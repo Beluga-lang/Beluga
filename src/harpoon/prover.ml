@@ -281,7 +281,7 @@ module Prover = struct
   module Session = struct
     type t =
       { theorems : Theorem.t DynArray.t
-      ; finished_theorems: Theorem.t DynArray.t
+      ; finished_theorems: (Theorem.t * Comp.exp_chk option) DynArray.t
       ; mutual_group : CompS.mutual_group_id
       }
 
@@ -308,10 +308,14 @@ module Prover = struct
     let remove_current_theorem s =
       DynArray.delete s.theorems 0
 
-    let mark_current_theorem_as_proven s  =
+    (** Moves the current theorem from the incomplete theorem stack to
+        the finished theorem stack, and associates it to the given
+        checkable term that is its translation.
+     *)
+    let mark_current_theorem_as_proven s e_trans =
       let t = DynArray.get s.theorems 0 in
       remove_current_theorem s;
-      DynArray.add s.finished_theorems t
+      DynArray.add s.finished_theorems (t, e_trans)
 
     let defer_theorem s =
       let t = DynArray.get s.theorems 0 in
@@ -352,6 +356,14 @@ module Prover = struct
          DynArray.insert c.theorems 0 t;
          true
 
+    (** Constructs a list of all theorems in this session, both
+        incomplete and finished.
+     *)
+    let full_theorem_list c =
+      List.append
+        (DynArray.to_list c.theorems)
+        (DynArray.to_list c.finished_theorems |> List.map fst)
+
     let get_session_kind c : [`introduced | `loaded] =
       let existing_holes = get_existing_holes () in
       (* If the theorems in the session do not have
@@ -359,9 +371,7 @@ module Prover = struct
        * that session is newly defined in this harpoon process,
        *)
       let is_loaded =
-        List.append
-          (DynArray.to_list c.theorems)
-          (DynArray.to_list c.finished_theorems)
+        full_theorem_list c
         |> List.exists
              begin fun thm ->
              existing_holes
@@ -733,12 +743,7 @@ module Prover = struct
              | `introduced -> true
              | `loaded -> false
              end
-        |> List.map
-             begin fun sess ->
-             List.append
-               (DynArray.to_list sess.Session.theorems)
-               (DynArray.to_list sess.Session.finished_theorems)
-             end
+        |> List.map Session.full_theorem_list
         |> List.filter Misc.List.nonempty
       in
       update_existing_holes existing_holes;
@@ -1152,15 +1157,15 @@ let rec loop (s : Prover.State.t) : unit =
      loop s
   | Either.Left (`no_subgoal (c, t)) ->
      (* TODO: record the proof into the Store *)
-     let trans = Prover.translate s (Theorem.get_entry t) in
+     let e_trans = Prover.translate s (Theorem.get_entry t) in
      printf
        "@[<v>Subproof complete! (No subgoals left.)\
         @,Full proof script:\
         @,  @[<v>%a@]\
         @,@[<v>%a@]@]"
        Theorem.dump_proof t
-       Translate.fmt_ppr_result trans;
-     Prover.Session.mark_current_theorem_as_proven c;
+       Translate.fmt_ppr_result e_trans;
+     Prover.Session.mark_current_theorem_as_proven c (Either.to_option e_trans);
      loop s
   | Either.Right (c, t, g) ->
     (* Show the proof state and the prompt *)

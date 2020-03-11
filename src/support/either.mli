@@ -59,6 +59,11 @@ val of_option : 'a option -> (unit, 'a) t
  *)
 val of_option' : (unit -> 'e) -> 'a option -> ('e, 'a) t
 
+(** Converts a union into an option, forgetting the left side, if
+    any.
+ *)
+val to_option : ('e, 'a) t -> 'a option
+
 (** Infix form of {!Either.bind}. *)
 val ( $ ) : ('e, 'a) t -> ('a -> ('e, 'b) t) -> ('e, 'b) t
 

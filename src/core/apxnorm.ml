@@ -274,7 +274,7 @@ let rec cnormApxExp cD delta e (cD'', t) = match e with
      dprint (fun () -> "cnormApxExp -- MLam (or could be PLam)");
      let e' =
        cnormApxExp cD (Apx.LF.Dec(delta, Apx.LF.DeclOpt u)) e
-         (Int.LF.Dec (cD'', Int.LF.DeclOpt u), Whnf.mvar_dot1 t)
+         (Int.LF.Dec (cD'', Int.LF.DeclOpt (u, `explicit)), Whnf.mvar_dot1 t)
      in
      Apx.Comp.MLam (loc, u, e')
 
@@ -369,9 +369,9 @@ and cnormApxBranch cD delta b (cD'', t) =
 
   let rec append_mctx cD'' delta' = match delta' with
     | Apx.LF.Empty -> cD''
-    | Apx.LF.Dec (delta2', Apx.LF.Decl(x, _,_)) ->
+    | Apx.LF.Dec (delta2', Apx.LF.Decl(x, _, dep)) ->
        let cD1'' = append_mctx cD'' delta2' in
-       Int.LF.Dec (cD1'', Int.LF.DeclOpt x)
+       Int.LF.Dec (cD1'', Int.LF.DeclOpt (x, Int.LF.Depend.to_plicity dep))
   in
 
   match b with

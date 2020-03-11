@@ -48,9 +48,11 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
 
   let fresh_name_ctyp_decl (cD: LF.mctx) : LF.ctyp_decl -> LF.ctyp_decl = function
     | LF.Decl (n, ct, dep) ->
-       let n' = fresh_name_mctx cD n in LF.Decl (n', ct, dep)
-    | LF.DeclOpt n ->
-       let n' = fresh_name_mctx cD n in LF.DeclOpt n'
+       let n' = fresh_name_mctx cD n in
+       LF.Decl (n', ct, dep)
+    | LF.DeclOpt (n, plicity) ->
+       let n' = fresh_name_mctx cD n in
+       LF.DeclOpt (n', plicity)
 
   (** Prints a context.
       Prints each element of the context from left to right with the
@@ -645,8 +647,13 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
        end
 
     | LF.CtxOffset psi ->
-       fprintf ppf "%s"
-         (R.render_ctx_var cD psi)
+       begin match Context.lookup' cD psi with
+       | Some LF.(Decl (u, _, Maybe) | DeclOpt (u, `implicit)) when !PC.printCtxUnderscore ->
+          fprintf ppf "_"
+       | Some LF.(Decl (u, _, _) | DeclOpt (u, _)) ->
+          fprintf ppf "%a" Id.print u
+       | None -> fprintf ppf "FREE CtxVar %d" psi
+       end
     | LF.CtxName psi ->
        fprintf ppf "%s"
          (Id.render_name psi)
@@ -825,35 +832,40 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
          (fmt_ppr_lf_kind (LF.DDec(cPsi, LF.TypDeclOpt  x)) 0) k
          (r_paren_if cond)
 
-  and fmt_ppr_lf_mtyp' cD (pre, post) ppf = function
-    | LF.ClTyp (LF.MTyp tA, cPsi) ->
-       fprintf ppf "%s@[<hov 2>@[%a@] |-@ @[%a@]@]%s"
-         pre
-         (fmt_ppr_lf_dctx cD 0) cPsi
-         (fmt_ppr_lf_typ cD cPsi 0) tA
-         post
+  and fmt_ppr_lf_mtyp' cD (pre, post) =
+    Printer.fmt_ppr_ctx_underscore false
+      begin fun ppf cU ->
+      match cU with
+      | LF.ClTyp (LF.MTyp tA, cPsi) ->
+         fprintf ppf "%s@[<hov 2>@[%a@] |-@ @[%a@]@]%s"
+           pre
+           (fmt_ppr_lf_dctx cD 0) cPsi
+           (fmt_ppr_lf_typ cD cPsi 0) tA
+           post
 
-    | LF.ClTyp (LF.PTyp tA, cPsi) ->
-       fprintf ppf "#%s@[<hov 2>@[%a@] |-@ @[%a@]@]%s"
-         pre
-         (fmt_ppr_lf_dctx cD 0) cPsi
-         (fmt_ppr_lf_typ cD cPsi 0) tA
-         post
+      | LF.ClTyp (LF.PTyp tA, cPsi) ->
+         fprintf ppf "#%s@[<hov 2>@[%a@] |-@ @[%a@]@]%s"
+           pre
+           (fmt_ppr_lf_dctx cD 0) cPsi
+           (fmt_ppr_lf_typ cD cPsi 0) tA
+           post
 
-    | LF.ClTyp (LF.STyp (cl, cPhi), cPsi) ->
-       fprintf ppf "$%s@[<hov 2>@[%a@] |- %a@ @[%a@]@]%s"
-         pre
-         (fmt_ppr_lf_dctx cD 0) cPsi
-         fmt_ppr_lf_svar_class cl
-         (fmt_ppr_lf_dctx cD 0) cPhi
-         post
-    | LF.CTyp (Some cid) ->
-       let x = Store.Cid.Schema.get_name cid in
-       fprintf ppf "%a"
-         Id.print x
-    | LF.CTyp None -> fprintf ppf "CTX"
+      | LF.ClTyp (LF.STyp (cl, cPhi), cPsi) ->
+         fprintf ppf "$%s@[<hov 2>@[%a@] |- %a@ @[%a@]@]%s"
+           pre
+           (fmt_ppr_lf_dctx cD 0) cPsi
+           fmt_ppr_lf_svar_class cl
+           (fmt_ppr_lf_dctx cD 0) cPhi
+           post
+      | LF.CTyp (Some cid) ->
+         let x = Store.Cid.Schema.get_name cid in
+         fprintf ppf "%a"
+           Id.print x
+      | LF.CTyp None -> fprintf ppf "CTX"
+      end
 
-  and fmt_ppr_lf_mtyp cD ppf = fmt_ppr_lf_mtyp' cD ("[", "]") ppf
+  and fmt_ppr_lf_mtyp cD =
+    fmt_ppr_lf_mtyp' cD ("[", "]")
 
   (* If a declaration is implicit and you don't want to print it, then
      it's *YOUR* responsibility to check the plicity of the
@@ -867,7 +879,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
          fmt_ppr_depend dep
          (fmt_ppr_lf_mtyp' cD ("(", ")")) mtyp
 
-    | LF.DeclOpt name ->
+    | LF.DeclOpt (name, _) ->
        fprintf ppf "%s : _"
          (Id.render_name name)
 
@@ -1153,20 +1165,19 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
     | Comp.MLam (_, x, e, `explicit) ->
        let x = fresh_name_mctx cD x in
        let cond = lvl > 0 in
+       let cD' = LF.Dec(cD, LF.DeclOpt (x, `explicit)) in
+       let cG' = Whnf.cnormGCtx (cG, LF.MShift 1) in
        fprintf ppf "%smlam %s =>@ %a%s"
          (l_paren_if cond)
          (Id.render_name x)
-         (fmt_ppr_cmp_exp_chk (LF.Dec(cD, LF.DeclOpt x)) (Whnf.cnormGCtx (cG, LF.MShift 1)) 0) e
+         (fmt_ppr_cmp_exp_chk cD' cG' 0) e
          (r_paren_if cond);
 
     | Comp.MLam (_, x, e, `implicit) ->
        let x = fresh_name_mctx cD x in
-       fmt_ppr_cmp_exp_chk
-         (LF.Dec(cD, LF.DeclOpt x))
-         (Whnf.cnormGCtx (cG, LF.MShift 1))
-         0
-         ppf
-         e
+       let cD' = LF.(Dec(cD, DeclOpt (x, `implicit))) in
+       let cG' = Whnf.cnormGCtx (cG, LF.MShift 1) in
+       fmt_ppr_cmp_exp_chk cD' cG' 0 ppf e
 
     | Comp.Pair (_, e1, e2) ->
        fprintf ppf "(%a , %a)"

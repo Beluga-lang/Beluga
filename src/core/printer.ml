@@ -8,20 +8,32 @@ module Control = struct
   let substitutionStyle = ref Natural
   let printImplicit = ref false
   let printNormal = ref false
+  let printCtxUnderscore = ref true
   let db() =
     match !substitutionStyle with
     | DeBruijn -> true
     | _ -> false
 end
 
-let with_implicits b' f =
-  let b = !Control.printImplicit in
-  Control.printImplicit := b';
-  f ();
-  Control.printImplicit := b
+let with_implicits, with_ctx_underscore =
+  let generic_with get set b' f =
+    let b = get () in
+    set b';
+    f ();
+    set b
+  in
+  let generic_with_ref r =
+    generic_with (fun _ -> !r) (fun x -> r := x)
+  in
+  ( generic_with_ref Control.printImplicit
+  , generic_with_ref Control.printCtxUnderscore
+  )
 
-let fmt_ppr_implicits b f ppf x =
+let fmt_ppr_implicits b f (ppf : formatter) x =
   with_implicits b (fun () -> f ppf x)
+
+let fmt_ppr_ctx_underscore b f (ppf : formatter) x =
+  with_ctx_underscore b (fun () -> f ppf x)
 
 module Common = struct
   module type T = sig

@@ -29,7 +29,7 @@ module LF = struct
 
   and ctyp_decl =                             (* Contextual Declarations        *)
     | Decl of name * ctyp * depend
-    | DeclOpt of name
+    | DeclOpt of name * plicity
 
   and typ =                                   (* LF level                       *)
     | Atom  of Loc.t * cid_typ * spine        (* A ::= a M1 ... Mn              *)
@@ -207,7 +207,7 @@ module LF = struct
 
   let rename_ctyp_decl f = function
     | Decl (x, tA, ind) -> Decl (f x, tA, ind)
-    | DeclOpt x -> DeclOpt (f x)
+    | DeclOpt (x, plicity) -> DeclOpt (f x, plicity)
 
   (** Embeds a head into a normal by using an empty spine.
       Very useful for constructing variables as normals.
@@ -321,7 +321,7 @@ module LF = struct
   let name_of_ctyp_decl (d : ctyp_decl) =
     match d with
     | Decl (n, _, _) -> n
-    | DeclOpt n -> n
+    | DeclOpt (n, _) -> n
 
   (** Decides whether the given mfront is a variable,
       viz. [projection of a] pattern variable, metavariable, or

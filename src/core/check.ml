@@ -306,7 +306,7 @@ module Comp = struct
       | I.Dec (cD, I.Decl (u, cdec,dep)), 1 ->
          I.Dec (cD, I.Decl (u, cdec, I.Inductive))
 
-      | I.Dec (_cD, I.DeclOpt u), 1 ->
+      | I.Dec (_cD, I.DeclOpt (u, _)), 1 ->
          raise (Error.Violation "Expected declaration to have type")
 
       | I.Dec (cD, dec), k' -> I.Dec (lookup cD (k' - 1), dec)

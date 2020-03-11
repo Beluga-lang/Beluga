@@ -3,4 +3,4 @@ Type-checking error.
 Found
   meta abstraction (mlam)
 but expected expression of type
-  Nlist [g] [ |- succ M] -> Nlist [g] [ |- M]
+  Nlist [_] [ |- succ M] -> Nlist [_] [ |- M]

@@ -4,6 +4,6 @@
 ##       CASE(S) NOT COVERED:
 (1)
 M : (g, y : term, x : term |- term), L : (g, y : term |- fvlist) ;  |-
-  [g, x1 |- cons (elam (\x. M)) L]
+  [_, x1 |- cons (elam (\x. M)) L]
 
 ##

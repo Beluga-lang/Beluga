@@ -65,7 +65,7 @@ let unbox cD cG i x cU =
   ( cD'
   , fun e ->
     let open Comp in
-    let b = Branch (Loc.ghost, LF.Empty, (cD', cG), pat, LF.MShift 1, e) in
+    let b = Branch (Loc.ghost, LF.Empty, (cD', LF.Empty), pat, LF.MShift 1, e) in
     Case (Loc.ghost, PragmaCase, i, [b])
   )
 

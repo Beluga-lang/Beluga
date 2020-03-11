@@ -19,12 +19,15 @@ type 'a subgoal_hook = proof_state -> 'a
  *)
 val printf : t -> ('a, Format.formatter, unit) format -> 'a
 
-(** Gets the Store entry related to this theorem. *)
+(** Gets the cid and Store entry for this theorem. *)
+val get_entry' : t -> Id.cid_prog * CompS.Entry.t
+
+(** Gets the Store entry for this theorem. *)
 val get_entry : t -> CompS.Entry.t
 val get_name : t -> Id.name
 val has_name_of : t -> Id.name -> bool
 val has_cid_of : t -> Id.cid_prog -> bool
-val theorem_statement : t -> typ
+val theorem_statement : t -> tclo
 
 val serialize : Format.formatter -> t -> unit
 

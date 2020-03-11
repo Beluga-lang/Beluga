@@ -277,6 +277,52 @@ let get_existing_holes () =
   Holes.get_harpoon_subgoals ()
   |> List.filter has_file_loc
 
+(** Contains a family a functions for rewriting references to program
+    functions.
+
+    This is used after translation to replace all references for
+    recursive calls with calls to the translated functions.
+ *)
+module CidProgRewrite = struct
+  open Comp
+
+  let rec exp_chk f = function
+    | Syn (loc, i) -> Syn (loc, exp_syn f i)
+    | Fn (loc, x, e) -> Fn (loc, x, exp_chk f e)
+    | Fun (loc, fbs) -> Fun (loc, fun_branches f fbs)
+    | MLam (loc, u, e, plicity) -> MLam (loc, u, exp_chk f e, plicity)
+    | Pair (loc, e1, e2) -> Pair (loc, exp_chk f e1, exp_chk f e2)
+    | LetPair (loc, i, (x1, x2, e)) ->
+       LetPair (loc, exp_syn f i, (x1, x2, exp_chk f e))
+    | Let (loc, i, (x, e)) -> Let (loc, exp_syn f i, (x, exp_chk f e))
+    | Box (loc, cM, cU) -> Box (loc, cM, cU)
+    | Case (loc, prag, i, bs) ->
+       Case (loc, prag, exp_syn f i, List.map (branch f) bs)
+    | Impossible (loc, i) -> Impossible (loc, exp_syn f i)
+    | Hole (loc, id, name) -> Hole (loc, id, name)
+
+  and exp_syn f = function
+    | Var (loc, k) -> Var (loc, k)
+    | DataConst (loc, cid) -> DataConst (loc, cid)
+    | Obs (loc, e, t, cid) -> Obs (loc, exp_chk f e, t, cid)
+    | Const (loc, cid) -> Const (loc, f cid)
+    | Apply (loc, i, e) -> Apply (loc, exp_syn f i, exp_chk f e)
+    | MApp (loc, i, cM, cU, plicity) ->
+       MApp (loc, exp_syn f i, cM, cU, plicity)
+    | AnnBox (cM, cU) -> AnnBox (cM, cU)
+    | PairVal (loc, i1, i2) ->
+       PairVal (loc, exp_syn f i1, exp_syn f i2)
+
+  and branch f (Branch (loc, cD_pref, (cD_b, cG_b), pat, t, e)) =
+      Branch (loc, cD_pref, (cD_b, cG_b), pat, t, exp_chk f e)
+
+  and fun_branches f = function
+    | NilFBranch loc -> NilFBranch loc
+    | ConsFBranch (loc, (cD, cG, patS, e), bs) ->
+       ConsFBranch
+         (loc, (cD, cG, patS, exp_chk f e), fun_branches f bs)
+end
+
 module Prover = struct
   module Session = struct
     type t =
@@ -382,6 +428,100 @@ module Prover = struct
       if is_loaded
       then `loaded
       else `introduced
+
+    type translation_check_result =
+      [ `some_translations_failed
+      | `check_error of exn
+      | `ok
+      ]
+
+    let prepare_translated_proofs tes total_decs =
+      let trans_name name =
+        Id.(mk_name (SomeString ("_" ^ render_name name ^ "_trans")))
+      in
+      (* create the totality declarations for the translated
+         proofs, and allocate the mutual group with them. *)
+      let total_decs =
+        Maybe.map
+          (List.map
+             (fun dec ->
+               let open Comp in
+               { dec with name = trans_name dec.name }))
+          total_decs
+      in
+      let mutual_group_id =
+        CompS.add_mutual_group total_decs
+      in
+      (* map from old cids to new cids *)
+      let h = Hashtbl.create 8 in
+      let es =
+        List.map
+          begin fun (t, e) ->
+          let open CompS in
+          let cid, entry = Theorem.get_entry' t in
+          let tau = entry.Entry.typ in
+          let _ =
+            add
+              begin fun cid' ->
+              (* associate the cid of this theorem to the newly allocated
+                 cid for the translated proof *)
+              Hashtbl.add h cid cid';
+              mk_entry
+                (trans_name entry.Entry.name)
+                tau
+                entry.Entry.implicit_arguments
+                mutual_group_id
+                None
+              end
+          in
+          (e, tau)
+          end
+          tes
+      in
+      (* Now h is populated, so we can rewrite the programs with the
+         new cids.
+         First, convert the hashtable to a function sending unmapped
+         entries to themselves.
+       *)
+      let cid_map k =
+        Hashtbl.find_opt h k |> Maybe.get_default k
+      in
+      let es =
+        List.map
+          (fun (e, ttau) -> (CidProgRewrite.exp_chk cid_map e, ttau))
+          es
+      in
+      (es, total_decs)
+
+    (** Checks the translated proofs in the session.
+        All theorems in the session must be finished.
+
+        This function will allocate one new mutual group, and for each
+        theorem, a new cid for the translated proof.
+        Next, it will rewrite the cids in each translated proof to
+        refer to the new cids.
+        Finally, it checks each program.
+     *)
+    let check_translated_proofs c : translation_check_result =
+      match
+        DynArray.to_list c.finished_theorems
+        |> Maybe.(traverse (fun (t, e) -> e $> fun e -> (t, e)))
+      with
+      | None -> `some_translations_failed
+      | Some tes ->
+         let ettaus, total_decs =
+           prepare_translated_proofs tes (get_mutual_decs c)
+         in
+         let total_decs = Maybe.get_default [] total_decs in
+         try
+           List.iter
+             (fun (e, tau) ->
+               B.Check.Comp.check LF.Empty LF.Empty total_decs
+                 e (tau, Whnf.m_id))
+             ettaus;
+           `ok
+         with
+         | exc -> `check_error exc
   end
 
   module State = struct
@@ -1147,8 +1287,21 @@ let rec loop (s : Prover.State.t) : unit =
      | `aborted ->
         printf "@,Harpoon terminated.@,"
      end
-  | Either.Left (`no_theorem _) ->
-     printf "@,Proof complete! (No theorems left.)@,";
+  | Either.Left (`no_theorem c) ->
+     printf "@,@[<v>Proof complete! (No theorems left.)@,";
+     begin match Prover.Session.check_translated_proofs c with
+     | `ok ->
+        printf "- Translated proofs successfully checked.@,"
+     | `some_translations_failed ->
+        printf "- @[%a@]@,"
+          Format.pp_print_string
+          "Skipped checking translated proofs because some translations failed."
+     | `check_error e ->
+        printf "- @[<v>An error occurred when checking the translated proofs.\
+                @,@[%s@]@]@,"
+          (Printexc.to_string e)
+     end;
+     printf "@]";
      begin
        if s.Prover.State.save_back
        then Prover.State.(save s; reset s)

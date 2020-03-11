@@ -47,14 +47,18 @@ type theorem = t
 
 let printf t x = Format.fprintf t.ppf x
 
-let get_entry t = (CompS.get t.cid)
+let get_entry' t =
+  let cid = t.cid in
+  (cid, CompS.get cid)
+
+let get_entry t = get_entry' t |> snd
 let get_name t = (get_entry t).CompS.Entry.name
 let has_name_of t name = equals (get_name t) name
 let has_cid_of t cid = t.cid = cid
 
 (** Gets the statement of the given theorem. *)
 let theorem_statement (t : t) =
-  Whnf.cnormCTyp t.initial_state.Comp.goal
+  t.initial_state.Comp.goal
 
 let serialize ppf (t : t) =
   let name = CompS.name t.cid in

@@ -7,23 +7,23 @@ Interactive Command Reference
    :local:
    :depth: 2
 
-Administrative commands
------------------------
+.. _administrative commands:
 
-Administrative commands are used to navigate the proof, obtain information about
+Administrative tactics
+----------------------
+
+Administrative tactics are used to navigate the proof, obtain information about
 functions or constructors, or to prove a lemma in the middle of another proof.
 
 .. _cmd-theorem:
 
-``theorem``
-^^^^^^^^^^^
-
-Use ``theorem COMMAND`` for operations relating to a particular theorem.
+Theorem commands
+^^^^^^^^^^^^^^^^
 
 ``theorem list``
 """"""""""""""""
 
-Displays a listing of all theorems in the current session.
+Lists all theorems in the current session.
 
 ``theorem defer``
 """""""""""""""""
@@ -38,6 +38,11 @@ See :ref:`cmd-select` for a more flexible way to select a theorem.
 
 Display the induction hypotheses available in the current subgoal.
 
+.. note::
+
+    This is a debugging command, and the output is not particularly
+    human-readable.
+
 ``theorem dump-proof PATH``
 """""""""""""""""""""""""""
 
@@ -50,8 +55,8 @@ Displays the current theorem's partial proof.
 
 .. _cmd-session:
 
-``session``
-^^^^^^^^^^^
+Session commands
+^^^^^^^^^^^^^^^^
 
 .. _cmd-session-list:
 
@@ -77,10 +82,23 @@ wizard` for setting up the theorems in the new session.
 ``session serialize``
 """""""""""""""""""""
 
+Saves the current session as partial proofs to the signature.
+
 .. _cmd-subgoal:
 
-``subgoal``
-^^^^^^^^^^^
+Subgoal commands
+^^^^^^^^^^^^^^^^
+
+``subgoal list``
+""""""""""""""""
+
+Lists all remaining subgoals in the current theorem.
+
+``subgoal defer``
+"""""""""""""""""
+
+Moves the current subgoal to the bottom of the subgoal stack and selects the
+next one.
 
 .. _cmd-select:
 
@@ -89,6 +107,11 @@ wizard` for setting up the theorems in the new session.
 
 ``select NAME`` selects a theorem by name for proving.
 See the :ref:`session list <cmd-session-list>` command.
+
+.. note::
+
+    When selecting a theorem from another session, be aware of the consequences
+    this has on scoping. See :ref:`changing sessions`.
 
 .. _cmd-rename:
 
@@ -111,15 +134,32 @@ Renames a variable. Use ``rename meta SRC DST`` to rename a metavariable and
 ``toggle-automation``
 ^^^^^^^^^^^^^^^^^^^^^
 
+Use ``toggle-automation AUTO [STATE]`` to change the state of proof automation
+features. See :ref:`Proof automation` for available values for ``AUTO``.
+
+Valid values for ``STATE`` are ``on``, ``off``, and ``toggle``. If unspecified,
+``STATE`` defaults to ``toggle``.
+
 .. _cmd-type:
 
 ``type``
 ^^^^^^^^
 
+Use ``type EXP`` to display the computed type of the given synthesizable
+expression ``EXP``.
+
 .. _cmd-info:
 
 ``info``
 ^^^^^^^^
+
+Use ``info KIND OBJ`` to get information on the ``KIND`` named ``OBJ``.
+
+Valid values for ``KIND`` are
+
+* ``theorem``: displays information about the Beluga program or Harpoon proof
+  named ``OBJ``.
+
 
 Proof tactics
 -------------
@@ -127,29 +167,121 @@ Proof tactics
 .. _cmd-intros:
 
 ``intros``
-^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^
+
+Use ``intros [NAME...]`` to introduce assumptions into the context.
+
+This tactic is applicable when the goal type is a function type (either simple
+or dependent).
+
+For Pi-types, the name of the assumption matches the name used in the Pi. For
+arrow-types, names will be taken from the given list of names, in order. If no
+names are given explicitly, then names are automatically generated.
+
+On success, this tactic will replace the current subgoal with a new subgoal in
+which the assumptions are in the context.
+
+.. note::
+
+    It is uncommon to use this tactic directly due to
+    :ref:`automation <auto intros>`.
 
 .. _cmd-split:
 
 ``split``
 ^^^^^^^^^
 
+Use ``split EXP`` to perform case analysis on the synthesizable expression ``EXP``.
+
+On success, this tactic removes the current subgoal and introduces a new subgoal
+for every possible constructor for ``EXP``.
+
 .. _cmd-msplit:
 
 ``msplit``
 ^^^^^^^^^^
+
+Use ``msplit MVAR`` to perform case analysis on the metavariable ``MVAR``.
+
+This command is syntactic sugar for a more verbose command using ``split``.
 
 .. _cmd-by:
 
 ``by``
 ^^^^^^
 
+Use ``by EXP as VAR [BOXITY]`` to invoke a lemma or induction hypothesis
+represented by the synthesizable expression ``EXP`` and bind the result to the
+name ``VAR``.
+The optional parameter ``BOXITY`` specifies at what level the binding occurs.
+
+Valid values for ``BOXITY`` are
+
+* ``boxed`` (default): the binding is made as a computational variable.
+* ``unboxed``: the binding is made as a metavariable.
+
+Note that ``unboxed`` is permitted only if the computed type of ``EXP`` is a
+boxed contextual type.
+
+On success, this tactic replaces the current subgoal with a subgoal having one
+additional entry in the appropriate context.
+
+.. note::
+
+    This command sometimes completes a proof due to
+    :ref:`automation <auto solve trivial>`.
+
 .. _cmd-solve:
 
 ``solve``
 ^^^^^^^^^
 
+Use ``solve EXP`` to complete the proof by providing an explicit checkable
+expression ``EXP``.
+
+The expression ``EXP`` must check against the current subgoal's type.
+
+On success, this tactic removes the current subgoal, introducing no new
+subgoals.
+
 .. _cmd-suffices:
 
 ``suffices``
 ^^^^^^^^^^^^
+
+Use ``suffices by EXP toshow TAU...`` to reason backwards via the synthesizable
+expression ``EXP`` by constructing proofs for each type ``TAU``.
+
+This command captures the common situation when a lemma or computational
+constructor can be used to complete a proof, because its conclusion is
+(unifiable with) the subgoal's type. In this case, it suffices to construct the
+arguments to the lemma or constructor in order to complete the proof.
+
+The main restriction on ``suffices`` is that the expression ``EXP`` must
+synthesize a type of the form
+
+.. code-block:: Beluga
+
+    {X1 : U1} ... {Xn : Un} tau_1 -> ... -> tau_k -> tau
+
+Thankfully, this is the most common form of type one sees when working with
+Beluga.
+
+Each type ``tau_i`` must unify with the ``i`` th type given in the command.
+It is through these unifications that the instantiations for all the Pi-bound
+metavariables are found. It is an error if after unification, there remain
+uninstantiated Pi-bound variables.
+
+On success, one subgoal is generated for each ``tau_i``, and the current subgoal
+is removed.
+
+In principle, this command is redundant with ``solve`` because one could just
+write ``solve EXP`` to invoke the lemma directly, but this can be quite
+unwieldy if the arguments to the lemma are complicated.
+
+.. note::
+
+    The user-provided type annotations ``TAU...`` are allowed to refer to
+    metavariables marked ``(not in scope)``.
+    However, it is an error if an out-of-scope metavariable appears in the
+    instantiation for an explicitly Pi-bound metavariable.

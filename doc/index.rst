@@ -10,9 +10,4 @@ Beluga/Harpoon user's manual
    harpoon/index
    beluga/index
 
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
+:ref:`search`

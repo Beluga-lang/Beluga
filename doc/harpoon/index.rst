@@ -12,4 +12,5 @@ a lemma or induction hypothesis.
    :maxdepth: 2
 
    prover-structure
+   proof-automation
    interactive-reference

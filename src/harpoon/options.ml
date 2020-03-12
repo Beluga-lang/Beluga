@@ -151,7 +151,7 @@ let options_spec : parsed_t Optparser.OptSpec.t =
   <& (switch_opt
         [ OptInfo.long_name "stop"
         ]
-      $> fun b -> if b then `go_on else `stop
+      $> fun b -> if b then `stop else `go_on
      )
   <& switch_opt
        [ OptInfo.long_name "no-load-holes"

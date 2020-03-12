@@ -5,3 +5,4 @@ Common elements
    :maxdepth: 1
 
    lf
+   contextual-lf

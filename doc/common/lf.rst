@@ -117,8 +117,12 @@ reasoning used on paper when proving that a lambda-abstract has an arrow-type.
 Here it is necessary to explicitly write a Pi-type for ``x`` as leaving it
 implicit would have it incorrect quantified at the level above.
 
-To *reason* about these definitions, one would formulate a theorem and prove it,
-either by writing a :ref:`functional program in Beluga <beluga>` or
-:ref:`interactively with Harpoon <harpoon>`.
+To *reason* about these definitions, one would formulate a theorem and prove it.
+Theorems are stated and proven in Beluga's computation language. Whereas LF is
+used as a metalanguage for encoding various formal systems, Beluga's computation
+language is used as a metalanguage for :ref:`contextual lf`.
+To prove a theorem, one
+either writes a :ref:`functional program in Beluga <beluga>` or
+:ref:`uses Harpoon <harpoon>`.
 
 .. [1] TODO cite LF paper

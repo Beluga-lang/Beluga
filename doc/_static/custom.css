@@ -1,5 +1,6 @@
 div.document {
     width: 100%;
+    max-width: 8in;
 }
 
 li.toctree-l1 {

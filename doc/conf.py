@@ -46,7 +46,7 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 #
 html_theme = 'alabaster'
 html_theme_options = {
-    'max_body_width': '100%'
+    'body_max_width': '100%'
 }
 
 # Add any paths that contain custom static files (such as style sheets) here,
@@ -55,3 +55,102 @@ html_theme_options = {
 html_static_path = ['_static']
 
 master_doc = 'index'
+
+# Set up Beluga syntax highlighting for documentation.
+
+from pygments.lexer import RegexLexer
+from pygments import token
+
+# ['Comment', 'Error', 'Escape', 'Generic', 'Keyword', 'Literal',
+# 'Name', 'Number', 'Operator', 'Other', 'Punctuation',
+# 'STANDARD_TYPES', 'String', 'Text', 'Token', 'Whitespace',
+# '_TokenType', '__builtins__', '__cached__', '__doc__', '__file__',
+# '__loader__', '__name__', '__package__', '__spec__',
+# 'is_token_subtype', 'string_to_tokentype']
+
+keywords = [
+    ( kw + '[^a-zA-Z0-9]', token.Keyword )
+    for kw in
+    [ 'LF',
+      'and',
+      'block',
+      'case',
+      'fn',
+      'else',
+      'if',
+      'impossible',
+      'in',
+      'let',
+      'mlam' ,
+      'of',
+      'rec',
+      'schema',
+      'some',
+      'then',
+      'module',
+      'struct',
+      'end',
+      'trust',
+      'total',
+      'type',
+      'ctype',
+      'prop',
+      'inductive',
+      'coinductive',
+      'stratified',
+      'LF',
+      'fun',
+      'typedef',
+      'proof',
+      'by',
+      'as',
+      'suffices',
+      'toshow',
+    ]
+]
+
+symbols = [
+    ( x, token.Operator )
+    for x in
+    [ r'\[',
+      r'\]',
+      r'{',
+      r'}',
+      r'\(',
+      r'\)',
+      r'<',
+      r'>',
+      r'\^',
+      r',',
+      r'::',
+      r':',
+      r';',
+      r'\|-',
+      r'\|',
+      r'\\',
+      r'\*',
+      r'=',
+      r'/',
+      r'\+',
+      r'->',
+      r'=>',
+      r'\.',
+    ]
+]
+
+class BelugaLexer (RegexLexer):
+    name = 'Beluga'
+
+    tokens = {
+        'root':
+        keywords +
+        symbols +
+        [ (r'%.*?$', token.Comment),
+          (r'(#\$)?[a-zA-Z_]([a-zA-Z0-9_\'-\*\+@=\^/#\?])*', token.Name),
+          (r'\s+', token.Whitespace),
+        ]
+    }
+
+from sphinx.highlighting import lexers
+
+lexers['Beluga'] = BelugaLexer()

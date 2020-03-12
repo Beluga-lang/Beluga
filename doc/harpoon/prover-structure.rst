@@ -60,7 +60,7 @@ The wizard prompts for three things about each theorem:
 
 .. note::
 
-    Explicitly marked implicit context parameters are not counted for the
+    Implicit context quantifiers are not counted for the
     numeric induction order. That is, in
 
     .. code-block:: Beluga

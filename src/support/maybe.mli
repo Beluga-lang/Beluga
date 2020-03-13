@@ -31,6 +31,9 @@ val map : ('a -> 'b) -> 'a option -> 'b option
 
 val ( $ ) : 'a option -> ('a -> 'b option) -> 'b option
 
+(** Named, flipped version of ($). *)
+val flat_map : ('a -> 'b option) -> 'a option -> 'b option
+
 val ( <|> ) : 'a option Lazy.t -> 'a option Lazy.t -> 'a option Lazy.t
 
 (** Selects the first alternative that succeeds.

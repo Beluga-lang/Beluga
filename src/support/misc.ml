@@ -154,6 +154,10 @@ module List = struct
     | [], [] -> true
     | x :: xs, y :: ys -> by x y && equals by xs ys
     | _ -> false
+
+  let hd_opt = function
+    | [] -> None
+    | x :: _ -> Some x
 end
 
 let id (x : 'a) : 'a = x

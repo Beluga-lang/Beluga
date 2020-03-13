@@ -541,6 +541,8 @@ module Prover = struct
 
     let next_prompt_number s = incr s.prompt_number; !(s.prompt_number)
 
+    (** Constructs a Theorem.t for the given cid with the given
+        subgoals. *)
     let recover_theorem ppf hooks (cid, gs) =
       let e = CompS.get cid in
       let initial_state =
@@ -570,8 +572,20 @@ module Prover = struct
     let recover_session ppf hooks (mutual_group, thm_confs) =
       let theorems =
         let open Nonempty in
-        map (recover_theorem ppf hooks) thm_confs
-        |> to_list (* XXX to_list -> of_list later is inefficient *)
+        let f =
+          let open F in
+          (* after recovering the theorem, set it hidden.
+             later, we enter the session, which will bring it into
+             scope. *)
+          (fun t -> Theorem.set_hidden t true; t)
+          ++ recover_theorem ppf hooks
+        in
+        (* XXX to_list -> of_list later is inefficient
+           It would be best to add a function to obtain a Seq.t from
+           an Nonempty.t, lazily map the sequence, and the force the
+           sequence with DynArray.of_seq
+         *)
+        map f thm_confs |> to_list
       in
       dprintf begin fun p ->
         p.fmt "[recover_session] @[<v>recovered a session with the following theorems:\
@@ -589,6 +603,10 @@ module Prover = struct
         Subgoals are grouped into theorems according to their
         associated cid, and theorems are grouped into sessions
         according to their mutual group.
+
+        WARNING: all recovered theorems are hidden (out of scope).
+        It is necessary to enter the session that ends up selecteed to
+        bring its theorems into scope.
      *)
     let recover_sessions ppf hooks (gs : Comp.open_subgoal list) =
       (* idea:
@@ -642,7 +660,31 @@ module Prover = struct
         : t =
       let automation_state = Automation.State.make () in
       let hooks = [run_automation automation_state] in
-      { sessions = DynArray.of_list (recover_sessions ppf hooks gs)
+      let sessions = recover_sessions ppf hooks gs
+      in
+      let _ =
+        (* since all recovered sessions are suspended, we must
+           explicitly enter the first one *)
+        let open Maybe in
+        Misc.List.hd_opt sessions
+        $> Session.enter
+      in
+
+      F.flip List.iter sessions
+        begin fun c ->
+        dprintf begin fun p ->
+          let open Format in
+          p.fmt "[harpoon State.make] @[<v>%a@]"
+            (pp_print_list ~pp_sep: pp_print_cut
+               (fun ppf t ->
+                 fprintf ppf "@[%a: hidden = %b@]"
+                   Id.print (Theorem.get_name t)
+                   (Theorem.get_entry t).CompS.Entry.hidden))
+            (DynArray.to_list c.Session.theorems)
+          end
+        end;
+
+      { sessions = DynArray.of_list sessions
       ; prompt_number = ref 0
       ; automation_state
       ; prompt
@@ -750,20 +792,6 @@ module Prover = struct
       let confs = do_prompts 1 in
       Theorem.configure_set s.ppf [run_automation s.automation_state] confs
 
-    let add_session s c = DynArray.insert s.sessions 0 c
-                        (*
-    let remove_current_session s = DynArray.delete s.sessions 0
-                         *)
-
-    let session_configuration_wizard s =
-      let mutual_group, thms = session_configuration_wizard' s in
-      (* c will be populated with theorems; if there are none it's
-         because the session is over. *)
-      match thms with
-      | _ :: _ ->
-         `ok (Session.make mutual_group (DynArray.of_list thms))
-      | [] -> `aborted
-
     (** Given that session `c` is at index `i` in the sessions list,
         `select_session s i c` moves it to the front, thus activating
         it.Takes care of suspending the active session and entering
@@ -778,6 +806,28 @@ module Prover = struct
       Session.enter c;
       (* make the target session the active session by moving it to position 0 *)
       DynArray.insert s.sessions 0 c
+
+    (** Adds a session to the prover and selects it.
+        If another session was selected before, it is suspended, and
+        the new session is entered.
+     *)
+    let add_session s c =
+      let k = DynArray.length s.sessions in
+      DynArray.add s.sessions c;
+      (* newly added session is at index k *)
+      select_session s k c
+                        (*
+    let remove_current_session s = DynArray.delete s.sessions 0
+                         *)
+
+    let session_configuration_wizard s =
+      let mutual_group, thms = session_configuration_wizard' s in
+      (* c will be populated with theorems; if there are none it's
+         because the session is over. *)
+      match thms with
+      | _ :: _ ->
+         `ok (Session.make mutual_group (DynArray.of_list thms))
+      | [] -> `aborted
 
     (** Finds a session containing a theorem with the given name and
         selects that session and that theorem.

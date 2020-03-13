@@ -2,6 +2,8 @@ open Support.Equality
 open Support
 open Syntax
 
+module F = Misc.Function
+
 module DynArray = Misc.DynArray
 
 module NameTable =
@@ -170,8 +172,11 @@ module type CIDSTORE = sig
   type entry
   type cid
 
+  (** Generic lookup function that includes configurable additional
+      lookup failure and result transformation. *)
+  val lookup : Id.name -> (entry -> entry option) -> (cid * entry) option
   val index_of_name : Id.name -> cid
-  val index_of_name_opt : Id.name -> cid option
+  (* val index_of_name_opt : Id.name -> cid option *)
   val replace_entry : cid -> entry -> unit
   val fixed_name_of : cid -> Id.name
   val get : cid -> entry
@@ -241,6 +246,13 @@ module CidStore (M : ENTRY) : CIDSTORE
       Id.(mk_name ~modules:m' (SomeString (string_of_name (name_of_entry e))))
 
     let get (l, n) = DynArray.get (DynArray.get store l) n
+
+    let lookup (n : Id.name) f : (cid * entry) option =
+      Maybe.flat_map
+        begin fun cid ->
+        Maybe.map (fun e -> (cid, e)) (f (get cid))
+        end
+        (index_of_name_opt n)
 
     let add f =
       let cid, e =
@@ -805,6 +817,22 @@ module Cid = struct
        *)
       ; hidden = false
       }
+
+    (* Need to override the CidStore implementation of index_of_name
+       and index_of_name_opt so it respects the `hidden` flag.
+       I don't bother overriding `lookup` since it isn't exported.
+     *)
+
+    let index_of_name_opt name =
+      let open Maybe in
+      lookup name
+        begin fun e ->
+        of_bool (not e.Entry.hidden) $> (fun _ -> e)
+        end
+      |> map fst
+
+    let index_of_name =
+      F.(Maybe.get' Not_found ++ index_of_name_opt)
 
     let mutual_groups = DynArray.of_list [ None; Some [] ]
 

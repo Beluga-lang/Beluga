@@ -46,6 +46,8 @@ let map (f : 'a -> 'b) (o : 'a option) : 'b option =
 let ( $ ) (o : 'a option) (k : 'a -> 'b option) : 'b option =
   eliminate (fun _ -> None) k o
 
+let flat_map k o = o $ k
+
 (** Prioritized choice between options.
     This will force the first option, but will never force the second.
     This operation is associative.

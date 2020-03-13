@@ -17,16 +17,13 @@ functions or constructors, or to prove a lemma in the middle of another proof.
 
 .. _cmd-theorem:
 
-Theorem commands
-^^^^^^^^^^^^^^^^
-
 ``theorem list``
-""""""""""""""""
+^^^^^^^^^^^^^^^^
 
 Lists all theorems in the current session.
 
 ``theorem defer``
-"""""""""""""""""
+^^^^^^^^^^^^^^^^^
 
 Moves the current theorem to the bottom of the theorem stack, selecting the next
 theorem.
@@ -34,7 +31,7 @@ theorem.
 See :ref:`cmd-select` for a more flexible way to select a theorem.
 
 ``theorem show-ihs``
-""""""""""""""""""""
+^^^^^^^^^^^^^^^^^^^^
 
 Display the induction hypotheses available in the current subgoal.
 
@@ -44,29 +41,24 @@ Display the induction hypotheses available in the current subgoal.
     human-readable.
 
 ``theorem dump-proof PATH``
-"""""""""""""""""""""""""""
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Records the current theorem's partial proof to ``PATH``.
 
 ``theorem show-proof``
-""""""""""""""""""""""
+^^^^^^^^^^^^^^^^^^^^^^
 
 Displays the current theorem's partial proof.
-
-.. _cmd-session:
-
-Session commands
-^^^^^^^^^^^^^^^^
 
 .. _cmd-session-list:
 
 ``session list``
-""""""""""""""""
+^^^^^^^^^^^^^^^^
 
 Lists all active sessions together with all theorems within each session.
 
 ``session defer``
-"""""""""""""""""
+^^^^^^^^^^^^^^^^^
 
 Moves the current session to the bottom of the session stack and selects the
 next one.
@@ -74,28 +66,23 @@ next one.
 See :ref:`cmd-select` for a more flexible way to select a theorem.
 
 ``session create``
-""""""""""""""""""
+^^^^^^^^^^^^^^^^^^
 
 Creates a new session. This command will start the :ref:`session configuration
 wizard` for setting up the theorems in the new session.
 
 ``session serialize``
-"""""""""""""""""""""
+^^^^^^^^^^^^^^^^^^^^^
 
 Saves the current session as partial proofs to the signature.
 
-.. _cmd-subgoal:
-
-Subgoal commands
-^^^^^^^^^^^^^^^^
-
 ``subgoal list``
-""""""""""""""""
+^^^^^^^^^^^^^^^^
 
 Lists all remaining subgoals in the current theorem.
 
 ``subgoal defer``
-"""""""""""""""""
+^^^^^^^^^^^^^^^^^
 
 Moves the current subgoal to the bottom of the subgoal stack and selects the
 next one.

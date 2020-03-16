@@ -143,10 +143,7 @@ end
  *)
 let replace_locs (replacees : (Loc.t * (Format.formatter -> unit -> unit)) list) : unit =
   replacees
-  |> Misc.Hashtbl.group_by
-       begin fun (loc, _) ->
-       Loc.filename loc
-       end
+  |> Misc.Hashtbl.group_by F.(Loc.filename ++ fst)
   (* iterate over replacee groups
    (* open file stream *)
    (* sort items in the group *)
@@ -156,7 +153,7 @@ let replace_locs (replacees : (Loc.t * (Format.formatter -> unit -> unit)) list)
    *)
    *)
   |> Hashtbl.iter
-       begin fun (file_name : string) replacees ->
+       begin fun file_name replacees ->
        dprintf begin fun p ->
          p.fmt "[replace_locs] opening file %s" file_name
          end;
@@ -273,7 +270,7 @@ let add_new_mutual_rec_thmss target_file_name new_mutual_rec_thmss =
   close_out out_ch
 
 let get_existing_holes () =
-  let has_file_loc hole = hole |> fst |> Loc.is_ghost |> not in
+  let has_file_loc = F.(not ++ Loc.is_ghost ++ fst) in
   Holes.get_harpoon_subgoals ()
   |> List.filter has_file_loc
 
@@ -345,11 +342,11 @@ module Prover = struct
 
     (** Unhides cids for all theorems in this session. *)
     let enter (s : t) : unit =
-      DynArray.iter (fun t -> Theorem.set_hidden t false) s.theorems
+      DynArray.iter (F.flip Theorem.set_hidden false) s.theorems
 
     (** Hides cids for all theorems in this session. *)
     let suspend (s : t) : unit =
-      DynArray.iter (fun t -> Theorem.set_hidden t true) s.theorems
+      DynArray.iter (F.flip Theorem.set_hidden true) s.theorems
 
     let remove_current_theorem s =
       DynArray.delete s.theorems 0
@@ -378,7 +375,7 @@ module Prover = struct
     (** Decides whether a given `cid` is in among the currently being
         proven theorems. *)
     let cid_is_in_current_theorem_set s c =
-      List.exists (fun t -> Theorem.has_cid_of t c) (DynArray.to_list s.theorems)
+      List.exists (F.flip Theorem.has_cid_of c) (DynArray.to_list s.theorems)
 
     (** Infer invocation kind based on `exp_syn` and the current theorem
      *)
@@ -394,7 +391,7 @@ module Prover = struct
       match
         Misc.DynArray.rfind_opt_idx
           c.theorems
-          (fun t -> Theorem.has_name_of t name)
+          (F.flip Theorem.has_name_of name)
       with
       | None -> false
       | Some (i, t) ->
@@ -406,9 +403,8 @@ module Prover = struct
         incomplete and finished.
      *)
     let full_theorem_list c =
-      List.append
-        (DynArray.to_list c.theorems)
-        (DynArray.to_list c.finished_theorems |> List.map fst)
+      DynArray.to_list c.theorems
+      @ List.map fst (DynArray.to_list c.finished_theorems)
 
     let get_session_kind c : [`introduced | `loaded] =
       let existing_holes = get_existing_holes () in
@@ -421,7 +417,7 @@ module Prover = struct
         |> List.exists
              begin fun thm ->
              existing_holes
-             |> List.map (fun x -> x |> snd |> fst)
+             |> List.map F.(fst ++ snd)
              |> List.exists (Theorem.has_cid_of thm)
              end
       in
@@ -544,22 +540,23 @@ module Prover = struct
     (** Constructs a Theorem.t for the given cid with the given
         subgoals. *)
     let recover_theorem ppf hooks (cid, gs) =
+      let open Comp in
       let e = CompS.get cid in
       let initial_state =
         let s =
-          Comp.make_proof_state Comp.SubgoalPath.start
+          make_proof_state SubgoalPath.start
             ( e.CompS.Entry.typ, Whnf.m_id )
         in
         let prf =
           match e.CompS.Entry.prog with
-          | Some (Comp.ThmValue (_, Comp.Proof p, _, _)) -> p
+          | Some (ThmValue (_, Proof p, _, _)) -> p
           | _ -> B.Error.violation "recovered theorem not a proof"
         in
         dprintf begin fun p ->
           p.fmt "[recover_theorem] @[<v>proof =@,@[%a@]@]"
             P.(fmt_ppr_cmp_proof LF.Empty LF.Empty) prf
           end;
-        s.Comp.solution := Some prf;
+        s.solution := Some prf;
         s
       in
       Theorem.configure
@@ -573,12 +570,10 @@ module Prover = struct
       let theorems =
         let open Nonempty in
         let f =
-          let open F in
           (* after recovering the theorem, set it hidden.
              later, we enter the session, which will bring it into
              scope. *)
-          (fun t -> Theorem.set_hidden t true; t)
-          ++ recover_theorem ppf hooks
+          F.((fun t -> Theorem.set_hidden t true; t) ++ recover_theorem ppf hooks)
         in
         (* XXX to_list -> of_list later is inefficient
            It would be best to add a function to obtain a Seq.t from
@@ -660,8 +655,7 @@ module Prover = struct
         : t =
       let automation_state = Automation.State.make () in
       let hooks = [run_automation automation_state] in
-      let sessions = recover_sessions ppf hooks gs
-      in
+      let sessions = recover_sessions ppf hooks gs in
       let _ =
         (* since all recovered sessions are suspended, we must
            explicitly enter the first one *)
@@ -839,7 +833,7 @@ module Prover = struct
           s.sessions
           begin fun c ->
           List.exists
-            (fun t -> Id.equals (Theorem.get_name t) name)
+            F.(Id.equals name ++ Theorem.get_name)
             (DynArray.to_list c.Session.theorems)
           end
       with
@@ -1100,7 +1094,7 @@ module Prover = struct
             pp_print_list ~pp_sep: pp_print_cut f ppf x
           in
           let print_indexed_session ppf (i, s) =
-            let thms = DynArray.to_list Session.(s.theorems) in
+            let thms = DynArray.to_list s.Session.theorems in
             let print_indexed_theorem ppf (i, t) =
               fprintf ppf "%d. %a" (i + 1) Id.print (Theorem.get_name t)
             in
@@ -1148,18 +1142,14 @@ module Prover = struct
          P.(fmt_ppr_cmp_exp_syn cD cG l0) i
          P.(fmt_ppr_cmp_typ cD l0) tau
 
-    | Command.Info (k, name) ->
+    | Command.Info (k, n) ->
        begin match k with
        | `prog ->
-          begin match
-            try
-              Some (CompS.index_of_name name |> CompS.get)
-            with
-            | Not_found -> None
-          with
+          let open Maybe in
+          begin match CompS.(index_of_name_opt n $> get) with
           | None ->
              State.printf s
-               "- No such theorem by name %a" Id.print name
+               "- No such theorem by name %a" Id.print n
           | Some e ->
              State.printf s
                "- @[%a@]"
@@ -1167,15 +1157,15 @@ module Prover = struct
           end
        end
 
-    | Command.Translate x ->
+    | Command.Translate n ->
        let open Maybe in
-       begin match CompS.(index_of_name_opt x $> get) with
+       begin match CompS.(index_of_name_opt n $> get) with
        | Some entry ->
           State.printf s "%a"
             Translate.fmt_ppr_result (translate s entry)
        | None ->
           State.printf s "No such theorem by name %a defined."
-            Id.print x
+            Id.print n
        end
 
     (* Real tactics: *)
@@ -1249,7 +1239,8 @@ let parse_input k (input : string) : Command.command list e =
   let open B in
   Runparser.parse_string Loc.(move_line k (initial "<prompt>")) input
     Parser.(only interactive_harpoon_command_sequence)
-  |> snd |> Parser.to_either
+  |> snd
+  |> Parser.to_either
   |> Either.lmap (fun e ppf () -> Parser.print_error ppf e)
 
 (** Runs the given function, trapping exceptions in Either.t
@@ -1317,7 +1308,7 @@ let process_input s (c, t, g) input =
   Either.eliminate
     begin fun f ->
     printf "%a" f ();
-    if Prover.(s.State.stop) = `stop then
+    if s.Prover.State.stop = `stop then
       exit 1;
     `error
     end
@@ -1405,7 +1396,7 @@ let start_toplevel
      then (it must have been empty so) we need to create the default
      session and configure it. *)
   B.Gensym.reset ();
-  if DynArray.empty State.(s.sessions) then
+  if DynArray.empty s.State.sessions then
     match State.session_configuration_wizard s with
     | `ok c ->
        State.add_session s c;

@@ -316,3 +316,14 @@ let configure_set ppf (hooks : (t -> Comp.proof_state -> unit) list) (confs : Co
 
 let set_hidden (t : t) b =
   Store.Cid.Comp.set_hidden t.cid (Misc.const b)
+
+type completeness =
+  [ `incomplete
+  | `complete
+  ]
+
+let completeness (t : t) =
+  if DynArray.length t.remaining_subgoals = 0 then
+    `complete
+  else
+    `incomplete

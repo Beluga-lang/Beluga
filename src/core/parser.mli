@@ -48,8 +48,14 @@ val span : 'a t -> 'a locd t
 
 (***** Exported helpers operations *****)
 
+(** Transforms a parse result with a function. *)
 val map : ('a -> 'b) -> 'a t -> 'b t
+
+(** Flipped, operator form of `map`. *)
 val ($>) : 'a t -> ('a -> 'b) -> 'b t
+
+(** Runs the parser, but capturing failure. *)
+val maybe : 'a t -> 'a option t
 
 (***** Exported productions *****)
 

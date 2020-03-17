@@ -158,6 +158,8 @@ module List = struct
   let hd_opt = function
     | [] -> None
     | x :: _ -> Some x
+
+  let index l = List.mapi (fun i x -> (i, x)) l
 end
 
 let id (x : 'a) : 'a = x

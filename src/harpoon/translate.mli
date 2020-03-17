@@ -9,6 +9,9 @@ exception Error of error
 
 type result = (error, Comp.exp_chk) Either.t
 
+(** Translates a theorem given by a Store entry. *)
+val entry : Store.Cid.Comp.Entry.t -> (error, Comp.exp_chk) Either.t
+
 (** Translates a theorem.
     Theorems proven already by a program are returned as-is, but
     theorems proven with a Harpoon proof are translated.

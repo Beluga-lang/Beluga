@@ -55,3 +55,11 @@ val configure : Id.cid_comp_const -> Format.formatter -> (t -> unit subgoal_hook
 val configure_set : Format.formatter -> (t -> unit subgoal_hook) list -> Conf.t list ->
                     Id.cid_mutual_group * t list
 val set_hidden : t -> bool -> unit
+
+type completeness =
+  [ `incomplete
+  | `complete
+  ]
+
+(** Decides whether the theorem is complete. *)
+val completeness : t -> completeness

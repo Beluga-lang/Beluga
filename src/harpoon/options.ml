@@ -58,6 +58,18 @@ let _ =
     | _ -> None
     end
 
+(** The `stop and `go_on flag control what happens in the presence of errors.
+    In particular, the `stop flag will cause Harpoon to exit as soon
+    as an error in encountered instead of continuing to process
+    commands which may not make sense anymore.
+    This is especially important when running tests.
+ *)
+type interaction_mode = [ `stop | `go_on ]
+
+(** Controls the behaviour of saving sessions back to the signature
+    when they are completed. *)
+type save_mode = [ `save_back | `no_save_back ]
+
 type test_kind = [ `incomplete | `complete ]
 type test_file = string * test_kind
 
@@ -67,9 +79,9 @@ type ('a, 'b) t =
   ; all_paths : 'b (* the list of paths resolved from the signature file to load *)
   ; test_file : test_file option (* the harpoon test file to load *)
   ; test_start : int option (* the first line from which the harpoon test file is considered as input *)
-  ; test_stop : [ `stop | `go_on ] (* whether to stop a test script if there's an error *)
+  ; test_stop : interaction_mode (* whether to stop a test script if there's an error *)
   ; load_holes : bool
-  ; save_back : bool
+  ; save_back : save_mode
   }
 
 type parsed_t =
@@ -96,7 +108,7 @@ let options_spec : parsed_t Optparser.OptSpec.t =
   in
   let open Optparser in
   let open OptSpec in
-  begin fun path test_opt test_kind test_start test_stop no_load_holes no_save_back ->
+  begin fun path test_opt test_kind test_start test_stop no_load_holes save_back ->
   let test_file =
     match test_opt, test_kind, test_stop with
     | None, `incomplete, _ ->
@@ -113,7 +125,7 @@ let options_spec : parsed_t Optparser.OptSpec.t =
   ; test_start
   ; test_stop
   ; load_holes = not no_load_holes
-  ; save_back = not no_save_back
+  ; save_back
   }
   end
   <$ string_opt1
@@ -156,9 +168,11 @@ let options_spec : parsed_t Optparser.OptSpec.t =
   <& switch_opt
        [ OptInfo.long_name "no-load-holes"
        ]
-  <& switch_opt
-       [ OptInfo.long_name "no-save-back"
-       ]
+  <& (switch_opt
+        [ OptInfo.long_name "no-save-back"
+        ]
+      $> fun b -> if b then `no_save_back else `save_back
+     )
   <! impure_opt0 handle_debug
        [ OptInfo.long_name "debug"
        ; OptInfo.help_msg

@@ -3,6 +3,8 @@ open Beluga
 open Syntax.Int
 module Loc = Location
 
+module CompS = Store.Cid.Comp
+
 let (dprintf, _, _) = Debug.(makeFunctions' (toFlags [13]))
 open Debug.Fmt
 
@@ -213,3 +215,23 @@ let fmt_ppr_result ppf =
        "@[<v>Translation failed.\
         @,@[%a@]@]"
        fmt_ppr_error err
+
+let entry { CompS.Entry.prog; typ = tau; name; _ } =
+  let prog =
+    Maybe.get'
+      (Error.Violation
+         ("The body of theorem "
+          ^ Id.render_name name ^ " is unknown."))
+      prog
+  in
+  let thm =
+    match prog with
+    | Comp.ThmValue (cid', thm, t, rho) ->
+       assert (match rho with Comp.Empty -> true | _ -> false);
+       assert (match t with LF.MShift 0 -> true | _ -> false);
+       thm
+    | _ ->
+       Error.violation
+         "Looked up theorem is not a theorem value."
+  in
+  trap (fun _ -> theorem thm tau)

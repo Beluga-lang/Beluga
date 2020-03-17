@@ -42,7 +42,7 @@ let create_file (path, k) (test_start : int option) : t =
      print_string msg;
      g_mirror ()
 
-let create test_file test_start : t =
+let make test_file test_start : t =
   match test_file with
   | None -> terminal
   | Some f -> create_file f test_start

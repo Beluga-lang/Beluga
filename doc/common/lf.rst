@@ -21,6 +21,46 @@ The first line defines a new simple LF type ``nat`` and the following lines
 define its constructors, ``zero`` and ``succ``. The number three is written
 ``succ (succ (succ zero))`` in this encoding.
 
+One can define relations on natural numbers by defining *indexed types*. For
+example, we can encode a less-than-equals relation on ``nat`` as follows.
+
+.. code-block:: Beluga
+
+    LF le : nat -> nat -> type =
+      | le_z : le zero N
+      | le_s : le N M ->
+               % ------------------
+               le (succ N) (succ M)
+    ;
+
+Terms of this type encode *proofs*. As a concrete example, a term of type
+``le (succ zero) (succ (succ zero))`` encodes a proof that 2 is less than 4.
+
+First, observe the presence of *free variables* ``M`` and ``N``.
+Any free variable is automatically Pi-quantified at the very front of the
+constructor being defined. Thus, the internal type of ``le_s`` is really
+``{N : nat} {M : nat} le N M -> le (succ N) (succ M)``.
+(Beluga uses curly braces to write Pi-types.)
+We call such automatically quantified variables *implicit parameters*.  The
+types of implicit parameters are determined by *type reconstruction*. It is not
+possible for the user to explicitly provide an instantiation for an implicit
+parameter. Instantiations for implicit parameters are automatically found via
+unification, based on the types of provided arguments.
+In other words, when one writes a term ``le_s Q`` for some argument proof ``Q``,
+it is via the type of ``Q`` that the instantiations for ``N`` and ``M`` are
+found.
+
+Next, the rule ``le_s`` has been suggestively written with a commented line to
+illustrate that one would ordinarily write this as an inference rule. In Beluga,
+we use ``LF`` declarations to uniformly represent the syntax and the inference
+rules of object languages.
+(Semantic predicates about encodings are defined using :ref:`inductive types`.)
+
+One can state a theorem about such an encoding using :ref:`contextual lf` and
+one can prove them by :ref:`writing a functional program <Beluga>` or
+:ref:`interactively <Harpoon>`.
+
+
 HOAS example: lambda calculus
 -----------------------------
 
@@ -59,29 +99,17 @@ call-by-name operational semantics for the lambda calculus.
                % -----------------------
                step (app M N) (app M' N)
 
-     | beta : step (app (lam \x. M) N) (M N)
+     | beta : step (app (lam M) N) (M N)
    ;
 
 First, observe that ``step`` is not a simple type. It is indexed by two terms,
 so we understand it as a binary relation between terms.
 
-Second, observe the presence of *free variables* ``M``, ``M'``, and ``N``. Any
-free variable is automatically Pi-quantified at the very front of the
-constructor being defined. Thus, the internal type of ``e_app`` is really ``{M :
-tm} {M' : tm} {N : tm} step M M' -> step (app M N) (app M' N)``.
-(Beluga uses curly braces to write Pi-types.)
-We call such automatically quantified variables *implicit parameters*.
-The types of implicit parameters are determined by type reconstruction, and it
-is not possible for the user to explicitly provide an instantiation for an
-implicit parameter.
-
-Next, the rule ``e_app`` has been suggestively written with a commented line to
-illustrate that one would ordinarily write this as an inference rule. In Beluga,
-we use ``LF`` declarations to uniformly represent the syntax and the inference
-rules of object languages.
-
 Finally, the rule ``beta`` demonstrates HOAS in action. We use LF function
-application to implement the beta reduction of the lambda calculus.
+application to implement the beta reduction of the lambda calculus. The type of
+the variable ``M`` in this constructor is inferred by type reconstruction as
+``tm -> tm``, given that it appears as the first argument to the constructor
+``lam``.
 
 To complete the example encoding of the lambda calculus, we will now turn our
 attention to a simple type assignment system for this language. First, we will
@@ -106,12 +134,12 @@ In this case, we understand ``oft`` as relating a term ``tm`` to a type ``tp``.
 
       | t_lam : ({x : tm} oft x A -> oft (M x) B) ->
                 % ----------------------------------
-                oft (lam (\x. M)) (arr A B)
+                oft (lam M) (arr A B)
     ;
 
 We will concentrate on the rule ``t_lam``. Here, the variable ``M`` is
-understood as the body of the lambda-abstraction, and it depends on a parameter
-``x``. The premise of this rule reads "for any term ``x``, if ``x`` is of type
+understood as the body of the lambda-abstraction, and it has type ``tm -> tm``.
+The premise of this rule reads "for any term ``x``, if ``x`` is of type
 ``A``, then ``M x`` is of type ``B``". This precisely captures the parametric
 reasoning used on paper when proving that a lambda-abstract has an arrow-type.
 Here it is necessary to explicitly write a Pi-type for ``x`` as leaving it

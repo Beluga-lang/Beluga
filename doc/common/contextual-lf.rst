@@ -87,7 +87,7 @@ well as a typing judgment for this language.
 
       | t_lam : ({x : tm} oft x A -> oft (M x) B) ->
                 % ----------------------------------
-                oft (lam A \x. M) (arr A B)
+                oft (lam A M) (arr A B)
 
 
 This syntax of terms includes a type annotation on lambda abstractions, and the
@@ -111,7 +111,7 @@ explicitly specify the schema of the context variable.
 Second, notice that the metavariables ``A1`` and ``A2``, referring to types, are
 associated with the substitution ``[]`` in the assumptions of the theorem. Type
 reconstruction is in some sense a greedy algorithm, so had these substitutions
-been left out, the of ``A1``, upon appearing as in ``g |- oft M A1``, would be
+been left out, the type of ``A1``, upon appearing in ``g |- oft M A1``, would be
 ``g |- tp``. But this makes no sense because types ought to be *closed* in the
 simply-typed lambda calculus. To specify that the metavariables ``A1`` and
 ``A2`` must be closed, we associate them with a *weakening substitution* ``[]``.
@@ -120,7 +120,9 @@ Confusingly, the reported error had the weakening substitutions been omitted
 would be relating to the occurrences of ``A1`` and ``A2`` in ``|- eq A1
 A2``. Here, the implicit identity substitution would be ill-typed. The type of
 ``A1``, for instance, would be ``g |- tp`` and identity subsitution would
-need to send the context ``g`` to the empty context.
+need to send the context ``g`` to the empty context, which it does not. In
+general, when dealing with ill-typed substitution errors, it is worth paying
+close attention to *every* occurrence of any relevant variables.
 
 Unboxing
 --------

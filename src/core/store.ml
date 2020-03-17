@@ -778,17 +778,13 @@ module Cid = struct
 
 
   module Comp = struct
-    type mutual_group_id = int
-
-    let fmt_ppr_mutual_group_id = Format.pp_print_int
-
     module Entry = struct
       type t =
         { name               : Id.name
         ; implicit_arguments : int
         ; typ                : Int.Comp.typ
         ; prog               : Int.Comp.value option
-        ; mutual_group       : mutual_group_id
+        ; mutual_group       : Id.cid_mutual_group
         (* Totality declarations for all mutually-defined functions.
            If this is None, then the function is not declared to be total.
            If it's an empty list, the interpretation is that that the
@@ -910,6 +906,7 @@ module Cid = struct
     val render_cid_term     : cid_term     -> string
     val render_cid_schema   : cid_schema   -> string
     val render_cid_prog     : cid_prog     -> string
+    val render_cid_mutual_group : cid_mutual_group -> string
     val render_offset       : offset       -> string
 
     val render_ctx_var      : LF.mctx    -> offset   -> string
@@ -932,6 +929,7 @@ module Cid = struct
     let render_cid_term    c   = render_name (Term.fixed_name_of c)
     let render_cid_schema  w   = render_name (Schema.fixed_name_of w)
     let render_cid_prog    f   = render_name (Comp.fixed_name_of f)
+    let render_cid_mutual_group c = string_of_int c
     let render_ctx_var cO g    =
       begin try
         render_name (Context.getNameMCtx cO g)

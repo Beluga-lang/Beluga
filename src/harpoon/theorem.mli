@@ -53,5 +53,5 @@ val rename_variable : Id.name -> Id.name -> [ `comp | `meta ] -> t -> proof_stat
 val configure : Id.cid_comp_const -> Format.formatter -> (t -> unit subgoal_hook) list ->
                 proof_state -> proof_state list -> t
 val configure_set : Format.formatter -> (t -> unit subgoal_hook) list -> Conf.t list ->
-                    CompS.mutual_group_id * t list
+                    Id.cid_mutual_group * t list
 val set_hidden : t -> bool -> unit

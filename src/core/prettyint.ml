@@ -1598,7 +1598,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
        @,@[<hv 2>type:@ @[%a@]@]\
        @,implicit parameters: %d\
        @,hidden: %b\
-       @,mutual_group: @[%a@]\
+       @,mutual_group: @[%s@]\
        @,@[<hv 2>total_decs:@ @[%a@]@]\
        @,@[<hv 2>definition:@ @[%a@]@]\
        @,@]"
@@ -1606,7 +1606,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
       (fmt_ppr_cmp_typ LF.Empty l0) typ
       implicit_arguments
       hidden
-      CompS.fmt_ppr_mutual_group_id mutual_group
+      (R.render_cid_mutual_group mutual_group)
       (Maybe.print (pp_print_list ~pp_sep: pp_print_cut fmt_ppr_cmp_total_dec)) ds
       (Maybe.print (fmt_ppr_cmp_value l0)) prog
 

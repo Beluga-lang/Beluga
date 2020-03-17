@@ -259,13 +259,9 @@ module Cid : sig
   end
 
   module Comp : sig
-    type mutual_group_id
-
-    val fmt_ppr_mutual_group_id : Format.formatter -> mutual_group_id -> unit
-
-    val add_mutual_group : Comp.total_dec list option -> mutual_group_id
-    val unchecked_mutual_group : mutual_group_id
-    val trust_mutual_group : mutual_group_id
+    val add_mutual_group : Comp.total_dec list option -> cid_mutual_group
+    val unchecked_mutual_group : cid_mutual_group
+    val trust_mutual_group : cid_mutual_group
 
       module Entry : sig
         type t =
@@ -273,7 +269,7 @@ module Cid : sig
           ; implicit_arguments : int
           ; typ                : Comp.typ
           ; prog               : Comp.value option
-          ; mutual_group       : mutual_group_id
+          ; mutual_group       : cid_mutual_group
           ; hidden             : bool
           }
         type cid = Id.cid_prog
@@ -285,10 +281,10 @@ module Cid : sig
     val name : cid_comp_const -> name
 
     (** Looks up the total declarations for the given mutual group. *)
-    val lookup_mutual_group : mutual_group_id -> Comp.total_dec list option
+    val lookup_mutual_group : cid_mutual_group -> Comp.total_dec list option
 
     (** Gets the mutual group ID for a given function reference. *)
-    val mutual_group : cid_comp_const -> mutual_group_id
+    val mutual_group : cid_comp_const -> cid_mutual_group
 
     (** Looks up the total declarations for the mutual group of the
         given function.
@@ -296,7 +292,7 @@ module Cid : sig
     val total_decs : cid_comp_const -> Comp.total_dec list option
 
     val mk_entry  : name -> Comp.typ -> int ->
-                    mutual_group_id -> Comp.value option ->
+                    cid_mutual_group -> Comp.value option ->
                     entry
 
     (** If the value we store in the entry is a recursive value, it
@@ -373,8 +369,9 @@ module Cid : sig
     val render_cid_term       : cid_term     -> string
     val render_cid_schema     : cid_schema   -> string
     val render_cid_prog       : cid_prog     -> string
-    val render_offset         : offset       -> string
+    val render_cid_mutual_group : cid_mutual_group -> string
 
+    val render_offset         : offset       -> string
     val render_ctx_var        : LF.mctx    -> offset   -> string
     val render_cvar           : LF.mctx    -> offset   -> string
     val render_bvar           : LF.dctx    -> offset   -> string

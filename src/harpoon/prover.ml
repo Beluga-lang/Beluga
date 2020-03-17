@@ -325,7 +325,7 @@ module Prover = struct
     type t =
       { theorems : Theorem.t DynArray.t
       ; finished_theorems: (Theorem.t * Comp.exp_chk option) DynArray.t
-      ; mutual_group : CompS.mutual_group_id
+      ; mutual_group : Id.cid_mutual_group
       }
 
     let make mutual_group thms =
@@ -721,7 +721,7 @@ module Prover = struct
     (** Runs the theorem configuration prompt to construct a mutual
         group of theorems.
      *)
-    let session_configuration_wizard' s : CompS.mutual_group_id * Theorem.t list =
+    let session_configuration_wizard' s : Id.cid_mutual_group * Theorem.t list =
       let rec do_prompts i : Theorem.Conf.t list =
         printf s "Configuring theorem #%d@." i;
         (* prompt for name, and allow using empty to signal we're done. *)

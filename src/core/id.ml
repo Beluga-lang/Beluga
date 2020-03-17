@@ -138,6 +138,9 @@ type cid_comp_dest = module_id * int
 type cid_comp_typdef = module_id * int
 type cid_prog   = module_id * int
 
+(** Used to identify a group of mutually proven theorems. *)
+type cid_mutual_group = int
+
 type offset     = int
 
 type var        = int

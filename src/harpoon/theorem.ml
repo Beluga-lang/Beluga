@@ -265,7 +265,7 @@ let configure cid ppf hooks initial_state gs =
     to the store.
  *)
 let configure_set ppf (hooks : (t -> Comp.proof_state -> unit) list) (confs : Conf.t list)
-    : CompS.mutual_group_id * t list =
+    : Id.cid_mutual_group * t list =
   let mutual_group =
     CompS.add_mutual_group
       (Some (List.map fst confs))

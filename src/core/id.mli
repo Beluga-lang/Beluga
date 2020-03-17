@@ -67,6 +67,9 @@ type cid_comp_typdef = module_id * int
 (** A constant identifier for recursive computations/programs *)
 type cid_prog = module_id * int
 
+(** A constant identifier for a group of mutually proven theorems. *)
+type cid_mutual_group = int
+
 (** An offset to be used during shifting for a DeBruijn variable
     representation *)
 type offset   = int

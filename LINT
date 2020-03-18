@@ -3,31 +3,23 @@
 # Emit an error if undefined variable is used.
 set -u
 
-# Allow glob to match files and directories in subdirectories
-shopt -s globstar
-shopt -s nullglob
-
 # Path to the Beluga source distribution.
 declare -r BELUGADIR=${BELUGADIR:-$(dirname "${BASH_SOURCE[0]}")}
 
 # Path to the Beluga source codes.
 declare -r SOURCE_DIR=${SOURCE_DIR:-"${BELUGADIR}/src"}
 
-declare -A LINT_RESULT=(
-    [success]=0
-    [fail]=0
-    [total]=0
-)
+declare -i LINT_RESULT_SUCCESS=0
+declare -i LINT_RESULT_FAIL=0
+declare -i LINT_RESULT_TOTAL=0
 
-declare -A C=(
-    [success]=""
-    [fail]=""
-    [added]=""
-    [added_back]=""
-    [removed]=""
-    [removed_back]=""
-)
-declare CEND=""
+declare C_SUCCESS=""
+declare C_FAIL=""
+declare C_ADDED=""
+declare C_ADDED_BACK=""
+declare C_REMOVED=""
+declare C_REMOVED_BACK=""
+declare C_END=""
 
 function main {
     local clean_output diff_output diff_code
@@ -36,51 +28,51 @@ function main {
 
     for f in $(find "${SOURCE_DIR}" -type f -name "*.ml" -or -type f -name "*.mli" | sort -n); do
         printf "** LINT: %-40s ... " "${f}"
-        (( LINT_RESULT[total]+=1 ))
+        (( LINT_RESULT_TOTAL+=1 ))
 
         clean_output=$(sed 's/[[:space:]]*$//' "${f}" 2>&1)
         diff_output=$(printf "%s\n" "${clean_output}" | diff --label "original ${f}" -u "${f}" --label "cleaned  ${f}" - 2>/dev/null)
         diff_code=$?
 
         if [[ "${diff_code}" -eq 0 ]]; then
-            echo -e "${C[success]}SUCCESS${CEND}"
-            (( LINT_RESULT[success]+=1 ))
+            echo -e "${C_SUCCESS}SUCCESS${C_END}"
+            (( LINT_RESULT_SUCCESS+=1 ))
         else
-            echo -e "${C[fail]}LINT FAILURE - TRAILING WHITESPACES${CEND}"
-            (( LINT_RESULT[fail]+=1 ))
+            echo -e "${C_FAIL}LINT FAILURE - TRAILING WHITESPACES${C_END}"
+            (( LINT_RESULT_FAIL+=1 ))
 
             echo "${diff_output}" | colorize_diff
         fi
     done
 
     echo
-    echo "Successes: ${LINT_RESULT[success]}"
-    echo " Failures: ${LINT_RESULT[fail]}"
-    echo "    Total: ${LINT_RESULT[total]}"
+    echo "Successes: ${LINT_RESULT_SUCCESS}"
+    echo " Failures: ${LINT_RESULT_FAIL}"
+    echo "    Total: ${LINT_RESULT_TOTAL}"
     echo
     times
 
-    exit $(( ! ! (LINT_RESULT[fail]) ))
+    exit $(( ! ! (LINT_RESULT_FAIL) ))
 }
 
 function set_colors {
-    C[success]="\x1b[01;32m"         # foreground bold green
-    C[fail]="\x1b[01;31m"            # foreground bold red
-    C[added]="\x1b[32m"              # foreground green
-    C[added_back]="\x1b[42;1m"       # background bright green
-    C[removed]="\x1b[31m"            # foreground red
-    C[removed_back]="\x1b[41;1m"     # background bright red
-    CEND="\x1b[00m"                  # reset colors
+    C_SUCCESS="\x1b[01;32m"         # foreground bold green
+    C_FAIL="\x1b[01;31m"            # foreground bold red
+    C_ADDED="\x1b[32m"              # foreground green
+    C_ADDED_BACK="\x1b[42;1m"       # background bright green
+    C_REMOVED="\x1b[31m"            # foreground red
+    C_REMOVED_BACK="\x1b[41;1m"     # background bright red
+    C_END="\x1b[00m"                  # reset colors
 }
 
 function colorize_diff {
     sed "s/^+++/file+++/
          s/^---/file---/
-         s/^+/${C[added]}+${C[added_back]}/
-         s/^-/${C[removed]}-${C[removed_back]}/
-         s/\$/${CEND}/
-         s/^file+++/${C[added]}+++/
-         s/^file---/${C[removed]}---/"
+         s/^+/${C_ADDED]}+${C_ADDED_BACK]}/
+         s/^-/${C_REMOVED]}-${C_REMOVED_BACK]}/
+         s/\$/${C_END}/
+         s/^file+++/${C_ADDED]}+++/
+         s/^file---/${C_REMOVED]}---/"
 }
 
 main "$@"

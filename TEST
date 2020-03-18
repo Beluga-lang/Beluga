@@ -3,8 +3,6 @@
 # Emit an error if undefined variable is used.
 set -u
 
-# Allow glob to match files and directories in subdirectories
-shopt -s globstar
 shopt -s nullglob
 
 # Option flags.
@@ -64,38 +62,24 @@ for p in "${EXE}" "${LEX_CHECK}" "${REPLAY}" "${HARPOON}" ; do
     require_program_exists "${p}"
 done
 
-declare -A TEST_RESULT=(
-    [total]=0
-    [success]=0
-    [timeout]=0
-    [admissible]=0
-    [fail]=0
-    [lexer_fail]=0
-    [replay_fail]=0
-    [harpoon_fail]=0
-)
+declare -i TEST_RESULT_TOTAL=0
+declare -i TEST_RESULT_SUCCESS=0
+declare -i TEST_RESULT_TIMEOUT=0
+declare -i TEST_RESULT_ADMISSIBLE=0
+declare -i TEST_RESULT_FAIL=0
+declare -i TEST_RESULT_LEXER_FAIL=0
+declare -i TEST_RESULT_REPLAY_FAIL=0
+declare -i TEST_RESULT_HARPOON_FAIL=0
 
-declare -A C=(
-    [start]=""
-    [admissible]=""
-    [ok]=""
-    [timeout]=""
-    [fail]=""
-    [lex_fail]=""
-    [added]=""
-    [removed]=""
-)
-declare CEND=""
-
-declare -Ar TYPE_TO_C=(
-    [success]="ok"
-    [timeout]="timeout"
-    [admissible]="admissible"
-    [fail]="fail"
-    [lexer_fail]="lexer_fail"
-    [replay_fail]="fail"
-    [harpoon_fail]="fail"
-)
+declare C_START=""
+declare C_ADMISSIBLE=""
+declare C_OK=""
+declare C_TIMEOUT=""
+declare C_FAIL=""
+declare C_LEX_FAIL=""
+declare C_ADDED=""
+declare C_REMOVED=""
+declare C_END=""
 
 function main {
     cd "${ROOTDIR}"
@@ -211,12 +195,15 @@ function do_testing {
             exit_code=$?
 
             if [ "${exit_code}" -eq 152 ] ; then
-                process_result "timeout" "TIMEOUT"
+                echo -e "${C_TIMEOUT}TIMEOUT${C_END}"
+                (( TEST_RESULT_TIMEOUT+=1 ))
             elif [ "${exit_code}" -ne 0 ] ; then
-                process_result "replay_fail" "FAIL"
+                echo -e "${C_FAIL}FAIL${C_END}"
+                (( TEST_RESULT_FAIL+=1 ))
                 echo "${output}"
             else
-                process_result "success" "OK"
+                echo -e "${C_OK}OK${C_END}"
+                (( TEST_RESULT_SUCCESS+=1 ))
             fi
         done
     fi
@@ -230,18 +217,18 @@ function do_testing {
     done
 
     echo
-    echo "Successes: ${TEST_RESULT[success]}"
-    echo "Failures: ${TEST_RESULT[fail]}"
-    echo "Lexer failures: ${TEST_RESULT[lexer_fail]}"
-    echo "Admissible failures: ${TEST_RESULT[admissible]}"
-    echo "Timeouts: ${TEST_RESULT[timeout]}"
-    echo "Interactive mode failures: ${TEST_RESULT[replay_fail]}"
-    echo "Harpoon mode failures: ${TEST_RESULT[harpoon_fail]}"
-    echo "Total: ${TEST_RESULT[total]}"
+    echo "Successes: ${TEST_RESULT_SUCCESS}"
+    echo "Failures: ${TEST_RESULT_FAIL}"
+    echo "Lexer failures: ${TEST_RESULT_LEXER_FAIL}"
+    echo "Admissible failures: ${TEST_RESULT_ADMISSIBLE}"
+    echo "Timeouts: ${TEST_RESULT_TIMEOUT}"
+    echo "Interactive mode failures: ${TEST_RESULT_REPLAY_FAIL}"
+    echo "Harpoon mode failures: ${TEST_RESULT_HARPOON_FAIL}"
+    echo "Total: ${TEST_RESULT_TOTAL}"
     echo
     times
 
-    (( is_failed=TEST_RESULT[fail] + TEST_RESULT[timeout] + TEST_RESULT[lexer_fail] + TEST_RESULT[replay_fail] + TEST_RESULT[harpoon_fail] ))
+    (( is_failed=TEST_RESULT_FAIL + TEST_RESULT_TIMEOUT + TEST_RESULT_LEXER_FAIL + TEST_RESULT_REPLAY_FAIL + TEST_RESULT_HARPOON_FAIL ))
     # If not all tests succeeded then exit with non-zero status.
     # double-negate the failure count to get 0 if it was zero, and
     # 1 if it was nonzero.
@@ -257,13 +244,15 @@ function lex_check_test_case {
     exit_code=$?
 
     if [ "${exit_code}" -eq 2 ] ; then
-        process_result "lexer_fail" "FATAL LEXER FAILURE"
+        echo -e "${C_FAIL}FATAL LEXER FAILURE${C_END}"
+        (( TEST_RESULT_LEXER_FAIL+=1 ))
         stop_on_failure
         return 1
     fi
 
     if [ "${exit_code}" -ne 0 ] ; then
-        process_result "lexer_fail" "LEXER FAILURE"
+        echo -e "${C_FAIL}LEXER FAILURE${C_END}"
+        (( TEST_RESULT_LEXER_FAIL+=1 ))
         stop_on_failure
         return 1
     fi
@@ -285,15 +274,19 @@ function check_compiler_test_case {
     diff_code=$?
 
     if [ "${exit_code}" -eq 152 ];then
-        process_result "timeout" "TIMEOUT"
+        echo -e "${C_TIMEOUT}TIMEOUT${C_END}"
+        (( TEST_RESULT_TIMEOUT+=1 ))
         stop_on_failure
     elif [[ "${diff_code}" -eq 0 || ("${exit_code}" -eq 0 && "${diff_code}" -eq 2) ]]; then
-        process_result "success" "OK"
+        echo -e "${C_OK}OK${C_END}"
+        (( TEST_RESULT_SUCCESS+=1 ))
     else
         if grep -q "${file_path}" .admissible-fail ; then
-            process_result "admissible" "ADMISSIBLE"
+            echo -e "${C_ADMISSIBLE}ADMISSIBLE${C_END}"
+            (( TEST_RESULT_ADMISSIBLE+=1 ))
         else
-            process_result "fail" "FAIL"
+            echo -e "${C_FAIL}FAIL${C_END}"
+            (( TEST_RESULT_FAIL+=1 ))
 
             if [ -z "${diff_output}" ]; then
                 echo "${output}"
@@ -320,14 +313,17 @@ function check_harpoon {
     exit_code=$?
 
     if [ "${exit_code}" -eq 152 ] ; then
-        process_result "timeout" "TIMEOUT"
+        echo -e "${C_TIMEOUT}TIMEOUT${C_END}"
+        (( TEST_RESULT_TIMEOUT+=1 ))
         stop_on_failure
     elif [ "${exit_code}" -ne 0 ] ; then
-        process_result "harpoon_fail" "FAIL"
+        echo -e "${C_FAIL}FAIL${C_END}"
+        (( TEST_RESULT_HARPOON_FAIL+=1 ))
         print_harpoon_output_on_failure "${output}"
         stop_on_failure
     else
-        process_result "success" "OK"
+        echo -e "${C_OK}OK${C_END}"
+        (( TEST_RESULT_SUCCESS+=1 ))
     fi
 }
 
@@ -360,17 +356,8 @@ function check_harpoon_output {
 function start_test_case {
     local -r file_path=$1
 
-    (( TEST_RESULT[total]+=1 ))
-    echo -ne "${C[start]}**${CEND} TEST ${TEST_RESULT[total]}: ${file_path} ... "
-}
-
-function process_result {
-    local -r type=$1 message=$2
-
-    local -r color=${TYPE_TO_C[${type}]}
-
-    echo -e "${C[${color}]}${message}${CEND}"
-    (( TEST_RESULT[${type}]+=1 ))
+    (( TEST_RESULT_TOTAL+=1 ))
+    echo -ne "${C_START}**${C_END} TEST ${TEST_RESULT_TOTAL}: ${file_path} ... "
 }
 
 function print_harpoon_output_on_failure {
@@ -390,10 +377,10 @@ function stop_on_failure {
 function find_compiler_tests_in {
     local -a tests
 
-    for dir in "$1"/**/; do
-        tests=("${dir}"*.cfg)
+    for dir in $(find "$1" -mindepth 1 -type d) ; do
+        tests=("${dir}/"*.cfg)
         if [ "${#tests[@]}" -eq 0 ]; then
-            tests=("${dir}"*.bel)
+            tests=("${dir}/"*.bel)
         fi
 
         if [ "${#tests[@]}" -gt 0 ]; then
@@ -440,21 +427,21 @@ function print_paths {
 }
 
 function set_colors {
-    C[start]="\x1b[34m"              # foreground blue
-    C[admissible]="\x1b[01;33m"      # foreground bold yellow
-    C[ok]="\x1b[01;32m"              # foreground bold green
-    C[timeout]="\x1b[01;35m"         # foreground bold magenta
-    C[fail]="\x1b[01;31m"            # foreground bold red
-    C[lexer_fail]="\x1b[01;36m"      # foreground bold cyan
-    C[added]="\x1b[32m"              # foreground green
-    C[removed]="\x1b[31m"            # foreground red
-    CEND="\x1b[00m"                     # reset colors
+    C_START="\x1b[34m"              # foreground blue
+    C_ADMISSIBLE="\x1b[01;33m"      # foreground bold yellow
+    C_OK="\x1b[01;32m"              # foreground bold green
+    C_TIMEOUT="\x1b[01;35m"         # foreground bold magenta
+    C_FAIL="\x1b[01;31m"            # foreground bold red
+    C_LEXER_FAIL="\x1b[01;36m"      # foreground bold cyan
+    C_ADDED="\x1b[32m"              # foreground green
+    C_REMOVED="\x1b[31m"            # foreground red
+    C_END="\x1b[00m"                     # reset colors
 }
 
 function colorize_diff {
-    sed "s/^+/${C[added]}+/
-         s/^-/${C[removed]}-/
-         s/\$/${CEND}/"
+    sed "s/^+/${C_ADDED}+/
+         s/^-/${C_REMOVED}-/
+         s/\$/${C_END}/"
 }
 
 main "$@"

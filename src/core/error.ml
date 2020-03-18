@@ -1,5 +1,6 @@
 open Support
 
+module F = Misc.Function
 module Loc = Location
 
 open Debug.Fmt
@@ -35,6 +36,29 @@ let print f =
   let str = Buffer.contents error_format_buffer in
   Buffer.reset error_format_buffer;
   str
+
+let register_printing_function
+      (extract : exn -> 'a option)
+      (fmt_ppr : Format.formatter -> 'a -> unit)
+    : unit =
+  let open F in
+  register_printer'
+    (Maybe.map (fun e -> print (fun ppf -> fmt_ppr ppf e)) ++ extract)
+
+let register_located_printing_function
+      (extract : exn -> (Loc.t * 'a) option)
+      (fmt_ppr : Format.formatter -> 'a -> unit)
+    : unit =
+  let f (loc, e) =
+    print
+      begin fun ppf ->
+      Format.fprintf ppf "@[<v>%a:@,%a@]"
+        Loc.print loc
+        fmt_ppr e
+      end
+  in
+  let open F in
+  register_printer' (Maybe.map f ++ extract)
 
 let print_location loc =
   Format.fprintf error_format "%a:@," Loc.print loc

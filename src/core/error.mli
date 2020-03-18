@@ -30,6 +30,18 @@ val register_printer : (exn -> print_result) -> unit
  *)
 val register_printer' : (exn -> print_result option) -> unit
 
+(** Registers a printer for an exception using the a given exception
+    selection function and exception formatter. *)
+val register_printing_function : (exn -> 'a option) ->
+                                 (Format.formatter -> 'a -> unit) ->
+                                 unit
+
+(** Registers a printer for an exception that carries a location using
+    the given exception selection function and exception formatter. *)
+val register_located_printing_function : (exn -> (Loc.t * 'a) option) ->
+                                         (Format.formatter -> 'a -> unit) ->
+                                         unit
+
 (** Use suplied formatter for printing errors. *)
 val print : (Format.formatter -> unit) -> print_result
 

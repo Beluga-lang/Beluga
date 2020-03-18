@@ -1,9 +1,9 @@
 language: c
-os:
-  - linux
+os: linux
 # See https://opam.ocaml.org/doc/Install.html#Ubuntu
 # for the reason why bionic(18.04) is used
 dist: bionic
+
 env:
   global:
     OPAMYES: true
@@ -12,6 +12,13 @@ env:
     - OCAML_VERSION=4.07
     - OCAML_VERSION=4.08
     - OCAML_VERSION=4.09
+
+jobs:
+  include:
+    - os: osx
+      env:
+        - OCAML_VERSION=4.07
+
 notifications:
   email:
     - beluga-dev@cs.mcgill.ca
@@ -22,15 +29,24 @@ notifications:
     on_failure: always
 
 # See https://docs.travis-ci.com/user/installing-dependencies/#installing-packages-with-the-apt-addon
+# and https://docs.travis-ci.com/user/installing-dependencies/#installing-packages-on-macos
 addons:
   apt:
-    packages: opam
+    packages:
+      - opam
     sources:
       - sourceline: ppa:avsm/ppa
     update: true
+  homebrew:
+    update: true
+    packages:
+      - gpatch
+      - opam
+
 cache:
   directories:
     - $HOME/.opam
+
 before_install: ci/travis-ci-before-install.sh
 install: ci/travis-ci-install.sh
 script: ci/travis-ci-build.sh

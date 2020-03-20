@@ -713,6 +713,8 @@ module Make (R : Store.Cid.RENDERER) : Printer.Ext.T = struct
 
     | Comp.Hole (_) -> fprintf ppf " ? "
 
+    | Comp.BoxHole _ -> fprintf ppf " _ "
+
     | Comp.Impossible (_, i) ->
       fprintf ppf "%s %a"
         (to_html "impossible" Keyword)

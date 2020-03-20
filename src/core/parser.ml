@@ -2380,6 +2380,7 @@ and cmp_exp_chk' =
             Comp.Pair (Loc.join l1 l2, e1, e2))
       in
       let hole = hole |> span $> fun (loc, h) -> Comp.Hole (loc, h) in
+      let box_hole = token T.UNDERSCORE |> span $> fun (loc, _) -> Comp.BoxHole loc in
       let meta_obj =
         meta_obj
         |> span
@@ -2394,6 +2395,7 @@ and cmp_exp_chk' =
           ; impossible (* empty case expression *)
           ; nested (* an expression nested in parens or a tuple *)
           ; hole
+          ; box_hole
           ; meta_obj
           ; lets (* let expressions: true let and pattern let *)
           ]

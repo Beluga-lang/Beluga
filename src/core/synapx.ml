@@ -150,6 +150,7 @@ module Comp = struct
      | Case   of Loc.t * case_pragma * exp_syn * branch list    (* case i of bs *)
      | Impossible of Loc.t * exp_syn                            (* impossible i *)
      | Hole   of Loc.t * string option                          (* ?name *)
+     | BoxHole of Loc.t                                         (* _ *)
 
   and exp_syn =
      | Var    of Loc.t * offset                                     (* x              *)

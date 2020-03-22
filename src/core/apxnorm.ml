@@ -318,6 +318,8 @@ let rec cnormApxExp cD delta e (cD'', t) = match e with
 
   | Apx.Comp.Hole (loc, name) -> Apx.Comp.Hole (loc, name)
 
+  | Apx.Comp.BoxHole loc -> Apx.Comp.BoxHole loc
+
 and cnormApxExp' cD delta i cDt = match i with
   | Apx.Comp.Var (_, _x) -> i
   | Apx.Comp.DataConst (_, _c) -> i
@@ -774,12 +776,12 @@ let fmvApxHat loc fMVs cD (l_cd1, l_delta, k) phat =
   | _ -> phat
 
 let rec fmvApxExp fMVs cD ((l_cd1, l_delta, k) as d_param) e = match e with
-  | Apx.Comp.Syn (loc, i)       -> Apx.Comp.Syn (loc, fmvApxExp' fMVs cD d_param  i)
-  | Apx.Comp.Fn (loc, f, e)    ->
+  | Apx.Comp.Syn (loc, i) -> Apx.Comp.Syn (loc, fmvApxExp' fMVs cD d_param  i)
+  | Apx.Comp.Fn (loc, f, e) ->
      Apx.Comp.Fn (loc, f, fmvApxExp fMVs cD d_param  e)
-  | Apx.Comp.Fun (loc, fbr)    ->
+  | Apx.Comp.Fun (loc, fbr) ->
      Apx.Comp.Fun (loc, fmvApxFBranches fMVs cD d_param fbr)
-  | Apx.Comp.MLam (loc, u, e)   ->
+  | Apx.Comp.MLam (loc, u, e) ->
      Apx.Comp.MLam (loc, u, fmvApxExp fMVs cD (l_cd1, l_delta, (k+1))  e)
   | Apx.Comp.Pair (loc, e1, e2) ->
      let e1' = fmvApxExp fMVs cD d_param  e1 in
@@ -804,7 +806,10 @@ let rec fmvApxExp fMVs cD ((l_cd1, l_delta, k) as d_param) e = match e with
   | Apx.Comp.Case (loc, prag, i, branch) ->
      Apx.Comp.Case (loc, prag, fmvApxExp' fMVs cD d_param  i,
                     fmvApxBranches fMVs cD d_param  branch)
+
   | Apx.Comp.Hole (loc, name) -> Apx.Comp.Hole (loc, name)
+
+  | Apx.Comp.BoxHole loc -> Apx.Comp.BoxHole loc
 
 and fmvApxExp' fMVs cD ((l_cd1, l_delta, k) as d_param)  i = match i with
   | Apx.Comp.Var (_, _x) -> i

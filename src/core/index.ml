@@ -1269,6 +1269,8 @@ let rec index_exp cvars vars fcvars = function
 
   | Ext.Comp.Hole (loc, name) -> Apx.Comp.Hole (loc, name)
 
+  | Ext.Comp.BoxHole loc -> Apx.Comp.BoxHole loc
+
 and index_exp' cvars vars fcvars =
   function
   | Ext.Comp.Name (loc, x) ->

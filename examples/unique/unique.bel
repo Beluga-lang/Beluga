@@ -68,8 +68,8 @@ mlam g => mlam E => fn d => fn f => case [g |- E ] of
   let [g |- t_lam (\x.(\u. F))] = f in
   let [ |- C2] = unique [g,b: block x:exp, _t:type_of x T1[]]
                       [g,b |- E[..,b.1] ] [g,b |- D[..,b.1,b.2]] [g,b |- F[..,b.1,b.2]] in
- let [ |- C1] = refl [ |- T1 ] in
-   [ |- e_arr C1 C2]
+  let [ |- C1] = refl [ |- T1 ] in
+  [ |- e_arr C1 C2]
 
 | [g |- #p.1] =>
    % #p: l          block a:exp. type_of a R
@@ -86,8 +86,7 @@ mlam g => mlam E => fn d => fn f => case [g |- E ] of
    % #r.2 : type_of (#r.1) S'  = f : type_of (#p.1) T'
    % S' = T' ,  #r=#p  , R = S'
 
-    refl [ |- _ ]
-
+    refl _
 ;
 
 

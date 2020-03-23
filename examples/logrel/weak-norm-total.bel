@@ -139,7 +139,7 @@ rec bwd_closed' : {A:[|- tp]}{M:[|- tm A]}{M':[|- tm A]}{S:[ |- step M M']} Redu
   let Arr ha f = r in
     Arr (halts_step [ |- MS] ha)
 	(mlam N => fn rn =>
-	 bwd_closed' [|- B] [|- _ ] [|- _ ] [ |- stepapp MS] (f [ |- N] rn))
+	 bwd_closed' [|- B] _ _ [ |- stepapp MS] (f [ |- N] rn))
 ;
 
 rec bwd_closed : {S:[ |- step M M']} Reduce [|- A] [ |- M'] -> Reduce [|- A] [ |- M] =
@@ -204,7 +204,7 @@ mlam gamma, M => fn rs => case [gamma |- M] of
 
 | [gamma |- app M1 M2] =>
   let Arr ha f = main [gamma] [gamma |- M1] rs in
-  f [ |- _ ] (main [gamma] [gamma |- M2] rs)
+  f _ (main [gamma] [gamma |- M2] rs)
 | [gamma |-  c] =>  I [ |- halts/m refl val/c]
 ;
 

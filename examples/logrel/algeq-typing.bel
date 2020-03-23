@@ -312,7 +312,7 @@ mlam T => fn e1 => fn e2 => case [|- T] of
   LogArr [g |-  M] [g |-  P] (mlam h,$W,V1,D1,V2,D2 => fn v =>
    logEqTrans [|- T2] (f1 [h] [h |- $W] [h |-  V1] [h|- D1] [h |-  V2] [h |- D2] v)
                       (f2 [h] [h |- $W] [h |-  V2] [h|- D2] [h |-  V2] [h |- D2]
-                      (logEqTrans [|- T1] (logEqSym [|- _ ] v) v)));
+                      (logEqTrans [|- T1] (logEqSym _ v) v)));
 
 
 deq : tm -> tm -> tp -> type.
@@ -366,7 +366,7 @@ rec logEqSubSym :
  / total e (logEqSubSym g h sigma sigma' e) /
 fn e => case e of
 | Nil => Nil
-| Dot e' e1 [h |- D1] [h |- D2] => Dot (logEqSubSym e') (logEqSym  [|- _ ] e1) [h |- D2] [h |- D1];
+| Dot e' e1 [h |- D1] [h |- D2] => Dot (logEqSubSym e') (logEqSym _ e1) [h |- D2] [h |- D1];
 
 % Transitivity of logical equivalence on substitutions
 rec logEqSubTrans :
@@ -376,7 +376,7 @@ rec logEqSubTrans :
 / total e1 (logEqSubTrans g g h s1 s2 s3 e1) /
 fn e1 => fn e2 => case e1 of
 | Nil => let Nil = e2 in Nil
-| Dot e1' x1 [h |- D1] [h |- D2] => let Dot e2' x2 [h |- D3] [h |- D4] = e2 in Dot (logEqSubTrans e1' e2') (logEqTrans [|- _ ] x1 x2) [h |- D1] [h |- D4];
+| Dot e1' x1 [h |- D1] [h |- D2] => let Dot e2' x2 [h |- D3] [h |- D4] = e2 in Dot (logEqSubTrans e1' e2') (logEqTrans _ x1 x2) [h |- D1] [h |- D4];
 
 
 rec lookup : {g:ctx}{#p:[g |- block (x:tm, u: oft x Q[])]} LogSub [g] [h |- $S1] [h |- $S2]
@@ -477,7 +477,7 @@ case d of
   let [h |- E1] = dtp1 [h |- D2[$S1]] in
   let [h |- E2] = dtp2 [h |- D2[$S2]] in
    let q0 = thm [g,b:block x:tm,y:oft x _ |- D1[..,b.1,b.2]] (Dot s (thm [g |- D2] s)  [h |- E1] [h |- E2]) in
-   closed [|- _] [h |- trans1 beta refl] [h |- refl] q0
+   closed _ [h |- trans1 beta refl] [h |- refl] q0
 | [g |- d_lam \x.\y. E1] =>
   let ([g |- _ ] : [g |- deq (lam \x.M1) (lam \x.M2) (arr P[] Q[])]) = d in
   LogArr [h |- lam (\x. M1[$S1[..],x])] [h |- lam (\x. M2[$S2[..],x])]
@@ -493,8 +493,8 @@ case d of
     thm [g,b:block x:tm,y:oft x _ |- D0[..,b.1,b.2]] q0
   )
 | [g |- d_refl D1] => thm' [g |- D1] s
-| [g |- d_sym D1] => logEqSym [|- _] (thm [g |- D1] (logEqSubSym s))
-| [g |- d_trans D1 D2] => logEqTrans [|- _] (thm [g |- D1] s) (thm [g |- D2] (logEqSubTrans (logEqSubSym s) s))
+| [g |- d_sym D1] => logEqSym _ (thm [g |- D1] (logEqSubSym s))
+| [g |- d_trans D1 D2] => logEqTrans _ (thm [g |- D1] s) (thm [g |- D2] (logEqSubTrans (logEqSubSym s) s))
 ;
 
 

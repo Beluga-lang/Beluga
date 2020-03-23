@@ -682,7 +682,7 @@ let rec elCompTyp cD tau = match tau with
       let cS' = elMetaSpine loc cD cS (tK, C.m_id) in
         Int.Comp.TypBase (loc, a ,cS')
 
-| Apx.Comp.TypCobase (loc, a, cS) ->
+  | Apx.Comp.TypCobase (loc, a, cS) ->
       let _ = dprint (fun () -> "[elCompCotyp] Cobase : " ^ R.render_cid_comp_cotyp a) in
       let tK = (CompCotyp.get a).CompCotyp.Entry.kind in
       dprintf
@@ -1029,12 +1029,12 @@ and elExpW cD cG e theta_tau = match (e, theta_tau) with
         Int.Comp.Let (loc, i', (x,  e'))
 
 
-  | (Apx.Comp.Box (loc, cM), (Int.Comp.TypBox (_loc, cT), theta)) ->
+  | (Apx.Comp.Box (loc, cM), (Int.Comp.TypBox (_, cT), theta)) ->
      let cM = elMetaObj cD cM (cT, theta) in
      let cU = Whnf.cnormMTyp (cT, theta) in
      Int.Comp.Box (loc, cM, cU)
 
-  | Apx.Comp.Impossible (loc, i), (tau, theta) ->
+  | (Apx.Comp.Impossible (loc, i), (tau, theta)) ->
      let i', ttau' = elExp' cD cG i in
      let _, (i', _) =
        Check.Comp.genMApp loc F.(not ++ Int.LF.is_explicit) cD (i', ttau')
@@ -1085,15 +1085,33 @@ and elExpW cD cG e theta_tau = match (e, theta_tau) with
      let name = HoleId.name_of_option name in
      Int.Comp.Hole (loc, id, name)
 
+  | (Apx.Comp.BoxHole loc, (Int.Comp.TypBox (_, cT), theta)) ->
+     let cM =
+       ( Loc.ghost
+       , Apx.Comp.ClObj
+           ( Apx.LF.CtxHole
+           , Apx.LF.Dot
+               ( Apx.LF.Obj (Apx.LF.Root (Loc.ghost, Apx.LF.Hole, Apx.LF.Nil))
+               , Apx.LF.EmptySub
+               )
+           )
+       )
+     in
+     let cM = elMetaObj cD cM (cT, theta) in
+     let cU = Whnf.cnormMTyp (cT, theta) in
+     Int.Comp.Box (loc, cM, cU)
+
   (* TODO postpone to reconstruction *)
   (* Error handling cases *)
-  | (Apx.Comp.Fn (loc, _x, _e),  tau_theta ) ->
+  | (Apx.Comp.Fn (loc, _, _),  tau_theta ) ->
       raise (Check.Comp.Error (loc, Check.Comp.BasicMismatch (`fn, cD, cG, tau_theta)))
-  | (Apx.Comp.MLam (loc, _u, _e), tau_theta) ->
+  | (Apx.Comp.MLam (loc, _, _), tau_theta) ->
       raise (Check.Comp.Error (loc, Check.Comp.BasicMismatch (`mlam, cD, cG, tau_theta)))
-  | (Apx.Comp.Pair(loc, _ , _ ), tau_theta) ->
+  | (Apx.Comp.Pair(loc, _, _), tau_theta) ->
       raise (Check.Comp.Error (loc, Check.Comp.BasicMismatch (`pair, cD, cG, tau_theta)))
-  | (Apx.Comp.Box (loc, _ ) , tau_theta) ->
+  | (Apx.Comp.Box (loc, _), tau_theta) ->
+      raise (Check.Comp.Error (loc, Check.Comp.BasicMismatch (`box, cD, cG, tau_theta)))
+  | (Apx.Comp.BoxHole loc, tau_theta) ->
       raise (Check.Comp.Error (loc, Check.Comp.BasicMismatch (`box, cD, cG, tau_theta)))
 
 and elExp' cD cG i =
@@ -1189,8 +1207,8 @@ and elExp' cD cG i =
          k
          P.(fmt_ppr_cmp_exp_syn cD cG l0) i'
        end;
-     begin match e , tau_theta' with
-     | e , (Int.Comp.TypArr (loc', tau2, tau), theta) ->
+     begin match e, tau_theta' with
+     | e, (Int.Comp.TypArr (loc', tau2, tau), theta) ->
         dprintf
           begin fun p ->
           p.fmt "[elExp'] @[<v>i' = @[%a@]@,inferred type: @[%a@]@,\
@@ -1227,15 +1245,41 @@ and elExp' cD cG i =
             MetaObj are off *)
         (i'', (tau', Whnf.m_id))
 
-     | Apx.Comp.Box (_,mC) , (Int.Comp.TypPiBox (_, Int.LF.Decl(_,ctyp,_), tau), theta) ->
-        dprintf begin fun p ->
+     | Apx.Comp.Box (_, cM), (Int.Comp.TypPiBox (_, Int.LF.Decl (_, ctyp, _), tau), theta) ->
+        dprintf
+          begin fun p ->
           p.fmt "[elExp'] @[<v>Apply -> elMetaObj at type\
                  @,@[%a@]@]"
             P.(fmt_ppr_cmp_meta_typ cD) (Whnf.cnormMTyp (ctyp, theta))
           end;
-        let cM = elMetaObj cD mC (ctyp, theta) in
+        let cM = elMetaObj cD cM (ctyp, theta) in
         ( Int.Comp.MApp (loc, i', cM, Whnf.cnormMTyp (ctyp, theta), `explicit)
-        , (tau, Int.LF.MDot (metaObjToFt cM, theta)))
+        , (tau, Int.LF.MDot (metaObjToFt cM, theta))
+        )
+
+     | Apx.Comp.BoxHole _, (Int.Comp.TypPiBox (_, Int.LF.Decl (_, ctyp, _), tau), theta) ->
+        dprintf
+          begin fun p ->
+          p.fmt "[elExp'] @[<v>Apply -> elMetaObj at type\
+                 @,@[%a@]@]"
+            P.(fmt_ppr_cmp_meta_typ cD) (Whnf.cnormMTyp (ctyp, theta))
+          end;
+        let cM =
+          ( Loc.ghost
+          , Apx.Comp.ClObj
+              ( Apx.LF.CtxHole
+              , Apx.LF.Dot
+                  ( Apx.LF.Obj (Apx.LF.Root (Loc.ghost, Apx.LF.Hole, Apx.LF.Nil))
+                  , Apx.LF.EmptySub
+                  )
+              )
+          )
+        in
+        let cM = elMetaObj cD cM (ctyp, theta) in
+        ( Int.Comp.MApp (loc, i', cM, Whnf.cnormMTyp (ctyp, theta), `explicit)
+        , (tau, Int.LF.MDot (metaObjToFt cM, theta))
+        )
+
      | _ ->
         raise
           ( Check.Comp.Error

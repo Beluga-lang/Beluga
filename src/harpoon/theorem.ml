@@ -5,8 +5,6 @@ module Comp = Syntax.Int.Comp
 open Id
 module CompS = Store.Cid.Comp
 module Loc = Location
-module Stack = Misc.Stack
-module F = Misc.Function
 
 module P = Pretty.Int.DefaultPrinter
 
@@ -35,6 +33,12 @@ module Action = struct
     { target; children; solution }
 end
 
+module Direction = struct
+  include History.Direction
+  let forward = `forward
+  let backward = `backward
+end
+
 (** A single theorem. *)
 type t =
   { (* The Store entry for the theorem. *)
@@ -56,7 +60,7 @@ type t =
   ; ppf : Format.formatter
 
   (* Actions applied to this theorem. *)
-  ; history : Action.t Stack.t
+  ; history : Action.t History.t
   }
 
 let remove_subgoal t g =
@@ -118,10 +122,7 @@ let validate_action_inverse t a : unit =
    *)
   () (* TODO *)
 
-type apply_mode =
-  [ `forward
-  | `backward
-  ]
+type apply_mode = History.Direction.t
 
 let apply' (mode : apply_mode) t (a : Action.t) =
   let open Action in
@@ -137,15 +138,17 @@ let apply' (mode : apply_mode) t (a : Action.t) =
      remove_subgoals t a.children;
      add_subgoal' t a.target
 
-let record_action t a = Stack.push a t.history
+let record_action t a = History.add t.history a
 
 let apply t a =
   apply' `forward t a;
   record_action t a
 
-let undo t : bool =
-  Stack.popping t.history
-    F.(Maybe.(is_some ++ map (apply' `backward t)))
+let history_step t d : bool =
+  let open Maybe in
+  History.step d t.history
+  $> apply' d t
+  |> is_some
 
 (** Alias to be used when this module is open. *)
 type theorem = t
@@ -330,7 +333,7 @@ let configure cid ppf hooks initial_state gs =
     ; remaining_subgoals = DynArray.make 16
     ; subgoal_hooks = DynArray.create ()
     ; ppf
-    ; history = Stack.create ()
+    ; history = History.create ()
     }
   in
   let hooks = List.map (fun h -> h t) hooks in

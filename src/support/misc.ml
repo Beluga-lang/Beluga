@@ -298,4 +298,16 @@ module Stack = struct
     let y = f x in
     let _ = pop_opt s in
     y
+
+  (** Converts the stack into a list.
+      The top element of the stack is the *last* element of the list.
+   *)
+  let to_list s =
+    fold (fun l x -> x :: l) [] s
+
+  (** Converts the stack into a list.
+      The top element of the stack is the *first* element of the
+      list. *)
+  let to_list_rev s =
+    fold (fun k x -> fun l -> k (x :: l)) (fun x -> x) s []
 end

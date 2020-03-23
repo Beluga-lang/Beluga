@@ -3231,10 +3231,8 @@ let interactive_harpoon_command =
     &> name
     $> fun name -> H.Translate name
   in
-  let undo =
-    keyword "undo"
-    &> pure H.Undo
-  in
+  let undo = keyword "undo" &> pure H.Undo in
+  let redo = keyword "redo" &> pure H.Redo in
   choice
     [ intros
     ; info
@@ -3256,6 +3254,7 @@ let interactive_harpoon_command =
     ; session_command
     ; subgoal_command
     ; undo
+    ; redo
     ]
 
 let interactive_harpoon_command_sequence =

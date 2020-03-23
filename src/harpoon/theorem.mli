@@ -26,6 +26,13 @@ module Action : sig
              t
 end
 
+module Direction : sig
+  type t
+
+  val forward : t
+  val backward : t
+end
+
 type t
 type theorem = t
 
@@ -67,7 +74,7 @@ val apply : t -> Action.t -> unit
 (** Inverts the last action recorded in the history.
     Returns false if the history is empty and no action can be
     inverted. *)
-val undo : t -> bool
+val history_step : t -> Direction.t -> bool
 
 (** Replaces the subgoal with another, solving it by transforming an
     incomplete proof for the new subgoal.

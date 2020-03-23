@@ -297,6 +297,7 @@ module Harpoon = struct
     | Session of [ basic_command | `create | `serialize ]
     | Subgoal of basic_command
     | Undo
+    | Redo
 
     | Translate of Id.name
 

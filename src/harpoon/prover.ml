@@ -291,8 +291,12 @@ let process_command
      end
 
   | Command.Undo ->
-     if not (Theorem.undo t) then
-       State.printf s "Nothing to undo in the current theorem."
+     if not Theorem.(history_step t Direction.backward) then
+       State.printf s "Nothing to undo in the current theorem's timeline."
+
+  | Command.Redo ->
+     if not Theorem.(history_step t Direction.forward) then
+       State.printf s "Nothing to redo in the current theorem's timeline."
 
   (* Real tactics: *)
   | Command.Unbox (i, name) ->

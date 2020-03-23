@@ -114,7 +114,7 @@ let fmt_ppr_leftover_vars ppf : leftover_vars -> unit =
 let ppr_leftover_vars = fmt_ppr_leftover_vars Format.std_formatter
 
 let rec get_target_cid_comptyp tau = match tau with
-  | Int.Comp.TypBase (_, a, _ ) -> a
+  | Int.Comp.TypBase (_, a, _) -> a
   | Int.Comp.TypArr (_, _, tau) -> get_target_cid_comptyp tau
   | Int.Comp.TypPiBox (_, _, tau) -> get_target_cid_comptyp tau
   | _ ->
@@ -122,8 +122,8 @@ let rec get_target_cid_comptyp tau = match tau with
        "[get_target_cid_comptyp] no target comp typ"
 
 let rec get_target_cid_compcotyp tau = match tau with
-  | Int.Comp.TypCobase (_, a, _ ) -> a
-  | Int.Comp.TypArr (_, tau , _) ->
+  | Int.Comp.TypCobase (_, a, _) -> a
+  | Int.Comp.TypArr (_, tau, _) ->
      get_target_cid_compcotyp tau
      (* XXX it's strange that this walks backwards, but is called "get *target*".
         Perhaps for codatatypes this should be "source" ? -je *)
@@ -133,15 +133,18 @@ let rec get_target_cid_compcotyp tau = match tau with
        "[get_target_cid_compcotyp] no target comp cotyp"
 
 let freeze_from_name tau = match tau with
-  |Ext.Sgn.Typ ( _, n, _) ->  let a = Typ.index_of_name n in
-                               Typ.freeze a;
-                               ()
-  |Ext.Sgn.CompTyp (_, n, _, _) -> let a =   CompTyp.index_of_name n in
-                               CompTyp.freeze a;
-                               ()
-   |Ext.Sgn.CompCotyp (_, n, _) -> let a =   CompCotyp.index_of_name n in
-                               CompCotyp.freeze a;
-                                ()
+  | Ext.Sgn.Typ (_, n, _) ->
+     let a = Typ.index_of_name n in
+     Typ.freeze a;
+     ()
+  | Ext.Sgn.CompTyp (_, n, _, _) ->
+     let a = CompTyp.index_of_name n in
+     CompTyp.freeze a;
+     ()
+  | Ext.Sgn.CompCotyp (_, n, _) ->
+     let a = CompCotyp.index_of_name n in
+     CompCotyp.freeze a;
+     ()
 
 let sgnDeclToHtml = function
   | Ext.Sgn.Comment (_, x) -> Html.appendAsComment x

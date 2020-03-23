@@ -20,10 +20,13 @@ module Action : sig
       - In the backward direction, it removes all child subgoals, adds
         the target, and clears the solution of the target.
    *)
-  val make : proof_state -> (* the target subgoal *)
+  val make : string -> (* name of item (shown to the user) *)
+             proof_state -> (* the target subgoal *)
              proof_state list -> (* the child subgoals *)
              proof -> (* the solution *)
              t
+
+  val name_of_action : t -> string
 end
 
 module Direction : sig
@@ -46,6 +49,12 @@ val printf : t -> ('a, Format.formatter, unit) format -> 'a
 
 (** Gets the cid and Store entry for this theorem. *)
 val get_entry' : t -> Id.cid_prog * CompS.Entry.t
+
+(** get_history_names t = (as1, as2)
+    where as1 are the past history items and as2 are the future
+    history items.
+ *)
+val get_history_names : t -> string list * string list
 
 (** Gets the Store entry for this theorem. *)
 val get_entry : t -> CompS.Entry.t
@@ -78,9 +87,10 @@ val history_step : t -> Direction.t -> bool
 
 (** Replaces the subgoal with another, solving it by transforming an
     incomplete proof for the new subgoal.
-    Interally this uses `apply` and so records theorem history.
+    Interally this uses `apply` and so records theorem history, using
+    the given action name.
  *)
-val apply_subgoal_replacement : t -> proof_state -> (proof -> proof) -> proof_state -> unit
+val apply_subgoal_replacement : t -> string -> proof_state -> (proof -> proof) -> proof_state -> unit
 
 (** Renames the given variable at the given level.
     Returns true iff such a variable could be renamed.

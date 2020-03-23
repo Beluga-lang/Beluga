@@ -9,6 +9,9 @@ val lmap : ('a -> 'b) -> 'a * 'x -> 'b * 'x
 (** Transforms both components of a pair. *)
 val bimap : ('a -> 'b) -> ('c -> 'd) -> 'a * 'c -> 'b * 'd
 
+(** Transforms both components of a pair in the same way. *)
+val both : ('a -> 'b) -> 'a * 'a -> 'b * 'b
+
 (** Forms a pair from left to right. *)
 val left : 'a -> 'b -> 'a * 'b
 

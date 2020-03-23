@@ -3233,6 +3233,7 @@ let interactive_harpoon_command =
   in
   let undo = keyword "undo" &> pure H.Undo in
   let redo = keyword "redo" &> pure H.Redo in
+  let history = keyword "history" &> pure H.History in
   choice
     [ intros
     ; info
@@ -3255,6 +3256,7 @@ let interactive_harpoon_command =
     ; subgoal_command
     ; undo
     ; redo
+    ; history
     ]
 
 let interactive_harpoon_command_sequence =

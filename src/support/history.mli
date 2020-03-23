@@ -40,3 +40,10 @@ end
     h` brings the history back to the state it was in before.
  *)
 val step : Direction.t -> 'a t -> 'a option
+
+(** Converts the history to a pair of lists.
+    The first list represents the past items. The second list
+    represents the future items.
+    Both lists have the most recent item first.
+ *)
+val to_lists : 'a t -> 'a list * 'a list

@@ -298,6 +298,7 @@ module Harpoon = struct
     | Subgoal of basic_command
     | Undo
     | Redo
+    | History
 
     | Translate of Id.name
 

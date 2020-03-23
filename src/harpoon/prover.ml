@@ -298,6 +298,33 @@ let process_command
      if not Theorem.(history_step t Direction.forward) then
        State.printf s "Nothing to redo in the current theorem's timeline."
 
+  | Command.History ->
+     let open Format in
+     let (past, future) = Theorem.get_history_names t in
+     let future = List.rev future in
+     let line ppf = function
+       | _ when Misc.List.nonempty future ->
+          fprintf ppf "@,-----@,"
+       | _ -> ()
+     in
+     let future_remark ppf = function
+       | _ when Misc.List.nonempty future ->
+          fprintf ppf "- @[%a@]"
+            pp_print_string
+            "Commands below the line would be undone. \
+             Commands above the line would be redone."
+       | _ -> ()
+     in
+     State.printf s
+       "@[<v 2>History:\
+        @,@[<v>%a@]%a@[<v>%a@]@]@,%a@,"
+       (pp_print_list ~pp_sep: pp_print_cut pp_print_string)
+       future
+       line ()
+       (pp_print_list ~pp_sep: pp_print_cut pp_print_string)
+       past
+       future_remark ()
+
   (* Real tactics: *)
   | Command.Unbox (i, name) ->
      let (hs, m, tau) = Elab.exp' cIH cD cG (Lazy.force mfs) i in

@@ -21,7 +21,7 @@ module Total = Beluga.Total
 type t = Theorem.t -> Comp.proof_state -> unit
 
 (** Solves the subgoal with the given proof. *)
-val solve : Comp.proof -> t
+val solve : ?action_name : string -> Comp.proof -> t
 
 (** Introduces the arguments to a function type, with the given names, if any. *)
 val intros : string list option -> t

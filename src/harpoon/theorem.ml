@@ -27,10 +27,13 @@ module Action = struct
     { target : Comp.proof_state
     ; children : Comp.proof_state list
     ; solution : Comp.proof
+    ; name : string
     }
 
-  let make target children solution =
-    { target; children; solution }
+  let make name target children solution =
+    { name; target; children; solution }
+
+  let name_of_action a = a.name
 end
 
 module Direction = struct
@@ -62,6 +65,9 @@ type t =
   (* Actions applied to this theorem. *)
   ; history : Action.t History.t
   }
+
+let get_history_names t =
+  Pair.both (List.map Action.name_of_action) (History.to_lists t.history)
 
 let remove_subgoal t g =
   let p g' = Comp.(Whnf.conv_subgoal_path_builder g.label g'.label) in
@@ -275,9 +281,9 @@ let defer_subgoal t =
     - removes the current subgoal (which must be g)
     - fill's in g's solution with an incomplete proof for g', transformed by f.
  *)
-let apply_subgoal_replacement t g' f g =
+let apply_subgoal_replacement t name g' f g =
   let p = f (Comp.incomplete_proof Loc.ghost g') in
-  apply t (Action.make g [g'] p)
+  apply t (Action.make name g [g'] p)
 
 (** Renames a variable from `src` to `dst` at the given level
     (`comp or `meta) in the subgoal `g`.
@@ -294,7 +300,7 @@ let rename_variable src dst level t g =
      $> fun cD -> { g.context with cD }
   end
   $> (fun context -> { g with context; solution = ref None })
-  $> (fun g' -> apply_subgoal_replacement t g' Misc.id g)
+  $> (fun g' -> apply_subgoal_replacement t "rename" g' Misc.id g)
   |> is_some
 
 (** Registers the theorem in the store.

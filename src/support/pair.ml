@@ -9,6 +9,9 @@ let lmap (f : 'a -> 'b) (p : 'a * 'x) : 'b * 'x =
 let bimap (f : 'a -> 'b) (g : 'c -> 'd) (p : 'a * 'c) =
   let (x, y) = p in (f x, g y)
 
+let both (f : 'a -> 'b) (p : 'a * 'a) : 'b * 'b =
+  bimap f f p
+
 let left (x : 'a) (y : 'b) : 'a * 'b = (x, y)
 
 let right (x : 'a) (y : 'b) : 'b * 'a = (y, x)

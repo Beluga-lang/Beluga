@@ -19,8 +19,8 @@ type t = Theorem.t -> Comp.proof_state -> unit
 (** Fill the hole with the given closed proof.
     This will solve the current subgoal.
  *)
-let solve (proof : Comp.proof) : t =
-  fun t g -> Theorem.(apply t (Action.make g [] proof))
+let solve ?(action_name = "solve") (proof : Comp.proof) : t =
+  fun t g -> Theorem.(apply t (Action.make action_name g [] proof))
 
 (** Decides whether the name of the given declaration already occurs
     in the given context.
@@ -134,7 +134,12 @@ let intros (names : string list option) : t =
        }
      in
      (* Solve the current goal with the intros proof. *)
-     Theorem.apply_subgoal_replacement t new_state (Comp.intros context) g
+     Theorem.apply_subgoal_replacement t
+       "intros"
+       new_state
+       (Comp.intros context)
+       g
+
   | Either.Left NothingToIntro ->
      Theorem.printf t
        "Nothing to introduce.@,\
@@ -199,6 +204,7 @@ let split (k : Command.split_kind) (i : Comp.exp_syn) (tau : Comp.typ) mfs : t =
        k, TypBox(loc, mT'), p_opt
     | _ -> None, tau, None
   in
+  let action_name = Fmt.stringify P.fmt_ppr_cmp_split_kind k in
   let cgs = generate_pattern_coverage_goals tau s t in
   match is_valid_goals_for_split_kind k cgs with
   | `cant_invert ->
@@ -475,7 +481,10 @@ let split (k : Command.split_kind) (i : Comp.exp_syn) (tau : Comp.typ) mfs : t =
        |> Maybe.map Nonempty.all_equal
      with
      | None ->
-        Theorem.(apply t (Action.make s [] (impossible_split i)))
+        let open Theorem in
+        impossible_split i
+        |> Action.make action_name s []
+        |> apply t
 
      | Some None ->
         B.Error.violation "mixed cases in split (bug in coverage?)"
@@ -502,7 +511,7 @@ let split (k : Command.split_kind) (i : Comp.exp_syn) (tau : Comp.typ) mfs : t =
           |> List.split
           |> Pair.rmap F.(g i tau ++ List.rev)
           |> fun (children, p) ->
-             Theorem.(apply t (Action.make s children p))
+             Theorem.(apply t (Action.make action_name s children p))
         in
         match k with
         | `meta -> finish (Misc.const make_meta_branch) Comp.meta_split
@@ -546,25 +555,33 @@ let extending_comp_context decl g =
     This will appropriately MShift the goal type and the computational
     context.
  *)
-let solve_with_new_meta_decl decl f t g =
+let solve_with_new_meta_decl action_name decl f t g =
   let Comp.{cD; _} = Comp.(g.context) in
   match check_metavariable_uniqueness cD decl t with
   | `duplicate -> ()
   | `unique ->
-     Theorem.apply_subgoal_replacement t (extending_meta_context decl g) f g
+     Theorem.apply_subgoal_replacement t
+       action_name
+       (extending_meta_context decl g)
+       f
+       g
 
 (** Solves the current subgoal by keeping it the same, but extending
     the computational context with a new declaration.
  *)
-let solve_with_new_comp_decl decl f t g =
+let solve_with_new_comp_decl action_name decl f t g =
   let Comp.{cD; cG; _} = Comp.(g.context) in
   match check_computational_variable_uniqueness cD cG decl t with
   | `duplicate -> ()
   | `unique ->
-     Theorem.apply_subgoal_replacement t (extending_comp_context decl g) f g
+     Theorem.apply_subgoal_replacement t
+       action_name
+       (extending_comp_context decl g)
+       f
+       g
 
 let solve_by_unbox' f (cT : Comp.meta_typ) (name : B.Id.name) : t =
-  solve_with_new_meta_decl LF.(Decl (name, cT, No)) f
+  solve_with_new_meta_decl "unbox" LF.(Decl (name, cT, No)) f
 
 let solve_by_unbox (m : Comp.exp_syn) (mk_cmd : Comp.meta_typ -> Comp.command) (tau : Comp.typ) (name : B.Id.name) : t =
   let open Comp in
@@ -586,7 +603,7 @@ let unbox (m : Comp.exp_syn) (tau : Comp.typ) (name : B.Id.name) : t =
 
 let invoke (i : Comp.exp_syn) (tau : Comp.typ) (name : Id.name) : t =
   let open Comp in
-  solve_with_new_comp_decl (CTypDecl (name, tau, false))
+  solve_with_new_comp_decl "by" (CTypDecl (name, tau, false))
     (prepend_commands [By (i, name, tau)])
 
 let suffices (i : Comp.exp_syn) (tau_args : Comp.typ list) (tau_i : Comp.typ) : t =
@@ -620,4 +637,4 @@ let suffices (i : Comp.exp_syn) (tau_args : Comp.typ list) (tau_i : Comp.typ) : 
     |> List.split
   in
   let p = suffices i' subproofs in
-  Theorem.(apply t Action.(make g children p))
+  Theorem.(apply t Action.(make "suffices" g children p))

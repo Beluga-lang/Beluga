@@ -64,7 +64,11 @@ let auto_intros : t =
        fmt_ppr_lf_ctx context.cD
        fmt_ppr_cmp_ctx context.cG
        (P.fmt_ppr_cmp_typ g.context.cD P.l0) (Whnf.cnormCTyp g.goal);
-     Theorem.apply_subgoal_replacement t new_state (Comp.intros context) g;
+     Theorem.apply_subgoal_replacement t
+       "auto-intros"
+       new_state
+       (Comp.intros context)
+       g;
      true
   | Either.Left _ ->
      false
@@ -164,7 +168,7 @@ let auto_solve_trivial : t =
         @,@]"
        (P.fmt_ppr_cmp_subgoal_path cD cG) (g.label Comp.SubgoalPath.Here)
        (P.fmt_ppr_cmp_typ cD P.l0) (Whnf.cnormCTyp g.goal);
-     (solve w |> Tactic.solve) t g;
+     (solve w |> Tactic.solve ~action_name: "auto-solve-trivial") t g;
      true
   | _ ->
      Theorem.printf t

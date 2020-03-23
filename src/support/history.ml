@@ -29,3 +29,6 @@ let step d { past; future } =
   | `backward ->
      Misc.Stack.pop_opt past
      $> fun x -> Stack.push x future; x
+
+let to_lists { past; future } =
+  Pair.both Misc.Stack.to_list_rev (past, future)

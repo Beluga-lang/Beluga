@@ -139,7 +139,7 @@ mlam g => fn d => fn s => case d of
       (mlam N => fn r => bwd_closed [ |- beta ] (main [g,x:tm] d1 (Dot s r)))
 | App d1 d2 =>
   let Arr h f = main [g] d1 s in
-  f [|- _] (main [g] d2 s)
+  f _ (main [g] d2 s)
 | C => I [|- halts/m refl val/c ]
 | Fst d => let Prod h r1 r2 = main [g] d s in r1
 | Snd d => let Prod h r1 r2 = main [g] d s in r2

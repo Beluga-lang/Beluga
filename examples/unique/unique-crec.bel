@@ -84,7 +84,7 @@ mlam g => mlam E => fn d => fn f => case [g |- E ] of
     % #r.2 : type_of (#r.1) S'  = f : type_of (#p.1) T'
     % S' = T' ,  #r=#p  , R = S'
 
-    refl [ |- _ ]
+     refl _
 ;
 
 

@@ -65,7 +65,7 @@ fn s => fn n =>
 let (s : {T:[ |- tp]} NeutVar [g] [ |- T] ->  NeutVar [h] [ |- T]) = s in
 case n of
 | {R:[g |- neut (atomic P[])]} [g |- embed (R ) ] =>
-  let [h |- R' ] = nsubst [h] [g] [|- _ ] s [g |- R ] in [h |- embed (R' )]
+  let [h |- R' ] = nsubst [h] [g] _ s [g |- R ] in [h |- embed (R' )]
 
  | {N:[g,x:neut S[]  |-  norm S'[]]}
    [g |- nlam (\x. N) ]  =>
@@ -82,7 +82,7 @@ rec subst : ({T:[ |- tp]} NeutVar [g] [ |- T] -> NeutVar [h] [ |- T])
 fn s => fn e =>
 let (s : {T:[ |- tp]} NeutVar [g] [ |- T] -> NeutVar [h] [ |- T]) = s in
 case e of
-| Syn [g |- R] => Syn (nsubst [h] [g] [|- _ ] s [g |- R])
+| Syn [g |- R] => Syn (nsubst [h] [g] _ s [g |- R])
 | Slam  [g] [|- A] [|- B] f =>
     Slam [h] [|- A] [|- B]
       (mlam h' => fn s' => fn e => f [h'] (mlam T => fn y => s' [ |- T] (s [ |- T] y)) e)
@@ -154,5 +154,5 @@ mlam T => fn y => let TmVar [ |- #p] = y in impossible [ |- #p] ;
 
 rec nbe : [ |- tm A] -> [ |- norm A] =
 / total (nbe) /
-fn t => reify  [] [|- _] (eval t initialMap)
+fn t => reify [] _ (eval t initialMap)
 ;

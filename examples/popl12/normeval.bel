@@ -135,7 +135,7 @@ and rec extendSem : [g |- neut (arr A[] B[])] ->
  fn r => mlam h => fn s => fn e =>
     let [h |- N ] = reify e in
     let [h |- R' ] = nsubst s r in
-       reflect [|- _ ] [h |- rapp (R') N]
+       reflect _ [h |- rapp (R') N]
 
 and rec reify : Sem [g] [ |- A] -> [g |- norm A[]] =
 % / total e (reify g a e) /
@@ -144,7 +144,7 @@ fn e => let (e : Sem [g] [ |- A]) = e in case [ |- A] of
 | [ |- arr T S ] =>
   (case e of
    | (Slam f)  =>
-     let s = (f [g,x:neut T[] ] weaken (reflect [|- _ ] [g ,x:neut T[] |-  x])) in
+     let s = (f [g,x:neut T[] ] weaken (reflect _ [g ,x:neut T[] |-  x])) in
      let [g,x:neut T[] |-  E] = reify s
      in [g |- nlam (\x. E)])
 ;

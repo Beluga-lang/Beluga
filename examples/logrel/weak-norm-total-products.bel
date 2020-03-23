@@ -165,13 +165,13 @@ rec bwd_closed' : {A:[|- tp]}{M:[|- tm A]}{M':[|- tm A]}
   let Arr ha f = r in
     Arr (halts_step [ |- MS] ha)
 	(mlam N => fn rn =>
-	 bwd_closed' [|- B] [|- _ ] [|- _ ] [ |- stepapp MS] (f [ |- N] rn))
+	 bwd_closed' [|- B] _ _ [ |- stepapp MS] (f [ |- N] rn))
 
 | [|- cross A B] =>
    let Cross ha r1 r2 = r in
    Cross (halts_step [|- MS] ha)
-	 (bwd_closed' [|- A] [|- _ ] [|- _ ] [|- stepfst MS] r1)
-	 (bwd_closed' [|- B] [|- _ ] [|- _ ] [|- stepsnd MS] r2)
+	 (bwd_closed' [|- A] _ _ [|- stepfst MS] r1)
+	 (bwd_closed' [|- B] _ _ [|- stepsnd MS] r2)
 
 ;
 
@@ -217,7 +217,7 @@ rec pair_mstep1 : {M1:[|- tm A]}{M2:[|- tm B]}[|- mstep M1 V1] ->
 mlam M1, M2 => fn ms1 => case ms1 of
 | [|- refl] => [|- refl]
 | [|- onestep S MS] =>
-  let [|- MS'] = pair_mstep1 [|- _ ] [|- M2] [|- MS] in
+  let [|- MS'] = pair_mstep1 _ [|- M2] [|- MS] in
      [ |- onestep (step_pairl S) MS']
 ;
 
@@ -227,7 +227,7 @@ rec pair_mstep2 : {V:[|- tm A]}{M2:[|- tm B]}[|- mstep M2 V2] ->
 mlam V, M2 => fn ms2 => case ms2 of
 | [|- refl] => [|- refl]
 | [|- onestep S MS] =>
-  let [|- MS'] = pair_mstep2 [|- V ] [|- _ ] [|- MS] in
+  let [|- MS'] = pair_mstep2 [|- V ] _ [|- MS] in
      [ |- onestep (step_pairr S) MS']
 ;
 
@@ -266,7 +266,7 @@ mlam gamma, M => fn rs => case [gamma |- M] of
 
 | [gamma |- app M1 M2] =>
   let Arr ha f = main [gamma] [gamma |- M1] rs in
-  f [ |- _ ] (main [gamma] [gamma |- M2] rs)
+  f _ (main [gamma] [gamma |- M2] rs)
 | [gamma |-  c] =>  I [ |- halts/m refl val/c]
 
 | [gamma |- pair M1 M2] =>
@@ -274,7 +274,7 @@ mlam gamma, M => fn rs => case [gamma |- M] of
   let r2 = main [gamma] [gamma |- M2] rs in
   let h1 = reduce_halts r1 in
   let h2 = reduce_halts r2 in
-  Cross (pair_halts [|- _] [|- _] h1 h2)
+  Cross (pair_halts _ _ h1 h2)
 	(bwd_closed [|- step1pair] r1)
 	(bwd_closed [|- step2pair] r2)
 

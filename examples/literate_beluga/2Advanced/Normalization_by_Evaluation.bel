@@ -83,7 +83,7 @@ We evaluate a term in an environment providing semantic values for each free var
 rec eval : [g |- tm S[]] -> Env [g] [h] -> Sem [h] [ |- S]  =
 fn t => fn s => let s : Env [g] [h] = s in
 case t of
-| [g |- #p ] =>  s [ |- _] [g |- #p ]
+| [g |- #p ] => s _ [g |- #p ]
 | [g |- lam (\x. E) ] =>
   Arr [h] (mlam h' => mlam $W => fn e =>
      eval [g,x:tm _ |- E] (env_ext (env_wkn [h'] [h] [h' |- $W] s) e))

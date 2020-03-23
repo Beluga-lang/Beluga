@@ -305,7 +305,7 @@ mlam T => fn e1 => fn e2 => case [|- T] of
   LogArr [g |-  M] [g |-  P] (mlam h,$W,V1,V2 => fn v =>
    logEqTrans [|- T2] (f1 [h] [h |- $W] [h |-  V1] [h |-  V2] v)
                       (f2 [h] [h |- $W] [h |-  V2] [h |-  V2]
-                      (logEqTrans [|- T1] (logEqSym [|- _ ] v) v)));
+                      (logEqTrans [|- T1] (logEqSym _ v) v)));
 
 schema ctx = tm;
 
@@ -378,7 +378,7 @@ rec logEqSubSym :
  / total e (logEqSubSym g g h sigma sigma' e) /
 fn e => case e of
 | Nil => Nil
-| Dot e' e1 => Dot (logEqSubSym e') (logEqSym  [|- _ ] e1);
+| Dot e' e1 => Dot (logEqSubSym e') (logEqSym _ e1);
 
 % % Transitivity of logical equivalence on substitutions
 rec logEqSubTrans :
@@ -388,7 +388,7 @@ rec logEqSubTrans :
 / total e1 (logEqSubTrans g g h s1 s2 s3 e1) /
 fn e1 => fn e2 => case e1 of
 | Nil => let Nil = e2 in Nil
-| Dot e1' x1 => let Dot e2' x2 = e2 in Dot (logEqSubTrans e1' e2') (logEqTrans [|- _ ] x1 x2);
+| Dot e1' x1 => let Dot e2' x2 = e2 in Dot (logEqSubTrans e1' e2') (logEqTrans _ x1 x2);
 
 
 % Fundamental theorem
@@ -406,16 +406,16 @@ case d of
    LogArr [h |-  lam (\x. M1[$S1[..], x])] [h |-  lam (\x. M2[$S2[..], x])]
      (mlam h0, $W, N1, N2 => fn rn =>
      let q2 = thm d1 (Dot (wknLogSub [h0] [h] [h0 |- $W] s) rn) in
-     closed [ |- _ ] [h0 |-  trans1 beta refl] [h0 |-  trans1 beta refl] q2
+     closed _ [h0 |-  trans1 beta refl] [h0 |-  trans1 beta refl] q2
    )
 | DecExt d1 =>
   LogArr [h |-  _] [h |-  _] (mlam h0,$W,N1,N2 => fn rn =>
    thm d1 (Dot (wknLogSub [h0] [h] [h0 |- $W] s) rn)
   )
 | DecBeta d1 d2 =>
-   closed [|- _ ] [h |-  trans1 beta refl] [h |-  refl] (thm d1 (Dot s (thm d2 s)))
-| DecSym d1 => logEqSym [|- _ ] (thm d1 (logEqSubSym s))
-| DecTrans d1 d2 => logEqTrans [|- _ ] (thm d1 s) (thm d2 (logEqSubTrans (logEqSubSym s) s))
+   closed _ [h |-  trans1 beta refl] [h |-  refl] (thm d1 (Dot s (thm d2 s)))
+| DecSym d1 => logEqSym _ (thm d1 (logEqSubSym s))
+| DecTrans d1 d2 => logEqTrans _ (thm d1 s) (thm d2 (logEqSubTrans (logEqSubSym s) s))
 ;
 
 inductive IdSub : {G:[|-dctx]}{g:ctx}(g':tctx){$Id:[g' |- g]} ctype =
@@ -433,11 +433,11 @@ rec idLogSub : IdSub [|-G] [g] [g' |- $Id]
 | ISnoc (r' : IdSub [|- G] [g] [g' |- $Id]) =>
   let q = idLogSub r' in
   Dot (wknLogSub [g',b:block x:tm,a:algeqNeu x x _] [g'] [g',b |-..] (idLogSub r'))
-      (reflect [ |- _] [g',b:block x:tm,y:algeqNeu x x _ |- b.2])
+      (reflect _ [g',b:block x:tm,y:algeqNeu x x _ |- b.2])
 ;
 
 rec completeness : IdSub [|-G] [g] [g' |- $Id]
 -> Decl [|-G] [g |- M1 sim M2] [ |- T]
 -> [g' |- algeq M1[$Id] M2[$Id] T[]] =
  / total (completeness) /
-   fn r => fn e => reify [|-_] (thm e (idLogSub r));
+   fn r => fn e => reify _ (thm e (idLogSub r));

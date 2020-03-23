@@ -174,7 +174,7 @@ mlam g, A,R => fn r =>  case [ |- A] of
   Arr [g |- R]
   (mlam h => mlam $W => mlam M2 => fn iv => fn rm2 =>
     let Halts [h |- MS] n = reify [h] [|- A] [h |- M2] rm2 in
-    closed [|- _ ] [h |- _ ]  [h |- _ ] [h |- s_app s_refl (MS)]
+    closed _ [h |- _ ]  [h |- _ ] [h |- s_app s_refl (MS)]
            (reflect [h] [|- B] [h |- _ ] (App (rwkn r iv) n)))
 
 and rec reify : {g:ctx}{A:[|- tp]}{M:[g |- tm A[]]}
@@ -235,7 +235,7 @@ mlam g => case [g] of
 | [ ] => Nil
 | [g',x:tm A[]] =>
   Dot (wknRedSub (idRedSub [g']) (shiftIsVarSub [g']))
-      (reflect [g', x:tm A[]] [|- _ ] [g', x:tm A[] |- x ] (Var (IsVar [g',x:tm A[] |-  x])));
+      (reflect [g', x:tm A[]] _ [g', x:tm A[] |- x ] (Var (IsVar [g',x:tm A[] |-  x])));
 
 % -----------------------------------------------------------------------------
 % Main Lemma:
@@ -253,7 +253,7 @@ mlam M => fn rs => let (rs : RedSub [g] [h |- $S] ) = rs in
 | [g' |-  lam (\x. M1)] =>
    Arr [h |- lam (\x. M1[$S[..], x])]
    (mlam h' => mlam $W => mlam N => fn isVS => fn rN =>
-     closed [|- _ ] [h' |- _ ] [h' |- _ ]
+     closed _ [h' |- _ ] [h' |- _ ]
             [h' |-  s_beta] (eval [g',x:tm _ |-  M1] (Dot (wknRedSub rs isVS) rN)));
 
 % -----------------------------------------------------------------------------
@@ -261,4 +261,4 @@ mlam M => fn rs => let (rs : RedSub [g] [h |- $S] ) = rs in
 
 rec weakNorm : {g:ctx}{M:[g |- tm A[]]} Halts  [ |- A] [g |- M] =
 / total (weakNorm) /
-mlam g => mlam M => reify [g] [|- _] [g |- M]  (eval [g |- M] (idRedSub [g]));
+mlam g => mlam M => reify [g] _ [g |- M]  (eval [g |- M] (idRedSub [g]));

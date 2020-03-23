@@ -50,3 +50,164 @@ LF hastype : term -> tp -> type =
 | t_iszero : hastype M nat -> hastype (iszero M) bool
 ;
 --name hastype D.
+
+proof tps : [ |- hastype M A] -> [ |- step M N] -> [ |- hastype N A] =
+/ total 2 /
+intros
+{ M : ( |- term), A : ( |- tp), N : ( |- term)
+| x : [ |- hastype M A], x1 : [ |- step M N]
+; split x1 as
+  case e_iszero:
+  { M1 : ( |- term), A : ( |- tp), M2 : ( |- term), S : ( |- step M1 M2)
+  | x : [ |- hastype (iszero M1) A], x1 : [ |- step (iszero M1) (iszero M2)]
+  ; split x as
+    case t_iszero:
+    { M1 : ( |- term),
+      M2 : ( |- term),
+      S : ( |- step M1 M2),
+      D : ( |- hastype M1 nat)
+    | x : [ |- hastype (iszero M1) bool],
+      x1 : [ |- step (iszero M1) (iszero M2)]
+    ; by tps [ |- D] [ |- S] as IH3 unboxed;
+      solve [ |- t_iszero IH3]
+    }
+  }
+  case e_pred:
+  { M1 : ( |- term), A : ( |- tp), M2 : ( |- term), S : ( |- step M1 M2)
+  | x : [ |- hastype (pred M1) A], x1 : [ |- step (pred M1) (pred M2)]
+  ; split x as
+    case t_pred:
+    { M1 : ( |- term),
+      M2 : ( |- term),
+      S : ( |- step M1 M2),
+      D : ( |- hastype M1 nat)
+    | x : [ |- hastype (pred M1) nat], x1 : [ |- step (pred M1) (pred M2)]
+    ; by tps [ |- D] [ |- S] as IH2 unboxed;
+      solve [ |- t_pred IH2]
+    }
+  }
+  case e_succ:
+  { M1 : ( |- term), A : ( |- tp), M2 : ( |- term), S : ( |- step M1 M2)
+  | x : [ |- hastype (succ M1) A], x1 : [ |- step (succ M1) (succ M2)]
+  ; split x as
+    case t_succ:
+    { M1 : ( |- term),
+      M2 : ( |- term),
+      S : ( |- step M1 M2),
+      D : ( |- hastype M1 nat)
+    | x : [ |- hastype (succ M1) nat], x1 : [ |- step (succ M1) (succ M2)]
+    ; by tps [ |- D] [ |- S] as IH1 unboxed;
+      solve [ |- t_succ IH1]
+    }
+  }
+  case e_if_then_else:
+  { M1 : ( |- term),
+    M3 : ( |- term),
+    M4 : ( |- term),
+    A : ( |- tp),
+    M2 : ( |- term),
+    S : ( |- step M1 M2)
+  | x : [ |- hastype (if_then_else M1 M3 M4) A],
+    x1 : [ |- step (if_then_else M1 M3 M4) (if_then_else M2 M3 M4)]
+  ; split x as
+    case t_if:
+    { M1 : ( |- term),
+      M3 : ( |- term),
+      M4 : ( |- term),
+      A : ( |- tp),
+      M2 : ( |- term),
+      S : ( |- step M1 M2),
+      D : ( |- hastype M1 bool),
+      D1 : ( |- hastype M3 A),
+      D2 : ( |- hastype M4 A)
+    | x : [ |- hastype (if_then_else M1 M3 M4) A],
+      x1 : [ |- step (if_then_else M1 M3 M4) (if_then_else M2 M3 M4)]
+    ; by tps [ |- D] [ |- S] as IH0 unboxed;
+      solve [ |- t_if IH0 D1 D2]
+    }
+  }
+  case e_iszero_succ:
+  { M1 : ( |- term), A : ( |- tp), V : ( |- value M1)
+  | x : [ |- hastype (iszero (succ M1)) A],
+    x1 : [ |- step (iszero (succ M1)) false]
+  ; split x as
+    case t_iszero:
+    { M1 : ( |- term), V : ( |- value M1), D : ( |- hastype (succ M1) nat)
+    | x : [ |- hastype (iszero (succ M1)) bool],
+      x1 : [ |- step (iszero (succ M1)) false]
+    ; solve [ |- t_false]
+    }
+  }
+  case e_iszero_zero:
+  { A : ( |- tp)
+  | x : [ |- hastype (iszero z) A], x1 : [ |- step (iszero z) true]
+  ; split x as
+    case t_iszero:
+    { D : ( |- hastype z nat)
+    | x : [ |- hastype (iszero z) bool], x1 : [ |- step (iszero z) true]
+    ; solve [ |- t_true]
+    }
+  }
+  case e_pred_succ:
+  { N : ( |- term), A : ( |- tp), V : ( |- value N)
+  | x : [ |- hastype (pred (succ N)) A], x1 : [ |- step (pred (succ N)) N]
+  ; split x as
+    case t_pred:
+    { N : ( |- term), V : ( |- value N), D : ( |- hastype (succ N) nat)
+    | x : [ |- hastype (pred (succ N)) nat],
+      x1 : [ |- step (pred (succ N)) N]
+    ; split [ |- D] as
+      case t_succ:
+      { N : ( |- term), V : ( |- value N), D1 : ( |- hastype N nat)
+      | x : [ |- hastype (pred (succ N)) nat],
+        x1 : [ |- step (pred (succ N)) N]
+      ; solve [ |- D1]
+      }
+    }
+  }
+  case e_pred_zero:
+  { A : ( |- tp)
+  | x : [ |- hastype (pred z) A], x1 : [ |- step (pred z) z]
+  ; split x as
+    case t_pred:
+    { D : ( |- hastype z nat)
+    | x : [ |- hastype (pred z) nat], x1 : [ |- step (pred z) z]
+    ; solve [ |- D]
+    }
+  }
+  case e_if_false:
+  { M1 : ( |- term), N : ( |- term), A : ( |- tp)
+  | x : [ |- hastype (if_then_else false M1 N) A],
+    x1 : [ |- step (if_then_else false M1 N) N]
+  ; split x as
+    case t_if:
+    { M1 : ( |- term),
+      N : ( |- term),
+      A : ( |- tp),
+      D : ( |- hastype false bool),
+      D1 : ( |- hastype M1 A),
+      D2 : ( |- hastype N A)
+    | x : [ |- hastype (if_then_else false M1 N) A],
+      x1 : [ |- step (if_then_else false M1 N) N]
+    ; solve [ |- D2]
+    }
+  }
+  case e_if_true:
+  { N : ( |- term), M2 : ( |- term), A : ( |- tp)
+  | x : [ |- hastype (if_then_else true N M2) A],
+    x1 : [ |- step (if_then_else true N M2) N]
+  ; split x as
+    case t_if:
+    { N : ( |- term),
+      M2 : ( |- term),
+      A : ( |- tp),
+      D : ( |- hastype true bool),
+      D1 : ( |- hastype N A),
+      D2 : ( |- hastype M2 A)
+    | x : [ |- hastype (if_then_else true N M2) A],
+      x1 : [ |- step (if_then_else true N M2) N]
+    ; solve [ |- D1]
+    }
+  }
+}
+;

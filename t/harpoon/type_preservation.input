@@ -8,3 +8,4 @@ invert x
 by (tpr [|- D] [|- E]) as ih0
 split ih0
 by (tpr [|- D2 [_, D1]] [|- E1]) as ih1
+solve x

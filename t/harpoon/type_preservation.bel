@@ -23,3 +23,67 @@ e_app : eval M (lam M') → eval (M' N) V → eval (app M N) V.
 --name eval E.
 
 schema ctx = some [t:tp] block x : tm, u : oft x t;
+
+proof tpr : [ |- oft M A] -> [ |- eval M M'] -> [ |- oft M' A] =
+/ total 2 /
+intros
+{ M : ( |- tm), A : ( |- tp), M' : ( |- tm)
+| x : [ |- oft M A], x1 : [ |- eval M M']
+; split x1 as
+  case e_app:
+  { M1 : ( |- tm),
+    M3 : ( |- tm),
+    A : ( |- tp),
+    M' : ( |- tm),
+    M2 : (y6 : tm |- tm),
+    E : ( |- eval M1 (lam (\y1. M2))),
+    E1 : ( |- eval (M2[M3]) M')
+  | x : [ |- oft (app M1 M3) A], x1 : [ |- eval (app M1 M3) M']
+  ; split x as
+    case t_app:
+    { M1 : ( |- tm),
+      M3 : ( |- tm),
+      A : ( |- tp),
+      M' : ( |- tm),
+      M2 : (y6 : tm |- tm),
+      E : ( |- eval M1 (lam (\y1. M2))),
+      E1 : ( |- eval (M2[M3]) M'),
+      A1 : ( |- tp),
+      D : ( |- oft M1 (arr A1 A)),
+      D1 : ( |- oft M3 A1)
+    | x : [ |- oft (app M1 M3) A], x1 : [ |- eval (app M1 M3) M']
+    ; by tpr [ |- D] [ |- E] as ih0;
+      split ih0 as
+      case t_lam:
+      { M1 : ( |- tm),
+        M3 : ( |- tm),
+        A : ( |- tp),
+        M' : ( |- tm),
+        M2 : (y6 : tm |- tm),
+        E : ( |- eval M1 (lam (\y1. M2))),
+        E1 : ( |- eval (M2[M3]) M'),
+        A1 : ( |- tp),
+        D : ( |- oft M1 (arr A1 A)),
+        D1 : ( |- oft M3 A1),
+        D2 : (x : tm, y3 : oft x A1[] |- oft (M2[x]) A[])
+      | x : [ |- oft (app M1 M3) A],
+        x1 : [ |- eval (app M1 M3) M'],
+        ih0 : [ |- oft (lam (\y1. M2)) (arr A1 A)]
+      ; by tpr [ |- D2[_, D1]] [ |- E1] as ih1;
+        solve ih1
+      }
+    }
+  }
+  case e_lam:
+  { M1 : (y5 : tm |- tm), A : ( |- tp)
+  | x : [ |- oft (lam (\y1. M1)) A],
+    x1 : [ |- eval (lam (\y1. M1)) (lam (\y1. M1))]
+  ; solve x
+  }
+  case e_c:
+  { A : ( |- tp)
+  | x : [ |- oft c A], x1 : [ |- eval c c]
+  ; solve x
+  }
+}
+;

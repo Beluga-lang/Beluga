@@ -153,7 +153,7 @@ let auto_solve_trivial : t =
          P.fmt_ppr_cmp_proof_state g
        end;
      false
-  | lazy (Some w) ->
+  | lazy (Some w) when Theorem.count_subgoals t > 1 ->
      Theorem.printf t
        "@[<v>@,The subgoal\
         @,  @[<hov 2>%a@]\
@@ -166,6 +166,18 @@ let auto_solve_trivial : t =
        (P.fmt_ppr_cmp_typ cD P.l0) (Whnf.cnormCTyp g.goal);
      (solve w |> Tactic.solve) t g;
      true
+  | _ ->
+     Theorem.printf t
+       "@[<v>@,The subgoal\
+        @,  @[<hov 2>%a@]\
+        @,of type\
+        @,  @[<hov 2>%a@]\
+        @,could be solved automatically.\
+        @,However, this would complete the theorem.@,@,@]"
+       (P.fmt_ppr_cmp_subgoal_path cD cG)
+       (g.label Comp.SubgoalPath.Here)
+       (P.fmt_ppr_cmp_typ cD P.l0) (Whnf.cnormCTyp g.goal);
+     false
 
 module State : sig
   type t

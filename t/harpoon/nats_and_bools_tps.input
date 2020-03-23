@@ -33,3 +33,4 @@ invert [|- D]
 invert x
 invert x
 invert x
+solve [|- D1]

@@ -23,5 +23,6 @@ invert ih1
 by main [gamma] [gamma |- M2] rs as ih2
 solve x1 [|- _] ih2
 by lookup [gamma] [gamma |- #p] rs as x
+solve x
 
 :quit

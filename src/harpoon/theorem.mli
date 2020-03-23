@@ -43,6 +43,9 @@ val defer_subgoal : t -> unit
 
 val solve : proof_state -> proof -> unit
 val solve_by_replacing_subgoal : t -> proof_state -> (proof -> proof) -> proof_state -> unit
+val subgoals : t -> proof_state list
+
+val count_subgoals : t -> int
 
 (** Renames the given variable at the given level.
     Returns true iff such a variable could be renamed.

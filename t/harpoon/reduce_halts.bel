@@ -41,3 +41,26 @@ stratified Reduce : {A:[⊢ tp]}{M:[ |- tm A]} ctype =
          ) ->
          Reduce [ ⊢ arr A B ] [ |- M]
 ;
+
+proof rh : {T : ( |- tp)}
+             {M : ( |- tm T)} Reduce [ |- T] [ |- M] -> [ |- halts M] =
+/ total /
+intros
+{ T : ( |- tp), M : ( |- tm T)
+| x : Reduce [ |- T] [ |- M]
+; split x as
+  case Arr:
+  { A : ( |- tp), B : ( |- tp), M : ( |- tm (arr A B))
+  | x : Reduce [ |- arr A B] [ |- M],
+    x2 :
+      {N : ( |- tm A)} Reduce [ |- A] [ |- N] -> Reduce [ |- B] [ |- app M N],
+    x1 : [ |- halts M]
+  ; solve x1
+  }
+  case I:
+  { M : ( |- tm b)
+  | x : Reduce [ |- b] [ |- M], x1 : [ |- halts M]
+  ; solve x1
+  }
+}
+;

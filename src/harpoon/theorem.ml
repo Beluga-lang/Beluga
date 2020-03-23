@@ -1,4 +1,3 @@
-(* open Support *)
 open Support
 open Beluga
 module LF = Syntax.Int.LF
@@ -327,3 +326,7 @@ let completeness (t : t) =
     `complete
   else
     `incomplete
+
+let subgoals t = DynArray.to_list t.remaining_subgoals
+
+let count_subgoals t = DynArray.length t.remaining_subgoals

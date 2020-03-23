@@ -290,6 +290,10 @@ let process_command
           Id.print n
      end
 
+  | Command.Undo ->
+     if not (Theorem.undo t) then
+       State.printf s "Nothing to undo in the current theorem."
+
   (* Real tactics: *)
   | Command.Unbox (i, name) ->
      let (hs, m, tau) = Elab.exp' cIH cD cG (Lazy.force mfs) i in

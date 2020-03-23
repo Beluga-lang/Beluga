@@ -296,6 +296,7 @@ module Harpoon = struct
     | Theorem of [ basic_command | `show_ihs | `show_proof | `dump_proof of string ]
     | Session of [ basic_command | `create | `serialize ]
     | Subgoal of basic_command
+    | Undo
 
     | Translate of Id.name
 

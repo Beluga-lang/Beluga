@@ -5,6 +5,8 @@ module Comp = Syntax.Int.Comp
 open Id
 module CompS = Store.Cid.Comp
 module Loc = Location
+module Stack = Misc.Stack
+module F = Misc.Function
 
 module P = Pretty.Int.DefaultPrinter
 
@@ -19,6 +21,19 @@ module Conf = struct
 end
 
 type 'a subgoal_hook = Comp.proof_state -> 'a
+
+module Action = struct
+  (** A invertible action applied to a theorem. Used to implement
+      history/undo. *)
+  type t =
+    { target : Comp.proof_state
+    ; children : Comp.proof_state list
+    ; solution : Comp.proof
+    }
+
+  let make target children solution =
+    { target; children; solution }
+end
 
 (** A single theorem. *)
 type t =
@@ -39,7 +54,98 @@ type t =
 
   (* So tactics can print messages. *)
   ; ppf : Format.formatter
+
+  (* Actions applied to this theorem. *)
+  ; history : Action.t Stack.t
   }
+
+let remove_subgoal t g =
+  let p g' = Comp.(Whnf.conv_subgoal_path_builder g.label g'.label) in
+  let i =
+    try DynArray.index_of p t.remaining_subgoals
+    with
+    | Not_found ->
+       Error.violation "[remove_subgoal] no such subgoal"
+  in
+  DynArray.delete t.remaining_subgoals i
+
+let remove_subgoals t = List.iter (remove_subgoal t)
+
+(** Runs all registered subgoal hooks on the given subgoal. *)
+let run_subgoal_hooks t g =
+  List.iter (fun f -> f g) (DynArray.to_list t.subgoal_hooks)
+
+(** Adds a new subgoal to this theorem.
+    This does not run subgoal hooks, and should be used in contexts
+    where automation must not be run.
+ *)
+let add_subgoal' t g =
+  DynArray.insert t.remaining_subgoals 0 g
+
+(** Adds a new subgoal to this theorem.
+    Will run the subgoal hooks.
+ *)
+let add_subgoal t g =
+  add_subgoal' t g;
+  run_subgoal_hooks t g
+
+(** Adds a list of subgoals to this theorem.
+    Will run the subgoal hooks.
+ *)
+let add_subgoals t = List.iter (add_subgoal t)
+
+(** Fills in the solution of the given subgoal. *)
+let solve (s : Comp.proof_state) (proof : Comp.proof) : unit =
+  s.Comp.solution := Some proof
+
+(** Clears the solution of the given subgoal. *)
+let unsolve g =
+  g.Comp.solution := None
+
+(** Raises Violation if any preconditions of an action are not
+    satisfied. *)
+let validate_action t a : unit =
+  (* - the solution of the target subgoal is None
+     - the target subgoal is among the list of remaining subgoals
+     - the child subgoals are not in the list of remaining subgoals
+   *)
+  () (* TODO *)
+
+let validate_action_inverse t a : unit =
+  (* - the solution of the target subgoal is not None
+     - the target subgoal is not among the list of remaining subgoals
+     - the child subgoals are among the list of remaining subgoals
+   *)
+  () (* TODO *)
+
+type apply_mode =
+  [ `forward
+  | `backward
+  ]
+
+let apply' (mode : apply_mode) t (a : Action.t) =
+  let open Action in
+  match mode with
+  | `forward ->
+     validate_action t a;
+     solve a.target a.solution;
+     remove_subgoal t a.target;
+     add_subgoals t a.children;
+  | `backward ->
+     validate_action_inverse t a;
+     unsolve a.target;
+     remove_subgoals t a.children;
+     add_subgoal' t a.target
+
+let record_action t a = Stack.push a t.history
+
+let apply t a =
+  apply' `forward t a;
+  record_action t a
+
+let undo t : bool =
+  Stack.popping t.history
+    F.(Maybe.(is_some ++ map (apply' `backward t)))
 
 (** Alias to be used when this module is open. *)
 type theorem = t
@@ -150,27 +256,6 @@ let show_subgoals (t : t) =
   printf t "@[<v>%a@]"
     print_subgoals (DynArray.to_list t.remaining_subgoals)
 
-(** Runs all registered subgoal hooks on the given subgoal. *)
-let run_subgoal_hooks t g =
-  List.iter (fun f -> f g) (DynArray.to_list t.subgoal_hooks)
-
-(** Adds a new subgoal to this theorem.
-    Will run the subgoal hooks.
- *)
-let add_subgoal t g =
-  DynArray.insert t.remaining_subgoals 0 g;
-  run_subgoal_hooks t g
-
-(** Adds a list of subgoals to this theorem.
-    Will run the subgoal hooks.
- *)
-let add_subgoals t = List.iter (add_subgoal t)
-
-let remove_subgoal t g =
-  let p g' = Comp.(Whnf.conv_subgoal_path_builder g.label g'.label) in
-  let i = DynArray.index_of p t.remaining_subgoals in
-  DynArray.delete t.remaining_subgoals i
-
 let remove_current_subgoal t =
   DynArray.delete t.remaining_subgoals 0
 
@@ -182,26 +267,14 @@ let defer_subgoal t =
   remove_current_subgoal t;
   DynArray.add t.remaining_subgoals g
 
-let replace_subgoal t g =
-  remove_current_subgoal t;
-  add_subgoal t g
-
-(** Fills in the solution of the given subgoal.
-    This should (ultimately) be called by tactics that solve their goal.
-    It is the most primitive solving tactic.
-    This doesn't remove the subgoal from the list of pending subgoals!
- *)
-let solve (s : Comp.proof_state) (proof : Comp.proof) : unit =
-  s.Comp.solution := Some proof
-
 (** High-level solving tactic.
-    solve_by_replacing_subgoal g' f g t
+    apply_subgoal_replacement t g' f g
     - removes the current subgoal (which must be g)
     - fill's in g's solution with an incomplete proof for g', transformed by f.
  *)
-let solve_by_replacing_subgoal t g' f g =
-  replace_subgoal t g';
-  f (Comp.incomplete_proof Loc.ghost g') |> solve g
+let apply_subgoal_replacement t g' f g =
+  let p = f (Comp.incomplete_proof Loc.ghost g') in
+  apply t (Action.make g [g'] p)
 
 (** Renames a variable from `src` to `dst` at the given level
     (`comp or `meta) in the subgoal `g`.
@@ -218,7 +291,7 @@ let rename_variable src dst level t g =
      $> fun cD -> { g.context with cD }
   end
   $> (fun context -> { g with context; solution = ref None })
-  $> (fun g' -> solve_by_replacing_subgoal t g' Misc.id g)
+  $> (fun g' -> apply_subgoal_replacement t g' Misc.id g)
   |> is_some
 
 (** Registers the theorem in the store.
@@ -247,12 +320,17 @@ let register name tau p mutual_group k : cid_prog =
     well as the only item in the list of states to work on.
  *)
 let configure cid ppf hooks initial_state gs =
+  dprintf begin fun p ->
+    p.fmt "[theorem] configuring theorem %a"
+      Id.print (CompS.name cid)
+    end;
   let t =
     { cid
     ; initial_state
     ; remaining_subgoals = DynArray.make 16
     ; subgoal_hooks = DynArray.create ()
     ; ppf
+    ; history = Stack.create ()
     }
   in
   let hooks = List.map (fun h -> h t) hooks in

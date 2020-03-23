@@ -5,6 +5,7 @@ module Command = Beluga.Syntax.Ext.Harpoon
 module Id = Beluga.Id
 module Total = Beluga.Total
 module Whnf = B.Whnf
+module F = Misc.Function
 
 module P = B.Pretty.Int.DefaultPrinter
 
@@ -15,13 +16,11 @@ open B.Debug.Fmt
 
 type t = Theorem.t -> Comp.proof_state -> unit
 
-(** Fill the hole with the given proof.
+(** Fill the hole with the given closed proof.
     This will solve the current subgoal.
  *)
 let solve (proof : Comp.proof) : t =
-  fun t g ->
-  Theorem.solve g proof;
-  Theorem.remove_subgoal t g
+  fun t g -> Theorem.(apply t (Action.make g [] proof))
 
 (** Decides whether the name of the given declaration already occurs
     in the given context.
@@ -118,24 +117,24 @@ let intros' : Theorem.t ->
  *)
 let intros (names : string list option) : t =
   (* Main body of `intros`: *)
-  fun t s ->
+  fun t g ->
   let open Comp in
-  let (tau, theta) = s.goal in
+  let (tau, theta) = g.goal in
   match intros' t names LF.Empty LF.Empty tau with
   | Either.Right (cD, cG, tau') ->
      (* only create a new intros node if something actually happened *)
      let goal = (tau', theta) in
      let local_context = {cD; cG; cIH = LF.Empty} in
-     let context = Whnf.append_hypotheses s.context local_context in
+     let context = Whnf.append_hypotheses g.context local_context in
      let new_state =
        { context
        ; goal
        ; solution = ref None
-       ; label = s.label
+       ; label = g.label
        }
      in
      (* Solve the current goal with the intros proof. *)
-     Theorem.solve_by_replacing_subgoal t new_state (Comp.intros context) s
+     Theorem.apply_subgoal_replacement t new_state (Comp.intros context) g
   | Either.Left NothingToIntro ->
      Theorem.printf t
        "Nothing to introduce.@,\
@@ -411,9 +410,11 @@ let split (k : Command.split_kind) (i : Comp.exp_syn) (tau : Comp.typ) mfs : t =
           let label =
             Comp.SubgoalPath.build_context_split i case_label
           in
-          let s' = new_state label in
-          Theorem.add_subgoal t s';
-          context_branch case_label (cG_p, pat) theta context (incomplete_proof Loc.ghost s')
+          let g' = new_state label in
+          let p = incomplete_proof Loc.ghost g' in
+          ( g'
+          , context_branch case_label (cG_p, pat) theta context p
+          )
        | _ -> assert false
      in
      let make_meta_branch (context, theta, new_state, (cG_p, pat)) =
@@ -438,9 +439,12 @@ let split (k : Command.split_kind) (i : Comp.exp_syn) (tau : Comp.typ) mfs : t =
                  "[make_meta_branch] head neither pvar (proj) nor const"
           in
           let label = Comp.SubgoalPath.build_meta_split i c in
-          let s' = new_state label in
-          Theorem.add_subgoal t s';
-          meta_branch c (cG_p, pat) theta context (incomplete_proof Loc.ghost s')
+          let g' = new_state label in
+          let p = incomplete_proof Loc.ghost g' in
+          ( g'
+          , meta_branch c (cG_p, pat) theta context p
+          )
+
        | _ -> B.Error.violation "[make_meta_branch] pattern not a meta object"
      in
      let make_comp_branch (context, theta, new_state, (cG_p, pat)) =
@@ -449,9 +453,11 @@ let split (k : Command.split_kind) (i : Comp.exp_syn) (tau : Comp.typ) mfs : t =
           let label =
             Comp.SubgoalPath.build_comp_split i cid
           in
-          let s' = new_state label in
-          Theorem.add_subgoal t s';
-          comp_branch cid (cG_p, pat) theta context (incomplete_proof Loc.ghost s')
+          let g' = new_state label in
+          let p = incomplete_proof Loc.ghost g' in
+          ( g'
+          , comp_branch cid (cG_p, pat) theta context p
+          )
        | _ ->
           B.Error.violation "[get_context_branch] pattern not a constant"
      in
@@ -469,13 +475,13 @@ let split (k : Command.split_kind) (i : Comp.exp_syn) (tau : Comp.typ) mfs : t =
        |> Maybe.map Nonempty.all_equal
      with
      | None ->
-        Theorem.remove_subgoal t s;
-        impossible_split i |> Theorem.solve s
+        Theorem.(apply t (Action.make s [] (impossible_split i)))
+
      | Some None ->
         B.Error.violation "mixed cases in split (bug in coverage?)"
+
      | Some (Some k) ->
         let finish f g =
-          Theorem.remove_subgoal t s;
           let f' k cg =
             (* k is the zero-based coverage goal/branch number
                and is used by make_context_branch in order to specify
@@ -492,7 +498,11 @@ let split (k : Command.split_kind) (i : Comp.exp_syn) (tau : Comp.typ) mfs : t =
              *)
             f k (get_branch cg)
           in
-          List.mapi f' cgs |> List.rev |> g i tau |> Theorem.solve s
+          List.mapi f' cgs
+          |> List.split
+          |> Pair.rmap F.(g i tau ++ List.rev)
+          |> fun (children, p) ->
+             Theorem.(apply t (Action.make s children p))
         in
         match k with
         | `meta -> finish (Misc.const make_meta_branch) Comp.meta_split
@@ -541,7 +551,7 @@ let solve_with_new_meta_decl decl f t g =
   match check_metavariable_uniqueness cD decl t with
   | `duplicate -> ()
   | `unique ->
-     Theorem.solve_by_replacing_subgoal t (extending_meta_context decl g) f g
+     Theorem.apply_subgoal_replacement t (extending_meta_context decl g) f g
 
 (** Solves the current subgoal by keeping it the same, but extending
     the computational context with a new declaration.
@@ -551,7 +561,7 @@ let solve_with_new_comp_decl decl f t g =
   match check_computational_variable_uniqueness cD cG decl t with
   | `duplicate -> ()
   | `unique ->
-     Theorem.solve_by_replacing_subgoal t (extending_comp_context decl g) f g
+     Theorem.apply_subgoal_replacement t (extending_comp_context decl g) f g
 
 let solve_by_unbox' f (cT : Comp.meta_typ) (name : B.Id.name) : t =
   solve_with_new_meta_decl LF.(Decl (name, cT, No)) f
@@ -580,35 +590,34 @@ let invoke (i : Comp.exp_syn) (tau : Comp.typ) (name : Id.name) : t =
     (prepend_commands [By (i, name, tau)])
 
 let suffices (i : Comp.exp_syn) (tau_args : Comp.typ list) (tau_i : Comp.typ) : t =
-  fun t s ->
+  fun t g ->
   let open Comp in
   let i_head = Comp.head_of_application i in
   let _, (i', ttau_i) =
     B.Check.Comp.genMApp
       Loc.ghost
       (fun _ -> true)
-      s.context.cD
+      g.context.cD
       (i, (tau_i, Whnf.m_id))
   in
   let tau_i' = Whnf.cnormCTyp ttau_i in
-  B.Check.Comp.unify_suffices s.context.cD tau_i' tau_args (Whnf.cnormCTyp s.goal);
-  Theorem.remove_subgoal t s;
+  B.Check.Comp.unify_suffices g.context.cD tau_i' tau_args (Whnf.cnormCTyp g.goal);
   (* generate the subgoals for the arguments.
      by unification it doesn't matter which list we use. *)
-  let subproofs =
+  let children, subproofs =
     Misc.Function.flip List.mapi tau_args
       begin fun k tau ->
       let new_state =
-        { context = s.context
+        { context = g.context
         ; goal = (tau, Whnf.m_id)
         ; solution = ref None
         ; label =
-            Comp.SubgoalPath.(append s.label (build_suffices i_head k))
+            Comp.SubgoalPath.(append g.label (build_suffices i_head k))
         }
       in
-      Theorem.add_subgoal t new_state;
-      (Loc.ghost, tau, incomplete_proof Loc.ghost new_state)
+      (new_state, (Loc.ghost, tau, incomplete_proof Loc.ghost new_state))
       end
+    |> List.split
   in
-  suffices i' subproofs
-  |> Theorem.solve s
+  let p = suffices i' subproofs in
+  Theorem.(apply t Action.(make g children p))

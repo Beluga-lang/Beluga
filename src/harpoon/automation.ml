@@ -64,7 +64,7 @@ let auto_intros : t =
        fmt_ppr_lf_ctx context.cD
        fmt_ppr_cmp_ctx context.cG
        (P.fmt_ppr_cmp_typ g.context.cD P.l0) (Whnf.cnormCTyp g.goal);
-     Theorem.solve_by_replacing_subgoal t new_state (Comp.intros context) g;
+     Theorem.apply_subgoal_replacement t new_state (Comp.intros context) g;
      true
   | Either.Left _ ->
      false

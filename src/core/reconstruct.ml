@@ -205,6 +205,18 @@ let _ = Error.register_printer
     end
   end
 
+(** Contextual object used as the the desugaring of the computational
+    underscore. *)
+let box_hole_cM loc =
+  ( loc
+  , Apx.Comp.ClObj
+      ( Apx.LF.CtxHole
+      , Apx.LF.Dot
+          ( Apx.LF.Obj (Apx.LF.Root (loc, Apx.LF.Hole, Apx.LF.Nil))
+          , Apx.LF.EmptySub
+          )
+      )
+  )
 
 (* extend_mctx cD (x, cdecl, t) = cD'
 
@@ -1086,18 +1098,7 @@ and elExpW cD cG e theta_tau = match (e, theta_tau) with
      Int.Comp.Hole (loc, id, name)
 
   | (Apx.Comp.BoxHole loc, (Int.Comp.TypBox (_, cT), theta)) ->
-     let cM =
-       ( Loc.ghost
-       , Apx.Comp.ClObj
-           ( Apx.LF.CtxHole
-           , Apx.LF.Dot
-               ( Apx.LF.Obj (Apx.LF.Root (Loc.ghost, Apx.LF.Hole, Apx.LF.Nil))
-               , Apx.LF.EmptySub
-               )
-           )
-       )
-     in
-     let cM = elMetaObj cD cM (cT, theta) in
+     let cM = elMetaObj cD (box_hole_cM loc) (cT, theta) in
      let cU = Whnf.cnormMTyp (cT, theta) in
      Int.Comp.Box (loc, cM, cU)
 
@@ -1257,25 +1258,14 @@ and elExp' cD cG i =
         , (tau, Int.LF.MDot (metaObjToFt cM, theta))
         )
 
-     | Apx.Comp.BoxHole _, (Int.Comp.TypPiBox (_, Int.LF.Decl (_, ctyp, _), tau), theta) ->
+     | Apx.Comp.BoxHole loc, (Int.Comp.TypPiBox (_, Int.LF.Decl (_, ctyp, _), tau), theta) ->
         dprintf
           begin fun p ->
           p.fmt "[elExp'] @[<v>Apply -> elMetaObj at type\
                  @,@[%a@]@]"
             P.(fmt_ppr_cmp_meta_typ cD) (Whnf.cnormMTyp (ctyp, theta))
           end;
-        let cM =
-          ( Loc.ghost
-          , Apx.Comp.ClObj
-              ( Apx.LF.CtxHole
-              , Apx.LF.Dot
-                  ( Apx.LF.Obj (Apx.LF.Root (Loc.ghost, Apx.LF.Hole, Apx.LF.Nil))
-                  , Apx.LF.EmptySub
-                  )
-              )
-          )
-        in
-        let cM = elMetaObj cD cM (ctyp, theta) in
+        let cM = elMetaObj cD (box_hole_cM loc) (ctyp, theta) in
         ( Int.Comp.MApp (loc, i', cM, Whnf.cnormMTyp (ctyp, theta), `explicit)
         , (tau, Int.LF.MDot (metaObjToFt cM, theta))
         )

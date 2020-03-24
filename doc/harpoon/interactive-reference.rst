@@ -15,6 +15,24 @@ Administrative tactics
 Administrative tactics are used to navigate the proof, obtain information about
 functions or constructors, or to prove a lemma in the middle of another proof.
 
+``undo``
+^^^^^^^^
+
+Undoes the effect of a previous :ref:`proof tactic <proof tactics>`.
+See :ref:`undo`.
+
+
+``redo``
+^^^^^^^^
+
+Undoes the effect of a previous ``undo``.
+See :ref:`undo`.
+
+``history``
+^^^^^^^^^^^
+
+Displays the ``undo`` history. See :ref:`undo`.
+
 .. _cmd-theorem:
 
 ``theorem list``
@@ -147,6 +165,7 @@ Valid values for ``KIND`` are
 * ``theorem``: displays information about the Beluga program or Harpoon proof
   named ``OBJ``.
 
+.. _proof tactics:
 
 Proof tactics
 -------------
@@ -213,10 +232,13 @@ boxed contextual type.
 On success, this tactic replaces the current subgoal with a subgoal having one
 additional entry in the appropriate context.
 
-.. note::
+.. _cmd-unbox:
 
-    This command sometimes completes a proof due to
-    :ref:`automation <auto solve trivial>`.
+``unbox``
+^^^^^^^^^
+
+The command ``unbox EXP as X`` is syntactic sugar for ``by EXP as X unboxed``.
+See also :ref:`by <cmd-by>`.
 
 .. _cmd-solve:
 

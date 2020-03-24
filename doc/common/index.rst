@@ -6,3 +6,4 @@ Common elements
 
    lf
    contextual-lf
+   Inductive Types (stub) <inductive-types>

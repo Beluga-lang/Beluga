@@ -34,7 +34,10 @@ example, we can encode a less-than-equals relation on ``nat`` as follows.
     ;
 
 Terms of this type encode *proofs*. As a concrete example, a term of type
-``le (succ zero) (succ (succ zero))`` encodes a proof that 2 is less than 4.
+``le (succ zero) (succ (succ zero))`` would represent a proof that 1 is less
+than 2.
+
+.. _free variables:
 
 First, observe the presence of *free variables* ``M`` and ``N``.
 Any free variable is automatically Pi-quantified at the very front of the

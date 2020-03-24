@@ -14,3 +14,5 @@ a lemma or induction hypothesis.
    prover-structure
    proof-automation
    interactive-reference
+   undo
+   structured-proof-language

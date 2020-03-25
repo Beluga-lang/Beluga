@@ -170,17 +170,19 @@ let auto_solve_trivial : t =
        (P.fmt_ppr_cmp_typ cD P.l0) (Whnf.cnormCTyp g.goal);
      (solve w |> Tactic.solve ~action_name: "auto-solve-trivial") t g;
      true
-  | _ ->
+  | lazy (Some w) ->
      Theorem.printf t
        "@[<v>@,The subgoal\
         @,  @[<hov 2>%a@]\
         @,of type\
         @,  @[<hov 2>%a@]\
-        @,could be solved automatically.\
+        @,could be solved automatically by\
+        @,  @[<hov 2>solve %a@].\
         @,However, this would complete the theorem.@,@,@]"
        (P.fmt_ppr_cmp_subgoal_path cD cG)
        (g.label Comp.SubgoalPath.Here)
-       (P.fmt_ppr_cmp_typ cD P.l0) (Whnf.cnormCTyp g.goal);
+       (P.fmt_ppr_cmp_typ cD P.l0) (Whnf.cnormCTyp g.goal)
+       (P.fmt_ppr_cmp_exp_chk cD cG P.l0) w;
      false
 
 module State : sig

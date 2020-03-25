@@ -175,9 +175,7 @@ type refinement_cands =
       - cPhi' |- tQ' <= type
  *)
 let gen_str cD cPsi (LF.Atom (_, a, _) as tP) =
-  let cPhi, conv_list = ConvSigma.flattenDCtx cD cPsi in
-  let s_proj = ConvSigma.gen_conv_sub conv_list in
-  let s_tup = ConvSigma.gen_conv_sub' conv_list in
+  let (cPhi, lazy s_proj, lazy s_tup) = ConvSigma.gen_flattening cD cPsi in
   (* cPsi |- s_proj          : cPhi
      cPhi |- s_tup           : cPsi
      cPhi |- tQ                       where cPsi |- tP !! tQ = [s_tup]tP !! *)
@@ -203,44 +201,6 @@ let eta_expand (tH, tA) =
   in
   eta (tA, S.LF.id) LF.Nil
 
-(* etaExpandMVstr cPsi sA = tN
-
-   cPsi  |- [s]A <= typ
-   cPsi  |- ss   <= cPsi'
-   cPsi' |- tN   <= [s'][s]A
- *)
-let rec etaExpandMVstr u cD dep cPsi sA =
-  etaExpandMVstr' u cD dep cPsi (Whnf.whnfTyp sA)
-
-and etaExpandMVstr' u cD dep cPsi =
-  function
-  | LF.Atom (_, a, _) as tP, s ->
-     let cPhi, conv_list = ConvSigma.flattenDCtx cD cPsi in
-     let s_proj = ConvSigma.gen_conv_sub conv_list in
-     let s_tup = ConvSigma.gen_conv_sub' conv_list in
-     (* let tQ = ConvSigma.strans_typ cD cPsi (tP, s) conv_list in *)
-     let tQ = Whnf.normTyp (tP, S.LF.id) in
-     (* necessary to eliminate closures *)
-     let tQ = Whnf.normTyp (tQ, Substitution.LF.comp s s_tup) in
-     (* cPsi |- s_proj          : cPhi
-        cPhi |- s_tup           : cPsi
-        cPhi |- tQ                       where cPsi |- tP !! tQ = [s_tup]tP !! *)
-     let ss', cPhi' = Subord.thin' cD a cPhi in
-     (* cPhi  |- ss'             : cPhi' *)
-     let ssi' = S.LF.invert ss' in
-     (* cPhi' |- ssi             : cPhi  *)
-     (* cPhi' |- [ssi]tQ                 *)
-     let u = Whnf.newMMVar u (cD, cPhi', LF.TClo (tQ, ssi')) dep in
-     (* cPhi  |- ss'             : cPhi'
-        cPsi  |- s_proj          : cPhi
-        cPsi  |- comp ss' s_proj : cPhi' *)
-     let ss_proj = S.LF.comp ss' s_proj in
-     let tM = LF.Root (Loc.ghost, LF.MMVar ((u, Whnf.m_id), ss_proj), LF.Nil, `explicit) in
-     tM
-  | LF.PiTyp ((LF.TypDecl (x, _) as decl, _), tB), s ->
-     LF.Lam (Loc.ghost, x, etaExpandMVstr u cD dep (LF.DDec (cPsi, S.LF.decSub decl s)) (tB, S.LF.dot1 s))
-
-(* ****************************************************************************** *)
 (** Printing for debugging
 
 Example:
@@ -1106,7 +1066,7 @@ let rec genSpine k names cD cPsi sA tP =
      (* let tN = Whnf.etaExpandMV cPsi (tA, s) S.LF.id in *)
      let u = NameGen.(mvar tA |> renumber names) in
      let dep = if k > 0 then LF.Maybe else LF.No in
-     let tN = etaExpandMVstr (Some u) cD dep cPsi (tA, s) in
+     let tN = ConvSigma.etaExpandMMVstr Loc.ghost cD cPsi (tA, s) dep (Some u) in
      dprintf
        begin fun p ->
        p.fmt "[genSpine] @[<v>Pi-type: extending spine with new (eta-expanded) variable@,\
@@ -2282,7 +2242,7 @@ let rec genPattSpine names mk_pat_var k =
      let tP' = Whnf.cnormTyp (tP, t) in
      let cPsi' = Whnf.cnormDCtx (cPsi, t) in
      let u = NameGen.renumber names u in
-     let tR = etaExpandMVstr (Some u) LF.Empty dep cPsi' (tP', S.LF.id) in
+     let tR = ConvSigma.etaExpandMMVstr Loc.ghost LF.Empty cPsi' (tP', S.LF.id) dep (Some u) in
      let pat1 =
        Comp.PatMetaObj
          ( Loc.ghost

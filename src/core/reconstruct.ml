@@ -469,7 +469,7 @@ let rec elMCtx recT delta = match delta with
 
 let mgAtomicTyp cD cPsi a kK =
   let (flat_cPsi, conv_list) = flattenDCtx cD cPsi in
-  let s_proj   = gen_conv_sub conv_list in
+  let s_proj   = gen_proj_sub conv_list in
   dprintf begin fun p ->
     p.fmt "[mgAtomicTyp] @[<v>flat cPsi = @[%a@]\
            @,s_proj = @[%a@]@]"

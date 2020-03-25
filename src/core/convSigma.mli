@@ -3,21 +3,46 @@
 *)
 
 open Syntax
-
+open Int
+open LF
 
 type error =
-  | BlockInDctx of Int.LF.mctx * Int.LF.head * Int.LF.typ * Int.LF.dctx
+  | BlockInDctx of mctx * head * typ * dctx
+
+type t
 
 exception Error of Syntax.Loc.t * error
-val fmt_ppr_conv_list : Format.formatter -> Id.offset list -> unit
-val strans_typ  : Int.LF.mctx -> Int.LF.dctx -> Int.LF.tclo  -> Id.offset list -> Int.LF.typ
-val strans_norm : Int.LF.mctx -> Int.LF.dctx -> Int.LF.nclo  -> Id.offset list -> Int.LF.normal
-val strans_sub  : Int.LF.mctx -> Int.LF.dctx -> Int.LF.sub   -> Id.offset list -> Int.LF.sub
-val new_index   : Id.offset    -> Id.offset list -> int
+val fmt_ppr_conv_list : Format.formatter -> t -> unit
 
-val flattenDCtx : Int.LF.mctx -> Int.LF.dctx -> Int.LF.dctx * Id.offset list
+val strans_typ  : mctx -> dctx -> tclo  -> t -> typ
+val strans_norm : mctx -> dctx -> nclo  -> t -> normal
+val strans_sub  : mctx -> dctx -> sub   -> t -> sub
 
-val gen_conv_sub: Id.offset list -> Int.LF.sub
-val gen_conv_sub': Id.offset list -> Int.LF.sub
+(** Translates a bound variable index according to the sigma
+    conversion. *)
+val map : t -> Id.offset -> Id.offset
 
-val etaExpandMMVstr    : Syntax.Loc.t -> Int.LF.mctx -> Int.LF.dctx -> Int.LF.tclo -> Id.name -> Int.LF.normal
+val flattenDCtx : mctx -> dctx -> dctx * t
+val gen_proj_sub: t -> sub
+val gen_tup_sub : t -> sub
+
+(** Constructs a unification variable for the given tclo,
+    strengthening its type. *)
+val etaExpandMMVstr : Loc.t -> mctx -> dctx -> tclo -> depend -> Id.name option -> normal
+
+(** gen_flattening cD cPsi = (cPhi, lazy s_proj, lazy s_tup)
+    Generates a flattened LF context cPhi in which all blocks present
+    in cPsi have been decomposed.
+    Packing and unpacking substitutions s_proj and s_tup are lazily
+    computed to mediate between the contexts.
+    Specifically:
+      if cD |- cPsi ctx
+      then cD |- cPhi ctx such that
+      cD ; cPsi |- s_proj : cPhi
+      cD ; cPhi |- s_tup : cPsi
+
+    The naming of s_proj and s_tup is based on what kind of terms
+    these substitutions *contain*; e.g. s_proj contains projections,
+    so it takes us from the block context to the flat context.
+ *)
+val gen_flattening : mctx -> dctx -> dctx * sub Lazy.t * sub Lazy.t

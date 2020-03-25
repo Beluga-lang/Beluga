@@ -738,8 +738,7 @@ Example: cPsi = g, x:tm, y:tm  ~~ g, y:tm, x:tm
 
 *)
 let convDCtxMod cD cPsi cPhi =
-  let cPhi', conv_list = ConvSigma.flattenDCtx cD cPhi in
-  let s_proj = ConvSigma.gen_conv_sub conv_list in
+  let (cPhi', lazy s_proj, _) = ConvSigma.gen_flattening cD cPhi in
     (*  cPhi |- s_proj : cPhi' *)
     begin try
       let wk_sub = wkSub cPhi' cPsi in

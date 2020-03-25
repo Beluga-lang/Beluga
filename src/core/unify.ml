@@ -168,9 +168,7 @@ let rec blockdeclInDctx cPsi = match cPsi with
           (P.fmt_ppr_lf_typ cD cPsi P.l0) (Whnf.normTyp (tP, s))
           (P.fmt_ppr_lf_dctx cD P.l0) cPsi
       );
-    let (cPhi, conv_list) = ConvSigma.flattenDCtx cD cPsi in
-    let s_proj = ConvSigma.gen_conv_sub conv_list in
-    let s_tup    = ConvSigma.gen_conv_sub' conv_list in
+    let (cPhi, lazy s_proj, lazy s_tup) = ConvSigma.gen_flattening cD cPsi in
     (* let tQ    = ConvSigma.strans_typ cD cPsi (tP, s) conv_list in*)
     let tQ = Whnf.normTyp (tP, Substitution.LF.comp s s_tup) in
     (*  cPsi |- s_proj : cPhi
@@ -1601,8 +1599,7 @@ let rec ground_sub cD = function (* why is parameter cD is unused? -je *)
             cPsi  |- tN <= [s]tA
             cPsi |- tN . s <= cPsi', x:A
           *)
-         (* let tN = Whnf.etaExpandMMV Syntax.Loc.ghost cD1 cPsi1 (tA, s) n id LF.Maybe in *)
-         let tN = ConvSigma.etaExpandMMVstr Syntax.Loc.ghost cD1 cPsi1 (tA, s) n in
+         let tN = ConvSigma.etaExpandMMVstr Syntax.Loc.ghost cD1 cPsi1 (tA, s) Maybe (Some n) in
          let tS  = genSpine cD1 cPsi1 (tB, LF.Dot(LF.Obj(tN), s))  in
          LF.App (tN, tS)
       | (LF.Atom (_ , _a, _tS) , _s) -> LF.Nil

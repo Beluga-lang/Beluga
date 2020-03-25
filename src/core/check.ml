@@ -297,6 +297,40 @@ module Comp = struct
        let t = Int.LF.MShift 1 in
        (Int.LF.(Dec (cD, Decl (x, cU, No))), Whnf.cnormGCtx (cG, t), t)
 
+  let apply_unbox_modifier cD modifier cU = match modifier with
+    | `strengthened ->
+       match cU with
+       | Int.LF.CTyp _ ->
+          (* TODO proper error; cannot strengthen a schema *)
+          assert false
+       | Int.LF.(ClTyp (mT, cPsi)) ->
+          match mT with
+          | Int.LF.(MTyp (Atom (_, a, _) as tA)) ->
+             let cPhi, _, lazy s_tup =
+               ConvSigma.gen_flattening cD cPsi
+             in
+             (* cPhi |- s_tup : cPsi *)
+             let (ss', cPhi') =
+               Subord.thin' cD a cPhi |> Pair.rmap Whnf.normDCtx
+             in
+             dprintf begin fun p ->
+               p.fmt "[apply_unbox_modifier] @[<v>strengthening !\
+                      @,cPhi' = @[%a@]@]"
+                 P.(fmt_ppr_lf_dctx cD l0) cPhi'
+               end;
+             (* cPhi |- ss' : cPhi' *)
+             let ssi' = S.LF.invert ss' in
+             (* cPhi' |- ssi' : cPhi *)
+             let ss_tup = S.LF.comp s_tup ssi' in
+             Int.LF.(ClTyp (MTyp (Whnf.normTyp (tA, ss_tup)), cPhi'))
+
+          | _ ->
+             (* TODO proper error; cannot strengthen non-atomic types. *)
+             assert false
+
+  let apply_unbox_modifier_opt cD modifier_opt =
+    Maybe.(get_default Misc.id (modifier_opt $> apply_unbox_modifier cD))
+
   type caseType =
     | IndexObj of meta_obj
     | DataObj
@@ -1393,6 +1427,11 @@ module Comp = struct
       )
     in
     function
+    | By (i, name, _) ->
+       let (_, tau', t) = syn cD (cG, cIH) total_decs i in
+       let tau = Whnf.cnormCTyp (tau', t) in
+       let cG = I.Dec (cG, CTypDecl (name, tau, false)) in
+       (cD, cG, cIH, Whnf.m_id)
     | Unbox (i, name, _, modifier) ->
        let (_, tau', t) = syn cD (cG, cIH) total_decs i in
        dprintf begin fun p ->
@@ -1402,13 +1441,16 @@ module Comp = struct
            Id.print name
            P.(fmt_ppr_cmp_typ cD l0) (Whnf.cnormCTyp (tau', t))
          end;
-       let (cU, t) = require_syn_typbox cD cG Loc.ghost i (tau', t) in
-       extend_meta I.(Decl (name, Whnf.cnormMTyp (cU, t), No))
-    | By (i, name, _) ->
-       let (_, tau', t) = syn cD (cG, cIH) total_decs i in
-       let tau = Whnf.cnormCTyp (tau', t) in
-       let cG = I.Dec (cG, CTypDecl (name, tau, false)) in
-       (cD, cG, cIH, Whnf.m_id)
+       let cU =
+         require_syn_typbox cD cG Loc.ghost i (tau', t)
+         |> Whnf.cnormMTyp
+         |> apply_unbox_modifier_opt cD modifier
+       in
+       dprintf begin fun p ->
+         p.fmt "[check] [command] [Unbox] result ctyp = @[%a@]"
+           P.(fmt_ppr_cmp_meta_typ cD) cU
+         end;
+       extend_meta I.(Decl (name, cU, No))
 
   (** Check a hypothetical derivation.
       Ensures that the contexts in the hypothetical are convertible

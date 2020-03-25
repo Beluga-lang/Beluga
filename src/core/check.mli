@@ -110,6 +110,13 @@ module Comp : sig
   val apply_command_to_context : LF.mctx * Comp.gctx -> Comp.command ->
                                  LF.mctx * Comp.gctx * LF.msub
 
+  (** Transforms the given contextual type according the an unboxing
+      modifier. *)
+  val apply_unbox_modifier : LF.mctx -> unbox_modifier -> LF.ctyp -> LF.ctyp
+
+  (** Variant of apply_unbox_modifier that is the identity when no modifier is specified. *)
+  val apply_unbox_modifier_opt : LF.mctx -> unbox_modifier option -> LF.ctyp -> LF.ctyp
+
   (** Checks a theorem in the given contexts against the given type.
       The given list of total declarations is used for totality checking.
       The cid_comp_const parameter is used for registering Harpoon

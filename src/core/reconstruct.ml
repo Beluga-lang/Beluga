@@ -2000,11 +2000,21 @@ let rec elHypothetical cD cG label hyp ttau =
 
 and elCommand cD cG =
   function
+  | A.By (loc, i, x) ->
+     let (i, tau_i) = elExp' cD cG i |> Pair.rmap Whnf.cnormCTyp in
+     let i = Whnf.(cnormExp' (i, m_id)) in
+     let tau_i = Whnf.(cnormCTyp (tau_i, m_id)) in
+     if not Whnf.(closedExp' i && closedCTyp tau_i) then
+       throw loc (ClosedTermRequired (cD, cG, i, tau_i));
+     let c = I.By (i, x, tau_i) in
+     (cD, Int.LF.Dec (cG, I.CTypDecl (x, tau_i, false)), Whnf.m_id, c)
+
   | A.Unbox (loc, i, x, modifier) ->
      let (i, ttau_i) = elExp' cD cG i in
      let cU =
        Check.Comp.require_syn_typbox cD cG loc i ttau_i
        |> Whnf.cnormMTyp
+       |> Check.Comp.apply_unbox_modifier_opt cD modifier
      in
      let d = Int.LF.(Decl (x, cU, No)) in
      let t = Int.LF.MShift 1 in
@@ -2015,15 +2025,6 @@ and elCommand cD cG =
      , t
      , I.Unbox (i, x, cU, modifier)
      )
-
-  | A.By (loc, i, x) ->
-     let (i, tau_i) = elExp' cD cG i |> Pair.rmap Whnf.cnormCTyp in
-     let i = Whnf.(cnormExp' (i, m_id)) in
-     let tau_i = Whnf.(cnormCTyp (tau_i, m_id)) in
-     if not Whnf.(closedExp' i && closedCTyp tau_i) then
-       throw loc (ClosedTermRequired (cD, cG, i, tau_i));
-     let c = I.By (i, x, tau_i) in
-     (cD, Int.LF.Dec (cG, I.CTypDecl (x, tau_i, false)), Whnf.m_id, c)
 
 (* elaborate Harpoon proofs *)
 and elProof cD cG (pb : I.SubgoalPath.builder) (p : Apx.Comp.proof) ttau =

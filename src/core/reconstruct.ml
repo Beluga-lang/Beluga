@@ -2000,7 +2000,7 @@ let rec elHypothetical cD cG label hyp ttau =
 
 and elCommand cD cG =
   function
-  | A.Unbox (loc, i, x) ->
+  | A.Unbox (loc, i, x, modifier) ->
      let (i, ttau_i) = elExp' cD cG i in
      let cU =
        Check.Comp.require_syn_typbox cD cG loc i ttau_i
@@ -2013,7 +2013,7 @@ and elCommand cD cG =
      ( Int.LF.Dec (cD, d)
      , Whnf.cnormGCtx (cG, t)
      , t
-     , I.Unbox (i, x, cU)
+     , I.Unbox (i, x, cU, modifier)
      )
 
   | A.By (loc, i, x) ->

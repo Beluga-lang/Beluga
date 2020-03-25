@@ -2237,14 +2237,6 @@ let append_hypotheses (h1 : Comp.hypotheses) (h2 : Comp.hypotheses) : Comp.hypot
 
 let mcomp' = Misc.Function.flip mcomp
 
-let apply_command_to_context (cD, cG) =
-  function
-  | Comp.Unbox (i, x, cU) ->
-     let t = MShift 1 in
-     (Dec (cD, Decl (x, cU, No)), cnormGCtx (cG, t), t)
-  | Comp.By (i, x, tau) ->
-     (cD, Dec (cG, Comp.CTypDecl (x, tau, false)), MShift 0)
-
 let collapse_sigma = function
   | SigmaLast (_, tA) -> tA
   | SigmaElem _ as typ_rec -> Sigma typ_rec

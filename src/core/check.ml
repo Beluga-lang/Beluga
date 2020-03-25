@@ -290,6 +290,13 @@ module Comp = struct
         end
       end
 
+  let apply_command_to_context (cD, cG) = function
+    | By (i, x, tau) ->
+       (cD, Int.LF.Dec (cG, CTypDecl (x, tau, false)), Int.LF.MShift 0)
+    | Unbox (i, x, cU, modifier) ->
+       let t = Int.LF.MShift 1 in
+       (Int.LF.(Dec (cD, Decl (x, cU, No))), Whnf.cnormGCtx (cG, t), t)
+
   type caseType =
     | IndexObj of meta_obj
     | DataObj
@@ -1386,7 +1393,7 @@ module Comp = struct
       )
     in
     function
-    | Unbox (i, name, _) ->
+    | Unbox (i, name, _, modifier) ->
        let (_, tau', t) = syn cD (cG, cIH) total_decs i in
        dprintf begin fun p ->
          p.fmt "[check] [command] @[<v>@[<hv 2>by @[%a@] as@ %a@]\

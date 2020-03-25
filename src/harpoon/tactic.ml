@@ -599,7 +599,7 @@ let solve_by_unbox (m : Comp.exp_syn) (mk_cmd : Comp.meta_typ -> Comp.command) (
 
 let unbox (m : Comp.exp_syn) (tau : Comp.typ) (name : B.Id.name) : t =
   let open Comp in
-  solve_by_unbox m (fun cT -> Unbox (m, name, cT)) tau name
+  solve_by_unbox m (fun cT -> Unbox (m, name, cT, None)) tau name
 
 let invoke (i : Comp.exp_syn) (tau : Comp.typ) (name : Id.name) : t =
   let open Comp in

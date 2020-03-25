@@ -207,7 +207,7 @@ module Comp = struct
 
   and command =
     | By of Loc.t * exp_syn * name
-    | Unbox of Loc.t * exp_syn * name
+    | Unbox of Loc.t * exp_syn * name * unbox_modifier option
 
   and directive =
     | Intros of Loc.t * hypothetical

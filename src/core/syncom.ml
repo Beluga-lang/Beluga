@@ -64,6 +64,10 @@ end
 module Comp = struct
   include Common
 
+  type unbox_modifier =
+    [ `strengthened
+    ]
+
   type case_pragma = PragmaCase | PragmaNotCase
 
   type context_case =

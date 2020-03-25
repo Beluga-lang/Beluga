@@ -205,17 +205,6 @@ val mctx_to_list_shifted : mctx -> ctyp_decl list
  *)
 val append_hypotheses : Comp.hypotheses -> Comp.hypotheses -> Comp.hypotheses
 
-(** Applies a Harpoon command to a pair of contexts.
-    Returns the new contexts together with a susbtitution to be
-    applied to the current goal type.
-
-    Concretely, apply_command_to_context (cD, cG) = (cD', cG', t)
-    such that
-    cD' |- t : cD
-    cD' |- cG' ctx
- *)
-val apply_command_to_context : mctx * Comp.gctx -> Comp.command -> mctx * Comp.gctx * msub
-
 (** Eliminates the level of indirection from having a Sigma with just
     one component. *)
 val collapse_sigma : typ_rec -> typ

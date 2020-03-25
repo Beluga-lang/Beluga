@@ -1548,10 +1548,10 @@ and index_command cvars vars fvars = function
      let i' = index_exp' cvars vars fvars i in
      let vars = Var.extend vars (Var.mk_entry x) in
      Apx.Comp.By (loc, i', x), vars, cvars
-  | Ext.Comp.Unbox (loc, i, x) ->
+  | Ext.Comp.Unbox (loc, i, x, modifier) ->
      let i' = index_exp' cvars vars fvars i in
      let cvars = CVar.extend cvars (CVar.mk_entry x `explicit) in
-     Apx.Comp.Unbox (loc, i', x), vars, cvars
+     Apx.Comp.Unbox (loc, i', x, modifier), vars, cvars
 
 and index_directive cvars vars fvars = function
   | Ext.Comp.Intros (loc, h) ->

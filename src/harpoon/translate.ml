@@ -86,12 +86,16 @@ let rec proof cD cG (p : Comp.proof) tau : Comp.exp_chk =
      | Comp.By (i, x, tau') ->
         let (cG', f) = by cD cG i x tau' in
         f (proof cD cG' p' tau)
-     | Comp.Unbox (i, x, cU) ->
-        let (cD', f) = unbox cD cG i x cU in
-        let t = LF.MShift 1 in
-        let cG' = Whnf.cnormGCtx (cG, t) in
-        let tau' = Whnf.cnormCTyp (tau, t) in
-        f (proof cD' cG' p' tau')
+     | Comp.Unbox (i, x, cU, modifier) ->
+        match modifier with
+        | None ->
+           let (cD', f) = unbox cD cG i x cU in
+           let t = LF.MShift 1 in
+           let cG' = Whnf.cnormGCtx (cG, t) in
+           let tau' = Whnf.cnormCTyp (tau, t) in
+           f (proof cD' cG' p' tau')
+        | Some `strengthened ->
+           assert false
      end
   | Comp.Directive d -> directive cD cG d tau
 

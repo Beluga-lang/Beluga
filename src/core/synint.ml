@@ -597,7 +597,7 @@ module Comp = struct
 
   and command =
     | By of exp_syn * name * typ
-    | Unbox of exp_syn * name * LF.ctyp
+    | Unbox of exp_syn * name * LF.ctyp * unbox_modifier option
 
   and proof_state =
     { context : hypotheses (* all the assumptions *)

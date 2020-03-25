@@ -2814,6 +2814,7 @@ let boxity =
   choice
     [ keyword "boxed" &> pure `boxed
     ; keyword "unboxed" &> pure `unboxed
+    ; keyword "strengthened" &> pure `strengthened
     ]
 
 let harpoon_command : Comp.command parser =
@@ -2828,16 +2829,24 @@ let harpoon_command : Comp.command parser =
     $> fun (loc, (i, x, b)) ->
        match b with
        | `boxed -> Comp.By (loc, i, x)
-       | `unboxed -> Comp.Unbox (loc, i, x)
+       | `unboxed -> Comp.Unbox (loc, i, x, None)
+       | `strengthened -> Comp.Unbox (loc, i, x, Some `strengthened)
   in
   let unbox =
     keyword "unbox" &>
       seq2
         ((span cmp_exp_syn) <& token T.KW_AS)
         name
-    $> fun ((loc, i), x) -> Comp.Unbox (loc, i, x)
+    $> fun ((loc, i), x) -> Comp.Unbox (loc, i, x, None)
   in
-  choice [ by; unbox ]
+  let strengthen =
+    keyword "strengthend" &>
+      seq2
+        (span cmp_exp_syn <& token T.KW_AS)
+        name
+    $> fun ((loc, i), x) -> Comp.Unbox (loc, i, x, Some `strengthened)
+  in
+  choice [ by; unbox; strengthen ]
 
 let case_label : Comp.case_label parser =
   let extension_case_label =

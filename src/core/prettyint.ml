@@ -1440,19 +1440,31 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
        fmt_ppr_cmp_directive cD cG ppf d
 
   and fmt_ppr_cmp_command cD cG ppf cmd =
+    let fmt_ppr_unbox_modifier ppf = function
+      | Some `strengthened -> fprintf ppf "strengthened"
+      | None -> fprintf ppf "unboxed"
+    in
     let open Comp in
     match cmd with
-    | Unbox (i, name, _) ->
-       fprintf ppf "@[<hv>by @[%a@]@ as %a unboxed@]"
+    | Unbox (i, name, _, modifier) ->
+       fprintf ppf "@[<hv>by @[%a@]@ as %a %a@]"
          (fmt_ppr_cmp_exp_syn cD cG l0) i
          Id.print name
+         fmt_ppr_unbox_modifier modifier
     | By (i, name, _) ->
        fprintf ppf "@[<hv 2>by @[%a@]@ as %a@]"
          (fmt_ppr_cmp_exp_syn cD cG l0) i
          Id.print name
 
   and fmt_ppr_cmp_command_and_proof cD cG ppf (c, p) =
-    let (cD', cG', _) = Whnf.apply_command_to_context (cD, cG) c in
+    let cD', cG' =
+      let open Comp in
+      match c with
+      | Unbox (_, u, _, _) ->
+         (LF.(Dec (cD, DeclOpt (u, `explicit))), Whnf.cnormGCtx (cG, LF.MShift 1))
+      | By (_, x, _) ->
+         (cD, LF.Dec (cG, Comp.CTypDeclOpt x))
+    in
     fprintf ppf
       "@[%a@];@,%a"
       (fmt_ppr_cmp_command cD cG) c

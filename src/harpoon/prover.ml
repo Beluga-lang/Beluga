@@ -326,9 +326,9 @@ let process_command
        future_remark ()
 
   (* Real tactics: *)
-  | Command.Unbox (i, name) ->
+  | Command.Unbox (i, name, modifier) ->
      let (hs, m, tau) = Elab.exp' cIH cD cG (Lazy.force mfs) i in
-     Tactic.unbox m tau name t g
+     Tactic.unbox m tau name modifier t g
 
   | Command.Intros names ->
      Tactic.intros names t g

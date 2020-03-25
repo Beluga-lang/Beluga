@@ -598,6 +598,8 @@ module Comp = struct
   and command =
     | By of exp_syn * name * typ
     | Unbox of exp_syn * name * LF.ctyp * unbox_modifier option
+  (* ^ The stored ctyp is the type synthesized for the exp_syn, BEFORE
+     the application of any unbox_modifier *)
 
   and proof_state =
     { context : hypotheses (* all the assumptions *)

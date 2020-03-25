@@ -3128,7 +3128,8 @@ let interactive_harpoon_command =
         (maybe_default boxity `boxed)
     $> fun (i, name, b) ->
        match b with
-       | `unboxed -> H.Unbox (i, name)
+       | `strengthened -> H.Unbox (i, name, Some `strengthened)
+       | `unboxed -> H.Unbox (i, name, None)
        | `boxed -> H.By (i, name)
   in
   let compute_type =
@@ -3150,7 +3151,14 @@ let interactive_harpoon_command =
       seq2
         cmp_exp_syn
         (token T.KW_AS &> name)
-    $> fun (t, name) -> H.Unbox (t, name)
+    $> fun (i, name) -> H.Unbox (i, name, None)
+  in
+  let strengthen =
+    keyword "strengthen" &>
+      seq2
+        cmp_exp_syn
+        (token T.KW_AS &> name)
+    $> fun (i, name) -> H.Unbox (i, name, Some `strengthened)
   in
   let automation_kind =
     choice
@@ -3255,6 +3263,7 @@ let interactive_harpoon_command =
     ; by
     ; suffices
     ; unbox
+    ; strengthen
     ; translate
     ; toggle_automation
     ; rename

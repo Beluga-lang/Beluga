@@ -1,0 +1,12 @@
+t/harpoon/equal/eq-proof-1.bel
+ref
+{g : equalCtx} {U : (g |- exp)} [g |- eq U U]
+2
+
+msplit U
+by ref [g, b:block y:exp, u:equal y y, t:eq y y] [g, b |- E[..,b.1]] as X strengthened
+solve [g |- eq_lam \x. \w. X]
+by ref [g] [g |- E] as X unboxed
+by ref [g] [g |- E1] as X1 unboxed
+solve [g |- eq_app X X1]
+solve [g |- #u.3]

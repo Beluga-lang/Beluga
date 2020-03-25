@@ -2011,7 +2011,7 @@ and elCommand cD cG =
 
   | A.Unbox (loc, i, x, modifier) ->
      let (i, ttau_i) = elExp' cD cG i in
-     let cU =
+     let cU, _ =
        Check.Comp.require_syn_typbox cD cG loc i ttau_i
        |> Whnf.cnormMTyp
        |> Check.Comp.apply_unbox_modifier_opt cD modifier

@@ -41,24 +41,32 @@ let by cD cG i x tau =
   , fun e -> Comp.Let (Loc.ghost, i, (x, e))
   )
 
-let unbox cD cG i x cU =
-  let cD' = LF.(Dec (cD, Decl (x, cU, No))) in
+let unbox cD cG i x cU modifier =
+  let cU', s =
+    Beluga.Check.Comp.apply_unbox_modifier_opt cD modifier cU
+  in
+  dprintf begin fun p ->
+    p.fmt "[unbox] cU = @[%a@]"
+      P.(fmt_ppr_cmp_meta_typ cD) cU
+    end;
+  let cD' = LF.(Dec (cD, Decl (x, cU', No))) in
+  let t = LF.MShift 1 in
   let pat =
     Comp.PatMetaObj
       ( Loc.ghost
       , ( Loc.ghost
         , let open LF in
           match cU with
-          | (ClTyp ( (MTyp tA | PTyp tA), cPsi )) ->
+          | (ClTyp ( (MTyp _ | PTyp _), cPsi )) ->
              let tM =
                Root
                  ( Loc.ghost
-                 , MVar (Offset 1, LF.EmptySub)
+                 , MVar (Offset 1, s)
                  , Nil
                  , `explicit
                  )
              in
-             ClObj (Context.dctxToHat cPsi, MObj tM)
+             ClObj (Context.dctxToHat (Whnf.cnormDCtx (cPsi, t)), MObj tM)
           | CTyp _ ->
              CObj (CtxVar (CtxOffset 1))
         )
@@ -67,7 +75,7 @@ let unbox cD cG i x cU =
   ( cD'
   , fun e ->
     let open Comp in
-    let b = Branch (Loc.ghost, LF.Empty, (cD', LF.Empty), pat, LF.MShift 1, e) in
+    let b = Branch (Loc.ghost, LF.Empty, (cD', LF.Empty), pat, t, e) in
     Case (Loc.ghost, PragmaCase, i, [b])
   )
 
@@ -87,15 +95,11 @@ let rec proof cD cG (p : Comp.proof) tau : Comp.exp_chk =
         let (cG', f) = by cD cG i x tau' in
         f (proof cD cG' p' tau)
      | Comp.Unbox (i, x, cU, modifier) ->
-        match modifier with
-        | None ->
-           let (cD', f) = unbox cD cG i x cU in
-           let t = LF.MShift 1 in
-           let cG' = Whnf.cnormGCtx (cG, t) in
-           let tau' = Whnf.cnormCTyp (tau, t) in
-           f (proof cD' cG' p' tau')
-        | Some `strengthened ->
-           assert false
+        let (cD', f) = unbox cD cG i x cU modifier in
+        let t = LF.MShift 1 in
+        let cG' = Whnf.cnormGCtx (cG, t) in
+        let tau' = Whnf.cnormCTyp (tau, t) in
+        f (proof cD' cG' p' tau')
      end
   | Comp.Directive d -> directive cD cG d tau
 

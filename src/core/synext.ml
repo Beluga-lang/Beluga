@@ -308,7 +308,7 @@ module Harpoon = struct
     | Split of split_kind * Comp.exp_syn (* the expression to split on *)
     | MSplit of Loc.t * Id.name (* split on a metavariable *)
     | Solve of Comp.exp_chk (* the expression to solve the current subgoal with *)
-    | Unbox of Comp.exp_syn * Id.name
+    | Unbox of Comp.exp_syn * Id.name * Comp.unbox_modifier option
     | By of Comp.exp_syn * Id.name
     | Suffices of Comp.exp_syn * Comp.typ list
 end

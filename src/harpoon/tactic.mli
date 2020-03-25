@@ -11,6 +11,7 @@
  *)
 
 open Beluga.Syntax.Int
+
 module Command = Beluga.Syntax.Ext.Harpoon
 module Id = Beluga.Id
 module Total = Beluga.Total
@@ -47,7 +48,7 @@ val split : Command.split_kind -> Comp.exp_syn -> Comp.typ -> Comp.total_dec lis
 (** Performs unboxing of the given synthesizable expression of the given type.
     The tactic will itself verify that the type is a box-type.
  *)
-val unbox : Comp.exp_syn -> Comp.typ -> Id.name -> t
+val unbox : Comp.exp_syn -> Comp.typ -> Id.name -> Comp.unbox_modifier option -> t
 
 (** It is verified that the given expression is an application.
     The result of the invocation is assigned to the variable of the

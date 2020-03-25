@@ -583,13 +583,16 @@ let solve_with_new_comp_decl action_name decl f t g =
 let solve_by_unbox' f (cT : Comp.meta_typ) (name : B.Id.name) : t =
   solve_with_new_meta_decl "unbox" LF.(Decl (name, cT, No)) f
 
-let solve_by_unbox (m : Comp.exp_syn) (mk_cmd : Comp.meta_typ -> Comp.command) (tau : Comp.typ) (name : B.Id.name) : t =
+let solve_by_unbox (m : Comp.exp_syn) (mk_cmd : Comp.meta_typ -> Comp.command) (tau : Comp.typ) (name : B.Id.name) modifier : t =
   let open Comp in
   fun t g ->
   let {cD; cG; cIH} = g.context in
      match tau with
      | TypBox (_, cT) ->
-        solve_by_unbox' (prepend_commands [mk_cmd cT]) cT name t g
+        let cT', _ =
+          B.Check.Comp.apply_unbox_modifier_opt cD modifier cT
+        in
+        solve_by_unbox' (prepend_commands [mk_cmd cT]) cT' name t g
      | _ ->
         Theorem.printf t
           "@[<v>The expression@,  @[%a@]@,\
@@ -597,9 +600,9 @@ let solve_by_unbox (m : Comp.exp_syn) (mk_cmd : Comp.meta_typ -> Comp.command) (
           (P.fmt_ppr_cmp_exp_syn cD cG P.l0) m
           (P.fmt_ppr_cmp_typ cD P.l0) tau
 
-let unbox (m : Comp.exp_syn) (tau : Comp.typ) (name : B.Id.name) : t =
+let unbox (m : Comp.exp_syn) (tau : Comp.typ) (name : B.Id.name) modifier : t =
   let open Comp in
-  solve_by_unbox m (fun cT -> Unbox (m, name, cT, None)) tau name
+  solve_by_unbox m (fun cT -> Unbox (m, name, cT, modifier)) tau name modifier
 
 let invoke (i : Comp.exp_syn) (tau : Comp.typ) (name : Id.name) : t =
   let open Comp in

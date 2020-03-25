@@ -306,7 +306,7 @@ module Comp = struct
        | Int.LF.(ClTyp (mT, cPsi)) ->
           match mT with
           | Int.LF.(MTyp (Atom (_, a, _) as tA)) ->
-             let cPhi, _, lazy s_tup =
+             let cPhi, lazy s_proj, lazy s_tup =
                ConvSigma.gen_flattening cD cPsi
              in
              (* cPhi |- s_tup : cPsi *)
@@ -322,14 +322,15 @@ module Comp = struct
              let ssi' = S.LF.invert ss' in
              (* cPhi' |- ssi' : cPhi *)
              let ss_tup = S.LF.comp s_tup ssi' in
-             Int.LF.(ClTyp (MTyp (Whnf.normTyp (tA, ss_tup)), cPhi'))
+             let ss_proj = S.LF.comp ss' s_proj in
+             Int.LF.(ClTyp (MTyp (Whnf.normTyp (tA, ss_tup)), cPhi')), ss_proj
 
           | _ ->
              (* TODO proper error; cannot strengthen non-atomic types. *)
              assert false
 
   let apply_unbox_modifier_opt cD modifier_opt =
-    Maybe.(get_default Misc.id (modifier_opt $> apply_unbox_modifier cD))
+    Maybe.(get_default (fun x -> (x, S.LF.id)) (modifier_opt $> apply_unbox_modifier cD))
 
   type caseType =
     | IndexObj of meta_obj
@@ -1441,7 +1442,7 @@ module Comp = struct
            Id.print name
            P.(fmt_ppr_cmp_typ cD l0) (Whnf.cnormCTyp (tau', t))
          end;
-       let cU =
+       let cU, _ =
          require_syn_typbox cD cG Loc.ghost i (tau', t)
          |> Whnf.cnormMTyp
          |> apply_unbox_modifier_opt cD modifier

@@ -1243,11 +1243,11 @@ let genPVarGoal (LF.SchElem (decls, trec)) (cD : LF.mctx) cPsi psi
   let tA = Whnf.collapse_sigma trec' in
   let names = Context.(names_of_mctx cD' @ names_of_dctx cPsi) in
   let pdecl =
-    let open LF in
+    let open! LF in
     Decl
       ( NameGen.(pvar tA |> renumber names)
       , ClTyp (PTyp tA, Whnf.cnormDCtx (LF.CtxVar psi, MShift offset))
-      , Maybe
+      , No
       )
   in
 

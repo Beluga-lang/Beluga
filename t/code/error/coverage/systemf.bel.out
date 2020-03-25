@@ -2,6 +2,16 @@
 
 ######   COVERAGE FAILURE: Case expression doesn't cover: ######
 ##       CASE(S) NOT COVERED:
-(1)  ;  |- [_ |- #p.4]
+(1)
+#p :
+  #(g |-
+      block (
+        x : tm_f,
+        y : obj,
+        u : tmrel x y,
+        v : hastype x (A[..]),
+        r : tyrel (A[..]) (X[..]),
+        w : oftype y (X[..]))) ;
+ |- [_ |- #p.4]
 
 ##

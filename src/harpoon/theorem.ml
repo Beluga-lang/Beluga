@@ -83,7 +83,7 @@ let remove_subgoals t = List.iter (remove_subgoal t)
 
 (** Runs all registered subgoal hooks on the given subgoal. *)
 let run_subgoal_hooks t g =
-  List.iter (fun f -> f g) (DynArray.to_list t.subgoal_hooks)
+  DynArray.iter (fun f -> f g) t.subgoal_hooks
 
 (** Adds a new subgoal to this theorem.
     This does not run subgoal hooks, and should be used in contexts

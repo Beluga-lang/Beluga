@@ -36,6 +36,9 @@ type t =
    module earlier. *)
 open Beluga
 
+let entering_first_session =
+  F.(ignore ++ Maybe.map Session.enter ++ Misc.List.hd_opt)
+
 (** Constructs a Theorem.t for the given cid with the given
     subgoals. *)
 let recover_theorem ppf hooks (cid, gs) =
@@ -91,19 +94,19 @@ let recover_session ppf hooks (mutual_group, thm_confs) =
   Session.make mutual_group theorems
 
 (** Constructs a list of sessions from a list of open subgoals.
-        Subgoals are grouped into theorems according to their
-        associated cid, and theorems are grouped into sessions
-        according to their mutual group.
+    Subgoals are grouped into theorems according to their
+    associated cid, and theorems are grouped into sessions
+    according to their mutual group.
 
-        WARNING: all recovered theorems are hidden (out of scope).
-        It is necessary to enter the session that ends up selecteed to
+    WARNING: all recovered theorems are hidden (out of scope).
+    It is necessary to enter the session that ends up selecteed to
         bring its theorems into scope.
  *)
 let recover_sessions ppf hooks (gs : Comp.open_subgoal list) =
   (* idea:
-         - first group subgoals by theorem
-         - group theorems by mutual group
-         - construct a session for each mutual group
+     - first group subgoals by theorem
+     - group theorems by mutual group
+     - construct a session for each mutual group
    *)
   Nonempty.(
     group_by fst gs
@@ -152,13 +155,9 @@ let make
     : t =
   let automation_state = Automation.State.make () in
   let hooks = [run_automation automation_state] in
-  let sessions = recover_sessions (IO.formatter io) hooks gs in
-  let _ =
-    (* since all recovered sessions are suspended, we must
-           explicitly enter the first one *)
-    let open Maybe in
-    Misc.List.hd_opt sessions
-    $> Session.enter
+  let sessions =
+    recover_sessions (IO.formatter io) hooks gs
+    |> F.through entering_first_session
   in
   { sessions = DynArray.of_list sessions
   ; automation_state
@@ -241,7 +240,10 @@ let reset s : unit =
   let _ = Load.load (IO.formatter s.io) s.sig_path in
   let gs = Holes.get_harpoon_subgoals () |> List.map snd in
   let hooks = [run_automation s.automation_state] in
-  let cs = recover_sessions (IO.formatter s.io) hooks gs in
+  let cs =
+    recover_sessions (IO.formatter s.io) hooks gs
+    |> F.through entering_first_session
+  in
   dprintf begin fun p ->
     p.fmt "[reset] recovered %d sessions from %d subgoals"
       (List.length cs)

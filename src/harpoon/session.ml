@@ -27,8 +27,24 @@ let make mutual_group thms =
 let get_mutual_decs (s : t) : Comp.total_dec list option =
   CompS.lookup_mutual_group s.mutual_group
 
-let enter (s : t) : unit =
-  DynArray.iter (F.flip Theorem.set_hidden false) s.theorems
+(** Constructs a list of all theorems in this session, both
+    incomplete and finished.
+
+    The incomplete theorems come before the complete theorems.
+ *)
+let full_theorem_list c =
+  DynArray.to_list c.theorems
+  @ List.map fst (DynArray.to_list c.finished_theorems)
+
+let enter (c : t) : unit =
+  dprintf begin fun p ->
+    p.fmt "[session] entering session @[<hov>%a@]"
+      (let open Format in
+       pp_print_list ~pp_sep: pp_print_space
+         (fun ppf t -> Id.print ppf (Theorem.get_name t)))
+      (full_theorem_list c)
+    end;
+  DynArray.iter (F.flip Theorem.set_hidden false) c.theorems
 
 let suspend (s : t) : unit =
   DynArray.iter (F.flip Theorem.set_hidden true) s.theorems
@@ -86,15 +102,6 @@ let select_theorem c name =
      DynArray.delete c.theorems i;
      DynArray.insert c.theorems 0 t;
      true
-
-(** Constructs a list of all theorems in this session, both
-    incomplete and finished.
-
-    The incomplete theorems come before the complete theorems.
- *)
-let full_theorem_list c =
-  DynArray.to_list c.theorems
-  @ List.map fst (DynArray.to_list c.finished_theorems)
 
 let get_session_kind c : [`introduced | `loaded] =
   let existing_holes = Holes.get_harpoon_subgoals () in

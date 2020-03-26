@@ -1,0 +1,158 @@
+% Mechanization of POPLMARK Reloaded challenge:
+% Retrieved 26 March 2020
+% Sec 3.3: Challenge 1a: Properties of sn
+
+%coverage
+
+% Lemma 3.9: Properties of Strongly Normalizing Terms
+
+rec Sn-var : (g : cxt)
+             {#p : [g |- tm A[]]}
+             Sn [g |- #p] =
+/ total /
+mlam #p => Sn-acc [_ |- #p]
+             (mlam _M', S =>
+                            impossible [_ |- S])
+;
+
+rec Sn-abs : (g : cxt)
+             {M : [g, x : tm A[] |- tm B[]]}
+             Sn [g, x : tm A[] |- M]
+             -> Sn [g |- abs \x.M] =
+/ total sn (Sn-abs g a b m sn) /
+mlam M => fn sn => Sn-acc [_ |- abs \x.M]
+                     (mlam _M', S =>
+                                    let [_ |- s-abs \x.S'] = [_ |- S] in
+                                    let Sn-acc [_ |- _] r = sn in
+                                    Sn-abs _ (r _ [_ |- S']))
+;
+
+rec Sn-subst : (g : cxt)
+               {M : [g, x : tm A[] |- tm B[]]}
+               {N : [g |- tm A[]]}
+               Sn [g |- M[..,N]]
+               -> Sn [g, x : tm A[] |- M] =
+/ total sn (Sn-subst g a b m n sn) /
+mlam M, N => fn sn => Sn-acc [_ |- M]
+                        (mlam _M', S => case [_ |- S] of
+                           | [_, x : tm _ |- s-beta] =>
+                                 let Sn-acc [_ |- _] r = sn in
+                                 Sn-subst _ _ (r _ [_ |- s-beta])
+                           | [_, x : tm _ |- s-abs \y.S'] =>
+                                 let Sn-acc [_ |- _] r = sn in
+                                 let [_, y : tm _, x : tm _ |- S''] = [_, y : tm _, x : tm _ |- S'[.., x, y]] in
+                                 Sn-subst _ _ (r _ [_ |- s-abs \y.S''[.., y, _]])
+                           | [_, x : tm _ |- s-app-l S'] =>
+                                 let Sn-acc [_ |- _] r = sn in
+                                 Sn-subst _ _ (r _ [_ |- s-app-l S'[.., _]])
+                           | [_, x : tm _ |- s-app-r S'] =>
+                                 let Sn-acc [_ |- _] r = sn in
+                                 Sn-subst _ _ (r _ [_ |- s-app-r S'[.., _]]))
+;
+
+rec Sn-app-l : (g : cxt)
+               {M : [g |- tm (arr A[] B[])]}
+               {N : [g |- tm A[]]}
+               Sn [g |- app M N]
+               -> Sn [g |- M] =
+/ total sn (Sn-app-l g a b m n sn) /
+mlam M, N => fn sn => Sn-acc [_ |- M]
+                        (mlam _M', S =>
+                                       let Sn-acc [_ |- _] r = sn in
+                                       Sn-app-l _ _ (r _ [_ |- s-app-l S]))
+;
+
+rec Sn-app-r : (g : cxt)
+               {M : [g |- tm (arr A[] B[])]}
+               {N : [g |- tm A[]]}
+               Sn [g |- app M N]
+               -> Sn [g |- N] =
+/ total sn (Sn-app-r g a b m n sn) /
+mlam M, N => fn sn => Sn-acc [_ |- N]
+                        (mlam _N', S =>
+                                       let Sn-acc [_ |- _] r = sn in
+                                       Sn-app-r _ _ (r _ [_ |- s-app-r S]))
+;
+
+% Lemma 3.10: Weak Head Expansion
+
+rec Sn-weak-head-expansion : (g : cxt)
+                             {M : [g, x : tm A[] |- tm B[]]}
+                             {N : [g |- tm A[]]}
+                             Sn [g |- N]
+                             -> Sn [g |- M[.., N]]
+                             -> Sn [g |- app (abs \x.M) N] =
+/ total m (Sn-weak-head-expansion g a b m) /
+mlam M, N => fn sn0, sn1 => Sn-acc [_ |- app (abs \x.M) N]
+                              (mlam _L', S => case [_ |- S] of
+                                 | [_ |- s-beta] => sn1
+                                 | [_ |- s-app-l (s-abs \x.S')] =>
+                                       let Sn-acc [_ |- _] r1 = sn1 in
+                                       Sn-weak-head-expansion _ _ sn0 (r1 _ [_ |- S'[.., N]])
+                                 | [_ |- s-app-r S'] =>
+                                       let Sn-acc [_ |- _] r0 = sn0 in
+                                       let ms' = m-subst [_ |- M] _ _ [_ |- S'] in
+                                       Sn-weak-head-expansion _ _ (r0 _ [_ |- S']) (mstep-Sn _ _ ms' sn1))
+;
+
+% Lemma 3.11: Closure Properties of Neutral Terms
+
+rec step-Sne : (g : cxt)
+               {R : [g |- tm A[]]}
+               {R' : [g |- tm A[]]}
+               Sne [g |- R]
+               -> [g |- step R R']
+               -> Sne [g |- R'] =
+/ total sne (step-Sne g a r r' sne) /
+mlam R, R' => fn sne, s => case sne of
+  | Sne-var [g |- #p] => impossible s
+  | Sne-app sne' =>
+        (case s of
+          | [_ |- s-beta] => impossible sne'
+          | [_ |- s-app-l S'] => Sne-app (step-Sne _ _ sne' [_ |- S'])
+          | [_ |- s-app-r S'] => Sne-app sne')
+;
+
+rec Sn-Sne : (g : cxt)
+             {R : [g |- tm (arr A[] B[])]}
+             {N : [g |- tm A[]]}
+             Sne [g |- R]
+             -> Sn [g |- R]
+             -> Sn [g |- N]
+             -> Sn [g |- app R N] =
+/ total {sn0 sn1} (Sn-Sne g a b r n sne sn0 sn1) /
+mlam R, N => fn sne, sn0, sn1 => Sn-acc [_ |- app R N] 
+                                   (mlam _L', S => case [_ |- S] of
+                                      | [_ |- s-beta] => impossible sne
+                                      | [_ |- s-app-l S'] =>
+                                            let Sn-acc [_ |- _] r0 = sn0 in
+                                            Sn-Sne _ _ (step-Sne _ _ sne [_ |- S']) (r0 _ [_ |- S']) sn1
+                                      | [_ |- s-app-r S'] =>
+                                            let Sn-acc [_ |- _] r1 = sn1 in
+                                            Sn-Sne _ _ sne sn0 (r1 _ [_ |- S']))
+;
+
+% Lemma 3.12: Confluence of sn
+
+rec confluence-Sn : (g : cxt)
+                    {M : [g |- tm A[]]}
+                    {N : [g |- tm A[]]}
+                    {N' : [g |- tm A[]]}
+                    SnRed [g |- M] [g |- N]
+                    -> [g |- step M N']
+                    -> SnConfResult [g |- N] [g |- N'] =
+/ total /
+mlam M, N, N' => fn snred, s => case snred of
+  | SnRed-beta [_ |- L] sn =>
+        (case s of
+          | [_ |- s-beta] => SnConfResult-eq
+          | [_ |- s-app-l (s-abs \x.S')] => ?
+                % let [_, x : tm _ |- _] : [_, x : tm _ |- step _ L] = [_ |- S'] in
+                % SnConfResult-conf (SnRed-beta [_, x : tm _ |- L] sn) [_ |- m-step S'[.., _] m-refl]
+          | [_ |- s-app-r S'] =>
+                let Sn-acc [_ |- _] r = sn in
+                let sn' = r _ [_ |- S'] in
+                SnConfResult-conf (SnRed-beta _ sn') (m-subst [_ |- L] _ _ [_ |- S'])
+        )
+  | SnRed-app-l snred' => ?
+;

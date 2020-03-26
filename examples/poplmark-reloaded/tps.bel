@@ -1,0 +1,84 @@
+% Mechanization of POPLMARK Reloaded challenge:
+% Retrieved 26 March 2020
+% Sec 3.1: Simply typed λ-calculus with type-directed reductions
+% Sec 3.2: Defining strong normalization
+
+%coverage
+
+LF ty : type =
+  | base : ty
+  | arr : ty -> ty -> ty
+;
+%name ty T.
+
+LF tm : ty -> type =
+  | abs : (tm A -> tm B) -> tm (arr A B)
+  | app : tm (arr A B) -> tm A -> tm B
+;
+%name tm M.
+
+schema cxt = tm A;
+
+% One-step reduction
+LF step : tm A -> tm A -> type =
+  | s-beta : step (app (abs M) N) (M N)
+  | s-abs : ({x : tm A} step (M x) (M' x)) -> step (abs M) (abs M')
+  | s-app-l : step M M' -> step (app M N) (app M' N)
+  | s-app-r : step N N' -> step (app M N) (app M N')
+;
+
+% Multi-step reduction
+LF mstep : tm A -> tm A -> type =
+  | m-refl : mstep M M
+  | m-step : step M N -> mstep N M' -> mstep M M'
+;
+
+% Accessibility definition of strong normalization
+inductive Sn : (g : cxt) {M : [g |- tm A[]]} ctype =
+  | Sn-acc : {M : [g |- tm A[]]}
+             ({M' : [g |- tm A[]]} {S : [g |- step M M']} Sn [g |- M'])
+             -> Sn [g |- M]
+;
+
+inductive Sne : (g : cxt) {M : [g |- tm A[]]} ctype =
+  | Sne-var : {#p : [g |- tm A[]]} Sne [g |- #p]
+  | Sne-app : Sne [g |- R]
+              -> Sne [g |- app R N]
+;
+
+inductive SnRed : (g : cxt) {M : [g |- tm A[]]} {M' : [g |- tm A[]]} ctype =
+  | SnRed-beta : {M: [g, x: tm A[] |- tm B[]]}
+                 Sn [g |- N]
+                 -> SnRed [g |- app (abs \x.M) N] [g |- M[.., N]]
+  | SnRed-app-l : SnRed [g |- M] [g |- M']
+                  -> SnRed [g |- app M N] [g |- app M' N]
+;
+
+inductive SnConfResult : (g: cxt) {N: [g |- tm A[]]} {N': [g |- tm A[]]} ctype =
+  | SnConfResult-eq : SnConfResult [g |- N] [g |- N']
+  | SnConfResult-conf : SnRed [g |- N'] [g |- Q]
+                        -> [g |- mstep N Q]
+                        -> SnConfResult [g |- N] [g |- N']
+;
+
+% Inductive definition of strong normalization
+inductive SN : (g : cxt) {M : [g |- tm A[]]} ctype =
+  | SN-abs : SN [g, x : tm A[] |- M] -> SN [g |- abs \x.M]
+  | SN-neu : SNe [g |- R] -> SN [g |- R]
+  | SN-red : SNRed [g |- M] [g |- M']
+             -> SN [g |- M']
+             -> SN [g |- M]
+and
+inductive SNe : (g : cxt) {M : [g |- tm A[]]} ctype =
+  | SNe-var : {#p : [g |- tm A[]]} SNe [g |- #p]
+  | SNe-app : SNe [g |- R]
+              -> SN [g |- M]
+              -> SNe [g |- app R M]
+and
+inductive SNRed : (g : cxt) {M : [g |- tm A[]]} {M' : [g |- tm A[]]} ctype =
+  | SNRed-beta : {M: [g, x: tm A[] |- tm B[]]}
+                 SN [g |- N]
+                 -> SNRed [g |- app (abs \x.M) N] [g |- M[.., N]]
+  | SNRed-app-l : SNRed [g |- M] [g |- M']
+                  -> SNRed [g |- app M N] [g |- app M' N]
+;

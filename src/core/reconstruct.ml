@@ -192,17 +192,19 @@ let _ = Error.register_printer
     end
   end
 
-(** Contextual object used as the the desugaring of the computational
-    underscore. *)
-let box_hole_cM loc =
+(** Constructs a contextual object used as the the desugaring of the
+    computational underscore according to the given index type. *)
+let box_hole_cM loc cT =
   ( loc
-  , Apx.Comp.ClObj
-      ( Apx.LF.CtxHole
-      , Apx.LF.Dot
-          ( Apx.LF.Obj (Apx.LF.Root (loc, Apx.LF.Hole, Apx.LF.Nil))
-          , Apx.LF.EmptySub
-          )
-      )
+  , let open Apx.LF in
+    match cT with
+    | Int.LF.ClTyp _ ->
+       Apx.Comp.ClObj
+         ( CtxHole
+         , Dot (Obj (Root (loc, Hole, Nil)), EmptySub)
+         )
+    | Int.LF.CTyp _ ->
+       Apx.Comp.CObj CtxHole
   )
 
 (* extend_mctx cD (x, cdecl, t) = cD'
@@ -1085,7 +1087,7 @@ and elExpW cD cG e theta_tau = match (e, theta_tau) with
      Int.Comp.Hole (loc, id, name)
 
   | (Apx.Comp.BoxHole loc, (Int.Comp.TypBox (_, cT), theta)) ->
-     let cM = elMetaObj cD (box_hole_cM loc) (cT, theta) in
+     let cM = elMetaObj cD (box_hole_cM loc cT) (cT, theta) in
      let cU = Whnf.cnormMTyp (cT, theta) in
      Int.Comp.Box (loc, cM, cU)
 
@@ -1252,7 +1254,7 @@ and elExp' cD cG i =
                  @,@[%a@]@]"
             P.(fmt_ppr_cmp_meta_typ cD) (Whnf.cnormMTyp (ctyp, theta))
           end;
-        let cM = elMetaObj cD (box_hole_cM loc) (ctyp, theta) in
+        let cM = elMetaObj cD (box_hole_cM loc ctyp) (ctyp, theta) in
         ( Int.Comp.MApp (loc, i', cM, Whnf.cnormMTyp (ctyp, theta), `explicit)
         , (tau, Int.LF.MDot (metaObjToFt cM, theta))
         )

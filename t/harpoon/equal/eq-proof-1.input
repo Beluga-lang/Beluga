@@ -1,0 +1,28 @@
+t/harpoon/equal/eq-proof-1.bel
+select ref
+msplit U
+by ref [g, b:block y:exp, u:equal y y, t:eq y y] [g, b |- E[..,b.1]] as X strengthened
+solve [g |- eq_lam \x. \w. X]
+by ref [g] [g |- E] as X unboxed
+by ref [g] [g |- E1] as X1 unboxed
+solve [g |- eq_app X X1]
+solve [g |- #u.3]
+select trans
+split x
+invert u
+by trans [_, b:block x':exp, u:equal x' x', t: eq x' x' |- Q[..,b.1,b.3]] [_, b |- Q1[..,b.1,b.3]] as P strengthened
+solve [_ |- eq_lam \x. \w. P]
+invert u
+by trans [_ |- Q] [_ |- Q2] as P1 unboxed
+by trans [_ |- Q1] [_ |- Q3] as P2 unboxed
+solve [_ |- eq_app P1 P2]
+solve u
+split x
+by ceq [_ |- X] as e1; by ceq [_ |- X1] as e2; solve trans e1 e2
+solve ref _ _
+by ceq [_ |- X] as Q1 unboxed; by ceq [_ |- X1] as Q2 unboxed
+solve [_ |- eq_app Q2 Q1]
+by ceq [_, b:block x:exp, u:equal x x, t:eq x x |- X[..,b.1,b.2]] as Q strengthened
+solve [_ |- eq_lam \x. \w. Q]
+solve ref _ _
+:quit

@@ -36,8 +36,10 @@ LF equal: exp -> exp -> type =
 schema eqCtx = block x:exp, _t:eq x x;
 schema equalCtx =  block x: exp, u:equal x x , _t:eq x x ;
 
-% proof ref : {g:equalCtx} {U:[g |- exp]} [g |- eq U U] =
-% / total u (ref g u) /
+proof ref : {g:equalCtx} {U:[g |- exp]} [g |- eq U U] =
+/ total u (ref g u) /
+?
+;
 
 % mlam g => mlam U => case [g |- U] of
 % | [g |- #p.1] => [g |- #p.3]
@@ -55,17 +57,15 @@ schema equalCtx =  block x: exp, u:equal x x , _t:eq x x ;
 % ;
 
 % General transitivity is admissible
-% proof trans: (g:equalCtx)
-%    [g |- eq (TT) (RR)]     % e1 : eq T R
-% -> [g |- eq (RR) (SS)]     % e2 : eq R S
-% -> [g |- eq (TT) (SS)]     % result : eq T S
-% =
-%  / total e1 (trans g t r s e1) /
-% intros
-% { g : equalCtx, TT : (g |- exp), RR : (g |- exp), SS : (g |- exp)
-% | x : [g |- eq TT RR], u : [g |- eq RR SS]
-% ; ?
-% };
+proof trans: (g:equalCtx)
+   [g |- eq (TT) (RR)]     % e1 : eq T R
+-> [g |- eq (RR) (SS)]     % e2 : eq R S
+-> [g |- eq (TT) (SS)]     % result : eq T S
+=
+ / total e1 (trans g t r s e1) /
+?
+;
+
 % fn e1 => fn e2 => case e1 of
 % | [g |- #p.3] => e2
 %
@@ -85,14 +85,12 @@ schema equalCtx =  block x: exp, u:equal x x , _t:eq x x ;
 %      [g |- eq_app  E1  E2]
 % ;
 
-% proof ceq: (g:equalCtx)
-%          [g |- equal T S] -> [g |- eq T S]  =
-% / total e (ceq g t s e)/
-% intros
-% { g : equalCtx, T : (g |- exp), S : (g |- exp)
-% | x : [g |- equal T S]
-% ; ?
-% };
+proof ceq: (g:equalCtx)
+         [g |- equal T S] -> [g |- eq T S]  =
+/ total e (ceq g t s e)/
+?
+;
+
 % fn e => case e of
 % | [g |- #p.2] => [g |- #p.3]
 % | [g |- e_r] => ref [g] [g |- _  ]
@@ -113,148 +111,3 @@ schema equalCtx =  block x: exp, u:equal x x , _t:eq x x ;
 %   let [g |- F1] = ceq [g |- D1] in
 %     trans [g |- F1]  [g |- F2]
 % ;
-
-proof ref : {g : equalCtx} {U : (g |- exp)} [g |- eq U U] =
-/ total 2 /
-intros
-{ g : equalCtx, U : (g |- exp)
-| 
-; split [g |- U] as
-  case lam:
-  { g : equalCtx, E : (g, y1 : exp |- exp)
-  | 
-  ; by ref [g, b : block (y : exp, u : equal y y, t : eq y y)]
-         [g, b : block (y : exp, u : equal y y, t : eq y y) |- E[.., b.1]]
-    as X strengthened;
-    solve [g |- eq_lam (\x. \w. X)]
-  }
-  case app:
-  { g : equalCtx, E : (g |- exp), E1 : (g |- exp)
-  | 
-  ; by ref [g] [g |- E] as X unboxed;
-    by ref [g] [g |- E1] as X1 unboxed;
-    solve [g |- eq_app X X1]
-  }
-  case #.1:
-  { g : equalCtx, #u : #(g |- block (x : exp, u : equal x x, _t : eq x x))
-  | 
-  ; solve [g |- #u.3]
-  }
-}
-;
-
-proof ref : {g : equalCtx} {U : (g |- exp)} [g |- eq U U] =
-/ total 2 /
-intros
-{ g : equalCtx, U : (g |- exp)
-| 
-; split [g |- U] as
-  case lam:
-  { g : equalCtx, E : (g, y1 : exp |- exp)
-  | 
-  ; by ref [g, b : block (y : exp, u : equal y y, t : eq y y)]
-         [g, b : block (y : exp, u : equal y y, t : eq y y) |- E[.., b.1]]
-    as X strengthened;
-    solve [g |- eq_lam (\x. \w. X)]
-  }
-  case app:
-  { g : equalCtx, E : (g |- exp), E1 : (g |- exp)
-  | 
-  ; by ref [g] [g |- E] as X unboxed;
-    by ref [g] [g |- E1] as X1 unboxed;
-    solve [g |- eq_app X X1]
-  }
-  case #.1:
-  { g : equalCtx, #u : #(g |- block (x : exp, u : equal x x, _t : eq x x))
-  | 
-  ; solve [g |- #u.3]
-  }
-}
-;
-
-proof ref : {g : equalCtx} {U : (g |- exp)} [g |- eq U U] =
-/ total 2 /
-intros
-{ g : equalCtx, U : (g |- exp)
-| 
-; split [g |- U] as
-  case lam:
-  { g : equalCtx, E : (g, y1 : exp |- exp)
-  | 
-  ; by ref [g, b : block (y : exp, u : equal y y, t : eq y y)]
-         [g, b : block (y : exp, u : equal y y, t : eq y y) |- E[.., b.1]]
-    as X strengthened;
-    solve [g |- eq_lam (\x. \w. X)]
-  }
-  case app:
-  { g : equalCtx, E : (g |- exp), E1 : (g |- exp)
-  | 
-  ; by ref [g] [g |- E] as X unboxed;
-    by ref [g] [g |- E1] as X1 unboxed;
-    solve [g |- eq_app X X1]
-  }
-  case #.1:
-  { g : equalCtx, #u : #(g |- block (x : exp, u : equal x x, _t : eq x x))
-  | 
-  ; solve [g |- #u.3]
-  }
-}
-;
-
-proof ref : {g : equalCtx} {U : (g |- exp)} [g |- eq U U] =
-/ total 2 /
-intros
-{ g : equalCtx, U : (g |- exp)
-| 
-; split [g |- U] as
-  case lam:
-  { g : equalCtx, E : (g, y1 : exp |- exp)
-  | 
-  ; by ref [g, b : block (y : exp, u : equal y y, t : eq y y)]
-         [g, b : block (y : exp, u : equal y y, t : eq y y) |- E[.., b.1]]
-    as X strengthened;
-    solve [g |- eq_lam (\x. \w. X)]
-  }
-  case app:
-  { g : equalCtx, E : (g |- exp), E1 : (g |- exp)
-  | 
-  ; by ref [g] [g |- E] as X unboxed;
-    by ref [g] [g |- E1] as X1 unboxed;
-    solve [g |- eq_app X X1]
-  }
-  case #.1:
-  { g : equalCtx, #u : #(g |- block (x : exp, u : equal x x, _t : eq x x))
-  | 
-  ; solve [g |- #u.3]
-  }
-}
-;
-
-proof ref : {g : equalCtx} {U : (g |- exp)} [g |- eq U U] =
-/ total 2 /
-intros
-{ g : equalCtx, U : (g |- exp)
-| 
-; split [g |- U] as
-  case lam:
-  { g : equalCtx, E : (g, y1 : exp |- exp)
-  | 
-  ; by ref [g, b : block (y : exp, u : equal y y, t : eq y y)]
-         [g, b : block (y : exp, u : equal y y, t : eq y y) |- E[.., b.1]]
-    as X strengthened;
-    solve [g |- eq_lam (\x. \w. X)]
-  }
-  case app:
-  { g : equalCtx, E : (g |- exp), E1 : (g |- exp)
-  | 
-  ; by ref [g] [g |- E] as X unboxed;
-    by ref [g] [g |- E1] as X1 unboxed;
-    solve [g |- eq_app X X1]
-  }
-  case #.1:
-  { g : equalCtx, #u : #(g |- block (x : exp, u : equal x x, _t : eq x x))
-  | 
-  ; solve [g |- #u.3]
-  }
-}
-;

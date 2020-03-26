@@ -897,7 +897,13 @@ and checkSchema loc cD cPsi schema_name (Schema elements as schema) =
     end;
   match cPsi with
     | Null -> ()
+    | CtxVar (CtxName name) ->
+       (* free ctxvar names should not appear here *)
+       throw (Id.loc_of_name name) (LeftoverFV name)
     | CtxVar (CInst (mmvar, _ )) ->
+       (* Manually chasing the MMVar instantiation here is sketchy.
+          Shouldn't the term already be in normal form when we enter
+          lfcheck ? -je *)
        let Some (ICtx cPhi) = mmvar.instantiation.contents in
        checkSchema loc cD cPhi schema_name schema
     | CtxVar ((CtxOffset _ ) as phi) ->

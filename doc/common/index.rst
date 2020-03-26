@@ -6,4 +6,5 @@ Common elements
 
    lf
    contextual-lf
+   lf-subordination
    Inductive Types (stub) <inductive-types>

@@ -216,18 +216,20 @@ This command is syntactic sugar for a more verbose command using ``split``.
 ``by``
 ^^^^^^
 
-Use ``by EXP as VAR [BOXITY]`` to invoke a lemma or induction hypothesis
+Use ``by EXP as VAR [MODIFIER]`` to invoke a lemma or induction hypothesis
 represented by the synthesizable expression ``EXP`` and bind the result to the
 name ``VAR``.
-The optional parameter ``BOXITY`` specifies at what level the binding occurs.
+The optional parameter ``MODIFIER`` specifies at what level the binding occurs.
 
-Valid values for ``BOXITY`` are
+Valid values for ``MODIFIER`` are
 
 * ``boxed`` (default): the binding is made as a computational variable.
 * ``unboxed``: the binding is made as a metavariable.
+* ``strengthened``: the binding is made as a metavariable, and its context is
+  strengthened according to :ref:`LF Subordination`.
 
-Note that ``unboxed`` is permitted only if the computed type of ``EXP`` is a
-boxed contextual type.
+The ``unboxed`` and ``strengthened`` modifiers are permitted only if the
+computed type of ``EXP`` is a boxed contextual type.
 
 On success, this tactic replaces the current subgoal with a subgoal having one
 additional entry in the appropriate context.
@@ -238,6 +240,15 @@ additional entry in the appropriate context.
 ^^^^^^^^^
 
 The command ``unbox EXP as X`` is syntactic sugar for ``by EXP as X unboxed``.
+See also :ref:`by <cmd-by>`.
+
+.. _cmd-strengthen:
+
+``strengthen``
+^^^^^^^^^^^^^^
+
+The command ``strengthen EXP as X`` is syntactic sugar for ``by EXP as X
+strengthened``.
 See also :ref:`by <cmd-by>`.
 
 .. _cmd-solve:

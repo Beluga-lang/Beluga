@@ -121,6 +121,10 @@ let rec loop (s : State.t) : unit =
      Session.mark_current_theorem_as_proven c (Either.to_option e_trans);
      loop s
   | Either.Right (c, t, g) ->
+     (* XXX this is somewhat "nuclear"
+        But, it is too complicated to figure out all the right
+        situations when entering is necessary. -je *)
+     Session.enter c;
     (* Show the proof state and the prompt *)
     printf "@,@[<v>@,%a@,@]@?"
       P.fmt_ppr_cmp_proof_state g;

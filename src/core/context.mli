@@ -119,3 +119,11 @@ val names_of_gctx : Comp.gctx -> Id.name list
 
 val is_null : LF.dctx -> bool
 val is_empty : 'a LF.ctx -> bool
+
+(** Given two convertible meta-contexts, rebuilds the first using the
+    names in the second. *)
+val steal_mctx_names : LF.mctx -> LF.mctx -> LF.mctx
+
+(** Given two convertible computational contexts, rebuilds teh first
+    using the names in the second. *)
+val steal_gctx_names : Comp.gctx -> Comp.gctx -> Comp.gctx

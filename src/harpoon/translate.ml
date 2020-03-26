@@ -105,7 +105,7 @@ let rec proof cD cG (p : Comp.proof) tau : Comp.exp_chk =
 
 and split_branch cD cG (cG_p, pat) t hyp tau =
   let tau_b = Whnf.cnormCTyp (tau, t) in
-  let Comp.Hypothetical (h, p) = hyp in
+  let Comp.Hypothetical (_, h, p) = hyp in
   let cD_b, cG_b = Comp.(h.cD, h.cG) in
   let e = proof cD_b cG_b p tau_b in
   Comp.Branch
@@ -130,7 +130,7 @@ and directive cD cG (d : Comp.directive) tau : Comp.exp_chk =
   match d with
   | Comp.Solve e_chk -> e_chk
 
-  | Comp.Intros (Comp.Hypothetical (hyp, p)) ->
+  | Comp.Intros (Comp.Hypothetical (_, hyp, p)) ->
      let (cD', cG', tau', t) = Check.Comp.unroll cD cG tau in
      (* cD' |- t : cD
         is a weakening meta-substitution *)

@@ -1481,7 +1481,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
     let open Comp in
     function
     | SplitBranch (c, _, _, h) ->
-       let Hypothetical (hyp, _) = h in
+       let Hypothetical (_, hyp, _) = h in
        fprintf ppf "@[<v>case %a:@,%a@]"
          f c
          (fmt_ppr_cmp_hypothetical cD cG) h
@@ -1551,7 +1551,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
   and fmt_ppr_cmp_hypothetical cD cG ppf =
     let open Comp in
     function
-    | Hypothetical (h, proof) ->
+    | Hypothetical (_, h, proof) ->
        fprintf ppf "@[<v>{ %a @[<v>%a@]@,}@]"
          fmt_ppr_cmp_hypotheses h
          (fmt_ppr_cmp_proof h.cD h.cG) proof;

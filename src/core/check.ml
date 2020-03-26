@@ -88,6 +88,8 @@ module Comp = struct
     | InvalidRecCall
     | MissingTotal    of Id.cid_prog
     | NotImpossible   of I.mctx * gctx * typ * exp_syn
+    | InvalidHypotheses  of Int.Comp.hypotheses (* expected *)
+                            * Int.Comp.hypotheses (* actual *)
   (* | IllTypedMetaObj of I.mctx * meta_obj * meta_typ  *)
 
   (*  type rec_call = bool *)
@@ -280,6 +282,18 @@ module Comp = struct
          "@[<v>The expression@,  @[%a@]@,is not impossible.@,Its type@,  @[%a@]@,is (possibly) inhabited.@]"
          (P.fmt_ppr_cmp_exp_syn cD cG P.l0) i
          (P.fmt_ppr_cmp_typ cD P.l0) tau
+
+    | InvalidHypotheses (exp, act) ->
+       Format.fprintf ppf
+         "@[<v>Invalid hypotheses.\
+          @,Expected hypotheses:\
+          @,  @[%a@]
+          @,Actual hypotheses:\
+          @,  @[%a@]
+          @]"
+         P.fmt_ppr_cmp_hypotheses_listing exp
+         P.fmt_ppr_cmp_hypotheses_listing act
+
   let _ =
     Error.register_printer
       begin fun (Error (loc, err)) ->
@@ -289,6 +303,16 @@ module Comp = struct
         format_error ppf err
         end
       end
+
+  (** Verifies that the pairs of contexts are convertible. *)
+  let validate_contexts loc (cD, cD') (cG, cG') =
+    if not Whnf.(convMCtx cD cD' && convGCtx (cG, m_id) (cG', m_id)) then
+      InvalidHypotheses
+        ( { cD; cG; cIH = Int.LF.Empty }
+        , { cD = cD'; cG = cG'; cIH = Int.LF.Empty }
+        )
+      |> throw loc;
+    Context.(steal_mctx_names cD cD', steal_gctx_names cG cG')
 
   let apply_command_to_context (cD, cG) = function
     | By (i, x, tau) ->
@@ -1458,28 +1482,22 @@ module Comp = struct
       with the outer contexts before elaborating the body against
       ttau.
    *)
-  and hypothetical mcid cD cG cIH total_decs (Hypothetical (ctx, p) : hypothetical) ttau =
-    let { cD = cD'; cG = cG'; cIH = I.Empty } = ctx in
-    (* TODO context convertibility check *)
-    (* For now we trust that cIH given to us will continue to make
-       sense in the inner context.
-       That is, if cD' =~ cD then cD' |- cIH ctx.
-       (This is because our =~ will even have the entries in the same order.
-       If reordering is possible, then we need an msub to apply to cIH.)
-     *)
-    proof mcid cD' cG' cIH total_decs p ttau
+  and hypothetical mcid cD cG cIH total_decs (Hypothetical (loc, h, p) : hypothetical) ttau =
+    let { cD = cD'; cG = cG'; cIH = I.Empty } = h in
+    let cD, cG = validate_contexts loc (cD, cD') (cG, cG') in
+    proof mcid cD cG cIH total_decs p ttau
 
   and directive mcid cD cG cIH total_decs (d : directive) ttau =
     let check_branch cG_pat pat t h i =
       let cD_b, cG_b, cIH_b =
-        let Hypothetical (ctx, _) = h in
+        let Hypothetical (_, ctx, _) = h in
         prepare_branch_contexts ctx.cD pat t cD (cG, cG_pat) cIH i total_decs
       in
       let ttau_b = Pair.rmap (Whnf.mcomp' t) ttau in
       hypothetical mcid cD_b cG_b cIH_b total_decs h ttau_b
     in
     match d with
-    | Intros (Hypothetical (h, p)) ->
+    | Intros hyp ->
        let tau = Whnf.cnormCTyp ttau in
        let (cD', cG', tau', t) = unroll cD cG tau in
        dprintf begin fun p ->
@@ -1498,7 +1516,7 @@ module Comp = struct
            P.(fmt_ppr_cmp_gctx cD' l0) cG'
          end;
        let cIH' = Whnf.cnormIHCtx (cIH, t) in
-       proof mcid cD' cG' cIH' total_decs p (tau', Whnf.m_id)
+       hypothetical mcid cD' cG' cIH' total_decs hyp (tau', Whnf.m_id)
 
     | Solve e ->
        check cD (cG, cIH) total_decs e ttau

@@ -92,6 +92,8 @@ module Comp : sig
     | InvalidRecCall
     | MissingTotal    of Id.cid_prog
     | NotImpossible   of LF.mctx * gctx * typ * exp_syn
+    | InvalidHypotheses  of hypotheses (* expected *)
+                            * hypotheses (* actual *)
 
   exception Error of Syntax.Loc.t * error
 
@@ -125,6 +127,14 @@ module Comp : sig
 
   (** Variant of apply_unbox_modifier that is the identity when no modifier is specified. *)
   val apply_unbox_modifier_opt : LF.mctx -> unbox_modifier option -> LF.ctyp -> LF.ctyp * LF.sub
+
+  (** Verifies that the pairs of contexts are convertible.
+      It is a user error InvalidHypotheses if they are not.
+      If the contexts are convertible, then they are merged, using
+      plicity and type information from the context on the left, but
+      the entry name from the context on the right.
+   *)
+  val validate_contexts : Loc.t -> LF.mctx * LF.mctx -> gctx * gctx -> LF.mctx * gctx
 
   (** Checks a theorem in the given contexts against the given type.
       The given list of total declarations is used for totality checking.

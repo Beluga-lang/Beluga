@@ -45,8 +45,6 @@ type error =
   | MCtxIllformed of Int.LF.mctx
   | TypMismatch        of Int.LF.mctx * Int.Comp.tclo * Int.Comp.tclo
   | IllegalSubstMatch
-  | InvalidHypotheses  of Int.Comp.hypotheses (* expected *)
-                          * Int.Comp.hypotheses (* actual *)
   | InvalidSchemaElementIndex of int * Id.cid_schema
   | UnboundCaseLabel of [ `comp | `meta ] * Id.name * Int.LF.mctx * Int.Comp.typ
   | CaseLabelMismatch of case_label_variant (* expected *)
@@ -180,17 +178,6 @@ let _ = Error.register_printer
          Id.print name
          print_case_label_kind kind
          P.(fmt_ppr_cmp_typ cD l0) tau
-
-    | InvalidHypotheses (exp, act) ->
-       fprintf ppf
-         "@[<v>Invalid hypotheses.\
-          @,Expected hypotheses:\
-          @,  @[%a@]
-          @,Actual hypotheses:\
-          @,  @[%a@]
-          @]"
-         P.fmt_ppr_cmp_hypotheses_listing exp
-         P.fmt_ppr_cmp_hypotheses_listing act
 
     | InvalidSchemaElementIndex (n, w) ->
        let Int.LF.Schema elems as schema = Store.Cid.Schema.get_schema w in
@@ -1964,16 +1951,6 @@ let elHypotheses { A.cD; cG } =
   let cG = elGCtx cD cG in
   { I.cD ; cG ; cIH = Int.LF.Empty }
 
-(** Verifies that the pairs of contexts are convertible. *)
-let validateContexts loc (cD, cD') (cG, cG') : unit =
-  if not Whnf.(convMCtx cD cD' && convGCtx (cG, m_id) (cG', m_id)) then
-    let open I in
-    InvalidHypotheses
-      ( { cD; cG; cIH = Int.LF.Empty }
-      , { cD = cD'; cG = cG'; cIH = Int.LF.Empty }
-      )
-    |> throw loc
-
 (* elaborate hypothetical *)
 let rec elHypothetical cD cG label hyp ttau =
   let { A.hypotheses = h; proof = p; hypothetical_loc = loc } = hyp in
@@ -1992,10 +1969,12 @@ let rec elHypothetical cD cG label hyp ttau =
       P.(fmt_ppr_lf_mctx l0) cD'
     end;
 
-  validateContexts loc (cD, cD') (cG, cG');
+  let cD, cG = Check.Comp.validate_contexts loc (cD, cD') (cG, cG') in
+
   I.Hypothetical
-    ( h'
-    , elProof cD' cG' label p ttau
+    ( loc
+    , h'
+    , elProof cD cG label p ttau
     )
 
 and elCommand cD cG =

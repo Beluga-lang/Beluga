@@ -456,3 +456,15 @@ let names_of_mctx cD =
 
 let names_of_gctx cG =
   to_list_map cG (fun _ -> Comp.name_of_ctyp_decl)
+
+let rec steal_mctx_names cD cD' = match cD, cD' with
+  | Dec (cD, Decl (_, cU, dep)), Dec (cD', Decl (u', _, _)) ->
+     Dec (steal_mctx_names cD cD', Decl (u', cU, dep))
+  | Empty, Empty -> Empty
+  | _ -> Error.violation "[steal_mctx_names] inputs weren't convertible"
+
+let rec steal_gctx_names cG cG' = match cG, cG' with
+  | Dec (cG, Comp.CTypDecl (_, tau, wf)), Dec (cG', Comp.CTypDecl (x', _, _)) ->
+     Dec (steal_gctx_names cG cG', Comp.CTypDecl (x', tau, wf))
+  | Empty, Empty -> Empty
+  | _ -> Error.violation "[steal_gctx_names] inputs weren't convertible"

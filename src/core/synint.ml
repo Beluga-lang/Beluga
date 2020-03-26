@@ -674,7 +674,8 @@ module Comp = struct
   *)
   and hypothetical =
     Hypothetical of
-      hypotheses (* the full contexts *)
+      Loc.t
+      * hypotheses (* the full contexts *)
       * proof (* the proof; should make sense in `hypotheses`. *)
 
   (** An open subgoal is a proof state together with a reference ot the
@@ -698,7 +699,7 @@ module Comp = struct
 
   (** Smart constructor for the intros directive. *)
   let intros (h : hypotheses) (proof : proof) : proof =
-    Directive (Intros (Hypothetical (h, proof)))
+    Directive (Intros (Hypothetical (Loc.ghost, h, proof)))
 
   let suffices (i : exp_syn) (ps : suffices_arg list) : proof =
     Directive (Suffices (i, ps))
@@ -714,7 +715,7 @@ module Comp = struct
 
   let context_branch (c : context_case) (cG_p, pat) (t : LF.msub) (h : hypotheses) (p : proof)
       : context_branch =
-    SplitBranch (c, (cG_p, pat), t, (Hypothetical (h, p)))
+    SplitBranch (c, (cG_p, pat), t, (Hypothetical (Loc.ghost, h, p)))
 
   let meta_split (m : exp_syn) (a : typ) (bs : meta_branch list)
       : proof =
@@ -730,7 +731,7 @@ module Comp = struct
         (h : hypotheses)
         (p : proof)
       : meta_branch =
-    SplitBranch (c, (cG_p, pat), t, (Hypothetical (h, p)))
+    SplitBranch (c, (cG_p, pat), t, (Hypothetical (Loc.ghost, h, p)))
 
   let comp_split (t : exp_syn) (tau : typ) (bs : comp_branch list)
       : proof =
@@ -743,7 +744,7 @@ module Comp = struct
         (h : hypotheses)
         (d : proof)
       : comp_branch =
-    SplitBranch (c, (cG_p, pat), t, (Hypothetical (h, d)))
+    SplitBranch (c, (cG_p, pat), t, (Hypothetical (Loc.ghost, h, d)))
 
   (** Gives a more convenient way of writing complex proofs by using list syntax. *)
   let prepend_commands (cmds : command list) (proof : proof)

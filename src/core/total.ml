@@ -1094,8 +1094,8 @@ and leq_meta_obj cD mC1 mC2 =
 (*find the meta obj needs to be compared*)
 let rec find_meta_obj mS n =
   match mS, n with
-    | Comp.MetaApp (mC, _)  , 1   ->  mC
-    | Comp.MetaApp (mC, mS'), _   -> find_meta_obj  mS' (n-1)
+    | Comp.MetaApp (mC, _, _)  , 1   ->  mC
+    | Comp.MetaApp (mC, mS', _), _   -> find_meta_obj  mS' (n-1)
     | Comp.MetaNil          , _   -> raise Not_compatible (* raise (Error (loc, (WrongArgNum n))) *)
 
 
@@ -1112,7 +1112,7 @@ let rec get_target cD tau =
 
 let rec mS_size mS =
   match mS with
-    | Comp.MetaApp (mC, mS')   -> mS_size mS' + 1
+    | Comp.MetaApp (mC, mS', _)   -> mS_size mS' + 1
     | Comp.MetaNil             -> 0
 
 

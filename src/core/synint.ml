@@ -368,7 +368,7 @@ module Comp = struct
 
   type meta_spine =
     | MetaNil
-    | MetaApp of meta_obj * meta_spine
+    | MetaApp of meta_obj * meta_spine * plicity
 
   type typ =
     | TypBase   of Loc.t * cid_comp_typ * meta_spine

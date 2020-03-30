@@ -2594,7 +2594,7 @@ let rec ground_sub cD = function (* why is parameter cD is unused? -je *)
 
   let rec unifyMetaSpine cD (mS, t) (mS', t') (cK, mt) = match ((mS, t) , (mS', t')) with
     | (Comp.MetaNil, _ ) , (Comp.MetaNil, _ ) -> ()
-    | (Comp.MetaApp (mO, mS), t) , (Comp.MetaApp (mO', mS'), t') ->
+    | (Comp.MetaApp (mO, mS, _), t) , (Comp.MetaApp (mO', mS', _), t') ->
         let Comp.PiKind (_, cdecl, cK') = cK in
         let mOt = Whnf.cnormMetaObj (mO, t) in
         let _mOt' = Whnf.cnormMetaObj (mO', t') in

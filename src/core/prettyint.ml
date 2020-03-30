@@ -964,10 +964,12 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
   let rec fmt_ppr_cmp_meta_spine cD lvl ppf = function
     | Comp.MetaNil ->
        fprintf ppf ""
-    | Comp.MetaApp (mO, mS) ->
+    | Comp.MetaApp (mO, mS, `implicit) ->
+       fmt_ppr_cmp_meta_spine cD lvl ppf mS
+    | Comp.MetaApp (mO, mS, `explicit) ->
        fprintf ppf "@ @[%a@]%a"
-         (fmt_ppr_cmp_meta_obj  cD (lvl + 1)) mO
-         (fmt_ppr_cmp_meta_spine   cD lvl) mS
+         (fmt_ppr_cmp_meta_obj cD (lvl + 1)) mO
+         (fmt_ppr_cmp_meta_spine cD lvl) mS
 
   let rec fmt_ppr_cmp_typ cD lvl ppf = function
     | Comp.TypBase (_, c, mS)->

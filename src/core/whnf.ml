@@ -1568,8 +1568,8 @@ let mctxMVarPos cD u =
 
   and normMetaSpine mS = match mS with
     | Comp.MetaNil -> mS
-    | Comp.MetaApp (mO, mS) ->
-        Comp.MetaApp (normMetaObj mO, normMetaSpine mS)
+    | Comp.MetaApp (mO, mS, plicity) ->
+       Comp.MetaApp (normMetaObj mO, normMetaSpine mS, plicity)
 
   let normMTyp = normITyp
 
@@ -1597,8 +1597,11 @@ let mctxMVarPos cD u =
 
   and cnormMetaSpine (mS,t) = match mS with
     | Comp.MetaNil -> mS
-    | Comp.MetaApp (mO, mS) ->
-        Comp.MetaApp (cnormMetaObj (mO,t), cnormMetaSpine (mS,t))
+    | Comp.MetaApp (mO, mS, plicity) ->
+       Comp.MetaApp
+         ( cnormMetaObj (mO,t)
+         , cnormMetaSpine (mS,t)
+         , plicity )
 
   let cnormCDecl (cdecl, t) = match cdecl with
     | Decl(u, mtyp,dep) -> Decl (u, cnormMTyp (mtyp, t),dep)
@@ -1892,8 +1895,10 @@ let mctxMVarPos cD u =
 
   and convMetaSpine mS mS' = match (mS, mS') with
     | (Comp.MetaNil , Comp.MetaNil) -> true
-    | (Comp.MetaApp (mO, mS) , Comp.MetaApp (mO', mS')) ->
-        convMetaObj mO mO' && convMetaSpine mS mS'
+    | (Comp.MetaApp (mO, mS, p1) , Comp.MetaApp (mO', mS', p2)) ->
+       convMetaObj mO mO'
+       && convMetaSpine mS mS'
+       && Stdlib.(=) p1 p2
 
   (* convCTyp (tT1, t1) (tT2, t2) = true iff [|t1|]tT1 = [|t2|]tT2 *)
   let convClTyp = function
@@ -2101,8 +2106,8 @@ let rec closedDCtx cPsi = match cPsi with
 
 let rec closedMetaSpine mS = match mS with
   | Comp.MetaNil -> true
-  | Comp.MetaApp (mO, mS) ->
-      closedMetaObj mO && closedMetaSpine mS
+  | Comp.MetaApp (mO, mS, _) ->
+     closedMetaObj mO && closedMetaSpine mS
 
 and closedMObj = function
   | MObj tM -> closed (tM, LF.id)

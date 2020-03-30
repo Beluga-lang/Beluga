@@ -41,8 +41,6 @@ inductive Subtype : (g:as_ctx) [g |- tp] -> [g |- tp] -> ctype =
 % Algorithmic subtyping
 %
 % Remark:
-% 0) We use logic programming style and write C <- B <- A instead of
-%    A -> B -> C  (we reverse the arrows)
 % 1) we view transitivity as follows:
 %
 % G |- a < U      U < T

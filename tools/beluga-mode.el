@@ -217,7 +217,7 @@ Regexp match data 0 points to the chars."
   "A regexp for matching a Beluga identifier.")
 
 (defconst beluga-syntax-fundec-re
-  (regexp-opt '("rec" "and") 'symbols)
+  (regexp-opt '("rec" "proof") 'symbols)
   "A regexp for matching a function declaration.
 Note that this will also match the 'and' keyword!")
 
@@ -729,7 +729,7 @@ Otherwise, `match-string' 1 will contain the name of the matched short.")
   (regexp-opt
    '("FN" "and" "block" "case" "inductive" "LF" "coinductive"
      "stratified" "else" "ffalse" "fn" "if" "in" "impossible" "let"
-     "mlam" "of" "rec" "schema" "some" "then" "type" "ctype" "ttrue"
+     "mlam" "of" "rec" "proof" "schema" "some" "then" "type" "ctype" "ttrue"
      "typedef"
      "module" "struct" "end" "#stratified" "#positive" "fun")
    'symbols)
@@ -874,6 +874,7 @@ Return the starting position of the short pragma; else, nil."
 
      (recs
       ("rec" def)
+      ("proof" def)
       (recs "and" recs))
 
      (decls
@@ -1005,6 +1006,9 @@ Return the starting position of the short pragma; else, nil."
        (smie-rule-parent)))
 
     (`(:after . ,(and "=" (guard (smie-rule-parent-p "rec"))))
+     (smie-rule-parent))
+
+    (`(:after . ,(and "=" (guard (smie-rule-parent-p "proof"))))
      (smie-rule-parent))
 
     ; if the token is a form that will use => eventually but is

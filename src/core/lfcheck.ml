@@ -1,4 +1,5 @@
-open Support.Equality
+open Support
+open Equality
 module P = Pretty.Int.DefaultPrinter
 module R = Store.Cid.DefaultRenderer
 
@@ -23,7 +24,7 @@ type error =
   | SigmaMismatch    of mctx * dctx * trec_clo * trec_clo
   | KindMismatch     of mctx * dctx * sclo * (kind * sub)
   | TypMismatch      of mctx * dctx * nclo * tclo * tclo
-  | IllTypedSub      of mctx * dctx * sub * dctx
+  | IllTypedSub      of mctx * dctx * sub * dctx * normal option
   | SpineIllTyped    of int * int
   | LeftoverFV       of Id.name
   | ParamVarInst     of mctx * dctx * tclo
@@ -117,14 +118,23 @@ let _ =
            "In expression: %a@."
            (P.fmt_ppr_lf_normal cD cPsi P.l0) (Whnf.norm sM)
 
-      | IllTypedSub (cD, cPsi, s, cPsi') ->
-         Format.fprintf ppf "Ill-typed substitution.@.";
-         Format.fprintf ppf "    Substitution: %a@."
-           (P.fmt_ppr_lf_sub cD cPsi P.l0) s;
-         Format.fprintf ppf "    does not take context: %a@."
-           (P.fmt_ppr_lf_dctx cD P.l0) cPsi';
-         Format.fprintf ppf "    to context: %a@."
-           (P.fmt_ppr_lf_dctx cD P.l0) cPsi;
+      | IllTypedSub (cD, cPsi, s, cPsi', tM_opt) ->
+         Format.fprintf ppf
+           "@[<v>Ill-typed substitution.\
+            @,    Substitution: @[%a@]\
+            %a\
+            @,    does not take context: @[%a@]\
+            @,    to context:            @[%a@]\
+            @]"
+           P.(fmt_ppr_lf_sub cD cPsi P.l0) s
+           (Maybe.print
+              (fun ppf x ->
+                Format.fprintf ppf
+                  "@,    applied to term: @[%a@]"
+                  P.(fmt_ppr_lf_normal cD cPsi' l0) x))
+           tM_opt
+           (P.fmt_ppr_lf_dctx cD P.l0) cPsi'
+           (P.fmt_ppr_lf_dctx cD P.l0) cPsi
 
       | SpineIllTyped (n_expected, n_actual) ->
          Error.report_mismatch ppf
@@ -509,19 +519,26 @@ and canAppear cD cPsi head sA loc=
                  somewhat gratuitously, as p .. x y when the context variable schema
                  doesn't include elements of type sA, but x or y do have type sA *)
 
-(* checkSub loc cD cPsi s cPsi' = ()
- *
- * Invariant:
- *
- * succeeds iff cD ; cPsi |- s : cPsi'
+(** checkSub loc cD cPsi s cPsi' = ()
+
+    Succeeds iff cD ; cPsi |- s : cPsi'
+
+    The optional term tM_opt, which is the term to which the
+    substitution is being applied, is added to error messages to make
+    them more informative.
+    If tM_opt = Some tM then require
+    tM be well-formed in cD; cPsi'
  *)
-and checkSub loc cD cPsi1 s1 cl cPsi1' =
+and checkSub loc cD cPsi1 ?(tM_opt = None) s1 cl cPsi1' =
   let svar_le = function
     | Ren, Ren
     | Subst, Subst
     | Ren, Subst -> ()
     | Subst, Ren ->
       raise (Error (loc, SubWhenRen(cD, cPsi1, s1)))
+  in
+  let die () =
+    IllTypedSub (cD, cPsi1, s1, cPsi1', tM_opt) |> throw loc
   in
   let rec checkSub loc cD cPsi s cPsi' = match cPsi, s, cPsi' with
     | cPsi, EmptySub, Null -> ()
@@ -550,7 +567,7 @@ and checkSub loc cD cPsi1 s1 cl cPsi1' =
       (* if psi = psi' then *)
       if not (Whnf.convCtxVar psi psi') then
 (*      if not (subsumes cD psi' psi) then *)
-        raise (Error (loc, IllTypedSub (cD, cPsi1, s1, cPsi1')))
+        raise (Error (loc, IllTypedSub (cD, cPsi1, s1, cPsi1', tM_opt)))
 
     (* SVar case to be added - bp *)
 
@@ -558,19 +575,19 @@ and checkSub loc cD cPsi1 s1 cl cPsi1' =
        if k > 0 then
          checkSub loc cD cPsi (Shift (k - 1)) Null
        else
-         raise (Error (loc, IllTypedSub (cD, cPsi1, s1, cPsi1')))
+         die ()
 
     | DDec (cPsi, _tX),  Shift k,  CtxVar psi ->
        if k > 0 then
          checkSub loc cD cPsi (Shift (k - 1)) (CtxVar psi)
        else
-         raise (Error (loc, IllTypedSub (cD, cPsi1, s1, cPsi1')))
+         die ()
 
     | cPsi',  Shift k,  cPsi ->
        if k >= 0 then
          checkSub loc cD cPsi' (Dot (Head (BVar (k + 1)), Shift (k + 1))) cPsi
        else
-         raise (Error (loc, IllTypedSub (cD, cPsi1, s1, cPsi1')))
+         die ()
 
     | cPsi', Dot (Head h, s'), DDec (cPsi, TypDecl (_, tA2))
     (* | cPsi', Dot (Obj (Root(_,h,Nil)), s'), DDec (cPsi, TypDecl (_, tA2)) *) ->
@@ -578,7 +595,7 @@ and checkSub loc cD cPsi1 s1 cl cPsi1' =
        (* ensures that s' is well-typed before comparing types tA1 =[s']tA2 *)
        and tA1 = inferHead loc cD cPsi' h cl in
        if not (Whnf.convTyp (tA1, S.LF.id) (tA2, s')) then
-         raise (Error (loc, IllTypedSub (cD, cPsi1, s1, cPsi1')))
+         die ()
 
     | cPsi, Dot (Obj tM, s'), DDec (cPsi'', TypDecl (_, tA2)) ->
        begin match cl with
@@ -591,7 +608,7 @@ and checkSub loc cD cPsi1 s1 cl cPsi1' =
        end
 
     | cPsi1, s, cPsi2 ->
-       raise (Error (loc, IllTypedSub (cD, cPsi1, s1, cPsi1')))
+       die ()
 
   in
   checkSub loc cD cPsi1 s1 cPsi1'

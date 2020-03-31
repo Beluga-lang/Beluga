@@ -16,7 +16,7 @@ module LF : sig
     | SigmaMismatch    of mctx * dctx * trec_clo * trec_clo
     | KindMismatch     of mctx * dctx * sclo * (kind * sub)
     | TypMismatch      of mctx * dctx * nclo * tclo * tclo
-    | IllTypedSub      of mctx * dctx * sub * dctx
+    | IllTypedSub      of mctx * dctx * sub * dctx * normal option
     | SpineIllTyped    of int * int
     | LeftoverFV       of Id.name
     | ParamVarInst     of mctx * dctx * tclo
@@ -94,6 +94,17 @@ module Comp : sig
     | NotImpossible   of LF.mctx * gctx * typ * exp_syn
     | InvalidHypotheses  of hypotheses (* expected *)
                             * hypotheses (* actual *)
+    | TypeDecompositionFailed of LF.mctx * typ
+    | SufficesLengthsMismatch
+      of LF.mctx * typ (* type that was decomposed *)
+         * int (* number of simple arguments in that type *)
+         * int (* number of given types *)
+    | SufficesBadAnnotation
+      of LF.mctx * typ (* suffices scrutinee's type *)
+         * int (* index of the scrutinee premise that didn't unify *)
+         * typ (* type annotation given by the user (valid in cD) *)
+    | SufficesBadGoal
+      of LF.mctx * typ (* scrutinee type *) * typ (* goal type *)
 
   exception Error of Syntax.Loc.t * error
 
@@ -264,8 +275,10 @@ module Comp : sig
       It decomposes the function type tau_i (see decompose_function_type)
       and appropriately unifies the decomposition so as to pin down all
       instantiations of universally quantified variables.
+
+      The provided location is used when raising errors.
    *)
-  val unify_suffices : LF.mctx -> typ -> typ list -> typ -> unit
+  val unify_suffices : Loc.t -> LF.mctx -> typ -> typ list -> typ -> unit
 
   (** Generates a meta-application spine consisting of unification
       variables to eliminate leading PiBox types.

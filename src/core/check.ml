@@ -15,6 +15,7 @@ let (dprintf, dprint, dprnt) =
 open Debug.Fmt
 
 module LF = Lfcheck
+module List = Misc.List
 
 module Comp = struct
   open Syntax
@@ -90,6 +91,18 @@ module Comp = struct
     | NotImpossible   of I.mctx * gctx * typ * exp_syn
     | InvalidHypotheses  of Int.Comp.hypotheses (* expected *)
                             * Int.Comp.hypotheses (* actual *)
+    | TypeDecompositionFailed of I.mctx * typ
+    | SufficesLengthsMismatch
+      of I.mctx * typ (* type that was decomposed *)
+         * int (* number of simple arguments in that type *)
+         * int (* number of given types *)
+    | SufficesBadAnnotation
+      of I.mctx * typ (* suffices scrutinee's type *)
+         * int (* index of the scrutinee premise that didn't unify *)
+         * typ (* type annotation given by the user (valid in cD) *)
+    | SufficesBadGoal
+      of I.mctx * typ (* scrutinee type *) * typ (* goal type *)
+
   (* | IllTypedMetaObj of I.mctx * meta_obj * meta_typ  *)
 
   (*  type rec_call = bool *)
@@ -293,6 +306,56 @@ module Comp = struct
           @]"
          P.fmt_ppr_cmp_hypotheses_listing exp
          P.fmt_ppr_cmp_hypotheses_listing act
+
+    | TypeDecompositionFailed (cD, tau) ->
+       Format.fprintf ppf
+         "@[<v>Type decomposition failed.\
+          @,The type\
+          @,  @[%a@]\
+          @,could not be decomposed.\
+          @,@[%a@]@]"
+         P.(fmt_ppr_cmp_typ cD l0) tau
+         Format.pp_print_string
+         "Decomposition requires that the type consist of Pi-types
+          following by arrow-types with no further Pi-types."
+
+    | SufficesLengthsMismatch (cD, tau, exp_k, act_k) ->
+       Format.fprintf ppf
+         "@[<v>Incorrect number of type annotations given.\
+          @,The type\
+          @,  @[%a@]\
+          @,requires exactly\
+          @,  %d\
+          @,annotations, but\
+          @,  %d\
+          @,were provided.\
+          @]"
+         P.(fmt_ppr_cmp_typ cD l0) tau
+         exp_k
+         act_k
+
+    | SufficesBadAnnotation (cD, tau_i, bad_index, tau_ann) ->
+       Format.fprintf ppf
+         "@[<v>The provided type annotation\
+          @,  @[%a@]\
+          @,is not compatible with premise\
+          @,  %d\
+          @,of the synthesized type\
+          @,  @[%a@]\
+          @]"
+         P.(fmt_ppr_cmp_typ cD l0) tau_ann
+         bad_index
+         P.(fmt_ppr_cmp_typ cD l0) tau_i
+
+    | SufficesBadGoal (cD, tau_i, tau_goal) ->
+       Format.fprintf ppf
+         "@[<v>The current goal type\
+          @,  @[%a@]\
+          @,is not compatible with the conclusion of\
+          @,  @[%a@]
+          @]"
+         P.(fmt_ppr_cmp_typ cD l0) tau_goal
+         P.(fmt_ppr_cmp_typ cD l0) tau_i
 
   let _ =
     Error.register_printer
@@ -597,7 +660,8 @@ module Comp = struct
       argument: genMApp will eliminate a leading PiBoxes while the
       predicate returns true.
    *)
-  let rec genMApp loc (p : Int.LF.ctyp_decl -> bool) cD (i, tau_t) : int * (Int.Comp.exp_syn * Int.Comp.tclo) =
+  let rec genMApp loc (p : Int.LF.ctyp_decl -> bool) cD (i, tau_t)
+          : int * (Int.Comp.exp_syn * Int.Comp.tclo) =
     genMAppW loc p cD (i, Whnf.cwhnfCTyp tau_t)
 
   and genMAppW loc p cD (i, tau_t) = match tau_t with
@@ -1328,7 +1392,7 @@ module Comp = struct
     F.(decomp_arrows ++ Whnf.cnormCTyp ++ decomp_pis Whnf.m_id)
 
   (** See documentation in check.mli *)
-  let unify_suffices cD tau_i tau_anns tau_g =
+  let unify_suffices loc cD tau_i tau_anns tau_g =
     dprintf begin fun p ->
       p.fmt "[unify_suffices] @[<v>tau_i = @[%a@]\
              @,@[<v 2>tau_anns =@,@[<v>%a@]@]\
@@ -1341,7 +1405,9 @@ module Comp = struct
       end;
     (* TODO check that there are no leftover vars *)
     match decompose_function_type cD tau_i with
-    | None -> failwith "failed to decompose" (* TODO real error message *)
+    | None ->
+       TypeDecompositionFailed (cD, tau_i)
+       |> throw loc
     | Some (tau_args, tau_out) ->
        let unify tau_1 tau_2 =
          try
@@ -1357,20 +1423,27 @@ module Comp = struct
              (tau_2, Whnf.m_id);
            true
          with
-         | Unify.Failure msg -> false (* TODO real error message here *)
+         | Unify.Failure msg ->
+            false (* TODO real error message here *)
        in
-       match
-         try Some (List.map2 (fun x y () -> unify x y) tau_args tau_anns)
-         with Invalid_argument _ -> None
-       with
-       | None -> failwith "argument lengths mismatched" (* TODO real error *)
-       | Some fs ->
-          match
-            List.for_all (fun f -> f ()) fs
-            && (dprnt "[unify_suffices] unifying goal"; unify tau_out tau_g)
-          with
-          | false -> failwith "failed to unify arguments or goal"
-          | true -> ()
+       let unify_list taus1 taus2 =
+         try
+           List.mapi2 (fun i x y -> (i, (fun () -> unify x y), x, y)) taus1 taus2
+         with
+         | Invalid_argument _ ->
+            let exp_k = List.length tau_args in
+            let act_k = List.length tau_anns in
+            SufficesLengthsMismatch (cD, tau_i, exp_k, act_k)
+            |> throw loc
+       in
+       unify_list tau_args tau_anns
+       |> List.iter
+            begin fun (i, f, _, tau_ann) ->
+            if f () |> not then
+              SufficesBadAnnotation (cD, tau_i, (i + 1), tau_ann) |> throw loc
+            end;
+       if not (unify tau_out tau_g) then
+         SufficesBadGoal (cD, tau_i, tau_g) |> throw loc
 
   let require_syn_typbox cD cG loc i (tau, t) =
     match tau with
@@ -1548,7 +1621,8 @@ module Comp = struct
        let (cIH_opt, tau_i, t) = syn cD (cG, cIH) total_decs i in
        let tau_i = Whnf.cnormCTyp (tau_i, t) in
        let tau_g = Whnf.cnormCTyp ttau in
-       unify_suffices cD tau_i (List.map (fun (_, tau, _) -> tau) args) tau_g;
+       let loc = loc_of_exp_syn i in
+       unify_suffices loc cD tau_i (List.map (fun (_, tau, _) -> tau) args) tau_g;
        List.iter
          begin fun (_, tau, p) ->
          dprintf begin fun p ->

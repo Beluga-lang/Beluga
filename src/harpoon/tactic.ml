@@ -612,16 +612,18 @@ let invoke (i : Comp.exp_syn) (tau : Comp.typ) (name : Id.name) : t =
 let suffices (i : Comp.exp_syn) (tau_args : Comp.typ list) (tau_i : Comp.typ) : t =
   fun t g ->
   let open Comp in
-  let i_head = Comp.head_of_application i in
+  let i_head = head_of_application i in
+  let loc = loc_of_exp_syn i in
   let _, (i', ttau_i) =
     B.Check.Comp.genMApp
-      Loc.ghost
+      loc
       (fun _ -> true)
       g.context.cD
       (i, (tau_i, Whnf.m_id))
   in
   let tau_i' = Whnf.cnormCTyp ttau_i in
-  B.Check.Comp.unify_suffices g.context.cD tau_i' tau_args (Whnf.cnormCTyp g.goal);
+  B.Check.Comp.unify_suffices loc g.context.cD tau_i' tau_args
+    (Whnf.cnormCTyp g.goal);
   (* generate the subgoals for the arguments.
      by unification it doesn't matter which list we use. *)
   let children, subproofs =

@@ -2474,7 +2474,7 @@ and elDirective cD cG pb (d : Apx.Comp.directive) ttau : Int.Comp.directive =
      let ps =
        List.map (fun (loc, tau, p) -> (loc, elCompTyp cD tau, p)) ps
      in
-     Check.Comp.unify_suffices cD tau_i
+     Check.Comp.unify_suffices loc cD tau_i
        (List.map (fun (_, tau, _) -> tau) ps)
        (Whnf.cnormCTyp ttau);
      let ps =

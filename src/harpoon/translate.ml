@@ -167,6 +167,7 @@ and directive cD cG (d : Comp.directive) tau : Comp.exp_chk =
      (* XXX consider storing tau_i inside Suffices to avoid
         needing to synthesize it here? -je *)
      let _, ttau_i = Check.Comp.syn cD cG [] i in
+     let loc = Comp.loc_of_exp_syn i in
      let _, (i', ttau_i') =
        Check.Comp.genMApp
          Loc.ghost
@@ -185,7 +186,7 @@ and directive cD cG (d : Comp.directive) tau : Comp.exp_chk =
         We are essentially skipping the part of unify_suffices that
         eliminates PiBoxes for us.
       *)
-     Check.Comp.unify_suffices cD tau_i' tau_args tau;
+     Check.Comp.unify_suffices loc cD tau_i' tau_args tau;
      let es =
        List.map (fun (_, tau_p, p) -> proof cD cG p tau_p) args
      in

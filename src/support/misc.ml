@@ -160,6 +160,14 @@ module List = struct
     | x :: _ -> Some x
 
   let index l = List.mapi (fun i x -> (i, x)) l
+
+  let mapi2 f l1 l2 =
+    let rec go i = function
+      | ( [], [] ) -> []
+      | ( x::xs, y::ys) -> f i x y :: go (i + 1) (xs, ys)
+      | _ -> raise (Invalid_argument "mapi2")
+    in
+    go 0 (l1, l2)
 end
 
 let id (x : 'a) : 'a = x

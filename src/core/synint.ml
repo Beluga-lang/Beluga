@@ -220,6 +220,15 @@ module LF = struct
   let mvar cvar sub : head =
     MVar (cvar, sub)
 
+  (** Assert that the contextual type declaration be a real Decl, and
+      not a DeclOpt.
+      Raises a violation if it is a DeclOpt.
+   *)
+  let require_decl : ctyp_decl -> Id.name * ctyp * depend = function
+    | Decl (u, cU, dep) -> (u, cU, dep)
+    | DeclOpt _ ->
+       Error.violation "[require_decl] DeclOpt is forbidden"
+
   (* Hatted version of LF.Null *)
   let null_hat : dctx_hat = (None, 0)
 
@@ -490,6 +499,29 @@ module Comp = struct
   let rec apply_many i = function
     | [] -> i
     | e :: es -> apply_many (Apply (Loc.ghost, i, e)) es
+
+  let loc_of_exp_syn = function
+    | Var (loc, _) -> loc
+    | DataConst (loc, _) -> loc
+    | Obs (loc, _, _, _) -> loc
+    | Const (loc, _) -> loc
+    | Apply (loc, _, _) -> loc
+    | MApp (loc, _, _, _, _) -> loc
+    | AnnBox ((loc, _), _) -> loc
+    | PairVal (loc, _, _) -> loc
+
+  let loc_of_exp_chk = function
+    | Syn (loc, _) -> loc
+    | Fn (loc, _, _) -> loc
+    | Fun (loc, _) -> loc
+    | MLam (loc, _, _, _) -> loc
+    | Pair (loc, _, _) -> loc
+    | LetPair (loc, _, _) -> loc
+    | Let (loc, _, _) -> loc
+    | Box (loc, _, _) -> loc
+    | Case (loc, _, _, _) -> loc
+    | Impossible (loc, _) -> loc
+    | Hole (loc, _, _) -> loc
 
   type total_dec =
     { name : Id.name

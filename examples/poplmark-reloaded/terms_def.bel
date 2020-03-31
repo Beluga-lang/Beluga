@@ -1,0 +1,100 @@
+% Mechanization of POPLMARK Reloaded challenge:
+% Sec 2.1: Well-typed Terms and Reductions
+
+%coverage
+
+LF ty : type =
+   | base : ty
+   | arr  : ty -> ty -> ty
+;
+%name ty T.
+
+LF tm : ty -> type =
+   | abs : (tm A -> tm B) -> tm (arr A B)
+   | app : tm (arr A B) -> tm A -> tm B
+;
+%name tm M.
+
+schema cxt = tm A;
+
+LF step : tm A -> tm A -> type =
+   | rbeta : step (app (abs M) N) (M N)
+   | rabs  : ({x : tm A} step (M x) (M' x)) -> step (abs M) (abs M')
+   | rappl : step M M' -> step (app M N) (app M' N)
+   | rappr : step N N' -> step (app M N) (app M N')
+;
+
+LF mstep : tm A -> tm A -> type =
+   | m-refl :  mstep M M
+   | m-step : step M N -> mstep N M' -> mstep M M'
+;
+
+% Properties of multi-step reductions
+% Transitivity of multi-step reductions
+rec m-trans : (g : cxt) {M1 : [g |- tm A[]]}
+			[g |- mstep M1 M] -> [g |- mstep M M2]
+              -> [g |- mstep M1 M2] =
+/ total s1 (m-trans g a m1 m2 m s1) /
+mlam M1 => fn s1, s2 => case s1 of
+  | [_ |- m-refl] => s2
+  | [_ |- m-step S MS] =>
+        let [_ |- MS'] = m-trans _ [_ |- MS] s2 in
+        [_ |- m-step S MS']
+;
+
+% If [g |- mstep M M'] then [g |- mstep (app M N) (app M' N)].
+rec mstep_appl : (g: cxt) {M  : [g |- tm (arr A[] B[])]}{M' : [g |- tm (arr A[] B[])]} {N  : [g |- tm A[]]}
+			  [g |- mstep M M'] -> [g |- mstep (app M N) (app M' N)] =
+/ total ms (mstep_appl g a b m m' n ms) /
+mlam M => mlam M' => mlam N => fn ms =>
+case ms of
+  | [_ |- m-refl] => [_ |- m-refl]
+  | [_ |- m-step S MS'] =>
+        let [_ |- MS''] = mstep_appl _ [_ |- M'] [_ |- N] [_ |- MS'] in
+		[_ |- m-step (rappl S) MS'']
+;
+
+% If [g |- mstep N N'] then [g |- mstep (app M N) (app M N')].
+rec mstep_appr : (g: cxt) {M  : [g |- tm (arr A[] B[])]}{N  : [g |- tm A[]]}{N' : [g |- tm A[]]}
+			  [g |- mstep N N'] -> [g |- mstep (app M N) (app M N')] =
+/ total ms (mstep_appr g a b m n n' ms) /
+mlam M => mlam N => mlam N' => fn ms =>
+case ms of
+  | [g |- m-refl] => [g |- m-refl]
+  | [g |- m-step S MS'] =>
+        let [_ |- MS''] = mstep_appr [_ |- M] [_ |- _] [_ |- N'] [_ |- MS'] in
+		[g |- m-step (rappr S) MS'']
+;
+
+% If [g, x:tm A[] |- mstep M M'] then [g |- mstep (abs \x.M) (abs \x.M')]
+rec mstep_abs : (g : cxt) {M : [g , x: tm A[] |- tm B[]]}
+			  [g, x:tm A[] |- mstep M M']-> [g |- mstep (abs \x.M) (abs \x.M')] =
+    / total ms (mstep_abs g a b m m' ms) /
+    mlam M => fn s1 => case s1 of
+    | [g, x:tm A[] |- m-refl] => [g |- m-refl]
+    | [g, x:tm A[] |- m-step S MS] =>
+      let [g |- MS'] = mstep_abs [g, x : tm A[] |- _ ] [g, x : tm A[] |- MS] in
+      let [g |- S'] = [g |- rabs \x.S] in
+      [g |- m-step S' MS']
+;
+
+% If M: [g, x: tm A[] |- tm B[]] and [g |- step N N'] then [g |- mstep M[.., N] M[.., N']].
+rec subst_mred : (g: cxt) {M : [g, x: tm A[] |- tm B[]]}{N : [g |- tm A[]]}{N': [g |- tm A[]]}
+			  [g |- step N N'] -> [g |- mstep M[.., N] M[.., N']] =
+   / trust / 
+  % Totality checker does not take into account modulo exchange; it only consider direct subterms 
+    mlam M => mlam N => mlam N' => fn s => case [_, x:tm _ |- M] of
+    | [g, x:tm A[] |- x ] => let [g |- S] = s in [g |- m-step S m-refl]
+    | [g, x:tm A[] |- #p[..] ] => [g |- m-refl]
+    | [g, x:tm A[] |- abs \y.M] =>
+      let [g |- S] = s in
+      let [ g, y: tm _ |- S'] = subst_mred [g, y:tm _ , x:tm A[] |- M[.., x, y]]
+					   [g, y:tm _ |- N[..]] [g, y:tm _ |- N'[..]] [g, y:tm _ |- S[..]]  in
+      mstep_abs [g, y : tm _ |- _] [g, y: tm _ |- S']
+    | [g, x:tm A[] |- app M1 M2] =>
+      let [g |- S1] = subst_mred [g, x:tm A[] |- M1] [g |- N] [g |- N'] s in
+      let [g |- S2] = subst_mred [g, x:tm A[] |- M2] [g |- N] [g |- N'] s in
+      let [g |- MS1] =  mstep_appl [g |- M1[..,N]]  [g |- M1[.., N'] ] [g |- M2[.., N]]    [g |- S1] in
+      let [g |- MS2] = mstep_appr  [g |- M1[..,N']]  [g |- M2[..,N]]    [g |- M2[.., N'] ]  [g |- S2] in
+      m-trans [g |- _ ] [g |- MS1] [g |- MS2]
+;

@@ -1,0 +1,47 @@
+% Mechanization of POPLMARK Reloaded challenge:
+% Sec 2.4 : Challenge 1b: Soundness of inductive definition of strongly normalizing terms
+%
+
+% If SNe [g |- R] then Neutral [g |- R].
+rec neutralSNe : (g: cxt) {R: [g |- tm A[]]} SNe [g |- R] -> Neutral [g |- R] =
+    / total sne (neutralSNe g a r sne) /
+    mlam R => fn sne =>
+    case sne of
+    | SVar [g |- #p] => Nvar [g |- #p]
+    | SApp sne' sn => let neu = neutralSNe [_ |- _] sne' in Napp [_ |- _] [_ |- _] neu
+;
+
+% Soundness of SN with respect to sn
+
+rec soundSN : (g: cxt) {M: [g |- tm A[]]} SN [g |- M] -> Sn [g |- M] =
+    / total s (soundSN g a m s) /
+    mlam M => fn sn =>
+    case sn of
+    | SNeu sne => soundSNe [_ |- M] sne
+    | SAbs sn' => let sn'' = soundSN [_ |- _] sn' in abs_sn  [_] [ |- _] [|- _]  [_ |- _] sn''
+    | SRed snr sn' => let snr' = soundSNRed [_ |- _] [_ |- _] snr in
+		      let sn'' = soundSN [_ |- _] sn' in
+		      backwards_closure [_ |- M] [_ |- _] snr' sn''
+and
+rec soundSNe : (g: cxt) {M: [g |- tm A[]]} SNe [g |- M] -> Sn [g |- M] =
+    / total s (soundSNe g a m s) /
+    mlam M => fn sne =>
+    case sne of
+    | SVar [g |- #p] => varSn [g |- #p]
+    | SApp sne' sn => let snl = soundSNe [_ |- _] sne' in
+		      let snr = soundSN [_ |- _] sn in
+		      let neu = neutralSNe [_ |- _] sne' in
+		      app_sn [_] [ |- _] [|- _] [_ |- _] [_ |- _] neu snl snr
+
+and
+rec soundSNRed : (g: cxt) {M: [g |- tm A[]]}
+			  {M': [g |- tm A[]]}
+			  SNRed [g |- M] [g |- M']
+		 -> SnRed [g |- M] [g |- M'] =
+     / total s (soundSNRed g a m m' s) /
+    mlam M => mlam M' => fn snr =>
+    case snr of
+    | SBeta ([g, x: tm A[] |- M]) sn => let sn' = soundSN [_ |- _] sn in SnBeta [_ |- M] sn'
+    | SAppl snr' => let snr'' = soundSNRed [_ |- _] [_ |- _] snr' in SnAppl snr''
+;
+

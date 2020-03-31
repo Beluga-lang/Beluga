@@ -1,0 +1,213 @@
+% Mechanization of POPLMARK Reloaded challenge:
+% Sec 2.3 Challenge 1a: Properties of Sn
+
+% All variables are in sn.
+empty: type.
+
+rec varSn : (g:cxt) {#p: [g |- tm A[]]} Sn [g |- #p] =
+    / total (varSn) /
+      mlam #p => let [_ |- #p] : [g |- tm A[]] = [_ |- #p] in
+		 Acc [g] [|- A] [g |- #p] (mlam M', S => impossible [_ |- S])
+;
+
+% If Sn [g, x: tm A[] |- M] then Sn [g |- abs \x. M].
+rec abs_sn : {g:cxt} {A : [ |- ty]} {B : [ |- ty]}
+		     {M : [g, x: tm A[] |- tm B[]]}
+		     Sn [g, x: tm A[] |- M] -> Sn [g |- (abs \x. M)] =
+     / total s (abs_sn g a b m  s) /
+    mlam g, A, B => mlam M => fn sn => 
+    Acc  [g] [ |- arr A B] [ g |- abs \x.M] 
+    (mlam Q => mlam S  =>   
+     let  [g |- rabs (\x. S1)] = [g |- S] in 
+     let [g, x : tm A[] |- S1] : [g, x : tm A[] |- step M M1] = [g, x: tm _ |- S1] in
+     let Acc [g,x:tm A[]] [ |- B] [g, x:tm A[] |- M] r = sn in 
+     abs_sn [g] [|- A] [|- B]
+            [g, x:tm  A[] |- M1] (r [g, x: tm A[] |- M1] [g, x: tm A[] |- S1])
+    )
+;
+
+% If Sn [g |- app M N] then Sn [g |- M] and Sn [g |- N].
+rec app_sna : (g: cxt) {M: [g |- tm (arr A[] B[])]}
+			 {N : [g |- tm A[]]}
+			 Sn [g |- (app M N)]
+		-> Sn [g |- M] =
+    / total s (app_sna g a b m n s) /
+    mlam M => mlam N => fn sn =>
+    let Acc  [g] [ |- B[]] [g |- app M N] r = sn in
+    Acc [_] [_ |- _ ] [_ |- _ ] (mlam M' => mlam S =>
+	 app_sna [_ |- M'] [_ |- _] (r [_ |- app M' N] [_ |- rappl S]))
+;
+rec app_snb : (g: cxt) {M: [g |- tm (arr A[] B[])]}
+			 {N : [g |- tm A[]]}
+			 Sn [g |- (app M N)]
+		-> Sn [g |- N] =
+     / total s (app_snb g a b m n s) /
+    mlam M => mlam N => fn sn =>
+    let Acc [g] [ |- B[]] [g |- app M N] r = sn in
+    Acc [_] [_ |- _ ] [_ |- _ ] (mlam N' => mlam S =>
+	 app_snb [_ |- M] [_ |- N'] (r [_ |- app M N'] [_ |- rappr S]))
+;
+
+% If Sn [g |- N] and Sn [g |- [N/x]M] then Sn [g |- app (abs \x. M) N].
+rec app_abs_sn : {g: cxt} {A : [ |- ty]} {B : [ |- ty]}
+		          {M: [g, x: tm A[] |- tm B[]]}
+			  {N: [g |- tm A[]]}
+			  Sn [g |- M[.., N]] -> Sn [g |- N]
+		 -> Sn [g |- app (abs \x. M) N] =
+   / total {sn1 sn2} (app_abs_sn g a b m n sn1 sn2) /
+   mlam g, A, B, M, N => fn sn1 => fn sn2 =>
+   Acc [g] [|- B] [g |- app (abs \x. M) N]
+       (mlam P, S => case [_ |- S] of
+	| [g |- rbeta] => sn1
+	| [g |- rappl S'] => let [_ |- rabs (\x. S'')] = [_ |- S'] in
+			     let [_ |- S''] : [g, x: tm _ |- step M M'] = [_ |- S''] in
+			     let [_ |- S'''] = [_ |- S''[.., N]] in
+			     let Acc [g] [ |- B] [g |- _ ] r = sn1 in
+			     app_abs_sn [g] [|- _] [|- _] [_ |- M'] [_ |- N] (r [_ |- M'[.., N]] [_ |- S''']) sn2
+	| [g |- rappr S'] => let Acc [g] [ |- A] [g |- N] r = sn2 in
+			     let [_ |- S'] : [_ |- step N N'] = [_ |- S'] in
+			     let [_ |- MS''] = subst_mred [_ |- M] [_ |- N] [_ |- N'] [_ |- S'] in
+			     let sn' = mstep_sn [_ |- M[.., N]] [_ |- M[.., N']] [_ |- MS''] sn1 in
+			     app_abs_sn [g] [|- _] [|- _] [_ |- M] [_ |- N'] sn' (r [_ |- N'] [_ |- S'])
+       )
+;
+
+% Neutral terms
+inductive Neutral: (g: cxt) {M: [g |- tm A[]]} ctype =
+  | Nvar : {#x: [g |- tm A[]]} Neutral [g |- #x]
+  | Napp : {R: [g |- tm (arr A[] B[])]} {N: [g |- tm A[]]} Neutral [g |- R]
+	   -> Neutral [g |- app R N]
+;
+
+% Closure properties of neutral terms
+
+% If Neutral [g |- R] and [g |- step R R'] then Neutral [g |- R'].
+rec neu-step : (g: cxt) {R  : [g |- tm A[]]}
+			{R' : [g |- tm A[]]}
+			[g |- step R R'] -> Neutral [g |- R]
+	       -> Neutral [g |- R'] =
+    / total s (neu-step g a r r' s n) /
+    mlam R => mlam R' => fn s => fn neu =>
+    case neu of
+    | Nvar [g |- #x] => impossible s
+    | Napp [g |- R''] [g |- N] neu' =>
+      (case s of
+       | [g |- rbeta ] => impossible neu'
+       | [g |- rappl S'] => let neu'' = neu-step [_ |- R''] [_ |- _] [_ |- S'] neu' in
+			    Napp [_ |- _] [_ |- N] neu''
+       | [g |- rappr S'] => Napp [_ |- R''] [_ |- _] neu'
+      )
+;
+
+% If Neutral [g |- R] and Sn [g |- R] and Sn [g |- N] then Sn [g |- app R N].
+rec app_sn : {g: cxt}{A:[ |- ty]}{B: [ |- ty]}
+		     {R: [g |- tm (arr A[] B[])]}
+		     {N: [g |- tm A[]]}
+		     Neutral [g |- R] -> Sn [g |- R] -> Sn [g |- N]
+	     -> Sn [g |- app R N] =
+     / total {sn1 sn2} (app_sn g a b r n neu sn1 sn2) /
+    mlam g, A, B, R, N => fn neu => fn sn1 => fn sn2 =>
+    Acc [g] [ |- B] [g |- app R N]
+	(mlam Q, S => case [g |- S] of
+	 | [g |- rbeta] => impossible neu
+	 | [g |- rappl S'] => let Acc [g] [ |- arr A B] [g |- R] r = sn1 in
+			      let neu' = neu-step [_ |- R] [_ |- _] [_ |- S'] neu in
+			      app_sn [g] [ |- A] [|- B ] [g |- _] [g |- N] neu' (r [_ |- _] [_ |- S']) sn2
+	 | [g |- rappr S'] => let Acc [g] [|- A] [g |- N] r = sn2 in
+			      app_sn [g] [ |- A] [|- B] [_ |- R] [_ |- _] neu sn1 (r [_ |- _] [_ |- S'])
+	)
+;
+
+
+% Confluence of sn
+
+inductive ConfResult : (g: cxt) {N: [g |- tm A[]]} {N': [g |- tm A[]]} ctype =
+  | Eq    : ConfResult [g |- N] [g |- N]
+  | Conf  : SnRed [g |- N'] [g |- Q] -> [g |- mstep N Q] -> ConfResult [g |- N] [g |- N']
+;
+
+rec confluence : (g: cxt) {M : [g |- tm A[]]}
+			  {N : [g |- tm A[]]}
+			  {N': [g |- tm A[]]}
+			  {S : [g |- step M N']}
+			  SnRed [g |- M] [g |- N]
+		 -> ConfResult [g |- N] [g |- N'] =
+    / total s (confluence g a m n n' s) /
+    mlam M => mlam N => mlam N' => mlam S => fn snr =>
+    case snr of
+    | SnBeta [g, x: tm A[] |- M] sn =>
+      (case [g |- S] of
+       | [g |- rbeta] => Eq
+       | [g |- rappl S'] => let [_ |- rabs (\x. S'')] = [_ |- S'] in
+			    let [_ |- S''] : [g, x: tm _ |- step M M'] = [_ |- S''] in
+			    let snr' = SnBeta [g, x: tm _ |- M'] sn in
+			    let sn : Sn [g |- N] = sn in
+			    let [_ |- R] = [_ |- S''[.., N]] in
+			    Conf snr' [g |- m-step R m-refl]
+       | [g |- rappr S'] => let [_ |- S'] : [_ |- step N N'] = [_ |- S'] in
+			    let ms = subst_mred [_ |- M] [_ |- N] [_ |- N'] [_ |- S'] in
+			    let Acc [_] [ |- _] [_ |- _ ] r = sn in
+			    let sn' = r [_ |- N'] [_ |- S'] in
+			    Conf (SnBeta [g, x: tm _ |- M] sn') ms
+      )
+    | SnAppl r =>
+      (case [_ |- S] of
+       | [g |- rbeta] => impossible r
+       | [g |- rappl S'] => let conf = confluence [_ |- _] [_ |- _] [_ |- _] [_ |- S'] r in
+			    (case conf of
+			     | Eq => Eq
+			     | Conf snr' ms => let snr' : SnRed [g |- M2] [g |- P] = snr' in
+					       let ms' = mstep_appl [_ |- _] [_ |- P] [_ |- _] ms in
+					       Conf (SnAppl snr') ms'
+			    )
+       | [g |- rappr S'] => let ms = [_ |- m-step S' m-refl] in
+			    let r: SnRed [_ |- M] [_ |- M'] = r in
+			    let ms' = mstep_appr [_ |- M'] [_ |- _] [_ |- _] ms in
+			    Conf (SnAppl r) ms'
+      )
+;
+
+% Backward closure of sn
+
+rec bc_aux : {g: cxt}{A : [ |- ty]}{B : [ |- ty]}
+		     {M : [g |- tm (arr A[] B[])]}
+		     {M': [g |- tm (arr A[] B[])]}
+		     {N : [g |- tm A[]]}
+		     Sn [g |- M] -> Sn [g |- N] -> SnRed [g |- M] [g |- M'] -> Sn [g |- app M' N]
+	     -> Sn [g |- app M N] =
+ / total {sn1 sn2} (bc_aux g a b m m' n sn1 sn2) /
+    mlam g, A, B, M, M', N => fn sn1 => fn sn2 => fn snr => fn sn =>
+    Acc  [g] [ |- B] [g |- app M N]
+         (mlam Q, S => case [g |- S] of
+	  | [g |- rbeta] => impossible snr
+	  | [g |- rappl S'] =>
+	    let conf = confluence [_ |- M] [_ |- M'] [_ |- _] [_ |- S'] snr in
+	    (case conf of
+	     | Eq => sn
+	     | Conf snr' ms =>
+	       let ms' = mstep_appl [_ |- M'] [_ |- _] [_ |- N] ms in
+	       let sn' = mstep_sn [_ |- app M' N] [_ |- _] ms' sn in
+	       let Acc [g] [ |- arr A B] [g |- M] r = sn1 in
+	       bc_aux [_] [ |- _] [ |- _ ] [_ |- _] [_ |- _] [_ |- N] (r [_ |- _] [_ |- S']) sn2 snr' sn'
+	    )
+	  | [g |- rappr S'] =>
+	    let Acc [g] [ |- B] [g |- app M' N] r = sn in
+	    let sn' = r [_ |- _] [_ |- rappr S'] in
+	    let Acc [g] [ |- A] [g |- N] r' = sn2 in
+	    bc_aux  [_] [ |- _] [ |- _ ] [_ |- M] [_ |- M'] [_ |- _] sn1 (r' [_ |- _] [_ |- S']) snr sn'
+	 )
+;
+
+rec backwards_closure : (g: cxt) {M : [g |- tm A[]]}
+				 {M': [g |- tm A[]]}
+				 SnRed [g |- M] [g |- M'] -> Sn [g |- M']
+			-> Sn [g |- M] =
+    / total r (backwards_closure g a m m' r) /
+    mlam M => mlam M' => fn snr => fn sn =>
+    case snr of
+    | SnBeta ([g, x: tm A[] |- M]) sn' => app_abs_sn [_] [|- _] [|- _] [_ |- M] [_ |- _] sn sn'
+    | SnAppl r => let snl' = app_sna [_ |- _] [_ |- _] sn in
+		  let snl = backwards_closure [_ |- _] [_ |- _] r snl' in
+		  let snr = app_snb [_ |- _] [_ |- _] sn in
+		    bc_aux [_] [ |- _] [ |- _ ] [_ |- _] [_ |- _] [_ |- _] snl snr r sn
+;

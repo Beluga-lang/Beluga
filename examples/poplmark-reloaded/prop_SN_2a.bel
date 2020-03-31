@@ -1,0 +1,97 @@
+% Mechanization of POPLMARK Reloaded challenge:
+% Sec 2.5 Challenge 2a: Properties of Strong Normalization
+
+% Renaming
+rec renameSN : {g : cxt} {g' : cxt}
+			 {$R : [g' |-# g]}
+			 {M : [g |- tm A[]]}
+			 SN [g |- M]
+	       -> SN [g' |- M[$R]] =
+    / total s (renameSN g g' a r m s) / 
+      mlam g, g', $R, M => fn s => case s of 
+    | SNeu s' => SNeu (renameSNe [g' |- $R] [g |- M] s')
+    | SAbs s' => SAbs (renameSN [g, x:tm _] [g', x:tm _] [g', x:tm _ |- $R[..], x] [g, x:tm _ |- _] s')
+    | SRed r s' => SRed (renameSNRed [g' |- $R] [g |- M] r)
+			(renameSN [g] [g'] [g' |- $R] [g |- _ ] s')
+
+and
+rec renameSNe : (g : cxt) (g' : cxt)
+			  {$R : [g' |-# g]}
+			  {M : [g |- tm A[]]}
+			  SNe [g |- M]
+		-> SNe [g' |- M[$R]] =
+   / total s (renameSNe g g' a r m s) / 
+     mlam $R, M => fn s => case s of
+    | SVar [g |- #p] => SVar [_ |- #p[$R]]
+    | SApp s1 s2 => SApp (renameSNe [_ |- $R] [_ |- _ ] s1)
+			 (renameSN [_] [_] [_ |- $R] [_ |- _ ] s2)
+
+and
+rec renameSNRed : (g : cxt) (g' : cxt)
+			    {$R : [g' |-# g]}
+			    {M : [g |- tm A[]]}
+			    SNRed [g |- M] [g |- N]
+		  -> SNRed [g' |- M[$R]] [g' |- N[$R]]=
+    / total s (renameSNRed g g' a r m n s) / 
+      mlam $R, M => fn s => case s of
+    | SBeta [g, x:tm A[] |- M] s' => SBeta [_, x:tm A[] |- M[$R[..], x]]
+					   (renameSN [_] [_] [_ |- $R] [_ |- _] s')
+    | SAppl s' => SAppl (renameSNRed [_ |- $R] [_ |- _ ] s')
+;
+
+% Anti-Renaming
+inductive SNRed' : (g : cxt) (g' : cxt) {$R : [g' |-# g]} {M : [g |- tm A[]]} {M' : [g' |- tm A[]]} ctype = 
+  | SNRed' : {g' : cxt} {g : cxt} {N:[g |- tm A[]]} SNRed [g |- M] [g |- N]  
+             -> SNRed' [g' |- $R] [g |- M] [g' |- N[$R]] ;
+
+rec anti_renameSNe : (g : cxt) (g' : cxt)
+			       {$R : [g' |-# g]}
+			       {M : [g |- tm A[]]}
+			       SNe [g' |- M[$R]]
+		     -> SNe [g |- M]  =
+        / total / 
+	  mlam $R, N => fn s => case s of 
+          | SVar [h' |- _] => SVar [ _ |- _ ]
+	  | SApp r s =>  let r' = anti_renameSNe [_ |- $R] [_ |- _] r in 
+			 let s' = anti_renameSN [_] [_] [_ |- $R] [_ |- _] s in 
+			 SApp r' s'
+
+and
+rec anti_renameSNRed : {g : cxt} {g' : cxt}
+				 {$R : [g' |-# g]}
+				 {M : [g |- tm A[]]}
+				 SNRed [g' |- M[$R]] [g' |- N']
+		       -> SNRed' [g' |- $R] [g |- M] [g' |- N'] =
+    / total / 
+      mlam g, g', $R, M => fn r => case r of 
+    | SBeta [_ |- _] s => let s' = anti_renameSN [g] [g'] [g' |- $R] [_ |- _ ] s in 
+			  SNRed' [_] [_] [_ |- _] (SBeta [_ |- _ ] s')
+    | SAppl r' => let SNRed' [_] [_][_ |- _ ] r0 = anti_renameSNRed [g] [g'] [g' |- $R] [_ |- _ ] r' in 
+		  SNRed' [_] [_] [_ |- _ ] (SAppl r0)
+
+and
+rec anti_renameSN : {g : cxt} {g' : cxt}
+			      {$R : [g' |-# g]}
+			      {M : [g |- tm A[]]}
+			      SN [g' |- M[$R]]
+		    -> SN [g |- M]  =
+     / total / 
+       mlam g, g', $R, M => fn s => case s of 
+    | SAbs s' => SAbs (anti_renameSN [g, x:tm _] [g', x:tm _ ] [g', x:tm _ |- $R[..], x] [g, x:tm _ |- _] s')
+    | SNeu s' => SNeu (anti_renameSNe [g' |- $R] [g |- M] s')
+    | SRed r' s' => let SNRed' [g'] [g] [g |- N] r = anti_renameSNRed [_] [_] [g' |- $R] [_ |- _ ] r' in 
+		    let s'' = anti_renameSN [g] [g'] [g' |- $R] [g |- N] s' in 
+		    SRed r s''
+;
+
+% Extensionality of SN
+rec ext_SN : {M: [g |- tm (arr A[] B[])]} {#p: [g |- tm A[]]} SN [g |- app M #p] -> SN [g |- M] =
+    / total s (ext_SN g a b m p s) /
+      mlam M, #p => fn s => case s of 
+    | SNeu (SApp sm sv) => SNeu sm
+    | SRed r sm' => (case r of 
+		     | SBeta [g, x:tm A[] |- M'] sn =>   
+		       let sn' = anti_renameSN [g, x:tm A[] ] [g] [g |- .., #p[..]] [g, x:tm A[] |- M'] sm' in 
+		       SAbs sn'
+		     | SAppl r' => let sn = ext_SN [_ |- _] [_ |- #p]  sm' in SRed r' sn)
+;

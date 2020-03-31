@@ -142,14 +142,16 @@ module Comp = struct
     | VariantPiBox -> "dependent function type"
     | VariantBox   -> "contextual type"
 
-  let format_error ppf = function
+  let format_error ppf =
+    let open Format in
+    function
     | MissingTotal prog ->
-       Format.fprintf ppf "Function %s not known to be total."
+       fprintf ppf "Function %s not known to be total."
          (R.render_cid_prog prog)
     | InvalidRecCall ->
-       Format.fprintf ppf "Recursive call not structurally smaller."
+       fprintf ppf "Recursive call not structurally smaller."
     | IllegalParamTyp (cD, cPsi, tA) ->
-       Format.fprintf ppf
+       fprintf ppf
          "Parameter type %a is illegal."
          (P.fmt_ppr_lf_typ cD cPsi P.l0) (Whnf.normTyp (tA, Substitution.LF.id))
     | UnsolvableConstraints (f, cnstrs) ->
@@ -188,7 +190,7 @@ module Comp = struct
          "Type checking Ill-typed meta-object. This is a bug in type reconstruction."
          "Expected context" (P.fmt_ppr_lf_dctx cD P.l0) (Whnf.normDCtx  cPsi)
          "Given context" (P.fmt_ppr_lf_dctx cD P.l0) (Whnf.normDCtx cPhi);
-       Format.fprintf ppf
+       fprintf ppf
          "In expression: %a@."
          (P.fmt_ppr_cmp_meta_obj cD P.l0) cM
 
@@ -197,16 +199,16 @@ module Comp = struct
          "Ill-typed expression."
          "Expected type" (P.fmt_ppr_cmp_typ cD P.l0) (Whnf.cnormCTyp theta_tau)
          "Inferred type" (P.fmt_ppr_cmp_typ cD P.l0) (Whnf.cnormCTyp theta_tau');
-       Format.fprintf ppf
+       fprintf ppf
          "In expression: %a@."
          (P.fmt_ppr_cmp_exp_chk cD cG P.l0) e
 
     | MismatchSyn (cD, cG, i, variant, theta_tau) ->
        Error.report_mismatch ppf
          "Ill-typed expression."
-         "Expected" Format.pp_print_string (string_of_typeVariant variant)
+         "Expected" pp_print_string (string_of_typeVariant variant)
          "Inferred type" (P.fmt_ppr_cmp_typ cD P.l0) (Whnf.cnormCTyp theta_tau);
-       Format.fprintf ppf
+       fprintf ppf
          "In expression: %a@."
          (P.fmt_ppr_cmp_exp_syn cD cG P.l0) i
 
@@ -215,7 +217,7 @@ module Comp = struct
          "Ill-typed pattern."
          "Expected type" (P.fmt_ppr_cmp_typ cD P.l0) (Whnf.cnormCTyp theta_tau)
          "Inferred type" (P.fmt_ppr_cmp_typ cD P.l0) (Whnf.cnormCTyp theta_tau');
-       Format.fprintf ppf
+       fprintf ppf
          "In pattern: %a@."
          (P.fmt_ppr_cmp_pattern cD cG P.l0) pat
 
@@ -240,7 +242,7 @@ module Comp = struct
                 (TypBox (Syntax.Loc.ghost, MetaTyp (Whnf.normTyp sA, Whnf.normDCtx cPsi)))
      *)
     | BoxCtxMismatch (cD, cPsi, (phat, tM)) ->
-       Format.fprintf ppf
+       fprintf ppf
          "@[<v>Found expression@,  @[%a@,in context %a@]@,but it was expected in context@,  %a@]"
          (P.fmt_ppr_lf_normal cD cPsi P.l0) tM
          (P.fmt_ppr_lf_dctx_hat cD P.l0) (Context.hatToDCtx phat)
@@ -249,7 +251,7 @@ module Comp = struct
     | BasicMismatch (k, cD, _cG, ttau) ->
        let tau = Whnf.cnormCTyp ttau in
        let print_mismatch_kind ppf : mismatch_kind -> unit =
-         let p s = Format.fprintf ppf "%s" s in
+         let p s = fprintf ppf "%s" s in
          function
          | `fn -> p "function abstraction"
          | `mlam -> p "meta abstraction (mlam)"
@@ -257,12 +259,12 @@ module Comp = struct
          | `box -> p "box-expression"
          | `pair -> p "tuple"
        in
-       Format.fprintf ppf "@[<v>Found@,  %a@,but expected expression of type@,  %a@]"
+       fprintf ppf "@[<v>Found@,  %a@,but expected expression of type@,  %a@]"
          print_mismatch_kind k
          (P.fmt_ppr_cmp_typ cD P.l0) tau
 
     | SBoxMismatch (cD, _cG, cPsi, cPhi) ->
-       Format.fprintf ppf
+       fprintf ppf
          "Found substitution that does not have type %a[%a]."
          (P.fmt_ppr_lf_dctx cD P.l0) (Whnf.normDCtx cPsi)
          (P.fmt_ppr_lf_dctx cD P.l0) (Whnf.normDCtx cPhi)
@@ -274,12 +276,12 @@ module Comp = struct
          "Inferred type" (P.fmt_ppr_cmp_typ cD P.l0) (Whnf.cnormCTyp theta_tau')
 
     | AppMismatch (cD, (ctyp, theta)) ->
-       Format.fprintf ppf
+       fprintf ppf
          "Expected contextual object of type %a."
          (P.fmt_ppr_cmp_typ cD P.l0) (Whnf.cnormCTyp (TypBox(Syntax.Loc.ghost, ctyp), theta))
 
     | MAppMismatch (cD, (ctyp, theta)) ->
-       Format.fprintf ppf
+       fprintf ppf
          "Expected contextual object of type %a."
          (P.fmt_ppr_cmp_typ cD P.l0) (Whnf.cnormCTyp (TypBox(Syntax.Loc.ghost, ctyp), theta))
     | TypMismatch (cD, (tau1, theta1), (tau2, theta2)) ->
@@ -291,13 +293,13 @@ module Comp = struct
          (Whnf.cnormCTyp (tau2, theta2))
 
     | NotImpossible (cD, cG, tau, i) ->
-       Format.fprintf ppf
+       fprintf ppf
          "@[<v>The expression@,  @[%a@]@,is not impossible.@,Its type@,  @[%a@]@,is (possibly) inhabited.@]"
          (P.fmt_ppr_cmp_exp_syn cD cG P.l0) i
          (P.fmt_ppr_cmp_typ cD P.l0) tau
 
     | InvalidHypotheses (exp, act) ->
-       Format.fprintf ppf
+       fprintf ppf
          "@[<v>Invalid hypotheses.\
           @,Expected hypotheses:\
           @,  @[%a@]
@@ -308,19 +310,19 @@ module Comp = struct
          P.fmt_ppr_cmp_hypotheses_listing act
 
     | TypeDecompositionFailed (cD, tau) ->
-       Format.fprintf ppf
+       fprintf ppf
          "@[<v>Type decomposition failed.\
           @,The type\
           @,  @[%a@]\
           @,could not be decomposed.\
           @,@[%a@]@]"
          P.(fmt_ppr_cmp_typ cD l0) tau
-         Format.pp_print_string
+         pp_print_string
          "Decomposition requires that the type consist of Pi-types
           following by arrow-types with no further Pi-types."
 
     | SufficesLengthsMismatch (cD, tau, exp_k, act_k) ->
-       Format.fprintf ppf
+       fprintf ppf
          "@[<v>Incorrect number of type annotations given.\
           @,The type\
           @,  @[%a@]\
@@ -335,7 +337,7 @@ module Comp = struct
          act_k
 
     | SufficesBadAnnotation (cD, tau_i, bad_index, tau_ann) ->
-       Format.fprintf ppf
+       fprintf ppf
          "@[<v>The provided type annotation\
           @,  @[%a@]\
           @,is not compatible with premise\
@@ -348,7 +350,7 @@ module Comp = struct
          P.(fmt_ppr_cmp_typ cD l0) tau_i
 
     | SufficesBadGoal (cD, tau_i, tau_goal) ->
-       Format.fprintf ppf
+       fprintf ppf
          "@[<v>The current goal type\
           @,  @[%a@]\
           @,is not compatible with the conclusion of\

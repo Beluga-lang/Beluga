@@ -1,5 +1,0 @@
-t/harpoon/poplmark-reloaded/tps.bel
-m-trans
-(g : cxt) {M1 : [g |- tm A[]]} [g |- mstep M1 M] -> [g |- mstep M M2] -> [g |- mstep M1 M2]
-
-

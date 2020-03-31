@@ -1009,12 +1009,15 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
     (* Special case for printing implicit context variable
        quantifiers; these can never be omitted, and are printed with
        parentheses instead of curly braces. *)
-    | Comp.TypPiBox (_, LF.(Decl (_, CTyp _, Maybe) as d), tau) ->
+    | Comp.TypPiBox (_, LF.(Decl (u, CTyp w, Maybe) as d), tau) ->
        let cond = lvl > 1 in
        fprintf ppf "%s@[<2>(@[<2>%a@])@ @[%a@]%s@]"
          (l_paren_if cond)
          (fmt_ppr_lf_ctyp_decl cD) d
-         (fmt_ppr_cmp_typ (LF.Dec(cD, d)) 1) tau
+         (* furthermore, they need to be considered *EXPLICIT* when
+            printing the remaining type, so that they don't appear as
+            _ *)
+         (fmt_ppr_cmp_typ (LF.(Dec(cD, Decl (u, CTyp w, No)))) 1) tau
          (r_paren_if cond)
 
     | Comp.TypPiBox (_, ctyp_decl, tau) ->

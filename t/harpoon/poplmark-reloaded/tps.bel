@@ -1,0 +1,99 @@
+%coverage
+
+LF ty : type =
+   | base : ty
+   | arr  : ty -> ty -> ty
+;
+%name ty T.
+
+LF tm : ty -> type =
+   | abs : (tm A -> tm B) -> tm (arr A B)
+   | app : tm (arr A B) -> tm A -> tm B
+;
+%name tm M.
+
+schema cxt = tm A;
+
+LF step : tm A -> tm A -> type =
+   | rbeta : step (app (abs M) N) (M N)
+   | rabs  : ({x : tm A} step (M x) (M' x)) -> step (abs M) (abs M')
+   | rappl : step M M' -> step (app M N) (app M' N)
+   | rappr : step N N' -> step (app M N) (app M N')
+;
+
+LF mstep : tm A -> tm A -> type =
+   | m-refl :  mstep M M
+   | m-step : step M N -> mstep N M' -> mstep M M'
+;
+
+% Accessibility definition
+inductive Sn : (g: cxt) {M: [g |- tm A[]]} ctype =
+| Acc : {g:cxt}{A : [ |- ty]}{M : [g |- tm A[]]}
+        ({M' : [g |- tm A[]]} {S: [g |- step M M']} Sn [g |- M'])
+     -> Sn [g |- M]
+;
+
+% Inductive definition
+inductive SN : (g: cxt) {M: [g |- tm A[]]} ctype =
+  | SNeu : SNe [g |- R] -> SN [g |- R]
+  | SAbs : SN [g, x: tm A[] |- M] -> SN [g |- abs \x. M]
+  | SRed : SNRed [g |- M] [g |- M'] -> SN [g |- M']
+	   -> SN [g |- M]
+
+and inductive SNe : (g: cxt) {M: [ g |- tm A[]]} ctype =
+      | SVar : {#p: [g |- tm A[]]} SNe [g |- #p]
+      | SApp : SNe [g |- R] -> SN [g |- M] -> SNe [g |- app R M]
+
+and inductive SNRed : (g: cxt) {M: [g |- tm A[]]} {M': [g |- tm A[]]} ctype =
+      | SBeta : {M: [g, x: tm A[] |- tm B[]]} SN [g |- N]
+		-> SNRed [g |- app (abs \x. M) N] [g |- M[..,N]]
+      | SAppl : SNRed [g |- R] [g |- R']
+		-> SNRed [g |- app R M] [g |- app R' M]
+;
+
+% Head reduction
+inductive SnRed : (g: cxt) {M: [g |- tm A[]]} {M': [g |- tm A[]]} ctype =
+  | SnBeta : {M: [g, x: tm A[] |- tm B[]]} Sn [g |- N]
+	     -> SnRed [g |- app (abs \x. M) N] [g |- M[.., N]]
+  | SnAppl : SnRed [g |- M] [g |- M']
+	     -> SnRed [g |- (app M N)] [g |- app M' N]
+;
+
+% All variables are in sn.
+empty: type.
+
+% Neutral terms
+inductive Neutral: (g: cxt) {M: [g |- tm A[]]} ctype =
+  | Nvar : {#x: [g |- tm A[]]} Neutral [g |- #x]
+  | Napp : {R: [g |- tm (arr A[] B[])]} {N: [g |- tm A[]]} Neutral [g |- R]
+	   -> Neutral [g |- app R N]
+;
+
+% Confluence of sn
+
+inductive ConfResult : (g: cxt) {N: [g |- tm A[]]} {N': [g |- tm A[]]} ctype =
+  | Eq    : ConfResult [g |- N] [g |- N]
+  | Conf  : SnRed [g |- N'] [g |- Q] -> [g |- mstep N Q] -> ConfResult [g |- N] [g |- N']
+;
+
+% Anti-Renaming
+inductive SNRed' : (g : cxt) (g' : cxt) {$R : [g' |-# g]} {M : [g |- tm A[]]} {M' : [g' |- tm A[]]} ctype =
+  | SNRed' : {g' : cxt} {g : cxt} {$R: [g' |-# g]} {N:[g |- tm A[]]} SNRed [g |- M] [g |- N]
+             -> SNRed' [g' |- $R] [g |- M] [g' |- N[$R]]
+;
+
+% Logical predicate
+stratified Red : (g : cxt) {A : [|- ty]} {M : [g |- tm A[]]} ctype =
+  | RBase : SN [g |- M] -> Red [|- base] [g |- M]
+  | RArr  : ({g' : cxt} {$S : [g' |-# g]} {N : [g' |- tm A[]]}
+             Red [|- A] [g' |- N] -> Red [|- B] [g' |- app M[$S] N])
+            -> Red [|- arr A B ] [g |- M]
+;
+
+% Semantic substitutions
+inductive RedS : {g : cxt} (g' : cxt) {$S : [g' |- g]} ctype =
+  | RNil  : RedS [] [g' |- ^]
+  | RCons : Red [|- A] [g' |- M]
+            -> RedS [g] [g' |- $S]
+            -> RedS [g, x : tm A[]] [g' |- $S, M]
+;

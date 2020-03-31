@@ -1374,18 +1374,8 @@ module Comp = struct
       | tau -> Some ([], tau) (* base type *)
     in
     let rec decomp_pis t = function
-      | TypPiBox (_, d, tau) ->
-         let u = Whnf.new_mmvar_for_ctyp_decl cD d in
-         let t' =
-           let open I in
-           MDot
-             ( ClObj
-                 ( null_hat
-                 , MObj (head (MMVar (mm_var_inst u Whnf.m_id S.LF.id)))
-                 )
-             , t
-             )
-         in
+      | TypPiBox (loc, d, tau) ->
+         let _, t' = Whnf.dotMMVar loc cD t (Int.LF.require_decl d) in
          decomp_pis t' tau
       | tau -> (tau, t)
     in

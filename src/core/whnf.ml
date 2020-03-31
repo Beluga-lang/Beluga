@@ -117,11 +117,6 @@ let newCVar n cD (sW) dep = CInst (newMMVar' n (cD, CTyp sW)  dep, MShift 0)
 
 let newMVar n (cPsi, tA) dep = Inst (newMMVar' n (Empty, ClTyp (MTyp tA, cPsi)) dep)
 
-let new_mmvar_for_ctyp_decl cD = function
-  | Decl (u, mT, dep) -> newMMVar' (Some u) (cD, mT) dep
-  | DeclOpt _ ->
-     Error.violation "[new_mmvar_for_ctyp_decl] can't generate mmvar from DeclOpt"
-
 (******************************)
 (* Lowering                   *)
 (******************************)
@@ -2327,6 +2322,8 @@ let mmVarToMFront loc' mV = function
     * cD |- [t]cU metatype
 
     This function is useful when eliminating PiBoxes via unification.
+
+    See {!require_decl}.
  *)
 let dotMMVar loc' cD t (u, cU, dep) =
   let cU = cnormMTyp (cU, t) in

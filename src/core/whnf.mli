@@ -52,12 +52,6 @@ val newCVar     : Id.name option -> mctx -> Id.cid_schema option -> depend -> ct
 
 val raiseType   : dctx -> typ -> typ
 
-(** Given a contextual type declaration, generates a new mmvar with
-    the same name, type, and dependency status.
- *)
-val new_mmvar_for_ctyp_decl : mctx -> ctyp_decl -> mm_var
-
-
 (*************************************)
 (* Other operations *)
 (*************************************)

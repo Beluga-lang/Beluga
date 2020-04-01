@@ -1226,10 +1226,11 @@ let rec collect_meta_obj p cQ (loc,cM) =
 
 and collect_meta_spine p cQ cS = match cS with
   | Comp.MetaNil -> (cQ, Comp.MetaNil)
-  | Comp.MetaApp (cM, cS, plicity) ->
+  | Comp.MetaApp (cM, cT, cS, plicity) ->
      let (cQ', cM') = collect_meta_obj p cQ cM in
-     let (cQ'', cS') = collect_meta_spine p cQ' cS in
-     (cQ'', Comp.MetaApp (cM', cS', plicity))
+     let (cQ'', cT') = collectMetaTyp Loc.ghost p cQ' cT in
+     let (cQ''', cS') = collect_meta_spine p cQ'' cS in
+     (cQ''', Comp.MetaApp (cM', cT', cS', plicity))
 
 let rec collectCompTyp p cQ tau = match tau with
   | Comp.TypBase (loc, a, ms) ->
@@ -1414,10 +1415,11 @@ let rec abstractMVarMetaObj cQ offset (loc,cM) =
 
 and abstractMVarMetaSpine cQ offset cS = match cS with
   | Comp.MetaNil -> Comp.MetaNil
-  | Comp.MetaApp (cM, cS, plicity) ->
+  | Comp.MetaApp (cM, cT, cS, plicity) ->
      let cM' = abstractMVarMetaObj cQ offset cM in
+     let cT' = abstractMVarMTyp cQ cT offset in
      let cS' = abstractMVarMetaSpine cQ offset cS in
-     Comp.MetaApp (cM', cS', plicity)
+     Comp.MetaApp (cM', cT', cS', plicity)
 
 let rec abstractMVarCompTyp cQ ((l,d) as offset) tau = match tau with
   | Comp.TypBase (loc, a, cS) ->

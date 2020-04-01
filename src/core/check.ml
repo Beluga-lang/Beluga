@@ -713,11 +713,22 @@ module Comp = struct
 
   and checkMetaSpine loc cD mS cKt  = match (mS, cKt) with
     | (MetaNil , (Ctype _ , _ )) -> ()
-    | (MetaApp (mO, mS, plicity), (PiKind (_, I.Decl (_u, ctyp, dep), cK) , t)) ->
+    | (MetaApp (mO, mT, mS, plicity), (PiKind (_, I.Decl (_u, ctyp, dep), cK) , t)) ->
        if not (Stdlib.(=) (Int.LF.Depend.to_plicity dep) plicity) then
          Error.violation "[checkMetaSpine] plicity mismatch";
        let loc = getLoc mO in
        LF.checkMetaObj cD mO (ctyp, t);
+       begin
+         try
+           (* need to use unification here instead of
+              convertibility because ctyp might contain MMVars *)
+           Unify.unifyMetaTyp cD (ctyp, t) (mT, C.m_id)
+         with
+         | Unify.Failure _ ->
+            Error.violation
+              ("[syn] type annotation not unifiable with PiBox type "
+               ^ Fmt.stringify Loc.print_short loc)
+       end;
        checkMetaSpine loc cD mS (cK, I.MDot (metaObjToMFront mO, t))
 
   let checkClTyp loc cD cPsi = function

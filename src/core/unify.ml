@@ -2594,7 +2594,7 @@ let rec ground_sub cD = function (* why is parameter cD is unused? -je *)
 
   let rec unifyMetaSpine cD (mS, t) (mS', t') (cK, mt) = match ((mS, t) , (mS', t')) with
     | (Comp.MetaNil, _ ) , (Comp.MetaNil, _ ) -> ()
-    | (Comp.MetaApp (mO, mS, _), t) , (Comp.MetaApp (mO', mS', _), t') ->
+    | (Comp.MetaApp (mO, mT, mS, _), t) , (Comp.MetaApp (mO', mT', mS', _), t') ->
         let Comp.PiKind (_, cdecl, cK') = cK in
         let mOt = Whnf.cnormMetaObj (mO, t) in
         let _mOt' = Whnf.cnormMetaObj (mO', t') in
@@ -2606,17 +2606,18 @@ let rec ground_sub cD = function (* why is parameter cD is unused? -je *)
           (* dprint (fun () -> "[unifyMetaObj] AFTER " ^ P.metaObjToString cD mOt ^ " == " ^
                     P.metaObjToString cD mOt'); *)
           let mt' = MDot (Comp.metaObjToMFront mOt, mt) in
+          unifyMetaTyp cD (mT, t) (mT', t');
           unifyMetaSpine cD (mS, t) (mS', t') (cK', mt');
           (* dprint (fun () -> "[unifyMetaObj] AFTER UNIFYING SPINES " ^ P.metaObjToString cD mOt ^ " == " ^
                     P.metaObjToString cD mOt') *))
 
     | _ -> raise (Failure "Meta-Spine mismatch")
 
-  let unifyClTyp Unification cD cPsi = function
+  and unifyClTyp Unification cD cPsi = function
     | MTyp tA1, MTyp tA2 -> unifyTyp Unification cD cPsi (tA1, id) (tA2, id)
     | PTyp tA1 , PTyp tA2 -> unifyTyp Unification cD cPsi (tA1, id) (tA2, id)
     | STyp (_, cPhi1) , STyp (_, cPhi2) -> unifyDCtx1 Unification cD cPhi1 cPhi2
-  let unifyCLFTyp Unification cD ctyp1 ctyp2 = match (ctyp1, ctyp2) with
+  and unifyCLFTyp Unification cD ctyp1 ctyp2 = match (ctyp1, ctyp2) with
     | ClTyp (tp1, cPsi1) , ClTyp (tp2, cPsi2) ->
        unifyDCtx1 Unification cD cPsi1 cPsi2;
        unifyClTyp Unification cD cPsi1 (tp1,tp2)
@@ -2624,6 +2625,10 @@ let rec ground_sub cD = function (* why is parameter cD is unused? -je *)
        if not (Maybe.equals Id.cid_equals schema1 schema2) then
          raise (Failure "CtxPi schema clash")
     | _ , _ -> raise (Failure "Computation-level Type Clash")
+
+  and unifyMetaTyp cD (mT, ms) (mT', ms') =
+    unifyCLFTyp Unification cD (Whnf.cnormMTyp (mT, ms))
+      (Whnf.cnormMTyp (mT', ms'))
 
     let rec unifyCompTyp cD tau_t tau_t' =
       (unifyCompTypW cD (Whnf.cwhnfCTyp tau_t) (Whnf.cwhnfCTyp tau_t');
@@ -3085,10 +3090,6 @@ let unify_phat psihat phihat =
 
     let unifyMetaObj cD (cM, ms) (cM', ms') (mT, mt) =
       unifyMObj cD (cM, ms) (cM', ms) (mT, mt)
-
-    let unifyMetaTyp cD (mT, ms) (mT', ms') =
-        unifyCLFTyp Unification cD (Whnf.cnormMTyp (mT, ms))
-                                    (Whnf.cnormMTyp (mT', ms'))
 
 
     let unifyCompTyp cD ttau ttau' =

@@ -660,15 +660,15 @@ and elMetaSpine loc cD s cKt  =
 
   | (s, (Int.Comp.PiKind (loc', Int.LF.Decl (u, cU, Int.LF.Maybe), cK), t)) ->
     let (mO,t') = Whnf.dotMMVar loc cD t (u, cU, Int.LF.Maybe) in
-    Int.Comp.MetaApp(mO, elMetaSpine loc cD s (cK, t'), `implicit)
+    Int.Comp.MetaApp(mO, Whnf.cnormMTyp (cU, t), elMetaSpine loc cD s (cK, t'), `implicit)
 
   | (Apx.Comp.MetaApp (m, s), (Int.Comp.PiKind (_, Int.LF.Decl(_,ctyp,_), cK) , theta)) ->
     let (mO,t') = elMetaObjCTyp loc cD m theta ctyp in
-    Int.Comp.MetaApp(mO, elMetaSpine loc cD s (cK, t'), `explicit)
+    Int.Comp.MetaApp(mO, Whnf.cnormMTyp (ctyp, theta), elMetaSpine loc cD s (cK, t'), `explicit)
 
 let rec spineToMSub cS' ms = match cS' with
   | Int.Comp.MetaNil -> ms
-  | Int.Comp.MetaApp (mO, mS, _) ->
+  | Int.Comp.MetaApp (mO, mT, mS, _) ->
     spineToMSub mS (Int.LF.MDot(metaObjToFt mO, ms))
 
 let rec elCompTyp cD tau = match tau with
@@ -737,7 +737,7 @@ let mgCompTypSpine cD (loc, cK) =
     | (Int.Comp.PiKind (loc', Int.LF.Decl(u, cU, dep), cK), t) ->
        let (mO, t') = Whnf.dotMMVar loc cD t (u, cU, dep) in
        let mS = genMetaSpine (cK, t') in
-       Int.Comp.MetaApp (mO, mS, Int.LF.Depend.to_plicity dep)
+       Int.Comp.MetaApp (mO, cU, mS, Int.LF.Depend.to_plicity dep)
   in
   genMetaSpine (cK, Whnf.m_id)
 

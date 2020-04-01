@@ -1555,6 +1555,11 @@ let mctxMVarPos cD u =
      Contextual weak head normal form for
      computation-level types
    ******************************************)
+
+  let normMTyp = normITyp
+
+  let normMetaTyp = normITyp
+
   let rec normMetaObj (loc,mO) = loc , (match mO with
     | CObj cPsi ->
         CObj (normDCtx cPsi)
@@ -1563,12 +1568,8 @@ let mctxMVarPos cD u =
 
   and normMetaSpine mS = match mS with
     | Comp.MetaNil -> mS
-    | Comp.MetaApp (mO, mS, plicity) ->
-       Comp.MetaApp (normMetaObj mO, normMetaSpine mS, plicity)
-
-  let normMTyp = normITyp
-
-  let normMetaTyp = normITyp
+    | Comp.MetaApp (mO, mT, mS, plicity) ->
+       Comp.MetaApp (normMetaObj mO, normMetaTyp mT, normMetaSpine mS, plicity)
 
   let rec normCTyp tau = match tau with
     | Comp.TypBase (loc, c, mS) ->
@@ -1592,9 +1593,10 @@ let mctxMVarPos cD u =
 
   and cnormMetaSpine (mS,t) = match mS with
     | Comp.MetaNil -> mS
-    | Comp.MetaApp (mO, mS, plicity) ->
+    | Comp.MetaApp (mO, mT, mS, plicity) ->
        Comp.MetaApp
          ( cnormMetaObj (mO,t)
+         , cnormMTyp (mT,t)
          , cnormMetaSpine (mS,t)
          , plicity )
 
@@ -1881,20 +1883,6 @@ let mctxMVarPos cD u =
      computation-level types
   *)
 
-  let convITerm tM1 tM2 = match (tM1, tM2) with
-    | INorm n1, INorm n2 -> conv (n1, LF.id) (n2, LF.id)
-    | ISub s1, ISub s2 -> convSub s1 s2
-    | IHead h1, IHead h2 -> convHead (h1, LF.id) (h2, LF.id)
-
-  let rec convMetaObj (loc,mO) (loc',mO') = convMFront (mfrontMSub mO m_id) (mfrontMSub mO' m_id)
-
-  and convMetaSpine mS mS' = match (mS, mS') with
-    | (Comp.MetaNil , Comp.MetaNil) -> true
-    | (Comp.MetaApp (mO, mS, p1) , Comp.MetaApp (mO', mS', p2)) ->
-       convMetaObj mO mO'
-       && convMetaSpine mS mS'
-       && Stdlib.(=) p1 p2
-
   (* convCTyp (tT1, t1) (tT2, t2) = true iff [|t1|]tT1 = [|t2|]tT2 *)
   let convClTyp = function
     | MTyp tA , MTyp tA'
@@ -1909,6 +1897,21 @@ let mctxMVarPos cD u =
     | _ -> false (* ClTyp is never convertible to CTyp *)
 
   let convMetaTyp thetaT1 thetaT2 = convMTyp thetaT1 thetaT2
+
+  let convITerm tM1 tM2 = match (tM1, tM2) with
+    | INorm n1, INorm n2 -> conv (n1, LF.id) (n2, LF.id)
+    | ISub s1, ISub s2 -> convSub s1 s2
+    | IHead h1, IHead h2 -> convHead (h1, LF.id) (h2, LF.id)
+
+  let rec convMetaObj (loc,mO) (loc',mO') = convMFront (mfrontMSub mO m_id) (mfrontMSub mO' m_id)
+
+  and convMetaSpine mS mS' = match (mS, mS') with
+    | (Comp.MetaNil , Comp.MetaNil) -> true
+    | (Comp.MetaApp (mO, mT, mS, p1) , Comp.MetaApp (mO', mT', mS', p2)) ->
+       convMetaObj mO mO'
+       && convMetaTyp mT mT'
+       && convMetaSpine mS mS'
+       && Stdlib.(=) p1 p2
 
   let rec convCTyp thetaT1 thetaT2 = convCTyp' (cwhnfCTyp thetaT1) (cwhnfCTyp thetaT2)
 
@@ -2099,10 +2102,19 @@ let rec closedDCtx cPsi = match cPsi with
   | DDec (cPsi' , tdecl) -> closedDCtx cPsi' && closedDecl (tdecl, LF.id)
 
 
+let closedClTyp = function
+  | MTyp tA
+  | PTyp tA -> closedTyp (tA, LF.id)
+  | STyp (_, cPhi) -> closedDCtx cPhi
+
+let closedMetaTyp cT = match cT with
+  | ClTyp (t, cPsi) -> closedClTyp t && closedDCtx cPsi
+  | CTyp _ -> true
+
 let rec closedMetaSpine mS = match mS with
   | Comp.MetaNil -> true
-  | Comp.MetaApp (mO, mS, _) ->
-     closedMetaObj mO && closedMetaSpine mS
+  | Comp.MetaApp (mO, mT, mS, _) ->
+     closedMetaObj mO && closedMetaTyp mT && closedMetaSpine mS
 
 and closedMObj = function
   | MObj tM -> closed (tM, LF.id)
@@ -2115,15 +2127,6 @@ and closedMFront = function
       closedDCtx (Context.hatToDCtx phat) && closedMObj t
 
 and closedMetaObj (_, mF) = closedMFront mF
-
-let closedClTyp = function
-  | MTyp tA
-  | PTyp tA -> closedTyp (tA, LF.id)
-  | STyp (_, cPhi) -> closedDCtx cPhi
-
-let closedMetaTyp cT = match cT with
-  | ClTyp (t, cPsi) -> closedClTyp t && closedDCtx cPsi
-  | CTyp _ -> true
 
 let closedDecl = function
   | Decl (_, cU, _) -> closedMetaTyp cU

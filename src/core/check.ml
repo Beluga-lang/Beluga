@@ -421,16 +421,6 @@ module Comp = struct
   let apply_unbox_modifier_opt cD modifier_opt =
     Maybe.(get_default (fun x -> (x, S.LF.id)) (modifier_opt $> apply_unbox_modifier cD))
 
-  type caseType =
-    | IndexObj of meta_obj
-    | DataObj
-    | IndDataObj
-    | IndIndexObj of meta_obj
-
-  let is_indMObj cD x = match Whnf.mctxLookupDep cD x with
-    | (_, _ , I.Inductive) -> true
-    | (_, _ , _) -> false
-
   (** Marks the variable at index k in cD as Inductive. *)
   let mark_ind cD k =
     let rec lookup cD k' =  match cD, k' with
@@ -875,19 +865,24 @@ module Comp = struct
       Error.violation ("Free meta-variable " ^ Id.render_name u)
 
   let rec checkW cD (cG , (cIH : ihctx)) total_decs e ttau =
-    let decide_ind cM x =
-      if Misc.List.nonempty total_decs && is_indMObj cD x
-      then
-        let _ =
-          dprintf
-            (fun p ->
-              p.fmt "[checkBranch] doing induction on a box-type");
-        in
-        IndIndexObj cM
-      else IndexObj cM
-    in
-    let decide_ind_maybe cM k =
-      Maybe.(get_default (IndexObj cM) (k $> decide_ind cM))
+    (** If cD; cG; cIH |- i ==> tau_sc then
+        prepare_case_scrutinee_type i = tau_sc, tau_sc', projOpt
+        * tau_sc is simply the synthesized type of the scrutinee.
+          For calling checkBranches, this is what one must use.
+        * tau_sc' is this type, but with the parameter type fix applied.
+          This is the type that must be used as the scrutinee type for
+          coverage checking, and ONLY for coverage checking.
+        * projOpt must also be passed to coverage, to correctly check
+          coverage on a projection. *)
+    let prepare_case_scrutinee_type i =
+       let _, tau_sc, t' = syn cD (cG, cIH) total_decs i in
+       let tau_sc = Whnf.cnormCTyp (tau_sc, t') in
+       match i, tau_sc with
+       | AnnBox ((l, mC), _), TypBox (loc, mT) ->
+          let _, mT, projOpt = fixParamTyp mC (Whnf.cnormMTyp (mT, C.m_id)) in
+          (tau_sc, TypBox (loc, mT), projOpt)
+       | _, _ ->
+          (tau_sc, tau_sc, None)
     in
     match (e, ttau) with
     | (Fn (loc, x, e), (TypArr (_, tau1, tau2), t)) ->
@@ -944,102 +939,24 @@ module Comp = struct
        checkMetaObj cD cM cU' t
 
     | Impossible (loc, i), (tau, t) ->
-       dprintf
-         begin fun p ->
-         p.fmt "[syn] [impossible] @[<v>checking (supposedly) impossible expression@,\
-                i = @[%a@]@,\
-                at @[%a@]@]"
-           P.(fmt_ppr_cmp_exp_syn cD cG l0) i
-           Loc.print loc
-         end;
-       let _, tau_sc, t' = syn cD (cG, cIH) total_decs i in
-       let tau_sc = Whnf.cnormCTyp (tau_sc, t') in
-       dprintf
-         begin fun p ->
-         p.fmt "[syn] [impossible] @[<v>synthesized type for scrutinee@,\
-                i = @[%a@]@,\
-                tau_sc[t'] = @[%a@]@]"
-           P.(fmt_ppr_cmp_exp_syn cD cG l0) i
-           P.(fmt_ppr_cmp_typ cD l0) tau_sc
-         end;
-       let total_pragma, tau_sc, projOpt =
-         match i, tau_sc with
-         | AnnBox ((l, mC), _), TypBox (loc, mT) ->
-            dprint (fun _ -> "[syn] [impossible] we are splitting on a meta-object");
-            let k, mT, projOpt = fixParamTyp mC (Whnf.cnormMTyp (mT, C.m_id)) in
-            ( decide_ind_maybe (l, mC) k
-            , TypBox (loc, mT)
-            , projOpt
-            )
-         | _, _ ->
-            dprint (fun _ -> "[syn] [impossible] we are splitting on a comp object");
-            DataObj, tau_sc, None
-       in
-       if not (Coverage.is_impossible cD tau_sc) then
+       let tau_sc, tau_sc', projOpt = prepare_case_scrutinee_type i in
+       if not (Coverage.is_impossible cD tau_sc') then
          throw loc (NotImpossible (cD, cG, tau_sc, i));
 
-       dprintf
-         begin fun p ->
-         p.fmt "[syn] [impossible] passed at %a"
-           Loc.print loc
-         end
-
-    | (Case (loc, prag, (AnnBox ((l, cM), mT) as i), branches), (tau, t)) ->
-       let (total_pragma, tau_sc, projOpt) =
-         let (k, mT, projOpt) = fixParamTyp cM (Whnf.cnormMTyp (mT, C.m_id)) in
-         ( Maybe.(get_default (IndexObj (l, cM)) (k $> decide_ind (l, cM)))
-         , TypBox (loc, mT)
-         , projOpt
-         )
-       in
-       let _  = LF.checkMetaObj cD (loc,cM) (mT, C.m_id)  in
-
-       (* Typeinfo.Comp.add loc (Typeinfo.Comp.mk_entry cD ttau) ("Case 1" ^ " " ^ Pretty.Int.DefaultPrinter.expChkToString cD cG e); *)
-
-       (* Instead of None, we can give (l, mT) in order to start the
-          coverage checker out with the current LF normal term.
+    | (Case (loc, prag, i, branches), (tau, t)) ->
+       let tau_sc, tau_sc', projOpt = prepare_case_scrutinee_type i in
+       (* Instead of None, we can give Some (l, cM) in order to start
+          the coverage checker out with the current LF normal term.
           However, this causes some tests to fail, so we leave it out.
           Theoretically, this improves the coverage checker by
           allowing to consider more cases as covering, especially in
-          situations with nested cases.
-        *)
-       let problem = Coverage.make loc prag cD branches tau_sc None in
-       (* Coverage.stage problem; *)
-       checkBranches total_pragma cD (cG,cIH) total_decs
-         (i, branches)
-         (TypBox (Syntax.Loc.ghost, mT))
+          situations with nested cases.  *)
+       let problem = Coverage.make loc prag cD branches tau_sc' None in
+       checkBranches cD (cG,cIH) total_decs
+         (i, tau_sc)
+         branches
          (tau, t);
        Coverage.process problem projOpt
-
-    | (Case (loc, prag, i, branches), (tau, t)) ->
-       let chkBranch total_pragma cD (cG, cIH) i branches (tau,t) =
-         let (_ , tau', t') = syn cD (cG,cIH) total_decs i in
-         let tau_s = C.cnormCTyp (tau', t') in
-         let problem =
-           Coverage.make loc prag cD branches (Whnf.cnormCTyp (tau',t')) None
-         in
-         checkBranches total_pragma cD (cG,cIH) total_decs (i, branches) tau_s (tau,t);
-         Coverage.process problem None
-       in
-       if Misc.List.nonempty total_decs then
-         (match i with
-          | Var (_, x)  ->
-             let (f,tau', wf_tag) = lookup cG x in
-             (* let _ = print_string ("\nTotality checking enabled - encountered " ^ P.expSynToString cD cG i ^
-                " with type " ^ P.compTypToString cD tau' ^ "\n") in*)
-             let ind = match Whnf.cnormCTyp (tau', Whnf.m_id) with
-               | TypInd _tau -> ( (*print_string ("Encountered Var " ^
-                                    P.expSynToString cD cG i ^ " -        INDUCTIVE\n");*)  true)
-               | _ -> ((* print_string ("Encountered Var " ^
-                          P.expSynToString cD cG i ^ " -        NON-INDUCTIVE\n");*) false) in
-             if ind || wf_tag then
-               chkBranch IndDataObj cD (cG,cIH) i branches (tau,t)
-             else
-               chkBranch DataObj cD (cG,cIH) i branches (tau,t)
-          | _ -> chkBranch DataObj cD (cG,cIH) i branches (tau,t)
-         )
-       else
-         chkBranch DataObj cD (cG,cIH) i branches (tau,t)
 
     | (Syn (loc, i), (tau, t)) ->
        let _ = dprint (fun () -> "check --> syn") in
@@ -1325,11 +1242,15 @@ module Comp = struct
     LF.checkMetaObj cD mO (ctyp, theta);
     I.MDot(metaObjToMFront mO, theta)
 
-  and checkBranches caseTyp cD cG total_decs (i, branches) tau_s ttau =
-    List.iter (fun branch -> checkBranch caseTyp cD cG total_decs (i, branch) tau_s ttau) branches
+  and checkBranches cD cG total_decs (i, tau_s) bs ttau =
+    List.iter
+      begin fun b ->
+      checkBranch cD cG total_decs (i, tau_s) b ttau
+      end
+      bs
 
-  and checkBranch caseTyp cD (cG, cIH) total_decs (i, branch) tau_s ttau =
-    match branch with
+  and checkBranch cD (cG, cIH) total_decs (i, tau_s) b ttau =
+    match b with
     | Branch (loc, _, (cD_b, cG_pat), pat, t', e) ->
        LF.checkMSub loc cD_b t' cD;
        let tau_p = Whnf.cnormCTyp (tau_s, t') in

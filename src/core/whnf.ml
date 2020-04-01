@@ -682,11 +682,6 @@ and cnorm (tM, t) = match tM with
      match cnormHead' (head, t) with
 	   | Head h' -> Root(loc, h', cnormSpine (tS, t), plicity)
 	   | Obj tM ->
-        dprintf begin fun p ->
-          p.fmt "[cnorm] %a Root -> reduce at %a"
-            Prettycom.fmt_ppr_plicity plicity
-            Loc.print_short loc
-          end;
         (* in this ends up evaluating to a Root, we want to keep the
            plicity that we had here *)
         map_plicity

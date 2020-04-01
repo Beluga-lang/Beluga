@@ -538,7 +538,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
   and fmt_ppr_lf_mfront cD lvl ppf mO =
     fprintf ppf "[%a]" (fmt_ppr_lf_mfront' cD) mO
 
-  and fmt_ppr_lf_mfront_typed cD lvl ppf = function
+  and fmt_ppr_lf_mfront_typed cD (lvl : lvl) ppf = function
     | LF.(ClObj (_, tM), ClTyp (_, cPsi)) ->
        fprintf ppf "@[<hov 2>@[%a@] |-@ @[%a@]@]"
          (fmt_ppr_lf_dctx cD 0) cPsi

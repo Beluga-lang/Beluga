@@ -515,8 +515,9 @@ and collectFVarSub p cQ phat (name, s') =
   (cQ, (name,s'))
 
 and collectMMVar loc p cQ (mmvar : I.mm_var)  =
-  (* (n,q,cD,tp,c,dep) *)
-  let { I.name; I.instantiation; I.cD; I.typ; I.constraints; I.depend } = mmvar in
+  let { I.name; I.instantiation; I.cD; I.typ; I.constraints; I.depend; _ } =
+    mmvar
+  in
   match cD with
   | I.Empty -> begin
       if constraints_solved !constraints then
@@ -526,7 +527,7 @@ and collectMMVar loc p cQ (mmvar : I.mm_var)  =
              addVar loc p cQ (MMV (name, instantiation)) (MetaTyp (typ, depend)) in
 	         ( cQ'
            , let open I in
-             { name; instantiation; cD; typ; constraints; depend }
+             { mmvar with typ; depend }
            )
 	      | Some _ -> raise (Error.Violation "Expected whnf")
       else

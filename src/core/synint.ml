@@ -119,6 +119,7 @@ module LF = struct
     { name : name
     ; instantiation : iterm option ref
     ; cD : mctx
+    ; mmvar_id : int (* unique to each MMVar *)
     ; typ : ctyp
     ; constraints : cnstr list ref (* not really used *)
     ; depend : depend

@@ -2214,13 +2214,7 @@ let rec genPattSpine names mk_pat_var k =
      let cPsi' =
        let open! LF in
        let mmvar =
-         { name = x
-         ; instantiation = ref None
-         ; cD = Empty
-         ; typ = LF.CTyp sW
-         ; constraints = ref []
-         ; depend = Maybe
-         }
+         Whnf.newMMVar' (Some x) LF.(Empty, CTyp sW) Maybe
        in
        CtxVar (CInst (mmvar, Whnf.m_id))
      in

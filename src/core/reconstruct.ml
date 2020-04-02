@@ -768,13 +768,7 @@ let rec mgCtx cD' (cD, cPsi) = begin match cPsi with
         let (n , sW) = Whnf.mctxCDec cD psi_var in
         let mmvar =
           let open Int.LF in
-          { name = n
-          ; instantiation = ref None
-          ; cD = cD'
-          ; typ = CTyp (Some sW)
-          ; constraints = ref []
-          ; depend = Maybe
-          }
+          Whnf.newMMVar' (Some n) (cD', CTyp (Some sW)) Maybe
         in
         Int.LF.(CtxVar (CInst (mmvar, Whnf.m_id)))
     | Int.LF.Null -> Int.LF.Null

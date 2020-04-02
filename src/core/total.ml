@@ -294,13 +294,7 @@ let gen_var' loc cD (x, cU) =
   | LF.CTyp (schema_cid) ->
      let mmvar =
        let open! LF in
-       { name = x
-       ; instantiation = ref None
-       ; cD
-       ; typ = CTyp schema_cid
-       ; constraints = ref []
-       ; depend = LF.Maybe
-       }
+       Whnf.newMMVar' (Some x) (cD, CTyp schema_cid) Maybe
      in
      let cPsi = LF.CtxVar (LF.CInst (mmvar, Whnf.m_id)) in
      ( (loc, LF.CObj cPsi)

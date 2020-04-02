@@ -93,6 +93,10 @@ let newMTypName = function
   | ClTyp (STyp _,_) -> Id.SVarName None
   | CTyp _ -> Id.NoName
 
+let next_mmvar_id =
+  let c = ref 0 in
+  fun () -> incr c; !c
+
 let newMMVar' name (cD, mtyp) depend =
   let name =
     match name with
@@ -103,6 +107,7 @@ let newMMVar' name (cD, mtyp) depend =
   in
   { name
   ; instantiation = ref None
+  ; mmvar_id = next_mmvar_id ()
   ; cD
   ; typ = mtyp
   ; constraints = ref []

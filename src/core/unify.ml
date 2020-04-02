@@ -164,7 +164,7 @@ let rec blockdeclInDctx cPsi = match cPsi with
   let genMMVarstr loc cD cPsi (Atom (_, a, _tS) as tP, s) =
     dprintf
       (fun p ->
-        p.fmt "@[<v 6>[genMMVarstr] of type %a@,in context cPsi = %a"
+        p.fmt "@[<v 6>[genMMVarstr] of type @[%a@]@,in context cPsi = @[%a@]@]"
           (P.fmt_ppr_lf_typ cD cPsi P.l0) (Whnf.normTyp (tP, s))
           (P.fmt_ppr_lf_dctx cD P.l0) cPsi
       );
@@ -2597,19 +2597,16 @@ let rec ground_sub cD = function (* why is parameter cD is unused? -je *)
     | (Comp.MetaApp (mO, mT, mS, _), t) , (Comp.MetaApp (mO', mT', mS', _), t') ->
         let Comp.PiKind (_, cdecl, cK') = cK in
         let mOt = Whnf.cnormMetaObj (mO, t) in
-        let _mOt' = Whnf.cnormMetaObj (mO', t') in
-          ((* dprint (fun () -> "[unifyMetaObj] BEFORE " ^
-                     " cD = " ^ P.mctxToString cD ^ "\n     " ^
-                     P.metaObjToString cD mOt' ^ " == " ^
-                    P.metaObjToString cD mOt); *)
-          unifyMetaObj cD (mO, t) (mO', t') (cdecl, mt);
-          (* dprint (fun () -> "[unifyMetaObj] AFTER " ^ P.metaObjToString cD mOt ^ " == " ^
-                    P.metaObjToString cD mOt'); *)
-          let mt' = MDot (Comp.metaObjToMFront mOt, mt) in
-          unifyMetaTyp cD (mT, t) (mT', t');
-          unifyMetaSpine cD (mS, t) (mS', t') (cK', mt');
-          (* dprint (fun () -> "[unifyMetaObj] AFTER UNIFYING SPINES " ^ P.metaObjToString cD mOt ^ " == " ^
-                    P.metaObjToString cD mOt') *))
+        (* let _mOt' = Whnf.cnormMetaObj (mO', t') in *)
+        unifyMetaObj cD (mO, t) (mO', t') (cdecl, mt);
+        let mt' = MDot (Comp.metaObjToMFront mOt, mt) in
+        dprintf begin fun p ->
+          p.fmt "[unifyMetaSpine] @[<v>@[%a@] ===@ @[%a@]@]"
+            P.(fmt_ppr_cmp_meta_typ cD) (Whnf.cnormMTyp (mT, t))
+            P.(fmt_ppr_cmp_meta_typ cD) (Whnf.cnormMTyp (mT', t'))
+          end;
+        unifyMetaTyp cD (mT, t) (mT', t');
+        unifyMetaSpine cD (mS, t) (mS', t') (cK', mt');
 
     | _ -> raise (Failure "Meta-Spine mismatch")
 
@@ -2814,12 +2811,17 @@ let rec ground_sub cD = function (* why is parameter cD is unused? -je *)
               end
             else
               begin
+                dprintf
+                  begin fun p ->
+                  p.fmt "[forceGlobalCnstr'] \
+                         @[<v 2>Existing Set of constraints (BEFORE UNIFY):\
+                         @,@[%a@]\
+                         @,@[<v 2>Note: @[%a@] is not convertible with @[%a@]@]@]"
+                    P.fmt_ppr_lf_constraints !globalCnstrs
+                    P.(fmt_ppr_lf_normal cD cPsi l0) tM1
+                    P.(fmt_ppr_lf_normal cD cPsi l0) tM2
+                  end;
                 try
-                  dprintf
-                    begin fun p ->
-                    p.fmt "[forceGlobalCnstr'] @[<v 2>Existing Set of constraints (BEFORE UNIFY):@,@[%a@]@]"
-                      P.fmt_ppr_lf_constraints !globalCnstrs
-                    end;
                   unify1 Unification cD cPsi (tM1, id) (tM2, id);
                   (* if l = List.length (!globalCnstrs) then *)
                   if solvedCnstrs (!globalCnstrs) then

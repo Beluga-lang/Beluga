@@ -1912,19 +1912,16 @@ let mctxMVarPos cD u =
 
   and convCTyp' thetaT1 thetaT2 = match (thetaT1, thetaT2) with
     | ((Comp.TypBase (_, c1, mS1), _t1), (Comp.TypBase (_, c2, mS2), _t2)) ->
-          if Id.cid_equals c1 c2 then
-            (* t1 = t2 = id by invariant *)
-            convMetaSpine (cnormMetaSpine (mS1, m_id))  (cnormMetaSpine (mS2, m_id))
-          else false
+       (* t1 = t2 = id by invariant *)
+       Id.cid_equals c1 c2
+       && convMetaSpine (cnormMetaSpine (mS1, m_id))  (cnormMetaSpine (mS2, m_id))
 
     | ((Comp.TypCobase (_, c1, mS1), _t1), (Comp.TypCobase (_, c2, mS2), _t2)) ->
-          if Id.cid_equals c1 c2 then
-            (* t1 = t2 = id by invariant *)
-            convMetaSpine mS1 mS2
-          else false
+       (* t1 = t2 = id by invariant *)
+       Id.cid_equals c1 c2
+       && convMetaSpine mS1 mS2
 
-    | ((Comp.TypBox (_, cT1), _t1) , (Comp.TypBox (_, cT2), _t2)) (* t1 = t2 = id *)
-      ->
+    | ((Comp.TypBox (_, cT1), _t1) , (Comp.TypBox (_, cT2), _t2)) (* t1 = t2 = id *) ->
         convMetaTyp cT1 cT2
 
     | ((Comp.TypArr (_, tT1, tT2), t), (Comp.TypArr (_, tT1', tT2'), t')) ->

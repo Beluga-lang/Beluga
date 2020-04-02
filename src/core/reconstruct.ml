@@ -1883,7 +1883,7 @@ and elBranch caseTyp cD cG branch tau_s (tau, theta) =
 
      dprintf
        begin fun p ->
-       p.fmt "[elBranch] @[<v>Elaborate branch against@,@[%a@]@,in cG = @[%a@]"
+       p.fmt "[elBranch] @[<v>Elaborate branch against@,@[%a@]@,in cG = @[%a@]@]"
          P.fmt_ppr_cmp_typ_typing (cD1'', tau')
          (P.fmt_ppr_cmp_gctx cD1'' P.l0) cG_ext
        end;

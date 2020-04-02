@@ -1248,6 +1248,9 @@ and convSub subst1 subst2 =
      s1 = s2 &&
      convSub sigma1 sigma2
 
+  | FSVar (k1, (u1, s1)), FSVar (k2, (u2, s2)) ->
+     k1 = k2 && Id.equals u1 u2 && convSub s1 s2
+
   | (Dot (f, s), Dot (f', s')) ->
       convFront f f' && convSub s s'
 

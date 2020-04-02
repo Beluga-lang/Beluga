@@ -889,7 +889,7 @@ and checkElementAgainstElement _cD elem1 elem2 =
   in
   dprintf
     begin fun p ->
-    p.fmt "[checkElementAgainstElement] @[<2>%a <== %a@ : %b@] "
+    p.fmt "@[<v 2>[checkElementAgainstElement]@ @[<2>@[%a@] <==@ @[%a@] ~~>@ %b@]@]"
       (P.fmt_ppr_lf_schema P.l0) (Schema [elem1])
       (P.fmt_ppr_lf_schema P.l0) (Schema [elem2])
       result

@@ -43,6 +43,7 @@ let elaborate_typ (cD : LF.mctx) (tau : ExtComp.typ) : Comp.typ * int =
   Index.hcomptyp cvars tau
   |> Reconstruct.comptyp_cD cD
   |> Abstract.comptyp
+  |> Pair.lmap (fun tau -> Whnf.(cnormCTyp (tau, m_id)))
   |> F.through (fun (tau, _) -> Check.Comp.checkTyp cD tau)
 
 let elaborate_exp (cD : LF.mctx) (cG : Comp.gctx)

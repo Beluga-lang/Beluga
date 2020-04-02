@@ -737,7 +737,7 @@ let mgCompTypSpine cD (loc, cK) =
     | (Int.Comp.PiKind (loc', Int.LF.Decl(u, cU, dep), cK), t) ->
        let (mO, t') = Whnf.dotMMVar loc cD t (u, cU, dep) in
        let mS = genMetaSpine (cK, t') in
-       Int.Comp.MetaApp (mO, cU, mS, Int.LF.Depend.to_plicity dep)
+       Int.Comp.MetaApp (mO, Whnf.cnormMTyp (cU, t), mS, Int.LF.Depend.to_plicity dep)
   in
   genMetaSpine (cK, Whnf.m_id)
 

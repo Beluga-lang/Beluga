@@ -108,7 +108,7 @@ let max_usage (ctx : name list) (s : string) : max_usage =
        p.fmt "[max_usage] @[<v 2>%s is unused in@,\
               @[%a@]@]"
          s
-         Format.(pp_print_list ~pp_sep: pp_print_cut print)
+         Format.(pp_print_list ~pp_sep: pp_print_space print)
          ctx
        end;
      `unused

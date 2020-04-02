@@ -1,6 +1,6 @@
 ./t/code/error/negshift.bel, line 13, column 31:
 Ill-typed expression.
     Expected type:
-      pred ?Y[^0][]
+      pred ?M_2[^0][]
     Actual type:
       pred N

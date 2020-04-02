@@ -1,6 +1,6 @@
 ./t/code/error/ctx_shift.bel, line 14, column 32:
 Ill-typed expression.
     Expected type:
-      pred ?Y[^0][]
+      pred ?M_6[^0][]
     Actual type:
       pred N

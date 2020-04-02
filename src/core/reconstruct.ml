@@ -489,18 +489,22 @@ let mgAtomicTyp cD cPsi a kK =
     | (Int.LF.Typ, _s) ->
         Int.LF.Nil
 
-    | (Int.LF.PiKind ((Int.LF.TypDecl (_n, tA1), dep ), kK), s) ->
+    | (Int.LF.(PiKind ((TypDecl (u, tA1), dep), kK), s)) ->
         let tA1' = strans_typ cD cPsi (tA1, s) conv_list in
         let tR    =
           if !strengthen then
             let lazy (cPhi', ssi', ss_proj) = thinned in
             dprintf begin fun p ->
-              p.fmt "[mgAtomicTyp] PiKind ssi' = @[%a@]"
+              p.fmt "[mgAtomicTyp] @[<v>PiKind ssi' = @[%a@]\
+                     @,name = @[%a@]@]"
                 P.(fmt_ppr_lf_sub cD cPhi' l0) ssi'
+                Id.print u
               end;
-            Whnf.etaExpandMMV Syntax.Loc.ghost cD cPhi' (tA1', ssi') _n ss_proj dep
+            Whnf.etaExpandMMV Loc.ghost cD
+              cPhi' (tA1', ssi') u ss_proj dep
           else
-            Whnf.etaExpandMMV Syntax.Loc.ghost cD flat_cPsi (tA1', Substitution.LF.id) _n s_proj dep
+            Whnf.etaExpandMMV Loc.ghost cD
+              flat_cPsi (tA1', Substitution.LF.id) u s_proj dep
         in
         dprintf
           begin fun p ->
@@ -1475,15 +1479,22 @@ and elPatChk (cD:Int.LF.mctx) (cG:Int.Comp.gctx) pat ttau = match (pat, ttau) wi
   | (Apx.Comp.PatPair (loc, pat1, pat2) , (Int.Comp.TypCross (_, tau1, tau2), theta)) ->
       let (cG1, pat1') = elPatChk cD cG pat1 (tau1, theta) in
       let (cG2, pat2') = elPatChk cD cG1 pat2 (tau2, theta) in
-        (cG2, Int.Comp.PatPair (loc, pat1', pat2'))
+      (cG2, Int.Comp.PatPair (loc, pat1', pat2'))
 
   | (Apx.Comp.PatMetaObj (loc, cM) , (Int.Comp.TypBox (_loc, ctyp), theta)) ->
      (cG, Int.Comp.PatMetaObj (loc, elMetaObj cD cM (ctyp, theta)))
+
   (* Error handling cases *)
   | (Apx.Comp.PatPair(loc, _ , _ ), tau_theta) ->
-      raise (Check.Comp.Error (loc, Check.Comp.BasicMismatch (`pair, cD, Int.LF.Empty, tau_theta)))
+     let open Check.Comp in
+     BasicMismatch (`pair, cD, Int.LF.Empty, tau_theta)
+     |> throw loc
   | (Apx.Comp.PatMetaObj (loc, _) , tau_theta) ->
-      raise (Check.Comp.Error (loc, Check.Comp.BasicMismatch (`box, cD, Int.LF.Empty, tau_theta)))
+     let open Check.Comp in
+     BasicMismatch (`box, cD, Int.LF.Empty, tau_theta)
+     |> throw loc
+
+  (* annotated general pattern *)
   | (Apx.Comp.PatAnn (loc, _, _ ) , ttau) ->
       let (cG', pat', ttau') = elPatSyn cD cG pat in
       dprintf
@@ -1492,15 +1503,12 @@ and elPatChk (cD:Int.LF.mctx) (cG:Int.Comp.gctx) pat ttau = match (pat, ttau) wi
           (P.fmt_ppr_cmp_typ cD P.l0) (Whnf.cnormCTyp ttau)
           (P.fmt_ppr_cmp_typ cD P.l0) (Whnf.cnormCTyp ttau')
         end;
-      begin
-        try
-          Unify.unifyCompTyp cD ttau ttau' ;
-          (cG', pat')
-        with Unify.Failure msg ->
-          dprint (fun () -> "Unify Error: " ^ msg) ;
-          raise (Check.Comp.Error (loc, Check.Comp.SynMismatch (cD, ttau, ttau')))
-      end
-
+      try
+        Unify.unifyCompTyp cD ttau ttau';
+        (cG', pat')
+      with Unify.Failure msg ->
+        dprint (fun () -> "Unify Error: " ^ msg) ;
+        raise (Check.Comp.Error (loc, Check.Comp.SynMismatch (cD, ttau, ttau')))
 
  and elPatSyn (cD:Int.LF.mctx) (cG:Int.Comp.gctx) pat = match pat with
   | Apx.Comp.PatAnn (loc, pat, tau) ->
@@ -1514,12 +1522,6 @@ and elPatChk (cD:Int.LF.mctx) (cG:Int.Comp.gctx) pat ttau = match (pat, ttau) wi
       in
       let (cG1, pat_spine', ttau') = elPatSpine cD cG pat_spine (tau, Whnf.m_id) in
         (cG1, Int.Comp.PatConst (loc, c, pat_spine'), ttau')
-(*
-  | Apx.Comp.PatTrue  loc ->  (Int.Comp.PatTrue loc ,
-                               (Int.Comp.TypBool, Whnf.m_id))
-  | Apx.Comp.PatFalse loc -> (Int.Comp.PatFalse loc,
-                              (Int.Comp.TypBool, Whnf.m_id))
-*)
 
 and elPatSpine (cD:Int.LF.mctx) (cG:Int.Comp.gctx) pat_spine ttau =
   elPatSpineW cD cG pat_spine (Whnf.cwhnfCTyp ttau)
@@ -1689,13 +1691,11 @@ and recPatObj' cD pat (cD_s, tau_s) = match pat with
               let cPsi' = mgCtx cD (cD_s, cPsi) in
               let cPhi' = mgCtx cD (cD_s, cPhi) in
               loc', Int.LF.ClTyp (Int.LF.STyp (sv_class, cPhi'), cPsi')
-              (* Are the other cases (PTyp, or MTyp of a non-atomic
-                 type) impossible?
-                 Or can a user somehow write such a pattern, and we
-                 should generate an error?
-                 -je
-               *)
            | Int.LF.PTyp _ ->
+              (* PTyp is not used during reconstruction here.
+                 PTyp is given to the scrutinee type only by
+                 fixParamTyp in check.ml, and it is only used for
+                 coverage checking. *)
               Error.violation "[recPatObj'] scrutinee PTyp should be impossible"
            end
         | Int.Comp.TypBox (loc', mT) -> raise (Error (loc, MetaObjectClash (cD, mT)))
@@ -1747,9 +1747,10 @@ and recPatObj loc cD pat (cD_s, tau_s) =
   dprintf
     begin fun p ->
     p.fmt "[recPatObj] @[<v>pat (before abstraction) =@,\
-           @[@[%a@] |-@ @[%a@]@]@]"
+           @[<hv 2>@[%a@] |-@ @[%a@] <=@ @[%a@]@]@]"
       (P.fmt_ppr_cmp_gctx cD P.l0) cG'
       (P.fmt_ppr_cmp_pattern cD cG' P.l0) pat'
+      (P.fmt_ppr_cmp_typ cD P.l0) (Whnf.cnormCTyp ttau')
     end;
   dprint (fun () -> "[recPatObj] Abstract over pattern and its type");
   let (cD1, cG1, pat1, tau1) =

@@ -17,20 +17,6 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
   type lvl = int
   let l0 = 0
 
-  module InstHashedType = struct
-    type t    = LF.iterm option ref
-    let equal = (==)
-    let hash  = Hashtbl.hash
-  end
-
-  module MInstHashtbl = Hashtbl.Make (InstHashedType)
-  module SInstHashtbl = Hashtbl.Make (InstHashedType)
-  module PInstHashtbl = Hashtbl.Make (InstHashedType)
-
-  let minst_hashtbl : string MInstHashtbl.t = MInstHashtbl.create 0
-  let sinst_hashtbl : string SInstHashtbl.t = SInstHashtbl.create 0
-  let pinst_hashtbl : string PInstHashtbl.t = PInstHashtbl.create 0
-
   (* Fresh name generation *)
 
   let rec get_names_dctx : LF.dctx -> Id.name list = function
@@ -428,7 +414,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
       | LF.Shift n -> fmt_ppr_lf_sub_shift ppf (cPsi, n)
       | LF.FSVar (_, (s_name, s)) ->
          [fun ppf _ ->
-          fprintf ppf "|- FSV %s[%a]"
+          fprintf ppf "FSV %s[%a]"
             (Id.render_name s_name )
             (fmt_ppr_lf_sub cD cPsi lvl) s]
 
@@ -554,65 +540,15 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
     fprintf ppf "[%a]"
       (fmt_ppr_lf_mfront_typed cD lvl) (cM, cU)
 
-  and fmt_ppr_lf_mmvar_uninstantiated ppf (u, typ, dep) =
-    match typ with
-    | LF.(ClTyp (PTyp tA, _)) ->
-       begin
-         try
-           fprintf ppf "?#%s"
-             (PInstHashtbl.find pinst_hashtbl u)
-         with
-         | Not_found ->
-            let sym = match Store.Cid.Typ.gen_mvar_name tA with
-              | Some vGen -> vGen ()
-              | None -> Gensym.MVarData.gensym ()
-            in
-            PInstHashtbl.replace pinst_hashtbl u sym;
-            fprintf ppf "?#%s" sym
-       end
-    | LF.(ClTyp (MTyp tA, _)) ->
-       begin
-         try
-           fprintf ppf "?%s%a"
-             (MInstHashtbl.find minst_hashtbl u)
-             fmt_ppr_lf_depend dep
-         with
-         | Not_found ->
-            (* (* Should probably create a sep. generator for this -dwm *)
-               let sym = String.uppercase (Gensym.VarData.gensym ()) in
-             *)
-            (* Not working -bp *)
-            let sym =
-              match Store.Cid.Typ.gen_mvar_name tA with
-              | Some vGen -> vGen ()
-              | None -> Gensym.MVarData.gensym ()
-            in
-            MInstHashtbl.replace minst_hashtbl u sym;
-            fprintf ppf "?%s" sym
-       end
-    | LF.(ClTyp (STyp (_, cPsi), _)) ->
-       begin
-         try
-           fprintf ppf "?%s"
-             (SInstHashtbl.find sinst_hashtbl u)
-         with
-         | Not_found ->
-            (* (* Should probably create a sep. generator for this -dwm *)
-               let sym = String.uppercase (Gensym.VarData.gensym ()) in
-             *)
-            (* Not working -bp *)
-            let sym = Gensym.MVarData.gensym ()
-            in
-            SInstHashtbl.replace sinst_hashtbl u sym
-            ; fprintf ppf "#?%s" sym
-       end
-
   and fmt_ppr_lf_mmvar lvl ppf mmvar =
     (* check whether the mmvar is instantiated or not before proceeding to print *)
     let u = LF.(mmvar.instantiation) in
     match !u with
     | None ->
-       fmt_ppr_lf_mmvar_uninstantiated ppf LF.(u, mmvar.typ, mmvar.depend)
+       let open LF in
+       fprintf ppf "?%a_%d"
+         Id.print mmvar.name
+         mmvar.mmvar_id
     | Some it ->
        match LF.(mmvar.typ) with
        | LF.ClTyp (_, cPsi) ->
@@ -623,16 +559,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
 
   and fmt_ppr_lf_cvar cD ppf = function
     | LF.Offset n -> fmt_ppr_lf_offset cD ppf n
-
-    | LF.Inst mmvar ->
-       let u = LF.(mmvar.instantiation) in
-       let open LF in
-       match !u with
-       | Some it ->
-          let ClTyp (_, cPsi) = mmvar.typ in
-          fmt_ppr_lf_iterm mmvar.cD cPsi 0 ppf it
-       | None ->
-          fmt_ppr_lf_mmvar_uninstantiated ppf (u, mmvar.typ, mmvar.depend)
+    | LF.Inst mmvar -> fmt_ppr_lf_mmvar l0 ppf mmvar
 
   and fmt_ppr_lf_ctx_var cD ppf = function
     | LF.CInst (mmvar, theta) ->

@@ -2,7 +2,7 @@
 Type-checking error.
 Ill-typed expression.
     Expected type:
-      [?g0[^0], b : block (x : tm, u : oft x ?T[^0][]) |-
-         oft (?#Y.1[^0].., b) ?T1[^0][]]
+      [?g0[^0], b : block (x : tm, u : oft x ?T_44[^0][]) |-
+         oft (?#p_41.1[^0].., b) ?Q_40[^0][]]
     Inferred type:
-      [?g0[^0], b : block (x : tm, u : oft x ?T^e[^0][]) |- oft elem i]
+      [?g0[^0], b : block (x : tm, u : oft x ?T_44[^0][]) |- oft elem i]

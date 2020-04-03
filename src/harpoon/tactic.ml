@@ -101,8 +101,9 @@ let intros' : Theorem.t ->
             tau_2
        | `duplicate -> Either.Left (DuplicateName (cD, cG, d))
        end
-    | Comp.TypPiBox (_, (LF.Decl (x, _, _) as d), tau_2) ->
+    | Comp.TypPiBox (_, (LF.Decl (x, cU, dep)), tau_2) ->
        let x = B.NameGen.renumber active_names x in
+       let d = LF.Decl (x, cU, dep) in
        go true (x :: active_names) user_names (LF.Dec (cD, d)) cG tau_2
     | _ when updated -> Either.Right (cD, cG, tau)
     | _ -> Either.Left NothingToIntro

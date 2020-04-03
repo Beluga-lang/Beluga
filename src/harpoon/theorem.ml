@@ -92,17 +92,13 @@ let run_subgoal_hooks t g =
 let add_subgoal' t g =
   DynArray.insert t.remaining_subgoals 0 g
 
-(** Adds a new subgoal to this theorem.
-    Will run the subgoal hooks.
- *)
-let add_subgoal t g =
-  add_subgoal' t g;
-  run_subgoal_hooks t g
-
 (** Adds a list of subgoals to this theorem.
-    Will run the subgoal hooks.
+    Will run the subgoal hooks, but only after adding *all* the
+    subgoals to the theorem.
  *)
-let add_subgoals t = List.iter (add_subgoal t)
+let add_subgoals t gs =
+  List.iter (add_subgoal' t) gs;
+  List.iter (run_subgoal_hooks t) gs
 
 (** Fills in the solution of the given subgoal. *)
 let solve (s : Comp.proof_state) (proof : Comp.proof) : unit =

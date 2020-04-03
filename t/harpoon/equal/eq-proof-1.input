@@ -16,7 +16,6 @@ invert u
 by trans [_ |- Q] [_ |- Q2] as P1 unboxed
 by trans [_ |- Q1] [_ |- Q3] as P2 unboxed
 solve [_ |- eq_app P1 P2]
-solve u
 split x
 by ceq [_ |- X] as e1; by ceq [_ |- X1] as e2; solve trans e1 e2
 solve ref _ _

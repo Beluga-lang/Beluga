@@ -96,6 +96,11 @@ val string_of_name : name -> string
 val render_name : name -> string
 val print : Format.formatter -> name -> unit
 
+(** Prints a list of space-separated names.
+    This printer does not open a box!
+ *)
+val print_list : Format.formatter -> name list -> unit
+
 (** Decide whether two names represent the same thing.
     This simply compares the string representations of the names. This
     corresponds with a user's intuition about when names are equal,

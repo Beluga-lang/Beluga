@@ -38,6 +38,11 @@ let print ppf n =
     n.modules
     (string_of_name n)
 
+(** Displays a list of space separated names. *)
+let print_list ppf ns =
+  let open Format in
+  pp_print_list ~pp_sep: pp_print_space print ppf ns
+
 (* For reporting whether a name is used in a context. *)
 type max_usage =
   [ `used of int option
@@ -108,7 +113,7 @@ let max_usage (ctx : name list) (s : string) : max_usage =
        p.fmt "[max_usage] @[<v 2>%s is unused in@,\
               @[%a@]@]"
          s
-         Format.(pp_print_list ~pp_sep: pp_print_space print)
+         print_list
          ctx
        end;
      `unused
@@ -120,8 +125,7 @@ let max_usage (ctx : name list) (s : string) : max_usage =
               @[%a@]@]"
          s
          (Maybe.show Format.pp_print_int) k
-         Format.(pp_print_list ~pp_sep: pp_print_space print)
-         ctx
+         print_list ctx
        end;
      `used k
 

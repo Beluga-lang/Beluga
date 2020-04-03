@@ -73,7 +73,9 @@ type intros'_failure =
     to display an appropriate message.
  *)
 let intros' : Theorem.t ->
-              string list option -> LF.mctx -> Comp.gctx -> Comp.typ ->
+              string list option ->
+              Id.name list ->
+              LF.mctx -> Comp.gctx -> Comp.typ ->
               (intros'_failure, LF.mctx * Comp.gctx * Comp.typ) Either.t =
   let gen_var_for_typ active_names tau =
     B.NameGen.(var tau |> renumber active_names)
@@ -105,10 +107,7 @@ let intros' : Theorem.t ->
     | _ when updated -> Either.Right (cD, cG, tau)
     | _ -> Either.Left NothingToIntro
   in
-  fun user_names cD cG tau ->
-  let active_names =
-    Context.(names_of_mctx cD @ names_of_gctx cG)
-  in
+  fun user_names active_names cD cG tau ->
   go false active_names user_names cD cG tau
 
 
@@ -120,7 +119,8 @@ let intros (names : string list option) : t =
   fun t g ->
   let open Comp in
   let (tau, theta) = g.goal in
-  match intros' t names LF.Empty LF.Empty tau with
+  let active_names = Context.names_of_proof_state g in
+  match intros' t names active_names LF.Empty LF.Empty tau with
   | Either.Right (cD, cG, tau') ->
      (* only create a new intros node if something actually happened *)
      let goal = (tau', theta) in

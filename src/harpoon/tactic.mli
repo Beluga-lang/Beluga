@@ -33,7 +33,11 @@ type intros'_failure =
 
 (** Introduces the arguments to a function type, with the given names, if any. *)
 val intros' : Theorem.t ->
-              string list option -> Beluga.Syntax.Int.LF.mctx -> Comp.gctx -> Comp.typ ->
+              string list option -> (* names to use instead of generation *)
+              Id.name list -> (* names to avoid for generation *)
+              Beluga.Syntax.Int.LF.mctx ->
+              Comp.gctx ->
+              Comp.typ ->
               (intros'_failure, Beluga.Syntax.Int.LF.mctx * Comp.gctx * Comp.typ) Support.Either.t
 
 (** Performs a case analysis on the given synthesizable expression of

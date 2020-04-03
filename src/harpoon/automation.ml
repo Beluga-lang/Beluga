@@ -27,7 +27,8 @@ let auto_intros : t =
     p.fmt "[auto_intros]: invoked on %a"
       (P.fmt_ppr_cmp_typ g.context.cD P.l0) tau
     end;
-  match Tactic.intros' t None LF.Empty LF.Empty tau with
+  let active_names = Context.names_of_proof_state g in
+  match Tactic.intros' t None active_names LF.Empty LF.Empty tau with
   | Either.Right (cD, cG, tau') ->
      let fmt_ppr_ctx f ppf ctx = Context.iter ctx (f ppf) in
      let fmt_ppr_lf_ctx ppf =

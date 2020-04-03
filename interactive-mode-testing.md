@@ -1,3 +1,6 @@
+Note: this document refers to the legacy interactive mode notably used by the
+Beluga Emacs integration, not to the newer interactive prover Harpoon.
+
 Interactive Mode Testing
 ========================
 

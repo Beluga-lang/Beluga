@@ -39,7 +39,7 @@ let auto_intros : t =
           fmt_ppr_ctx (fun ppf cD v -> Format.fprintf ppf "@,@[<hov 2>%a@]" (P.fmt_ppr_lf_ctyp_decl cD) v) ppf cD;
           Format.fprintf ppf "@]"
      in
-     let fmt_ppr_cmp_ctx ppf =
+     let fmt_ppr_cmp_ctx cD ppf =
        function
        | LF.Empty -> ()
        | cG ->
@@ -63,7 +63,7 @@ let auto_intros : t =
         @,  @[<v>%a@]\
         @,@]"
        fmt_ppr_lf_ctx context.cD
-       fmt_ppr_cmp_ctx context.cG
+       (fmt_ppr_cmp_ctx context.cD) context.cG
        (P.fmt_ppr_cmp_typ g.context.cD P.l0) (Whnf.cnormCTyp g.goal);
      Theorem.apply_subgoal_replacement t
        "auto-intros"

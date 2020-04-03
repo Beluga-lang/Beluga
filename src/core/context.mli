@@ -113,9 +113,26 @@ val rename_gctx : Id.name -> Id.name -> Comp.gctx -> Comp.gctx option
 
 val concat : 'a LF.ctx list -> 'a LF.ctx
 
+(** Erases an LF context to a list of names.
+    To be used in preparation for contextual name generation.
+    See nameGen.ml. *)
 val names_of_dctx : LF.dctx -> Id.name list
+
+(** Erases a meta-context to a list of names.
+    To be used in preparation for contextual name generation.
+    See nameGen.ml. *)
 val names_of_mctx : LF.mctx -> Id.name list
+
+(** Erases a program context to a list of names.
+    To be used in preparation for contextual name generation.
+    See nameGen.ml. *)
 val names_of_gctx : Comp.gctx -> Id.name list
+
+(** Computes the names in a proof state.
+    This is the names from the meta-context and the program context.
+    To be used in preparation for contextual name generation.
+    See nameGen.ml. *)
+val names_of_proof_state : Comp.proof_state -> Id.name list
 
 val is_null : LF.dctx -> bool
 val is_empty : 'a LF.ctx -> bool

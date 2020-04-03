@@ -457,6 +457,10 @@ let names_of_mctx cD =
 let names_of_gctx cG =
   to_list_map cG (fun _ -> Comp.name_of_ctyp_decl)
 
+let names_of_proof_state g =
+  names_of_mctx g.Comp.context.Comp.cD
+  @ names_of_gctx g.Comp.context.Comp.cG
+
 let rec steal_mctx_names cD cD' = match cD, cD' with
   | Dec (cD, Decl (_, cU, dep)), Dec (cD', Decl (u', _, _)) ->
      Dec (steal_mctx_names cD cD', Decl (u', cU, dep))

@@ -91,7 +91,7 @@ module Comp = struct
     | NotImpossible   of I.mctx * gctx * typ * exp_syn
     | InvalidHypotheses  of Int.Comp.hypotheses (* expected *)
                             * Int.Comp.hypotheses (* actual *)
-    | TypeDecompositionFailed of I.mctx * typ
+    | SufficesDecompositionFailed of I.mctx * typ
     | SufficesLengthsMismatch
       of I.mctx * typ (* type that was decomposed *)
          * int (* number of simple arguments in that type *)
@@ -102,6 +102,10 @@ module Comp = struct
          * typ (* type annotation given by the user (valid in cD) *)
     | SufficesBadGoal
       of I.mctx * typ (* scrutinee type *) * typ (* goal type *)
+    | SufficesPremiseNotClosed
+      of I.mctx
+         * int (* premise index *)
+         * suffices_typ (* given type annotation *)
 
   (* | IllTypedMetaObj of I.mctx * meta_obj * meta_typ  *)
 
@@ -309,7 +313,7 @@ module Comp = struct
          P.fmt_ppr_cmp_hypotheses_listing exp
          P.fmt_ppr_cmp_hypotheses_listing act
 
-    | TypeDecompositionFailed (cD, tau) ->
+    | SufficesDecompositionFailed (cD, tau) ->
        fprintf ppf
          "@[<v>Type decomposition failed.\
           @,The type\
@@ -351,13 +355,26 @@ module Comp = struct
 
     | SufficesBadGoal (cD, tau_i, tau_goal) ->
        fprintf ppf
-         "@[<v>The current goal type\
+         "@[<v>Bad goal type.\
+          @,The current goal type\
           @,  @[%a@]\
           @,is not compatible with the conclusion of\
           @,  @[%a@]
+          @,`suffices' cannot be used in this case.
           @]"
          P.(fmt_ppr_cmp_typ cD l0) tau_goal
          P.(fmt_ppr_cmp_typ cD l0) tau_i
+
+    | SufficesPremiseNotClosed (cD, k, stau) ->
+       fprintf ppf
+         "@[<v>Premise not closed.\
+          @,The premise at position\
+          @,  %d\
+          @,namely\
+          @,  @[%a@]\
+          @,is not closed.@]"
+         k
+         P.(fmt_ppr_cmp_suffices_typ cD) stau
 
   let _ =
     Error.register_printer
@@ -1316,21 +1333,20 @@ module Comp = struct
     F.(decomp_arrows ++ Whnf.cnormCTyp ++ decomp_pis Whnf.m_id)
 
   (** See documentation in check.mli *)
-  let unify_suffices loc cD tau_i tau_anns tau_g =
+  let unify_suffices loc cD tau_i (tau_anns : suffices_typ list) tau_g =
     dprintf begin fun p ->
       p.fmt "[unify_suffices] @[<v>tau_i = @[%a@]\
              @,@[<v 2>tau_anns =@,@[<v>%a@]@]\
              @,tau_g = @[%a@]@]"
         P.(fmt_ppr_cmp_typ cD l0) tau_i
         (Format.pp_print_list ~pp_sep: Format.pp_print_cut
-           P.(fmt_ppr_cmp_typ cD l0))
+           P.(fmt_ppr_cmp_suffices_typ cD))
         tau_anns
         P.(fmt_ppr_cmp_typ cD l0) tau_g
       end;
-    (* TODO check that there are no leftover vars *)
     match decompose_function_type cD tau_i with
     | None ->
-       TypeDecompositionFailed (cD, tau_i)
+       SufficesDecompositionFailed (cD, tau_i)
        |> throw loc
     | Some (tau_args, tau_out) ->
        let unify tau_1 tau_2 =
@@ -1345,14 +1361,15 @@ module Comp = struct
            Unify.unifyCompTyp cD
              (tau_1, Whnf.m_id)
              (tau_2, Whnf.m_id);
-           true
+           (tau_2, true)
          with
          | Unify.Failure msg ->
-            false (* TODO real error message here *)
+            (tau_2, false)
        in
-       let unify_list taus1 taus2 =
+       let unify_s tau_1 = map_suffices_typ (unify tau_1) in
+       let unify_anns taus1 taus2 =
          try
-           List.mapi2 (fun i x y -> (i, (fun () -> unify x y), x, y)) taus1 taus2
+           List.mapi2 (fun i x y -> (i, (fun () -> unify_s x y), x, y)) taus1 taus2
          with
          | Invalid_argument _ ->
             let exp_k = List.length tau_args in
@@ -1360,14 +1377,56 @@ module Comp = struct
             SufficesLengthsMismatch (cD, tau_i, exp_k, act_k)
             |> throw loc
        in
-       unify_list tau_args tau_anns
-       |> List.iter
-            begin fun (i, f, _, tau_ann) ->
-            if f () |> not then
-              SufficesBadAnnotation (cD, tau_i, (i + 1), tau_ann) |> throw loc
-            end;
-       if not (unify tau_out tau_g) then
-         SufficesBadGoal (cD, tau_i, tau_g) |> throw loc
+       (* first unify the goal *)
+       if unify tau_out tau_g |> snd |> not then
+         SufficesBadGoal (cD, tau_i, tau_g) |> throw loc;
+
+       (* Two phases:
+          1. Unify *all* the arguments (that the user supplied)
+          2. For each synthesized type we need to check that it is
+             closed. *)
+       unify_anns tau_args tau_anns
+       |> List.map
+            begin fun (i, f, tau_arg, tau_ann) ->
+            let l = lazy (loc_of_suffices_typ tau_ann) in
+            (* actually do the unification here *)
+            match f () with
+            | `infer loc ->
+               (* user did not provide an explicit type *)
+               (* instead, consider that the synthesized argument type
+                  was specified by the user *)
+               (i, lazy loc, Either.Left tau_arg)
+            | `exact (tau_ann, true) ->
+               (* user provided an explicit type & we could unify it *)
+               (i, l, Either.Right tau_ann)
+            | `exact (tau_ann, false) ->
+               (* used provided an explicit type & we couldn't unify it *)
+               SufficesBadAnnotation (cD, tau_i, (i + 1), tau_ann) |> throw loc
+            end
+       |> List.map
+            begin fun (k, l, e) ->
+            let open Either in
+            match e with
+            | Left tau_arg
+                 when not (Whnf.closedCTyp tau_arg) ->
+               SufficesPremiseNotClosed (cD, k, `infer (Lazy.force l))
+               |> throw (Lazy.force l)
+
+            | Right tau_ann
+                 when not (Whnf.closedCTyp tau_ann) ->
+               (* This error should be rare; perhaps it is impossible.
+                  If the user provides an explicit type, how could the
+                  unification result in a type still containing
+                  MMVars? The only way I can think that this would
+                  happen is if the user uses LF underscores. *)
+               SufficesPremiseNotClosed
+                 ( cD
+                 , k
+                 , `exact Whnf.(cnormCTyp (tau_ann, m_id)))
+               |> throw (Lazy.force l)
+
+            | (Left tau_arg | Right tau_arg) -> tau_arg
+            end
 
   let require_syn_typbox cD cG loc i (tau, t) =
     match tau with
@@ -1546,7 +1605,8 @@ module Comp = struct
        let tau_i = Whnf.cnormCTyp (tau_i, t) in
        let tau_g = Whnf.cnormCTyp ttau in
        let loc = loc_of_exp_syn i in
-       unify_suffices loc cD tau_i (List.map (fun (_, tau, _) -> tau) args) tau_g;
+       unify_suffices loc cD tau_i (List.map (fun (_, tau, _) -> `exact tau) args) tau_g
+       |> ignore;
        List.iter
          begin fun (_, tau, p) ->
          dprintf begin fun p ->

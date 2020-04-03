@@ -94,7 +94,7 @@ module Comp : sig
     | NotImpossible   of LF.mctx * gctx * typ * exp_syn
     | InvalidHypotheses  of hypotheses (* expected *)
                             * hypotheses (* actual *)
-    | TypeDecompositionFailed of LF.mctx * typ
+    | SufficesDecompositionFailed of LF.mctx * typ
     | SufficesLengthsMismatch
       of LF.mctx * typ (* type that was decomposed *)
          * int (* number of simple arguments in that type *)
@@ -105,6 +105,10 @@ module Comp : sig
          * typ (* type annotation given by the user (valid in cD) *)
     | SufficesBadGoal
       of LF.mctx * typ (* scrutinee type *) * typ (* goal type *)
+    | SufficesPremiseNotClosed
+      of LF.mctx
+         * int (* premise index *)
+         * suffices_typ (* given type annotation *)
 
   exception Error of Syntax.Loc.t * error
 
@@ -270,15 +274,29 @@ module Comp : sig
       unify_suffices cD tau_i tau_anns tau_g
       requires
       1. cD |- tau_i <= type
-      2. cD |- tau_anns <= type (for each type in the list)
+      2. for each stau in tau_anns,
+         if stau = `exact tau, then cD |- tau <= type (for each type in the list)
       3. cD |- tau_g <= type
       It decomposes the function type tau_i (see decompose_function_type)
-      and appropriately unifies the decomposition so as to pin down all
-      instantiations of universally quantified variables.
+      and appropriately unifies the decomposition with the given type
+      annotations so as to pin down all instantiations of universally
+      quantified variables.
+      Some type annotations may be omitted. The interpretation of an
+      omitted annotation is that that annotation is not necessary (the
+      type of that argument is already determined by unification of
+      the goal, or other annotations).
+
+      Returns the list of elaborated premise types, which are
+      guaranteed to be closed (no MMVars).
 
       The provided location is used when raising errors.
    *)
-  val unify_suffices : Loc.t -> LF.mctx -> typ -> typ list -> typ -> unit
+  val unify_suffices : Loc.t -> LF.mctx ->
+                       typ -> (* scrutinee type; to be decomposed *)
+                       suffices_typ list -> (* type annotations *)
+                       typ -> (* goal type; to match against
+                                 decomposed conclusion *)
+                       typ list (* list of determined premise types *)
 
   (** Generates a meta-application spine consisting of unification
       variables to eliminate leading PiBox types.

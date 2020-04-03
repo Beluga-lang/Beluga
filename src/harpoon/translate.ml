@@ -178,7 +178,7 @@ and directive cD cG (d : Comp.directive) tau : Comp.exp_chk =
      let tau_i' = Whnf.cnormCTyp ttau_i' in
      (* cD; cG |- i' ==> tau_i' *)
      let tau_args =
-       List.map (fun (_, tau, _) -> tau) args
+       List.map (fun (_, tau, _) -> `exact tau) args
      in
      (* here we use unify_suffices *after* having done genMApp so that
         the unification will instantiate the MMVars used as MApp
@@ -186,7 +186,8 @@ and directive cD cG (d : Comp.directive) tau : Comp.exp_chk =
         We are essentially skipping the part of unify_suffices that
         eliminates PiBoxes for us.
       *)
-     Check.Comp.unify_suffices loc cD tau_i' tau_args tau;
+     Check.Comp.unify_suffices loc cD tau_i' tau_args tau
+     |> ignore;
      let es =
        List.map (fun (_, tau_p, p) -> proof cD cG p tau_p) args
      in

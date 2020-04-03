@@ -92,4 +92,4 @@ val invoke : Comp.exp_syn -> Comp.typ -> Id.name -> t
 
     by <lemma/ih> i suffices tau_1, ..., tau_k
  *)
-val suffices : Comp.exp_syn -> Comp.typ list -> Comp.typ -> t
+val suffices : Comp.exp_syn -> Comp.suffices_typ list -> Comp.typ -> t

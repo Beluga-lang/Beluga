@@ -370,7 +370,10 @@ let process_command
         | _ :: _ ->
            Theorem.printf t "holes are not supported for `suffices by _ ...`"
         | [] ->
-           let tau_list = List.map (Elab.typ cD) tau_list in
+           let elab_suffices_typ tau_ext : suffices_typ =
+             map_suffices_typ (Elab.typ cD) tau_ext
+           in
+           let tau_list = List.map elab_suffices_typ tau_list in
            Tactic.suffices i tau_list tau t g
         end
      end

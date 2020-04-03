@@ -609,7 +609,10 @@ let invoke (i : Comp.exp_syn) (tau : Comp.typ) (name : Id.name) : t =
   solve_with_new_comp_decl "by" (CTypDecl (name, tau, false))
     (prepend_commands [By (i, name, tau)])
 
-let suffices (i : Comp.exp_syn) (tau_args : Comp.typ list) (tau_i : Comp.typ) : t =
+let suffices
+      (i : Comp.exp_syn)
+      (tau_args : Comp.suffices_typ list)
+      (tau_i : Comp.typ) : t =
   fun t g ->
   let open Comp in
   let i_head = head_of_application i in
@@ -622,8 +625,6 @@ let suffices (i : Comp.exp_syn) (tau_args : Comp.typ list) (tau_i : Comp.typ) : 
       (i, (tau_i, Whnf.m_id))
   in
   let tau_i' = Whnf.cnormCTyp ttau_i in
-  B.Check.Comp.unify_suffices loc g.context.cD tau_i' tau_args
-    (Whnf.cnormCTyp g.goal);
   (* Need to normalize the scrutinee here because genMApp will create
      a spine of MApps involving MMVars to eliminate the leading PiBoxes, both
      implicit & explicit kinds. However, after unifying with the given
@@ -632,12 +633,24 @@ let suffices (i : Comp.exp_syn) (tau_args : Comp.typ list) (tau_i : Comp.typ) : 
      msub. So we need to normalize here to replace the instantiated
      MMVars with their instantiations. *)
   let i' = Whnf.(cnormExp' (i', m_id)) in
-  (* TODO add a closedness check here to make sure i' and tau_i' have
-     no uninstantiated MMVars *)
-
+  let tau_args =
+    B.Check.Comp.unify_suffices loc g.context.cD tau_i' tau_args
+      (Whnf.cnormCTyp g.goal)
+  in
+  (* generate the subgoals for the arguments.
+     by unification it doesn't matter which list we use. *)
   let children, subproofs =
     Misc.Function.flip List.mapi tau_args
       begin fun k tau ->
+      (* it is necessary to normalize the type here, because the type
+         returned by unify_suffices, although guaranteed to be closed,
+         will likely contain instantiated MMVars. Normalization will
+         replace these MMVars with their instantiation. It's paramount
+         to do this because MMVars, even instantiated ones, will show
+         their associated msub when printed. But this is no good
+         because msubs cannot be parsed. Since these annotations
+         appear in the external syntax, we can't have that. *)
+      let tau = Whnf.(cnormCTyp (tau, m_id)) in
       let new_state =
         { context = g.context
         ; goal = (tau, Whnf.m_id)

@@ -89,6 +89,17 @@ module Comp = struct
    | Simul of 'a generic_order list               (*     | [O1 .. On]           *)
  (* Note: Simul is currently unused. It doesn't even have a parser. -je *)
 
+ (** Type specified in an interactive use of `suffices` *)
+ type 'a generic_suffices_typ =
+   [ `exact of 'a (* user specified an exact type annotation *)
+   | `infer of Loc.t (* user specified `_` and expects the type to be known *)
+   ]
+
+ let map_suffices_typ (f : 'a -> 'b) : 'a generic_suffices_typ -> 'b generic_suffices_typ =
+   function
+   | `exact x -> `exact (f x)
+   | `infer loc -> `infer loc
+
  let rec map_order (f : 'a -> 'b) : 'a generic_order -> 'b generic_order =
    function
    | Arg x -> Arg (f x)

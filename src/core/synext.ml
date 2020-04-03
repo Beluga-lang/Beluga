@@ -207,6 +207,8 @@ module Comp = struct
      | NormalPattern of LF.normal * exp_chk
      | EmptyPattern
 
+ type suffices_typ = typ generic_suffices_typ
+
  type named_order = name generic_order
  type numeric_order = int generic_order
 
@@ -310,7 +312,7 @@ module Harpoon = struct
     | Solve of Comp.exp_chk (* the expression to solve the current subgoal with *)
     | Unbox of Comp.exp_syn * Id.name * Comp.unbox_modifier option
     | By of Comp.exp_syn * Id.name
-    | Suffices of Comp.exp_syn * Comp.typ list
+    | Suffices of Comp.exp_syn * Comp.suffices_typ list
 end
 
 

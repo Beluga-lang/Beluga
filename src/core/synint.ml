@@ -392,12 +392,18 @@ module Comp = struct
     | TypClo    of typ *  LF.msub
     | TypInd of typ
 
+  type suffices_typ = typ generic_suffices_typ
+
   let rec loc_of_typ : typ -> Loc.t = function
     | TypBase (l, _, _) | TypCobase (l, _, _) | TypDef (l, _, _)
       | TypBox (l, _) | TypArr (l, _, _) | TypCross (l, _, _)
       | TypPiBox (l, _, _) ->
        l
     | TypClo (tau, _) | TypInd tau -> loc_of_typ tau
+
+  let loc_of_suffices_typ : suffices_typ -> Loc.t = function
+    | `exact tau -> loc_of_typ tau
+    | `infer loc -> loc
 
   type ih_arg =
     | M  of meta_obj

@@ -437,7 +437,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
     | LF.Shift _ when not (Context.hasCtxVar cPsi) ->
        (* Print nothing at all, because the user would have written nothing at all *)
        ()
-    | _ ->  (* For anything else, print a space first *)
+    | _ ->
        fprintf ppf "%a"
          (pp_print_list ~pp_sep: Fmt.comma
             (fun ppf f -> f ppf ()))
@@ -970,6 +970,10 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
            (fmt_ppr_cmp_typ cD 10) tau
        else
          fmt_ppr_cmp_typ cD lvl ppf tau
+
+  let fmt_ppr_cmp_suffices_typ cD ppf = function
+    | `exact tau -> fmt_ppr_cmp_typ cD l0 ppf tau
+    | `infer _ -> fprintf ppf "_"
 
   let rec fmt_ppr_pat_spine cD cG lvl ppf = function
     | Comp.PatNil -> fprintf ppf ""

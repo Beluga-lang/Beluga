@@ -3138,11 +3138,16 @@ let interactive_harpoon_command =
     $> fun i -> H.Type i
   in
   let suffices =
+    let tau_list_item =
+      alt
+        (cmp_typ $> fun tau -> `exact tau)
+        (token T.UNDERSCORE |> span $> fun (loc, _) -> `infer loc)
+    in
     seq2
       (tokens [T.KW_SUFFICES; T.KW_BY]
        &> cmp_exp_syn)
       (token T.KW_TOSHOW
-       &> sep_by0 cmp_typ (token T.COMMA))
+       &> sep_by0 tau_list_item (token T.COMMA))
     $> fun (i, tau_list) ->
        H.Suffices (i, tau_list)
   in

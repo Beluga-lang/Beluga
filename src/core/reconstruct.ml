@@ -2470,8 +2470,9 @@ and elDirective cD cG pb (d : Apx.Comp.directive) ttau : Int.Comp.directive =
        List.map (fun (loc, tau, p) -> (loc, elCompTyp cD tau, p)) ps
      in
      Check.Comp.unify_suffices loc cD tau_i
-       (List.map (fun (_, tau, _) -> tau) ps)
-       (Whnf.cnormCTyp ttau);
+       (List.map (fun (_, tau, _) -> `exact tau) ps)
+       (Whnf.cnormCTyp ttau)
+     |> ignore;
      let ps =
        let i_head = I.head_of_application i in
        List.mapi

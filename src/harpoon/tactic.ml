@@ -625,18 +625,18 @@ let suffices
       (i, (tau_i, Whnf.m_id))
   in
   let tau_i' = Whnf.cnormCTyp ttau_i in
-  (* Need to normalize the scrutinee here because genMApp will create
-     a spine of MApps involving MMVars to eliminate the leading PiBoxes, both
-     implicit & explicit kinds. However, after unifying with the given
-     type annotations and goal via unify_suffices, these MMVars will
-     be *instantiated* MMVars, which print incorrectly by showing an
-     msub. So we need to normalize here to replace the instantiated
-     MMVars with their instantiations. *)
-  let i' = Whnf.(cnormExp' (i', m_id)) in
   let tau_args =
     B.Check.Comp.unify_suffices loc g.context.cD tau_i' tau_args
       (Whnf.cnormCTyp g.goal)
   in
+  (* Need to normalize the scrutinee here because genMApp will create
+     a spine of MApps involving MMVars to eliminate the leading
+     PiBoxes, both implicit & explicit kinds. However, after unifying
+     with the given type annotations and goal via unify_suffices,
+     these MMVars will be *instantiated* MMVars, which print
+     incorrectly by showing an msub. So we need to normalize here to
+     replace the instantiated MMVars with their instantiations. *)
+  let i' = Whnf.(cnormExp' (i', m_id)) in
   (* generate the subgoals for the arguments.
      by unification it doesn't matter which list we use. *)
   let children, subproofs =

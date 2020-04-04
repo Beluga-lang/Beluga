@@ -386,4 +386,8 @@ let process_command
      dprnt "[harpoon] [solve] double-check!";
      Check.Comp.check cD cG (Lazy.force mfs) ~cIH: cIH e g.goal;
      dprnt "[harpoon] [solve] double-check DONE";
-     (Comp.solve e |> Tactic.solve) t g
+     let e = Whnf.(cnormExp (e, m_id)) in
+     if Whnf.closedExp e then
+       (Comp.solve e |> Tactic.solve) t g
+     else
+       State.printf s "Solution contains uninstantiated metavariables."

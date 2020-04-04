@@ -126,7 +126,8 @@ let rec loop (s : State.t) : unit =
         situations when entering is necessary. -je *)
      Session.enter c;
     (* Show the proof state and the prompt *)
-    printf "@,@[<v>@,%a@,@]@?"
+    printf "@,@[<v>@,Theorem: %a@,%a@,@]@?"
+      Id.print (Theorem.get_name t)
       P.fmt_ppr_cmp_proof_state g;
     (*
       printf "@,@[<v>@,%a@,There are %d IHs.@,@]@?"

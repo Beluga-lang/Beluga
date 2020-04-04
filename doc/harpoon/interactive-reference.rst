@@ -177,8 +177,9 @@ Proof tactics
 
 Use ``intros [NAME...]`` to introduce assumptions into the context.
 
-This tactic is applicable when the goal type is a function type (either simple
-or dependent).
+*Restrictions*:
+
+* The current goal type is either a simple or dependent function type.
 
 For Pi-types, the name of the assumption matches the name used in the Pi. For
 arrow-types, names will be taken from the given list of names, in order. If no
@@ -199,6 +200,11 @@ which the assumptions are in the context.
 
 Use ``split EXP`` to perform case analysis on the synthesizable expression ``EXP``.
 
+*Restrictions:*
+
+* The expression ``EXP`` and its synthesized type may not contain uninstantiated
+  metavariables.
+
 On success, this tactic removes the current subgoal and introduces a new subgoal
 for every possible constructor for ``EXP``.
 
@@ -209,7 +215,7 @@ for every possible constructor for ``EXP``.
 
 Use ``msplit MVAR`` to perform case analysis on the metavariable ``MVAR``.
 
-This command is syntactic sugar for a more verbose command using ``split``.
+This command is syntactic sugar for ``split [_ |- MVAR]``.
 
 .. _cmd-by:
 
@@ -228,11 +234,22 @@ Valid values for ``MODIFIER`` are
 * ``strengthened``: the binding is made as a metavariable, and its context is
   strengthened according to :ref:`LF Subordination`.
 
-The ``unboxed`` and ``strengthened`` modifiers are permitted only if the
-computed type of ``EXP`` is a boxed contextual type.
+*Restrictions:*
+
+* The defined variable ``VAR`` must not already be in scope.
+* ``EXP`` and its synthesized type may not contain uninstantiated metavariables.
+* (For ``unboxed`` and ``strengthened`` only.) The synthesized type must be a
+  boxed contextual object.
 
 On success, this tactic replaces the current subgoal with a subgoal having one
 additional entry in the appropriate context.
+
+.. tip::
+
+    LF terms whose contexts contain blocks are not in principle eligible for
+    strengthening. But such a context is equivalent to a flat context, and
+    Beluga will automatically flatten any blocks when strengthening.
+    Therefore, ``strengthened`` has a secondary use for flattening.
 
 .. _cmd-unbox:
 
@@ -259,7 +276,9 @@ See also :ref:`by <cmd-by>`.
 Use ``solve EXP`` to complete the proof by providing an explicit checkable
 expression ``EXP``.
 
-The expression ``EXP`` must check against the current subgoal's type.
+*Restrictions:*
+
+* The expression ``EXP`` must check against the current subgoal's type.
 
 On success, this tactic removes the current subgoal, introducing no new
 subgoals.
@@ -270,12 +289,12 @@ subgoals.
 ^^^^^^^^^^^^
 
 Use ``suffices by EXP toshow TAU...`` to reason backwards via the synthesizable
-expression ``EXP`` by constructing proofs for each type ``TAU``.
+expression ``EXP`` by constructing proofs for each type annotation ``TAU``.
 
 This command captures the common situation when a lemma or computational
 constructor can be used to complete a proof, because its conclusion is
-(unifiable with) the subgoal's type. In this case, it suffices to construct the
-arguments to the lemma or constructor in order to complete the proof.
+(unifiable with) the subgoal's type. In this case, it *suffices* to construct
+the arguments to the lemma or constructor.
 
 The main restriction on ``suffices`` is that the expression ``EXP`` must
 synthesize a type of the form
@@ -287,17 +306,39 @@ synthesize a type of the form
 Thankfully, this is the most common form of type one sees when working with
 Beluga.
 
-Each type ``tau_i`` must unify with the ``i`` th type given in the command.
-It is through these unifications that the instantiations for all the Pi-bound
-metavariables are found. It is an error if after unification, there remain
-uninstantiated Pi-bound variables.
+*Restrictions:*
+
+* The expression ``EXP`` must synthesize a compatible type, as above.
+* Its target type ``tau`` must unify with the current goal type.
+* Each type ``tau_i`` must unify with the ``i`` th type annotation given in the
+  command.
+* After unification, there must remain no uninstantiated metavariables.
+
+.. tip::
+
+    Sometimes, not all the type annotations are necesary to pin down the
+    instantiations for the Pi-bound metavariables.
+    Instead of a type, you can use ``_`` to indicate that this type annotation
+    should be uniquely inferrable given the goal type and the other specified
+    annotations. It is not uncommon to use ``suffices by i toshow _``.
+
+.. tip::
+
+    ``suffices`` eliminates both explicit and implicit leading Pi-types via
+    unification. It can sometimes be simpler to manually eliminate leading
+    explicit Pi-types via partial application:
+    ``suffices by i [C] ... toshow ...``.
+    When explicit Pi-types are manually eliminated, the need for a full type
+    annotation is less common.
 
 On success, one subgoal is generated for each ``tau_i``, and the current subgoal
 is removed.
 
 In principle, this command is redundant with ``solve`` because one could just
 write ``solve EXP`` to invoke the lemma directly, but this can be quite
-unwieldy if the arguments to the lemma are complicated.
+unwieldy if the arguments to the lemma are complicated. Furthermore, the
+arguments would need to be written as Beluga terms rather than interactively
+constructed.
 
 .. note::
 

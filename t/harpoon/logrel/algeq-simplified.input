@@ -1,0 +1,179 @@
+t/harpoon/logrel/algeq-simplified.bel
+select logEq_Monotone
+split x
+suffices by LogArr toshow _
+solve x1 _ [_ |- $W[$R]] _ _ x2
+unbox x1 as X
+suffices by LogBase toshow _
+solve [_ |- X[$W]]
+select reflect
+msplit A
+unbox x as R
+suffices by LogArr toshow _
+by reify [ |- T ] x1 as S unboxed
+by reflect [ |- T1 ] [_ |- alg_app R[$R] S] as done
+unbox x as R
+suffices by LogBase toshow _
+solve [_ |- alg_base refl refl R]
+select reify
+msplit A
+invert x
+by reflect [|- T] [g, b:block x:tm, y:algeqNeu x x T[] |- b.2] as q
+by x1 [g, b:block x:tm, y:algeqNeu x x T[]] [g, b |- ..] [g, b |- b.1] [g, b |- b.1] q as q'
+by reify _ q' as R unboxed
+solve [_ |- alg_arr \x.\y. R[..,<x;y>]]
+invert x
+solve x1
+select closed
+msplit T
+invert x2
+unbox x as S1
+unbox x1 as S2
+suffices by LogArr toshow _
+by x3 _ [_ |- $R] _ _ x4 as q0
+by closed _ (mstep_app [_ |- S1[$R]]) (mstep_app [_ |- S2[$R]]) q0 as done
+invert x2
+invert x3
+by mstep_trans x [_ |- S] as S' unboxed
+by mstep_trans x1 [_ |- S1] as S1' unboxed
+suffices by LogBase toshow _
+solve [_ |- alg_base S' S1' X]
+select algeqNeuSym
+split x
+by algeqNeuSym [_ |- X] as R unboxed
+by algeqSym [_ |- X1] as N unboxed
+solve [_ |- alg_app R N]
+split x
+by algeqSym [_, b:block x:tm, y:algeqNeu x x _ |- X[..,b.1,b.2]] as X' unboxed
+strengthen [_ |- X'] as X'' % slight hack for flattening
+solve [_ |- alg_arr \x.\u. X'']
+by algeqNeuSym [_ |- X] as X' unboxed
+solve [_ |- alg_base S1 S X']
+select logEqSym
+msplit T
+invert x
+suffices by LogArr toshow _
+by logEqSym _ x2 as e'
+by x1 _ [_ |- $R] _ _ e' as q
+solve logEqSym _ q
+invert x
+suffices by LogBase toshow _
+solve algeqSym x1
+select algeqNeuUnique
+split x
+invert x1
+invert algeqNeuUnique [_ |- X] [_ |- X2]
+solve [|- refltp]
+invert x1
+solve [|- refltp]
+select determinacy
+split x
+split x1 % original proof uses the 1-step lookahead to do let instead of case
+invert determinacy [_ |- S] [_ |- S1]
+solve [_ |- refltm]
+impossible [_ |- S] % but the other case is indeed impossible, so nothing lost
+split x1 % same deal again
+impossible [_ |- S]
+solve [_ |- refltm]
+select confluence
+split x
+split x1
+invert determinacy [_ |- S] [_ |- S2]
+solve confluence [_ |- S1] [_ |- S3]
+solve Common [_ |- refl] x
+solve Common x1 [_ |- refl]
+select neutral_doesnt_step
+split x
+invert x1
+solve neutral_doesnt_step [_ |- S] [_ |- X]
+invert x1
+impossible [_ |- X]
+select neutral_mstep
+split x
+impossible neutral_doesnt_step [_ |- S] x1
+solve [_ |- refltm]
+select determinacy'
+invert confluence x x1
+invert neutral_mstep x5 x3
+invert neutral_mstep x4 (algeqNeuSym x2)
+solve [_ |- refltm]
+select algeqNeuTrans
+split x
+invert x1
+invert algeqNeuUnique [_ |- X] [_ |- X2]
+by algeqNeuTrans [_ |- X] [_ |- X2] as R1 unboxed
+by algeqTrans [_ |- X1] [_ |- X3] as R2 unboxed
+solve [_ |- alg_app R1 R2]
+select algeqTrans
+split x
+invert x1
+by algeqTrans [_, b:block x:tm, y:algeqNeu x x _ |- X[..,b.1,b.2]] [_, b |- X1[..,b.1,b.2]] as R unboxed
+solve [_ |- alg_arr \x.\u. R[..,<x;u>]]
+invert x1
+invert determinacy' [_ |- S1] [_ |- S2] [_ |- X] [_ |- X1]
+unbox algeqNeuTrans [_ |- X] [_ |- X1] as R
+solve [_ |- alg_base S S3 R]
+select logEqTrans
+msplit T
+invert x
+invert x1
+suffices by LogArr toshow _
+by x2 _ [_ |- $R] _ _ x4 as q1
+by x3 _ [_ |- $R] _ _ (logEqTrans _ (logEqSym _ x4) x4) as q2
+solve logEqTrans _ q1 q2
+invert x
+invert x1
+suffices by LogBase toshow _
+solve algeqTrans x2 x3
+select lookup
+split x
+invert x1
+solve lookup x2 x3
+invert x1
+solve x3
+select wknLogSub
+split x
+by wknLogSub _ _ [_ |- $W] x1 as ih
+suffices by Dot ih toshow _
+suffices by logEq_Monotone toshow _
+solve Nil
+select logEqSubSym
+split x
+suffices by Dot (logEqSubSym x1) toshow _
+solve logEqSym _ x2
+select logEqSubTrans
+split x
+invert x1
+by logEqSubTrans x2 x4 as q1
+by logEqTrans _ x3 x5 as q2
+solve Dot q1 q2
+select thm
+split x
+by thm x2 x1 as q1
+by logEqSubTrans (logEqSubSym x1) x1 as s_refl
+by thm x3 s_refl as q2
+solve logEqTrans _ q1 q2
+solve logEqSym _ (thm x2 (logEqSubSym x1))
+invert thm x2 x1
+suffices by x4 toshow _
+solve thm x3 x1
+solve lookup x2 x1
+suffices by LogArr toshow _
+by wknLogSub _ _ [_ |- $R] x1 as s
+by Dot s x3 as s'
+solve thm x2 s'
+suffices by LogArr toshow _
+by Dot (wknLogSub _ _ [_ |- $R] x1) x3 as s
+by thm x2 s as q
+solve closed _ [_ |- trans1 beta refl] [_ |- trans1 beta refl] q
+by thm x2 (Dot x1 (thm x3 x1)) as q
+solve closed _ [_ |- trans1 beta refl] [_ |- refl] q
+select idLogSub
+split x
+by idLogSub x1 as q
+suffices by Dot toshow _, _
+solve reflect _ [g', b:block x:tm, y:algeqNeu x x T[] |- b.2]
+solve wknLogSub [g', b:block x:tm, a:algeqNeu x x T[]] [g'] [g', b |- ..] q
+solve Nil
+select completeness
+solve reify _ (thm x1 (idLogSub x))

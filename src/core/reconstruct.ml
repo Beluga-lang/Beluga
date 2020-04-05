@@ -335,15 +335,15 @@ let unifyDCtxWithFCVar loc cD cPsi1 cPsi2 =
   let rec loop cD cPsi1 cPsi2 = match (cPsi1 , cPsi2) with
     | (Int.LF.Null , Apx.LF.Null) -> ()
 
-    | (Int.LF.CtxVar (Int.LF.CInst (mmvar (*(_n, ({contents = None} as cvar_ref), _cO, Int.LF.CTyp (Some s_cid), _, dep)*), _cD)) , cPsi) ->
-       let Int.LF.CTyp (Some s_cid) = Int.LF.(mmvar.typ) in
+    | (Int.LF.CtxVar (Int.LF.CInst (v, _cD)) , cPsi) ->
+       let Int.LF.CTyp (Some s_cid) = Int.LF.(v.typ) in
       begin
         let cPsi = elDCtxAgainstSchema loc Lfrecon.Pibox cD cPsi s_cid in
-        Unify.instantiateCtxVar (Int.LF.(mmvar.instantiation), cPsi);
+        Unify.instantiateCtxVar (Int.LF.(v.instantiation), cPsi);
         match Context.ctxVar cPsi with
           | None -> ()
           | Some (Int.LF.CtxName psi) ->
-            FCVar.add psi (cD, Int.LF.(Decl (psi, CTyp (Some s_cid), mmvar.depend)))
+            FCVar.add psi (cD, Int.LF.(Decl (psi, CTyp (Some s_cid), v.depend)))
           | _ -> ()
       end
 
@@ -770,11 +770,11 @@ let mgCompTyp cD (loc, c) =
 let rec mgCtx cD' (cD, cPsi) = begin match cPsi with
     | Int.LF.CtxVar (Int.LF.CtxOffset psi_var) ->
         let (n , sW) = Whnf.mctxCDec cD psi_var in
-        let mmvar =
+        let v =
           let open Int.LF in
           Whnf.newMMVar' (Some n) (cD', CTyp (Some sW)) Maybe
         in
-        Int.LF.(CtxVar (CInst (mmvar, Whnf.m_id)))
+        Int.LF.(CtxVar (CInst (v, Whnf.m_id)))
     | Int.LF.Null -> Int.LF.Null
     | Int.LF.DDec (cPsi, Int.LF.TypDecl (x, tA)) ->
         let cPsi' = mgCtx cD' (cD, cPsi) in

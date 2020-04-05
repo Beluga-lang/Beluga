@@ -40,8 +40,8 @@ rec copyXGood : {g:termCtx} [g |- term] -> [g |- term] =
 / total e (copyXGood g e)/
 mlam g => fn e =>
   case e of
-  | [g,x:term |-  z]     => [g,x:term |-  z]
-  | [g,x:term |-  #p] => [g,x:term |-  #p]
+  | [g,x:term |-  x]     => [g,x:term |-  x]
+  | [g,x:term |-  #p[..]] => [g,x:term |-  #p[..]]
   | [g |- z] => [g |- z]
 ;
 

@@ -81,6 +81,7 @@ module type UNIFY = sig
   (* All unify* functions return () on success and raise Failure on failure *)
   val unify        : mctx -> dctx  -> nclo  -> nclo -> unit
   val unifyH       : mctx -> dctx_hat -> head -> head -> unit
+  val unifySub     : mctx -> dctx -> sub -> sub -> unit
   val unifyTyp     : mctx -> dctx  -> tclo  -> tclo -> unit
   val unifyTypRec  : mctx -> dctx  -> (typ_rec * sub) -> (typ_rec * sub) -> unit
   val unifyDCtx    : mctx -> dctx -> dctx -> unit
@@ -1599,7 +1600,8 @@ let rec ground_sub cD = function (* why is parameter cD is unused? -je *)
             cPsi  |- tN <= [s]tA
             cPsi |- tN . s <= cPsi', x:A
           *)
-         let tN = ConvSigma.etaExpandMMVstr Syntax.Loc.ghost cD1 cPsi1 (tA, s) Maybe (Some n) in
+         let tN =
+           ConvSigma.etaExpandMMVstr Loc.ghost cD1 cPsi1 (tA, s) Maybe (Some n) in
          let tS  = genSpine cD1 cPsi1 (tB, LF.Dot(LF.Obj(tN), s))  in
          LF.App (tN, tS)
       | (LF.Atom (_ , _a, _tS) , _s) -> LF.Nil
@@ -2189,10 +2191,21 @@ let rec ground_sub cD = function (* why is parameter cD is unused? -je *)
     | (h, MPVar (({ typ = ClTyp (PTyp tA1,cPsi1); _ } as i, mt1), s1) ) ->
        (* ?#p[mt1, s1] ==  BVar k    or     ?#p[mt1, s1] = PVar (q, s) *)
        dprnt "(013) _-MPVar - head";
-       if isVar h && isPatSub s1 && isPatMSub mt1 then
+       let b1 = isVar h in
+       let b2 = isPatSub s1 in
+       let b3 = isPatMSub mt1 in
+       if b1 && b2 && b3 then
          unifyMMVarTerm cD0 cPsi i mt1 s1 (IHead h)
        else
-         raise (Failure "Cannot instantiate PVar with a head which is not guaranteed to remain a variable")
+         begin
+           dprintf begin fun p ->
+             p.fmt "[unifyH] @[<v>isVar h: %b\
+                    @,isPatSub s1: %b\
+                    @,isPatMSub mt1: %b@]"
+               b1 b2 b3
+             end;
+           raise (Failure "Cannot instantiate PVar with a head which is not guaranteed to remain a variable")
+         end
 
     | (PVar _  , Proj (PVar _, _))
     | (Proj (PVar _, _), PVar _) ->
@@ -2951,6 +2964,9 @@ let rec ground_sub cD = function (* why is parameter cD is unused? -je *)
 
     let unifyH cD phat h h' =
       unifyHead Unification cD (Context.hatToDCtx phat) h h'
+
+    let unifySub cD cPsi s1 s2 =
+      unifySub Unification cD cPsi s1 s2
    (* **************************************************************** *)
 
 let unify_phat psihat phihat =

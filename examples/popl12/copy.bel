@@ -20,6 +20,7 @@ inductive IsExp : {g:ctx} [g |- exp] -> ctype
 rec copy : (g:ctx)IsExp [g] [g |- M] -> IsExp [g] [g |- M] =
 / total e (copy g m e) /
 fn e => case e of
+  | IsVar ⇒ IsVar
 | IsZero => IsZero
 | IsSuc m => IsSuc (copy m)
 | IsLam m => let m' = copy m in IsLam m

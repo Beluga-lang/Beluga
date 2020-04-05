@@ -540,19 +540,19 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
     fprintf ppf "[%a]"
       (fmt_ppr_lf_mfront_typed cD lvl) (cM, cU)
 
-  and fmt_ppr_lf_mmvar lvl ppf mmvar =
+  and fmt_ppr_lf_mmvar lvl ppf v =
     (* check whether the mmvar is instantiated or not before proceeding to print *)
-    let u = LF.(mmvar.instantiation) in
+    let u = LF.(v.instantiation) in
     match !u with
     | None ->
        let open LF in
        fprintf ppf "?%a_%d"
-         Id.print mmvar.name
-         mmvar.mmvar_id
+         Id.print v.name
+         v.mmvar_id
     | Some it ->
-       match LF.(mmvar.typ) with
+       match LF.(v.typ) with
        | LF.ClTyp (_, cPsi) ->
-          fmt_ppr_lf_iterm LF.(mmvar.cD) cPsi lvl ppf it
+          fmt_ppr_lf_iterm LF.(v.cD) cPsi lvl ppf it
 
   and fmt_ppr_lf_offset cD ppf n =
     fprintf ppf "%s" (R.render_cvar cD n)
@@ -562,17 +562,17 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
     | LF.Inst mmvar -> fmt_ppr_lf_mmvar l0 ppf mmvar
 
   and fmt_ppr_lf_ctx_var cD ppf = function
-    | LF.CInst (mmvar, theta) ->
-       let g = LF.(mmvar.instantiation) in
+    | LF.CInst (v, theta) ->
+       let g = LF.(v.instantiation) in
        begin match !g with
        | None ->
           fprintf ppf "?%a[%a]"
-            Id.print LF.(mmvar.name)
+            Id.print LF.(v.name)
             (fmt_ppr_lf_msub cD 0) theta
 
        | Some (LF.ICtx cPsi) ->
           fprintf ppf "%a"
-            (fmt_ppr_lf_dctx LF.(mmvar.cD) 0) (Whnf.cnormDCtx (cPsi, theta))
+            (fmt_ppr_lf_dctx LF.(v.cD) 0) (Whnf.cnormDCtx (cPsi, theta))
        end
 
     | LF.CtxOffset psi ->

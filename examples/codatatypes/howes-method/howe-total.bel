@@ -233,13 +233,16 @@ rec howe_subst_var : (g:ctx) (h:ctx) Howe [|- T] [g |- #p] [g |- M]
 %    / total hs (howe_subst_var g h t p m s1 s2 hr hs) /
 fn h => fn hs =>
 let hs_annot : Howe_subst [g] [h |- $S1] [h |- $S2] = hs in
-  case hs of
-  | HNil => impossible h
-  | HCons hs' h' => (case h of
-                     | Howe_var [g,x:term _ |- x] s =>
-                       howe_osim_trans h' (osim_cus [h |- $S2] s)
-                     | Howe_var [g,x:term _ |- #p[..]] s =>
-                       howe_osim_trans (howe_subst_var (howe_refl [g |- #p]) hs') (osim_cus [h |- $S2] s))
+case hs of
+  | HNil =>
+        let Howe_var [⊢ #p] s = h in
+        impossible [⊢ #p]
+  | HCons hs' h' =>
+        case h of
+          | Howe_var [g,x:term _ |- x] s =>
+                howe_osim_trans h' (osim_cus [h |- $S2] s)
+          | Howe_var [g,x:term _ |- #p[..]] s =>
+                howe_osim_trans (howe_subst_var (howe_refl [g |- #p]) hs') (osim_cus [h |- $S2] s)
   % let (hsa : Howe_subst [g] [h |- $S1] [h |- $S2]) = hs in
   %   case h of
   %   | Howe_var [g,x:term T[] |- x] s =>

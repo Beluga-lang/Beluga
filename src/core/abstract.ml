@@ -288,9 +288,9 @@ and cnstr_spine sS = match sS with
 
 
 and cnstr_head h = match h with
-  | I.MMVar((mmvar, _), s)
-  | I.MVar(I.Inst mmvar, s) ->
-     constraints_solved (!I.(mmvar.constraints)) && cnstr_sub s
+  | I.MMVar((v, _), s)
+  | I.MVar(I.Inst v, s) ->
+     constraints_solved (!I.(v.constraints)) && cnstr_sub s
  |  _  -> false
 
 
@@ -514,9 +514,9 @@ and collectFVarSub p cQ phat (name, s') =
   let (cQ,s') = collectSub p cQ phat s' in
   (cQ, (name,s'))
 
-and collectMMVar loc p cQ (mmvar : I.mm_var)  =
+and collectMMVar loc p cQ (v : I.mm_var)  =
   let { I.name; I.instantiation; I.cD; I.typ; I.constraints; I.depend; _ } =
-    mmvar
+    v
   in
   match cD with
   | I.Empty -> begin
@@ -527,7 +527,7 @@ and collectMMVar loc p cQ (mmvar : I.mm_var)  =
              addVar loc p cQ (MMV (name, instantiation)) (MetaTyp (typ, depend)) in
 	         ( cQ'
            , let open I in
-             { mmvar with typ; depend }
+             { v with typ; depend }
            )
 	      | Some _ -> raise (Error.Violation "Expected whnf")
       else

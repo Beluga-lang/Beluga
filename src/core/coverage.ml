@@ -537,12 +537,24 @@ let rec pre_match_head cD cD' (cPsi, tH) (cPsi', tH') =
      else No
    *)
   | LF.PVar (p, s), LF.PVar (q, s') ->
-     let ms = Ctxsub.mctxToMMSub cD cD' in
-     let cPsi_p' = Whnf.cnormDCtx (cPsi', ms) in
-     let tH' = Whnf.cnormHead (tH', ms) in
+     let t = Ctxsub.mctxToMMSub cD cD' in
+     (* cD |- t : cD'
+        and t will instantiate every variable in cD' with a fresh
+        unification variable (MXVar) *)
+     dprintf begin fun p ->
+       p.fmt "[pre_match_head] @[<v>pvar-pvar case\
+              @,tH' = @[%a@]@]"
+         P.(fmt_ppr_lf_head cD' cPsi' l0) tH'
+       end;
+     let cPsi_p' = Whnf.cnormDCtx (cPsi', t) in
+     (* guaranteed to produce an MPVar because t is a closing MXVar
+        substitution constructed from cD' *)
+     let LF.MPVar (_, s') as tH' = Whnf.cnormHead (tH', t) in
      dprintf
        begin fun p ->
-       p.fmt "[pre_match_head] @[<v>pvar - case@,@[@[%a@]@ |- @[%a@]@]@,@[@[%a@]@ |- @[%a@]@]@] "
+       p.fmt "[pre_match_head]  @[<v>pvar - case\
+              @,pattern:     @[@[%a@]@ |- @[%a@]@]\
+              @,synthesized: @[@[%a@]@ |- @[%a@]@]@] "
          (P.fmt_ppr_lf_dctx cD P.l0) cPsi
          (P.fmt_ppr_lf_head cD cPsi P.l0) tH
          (P.fmt_ppr_lf_dctx cD' P.l0) cPsi'
@@ -558,15 +570,21 @@ let rec pre_match_head cD cD' (cPsi, tH) (cPsi', tH') =
        end;
      begin try
          U.unifyDCtx cD cPsi cPsi_p';
-         U.unifyH cD (Context.dctxToHat cPsi_p') tH tH';
+         (* only bother unifying the substitutions since we know that
+            the heads will unify (MPVar will just instantiate to the
+            PVar) *)
+         U.unifySub cD cPsi_p' s s';
          let _, tA, _ = Whnf.mctxPDec cD p in
          let _, tA', _ = Whnf.mctxPDec cD' q in
          Yes ((tA, S.LF.id), (tA', S.LF.id))
        with
-       | _ ->
-          dprint
-            begin fun _ ->
-            "[pre_match_head] pvar - SplitCand"
+       | e ->
+          dprintf
+            begin fun p ->
+            p.fmt
+              "[pre_match_head] pvar - SplitCand due to exception\
+               @.%s"
+              (Printexc.to_string e)
             end;
           SplitCand
             (* CtxSplitCand (pre_match_dctx cD cD_p cPsi cPsi_p [] []) *)
@@ -630,6 +648,12 @@ let rec pre_match_head cD cD' (cPsi, tH) (cPsi', tH') =
 and pre_match cD cD_p covGoal patt matchCands splitCands =
   let CovGoal (cPsi, tM, sA) = covGoal in
   let MetaPatt (cPhi, tN, sA') = patt in
+  dprintf begin fun p ->
+    p.fmt "[pre_match] @[<v>cov goal: @[%a@]\
+           @,pattern: @[%a@]@]"
+      P.(fmt_ppr_lf_normal cD cPsi l0) tM
+      P.(fmt_ppr_lf_normal cD_p cPhi l0) tN
+    end;
   match tM, tN with
   | LF.Lam (_, x, tM), LF.Lam (_, _, tN) ->
      let LF.PiTyp ((tdecl, _), tB), s = Whnf.whnfTyp sA in
@@ -677,9 +701,6 @@ and pre_match cD cD_p covGoal patt matchCands splitCands =
         (Eqn (covGoal, patt) :: matchCands, splitCands)
 
      | SplitCand -> (matchCands, Split (covGoal, patt)::splitCands)
-     (*
-     | CtxSplitCand (mC, sC) -> (mC @ matchCands, sC @ splitCands)
-      *)
      end
 
 and pre_match_spine cD cD_p (cPsi, tS, sA) (cPsi', tS', sA') matchCands splitCands =
@@ -861,54 +882,63 @@ let match_metaobj cD cD_p ((loc, mO), mt) ((loc', mO_p), mtp) mC sC =
   match (mO, mt), (mO_p, mtp) with
   | (LF.CObj cPsi, _), (LF.CObj cPsi', _) ->
      pre_match_dctx cD cD_p cPsi cPsi' mC sC
-  | (LF.ClObj (_, LF.MObj tR), LF.ClTyp (LF.MTyp tA, cPsi)),
-    (LF.ClObj (_, LF.MObj tR'), LF.ClTyp (LF.MTyp tA', cPsi')) ->
-     let mC0, sC0 = pre_match_dctx cD cD_p cPsi cPsi' mC sC in
-     let mC1, sC1 = pre_match_typ cD cD_p (cPsi, (tA, S.LF.id)) (cPsi', (tA', S.LF.id)) mC0 sC0 in
-     let covGoal = CovGoal (cPsi, tR, (tA, S.LF.id)) in
-     let pat = MetaPatt (cPsi', tR', (tA', S.LF.id)) in
-     dprintf
-       begin fun p ->
-       let f = P.fmt_ppr_lf_normal cD_p cPsi P.l0 in
-       p.fmt "[match_metaobj] MObj of MTyp: @[<v>tR = @[%a@]@,tR' = @[%a@]@]"
-         f tR f tR'
-       end;
-     pre_match cD cD_p covGoal pat mC1 sC1
-  | (LF.ClObj (_, LF.MObj tR), LF.ClTyp (LF.PTyp tA, cPsi)),
-    (LF.ClObj (_, LF.MObj tR'), LF.ClTyp (LF.PTyp tA', cPsi')) ->
-     let mC0, sC0 = pre_match_dctx cD cD_p cPsi cPsi' mC sC in
-     let mC1, sC1 = pre_match_typ cD cD_p (cPsi, (tA, S.LF.id)) (cPsi', (tA', S.LF.id)) mC0 sC0 in
-     let covGoal = CovGoal (cPsi, tR, (tA, S.LF.id)) in
-     let pat = MetaPatt (cPsi', tR', (tA', S.LF.id)) in
-     pre_match cD cD_p covGoal pat mC1 sC1
-  | (LF.ClObj (_, LF.PObj tH), LF.ClTyp (LF.PTyp tA, cPsi)),
-    (LF.ClObj (_, LF.PObj tH'), LF.ClTyp (LF.PTyp tA', cPsi')) ->
-     let mC0, sC0 = pre_match_dctx cD cD_p cPsi cPsi' mC sC in
-     let mC1, sC1 = pre_match_typ cD cD_p (cPsi, (tA, S.LF.id)) (cPsi', (tA', S.LF.id)) mC0 sC0 in
-     let covGoal = CovGoal (cPsi, LF.Root (Loc.ghost, tH, LF.Nil, `explicit), (tA, S.LF.id)) in
-     let pat = MetaPatt (cPsi', LF.Root (Loc.ghost, tH', LF.Nil, `explicit), (tA', S.LF.id)) in
-     pre_match cD cD_p covGoal pat mC1 sC1
-  | (LF.ClObj (_, LF.SObj s), LF.ClTyp (sT, cPsi)),
-    (LF.ClObj (_, LF.SObj s'), LF.ClTyp (sT', cPsi')) ->
-     let mC1, sC1 = pre_match_dctx cD cD_p cPsi cPsi' mC sC in
-     let covGoal = CovSub (cPsi, s, sT) in
-     let pat = MetaSub (cPsi', s', sT') in
-     pre_match_sub cD cD_p covGoal pat mC1 sC1
-  | _, _ ->
-     let s =
-       let open Format in
-       let mobj cD = P.fmt_ppr_cmp_meta_obj cD P.l0 in
-       let mtyp cD = P.fmt_ppr_cmp_meta_typ cD in
-       fprintf str_formatter "[coverage] @[<v>[match_metaobj] @,\
-                              Found covgoal @[%a@ : %a@]@,
-                              Pattern: @[%a@ : %a@]"
-         (mobj cD) (loc, mO)
-         (mtyp cD) mt
-         (mobj cD_p) (loc', mO_p)
-         (mtyp cD_p) mtp;
-       flush_str_formatter ()
-     in
-     Error.violation s
+  | LF.( (ClObj (_, clobj), ClTyp (cltyp, cPsi))
+       , (ClObj (_, clobj'), ClTyp (cltyp', cPsi'))) ->
+     match (clobj, cltyp), (clobj', cltyp') with
+     | LF.( (MObj tR, MTyp tA)
+          , (MObj tR', MTyp tA') ) ->
+        let mC0, sC0 = pre_match_dctx cD cD_p cPsi cPsi' mC sC in
+        let mC1, sC1 = pre_match_typ cD cD_p (cPsi, (tA, S.LF.id)) (cPsi', (tA', S.LF.id)) mC0 sC0 in
+        let covGoal = CovGoal (cPsi, tR, (tA, S.LF.id)) in
+        let pat = MetaPatt (cPsi', tR', (tA', S.LF.id)) in
+        pre_match cD cD_p covGoal pat mC1 sC1
+
+     | LF.( (MObj tR, PTyp tA)
+          , (MObj tR', PTyp tA') ) ->
+        let mC0, sC0 = pre_match_dctx cD cD_p cPsi cPsi' mC sC in
+        let mC1, sC1 = pre_match_typ cD cD_p (cPsi, (tA, S.LF.id)) (cPsi', (tA', S.LF.id)) mC0 sC0 in
+        let covGoal = CovGoal (cPsi, tR, (tA, S.LF.id)) in
+        let pat = MetaPatt (cPsi', tR', (tA', S.LF.id)) in
+        pre_match cD cD_p covGoal pat mC1 sC1
+
+     | LF.( (PObj tH, PTyp tA)
+          , (PObj tH', PTyp tA') ) ->
+        let mC0, sC0 = pre_match_dctx cD cD_p cPsi cPsi' mC sC in
+        let mC1, sC1 = pre_match_typ cD cD_p (cPsi, (tA, S.LF.id)) (cPsi', (tA', S.LF.id)) mC0 sC0 in
+        let covGoal = CovGoal (cPsi, LF.Root (Loc.ghost, tH, LF.Nil, `explicit), (tA, S.LF.id)) in
+        let pat = MetaPatt (cPsi', LF.Root (Loc.ghost, tH', LF.Nil, `explicit), (tA', S.LF.id)) in
+        pre_match cD cD_p covGoal pat mC1 sC1
+
+     | LF.( (MObj tR, PTyp tA)
+          , (PObj tH, PTyp tA') ) ->
+        let mC0, sC0 = pre_match_dctx cD cD_p cPsi cPsi' mC sC in
+        let mC1, sC1 = pre_match_typ cD cD_p (cPsi, (tA, S.LF.id)) (cPsi', (tA', S.LF.id)) mC0 sC0 in
+        let covGoal = CovGoal (cPsi, tR, (tA, S.LF.id)) in
+        let tR' = LF.(Root (Loc.ghost, tH, Nil, `explicit)) in
+        let pat = MetaPatt (cPsi', tR', (tA', S.LF.id)) in
+        pre_match cD cD_p covGoal pat mC1 sC1
+
+     | LF.( (SObj s, sT), (SObj s', sT') ) ->
+        let mC1, sC1 = pre_match_dctx cD cD_p cPsi cPsi' mC sC in
+        let covGoal = CovSub (cPsi, s, sT) in
+        let pat = MetaSub (cPsi', s', sT') in
+        pre_match_sub cD cD_p covGoal pat mC1 sC1
+
+     | _, _ ->
+        let s =
+          let open Format in
+          let mobj cD = P.fmt_ppr_cmp_meta_obj cD P.l0 in
+          let mtyp cD = P.fmt_ppr_cmp_meta_typ cD in
+          fprintf str_formatter "[coverage] @[<v>[match_metaobj] @,\
+                                 Found covgoal @[%a@ : %a@]@,
+                                 Pattern: @[%a@ : %a@]"
+            (mobj cD) (loc, mO)
+            (mtyp cD) mt
+            (mobj cD_p) (loc', mO_p)
+            (mtyp cD_p) mtp;
+          flush_str_formatter ()
+        in
+        Error.violation s
 (*
      raise (Error (Loc.ghost, MatchError ("Meta Obj Mismatch \n" ^ "Found CovGoal: " ^ P.metaObjToString cD (loc, mO) ^ " : " ^ P.metaTypToString cD mt  ^ "\nPattern: " ^ P.metaObjToString cD_p (loc', mO_p) ^ " : " ^ P.metaTypToString cD_p mtp ^ "\n")))
  *)
@@ -982,12 +1012,25 @@ and match_spines (cD, cG) (cD_p, cG_p) pS pS' mC sC =
      in
      match_spines (cD, cG) (cD_p, cG_p)
        (pS, (tau2,t)) (pS', (tau2', t')) mC1 sC1
+
   | (Comp.PatApp (_, pat, pS), (Comp.TypPiBox (_, LF.Decl (_, LF.ClTyp (LF.MTyp tA, cPsi), _), tau2), t)),
     (Comp.PatApp (_, pat', pS'), (Comp.TypPiBox (_, LF.Decl (_, LF.ClTyp (LF.MTyp tA', cPsi'), _), tau2'), t')) ->
      let Comp.PatMetaObj (_, (loc, mO)) = pat in
      let Comp.PatMetaObj (_, (loc', mO')) = pat' in
      let tau1 = LF.ClTyp (LF.MTyp (Whnf.cnormTyp (tA, t)), Whnf.cnormDCtx (cPsi, t)) in
      let tau1' = LF.ClTyp (LF.MTyp (Whnf.cnormTyp (tA', t')), Whnf.cnormDCtx (cPsi', t')) in
+     let t2 = LF.MDot (mO, t) in
+     let t2' = LF.MDot (mO', t') in
+     let mC1, sC1 = match_metaobj cD cD_p ((loc, mO), tau1) ((loc', mO'), tau1') mC sC in
+     match_spines (cD, cG) (cD_p, cG_p)
+       (pS, (tau2, t2)) (pS', (tau2', t2')) mC1 sC1
+
+  | (Comp.PatApp (_, pat, pS), (Comp.TypPiBox (_, LF.Decl (_, LF.ClTyp (LF.PTyp tA, cPsi), _), tau2), t)),
+    (Comp.PatApp (_, pat', pS'), (Comp.TypPiBox (_, LF.Decl (_, LF.ClTyp (LF.PTyp tA', cPsi'), _), tau2'), t')) ->
+     let Comp.PatMetaObj (_, (loc, mO)) = pat in
+     let Comp.PatMetaObj (_, (loc', mO')) = pat' in
+     let tau1 = LF.ClTyp (LF.PTyp (Whnf.cnormTyp (tA, t)), Whnf.cnormDCtx (cPsi, t)) in
+     let tau1' = LF.ClTyp (LF.PTyp (Whnf.cnormTyp (tA', t')), Whnf.cnormDCtx (cPsi', t')) in
      let t2 = LF.MDot (mO, t) in
      let t2' = LF.MDot (mO', t') in
      let mC1, sC1 = match_metaobj cD cD_p ((loc, mO), tau1) ((loc', mO'), tau1') mC sC in
@@ -2131,7 +2174,16 @@ let rec best_cand (cD, mv_list) k cD_tail =
                       p.fmt "[best_cand] generated covgoal @[%a@]"
                         (Prettycov.fmt_ppr_cov_goal cD') cg
                       end;
-                    let ms' = LF.MDot (LF.ClObj (Context.dctxToHat cPsi', LF.MObj tR), ms) in
+                    let clobj = match cT with
+                      (* gonna be a ClTyp because we're in the CovGoal branch *)
+                      | LF.ClTyp (LF.MTyp _, _) -> LF.MObj tR
+                      | LF.ClTyp (LF.PTyp _, _) ->
+                         (* ensure that PTyp is added as a PObj to the
+                            msub; otherwise normalization WILL crash. *)
+                         let LF.Root (_, tH, _, _) = tR in
+                         LF.PObj tH
+                    in
+                    let ms' = LF.MDot (LF.ClObj (Context.dctxToHat cPsi', clobj), ms) in
                     let cD'', ms0 = addToMCtx cD' (cD_tail, ms') in
                     let cg' =
                       CovGoal
@@ -2232,20 +2284,46 @@ let rec genPattSpine names mk_pat_var k =
      , ttau0
      )
 
-  | Comp.TypPiBox (_, LF.Decl (u, LF.ClTyp (LF.MTyp tP,  cPsi), dep), tau), t ->
+  (* Case for bound MVar and bound PVar are the same, up to calling
+     the appropriate eta-expansion function from ConvSigma.
+     So we use an or-pattern for both PTyp and MTyp, but also rebind
+     that part as `cl` so that we can dispatch on the variable class
+     later to call the right eta-expansion.
+   *)
+  | ( Comp.TypPiBox
+        ( _
+        , LF.(Decl (u, ClTyp ((PTyp tP | MTyp tP) as cl, cPsi), dep))
+        , tau )
+    , t ) ->
      let tP' = Whnf.cnormTyp (tP, t) in
      let cPsi' = Whnf.cnormDCtx (cPsi, t) in
      let u = NameGen.renumber names u in
-     let tR = ConvSigma.etaExpandMMVstr Loc.ghost LF.Empty cPsi' (tP', S.LF.id) dep (Some u) in
+     (* decide which eta-expansion function to use based on the
+        variable class, and avoid forming MObj in case eta-expansion
+        of a PTyp does not produce a true normal. *)
+     let clobj =
+       let call f =
+         f Loc.ghost LF.Empty cPsi' (tP', S.LF.id) dep (Some u)
+       in
+       match cl with
+       | LF.PTyp _ ->
+          begin match call ConvSigma.etaExpandMPVstr with
+          | LF.Root (_, tH, tS, _) ->
+             assert (match tS with LF.Nil -> true | _ -> false);
+             LF.PObj tH
+          | tM -> LF.MObj tM
+          end
+       | LF.MTyp _ -> LF.MObj (call ConvSigma.etaExpandMMVstr)
+     in
      let pat1 =
        Comp.PatMetaObj
          ( Loc.ghost
-         , (Loc.ghost, LF.ClObj (Context.dctxToHat cPsi', LF.MObj tR))
+         , (Loc.ghost, LF.ClObj (Context.dctxToHat cPsi', clobj))
          )
      in
      let cG, pS, ttau0 =
        genPattSpine (u :: names) mk_pat_var k
-         (tau, LF.MDot (LF.ClObj (Context.dctxToHat cPsi', LF.MObj tR), t))
+         (tau, LF.MDot (LF.ClObj (Context.dctxToHat cPsi', clobj), t))
      in
      (cG, Comp.PatApp (Loc.ghost, pat1, pS), ttau0)
 
@@ -2357,6 +2435,10 @@ let genPatt names mk_pat_var (cD_p, tau_v) (c, tau_c) =
        unify; therefore c pS is not inhabit tau_v
    *)
   | U.Failure _ ->
+     dprintf begin fun p ->
+       p.fmt "[genPatt] case for constructor %s is impossible"
+         (R.render_cid_comp_const c)
+       end;
      None
   | Abstract.Error (_, Abstract.LeftoverConstraints) as e ->
      print_string

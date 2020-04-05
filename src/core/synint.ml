@@ -221,6 +221,10 @@ module LF = struct
   let mvar cvar sub : head =
     MVar (cvar, sub)
 
+  let mmvar inst = MMVar inst
+
+  let mpvar inst = MPVar inst
+
   (** Assert that the contextual type declaration be a real Decl, and
       not a DeclOpt.
       Raises a violation if it is a DeclOpt.

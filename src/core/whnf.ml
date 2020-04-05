@@ -115,8 +115,8 @@ let newMMVar' name (cD, mtyp) depend =
   }
 
 let newMMVar n (cD, cPsi, tA) dep =  newMMVar' n (cD, ClTyp (MTyp tA,cPsi)) dep
-
 let newMPVar n (cD, cPsi, tA) dep = newMMVar' n (cD, ClTyp (PTyp tA, cPsi)) dep
+
 let newMSVar n (cD, cl, cPsi, cPhi) dep = newMMVar' n (cD, ClTyp (STyp (cl, cPhi), cPsi)) dep
 let newCVar n cD (sW) dep = CInst (newMMVar' n (cD, CTyp sW)  dep, MShift 0)
 
@@ -459,6 +459,7 @@ and normMObj (tM, s) = match tM with
 and reduceTupleFt (ft, i) = match ft with
   | Head h -> Head (Proj (h, i))
   | Obj (Tuple (_loc,tM)) -> Obj (reduceTuple (tM, i))
+  | Obj _ -> Error.violation "[reduceTupleFt] not a tuple"
 
 and reduceTuple = function
   | (Last tM, 1) -> tM
@@ -624,7 +625,9 @@ and cnormHead' (h, t) = match h with
   | BVar k -> Head (BVar k)
   | Const c -> Head (Const c)
   | AnnH (h,_) -> cnormHead' (h,t)
-  | Proj (h, k) -> reduceTupleFt (cnormHead' (h, t), k)
+  | Proj (h, k) ->
+     dprnt "[cnormHead'] Proj case";
+     reduceTupleFt (cnormHead' (h, t), k)
   | FVar x -> Head (FVar x)
   | FMVar (n,s) -> Head (FMVar (n,cnormSub (s,t)))
   | FPVar (n,s) -> Head (FPVar (n,cnormSub (s,t)))
@@ -635,12 +638,15 @@ and cnormHead' (h, t) = match h with
       | ClObj (_,MObj tM) -> Obj (norm (tM, s'))
     end
   | PVar (k, s) ->
-    let s' = cnormSub (s,t) in
-    begin match LF.applyMSub k t with
-      | MV k' -> Head (PVar(k', s'))
-      | ClObj (_,PObj h) -> normHead (h, s')
-      | ClObj (_,MObj tM) ->  Obj (norm (tM, s'))
-    end
+     dprnt "[cnormHead'] PVar case";
+     let s' = cnormSub (s,t) in
+     begin match LF.applyMSub k t with
+     | MV k' -> Head (PVar(k', s'))
+     | ClObj (_,PObj h) -> normHead (h, s')
+     | ClObj (_,MObj tM) ->
+        dprnt "PVar ~> normal term";
+        Obj (norm (tM, s'))
+     end
   | HClo (k,sv,s) ->
     let s' = cnormSub (s,t) in
     begin match LF.applyMSub sv t with
@@ -656,7 +662,9 @@ and cnormHead' (h, t) = match h with
     begin match normMMVar mmt with
       | ResMM (mm',mt) -> Head (MPVar((mm', cnormMSub' (mt,t)), cnormSub (s,t)))
       | Result (IHead h) -> cnormFt' (normHead(h,s), t)
-      | Result (INorm n) -> Obj (cnorm (norm (n, s), t))
+      | Result (INorm n) ->
+         dprnt "MPVar ~> Obj";
+         Obj (cnorm (norm (n, s), t))
     end
   | HMClo (k,(mmt,s)) ->
     begin match normMMVar mmt with

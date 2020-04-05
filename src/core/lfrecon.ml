@@ -2784,7 +2784,7 @@ let rec solve_fvarCnstr recT cD cnstr = match cnstr with
     end
 
 let solve_fcvarCnstr cnstrs =
-  let solve_one (tM, mmvar) =
+  let solve_one (tM, v) =
     let lookup_fcvar loc u =
       try
         FCVar.get u
@@ -2792,13 +2792,13 @@ let solve_fcvarCnstr cnstrs =
       | Not_found -> throw loc (LeftoverConstraints u)
     in
     let elSub loc cPsi s cPhi =
-      Int.LF.(elSub loc Pibox mmvar.cD cPsi s Subst cPhi)
+      Int.LF.(elSub loc Pibox v.cD cPsi s Subst cPhi)
     in
     let weakenAppropriately cD_d cPhi =
-      let d = Context.length Int.LF.(mmvar.cD) - Context.length cD_d in
+      let d = Context.length Int.LF.(v.cD) - Context.length cD_d in
       if d = 0 then cPhi else Whnf.cnormDCtx (cPhi, Int.LF.MShift d)
     in
-    match tM, Int.LF.(mmvar.typ) with
+    match tM, Int.LF.(v.typ) with
     | Apx.LF.(Root (loc, FMVar (u, s), _nil_spine)), Int.LF.(ClTyp (MTyp _, cPsi)) ->
        assert (match _nil_spine with Apx.LF.Nil -> true | _ -> false);
        let (cD_d, Int.LF.(Decl (_, ClTyp (MTyp _tP, cPhi), _))) =
@@ -2806,15 +2806,15 @@ let solve_fcvarCnstr cnstrs =
        in
        let cPhi = weakenAppropriately cD_d cPhi in
        let s'' = elSub loc cPsi s cPhi in
-       Int.LF.(mmvar.instantiation := Some (INorm (Root (loc, FMVar (u, s''), Nil, `explicit))))
+       Int.LF.(v.instantiation := Some (INorm (Root (loc, FMVar (u, s''), Nil, `explicit))))
     | Apx.LF.(Root (loc, FPVar (x, s), spine)), Int.LF.(ClTyp (MTyp _, cPsi)) ->
        let (cD_d, Int.LF.(Decl (_, ClTyp (PTyp tA, cPhi), _))) =
          lookup_fcvar loc x
        in
        let cPhi = weakenAppropriately cD_d cPhi in
        let s'' = elSub loc cPsi s cPhi in
-       let (tS, _) = elSpine loc Pibox Int.LF.(mmvar.cD) cPsi spine (tA, s'') in
-       Int.LF.(mmvar.instantiation := Some (INorm (Root (loc, FPVar (x, s''), tS, `explicit))))
+       let (tS, _) = elSpine loc Pibox Int.LF.(v.cD) cPsi spine (tA, s'') in
+       Int.LF.(v.instantiation := Some (INorm (Root (loc, FPVar (x, s''), tS, `explicit))))
   in
   List.iter solve_one cnstrs
 

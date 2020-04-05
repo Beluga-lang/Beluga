@@ -28,7 +28,13 @@ val gen_tup_sub : t -> sub
 
 (** Constructs a unification variable for the given tclo,
     strengthening its type. *)
-val etaExpandMMVstr : Loc.t -> mctx -> dctx -> tclo -> depend -> Id.name option -> normal
+val etaExpandMMVstr : Loc.t ->
+                      mctx -> dctx -> tclo -> depend -> Id.name option -> normal
+
+(** Constructs a unification parameter variable for a given tclo,
+    strengthening its type. *)
+val etaExpandMPVstr : Loc.t ->
+                      mctx -> dctx -> tclo -> depend -> Id.name option -> normal
 
 (** gen_flattening cD cPsi = (cPhi, lazy s_proj, lazy s_tup)
     Generates a flattened LF context cPhi in which all blocks present

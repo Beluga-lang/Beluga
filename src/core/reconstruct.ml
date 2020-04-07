@@ -987,6 +987,13 @@ and elExpW cD cG e theta_tau = match (e, theta_tau) with
             (P.fmt_ppr_cmp_typ cD P.l0) (Whnf.cnormCTyp tau_t')
             (P.fmt_ppr_cmp_typ cD P.l0) (Whnf.cnormCTyp (tau,t))
           end;
+        (* unifying the types may instantiate MMVars present in the
+           term, so we normalize here to replace any instantiated
+           MMVar with its instantiation.
+           Crucially, this makes later typechecking of Harpoon proofs
+           succeed. -je
+         *)
+        let i' = Whnf.(cnormExp' (i', m_id)) in
         Int.Comp.Syn (loc, i')
       with
       | ConvSigma.Error (_loc, msg) ->
@@ -2473,6 +2480,9 @@ and elDirective cD cG pb (d : Apx.Comp.directive) ttau : Int.Comp.directive =
        (List.map (fun (_, tau, _) -> `exact tau) ps)
        (Whnf.cnormCTyp ttau)
      |> ignore;
+     (* Unification of the goal & annotations may instantiate MMVars
+        present in the scrutinee, so we need to normalize it here. *)
+     let i = Whnf.(cnormExp' (i, m_id)) in
      let ps =
        let i_head = I.head_of_application i in
        List.mapi

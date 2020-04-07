@@ -396,13 +396,6 @@ module Comp = struct
       |> throw loc;
     Context.(steal_mctx_names cD cD', steal_gctx_names cG cG')
 
-  let apply_command_to_context (cD, cG) = function
-    | By (i, x, tau) ->
-       (cD, Int.LF.Dec (cG, CTypDecl (x, tau, false)), Int.LF.MShift 0)
-    | Unbox (i, x, cU, modifier) ->
-       let t = Int.LF.MShift 1 in
-       (Int.LF.(Dec (cD, Decl (x, cU, No))), Whnf.cnormGCtx (cG, t), t)
-
   let apply_unbox_modifier cD modifier cU = match modifier with
     | `strengthened ->
        match cU with

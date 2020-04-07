@@ -115,17 +115,6 @@ module Comp : sig
   (** Raises an error from this module. *)
   val throw : Syntax.Loc.t -> error -> 'a
 
-  (** Applies a Harpoon command to a pair of contexts.
-      Returns the new contexts together with a susbtitution to be
-      applied to the current goal type.
-
-      Concretely, apply_command_to_context (cD, cG) = (cD', cG', t)
-      such that
-      cD' |- t : cD
-      cD' |- cG' ctx
-   *)
-  val apply_command_to_context : LF.mctx * Comp.gctx -> Comp.command ->
-                                 LF.mctx * Comp.gctx * LF.msub
 
   (** Transforms the given contextual type according the an unboxing
       modifier.

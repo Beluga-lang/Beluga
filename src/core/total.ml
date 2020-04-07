@@ -561,26 +561,31 @@ let rec get_return_type cD x ttau =
 let rec gen_rec_calls' cD cG cIH (cG0, j) mfs =
   match cG0 with
   | LF.Empty -> cIH
-  | LF.Dec(cG', Comp.CTypDecl (_x, tau0, false)) ->
+  | LF.Dec(cG', Comp.CTypDecl (x, tau0, false)) ->
+
      gen_rec_calls' cD cG cIH (cG', j+1) mfs
-  | LF.Dec(cG', Comp.CTypDecl (_x, tau0, true)) ->
-     let y = j+1 in
+  | LF.Dec(cG', Comp.CTypDecl (x, tau0, true)) ->
      let mf_list = get_order mfs in
-     dprintf
-       (fun p ->
-         p.fmt "[gen_rec_calls'] for %a"
-           (P.fmt_ppr_cmp_typ cD P.l0) tau0);
-     let (_i, ttau0') = get_return_type cD (Comp.Var (Syntax.Loc.ghost, y)) (tau0, Whnf.m_id) in
-     let mk_wfrec (f,x, ttau) =
-       dprintf
-         (fun p ->
-           p.fmt "[gen_rec_calls'] @[<v>Return Type @[%a@] for arg %d@,type of function: %a : %a@]"
-             (P.fmt_ppr_cmp_typ cD P.l0) (Whnf.cnormCTyp ttau0')
-             x
-             Id.print f
-             (P.fmt_ppr_cmp_typ cD P.l0) (Whnf.cnormCTyp ttau)
-         );
-       let (args, tau) = rec_spine' cD (y, ttau0') (x, ttau) in
+     dprintf begin fun p ->
+       p.fmt "[gen_rec_calls'] @[<v>for variable %a of type \
+              @,@[%a@]@]"
+         Id.print x
+         (P.fmt_ppr_cmp_typ cD P.l0) tau0
+       end;
+     let (_i, ttau0') =
+       get_return_type cD (Comp.Var (Syntax.Loc.ghost, j)) (tau0, Whnf.m_id)
+     in
+     let mk_wfrec (f, x, ttau) =
+       dprintf begin fun p ->
+         p.fmt
+           "[gen_rec_calls'] @[<v>Return Type @[%a@] for arg %d\
+            @,type of function: %a : %a@]"
+           (P.fmt_ppr_cmp_typ cD P.l0) (Whnf.cnormCTyp ttau0')
+           x
+           Id.print f
+           (P.fmt_ppr_cmp_typ cD P.l0) (Whnf.cnormCTyp ttau)
+         end;
+       let (args, tau) = rec_spine' cD (j, ttau0') (x, ttau) in
        let args = generalize args in
        let d = Comp.WfRec (f, args, tau) in
        dprintf
@@ -606,21 +611,17 @@ let rec gen_rec_calls' cD cG cIH (cG0, j) mfs =
        | [] -> cIH
        | (f, None,   _ttau)::mf_list ->  mk_all cIH mf_list
        | (f, Some xs, ttau)::mf_list ->
-          dprint
-            (fun () ->
-              "[mk_all] Function " ^ Id.render_name f ^ " with lex Order: "
-              ^ List.fold_right (fun x s -> (string_of_int x) ^ " " ^ s) xs "");
+          dprintf begin fun p ->
+            p.fmt "[mk_all] function %a with order %a"
+              Id.print f
+              Format.(pp_print_list ~pp_sep: pp_print_space pp_print_int)
+              xs
+            end;
           let ds = mk_wfrec_all (f, ttau) xs in
-          (* Check that generated call is valid -
-             mostly this prevents cases where we have contexts not matching
-             a given schema *)
           let cIH' = List.fold_right (fun d cIH' -> LF.Dec(cIH', d)) ds cIH in
           mk_all cIH' mf_list
      in
      let cIH' = mk_all cIH mf_list in
-     dprint
-       (fun _ ->
-         "[gen_rec_calls'] Generate more possible rec. calls");
      gen_rec_calls' cD cG cIH' (cG', j+1) mfs
 
 
@@ -640,7 +641,7 @@ let wf_rec_calls cD cG mfs =
            (P.fmt_ppr_lf_mctx P.l0) cD
            (P.fmt_ppr_cmp_gctx cD P.l0) cG);
      let cIH  = gen_rec_calls cD (LF.Empty) (cD, 0) mfs in
-     let cIH' = gen_rec_calls' cD cG cIH (cG, 0) mfs in
+     let cIH' = gen_rec_calls' cD cG cIH (cG, 1) mfs in
      let _ = Unify.resetGlobalCnstrs () in
      dprintf
        begin fun p ->

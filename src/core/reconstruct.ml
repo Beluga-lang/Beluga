@@ -2443,8 +2443,8 @@ and elSplit loc cD cG pb i tau_i bs ttau =
 and elDirective cD cG pb (d : Apx.Comp.directive) ttau : Int.Comp.directive =
   match d with
   | A.Intros (loc, hyp) ->
-     let (cD', cG', tau', _) =
-       Check.Comp.unroll cD cG (Whnf.cnormCTyp ttau)
+     let (cD', cG', Int.LF.Empty, tau', _) =
+       Check.Comp.unroll cD cG Int.LF.Empty (Whnf.cnormCTyp ttau)
      in
      let hyp =
        elHypothetical cD' cG' I.SubgoalPath.(append pb build_intros) hyp (tau', Whnf.m_id)

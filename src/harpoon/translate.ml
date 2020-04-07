@@ -131,7 +131,9 @@ and directive cD cG (d : Comp.directive) tau : Comp.exp_chk =
   | Comp.Solve e_chk -> e_chk
 
   | Comp.Intros (Comp.Hypothetical (_, hyp, p)) ->
-     let (cD', cG', tau', t) = Check.Comp.unroll cD cG tau in
+     let (cD', cG', LF.Empty, tau', t) =
+       Check.Comp.unroll cD cG LF.Empty tau
+     in
      (* cD' |- t : cD
         is a weakening meta-substitution *)
      let e = proof cD' cG' p tau' in

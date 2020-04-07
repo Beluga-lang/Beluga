@@ -222,7 +222,7 @@ module Comp : sig
    *)
   val id_map_ind : LF.mctx -> LF.msub -> LF.mctx -> LF.mctx
 
-  (** unroll cD cG tau = (cD', cG', tau', t)
+  (** unroll cD cG cIH tau = (cD', cG', cIH', tau', t)
       where cD |- cG <= ctx
       and   cD |- tau <= type
       s.t. cD' extends cD
@@ -230,8 +230,10 @@ module Comp : sig
       and tau' is a subterm of tau
       and tau' is not an arrow nor a PiBox type
       and cD' |- t : cD is a weakening meta-substitution.
+      and cD' |- cIH' ihctx
+      and cIH' is appropriately shifted
    *)
-  val unroll : LF.mctx -> gctx -> typ -> LF.mctx * gctx * typ * LF.msub
+  val unroll : LF.mctx -> gctx -> ihctx -> typ -> LF.mctx * gctx * ihctx * typ * LF.msub
 
   (** Requires that the given type be a box-type.
       require_syn_typbox cD cG loc i (tau, t) = (cU, t) if tau = [cU];

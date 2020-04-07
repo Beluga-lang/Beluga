@@ -1458,7 +1458,7 @@ module Comp = struct
     | _ -> (cD, cG, tau), 0
 
   (* See documentation in check.mli *)
-  let unroll cD cG tau =
+  let unroll cD cG cIH tau =
     (* cD |- cG <= ctx
        If we simply extend cG with the new entries computed from the
        TypArrs in tau, then the resulting context doesn't make sense
@@ -1474,8 +1474,13 @@ module Comp = struct
     (* to compute the weakening t, unroll' counts the number k of
        entries added to cD *)
     let t = I.MShift k in
+    let cIH' =
+      Whnf.cnormIHCtx (cIH, t)
+      |> Total.shiftIH (Context.length cG')
+    in
     ( cD'
     , Context.append (Whnf.cnormGCtx (cG, t)) cG'
+    , cIH'
     , tau'
     , t
     )
@@ -1568,7 +1573,7 @@ module Comp = struct
     match d with
     | Intros hyp ->
        let tau = Whnf.cnormCTyp ttau in
-       let (cD', cG', tau', t) = unroll cD cG tau in
+       let (cD', cG', cIH', tau', t) = unroll cD cG cIH tau in
        dprintf begin fun p ->
          p.fmt "[check] [directive] @[<v>[intros] unroll\
                 @,tau  = @[%a@]\
@@ -1584,7 +1589,6 @@ module Comp = struct
            P.(fmt_ppr_cmp_gctx cD l0) cG
            P.(fmt_ppr_cmp_gctx cD' l0) cG'
          end;
-       let cIH' = Whnf.cnormIHCtx (cIH, t) in
        hypothetical mcid cD' cG' cIH' total_decs hyp (tau', Whnf.m_id)
 
     | Solve e ->

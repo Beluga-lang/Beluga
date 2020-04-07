@@ -2068,9 +2068,12 @@ and closedSub s = match s with
  | EmptySub -> true
  | Undefs -> true
  | SVar (_ , _ , sigma) ->
-        closedSub sigma
-  | Shift _ -> true
-  | Dot (ft, s) -> closedFront ft && closedSub s
+    closedSub sigma
+ | Shift _ -> true
+ | Dot (ft, s) -> closedFront ft && closedSub s
+ | MSVar (_, ((v, t), s)) ->
+    (* the case for MMVar doesn't also check the substitution -je *)
+    is_mmvar_instantiated v (* && closedSub s *)
 
 and closedFront ft = match ft with
   | Head h -> closedHead h

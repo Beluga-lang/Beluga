@@ -267,7 +267,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
            (r_paren_if (paren s))
 
       | LF.MPVar ((c, ms), s) ->
-         fprintf ppf "%s%a%s[%a]%a%s"
+         fprintf ppf "%s%a%s[%a][%a]%s"
            (l_paren_if (paren s))
            (fmt_ppr_lf_mmvar lvl) c
            proj

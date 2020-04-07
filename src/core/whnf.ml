@@ -2233,19 +2233,6 @@ and closedPattern = function
   | Comp.PatAnn (_, pat, tau, _) ->
      closedPattern pat && closedCTyp tau
 
-(** Combines two sets of hypotheses.
-    IH and computational hypotheses are MShifted by the length of the appended cD !
- *)
-let append_hypotheses (h1 : Comp.hypotheses) (h2 : Comp.hypotheses) : Comp.hypotheses =
-  let open! Comp in
-  let { cD = cD1; cG = cG1; cIH = cIH1 } = h1 in
-  let { cD = cD2; cG = cG2; cIH = cIH2 } = h2 in
-  let k = Context.length cD2 in
-  let cD = Context.append cD1 cD2 in
-  let cG = Context.append (cnormGCtx (cG1, MShift k)) cG2 in
-  let cIH = Context.append (cnormIHCtx (cIH1, MShift k)) cIH2 in
-  { cD; cG; cIH }
-
 let mcomp' = Misc.Function.flip mcomp
 
 let collapse_sigma = function

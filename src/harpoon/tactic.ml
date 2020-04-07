@@ -126,7 +126,7 @@ let intros (names : string list option) : t =
      (* only create a new intros node if something actually happened *)
      let goal = (tau', theta) in
      let local_context = {cD; cG; cIH = LF.Empty} in
-     let context = Whnf.append_hypotheses g.context local_context in
+     let context = B.Check.Comp.append_hypotheses g.context local_context in
      let new_state =
        { context
        ; goal
@@ -541,12 +541,16 @@ let extending_meta_context decl g =
   ; label = g.label
   }
 
+(** Constructs a new proof state from `g` in which the comp context is
+    extended by the given declaration, and cIH is shifted by one.
+ *)
 let extending_comp_context decl g =
   let open Comp in
   { g with
     context =
       { g.context with
         cG = LF.Dec (g.context.cG, decl)
+      ; cIH = Total.shift g.context.cIH
       }
   ; solution = ref None
   }

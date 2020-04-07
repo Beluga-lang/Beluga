@@ -49,7 +49,7 @@ let auto_intros : t =
      in
      let goal = (tau', theta) in
      let local_context = {cD; cG; cIH = LF.Empty} in
-     let context = Whnf.append_hypotheses g.context local_context in
+     let context = B.Check.Comp.append_hypotheses g.context local_context in
      let new_state =
        { context
        ; goal

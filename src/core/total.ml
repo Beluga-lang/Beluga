@@ -73,13 +73,13 @@ let shiftArg k arg = match arg with
   | Comp.V x -> Comp.V (x+k)
   | _ -> arg
 
-let rec shiftIH cIH k = match cIH with
+let rec shiftIH k cIH = match cIH with
   | LF.Empty -> LF.Empty
   | LF.Dec (cIH', Comp.WfRec (f, args, tau)) ->
      let args' = List.map (shiftArg k) args in
-     LF.Dec (shiftIH cIH' k, Comp.WfRec (f, args', tau))
+     LF.Dec (shiftIH k cIH', Comp.WfRec (f, args', tau))
 
-let shift cIH = shiftIH cIH 1
+let shift = shiftIH 1
 
 let is_inductive cU =  match cU with
   | LF.Inductive -> true

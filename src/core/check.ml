@@ -386,6 +386,24 @@ module Comp = struct
         end
       end
 
+  (** Combines two sets of hypotheses.
+      IHs and computational hypotheses are MShifted by the length of the appended cD !
+      IHs are also shifted by the length of appended cG.
+   *)
+  let append_hypotheses (h1 : hypotheses) (h2 : hypotheses) : hypotheses =
+    let { cD = cD1; cG = cG1; cIH = cIH1 } = h1 in
+    let { cD = cD2; cG = cG2; cIH = cIH2 } = h2 in
+    let t = I.MShift (Context.length cD2) in
+    let cD = Context.append cD1 cD2 in
+    let cG = Context.append (Whnf.cnormGCtx (cG1, t)) cG2 in
+    let cIH =
+      Context.append
+        (Whnf.cnormIHCtx (cIH1, t)
+         |> Total.shiftIH (Context.length cG2))
+        cIH2
+    in
+    { cD; cG; cIH }
+
   (** Verifies that the pairs of contexts are convertible. *)
   let validate_contexts loc (cD, cD') (cG, cG') =
     if not Whnf.(convMCtx cD cD' && convGCtx (cG, m_id) (cG', m_id)) then
@@ -1507,7 +1525,7 @@ module Comp = struct
        let (_, tau', t) = syn cD (cG, cIH) total_decs i in
        let tau = Whnf.cnormCTyp (tau', t) in
        let cG = I.Dec (cG, CTypDecl (name, tau, false)) in
-       (cD, cG, cIH, Whnf.m_id)
+       (cD, cG, Total.shift cIH, Whnf.m_id)
     | Unbox (i, name, _, modifier) ->
        let (_, tau', t) = syn cD (cG, cIH) total_decs i in
        dprintf begin fun p ->

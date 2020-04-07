@@ -115,6 +115,11 @@ module Comp : sig
   (** Raises an error from this module. *)
   val throw : Syntax.Loc.t -> error -> 'a
 
+  (** Appends two sets of hypotheses.
+      Appropriately MShifts the left contexts and applies an
+      appropriate totality shift.
+   *)
+  val append_hypotheses : Comp.hypotheses -> Comp.hypotheses -> Comp.hypotheses
 
   (** Transforms the given contextual type according the an unboxing
       modifier.

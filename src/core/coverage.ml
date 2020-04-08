@@ -2298,22 +2298,15 @@ let rec genPattSpine names mk_pat_var k =
      let tP' = Whnf.cnormTyp (tP, t) in
      let cPsi' = Whnf.cnormDCtx (cPsi, t) in
      let u = NameGen.renumber names u in
-     (* decide which eta-expansion function to use based on the
-        variable class, and avoid forming MObj in case eta-expansion
-        of a PTyp does not produce a true normal. *)
      let clobj =
-       let call f =
-         f Loc.ghost LF.Empty cPsi' (tP', S.LF.id) dep (Some u)
-       in
        match cl with
        | LF.PTyp _ ->
-          begin match call ConvSigma.etaExpandMPVstr with
-          | LF.Root (_, tH, tS, _) ->
-             assert (match tS with LF.Nil -> true | _ -> false);
-             LF.PObj tH
-          | tM -> LF.MObj tM
-          end
-       | LF.MTyp _ -> LF.MObj (call ConvSigma.etaExpandMMVstr)
+          let v = Whnf.newMPVar (Some u) (LF.Empty, cPsi', tP') dep in
+          LF.(PObj (mpvar ((v, Whnf.m_id), S.LF.id)))
+       | LF.MTyp _ ->
+          LF.MObj
+            (ConvSigma.etaExpandMMVstr
+               Loc.ghost LF.Empty cPsi' (tP', S.LF.id) dep (Some u))
      in
      let pat1 =
        Comp.PatMetaObj

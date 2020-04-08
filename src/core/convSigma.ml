@@ -1,20 +1,15 @@
-open Support.Equality
 (**
    @author Renaud Germain
    @author Brigitte Pientka
 *)
+
+open Support.Equality
 
 open Syntax
 open Int
 module S = Substitution
 
 module P = Pretty.Int.DefaultPrinter
-(* module R = Store.Cid.DefaultRenderer
-   module RR = Store.Cid.NamedRenderer
-*)
-
-
-(* let (dprint, _) = Debug.makeFunctions (Debug.toFlags [7]) *)
 
 let fmt_ppr_conv_list =
   Format.(pp_print_list ~pp_sep: Support.Fmt.comma pp_print_int)

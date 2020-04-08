@@ -1754,7 +1754,8 @@ let rec ground_sub cD = function (* why is parameter cD is unused? -je *)
     let cPsi_n = Whnf.cnormDCtx (cPsi', mtt') in
     let tp1'  = normClTyp2 (tp1, (mtt',ss')) in
 
-    let w = Whnf.newMMVar' (Some mmvar1.name) (cD', ClTyp (tp1', cPsi_n)) Maybe in
+    let dep = Depend.max mmvar1.depend mmvar2.depend in
+    let w = Whnf.newMMVar' (Some mmvar1.name) (cD', ClTyp (tp1', cPsi_n)) dep in
                       (* w::[s'^-1](tP1)[cPsi'] in cD'            *)
                       (* cD' ; cPsi1 |- w[s'] <= [s']([s'^-1] tP1)
                          [|w[s']/u|](u[t1]) = [t1](w[s'])

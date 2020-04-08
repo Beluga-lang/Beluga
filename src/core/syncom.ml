@@ -35,17 +35,19 @@ module LF = struct
     | Inductive (* used for induction *)
 
   module Depend = struct
+    type t = depend
+
     let equals d1 d2 = match d1, d2 with
       | Maybe, Maybe -> true
       | No, No -> true
       | Inductive, Inductive -> true
       | _ -> false
 
-    let of_plicity : plicity -> depend = function
+    let of_plicity : plicity -> t = function
       | `implicit -> Maybe
       | `explicit -> No
 
-    let to_plicity : depend -> plicity = function
+    let to_plicity : t -> plicity = function
       | Maybe -> `implicit
       | No -> `explicit
       | Inductive ->
@@ -55,9 +57,13 @@ module LF = struct
     (** Variant of to_plicity that does not fail on Inductive, instead
         sending it to `explicit.
      *)
-    let to_plicity' : depend -> plicity = function
+    let to_plicity' : t -> plicity = function
       | Inductive -> `explicit
       | d -> to_plicity d
+
+    let max d1 d2 = match d1, d2 with
+      | No, No -> No
+      | _ -> Maybe
   end
 end
 

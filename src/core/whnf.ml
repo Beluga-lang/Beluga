@@ -626,7 +626,6 @@ and cnormHead' (h, t) = match h with
   | Const c -> Head (Const c)
   | AnnH (h,_) -> cnormHead' (h,t)
   | Proj (h, k) ->
-     dprnt "[cnormHead'] Proj case";
      reduceTupleFt (cnormHead' (h, t), k)
   | FVar x -> Head (FVar x)
   | FMVar (n,s) -> Head (FMVar (n,cnormSub (s,t)))
@@ -638,13 +637,11 @@ and cnormHead' (h, t) = match h with
       | ClObj (_,MObj tM) -> Obj (norm (tM, s'))
     end
   | PVar (k, s) ->
-     dprnt "[cnormHead'] PVar case";
      let s' = cnormSub (s,t) in
      begin match LF.applyMSub k t with
      | MV k' -> Head (PVar(k', s'))
      | ClObj (_,PObj h) -> normHead (h, s')
      | ClObj (_,MObj tM) ->
-        dprnt "PVar ~> normal term";
         Obj (norm (tM, s'))
      end
   | HClo (k,sv,s) ->
@@ -663,7 +660,6 @@ and cnormHead' (h, t) = match h with
       | ResMM (mm',mt) -> Head (MPVar((mm', cnormMSub' (mt,t)), cnormSub (s,t)))
       | Result (IHead h) -> cnormFt' (normHead(h,s), t)
       | Result (INorm n) ->
-         dprnt "MPVar ~> Obj";
          Obj (cnorm (norm (n, s), t))
     end
   | HMClo (k,(mmt,s)) ->

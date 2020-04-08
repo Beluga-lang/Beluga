@@ -248,26 +248,26 @@ let split (k : Command.split_kind) (i : Comp.exp_syn) (tau : Comp.typ) mfs : t =
            (P.fmt_ppr_lf_mctx P.l0) s.context.cD
          end;
 
+       dprintf
+         begin fun p ->
+         p.fmt "[harpoon-split] @[<v>before synPatRefine:@,\
+                cD = @[%a@]@,\
+                cD' = @[%a@]@,\
+                cD' |- t : cD = @[%a@]@,\
+                pat1 = @[%a@]@,\
+                tau_s = @[%a@]@,\
+                tau1 = @[%a@]@]"
+           (P.fmt_ppr_lf_mctx P.l0) s.context.cD
+           (P.fmt_ppr_lf_mctx P.l0) cD
+           (P.fmt_ppr_lf_msub cD P.l0) t
+           (P.fmt_ppr_cmp_pattern cD cG P.l0) pat
+           (P.fmt_ppr_cmp_typ s.context.cD P.l0) tau
+           (P.fmt_ppr_cmp_typ cD P.l0) tau_p
+         end;
        let t', t1', cD_b =
          (* Refine the pattern to compute the branch's
             meta-context, accounting for dependent pattern matching on
             `m`. *)
-         dprintf
-           begin fun p ->
-           p.fmt "[harpoon-split] @[<v>before synPatRefine:@,\
-                  cD = @[%a@]@,\
-                  cD' = @[%a@]@,\
-                  cD' |- t : cD = @[%a@]@,\
-                  pat1 = @[%a@]@,\
-                  tau_s = @[%a@]@,\
-                  tau1 = @[%a@]@]"
-             (P.fmt_ppr_lf_mctx P.l0) s.context.cD
-             (P.fmt_ppr_lf_mctx P.l0) cD
-             (P.fmt_ppr_lf_msub cD P.l0) t
-             (P.fmt_ppr_cmp_pattern cD cG P.l0) pat
-             (P.fmt_ppr_cmp_typ s.context.cD P.l0) tau
-             (P.fmt_ppr_cmp_typ cD P.l0) tau_p
-           end;
          Reconstruct.synPatRefine
            Loc.ghost
            (Reconstruct.case_type (lazy pat) i)

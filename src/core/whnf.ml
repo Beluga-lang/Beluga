@@ -40,9 +40,7 @@ let rec raiseType cPsi tA = match cPsi with
 
 (* Eta-contract elements in substitutions *)
 let etaContract tM = begin match tM with
-  | Root (_, ((BVar _) as h), Nil, _)
-  | Root (_, ((PVar _) as h), Nil, _)
-  | Root (_, ((Proj _) as h), Nil, _) ->
+  | Root (_, ((BVar _ | PVar _ | Proj _ | MPVar _) as h), Nil, _) ->
      Head h
   | Lam  _ as tMn ->
       let rec etaUnroll k tM = begin match tM with
@@ -1275,54 +1273,26 @@ and convSub subst1 subst2 =
   | _ -> false
 
 and convFront front1 front2 = match (front1, front2) with
-  | (Head (BVar i), Head (BVar k)) ->
-      i = k
-
-  | (Head (Const i), Head (Const k)) ->
-      Id.cid_equals i k
-
-  | (Head (MMVar ((u, _t),s)), Head (MMVar ((v, _t'),s'))) ->
-      u == v && convSub s s' (* && convMSub ... to be added -bp *)
-
-  | (Head (PVar (q, s)), Head (PVar (p, s'))) ->
-      p = q && convSub s s'
-
-  | (Head (FPVar (q, s)), Head (FPVar (p, s'))) ->
-      Id.equals p q && convSub s s'
-
-  | (Head (MVar (u, s)), Head (MVar (v, s'))) ->
-      u == v && convSub s s'
-
-  | (Head (FMVar (u, s)), Head (FMVar (v, s'))) ->
-      Id.equals u v && convSub s s'
-
-  | (Head (Proj (head, k)), Head (Proj (head', k'))) ->
-     k = k' && convFront (Head head) (Head head')
-
-  | (Head (FVar x), Head (FVar y)) ->
-      Id.equals x y
-
-  | (Obj tM, Obj tN) ->
-      conv (tM, LF.id) (tN, LF.id)
+  | Head h1, Head h2 -> convHead (h1, LF.id) (h2, LF.id)
+  | (Obj tM, Obj tN) -> conv (tM, LF.id) (tN, LF.id)
 
   | (Head h, Obj tN) ->
-      begin match etaContract (norm (tN, LF.id)) with
-        | Head h' -> convFront (Head h) (Head h')
-        | _ -> false
-      end
+     begin match etaContract (norm (tN, LF.id)) with
+     | Head h' -> convFront (Head h) (Head h')
+     | _ -> false
+     end
 
   | (Obj tN, Head h) ->
-      begin match etaContract (norm (tN, LF.id)) with
-        | Head h' -> convFront (Head h) (Head h')
-        | _ -> false
-      end
+     begin match etaContract (norm (tN, LF.id)) with
+     | Head h' -> convFront (Head h) (Head h')
+     | _ -> false
+     end
 
-  | (Undef, Undef) ->
-      true
+  | (Undef, Undef) -> true
 
-  | (_, _) -> dprint (fun () -> "[convFront] Falls through");
-      false
-
+  | (_, _) ->
+     dprint (fun () -> "[convFront] Falls through");
+     false
 
 and convMSub subst1 subst2 = match (subst1, subst2) with
   | (MShift n, MShift  k) ->

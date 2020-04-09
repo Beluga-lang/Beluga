@@ -2017,7 +2017,7 @@ and closedTuple = function
   | Cons (tM, tup), s -> closedW (tM, s) && closedTuple (tup, s)
 
 and closedHead h = match h with
-  | (MMVar ((mmvar, _), _) | MVar (Inst mmvar, _)) when not (is_mmvar_instantiated mmvar) ->
+  | (MMVar ((mmvar, _), _) | MPVar ((mmvar, _), _) | MVar (Inst mmvar, _)) when not (is_mmvar_instantiated mmvar) ->
      false
   | PVar (_, r) ->
       closedSub r

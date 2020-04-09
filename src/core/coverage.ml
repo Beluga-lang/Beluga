@@ -2262,11 +2262,12 @@ let rec genPattSpine names mk_pat_var k =
      , Comp.PatApp (Loc.ghost, pat1, pS)
      , ttau
      )
-  | Comp.TypPiBox (_, LF.Decl (x, LF.CTyp sW, _), tau), t ->
+  | Comp.TypPiBox (_, LF.Decl (u, LF.CTyp sW, dep), tau), t ->
+     let u = NameGen.renumber names u in
      let cPsi' =
        let open! LF in
        let mmvar =
-         Whnf.newMMVar' (Some x) LF.(Empty, CTyp sW) Maybe
+         Whnf.newMMVar' (Some u) LF.(Empty, CTyp sW) dep
        in
        CtxVar (CInst (mmvar, Whnf.m_id))
      in
@@ -2277,7 +2278,7 @@ let rec genPattSpine names mk_pat_var k =
          )
      in
      let cG, pS, ttau0 =
-       genPattSpine names mk_pat_var k (tau, LF.MDot (LF.CObj (cPsi'), t))
+       genPattSpine (u :: names) mk_pat_var k (tau, LF.MDot (LF.CObj (cPsi'), t))
      in
      ( cG
      , Comp.PatApp (Loc.ghost, pat1, pS)

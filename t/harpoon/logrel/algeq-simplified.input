@@ -172,8 +172,8 @@ select idLogSub
 split x
 by idLogSub x1 as q
 suffices by Dot toshow _, _
-solve reflect _ [g', b:block x:tm, y:algeqNeu x x T[] |- b.2]
-solve wknLogSub [g', b:block x:tm, a:algeqNeu x x T[]] [g'] [g', b |- ..] q
+solve reflect _ [g'1, b:block x:tm, y:algeqNeu x x T[] |- b.2]
+solve wknLogSub [g'1, b:block x:tm, a:algeqNeu x x T[]] [g'1] [g'1, b |- ..] q
 solve Nil
 select completeness
 solve reify _ (thm x1 (idLogSub x))

@@ -728,7 +728,8 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
       else
         function
         | (_, LF.Decl (_, _, dep)) ->
-           not !Printer.Control.printNormal && (!Printer.Control.printImplicit || not (isImplicit dep))
+           not !Printer.Control.printNormal
+           && (!Printer.Control.printImplicit || not (isImplicit dep))
         | _ -> true
     in
     fmt_ppr_ctx_filter ~sep: sep should_print
@@ -1513,22 +1514,24 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
     | Comp.DC -> fprintf ppf "_"
     | Comp.E -> Misc.not_implemented "IH E printing"
 
-  and fmt_ppr_cmp_ctyp_decl cD lvl ppf = function
-    | Comp.CTypDecl (x, tau, tag) ->
-       fprintf ppf "@[<hov 2>%a@[%a@] :@ @[%a@]@]"
-         Id.print x
-         print_wf_tag (tag && !PC.printImplicit)
-         (fmt_ppr_cmp_typ cD lvl) tau
+  and fmt_ppr_cmp_ctyp_decl cD lvl =
+    Printer.fmt_ppr_ctx_underscore false
+      begin fun ppf decl ->
+      match decl with
+      | Comp.CTypDecl (x, tau, tag) ->
+         fprintf ppf "@[<hov 2>%a@[%a@] :@ @[%a@]@]"
+           Id.print x
+           print_wf_tag (tag && !PC.printImplicit)
+           (fmt_ppr_cmp_typ cD lvl) tau
 
-    | Comp.CTypDeclOpt x ->
-       fprintf ppf "%a : _" Id.print x
+      | Comp.CTypDeclOpt x ->
+         fprintf ppf "%a : _" Id.print x
+      end
 
-  and fmt_ppr_cmp_gctx ?(sep = Fmt.comma) cD lvl ppf cG =
+  and fmt_ppr_cmp_gctx ?(sep = Fmt.comma) cD lvl =
     fmt_ppr_ctx_filter ~sep: sep
       (Misc.const true)
       (fun ppf (_, d) -> fmt_ppr_cmp_ctyp_decl cD l0 ppf d)
-      ppf
-      cG
 
   let fmt_ppr_cmp_gctx_typing ppf (cD, cG) =
     fprintf ppf "@[%a@] |-@ @[%a@]"

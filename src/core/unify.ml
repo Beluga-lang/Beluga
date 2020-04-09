@@ -377,9 +377,22 @@ let rec ground_sub cD = function (* why is parameter cD is unused? -je *)
       cnstrs
 
   let solveConstraint ({contents=constrnt} as cnstr) =
-    let id = get_constraint_id constrnt in
-    cnstr := Queued id; (* replace the constraint with a queued counterpart *)
-    T.log globalTrail (Solve (cnstr, constrnt))
+    (* Trying to solve a constraint that is already being solved is a
+       no-op. *)
+    match !cnstr with
+    | Queued id ->
+       dprintf begin fun p ->
+         p.fmt "[solveConstraint] @[<v>id = %d\
+                @,@[%a@]@]"
+           id
+           Format.pp_print_string
+           "WARNING trying to solve constraint that is already being \
+            solved."
+         end
+    | _ ->
+       let id = get_constraint_id constrnt in
+       cnstr := Queued id; (* replace the constraint with a queued counterpart *)
+       T.log globalTrail (Solve (cnstr, constrnt))
 
   (* trail a function;
      if the function raises an exception,
@@ -416,16 +429,28 @@ let rec ground_sub cD = function (* why is parameter cD is unused? -je *)
   let resetDelayedCnstrs () = delayedCnstrs := []
   let resetGlobalCnstrs () = globalCnstrs := []
 
-  let addConstraint (cnstrs, cnstr) =
-    dprintf
-      begin fun p ->
-      p.fmt "[addConstraint] @[<v 2>adding@,@[%a@]@]"
-        P.fmt_ppr_lf_constraint !cnstr
-      end;
-    cnstrs := cnstr :: !cnstrs;
-    globalCnstrs := cnstr :: !globalCnstrs;
-    T.log globalTrail (Add cnstrs)
+  let is_trivial_constraint = function
+    | Queued _ -> true
+    | Eqn (c_id, cD, cPsi, itM1, itM2)
+         when Whnf.convITerm itM1 itM2 -> true
+    | _ -> false
 
+  let addConstraint (cnstrs, cnstr) = match !cnstr with
+    | c when is_trivial_constraint c ->
+       dprintf begin fun p ->
+         p.fmt "[addConstraint] @[<v>skipping trivial constraint\
+                @,@[%a@]@]"
+           P.fmt_ppr_lf_constraint c
+         end;
+    | _ ->
+       dprintf
+         begin fun p ->
+         p.fmt "[addConstraint] @[<v 2>adding nontrivial constraint@,@[%a@]@]"
+           P.fmt_ppr_lf_constraint !cnstr
+         end;
+       cnstrs := cnstr :: !cnstrs;
+       globalCnstrs := cnstr :: !globalCnstrs;
+       T.log globalTrail (Add cnstrs)
 
   let nextCnstr () = match !delayedCnstrs with
     | []              -> None
@@ -1336,7 +1361,6 @@ let rec ground_sub cD = function (* why is parameter cD is unused? -je *)
               let s1_i = invert (Monitor.timer ("Normalisation", fun () -> Whnf.normSub s1')) in      (* cPsi1' |- s1_i <= cPsi' *)
                (dot1 s1' ,  DDec(cPsi1', TypDecl(x, TClo (tA, s1_i))))
         end
-
 
     | (Dot (Head (Proj (BVar n, _projIndex)), s'), DDec(cPsi', TypDecl(x, tA))) ->
       (* copied immediately preceding case for Head (BVar _)...is this right?  -jd *)
@@ -2712,84 +2736,41 @@ let rec ground_sub cD = function (* why is parameter cD is unused? -je *)
          (Comp.TypPiBox (_, (Decl(_, ctyp2,_)), tau'), t')) ->
         let ctyp1n = Whnf.cnormMTyp (ctyp1, t) in
         let ctyp2n = Whnf.cnormMTyp (ctyp2, t') in
-        (unifyCLFTyp Unification cD ctyp1n ctyp2n;
-         unifyCompTyp (Dec(cD, Decl(u, ctyp1n,dep))) (tau, Whnf.mvar_dot1 t) (tau', Whnf.mvar_dot1 t'))
+        unifyCLFTyp Unification cD ctyp1n ctyp2n;
+        unifyCompTyp
+          (Dec(cD, Decl(u, ctyp1n,dep)))
+          (tau, Whnf.mvar_dot1 t)
+          (tau', Whnf.mvar_dot1 t')
 
       | _ -> raise (Failure "Computation-level Type Clash")
 
 
    (* **************************************************************** *)
-    let rec unify1 mflag cD0 cPsi sM1 sM2 =
-        (unifyTerm mflag cD0 cPsi sM1 sM2;
-        dprint (fun () -> "[unify1] Forcing constraint...") ;
-        forceCnstr mflag (nextCnstr ()))
-
-    and unifyITerm cD cPsi itM1 itM2 = match itM1, itM2 with
-      | INorm tM1, INorm tM2 -> unify1 Unification cD cPsi (tM1, id) (tM2, id)
+    let unifyITerm cD cPsi itM1 itM2 = match itM1, itM2 with
+      | INorm tM1, INorm tM2 -> unifyTerm Unification cD cPsi (tM1, id) (tM2, id)
       | IHead tH1, IHead tH2 -> unifyHead Unification cD cPsi tH1 tH2
       | ISub s1, ISub s2 -> unifySub Unification cD cPsi s1 s2
 
     (* NOTE: We sometimes flip the position when we generate constraints;
        if matching requires that the first argument is fixed then this may
        become problematic if we are outside the pattern fragment -bp *)
-    and forceCnstr mflag constrnt = match constrnt with
-      | None       -> () (* dprint (fun () -> "All constraints forced.") *)  (* all constraints are forced *)
+    let rec forceCnstr mflag constrnt = match constrnt with
+      | None       -> ()
       | Some cnstr ->
-         dprint (fun () -> "Found constraint ...\n");
-         begin match !cnstr with
-         | Queued id (* in process elsewhere *) ->
-            dprintf
-              begin fun p ->
-              p.fmt "[forceCnstr] constraint %d is queued" id
-              end;
+         match !cnstr with
+         | Queued id ->
             forceCnstr mflag (nextCnstr ())
-         | Eqn (c_id, cD, cPsi, INorm tM1, INorm tM2) as c ->
-            let _ = solveConstraint cnstr in
-            (* let tM1 = Whnf.norm (tM1, id) in
-               let tM2 = Whnf.norm (tM2, id) in   *)
-            dprintf
-              begin fun p ->
-              p.fmt "[forceCnstr] @[<v 2>solving constraint (normal):@,\
-                     @[<v 2>c =@ @[%a@]@]@]" P.fmt_ppr_lf_constraint c
-              end;
+         | Eqn (c_id, cD, cPsi, INorm tM1, INorm tM2) ->
+            solveConstraint cnstr;
             if Whnf.conv (tM1, id) (tM2, id) then
-              dprintf
-                begin fun p ->
-                p.fmt "[forceCnstr] constraint %d is trivial" c_id
-                end
+              () (* trivial constraint *)
             else
-              begin
-                dprintf
-                  begin fun p ->
-                  p.fmt "[forceCnstr] try unification on constraint %d"
-                    c_id
-                  end;
-                unify1 mflag cD cPsi (tM1, id) (tM2, id);
-                dprintf
-                  begin fun p ->
-                  p.fmt "@[<v 2>solved constraint (normal):@,\
-                         @[<v 2>c = @ @[%a@]@]@]"
-                    P.fmt_ppr_lf_constraint c
-                  end
-              end;
+              unifyTerm mflag cD cPsi (tM1, id) (tM2, id);
             forceCnstr mflag (nextCnstr ())
-         | Eqn (id, cD, cPsi, IHead h1, IHead h2) as c ->
-            let _ = solveConstraint cnstr in
-            dprintf
-               begin fun p ->
-                 p.fmt "[forceCnstr] @[<v 2>solve constraint (head):@,\
-                        @[%a@]@]"
-                   P.fmt_ppr_lf_constraint c
-               end;
+         | Eqn (id, cD, cPsi, IHead h1, IHead h2) ->
+            solveConstraint cnstr;
             unifyHead mflag cD cPsi h1 h2 ;
-            dprintf
-              begin fun p ->
-              p.fmt "[forceCnstr] @[<v 2>Solved constraint (head):@,\
-                     @[%a@]@]"
-                P.fmt_ppr_lf_constraint c
-              end;
             forceCnstr mflag (nextCnstr ())
-         end
 
     and forceGlobalCnstr cnstr =
       resetGlobalCnstrs ();
@@ -2800,70 +2781,52 @@ let rec ground_sub cD = function (* why is parameter cD is unused? -je *)
 
     and forceGlobalCnstr' c_list = match c_list with
       | [ ] -> ()
-      | c::cnstrs ->
+      | c :: cnstrs when is_trivial_constraint !c ->
+         solveConstraint c;
+         forceGlobalCnstr cnstrs
+      (* constraints that are Queued are considered trivial, so this
+         time we must have an outstanding Eqn whose terms are not
+         convertible *)
+      | c :: cnstrs ->
+         let Eqn (_, cD, cPsi, itM1, itM2) as c' = !c in
+         solveConstraint c;
          dprintf begin fun p ->
-           p.fmt "[forceGlobalCnstr'] @[<v>processing constraint\
+           p.fmt "[forceGlobalCnstr'] @[<v>processing nontrivial constraint\
                   @,@[%a@]@]"
              P.fmt_ppr_lf_constraint !c
            end;
-         let c' = !c in
-         match c' with
-         | Queued id ->
-            (* in process elsewhere *)
-            forceGlobalCnstr cnstrs
 
-         | Eqn (_, _, _, itM1, itM2)
-              when solveConstraint c; Whnf.convITerm itM1 itM2 ->
-            forceGlobalCnstr' cnstrs
-            (* First check whether the equated objects are convertible.
-               It can happen that initially, a complex constraint is
-               added, but that after instantiating a number of
-               variables, the constraint can actually become trivial,
-               i.e. it's an expression equal to itself.
-               In principle, such constraints can be resolved by
-               unification, but sometimes the expressions fall outside
-               the pattern fragment so unification will fail.
-               Instead, we check the terms for convertibility first to
-               resolve such trivial constraints that fall outside the
-               pattern fragment. *)
-         | Eqn (c_id, cD, cPsi, itM1, itM2) ->
-            dprintf
-              begin fun p ->
-              p.fmt "[forceGlobalCnstr'] @[<v>global constraint not convertible:\
-                     @,@[%a@]\
-                     @,Unifying ...@]"
-                P.fmt_ppr_lf_constraint c'
-              end;
-            begin
-              try
-                unifyITerm cD cPsi itM1 itM2
-              with
-              | Failure msg ->
-                 let cnstr_string =
-                   let open Format in
-                   fprintf str_formatter "@[<v>@[%a@]@,@[%a@]@]"
-                     P.fmt_ppr_lf_constraint c'
-                     pp_print_string msg;
-                   flush_str_formatter ()
-                 in
-                 raise (GlobalCnstrFailure (Loc.ghost, cnstr_string))
-            end;
-            (* Unification could succeed by postponing the constraint
-               we just tried to solve, so now we need to check that
-               that didn't happen.
-               To do this, we can just check that there are no
-               unsolved global constraints.
-               Since forceGlobalCnstr' has the precondition that the
-               list of global constraints be empty (this is ensured by
-               getting the list and then calling resetGlobalCnstrs)
-               and since it maintains this invariant, if there are any
-               *unsolved* constraints at this point, then it's because
-               the unification we just called added it.
-             *)
-            if solvedCnstrs (!globalCnstrs) then
-              forceGlobalCnstr' cnstrs
-            else
-              raise (GlobalCnstrFailure (Loc.ghost, "[forceGlobalCnstr'] Constraints generated"))
+         begin
+           try
+             unifyITerm cD cPsi itM1 itM2;
+             forceCnstr Unification (nextCnstr ())
+           with
+           | Failure msg ->
+              let cnstr_string =
+                let open Format in
+                fprintf str_formatter "@[<v>@[%a@]@,@[%a@]@]"
+                  P.fmt_ppr_lf_constraint c'
+                  pp_print_string msg;
+                flush_str_formatter ()
+              in
+              raise (GlobalCnstrFailure (Loc.ghost, cnstr_string))
+         end;
+         (* Unification could succeed by postponing the constraint
+            we just tried to solve, so now we need to check that
+            that didn't happen.
+            To do this, we can just check that there are no
+            unsolved global constraints.
+            Since forceGlobalCnstr' has the precondition that the
+            list of global constraints be empty (this is ensured by
+            getting the list and then calling resetGlobalCnstrs)
+            and since it maintains this invariant, if there are any
+            *unsolved* constraints at this point, then it's because
+            the unification we just called added it.
+          *)
+         if solvedCnstrs (!globalCnstrs) then
+           forceGlobalCnstr' cnstrs
+         else
+           raise (GlobalCnstrFailure (Loc.ghost, "[forceGlobalCnstr'] Constraints generated"))
 
     let unresolvedGlobalCnstrs () =
       begin try
@@ -2877,7 +2840,8 @@ let rec ground_sub cD = function (* why is parameter cD is unused? -je *)
 
     let unify' mflag cD0 cPsi sM1 sM2 =
       resetDelayedCnstrs ();
-      unify1 mflag cD0 cPsi sM1 sM2
+      unifyTerm mflag cD0 cPsi sM1 sM2;
+      forceCnstr mflag (nextCnstr ())
 
     let unifyTyp1 mflag cD0 cPsi sA sB =
       unifyTyp mflag cD0 cPsi sA sB;

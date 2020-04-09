@@ -2724,6 +2724,10 @@ let rec ground_sub cD = function (* why is parameter cD is unused? -je *)
         dprint (fun () -> "[unify1] Forcing constraint...") ;
         forceCnstr mflag (nextCnstr ()))
 
+    and unifyITerm cD cPsi itM1 itM2 = match itM1, itM2 with
+      | INorm tM1, INorm tM2 -> unify1 Unification cD cPsi (tM1, id) (tM2, id)
+      | IHead tH1, IHead tH2 -> unifyHead Unification cD cPsi tH1 tH2
+      | ISub s1, ISub s2 -> unifySub Unification cD cPsi s1 s2
 
     (* NOTE: We sometimes flip the position when we generate constraints;
        if matching requires that the first argument is fixed then this may
@@ -2797,119 +2801,69 @@ let rec ground_sub cD = function (* why is parameter cD is unused? -je *)
     and forceGlobalCnstr' c_list = match c_list with
       | [ ] -> ()
       | c::cnstrs ->
-         match !c with
-         | Queued id (* in process elsewhere *) -> forceGlobalCnstr cnstrs
-         | Eqn (c_id, cD, cPsi, INorm tM1, INorm tM2) as c' ->
-            solveConstraint c;
-            let l = List.length (!globalCnstrs) in
+         dprintf begin fun p ->
+           p.fmt "[forceGlobalCnstr'] @[<v>processing constraint\
+                  @,@[%a@]@]"
+             P.fmt_ppr_lf_constraint !c
+           end;
+         let c' = !c in
+         match c' with
+         | Queued id ->
+            (* in process elsewhere *)
+            forceGlobalCnstr cnstrs
+
+         | Eqn (_, _, _, itM1, itM2)
+              when solveConstraint c; Whnf.convITerm itM1 itM2 ->
+            forceGlobalCnstr' cnstrs
+            (* First check whether the equated objects are convertible.
+               It can happen that initially, a complex constraint is
+               added, but that after instantiating a number of
+               variables, the constraint can actually become trivial,
+               i.e. it's an expression equal to itself.
+               In principle, such constraints can be resolved by
+               unification, but sometimes the expressions fall outside
+               the pattern fragment so unification will fail.
+               Instead, we check the terms for convertibility first to
+               resolve such trivial constraints that fall outside the
+               pattern fragment. *)
+         | Eqn (c_id, cD, cPsi, itM1, itM2) ->
             dprintf
               begin fun p ->
-              p.fmt "[forceGlobalCnstr'] @[<v>@[<v 2>Solve global constraint:@,\
-                     @[%a@]@]@,\
-                     There are %d global constraints right now.@]"
+              p.fmt "[forceGlobalCnstr'] @[<v>global constraint not convertible:\
+                     @,@[%a@]\
+                     @,Unifying ...@]"
                 P.fmt_ppr_lf_constraint c'
-                l
-              end;
-            if Whnf.conv (tM1, id) (tM2, id) then
-              (* Note: we test whether tM1 and tM2 are
-                 convertible because some terms which fall
-                 outside of the pattern fragment are convertible,
-                 but not unifiable *)
-              begin
-                dprintf
-                  begin fun p ->
-                  p.fmt "[forceGlobalCnstr'] constraint %d is convertible (whnf)."
-                    c_id
-                  end;
-                forceGlobalCnstr' cnstrs
-              end
-            else
-              begin
-                dprintf
-                  begin fun p ->
-                  p.fmt "[forceGlobalCnstr'] \
-                         @[<v 2>Existing Set of constraints (BEFORE UNIFY):\
-                         @,@[%a@]\
-                         @,@[<v 2>Note: @[%a@] is not convertible with @[%a@]@]@]"
-                    P.fmt_ppr_lf_constraints !globalCnstrs
-                    P.(fmt_ppr_lf_normal cD cPsi l0) tM1
-                    P.(fmt_ppr_lf_normal cD cPsi l0) tM2
-                  end;
-                try
-                  unify1 Unification cD cPsi (tM1, id) (tM2, id);
-                  (* if l = List.length (!globalCnstrs) then *)
-                  if solvedCnstrs (!globalCnstrs) then
-                    begin
-                      dprintf
-                        begin fun p ->
-                        p.fmt "[forceGlobalCnstr'] @[<v 2>Solved global constraint (DONE):@,@[%a@]@]"
-                          P.fmt_ppr_lf_constraint c'
-                        end;
-                      forceGlobalCnstr' cnstrs
-                    end
-                  else
-                    begin
-                      dprint
-                        (fun _ ->
-                          "[forceGlobalCnstr'] New constraints generated? "
-                          ^ string_of_int l ^ " vs " ^ string_of_int (List.length (!globalCnstrs)));
-                      dprintf
-                        begin fun p ->
-                        p.fmt "[forceGlobalCnstr'] @[<v 2>New set of constraints:@,@[%a@]@]"
-                          P.fmt_ppr_lf_constraints (!globalCnstrs)
-                        end;
-                      raise (Failure "[forceGlobalCnstr'] Constraints generated")
-                    end
-                with Failure msg ->
-                  let cnstr_string =
-                    let open Format in
-                    let f = P.fmt_ppr_lf_normal cD cPsi P.l0 in
-                    fprintf str_formatter "@[<v>%d. @[<v>@[%a@]@ =/=@ @[%a@]@]@,@[%a@]@]"
-                      c_id
-                      f tM1
-                      f tM2
-                      pp_print_string msg;
-                    flush_str_formatter ()
-                  in
-                  raise (GlobalCnstrFailure (loc_of_normal (Whnf.norm (tM1, id)), cnstr_string))
-              end
-         | Eqn (c_id, cD, cPsi, IHead h1, IHead h2)   ->
-            let _ = solveConstraint c in
-            let l = List.length (!globalCnstrs) in
-            let f = P.fmt_ppr_lf_head cD cPsi P.l0 in
-            dprintf
-              begin fun p ->
-              p.fmt "Solve global constraint (H): %a = %a" f h1 f h2
               end;
             begin
               try
-                unifyHead Unification cD cPsi h1 h2;
-                if l = List.length (!globalCnstrs) then
-                  let _ =
-                    dprintf
-                      begin fun p ->
-                      p.fmt "Solved global constraint (H): %a = %a" f h1 f h2
-                      end
-                  in
-                  forceGlobalCnstr' cnstrs
-                else
-                  raise (Failure "Constraints generated")
-              with Failure _ ->
-                let cnstr_string =
-                  let open Format in
-                  fprintf str_formatter "%a =/= %a" f h1 f h2;
-                  flush_str_formatter ()
-                in
-                let loc = Syntax.Loc.ghost in
-                raise (GlobalCnstrFailure (loc, cnstr_string))
-            end
-         | Eqn (c_id, cD, cPsi, ISub s1, ISub s2) ->
-            let _ = solveConstraint c in
-            begin try
-                (unifySub Unification cD cPsi s1 s2; forceGlobalCnstr cnstrs)
-              with Failure _ -> raise (GlobalCnstrFailure (Syntax.Loc.ghost, "s1 =/= s2"))
-            end
-
+                unifyITerm cD cPsi itM1 itM2
+              with
+              | Failure msg ->
+                 let cnstr_string =
+                   let open Format in
+                   fprintf str_formatter "@[<v>@[%a@]@,@[%a@]@]"
+                     P.fmt_ppr_lf_constraint c'
+                     pp_print_string msg;
+                   flush_str_formatter ()
+                 in
+                 raise (GlobalCnstrFailure (Loc.ghost, cnstr_string))
+            end;
+            (* Unification could succeed by postponing the constraint
+               we just tried to solve, so now we need to check that
+               that didn't happen.
+               To do this, we can just check that there are no
+               unsolved global constraints.
+               Since forceGlobalCnstr' has the precondition that the
+               list of global constraints be empty (this is ensured by
+               getting the list and then calling resetGlobalCnstrs)
+               and since it maintains this invariant, if there are any
+               *unsolved* constraints at this point, then it's because
+               the unification we just called added it.
+             *)
+            if solvedCnstrs (!globalCnstrs) then
+              forceGlobalCnstr' cnstrs
+            else
+              raise (GlobalCnstrFailure (Loc.ghost, "[forceGlobalCnstr'] Constraints generated"))
 
     let unresolvedGlobalCnstrs () =
       begin try

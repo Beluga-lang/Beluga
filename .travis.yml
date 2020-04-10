@@ -43,6 +43,9 @@ addons:
       - gpatch
       - opam
 
+# We should cache homebrew bottles/settings too...
+# Updating homebrew takes about 2mins in TravisCI.
+# - Clare
 cache:
   directories:
     - $HOME/.opam

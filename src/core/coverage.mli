@@ -76,7 +76,8 @@ val process : problem -> int option -> unit   (* check coverage immediately *)
     matching (see Reconstruct.synPatRefine) eliminates this extra
     variable later.  However, the preliminary branch context
  *)
-val genNthSchemaElemGoal : LF.mctx -> int -> Id.cid_schema ->
+val genNthSchemaElemGoal : Id.name list ->
+                           LF.mctx -> int -> Id.cid_schema ->
                            LF.dctx inside option
 
 (** genPVarGoal sch_elem cD cPsi psi = (cD', cPsi', h, tA', t)

@@ -4,7 +4,6 @@ lookup
 1
 
 split [gamma]
-rename meta y g
 split [g, x:tm T[] |- #p]
 invert x
 invert x
@@ -29,4 +28,4 @@ by main [gamma] [gamma |- M1] rs as ih1
 invert ih1
 by main [gamma] [gamma |- M2] rs as ih2
 solve x1 [|- _] ih2
-by lookup [gamma] [gamma |- #p] rs as x
+solve lookup [gamma] [gamma |- #p] rs

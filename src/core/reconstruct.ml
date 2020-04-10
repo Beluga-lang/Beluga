@@ -2055,7 +2055,8 @@ and elSplit loc cD cG pb i tau_i bs ttau =
        I.SplitBranch (I.EmptyContext loc, (Int.LF.Empty, pat), t', hyp')
 
     | A.ContextCase (A.ExtendedBy (loc, n)) ->
-       begin match Coverage.genNthSchemaElemGoal cD n w with
+       let names = Context.names_of_mctx cD in
+       begin match Coverage.genNthSchemaElemGoal names cD n w with
        | None ->
           throw loc (InvalidSchemaElementIndex (n, w))
        | Some (cD', cPsi, t) ->

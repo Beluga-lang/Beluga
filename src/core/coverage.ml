@@ -1871,46 +1871,31 @@ let rec append cD =
 
     and cO'' |- cD'' mctx
  *)
-let rec decTomdec cD' (LF.CtxOffset k as cpsi) (d, decls) =
+let rec decTomdec names cD' (LF.CtxOffset k as cpsi) (d, decls) =
   match decls with
   | LF.Empty -> (cD', S.LF.id)
   | LF.(Dec (decls, TypDecl (x, tA))) ->
+     let x = NameGen.renumber names x in
+     let names = x :: names in
+
      (* .; decls |- tA : type            *)
      (*  cD'; cpsi, @x: _  |- s' : decls         *)
-     let cD'', s' = decTomdec cD' cpsi (d-1, decls) in
+     let cD'', s' = decTomdec names cD' cpsi (d-1, decls) in
      let cPsi, (LF.Atom (_, a, _) as tP, s) =
        Whnf.lowerTyp (LF.CtxVar (LF.CtxOffset (k+d))) (tA, s')
      in
-     dprintf
-       begin fun p ->
-       p.fmt "[decTomdec] @[<v>cPsi = @[%a@]@,\
-              tP = @[%a@]@,\
-              s' = @[%a@]@,@]"
-         (P.fmt_ppr_lf_dctx cD'' P.l0) cPsi
-         (P.fmt_ppr_lf_typ cD'' cPsi P.l0) tP
-         (P.fmt_ppr_lf_sub cD'' LF.Null P.l0) s'
-       end;
      (* bp : Context substitution associated with declaration is off by 1 *)
      let ss', cPsi' = Subord.thin' cD'' a cPsi in
-     dprintf
-       begin fun p ->
-       p.fmt "[decTomdec] thinned @[ss' = @[%a@]@]"
-         (P.fmt_ppr_lf_sub cD'' cPsi' P.l0) ss'
-       end;
      (* cPsi |- ss' : cPsi' *)
      let ssi' = S.LF.invert ss' in
      (* cPsi' |- ssi : cPsi *)
      let ssi = S.LF.comp s ssi' in
-     dprintf
-       begin fun p ->
-       p.fmt "[decTomdec] inverted @[ss' = @[%a@]@]"
-         (P.fmt_ppr_lf_sub cD'' cPsi' P.l0) ssi;
-       p.fmt "[genCtx] generated mvar of type @[%a |- %a@]"
-         (P.fmt_ppr_lf_dctx cD'' P.l0) cPsi'
-         (P.fmt_ppr_lf_typ cD'' cPsi' P.l0)
-         (Whnf.normTyp (tP, ssi))
-       end;
-     let mdec = LF.Decl (x, LF.ClTyp (LF.MTyp (LF.TClo (tP, ssi)), cPsi'), LF.Maybe) in
+     let mdec =
+       LF.Decl
+         ( x
+         , LF.ClTyp (LF.MTyp (LF.TClo (tP, ssi)), cPsi')
+         , LF.Maybe )
+     in
      let mv =
        LF.Root
          ( Loc.ghost
@@ -1918,7 +1903,9 @@ let rec decTomdec cD' (LF.CtxOffset k as cpsi) (d, decls) =
          , LF.Nil
          , `explicit )
      in
-     (LF.Dec (cD'', mdec), LF.Dot (LF.Obj mv, Whnf.cnormSub (s', LF.MShift 1)))
+     ( LF.Dec (cD'', mdec)
+     , LF.Dot (LF.Obj mv, Whnf.cnormSub (s', LF.MShift 1))
+     )
 
 (** Generates the coverage goal for a schema element.
     genSchemaElemGoal cD psi (cPhi, trec) = (cD', cPsi, t)
@@ -1939,14 +1926,14 @@ let rec decTomdec cD' (LF.CtxOffset k as cpsi) (d, decls) =
     with ctx being the schema from which the given element is drawn.
     Furthermore, psi must be CtxOffset 1, pointing to u.
  *)
-let genSchemaElemGoal cD psi (LF.SchElem (cPhi, trec)) =
+let genSchemaElemGoal names cD psi (LF.SchElem (cPhi, trec)) =
   let d = Context.length cPhi in
   (* decTomdec does the hard work of shifting the declarations in the
      existential variable context into cD and it returns an LF
      substitution s that maps the variables that used to point into
      cPhi to MVars that point into cD0.
    *)
-  let cD0, s = decTomdec cD psi (d-1, cPhi) in
+  let cD0, s = decTomdec names cD psi (d-1, cPhi) in
   dprintf
     begin fun p ->
     p.fmt "[genCtx] @[s =@ @[%a@]@]"
@@ -1967,11 +1954,10 @@ let genSchemaElemGoal cD psi (LF.SchElem (cPhi, trec)) =
   (* cD0 |- t : cD
      cD' |- cPsi' ctx *)
   let cPsi' =
-    let names = Context.(names_of_mctx cD @ names_of_dctx cpsi') in
+    let names = Context.names_of_dctx cpsi' @ names in
     let x = NameGen.(bvar tA |> renumber names) in
     LF.DDec (cpsi', LF.TypDecl (x, tA))
   in
-  (* TODO use contextual name generation *)
   dprintf
     begin fun p ->
     p.fmt "[genCtx] @[<v>cPsi' = @[%a@]@,\
@@ -1985,17 +1971,20 @@ let genSchemaElemGoal cD psi (LF.SchElem (cPhi, trec)) =
     end;
   (cD0, cPsi', t)
 
-let genNthSchemaElemGoal cD n w =
+let genNthSchemaElemGoal names cD n w =
   let open Maybe in
   let (LF.Schema elems) = Store.Cid.Schema.get_schema w in
   List.nth_opt elems (n - 1)
   $> fun e ->
+     let x =
+       Id.(mk_name (SomeString "g"))
+       |> NameGen.renumber names
+     in
      let cD' =
-       let x = Id.mk_name (Whnf.newMTypName (LF.CTyp (Some w))) in
        LF.Dec (cD, LF.Decl (x, LF.CTyp (Some w), LF.Maybe))
      in
      let psi = LF.CtxOffset 1 in
-     genSchemaElemGoal cD' psi e
+     genSchemaElemGoal (x :: names) cD' psi e
 
 (* genCtx elems = ctx_goal_list
 
@@ -2004,8 +1993,8 @@ let genNthSchemaElemGoal cD n w =
         cO; cD_i |- ms_i   : cD
         cO; cD_i |- cPsi_i : ctx
  *)
-let genCtx (LF.Dec (cD', LF.Decl _) as cD) cpsi =
-  let nonempty_cases = List.map (genSchemaElemGoal cD cpsi) in
+let genCtx names (LF.Dec (cD', LF.Decl _) as cD) cpsi =
+  let nonempty_cases = List.map (genSchemaElemGoal names cD cpsi) in
   let empty_case = Misc.List.cons (cD', LF.Null, LF.MShift 0) in
   F.(empty_case ++ nonempty_cases)
   (* WARNING: the order of the list here is used *CRUCIALLY* by
@@ -2034,7 +2023,7 @@ let genCtx (LF.Dec (cD', LF.Decl _) as cD) cpsi =
 let genContextGoals cD (x, LF.CTyp (Some schema_cid), dep) =
   let LF.Schema elems = Store.Cid.Schema.get_schema schema_cid in
   let cD' = LF.Dec (cD, LF.Decl (x, LF.CTyp (Some schema_cid), dep)) in
-  genCtx cD' (LF.CtxOffset 1) elems
+  genCtx [] cD' (LF.CtxOffset 1) elems
 
 (* Find mvar to split on *)
 let genSVCovGoals (cD, (cPsi, (r0, cPhi))) (* cov_problem *) =
@@ -2499,10 +2488,13 @@ let genPatCGoals names mk_pat_var (cD : LF.mctx) tau =
      | LF.CTyp (Some w) -> (* require that a schema be present *)
         let LF.Schema elems = Store.Cid.Schema.get_schema w in
         let cD' =
-          let x = Id.mk_name (Whnf.newMTypName (LF.CTyp (Some w))) in
-          LF.Dec (cD, LF.Decl (x, LF.CTyp (Some w), LF.Maybe))
+          let u =
+            Id.(mk_name (SomeString "g"))
+            |> NameGen.renumber names
+          in
+          LF.Dec (cD, LF.Decl (u, LF.CTyp (Some w), LF.Maybe))
         in
-        genCtx cD' (LF.CtxOffset 1) elems
+        genCtx names cD' (LF.CtxOffset 1) elems
         |> List.map
              begin fun (cD', cPsi, t) ->
              let mC = (Loc.ghost, LF.CObj cPsi) in

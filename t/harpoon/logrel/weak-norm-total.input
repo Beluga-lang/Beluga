@@ -4,7 +4,6 @@ lookup
 1
 
 split [gamma]
-rename meta y g
 split [g, x:tm T[] |- #p]
 invert x
 invert x

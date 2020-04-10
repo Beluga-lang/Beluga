@@ -6,7 +6,7 @@ length
 
 toggle-automation auto-solve-trivial off
 split [g]
-by length [y] as N unboxed
+by length [g1] as N unboxed
 solve [|- s N]
 solve [|- z]
 :quit

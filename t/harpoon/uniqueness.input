@@ -3,7 +3,6 @@ unique
 (g : tctx) [g ⊢ hastype M T1[]] → [g ⊢ hastype M T2[]] → [⊢ eq T1 T2]
 1
 
-
 split x
 
 invert x1
@@ -18,3 +17,4 @@ solve [|- refl]
 
 invert x1
 solve [|- refl]
+:quit

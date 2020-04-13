@@ -4,4 +4,4 @@ const
 
 
 solve ([⊢ IMP-I P (imply Q P) (\p. IMP-I Q[] P[] (\q. p))])
-
+:quit

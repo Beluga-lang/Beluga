@@ -3,7 +3,6 @@ length
 {g : ctx} [|- nat]
 1
 
-
 toggle-automation auto-solve-trivial off
 split [g]
 by length [g1] as N unboxed

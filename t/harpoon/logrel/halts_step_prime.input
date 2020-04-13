@@ -5,3 +5,4 @@ halts_step'
 
 invert x
 solve [|- halts/m (onestep S S1) V]
+:quit

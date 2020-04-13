@@ -4,10 +4,10 @@ vsound
 1
 
 split x
-by (vsound [|- D2]) as ih
+by vsound [|- D2] as ih
 solve [|- v_lam]
-by (vsound [|- D]) as ih
-by (vsound [|- D]) as ih
-unbox (ih) as IH
+by vsound [|- D] as ih
+by vsound [|- D] as IH unboxed
 solve [|- v_s IH]
 solve [|- v_z]
+:quit

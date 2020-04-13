@@ -4,4 +4,4 @@ forall_to_exists
 
 
 solve ([⊢ IMP-I (forall (\t. S[t])) (exists (\t. S[t])) (\all. EXT-I (\t. S[t]) zero (ALL-E (\t. S[t]) zero all))])
-
+:quit

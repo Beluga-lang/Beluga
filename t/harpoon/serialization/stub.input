@@ -5,3 +5,4 @@ foo
 
 session serialize
 solve [|- base]
+:quit

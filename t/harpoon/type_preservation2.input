@@ -8,7 +8,7 @@ split x1
 invert x
 by (tpr [|- D] [|- E]) as ih0
 invert ih0
-by (tpr [|- D2 [_, D1]] [|- E1]) as ih1
-solve ih1
+solve tpr [|- D2 [_, D1]] [|- E1]
 solve x
 solve x
+:quit

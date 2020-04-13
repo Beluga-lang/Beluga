@@ -21,5 +21,6 @@ le-add
 
 split x
 suffices by le-succ-1 toshow [|- le M N3]
-by le-add [|- A] as done
+solve le-add [|- A]
 suffices by le-refl toshow
+:quit

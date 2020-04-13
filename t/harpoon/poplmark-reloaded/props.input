@@ -1,19 +1,17 @@
 t/harpoon/poplmark-reloaded/tps.bel
 m-trans
-(g : cxt) {M1 : [g |- tm A[]]} [g |- mstep M1 M] -> [g |- mstep M M2] -> [g |- mstep M1 M2]
+(g : cxt) {M : [g |- tm A[]]} [g |- mstep M1 M] -> [g |- mstep M M2] -> [g |- mstep M1 M2]
 
 
 split x
-by m-trans _ [_ |- X5] x1 as ms
-unbox ms as MS
+by m-trans _ [_ |- X5] x1 as MS unboxed
 solve [_ |- m-step X4 MS]
 m-appl
 (g : cxt) {M : [g |- tm (arr A[] B[])]} {M' : [g |- tm (arr A[] B[])]} {N : [g |- tm A[]]} [g |- mstep M M'] -> [g |- mstep (app M N) (app M' N)]
 
 
 split x
-by m-appl _ _ [_ |- N] [_ |- X5] as ms
-unbox ms as MS
+by m-appl _ _ [_ |- N] [_ |- X5] as MS unboxed
 solve [_ |- m-step (rappl X4) MS]
 solve [_ |- m-refl]
 m-appr
@@ -21,8 +19,7 @@ m-appr
 
 
 split x
-by m-appr [_ |- M] _ _ [_ |- X5] as ms
-unbox ms as MS
+by m-appr [_ |- M] _ _ [_ |- X5] as MS unboxed
 solve [_ |- m-step (rappr X4) MS]
 solve [_ |- m-refl]
 m-abs
@@ -30,8 +27,7 @@ m-abs
 
 
 split x
-by m-abs _ [_ |- X5] as ms
-unbox ms as MS
+by m-abs _ [_ |- X5] as MS unboxed
 solve [_ |- m-step (rabs \x. X4) MS]
 solve [_ |- m-refl]
 m-subst
@@ -41,7 +37,7 @@ m-subst
 split [_, x : tm _ |- M]
 by m-subst [_, x : tm _ |- X2] _ _ x as ms1
 by m-subst [_, x : tm _ |- X3] _ _ x as ms2
-suffices by m-trans toshow [_ |- mstep (app X2[.., N] X3[.., N]) (app X2[.., N'] X3[.., N])], _
+suffices by m-trans [_ |- app X2[.., N'] X3[.., N]] toshow _, _
 suffices by m-appr toshow _
 suffices by m-appl toshow _
 unbox x as S
@@ -269,8 +265,10 @@ extSN
 
 split x
 split x1
-solve SRed x3 (extSN _ [_ |- #p] x2)
-solve SAbs (anti-renameSN [_, x : tm _] [_] [_ |- .., #p[..]] [_, x : tm _ |- _] x2)
+suffices by SRed toshow _, SN [_ |- R']
+solve extSN _ [_ |- #p] x2
+suffices by SAbs toshow _
+solve anti-renameSN [_, x : tm _] [_] [_ |- .., #p[..]] [_, x : tm _ |- _] x2
 split x1
 solve SNeu x2
 renameRed
@@ -376,3 +374,4 @@ norm
 
 suffices by cr1 toshow _
 solve fundamental_lemma [_] [_] _ [_ |- ..] (id_red [g])
+:quit

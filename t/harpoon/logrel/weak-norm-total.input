@@ -1,6 +1,6 @@
 t/harpoon/logrel/weak-norm-total.bel
 lookup
-{gamma:ctx}{#p:[gamma |- tm A[]]}RedSub [gamma] [ |- $S[^]] -> Reduce [|- A] [|- #p[$S]]
+{gamma:ctx}{#p:[gamma |- tm A[]]}RedSub [gamma] [|- $S[^]] -> Reduce [|- A] [|- #p[$S]]
 1
 
 split [gamma]
@@ -10,18 +10,16 @@ invert x
 by lookup [g] [g |- #p1] x1 as ih
 impossible [|- #p]
 main
-{gamma:ctx}{M:[gamma |- tm A[]]} RedSub [gamma] [ |- $S[^]] -> Reduce [|- A] [|- M[$S]]
+{gamma:ctx}{M:[gamma |- tm A[]]} RedSub [gamma] [|- $S[^]] -> Reduce [|- A] [|- M[$S]]
 2
 
 rename comp x rs
 msplit M
-solve I [ |- halts/m refl val/c]
+solve I [|- halts/m refl val/c]
 solve Arr [|- halts/m refl val/lam] (mlam N => fn rN => bwd_closed [|- beta] (main [gamma, x : tm _] [gamma, x |- M1] (Dot rs rN)))
 by main [gamma] [gamma |- M1] rs as ih1
 invert ih1
 by main [gamma] [gamma |- M2] rs as ih2
-solve x1 [|- _] ih2
-by lookup [gamma] [gamma |- #p] rs as x
-solve x
-
+solve x1 _ ih2
+solve lookup [gamma] [gamma |- #p] rs
 :quit

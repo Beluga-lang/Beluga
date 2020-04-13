@@ -5,3 +5,4 @@ foo
 
 translate tpr
 solve [|- base]
+:quit

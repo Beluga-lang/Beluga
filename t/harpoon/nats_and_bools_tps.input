@@ -5,20 +5,20 @@ tps
 
 split x1
 invert x
-invert [ |- D ]
-by (tps [|- D] [|- S]) as IH3 unboxed
+invert [|- D]
+by tps [|- D] [|- S] as IH3 unboxed
 solve [|- t_iszero IH3]
 
 invert x
-by (tps [|- D] [|- S]) as IH2 unboxed
+by tps [|- D] [|- S] as IH2 unboxed
 solve [|- t_pred IH2]
 
 invert x
-by (tps [|- D] [|- S]) as IH1 unboxed
+by tps [|- D] [|- S] as IH1 unboxed
 solve [|- t_succ IH1]
 
 invert x
-by (tps [|- D] [|- S]) as IH0 unboxed
+by tps [|- D] [|- S] as IH0 unboxed
 solve [|- t_if IH0 D1 D2]
 
 invert x
@@ -34,3 +34,4 @@ invert x
 invert x
 invert x
 solve [|- D1]
+:quit

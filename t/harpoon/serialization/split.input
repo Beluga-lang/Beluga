@@ -8,3 +8,4 @@ session serialize
 solve [|- base]
 solve [|- base]
 solve [|- base]
+:quit

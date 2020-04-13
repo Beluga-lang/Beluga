@@ -1,6 +1,6 @@
 t/harpoon/logrel/weak-norm-total.bel
 lookup
-{gamma:ctx}{#p:[gamma |- tm A[]]}RedSub [gamma] [ |- $S[^]] -> Reduce [|- A] [|- #p[$S]]
+{gamma:ctx}{#p:[gamma |- tm A[]]}RedSub [gamma] [|- $S[^]] -> Reduce [|- A] [|- #p[$S]]
 1
 
 split [gamma]
@@ -10,22 +10,23 @@ invert x
 by lookup [g] [g |- #p1] x1 as ih
 impossible [|- #p]
 main
-{gamma:ctx}{M:[gamma |- tm A[]]} RedSub [gamma] [ |- $S[^]] -> Reduce [|- A] [|- M[$S]]
+{gamma:ctx}{M:[gamma |- tm A[]]} RedSub [gamma] [|- $S[^]] -> Reduce [|- A] [|- M[$S]]
 2
 
 rename comp x rs
 split [gamma |- M]
-suffices by I toshow [|- halts c]
+suffices by I toshow _
 solve [|- halts/m refl val/c]
 
-suffices by Arr toshow [|- halts (lam \y. M1[$S[], y])], {N : [|- tm T]} Reduce [|- T] [|- N] -> Reduce [|- T1] [|- app (lam \y. M1[$S[], y]) N]
-suffices by bwd_closed [|- beta] toshow Reduce [|- T1] [|- M1 [$S[], N]]
+suffices by Arr toshow _, _
+suffices by bwd_closed [|- beta] toshow _
 by Dot rs x as rs'
-by main [gamma, x : tm _] [gamma, x |- M1] rs' as ih
+solve main [gamma, x : tm _] [gamma, x |- M1] rs'
 solve [|- halts/m refl val/lam]
 
 by main [gamma] [gamma |- M1] rs as ih1
 invert ih1
-by main [gamma] [gamma |- M2] rs as ih2
-solve x1 [|- _] ih2
+suffices by x1 toshow _
+solve main [gamma] [gamma |- M2] rs
 solve lookup [gamma] [gamma |- #p] rs
+:quit

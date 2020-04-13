@@ -4,4 +4,4 @@ forall_to_exists
 
 
 solve ([⊢ IMP-I (apply (term arrow formula) formula (forall term) (lambda term formula (\t. S[t]))) (apply (term arrow formula) formula (exists term) (lambda term formula (\t. S[t]))) (\all. EXT-I term (lambda term formula (\t. S[t])) zero (ALL-E term (lambda term formula (\t. S[t])) zero all))])
-
+:quit

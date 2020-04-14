@@ -2777,7 +2777,10 @@ let rec ground_sub cD = function (* why is parameter cD is unused? -je *)
       forceGlobalCnstr' cnstr;
       match !globalCnstrs with
       | [] -> ()
-      | _ -> raise (Failure "Unresolved constraints")
+      | cs ->
+         Format.fprintf Format.str_formatter "Unresolved constraints@,@[<v 2>  %a@]@."
+           P.fmt_ppr_lf_constraints cs;
+         raise (Failure (Buffer.contents Format.stdbuf))
 
     and forceGlobalCnstr' c_list = match c_list with
       | [ ] -> ()

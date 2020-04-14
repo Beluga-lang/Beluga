@@ -2783,6 +2783,12 @@ let rec ground_sub cD = function (* why is parameter cD is unused? -je *)
       | [ ] -> ()
       | c :: cnstrs when is_trivial_constraint !c ->
          solveConstraint c;
+         dprintf
+           begin fun p ->
+           p.fmt "[forceGlobalCnstr'] @[<v>processing trivial constraint\
+                  @,@[%a@]@]"
+             P.fmt_ppr_lf_constraint !c
+           end;
          forceGlobalCnstr cnstrs
       (* constraints that are Queued are considered trivial, so this
          time we must have an outstanding Eqn whose terms are not
@@ -2793,7 +2799,7 @@ let rec ground_sub cD = function (* why is parameter cD is unused? -je *)
          dprintf begin fun p ->
            p.fmt "[forceGlobalCnstr'] @[<v>processing nontrivial constraint\
                   @,@[%a@]@]"
-             P.fmt_ppr_lf_constraint !c
+             P.fmt_ppr_lf_constraint c'
            end;
 
          begin

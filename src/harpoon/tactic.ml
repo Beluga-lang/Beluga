@@ -634,6 +634,9 @@ let suffices
     B.Check.Comp.unify_suffices loc g.context.cD tau_i' tau_args
       (Whnf.cnormCTyp g.goal)
   in
+  (* Need to solve constraints since unify_suffices adds some
+     but does not try to solve them *)
+  B.Unify.EmptyTrail.forceGlobalCnstr !B.Unify.EmptyTrail.globalCnstrs;
   (* Need to normalize the scrutinee here because genMApp will create
      a spine of MApps involving MMVars to eliminate the leading
      PiBoxes, both implicit & explicit kinds. However, after unifying

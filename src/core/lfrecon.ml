@@ -2855,7 +2855,7 @@ let solve_fcvarCnstr cnstrs =
 let solve_constraints cD' =
   solve_fcvarCnstr !fcvar_cnstr ;
   reset_fcvarCnstr ();
-  Unify.forceGlobalCnstr (!Unify.globalCnstrs);
+  Unify.forceGlobalCnstr ();
   Unify.resetGlobalCnstrs ()
 
 let solve_fvarCnstr rectyp =

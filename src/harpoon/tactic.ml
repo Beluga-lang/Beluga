@@ -636,7 +636,7 @@ let suffices
   in
   (* Need to solve constraints since unify_suffices adds some
      but does not try to solve them *)
-  B.Unify.EmptyTrail.forceGlobalCnstr !B.Unify.EmptyTrail.globalCnstrs;
+  B.Unify.EmptyTrail.forceGlobalCnstr ();
   (* Need to normalize the scrutinee here because genMApp will create
      a spine of MApps involving MMVars to eliminate the leading
      PiBoxes, both implicit & explicit kinds. However, after unifying

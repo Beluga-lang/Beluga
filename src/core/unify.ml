@@ -62,7 +62,7 @@ module type UNIFY = sig
 
   val nextCnstr         : unit -> cnstr option
   val addConstraint     : cnstr list ref * cnstr -> unit
-  val forceGlobalCnstr  : cnstr list -> unit
+  val forceGlobalCnstr  : unit -> unit
   val solveConstraint   : cnstr -> unit
 
   val isVar             : head -> bool
@@ -2772,9 +2772,10 @@ let rec ground_sub cD = function (* why is parameter cD is unused? -je *)
             unifyHead mflag cD cPsi h1 h2 ;
             forceCnstr mflag (nextCnstr ())
 
-    and forceGlobalCnstr cnstr =
+    and forceGlobalCnstr () =
+      let constrs = !globalCnstrs in
       resetGlobalCnstrs ();
-      forceGlobalCnstr' cnstr;
+      forceGlobalCnstr' constrs;
       match !globalCnstrs with
       | [] -> ()
       | cs ->
@@ -2840,8 +2841,7 @@ let rec ground_sub cD = function (* why is parameter cD is unused? -je *)
 
     let unresolvedGlobalCnstrs () =
       begin try
-        let cnstr = !globalCnstrs in
-        forceGlobalCnstr cnstr;
+        forceGlobalCnstr ();
         resetGlobalCnstrs () ;
         false
       with Failure _ -> resetGlobalCnstrs () ; true

@@ -306,7 +306,7 @@ let recSgnDecls decls =
              cK
 				   )
        in
-       let _ = Unify.forceGlobalCnstr (!Unify.globalCnstrs) in
+       Unify.forceGlobalCnstr ();
        let (cK', i) =
          Monitor.timer
            ( "Type Abstraction"
@@ -359,7 +359,7 @@ let recSgnDecls decls =
 				                       (fun () -> let cK = Reconstruct.compkind apxK in
 					                                Reconstruct.solve_fvarCnstr Lfrecon.Pibox; cK
 				          )) in
-       let _        = Unify.forceGlobalCnstr (!Unify.globalCnstrs) in
+       Unify.forceGlobalCnstr ();
        let (cK', i) = Monitor.timer ("Type Abstraction",
                                      fun () -> Abstract.compkind cK) in
 
@@ -394,7 +394,7 @@ let recSgnDecls decls =
        let _         = dprint (fun () -> "\nElaborating data-type constructor " ^ (string_of_name c)) in
        let tau'      = Monitor.timer ("Data-type Constant: Type Elaboration",
 				                              fun () -> Reconstruct.comptyp apx_tau)  in
-       let _         = Unify.forceGlobalCnstr (!Unify.globalCnstrs) in
+       Unify.forceGlobalCnstr ();
 	     let _         = dprint (fun () -> "Abstracting over comp. type") in
        let (tau', i) = Monitor.timer ("Data-type Constant: Type Abstraction",
 				                              fun () -> Abstract.comptyp tau') in
@@ -457,7 +457,7 @@ let recSgnDecls decls =
            , fun () -> Reconstruct.comptyp_cD cD apx_tau1
            )
        in
-       let _         = Unify.forceGlobalCnstr (!Unify.globalCnstrs) in
+       Unify.forceGlobalCnstr ();
        let _         = dprint (fun () -> "Abstracting over comp. type") in
        let (cD1, tau0', tau1', i) = Monitor.timer ("Codata-type Constant: Type Abstraction",
                                                    fun () -> Abstract.codatatyp cD tau0' tau1') in
@@ -512,7 +512,7 @@ let recSgnDecls decls =
            )
        in
 
-       let _        = Unify.forceGlobalCnstr (!Unify.globalCnstrs) in
+       Unify.forceGlobalCnstr ();
 
        let (tK', i) = Monitor.timer ("Type Abstraction",
                                      fun () -> Abstract.kind tK) in
@@ -566,7 +566,7 @@ let recSgnDecls decls =
            (P.fmt_ppr_lf_typ cD Int.LF.Null P.l0) tA
          end;
 
-       let _        = Unify.forceGlobalCnstr (!Unify.globalCnstrs) in
+       Unify.forceGlobalCnstr ();
        let (tA', i) = Monitor.timer ("Constant Abstraction",
                                      fun () -> Abstract.typ tA) in
 	     begin
@@ -605,7 +605,7 @@ let recSgnDecls decls =
              (P.fmt_ppr_lf_schema P.l0) sW
            end;
 			   Reconstruct.solve_fvarCnstr Lfrecon.Pi;
-			   Unify.forceGlobalCnstr (!Unify.globalCnstrs);
+			   Unify.forceGlobalCnstr ();
 			   Reconstruct.reset_fvarCnstr ();
 			   Unify.resetGlobalCnstrs ()
        end;
@@ -633,7 +633,7 @@ let recSgnDecls decls =
        let apx_i = Index.exp' (Var.create ()) i in
 	     let (cD, cG) = (Int.LF.Empty, Int.LF.Empty) in
        let (i', (tau, theta)) = Monitor.timer ("Function Elaboration", fun () -> Reconstruct.exp' cG apx_i) in
-       Unify.forceGlobalCnstr (!Unify.globalCnstrs);
+       Unify.forceGlobalCnstr ();
        let tau' = Whnf.cnormCTyp (tau, theta) in
        let i' = Whnf.cnormExp' (i', Whnf.m_id) in
 
@@ -684,7 +684,7 @@ let recSgnDecls decls =
        let apx_tau = Index.comptyp tau in
 	     let (cD, cG) = (Int.LF.Empty, Int.LF.Empty) in
        let tau' = Monitor.timer ("Function Type Elaboration", fun () -> Reconstruct.comptyp apx_tau)  in
-       Unify.forceGlobalCnstr (!Unify.globalCnstrs);
+       Unify.forceGlobalCnstr ();
        let (tau', _imp) =
          Monitor.timer
            ( "Function Type Abstraction"
@@ -701,7 +701,7 @@ let recSgnDecls decls =
            )
        in
        let i' = Whnf.cnormExp (i', Whnf.m_id) in
-       Unify.forceGlobalCnstr (!Unify.globalCnstrs);
+       Unify.forceGlobalCnstr ();
        let tau'    = Whnf.cnormCTyp (tau', C.m_id) in
        dprintf
          (fun p ->
@@ -829,7 +829,7 @@ let recSgnDecls decls =
                , fun () -> Reconstruct.comptyp apx_tau
                )
            in
-           Unify.forceGlobalCnstr (!Unify.globalCnstrs);
+           Unify.forceGlobalCnstr ();
            (* Are some FMVars delayed since we can't infer their
               type? - Not associated with pattsub
             *)
@@ -904,7 +904,7 @@ let recSgnDecls decls =
            end;
          begin
            try
-             Unify.forceGlobalCnstr (!Unify.globalCnstrs)
+             Unify.forceGlobalCnstr ()
            with Unify.GlobalCnstrFailure (loc,cnstr) ->
              raise
                ( Check.Comp.Error
@@ -1046,7 +1046,7 @@ let recSgnDecls decls =
            (P.fmt_ppr_lf_typ cD Int.LF.Null P.l0) tA
          end;
 
-       Unify.forceGlobalCnstr (!Unify.globalCnstrs);
+       Unify.forceGlobalCnstr ();
 
        let (tA', i) =
          Monitor.timer

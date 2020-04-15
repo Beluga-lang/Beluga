@@ -485,7 +485,7 @@ let query =
                   tA)
             in
             (* let cD       = Synint.LF.Empty in *)
-            let _ = Unify.StdTrail.forceGlobalCnstr (!Unify.StdTrail.globalCnstrs) in
+            Unify.StdTrail.forceGlobalCnstr ();
             let (tA', i) =
               Monitor.timer
                 ( "Constant Abstraction"

@@ -1167,7 +1167,7 @@ let genObj (cD, cPsi, tP) (tH, tA, k) =
     genSpine k names LF.Empty cPsi' (tA', S.LF.id) tP'
     $ fun tS ->
       try
-        U.forceGlobalCnstr !U.globalCnstrs;
+        U.forceGlobalCnstr ();
         dprnt "[genObj] global constraints forced!";
         Some tS
       with
@@ -1460,7 +1460,7 @@ let rec solve' cD (matchCand, ms) cD_p mCands' sCands' =
      | [] ->
         begin
           try
-            U.forceGlobalCnstr (!U.globalCnstrs);
+            U.forceGlobalCnstr ();
             dprint
               begin fun _ ->
               "[solve'] All global constraints are true."

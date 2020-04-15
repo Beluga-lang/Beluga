@@ -637,7 +637,7 @@ and elMetaObj cD (loc,cM) cTt =
   let ctyp = C.cnormMTyp cTt in
   let r = elMetaObj' cD loc cM ctyp in
   try
-    Unify.forceGlobalCnstr (!Unify.globalCnstrs);
+    Unify.forceGlobalCnstr ();
     dprintf
       begin fun p ->
       p.fmt "[elMetaObj] @[<v>type = %a@,term = %a@]"
@@ -2528,8 +2528,8 @@ let comptyp tau = comptyp_cD Int.LF.Empty tau
 
 let comptypdef loc a (tau, cK) =
   let cK = elCompKind Int.LF.Empty cK in
-  let _  = (solve_fvarCnstr Lfrecon.Pibox;
-            Unify.forceGlobalCnstr (!Unify.globalCnstrs)) in
+  solve_fvarCnstr Lfrecon.Pibox;
+  Unify.forceGlobalCnstr ();
   let (cK,i) = Abstract.compkind cK in
   reset_fvarCnstr ();
   Unify.resetGlobalCnstrs ();
@@ -2539,7 +2539,7 @@ let comptypdef loc a (tau, cK) =
   end in
   let cD  = unroll Int.LF.Empty cK in
   let tau = elCompTyp cD tau in
-  let _   = Unify.forceGlobalCnstr (!Unify.globalCnstrs) in
+  Unify.forceGlobalCnstr ();
   let (tau, k) =  Abstract.comptyp  tau in
    let _   = if k = 0 then () else
                 raise (Error(loc, TypeAbbrev a)) in

@@ -2792,7 +2792,8 @@ let rec ground_sub cD = function (* why is parameter cD is unused? -je *)
                   @,@[%a@]@]"
              P.fmt_ppr_lf_constraint !c
            end;
-         forceGlobalCnstr cnstrs
+         resetGlobalCnstrs ();
+         forceGlobalCnstr' cnstrs
       (* constraints that are Queued are considered trivial, so this
          time we must have an outstanding Eqn whose terms are not
          convertible *)

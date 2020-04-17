@@ -14,9 +14,9 @@ module LF = struct
     | Typ
     | PiKind of (typ_decl * depend) * kind
 
-  and typ_decl =                              (* LF Declarations                *)
-    | TypDecl of name * typ                   (* D := x:A                       *)
-    | TypDeclOpt of name                      (*   |  x:_                       *)
+  and typ_decl =                                (* LF Declarations                *)
+    | TypDecl of name * typ                     (* D := x:A                       *)
+    | TypDeclOpt of name                        (*   |  x:_                       *)
 
   and cltyp =
     | MTyp of typ
@@ -27,25 +27,25 @@ module LF = struct
     | ClTyp of cltyp * dctx
     | CTyp of cid_schema option
 
-  and ctyp_decl =                             (* Contextual Declarations        *)
+  and ctyp_decl =                               (* Contextual Declarations        *)
     | Decl of name * ctyp * depend
     | DeclOpt of name * plicity
 
-  and typ =                                   (* LF level                       *)
-    | Atom  of Loc.t * cid_typ * spine        (* A ::= a M1 ... Mn              *)
-    | PiTyp of (typ_decl * depend) * typ      (*   | Pi x:A.B                   *)
+  and typ =                                     (* LF level                       *)
+    | Atom of Loc.t * cid_typ * spine           (* A ::= a M1 ... Mn              *)
+    | PiTyp of (typ_decl * depend) * typ        (*   | Pi x:A.B                   *)
     | Sigma of typ_rec
-    | TClo  of (typ * sub)                    (*   | TClo(A,s)                  *)
+    | TClo of (typ * sub)                       (*   | TClo(A,s)                  *)
 
 
   (* The plicity annotation is set to `implicit when reconstructing an
      a hole (_) so that when printing, it can be reproduced correctly.
    *)
-  and normal =                                (* normal terms                   *)
-    | Lam  of Loc.t * name * normal           (* M ::= \x.M                     *)
-    | Root of Loc.t * head * spine * plicity  (*   | h . S                      *)
+  and normal =                                  (* normal terms                   *)
+    | Lam of Loc.t * name * normal              (* M ::= \x.M                     *)
+    | Root of Loc.t * head * spine * plicity    (*   | h . S                      *)
     | LFHole of Loc.t * HoleId.t * HoleId.name
-    | Clo  of (normal * sub)                  (*   | Clo(N,s)                   *)
+    | Clo of (normal * sub)                     (*   | Clo(N,s)                   *)
     | Tuple of Loc.t * tuple
 
   (* TODO: Heads ought to carry their location.
@@ -53,67 +53,67 @@ module LF = struct
      location is the correct one.
    *)
   and head =
-    | BVar  of offset                         (* H ::= x                        *)
-    | Const of cid_term                       (*   | c                          *)
-    | MMVar of mm_var_inst                    (*   | u[t ; s]                   *)
-    | MPVar of mm_var_inst                    (*   | p[t ; s]                   *)
-    | MVar  of (cvar * sub)                   (*   | u[s]                       *)
-    | PVar  of (offset * sub)                 (*   | p[s]                       *)
-    | AnnH  of head * typ                     (*   | (H:A)                      *)
-    | Proj  of head * int                     (*   | x.k | #p.k s               *)
+    | BVar of offset                            (* H ::= x                        *)
+    | Const of cid_term                         (*   | c                          *)
+    | MMVar of mm_var_inst                      (*   | u[t ; s]                   *)
+    | MPVar of mm_var_inst                      (*   | p[t ; s]                   *)
+    | MVar of (cvar * sub)                      (*   | u[s]                       *)
+    | PVar of (offset * sub)                    (*   | p[s]                       *)
+    | AnnH of head * typ                        (*   | (H:A)                      *)
+    | Proj of head * int                        (*   | x.k | #p.k s               *)
 
-    | FVar  of name                           (* free variable for type
-                                                 reconstruction                 *)
-    | FMVar of fvarsub                        (* free meta-variable for type
-                                                 reconstruction                 *)
-    | FPVar of fvarsub                        (* free parameter variable for type
-                                                 reconstruction                 *)
-    | HClo  of offset * offset * sub          (*   | HClo(x, #S[sigma])         *)
-    | HMClo of offset * mm_var_inst           (*   | HMClo(x, #S[theta;sigma])  *)
+    | FVar of name                              (* free variable for type
+                                                   reconstruction                 *)
+    | FMVar of fvarsub                          (* free meta-variable for type
+                                                   reconstruction                 *)
+    | FPVar of fvarsub                          (* free parameter variable for type
+                                                   reconstruction                 *)
+    | HClo of offset * offset * sub             (*   | HClo(x, #S[sigma])         *)
+    | HMClo of offset * mm_var_inst             (*   | HMClo(x, #S[theta;sigma])  *)
 
   and fvarsub = name * sub
-  and spine =                                 (* spine                          *)
-    | Nil                                     (* S ::= Nil                      *)
-    | App  of normal * spine                  (*   | M . S                      *)
-    | SClo of (spine * sub)                   (*   | SClo(S,s)                  *)
+  and spine =                                   (* spine                          *)
+    | Nil                                       (* S ::= Nil                      *)
+    | App of normal * spine                     (*   | M . S                      *)
+    | SClo of (spine * sub)                     (*   | SClo(S,s)                  *)
 
   and sub =
-    | Shift of offset                         (* sigma ::= ^(psi,n)             *)
-    | SVar  of offset * int * sub (* BEWARE: offset and int are both ints,
+    | Shift of offset                           (* sigma ::= ^(psi,n)             *)
+    | SVar of offset * int * sub (* BEWARE: offset and int are both ints,
                                      and in the opposite order compared to FSVar and MSVar.
                                      offset is the index into Delta and describes the SVar.
                                      This is a pain to fix *)
-    | FSVar of offset * fvarsub               (*   | s[sigma]                   *)
-    | Dot   of front * sub                    (*   | Ft . s                     *)
-    | MSVar of offset * mm_var_inst           (*   | u[t ; s]                   *)
+    | FSVar of offset * fvarsub                 (*   | s[sigma]                   *)
+    | Dot of front * sub                        (*   | Ft . s                     *)
+    | MSVar of offset * mm_var_inst             (*   | u[t ; s]                   *)
     | EmptySub
     | Undefs
 
-  and front =                                 (* Fronts:                        *)
-    | Head of head                            (* Ft ::= H                       *)
-    | Obj  of normal                          (*    | N                         *)
-    | Undef                                   (*    | _                         *)
+  and front =                                   (* Fronts:                        *)
+    | Head of head                              (* Ft ::= H                       *)
+    | Obj of normal                             (*    | N                         *)
+    | Undef                                     (*    | _                         *)
 
-                                              (* Contextual substitutions       *)
-  and mfront =                                (* Fronts:                        *)
+                                                (* Contextual substitutions       *)
+  and mfront =                                  (* Fronts:                        *)
     | ClObj of dctx_hat * clobj
-    | CObj of dctx                            (*    | Psi                       *)
-    | MV   of offset                          (*    | u//u | p//p | psi/psi     *)
+    | CObj of dctx                              (*    | Psi                       *)
+    | MV of offset                              (*    | u//u | p//p | psi/psi     *)
     | MUndef (* This shouldn't be here, we should use a different datastructure for
                partial inverse substitutions *)
 
-  and clobj =                                 (* ContextuaL objects *)
-    | MObj of normal                          (* Mft::= Psihat.N                *)
-    | PObj of head                            (*    | Psihat.p[s] | Psihat.x    *)
+  and clobj =                                   (* ContextuaL objects *)
+    | MObj of normal                            (* Mft::= Psihat.N                *)
+    | PObj of head                              (*    | Psihat.p[s] | Psihat.x    *)
     | SObj of sub
 
-  and msub =                                  (* Contextual substitutions       *)
-    | MShift of int                           (* theta ::= ^n                   *)
-    | MDot   of mfront * msub                 (*       | MFt . theta            *)
+  and msub =                                    (* Contextual substitutions       *)
+    | MShift of int                             (* theta ::= ^n                   *)
+    | MDot of mfront * msub                     (*       | MFt . theta            *)
 
-  and cvar =                                  (* Contextual Variables           *)
-    | Offset of offset                        (* Bound Variables                *)
-    | Inst   of mm_var                 (* D ; Psi |- M <= A provided constraint *)
+  and cvar =                                    (* Contextual Variables           *)
+    | Offset of offset                          (* Bound Variables                *)
+    | Inst of mm_var                            (* D ; Psi |- M <= A provided constraint *)
 
   and mm_var =
     { name : name
@@ -135,7 +135,7 @@ module LF = struct
     | ICtx of dctx
 
   and tvar =
-    | TInst   of typ option ref * dctx * kind * cnstr list ref
+    | TInst of typ option ref * dctx * kind * cnstr list ref
 
   and typ_free_var = Type of typ | TypVar of tvar
 
@@ -148,54 +148,57 @@ module LF = struct
 
   and cnstr = constrnt ref
 
-  and dctx =                                 (* LF Context                     *)
-    | Null                                   (* Psi ::= .                      *)
-    | CtxVar   of ctx_var                    (* | psi                          *)
-    | DDec     of dctx * typ_decl            (* | Psi, x:A   or x:block ...    *)
+  and dctx =                               (* LF Context                     *)
+    | Null                                 (* Psi ::= .                      *)
+    | CtxVar of ctx_var                    (* | psi                          *)
+    | DDec of dctx * typ_decl              (* | Psi, x:A   or x:block ...    *)
 
   and ctx_var =
-    | CtxName   of name
+    | CtxName of name
     | CtxOffset of offset
-    | CInst  of mm_var_inst'
-        (* D |- Psi : schema   *)
+    | CInst of mm_var_inst'
+       (* D |- Psi : schema   *)
 
-  and sch_elem =                         (* Schema Element                 *)
+  and sch_elem =                           (* Schema Element                 *)
     | SchElem of typ_decl ctx * typ_rec    (* Pi    x1:A1 ... xn:An.
-                                            Sigma y1:B1 ... yk:Bk. B       *)
-                                         (* Sigma-types not allowed in Ai  *)
+                                              Sigma y1:B1 ... yk:Bk. B       *)
+                                           (* Sigma-types not allowed in Ai  *)
 
   and schema =
     | Schema of sch_elem list
 
-  and dctx_hat = ctx_var option * offset  (* Psihat ::=         *)
-                                          (*        | psi       *)
-                                          (*        | .         *)
-                                          (*        | Psihat, x *)
+  and dctx_hat = ctx_var option * offset   (* Psihat ::=         *)
+                                           (*        | psi       *)
+                                           (*        | .         *)
+                                           (*        | Psihat, x *)
 
 
-  and typ_rec =    (* Sigma x1:A1 ... xn:An. B *)
-    |  SigmaLast of name option * typ                        (* ... . B *)
-    |  SigmaElem of name * typ * typ_rec                (* xk : Ak, ... *)
+  and typ_rec =                            (* Sigma x1:A1 ... xn:An. B *)
+    |  SigmaLast of name option * typ      (* ... . B *)
+    |  SigmaElem of name * typ * typ_rec   (* xk : Ak, ... *)
 
   and tuple =
     | Last of normal
     | Cons of normal * tuple
 
-  and mctx = ctyp_decl ctx          (* Modal Context  D: CDec ctx     *)
+  and mctx = ctyp_decl ctx                 (* Modal Context  D: CDec ctx     *)
 
-  let map_plicity f = function
+  let map_plicity f =
+    function
     | Root (loc, tH, tS, plicity) ->
        Root (loc, tH, tS, f plicity)
-    | _ as tM -> tM
+    | tM -> tM
 
-  let proj_maybe (h : head) : int option -> head = function
+  let proj_maybe (h : head) : int option -> head =
+    function
     | None -> h
     | Some k -> Proj (h, k)
 
   (** Helper for forming TClo LF types, which avoids doing so if the
       substitution is the identity.
    *)
-  let tclo tA s = match s with
+  let tclo tA s =
+    match s with
     | Shift 0 -> tA
     | _ -> TClo (tA, s)
 
@@ -206,7 +209,8 @@ module LF = struct
 
   let is_mmvar_instantiated mmvar = Maybe.is_some (mmvar.instantiation.contents)
 
-  let rename_ctyp_decl f = function
+  let rename_ctyp_decl f =
+    function
     | Decl (x, tA, ind) -> Decl (f x, tA, ind)
     | DeclOpt (x, plicity) -> DeclOpt (f x, plicity)
 
@@ -229,7 +233,8 @@ module LF = struct
       not a DeclOpt.
       Raises a violation if it is a DeclOpt.
    *)
-  let require_decl : ctyp_decl -> Id.name * ctyp * depend = function
+  let require_decl : ctyp_decl -> Id.name * ctyp * depend =
+    function
     | Decl (u, cU, dep) -> (u, cU, dep)
     | DeclOpt _ ->
        Error.violation "[require_decl] DeclOpt is forbidden"
@@ -237,7 +242,8 @@ module LF = struct
   (* Hatted version of LF.Null *)
   let null_hat : dctx_hat = (None, 0)
 
-  let rec loc_of_normal = function
+  let rec loc_of_normal =
+    function
     | Lam (loc, _, _) -> loc
     | Root (loc, _, _, _) -> loc
     | LFHole (loc, _, _) -> loc
@@ -248,9 +254,9 @@ module LF = struct
   (* Type Abbreviations *)
   (**********************)
 
-  type nclo     = normal  * sub          (* Ns = [s]N                      *)
-  type sclo     = spine   * sub          (* Ss = [s]S                      *)
-  type tclo     = typ     * sub          (* As = [s]A                      *)
+  type nclo = normal * sub               (* Ns = [s]N                      *)
+  type sclo = spine * sub                (* Ss = [s]S                      *)
+  type tclo = typ * sub                  (* As = [s]A                      *)
   type trec_clo = typ_rec * sub          (* [s]Arec                        *)
 
   type assoc = Left | Right | NoAssoc
@@ -267,8 +273,8 @@ module LF = struct
   (* Helpers            *)
   (**********************)
 
-  (* val blockLength : typ_rec -> int *)
-  let rec blockLength = function
+  let rec blockLength =
+    function
     | SigmaLast _ -> 1
     | SigmaElem(_x, _tA, recA) -> 1 + blockLength recA
 
@@ -287,7 +293,8 @@ module LF = struct
     (* getType head s_recA target 1 *)
     val getType : head -> trec_clo -> int -> int -> tclo
   *)
-  let rec getType head s_recA target j = match (s_recA, target) with
+  let rec getType head s_recA target j =
+    match (s_recA, target) with
     | ((SigmaLast (_, lastA), s), 1) ->
         (lastA, s)
 
@@ -357,11 +364,13 @@ module LF = struct
 
     | _ -> None
 
-  let get_constraint_id = function
+  let get_constraint_id =
+    function
     | Eqn (id, _, _, _, _) -> id
     | Queued id -> id
 
-  let rec drop_spine k = function
+  let rec drop_spine k =
+    function
     | tS when k = 0 -> tS
     | Nil -> Nil
     | App (_, tS') -> drop_spine (k-1) tS'
@@ -374,7 +383,7 @@ module Comp = struct
 
   type kind =
     | Ctype of Loc.t
-    | PiKind  of Loc.t * LF.ctyp_decl * kind
+    | PiKind of Loc.t * LF.ctyp_decl * kind
 
   type meta_typ = LF.ctyp
 
@@ -386,32 +395,34 @@ module Comp = struct
                  * meta_spine * plicity
 
   type typ =
-    | TypBase   of Loc.t * cid_comp_typ * meta_spine
+    | TypBase of Loc.t * cid_comp_typ * meta_spine
     | TypCobase of Loc.t * cid_comp_cotyp * meta_spine
-    | TypDef    of Loc.t * cid_comp_typ * meta_spine
+    | TypDef of Loc.t * cid_comp_typ * meta_spine
     | TypBox of Loc.t * meta_typ
-    | TypArr    of Loc.t * typ * typ
-    | TypCross  of Loc.t * typ * typ
-    | TypPiBox  of Loc.t * LF.ctyp_decl * typ
-    | TypClo    of typ *  LF.msub
+    | TypArr of Loc.t * typ * typ
+    | TypCross of Loc.t * typ * typ
+    | TypPiBox of Loc.t * LF.ctyp_decl * typ
+    | TypClo of typ *  LF.msub
     | TypInd of typ
 
   type suffices_typ = typ generic_suffices_typ
 
-  let rec loc_of_typ : typ -> Loc.t = function
+  let rec loc_of_typ : typ -> Loc.t =
+    function
     | TypBase (l, _, _) | TypCobase (l, _, _) | TypDef (l, _, _)
       | TypBox (l, _) | TypArr (l, _, _) | TypCross (l, _, _)
       | TypPiBox (l, _, _) ->
        l
     | TypClo (tau, _) | TypInd tau -> loc_of_typ tau
 
-  let loc_of_suffices_typ : suffices_typ -> Loc.t = function
+  let loc_of_suffices_typ : suffices_typ -> Loc.t =
+    function
     | `exact tau -> loc_of_typ tau
     | `infer loc -> loc
 
   type ih_arg =
-    | M  of meta_obj
-    | V  of offset
+    | M of meta_obj
+    | V of offset
     | E (* what is E? -je *)
     | DC
   (* ^ For arguments that not constrained in the IH call. Stands
@@ -420,7 +431,7 @@ module Comp = struct
   type wf_tag = bool  (* indicates whether the argument is smaller *)
 
   type ctyp_decl =
-    | CTypDecl    of name * typ * wf_tag
+    | CTypDecl of name * typ * wf_tag
 
     (** Used during pretty-printing when going under lambdas. *)
     | CTypDeclOpt of name
@@ -428,7 +439,8 @@ module Comp = struct
   type ih_decl =
     | WfRec of name * ih_arg list * typ
 
-  let rename_ctyp_decl f = function
+  let rename_ctyp_decl f =
+    function
     | CTypDecl (x, tau, tag) -> CTypDecl (f x, tau, tag)
     | CTypDeclOpt x -> CTypDeclOpt (f x)
 
@@ -463,10 +475,10 @@ module Comp = struct
   and pattern =
     | PatMetaObj of Loc.t * meta_obj
     | PatConst of Loc.t * cid_comp_const * pattern_spine
-    | PatFVar   of Loc.t * name (* used only _internally_ by coverage *)
-    | PatVar   of Loc.t * offset
-    | PatPair  of Loc.t * pattern * pattern
-    | PatAnn   of Loc.t * pattern * typ * plicity
+    | PatFVar of Loc.t * name (* used only _internally_ by coverage *)
+    | PatVar of Loc.t * offset
+    | PatPair of Loc.t * pattern * pattern
+    | PatAnn of Loc.t * pattern * typ * plicity
 
   and pattern_spine =
     | PatNil
@@ -474,13 +486,13 @@ module Comp = struct
     | PatObs of Loc.t * cid_comp_dest * LF.msub * pattern_spine
 
   and branch =
-    | Branch of
-        Loc.t
-        * LF.mctx (* branch prefix *)
-        * (LF.mctx * gctx) (* branch contexts *)
-        * pattern
-        * LF.msub (* refinement substitution for the branch *)
-        * exp_chk
+    | Branch
+      of Loc.t
+         * LF.mctx (* branch prefix *)
+         * (LF.mctx * gctx) (* branch contexts *)
+         * pattern
+         * LF.msub (* refinement substitution for the branch *)
+         * exp_chk
 
   and fun_branches =
    | NilFBranch of Loc.t
@@ -502,17 +514,20 @@ module Comp = struct
     | `inductive o -> `inductive (f o)
     | x -> x
 
-  let option_of_total_dec_kind = function
+  let option_of_total_dec_kind =
+    function
     | `inductive o -> Some o
     | _ -> None
 
   (** Applies a spine of checkable terms to a synthesizable term, from
       left to right. *)
-  let rec apply_many i = function
+  let rec apply_many i =
+    function
     | [] -> i
     | e :: es -> apply_many (Apply (Loc.ghost, i, e)) es
 
-  let loc_of_exp_syn = function
+  let loc_of_exp_syn =
+    function
     | Var (loc, _) -> loc
     | DataConst (loc, _) -> loc
     | Obs (loc, _, _, _) -> loc
@@ -522,7 +537,8 @@ module Comp = struct
     | AnnBox ((loc, _), _) -> loc
     | PairVal (loc, _, _) -> loc
 
-  let loc_of_exp_chk = function
+  let loc_of_exp_chk =
+    function
     | Syn (loc, _) -> loc
     | Fn (loc, _, _) -> loc
     | Fun (loc, _) -> loc
@@ -558,7 +574,8 @@ module Comp = struct
     | (_, ClObj (phat, MObj (Root (_, h, _, _)))) -> Some (phat, h)
     | _ -> None
 
-  let itermToClObj = function
+  let itermToClObj =
+    function
     | LF.INorm n -> LF.MObj n
     | LF.IHead h -> LF.PObj h
     | LF.ISub s -> LF.SObj s
@@ -569,13 +586,15 @@ module Comp = struct
   (** Finds the head of an application. Chases meta-applications and
       computation applications.
    *)
-  let rec head_of_application : exp_syn -> exp_syn = function
+  let rec head_of_application : exp_syn -> exp_syn =
+    function
     | Apply (_, i, _) -> head_of_application i
     | MApp (_, i, _, _, _) -> head_of_application i
-    | _ as i -> i
+    | i -> i
 
   (** Removes all type annotations from a pattern. *)
-  let rec strip_pattern : pattern -> pattern = function
+  let rec strip_pattern : pattern -> pattern =
+    function
     | PatPair (loc, p1, p2) ->
        PatPair (loc, strip_pattern p1, strip_pattern p2)
     | PatAnn (loc, p, _, _) -> p
@@ -583,7 +602,8 @@ module Comp = struct
        PatConst (loc, c, strip_pattern_spine pS)
     | p -> p (* no subpatterns *)
 
-  and strip_pattern_spine : pattern_spine -> pattern_spine = function
+  and strip_pattern_spine : pattern_spine -> pattern_spine =
+    function
     | PatNil -> PatNil
     | PatApp (loc, p, pS) ->
        PatApp (loc, strip_pattern p, strip_pattern_spine pS)
@@ -717,10 +737,10 @@ module Comp = struct
      then proceeds with a proof.
   *)
   and hypothetical =
-    Hypothetical of
-      Loc.t
-      * hypotheses (* the full contexts *)
-      * proof (* the proof; should make sense in `hypotheses`. *)
+    Hypothetical
+    of Loc.t
+       * hypotheses (* the full contexts *)
+       * proof (* the proof; should make sense in `hypotheses`. *)
 
   (** An open subgoal is a proof state together with a reference ot the
       theorem in which it occurs.
@@ -795,8 +815,8 @@ module Comp = struct
       : proof =
     List.fold_right proof_cons cmds proof
 
-  let name_of_ctyp_decl (d : ctyp_decl) =
-    match d with
+  let name_of_ctyp_decl =
+    function
     | CTypDecl (name, _, _) -> name
     | CTypDeclOpt name -> name
 
@@ -804,16 +824,16 @@ module Comp = struct
       index object.
       See `LF.variable_of_mfront`.
    *)
-  let metavariable_of_exp (t : exp_syn) : (offset * offset option) option =
-    match t with
+  let metavariable_of_exp : exp_syn -> (offset * offset option) option =
+    function
     | AnnBox ((_, mf), _) -> LF.variable_of_mfront mf
     | _ -> None
 
   (* Decides whether the given term is a computational variable.
      Returns the offset of the variable.
    *)
-  let variable_of_exp (t : exp_syn) : offset option =
-    match t with
+  let variable_of_exp : exp_syn -> offset option =
+    function
     | Var (_, k) -> Some k
     | _ -> None
 
@@ -845,8 +865,8 @@ module Comp = struct
     | DataApp of value * data_spine
 
   and fun_branches_value =
-  | NilValBranch
-  | ConsValBranch of (pattern_spine * exp_chk * LF.msub * env) * fun_branches_value
+    | NilValBranch
+    | ConsValBranch of (pattern_spine * exp_chk * LF.msub * env) * fun_branches_value
 end
 
 

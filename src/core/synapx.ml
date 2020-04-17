@@ -31,7 +31,7 @@ module LF = struct
     | DeclOpt of name
 
   and typ =
-    | Atom  of Loc.t * cid_typ * spine
+    | Atom of Loc.t * cid_typ * spine
     | PiTyp of (typ_decl * depend) * typ
     | Sigma of typ_rec
 
@@ -44,20 +44,20 @@ module LF = struct
     | Cons of normal * tuple
 
   and normal =
-    | Lam  of Loc.t * name * normal
+    | Lam of Loc.t * name * normal
     | Root of Loc.t * head * spine
     | LFHole of Loc.t * string option
     | Tuple of Loc.t * tuple
     | Ann of Loc.t * normal * typ
 
   and head =
-    | BVar  of offset
+    | BVar of offset
     | Const of cid_term
-    | MVar  of cvar * sub option
-    | Proj  of head * proj
+    | MVar of cvar * sub option
+    | Proj of head * proj
     | Hole
-    | PVar  of cvar * sub option
-    | FVar  of name
+    | PVar of cvar * sub option
+    | FVar of name
     | FMVar of name * sub option
     | FPVar of name * sub option
 
@@ -72,26 +72,26 @@ module LF = struct
   and sub =
     | EmptySub
     | Id
-    | Dot   of front * sub
-    | SVar  of cvar * sub option
+    | Dot of front * sub
+    | SVar of cvar * sub option
     | FSVar of name * sub option
 
   and front =
     | Head of head
-    | Obj  of normal
+    | Obj of normal
 
   and cvar =
     | Offset of offset
-    | MInst  of Int.LF.clobj * Int.LF.ctyp
+    | MInst of Int.LF.clobj * Int.LF.ctyp
 
   and dctx =
     | Null
-    | CtxVar   of ctx_var
-    | DDec     of dctx * typ_decl
+    | CtxVar of ctx_var
+    | DDec of dctx * typ_decl
     | CtxHole
 
   and ctx_var =
-    | CtxName   of name
+    | CtxName of name
     | CtxOffset of offset
 
   and mctx = ctyp_decl ctx
@@ -102,9 +102,7 @@ module LF = struct
   and schema =
     | Schema of sch_elem list
 
- and psi_hat = (Int.LF.ctx_var) option * offset
-
-
+  and psi_hat = Int.LF.ctx_var option * offset
 end
 
 
@@ -112,76 +110,76 @@ end
 module Comp = struct
   include Syncom.Comp
 
- type kind =
-   | Ctype of Loc.t
-   | PiKind  of Loc.t * LF.ctyp_decl * kind
+  type kind =
+    | Ctype of Loc.t
+    | PiKind of Loc.t * LF.ctyp_decl * kind
 
- type meta_typ = Loc.t * LF.ctyp
+  type meta_typ = Loc.t * LF.ctyp
 
- type mfront =
-   | ClObj of LF.dctx * LF.sub
-   | CObj of LF.dctx
+  type mfront =
+    | ClObj of LF.dctx * LF.sub
+    | CObj of LF.dctx
 
- type meta_obj = Loc.t * mfront
+  type meta_obj = Loc.t * mfront
 
- type meta_spine =
-   | MetaNil
-   | MetaApp of meta_obj * meta_spine
+  type meta_spine =
+    | MetaNil
+    | MetaApp of meta_obj * meta_spine
 
   type typ =
-   | TypBase of Loc.t * cid_comp_typ * meta_spine
-   | TypCobase of Loc.t * cid_comp_cotyp * meta_spine
-   | TypDef of Loc.t * cid_comp_typ * meta_spine
-   | TypBox of Loc.t * meta_typ
-   | TypArr     of Loc.t * typ * typ
-   | TypCross   of Loc.t * typ * typ
-   | TypPiBox   of Loc.t * LF.ctyp_decl * typ
-   | TypInd of typ
+    | TypBase of Loc.t * cid_comp_typ * meta_spine
+    | TypCobase of Loc.t * cid_comp_cotyp * meta_spine
+    | TypDef of Loc.t * cid_comp_typ * meta_spine
+    | TypBox of Loc.t * meta_typ
+    | TypArr of Loc.t * typ * typ
+    | TypCross of Loc.t * typ * typ
+    | TypPiBox of Loc.t * LF.ctyp_decl * typ
+    | TypInd of typ
 
   and exp_chk =
-     | Syn    of Loc.t * exp_syn
-     | Fn     of Loc.t * name * exp_chk                         (* fn x => e           *)
-     | Fun    of Loc.t * fun_branches                           (* fun   fbranches     *)
-     | MLam   of Loc.t * name * exp_chk                         (* mlam f => e         *)
-     | Pair   of Loc.t * exp_chk * exp_chk                      (* (e1 , e2)           *)
+     | Syn of Loc.t * exp_syn
+     | Fn of Loc.t * name * exp_chk                             (* fn x => e           *)
+     | Fun of Loc.t * fun_branches                              (* fun   fbranches     *)
+     | MLam of Loc.t * name * exp_chk                           (* mlam f => e         *)
+     | Pair of Loc.t * exp_chk * exp_chk                        (* (e1 , e2)           *)
      | LetPair of Loc.t * exp_syn * (name * name * exp_chk)     (* let (x,y) = i in e  *)
-     | Let    of Loc.t * exp_syn * (name * exp_chk)             (* let x = i in e      *)
-     | Box    of Loc.t * meta_obj                               (* box (Psi hat. M)    *)
-     | Case   of Loc.t * case_pragma * exp_syn * branch list    (* case i of bs *)
+     | Let of Loc.t * exp_syn * (name * exp_chk)                (* let x = i in e      *)
+     | Box of Loc.t * meta_obj                                  (* box (Psi hat. M)    *)
+     | Case of Loc.t * case_pragma * exp_syn * branch list      (* case i of bs *)
      | Impossible of Loc.t * exp_syn                            (* impossible i *)
-     | Hole   of Loc.t * string option                          (* ?name *)
+     | Hole of Loc.t * string option                            (* ?name *)
      | BoxHole of Loc.t                                         (* _ *)
 
   and exp_syn =
-     | Var    of Loc.t * offset                                     (* x              *)
-     | FVar   of name                                               (* x              *)
+     | Var of Loc.t * offset                                        (* x              *)
+     | FVar of name                                                 (* x              *)
      | DataConst of Loc.t * cid_comp_const                          (* c              *)
-     | Obs    of Loc.t * exp_chk * cid_comp_dest                    (* e.d            *)
-     | Const  of Loc.t * cid_prog                                   (* c              *)
-     | Apply  of Loc.t * exp_syn * exp_chk                          (* i e            *)
+     | Obs of Loc.t * exp_chk * cid_comp_dest                       (* e.d            *)
+     | Const of Loc.t * cid_prog                                    (* c              *)
+     | Apply of Loc.t * exp_syn * exp_chk                           (* i e            *)
      | BoxVal of Loc.t * meta_obj
      | PairVal of Loc.t * exp_syn * exp_syn
-     | Ann    of exp_chk * typ                                      (* e : tau        *)
+     | Ann of exp_chk * typ                                         (* e : tau        *)
 
- and pattern =
-   | PatMetaObj of Loc.t * meta_obj
-   | PatConst   of Loc.t * cid_comp_const * pattern_spine
-   | PatFVar    of Loc.t * name (* used only temporarily during indexing *)
-   | PatVar     of Loc.t * name * offset
-   | PatPair    of Loc.t * pattern * pattern
-   | PatAnn     of Loc.t * pattern * typ
+  and pattern =
+    | PatMetaObj of Loc.t * meta_obj
+    | PatConst of Loc.t * cid_comp_const * pattern_spine
+    | PatFVar of Loc.t * name (* used only temporarily during indexing *)
+    | PatVar of Loc.t * name * offset
+    | PatPair of Loc.t * pattern * pattern
+    | PatAnn of Loc.t * pattern * typ
 
- and pattern_spine =
-   | PatNil of Loc.t
-   | PatApp of Loc.t * pattern * pattern_spine
-   | PatObs of Loc.t * cid_comp_dest * pattern_spine
+  and pattern_spine =
+    | PatNil of Loc.t
+    | PatApp of Loc.t * pattern * pattern_spine
+    | PatObs of Loc.t * cid_comp_dest * pattern_spine
 
   and branch =
     | Branch of Loc.t * LF.ctyp_decl LF.ctx * pattern * exp_chk
 
   and fun_branches =
-   | NilFBranch of Loc.t
-   | ConsFBranch of Loc.t * (pattern_spine * exp_chk) * fun_branches
+    | NilFBranch of Loc.t
+    | ConsFBranch of Loc.t * (pattern_spine * exp_chk) * fun_branches
 
 
   (* the definition of branch_pattern will be removed and replaced by the more general notion of patterns;

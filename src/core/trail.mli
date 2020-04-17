@@ -4,7 +4,7 @@
     @author Brigitte Pientka
     @author Roberto Virga
     Modified: Costin Badescu
-*)
+ *)
 
 module type TRAIL = sig
   type 'a t

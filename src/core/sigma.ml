@@ -1,7 +1,8 @@
 open Support.Equality
 module LF = Syntax.Int.LF
 
-let rec project' fuel k tH s = function
+let rec project' fuel k tH s =
+  function
   | LF.SigmaLast (_, tA) when fuel = 0 -> Some (tA, s)
   | LF.SigmaElem (_, tA, _) when fuel = 0 -> Some (tA, s)
   | LF.SigmaElem (_, tA, tRec) ->

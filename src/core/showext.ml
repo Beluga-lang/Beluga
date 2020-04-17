@@ -6,12 +6,14 @@ open Support
 module LF = struct
   open Syntax.Ext.LF
 
-  let show_dep ppf = function
+  let show_dep ppf =
+    function
     | Maybe -> fprintf ppf "Maybe"
     | No -> fprintf ppf "No"
     | Inductive -> fprintf ppf "Inductive"
 
-  let rec show_kind ppf = function
+  let rec show_kind ppf =
+    function
     | Typ _ -> fprintf ppf "type"
     | ArrKind (_, t, k) ->
        fprintf ppf "ArrKind(@[<hv>%a,@ %a@])"
@@ -22,13 +24,15 @@ module LF = struct
          show_typ_decl d
          show_kind k
 
-  and show_typ_decl ppf = function
+  and show_typ_decl ppf =
+    function
     | TypDecl (x, t) ->
        fprintf ppf "TypDecl(@[<hv>%a,@ %a@])"
          Id.print x
          show_type t
 
-  and show_cltyp ppf = function
+  and show_cltyp ppf =
+    function
     | MTyp t -> fprintf ppf "MTyp(%a)" show_type t
     | PTyp t -> fprintf ppf "PTyp(%a)" show_type t
     | STyp (cl, cPsi) ->
@@ -36,29 +40,34 @@ module LF = struct
          show_svar_class cl
          show_dctx cPsi
 
-  and show_svar_class ppf = function
+  and show_svar_class ppf =
+    function
     | Ren -> fprintf ppf "Ren"
     | Subst -> fprintf ppf "Subst"
 
-  and show_ctyp ppf = function
+  and show_ctyp ppf =
+    function
     | ClTyp (cltyp, cPsi) ->
        fprintf ppf "ClTyp(@[<hv>%a,@ %a@])"
          show_cltyp cltyp
          show_dctx cPsi
 
-  and show_loc_ctyp ppf (_, ctyp) = show_ctyp ppf ctyp
+  and show_loc_ctyp ppf (_, ctyp) =
+    show_ctyp ppf ctyp
 
-  and show_ctyp_decl ppf = function
+  and show_ctyp_decl ppf =
+    function
     | Decl (x, d, dep) ->
-        fprintf ppf "Decl(@[<hv>%a,@ %a,@ %a@])"
-          Id.print x
-          show_loc_ctyp d
-          show_dep dep
+       fprintf ppf "Decl(@[<hv>%a,@ %a,@ %a@])"
+         Id.print x
+         show_loc_ctyp d
+         show_dep dep
     | DeclOpt x ->
        fprintf ppf "DeclOpt(%a)"
          Id.print x
 
-  and show_type ppf = function
+  and show_type ppf =
+    function
     | Atom (_, x, sp) ->
        fprintf ppf "Atom(@[<hv>%a,@ %a@])"
          Id.print x
@@ -81,7 +90,8 @@ module LF = struct
        fprintf ppf "AtomTerm(%a)"
          show_normal m
 
-  and show_normal ppf = function
+  and show_normal ppf =
+    function
     | Lam (_, x, m) ->
        fprintf ppf "Lam(@[<hv>%a,@ %a@])"
          Id.print x
@@ -111,7 +121,8 @@ module LF = struct
          show_type t
     | PatEmpty _ -> fprintf ppf "PatEmpty"
 
-  and show_head ppf = function
+  and show_head ppf =
+    function
     | Name (_, name, s) ->
        fprintf ppf "Name(@[<hv>%a,@ %a@])"
          Id.print name
@@ -126,7 +137,8 @@ module LF = struct
          show_head h
          show_proj p
 
-  and show_proj ppf = function
+  and show_proj ppf =
+    function
     | ByPos k -> fprintf ppf ".%d" k
     | ByName name -> fprintf ppf ".%a" Id.print name
 
@@ -138,7 +150,8 @@ module LF = struct
          (fun ppf (_, m) -> show_normal ppf m))
       ms
 
-  and show_sub_start ppf = function
+  and show_sub_start ppf =
+    function
     | EmptySub _ -> fprintf ppf "^"
     | Id _ -> fprintf ppf ".."
     | SVar (_, name, s) ->
@@ -146,7 +159,8 @@ module LF = struct
          Id.print name
          show_sub_opt s
 
-  and show_sub_opt ppf = function
+  and show_sub_opt ppf =
+    function
     | None -> ()
     | Some s -> show_sub ppf s
 
@@ -167,7 +181,8 @@ module Comp = struct
   open Format
   open Syntax.Ext.Comp
 
-  let rec show_kind ppf = function
+  let rec show_kind ppf =
+    function
     | Ctype _ -> fprintf ppf "ctype"
     | PiKind (_, d, k) ->
        fprintf ppf "PiKind(@[<hv>%a,@ %a@])"

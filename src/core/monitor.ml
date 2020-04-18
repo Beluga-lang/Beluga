@@ -59,38 +59,43 @@ init_tab ();;
 let writeTime (name, time, array) =
   let found = ref false in
   for i = 1 to 16 do
-    if Misc.String.equals name etapes.(i) then
+    if Misc.String.equals name etapes.(i)
+    then
       begin
-        (array.(i) <- array.(i) +. time);
+        array.(i) <- array.(i) +. time;
         found := true
       end
   done;
-  if not !found then
+  if not !found
+  then
     Printf.printf "Non existing argument for function writeTime (name, time).\n"
 
 (* Get the time before and after executing function f. Then call writeTime() to save data. *)
 let timer (name, f) =
-  if (!on || !onf) then
-    let timeRealBef = Unix.gettimeofday() in
-    let timeBef = Unix.times() in
-    let result  = f() in
-    let timeAft = Unix.times() in
-    let timeRealAft = Unix.gettimeofday() in
+  if !on || !onf
+  then
+    begin
+      let timeRealBef = Unix.gettimeofday () in
+      let timeBef = Unix.times () in
+      let result = f () in
+      let timeAft = Unix.times () in
+      let timeRealAft = Unix.gettimeofday () in
       writeTime (name, timeAft.Unix.tms_utime -. timeBef.Unix.tms_utime, valeurs_utime);
       writeTime (name, timeAft.Unix.tms_stime -. timeBef.Unix.tms_stime, valeurs_stime);
       writeTime (name, timeRealAft -. timeRealBef, valeurs_realtime);
       result;
+    end
   else
-    f();;
+    f ();;
 
 
 (*Help for print_timer*)
 let addR i =
-  (valeurs_realtime.(i)+.valeurs_realtime.(i+4)+.valeurs_realtime.(i+8)+.valeurs_realtime.(i+ 12));;
+  (valeurs_realtime.(i) +. valeurs_realtime.(i + 4) +. valeurs_realtime.(i + 8) +. valeurs_realtime.(i + 12));;
 let addU i =
-  (valeurs_utime.(i)+.valeurs_utime.(i+4)+.valeurs_utime.(i+8)+.valeurs_utime.(i+ 12));;
+  (valeurs_utime.(i) +. valeurs_utime.(i + 4) +. valeurs_utime.(i + 8) +. valeurs_utime.(i + 12));;
 let addS i =
-  (valeurs_stime.(i)+.valeurs_stime.(i+4)+.valeurs_stime.(i+8)+.valeurs_stime.(i+ 12));;
+  (valeurs_stime.(i) +. valeurs_stime.(i + 4) +. valeurs_stime.(i + 8) +. valeurs_stime.(i + 12));;
 
 
 (*
@@ -99,9 +104,11 @@ let addS i =
  * If the flag "onf" is true, print it in the file named "time.txt".
  *)
 let print_timer () =
-  if !on then
-    let _ = Printf.printf "\n                ## Timer Information: ##\n\n" in
-    let _ = Printf.printf "    Steps:                   | Real time: | User time: | System time: \n" in
+  if !on
+  then
+    begin
+      Printf.printf "\n                ## Timer Information: ##\n\n";
+      Printf.printf "    Steps:                   | Real time: | User time: | System time: \n";
 
       Printf.printf "%s         |  %.6f  |  %.6f  |  %.6f\n" etapes.(0) valeurs_realtime.(0) valeurs_utime.(0) valeurs_stime.(0);
       Printf.printf "%s      |  %.6f  |  %.6f  |  %.6f\n" etapes.(1) valeurs_realtime.(1) valeurs_utime.(1) valeurs_stime.(1);
@@ -129,12 +136,13 @@ let print_timer () =
       Printf.printf "\n Abstraction:                |  %.6f  |  %.6f  |  %.6f" (addR 2) (addU 2) (addS 2);
       Printf.printf "\n Check:                      |  %.6f  |  %.6f  |  %.6f\n" (addR 3) (addU 3) (addS 3);
       Printf.printf "\n Normalisation:              |  %.6f  |  %.6f  |  %.6f\n" valeurs_realtime.(16) valeurs_utime.(16) valeurs_stime.(16);
-
-  else
-    if !onf then
+    end
+  else if !onf
+  then
+    begin
       let channel = open_out "time.txt" in
-      let _ = Printf.fprintf channel "\n               ## Timer Information: ##\n\n" in
-      let _ = Printf.fprintf channel "    Steps:                   | Real time: | User time: | System time: \n" in
+      Printf.fprintf channel "\n               ## Timer Information: ##\n\n";
+      Printf.fprintf channel "    Steps:                   | Real time: | User time: | System time: \n";
 
       Printf.fprintf channel "%s         |  %.6f  |  %.6f  |  %.6f\n" etapes.(0) valeurs_realtime.(0) valeurs_utime.(0) valeurs_stime.(0);
       Printf.fprintf channel "%s      |  %.6f  |  %.6f  |  %.6f\n" etapes.(1) valeurs_realtime.(1) valeurs_utime.(1) valeurs_stime.(1);
@@ -162,3 +170,4 @@ let print_timer () =
       Printf.fprintf channel "\n Abstraction:                |  %.6f  |  %.6f  |  %.6f" (addR 2) (addU 2) (addS 2);
       Printf.fprintf channel "\n Check:                      |  %.6f  |  %.6f  |  %.6f\n" (addR 3) (addU 3) (addS 3);
       Printf.fprintf channel "\n Normalisation:              |  %.6f  |  %.6f  |  %.6f\n" valeurs_realtime.(16) valeurs_utime.(16) valeurs_stime.(16)
+    end

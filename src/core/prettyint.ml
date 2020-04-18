@@ -19,20 +19,23 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
 
   (* Fresh name generation *)
 
-  let rec get_names_dctx : LF.dctx -> Id.name list = function
+  let rec get_names_dctx : LF.dctx -> Id.name list =
+    function
     | LF.Null -> []
     | LF.CtxVar psi -> []
     | LF.DDec (cPsi', LF.TypDecl (n, _))
-      | LF.DDec (cPsi', LF.TypDeclOpt n) -> n :: get_names_dctx cPsi'
+      | LF.DDec (cPsi', LF.TypDeclOpt n) ->
+       n :: get_names_dctx cPsi'
 
   let fresh_name_dctx (cPsi : LF.dctx) : Id.name -> Id.name =
     Id.gen_fresh_name (get_names_dctx cPsi)
   let fresh_name_mctx (cD : LF.mctx) : Id.name -> Id.name =
     Id.gen_fresh_name (Context.names_of_mctx cD)
-  let fresh_name_gctx (cG : Comp.gctx) : Id.name -> Id.name  =
+  let fresh_name_gctx (cG : Comp.gctx) : Id.name -> Id.name =
     Id.gen_fresh_name (Context.names_of_gctx cG)
 
-  let fresh_name_ctyp_decl (cD: LF.mctx) : LF.ctyp_decl -> LF.ctyp_decl = function
+  let fresh_name_ctyp_decl (cD: LF.mctx) : LF.ctyp_decl -> LF.ctyp_decl =
+    function
     | LF.Decl (n, ct, dep) ->
        let n' = fresh_name_mctx cD n in
        LF.Decl (n', ct, dep)
@@ -59,7 +62,8 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
    * We assume types, terms, etc are all in normal form.
    *)
 
-  let rec fmt_ppr_lf_typ cD cPsi lvl ppf = function
+  let rec fmt_ppr_lf_typ cD cPsi lvl ppf =
+    function
     | LF.Atom (_, a, LF.Nil) ->
        fprintf ppf "%s"
          (R.render_cid_typ a)
@@ -69,7 +73,9 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
        let Store.Cid.Typ.Entry.({ implicit_arguments = k; _ }) = Store.Cid.Typ.get a in
        let ms =
          (* drop implicits *)
-         if !PC.printImplicit then ms else LF.drop_spine k ms
+         if !PC.printImplicit
+         then ms
+         else LF.drop_spine k ms
        in
        fprintf ppf "%s@[<hov 2>%s@ @[<hov>%a@]@]%s"
          (l_paren_if cond)
@@ -105,7 +111,8 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
          (fmt_ppr_lf_typ cD cPsi lvl) typ
          (fmt_ppr_lf_sub cD cPsi lvl) s
 
-  and fmt_ppr_lf_tuple cD cPsi lvl ppf = function
+  and fmt_ppr_lf_tuple cD cPsi lvl ppf =
+    function
     | LF.Last tM ->
        fmt_ppr_lf_normal cD cPsi lvl ppf tM
 
@@ -123,7 +130,8 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
     | Ext.Sgn.Infix ->
        fmt_ppr_lf_infix_operator cD cPsi ppf (name, spine)
 
-  and fmt_ppr_lf_prefix_operator cD cPsi ppf = function
+  and fmt_ppr_lf_prefix_operator cD cPsi ppf =
+    function
     | name, LF.(App (m, Nil)) ->
        fprintf ppf "%a %a"
          Id.print name
@@ -132,7 +140,8 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
        Error.violation
          "[fmt_ppr_lf_prefix_operator] spine length <> 1"
 
-  and fmt_ppr_lf_postfix_operator cD cPsi ppf = function
+  and fmt_ppr_lf_postfix_operator cD cPsi ppf =
+    function
     | name, LF.(App (m, Nil)) ->
        fprintf ppf "%a %a"
          (fmt_ppr_lf_normal cD cPsi 2) m
@@ -141,7 +150,8 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
        Error.violation
          "[fmt_ppr_lf_postfix_operator] spine length <> 1"
 
-  and fmt_ppr_lf_infix_operator cD cPsi ppf = function
+  and fmt_ppr_lf_infix_operator cD cPsi ppf =
+    function
     | name, LF.(App (m1, App (m2, Nil))) ->
        fprintf ppf "%a %a %a"
          (fmt_ppr_lf_normal cD cPsi 2) m1
@@ -152,80 +162,83 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
          "[fmt_ppr_lf_infix_operator] spine length <> 2"
 
   and fmt_ppr_lf_normal cD cPsi lvl ppf =
-    let deimplicitize_spine h ms = match h with
+    let deimplicitize_spine h ms =
+      match h with
       | _ when !PC.printImplicit -> ms
       | LF.Const c ->
          LF.drop_spine (Store.Cid.Term.get_implicit_arguments c) ms
       | _ -> ms
     in
     function
-       | LF.Lam (_, x, m) ->
-          let x = fresh_name_dctx cPsi x in
-          let cond = lvl > 0 in
-          fprintf ppf "%s@[<hov 2>\\%s.@ @[%a@]@]%s"
-            (l_paren_if cond)
-            (Id.render_name x)
-            (fmt_ppr_lf_normal cD (LF.DDec(cPsi, LF.TypDeclOpt x)) 0) m
-            (r_paren_if cond)
-       | LF.LFHole (_, id, name) ->
-          let open Holes in
-          let open HoleId in
-          let name =
-            match name with
-            | Anonymous -> ""
-            | Named s -> s
-          in
-          begin match get (by_id id) with
-          | None -> fprintf ppf "?%s" name
-          | Some (_, Exists (w, h)) ->
-             match w with
-             | CompInfo -> Error.violation "expected LFHole; got comp hole"
-             | LFInfo ->
-                let { lfSolution; cPsi; _ } = h.info in
-                match lfSolution with
-                | None ->
-                   fprintf ppf "?%s" name
-                | Some sM ->
-                   fprintf ppf "%a" (fmt_ppr_lf_normal cD cPsi l0) (Whnf.norm sM)
+    | LF.Lam (_, x, m) ->
+       let x = fresh_name_dctx cPsi x in
+       let cond = lvl > 0 in
+       fprintf ppf "%s@[<hov 2>\\%s.@ @[%a@]@]%s"
+         (l_paren_if cond)
+         (Id.render_name x)
+         (fmt_ppr_lf_normal cD (LF.DDec(cPsi, LF.TypDeclOpt x)) 0) m
+         (r_paren_if cond)
+    | LF.LFHole (_, id, name) ->
+       let open Holes in
+       let open HoleId in
+       let name =
+         match name with
+         | Anonymous -> ""
+         | Named s -> s
+       in
+       begin match get (by_id id) with
+       | None -> fprintf ppf "?%s" name
+       | Some (_, Exists (w, h)) ->
+          begin match w with
+          | CompInfo -> Error.violation "expected LFHole; got comp hole"
+          | LFInfo ->
+             let { lfSolution; cPsi; _ } = h.info in
+             begin match lfSolution with
+             | None ->
+                fprintf ppf "?%s" name
+             | Some sM ->
+                fprintf ppf "%a" (fmt_ppr_lf_normal cD cPsi l0) (Whnf.norm sM)
+             end
           end
-       | LF.Tuple (_, tuple) ->
-          fprintf ppf "<%a>"
-            (fmt_ppr_lf_tuple cD cPsi lvl) tuple
+       end
+    | LF.Tuple (_, tuple) ->
+       fprintf ppf "<%a>"
+         (fmt_ppr_lf_tuple cD cPsi lvl) tuple
 
-       | LF.Clo(tM, s) ->
-          fmt_ppr_lf_normal cD cPsi lvl ppf (Whnf.norm (tM, s))
+    | LF.Clo(tM, s) ->
+       fmt_ppr_lf_normal cD cPsi lvl ppf (Whnf.norm (tM, s))
 
-       | LF.Root (_, _, _, `implicit) when not !PC.printImplicit ->
-          fprintf ppf "_" (* XXX what to do about spines? -je *)
+    | LF.Root (_, _, _, `implicit) when not !PC.printImplicit ->
+       fprintf ppf "_" (* XXX what to do about spines? -je *)
 
-       | LF.Root (_, h, LF.Nil, _) ->
-          fprintf ppf "%a" (fmt_ppr_lf_head cD cPsi lvl) h
+    | LF.Root (_, h, LF.Nil, _) ->
+       fprintf ppf "%a" (fmt_ppr_lf_head cD cPsi lvl) h
 
-       | LF.(Root (_, (Const cid as h), ms, _))  ->
-          let ms = deimplicitize_spine h ms in
-          let TermS.Entry.({ name; _ }) = TermS.get cid in
-          begin match Store.OpPragmas.getPragma name with
-          | Some p ->
-             (* TODO limit the printing of parens for operators *)
-             fprintf ppf "(%a)"
-               (fmt_ppr_lf_operator cD cPsi)
-               (Store.OpPragmas.(p.fix), name, ms)
-          | _ ->
-             let cond = lvl > 1 in
-             fprintf ppf "%s%a %a%s"
-               (l_paren_if cond)
-               (fmt_ppr_lf_head cD cPsi lvl) h
-               (fmt_ppr_lf_spine cD cPsi 2)  ms
-               (r_paren_if cond)
-          end
-       | LF.Root (_, h, ms, _) ->
-          let ms = deimplicitize_spine h ms in
+    | LF.(Root (_, (Const cid as h), ms, _)) ->
+       let ms = deimplicitize_spine h ms in
+       let TermS.Entry.({ name; _ }) = TermS.get cid in
+       begin match Store.OpPragmas.getPragma name with
+       | Some p ->
+          (* TODO limit the printing of parens for operators *)
+          fprintf ppf "(%a)"
+            (fmt_ppr_lf_operator cD cPsi)
+            (Store.OpPragmas.(p.fix), name, ms)
+       | _ ->
           let cond = lvl > 1 in
           fprintf ppf "%s%a %a%s"
             (l_paren_if cond)
             (fmt_ppr_lf_head cD cPsi lvl) h
-            (fmt_ppr_lf_spine cD cPsi 2)  ms
+            (fmt_ppr_lf_spine cD cPsi 2) ms
             (r_paren_if cond)
+       end
+    | LF.Root (_, h, ms, _) ->
+       let ms = deimplicitize_spine h ms in
+       let cond = lvl > 1 in
+       fprintf ppf "%s%a %a%s"
+         (l_paren_if cond)
+         (fmt_ppr_lf_head cD cPsi lvl) h
+         (fmt_ppr_lf_spine cD cPsi 2) ms
+         (r_paren_if cond)
 
   and fmt_ppr_lf_head cD cPsi lvl ppf head =
     let paren s =
@@ -235,19 +248,20 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
          | LF.Shift _ when not (Context.hasCtxVar cPsi) -> false
          | _ -> true
     in
-    let rec fmt_head_with proj = function
+    let rec fmt_head_with proj =
+      function
       | LF.HClo (h, s, sigma) ->
          fprintf ppf "%s[%a[%a]]"
            (R.render_bvar cPsi h)
            (fmt_ppr_lf_offset cD) s
            (fmt_ppr_lf_sub cD cPsi lvl) sigma
-      | LF.HMClo (h, ((s, theta),sigma)) ->
+      | LF.HMClo (h, ((s, theta), sigma)) ->
          fprintf ppf "%s[%a[%a ; %a]]"
            (R.render_bvar cPsi h)
            (fmt_ppr_lf_mmvar lvl) s
-           (fmt_ppr_lf_msub  cD lvl) theta
+           (fmt_ppr_lf_msub cD lvl) theta
            (fmt_ppr_lf_sub cD cPsi lvl) sigma
-      | LF.BVar x  ->
+      | LF.BVar x ->
          fprintf ppf "%s%s"
            (R.render_bvar cPsi x)
            proj
@@ -263,7 +277,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
            (fmt_ppr_lf_mmvar lvl) c
            proj
            (fmt_ppr_lf_msub cD lvl) ms
-           (fmt_ppr_lf_sub  cD cPsi lvl) s
+           (fmt_ppr_lf_sub cD cPsi lvl) s
            (r_paren_if (paren s))
 
       | LF.MPVar ((c, ms), s) ->
@@ -272,13 +286,14 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
            (fmt_ppr_lf_mmvar lvl) c
            proj
            (fmt_ppr_lf_msub cD lvl) ms
-           (fmt_ppr_lf_sub  cD cPsi lvl) s
+           (fmt_ppr_lf_sub cD cPsi lvl) s
            (r_paren_if (paren s))
 
       | LF.MVar(c, LF.Undefs)
         | LF.MVar(c, LF.EmptySub) ->
          let f =
-           if Context.is_null cPsi then
+           if Context.is_null cPsi
+           then
              fun _ () -> ()
            else
              fun ppf () -> fprintf ppf "[]"
@@ -296,7 +311,8 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
          end
 
       | LF.MVar (c, s) ->
-         if Substitution.LF.isId s then
+         if Substitution.LF.isId s
+         then
            fprintf ppf "%a%s"
              (fmt_ppr_lf_cvar cD) c
              proj
@@ -309,7 +325,8 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
              (r_paren_if (paren s))
 
       | LF.PVar (c, s) ->
-         if Substitution.LF.isId s then
+         if Substitution.LF.isId s
+         then
            fprintf ppf "%a%s"
              (fmt_ppr_lf_offset cD) c
              proj
@@ -318,7 +335,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
              (l_paren_if (paren s))
              (fmt_ppr_lf_offset cD) c
              proj
-             (fmt_ppr_lf_sub  cD cPsi lvl) s
+             (fmt_ppr_lf_sub cD cPsi lvl) s
              (r_paren_if (paren s))
 
       | LF.FVar x ->
@@ -349,15 +366,16 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
     fmt_head_with "" head
 
 
-  and fmt_ppr_lf_spine cD cPsi lvl ppf = function
+  and fmt_ppr_lf_spine cD cPsi lvl ppf =
+    function
     | LF.Nil -> ()
     | LF.App(m, LF.Nil) ->
        fprintf ppf "@[%a@]"
-         (fmt_ppr_lf_normal  cD cPsi (lvl + 1)) m
+         (fmt_ppr_lf_normal cD cPsi (lvl + 1)) m
     | LF.App (m, ms) ->
        fprintf ppf "@[%a@]@ @[%a@]"
-         (fmt_ppr_lf_normal  cD cPsi (lvl + 1)) m
-         (fmt_ppr_lf_spine   cD cPsi lvl) ms
+         (fmt_ppr_lf_normal cD cPsi (lvl + 1)) m
+         (fmt_ppr_lf_spine cD cPsi lvl) ms
     | LF.SClo (ms, s) ->
        let ms' = Whnf.normSpine (ms, s) in
        fprintf ppf "%a"
@@ -402,7 +420,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
         | LF.DDec (cPsi', LF.TypDeclOpt x) ->
          prepare_lf_sub_id cPsi' @ [fun ppf _ -> Id.print ppf x]
     in
-    let rec fmt_ppr_lf_sub_shift ppf (cPsi,n) = match cPsi, n with
+    let rec fmt_ppr_lf_sub_shift ppf (cPsi, n) = match cPsi, n with
       | _, 0 -> prepare_lf_sub_id cPsi
       | LF.DDec (cPsi', _), n -> fmt_ppr_lf_sub_shift ppf (cPsi', n-1)
       | _, _ ->
@@ -415,7 +433,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
       | LF.FSVar (_, (s_name, s)) ->
          [fun ppf _ ->
           fprintf ppf "FSV %s[%a]"
-            (Id.render_name s_name )
+            (Id.render_name s_name)
             (fmt_ppr_lf_sub cD cPsi lvl) s]
 
       | LF.SVar (c, _, s) ->
@@ -424,7 +442,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
             (fmt_ppr_lf_offset cD) c
             (fmt_ppr_lf_sub_natural cD cPsi lvl) s]
 
-      | LF.MSVar (_, ((_sigma, t),s)) ->
+      | LF.MSVar (_, ((_sigma, t), s)) ->
          [fun ppf _ ->
           fprintf ppf "$?S[@[%a@];@ @[%a@]]"
            (fmt_ppr_lf_msub cD lvl) t
@@ -444,7 +462,8 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
          (self lvl s)
 
   and fmt_ppr_lf_sub_deBruijn cD cPsi lvl ppf s =
-    let rec self lvl ppf = function
+    let rec self lvl ppf =
+      function
       | LF.EmptySub -> fprintf ppf "EmptySub"
       | LF.Undefs -> fprintf ppf "Undefs"
       | LF.Shift n ->
@@ -465,7 +484,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
            (fmt_ppr_lf_offset cD) c
            (self lvl) s
 
-      | LF.MSVar (n , ((_sigma, t),s)) ->
+      | LF.MSVar (n, ((_sigma, t), s)) ->
          fprintf ppf
            "^%s $?S [%a][|%a|]"
            (R.render_offset n)
@@ -481,7 +500,8 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
       (self lvl) s
 
 
-  and fmt_ppr_lf_front cD cPsi lvl ppf = function
+  and fmt_ppr_lf_front cD cPsi lvl ppf =
+    function
     | LF.Head h ->
        fprintf ppf "%a"
          (fmt_ppr_lf_head cD cPsi lvl) h
@@ -493,7 +513,8 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
     | LF.Undef ->
        fprintf ppf "undef"
 
-  and fmt_ppr_lf_msub cD lvl ppf = function
+  and fmt_ppr_lf_msub cD lvl ppf =
+    function
     | LF.MShift k ->
        fprintf ppf "^%s" (string_of_int k)
 
@@ -502,13 +523,15 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
          (fmt_ppr_lf_msub cD lvl) s
          (fmt_ppr_lf_mfront cD 1) f
 
-  and fmt_ppr_lf_clobj cD lvl cPsi ppf = function
+  and fmt_ppr_lf_clobj cD lvl cPsi ppf =
+    function
     | LF.MObj m -> fmt_ppr_lf_normal cD cPsi lvl ppf m
     | LF.SObj s -> fmt_ppr_lf_sub cD cPsi lvl ppf s
     | LF.PObj h -> fprintf ppf "%a" (fmt_ppr_lf_head cD cPsi lvl) h
 
 
-  and fmt_ppr_lf_mfront' cD ppf = function
+  and fmt_ppr_lf_mfront' cD ppf =
+    function
     | LF.CObj cPsi ->
        fprintf ppf "@[%a@]"
          (fmt_ppr_lf_dctx cD 0) cPsi
@@ -526,7 +549,8 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
   and fmt_ppr_lf_mfront cD lvl ppf mO =
     fprintf ppf "[%a]" (fmt_ppr_lf_mfront' cD) mO
 
-  and fmt_ppr_lf_mfront_typed cD (lvl : lvl) ppf = function
+  and fmt_ppr_lf_mfront_typed cD (lvl : lvl) ppf =
+    function
     | LF.(ClObj (_, tM), ClTyp (_, cPsi)) ->
        fprintf ppf "@[<hov 2>@[%a@] |-@ @[%a@]@]"
          (fmt_ppr_lf_dctx cD 0) cPsi
@@ -536,7 +560,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
   and fmt_ppr_cmp_meta_obj cD lvl ppf (_, mO) =
     fmt_ppr_lf_mfront cD lvl ppf mO
 
-  and fmt_ppr_cmp_meta_obj_typed cD lvl ppf ( (_, cM), cU ) =
+  and fmt_ppr_cmp_meta_obj_typed cD lvl ppf ((_, cM), cU) =
     fprintf ppf "[%a]"
       (fmt_ppr_lf_mfront_typed cD lvl) (cM, cU)
 
@@ -557,11 +581,13 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
   and fmt_ppr_lf_offset cD ppf n =
     fprintf ppf "%s" (R.render_cvar cD n)
 
-  and fmt_ppr_lf_cvar cD ppf = function
+  and fmt_ppr_lf_cvar cD ppf =
+    function
     | LF.Offset n -> fmt_ppr_lf_offset cD ppf n
     | LF.Inst mmvar -> fmt_ppr_lf_mmvar l0 ppf mmvar
 
-  and fmt_ppr_lf_ctx_var cD ppf = function
+  and fmt_ppr_lf_ctx_var cD ppf =
+    function
     | LF.CInst (v, theta) ->
        let g = LF.(v.instantiation) in
        begin match !g with
@@ -588,21 +614,21 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
          (Id.render_name psi)
 
   and fmt_ppr_lf_typ_rec cD cPsi _lvl ppf typrec =
-    let ppr_element cD cPsi ppf = function
-      | (x, tA) ->
-         fprintf ppf "@[<hv>%s :@ @[%a@]@]"
-           (Id.render_name x)
-           (fmt_ppr_lf_typ cD cPsi 0) tA
+    let ppr_element cD cPsi ppf (x, tA) =
+      fprintf ppf "@[<hv>%s :@ @[%a@]@]"
+        (Id.render_name x)
+        (fmt_ppr_lf_typ cD cPsi 0) tA
     in
-    let rec ppr_elements cD cPsi ppf = function
+    let rec ppr_elements cD cPsi ppf =
+      function
       | LF.SigmaLast (None, tA) -> fmt_ppr_lf_typ cD cPsi 0 ppf tA
-      | LF.SigmaLast (Some x, tA) ->  ppr_element cD cPsi ppf (x, tA)
+      | LF.SigmaLast (Some x, tA) -> ppr_element cD cPsi ppf (x, tA)
       (*          | LF.SigmaElem (x, tA1, LF.SigmaLast tA2) ->
                   begin
-                  ppr_element cD cPsi  ppf ". " (x, tA1);
+                  ppr_element cD cPsi ppf ". " (x, tA1);
                   fprintf ppf "%a" (fmt_ppr_lf_typ cD (LF.DDec(cPsi, LF.TypDecl(x, tA1))) 0) tA2
                   end *)
-      | LF.SigmaElem (x, tA, tRec)  ->
+      | LF.SigmaElem (x, tA, tRec) ->
          let x = fresh_name_dctx cPsi x in
          fprintf ppf "%a,@ %a"
            (ppr_element cD cPsi) (x, tA)
@@ -611,8 +637,8 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
     fprintf ppf "@[<hv>%a@]" (ppr_elements cD cPsi) typrec
 
   and projectCtxIntoDctx = function
-    |  LF.Empty -> LF.Null
-    |  LF.Dec (rest, last) -> LF.DDec (projectCtxIntoDctx rest, last)
+    | LF.Empty -> LF.Null
+    | LF.Dec (rest, last) -> LF.DDec (projectCtxIntoDctx rest, last)
 
   and fmt_ppr_lf_schema ?(useName=true) lvl ppf s =
     let print_without_name (LF.Schema elems) =
@@ -633,13 +659,16 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
       with
       | Not_found -> print_without_name s
 
-    else *) print_without_name s
+    else *)
+    print_without_name s
 
-  and frugal_block cD cPsi lvl ppf = function
-    | LF.SigmaLast(_,  tA) -> fmt_ppr_lf_typ cD cPsi 0 ppf tA
+  and frugal_block cD cPsi lvl ppf =
+    function
+    | LF.SigmaLast(_, tA) -> fmt_ppr_lf_typ cD cPsi 0 ppf tA
     | other -> fprintf ppf "block (%a)" (fmt_ppr_lf_typ_rec cD cPsi lvl) other
 
-  and fmt_ppr_lf_sch_elem lvl ppf = function
+  and fmt_ppr_lf_sch_elem lvl ppf =
+    function
     | LF.SchElem (LF.Empty, sgmDecl) ->
        fprintf ppf "%a"
          (frugal_block LF.Empty LF.Null lvl) sgmDecl
@@ -647,11 +676,12 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
     | LF.SchElem (typDecls, sgmDecl) ->
        let cPsi = projectCtxIntoDctx typDecls in
        fprintf ppf "@[some [%a] %a@]"
-         (ppr_typ_decl_dctx  LF.Empty)  cPsi
+         (ppr_typ_decl_dctx LF.Empty) cPsi
          (frugal_block LF.Empty cPsi lvl) sgmDecl
 
 
-  and ppr_typ_decl_dctx cD ppf = function
+  and ppr_typ_decl_dctx cD ppf =
+    function
     | LF.Null ->
        fprintf ppf ""
 
@@ -667,8 +697,9 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
          (fmt_ppr_lf_typ cD cPsi 0) tA
 
 
-  and fmt_ppr_lf_dctx_hat cD _lvl ppf = function
-    | LF.Null   -> fprintf ppf ""
+  and fmt_ppr_lf_dctx_hat cD _lvl ppf =
+    function
+    | LF.Null -> fprintf ppf ""
 
     | LF.CtxVar ctx_var ->
        fmt_ppr_lf_ctx_var cD ppf ctx_var
@@ -682,16 +713,17 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
          (fmt_ppr_lf_dctx_hat cD 0) cPsi
          (Id.render_name x)
 
-    | LF.DDec (LF.Null, LF.TypDecl(x, _ )) ->
+    | LF.DDec (LF.Null, LF.TypDecl(x, _)) ->
        fprintf ppf "%s"
          (Id.render_name x)
 
-    | LF.DDec (cPsi, LF.TypDecl(x, _ )) ->
+    | LF.DDec (cPsi, LF.TypDecl(x, _)) ->
        fprintf ppf "%a, %s"
          (fmt_ppr_lf_dctx_hat cD 0) cPsi
          (Id.render_name x)
 
-  and fmt_ppr_lf_dctx' cD ppf = function
+  and fmt_ppr_lf_dctx' cD ppf =
+    function
     | LF.Null ->
        fprintf ppf ""
 
@@ -723,8 +755,8 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
 
   and fmt_ppr_lf_mctx ?(all = false) ?(sep = Fmt.comma) lvl ppf cD =
     let should_print =
-      if all then
-        fun _ -> true
+      if all
+      then fun _ -> true
       else
         function
         | (_, LF.Decl (_, _, dep)) ->
@@ -739,7 +771,8 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
       ppf
       cD
 
-  and fmt_ppr_lf_kind cPsi lvl ppf = function
+  and fmt_ppr_lf_kind cPsi lvl ppf =
+    function
     | LF.Typ ->
        fprintf ppf "type"
 
@@ -748,9 +781,9 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
        let cond = lvl > 0 in
        fprintf ppf "@[<2>%s{@[%s :@ @[%a@]@]}@ @[%a@]%s@]"
          (l_paren_if cond)
-         (Id.render_name   x)
-         (fmt_ppr_lf_typ LF.Empty cPsi  0) a
-         (fmt_ppr_lf_kind (LF.DDec(cPsi, LF.TypDeclOpt  x)) 0) k
+         (Id.render_name x)
+         (fmt_ppr_lf_typ LF.Empty cPsi 0) a
+         (fmt_ppr_lf_kind (LF.DDec(cPsi, LF.TypDeclOpt x)) 0) k
          (r_paren_if cond)
 
     | LF.PiKind ((LF.TypDecl (x, a), LF.No), k) ->
@@ -758,8 +791,8 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
        let cond = lvl > 0 in
        fprintf ppf "%s@[<2>@[%a@] ->@ @[%a@]%s@]"
          (l_paren_if cond)
-         (fmt_ppr_lf_typ LF.Empty cPsi  1) a
-         (fmt_ppr_lf_kind (LF.DDec(cPsi, LF.TypDeclOpt  x)) 0) k
+         (fmt_ppr_lf_typ LF.Empty cPsi 1) a
+         (fmt_ppr_lf_kind (LF.DDec(cPsi, LF.TypDeclOpt x)) 0) k
          (r_paren_if cond)
 
   and fmt_ppr_lf_mtyp' cD (pre, post) =
@@ -802,8 +835,9 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
      declaration and skip calling this function. Otherwise, it is
      impossible to get the spacing to work correctly in the printed
      material. *)
-  and fmt_ppr_lf_ctyp_decl ?(fmt_ppr_depend = fmt_ppr_lf_depend_clean) cD ppf = function
-    | LF.Decl (u, mtyp,dep) ->
+  and fmt_ppr_lf_ctyp_decl ?(fmt_ppr_depend = fmt_ppr_lf_depend_clean) cD ppf =
+    function
+    | LF.Decl (u, mtyp, dep) ->
        fprintf ppf "@[<2>%a%a :@ @[%a@]@]"
          Id.print u
          fmt_ppr_depend dep
@@ -813,7 +847,8 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
        fprintf ppf "%s : _"
          (Id.render_name name)
 
-  and fmt_ppr_lf_ctyp_decl_harpoon cD ppf = function
+  and fmt_ppr_lf_ctyp_decl_harpoon cD ppf =
+    function
     | LF.Decl (_, _, dep) as d ->
        let f =
          match dep with
@@ -826,15 +861,18 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
     | LF.DeclOpt _ ->
        Error.violation "[fmt_ppr_lf_ctyp_decl_harpoon] DeclOpt impossible"
 
-  and isImplicit = function
+  and isImplicit =
+    function
     | LF.Maybe -> true
     | LF.(No | Inductive) -> false
 
-  and isImplicitDecl = function
+  and isImplicitDecl =
+    function
     | LF.Decl (_, _, dep) when isImplicit dep -> true
     | _ -> false
 
-  and fmt_ppr_lf_iterm cD cPsi lvl ppf = function
+  and fmt_ppr_lf_iterm cD cPsi lvl ppf =
+    function
     | LF.INorm tM -> fmt_ppr_lf_normal cD cPsi lvl ppf tM
     | LF.IHead h -> fmt_ppr_lf_head cD cPsi lvl ppf h
     | LF.ISub s -> fmt_ppr_lf_sub cD cPsi lvl ppf s
@@ -876,7 +914,8 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
          (fun ppf x -> fmt_ppr_lf_constraint ppf !x))
 
   (* Computation-level *)
-  let rec fmt_ppr_cmp_kind cD lvl ppf = function
+  let rec fmt_ppr_cmp_kind cD lvl ppf =
+    function
     | Comp.Ctype _ -> fprintf ppf "ctype"
     | Comp.PiKind (_, ctyp_decl, cK) ->
        let ctyp_decl = fresh_name_ctyp_decl cD ctyp_decl in
@@ -891,7 +930,8 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
 
   let fmt_ppr_cmp_meta_typ cD ppf = fmt_ppr_lf_mtyp cD ppf
 
-  let rec fmt_ppr_cmp_meta_spine cD lvl ppf = function
+  let rec fmt_ppr_cmp_meta_spine cD lvl ppf =
+    function
     | Comp.MetaNil ->
        fprintf ppf ""
     | Comp.MetaApp (mO, _, mS, `implicit) ->
@@ -901,7 +941,8 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
          (fmt_ppr_cmp_meta_obj_typed cD (lvl + 1)) (mO, mT)
          (fmt_ppr_cmp_meta_spine cD lvl) mS
 
-  let rec fmt_ppr_cmp_typ cD lvl ppf = function
+  let rec fmt_ppr_cmp_typ cD lvl ppf =
+    function
     | Comp.TypBase (_, c, mS)->
        let cond = lvl > 10 in
        fprintf ppf "%s@[<2>%s@[%a@]@]%s"
@@ -952,7 +993,8 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
 
     | Comp.TypPiBox (_, ctyp_decl, tau) ->
        let ctyp_decl = fresh_name_ctyp_decl cD ctyp_decl in
-       if not !PC.printImplicit && isImplicitDecl ctyp_decl then
+       if not !PC.printImplicit && isImplicitDecl ctyp_decl
+       then
          fprintf ppf "%a" (fmt_ppr_cmp_typ (LF.Dec (cD, ctyp_decl)) 1) tau
        else
          let cond = lvl > 1 in
@@ -962,21 +1004,24 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
            (fmt_ppr_cmp_typ (LF.Dec(cD, ctyp_decl)) 1) tau
            (r_paren_if cond)
 
-    | Comp.TypClo (_, _ ) ->
+    | Comp.TypClo (_, _) ->
        fprintf ppf "TypClo!"
 
     | Comp.TypInd tau ->
-       if !PC.printImplicit then
+       if !PC.printImplicit
+       then
          fprintf ppf "@[%a@]*"
            (fmt_ppr_cmp_typ cD 10) tau
        else
          fmt_ppr_cmp_typ cD lvl ppf tau
 
-  let fmt_ppr_cmp_suffices_typ cD ppf = function
+  let fmt_ppr_cmp_suffices_typ cD ppf =
+    function
     | `exact tau -> fmt_ppr_cmp_typ cD l0 ppf tau
     | `infer _ -> fprintf ppf "_"
 
-  let rec fmt_ppr_pat_spine cD cG lvl ppf = function
+  let rec fmt_ppr_pat_spine cD cG lvl ppf =
+    function
     | Comp.PatNil -> fprintf ppf ""
     | Comp.PatApp (_, pat, pat_spine) ->
        fprintf ppf "@[%a@]@ @[%a@]"
@@ -984,10 +1029,11 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
          (fmt_ppr_pat_spine cD cG lvl) pat_spine
 
   and fmt_ppr_cmp_pattern cD cG lvl ppf =
-    let rec dropSpineLeft ms n = match (ms, n) with
+    let rec dropSpineLeft ms n =
+      match (ms, n) with
       | (_, 0) -> ms
       | (Comp.PatNil, _) -> ms
-      | (Comp.PatApp (_l,_p,rest), n) -> dropSpineLeft rest (n-1)
+      | (Comp.PatApp (_, _, rest), n) -> dropSpineLeft rest (n-1)
     in
     let deimplicitize_spine c ms =
       let ia =
@@ -1022,11 +1068,11 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
          (fmt_ppr_cmp_pattern cD cG 0) pat
          (fmt_ppr_cmp_typ cD 0) tau
 
-    | Comp.PatVar (_, offset ) ->
+    | Comp.PatVar (_, offset) ->
        fprintf ppf "%s"
          (R.render_var cG offset)
 
-    | Comp.PatFVar (_, name ) ->
+    | Comp.PatFVar (_, name) ->
        fprintf ppf "%s"
          (Id.render_name name)
 
@@ -1046,24 +1092,26 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
     | Comp.Simul os ->
        print_list ("[", "]") ppf os
 
-  let fmt_ppr_cmp_total_dec_kind ppf = function
+  let fmt_ppr_cmp_total_dec_kind ppf =
+    function
     | `trust -> fprintf ppf "trust"
     | `partial -> fprintf ppf "partial"
     | `not_recursive -> fprintf ppf "notrec"
-    | `inductive order -> fprintf ppf "total @[%a@]"
+    | `inductive order ->
+       fprintf ppf "total @[%a@]"
          fmt_ppr_cmp_numeric_order order
 
   (** Prints a totality declaration for *debugging*.
       This does not generate syntactically valid Beluga.
    *)
-  let fmt_ppr_cmp_total_dec ppf = function
-    | { Comp.name; tau; order } ->
-       fprintf ppf "@[<hov 2>@[%a@]:@ @[<hv 2>%a :@ @[%a@]@]@]"
-         fmt_ppr_cmp_total_dec_kind order
-         Id.print name
-         (fmt_ppr_cmp_typ LF.Empty l0) tau
+  let fmt_ppr_cmp_total_dec ppf { Comp.name; tau; order } =
+    fprintf ppf "@[<hov 2>@[%a@]:@ @[<hv 2>%a :@ @[%a@]@]@]"
+      fmt_ppr_cmp_total_dec_kind order
+      Id.print name
+      (fmt_ppr_cmp_typ LF.Empty l0) tau
 
-  let fmt_ppr_cmp_meta_branch_label ppf = function
+  let fmt_ppr_cmp_meta_branch_label ppf =
+    function
     | `ctor cid -> fprintf ppf "%s" (R.render_cid_term cid)
     | `pvar k ->
        fprintf ppf "#%a"
@@ -1071,7 +1119,8 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
          k
     | `bvar -> fprintf ppf "head variable"
 
-  let rec fmt_ppr_cmp_exp_chk cD cG lvl ppf = function
+  let rec fmt_ppr_cmp_exp_chk cD cG lvl ppf =
+    function
     | Comp.Syn (_, i) ->
        fmt_ppr_cmp_exp_syn cD cG lvl ppf i
 
@@ -1084,7 +1133,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
          (Id.render_name x);
 
        fprintf ppf "%a%s"
-         (fmt_ppr_cmp_exp_chk cD (LF.Dec(cG, Comp.CTypDeclOpt x))  0) e
+         (fmt_ppr_cmp_exp_chk cD (LF.Dec(cG, Comp.CTypDeclOpt x)) 0) e
          (r_paren_if cond);
 
     | Comp.Fun (_, fbr) -> fprintf ppf "Some fun"
@@ -1147,7 +1196,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
          (fmt_ppr_cmp_exp_chk cD (LF.Dec(cG, Comp.CTypDeclOpt x)) 0) e
          (r_paren_if cond)
 
-    | Comp.Box (_ , cM, cU) ->
+    | Comp.Box (_, cM, cU) ->
        fmt_ppr_cmp_meta_obj_typed cD 0 ppf (cM, cU)
 
     | Comp.Impossible (_, i) ->
@@ -1180,7 +1229,10 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
           fprintf ppf "%s@[<v>case @[%a@] of%s@,@[%a@]@]%s"
             (l_paren_if cond)
             (fmt_ppr_cmp_exp_syn cD cG 0) i
-            (match prag with PragmaCase -> "" | PragmaNotCase -> " --not")
+            begin match prag with
+            | PragmaCase -> ""
+            | PragmaNotCase -> " --not"
+            end
             (fmt_ppr_cmp_branches cG) bs
             (r_paren_if cond)
        end
@@ -1188,20 +1240,25 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
     | Comp.Hole (loc, id, name) ->
        let name =
          let open HoleId in
-         match name with
+         begin match name with
          | Named n -> n
-         | Anonymous -> "" in
-       try
-         fprintf ppf "?%s" name
-       with
-       | _ -> fprintf ppf "?%s" name
+         | Anonymous -> ""
+         end
+       in
+       begin
+         try
+           fprintf ppf "?%s" name
+         with
+         | _ -> fprintf ppf "?%s" name
+       end
 
-  and fmt_ppr_cmp_exp_syn cD cG lvl ppf = function
+  and fmt_ppr_cmp_exp_syn cD cG lvl ppf =
+    function
     | Comp.Var (_, x) ->
        fprintf ppf "%s"
          (R.render_var cG x)
 
-    | Comp.Const (_ ,prog) ->
+    | Comp.Const (_, prog) ->
        fprintf ppf "%s"
          (R.render_cid_prog prog)
 
@@ -1224,7 +1281,8 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
 
     | Comp.MApp (_, i, cM, cU, pl) ->
        let cond = lvl > 1 in
-       if !PC.printImplicit || Comp.is_explicit pl then
+       if !PC.printImplicit || Comp.is_explicit pl
+       then
          fprintf ppf "%s@[<2>@[%a@]@ @[%a@]@]%s"
            (l_paren_if cond)
            (fmt_ppr_cmp_exp_syn cD cG 1) i
@@ -1247,7 +1305,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
     | Comp.ThmValue _ -> fprintf ppf " rec "
     | Comp.MLamValue _ -> fprintf ppf " mlam "
     | Comp.CtxValue _ -> fprintf ppf " mlam "
-    | Comp.BoxValue mC -> fprintf ppf "%a"  (fmt_ppr_cmp_meta_obj LF.Empty 0) mC
+    | Comp.BoxValue mC -> fprintf ppf "%a" (fmt_ppr_cmp_meta_obj LF.Empty 0) mC
     | Comp.ConstValue _ -> fprintf ppf " const "
     | Comp.PairValue (v1, v2) ->
        fprintf ppf "(%a , %a)"
@@ -1256,28 +1314,33 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
     | Comp.DataValue (c, spine) ->
        (* Note: Arguments in data spines are accumulated in reverse order, to
           allow applications of data values in constant time. *)
-       let k = if !Printer.Control.printImplicit then 0
-               else Store.Cid.CompConst.get_implicit_arguments c in
+       let k =
+         if !Printer.Control.printImplicit
+         then 0
+         else Store.Cid.CompConst.get_implicit_arguments c
+       in
        (* the function drop and print_spine can probably be combined
           to avoid traversing the spine twice.
         *)
-       let rec drop ms = match ms with
+       let rec drop =
+         function
          | Comp.DataNil -> (Comp.DataNil, 0)
          | Comp.DataApp (v, spine) ->
             let (ms', k') = drop spine in
             if k' < k then (ms', k'+1)
             else (Comp.DataApp (v, ms'), k'+1)
        in
-       let rec print_spine ppf = function
+       let rec print_spine ppf =
+         function
          | Comp.DataNil -> ()
          | Comp.DataApp (v, spine) ->
             print_spine ppf spine;
-            fprintf ppf " %a" (fmt_ppr_cmp_value 1 ) v
+            fprintf ppf " %a" (fmt_ppr_cmp_value 1) v
        in
        let (pat_spine, k') = drop spine in (* k = length of original spine *)
 
 
-       let cond = lvl > 0 &&  (k' - k) > 1 in
+       let cond = lvl > 0 && (k' - k) > 1 in
        fprintf ppf "%s%s%a%s"
          (l_paren_if cond)
          (R.render_cid_comp_const c) print_spine pat_spine
@@ -1288,16 +1351,15 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
       (pp_print_list ~pp_sep: pp_print_cut (fmt_ppr_cmp_branch cG))
       bs
 
-  and fmt_ppr_cmp_branch cG ppf = function
-    | Comp.Branch (_, cD_prefix, (cD1', cG_p), pat, t, e) ->
-       fprintf ppf "@[<v2>| @[%a@]@[%a@] =>@ @[%a@]@]"
-         (fmt_ppr_lf_mctx 0) cD_prefix
-         (fmt_ppr_cmp_pattern cD1' cG_p 0) pat
-         (* NOTE: Technically: cD |- cG ctx and
-          *       cD1' |- mcomp (MShift n) t    <= cD where n = |cD1|
-          * -bp
-          *)
-         (fmt_ppr_cmp_exp_chk cD1' (Context.append cG cG_p) 1) e
+  and fmt_ppr_cmp_branch cG ppf (Comp.Branch (_, cD_prefix, (cD1', cG_p), pat, t, e)) =
+    fprintf ppf "@[<v2>| @[%a@]@[%a@] =>@ @[%a@]@]"
+      (fmt_ppr_lf_mctx 0) cD_prefix
+      (fmt_ppr_cmp_pattern cD1' cG_p 0) pat
+      (* NOTE: Technically: cD |- cG ctx and
+       *       cD1' |- mcomp (MShift n) t    <= cD where n = |cD1|
+       * -bp
+       *)
+      (fmt_ppr_cmp_exp_chk cD1' (Context.append cG cG_p) 1) e
 
   and fmt_ppr_cmp_subgoal_path cD cG ppf path =
     let rec format_path =
@@ -1347,9 +1409,13 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
       fs
 
   and fmt_ppr_cmp_proof_state ppf =
-    let print_line ppf () = for _ = 1 to 80 do fprintf ppf "-" done in
+    let print_line ppf () =
+      for _ = 1 to 80 do
+        fprintf ppf "-"
+      done
+    in
     let open Comp in
-    fun { context = {cD; cG; _} as ctx ; goal; solution; label } ->
+    fun { context = {cD; cG; _} as ctx; goal; solution; label } ->
     fprintf ppf
       "@[<v>%a\
        @,%a\
@@ -1366,20 +1432,21 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
     function
     | Incomplete (_, g) ->
        begin
-         match ! (g.solution) with
+         match !(g.solution) with
          | None -> fprintf ppf "?"
          | Some proof ->
             dprnt "[fmt_ppr_cmp_proof] chasing pointer!";
             fmt_ppr_cmp_proof cD cG ppf proof
        end
-    | Command ( stmt, proof ) ->
+    | Command (stmt, proof) ->
        fprintf ppf "%a"
          (fmt_ppr_cmp_command_and_proof cD cG) (stmt, proof)
     | Directive d ->
        fmt_ppr_cmp_directive cD cG ppf d
 
   and fmt_ppr_cmp_command cD cG ppf cmd =
-    let fmt_ppr_unbox_modifier ppf = function
+    let fmt_ppr_unbox_modifier ppf =
+      function
       | Some `strengthened -> fprintf ppf "strengthened"
       | None -> fprintf ppf "unboxed"
     in
@@ -1416,14 +1483,12 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
         type b. LF.mctx -> Comp.gctx -> (Format.formatter -> b -> unit) ->
         Format.formatter ->
         b Comp.split_branch -> unit =
-    fun cD cG f ppf ->
     let open Comp in
-    function
-    | SplitBranch (c, _, _, h) ->
-       let Hypothetical (_, hyp, _) = h in
-       fprintf ppf "@[<v>case %a:@,%a@]"
-         f c
-         (fmt_ppr_cmp_hypothetical cD cG) h
+    fun cD cG f ppf (SplitBranch (c, _, _, h)) ->
+    let Hypothetical (_, hyp, _) = h in
+    fprintf ppf "@[<v>case %a:@,%a@]"
+      f c
+      (fmt_ppr_cmp_hypothetical cD cG) h
 
   and fmt_ppr_cmp_directive cD cG ppf : Comp.directive -> unit =
     let open Comp in
@@ -1489,11 +1554,10 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
 
   and fmt_ppr_cmp_hypothetical cD cG ppf =
     let open Comp in
-    function
-    | Hypothetical (_, h, proof) ->
-       fprintf ppf "@[<v>{ %a @[<v>%a@]@,}@]"
-         fmt_ppr_cmp_hypotheses h
-         (fmt_ppr_cmp_proof h.cD h.cG) proof;
+    fun (Hypothetical (_, h, proof)) ->
+    fprintf ppf "@[<v>{ %a @[<v>%a@]@,}@]"
+      fmt_ppr_cmp_hypotheses h
+      (fmt_ppr_cmp_proof h.cD h.cG) proof;
 
   and fmt_ppr_cmp_hypotheses ppf =
     let open Comp in
@@ -1508,7 +1572,8 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
       (comma_sep_by (fmt_ppr_cmp_ctyp_decl cD l0))
       (Context.to_list cG)
 
-  and fmt_ppr_cmp_ih_arg cD ppf = function
+  and fmt_ppr_cmp_ih_arg cD ppf =
+    function
     | Comp.M m_obj -> fmt_ppr_cmp_meta_obj cD l0 ppf m_obj
     | Comp.V k -> fprintf ppf "(offset %d)" k
     | Comp.DC -> fprintf ppf "_"
@@ -1516,8 +1581,8 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
 
   and fmt_ppr_cmp_ctyp_decl cD lvl =
     Printer.fmt_ppr_ctx_underscore false
-      begin fun ppf decl ->
-      match decl with
+      begin fun ppf ->
+      function
       | Comp.CTypDecl (x, tau, tag) ->
          fprintf ppf "@[<hov 2>%a@[%a@] :@ @[%a@]@]"
            Id.print x
@@ -1540,8 +1605,8 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
 
   let fmt_ppr_cmp_typ_typing ppf (cD, tau) =
     fprintf ppf "@[%a@] |-@ @[%a@]"
-    (fmt_ppr_lf_mctx l0) cD
-    (fmt_ppr_cmp_typ cD l0) tau
+      (fmt_ppr_lf_mctx l0) cD
+      (fmt_ppr_cmp_typ cD l0) tau
 
   let fmt_ppr_cmp_comp_prog_info ppf e =
     let {CompS.Entry.name; implicit_arguments; typ; prog; mutual_group; hidden} = e in
@@ -1563,14 +1628,16 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
       (Maybe.print (pp_print_list ~pp_sep: pp_print_cut fmt_ppr_cmp_total_dec)) ds
       (Maybe.print (fmt_ppr_cmp_value l0)) prog
 
-  let fmt_ppr_cmp_thm ppf = function
+  let fmt_ppr_cmp_thm ppf =
+    function
     (* should cG contain a Dec for the theorem itself? *)
     | Comp.Program e ->
        fmt_ppr_cmp_exp_chk LF.Empty LF.Empty 0 ppf e
     | Comp.Proof p ->
        fmt_ppr_cmp_proof LF.Empty LF.Empty ppf p
 
-  let fmt_ppr_cmp_thm_prefix ppf = function
+  let fmt_ppr_cmp_thm_prefix ppf =
+    function
     | Comp.Program _ -> fprintf ppf "rec"
     | Comp.Proof _ -> fprintf ppf "proof"
 
@@ -1589,7 +1656,8 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
       (pp_print_list ~pp_sep: pp_print_cut (fmt_ppr_cmp_ih cD cG))
       (Context.to_list cIH)
 
-  let fmt_ppr_sgn_thm_decl ppf = function
+  let fmt_ppr_sgn_thm_decl ppf =
+    function
     | Sgn.({ thm_name; thm_typ; thm_body; thm_loc }) ->
        fprintf ppf "%a %s : %a =@ @[<v2>%a;@]"
          fmt_ppr_cmp_thm_prefix thm_body
@@ -1597,16 +1665,17 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
          (fmt_ppr_cmp_typ LF.Empty 0) thm_typ
          fmt_ppr_cmp_thm thm_body
 
-  let rec fmt_ppr_sgn_decl ppf = function
-    | Sgn.CompTypAbbrev (_,_,_,_) -> ()
+  let rec fmt_ppr_sgn_decl ppf =
+    function
+    | Sgn.CompTypAbbrev (_, _, _, _) -> ()
     | Sgn.Const (_, c, a) ->
        fprintf ppf "%s : %a.@\n"
          (R.render_cid_term c)
-         (fmt_ppr_lf_typ LF.Empty  LF.Null l0)  a
+         (fmt_ppr_lf_typ LF.Empty LF.Null l0) a
 
     | Sgn.Typ (_, a, k) ->
        fprintf ppf "%s : %a.@\n"
-         (R.render_cid_typ  a)
+         (R.render_cid_typ a)
          (fmt_ppr_lf_kind LF.Null l0) k
 
     | Sgn.CompTyp (_, a, cK, _) ->
@@ -1646,7 +1715,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
 
     | Sgn.Schema (w, schema) ->
        fprintf ppf "@\nschema %s = @[%a@];@\n"
-         (R.render_cid_schema  w)
+         (R.render_cid_schema w)
          (fmt_ppr_lf_schema ~useName:false l0) schema
 
     | Sgn.Theorem thms ->
@@ -1657,18 +1726,18 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
                 fmt_ppr_sgn_thm_decl x))
          thms
 
-      (*
-    | Sgn.Rec (((f, _, _ ) as h)::t) ->
+    (*
+    | Sgn.Rec (((f, _, _) as h)::t) ->
        let total = if (Store.Cid.Comp.get f).Store.Cid.Comp.total
                    then " total" else ""
        in
        fmt_ppr_rec l0 ppf ("rec"^total) h;
        List.iter (fmt_ppr_rec l0 ppf ("and"^total)) t
-       *)
+     *)
 
     | Sgn.Pragma (LF.OpenPrag n) ->
        let n' = Store.Modules.name_of_id n in
-       let _ = Store.Modules.open_module n' in
+       ignore (Store.Modules.open_module n');
        fprintf ppf "@\n--open %s@\n" (String.concat "." n')
 
     | Sgn.Pragma _ -> ()
@@ -1677,15 +1746,16 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
        let aux fmt t = List.iter (fun x -> (fmt_ppr_sgn_decl fmt x)) t in
 
        (* Necessary to enforce correct printing *)
-       let ((_, origName, _, _) as state) = Store.Modules.getState () in
+       let (_, origName, _, _) as state = Store.Modules.getState () in
        let newName = origName@[name] in
-       let _ = Store.Modules.current := (Store.Modules.id_of_name newName) in
-       let _ = Store.Modules.currentName := newName in
-       let _ = fprintf ppf "@\nmodule %s = struct@\n@[<v2>%a@]@\nend;@\n"
-                 (name) (aux) decls in
+       Store.Modules.current := (Store.Modules.id_of_name newName);
+       Store.Modules.currentName := newName;
+       fprintf ppf "@\nmodule %s = struct@\n@[<v2>%a@]@\nend;@\n"
+         name
+         aux decls;
        Store.Modules.setState state
 
-    |  _ -> ()
+    | _ -> ()
 
   let fmt_ppr_sgn ppf sgn = List.iter (fmt_ppr_sgn_decl ppf) sgn
 end (* Int.Make *)

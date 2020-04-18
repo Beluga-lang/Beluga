@@ -9,7 +9,7 @@ module Control = struct
   let printImplicit = ref false
   let printNormal = ref false
   let printCtxUnderscore = ref true
-  let db() =
+  let db () =
     match !substitutionStyle with
     | DeBruijn -> true
     | _ -> false
@@ -46,7 +46,7 @@ module Common = struct
       ]
 
     val fmt_ppr_plicity : formatter -> LF.plicity -> unit
-    val fmt_ppr_lf_depend      : formatter -> LF.depend -> unit
+    val fmt_ppr_lf_depend : formatter -> LF.depend -> unit
     val fmt_ppr_lf_depend_clean : formatter -> LF.depend -> unit
     val fmt_ppr_lf_depend_inductive : formatter -> LF.depend -> unit
     val fmt_ppr_lf_svar_class : formatter -> LF.svar_class -> unit
@@ -64,35 +64,35 @@ module Int = struct
 
     open Syntax.Int
 
-    val fmt_ppr_sgn           : formatter -> Sgn.sgn -> unit
-    val fmt_ppr_sgn_decl      : formatter -> Sgn.decl  -> unit
+    val fmt_ppr_sgn : formatter -> Sgn.sgn -> unit
+    val fmt_ppr_sgn_decl : formatter -> Sgn.decl -> unit
 
     (* LF printers *)
-    val fmt_ppr_lf_svar_class  : formatter -> LF.svar_class -> unit
-    val fmt_ppr_lf_kind        : LF.dctx -> lvl -> formatter -> LF.kind      -> unit
-    val fmt_ppr_lf_ctyp_decl   : ?fmt_ppr_depend:(formatter -> LF.depend -> unit) ->
-                                 LF.mctx -> formatter -> LF.ctyp_decl -> unit
-    val fmt_ppr_lf_typ_rec     : LF.mctx -> LF.dctx -> lvl -> formatter -> LF.typ_rec    -> unit
-    val fmt_ppr_lf_typ         : LF.mctx -> LF.dctx -> lvl -> formatter -> LF.typ    -> unit
-    val fmt_ppr_lf_mtyp'       : LF.mctx -> string * string -> formatter -> LF.ctyp  -> unit
-    val fmt_ppr_lf_mtyp        : LF.mctx                    -> formatter -> LF.ctyp  -> unit
-    val fmt_ppr_lf_tuple       : LF.mctx -> LF.dctx -> lvl  -> formatter -> LF.tuple  -> unit
-    val fmt_ppr_lf_normal      : LF.mctx -> LF.dctx -> lvl -> formatter -> LF.normal -> unit
-    val fmt_ppr_lf_head        : LF.mctx -> LF.dctx -> lvl -> formatter -> LF.head   -> unit
-    val fmt_ppr_lf_spine       : LF.mctx -> LF.dctx -> lvl -> formatter -> LF.spine  -> unit
-    val fmt_ppr_lf_sub         : LF.mctx -> LF.dctx -> lvl -> formatter -> LF.sub    -> unit
-    val fmt_ppr_lf_schema      : ?useName:bool -> lvl -> formatter -> LF.schema     -> unit
-    val fmt_ppr_lf_sch_elem    : lvl -> formatter -> LF.sch_elem   -> unit
-    val fmt_ppr_lf_dctx_hat    : LF.mctx -> lvl -> formatter -> LF.dctx  -> unit
-    val fmt_ppr_lf_dctx        : LF.mctx -> lvl -> formatter -> LF.dctx  -> unit
-    val fmt_ppr_lf_mctx        : ?all: bool -> ?sep: (formatter -> unit -> unit) -> lvl ->
-                                 formatter -> LF.mctx -> unit
-    val fmt_ppr_lf_ctx_var     : LF.mctx -> formatter -> LF.ctx_var -> unit
-    val fmt_ppr_lf_mfront      : LF.mctx -> lvl -> formatter -> LF.mfront -> unit
-    val fmt_ppr_lf_iterm       : LF.mctx -> LF.dctx -> lvl -> formatter -> LF.iterm -> unit
-    val fmt_ppr_lf_constraint  : formatter -> LF.constrnt -> unit
+    val fmt_ppr_lf_svar_class : formatter -> LF.svar_class -> unit
+    val fmt_ppr_lf_kind : LF.dctx -> lvl -> formatter -> LF.kind -> unit
+    val fmt_ppr_lf_ctyp_decl : ?fmt_ppr_depend:(formatter -> LF.depend -> unit) ->
+                                   LF.mctx -> formatter -> LF.ctyp_decl -> unit
+    val fmt_ppr_lf_typ_rec : LF.mctx -> LF.dctx -> lvl -> formatter -> LF.typ_rec -> unit
+    val fmt_ppr_lf_typ : LF.mctx -> LF.dctx -> lvl -> formatter -> LF.typ -> unit
+    val fmt_ppr_lf_mtyp' : LF.mctx -> string * string -> formatter -> LF.ctyp -> unit
+    val fmt_ppr_lf_mtyp : LF.mctx -> formatter -> LF.ctyp -> unit
+    val fmt_ppr_lf_tuple : LF.mctx -> LF.dctx -> lvl -> formatter -> LF.tuple -> unit
+    val fmt_ppr_lf_normal : LF.mctx -> LF.dctx -> lvl -> formatter -> LF.normal -> unit
+    val fmt_ppr_lf_head : LF.mctx -> LF.dctx -> lvl -> formatter -> LF.head -> unit
+    val fmt_ppr_lf_spine : LF.mctx -> LF.dctx -> lvl -> formatter -> LF.spine -> unit
+    val fmt_ppr_lf_sub : LF.mctx -> LF.dctx -> lvl -> formatter -> LF.sub -> unit
+    val fmt_ppr_lf_schema : ?useName:bool -> lvl -> formatter -> LF.schema -> unit
+    val fmt_ppr_lf_sch_elem : lvl -> formatter -> LF.sch_elem -> unit
+    val fmt_ppr_lf_dctx_hat : LF.mctx -> lvl -> formatter -> LF.dctx -> unit
+    val fmt_ppr_lf_dctx : LF.mctx -> lvl -> formatter -> LF.dctx -> unit
+    val fmt_ppr_lf_mctx : ?all: bool -> ?sep: (formatter -> unit -> unit) -> lvl ->
+                                   formatter -> LF.mctx -> unit
+    val fmt_ppr_lf_ctx_var : LF.mctx -> formatter -> LF.ctx_var -> unit
+    val fmt_ppr_lf_mfront : LF.mctx -> lvl -> formatter -> LF.mfront -> unit
+    val fmt_ppr_lf_iterm : LF.mctx -> LF.dctx -> lvl -> formatter -> LF.iterm -> unit
+    val fmt_ppr_lf_constraint : formatter -> LF.constrnt -> unit
     val fmt_ppr_lf_constraints : formatter -> LF.cnstr list -> unit
-    val fmt_ppr_lf_msub        : LF.mctx -> lvl -> formatter -> LF.msub -> unit
+    val fmt_ppr_lf_msub : LF.mctx -> lvl -> formatter -> LF.msub -> unit
 
     (** Prints a typing judgment for an msub: cD' |- theta : cD *)
     val fmt_ppr_lf_msub_typing : formatter -> LF.mctx * LF.msub * LF.mctx -> unit
@@ -104,20 +104,20 @@ module Int = struct
     val fmt_ppr_lf_sub_typing : formatter -> LF.mctx * LF.dctx * LF.sub * LF.dctx -> unit
 
     (* computational printers *)
-    val fmt_ppr_cmp_kind      : LF.mctx -> lvl -> formatter -> Comp.kind -> unit
-    val fmt_ppr_cmp_typ       : LF.mctx -> lvl -> formatter -> Comp.typ -> unit
+    val fmt_ppr_cmp_kind : LF.mctx -> lvl -> formatter -> Comp.kind -> unit
+    val fmt_ppr_cmp_typ : LF.mctx -> lvl -> formatter -> Comp.typ -> unit
     val fmt_ppr_cmp_suffices_typ : LF.mctx -> formatter -> Comp.suffices_typ -> unit
     val fmt_ppr_cmp_ctyp_decl : LF.mctx -> lvl -> formatter -> Comp.ctyp_decl -> unit
-    val fmt_ppr_cmp_gctx      : ?sep:(formatter -> unit -> unit) ->
-                                LF.mctx -> lvl -> formatter -> Comp.gctx -> unit
-    val fmt_ppr_cmp_exp_chk   : LF.mctx -> Comp.gctx -> lvl -> formatter -> Comp.exp_chk  -> unit
-    val fmt_ppr_cmp_exp_syn   : LF.mctx -> Comp.gctx -> lvl -> formatter -> Comp.exp_syn  -> unit
-    val fmt_ppr_cmp_value     : lvl -> formatter -> Comp.value -> unit
-    val fmt_ppr_cmp_branches  : Comp.gctx -> formatter -> Comp.branch list -> unit
-    val fmt_ppr_cmp_branch    : Comp.gctx -> formatter -> Comp.branch      -> unit
-    val fmt_ppr_cmp_ih_args   : LF.mctx -> Comp.gctx -> formatter -> Comp.ih_arg list -> unit
-    val fmt_ppr_cmp_ih        : LF.mctx -> Comp.gctx -> formatter -> Comp.ih_decl -> unit
-    val fmt_ppr_cmp_ihctx     : LF.mctx -> Comp.gctx -> formatter -> Comp.ihctx -> unit
+    val fmt_ppr_cmp_gctx : ?sep:(formatter -> unit -> unit) ->
+                                   LF.mctx -> lvl -> formatter -> Comp.gctx -> unit
+    val fmt_ppr_cmp_exp_chk : LF.mctx -> Comp.gctx -> lvl -> formatter -> Comp.exp_chk -> unit
+    val fmt_ppr_cmp_exp_syn : LF.mctx -> Comp.gctx -> lvl -> formatter -> Comp.exp_syn -> unit
+    val fmt_ppr_cmp_value : lvl -> formatter -> Comp.value -> unit
+    val fmt_ppr_cmp_branches : Comp.gctx -> formatter -> Comp.branch list -> unit
+    val fmt_ppr_cmp_branch : Comp.gctx -> formatter -> Comp.branch -> unit
+    val fmt_ppr_cmp_ih_args : LF.mctx -> Comp.gctx -> formatter -> Comp.ih_arg list -> unit
+    val fmt_ppr_cmp_ih : LF.mctx -> Comp.gctx -> formatter -> Comp.ih_decl -> unit
+    val fmt_ppr_cmp_ihctx : LF.mctx -> Comp.gctx -> formatter -> Comp.ihctx -> unit
 
     val fmt_ppr_cmp_total_dec_kind : formatter -> Comp.order Comp.total_dec_kind -> unit
     val fmt_ppr_cmp_total_dec : formatter -> Comp.total_dec -> unit
@@ -128,14 +128,14 @@ module Int = struct
     val fmt_ppr_cmp_hypotheses_listing : formatter -> Comp.hypotheses -> unit
     val fmt_ppr_cmp_subgoal_path : LF.mctx -> Comp.gctx -> formatter -> Comp.SubgoalPath.t -> unit
     val fmt_ppr_cmp_proof_state : formatter -> Comp.proof_state -> unit
-    val fmt_ppr_cmp_proof     : LF.mctx -> Comp.gctx -> formatter -> Comp.proof -> unit
-    val fmt_ppr_cmp_command   : LF.mctx -> Comp.gctx -> formatter -> Comp.command -> unit
+    val fmt_ppr_cmp_proof : LF.mctx -> Comp.gctx -> formatter -> Comp.proof -> unit
+    val fmt_ppr_cmp_command : LF.mctx -> Comp.gctx -> formatter -> Comp.command -> unit
     val fmt_ppr_cmp_directive : LF.mctx -> Comp.gctx -> formatter -> Comp.directive -> unit
     val fmt_ppr_cmp_hypothetical : LF.mctx -> Comp.gctx -> formatter -> Comp.hypothetical -> unit
-    val fmt_ppr_cmp_pattern       : LF.mctx -> Comp.gctx -> lvl -> formatter -> Comp.pattern     -> unit
-    val fmt_ppr_cmp_meta_typ      : LF.mctx -> formatter -> Comp.meta_typ -> unit
-    val fmt_ppr_cmp_meta_obj      : LF.mctx -> lvl -> formatter -> Comp.meta_obj -> unit
-    val fmt_ppr_cmp_meta_spine    : LF.mctx -> lvl -> formatter -> Comp.meta_spine -> unit
+    val fmt_ppr_cmp_pattern : LF.mctx -> Comp.gctx -> lvl -> formatter -> Comp.pattern -> unit
+    val fmt_ppr_cmp_meta_typ : LF.mctx -> formatter -> Comp.meta_typ -> unit
+    val fmt_ppr_cmp_meta_obj : LF.mctx -> lvl -> formatter -> Comp.meta_obj -> unit
+    val fmt_ppr_cmp_meta_spine : LF.mctx -> lvl -> formatter -> Comp.meta_spine -> unit
 
     val fmt_ppr_cmp_comp_prog_info : formatter -> CompS.entry -> unit
 
@@ -153,35 +153,35 @@ module Ext = struct
     val l0 : lvl
 
     (* Contextual Format Based Pretty Printers *)
-    val fmt_ppr_sgn           : formatter -> Sgn.sgn -> unit
-    val fmt_ppr_sgn_decl      : formatter -> Sgn.decl -> unit
-    val fmt_ppr_lf_kind       : lvl -> formatter -> LF.kind      -> unit
-    val fmt_ppr_lf_ctyp_decl  : formatter -> LF.ctyp_decl -> unit
-    val fmt_ppr_lf_typ_rec    : formatter -> LF.typ_rec    -> unit
+    val fmt_ppr_sgn : formatter -> Sgn.sgn -> unit
+    val fmt_ppr_sgn_decl : formatter -> Sgn.decl -> unit
+    val fmt_ppr_lf_kind : lvl -> formatter -> LF.kind -> unit
+    val fmt_ppr_lf_ctyp_decl : formatter -> LF.ctyp_decl -> unit
+    val fmt_ppr_lf_typ_rec : formatter -> LF.typ_rec -> unit
 
-    val fmt_ppr_lf_typ        : lvl -> formatter -> LF.typ    -> unit
-    val fmt_ppr_lf_normal     : lvl -> formatter -> LF.normal -> unit
-    val fmt_ppr_lf_head       : lvl -> formatter -> LF.head   -> unit
-    val fmt_ppr_lf_spine      : lvl -> formatter -> LF.spine  -> unit
-    val fmt_ppr_lf_sub        : ?pp_empty:(formatter -> unit -> bool) ->
-                                lvl -> formatter -> LF.sub    -> unit
+    val fmt_ppr_lf_typ : lvl -> formatter -> LF.typ -> unit
+    val fmt_ppr_lf_normal : lvl -> formatter -> LF.normal -> unit
+    val fmt_ppr_lf_head : lvl -> formatter -> LF.head -> unit
+    val fmt_ppr_lf_spine : lvl -> formatter -> LF.spine -> unit
+    val fmt_ppr_lf_sub : ?pp_empty:(formatter -> unit -> bool) ->
+                                lvl -> formatter -> LF.sub -> unit
 
-    val fmt_ppr_lf_schema     : lvl -> formatter -> LF.schema     -> unit
-    val fmt_ppr_lf_sch_elem   : lvl -> formatter -> LF.sch_elem   -> unit
+    val fmt_ppr_lf_schema : lvl -> formatter -> LF.schema -> unit
+    val fmt_ppr_lf_sch_elem : lvl -> formatter -> LF.sch_elem -> unit
 
-    val fmt_ppr_lf_dctx_hat   : formatter -> LF.dctx  -> unit
-    val fmt_ppr_lf_dctx       : lvl -> formatter -> LF.dctx  -> unit
+    val fmt_ppr_lf_dctx_hat : formatter -> LF.dctx -> unit
+    val fmt_ppr_lf_dctx : lvl -> formatter -> LF.dctx -> unit
 
-    val fmt_ppr_lf_mctx       : ?sep:(formatter -> unit -> unit)
-                                -> lvl -> formatter -> LF.mctx     -> unit
-    val fmt_ppr_cmp_kind      : lvl -> formatter -> Comp.kind -> unit
-    val fmt_ppr_cmp_typ       : lvl -> formatter -> Comp.typ -> unit
-    val fmt_ppr_cmp_exp_chk   : lvl -> Format.formatter -> Comp.exp_chk -> unit
-    val fmt_ppr_cmp_exp_syn   : lvl -> Format.formatter -> Comp.exp_syn -> unit
-    val fmt_ppr_cmp_branches  : Format.formatter -> Comp.branch list -> unit
-    val fmt_ppr_cmp_branch    : Format.formatter -> Comp.branch -> unit
-    val fmt_ppr_pat_obj       : lvl -> Format.formatter -> Comp.pattern -> unit
+    val fmt_ppr_lf_mctx : ?sep:(formatter -> unit -> unit)
+                                -> lvl -> formatter -> LF.mctx -> unit
+    val fmt_ppr_cmp_kind : lvl -> formatter -> Comp.kind -> unit
+    val fmt_ppr_cmp_typ : lvl -> formatter -> Comp.typ -> unit
+    val fmt_ppr_cmp_exp_chk : lvl -> Format.formatter -> Comp.exp_chk -> unit
+    val fmt_ppr_cmp_exp_syn : lvl -> Format.formatter -> Comp.exp_syn -> unit
+    val fmt_ppr_cmp_branches : Format.formatter -> Comp.branch list -> unit
+    val fmt_ppr_cmp_branch : Format.formatter -> Comp.branch -> unit
+    val fmt_ppr_pat_obj : lvl -> Format.formatter -> Comp.pattern -> unit
 
-    val fmt_ppr_patternOpt    : formatter -> LF.normal option -> unit
+    val fmt_ppr_patternOpt : formatter -> LF.normal option -> unit
   end
 end

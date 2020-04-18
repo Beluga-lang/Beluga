@@ -24,58 +24,58 @@ val dec : 'a -> 'a ctx -> 'a ctx
  *)
 val decs : 'a list -> 'a ctx -> 'a ctx
 
-val dctxToHat   : dctx -> dctx_hat
-val addToHat   : dctx_hat -> dctx_hat   (* Lengthen by one declaration *)
-val hatToDCtx   : dctx_hat -> dctx
+val dctxToHat : dctx -> dctx_hat
+val addToHat : dctx_hat -> dctx_hat (* Lengthen by one declaration *)
+val hatToDCtx : dctx_hat -> dctx
 (* Declaration Contexts *)
-val ctxDec      : dctx -> int -> typ_decl
+val ctxDec : dctx -> int -> typ_decl
 val ctxSigmaDec : dctx -> int -> typ_decl
-val ctxVar      : dctx -> ctx_var option
-val hasCtxVar   : dctx -> bool         (* true if ctxVar dctx = Some _ *)
+val ctxVar : dctx -> ctx_var option
+val hasCtxVar : dctx -> bool (* true if ctxVar dctx = Some _ *)
 
-val append      : 'a ctx -> 'a ctx -> 'a ctx
+val append : 'a ctx -> 'a ctx -> 'a ctx
 
 (** General eliminator for contexts. *)
-val fold            : 'b -> ('b -> 'a -> 'b) -> 'a ctx -> 'b
+val fold : 'b -> ('b -> 'a -> 'b) -> 'a ctx -> 'b
 
 (** Lift a function into contexts. *)
-val map             : ('a -> 'b) -> 'a ctx -> 'b ctx
+val map : ('a -> 'b) -> 'a ctx -> 'b ctx
 
 val to_list_map_rev : 'a ctx -> ('a ctx -> 'a -> 'b) -> 'b list
-val to_list_map     : 'a ctx -> ('a ctx -> 'a -> 'b) -> 'b list
-val to_list_rev     : 'a ctx -> 'a list
-val to_list         : 'a ctx -> 'a list
-val to_sublist      : 'a ctx -> ('a ctx * 'a) list
-val to_sublist_rev  : 'a ctx -> ('a ctx * 'a) list
-val of_list_map     : 'a list -> ('a -> 'b) -> 'b ctx
+val to_list_map : 'a ctx -> ('a ctx -> 'a -> 'b) -> 'b list
+val to_list_rev : 'a ctx -> 'a list
+val to_list : 'a ctx -> 'a list
+val to_sublist : 'a ctx -> ('a ctx * 'a) list
+val to_sublist_rev : 'a ctx -> ('a ctx * 'a) list
+val of_list_map : 'a list -> ('a -> 'b) -> 'b ctx
 val of_list_map_rev : 'a list -> ('a -> 'b) -> 'b ctx
-val of_list         : 'a list -> 'a ctx
-val of_list_rev     : 'a list -> 'a ctx
-val iter        : 'a ctx -> ('a ctx -> 'a -> unit) -> unit
-val iter'       : 'a ctx -> ('a -> unit) -> unit
-val iter_rev    : 'a ctx -> ('a ctx -> 'a -> unit) -> unit
-val iter_rev'   : 'a ctx -> ('a -> unit) -> unit
-val length      : 'a ctx -> int
-val dctxLength  : dctx -> int    (* number of concrete variables *)
-val find        : 'a ctx -> ('a ctx -> 'a -> bool) -> 'a option
-val find'       : 'a ctx -> ('a -> bool) -> 'a option
-val find_rev    : 'a ctx -> ('a ctx -> 'a -> bool) -> 'a option
-val find_rev'   : 'a ctx -> ('a -> bool) -> 'a option
-val find_index  : 'a ctx -> ('a ctx -> 'a -> bool) -> int option
+val of_list : 'a list -> 'a ctx
+val of_list_rev : 'a list -> 'a ctx
+val iter : 'a ctx -> ('a ctx -> 'a -> unit) -> unit
+val iter' : 'a ctx -> ('a -> unit) -> unit
+val iter_rev : 'a ctx -> ('a ctx -> 'a -> unit) -> unit
+val iter_rev' : 'a ctx -> ('a -> unit) -> unit
+val length : 'a ctx -> int
+val dctxLength : dctx -> int (* number of concrete variables *)
+val find : 'a ctx -> ('a ctx -> 'a -> bool) -> 'a option
+val find' : 'a ctx -> ('a -> bool) -> 'a option
+val find_rev : 'a ctx -> ('a ctx -> 'a -> bool) -> 'a option
+val find_rev' : 'a ctx -> ('a -> bool) -> 'a option
+val find_index : 'a ctx -> ('a ctx -> 'a -> bool) -> int option
 val find_index' : 'a ctx -> ('a -> bool) -> int option
-val find_index_rev  : 'a ctx -> ('a ctx -> 'a -> bool) -> int option
+val find_index_rev : 'a ctx -> ('a ctx -> 'a -> bool) -> int option
 val find_index_rev' : 'a ctx -> ('a -> bool) -> int option
 
 (** Finds the leftmost element of the context, together with its
     index, satisfying the given predicate *)
-val find_with_index     : 'a ctx -> ('a ctx -> 'a * int -> bool) -> ('a * int) option
-val find_with_index'    : 'a ctx -> ('a * int -> bool) -> ('a * int) option
+val find_with_index : 'a ctx -> ('a ctx -> 'a * int -> bool) -> ('a * int) option
+val find_with_index' : 'a ctx -> ('a * int -> bool) -> ('a * int) option
 val find_with_index_rev : 'a ctx -> ('a ctx -> 'a * int -> bool) -> ('a * int) option
 val find_with_index_rev': 'a ctx -> ('a * int -> bool) -> ('a * int) option
 
 val getNameDCtx : dctx -> int -> Id.name
 val getNameMCtx : mctx -> int -> Id.name
-val getNameCtx  : Comp.gctx -> int -> Id.name
+val getNameCtx : Comp.gctx -> int -> Id.name
 
 val projectCtxIntoDctx : typ_decl ctx -> dctx
 val splitContextVariable : dctx -> typ_decl -> dctx

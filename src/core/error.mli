@@ -62,6 +62,6 @@ val report_mismatch :
   unit
 
 val resetInformation : unit -> unit
-val getInformation   : unit -> string
+val getInformation : unit -> string
 
-val addInformation   : string -> unit
+val addInformation : string -> unit

@@ -22,7 +22,12 @@ let error_format = Format.formatter_of_buffer error_format_buffer
 
 let register_printer f =
   Printexc.register_printer
-    (fun e -> try Some (f e) with Match_failure _ -> None)
+    begin fun e ->
+    try
+      Some (f e)
+    with
+    | Match_failure _ -> None
+    end
 
 let register_printer' f = Printexc.register_printer f
 
@@ -69,8 +74,9 @@ let print_with_location loc f =
 
 (* Since this printer is registered first, it will be executed only if
    all other printers fail. *)
-let _ = Printexc.register_printer
-  (fun exc ->
+let _ =
+  Printexc.register_printer
+    begin fun exc ->
     (* We unfortunately do not have direct access to the default
        printer that Printexc uses for exceptions, so we print the
        message we want as a side-effect and return None, which should
@@ -78,7 +84,8 @@ let _ = Printexc.register_printer
        actually print the exception. *)
     Format.fprintf Format.err_formatter
       "Uncaught exception.@ Please report this as a bug.@.";
-    None)
+    None
+    end
 
 let report_mismatch ppf title title_obj1 pp_obj1 obj1 title_obj2 pp_obj2 obj2 =
   Format.fprintf ppf "@[<v>%s@," title;
@@ -91,13 +98,14 @@ let report_mismatch ppf title title_obj1 pp_obj1 obj1 title_obj2 pp_obj2 obj2 =
 (* The following is for coverage. Probably needs to be phased out. *)
 let information = ref []
 
-let resetInformation () = information := []
+let resetInformation () =
+  information := []
 
 let getInformation () =
   match List.rev !information with
-    | [] -> ""
-    | information ->
-      (List.fold_left (fun acc s -> acc ^ "\n" ^ s) "" information) ^ "\n"
+  | [] -> ""
+  | information ->
+     List.fold_left (fun acc s -> acc ^ "\n" ^ s) "" information ^ "\n"
 
 let addInformation message =
   information := message :: !information
@@ -106,8 +114,11 @@ let addInformation message =
 let _ =
   register_printer
     begin fun (Sys_error msg) ->
-    print (fun ppf ->
-        Format.fprintf ppf "System error: %s" msg)
+    print
+      begin fun ppf ->
+      Format.fprintf ppf "System error: %s"
+        msg
+      end
     end;
 
   register_printer

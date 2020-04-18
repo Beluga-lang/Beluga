@@ -72,8 +72,7 @@ type error =
       * Loc.t (* location of existing hole *)
   | UnsolvedHole of HoleId.name * HoleId.t
 
-let string_of_lookup_strategy : lookup_strategy -> string = function
-  | { repr; _ } -> repr
+let string_of_lookup_strategy ({ repr; _ } : lookup_strategy) : string = repr
 
 let print_lookup_strategy ppf (s : lookup_strategy) : unit =
   let open Format in
@@ -123,7 +122,8 @@ let lookup (name : string) : (HoleId.t * some_hole) option =
   let matches_name =
     function
     | { name = HoleId.Named n; _ } -> Misc.String.equals n name
-    | _ -> false in
+    | _ -> false
+  in
   find (fun (Exists (_, h)) -> matches_name h)
 
 let count () : int = Hashtbl.length holes
@@ -141,11 +141,12 @@ let loc_within (loc : Loc.t) (loc' : Loc.t) : bool =
 (* removes all holes located within the given loc (e.g. of a function being shadowed) *)
 let destroy_holes_within loc =
   Hashtbl.filter_map_inplace
-    (fun k (Exists (w, h)) ->
-      let open Maybe in
-      not (loc_within loc h.loc)
-      |> of_bool
-      &> pure (Exists (w, h)))
+    begin fun k (Exists (w, h)) ->
+    let open Maybe in
+    not (loc_within loc h.loc)
+    |> of_bool
+    &> pure (Exists (w, h))
+    end
     holes
 
 (** Checks that the given hole's name is not already stored. *)
@@ -154,16 +155,17 @@ let check_hole_uniqueness (Exists (_, h) : some_hole) : unit =
   match h.name with
   | Anonymous -> () (* anonymous holes never overlap existing holes *)
   | Named s ->
-     match lookup s with
+     begin match lookup s with
      | None -> ()
      | Some (_, Exists (_, h')) ->
         throw h.loc (NameShadowing (s, h'.loc))
+     end
 
 let by_id (i : HoleId.t) : lookup_strategy =
   { repr =
       begin
         let open Format in
-        fprintf str_formatter "by id '%a'" HoleId.fmt_ppr_id i ;
+        fprintf str_formatter "by id '%a'" HoleId.fmt_ppr_id i;
         flush_str_formatter ()
       end
   ; action =

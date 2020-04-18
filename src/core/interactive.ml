@@ -85,15 +85,15 @@ let elaborate_exp' (cD : LF.mctx) (cG : Comp.gctx) (t : ExtComp.exp_syn)
     cD', cD0 |- tA with |cD0| = n
     for all (cD_i , cg_i, ms_i)  in cg,
       cD_i |- ms_i : cD'
-*)
+ *)
 let branchCovGoals i cG0 cgs =
-  let f = fun (cD, cg, ms) ->
+  let f (cD, cg, ms) =
     let make_branch patt =
       let id = Holes.allocate () in
       Comp.Branch
         ( Loc.ghost
         , LF.Empty
-        , (cD , LF.Empty)
+        , (cD, LF.Empty)
         , patt
         , ms
         , Comp.Hole (Loc.ghost, id, HoleId.Anonymous)
@@ -101,32 +101,32 @@ let branchCovGoals i cG0 cgs =
     in
     match cg with
     | Cover.CovCtx cPsi ->
-       (* Printf.printf "CovGoal %s with msub =  %s and i = %s\n"  (P.dctxToString cD cPsi) (P.msubToString cD ms) (string_of_int i); *)
+       (* Printf.printf "CovGoal %s with msub =  %s and i = %s\n" (P.dctxToString cD cPsi) (P.msubToString cD ms) (string_of_int i); *)
        make_branch
-         ( PatMetaObj
-             ( Loc.ghost,
-               ( Loc.ghost,
-                 LF.CObj cPsi
-               )
-             )
+         (PatMetaObj
+            ( Loc.ghost
+            , ( Loc.ghost
+              , LF.CObj cPsi
+              )
+            )
          )
 
-    | Cover.CovGoal(cPsi, tR, _tau' ) ->
-       (* Printf.printf "CovGoal: %s \n"  (P.msubToString cD ms); flush stderr; *)
-       (* _tau'  = tau[ms] *)
-      make_branch
-        (PatMetaObj
-           ( Loc.ghost,
-             ( Loc.ghost,
-               LF.ClObj
-                 ( Context.dctxToHat cPsi,
-                   LF.MObj tR
-                 )
-             )
-           )
-        )
+    | Cover.CovGoal (cPsi, tR, _) ->
+       (* Printf.printf "CovGoal: %s \n" (P.msubToString cD ms); flush stderr; *)
+       (* _tau' = tau[ms] *)
+       make_branch
+         (PatMetaObj
+            ( Loc.ghost
+            , ( Loc.ghost
+              , LF.ClObj
+                  ( Context.dctxToHat cPsi
+                  , LF.MObj tR
+                  )
+              )
+            )
+         )
 
-    | Cover.CovPatt (cG, patt, (_tau',ms')) ->
+    | Cover.CovPatt (_, patt, _) ->
        (* Printf.printf "CovPat %s \n" (P.msubToString cD ms); *)
        make_branch patt
     | _ ->
@@ -135,59 +135,65 @@ let branchCovGoals i cG0 cgs =
   List.map f cgs
 
 let matchFromPatterns l e bl =
-   Comp.(Case(l, PragmaCase, e, bl))
+   Comp.(Case (l, PragmaCase, e, bl))
 
 let genVarName tA = Store.Cid.Typ.gen_var_name tA
 
 (** Traverses a computation-level type-checkable expression and
  * applies the given function to all computational holes. *)
-let rec mapHoleChk f = function
- | Hole (l, id, name) -> f name l
- | Syn (l, es) ->
+let rec mapHoleChk f =
+  function
+  | Hole (l, id, name) -> f name l
+  | Syn (l, es) ->
      let es' = mapHoleSyn f es in
-         Syn (l, es')
- | Fn (l, n, ec) ->
-    let ec' =  mapHoleChk f ec in
-    Fn(l, n, ec')
- | MLam (l, n, ec, p) ->
-   let ec' =  mapHoleChk f ec in
-   MLam (l, n, ec', p)
- | Let (t, es, (n, ec)) ->
-     let es' =  mapHoleSyn f es in
-     let ec' = mapHoleChk f ec  in
-     Let(t, es', (n, ec'))
- | LetPair (t, es, (n1,n2, ec)) ->
-     let es' =  mapHoleSyn f es in
-     let ec' =   mapHoleChk f ec in
-     LetPair(t,es', (n1,n2,ec'))
- | Pair (l,  ec1, ec2) ->
+     Syn (l, es')
+  | Fn (l, n, ec) ->
+     let ec' = mapHoleChk f ec in
+     Fn (l, n, ec')
+  | MLam (l, n, ec, p) ->
+     let ec' = mapHoleChk f ec in
+     MLam (l, n, ec', p)
+  | Let (t, es, (n, ec)) ->
+     let es' = mapHoleSyn f es in
+     let ec' = mapHoleChk f ec in
+     Let (t, es', (n, ec'))
+  | LetPair (t, es, (n1, n2, ec)) ->
+     let es' = mapHoleSyn f es in
+     let ec' = mapHoleChk f ec in
+     LetPair (t, es', (n1, n2, ec'))
+  | Pair (l, ec1, ec2) ->
      let ec1' = mapHoleChk f ec1 in
      let ec2' = mapHoleChk f ec2 in
-     Pair(l, ec1', ec2')
- | Case (l, s, es, bs) ->
+     Pair (l, ec1', ec2')
+  | Case (l, s, es, bs) ->
      let es' = mapHoleSyn f es in
      let bs' = List.map (mapHoleBranch f) bs in
-     Case(l,s,es', bs')
- |  e -> e
-and mapHoleSyn f = function
-  | Apply (l, es, ec) ->
-      let es' = mapHoleSyn f es in
-      let ec' = mapHoleChk f ec in
-      Apply(l, es', ec')
-  | MApp (l, es, cM, cU, pl) ->
-     let es' =  mapHoleSyn f es in
-     MApp(l, es', cM, cU, pl)
-  | PairVal(l, es1, es2) ->
-      let es1' =  mapHoleSyn f es1 in
-      let es2' = mapHoleSyn f es2 in
-      PairVal(l, es1', es2')
+     Case (l, s, es', bs')
   | e -> e
-and mapHoleBranch f = function
-  | Branch (l, cD, cG, p, mS, ec) ->
-      let ec' =  mapHoleChk f ec  in
-      Branch (l, cD, cG, p, mS, ec')
 
-let mapHoleThm f = function
+and mapHoleSyn f =
+  function
+  | Apply (l, es, ec) ->
+     let es' = mapHoleSyn f es in
+     let ec' = mapHoleChk f ec in
+     Apply (l, es', ec')
+  | MApp (l, es, cM, cU, pl) ->
+     let es' = mapHoleSyn f es in
+     MApp (l, es', cM, cU, pl)
+  | PairVal(l, es1, es2) ->
+     let es1' = mapHoleSyn f es1 in
+     let es2' = mapHoleSyn f es2 in
+     PairVal (l, es1', es2')
+  | e -> e
+
+and mapHoleBranch f =
+  function
+  | Branch (l, cD, cG, p, mS, ec) ->
+     let ec' = mapHoleChk f ec in
+     Branch (l, cD, cG, p, mS, ec')
+
+let mapHoleThm f =
+  function
   | Program e -> Program (mapHoleChk f e)
   | Proof p -> Misc.not_implemented "mapHoleThm"
 
@@ -200,15 +206,8 @@ let is_inferred decl =
 
 (* intro: int -> Comp.exp_chk option *)
 let intro (h : Holes.comp_hole_info Holes.hole) =
-  let { Holes.loc
-      ; Holes.name
-      ; Holes.cD = cDT
-      ; Holes.info =
-          { Holes.cG = cGT
-          ; Holes.compGoal = (tau, mS)
-          ; _
-          }
-      } = h
+  let { Holes.cD = cDT; Holes.info = { Holes.cG = cGT; Holes.compGoal = (tau, _); _ }; _ } =
+    h
   in
   let rec crawl cD cG =
     function
@@ -217,22 +216,23 @@ let intro (h : Holes.comp_hole_info Holes.hole) =
          match t1 with
          | Comp.TypBox (l, LF.ClTyp (LF.MTyp tA, psi)) ->
             let nam = Id.mk_name (Id.BVarName (genVarName tA)) in
-            let exp = crawl cD (LF.Dec (cG, Comp.CTypDecl (nam, t1, false))) t2  in
+            let exp = crawl cD (LF.Dec (cG, Comp.CTypDecl (nam, t1, false))) t2 in
             Comp.Fn(l, nam, exp)
-         | Comp.TypBox (l, LF.ClTyp (LF.PTyp tA,psi)) ->
+         | Comp.TypBox (l, LF.ClTyp (LF.PTyp tA, psi)) ->
             let nam = Id.mk_name (Id.PVarName (genVarName tA)) in
             let exp = crawl cD (LF.Dec (cG, Comp.CTypDecl (nam, t1, false))) t2 in
             Comp.Fn(l, nam, exp)
          | _ ->
             let nam = Id.mk_name (Id.NoName) in
-            let exp = crawl cD (LF.Dec (cG, Comp.CTypDecl (nam, t1, false))) t2  in
+            let exp = crawl cD (LF.Dec (cG, Comp.CTypDecl (nam, t1, false))) t2 in
             Comp.Fn(Loc.ghost, nam, exp)
        end
-    | Comp.TypPiBox (_, tdec, t') when not (is_inferred tdec) ->
+    | Comp.TypPiBox (_, tdec, t')
+         when not (is_inferred tdec) ->
        let nam = LF.name_of_ctyp_decl tdec in
        let exp = crawl (LF.Dec (cD, tdec)) cG t' in
-       Comp.MLam (Loc.ghost, nam , exp, `explicit)
-    | t ->
+       Comp.MLam (Loc.ghost, nam, exp, `explicit)
+    | _ ->
        let id = Holes.allocate () in
        Comp.Hole (Loc.ghost, id, HoleId.Anonymous)
   in
@@ -252,55 +252,53 @@ let intro (h : Holes.comp_hole_info Holes.hole) =
 let genCGoals cD' (LF.Decl (n, mtyp, dep)) cD_tail =
   match mtyp with
   | LF.CTyp _ ->
-     let cgs = Cover.genContextGoals cD' (n, mtyp, dep) in
-     List.map (fun (cDg, cPhi, ms) ->
-         (* cDg |- ms : cD' *)
-         let ms' = LF.MDot (LF.CObj (cPhi),  ms) in
-         let k = List.length cD_tail in
-         let (cD'', ms0) = Coverage.addToMCtx cDg (cD_tail, ms') in
-         (* cDg, cD_tail |- ms0 : cD', cD_tail *)
-         (cD'' , Coverage.CovCtx (Whnf.cnormDCtx (cPhi, LF.MShift k)),  ms0 )
-       ) cgs
+     Cover.genContextGoals cD' (n, mtyp, dep)
+     |> List.map
+          begin fun (cDg, cPhi, ms) ->
+          (* cDg |- ms : cD' *)
+          let ms' = LF.MDot (LF.CObj (cPhi), ms) in
+          let k = List.length cD_tail in
+          let (cD'', ms0) = Coverage.addToMCtx cDg (cD_tail, ms') in
+          (* cDg, cD_tail |- ms0 : cD', cD_tail *)
+          (cD'', Coverage.CovCtx (Whnf.cnormDCtx (cPhi, LF.MShift k)), ms0)
+          end
 
-  | _         ->
-     let cgs, _ = Cover.genCGoals cD' mtyp in
-     List.map (fun (cDg', cg, ms) ->
-         let Cover.CovGoal (cPsi', tR, sA') = cg in
-         (* let _ = Printf.printf "\n[Generated CovGoal] %s\n %s\n"
+  | _ ->
+     Cover.genCGoals cD' mtyp
+     |> fst
+     |> List.map
+          begin fun (cDg', cg, ms) ->
+          let Cover.CovGoal (cPsi', tR, sA') = cg in
+          (* let _ = Printf.printf "\n[Generated CovGoal] %s\n %s\n"
             (P.mctxToString cDg') (Cover.covGoalToString cDg' cg); Format.flush_str_formatter () in  *)
-         let ms' = LF.MDot (LF.ClObj ( Context.dctxToHat cPsi' , LF.MObj tR),  ms) in
-         let k   = List.length cD_tail in
-         let (cD'', ms0) = Coverage.addToMCtx cDg' (cD_tail, ms') in
-         let cg' = Coverage.CovGoal (Whnf.cnormDCtx (cPsi', LF.MShift k) ,
-                                     Whnf.cnorm (tR, LF.MShift k) ,
-                                     (Whnf.cnormTyp (Whnf.normTyp sA' , LF.MShift k), S.LF.id)) in
-         (*        let _ = Printf.printf "\n[Generated CovGoal – shifted] k = %s\n cD'' = %s\n %s\n"
+          let ms' = LF.MDot (LF.ClObj (Context.dctxToHat cPsi', LF.MObj tR), ms) in
+          let k = List.length cD_tail in
+          let (cD'', ms0) = Coverage.addToMCtx cDg' (cD_tail, ms') in
+          let cg' =
+            Coverage.CovGoal
+              ( Whnf.cnormDCtx (cPsi', LF.MShift k)
+              , Whnf.cnorm (tR, LF.MShift k)
+              , (Whnf.cnormTyp (Whnf.normTyp sA', LF.MShift k), S.LF.id)
+              )
+          in
+          (*        let _ = Printf.printf "\n[Generated CovGoal – shifted] k = %s\n cD'' = %s\n %s\n"
                    (string_of_int k) (P.mctxToString cD'') (Cover.covGoalToString cD'' cg'); Format.flush_str_formatter () in *)
-         (cD'' , cg',  ms0 )
-       ) cgs
+          (cD'', cg', ms0)
+          end
 
-(* split : String -> Holes.look -> Comp.exp_chk  option *)
+(* split : String -> Holes.look -> Comp.exp_chk option *)
 let split (e : string) (hi : HoleId.t * Holes.comp_hole_info Holes.hole) : Comp.exp_chk option =
-  let ( hole_id,
-        { Holes.loc
-        ; Holes.name
-        ; Holes.cD = cD0
-        ; Holes.info =
-            { Holes.cG = cG0
-            ; Holes.compGoal = tau_theta
-            ; _
-            }
-        }
-      ) = hi in
+  let (_, { Holes.cD = cD0; Holes.info = { Holes.cG = cG0; _ }; _ }) =
+    hi
+  in
 
   let rec searchGctx i =
     function
-    | LF.Empty ->
-       None
+    | LF.Empty -> None
     | LF.Dec (cG', Comp.CTypDecl (n, tau, _))
-      when Misc.String.equals (Id.string_of_name n) e ->
-       let rec matchTyp tau =
-         match tau with
+         when Misc.String.equals (Id.string_of_name n) e ->
+       let rec matchTyp =
+         function
          | Comp.TypBox (l, _)
            | Comp.TypBase (l, _, _) -> (* tA:typ, cPsi: dctx *)
             let names =
@@ -321,7 +319,8 @@ let split (e : string) (hi : HoleId.t * Holes.comp_hole_info Holes.hole) : Comp.
          | _ ->
             failwith
               ( "Found variable in gCtx, cannot split on "
-                ^ Id.string_of_name n )
+                ^ Id.string_of_name n
+              )
        in
        matchTyp tau
     | LF.Dec (cG', _) -> searchGctx (i+1) cG'
@@ -330,51 +329,54 @@ let split (e : string) (hi : HoleId.t * Holes.comp_hole_info Holes.hole) : Comp.
     match cD with
     | LF.Empty -> None
     | LF.Dec (cD', (LF.Decl (n, mtyp, dep) as cd)) ->
-	     if Misc.String.equals (Id.string_of_name n) e then
-	       let cgs = genCGoals cD' cd cD_tail in
-	       let bl  = branchCovGoals i cG0 cgs in
-	       let mtyp' = Whnf.cnormMTyp (mtyp, LF.MShift i) in  (* cD0 |- mtyp' *)
-	       let m0  =
-           match  mtyp with
-	         | LF.CTyp _ -> (Loc.ghost, LF.CObj (LF.CtxVar (LF.CtxOffset i)))
-	         | LF.ClTyp (LF.MTyp _ , cPsi ) ->
-		          let cPsi' = Whnf.cnormDCtx (cPsi, LF.MShift i) in
-		          let phat = Context.dctxToHat cPsi' in
-		          ( Loc.ghost,
-		            LF.ClObj
-                  ( phat,
-                    LF.MObj
-                      (LF.Root
-                         ( Loc.ghost
-                         , LF.MVar (LF.Offset i, LF.Shift 0)
-                         , LF.Nil
-                         , `explicit
-                         )
-                      )
-                  )
-              )
-	         | LF.ClTyp (LF.PTyp _ , cPsi) ->
-		          let cPsi' = Whnf.cnormDCtx (cPsi, LF.MShift i) in
-		          let phat  = Context.dctxToHat cPsi' in
-		          ( Loc.ghost,
-                LF.ClObj
-                  ( phat,
-                    LF.MObj
-                      (LF.Root
-                         ( Loc.ghost
-                         , LF.PVar (i, LF.Shift 0)
-                         , LF.Nil
-                         , `explicit
-                         )
-                      )
-                  )
-              )
-	         | _ -> failwith "Interactive Splitting on Substitution Variables not supported"
-	       in
-	       let entry = Comp.AnnBox (m0, mtyp') in
-	       Some (matchFromPatterns (Loc.ghost) entry bl)
-	     else
-	       searchMctx (i+1) cD' (cd::cD_tail)
+       if Misc.String.equals (Id.string_of_name n) e
+       then
+         begin
+           let cgs = genCGoals cD' cd cD_tail in
+           let bl = branchCovGoals i cG0 cgs in
+           let mtyp' = Whnf.cnormMTyp (mtyp, LF.MShift i) in (* cD0 |- mtyp' *)
+           let m0 =
+             match mtyp with
+             | LF.CTyp _ -> (Loc.ghost, LF.CObj (LF.CtxVar (LF.CtxOffset i)))
+             | LF.ClTyp (LF.MTyp _, cPsi) ->
+                let cPsi' = Whnf.cnormDCtx (cPsi, LF.MShift i) in
+                let phat = Context.dctxToHat cPsi' in
+                ( Loc.ghost,
+                  LF.ClObj
+                    ( phat,
+                      LF.MObj
+                        (LF.Root
+                           ( Loc.ghost
+                           , LF.MVar (LF.Offset i, LF.Shift 0)
+                           , LF.Nil
+                           , `explicit
+                           )
+                        )
+                    )
+                )
+             | LF.ClTyp (LF.PTyp _, cPsi) ->
+                let cPsi' = Whnf.cnormDCtx (cPsi, LF.MShift i) in
+                let phat = Context.dctxToHat cPsi' in
+                ( Loc.ghost
+                , LF.ClObj
+                    ( phat
+                    , LF.MObj
+                        (LF.Root
+                           ( Loc.ghost
+                           , LF.PVar (i, LF.Shift 0)
+                           , LF.Nil
+                           , `explicit
+                           )
+                        )
+                    )
+                )
+             | _ -> failwith "Interactive Splitting on Substitution Variables not supported"
+           in
+           let entry = Comp.AnnBox (m0, mtyp') in
+           Some (matchFromPatterns (Loc.ghost) entry bl)
+         end
+       else
+         searchMctx (i + 1) cD' (cd :: cD_tail)
     | _ ->
        failwith "mCtx contains something we can't split on"
   in
@@ -428,7 +430,8 @@ let whale =
   let light_shade = "\xe2\x96\x91" in
   let medium_shade = "\xe2\x96\x92" in
   let dark_shade = "\xe2\x96\x93" in
-  let f = function
+  let f =
+    function
     | 'Q' | '#' | '+' | ';' | ':' -> emit full_block
     | ',' -> pass ' ' (* emit light_shade *)
     | '\'' -> emit light_shade
@@ -436,51 +439,67 @@ let whale =
     | '=' | '`' -> emit medium_shade
     | c -> pass c
   in
-  String.iter f whale_str; flush_str_formatter ()
+  String.iter f whale_str;
+  flush_str_formatter ()
 
 let iterMctx (cD : LF.mctx) (cPsi : LF.dctx) (tA : LF.tclo) : Id.name list =
   let (_, sub) = tA in
-  let rec aux acc c = function
+  let rec aux acc c =
+    function
     | LF.Empty -> acc
     | LF.Dec (cD', LF.Decl(n, LF.ClTyp (LF.MTyp tA', cPsi'), LF.No))
-    | LF.Dec (cD', LF.Decl(n, LF.ClTyp (LF.PTyp tA', cPsi'), LF.No))->
-      begin try
-        Unify.StdTrail.resetGlobalCnstrs ();
-        let tA' = Whnf.cnormTyp (tA', LF.MShift c) in
-        Unify.StdTrail.unifyTyp cD cPsi tA (tA', sub);
-        aux (n::acc) (c+1) cD'
-      with | _ -> aux acc (c+1) cD' end
+      | LF.Dec (cD', LF.Decl(n, LF.ClTyp (LF.PTyp tA', cPsi'), LF.No)) ->
+       begin
+         try
+           Unify.StdTrail.resetGlobalCnstrs ();
+           let tA' = Whnf.cnormTyp (tA', LF.MShift c) in
+           Unify.StdTrail.unifyTyp cD cPsi tA (tA', sub);
+           aux (n::acc) (c+1) cD'
+         with
+         | _ -> aux acc (c+1) cD'
+       end
     | LF.Dec (cD', _) -> aux acc (c + 1) cD'
-  in aux [] 1 cD
+  in
+  aux [] 1 cD
 
 let iterDctx (cD : LF.mctx) (cPsi : LF.dctx) (tA : LF.tclo) : Id.name list =
-  let rec aux acc = function
-    | LF.DDec(cPsi', LF.TypDecl(n, tA')) ->
-      begin try
-        Unify.StdTrail.resetGlobalCnstrs ();
-        Unify.StdTrail.unifyTyp cD cPsi tA (tA', LF.EmptySub);
-        aux (n::acc) cPsi'
-      with | _ -> aux acc cPsi' end
-    | LF.DDec(cPsi', _) -> aux acc cPsi'
+  let rec aux acc =
+    function
+    | LF.DDec (cPsi', LF.TypDecl(n, tA')) ->
+       begin
+         try
+           Unify.StdTrail.resetGlobalCnstrs ();
+           Unify.StdTrail.unifyTyp cD cPsi tA (tA', LF.EmptySub);
+           aux (n::acc) cPsi'
+         with
+         | _ -> aux acc cPsi'
+       end
+    | LF.DDec (cPsi', _) -> aux acc cPsi'
     | _ -> acc
   in
-    aux [] cPsi
+  aux [] cPsi
 
 let iterGctx (cD : LF.mctx) (cG : Comp.gctx) (ttau : Comp.tclo) : Id.name list =
-  let rec aux acc = function
+  let rec aux acc =
+    function
     | LF.Empty -> acc
-    | LF.Dec (cG', Comp.CTypDecl(n, tau', _ )) ->
-      begin try
-        Unify.StdTrail.resetGlobalCnstrs ();
-        Unify.StdTrail.unifyCompTyp cD ttau (tau', LF.MShift 0);
-        aux (n::acc) cG'
-      with | _ -> aux acc cG' end
+    | LF.Dec (cG', Comp.CTypDecl(n, tau', _)) ->
+       begin
+         try
+           Unify.StdTrail.resetGlobalCnstrs ();
+           Unify.StdTrail.unifyCompTyp cD ttau (tau', LF.MShift 0);
+           aux (n::acc) cG'
+         with
+         | _ -> aux acc cG'
+       end
     | LF.Dec (cG', _) -> aux acc cG'
-  in aux [] cG
+  in
+  aux [] cG
 
 let thin_line =
   let replicate n c = String.init n (Misc.const c) in
   replicate 80 '_'
+
 let thin_line ppf () = Format.fprintf ppf "%s" thin_line
 
 let fmt_ppr_hole ppf (i, (Holes.Exists (w, h)) : HoleId.t * Holes.some_hole) : unit =
@@ -508,7 +527,8 @@ let fmt_ppr_hole ppf (i, (Holes.Exists (w, h)) : HoleId.t * Holes.some_hole) : u
     (P.fmt_ppr_lf_mctx ~sep: pp_print_cut P.l0) cD;
   (* thin_line ppf (); *)
 
-  let plural ppf = function
+  let plural ppf =
+    function
     | true -> fprintf ppf "s"
     | false -> ()
   in
@@ -516,8 +536,8 @@ let fmt_ppr_hole ppf (i, (Holes.Exists (w, h)) : HoleId.t * Holes.some_hole) : u
   (* The remainder of the formatting hinges on whether we're printing
      an LF hole or a computational hole.
    *)
-  begin match w, info with
-  | Holes.LFInfo, { Holes.cPsi; Holes.lfGoal; Holes.lfSolution } ->
+  begin match (w, info) with
+  | (Holes.LFInfo, { Holes.cPsi; Holes.lfGoal; Holes.lfSolution }) ->
      let lfGoal' = Whnf.normTyp lfGoal in
      let cPsi = Whnf.normDCtx cPsi in
 
@@ -536,7 +556,8 @@ let fmt_ppr_hole ppf (i, (Holes.Exists (w, h)) : HoleId.t * Holes.some_hole) : u
           (* Need to check both the LF context and the meta-variable context. *)
           iterMctx cD cPsi lfGoal @ iterDctx cD cPsi lfGoal
         in
-        if Misc.List.nonempty suggestions then
+        if Misc.List.nonempty suggestions
+        then
           fprintf ppf
             "@,@[<hov 2>Variable%a of this type:@ @[<h>%a@]@]"
             plural (List.length suggestions = 1)
@@ -546,7 +567,7 @@ let fmt_ppr_hole ppf (i, (Holes.Exists (w, h)) : HoleId.t * Holes.some_hole) : u
           (P.fmt_ppr_lf_normal cD cPsi P.l0) (Whnf.norm sM)
      end
 
-  | Holes.CompInfo, { Holes.cG; Holes.compGoal = (tau, theta); Holes.compSolution } ->
+  | (Holes.CompInfo, { Holes.cG; Holes.compGoal = (tau, theta); Holes.compSolution }) ->
      let cG = Whnf.normGCtx cG in
      let goal = Whnf.cnormCTyp (tau, theta) in
      (* 3. The (computational) context information. *)
@@ -561,7 +582,8 @@ let fmt_ppr_hole ppf (i, (Holes.Exists (w, h)) : HoleId.t * Holes.some_hole) : u
      | None ->
         (* Collect a list of variables that already have the goal type. *)
         let suggestions = iterGctx cD cG (tau, theta) in
-        if Misc.List.nonempty suggestions then
+        if Misc.List.nonempty suggestions
+        then
           fprintf ppf
             "@,@,Variable%a of this type: @[<h>%a@]"
             plural (List.length suggestions = 1)

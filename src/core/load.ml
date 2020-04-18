@@ -17,7 +17,7 @@ let rec accum_lines input =
     let res = input_line input in
     res :: accum_lines input
   with
-    | End_of_file -> []
+  | End_of_file -> []
 
 let rec trim_comment str =
   let len = String.length str in
@@ -60,7 +60,8 @@ let resolve_path f =
   then resolve_cfg_paths f
   else [f]
 
-let forbid_leftover_vars path = function
+let forbid_leftover_vars path =
+  function
   | None -> ()
   | Some vars ->
      Chatter.print 1
@@ -76,7 +77,8 @@ let load_file ppf file_name =
     (* If the file starts with global pragmas then process them now. *)
     |> F.through
          begin fun sgn ->
-         if !Options.Testing.print_external_syntax then
+         if !Options.Testing.print_external_syntax
+         then
            begin
              Chatter.print 1
                "## External syntax dump: %s ##@." file_name;
@@ -90,7 +92,7 @@ let load_file ppf file_name =
   Chatter.print 1 "## Type Reconstruction begin: %s ##@." file_name;
 
   let sgn', leftoverVars = Recsgn.recSgnDecls sgn in
-  let _ = Store.Modules.reset () in
+  Store.Modules.reset ();
 
   Chatter.print 2
     "@[<v>## Internal syntax dump: %s ##@,@[<v>%a@]@]@." file_name
@@ -111,11 +113,12 @@ let load_file ppf file_name =
      end;
    *)
 
-  if !Coverage.enableCoverage then
-    Chatter.print 2 "## Coverage checking done: %s  ##@." file_name;
+  if !Coverage.enableCoverage
+  then Chatter.print 2 "## Coverage checking done: %s  ##@." file_name;
 
   Logic.runLogic (); (* TODO Logic needs to accept a formatter -je *)
-  if not (Holes.none ()) then
+  if not (Holes.none ())
+  then
     begin
       let open Format in
       Chatter.print 1
@@ -126,12 +129,13 @@ let load_file ppf file_name =
 
   forbid_leftover_vars file_name leftoverVars;
 
-  if !Typeinfo.generate_annotations then
-    Typeinfo.print_annot file_name;
-  if !Monitor.on || !Monitor.onf then
-    Monitor.print_timer () ;
+  if !Typeinfo.generate_annotations
+  then Typeinfo.print_annot file_name;
+  if !Monitor.on || !Monitor.onf
+  then Monitor.print_timer ();
 
-  if !Html.generate then Html.generatePage file_name
+  if !Html.generate
+  then Html.generatePage file_name
 
 let load_one ppf path =
   try
@@ -161,7 +165,7 @@ let load ppf f =
   Gensym.reset ();
   Store.clear ();
   Typeinfo.clear_all ();
-  Holes.clear();
+  Holes.clear ();
   List.iter
     (load_one ppf)
     all_paths;

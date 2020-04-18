@@ -1,4 +1,7 @@
-type 'a t' = Nil | Cons of 'a * 'a t
+type 'a t' =
+  | Nil
+  | Cons of 'a * 'a t
+
 and 'a t = int * 'a t' Lazy.t
 
 let of_gen (g : unit -> 'a option) : 'a t =
@@ -29,13 +32,15 @@ let of_stream (s : 'a Stream.t) : 'a t =
   go 0
 
 let rec iter f s =
-  match Lazy.force (snd s) with
-  | Nil -> ()
-  | Cons (x, s) -> f x; iter f s
+  match snd s with
+  | lazy Nil -> ()
+  | lazy (Cons (x, s)) ->
+     f x;
+     iter f s
 
 let position s = fst s
 
 let observe s =
-  match Lazy.force (snd s) with
-  | Nil -> None
-  | Cons (x, s) -> Some (x, s)
+  match snd s with
+  | lazy Nil -> None
+  | lazy (Cons (x, s)) -> Some (x, s)

@@ -3,24 +3,20 @@ open Syntax.Int
 type goal
 type query
 
-module Options :
-sig
+module Options : sig
   val enableLogic : bool ref
 end
 
-module Convert :
-sig
-  val typToQuery : LF.dctx -> LF.mctx -> (LF.typ * Id.offset) ->
+module Convert : sig
+  val typToQuery : LF.dctx -> LF.mctx -> LF.typ * Id.offset ->
                    query * LF.typ * LF.sub * (Id.name * LF.normal) list
 end
 
-module Frontend :
-sig
+module Frontend : sig
   exception Done
 end
 
-module Solver :
-sig
+module Solver : sig
   val solve : LF.mctx -> LF.dctx -> query -> (LF.dctx * LF.normal -> unit) -> unit
 end
 

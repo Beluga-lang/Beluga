@@ -14,7 +14,6 @@ let (dprintf, _, _) = Debug.makeFunctions' (Debug.toFlags [11])
 open Debug.Fmt
 
 module Options = struct
-
   (* Enable the logic programming engine (disabled by default). *)
   let enableLogic = ref true
 
@@ -32,7 +31,6 @@ module Options = struct
 
   (* Type check the proof terms. *)
   let checkProofs = ref false
-
 end
 
 
@@ -78,27 +76,25 @@ type conjunction =                      (* Subgoals         *)
   | True                                (* cG ::= True      *)
   | Conjunct of conjunction * goal      (*      | cG' ∧ g   *)
 
-let rec list_of_conjunction (c : conjunction) : goal list =
-  match c with
+let rec list_of_conjunction : conjunction -> goal list =
+  function
   | True -> []
   | Conjunct (c, x) -> x :: list_of_conjunction c
 
 type bound = int option                 (* b ::= '*' | nat  *)
 
-and query = (goal * LF.sub)             (* q ::= (g, s)     *)
+type query = goal * LF.sub              (* q ::= (g, s)     *)
 
 type clause =                    (* Horn Clause ::= eV |- A :- cG   *)
-    { tHead : LF.typ             (* Head A : LF.Atom                *)
-    ; eVars : LF.dctx            (* Context eV : EV's bound in A/cG *)
-    ; subGoals : conjunction }   (* Subgoals cG : solv. cG => A     *)
+  { tHead : LF.typ               (* Head A : LF.Atom                *)
+  ; eVars : LF.dctx              (* Context eV : EV's bound in A/cG *)
+  ; subGoals : conjunction       (* Subgoals cG : solv. cG => A     *)
+  }
 
 
 module Shift : sig
-
-  val shiftAtom : LF.typ -> (int * int * int) -> LF.typ
-
+  val shiftAtom : LF.typ -> int * int * int -> LF.typ
 end = struct
-
   (* NB.
 
      Only BVar's in LF.Atom's are affected.
@@ -123,102 +119,110 @@ end = struct
   let dR = ref 0               (* Range of Dynamic Scope *)
   let dS = ref 0               (* Dynamic Shift *)
 
-  let rec shiftTyp tM k = match tM with
+  let rec shiftTyp tM k =
+    match tM with
     | LF.Atom (l, c, tS) ->
-      LF.Atom (l, c, shiftSpine tS k)
+       LF.Atom (l, c, shiftSpine tS k)
     | x -> x
 
-  and shiftSpine tS k = match tS with
+  and shiftSpine tS k =
+    match tS with
     | LF.App (tN, tS) ->
-      LF.App (shiftNormal tN k, shiftSpine tS k)
+       LF.App (shiftNormal tN k, shiftSpine tS k)
     | LF.SClo (tS, s) ->
-      LF.SClo (shiftSpine tS k, s)
+       LF.SClo (shiftSpine tS k, s)
     | LF.Nil -> LF.Nil
 
-  and shiftNormal tN k = match tN with
+  and shiftNormal tN k =
+    match tN with
     | LF.Lam (l, n, tN') ->
-      begin
-        ignore (incr lR) ;
-        let tM = LF.Lam (l, n, shiftNormal tN' k) in
-        ignore (decr lR) ; tM
-      end
+       begin
+         incr lR;
+         let tM = LF.Lam (l, n, shiftNormal tN' k) in
+         decr lR;
+         tM
+       end
     | LF.Root (l, tH, tS, plicity) ->
-      LF.Root (l, shiftHead tH k, shiftSpine tS k, plicity)
+       LF.Root (l, shiftHead tH k, shiftSpine tS k, plicity)
     | LF.Clo (tN, s) ->
-      LF.Clo (shiftNormal tN k, s)
+       LF.Clo (shiftNormal tN k, s)
     | LF.Tuple (l, tP) ->
-      LF.Tuple (l, shiftTuple tP k)
+       LF.Tuple (l, shiftTuple tP k)
 
-  and shiftHead tH k = match tH with
-    | LF.BVar (i) ->
-      if i > !lR && i > !dR then
-        LF.BVar (i + k)
-      else if i > !lR && i <= !dR then
-        LF.BVar (i + !dS)
-      else
-        LF.BVar (i)
+  and shiftHead tH k =
+    match tH with
+    | LF.BVar i ->
+       if i > !lR && i > !dR
+       then LF.BVar (i + k)
+       else if i > !lR && i <= !dR
+       then LF.BVar (i + !dS)
+       else LF.BVar i
     | LF.AnnH (tH, tM) ->
-      LF.AnnH (shiftHead tH k, tM)
+       LF.AnnH (shiftHead tH k, tM)
     | LF.Proj (tH, n) ->
-      LF.Proj (shiftHead tH k, n)
+       LF.Proj (shiftHead tH k, n)
     | x -> x
 
-  and shiftTuple tP k = match tP with
-    | LF.Last (tN) ->
-      LF.Last (shiftNormal tN k)
+  and shiftTuple tP k =
+    match tP with
+    | LF.Last tN ->
+       LF.Last (shiftNormal tN k)
     | LF.Cons (tN, tP') ->
-      LF.Cons (shiftNormal tN k, shiftTuple tP' k)
+       LF.Cons (shiftNormal tN k, shiftTuple tP' k)
 
   let shiftAtom tM (cS, dS', dR') =
-    ignore (dR := dR' ; dS := dS') ; shiftTyp tM cS
-
+    dR := dR';
+    dS := dS';
+    shiftTyp tM cS
 end
 
 
 module Convert = struct
-
   (* typToClause' eV cG M (cS, dS, dR) = clause
      Invariants:
        If BV(i) is free in M, then BV(i) is bound in (eV |- M).
        If M = PiTyp (x:A, No), then M ~ g.
   *)
-  let rec typToClause' eV cG tM (cS, dS, dR) = match tM with
+  let rec typToClause' eV cG tM (cS, dS, dR) =
+    match tM with
     | LF.PiTyp ((tD, LF.Maybe), tM') ->
-      typToClause' (LF.DDec (eV, tD)) cG tM' (cS, dS, dR)
-    | LF.PiTyp ((LF.TypDecl(_, tA), LF.No), tB) ->
-      typToClause' eV (Conjunct (cG, typToGoal tA (cS, dS, dR)))
-        tB (cS + 1, dS, dR)
-    | LF.Atom (_) as tA ->
-      { tHead = (Shift.shiftAtom tA (-cS, -dS, dR))
-      ; eVars = eV
-      ; subGoals = cG }
-
-  and typToGoal tM (cS, dS, dR) = match tM with
-    | LF.PiTyp ((tD, LF.Maybe), tM') ->
-      All (tD, typToGoal tM' (cS, dS, dR + 1))
-    | LF.PiTyp ((LF.TypDecl (x, tA) as tD, LF.No), tB) ->
-      Impl ((typToRes tA (cS, dS, dR), tD), typToGoal tB
-        (cS, dS, dR + 1))
-    | LF.Atom (_) as tA ->
-      Atom (Shift.shiftAtom tA (-cS, -dS, dR))
-
-  and typToRes tM (cS, dS, dR) = match tM with
-    | LF.PiTyp ((tD, LF.Maybe), tM') ->
-      Exists (tD, typToRes tM' (cS, dS, dR + 1))
+       typToClause' (LF.DDec (eV, tD)) cG tM' (cS, dS, dR)
     | LF.PiTyp ((LF.TypDecl (_, tA), LF.No), tB) ->
-      And (typToGoal tA (cS, dS, dR), typToRes tB
-        (cS + 1, dS + 1, dR + 1))
-    | LF.Atom (_) as tA ->
-      Head (Shift.shiftAtom tA (-cS, -dS, dR))
+       typToClause' eV (Conjunct (cG, typToGoal tA (cS, dS, dR)))
+         tB (cS + 1, dS, dR)
+    | LF.Atom _ ->
+       { tHead = (Shift.shiftAtom tM (-cS, -dS, dR))
+       ; eVars = eV
+       ; subGoals = cG
+       }
 
-  let rec resToClause' eV cG (r, s) = match r with
+  and typToGoal tM (cS, dS, dR) =
+    match tM with
+    | LF.PiTyp ((tD, LF.Maybe), tM') ->
+       All (tD, typToGoal tM' (cS, dS, dR + 1))
+    | LF.PiTyp ((LF.TypDecl (x, tA) as tD, LF.No), tB) ->
+       Impl ((typToRes tA (cS, dS, dR), tD), typToGoal tB (cS, dS, dR + 1))
+    | LF.Atom _ ->
+       Atom (Shift.shiftAtom tM (-cS, -dS, dR))
+
+  and typToRes tM (cS, dS, dR) =
+    match tM with
+    | LF.PiTyp ((tD, LF.Maybe), tM') ->
+       Exists (tD, typToRes tM' (cS, dS, dR + 1))
+    | LF.PiTyp ((LF.TypDecl (_, tA), LF.No), tB) ->
+       And (typToGoal tA (cS, dS, dR), typToRes tB (cS + 1, dS + 1, dR + 1))
+    | LF.Atom _ ->
+       Head (Shift.shiftAtom tM (-cS, -dS, dR))
+
+  let rec resToClause' eV cG (r, s) =
+    match r with
     | Exists (tD, r') ->
-      resToClause' (LF.DDec (eV, tD)) cG (r', S.dot1 s)
+       resToClause' (LF.DDec (eV, tD)) cG (r', S.dot1 s)
     | And (g, r') ->
-      resToClause' eV (Conjunct (cG, g)) (r', s)
-    | Head (tA) ->
-      let (tA', _) = Whnf.whnfTyp (tA, s) in
-      { tHead = tA' ; eVars = eV ; subGoals = cG }
+       resToClause' eV (Conjunct (cG, g)) (r', s)
+    | Head tA ->
+       let (tA', _) = Whnf.whnfTyp (tA, s) in
+       { tHead = tA'; eVars = eV; subGoals = cG }
 
   let resToClause (r, s) =
     resToClause' LF.Null True (r, s)
@@ -235,15 +239,17 @@ module Convert = struct
        None.
   *)
   let rec etaExpand cD cPsi sA =
-    let (tA, s) = Whnf.whnfTyp sA
-    in match tA with
-      | LF.Atom (_) as tA ->
-        let u = LF.Inst (Whnf.newMMVar None (cD, cPsi, LF.TClo (tA, s)) LF.Maybe) in
-        LF.Root (Syntax.Loc.ghost, LF.MVar (u, S.id), LF.Nil, `explicit)
-      | LF.PiTyp ((LF.TypDecl (x, tA) as tD, _), tB) ->
-         LF.Lam (
-             Syntax.Loc.ghost, x,
-             etaExpand cD (LF.DDec (cPsi, S.decSub tD s)) (tB, S.dot1 s))
+    let (tA, s) = Whnf.whnfTyp sA in
+    match tA with
+    | LF.Atom _ ->
+       let u = LF.Inst (Whnf.newMMVar None (cD, cPsi, LF.TClo (tA, s)) LF.Maybe) in
+       LF.Root (Syntax.Loc.ghost, LF.MVar (u, S.id), LF.Nil, `explicit)
+    | LF.PiTyp ((LF.TypDecl (x, tA) as tD, _), tB) ->
+       LF.Lam
+         ( Syntax.Loc.ghost
+         , x
+         , etaExpand cD (LF.DDec (cPsi, S.decSub tD s)) (tB, S.dot1 s)
+         )
 
   (* dctxToSub Delta Psi (eV, s) fS = sub * (spine -> spine)
      Invariants:
@@ -259,14 +265,16 @@ module Convert = struct
      in a substitution, performing eta-expansion if necessary,
      and add them to the spine of a proof-term through fS.
   *)
-  let rec dctxToSub cD cPsi (eV, s) fS = match eV with
+  let rec dctxToSub cD cPsi (eV, s) fS =
+    match eV with
     | LF.DDec (eV', LF.TypDecl (_, tM)) ->
-      let (s', fS') = dctxToSub cD cPsi (eV', s) fS in
-      let tM' = etaExpand cD cPsi (tM, s') in
-      (LF.Dot (LF.Obj tM', s'), (fun tS -> fS' (LF.App (tM', tS))))
+       let (s', fS') = dctxToSub cD cPsi (eV', s) fS in
+       let tM' = etaExpand cD cPsi (tM, s') in
+       (LF.Dot (LF.Obj tM', s'), (fun tS -> fS' (LF.App (tM', tS))))
     | LF.Null -> (s, fS)
-    | LF.CtxVar (_) -> invalid_arg
-        "Logic.Convert.dctxToSub: Match conflict with LF.CtxVar (_)."
+    | LF.CtxVar _ ->
+       invalid_arg
+         "Logic.Convert.dctxToSub: Match conflict with LF.CtxVar _."
 
   (** typToQuery (M, i)  = ((g, s), xs)
       Transform a reconstructed LF.typ into a query, accumulating all
@@ -277,37 +285,38 @@ module Convert = struct
       type.
   *)
   let typToQuery cPsi cD (tA, i) =
-    let rec typToQuery' (tA, i) s xs = match tA with
+    let rec typToQuery' (tA, i) s xs =
+      match tA with
       | LF.PiTyp ((LF.TypDecl (x, tA), LF.Maybe), tB) when i > 0 ->
-        let tN' = etaExpand cD cPsi (tA, s) in
-        typToQuery' (tB, i - 1) (LF.Dot (LF.Obj tN', s))
-          ((x, tN') :: xs)
+         let tN' = etaExpand cD cPsi (tA, s) in
+         typToQuery' (tB, i - 1) (LF.Dot (LF.Obj tN', s)) ((x, tN') :: xs)
       | _ -> ((typToGoal tA (0, 0, 0), s), tA, s, xs)
-    in typToQuery' (tA, i) S.id []
+    in
+    typToQuery' (tA, i) S.id []
 
-  let rec solToSub xs = match xs with
+  let rec solToSub xs =
+    match xs with
     | [] -> S.id
     | (x, tN) :: xs -> LF.Dot (LF.Obj tN, solToSub xs)
-
 end
 
 
 module Index = struct
-
   open Store
 
   let types = Hashtbl.create 0          (* typConst Hashtbl.t          *)
 
   type inst = (Id.name * LF.normal)     (* I ::= (x, MVar)             *)
 
-  and sgnQuery =
-      { query : query                   (* Query ::= (g, s)            *)
-      ; typ : LF.typ                    (* Query as LF.typ.            *)
-      ; skinnyTyp : LF.typ              (* Query stripped of E-vars.   *)
-      ; optName : Id.name option        (* Opt. name of proof term.    *)
-      ; expected : bound                (* Expected no. of solutions.  *)
-      ; tries : bound                   (* No. of tries to find soln.  *)
-      ; instMVars : inst list }         (* MVar instantiations.        *)
+  type sgnQuery =
+    { query : query                   (* Query ::= (g, s)            *)
+    ; typ : LF.typ                    (* Query as LF.typ.            *)
+    ; skinnyTyp : LF.typ              (* Query stripped of E-vars.   *)
+    ; optName : Id.name option        (* Opt. name of proof term.    *)
+    ; expected : bound                (* Expected no. of solutions.  *)
+    ; tries : bound                   (* No. of tries to find soln.  *)
+    ; instMVars : inst list           (* MVar instantiations.        *)
+    }
 
   let queries = DynArray.create ()      (* sgnQuery DynArray.t         *)
 
@@ -318,7 +327,7 @@ module Index = struct
      return it's mapping, i.e. an empty DynArray.
   *)
   let addTyp cidTyp =
-    Hashtbl.add types cidTyp (DynArray.create ()) ;
+    Hashtbl.add types cidTyp (DynArray.create ());
     Hashtbl.find types cidTyp
 
   (* addSgnClause tC, sCl = ()
@@ -332,13 +341,14 @@ module Index = struct
   *)
   let addSgnQuery (p, a, a', q, xs, e, t) =
     DynArray.add queries
-      { query = q ;
-        typ = a ;
-        skinnyTyp = a' ;
-        optName = p ;
-        expected = e ;
-        tries = t ;
-        instMVars = xs }
+      { query = q
+      ; typ = a
+      ; skinnyTyp = a'
+      ; optName = p
+      ; expected = e
+      ; tries = t
+      ; instMVars = xs
+      }
 
   (* compileSgnClause c = (c, sCl)
      Retrieve LF.typ for term constant c, clausify it into sCl and
@@ -366,11 +376,16 @@ module Index = struct
     let typConstr = !(typEntry.Cid.Typ.Entry.constructors) in
     let typConst = addTyp cidTyp in
     let regSgnClause cidTerm =
-      addSgnClause typConst (compileSgnClause cidTerm) in
-    let rec revIter f l = match l with
+      addSgnClause typConst (compileSgnClause cidTerm)
+    in
+    let rec revIter f =
+      function
       | [] -> ()
-      | h :: l' -> revIter f l' ; f h
-    in revIter regSgnClause typConstr
+      | h :: l' ->
+         revIter f l';
+         f h
+    in
+    revIter regSgnClause typConstr
 
   (* storeQuery (p, (M, i), e, t) = ()
      Invariants:
@@ -378,7 +393,8 @@ module Index = struct
   *)
   let storeQuery (p, (tM, i), e, t) =
     let (q, tM', s, xs) = (Convert.typToQuery LF.Null LF.Empty (tM, i)) in
-    ignore (querySub := s) ; addSgnQuery (p, tM, tM', q, xs, e, t)
+    querySub := s;
+    addSgnQuery (p, tM, tM', q, xs, e, t)
 
   (* robStore () = ()
      Store all type constants in the `types' table.
@@ -386,7 +402,8 @@ module Index = struct
   let robStore () =
     try
       List.iter storeTypConst (Cid.Typ.current_entries ())
-    with _ -> ()
+    with
+    | _ -> ()
 
   (* iterSClauses f c = ()
      Iterate over all signature clauses associated with c.
@@ -403,32 +420,34 @@ module Index = struct
   (* clearIndex () = ()
      Empty the local storage.
   *)
-  let clearIndex () = DynArray.clear queries ; Hashtbl.clear types
+  let clearIndex () =
+    DynArray.clear queries;
+    Hashtbl.clear types
 
 
   let singleQuery (p, (tM, i), e, t) f =
     let (q, tM', s, xs) = (Convert.typToQuery LF.Null LF.Empty (tM, i)) in
-    ignore (querySub := s) ;
-    robStore();
+    querySub := s;
+    robStore ();
     let bchatter = !Options.chatter in
     Options.chatter := 0;
-    let sgnQ = { query = q ;
-        typ = tM ;
-        skinnyTyp = tM' ;
-        optName = p ;
-        expected = e ;
-        tries = t ;
-        instMVars = xs } in
+    let sgnQ =
+      { query = q
+      ; typ = tM
+      ; skinnyTyp = tM'
+      ; optName = p
+      ; expected = e
+      ; tries = t
+      ; instMVars = xs
+      }
+    in
     f sgnQ;
     Options.chatter := bchatter;
-   Hashtbl.clear types
-
-
+    Hashtbl.clear types
 end
 
 
 module Printer = struct
-
   module P = Pretty.Int.DefaultPrinter
   open Index
 
@@ -441,7 +460,8 @@ module Printer = struct
   let fmt_ppr_normal cPsi ppf sM =
     P.fmt_ppr_lf_normal LF.Empty cPsi P.l0 ppf (Whnf.norm sM)
 
-  let fmt_ppr_decl cD cPsi ppf (tD, s) = match tD with
+  let fmt_ppr_decl cD cPsi ppf (tD, s) =
+    match tD with
     | LF.TypDeclOpt x ->
        fprintf ppf "%a : _"
          Id.print x
@@ -459,8 +479,9 @@ module Printer = struct
      Effects:
        None.
   *)
-  let rec fmt_ppr_goal cD cPsi ppf (g, s) = match g with
-    | Atom (tA) ->
+  let rec fmt_ppr_goal cD cPsi ppf (g, s) =
+    match g with
+    | Atom tA ->
        fmt_ppr_typ cD cPsi ppf (tA, s)
     | Impl ((r, tD), g') ->
        fprintf ppf "%a -> %a"
@@ -480,9 +501,10 @@ module Printer = struct
      Effects:
        None.
   *)
-  and fmt_ppr_res cD cPsi ppf (r, s) = match r with
-    | Head (tH) ->
-      fmt_ppr_typ cD cPsi ppf (tH, s)
+  and fmt_ppr_res cD cPsi ppf (r, s) =
+    match r with
+    | Head tH ->
+       fmt_ppr_typ cD cPsi ppf (tH, s)
     | And (g, r') ->
        fprintf ppf "%a -> %a"
          (fmt_ppr_goal cD cPsi) (g, s)
@@ -511,7 +533,8 @@ module Printer = struct
       (fmt_ppr_typ LF.Empty sCl.eVars) (sCl.tHead, S.id)
       (fmt_ppr_subgoals LF.Empty sCl.eVars) (sCl.subGoals, S.id)
 
-  let fmt_ppr_bound ppf = function
+  let fmt_ppr_bound ppf =
+    function
     | Some i -> fprintf ppf "%d" i
     | None -> fprintf ppf "*"
 
@@ -524,11 +547,11 @@ module Printer = struct
   (* instToString xs = string
      Return string representation of existential variable
      instantiations in the query.
-  *)
-  let fmt_ppr_inst ppf xs =
-    match xs with
+   *)
+  let fmt_ppr_inst ppf =
+    function
     | [] -> fprintf ppf "^."
-    | _ ->
+    | xs ->
        fprintf ppf "@[<v>%a@]."
          (pp_print_list ~pp_sep: pp_print_cut
             (fun ppf (x, tM) ->
@@ -550,7 +573,6 @@ end
 
 
 module Solver = struct
-
   module P = Printer.P
   module U = Unify.StdTrail
   module C = Convert
@@ -570,28 +592,38 @@ module Solver = struct
        Any effect of (sc ()).
   *)
   let unify cD cPsi sA sB sc =
-    U.unifyTyp cD cPsi sA sB ; sc ()
+    U.unifyTyp cD cPsi sA sB;
+    sc ()
 
   (* trail f = ()
      Trail a function. If an exception is raised, unwind the trail and
      propagate the exception.
   *)
   let trail f =
-    let () = U.mark () in
-    try f () ; U.unwind () with e -> (U.unwind (); raise e)
+    U.mark ();
+    try
+      f ();
+      U.unwind ()
+    with
+    | e ->
+       U.unwind ();
+       raise e
 
   (* eqHead A dCl = bool
      Compare the cid_typ's of A and the head of dCl.
   *)
-  let eqHead tM dCl = match (tM, dCl.tHead) with
+  let eqHead tM dCl =
+    match (tM, dCl.tHead) with
     | (LF.Atom (_, i, _), LF.Atom (_, j, _)) -> Id.cid_equals i j
     | _ -> false
 
   (* cidFromAtom A = cid_typ *)
-  let cidFromAtom tM = match tM with
+  let cidFromAtom =
+    function
     | LF.Atom (_, i, _) -> i
-    | _ -> invalid_arg
-      "Logic.Solver.cidFromAtom: Match failure against LF.Atom (_,_,_)."
+    | _ ->
+       invalid_arg
+         "Logic.Solver.cidFromAtom: Match failure against LF.Atom (_, _, _)."
 
   (* shiftSub k = ^k
      Invariants:
@@ -616,8 +648,9 @@ module Solver = struct
        In the arguments to 'sc', 'u' refers to the universal
        context and 't' refers to a proof term.
   *)
-  let rec gSolve dPool cD (cPsi, k) (g, s) sc = match g with
-    | Atom (tA) ->
+  let rec gSolve dPool cD (cPsi, k) (g, s) sc =
+    match g with
+    | Atom tA ->
        matchAtom dPool cD (cPsi, k) (tA, s) sc
 
     | Impl ((r, (LF.TypDecl (x, _) as tD)), g') ->
@@ -657,38 +690,42 @@ module Solver = struct
        Try all the dynamic clauses in dPool starting with the most
        recent one. If dPool is empty, try the signature.
     *)
-    let rec matchDProg dPool = match dPool with
+    let rec matchDProg =
+      function
       | DynCl (dPool', (dCl, k')) ->
-        if (eqHead tA dCl) then
-          begin
-            let (s', fS) =
-              C.dctxToSub cD cPsi (dCl.eVars, shiftSub (k - k'))
-                (fun tS -> tS) in
-            (* Trail to undo MVar instantiations. *)
-            try
-              trail
-                begin fun () ->
-                unify cD cPsi (tA, s) (dCl.tHead, s')
-                  begin fun () ->
-                  solveSubGoals dPool cD (cPsi, k) (dCl.subGoals, s')
-                    begin fun (u, tS) ->
-                    let tM =
-                      LF.Root
-                        ( Syntax.Loc.ghost
-                        , LF.BVar (k - k')
-                        , fS (spineFromRevList tS)
-                        , `explicit )
-                    in
-                    sc (u, tM)
-                    end
-                  end
-                end
-            with U.Failure _ -> ()
-          end;
-        matchDProg dPool'
+         if (eqHead tA dCl)
+         then
+           begin
+             let (s', fS) =
+               C.dctxToSub cD cPsi (dCl.eVars, shiftSub (k - k'))
+                 (fun tS -> tS) in
+             (* Trail to undo MVar instantiations. *)
+             try
+               trail
+                 begin fun () ->
+                 unify cD cPsi (tA, s) (dCl.tHead, s')
+                   begin fun () ->
+                   solveSubGoals dPool cD (cPsi, k) (dCl.subGoals, s')
+                     begin fun (u, tS) ->
+                     let tM =
+                       LF.Root
+                         ( Syntax.Loc.ghost
+                         , LF.BVar (k - k')
+                         , fS (spineFromRevList tS)
+                         , `explicit
+                         )
+                     in
+                     sc (u, tM)
+                     end
+                   end
+                 end
+             with
+             | U.Failure _ -> ()
+           end;
+         matchDProg dPool'
 
       | Empty ->
-        matchSig (cidFromAtom tA)
+         matchSig (cidFromAtom tA)
 
     (* Decides whether the given Sigma type can solve the
      * goal type by trying all the projections.
@@ -810,18 +847,19 @@ module Solver = struct
     (* matchSig c = ()
        Try all the clauses in the static signature with head matching
        type constant c.
-    *)
+     *)
     and matchSig cidTyp =
       I.iterSClauses (fun w -> matchSgnClause w sc) cidTyp
 
     (* matchSgnClause (c, sCl) sc = ()
        Try to unify the head of sCl with A[s]. If unification succeeds,
        attempt to solve the subgoals of sCl.
-    *)
+     *)
     and matchSgnClause (cidTerm, sCl) sc =
       let (s', fS) =
         C.dctxToSub cD cPsi (sCl.eVars, shiftSub (Context.dctxLength cPsi))
-          (fun tS -> tS) in
+          (fun tS -> tS)
+      in
       (* Trail to undo MVar instantiations. *)
       try
         trail
@@ -840,16 +878,17 @@ module Solver = struct
             sc (u, tM)
             end
           end
-      with U.Failure _ -> ()
+      with
+      | U.Failure _ -> ()
     in
     (* ^ end of the gigantic let of all the helpers for matchAtom;
      * Now here's the actual body of matchAtom: *)
     matchDelta cD
 
-(* spineFromRevList : LF.normal list -> LF.spine
-  build an LF.spine out of a list of LF.normal, reversing the order of the elements*)
+  (* spineFromRevList : LF.normal list -> LF.spine
+     build an LF.spine out of a list of LF.normal, reversing the order of the elements*)
   and spineFromRevList lS =
-      List.fold_left (fun tSc tMc -> LF.App(tMc, tSc)) LF.Nil lS
+    List.fold_left (fun tSc tMc -> LF.App (tMc, tSc)) LF.Nil lS
 
   (* solveSubGoals dPool (Psi, k) (G, s) sc = ()
      Invariants:
@@ -865,13 +904,18 @@ module Solver = struct
      Effects:
        Instatiation of MVars in dPool and g[s].
        Any effect of (sc S).
-  *)
-  and solveSubGoals dPool cD (cPsi, k) (cG, s) sc = match cG with
+   *)
+  and solveSubGoals dPool cD (cPsi, k) (cG, s) sc =
+    match cG with
     | True -> sc (cPsi, [])
     | Conjunct (cG', g) ->
-      gSolve dPool cD (cPsi, k) (g, s)
-        (fun (u, tM) -> solveSubGoals dPool cD (cPsi, k) (cG', s)
-          (fun (v, tS) -> sc (v, tM::tS)))
+       gSolve dPool cD (cPsi, k) (g, s)
+         begin fun (u, tM) ->
+         solveSubGoals dPool cD (cPsi, k) (cG', s)
+           begin fun (v, tS) ->
+           sc (v, tM :: tS)
+           end
+         end
 
   (* solve (g, s) sc = ()
      Invariants:
@@ -886,7 +930,6 @@ module Solver = struct
 end
 
 module Frontend = struct
-
   module P = Printer
   open Index
 
@@ -896,7 +939,8 @@ module Frontend = struct
   (* exceeds B1 B2 = b
      True if B1 = * or B1 >= B2.
   *)
-  let exceeds x y = match (x, y) with
+  let exceeds x y =
+    match (x, y) with
     | (Some i, Some j) -> i >= j
     | (Some i, None) -> false
     | (None, _) -> true
@@ -907,7 +951,8 @@ module Frontend = struct
   let boundEq x y = Maybe.equals (=) x y
 
   (* lowerBound B1 B2 = min (B1, B2) *)
-  let lowerBound x y = match (x, y) with
+  let lowerBound x y =
+    match (x, y) with
     | (Some i, Some j) -> Some (min i j)
     | (x, None) -> x
     | (None, y) -> y
@@ -921,28 +966,30 @@ module Frontend = struct
     raise (AbortQuery s)
 
   (* checkSolutions e t s = () *)
-  let checkSolutions e t s = match (e, t) with
+  let checkSolutions e t s =
+    match (e, t) with
     | (None, None) -> ()
     | _ ->
-      if not (boundEq (lowerBound e t) (Some s)) then
-        abort
-          begin fun ppf () ->
-          fprintf ppf
-            "Query error: Wrong number of solutions -- \
-             expected %a in %a tries, but found %d"
-            P.fmt_ppr_bound e
-            P.fmt_ppr_bound t
-            s
-          end
-      else ()
+       if not (boundEq (lowerBound e t) (Some s))
+       then
+         abort
+           begin fun ppf () ->
+           fprintf ppf
+             "Query error: Wrong number of solutions -- \
+              expected %a in %a tries, but found %d"
+             P.fmt_ppr_bound e
+             P.fmt_ppr_bound t
+             s
+           end
 
   (* moreSolutions () = () *)
   let moreSolutions () =
-    printf "More? " ; match (read_line ()) with
-      | "y" | "Y" | ";" -> true
-      | "q" | "Q" ->
-         abort (fun ppf () -> fprintf ppf "Query error -- explicit quit.")
-      | _ -> false
+    printf "More? ";
+    match read_line () with
+    | "y" | "Y" | ";" -> true
+    | "q" | "Q" ->
+       abort (fun ppf () -> fprintf ppf "Query error -- explicit quit.")
+    | _ -> false
 
   (* solve q = () *)
   let solve sgnQuery =
@@ -951,20 +998,23 @@ module Frontend = struct
     let solutions = ref 0 in
 
     (* Type checking function. *)
-    let check cPsi tM s = Check.LF.check LF.Empty
-      cPsi (tM, S.id) (sgnQuery.skinnyTyp, s) in
+    let check cPsi tM s =
+      Check.LF.check LF.Empty
+        cPsi (tM, S.id) (sgnQuery.skinnyTyp, s)
+    in
 
 
     (* Initial success continuation. *)
     let scInit (cPsi, tM) =
-      ignore (incr solutions) ;
+      incr solutions;
 
       (* Rebuild the substitution and type check the proof term. *)
-      if !Options.checkProofs then
-        check cPsi tM (Convert.solToSub sgnQuery.instMVars); (* !querySub *)
+      if !Options.checkProofs
+      then check cPsi tM (Convert.solToSub sgnQuery.instMVars); (* !querySub *)
 
       (* Print MVar instantiations. *)
-      if !Options.chatter >= 3 then
+      if !Options.chatter >= 3
+      then
         begin
           fprintf std_formatter "@[<v>---------- Solution %d ----------@,[%a]@,%a@,@]"
             (!solutions)
@@ -978,36 +1028,32 @@ module Frontend = struct
           | None -> ()
           end;
           fprintf std_formatter "@."
-        end
-      else () ;
+        end;
       (* Interactive. *)
-      if !Options.askSolution then
-        if not (moreSolutions ()) then
-          raise Done;
+      if !Options.askSolution && not (moreSolutions ())
+      then raise Done;
 
       (* Stop when no. of solutions exceeds tries. *)
-      if exceeds (Some !solutions) sgnQuery.tries then
-        raise Done
+      if exceeds (Some !solutions) sgnQuery.tries
+      then raise Done
     in
 
-    if not (boundEq sgnQuery.tries (Some 0)) then
+    if not (boundEq sgnQuery.tries (Some 0))
+    then
       begin
-        if !Options.chatter >= 1 then
-          P.printQuery sgnQuery;
-
+        if !Options.chatter >= 1
+        then P.printQuery sgnQuery;
         try
-          Solver.solve LF.Empty LF.Null sgnQuery.query scInit ;
+          Solver.solve LF.Empty LF.Null sgnQuery.query scInit;
           (* Check solution bounds. *)
           checkSolutions sgnQuery.expected sgnQuery.tries !solutions
         with
-          | Done -> printf "Done.\n"
-          | AbortQuery (s) -> printf "%s\n" s
-          | _ -> ()
+        | Done -> printf "Done.\n"
+        | AbortQuery s -> printf "%s\n" s
+        | _ -> ()
       end
-
-    else
-      if !Options.chatter >= 2 then
-        printf "Skipping query -- bound for tries = 0.\n"
+    else if !Options.chatter >= 2
+    then printf "Skipping query -- bound for tries = 0.\n"
 end
 
 (* Interface *)
@@ -1020,32 +1066,31 @@ let storeQuery p (tM, i) e t =
    do nothing, i.e. return unit.
 *)
 let runLogic () =
-  if !Options.enableLogic then
+  if !Options.enableLogic
+  then
     begin
       (* Transform LF signature into clauses. *)
-      Index.robStore () ;
+      Index.robStore ();
       (* Optional: Print signature clauses. *)
-      if !Options.chatter >= 4 then
-        Printer.printSignature ()
-      else () ;
+      if !Options.chatter >= 4
+      then Printer.printSignature ();
       (* Solve! *)
-      Index.iterQueries Frontend.solve ;
+      Index.iterQueries Frontend.solve;
       (* Clear the local storage.  *)
       Index.clearIndex ()
     end
-  else () (* NOP *)
 
 
-let runLogicOn n (tA,i) e t  =
-  Index.singleQuery (n,(tA,i),e,t) Frontend.solve
+let runLogicOn n (tA, i) e t  =
+  Index.singleQuery (n, (tA, i), e, t) Frontend.solve
 
 let prepare () =
-  Index.clearIndex () ;
+  Index.clearIndex ();
   Index.robStore ()
 
 (*
 
 
 let runLogicOn n (cD, cPsi, tA, i) e t  =
-  Index.singleQuery (n,(tA,i),e,t) Frontend.solve
+  Index.singleQuery (n, (tA, i), e, t) Frontend.solve
  *)

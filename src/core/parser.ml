@@ -377,12 +377,14 @@ let print_error ppf ({path; loc; _} as e : error) =
 
 let _ =
   Error.register_printer'
-    (function
-     | Error (s, e) ->
-        Some
-          (Error.print_with_location e.loc
-             (fun ppf -> print_error ppf e))
-     | _ -> None)
+    begin
+      function
+      | Error (s, e) ->
+         Some
+           (Error.print_with_location e.loc
+              (fun ppf -> print_error ppf e))
+      | _ -> None
+    end
 
 (***** Syntax mangling helpers *****)
 
@@ -393,7 +395,7 @@ type typ_or_ctx =
 
 type kind_or_typ =
   [ `Kind of LF.kind
-  | `Typ  of LF.typ
+  | `Typ of LF.typ
   ]
 
 (***** Parser type definition *****)
@@ -534,19 +536,19 @@ let ($) = seq
 (** Sequence two parsers. *)
 let seq2 : type a b. a parser -> b parser -> (a * b) parser =
   fun p1 p2 ->
-  p1 $ fun x -> p2 $ fun y -> pure (x , y)
+  p1 $ fun x -> p2 $ fun y -> pure (x, y)
 
 (** Sequence three parsers. *)
 let seq3 p1 p2 p3 =
-  p1 $ fun x1 -> p2 $ fun x2 -> p3 $ fun x3 -> pure (x1 , x2 , x3)
+  p1 $ fun x1 -> p2 $ fun x2 -> p3 $ fun x3 -> pure (x1, x2, x3)
 
 (** Sequence four parsers. *)
 let seq4 p1 p2 p3 p4 =
-  p1 $ fun x1 -> p2 $ fun x2 -> p3 $ fun x3 -> p4 $ fun x4 -> pure (x1 , x2 , x3 , x4)
+  p1 $ fun x1 -> p2 $ fun x2 -> p3 $ fun x3 -> p4 $ fun x4 -> pure (x1, x2, x3, x4)
 
 (** Sequence five parsers. *)
 let seq5 p1 p2 p3 p4 p5 =
-  p1 $ fun x1 -> p2 $ fun x2 -> p3 $ fun x3 -> p4 $ fun x4 -> p5 $ fun x5 -> pure (x1 , x2 , x3 , x4 , x5)
+  p1 $ fun x1 -> p2 $ fun x2 -> p3 $ fun x3 -> p4 $ fun x4 -> p5 $ fun x5 -> pure (x1, x2, x3, x4, x5)
 
 (** Runs p1 and p2, discarding the result of p1. *)
 let (&>) p1 p2 = p1 $ fun _ -> p2
@@ -609,26 +611,28 @@ let relabelled f p = relabelling p f
 
 let shift p s =
   relabelling p
-    (fun loc path ->
-      [ Shift
-          ( { location = Some loc
-            ; label = s
-            }
-          , path
-          )
-      ])
+    begin fun loc path ->
+    [ Shift
+        ( { location = Some loc
+          ; label = s
+          }
+        , path
+        )
+    ]
+    end
 
 let shifted s p = shift p s
 
 (** Adds the given label to the stack if `p` fails. *)
 let label p s =
   relabelling p
-    (fun loc path ->
-      Entry
-        { location = Some loc
-        ; label = s
-        }
-      :: path)
+    begin fun loc path ->
+    Entry
+      { location = Some loc
+      ; label = s
+      }
+    :: path
+    end
 
 (** Flipped version of `label'. *)
 let labelled s p = label p s
@@ -636,10 +640,12 @@ let labelled s p = label p s
 (** Replaces the _name_ of the last entry on the path. *)
 let renamed label p =
   relabelling p
-    (fun loc -> function
-      | [] -> []
-      | Shift (e, p) :: xs -> Shift ({ e with label }, p) :: xs
-      | Entry e :: xs -> Entry {e with label} :: xs)
+    begin fun loc ->
+    function
+    | [] -> []
+    | Shift (e, p) :: xs -> Shift ({ e with label }, p) :: xs
+    | Entry e :: xs -> Entry { e with label } :: xs
+    end
 
 (***** Special combinators *****)
 
@@ -708,28 +714,26 @@ let alt (p1 : 'a parser) (p2 : 'a parser) : 'a parser =
       match p1.run s with
       | (s', Left e) ->
          let consumed_input = LinkStream.position s.input < LinkStream.position s'.input in
-         if not consumed_input || s'.backtrack then
-           p2.run s
-         else
-           (s', Left e)
+         if not consumed_input || s'.backtrack
+         then p2.run s
+         else (s', Left e)
       | x -> x
   }
 
 let choice (ps : 'a parser list) : 'a parser =
   { run =
       fun s ->
-      let rec go es ps' =
-        match ps' with
+      let rec go es =
+        function
         | [] -> fail (NoMoreChoices es)
         | p :: ps' ->
            catch p
              (function
-              | s', Either.Left e ->
+              | (s', Either.Left e) ->
                  let consumed_input = LinkStream.position s.input < LinkStream.position s'.input in
-                 if not consumed_input || s'.backtrack then
-                   (go (e :: es) ps').run s
-                 else
-                   s', Either.Left e
+                 if not consumed_input || s'.backtrack
+                 then (go (e :: es) ps').run s
+                 else (s', Either.Left e)
               | x -> x)
       in
       (go [] ps).run s
@@ -767,7 +771,7 @@ let satisfy (f : T.t -> ('e, 'b) Either.t) : ('e, 'b) Either.t parser =
            let open Either in
            match r with
            | Left _ -> s
-           | Right _ -> {s with input = xs; last_loc = loc}
+           | Right _ -> { s with input = xs; last_loc = loc }
          in
          pure_at s' r
   }
@@ -850,7 +854,8 @@ let sep_by1 (p : 'a parser) (sep : unit parser) : 'a Nonempty.t parser =
     structural grouping between constructors of a same datatype.
  *)
 let check_datatype_decl loc a cs : unit parser =
-  let rec retname = function
+  let rec retname =
+    function
     | Comp.TypBase (_, c', _) -> pure c'
     | Comp.TypArr (_, _, tau) -> retname tau
     | Comp.TypPiBox (_, _, tau) -> retname tau
@@ -868,7 +873,8 @@ let check_datatype_decl loc a cs : unit parser =
     cs
 
 let check_codatatype_decl loc a cs : unit parser =
-  let retname = function
+  let retname =
+    function
     | Comp.TypBase (_, c', _) -> pure c'
     | _ -> fail IllFormedDataDecl
   in
@@ -962,7 +968,8 @@ let name_or_blank : name_or_blank parser =
     (token T.UNDERSCORE |> blankify)
 
 (** Converts a name or blank into a depend and a name. *)
-let dep_name_of_nb = function
+let dep_name_of_nb =
+  function
   | `blank loc' -> (LF.Maybe, Id.mk_blank (Some loc'))
   | `name x -> (LF.No, x)
 
@@ -993,12 +1000,14 @@ type name_class =
 
 type 'a name_parser = name_class -> 'a t
 
-let name_or_blank' : name_or_blank name_parser = function
+let name_or_blank' : name_or_blank name_parser =
+  function
   | `ordinary -> name_or_blank
   | `dollar -> dollar_name_or_blank
   | `hash -> hash_name_or_blank
 
-let name' : Id.name name_parser = function
+let name' : Id.name name_parser =
+  function
   | `ordinary -> name
   | `dollar -> dollar_name
   | `hash -> hash_name
@@ -1043,7 +1052,7 @@ let bracketed start stop p =
 let bracketed' b p = bracketed b b p
 
 (** Helpers for parsing something between parens, braces, or brackets. *)
-let parens , braces , bracks , angles =
+let parens, braces, bracks, angles =
   let f l r p = bracketed (token l) (token r) p in
   (* The functions here must be eta-expanded to avoid the value restriction ! *)
   let open T in
@@ -1105,7 +1114,7 @@ let sgn_name_pragma : Sgn.decl parser =
     (maybe identifier <& token T.DOT)
   |> labelled "name pragma"
   |> span
-  $> fun (loc, ( w , mv , x )) ->
+  $> fun (loc, (w, mv, x)) ->
      Sgn.Pragma (loc, Sgn.NamePrag (w, mv, x))
 
 (** Parses the `type' kind. *)
@@ -1170,7 +1179,7 @@ and lf_term_lam =
               match q, m with
               | None, LF.AtomTerm (_, t) -> pure t
               | None, _ -> LF.NTyp (loc, m) |> pure
-              | Some a, LF.AtomTerm (_, t) -> LF.Ann(loc, t, a) |> pure
+              | Some a, LF.AtomTerm (_, t) -> LF.Ann (loc, t, a) |> pure
               | _, _ -> fail (Violation "invalid atomic LF term")
                                      (* ^ XXX not sure if this is a violation or a user error -je *)
           ]
@@ -1277,10 +1286,10 @@ and lf_typ_atomic =
           begin
             span lf_term
             $> function
-              | loc , LF.NTyp(_, t) -> t
-              | loc , LF.TList(_, [LF.NTyp(_,t)]) -> t
-              | loc , LF.TList(_, [n]) -> LF.AtomTerm(loc, n)
-              | loc , t -> LF.AtomTerm (loc, t)
+              | (loc, LF.NTyp (_, t)) -> t
+              | (loc, LF.TList (_, [LF.NTyp (_, t)])) -> t
+              | (loc, LF.TList (_, [n])) -> LF.AtomTerm (loc, n)
+              | (loc, t) -> LF.AtomTerm (loc, t)
           end
           (parens lf_typ)
         |> labelled "atomic LF type"
@@ -1320,7 +1329,7 @@ let sgn_lf_typ_decl : Sgn.decl parser =
       (maybe (token T.PIPE)
        &> sep_by0 lf_const_decl (token (T.PIPE)))
     |> span
-    $> fun (loc, ( (a, k) , const_decls ) ) ->
+    $> fun (loc, ((a, k), const_decls)) ->
        Sgn.Typ (loc, a, k), const_decls
   in
 
@@ -1331,10 +1340,10 @@ let sgn_lf_typ_decl : Sgn.decl parser =
      <& token T.SEMICOLON
      |> span
      $> fun (loc, f) ->
-        Sgn.MRecTyp(loc, f))
+        Sgn.MRecTyp (loc, f))
 
   (*
-let ctyp_decl , implicit_ctyp_decl =
+let ctyp_decl, implicit_ctyp_decl =
   let f g =
     seq2
       (name <& token T.COLON)
@@ -1426,8 +1435,8 @@ and clf_typ_atomic =
             |> span
             $> fun (loc, ms) ->
                match ms with
-               | [LF.NTyp(_, a)] -> a
-               | _ -> LF.AtomTerm (loc, LF.TList(loc, ms))
+               | [LF.NTyp (_, a)] -> a
+               | _ -> LF.AtomTerm (loc, LF.TList (loc, ms))
           end
       in
       let b =
@@ -2516,7 +2525,7 @@ let named_total_arg : Comp.named_order t =
 let numeric_total_arg : Comp.numeric_order t =
   integer $> fun x -> Comp.Arg x
 
-let total_order (arg : 'a Comp.generic_order t) : 'a Comp.generic_order t  =
+let total_order (arg : 'a Comp.generic_order t) : 'a Comp.generic_order t =
   alt
     arg
     (braces (some arg) $> fun args -> Comp.Lex args)
@@ -2750,7 +2759,7 @@ let sgn_typedef_decl : Sgn.decl parser =
   |> span
   |> labelled "type synonym declaration"
   $> fun (loc, (x, k, tau)) ->
-     Sgn.CompTypAbbrev(loc, x, k, tau)
+     Sgn.CompTypAbbrev (loc, x, k, tau)
 
 let lf_schema_some : LF.typ_decl LF.ctx parser =
   alt
@@ -2759,7 +2768,7 @@ let lf_schema_some : LF.typ_decl LF.ctx parser =
           (sep_by0
              (lf_typ_decl ())
              (token T.COMMA))
-     $> fun ds -> List.fold_left (fun ctx d -> LF.Dec (ctx, d) ) LF.Empty ds)
+     $> fun ds -> List.fold_left (fun ctx d -> LF.Dec (ctx, d)) LF.Empty ds)
     (pure LF.Empty)
   |> labelled "existential declaration"
 

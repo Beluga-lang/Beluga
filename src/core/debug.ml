@@ -21,13 +21,13 @@ let out : Format.formatter option ref = ref None
 (** Tests if a given flag is set. *)
 let flag (n : int) : bool = 1 = !r_flags land (1 lsl n)
 
-let rec toFlags = function
+let rec toFlags =
+  function
   | [] -> 0
-  | x::xs ->
-       if x > 30 then
-         raise (Invalid_argument "toFlags argument out of bounds")
-       else
-         (toFlags xs) lor (1 lsl x)
+  | x :: xs ->
+     if x > 30
+     then raise (Invalid_argument "toFlags argument out of bounds")
+     else (toFlags xs) lor (1 lsl x)
 
 let init_formatter ppf : unit =
   out := Some ppf;
@@ -53,20 +53,21 @@ let print' f =
     try
       f { fmt }
     with
-      exn ->
-      Format.fprintf ppf
-        "*** @[<v>Exception raised inside function passed to dprint:@,\
-         %s@,%s@]"
-          (Printexc.to_string exn)
-          (Printexc.get_backtrace ());
-      flush_all ();
-      raise exn
+    | exn ->
+       Format.fprintf ppf
+         "*** @[<v>Exception raised inside function passed to dprint:@,\
+          %s@,%s@]"
+         (Printexc.to_string exn)
+         (Printexc.get_backtrace ());
+       flush_all ();
+       raise exn
   end;
   Format.fprintf ppf "@,@?";
   flush_all ()
 
 let printf flags (f : fmt -> unit) : unit =
-  if flags land !r_flags = 0 then () else print' f
+  if not (flags land !r_flags = 0)
+  then print' f
 
 let print flags f =
   printf flags (fun p -> p.fmt "%s" (f ()))
@@ -84,18 +85,22 @@ let printf f = printf 1 f
 
 let indented dprintf n f =
   dprintf
-    (fun p ->
-      (* generate the format string with the right number of spaces.
+    begin fun p ->
+    (* generate the format string with the right number of spaces.
          I suspect this is more performant than calling `p.fmt " "` n
          times.
-       *)
-      let rec mkfmt fmt n =
-        match n with
-        | 0 -> fmt ^^ "@[<v>"
-        | _ -> mkfmt (" " ^^ fmt) (n - 1)
-      in
-      let fmt = mkfmt "" n in
-      p.fmt fmt);
+     *)
+    let rec mkfmt fmt =
+      function
+      | 0 -> fmt ^^ "@[<v>"
+      | _ -> mkfmt (" " ^^ fmt) (n - 1)
+    in
+    let fmt = mkfmt "" n in
+    p.fmt fmt
+    end;
   let x = f () in
-  dprintf (fun p -> p.fmt "@]");
+  dprintf
+    begin fun p ->
+    p.fmt "@]"
+    end;
   x

@@ -9,9 +9,9 @@ type error =
 
 type cov_goal =
   | CovGoal of LF.dctx * LF.normal * LF.tclo (*  cPsi |- tR <= sP *)
-	| CovCtx of LF.dctx
-	| CovSub of LF.dctx * LF.sub * LF.cltyp
-	| CovPatt of Comp.gctx * Comp.pattern * Comp.tclo
+    | CovCtx of LF.dctx
+    | CovSub of LF.dctx * LF.sub * LF.cltyp
+    | CovPatt of Comp.gctx * Comp.pattern * Comp.tclo
 
 type 'a inside = LF.mctx * 'a * LF.msub
 

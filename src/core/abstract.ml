@@ -204,8 +204,8 @@ let rec checkOccurrence loc p = function
   | I.Dec (cQ', FDecl (y,m))  ->
     if eqVar p y then
       (match m with
-	| Pure _ -> Yes
-	| Impure -> raise (Error (loc, CyclicDependency p)))
+    | Pure _ -> Yes
+    | Impure -> raise (Error (loc, CyclicDependency p)))
     else checkOccurrence loc p cQ'
   | I.Dec (cQ', CtxV _) -> No
 
@@ -521,17 +521,17 @@ and collectMMVar loc p cQ (v : I.mm_var)  =
   match cD with
   | I.Empty -> begin
       if constraints_solved !constraints then
-	      match !instantiation with
-	      | None ->
-	         let (cQ', MetaTyp (typ, depend)) =
+          match !instantiation with
+          | None ->
+             let (cQ', MetaTyp (typ, depend)) =
              addVar loc p cQ (MMV (name, instantiation)) (MetaTyp (typ, depend)) in
-	         ( cQ'
+             ( cQ'
            , let open I in
              { v with typ; depend }
            )
-	      | Some _ -> raise (Error.Violation "Expected whnf")
+          | Some _ -> raise (Error.Violation "Expected whnf")
       else
-	      raise (Error (loc, LeftoverConstraints))
+          raise (Error (loc, LeftoverConstraints))
     end
   | I.Dec(_,_) ->
      dprintf
@@ -637,7 +637,7 @@ and collectHead (k:int) cQ phat loc (head, _s) =
 
   | (I.MVar (I.Inst i, s')) ->
      let (cQ', ((i', ms'),s')) = collectMVarInst loc k cQ phat ((i, Whnf.m_id), s') in
-	 (cQ', I.MVar (I.Inst i', s'))
+     (cQ', I.MVar (I.Inst i', s'))
 
   | (I.MMVar i) ->
     let (cQ', i') = collectMVarInst loc k cQ phat i
@@ -1176,7 +1176,7 @@ and abstractMSub t =
   dprintf
     (fun p ->
       p.fmt "[abstractMSub] Collection cQ' = %a"
-		    fmt_ppr_collection cQ');
+            fmt_ppr_collection cQ');
   let cD' = ctxToMCtx'  cQ' in
   (t'', cD')
 

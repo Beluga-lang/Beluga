@@ -687,8 +687,8 @@ and cnorm (tM, t) = match tM with
 
   | Root (loc, head, tS, plicity) ->
      match cnormHead' (head, t) with
-	   | Head h' -> Root(loc, h', cnormSpine (tS, t), plicity)
-	   | Obj tM ->
+       | Head h' -> Root(loc, h', cnormSpine (tS, t), plicity)
+       | Obj tM ->
         (* in this ends up evaluating to a Root, we want to keep the
            plicity that we had here *)
         map_plicity
@@ -1410,11 +1410,11 @@ let rec convSubsetCtx cPsi cPsi' = match cPsi, cPsi' with
   | (_ , Empty) -> true
   | Dec (cPsi1, TypDecl (_, tA)), Dec (cPsi2, TypDecl (_, tB)) ->
       if convTyp (tA, LF.id) (tB, LF.id) then
-	convSubsetCtx cPsi1 cPsi2
+    convSubsetCtx cPsi1 cPsi2
       else
-	(* keep tBs around and check that tA is a subordinate of tB,
-	   i.e. anything in tA cannot influence tB *)
-	convSubsetCtx cPsi1 cPsi'
+    (* keep tBs around and check that tA is a subordinate of tB,
+       i.e. anything in tA cannot influence tB *)
+    convSubsetCtx cPsi1 cPsi'
 
 (* convPrefixTypRec((recA,s), (recB,s'))
  *
@@ -1430,7 +1430,7 @@ and convPrefixTypRec sArec sBrec = match (sArec, sBrec) with
 
   | ((SigmaElem (_xA, tA, recA), s), (SigmaLast (_, tB), s')) ->
       convTyp (tA, s) (tB, s') ||
-	convPrefixTypRec (recA, LF.dot1 s) sBrec
+    convPrefixTypRec (recA, LF.dot1 s) sBrec
 
   | ((SigmaElem (_xA, tA, recA), s), (SigmaElem(_xB, tB, recB), s')) ->
       if convTyp (tA, s) (tB, s')
@@ -1589,7 +1589,7 @@ let mctxMVarPos cD u =
           let mS' = cnormMetaSpine (mS, t) in
             Comp.TypCobase (loc, a, mS')
       | (Comp.TypBox (loc, cT), t) ->
-	 Comp.TypBox (loc, cnormMTyp (cT, t))
+     Comp.TypBox (loc, cnormMTyp (cT, t))
 
       | (Comp.TypArr (loc, tT1, tT2), t)   ->
           Comp.TypArr (loc, cnormCTyp (tT1, t), cnormCTyp (tT2, t))
@@ -1768,11 +1768,11 @@ let mctxMVarPos cD u =
       , e
       )
     , theta ->
-	Comp.Branch (loc, cD, cG,
-		     Comp.PatAnn(loc'',
-				 Comp.PatMetaObj (loc', normMetaObj mO),
-				 cnormCTyp (tau, m_id), plicity),
-		     cnormMSub t,
+    Comp.Branch (loc, cD, cG,
+             Comp.PatAnn(loc'',
+                 Comp.PatMetaObj (loc', normMetaObj mO),
+                 cnormCTyp (tau, m_id), plicity),
+             cnormMSub t,
                      cnormExp (e, m_id))
 
     | (Comp.Branch (loc, cD, cG, Comp.PatMetaObj (loc', mO), t, e), theta) ->
@@ -1919,10 +1919,10 @@ let mctxMVarPos cD u =
        && convCTyp (tT, mvar_dot1 t) (tT', mvar_dot1 t')
 
     | ((Comp.TypInd tau, t) , ttau' ) ->
-	convCTyp (tau,t) ttau'
+    convCTyp (tau,t) ttau'
 
     | (ttau, (Comp.TypInd tau', t')) ->
-	convCTyp ttau (tau',t')
+    convCTyp ttau (tau',t')
 
     | ( _ , _ ) -> (dprint (fun () -> "[convCtyp] falls through?");false)
 

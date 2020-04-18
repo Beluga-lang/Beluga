@@ -18,23 +18,28 @@ type name =
   | Anonymous
   | Named of string
 
-let is_anonymous = function
+let is_anonymous =
+  function
   | Anonymous -> true
   | _ -> false
 
-let name_of_option : string option -> name = function
+let name_of_option : string option -> name =
+  function
   | Some name -> Named name
   | None -> Anonymous
 
-let option_of_name : name -> string option = function
+let option_of_name : name -> string option =
+  function
   | Anonymous -> None
   | Named s -> Some s
 
-let string_of_name : name -> string = function
+let string_of_name : name -> string =
+  function
   | Anonymous -> ""
   | Named s -> s
 
-let string_of_name_or_id : name * t -> string = function
+let string_of_name_or_id : name * t -> string =
+  function
   | Anonymous, i -> string_of_hole_id i
   | Named s, _ -> s
 

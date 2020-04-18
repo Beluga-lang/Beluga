@@ -14,9 +14,9 @@ type t
 exception Error of Syntax.Loc.t * error
 val fmt_ppr_conv_list : Format.formatter -> t -> unit
 
-val strans_typ  : mctx -> dctx -> tclo  -> t -> typ
-val strans_norm : mctx -> dctx -> nclo  -> t -> normal
-val strans_sub  : mctx -> dctx -> sub   -> t -> sub
+val strans_typ : mctx -> dctx -> tclo -> t -> typ
+val strans_norm : mctx -> dctx -> nclo -> t -> normal
+val strans_sub : mctx -> dctx -> sub -> t -> sub
 
 (** Translates a bound variable index according to the sigma
     conversion. *)

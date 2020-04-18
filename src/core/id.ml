@@ -3,14 +3,14 @@ open Support
 let (dprintf, _, _) = Debug.(makeFunctions' (toFlags [11]))
 open Debug.Fmt
 
-type name     = {
-  modules : string list;
-  hint_name : string ;
-  hint_cnt : int option;
-  was_generated : bool ;
-  counter : int;
-  loc : Location.t
-}
+type name =
+  { modules : string list
+  ; hint_name : string
+  ; hint_cnt : int option
+  ; was_generated : bool
+  ; counter : int
+  ; loc : Location.t
+  }
 
 let loc_of_name n = n.loc
 
@@ -19,7 +19,7 @@ let string_of_name (n : name) : string =
   let suf =
     match n.hint_cnt with
     | None -> ""
-    | Some cnt -> (string_of_int cnt)
+    | Some cnt -> string_of_int cnt
   in
   n.hint_name ^ suf
 
@@ -27,13 +27,13 @@ let string_of_name (n : name) : string =
 let render_name n =
   match n.modules with
   | [] -> string_of_name n
-  | l  -> (String.concat "::" l) ^ "::" ^ (string_of_name n)
+  | l -> String.concat "::" l ^ "::" ^ string_of_name n
 
 (** Does the same as `render_name', but for use with pretty-printing. *)
 let print ppf n =
   let open Format in
   fprintf ppf "%a%s"
-    (pp_print_list ~pp_sep: (fun _ _ -> ())
+    (pp_print_list ~pp_sep:(fun _ _ -> ())
        (fun ppf x -> fprintf ppf "%s::" x))
     n.modules
     (string_of_name n)
@@ -41,7 +41,7 @@ let print ppf n =
 (** Displays a list of space separated names. *)
 let print_list ppf ns =
   let open Format in
-  pp_print_list ~pp_sep: pp_print_space print ppf ns
+  pp_print_list ~pp_sep:pp_print_space print ppf ns
 
 (* For reporting whether a name is used in a context. *)
 type max_usage =
@@ -57,8 +57,8 @@ let modify_number f name =
 
 let get_module (n : name) : string list = n.modules
 
-let inc (n : name) : name  =
-  {n with counter = n.counter + 1}
+let inc (n : name) : name =
+  { n with counter = n.counter + 1 }
 
 let split_name (s : string) : string * int option =
   try
@@ -70,17 +70,21 @@ let split_name (s : string) : string * int option =
 
 let sanitize_name (n : name) : name =
   let s, cnt = split_name n.hint_name in
-  {n with hint_name = s;
-          hint_cnt =
-            match n.hint_cnt with
-            | None -> cnt
-            | Some old_cnt  ->
-               match cnt with
-               | None -> n.hint_cnt
-               | Some name_cnt ->
-                  Some (int_of_string ((string_of_int name_cnt) ^ (string_of_int old_cnt)))}
+  { n with
+    hint_name = s;
+    hint_cnt =
+      match n.hint_cnt with
+      | None -> cnt
+      | Some old_cnt ->
+         begin match cnt with
+         | None -> n.hint_cnt
+         | Some name_cnt ->
+            Some (int_of_string (string_of_int name_cnt ^ string_of_int old_cnt))
+         end
+  }
 
-let inc_hint_cnt : int option -> int option = function
+let inc_hint_cnt : int option -> int option =
+  function
   | None -> Some 1
   | Some k -> Some (k + 1)
 
@@ -88,7 +92,8 @@ let gen_fresh_name (ns : name list) (n : name) : name =
   let rec next_unused y xs =
     if List.mem y xs
     then next_unused (inc_hint_cnt y) xs
-    else y in
+    else y
+  in
   let cnts =
     let open Maybe in
     filter_map
@@ -99,7 +104,7 @@ let gen_fresh_name (ns : name list) (n : name) : name =
       end
       ns
   in
-  {n with hint_cnt = next_unused n.hint_cnt cnts}
+  { n with hint_cnt = next_unused n.hint_cnt cnts }
 
 let max_usage (ctx : name list) (s : string) : max_usage =
   let same_head s name =
@@ -131,8 +136,8 @@ let max_usage (ctx : name list) (s : string) : max_usage =
 
 type module_id = int
 
-type cid_typ    = module_id * int
-type cid_term   = module_id * int
+type cid_typ = module_id * int
+type cid_term = module_id * int
 type cid_schema = module_id * int
 type cid_coercion = module_id * int
 type cid_comp_typ = module_id * int
@@ -140,14 +145,14 @@ type cid_comp_cotyp = module_id * int
 type cid_comp_const = module_id * int
 type cid_comp_dest = module_id * int
 type cid_comp_typdef = module_id * int
-type cid_prog   = module_id * int
+type cid_prog = module_id * int
 
 (** Used to identify a group of mutually proven theorems. *)
 type cid_mutual_group = int
 
-type offset     = int
+type offset = int
 
-type var        = int
+type var = int
 
 type name_guide =
   | NoName
@@ -167,7 +172,8 @@ let mk_name ?(loc = Location.ghost) ?(modules=[]) : name_guide -> name =
       counter = 0;
       hint_cnt = cnt;
       loc
-    } in
+    }
+  in
   function
     (* If no {!name} is given, create a new unique {!name}.
        This prevents the problem that when a {!Store.Typ.entry} or {!Store.Term.entry} is
@@ -175,15 +181,20 @@ let mk_name ?(loc = Location.ghost) ?(modules=[]) : name_guide -> name =
        This prevents the case where two entries appear to refer to the same name
        because {!None} = {!None}. *)
   | MVarName (Some vGen)
-  | SVarName (Some vGen)
-  | PVarName (Some vGen)
-  | BVarName (Some vGen) -> mk_name_helper (vGen())
+    | SVarName (Some vGen)
+    | PVarName (Some vGen)
+    | BVarName (Some vGen) -> mk_name_helper (vGen ())
+
   | MVarName None
-  | SVarName None -> mk_name_helper (Gensym.MVarData.gensym())
-  | PVarName None -> mk_name_helper ("#" ^ Gensym.VarData.gensym())
+    | SVarName None -> mk_name_helper (Gensym.MVarData.gensym ())
+
+  | PVarName None -> mk_name_helper ("#" ^ Gensym.VarData.gensym ())
+
   | BVarName None
-  | NoName     -> mk_name_helper (Gensym.VarData.gensym ())
-  | SomeName x  -> sanitize_name x
+    | NoName -> mk_name_helper (Gensym.VarData.gensym ())
+
+  | SomeName x -> sanitize_name x
+
   | SomeString x -> mk_name_helper x
 
 let equals n1 n2 =
@@ -192,6 +203,7 @@ let equals n1 n2 =
 let cid_equals (l1, n1) (l2, n2) =
   l1 = l2 && n1 = n2
 
-let mk_blank = function
-  | Some loc -> mk_name ~loc: loc (SomeString "_")
+let mk_blank =
+  function
+  | Some loc -> mk_name ~loc:loc (SomeString "_")
   | None -> mk_name (SomeString "_")

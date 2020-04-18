@@ -37,7 +37,7 @@ val modify_number : (int option -> int option) -> name -> name
 type module_id = int
 
 (** A constant identifier for types *)
-type cid_typ  = module_id * int
+type cid_typ = module_id * int
 
 (** A constant identifier for terms *)
 type cid_term = module_id * int
@@ -72,10 +72,10 @@ type cid_mutual_group = int
 
 (** An offset to be used during shifting for a DeBruijn variable
     representation *)
-type offset   = int
+type offset = int
 
 (** The DeBruijn representation of a variable *)
-type var      = int
+type var = int
 
 
 type name_guide =

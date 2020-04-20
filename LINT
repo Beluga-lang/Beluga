@@ -68,11 +68,11 @@ function set_colors {
 function colorize_diff {
     sed "s/^+++/file+++/
          s/^---/file---/
-         s/^+/${C_ADDED]}+${C_ADDED_BACK]}/
-         s/^-/${C_REMOVED]}-${C_REMOVED_BACK]}/
+         s/^+/${C_ADDED}+${C_ADDED_BACK}/
+         s/^-/${C_REMOVED}-${C_REMOVED_BACK}/
          s/\$/${C_END}/
-         s/^file+++/${C_ADDED]}+++/
-         s/^file---/${C_REMOVED]}---/"
+         s/^file+++/${C_ADDED}+++/
+         s/^file---/${C_REMOVED}---/"
 }
 
 main "$@"

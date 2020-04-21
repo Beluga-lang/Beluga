@@ -27,9 +27,9 @@ type case_type
 val case_type : Int.Comp.pattern Lazy.t -> Int.Comp.exp_syn -> case_type
 
 (** Transforms a case_type if it was actually an index object. *)
-val map_case_type : (Int.Comp.pattern * Int.Comp.meta_obj ->
-                     Int.Comp.pattern * Int.Comp.meta_obj) ->
-                    case_type -> case_type
+val map_case_type : (Int.Comp.pattern * Int.Comp.meta_obj
+                     -> Int.Comp.pattern * Int.Comp.meta_obj)
+                    -> case_type -> case_type
 
 (** Constructs the refinement substitution for a case analysis.
     If
@@ -52,11 +52,11 @@ val map_case_type : (Int.Comp.pattern * Int.Comp.meta_obj ->
         should be elaborated.
       * t' is just t1' composed with t.
  *)
-val synPatRefine : Loc.t -> case_type ->
-                   Int.LF.mctx * Int.LF.mctx ->
-                   Int.LF.msub ->
-                   Int.Comp.typ * Int.Comp.typ ->
-                   Int.LF.msub * Int.LF.msub * Int.LF.mctx
+val synPatRefine : Loc.t -> case_type
+                   -> Int.LF.mctx * Int.LF.mctx
+                   -> Int.LF.msub
+                   -> Int.Comp.typ * Int.Comp.typ
+                   -> Int.LF.msub * Int.LF.msub * Int.LF.mctx
 
 val kind : Apx.LF.kind -> Int.LF.kind
 val typ : Lfrecon.reconType -> Apx.LF.typ -> Int.LF.typ
@@ -65,19 +65,19 @@ val mctx : Apx.LF.mctx -> Int.LF.mctx
 val compkind : Apx.Comp.kind -> Int.Comp.kind
 val comptyp : Apx.Comp.typ -> Int.Comp.typ
 val comptyp_cD : Int.LF.mctx -> Apx.Comp.typ -> Int.Comp.typ
-val comptypdef : Syntax.Loc.t ->
-                 Id.name -> (Apx.Comp.typ * Apx.Comp.kind) ->
-                 (Int.LF.mctx * Int.Comp.typ) * Id.offset * Int.Comp.kind
-val elExp : Int.LF.mctx ->
-            Int.Comp.gctx ->
-            Apx.Comp.exp_chk ->
-            Int.Comp.typ * Int.LF.msub ->
-            Int.Comp.exp_chk
+val comptypdef : Syntax.Loc.t
+                 -> Id.name -> (Apx.Comp.typ * Apx.Comp.kind)
+                 -> (Int.LF.mctx * Int.Comp.typ) * Id.offset * Int.Comp.kind
+val elExp : Int.LF.mctx
+            -> Int.Comp.gctx
+            -> Apx.Comp.exp_chk
+            -> Int.Comp.typ * Int.LF.msub
+            -> Int.Comp.exp_chk
 
-val elExp' : Int.LF.mctx ->
-             Int.Comp.gctx ->
-             Apx.Comp.exp_syn ->
-             Int.Comp.exp_syn * Int.Comp.tclo
+val elExp' : Int.LF.mctx
+             -> Int.Comp.gctx
+             -> Apx.Comp.exp_syn
+             -> Int.Comp.exp_syn * Int.Comp.tclo
 
 val exp : Int.Comp.gctx -> Apx.Comp.exp_chk -> Int.Comp.typ * Int.LF.msub -> Int.Comp.exp_chk
 val exp' : Int.Comp.gctx -> Apx.Comp.exp_syn -> Int.Comp.exp_syn * Int.Comp.tclo

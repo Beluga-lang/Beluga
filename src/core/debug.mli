@@ -29,9 +29,8 @@ type flags
 val enable : unit -> unit
 val init : string option -> unit
 
-val makeFunctions :
-  flags ->
-  ((unit -> string) -> unit) * (string -> unit)
+val makeFunctions : flags
+                    -> ((unit -> string) -> unit) * (string -> unit)
 
 (** This submodule defines a record containing a higher-rank
     polymorhic function. We need this record type so that we can pass
@@ -53,11 +52,10 @@ module Fmt : sig
 end
 
 type 'a io = 'a -> unit
-val makeFunctions' :
-  flags ->
-  Fmt.fmt io io
-  * (unit -> string) io
-  * string io
+val makeFunctions' : flags
+                     -> Fmt.fmt io io
+                        * (unit -> string) io
+                        * string io
 
 val toFlags : int list -> flags
 

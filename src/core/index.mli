@@ -15,11 +15,11 @@ type name_disambiguator
 val disambiguate_to_fvars : name_disambiguator
 val disambiguate_to_fmvars : name_disambiguator
 
-val kind : name_disambiguator ->
-           Ext.LF.kind -> fvars * Apx.LF.kind
+val kind : name_disambiguator
+           -> Ext.LF.kind -> fvars * Apx.LF.kind
 
-val typ : name_disambiguator ->
-          Ext.LF.typ -> fvars * Apx.LF.typ
+val typ : name_disambiguator
+          -> Ext.LF.typ -> fvars * Apx.LF.typ
 
 val schema : Ext.LF.schema -> Apx.LF.schema
 

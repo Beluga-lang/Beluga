@@ -89,8 +89,8 @@ type name_guide =
 
 (** Smart constructor for `name'.
     `mk_name' generates a `name' with a guaranteed unique `string'. *)
-val mk_name : ?loc:Location.t -> ?modules:string list ->
-              name_guide -> name
+val mk_name : ?loc:Location.t -> ?modules:string list
+              -> name_guide -> name
 
 val string_of_name : name -> string
 val render_name : name -> string

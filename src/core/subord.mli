@@ -12,6 +12,6 @@ val dump : bool ref
  * If all parts of cPsi are potentially relevant in tP, then `thin' behaves as
  *  Substitution.identity.
  *)
-val thin : mctx -> (typ * dctx) -> (sub * dctx)
+val thin : mctx -> typ * dctx -> sub * dctx
 
-val thin' : mctx -> Id.cid_typ -> dctx -> (sub * dctx)
+val thin' : mctx -> Id.cid_typ -> dctx -> sub * dctx

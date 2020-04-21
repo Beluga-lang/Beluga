@@ -32,15 +32,15 @@ val register_printer' : (exn -> print_result option) -> unit
 
 (** Registers a printer for an exception using the a given exception
     selection function and exception formatter. *)
-val register_printing_function : (exn -> 'a option) ->
-                                 (Format.formatter -> 'a -> unit) ->
-                                 unit
+val register_printing_function : (exn -> 'a option)
+                                 -> (Format.formatter -> 'a -> unit)
+                                 -> unit
 
 (** Registers a printer for an exception that carries a location using
     the given exception selection function and exception formatter. *)
-val register_located_printing_function : (exn -> (Loc.t * 'a) option) ->
-                                         (Format.formatter -> 'a -> unit) ->
-                                         unit
+val register_located_printing_function : (exn -> (Loc.t * 'a) option)
+                                         -> (Format.formatter -> 'a -> unit)
+                                         -> unit
 
 (** Use suplied formatter for printing errors. *)
 val print : (Format.formatter -> unit) -> print_result
@@ -55,11 +55,10 @@ val print_with_location : Loc.t -> (Format.formatter -> unit) -> print_result
     example:
     report_mismatch ppf "Type mismatch." "Expected type" pp_ty1 ty1 "Inferred type" pp_ty2 ty2
 *)
-val report_mismatch :
-  Format.formatter -> string ->
-  string -> (Format.formatter -> 'a -> unit) -> 'a ->
-  string -> (Format.formatter -> 'b -> unit) -> 'b ->
-  unit
+val report_mismatch : Format.formatter -> string
+                      -> string -> (Format.formatter -> 'a -> unit) -> 'a
+                      -> string -> (Format.formatter -> 'b -> unit) -> 'b
+                      -> unit
 
 val resetInformation : unit -> unit
 val getInformation : unit -> string

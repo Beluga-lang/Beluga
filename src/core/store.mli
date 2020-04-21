@@ -80,10 +80,10 @@ module Cid : sig
 
     val mk_entry : name -> LF.kind -> int -> entry
     val add : (cid_typ -> entry) -> cid_typ
-    val set_name_convention : cid_typ ->
-                              (unit -> string) option ->
-                              (unit -> string) option ->
-                              unit
+    val set_name_convention : cid_typ
+                              -> (unit -> string) option
+                              -> (unit -> string) option
+                              -> unit
     val gen_var_name : LF.typ -> (unit -> string) option
     val gen_mvar_name : LF.typ -> (unit -> string) option
     val cid_of_typ : LF.typ -> cid_typ
@@ -279,9 +279,9 @@ module Cid : sig
      *)
     val total_decs : cid_comp_const -> Comp.total_dec list option
 
-    val mk_entry : name -> Comp.typ -> int ->
-                    cid_mutual_group -> Comp.value option ->
-                    entry
+    val mk_entry : name -> Comp.typ -> int
+                   -> cid_mutual_group -> Comp.value option
+                   -> entry
 
     (** If the value we store in the entry is a recursive value, it
         itself needs the cid_prog that we are creating to store this

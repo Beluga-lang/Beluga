@@ -8,8 +8,8 @@ module Options : sig
 end
 
 module Convert : sig
-  val typToQuery : LF.dctx -> LF.mctx -> LF.typ * Id.offset ->
-                   query * LF.typ * LF.sub * (Id.name * LF.normal) list
+  val typToQuery : LF.dctx -> LF.mctx -> LF.typ * Id.offset
+                   -> query * LF.typ * LF.sub * (Id.name * LF.normal) list
 end
 
 module Frontend : sig

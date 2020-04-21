@@ -43,11 +43,11 @@ val convDCtxHat : dctx_hat -> dctx_hat -> bool
 val newMMVar' : Id.name option -> mctx * ctyp -> depend -> mm_var
 val newMMVar : Id.name option -> mctx * dctx * typ -> depend -> mm_var
 val newMPVar : Id.name option -> mctx * dctx * typ -> depend -> mm_var
-val newMSVar : Id.name option ->
-               mctx (* cD *)
-               * svar_class
-               * dctx (* cPsi *)
-               * dctx (* cPhi *)
+val newMSVar : Id.name option
+               -> mctx (* cD *)
+                  * svar_class
+                  * dctx (* cPsi *)
+                  * dctx (* cPhi *)
                -> depend
                -> mm_var
                (* cD ; cPsi |- msvar : cPhi *)

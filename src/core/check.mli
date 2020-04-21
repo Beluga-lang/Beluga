@@ -8,38 +8,42 @@ module LF : sig
   open Syntax.Int.LF
 
   type error =
-    | CtxVarMisCheck   of mctx * dctx * tclo * Id.name * schema
-    | CtxVarMismatch   of mctx * ctx_var * Id.name * schema
-    | CtxVarDiffer     of mctx * ctx_var * ctx_var
-    | CheckError       of mctx * dctx * nclo * tclo
-    | TupleArity       of mctx * dctx * nclo * trec_clo
-    | SigmaMismatch    of mctx * dctx * trec_clo * trec_clo
-    | KindMismatch     of mctx * dctx * sclo * (kind * sub)
-    | TypMismatch      of mctx * dctx * nclo * tclo * tclo
-    | IllTypedSub      of mctx * dctx * sub * dctx * normal option
-    | SpineIllTyped    of int * int
-    | LeftoverFV       of Id.name
-    | ParamVarInst     of mctx * dctx * tclo
-    | CtxHatMismatch  of mctx * dctx (* expected *) * dctx_hat (* found *) * (Syntax.Loc.t * mfront)
+    | CtxVarMisCheck of mctx * dctx * tclo * Id.name * schema
+    | CtxVarMismatch of mctx * ctx_var * Id.name * schema
+    | CtxVarDiffer of mctx * ctx_var * ctx_var
+    | CheckError of mctx * dctx * nclo * tclo
+    | TupleArity of mctx * dctx * nclo * trec_clo
+    | SigmaMismatch of mctx * dctx * trec_clo * trec_clo
+    | KindMismatch of mctx * dctx * sclo * (kind * sub)
+    | TypMismatch of mctx * dctx * nclo * tclo * tclo
+    | IllTypedSub of mctx * dctx * sub * dctx * normal option
+    | SpineIllTyped of int * int
+    | LeftoverFV of Id.name
+    | ParamVarInst of mctx * dctx * tclo
+    | CtxHatMismatch
+      of mctx
+         * dctx (* expected *)
+         * dctx_hat (* found *)
+         * (Syntax.Loc.t * mfront)
     | IllTypedMetaObj of mctx * clobj * dctx * cltyp
-    | TermWhenVar      of mctx * dctx * normal
-    | SubWhenRen       of mctx * dctx * sub
+    | TermWhenVar of mctx * dctx * normal
+    | SubWhenRen of mctx * dctx * sub
     | MissingType of string
 
   exception Error of Syntax.Loc.t * error
 
   val throw : Syntax.Loc.t -> error -> 'a
 
-  val check       : mctx -> dctx -> nclo -> tclo -> unit
+  val check : mctx -> dctx -> nclo -> tclo -> unit
 
-  val syn         : mctx -> dctx -> nclo -> tclo
-  val checkTyp    : mctx -> dctx -> tclo         -> unit
-  val checkKind   : mctx -> dctx -> kind         -> unit
-  val checkDCtx   : mctx -> dctx                 -> unit
+  val syn : mctx -> dctx -> nclo -> tclo
+  val checkTyp : mctx -> dctx -> tclo -> unit
+  val checkKind : mctx -> dctx -> kind -> unit
+  val checkDCtx : mctx -> dctx -> unit
 
   val checkSchemaWf : schema -> unit
   val checkSchema : Syntax.Loc.t -> mctx -> dctx -> Id.name -> schema -> unit
-  val subsumes    : mctx -> ctx_var -> ctx_var -> bool
+  val subsumes : mctx -> ctx_var -> ctx_var -> bool
 
   (** Checks that a type exists within a given schema.
       checkTypeAgainstSchema loc cD cPsi tA name es = (tR, s)
@@ -49,12 +53,12 @@ module LF : sig
       The input name will be a part of the error message, and should
       be the declared name of the schema.
    *)
-  val checkTypeAgainstSchema: Syntax.Loc.t -> mctx -> dctx -> typ -> Id.name -> sch_elem list ->
-                              typ_rec * sub
-  val instanceOfSchElem     : mctx -> dctx -> tclo -> sch_elem ->  (typ_rec * sub)
+  val checkTypeAgainstSchema: Syntax.Loc.t -> mctx -> dctx -> typ -> Id.name -> sch_elem list
+                              -> typ_rec * sub
+  val instanceOfSchElem : mctx -> dctx -> tclo -> sch_elem -> (typ_rec * sub)
   val instanceOfSchElemProj : mctx -> dctx -> tclo -> (head * int) -> sch_elem -> (typ_rec * sub)
 
-  val checkMSub   : Syntax.Loc.t -> mctx -> msub -> mctx -> unit
+  val checkMSub : Syntax.Loc.t -> mctx -> msub -> mctx -> unit
 
 end
 
@@ -62,7 +66,12 @@ module Comp : sig
   open Syntax.Int.Comp
   open Syntax.Int
 
-  type typeVariant = VariantCross | VariantArrow | VariantCtxPi | VariantPiBox | VariantBox
+  type typeVariant =
+    | VariantCross
+    | VariantArrow
+    | VariantCtxPi
+    | VariantPiBox
+    | VariantBox
 
   type mismatch_kind =
     [ `fn
@@ -74,37 +83,46 @@ module Comp : sig
 
   type error =
     | IllegalParamTyp of LF.mctx * LF.dctx * LF.typ
-    | MismatchChk     of LF.mctx * gctx * exp_chk * tclo * tclo
-    | MismatchSyn     of LF.mctx * gctx * exp_syn * typeVariant * tclo
-    | PatIllTyped     of LF.mctx * gctx * pattern * tclo * tclo
-    | BasicMismatch   of mismatch_kind * LF.mctx * gctx * tclo
-    | SBoxMismatch    of LF.mctx * gctx  * LF.dctx  * LF.dctx
-    | SynMismatch     of LF.mctx * tclo (* expected *) * tclo (* inferred *)
-    | BoxCtxMismatch  of LF.mctx * LF.dctx * (LF.dctx_hat * LF.normal)
-    | PattMismatch    of (LF.mctx * meta_obj * meta_typ) * (LF.mctx * meta_typ)
-(*    | PattMismatch    of (LF.mctx * LF.dctx * LF.normal option * LF.tclo) *
+    | MismatchChk of LF.mctx * gctx * exp_chk * tclo * tclo
+    | MismatchSyn of LF.mctx * gctx * exp_syn * typeVariant * tclo
+    | PatIllTyped of LF.mctx * gctx * pattern * tclo * tclo
+    | BasicMismatch of mismatch_kind * LF.mctx * gctx * tclo
+    | SBoxMismatch of LF.mctx * gctx * LF.dctx * LF.dctx
+    | SynMismatch of LF.mctx * tclo (* expected *) * tclo (* inferred *)
+    | BoxCtxMismatch of LF.mctx * LF.dctx * (LF.dctx_hat * LF.normal)
+    | PattMismatch of (LF.mctx * meta_obj * meta_typ) * (LF.mctx * meta_typ)
+(* | PattMismatch of (LF.mctx * LF.dctx * LF.normal option * LF.tclo) *
                          (LF.mctx * LF.dctx * LF.tclo)*)
-    | MAppMismatch    of LF.mctx * (meta_typ * LF.msub)
-    | AppMismatch     of LF.mctx * (meta_typ * LF.msub)
-    | CtxMismatch     of LF.mctx * LF.dctx (* expected *) * LF.dctx (* found *) * meta_obj
-    | TypMismatch     of LF.mctx * tclo * tclo
+    | MAppMismatch of LF.mctx * (meta_typ * LF.msub)
+    | AppMismatch of LF.mctx * (meta_typ * LF.msub)
+    | CtxMismatch
+      of LF.mctx
+         * LF.dctx (* expected *)
+         * LF.dctx (* found *)
+         * meta_obj
+    | TypMismatch of LF.mctx * tclo * tclo
     | UnsolvableConstraints of Id.name option * string
     | InvalidRecCall
-    | MissingTotal    of Id.cid_prog
-    | NotImpossible   of LF.mctx * gctx * typ * exp_syn
-    | InvalidHypotheses  of hypotheses (* expected *)
-                            * hypotheses (* actual *)
+    | MissingTotal of Id.cid_prog
+    | NotImpossible of LF.mctx * gctx * typ * exp_syn
+    | InvalidHypotheses
+      of hypotheses (* expected *)
+         * hypotheses (* actual *)
     | SufficesDecompositionFailed of LF.mctx * typ
     | SufficesLengthsMismatch
-      of LF.mctx * typ (* type that was decomposed *)
+      of LF.mctx
+         * typ (* type that was decomposed *)
          * int (* number of simple arguments in that type *)
          * int (* number of given types *)
     | SufficesBadAnnotation
-      of LF.mctx * typ (* suffices scrutinee's type *)
+      of LF.mctx
+         * typ (* suffices scrutinee's type *)
          * int (* index of the scrutinee premise that didn't unify *)
          * typ (* type annotation given by the user (valid in cD) *)
     | SufficesBadGoal
-      of LF.mctx * typ (* scrutinee type *) * typ (* goal type *)
+      of LF.mctx
+         * typ (* scrutinee type *)
+         * typ (* goal type *)
     | SufficesPremiseNotClosed
       of LF.mctx
          * int (* premise index *)
@@ -151,48 +169,45 @@ module Comp : sig
       subgoals. For ordinary Beluga programs or for complete Harpoon
       proofs, this argument can be None.
    *)
-  val thm :
-    Id.cid_comp_const option -> (* cid of the theorem being checked, if any *)
-    LF.mctx ->
-    gctx ->
-    total_dec list ->
-    ?cIH: ihctx ->
-    thm ->
-    tclo ->
-    unit
+  val thm : Id.cid_comp_const option (* cid of the theorem being checked, if any *)
+            -> LF.mctx
+            -> gctx
+            -> total_dec list
+            -> ?cIH: ihctx
+            -> thm
+            -> tclo
+            -> unit
 
-  val check :
-    LF.mctx ->
-    (* ^ The meta context *)
-    gctx ->
-    (* ^ The computation context *)
-    total_dec list ->
-    (* ^ the group of mutual recursive functions the expression is being checked in *)
-    ?cIH: ihctx ->
-    (* ^ the context of available induction hypotheses *)
-    exp_chk ->
-    (* ^ The expression to check *)
-    tclo ->
-    (* ^ The type it should have *)
-    unit
+  val check : LF.mctx
+              (* ^ The meta context *)
+              -> gctx
+              (* ^ The computation context *)
+              -> total_dec list
+              (* ^ the group of mutual recursive functions the expression is being checked in *)
+              -> ?cIH: ihctx
+              (* ^ the context of available induction hypotheses *)
+              -> exp_chk
+              (* ^ The expression to check *)
+              -> tclo
+              (* ^ The type it should have *)
+              -> unit
 
-  val syn :
-    LF.mctx ->
-    (* ^ The meta context *)
-    gctx ->
-    (* ^ The computation context *)
-    total_dec list ->
-    (* ^ The group of mutual recursive functions the expression is being checked in *)
-    ?cIH: ihctx ->
-    (* ^ The context of available induction hypotheses *)
-    exp_syn ->
-    (* ^ The expression whose type to synthesize *)
-    ihctx option * tclo
-  (* ^ A possibly refined context of induction hypotheses and the synthesized type *)
+  val syn : LF.mctx
+            (* ^ The meta context *)
+            -> gctx
+            (* ^ The computation context *)
+            -> total_dec list
+            (* ^ The group of mutual recursive functions the expression is being checked in *)
+            -> ?cIH: ihctx
+            (* ^ The context of available induction hypotheses *)
+            -> exp_syn
+            (* ^ The expression whose type to synthesize *)
+            -> ihctx option * tclo
+            (* ^ A possibly refined context of induction hypotheses and the synthesized type *)
 
-  val checkKind   : LF.mctx -> kind                -> unit
-  val checkTyp    : LF.mctx -> typ                  -> unit
-  val wf_mctx     : LF.mctx -> unit
+  val checkKind : LF.mctx -> kind -> unit
+  val checkTyp : LF.mctx -> typ -> unit
+  val wf_mctx : LF.mctx -> unit
 
   (** Transforms the given meta-context by marking all meta-variables
       appearing in the pattern as Inductive.
@@ -287,12 +302,12 @@ module Comp : sig
 
       The provided location is used when raising errors.
    *)
-  val unify_suffices : Loc.t -> LF.mctx ->
-                       typ -> (* scrutinee type; to be decomposed *)
-                       suffices_typ list -> (* type annotations *)
-                       typ -> (* goal type; to match against
+  val unify_suffices : Loc.t -> LF.mctx
+                       -> typ (* scrutinee type; to be decomposed *)
+                       -> suffices_typ list (* type annotations *)
+                       -> typ (* goal type; to match against
                                  decomposed conclusion *)
-                       typ list (* list of determined premise types *)
+                       -> typ list (* list of determined premise types *)
 
   (** Generates a meta-application spine consisting of unification
       variables to eliminate leading PiBox types.

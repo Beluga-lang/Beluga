@@ -32,9 +32,9 @@ type problem
 
 val make : Syntax.Loc.t
            -> Comp.case_pragma
-           -> LF.mctx              (* cD *)
-           -> Comp.branch list     (* branches *)
-           -> Comp.typ             (* type of object being case-analyzed *)
+           -> LF.mctx (* cD *)
+           -> Comp.branch list (* branches *)
+           -> Comp.typ (* type of object being case-analyzed *)
            -> Comp.meta_obj option
            (* ^ scrutinee of the case. Provided only if it as a normal LF
             * object, as this will eliminate certain cases from the
@@ -51,13 +51,13 @@ type depend =
 
 
 
-(* val clear  : unit -> unit
-val stage  : problem -> unit *)
-val map  : (coverage_result -> 'a) -> 'a list
+(* val clear : unit -> unit
+val stage : problem -> unit *)
+val map : (coverage_result -> 'a) -> 'a list
 val iter : (coverage_result -> unit) -> unit
 
 (* val covers : problem -> coverage_result *)
-val process : problem -> int option -> unit   (* check coverage immediately *)
+val process : problem -> int option -> unit (* check coverage immediately *)
 
 (** Generates the coverage goal for the nth schema element in the
     given schema.
@@ -154,26 +154,26 @@ val genPatt : Id.name list
               -> Id.cid_comp_typ * Comp.typ
               -> (Comp.gctx * Comp.pattern * Comp.tclo) inside option
 
-val genPatCGoals    : Id.name list
-                      -> gen_pat_var_strategy
-                      -> LF.mctx -> Comp.typ
-                      -> (Comp.gctx * Comp.pattern * Comp.tclo) inside list
+val genPatCGoals : Id.name list
+                   -> gen_pat_var_strategy
+                   -> LF.mctx -> Comp.typ
+                   -> (Comp.gctx * Comp.pattern * Comp.tclo) inside list
 
 val genContextGoals : LF.mctx -> Id.name * LF.ctyp * LF.depend
                       -> LF.dctx inside list
 
-val genCGoals       : LF.mctx -> LF.ctyp -> (LF.mctx * cov_goal * LF.msub) list * depend
-val genCovGoals     : (LF.mctx * LF.dctx * LF.typ)
-                      -> (LF.dctx * LF.normal * LF.tclo) inside list
+val genCGoals : LF.mctx -> LF.ctyp -> (LF.mctx * cov_goal * LF.msub) list * depend
+val genCovGoals : (LF.mctx * LF.dctx * LF.typ)
+                  -> (LF.dctx * LF.normal * LF.tclo) inside list
 
-val genBCovGoals    : (LF.mctx * LF.dctx * LF.typ)
-                      -> (LF.dctx * LF.normal * LF.tclo) inside list
+val genBCovGoals : (LF.mctx * LF.dctx * LF.typ)
+                   -> (LF.dctx * LF.normal * LF.tclo) inside list
 
 (** Generates one coverage goal for every bound variable that appears
     in the given LF context.
  *)
-val genBVar         : (LF.mctx * LF.dctx * LF.typ) -> int
-                      -> (LF.dctx * LF.normal * LF.tclo) inside list
+val genBVar : (LF.mctx * LF.dctx * LF.typ) -> int
+              -> (LF.dctx * LF.normal * LF.tclo) inside list
 
 val addToMCtx : LF.mctx -> (LF.ctyp_decl list * LF.msub) -> LF.mctx * LF.msub
 

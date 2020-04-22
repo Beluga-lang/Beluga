@@ -946,46 +946,6 @@ module Cid = struct
       set cid (fun e -> { e with hidden = f e.hidden })
   end
 
-  module NamedHoles = struct
-    let printingHoles = ref false
-
-    let usingRealNames = ref false
-
-    let conventions = ref []
-
-    let explicitNames = ref []
-
-    let addExplicitName s =
-      explicitNames := s :: !explicitNames
-
-    let addNameConvention cid mvar var =
-      let vgen =
-        match var with
-        | None -> None
-        | Some x -> Some (Gensym.create_symbols [|x|])
-      in
-      conventions := (cid, (mvar, Gensym.create_symbols [|mvar|], var, vgen)) :: !conventions
-
-    let _first_unique gen = Stream.next gen
-
-    let getName n = Id.string_of_name n
-
-    let reset () =
-      Gensym.MVarData.reset ();
-      Gensym.VarData.reset ();
-      conventions :=
-        List.map
-          begin fun (cid, (mvar, _, var, _)) ->
-          let vargen =
-            match var with
-            | None -> None
-            | Some x -> Some (Gensym.create_symbols [|x|])
-          in
-          (cid, (mvar, Gensym.create_symbols [|mvar|], var, vargen))
-          end
-          !conventions
-  end
-
   module type RENDERER = sig
     open Id
     open Syntax.Int

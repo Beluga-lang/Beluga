@@ -29,7 +29,6 @@ let usage () =
         ^ "    -width nnn            Set output width to nnn (default 86; minimum 40)\n"
         ^ "    -logic                Turn off logic programming engine\n"
         ^ "    +test                 Make output suitable for test harness. Implies -print\n"
-        ^ "    +realNames         Print holes using real names\n"
         ^ "    +html              Generate an html page of the source code using default CSS\n"
         ^ "    +htmltest          Run HTML mode on file, but do not create final HTML page\n"
         ^ "    -css               Generate the html of the source code without CSS or <body> tags -- for inserting HTML into a webpage\n"
@@ -78,7 +77,6 @@ let process_option arg rest =
        rest
        end
   | "-logic" -> Logic.Options.enableLogic := false ; rest
-  | "+realNames" -> Store.Cid.NamedHoles.usingRealNames := true; rest
   | "+htmltest" ->
      Html.generate := true;
      Html.filename := None;

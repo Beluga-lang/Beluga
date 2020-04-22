@@ -1154,7 +1154,6 @@ let recSgnDecls decls =
           let m = Some (Gensym.MVarData.name_gensym m_name) in
           let v = Maybe.(v_name $> Gensym.VarData.name_gensym) in
           Typ.set_name_convention cid m v;
-          Store.Cid.NamedHoles.addNameConvention cid m_name v_name;
           Int.Sgn.Pragma (Int.LF.NamePrag cid)
        | None ->
            throw loc (UnboundNamePragma typ_name)

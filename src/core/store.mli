@@ -336,15 +336,6 @@ module Cid : sig
     val clear : unit -> unit
   end
 
-  module NamedHoles : sig
-    val printingHoles : bool ref
-    val usingRealNames : bool ref
-    val addExplicitName : string -> unit
-    val addNameConvention : cid_typ -> string -> string option -> unit
-    val getName : Id.name -> string
-    val reset : unit -> unit
-  end
-
   module type RENDERER = sig
     open Id
     open Syntax.Int

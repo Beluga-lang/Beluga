@@ -54,7 +54,7 @@ val completeness : t -> [ `complete | `incomplete ]
     This function analyzes the current save_mode and proceeds
     accordingly.
  *)
-val on_session_completed : t -> unit
+val on_session_completed : t -> Session.t -> unit
 
 (** Serializes the current state back to the loaded signature,
     preserving prover focus on the given state triple. *)

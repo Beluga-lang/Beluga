@@ -2,8 +2,6 @@ open Support.Equality
 open Support
 open Syntax
 
-module F = Misc.Function
-
 module DynArray = Misc.DynArray
 
 module NameTable =
@@ -251,9 +249,9 @@ module type CIDSTORE = sig
 
   (** Generic lookup function that includes configurable additional
       lookup failure and result transformation. *)
-  val lookup : Id.name -> (entry -> entry option) -> (cid * entry) option
+  (* val lookup : Id.name -> (entry -> entry option) -> (cid * entry) option *)
   val index_of_name : Id.name -> cid
-  (* val index_of_name_opt : Id.name -> cid option *)
+  val index_of_name_opt : Id.name -> cid option
   val replace_entry : cid -> entry -> unit
   val fixed_name_of : cid -> Id.name
   val get : cid -> entry
@@ -329,12 +327,14 @@ module CidStore (M : ENTRY) : CIDSTORE
   let get (l, n) =
     DynArray.get (DynArray.get store l) n
 
+    (*
   let lookup (n : Id.name) f : (cid * entry) option =
     Maybe.flat_map
       begin fun cid ->
       Maybe.map (fun e -> (cid, e)) (f (get cid))
       end
       (index_of_name_opt n)
+     *)
 
   let add f =
     let cid, e =
@@ -386,6 +386,7 @@ module Cid = struct
         ; subordinates : BitSet.t ref
         (* bit array: if cid is a subordinate of this entry, then the cid-th bit is set *)
         ; typesubordinated : BitSet.t ref (* unused at the moment *)
+        ; decl : Decl.t
         }
       let name_of_entry e = e.name
       type cid = Id.cid_typ
@@ -404,6 +405,7 @@ module Cid = struct
       ; constructors = ref []
       ; subordinates = ref (BitSet.empty ())
       ; typesubordinated = ref (BitSet.empty ())
+      ; decl = Decl.next ()
       }
 
     let rec args =
@@ -617,6 +619,7 @@ module Cid = struct
         { name : Id.name
         ; implicit_arguments : int
         ; typ : Int.LF.typ
+        ; decl : Decl.t
         }
       type cid = Id.cid_term
       let name_of_entry e = e.name
@@ -628,6 +631,7 @@ module Cid = struct
       { name
       ; implicit_arguments
       ; typ
+      ; decl = Decl.next ()
       }
 
     let rec args =
@@ -653,6 +657,7 @@ module Cid = struct
       type t =
         { name : Id.name
         ; schema : Int.LF.schema
+        ; decl : Decl.t
         }
       type cid = Id.cid_schema
       let name_of_entry e = e.name
@@ -663,6 +668,7 @@ module Cid = struct
     let mk_entry name schema =
       { name
       ; schema
+      ; decl = Decl.next ()
       }
 
     let get_schema cid = (get cid).schema
@@ -705,6 +711,7 @@ module Cid = struct
 
         ; mutable frozen : bool
         ; constructors : Id.cid_comp_const list ref
+        ; decl : Decl.t
         }
       let name_of_entry e = e.name
       type cid = Id.cid_comp_typ
@@ -719,6 +726,7 @@ module Cid = struct
       ; positivity
       ; frozen = false
       ; constructors = ref []
+      ; decl = Decl.next ()
       }
 
     let get_implicit_arguments c = (get c).implicit_arguments
@@ -740,6 +748,7 @@ module Cid = struct
         ; kind : Int.Comp.kind
         ; frozen : bool ref
         ; destructors: Id.cid_comp_dest list ref
+        ; decl : Decl.t
         }
       type cid = Id.cid_comp_cotyp
       let name_of_entry e = e.name
@@ -754,6 +763,7 @@ module Cid = struct
       ; kind
       ; frozen = ref false
       ; destructors = ref []
+      ; decl = Decl.next ()
       }
 
     let freeze a = (get a).frozen := true
@@ -769,6 +779,7 @@ module Cid = struct
         { name : Id.name
         ; implicit_arguments : int
         ; typ : Int.Comp.typ
+        ; decl : Decl.t
         }
       let name_of_entry e = e.name
       type cid = Id.cid_comp_const
@@ -780,6 +791,7 @@ module Cid = struct
       { name
       ; implicit_arguments
       ; typ
+      ; decl = Decl.next ()
       }
 
     let add cid_ctyp f =
@@ -798,6 +810,7 @@ module Cid = struct
         ; mctx : Int.LF.mctx
         ; obs_type : Int.Comp.typ
         ; return_type : Int.Comp.typ
+        ; decl : Decl.t
         }
       let name_of_entry e = e.name
       type cid = Id.cid_comp_dest
@@ -811,6 +824,7 @@ module Cid = struct
       ; mctx
       ; obs_type
       ; return_type
+      ; decl = Decl.next ()
       }
 
     let add cid_ctyp f =
@@ -829,6 +843,7 @@ module Cid = struct
         ; kind : Int.Comp.kind
         ; mctx : Int.LF.mctx
         ; typ : Int.Comp.typ
+        ; decl : Decl.t
         }
       let name_of_entry e = e.name
       type cid = Id.cid_comp_typdef
@@ -842,11 +857,11 @@ module Cid = struct
       ; kind
       ; mctx
       ; typ
+      ; decl = Decl.next ()
       }
 
     let get_implicit_arguments c = (get c).implicit_arguments
   end
-
 
   module Comp = struct
     module Entry = struct
@@ -856,13 +871,10 @@ module Cid = struct
         ; typ : Int.Comp.typ
         ; prog : Int.Comp.value option
         ; mutual_group : Id.cid_mutual_group
-        (* Totality declarations for all mutually-defined functions.
-           If this is None, then the function is not declared to be total.
-           If it's an empty list, the interpretation is that that the
-           totality is merely being asserted, and not checked.
-         *)
-
-        ; hidden : bool
+        ; decl : Decl.t option
+          (* theorems without an associated
+             declaration number have not yet been reflected into the
+             signature. *)
         }
       let name_of_entry e = e.name
       type cid = Id.cid_comp_const
@@ -870,36 +882,14 @@ module Cid = struct
     include CidStore (Entry)
     open Entry
 
-    let mk_entry name typ implicit_arguments mutual_group prog =
+    let mk_entry decl name typ implicit_arguments mutual_group prog =
       { name
       ; implicit_arguments
       ; typ
       ; prog
       ; mutual_group
-
-      (* Hidden entries cannot be looked up by name, which in turn
-         prevents the user from referring to them via external syntax.
-         Harpoon uses this feature when suspending a session to avoid
-         potential circularities between theorems.
-       *)
-      ; hidden = false
+      ; decl
       }
-
-    (* Need to override the CidStore implementation of index_of_name
-       and index_of_name_opt so it respects the `hidden` flag.
-       I don't bother overriding `lookup` since it isn't exported.
-     *)
-
-    let index_of_name_opt name =
-      let open Maybe in
-      lookup name
-        begin fun e ->
-        of_bool (not e.Entry.hidden) $> (fun _ -> e)
-        end
-      |> map fst
-
-    let index_of_name =
-      F.(Maybe.get' Not_found ++ index_of_name_opt)
 
     let mutual_groups = DynArray.of_list [None; Some []]
 
@@ -930,8 +920,8 @@ module Cid = struct
     let set_prog cid f =
       set cid (fun e -> { e with prog = f e.prog })
 
-    let set_hidden cid f =
-      set cid (fun e -> { e with hidden = f e.hidden })
+    let set_decl cid f =
+      set cid (fun e -> { e with decl = f e.decl })
   end
 
   module type RENDERER = sig

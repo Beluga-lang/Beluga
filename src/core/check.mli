@@ -5,7 +5,8 @@
 
 module LF : sig
 
-  open Syntax.Int.LF
+  open Syntax
+  open Int.LF
 
   type error =
     | CtxVarMisCheck of mctx * dctx * tclo * Id.name * schema
@@ -24,15 +25,15 @@ module LF : sig
       of mctx
          * dctx (* expected *)
          * dctx_hat (* found *)
-         * (Syntax.Loc.t * mfront)
+         * (Loc.t * mfront)
     | IllTypedMetaObj of mctx * clobj * dctx * cltyp
     | TermWhenVar of mctx * dctx * normal
     | SubWhenRen of mctx * dctx * sub
     | MissingType of string
 
-  exception Error of Syntax.Loc.t * error
+  exception Error of Loc.t * error
 
-  val throw : Syntax.Loc.t -> error -> 'a
+  val throw : Loc.t -> error -> 'a
 
   val check : mctx -> dctx -> nclo -> tclo -> unit
 
@@ -42,7 +43,7 @@ module LF : sig
   val checkDCtx : mctx -> dctx -> unit
 
   val checkSchemaWf : schema -> unit
-  val checkSchema : Syntax.Loc.t -> mctx -> dctx -> Id.name -> schema -> unit
+  val checkSchema : Loc.t -> mctx -> dctx -> Id.name -> schema -> unit
   val subsumes : mctx -> ctx_var -> ctx_var -> bool
 
   (** Checks that a type exists within a given schema.
@@ -58,7 +59,7 @@ module LF : sig
   val instanceOfSchElem : mctx -> dctx -> tclo -> sch_elem -> (typ_rec * sub)
   val instanceOfSchElemProj : mctx -> dctx -> tclo -> (head * int) -> sch_elem -> (typ_rec * sub)
 
-  val checkMSub : Syntax.Loc.t -> mctx -> msub -> mctx -> unit
+  val checkMSub : Loc.t -> mctx -> msub -> mctx -> unit
 
 end
 
@@ -128,10 +129,10 @@ module Comp : sig
          * int (* premise index *)
          * suffices_typ (* given type annotation *)
 
-  exception Error of Syntax.Loc.t * error
+  exception Error of Loc.t * error
 
   (** Raises an error from this module. *)
-  val throw : Syntax.Loc.t -> error -> 'a
+  val throw : Loc.t -> error -> 'a
 
   (** Appends two sets of hypotheses.
       Appropriately MShifts the left contexts and applies an
@@ -169,7 +170,7 @@ module Comp : sig
       subgoals. For ordinary Beluga programs or for complete Harpoon
       proofs, this argument can be None.
    *)
-  val thm : Id.cid_comp_const option (* cid of the theorem being checked, if any *)
+  val thm : Id.cid_prog option (* cid of the theorem being checked, if any *)
             -> LF.mctx
             -> gctx
             -> total_dec list
@@ -178,7 +179,8 @@ module Comp : sig
             -> tclo
             -> unit
 
-  val check : LF.mctx
+  val check : Id.cid_prog option (* cid of the theorem being checked, if any *)
+              -> LF.mctx
               (* ^ The meta context *)
               -> gctx
               (* ^ The computation context *)
@@ -192,7 +194,8 @@ module Comp : sig
               (* ^ The type it should have *)
               -> unit
 
-  val syn : LF.mctx
+  val syn : Id.cid_prog option (* cid of the theorem being checked, if any *)
+            -> LF.mctx
             (* ^ The meta context *)
             -> gctx
             (* ^ The computation context *)

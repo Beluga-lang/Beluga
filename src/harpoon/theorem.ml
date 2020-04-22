@@ -1,5 +1,6 @@
 open Support
 open Beluga
+module F = Misc.Function
 module LF = Syntax.Int.LF
 module Comp = Syntax.Int.Comp
 open Id
@@ -161,6 +162,7 @@ let get_entry' t =
   let cid = t.cid in
   (cid, CompS.get cid)
 
+let get_cid t = t.cid
 let get_entry t = get_entry' t |> snd
 let get_name t = (get_entry t).CompS.Entry.name
 let has_name_of t name = equals (get_name t) name
@@ -307,7 +309,7 @@ let register name tau p mutual_group k : cid_prog =
   CompS.add
     begin fun cid ->
     let v = Comp.(ThmValue (cid, Proof p, Whnf.m_id, Empty)) in
-    CompS.mk_entry name tau k
+    CompS.mk_entry None name tau k
       mutual_group
       (Some v)
     end
@@ -396,9 +398,6 @@ let configure_set ppf (hooks : (t -> Comp.proof_state -> unit) list) (confs : Co
   in
   (mutual_group, List.map configure confs)
 
-let set_hidden (t : t) b =
-  Store.Cid.Comp.set_hidden t.cid (Misc.const b)
-
 type completeness =
   [ `incomplete
   | `complete
@@ -413,3 +412,7 @@ let completeness (t : t) =
 let subgoals t = DynArray.to_list t.remaining_subgoals
 
 let count_subgoals t = DynArray.length t.remaining_subgoals
+
+let materialize t =
+  CompS.set_decl t.cid
+    Maybe.(eliminate F.(pure ++ Decl.next) pure)

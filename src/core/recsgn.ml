@@ -731,7 +731,7 @@ let recSgnDecls decls =
        storeLeftoverVars cQ loc;
        Monitor.timer
          ( "Function Check"
-         , fun _ -> Check.Comp.check cD cG [] i'' (tau', C.m_id)
+         , fun _ -> Check.Comp.check None cD cG [] i'' (tau', C.m_id)
          );
 
        let v =
@@ -739,7 +739,11 @@ let recSgnDecls decls =
          then
            begin
              let v = Some (Opsem.eval i'') in
-             ignore Comp.(add (fun _ -> mk_entry x tau' 0 unchecked_mutual_group v));
+             let open Comp in
+             add begin fun _ ->
+               mk_entry (Some (Decl.next ())) x tau' 0 unchecked_mutual_group v
+               end
+             |> ignore;
              v
            end
          else
@@ -803,7 +807,7 @@ let recSgnDecls decls =
        Monitor.timer
          ( "Function Check"
          , fun _ ->
-           Check.Comp.check cD cG [] i'' (tau', C.m_id)
+           Check.Comp.check None cD cG [] i'' (tau', C.m_id)
          );
 
        let v =
@@ -811,7 +815,11 @@ let recSgnDecls decls =
          then
            begin
              let v = Some (Opsem.eval i'') in
-             ignore Comp.(add (fun _ -> mk_entry x tau' 0 unchecked_mutual_group v));
+             let open Comp in
+             add begin fun _ ->
+               mk_entry (Some (Decl.next ())) x tau' 0 unchecked_mutual_group v
+               end;
+             |> ignore;
              v
            end
          else
@@ -843,35 +851,31 @@ let recSgnDecls decls =
          | Some k -> k + 1 (* index_of is 0-based, but we're 1-based *)
        in
 
-       let mk_total_decl f tau =
-         function
-         | None -> `partial (* no declaration -> partial function *)
-         | Some d ->
-            match d with
-            | Ext.Comp.Trust _ -> `trust
-            | Ext.Comp.NumericTotal (loc, None) -> `not_recursive
-            | Ext.Comp.NumericTotal (loc, Some order) ->
-               `inductive (Reconstruct.numeric_order tau order)
-            | Ext.Comp.NamedTotal (loc, order, f', args) ->
-               (* Validate the inputs: can't have too many args or the wrong name *)
-               if not (Total.is_valid_args tau (List.length args))
-               then raise (Error (loc, TotalArgsError f))
-               else if not (Id.equals f f')
-               then raise (Error (loc, TotalDeclError (f, f')))
-               else
-                 begin match order with
-                 | None -> `not_recursive
-                 | Some order ->
-                    (* convert to a numeric order by looking up the
-                       positions of the specified arguments;
-                       then convert to a proper Order.order.
-                     *)
-                    let order =
-                      Ext.Comp.map_order (fun x -> pos loc x args) order
-                      |> Order.of_numeric_order
-                    in
-                    `inductive order
-                 end
+       let mk_total_decl f tau = function
+         | Ext.Comp.Trust _ -> `trust
+         | Ext.Comp.NumericTotal (loc, None) -> `not_recursive
+         | Ext.Comp.NumericTotal (loc, Some order) ->
+            `inductive (Reconstruct.numeric_order tau order)
+         | Ext.Comp.NamedTotal (loc, order, f', args) ->
+            (* Validate the inputs: can't have too many args or the wrong name *)
+            if not (Total.is_valid_args tau (List.length args))
+            then raise (Error (loc, TotalArgsError f))
+            else if not (Id.equals f f')
+            then raise (Error (loc, TotalDeclError (f, f')))
+            else
+              begin match order with
+              | None -> `not_recursive
+              | Some order ->
+                 (* convert to a numeric order by looking up the
+                    positions of the specified arguments;
+                    then convert to a proper Order.order.
+                  *)
+                 let order =
+                   Ext.Comp.map_order (fun x -> pos loc x args) order
+                   |> Order.of_numeric_order
+                 in
+                 `inductive order
+              end
        in
 
        (* Collect all totality declarations. *)
@@ -933,8 +937,9 @@ let recSgnDecls decls =
 
            let register =
              fun total_decs ->
-             Comp.add
-               (fun cid -> Comp.mk_entry thm_name tau' 0 total_decs None)
+             Comp.add begin fun cid ->
+               Comp.mk_entry (Some (Decl.next ())) thm_name tau' 0 total_decs None
+               end
            in
            ( (thm_name, thm_body, thm_loc, tau')
            , register
@@ -948,20 +953,26 @@ let recSgnDecls decls =
           so we construct the final list of totality declarations for
           this mutual group. *)
        let total_decs =
-         Maybe.map
-           (List.map2
+         match total_decs with
+         | Some total_decs ->
+            List.map2
               (fun (thm_name, _, _, tau) decl ->
-                mk_total_decl thm_name tau (Some decl)
+                mk_total_decl thm_name tau decl
                 |> Int.Comp.make_total_dec thm_name tau)
-              thm_list)
-         total_decs
+              thm_list
+              total_decs
+         | None ->
+            List.map
+              (fun (thm_name, _, _, tau) ->
+                Int.Comp.make_total_dec thm_name tau `partial)
+              thm_list
        in
 
        (* We have the list of all totality declarations for this group,
           so we can register each theorem in the store.
         *)
        let thm_cid_list =
-         Comp.add_mutual_group total_decs
+         Comp.add_mutual_group (Some total_decs)
          |> Misc.Function.sequence registers
        in
 
@@ -1022,21 +1033,19 @@ let recSgnDecls decls =
          let tau_ann =
            match
              let open Maybe in
-             total_decs
-             $ fun ds ->
-               Total.lookup_dec f ds
-               $ fun d ->
-                 Int.Comp.(option_of_total_dec_kind d.order)
-                 $> fun order ->
-                    Order.list_of_order order
-                    |> Maybe.get'
-                         (Total.Error
-                            ( loc
-                            , Total.NotImplemented
-                                "lexicographic order not fully supported"))
-                    |> Total.annotate tau
-                    |> Maybe.get'
-                         (Total.Error (loc , Total.TooManyArg f))
+             Total.lookup_dec f total_decs
+             $ fun d ->
+               Int.Comp.(option_of_total_dec_kind d.order)
+               $> fun order ->
+                  Order.list_of_order order
+                  |> Maybe.get'
+                       (Total.Error
+                          ( loc
+                          , Total.NotImplemented
+                              "lexicographic order not fully supported"))
+                  |> Total.annotate tau
+                  |> Maybe.get'
+                       (Total.Error (loc , Total.TooManyArg f))
            with
            | None -> tau
            | Some x ->
@@ -1050,7 +1059,6 @@ let recSgnDecls decls =
          Monitor.timer
            ( "Function Check"
            , fun _ ->
-             let total_decs = Maybe.get_default [] total_decs in
              dprintf
                begin fun p ->
                p.fmt "[recThm] @[<v>begin checking theorem %a.\

@@ -41,7 +41,7 @@ end
 (** High-level elaboration from external to internal syntax. *)
 module Elab = struct
   (** Elaborates a synthesizable expression in the given contexts. *)
-  let exp' cIH cD cG mfs t =
+  let exp' mcid cIH cD cG mfs t =
     let (hs, (i, tau)) =
       Holes.catch
         begin fun _ ->
@@ -55,19 +55,19 @@ module Elab = struct
             P.(fmt_ppr_cmp_exp_syn cD cG l0) i
           end;
         let i = Whnf.(cnormExp' (i, m_id)) in
-        let _ = Check.Comp.syn ~cIH: cIH cD cG mfs i in  (* (tau, theta); *)
+        let _ = Check.Comp.syn mcid ~cIH: cIH cD cG mfs i in  (* (tau, theta); *)
         (i, Whnf.cnormCTyp (tau, theta))
         end
     in
     (hs, i, tau)
 
   (** Elaborates a checkable expression in the given contexts against the given type. *)
-  let exp cIH cD cG mfs t ttau =
+  let exp mcid cIH cD cG mfs t ttau =
     Holes.catch
       begin fun _ ->
       let e = Interactive.elaborate_exp cD cG t (Pair.lmap Total.strip ttau) in
       let e = Whnf.(cnormExp (e, m_id)) in
-      Check.Comp.check ~cIH: cIH cD cG mfs e ttau;
+      Check.Comp.check mcid ~cIH: cIH cD cG mfs e ttau;
       e
       end
 
@@ -258,7 +258,10 @@ let process_command
        automation_change
 
   | Command.Type i ->
-     let (hs, i, tau) = Elab.exp' cIH cD cG (Lazy.force mfs) i in
+     let (hs, i, tau) =
+       Elab.exp' (Some (Theorem.get_cid t))
+         cIH cD cG (Lazy.force mfs) i
+     in
      State.printf s
        "- @[<hov 2>@[%a@] :@ @[%a@]@]"
        P.(fmt_ppr_cmp_exp_syn cD cG l0) i
@@ -327,20 +330,29 @@ let process_command
 
   (* Real tactics: *)
   | Command.Unbox (i, name, modifier) ->
-     let (hs, m, tau) = Elab.exp' cIH cD cG (Lazy.force mfs) i in
+     let (hs, m, tau) =
+       let cid = Theorem.get_cid t in
+       Elab.exp' (Some cid) cIH cD cG (Lazy.force mfs) i
+     in
      Tactic.unbox m tau name modifier t g
 
   | Command.Intros names ->
      Tactic.intros names t g
 
   | Command.Split (split_kind, i) ->
-     let (hs, m, tau) = Elab.exp' cIH cD cG (Lazy.force mfs) i in
+     let (hs, m, tau) =
+       let cid = Theorem.get_cid t in
+       Elab.exp' (Some cid) cIH cD cG (Lazy.force mfs) i
+     in
      Tactic.split split_kind m tau (Lazy.force mfs) t g
   | Command.MSplit (loc, name) ->
      let i, tau = Elab.mvar cD loc name in
      Tactic.split `split i tau (Lazy.force mfs) t g
   | Command.By (i, name) ->
-     let (hs, i, tau) = Elab.exp' cIH cD cG (Lazy.force mfs) i in
+     let (hs, i, tau) =
+       let cid = Theorem.get_cid t in
+       Elab.exp' (Some cid) cIH cD cG (Lazy.force mfs) i
+     in
      dprintf
        begin fun p ->
        p.fmt "@[<v>[harpoon-By] elaborated invocation:@,%a@ : %a@]"
@@ -361,7 +373,10 @@ let process_command
          P.(fmt_ppr_cmp_typ cD l0) tau
 
   | Command.Suffices (i, tau_list) ->
-     let (hs, i, tau) = Elab.exp' cIH cD cG (Lazy.force mfs) i in
+     let (hs, i, tau) =
+       let cid = Theorem.get_cid t in
+       Elab.exp' (Some cid) cIH cD cG (Lazy.force mfs) i
+     in
      begin match Session.infer_invocation_kind c i with
      | `ih ->
         State.printf s "inductive use of `suffices by ...` is not currently supported"
@@ -379,12 +394,15 @@ let process_command
      end
 
   | Command.Solve e ->
-     let (hs, e) = Elab.exp cIH cD cG (Lazy.force mfs) e g.goal in
+     let cid = Theorem.get_cid t in
+     let (hs, e) =
+       Elab.exp (Some cid) cIH cD cG (Lazy.force mfs) e g.goal
+     in
      dprnt "[harpoon] [solve] elaboration finished";
      (* State.printf s "Found %d hole(s) in solution@." (List.length hs); *)
      List.iter solve_hole hs;
      dprnt "[harpoon] [solve] double-check!";
-     Check.Comp.check cD cG (Lazy.force mfs) ~cIH: cIH e g.goal;
+     Check.Comp.check (Some cid) cD cG (Lazy.force mfs) ~cIH: cIH e g.goal;
      dprnt "[harpoon] [solve] double-check DONE";
      let e = Whnf.(cnormExp (e, m_id)) in
      if Whnf.closedExp e then

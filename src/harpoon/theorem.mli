@@ -56,6 +56,9 @@ val get_entry' : t -> Id.cid_prog * CompS.Entry.t
  *)
 val get_history_names : t -> string list * string list
 
+(** Gets the cid for this theorem. *)
+val get_cid : t -> Id.cid_prog
+
 (** Gets the Store entry for this theorem. *)
 val get_entry : t -> CompS.Entry.t
 val get_name : t -> Id.name
@@ -102,7 +105,6 @@ val configure : Id.cid_comp_const -> Format.formatter -> (t -> unit subgoal_hook
                 proof_state -> proof_state list -> t
 val configure_set : Format.formatter -> (t -> unit subgoal_hook) list -> Conf.t list ->
                     Id.cid_mutual_group * t list
-val set_hidden : t -> bool -> unit
 
 type completeness =
   [ `incomplete
@@ -111,3 +113,13 @@ type completeness =
 
 (** Decides whether the theorem is complete. *)
 val completeness : t -> completeness
+
+(** Assigns a declaration number to this theorem.
+
+    Be careful calling this. It should never be the case that some
+    theorems in a session are materialized and some not.
+
+    This function is idempotent: calling this on a theorem that is
+    already materialized will do nothing.
+ *)
+val materialize : t -> unit

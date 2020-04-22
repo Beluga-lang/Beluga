@@ -49,7 +49,8 @@ module Comp = struct
      *  If we keep them in Delta, we need to rewrite mctxToMSub for example;
      *)
 
-  open Store.Cid
+  open Store
+  open Cid
   module Loc = Syntax.Loc
   open Syntax.Int.Comp
 
@@ -123,10 +124,6 @@ module Comp = struct
       of I.mctx
          * int (* premise index *)
          * suffices_typ (* given type annotation *)
-
-  (* | IllTypedMetaObj of I.mctx * meta_obj * meta_typ *)
-
-  (* type rec_call = bool *)
 
   exception Error of Syntax.Loc.t * error
 
@@ -784,7 +781,7 @@ module Comp = struct
       | Int.LF.Null -> () (* raise (Error (Syntax.Loc.ghost, IllegalParamTyp (cD, cPsi, tA))) *)
       | Int.LF.CtxVar psi ->
          (* tA is an instance of a schema block *)
-         let { Schema.Entry.name; schema = Int.LF.Schema elems } =
+         let { Schema.Entry.name; schema = Int.LF.Schema elems; decl = _ } =
            Schema.get (Context.lookupCtxVarSchema cD psi)
          in
          begin
@@ -985,7 +982,7 @@ module Comp = struct
     | Whnf.FreeMVar (I.FMVar (u, _)) ->
        Error.violation ("Free meta-variable " ^ Id.render_name u)
 
-  let rec checkW cD (cG, (cIH : ihctx)) total_decs e ttau =
+  let rec checkW mcid cD (cG, (cIH : ihctx)) total_decs e ttau =
     (** If cD; cG; cIH |- i ==> tau_sc then
         prepare_case_scrutinee_type i = tau_sc, tau_sc', projOpt
         * tau_sc is simply the synthesized type of the scrutinee.
@@ -996,7 +993,7 @@ module Comp = struct
         * projOpt must also be passed to coverage, to correctly check
           coverage on a projection. *)
     let prepare_case_scrutinee_type i =
-       let (_, tau_sc, t') = syn cD (cG, cIH) total_decs i in
+       let (_, tau_sc, t') = syn mcid cD (cG, cIH) total_decs i in
        let tau_sc = Whnf.cnormCTyp (tau_sc, t') in
        match (i, tau_sc) with
        | (AnnBox ((l, mC), _), TypBox (loc, mT)) ->
@@ -1006,35 +1003,35 @@ module Comp = struct
     in
     match (e, ttau) with
     | (Fn (loc, x, e), (TypArr (_, tau1, tau2), t)) ->
-       check cD (I.Dec (cG, CTypDecl (x, Whnf.cnormCTyp (tau1, t), false)), (Total.shift cIH)) total_decs e (tau2, t);
+       check mcid cD (I.Dec (cG, CTypDecl (x, Whnf.cnormCTyp (tau1, t), false)), (Total.shift cIH)) total_decs e (tau2, t);
        Typeinfo.Comp.add loc (Typeinfo.Comp.mk_entry cD ttau)
          ("Fn " ^ Fmt.stringify (P.fmt_ppr_cmp_exp_chk cD cG P.l0) e)
 
     | (Fun (loc, fbr), _) ->
-       checkFBranches cD (cG, cIH) total_decs fbr ttau
+       checkFBranches mcid cD (cG, cIH) total_decs fbr ttau
 
     | (MLam (loc, u, e, _), (TypPiBox (_, cdec, tau), t)) ->
-       check (extend_mctx cD (u, cdec, t))
+       check mcid (extend_mctx cD (u, cdec, t))
          (C.cnormGCtx (cG, I.MShift 1), C.cnormIHCtx (cIH, I.MShift 1)) total_decs e (tau, C.mvar_dot1 t);
        Typeinfo.Comp.add loc (Typeinfo.Comp.mk_entry cD ttau)
          ("MLam " ^ Fmt.stringify (P.fmt_ppr_cmp_exp_chk cD cG P.l0) e)
 
     | (Pair (loc, e1, e2), (TypCross (_, tau1, tau2), t)) ->
-       check cD (cG,cIH) total_decs e1 (tau1, t);
-       check cD (cG,cIH) total_decs e2 (tau2, t);
+       check mcid cD (cG,cIH) total_decs e1 (tau1, t);
+       check mcid cD (cG,cIH) total_decs e2 (tau2, t);
        Typeinfo.Comp.add loc (Typeinfo.Comp.mk_entry cD ttau)
          ("Pair " ^ Fmt.stringify (P.fmt_ppr_cmp_exp_chk cD cG P.l0) e)
 
     | (Let (loc, i, (x, e)), (tau, t)) ->
-       let (_, tau', t') = syn cD (cG,cIH) total_decs i in
+       let (_, tau', t') = syn mcid cD (cG,cIH) total_decs i in
        let (tau', t') = C.cwhnfCTyp (tau',t') in
        let cG' = I.Dec (cG, CTypDecl (x, Whnf.cnormCTyp (tau', t'), false)) in
-       check cD (cG', Total.shift cIH) total_decs e (tau,t);
+       check mcid cD (cG', Total.shift cIH) total_decs e (tau,t);
        Typeinfo.Comp.add loc (Typeinfo.Comp.mk_entry cD ttau)
          ("Let " ^ Fmt.stringify (P.fmt_ppr_cmp_exp_chk cD cG P.l0) e)
 
     | (LetPair (_, i, (x, y, e)), (tau, t)) ->
-       let (_, tau', t') = syn cD (cG,cIH) total_decs i in
+       let (_, tau', t') = syn mcid cD (cG,cIH) total_decs i in
        let (tau', t') = C.cwhnfCTyp (tau',t') in
        begin match (tau',t') with
        | (TypCross (_, tau1, tau2), t') ->
@@ -1044,7 +1041,7 @@ module Comp = struct
               , CTypDecl (y, Whnf.cnormCTyp (tau2, t'), false)
               )
           in
-          check cD (cG', (Total.shift (Total.shift cIH))) total_decs e (tau,t)
+          check mcid cD (cG', (Total.shift (Total.shift cIH))) total_decs e (tau,t)
        | _ -> raise (Error.Violation "Case scrutinee not of product type")
        end
 
@@ -1072,7 +1069,7 @@ module Comp = struct
           allowing to consider more cases as covering, especially in
           situations with nested cases.  *)
        let problem = Coverage.make loc prag cD branches tau_sc' None in
-       checkBranches cD (cG,cIH) total_decs
+       checkBranches mcid cD (cG,cIH) total_decs
          (i, tau_sc)
          branches
          (tau, t);
@@ -1080,7 +1077,7 @@ module Comp = struct
 
     | (Syn (loc, i), (tau, t)) ->
        dprint (fun () -> "check --> syn");
-       let (_, tau', t') = syn cD (cG,cIH) total_decs i in
+       let (_, tau', t') = syn mcid cD (cG,cIH) total_decs i in
        let (tau', t') = Whnf.cwhnfCTyp (tau', t') in
        let tau' = Whnf.cnormCTyp (tau', t') in
        let tau = Whnf.cnormCTyp (tau, t) in
@@ -1110,7 +1107,7 @@ module Comp = struct
              then Error.violation "mismatched hole type";
              begin match compSolution with
              | None -> ()
-             | Some e -> checkW cD (cG, cIH) total_decs e (tau, t)
+             | Some e -> checkW mcid cD (cG, cIH) total_decs e (tau, t)
              end
           end
        end
@@ -1125,7 +1122,7 @@ module Comp = struct
          end;
        Error.violation "[checkW] fallthrough"
 
-  and check cD (cG, cIH) total_decs e (tau, t) =
+  and check mcid cD (cG, cIH) total_decs e (tau, t) =
     dprintf
       begin fun p ->
       p.fmt "[check] @[<v>%a against\
@@ -1134,9 +1131,9 @@ module Comp = struct
         (P.fmt_ppr_lf_mctx P.l0) cD
         (P.fmt_ppr_cmp_typ cD P.l0) (Whnf.cnormCTyp (tau, t))
       end;
-    checkW cD (cG, cIH) total_decs e (C.cwhnfCTyp (tau, t));
+    checkW mcid cD (cG, cIH) total_decs e (C.cwhnfCTyp (tau, t));
 
-  and syn cD (cG,cIH) total_decs : exp_syn -> ihctx option * typ * I.msub =
+  and syn mcid cD (cG,cIH) total_decs : exp_syn -> ihctx option * typ * I.msub =
     function
     | Var (loc, x) as e ->
        let (f,tau', _) = lookup cG x in
@@ -1163,7 +1160,7 @@ module Comp = struct
     | Obs (loc, e, t, obs) ->
        let tau0 = (CompDest.get obs).CompDest.Entry.obs_type in
        let tau1 = (CompDest.get obs).CompDest.Entry.return_type in
-       check cD (cG, cIH) total_decs e (tau0, t);
+       check mcid cD (cG, cIH) total_decs e (tau0, t);
        (None, tau1, t)
 
     (* | DataDest (loc, c) -> *)
@@ -1172,13 +1169,25 @@ module Comp = struct
 
     | Const (loc, prog) as e ->
        let entry = Comp.get prog in
-       let tau = Comp.Entry.(entry.typ) in
+       let tau, d1, name =
+         let open! Comp.Entry in
+         entry.typ, entry.decl, entry.name
+       in
        Typeinfo.Comp.add loc (Typeinfo.Comp.mk_entry cD (tau, C.m_id))
          ("Const " ^ Fmt.stringify (P.fmt_ppr_cmp_exp_syn cD cG P.l0) e);
        (* First we need to decide whether we are calling a function in
           the current mutual block. *)
        begin match Total.lookup_dec entry.Comp.Entry.name total_decs with
        | None -> (* No, we aren't. *)
+          (* Since we're not calling a function in the mutual block,
+             we need to decide whether the call is well-scoped.
+             Harpoon violates the traditional scoping assumption that
+             everything in the store is in scope: an incomplete
+             harpoon proof could be defined before other functions,
+             and we must prevent the user from calling those functions
+             interactively, else the resulting proof script refer to
+             out-of-scope values. *)
+          ScopeCheck.thm_thm loc prog mcid;
           (None, tau, C.m_id)
        | Some d -> (* Yes we are, and d is its total dec *)
           (* Second, need to check whether the function we're calling
@@ -1192,11 +1201,11 @@ module Comp = struct
        end
 
     | Apply (loc, e1, e2) as e ->
-       let (cIH_opt, tau1, t1) = syn cD (cG,cIH) total_decs e1 in
+       let (cIH_opt, tau1, t1) = syn mcid cD (cG,cIH) total_decs e1 in
        let (tau1,t1) = C.cwhnfCTyp (tau1,t1) in
        begin match (tau1, t1) with
        | (TypArr (_, tau2, tau), t) ->
-          check cD (cG,cIH) total_decs e2 (tau2, t);
+          check mcid cD (cG,cIH) total_decs e2 (tau2, t);
           Typeinfo.Comp.add
             loc
             (Typeinfo.Comp.mk_entry cD (tau, t))
@@ -1208,7 +1217,7 @@ module Comp = struct
        end
 
     | MApp (loc, e, mC, cU, _) ->
-       let (cIH_opt, tau1, t1) = syn cD (cG, cIH) total_decs e in
+       let (cIH_opt, tau1, t1) = syn mcid cD (cG, cIH) total_decs e in
        dprintf
          begin fun p ->
          p.fmt "[syn] @[<v>MApp synthesized function type at %a\
@@ -1260,8 +1269,8 @@ module Comp = struct
        end
 
     | PairVal (loc, i1, i2) ->
-       let (_, tau1, t1) = syn cD (cG, cIH) total_decs i1 in
-       let (_, tau2, t2) = syn cD (cG, cIH) total_decs i2 in
+       let (_, tau1, t1) = syn mcid cD (cG, cIH) total_decs i1 in
+       let (_, tau2, t2) = syn mcid cD (cG, cIH) total_decs i2 in
        let (tau1, t1) = C.cwhnfCTyp (tau1, t1) in
        let (tau2, t2) = C.cwhnfCTyp (tau2, t2) in
        ( None
@@ -1374,28 +1383,28 @@ module Comp = struct
     LF.checkMetaObj cD mO (ctyp, theta);
     I.MDot (metaObjToMFront mO, theta)
 
-  and checkBranches cD cG total_decs (i, tau_s) bs ttau =
+  and checkBranches mcid cD cG total_decs (i, tau_s) bs ttau =
     List.iter
       begin fun b ->
-      checkBranch cD cG total_decs (i, tau_s) b ttau
+      checkBranch mcid cD cG total_decs (i, tau_s) b ttau
       end
       bs
 
-  and checkBranch cD (cG, cIH) total_decs (i, tau_s) (Branch (loc, _, (cD_b, cG_pat), pat, t', e)) ttau =
+  and checkBranch mcid cD (cG, cIH) total_decs (i, tau_s) (Branch (loc, _, (cD_b, cG_pat), pat, t', e)) ttau =
     LF.checkMSub loc cD_b t' cD;
     let tau_p = Whnf.cnormCTyp (tau_s, t') in
     let (cD_b, cG_b, cIH_b) =
       prepare_branch_contexts cD_b pat t' cD (cG, cG_pat) cIH i total_decs
     in
     checkPattern cD_b cG_b pat (tau_p, Whnf.m_id);
-    check
+    check mcid
       cD_b
       (cG_b, cIH_b)
       total_decs
       e
       (Pair.rmap (Whnf.mcomp' t') ttau)
 
-  and checkFBranches cD (cG, cIH) total_decs fbr ttau =
+  and checkFBranches mcid cD (cG, cIH) total_decs fbr ttau =
     match fbr with
     | NilFBranch _ -> ()
     | ConsFBranch (_, (cD', cG', patS, e), fbr') ->
@@ -1405,8 +1414,8 @@ module Comp = struct
          p.fmt "[checkFBranches] tau2' = @[%a@]"
            (P.fmt_ppr_cmp_typ cD' P.l0) (Whnf.cnormCTyp (tau2', t'))
          end;
-       check cD' (cG', (Total.shift cIH)) total_decs e (tau2', t');
-       checkFBranches cD (cG, cIH) total_decs fbr' ttau
+       check mcid cD' (cG', (Total.shift cIH)) total_decs e (tau2', t');
+       checkFBranches mcid cD (cG, cIH) total_decs fbr' ttau
 
   let rec wf_mctx =
     function
@@ -1607,7 +1616,7 @@ module Comp = struct
        end
 
     | Command (cmd, p) ->
-       let (cD, cG, cIH, t) = command cD cG cIH total_decs cmd in
+       let (cD, cG, cIH, t) = command mcid cD cG cIH total_decs cmd in
        let ttau = Pair.rmap (Whnf.mcomp' t) ttau in
        proof mcid cD cG cIH total_decs p ttau
 
@@ -1615,7 +1624,7 @@ module Comp = struct
        dprnt "[check] [proof] --> directive";
        directive mcid cD cG cIH total_decs d ttau
 
-  and command cD cG cIH total_decs =
+  and command mcid cD cG cIH total_decs =
     let extend_meta d =
       let t = I.MShift 1 in
       ( I.Dec (cD, d)
@@ -1626,12 +1635,12 @@ module Comp = struct
     in
     function
     | By (i, name, _) ->
-       let (_, tau', t) = syn cD (cG, cIH) total_decs i in
+       let (_, tau', t) = syn mcid cD (cG, cIH) total_decs i in
        let tau = Whnf.cnormCTyp (tau', t) in
        let cG = I.Dec (cG, CTypDecl (name, tau, false)) in
        (cD, cG, Total.shift cIH, Whnf.m_id)
     | Unbox (i, name, _, modifier) ->
-       let (_, tau', t) = syn cD (cG, cIH) total_decs i in
+       let (_, tau', t) = syn mcid cD (cG, cIH) total_decs i in
        dprintf
          begin fun p ->
          p.fmt "[check] [command] @[<v>@[<hv 2>by @[%a@] as@ %a@]\
@@ -1694,7 +1703,7 @@ module Comp = struct
        hypothetical mcid cD' cG' cIH' total_decs hyp (tau', Whnf.m_id)
 
     | Solve e ->
-       check cD (cG, cIH) total_decs e ttau
+       check mcid cD (cG, cIH) total_decs e ttau
 
     | ContextSplit (i, tau, bs) ->
        List.iter
@@ -1721,7 +1730,7 @@ module Comp = struct
        (* TODO verify that `i` is not an IH call.
           IH is unsupported with Suffices
         *)
-       let (cIH_opt, tau_i, t) = syn cD (cG, cIH) total_decs i in
+       let (cIH_opt, tau_i, t) = syn mcid cD (cG, cIH) total_decs i in
        let tau_i = Whnf.cnormCTyp (tau_i, t) in
        let tau_g = Whnf.cnormCTyp ttau in
        let loc = loc_of_exp_syn i in
@@ -1738,16 +1747,16 @@ module Comp = struct
          end
          args
 
-  let syn cD cG (total_decs : total_dec list) ?cIH:(cIH = Syntax.Int.LF.Empty) e =
-    let (cIH, tau, ms) = syn cD (cG,cIH) total_decs e in
+  let syn mcid cD cG (total_decs : total_dec list) ?cIH:(cIH = Syntax.Int.LF.Empty) e =
+    let (cIH, tau, ms) = syn mcid cD (cG,cIH) total_decs e in
     (cIH, (tau, ms))
 
-  let check cD cG (total_decs : total_dec list) ?cIH:(cIH = Syntax.Int.LF.Empty) e ttau =
-    check cD (cG, cIH) total_decs e ttau
+  let check mcid cD cG (total_decs : total_dec list) ?cIH:(cIH = Syntax.Int.LF.Empty) e ttau =
+    check mcid cD (cG, cIH) total_decs e ttau
 
   let thm mcid cD cG total_decs ?cIH:(cIH = Syntax.Int.LF.Empty) t ttau =
     match t with
-    | Syntax.Int.Comp.Program e -> check cD cG total_decs ~cIH:cIH e ttau
+    | Syntax.Int.Comp.Program e -> check mcid cD cG total_decs ~cIH:cIH e ttau
     | Syntax.Int.Comp.Proof p -> proof mcid cD cG cIH total_decs p ttau
 
 end

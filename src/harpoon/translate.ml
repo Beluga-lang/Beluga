@@ -168,7 +168,7 @@ and directive cD cG (d : Comp.directive) tau : Comp.exp_chk =
   | Comp.Suffices (i, args) ->
      (* XXX consider storing tau_i inside Suffices to avoid
         needing to synthesize it here? -je *)
-     let _, ttau_i = Check.Comp.syn cD cG [] i in
+     let _, ttau_i = Check.Comp.syn None cD cG [] i in
      let loc = Comp.loc_of_exp_syn i in
      let _, (i', ttau_i') =
        Check.Comp.genMApp

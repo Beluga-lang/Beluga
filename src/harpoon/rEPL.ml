@@ -102,11 +102,12 @@ let rec loop (s : State.t) : unit =
           "Skipped checking translated proofs because some translations failed."
      | `check_error e ->
         printf "- @[<v>An error occurred when checking the translated proofs.\
+                @,Please report this as a bug.\
                 @,@[%s@]@]@,"
           (Printexc.to_string e)
      end;
      printf "@]";
-     State.on_session_completed s;
+     State.on_session_completed s c;
      loop s
   | Either.Left (`no_subgoal (c, t)) ->
      (* TODO: record the proof into the Store *)
@@ -121,10 +122,6 @@ let rec loop (s : State.t) : unit =
      Session.mark_current_theorem_as_proven c (Either.to_option e_trans);
      loop s
   | Either.Right (c, t, g) ->
-     (* XXX this is somewhat "nuclear"
-        But, it is too complicated to figure out all the right
-        situations when entering is necessary. -je *)
-     Session.enter c;
     (* Show the proof state and the prompt *)
     printf "@,@[<v>@,Theorem: %a@,%a@,@]@?"
       Id.print (Theorem.get_name t)

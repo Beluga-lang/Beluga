@@ -36,9 +36,6 @@ type t =
    module earlier. *)
 open Beluga
 
-let entering_first_session =
-  F.(ignore ++ Maybe.map Session.enter ++ Misc.List.hd_opt)
-
 (** Constructs a Theorem.t for the given cid with the given
     subgoals. *)
 let recover_theorem ppf hooks (cid, gs) =
@@ -71,12 +68,7 @@ let recover_theorem ppf hooks (cid, gs) =
 let recover_session ppf hooks (mutual_group, thm_confs) =
   let theorems =
     let open Nonempty in
-    let f =
-      (* after recovering the theorem, set it hidden.
-             later, we enter the session, which will bring it into
-             scope. *)
-      F.((fun t -> Theorem.set_hidden t true; t) ++ recover_theorem ppf hooks)
-    in
+    let f = recover_theorem ppf hooks in
     (* XXX to_list -> of_list later is inefficient
            It would be best to add a function to obtain a Seq.t from
            an Nonempty.t, lazily map the sequence, and the force the
@@ -97,10 +89,6 @@ let recover_session ppf hooks (mutual_group, thm_confs) =
     Subgoals are grouped into theorems according to their
     associated cid, and theorems are grouped into sessions
     according to their mutual group.
-
-    WARNING: all recovered theorems are hidden (out of scope).
-    It is necessary to enter the session that ends up selecteed to
-        bring its theorems into scope.
  *)
 let recover_sessions ppf hooks (gs : Comp.open_subgoal list) =
   (* idea:
@@ -157,7 +145,6 @@ let make
   let hooks = [run_automation automation_state] in
   let sessions =
     recover_sessions (IO.formatter io) hooks gs
-    |> F.through entering_first_session
   in
   { sessions = DynArray.of_list sessions
   ; automation_state
@@ -170,31 +157,20 @@ let make
 
 (** Given that session `c` is at index `i` in the sessions list,
     `select_session s i c` moves it to the front, thus activating
-    it.Takes care of suspending the active session and entering
-    `c`. *)
+    it.
+ *)
 let select_session s i c =
-  (* get the active session *)
-  let c' = DynArray.get s.sessions 0 in
   (* remove the target session (i.e. c) from the list *)
   DynArray.delete s.sessions i;
-  (* suspend the current session and enter the target session *)
-  Session.suspend c';
-  Session.enter c;
   (* make the target session the active session by moving it to position 0 *)
   DynArray.insert s.sessions 0 c
 
-(** Adds a session to the prover and selects it.
-    If another session was selected before, it is suspended, and
-    the new session is entered.
- *)
+(** Adds a session to the prover and selects it. *)
 let add_session s c =
   let k = DynArray.length s.sessions in
   DynArray.add s.sessions c;
   (* newly added session is at index k *)
   select_session s k c
-(*
-    let remove_current_session s = DynArray.delete s.sessions 0
- *)
 
 (** Finds a session containing a theorem with the given name and
     selects that session and that theorem.
@@ -242,7 +218,6 @@ let reset s : unit =
   let hooks = [run_automation s.automation_state] in
   let cs =
     recover_sessions (IO.formatter s.io) hooks gs
-    |> F.through entering_first_session
   in
   dprintf begin fun p ->
     p.fmt "[reset] recovered %d sessions from %d subgoals"
@@ -328,10 +303,12 @@ let session_configuration_wizard s =
   $> add_session s
   |> is_some
 
-let on_session_completed s =
+let on_session_completed s c =
   match save_mode s with
   | `save_back -> save s; reset s
-  | `no_save_back -> remove_current_session s
+  | `no_save_back ->
+     Session.materialize_theorems c;
+     remove_current_session s
 
 let serialize s ctg = keeping_focus s ctg (fun _ -> save s; reset s)
 

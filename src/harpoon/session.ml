@@ -36,19 +36,6 @@ let full_theorem_list c =
   DynArray.to_list c.theorems
   @ List.map fst (DynArray.to_list c.finished_theorems)
 
-let enter (c : t) : unit =
-  dprintf begin fun p ->
-    p.fmt "[session] entering session @[<hov>%a@]"
-      (let open Format in
-       pp_print_list ~pp_sep: pp_print_space
-         (fun ppf t -> Id.print ppf (Theorem.get_name t)))
-      (full_theorem_list c)
-    end;
-  DynArray.iter (F.flip Theorem.set_hidden false) c.theorems
-
-let suspend (s : t) : unit =
-  DynArray.iter (F.flip Theorem.set_hidden true) s.theorems
-
 let remove_current_theorem s =
   DynArray.delete s.theorems 0
 
@@ -154,11 +141,17 @@ let prepare_translated_proofs tes total_decs =
                  cid for the translated proof *)
           Hashtbl.add h cid cid';
           mk_entry
+            None
             (trans_name entry.Entry.name)
             tau
             entry.Entry.implicit_arguments
             mutual_group_id
             None
+          (* We use None for the declaration number here.
+             This technically means that these definitions are
+             considered floating. However, this will not be a problem
+             during late scopechecking because definitions belonging
+             to the same mutual group skip late scopechecking. *)
           end
       in
       (e, tau)
@@ -209,7 +202,7 @@ let check_translated_proofs c : translation_check_result =
      try
        List.iter
          (fun (e, tau) ->
-           Check.Comp.check LF.Empty LF.Empty total_decs
+           Check.Comp.check None LF.Empty LF.Empty total_decs
              e (tau, Whnf.m_id))
          ettaus;
        `ok
@@ -313,3 +306,9 @@ let fmt_ppr_theorem_list ppf c =
   fprintf ppf
     "@[<v>%a@]"
     fmt_ppr_indexed_theorems (Misc.List.index theorem_list)
+
+let materialize_theorems c =
+  if DynArray.length c.theorems > 0 then
+    Error.violation
+      "[materialize_theorems] not all theorems are complete";
+  DynArray.iter F.(Theorem.materialize ++ fst) c.finished_theorems

@@ -284,68 +284,6 @@ let rec constraints_solved =
        end;
      false
 
-(* Check that a synthesized computation-level type is free of constraints *)
-let rec cnstr_ctyp =
-  function
-  | Comp.TypBox (_, I.ClTyp (I.MTyp tA, cPsi)) -> cnstr_typ (tA, LF.id) && cnstr_dctx cPsi
-  | Comp.TypBox (_, I.ClTyp (I.STyp (_, cPhi), cPsi)) -> cnstr_dctx cPhi && cnstr_dctx cPsi
-
-and cnstr_typ =
-  function
-  | (I.Atom (_, _, spine), s) -> cnstr_spine (spine, s)
-  | (I.PiTyp ((t_decl, _), tB), s) ->
-      cnstr_typ_decl (t_decl, s) && cnstr_typ (tB, LF.dot1 s)
-
-  | (I.Sigma t_rec, s) -> cnstr_typ_rec (t_rec, s)
-
-and cnstr_term =
-  function
-  | (I.Lam (_, _, tM), s) -> cnstr_term (tM, LF.dot1 s)
-  | (I.Root (_, h, spine, _), s) ->
-      cnstr_head h && cnstr_spine (spine, s)
-
-and cnstr_spine =
-  function
-  | (I.Nil, _) -> false
-  | (I.App (tM, tS), s) ->
-      cnstr_term (tM, s) && cnstr_spine (tS, s)
-  | (I.SClo (tS, s'), s) -> cnstr_spine (tS, LF.comp s' s)
-
-
-and cnstr_head =
-  function
-  | I.MMVar ((v, _), s)
-  | I.MVar (I.Inst v, s) ->
-     constraints_solved !I.(v.constraints) && cnstr_sub s
- | _ -> false
-
-
-and cnstr_sub =
-  function
-  | I.Shift _ -> false
-  | I.Dot (I.Head h, s) -> cnstr_head h && cnstr_sub s
-  | I.Dot (I.Obj tM, s) -> cnstr_term (tM, LF.id) && cnstr_sub s
-  | I.Dot (I.Undef, s') -> cnstr_sub s'
-
-
-and cnstr_dctx =
-  function
-  | I.Null -> false
-  | I.CtxVar _ -> false
-  | I.DDec (cPsi, t_decl) -> cnstr_dctx cPsi && cnstr_typ_decl (t_decl, LF.id)
-
-
-and cnstr_typ_decl =
-  function
-  | (I.TypDecl (_, tA), s) -> cnstr_typ (tA, s)
-  | _ -> false
-
-
-and cnstr_typ_rec (t_rec, s) =
-  match t_rec with
-  | I.SigmaLast (_, tA) -> cnstr_typ (tA, s)
-  | I.SigmaElem (_, tA, t_rec) -> cnstr_typ (tA, s) && cnstr_typ_rec (t_rec, s)
-
 (* index_of cQ n = i
    where cQ = cQ1, Y, cQ2 s.t. n = Y and length cQ2 = i
 *)

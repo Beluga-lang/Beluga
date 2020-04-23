@@ -32,8 +32,6 @@ type fctx = free_var LF.ctx
 
 exception Error of Syntax.Loc.t * error
 
-val cnstr_ctyp : Comp.typ -> bool
-
 val kind : LF.kind -> LF.kind * Id.offset
 val typ : LF.typ -> LF.typ * Id.offset
 

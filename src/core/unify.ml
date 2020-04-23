@@ -2952,7 +2952,6 @@ module Make (T : TRAIL) : UNIFY = struct
                 @,@[%a@]@]"
            P.fmt_ppr_lf_constraint !c
          end;
-       resetGlobalCnstrs ();
        forceGlobalCnstr' cnstrs
     (* constraints that are Queued are considered trivial, so this
          time we must have an outstanding Eqn whose terms are not
@@ -2994,7 +2993,7 @@ module Make (T : TRAIL) : UNIFY = struct
             the unification we just called added it.
         *)
        if solvedCnstrs (!globalCnstrs)
-       then forceGlobalCnstr' cnstrs
+       then (resetGlobalCnstrs (); forceGlobalCnstr' cnstrs)
        else raise (GlobalCnstrFailure (Loc.ghost, "[forceGlobalCnstr'] Constraints generated"))
 
   let unresolvedGlobalCnstrs () =

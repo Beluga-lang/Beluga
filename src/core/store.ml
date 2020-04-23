@@ -428,18 +428,6 @@ module Cid = struct
       in
       replace_entry cid_tp new_entry
 
-    let rec cid_of_typ : Int.LF.typ -> Id.cid_typ =
-      function
-      | Int.LF.Atom (_, a, _) -> a
-      | Int.LF.PiTyp(_, tA) -> cid_of_typ tA
-      | Int.LF.Sigma typRec -> cid_of_typRec typRec
-      | Int.LF.TClo (tA, _) -> cid_of_typ tA
-
-    and cid_of_typRec =
-      function
-      | Int.LF.SigmaLast (_, tA) -> cid_of_typ tA
-      | Int.LF.SigmaElem(_, _, rest) -> cid_of_typRec rest
-
     let var_gen cid_tp = (get cid_tp).var_generator
     let mvar_gen cid_tp = (get cid_tp).mvar_generator
 

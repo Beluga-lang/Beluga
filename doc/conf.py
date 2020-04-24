@@ -148,6 +148,7 @@ class BelugaLexer (RegexLexer):
         [ (r'%.*?$', token.Comment),
           (r'(#\$)?[a-zA-Z_]([a-zA-Z0-9_\'-\*\+@=\^/#\?])*', token.Name),
           (r'\s+', token.Whitespace),
+          (r'[0-9]+', token.Number)
         ]
     }
 

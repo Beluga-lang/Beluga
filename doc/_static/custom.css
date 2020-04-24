@@ -14,7 +14,13 @@ li.toctree-l1 {
     margin: 0.5em 0;
 }
 
+/* make admonitions less obtrusive */
 div.admonition p.admonition-title {
     font-size: 1em;
     font-weight: bold;
+}
+
+/* to make whitespace not have an ugly underline */
+div.highlight span.w {
+    text-decoration: none;
 }

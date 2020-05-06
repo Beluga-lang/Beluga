@@ -217,6 +217,22 @@ Use ``msplit MVAR`` to perform case analysis on the metavariable ``MVAR``.
 
 This command is syntactic sugar for ``split [_ |- MVAR]``.
 
+``invert``
+^^^^^^^^^^
+
+Use ``invert EXP`` to perform inversion on the synthesizable expression
+``EXP``.
+This is the same as using ``split EXP``, but ``invert`` will check that a unique
+case is produced.
+
+``impossible``
+^^^^^^^^^^^^^^
+
+Use ``impossible EXP`` to eliminate the uninhabited type of the synthesizable
+expression ``EXP``.
+This is the same as using ``split EXP``, but ``impossible`` will check that zero
+cases are produced.
+
 .. _cmd-by:
 
 ``by``

@@ -15,7 +15,7 @@ val make : Id.cid_mutual_group -> Theorem.t list -> t
 
 (** Retrieves the mutual declarations associated to this session's
     mutual group. *)
-val get_mutual_decs : t -> Comp.total_dec list option
+val get_mutual_decs : t -> Comp.total_dec list
 
 (** Looks up an incomplete theorem by name in the session. *)
 val lookup_theorem : t -> Id.name -> Theorem.t option

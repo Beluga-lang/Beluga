@@ -1,0 +1,3 @@
+t/harpoon/nat-trans.bel
+solve [|- leq_z]
+:quit

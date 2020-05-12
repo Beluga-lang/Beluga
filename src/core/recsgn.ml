@@ -741,7 +741,11 @@ let recSgnDecls decls =
              let v = Some (Opsem.eval i'') in
              let open Comp in
              add begin fun _ ->
-               mk_entry (Some (Decl.next ())) x tau' 0 unchecked_mutual_group v
+               let mgid =
+                 Comp.add_mutual_group
+                   Int.Comp.[{ name = x; tau = tau'; order = `not_recursive }]
+               in
+               mk_entry (Some (Decl.next ())) x tau' 0 mgid v
                end
              |> ignore;
              v
@@ -816,8 +820,12 @@ let recSgnDecls decls =
            begin
              let v = Some (Opsem.eval i'') in
              let open Comp in
+             let mgid =
+               add_mutual_group
+                 Int.Comp.[ {name = x; tau = tau'; order = `not_recursive } ]
+             in
              add begin fun _ ->
-               mk_entry (Some (Decl.next ())) x tau' 0 unchecked_mutual_group v
+               mk_entry (Some (Decl.next ())) x tau' 0 mgid v
                end;
              |> ignore;
              v
@@ -972,7 +980,7 @@ let recSgnDecls decls =
           so we can register each theorem in the store.
         *)
        let thm_cid_list =
-         Comp.add_mutual_group (Some total_decs)
+         Comp.add_mutual_group total_decs
          |> Misc.Function.sequence registers
        in
 

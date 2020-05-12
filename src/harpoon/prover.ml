@@ -149,7 +149,7 @@ let process_command
   let mfs =
     lazy
       begin
-        let ds = Session.get_mutual_decs c |> Maybe.get_default [] in
+        let ds = Session.get_mutual_decs c in
         dprintf
           begin fun p ->
           p.fmt "[harpoon] [mfs] @[<v>got mutual decs:\

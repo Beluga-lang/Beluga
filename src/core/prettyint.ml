@@ -1630,7 +1630,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
       (fmt_ppr_cmp_typ LF.Empty l0) typ
       implicit_arguments
       (R.render_cid_mutual_group mutual_group)
-      (Maybe.print (pp_print_list ~pp_sep: pp_print_cut fmt_ppr_cmp_total_dec)) ds
+      (pp_print_list ~pp_sep: pp_print_cut fmt_ppr_cmp_total_dec) ds
       (Maybe.print (fmt_ppr_cmp_value l0)) prog
 
   let fmt_ppr_cmp_thm ppf =

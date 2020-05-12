@@ -61,10 +61,22 @@ val get_cid : t -> Id.cid_prog
 
 (** Gets the Store entry for this theorem. *)
 val get_entry : t -> CompS.Entry.t
+
 val get_name : t -> Id.name
+
+(** Checks if the theorem's name is equal to the given name. *)
 val has_name_of : t -> Id.name -> bool
+
+(** Checks if the theorem's cid is equal to the given cid. *)
 val has_cid_of : t -> Id.cid_prog -> bool
-val theorem_statement : t -> tclo
+
+(** Gets the type of the initial subgoal of this theorem.
+    Note that this is the statement of the theorem _including_
+    inductive stars.
+    To get the statement without stars, retrieve the type of the
+    theorem in the store via its cid.
+ *)
+val get_statement : t -> tclo
 
 val serialize : Format.formatter -> t -> unit
 

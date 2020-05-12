@@ -24,7 +24,7 @@ let make mutual_group thms =
 (** Gets the list of mutual declarations corresponding to the
         currently loaded theorems in the active session.
  *)
-let get_mutual_decs (s : t) : Comp.total_dec list option =
+let get_mutual_decs (s : t) : Comp.total_dec list =
   CompS.lookup_mutual_group s.mutual_group
 
 (** Constructs a list of all theorems in this session, both
@@ -116,11 +116,10 @@ let prepare_translated_proofs tes total_decs =
   (* create the totality declarations for the translated
          proofs, and allocate the mutual group with them. *)
   let total_decs =
-    Maybe.map
-      (List.map
-         (fun dec ->
-           let open Comp in
-           { dec with name = trans_name dec.name }))
+    List.map
+      (fun dec ->
+        let open Comp in
+        { dec with name = trans_name dec.name })
       total_decs
   in
   let mutual_group_id =
@@ -128,13 +127,16 @@ let prepare_translated_proofs tes total_decs =
   in
   (* map from old cids to new cids *)
   let h = Hashtbl.create 8 in
-  let es =
+  let etaus =
     List.map
       begin fun (t, e) ->
       let open CompS in
       let cid, entry = Theorem.get_entry' t in
       let tau = entry.Entry.typ in
       let _ =
+        (* the type to store for the newly allocated must be without
+        inductive stars, so we obtain it directly from the store entry
+        for the proof. *)
         add
           begin fun cid' ->
           (* associate the cid of this theorem to the newly allocated
@@ -154,7 +156,11 @@ let prepare_translated_proofs tes total_decs =
              to the same mutual group skip late scopechecking. *)
           end
       in
-      (e, tau)
+      (* we need to check the translated proof against the type *with*
+      inductive stars, so we obtain it from the initial subgoal of the
+      theorem *)
+      let tau_ann = Theorem.get_statement t |> Whnf.cnormCTyp in
+      (e, tau_ann)
       end
       tes
   in
@@ -166,12 +172,12 @@ let prepare_translated_proofs tes total_decs =
   let cid_map k =
     Hashtbl.find_opt h k |> Maybe.get_default k
   in
-  let es =
+  let etaus =
     List.map
-      (fun (e, ttau) -> (CidProgRewrite.exp_chk cid_map e, ttau))
-      es
+      (fun (e, tau) -> (CidProgRewrite.exp_chk cid_map e, tau))
+      etaus
   in
-  (es, total_decs)
+  (etaus, total_decs)
 
 type translation_check_result =
   [ `some_translations_failed
@@ -198,10 +204,21 @@ let check_translated_proofs c : translation_check_result =
      let ettaus, total_decs =
        prepare_translated_proofs tes (get_mutual_decs c)
      in
-     let total_decs = Maybe.get_default [] total_decs in
+     dprintf begin fun p ->
+       let open Format in
+       p.fmt "[check_translated_proofs] @[<v>total_decs:\
+              @,@[%a@]@]"
+         (pp_print_list ~pp_sep: pp_print_cut
+            P.fmt_ppr_cmp_total_dec)
+       total_decs
+       end;
      try
        List.iter
          (fun (e, tau) ->
+           dprintf begin fun p ->
+             p.fmt "[check_translated_proofs] statement @[%a@]"
+               P.(fmt_ppr_cmp_typ LF.Empty l0) tau
+             end;
            Check.Comp.check None LF.Empty LF.Empty total_decs
              e (tau, Whnf.m_id))
          ettaus;

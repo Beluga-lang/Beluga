@@ -1,0 +1,39 @@
+LF nat : type =
+  | z : nat
+  | s : nat → nat
+;
+
+LF leq : nat → nat → type =
+  | leq_z : leq z N
+  | leq_s : leq N1 N2 → leq (s N1) (s N2)
+;
+
+proof trans : [⊢ leq N1 N2] → [⊢ leq N2 N3] → [⊢ leq N1 N3] =
+/ total 1 /
+intros
+{ N : ( |- nat), N1 : ( |- nat), N2 : ( |- nat)
+| x : [ |- leq N N1], x1 : [ |- leq N1 N2]
+; split x as
+  case leq_s:
+  { X : ( |- nat), X1 : ( |- nat), N2 : ( |- nat), X2 : ( |- leq X X1)
+  | x : [ |- leq (s X) (s X1)], x1 : [ |- leq (s X1) N2]
+  ; split x1 as
+    case leq_s:
+    { X : ( |- nat),
+      X1 : ( |- nat),
+      X4 : ( |- nat),
+      X2 : ( |- leq X X1),
+      X5 : ( |- leq X1 X4)
+    | x : [ |- leq (s X) (s X1)], x1 : [ |- leq (s X1) (s X4)]
+    ; by trans [ |- X2] [ |- X5] as l;
+      by l as L unboxed;
+      solve [ |- leq_s L]
+    }
+  }
+  case leq_z:
+  { N1 : ( |- nat), N2 : ( |- nat)
+  | x : [ |- leq z N1], x1 : [ |- leq N1 N2]
+  ; solve [ |- leq_z ]
+  }
+}
+;

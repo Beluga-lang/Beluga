@@ -891,19 +891,26 @@ module Cid = struct
       ; decl
       }
 
-    let mutual_groups = DynArray.of_list [None; Some []]
-
-    (** id for the mutual group that won't check for totality *)
-    let unchecked_mutual_group = 0
-
-    (** id for the mutual group that simply trusts totality *)
-    let trust_mutual_group = 1
+    let mutual_groups = DynArray.make 32
 
     let add_mutual_group decs =
       DynArray.add mutual_groups decs;
       DynArray.length mutual_groups - 1
 
     let lookup_mutual_group = DynArray.get mutual_groups
+
+    let get_total_decl cid =
+      let e = get cid in
+      let name = e.Entry.name in
+      let mg = lookup_mutual_group e.Entry.mutual_group in
+      match
+        List.find_opt
+          (fun d -> Id.equals d.Int.Comp.name name)
+          mg
+      with
+      | Some d -> d
+      | None ->
+         Error.violation "theorem does not belong to its mutual group"
 
     let mutual_group cid = (get cid).mutual_group
 

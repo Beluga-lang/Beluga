@@ -168,9 +168,7 @@ let get_name t = (get_entry t).CompS.Entry.name
 let has_name_of t name = equals (get_name t) name
 let has_cid_of t cid = t.cid = cid
 
-(** Gets the statement of the given theorem. *)
-let theorem_statement (t : t) =
-  t.initial_state.Comp.goal
+let get_statement t = t.initial_state.Comp.goal
 
 let serialize ppf (t : t) =
   let name = CompS.name t.cid in
@@ -194,7 +192,7 @@ let serialize ppf (t : t) =
   in
   let order =
     let open Maybe in
-    Total.lookup_dec name (CompS.total_decs t.cid |> get_default [])
+    Total.lookup_dec name (CompS.total_decs t.cid)
     $> fun o -> o.Comp.order
   in
   Printer.with_implicits false
@@ -352,7 +350,7 @@ let configure_set ppf (hooks : (t -> Comp.proof_state -> unit) list) (confs : Co
     : Id.cid_mutual_group * t list =
   let mutual_group =
     CompS.add_mutual_group
-      (Some (List.map fst confs))
+      (List.map fst confs)
   in
   let configure ({ Comp.name; tau; order }, k) =
     let tau' =

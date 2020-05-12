@@ -353,23 +353,7 @@ let configure_set ppf (hooks : (t -> Comp.proof_state -> unit) list) (confs : Co
       (List.map fst confs)
   in
   let configure ({ Comp.name; tau; order }, k) =
-    let tau' =
-      Comp.option_of_total_dec_kind order
-      |> Maybe.map
-           begin fun order ->
-           Order.list_of_order order
-           |> Maybe.get'
-                (Error.Violation
-                   "lexicographic order not supported; should \
-                    have checked sooner")
-           |> Total.annotate tau
-           |> Maybe.get'
-                (Error.Violation
-                   "annotation failed; too many arguments? \
-                    Check sooner.")
-           end
-      |> Maybe.get_default tau
-    in
+    let tau' = Total.annotate Loc.ghost order tau in
     dprintf begin fun p ->
       p.fmt "[configure_set] @[<v>got (possibly) annotated type\
              @,@[%a@]\

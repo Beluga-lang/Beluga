@@ -1039,30 +1039,16 @@ let recSgnDecls decls =
          let thm_r' = Whnf.cnormThm (thm_r, Whnf.m_id) in
 
          let tau_ann =
-           match
-             let open Maybe in
-             Total.lookup_dec f total_decs
-             $ fun d ->
-               Int.Comp.(option_of_total_dec_kind d.order)
-               $> fun order ->
-                  Order.list_of_order order
-                  |> Maybe.get'
-                       (Total.Error
-                          ( loc
-                          , Total.NotImplemented
-                              "lexicographic order not fully supported"))
-                  |> Total.annotate tau
-                  |> Maybe.get'
-                       (Total.Error (loc , Total.TooManyArg f))
-           with
+           match Total.lookup_dec f total_decs with
            | None -> tau
-           | Some x ->
+           | Some d ->
+              let tau = Total.annotate loc d.Int.Comp.order tau in
               dprintf
                 begin fun p ->
                 p.fmt "[reconThm] @[<v>got annotated type:@,@[%a@]@]"
-                  P.(fmt_ppr_cmp_typ Int.LF.Empty l0) x
+                  P.(fmt_ppr_cmp_typ Int.LF.Empty l0) tau
                 end;
-              x
+              tau
          in
          Monitor.timer
            ( "Function Check"

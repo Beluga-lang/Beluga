@@ -2,10 +2,12 @@ open Support.Equality
 (* Checking termination of a function *)
 
 open Support
-open Syntax.Int
+open Syntax
+open Int
 module Unify = Unify.StdTrail
 module P = Pretty.Int.DefaultPrinter
 module R = Store.Cid.DefaultRenderer
+module CompS = Store.Cid.Comp
 
 let (dprintf, dprint, dprnt) = Debug.makeFunctions' (Debug.toFlags [11])
 open Debug.Fmt
@@ -17,19 +19,20 @@ type error =
   | WrongArgNum of Id.cid_comp_typ * int
   | RecCallIncompatible of LF.mctx * Comp.ih_arg * Comp.ih_decl
   | NotImplemented of string
-  | TooManyArg of Id.name
+  | TooManyArg
 
-exception Error of Syntax.Loc.t * error
+exception E of Syntax.Loc.t * error
+
+let throw loc e = raise (E (loc, e))
 
 let _ =
   Error.register_printer
-    begin fun (Error (loc, err)) ->
+    begin fun (E (loc, err)) ->
     Error.print_with_location loc
       begin fun ppf ->
       match err with
-      | TooManyArg f ->
-         Format.fprintf ppf "Totality declaration for %s has too many arguments.\n"
-           (Id.render_name f)
+      | TooManyArg ->
+         Format.fprintf ppf "Totality declaration for has too many arguments.@."
       | RecCallIncompatible (cD, x, Comp.WfRec (f, args, _)) ->
          begin match (x, args) with
          | (_, []) ->
@@ -966,12 +969,10 @@ let filter cD cG cIH (loc, e) =
 
 (** Adjusts the given type signature with annotations for the
     induction arguments according to the given order.
-    Call `get_order_for` to retrieve an induction order before calling
-    this.
     Returns None if the order does not match the type, i.e. goes out
     of bounds.
  *)
-let annotate
+let annotate'
       (tau : Syntax.Int.Comp.typ) (order : int list)
     : Syntax.Int.Comp.typ option =
   let open Maybe in
@@ -1034,7 +1035,7 @@ let rec no_occurs a =
         | Sgn.StratifyAll _ -> true
         | _ ->
            let n = R.render_cid_comp_typ c in
-           raise (Error (loc, NoPositiveCheck n))
+           throw loc (NoPositiveCheck n)
         end
   (* ((Store.Cid.CompTyp.get c).Store.Cid.CompTyp.positivity *)
   (* || let n = R.render_cid_comp_typ c in *)
@@ -1058,7 +1059,7 @@ let rec check_positive a =
         | Sgn.StratifyAll _ -> true
         | _ ->
            let n = R.render_cid_comp_typ c in
-           raise (Error (loc, NoPositiveCheck n))
+           throw loc (NoPositiveCheck n)
         end
   (* (Store.Cid.CompTyp.get c).Store.Cid.CompTyp.positivity *)
   (* || let n = R.render_cid_comp_typ c in *)
@@ -1120,7 +1121,7 @@ let rec less_meta_obj cD mC1 mC2 =
                || leq_some tS'
             | LF.Nil -> false
             | LF.SClo _ ->
-               raise (Error (Syntax.Loc.ghost, NotImplemented "LF.SClo in Total.less_meta_obj"))
+               Error.violation "[less_meta_obj] SClo"
           in
           leq_some tS
        | _ -> false
@@ -1139,7 +1140,7 @@ let rec less_meta_obj cD mC1 mC2 =
   (* is the first rule still applied in this case? *)
 
   | ((loc1, LF.ClObj (_, LF.SObj _)), (_, LF.ClObj (_, LF.SObj _))) ->
-     raise (Error (loc1, NotImplemented "Comp.MetaSObj in Total.less_meta_obj"))
+     Error.violation "[less_meta_obj] SObj"
 
   | _ -> false
 
@@ -1226,7 +1227,7 @@ let rec compare a cD tau1 mC2 n =
          | Sgn.StratifyAll _ -> true
        | _ ->
           let n = R.render_cid_comp_typ c in
-          raise (Error (loc, NoStratifyOrPositiveCheck n))
+          throw loc (NoStratifyOrPositiveCheck n)
        end
   | Comp.TypArr (_, tau, tau')
     | Comp.TypCross (_, tau, tau') ->
@@ -1256,7 +1257,8 @@ let stratify a tau n =
   let (cD, mS) = get_target LF.Empty tau in
   let mSize = mS_size mS in
   if (mSize < n || n <= 0)
-  then raise (Error (Syntax.Loc.ghost, WrongArgNum (a, n)))
+  then
+    throw Loc.ghost (WrongArgNum (a, n))
   else
     begin
       let mC = find_meta_obj mS n in
@@ -1401,3 +1403,16 @@ let requires_checking f ds =
   match lookup_dec f ds with
   | Some d -> None <> Comp.(d.order |> option_of_total_dec_kind)
   | None -> false
+
+(** Applies the given induction order to produce an annotated type. *)
+let annotate loc order tau =
+  let error e = E (loc, e) in
+  match Comp.option_of_total_dec_kind order with
+  | Some order ->
+     Order.list_of_order order
+     |> Maybe.get'
+          (error (NotImplemented "lexicographic order not fully supported"))
+     |> annotate' tau
+     |> Maybe.get'
+          (error TooManyArg)
+  | None -> tau

@@ -41,10 +41,13 @@ open Beluga
 let recover_theorem ppf hooks (cid, gs) =
   let open Comp in
   let e = CompS.get cid in
+  let tau = e.CompS.Entry.typ in
+  let decl = CompS.get_total_decl cid in
   let initial_state =
     let s =
       make_proof_state SubgoalPath.start
-        ( e.CompS.Entry.typ, Whnf.m_id )
+        ( Total.annotate Loc.ghost decl.Comp.order tau
+        , Whnf.m_id )
     in
     let prf =
       match e.CompS.Entry.prog with

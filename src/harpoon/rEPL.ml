@@ -92,21 +92,25 @@ let rec loop (s : State.t) : unit =
      else
        printf "@,Harpoon terminated.@,"
   | Either.Left (`no_theorem c) ->
-     printf "@,@[<v>Proof complete! (No theorems left.)@,";
+     printf "@,No theorems left. Checking translated proofs.@,";
      begin match Session.check_translated_proofs c with
      | `ok ->
         printf "- Translated proofs successfully checked.@,"
      | `some_translations_failed ->
         printf "- @[%a@]@,"
-          Format.pp_print_string
-          "Skipped checking translated proofs because some translations failed."
+          Format.pp_print_text
+          "Skipped checking translated proofs because some translations failed.";
+          if State.interaction_mode s = `stop then
+            exit 1
      | `check_error e ->
         printf "- @[<v>An error occurred when checking the translated proofs.\
                 @,Please report this as a bug.\
                 @,@[%s@]@]@,"
-          (Printexc.to_string e)
+          (Printexc.to_string e);
+        if State.interaction_mode s = `stop then
+          exit 1
      end;
-     printf "@]";
+     printf "@,@[<v>Proof complete! (No theorems left.)@,@]";
      State.on_session_completed s c;
      loop s
   | Either.Left (`no_subgoal (c, t)) ->

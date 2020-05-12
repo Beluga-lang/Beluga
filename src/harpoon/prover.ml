@@ -328,6 +328,11 @@ let process_command
        past
        future_remark ()
 
+  | Command.Help ->
+     State.printf s
+       "@[<v>Built-in help is not implemented.\
+        @,See online documentation: https://beluga-lang.readthedocs.io/@]"
+
   (* Real tactics: *)
   | Command.Unbox (i, name, modifier) ->
      let (hs, m, tau) =

@@ -3266,6 +3266,7 @@ let interactive_harpoon_command =
   let redo = keyword "redo" &> pure H.Redo in
   let history = keyword "history" &> pure H.History in
   let help = keyword "help" &> pure H.Help in
+  let save = keyword "save" &> pure (H.Session `serialize) in
   choice
     [ intros
     ; info
@@ -3291,6 +3292,7 @@ let interactive_harpoon_command =
     ; redo
     ; history
     ; help
+    ; save
     ]
 
 let interactive_harpoon_command_sequence =

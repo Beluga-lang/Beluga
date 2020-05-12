@@ -309,14 +309,9 @@ function check_harpoon {
     local output exit_code
 
     output=$(./run_harpoon_test.sh "${file_path}" --no-save-back --stop 2>&1)
-    check_harpoon_output "${output}"
     exit_code=$?
 
-    if [ "${exit_code}" -eq 152 ] ; then
-        echo -e "${C_TIMEOUT}TIMEOUT${C_END}"
-        (( TEST_RESULT_TIMEOUT+=1 ))
-        stop_on_failure
-    elif [ "${exit_code}" -ne 0 ] ; then
+    if [ ${exit_code} -ne 0 ] ; then
         echo -e "${C_FAIL}FAIL${C_END}"
         (( TEST_RESULT_HARPOON_FAIL+=1 ))
         print_harpoon_output_on_failure "${output}"
@@ -325,32 +320,6 @@ function check_harpoon {
         echo -e "${C_OK}OK${C_END}"
         (( TEST_RESULT_SUCCESS+=1 ))
     fi
-}
-
-function check_harpoon_output {
-    local -r output=$1
-    local -r proof_complete_message="Proof complete! (No theorems left.)"
-    local -r uncaught_exception_message="Uncaught exception"
-    local -r parse_error_message="Parse error"
-    local -r internal_error_message="Internal error"
-
-    if ! grep -q "${proof_complete_message}" <(echo "${output}"); then
-        return 1
-    fi
-
-    if grep -q "${uncaught_exception_message}" <(echo "${output}"); then
-        return 1
-    fi
-
-    if grep -q "${parse_error_message}" <(echo "${output}"); then
-        return 1
-    fi
-
-    if grep -q "${internal_error_message}" <(echo "${output}"); then
-        return 1
-    fi
-
-    return 0
 }
 
 function start_test_case {

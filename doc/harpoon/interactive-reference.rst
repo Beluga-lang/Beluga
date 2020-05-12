@@ -93,6 +93,17 @@ wizard` for setting up the theorems in the new session.
 ^^^^^^^^^^^^^^^^^^^^^
 
 Saves the current session as partial proofs to the signature.
+In other words, any work done interactively will be reflected back into the
+loaded signature.
+
+.. _note::
+
+    This will drop the current undo history.
+
+``save``
+^^^^^^^^
+
+This command is a shortcut for ``session serialize``.
 
 ``subgoal list``
 ^^^^^^^^^^^^^^^^

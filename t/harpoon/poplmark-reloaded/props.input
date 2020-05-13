@@ -1,14 +1,14 @@
 t/harpoon/poplmark-reloaded/tps.bel
 m-trans
 (g : cxt) {M : [g |- tm A[]]} [g |- mstep M1 M] -> [g |- mstep M M2] -> [g |- mstep M1 M2]
-
+2
 
 split x
 by m-trans _ [_ |- X5] x1 as MS unboxed
 solve [_ |- m-step X4 MS]
 m-appl
 (g : cxt) {M : [g |- tm (arr A[] B[])]} {M' : [g |- tm (arr A[] B[])]} {N : [g |- tm A[]]} [g |- mstep M M'] -> [g |- mstep (app M N) (app M' N)]
-
+4
 
 split x
 by m-appl _ _ [_ |- N] [_ |- X5] as MS unboxed
@@ -16,7 +16,7 @@ solve [_ |- m-step (rappl X4) MS]
 solve [_ |- m-refl]
 m-appr
 (g : cxt) {M : [g |- tm (arr A[] B[])]} {N : [g |- tm A[]]} {N' : [g |- tm A[]]} [g |- mstep N N'] -> [g |- mstep (app M N) (app M N')]
-
+4
 
 split x
 by m-appr [_ |- M] _ _ [_ |- X5] as MS unboxed
@@ -24,7 +24,7 @@ solve [_ |- m-step (rappr X4) MS]
 solve [_ |- m-refl]
 m-abs
 (g : cxt) {M : [g, x : tm A[] |- tm B[]]} [g, x : tm A[] |- mstep M M']-> [g |- mstep (abs \x. M) (abs \x. M')]
-
+2
 
 split x
 by m-abs _ [_ |- X5] as MS unboxed
@@ -48,7 +48,7 @@ solve [_ |- m-step S m-refl]
 solve [_ |- m-refl]
 mstep-Sn
 (g : cxt) {M : [g |- tm A[]]} {M' : [g |- tm A[]]} [g |- mstep M M'] -> Sn [g |- M] -> Sn [g |- M']
-
+3
 
 split x
 split x1
@@ -61,7 +61,7 @@ suffices by Acc toshow _
 split [_ |- S]
 Sn-abs
 (g : cxt) {M : [g, x : tm A[] |- tm B[]]} Sn [g, x : tm A[] |- M] -> Sn [g |- abs \x. M]
-
+1
 
 suffices by Acc toshow _
 split [_ |- S]
@@ -69,20 +69,21 @@ split x
 solve Sn-abs _ (x1 _ [_ |- X4])
 Sn-appl
 (g : cxt) {M : [g |- tm (arr A[] B[])]} {N : [g |- tm A[]]} Sn [g |- app M N] -> Sn [g |- M]
-
+2
 
 split x
 suffices by Acc toshow _
 solve Sn-appl _ _ (x1 _ [_ |- rappl S])
 Sn-appr
 (g : cxt) {M : [g |- tm (arr A[] B[])]} {N : [g |- tm A[]]} Sn [g |- app M N] -> Sn [g |- N]
-
+1
 
 split x
 suffices by Acc toshow _
 solve Sn-appr _ _ (x1 _ [_ |- rappr S])
 Sn-weak-head
 (g : cxt) {M : [g, x : tm A[] |- tm B[]]} {N : [g |- tm A[]]} Sn [g |- M[.., N]] -> Sn [g |- N] -> Sn [g |- app (abs \x. M) N]
+2
 
 
 suffices by Acc toshow _
@@ -96,7 +97,7 @@ split x
 solve Sn-weak-head [_ |- X9] _ (x2 _ [_ |- X10[.., N]]) x1
 neu-step
 (g : cxt) {R : [g |- tm A[]]} {R' : [g |- tm A[]]} [g |- step R R'] -> Neutral [g |- R] -> Neutral [g |- R']
-
+3
 
 split x1
 split x
@@ -107,7 +108,7 @@ impossible x2
 impossible x
 Sn-neu
 (g : cxt) {R : [g |- tm (arr A[] B[])]} {N : [g |- tm A[]]} Neutral [g |- R] -> Sn [g |- R] -> Sn [g |- N] -> Sn [g |- app R N]
-
+2
 
 suffices by Acc toshow _
 split [_ |- S]
@@ -119,7 +120,7 @@ solve Sn-neu _ _ neu (x3 _ [_ |- X5]) x2
 impossible x
 confluence
 (g : cxt) {M : [g |- tm A[]]} {N : [g |- tm A[]]} {N' : [g |- tm A[]]} [g |- step M N'] -> SnRed [g |- M] [g |- N] -> ConfResult [g |- N] [g |- N']
-
+4
 
 split x1
 split x
@@ -161,7 +162,7 @@ solve backwards_closure_aux _ _ _ (x6 _ [_ |- X5]) x1 x4 (mstep-Sn _ _ (m-appl _
 impossible x2
 backwards_closure
 (g : cxt) {M : [g |- tm A[]]} {M' : [g |- tm A[]]} SnRed [g |- M] [g |- M'] -> Sn [g |- M'] -> Sn [g |- M]
-
+3
 
 split x
 suffices by backwards_closure_aux toshow _, _, _, Sn [_ |- app M'1 N]
@@ -171,7 +172,7 @@ suffices by Sn-weak-head toshow _, _
 solve x2
 neutralSNe
 (g : cxt) {R : [g |- tm A[]]} SNe [g |- R] -> Neutral [g |- R]
-
+2
 
 split x
 suffices by Napp toshow _
@@ -179,13 +180,13 @@ solve neutralSNe _ x1
 solve Nvar _
 soundSN
 (g : cxt) {M : [g |- tm A[]]} SN [g |- M] -> Sn [g |- M]
-
+2
 soundSNe
 (g : cxt) {M : [g |- tm A[]]} SNe [g |- M] -> Sn [g |- M]
-
+2
 soundSNRed
 (g : cxt) {M : [g |- tm A[]]} {M' : [g |- tm A[]]} SNRed [g |- M] [g |- M'] -> SnRed [g |- M] [g |- M']
-
+3
 
 split x
 suffices by backwards_closure toshow _, Sn [_ |- M']
@@ -207,13 +208,13 @@ suffices by SnBeta toshow _
 solve soundSN _ x1
 renameSN
 {g : cxt} {g' : cxt} {$R : [g' |-# g]} {M : [g |- tm A[]]} SN [g |- M] -> SN [g' |- M[$R]]
-
+5
 renameSNe
 (g : cxt) (g' : cxt) {$R : [g' |-# g]} {M : [g |- tm A[]]} SNe [g |- M] -> SNe [g' |- M[$R]]
-
+3
 renameSNRed
 (g : cxt) (g' : cxt) {$R : [g' |-# g]} {M : [g |- tm A[]]} SNRed [g |- M] [g |- N] -> SNRed [g' |- M[$R]] [g' |- N[$R]]
-
+3
 
 split x
 suffices by SRed toshow _, SN [_ |- M'[$R[..]]]
@@ -235,13 +236,13 @@ suffices by SBeta toshow _
 solve renameSN [_] [_] [_ |- $R] _ x1
 anti-renameSNe
 (g : cxt) (g' : cxt) {$R : [g' |-# g]} {M : [g |- tm A[]]} SNe [g' |- M[$R]] -> SNe [g |- M]
-
+3
 anti-renameSNRed
 {g : cxt} {g' : cxt} {$R : [g' |-# g]} {M : [g |- tm A[]]} {N' : [g' |- tm A[]]} SNRed [g' |- M[$R]] [g' |- N'] -> SNRed' [g' |- $R] [g |- M] [g' |- N']
-
+6
 anti-renameSN
 {g : cxt} {g' : cxt} {$R : [g' |-# g]} {M : [g |- tm A[]]} SN [g' |- M[$R]] -> SN [g |- M]
-
+5
 
 split x
 suffices by SApp toshow _, _
@@ -261,7 +262,7 @@ solve SAbs (anti-renameSN [g, x : tm _] [g', x : tm _] [g', x : tm _ |- $R[..], 
 solve SNeu (anti-renameSNe [g' |- $R] [g |- M] x1)
 extSN
 (g : cxt) {M : [g |- tm (arr A[] B[])]} {#p : [g |- tm A[]]} SN [g |- app M #p] -> SN [g |- M]
-
+3
 
 split x
 split x1
@@ -285,7 +286,7 @@ suffices by renameSN toshow _
 solve x1
 renameRedS
 (g : cxt) (g' : cxt) {$R : [g' |-# g]} {$S : [g |- g'']} RedS [g''] [g |- $S] -> RedS [g''] [g' |- $S[$R]]
-
+3
 
 split x
 suffices by RCons toshow _, _
@@ -294,13 +295,13 @@ suffices by renameRed toshow _
 solve RNil
 cr1
 (g : cxt) {A : [|- ty]} {M : [g |- tm A[]]} Red [|- A] [g |- M] -> SN [g |- M]
-
+1
 cr2
 (g : cxt) {A : [|- ty]} {M : [g |- tm A[]]} {M' : [g |- tm A[]]} SNRed [g |- M] [g |- M'] -> Red [|- A] [g |- M'] -> Red [|- A] [g |- M]
-
+1
 cr3
 (g : cxt) {A : [|- ty]} {M : [g |- tm A[]]} SNe [g |- M] -> Red [|- A] [g |- M]
-
+1
 
 split [|- A]
 split x
@@ -334,7 +335,7 @@ red-var
 solve cr3 _ _ (SVar [_ |- #p])
 fund-var
 {g : cxt} {$S : [g' |- g]} {#p : [g |- tm A[]]} RedS [g] [g' |- $S] -> Red [|- A] [g' |- #p[$S]]
-
+1
 
 split [g]
 split [_, x : tm _ |- #p]
@@ -345,7 +346,7 @@ split x
 impossible [|- #p]
 fundamental_lemma
 {g : cxt} {g' : cxt} {M : [g |- tm A[]]} {$S : [g' |- g]} RedS [g] [g' |- $S] -> Red [|- A] [g' |- M[$S]]
-
+3
 
 split [_ |- M]
 by fundamental_lemma [_] [_] [_ |- X2] [_ |- $S] x as x1
@@ -361,7 +362,7 @@ suffices by cr1 toshow _
 solve fund-var [_] [_ |- $S] [_ |- #p] x
 id_red
 {g : cxt} RedS [g] [g |- ..]
-
+1
 
 split [g]
 by id_red [g1] as r

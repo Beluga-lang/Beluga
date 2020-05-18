@@ -84,19 +84,6 @@ module Comp = struct
       of I.mctx
          * tclo (* expected *)
          * tclo (* inferred *)
-    | BoxCtxMismatch of I.mctx * I.dctx * (I.dctx_hat * I.normal)
-    | PattMismatch
-      of (I.mctx * meta_obj * meta_typ)
-         * (I.mctx * meta_typ)
-    (* | PattMismatch of (I.mctx * I.dctx * I.normal option * I.tclo) *
-          (I.mctx * I.dctx * I.tclo) *)
-    | MAppMismatch of I.mctx * (meta_typ * I.msub)
-    | AppMismatch of I.mctx * (meta_typ * I.msub)
-    | CtxMismatch
-      of I.mctx
-         * I.dctx (* expected *)
-         * I.dctx (* found *)
-         * meta_obj
     | TypMismatch of I.mctx * tclo * tclo
     | UnsolvableConstraints of Id.name option * string
     | InvalidRecCall
@@ -214,15 +201,6 @@ module Comp = struct
          pp_print_string cnstrs
          pp_print_string fname
 
-    | CtxMismatch (cD, cPsi, cPhi, cM) ->
-       Error.report_mismatch ppf
-         "Type checking Ill-typed meta-object. This is a bug in type reconstruction."
-         "Expected context" (P.fmt_ppr_lf_dctx cD P.l0) (Whnf.normDCtx cPsi)
-         "Given context" (P.fmt_ppr_lf_dctx cD P.l0) (Whnf.normDCtx cPhi);
-       fprintf ppf
-         "In expression: %a@."
-         (P.fmt_ppr_cmp_meta_obj cD P.l0) cM
-
     | MismatchChk (cD, cG, e, theta_tau (* expected *), theta_tau' (* inferred *)) ->
        Error.report_mismatch ppf
          "Ill-typed expression."
@@ -250,33 +228,6 @@ module Comp = struct
          "In pattern: %a@."
          (P.fmt_ppr_cmp_pattern cD cG P.l0) pat
 
-    | PattMismatch ((cD, _, mT), (cD', mT')) ->
-       Error.report_mismatch ppf
-         "Ill-typed pattern."
-         "Expected type"
-         (P.fmt_ppr_cmp_typ cD' P.l0)
-         (TypBox (Syntax.Loc.ghost, mT'))
-         "Inferred type"
-         (P.fmt_ppr_cmp_typ cD P.l0)
-         (TypBox (Syntax.Loc.ghost, mT))
-
-    (*          | PattMismatch ((cD, cPsi, pattern, sA), (cD', cPsi', sA')) ->
-                Error.report_mismatch ppf
-                "Ill-typed pattern."
-                "Expected type"
-                (P.fmt_ppr_cmp_typ cD' P.l0)
-                (TypBox (Syntax.Loc.ghost, MetaTyp (Whnf.normTyp sA', Whnf.normDCtx cPsi')))
-                "Inferred type"
-                (P.fmt_ppr_cmp_typ cD P.l0)
-                (TypBox (Syntax.Loc.ghost, MetaTyp (Whnf.normTyp sA, Whnf.normDCtx cPsi)))
-     *)
-    | BoxCtxMismatch (cD, cPsi, (phat, tM)) ->
-       fprintf ppf
-         "@[<v>Found expression@,  @[%a@,in context %a@]@,but it was expected in context@,  %a@]"
-         (P.fmt_ppr_lf_normal cD cPsi P.l0) tM
-         (P.fmt_ppr_lf_dctx_hat cD P.l0) (Context.hatToDCtx phat)
-         (P.fmt_ppr_lf_dctx cD P.l0) (Whnf.normDCtx cPsi)
-
     | BasicMismatch (k, cD, _, ttau) ->
        let tau = Whnf.cnormCTyp ttau in
        let print_mismatch_kind ppf : mismatch_kind -> unit =
@@ -303,16 +254,6 @@ module Comp = struct
          "Ill-typed expression."
          "Expected type" (P.fmt_ppr_cmp_typ cD P.l0) (Whnf.cnormCTyp theta_tau)
          "Inferred type" (P.fmt_ppr_cmp_typ cD P.l0) (Whnf.cnormCTyp theta_tau')
-
-    | AppMismatch (cD, (ctyp, theta)) ->
-       fprintf ppf
-         "Expected contextual object of type %a."
-         (P.fmt_ppr_cmp_typ cD P.l0) (Whnf.cnormCTyp (TypBox (Syntax.Loc.ghost, ctyp), theta))
-
-    | MAppMismatch (cD, (ctyp, theta)) ->
-       fprintf ppf
-         "Expected contextual object of type %a."
-         (P.fmt_ppr_cmp_typ cD P.l0) (Whnf.cnormCTyp (TypBox (Syntax.Loc.ghost, ctyp), theta))
 
     | TypMismatch (cD, (tau1, theta1), (tau2, theta2)) ->
        Error.report_mismatch ppf

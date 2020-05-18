@@ -90,17 +90,6 @@ module Comp : sig
     | BasicMismatch of mismatch_kind * LF.mctx * gctx * tclo
     | SBoxMismatch of LF.mctx * gctx * LF.dctx * LF.dctx
     | SynMismatch of LF.mctx * tclo (* expected *) * tclo (* inferred *)
-    | BoxCtxMismatch of LF.mctx * LF.dctx * (LF.dctx_hat * LF.normal)
-    | PattMismatch of (LF.mctx * meta_obj * meta_typ) * (LF.mctx * meta_typ)
-(* | PattMismatch of (LF.mctx * LF.dctx * LF.normal option * LF.tclo) *
-                         (LF.mctx * LF.dctx * LF.tclo)*)
-    | MAppMismatch of LF.mctx * (meta_typ * LF.msub)
-    | AppMismatch of LF.mctx * (meta_typ * LF.msub)
-    | CtxMismatch
-      of LF.mctx
-         * LF.dctx (* expected *)
-         * LF.dctx (* found *)
-         * meta_obj
     | TypMismatch of LF.mctx * tclo * tclo
     | UnsolvableConstraints of Id.name option * string
     | InvalidRecCall

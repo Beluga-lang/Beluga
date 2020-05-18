@@ -1,0 +1,12 @@
+% Making a mutual recursive call from a nonrecursive function is
+% forbidden.
+
+LF u : type = u : u;
+
+rec bad1 : [⊢ u] → [⊢ u] =
+/ total /
+fn x ⇒ bad2 x
+
+and rec bad2 : [⊢ u] → [⊢ u] =
+/ trust /
+fn x ⇒ bad1 x;

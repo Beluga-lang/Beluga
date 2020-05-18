@@ -87,6 +87,8 @@ module Comp = struct
     | TypMismatch of I.mctx * tclo * tclo
     | UnsolvableConstraints of Id.name option * string
     | InvalidRecCall
+    | NotRecursiveSrc of Id.name
+    | NotRecursiveDst of Id.name
     | MissingTotal of Id.cid_prog
     | NotImpossible of I.mctx * gctx * typ * exp_syn
     | InvalidHypotheses
@@ -162,6 +164,15 @@ module Comp = struct
          (R.render_cid_prog prog)
     | InvalidRecCall ->
        fprintf ppf "Recursive call not structurally smaller."
+
+    | NotRecursiveSrc name ->
+       fprintf ppf "A recursive call is forbidden in nonrecursive total function %a."
+         Id.print name
+
+    | NotRecursiveDst name ->
+       fprintf ppf "A recursive call to nonrecursive fucntion %a is forbidden."
+         Id.print name
+
     | IllegalParamTyp (cD, cPsi, tA) ->
        fprintf ppf
          "Parameter type %a is illegal."
@@ -1133,10 +1144,22 @@ module Comp = struct
        | Some d -> (* Yes we are, and d is its total dec *)
           (* Second, need to check whether the function we're calling
              actually requires totality checking. *)
-          begin match option_of_total_dec_kind d.order with
-          | None -> (* No, it doesn't. *)
+          let is_not_recursive cid =
+            match (Comp.get_total_decl cid).order with
+            | `not_recursive -> true
+            | _ -> false
+          in
+          begin match mcid with
+          | Some cid when is_not_recursive cid ->
+             throw loc (NotRecursiveSrc (Comp.name cid))
+          | _ -> ()
+          end;
+          begin match d.order with
+          | `partial | `trust -> (* No, it doesn't. *)
              (None, tau, C.m_id)
-          | Some _ -> (* yes, it actually requires totality checking *)
+          | `not_recursive ->
+            throw loc (NotRecursiveDst d.name)
+          | `inductive _ -> (* yes, it actually requires totality checking *)
              Some cIH, tau, C.m_id
           end
        end

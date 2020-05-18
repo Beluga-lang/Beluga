@@ -93,6 +93,8 @@ module Comp : sig
     | TypMismatch of LF.mctx * tclo * tclo
     | UnsolvableConstraints of Id.name option * string
     | InvalidRecCall
+    | NotRecursiveSrc of Id.name
+    | NotRecursiveDst of Id.name
     | MissingTotal of Id.cid_prog
     | NotImpossible of LF.mctx * gctx * typ * exp_syn
     | InvalidHypotheses

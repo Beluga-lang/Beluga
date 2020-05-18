@@ -1,0 +1,3 @@
+./t/code/error/total/nonrecursive/src-mutual.bel, line 8, column 7:
+Type-checking error.
+A recursive call is forbidden in nonrecursive total function bad1.

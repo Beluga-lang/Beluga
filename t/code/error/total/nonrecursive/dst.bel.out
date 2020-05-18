@@ -1,0 +1,3 @@
+./t/code/error/total/nonrecursive/dst.bel, line 7, column 7:
+Type-checking error.
+A recursive call to nonrecursive fucntion bad2 is forbidden.

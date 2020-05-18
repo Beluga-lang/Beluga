@@ -1,0 +1,7 @@
+% Making a recursive call from a nonrecursive function is forbidden.
+
+LF u : type = u : u;
+
+rec bad : [⊢ u] → [⊢ u] =
+/ total /
+fn x ⇒ bad x;

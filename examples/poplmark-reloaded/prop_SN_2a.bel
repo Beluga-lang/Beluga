@@ -58,17 +58,15 @@ rec anti_renameSNe : (g : cxt) (g' : cxt)
 
 and
 rec anti_renameSNRed : {g : cxt} {g' : cxt}
-                 {A : [|- ty]}
                  {$R : [g' |-# g]}
 				 {M : [g |- tm A[]]}
-				 {N' : [g' |- tm A[]]}
 				 SNRed [g' |- M[$R]] [g' |- N']
 		       -> SNRed' [g' |- $R] [g |- M] [g' |- N'] =
-    / total r (anti_renameSNRed g g' a rr m n r) /
-      mlam g, g', A, $R, M, N' => fn r => case r of
-    | SBeta [_ |- _] s => let s' = anti_renameSN [g] [g'] [g' |- $R] [_ |- _ ] s in
+    / total r (anti_renameSNRed g g' a n rr m r) /
+      mlam g, g', $R, M => fn r => case r of
+    | SBeta [_ |- _] s => let s' = anti_renameSN [_] [_] [_ |- $R] _ s in
 			  SNRed' [_] [_] [_ |- _] (SBeta [_ |- _ ] s')
-    | SAppl r' => let SNRed' [_] [_][_ |- _ ] r0 = anti_renameSNRed [g] [g'] _ [g' |- $R] _ _ r' in
+    | SAppl r' => let SNRed' [_] [_][_ |- _ ] r0 = anti_renameSNRed [g] [g'] [g' |- $R] _ r' in
 		  SNRed' [_] [_] [_ |- _ ] (SAppl r0)
 
 and
@@ -81,7 +79,7 @@ rec anti_renameSN : {g : cxt} {g' : cxt}
        mlam g, g', $R, M => fn s => case s of
     | SAbs s' => SAbs (anti_renameSN [g, x:tm _] [g', x:tm _ ] [g', x:tm _ |- $R[..], x] [g, x:tm _ |- _] s')
     | SNeu s' => SNeu (anti_renameSNe [g' |- $R] [g |- M] s')
-    | SRed r' s' => let SNRed' [g'] [g] [g |- N] r = anti_renameSNRed [_] [_] _ [g' |- $R] _ _ r' in
+    | SRed r' s' => let SNRed' [g'] [g] [g |- N] r = anti_renameSNRed [_] [_] [_ |- $R] _ r' in
 		    let s'' = anti_renameSN [g] [g'] [g' |- $R] [g |- N] s' in
 		    SRed r s''
 ;

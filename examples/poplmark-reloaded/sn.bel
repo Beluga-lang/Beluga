@@ -19,22 +19,21 @@ inductive RedS : {g : cxt} (g' : cxt) {$S : [g' |- g]} ctype =
 ;
 
 % Weakening for logical predicate and semantic substitutions
-rec rename_red : {g : cxt} {g' : cxt} {A:[|- ty]} {M : [g |- tm A[]]} {$R : [g' |-# g]}
+rec rename_red : {g : cxt} {g' : cxt} {A : [|- ty]} {M : [g |- tm A[]]} {$R : [g' |-# g]}
 			   Red [|- A] [g |- M] -> Red [|- A] [g' |- M[$R]] =
-    / total /
+    / total r (rename_red g g' a m rr r) /
       mlam g, g', A, M, $R => fn r => case [|- A] of
-     | [|- base] => let RBase s = r in RBase (renameSN [_ ] [_ ] [g' |- $R] [g |- M] s)
+     | [|- base] => let RBase s = r in RBase (renameSN [_] [_] [_ |- $R] _ s)
      | [|- arr A B] => let RArr r' = r in
 		       RArr (mlam g'', $S, N => fn rn =>
 			     r' [g'']  [g'' |- $R[$S[..]]] [g'' |- N] rn)
-;
-
+and
 rec rename_redS: {g : cxt} {g' : cxt} {$R : [g' |-# g]} RedS [h] [g |- $S] -> RedS [h] [g' |- $S[$R]] =
     / total r (rename_redS h g g' rr sr r) /
       mlam g, g', $R => fn rs => case rs of
     | RNil => RNil
-    | RCons r rs' => RCons (rename_red [g] [g'] [ |- _] [_ |- _] [g' |- $R] r)
-			               (rename_redS [g] [g'] [g' |- $R] rs')
+    | RCons r rs' => RCons (rename_red [_] [_] _ _ [_ |- $R] r)
+			               (rename_redS [_] [_] [_ |- $R] rs')
 ;
 
 % Reducibility candidate conditions

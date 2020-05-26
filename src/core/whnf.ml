@@ -1367,11 +1367,13 @@ and convClObj m1 m2 =
   | (MObj tM, MObj tN) -> conv (tM, LF.id) (tN, LF.id)
   | (PObj h1, PObj h2) -> convHead (h1, LF.id) (h2, LF.id)
   | (SObj s1, SObj s2) -> convSub s1 s2
+  | _ -> false
 
 and convMFront front1 front2 =
   match (front1, front2) with
   | (CObj cPsi, CObj cPhi) -> convDCtx cPsi cPhi
   | (ClObj (phat, m1), ClObj (phat', m2)) -> convDCtxHat phat phat' && convClObj m1 m2
+  | _ -> false
 
 
 and convTyp' sA sB =

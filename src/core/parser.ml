@@ -2531,14 +2531,14 @@ let total_order (arg : 'a Comp.generic_order t) : 'a Comp.generic_order t =
     (braces (some arg) $> fun args -> Comp.Lex args)
   |> labelled "totality ordering"
 
+let trust_order : Comp.total_dec t =
+  token T.KW_TRUST
+  |> span
+  |> labelled "trust totality"
+  $> fun (loc, _) -> Comp.Trust loc
+
 (** Parses a totality declaration whose arguments are parsed by `arg` *)
 let total_decl : Comp.total_dec t =
-  let trust =
-    token T.KW_TRUST
-    |> span
-    |> labelled "trust totality"
-    $> fun (loc, _) -> Comp.Trust loc
-  in
   let total =
     token T.KW_TOTAL &>
       alt
@@ -2557,7 +2557,7 @@ let total_decl : Comp.total_dec t =
              Comp.NumericTotal (loc, order)
         end
   in
-  alt trust total
+  alt trust_order total
   |> labelled "totality declaration"
 
 let numeric_total_order = total_order numeric_total_arg

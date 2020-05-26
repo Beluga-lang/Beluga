@@ -57,6 +57,16 @@ val ($>) : 'a t -> ('a -> 'b) -> 'b t
 (** Runs the parser, but capturing failure. *)
 val maybe : 'a t -> 'a option t
 
+(** Alternation between parsers.
+
+    Runs `p1`. If it fails, p2 is run if one of the following is true.
+    - p1 failed without consuming any input.
+    - p2 failed with backtracking enabled.
+
+    Backtracking is enabled by the `trying` combinator.
+ *)
+val alt : 'a t -> 'a t -> 'a t
+
 (***** Exported productions *****)
 
 (** Parser for a full Beluga signature. *)
@@ -68,6 +78,8 @@ val name : Id.name t
 val interactive_harpoon_command : Syntax.Ext.Harpoon.command t
 val interactive_harpoon_command_sequence : Syntax.Ext.Harpoon.command list t
 
+val trust_order : Comp.total_dec t
+val total_order : 'a Comp.generic_order t -> 'a Comp.generic_order t
 val numeric_total_order : Syntax.Ext.Comp.numeric_order t
 val optional_numeric_total_order : Syntax.Ext.Comp.numeric_order option t
 

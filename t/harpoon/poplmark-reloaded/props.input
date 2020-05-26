@@ -32,7 +32,7 @@ solve [_ |- m-step (rabs \x. X4) MS]
 solve [_ |- m-refl]
 m-subst
 (g : cxt) {M : [g, x : tm A[] |- tm B[]]} {N : [g |- tm A[]]} {N' : [g |- tm A[]]} [g |- step N N'] -> [g |- mstep M[.., N] M[.., N']]
-
+trust
 
 split [_, x : tm _ |- M]
 by m-subst [_, x : tm _ |- X2] _ _ x as ms1
@@ -148,7 +148,7 @@ suffices by SnBeta toshow _
 solve Eq
 backwards_closure_aux
 (g : cxt) {M : [g |- tm (arr A[] B[])]} {M' : [g |- tm (arr A[] B[])]} {N : [g |- tm A[]]} Sn [g |- M] -> Sn [g |- N] -> SnRed [g |- M] [g |- M'] -> Sn [g |- app M' N] -> Sn [g |- app M N]
-
+{4 5}
 
 suffices by Acc toshow _
 split [_ |- S]

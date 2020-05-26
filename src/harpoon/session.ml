@@ -259,24 +259,28 @@ let configuration_wizard' io automation_state : Id.cid_mutual_group * Theorem.t 
          end;
        let order =
          let p =
-           Misc.Function.flip Parser.map
-             Parser.(numeric_total_order |> span)
-             begin fun (loc, o) ->
-             let order = Reconstruct.numeric_order tau o in
-             dprintf begin fun p ->
-               p.fmt "[configuration_wizard] @[<v>elaborated numeric order\
-                      @,  @[%a@]\
-                      @,considering %d implicit arguments.@]"
-                 P.(fmt_ppr_cmp_numeric_order) order
-                 k
-               end;
-             order
-             (* TODO we should check that the order is legit
+           let open Parser in
+           alt
+             (trust_order $> Either.left)
+             (total_order numeric_total_order $> Either.pure)
+           $> begin function
+                | Either.Right no ->
+                   let order = Reconstruct.numeric_order tau no in
+                   dprintf begin fun p ->
+                     p.fmt "[configuration_wizard] @[<v>elaborated numeric order\
+                       @,  @[%a@]\
+                       @,considering %d implicit arguments.@]"
+                       P.(fmt_ppr_cmp_numeric_order) order
+                       k
+                     end;
+                   Either.Right order
+                | trust -> trust
+              (* TODO we should check that the order is legit
                         here so that we can right away prompt the user
                         for a correct one; currently this check only
                         happens very late when the theorem set is
                         configured. *)
-             end
+              end
          in
          IO.parsed_prompt io "  Induction order (empty for none): " None
            (Parser.maybe p)
@@ -284,7 +288,8 @@ let configuration_wizard' io automation_state : Id.cid_mutual_group * Theorem.t 
        IO.printf io "@]";
        let total_dec_kind =
          match order with
-         | Some order -> `inductive order
+         | Some (Either.Right no) -> `inductive no
+         | Some (Either.Left (Synext.Comp.Trust _)) -> `trust
          | None -> `not_recursive
        in
        let conf = Theorem.Conf.make name total_dec_kind tau k in

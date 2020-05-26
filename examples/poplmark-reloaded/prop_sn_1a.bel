@@ -15,12 +15,12 @@ rec abs_sn : {g:cxt} {A : [ |- ty]} {B : [ |- ty]}
 		     {M : [g, x: tm A[] |- tm B[]]}
 		     Sn [g, x: tm A[] |- M] -> Sn [g |- (abs \x. M)] =
      / total s (abs_sn g a b m  s) /
-    mlam g, A, B => mlam M => fn sn => 
-    Acc  [g] [ |- arr A B] [ g |- abs \x.M] 
-    (mlam Q => mlam S  =>   
-     let  [g |- rabs (\x. S1)] = [g |- S] in 
+    mlam g, A, B => mlam M => fn sn =>
+    Acc  [g] [ |- arr A B] [ g |- abs \x.M]
+    (mlam Q => mlam S  =>
+     let  [g |- rabs (\x. S1)] = [g |- S] in
      let [g, x : tm A[] |- S1] : [g, x : tm A[] |- step M M1] = [g, x: tm _ |- S1] in
-     let Acc [g,x:tm A[]] [ |- B] [g, x:tm A[] |- M] r = sn in 
+     let Acc [g,x:tm A[]] [ |- B] [g, x:tm A[] |- M] r = sn in
      abs_sn [g] [|- A] [|- B]
             [g, x:tm  A[] |- M1] (r [g, x: tm A[] |- M1] [g, x: tm A[] |- S1])
     )

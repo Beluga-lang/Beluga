@@ -2,7 +2,7 @@
 % Section 2.6 Challenge 2b: Strong Normalization Proof using Logical Predicate
 
 
-% Logical predicate 
+% Logical predicate
 stratified Red : {A : [|- ty]} (g : cxt) {M : [g |- tm A[]]} ctype =
   | RBase : SN [g |- M] -> Red [|- base] [g |- M]
   | RArr  : ({g' : cxt} {$S : [g' |-# g]} {N : [g' |- tm A[]]}
@@ -20,27 +20,27 @@ inductive RedS : {g : cxt} (g' : cxt) {$S : [g' |- g]} ctype =
 
 % Weakening for logical predicate and semantic substitutions
 rec rename_red : {g : cxt} {g' : cxt} {A:[|- ty]} {M : [g |- tm A[]]} {$R : [g' |-# g]}
-			   Red [|- A] [g |- M] -> Red [|- A] [g' |- M[$R]] =  
+			   Red [|- A] [g |- M] -> Red [|- A] [g' |- M[$R]] =
     / total /
       mlam g, g', A, M, $R => fn r => case [|- A] of
      | [|- base] => let RBase s = r in RBase (renameSN [_ ] [_ ] [g' |- $R] [g |- M] s)
      | [|- arr A B] => let RArr r' = r in
 		       RArr (mlam g'', $S, N => fn rn =>
 			     r' [g'']  [g'' |- $R[$S[..]]] [g'' |- N] rn)
-	 
-and
-rec rename_redS: {g : cxt} {g' : cxt} {$R : [g' |-# g]} RedS [h] [g |- $S]   -> RedS [h] [g' |- $S[$R]] = 
-    / total /
+;
+
+rec rename_redS: {g : cxt} {g' : cxt} {$R : [g' |-# g]} RedS [h] [g |- $S] -> RedS [h] [g' |- $S[$R]] =
+    / total r (rename_redS h g g' rr sr r) /
       mlam g, g', $R => fn rs => case rs of
     | RNil => RNil
-    | RCons r rs' => RCons (rename_red  [g] [g'] [ |- _] [_ |- _] [g' |- $R] r)
-			   (rename_redS [g] [g'] [g' |- $R] rs') 
+    | RCons r rs' => RCons (rename_red [g] [g'] [ |- _] [_ |- _] [g' |- $R] r)
+			               (rename_redS [g] [g'] [g' |- $R] rs')
 ;
 
 % Reducibility candidate conditions
-rec cr1 : {g : cxt} {A : [|- ty]} {M : [g |- tm A[]]} Red [|- A] [g |- M] -> SN [g |- M] = 
+rec cr1 : {g : cxt} {A : [|- ty]} {M : [g |- tm A[]]} Red [|- A] [g |- M] -> SN [g |- M] =
     / total a (cr1 g a) /
-      mlam g, A, M => fn r => case [|- A] of 
+      mlam g, A, M => fn r => case [|- A] of
     | [|- base] => let RBase s = r in s
     | [|- arr A B] => let rv = cr3 [g, x:tm A[]] [|- A] [g, x:tm A[] |- x] (SVar [g, x:tm A[] |- x]) in
 		      let RArr r'  = r in
@@ -52,7 +52,7 @@ rec cr1 : {g : cxt} {A : [|- ty]} {M : [g |- tm A[]]} Red [|- A] [g |- M] -> SN 
 
 and
 rec cr2 : {g : cxt} {A : [|- ty]} {M : [g |- tm A[]]} {M' : [g |- tm A[]]}
-		    SNRed [g |- M] [g |- M'] -> Red [|- A] [g |- M'] -> Red [|- A] [g |- M] = 
+		    SNRed [g |- M] [g |- M'] -> Red [|- A] [g |- M'] -> Red [|- A] [g |- M] =
     / total a (cr2 g a) /
       mlam g, A, M, M' => fn sr, rm' => case [|- A] of
     | [|- base] => let RBase sm' = rm'  in RBase (SRed sr sm')
@@ -75,7 +75,7 @@ rec cr3 : {g : cxt} {A : [|- ty]} {M : [g |- tm A[]]} SNe [g |- M] -> Red [|- A]
 ;
 
 % Variables are reducible
-rec red_var : {g : cxt} {#p : [g |- tm A[]]} Red [ |- A] [g |- #p] = 
+rec red_var : {g : cxt} {#p : [g |- tm A[]]} Red [ |- A] [g |- #p] =
     / total (red_var ) /
       mlam g, #p => cr3 [_] [|- _ ] [_ |- _] (SVar [g |- #p]);
 
@@ -92,34 +92,34 @@ rec fundVar : {g : cxt} {#p : [g |- tm A[]]}
 
 % Fundamental lemma
 rec fundamental_lemma : {g : cxt} {g' : cxt} {M : [g |- tm A[]]} {$S : [g' |- g]} RedS [g] [g' |- $S]
-			-> Red [ |- A[]] [g' |- M[$S]] = 
+			-> Red [ |- A[]] [g' |- M[$S]] =
     / total m (fundamental_lemma g g' a m) /
-      mlam g, g', M, $S => fn rs => case [g |- M] of 
+      mlam g, g', M, $S => fn rs => case [g |- M] of
    | [g |- #p] => fundVar [g] [g |- #p] rs
 
-   | [g |- app M N] => let RArr r1 = fundamental_lemma [g] [g'] [g |- M] [g' |- $S] rs in 
-		       let r2 = fundamental_lemma [g] [g'] [g |- N] [g' |- $S] rs in 
+   | [g |- app M N] => let RArr r1 = fundamental_lemma [g] [g'] [g |- M] [g' |- $S] rs in
+		       let r2 = fundamental_lemma [g] [g'] [g |- N] [g' |- $S] rs in
 		       r1 [g'] [g' |- ..] [g' |- N[$S]] r2
 
-   | [g |- abs \x.M] => 
-     RArr (mlam g'', $R, N => fn rn => 
+   | [g |- abs \x.M] =>
+     RArr (mlam g'', $R, N => fn rn =>
 	   let rs' = rename_redS [g'] [g''] [g'' |- $R] rs in
-	   let r   = fundamental_lemma  [g, x:tm _] [g''] [g, x:tm _ |- M] [g'' |- $S[$R], N] (RCons rn rs') in 
-	   let sn = cr1 [_] [ |- _ ] [_ |- _ ] rn in 
-	   let sn' = SBeta [g'', x:tm _ |- M[$S[$R[..]], x]] sn in 
+	   let r   = fundamental_lemma  [g, x:tm _] [g''] [g, x:tm _ |- M] [g'' |- $S[$R], N] (RCons rn rs') in
+	   let sn = cr1 [_] [ |- _ ] [_ |- _ ] rn in
+	   let sn' = SBeta [g'', x:tm _ |- M[$S[$R[..]], x]] sn in
 	   cr2 [_] [|- _] [_ |- _] [_ |- _] sn' r)
 ;
 
 % All well-typed terms are strongly normalizing.
-rec id_red : {g : cxt} RedS [g] [g |- ..] = 
+rec id_red : {g : cxt} RedS [g] [g |- ..] =
     / total g (id_red g) /
-      mlam g => case [g] of 
+      mlam g => case [g] of
       | [] => RNil
-      | [g, x: tm A[]] => let r  = id_red [g] in 
+      | [g, x: tm A[]] => let r  = id_red [g] in
 			  let r' = rename_redS [g] [g, x : tm A[]] [g, x : tm A[] |- ..] r in
 			  RCons (red_var [g, x : tm A[]] [g, x : tm A[] |- x]) r'
 ;
 
-rec norm : {g : cxt} {M : [g |- tm A[]]} SN [g |- M] = 
+rec norm : {g : cxt} {M : [g |- tm A[]]} SN [g |- M] =
     / total  (norm) /
       mlam g, M => cr1 [_] [|- _ ] [_ |- _] (fundamental_lemma [g] [g] [g |- M] [g |- ..] (id_red [g]));

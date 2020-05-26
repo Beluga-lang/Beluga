@@ -81,8 +81,8 @@ rec mstep_abs : (g : cxt) {M : [g , x: tm A[] |- tm B[]]}
 % If M: [g, x: tm A[] |- tm B[]] and [g |- step N N'] then [g |- mstep M[.., N] M[.., N']].
 rec subst_mred : (g: cxt) {M : [g, x: tm A[] |- tm B[]]}{N : [g |- tm A[]]}{N': [g |- tm A[]]}
 			  [g |- step N N'] -> [g |- mstep M[.., N] M[.., N']] =
-   / trust / 
-  % Totality checker does not take into account modulo exchange; it only consider direct subterms 
+   / trust /
+  % Totality checker does not take into account modulo exchange; it only consider direct subterms
     mlam M => mlam N => mlam N' => fn s => case [_, x:tm _ |- M] of
     | [g, x:tm A[] |- x ] => let [g |- S] = s in [g |- m-step S m-refl]
     | [g, x:tm A[] |- #p[..] ] => [g |- m-refl]

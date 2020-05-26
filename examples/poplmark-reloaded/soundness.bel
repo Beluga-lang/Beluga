@@ -44,4 +44,3 @@ rec soundSNRed : (g: cxt) {M: [g |- tm A[]]}
     | SBeta ([g, x: tm A[] |- M]) sn => let sn' = soundSN [_ |- _] sn in SnBeta [_ |- M] sn'
     | SAppl snr' => let snr'' = soundSNRed [_ |- _] [_ |- _] snr' in SnAppl snr''
 ;
-

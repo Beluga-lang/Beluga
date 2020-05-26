@@ -59,30 +59,27 @@ $ ./bin/beluga path/to/program.bel
 
 Tip: Running `make clean` will clean the directory of compilation results
 
-
-
 ## Interactive Mode
 
-Beluga has an interactive mode for Emacs. Check docs [here](https://github.com/Beluga-lang/Beluga/blob/master/interactive-mode-testing.md).
-We advise using [Harpoon](https://beluga-lang.readthedocs.io/en/latest/harpoon/index.html)
-A detailed list of commands and tactics is listed [here](https://beluga-lang.readthedocs.io/en/latest/harpoon/interactive-reference.html).
-
+For interactive proofs, we recommend using
+[Harpoon](https://beluga-lang.readthedocs.io/en/latest/harpoon/index.html).
+A detailed list of commands and tactics is available
+[here](https://beluga-lang.readthedocs.io/en/latest/harpoon/interactive-reference.html).
 
 ## Beluga-mode for GNU Emacs
-
 
 Beluga includes a major mode for programming in Emacs. The elisp file is
 located in the ./tools directory. To configure Beluga-mode:
 
 1. Update your ~/.emacs or ~/.emacs.d/init.el file with the lines written below.
-  XEmacs users must update ~/.emacs or ~/.xemacs/init.el with the same text.
-  Create any of these files if they do not exist already.
-  * You should replace path/to/beluga with the actual path of the Beluga directory.
-(add-to-list 'load-path "path/to/beluga/tools/")
-(load "beluga-mode.el")
-  * NOTE: Feel free to move the beluga-mode.el file to another directory so long as
-you add its location to the Emacs load-path.
+   XEmacs users must update ~/.emacs or ~/.xemacs/init.el with the same text.
+   Create any of these files if they do not exist already.
+   * You should replace path/to/beluga with the actual path of the Beluga directory.
+     (add-to-list 'load-path "path/to/beluga/tools/")
+     (load "beluga-mode.el")
+   * NOTE: Feel free to move the beluga-mode.el file to another directory so long as
+     you add its location to the Emacs load-path.
 
 2. Restart Emacs.
-  Emacs will now launch in Beluga-mode automatically when you open a Beluga
-  program.
+   Emacs will now launch in Beluga-mode automatically when you open a Beluga
+   program.

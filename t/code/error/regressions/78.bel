@@ -1,0 +1,14 @@
+LF empty : type =
+;
+
+LF t : type =
+| c : (t → t) → t
+;
+
+schema ctx = t;
+
+rec foo : {γ : ctx} [γ ⊢ t] → [⊢ empty] =
+mlam γ ⇒ fn x ⇒ case x of
+| [γ ⊢ c (\x. X)] ⇒
+  foo [_] [γ, x ⊢ X[..]]
+;

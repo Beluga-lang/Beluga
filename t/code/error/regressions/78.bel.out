@@ -1,0 +1,4 @@
+./t/code/error/regressions/78.bel, line 13, column 11:
+Need to know the type of bound variable x.
+Typically, a type annotation is required on a bound variable in order to
+disambiguate which schema element the variable is referring to.

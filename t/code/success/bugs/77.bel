@@ -1,0 +1,14 @@
+
+
+LF unit : type =
+| unit : unit
+;
+
+LF t : type =
+| c : t → t
+;
+
+rec foo : [⊢ unit] → [⊢ t] → [⊢ unit] =
+/ total y (foo x y) /
+fn x, y ⇒ let [⊢ c Y] = y in foo ? [⊢ Y]
+;

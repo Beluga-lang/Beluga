@@ -1427,3 +1427,13 @@ let rec select_ihs name = function
   | LF.Dec (cIH, _) ->
      (* Remove the declaration if the name doesn't match. *)
      select_ihs name cIH
+
+(** Drops n leading arguments from all recursive calls in a given
+    ihctx. *)
+let drop_args n =
+  Context.map begin fun (Comp.WfRec (name, args, tau)) ->
+    Comp.WfRec (name, Misc.List.drop n args, tau)
+    end
+
+(** Drops one argument from all recursive calls in a given ihctx. *)
+let drop_arg = drop_args 1

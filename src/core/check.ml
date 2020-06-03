@@ -895,6 +895,7 @@ module Comp = struct
                | Some x -> Total.filter cD cG cIH (loc, V x)
                | None -> Total.filter cD cG cIH (loc, E)
                end
+            | Hole _ -> Total.drop_arg cIH
             end
        in
        dprintf

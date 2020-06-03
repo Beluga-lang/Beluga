@@ -168,6 +168,11 @@ module List = struct
       | _ -> raise (Invalid_argument "mapi2")
     in
     go 0 (l1, l2)
+
+  let rec drop n = function
+    | l when n <= 0 -> l
+    | [] -> []
+    | _ :: xs (* n > 0 *) -> drop (n-1) xs
 end
 
 let id (x : 'a) : 'a = x

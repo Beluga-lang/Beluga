@@ -1,0 +1,32 @@
+LF term : type =
+ | lam : (term → term) → term
+ ;
+
+ % subst T U T' means that the result of substituting U for the free
+ % variable in T is T'.
+
+ LF subst : (term → term) → term → term → type =
+ | subst_lam :
+     ({y : term} subst (\x. T x y) U (T' y)) →
+     subst (\x. lam (\y. T x y)) U (lam T')
+ | subst_var     :   subst (\x. x) U U
+ | subst_other :   subst (\x. T) U T
+ ;
+
+ schema ctx = term;
+
+ LF equal : term → term → type =
+ | refl : equal T T
+ ;
+
+rec subst_sound :  (gamma : ctx)
+   [gamma ⊢ subst (\y. T) U[] T'] →  [gamma |- equal T' T[..,U[]]] =
+  / total p (subst_sound g t u t' p) /
+fn p =>
+(case p of
+| [gamma |- subst_lam (\y. P)] =>
+  let [gamma, y:term |- E] = subst_sound [gamma, y:term ⊢ P] in
+    ?
+| [gamma |- subst_var ] =>  ?
+| [gamma |- subst_other ] => ?
+) ;

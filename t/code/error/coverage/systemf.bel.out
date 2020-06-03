@@ -3,6 +3,9 @@
 ######   COVERAGE FAILURE: Case expression doesn't cover: ######
 ##       CASE(S) NOT COVERED:
 (1)
+X : (g |- hastype M1 (arr A1 A)), X1 : (g |- hastype M2 A1) ;  |-
+  [_ |- f_app X X1]
+(2)
 #p :
   #(g |-
       block (

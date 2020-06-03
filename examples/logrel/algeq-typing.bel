@@ -433,8 +433,12 @@ fn d => case d of
   let [g |- E2] = dtp1 [g |- D2] in
   [g |- t_app (t_lam (\x.\y. E1[..,<x;y>])) E2]
 | [g |- d_ext (\x.\y. D1)] =>
-  let [g,b:block x:tm,y:oft x T[] |- t_app E1[..] b.2] = dtp1 [g,b:block x:tm,y:oft x _ |- D1[..,b.1,b.2]] in
-  [g |- E1]
+      % this case is impossible because a form of strengthening
+      % unsupported by Beluga is needed.
+      % Try to do this case on paper to see what I mean.
+      ?
+  % let [g,b:block x:tm,y:oft x T[] |- t_app E1[..] b.2] = dtp1 [g,b:block x:tm,y:oft x _ |- D1[..,b.1,b.2]] in
+  % [g |- E1]
 | [g |- d_refl D1] => [g |- D1]
 | [g |- d_sym D1] => dtp2 [g |- D1]
 | [g |- d_trans D1 D2] => dtp1 [g |- D1]
@@ -453,8 +457,10 @@ fn d => case d of
   let [g |- E2] = dtp2 [g |- D2] in
   [g |- E1[..,< _ ; E2 >]]
 | [g |- d_ext (\x.\y. D1)] =>
-  let [g,b:block x:tm,y:oft x T[] |- t_app E1[..] b.2] = dtp2 [g,b:block x:tm,y:oft x _ |- D1[..,b.1,b.2]] in
-  [g |- E1]
+      % Again, an unsupported form of strengthening is required to prove this case.
+      ?
+  % let [g,b:block x:tm,y:oft x T[] |- t_app E1[..] b.2] = dtp2 [g,b:block x:tm,y:oft x _ |- D1[..,b.1,b.2]] in
+  % [g |- E1]
 | [g |- d_refl D1] => [g |- D1]
 | [g |- d_sym D1] => dtp1 [g |- D1]
 | [g |- d_trans D1 D2] => dtp2 [g |- D2]

@@ -1244,7 +1244,9 @@ let genObj (cD, cPsi, tP) (tH, tA, k) =
         dprnt "[genObj] global constraints forced!";
         Some tS
       with
-      | U.GlobalCnstrFailure _ -> None
+      | U.GlobalCnstrFailure _ ->
+         U.resetGlobalCnstrs ();
+         None
       end
   with
   | None -> None

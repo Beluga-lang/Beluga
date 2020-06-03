@@ -80,7 +80,7 @@ let _ =
            "@[<v>Need to know the type of bound variable %s.\
             @,@[%a@]@]"
            name
-           Format.pp_print_string
+           Format.pp_print_text
            "Typically, a type annotation is required on a bound \
             variable in order to disambiguate which schema element \
             the variable is referring to."

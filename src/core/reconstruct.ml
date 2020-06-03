@@ -55,6 +55,7 @@ type error =
     of case_label_variant (* expected *)
        * case_label_variant (* actual *)
   | NotImplemented of (Format.formatter -> unit -> unit)
+  | ImpossiblePattern of Int.LF.mctx * Int.Comp.meta_obj * Int.Comp.meta_obj
 
 exception Error of Syntax.Loc.t * error
 let throw loc e = raise (Error (loc, e))
@@ -197,6 +198,15 @@ let _ =
            n
            P.(fmt_ppr_lf_schema ~useName: false l0) schema
            (List.length elems)
+      | ImpossiblePattern (cD, mC_p, mC) ->
+         fprintf ppf
+           "@[<v>The pattern \
+            @,  @[%a@]\
+            @,is impossible for this case-expression's scrutinee, namely\
+            @,  @[%a@]\
+            @]"
+           P.(fmt_ppr_cmp_meta_obj cD l0) mC_p
+           P.(fmt_ppr_cmp_meta_obj cD l0) mC
       end
     end
 
@@ -926,9 +936,7 @@ let synPatRefine loc caseT (cD, cD') t (tau_s, tau_p) =
            (mT, Whnf.m_id)
        with
        | Unify.Failure msg ->
-          Error.violation
-            ("Dependent pattern matching failed at "
-             ^ Fmt.stringify Loc.print_short loc ^ ": " ^ msg)
+          throw loc (ImpossiblePattern (cD, mC_p, mC))
   in
   let t1 = Ctxsub.mctxToMSub cD' in (* . |- t1 : cD' *)
   let t1t = Whnf.mcomp t t1 in (* . |- t1t : cD  since  cD' |- t : cD  and  t1t = t mcomp t1 *)

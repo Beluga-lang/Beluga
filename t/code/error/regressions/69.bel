@@ -1,0 +1,16 @@
+LF bool : type =
+| true  : bool
+| false : bool
+;
+
+LF is_true : bool → type =
+| is_true : is_true true
+;
+
+rec f : {B : [⊢ bool]} [⊢ is_true B] → [⊢ is_true B] =
+/ total b (f b) /
+mlam B ⇒ fn p ⇒ case p of
+| [⊢ is_true] ⇒ case [⊢ B] of
+  | [⊢ true]  ⇒ ?
+  | [⊢ false] ⇒ ?
+;

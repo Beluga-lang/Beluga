@@ -1,0 +1,6 @@
+./t/code/error/regressions/69.bel, line 15, column 4:
+Type reconstruction error.
+The pattern 
+  [ |- false]
+is impossible for this case-expression's scrutinee, namely
+  [ |- true]

@@ -1160,7 +1160,17 @@ module Comp = struct
           | `not_recursive ->
             throw loc (NotRecursiveDst d.name)
           | `inductive _ -> (* yes, it actually requires totality checking *)
-             Some cIH, tau, C.m_id
+             (* cIH contains *all* available induction hypotheses, so
+             we need to pare it down to only those IHs whose head is
+             the function we see here. *)
+             let cIH' = Total.select_ihs entry.Comp.Entry.name cIH in
+             dprintf begin fun p ->
+               p.fmt "[syn] [Const] @[<v>cIH = @[%a@]\
+                      @,cIH' = @[%a@]@]"
+                 P.(fmt_ppr_cmp_ihctx cD cG) cIH
+                 P.(fmt_ppr_cmp_ihctx cD cG) cIH'
+               end;
+             Some cIH', tau, C.m_id
           end
        end
 

@@ -1416,3 +1416,14 @@ let annotate loc order tau =
      |> Maybe.get'
           (error TooManyArg)
   | None -> tau
+
+(** Filters an ihctx to contain only those IHs for the given function
+    name. *)
+let rec select_ihs name = function
+  | LF.Empty -> LF.Empty
+  | LF.Dec (cIH, Comp.(WfRec (name', args, tau) as d))
+       when Id.equals name name' ->
+     LF.Dec (select_ihs name cIH, d)
+  | LF.Dec (cIH, _) ->
+     (* Remove the declaration if the name doesn't match. *)
+     select_ihs name cIH

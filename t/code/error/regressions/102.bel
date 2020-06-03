@@ -1,0 +1,9 @@
+LF tm : type =
+    | zero : tm
+    | succ : tm → tm
+;
+
+rec test : [⊢ tm] → [⊢ tm] =
+/ total t (test t) /
+test
+;

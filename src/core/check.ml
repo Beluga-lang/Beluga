@@ -1029,7 +1029,12 @@ module Comp = struct
 
     | (Syn (loc, i), (tau, t)) ->
        dprint (fun () -> "check --> syn");
-       let (_, tau', t') = syn mcid cD (cG,cIH) total_decs i in
+       let (cIH_opt, tau', t') = syn mcid cD (cG,cIH) total_decs i in
+       begin match cIH_opt with
+       | None -> ()
+       | Some Int.LF.(Dec (_, WfRec (_, [], _))) -> ()
+       | _ -> throw loc InvalidRecCall
+       end;
        let (tau', t') = Whnf.cwhnfCTyp (tau', t') in
        let tau' = Whnf.cnormCTyp (tau', t') in
        let tau = Whnf.cnormCTyp (tau, t) in

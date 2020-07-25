@@ -318,7 +318,7 @@ let gen_tup_sub conv_list =
        let s = gen_sub' clist (pos + 1) in
        LF.Dot (LF.Head (LF.BVar pos), s)
     | k :: clist ->
-       let s = gen_sub' clist (pos + 1) in
+       let s = gen_sub' clist (pos + k) in
        (* let tM = gen_tup pos (k, 1) in *)
        let tM = gen_tup (pos + k - 1) (k, 1) in
        LF.Dot (LF.Obj (LF.Tuple (Syntax.Loc.ghost, tM)), s)

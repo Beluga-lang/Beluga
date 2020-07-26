@@ -1,0 +1,13 @@
+t/harpoon/regression/229.bel
+split x
+invert kd-equiv-sing-form [_|-X3]
+by kd-equiv-resp [_|-kind-eq/i] [_|-X7] [_|-X3] as D12' unboxed
+by kd-equiv-resp [_|-X7] [_|-kind-eq/i] [_|-X4] as D23' unboxed
+by injective-sing [_|-D12'] as D12'' unboxed
+by injective-sing [_|-D23'] as D23'' unboxed
+solve [_|-cn-equiv/trans D12'' D23'']
+by injective-sing [_|-X2] as D' unboxed
+solve [_|-cn-equiv/symm D']
+msplit X1
+solve [_|-cn-equiv/refl X3]
+:quit

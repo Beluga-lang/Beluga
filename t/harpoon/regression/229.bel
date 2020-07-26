@@ -1,0 +1,251 @@
+LF kind : type = t : kind | sing : con -> kind
+and con : type =;
+
+LF cn-of : con -> kind -> type =;
+
+LF kd-wf : kind -> type =  kd-wf/sing : cn-of C t -> kd-wf (sing C);
+
+LF kd-equiv : kind -> kind -> type =
+| kd-equiv/refl : kd-wf K -> kd-equiv K K
+
+| kd-equiv/symm : kd-equiv K1 K2 -> kd-equiv K2 K1
+
+| kd-equiv/trans : kd-equiv K1 K2 -> kd-equiv K2 K3 -> kd-equiv K1 K3
+
+| kd-equiv/sing : cn-equiv C1 C2 t -> kd-equiv (sing C1) (sing C2)
+
+and cn-equiv : con -> con -> kind -> type =
+| cn-equiv/refl : cn-of C K -> cn-equiv C C K
+
+| cn-equiv/symm : cn-equiv C1 C2 K -> cn-equiv C2 C1 K
+
+| cn-equiv/trans : cn-equiv C1 C2 K -> cn-equiv C2 C3 K -> cn-equiv C1 C3 K
+
+| cn-equiv/sing : cn-equiv C C' t -> cn-equiv C C' (sing C)
+;
+
+LF kind-eq : kind -> kind -> type =
+| kind-eq/i : kind-eq K K
+;
+
+schema conblock+conbind =
+  % conblock
+  block (a : con) +
+  % conbind
+  some [K : kind] block (a : con, d : cn-of a K);
+
+proof kd-equiv-resp :
+  (g : conblock+conbind)
+  [g |- kind-eq K1 K1'] ->
+  [g |- kind-eq K2 K2'] ->
+  [g |- kd-equiv K1 K2] ->
+    [g |- kd-equiv K1' K2'] =
+/ total /
+intros
+{ g : conblock+conbind,
+  K : (g |- kind),
+  K1' : (g |- kind),
+  K1 : (g |- kind),
+  K2' : (g |- kind)
+| eq : [g |- kind-eq K K1'],
+  eq1 : [g |- kind-eq K1 K2'],
+  equiv : [g |- kd-equiv K K1]
+; split eq as
+  case kind-eq/i:
+  { g : conblock+conbind,
+    K1' : (g |- kind),
+    K1 : (g |- kind),
+    K2' : (g |- kind)
+  | eq : [g |- kind-eq K1' K1'],
+    eq1 : [g |- kind-eq K1 K2'],
+    equiv : [g |- kd-equiv K1' K1]
+  ; split eq1 as
+    case kind-eq/i:
+    { g : conblock+conbind, K1' : (g |- kind), K2' : (g |- kind)
+    | eq : [g |- kind-eq K1' K1'],
+      eq1 : [g |- kind-eq K2' K2'],
+      equiv : [g |- kd-equiv K1' K2']
+    ; solve equiv
+    }
+  }
+}
+;
+
+schema conbind = some [K : kind] block (a : con, d : cn-of a K);
+
+LF kd-equiv-sing-form/e : kind -> type =
+| kd-equiv-sing-form/i :
+  { C' : con }
+  kind-eq K (sing C') -> kd-equiv-sing-form/e K
+;
+
+proof kd-equiv-sing-form :
+  (g : conbind)
+  [g |- kd-equiv (sing C) K] ->
+    [g |- kd-equiv-sing-form/e K] =
+/ trust /
+intros
+{ g : conbind, C : (g |- con), K : (g |- kind)
+| equiv : [g |- kd-equiv (sing C) K]
+; split equiv as
+  case kd-equiv/sing:
+  { g : conbind,
+    C : (g |- con),
+    C2 : (g |- con),
+    Dequiv : (g |- cn-equiv C C2 t)
+  | equiv : [g |- kd-equiv (sing C) (sing C2)]
+  ; solve [g |- kd-equiv-sing-form/i _ (kind-eq/i )]
+  }
+  case kd-equiv/trans:
+  { g : conbind,
+    C : (g |- con),
+    K : (g |- kind),
+    K2 : (g |- kind),
+    Dequiv : (g |- kd-equiv (sing C) K2),
+    Dequiv1 : (g |- kd-equiv K2 K)
+  | equiv : [g |- kd-equiv (sing C) K]
+  ; split kd-equiv-sing-form [g |- Dequiv] as
+    case kd-equiv-sing-form/i:
+    { g : conbind,
+      C : (g |- con),
+      K : (g |- kind),
+      K2 : (g |- kind),
+      Dequiv : (g |- kd-equiv (sing C) K2),
+      Dequiv1 : (g |- kd-equiv K2 K),
+      C1 : (g |- con),
+      Deq : (g |- kind-eq K2 (sing C1))
+    | equiv : [g |- kd-equiv (sing C) K]
+    ; by kd-equiv-resp [g |- Deq] [g |- kind-eq/i ] [g |- Dequiv1]
+      as Dequiv'' unboxed;
+      split kd-equiv-sing-form [g |- Dequiv''] as
+      case kd-equiv-sing-form/i:
+      { g : conbind,
+        C : (g |- con),
+        K : (g |- kind),
+        K2 : (g |- kind),
+        Dequiv : (g |- kd-equiv (sing C) K2),
+        Dequiv1 : (g |- kd-equiv K2 K),
+        C1 : (g |- con),
+        Deq : (g |- kind-eq K2 (sing C1)),
+        Dequiv'' : (g |- kd-equiv (sing C1) K),
+        C2 : (g |- con),
+        Deq1 : (g |- kind-eq K (sing C2))
+      | equiv : [g |- kd-equiv (sing C) K]
+      ; solve [g |- kd-equiv-sing-form/i _ Deq1]
+      }
+    }
+  }
+  case kd-equiv/symm:
+  { g : conbind,
+    C : (g |- con),
+    K : (g |- kind),
+    Dequiv : (g |- kd-equiv K (sing C))
+  | equiv : [g |- kd-equiv (sing C) K]
+  ; split kd-equiv-sing-form' [g |- Dequiv] as
+    case kd-equiv-sing-form/i:
+    { g : conbind,
+      C : (g |- con),
+      K : (g |- kind),
+      Dequiv : (g |- kd-equiv K (sing C)),
+      C1 : (g |- con),
+      Deq : (g |- kind-eq K (sing C1))
+    | equiv : [g |- kd-equiv (sing C) K]
+    ; solve [g |- kd-equiv-sing-form/i _ Deq]
+    }
+  }
+  case kd-equiv/refl:
+  { g : conbind, C : (g |- con), Dwf : (g |- kd-wf (sing C))
+  | equiv : [g |- kd-equiv (sing C) (sing C)]
+  ; solve [g |- kd-equiv-sing-form/i _ (kind-eq/i )]
+  }
+}
+
+and proof kd-equiv-sing-form' :
+  (g : conbind)
+  [g |- kd-equiv K (sing C)] ->
+    [g |- kd-equiv-sing-form/e K] =
+/ trust /
+intros
+{ g : conbind, K : (g |- kind), C : (g |- con)
+| equiv : [g |- kd-equiv K (sing C)]
+; split equiv as
+  case kd-equiv/sing:
+  { g : conbind,
+    C1 : (g |- con),
+    C : (g |- con),
+    Dequiv : (g |- cn-equiv C1 C t)
+  | equiv : [g |- kd-equiv (sing C1) (sing C)]
+  ; solve [g |- kd-equiv-sing-form/i _ (kind-eq/i )]
+  }
+  case kd-equiv/trans:
+  { g : conbind,
+    K : (g |- kind),
+    C : (g |- con),
+    K2 : (g |- kind),
+    Dequiv : (g |- kd-equiv K K2),
+    Dequiv1 : (g |- kd-equiv K2 (sing C))
+  | equiv : [g |- kd-equiv K (sing C)]
+  ; split kd-equiv-sing-form' [g |- Dequiv1] as
+    case kd-equiv-sing-form/i:
+    { g : conbind,
+      K : (g |- kind),
+      C : (g |- con),
+      K2 : (g |- kind),
+      Dequiv : (g |- kd-equiv K K2),
+      Dequiv1 : (g |- kd-equiv K2 (sing C)),
+      C1 : (g |- con),
+      Deq : (g |- kind-eq K2 (sing C1))
+    | equiv : [g |- kd-equiv K (sing C)]
+    ; by kd-equiv-resp [g |- kind-eq/i ] [g |- Deq] [g |- Dequiv]
+      as Dequiv'' unboxed;
+      split kd-equiv-sing-form' [g |- Dequiv''] as
+      case kd-equiv-sing-form/i:
+      { g : conbind,
+        K : (g |- kind),
+        C : (g |- con),
+        K2 : (g |- kind),
+        Dequiv : (g |- kd-equiv K K2),
+        Dequiv1 : (g |- kd-equiv K2 (sing C)),
+        C1 : (g |- con),
+        Deq : (g |- kind-eq K2 (sing C1)),
+        Dequiv'' : (g |- kd-equiv K (sing C1)),
+        C2 : (g |- con),
+        Deq1 : (g |- kind-eq K (sing C2))
+      | equiv : [g |- kd-equiv K (sing C)]
+      ; solve [g |- kd-equiv-sing-form/i _ Deq1]
+      }
+    }
+  }
+  case kd-equiv/symm:
+  { g : conbind,
+    K : (g |- kind),
+    C : (g |- con),
+    Dequiv : (g |- kd-equiv (sing C) K)
+  | equiv : [g |- kd-equiv K (sing C)]
+  ; split kd-equiv-sing-form [g |- Dequiv] as
+    case kd-equiv-sing-form/i:
+    { g : conbind,
+      K : (g |- kind),
+      C : (g |- con),
+      Dequiv : (g |- kd-equiv (sing C) K),
+      C1 : (g |- con),
+      Deq : (g |- kind-eq K (sing C1))
+    | equiv : [g |- kd-equiv K (sing C)]
+    ; solve [g |- kd-equiv-sing-form/i _ Deq]
+    }
+  }
+  case kd-equiv/refl:
+  { g : conbind, C : (g |- con), Dwf : (g |- kd-wf (sing C))
+  | equiv : [g |- kd-equiv (sing C) (sing C)]
+  ; solve [g |- kd-equiv-sing-form/i _ (kind-eq/i )]
+  }
+}
+;
+
+proof injective-sing :
+  (g : conbind)
+  [g |- kd-equiv (sing C) (sing C')] ->
+    [g |- cn-equiv C C' t] =
+/ trust /
+?
+;

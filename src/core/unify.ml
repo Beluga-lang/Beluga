@@ -1640,7 +1640,7 @@ module Make (T : TRAIL) : UNIFY = struct
     dprintf
       begin fun p ->
       p.fmt "[unifyTerm] @[<v>unifying:@,\
-             @[  @[<v>@[%a@]@ =?=@ @[%a@]@]@]@]"
+             @[  @[<hov>@[%a@]@ =?=@ @[%a@]@]@]@]"
         (P.fmt_ppr_lf_normal cD0 cPsi P.l0) (Whnf.norm sN)
         (P.fmt_ppr_lf_normal cD0 cPsi P.l0) (Whnf.norm sM)
       end;
@@ -1809,14 +1809,18 @@ module Make (T : TRAIL) : UNIFY = struct
             ; cPsi1 |-     : cPsi
 
    *)
-  and unifyMMVarTermProj cD0 cPsi mmvar (* (_, r1, cD, ClTyp (_, cPsi1), cnstrs1, mdep1) *) mt1 t1' tM2 =
+  and unifyMMVarTermProj cD0 cPsi mmvar mt1 t1' tM2 =
     let ClTyp (_, cPsi1) = mmvar.typ in
     let mtt1 = Whnf.m_invert (Whnf.cnormMSub mt1) in
     (* cD |- mtt1 : cD0 *)
     let (flat_cPsi, conv_list) = ConvSigma.flattenDCtx cD0 cPsi in
     dprintf
       begin fun p ->
-      p.fmt "[unifyMMVarTermProj] @[<v>cPsi = %a@,sM2 = %a@,flat_cPsi = %a@,conv_list = %a"
+      p.fmt "[unifyMMVarTermProj] \
+             @[<v>cPsi = @[%a@]\
+             @,sM2 = @[%a@]\
+             @,flat_cPsi = @[%a@]\
+             @,conv_list = @[%a@]@]"
         (P.fmt_ppr_lf_dctx cD0 P.l0) cPsi
         (P.fmt_ppr_lf_normal cD0 cPsi P.l0) tM2
         (P.fmt_ppr_lf_dctx cD0 P.l0) flat_cPsi
@@ -2262,12 +2266,11 @@ module Make (T : TRAIL) : UNIFY = struct
        end
 
     | (Root (_, h1, tS1, _) as sM1, (Root (_, h2, tS2, _) as sM2)) ->
-       dprnt "(020) Root-Root";
        dprintf
          begin fun p ->
          let f = P.fmt_ppr_lf_normal cD0 cPsi P.l0 in
          p.fmt "UNIFY: @[<v>normal - normal (non MVar cases)@,\
-                @[  @[<v 2>@[%a@] |-@ @[<v>@[%a@]@ ==@ @[%a@]@]@]@]@]"
+                @[  @[<hov 2>@[%a@] |-@ @[<hov>@[%a@]@ ==@ @[%a@]@]@]@]@]"
            (P.fmt_ppr_lf_mctx P.l0) cD0
            f sM1
            f sM2

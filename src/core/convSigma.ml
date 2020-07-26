@@ -339,7 +339,7 @@ let rec etaExpandTuple tRec h k =
      LF.Cons (tM, etaExpandTuple tRec h (k+1))
    *)
 
-let rec etaExpandStrGeneric new_mxvar mk_head loc cD cPsi sA dep n =
+let rec etaExpandStrGeneric new_mxvar mk_head loc cD cPsi sA dep n names =
   match Whnf.whnfTyp sA with
   | LF.Sigma tRec as tA, s ->
      (* XXX this doesn't do any strengthening !! -je *)
@@ -381,13 +381,14 @@ let rec etaExpandStrGeneric new_mxvar mk_head loc cD cPsi sA dep n =
         , `explicit
         )
 
-  | (LF.PiTyp ((LF.TypDecl (x, _tA) as decl, _), tB), s) ->
+  | (LF.PiTyp ((LF.TypDecl (x, tA), _), tB), s) ->
+     let x = NameGen.renumber names x in
+     let decl = LF.TypDecl (x, tA) in
      let cPsi' = LF.DDec (cPsi, S.LF.decSub decl s) in
-     LF.Lam
-       ( loc
-       , x
-       , etaExpandStrGeneric new_mxvar mk_head loc cD cPsi' (tB, S.LF.dot1 s) dep n
-       )
+     let tN =
+       etaExpandStrGeneric new_mxvar mk_head loc cD cPsi' (tB, S.LF.dot1 s) dep n (x :: names)
+     in
+     LF.Lam (loc, x, tN)
 
 (* etaExpandMMVstr loc cD cPsi sA  = tN
  *

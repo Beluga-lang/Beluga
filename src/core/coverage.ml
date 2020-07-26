@@ -1179,7 +1179,7 @@ let rec genSpine k names cD cPsi sA tP =
        then LF.Maybe
        else LF.No
      in
-     let tN = ConvSigma.etaExpandMMVstr Loc.ghost cD cPsi (tA, s) dep (Some u) in
+     let tN = ConvSigma.etaExpandMMVstr Loc.ghost cD cPsi (tA, s) dep (Some u) (u :: names) in
      dprintf
        begin fun p ->
        p.fmt "[genSpine] @[<v>Pi-type: extending spine with new (eta-expanded) variable@,\
@@ -2384,7 +2384,7 @@ let rec genPattSpine names mk_pat_var k =
        | LF.MTyp _ ->
           LF.MObj
             (ConvSigma.etaExpandMMVstr
-               Loc.ghost LF.Empty cPsi' (tP', S.LF.id) dep (Some u)
+               Loc.ghost LF.Empty cPsi' (tP', S.LF.id) dep (Some u) (u :: names)
             )
      in
      let pat1 =

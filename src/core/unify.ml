@@ -1726,8 +1726,9 @@ module Make (T : TRAIL) : UNIFY = struct
           *)
          let tN =
            ConvSigma.etaExpandMMVstr Loc.ghost cD1 cPsi1 (tA, s) Maybe (Some n)
+             Context.(names_of_dctx cPsi @ names_of_mctx cD0)
          in
-         let tS = genSpine cD1 cPsi1 (tB, LF.Dot (LF.Obj (tN), s)) in
+         let tS = genSpine cD1 cPsi1 (tB, LF.Dot (LF.Obj tN, s)) in
          LF.App (tN, tS)
       | (LF.Atom _, _) -> LF.Nil
     in

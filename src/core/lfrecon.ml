@@ -2645,6 +2645,7 @@ and elSpineIW loc recT cD cPsi spine i sA =
        let tN =
          if !strengthen
          then ConvSigma.etaExpandMMVstr loc cD cPsi (tA, s) Int.LF.Maybe (Some n)
+                Context.(names_of_dctx cPsi @ names_of_mctx cD)
          else Whnf.etaExpandMMV loc cD cPsi (tA, s) n S.LF.id Int.LF.Maybe
        in
 
@@ -2730,6 +2731,7 @@ and elKSpineI loc recT cD cPsi spine i sK =
          if !strengthen
          then
            ConvSigma.etaExpandMMVstr Syntax.Loc.ghost cD cPsi (tA, s) Int.LF.Maybe (Some n)
+             Context.(names_of_dctx cPsi @ names_of_mctx cD)
          else
            Whnf.etaExpandMMV Syntax.Loc.ghost cD cPsi (tA, s) n S.LF.id Int.LF.Maybe
        in

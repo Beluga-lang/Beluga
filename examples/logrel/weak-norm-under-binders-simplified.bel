@@ -21,11 +21,28 @@ schema ctx = tm T;
 % ----------------------------------------------------------------------------
 LF step : tm A -> tm A -> type =
 | s_beta : step (app (lam M) N) (M N)
-| s_eta : {M:tm (arr A B)} step M (lam (\x. app M x))
+| s_eta : {M:tm (arr A B)} step M (lam (\y. app M y))
 | s_lam : ({x:tm A} step (M x) (M' x)) -> step (lam M) (lam M')
 | s_app1 : step M M' -> step (app M N) (app M' N)
 | s_app2 : step N N' -> step (app M N) (app M N')
 ;
+
+%  M : A => B  -------> lam x:A. M x
+%
+% (lam x:A => B. x ) beta-normal (no redex)   and has type (A => B) => (A => B)
+%   x neutral   at type A => B
+%  
+%
+% x: A => B|- x --> (A => B)     and (A => B) = (A => B)
+% x:A => B |- x <-- (A => B)
+% |- (lam x:A => B. x )  <-  (A => B) => (A => B)
+%
+% lam x: A=>B. lam y:A. x y   is in beta-eta normal form
+% XXXX lam x: A=>B. lam y:A. (lam y':A. x y') y
+% lam y:A. x y  is the eta-expansion of x:A=>B
+%  
+% 
+
 
 LF mstep : tm A -> tm A -> type =
 | s_refl : mstep M M

@@ -20,6 +20,7 @@ LF type_of: exp -> tp -> type =
 ;
 --name type_of H.
 
+
 % Equality predicate
 
 eq: tp -> tp -> type.
@@ -31,6 +32,7 @@ e_nat: eq nat nat.
 
 % Reflexivity is admissible:
 % Theorem: For all types T:tp, eq T T.
+
 rec refl : {T:[ |- tp]}[ |- eq T T] = / total t (refl t) /
 mlam T => case [ |- T] of
  | [ |- nat] => [ |- e_nat]
@@ -45,17 +47,14 @@ mlam T => case [ |- T] of
 %{Theorem:
   If  G |- type_of E T  and G |- type_of E T'
   then  equal T T'.
-
-Proof by induction on E.
 }%
 % block l = some [t:tp] block x:exp. type_of x t;
 % world tctx = l
 
 schema tctx = some [t:tp] block (x:exp, _t:type_of x t);
 
-
-rec unique : {g:tctx}{E:[g |- exp]} [g |- type_of E T[]] -> [g |- type_of E T'[]]
-             ->  [ |- eq T T'] =  / total e (unique _ _ _ e) /
+rec unique : {g:tctx}   {E:[g |- exp]} [g |- type_of E T[]] -> [g |- type_of E T'[]]
+             ->  [ |- eq T T'] =  / total e (unique _g _t _t' e) /
 mlam g => mlam E => fn d => fn f => case [g |- E ] of
  | [g |- app E1 E2] =>
   let [g |- t_app D1 D2] = d in
@@ -147,3 +146,4 @@ fn d => fn f => case d of
 let v : [ |- equal (arr nat nat) (arr nat nat)] =
   unique3 [ |- t_lam \x.\u. u] [ |- t_lam \x.\u.u]
 ;
+

@@ -5,7 +5,12 @@ LF cmp : exp -> (cval -> cexp) -> cexp -> type =
   | cmp_z : cmp z (\v. K  v) (K z+)
   | cmp_s : cmp E (\x. K (s+ x)) E' -> cmp (s E) (\v. K v) E'
 
-  | cmp_match : cmp E1 (\x1. match+ x1 E2' (\x. E3' x)) E' -> ({x:exp} {x':cval} ({k':cval -> cexp} cmp x (\v. k' v) (k' x')) -> cmp (E3 x) (\v. K v) (E3' x')) -> cmp E2 (\v. K v) E2' -> cmp (match E1 E2 (\x.E3 x)) (\v. K v)  E'
+| cmp_match :
+      cmp E1 (\x1. match+ x1 E2' (\x. E3' x)) E'
+   -> ({x:exp} {x':cval} ({k':cval -> cexp} cmp x (\v. k' v) (k' x'))
+   -> cmp (E3 x) (\v. K v) (E3' x'))
+   -> cmp E2 (\v. K v) E2'
+   -> cmp (match E1 E2 (\x.E3 x)) (\v. K v)  E'
   | cmp_pair : cmp E1 (\v. E2' v) E' -> ({x1':cval} cmp E2 (\x2'. K (pair+ x1' x2')) (E2' x1')) -> cmp (pair E1 E2) (\v. K v) E'
   | cmp_fst : cmp E (\x. fst+ x (\v. K v)) E' -> cmp (fst E) (\v. K v) E'
   | cmp_snd : cmp E (\x. snd+ x (\v. K v)) E' -> cmp (snd E) (\v. K v) E'

@@ -39,7 +39,32 @@ let ctxShift cPsi = EmptySub (* match cPsi with *)
   (* | CtxVar psi -> Shift (CtxShift psi, 0) *)
   (* | DDec (cPsi, _x) -> *)
   (*     let Shift (cshift, n) = ctxShift cPsi in *)
-  (*       Shift (cshift, n+1) *)
+(*       Shift (cshift, n+1) *)
+
+                  
+
+let rec lowerMVar cPsi sA' =
+  match sA' with
+  | (PiTyp ((decl, _), tA'), s') ->
+     let (tM , sAmv) =
+       lowerMVar
+         (DDec (cPsi, Substitution.LF.decSub decl s'))
+         (tA', Substitution.LF.dot1 s')
+     in
+       (Lam (Syntax.Loc.ghost, Id.mk_name Id.NoName, tM) , sAmv)
+
+  | (TClo (tA, s), s') ->
+     lowerMVar cPsi (tA, Substitution.LF.comp s s')
+    
+  | (Atom (loc, a, tS), s') ->
+     (Root
+         ( Loc.ghost
+         , MVar (Offset 1, Substitution.LF.id)
+         , Nil
+         , `explicit
+         ) ,
+      ClTyp(MTyp (TClo sA') , cPsi))
+                 
 
 (* ctxToSub_mclosed cD psi cPsi = (cD', s)
 
@@ -101,6 +126,32 @@ let rec ctxToSub_mclosed cD psi =
      , k + 1
      )
 
+  | DDec (cPsi', TypDecl (_, (PiTyp _ as tA))) ->
+     let (cD', s, k) = ctxToSub_mclosed cD psi cPsi' in (* cD' ; psi |- s : cPsi' *)
+     dprint (fun () -> "s = " ^ subToString s);
+
+     (* cD' ; psi |- s : cPsi' *)
+     (* cD' ; psi |- u[id] : [s]tA *)
+
+     let tA' = TClo (tA, s) in
+     (* cD', u: _   ; psi |- s : cPsi', x:tA *)
+     let s' = Whnf.cnormSub (s, MShift 1) in
+     let tM , clT = lowerMVar (Whnf.cnormDCtx (CtxVar psi, MShift k)) (tA,s) in   (* where clT is the type of the mvar in M *)
+     let u_name = Id.mk_name (Id.MVarName (Typ.gen_mvar_name tA')) in
+     let result = Dot (Obj tM, s') in
+     (* dprint (fun () -> "[ctxToSub_mclosed] result = " ^ subToString result); *)
+     ( Dec
+         ( cD'
+         , Decl
+             ( u_name
+             , clT
+             , Maybe
+             )
+         )
+     , result
+     , k + 1
+     )
+     
   | DDec (_, TypDecl _) ->
      (* For the moment, assume tA atomic. *)
      Error.not_implemented' "[ctxToSub_mclosed] non-atomic cPsi entry not supported"

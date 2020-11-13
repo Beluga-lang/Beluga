@@ -41,7 +41,7 @@ let ctxShift cPsi = EmptySub (* match cPsi with *)
   (*     let Shift (cshift, n) = ctxShift cPsi in *)
 (*       Shift (cshift, n+1) *)
 
-                  
+
 
 let rec lowerMVar cPsi sA' =
   match sA' with
@@ -55,7 +55,7 @@ let rec lowerMVar cPsi sA' =
 
   | (TClo (tA, s), s') ->
      lowerMVar cPsi (tA, Substitution.LF.comp s s')
-    
+
   | (Atom (loc, a, tS), s') ->
      (Root
          ( Loc.ghost
@@ -64,7 +64,7 @@ let rec lowerMVar cPsi sA' =
          , `explicit
          ) ,
       ClTyp(MTyp (TClo sA') , cPsi))
-                 
+
 
 (* ctxToSub_mclosed cD psi cPsi = (cD', s)
 
@@ -151,7 +151,7 @@ let rec ctxToSub_mclosed cD psi =
      , result
      , k + 1
      )
-     
+
   | DDec (_, TypDecl _) ->
      (* For the moment, assume tA atomic. *)
      Error.not_implemented' "[ctxToSub_mclosed] non-atomic cPsi entry not supported"

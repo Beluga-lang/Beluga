@@ -16,7 +16,7 @@ module Control = struct
 end
 
 let with_implicits, with_ctx_underscore =
-  let generic_with get set b' f =
+  let generic_with get set b' (f : unit -> unit) =
     let b = get () in
     set b';
     f ();

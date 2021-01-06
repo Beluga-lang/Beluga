@@ -9,15 +9,15 @@ env:
     OPAMYES: true
     OPAMVERBOSE: 1
   jobs:
-    - OCAML_VERSION=4.07
     - OCAML_VERSION=4.08
     - OCAML_VERSION=4.09
+    - OCAML_VERSION=4.10
 
 jobs:
   include:
     - os: osx
       env:
-        - OCAML_VERSION=4.07
+        - OCAML_VERSION=4.08
 
 notifications:
   email:

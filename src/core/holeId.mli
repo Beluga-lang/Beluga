@@ -15,7 +15,7 @@ val string_of_hole_id : t -> string
     private integer reference, that can be made inaccessible outside
     of holes.ml
  *)
-module Make (Unit : UNIT) : sig
+module Make (_ : UNIT) : sig
   (** Generates the next hole ID. *)
   val next : unit -> t
 end

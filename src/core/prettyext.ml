@@ -8,7 +8,7 @@ open Support
 open Format
 open Syntax.Ext
 
-module Make (R : Store.Cid.RENDERER) : Printer.Ext.T = struct
+module Make (_ : Store.Cid.RENDERER) : Printer.Ext.T = struct
   include Prettycom
 
   type lvl = int

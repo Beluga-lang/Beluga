@@ -84,6 +84,29 @@ theorem name or the special name ``:quit``. Ending the wizard without
 configuring any theorems will abort the creation of the new session. If there
 are no other sessions in Harpoon, then Harpoon will exit.
 
+.. _loading goals from a file:
+
+Loading goals from a file
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Harpoon proofs are recorded into signature files as a **proof script**. This is a
+structured language whose core constructs close resembles the syntax of
+:ref:`proof tactics`, which the following section in this document will describe.
+In a signature file, a proof named ``foo`` is declared as follows.
+
+.. code-block:: Beluga
+
+    proof foo : tau = P;
+
+where ``tau`` is a :ref:`computation type <computation types>` and ``P`` is the body of the proof.
+
+However, when a proof script is saved back using :ref:`session commands <administrative commands>`,
+this ``P`` contains some subgoals left. When harpoon loads a signature file with
+such incomplete proofs, harpoon will load the proofs into a session so that a user doesn't
+need to repeat the session wizard. It is still possible to open the session wizard using
+:ref:`session commands <administrative commands>` in a case when a user want to use it to start
+a new proof.
+
 .. _subgoal:
 
 Subgoal

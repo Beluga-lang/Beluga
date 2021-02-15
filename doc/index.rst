@@ -27,7 +27,6 @@ by Professor Brigitte Pientka. It is implemented in OCaml.
    installation
    common/index
    harpoon/index
-   beluga/index
 
 Funding
 -------

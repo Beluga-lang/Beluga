@@ -18,8 +18,8 @@
 # -- Project information -----------------------------------------------------
 
 project = 'Beluga'
-copyright = '2020, Brigitte Pientka, Jacob Errington, Joshua Dunfield, Andrew Cave'
-author = 'Brigitte Pientka, Jacob Errington, Joshua Dunfield, Andrew Cave'
+copyright = '2020, Brigitte Pientka, Jacob Errington, Junyoung Jang, Joshua Dunfield, Andrew Cave'
+author = 'Brigitte Pientka, Jacob Errington, Junyoung Jang, Joshua Dunfield, Andrew Cave'
 
 
 # -- General configuration ---------------------------------------------------

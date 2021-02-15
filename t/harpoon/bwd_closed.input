@@ -1,0 +1,23 @@
+t/harpoon/bwd_closed.bel
+halts_step
+[|- step M M'] -> [|- halts M'] -> [|- halts M]
+
+
+split x1
+unbox x as S'
+solve [|- halts/m (next S' S) V]
+bwd_closed
+{T : (|- tp)} {M : (|- tm T)} {M' : (|- tm T)} [|- step M M'] -> Reduce [|- T] [|- M'] -> Reduce [|- T] [|- M]
+1
+
+msplit T
+split x1
+suffices by Arr toshow [|- halts M], {N: (|- tm T1)} Reduce [|- T1] [|- N] -> Reduce [|- T2] [|- app M N]
+by (x3 [|- N] x4) as r'
+unbox x as S
+by (bwd_closed _ _ _ [|- s_app S] r') as ih
+by halts_step x x2 as h
+split x1
+by halts_step x x2 as h
+solve Unit h
+:quit

@@ -24,7 +24,7 @@ by Professor Brigitte Pientka. It is implemented in OCaml.
 .. toctree::
    :maxdepth: 2
 
-   installation
+   getting-started
    common/index
    harpoon/index
 

@@ -8,7 +8,7 @@ We support only installation on macOS, Linux, and WSL.
 
 Any of the following methods uses ``opam`` 2. Please ensure
 that you have that version of ``opam``. You can find the installation
-instruction `here <https://opam.ocaml.org/doc/Install.html>`.
+instruction `here <https://opam.ocaml.org/doc/Install.html>`_.
 
 We use recent versions of OCaml, so check which are supported on our
 `continuous integration <https://travis-ci.org/github/Beluga-lang/Beluga>`_
@@ -276,4 +276,4 @@ Once the proof is completed, Harpoon will restart the session wizard, and we can
       Name of theorem (:quit or empty to finish): :quit
     Harpoon terminated.
 
-That's it! If you want to know more details including how to write the signature file and what kinds of tactics do we provide, please read the `common elements <common>` and `interactive proving with harpoon <harpoon>` section of this page. For additional examples, you can checkout `the test directory <https://github.com/Beluga-lang/Beluga/tree/master/t>` in `our github repository <https://github.com/Beluga-lang/Beluga>`.
+That's it! If you want to know more details including how to write the signature file and what kinds of tactics do we provide, please read the :ref:`common elements <common>` and :ref:`interactive proving with harpoon <harpoon>` section of this page. For additional examples, you can checkout `the test directory <https://github.com/Beluga-lang/Beluga/tree/master/t>`_ in `our github repository <https://github.com/Beluga-lang/Beluga>`_.

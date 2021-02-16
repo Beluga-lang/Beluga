@@ -15,4 +15,3 @@ a lemma or induction hypothesis.
    proof-automation
    interactive-reference
    undo
-   structured-proof-language

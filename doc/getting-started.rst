@@ -70,12 +70,12 @@ You can try the following example to check Harpoon works:
 
     LF tp : type =
       | i : tp
-      | arr : tp → tp → tp
+      | arr : tp -> tp -> tp
     ;
 
-    LF eq : tp → tp → type =
+    LF eq : tp -> tp -> type =
       | eq_i : eq i i
-      | eq_arr : eq A1 A2 → eq B1 B2 → eq (arr A1 B1) (arr A2 B2)
+      | eq_arr : eq A1 A2 -> eq B1 B2 -> eq (arr A1 B1) (arr A2 B2)
     ;
 
 First, save this code as a file ``tp-refl.bel``. Next, run the following command to load the Harpoon session.
@@ -108,7 +108,7 @@ The session wizard will ask for the name of theorem, the actual statement, and t
 
 Users can give any numbers of theorems they want. Here, for the purpose of this example, we will finish the session wizard, by typing the enter key. Then, Harpoon will display an interactive session:
 
-.. code-block:: Beluga
+.. code-block:: Text
 
     Assumptions
       Meta-assumptions:
@@ -131,7 +131,7 @@ Users can give any numbers of theorems they want. Here, for the purpose of this 
 
 Now we can use interactive tactics to prove the goal (the type under the line). First, by applying ``split [|- A]``, we split the type into cases.
 
-.. code-block:: Beluga
+.. code-block:: Text
 
     Theorem: tp-refl
     intros
@@ -147,7 +147,7 @@ Now we can use interactive tactics to prove the goal (the type under the line). 
 
 This will generate two subgoals, and you will notice that the label (the string on the second line) is changed so that we can see which subgoal we are in.
 
-.. code-block:: Beluga
+.. code-block:: Text
 
     Theorem: tp-refl
     intros <- split [ |- X1] (case arr)
@@ -164,7 +164,7 @@ This will generate two subgoals, and you will notice that the label (the string 
 
 To prove this, we need ``[|- eq X X]`` and ``[|- eq X1 X1]``. We can get these by induction.
 
-.. code-block:: Beluga
+.. code-block:: Text
 
     Theorem: tp-refl
     intros <- split [ |- X1] (case arr)
@@ -179,7 +179,7 @@ To prove this, we need ``[|- eq X X]`` and ``[|- eq X1 X1]``. We can get these b
 
     > by tp-refl [|- X] as EQ_X unboxed
 
-.. code-block:: Beluga
+.. code-block:: Text
 
     Theorem: tp-refl
     intros <- split [ |- X1] (case arr)
@@ -197,7 +197,7 @@ To prove this, we need ``[|- eq X X]`` and ``[|- eq X1 X1]``. We can get these b
 
 With these two, we are able to use ``eq_arr``. 
 
-.. code-block:: Beluga
+.. code-block:: Text
 
     Theorem: tp-refl
     intros <- split [ |- X1] (case arr)
@@ -216,7 +216,7 @@ With these two, we are able to use ``eq_arr``.
 
 This will solve the subgoal, and Harpoon will subsequently show the next case, which can be solved directly with ``eq_i``.
 
-.. code-block:: Beluga
+.. code-block:: Text
 
     Theorem: tp-refl
     intros <- split [ |- FREE MVar 1] (case i)
@@ -232,7 +232,7 @@ This will solve the subgoal, and Harpoon will subsequently show the next case, w
 
 After solving all subgoals, Harpoon will print the proof script as well as its translation as a Beluga program, and save the proof script (You can check it by ``cat tp-refl.bel``) and type-check the signature file again.
 
-.. code-block:: Beluga
+.. code-block:: Text
 
     Subproof complete! (No subgoals left.)
     Full proof script:
@@ -270,7 +270,7 @@ After solving all subgoals, Harpoon will print the proof script as well as its t
 
 Once the proof is completed, Harpoon will restart the session wizard, and we can choose whether to prove more theorems or ``:quit``.
 
-.. code-block:: Beluga
+.. code-block:: Text
 
     Configuring theorem #1
       Name of theorem (:quit or empty to finish): :quit

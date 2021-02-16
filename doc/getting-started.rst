@@ -276,4 +276,4 @@ Once the proof is completed, Harpoon will restart the session wizard, and we can
       Name of theorem (:quit or empty to finish): :quit
     Harpoon terminated.
 
-That's it! If you want to know more details including how to write the signature file and what kinds of tactics do we provide, please read the :ref:`common elements <common>` and :ref:`interactive proving with harpoon <harpoon>` section of this page. For additional examples, you can checkout `the test directory <https://github.com/Beluga-lang/Beluga/tree/master/t>`_ in `our github repository <https://github.com/Beluga-lang/Beluga>`_.
+That's it! If you want to know more details including how to write the signature file and what kinds of tactics do we provide, please read the :ref:`common elements <common>` and :ref:`interactive proving with harpoon <harpoon>` section of this page. For additional examples, you can check out `the test directory <https://github.com/Beluga-lang/Beluga/tree/master/t>`_ in `our github repository <https://github.com/Beluga-lang/Beluga>`_.

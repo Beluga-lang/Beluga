@@ -313,7 +313,7 @@ module Index = struct
     ; typ : LF.typ                    (* Query as LF.typ.            *)
     ; skinnyTyp : LF.typ              (* Query stripped of E-vars.   *)
     ; optName : Id.name option        (* Opt. name of proof term.    *)
-    ; cD : LF.mctx                    (* Opt. meta context.          *)
+    ; cD : LF.mctx                    (* Meta context.               *)
     ; expected : bound                (* Expected no. of solutions.  *)
     ; tries : bound                   (* No. of tries to find soln.  *)
     ; instMVars : inst list           (* MVar instantiations.        *)

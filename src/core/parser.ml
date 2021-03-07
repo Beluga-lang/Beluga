@@ -2660,15 +2660,16 @@ let sgn_query_pragma =
     |> labelled "search bound"
   in
   pragma "query" &>
-    seq3
+    seq4
       (seq2 bound bound)
+      (mctx ~sep: (pure ()) (clf_ctyp_decl_bare name' (fun x -> LF.No, x) |> braces))
       (maybe (name <& token T.COLON))
       lf_typ
   <& token T.DOT
   |> span
   |> labelled "logic programming engine query pragma"
-  $> fun (loc, ((e, t), x, a)) ->
-     Sgn.Query (loc, x, a, e, t)
+  $> fun (loc, ((e, t), cD, x, a)) ->
+     Sgn.Query (loc, x, cD, a, e, t)
 
 let sgn_oldstyle_lf_decl =
   labelled

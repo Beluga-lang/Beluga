@@ -475,7 +475,7 @@ let query =
       begin fun ppf arglist ->
       try
         begin
-          let [Synext.Sgn.Query (_, name, extT, expected, tries)] =
+          let [Synext.Sgn.Query (_, name, cD, extT, expected, tries)] =
             let expected = List.hd arglist in
             let tries = List.hd (List.tl arglist) in
             let str = String.concat " " (List.tl (List.tl arglist)) in
@@ -495,6 +495,8 @@ let query =
               )
           in
           (* let cD       = Synint.LF.Empty in *)
+          let cD = Index.mctx cD in
+          let cD = Reconstruct.mctx cD in
           Unify.StdTrail.forceGlobalCnstr ();
           let (tA', i) =
             Monitor.timer
@@ -509,7 +511,7 @@ let query =
             , fun () ->
               Check.LF.checkTyp Synint.LF.Empty Synint.LF.Null (tA', Substitution.LF.id)
             );
-          Logic.storeQuery name (tA', i) expected tries;
+          Logic.storeQuery name (tA', i) cD expected tries;
           Logic.runLogic ();
           fprintf ppf ";\n@?"
         end

@@ -313,6 +313,7 @@ module Index = struct
     ; typ : LF.typ                    (* Query as LF.typ.            *)
     ; skinnyTyp : LF.typ              (* Query stripped of E-vars.   *)
     ; optName : Id.name option        (* Opt. name of proof term.    *)
+    ; cD : LF.mctx                    (* Opt. meta context.          *)
     ; expected : bound                (* Expected no. of solutions.  *)
     ; tries : bound                   (* No. of tries to find soln.  *)
     ; instMVars : inst list           (* MVar instantiations.        *)
@@ -336,15 +337,16 @@ module Index = struct
   let addSgnClause typConst sgnClause =
     DynArray.add typConst sgnClause
 
-  (* addSgnQuery (p, (g, s), xs, e, t)  = ()
+  (* addSgnQuery (p, (g, s), cD, xs, e, t)  = ()
      Add a new sgnQuery to the `queries' DynArray.
   *)
-  let addSgnQuery (p, a, a', q, xs, e, t) =
+  let addSgnQuery (p, a, a', q, cD, xs, e, t) =
     DynArray.add queries
       { query = q
       ; typ = a
       ; skinnyTyp = a'
       ; optName = p
+      ; cD = cD 
       ; expected = e
       ; tries = t
       ; instMVars = xs
@@ -387,14 +389,14 @@ module Index = struct
     in
     revIter regSgnClause typConstr
 
-  (* storeQuery (p, (M, i), e, t) = ()
+  (* storeQuery (p, (M, i), cD, e, t) = ()
      Invariants:
        i = count of abstracted EVars in M
   *)
-  let storeQuery (p, (tM, i), e, t) =
+  let storeQuery (p, (tM, i), cD,  e, t) =
     let (q, tM', s, xs) = (Convert.typToQuery LF.Null LF.Empty (tM, i)) in
     querySub := s;
-    addSgnQuery (p, tM, tM', q, xs, e, t)
+    addSgnQuery (p, tM, tM', q, cD, xs, e, t)
 
   (* robStore () = ()
      Store all type constants in the `types' table.
@@ -425,7 +427,7 @@ module Index = struct
     Hashtbl.clear types
 
 
-  let singleQuery (p, (tM, i), e, t) f =
+  let singleQuery (p, (tM, i), cD, e, t) f =
     let (q, tM', s, xs) = (Convert.typToQuery LF.Null LF.Empty (tM, i)) in
     querySub := s;
     robStore ();
@@ -436,6 +438,7 @@ module Index = struct
       ; typ = tM
       ; skinnyTyp = tM'
       ; optName = p
+      ; cD = cD
       ; expected = e
       ; tries = t
       ; instMVars = xs
@@ -785,7 +788,7 @@ module Solver = struct
      * In that case, it will call matchSigma to figure out the
        appropriate projection to use on the variable, if any.
      *)
-    and matchDelta (cD' : LF.mctx) =
+     and matchDelta (cD' : LF.mctx) =
       let rec loop cD' k =
         match cD' with
         | LF.Empty -> matchDProg dPool
@@ -1058,8 +1061,8 @@ end
 
 (* Interface *)
 
-let storeQuery p (tM, i) e t =
-  Index.storeQuery (p, (tM, i), e, t)
+let storeQuery p (tM, i) cD e t =
+  Index.storeQuery (p, (tM, i), cD, e, t)
 
 (* runLogic () = ()
    If !enabledLogic, run the logic programming engine. Otherwise
@@ -1081,8 +1084,8 @@ let runLogic () =
     end
 
 
-let runLogicOn n (tA, i) e t  =
-  Index.singleQuery (n, (tA, i), e, t) Frontend.solve
+let runLogicOn n (tA, i) cD e t  =
+  Index.singleQuery (n, (tA, i), cD, e, t) Frontend.solve
 
 let prepare () =
   Index.clearIndex ();

@@ -907,7 +907,7 @@ module Sgn = struct
     | Val           of Loc.t * name * Comp.typ * Comp.exp_chk * Comp.value option
     | MRecTyp       of Loc.t * decl list list
     | Module        of Loc.t * string * decl list
-    | Query         of Loc.t * name option * (LF.typ  * Id.offset) * int option * int option
+    | Query         of Loc.t * name option * LF.mctx * (LF.typ  * Id.offset) * int option * int option
     | Comment       of Loc.t * string
 
   type sgn = decl list

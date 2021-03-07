@@ -1098,7 +1098,7 @@ let recSgnDecls decls =
        Store.Modules.addSgnToCurrent decl;
        decl
 
-    | Ext.Sgn.Query (loc, name, extT, expected, tries) ->
+    | Ext.Sgn.Query (loc, name, cD, extT, expected, tries) ->
        dprintf
          (fun p ->
            p.fmt "[RecSgn Checking] Query at %a"
@@ -1115,7 +1115,8 @@ let recSgnDecls decls =
              tA
            )
        in
-       let cD = Int.LF.Empty in
+       let cD = Index.mctx cD in
+       let cD = Reconstruct.mctx cD in
        dprintf
          begin fun p ->
          p.fmt "Elaboration of query : %a"
@@ -1140,8 +1141,8 @@ let recSgnDecls decls =
          , fun () ->
            Check.LF.checkTyp Int.LF.Empty Int.LF.Null (tA', S.LF.id)
          );
-       Logic.storeQuery name (tA', i) expected tries;
-       Int.Sgn.Query (loc, name, (tA', i), expected, tries)
+       Logic.storeQuery name (tA', i) cD  expected tries;
+       Int.Sgn.Query (loc, name, cD, (tA', i), expected, tries)
 
     | Ext.Sgn.Pragma (loc, Ext.Sgn.NamePrag (typ_name, m_name, v_name)) ->
        dprintf

@@ -365,7 +365,7 @@ module Sgn = struct
     | MRecTyp of Loc.t * (decl * decl list) list
     | Theorem of Loc.t * thm_decl list
     | Val of Loc.t * name * Comp.typ option * Comp.exp_syn
-    | Query of Loc.t * name option * LF.typ * int option * int option
+    | Query of Loc.t * name option * LF.mctx * LF.typ * int option * int option
     | Module of Loc.t * string * decl list
     | Comment of Loc.t * string
   type sgn = decl list

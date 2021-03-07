@@ -1109,6 +1109,7 @@ let recSgnDecls decls =
     | Ext.Sgn.Query
       { location
       ; name
+      ; mctx=cD
       ; typ=extT
       ; expected_solutions=expected
       ; maximum_tries=tries
@@ -1129,7 +1130,8 @@ let recSgnDecls decls =
              tA
            )
        in
-       let cD = Int.LF.Empty in
+       let cD = Index.mctx cD in
+       let cD = Reconstruct.mctx cD in
        dprintf
          begin fun p ->
          p.fmt "Elaboration of query : %a"
@@ -1154,16 +1156,17 @@ let recSgnDecls decls =
          , fun () ->
            Check.LF.checkTyp Int.LF.Empty Int.LF.Null (tA', S.LF.id)
          );
-       Logic.storeQuery name (tA', i) expected tries;
+       Logic.storeQuery name (tA', i) cD expected tries;
        Int.Sgn.Query
        { location
        ; name
+       ; mctx=cD
        ; typ=(tA', i)
        ; expected_solutions=expected
        ; maximum_tries=tries
        }
 
-    | Ext.Sgn.Pragma { location=loc; pragma=Ext.Sgn.NamePrag (typ_name, m_name, v_name) } ->
+    | Ext.Sgn.Pragma (loc, Ext.Sgn.NamePrag (typ_name, m_name, v_name)) ->
        dprintf
          (fun p ->
            p.fmt "[RecSgn Checking] Pragma at %a"

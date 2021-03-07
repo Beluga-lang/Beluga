@@ -975,6 +975,7 @@ module Sgn = struct
     | Query of
       { location: Location.t
       ; name: name option
+      ; mctx: LF.mctx
       ; typ: (LF.typ * Id.offset)
       ; expected_solutions: int option
       ; maximum_tries: int option

@@ -1047,7 +1047,7 @@ module Frontend = struct
         if !Options.chatter >= 1
         then P.printQuery sgnQuery;
         try
-          Solver.solve LF.Empty LF.Null sgnQuery.query scInit;
+          Solver.solve sgnQuery.cD LF.Null sgnQuery.query scInit;
           (* Check solution bounds. *)
           checkSolutions sgnQuery.expected sgnQuery.tries !solutions
         with

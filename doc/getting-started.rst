@@ -11,7 +11,7 @@ that you have that version of ``opam``. You can find the installation
 instruction `here <https://opam.ocaml.org/doc/Install.html>`_.
 
 We use recent versions of OCaml, so check which are supported on our
-`continuous integration <https://travis-ci.org/github/Beluga-lang/Beluga>`_
+`continuous integration <https://github.com/Beluga-lang/Beluga/actions>`_
 before creating an opam switch.
 At time of writing, version 4.10.0 is the latest supported version.
 

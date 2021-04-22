@@ -1,0 +1,59 @@
+name: Build & Test
+
+on:
+  push: {}
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build-and-test:
+    name: Build & Test
+
+    strategy:
+      fail-fast: true
+      matrix:
+        ocaml-version:
+          - 4.11.0
+          - 4.10.1
+          - 4.09.1
+          - 4.08.1
+        os:
+          - ubuntu-latest
+          - macOS-latest
+
+    runs-on: ${{ matrix.os }}
+    steps:
+      # Cancel queued workflows from earlier commits in this branch
+      - uses: fkirc/skip-duplicate-actions@master
+
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Retrieve opam cache
+        uses: actions/cache@v2
+        id: cache-opam
+        with:
+          path: ~/.opam
+          key: v1-${{ runner.os }}-opam-${{ matrix.ocaml-version }}-${{ hashFiles('*.opam') }}
+          restore-keys: |
+            v1-${{ runner.os }}-opam-${{ matrix.ocaml-version }}-
+
+      - name: Use OCaml ${{ matrix.ocaml-version }}
+        uses: avsm/setup-ocaml@v1
+        with:
+          ocaml-version: ${{ matrix.ocaml-version }}
+
+      - name: Install dependencies
+        run: opam install --deps-only .
+
+      - name: Build
+        run: opam exec -- make
+
+      - name: Test
+        run: |
+          opam exec -- ./TEST
+          opam exec -- ./TEST -- +htmltest
+
+      - name: Check whitespaces
+        run: opam exec -- ./LINT

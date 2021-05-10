@@ -2,7 +2,7 @@
    @author Brigitte Pientka
    modified: Joshua Dunfield
 *)
-
+ 
 module LF : sig
 
   open Syntax

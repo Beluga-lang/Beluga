@@ -1166,6 +1166,16 @@ let recSgnDecls decls =
        ; maximum_tries=tries
        }
 
+
+    | Ext.Sgn.MQuery (loc, cD, extTau, expected, tries) ->
+       (dprintf
+         (fun p ->
+           p.fmt "[RecSgn Checking] MQuery at %a"
+             Syntax.Loc.print_short loc);        
+       Int.Sgn.MQuery (loc, None, None, expected, tries))
+
+
+       
     | Ext.Sgn.Pragma (loc, Ext.Sgn.NamePrag (typ_name, m_name, v_name)) ->
        dprintf
          (fun p ->

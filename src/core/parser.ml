@@ -2674,6 +2674,25 @@ let sgn_query_pragma =
   $> fun (location, ((expected_solutions, maximum_tries), cD name, typ)) ->
      Sgn.Query { location; name; mctx=cD; typ; expected_solutions; maximum_tries }
 
+let sgn_mquery_pragma =
+  let bound =
+    alt
+      (token T.STAR &> pure None)
+      (integer $> Maybe.pure)
+    |> labelled "search bound"
+  in
+  pragma "mquery" &>
+    seq3
+      (seq2 bound bound)
+      (mctx ~sep: (pure ()) (clf_ctyp_decl_bare name' (fun x -> LF.No, x) |> braces))
+      cmp_typ
+  <& token T.DOT
+  |> span
+  |> labelled "meta-logic search engine mquery pragma"
+  $> fun (loc, ((e, t), cD, tau)) ->
+     Sgn.MQuery (loc, cD, tau,e,t)
+
+     
 let sgn_oldstyle_lf_decl =
   labelled
     "old-style LF type or constant declaration"
@@ -3057,6 +3076,7 @@ let rec sgn_decl : Sgn.decl parser =
           (* pragmas *)
           [ sgn_name_pragma
           ; sgn_query_pragma
+          ; sgn_mquery_pragma
           ; sgn_not_pragma
           ; sgn_fixity_pragma
           ; sgn_associativity_pragma

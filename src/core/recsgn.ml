@@ -1119,7 +1119,7 @@ let recSgnDecls decls =
            p.fmt "[RecSgn Checking] Query at %a"
              Syntax.Loc.print_short location);
        let (_, apxT) = Index.typ Index.disambiguate_to_fvars extT in
-       dprint (fun () -> "Reconstructing query.");
+                                                                            dprint (fun () -> "Reconstructing query.");
        FVar.clear ();
        let tA =
          Monitor.timer
@@ -1145,7 +1145,7 @@ let recSgnDecls decls =
            )
        in
        Reconstruct.reset_fvarCnstr ();
-       Unify.resetGlobalCnstrs ();       
+       Unify.resetGlobalCnstrs ();
        dprintf
          begin fun p ->
            p.fmt "Reconstruction (with abstraction) of query: %a with %s abstracted variables"
@@ -1189,15 +1189,29 @@ let recSgnDecls decls =
            (P.fmt_ppr_cmp_typ cD P.l0) tau0
          end;
          Unify.forceGlobalCnstr ();
-(*         let (tau', i) =
+         let (tau', i) =
          Monitor.timer
            ( "Constant Abstraction"
-           , fun () -> Abstract.typ tA
+           , fun () -> Abstract.comptyp tau0
            )
-       in
-       Reconstruct.reset_fvarCnstr ();
-       Unify.resetGlobalCnstrs ();       
- *)
+        in
+        Reconstruct.reset_fvarCnstr ();
+        Unify.resetGlobalCnstrs ();
+        dprintf
+        begin fun p ->
+        p.fmt "Reconstruction (with abstraction) of mquery: %a with %s abstracted variables"
+          (P.fmt_ppr_cmp_typ cD P.l0) tau'
+          (string_of_int i)   
+        end;
+        Monitor.timer
+          ( "Constant Check"
+          , fun () ->
+           Check.Comp.checkTyp cD tau'
+          );
+        (*Logic.storeQuery (tau', i) cD  expected tries;
+
+         *)
+ 
           Int.Sgn.MQuery (loc, None, None, expected, tries)))
 
 

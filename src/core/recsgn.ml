@@ -1192,7 +1192,7 @@ let recSgnDecls decls =
          let (tau', i) =
          Monitor.timer
            ( "Constant Abstraction"
-           , fun () -> Abstract.comptyp tau0
+           , fun () -> Abstract.comptyp_cD cD tau0
            )
         in
         Reconstruct.reset_fvarCnstr ();
@@ -1207,10 +1207,10 @@ let recSgnDecls decls =
           ( "Constant Check"
           , fun () ->
            Check.Comp.checkTyp cD tau'
-          );
-        (*Logic.storeQuery (tau', i) cD  expected tries;
-
-         *)
+          );(*
+        Logic.storeMQuery((tau', i), cD, expected, tries);
+             *)
+         
  
           Int.Sgn.MQuery (loc, None, None, expected, tries)))
 

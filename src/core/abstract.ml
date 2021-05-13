@@ -348,6 +348,13 @@ let rec ctxToMCtx f =
   | I.Dec (cQ', FDecl (_, Impure)) ->
      ctxToMCtx f cQ'
 
+let rec mctxToCtx =
+  function
+  | I.Empty -> I.Empty
+  | I.Dec (cQ', I.Decl (x, I.CTyp (Some w), dep)) ->
+     I.Dec (mctxToCtx cQ', CtxV (x, w, dep))
+  | I.Dec (cQ', I.Decl (n, ityp, dep)) ->
+     I.Dec (mctxToCtx cQ', FDecl (FV n, Pure (MetaTyp (ityp, dep))))   
 
 let rec ctxToMCtx_pattern names =
   function
@@ -1575,6 +1582,37 @@ let abstrCompTyp tau =
      parameters. *)
   (tau'', Context.length (dropExplicitCTyp cD'))
 
+let abstrCompTypcD cD tau =
+  let rec roll tau cQ =
+    match tau with
+    | Comp.TypPiBox (_, I.Decl (psi, I.CTyp (Some w), dep), tau) ->
+       roll tau (I.Dec (cQ, CtxV (psi, w, dep)))
+    | tau -> (cQ, tau)
+  in
+  let tau0 = Whnf.cnormCTyp (tau, Whnf.m_id) in
+  let cQ = mctxToCtx cD in
+  let (cQ, tau') = roll tau0 cQ in
+  (* l': count of leading context quantifiers *)
+  let l' = lengthCollection cQ in
+  let p = prefixCompTyp tau' in (* p = number of explicitely declared mvars *)
+  (* extend cQ with any variables found in tau' *)
+  let (cQ, tau1) = collectCompTyp (l' + p) cQ tau' in 
+  let k = lengthCollection cQ in
+  let l = (k - l') in
+  (* l: count of variables *excluding* leading context variables *)
+  let cQ' = abstractMVarCtx cQ (l - 1 - p) in
+  (* let cQ' = abstractMVarCtx cQ (l-1) in *)
+  let tau' = abstractMVarCompTyp cQ' (l, 0) tau1 in
+  let cD' = ctxToMCtx (fun _ -> I.Maybe) cQ' in
+  
+  let tau'' = raiseCompTyp cD' tau' in
+  (* We can't just subtract l' because l' counts also implicit context quantifications.
+     Instead we drop all explicit context contexts from cD' and then
+     take the length in order to get the correct count of implicit
+     parameters. *)
+  (tau'', Context.length (dropExplicitCTyp cD'))
+ 
+
 let abstrCodataTyp cD tau tau' =
   let rec split =
     function
@@ -1809,6 +1847,7 @@ let schema = abstrSchema
 let msub = abstractMSub
 let compkind = abstrCompKind
 let comptyp = abstrCompTyp
+let comptyp_cD = abstrCompTypcD
 let codatatyp = abstrCodataTyp
 let exp = abstrExp
 let pattern_spine = abstrPatSpine

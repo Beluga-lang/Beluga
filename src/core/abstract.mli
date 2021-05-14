@@ -32,8 +32,8 @@ type fctx = free_var LF.ctx
 
 exception Error of Syntax.Loc.t * error
 
-val kind : LF.kind -> LF.kind * Id.offset
-val typ : LF.typ -> LF.typ * Id.offset
+val kind : LF.kind -> LF.kind * Id.offset (* where the offset indicates the #implicit arguments *)
+val typ : LF.typ -> LF.typ * Id.offset    (* where the offset indicates the #implicit arguments *)
 
 val covgoal : LF.dctx -> LF.normal -> LF.typ -> LF.msub
               -> LF.mctx * LF.dctx * LF.normal * LF.typ * LF.msub
@@ -43,8 +43,8 @@ val covpatt : Comp.gctx -> Comp.pattern -> Comp.typ -> LF.msub
 val schema : LF.schema -> LF.schema
 val msub : LF.msub -> LF.msub * LF.mctx
 
-val compkind : Comp.kind -> Comp.kind * Id.offset
-val comptyp : Comp.typ -> Comp.typ * Id.offset
+val compkind : Comp.kind -> Comp.kind * Id.offset (* where the offset indicates the #implicit arguments *)
+val comptyp : Comp.typ -> Comp.typ * Id.offset    (* where the offset indicates the #implicit arguments *)
 val codatatyp : LF.mctx -> Comp.typ -> Comp.typ -> LF.mctx * Comp.typ * Comp.typ * Id.offset
 val exp : Comp.exp_chk -> fctx * Comp.exp_chk
 val thm : Comp.thm -> fctx * Comp.thm

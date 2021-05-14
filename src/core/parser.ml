@@ -2682,15 +2682,15 @@ let sgn_mquery_pragma =
     |> labelled "search bound"
   in
   pragma "mquery" &>
-    seq3
+    seq2
       (seq2 bound bound)
-      (mctx ~sep: (pure ()) (clf_ctyp_decl_bare name' (fun x -> LF.No, x) |> braces))
+      (*      (mctx ~sep: (pure ()) (clf_ctyp_decl_bare name' (fun x -> LF.No, x) |> braces)) *)
       cmp_typ
   <& token T.DOT
   |> span
   |> labelled "meta-logic search engine mquery pragma"
-  $> fun (loc, ((e, t), cD, tau)) ->
-     Sgn.MQuery (loc, cD, tau,e,t)
+  $> fun (loc, ((e, t), tau)) ->
+     Sgn.MQuery (loc, tau,e,t)
 
      
 let sgn_oldstyle_lf_decl =

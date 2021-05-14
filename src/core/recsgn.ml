@@ -1168,31 +1168,28 @@ let recSgnDecls decls =
        }
 
 
-    | Ext.Sgn.MQuery (loc, cD, tau, expected, tries) ->
+    | Ext.Sgn.MQuery (loc, tau, expected, tries) ->
        (dprintf
          (fun p ->
            p.fmt "[RecSgn Checking] MQuery at %a"
              Syntax.Loc.print_short loc);
-        let cD  = Index.mctx cD in
-        let cD  = Reconstruct.mctx cD in
         let apx_tau = Index.comptyp tau in
         let tau0 =
          Monitor.timer
            ( "MQuery: Type Elaboration"
-           , fun () -> Reconstruct.comptyp_cD cD apx_tau
+           , fun () -> Reconstruct.comptyp apx_tau
            )
         in
         (dprintf
          begin fun p ->
-         p.fmt "[mquery]  @[<v>cD = @[%a@]@,tau = @[%a@]@]"
-           (P.fmt_ppr_lf_mctx P.l0) cD
-           (P.fmt_ppr_cmp_typ cD P.l0) tau0
+         p.fmt "[mquery]  @[<v>ctau = @[%a@]@]"
+           (P.fmt_ppr_cmp_typ (Int.LF.Empty) P.l0) tau0
          end;
          Unify.forceGlobalCnstr ();
          let (tau', i) =
          Monitor.timer
            ( "Constant Abstraction"
-           , fun () -> Abstract.comptyp_cD cD tau0
+           , fun () -> Abstract.comptyp tau0
            )
         in
         Reconstruct.reset_fvarCnstr ();
@@ -1200,19 +1197,19 @@ let recSgnDecls decls =
         dprintf
         begin fun p ->
         p.fmt "Reconstruction (with abstraction) of mquery: %a with %s abstracted variables"
-          (P.fmt_ppr_cmp_typ cD P.l0) tau'
+          (P.fmt_ppr_cmp_typ (Int.LF.Empty) P.l0) tau'
           (string_of_int i)   
         end;
         Monitor.timer
           ( "Constant Check"
           , fun () ->
-           Check.Comp.checkTyp cD tau'
+           Check.Comp.checkTyp Int.LF.Empty tau'
           );(*
         Logic.storeMQuery((tau', i), cD, expected, tries);
              *)
          
  
-          Int.Sgn.MQuery (loc, None, None, expected, tries)))
+          Int.Sgn.MQuery (loc, None, expected, tries)))
 
 
        

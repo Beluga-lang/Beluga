@@ -92,6 +92,8 @@ type clause =                    (* Horn Clause ::= eV |- A :- cG   *)
   }
 
 
+
+  
 module Shift : sig
   val shiftAtom : LF.typ -> int * int * int -> LF.typ
 end = struct
@@ -307,6 +309,7 @@ module Index = struct
   let types = Hashtbl.create 0          (* typConst Hashtbl.t          *)
 
   type inst = (Id.name * LF.normal)     (* I ::= (x, MVar)             *)
+  type minst = (Id.name * LF.normal)    (* I ::= (x, MMVar)            *)            
 
   type sgnQuery =
     { query : query                   (* Query ::= (g, s)            *)
@@ -319,6 +322,15 @@ module Index = struct
     ; instMVars : inst list           (* MVar instantiations.        *)
     }
 
+  type sgnMQuery =
+    { query : Comp.tclo               (* MQuery ::= (tau, ms)        *)
+    ; skinnyCompTyp : Comp.typ        (* MQuery stripped of E-vars.  *)
+    ; optName : Id.name option        (* Opt. name of proof term.    *)
+    ; expected : bound                (* Expected no. of solutions.  *)
+    ; tries : bound                   (* No. of tries to find soln.  *)
+    ; instMMVars : minst list         (* MMVar instantiations.       *)
+    }
+    
 
   let queries = DynArray.create ()      (* sgnQuery DynArray.t         *)
 

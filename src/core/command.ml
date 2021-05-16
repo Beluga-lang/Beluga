@@ -271,7 +271,7 @@ let solvelfhole =
              (* Not too sure what I'm doing here. *)
              Logic.prepare ();
              let (query, skinnyTyp, querySub, instMVars) =
-               Logic.Convert.typToQuery cPsi cD (lfTyp', i)
+               Logic.Convert.typToQuery cD cPsi (lfTyp', i)
              in
              begin
                (* Count the solutions that are found so we only

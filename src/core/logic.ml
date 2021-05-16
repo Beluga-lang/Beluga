@@ -286,7 +286,7 @@ module Convert = struct
       `i` is the count of abstracted existential variables in the
       type.
   *)
-  let typToQuery cPsi cD (tA, i) =
+  let typToQuery cD cPsi (tA, i) =
     let rec typToQuery' (tA, i) s xs =
       match tA with
       | LF.PiTyp ((LF.TypDecl (x, tA), LF.Maybe), tB) when i > 0 ->
@@ -323,16 +323,16 @@ module Index = struct
     }
 
   type sgnMQuery =
-    { query : Comp.tclo               (* MQuery ::= (tau, ms)        *)
+    { mquery : Comp.tclo              (* MQuery ::= (tau, ms)        *)
     ; skinnyCompTyp : Comp.typ        (* MQuery stripped of E-vars.  *)
-    ; optName : Id.name option        (* Opt. name of proof term.    *)
-    ; expected : bound                (* Expected no. of solutions.  *)
-    ; tries : bound                   (* No. of tries to find soln.  *)
+    ; mexpected : bound               (* Expected no. of solutions.  *)
+    ; mtries : bound                  (* No. of tries to find soln.  *)
     ; instMMVars : minst list         (* MMVar instantiations.       *)
     }
     
 
   let queries = DynArray.create ()      (* sgnQuery DynArray.t         *)
+  let mqueries = DynArray.create ()     (* sgnMQuery DynArray.t        *)              
 
   let querySub = ref S.id
 
@@ -365,6 +365,19 @@ module Index = struct
       ; instMVars = xs
       }
 
+    
+  (* addSgnMQuery (tau', ttau, xs, e, t)  = ()
+     Add a new sgnMQuery to the `mqueries' DynArray.
+   *)
+  let addSgnMQuery (tau', ttau, xs, e, t) =
+    DynArray.add mqueries
+      { mquery = ttau
+      ; skinnyCompTyp = tau'
+      ; mexpected = e
+      ; mtries = t
+      ; instMMVars = xs
+      }    
+    
   (* compileSgnClause c = (c, sCl)
      Retrieve LF.typ for term constant c, clausify it into sCl and
      return an sgnClause (c, sCl).
@@ -407,10 +420,24 @@ module Index = struct
        i = # of abstracted EVars in tA
   *)
   let storeQuery (p, (tA, i), cD,  e, t) =
-    let (q, tA', s, xs) = (Convert.typToQuery LF.Null LF.Empty (tA, i)) in
+    let (q, tA', s, xs) = (Convert.typToQuery LF.Empty LF.Null (tA, i)) in
     querySub := s;
     addSgnQuery (p, tA, tA', q, cD, xs, e, t)
 
+
+  (* storeMQuery ((tau, i), e, t) = ()
+     Invariants:
+       i = # of abstracted EVars in tA
+       e = expected number of  solutions
+       t = expected number of tries to find soln.
+  *)
+  let storeMQuery ((tau, i), e, t) =
+    (*  TO BE IMPLEMENTED AND FINISHED 
+      let (q, tau', s, xs) = (Convert.comptypToQuery LF.Null LF.Empty (tau, i)) in *)
+    addSgnMQuery (tau, (tau, LF.MShift 0), [], e, t)
+
+
+    
   (* robStore () = ()
      Store all type constants in the `types' table.
   *)
@@ -441,7 +468,7 @@ module Index = struct
 
 
   let singleQuery (p, (tA, i), cD, e, t) f =
-    let (q, tA', s, xs) = (Convert.typToQuery LF.Null LF.Empty (tA, i)) in
+    let (q, tA', s, xs) = (Convert.typToQuery LF.Empty LF.Null (tA, i)) in
     querySub := s;
     robStore ();
     let bchatter = !Options.chatter in
@@ -1074,9 +1101,13 @@ end
 
 (* Interface *)
 
-let storeQuery p (tM, i) cD e t =
-  Index.storeQuery (p, (tM, i), cD, e, t)
+let storeQuery p (tA, i) cD e t =
+  Index.storeQuery (p, (tA, i), cD, e, t)
 
+let storeMQuery  (tau, i) e t =
+  Index.storeMQuery ((tau, i), e, t)
+
+  
 (* runLogic () = ()
    If !enabledLogic, run the logic programming engine. Otherwise
    do nothing, i.e. return unit.

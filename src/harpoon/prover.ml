@@ -185,7 +185,7 @@ let process_command
          end;
        Logic.prepare ();
        let (query, skinnyTyp, querySub, instMVars) =
-         Logic.Convert.typToQuery cPsi cDh (typ, 0)
+         Logic.Convert.typToQuery cDh cPsi (typ, 0)
        in
        try
          Logic.Solver.solve cDh cPsi query

@@ -8,7 +8,7 @@ module Options : sig
 end
 
 module Convert : sig
-  val typToQuery : LF.dctx -> LF.mctx -> LF.typ * Id.offset
+  val typToQuery : LF.mctx -> LF.dctx -> LF.typ * Id.offset
                    -> query * LF.typ * LF.sub * (Id.name * LF.normal) list
 end
 
@@ -23,6 +23,7 @@ end
 type bound = int option
 
 val storeQuery : Id.name option -> LF.typ * Id.offset -> LF.mctx -> bound -> bound -> unit
+val storeMQuery: Comp.typ * Id.offset -> bound -> bound -> unit
 val runLogic : unit -> unit
 val runLogicOn : Id.name option -> LF.typ * Id.offset -> LF.mctx -> bound -> bound -> unit
 (** Clears the local storage of the logic programming engine,

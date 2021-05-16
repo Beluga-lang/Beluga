@@ -319,6 +319,7 @@ module Index = struct
     ; instMVars : inst list           (* MVar instantiations.        *)
     }
 
+
   let queries = DynArray.create ()      (* sgnQuery DynArray.t         *)
 
   let querySub = ref S.id
@@ -389,14 +390,14 @@ module Index = struct
     in
     revIter regSgnClause typConstr
 
-  (* storeQuery (p, (M, i), cD, e, t) = ()
+  (* storeQuery (p, (tA, i), cD, e, t) = ()
      Invariants:
-       i = count of abstracted EVars in M
+       i = # of abstracted EVars in tA
   *)
-  let storeQuery (p, (tM, i), cD,  e, t) =
-    let (q, tM', s, xs) = (Convert.typToQuery LF.Null LF.Empty (tM, i)) in
+  let storeQuery (p, (tA, i), cD,  e, t) =
+    let (q, tA', s, xs) = (Convert.typToQuery LF.Null LF.Empty (tA, i)) in
     querySub := s;
-    addSgnQuery (p, tM, tM', q, cD, xs, e, t)
+    addSgnQuery (p, tA, tA', q, cD, xs, e, t)
 
   (* robStore () = ()
      Store all type constants in the `types' table.
@@ -427,16 +428,16 @@ module Index = struct
     Hashtbl.clear types
 
 
-  let singleQuery (p, (tM, i), cD, e, t) f =
-    let (q, tM', s, xs) = (Convert.typToQuery LF.Null LF.Empty (tM, i)) in
+  let singleQuery (p, (tA, i), cD, e, t) f =
+    let (q, tA', s, xs) = (Convert.typToQuery LF.Null LF.Empty (tA, i)) in
     querySub := s;
     robStore ();
     let bchatter = !Options.chatter in
     Options.chatter := 0;
     let sgnQ =
       { query = q
-      ; typ = tM
-      ; skinnyTyp = tM'
+      ; typ = tA
+      ; skinnyTyp = tA'
       ; optName = p
       ; cD = cD
       ; expected = e
@@ -457,21 +458,21 @@ module Printer = struct
   let fmt_ppr_dctx ppf cPsi =
     P.fmt_ppr_lf_dctx LF.Empty P.l0 ppf cPsi
 
-  let fmt_ppr_typ cD cPsi ppf sM =
-    P.fmt_ppr_lf_typ cD cPsi P.l0 ppf (Whnf.normTyp sM)
+  let fmt_ppr_typ cD cPsi ppf sA =
+    P.fmt_ppr_lf_typ cD cPsi P.l0 ppf (Whnf.normTyp sA)
 
-  let fmt_ppr_normal cPsi ppf sM =
-    P.fmt_ppr_lf_normal LF.Empty cPsi P.l0 ppf (Whnf.norm sM)
+  let fmt_ppr_normal cPsi ppf sA =
+    P.fmt_ppr_lf_normal LF.Empty cPsi P.l0 ppf (Whnf.norm sA)
 
   let fmt_ppr_decl cD cPsi ppf (tD, s) =
     match tD with
     | LF.TypDeclOpt x ->
        fprintf ppf "%a : _"
          Id.print x
-    | LF.TypDecl (x, tM) ->
+    | LF.TypDecl (x, tA) ->
        fprintf ppf "%a : %a"
          Id.print x
-         (fmt_ppr_typ cD cPsi) (tM, s)
+         (fmt_ppr_typ cD cPsi) (tA, s)
 
   (* goalToString Psi (g, s) = string
      Invariants:
@@ -512,11 +513,11 @@ module Printer = struct
        fprintf ppf "%a -> %a"
          (fmt_ppr_goal cD cPsi) (g, s)
          (fmt_ppr_res cD cPsi) (r', s)
-    | Exists (LF.TypDecl (_, tM) as tD, r') ->
-       let tM' = Convert.etaExpand cD cPsi (tM, s) in
+    | Exists (LF.TypDecl (_, tA) as tD, r') ->
+       let tA' = Convert.etaExpand cD cPsi (tA, s) in
        fprintf ppf "[∃%a. %a]"
          (fmt_ppr_decl cD cPsi) (tD, s)
-         (fmt_ppr_res cD cPsi) (r', LF.Dot (LF.Obj tM', s))
+         (fmt_ppr_res cD cPsi) (r', LF.Dot (LF.Obj tA', s))
 
   (** Prints each subgoal with a leading `<-`. *)
   let fmt_ppr_subgoals cD cPsi ppf (cG, s) =
@@ -557,10 +558,10 @@ module Printer = struct
     | xs ->
        fprintf ppf "@[<v>%a@]."
          (pp_print_list ~pp_sep: pp_print_cut
-            (fun ppf (x, tM) ->
+            (fun ppf (x, tA) ->
               fprintf ppf "%a = %a;"
                 Id.print x
-                (fmt_ppr_normal LF.Null) (tM, S.id)))
+                (fmt_ppr_normal LF.Null) (tA, S.id)))
          xs
 
   let printQuery q =
@@ -615,8 +616,8 @@ module Solver = struct
   (* eqHead A dCl = bool
      Compare the cid_typ's of A and the head of dCl.
   *)
-  let eqHead tM dCl =
-    match (tM, dCl.tHead) with
+  let eqHead tA dCl =
+    match (tA, dCl.tHead) with
     | (LF.Atom (_, i, _), LF.Atom (_, j, _)) -> Id.cid_equals i j
     | _ -> false
 

@@ -1,0 +1,169 @@
+% Typing and Evaluation as Logic Programming
+% Author: Brigitte Pientka
+%
+
+LF tp   : type = 
+  | nat  : tp
+  | arrow  : tp → tp → tp;
+ --name tp T.
+
+ LF tm  : type =                  % Terms       M := 
+| lam  : tp → (tm → tm) → tm      % Functions:  |  lam x:T. M
+| app  : tm → tm → tm             % Application:|  M N   
+;
+--name tm E.
+
+% Typing
+LF oft : tm → tp → type = 
+  | tp_lam :   ({x:tm} oft x T1 → oft (E x) T2)    % (for x:tm. nd x T1 -> nd (E x) T2) 
+               → oft (lam T1 E) (arrow T1 T2)      % -> nd (lam T1 E) (arr T1 T2)
+
+  | tp_app : oft E2 T2 →  oft E1 (arrow T2 T1)     
+	     → oft (app E1 E2) T1
+;
+ --name oft D u.
+
+%% proof tps : [ |- oft M T] -> [ |- oft M S] -> [ |- eq S T]
+%%  auto 
+
+%% What do we want?
+%%
+%%   cD  (meta-context) ; cPsi   |-  tM : tA
+%%   cD                          | [ cPsi |- tM] : [cPsi |- A]
+
+%%   cD (meta-context)           |-  t  : [ cPsi |- tA]
+%%                          computation-level type tau
+%% tau := tau1 => tau2 | [cPsi |- tA]
+%%                         TypBox 
+%%
+%% mquery 1 *  mctx   tau
+%% 
+%% Branch in a case-statement
+%%    mctx pattern : tau => exp
+%% What is the type of T?  -- It's a sub-goal variable / meta2-variable (depends on cD and cPsi)
+%% T : [S : ( |- tp) ; a:tp |- tp]
+%% Answer for T:   S : ( |- tp) ; a:tp  |- (arr S[] a)
+%% T =  [a:tp |-tp]
+%% ==> ANY Unifcation variable that is created during proof search should be meta2-variable!
+
+%% --mquery 1 *  S:( |- tp) ;   a:tp |- oft (lam S[] \x. (lam (arrow S[] a) \f. app f x)) T .
+%%% META QUERY
+%% parse a computation level type {S:[ |- tp]}  [a:tp |- oft (lam S[] \x. (lam (arrow S[] a) \f. app f x)) T ].
+%% abstract over internal computation type {T:[ |- tp]} {S:[ |- tp]}  [a:tp |- oft (lam S[] \x. (lam (arrow S[] a) \f. app f x)) T ].
+   %%% -> DO not use Abstract.compTyp
+%% Store in computation type   {T:[ |- tp]} {S:[ |- tp]}  [a:tp |- oft (lam S[] \x. (lam (arrow S[] a) \f. app f x)) T ] with  "existential" parameters
+%% The logic engine instantiates the 1 "existential" parameters with meta2-variable that is unifiable for proof search and depends on S:[ |- tp]
+%%    
+--mquery 1 *  {S:[ |- tp]}  [a:tp |- oft (lam S[] \x. (lam (arrow S[] a) \f. app f x)) T ].
+
+%{
+src/logic.ml 
+}%
+
+%% For all S,
+%% construct a derivation that proves that lam x:S. lam f:arrow S a. f x  has type T
+%% (i.e. predicate oft defines when a term has a type tp)
+
+%%  T1:tp, T2:tp, T:tp
+%% ORIGNAL LOGIC PROGRAMMING QUERY
+--query 1 * D : {a:tp} oft (lam T1 \x. (lam T2 \f. app f x)) T.
+%% parse an LF type {a:tp} oft (lam T1 \x. (lam T2 \f. app f x)) T.
+%% type reconstruction {a:tp} oft (lam T1 \x. (lam T2 \f. app f x)) FV T -- done
+%% ------ abstract over internal LF type {T:tp}{T1:tp}{T2:tp}{a:tp} oft (lam T1 \x. (lam T2 \f. app f x)) T with 3 "existential" parameters
+%% ------  Abstract.typ
+%% Store in LF type {T:tp}{T1:tp}{T2:tp}{a:tp} oft (lam T1 \x. (lam T2 \f. app f x)) T with 3 "existential" parameters
+%% We could also have stored : {T:[a:tp |- tp]}{T1:[a:tp |- tp]}{T2:[a:tp |- tp]}   |- {a:tp} oft (lam T1[^0] \x. (lam T2[^0] \f. app f x)) T[^0]
+%%  ---- we would need to use some other abstraction than Abstract.typ
+
+%% The logic engine instantiates the 3  "existential" parameters with meta-variables that are unifiable for proof search
+%% and these meta-variables depend on a:tp
+%%    
+%%
+%% What is the type of T?   [a:tp |- tp]   (meta-variable, i.e. depends only on LF context a:tp)
+
+% Parsing -> external Syntax
+% external Syntax -> Approximate Syntax (apxSyn)
+% type reconstruction: approximate Syntax -> Internal Syntax  (tA)   (HARD - Unification! - Hard to trust - many things can go wrong)
+% DOUBLE CHECK : check that indeed tA is well-kinded (i.e. it is a meaningful type)
+%                 (type checking is "easy" - easy to trust )
+%
+% LF type in Internal Syntax --> logical formula
+% logic.ml 
+
+
+
+
+%{
+
+LF Layer (where specify our theory)   module LF
+
+LF Kind K   := type | A -> type 
+LF Type A,B := a M1 ....Mn | A -> A' | {x:A}B
+LF Context Psi := . | Psi, x:A
+LF Signature Sigma := . | Sigma, c:A | Sigma, a:K
+
+EXAMPLE:   even:nat -> type.   (even is type family)  Declare a predicate / Declare a type family
+ 
+nat:type
+z: nat.
+suc: nat -> nat.
+
+ev_z: even z.
+ev_s: even N -> even (suc (suc N)).
+
+odd:nat -> type
+od_sz: odd (s z).
+od_s : odd N -> odd (suc (suc N)).
+
+--query 1 * even (suc (suc z)).    --> Logic programming search will construct the witness (ev_s z ev_z)
+  logic.ml
+
+
+Note: if we have {x:A} B and x does occur in B, then we simply write on the surface A -> B
+
+
+Computation Layer (where we prove properties about the theory)  module Comp
+
+    Contextual Type U := Psi |- A
+
+  -- Types tau := tau1 -> tau2 | {X:U} tau                | [U]
+                  (implication)   (universal quantifier)    Box type
+
+
+Theorem: if even N then odd (suc N)  [on paper]
+let rec lemma : [ |- even N] -> [ |- odd (suc N)]
+
+
+external syntax (synext.ml)   ---parsing.ml--->  approximate syntax (synapx.ml)
+approximate syntax (synapx.ml) --reconstruct--> internal syntax (synint.ml)
+
+Internal Representation of [ |- even N] -> [ |- odd (suc N)] is 
+
+{N: [ |- nat]} [ |- even N] -> [ |- odd (suc N)]
+
+
+--mquery 1 *  [ |- even (suc (suc z))]     --> Logic programming search will construct the witness [ |- (ev_s z ev_z) ]
+
+--mquery 1 *  [ |- even (suc N)]           --> does there exist an N s.t even (suc N)   
+                                           --> yes, N = (suc z)   and then the witness for even (suc (suc z)) is [ |- (ev_s z ev_z) ]
+
+    AFTER type reconstruction:
+    {mquery = {N:[ |- nat]} [ |- even (suc N)]  
+     skinnyCompTyp =   [ |- even (suc N)]  
+     expeccted  = 1 
+     tries      = inf
+     instMMVars = [ N ]
+    }
+
+modify logic.ml so we can deal with computation-level types
+
+
+
+}%
+
+
+
+
+
+
+

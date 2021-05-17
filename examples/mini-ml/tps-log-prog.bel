@@ -2,11 +2,16 @@
 % Author: Brigitte Pientka
 %
 
-LF tp   : type = 
-  | nat  : tp
-  | arrow  : tp → tp → tp;
- --name tp T.
+LF tp   : type =    
+  | nat  : tp       % LF.Atom( _% , tp, Nil)
+  | arrow  : tp → tp → tp;   % (x:tp) (y:tp) tp  ---> LF.PiTyp((TypDecl(_x: typ), No)
+--name tp T.
 
+% if x does appear in the rest of the type (y:tp) tp we simply write it as tp -> (y:tp) tp
+
+
+
+ 
  LF tm  : type =                  % Terms       M := 
 | lam  : tp → (tm → tm) → tm      % Functions:  |  lam x:T. M
 | app  : tm → tm → tm             % Application:|  M N   
@@ -54,7 +59,7 @@ LF oft : tm → tp → type =
 %% Store in computation type   {T:[ |- tp]} {S:[ |- tp]}  [a:tp |- oft (lam S[] \x. (lam (arrow S[] a) \f. app f x)) T ] with  "existential" parameters
 %% The logic engine instantiates the 1 "existential" parameters with meta2-variable that is unifiable for proof search and depends on S:[ |- tp]
 %%    
---mquery 1 *  {S:[ |- tp]}  [a:tp |- oft (lam S[] \x. (lam (arrow S[] a) \f. app f x)) T ].
+% --mquery 1 *  {S:[ |- tp]}  [a:tp |- oft (lam S[] \x. (lam (arrow S[] a) \f. app f x)) T ].
 
 %{
 src/logic.ml 
@@ -67,6 +72,7 @@ src/logic.ml
 %%  T1:tp, T2:tp, T:tp
 %% ORIGNAL LOGIC PROGRAMMING QUERY
 --query 1 * D : {a:tp} oft (lam T1 \x. (lam T2 \f. app f x)) T.
+--query 1 * D : oft (lam nat \x. (lam (arrow nat nat) \f. app f x)) T.
 %% parse an LF type {a:tp} oft (lam T1 \x. (lam T2 \f. app f x)) T.
 %% type reconstruction {a:tp} oft (lam T1 \x. (lam T2 \f. app f x)) FV T -- done
 %% ------ abstract over internal LF type {T:tp}{T1:tp}{T2:tp}{a:tp} oft (lam T1 \x. (lam T2 \f. app f x)) T with 3 "existential" parameters
@@ -165,5 +171,20 @@ modify logic.ml so we can deal with computation-level types
 
 
 
+
+ 
+nat:type.
+z: nat.
+suc: nat -> nat.
+
+even:nat -> type.   
+ev_z: even z.
+ev_s: even N -> even (suc (suc N)).
+
+odd:nat -> type.
+od_sz: odd (suc z).
+od_s : odd N -> odd (suc (suc N)).
+
+--query 2 2 D : even (suc N).   
 
 

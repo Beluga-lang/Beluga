@@ -67,6 +67,7 @@ type goal =                             (* Goals            *)
   | Atom of LF.typ                      (* g ::= A          *)
   | Impl of (res * LF.typ_decl) * goal  (*     | r => g'    *)
   | All of LF.typ_decl * goal           (*     | ∀x:A. g'   *)
+  | Comp of Comp.typ                    (*     | [ g' ]     *)
 
 and res =                               (* Residual Goals   *)
   | Head of LF.typ                      (* r ::= A          *)
@@ -208,6 +209,15 @@ module Convert = struct
     | LF.Atom _ ->
        Atom (Shift.shiftAtom tM (-cS, -dS, dR))
 
+      
+  and comptypToGoal tau (cS, dS, dR) =
+    match tau with
+    | Comp.TypBox (loc, ctyp) ->
+       Comp (tau)
+    | Comp.TypPiBox (loc, ctyp_decl, tA') ->
+       Comp (tau)
+      
+
   and typToRes tM (cS, dS, dR) =
     match tM with
     | LF.PiTyp ((tD, LF.Maybe), tM') ->
@@ -313,25 +323,27 @@ module Convert = struct
 let comptypToQuery (tau, i) =
     let rec comptypToQuery' (tau, i) ms xs =
       match tau with
-      | Comp.TypBox (loc, LF.ClTyp (LF.MTyp tA, cPsi)) -> 
+      | Comp.TypBox (loc, LF.ClTyp (LF.MTyp tA, cPsi)) ->
+         dprintf
+         begin fun p ->
+         p.fmt "goal = %a"
+           (Pretty.Int.DefaultPrinter.fmt_ppr_cmp_typ LF.Empty Pretty.Int.DefaultPrinter.l0) tau
+         end ;
+          ((comptypToGoal tau (0,0,0)), tau, ms, xs) 
+      | Comp.TypBox (loc, LF.ClTyp (LF.PTyp tA, cPsi)) when i > 0 ->
          raise NotImplementedYet
-         (*  typToQuery cD cPsi (tA, 0)    *)
-         (*
-      | Comp.TypBox (loc, LF.ClTyp (LF.PTyp tA, cPsi)) when i > 0
-      | Comp.TypBox (loc, LF.ClTyp (LF.STyp tA, cPsi)) when i > 0 *)
+      | Comp.TypBox (loc, LF.ClTyp (LF.STyp (svar_c, cPhi),  cPsi)) when i > 0 ->
+          raise NotImplementedYet
       | Comp.TypPiBox (loc, mdecl, tau)  when i > 0 ->
           let LF.Decl(x, mtyp, dep) = mdecl in  (* where mtyp = (LF.MTyp tA, cPsi) *)
           (* generate a meta-variable (instantiated by unification) of type (LF.MTyp tA, cPsi)
              and make sure it is an mfront *)
           let mmV = Whnf.newMMVar' (Some x) (LF.Empty, mtyp) dep in
           let mfront = Whnf.mmVarToMFront loc mmV mtyp in 
-         comptypToQuery' (tau , i-1) (LF.MDot (mfront, ms)) ((x, mfront) :: xs)
-         
-      (*
-      | LF.PiTyp ((LF.TypDecl (x, tA), LF.Maybe), tB) when i > 0 ->
-         let tN' = etaExpand cD cPsi (tA, s) in
-         typToQuery' (tB, i - 1) (LF.Dot (LF.Obj tN', s)) ((x, tN') :: xs)
-      | _ -> ((typToGoal tA (0, 0, 0), s), tA, s, xs) *)
+          comptypToQuery' (tau , i-1) (LF.MDot (mfront, ms)) ((x, (loc, mfront)) :: xs)
+      | Comp.TypPiBox (loc, mdecl, tau) ->
+         raise NotImplementedYet
+      | _ -> raise NotImplementedYet
     in
     comptypToQuery' (tau, i) (LF.MShift 0) []
 

@@ -300,9 +300,28 @@ module Convert = struct
     match xs with
     | [] -> S.id
     | (x, tN) :: xs -> LF.Dot (LF.Obj tN, solToSub xs)
+
+
+let comptypToQuery cD cPsi (tau, i) =
+    let rec comptypToQuery' (tau, i) s xs =
+      match tau with
+      | Comp.TypBox (loc, LF.ClTyp (LF.MTyp tA, dctx)) when i > 0 ->
+         let tN' = etaExpand cD dctx (tA, s) in
+         comptypToQuery' (tA, i-1) (LF.Dot (LF.Obj tN', s)) ((None, tN') :: xs)
+         (*
+      | Comp.TypBox (loc, LF.ClTyp (LF.PTyp tA, dctx)) when i > 0
+      | Comp.TypBox (loc, LF.ClTyp (LF.STyp tA, dctx)) when i > 0 *)
+      (*
+      | LF.PiTyp ((LF.TypDecl (x, tA), LF.Maybe), tB) when i > 0 ->
+         let tN' = etaExpand cD cPsi (tA, s) in
+         typToQuery' (tB, i - 1) (LF.Dot (LF.Obj tN', s)) ((x, tN') :: xs)
+      | _ -> ((typToGoal tA (0, 0, 0), s), tA, s, xs) *)
+    in
+    comptypToQuery' (tau, i) S.id []
+
 end
 
-
+    
 module Index = struct
   open Store
 

@@ -197,6 +197,7 @@ end
 
 
 module Convert = struct
+  
   (* typToClause' eV cG M (cS, dS, dR) = clause
      Invariants:
        If BV(i) is free in M, then BV(i) is bound in (eV |- M).
@@ -366,11 +367,11 @@ let comptypToMQuery (tau, i) =
      *)
       match tau with
       | Comp.TypBox (_loc, LF.ClTyp (LF.MTyp _tA, _cPsi)) ->
-(*         dprintf
+         dprintf
          begin fun p ->
          p.fmt "goal = %a"
-           Pretty.Int.DefaultPrinter.fmt_ppr_lf_typ LF.Empty (Whnf.cnormTyp (_tA,ms))
-         end ; *)
+           (Pretty.Int.DefaultPrinter.fmt_ppr_cmp_typ LF.Empty Pretty.Int.DefaultPrinter.l0) (Whnf.cnormCTyp (tau,ms))
+         end ; 
           ((comptypToCompGoal tau), tau, ms, xs) 
       | Comp.TypBox (_loc, LF.ClTyp (LF.PTyp _tA, _cPsi)) when i > 0 ->
          raise NotImplementedYet
@@ -549,6 +550,8 @@ module Index = struct
   let iterQueries f =
     DynArray.iter (fun q -> f q) queries
 
+  let iterMQueries f =
+    DynArray.iter (fun q -> f q) mqueries
   (* clearIndex () = ()
      Empty the local storage.
   *)
@@ -580,6 +583,7 @@ module Index = struct
 end
 
 
+
 module Printer = struct
   module P = Pretty.Int.DefaultPrinter
   open Index
@@ -590,8 +594,8 @@ module Printer = struct
   let fmt_ppr_typ cD cPsi ppf sA =
     P.fmt_ppr_lf_typ cD cPsi P.l0 ppf (Whnf.normTyp sA)
 
-  let fmt_ppr_normal cPsi ppf sA =
-    P.fmt_ppr_lf_normal LF.Empty cPsi P.l0 ppf (Whnf.norm sA)
+  let fmt_ppr_normal cPsi ppf sM =
+    P.fmt_ppr_lf_normal LF.Empty cPsi P.l0 ppf (Whnf.norm sM)
 
   let fmt_ppr_decl cD cPsi ppf (tD, s) =
     match tD with
@@ -642,11 +646,10 @@ module Printer = struct
        fprintf ppf "%a -> %a"
          (fmt_ppr_goal cD cPsi) (g, s)
          (fmt_ppr_res cD cPsi) (r', s)
-    | Exists (LF.TypDecl (_, tA) as tD, r') ->
-       let tA' = Convert.etaExpand cD cPsi (tA, s) in
+    | Exists (LF.TypDecl (_, _tA) as tD, r') ->
        fprintf ppf "[∃%a. %a]"
          (fmt_ppr_decl cD cPsi) (tD, s)
-         (fmt_ppr_res cD cPsi) (r', LF.Dot (LF.Obj tA', s))
+         (fmt_ppr_res cD (LF.DDec (cPsi, S.decSub tD s))) (r', S.dot1 s)
 
   (** Prints each subgoal with a leading `<-`. *)
   let fmt_ppr_subgoals cD cPsi ppf (cG, s) =
@@ -703,7 +706,6 @@ module Printer = struct
         fprintf std_formatter "%a@."
           fmt_ppr_sgn_clause w)
 end
-
 
 module Solver = struct
   module P = Printer.P
@@ -1187,6 +1189,31 @@ module Frontend = struct
       end
     else if !Options.chatter >= 2
     then printf "Skipping query -- bound for tries = 0.\n"
+
+
+  let msolve sgnMQuery =
+    let solutions = ref 0 in
+    match sgnMQuery.mquery with
+    | (Box(cPsi, g) , ms) ->
+       let scInit (cPsi, tM) =
+          begin
+            fprintf std_formatter  "@[<v>---------- Solution ----------@,[%a |- %a]@]" 
+              (*              "@[<hov 2>@[%a@] |-@ @[%a@]@]" *)
+              P.fmt_ppr_dctx cPsi
+              (P.fmt_ppr_normal cPsi) (tM, Substitution.LF.id)
+          end 
+       in
+       begin
+       try
+          Solver.solve LF.Empty cPsi (g, Substitution.LF.id) scInit;
+          (* Check solution bounds. *)
+          checkSolutions sgnMQuery.mexpected sgnMQuery.mtries !solutions
+        with
+        | Done -> printf "Done.\n"
+        | AbortQuery s -> printf "%s\n" s
+        | _ -> ()
+      end
+
 end
 
 (* Interface *)
@@ -1213,6 +1240,7 @@ let runLogic () =
       then Printer.printSignature ();
       (* Solve! *)
       Index.iterQueries Frontend.solve;
+      Index.iterMQueries Frontend.msolve;      
       (* Clear the local storage.  *)
       Index.clearIndex ()
     end

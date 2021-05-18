@@ -69,10 +69,13 @@ src/logic.ml
 %% construct a derivation that proves that lam x:S. lam f:arrow S a. f x  has type T
 %% (i.e. predicate oft defines when a term has a type tp)
 
+%% =====================================================================
 %%  T1:tp, T2:tp, T:tp
 %% ORIGNAL LOGIC PROGRAMMING QUERY
+%%
 --query 1 * D : {a:tp} oft (lam T1 \x. (lam T2 \f. app f x)) T.
 --query 1 * D : oft (lam nat \x. (lam (arrow nat nat) \f. app f x)) T.
+%% =====================================================================
 %% parse an LF type {a:tp} oft (lam T1 \x. (lam T2 \f. app f x)) T.
 %% type reconstruction {a:tp} oft (lam T1 \x. (lam T2 \f. app f x)) FV T -- done
 %% ------ abstract over internal LF type {T:tp}{T1:tp}{T2:tp}{a:tp} oft (lam T1 \x. (lam T2 \f. app f x)) T with 3 "existential" parameters
@@ -168,10 +171,6 @@ modify logic.ml so we can deal with computation-level types
 }%
 
 
-
-
-
-
  
 nat:type.
 z: nat.
@@ -186,5 +185,5 @@ od_sz: odd (suc z).
 od_s : odd N -> odd (suc (suc N)).
 
 --query 2 2 D : even (suc N).   
-
+--mquery 1 * [ |- even (suc (suc z))].
 

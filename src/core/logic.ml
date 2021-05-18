@@ -108,7 +108,7 @@ type comp_goal =
   | Forall of  LF.ctyp_decl * comp_goal         
 
 
-
+type mquery = comp_goal * LF.msub       (* mq := (c_g, ms)  *)
 
   
 module Shift : sig
@@ -344,7 +344,7 @@ module Convert = struct
     | (x, tN) :: xs -> LF.Dot (LF.Obj tN, solToSub xs)
 
 (*
-  comptypToQuery (tau,i) = comp_goal  
+  comptypToMQuery (tau,i) = comp_goal  
 
    Precondition:
 
@@ -356,8 +356,8 @@ module Convert = struct
 
 
  *)
-let comptypToQuery (tau, i) =
-  let rec comptypToQuery' (tau, i) ms xs =
+let comptypToMQuery (tau, i) =
+  let rec comptypToMQuery' (tau, i) ms xs =
     (* 
      Invariant: 
 
@@ -369,11 +369,11 @@ let comptypToQuery (tau, i) =
      *)
       match tau with
       | Comp.TypBox (_loc, LF.ClTyp (LF.MTyp _tA, _cPsi)) ->
-         dprintf
+(*         dprintf
          begin fun p ->
          p.fmt "goal = %a"
-           (Pretty.Int.DefaultPrinter.fmt_ppr_cmp_typ LF.Empty Pretty.Int.DefaultPrinter.l0) (Whnf.cnormTyp (tau,ms))
-         end ;
+           Pretty.Int.DefaultPrinter.fmt_ppr_lf_typ LF.Empty (Whnf.cnormTyp (_tA,ms))
+         end ; *)
           ((comptypToCompGoal tau), tau, ms, xs) 
       | Comp.TypBox (_loc, LF.ClTyp (LF.PTyp _tA, _cPsi)) when i > 0 ->
          raise NotImplementedYet
@@ -385,12 +385,12 @@ let comptypToQuery (tau, i) =
              and make sure it is an mfront *)
           let mmV = Whnf.newMMVar' (Some x) (LF.Empty, mtyp) dep in
           let mfront = Whnf.mmVarToMFront loc mmV mtyp in 
-          comptypToQuery' (tau , i-1) (LF.MDot (mfront, ms)) ((x, (loc, mfront)) :: xs)
+          comptypToMQuery' (tau , i-1) (LF.MDot (mfront, ms)) ((x, (loc, mfront)) :: xs)
       | Comp.TypPiBox (loc, mdecl, tau) ->
          raise NotImplementedYet
       | _ -> raise NotImplementedYet
     in
-    comptypToQuery' (tau, i) (LF.MShift 0) []
+    comptypToMQuery' (tau, i) (LF.MShift 0) []
 
 end
 
@@ -415,7 +415,7 @@ module Index = struct
     }
 
   type sgnMQuery =
-    { mquery : Comp.tclo              (* MQuery ::= (tau, ms)        *)
+    { mquery : mquery                 (* MQuery ::= (c_g, ms)        *)
     ; skinnyCompTyp : Comp.typ        (* MQuery stripped of E-vars.  *)
     ; mexpected : bound               (* Expected no. of solutions.  *)
     ; mtries : bound                  (* No. of tries to find soln.  *)
@@ -461,9 +461,9 @@ module Index = struct
   (* addSgnMQuery (tau', ttau, xs, e, t)  = ()
      Add a new sgnMQuery to the `mqueries' DynArray.
    *)
-  let addSgnMQuery (tau', ttau, xs, e, t) =
+  let addSgnMQuery (tau', mq, xs, e, t) =
     DynArray.add mqueries
-      { mquery = ttau
+      { mquery = mq
       ; skinnyCompTyp = tau'
       ; mexpected = e
       ; mtries = t
@@ -525,8 +525,9 @@ module Index = struct
   *)
   let storeMQuery ((tau, i), e, t) =
     (*  TO BE IMPLEMENTED AND FINISHED *)
-    let (comp_goal, tau', ms, xs) = (Convert.comptypToQuery (tau, i)) in
-      addSgnMQuery (tau, (tau, LF.MShift 0), [], e, t)
+    let (comp_goal, tau', ms, xs) = (Convert.comptypToMQuery (tau, i)) in
+    let mq = (comp_goal, ms) in 
+      addSgnMQuery (tau', mq, [], e, t)
 
 
     

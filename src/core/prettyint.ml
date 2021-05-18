@@ -941,7 +941,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
          (fmt_ppr_cmp_meta_obj_typed cD (lvl + 1)) (mO, mT)
          (fmt_ppr_cmp_meta_spine cD lvl) mS
 
-  let rec fmt_ppr_cmp_typ cD lvl ppf =
+  let rec fmt_ppr_cmp_typ  cD lvl ppf =
     function
     | Comp.TypBase (_, c, mS)->
        let cond = lvl > 10 in

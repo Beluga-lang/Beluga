@@ -1,6 +1,7 @@
 open Syntax.Int
 
 type goal
+type comp_goal 
 type query
 
 module Options : sig
@@ -10,7 +11,7 @@ end
 module Convert : sig
   val typToQuery : LF.mctx -> LF.dctx -> LF.typ * Id.offset
                    -> query * LF.typ * LF.sub * (Id.name * LF.normal) list
-  val comptypToQuery : Comp.typ * Id.offset -> Comp.typ * LF.msub * (Id.name * Comp.meta_obj) list
+  val comptypToQuery : Comp.typ * Id.offset -> comp_goal * Comp.typ * LF.msub * (Id.name * Comp.meta_obj) list
 end
 
 module Frontend : sig

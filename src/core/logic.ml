@@ -35,6 +35,7 @@ end
 
 
 exception NotImplementedYet
+
 (* Naming conventions:
      g : goal
    Goal.
@@ -91,6 +92,20 @@ type clause =                    (* Horn Clause ::= eV |- A :- cG   *)
   ; eVars : LF.dctx              (* Context eV : EV's bound in A/cG *)
   ; subGoals : conjunction       (* Subgoals cG : solv. cG => A     *)
   }
+
+
+
+(* Naming conventions:
+
+  cg : comp_goal (computation-level goal)
+
+ *)
+
+type comp_goal =
+  | Box of  LF.dctx  * goal
+  | Implies of comp_goal * comp_goal  
+  | Forall of  LF.ctyp_decl * comp_goal         
+
 
 
 
@@ -199,14 +214,31 @@ module Convert = struct
        ; subGoals = cG
        }
 
-  and typToGoal tM (cS, dS, dR) =
-    match tM with
-    | LF.PiTyp ((tD, LF.Maybe), tM') ->
-       All (tD, typToGoal tM' (cS, dS, dR + 1))
-    | LF.PiTyp ((LF.TypDecl (x, tA) as tD, LF.No), tB) ->
-       Impl ((typToRes tA (cS, dS, dR), tD), typToGoal tB (cS, dS, dR + 1))
+  (* Write out invariant / comment
+     in particular: what is cS, dS, dR 
+   *)       
+  and typToGoal tA (cS, dS, dR) =
+    match tA with
+    | LF.PiTyp ((tdec, LF.Maybe), tA') ->
+       All (tdec, typToGoal tA' (cS, dS, dR + 1))
+    | LF.PiTyp ((LF.TypDecl (x, tA) as tdec, LF.No), tB) ->
+       Impl ((typToRes tA (cS, dS, dR), tdec), typToGoal tB (cS, dS, dR + 1))
     | LF.Atom _ ->
-       Atom (Shift.shiftAtom tM (-cS, -dS, dR))
+       Atom (Shift.shiftAtom tA (-cS, -dS, dR))
+
+           
+  and comptypToCompGoal tau  =
+    match tau with
+    | Comp.TypBox (_loc, LF.ClTyp (LF.MTyp tA, cPsi)) -> 
+       Box (cPsi, Atom tA)
+       (* possibly needs to have PiBox variables shifted;
+          note: Pibox variables are indexed with respect to cD (Delta)
+                LF Pi variables are indexed with respect to LF context 
+                (hence one cannot simply re-use the module Shift, but would need a module MShift)
+        *)   
+    | Comp.TypPiBox (loc, ctyp_decl , tau') ->
+       Forall(ctyp_decl, comptypToCompGoal tau' )
+
 
   and typToRes tM (cS, dS, dR) =
     match tM with
@@ -309,29 +341,46 @@ module Convert = struct
     | [] -> S.id
     | (x, tN) :: xs -> LF.Dot (LF.Obj tN, solToSub xs)
 
+(*
+  comptypToQuery (tau,i) = comp_goal  
 
+   Precondiction:
+
+     . |- tau : ctyp  (i.e. tau is a closed computation-level type)
+          i  = # Pi quantified variables in tau that denote existential variables, i.e. we want to find instantiation for those variables during proof search.
+
+   Postcondition (result)
+      comp_goal is a the representation of the computation-level type tau as a computation-level goal
+ 
+ *)
 let comptypToQuery (tau, i) =
-    let rec comptypToQuery' (tau, i) ms xs =
+  let rec comptypToQuery' (tau, i) ms xs =
+    (* Invariant:
+
+
+     *)
       match tau with
-      | Comp.TypBox (loc, LF.ClTyp (LF.MTyp tA, cPsi)) -> 
+      | Comp.TypBox (_loc, LF.ClTyp (LF.MTyp _tA, _cPsi)) ->
+         dprintf
+         begin fun p ->
+         p.fmt "goal = %a"
+           (Pretty.Int.DefaultPrinter.fmt_ppr_cmp_typ LF.Empty Pretty.Int.DefaultPrinter.l0) tau
+         end ;
+          ((comptypToCompGoal tau), tau, ms, xs) 
+      | Comp.TypBox (_loc, LF.ClTyp (LF.PTyp _tA, _cPsi)) when i > 0 ->
          raise NotImplementedYet
-         (*  typToQuery cD cPsi (tA, 0)    *)
-         (*
-      | Comp.TypBox (loc, LF.ClTyp (LF.PTyp tA, cPsi)) when i > 0
-      | Comp.TypBox (loc, LF.ClTyp (LF.STyp tA, cPsi)) when i > 0 *)
+      | Comp.TypBox (loc, LF.ClTyp (LF.STyp (_svar_c, _cPhi),  _cPsi)) when i > 0 ->
+          raise NotImplementedYet
       | Comp.TypPiBox (loc, mdecl, tau)  when i > 0 ->
           let LF.Decl(x, mtyp, dep) = mdecl in  (* where mtyp = (LF.MTyp tA, cPsi) *)
           (* generate a meta-variable (instantiated by unification) of type (LF.MTyp tA, cPsi)
              and make sure it is an mfront *)
           let mmV = Whnf.newMMVar' (Some x) (LF.Empty, mtyp) dep in
           let mfront = Whnf.mmVarToMFront loc mmV mtyp in 
-         comptypToQuery' (tau , i-1) (LF.MDot (mfront, ms)) ((x, mfront) :: xs)
-         
-      (*
-      | LF.PiTyp ((LF.TypDecl (x, tA), LF.Maybe), tB) when i > 0 ->
-         let tN' = etaExpand cD cPsi (tA, s) in
-         typToQuery' (tB, i - 1) (LF.Dot (LF.Obj tN', s)) ((x, tN') :: xs)
-      | _ -> ((typToGoal tA (0, 0, 0), s), tA, s, xs) *)
+          comptypToQuery' (tau , i-1) (LF.MDot (mfront, ms)) ((x, (loc, mfront)) :: xs)
+      | Comp.TypPiBox (loc, mdecl, tau) ->
+         raise NotImplementedYet
+      | _ -> raise NotImplementedYet
     in
     comptypToQuery' (tau, i) (LF.MShift 0) []
 

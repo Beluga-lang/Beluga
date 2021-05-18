@@ -263,12 +263,9 @@ and lowerMMVar cD =
 (* mvar_dot1 t = t'
    Invariant:
 
-   If  cD |- t : cD'
-
+   If  cD |- t : cD' 
    then t' = u. (mshift t 1)
-       and  for all A s.t.  D' ; Psi |- A : type
-
-              D, u::[|t|](A[Psi]) |- t' : D', A[Psi]
+        cD, u::[|t|]U |- t' : cD', u:U
  *)
 let rec mvar_dot1 t =
   (* MDot (MV 1, mshift t 1) *)

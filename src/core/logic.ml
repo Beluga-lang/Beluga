@@ -36,6 +36,7 @@ end
 
 exception NotImplementedYet
 
+        
 (* Naming conventions:
      g : goal
    Goal.
@@ -229,7 +230,8 @@ module Convert = struct
            
   and comptypToCompGoal tau  =
     match tau with
-    | Comp.TypBox (_loc, LF.ClTyp (LF.MTyp tA, cPsi)) -> 
+    | Comp.TypBox (_loc, LF.ClTyp (LF.MTyp tA, cPsi)) ->
+       (* Invariant: tA will always be atomic in our implementation *)
        Box (cPsi, Atom tA)
        (* possibly needs to have PiBox variables shifted;
           note: Pibox variables are indexed with respect to cD (Delta)
@@ -344,19 +346,25 @@ module Convert = struct
 (*
   comptypToQuery (tau,i) = comp_goal  
 
-   Precondiction:
+   Precondition:
 
      . |- tau : ctyp  (i.e. tau is a closed computation-level type)
-          i  = # Pi quantified variables in tau that denote existential variables, i.e. we want to find instantiation for those variables during proof search.
+          i  = # Pibox quantified variables in tau that denote existential variables, i.e. we want to find instantiation for those variables during proof search.
 
    Postcondition (result)
       comp_goal is a the representation of the computation-level type tau as a computation-level goal
- 
+
+
  *)
 let comptypToQuery (tau, i) =
   let rec comptypToQuery' (tau, i) ms xs =
-    (* Invariant:
+    (* 
+     Invariant: 
 
+       cD' |- tau 
+       .   |- ms : cD'     ms is a meta-substitution that provides existential variables (refs that will instantiated) 
+                              for all the bound meta-variables in cD'
+       .   |- [ms]tau 
 
      *)
       match tau with
@@ -364,7 +372,7 @@ let comptypToQuery (tau, i) =
          dprintf
          begin fun p ->
          p.fmt "goal = %a"
-           (Pretty.Int.DefaultPrinter.fmt_ppr_cmp_typ LF.Empty Pretty.Int.DefaultPrinter.l0) tau
+           (Pretty.Int.DefaultPrinter.fmt_ppr_cmp_typ LF.Empty Pretty.Int.DefaultPrinter.l0) (Whnf.cnormTyp (tau,ms))
          end ;
           ((comptypToCompGoal tau), tau, ms, xs) 
       | Comp.TypBox (_loc, LF.ClTyp (LF.PTyp _tA, _cPsi)) when i > 0 ->
@@ -392,9 +400,9 @@ module Index = struct
 
   let types = Hashtbl.create 0          (* typConst Hashtbl.t          *)
 
-  type inst = (Id.name * LF.normal)     (* I ::= (x, MVar)             *)
-  type minst = (Id.name * LF.normal)    (* I ::= (x, MMVar)            *)            
-
+  type inst = (Id.name *  LF.normal)    (* I ::= (x, Y[s]) where Y is an MVar        *)
+  type minst = (Id.name * LF.mfront)    (* I ::= (x, mf)   where mf is (Psihat.term) *)            
+                                        (* where mf contains an MMVar *)
   type sgnQuery =
     { query : query                   (* Query ::= (g, s)            *)
     ; typ : LF.typ                    (* Query as LF.typ.            *)
@@ -516,9 +524,9 @@ module Index = struct
        t = expected number of tries to find soln.
   *)
   let storeMQuery ((tau, i), e, t) =
-    (*  TO BE IMPLEMENTED AND FINISHED 
-      let (q, tau', s, xs) = (Convert.comptypToQuery LF.Null LF.Empty (tau, i)) in *)
-    addSgnMQuery (tau, (tau, LF.MShift 0), [], e, t)
+    (*  TO BE IMPLEMENTED AND FINISHED *)
+    let (comp_goal, tau', ms, xs) = (Convert.comptypToQuery (tau, i)) in
+      addSgnMQuery (tau, (tau, LF.MShift 0), [], e, t)
 
 
     

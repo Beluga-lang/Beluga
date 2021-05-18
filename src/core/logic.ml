@@ -313,7 +313,7 @@ module Convert = struct
 let comptypToQuery (tau, i) =
     let rec comptypToQuery' (tau, i) ms xs =
       match tau with
-      | Comp.TypBox (loc, LF.ClTyp (LF.MTyp tA, cPsi)) ->
+      | Comp.TypBox (loc, LF.ClTyp (LF.MTyp tA, cPsi)) -> 
          raise NotImplementedYet
          (*  typToQuery cD cPsi (tA, 0)    *)
          (*

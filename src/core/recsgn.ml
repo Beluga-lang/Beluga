@@ -1192,7 +1192,7 @@ let recSgnDecls decls =
            , fun () -> Abstract.comptyp tau0
            )
         in
-        Reconstruct.reset_fvarCnstr ();
+        (Reconstruct.reset_fvarCnstr ();
         Unify.resetGlobalCnstrs ();
         dprintf
         begin fun p ->
@@ -1204,12 +1204,9 @@ let recSgnDecls decls =
           ( "Constant Check"
           , fun () ->
            Check.Comp.checkTyp Int.LF.Empty tau'
-          );(*
-        Logic.storeMQuery((tau', i), cD, expected, tries);
-             *)
-         
- 
-          Int.Sgn.MQuery (loc, None, expected, tries)))
+          );
+        Logic.storeMQuery (tau', i) expected tries)   ;                 
+        Int.Sgn.MQuery (loc, (tau', i), expected, tries)))
 
 
        

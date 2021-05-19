@@ -3,7 +3,7 @@
 %
 
 LF tp   : type =    
-  | nat  : tp       % LF.Atom( _% , tp, Nil)
+  | nat  : tp                % LF.Atom( _% , tp, Nil)
   | arrow  : tp → tp → tp;   % (x:tp) (y:tp) tp  ---> LF.PiTyp((TypDecl(_x: typ), No)
 --name tp T.
 

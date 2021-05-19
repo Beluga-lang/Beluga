@@ -99,6 +99,7 @@ type clause =                    (* Horn Clause ::= eV |- A :- cG   *)
 (* Naming conventions:
 
   cg : comp_goal (computation-level goal)
+  mq : mquery    (a query for a cg) 
 
  *)
 
@@ -108,7 +109,7 @@ type comp_goal =
   | Forall of  LF.ctyp_decl * comp_goal         
 
 
-type mquery = comp_goal * LF.msub       (* mq := (c_g, ms)  *)
+type mquery = comp_goal * LF.msub       (* mq := (cg, ms)  *)
 
   
 module Shift : sig
@@ -235,7 +236,9 @@ module Convert = struct
           note: Pibox variables are indexed with respect to cD (Delta)
                 LF Pi variables are indexed with respect to LF context 
                 (hence one cannot simply re-use the module Shift, but would need a module MShift)
-        *)   
+        *)
+    | Comp.TypBox (_,_) ->
+       raise NotImplementedYet
     | Comp.TypPiBox (loc, ctyp_decl , tau') ->
        Forall(ctyp_decl, comptypToCompGoal tau' )
 
@@ -384,8 +387,13 @@ let comptypToMQuery (tau, i) =
           let mmV = Whnf.newMMVar' (Some x) (LF.Empty, mtyp) dep in
           let mfront = Whnf.mmVarToMFront loc mmV mtyp in 
           comptypToMQuery' (tau , i-1) (LF.MDot (mfront, ms)) ((x, (loc, mfront)) :: xs)
-      | Comp.TypPiBox (loc, mdecl, tau) ->
-         raise NotImplementedYet
+      | Comp.TypPiBox (_,_, tau') ->
+         dprintf
+         begin fun p ->
+         p.fmt "goal = %a"
+           (Pretty.Int.DefaultPrinter.fmt_ppr_cmp_typ LF.Empty Pretty.Int.DefaultPrinter.l0) (Whnf.cnormCTyp (tau,ms))
+         end ; 
+         ((comptypToCompGoal tau), tau', ms, xs)
       | _ -> raise NotImplementedYet
     in
     comptypToMQuery' (tau, i) (LF.MShift 0) []
@@ -524,8 +532,8 @@ module Index = struct
   let storeMQuery ((tau, i), e, t) =
     (*  TO BE IMPLEMENTED AND FINISHED *)
     let (comp_goal, tau', ms, xs) = (Convert.comptypToMQuery (tau, i)) in
-    let mq = (comp_goal, ms) in 
-      addSgnMQuery (tau', mq, [], e, t)
+    let mq = (comp_goal, ms) in
+    addSgnMQuery (tau', mq, [], e, t)
 
 
     
@@ -1192,6 +1200,13 @@ module Frontend = struct
 
 
   let msolve sgnMQuery =
+    let rec cgTog cg = match cg with
+      | Box (cPsi, g) -> g
+      | Forall (LF.Decl(n, LF.ClTyp ((LF.MTyp tA),cPsi),dep), cg') ->
+          let typD = LF.TypDecl (n, tA) in
+          let g = cgTog cg' in
+          All (typD, g)
+    in 
     let solutions = ref 0 in
     match sgnMQuery.mquery with
     | (Box(cPsi, g) , ms) ->
@@ -1212,7 +1227,28 @@ module Frontend = struct
         | Done -> printf "Done.\n"
         | AbortQuery s -> printf "%s\n" s
         | _ -> ()
-      end
+       end
+    | (Forall (ctyp_decl, g), ms) ->
+       let g' = cgTog g in
+       let scInit (cPsi, tM) =
+          begin
+            fprintf std_formatter  "@[<v>---------- Solution ----------@,[%a |- %a]@]" 
+              (*              "@[<hov 2>@[%a@] |-@ @[%a@]@]" *)
+              P.fmt_ppr_dctx cPsi
+              (P.fmt_ppr_normal cPsi) (tM, Substitution.LF.id)
+          end 
+       in
+       begin
+         try
+          Solver.solve LF.Empty LF.Null (g', Substitution.LF.id) scInit;
+          (* Check solution bounds. *)
+          checkSolutions sgnMQuery.mexpected sgnMQuery.mtries !solutions
+        with
+        | Done -> printf "Done.\n"
+        | AbortQuery s -> printf "%s\n" s
+        | _ -> ()
+       end
+       
 
 end
 

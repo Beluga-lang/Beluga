@@ -184,6 +184,104 @@ odd:nat -> type.
 od_sz: odd (suc z).
 od_s : odd N -> odd (suc (suc N)).
 
---query 2 2 D : even (suc N).   
---mquery 1 * [ |- even (suc (suc z))].
+--query 2 2 D : even (suc N).             % does the exist a solution for D and N st. D : [even (suc N)] 
+--mquery 1 *  [ |- even (suc (suc z))].    
 
+
+
+
+
+%{
+
+Baby extension:
+
+- Extend mquery s.t. we can write 
+  --mquery 1 * e : [ |- even (suc (suc z))].
+
+  and then e will be instantiated with [ |- ev_s ev_z]
+
+- Fix pretty printing
+
+- Run it on some example (to get a sense of the limitations of the search that is implemented)
+
+- Fix that we count properly the solution vs tries
+
+- Extend functionality to handle 
+  --mquery 1 * {N:[ |- nat]}{D: [ |- even N]} [ |- even (suc (suc N))].
+
+Little extension:
+
+- solve is depth-first search (logic programming)
+  ---> bounded depth-first search  (doing some backtracking)
+  ---> mqery 1 * depth-bound 
+  
+  Long term: more sophistacted search (Twelf : Tabling /memoization of subgaols)
+
+
+- Existential in the mquery itself (for Harpoon there are no existentials!)
+  (but to maybe make it more robust, think about 
+     --mquery 1 *  [ |- even (suc (suc N))].  )
+
+
+
+Further extensions:
+
+- proof search over inductive / stratified types (msolveD)
+  (backwards chaining) 
+
+  Example: 
+
+  inductive Even : [ |- nat] -> ctype = 
+  | Evz : Even [ |- z]
+  | Evss: Even [ |- N] -> Even [ |- suc (suc N)].
+
+  Step 1: Extend compilation computation-level type for a constant like Evz, Evss into a clause) 
+          to mclause 
+  
+  Step 2: solve works on goals ; msolve that works on comp_goals (uniform proof search for a logic
+          first-order logic with box)
+           ===> we also want to deal with box! [to be investigated]
+
+
+Meta-Context:
+
+   N: [|- nat]
+   E: [ |- even N]
+  
+
+Computation-level Context :
+
+   Evss: forall N. Even [ |- N] -> Even [ |- suc (suc N)].,
+   Evz : Even [ |- z],
+   ih: Even [ |- N] -> Odd [ |- suc N]
+
+   x  :  Even [ |- suc (suc N)]
+
+......  ==>   Odd [ |- suc (suc N)]
+
+- proof search over inductive / stratified types (msolveD)  AND use of lemmas/other functions/ih. 
+   (add some forward chaining)
+
+- proof search over computation-level types that denote "theorems" 
+  first-order logic with with box AND CASE ANALYSIS AND INDUCTION  [HARPOON LOOP] 
+
+  Step 0: Intro (Action)
+  
+  Idea from Twelf loop:
+
+  iterate over:
+   1) Try msolve_lf  or msolveD (bounded depth-first search or , if this fails)
+      (msolve which combines forward and backward reasoning)
+   2) Split on an assumption  (currently the user uses the action split x)
+      (Note: if we split on an induction variable, it will generate valid induction hypothesis)
+      Back to Step 1:
+
+
+  In the design: Make it such that when it fails -> it bounces the problem back to the user.
+
+
+SIDE REMARK:
+  Kaustuv Chaudhuri PhD 
+
+
+}%

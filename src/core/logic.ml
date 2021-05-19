@@ -393,7 +393,7 @@ let comptypToMQuery (tau, i) =
          p.fmt "goal = %a"
            (Pretty.Int.DefaultPrinter.fmt_ppr_cmp_typ LF.Empty Pretty.Int.DefaultPrinter.l0) (Whnf.cnormCTyp (tau,ms))
          end ; 
-         ((comptypToCompGoal tau), tau', ms, xs)
+         ((comptypToCompGoal tau), tau, ms, xs)
       | _ -> raise NotImplementedYet
     in
     comptypToMQuery' (tau, i) (LF.MShift 0) []

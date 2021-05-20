@@ -1,0 +1,31 @@
+nat:type.
+zero: nat.
+succ: nat -> nat.
+
+even:nat -> type.
+ev_z: even zero.
+ev_s: even N -> even (succ (succ N)).
+
+odd : nat -> type.
+od_sz : odd (succ zero).
+od_s : odd N -> odd (succ (succ N)).
+
+le : nat -> nat -> type.
+le_z : le zero N.
+le_s : le N M -> le (succ N) (succ M).
+
+
+% --mquery 1 * [ |- even (succ (succ zero))].
+
+% --mquery 0 * [ |- even (succ (succ (succ zero)))].
+
+% --mquery 1 * {N:[ |- nat]}[ |- even (succ (succ N))].
+
+% --mquery 1 * [ |- odd (succ (succ (succ zero)))].
+
+% --mquery 1 * [ |- le (succ (succ zero)) (succ (succ (succ (succ zero))))].
+
+% --mquery 2 2 D :  even (succ N)
+
+% --mquery 1 * {N: [ |- nat]}{D: [|- even N]} [|- evn (succ (succ zero))].
+

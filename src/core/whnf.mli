@@ -234,3 +234,5 @@ val mmVarToMFront : Location.t -> mm_var -> Comp.meta_typ -> mfront
 
 val dotMMVar : Location.t -> mctx -> msub -> Id.name * ctyp * depend
                -> Comp.meta_obj * msub
+
+val extend_mctx : mctx -> (LF.ctyp_decl * msub ) -> mctx

@@ -15,11 +15,14 @@ le_z : le zero N.
 le_s : le N M -> le (succ N) (succ M).
 
 
-% --mquery 1 * [ |- even (succ (succ zero))].
+--mquery 1 * [ |- even (succ (succ zero))].
 
-% --mquery 0 * [ |- even (succ (succ (succ zero)))].
+%% --mquery 0 * [ |- even (succ (succ (succ zero)))].
 
-% --mquery 1 * {N:[ |- nat]}[ |- even (succ (succ N))].
+--mquery 1 * {N:[ |- nat]}{D:[ |- even N]} [ |- even (succ (succ N))].
+
+--mquery 0 * {N:[ |- nat]}[ |- even (succ (succ N))].
+
 
 % --mquery 1 * [ |- odd (succ (succ (succ zero)))].
 

@@ -259,7 +259,7 @@ and lowerMMVar cD =
 *)
 
 (*************************************)
-
+    
 (* mvar_dot1 t = t'
    Invariant:
 
@@ -2414,3 +2414,18 @@ let dotMMVar loc' cD t (u, cU, dep) =
   let cU = cnormMTyp (cU, t) in
   let mO = mmVarToMFront loc' (newMMVar' (Some u) (cD, cU) dep) cU in
   ((loc', mO), MDot (mO, t))
+
+
+
+(* extend_mctx cD (cdecl, t) = cD'
+
+   if cD mctx
+      cD' |- cU   where cdecl = _ : cU
+      cD  |- t : cD
+   the
+      cD, x:[t]U  mctx
+
+ *)
+let extend_mctx cD (cdecl, t) =
+  Dec(cD, cnormCDecl (cdecl, t))
+    

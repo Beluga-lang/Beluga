@@ -602,6 +602,9 @@ module Printer = struct
   let fmt_ppr_typ cD cPsi ppf sA =
     P.fmt_ppr_lf_typ cD cPsi P.l0 ppf (Whnf.normTyp sA)
 
+  let fmt_ppr_cmp_typ cPsi ppf sA =
+    P.fmt_ppr_cmp_typ cPsi P.l0 ppf sA
+
   let fmt_ppr_normal cPsi ppf sM =
     P.fmt_ppr_lf_normal LF.Empty cPsi P.l0 ppf (Whnf.norm sM)
 
@@ -688,6 +691,12 @@ module Printer = struct
       fmt_ppr_bound q.tries
       (fmt_ppr_typ LF.Empty LF.Null) (q.typ, S.id)
 
+  let fmt_ppr_sgn_mquery ppf mq =
+      fprintf ppf "--mquery %a %a %a."
+        fmt_ppr_bound mq.mexpected
+        fmt_ppr_bound mq.mtries
+        (fmt_ppr_cmp_typ LF.Empty) mq.skinnyCompTyp
+
   (* instToString xs = string
      Return string representation of existential variable
      instantiations in the query.
@@ -707,6 +716,10 @@ module Printer = struct
   let printQuery q =
     fprintf std_formatter "%a.@.@."
       fmt_ppr_sgn_query q
+
+  let printMQuery mq =
+    fprintf std_formatter "%a.@.@."
+      fmt_ppr_sgn_mquery mq  
 
   let printSignature () =
     iterAllSClauses
@@ -1211,44 +1224,77 @@ module Frontend = struct
     match sgnMQuery.mquery with
     | (Box(cPsi, g) , ms) ->
        let scInit (cPsi, tM) =
+          incr solutions;
           begin
-            fprintf std_formatter  "@[<v>---------- Solution ----------@,[%a |- %a]@]" 
+            fprintf std_formatter  "@[<v>---------- Solution %d ----------@,[%a |- %a]@]" 
               (*              "@[<hov 2>@[%a@] |-@ @[%a@]@]" *)
+              (!solutions)
               P.fmt_ppr_dctx cPsi
-              (P.fmt_ppr_normal cPsi) (tM, Substitution.LF.id)
+              (P.fmt_ppr_normal cPsi) (tM, Substitution.LF.id);    
+            
+            fprintf std_formatter "@.@.";
+            
+            (* Stop when no. of solutions exceeds tries. *)
+            if exceeds (Some !solutions) sgnMQuery.mtries   
+            then raise Done;
+
+            (* Temporary: Exiting as soon as we receive as many solutions as required *)
+            if exceeds (Some !solutions) sgnMQuery.mexpected   
+            then raise Done;
           end 
        in
-       begin
-       try
-          Solver.solve LF.Empty cPsi (g, Substitution.LF.id) scInit;
-          (* Check solution bounds. *)
-          checkSolutions sgnMQuery.mexpected sgnMQuery.mtries !solutions
-        with
-        | Done -> printf "Done.\n"
-        | AbortQuery s -> printf "%s\n" s
-        | _ -> ()
-       end
+        if not (boundEq sgnMQuery.mtries (Some 0))
+        then
+          begin
+            if !Options.chatter >= 1
+              then P.printMQuery sgnMQuery;
+            try
+                Solver.solve LF.Empty cPsi (g, Substitution.LF.id) scInit;
+                (* Check solution bounds. *)
+                checkSolutions sgnMQuery.mexpected sgnMQuery.mtries !solutions
+              with
+              | Done -> printf "Done.\n"
+              | AbortQuery s -> printf "%s\n" s
+              | _ -> ()
+          end
+        else if !Options.chatter >= 2
+        then printf "Skipping query -- bound for tries = 0.\n";
     | (Forall (ctyp_decl, g), ms) ->
        let g' = cgTog g in
        let scInit (cPsi, tM) =
+          incr solutions;
           begin
-            fprintf std_formatter  "@[<v>---------- Solution ----------@,[%a |- %a]@]" 
+            fprintf std_formatter  "@[<v>---------- Solution %d ----------@,[%a |- %a]@]" 
               (*              "@[<hov 2>@[%a@] |-@ @[%a@]@]" *)
+              (!solutions)
               P.fmt_ppr_dctx cPsi
-              (P.fmt_ppr_normal cPsi) (tM, Substitution.LF.id)
+              (P.fmt_ppr_normal cPsi) (tM, Substitution.LF.id);
+
+            fprintf std_formatter "@.@.";
+            
+            (* Stop when no. of solutions exceeds tries. *)
+            if exceeds (Some !solutions) sgnMQuery.mtries
+            then raise Done;
+
+            (* Temporary: Exiting as soon as we receive as many solutions as required *)
+            if exceeds (Some !solutions) sgnMQuery.mexpected   
+            then raise Done;
           end 
        in
-       begin
-         try
-          Solver.solve LF.Empty LF.Null (g', Substitution.LF.id) scInit;
-          (* Check solution bounds. *)
-          checkSolutions sgnMQuery.mexpected sgnMQuery.mtries !solutions
-        with
-        | Done -> printf "Done.\n"
-        | AbortQuery s -> printf "%s\n" s
-        | _ -> ()
-       end
-       
+        if not (boundEq sgnMQuery.mtries (Some 0))
+        then 
+          begin
+            try
+              Solver.solve LF.Empty LF.Null (g', Substitution.LF.id) scInit;
+              (* Check solution bounds. *)
+              checkSolutions sgnMQuery.mexpected sgnMQuery.mtries !solutions
+            with
+            | Done -> printf "Done.\n"
+            | AbortQuery s -> printf "%s\n" s
+            | _ -> ()
+          end
+        else if !Options.chatter >= 2
+        then printf "Skipping query -- bound for tries = 0.\n";
 
 end
 

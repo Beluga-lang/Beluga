@@ -34,7 +34,7 @@ module Options = struct
 end
 
 
-exception NotImplementedYet
+exception NotImplementedYet 
 
 (* Naming conventions:
      g : goal
@@ -350,7 +350,8 @@ module Convert = struct
    Precondition:
 
      . |- tau : ctyp  (i.e. tau is a closed computation-level type)
-          i  = # Pibox quantified variables in tau that denote existential variables, i.e. we want to find instantiation for those variables during proof search.
+          i  = # Pibox quantified variables in tau that denote existential variables, 
+               i.e. we want to find instantiation for those variables during proof search.
 
    Postcondition (result)
       comp_goal is a the representation of the computation-level type tau as a computation-level goal
@@ -376,9 +377,9 @@ let comptypToMQuery (tau, i) =
            (Pretty.Int.DefaultPrinter.fmt_ppr_cmp_typ LF.Empty Pretty.Int.DefaultPrinter.l0) (Whnf.cnormCTyp (tau,ms))
          end ; 
           ((comptypToCompGoal tau), tau, ms, xs) 
-      | Comp.TypBox (_loc, LF.ClTyp (LF.PTyp _tA, _cPsi)) when i > 0 ->
+      | Comp.TypBox (_loc, LF.ClTyp (LF.PTyp _tA, _cPsi)) ->
          raise NotImplementedYet
-      | Comp.TypBox (loc, LF.ClTyp (LF.STyp (svar_c, cPhi),  cPsi)) when i > 0 ->
+      | Comp.TypBox (loc, LF.ClTyp (LF.STyp (_svar_c, _cPhi),  _cPsi)) ->
           raise NotImplementedYet
       | Comp.TypPiBox (loc, mdecl, tau)  when i > 0 ->
           let LF.Decl(x, mtyp, dep) = mdecl in  (* where mtyp = (LF.MTyp tA, cPsi) *)
@@ -387,7 +388,7 @@ let comptypToMQuery (tau, i) =
           let mmV = Whnf.newMMVar' (Some x) (LF.Empty, mtyp) dep in
           let mfront = Whnf.mmVarToMFront loc mmV mtyp in 
           comptypToMQuery' (tau , i-1) (LF.MDot (mfront, ms)) ((x, (loc, mfront)) :: xs)
-      | Comp.TypPiBox (_,_, tau') ->
+      | Comp.TypPiBox (_,_, tau') when i = 0 ->
          dprintf
          begin fun p ->
          p.fmt "goal = %a"
@@ -596,17 +597,17 @@ module Printer = struct
   module P = Pretty.Int.DefaultPrinter
   open Index
 
-  let fmt_ppr_dctx ppf cPsi =
-    P.fmt_ppr_lf_dctx LF.Empty P.l0 ppf cPsi
+  let fmt_ppr_dctx cD ppf  cPsi =
+    P.fmt_ppr_lf_dctx cD P.l0 ppf cPsi
 
   let fmt_ppr_typ cD cPsi ppf sA =
     P.fmt_ppr_lf_typ cD cPsi P.l0 ppf (Whnf.normTyp sA)
 
-  let fmt_ppr_cmp_typ cPsi ppf sA =
-    P.fmt_ppr_cmp_typ cPsi P.l0 ppf sA
+  let fmt_ppr_cmp_typ cD ppf sA =
+    P.fmt_ppr_cmp_typ cD P.l0 ppf sA
 
-  let fmt_ppr_normal cPsi ppf sM =
-    P.fmt_ppr_lf_normal LF.Empty cPsi P.l0 ppf (Whnf.norm sM)
+  let fmt_ppr_normal cD cPsi ppf sM =
+    P.fmt_ppr_lf_normal cD cPsi P.l0 ppf (Whnf.norm sM)
 
   let fmt_ppr_decl cD cPsi ppf (tD, s) =
     match tD with
@@ -710,7 +711,7 @@ module Printer = struct
             (fun ppf (x, tA) ->
               fprintf ppf "%a = %a;"
                 Id.print x
-                (fmt_ppr_normal LF.Null) (tA, S.id)))
+                (fmt_ppr_normal LF.Empty LF.Null) (tA, S.id)))
          xs
 
   let printQuery q =
@@ -1174,7 +1175,7 @@ module Frontend = struct
         begin
           fprintf std_formatter "@[<v>---------- Solution %d ----------@,[%a]@,%a@,@]"
             (!solutions)
-            P.fmt_ppr_dctx cPsi
+            (P.fmt_ppr_dctx LF.Empty) cPsi
             P.fmt_ppr_inst sgnQuery.instMVars;
           (* Print proof term. *)
           begin match sgnQuery.optName with
@@ -1213,15 +1214,33 @@ module Frontend = struct
 
 
   let msolve sgnMQuery =
-    let rec cgTog cg = match cg with
-      | Box (cPsi, g) -> g
-      | Forall (LF.Decl(n, LF.ClTyp ((LF.MTyp tA),cPsi),dep), cg') ->
-          let typD = LF.TypDecl (n, tA) in
-          let g = cgTog cg' in
-          All (typD, g)
+    (*  unroll cD  (cg,ms) = (cD', cg_atomic) 
+
+       if         
+
+        cD |- [ms]cg      computation-level goal cg is well-formed/well-typed 
+                          in the meta-context cD where 
+        cD' |- cg        
+        cD  |- ms : cD'                               
+            |- cD mctx    (cD is a well-formed meta-context)
+      
+       then 
+   
+         cg_atomic is either a Boxed Type or an Inductive Type 
+         cD' |- cg_atomic  (computation-level goal cg is well-formed/well-typed 
+                            in the meta-context cD) 
+         |- cD' mctx       (cD' is a well-formed meta-context)
+         cD' is an extension of cD
+
+     *)    
+    let rec unroll cD (cg,ms) = match (cg,ms) with
+      | (Box (_cPsi, _g), ms) -> (cD, (cg,ms))
+      | (Forall (tdecl, cg'), ms) ->
+          unroll (Whnf.extend_mctx cD  (tdecl,ms)) (cg',Whnf.mvar_dot1 ms) 
     in 
     let solutions = ref 0 in
-    match sgnMQuery.mquery with
+    let (cD, mgoal_atomic) = unroll LF.Empty sgnMQuery.mquery in  
+    match mgoal_atomic  with
     | (Box(cPsi, g) , ms) ->
        let scInit (cPsi, tM) =
           incr solutions;
@@ -1229,8 +1248,8 @@ module Frontend = struct
             fprintf std_formatter  "@[<v>---------- Solution %d ----------@,[%a |- %a]@]" 
               (*              "@[<hov 2>@[%a@] |-@ @[%a@]@]" *)
               (!solutions)
-              P.fmt_ppr_dctx cPsi
-              (P.fmt_ppr_normal cPsi) (tM, Substitution.LF.id);    
+              (P.fmt_ppr_dctx cD) cPsi
+              (P.fmt_ppr_normal cD cPsi) (tM, Substitution.LF.id);    
             
             fprintf std_formatter "@.@.";
             
@@ -1249,7 +1268,7 @@ module Frontend = struct
             if !Options.chatter >= 1
               then P.printMQuery sgnMQuery;
             try
-                Solver.solve LF.Empty cPsi (g, Substitution.LF.id) scInit;
+                Solver.solve cD cPsi (g, Substitution.LF.id) scInit;
                 (* Check solution bounds. *)
                 checkSolutions sgnMQuery.mexpected sgnMQuery.mtries !solutions
               with
@@ -1259,43 +1278,12 @@ module Frontend = struct
           end
         else if !Options.chatter >= 2
         then printf "Skipping query -- bound for tries = 0.\n";
-    | (Forall (ctyp_decl, g), ms) ->
-       let g' = cgTog g in
-       let scInit (cPsi, tM) =
-          incr solutions;
-          begin
-            fprintf std_formatter  "@[<v>---------- Solution %d ----------@,[%a |- %a]@]" 
-              (*              "@[<hov 2>@[%a@] |-@ @[%a@]@]" *)
-              (!solutions)
-              P.fmt_ppr_dctx cPsi
-              (P.fmt_ppr_normal cPsi) (tM, Substitution.LF.id);
-
-            fprintf std_formatter "@.@.";
-            
-            (* Stop when no. of solutions exceeds tries. *)
-            if exceeds (Some !solutions) sgnMQuery.mtries
-            then raise Done;
-
-            (* Temporary: Exiting as soon as we receive as many solutions as required *)
-            if exceeds (Some !solutions) sgnMQuery.mexpected   
-            then raise Done;
-          end 
-       in
-        if not (boundEq sgnMQuery.mtries (Some 0))
-        then 
-          begin
-            try
-              Solver.solve LF.Empty LF.Null (g', Substitution.LF.id) scInit;
-              (* Check solution bounds. *)
-              checkSolutions sgnMQuery.mexpected sgnMQuery.mtries !solutions
-            with
-            | Done -> printf "Done.\n"
-            | AbortQuery s -> printf "%s\n" s
-            | _ -> ()
-          end
-        else if !Options.chatter >= 2
-        then printf "Skipping query -- bound for tries = 0.\n";
-
+        
+    | _ -> (* since we only consider atomic goals here the other option is an inductive type 
+              which is not yet in our comp_goal data type and we do not yet solve / search for 
+              such goals
+            *) 
+       raise NotImplementedYet 
 end
 
 (* Interface *)

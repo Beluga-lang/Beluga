@@ -1,0 +1,7 @@
+- Extend solve to bounded depth-first search
+- Similar to solve, design solve for inductive types
+  --> Extend the data type for comp_goals and add data type for computation-level clauses  
+  --> Compile computation-level types into computation goals and clauses
+  --> Do proof search over the computation goals and clauses
+
+- Extend 

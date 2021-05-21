@@ -26,12 +26,22 @@ le_s : le N M -> le (succ N) (succ M).
 
 --mquery 0 * {N:[ |- nat]}[ |- even (succ (succ N))].
 
+--mquery 1 * {N1:[ ⊢ nat]}{D : [ ⊢ odd N1]} {F:[ ⊢ even (succ N1)]}
+	   [ |- even (succ (succ (succ N1)))].
 
 % --mquery 2 2 D :  even (succ N)
 
 --mquery 1 * {N: [ |- nat]}{D: [|- even N]} [|- even (succ (succ zero))].
 
 schema ctx = nat;
+
+rec odd_even : [ ⊢ odd N] → [ ⊢ even (succ N)] = fn d ⇒ case d of
+  | [ ⊢ od_sz] ⇒ ? % solve [ ⊢ ev_s ev_z]
+  | [ ⊢ od_s D] ⇒ let [ ⊢ F] = odd_even [ ⊢ D] in ?  % solve [ ⊢ ev_s F]  -- msolve-auto
+;
+
+
+
 % 
 % --mquery  1 * {g:ctx}{N:[g |- nat]}{D : [g |- even N]} [g |- even (succ (succ N))].
 %   ERROR: does not produce any solution but should produce as an answer [g |- ev_s D]
@@ -80,7 +90,7 @@ rec plus : [ ⊢ nat] → [ |- nat] → [ ⊢ nat] = fn x ⇒ fn y ⇒ case x of
 rec size : [ ⊢ tree] → [ ⊢ nat] = fn t ⇒ case t of
       | [ |- leaf] ⇒ [ ⊢ zero]
       | [ ⊢ node D L R] ⇒ let [ ⊢ N1] = size [ ⊢ L] in
-			  let [ ⊢ N2] = size ? in
+			  let [ ⊢ N2] = size [ ⊢ R] in
 			  plus ? (plus [ ⊢ N1] ?)
 ;
 

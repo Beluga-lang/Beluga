@@ -24,7 +24,7 @@ end
 type bound = int option
 
 val storeQuery : Id.name option -> LF.typ * Id.offset -> LF.mctx -> bound -> bound -> unit
-val storeMQuery: Comp.typ * Id.offset -> bound -> bound -> unit
+val storeMQuery: Comp.typ * Id.offset -> bound -> bound -> bound -> unit
 val runLogic : unit -> unit
 val runLogicOn : Id.name option -> LF.typ * Id.offset -> LF.mctx -> bound -> bound -> unit
 (** Clears the local storage of the logic programming engine,

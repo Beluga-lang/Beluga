@@ -69,3 +69,23 @@ r_reach: reach B C -> edge A B -> reach A C.
 % To be tested with bounded depth-first search when we introduce some cycles in the graph
 
 
+tree: type.
+leaf: tree.
+node: nat → tree → tree → tree.
+
+rec plus : [ ⊢ nat] → [ |- nat] → [ ⊢ nat] = fn x ⇒ fn y ⇒ case x of
+  | [ ⊢ zero] ⇒ ?
+  | [ ⊢ succ N] ⇒ ? ;
+
+rec size : [ ⊢ tree] → [ ⊢ nat] = fn t ⇒ case t of
+      | [ |- leaf] ⇒ [ ⊢ zero]
+      | [ ⊢ node D L R] ⇒ let [ ⊢ N1] = size [ ⊢ L] in
+			  let [ ⊢ N2] = size ? in
+			  plus ? (plus [ ⊢ N1] ?)
+;
+
+
+% Bi-directional typing
+% -- checking an expression against a type (\x.M, [ ⊢ ....],  )
+% -- synthesizing a type for an expression 
+% 

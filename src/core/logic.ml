@@ -425,7 +425,8 @@ module Index = struct
     { mquery : mquery                 (* MQuery ::= (c_g, ms)        *)
     ; skinnyCompTyp : Comp.typ        (* MQuery stripped of E-vars.  *)
     ; mexpected : bound               (* Expected no. of solutions.  *)
-    ; mtries : bound                  (* No. of tries to find soln.  *)
+    ; mtries : bound
+    ; depth : bound                  (* No. of tries to find soln.  *)
     ; instMMVars : minst list         (* MMVar instantiations.       *)
     }
     
@@ -468,12 +469,13 @@ module Index = struct
   (* addSgnMQuery (tau', ttau, xs, e, t)  = ()
      Add a new sgnMQuery to the `mqueries' DynArray.
    *)
-  let addSgnMQuery (tau', mq, xs, e, t) =
+  let addSgnMQuery (tau', mq, xs, e, t, d) =
     DynArray.add mqueries
       { mquery = mq
       ; skinnyCompTyp = tau'
       ; mexpected = e
       ; mtries = t
+      ; depth = d
       ; instMMVars = xs
       }    
     
@@ -530,11 +532,11 @@ module Index = struct
        e = expected number of  solutions
        t = expected number of tries to find soln.
   *)
-  let storeMQuery ((tau, i), e, t) =
+  let storeMQuery ((tau, i), e, t, d) =
     (*  TO BE IMPLEMENTED AND FINISHED *)
     let (comp_goal, tau', ms, xs) = (Convert.comptypToMQuery (tau, i)) in
     let mq = (comp_goal, ms) in
-    addSgnMQuery (tau', mq, [], e, t)
+    addSgnMQuery (tau', mq, [], e, t, d)
 
 
     
@@ -693,9 +695,10 @@ module Printer = struct
       (fmt_ppr_typ LF.Empty LF.Null) (q.typ, S.id)
 
   let fmt_ppr_sgn_mquery ppf mq =
-      fprintf ppf "--mquery %a %a %a."
+      fprintf ppf "--mquery %a %a %a %a."
         fmt_ppr_bound mq.mexpected
         fmt_ppr_bound mq.mtries
+        fmt_ppr_bound mq.depth
         (fmt_ppr_cmp_typ LF.Empty) mq.skinnyCompTyp
 
   (* instToString xs = string
@@ -1092,6 +1095,7 @@ module Frontend = struct
 
   exception Done                        (* Solved query successfully. *)
   exception AbortQuery of string        (* Abort solving the query.   *)
+  (* exception DepthReached of bound                (* Stops a query going beyond the specified depth *) *)
 
   (* exceeds B1 B2 = b
      True if B1 = * or B1 >= B2.
@@ -1274,6 +1278,7 @@ module Frontend = struct
               with
               | Done -> printf "Done.\n"
               | AbortQuery s -> printf "%s\n" s
+              (* | DepthReached d -> printf "Query complete -- depth = %a was reached\n" P.fmt_ppr_bound d *)
               | _ -> ()
           end
         else if !Options.chatter >= 2
@@ -1291,8 +1296,8 @@ end
 let storeQuery p (tA, i) cD e t =
   Index.storeQuery (p, (tA, i), cD, e, t)
 
-let storeMQuery  (tau, i) e t =
-  Index.storeMQuery ((tau, i), e, t)
+let storeMQuery  (tau, i) e t d =
+  Index.storeMQuery ((tau, i), e, t, d)
 
   
 (* runLogic () = ()

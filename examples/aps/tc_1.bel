@@ -15,23 +15,23 @@ le_z : le zero N.
 le_s : le N M -> le (succ N) (succ M).
 
 
---mquery 1 * [ |- even (succ (succ zero))].
+--mquery 1 * 4 [ |- even (succ (succ zero))].
 
-%% --mquery 0 * [ |- even (succ (succ (succ zero)))].
---mquery 1 * [ |- odd (succ (succ (succ zero)))].
+%% --mquery 0 * 2 [ |- even (succ (succ (succ zero)))].
+--mquery 1 * * [ |- odd (succ (succ (succ zero)))].
 
---mquery 1 * [ |- le (succ (succ zero)) (succ (succ (succ (succ zero))))].
+--mquery 1 * 7 [ |- le (succ (succ zero)) (succ (succ (succ (succ zero))))].
 
---mquery 1 * {N:[ |- nat]}{D:[ |- even N]} [ |- even (succ (succ N))].
+--mquery 1 * 2 {N:[ |- nat]}{D:[ |- even N]} [ |- even (succ (succ N))].
 
---mquery 0 * {N:[ |- nat]}[ |- even (succ (succ N))].
+--mquery 0 * 5 {N:[ |- nat]}[ |- even (succ (succ N))].
 
 --mquery 1 * {N1:[ ⊢ nat]}{D : [ ⊢ odd N1]} {F:[ ⊢ even (succ N1)]}
 	   [ |- even (succ (succ (succ N1)))].
 
 % --mquery 2 2 D :  even (succ N)
 
---mquery 1 * {N: [ |- nat]}{D: [|- even N]} [|- even (succ (succ zero))].
+--mquery 1 * 3 {N: [ |- nat]}{D: [|- even N]} [|- even (succ (succ zero))].
 
 schema ctx = nat;
 
@@ -43,10 +43,10 @@ rec odd_even : [ ⊢ odd N] → [ ⊢ even (succ N)] = fn d ⇒ case d of
 
 
 % 
-% --mquery  1 * {g:ctx}{N:[g |- nat]}{D : [g |- even N]} [g |- even (succ (succ N))].
+% --mquery  1 * * {g:ctx}{N:[g |- nat]}{D : [g |- even N]} [g |- even (succ (succ N))].
 %   ERROR: does not produce any solution but should produce as an answer [g |- ev_s D]
 %
-% --mquery  1 * {g:ctx}{N:[ |- nat]} {D : [g |- even N[]]} [g |- even (succ (succ N[]))].
+% --mquery  1 * * {g:ctx}{N:[ |- nat]} {D : [g |- even N[]]} [g |- even (succ (succ N[]))].
 %   ERROR: does not produce a solution, but should produce as an answer [g |- ev_s D]
 
 node:type.
@@ -68,13 +68,13 @@ r_reach: reach B C -> edge A B -> reach A C.
 %       in this example our 1. subgoal will be edge A B and our 2. subgoal reach B C.
 %       This is important, when we use depth first search
 
---mquery 1 * [ |- reach a d].
+--mquery 1 * * [ |- reach a d].
 % succeeds, finding the first solution, but in fact there are 2 expected solutions.
 
---mquery 2 * [ |- reach a d].
+--mquery 2 * * [ |- reach a d].
 % finds the correct 2 solutions
 
---mquery 2 * {N:[ |- node]}{E: [ |- edge N a]}[ |- reach N d].
+--mquery 2 * * {N:[ |- node]}{E: [ |- edge N a]}[ |- reach N d].
 
 % To be tested with bounded depth-first search when we introduce some cycles in the graph
 

@@ -4,4 +4,13 @@
   --> Compile computation-level types into computation goals and clauses
   --> Do proof search over the computation goals and clauses
 
-- Extend 
+- Build a bridge between Harpoon and msolve.
+  Note: * Harpoon will have a meta-context cD and a computation-level type T (typically Box or Inductive) it tries to prove
+        * msolve and sgnMQuery work on the computation-level type Pibox cD . T
+	
+  --> Revisit how we store computation-level goals in sgnMQuery
+  --> Revisit how we kick-off msolve
+  ---> Pesently we unroll the Pibox quantified variables from the mquery
+      (i.e. computation-level type Pibox cD . T)  in unsolve to then call
+      to obtain cD together with a computation-level type T (typically Box or Inductive)
+ 

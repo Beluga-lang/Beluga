@@ -16,7 +16,7 @@
   (name lex_check)
   (public_name lex_check)
   (package beluga)
-  (libraries support beluga sedlex)
+  (libraries support beluga sedlex gen extlib)
   (modules lex_check))
 
 (executable
@@ -30,5 +30,5 @@
   (name lex_dump)
   (public_name lex_dump)
   (package beluga)
-  (libraries support beluga)
+  (libraries support beluga gen)
   (modules lex_dump))

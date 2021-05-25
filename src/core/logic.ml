@@ -24,7 +24,7 @@ module Options = struct
        3 => + Solutions and proof terms.
        4 => + LF signature.
   *)
-  let chatter = ref 3
+  let chatter = ref 4
 
   (* Ask before giving more solutions (à la Prolog). *)
   let askSolution = ref false
@@ -75,9 +75,9 @@ and res =                               (* Residual Goals   *)
   | And of goal * res                   (*     | g ∧ r'     *)
   | Exists of LF.typ_decl * res         (*     | ∃x:T. r'   *)
 
-type conjunction =                      (* Subgoals         *)
-  | True                                (* cG ::= True      *)
-  | Conjunct of conjunction * goal      (*      | cG' ∧ g   *)
+type conjunction =                       (* Subgoals         *)
+  | True                                 (* cG ::= True      *)
+  | Conjunct of conjunction * goal       (*      | cG' ∧ g   *) 
 
 let rec list_of_conjunction : conjunction -> goal list =
   function
@@ -94,8 +94,6 @@ type clause =                    (* Horn Clause ::= eV |- A :- cG   *)
   ; subGoals : conjunction       (* Subgoals cG : solv. cG => A     *)
   }
 
-
-
 (* Naming conventions:
 
   cg : comp_goal (computation-level goal)
@@ -108,9 +106,15 @@ type comp_goal =
   | Implies of comp_goal * comp_goal  
   | Forall of  LF.ctyp_decl * comp_goal         
 
-
 type mquery = comp_goal * LF.msub       (* mq := (cg, ms)  *)
-
+(*
+type cclause =                       (* Horn Clause ::= cD [eV |- A :- cG]  *)
+  { ctHead : LF.typ                  (* Head A : LF.typ                     *)
+  ; cEVars : LF.dctx                 (* Context eV : EV's bound in A/cG     *)
+  ; cUVars : LF.mctx                 (* Context uV : UV's bound in [eV |- A :- cG] *)
+  ; cSubGoals : conjunction          (* Subgoals cG                         *)
+  }
+  *)
   
 module Shift : sig
   val shiftAtom : LF.typ -> int * int * int -> LF.typ
@@ -217,12 +221,40 @@ module Convert = struct
        ; subGoals = cG
        }
 
-  and typToGoal tM (cS, dS, dR) =
+      (*
+  (* comptypToCClause' cD U (cS, dS, dR) = cclause
+     Invariants:
+       If BV(i) is free in M, then BV(i) is bound in (eV |- M).
+       If M = PiTyp (x:A, No), then M ~ g.
+       If U = TypPiBox (u:t, U') then cD := cD, u:t
+
+     TODO: arrow comp-typ to cclause
+  *)
+      
+  and comptypToCClause' cD tM (cS, dS, dR) =
     match tM with
-    | LF.PiTyp ((tD, LF.Maybe), tM') ->
-       All (tD, typToGoal tM' (cS, dS, dR + 1))
-    | LF.PiTyp ((LF.TypDecl (x, tA) as tD, LF.No), tB) ->
-       Impl ((typToRes tA (cS, dS, dR), tD), typToGoal tB (cS, dS, dR + 1))
+    | Comp.TypBox (l, LF.ClTyp (LF.MTyp typ, cPsi)) ->
+       let tMclause = typToClause' cPsi True typ (cS, dS, dR) in 
+       { ctHead = tMclause.tHead
+       ; cEVars = tMclause.eVars
+       ; cUVars = cD 
+       ; cSubGoals = tMclause.subGoals
+       }
+    | Comp.TypPiBox (l, tdecl, tM') ->
+       comptypToCClause' (Whnf.extend_mctx cD (tdecl, LF.MShift 0)) tM' (cS, dS, dR)
+    
+       *)
+   
+
+  (* Write out invariant / comment
+     in particular: what is cS, dS, dR 
+   *)       
+  and typToGoal tA (cS, dS, dR) =
+    match tA with
+    | LF.PiTyp ((tdec, LF.Maybe), tA') ->
+       All (tdec, typToGoal tA' (cS, dS, dR + 1))
+    | LF.PiTyp ((LF.TypDecl (x, tA) as tdec, LF.No), tB) ->
+       Impl ((typToRes tA (cS, dS, dR), tdec), typToGoal tB (cS, dS, dR + 1))
     | LF.Atom _ ->
        Atom (Shift.shiftAtom tM (-cS, -dS, dR))
 
@@ -267,6 +299,9 @@ module Convert = struct
 
   let typToClause tM =
     typToClause' LF.Null True tM (0, 0, 0)
+
+(*  let comptypToCClause tM =
+    comptypToCClause' LF.Empty tM (0, 0, 0)    *)
 
   (* etaExpand Psi (A, s) = normal
      Invariants:
@@ -449,7 +484,14 @@ module Index = struct
   *)
   let addSgnClause typConst sgnClause =
     DynArray.add typConst sgnClause
-
+    
+(* TODO:: create new DynArray for compclauses
+  (* addSgnClause tC, sCl = ()
+     Add a new sgnClause, sCl, to the DynArray tC.
+  *)
+  let addSgnClause typConst sgnClause =
+    DynArray.add typConst sgnClause
+ *)
   (* addSgnQuery (p, (g, s), cD, xs, e, t)  = ()
      Add a new sgnQuery to the `queries' DynArray.
   *)
@@ -488,6 +530,20 @@ module Index = struct
     let tM = termEntry.Cid.Term.Entry.typ in
     (cidTerm, Convert.typToClause tM)
 
+
+    (*
+  (* compileSgCnClause c = (c, sCl)
+     Retrieve Comp.typ for term constant c, clausify it into sCl and
+     return an sgnClause (c, sCl). 
+   *)
+
+  let compileSgnCClause cidTerm =
+    let termEntry = Cid.Comp.get cidTerm in
+    let tM = termEntry.Cid.Comp.Entry.typ in
+    (cidTerm, Convert.comptypToCClause tM)
+
+    *)
+
   (* termName c = Id.name
      Get the string representation of term constant c.
   *)
@@ -505,7 +561,10 @@ module Index = struct
     let typConstr = !(typEntry.Cid.Typ.Entry.constructors) in
     let typConst = addTyp cidTyp in
     let regSgnClause cidTerm =
-      addSgnClause typConst (compileSgnClause cidTerm)
+      (*  try  *) 
+        addSgnClause typConst (compileSgnClause cidTerm)
+    (*  with failure ->
+        addSgnClause typConst (compileSgnCClause cidTerm) *)
     in
     let rec revIter f =
       function

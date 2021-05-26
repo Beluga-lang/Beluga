@@ -4,6 +4,7 @@
 *)
 
 (* Context substitution  *)
+open Support
 
 open Context
 open Syntax.Int.LF

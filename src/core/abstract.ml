@@ -1,4 +1,5 @@
 open Support.Equality
+open Support
 (**
    @author Renaud Germain
    @author Brigitte Pientka

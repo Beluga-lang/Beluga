@@ -1,5 +1,3 @@
-open Support
-
 exception Violation of string
 
 (** Raises a Violation exception with the given message. *)

@@ -333,7 +333,7 @@ let gen_tup_sub conv_list =
     head. *)
 let rec etaExpandTuple tRec h k =
   let open LF in
-  let tM = Root (Loc.ghost, Proj (h, k), Nil, `explicit) in
+  let tM = Root (Location.ghost, Proj (h, k), Nil, `explicit) in
   match tRec with
   | SigmaLast (_, _) -> Last tM
   | LF.SigmaElem (_, _, tRec) ->

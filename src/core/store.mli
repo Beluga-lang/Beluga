@@ -307,7 +307,7 @@ module Cid : sig
     val index_of_name : name -> cid_prog
     val index_of_name_opt : name -> cid_prog option
 
-    (* val entry_list : ((Id.cid_prog * Loc.t) list ref) DynArray.t *)
+    (* val entry_list : ((Id.cid_prog * Location.t) list ref) DynArray.t *)
     val clear : unit -> unit
 
     (** Update the associated program of an existing entry.

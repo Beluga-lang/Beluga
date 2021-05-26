@@ -4,7 +4,6 @@ open Support.Equality
 open Support
 open Syntax
 
-module Loc = Location
 module LF = Syntax.Int.LF
 module Comp = Syntax.Int.Comp
 
@@ -34,7 +33,7 @@ type 'a hole =
   ; info : 'a
   }
 
-let compare_loc {loc = l1; _} {loc = l2; _} = Loc.compare_start l1 l2
+let compare_loc {loc = l1; _} {loc = l2; _} = Location.compare_start l1 l2
 
 type some_hole =
   | Exists : 'a hole_info * 'a hole -> some_hole
@@ -70,7 +69,7 @@ type error =
   | NoSuchHole of lookup_strategy
   | NameShadowing of
       string (* problematic name *)
-      * Loc.t (* location of existing hole *)
+      * Location.t (* location of existing hole *)
   | UnsolvedHole of HoleId.name * HoleId.t
 
 let string_of_lookup_strategy ({ repr; _ } : lookup_strategy) : string = repr
@@ -79,7 +78,7 @@ let print_lookup_strategy ppf (s : lookup_strategy) : unit =
   let open Format in
   fprintf ppf "%s" (string_of_lookup_strategy s)
 
-exception Error of Loc.t * error
+exception Error of Location.t * error
 
 let throw loc e = raise (Error (loc, e))
 
@@ -93,7 +92,7 @@ let format_error ppf : error -> unit =
   | NameShadowing (s, loc) ->
      fprintf ppf "Hole with name %s already defined at %a"
        s
-       Loc.print loc
+       Location.print loc
   | UnsolvedHole (name, id) ->
      fprintf ppf "Hole %s is unsolved"
        (HoleId.string_of_name_or_id (name, id))
@@ -133,11 +132,11 @@ let none () : bool = 0 = count ()
 (** More holes **)
 
 (* loc -> loc' -> bool : is loc' within loc? *)
-let loc_within (loc : Loc.t) (loc' : Loc.t) : bool =
+let loc_within (loc : Location.t) (loc' : Location.t) : bool =
   (* To check this, it suffices to look at the start offset and end offset.
    * Specifically, loc' needs to start after loc and end before loc.
    *)
-  Loc.start_offset loc' >= Loc.start_offset loc && Loc.stop_offset loc' <= Loc.stop_offset loc
+  Location.start_offset loc' >= Location.start_offset loc && Location.stop_offset loc' <= Location.stop_offset loc
 
 (* removes all holes located within the given loc (e.g. of a function being shadowed) *)
 let destroy_holes_within loc =
@@ -221,7 +220,7 @@ let get (s : lookup_strategy) : (HoleId.t * some_hole) option = s.action ()
 
 let unsafe_get (s : lookup_strategy) : HoleId.t * some_hole =
   match s.action () with
-  | None -> throw Loc.ghost (NoSuchHole s)
+  | None -> throw Location.ghost (NoSuchHole s)
   | Some h -> h
 
 let harpoon_subgoals = DynArray.create ()

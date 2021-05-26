@@ -6,7 +6,6 @@ open Id
 module LF = Syntax.Int.LF
 module Comp = Syntax.Int.Comp
 module CompS = Store.Cid.Comp
-module Loc = Location
 
 module P = Pretty.Int.DefaultPrinter
 
@@ -202,7 +201,7 @@ let serialize ppf (t : t) =
       Id.print name
       Comp.(P.fmt_ppr_cmp_typ s.context.cD P.l0) goal
       fmt_ppr_order order
-      Comp.(P.fmt_ppr_cmp_proof s.context.cD s.context.cG) (Comp.incomplete_proof Loc.ghost s)
+      Comp.(P.fmt_ppr_cmp_proof s.context.cD s.context.cG) (Comp.incomplete_proof Location.ghost s)
     end
 
 (** Computes the index of the current subgoal we're working on. *)
@@ -235,7 +234,7 @@ let select_subgoal_satisfying (t : t) (p: Comp.proof_state -> bool) : Comp.proof
 let dump_proof ppf t =
   let s = t.initial_state in
   Format.fprintf ppf "%a"
-    Comp.(P.fmt_ppr_cmp_proof s.context.cD s.context.cG) (Comp.incomplete_proof Loc.ghost s)
+    Comp.(P.fmt_ppr_cmp_proof s.context.cD s.context.cG) (Comp.incomplete_proof Location.ghost s)
 
 let show_proof (t : t) =
   (* This is a trick to print out the proof resulting from
@@ -279,7 +278,7 @@ let defer_subgoal t =
     - fill's in g's solution with an incomplete proof for g', transformed by f.
  *)
 let apply_subgoal_replacement t name g' f g =
-  let p = f (Comp.incomplete_proof Loc.ghost g') in
+  let p = f (Comp.incomplete_proof Location.ghost g') in
   apply t (Action.make name g [g'] p)
 
 (** Renames a variable from `src` to `dst` at the given level
@@ -354,7 +353,7 @@ let configure_set ppf (hooks : (t -> Comp.proof_state -> unit) list) (confs : Co
       (List.map fst confs)
   in
   let configure ({ Comp.name; tau; order }, k) =
-    let tau' = Total.annotate Loc.ghost order tau in
+    let tau' = Total.annotate Location.ghost order tau in
     dprintf begin fun p ->
       p.fmt "[configure_set] @[<v>got (possibly) annotated type\
              @,@[%a@]\
@@ -369,7 +368,7 @@ let configure_set ppf (hooks : (t -> Comp.proof_state -> unit) list) (confs : Co
       Comp.make_proof_state Comp.SubgoalPath.start
         ( tau', Whnf.m_id )
     in
-    let p = Comp.incomplete_proof Loc.ghost g in
+    let p = Comp.incomplete_proof Location.ghost g in
     (* add the theorem to the store to get a cid allocated
        Make sure to register with the original, un-annotated type.
        Annotating and then stripping here doesn't work, as stripping

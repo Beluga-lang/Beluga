@@ -19,7 +19,6 @@ open Trail
 
 module P = Pretty.Int.DefaultPrinter
 module R = Store.Cid.DefaultRenderer
-module Loc = Location
 
 let (dprintf, dprint, dprnt) = Debug.makeFunctions' (Debug.toFlags [15])
 open Debug.Fmt
@@ -75,7 +74,7 @@ module type UNIFY = sig
   val intersection : dctx_hat -> sub -> sub -> dctx -> (sub * dctx)
 
   exception Failure of string
-  exception GlobalCnstrFailure of Loc.t * string
+  exception GlobalCnstrFailure of Location.t * string
   exception NotInvertible
 
   (* All unify* functions return () on success and raise Failure on failure *)
@@ -116,7 +115,7 @@ module Make (T : TRAIL) : UNIFY = struct
   module P = Pretty.Int.DefaultPrinter
 
   exception Failure of string
-  exception GlobalCnstrFailure of Loc.t * string
+  exception GlobalCnstrFailure of Location.t * string
   exception NotInvertible
 
   let fail s = raise (Failure s)
@@ -1726,7 +1725,7 @@ module Make (T : TRAIL) : UNIFY = struct
             cPsi |- tN . s <= cPsi', x:A
           *)
          let tN =
-           ConvSigma.etaExpandMMVstr Loc.ghost cD1 cPsi1 (tA, s) Maybe (Some n)
+           ConvSigma.etaExpandMMVstr Location.ghost cD1 cPsi1 (tA, s) Maybe (Some n)
              Context.(names_of_dctx cPsi @ names_of_mctx cD0)
          in
          let tS = genSpine cD1 cPsi1 (tB, LF.Dot (LF.Obj tN, s)) in
@@ -2983,7 +2982,7 @@ module Make (T : TRAIL) : UNIFY = struct
                 pp_print_string msg;
               flush_str_formatter ()
             in
-            raise (GlobalCnstrFailure (Loc.ghost, cnstr_string))
+            raise (GlobalCnstrFailure (Location.ghost, cnstr_string))
        end;
        (* Unification could succeed by postponing the constraint
             we just tried to solve, so now we need to check that
@@ -2999,7 +2998,7 @@ module Make (T : TRAIL) : UNIFY = struct
         *)
        if solvedCnstrs (!globalCnstrs)
        then (resetGlobalCnstrs (); forceGlobalCnstr' cnstrs)
-       else raise (GlobalCnstrFailure (Loc.ghost, "[forceGlobalCnstr'] Constraints generated"))
+       else raise (GlobalCnstrFailure (Location.ghost, "[forceGlobalCnstr'] Constraints generated"))
 
   let unresolvedGlobalCnstrs () =
     try

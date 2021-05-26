@@ -6,6 +6,7 @@ open Support.Equality
 
 open Support
 open Format
+open Syntax
 open Syntax.Ext
 
 module Make (_ : Store.Cid.RENDERER) : Printer.Ext.T = struct

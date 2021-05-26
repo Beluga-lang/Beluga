@@ -1,7 +1,7 @@
 open Support
 open Beluga
+open Syntax
 open Syntax.Int
-module Loc = Location
 
 module CompS = Store.Cid.Comp
 
@@ -25,20 +25,20 @@ let rec unroll cD cG = function
   | Comp.TypArr (_, _, tau2) ->
      let (cD', cG', f) = unroll cD cG tau2 in
      let LF.Dec (cG', Comp.CTypDecl (x, _, _)) = cG' in
-     (cD', cG', fun e -> Comp.Fn (Loc.ghost, x, f e))
+     (cD', cG', fun e -> Comp.Fn (Location.ghost, x, f e))
   | Comp.TypPiBox (_, _, tau2) ->
      let (cD', cG', f) = unroll cD cG tau2 in
      let LF.Dec (cD', LF.Decl (x, _, dep)) = cD' in
      ( cD'
      , cG'
      , let plicity = LF.Depend.to_plicity dep in
-       fun e -> Comp.MLam (Loc.ghost, x, f e, plicity)
+       fun e -> Comp.MLam (Location.ghost, x, f e, plicity)
      )
   | _ -> (cD, cG, fun e -> e)
 
 let by cD cG i x tau =
   ( LF.Dec (cG, Comp.CTypDecl (x, tau, false))
-  , fun e -> Comp.Let (Loc.ghost, i, (x, e))
+  , fun e -> Comp.Let (Location.ghost, i, (x, e))
   )
 
 let unbox cD cG i x cU modifier =
@@ -53,14 +53,14 @@ let unbox cD cG i x cU modifier =
   let t = LF.MShift 1 in
   let pat =
     Comp.PatMetaObj
-      ( Loc.ghost
-      , ( Loc.ghost
+      ( Location.ghost
+      , ( Location.ghost
         , let open LF in
           match cU with
           | (ClTyp ( (MTyp _ | PTyp _), cPsi )) ->
              let tM =
                Root
-                 ( Loc.ghost
+                 ( Location.ghost
                  , MVar (Offset 1, s)
                  , Nil
                  , `explicit
@@ -75,8 +75,8 @@ let unbox cD cG i x cU modifier =
   ( cD'
   , fun e ->
     let open Comp in
-    let b = Branch (Loc.ghost, LF.Empty, (cD', LF.Empty), pat, t, e) in
-    Case (Loc.ghost, PragmaCase, i, [b])
+    let b = Branch (Location.ghost, LF.Empty, (cD', LF.Empty), pat, t, e) in
+    Case (Location.ghost, PragmaCase, i, [b])
   )
 
 (* translate a Harpoon proof into Beluga internal syntax *)
@@ -109,7 +109,7 @@ and split_branch cD cG (cG_p, pat) t hyp tau =
   let cD_b, cG_b = Comp.(h.cD, h.cG) in
   let e = proof cD_b cG_b p tau_b in
   Comp.Branch
-    ( Loc.ghost
+    ( Location.ghost
     , LF.Empty
     , (cD_b, cG_p)
     , pat
@@ -153,17 +153,17 @@ and directive cD cG (d : Comp.directive) tau : Comp.exp_chk =
 
   | Comp.MetaSplit (i, _, sbs) ->
      let bs = List.map (fun b -> meta_split_branch cD cG b tau) sbs in
-     Comp.Case (Loc.ghost, Comp.PragmaCase, i, bs)
+     Comp.Case (Location.ghost, Comp.PragmaCase, i, bs)
 
   | Comp.CompSplit (i, _, sbs) ->
      let bs = List.map (fun b -> comp_split_branch cD cG b tau) sbs in
-     Comp.Case (Loc.ghost, Comp.PragmaCase, i, bs)
+     Comp.Case (Location.ghost, Comp.PragmaCase, i, bs)
 
   | Comp.ContextSplit (i, _, sbs) ->
      let bs = List.map (fun b -> context_split_branch cD cG b tau) sbs in
-     Comp.Case (Loc.ghost, Comp.PragmaCase, i, bs)
+     Comp.Case (Location.ghost, Comp.PragmaCase, i, bs)
 
-  | Comp.ImpossibleSplit i -> Comp.Impossible (Loc.ghost, i)
+  | Comp.ImpossibleSplit i -> Comp.Impossible (Location.ghost, i)
 
   | Comp.Suffices (i, args) ->
      (* XXX consider storing tau_i inside Suffices to avoid
@@ -172,7 +172,7 @@ and directive cD cG (d : Comp.directive) tau : Comp.exp_chk =
      let loc = Comp.loc_of_exp_syn i in
      let _, (i', ttau_i') =
        Check.Comp.genMApp
-         Loc.ghost
+         Location.ghost
          (Misc.const true)
          cD
          (i, ttau_i)
@@ -193,7 +193,7 @@ and directive cD cG (d : Comp.directive) tau : Comp.exp_chk =
      let es =
        List.map (fun (_, tau_p, p) -> proof cD cG p tau_p) args
      in
-     Comp.(Syn (Loc.ghost, apply_many i' es))
+     Comp.(Syn (Location.ghost, apply_many i' es))
 
 let theorem thm tau = match thm with
   | Comp.Proof p -> proof LF.Empty LF.Empty p tau

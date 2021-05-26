@@ -1,3 +1,4 @@
+open Syntax
 open Syntax.Int.LF
 
 val dump : bool ref

@@ -1,7 +1,7 @@
 open Support
 
 module P = Beluga.Pretty.Ext.DefaultPrinter
-module LF = Beluga.Syntax.Ext.LF
+module LF = Syntax.Ext.LF
 
 (** The thing we're trying to parse in the file.
     Usually this should be `only sgn', but for testing it's convenient

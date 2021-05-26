@@ -8,7 +8,7 @@ open Store
 open Store.Cid
 open Substitution
 open Syntax
-open Id
+open Syntax.Id
 
 module I = Int.LF
 module Comp = Int.Comp
@@ -33,7 +33,7 @@ type error =
 
 let pat_flag = ref false
 
-exception Error of Syntax.Loc.t * error
+exception Error of Location.t * error
 
 let string_of_varvariant =
   function
@@ -477,7 +477,7 @@ and collectLFVar l = collectFVar LF l
 and collectCompFVar l = collectFVar Comp l
 
 and collectFVarSub p cQ phat (name, s') =
-  let cQ = collectCompFVar Syntax.Loc.ghost p cQ name in
+  let cQ = collectCompFVar Location.ghost p cQ name in
   let (cQ, s') = collectSub p cQ phat s' in
   (cQ, (name, s'))
 
@@ -534,7 +534,7 @@ and collectSub (p : int) cQ phat =
                                 argument to shift; if the substitution is
                                 well-typed, then it has been already collected *)
   | I.Dot (I.Head h, s) ->
-     let (cQ1, h') = collectHead p cQ phat Syntax.Loc.ghost (h, LF.id) in
+     let (cQ1, h') = collectHead p cQ phat Location.ghost (h, LF.id) in
      let (cQ2, s') = collectSub p cQ1 phat s in
      (cQ2, I.Dot (I.Head h', s'))
 
@@ -556,7 +556,7 @@ and collectSub (p : int) cQ phat =
      (cQ1, I.SVar (offset, n, s'))
 
   | I.MSVar (k, i) ->
-     let (cQ', i') = collectMVarInst Syntax.Loc.ghost p cQ phat i
+     let (cQ', i') = collectMVarInst Location.ghost p cQ phat i
      in (cQ', I.MSVar (k, i'))
 
 and collectClObj p cQ1 phat' =
@@ -565,7 +565,7 @@ and collectClObj p cQ1 phat' =
      let (cQ2, tM') = collectTerm p cQ1 phat' (tM, LF.id) in
      (cQ2, I.MObj tM')
   | I.PObj h ->
-     let (cQ2, h') = collectHead p cQ1 phat' Syntax.Loc.ghost (h, LF.id) in
+     let (cQ2, h') = collectHead p cQ1 phat' Location.ghost (h, LF.id) in
      (cQ2, I.PObj h')
   | I.SObj s ->
      let (cQ2, s') = collectSub p cQ1 phat' s in
@@ -579,7 +579,7 @@ and collectMObj p cQ1 =
      (cQ2, I.ClObj (phat', tM'))
   | I.CObj cPsi ->
      let phat = Context.dctxToHat cPsi in
-     let (cQ2, cPsi') = collectDctx Syntax.Loc.ghost p cQ1 phat cPsi in
+     let (cQ2, cPsi') = collectDctx Location.ghost p cQ1 phat cPsi in
      (cQ2, I.CObj cPsi')
   | I.MUndef -> raise (Error.Violation "Unexpected undef")
   | I.MV k -> (cQ1, I.MV k)
@@ -686,7 +686,7 @@ and collectHat p cQ (cv, offset) =
   match cv with
   | None -> (cQ, (None, offset))
   | Some cv ->
-     let (cQ', cv') = collectCVar Syntax.Loc.ghost p cQ cv
+     let (cQ', cv') = collectCVar Location.ghost p cQ cv
      in (cQ', (Some cv', offset))
 
 and collectDctx loc (p : int) cQ (cvar, offset) cPsi =
@@ -713,7 +713,7 @@ and collectDctx' loc p cQ ((cvar, offset)) =
      (cQ'', I.DDec (cPsi', I.TypDecl (x, tA')))
 
 
-and collectMTyp p cQ = collectMetaTyp Syntax.Loc.ghost p cQ
+and collectMTyp p cQ = collectMetaTyp Location.ghost p cQ
 
 and collectClTyp loc p cQ' phat =
   function
@@ -840,7 +840,7 @@ and subToSpine cQ offset (s, cPsi) tS =
      subToSpine cQ offset (I.Dot (I.Head (I.BVar (k + 1)), I.Shift (k + 1)), cPsi) tS
 
   | (I.Dot (I.Head (I.BVar k), s), I.DDec (cPsi', I.TypDecl (_, tA))) ->
-     let tN = etaExpandHead Syntax.Loc.ghost (I.BVar k) (Whnf.normTyp (tA, LF.id)) in
+     let tN = etaExpandHead Location.ghost (I.BVar k) (Whnf.normTyp (tA, LF.id)) in
      subToSpine cQ offset (s,cPsi') (I.App (tN, tS))
 
   | (I.Dot (I.Head (I.MVar _), _), I.DDec _) ->
@@ -958,7 +958,7 @@ and abstractMMVar cQ d : I.mm_var -> 'a =
   | { I.name; I.instantiation; I.cD = I.Empty; _ } ->
      index_of cQ (MMV (name, instantiation)) + d
   | { I.name; I.instantiation; _ } ->
-     raise (Error (Syntax.Loc.ghost, LeftoverVars))
+     raise (Error (Location.ghost, LeftoverVars))
 
 and abstractMMVarMSub cQ (l, d) ((i, _) : I.mm_var_inst') =
   abstractMMVar cQ d i (* Shouldn't this apply ms? *)
@@ -1116,7 +1116,7 @@ and abstractMVarCtx cQ l =
       * is it ever hit on correct code?  -jd 2009-02-12
       * No. This case should not occur in correct code - bp
       *)
-     raise (Error (Syntax.Loc.ghost, UnknownIdentifier))
+     raise (Error (Location.ghost, UnknownIdentifier))
 
 
 (* Cases for: FMV *)
@@ -1191,7 +1191,7 @@ and abstrTyp tA =
      let cPsi = ctxToCtx cQ' in
      begin match raiseType' cPsi tA2 with
      | (None, tA3) -> (tA3, length' cPsi)
-     | _ -> raise (Error (Syntax.Loc.ghost, LeftoverVars))
+     | _ -> raise (Error (Location.ghost, LeftoverVars))
      end
 
 (* *********************************************************************** *)
@@ -1216,7 +1216,7 @@ and collect_meta_spine p cQ =
   | Comp.MetaNil -> (cQ, Comp.MetaNil)
   | Comp.MetaApp (cM, cT, cS, plicity) ->
      let (cQ', cM') = collect_meta_obj p cQ cM in
-     let (cQ'', cT') = collectMetaTyp Loc.ghost p cQ' cT in
+     let (cQ'', cT') = collectMetaTyp Location.ghost p cQ' cT in
      let (cQ''', cS') = collect_meta_spine p cQ'' cS in
      (cQ''', Comp.MetaApp (cM', cT', cS', plicity))
 
@@ -1337,7 +1337,7 @@ and collectExp' cQ =
 
   | Comp.AnnBox (cM, cT) ->
      let (cQ', cM') = collect_meta_obj 0 cQ cM in
-     let (cQ'', cT') = collectMetaTyp Syntax.Loc.ghost 0 cQ' cT in
+     let (cQ'', cT') = collectMetaTyp Location.ghost 0 cQ' cT in
      (cQ'', Comp.AnnBox (cM', cT'))
 
   | Comp.PairVal (loc, i1, i2) ->
@@ -1510,7 +1510,7 @@ let raiseCompKind cD cK =
     match cD with
     | I.Empty -> cK
     | I.Dec (cD', mdecl) ->
-       raisePiBox cD' (Comp.PiKind (Syntax.Loc.ghost, mdecl, cK))
+       raisePiBox cD' (Comp.PiKind (Location.ghost, mdecl, cK))
   in
   (* let rec roll =
      funciton
@@ -1722,7 +1722,7 @@ let abstrSchema (I.Schema elements) =
     | [] -> []
     | Int.LF.SchElem (cPsi, trec) :: els ->
        let cPsi0 = Context.projectCtxIntoDctx cPsi in
-       let (cQ, cPsi0') = collectDctx Syntax.Loc.ghost 0 I.Empty (Context.dctxToHat I.Null) cPsi0 in
+       let (cQ, cPsi0') = collectDctx Location.ghost 0 I.Empty (Context.dctxToHat I.Null) cPsi0 in
        let (_, l) as phat = Context.dctxToHat cPsi0 in
        let (cQ, trec') = collectTypRec 0 cQ phat (trec, LF.id) in
        let cQ' = abstractCtx cQ in
@@ -1756,7 +1756,7 @@ let rec fvarInCollection =
   | I.Dec (cQ, _) -> fvarInCollection cQ
 
 let closedTyp (cPsi, tA) =
-  let (cQ1, _) = collectDctx Syntax.Loc.ghost 0 I.Empty (None, 0) cPsi in
+  let (cQ1, _) = collectDctx Location.ghost 0 I.Empty (None, 0) cPsi in
   let (cQ2, _) = collectTyp 0 cQ1 (Context.dctxToHat cPsi) (tA, LF.id) in
   not (fvarInCollection cQ2)
 
@@ -1765,7 +1765,7 @@ let closedTyp (cPsi, tA) =
 let abstrCovGoal cPsi tM tA ms =
   let phat = Context.dctxToHat cPsi in
   let (cQ0, ms') = collectMSub 0 I.Empty ms in
-  let (cQ1, cPsi') = collectDctx Syntax.Loc.ghost 0 cQ0 phat cPsi in
+  let (cQ1, cPsi') = collectDctx Location.ghost 0 cQ0 phat cPsi in
   let (cQ2, tA') = collectTyp 0 cQ1 phat (tA, LF.id) in
   let (cQ3, tM') = collectTerm 0 cQ2 phat (tM, LF.id) in
 

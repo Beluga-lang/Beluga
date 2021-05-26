@@ -1,5 +1,6 @@
 open Support
-open Beluga.Syntax.Int
+open Syntax
+open Syntax.Int
 
 type t
 
@@ -38,7 +39,7 @@ val defer_session : t -> unit
  *)
 val session_configuration_wizard : t -> bool
 
-val select_theorem : t -> Beluga.Id.name -> bool
+val select_theorem : t -> Id.name -> bool
 
 val automation_state : t -> Automation.State.t
 

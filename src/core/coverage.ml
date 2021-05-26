@@ -8,10 +8,10 @@ open Support
 
 module F = Misc.Function
 
+open Syntax
 module Comp = Syntax.Int.Comp
 module LF = Syntax.Int.LF
 
-module Loc = Syntax.Loc
 module Types = Store.Cid.Typ
 module Const = Store.Cid.Term
 module S = Substitution
@@ -28,7 +28,7 @@ type error =
   | NothingToRefine
   | NoCoverageGoalsGenerated
 
-exception Error of Loc.t * error
+exception Error of Location.t * error
 
 let _ =
   Error.register_printer
@@ -51,8 +51,8 @@ let _ =
 
 type gen_pat_var_strategy = Id.name -> int -> Comp.pattern
 
-let withPatVar name k = Comp.PatVar (Loc.ghost, k)
-let withPatFVar name k = Comp.PatFVar (Loc.ghost, name)
+let withPatVar name k = Comp.PatVar (Location.ghost, k)
+let withPatFVar name k = Comp.PatFVar (Location.ghost, name)
 
 (* ****************************************************************************** *)
 (* Coverage problem *)
@@ -65,7 +65,7 @@ let lookup (cG : Comp.gctx) x =
   tau
 
 type problem =
-  { loc : Loc.t
+  { loc : Location.t
   ; prag : Comp.case_pragma (* indicates if % not appeared after ``case...of'' *)
   ; cD : LF.mctx
   ; cG : Comp.gctx
@@ -193,10 +193,10 @@ let gen_str cD cPsi (LF.Atom (_, a, _) as tP) =
 let eta_expand (tH, tA) =
   let rec eta (tA, s) tS =
     match tA with
-    | LF.Atom _ -> LF.Root (Loc.ghost, tH, tS, `explicit)
+    | LF.Atom _ -> LF.Root (Location.ghost, tH, tS, `explicit)
     | LF.PiTyp ((LF.TypDecl (x, tB0), _), tB) ->
        let tM = eta (tB0, s) LF.Nil in
-       LF.Lam (Loc.ghost, x, eta (tB, S.LF.dot1 s) (LF.App (tM, tS)))
+       LF.Lam (Location.ghost, x, eta (tB, S.LF.dot1 s) (LF.App (tM, tS)))
   in
   eta (tA, S.LF.id) LF.Nil
 
@@ -447,7 +447,7 @@ end = struct
          | (LF.ClObj _, LF.Dec (cD0, LF.Decl (_, tU, _))) ->
             check_meta_obj
               cD
-              (Loc.ghost, m)
+              (Location.ghost, m)
               (Whnf.cnormMTyp (tU, t))
             && id t cD0
          | _ -> false
@@ -751,7 +751,7 @@ and pre_match_sub cD cD_p covGoal patt matchCands splitCands =
      then (matchCands, splitCands)
      else Error.violation "[coverage] [pre_match_sub] substitution mismatch"
   (*
-          raise (Error (Loc.ghost,
+          raise (Error (Location.ghost,
                     MatchError ("Substitution mismatch " ^ P.subToString cD cPsi0 s0 ^ " =/= " ^ P.subToString cD_p cPsi0 s1 ^ "\n")))
    *)
 
@@ -930,7 +930,7 @@ and pre_match_dctx cD cD_p cPsi cPhi_patt matchCands splitCands =
      let (mC, sC) = pre_match_dctx cD cD_p cPsi' cPhi' matchCands splitCands in
      pre_match_typ cD cD_p (cPsi', (tA, S.LF.id)) (cPhi', (tB, S.LF.id)) mC sC
   | _ ->
-     raise (Error (Loc.ghost, MatchError "Ctx mismatch"))
+     raise (Error (Location.ghost, MatchError "Ctx mismatch"))
 
 let match_metaobj cD cD_p ((loc, mO), mt) ((loc', mO_p), mtp) mC sC =
   match ((mO, mt), (mO_p, mtp)) with
@@ -955,15 +955,15 @@ let match_metaobj cD cD_p ((loc, mO), mt) ((loc', mO_p), mtp) mC sC =
      | LF.((PObj tH, PTyp tA), (PObj tH', PTyp tA')) ->
         let (mC0, sC0) = pre_match_dctx cD cD_p cPsi cPsi' mC sC in
         let (mC1, sC1) = pre_match_typ cD cD_p (cPsi, (tA, S.LF.id)) (cPsi', (tA', S.LF.id)) mC0 sC0 in
-        let covGoal = CovGoal (cPsi, LF.Root (Loc.ghost, tH, LF.Nil, `explicit), (tA, S.LF.id)) in
-        let pat = MetaPatt (cPsi', LF.Root (Loc.ghost, tH', LF.Nil, `explicit), (tA', S.LF.id)) in
+        let covGoal = CovGoal (cPsi, LF.Root (Location.ghost, tH, LF.Nil, `explicit), (tA, S.LF.id)) in
+        let pat = MetaPatt (cPsi', LF.Root (Location.ghost, tH', LF.Nil, `explicit), (tA', S.LF.id)) in
         pre_match cD cD_p covGoal pat mC1 sC1
 
      | LF.((MObj tR, PTyp tA), (PObj tH, PTyp tA')) ->
         let (mC0, sC0) = pre_match_dctx cD cD_p cPsi cPsi' mC sC in
         let (mC1, sC1) = pre_match_typ cD cD_p (cPsi, (tA, S.LF.id)) (cPsi', (tA', S.LF.id)) mC0 sC0 in
         let covGoal = CovGoal (cPsi, tR, (tA, S.LF.id)) in
-        let tR' = LF.(Root (Loc.ghost, tH, Nil, `explicit)) in
+        let tR' = LF.(Root (Location.ghost, tH, Nil, `explicit)) in
         let pat = MetaPatt (cPsi', tR', (tA', S.LF.id)) in
         pre_match cD cD_p covGoal pat mC1 sC1
 
@@ -989,7 +989,7 @@ let match_metaobj cD cD_p ((loc, mO), mt) ((loc', mO_p), mtp) mC sC =
         in
         Error.violation s
 (*
-     raise (Error (Loc.ghost, MatchError ("Meta Obj Mismatch \n" ^ "Found CovGoal: " ^ P.metaObjToString cD (loc, mO) ^ " : " ^ P.metaTypToString cD mt ^ "\nPattern: " ^ P.metaObjToString cD_p (loc', mO_p) ^ " : " ^ P.metaTypToString cD_p mtp ^ "\n")))
+     raise (Error (Location.ghost, MatchError ("Meta Obj Mismatch \n" ^ "Found CovGoal: " ^ P.metaObjToString cD (loc, mO) ^ " : " ^ P.metaTypToString cD mt ^ "\nPattern: " ^ P.metaObjToString cD_p (loc', mO_p) ^ " : " ^ P.metaTypToString cD_p mtp ^ "\n")))
  *)
 
 let rec match_pattern (cD, cG) (cD_p, cG_p) (pat, ttau) (pat_p, ttau_p) mC sC =
@@ -1051,7 +1051,7 @@ let rec match_pattern (cD, cG) (cD_p, cG_p) (pat, ttau) (pat_p, ttau_p) mC sC =
   | ((Comp.PatAnn (_, pat', tau', _), (_, t')), pat_ttau) ->
      match_pattern (cD, cG) (cD_p, cG_p) (pat', (tau', t')) pat_ttau mC sC
   | _ ->
-     raise (Error (Loc.ghost, MatchError "Mismatch"))
+     raise (Error (Location.ghost, MatchError "Mismatch"))
 
 and match_spines (cD, cG) (cD_p, cG_p) pS pS' mC sC =
   match (pS, pS') with
@@ -1131,7 +1131,7 @@ and match_spines (cD, cG) (cD_p, cG_p) pS pS' mC sC =
   | (_, (Comp.PatApp (loc, _, _), _)) ->
      raise (Error (loc, MatchError "Spine Mismatch"))
   | _ ->
-     raise (Error (Loc.ghost, MatchError "Spine Mismatch"))
+     raise (Error (Location.ghost, MatchError "Spine Mismatch"))
 
 (* ********************************************************************************)
 (* getSchemaElems : LF.mctx -> LF.dctx -> LF.sch_elem list
@@ -1179,7 +1179,7 @@ let rec genSpine k names cD cPsi sA tP =
        then LF.Maybe
        else LF.No
      in
-     let tN = ConvSigma.etaExpandMMVstr Loc.ghost cD cPsi (tA, s) dep (Some u) (u :: names) in
+     let tN = ConvSigma.etaExpandMMVstr Location.ghost cD cPsi (tA, s) dep (Some u) (u :: names) in
      dprintf
        begin fun p ->
        p.fmt "[genSpine] @[<v>Pi-type: extending spine with new (eta-expanded) variable@,\
@@ -1251,7 +1251,7 @@ let genObj (cD, cPsi, tP) (tH, tA, k) =
   with
   | None -> None
   | Some spine ->
-     let tM = LF.Root (Loc.ghost, tH', spine, `explicit) in
+     let tM = LF.Root (Location.ghost, tH', spine, `explicit) in
      let (cD', cPsi', tR, tP', ms') =
        try
          Abstract.covgoal cPsi' tM tP' (Whnf.cnormMSub ms) (* cD0; cPsi0 |- tM : tP0 *)
@@ -1294,7 +1294,7 @@ let genConst (cD, cPsi, (a, tS)) =
       end
       constructors
   in
-  genAllObj (cD, cPsi, LF.(Atom (Loc.ghost, a, tS))) tH_tA_list
+  genAllObj (cD, cPsi, LF.(Atom (Location.ghost, a, tS))) tH_tA_list
 
 (** Given a head and its type,
     expands the head into a list of heads if the head's type is a
@@ -1466,7 +1466,7 @@ let rec genBCovGoals ((cD, cPsi, tA) as cov_problem) =
        begin fun (cD', (LF.DDec (cPsi', tdecl'), tM, sA), ms) ->
        let cg' =
          ( cPsi'
-         , LF.Lam (Loc.ghost, x, tM)
+         , LF.Lam (Location.ghost, x, tM)
          , (LF.PiTyp ((tdecl', dep), LF.TClo (sA)), S.LF.id)
          )
        in
@@ -1526,7 +1526,7 @@ let rec genCovGoals ((cD, cPsi, tA) as cov_problem : (LF.mctx * LF.dctx * LF.typ
        begin fun (cD', (LF.DDec (cPsi', tdecl'), tM, sA), t) ->
        ( cD'
        , ( cPsi'
-         , LF.Lam (Loc.ghost, x, tM)
+         , LF.Lam (Location.ghost, x, tM)
          , (LF.PiTyp ((tdecl', dep), LF.TClo (sA)), S.LF.id))
        , t
        )
@@ -1568,8 +1568,8 @@ let rec solve' cD (matchCand, ms) cD_p mCands' sCands' =
      | Eqn (CovSub (cPsi, s, sT), MetaSub (cPsi_p, s_p, sT_p)) ->
         let cT = LF.ClTyp (sT, cPsi) in
         let cT_p = LF.ClTyp (sT_p, cPsi_p) in
-        let cM = (Loc.ghost, LF.ClObj (Context.dctxToHat cPsi, LF.SObj s)) in
-        let cM_p = (Loc.ghost, LF.ClObj (Context.dctxToHat cPsi_p, LF.SObj s_p)) in
+        let cM = (Location.ghost, LF.ClObj (Context.dctxToHat cPsi, LF.SObj s)) in
+        let cM_p = (Location.ghost, LF.ClObj (Context.dctxToHat cPsi_p, LF.SObj s_p)) in
         begin
           try
             U.unifyMetaTyp cD (cT, Whnf.m_id) (cT_p, ms);
@@ -1980,7 +1980,7 @@ let rec decTomdec names cD' (LF.CtxOffset k as cpsi) (d, decls) =
      in
      let mv =
        LF.Root
-         ( Loc.ghost
+         ( Location.ghost
          , LF.MVar (LF.Offset 1, Whnf.cnormSub (ss', LF.MShift 1))
          , LF.Nil
          , `explicit
@@ -2118,7 +2118,7 @@ let genSVCovGoals (cD, (cPsi, (r0, cPhi))) (* cov_problem *) =
      let mT = LF.ClTyp (LF.STyp (r0, cPhi'), cPsi) in
      let cD' = LF.Dec (cD, LF.Decl (Id.mk_name (Whnf.newMTypName mT), mT, LF.No)) in
      (* if ren = renaming, generate parameter variable *)
-     let tM = LF.Root (Loc.ghost, LF.MVar (LF.Offset 1, S.LF.id), LF.Nil, `explicit) in
+     let tM = LF.Root (Location.ghost, LF.MVar (LF.Offset 1, S.LF.id), LF.Nil, `explicit) in
      let tA0 = Whnf.cnormTyp (tA, LF.MShift 1) in
      let cPhi0 = Whnf.cnormDCtx (cPhi', LF.MShift 1) in
      let mT' = LF.ClTyp (LF.MTyp tA0, cPhi0) in
@@ -2334,7 +2334,7 @@ let rec genPattSpine names mk_pat_var k =
        genPattSpine (pv1 :: names) mk_pat_var (k + 1) (tau2, t)
      in
      ( LF.Dec (cG, Comp.CTypDecl (pv1, tau_p, false))
-     , Comp.PatApp (Loc.ghost, pat1, pS)
+     , Comp.PatApp (Location.ghost, pat1, pS)
      , ttau
      )
   | Comp.TypPiBox (_, LF.Decl (u, LF.CTyp sW, dep), tau), t ->
@@ -2348,15 +2348,15 @@ let rec genPattSpine names mk_pat_var k =
      in
      let pat1 =
        Comp.PatMetaObj
-         ( Loc.ghost
-         , (Loc.ghost, LF.CObj cPsi')
+         ( Location.ghost
+         , (Location.ghost, LF.CObj cPsi')
          )
      in
      let (cG, pS, ttau0) =
        genPattSpine (u :: names) mk_pat_var k (tau, LF.MDot (LF.CObj (cPsi'), t))
      in
      ( cG
-     , Comp.PatApp (Loc.ghost, pat1, pS)
+     , Comp.PatApp (Location.ghost, pat1, pS)
      , ttau0
      )
 
@@ -2384,13 +2384,13 @@ let rec genPattSpine names mk_pat_var k =
        | LF.MTyp _ ->
           LF.MObj
             (ConvSigma.etaExpandMMVstr
-               Loc.ghost LF.Empty cPsi' (tP', S.LF.id) dep (Some u) (u :: names)
+               Location.ghost LF.Empty cPsi' (tP', S.LF.id) dep (Some u) (u :: names)
             )
      in
      let pat1 =
        Comp.PatMetaObj
-         ( Loc.ghost
-         , (Loc.ghost, LF.ClObj (Context.dctxToHat cPsi', clobj))
+         ( Location.ghost
+         , (Location.ghost, LF.ClObj (Context.dctxToHat cPsi', clobj))
          )
      in
      let (cG, pS, ttau0) =
@@ -2400,7 +2400,7 @@ let rec genPattSpine names mk_pat_var k =
          k
          (tau, LF.MDot (LF.ClObj (Context.dctxToHat cPsi', clobj), t))
      in
-     (cG, Comp.PatApp (Loc.ghost, pat1, pS), ttau0)
+     (cG, Comp.PatApp (Location.ghost, pat1, pS), ttau0)
 
   | (Comp.TypPiBox (_, LF.(Decl (u, ClTyp (STyp (cl, cPhi), cPsi), _)), tau), t) ->
      let cPhi' = Whnf.cnormDCtx (cPhi, t) in
@@ -2417,11 +2417,11 @@ let rec genPattSpine names mk_pat_var k =
        LF.MSVar (0, ((v, Whnf.m_id), S.LF.id))
      in
      let sO = LF.ClObj (Context.dctxToHat cPsi', LF.SObj s) in
-     let pat = Comp.PatMetaObj (Loc.ghost, (Loc.ghost, sO)) in
+     let pat = Comp.PatMetaObj (Location.ghost, (Location.ghost, sO)) in
      let (cG, pS, ttau0) =
        genPattSpine (u :: names) mk_pat_var k (tau, LF.MDot (sO, t))
      in
-     (cG, Comp.PatApp (Loc.ghost, pat, pS), ttau0)
+     (cG, Comp.PatApp (Location.ghost, pat, pS), ttau0)
 
   | typ ->
      (LF.Empty, Comp.PatNil, typ)
@@ -2449,7 +2449,7 @@ let genPatt names mk_pat_var (cD_p, tau_v) (c, tau_c) =
       (P.fmt_ppr_lf_mctx P.l0) cD_p
     end;
   let (cG, pS, ttau) = genPattSpine names mk_pat_var 1 (tau_c, Whnf.m_id) in
-  let pat = Comp.PatConst (Loc.ghost, c, pS) in
+  let pat = Comp.PatConst (Location.ghost, c, pS) in
   dprintf
     begin fun p ->
     p.fmt "[genPatt] @[<v>@[<hv 2>@[%a@] :@ @[%a@]@]@,\
@@ -2530,11 +2530,11 @@ let genPatCGoals names mk_pat_var (cD : LF.mctx) tau =
     map_inside
       begin fun (CovGoal (cPsi', tR, sA')) ->
       let m_obj =
-        ( Loc.ghost
+        ( Location.ghost
         , LF.ClObj (Context.dctxToHat cPsi', LF.MObj tR)
         )
       in
-      let pat_r = Comp.PatMetaObj (Loc.ghost, m_obj) in
+      let pat_r = Comp.PatMetaObj (Location.ghost, m_obj) in
       let tau_r =
         ( Comp.TypBox (loc, LF.ClTyp (f sA', cPsi'))
         , Whnf.m_id
@@ -2558,7 +2558,7 @@ let genPatCGoals names mk_pat_var (cD : LF.mctx) tau =
      in
      let pat =
        Comp.PatPair
-         ( Loc.ghost
+         ( Location.ghost
          , mk_pat_var pv1 2
          , mk_pat_var pv2 1
          )
@@ -2590,10 +2590,10 @@ let genPatCGoals names mk_pat_var (cD : LF.mctx) tau =
         genCtx names cD' (LF.CtxOffset 1) elems
         |> List.map
              begin fun (cD', cPsi, t) ->
-             let mC = (Loc.ghost, LF.CObj cPsi) in
+             let mC = (Location.ghost, LF.CObj cPsi) in
              ( cD'
              , ( LF.Empty
-               , Comp.PatMetaObj (Loc.ghost, mC)
+               , Comp.PatMetaObj (Location.ghost, mC)
                , (tau, Whnf.m_id)
                )
              , t
@@ -2761,7 +2761,7 @@ let refine_mv ((cD, cG, candidates, patt) as cov_problem) =
        "[refine_mv] NOTHING TO REFINE"
        end;
      open_cov_problems := (cD, cG, patt) :: !open_cov_problems;
-     raise (Error (Loc.ghost, NothingToRefine))
+     raise (Error (Location.ghost, NothingToRefine))
   (* [] *)
   (* raise (Error "Nothing to refine") *)
   | _ ->
@@ -2790,7 +2790,7 @@ let refine_mv ((cD, cG, candidates, patt) as cov_problem) =
      | (SomeTermCands (_, []), []) -> []
      | (SomeTermCands (_, []), _) ->
         open_cov_problems := (cD, cG, patt) :: !open_cov_problems;
-        raise (Error (Loc.ghost, NothingToRefine))
+        raise (Error (Location.ghost, NothingToRefine))
      | (SomeTermCands (_, cgoals), _) ->
         dprintf
           begin fun p ->
@@ -3176,7 +3176,7 @@ let initialize_coverage problem projOpt : cov_problems =
      let cG' = Whnf.cnormGCtx (problem.cG, LF.MShift 1) in
      let cPsi = LF.CtxVar (LF.CtxOffset 1) in
      (* let covGoal = CovPatt (LF.Empty, Comp.PatMetaObj (loc, LF.CObj cPsi)) in *)
-     let mC = Comp.PatMetaObj (Loc.ghost, (Loc.ghost, LF.CObj cPsi)) in
+     let mC = Comp.PatMetaObj (Location.ghost, (Location.ghost, LF.CObj cPsi)) in
      let mT = Comp.TypBox (loc, LF.CTyp w) in
      let covGoal = CovPatt (LF.Empty, mC, (mT, LF.MShift 0)) in
      let pat_list = List.map (fun b -> extract_patterns problem.ctype b) problem.branches in
@@ -3207,10 +3207,10 @@ let initialize_coverage problem projOpt : cov_problems =
         in
         let cG' = Whnf.cnormGCtx (problem.cG, LF.MShift 1) in
         let mv = LF.MVar (LF.Offset 1, s) in
-        let tM = LF.Root (Loc.ghost, mv, LF.Nil, `explicit) in
+        let tM = LF.Root (Location.ghost, mv, LF.Nil, `explicit) in
         let cPsi = Whnf.cnormDCtx (cPsi, LF.MShift 1) in
         let tA = Whnf.cnormTyp (tA, LF.MShift 1) in
-        let mC = Comp.PatMetaObj (Loc.ghost, (loc, LF.ClObj (Context.dctxToHat cPsi, LF.MObj tM))) in
+        let mC = Comp.PatMetaObj (Location.ghost, (loc, LF.ClObj (Context.dctxToHat cPsi, LF.MObj tM))) in
         let mT = Comp.TypBox (loc, LF.ClTyp (LF.MTyp tA, cPsi)) in
         let covGoal = CovPatt (LF.Empty, mC, (mT, LF.MShift 0)) in
 
@@ -3232,7 +3232,7 @@ let initialize_coverage problem projOpt : cov_problems =
           begin fun _ ->
           "[initialize_coverage] using case scrutinee"
           end;
-        let mC = Comp.PatMetaObj (Loc.ghost, m_obj) in
+        let mC = Comp.PatMetaObj (Location.ghost, m_obj) in
         let covGoal = CovPatt (LF.Empty, mC, (problem.ctype, LF.MShift 0)) in
         let pat_list = List.map (extract_patterns problem.ctype) problem.branches in
         let cand_list = gen_candidates problem.loc problem.cD covGoal pat_list in
@@ -3249,10 +3249,10 @@ let initialize_coverage problem projOpt : cov_problems =
        | None -> LF.PVar (1, s)
        | Some k -> LF.Proj (LF.PVar (1, s), k)
      in
-     let tM = LF.Root (Loc.ghost, mv, LF.Nil, `explicit) in
+     let tM = LF.Root (Location.ghost, mv, LF.Nil, `explicit) in
      let cPsi = Whnf.cnormDCtx (cPsi, LF.MShift 1) in
      let tA = Whnf.cnormTyp (tA, LF.MShift 1) in
-     let mC = Comp.PatMetaObj (Loc.ghost, (Loc.ghost, LF.ClObj (Context.dctxToHat cPsi, LF.MObj tM))) in
+     let mC = Comp.PatMetaObj (Location.ghost, (Location.ghost, LF.ClObj (Context.dctxToHat cPsi, LF.MObj tM))) in
      let mT = Comp.TypBox (loc, LF.ClTyp (LF.PTyp tA, cPsi)) in
      let covGoal = CovPatt (LF.Empty, mC, (mT, LF.MShift 0)) in
      let pat_list = List.map (fun b -> extract_patterns problem.ctype b) problem.branches in
@@ -3265,7 +3265,7 @@ let initialize_coverage problem projOpt : cov_problems =
      let s = LF.SVar (1, 0, S.LF.id) in
      let cPhi = Whnf.cnormDCtx (cPhi, LF.MShift 1) in
      let cPsi = Whnf.cnormDCtx (cPsi, LF.MShift 1) in
-     let mC = Comp.PatMetaObj (Loc.ghost, (Loc.ghost, LF.ClObj (Context.dctxToHat cPhi, LF.SObj s))) in
+     let mC = Comp.PatMetaObj (Location.ghost, (Location.ghost, LF.ClObj (Context.dctxToHat cPhi, LF.SObj s))) in
      let mT = Comp.TypBox (loc, ((LF.ClTyp (LF.STyp (r, cPhi), cPsi)))) in
      let covGoal = CovPatt (LF.Empty, mC, (mT, LF.MShift 0)) in
 
@@ -3281,7 +3281,7 @@ let initialize_coverage problem projOpt : cov_problems =
      let names = Context.(names_of_gctx problem.cG) in
      let pv = NameGen.(var tau |> renumber names) in
      let cG' = LF.Dec (problem.cG, Comp.CTypDecl (pv, tau, false)) in
-     let pat = Comp.PatFVar (Loc.ghost, pv) in
+     let pat = Comp.PatFVar (Location.ghost, pv) in
      let pat_list = List.map (fun b -> extract_patterns problem.ctype b) problem.branches in
      let covGoal = CovPatt (cG', pat, (problem.ctype, Whnf.m_id)) in
      let cand_list = gen_candidates problem.loc problem.cD covGoal pat_list in
@@ -3412,7 +3412,7 @@ let check_coverage_success problem =
          let s =
            fprintf str_formatter
              "\n##   Case expression covers : ##\n##   %a\n##\n\n"
-             Loc.print problem.loc;
+             Location.print problem.loc;
            flush_str_formatter ()
          in
          Failure s
@@ -3421,7 +3421,7 @@ let check_coverage_success problem =
        begin
          fprintf std_formatter
            "\n##   Case expression doesn't cover, consistent with \"case ... of %%not\" ##\n##   %a\n##   CASE(S) NOT COVERED :\n%a\n\n"
-           Loc.print problem.loc
+           Location.print problem.loc
            Prettycov.fmt_ppr_open_cov_problems !open_cov_problems;
          Success
        end
@@ -3434,7 +3434,7 @@ let covers' problem projObj =
     begin fun p ->
     p.fmt "@[<hv>#################################@,### BEGIN COVERAGE FOR TYPE tau = %a@,at %a@]"
       (P.fmt_ppr_cmp_typ problem.cD P.l0) problem.ctype
-      Loc.print problem.loc
+      Location.print problem.loc
     end;
   U.resetGlobalCnstrs ();
   let cov_problems = initialize_coverage problem projObj in
@@ -3442,7 +3442,7 @@ let covers' problem projObj =
     begin fun p ->
     p.fmt "@[<v>Coverage checking a case with %d branch(es)@,at: %a@]"
       (List.length problem.branches)
-      Loc.print problem.loc
+      Location.print problem.loc
     end;
   dprintf
     begin fun p ->
@@ -3504,7 +3504,7 @@ let covers problem projObj =
         begin fun p ->
         p.fmt "[covers] @[<v>the coverage problem is trivial; skipping@,\
                at: %a@]"
-          Loc.print_short problem.loc
+          Location.print_short problem.loc
         end;
       Success
     end

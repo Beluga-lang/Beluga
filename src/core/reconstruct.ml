@@ -57,7 +57,7 @@ type error =
   | NotImplemented of (Format.formatter -> unit -> unit)
   | ImpossiblePattern of Int.LF.mctx * Int.Comp.meta_obj * Int.Comp.meta_obj
 
-exception Error of Syntax.Loc.t * error
+exception Error of Location.t * error
 let throw loc e = raise (Error (loc, e))
 
 let _ =
@@ -353,7 +353,7 @@ let rec elDCtxAgainstSchema loc recT cD psi s_cid =
 let unifyDCtxWithFCVar loc cD cPsi1 cPsi2 =
   dprintf
     (fun p ->
-      p.fmt "[unifyDCtxWithFCVar] at %a" Loc.print_short loc);
+      p.fmt "[unifyDCtxWithFCVar] at %a" Location.print_short loc);
 
   let rec loop cD cPsi1 cPsi2 =
     match (cPsi1, cPsi2) with
@@ -513,7 +513,7 @@ let mgAtomicTyp cD cPsi a kK =
                  @,@[%a@]\
                  @,for type %a@]"
             P.fmt_ppr_lf_sub_typing (cD, flat_cPsi, ss', cPhi')
-            (P.fmt_ppr_lf_typ Int.LF.Empty Int.LF.Null P.l0) Int.LF.(Atom (Loc.ghost, a, Nil))
+            (P.fmt_ppr_lf_typ Int.LF.Empty Int.LF.Null P.l0) Int.LF.(Atom (Location.ghost, a, Nil))
           end;
         let ssi' = LF.invert ss' in
         (* cPhi' |- ssi : cPhi *)
@@ -541,10 +541,10 @@ let mgAtomicTyp cD cPsi a kK =
                P.(fmt_ppr_lf_sub cD cPhi' l0) ssi'
                Id.print u
              end;
-           Whnf.etaExpandMMV Loc.ghost cD
+           Whnf.etaExpandMMV Location.ghost cD
              cPhi' (tA1', ssi') u ss_proj dep
          else
-           Whnf.etaExpandMMV Loc.ghost cD
+           Whnf.etaExpandMMV Location.ghost cD
              flat_cPsi (tA1', Substitution.LF.id) u s_proj dep
        in
        dprintf
@@ -559,7 +559,7 @@ let mgAtomicTyp cD cPsi a kK =
        let tS = genSpine (kK, Int.LF.Dot (Int.LF.Obj tR, s)) in
        Int.LF.App (tR, tS)
   in
-  Int.LF.Atom (Syntax.Loc.ghost, a, genSpine (kK, LF.id))
+  Int.LF.Atom (Location.ghost, a, genSpine (kK, LF.id))
 
 
 let rec mgTyp cD cPsi =
@@ -614,7 +614,7 @@ let elClObj cD loc cPsi' clobj mtyp =
      dprintf
        (fun p ->
          p.fmt "[elClObj] disambiguating substitution to term at %a"
-           Loc.print loc);
+           Location.print loc);
      let r = Int.LF.MObj (Lfrecon.elTerm Lfrecon.Pibox cD cPsi' tM (tA, LF.id)) in
      dprint (fun () -> "[ElClObj] ELABORATION MObj DONE");
      r
@@ -646,7 +646,7 @@ let elClObj cD loc cPsi' clobj mtyp =
   | ( Apx.LF.Dot (Apx.LF.Head h, Apx.LF.EmptySub)
     , Int.LF.PTyp tA'
     ) ->
-     let tM = Apx.LF.Root (Loc.ghost, h, Apx.LF.Nil) in
+     let tM = Apx.LF.Root (Location.ghost, h, Apx.LF.Nil) in
      let Int.LF.Root (_, h, Int.LF.Nil, _) =
        Lfrecon.elTerm Lfrecon.Pibox cD cPsi' tM (tA', LF.id)
      in
@@ -654,7 +654,7 @@ let elClObj cD loc cPsi' clobj mtyp =
   | ( Apx.LF.Dot (Apx.LF.Head h, Apx.LF.EmptySub)
     , Int.LF.MTyp tA'
     ) ->
-     let tM = Apx.LF.Root (Loc.ghost, h, Apx.LF.Nil) in
+     let tM = Apx.LF.Root (Location.ghost, h, Apx.LF.Nil) in
      let m = Lfrecon.elTerm Lfrecon.Pibox cD cPsi' tM (tA', LF.id) in
      Int.LF.MObj m
 
@@ -767,7 +767,7 @@ let rec elCompTyp cD =
   | Apx.Comp.TypBox (loc, (_, cU)) ->
      dprintf
        begin fun p ->
-       p.fmt "[elCompTyp] TypBox at %a" Loc.print_short loc
+       p.fmt "[elCompTyp] TypBox at %a" Location.print_short loc
        end;
      let cU = elCTyp Lfrecon.Pibox cD cU in
      I.TypBox (loc, cU)
@@ -1015,7 +1015,7 @@ and elExpW cD cG e theta_tau =
      let cD' = extend_mctx cD (u, cdec, theta) in
      let e' = Apxnorm.cnormApxExp cD (Apx.LF.Empty) e (cD', Int.LF.MShift 1) in
      let e' = elExp cD' cG' e' (tau, C.mvar_dot1 theta) in
-     Int.Comp.MLam (Syntax.Loc.ghost, u, e', `implicit)
+     Int.Comp.MLam (Location.ghost, u, e', `implicit)
 
   | (Apx.Comp.Syn (loc, i), (tau, t)) ->
      dprintf
@@ -1113,7 +1113,7 @@ and elExpW cD cG e theta_tau =
      Int.Comp.Impossible (loc, i')
 
   | (Apx.Comp.Case (loc, prag, i, branches), ttau) ->
-     dprintf (fun p -> p.fmt "[elExp] case at %a" Loc.print_short loc);
+     dprintf (fun p -> p.fmt "[elExp] case at %a" Location.print_short loc);
      dprintf (fun p -> p.fmt "[elExp] elaborating scrutinee");
      let (i', ttau') = (elExp' cD cG i) in
      dprintf
@@ -1191,7 +1191,7 @@ and elExp' cD cG i =
      *)
     let phat = Context.dctxToHat cPsi in
     let cT = Int.LF.ClTyp (Int.LF.MTyp (Int.LF.TClo sP), cPsi) in
-    let tau = Int.Comp.TypBox (Loc.ghost, cT) in
+    let tau = Int.Comp.TypBox (Location.ghost, cT) in
     let cM = (loc, Int.LF.ClObj (phat, Int.LF.MObj tR)) in
     (Int.Comp.AnnBox (cM, cT), (tau, C.m_id))
   in
@@ -1249,7 +1249,7 @@ and elExp' cD cG i =
   | Apx.Comp.Apply (loc, i, e) ->
      dprintf
        (fun p ->
-         p.fmt "[elExp'] Apply at @[%a@]" Loc.print_short loc);
+         p.fmt "[elExp'] Apply at @[%a@]" Location.print_short loc);
      let i' = elExp' cD cG i in
      dprintf begin fun p ->
        p.fmt "[elExp'] @[<v>genMApp for@,@[<hv 2>i' =@ @[%a@]@]@]"
@@ -1346,7 +1346,7 @@ and elExp' cD cG i =
      a boxed *term*. -je *)
   | Apx.Comp.BoxVal (loc, (loc', Apx.Comp.ClObj (psi, Apx.LF.Dot (Apx.LF.Head h, Apx.LF.EmptySub)))) ->
      (* package the head into a full term *)
-     elBoxVal loc loc' psi (Apx.LF.Root (Loc.ghost, h, Apx.LF.Nil))
+     elBoxVal loc loc' psi (Apx.LF.Root (Location.ghost, h, Apx.LF.Nil))
 
   | Apx.Comp.BoxVal (loc, (loc', Apx.Comp.ClObj (psi, Apx.LF.Dot (Apx.LF.Obj r, Apx.LF.EmptySub)))) ->
      elBoxVal loc loc' psi r
@@ -1360,7 +1360,7 @@ and elExp' cD cG i =
       let _ = dprint (fun () -> "[elExp'] BoxVal tR done ") in
       (* let sP    = synTerm Lfrecon.Pibox cD cPsi (tR, LF.id) in *)
       let phat     = Context.dctxToHat cPsi in
-      let tau      = Int.Comp.TypBox (Syntax.Loc.ghost, Int.LF.ClTyp (Int.LF.MTyp (Int.LF.TClo sP), cPsi)) in
+      let tau      = Int.Comp.TypBox (Location.ghost, Int.LF.ClTyp (Int.LF.MTyp (Int.LF.TClo sP), cPsi)) in
       let cM       = (loc, Int.LF.ClObj(phat, Int.LF.MObj tR)) in
         (Int.Comp.Ann (Int.Comp.Box (loc, cM), tau), (tau, C.m_id))
       *)
@@ -1384,7 +1384,7 @@ and elExp' cD cG i =
        let (_, cPsi, cl, _cPhi) = Whnf.mctxSDec cD k in (* cD; cPhi |- svar: cPsi  *)
        let phat = Context.dctxToHat cPhi in
        let cT = Int.LF.ClTyp (Int.LF.STyp (cl, cPsi), cPhi) in
-       let tau = Int.Comp.TypBox (Syntax.Loc.ghost, cT) in
+       let tau = Int.Comp.TypBox (Location.ghost, cT) in
        let cM = (loc, Int.LF.ClObj(phat, Int.LF.SObj sv)) in
        (Int.Comp.AnnBox (cM, cT), (tau, C.m_id))
      else
@@ -1409,7 +1409,7 @@ and elExp' cD cG i =
          then
            let phat = Context.dctxToHat cPhi in
            let cT = Int.LF.ClTyp (Int.LF.STyp (cl, cPsi), cPhi2) in
-           let tau = Int.Comp.TypBox (Syntax.Loc.ghost, cT) in
+           let tau = Int.Comp.TypBox (Location.ghost, cT) in
            let cM = (loc, Int.LF.ClObj(phat, Int.LF.SObj s0')) in
            (Int.Comp.AnnBox (cM, cT), (tau, C.m_id))
          else
@@ -1430,7 +1430,7 @@ and elExp' cD cG i =
             | (Int.LF.CtxOffset offset) as phi ->
                let sW = Context.lookupCtxVarSchema cD phi in
                let cT = Int.LF.CTyp (Some sW) in
-               let tau = Int.Comp.TypBox (Syntax.Loc.ghost, cT) in
+               let tau = Int.Comp.TypBox (Location.ghost, cT) in
                (Int.Comp.AnnBox (cM, cT), (tau, C.m_id))
             | _ ->
                NotImplemented
@@ -1828,7 +1828,7 @@ and recPatObj loc cD pat (cD_s, tau_s) =
      cG' contains the free computation-level variables in pat'
      cG' and cD' are handled destructively via FVar and FCVar store
    *)
-  dprintf (fun p -> p.fmt "[recPatObj] solving constraints %a" Loc.print_short loc);
+  dprintf (fun p -> p.fmt "[recPatObj] solving constraints %a" Location.print_short loc);
   Lfrecon.solve_constraints cD;
   dprintf
     begin fun p ->
@@ -1863,7 +1863,7 @@ and elBranch caseTyp cD cG branch tau_s (tau, theta) =
        begin fun p ->
          p.fmt "[elBranch] @[<v>type@,@[%a@]@,at %a@]"
            (P.fmt_ppr_cmp_typ cD P.l0) tau_s
-           Loc.print_short loc
+           Location.print_short loc
        end;
      let cD_prefix = elMCtx Lfrecon.Pibox delta in
      dprintf
@@ -2133,8 +2133,8 @@ and elSplit loc cD cG pb i tau_i bs ttau =
          I.SubgoalPath.(append pb (build_context_split i I.(EmptyContext loc)))
        in
        let pat =
-         let mC = (Loc.ghost, Int.LF.(CObj Null)) in
-         I.PatMetaObj (Loc.ghost, mC)
+         let mC = (Location.ghost, Int.LF.(CObj Null)) in
+         I.PatMetaObj (Location.ghost, mC)
        in
        let (t', t1, cD_b) =
          synPatRefine loc (case_type (lazy pat) i) (cD, cD) Whnf.m_id
@@ -2155,7 +2155,7 @@ and elSplit loc cD cG pb i tau_i bs ttau =
           (* cD' |- t : cD
              cD' |- cPsi dctx is the pattern *)
           let pat =
-            I.PatMetaObj (Loc.ghost, (Loc.ghost, Int.LF.CObj cPsi))
+            I.PatMetaObj (Location.ghost, (Location.ghost, Int.LF.CObj cPsi))
           in
           let (t', t1, cD_b) =
             synPatRefine loc (case_type (lazy pat) i) (cD, cD') t
@@ -2227,12 +2227,12 @@ and elSplit loc cD cG pb i tau_i bs ttau =
         *)
        let pat =
          I.PatMetaObj
-           ( Loc.ghost
-           , ( Loc.ghost
+           ( Location.ghost
+           , ( Location.ghost
              , let open Int.LF in
                ClObj
                  ( Context.dctxToHat cPsi'
-                 , MObj (Root (Loc.ghost, (proj_maybe h k), Nil, `explicit))
+                 , MObj (Root (Location.ghost, (proj_maybe h k), Nil, `explicit))
                  )
              )
            )
@@ -2261,7 +2261,7 @@ and elSplit loc cD cG pb i tau_i bs ttau =
            | None, tA' -> tA'
          in
          I.TypBox
-           ( Loc.ghost
+           ( Location.ghost
            , Int.LF.(ClTyp (MTyp tA', cPsi'))
            )
          (* We generate an MTyp here despite this being a _parameter_
@@ -2325,9 +2325,9 @@ and elSplit loc cD cG pb i tau_i bs ttau =
        in
        let pat =
          I.PatMetaObj
-           ( Loc.ghost
+           ( Location.ghost
            , let open Int.LF in
-             ( Loc.ghost
+             ( Location.ghost
              , ClObj
                  ( Context.dctxToHat cPsi'
                  , MObj tR_p
@@ -2337,7 +2337,7 @@ and elSplit loc cD cG pb i tau_i bs ttau =
        in
        let tau_p =
          I.TypBox
-           ( Loc.ghost
+           ( Location.ghost
            , Int.LF.(ClTyp (MTyp (Whnf.normTyp tA_p), cPsi'))
            )
        in
@@ -2404,9 +2404,9 @@ and elSplit loc cD cG pb i tau_i bs ttau =
        in
        let pat =
          I.PatMetaObj
-           ( Loc.ghost
+           ( Location.ghost
            , let open Int.LF in
-             ( Loc.ghost
+             ( Location.ghost
              , ClObj
                  ( Context.dctxToHat cPsi'
                  , MObj tM
@@ -2416,7 +2416,7 @@ and elSplit loc cD cG pb i tau_i bs ttau =
        in
        let tau_p =
          I.TypBox
-           ( Loc.ghost
+           ( Location.ghost
            , Int.LF.(ClTyp (MTyp (Whnf.normTyp sA), cPsi'))
            )
        in

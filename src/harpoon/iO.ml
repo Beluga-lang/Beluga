@@ -1,6 +1,5 @@
 open Support
 open Beluga
-open Syntax
 
 module Error = struct
   type t =
@@ -53,7 +52,7 @@ let rec parsed_prompt ?(source = default_prompt_source) io msg use_history (p : 
   | None -> Error.(throw EndOfInput)
   | Some line ->
      Runparser.parse_string
-       (Loc.(move_line (next_prompt_number io) (initial source)))
+       (Location.(move_line (next_prompt_number io) (initial source)))
        line
        (Parser.only p)
      |> snd

@@ -1,3 +1,4 @@
+open Support
 open Syntax
 
 val solve_fvarCnstr : Lfrecon.reconType -> unit
@@ -52,7 +53,7 @@ val map_case_type : (Int.Comp.pattern * Int.Comp.meta_obj
         should be elaborated.
       * t' is just t1' composed with t.
  *)
-val synPatRefine : Loc.t -> case_type
+val synPatRefine : Location.t -> case_type
                    -> Int.LF.mctx * Int.LF.mctx
                    -> Int.LF.msub
                    -> Int.Comp.typ * Int.Comp.typ
@@ -65,7 +66,7 @@ val mctx : Apx.LF.mctx -> Int.LF.mctx
 val compkind : Apx.Comp.kind -> Int.Comp.kind
 val comptyp : Apx.Comp.typ -> Int.Comp.typ
 val comptyp_cD : Int.LF.mctx -> Apx.Comp.typ -> Int.Comp.typ
-val comptypdef : Syntax.Loc.t
+val comptypdef : Location.t
                  -> Id.name -> (Apx.Comp.typ * Apx.Comp.kind)
                  -> (Int.LF.mctx * Int.Comp.typ) * Id.offset * Int.Comp.kind
 val elExp : Int.LF.mctx

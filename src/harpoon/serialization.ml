@@ -3,7 +3,6 @@ open Beluga
 open Syntax.Int
 
 module F = Misc.Function
-module Loc = Syntax.Loc
 module P = Pretty.Int.DefaultPrinter
 
 let dprintf, _, _ = Debug.(makeFunctions' (toFlags [15]))
@@ -13,9 +12,9 @@ open Debug.Fmt
  * TODO: Move this util into a dedicated module
  * TODO: Add more abstraction layers for system level operations
  *)
-let replace_locs (replacees : (Loc.t * (Format.formatter -> unit -> unit)) list) : unit =
+let replace_locs (replacees : (Location.t * (Format.formatter -> unit -> unit)) list) : unit =
   replacees
-  |> Misc.Hashtbl.group_by F.(Loc.filename ++ fst)
+  |> Misc.Hashtbl.group_by F.(Location.filename ++ fst)
   (* iterate over replacee groups
    (* open file stream *)
    (* sort items in the group *)
@@ -53,11 +52,11 @@ let replace_locs (replacees : (Loc.t * (Format.formatter -> unit -> unit)) list)
            dprintf (fun p -> p.fmt "[replace_locs] opened %s" temp_file_name);
            let outbuf = Buffer.create 4 in
            replacees
-           |> List.sort (Misc.on fst Loc.compare_start)
+           |> List.sort (Misc.on fst Location.compare_start)
            |> List.iter
                 begin fun (loc, printer) ->
-                let start_offset = Loc.start_offset loc in
-                let stop_offset = Loc.stop_offset loc in
+                let start_offset = Location.start_offset loc in
+                let stop_offset = Location.stop_offset loc in
                 Misc.Function.until
                   begin fun _ ->
                   if !read_length < start_offset

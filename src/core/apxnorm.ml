@@ -17,7 +17,7 @@ type error =
   | CtxOverGeneral
   | IndexInvariantFailed of (Format.formatter -> unit -> unit)
 
-exception Error of Syntax.Loc.t * error
+exception Error of Location.t * error
 
 let _ =
   Error.register_printer

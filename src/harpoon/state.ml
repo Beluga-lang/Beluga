@@ -1,5 +1,6 @@
 open Support
-open Beluga.Syntax.Int
+open Syntax
+open Syntax.Int
 
 module F = Misc.Function
 module DynArray = Misc.DynArray
@@ -46,7 +47,7 @@ let recover_theorem ppf hooks (cid, gs) =
   let initial_state =
     let s =
       make_proof_state SubgoalPath.start
-        ( Total.annotate Loc.ghost decl.Comp.order tau
+        ( Total.annotate Location.ghost decl.Comp.order tau
         , Whnf.m_id )
     in
     let prf =

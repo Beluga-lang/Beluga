@@ -3,6 +3,8 @@
    modified: Joshua Dunfield
 *)
 
+open Support
+open Syntax
 open Syntax.Int
 
 type kind =
@@ -30,7 +32,7 @@ type free_var =
 type fctx = free_var LF.ctx
 
 
-exception Error of Syntax.Loc.t * error
+exception Error of Location.t * error
 
 val kind : LF.kind -> LF.kind * Id.offset
 val typ : LF.typ -> LF.typ * Id.offset
@@ -49,10 +51,10 @@ val codatatyp : LF.mctx -> Comp.typ -> Comp.typ -> LF.mctx * Comp.typ * Comp.typ
 val exp : Comp.exp_chk -> fctx * Comp.exp_chk
 val thm : Comp.thm -> fctx * Comp.thm
 
-val patobj : Syntax.Loc.t -> LF.mctx -> Comp.gctx -> Comp.pattern
+val patobj : Location.t -> LF.mctx -> Comp.gctx -> Comp.pattern
              -> Id.name list -> Comp.typ
              -> LF.mctx * Comp.gctx * Comp.pattern * Comp.typ
-val pattern_spine: Syntax.Loc.t -> LF.mctx -> Comp.gctx -> Comp.pattern_spine
+val pattern_spine: Location.t -> LF.mctx -> Comp.gctx -> Comp.pattern_spine
                    -> Id.name list -> Comp.typ
                    -> LF.mctx * Comp.gctx * Comp.pattern_spine * Comp.typ
 

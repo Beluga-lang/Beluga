@@ -1,4 +1,6 @@
-open Id
+open Support
+open Syntax
+open Syntax.Id
 open Syntax.Int
 
 module OpPragmas : sig
@@ -89,7 +91,7 @@ module Cid : sig
     val gen_mvar_name : LF.typ -> (unit -> string) option
     val get : cid_typ -> entry
     val index_of_name : name -> cid_typ
-    val addConstructor : Syntax.Loc.t -> cid_typ -> cid_term -> LF.typ -> unit
+    val addConstructor : Location.t -> cid_typ -> cid_term -> LF.typ -> unit
     val clear : unit -> unit
     val args_of_name : name -> int
     val current_entries : unit -> (cid_typ * entry) list
@@ -117,7 +119,7 @@ module Cid : sig
 
     val mk_entry : name -> LF.typ -> int -> entry
     val get : cid_term -> entry
-    val add' : Loc.t -> cid_typ -> (cid_term -> entry) -> cid_term
+    val add' : Location.t -> cid_typ -> (cid_term -> entry) -> cid_term
     val get_implicit_arguments : cid_term -> int
     val index_of_name : name -> cid_term
     val args_of_name : name -> int

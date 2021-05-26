@@ -8,6 +8,7 @@ open Support.Equality
 open Support
 module S = Substitution.LF
 open Format
+open Syntax
 open Syntax.Int
 
 let (dprintf, _, _) = Debug.makeFunctions' (Debug.toFlags [11])
@@ -243,10 +244,10 @@ module Convert = struct
     match tA with
     | LF.Atom _ ->
        let u = LF.Inst (Whnf.newMMVar None (cD, cPsi, LF.TClo (tA, s)) LF.Maybe) in
-       LF.Root (Syntax.Loc.ghost, LF.MVar (u, S.id), LF.Nil, `explicit)
+       LF.Root (Location.ghost, LF.MVar (u, S.id), LF.Nil, `explicit)
     | LF.PiTyp ((LF.TypDecl (x, tA) as tD, _), tB) ->
        LF.Lam
-         ( Syntax.Loc.ghost
+         ( Location.ghost
          , x
          , etaExpand cD (LF.DDec (cPsi, S.decSub tD s)) (tB, S.dot1 s)
          )
@@ -659,13 +660,13 @@ module Solver = struct
          DynCl (dPool, (C.resToClause (r, s), k))
        in
        gSolve dPool' cD (LF.DDec (cPsi, S.decSub tD s), k + 1) (g', S.dot1 s)
-         (fun (u, tM) -> sc (u, LF.Lam (Syntax.Loc.ghost, x, tM)))
+         (fun (u, tM) -> sc (u, LF.Lam (Location.ghost, x, tM)))
 
     | All (LF.TypDecl (x, _) as tD, g') ->
        (* we *don't* get an assumption from a forall; it's just a parameter.
           So we just prove the conclusion in an extended context. *)
        gSolve dPool cD (LF.DDec (cPsi, S.decSub tD s), k + 1) (g', S.dot1 s)
-         (fun (u, tM) -> sc (u, LF.Lam (Syntax.Loc.ghost, x, tM)))
+         (fun (u, tM) -> sc (u, LF.Lam (Location.ghost, x, tM)))
 
   (* matchAtom dPool Delta (Psi, k) (A, s) sc = ()
      Invariants:
@@ -681,7 +682,7 @@ module Solver = struct
   *)
   and matchAtom dPool cD (cPsi, k) (tA, s) sc =
     (* some shorthands for creating syntax *)
-    let root x = LF.Root (Syntax.Loc.ghost, x, LF.Nil, `explicit) in
+    let root x = LF.Root (Location.ghost, x, LF.Nil, `explicit) in
     let pvar k = LF.PVar (k, LF.Shift 0) in
     let mvar k = LF.MVar (LF.Offset k, LF.Shift 0) in
     let proj x k = LF.Proj (x, k) in
@@ -709,7 +710,7 @@ module Solver = struct
                      begin fun (u, tS) ->
                      let tM =
                        LF.Root
-                         ( Syntax.Loc.ghost
+                         ( Location.ghost
                          , LF.BVar (k - k')
                          , fS (spineFromRevList tS)
                          , `explicit
@@ -869,7 +870,7 @@ module Solver = struct
             begin fun (u, tS) ->
             let tM =
               LF.Root
-                ( Syntax.Loc.ghost
+                ( Location.ghost
                 , LF.Const (cidTerm)
                 , fS (spineFromRevList tS)
                 , `explicit

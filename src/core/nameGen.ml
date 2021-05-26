@@ -1,4 +1,5 @@
 open Support
+open Syntax
 
 module LF = Syntax.Int.LF
 module Comp = Syntax.Int.Comp

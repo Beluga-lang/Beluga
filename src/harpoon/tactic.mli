@@ -10,10 +10,11 @@
  * Tactics are not obligated to solve the current subgoal!
  *)
 
-open Beluga.Syntax.Int
+ open Syntax
+open Syntax.Int
 
-module Command = Beluga.Syntax.Ext.Harpoon
-module Id = Beluga.Id
+module Command = Syntax.Ext.Harpoon
+module Id = Id
 module Total = Beluga.Total
 
 (** Tactics operate on an incomplete proof in a tactic context.
@@ -35,10 +36,10 @@ type intros'_failure =
 val intros' : Theorem.t ->
               string list option -> (* names to use instead of generation *)
               Id.name list -> (* names to avoid for generation *)
-              Beluga.Syntax.Int.LF.mctx ->
+              Syntax.Int.LF.mctx ->
               Comp.gctx ->
               Comp.typ ->
-              (intros'_failure, Beluga.Syntax.Int.LF.mctx * Comp.gctx * Comp.typ) Support.Either.t
+              (intros'_failure, Syntax.Int.LF.mctx * Comp.gctx * Comp.typ) Support.Either.t
 
 (** Performs a case analysis on the given synthesizable expression of
     the given type.

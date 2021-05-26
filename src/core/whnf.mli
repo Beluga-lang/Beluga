@@ -3,6 +3,8 @@
    modified: Joshua Dunfield
 *)
 
+open Support
+open Syntax
 open Syntax.Int.LF
 open Syntax.Int
 
@@ -63,13 +65,13 @@ val raiseType : dctx -> typ -> typ
 
 val etaExpandMV : dctx -> tclo -> Id.name -> sub -> depend -> normal
 
-val etaExpandMMV : Syntax.Loc.t -> mctx -> dctx -> tclo -> Id.name -> sub -> depend -> normal
+val etaExpandMMV : Location.t -> mctx -> dctx -> tclo -> Id.name -> sub -> depend -> normal
 
 
 exception Fmvar_not_found
 exception FreeMVar of head
 exception NonInvertible
-exception InvalidLFHole of Loc.t
+exception InvalidLFHole of Location.t
 
 val newMTypName : ctyp -> Id.name_guide
 
@@ -227,10 +229,10 @@ val lowerTyp : dctx -> tclo -> dctx * tclo
 
 (** Converts an MMVar to a contextual object according to its
     contextual type. *)
-val mmVarToClObj : Loc.t -> mm_var -> cltyp -> clobj
+val mmVarToClObj : Location.t -> mm_var -> cltyp -> clobj
 
 (** Converts an MMVar to a meta object according to its meta type. *)
-val mmVarToMFront : Loc.t -> mm_var -> Comp.meta_typ -> mfront
+val mmVarToMFront : Location.t -> mm_var -> Comp.meta_typ -> mfront
 
-val dotMMVar : Loc.t -> mctx -> msub -> Id.name * ctyp * depend
+val dotMMVar : Location.t -> mctx -> msub -> Id.name * ctyp * depend
                -> Comp.meta_obj * msub

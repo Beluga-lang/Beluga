@@ -5,6 +5,7 @@ open Support.Equality
 *)
 
 open Support
+open Syntax
 open Syntax.Int.LF
 open Syntax.Int
 

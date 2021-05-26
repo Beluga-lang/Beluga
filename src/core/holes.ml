@@ -2,8 +2,9 @@ open Support.Equality
 (* module Holes *)
 
 open Support
+open Syntax
 
-module Loc = Syntax.Loc
+module Loc = Location
 module LF = Syntax.Int.LF
 module Comp = Syntax.Int.Comp
 
@@ -25,7 +26,7 @@ type _ hole_info =
   | CompInfo : comp_hole_info hole_info
 
 type 'a hole =
-  { loc : Syntax.Loc.t
+  { loc : Location.t
   ; name : HoleId.name
     (** "Context Delta", for metavariables. *)
   ; cD : LF.mctx

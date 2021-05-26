@@ -15,7 +15,7 @@ module NameTable =
 type error =
   | FrozenType of Id.cid_typ
 
-exception Error of Syntax.Loc.t * error
+exception Error of Location.t * error
 
 (* Register error printer at the end of this module. *)
 module OpPragmas = struct

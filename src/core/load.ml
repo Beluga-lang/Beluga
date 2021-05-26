@@ -1,6 +1,7 @@
 (* Loading files *)
 
 open Support
+open Syntax
 module F = Misc.Function
 
 let (dprintf, _, _) = Debug.(makeFunctions' (toFlags [11]))
@@ -69,11 +70,11 @@ let forbid_leftover_vars path =
         @,  @[%a@]@]@."
        path
        Recsgn.fmt_ppr_leftover_vars vars;
-     raise (Abstract.Error (Syntax.Loc.ghost, Abstract.LeftoverVars))
+     raise (Abstract.Error (Location.ghost, Abstract.LeftoverVars))
 
 let load_file ppf file_name =
   let sgn =
-    Parser.(Runparser.parse_file (Loc.initial file_name) (only sgn) |> extract)
+    Parser.(Runparser.parse_file (Location.initial file_name) (only sgn) |> extract)
     (* If the file starts with global pragmas then process them now. *)
     |> F.through
          begin fun sgn ->
@@ -109,7 +110,7 @@ let load_file ppf file_name =
      if !Coverage.warningOnly then
      Error.addInformation ("WARNING: Cases didn't cover: " ^ message)
      else
-     raise (Coverage.Error (Syntax.Loc.ghost, Coverage.NoCover message))
+     raise (Coverage.Error (Location.ghost, Coverage.NoCover message))
      end;
    *)
 

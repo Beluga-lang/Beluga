@@ -3,7 +3,8 @@
    @author Brigitte Pientka
 *)
 
-open Support.Equality
+open Support
+open Equality
 
 open Syntax
 open Int
@@ -31,7 +32,7 @@ type error =
 
 type t = Id.offset list
 
-exception Error of Syntax.Loc.t * error
+exception Error of Location.t * error
 
 let _ =
   Error.register_printer
@@ -131,7 +132,7 @@ and strans_mfront cD cPsi mf conv_list =
   | LF.ClObj (phat, LF.MObj tM) ->
      LF.ClObj (phat, LF.MObj (strans_norm cD cPsi (tM, S.LF.id) conv_list ))
   | LF.ClObj (phat, LF.PObj h) ->
-     LF.ClObj (phat, LF.PObj (strans_head Syntax.Loc.ghost cD cPsi h conv_list))
+     LF.ClObj (phat, LF.PObj (strans_head Location.ghost cD cPsi h conv_list))
   | LF.MV u -> LF.MV u
   | LF.MUndef -> LF.MUndef
 
@@ -160,7 +161,7 @@ and strans_sub cD cPsi s conv_list =
 
 and strans_front cD cPsi ft conv_list =
   match ft with
-  | LF.Head h -> LF.Head (strans_head Syntax.Loc.ghost cD cPsi h conv_list)
+  | LF.Head h -> LF.Head (strans_head Location.ghost cD cPsi h conv_list)
   | LF.Obj tM -> LF.Obj (strans_norm cD cPsi (tM, S.LF.id) conv_list)
   | LF.Undef -> LF.Undef
 
@@ -303,10 +304,10 @@ let gen_tup_sub conv_list =
     if k = index
     then
       (* only correct if pos stands for a variable of atomic type *)
-      LF.Last (LF.Root (Syntax.Loc.ghost, LF.BVar pos, LF.Nil, `explicit))
+      LF.Last (LF.Root (Location.ghost, LF.BVar pos, LF.Nil, `explicit))
     else
       begin
-        let tM = LF.Root (Syntax.Loc.ghost, LF.BVar pos, LF.Nil, `explicit) in
+        let tM = LF.Root (Location.ghost, LF.BVar pos, LF.Nil, `explicit) in
         let tTup = gen_tup (pos - 1) (k, index+1) in
         LF.Cons (tM, tTup)
       end
@@ -321,7 +322,7 @@ let gen_tup_sub conv_list =
        let s = gen_sub' clist (pos + k) in
        (* let tM = gen_tup pos (k, 1) in *)
        let tM = gen_tup (pos + k - 1) (k, 1) in
-       LF.Dot (LF.Obj (LF.Tuple (Syntax.Loc.ghost, tM)), s)
+       LF.Dot (LF.Obj (LF.Tuple (Location.ghost, tM)), s)
   in
   gen_sub' conv_list 1
 
@@ -350,9 +351,9 @@ let rec etaExpandStrGeneric new_mxvar mk_head loc cD cPsi sA dep n names =
      let tTup =
        etaExpandTuple tRec tH 1
      in
-     LF.Tuple (Loc.ghost, tTup)
+     LF.Tuple (Location.ghost, tTup)
       *)
-     LF.Root (Loc.ghost, tH, LF.Nil, `explicit)
+     LF.Root (Location.ghost, tH, LF.Nil, `explicit)
 
   | (LF.Atom (_, a, _tS) as tP, s) ->
       let (cPhi, conv_list) = flattenDCtx cD cPsi in

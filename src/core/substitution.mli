@@ -3,6 +3,7 @@
     @author Brigitte Pientka
 *)
 
+open Syntax
 open Syntax.Int.LF
 
 module LF : sig

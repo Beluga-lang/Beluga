@@ -1,10 +1,11 @@
 open Support
 
-module Loc = Location
+open Syntax
+
 module Comp = Syntax.Ext.Comp
 module LF = Syntax.Ext.LF
 
-type input = (Loc.t * Token.t) LinkStream.t
+type input = (Location.t * Token.t) LinkStream.t
 type state
 
 (** Constructs the initial state for a parser by providing an input stream. *)
@@ -35,7 +36,7 @@ val print_error : Format.formatter -> error -> unit
 type 'a t
 
 (** Type of located values, i.e. values paired with their location. *)
-type 'a locd = Loc.t * 'a
+type 'a locd = Location.t * 'a
 
 (* Eliminator for parsers: *)
 (** Runs a parser on a given state, resulting in a final state and a result. *)

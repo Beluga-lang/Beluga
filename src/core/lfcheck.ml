@@ -8,6 +8,7 @@ open Debug.Fmt
 
 open Context
 open Store.Cid
+open Syntax
 open Syntax.Int.LF
 
 module Print = Pretty.Int.DefaultPrinter
@@ -28,13 +29,13 @@ type error =
   | SpineIllTyped of int * int
   | LeftoverFV of Id.name
   | ParamVarInst of mctx * dctx * tclo
-  | CtxHatMismatch of mctx * dctx (* expected *) * dctx_hat (* found *) * (Syntax.Loc.t * mfront)
+  | CtxHatMismatch of mctx * dctx (* expected *) * dctx_hat (* found *) * (Location.t * mfront)
   | IllTypedMetaObj of mctx * clobj * dctx * cltyp
   | TermWhenVar of mctx * dctx * normal
   | SubWhenRen of mctx * dctx * sub
   | MissingType of string
 
-exception Error of Syntax.Loc.t * error
+exception Error of Location.t * error
 
 let throw loc e = raise (Error (loc, e))
 

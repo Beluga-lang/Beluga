@@ -4,8 +4,6 @@ open Support
 
 open Id
 
-module Loc = Location
-
 (* Internal LF Syntax *)
 module LF = struct
   include Syncom.LF
@@ -32,7 +30,7 @@ module LF = struct
     | DeclOpt of name * plicity
 
   and typ =                                     (* LF level                       *)
-    | Atom of Loc.t * cid_typ * spine           (* A ::= a M1 ... Mn              *)
+    | Atom of Location.t * cid_typ * spine           (* A ::= a M1 ... Mn              *)
     | PiTyp of (typ_decl * depend) * typ        (*   | Pi x:A.B                   *)
     | Sigma of typ_rec
     | TClo of (typ * sub)                       (*   | TClo(A,s)                  *)
@@ -42,11 +40,11 @@ module LF = struct
      a hole (_) so that when printing, it can be reproduced correctly.
    *)
   and normal =                                  (* normal terms                   *)
-    | Lam of Loc.t * name * normal              (* M ::= \x.M                     *)
-    | Root of Loc.t * head * spine * plicity    (*   | h . S                      *)
-    | LFHole of Loc.t * HoleId.t * HoleId.name
+    | Lam of Location.t * name * normal              (* M ::= \x.M                     *)
+    | Root of Location.t * head * spine * plicity    (*   | h . S                      *)
+    | LFHole of Location.t * HoleId.t * HoleId.name
     | Clo of (normal * sub)                     (*   | Clo(N,s)                   *)
-    | Tuple of Loc.t * tuple
+    | Tuple of Location.t * tuple
 
   (* TODO: Heads ought to carry their location.
      Erasure currently needs to invent / pretend that a different
@@ -220,7 +218,7 @@ module LF = struct
       carry a location.
    *)
   let head (tH : head) : normal =
-    Root (Loc.ghost, tH, Nil, `explicit)
+    Root (Location.ghost, tH, Nil, `explicit)
 
   let mvar cvar sub : head =
     MVar (cvar, sub)
@@ -370,7 +368,7 @@ module LF = struct
     | Queued id -> id
 
   let rec drop_spine k =
-    function
+    function [@warning "-8"] (* FIXME: Missing case for SClo _ *)
     | tS when k = 0 -> tS
     | Nil -> Nil
     | App (_, tS') -> drop_spine (k-1) tS'
@@ -382,12 +380,12 @@ module Comp = struct
   include Syncom.Comp
 
   type kind =
-    | Ctype of Loc.t
-    | PiKind of Loc.t * LF.ctyp_decl * kind
+    | Ctype of Location.t
+    | PiKind of Location.t * LF.ctyp_decl * kind
 
   type meta_typ = LF.ctyp
 
-  type meta_obj = Loc.t * LF.mfront
+  type meta_obj = Location.t * LF.mfront
 
   type meta_spine =
     | MetaNil
@@ -395,19 +393,19 @@ module Comp = struct
                  * meta_spine * plicity
 
   type typ =
-    | TypBase of Loc.t * cid_comp_typ * meta_spine
-    | TypCobase of Loc.t * cid_comp_cotyp * meta_spine
-    | TypDef of Loc.t * cid_comp_typ * meta_spine
-    | TypBox of Loc.t * meta_typ
-    | TypArr of Loc.t * typ * typ
-    | TypCross of Loc.t * typ * typ
-    | TypPiBox of Loc.t * LF.ctyp_decl * typ
+    | TypBase of Location.t * cid_comp_typ * meta_spine
+    | TypCobase of Location.t * cid_comp_cotyp * meta_spine
+    | TypDef of Location.t * cid_comp_typ * meta_spine
+    | TypBox of Location.t * meta_typ
+    | TypArr of Location.t * typ * typ
+    | TypCross of Location.t * typ * typ
+    | TypPiBox of Location.t * LF.ctyp_decl * typ
     | TypClo of typ *  LF.msub
     | TypInd of typ
 
   type suffices_typ = typ generic_suffices_typ
 
-  let rec loc_of_typ : typ -> Loc.t =
+  let rec loc_of_typ : typ -> Location.t =
     function
     | TypBase (l, _, _) | TypCobase (l, _, _) | TypDef (l, _, _)
       | TypBox (l, _) | TypArr (l, _, _) | TypCross (l, _, _)
@@ -415,7 +413,7 @@ module Comp = struct
        l
     | TypClo (tau, _) | TypInd tau -> loc_of_typ tau
 
-  let loc_of_suffices_typ : suffices_typ -> Loc.t =
+  let loc_of_suffices_typ : suffices_typ -> Location.t =
     function
     | `exact tau -> loc_of_typ tau
     | `infer loc -> loc
@@ -433,8 +431,8 @@ module Comp = struct
   type ctyp_decl =
     | CTypDecl of name * typ * wf_tag
 
-    (** Used during pretty-printing when going under lambdas. *)
     | CTypDeclOpt of name
+    (** Used during pretty-printing when going under lambdas. *)
 
   type ih_decl =
     | WfRec of name * ih_arg list * typ
@@ -449,45 +447,45 @@ module Comp = struct
   type ihctx = ih_decl LF.ctx
 
   and exp_chk =
-    | Syn        of Loc.t * exp_syn
-    | Fn         of Loc.t * name * exp_chk
-    | Fun        of Loc.t * fun_branches
-    | MLam       of Loc.t * name * exp_chk * plicity
-    | Pair       of Loc.t * exp_chk * exp_chk
-    | LetPair    of Loc.t * exp_syn * (name * name * exp_chk)
-    | Let        of Loc.t * exp_syn * (name * exp_chk)
-    | Box        of Loc.t * meta_obj * meta_typ (* type annotation used for pretty-printing *)
-    | Case       of Loc.t * case_pragma * exp_syn * branch list
-    | Impossible of Loc.t * exp_syn
-    | Hole       of Loc.t * HoleId.t * HoleId.name
+    | Syn        of Location.t * exp_syn
+    | Fn         of Location.t * name * exp_chk
+    | Fun        of Location.t * fun_branches
+    | MLam       of Location.t * name * exp_chk * plicity
+    | Pair       of Location.t * exp_chk * exp_chk
+    | LetPair    of Location.t * exp_syn * (name * name * exp_chk)
+    | Let        of Location.t * exp_syn * (name * exp_chk)
+    | Box        of Location.t * meta_obj * meta_typ (* type annotation used for pretty-printing *)
+    | Case       of Location.t * case_pragma * exp_syn * branch list
+    | Impossible of Location.t * exp_syn
+    | Hole       of Location.t * HoleId.t * HoleId.name
 
   and exp_syn =
-    | Var       of Loc.t * offset
-    | DataConst of Loc.t * cid_comp_const
-    | Obs       of Loc.t * exp_chk * LF.msub * cid_comp_dest
-    | Const     of Loc.t * cid_prog
-    | Apply     of Loc.t * exp_syn * exp_chk
-    | MApp      of Loc.t * exp_syn * meta_obj * meta_typ (* annotation for printing *)
+    | Var       of Location.t * offset
+    | DataConst of Location.t * cid_comp_const
+    | Obs       of Location.t * exp_chk * LF.msub * cid_comp_dest
+    | Const     of Location.t * cid_prog
+    | Apply     of Location.t * exp_syn * exp_chk
+    | MApp      of Location.t * exp_syn * meta_obj * meta_typ (* annotation for printing *)
                    * plicity
     | AnnBox    of meta_obj * meta_typ
-    | PairVal   of Loc.t * exp_syn * exp_syn
+    | PairVal   of Location.t * exp_syn * exp_syn
 
   and pattern =
-    | PatMetaObj of Loc.t * meta_obj
-    | PatConst of Loc.t * cid_comp_const * pattern_spine
-    | PatFVar of Loc.t * name (* used only _internally_ by coverage *)
-    | PatVar of Loc.t * offset
-    | PatPair of Loc.t * pattern * pattern
-    | PatAnn of Loc.t * pattern * typ * plicity
+    | PatMetaObj of Location.t * meta_obj
+    | PatConst of Location.t * cid_comp_const * pattern_spine
+    | PatFVar of Location.t * name (* used only _internally_ by coverage *)
+    | PatVar of Location.t * offset
+    | PatPair of Location.t * pattern * pattern
+    | PatAnn of Location.t * pattern * typ * plicity
 
   and pattern_spine =
     | PatNil
-    | PatApp of Loc.t * pattern * pattern_spine
-    | PatObs of Loc.t * cid_comp_dest * LF.msub * pattern_spine
+    | PatApp of Location.t * pattern * pattern_spine
+    | PatObs of Location.t * cid_comp_dest * LF.msub * pattern_spine
 
   and branch =
     | Branch
-      of Loc.t
+      of Location.t
          * LF.mctx (* branch prefix *)
          * (LF.mctx * gctx) (* branch contexts *)
          * pattern
@@ -495,8 +493,8 @@ module Comp = struct
          * exp_chk
 
   and fun_branches =
-   | NilFBranch of Loc.t
-   | ConsFBranch of Loc.t * (LF.mctx * gctx * pattern_spine * exp_chk) * fun_branches
+   | NilFBranch of Location.t
+   | ConsFBranch of Location.t * (LF.mctx * gctx * pattern_spine * exp_chk) * fun_branches
 
   type tclo = typ * LF.msub
 
@@ -524,7 +522,7 @@ module Comp = struct
   let rec apply_many i =
     function
     | [] -> i
-    | e :: es -> apply_many (Apply (Loc.ghost, i, e)) es
+    | e :: es -> apply_many (Apply (Location.ghost, i, e)) es
 
   let loc_of_exp_syn =
     function
@@ -597,13 +595,13 @@ module Comp = struct
     function
     | PatPair (loc, p1, p2) ->
        PatPair (loc, strip_pattern p1, strip_pattern p2)
-    | PatAnn (loc, p, _, _) -> p
+    | PatAnn (_, p, _, _) -> p
     | PatConst (loc, c, pS) ->
        PatConst (loc, c, strip_pattern_spine pS)
     | p -> p (* no subpatterns *)
 
   and strip_pattern_spine : pattern_spine -> pattern_spine =
-    function
+    function [@warning "-8"] (* FIXME: Missing case for PatObs (_, _, _, _) *)
     | PatNil -> PatNil
     | PatApp (loc, p, pS) ->
        PatApp (loc, strip_pattern p, strip_pattern_spine pS)
@@ -635,7 +633,7 @@ module Comp = struct
       | CompSplit of exp_syn * cid_comp_const * t
       | ContextSplit of exp_syn * context_case * t
 
-    let equals p1 p2 = assert false
+    let equals _ _ = assert false
 
     type builder = t -> t
     let start = fun p -> p
@@ -655,7 +653,7 @@ module Comp = struct
   (* A proof is a sequence of statements ending either as a complete proof or an incomplete proof.*)
   type proof =
     | Incomplete (* hole *)
-      of Loc.t * proof_state
+      of Location.t * proof_state
     | Command of command * proof
     | Directive of directive (* which can end proofs or split into subgoals *)
 
@@ -705,7 +703,7 @@ module Comp = struct
          * typ (* The type of the scrutinee *)
          * context_branch list
 
-  and suffices_arg = Loc.t * typ * proof
+  and suffices_arg = Location.t * typ * proof
 
   and context_branch = context_case split_branch
   and meta_branch = meta_branch_label split_branch
@@ -738,7 +736,7 @@ module Comp = struct
   *)
   and hypothetical =
     Hypothetical
-    of Loc.t
+    of Location.t
        * hypotheses (* the full contexts *)
        * proof (* the proof; should make sense in `hypotheses`. *)
 
@@ -758,12 +756,12 @@ module Comp = struct
     }
 
   (** Smart constructor for an unfinished proof ending. *)
-  let incomplete_proof (l : Loc.t) (s : proof_state) : proof =
+  let incomplete_proof (l : Location.t) (s : proof_state) : proof =
     Incomplete (l, s)
 
   (** Smart constructor for the intros directive. *)
   let intros (h : hypotheses) (proof : proof) : proof =
-    Directive (Intros (Hypothetical (Loc.ghost, h, proof)))
+    Directive (Intros (Hypothetical (Location.ghost, h, proof)))
 
   let suffices (i : exp_syn) (ps : suffices_arg list) : proof =
     Directive (Suffices (i, ps))
@@ -779,7 +777,7 @@ module Comp = struct
 
   let context_branch (c : context_case) (cG_p, pat) (t : LF.msub) (h : hypotheses) (p : proof)
       : context_branch =
-    SplitBranch (c, (cG_p, pat), t, (Hypothetical (Loc.ghost, h, p)))
+    SplitBranch (c, (cG_p, pat), t, (Hypothetical (Location.ghost, h, p)))
 
   let meta_split (m : exp_syn) (a : typ) (bs : meta_branch list)
       : proof =
@@ -795,7 +793,7 @@ module Comp = struct
         (h : hypotheses)
         (p : proof)
       : meta_branch =
-    SplitBranch (c, (cG_p, pat), t, (Hypothetical (Loc.ghost, h, p)))
+    SplitBranch (c, (cG_p, pat), t, (Hypothetical (Location.ghost, h, p)))
 
   let comp_split (t : exp_syn) (tau : typ) (bs : comp_branch list)
       : proof =
@@ -808,7 +806,7 @@ module Comp = struct
         (h : hypotheses)
         (d : proof)
       : comp_branch =
-    SplitBranch (c, (cG_p, pat), t, (Hypothetical (Loc.ghost, h, d)))
+    SplitBranch (c, (cG_p, pat), t, (Hypothetical (Location.ghost, h, d)))
 
   (** Gives a more convenient way of writing complex proofs by using list syntax. *)
   let prepend_commands (cmds : command list) (proof : proof)
@@ -876,39 +874,39 @@ module Sgn = struct
   (* type positivity_flag =  *)
   (*   | Noflag *)
   (*   | Positivity *)
-  (*   | Stratify of Loc.t * Comp.order * name * (name option) list  *)
+  (*   | Stratify of Location.t * Comp.order * name * (name option) list  *)
 
 
   type positivity_flag =
     | Nocheck
     | Positivity
-    | Stratify of  Loc.t * int
-    | StratifyAll of Loc.t
+    | Stratify of  Location.t * int
+    | StratifyAll of Location.t
 
   type thm_decl =
     { thm_name : cid_prog
     ; thm_typ : Comp.typ
     ; thm_body : Comp.thm
-    ; thm_loc : Loc.t
+    ; thm_loc : Location.t
     }
 
   type decl =
-    | Typ           of Loc.t * cid_typ  * LF.kind
-    | Const         of Loc.t * cid_term * LF.typ
-    | CompTyp       of Loc.t * name * Comp.kind  *  positivity_flag
-    | CompCotyp     of Loc.t * name * Comp.kind
-    | CompConst     of Loc.t * name * Comp.typ
-    | CompDest      of Loc.t * name * LF.mctx * Comp.typ * Comp.typ
-    | CompTypAbbrev of Loc.t * name * Comp.kind * Comp.typ
+    | Typ           of Location.t * cid_typ  * LF.kind
+    | Const         of Location.t * cid_term * LF.typ
+    | CompTyp       of Location.t * name * Comp.kind  *  positivity_flag
+    | CompCotyp     of Location.t * name * Comp.kind
+    | CompConst     of Location.t * name * Comp.typ
+    | CompDest      of Location.t * name * LF.mctx * Comp.typ * Comp.typ
+    | CompTypAbbrev of Location.t * name * Comp.kind * Comp.typ
     | Schema        of cid_schema * LF.schema
     | Theorem       of thm_decl list
     | Proof         of Comp.typ * Comp.proof
     | Pragma        of LF.prag
-    | Val           of Loc.t * name * Comp.typ * Comp.exp_chk * Comp.value option
-    | MRecTyp       of Loc.t * decl list list
-    | Module        of Loc.t * string * decl list
-    | Query         of Loc.t * name option * (LF.typ  * Id.offset) * int option * int option
-    | Comment       of Loc.t * string
+    | Val           of Location.t * name * Comp.typ * Comp.exp_chk * Comp.value option
+    | MRecTyp       of Location.t * decl list list
+    | Module        of Location.t * string * decl list
+    | Query         of Location.t * name option * (LF.typ  * Id.offset) * int option * int option
+    | Comment       of Location.t * string
 
   type sgn = decl list
 

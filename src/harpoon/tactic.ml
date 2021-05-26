@@ -1,15 +1,15 @@
 open Support
 module B = Beluga
 module Context = B.Context
-module Command = Beluga.Syntax.Ext.Harpoon
-module Id = Beluga.Id
+module Command = Syntax.Ext.Harpoon
+module Id = Syntax.Id
 module Total = Beluga.Total
 module Whnf = B.Whnf
 module F = Misc.Function
 
 module P = B.Pretty.Int.DefaultPrinter
 
-open B.Syntax.Int
+open Syntax.Int
 
 let dprintf, dprint, _ = Debug.(makeFunctions' (toFlags [11]))
 open Debug.Fmt
@@ -90,7 +90,7 @@ let intros' : Theorem.t ->
          |> Maybe.eliminate
               (fun _ -> gen_var_for_typ active_names tau_1 , None)
               begin fun (name, user_names) ->
-              ( B.Id.(mk_name (SomeString name))
+              ( Id.(mk_name (SomeString name))
               , Some user_names )
               end
        in
@@ -269,7 +269,7 @@ let split (k : Command.split_kind) (i : Comp.exp_syn) (tau : Comp.typ) mfs : t =
             meta-context, accounting for dependent pattern matching on
             `m`. *)
          Reconstruct.synPatRefine
-           Loc.ghost
+           Location.ghost
            (Reconstruct.case_type (lazy pat) i)
            (s.context.cD, cD)
            t
@@ -410,15 +410,15 @@ let split (k : Command.split_kind) (i : Comp.exp_syn) (tau : Comp.typ) mfs : t =
        | PatMetaObj (_, (_, LF.CObj cPsi)) ->
           let case_label =
             match cPsi with
-            | LF.Null -> EmptyContext Loc.ghost
-            | LF.(DDec _) -> ExtendedBy (Loc.ghost, k)
-            | _ -> B.Error.violation "[get_context_branch] pattern not a context"
+            | LF.Null -> EmptyContext Location.ghost
+            | LF.(DDec _) -> ExtendedBy (Location.ghost, k)
+            | _ -> Error.violation "[get_context_branch] pattern not a context"
           in
           let label =
             Comp.SubgoalPath.build_context_split i case_label
           in
           let g' = new_state label in
-          let p = incomplete_proof Loc.ghost g' in
+          let p = incomplete_proof Location.ghost g' in
           ( g'
           , context_branch case_label (cG_p, pat) theta context p
           )
@@ -442,17 +442,17 @@ let split (k : Command.split_kind) (i : Comp.exp_syn) (tau : Comp.typ) mfs : t =
                         @,tM = @[%a@]@]"
                    P.(fmt_ppr_cmp_pattern cD cG l0) pat
                  end;
-               B.Error.violation
+               Error.violation
                  "[make_meta_branch] head neither pvar (proj) nor const"
           in
           let label = Comp.SubgoalPath.build_meta_split i c in
           let g' = new_state label in
-          let p = incomplete_proof Loc.ghost g' in
+          let p = incomplete_proof Location.ghost g' in
           ( g'
           , meta_branch c (cG_p, pat) theta context p
           )
 
-       | _ -> B.Error.violation "[make_meta_branch] pattern not a meta object"
+       | _ -> Error.violation "[make_meta_branch] pattern not a meta object"
      in
      let make_comp_branch (context, theta, new_state, (cG_p, pat)) =
        match pat with
@@ -461,12 +461,12 @@ let split (k : Command.split_kind) (i : Comp.exp_syn) (tau : Comp.typ) mfs : t =
             Comp.SubgoalPath.build_comp_split i cid
           in
           let g' = new_state label in
-          let p = incomplete_proof Loc.ghost g' in
+          let p = incomplete_proof Location.ghost g' in
           ( g'
           , comp_branch cid (cG_p, pat) theta context p
           )
        | _ ->
-          B.Error.violation "[get_context_branch] pattern not a constant"
+          Error.violation "[get_context_branch] pattern not a constant"
      in
 
      let decide_split_kind =
@@ -474,7 +474,7 @@ let split (k : Command.split_kind) (i : Comp.exp_syn) (tau : Comp.typ) mfs : t =
        | _, (_, PatMetaObj (_, LF.(_, CObj _)), _), _ -> `context
        | _, (_, PatMetaObj (_, LF.(_, ClObj (_, _))), _), _ -> `meta
        | _, (_, PatConst (_, _, _), _), _ -> `comp
-       | _ -> B.Error.violation "unhandled pattern type for split"
+       | _ -> Error.violation "unhandled pattern type for split"
      in
      match
        List.map decide_split_kind cgs
@@ -488,7 +488,7 @@ let split (k : Command.split_kind) (i : Comp.exp_syn) (tau : Comp.typ) mfs : t =
         |> apply t
 
      | Some None ->
-        B.Error.violation "mixed cases in split (bug in coverage?)"
+        Error.violation "mixed cases in split (bug in coverage?)"
 
      | Some (Some k) ->
         let finish f g =
@@ -585,10 +585,10 @@ let solve_with_new_comp_decl action_name decl f t g =
        f
        g
 
-let solve_by_unbox' f (cT : Comp.meta_typ) (name : B.Id.name) : t =
+let solve_by_unbox' f (cT : Comp.meta_typ) (name : Id.name) : t =
   solve_with_new_meta_decl "unbox" LF.(Decl (name, cT, No)) f
 
-let solve_by_unbox (m : Comp.exp_syn) (mk_cmd : Comp.meta_typ -> Comp.command) (tau : Comp.typ) (name : B.Id.name) modifier : t =
+let solve_by_unbox (m : Comp.exp_syn) (mk_cmd : Comp.meta_typ -> Comp.command) (tau : Comp.typ) (name : Id.name) modifier : t =
   let open Comp in
   fun t g ->
   let {cD; cG; cIH} = g.context in
@@ -605,7 +605,7 @@ let solve_by_unbox (m : Comp.exp_syn) (mk_cmd : Comp.meta_typ -> Comp.command) (
           (P.fmt_ppr_cmp_exp_syn cD cG P.l0) m
           (P.fmt_ppr_cmp_typ cD P.l0) tau
 
-let unbox (m : Comp.exp_syn) (tau : Comp.typ) (name : B.Id.name) modifier : t =
+let unbox (m : Comp.exp_syn) (tau : Comp.typ) (name : Id.name) modifier : t =
   let open Comp in
   solve_by_unbox m (fun cT -> Unbox (m, name, cT, modifier)) tau name modifier
 
@@ -667,7 +667,7 @@ let suffices
             Comp.SubgoalPath.(append g.label (build_suffices i_head k))
         }
       in
-      (new_state, (Loc.ghost, tau, incomplete_proof Loc.ghost new_state))
+      (new_state, (Location.ghost, tau, incomplete_proof Location.ghost new_state))
       end
     |> List.split
   in

@@ -50,11 +50,11 @@ end
 (* Register error formatting. *)
 let _ =
   let open Error in
-  B.Error.register_printer'
+  Support.Error.register_printer'
     begin fun e ->
     match e with
     | E e ->
-       Some (B.Error.print (fun ppf -> format_error ppf e))
+       Some (Support.Error.print (fun ppf -> format_error ppf e))
     | _ -> None
     end
 

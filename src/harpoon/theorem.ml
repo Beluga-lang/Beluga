@@ -1,9 +1,10 @@
 open Support
 open Beluga
 module F = Misc.Function
+open Syntax
+open Id
 module LF = Syntax.Int.LF
 module Comp = Syntax.Int.Comp
-open Id
 module CompS = Store.Cid.Comp
 module Loc = Location
 

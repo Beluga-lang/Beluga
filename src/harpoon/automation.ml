@@ -3,10 +3,9 @@ open Support
 module B = Beluga
 
 module P = B.Pretty.Int.DefaultPrinter
-module Command = B.Syntax.Ext.Harpoon
-module Comp = B.Syntax.Int.Comp
-module LF = B.Syntax.Int.LF
-module Loc = B.Syntax.Loc
+module Command = Syntax.Ext.Harpoon
+module Comp = Syntax.Int.Comp
+module LF = Syntax.Int.LF
 module Context = B.Context
 module Whnf = B.Whnf
 module S = B.Substitution
@@ -93,15 +92,15 @@ let auto_solve_trivial : t =
       end;
     match m with
     | LF.Decl (_, mtyp, _) ->
-       Whnf.convCTyp g.goal (TypBox (Loc.ghost, mtyp), LF.MShift idx)
+       Whnf.convCTyp g.goal (TypBox (Location.ghost, mtyp), LF.MShift idx)
     | LF.DeclOpt _ ->
-       B.Error.violation "[auto_solve_trivial] Unexpected DeclOpt"
+       Error.violation "[auto_solve_trivial] Unexpected DeclOpt"
   in
   let build_mwitness (m : LF.ctyp_decl * int) =
     match m with
     | (LF.Decl (_, (LF.ClTyp (_, _) as cU), _), idx) ->
        let open LF in
-       let open Loc in
+       let open Location in
        let t = LF.MShift idx in
        let LF.ClTyp (_, cPsi) as cU = Whnf.cnormMTyp (cU, t) in
        let head = MVar (Offset idx, S.LF.id) in
@@ -116,9 +115,9 @@ let auto_solve_trivial : t =
        will never return true for a DeclOpt.
      *)
     | LF.DeclOpt _, _ ->
-       B.Error.violation "[auto_solve_trivial] DeclOpt impossible"
+       Error.violation "[auto_solve_trivial] DeclOpt impossible"
     | _ ->
-       B.Error.violation "[auto_solve_trivial] impossible case"
+       Error.violation "[auto_solve_trivial] impossible case"
   in
   let c_is_witness ((c, _) : ctyp_decl * int) =
     dprintf
@@ -130,12 +129,12 @@ let auto_solve_trivial : t =
     | CTypDecl (_, typ, _) ->
        Whnf.convCTyp g.goal (typ, Whnf.m_id)
     | CTypDeclOpt _ ->
-       B.Error.violation "[auto_solve_trivial] Unexpected CTypDeclOpt"
+       Error.violation "[auto_solve_trivial] Unexpected CTypDeclOpt"
   in
   let build_cwitness (c : ctyp_decl * int) =
     match c with
     | (_, idx) ->
-       let open Loc in
+       let open Location in
        Syn (ghost, Var (ghost, idx))
   in
   let open Maybe in

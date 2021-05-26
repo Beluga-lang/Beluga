@@ -1,5 +1,3 @@
-open Beluga
-
 module Error : sig
   type t
   exception E of t

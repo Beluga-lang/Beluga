@@ -3,6 +3,7 @@
 *)
 
 open Support
+open Syntax
 open Syntax.Int
 
 (* module Unify = Unify.EmptyTrail  *)
@@ -17,7 +18,7 @@ open Debug.Fmt
 type error =
   | MissingBranch
 
-exception Error of Syntax.Loc.t * error
+exception Error of Location.t * error
 
 let _ =
   Error.register_printer
@@ -246,7 +247,7 @@ let rec eval_syn i (theta, eta) =
         eval_fun_branches (Comp.BoxValue (l, LF.CObj cPsi')) fbr
      | _ ->
         Format.fprintf Format.std_formatter "@[<v%a@,@]"
-          Syntax.Loc.print loc;
+          Location.print loc;
         raise (Error.Violation "Expected CtxValue")
      end
 

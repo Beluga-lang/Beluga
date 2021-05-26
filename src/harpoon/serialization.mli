@@ -1,6 +1,6 @@
 (** Module for dealing with Harpoon proof serialization. *)
 
-open Beluga
+open Support
 open Syntax
 open Int
 
@@ -11,4 +11,4 @@ open Int
  *)
 val append_sessions : string -> Theorem.t list list -> unit
 
-val update_existing_holes : (Loc.t * Comp.proof_state) list -> unit
+val update_existing_holes : (Location.t * Comp.proof_state) list -> unit

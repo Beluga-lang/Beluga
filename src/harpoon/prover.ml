@@ -1,6 +1,7 @@
 open Support
 
 open Beluga
+open Syntax
 open Syntax.Int
 
 module E = Error

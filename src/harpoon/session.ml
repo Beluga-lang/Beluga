@@ -1,5 +1,6 @@
 open Support
 open Beluga
+open Syntax
 open Syntax.Int
 
 module CompS = Store.Cid.Comp
@@ -289,7 +290,7 @@ let configuration_wizard' io automation_state : Id.cid_mutual_group * Theorem.t 
        let total_dec_kind =
          match order with
          | Some (Either.Right no) -> `inductive no
-         | Some (Either.Left (Synext.Comp.Trust _)) -> `trust
+         | Some (Either.Left (Syntax.Ext.Comp.Trust _)) -> `trust
          | None -> `not_recursive
        in
        let conf = Theorem.Conf.make name total_dec_kind tau k in

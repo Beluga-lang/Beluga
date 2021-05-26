@@ -2,9 +2,11 @@
    @author Brigitte Pientka
    modified: Joshua Dunfield
 *)
+open Support
 
 module LF : sig
 
+  open Support
   open Syntax
   open Int.LF
 
@@ -25,15 +27,15 @@ module LF : sig
       of mctx
          * dctx (* expected *)
          * dctx_hat (* found *)
-         * (Loc.t * mfront)
+         * (Location.t * mfront)
     | IllTypedMetaObj of mctx * clobj * dctx * cltyp
     | TermWhenVar of mctx * dctx * normal
     | SubWhenRen of mctx * dctx * sub
     | MissingType of string
 
-  exception Error of Loc.t * error
+  exception Error of Location.t * error
 
-  val throw : Loc.t -> error -> 'a
+  val throw : Location.t -> error -> 'a
 
   val check : mctx -> dctx -> nclo -> tclo -> unit
 
@@ -43,7 +45,7 @@ module LF : sig
   val checkDCtx : mctx -> dctx -> unit
 
   val checkSchemaWf : schema -> unit
-  val checkSchema : Loc.t -> mctx -> dctx -> Id.name -> schema -> unit
+  val checkSchema : Location.t -> mctx -> dctx -> Id.name -> schema -> unit
   val subsumes : mctx -> ctx_var -> ctx_var -> bool
 
   (** Checks that a type exists within a given schema.
@@ -54,16 +56,18 @@ module LF : sig
       The input name will be a part of the error message, and should
       be the declared name of the schema.
    *)
-  val checkTypeAgainstSchema: Syntax.Loc.t -> mctx -> dctx -> typ -> Id.name -> sch_elem list
+  val checkTypeAgainstSchema: Location.t -> mctx -> dctx -> typ -> Id.name -> sch_elem list
                               -> typ_rec * sub
   val instanceOfSchElem : mctx -> dctx -> tclo -> sch_elem -> (typ_rec * sub)
   val instanceOfSchElemProj : mctx -> dctx -> tclo -> (head * int) -> sch_elem -> (typ_rec * sub)
 
-  val checkMSub : Loc.t -> mctx -> msub -> mctx -> unit
+  val checkMSub : Location.t -> mctx -> msub -> mctx -> unit
 
 end
 
 module Comp : sig
+
+  open Syntax
   open Syntax.Int.Comp
   open Syntax.Int
 
@@ -120,10 +124,10 @@ module Comp : sig
          * int (* premise index *)
          * suffices_typ (* given type annotation *)
 
-  exception Error of Loc.t * error
+  exception Error of Location.t * error
 
   (** Raises an error from this module. *)
-  val throw : Loc.t -> error -> 'a
+  val throw : Location.t -> error -> 'a
 
   (** Appends two sets of hypotheses.
       Appropriately MShifts the left contexts and applies an
@@ -153,7 +157,7 @@ module Comp : sig
       plicity and type information from the context on the left, but
       the entry name from the context on the right.
    *)
-  val validate_contexts : Loc.t -> LF.mctx * LF.mctx -> gctx * gctx -> LF.mctx * gctx
+  val validate_contexts : Location.t -> LF.mctx * LF.mctx -> gctx * gctx -> LF.mctx * gctx
 
   (** Checks a theorem in the given contexts against the given type.
       The given list of total declarations is used for totality checking.
@@ -249,7 +253,7 @@ module Comp : sig
       else, raises a synthesis mismatch error for the expression i
       saying that the type of i is expected to be a box-type.
    *)
-  val require_syn_typbox : LF.mctx -> gctx -> Loc.t -> exp_syn -> tclo -> meta_typ * LF.msub
+  val require_syn_typbox : LF.mctx -> gctx -> Location.t -> exp_syn -> tclo -> meta_typ * LF.msub
 
 
   (** Processes all leading PiBoxes to replace them with unification
@@ -296,7 +300,7 @@ module Comp : sig
 
       The provided location is used when raising errors.
    *)
-  val unify_suffices : Loc.t -> LF.mctx
+  val unify_suffices : Location.t -> LF.mctx
                        -> typ (* scrutinee type; to be decomposed *)
                        -> suffices_typ list (* type annotations *)
                        -> typ (* goal type; to match against
@@ -309,5 +313,5 @@ module Comp : sig
       the type (together with a delayed meta-substitution) of the
       produced expression.
    *)
-  val genMApp : Loc.t -> (LF.ctyp_decl -> bool) -> LF.mctx -> exp_syn * tclo -> int * (exp_syn * tclo)
+  val genMApp : Location.t -> (LF.ctyp_decl -> bool) -> LF.mctx -> exp_syn * tclo -> int * (exp_syn * tclo)
 end

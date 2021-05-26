@@ -1,9 +1,9 @@
 open Support.Equality
 open Support
-open Id
 open Store
 open Store.Cid
 open Syntax
+open Syntax.Id
 
 module C = Whnf
 module S = Substitution
@@ -15,7 +15,7 @@ module R = Store.Cid.DefaultRenderer
 let (dprintf, dprint, _) = Debug.makeFunctions' (Debug.toFlags [11])
 open Debug.Fmt
 
-type leftover_vars = (Abstract.free_var Int.LF.ctx * Syntax.Loc.t) list
+type leftover_vars = (Abstract.free_var Int.LF.ctx * Location.t) list
 
 type error =
   | UnexpectedSucess
@@ -34,7 +34,7 @@ type error =
   | UnboundArg of Id.name * Id.name option list
   | UnboundNamePragma of Id.name
 
-exception Error of Syntax.Loc.t * error
+exception Error of Location.t * error
 
 let throw loc e = raise (Error (loc, e))
 
@@ -110,7 +110,7 @@ let fmt_ppr_leftover_vars ppf : leftover_vars -> unit =
        begin fun ppf (cQ, loc) ->
        fprintf ppf "@[<2>@[%a@] |-@ @[%a@]@]"
          Abstract.fmt_ppr_collection cQ
-         Syntax.Loc.print loc
+         Location.print loc
        end)
 
 let ppr_leftover_vars = fmt_ppr_leftover_vars Format.std_formatter
@@ -166,10 +166,10 @@ let sgnDeclToHtml =
 
 let rec apply_global_pragmas =
   function
-  | Synext.Sgn.GlobalPragma (_, Synext.Sgn.NoStrengthen) :: t ->
+  | Syntax.Ext.Sgn.GlobalPragma (_, Syntax.Ext.Sgn.NoStrengthen) :: t ->
      Lfrecon.strengthen := false;
      apply_global_pragmas t
-  | Synext.Sgn.GlobalPragma (_, Synext.Sgn.Coverage(opt)) :: t ->
+  | Syntax.Ext.Sgn.GlobalPragma (_, Syntax.Ext.Sgn.Coverage(opt)) :: t ->
      Coverage.enableCoverage := true;
      begin match opt with
      | `Warn -> Coverage.warningOnly := true
@@ -185,7 +185,7 @@ let recSgnDecls decls =
     | Int.LF.Empty -> true
     | _ -> false
   in
-  let storeLeftoverVars (cQ : Abstract.free_var Int.LF.ctx) (loc : Syntax.Loc.t) : unit =
+  let storeLeftoverVars (cQ : Abstract.free_var Int.LF.ctx) (loc : Location.t) : unit =
     match cQ with
     | Int.LF.Empty -> ()
     | _ -> leftoverVars := (cQ, loc) :: !leftoverVars
@@ -377,7 +377,7 @@ let recSgnDecls decls =
        dprintf
          (fun p ->
            p.fmt "[RecSgn Checking] CompCotyp at: %a"
-             Syntax.Loc.print loc);
+             Location.print loc);
        dprint (fun () -> "\nIndexing computation-level codata-type constant " ^ string_of_name a);
        let apxK = Index.compkind extK in
        FVar.clear ();
@@ -425,7 +425,7 @@ let recSgnDecls decls =
        dprintf
          (fun p ->
            p.fmt "[RecSgn Checking] CompConst at: %a"
-             Syntax.Loc.print_short loc);
+             Location.print_short loc);
        dprint (fun () -> "\nIndexing computation-level data-type constructor " ^ string_of_name c);
        let apx_tau = Index.comptyp tau in
        let cD = Int.LF.Empty in
@@ -501,7 +501,7 @@ let recSgnDecls decls =
     | Ext.Sgn.CompDest (loc , c, cD, tau0, tau1) ->
        dprintf
          (fun p ->
-           p.fmt "[RecSgn Checking] CompDest at: %a" Syntax.Loc.print_short loc);
+           p.fmt "[RecSgn Checking] CompDest at: %a" Location.print_short loc);
        dprint (fun () -> "\nIndexing computation-level codata-type destructor " ^ string_of_name c);
        let cD = Index.mctx cD in
        let cD = Reconstruct.mctx cD in
@@ -561,7 +561,7 @@ let recSgnDecls decls =
        dprintf
          (fun p ->
            p.fmt "[RecSgn Checking] Typ at: %a"
-             Syntax.Loc.print_short loc);
+             Location.print_short loc);
        dprint (fun () -> "\nIndexing type constant " ^ string_of_name a);
        let (_, apxK) = Index.kind Index.disambiguate_to_fvars extK in
        FVar.clear ();
@@ -611,7 +611,7 @@ let recSgnDecls decls =
        dprintf
          (fun p ->
            p.fmt "[RecSgn Checking] Const at: %a"
-             Syntax.Loc.print_short loc);
+             Location.print_short loc);
        let (_, apxT) = Index.typ Index.disambiguate_to_fvars extT in
        let rec get_type_family =
          function
@@ -666,7 +666,7 @@ let recSgnDecls decls =
        dprintf
          (fun p ->
            p.fmt "[RecSgn Checking] Schema at: %a"
-             Syntax.Loc.print_short loc);
+             Location.print_short loc);
        let apx_schema = Index.schema schema in
        dprint (fun () -> "\nReconstructing schema " ^ string_of_name g ^ "\n");
        FVar.clear ();
@@ -701,7 +701,7 @@ let recSgnDecls decls =
        dprintf
          (fun p ->
            p.fmt "[RecSgn Checking] Val at: %a"
-             Syntax.Loc.print_short loc);
+             Location.print_short loc);
        let apx_i = Index.exp' (Var.create ()) i in
        let (cD, cG) = (Int.LF.Empty, Int.LF.Empty) in
        let (i', (tau, theta)) =
@@ -761,7 +761,7 @@ let recSgnDecls decls =
        dprintf
          (fun p ->
            p.fmt "[RecSgn Checking] Val at %a"
-             Syntax.Loc.print_short loc
+             Location.print_short loc
          );
        let apx_tau = Index.comptyp tau in
        let (cD, cG) = (Int.LF.Empty, Int.LF.Empty) in
@@ -840,7 +840,7 @@ let recSgnDecls decls =
     | Ext.Sgn.MRecTyp (loc, recDats) ->
        dprintf
          (fun p ->
-           p.fmt "[recsgn] MRecTyp at %a" Loc.print_short loc);
+           p.fmt "[recsgn] MRecTyp at %a" Location.print_short loc);
        let recTyps = List.map (fun (k, _) -> k) recDats in
        let recTyps' = List.map (recSgnDecl ~pauseHtml:true) recTyps in
        let recConts = List.map (fun (_, cs) -> cs) recDats in
@@ -1081,7 +1081,7 @@ let recSgnDecls decls =
              begin fun p ->
              p.fmt "[reconRecFun] @[<v>DOUBLE CHECK of function %a at %a successful@,Adding definition to the store.@]"
                Id.print thm_name
-               Loc.print_short thm_loc
+               Location.print_short thm_loc
              end;
            let v =Int.(Comp.ThmValue (thm_cid, e_r', LF.MShift 0, Comp.Empty)) in
            Comp.set_prog thm_cid (Misc.const (Some v));
@@ -1102,7 +1102,7 @@ let recSgnDecls decls =
        dprintf
          (fun p ->
            p.fmt "[RecSgn Checking] Query at %a"
-             Syntax.Loc.print_short loc);
+             Location.print_short loc);
        let (_, apxT) = Index.typ Index.disambiguate_to_fvars extT in
        dprint (fun () -> "Reconstructing query.");
        FVar.clear ();
@@ -1147,7 +1147,7 @@ let recSgnDecls decls =
        dprintf
          (fun p ->
            p.fmt "[RecSgn Checking] Pragma at %a"
-             Syntax.Loc.print_short loc);
+             Location.print_short loc);
        begin match
          try Some (Typ.index_of_name typ_name)
          with Not_found -> None

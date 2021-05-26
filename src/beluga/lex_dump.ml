@@ -2,6 +2,7 @@
  * usage: lex_dump FILE
  * synopsis: pretty-prints the output of the Beluga lexer run on FILE.
  *)
+open Support
 open Beluga
 module Loc = Location
 

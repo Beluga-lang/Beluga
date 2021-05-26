@@ -91,7 +91,7 @@ type elaborated_t =
 
 let options_spec : parsed_t Optparser.OptSpec.t =
   let handle_debug () =
-    B.Debug.enable ();
+    Debug.enable ();
     Printexc.record_backtrace true
   in
   let handle_implicit () =

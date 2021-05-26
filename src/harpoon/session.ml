@@ -6,8 +6,8 @@ module CompS = Store.Cid.Comp
 module F = Misc.Function
 module P = Pretty.Int.DefaultPrinter
 
-let dprintf, _, _ = Beluga.Debug.(makeFunctions' (toFlags [15]))
-open Beluga.Debug.Fmt
+let dprintf, _, _ = Debug.(makeFunctions' (toFlags [15]))
+open Debug.Fmt
 
 type t =
   { theorems : Theorem.t DynArray.t

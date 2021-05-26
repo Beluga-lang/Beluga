@@ -1,5 +1,4 @@
-open Support.Equality
-module Maybe = Support.Maybe
+open Equality
 
 exception NotInitialized
 
@@ -7,7 +6,7 @@ type flags = int
 
 type 'a io = 'a -> unit
 
-module Fmt = Support.Fmt
+module Fmt = Fmt
 open Fmt
 
 let r_flags : flags ref = ref 0

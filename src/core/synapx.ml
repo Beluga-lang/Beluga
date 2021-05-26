@@ -1,9 +1,9 @@
 (** Approximate Syntax *)
 
 (** Approximate LF Syntax *)
+open Support
 open Id
 
-module Loc = Location
 module Int = Synint
 
 module LF = struct
@@ -31,7 +31,7 @@ module LF = struct
     | DeclOpt of name
 
   and typ =
-    | Atom of Loc.t * cid_typ * spine
+    | Atom of Location.t * cid_typ * spine
     | PiTyp of (typ_decl * depend) * typ
     | Sigma of typ_rec
 
@@ -44,11 +44,11 @@ module LF = struct
     | Cons of normal * tuple
 
   and normal =
-    | Lam of Loc.t * name * normal
-    | Root of Loc.t * head * spine
-    | LFHole of Loc.t * string option
-    | Tuple of Loc.t * tuple
-    | Ann of Loc.t * normal * typ
+    | Lam of Location.t * name * normal
+    | Root of Location.t * head * spine
+    | LFHole of Location.t * string option
+    | Tuple of Location.t * tuple
+    | Ann of Location.t * normal * typ
 
   and head =
     | BVar of offset
@@ -111,75 +111,75 @@ module Comp = struct
   include Syncom.Comp
 
   type kind =
-    | Ctype of Loc.t
-    | PiKind of Loc.t * LF.ctyp_decl * kind
+    | Ctype of Location.t
+    | PiKind of Location.t * LF.ctyp_decl * kind
 
-  type meta_typ = Loc.t * LF.ctyp
+  type meta_typ = Location.t * LF.ctyp
 
   type mfront =
     | ClObj of LF.dctx * LF.sub
     | CObj of LF.dctx
 
-  type meta_obj = Loc.t * mfront
+  type meta_obj = Location.t * mfront
 
   type meta_spine =
     | MetaNil
     | MetaApp of meta_obj * meta_spine
 
   type typ =
-    | TypBase of Loc.t * cid_comp_typ * meta_spine
-    | TypCobase of Loc.t * cid_comp_cotyp * meta_spine
-    | TypDef of Loc.t * cid_comp_typ * meta_spine
-    | TypBox of Loc.t * meta_typ
-    | TypArr of Loc.t * typ * typ
-    | TypCross of Loc.t * typ * typ
-    | TypPiBox of Loc.t * LF.ctyp_decl * typ
+    | TypBase of Location.t * cid_comp_typ * meta_spine
+    | TypCobase of Location.t * cid_comp_cotyp * meta_spine
+    | TypDef of Location.t * cid_comp_typ * meta_spine
+    | TypBox of Location.t * meta_typ
+    | TypArr of Location.t * typ * typ
+    | TypCross of Location.t * typ * typ
+    | TypPiBox of Location.t * LF.ctyp_decl * typ
     | TypInd of typ
 
   and exp_chk =
-     | Syn of Loc.t * exp_syn
-     | Fn of Loc.t * name * exp_chk                             (* fn x => e           *)
-     | Fun of Loc.t * fun_branches                              (* fun   fbranches     *)
-     | MLam of Loc.t * name * exp_chk                           (* mlam f => e         *)
-     | Pair of Loc.t * exp_chk * exp_chk                        (* (e1 , e2)           *)
-     | LetPair of Loc.t * exp_syn * (name * name * exp_chk)     (* let (x,y) = i in e  *)
-     | Let of Loc.t * exp_syn * (name * exp_chk)                (* let x = i in e      *)
-     | Box of Loc.t * meta_obj                                  (* box (Psi hat. M)    *)
-     | Case of Loc.t * case_pragma * exp_syn * branch list      (* case i of bs *)
-     | Impossible of Loc.t * exp_syn                            (* impossible i *)
-     | Hole of Loc.t * string option                            (* ?name *)
-     | BoxHole of Loc.t                                         (* _ *)
+     | Syn of Location.t * exp_syn
+     | Fn of Location.t * name * exp_chk                             (* fn x => e           *)
+     | Fun of Location.t * fun_branches                              (* fun   fbranches     *)
+     | MLam of Location.t * name * exp_chk                           (* mlam f => e         *)
+     | Pair of Location.t * exp_chk * exp_chk                        (* (e1 , e2)           *)
+     | LetPair of Location.t * exp_syn * (name * name * exp_chk)     (* let (x,y) = i in e  *)
+     | Let of Location.t * exp_syn * (name * exp_chk)                (* let x = i in e      *)
+     | Box of Location.t * meta_obj                                  (* box (Psi hat. M)    *)
+     | Case of Location.t * case_pragma * exp_syn * branch list      (* case i of bs *)
+     | Impossible of Location.t * exp_syn                            (* impossible i *)
+     | Hole of Location.t * string option                            (* ?name *)
+     | BoxHole of Location.t                                         (* _ *)
 
   and exp_syn =
-     | Var of Loc.t * offset                                        (* x              *)
+    | Var of Location.t * offset                                    (* x              *)
      | FVar of name                                                 (* x              *)
-     | DataConst of Loc.t * cid_comp_const                          (* c              *)
-     | Obs of Loc.t * exp_chk * cid_comp_dest                       (* e.d            *)
-     | Const of Loc.t * cid_prog                                    (* c              *)
-     | Apply of Loc.t * exp_syn * exp_chk                           (* i e            *)
-     | BoxVal of Loc.t * meta_obj
-     | PairVal of Loc.t * exp_syn * exp_syn
+     | DataConst of Location.t * cid_comp_const                     (* c              *)
+     | Obs of Location.t * exp_chk * cid_comp_dest                  (* e.d            *)
+     | Const of Location.t * cid_prog                               (* c              *)
+     | Apply of Location.t * exp_syn * exp_chk                      (* i e            *)
+     | BoxVal of Location.t * meta_obj
+     | PairVal of Location.t * exp_syn * exp_syn
      | Ann of exp_chk * typ                                         (* e : tau        *)
 
   and pattern =
-    | PatMetaObj of Loc.t * meta_obj
-    | PatConst of Loc.t * cid_comp_const * pattern_spine
-    | PatFVar of Loc.t * name (* used only temporarily during indexing *)
-    | PatVar of Loc.t * name * offset
-    | PatPair of Loc.t * pattern * pattern
-    | PatAnn of Loc.t * pattern * typ
+    | PatMetaObj of Location.t * meta_obj
+    | PatConst of Location.t * cid_comp_const * pattern_spine
+    | PatFVar of Location.t * name (* used only temporarily during indexing *)
+    | PatVar of Location.t * name * offset
+    | PatPair of Location.t * pattern * pattern
+    | PatAnn of Location.t * pattern * typ
 
   and pattern_spine =
-    | PatNil of Loc.t
-    | PatApp of Loc.t * pattern * pattern_spine
-    | PatObs of Loc.t * cid_comp_dest * pattern_spine
+    | PatNil of Location.t
+    | PatApp of Location.t * pattern * pattern_spine
+    | PatObs of Location.t * cid_comp_dest * pattern_spine
 
   and branch =
-    | Branch of Loc.t * LF.ctyp_decl LF.ctx * pattern * exp_chk
+    | Branch of Location.t * LF.ctyp_decl LF.ctx * pattern * exp_chk
 
   and fun_branches =
-    | NilFBranch of Loc.t
-    | ConsFBranch of Loc.t * (pattern_spine * exp_chk) * fun_branches
+    | NilFBranch of Location.t
+    | ConsFBranch of Location.t * (pattern_spine * exp_chk) * fun_branches
 
 
   (* the definition of branch_pattern will be removed and replaced by the more general notion of patterns;
@@ -199,21 +199,21 @@ module Comp = struct
     }
 
   type proof =
-    | Incomplete of Loc.t * string option
-    | Command of Loc.t * command * proof
-    | Directive of Loc.t * directive
+    | Incomplete of Location.t * string option
+    | Command of Location.t * command * proof
+    | Directive of Location.t * directive
 
   and command =
-    | By of Loc.t * exp_syn * name
-    | Unbox of Loc.t * exp_syn * name * unbox_modifier option
+    | By of Location.t * exp_syn * name
+    | Unbox of Location.t * exp_syn * name * unbox_modifier option
 
   and directive =
-    | Intros of Loc.t * hypothetical
-    | Solve of Loc.t * exp_chk
-    | Split of Loc.t * exp_syn * split_branch list
-    | Suffices of Loc.t * exp_syn * suffices_arg list
+    | Intros of Location.t * hypothetical
+    | Solve of Location.t * exp_chk
+    | Split of Location.t * exp_syn * split_branch list
+    | Suffices of Location.t * exp_syn * suffices_arg list
 
-  and suffices_arg = Loc.t * typ * proof
+  and suffices_arg = Location.t * typ * proof
 
   and split_branch =
     { case_label : case_label
@@ -223,13 +223,13 @@ module Comp = struct
        scrutinee's type.
      *)
     ; branch_body : hypothetical
-    ; split_branch_loc : Loc.t
+    ; split_branch_loc : Location.t
     }
 
   and hypothetical =
     { hypotheses : hypotheses
     ; proof : proof
-    ; hypothetical_loc : Loc.t
+    ; hypothetical_loc : Location.t
     }
 
   type thm =

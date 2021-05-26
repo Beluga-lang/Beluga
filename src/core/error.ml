@@ -1,7 +1,6 @@
 open Support
 
 module F = Misc.Function
-module Loc = Location
 
 open Debug.Fmt
 
@@ -10,7 +9,7 @@ let violation msg =
   Debug.printf (fun p -> p.fmt "[violation] %s" msg);
   raise (Violation msg)
 
-exception NotImplemented of Loc.t option * string
+exception NotImplemented of Location.t option * string
 let not_implemented loc msg = raise (NotImplemented (Some loc, msg))
 let not_implemented' msg = raise (NotImplemented (None, msg))
 
@@ -51,14 +50,14 @@ let register_printing_function
     (Maybe.map (fun e -> print (fun ppf -> fmt_ppr ppf e)) ++ extract)
 
 let register_located_printing_function
-      (extract : exn -> (Loc.t * 'a) option)
+      (extract : exn -> (Location.t * 'a) option)
       (fmt_ppr : Format.formatter -> 'a -> unit)
     : unit =
   let f (loc, e) =
     print
       begin fun ppf ->
       Format.fprintf ppf "@[<v>%a:@,%a@]"
-        Loc.print loc
+      Location.print loc
         fmt_ppr e
       end
   in
@@ -66,7 +65,7 @@ let register_located_printing_function
   register_printer' (Maybe.map f ++ extract)
 
 let print_location loc =
-  Format.fprintf error_format "%a:@," Loc.print loc
+  Format.fprintf error_format "%a:@," Location.print loc
 
 let print_with_location loc f =
   print_location loc;

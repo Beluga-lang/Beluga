@@ -3,7 +3,7 @@
 *)
 
 (** Syntax for the LF and Computation languages *)
-
+open Support
 module Loc = Location
 
 module Common = Syncom

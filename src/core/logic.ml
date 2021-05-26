@@ -24,7 +24,7 @@ module Options = struct
        3 => + Solutions and proof terms.
        4 => + LF signature.
   *)
-  let chatter = ref 4
+  let chatter = ref 3
 
   (* Ask before giving more solutions (à la Prolog). *)
   let askSolution = ref false
@@ -111,7 +111,8 @@ type comp_goal =
 type mquery = comp_goal * LF.msub       (* mq := (cg, ms)  *)
 
 type cclause =                       (* Horn Clause ::= cD [eV |- A :- cG]  *)
-  { ctHead : LF.typ                  (* Head A : LF.typ                     *)
+  { lfHead : LF.typ                 (* Head A : LF.typ                     *)
+  ; ctHead : Comp.typ                (* Computation type 'head' : [eV |- A :- cG]  *)
   ; cEVars : LF.dctx                 (* Context eV : EV's bound in A/cG     *)
   ; cUVars : LF.mctx                 (* Context uV : UV's bound in [eV |- A :- cG] *)
   ; cSubGoals : conjunction          (* Subgoals cG                         *)
@@ -237,14 +238,18 @@ module Convert = struct
     match tM with
     | Comp.TypBox (l, LF.ClTyp (LF.MTyp typ, cPsi)) ->
        let tMclause = typToClause' cPsi True typ (cS, dS, dR) in 
-       { ctHead = tMclause.tHead
+       { ctHead = tM
+       ; lfHead = tMclause.tHead
        ; cEVars = tMclause.eVars
        ; cUVars = cD 
        ; cSubGoals = tMclause.subGoals
        }
     | Comp.TypPiBox (l, tdecl, tM') ->
        comptypToCClause' (Whnf.extend_mctx cD (tdecl, LF.MShift 0)) tM' (cS, dS, dR)
-    
+     (*
+    | Comp.TypArr (_, t1, t2) ->
+       comptypToCClause' (Whnf.extend_mctx cD (tdecl, LF.MShift 0)) t2 (cS, dS, dR)
+       *)
        
    
 
@@ -801,10 +806,10 @@ module Printer = struct
       (fmt_ppr_subgoals LF.Empty sCl.eVars) (sCl.subGoals, S.id)
 
   let fmt_ppr_sgn_cclause ppf (cidTerm, sCCl) =
-    fprintf ppf "@[<v 2>@[%a@] : @[%a@]@,%a@]"
+    fprintf ppf "@[<v 2>@[%a@] : @[%a@]@]"
       Id.print (compTermName cidTerm)
-      (fmt_ppr_typ LF.Empty sCCl.cEVars) (sCCl.ctHead, S.id) 
-      (fmt_ppr_subgoals LF.Empty sCCl.cEVars) (sCCl.cSubGoals, S.id)
+      (fmt_ppr_cmp_typ sCCl.cUVars) (sCCl.ctHead)
+     
 
   let fmt_ppr_bound ppf =
     function
@@ -818,7 +823,7 @@ module Printer = struct
       (fmt_ppr_typ LF.Empty LF.Null) (q.typ, S.id)
 
   let fmt_ppr_sgn_mquery ppf mq =
-      fprintf ppf "--mquery %a %a %a %a."
+      fprintf ppf "--mquery %a %a %a %a"
         fmt_ppr_bound mq.mexpected
         fmt_ppr_bound mq.mtries
         fmt_ppr_bound mq.depth
@@ -1190,7 +1195,7 @@ module Solver = struct
       try
         trail
           begin fun () ->
-          U.unifyTyp cD cPsi (tA, s) (sCCl.ctHead, s');
+          U.unifyTyp cD cPsi (tA, s) (sCCl.lfHead, s');
           solveSubGoals dPool cD (cPsi, k) (sCCl.cSubGoals, s')
             begin fun (u, tS) ->
             let tM =

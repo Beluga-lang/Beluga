@@ -2,6 +2,7 @@
    This module brings them together by providing a high-level
    interface for running parsers.
  *)
+open Support
 
 type filename = string
 

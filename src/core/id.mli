@@ -1,3 +1,5 @@
+open Support
+
 (** A `name' represents the original named representation of a
     variable.  These are primarily used in parsing and pretty-
     printing.  Names should never be constructed directly.

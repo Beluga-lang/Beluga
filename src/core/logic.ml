@@ -24,7 +24,7 @@ module Options = struct
        3 => + Solutions and proof terms.
        4 => + LF signature.
   *)
-  let chatter = ref 3
+  let chatter = ref 4
 
   (* Ask before giving more solutions (à la Prolog). *)
   let askSolution = ref false
@@ -55,6 +55,8 @@ exception NotImplementedYet
    Dynamic clause.
      sCl : clause
    Clause from LF signature.
+     sCCl : clause 
+   Clause from Signature of computation type. 
      cS : int
    Constant shift for BVar indices bound to existential variables.
      dS : int
@@ -497,7 +499,7 @@ module Index = struct
     DynArray.add typConst sgnClause
     
 (* TODO:: create new DynArray for compclauses
-   addSgnClause tC, sCl = ()
+   addSgnClause tC, sCCl = ()
      Add a new sgnClause, sCl, to the DynArray tC.
   *)
   let addSgnCClause typConst sgnCClause =
@@ -543,9 +545,9 @@ module Index = struct
 
 
     
-  (* compileSgnCClause c = (c, sCl)
-     Retrieve Comp.typ for term constant c, clausify it into sCl and
-     return an sgnClause (c, sCl). 
+  (* compileSgnCClause c = (c, sCCl)
+     Retrieve Comp.typ for term constant c, clausify it into sCCl and
+     return an sgnCClause (c, sCCl). 
    *)
 
   let compileSgnCClause cidTerm =
@@ -560,6 +562,9 @@ module Index = struct
   *)
   let termName cidTerm =
     (Cid.Term.get cidTerm).Cid.Term.Entry.name
+
+  let compTermName cidTerm =
+    (Cid.Comp.get cidTerm).Cid.Comp.Entry.name
 
   (* storeTypConst c = ()
      Add a new entry in `types' for type constant c and fill the DynArray
@@ -662,6 +667,12 @@ module Index = struct
   let iterAllSClauses f =
     Hashtbl.iter (fun k v -> DynArray.iter f v) types
 
+  let iterSCClauses f cidTyp =
+    DynArray.iter f (Hashtbl.find compTypes cidTyp)
+
+  let iterAllSCClauses f =
+    Hashtbl.iter (fun k v -> DynArray.iter f v) compTypes
+
   let iterQueries f =
     DynArray.iter (fun q -> f q) queries
 
@@ -695,7 +706,8 @@ module Index = struct
     in
     f sgnQ;
     Options.chatter := bchatter;
-    Hashtbl.clear types
+    Hashtbl.clear types;
+    Hashtbl.clear compTypes
 end
 
 
@@ -788,6 +800,12 @@ module Printer = struct
       (fmt_ppr_typ LF.Empty sCl.eVars) (sCl.tHead, S.id)
       (fmt_ppr_subgoals LF.Empty sCl.eVars) (sCl.subGoals, S.id)
 
+  let fmt_ppr_sgn_cclause ppf (cidTerm, sCCl) =
+    fprintf ppf "@[<v 2>@[%a@] : @[%a@]@,%a@]"
+      Id.print (compTermName cidTerm)
+      (fmt_ppr_typ LF.Empty sCCl.cEVars) (sCCl.ctHead, S.id) 
+      (fmt_ppr_subgoals LF.Empty sCCl.cEVars) (sCCl.cSubGoals, S.id)
+
   let fmt_ppr_bound ppf =
     function
     | Some i -> fprintf ppf "%d" i
@@ -835,6 +853,12 @@ module Printer = struct
       (fun w ->
         fprintf std_formatter "%a@."
           fmt_ppr_sgn_clause w)
+
+  let printCompSignature () =
+    iterAllSCClauses
+      (fun w ->
+        fprintf std_formatter "%a@."
+          fmt_ppr_sgn_cclause w)
 end
 
 module Solver = struct
@@ -990,7 +1014,10 @@ module Solver = struct
          matchDProg dPool'
 
       | Empty ->
-         matchSig (cidFromAtom tA)
+         try 
+           matchSig (cidFromAtom tA)
+         with failure ->
+           matchCompSig (cidFromAtom tA)
 
     (* Decides whether the given Sigma type can solve the
      * goal type by trying all the projections.
@@ -1116,6 +1143,14 @@ module Solver = struct
     and matchSig cidTyp =
       I.iterSClauses (fun w -> matchSgnClause w sc) cidTyp
 
+    (*    TODO:: where to use matchCompSig???   *)
+    (* matchSig c = ()
+       Try all the clauses in the static signature with head matching
+       type constant c.
+     *)
+    and matchCompSig cidTyp =
+      I.iterSCClauses (fun w -> matchSgnCClause w sc) cidTyp  
+
     (* matchSgnClause (c, sCl) sc = ()
        Try to unify the head of sCl with A[s]. If unification succeeds,
        attempt to solve the subgoals of sCl.
@@ -1131,6 +1166,32 @@ module Solver = struct
           begin fun () ->
           U.unifyTyp cD cPsi (tA, s) (sCl.tHead, s');
           solveSubGoals dPool cD (cPsi, k) (sCl.subGoals, s')
+            begin fun (u, tS) ->
+            let tM =
+              LF.Root
+                ( Syntax.Loc.ghost
+                , LF.Const (cidTerm)
+                , fS (spineFromRevList tS)
+                , `explicit
+                )
+            in
+            sc (u, tM)
+            end
+          end
+      with
+      | U.Failure _ -> ()
+                     
+    and matchSgnCClause (cidTerm, sCCl) sc =
+      let (s', fS) =
+        C.dctxToSub cD cPsi (sCCl.cEVars, shiftSub (Context.dctxLength cPsi))
+          (fun tS -> tS)
+      in
+      (* Trail to undo MVar instantiations. *)
+      try
+        trail
+          begin fun () ->
+          U.unifyTyp cD cPsi (tA, s) (sCCl.ctHead, s');
+          solveSubGoals dPool cD (cPsi, k) (sCCl.cSubGoals, s')
             begin fun (u, tS) ->
             let tM =
               LF.Root
@@ -1419,7 +1480,8 @@ let runLogic () =
       Index.robSecondStore ();
       (* Optional: Print signature clauses. *)
       if !Options.chatter >= 4
-      then Printer.printSignature ();
+      then (Printer.printSignature ();
+            Printer.printCompSignature ());
       (* Solve! *)
       Index.iterQueries Frontend.solve;
       Index.iterMQueries Frontend.msolve;      

@@ -24,7 +24,7 @@ module Options = struct
        3 => + Solutions and proof terms.
        4 => + LF signature.
   *)
-  let chatter = ref 4
+  let chatter = ref 3
 
   (* Ask before giving more solutions (à la Prolog). *)
   let askSolution = ref false
@@ -107,14 +107,14 @@ type comp_goal =
   | Forall of  LF.ctyp_decl * comp_goal         
 
 type mquery = comp_goal * LF.msub       (* mq := (cg, ms)  *)
-(*
+
 type cclause =                       (* Horn Clause ::= cD [eV |- A :- cG]  *)
   { ctHead : LF.typ                  (* Head A : LF.typ                     *)
   ; cEVars : LF.dctx                 (* Context eV : EV's bound in A/cG     *)
   ; cUVars : LF.mctx                 (* Context uV : UV's bound in [eV |- A :- cG] *)
   ; cSubGoals : conjunction          (* Subgoals cG                         *)
   }
-  *)
+  
   
 module Shift : sig
   val shiftAtom : LF.typ -> int * int * int -> LF.typ
@@ -221,7 +221,7 @@ module Convert = struct
        ; subGoals = cG
        }
 
-      (*
+      
   (* comptypToCClause' cD U (cS, dS, dR) = cclause
      Invariants:
        If BV(i) is free in M, then BV(i) is bound in (eV |- M).
@@ -243,7 +243,7 @@ module Convert = struct
     | Comp.TypPiBox (l, tdecl, tM') ->
        comptypToCClause' (Whnf.extend_mctx cD (tdecl, LF.MShift 0)) tM' (cS, dS, dR)
     
-       *)
+       
    
 
   (* Write out invariant / comment
@@ -300,8 +300,8 @@ module Convert = struct
   let typToClause tM =
     typToClause' LF.Null True tM (0, 0, 0)
 
-(*  let comptypToCClause tM =
-    comptypToCClause' LF.Empty tM (0, 0, 0)    *)
+  let comptypToCClause tM =
+    comptypToCClause' LF.Empty tM (0, 0, 0)    
 
   (* etaExpand Psi (A, s) = normal
      Invariants:
@@ -442,6 +442,8 @@ module Index = struct
 
   let types = Hashtbl.create 0          (* typConst Hashtbl.t          *)
 
+  let compTypes = Hashtbl.create 0      (* compTypConst Hashtbl.t      *)
+
   type inst = (Id.name *  LF.normal)    (* I ::= (x, Y[s]) where Y is an MVar        *)
   type minst = (Id.name * LF.mfront)    (* I ::= (x, mf)   where mf is (Psihat.term) *)            
                                         (* where mf contains an MMVar *)
@@ -473,11 +475,20 @@ module Index = struct
 
   (* addTyp c = sgnClause DynArray.t
      Create a new entry for a type constant, c, in the `types' table and
-     return it's mapping, i.e. an empty DynArray.
+     return its mapping, i.e. an empty DynArray.
   *)
   let addTyp cidTyp =
     Hashtbl.add types cidTyp (DynArray.create ());
     Hashtbl.find types cidTyp
+
+  (* addCompTyp c = sgnCClause DynArray.t
+     Create new entry for a compTyp constant c in the `compTypes' table
+     and return its mapping 
+  *)
+    
+  let addCompTyp cidTyp =
+    Hashtbl.add compTypes cidTyp (DynArray.create ());
+    Hashtbl.find compTypes cidTyp
 
   (* addSgnClause tC, sCl = ()
      Add a new sgnClause, sCl, to the DynArray tC.
@@ -486,12 +497,12 @@ module Index = struct
     DynArray.add typConst sgnClause
     
 (* TODO:: create new DynArray for compclauses
-  (* addSgnClause tC, sCl = ()
+   addSgnClause tC, sCl = ()
      Add a new sgnClause, sCl, to the DynArray tC.
   *)
-  let addSgnClause typConst sgnClause =
-    DynArray.add typConst sgnClause
- *)
+  let addSgnCClause typConst sgnCClause =
+    DynArray.add typConst sgnCClause
+ 
   (* addSgnQuery (p, (g, s), cD, xs, e, t)  = ()
      Add a new sgnQuery to the `queries' DynArray.
   *)
@@ -531,8 +542,8 @@ module Index = struct
     (cidTerm, Convert.typToClause tM)
 
 
-    (*
-  (* compileSgCnClause c = (c, sCl)
+    
+  (* compileSgnCClause c = (c, sCl)
      Retrieve Comp.typ for term constant c, clausify it into sCl and
      return an sgnClause (c, sCl). 
    *)
@@ -542,7 +553,7 @@ module Index = struct
     let tM = termEntry.Cid.Comp.Entry.typ in
     (cidTerm, Convert.comptypToCClause tM)
 
-    *)
+    
 
   (* termName c = Id.name
      Get the string representation of term constant c.
@@ -574,6 +585,29 @@ module Index = struct
          f h
     in
     revIter regSgnClause typConstr
+
+  (* storeCompTypConst c = ()
+     Add a new entry in `Comptypes' for comptype constant c and fill the 
+     DynArray with the clauses corresponding to the term constants associated 
+     with c.
+   *)
+    
+  let storeCompTypConst (cidTyp, typEntry) =
+    let typConstr = !(typEntry.Cid.Typ.Entry.constructors) in  
+    let typConst = addCompTyp cidTyp in
+    let regSgnCClause cidTerm =
+      addSgnCClause typConst (compileSgnCClause cidTyp)
+    (*  with failure ->
+        addSgnClause typConst (compileSgnCClause cidTerm) *)
+    in
+    let rec revIter f =
+      function
+      | [] -> ()
+      | h :: l' ->
+         revIter f l';
+         f h
+    in
+    revIter regSgnCClause typConstr 
 
   (* storeQuery (p, (tA, i), cD, e, t) = ()
      Invariants:
@@ -608,6 +642,17 @@ module Index = struct
     with
     | _ -> ()
 
+  (* robSecondStore () = ()
+     Store all comptype constants in the `compTypes' table.
+
+ TODO:: current_entries for compTyps???
+  *)
+  let robSecondStore () =
+    try
+      List.iter storeCompTypConst (Cid.Typ.current_entries ())
+    with
+    | _ -> ()
+
   (* iterSClauses f c = ()
      Iterate over all signature clauses associated with c.
   *)
@@ -634,6 +679,7 @@ module Index = struct
     let (q, tA', s, xs) = (Convert.typToQuery LF.Empty LF.Null (tA, i)) in
     querySub := s;
     robStore ();
+    robSecondStore ();
     let bchatter = !Options.chatter in
     Options.chatter := 0;
     let sgnQ =
@@ -1369,6 +1415,8 @@ let runLogic () =
     begin
       (* Transform LF signature into clauses. *)
       Index.robStore ();
+      (* Transform Comp signatures into clauses. *)
+      Index.robSecondStore ();
       (* Optional: Print signature clauses. *)
       if !Options.chatter >= 4
       then Printer.printSignature ();
@@ -1385,7 +1433,8 @@ let runLogicOn n (tA, i) cD e t  =
 
 let prepare () =
   Index.clearIndex ();
-  Index.robStore ()
+  Index.robStore ();
+  Index.robSecondStore ()
 
 (*
 

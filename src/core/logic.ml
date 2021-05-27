@@ -22,7 +22,7 @@ module Options = struct
        1 => Query and success notification.
        2 => + Error messages.
        3 => + Solutions and proof terms.
-       4 => + LF signature.
+       4 => + LF signature & Comp Sig.
   *)
   let chatter = ref 3
 
@@ -110,12 +110,18 @@ type comp_goal =
 
 type mquery = comp_goal * LF.msub       (* mq := (cg, ms)  *)
 
-type cclause =                       (* Horn Clause ::= cD [eV |- A :- cG]  *)
-  { lfHead : LF.typ                 (* Head A : LF.typ                     *)
-  ; ctHead : Comp.typ                (* Computation type 'head' : [eV |- A :- cG]  *)
-  ; cEVars : LF.dctx                 (* Context eV : EV's bound in A/cG     *)
-  ; cUVars : LF.mctx                 (* Context uV : UV's bound in [eV |- A :- cG] *)
-  ; cSubGoals : conjunction          (* Subgoals cG                         *)
+(* Clause representation of Computation Types. 
+   Pre Conditions (preConds) are used as opposed to subGoals because 
+   assumptions of computation type are normally used in the forward direction
+   during proof search/construction
+*)
+            
+type cclause =                       (* Horn Clause ::= cD compTyp           *)
+  { lfTyp : LF.typ                   (* LF type/object in the conclusion     *)
+  ; concl : Comp.typ                 (* `Conclusion' of compTyp : [eV |- A]  *)
+  ; cEVars : LF.dctx                 (* Context eV : EV's bound in A         *)
+  ; cMVars : LF.mctx                 (* Context mV : MV's bound in compTyp   *)
+  ; preConds : (LF.mctx * Comp.typ) list         (* Preconditions : Contextual Objects that are needed to deduce the conclusion (used for a ArrTyp compTyp) *)
   }
   
   
@@ -225,31 +231,33 @@ module Convert = struct
        }
 
       
-  (* comptypToCClause' cD U (cS, dS, dR) = cclause
+  (* comptypToCClause' cD U preCond (cS, dS, dR) = cclause
      Invariants:
        If BV(i) is free in M, then BV(i) is bound in (eV |- M).
        If M = PiTyp (x:A, No), then M ~ g.
        If U = TypPiBox (u:t, U') then cD := cD, u:t
+       If U = TypArr U1 U2 then preCond := preCond, U1
 
      TODO: arrow comp-typ to cclause
   *)
       
-  and comptypToCClause' cD tM (cS, dS, dR) =
+  and comptypToCClause' cD tM preCond (cS, dS, dR) =
     match tM with
     | Comp.TypBox (l, LF.ClTyp (LF.MTyp typ, cPsi)) ->
        let tMclause = typToClause' cPsi True typ (cS, dS, dR) in 
-       { ctHead = tM
-       ; lfHead = tMclause.tHead
+       { concl = tM
+       ; lfTyp = tMclause.tHead
        ; cEVars = tMclause.eVars
-       ; cUVars = cD 
-       ; cSubGoals = tMclause.subGoals
+       ; cMVars = cD
+       ; preConds = preCond
        }
     | Comp.TypPiBox (l, tdecl, tM') ->
-       comptypToCClause' (Whnf.extend_mctx cD (tdecl, LF.MShift 0)) tM' (cS, dS, dR)
-     (*
+       let cD' = Whnf.extend_mctx cD (tdecl, LF.MShift 0) in 
+       comptypToCClause' cD' tM' preCond (cS, dS, dR)
     | Comp.TypArr (_, t1, t2) ->
-       comptypToCClause' (Whnf.extend_mctx cD (tdecl, LF.MShift 0)) t2 (cS, dS, dR)
-       *)
+       let pC = (cD, t1) :: preCond in 
+       comptypToCClause' cD t2  pC (cS, dS, dR)
+       
        
    
 
@@ -308,7 +316,7 @@ module Convert = struct
     typToClause' LF.Null True tM (0, 0, 0)
 
   let comptypToCClause tM =
-    comptypToCClause' LF.Empty tM (0, 0, 0)    
+    comptypToCClause' LF.Empty tM [] (0, 0, 0)    
 
   (* etaExpand Psi (A, s) = normal
      Invariants:
@@ -796,6 +804,14 @@ module Printer = struct
              (fmt_ppr_goal cD cPsi) (g, s)))
       (list_of_conjunction cG)
 
+  let fmt_ppr_preconds ppf preConds =
+    fprintf ppf "@[<v>%a@]"
+      (pp_print_list ~pp_sep: pp_print_cut
+         (fun ppf (cD, pC) ->
+           fprintf ppf "%a ->"
+             (fmt_ppr_cmp_typ cD) pC))
+       (List.rev preConds)
+
   (* sgnClauseToString (c, sCl) = string
      String representation of signature clause.
   *)
@@ -806,9 +822,10 @@ module Printer = struct
       (fmt_ppr_subgoals LF.Empty sCl.eVars) (sCl.subGoals, S.id)
 
   let fmt_ppr_sgn_cclause ppf (cidTerm, sCCl) =
-    fprintf ppf "@[<v 2>@[%a@] : @[%a@]@]"
+    fprintf ppf "@[<v 2>@[%a@] : @[%a@]@,%a@]"
       Id.print (compTermName cidTerm)
-      (fmt_ppr_cmp_typ sCCl.cUVars) (sCCl.ctHead)
+      (fmt_ppr_preconds) (sCCl.preConds)
+      (fmt_ppr_cmp_typ sCCl.cMVars) (sCCl.concl)
      
 
   let fmt_ppr_bound ppf =
@@ -1185,6 +1202,12 @@ module Solver = struct
           end
       with
       | U.Failure _ -> ()
+
+    (* matching against a Comp. SgnClause.
+       TODO:: We will probably be checking if all the preConds are met- 
+              therefore allowing us to deduce the conclusion, adding it
+              to dPool??
+     *)                   
                      
     and matchSgnCClause (cidTerm, sCCl) sc =
       let (s', fS) =
@@ -1195,7 +1218,7 @@ module Solver = struct
       try
         trail
           begin fun () ->
-          U.unifyTyp cD cPsi (tA, s) (sCCl.lfHead, s');
+          U.unifyTyp cD cPsi (tA, s) (sCCl.lfTyp, s'); (*
           solveSubGoals dPool cD (cPsi, k) (sCCl.cSubGoals, s')
             begin fun (u, tS) ->
             let tM =
@@ -1207,7 +1230,7 @@ module Solver = struct
                 )
             in
             sc (u, tM)
-            end
+            end *)
           end
       with
       | U.Failure _ -> ()

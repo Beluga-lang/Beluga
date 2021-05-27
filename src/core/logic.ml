@@ -24,7 +24,7 @@ module Options = struct
        3 => + Solutions and proof terms.
        4 => + LF signature & Comp Sig.
   *)
-  let chatter = ref 3
+  let chatter = ref 4
 
   (* Ask before giving more solutions (à la Prolog). *)
   let askSolution = ref false
@@ -804,6 +804,7 @@ module Printer = struct
              (fmt_ppr_goal cD cPsi) (g, s)))
       (list_of_conjunction cG)
 
+  (** Prints each precondition with a trailing `<-`. *)
   let fmt_ppr_preconds ppf preConds =
     fprintf ppf "@[<v>%a@]"
       (pp_print_list ~pp_sep: pp_print_cut
@@ -821,6 +822,7 @@ module Printer = struct
       (fmt_ppr_typ LF.Empty sCl.eVars) (sCl.tHead, S.id)
       (fmt_ppr_subgoals LF.Empty sCl.eVars) (sCl.subGoals, S.id)
 
+  (** Prints a Computation Type clause *)
   let fmt_ppr_sgn_cclause ppf (cidTerm, sCCl) =
     fprintf ppf "@[<v 2>@[%a@] : @[%a@]@,%a@]"
       Id.print (compTermName cidTerm)

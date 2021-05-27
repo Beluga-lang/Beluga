@@ -1,10 +1,8 @@
-open Support.Module
-
 type t = int
 
 let of_int x = x
 
-module Make (_ : UNIT) = struct
+module Make () = struct
   let counter = ref 0
   let next () =
     let x = !counter in

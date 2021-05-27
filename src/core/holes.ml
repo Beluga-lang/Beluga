@@ -251,7 +251,7 @@ let unsafe_parse_lookup_strategy loc (s : string) : lookup_strategy =
 
 (* instantiate a counter for hole IDs;
    this module is kept private to Holes *)
-module ID = HoleId.Make (Module.Unit)
+module ID = HoleId.Make ()
 
 let allocate () = ID.next ()
 let assign id h =

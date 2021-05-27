@@ -4,7 +4,8 @@ open Format
 open Support
 
 module LF = struct
-  open Synext.LF
+  open Syntax
+  open Syntax.Ext.LF
 
   let show_dep ppf =
     function
@@ -185,7 +186,7 @@ end
 
 module Comp = struct
   open Format
-  open Synext.Comp
+  open Syntax.Ext.Comp
 
   let rec show_kind ppf =
     function

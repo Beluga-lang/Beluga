@@ -2,7 +2,7 @@
   (name main)
   (public_name beluga)
   (package beluga)
-  (libraries support beluga dune-build-info)
+  (libraries support beluga dune-build-info syntax)
   (modules main beli version))
 
 (executable
@@ -16,7 +16,7 @@
   (name parse_check)
   (public_name parse_check)
   (package beluga)
-  (libraries support beluga)
+  (libraries support beluga syntax)
   (modules parse_check))
 
 (executable

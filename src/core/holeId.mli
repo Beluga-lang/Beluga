@@ -1,5 +1,3 @@
-open Support.Module
-
 type name =
   | Anonymous
   | Named of string
@@ -15,7 +13,7 @@ val string_of_hole_id : t -> string
     private integer reference, that can be made inaccessible outside
     of holes.ml
  *)
-module Make (_ : UNIT) : sig
+module Make () : sig
   (** Generates the next hole ID. *)
   val next : unit -> t
 end

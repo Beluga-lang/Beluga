@@ -1,7 +1,4 @@
-open Support
-
 module F = Misc.Function
-module Loc = Location
 
 open Debug.Fmt
 
@@ -10,7 +7,7 @@ let violation msg =
   Debug.printf (fun p -> p.fmt "[violation] %s" msg);
   raise (Violation msg)
 
-exception NotImplemented of Loc.t option * string
+exception NotImplemented of Location.t option * string
 let not_implemented loc msg = raise (NotImplemented (Some loc, msg))
 let not_implemented' msg = raise (NotImplemented (None, msg))
 
@@ -51,14 +48,14 @@ let register_printing_function
     (Maybe.map (fun e -> print (fun ppf -> fmt_ppr ppf e)) ++ extract)
 
 let register_located_printing_function
-      (extract : exn -> (Loc.t * 'a) option)
+      (extract : exn -> (Location.t * 'a) option)
       (fmt_ppr : Format.formatter -> 'a -> unit)
     : unit =
   let f (loc, e) =
     print
       begin fun ppf ->
       Format.fprintf ppf "@[<v>%a:@,%a@]"
-        Loc.print loc
+      Location.print loc
         fmt_ppr e
       end
   in
@@ -66,7 +63,7 @@ let register_located_printing_function
   register_printer' (Maybe.map f ++ extract)
 
 let print_location loc =
-  Format.fprintf error_format "%a:@," Loc.print loc
+  Format.fprintf error_format "%a:@," Location.print loc
 
 let print_with_location loc f =
   print_location loc;
@@ -76,7 +73,7 @@ let print_with_location loc f =
    all other printers fail. *)
 let _ =
   Printexc.register_printer
-    begin fun exc ->
+    begin fun _ ->
     (* We unfortunately do not have direct access to the default
        printer that Printexc uses for exceptions, so we print the
        message we want as a side-effect and return None, which should
@@ -113,7 +110,7 @@ let addInformation message =
 (** Register some basic printers. *)
 let _ =
   register_printer
-    begin fun (Sys_error msg) ->
+    begin fun [@warning "-8"] (Sys_error msg) ->
     print
       begin fun ppf ->
       Format.fprintf ppf "System error: %s"
@@ -122,7 +119,7 @@ let _ =
     end;
 
   register_printer
-    begin fun (Violation msg) ->
+    begin fun [@warning "-8"] (Violation msg) ->
     print
       begin fun ppf ->
       Format.fprintf ppf "@[<v>Internal error (please report as a bug):@,@[%a@]@]"
@@ -131,7 +128,7 @@ let _ =
     end;
 
   register_printer
-    begin fun (NotImplemented (loc, msg)) ->
+    begin fun [@warning "-8"] (NotImplemented (loc, msg)) ->
     print
       begin fun ppf ->
       Maybe.when_some loc print_location;

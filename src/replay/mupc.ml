@@ -1,3 +1,5 @@
+open Support
+
 module type ParserInfo = sig
   module Stream : Types.BasicStream
 

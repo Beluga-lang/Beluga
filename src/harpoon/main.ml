@@ -7,11 +7,11 @@
 Harpoon is an interactive mode for Beluga that uses a small set of
 tactics for elaborating proofs.
  *)
-
+open Support
 module B = Beluga
 
 let realMain () =
-  B.Debug.init (Some "debug.out");
+  Debug.init (Some "debug.out");
   let (arg0 :: args) = Array.to_list Sys.argv in
   let open Options in
   let options = parse_arguments args |> elaborate in

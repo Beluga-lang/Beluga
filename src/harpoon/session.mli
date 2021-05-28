@@ -1,6 +1,7 @@
 (** A Harpoon session represents a set of mutually proven theorems. *)
 
 open Beluga
+open Syntax
 open Syntax.Int
 
 module CompS = Store.Cid.Comp

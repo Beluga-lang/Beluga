@@ -11,6 +11,7 @@ open Store.Cid
 module P = Pretty.Int.DefaultPrinter
 open Format
 
+open Syntax
 open Syntax.Int
 
 (* the type of commands  *)
@@ -76,7 +77,7 @@ let types =
         let entrylist =
           List.map snd (Typ.current_entries ())
         in
-        let dctx = Synint.LF.Null in
+        let dctx = Syntax.Int.LF.Null in
         fprintf ppf "@[<v>%a@];\n@?"
           (pp_print_list ~pp_sep:pp_print_cut
              (fun ppf x ->
@@ -441,16 +442,16 @@ let printfun =
           let n = Id.(mk_name (SomeString arg)) in
           let entry = Store.Cid.Comp.(index_of_name n |> get) in
           match Store.Cid.Comp.Entry.(entry.prog) with
-          | Some (Synint.Comp.ThmValue (thm_name, thm_body, _ms, _env)) ->
+          | Some (Syntax.Int.Comp.ThmValue (thm_name, thm_body, _ms, _env)) ->
              let d =
                let open Syntax.Int.Sgn in
                { thm_name
                ; thm_typ = Store.Cid.Comp.Entry.(entry.typ)
                ; thm_body
-               ; thm_loc = Syntax.Loc.ghost
+               ; thm_loc = Location.ghost
                }
              in
-             P.fmt_ppr_sgn_decl ppf (Synint.Sgn.Theorem [d])
+             P.fmt_ppr_sgn_decl ppf (Syntax.Int.Sgn.Theorem [d])
           | _  -> fprintf ppf "- %s is not a function.;\n@?" arg
         with
         | Not_found ->
@@ -475,7 +476,7 @@ let query =
       begin fun ppf arglist ->
       try
         begin
-          let [Synext.Sgn.Query (_, name, extT, expected, tries)] =
+          let [Syntax.Ext.Sgn.Query (_, name, extT, expected, tries)] =
             let expected = List.hd arglist in
             let tries = List.hd (List.tl arglist) in
             let str = String.concat " " (List.tl (List.tl arglist)) in
@@ -494,7 +495,7 @@ let query =
                 tA
               )
           in
-          (* let cD       = Synint.LF.Empty in *)
+          (* let cD       = Syntax.Int.LF.Empty in *)
           Unify.StdTrail.forceGlobalCnstr ();
           let (tA', i) =
             Monitor.timer
@@ -507,7 +508,7 @@ let query =
           Monitor.timer
             ( "Constant Check"
             , fun () ->
-              Check.LF.checkTyp Synint.LF.Empty Synint.LF.Null (tA', Substitution.LF.id)
+              Check.LF.checkTyp Syntax.Int.LF.Empty Syntax.Int.LF.Null (tA', Substitution.LF.id)
             );
           Logic.storeQuery name (tA', i) expected tries;
           Logic.runLogic ();

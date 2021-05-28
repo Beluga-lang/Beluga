@@ -1,6 +1,7 @@
+open Support
 open Syntax
 
-type leftover_vars = (Abstract.free_var Int.LF.ctx * Loc.t) list
+type leftover_vars = (Abstract.free_var Int.LF.ctx * Location.t) list
 
 (** Processes global pragmas, which must appear at the beginning of
     the list, and returns the remaining declarations. *)

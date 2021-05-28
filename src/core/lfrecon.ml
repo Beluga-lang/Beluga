@@ -66,7 +66,7 @@ type error =
   | UnboundIdSub
   | InvalidProjection of Int.LF.mctx * Int.LF.dctx * Int.LF.typ * Apx.LF.proj
 
-exception Error of Syntax.Loc.t * error * hint list
+exception Error of Location.t * error * hint list
 
 let throw_hint loc e hints = raise (Error (loc, e, hints))
 let throw loc e = throw_hint loc e []
@@ -1055,7 +1055,7 @@ and elTerm' recT cD cPsi r sP =
      dprintf
        (fun p ->
          p.fmt "[elTerm'] elaborated LFHole at %a"
-           Loc.print_short loc);
+           Location.print_short loc);
      Int.LF.LFHole (loc, id, name)
 
   | Apx.LF.Root (loc, Apx.LF.Const c, spine) ->
@@ -1159,7 +1159,7 @@ and elTerm' recT cD cPsi r sP =
 
          dprintf begin fun p ->
            p.fmt "[elTerm'] reconstructing hole to implicit root at %a"
-             Loc.print_short loc
+             Location.print_short loc
            end;
 
          begin match recT with
@@ -1303,7 +1303,7 @@ and elTerm' recT cD cPsi r sP =
                   p.fmt
                     "[elTerm] it's %a at %a "
                     (P.fmt_ppr_lf_dctx cD P.l0) cPhi
-                    Loc.print_short loc);
+                    Location.print_short loc);
 
               begin
                 match Context.ctxVar cPhi with
@@ -1667,7 +1667,7 @@ and elTerm' recT cD cPsi r sP =
          (P.fmt_ppr_lf_mctx P.l0) cD
          (P.fmt_ppr_lf_dctx cD P.l0) cPsi
          (P.fmt_ppr_lf_dctx cD P.l0) cPhi
-         Loc.print loc
+         Location.print loc
        end;
      let s'' = elSub loc recT cD cPsi s' Int.LF.Subst cPhi in
      dprintf
@@ -2204,7 +2204,7 @@ and elClosedTerm' recT cD cPsi =
 
   | _ ->
      dprint (fun () -> "[elClosedTerm] Violation?");
-     throw Syntax.Loc.ghost CompTypAnn
+     throw Location.ghost CompTypAnn
 
 (* When we elaborate a substitution, the source and target LF contexts
    cPsi and cPhi have already been elaborated.
@@ -2555,7 +2555,7 @@ and elHead loc recT cD cPsi head cl =
          (Int.LF.MVar (Int.LF.Offset offset, s'), (tP, s'))
        with
        | Whnf.Fmvar_not_found ->
-          throw Syntax.Loc.ghost (UnboundName u)
+          throw Location.ghost (UnboundName u)
      end
 
   | (Apx.LF.FPVar (p, s), cl) ->
@@ -2726,14 +2726,14 @@ and elKSpineI loc recT cD cPsi spine i sK =
        Int.LF.App (tN, spine')
     | ((Int.LF.PiKind ((Int.LF.TypDecl (n, tA), _), tK), s), Pibox) ->
        (* let sshift = mkShift recT cPsi in *)
-       (* let tN = Whnf.etaExpandMMV Syntax.Loc.ghost cD cPsi (tA, s) n S.LF.id in*)
+       (* let tN = Whnf.etaExpandMMV Location.ghost cD cPsi (tA, s) n S.LF.id in*)
        let tN =
          if !strengthen
          then
-           ConvSigma.etaExpandMMVstr Syntax.Loc.ghost cD cPsi (tA, s) Int.LF.Maybe (Some n)
+           ConvSigma.etaExpandMMVstr Location.ghost cD cPsi (tA, s) Int.LF.Maybe (Some n)
              Context.(names_of_dctx cPsi @ names_of_mctx cD)
          else
-           Whnf.etaExpandMMV Syntax.Loc.ghost cD cPsi (tA, s) n S.LF.id Int.LF.Maybe
+           Whnf.etaExpandMMV Location.ghost cD cPsi (tA, s) n S.LF.id Int.LF.Maybe
        in
        let spine' = elKSpineI loc recT cD cPsi spine (i - 1) (tK, Int.LF.Dot (Int.LF.Obj tN, s)) in
        Int.LF.App (tN, spine')
@@ -2803,7 +2803,7 @@ and elSpineSynth recT cD cPsi spine s' sP =
   match (spine, sP) with
   | (Apx.LF.Nil, _) ->
      let ss = S.LF.invert s' in
-     let tQ = pruningTyp Syntax.Loc.ghost cD cPsi (Context.dctxToHat cPsi) sP (Int.LF.MShift 0, ss) in
+     let tQ = pruningTyp Location.ghost cD cPsi (Context.dctxToHat cPsi) sP (Int.LF.MShift 0, ss) in
      (* PROBLEM: [s'][ss] [s]P is not really P; in fact [ss][s]P may not exist;
       * We use pruning to ensure that [ss][s]P does exist
       *)

@@ -78,7 +78,7 @@ let run args =
       let sgn' = begin match Recsgn.recSgnDecls sgn with
     | sgn', None -> sgn'
     | _, Some _ ->
-      raise (Abstract.Error (Syntax.Loc.ghost, Abstract.LeftoverVars))
+      raise (Abstract.Error (Location.ghost, Abstract.LeftoverVars))
       end
       in
       Chatter.print 1 "%a" P.fmt_ppr_sgn sgn';

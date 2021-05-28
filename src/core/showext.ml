@@ -4,6 +4,7 @@ open Format
 open Support
 
 module LF = struct
+  open Syntax
   open Syntax.Ext.LF
 
   let show_dep ppf =
@@ -30,6 +31,9 @@ module LF = struct
        fprintf ppf "TypDecl(@[<hv>%a,@ %a@])"
          Id.print x
          show_type t
+    | TypDeclOpt x ->
+        fprintf ppf "TypDeclOpt(%a)"
+          Id.print x
 
   and show_cltyp ppf =
     function
@@ -51,6 +55,9 @@ module LF = struct
        fprintf ppf "ClTyp(@[<hv>%a,@ %a@])"
          show_cltyp cltyp
          show_dctx cPsi
+    | CTyp x ->
+        fprintf ppf "CTyp(%a)"
+            Id.print x
 
   and show_loc_ctyp ppf (_, ctyp) =
     show_ctyp ppf ctyp

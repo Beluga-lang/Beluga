@@ -2,7 +2,7 @@
   (name main)
   (public_name harpoon)
   (package beluga)
-  (libraries extlib gen sedlex linenoise support optparser beluga dune-build-info))
+  (libraries extlib gen sedlex linenoise support optparser beluga dune-build-info syntax))
 (env
   (dev
     (flags (:standard -w Azep-44-48-50-58 -warn-error Ap-37-48-50-60))))

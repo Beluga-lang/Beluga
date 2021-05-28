@@ -1,4 +1,5 @@
 open Beluga
+open Syntax
 open Syntax.Int.Comp
 
 module CompS = Store.Cid.Comp

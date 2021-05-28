@@ -1,13 +1,14 @@
 open Support
 open Beluga
+open Syntax
 open Syntax.Int
 
 module CompS = Store.Cid.Comp
 module F = Misc.Function
 module P = Pretty.Int.DefaultPrinter
 
-let dprintf, _, _ = Beluga.Debug.(makeFunctions' (toFlags [15]))
-open Beluga.Debug.Fmt
+let dprintf, _, _ = Debug.(makeFunctions' (toFlags [15]))
+open Debug.Fmt
 
 type t =
   { theorems : Theorem.t DynArray.t
@@ -289,7 +290,7 @@ let configuration_wizard' io automation_state : Id.cid_mutual_group * Theorem.t 
        let total_dec_kind =
          match order with
          | Some (Either.Right no) -> `inductive no
-         | Some (Either.Left (Synext.Comp.Trust _)) -> `trust
+         | Some (Either.Left (Syntax.Ext.Comp.Trust _)) -> `trust
          | None -> `not_recursive
        in
        let conf = Theorem.Conf.make name total_dec_kind tau k in

@@ -3,6 +3,7 @@ open Support
 module O = Options
 
 open Beluga
+open Syntax
 open Syntax.Int
 
 module P = Pretty.Int.DefaultPrinter

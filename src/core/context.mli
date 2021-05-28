@@ -2,7 +2,7 @@
 
     @author Brigitte Pientka
 *)
-
+open Syntax
 open Syntax.Int.LF
 open Syntax.Int
 

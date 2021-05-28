@@ -21,7 +21,7 @@ type error =
   | NotImplemented of string
   | TooManyArg
 
-exception E of Syntax.Loc.t * error
+exception E of Location.t * error
 
 let throw loc e = raise (E (loc, e))
 
@@ -393,7 +393,7 @@ let rec rec_spine cD (cM, cU) =
      raise Not_compatible
 
   | (n, (Comp.TypPiBox (_, cdecl, tau), theta)) ->
-     let (cN, ft) = gen_var (Syntax.Loc.ghost) cD (Whnf.cnormCDecl (cdecl, theta)) in
+     let (cN, ft) = gen_var (Location.ghost) cD (Whnf.cnormCDecl (cdecl, theta)) in
      let (spine, tau_r) = rec_spine cD (cM, cU) (n - 1, (tau, LF.MDot (ft, theta))) in
      (Comp.M cN :: spine, tau_r)
 
@@ -429,7 +429,7 @@ let rec rec_spine' cD (x, ttau0) =
        | _ -> raise Not_compatible
      end
   | (n, (Comp.TypPiBox (_, cdecl, tau), theta)) ->
-     let (cN, ft) = gen_var (Syntax.Loc.ghost) cD (Whnf.cnormCDecl (cdecl, theta)) in
+     let (cN, ft) = gen_var (Location.ghost) cD (Whnf.cnormCDecl (cdecl, theta)) in
      let (spine, tau_r) = rec_spine' cD (x, ttau0) (n - 1, (tau, LF.MDot (ft, theta))) in
      (Comp.M cN :: spine, tau_r)
 
@@ -441,25 +441,25 @@ let rec rec_spine' cD (x, ttau0) =
 let gen_meta_obj (cdecl, theta) k =
   match cdecl with
   | LF.CTyp (schema_cid) ->
-     (Syntax.Loc.ghost, LF.CObj (LF.CtxVar (LF.CtxOffset k)))
+     (Location.ghost, LF.CObj (LF.CtxVar (LF.CtxOffset k)))
   | LF.ClTyp (LF.MTyp tA, cPsi) ->
      let phat = Context.dctxToHat cPsi in
      let psihat' = Whnf.cnorm_psihat phat theta in
      let mv = LF.MVar (LF.Offset k, Substitution.LF.id) in
-     let tM = LF.Root (Syntax.Loc.ghost, mv, LF.Nil, `explicit) in
-     (Syntax.Loc.ghost, LF.ClObj (psihat', LF.MObj tM))
+     let tM = LF.Root (Location.ghost, mv, LF.Nil, `explicit) in
+     (Location.ghost, LF.ClObj (psihat', LF.MObj tM))
 
   | LF.ClTyp (LF.PTyp tA, cPsi) ->
      let phat = Context.dctxToHat cPsi in
      let psihat' = Whnf.cnorm_psihat phat theta in
      let pv = LF.PVar (k, Substitution.LF.id) in
-     (Syntax.Loc.ghost, LF.ClObj (psihat', LF.PObj pv))
+     (Location.ghost, LF.ClObj (psihat', LF.PObj pv))
 
   | LF.ClTyp (LF.STyp (_, cPsi), cPhi) ->
      let sv = LF.SVar (k, 0, Substitution.LF.id) in
      let phat = Context.dctxToHat cPsi in
      let psihat' = Whnf.cnorm_psihat phat theta in
-     (Syntax.Loc.ghost, LF.ClObj (psihat', LF.SObj sv))
+     (Location.ghost, LF.ClObj (psihat', LF.SObj sv))
 
 let uninstantiated_arg cM =
   match Whnf.cnormMetaObj (cM, Whnf.m_id) with
@@ -597,7 +597,7 @@ let rec get_return_type cD x =
   function
   | (Comp.TypArr (_, _, tau0), theta) -> get_return_type cD x (tau0, theta)
   | (Comp.TypPiBox (_, cdecl, tau0), theta) ->
-     let (_, ft) = gen_var (Syntax.Loc.ghost) cD (Whnf.cnormCDecl (cdecl, theta)) in
+     let (_, ft) = gen_var (Location.ghost) cD (Whnf.cnormCDecl (cdecl, theta)) in
      get_return_type cD x (tau0, LF.MDot (ft, theta))
   | ttau -> (x, ttau)
 
@@ -617,7 +617,7 @@ let rec gen_rec_calls' cD cG cIH (cG0, j) mfs =
          (P.fmt_ppr_cmp_typ cD P.l0) tau0
        end;
      let (_, ttau0') =
-       get_return_type cD (Comp.Var (Syntax.Loc.ghost, j)) (tau0, Whnf.m_id)
+       get_return_type cD (Comp.Var (Location.ghost, j)) (tau0, Whnf.m_id)
      in
      let mk_wfrec (f, x, ttau) =
        dprintf begin fun p ->
@@ -1258,7 +1258,7 @@ let stratify a tau n =
   let mSize = mS_size mS in
   if (mSize < n || n <= 0)
   then
-    throw Loc.ghost (WrongArgNum (a, n))
+    throw Location.ghost (WrongArgNum (a, n))
   else
     begin
       let mC = find_meta_obj mS n in

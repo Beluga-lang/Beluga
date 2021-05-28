@@ -12,13 +12,13 @@ open Equality
    to other modules) are declared at the end of this file.
 *)
 open Store
+open Syntax
 open Syntax.Int.LF
 open Syntax.Int
 open Trail
 
 module P = Pretty.Int.DefaultPrinter
 module R = Store.Cid.DefaultRenderer
-module Loc = Location
 
 let (dprintf, dprint, dprnt) = Debug.makeFunctions' (Debug.toFlags [15])
 open Debug.Fmt
@@ -74,7 +74,7 @@ module type UNIFY = sig
   val intersection : dctx_hat -> sub -> sub -> dctx -> (sub * dctx)
 
   exception Failure of string
-  exception GlobalCnstrFailure of Loc.t * string
+  exception GlobalCnstrFailure of Location.t * string
   exception NotInvertible
 
   (* All unify* functions return () on success and raise Failure on failure *)
@@ -115,7 +115,7 @@ module Make (T : TRAIL) : UNIFY = struct
   module P = Pretty.Int.DefaultPrinter
 
   exception Failure of string
-  exception GlobalCnstrFailure of Loc.t * string
+  exception GlobalCnstrFailure of Location.t * string
   exception NotInvertible
 
   let fail s = raise (Failure s)
@@ -1311,7 +1311,7 @@ module Make (T : TRAIL) : UNIFY = struct
     | (FSVar (n, ns), cPsi1) -> FSVar (n, pruneFVar cD cPsi ns ss rOccur)
 
     | (MSVar (n, ((i, mt), t)), cPsi1) ->
-       MSVar (n, pruneMMVarInst cD cPsi Syntax.Loc.ghost i (mt, t) ss rOccur)
+       MSVar (n, pruneMMVarInst cD cPsi Location.ghost i (mt, t) ss rOccur)
 
     | (Dot (ft, s'), DDec (cPsi', _)) ->
        Dot (pruneFront cD cPsi ft ss rOccur, pruneSubst cD cPsi (s', cPsi') ss rOccur)
@@ -1324,7 +1324,7 @@ module Make (T : TRAIL) : UNIFY = struct
   and pruneFront cD cPsi ft ss rOccur =
     match ft with
     | Obj tM -> Obj (prune cD cPsi (Context.dctxToHat cPsi) (tM, id) ss rOccur)
-    | Head h -> Head (pruneHead cD cPsi (Syntax.Loc.ghost, h) ss rOccur)
+    | Head h -> Head (pruneHead cD cPsi (Location.ghost, h) ss rOccur)
 
   (* pruneSub cD0 cPsi phat (s, cPsi1) ss rOccur = (s', cPsi1')
 
@@ -1725,7 +1725,7 @@ module Make (T : TRAIL) : UNIFY = struct
             cPsi |- tN . s <= cPsi', x:A
           *)
          let tN =
-           ConvSigma.etaExpandMMVstr Loc.ghost cD1 cPsi1 (tA, s) Maybe (Some n)
+           ConvSigma.etaExpandMMVstr Location.ghost cD1 cPsi1 (tA, s) Maybe (Some n)
              Context.(names_of_dctx cPsi @ names_of_mctx cD0)
          in
          let tS = genSpine cD1 cPsi1 (tB, LF.Dot (LF.Obj tN, s)) in
@@ -1769,7 +1769,7 @@ module Make (T : TRAIL) : UNIFY = struct
   and pruneITerm cD cPsi (hat, tm) ss rOccur =
     match tm with
     | (INorm n, _) -> INorm (prune cD cPsi hat (n, id) ss rOccur)
-    | (IHead h, _) -> IHead (pruneHead cD cPsi (Syntax.Loc.ghost, h) ss rOccur)
+    | (IHead h, _) -> IHead (pruneHead cD cPsi (Location.ghost, h) ss rOccur)
     | (ISub s, STyp (_, cPhi)) -> ISub (pruneSubst cD cPsi (s, cPhi) ss rOccur)
 
   and unifyMMVarTerm cD0 cPsi mmvar mt1 t1' sM2 =
@@ -1943,7 +1943,7 @@ module Make (T : TRAIL) : UNIFY = struct
             *)
            instantiateMVar
              ( mmvar1.instantiation
-             , Root (Syntax.Loc.ghost, MVar (w, s'), Nil, `explicit)
+             , Root (Location.ghost, MVar (w, s'), Nil, `explicit)
              , mmvar1.constraints.contents
              )
          end
@@ -2325,7 +2325,7 @@ module Make (T : TRAIL) : UNIFY = struct
        (* check s1' and s2' are pattern substitutions; possibly generate constraints;
            check intersection (s1', s2'); possibly prune *)
        if isPatMSub mt1 && isPatSub s1 && isPatMSub mt2 && isPatSub s2
-       then unifyMMVarMMVar cPsi Syntax.Loc.ghost i1 i2
+       then unifyMMVarMMVar cPsi Location.ghost i1 i2
        else
          begin
            let id = next_constraint_id () in
@@ -2477,7 +2477,7 @@ module Make (T : TRAIL) : UNIFY = struct
               && isPatSub t1
               && isPatMSub mt2
               && isPatSub t2 ->
-       unifyMMVarMMVar cPsi Syntax.Loc.ghost q1 q2
+       unifyMMVarMMVar cPsi Location.ghost q1 q2
 
     | (MSVar (_, ((q, mt), s)), s2)
          when isPatSub s && isPatMSub mt ->
@@ -2560,7 +2560,7 @@ module Make (T : TRAIL) : UNIFY = struct
          mflag
          cD0
          cPsi
-         (Root (Syntax.Loc.ghost, head, Nil, `explicit), id)
+         (Root (Location.ghost, head, Nil, `explicit), id)
          (tN, id)
 
     | (Undef, Undef) -> ()
@@ -2982,7 +2982,7 @@ module Make (T : TRAIL) : UNIFY = struct
                 pp_print_string msg;
               flush_str_formatter ()
             in
-            raise (GlobalCnstrFailure (Loc.ghost, cnstr_string))
+            raise (GlobalCnstrFailure (Location.ghost, cnstr_string))
        end;
        (* Unification could succeed by postponing the constraint
             we just tried to solve, so now we need to check that
@@ -2998,7 +2998,7 @@ module Make (T : TRAIL) : UNIFY = struct
         *)
        if solvedCnstrs (!globalCnstrs)
        then (resetGlobalCnstrs (); forceGlobalCnstr' cnstrs)
-       else raise (GlobalCnstrFailure (Loc.ghost, "[forceGlobalCnstr'] Constraints generated"))
+       else raise (GlobalCnstrFailure (Location.ghost, "[forceGlobalCnstr'] Constraints generated"))
 
   let unresolvedGlobalCnstrs () =
     try

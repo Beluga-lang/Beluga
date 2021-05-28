@@ -1,7 +1,7 @@
 (library
   (name beluga)
   (modules :standard)
-  (libraries gen sedlex extlib support unix str)
+  (libraries gen sedlex extlib support unix str syntax)
   (preprocess
     (pps sedlex.ppx)))
 (env

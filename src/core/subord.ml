@@ -10,6 +10,7 @@
 include Options.Subord
 
 open Support
+open Syntax
 open Syntax.Int.LF
 module Types = Store.Cid.Typ
 module Schema = Store.Cid.Schema

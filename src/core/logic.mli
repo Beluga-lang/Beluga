@@ -1,4 +1,5 @@
 open Syntax.Int
+open Syntax
 
 type goal
 type query

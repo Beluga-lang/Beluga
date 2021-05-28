@@ -1,3 +1,5 @@
+open Support
+
 (** The things needed to build a tokenizer. *)
 module type TokenizerInfo = sig
   type 'a token

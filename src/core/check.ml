@@ -51,7 +51,6 @@ module Comp = struct
 
   open Store
   open Cid
-  module Loc = Syntax.Loc
   open Syntax.Int.Comp
 
   module S = Substitution
@@ -114,7 +113,7 @@ module Comp = struct
          * int (* premise index *)
          * suffices_typ (* given type annotation *)
 
-  exception Error of Syntax.Loc.t * error
+  exception Error of Location.t * error
 
   let throw loc e = raise (Error (loc, e))
 
@@ -730,7 +729,7 @@ module Comp = struct
   let rec checkParamTypeValid loc cD cPsi tA =
     let rec checkParamTypeValid' (cPsi0, n) =
       match cPsi0 with
-      | Int.LF.Null -> () (* raise (Error (Syntax.Loc.ghost, IllegalParamTyp (cD, cPsi, tA))) *)
+      | Int.LF.Null -> () (* raise (Error (Location..ghost, IllegalParamTyp (cD, cPsi, tA))) *)
       | Int.LF.CtxVar psi ->
          (* tA is an instance of a schema block *)
          let { Schema.Entry.name; schema = Int.LF.Schema elems; decl = _ } =
@@ -774,7 +773,7 @@ module Comp = struct
          | Unify.Failure _ ->
             Error.violation
               ("[syn] type annotation not unifiable with PiBox type "
-               ^ Fmt.stringify Loc.print_short loc
+               ^ Fmt.stringify Location.print_short loc
               )
        end;
        checkMetaSpine loc cD mS (cK, I.MDot (metaObjToMFront mO, t))
@@ -1203,7 +1202,7 @@ module Comp = struct
          p.fmt "[syn] @[<v>MApp synthesized function type at %a\
                 @,tau1 = @[%a@]\
                 @,cU = @[%a@]@]"
-           Loc.print_short loc
+           Location.print_short loc
            P.(fmt_ppr_cmp_typ cD l0) (Whnf.cnormCTyp (tau1, t1))
            P.(fmt_ppr_cmp_meta_typ cD) cU
          end;
@@ -1230,7 +1229,7 @@ module Comp = struct
             | Unify.Failure _ ->
                Error.violation
                  ("[syn] type annotation not unifiable with PiBox type "
-                  ^ Fmt.stringify Loc.print_short loc)
+                  ^ Fmt.stringify Location.print_short loc)
           end;
           dprintf
             begin fun p ->
@@ -1630,7 +1629,7 @@ module Comp = struct
            P.(fmt_ppr_cmp_typ cD l0) (Whnf.cnormCTyp (tau', t))
          end;
        let (cU, _) =
-         require_syn_typbox cD cG Loc.ghost i (tau', t)
+         require_syn_typbox cD cG Location.ghost i (tau', t)
          |> Whnf.cnormMTyp
          |> apply_unbox_modifier_opt cD modifier
        in

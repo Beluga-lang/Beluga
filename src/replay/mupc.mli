@@ -14,6 +14,7 @@ Microparsec supports parsing arbitrary streams, not just streams of
 characters. Furthermore, Microparsec supports on-line parsing: the
 input does not need to be fully available.
  *)
+open Support
 
 module type ParserInfo = sig
   type item

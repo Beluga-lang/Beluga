@@ -1,3 +1,6 @@
+open Support
+open Syntax
+
 module Comp = Syntax.Int.Comp
 module LF = Syntax.Int.LF
 
@@ -22,7 +25,7 @@ val withPatVar : gen_pat_var_strategy
 
 val map_inside : ('a -> 'b) -> 'a inside -> 'b inside
 
-exception Error of Syntax.Loc.t * error
+exception Error of Location.t * error
 
 val enableCoverage : bool ref
 val warningOnly : bool ref
@@ -30,7 +33,7 @@ val no_covers : int ref
 
 type problem
 
-val make : Syntax.Loc.t
+val make : Location.t
            -> Comp.case_pragma
            -> LF.mctx (* cD *)
            -> Comp.branch list (* branches *)

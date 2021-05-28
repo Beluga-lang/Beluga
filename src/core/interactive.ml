@@ -6,13 +6,13 @@ open Support
 module F = Misc.Function
 module P = Pretty.Int.DefaultPrinter
 module PExt = Pretty.Ext.DefaultPrinter
-module Loc = Syntax.Loc
 module LF = Syntax.Int.LF
 module ExtComp = Syntax.Ext.Comp
 module Comp = Syntax.Int.Comp
 module Cover = Coverage
 module S = Substitution
 open Syntax.Int.Comp
+open Syntax
 
 let dprintf, dprint, _ = Debug.makeFunctions' (Debug.toFlags [11])
 open Debug.Fmt
@@ -91,12 +91,12 @@ let branchCovGoals i cG0 cgs =
     let make_branch patt =
       let id = Holes.allocate () in
       Comp.Branch
-        ( Loc.ghost
+        ( Location.ghost
         , LF.Empty
         , (cD, LF.Empty)
         , patt
         , ms
-        , Comp.Hole (Loc.ghost, id, HoleId.Anonymous)
+        , Comp.Hole (Location.ghost, id, HoleId.Anonymous)
         )
     in
     match cg with
@@ -104,8 +104,8 @@ let branchCovGoals i cG0 cgs =
        (* Printf.printf "CovGoal %s with msub =  %s and i = %s\n" (P.dctxToString cD cPsi) (P.msubToString cD ms) (string_of_int i); *)
        make_branch
          (PatMetaObj
-            ( Loc.ghost
-            , ( Loc.ghost
+            ( Location.ghost
+            , ( Location.ghost
               , LF.CObj cPsi
               )
             )
@@ -116,8 +116,8 @@ let branchCovGoals i cG0 cgs =
        (* _tau' = tau[ms] *)
        make_branch
          (PatMetaObj
-            ( Loc.ghost
-            , ( Loc.ghost
+            ( Location.ghost
+            , ( Location.ghost
               , LF.ClObj
                   ( Context.dctxToHat cPsi
                   , LF.MObj tR
@@ -225,16 +225,16 @@ let intro (h : Holes.comp_hole_info Holes.hole) =
          | _ ->
             let nam = Id.mk_name (Id.NoName) in
             let exp = crawl cD (LF.Dec (cG, Comp.CTypDecl (nam, t1, false))) t2 in
-            Comp.Fn(Loc.ghost, nam, exp)
+            Comp.Fn(Location.ghost, nam, exp)
        end
     | Comp.TypPiBox (_, tdec, t')
          when not (is_inferred tdec) ->
        let nam = LF.name_of_ctyp_decl tdec in
        let exp = crawl (LF.Dec (cD, tdec)) cG t' in
-       Comp.MLam (Loc.ghost, nam, exp, `explicit)
+       Comp.MLam (Location.ghost, nam, exp, `explicit)
     | _ ->
        let id = Holes.allocate () in
-       Comp.Hole (Loc.ghost, id, HoleId.Anonymous)
+       Comp.Hole (Location.ghost, id, HoleId.Anonymous)
   in
   crawl cDT cGT tau
 
@@ -337,16 +337,16 @@ let split (e : string) (hi : HoleId.t * Holes.comp_hole_info Holes.hole) : Comp.
            let mtyp' = Whnf.cnormMTyp (mtyp, LF.MShift i) in (* cD0 |- mtyp' *)
            let m0 =
              match mtyp with
-             | LF.CTyp _ -> (Loc.ghost, LF.CObj (LF.CtxVar (LF.CtxOffset i)))
+             | LF.CTyp _ -> (Location.ghost, LF.CObj (LF.CtxVar (LF.CtxOffset i)))
              | LF.ClTyp (LF.MTyp _, cPsi) ->
                 let cPsi' = Whnf.cnormDCtx (cPsi, LF.MShift i) in
                 let phat = Context.dctxToHat cPsi' in
-                ( Loc.ghost,
+                ( Location.ghost,
                   LF.ClObj
                     ( phat,
                       LF.MObj
                         (LF.Root
-                           ( Loc.ghost
+                           ( Location.ghost
                            , LF.MVar (LF.Offset i, LF.Shift 0)
                            , LF.Nil
                            , `explicit
@@ -357,12 +357,12 @@ let split (e : string) (hi : HoleId.t * Holes.comp_hole_info Holes.hole) : Comp.
              | LF.ClTyp (LF.PTyp _, cPsi) ->
                 let cPsi' = Whnf.cnormDCtx (cPsi, LF.MShift i) in
                 let phat = Context.dctxToHat cPsi' in
-                ( Loc.ghost
+                ( Location.ghost
                 , LF.ClObj
                     ( phat
                     , LF.MObj
                         (LF.Root
-                           ( Loc.ghost
+                           ( Location.ghost
                            , LF.PVar (i, LF.Shift 0)
                            , LF.Nil
                            , `explicit
@@ -373,7 +373,7 @@ let split (e : string) (hi : HoleId.t * Holes.comp_hole_info Holes.hole) : Comp.
              | _ -> failwith "Interactive Splitting on Substitution Variables not supported"
            in
            let entry = Comp.AnnBox (m0, mtyp') in
-           Some (matchFromPatterns (Loc.ghost) entry bl)
+           Some (matchFromPatterns (Location.ghost) entry bl)
          end
        else
          searchMctx (i + 1) cD' (cd :: cD_tail)
@@ -517,7 +517,7 @@ let fmt_ppr_hole ppf (i, (Holes.Exists (w, h)) : HoleId.t * Holes.some_hole) : u
   (* 1. The 'hole identification component' contains the hole name (if any) and its number. *)
   fprintf ppf
     "@[<hov>%a:@ Hole number %a, %a@]@,  @[<v>"
-    Loc.print loc
+    Location.print loc
     HoleId.fmt_ppr_id i
     HoleId.fmt_ppr_name name;
   (* thin_line ppf (); *)

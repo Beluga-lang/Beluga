@@ -1,13 +1,11 @@
 open Support
 
-module Loc = Location
-
 type error =
   | UnlexableCharacter of string
   | MismatchedBlockComment
   | Violation of string
 
-exception Error of Loc.t * error
+exception Error of Location.t * error
 
 let throw loc e = raise (Error (loc, e))
 
@@ -44,12 +42,12 @@ let dollar_blank = [%sedlex.regexp? "$_"]
 let dot_number = [%sedlex.regexp? '.', number]
 
 let shift_by_lexeme lexbuf loc =
-  Loc.shift (Sedlexing.lexeme_length lexbuf) loc
+  Location.shift (Sedlexing.lexeme_length lexbuf) loc
 
-let advance_lines (n : int) (lexbuf : Sedlexing.lexbuf) (loc : Loc.t) : Loc.t =
-  Loc.move_line n (Loc.shift (Sedlexing.lexeme_length lexbuf) loc)
+let advance_lines (n : int) (lexbuf : Sedlexing.lexbuf) (loc : Location.t) : Location.t =
+  Location.move_line n (Location.shift (Sedlexing.lexeme_length lexbuf) loc)
 
-let advance_line : Sedlexing.lexbuf -> Loc.t -> Loc.t = advance_lines 1
+let advance_line : Sedlexing.lexbuf -> Location.t -> Location.t = advance_lines 1
 
 let update_loc loc f = loc := f !loc
 
@@ -65,7 +63,7 @@ let get_lexeme loc lexbuf =
 let count_linebreaks loc s =
   let n = ref 0 in
   String.iter (fun c -> if Misc.Char.equals c '\n' then incr n) s;
-  if !n <> 0 then loc := Loc.move_line !n !loc
+  if !n <> 0 then loc := Location.move_line !n !loc
 
 let arrow =       [%sedlex.regexp? ("->" | 0x2192)]
 let turnstile =   [%sedlex.regexp? ("|-" | 0x22a2)]

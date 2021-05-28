@@ -1,3 +1,4 @@
+open Support
 open Loc
 type loc = Loc.t
 

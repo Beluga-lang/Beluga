@@ -29,7 +29,7 @@
     particular, a hashtable or a trie that associates to each name its
     highest count.
  *)
-
+open Syntax
 open Syntax.Int
 
 (** Generates a raw parameter variable name for a given LF type.

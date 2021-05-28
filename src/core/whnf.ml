@@ -1,16 +1,17 @@
-open Support.Equality
 (**
 
-   @author Brigitte Pientka
-   modified:  Joshua Dunfield
+@author Brigitte Pientka
+modified:  Joshua Dunfield
 
 *)
 
 (* Weak Head Normalization,
- * Normalization, and alpha-conversion
- *)
+* Normalization, and alpha-conversion
+*)
 
+open Support.Equality
 open Support
+open Syntax
 open Syntax.Int.LF
 open Syntax.Int
 open Substitution
@@ -23,7 +24,7 @@ module T = Store.Cid.Typ
 exception Fmvar_not_found
 exception FreeMVar of head
 exception NonInvertible
-exception InvalidLFHole of Loc.t
+exception InvalidLFHole of Location.t
 
 let m_id = MShift 0
 
@@ -147,14 +148,14 @@ let rec lowerMVar' cPsi sA' dep =
          (tA', LF.dot1 s')
          dep
      in
-     (u', Lam (Syntax.Loc.ghost, Id.mk_name Id.NoName, tM))
+     (u', Lam (Location.ghost, Id.mk_name Id.NoName, tM))
 
   | (TClo (tA, s), s') ->
      lowerMVar' cPsi (tA, LF.comp s s') dep
 
   | (Atom (loc, a, tS), s') ->
      let u' = newMVar None (cPsi, Atom (loc, a, SClo (tS, s'))) dep in
-     (u', Root (Syntax.Loc.ghost, MVar (u', LF.id), Nil, Depend.to_plicity dep)) (* cvar * normal *)
+     (u', Root (Location.ghost, MVar (u', LF.id), Nil, Depend.to_plicity dep)) (* cvar * normal *)
 
 (* lowerMVar1 (u, tA[s]), tA[s] in whnf, see lowerMVar *)
 and lowerMVar1 u sA =
@@ -204,14 +205,14 @@ and lowerMMVar' cD cPsi sA' dep =
   match sA' with
   | (PiTyp ((decl, _), tA'), s') ->
      let (u', tM) = lowerMMVar' cD (DDec (cPsi, LF.decSub decl s')) (tA', LF.dot1 s') dep in
-     (u', Lam (Syntax.Loc.ghost, Id.mk_name Id.NoName, tM))
+     (u', Lam (Location.ghost, Id.mk_name Id.NoName, tM))
 
   | (TClo (tA, s), s') ->
      lowerMMVar' cD cPsi (tA, LF.comp s s') dep
 
   | (Atom (loc, a, tS), s') ->
      let u' = newMMVar None (cD, cPsi, Atom (loc, a, SClo (tS, s'))) dep in
-     (u', Root (Syntax.Loc.ghost, MMVar ((u', MShift 0), LF.id), Nil)) (* cvar * normal *)
+     (u', Root (Location.ghost, MMVar ((u', MShift 0), LF.id), Nil)) (* cvar * normal *)
 
 
 (* lowerMMVar1 (u, tA[s]), tA[s] in whnf, see lowerMMVar *)

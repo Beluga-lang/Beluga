@@ -32,7 +32,7 @@ So our parsing function type now looks like:
 
 > type 'a parser = state -> state * (error, 'a) Either.t
 
-where `state` contains a `(Loc.t * Token.t) LinkStream.t` for the
+where `state` contains a `(Location.t * Token.t) LinkStream.t` for the
 input as well as extra stuff for handling backtracking.
 
 In reality, we wrap the parsing function into a record so that we can
@@ -121,8 +121,8 @@ backtrack out of the parser for case expressions.
  *)
 
 open Support
+open Syntax
 
-module Loc = Location
 module Comp = Syntax.Ext.Comp
 module LF = Syntax.Ext.LF
 module Sgn = Syntax.Ext.Sgn
@@ -132,7 +132,7 @@ module F = Misc.Function
 (***** Parser state definition *****)
 
 (** Type of located values, i.e. values paired with their location. *)
-type 'a locd = Loc.t * 'a
+type 'a locd = Location.t * 'a
 
 (** The input to the parser is a backtrackable stream of tokens paired
     with their locations.
@@ -145,7 +145,7 @@ type input = T.t locd LinkStream.t
 type state =
   { input : input
   ; backtrack : bool
-  ; last_loc : Loc.t (* Location of the last token seen by the parser. *)
+  ; last_loc : Location.t (* Location of the last token seen by the parser. *)
   }
 
   (*
@@ -164,7 +164,7 @@ let next_token s =
 
 type error_entry =
   { label : string
-  ; location : Loc.t option
+  ; location : Location.t option
   }
 
 type path' =
@@ -173,7 +173,7 @@ type path' =
 and path = path' list
 
          (*
-let entry (location : Loc.t) (label : string) : path' =
+let entry (location : Location.t) (label : string) : path' =
   Entry { location = Some location; label }
           *)
 
@@ -292,7 +292,7 @@ and error =
      and so on
      ```
    *)
-  ; loc : Loc.t (* the location the error occurred at *)
+  ; loc : Location.t (* the location the error occurred at *)
   }
 
   (*
@@ -317,7 +317,7 @@ let print_path ppf (path : path) : unit =
   let print_entry ppf { label; location } : unit =
     fprintf ppf "in `%s'%a" label
       (Maybe.print
-         (fun ppf x -> fprintf ppf " at %a" Loc.print x))
+         (fun ppf x -> fprintf ppf " at %a" Location.print x))
       location
   in
   let rec go' ppf (path' : path') =
@@ -401,18 +401,18 @@ type kind_or_typ =
 (***** Parser type definition *****)
 
 (** Gets the location of the next item in the input stream *)
-let next_loc_at (s : state) : Loc.t =
+let next_loc_at (s : state) : Location.t =
   match LinkStream.observe s.input with
   | None -> failwith "lexer invariant failed"
   (* the lexer should infinitely repeat "EOI" when it's done. *)
   | Some ((loc, _), _) -> loc
 
-let prev_loc_at (s : state) : Loc.t = s.last_loc
+let prev_loc_at (s : state) : Location.t = s.last_loc
 
 let initial_state input =
   { input
   ; backtrack = false
-  ; last_loc = Loc.ghost
+  ; last_loc = Location.ghost
   }
 
 (** A parsing result is either an error or a successfully computed value. *)
@@ -572,11 +572,11 @@ let void (p : 'a parser) : unit parser = p &> pure ()
 (** Gets the location of the next token in the input stream.
     If the stream is ended, gets the location of the last token.
  *)
-let next_loc : Loc.t parser =
+let next_loc : Location.t parser =
   get_state
   $> fun s -> next_loc_at s
 
-let prev_loc : Loc.t parser =
+let prev_loc : Location.t parser =
   get_state
   $> fun s -> prev_loc_at s
 
@@ -586,7 +586,7 @@ let span p =
       fun s ->
       let p =
         seq3 next_loc p prev_loc
-        $> fun (l1, x, l2) -> (Loc.join l1 l2, x)
+        $> fun (l1, x, l2) -> (Location.join l1 l2, x)
       in
       p.run s
   }
@@ -595,7 +595,7 @@ let span p =
     transform the label stack.
     Also provides the location of the very next token `p` would see.
  *)
-let relabelling (type a) (p : a parser) (f : Loc.t -> path -> path) : a parser =
+let relabelling (type a) (p : a parser) (f : Location.t -> path -> path) : a parser =
   next_loc
   $ fun loc ->
     let open Either in
@@ -694,7 +694,7 @@ let sequence (ps : 'a parser list) : 'a list parser =
 
                                 (*
 (** Gets the next item in the input stream without advancing the parser. *)
-let peek : (Loc.t * Token.t) option parser = anon_parser (fun s -> pure_at s (peek_at s))
+let peek : (Location.t * Token.t) option parser = anon_parser (fun s -> pure_at s (peek_at s))
                                  *)
 
 (***** Prioritized choice *****)
@@ -957,7 +957,7 @@ let namify (p : string t) : Id.name t =
 let name : Id.name parser =
   namify identifier
 
-type name_or_blank = [ `name of Id.name | `blank of Loc.t ]
+type name_or_blank = [ `name of Id.name | `blank of Location.t ]
 
 let blankify (p : unit t) : name_or_blank t =
   p |> span $> fun (loc, _) -> `blank loc
@@ -1885,13 +1885,13 @@ let clf_ctyp_decl_bare : type a. a name_parser -> (a -> LF.depend * Id.name) -> 
                  $> fun (loc2, ctx) ->
                     mk_decl dep
                       (fun w -> LF.CTyp w)
-                      (Loc.join loc1 loc2, (x, ctx)))
+                      (Location.join loc1 loc2, (x, ctx)))
                 (bracks_or_opt_parens (contextual clf_typ_atomic) |> span
                  $> fun (loc2, d) ->
                     mk_cltyp_decl
                       dep
                       (fun tA -> LF.MTyp tA)
-                      (Loc.join loc1 loc2, (x, d)))
+                      (Location.join loc1 loc2, (x, d)))
           ]
       in
       q.run s
@@ -1964,13 +1964,13 @@ let clf_ctyp_decl =
                  $> fun (loc2, ctx) ->
                     mk_decl LF.No
                       (fun w -> LF.CTyp w)
-                      (Loc.join loc1 loc2, (x, ctx)))
+                      (Location.join loc1 loc2, (x, ctx)))
                 (bracks_or_opt_parens (contextual clf_typ_atomic)
                  |> span
                  $> fun (loc2, d) ->
                     mk_cltyp_decl
                       (fun tA -> LF.MTyp tA)
-                      (Loc.join loc1 loc2, (x, d)))
+                      (Location.join loc1 loc2, (x, d)))
           ]
         |> braces
       in
@@ -2275,7 +2275,7 @@ and cmp_pattern_atomic =
         nested cmp_pattern
           snd
           (fun (l1, p1) (l2, p2) ->
-            Comp.PatPair (Loc.join l1 l2, p1, p2))
+            Comp.PatPair (Location.join l1 l2, p1, p2))
         |> labelled "nested/pair pattern"
       in
       let var =
@@ -2386,7 +2386,7 @@ and cmp_exp_chk' =
         nested cmp_exp_chk
           snd
           (fun (l1, e1) (l2, e2) ->
-            Comp.Pair (Loc.join l1 l2, e1, e2))
+            Comp.Pair (Location.join l1 l2, e1, e2))
       in
       let hole = hole |> span $> fun (loc, h) -> Comp.Hole (loc, h) in
       let box_hole = token T.UNDERSCORE |> span $> fun (loc, _) -> Comp.BoxHole loc in
@@ -2457,7 +2457,7 @@ and cmp_exp_syn =
              match es with
              | [] -> i
              | (loc', e) :: es ->
-                let i = Comp.Apply (Loc.join loc loc', i, e) in
+                let i = Comp.Apply (Location.join loc loc', i, e) in
                 fold i es
            in
            fold i es
@@ -2494,7 +2494,7 @@ and cmp_exp_syn' =
         nested cmp_exp_syn
           snd
           (fun (l1, i1) (l2, i2) ->
-            Comp.PairVal (Loc.join l1 l2, i1, i2))
+            Comp.PairVal (Location.join l1 l2, i1, i2))
         |> labelled "nested synthesizable expression or pair"
       in
       let name =

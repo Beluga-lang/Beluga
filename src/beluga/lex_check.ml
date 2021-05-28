@@ -14,10 +14,9 @@
 
 open Support
 open Beluga
-module Loc = Lexer.Loc
 
 (** From a token stream, finds to location of the EOI token. *)
-let rec find_eoi (s : (Loc.t * Token.t) Gen.t) : Loc.t option =
+let rec find_eoi (s : (Location.t * Token.t) Gen.t) : Location.t option =
   match s () with
   | None -> None
   | Some (l, Token.EOI) -> Some l
@@ -33,10 +32,10 @@ let passes_check (path : string) : bool =
   let real_end = Sedlexing.Utf8.from_string input |> count 0 in
   Printf.printf "found end %d\n" real_end;
   let stream = GenMisc.of_string input in
-  let out = Lexer.mk (Loc.initial path) stream in
+  let out = Lexer.mk (Location.initial path) stream in
   match find_eoi out with
   | None -> false
-  | Some l -> Loc.start_offset l = real_end
+  | Some l -> Location.start_offset l = real_end
 
 let main () =
   match Array.to_list Sys.argv with

@@ -3,6 +3,8 @@ open Syntax.Int
 type goal
 type comp_goal 
 type query
+type mquery
+   
 
 module Options : sig
   val enableLogic : bool ref
@@ -11,7 +13,7 @@ end
 module Convert : sig
   val typToQuery : LF.mctx -> LF.dctx -> LF.typ * Id.offset
                    -> query * LF.typ * LF.sub * (Id.name * LF.normal) list
-  val comptypToMQuery : Comp.typ * Id.offset -> comp_goal * Comp.typ * LF.msub * (Id.name * Comp.meta_obj) list
+  val comptypToMQuery : Comp.typ * Id.offset -> mquery * Comp.typ * LF.msub * (Id.name * Comp.meta_obj) list
 end
 
 module Frontend : sig
@@ -20,6 +22,7 @@ end
 
 module Solver : sig
   val solve : LF.mctx -> LF.dctx -> query -> (LF.dctx * LF.normal -> unit) -> unit
+  val msolve : LF.mctx -> LF.dctx -> mquery -> (LF.dctx * LF.normal -> unit) -> unit
 end
 
 type bound = int option

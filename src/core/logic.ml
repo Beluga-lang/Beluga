@@ -667,6 +667,7 @@ module Index = struct
   *)
   let robSecondStore () =
     try
+
       List.iter storeCompTypConst (Cid.Typ.current_entries ())
     with
     | _ -> ()
@@ -696,7 +697,9 @@ module Index = struct
   *)
   let clearIndex () =
     DynArray.clear queries;
-    Hashtbl.clear types
+    DynArray.clear mqueries;             (* Added clearing tasks for mquery and compTypes ? *)
+    Hashtbl.clear types;
+    Hashtbl.clear compTypes
 
 
   let singleQuery (p, (tA, i), cD, e, t) f =
@@ -804,7 +807,7 @@ module Printer = struct
              (fmt_ppr_goal cD cPsi) (g, s)))
       (list_of_conjunction cG)
 
-  (** Prints each precondition with a trailing `<-`. *)
+  (** Prints each precondition with a trailing `->`. *)
   let fmt_ppr_preconds ppf preConds =
     fprintf ppf "@[<v>%a@]"
       (pp_print_list ~pp_sep: pp_print_cut

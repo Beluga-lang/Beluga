@@ -426,7 +426,7 @@ let comptypToMQuery (tau, i) =
          p.fmt "goal = %a"
            (Pretty.Int.DefaultPrinter.fmt_ppr_cmp_typ LF.Empty Pretty.Int.DefaultPrinter.l0) (Whnf.cnormCTyp (tau,ms))
          end ; 
-          ((comptypToCompGoal tau), tau, ms, xs) 
+          (((comptypToCompGoal tau),ms), tau, ms, xs) 
       | Comp.TypBox (_loc, LF.ClTyp (LF.PTyp _tA, _cPsi)) ->
          raise NotImplementedYet
       | Comp.TypBox (loc, LF.ClTyp (LF.STyp (_svar_c, _cPhi),  _cPsi)) ->
@@ -444,7 +444,7 @@ let comptypToMQuery (tau, i) =
          p.fmt "goal = %a"
            (Pretty.Int.DefaultPrinter.fmt_ppr_cmp_typ LF.Empty Pretty.Int.DefaultPrinter.l0) (Whnf.cnormCTyp (tau,ms))
          end ; 
-         ((comptypToCompGoal tau), tau, ms, xs)
+         (((comptypToCompGoal tau),ms), tau, ms, xs)
       | _ -> raise NotImplementedYet
     in
     comptypToMQuery' (tau, i) (LF.MShift 0) []
@@ -615,8 +615,6 @@ module Index = struct
     let typConst = addCompTyp cidTyp in
     let regSgnCClause cidTerm =
       addSgnCClause typConst (compileSgnCClause cidTyp)
-    (*  with failure ->
-        addSgnClause typConst (compileSgnCClause cidTerm) *)
     in
     let rec revIter f =
       function
@@ -645,8 +643,7 @@ module Index = struct
   *)
   let storeMQuery ((tau, i), e, t, d) =
     (*  TO BE IMPLEMENTED AND FINISHED *)
-    let (comp_goal, tau', ms, xs) = (Convert.comptypToMQuery (tau, i)) in
-    let mq = (comp_goal, ms) in
+    let (mq, tau', ms, xs) = (Convert.comptypToMQuery (tau, i)) in
     addSgnMQuery (tau', mq, [], e, t, d)
 
 
@@ -662,8 +659,6 @@ module Index = struct
 
   (* robSecondStore () = ()
      Store all comptype constants in the `compTypes' table.
-
- TODO:: current_entries for compTyps???
   *)
   let robSecondStore () =
     try
@@ -1001,7 +996,7 @@ module Solver = struct
 
     (* matchDProg dPool = ()
        Try all the dynamic clauses in dPool starting with the most
-       recent one. If dPool is empty, try the signature.
+       recent one. If dPool is empty, try the signatures.
     *)
     let rec matchDProg =
       function
@@ -1038,10 +1033,8 @@ module Solver = struct
          matchDProg dPool'
 
       | Empty ->
-         try 
-           matchSig (cidFromAtom tA)
-         with failure ->
-           matchCompSig (cidFromAtom tA)
+         matchSig (cidFromAtom tA);
+         matchCompSig (cidFromAtom tA)
 
     (* Decides whether the given Sigma type can solve the
      * goal type by trying all the projections.
@@ -1164,19 +1157,19 @@ module Solver = struct
        Try all the clauses in the static signature with head matching
        type constant c.
      *)
-    and matchSig cidTyp =
-      I.iterSClauses (fun w -> matchSgnClause w sc) cidTyp
+     and matchSig cidTyp =
+       I.iterSClauses (fun w -> matchSgnClause w sc) cidTyp
 
     (*    TODO:: where to use matchCompSig???   *)
     (* matchSig c = ()
-       Try all the clauses in the static signature with head matching
+       Try all the clauses in the static Comp signature with head matching
        type constant c.
      *)
-    and matchCompSig cidTyp =
+     and matchCompSig cidTyp =
       I.iterSCClauses (fun w -> matchSgnCClause w sc) cidTyp  
 
     (* matchSgnClause (c, sCl) sc = ()
-       Try to unify the head of sCl with A[s]. If unification succeeds,
+       Try to unify the LF type of sCl with A[s]. If unification succeeds,
        attempt to solve the subgoals of sCl.
      *)
     and matchSgnClause (cidTerm, sCl) sc =
@@ -1205,7 +1198,7 @@ module Solver = struct
       with
       | U.Failure _ -> ()
 
-    (* matching against a Comp. SgnClause.
+    (* Try to unify the LF type of sCCl with A[s].
        TODO:: We will probably be checking if all the preConds are met- 
               therefore allowing us to deduce the conclusion, adding it
               to dPool??
@@ -1216,27 +1209,15 @@ module Solver = struct
         C.dctxToSub cD cPsi (sCCl.cEVars, shiftSub (Context.dctxLength cPsi))
           (fun tS -> tS)
       in
-      (* Trail to undo MVar instantiations. *)
       try
-        trail
-          begin fun () ->
-          U.unifyTyp cD cPsi (tA, s) (sCCl.lfTyp, s'); (*
-          solveSubGoals dPool cD (cPsi, k) (sCCl.cSubGoals, s')
-            begin fun (u, tS) ->
-            let tM =
-              LF.Root
-                ( Syntax.Loc.ghost
-                , LF.Const (cidTerm)
-                , fS (spineFromRevList tS)
-                , `explicit
-                )
-            in
-            sc (u, tM)
-            end *)
-          end
+      fprintf std_formatter "goal! = %a"
+
+      (P.fmt_ppr_lf_typ cD cPsi P.l0) (tA)   ;             
+        U.unifyTyp cD cPsi (tA, s) (sCCl.lfTyp, s');
       with
       | U.Failure _ -> ()
     in
+    
     (* ^ end of the gigantic let of all the helpers for matchAtom;
      * Now here's the actual body of matchAtom: *)
     matchDelta cD
@@ -1283,6 +1264,25 @@ module Solver = struct
   *)
   let solve cD cPsi (g, s) sc =
     gSolve Empty cD (cPsi, Context.dctxLength cPsi) (g, s) sc
+
+
+  let msolve cD cPsi (cg, ms) sc =
+    let rec unroll cD (cg,ms) = match (cg,ms) with
+      | (Box (_cPsi, _g), ms) -> (cD, (cg,ms))
+      | (Forall (tdecl, cg'), ms) ->
+          unroll (Whnf.extend_mctx cD  (tdecl,ms)) (cg',Whnf.mvar_dot1 ms) 
+       in
+       let (cD', mgoal_atomic) = unroll cD (cg,ms) in
+       match mgoal_atomic  with
+    | (Box(cPsi', g) , ms) -> 
+          begin
+            try
+                solve cD' cPsi' (g, Substitution.LF.id) sc;
+             with
+              | _ -> ()
+          end       
+    | _ -> raise NotImplementedYet 
+    
 end
 
 module Frontend = struct
@@ -1439,9 +1439,9 @@ module Frontend = struct
           unroll (Whnf.extend_mctx cD  (tdecl,ms)) (cg',Whnf.mvar_dot1 ms) 
     in 
     let solutions = ref 0 in
-    let (cD, mgoal_atomic) = unroll LF.Empty sgnMQuery.mquery in  
+    let (cD, mgoal_atomic) = unroll LF.Empty sgnMQuery.mquery in
     match mgoal_atomic  with
-    | (Box(cPsi, g) , ms) ->
+    | (Box(cPsi, g) , ms) -> 
        let scInit (cPsi, tM) =
           incr solutions;
           begin

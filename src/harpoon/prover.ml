@@ -172,8 +172,40 @@ let process_command
         (HoleId.string_of_name_or_id (h.Holes.name, id))
       end;
     let { name; Holes.cD = cDh; info; _ } = h in
-    match w with
-    | Holes.CompInfo -> failwith "computational holes not supported"
+    match w with 
+    | Holes.CompInfo ->
+      begin
+       let { compGoal; Holes.cG = cGh; compSolution } = h.info
+       in
+       assert (compSolution = None);
+       let typ = Whnf.cnormCTyp compGoal in
+       dprintf
+         begin fun p ->
+         p.fmt "[harpoon] [solve] [holes] @[<v>goal: @[%a@]@]"
+           (P.fmt_ppr_cmp_typ cDh Pretty.Int.DefaultPrinter.l0) typ
+         end;
+       Logic.prepare ();
+       let (mquery, skinnyCTyp, mquerySub, instMMVars) =
+         Logic.Convert.comptypToMQuery (typ,0)
+       in
+       try
+         Logic.Solver.msolve cDh LF.Null mquery
+           begin
+             fun (cPsi, tM) ->
+           State.printf s "found solution: @[%a@]@,@?"
+             (P.fmt_ppr_lf_normal cDh cPsi P.l0) tM;
+           (* TODO:: How to add a solution to compSolution??
+           h.info.compSolution <- Some (tM, LF.Shift 0); *)
+           raise Logic.Frontend.Done
+           end 
+       with
+         | Logic.Frontend.Done ->
+             State.printf s "logic programming finished@,@?"; 
+             ()
+
+        end
+       
+  
     | Holes.LFInfo ->
        let { lfGoal; cPsi; lfSolution } = h.info in
        assert (lfSolution = None);
@@ -198,7 +230,7 @@ let process_command
        with
        | Logic.Frontend.Done ->
           State.printf s "logic programming finished@,@?";
-          ()
+          () 
   in
 
   let { cD; cG; cIH } = g.context in

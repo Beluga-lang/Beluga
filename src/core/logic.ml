@@ -686,9 +686,11 @@ module Index = struct
   let iterAllSClauses f =
     Hashtbl.iter (fun k v -> DynArray.iter f v) types
 
+  (* bp : currently unused     
   let iterSCClauses f cidTyp =
     DynArray.iter f (Hashtbl.find compTypes cidTyp)
-
+   *)
+    
   let iterAllSCClauses f =
     Hashtbl.iter (fun k v -> DynArray.iter f v) compTypes
 
@@ -1240,11 +1242,11 @@ module Solver = struct
         U.unifyTyp cD cPsi (tA, s) (sCCl.lfTyp, s');
       with
       | U.Failure _ -> ()
+ *)
     in
- *)    
     (* ^ end of the gigantic let of all the helpers for matchAtom;
          Now here's the actual body of matchAtom: *)
-
+    matchDelta cD
 
   (* spineFromRevList : LF.normal list -> LF.spine
      build an LF.spine out of a list of LF.normal, reversing the order of the elements*)

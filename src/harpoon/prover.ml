@@ -172,6 +172,15 @@ let process_command
         (HoleId.string_of_name_or_id (h.Holes.name, id))
       end;
     let { name; Holes.cD = cDh; info; _ } = h in
+    let rec cGtoList gctx cG =
+      (* Turn the Computation assumptions into a list of comp goals *)
+      match gctx with
+      | LF.Empty -> []
+      | LF.Dec (gctx', CTypDecl (name, typ, wf_tag)) ->
+         let c_g = Logic.Convert.comptypToCompGoal typ in
+         let cG' =  c_g :: cG in
+         cGtoList gctx' cG'
+    in
     match w with 
     | Holes.CompInfo ->
       begin
@@ -181,6 +190,7 @@ let process_command
                  useable assumptions since they aren't currently being used.
                  Can we unbox them- placing them in our meta-context?  *)
         in
+        let cG' = cGtoList cGh [] in
         assert (compSolution = None);
         let typ = Whnf.cnormCTyp compGoal in
         dprintf
@@ -193,11 +203,11 @@ let process_command
           Logic.Convert.comptypToMQuery (typ,0)
         in
            try
-          Logic.Solver.msolve cDh LF.Null mquery
+          Logic.CSolver.cgSolve cG' cDh mquery
             begin
-              fun (cPsi, tM) ->
+              fun cD (cPsi, tM) ->
             State.printf s "found solution: @[%a@]@,@?"
-              (P.fmt_ppr_lf_normal cDh cPsi P.l0) tM;
+              (P.fmt_ppr_lf_normal cD cPsi P.l0) tM;
            (* TODO:: How to add a solution to compSolution??
                      Will need to convert term into type exp_chk *)
            (*

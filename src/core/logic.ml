@@ -283,8 +283,20 @@ module Convert = struct
     | LF.Atom _ ->
        Atom (Shift.shiftAtom tM (-cS, -dS, dR))
 
-      
-  and comptypToGoal tau (cS, dS, dR) =
+  (* TODO:: May need to add shifts as args? *)
+  and goalToTyp g =
+    match g with
+    | Atom tp -> tp
+    | All (tdec, g') ->
+       let g'' = goalToTyp g' in 
+       LF.PiTyp ((tdec, LF.Maybe), g'')
+    | Impl ((res_g, tdec), g') ->
+       let g'' = goalToTyp g' in
+       LF.PiTyp ((tdec, LF.No), g'')
+         
+
+           
+  and comptypToCompGoal tau  =
     match tau with
     | Comp.TypBox (_loc, LF.ClTyp (LF.MTyp tA, cPsi)) ->
        (* Invariant: tA will always be atomic in our implementation *)
@@ -298,6 +310,10 @@ module Convert = struct
        raise NotImplementedYet
     | Comp.TypPiBox (loc, ctyp_decl , tau') ->
        Forall(ctyp_decl, comptypToCompGoal tau' )
+    | Comp.TypArr (loc, tau1, tau2) ->
+       let cg1 = comptypToCompGoal tau1 in
+       let cg2 = comptypToCompGoal tau1 in 
+       Implies (cg1, cg2)
 
 
   and typToRes tM (cS, dS, dR) =
@@ -455,6 +471,11 @@ let comptypToMQuery (tau, i) =
            (Pretty.Int.DefaultPrinter.fmt_ppr_cmp_typ LF.Empty Pretty.Int.DefaultPrinter.l0) (Whnf.cnormCTyp (tau,ms))
          end ; 
          (((comptypToCompGoal tau),ms), tau, ms, xs)
+      | Comp.TypArr (loc, tau1, tau2) when i = 0 ->
+         (((comptypToCompGoal tau),ms), tau, ms, xs)
+      | Comp.TypArr (loc, tau1, tau2) when i > 0 ->
+         (* TODO:: This case?? *)
+         raise NotImplementedYet
       | _ -> raise NotImplementedYet
     in
     comptypToMQuery' (tau, i) (LF.MShift 0) []
@@ -647,7 +668,7 @@ module Index = struct
 
   (* storeMQuery ((tau, i), e, t) = ()
      Invariants:
-       i = # of abstracted EVars in tA
+       i = # of abstracted EVars in tau
        e = expected number of  solutions
        t = expected number of tries to find soln.
   *)
@@ -1312,25 +1333,53 @@ end
 
 module CSolver = struct
 
-  let rec cgSolve (cG : comp_goal list) cD (cg, ms) sc =
-(*    let rec filter_cG cG cD ms =
-      match cG with
-      | [] -> (cG, cD, ms)
-      | Box(_cPsi, _g) :: cG' ->
-         raise NotImplementedYet
-          (* In this case, we want to "unbox" the assumption and add it to 
-             our cD *)
+  (* Take an LF goal (extracted from a comp goal) and unbox, 
+     i.e. convert to LF ctyp_decl so it may be added to the cD *)
+  let unbox g cPsi =
+    let typ = Convert.goalToTyp g in
+    (* TO DO:: Not always an MTyp?? *)
+    let cltyp = LF.MTyp typ in
+    let ctyp = LF.ClTyp (cltyp, cPsi) in
+    let name = Id.mk_name (Whnf.newMTypName ctyp) in
+    LF.Decl (name, ctyp, LF.No)
 
-      | x :: cG' -> filter_cG cG' cD ms
-         
-    in *)
-   
-    
+  let rec cgSolve (cG : comp_goal list) cD (cg, ms) sc =
+
+    (* Clean up comp assumptions in cG *)
+    let rec filter_cG cG cD ms =
+      match cG with
+      | [] -> (cG, cD)
+      | Box(_cPsi, _g) :: cG' ->
+        (* In this case, we want to "unbox" the assumption and add it to 
+             our cD *)
+         let typ_dec = unbox _g _cPsi in
+         let cD' = Whnf.extend_mctx cD (typ_dec, ms) in
+         filter_cG cG' cD' ms
+      | x :: cG' ->
+         let (cG'', cD') = filter_cG cG' cD ms in
+         (x :: cG'', cD')
+    in
+
+    (* Focusing phase of proof search *)
+    let focus cG cD c_g ms sc =
+      match c_g with
+      | Box (_cPsi, _g) ->
+         try
+           Solver.solve cD _cPsi (_g, LF.Shift 0) (sc cD)
+         with
+         | _ -> ()
+
+
+
+           (* Main loop  *)
+    in
+    (* First we collect assumption from the overall goal until we
+       reach an atomic goal *)
     match cg with
     | Box (_cPsi, _g) ->
-       (* First we filter the cD *)
-       (* let cG' cD' ms = filter_cG cG cD ms in *)
-       ()
+       (* Then we filter the cG, so only stable assumptions are left *)
+       let (cG', cD') = filter_cG cG cD ms in 
+       focus cG' cD' cg ms sc
     | Forall (tdecl, cg') ->
        (* In this case we gain an assumption in the meta-context *)
        let cD' = Whnf.extend_mctx cD (tdecl,ms) in
@@ -1505,7 +1554,7 @@ module Frontend = struct
     (*    let (cD, mgoal_atomic) = unroll LF.Empty sgnMQuery.mquery in 
     match mgoal_atomic  with
     | (Box(cPsi, g) , ms) -> *)
-    let scInit (cD, cPsi, tM) =
+    let scInit cD (cPsi, tM) =
           incr solutions;
           begin
             fprintf std_formatter  "@[<v>---------- Solution %d ----------@,[%a |- %a]@]" 

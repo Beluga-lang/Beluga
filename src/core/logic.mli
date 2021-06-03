@@ -10,6 +10,7 @@ module Options : sig
 end
 
 module Convert : sig
+  val comptypToCompGoal : Comp.typ -> comp_goal 
   val typToQuery : LF.mctx -> LF.dctx -> LF.typ * Id.offset
                    -> query * LF.typ * LF.sub * (Id.name * LF.normal) list
   val comptypToMQuery : Comp.typ * Id.offset -> mquery * Comp.typ * LF.msub * (Id.name * Comp.meta_obj) list
@@ -21,8 +22,11 @@ end
 
 module Solver : sig
   val solve : LF.mctx -> LF.dctx -> query -> (LF.dctx * LF.normal -> unit) -> unit
-  val msolve : LF.mctx -> LF.dctx -> mquery -> (LF.dctx * LF.normal -> unit) -> unit
 end
+
+module CSolver : sig
+  val cgSolve : comp_goal list -> LF.mctx -> mquery -> (LF.mctx -> (LF.dctx * LF.normal) -> unit) -> unit
+end 
 
 type bound = int option
 

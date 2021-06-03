@@ -106,7 +106,7 @@ type clause =                    (* Horn Clause ::= eV |- A :- cG   *)
 type comp_goal =
   | Box of  LF.dctx  * goal
   | Implies of comp_goal * comp_goal  
-  | Forall of  LF.ctyp_decl * comp_goal         
+  | Forall of  LF.ctyp_decl * comp_goal
 
 type mquery = comp_goal * LF.msub       (* mq := (cg, ms)  *)
 
@@ -707,11 +707,10 @@ module Index = struct
   let iterAllSClauses f =
     Hashtbl.iter (fun k v -> DynArray.iter f v) types
 
-  (* bp : currently unused     
+    (* unused for now...
   let iterSCClauses f cidTyp =
-    DynArray.iter f (Hashtbl.find compTypes cidTyp)
-   *)
-    
+    DynArray.iter f (Hashtbl.find compTypes cidTyp)  *)
+   
   let iterAllSCClauses f =
     Hashtbl.iter (fun k v -> DynArray.iter f v) compTypes
 
@@ -1070,11 +1069,6 @@ module Solver = struct
 
       | Empty ->
          matchSig (cidFromAtom tA)
-      (* bp: 
-         we are in the LF level – the LF level cannot use computation-level types (see definition/grammar of Beluga) 
-         ==> we need an entire proof search level for computation-level types which replicates what is done for LF for computation-level types!
-         matchCompSig (cidFromAtom tA)  *)
-            
 
     (* Decides whether the given Sigma type can solve the
      * goal type by trying all the projections.
@@ -1200,19 +1194,6 @@ module Solver = struct
      and matchSig cidTyp =
        I.iterSClauses (fun w -> matchSgnClause w sc) cidTyp
 
-    (*    TODO:: where to use matchCompSig???   *)
-    (* matchSig c = ()
-       Try all the clauses in the static Comp signature with head matching
-       type constant c.
-     *)
-(* 
-      bp: we are in the LF level – the LF level cannot use computation-level types (see definition/grammar of Beluga) 
-         ==> we need an entire proof search level for computation-level types which replicates what is done for LF for computation-level types! 
-
-
-    and matchCompSig cidTyp =
-      I.iterSCClauses (fun w -> matchSgnCClause w sc) cidTyp  
- *)
     (* matchSgnClause (c, sCl) sc = ()
        Try to unify the LF type of sCl with A[s]. If unification succeeds,
        attempt to solve the subgoals of sCl.
@@ -1245,25 +1226,6 @@ module Solver = struct
         | U.Failure _ -> ()
       end 
 
-    (* Try to unify the LF type of sCCl with A[s].
-       TODO:: We will probably be checking if all the preConds are met- 
-              therefore allowing us to deduce the conclusion, adding it
-              to dPool??
-     *)                   
-(* bp: we cannot use computation-level clauses within LF level (see earlier comment)                    
-    and matchSgnCClause (cidTerm, sCCl) sc =
-      let (s', fS) =
-        C.dctxToSub cD cPsi (sCCl.cEVars, shiftSub (Context.dctxLength cPsi))
-          (fun tS -> tS)
-      in
-      try
-      fprintf std_formatter "goal! = %a"
-
-      (P.fmt_ppr_lf_typ cD cPsi P.l0) (tA)   ;             
-        U.unifyTyp cD cPsi (tA, s) (sCCl.lfTyp, s');
-      with
-      | U.Failure _ -> ()
- *)
     in
     (* ^ end of the gigantic let of all the helpers for matchAtom;
          Now here's the actual body of matchAtom: *)
@@ -1310,31 +1272,12 @@ module Solver = struct
   let solve cD cPsi (g, s) sc =
     gSolve Empty cD (cPsi, Context.dctxLength cPsi) (g, s) sc
 
-
-  let msolve cD cPsi (cg, ms) sc =
-    let rec unroll cD (cg,ms) = match (cg,ms) with
-      | (Box (_cPsi, _g), ms) -> (cD, (cg,ms))
-      | (Forall (tdecl, cg'), ms) ->
-          unroll (Whnf.extend_mctx cD  (tdecl,ms)) (cg',Whnf.mvar_dot1 ms) 
-    in
-    let (cD', mgoal_atomic) = unroll cD (cg,ms) in
-       (match mgoal_atomic  with
-       | (Box(cPsi', g) , ms) -> 
-          begin
-            try
-              solve cD' cPsi' (g, Substitution.LF.id) sc
-             with
-              | _ -> ()
-          end       
-       | _ -> raise NotImplementedYet)
-
-
 end
 
 module CSolver = struct
 
   (* Take an LF goal (extracted from a comp goal) and unbox, 
-     i.e. convert to LF ctyp_decl so it may be added to the cD *)
+     i.e. convert to an LF ctyp_decl so it may be added to the cD *)
   let unbox g cPsi =
     let typ = Convert.goalToTyp g in
     (* TO DO:: Not always an MTyp?? *)
@@ -1343,7 +1286,23 @@ module CSolver = struct
     let name = Id.mk_name (Whnf.newMTypName ctyp) in
     LF.Decl (name, ctyp, LF.No)
 
-  let rec cgSolve (cG : comp_goal list) cD (cg, ms) sc =
+  (* Check to see if the cid_typ inside the the comp head of c_g1 
+     matches the cid_typ of the LF type of our goal *)
+  let rec matchLFhead c_g tA =
+    match c_g with
+    | Box (_cPsi, Atom tA') ->
+       Id.cid_equals (Solver.cidFromAtom tA) (Solver.cidFromAtom tA')
+    | Implies (c_g1, c_g2) ->
+       matchLFhead c_g2 tA
+    | Forall (tdec, c_g') ->
+       matchLFhead c_g' tA
+       
+       
+      
+
+
+  (* Solver function for a goal of computation type *)
+  let rec cgSolve (cG : comp_goal list) cD mq sc =
 
     (* Clean up comp assumptions in cG *)
     let rec filter_cG cG cD ms =
@@ -1351,23 +1310,77 @@ module CSolver = struct
       | [] -> (cG, cD)
       | Box(_cPsi, _g) :: cG' ->
         (* In this case, we want to "unbox" the assumption and add it to 
-             our cD *)
+             the cD *)
          let typ_dec = unbox _g _cPsi in
          let cD' = Whnf.extend_mctx cD (typ_dec, ms) in
          filter_cG cG' cD' ms
       | x :: cG' ->
+         (* Otherwise we leave the assumption in cG *)
          let (cG'', cD') = filter_cG cG' cD ms in
          (x :: cG'', cD')
     in
+
+    (* We focus on one of the computation assumptions *)
+    let rec focusCClause cG cD c_g ms sc =
+      match cG with
+      | [] -> raise NotImplementedYet
+      (*  matchCompSig (cidFromAtomicCG c_g)  *)
+      | (Implies (c_g1, c_g2)) :: cG' ->
+         let Box (_cPsi, Atom tA) = c_g in 
+         if (* Check to see if the goal is the head of the assumption *)
+           matchLFhead c_g2 tA 
+         then (* If so, try to solve the subgoals *)
+           raise NotImplementedYet
+         else (* Otherwise, try the remaining comp assumptions *)
+           focusCClause cG' cD c_g ms sc
+      | (Forall (tdec, c_g')) :: cG' ->
+         raise NotImplementedYet
+         
+      
+    in
+    (*         
+     (* Try to unify the LF type of sCCl with A[s].
+       TODO:: We will probably be checking if all the preConds are met- 
+              therefore allowing us to deduce the conclusion, adding it
+              to dPool??
+     *)                                      
+    let matchSgnCClause (cidTerm, sCCl) sc =
+      let (s', fS) =
+        C.dctxToSub cD cPsi (sCCl.cEVars, shiftSub (Context.dctxLength cPsi))
+          (fun tS -> tS)
+      in
+      try
+      fprintf std_formatter "goal! = %a"
+
+      (P.fmt_ppr_lf_typ cD cPsi P.l0) (tA)   ;             
+        U.unifyTyp cD cPsi (tA, s) (sCCl.lfTyp, s');
+      with
+      | U.Failure _ -> ()
+    in  
+
+    (* matchCompSig c = ()
+       Try all the clauses in the static Comp signature with head matching
+       type constant c.
+     *)
+     let matchCompSig cidTyp =
+       I.iterSCClauses (fun w -> matchSgnCClause w sc) cidTyp  
+     in *)
+     
+         
 
     (* Focusing phase of proof search *)
     let focus cG cD c_g ms sc =
       match c_g with
       | Box (_cPsi, _g) ->
-         try
-           Solver.solve cD _cPsi (_g, LF.Shift 0) (sc cD)
+         (try
+           (* First, try solving on LF level *)
+           Solver.solve cD _cPsi (_g, Substitution.LF.id) (sc cD)
          with
-         | _ -> ()
+         (* If no solution found, try solving on comp level *)
+         | _ ->
+            focusCClause cG cD c_g ms sc)
+      | _ -> (* For goals of inductive/stratified type *)
+        raise NotImplementedYet 
 
 
 
@@ -1375,10 +1388,13 @@ module CSolver = struct
     in
     (* First we collect assumption from the overall goal until we
        reach an atomic goal *)
+    let (cg, ms) = mq in 
     match cg with
     | Box (_cPsi, _g) ->
        (* Then we filter the cG, so only stable assumptions are left *)
-       let (cG', cD') = filter_cG cG cD ms in 
+       let (cG', cD') = filter_cG cG cD ms in
+       (* Finally we try to solve the goal via focusing- 
+          either on the LF level or Comp level *)
        focus cG' cD' cg ms sc
     | Forall (tdecl, cg') ->
        (* In this case we gain an assumption in the meta-context *)

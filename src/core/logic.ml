@@ -1310,6 +1310,43 @@ module Solver = struct
 
 end
 
+module CSolver = struct
+
+  let rec cgSolve (cG : comp_goal list) cD (cg, ms) sc =
+(*    let rec filter_cG cG cD ms =
+      match cG with
+      | [] -> (cG, cD, ms)
+      | Box(_cPsi, _g) :: cG' ->
+         raise NotImplementedYet
+          (* In this case, we want to "unbox" the assumption and add it to 
+             our cD *)
+
+      | x :: cG' -> filter_cG cG' cD ms
+         
+    in *)
+   
+    
+    match cg with
+    | Box (_cPsi, _g) ->
+       (* First we filter the cD *)
+       (* let cG' cD' ms = filter_cG cG cD ms in *)
+       ()
+    | Forall (tdecl, cg') ->
+       (* In this case we gain an assumption in the meta-context *)
+       let cD' = Whnf.extend_mctx cD (tdecl,ms) in
+       cgSolve cG cD' (cg', ms) sc
+    | Implies (cg1, cg2) ->
+       (* We gain a computation assumption *)
+       
+       (* Do we need to normalize cG1 first? 
+       let cg1' = Whnf.cnormMTyp (cg1,ms) in
+        *)
+       let cG' = cg1 :: cG in
+       cgSolve cG' cD (cg2, ms) sc
+  
+
+end 
+
 module Frontend = struct
   module P = Printer
   open Index
@@ -1458,16 +1495,17 @@ module Frontend = struct
          cD' is an extension of cD
 
      *)    
-    let rec unroll cD (cg,ms) = match (cg,ms) with
+
+    (* let rec unroll cD (cg,ms) = match (cg,ms) with
       | (Box (_cPsi, _g), ms) -> (cD, (cg,ms))
       | (Forall (tdecl, cg'), ms) ->
           unroll (Whnf.extend_mctx cD  (tdecl,ms)) (cg',Whnf.mvar_dot1 ms) 
-    in 
+    in  *)
     let solutions = ref 0 in
-    let (cD, mgoal_atomic) = unroll LF.Empty sgnMQuery.mquery in
+    (*    let (cD, mgoal_atomic) = unroll LF.Empty sgnMQuery.mquery in 
     match mgoal_atomic  with
-    | (Box(cPsi, g) , ms) -> 
-       let scInit (cPsi, tM) =
+    | (Box(cPsi, g) , ms) -> *)
+    let scInit (cD, cPsi, tM) =
           incr solutions;
           begin
             fprintf std_formatter  "@[<v>---------- Solution %d ----------@,[%a |- %a]@]" 
@@ -1487,13 +1525,14 @@ module Frontend = struct
             then raise Done;
           end 
        in
-        if not (boundEq sgnMQuery.mtries (Some 0))
-        then
-          begin
+       let (cG, ms) = sgnMQuery.mquery in 
+       if not (boundEq sgnMQuery.mtries (Some 0))
+       then
+         begin
             if !Options.chatter >= 1
               then P.printMQuery sgnMQuery;
             try
-                Solver.solve cD cPsi (g, Substitution.LF.id) scInit;
+                CSolver.cgSolve [] LF.Empty (cG, ms) scInit;
                 (* Check solution bounds. *)
                 checkSolutions sgnMQuery.mexpected sgnMQuery.mtries !solutions
               with
@@ -1505,11 +1544,7 @@ module Frontend = struct
         else if !Options.chatter >= 2
         then printf "Skipping query -- bound for tries = 0.\n";
         
-    | _ -> (* since we only consider atomic goals here the other option is an inductive type 
-              which is not yet in our comp_goal data type and we do not yet solve / search for 
-              such goals
-            *) 
-       raise NotImplementedYet 
+
 end
 
 (* Interface *)

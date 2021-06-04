@@ -110,23 +110,6 @@ type comp_goal =
 
 type mquery = comp_goal * LF.msub       (* mq := (cg, ms)  *)
 
-(* Clause representation of Computation Types. 
-
-   Pre Conditions (preConds) are used as opposed to subGoals because 
-   assumptions of computation type are normally used in the forward direction
-   during proof search/construction
-*)
-(*             
-type cclause =                       (* Horn Clause ::= cD compTyp           *)
-  { lfTyp : LF.typ                   (* LF type/object in the conclusion     *)
-  ; concl : Comp.typ                 (* `Conclusion' of compTyp : [eV |- A]  *)
-  ; cEVars : LF.dctx                 (* Context eV : EV's bound in A         *)
-  ; cMVars : LF.mctx                 (* Context mV : MV's bound in compTyp   *)
-  ; preConds : (LF.mctx * Comp.typ) list         (* Preconditions : Contextual Objects that are needed to deduce the conclusion (used for a ArrTyp compTyp) *)
-  }
-
- *)
-
             
 (*  bp : modelling the computation level clause following the LF clause definition *)
 type cclause =                       (* Comp. Horn Clause ::= cD |- tau_atomic  :- subgoals   *) 
@@ -1288,16 +1271,30 @@ module CSolver = struct
 
   (* Check to see if the cid_typ inside the the comp head of c_g1 
      matches the cid_typ of the LF type of our goal *)
-  let rec matchLFhead c_g tA =
-    match c_g with
+  let rec matchLFhead cg tA =
+    match cg with
     | Box (_cPsi, Atom tA') ->
        Id.cid_equals (Solver.cidFromAtom tA) (Solver.cidFromAtom tA')
-    | Implies (c_g1, c_g2) ->
-       matchLFhead c_g2 tA
-    | Forall (tdec, c_g') ->
-       matchLFhead c_g' tA
-       
-       
+    | Implies (cg1, cg2) ->
+       matchLFhead cg2 tA
+    | Forall (tdec, cg') ->
+       matchLFhead cg' tA
+(*
+  (* Returns the head of a comp goal *)
+  let rec getcgHead cg =
+    match cg with
+    | Box (_) -> cg
+    | Implies (cg1, cg2) -> getcgHead cg2
+    | Forall (tdec, cg') -> getcgHead cg'         *)
+
+  (* Turn the antecedent of an implication into a list of subgoals*)
+  let rec anteToSG cg =
+    match cg with
+    | Implies (cg1, cg2) ->
+       let xs = anteToSG cg2 in
+       cg1 :: xs
+    | Box (_) -> []
+    | Forall (_) -> []
       
 
 
@@ -1320,8 +1317,26 @@ module CSolver = struct
          (x :: cG'', cD')
     in
 
+    (* solve the comp type subgoals of an assumption whose head matches
+       the original goal *) 
+    let solveImpSubGoals c_g cG cD ms sc =
+      (*      let hd = getcgHead c_g in *)
+      let subGoals = anteToSG c_g in  
+      match subGoals with
+      | [] ->
+         raise NotImplementedYet
+   (*      let Box (cPsi,_) = hd in
+         let tm = ? in 
+         sc cD (cPsi, tm)   *)
+      | x :: xs ->
+         cgSolve cG cD (x, ms) sc
+    in   
+    
+
+    
+
     (* We focus on one of the computation assumptions *)
-    let rec focusCClause cG cD c_g ms sc =
+    let rec focusCClause cG cG_all cD c_g ms sc =
       match cG with
       | [] -> raise NotImplementedYet
       (*  matchCompSig (cidFromAtomicCG c_g)  *)
@@ -1330,9 +1345,9 @@ module CSolver = struct
          if (* Check to see if the goal is the head of the assumption *)
            matchLFhead c_g2 tA 
          then (* If so, try to solve the subgoals *)
-           raise NotImplementedYet
+           solveImpSubGoals (Implies (c_g1, c_g2)) cG cD ms sc  
          else (* Otherwise, try the remaining comp assumptions *)
-           focusCClause cG' cD c_g ms sc
+           focusCClause cG' cG cD c_g ms sc
       | (Forall (tdec, c_g')) :: cG' ->
          raise NotImplementedYet
          
@@ -1378,7 +1393,7 @@ module CSolver = struct
          with
          (* If no solution found, try solving on comp level *)
          | _ ->
-            focusCClause cG cD c_g ms sc)
+            focusCClause cG cG cD c_g ms sc)
       | _ -> (* For goals of inductive/stratified type *)
         raise NotImplementedYet 
 

@@ -107,6 +107,7 @@ type comp_goal =
   | Box of  LF.dctx  * goal
   | Implies of comp_goal * comp_goal  
   | Forall of  LF.ctyp_decl * comp_goal
+  | Inductive of Id.cid_comp_typ * (Comp.meta_obj * LF.ctyp) list
 
 type mquery = comp_goal * LF.msub       (* mq := (cg, ms)  *)
 
@@ -241,7 +242,7 @@ module Convert = struct
    - other types (such as codata, etc. ) abort gracefull 
   *)
       
-  and comptypToCClause' cD tau subgoals  =
+  and comptypToCClause' cD tau subgoals  = 
     match tau with
     | Comp.TypBox (_, _U) ->
        { cHead = tau  
@@ -252,7 +253,13 @@ module Convert = struct
        let cD' = Whnf.extend_mctx cD (tdecl, LF.MShift 0) in 
        comptypToCClause' cD' tM' subgoals 
     | Comp.TypArr (_, t1, t2) ->
-       comptypToCClause' cD t2  (t1 :: subgoals)            
+       comptypToCClause' cD t2  (t1 :: subgoals)
+    | Comp.TypBase (_) ->
+       { cHead = tau
+       ; cMVars = cD
+       ; cSubGoals = subgoals
+       }
+       
 
   (* Write out invariant / comment
      in particular: what is cS, dS, dR 
@@ -280,6 +287,14 @@ module Convert = struct
 
            
   and comptypToCompGoal tau  =
+    (* convert spine into the required shape to store as goal *)
+    let rec spineToList s xs =
+      match s with
+      | Comp.MetaNil -> []
+      | Comp.MetaApp (m_obj, m_typ, s', _) ->
+         let xs' = spineToList s' xs in
+         (m_obj, m_typ)::xs'
+    in
     match tau with
     | Comp.TypBox (_loc, LF.ClTyp (LF.MTyp tA, cPsi)) ->
        (* Invariant: tA will always be atomic in our implementation *)
@@ -297,6 +312,10 @@ module Convert = struct
        let cg1 = comptypToCompGoal tau1 in
        let cg2 = comptypToCompGoal tau1 in 
        Implies (cg1, cg2)
+    | Comp.TypBase (_, comp_cid, s) ->
+       let ls = spineToList s [] in
+       Inductive (comp_cid, ls)
+       
 
 
   and typToRes tM (cS, dS, dR) =
@@ -403,6 +422,12 @@ module Convert = struct
     | [] -> S.id
     | (x, tN) :: xs -> LF.Dot (LF.Obj tN, solToSub xs)
 
+(*  let rec solToMSub xs =
+    match xs with
+    | [] -> LF.MShift 0
+    | (x, tN) :: xs ->
+       LF.MDot (tN, solToMSub xs) *)
+
 (*
   comptypToMQuery (tau,i) = comp_goal  
 
@@ -459,6 +484,8 @@ let comptypToMQuery (tau, i) =
       | Comp.TypArr (loc, tau1, tau2) when i > 0 ->
          (* TODO:: This case?? *)
          raise NotImplementedYet
+      | Comp.TypBase (_) ->
+         (((comptypToCompGoal tau),ms), tau, ms, xs)
       | _ -> raise NotImplementedYet
     in
     comptypToMQuery' (tau, i) (LF.MShift 0) []
@@ -1279,29 +1306,53 @@ module CSolver = struct
        matchLFhead cg2 tA
     | Forall (tdec, cg') ->
        matchLFhead cg' tA
-(*
+
+  let rec matchHead assump cg =
+    match assump with
+    | Box (_cPsi, Atom tA) ->
+       raise NotImplementedYet
+    | Inductive (name, spine) ->
+       raise NotImplementedYet
+    | Implies (ante, conse) ->
+       matchHead conse cg
+    | Forall (tdec, assump') ->
+       matchHead assump' cg
+
   (* Returns the head of a comp goal *)
   let rec getcgHead cg =
     match cg with
     | Box (_) -> cg
     | Implies (cg1, cg2) -> getcgHead cg2
-    | Forall (tdec, cg') -> getcgHead cg'         *)
+    | Forall (tdec, cg') -> getcgHead cg'
 
   (* Turn the antecedent of an implication into a list of subgoals*)
   let rec anteToSG cg =
     match cg with
     | Implies (cg1, cg2) ->
        let xs = anteToSG cg2 in
-       cg1 :: xs
+       (* Keep subgoals in order they should be solved *)
+       List.rev (cg1 :: xs)
     | Box (_) -> []
-    | Forall (_) -> []
+    | Forall (_) -> [cg]
       
 
 
   (* Solver function for a goal of computation type *)
   let rec cgSolve (cG : comp_goal list) cD mq sc =
 
-    (* Clean up comp assumptions in cG *)
+    
+    (* Clean up comp assumptions in cG, leaving only stable assumptions
+       Does the backwards steps:
+
+       cD, x:U; cG > cG' => Q
+       ------------------------- unbox
+       cD; cG, x:[U] > cG' => Q
+
+
+       tau =/= [U]      cD; cG > cG', x:tau => Q
+       ------------------------------------------ shift
+               cD; cG, x:tau > cG' => Q 
+     *)
     let rec filter_cG cG cD ms =
       match cG with
       | [] -> (cG, cD)
@@ -1317,17 +1368,26 @@ module CSolver = struct
          (x :: cG'', cD')
     in
 
+
+    
+
     (* solve the comp type subgoals of an assumption whose head matches
        the original goal *) 
     let solveImpSubGoals c_g cG cD ms sc =
-      (*      let hd = getcgHead c_g in *)
+      let hd = getcgHead c_g in
       let subGoals = anteToSG c_g in  
       match subGoals with
       | [] ->
-         raise NotImplementedYet
-   (*      let Box (cPsi,_) = hd in
-         let tm = ? in 
-         sc cD (cPsi, tm)   *)
+         (match hd with
+          | Box (cPsi, _) -> 
+            (* check that the hd matches the goal in sc func
+
+              let tm = ? in 
+              sc cD (cPsi, tm) *) 
+             ()
+          | _ ->
+             (* For goals of ind type *)
+             ())
       | x :: xs ->
          cgSolve cG cD (x, ms) sc
     in   
@@ -1335,22 +1395,31 @@ module CSolver = struct
 
     
 
-    (* We focus on one of the computation assumptions *)
+    (* We focus on one of the computation assumptions in cG *)
     let rec focusCClause cG cG_all cD c_g ms sc =
       match cG with
       | [] -> raise NotImplementedYet
       (*  matchCompSig (cidFromAtomicCG c_g)  *)
       | (Implies (c_g1, c_g2)) :: cG' ->
-         let Box (_cPsi, Atom tA) = c_g in 
-         if (* Check to see if the goal is the head of the assumption *)
-           matchLFhead c_g2 tA 
-         then (* If so, try to solve the subgoals *)
-           solveImpSubGoals (Implies (c_g1, c_g2)) cG cD ms sc  
-         else (* Otherwise, try the remaining comp assumptions *)
-           focusCClause cG' cG cD c_g ms sc
+         (match c_g with
+          | Box (_cPsi, Atom tA) ->
+             if (* Check to see if the goal is the head of the assumption *)
+               matchLFhead c_g2 tA 
+             then (* If so, try to solve the subgoals *)
+               solveImpSubGoals (Implies (c_g1, c_g2)) cG cD ms sc  
+             else (* Otherwise, try the remaining comp assumptions *)
+               focusCClause cG' cG cD c_g ms sc
+          | Inductive (name, spine) ->
+             if
+               matchHead (Implies (c_g1, c_g2)) c_g
+             then ())
       | (Forall (tdec, c_g')) :: cG' ->
          raise NotImplementedYet
-         
+   (*        if (* check to see if body of ForAll matches the goal *)
+             match forAllBody 
+
+    *)
+        
       
     in
     (*         
@@ -1394,8 +1463,12 @@ module CSolver = struct
          (* If no solution found, try solving on comp level *)
          | _ ->
             focusCClause cG cG cD c_g ms sc)
-      | _ -> (* For goals of inductive/stratified type *)
-        raise NotImplementedYet 
+      | Inductive (name, spine) ->
+         (* We need to first find how to construct the computational 
+            relation- meaning we need to first do proof search on the
+            comp level
+          *)
+         focusCClause cG cG cD c_g ms sc
 
 
 
@@ -1405,7 +1478,7 @@ module CSolver = struct
        reach an atomic goal *)
     let (cg, ms) = mq in 
     match cg with
-    | Box (_cPsi, _g) ->
+    | Box (_) | Inductive (_) ->
        (* Then we filter the cG, so only stable assumptions are left *)
        let (cG', cD') = filter_cG cG cD ms in
        (* Finally we try to solve the goal via focusing- 
@@ -1585,8 +1658,23 @@ module Frontend = struct
     (*    let (cD, mgoal_atomic) = unroll LF.Empty sgnMQuery.mquery in 
     match mgoal_atomic  with
     | (Box(cPsi, g) , ms) -> *)
+
+    (* Type checking function. *)
+(*    let check cD cPsi (e : Comp.exp_chk) ms =
+      (* check mcid cD cG (total_decs : total_dec list) ?cIH:(cIH = Syntax.Int.LF.Empty) e ttau  *)
+     let x = name in 
+      let mcid = Store.Comp.index_of_name_opt x in 
+      Check.Comp.check mcid cD LF.Empty [] e (sgnMQuery.skinnyCompTyp, ms)
+    in
+ *) 
+    
     let scInit cD (cPsi, tM) =
-          incr solutions;
+      incr solutions;
+
+       (* Rebuild the substitution and type check the proof term. *)
+(*      if !Options.checkProofs
+      then check cD cPsi tM (Convert.solToMSub sgnMQuery.instMMVars); (* !querySub *)
+ *) 
           begin
             fprintf std_formatter  "@[<v>---------- Solution %d ----------@,[%a |- %a]@]" 
               (*              "@[<hov 2>@[%a@] |-@ @[%a@]@]" *)

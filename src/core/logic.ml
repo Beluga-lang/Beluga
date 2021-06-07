@@ -1296,21 +1296,18 @@ module CSolver = struct
     let name = Id.mk_name (Whnf.newMTypName ctyp) in
     LF.Decl (name, ctyp, LF.No)
 
-  (* Check to see if the cid_typ inside the the comp head of c_g1 
-     matches the cid_typ of the LF type of our goal *)
-  let rec matchLFhead cg tA =
-    match cg with
-    | Box (_cPsi, Atom tA') ->
-       Id.cid_equals (Solver.cidFromAtom tA) (Solver.cidFromAtom tA')
-    | Implies (cg1, cg2) ->
-       matchLFhead cg2 tA
-    | Forall (tdec, cg') ->
-       matchLFhead cg' tA
 
+  (* Check to see if the head of an assumption matches the comp goal *)
   let rec matchHead assump cg =
+    let matchLFhead cg tA =
+      match cg with
+      | Box (_cPsi, Atom tA') ->
+         Id.cid_equals (Solver.cidFromAtom tA) (Solver.cidFromAtom tA')
+      | (_) -> false
+    in                     
     match assump with
     | Box (_cPsi, Atom tA) ->
-       raise NotImplementedYet
+       matchLFhead cg tA
     | Inductive (name, spine) ->
        raise NotImplementedYet
     | Implies (ante, conse) ->
@@ -1373,10 +1370,9 @@ module CSolver = struct
 
     (* solve the comp type subgoals of an assumption whose head matches
        the original goal *) 
-    let solveImpSubGoals c_g cG cD ms sc =
-      let hd = getcgHead c_g in
-      let subGoals = anteToSG c_g in  
-      match subGoals with
+    let solveImpSubGoals c_g subG cD ms sc =
+      let hd = getcgHead c_g in 
+      match subG with
       | [] ->
          (match hd with
           | Box (cPsi, _) -> 
@@ -1390,6 +1386,11 @@ module CSolver = struct
              ())
       | x :: xs ->
          cgSolve cG cD (x, ms) sc
+ (*          (fun cD (cPsi, tM) ->
+             solveImpSubGoals c_g xs cD ms
+               (fun cD' (v, tS) -> sc cD' (v, tM :: tS))
+           ) 
+  *)
     in   
     
 
@@ -1400,25 +1401,26 @@ module CSolver = struct
       match cG with
       | [] -> raise NotImplementedYet
       (*  matchCompSig (cidFromAtomicCG c_g)  *)
-      | (Implies (c_g1, c_g2)) :: cG' ->
-         (match c_g with
-          | Box (_cPsi, Atom tA) ->
-             if (* Check to see if the goal is the head of the assumption *)
-               matchLFhead c_g2 tA 
-             then (* If so, try to solve the subgoals *)
-               solveImpSubGoals (Implies (c_g1, c_g2)) cG cD ms sc  
-             else (* Otherwise, try the remaining comp assumptions *)
-               focusCClause cG' cG cD c_g ms sc
-          | Inductive (name, spine) ->
-             if
-               matchHead (Implies (c_g1, c_g2)) c_g
-             then ())
-      | (Forall (tdec, c_g')) :: cG' ->
+      | (Implies (c_g1, c_g2) as x) :: cG' ->
+         if (* Check to see if the goal is the head of the assumption *)
+           matchHead x c_g
+         then (* If so, try to solve the subgoals *)
+           let subGoals = anteToSG c_g in
+           solveImpSubGoals x subGoals cD ms sc  
+         else (* Otherwise, try the remaining comp assumptions *)
+           focusCClause cG' cG cD c_g ms sc
+      | (Forall (tdec, c_g') as x) :: cG' ->
+         if (* check to see if body of ForAll matches the goal *)
+           matchHead x c_g
+         then (* If so, the goal can be solved by instantiating assumption  *)
+           raise NotImplementedYet
+           (* instForAll x c_g *)
+         else
+           focusCClause cG' cG cD c_g ms sc
+      | _ -> (* this case should not happen *)
          raise NotImplementedYet
-   (*        if (* check to see if body of ForAll matches the goal *)
-             match forAllBody 
 
-    *)
+    
         
       
     in

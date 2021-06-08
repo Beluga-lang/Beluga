@@ -422,11 +422,11 @@ module Convert = struct
     | [] -> S.id
     | (x, tN) :: xs -> LF.Dot (LF.Obj tN, solToSub xs)
 
-(*  let rec solToMSub xs =
+  let rec solToMSub xs =
     match xs with
     | [] -> LF.MShift 0
     | (x, tN) :: xs ->
-       LF.MDot (tN, solToMSub xs) *)
+       LF.MDot (tN, solToMSub xs) 
 
 (*
   comptypToMQuery (tau,i) = comp_goal  
@@ -1331,8 +1331,22 @@ module CSolver = struct
        List.rev (cg1 :: xs)
     | Box (_) -> []
     | Forall (_) -> [cg]
-      
 
+  (* Convert a (normal) term into an exp_chk for type checking purposes *) 
+  let tmToExCk tM cPsi =
+    match tM with
+    | LF.Lam (loc, name, tM') ->
+       raise NotImplementedYet
+    | LF.Root (loc, hd, spine, pl) ->
+       raise NotImplementedYet
+    | LF.LFHole (loc, t, name) ->
+       raise NotImplementedYet
+    | LF.Clo (tM', s) ->
+       raise NotImplementedYet
+    | LF.Tuple (loc, tuple) ->
+       raise NotImplementedYet
+       
+      
 
   (* Solver function for a goal of computation type *)
   let rec cgSolve (cG : comp_goal list) cD mq sc =
@@ -1374,7 +1388,8 @@ module CSolver = struct
       let hd = getcgHead c_g in 
       match subG with
       | [] ->
-         (match hd with
+         ( (* In this case we are finished; no subgoals remain. *)
+           match hd with
           | Box (cPsi, _) -> 
             (* check that the hd matches the goal in sc func
 
@@ -1386,6 +1401,7 @@ module CSolver = struct
              ())
       | x :: xs ->
          cgSolve cG cD (x, ms) sc
+         (* TODO:: sc function for solveImpSubGoals as in gsolve *)
  (*          (fun cD (cPsi, tM) ->
              solveImpSubGoals c_g xs cD ms
                (fun cD' (v, tS) -> sc cD' (v, tM :: tS))
@@ -1425,11 +1441,7 @@ module CSolver = struct
       
     in
     (*         
-     (* Try to unify the LF type of sCCl with A[s].
-       TODO:: We will probably be checking if all the preConds are met- 
-              therefore allowing us to deduce the conclusion, adding it
-              to dPool??
-     *)                                      
+     (* Try to find solution in the computation signatures. *)                                      
     let matchSgnCClause (cidTerm, sCCl) sc =
       let (s', fS) =
         C.dctxToSub cD cPsi (sCCl.cEVars, shiftSub (Context.dctxLength cPsi))
@@ -1662,21 +1674,23 @@ module Frontend = struct
     | (Box(cPsi, g) , ms) -> *)
 
     (* Type checking function. *)
-(*    let check cD cPsi (e : Comp.exp_chk) ms =
+    let check cD cPsi (e : Comp.exp_chk) ms =
       (* check mcid cD cG (total_decs : total_dec list) ?cIH:(cIH = Syntax.Int.LF.Empty) e ttau  *)
-     let x = name in 
-      let mcid = Store.Comp.index_of_name_opt x in 
-      Check.Comp.check mcid cD LF.Empty [] e (sgnMQuery.skinnyCompTyp, ms)
+      (* Does the term have a cid?? *)
+      Check.Comp.check None cD LF.Empty [] e (sgnMQuery.skinnyCompTyp, ms)
     in
- *) 
+   
     
     let scInit cD (cPsi, tM) =
       incr solutions;
 
        (* Rebuild the substitution and type check the proof term. *)
-(*      if !Options.checkProofs
-      then check cD cPsi tM (Convert.solToMSub sgnMQuery.instMMVars); (* !querySub *)
- *) 
+      if !Options.checkProofs
+      then
+        let e = CSolver.tmToExCk tM cPsi in
+        check cD cPsi e (Convert.solToMSub sgnMQuery.instMMVars);
+    
+ 
           begin
             fprintf std_formatter  "@[<v>---------- Solution %d ----------@,[%a |- %a]@]" 
               (*              "@[<hov 2>@[%a@] |-@ @[%a@]@]" *)

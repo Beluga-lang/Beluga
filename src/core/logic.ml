@@ -1391,12 +1391,12 @@ module CSolver = struct
       | [] ->
          ( (* In this case we are finished; no subgoals remain. *)
            match hd with
-          | Box (cPsi, _) -> 
-            (* check that the hd matches the goal in sc func
-
-              let tm = ? in 
-              sc cD (cPsi, tm) *) 
-             ()
+           | Box (cPsi, g) ->
+              let root x = LF.Root (Syntax.Loc.ghost, x, LF.Nil, `explicit)
+              in
+              let mvar k = LF.MVar (LF.Offset k, LF.Shift 0) in
+              let tm = root (mvar 0) in 
+              sc cD (cPsi, tm)  
           | _ ->
              (* For goals of ind type *)
              ())
@@ -1498,11 +1498,15 @@ module CSolver = struct
        let (cG', cD') = filter_cG cG cD ms in
        (* Finally we try to solve the goal via focusing- 
           either on the LF level or Comp level *)
+  (*     let sc' = (fun (u, tM) -> sc cD' (u, tM)) in *)
        focus cG' cD' cg ms sc
     | Forall (tdecl, cg') ->
        (* In this case we gain an assumption in the meta-context *)
        let cD' = Whnf.extend_mctx cD (tdecl,ms) in
-       cgSolve cG cD' (cg', ms) sc
+       let sc' =
+         (fun d (u, tM) ->
+           sc cD' (u, tM)) in
+       cgSolve cG cD' (cg', ms) sc'
     | Implies (cg1, cg2) ->
        (* We gain a computation assumption *)
        

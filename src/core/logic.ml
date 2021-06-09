@@ -103,12 +103,14 @@ type clause =                    (* Horn Clause ::= eV |- A :- cG   *)
 
  *)
 
-type comp_goal =
-  | Box of  LF.dctx  * goal
-  | Implies of comp_goal * comp_goal  
-  | Forall of  LF.ctyp_decl * comp_goal
-  | Inductive of Id.cid_comp_typ * (Comp.meta_obj * LF.ctyp) list
+type comp_goal =                          (* Comp Goal cg :=       *)
+  | Box of  LF.dctx  * goal               (*     | Box (cPsi , g)  *)
+  | Implies of (comp_goal * Comp.typ) * comp_goal      (*     | cg -> cg        *)
+  | Forall of  LF.ctyp_decl * comp_goal   (*     | ∀x:U. cg        *)
+  | Atomic of Id.cid_comp_typ *           (*     | a meta_spine    *)
+          (Comp.meta_obj * LF.ctyp) list
 
+           
 type mquery = comp_goal * LF.msub       (* mq := (cg, ms)  *)
 
             
@@ -314,7 +316,7 @@ module Convert = struct
        Implies (cg1, cg2)
     | Comp.TypBase (_, comp_cid, s) ->
        let ls = spineToList s [] in
-       Inductive (comp_cid, ls)
+       Atomic (comp_cid, ls)
        
 
 
@@ -1350,38 +1352,155 @@ module CSolver = struct
       
 
   (* Solver function for a goal of computation type *)
-  let rec cgSolve (cG : comp_goal list) cD mq sc =
-
     
-    (* Clean up comp assumptions in cG, leaving only stable assumptions
-       Does the backwards steps:
+  (* filter_cG  cD (cPool,cPool') (cGamma, cGamma') ( ms = (cD', cG')
 
-       cD, x:U; cG > cG' => Q
-       ------------------------- unbox
-       cD; cG, x:[U] > cG' => Q
+    Pre-conditions:
+
+       cD : meta-context
+       cPool,cPool' : list of comp_goal assumptions
+       cPool  ~~ cGamma
+       cPool' ~~ cGamma'
+       ms : ? 
+
+      if cD |- cG    (list of comp_goals is well-formed in cD)
+      then 
+         cD' |- cG'  where 
+
+      cD' : meta-context and is an extension of cD
+      cG' : list of comp_goals where each comp_goal is 
+            either an implication or a universal or Atomic (Inductive) 
+            i.e. cG' is a stable context 
+
+      Clean up comp assumptions in cG, leaving only stable assumptions
 
 
-       tau =/= [U]      cD; cG > cG', x:tau => Q
-       ------------------------------------------ shift
-               cD; cG, x:tau > cG' => Q 
+      Uniform Phase on the left:   cD ; cG  ==> e : Q / (cD', cG'')
+ 
+       uniform_left cD cG cG' Q (sc)    (where the sc continuation builds 
+       skeleton term (fn e -> let box X = x in ..... in e )
+
+        cD ; (cG @ cG') |- e : Q 
+ 
+
+       cD, X:U; cG >> cG' => e : Q  
+       -------------------------——————————————————————------------- box left 
+       cD; cG, x:[U] >> cG' => let box X = x in e : Q 
+
+
+       tau =/= [U]      cD; cG >> x:tau, cG' => e : Q 
+       ------------------------------------------------------------------ tau is left synchronous 
+               cD;  x:tau, cG >> cG' => e : Q / (cD', cG,x:tau)
+
+               cD ; cGamma  >> e : Q   (prove Q from the stable context cGamma and meta-context cD)
+       --------------------------------------------------——–----------------------------------------
+       cD ; . >> cG  => e  : Q   
+         
+
+
+     cG (list of comp_goals)  ~~ cGamma (gctx) 
+
      *)
-    let rec filter_cG cG cD ms =
-      match cG with
-      | [] -> (cG, cD)
-      | Box(_cPsi, _g) :: cG' ->
-        (* In this case, we want to "unbox" the assumption and add it to 
-             the cD *)
-         let typ_dec = unbox _g _cPsi in
-         let cD' = Whnf.extend_mctx cD (typ_dec, ms) in
-         filter_cG cG' cD' ms
-      | x :: cG' ->
-         (* Otherwise we leave the assumption in cG *)
-         let (cG'', cD') = filter_cG cG' cD ms in
-         (x :: cG'', cD')
+    
+
+let rec filter_cG cD cG cGamma  ms =  match cG with
+  | [] -> (cG, cD)
+  | Box(_cPsi, _g) :: cG' ->
+     (* In this case, we want to "unbox" the assumption and add it to 
+        the cD *)
+     let typ_dec = unbox _g _cPsi in
+     let cD' = Whnf.extend_mctx cD (typ_dec, ms) in
+     filter_cG cG' cD' ms
+  | x :: cG' ->
+     (* Otherwise we leave the assumption in cG *)
+     let (cG'', cD') = filter_cG cG' cD ms in
+     (x :: cG'', cD')
     in
 
 
+    (* Uniform Right Phase : 
+
+  
+       cD; cG >> .  => e : Q  
+       ------------------------ Q is either Box or Atomic (Inductive)
+       cD; cG => e : Q 
+
+
+        cD; cG, x:cg1  => e : cg2        (cG ~~ cGamma, x:tau1)
+       ------------------------------------------------------------------ tau is left synchronous 
+               cD;cG => fn x -> e  : (cg1 , tau1) -> cg2
+
+         cD,X:U ; G |- e : cgxs    
+       ------------------------------------------------------
+       cD ; cG  => mlam X -> e  : forall X:U. cg   
     
+
+
+      [ Stable phase : cD ; cG >> . ==> e : Q
+
+
+       cD ; cGamma  >> e : Q   (prove Q from the stable context cGamma and meta-context cD)
+
+
+       CHOICE: 
+
+      1)   Q = Box(cPsi, A)      cD ; cG >> box(cPsihat.M) :Box(cPsi, A)
+
+             cD ; cPsi ==>  M: A     (this is solve!) 
+            -----------------------------------------------------    [in Harpoon some msolve (args) ] 
+               cD ; cG >> box(cPsihat.M) : Box(cPsi, A)                (assumes that cG is stable)
+
+
+      2) Q = Inductive(Atomic) 
+
+         matchCompAtom (Signature) (a) = computation-level clauses c (for example Ev_z) that have a (for example Even) in its cHead
+         this will result in some subgoals (cgᵢ)
+
+         for all i.   cD ; cG ===>  eᵢ :  cgᵢ   (uniform right phase)
+         --------------------------------------------------------------------[in Harpoon some auto-solve] 
+         cD ; cG >> c e₁ ...en  : Inductive(a, meta-spine)                       (assumes that cG is stable)
+ 
+
+      For example:
+
+      inductive Even: [ |- nat] -> ctype = 
+      | Ev_z : Even [ |- z]
+      | Ev_ss: Pi N:[ |- nat]. Even [ |- N] -> Even [ |- suc (suc N)] 
+
+
+    3) Q = Box(cPsi,A) or Inductive(a, meta-spine)  we solve it using some assumption from cG
+
+      cG might contain  f: tau₁ -> Q  , x:tau₁   ===> Q 
+
+
+      focus left  (on some comp_goal cgᵢ in cG)  
+
+        cD ; cGamma > f:cgᵢ ===> e : Q     
+       --------------------------------- transition to focus left
+       cD ; cGamma  >> e : Q
+
+
+
+
+    cD ; cGamma > e e₁ : cg₂ ==>   Q     cD ; cGamma ===> e1 : cg₁
+    ----------------------------------------------------------------- 
+     cD ; cGamma > e : cg₁ -> cg₂ ==>   Q
+
+
+
+    cD ; cGamma > e C : [C/X]cg₂ ==>   Q     
+    ----------------------------------------
+     cD ; cGamma > e : Pi X:U. cg₂ ==>   Q
+
+
+    ----------------------------------------
+    cD ; cGamma  > e : Q   ====> Q
+
+
+     *)
+    
+and  cgSolve (cG : comp_goal list) cD mq sc =
+
 
     (* solve the comp type subgoals of an assumption whose head matches
        the original goal *) 

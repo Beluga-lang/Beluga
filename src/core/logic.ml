@@ -422,12 +422,12 @@ module Convert = struct
     | [] -> S.id
     | (x, tN) :: xs -> LF.Dot (LF.Obj tN, solToSub xs)
 
-  let rec solToMSub xs =
+(*  let rec solToMSub xs =
     match xs with
     | [] -> LF.MShift 0
     | (x, tN) :: xs ->
        LF.MDot (tN, solToMSub xs) 
-
+ *)
 (*
   comptypToMQuery (tau,i) = comp_goal  
 
@@ -1331,7 +1331,7 @@ module CSolver = struct
        List.rev (cg1 :: xs)
     | Box (_) -> []
     | Forall (_) -> [cg]
-
+(*
   (* Convert a (normal) term into an exp_chk for type checking purposes *) 
   let tmToExCk tM cPsi =
     match tM with
@@ -1345,6 +1345,7 @@ module CSolver = struct
        raise NotImplementedYet
     | LF.Tuple (loc, tuple) ->
        raise NotImplementedYet
+ *)      
        
       
 
@@ -1674,22 +1675,22 @@ module Frontend = struct
     | (Box(cPsi, g) , ms) -> *)
 
     (* Type checking function. *)
-    let check cD cPsi (e : Comp.exp_chk) ms =
+(*    let check cD cPsi (e : Comp.exp_chk) ms =
       (* check mcid cD cG (total_decs : total_dec list) ?cIH:(cIH = Syntax.Int.LF.Empty) e ttau  *)
       (* Does the term have a cid?? *)
       Check.Comp.check None cD LF.Empty [] e (sgnMQuery.skinnyCompTyp, ms)
     in
-   
+*)   
     
     let scInit cD (cPsi, tM) =
       incr solutions;
 
        (* Rebuild the substitution and type check the proof term. *)
-      if !Options.checkProofs
+(*      if !Options.checkProofs
       then
         let e = CSolver.tmToExCk tM cPsi in
         check cD cPsi e (Convert.solToMSub sgnMQuery.instMMVars);
-    
+ *)    
  
           begin
             fprintf std_formatter  "@[<v>---------- Solution %d ----------@,[%a |- %a]@]" 

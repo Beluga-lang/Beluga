@@ -1642,7 +1642,7 @@ and cnormMetaSpine (mS, t) =
 
 let cnormCDecl (cdecl, t) =
   match cdecl with
-  | Decl (u, mtyp, dep) -> Decl (u, cnormMTyp (mtyp, t), dep)
+  | Decl (u, mtyp, dep) -> Decl (u, cnormMTyp (mtyp, t), dep) 
 
 let rec cnormCTyp =
   function
@@ -1669,6 +1669,11 @@ let rec cnormCTyp =
      cnormCTyp (tT, mcomp t' t)
 
   | (Comp.TypInd tau, t) -> Comp.TypInd (cnormCTyp (tau, t))
+
+let cnormCCDecl (cdecl, t) =
+  match cdecl with
+  | Comp.CTypDecl(n, typ, wf_t) ->
+     Comp.CTypDecl(n, cnormCTyp (typ,t), wf_t)
 
 let rec cnormCKind (cK, t) =
   match cK with
@@ -2428,4 +2433,7 @@ let dotMMVar loc' cD t (u, cU, dep) =
  *)
 let extend_mctx cD (cdecl, t) =
   Dec(cD, cnormCDecl (cdecl, t))
+  
+let extend_gctx cG (cdecl, t) =
+  Dec(cG, cnormCCDecl (cdecl, t))
     

@@ -65,7 +65,9 @@ exception NotImplementedYet
    Range of de Bruijn indices in the dynamic scope.
 *)
 
-
+type lfTyp =  (* Used to classify the kind of LF object an LF type represents *)
+  | M | P     (* Required for ??                   *) 
+                     
 type goal =                             (* Goals            *)
   | Atom of LF.typ                      (* g ::= A          *)
   | Impl of (res * LF.typ_decl) * goal  (*     | r => g'    *)
@@ -103,13 +105,21 @@ type clause =                    (* Horn Clause ::= eV |- A :- cG   *)
 
  *)
 
-type comp_goal =                          (* Comp Goal cg :=       *)
-  | Box of  LF.dctx  * goal               (*     | Box (cPsi , g)  *)
-  | Implies of (comp_goal * Comp.typ) * comp_goal      (*     | cg -> cg        *)
-  | Forall of  LF.ctyp_decl * comp_goal   (*     | ∀x:U. cg        *)
-  | Atomic of Id.cid_comp_typ *           (*     | a meta_spine    *)
-          (Comp.meta_obj * LF.ctyp) list
+type comp_goal =                                (* Comp Goal cg :=       *)
+  | Box of LF.dctx  * goal * lfTyp option       (*     | Box (cPsi , g)  *)
+  | Implies of (comp_res * Comp.ctyp_decl)      (*     | r -> cg'        *)
+               * comp_goal  
+  | Forall of  LF.ctyp_decl * comp_goal         (*     | ∀x:U. cg        *)
+  | Atomic of Id.cid_comp_typ * atomic_spine    (*     | a meta_spine    *)
 
+and atomic_spine =
+  | End
+  | Spine of atomic_spine * (comp_goal * LF.mfront)
+            
+and comp_res =                          (* Residual Comp Goals   *)
+  | Base of Comp.typ                    (* cr ::= A              *)
+  | CAnd of comp_goal * comp_res        (*     | cg ∧ r'         *)
+  | CExists of LF.ctyp_decl * comp_res  (*     | ∃x:T. r'        *)
            
 type mquery = comp_goal * LF.msub       (* mq := (cg, ms)  *)
 
@@ -275,7 +285,16 @@ module Convert = struct
     | LF.Atom _ ->
        Atom (Shift.shiftAtom tM (-cS, -dS, dR))
 
-  (* TODO:: May need to add shifts as args? *)
+  and typToRes tM (cS, dS, dR) =
+    match tM with
+    | LF.PiTyp ((tD, LF.Maybe), tM') ->
+       Exists (tD, typToRes tM' (cS, dS, dR + 1))
+    | LF.PiTyp ((LF.TypDecl (_, tA), LF.No), tB) ->
+       And (typToGoal tA (cS, dS, dR), typToRes tB (cS + 1, dS + 1, dR + 1))
+    | LF.Atom _ ->
+       Head (Shift.shiftAtom tM (-cS, -dS, dR)) 
+
+(*  (* TODO:: May need to add shifts as args? *)
   and goalToTyp g =
     match g with
     | Atom tp -> tp
@@ -284,50 +303,59 @@ module Convert = struct
        LF.PiTyp ((tdec, LF.Maybe), g'')
     | Impl ((res_g, tdec), g') ->
        let g'' = goalToTyp g' in
-       LF.PiTyp ((tdec, LF.No), g'')
+       LF.PiTyp ((tdec, LF.No), g'')  *)
+
+  and cTypToCompTyp ctyp =
+    match ctyp with
+    | LF.ClTyp (LF.MTyp typ, cPsi) ->
+       Box (cPsi, typToGoal typ (0, 0, 0), Some M)
+    | LF.ClTyp (LF.PTyp typ, cPsi) ->
+       Box (cPsi, typToGoal typ (0, 0, 0), Some P)
+    | LF.ClTyp (LF.STyp(_), cPsi) ->
+       raise NotImplementedYet
          
 
            
   and comptypToCompGoal tau  =
-    (* convert spine into the required shape to store as goal *)
-    let rec spineToList s xs =
+    (* convert spine into the required shape (atomic_spine) *)
+    let rec sToAs s =
       match s with
-      | Comp.MetaNil -> []
-      | Comp.MetaApp (m_obj, m_typ, s', _) ->
-         let xs' = spineToList s' xs in
-         (m_obj, m_typ)::xs'
+      | Comp.MetaNil -> End
+      | Comp.MetaApp ((_,mf), ctyp, s', _) ->
+         Spine  (sToAs s', (cTypToCompTyp ctyp, mf))
     in
     match tau with
     | Comp.TypBox (_loc, LF.ClTyp (LF.MTyp tA, cPsi)) ->
        (* Invariant: tA will always be atomic in our implementation *)
-       Box (cPsi, Atom tA)
+       Box (cPsi, Atom tA, Some M)
        (* possibly needs to have PiBox variables shifted;
           note: Pibox variables are indexed with respect to cD (Delta)
                 LF Pi variables are indexed with respect to LF context 
                 (hence one cannot simply re-use the module Shift, but would need a module MShift)
         *)
-    | Comp.TypBox (_,_) ->
+    | Comp.TypBox (_loc, LF.ClTyp (LF.PTyp tA, cPsi)) ->
+       Box (cPsi, Atom tA, Some P)
+    | Comp.TypBox (_loc, LF.ClTyp (LF.STyp (svar_class, range), dom)) ->
        raise NotImplementedYet
     | Comp.TypPiBox (loc, ctyp_decl , tau') ->
        Forall(ctyp_decl, comptypToCompGoal tau' )
     | Comp.TypArr (loc, tau1, tau2) ->
-       let cg1 = comptypToCompGoal tau1 in
-       let cg2 = comptypToCompGoal tau1 in 
-       Implies (cg1, cg2)
+       let cr1 = comptypToCompRes tau1 in
+       let cg2 = comptypToCompGoal tau2 in
+       let name = Id.mk_name Id.NoName in
+       let typ_dec = Comp.CTypDecl (name, tau1 , true) in 
+       Implies ((cr1,typ_dec), cg2)  
     | Comp.TypBase (_, comp_cid, s) ->
-       let ls = spineToList s [] in
-       Atomic (comp_cid, ls)
+       Atomic (comp_cid, sToAs s)
        
-
-
-  and typToRes tM (cS, dS, dR) =
-    match tM with
-    | LF.PiTyp ((tD, LF.Maybe), tM') ->
-       Exists (tD, typToRes tM' (cS, dS, dR + 1))
-    | LF.PiTyp ((LF.TypDecl (_, tA), LF.No), tB) ->
-       And (typToGoal tA (cS, dS, dR), typToRes tB (cS + 1, dS + 1, dR + 1))
-    | LF.Atom _ ->
-       Head (Shift.shiftAtom tM (-cS, -dS, dR))
+  and comptypToCompRes tau =
+    match tau with
+    | Comp.TypBox (_) ->
+       Base tau
+    | Comp.TypArr (_,tau1,tau2) ->
+       CAnd (comptypToCompGoal tau1, comptypToCompRes tau2)
+    | Comp.TypPiBox (_,typ_dec, tau') ->
+       CExists (typ_dec, comptypToCompRes tau')
 
   let rec resToClause' eV cG (r, s) =
     match r with
@@ -424,12 +452,12 @@ module Convert = struct
     | [] -> S.id
     | (x, tN) :: xs -> LF.Dot (LF.Obj tN, solToSub xs)
 
-(*  let rec solToMSub xs =
+  let rec solToMSub xs =
     match xs with
     | [] -> LF.MShift 0
     | (x, tN) :: xs ->
        LF.MDot (tN, solToMSub xs) 
- *)
+ 
 (*
   comptypToMQuery (tau,i) = comp_goal  
 
@@ -464,7 +492,7 @@ let comptypToMQuery (tau, i) =
          end ; 
           (((comptypToCompGoal tau),ms), tau, ms, xs) 
       | Comp.TypBox (_loc, LF.ClTyp (LF.PTyp _tA, _cPsi)) ->
-         raise NotImplementedYet
+         (((comptypToCompGoal tau),ms), tau, ms, xs)
       | Comp.TypBox (loc, LF.ClTyp (LF.STyp (_svar_c, _cPhi),  _cPsi)) ->
           raise NotImplementedYet
       | Comp.TypPiBox (loc, mdecl, tau)  when i > 0 ->
@@ -1288,29 +1316,29 @@ end
 
 module CSolver = struct
 
-  (* Take an LF goal (extracted from a comp goal) and unbox, 
-     i.e. convert to an LF ctyp_decl so it may be added to the cD *)
-  let unbox g cPsi =
-    let typ = Convert.goalToTyp g in
-    (* TO DO:: Not always an MTyp?? *)
-    let cltyp = LF.MTyp typ in
-    let ctyp = LF.ClTyp (cltyp, cPsi) in
-    let name = Id.mk_name (Whnf.newMTypName ctyp) in
-    LF.Decl (name, ctyp, LF.No)
+             
+  (* Turns a gctx delaration into a mctx declaration
+     unbox ctyp : Comp.ctyp_decl -> LF.ctyp_decl *)
+  let unbox ctyp =
+    match ctyp with
+    | Comp.CTypDecl (name, Comp.TypBox(loc, ctyp), wf_tag) ->
+       LF.Decl (name, ctyp, LF.No)
 
 
   (* Check to see if the head of an assumption matches the comp goal *)
-  let rec matchHead assump cg =
+  (* Note: currently doesn't check if the kind of type (MTyp, PTyp, ect) 
+     matches *)
+(*  let rec matchHead assump cg =
     let matchLFhead cg tA =
       match cg with
-      | Box (_cPsi, Atom tA') ->
+      | Box (_cPsi, Atom tA', l) ->
          Id.cid_equals (Solver.cidFromAtom tA) (Solver.cidFromAtom tA')
       | (_) -> false
     in                     
     match assump with
-    | Box (_cPsi, Atom tA) ->
+    | Box (_cPsi, Atom tA, l) ->
        matchLFhead cg tA
-    | Inductive (name, spine) ->
+    | Atomic (name, spine) ->
        raise NotImplementedYet
     | Implies (ante, conse) ->
        matchHead conse cg
@@ -1323,120 +1351,15 @@ module CSolver = struct
     | Box (_) -> cg
     | Implies (cg1, cg2) -> getcgHead cg2
     | Forall (tdec, cg') -> getcgHead cg'
+   
+                            *)
 
-  (* Turn the antecedent of an implication into a list of subgoals*)
-  let rec anteToSG cg =
-    match cg with
-    | Implies (cg1, cg2) ->
-       let xs = anteToSG cg2 in
-       (* Keep subgoals in order they should be solved *)
-       List.rev (cg1 :: xs)
-    | Box (_) -> []
-    | Forall (_) -> [cg]
-(*
-  (* Convert a (normal) term into an exp_chk for type checking purposes *) 
-  let tmToExCk tM cPsi =
-    match tM with
-    | LF.Lam (loc, name, tM') ->
-       raise NotImplementedYet
-    | LF.Root (loc, hd, spine, pl) ->
-       raise NotImplementedYet
-    | LF.LFHole (loc, t, name) ->
-       raise NotImplementedYet
-    | LF.Clo (tM', s) ->
-       raise NotImplementedYet
-    | LF.Tuple (loc, tuple) ->
-       raise NotImplementedYet
- *)      
-       
-      
+  let rec cgSolve (cD: LF.mctx) (cG: Comp.gctx) (cPool : comp_res list)
+            (mq:mquery) (sc: LF.mctx -> Comp.gctx -> Comp.exp_chk -> unit) =
+    let ((cg:comp_goal), (ms:LF.msub)) = mq in
+    uniform_right cD cG cPool cg ms sc
 
-  (* Solver function for a goal of computation type *)
-    
-  (* filter_cG  cD (cPool,cPool') (cGamma, cGamma') ( ms = (cD', cG')
-
-    Pre-conditions:
-
-       cD : meta-context
-       cPool,cPool' : list of comp_goal assumptions
-       cPool  ~~ cGamma
-       cPool' ~~ cGamma'
-       ms : ? 
-
-      if cD |- cG    (list of comp_goals is well-formed in cD)
-      then 
-         cD' |- cG'  where 
-
-      cD' : meta-context and is an extension of cD
-      cG' : list of comp_goals where each comp_goal is 
-            either an implication or a universal or Atomic (Inductive) 
-            i.e. cG' is a stable context 
-
-      Clean up comp assumptions in cG, leaving only stable assumptions
-
-
-      Uniform Phase on the left:   cD ; cG  ==> e : Q / (cD', cG'')
- 
-       uniform_left cD cG cG' Q (sc)    (where the sc continuation builds 
-       skeleton term (fn e -> let box X = x in ..... in e )
-
-        cD ; (cG @ cG') |- e : Q 
- 
-
-       cD, X:U; cG >> cG' => e : Q  
-       -------------------------——————————————————————------------- box left 
-       cD; cG, x:[U] >> cG' => let box X = x in e : Q 
-
-
-       tau =/= [U]      cD; cG >> x:tau, cG' => e : Q 
-       ------------------------------------------------------------------ tau is left synchronous 
-               cD;  x:tau, cG >> cG' => e : Q / (cD', cG,x:tau)
-
-               cD ; cGamma  >> e : Q   (prove Q from the stable context cGamma and meta-context cD)
-       --------------------------------------------------——–----------------------------------------
-       cD ; . >> cG  => e  : Q   
-         
-
-
-     cG (list of comp_goals)  ~~ cGamma (gctx) 
-
-     *)
-    
-
-let rec filter_cG cD cG cGamma  ms =  match cG with
-  | [] -> (cG, cD)
-  | Box(_cPsi, _g) :: cG' ->
-     (* In this case, we want to "unbox" the assumption and add it to 
-        the cD *)
-     let typ_dec = unbox _g _cPsi in
-     let cD' = Whnf.extend_mctx cD (typ_dec, ms) in
-     filter_cG cG' cD' ms
-  | x :: cG' ->
-     (* Otherwise we leave the assumption in cG *)
-     let (cG'', cD') = filter_cG cG' cD ms in
-     (x :: cG'', cD')
-    in
-
-
-    (* Uniform Right Phase : 
-
-  
-       cD; cG >> .  => e : Q  
-       ------------------------ Q is either Box or Atomic (Inductive)
-       cD; cG => e : Q 
-
-
-        cD; cG, x:cg1  => e : cg2        (cG ~~ cGamma, x:tau1)
-       ------------------------------------------------------------------ tau is left synchronous 
-               cD;cG => fn x -> e  : (cg1 , tau1) -> cg2
-
-         cD,X:U ; G |- e : cgxs    
-       ------------------------------------------------------
-       cD ; cG  => mlam X -> e  : forall X:U. cg   
-    
-
-
-      [ Stable phase : cD ; cG >> . ==> e : Q
+  (* Stable phase : cD ; cG >> . ==> e : Q
 
 
        cD ; cGamma  >> e : Q   (prove Q from the stable context cGamma and meta-context cD)
@@ -1495,71 +1418,207 @@ let rec filter_cG cD cG cGamma  ms =  match cG with
 
     ----------------------------------------
     cD ; cGamma  > e : Q   ====> Q
+   *)
 
+  (* We focus on one of the computation assumptions in cPool *)
+  and focus cD cG cG_all cPool cPool_all cg ms sc =
+    match cPool with
+    | [] -> raise NotImplementedYet
+    (*  matchCompSig (cidFromAtomicCG c_g)  *)
+    | (CAnd (cg', r)) :: cPool' ->
+       if (* Check to see if the goal is the head of the assumption *)
+         (*      matchHead x cg  *) true
+       then (* If so, try to solve the subgoals *)
+         ()
+(*           let subGoals = anteToSG c_g in
+         solveImpSubGoals x subGoals cD ms sc  
+*)         else (* Otherwise, try the remaining comp assumptions *)
+         focus cD cG cG_all cPool cPool_all cg ms sc
+    | (CExists(tdecl, r) ) :: cPool' ->
+       if (* check to see if body of ForAll matches the goal *)
+         (*  matchHead x cg *) true
+       then (* If so, the goal can be solved by instantiating assumption  *)
+         raise NotImplementedYet
+         (* instForAll x c_g *)
+       else
+         focus cD cG cG_all cPool cPool_all cg ms sc
+    | _ -> (* this case should not happen *)
+       raise NotImplementedYet
+        
+        
+  and prove cD cG cPool cg ms sc =
+    match cg with
+    | Box (_cPsi, _g, l) ->
+       (try ()
+         (* First, try solving on LF level *)
+(*            TODO:: give new sc function to solve!
+           Solver.solve cD _cPsi (_g, Substitution.LF.id) (sc cD)
+*)         with
+       (* If no solution found, try solving on comp level *)
+       | _ ->
+          focus cD cG cG cPool cPool cg ms sc)
+    | Atomic (name, spine) ->
+       (try ()
+          (* First try solving by matching with the signatures *)
+        with
+        | _ ->
+           (* Otherwise, head to the focusing phase *)
+           focus cD cG cG cPool cPool cg ms sc)
+
+       
+
+
+    
+
+  
+    (* uniform_left_cG  cD (cPool,cPool') (cG, cG') ms = (cD', cPool', cG')
+
+    Pre-conditions:
+
+       cD : meta-context
+       cPool,cPool' : list of comp_goal assumptions
+       cPool  ~~ cG
+       cPool' ~~ cG'
+       ms : ? 
+
+      if cD |- cPool   (list of comp_goals is well-formed in cD)
+      then 
+         cD' |- cPool'  where 
+
+      cD'    : meta-context and is an extension of cD
+      cPool' : list of comp_goals where each comp_goal is 
+               either an implication or a universal or Atomic (Inductive)
+      cG'    : stable computation-context and is a reduction of cG
+ 
+
+      Clean up comp assumptions in cG, leaving only stable assumptions
+
+
+      Uniform Phase on the left:   cD ; cG  ==> e : Q / (cD', cG'')
+ 
+       uniform_left cD cG cG' Q (sc)    (where the sc continuation builds 
+       skeleton term (fn e -> let box X = x in ..... in e )
+
+        cD ; (cG @ cG') |- e : Q 
+ 
+
+       cD, X:U; cG >> cG' => e : Q  
+       -------------------------——————————————————————------------- box left 
+       cD; cG, x:[U] >> cG' => let box X = x in e : Q 
+
+
+       tau =/= [U]      cD; cG >> x:tau, cG' => e : Q 
+       ------------------------------------------------------------------ tau is left synchronous 
+               cD;  x:tau, cG >> cG' => e : Q / (cD', cG,x:tau)
+
+               cD ; cGamma  >> e : Q   (prove Q from the stable context cGamma and meta-context cD)
+       --------------------------------------------------——–----------------------------------------
+       cD ; . >> cG  => e  : Q   
+         
+
+
+     cG (list of comp_goals)  ~~ cGamma (gctx) 
 
      *)
     
-and  cgSolve (cG : comp_goal list) cD mq sc =
+
+  and uniform_left cD cG cG_ret cPool cPool_ret cg ms sc =
+    match (cG, cPool) with
+    | (LF.Empty, []) -> prove cD cG_ret cPool_ret cg ms sc
+    | (LF.Dec (cG', Comp.CTypDecl (n,Comp.TypBox (l,t),w)),
+       Base (Comp.TypBox(_)) :: cPool') ->
+       (* In this case, we want to "unbox" the assumption and add it to 
+          the cD *)
+       let mctx_decl = unbox (Comp.CTypDecl (n,Comp.TypBox (l,t),w)) in 
+       let cD' = Whnf.extend_mctx cD (mctx_decl, ms) in
+       (* TODO:: correct exp_syn?? *)
+       let exp_syn = Comp.Var (l, 0) in
+       let sc' =
+         (fun d g tM ->
+           sc d g (Comp.Let (l, exp_syn, (n, tM)))) in 
+       uniform_left cD' cG' cG_ret cPool' cPool_ret cg ms sc'
+    | (LF.Dec (cG', tdecl), x :: cPool') ->
+       (* Otherwise we leave the assumption in cG *)
+       let cG_ret' = Whnf.extend_gctx cG_ret (tdecl, ms) in
+       let cPool_ret' = x :: cPool_ret in 
+       uniform_left cD cG' cG_ret' cPool' cPool_ret' cg ms sc
+
+       
+       (* Uniform Right Phase : 
+ 
+       cD; cG >> .  => e : Q  
+       ------------------------ Q is either Box or Atomic (Inductive)
+       cD; cG => e : Q 
 
 
-    (* solve the comp type subgoals of an assumption whose head matches
-       the original goal *) 
-    let solveImpSubGoals c_g subG cD ms sc =
-      let hd = getcgHead c_g in 
-      match subG with
+        cD; cG, x:cg1  => e : cg2        (cG ~~ cGamma, x:tau1)
+       ------------------------------------------------------------------ tau is left synchronous 
+               cD;cG => fn x -> e  : (cg1 , tau1) -> cg2
+
+         cD, X:U ; cG |- e : cgxs    
+       ------------------------------------------------------
+       cD ; cG  => mlam X -> e  : forall X:U. cg   
+    
+       *)
+           
+     (* First we break our goal down into an atomic one *)
+  and uniform_right cD cG cPool cg ms sc =
+    match cg with
+    | Box (_) | Atomic (_) ->
+       (* Then we filter the cG, so only stable assumptions are left *)
+       uniform_left cD cG LF.Empty cPool [] cg ms sc 
+    | Forall (tdecl, cg') ->
+       (* In this case we gain an assumption in the meta-context *)
+       let LF.Decl (name, LF.ClTyp (LF.MTyp (LF.Atom (loc,_,_)), cPsi),_) = tdecl in
+       let cD' = Whnf.extend_mctx cD (tdecl, ms) in
+       let sc' =
+         (fun d g tM -> (* TODO:: remove X:U from cD?? *)
+           sc d g (Comp.MLam(loc, name, tM, `explicit))) in
+       cgSolve cD' cG cPool (cg', ms) sc'
+    | Implies ((r, tdecl), cg') ->
+       (* We gain a computation assumption in the computation context *)
+
+       let cPool' = r :: cPool in
+       let cG' = Whnf.extend_gctx cG (tdecl, ms) in
+       let Comp.CTypDecl (name, tau,_) = tdecl in
+       let loc = Comp.loc_of_typ tau in 
+       let sc' =
+         (fun d g tM ->
+            sc d g (Comp.Fn (loc, name, tM))) in
+       cgSolve cD cG' cPool' (cg', ms) sc'
+
+
+
+
+
+
+(*
+  (* solve the comp type subgoals of an assumption whose head matches
+     the original goal *) 
+  and solveImpSubGoals c_g subG cD ms sc =
+    let hd = getcgHead c_g in 
+    match subG with
       | [] ->
-         ( (* In this case we are finished; no subgoals remain. *)
-           match hd with
-           | Box (cPsi, g) ->
-              let root x = LF.Root (Syntax.Loc.ghost, x, LF.Nil, `explicit)
-              in
-              let mvar k = LF.MVar (LF.Offset k, LF.Shift 0) in
-              let tm = root (mvar 0) in 
-              sc cD (cPsi, tm)  
-          | _ ->
+       ( (* In this case we are finished; no subgoals remain. *)
+         match hd with
+         | Box (cPsi, g, l) ->
+            () 
+         | _ ->
              (* For goals of ind type *)
-             ())
+            ())
       | x :: xs ->
-         cgSolve cG cD (x, ms) sc
-         (* TODO:: sc function for solveImpSubGoals as in gsolve *)
- (*          (fun cD (cPsi, tM) ->
-             solveImpSubGoals c_g xs cD ms
-               (fun cD' (v, tS) -> sc cD' (v, tM :: tS))
-           ) 
-  *)
-    in   
-    
-
-    
-
-    (* We focus on one of the computation assumptions in cG *)
-    let rec focusCClause cG cG_all cD c_g ms sc =
-      match cG with
-      | [] -> raise NotImplementedYet
-      (*  matchCompSig (cidFromAtomicCG c_g)  *)
-      | (Implies (c_g1, c_g2) as x) :: cG' ->
-         if (* Check to see if the goal is the head of the assumption *)
-           matchHead x c_g
-         then (* If so, try to solve the subgoals *)
-           let subGoals = anteToSG c_g in
-           solveImpSubGoals x subGoals cD ms sc  
-         else (* Otherwise, try the remaining comp assumptions *)
-           focusCClause cG' cG cD c_g ms sc
-      | (Forall (tdec, c_g') as x) :: cG' ->
-         if (* check to see if body of ForAll matches the goal *)
-           matchHead x c_g
-         then (* If so, the goal can be solved by instantiating assumption  *)
-           raise NotImplementedYet
-           (* instForAll x c_g *)
-         else
-           focusCClause cG' cG cD c_g ms sc
-      | _ -> (* this case should not happen *)
-         raise NotImplementedYet
+         cgSolve cPool cD cG (x, ms) sc
+(* TODO:: sc function for solveImpSubGoals as in gsolve *)
+(*          (fun cD (cPsi, tM) ->
+           solveImpSubGoals c_g xs cD ms
+             (fun cD' (v, tS) -> sc cD' (v, tM :: tS))
+         ) 
+*)
+         *)
 
     
         
-      
-    in
+
     (*         
      (* Try to find solution in the computation signatures. *)                                      
     let matchSgnCClause (cidTerm, sCCl) sc =
@@ -1584,56 +1643,9 @@ and  cgSolve (cG : comp_goal list) cD mq sc =
        I.iterSCClauses (fun w -> matchSgnCClause w sc) cidTyp  
      in *)
      
-         
-
-    (* Focusing phase of proof search *)
-    let focus cG cD c_g ms sc =
-      match c_g with
-      | Box (_cPsi, _g) ->
-         (try
-           (* First, try solving on LF level *)
-           Solver.solve cD _cPsi (_g, Substitution.LF.id) (sc cD)
-         with
-         (* If no solution found, try solving on comp level *)
-         | _ ->
-            focusCClause cG cG cD c_g ms sc)
-      | Inductive (name, spine) ->
-         (* We need to first find how to construct the computational 
-            relation- meaning we need to first do proof search on the
-            comp level
-          *)
-         focusCClause cG cG cD c_g ms sc
 
 
 
-           (* Main loop  *)
-    in
-    (* First we collect assumption from the overall goal until we
-       reach an atomic goal *)
-    let (cg, ms) = mq in 
-    match cg with
-    | Box (_) | Inductive (_) ->
-       (* Then we filter the cG, so only stable assumptions are left *)
-       let (cG', cD') = filter_cG cG cD ms in
-       (* Finally we try to solve the goal via focusing- 
-          either on the LF level or Comp level *)
-  (*     let sc' = (fun (u, tM) -> sc cD' (u, tM)) in *)
-       focus cG' cD' cg ms sc
-    | Forall (tdecl, cg') ->
-       (* In this case we gain an assumption in the meta-context *)
-       let cD' = Whnf.extend_mctx cD (tdecl,ms) in
-       let sc' =
-         (fun d (u, tM) ->
-           sc cD' (u, tM)) in
-       cgSolve cG cD' (cg', ms) sc'
-    | Implies (cg1, cg2) ->
-       (* We gain a computation assumption *)
-       
-       (* Do we need to normalize cG1 first? 
-       let cg1' = Whnf.cnormMTyp (cg1,ms) in
-        *)
-       let cG' = cg1 :: cG in
-       cgSolve cG' cD (cg2, ms) sc
   
 
 end 
@@ -1765,63 +1777,45 @@ module Frontend = struct
     else if !Options.chatter >= 2
     then printf "Skipping query -- bound for tries = 0.\n"
 
-
-  let msolve sgnMQuery =
-    (*  unroll cD  (cg,ms) = (cD', cg_atomic) 
-
-       if         
-
-        cD |- [ms]cg      computation-level goal cg is well-formed/well-typed 
-                          in the meta-context cD where 
-        cD' |- cg        
-        cD  |- ms : cD'                               
-            |- cD mctx    (cD is a well-formed meta-context)
+  (* 
+     msolve (sgnMQ: {mquery        : mquery; 
+                     skinnyCompTyp : Comp.typ; 
+                     mexpected     : bound;  
+                     mtries        : bound
+                     depth         : bound
+                     instMMVars    : minst list})= 
       
-       then 
-   
-         cg_atomic is either a Boxed Type or an Inductive Type 
-         cD' |- cg_atomic  (computation-level goal cg is well-formed/well-typed 
-                            in the meta-context cD) 
-         |- cD' mctx       (cD' is a well-formed meta-context)
-         cD' is an extension of cD
-
-     *)    
-
-    (* let rec unroll cD (cg,ms) = match (cg,ms) with
-      | (Box (_cPsi, _g), ms) -> (cD, (cg,ms))
-      | (Forall (tdecl, cg'), ms) ->
-          unroll (Whnf.extend_mctx cD  (tdecl,ms)) (cg',Whnf.mvar_dot1 ms) 
-    in  *)
+     
+  *)
+    
+  let msolve sgnMQuery =
+     
     let solutions = ref 0 in
-    (*    let (cD, mgoal_atomic) = unroll LF.Empty sgnMQuery.mquery in 
-    match mgoal_atomic  with
-    | (Box(cPsi, g) , ms) -> *)
 
     (* Type checking function. *)
-(*    let check cD cPsi (e : Comp.exp_chk) ms =
-      (* check mcid cD cG (total_decs : total_dec list) ?cIH:(cIH = Syntax.Int.LF.Empty) e ttau  *)
+    let check cD cG (e : Comp.exp_chk) ms =
+   (* check mcid cD cG (total_decs : total_dec list) ?cIH:(cIH = Syntax.Int.LF.Empty) e ttau  *)
       (* Does the term have a cid?? *)
-      Check.Comp.check None cD LF.Empty [] e (sgnMQuery.skinnyCompTyp, ms)
+      Check.Comp.check None cD cG [] e (sgnMQuery.skinnyCompTyp, ms)
     in
-*)   
-    
-    let scInit cD (cPsi, tM) =
+
+    (* Success continuation function *)
+    let scInit cD cG e =
       incr solutions;
 
        (* Rebuild the substitution and type check the proof term. *)
-(*      if !Options.checkProofs
+      if !Options.checkProofs
       then
-        let e = CSolver.tmToExCk tM cPsi in
-        check cD cPsi e (Convert.solToMSub sgnMQuery.instMMVars);
- *)    
+        check cD cG e (Convert.solToMSub sgnMQuery.instMMVars);
+     
  
           begin
-            fprintf std_formatter  "@[<v>---------- Solution %d ----------@,[%a |- %a]@]" 
+(*            fprintf std_formatter  "@[<v>---------- Solution %d ----------@,[%a |- %a]@]" 
               (*              "@[<hov 2>@[%a@] |-@ @[%a@]@]" *)
               (!solutions)
               (P.fmt_ppr_dctx cD) cPsi
               (P.fmt_ppr_normal cD cPsi) (tM, Substitution.LF.id);    
-            
+ *)            
             fprintf std_formatter "@.@.";
             
             (* Stop when no. of solutions exceeds tries. *)
@@ -1840,7 +1834,7 @@ module Frontend = struct
             if !Options.chatter >= 1
               then P.printMQuery sgnMQuery;
             try
-                CSolver.cgSolve [] LF.Empty (cG, ms) scInit;
+                CSolver.cgSolve LF.Empty LF.Empty [] (cG, ms) scInit;
                 (* Check solution bounds. *)
                 checkSolutions sgnMQuery.mexpected sgnMQuery.mtries !solutions
               with

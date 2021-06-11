@@ -3,6 +3,7 @@ open Syntax.Int
 type goal
 type query
 type mquery
+type comp_res
    
 
 module Options : sig
@@ -25,7 +26,7 @@ module Solver : sig
 end
 
 module CSolver : sig
-  val cgSolve : comp_goal list -> LF.mctx -> mquery -> (LF.mctx -> (LF.dctx * LF.normal) -> unit) -> unit
+  val cgSolve : LF.mctx -> Comp.gctx -> comp_res list -> mquery -> (LF.mctx -> Comp.gctx -> Comp.exp_chk -> unit) -> unit
 end 
 
 type bound = int option

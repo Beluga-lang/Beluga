@@ -66,7 +66,7 @@ exception NotImplementedYet
 *)
 
 type lfTyp =  (* Used to classify the kind of LF object an LF type represents *)
-  | M | P     (* Required for ??                   *) 
+  | M | P
                      
 type goal =                             (* Goals            *)
   | Atom of LF.typ                      (* g ::= A          *)
@@ -303,7 +303,7 @@ module Convert = struct
        LF.PiTyp ((tdec, LF.Maybe), g'')
     | Impl ((res_g, tdec), g') ->
        let g'' = goalToTyp g' in
-       LF.PiTyp ((tdec, LF.No), g'')  *)
+       LF.PiTyp ((tdec, LF.No), g'') *)
 
   and cTypToCompTyp ctyp =
     match ctyp with
@@ -1315,7 +1315,7 @@ module Solver = struct
 end
 
 module CSolver = struct
-
+  
              
   (* Turns a gctx delaration into a mctx declaration
      unbox ctyp : Comp.ctyp_decl -> LF.ctyp_decl *)
@@ -1326,33 +1326,33 @@ module CSolver = struct
 
 
   (* Check to see if the head of an assumption matches the comp goal *)
-  (* Note: currently doesn't check if the kind of type (MTyp, PTyp, ect) 
-     matches *)
-(*  let rec matchHead assump cg =
-    let matchLFhead cg tA =
-      match cg with
-      | Box (_cPsi, Atom tA', l) ->
+  let rec matchHead assump cg =
+    let matchLFhead cg assump =
+      match (cg, assump) with
+      | (Box (_cPsi, Atom tA, Some M),
+         Base (Comp.TypBox (loc, LF.ClTyp (LF.MTyp (tA'), cPsi)))) ->
+         Id.cid_equals (Solver.cidFromAtom tA) (Solver.cidFromAtom tA')
+      | (Box (_cPsi, Atom tA, Some P),
+         Base (Comp.TypBox (loc, LF.ClTyp (LF.PTyp (tA'), cPsi)))) ->
          Id.cid_equals (Solver.cidFromAtom tA) (Solver.cidFromAtom tA')
       | (_) -> false
     in                     
     match assump with
-    | Box (_cPsi, Atom tA, l) ->
-       matchLFhead cg tA
-    | Atomic (name, spine) ->
-       raise NotImplementedYet
-    | Implies (ante, conse) ->
-       matchHead conse cg
-    | Forall (tdec, assump') ->
+    | Base (_) ->
+       matchLFhead cg assump
+    | CAnd (g, r) ->
+       matchHead r cg
+    | CExists (tdec, assump') ->
        matchHead assump' cg
 
-  (* Returns the head of a comp goal *)
-  let rec getcgHead cg =
-    match cg with
-    | Box (_) -> cg
-    | Implies (cg1, cg2) -> getcgHead cg2
-    | Forall (tdec, cg') -> getcgHead cg'
+  let rec rev_LFctx ctx ctx_ret =
+    match ctx with
+    | LF.Empty -> ctx_ret
+    | LF.Dec (ctx', ctd) ->
+       rev_LFctx ctx' (LF.Dec (ctx_ret, ctd))
+       
    
-                            *)
+
 
   let rec cgSolve (cD: LF.mctx) (cG: Comp.gctx) (cPool : comp_res list)
             (mq:mquery) (sc: LF.mctx -> Comp.gctx -> Comp.exp_chk -> unit) =
@@ -1425,18 +1425,18 @@ module CSolver = struct
     match cPool with
     | [] -> raise NotImplementedYet
     (*  matchCompSig (cidFromAtomicCG c_g)  *)
-    | (CAnd (cg', r)) :: cPool' ->
+    | (CAnd (cg', r) as x) :: cPool' ->
        if (* Check to see if the goal is the head of the assumption *)
-         (*      matchHead x cg  *) true
+         matchHead x cg
        then (* If so, try to solve the subgoals *)
          ()
 (*           let subGoals = anteToSG c_g in
          solveImpSubGoals x subGoals cD ms sc  
 *)         else (* Otherwise, try the remaining comp assumptions *)
          focus cD cG cG_all cPool cPool_all cg ms sc
-    | (CExists(tdecl, r) ) :: cPool' ->
+    | (CExists(tdecl, r) as x) :: cPool' ->
        if (* check to see if body of ForAll matches the goal *)
-         (*  matchHead x cg *) true
+         matchHead x cg
        then (* If so, the goal can be solved by instantiating assumption  *)
          raise NotImplementedYet
          (* instForAll x c_g *)
@@ -1471,60 +1471,68 @@ module CSolver = struct
     
 
   
-    (* uniform_left_cG  cD (cPool,cPool') (cG, cG') ms = (cD', cPool', cG')
+    (* uniform_left_ cD cG cG_ret cPool cPool_ret cg ms sc = 
+         (cD', cPool', cG', sc')
+        (where the sc continuation builds skeleton term 
+        (fn e -> let box X = x in ..... in e ))
 
     Pre-conditions:
 
        cD : meta-context
-       cPool,cPool' : list of comp_goal assumptions
+       cPool,cPool_ret : list of comp_res assumptions
        cPool  ~~ cG
-       cPool' ~~ cG'
-       ms : ? 
+       cPool_ret ~~ cG_ret
+       cg : comp_goal
+       ms : msub
+       sc : mcts -> gctx -> exp_chk -> unit
+      
 
       if cD |- cPool   (list of comp_goals is well-formed in cD)
       then 
-         cD' |- cPool'  where 
+         cD' |- cPool_ret  where 
 
-      cD'    : meta-context and is an extension of cD
-      cPool' : list of comp_goals where each comp_goal is 
-               either an implication or a universal or Atomic (Inductive)
-      cG'    : stable computation-context and is a reduction of cG
+      cD'       : meta-context and is an extension of cD
+      cPool_ret : list of comp_res where each comp_res is 
+                  either an implication or a universal or Atomic (Inductive)
+      cG_ret    : stable computation-context and is a reduction of cG
  
 
-      Clean up comp assumptions in cG, leaving only stable assumptions
 
-
-      Uniform Phase on the left:   cD ; cG  ==> e : Q / (cD', cG'')
+      Uniform Phase on the left:   cD ; cG  ==> e : Q 
  
-       uniform_left cD cG cG' Q (sc)    (where the sc continuation builds 
-       skeleton term (fn e -> let box X = x in ..... in e )
 
         cD ; (cG @ cG') |- e : Q 
  
 
-       cD, X:U; cG >> cG' => e : Q  
-       -------------------------——————————————————————------------- box left 
-       cD; cG, x:[U] >> cG' => let box X = x in e : Q 
+                cD, X:U; cG >> cG' => e : Q  
+       ------------------------------------------------ box left 
+        cD; cG, x:[U] >> cG' => let box X = x in e : Q 
 
 
-       tau =/= [U]      cD; cG >> x:tau, cG' => e : Q 
-       ------------------------------------------------------------------ tau is left synchronous 
-               cD;  x:tau, cG >> cG' => e : Q / (cD', cG,x:tau)
+       tau =/= [U]   D; cG >> cG', x:tau => e : Q   (cG, x:tau ~~ cPool, x:res)
+       ------------------------------------------------------------------------- tau is left synchronous 
+                             cD; cG, x:tau >> cG' => e : Q 
 
-               cD ; cGamma  >> e : Q   (prove Q from the stable context cGamma and meta-context cD)
-       --------------------------------------------------——–----------------------------------------
-       cD ; . >> cG  => e  : Q   
+                                           
+               cD ; cG  >> e : Q           (prove Q from the stable context 
+       ----------------------------------   cG and meta-context cD)
+            cD ; . >> cG  => e  : Q   
          
 
 
-     cG (list of comp_goals)  ~~ cGamma (gctx) 
+     cG (gctx)  ~~ cPool (list of comp_res) 
 
      *)
     
 
   and uniform_left cD cG cG_ret cPool cPool_ret cg ms sc =
     match (cG, cPool) with
-    | (LF.Empty, []) -> prove cD cG_ret cPool_ret cg ms sc
+    | (LF.Empty, []) ->
+       (* uniform_left reverses order of cG and cPool, 
+          need to reverse both list and ctx *)
+       let cPool_ret' = List.rev cPool_ret in
+       let cG_ret' = rev_LFctx cG_ret LF.Empty in
+       prove cD cG_ret' cPool_ret' cg ms sc
     | (LF.Dec (cG', Comp.CTypDecl (n,Comp.TypBox (l,t),w)),
        Base (Comp.TypBox(_)) :: cPool') ->
        (* In this case, we want to "unbox" the assumption and add it to 
@@ -1547,15 +1555,15 @@ module CSolver = struct
        (* Uniform Right Phase : 
  
        cD; cG >> .  => e : Q  
-       ------------------------ Q is either Box or Atomic (Inductive)
+       ------------------------ (where Q is either Box or Atomic (Inductive) type)
        cD; cG => e : Q 
 
 
-        cD; cG, x:cg1  => e : cg2        (cG ~~ cGamma, x:tau1)
+        cD; cG, x:tau  => e : cg        (cG, x:tau ~~ cPool, x:res)
        ------------------------------------------------------------------ tau is left synchronous 
-               cD;cG => fn x -> e  : (cg1 , tau1) -> cg2
+               cD;cG => fn x -> e  : (res , tau) -> cg
 
-         cD, X:U ; cG |- e : cgxs    
+         cD, X:U ; cG => e : cg    
        ------------------------------------------------------
        cD ; cG  => mlam X -> e  : forall X:U. cg   
     
@@ -1577,10 +1585,9 @@ module CSolver = struct
        cgSolve cD' cG cPool (cg', ms) sc'
     | Implies ((r, tdecl), cg') ->
        (* We gain a computation assumption in the computation context *)
-
        let cPool' = r :: cPool in
        let cG' = Whnf.extend_gctx cG (tdecl, ms) in
-       let Comp.CTypDecl (name, tau,_) = tdecl in
+       let Comp.CTypDecl (name, tau, _) = tdecl in
        let loc = Comp.loc_of_typ tau in 
        let sc' =
          (fun d g tM ->

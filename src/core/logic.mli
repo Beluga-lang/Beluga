@@ -17,6 +17,11 @@ module Convert : sig
   val comptypToMQuery : Comp.typ * Id.offset -> mquery * Comp.typ * LF.msub * (Id.name * Comp.meta_obj) list
 end
 
+module Index : sig
+  type inst 
+end
+     
+
 module Frontend : sig
   exception Done
 end
@@ -26,9 +31,10 @@ module Solver : sig
 end
 
 module CSolver : sig
-  val cgSolve : LF.mctx -> Comp.gctx -> comp_res list -> mquery -> (LF.mctx -> Comp.gctx -> Comp.exp_chk -> unit) -> unit
+  val cgSolve : LF.mctx -> Comp.gctx -> mquery -> (LF.mctx -> Comp.gctx -> Comp.exp_chk -> unit) ->
+     ((LF.sub * Index.inst list * LF.typ) -> (LF.dctx * LF.normal) -> unit) -> unit
 end 
-
+     
 type bound = int option
 
 val storeQuery : Id.name option -> LF.typ * Id.offset -> LF.mctx -> bound -> bound -> unit

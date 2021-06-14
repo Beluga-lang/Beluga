@@ -193,7 +193,7 @@ let process_command
           Logic.Convert.comptypToMQuery (typ,0)
         in
            try
-          Logic.CSolver.cgSolve cDh cGh [] mquery
+          Logic.CSolver.cgSolve cDh cGh mquery
             begin
               fun cD cG tM ->
 (*            State.printf s "found solution: @[%a@]@,@?"
@@ -203,14 +203,23 @@ let process_command
            (*
            h.info.compSolution <- Some (tM, LF.Shift 0); *)
             raise Logic.Frontend.Done
-            end 
+            end
+            begin
+                fun (s,xs,tA) (cPsi, tM) ->
+  (*            State.printf s "found solution: @[%a@]@,@?"
+                (P.fmt_ppr_lf_normal cD LF.Null P.l0) tM;  *)
+             (* TODO:: How to add a solution to compSolution??
+                       Will need to convert term into type exp_chk *)
+             (*
+             h.info.compSolution <- Some (tM, LF.Shift 0); *)
+              raise Logic.Frontend.Done
+              end 
         with
           | Logic.Frontend.Done ->
               State.printf s "logic programming finished@,@?"; 
               ()
-         end
-       
-  
+             end
+         
     | Holes.LFInfo ->
        let { lfGoal; cPsi; lfSolution } = h.info in
        assert (lfSolution = None);

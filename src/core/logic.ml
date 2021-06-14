@@ -1315,6 +1315,11 @@ module Solver = struct
 end
 
 module CSolver = struct
+
+    (* Dynamic Computation Assumptions *)
+  type cPool =                    (* dP ::=                  *)
+    | Emp                         (*      | Emp              *)
+    | Full of (cPool * comp_res)  (*      | (cP', c_r)       *)
   
              
   (* Turns a gctx delaration into a mctx declaration
@@ -1325,7 +1330,8 @@ module CSolver = struct
        LF.Decl (name, ctyp, LF.No)
 
 
-  (* Check to see if the head of an assumption matches the comp goal *)
+  (* Check to see if the head of an assumption (a comp_res) 
+     matches the comp_goal *)
   let rec matchHead assump cg =
     let matchLFhead cg assump =
       match (cg, assump) with
@@ -1345,19 +1351,34 @@ module CSolver = struct
     | CExists (tdec, assump') ->
        matchHead assump' cg
 
-  let rec rev_LFctx ctx ctx_ret =
-    match ctx with
-    | LF.Empty -> ctx_ret
-    | LF.Dec (ctx', ctd) ->
-       rev_LFctx ctx' (LF.Dec (ctx_ret, ctd))
-       
-   
+  (* rev_LFctx (cD, C:U) cD_ret = 
+        (C:U, rev_LFctx cD)
+     takes arbitrary LF contexts (mctx, gctx)
+   *)
+  let rev_LFctx ctx =
+    let rec loop ctx ctx_ret =
+      match ctx with
+      | LF.Empty -> ctx_ret
+      | LF.Dec (ctx', ctd) ->
+         loop ctx' (LF.Dec (ctx_ret, ctd))
+    in
+    loop ctx LF.Empty
+
+  (* Reverse the order of a cPool (as above) *)
+  let rev_cPool cPool =
+    let rec loop cPool cPool_ret =
+      match cPool with
+      | Emp -> cPool_ret
+      | Full (cPool', r) ->
+         loop cPool' (Full (cPool_ret, r))
+    in
+    loop cPool Emp
 
 
-  let rec cgSolve (cD: LF.mctx) (cG: Comp.gctx) (cPool : comp_res list)
-            (mq:mquery) (sc: LF.mctx -> Comp.gctx -> Comp.exp_chk -> unit) =
+  let rec cgSolve' (cD: LF.mctx) (cG: Comp.gctx) (cPool : cPool)
+            (mq:mquery) (sc: LF.mctx -> Comp.gctx -> Comp.exp_chk -> unit) (scLF : LF.sub * Index.inst list * LF.typ -> LF.dctx * LF.normal -> unit) =
     let ((cg:comp_goal), (ms:LF.msub)) = mq in
-    uniform_right cD cG cPool cg ms sc
+    uniform_right cD cG cPool cg ms sc scLF
 
   (* Stable phase : cD ; cG >> . ==> e : Q
 
@@ -1421,49 +1442,56 @@ module CSolver = struct
    *)
 
   (* We focus on one of the computation assumptions in cPool *)
-  and focus cD cG cG_all cPool cPool_all cg ms sc =
+  and focus cD cG cG_all cPool cPool_all cg ms sc scLF =
     match cPool with
-    | [] -> raise NotImplementedYet
+    | Emp -> raise NotImplementedYet
     (*  matchCompSig (cidFromAtomicCG c_g)  *)
-    | (CAnd (cg', r) as x) :: cPool' ->
+    | Full (cPool', CAnd (cg', r)) ->
        if (* Check to see if the goal is the head of the assumption *)
-         matchHead x cg
+         matchHead (CAnd (cg', r)) cg
        then (* If so, try to solve the subgoals *)
          ()
 (*           let subGoals = anteToSG c_g in
          solveImpSubGoals x subGoals cD ms sc  
-*)         else (* Otherwise, try the remaining comp assumptions *)
-         focus cD cG cG_all cPool cPool_all cg ms sc
-    | (CExists(tdecl, r) as x) :: cPool' ->
+*)     else (* Otherwise, try the remaining comp assumptions *)
+         focus cD cG cG_all cPool' cPool_all cg ms sc scLF
+    | Full (cPool', CExists (tdecl, r)) ->
        if (* check to see if body of ForAll matches the goal *)
-         matchHead x cg
+         matchHead (CExists (tdecl, r)) cg
        then (* If so, the goal can be solved by instantiating assumption  *)
          raise NotImplementedYet
          (* instForAll x c_g *)
        else
-         focus cD cG cG_all cPool cPool_all cg ms sc
+         focus cD cG cG_all cPool' cPool_all cg ms sc scLF
     | _ -> (* this case should not happen *)
        raise NotImplementedYet
         
         
-  and prove cD cG cPool cg ms sc =
+  and prove cD cG cPool cg ms sc scLF =
     match cg with
     | Box (_cPsi, _g, l) ->
-       (try ()
+       (try
          (* First, try solving on LF level *)
-(*            TODO:: give new sc function to solve!
-           Solver.solve cD _cPsi (_g, Substitution.LF.id) (sc cD)
-*)         with
-       (* If no solution found, try solving on comp level *)
-       | _ ->
-          focus cD cG cG cPool cPool cg ms sc)
+          (*            TODO:: give new sc function to solve!    *)
+          let Atom tA = _g in
+          let (tA', i) = Abstract.typ tA in
+          let ((_, s), tA'', _, xs) =
+            Convert.typToQuery cD _cPsi (tA', i) in
+          let sc' =
+            (fun (cPsi, tM) ->
+            (scLF (s,xs,tA')) (cPsi, tM)) in
+          Solver.solve cD _cPsi (_g, S.id) sc'
+        with
+         (* If no solution found, try solving on comp level *)
+         | _ ->
+          focus cD cG cG cPool cPool cg ms sc scLF)
     | Atomic (name, spine) ->
        (try ()
           (* First try solving by matching with the signatures *)
         with
         | _ ->
            (* Otherwise, head to the focusing phase *)
-           focus cD cG cG cPool cPool cg ms sc)
+           focus cD cG cG cPool cPool cg ms sc scLF)
 
        
 
@@ -1525,16 +1553,16 @@ module CSolver = struct
      *)
     
 
-  and uniform_left cD cG cG_ret cPool cPool_ret cg ms sc =
+  and uniform_left cD cG cG_ret cPool cPool_ret cg ms sc scLF =
     match (cG, cPool) with
-    | (LF.Empty, []) ->
+    | (LF.Empty, Emp) ->
        (* uniform_left reverses order of cG and cPool, 
           need to reverse both list and ctx *)
-       let cPool_ret' = List.rev cPool_ret in
-       let cG_ret' = rev_LFctx cG_ret LF.Empty in
-       prove cD cG_ret' cPool_ret' cg ms sc
+       let cPool_ret' = rev_cPool cPool_ret in
+       let cG_ret' = rev_LFctx cG_ret in
+       prove cD cG_ret' cPool_ret' cg ms sc scLF
     | (LF.Dec (cG', Comp.CTypDecl (n,Comp.TypBox (l,t),w)),
-       Base (Comp.TypBox(_)) :: cPool') ->
+       Full (cPool', Base (Comp.TypBox(_)))) ->
        (* In this case, we want to "unbox" the assumption and add it to 
           the cD *)
        let mctx_decl = unbox (Comp.CTypDecl (n,Comp.TypBox (l,t),w)) in 
@@ -1544,12 +1572,12 @@ module CSolver = struct
        let sc' =
          (fun d g tM ->
            sc d g (Comp.Let (l, exp_syn, (n, tM)))) in 
-       uniform_left cD' cG' cG_ret cPool' cPool_ret cg ms sc'
-    | (LF.Dec (cG', tdecl), x :: cPool') ->
+       uniform_left cD' cG' cG_ret cPool' cPool_ret cg ms sc' scLF
+    | (LF.Dec (cG', tdecl), Full (cPool', x)) ->
        (* Otherwise we leave the assumption in cG *)
        let cG_ret' = Whnf.extend_gctx cG_ret (tdecl, ms) in
-       let cPool_ret' = x :: cPool_ret in 
-       uniform_left cD cG' cG_ret' cPool' cPool_ret' cg ms sc
+       let cPool_ret' = Full (cPool_ret, x) in 
+       uniform_left cD cG' cG_ret' cPool' cPool_ret' cg ms sc scLF
 
        
        (* Uniform Right Phase : 
@@ -1570,11 +1598,11 @@ module CSolver = struct
        *)
            
      (* First we break our goal down into an atomic one *)
-  and uniform_right cD cG cPool cg ms sc =
+  and uniform_right cD cG cPool cg ms sc scLF =
     match cg with
     | Box (_) | Atomic (_) ->
        (* Then we filter the cG, so only stable assumptions are left *)
-       uniform_left cD cG LF.Empty cPool [] cg ms sc 
+       uniform_left cD cG LF.Empty cPool Emp cg ms sc scLF
     | Forall (tdecl, cg') ->
        (* In this case we gain an assumption in the meta-context *)
        let LF.Decl (name, LF.ClTyp (LF.MTyp (LF.Atom (loc,_,_)), cPsi),_) = tdecl in
@@ -1582,17 +1610,17 @@ module CSolver = struct
        let sc' =
          (fun d g tM -> (* TODO:: remove X:U from cD?? *)
            sc d g (Comp.MLam(loc, name, tM, `explicit))) in
-       cgSolve cD' cG cPool (cg', ms) sc'
+       cgSolve' cD' cG cPool (cg', ms) sc' scLF
     | Implies ((r, tdecl), cg') ->
        (* We gain a computation assumption in the computation context *)
-       let cPool' = r :: cPool in
+       let cPool' = Full (cPool, r) in
        let cG' = Whnf.extend_gctx cG (tdecl, ms) in
        let Comp.CTypDecl (name, tau, _) = tdecl in
        let loc = Comp.loc_of_typ tau in 
        let sc' =
          (fun d g tM ->
             sc d g (Comp.Fn (loc, name, tM))) in
-       cgSolve cD cG' cPool' (cg', ms) sc'
+       cgSolve' cD cG' cPool' (cg', ms) sc' scLF
 
 
 
@@ -1651,9 +1679,8 @@ module CSolver = struct
      in *)
      
 
-
-
-  
+  let cgSolve cD cG mq sc scLF =
+    cgSolve' cD cG Emp mq sc scLF
 
 end 
 
@@ -1799,12 +1826,48 @@ module Frontend = struct
      
     let solutions = ref 0 in
 
-    (* Type checking function. *)
-    let check cD cG (e : Comp.exp_chk) ms =
-   (* check mcid cD cG (total_decs : total_dec list) ?cIH:(cIH = Syntax.Int.LF.Empty) e ttau  *)
-      (* Does the term have a cid?? *)
-      Check.Comp.check None cD cG [] e (sgnMQuery.skinnyCompTyp, ms)
-    in
+    (* Initial success continuation for gsolve. *)
+    let scLF (s, xs, tA) (cPsi, tM) =
+      incr solutions;
+
+      (* Rebuild the substitution and type check the proof term. *)
+      if !Options.checkProofs
+      then
+        Check.LF.check LF.Empty cPsi (tM, S.id) (tA, s);
+        (*   check cPsi tM (Convert.solToSub sgnQuery.instMVars); (* !querySub *) *)
+
+      (* Print MVar instantiations. *)
+      if !Options.chatter >= 3
+      then
+        begin
+          fprintf std_formatter "@[<v>---------- Solution %d ----------@,[%a]@,%a@,@]"
+            (!solutions)
+            (Printer.fmt_ppr_dctx LF.Empty) cPsi
+            Printer.fmt_ppr_inst xs;
+    (*      (* Print proof term. *)
+          begin match sgnQuery.optName with
+          | Some n ->
+             fprintf std_formatter "%a@."
+               P.fmt_ppr_inst [(n, tM)]
+          | None -> ()
+          end; *)
+          fprintf std_formatter "@."
+        end;
+      (* Interactive. *)
+      if !Options.askSolution && not (moreSolutions ())
+      then raise Done;
+
+      (* Stop when no. of solutions exceeds tries. *)
+      if exceeds (Some !solutions) sgnMQuery.mtries
+      then raise Done
+      in
+
+      (* Type checking function. *)
+      let check cD cG (e : Comp.exp_chk) ms =
+     (* check mcid cD cG (total_decs : total_dec list) ?cIH:(cIH = Syntax.Int.LF.Empty) e ttau  *)
+        (* Does the term have a cid?? *)
+        Check.Comp.check None cD cG [] e (sgnMQuery.skinnyCompTyp, ms)
+      in
 
     (* Success continuation function *)
     let scInit cD cG e =
@@ -1841,7 +1904,7 @@ module Frontend = struct
             if !Options.chatter >= 1
               then P.printMQuery sgnMQuery;
             try
-                CSolver.cgSolve LF.Empty LF.Empty [] (cG, ms) scInit;
+                CSolver.cgSolve LF.Empty LF.Empty (cG, ms) scInit scLF;
                 (* Check solution bounds. *)
                 checkSolutions sgnMQuery.mexpected sgnMQuery.mtries !solutions
               with

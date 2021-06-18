@@ -105,7 +105,7 @@ type clause =                    (* Horn Clause ::= eV |- A :- cG   *)
 
  *)
 
-type comp_goal =                                (* Comp Goal cg :=       *)
+type comp_goal =                                (* Comp Goal cg :=     x  *)
   | Box of LF.dctx  * goal * lfTyp option       (*     | Box (cPsi , g)  *)
   | Implies of (comp_res * Comp.ctyp_decl)      (*     | r -> cg'        *)
                * comp_goal  
@@ -253,13 +253,11 @@ module Convert = struct
        cD |- subgoals 
 
        If tau = TypPiBox (u:U, tau) then cD := cD, u:U
-       If tau = TypArr tau1 tau2 then subgoals := tau1 :: subgoals
-                                    (order of subgoals ?)
-
+       If tau = TypArr tau1 tau2 then subgoals := Solve (subgoals, tau1)
+     
       
    To do: 
-   - add TypBase 
-   - other types (such as codata, etc. ) abort gracefull 
+   - add other types (such as codata, etc. ) abort gracefull 
   *)
       
   and comptypToCClause' cD tau subgoals  = 
@@ -280,7 +278,7 @@ module Convert = struct
        ; cMVars = cD
        ; cSubGoals = subgoals
        }
-       
+   
 
   (* Write out invariant / comment
      in particular: what is cS, dS, dR 
@@ -312,7 +310,13 @@ module Convert = struct
        Box (cPsi, typToGoal typ (0, 0, 0), Some P)
     | LF.ClTyp (LF.STyp(_), cPsi) ->
        raise NotImplementedYet
-         
+
+  and comptypToCTyp tau =
+    match tau with
+    | Box (cPsi, Atom tA, Some M) ->
+       LF.ClTyp (LF.MTyp tA, cPsi)
+    | Box (cPsi, Atom tA, Some P) ->
+       LF.ClTyp (LF.PTyp tA, cPsi)
 
            
   and comptypToCompGoal tau  =
@@ -399,6 +403,21 @@ module Convert = struct
        let ctyp = LF.ClTyp (LF.PTyp tA, cPsi) in
        Comp.TypBox (loc, ctyp)
 
+  let atomicToBase atomic =
+    let rec asToS aS =
+      match aS with
+      | End -> Comp.MetaNil
+      | Spine (aS', (tau, mf)) ->
+         let ctdec = comptypToCTyp tau in 
+         Comp.MetaApp ((Syntax.Loc.ghost, mf), ctdec, asToS aS', `explicit)
+    in
+    match atomic with
+    | Atomic (cid, aS) ->
+       let loc = Syntax.Loc.ghost in
+       let mS = asToS aS in
+       Comp.TypBase (loc, cid, mS)
+        
+
   (* etaExpand Psi (A, s) = normal
      Invariants:
        Psi |- s : Phi
@@ -443,29 +462,28 @@ module Convert = struct
   *)
   let rec dctxToSub cD cPsi (eV, s) fS =
     match eV with
-    | LF.DDec (eV', LF.TypDecl (_, tM)) ->
+    | LF.DDec (eV', LF.TypDecl (_, tA)) ->
        let (s', fS') = dctxToSub cD cPsi (eV', s) fS in
-       let tM' = etaExpand cD cPsi (tM, s') in
+       let tM' = etaExpand cD cPsi (tA, s') in
        (LF.Dot (LF.Obj tM', s'), (fun tS -> fS' (LF.App (tM', tS))))
     | LF.Null -> (s, fS)
     | LF.CtxVar _ ->
        invalid_arg
          "Logic.Convert.dctxToSub: Match conflict with LF.CtxVar _."
-(*
+
   let rec mctxToMSub cD (mV, ms) fS =
     match mV with
     | LF.Empty -> (ms, fS) 
     | LF.Dec (mV', LF.Decl (name, (LF.ClTyp (LF.MTyp tA, cPsi) as meta_typ), dep)) ->
        let (ms', fS') = mctxToMSub cD (mV', ms) fS in
+       (* TODO:: sub here?? *)
        let tM' = etaExpand cD cPsi (tA, S.id) in
        (* TODO:: what should offset be?? *)
        let offset = 0 in
        let mfront = LF.ClObj ((Some (LF.CtxName name), offset), LF.MObj tM') in
-       (* TODO:: loc from where?? *)
-       let meta_ob = (loc, mfront) in
+       let meta_ob = (Syntax.Loc.ghost, mfront) in
        ((LF.MDot (mfront, ms'),
         (fun tS -> fS' (Comp.MetaApp (meta_ob, meta_typ, tS, `explicit)))))
- *)
 
   let rec list_of_spine aS =
     match aS with
@@ -501,6 +519,33 @@ module Convert = struct
     | [] -> LF.MShift 0
     | (x, tN) :: xs ->
        LF.MDot (tN, solToMSub xs)
+(*
+  let typToExp tau =
+    match tau with
+    | Comp.TypBox (loc, meta_typ) ->
+       Comp.Box (loc, meta_obj, meta_typ)
+    | Comp.TypBase (loc, cid, meta_spine) -> *)
+       
+ (*      
+  let tauToSyn hd =
+    match hd with
+    | Comp.TypArr (loc, tau1, tau2) ->
+       
+        
+    let {cHead = hd; cMVars; cSubGoals = sg} = cc in
+    let body = typToExp hd in
+    let name = Id.mk_name Id.NoName in
+    let loc = Syntax.Loc.ghost in 
+    let rec sgToBody sg body =
+      match sg with 
+      | Proved -> body
+      | Solve (sg', cg) ->
+         sgToBody sg' (Comp.Fn (loc, name, body))
+    in
+    sgToBody sg body  *)
+       
+                                      
+       
  
 (*
   comptypToMQuery (tau,i) = comp_goal  
@@ -1432,10 +1477,26 @@ module CSolver = struct
   module I = Index
 
     (* Dynamic Computation Assumptions *)
-  type cPool =                             (* cP ::=            *)
-    | Emp                                  (*      | Emp        *)
-    | Full of (cPool * cclause)            (*      | (cP', cc)  *)
-  
+  type cPool =                             (* cP ::=                   *)
+    | Emp                                  (*   | Emp                  *)
+    | Full of (cPool * (cclause * int))    (*   | Full (cP', (cc, k))  *)
+
+  (* unify (A, s) (B, s') sc = ()
+     Invariants:
+       sc : unit -> unit
+
+     Effects:
+       Instatiation of MMVars in s and s'.
+       Any effect of (sc ()).
+    *)
+  let unify cD sA sB sc =
+    U.unifyCompTyp cD sA sB;
+    sc ()
+
+  let isBox cg =
+    match cg with
+    | Box (_) -> true
+    | _ -> false
              
   (* Turns a gctx delaration into a mctx declaration
      unbox ctyp : Comp.ctyp_decl -> LF.ctyp_decl *)
@@ -1503,12 +1564,22 @@ module CSolver = struct
     in
     loop cPool Emp
 
+  (* shifts the index of the cPool by 1 
+     ex) adjust_shift (Full (Full (Emp, (A, 2)), (B, 3))) =
+                       Full (Full (Emp, (A, 1)), (B, 2))
+  *)
+  let rec adjust_shift cPool =
+    match cPool with
+    | Full (cPool', (cc, k)) ->
+       Full (adjust_shift cPool', (cc, k-1))
+    | _ -> cPool
 
-  let rec cgSolve' (cD: LF.mctx) (cG: Comp.gctx) (cPool : cPool)
+
+  let rec cgSolve' (cD: LF.mctx) (cG: Comp.gctx) (cPool,  k)
             (mq:mquery) (sc: LF.mctx -> Comp.gctx -> Comp.exp_chk -> unit) (scLF : LF.sub * I.inst list * LF.typ -> LF.dctx * LF.normal -> unit) =
     
     let ((cg:comp_goal), (ms:LF.msub)) = mq in
-    uniform_right cD cG cPool cg ms sc scLF
+    uniform_right cD cG (cPool, k) cg ms sc scLF
 
   (* Stable phase : cD ; cG >> . ==> e : Q
 
@@ -1606,27 +1677,73 @@ module CSolver = struct
     in
     I.iterSCClauses (fun w -> matchSgnCClause w sc) cidTyp
 
- *)   
+ *)
+
+   
+  and solveSubGoals cD cG (cPool, k) cg sg ms sc scLF =
+    match (sg, cg) with
+    | (Proved, Comp.TypBox(loc, meta_typ))  ->
+       (* TODO:: correct e?? *)
+       let mf = LF.MV k in 
+       let meta_obj = (Syntax.Loc.ghost, mf) in
+       let e = Comp.Box (Syntax.Loc.ghost, meta_obj, meta_typ) in         
+       sc cD cG e
+    | (Proved, Comp.TypBase(loc, cid, meta_spine))  ->
+       (* TODO:: correct e?? *)
+       let fun_branches = Comp.NilFBranch Syntax.Loc.ghost in
+                        (* spineToBranch meta_spine *)
+       let e = Comp.Fun (Syntax.Loc.ghost, fun_branches) in         
+       sc cD cG e
+    | (Solve (sg', cg'), _) ->
+       cgSolve' cD cG (cPool, k) (cg', ms) 
+         (fun d g e ->
+           solveSubGoals cD cG (cPool, k) cg  sg' ms
+             (fun cD cG e'  ->
+               sc d g (e')) scLF
+         ) scLF
+
   
 
   (* We focus on one of the computation assumptions in cPool *)
-  and focus cD cG cG_all cPool cPool_all cg ms sc scLF =
+  and focus cD cG cG_all cPool (cPool_all, k) cg ms sc scLF =
     match cPool with
     | Emp -> ()
     (*  end of search loop??  *)
-    | Full (cPool', {cHead = hd; cMVars; cSubGoals = sg}) ->
+    | Full (cPool', ({cHead = hd; cMVars; cSubGoals = sg}, k)) ->
        if (* Check to see if the comp goal is the head of the assumption *)
          matchHead cD hd cg
        then (* If so, try to solve the subgoals *)
-         ()
-(*           let subGoals = anteToSG c_g in
-         solveImpSubGoals x subGoals cD ms sc  
-*)     else (* Otherwise, try the remaining comp assumptions *)
-         focus cD cG cG_all cPool' cPool_all cg ms sc scLF
+         let (ms', fS) = C.mctxToMSub cD (cMVars, ms) (fun tS -> tS) in
+         let tau = if isBox cg then C.boxToTypBox cg else C.atomicToBase cg in
+         (* variable representing the function in cG at index k *)
+         let func = Comp.Var (Syntax.Loc.ghost, k-1) in 
+         (* Trail to undo MVar instantiations. *)
+         (try
+           Solver.trail
+             begin fun () ->
+             unify cD (tau, ms) (hd, ms')
+               (fun () ->
+               solveSubGoals cD cG_all (cPool_all, k) tau sg ms 
+                 (fun cD' cG' e' ->
+                 let e =
+                   Comp.Syn
+                     (Syntax.Loc.ghost,
+                      Comp.Apply (Syntax.Loc.ghost,
+                                  func,
+                                  e'))
+                 in
+                 sc cD' cG' e) scLF)          
+             end   
+         with
+         | U.Failure _ -> ()); 
+         focus cD cG cG_all cPool' (cPool_all, k) cg ms sc scLF 
+               
+       else (* Otherwise, try the remaining comp assumptions *)
+         focus cD cG cG_all cPool' (cPool_all, k) cg ms sc scLF
       
         
         
-  and prove cD cG cPool cg ms sc scLF =
+  and prove cD cG (cPool, k) cg ms sc scLF =
     match cg with
     | Box (_cPsi, _g, l) ->
        (try
@@ -1643,7 +1760,7 @@ module CSolver = struct
         with
          (* If no solution found, try solving on comp level *)
          | _ ->
-          focus cD cG cG cPool cPool cg ms sc scLF)
+          focus cD cG cG cPool (cPool, k) cg ms sc scLF)
     | Atomic (name, spine) ->
        (try ()
           (* First try solving by matching with the signatures *)
@@ -1651,7 +1768,7 @@ module CSolver = struct
         with
         | _ ->
            (* Otherwise, head to the focusing phase *)
-           focus cD cG cG cPool cPool cg ms sc scLF)
+           focus cD cG cG cPool (cPool, k) cg ms sc scLF)
 
        
 
@@ -1714,31 +1831,32 @@ module CSolver = struct
      *)
     
 
-  and uniform_left cD cG cG_ret cPool cPool_ret cg ms sc scLF =
+  and uniform_left cD cG cG_ret cPool (cPool_ret, k_ret) cg ms sc scLF =
     match (cG, cPool) with
     | (LF.Empty, Emp) ->
        (* uniform_left reverses order of cG and cPool, 
           need to reverse both list and ctx *)
        let cPool_ret' = rev_cPool cPool_ret in
        let cG_ret' = rev_LFctx cG_ret in
-       prove cD cG_ret' cPool_ret' cg ms sc scLF
+       prove cD cG_ret' (cPool_ret', k_ret) cg ms sc scLF
     | (LF.Dec (cG', Comp.CTypDecl (n,Comp.TypBox (l,t),w)),
-       Full (cPool', {cHead = Comp.TypBox(_); cMVars = cmv;cSubGoals = Proved })) ->
+       Full (cPool',({cHead = Comp.TypBox(_); cMVars = cmv;cSubGoals = Proved }, k'))) ->
        (* In this case, we want to "unbox" the assumption and add it to 
           the cD *)
        let mctx_decl = unbox (Comp.CTypDecl (n,Comp.TypBox (l,t),w)) in 
        let cD' = Whnf.extend_mctx cD (mctx_decl, ms) in
        (* TODO:: correct exp_syn?? *)
-       let exp_syn = Comp.Var (l, 0) in
+       let exp_syn = Comp.Var (l, Context.length cD') in
        let sc' =
          (fun d g tM ->
-           sc d g (Comp.Let (l, exp_syn, (n, tM)))) in 
-       uniform_left cD' cG' cG_ret cPool' cPool_ret cg ms sc' scLF
+           sc d g (Comp.Let (l, exp_syn, (n, tM)))) in
+       let cPool_ret' = adjust_shift cPool_ret in
+       uniform_left cD' cG' cG_ret cPool' (cPool_ret', k_ret - 1) cg ms sc' scLF
     | (LF.Dec (cG', tdecl), Full (cPool', x)) ->
        (* Otherwise we leave the assumption in cG *)
        let cG_ret' = Whnf.extend_gctx cG_ret (tdecl, ms) in
        let cPool_ret' = Full (cPool_ret, x) in 
-       uniform_left cD cG' cG_ret' cPool' cPool_ret' cg ms sc scLF
+       uniform_left cD cG' cG_ret' cPool' (cPool_ret', k_ret) cg ms sc scLF
 
        
        (* uniform_right cD cG cPool cg ms sc scLF = 
@@ -1784,11 +1902,11 @@ module CSolver = struct
        *)
            
      (* First we break our goal down into an atomic one *)
-  and uniform_right cD cG cPool cg ms sc scLF =
+  and uniform_right cD cG (cPool, k) cg ms sc scLF =
     match cg with
     | Box (_) | Atomic (_) ->
        (* Then we filter the cG, so only stable assumptions are left *)
-       uniform_left cD cG LF.Empty cPool Emp cg ms sc scLF
+       uniform_left cD cG LF.Empty cPool (Emp, k) cg ms sc scLF
     | Forall (tdecl, cg') ->
        (* In this case we gain an assumption in the meta-context *)
        let LF.Decl (name, LF.ClTyp (LF.MTyp (LF.Atom (loc,_,_)), cPsi),_) = tdecl in
@@ -1796,22 +1914,22 @@ module CSolver = struct
        let sc' =
          (fun d g tM -> (* TODO:: remove X:U from cD?? *)
            sc d g (Comp.MLam(loc, name, tM, `explicit))) in
-       cgSolve' cD' cG cPool (cg', ms) sc' scLF
+       cgSolve' cD' cG (cPool, k) (cg', ms) sc' scLF
     | Implies ((r, tdecl), cg') ->
        (* We gain a computation assumption in the computation context *)
        let cc = C.cResToCClause (r, ms) in
-       let cPool' = Full (cPool, cc) in
+       let cPool' = Full (cPool, (cc, k)) in
        let cG' = Whnf.extend_gctx cG (tdecl, ms) in
        let Comp.CTypDecl (name, tau, _) = tdecl in
        let loc = Comp.loc_of_typ tau in 
        let sc' =
          (fun d g tM ->
             sc d g (Comp.Fn (loc, name, tM))) in
-       cgSolve' cD cG' cPool' (cg', ms) sc' scLF
+       cgSolve' cD cG' (cPool', (k+1)) (cg', ms) sc' scLF
      
 
   let cgSolve cD cG mq sc scLF =
-    cgSolve' cD cG Emp mq sc scLF
+    cgSolve' cD cG (Emp, Context.length cG) mq sc scLF
 
 end 
 

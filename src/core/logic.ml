@@ -105,7 +105,7 @@ type clause =                    (* Horn Clause ::= eV |- A :- cG   *)
 
  *)
 
-type comp_goal =                                (* Comp Goal cg :=     x  *)
+type comp_goal =                                (* Comp Goal cg :=       *)
   | Box of LF.dctx  * goal * lfTyp option       (*     | Box (cPsi , g)  *)
   | Implies of (comp_res * Comp.ctyp_decl)      (*     | r -> cg'        *)
                * comp_goal  
@@ -392,6 +392,7 @@ module Convert = struct
   let comptypToCClause tau =
     comptypToCClause' LF.Empty tau Proved
 
+  (* Converts a box comp goal to a Comp.TypBox *)
   let boxToTypBox box =
     match box with
     | Box (cPsi, Atom tA, Some M) ->
@@ -403,6 +404,7 @@ module Convert = struct
        let ctyp = LF.ClTyp (LF.PTyp tA, cPsi) in
        Comp.TypBox (loc, ctyp)
 
+  (* Converts an atomic comp goal to a Comp.TypBase *) 
   let atomicToBase atomic =
     let rec asToS aS =
       match aS with
@@ -519,33 +521,8 @@ module Convert = struct
     | [] -> LF.MShift 0
     | (x, tN) :: xs ->
        LF.MDot (tN, solToMSub xs)
-(*
-  let typToExp tau =
-    match tau with
-    | Comp.TypBox (loc, meta_typ) ->
-       Comp.Box (loc, meta_obj, meta_typ)
-    | Comp.TypBase (loc, cid, meta_spine) -> *)
        
- (*      
-  let tauToSyn hd =
-    match hd with
-    | Comp.TypArr (loc, tau1, tau2) ->
-       
-        
-    let {cHead = hd; cMVars; cSubGoals = sg} = cc in
-    let body = typToExp hd in
-    let name = Id.mk_name Id.NoName in
-    let loc = Syntax.Loc.ghost in 
-    let rec sgToBody sg body =
-      match sg with 
-      | Proved -> body
-      | Solve (sg', cg) ->
-         sgToBody sg' (Comp.Fn (loc, name, body))
-    in
-    sgToBody sg body  *)
-       
-                                      
-       
+                                     
  
 (*
   comptypToMQuery (tau,i) = comp_goal  

@@ -1659,7 +1659,12 @@ module CSolver = struct
    
   and solveSubGoals cD cG (cPool, k) cg sg ms sc scLF =
     match (sg, cg) with
-    | (Proved, Comp.TypBox(loc, meta_typ))  ->
+    | (Proved, tau) ->
+       let e =
+         Comp.Syn (Syntax.Loc.ghost, Comp.Var (Syntax.Loc.ghost, k))
+       in
+       sc cD cG e
+(*    | (Proved, Comp.TypBox(loc, meta_typ))  ->
        (* TODO:: correct e?? *)
        let mf = LF.MV k in 
        let meta_obj = (Syntax.Loc.ghost, mf) in
@@ -1670,22 +1675,45 @@ module CSolver = struct
        let fun_branches = Comp.NilFBranch Syntax.Loc.ghost in
                         (* spineToBranch meta_spine *)
        let e = Comp.Fun (Syntax.Loc.ghost, fun_branches) in         
-       sc cD cG e
+       sc cD cG e *)
     | (Solve (sg', cg'), _) ->
        cgSolve' cD cG (cPool, k) (cg', ms) 
          (fun d g e ->
            solveSubGoals cD cG (cPool, k) cg  sg' ms
-             (fun cD cG e'  ->
+             (fun d' g' e'  ->
                sc d g (e')) scLF
          ) scLF
 
-  
+ 
+(*      Focusing Phase:   cD ; cG  > tau ==> e: Q 
+ 
+
+      if our cPool is empty, 
+        we finish the loop.
+      otherwise, we investigate each clause in cPool, starting 
+        with most recently added
+        if the clause we are looking at has no subgoals, and 
+          head matches cg, we return the variable indexed at k 
+          reprsenting the positon in cG of the type decl 
+          representation of the clause 
+        otherwise, we know the clause has type TypArr and 
+          therefore need to build an App term to get to the head
+
+     *) 
 
   (* We focus on one of the computation assumptions in cPool *)
   and focus cD cG cG_all cPool (cPool_all, k) cg ms sc scLF =
     match cPool with
     | Emp -> ()
     (*  end of search loop??  *)
+    | Full (cPool', ({cHead = hd; cMVars; cSubGoals = Proved}, k)) ->
+       if (* Check to see if the comp goal is the head of the assumption *)
+         matchHead cD hd cg
+       then (* If so, try to solve the subgoals *)
+         let tM = Comp.Syn (Syntax.Loc.ghost, Comp.Var (Syntax.Loc.ghost, k-1)) in 
+         sc cD cG tM
+       else (* Otherwise, try the remaining comp assumptions *)
+         focus cD cG cG_all cPool' (cPool_all, k - 1) cg ms sc scLF
     | Full (cPool', ({cHead = hd; cMVars; cSubGoals = sg}, k)) ->
        if (* Check to see if the comp goal is the head of the assumption *)
          matchHead cD hd cg
@@ -1713,10 +1741,10 @@ module CSolver = struct
              end   
          with
          | U.Failure _ -> ()); 
-         focus cD cG cG_all cPool' (cPool_all, k) cg ms sc scLF 
+         focus cD cG cG_all cPool' (cPool_all, k - 1) cg ms sc scLF 
                
        else (* Otherwise, try the remaining comp assumptions *)
-         focus cD cG cG_all cPool' (cPool_all, k) cg ms sc scLF
+         focus cD cG cG_all cPool' (cPool_all, k - 1) cg ms sc scLF
       
         
         
@@ -1763,7 +1791,8 @@ module CSolver = struct
        cD : meta-context
        cPool, cPool_ret : computation assumptions in clausal form
        cPool  ~~ cG
-       cPool_ret ~~ cG_ret
+       cPool_ret ~~ cG_ret 
+       k = |cPool|
        cg : comp_goal
        ms : msub
        sc : mctx -> gctx -> exp_chk -> unit

@@ -467,7 +467,7 @@ module Comp = struct
     | DataConst of Loc.t * cid_comp_const
     | Obs       of Loc.t * exp_chk * LF.msub * cid_comp_dest
     | Const     of Loc.t * cid_prog
-    | Apply     of Loc.t * exp_syn * exp_chk
+    | Apply     of Loc.t * exp_syn * exp_chk                      
     | MApp      of Loc.t * exp_syn * meta_obj * meta_typ (* annotation for printing *)
                    * plicity
     | AnnBox    of meta_obj * meta_typ

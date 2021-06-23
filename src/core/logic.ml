@@ -996,8 +996,11 @@ module Printer = struct
          (fmt_ppr_decl cD cPsi) (tD, s)
          (fmt_ppr_res cD (LF.DDec (cPsi, S.decSub tD s))) (r', S.dot1 s)
 
-  
 
+  let fmt_ppr_cmp_exp_chk cD cG ppf eChk =
+    P.fmt_ppr_cmp_exp_chk cD cG P.l0 ppf eChk
+
+  
   (** Prints each subgoal with a leading `<-`. *)
   let fmt_ppr_subgoals cD cPsi ppf (cG, s) =
     fprintf ppf "@[<v>%a@]"
@@ -1456,6 +1459,10 @@ module CSolver = struct
   type cPool =                             (* cP ::=                   *)
     | Emp                                  (*   | Emp                  *)
     | Full of (cPool * (cclause * int))    (*   | Full (cP', (cc, k))  *)
+                                           (*      where k denotes the 
+                                                   postion of the
+                                                   correspoding type
+                                                   declaration in cG   *) 
 
   let noLoc = Syntax.Loc.ghost
 
@@ -1464,7 +1471,7 @@ module CSolver = struct
        sc : unit -> unit
 
      Effects:
-       Instatiation of MMVars in s and s'.
+       Instatiation of MMVars in ms and ms'.
        Any effect of (sc ()).
     *)
   let unify cD sA sB sc =
@@ -1475,7 +1482,8 @@ module CSolver = struct
     match cg with
     | Box (_) -> true
     | _ -> false
-             
+
+         
   (* Turns a gctx delaration into a mctx declaration
      unbox ctyp : Comp.ctyp_decl -> LF.ctyp_decl *)
   let unbox ctyp =
@@ -1491,8 +1499,7 @@ module CSolver = struct
        Checks that both the LF objects have the same cid and 
        that their LF contexts unify
      If the cg is Atomic, 
-       Checks that the cid's are the same 
-   *)
+       Checks that the cid's are the same                  *)
   let rec matchHead cD assump cg =
     let unify_psi cD cPsi1 cPsi2 =
       try U.unifyDCtx cD cPsi1 cPsi2 ;
@@ -1646,21 +1653,21 @@ module CSolver = struct
       
       let (ms', fS) = C.mctxToMSub cD (sCCl.cMVars, (LF.MShift (Context.length cD))) (fun tS -> tS) in    
       let tau = if isBox cg then C.boxToTypBox cg else C.atomicToBase cg in
-         (* variable representing the function in cG at index k *)
+      (* constant representing the function from signature with cidTyp *)
       let func = Comp.Const(noLoc, cidTyp) in 
          (* Trail to undo MVar instantiations. *)
       (try
-           Solver.trail
-             begin fun () ->
-             unify cD (tau, ms) (sCCl.cHead, ms')
-               (fun () ->
-               solveSubGoals cD cG (cPool, k) tau (sCCl.cSubGoals, k) ms 
-                 (fun cD' cG' e' ->
-                 let e =
-                   Comp.Syn (noLoc, Comp.Apply (noLoc, func, e'))
-                 in
-                 sc cD' cG' e))          
-             end   
+         Solver.trail
+           begin fun () ->
+           unify cD (tau, ms) (sCCl.cHead, ms')
+             (fun () ->
+             solveSubGoals cD cG (cPool, k) tau (sCCl.cSubGoals, k) ms 
+               (fun cD' cG' e' ->
+               let e =
+                 Comp.Syn (noLoc, Comp.Apply (noLoc, func, e'))
+               in
+               sc cD' cG' e))          
+           end   
          with
          | U.Failure _ -> ())
     in
@@ -1838,8 +1845,8 @@ module CSolver = struct
        let mfront = LF.MV (Context.length cD + 1) in
        let box = Comp.AnnBox ((noLoc, mfront), ctyp) in
        let sc' =
-         (fun d g tM ->
-           sc d g (Comp.Let (noLoc, box, (n, tM)))) in
+         (fun d g e ->
+           sc d g (Comp.Let (noLoc, box, (n, e)))) in
        (* fix the shift index in the cPool *)
        let cPool_ret' = adjust_shift cPool_ret in
        uniform_left cD' cG' cG_ret cPool' (cPool_ret', k_ret - 1) cg ms sc'
@@ -1895,7 +1902,6 @@ module CSolver = struct
   and uniform_right cD cG (cPool, k) cg ms sc =
     match cg with
     | Box (_) | Atomic (_) ->
-       (* Then we filter the cG, so only stable assumptions are left *)
        uniform_left cD cG LF.Empty cPool (Emp, k) cg ms sc
     | Forall (tdecl, cg') ->
        (* In this case we gain an assumption in the meta-context *)
@@ -1906,7 +1912,7 @@ module CSolver = struct
            sc d g (Comp.MLam(noLoc, name, tM, `explicit))) in
        uniform_right cD' cG (cPool, k) cg' ms sc'
     | Implies ((r, tdecl), cg') ->
-       (* We gain a computation assumption in the computation context *)
+       (* We gain an assumption for the computation context *)
        let cc = C.cResToCClause (r, ms) in
        let cPool' = Full (cPool, (cc, k)) in
        let cG' = Whnf.extend_gctx cG (tdecl, ms) in
@@ -2078,45 +2084,44 @@ module Frontend = struct
        (* Rebuild the substitution and type check the proof term. *)
       if !Options.checkProofs
       then
+        
         check cD cG e (Convert.solToMSub sgnMQuery.instMMVars);
-     
- 
+      
+        if !Options.chatter >= 3
+        then
           begin
-(*            fprintf std_formatter  "@[<v>---------- Solution %d ----------@,[%a |- %a]@]" 
+            fprintf std_formatter  "@[<v>---------- Solution %d ----------@, %a@,@,@]" 
               (*              "@[<hov 2>@[%a@] |-@ @[%a@]@]" *)
               (!solutions)
-              (P.fmt_ppr_dctx cD) cPsi
-              (P.fmt_ppr_normal cD cPsi) (tM, Substitution.LF.id);    
- *)            
-            fprintf std_formatter "@.@.";
+              (P.fmt_ppr_cmp_exp_chk cD cG) e
+          end;
             
-            (* Stop when no. of solutions exceeds tries. *)
-            if exceeds (Some !solutions) sgnMQuery.mtries   
-            then raise Done;
+        (* Stop when no. of solutions exceeds tries. *)
+        if exceeds (Some !solutions) sgnMQuery.mtries   
+        then raise Done;
 
-            (* Temporary: Exiting as soon as we receive as many solutions as required *)
-            if exceeds (Some !solutions) sgnMQuery.mexpected   
-            then raise Done;
-          end 
-       in
-       if not (boundEq sgnMQuery.mtries (Some 0))
-       then
-         begin
-            if !Options.chatter >= 1
-              then P.printMQuery sgnMQuery;
-            try
-                CSolver.cgSolve LF.Empty LF.Empty sgnMQuery.mquery scInit;
-                (* Check solution bounds. *)
-                checkSolutions sgnMQuery.mexpected sgnMQuery.mtries !solutions
-              with
-              | Done -> printf "Done.\n"
-              | AbortQuery s -> printf "%s\n" s
-              (* | DepthReached d -> printf "Query complete -- depth = %a was reached\n" P.fmt_ppr_bound d *)
-              | _ -> ()
-          end
-        else if !Options.chatter >= 2
-        then printf "Skipping query -- bound for tries = 0.\n";
-        
+        (* Temporary: Exiting as soon as we receive as many solutions as required *)
+        if exceeds (Some !solutions) sgnMQuery.mexpected   
+        then raise Done; 
+    in
+    if not (boundEq sgnMQuery.mtries (Some 0))
+    then
+      begin
+         if !Options.chatter >= 1
+           then P.printMQuery sgnMQuery;
+         try
+             CSolver.cgSolve LF.Empty LF.Empty sgnMQuery.mquery scInit;
+             (* Check solution bounds. *)
+             checkSolutions sgnMQuery.mexpected sgnMQuery.mtries !solutions
+           with
+           | Done -> printf "Done.\n"
+           | AbortQuery s -> printf "%s\n" s
+           (* | DepthReached d -> printf "Query complete -- depth = %a was reached\n" P.fmt_ppr_bound d *)
+           | _ -> ()
+       end
+     else if !Options.chatter >= 2
+     then printf "Skipping query -- bound for tries = 0.\n";
+
 
 end
 

@@ -447,28 +447,31 @@ module Comp = struct
 
   type ihctx = ih_decl LF.ctx
 
-  and exp_chk =
-    | Syn        of Location.t * exp_syn
-    | Fn         of Location.t * name * exp_chk
-    | Fun        of Location.t * fun_branches
-    | MLam       of Location.t * name * exp_chk * plicity
-    | Pair       of Location.t * exp_chk * exp_chk
-    | LetPair    of Location.t * exp_syn * (name * name * exp_chk)
-    | Let        of Location.t * exp_syn * (name * exp_chk)
-    | Box        of Location.t * meta_obj * meta_typ (* type annotation used for pretty-printing *)
+  (* normal comp. terms  *)
+  and exp_chk =                                                              (* e :=                                              *)
+    | Syn        of Location.t * exp_syn                                     (* | n                                               *)
+    | Fn         of Location.t * name * exp_chk                              (* | \x. e'                                          *)
+    | Fun        of Location.t * fun_branches                                (* | b_1...b_k                                       *) 
+    | MLam       of Location.t * name * exp_chk * plicity                    (* | Pi X.e'                                         *)
+    | Pair       of Location.t * exp_chk * exp_chk                           (* | (e_1, e_2)                                      *)
+    | LetPair    of Location.t * exp_syn * (name * name * exp_chk)           (* | letpair n (x, y, e) := let (x=n.1, y=n.2) in  e *)
+    | Let        of Location.t * exp_syn * (name * exp_chk)                  (* | let x = n in e                                  *)
+    | Box        of Location.t * meta_obj * meta_typ (* type annotation,     (* | Box ([cPsihat |- tM]) : [cPsi |- tA]            *)
+                                            used for pretty-printing *)              
     | Case       of Location.t * case_pragma * exp_syn * branch list
     | Impossible of Location.t * exp_syn
     | Hole       of Location.t * HoleId.t * HoleId.name
 
-  and exp_syn =
-    | Var       of Location.t * offset
-    | DataConst of Location.t * cid_comp_const
-    | Obs       of Location.t * exp_chk * LF.msub * cid_comp_dest
-    | Const     of Location.t * cid_prog
-    | Apply     of Location.t * exp_syn * exp_chk
-    | MApp      of Location.t * exp_syn * meta_obj * meta_typ (* annotation for printing *)
-                   * plicity
-    | AnnBox    of meta_obj * meta_typ
+  (* neutral com. terms *)
+and exp_syn =                                                                    (* n :=                                            *)
+    | Var       of Location.t * offset                                           (* | x:tau in cG                                   *)
+    | DataConst of Location.t * cid_comp_const                                   (* | c:tau in Comp. Sig.                           *)
+    | Obs       of Location.t * exp_chk * LF.msub * cid_comp_dest                (* | observation (e, ms, destructor={typ, ret_typ} *)
+    | Const     of Location.t * cid_prog                                         (* | theorem cp                                    *)
+    | Apply     of Location.t * exp_syn * exp_chk                                (* | (n:tau_1 -> tau_2) (e:tau_1)                  *)
+    | MApp      of Location.t * exp_syn * meta_obj * meta_typ (* annotation, *)  (* | (Pi X:U. n': tau) ([cPsihat |- tM] : [U'])    *)
+                    * plicity                            (* for printing *)
+    | AnnBox    of meta_obj * meta_typ                                           (* | [cPsihat |- tM] : [cPsi |- tA]                *)
     | PairVal   of Location.t * exp_syn * exp_syn
 
   and pattern =

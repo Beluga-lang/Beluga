@@ -195,14 +195,11 @@ let process_command
            try
           Logic.CSolver.cgSolve cDh cGh mquery
             begin
-              fun cD cG tM ->
-(*            State.printf s "found solution: @[%a@]@,@?"
-              (P.fmt_ppr_lf_normal cD LF.Null P.l0) tM;  *)
-           (* TODO:: How to add a solution to compSolution??
-                     Will need to convert term into type exp_chk *)
-           (*
-           h.info.compSolution <- Some (tM, LF.Shift 0); *)
-            raise Logic.Frontend.Done
+              fun e ->
+              State.printf s "found solution: @[%a@]@,@?"
+                (P.fmt_ppr_cmp_exp_chk cDh cGh P.l0) e;           
+              h.info.compSolution <- Some e; 
+              raise Logic.Frontend.Done
             end
         with
           | Logic.Frontend.Done ->

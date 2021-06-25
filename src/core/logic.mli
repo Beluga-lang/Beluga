@@ -32,7 +32,7 @@ module Solver : sig
 end
 
 module CSolver : sig
-  val cgSolve : LF.mctx -> Comp.gctx -> mquery -> (LF.mctx -> Comp.gctx -> Comp.exp_chk -> unit) -> unit
+  val cgSolve : LF.mctx -> Comp.gctx -> mquery -> (Comp.exp_chk -> unit) -> unit
 end 
      
 type bound = int option

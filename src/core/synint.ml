@@ -449,28 +449,31 @@ module Comp = struct
 
   type ihctx = ih_decl LF.ctx
 
-  and exp_chk =
-    | Syn        of Loc.t * exp_syn
-    | Fn         of Loc.t * name * exp_chk
-    | Fun        of Loc.t * fun_branches
-    | MLam       of Loc.t * name * exp_chk * plicity
-    | Pair       of Loc.t * exp_chk * exp_chk
-    | LetPair    of Loc.t * exp_syn * (name * name * exp_chk)
-    | Let        of Loc.t * exp_syn * (name * exp_chk)
-    | Box        of Loc.t * meta_obj * meta_typ (* type annotation used for pretty-printing *)
+  (* normal comp. terms  *)
+  and exp_chk =                                                         (* e :=                                              *)
+    | Syn        of Loc.t * exp_syn                                     (* | n                                               *)
+    | Fn         of Loc.t * name * exp_chk                              (* | \x. e'                                          *)
+    | Fun        of Loc.t * fun_branches                                (* | b_1...b_k                                       *) 
+    | MLam       of Loc.t * name * exp_chk * plicity                    (* | Pi X.e'                                         *)
+    | Pair       of Loc.t * exp_chk * exp_chk                           (* | (e_1, e_2)                                      *)
+    | LetPair    of Loc.t * exp_syn * (name * name * exp_chk)           (* | letpair n (x, y, e) := let (x=n.1, y=n.2) in  e *)
+    | Let        of Loc.t * exp_syn * (name * exp_chk)                  (* | let x = n in e                                  *)
+    | Box        of Loc.t * meta_obj * meta_typ (* type annotation,     (* | Box ([cPsihat |- tM]) : [cPsi |- tA]            *)
+                                            used for pretty-printing *)              
     | Case       of Loc.t * case_pragma * exp_syn * branch list
     | Impossible of Loc.t * exp_syn
     | Hole       of Loc.t * HoleId.t * HoleId.name
 
-  and exp_syn =
-    | Var       of Loc.t * offset
-    | DataConst of Loc.t * cid_comp_const
-    | Obs       of Loc.t * exp_chk * LF.msub * cid_comp_dest
-    | Const     of Loc.t * cid_prog
-    | Apply     of Loc.t * exp_syn * exp_chk                      
-    | MApp      of Loc.t * exp_syn * meta_obj * meta_typ (* annotation for printing *)
-                   * plicity
-    | AnnBox    of meta_obj * meta_typ
+  (* neutral com. terms *)
+  and exp_syn =                                                             (* n :=                                            *)
+    | Var       of Loc.t * offset                                           (* | x:tau in cG                                   *)
+    | DataConst of Loc.t * cid_comp_const                                   (* | c:tau in Comp. Sig.                           *)
+    | Obs       of Loc.t * exp_chk * LF.msub * cid_comp_dest                (* | observation (e, ms, destructor={typ, ret_typ} *)
+    | Const     of Loc.t * cid_prog                                         (* | theorem cp                                    *)
+    | Apply     of Loc.t * exp_syn * exp_chk                                (* | (n:tau_1 -> tau_2) (e:tau_1)                  *)     
+    | MApp      of Loc.t * exp_syn * meta_obj * meta_typ (* annotation, *)  (* | (Pi X:U. n': tau) ([cPsihat |- tM] : [U'])    *)
+                    * plicity                            (* for printing *)
+    | AnnBox    of meta_obj * meta_typ                                      (* | [cPsihat |- tM] : [cPsi |- tA]                 *)
     | PairVal   of Loc.t * exp_syn * exp_syn
 
   and pattern =

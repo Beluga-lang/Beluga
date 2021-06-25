@@ -154,6 +154,7 @@ val cnormClObj : clobj -> msub -> clobj
 val cnormMFt : mfront -> msub -> mfront
 val cnormMSub : msub -> msub
 
+val cnormCCDecl : Comp.ctyp_decl * msub -> Comp.ctyp_decl
 val cnormCKind : Comp.kind * msub -> Comp.kind
 val cnormCTyp : Comp.typ * msub -> Comp.typ
 val cnormCDecl : LF.ctyp_decl * msub -> LF.ctyp_decl

@@ -552,11 +552,6 @@ let comptypToMQuery (tau, i) =
      *)
       match tau with
       | Comp.TypBox (_loc, LF.ClTyp (LF.MTyp _tA, _cPsi)) ->
-         dprintf
-         begin fun p ->
-         p.fmt "goal = %a"
-           (Pretty.Int.DefaultPrinter.fmt_ppr_cmp_typ LF.Empty Pretty.Int.DefaultPrinter.l0) (Whnf.cnormCTyp (tau,ms))
-         end ; 
           (((comptypToCompGoal tau),ms), tau, ms, xs) 
       | Comp.TypBox (_loc, LF.ClTyp (LF.PTyp _tA, _cPsi)) ->
          (((comptypToCompGoal tau),ms), tau, ms, xs)
@@ -569,18 +564,10 @@ let comptypToMQuery (tau, i) =
           let mmV = Whnf.newMMVar' (Some x) (LF.Empty, mtyp) dep in
           let mfront = Whnf.mmVarToMFront loc mmV mtyp in 
           comptypToMQuery' (tau', i-1) (LF.MDot (mfront, ms)) ((x, (loc, mfront)) :: xs)
-      | Comp.TypPiBox (_,_, tau') when i = 0 ->
-         dprintf
-         begin fun p ->
-         p.fmt "goal = %a"
-           (Pretty.Int.DefaultPrinter.fmt_ppr_cmp_typ LF.Empty Pretty.Int.DefaultPrinter.l0) (Whnf.cnormCTyp (tau,ms))
-         end ; 
+      | Comp.TypPiBox (_,_, tau') when i = 0 -> 
          (((comptypToCompGoal tau),ms), tau, ms, xs)
-      | Comp.TypArr (loc, tau1, tau2) when i = 0 ->
+      | Comp.TypArr (loc, tau1, tau2) ->
          (((comptypToCompGoal tau),ms), tau, ms, xs)
-      | Comp.TypArr (loc, tau1, tau2) when i > 0 ->
-         (* TODO:: This case?? *)
-         raise NotImplementedYet
       | Comp.TypBase (_) ->
          (((comptypToCompGoal tau),ms), tau, ms, xs)
       | _ -> raise NotImplementedYet
@@ -868,6 +855,9 @@ module Printer = struct
   let fmt_ppr_dctx cD ppf cPsi =
     P.fmt_ppr_lf_dctx cD P.l0 ppf cPsi
 
+(* let fmt_ppr_gctx cD ppf cG =
+    P.fmt_ppr_cmp_gctx cD P.l0 ppf cG *)
+    
   let fmt_ppr_typ cD cPsi ppf sA =
     P.fmt_ppr_lf_typ cD cPsi P.l0 ppf (Whnf.normTyp sA)
 
@@ -1557,6 +1547,12 @@ module CSolver = struct
        Full (shift_cPool cPool' k, (cc, k'+k))
     | _ -> cPool
 
+  let rec concat_cG cG cG_ret ms =
+    match cG with
+    | LF.Empty -> cG_ret
+    | LF.Dec (cG', ctd) ->
+       concat_cG cG' (appendToGamma ctd cG_ret ms) ms
+
 
   let rec cgSolve' (cD: LF.mctx) (cG: Comp.gctx) (cPool: cPool)
             (mq:mquery) (sc: Comp.exp_chk -> unit) =
@@ -1753,8 +1749,8 @@ module CSolver = struct
           Solver.solve cD _cPsi (_g, S.id) sc'  
         with
          (* If no solution found, try solving on comp level *)
-        | _ ->
-           focus cD cG cG cPool cPool cg ms sc) 
+        | _ -> 
+           focus cD cG cG cPool cPool cg ms sc)
     | Atomic (name, spine) ->
        (try 
           (* First try solving by matching with the signatures *)
@@ -1827,8 +1823,10 @@ module CSolver = struct
 
   and uniform_left cD cG cG_ret cPool cPool_ret cg ms sc =
     match (cG, cPool) with
-    | (LF.Empty, Emp) ->
-       prove cD cG_ret cPool_ret cg ms sc
+    | (_, Emp) ->
+       (* add the assumptions from previous cgSolve call into the returned cG_ret *)
+       let cG_ret' = concat_cG cG cG_ret ms in 
+       prove cD cG_ret' cPool_ret cg ms sc
     | (LF.Dec (cG', Comp.CTypDecl (n,Comp.TypBox (l,t),w)),
        Full (cPool',({cHead = Comp.TypBox(_); cMVars = cmv;cSubGoals = Proved }, k'))) ->
        (* In this case, we want to "unbox" the assumption and add it to 
@@ -1844,6 +1842,7 @@ module CSolver = struct
            sc (Comp.Let (noLoc, box, (n, e)))) in
        (* indices in cPool shift by -1 *)
        let cPool'' = shift_cPool cPool' (-1) in
+       (* TODO:: add shift for term e *)
        uniform_left cD' cG' cG_ret cPool'' cPool_ret cg ms sc'
     | (LF.Dec (cG', tdecl), Full (cPool', x)) ->
        (* Otherwise we leave the assumption in cG *)
@@ -1910,6 +1909,7 @@ module CSolver = struct
        (* We gain an assumption for the computation context *)
        let cc = C.cResToCClause (r, ms) in
        let cPool' = Full (shift_cPool cPool 1, (cc, 1)) in
+       (* TODO:: Correct ms? Do we also need a shift?? *)
        let cG' = Whnf.extend_gctx cG (tdecl, ms) in
        let Comp.CTypDecl (name, tau, _) = tdecl in
        let sc' =

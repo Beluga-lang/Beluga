@@ -176,10 +176,6 @@ let process_command
     | Holes.CompInfo ->
       begin
         let { compGoal; Holes.cG = cGh; compSolution } = h.info
-
-       (* TODO:: how to turn the computation-type assumptions (cGh) into
-                 useable assumptions since they aren't currently being used.
-                 Can we unbox them- placing them in our meta-context?  *)
         in
         assert (compSolution = None);
         let typ = Whnf.cnormCTyp compGoal in
@@ -190,7 +186,8 @@ let process_command
           end;
         Logic.prepare ();
         let (mquery, skinnyCTyp, mquerySub, instMMVars) =
-          Logic.Convert.comptypToMQuery (typ,0)
+          let (typ',k) = Abstract.comptyp typ in
+          Logic.Convert.comptypToMQuery (typ',k)
         in
            try
           Logic.CSolver.cgSolve cDh cGh mquery

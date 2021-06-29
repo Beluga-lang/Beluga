@@ -354,7 +354,7 @@ module Convert = struct
        
   and comptypToCompRes tau =
     match tau with
-    | Comp.TypBox (_) ->
+    | Comp.TypBox (_) | Comp.TypBase(_) ->
        Base tau
     | Comp.TypArr (_,tau1,tau2) ->
        CAnd (comptypToCompGoal tau1, comptypToCompRes tau2)
@@ -1479,7 +1479,8 @@ module CSolver = struct
      unbox ctyp : Comp.ctyp_decl -> LF.ctyp_decl *)
   let unbox ctyp =
     match ctyp with
-    | Comp.CTypDecl (name, Comp.TypBox(loc, ctyp), wf_tag) ->
+    | Comp.CTypDecl (_, (Comp.TypBox(_, ((LF.ClTyp (LF.MTyp t, cPsi)) as ctyp))), _) ->
+       let name = Id.mk_name (Whnf.newMTypName ctyp) in
        LF.Decl (name, ctyp, LF.No)
 
 
@@ -1546,7 +1547,42 @@ module CSolver = struct
     | Full (cPool', (cc, k')) ->
        Full (shift_cPool cPool' k, (cc, k'+k))
     | _ -> cPool
+(*
+  let rec shift_exp e k =
+    match e with
+    | Comp.Syn (l,s) ->
+       Comp.Syn (l, shift_syn s k)
+    | Comp.Fn (l,n,e') ->
+       Comp.Fn (l,n,shift_exp e' k)
+    | Comp.Fun (l,fb) ->
+       raise NotImplementedYet
+    | Comp.MLam (l,n,e',p) ->
+       Comp.MLam (l,n,shift_exp e' k, p)
+    | Comp.Pair (l,e1,e2) ->
+       Comp.Pair (l,shift_exp e1 k, shift_exp e2 k)
+    | Comp.LetPair (l,s,(n,m,e')) ->
+       Comp.LetPair (l,shift_syn s k,(n,m,shift_exp e' k))
+    | Comp.Let (l,s,(n,e')) ->
+       Comp.Let (l,shift_syn s k,(n,shift_exp e' k))
+    | Comp.Case (l,c,s,bl) -> raise NotImplementedYet
+    | Comp.Impossible (l,s) ->
+       Comp.Impossible (l, shift_syn s k)
+    | _ -> e
 
+  and shift_syn s k =
+      match s with
+      | Comp.Var (l,k') ->
+         Comp.Var (l,k+k')
+      | Comp.Obs (l,e,ms,cid) ->
+         Comp.Obs (l,shift_exp e k,ms,cid)
+      | Comp.Apply (l,s',e) ->
+         Comp.Apply (l,shift_syn s' k,shift_exp e k)
+      | Comp.MApp (l,s',o,t,p) ->
+         Comp.MApp (l,shift_syn s' k,o,t,p)
+      | Comp.PairVal (l,s1,s2) ->
+         Comp.PairVal (l,shift_syn s1 k,shift_syn s2 k)
+      | _ -> s  *)
+    
   let rec concat_cG cG cG_ret ms =
     match cG with
     | LF.Empty -> cG_ret
@@ -1693,6 +1729,8 @@ module CSolver = struct
     (*  end of search loop??  *)
     | Full (cPool', ({cHead = hd; cMVars; cSubGoals = Proved}, k')) ->
        if (* Check to see if the comp goal is the head of the assumption *)
+         fprintf std_formatter "goal = %a"
+         (Printer.fmt_ppr_cmp_goal cD) (cg, S.id) ;
          matchHead cD hd cg
        then (* If so, since there are no subgoals, return the assumption *)
          sc (Comp.Syn (noLoc, Comp.Var (noLoc, k')))
@@ -1750,7 +1788,7 @@ module CSolver = struct
         with
          (* If no solution found, try solving on comp level *)
         | _ -> 
-           focus cD cG cG cPool cPool cg ms sc)
+           focus cD cG cG cPool cPool cg ms sc) 
     | Atomic (name, spine) ->
        (try 
           (* First try solving by matching with the signatures *)
@@ -1827,23 +1865,24 @@ module CSolver = struct
        (* add the assumptions from previous cgSolve call into the returned cG_ret *)
        let cG_ret' = concat_cG cG cG_ret ms in 
        prove cD cG_ret' cPool_ret cg ms sc
-    | (LF.Dec (cG', Comp.CTypDecl (n,Comp.TypBox (l,t),w)),
-       Full (cPool',({cHead = Comp.TypBox(_); cMVars = cmv;cSubGoals = Proved }, k'))) ->
+    | (LF.Dec (cG', ((Comp.CTypDecl (n,Comp.TypBox (l,t),w)) as ctyp)),
+       Full (cPool',((({cHead = Comp.TypBox(m,r); cMVars = cmv;cSubGoals = Proved }, k'))as cP))) ->
        (* In this case, we want to "unbox" the assumption and add it to 
           the cD *)
-       let mctx_decl = unbox (Comp.CTypDecl (n,Comp.TypBox (l,t),w)) in
-       let LF.Decl (_,ctyp,_) = mctx_decl in
+       let mctx_decl = unbox ctyp in
+       let LF.Decl (x,_,_) = mctx_decl in
        let cD' = Whnf.extend_mctx cD (mctx_decl, ms) in
        (* TODO:: correct exp_syn- box?? *)
-       let mfront = LF.MV (Context.length cD + 1) in
-       let box = Comp.AnnBox ((noLoc, mfront), ctyp) in
+       let box = Comp.Var (noLoc, k') in
        let sc' =
          (fun e ->
-           sc (Comp.Let (noLoc, box, (n, e)))) in
+           sc (Comp.Let (noLoc, box, (x, e)))) in
        (* indices in cPool shift by -1 *)
-       let cPool'' = shift_cPool cPool' (-1) in
-       (* TODO:: add shift for term e *)
-       uniform_left cD' cG' cG_ret cPool'' cPool_ret cg ms sc'
+       (*     let cPool'' = shift_cPool cPool' (-1) in *)
+       let cG_ret' = appendToGamma ctyp cG_ret ms in
+       let cPool_ret' = appendToCPool cP cPool_ret in 
+       (* TODO:: add shift for term e?? *)
+       uniform_left cD' cG' cG_ret' cPool' cPool_ret' cg ms sc'
     | (LF.Dec (cG', tdecl), Full (cPool', x)) ->
        (* Otherwise we leave the assumption in cG *)
        let cG_ret' = appendToGamma tdecl cG_ret ms in
@@ -2067,7 +2106,6 @@ module Frontend = struct
       (* Type checking function. *)
       let check cD cG (e : Comp.exp_chk) ms =
      (* check mcid cD cG (total_decs : total_dec list) ?cIH:(cIH = Syntax.Int.LF.Empty) e ttau  *)
-        (* Does the term have a cid?? *)
         Check.Comp.check None cD cG [] e (sgnMQuery.skinnyCompTyp, ms)
       in
 
@@ -2078,8 +2116,11 @@ module Frontend = struct
        (* Rebuild the substitution and type check the proof term. *)
       if !Options.checkProofs
       then
-        check LF.Empty LF.Empty e (Convert.solToMSub sgnMQuery.instMMVars);
-
+        
+                fprintf std_formatter "\n check e = %a"
+        (P.fmt_ppr_cmp_exp_chk LF.Empty LF.Empty) e;
+                check LF.Empty LF.Empty e (Convert.solToMSub sgnMQuery.instMMVars);
+                
         if !Options.chatter >= 3
         then
           begin

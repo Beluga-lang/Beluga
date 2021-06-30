@@ -1772,7 +1772,7 @@ module CSolver = struct
        (* If our goal is of box type, we first try to find the  
           proof term in the LF level, otherwise we focus on 
           an assumption in our computation context cG          *)
-       (try
+
           let Atom tA = _g in
           (* note, we take the goal's type because the main check
              is checking the meta_obj against meta_typ of the goal *)
@@ -1785,10 +1785,8 @@ module CSolver = struct
               let meta_typ = LF.ClTyp (cltyp, cPsi) in
               sc (Comp.Box(noLoc, meta_obj, meta_typ)))
           in
-          Solver.solve cD _cPsi (_g, S.id) sc'  
-        with
-        | _ -> 
-           focus cD cG cPool cPool cg ms sc)
+          Solver.solve cD _cPsi (_g, S.id) sc'; 
+          focus cD cG cPool cPool cg ms sc
     | Box (_cPsi, _g, Some P) -> 
        (try
           let Atom tA = _g in
@@ -1889,13 +1887,37 @@ module CSolver = struct
        (* In this case, we want to "unbox" the assumption and add it to 
           the cD *)
        let mctx_decl = unbox ctyp in
-       let LF.Decl (x,_,_) = mctx_decl in
+       let LF.Decl (_,decl,_) = mctx_decl in
        let cD' = Whnf.extend_mctx cD (mctx_decl, ms) in
        (* TODO:: correct exp_syn- box?? *)
        let box = Comp.Var (noLoc, k') in
+       let t = LF.MShift 1 in
+       let pattern =
+    Comp.PatMetaObj
+      ( Loc.ghost
+      , ( Loc.ghost
+        , let open LF in
+          match decl with
+          | LF.ClTyp ( (MTyp _ | PTyp _), cPsi ) ->
+             let tM =
+               Root
+                 ( Loc.ghost
+                 , MVar (Offset 1, S.id)
+                 , Nil
+                 , `explicit
+                 )
+             in
+             ClObj (Context.dctxToHat (Whnf.cnormDCtx (cPsi, t)), MObj tM)
+          | CTyp _ ->
+             CObj (CtxVar (CtxOffset 1))
+        )
+      )
+  in
        let sc' =
          (fun e ->
-           sc (Comp.Let (noLoc, box, (x, e)))) in
+           sc (Comp.Case (noLoc, Comp.PragmaNotCase, box,
+                          (* TODO:: correct branch?? *)
+                  [Comp.Branch (noLoc, cD', (cD', LF.Empty), pattern, ms,e)]))) in
        (* indices in cPool shift by -1 *)
        (*     let cPool'' = shift_cPool cPool' (-1) in *)
        let cG_ret' = appendToGamma ctyp cG_ret ms in

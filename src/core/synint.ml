@@ -46,7 +46,7 @@ module LF = struct
     | Lam of Loc.t * name * normal              (* M ::= \x.M                     *)
     | Root of Loc.t * head * spine * plicity    (*   | h . S                      *)
     | LFHole of Loc.t * HoleId.t * HoleId.name
-    | Clo of (normal * sub)                     (*   | Clo(N,s)                   *)
+    | Clo of (normal * sub)                     (*   | Clo(M,s)                   *)
     | Tuple of Loc.t * tuple
 
   (* TODO: Heads ought to carry their location.

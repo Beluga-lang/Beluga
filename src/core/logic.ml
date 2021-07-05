@@ -474,19 +474,24 @@ module Convert = struct
        invalid_arg
          "Logic.Convert.dctxToSub: Match conflict with LF.CtxVar _."
 
-  let rec mctxToMSub cD (mV, ms) fS =
+  let rec mctxToMSub cD (mV, ms) k =
     match mV with
-    | LF.Empty -> (ms, fS) 
-    | LF.Dec (mV', LF.Decl (name, (LF.ClTyp (LF.MTyp tA, cPsi) as meta_typ), dep)) ->
-       let (ms', fS') = mctxToMSub cD (mV', ms) fS in
-       (* TODO:: sub here?? *)
+    | LF.Empty -> ms 
+    | LF.Dec (mV', LF.Decl (name, LF.ClTyp (LF.MTyp tA, cPsi),_)) ->
+       let ms' = mctxToMSub cD (mV', ms) (k-1) in
        let tM' = etaExpand cD cPsi (tA, S.id) in
        (* TODO:: what should offset be?? *)
-       let offset = 0 in
+       let offset = k in
        let mfront = LF.ClObj ((Some (LF.CtxName name), offset), LF.MObj tM') in
-       let meta_ob = (Syntax.Loc.ghost, mfront) in
-       ((LF.MDot (mfront, ms'),
-        (fun tS -> fS' (Comp.MetaApp (meta_ob, meta_typ, tS, `explicit)))))
+       LF.MDot (mfront, ms')
+    | LF.Dec (mV', LF.Decl (name, LF.ClTyp (LF.PTyp tA, cPsi),_)) ->
+       (* TODO:: Correct? *)
+       let ms' = mctxToMSub cD (mV', ms) (k-1) in
+       let tM' = etaExpand cD cPsi (tA, S.id) in
+       let LF.Root (noLoc, hd, LF.Nil, _) = tM' in
+       let offset = k in
+       let mfront = LF.ClObj ((Some (LF.CtxName name), offset), LF.PObj hd) in
+       LF.MDot (mfront, ms')
 
   let rec list_of_spine aS =
     match aS with
@@ -1657,17 +1662,24 @@ module CSolver = struct
     cD ; cGamma  > e : Q   ====> Q
    *)
 
-  and solveSubGoals cD cG cPool cg (sg, k') ms sc =
-    match (sg, cg) with
-    | (Proved, tau) -> 
-       let e =
-         Comp.Var (noLoc, k')
-       in
-       sc e
-    | (Solve (sg', cg'), _) ->
+  and solveSubGoals cD cG cPool (sg, k) ms sc =
+    match sg with
+    | Proved -> 
+       sc (Comp.Var (noLoc, k))
+    | Solve (sg', cg') ->
        cgSolve' cD cG cPool (cg', ms) 
          (fun e ->
-           solveSubGoals cD cG cPool cg (sg', k') ms
+           solveSubGoals cD cG cPool (sg', k) ms
+             (fun e' -> sc (Comp.Apply (noLoc, e', e))))
+
+  and solveClauseSubGoals cD cG cPool cid sg ms sc =
+    match sg with
+    | Proved ->
+       sc (Comp.DataConst (noLoc, cid))
+    | Solve (sg', cg) ->
+       cgSolve' cD cG cPool (cg, ms)
+         (fun e ->
+           solveClauseSubGoals cD cG cPool cid sg' ms
              (fun e' -> sc (Comp.Apply (noLoc, e', e))))
          
     
@@ -1679,14 +1691,14 @@ module CSolver = struct
   (* Try to find solution in the computation signatures. *)
   and matchCompSig cidTyp cD cG cPool cg ms sc =
     let matchSgnCClause (cidTerm, sCCl) sc =      
-      let (ms', fS) = C.mctxToMSub cD (sCCl.cMVars, (LF.MShift (Context.length cD))) (fun tS -> tS) in    
+      let ms' = C.mctxToMSub cD (sCCl.cMVars, (LF.MShift (Context.length cD))) (Context.length sCCl.cMVars) in    
       let tau = if isBox cg then C.boxToTypBox cg else C.atomicToBase cg in
       match sCCl.cSubGoals with
       | Proved ->
          unify cD (tau, ms) (sCCl.cHead, ms')
            (fun () ->
              (sc (Comp.Syn (noLoc, Comp.DataConst (noLoc, cidTerm)))))
-      | Solve (sg', cg) -> 
+      | Solve (sg', cg') -> 
          (* constant representing the function from signature with cidTyp *)
          (*     let func = Comp.DataConst(noLoc, cidTyp) in *) 
             (* Trail to undo MVar instantiations. *)
@@ -1695,11 +1707,8 @@ module CSolver = struct
               begin fun () ->
                 unify cD (tau, ms) (sCCl.cHead, ms')
                   (fun () ->
-                    (* TODO:: k for solve subgoals?? *)
-                   solveSubGoals cD cG cPool tau (sg', 0) ms 
-                     (fun e' ->   
-                       (* sc (Comp.Syn (noLoc, Comp.Apply (noLoc, func, e')))))         *)
-                       sc (Comp.Syn (noLoc, e'))))
+                   solveClauseSubGoals cD cG cPool cidTerm sCCl.cSubGoals ms 
+                     (fun e' -> sc (Comp.Syn (noLoc, e'))))
                end   
             with
             | U.Failure _ -> ())
@@ -1739,17 +1748,15 @@ module CSolver = struct
        if (* Check to see if the comp goal is the head of the assumption *)
          matchHead cD hd cg
        then (* If so, try to solve the subgoals *)
-         let (ms', fS) = C.mctxToMSub cD (cMVars, (LF.MShift (Context.length cD))) (fun tS -> tS) in
+         let ms' = C.mctxToMSub cD (cMVars, (LF.MShift ((Context.length cD - k')))) (Context.length cMVars) in
          let tau = if isBox cg then C.boxToTypBox cg else C.atomicToBase cg in
-         (* variable representing the function in cG at index k *)
-     (*    let func = Comp.Var (noLoc, k') in  *)
          (* Trail to undo MVar instantiations. *)
          (try
            Solver.trail
              begin fun () ->
              unify cD (tau, ms) (hd, ms')
                (fun () ->
-               solveSubGoals cD cG cPool_all tau (sg, k') ms 
+               solveSubGoals cD cG cPool_all (sg, k') ms 
                  (fun e' ->
                  let e =
                    Comp.Syn
@@ -1984,7 +1991,7 @@ module CSolver = struct
        let sc' =
          (fun e -> 
            sc (Comp.MLam(noLoc, name, e, `explicit))) in
-       uniform_right cD' cG cPool cg' ms sc'
+       uniform_right cD' cG cPool cg' (Whnf.mvar_dot1 ms) sc'
     | Implies ((r, tdecl), cg') ->
        (* We gain an assumption for the computation context *)
        let cc = C.cResToCClause (r, ms) in
@@ -2153,31 +2160,30 @@ module Frontend = struct
     (* Success continuation function *)
     let scInit e =
       incr solutions;
+      fprintf std_formatter "\n check e = \n %a \n"
+          (P.fmt_ppr_cmp_exp_chk LF.Empty LF.Empty) e;
 
        (* Rebuild the substitution and type check the proof term. *)
       if !Options.checkProofs
       then
-        
-                fprintf std_formatter "\n check e = %a"
-        (P.fmt_ppr_cmp_exp_chk LF.Empty LF.Empty) e;
-                check LF.Empty LF.Empty e (Convert.solToMSub sgnMQuery.instMMVars);
+        check LF.Empty LF.Empty e (Convert.solToMSub sgnMQuery.instMMVars);
                 
-        if !Options.chatter >= 3
-        then
-          begin
-            fprintf std_formatter  "@[<v>---------- Solution %d ----------@, %a@,@,@]" 
-              (*              "@[<hov 2>@[%a@] |-@ @[%a@]@]" *)
-              (!solutions)
-              (P.fmt_ppr_cmp_exp_chk LF.Empty LF.Empty) e
-          end;
+      if !Options.chatter >= 3
+      then
+        begin
+          fprintf std_formatter  "@[<v>---------- Solution %d ----------\n, %a@,@,@]" 
+            (*              "@[<hov 2>@[%a@] |-@ @[%a@]@]" *)
+            (!solutions)
+            (P.fmt_ppr_cmp_exp_chk LF.Empty LF.Empty) e
+        end;
 
-        (* Stop when no. of solutions exceeds tries. *)
-        if exceeds (Some !solutions) sgnMQuery.mtries   
-        then raise Done;
+      (* Stop when no. of solutions exceeds tries. *)
+      if exceeds (Some !solutions) sgnMQuery.mtries   
+      then raise Done;
 
-        (* Temporary: Exiting as soon as we receive as many solutions as required *)
-        if exceeds (Some !solutions) sgnMQuery.mexpected   
-        then raise Done;
+      (* Temporary: Exiting as soon as we receive as many solutions as required *)
+      if exceeds (Some !solutions) sgnMQuery.mexpected   
+      then raise Done;
     in
     if not (boundEq sgnMQuery.mtries (Some 0))
     then

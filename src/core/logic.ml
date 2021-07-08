@@ -1356,6 +1356,8 @@ module Solver = struct
              | U.Failure s -> ()
            end;
            loop cD' (k + 1)
+        | LF.Dec (cD', _dec) ->
+           loop cD' (k + 1)
       in
       loop cD' 1
 
@@ -1484,7 +1486,7 @@ module CSolver = struct
      unbox ctyp : Comp.ctyp_decl -> LF.ctyp_decl *)
   let unbox ctyp =
     match ctyp with
-    | Comp.CTypDecl (_, (Comp.TypBox(_, ((LF.ClTyp (LF.MTyp t, cPsi)) as ctyp))), _) ->
+    | Comp.CTypDecl(_, (Comp.TypBox(_, ((LF.ClTyp (LF.MTyp t, cPsi)) as ctyp))), _) ->
        let name = Id.mk_name (Whnf.newMTypName ctyp) in
        LF.Decl (name, ctyp, LF.No)
 
@@ -1699,8 +1701,6 @@ module CSolver = struct
            (fun () ->
              (sc (Comp.Syn (noLoc, Comp.DataConst (noLoc, cidTerm)))))
       | Solve (sg', cg') -> 
-         (* constant representing the function from signature with cidTyp *)
-         (*     let func = Comp.DataConst(noLoc, cidTyp) in *) 
             (* Trail to undo MVar instantiations. *)
          (try
             Solver.trail
@@ -1739,7 +1739,7 @@ module CSolver = struct
     (*  end of search loop??  *)
     | Full (cPool', ({cHead = hd; cMVars; cSubGoals = Proved}, k')) ->
        if (* Check to see if the comp goal is the head of the assumption *)
-         matchHead cD hd cg
+         matchHead cD hd cg;
        then (* If so, since there are no subgoals, return the assumption *)
          sc (Comp.Syn (noLoc, Comp.Var (noLoc, k')))
        else (* Otherwise, try the remaining comp assumptions *)
@@ -1775,12 +1775,12 @@ module CSolver = struct
         
   and prove cD cG cPool cg ms sc =
     match cg with
-    | Box (_cPsi, _g, Some M) ->
+    | Box (cPsi, g, Some M) ->
        (* If our goal is of box type, we first try to find the  
           proof term in the LF level, otherwise we focus on 
           an assumption in our computation context cG          *)
 
-          let Atom tA = _g in
+          let Atom tA = g in
           (* note, we take the goal's type because the main check
              is checking the meta_obj against meta_typ of the goal *)
           let cltyp = LF.MTyp tA in
@@ -1792,7 +1792,8 @@ module CSolver = struct
               let meta_typ = LF.ClTyp (cltyp, cPsi) in
               sc (Comp.Box(noLoc, meta_obj, meta_typ)))
           in
-          Solver.solve cD _cPsi (_g, S.id) sc'; 
+          Solver.solve cD cPsi (g, S.id) sc';
+      (*    printf "hi"; *)
           focus cD cG cPool cPool cg ms sc
     | Box (_cPsi, _g, Some P) -> 
        (try
@@ -1900,37 +1901,38 @@ module CSolver = struct
        let box = Comp.Var (noLoc, k') in
        let t = LF.MShift 1 in
        let pattern =
-    Comp.PatMetaObj
-      ( Loc.ghost
-      , ( Loc.ghost
-        , let open LF in
+         Comp.PatMetaObj (noLoc,(noLoc,
           match decl with
-          | LF.ClTyp ( (MTyp _ | PTyp _), cPsi ) ->
+          | LF.ClTyp (LF.MTyp _, cPsi) ->
              let tM =
-               Root
-                 ( Loc.ghost
-                 , MVar (Offset 1, S.id)
-                 , Nil
+               LF.Root
+                 (noLoc
+                 ,LF.MVar (LF.Offset 1, S.id)
+                 , LF.Nil
                  , `explicit
                  )
              in
-             ClObj (Context.dctxToHat (Whnf.cnormDCtx (cPsi, t)), MObj tM)
-          | CTyp _ ->
-             CObj (CtxVar (CtxOffset 1))
-        )
-      )
-  in
+             LF.ClObj (Context.dctxToHat (Whnf.cnormDCtx (cPsi, t)), LF.MObj tM)
+          | LF.ClTyp (LF.PTyp _, cPsi) ->
+             let hd = LF.PVar (1, S.id) in
+             LF.ClObj (Context.dctxToHat (Whnf.cnormDCtx (cPsi, t)), LF.PObj hd)
+          | LF.CTyp _ ->
+             LF.CObj (LF.CtxVar (LF.CtxOffset 1))
+                                )
+           )
+       in
        let sc' =
          (fun e ->
            sc (Comp.Case (noLoc, Comp.PragmaNotCase, box,
-                          (* TODO:: correct branch?? *)
-                  [Comp.Branch (noLoc, cD', (cD', LF.Empty), pattern, ms,e)]))) in
+                  [Comp.Branch (noLoc, LF.Empty, (cD', LF.Empty), pattern, LF.MShift 1,e)]))) in
        (* indices in cPool shift by -1 *)
        (*     let cPool'' = shift_cPool cPool' (-1) in *)
        let cG_ret' = appendToGamma ctyp cG_ret ms in
-       let cPool_ret' = appendToCPool cP cPool_ret in 
+       let cPool_ret' = appendToCPool cP cPool_ret in
+       (* substitution gets shifted *)
+       let ms' = (Whnf.mvar_dot1 ms) in 
        (* TODO:: add shift for term e?? *)
-       uniform_left cD' cG' cG_ret' cPool' cPool_ret' cg ms sc'
+       uniform_left cD' cG' cG_ret' cPool' cPool_ret' cg ms' sc'
     | (LF.Dec (cG', tdecl), Full (cPool', x)) ->
        (* Otherwise we leave the assumption in cG *)
        let cG_ret' = appendToGamma tdecl cG_ret ms in
@@ -1987,7 +1989,7 @@ module CSolver = struct
     | Forall (tdecl, cg') ->
        (* In this case we gain an assumption in the meta-context *)
        let cD' = Whnf.extend_mctx cD (tdecl, ms) in
-       let LF.Decl (name,_,_) = tdecl in
+       let name = LF.name_of_ctyp_decl tdecl in 
        let sc' =
          (fun e -> 
            sc (Comp.MLam(noLoc, name, e, `explicit))) in
@@ -2153,15 +2155,14 @@ module Frontend = struct
     let solutions = ref 0 in
       (* Type checking function. *)
       let check cD cG (e : Comp.exp_chk) ms =
-     (* check mcid cD cG (total_decs : total_dec list) ?cIH:(cIH = Syntax.Int.LF.Empty) e ttau  *)
-        Check.Comp.check None cD cG [] e (sgnMQuery.skinnyCompTyp, ms)
-      in
+        Check.Comp.check None cD cG [] e (sgnMQuery.skinnyCompTyp, ms) 
+      in  
 
     (* Success continuation function *)
     let scInit e =
       incr solutions;
-      fprintf std_formatter "\n check e = \n %a \n"
-          (P.fmt_ppr_cmp_exp_chk LF.Empty LF.Empty) e;
+   (*   fprintf std_formatter "\n check e = \n %a \n"
+          (P.fmt_ppr_cmp_exp_chk LF.Empty LF.Empty) e; *)
 
        (* Rebuild the substitution and type check the proof term. *)
       if !Options.checkProofs
@@ -2171,7 +2172,7 @@ module Frontend = struct
       if !Options.chatter >= 3
       then
         begin
-          fprintf std_formatter  "@[<v>---------- Solution %d ----------\n, %a@,@,@]" 
+          fprintf std_formatter  "@[<v>---------- Solution %d ----------\n %a@,@,@]" 
             (*              "@[<hov 2>@[%a@] |-@ @[%a@]@]" *)
             (!solutions)
             (P.fmt_ppr_cmp_exp_chk LF.Empty LF.Empty) e

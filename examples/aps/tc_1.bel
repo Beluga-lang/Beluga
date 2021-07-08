@@ -14,10 +14,11 @@ le : nat -> nat -> type.
 le_z : le zero N.
 le_s : le N M -> le (succ N) (succ M).
 
+--mquery 1 * 4 {N: [⊢ nat]} {D: [⊢ even N]} [⊢ odd (succ N)].
 
 --mquery 1 * 4 [ |- even (succ (succ zero))].
 
-%% --mquery 0 * 2 [ |- even (succ (succ (succ zero)))].
+--mquery 1 * 2 [ |- even (succ (succ (succ zero)))].
 --mquery 1 * * [ |- odd (succ (succ (succ zero)))].
 
 --mquery 1 * 7 [ |- le (succ (succ zero)) (succ (succ (succ (succ zero))))].
@@ -42,12 +43,10 @@ rec odd_even : [ ⊢ odd N] → [ ⊢ even (succ N)] = fn d ⇒ case d of
 
 
 
-% 
-% --mquery  1 * * {g:ctx}{N:[g |- nat]}{D : [g |- even N]} [g |- even (succ (succ N))].
-%   ERROR: does not produce any solution but should produce as an answer [g |- ev_s D]
 %
-% --mquery  1 * * {g:ctx}{N:[ |- nat]} {D : [g |- even N[]]} [g |- even (succ (succ N[]))].
-%   ERROR: does not produce a solution, but should produce as an answer [g |- ev_s D]
+--mquery  1 * * {g:ctx}{N:[g |- nat]}{D : [g |- even N]} [g |- even (succ (succ N))].
+
+--mquery  1 * * {g:ctx}{N:[ |- nat]} {D : [g |- even N[]]} [g |- even (succ (succ N[]))].
 
 node:type.
 a:node.

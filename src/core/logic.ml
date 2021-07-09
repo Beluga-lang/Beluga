@@ -30,7 +30,7 @@ module Options = struct
   let askSolution = ref false
 
   (* Type check the proof terms. *)
-  let checkProofs = ref true
+  let checkProofs = ref false
 end
 
 
@@ -110,7 +110,7 @@ type comp_goal =                                (* Comp Goal cg :=       *)
   | Implies of (comp_res * Comp.ctyp_decl)      (*     | r -> cg'        *)
                * comp_goal  
   | Forall of  LF.ctyp_decl * comp_goal         (*     | ∀x:U. cg        *)
-  | Atomic of Id.cid_comp_typ * atomic_spine    (*     | a meta_spine    *)
+  | Atomic of Id.cid_comp_typ * atomic_spine    (*     | a meta_spine    *)     
 
 and atomic_spine =
   | End
@@ -275,6 +275,13 @@ module Convert = struct
        let cg = comptypToCompGoal t1 in 
        comptypToCClause' cD t2 (Solve (subgoals, cg))
     | Comp.TypBase (_) ->
+       { cHead = tau
+       ; cMVars = cD
+       ; cSubGoals = subgoals
+       }
+    | Comp.TypInd tau' ->
+       comptypToCClause' cD tau' subgoals
+    | _  ->
        { cHead = tau
        ; cMVars = cD
        ; cSubGoals = subgoals
@@ -692,11 +699,33 @@ module Index = struct
      Retrieve Comp.typ for term constant c, clausify it into sCCl and
      return an sgnCClause (c, sCCl). 
    *)
-
+    
+  (* Computation Type Theorems  *)
   let compileSgnCClause cidTerm =
     let termEntry = Cid.Comp.get cidTerm in
     let tau = termEntry.Cid.Comp.Entry.typ in
     (cidTerm, Convert.comptypToCClause tau)
+    
+  (* Inductive Types *)
+  let compileSgnIClause cidTerm =
+    let termEntry = Cid.CompConst.get cidTerm in
+    let tau = termEntry.Cid.CompConst.Entry.typ in
+    (cidTerm, Convert.comptypToCClause tau)
+
+(*  let compileSgnTDClause cidTerm =
+    let termEntry = Cid.CompTypDef.get cidTerm in
+    let tau = termEntry.Cid.CompTypDef.Entry.typ in
+    (cidTerm, Convert.comptypToCClause tau)  *)
+
+(*  let compileCoClause cidTerm =
+    let termEntry = Cid.CompCotyp.get cidTerm in
+    let tau = termEntry.Cid.CompCotyp.Entry.typ in
+    (cidTerm, Convert.comptypToCClause tau) *)
+
+(*  let compileCTClause cidTerm =
+    let termEntry = Cid.CompDest.get cidTerm in
+    let tau = termEntry.Cid.CompDest.Entry.return_type in
+    (cidTerm, Convert.comptypToCClause tau)   *)
 
     
 
@@ -720,10 +749,7 @@ module Index = struct
     let typConstr = !(typEntry.Cid.Typ.Entry.constructors) in
     let typConst = addTyp cidTyp in
     let regSgnClause cidTerm =
-      (*  try  *) 
-        addSgnClause typConst (compileSgnClause cidTerm)
-    (*  with failure ->
-        addSgnClause typConst (compileSgnCClause cidTerm) *)
+      addSgnClause typConst (compileSgnClause cidTerm)
     in
     let rec revIter f =
       function
@@ -753,7 +779,52 @@ module Index = struct
          revIter f l';
          f h
     in
-    revIter regSgnCClause typConstr 
+    revIter regSgnCClause typConstr
+
+  let storeCompTypIConst (cidTyp, typEntry) =
+    let typConstr = !(typEntry.Cid.Typ.Entry.constructors) in  
+    let typConst = addCompTyp cidTyp in
+    let regSgnCClause cidTerm =
+      addSgnCClause typConst (compileSgnIClause cidTyp)
+    in
+    let rec revIter f =
+      function
+      | [] -> ()
+      | h :: l' ->
+         revIter f l';
+         f h
+    in
+    revIter regSgnCClause typConstr
+
+(*  let storeCompTypTDConst (cidTyp, typEntry) =
+    let typConstr = !(typEntry.Cid.Typ.Entry.constructors) in  
+    let typConst = addCompTyp cidTyp in
+    let regSgnCClause cidTerm =
+      addSgnCClause typConst (compileSgnTDClause cidTyp)
+    in
+    let rec revIter f =
+      function
+      | [] -> ()
+      | h :: l' ->
+         revIter f l';
+         f h
+    in
+    revIter regSgnCClause typConstr   
+
+  let storeCompTypCTConst (cidTyp, typEntry) =
+    let typConstr = !(typEntry.Cid.Typ.Entry.constructors) in  
+    let typConst = addCompTyp cidTyp in
+    let regSgnCClause cidTerm =
+      addSgnCClause typConst (compileCTClause cidTyp)
+    in
+    let rec revIter f =
+      function
+      | [] -> ()
+      | h :: l' ->
+         revIter f l';
+         f h
+    in
+    revIter regSgnCClause typConstr  *)
 
   (* storeQuery (p, (tA, i), cD, e, t) = ()
      Invariants:
@@ -776,7 +847,6 @@ module Index = struct
     let (mq, tau', ms, xs) = (Convert.comptypToMQuery (tau, i)) in
     addSgnMQuery (tau', mq, [], e, t, d)
 
-
     
   (* robStore () = ()
      Store all type constants in the `types' table.
@@ -792,11 +862,31 @@ module Index = struct
   *)
   let robSecondStore () =
     try
-
       List.iter storeCompTypConst (Cid.Typ.current_entries ())
     with
     | _ -> ()
 
+  (* robThirdStore () = ()
+     Store all Inductive comptype constants in the `compTypes' table.
+  *)
+  let robThirdStore () =
+    try
+      List.iter storeCompTypIConst (Cid.Typ.current_entries ())
+    with
+    | _ -> ()
+
+(*  let robFourthStore () =
+    try
+      List.iter storeCompTypTDConst (Cid.Typ.current_entries ())
+    with
+    | _ -> ()
+
+    let robFifthStore () =
+    try
+      List.iter storeCompTypCTConst (Cid.Typ.current_entries ())
+    with
+    | _ -> ()  *)
+ 
   (* iterSClauses f c = ()
      Iterate over all signature clauses associated with c.
   *)
@@ -832,6 +922,7 @@ module Index = struct
     querySub := s;
     robStore ();
     robSecondStore ();
+    robThirdStore ();
     let bchatter = !Options.chatter in
     Options.chatter := 0;
     let sgnQ =
@@ -1684,8 +1775,34 @@ module CSolver = struct
            solveClauseSubGoals cD cG cPool cid sg' ms
              (fun e' -> sc (Comp.Apply (noLoc, e', e))))
          
-    
-  
+(*
+  and matchSig cD cG cPool cg ms sc =
+    let mS (cid, sCCl) =
+      if (* Check to see if the comp goal is the head of the assumption *)
+         matchHead cD sCCl.cHead cg;
+      then (* If so, since there are no subgoals, return the assumption *)
+         let ms' = C.mctxToMSub cD (sCCl.cMVars, (LF.MShift (Context.length cD))) (Context.length sCCl.cMVars) in    
+      let tau = if isBox cg then C.boxToTypBox cg else C.atomicToBase cg in
+      match sCCl.cSubGoals with
+      | Proved ->
+         unify cD (tau, ms) (sCCl.cHead, ms')
+           (fun () ->
+             (sc (Comp.Syn (noLoc, Comp.Const (noLoc, cid)))))
+      | Solve (sg', cg') -> 
+            (* Trail to undo MVar instantiations. *)
+         (try
+            Solver.trail
+              begin fun () ->
+                unify cD (tau, ms) (sCCl.cHead, ms')
+                  (fun () ->
+                   solveClauseSubGoals cD cG cPool cid sCCl.cSubGoals ms 
+                     (fun e' -> sc (Comp.Syn (noLoc, e'))))
+               end   
+            with
+            | U.Failure _ -> ())
+    in
+    Index.iterAllSCClauses (fun w -> mS w)
+    *)
   (* matchCompSig c = ()
      Try all the clauses in the static Comp signature with head matching
      type constant c.
@@ -1794,7 +1911,8 @@ module CSolver = struct
           in
           Solver.solve cD cPsi (g, S.id) sc';
       (*    printf "hi"; *)
-          focus cD cG cPool cPool cg ms sc
+          focus cD cG cPool cPool cg ms sc;
+    (*     matchSig cD cG cPool cg ms sc; *)
     | Box (_cPsi, _g, Some P) -> 
        (try
           let Atom tA = _g in
@@ -2228,6 +2346,7 @@ let runLogic () =
       Index.robStore ();
       (* Transform Comp signatures into clauses. *)
       Index.robSecondStore ();
+      Index.robThirdStore ();
       (* Optional: Print signature clauses. *)
       if !Options.chatter >= 4
       then (Printer.printSignature ();
@@ -2246,7 +2365,8 @@ let runLogicOn n (tA, i) cD e t  =
 let prepare () =
   Index.clearIndex ();
   Index.robStore ();
-  Index.robSecondStore ()
+  Index.robSecondStore ();
+  Index.robThirdStore ()
 
 (*
 

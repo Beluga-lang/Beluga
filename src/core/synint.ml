@@ -467,7 +467,7 @@ module Comp = struct
   (* neutral com. terms *)
   and exp_syn =                                                             (* n :=                                            *)
     | Var       of Loc.t * offset                                           (* | x:tau in cG                                   *)
-    | DataConst of Loc.t * cid_comp_const                                   (* | c:tau in Comp. Sig.                           *)
+    | DataConst of Loc.t * cid_comp_const                                   (* | c:tau in Comp. Sig. (Induc/Strat. type)       *)
     | Obs       of Loc.t * exp_chk * LF.msub * cid_comp_dest                (* | observation (e, ms, destructor={typ, ret_typ} *)
     | Const     of Loc.t * cid_prog                                         (* | theorem cp                                    *)
     | Apply     of Loc.t * exp_syn * exp_chk                                (* | (n:tau_1 -> tau_2) (e:tau_1)                  *)     

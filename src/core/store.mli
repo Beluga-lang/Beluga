@@ -144,7 +144,7 @@ module Cid : sig
 
     (* val entry_list : (Id.cid_comp_typ list ref) DynArray.t *)
     val mk_entry : name -> Comp.kind -> int -> Sgn.positivity_flag -> entry
-
+    val current_entries : unit -> (cid_comp_typ * entry) list
     val add : (cid_comp_typ -> entry) -> cid_comp_typ
     val get : cid_comp_typ -> entry
     val freeze : cid_comp_typ -> unit
@@ -175,6 +175,7 @@ module Cid : sig
     val add : (cid_comp_cotyp -> entry) -> cid_comp_cotyp
     val fixed_name_of : cid_comp_cotyp -> Id.name
     val get : cid_comp_cotyp -> entry
+    val current_entries : unit -> (cid_comp_cotyp * entry) list
     val freeze : cid_comp_cotyp -> unit
     val addDestructor : cid_comp_dest -> cid_comp_cotyp -> unit
     val index_of_name : name -> cid_comp_typ
@@ -197,6 +198,7 @@ module Cid : sig
 
     val mk_entry : name -> Comp.typ -> int -> entry
     val add : cid_comp_typ -> (cid_comp_const -> entry) -> cid_comp_const
+    val current_entries : unit -> (cid_comp_const * entry) list
     val get : cid_comp_const -> entry
     val get_implicit_arguments : cid_comp_const -> int
     val index_of_name : name -> cid_comp_const
@@ -221,6 +223,7 @@ module Cid : sig
 
     val mk_entry : name -> LF.mctx -> Comp.typ -> Comp.typ -> int -> entry
     val add : cid_comp_cotyp -> (cid_comp_dest -> entry) -> cid_comp_dest
+    val current_entries : unit -> (cid_comp_dest * entry) list
     val get : cid_comp_dest -> entry
     val fixed_name_of : cid_comp_dest -> Id.name
     val get_implicit_arguments : cid_comp_dest -> int
@@ -246,6 +249,7 @@ module Cid : sig
 
     val mk_entry : name -> int -> (LF.mctx * Comp.typ) -> Comp.kind -> entry
     val add : (cid_comp_typdef -> entry) -> cid_comp_typdef
+    val current_entries : unit -> (cid_comp_typdef * entry) list
     val get : cid_comp_typdef -> entry
     val fixed_name_of : cid_comp_typdef -> Id.name
     val get_implicit_arguments : cid_comp_typdef -> int
@@ -301,6 +305,7 @@ module Cid : sig
      *)
     val add : (cid_prog -> entry) -> cid_prog
     val get : cid_prog -> entry
+    val current_entries : unit -> (cid_prog * entry) list
 
     val fixed_name_of : cid_prog -> Id.name
     val index_of_name : name -> cid_prog

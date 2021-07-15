@@ -591,9 +591,9 @@ module Index = struct
 
   let types = Hashtbl.create 0          (* typConst Hashtbl.t          *)
 
-  let compTypes = Hashtbl.create 0      (* compTypConst Hashtbl.t      *)
+  let compITypes = Hashtbl.create 0     (* compTypConst Hashtbl.t      *)
 
-(*  let compCoTypes = Hashtbl.create 0 *)
+  let compTTypes = Hashtbl.create 0     (* comp theorem Hashtbl.t      *)
 
   type inst = (Id.name *  LF.normal)    (* I ::= (x, Y[s]) where Y is an MVar        *)
   type minst = (Id.name * LF.mfront)    (* I ::= (x, mf)   where mf is (Psihat.term) *)            
@@ -633,30 +633,23 @@ module Index = struct
     Hashtbl.find types cidTyp
 
   (* addCompTyp c = sgnCClause DynArray.t
-     Create new entry for a compTyp constant c in the `compTypes' table
+     Create new entry for a compTyp constant c in the `compITypes' table
      and return its mapping 
   *)
     
   let addCompTyp cidTyp =
-    Hashtbl.add compTypes cidTyp (DynArray.create ());
-    Hashtbl.find compTypes cidTyp
+    Hashtbl.add compITypes cidTyp (DynArray.create ());
+    Hashtbl.find compITypes cidTyp
 
-(*  let addCompCoTyp cidTyp =
-    Hashtbl.add compCoTypes cidTyp (DynArray.create ());
-    Hashtbl.find compCoTypes cidTyp *)
+  let addComp cidTyp =
+    Hashtbl.add compTTypes cidTyp (DynArray.create ());
+    Hashtbl.find compTTypes cidTyp 
 
   (* addSgnClause tC, sCl = ()
      Add a new sgnClause, sCl, to the DynArray tC.
   *)
   let addSgnClause typConst sgnClause =
     DynArray.add typConst sgnClause
-    
-(* TODO:: create new DynArray for compclauses
-   addSgnClause tC, sCCl = ()
-     Add a new sgnClause, sCl, to the DynArray tC.
-  *)
-  let addSgnCClause typConst sgnCClause =
-    DynArray.add typConst sgnCClause
  
   (* addSgnQuery (p, (g, s), cD, xs, e, t)  = ()
      Add a new sgnQuery to the `queries' DynArray.
@@ -697,34 +690,18 @@ module Index = struct
     let termEntry = Cid.Term.get cidTerm in
     let tA = termEntry.Cid.Term.Entry.typ in
     (cidTerm, Convert.typToClause tA)
-(*
+
   (* Computation Theorem Constants  *)
   let compileSgnCClause cidTerm =
     let termEntry = Cid.Comp.get cidTerm in
     let tau = termEntry.Cid.Comp.Entry.typ in
-    (cidTerm, Convert.comptypToCClause tau)   *)
+    (cidTerm, Convert.comptypToCClause tau)   
     
-  (* Computation Constants *)
+  (* Computation Inductive Constants *)
   let compileSgnConstClause cidCompTerm =
     let ctermEntry = Cid.CompConst.get cidCompTerm in
     let tau = ctermEntry.Cid.CompConst.Entry.typ in
     (cidCompTerm, Convert.comptypToCClause tau)      
-
-(*  let compileSgnTDClause cidTerm =
-    let termEntry = Cid.CompTypDef.get cidTerm in
-    let tau = termEntry.Cid.CompTypDef.Entry.typ in
-    (cidTerm, Convert.comptypToCClause tau)  
-
-(*  let compileCoClause cidTerm =
-    let termEntry = Cid.CompCotyp.get cidTerm in
-    let tau = termEntry.Cid.CompCotyp.Entry.typ in
-    (cidTerm, Convert.comptypToCClause tau)  *)
-
-  let compileCTClause cidTerm =
-    let termEntry = Cid.CompDest.get cidTerm in
-    let tau = termEntry.Cid.CompDest.Entry.return_type in
-    (cidTerm, Convert.comptypToCClause tau)    *)
-
     
 
   (* termName c = Id.name
@@ -732,18 +709,12 @@ module Index = struct
   *)
   let termName cidTerm =
     (Cid.Term.get cidTerm).Cid.Term.Entry.name
-(*
+
   let compName cidTerm =
-    (Cid.Comp.get cidTerm).Cid.Comp.Entry.name  *)
+    (Cid.Comp.get cidTerm).Cid.Comp.Entry.name  
 
   let compConstName cidTerm =
     (Cid.CompConst.get cidTerm).Cid.CompConst.Entry.name  
-
-(*  let typName cidTerm =
-    (Cid.Typ.get cidTerm).Cid.Typ.Entry.name *)
-
-(*  let compTypName cidTerm =
-    (Cid.Comp.get cidTerm).Cid.Comp.Entry.name *)
 
   (* storeTypConst c = ()
      Add a new entry in `types' for type constant c and fill the DynArray
@@ -767,27 +738,17 @@ module Index = struct
     in
     revIter regSgnClause typConstr
 
-  (* storeCompTypConst c = ()
-     Add a new entry in `Comptypes' for comptype constant c and fill the 
-     DynArray with the clauses corresponding to the comp. term constants 
+  (* storeCompConst c = ()
+     Add a new entry in `compTTypes' for comptype constant c and fill the 
+     DynArray with the clause corresponding to the comp. theorem 
      associated  with c.
    *)
     
-(*  let storeCompTypConst (cidTyp, typEntry) =
-    (* TODO:: Typ or CompTyp?? *)
-    let typConstr = !(typEntry.Cid.Typ.Entry.constructors) in  
-    let typConst = addCompTyp cidTyp in
-    let regSgnCClause cidTerm =
-      addSgnCClause typConst (compileSgnCClause cidTyp)
-    in
-    let rec revIter f =
-      function
-      | [] -> ()
-      | h :: l' ->
-         revIter f l';
-         f h
-    in
-    revIter regSgnCClause typConstr    *)
+  let storeCompConst (cidTyp, typEntry) =
+    (* TODO:: Typ or CompTyp?? *) 
+    let typConst = addComp cidTyp in
+    addSgnClause typConst (compileSgnCClause cidTyp)
+  
 
   (* storeCompTypConst c = ()
      Add a new entry in `Comptypes' for comptype constant c and fill the 
@@ -796,11 +757,10 @@ module Index = struct
    *)
     
   let storeCompTypConst (cidCompTyp, compTypEntry) =
-    (* TODO:: Typ or CompTyp?? *)
     let ctypConstr = !(compTypEntry.Cid.CompTyp.Entry.constructors) in  
     let ctypConst = addCompTyp cidCompTyp in
     let regSgnCClause cidCompTerm =
-      addSgnCClause ctypConst (compileSgnConstClause cidCompTerm)
+      addSgnClause ctypConst (compileSgnConstClause cidCompTerm)
     in
     let rec revIter f =
       function
@@ -844,16 +804,16 @@ module Index = struct
     | _ -> ()
 
   (* robSecondStore () = ()
-     Store all comptype theorem constants in the `compTypes' table.
+     Store all comptype theorem constants in the `compTTypes' table.
   *)
-(*  let robSecondStore () =
+  let robSecondStore () =
     try
-      List.iter storeCompTypConst (Cid.Typ.current_entries ())
+      List.iter storeCompConst (Cid.Comp.current_entries ())
     with
-    | _ -> ()   *)
+    | _ -> ()   
 
   (* robThirdStore () = ()
-     Store all ? comptype constants in the `compTypes' table.
+     Store all  comptyp Inductive constants in the `compITypes' table.
   *)
   let robThirdStore () =
     try
@@ -864,7 +824,7 @@ module Index = struct
 
   let robAll () =
     robStore ();
-(*    robSecondStore () *)
+    robSecondStore ();
     robThirdStore ()  
     
  
@@ -877,11 +837,14 @@ module Index = struct
   let iterAllSClauses f =
     Hashtbl.iter (fun k v -> DynArray.iter f v) types
 
-  let iterSCClauses f cidTyp =
-    DynArray.iter f (Hashtbl.find compTypes cidTyp)
+  let iterISClauses f cidTyp =
+    DynArray.iter f (Hashtbl.find compITypes cidTyp)
    
-  let iterAllSCClauses f =
-    Hashtbl.iter (fun k v -> DynArray.iter f v) compTypes
+  let iterAllISClauses f =
+    Hashtbl.iter (fun k v -> DynArray.iter f v) compITypes
+   
+  let iterAllTSClauses f =
+    Hashtbl.iter (fun k v -> DynArray.iter f v) compTTypes
 
   let iterQueries f =
     DynArray.iter (fun q -> f q) queries
@@ -895,7 +858,7 @@ module Index = struct
     DynArray.clear queries;
     DynArray.clear mqueries;             
     Hashtbl.clear types;
-    Hashtbl.clear compTypes
+    Hashtbl.clear compITypes
 
 
   let singleQuery (p, (tA, i), cD, e, t) f =
@@ -918,7 +881,7 @@ module Index = struct
     f sgnQ;
     Options.chatter := bchatter;
     Hashtbl.clear types;
-    Hashtbl.clear compTypes
+    Hashtbl.clear compITypes
 end
 
 
@@ -1094,13 +1057,13 @@ module Printer = struct
       Id.print (termName cidTerm)
       (fmt_ppr_typ LF.Empty sCl.eVars) (sCl.tHead, S.id)
       (fmt_ppr_subgoals LF.Empty sCl.eVars) (sCl.subGoals, S.id)
-(*
+
   (** Prints a Computation Type clause *)
   let fmt_ppr_sgn_cclause ppf (cidTerm, sCCl) =
     fprintf ppf "@[<v 2>@[%a@] : @[%a@]@,%a@]"
       Id.print (compName cidTerm)
-      (fmt_ppr_preconds sCCl.cMVars) (sCCl.cSubGoals)
-      (fmt_ppr_cmp_typ sCCl.cMVars) (sCCl.cHead)   *)
+      (fmt_ppr_cmp_typ sCCl.cMVars) (sCCl.cHead)
+      (fmt_ppr_csubgoals sCCl.cMVars) (sCCl.cSubGoals)
 
    (** Prints clausal form of a Computation Constant *)
   let fmt_ppr_sgn_compclause ppf (cidTerm, sCCl) =
@@ -1152,27 +1115,30 @@ module Printer = struct
     fprintf std_formatter "%a.@.@."
       fmt_ppr_sgn_mquery mq  
 
+  (* Prints all LF signatures *)
   let printSignature () =
     iterAllSClauses
       (fun w ->
         fprintf std_formatter "%a@."
           fmt_ppr_sgn_clause w)
-(*
+
+  (* Prints all the computation theorems *)
   let printCompSignature () =
-    iterAllSCClauses
+    iterAllTSClauses
       (fun w ->
         fprintf std_formatter "%a@."
-          fmt_ppr_sgn_cclause w)    *)
-    
+          fmt_ppr_sgn_cclause w)    
+
+  (* Prints all Inductive type signatures *)
   let printCompConstSignature () =
-    iterAllSCClauses
+    iterAllISClauses
       (fun w ->
         fprintf std_formatter "%a@."
           fmt_ppr_sgn_compclause w)    
 
   let printAllSig () =
-    printSignature (); (*
-    printCompSignature ()*)
+    printSignature (); 
+    printCompSignature ();
     printCompConstSignature ()  
     
 end
@@ -1802,13 +1768,13 @@ module CSolver = struct
          with
            | U.Failure _ -> ())
     in
-    Index.iterAllSCClauses (fun w -> mS w)
+    Index.iterAllTSClauses (fun w -> mS w)
     
   (* Focus on the clause in the static Comp signature with head matching
      type constant c. *)
   and matchCompSig cidTyp cD cG cPool cg ms sc =
     let matchSgnCClause (cidTerm, sCCl) sc =      
-      let ms' = C.mctxToMSub cD (sCCl.cMVars, (LF.MShift 0)) (Context.length sCCl.cMVars) in    
+      let ms' = C.mctxToMSub cD (sCCl.cMVars, (LF.MShift 0)) (Context.length sCCl.cMVars) in
       let tau = if isBox cg then C.boxToTypBox cg else C.atomicToBase cg in
       (try
          Solver.trail
@@ -1821,7 +1787,7 @@ module CSolver = struct
          with
          | U.Failure _ -> ())
     in
-    I.iterSCClauses (fun w -> matchSgnCClause w sc) cidTyp
+    I.iterISClauses (fun w -> matchSgnCClause w sc) cidTyp
 
  
 (*      Focusing Gamma Phase:   cD ; cG  > tau ==> e: Q 

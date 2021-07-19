@@ -486,7 +486,8 @@ module Convert = struct
        let ms' = mctxToMSub cD (mV', ms) (k-1) in
        let tM' = etaExpand cD cPsi (tA, S.id) in
        let offset = k in
-       let mfront = LF.ClObj ((Some (LF.CtxName name), offset), LF.MObj tM') in
+       let mfront =
+         LF.ClObj ((Some (LF.CtxName name), offset), LF.MObj tM') in
        LF.MDot (mfront, ms')
     | LF.Dec (mV', LF.Decl (name, LF.ClTyp (LF.PTyp tA, cPsi),_)) ->
        (* TODO:: Correct? *)
@@ -494,7 +495,8 @@ module Convert = struct
        let tM' = etaExpand cD cPsi (tA, S.id) in
        let LF.Root (noLoc, hd, LF.Nil, _) = tM' in
        let offset = k in
-       let mfront = LF.ClObj ((Some (LF.CtxName name), offset), LF.PObj hd) in
+       let mfront =
+         LF.ClObj ((Some (LF.CtxName name), offset), LF.PObj hd) in
        LF.MDot (mfront, ms')
 
   let rec list_of_obj aS =
@@ -1651,6 +1653,63 @@ module CSolver = struct
     | LF.Dec (cG', ctd) ->
        concat_cG cG' (appendToGamma ctd cG_ret ms) ms
 
+  let rec normCompGoal ms cg =
+    let rec normCompRes ms r =
+      match r with
+      | Base tau -> Base (Whnf.cnormCTyp (tau, ms))
+      | CAnd (cg', r') ->
+         let cg'' = normCompGoal ms cg' in
+         let r'' = normCompRes ms r' in
+         CAnd (cg'', r'')
+      | CExists (td, r') ->
+         let td' = Whnf.cnormCDecl (td, ms) in
+         let r'' = normCompRes ms r' in
+         CExists (td', r'')
+    in
+    let rec normAtomicSpine ms aS =
+      match aS with
+      | End -> aS
+      | Spine (aS', (cg', mf)) ->
+         let aS'' = normAtomicSpine ms aS' in
+         let cg'' = normCompGoal ms cg' in
+         let mf' = Whnf.cnormMFt mf ms in
+         Spine (aS'', (cg'', mf'))
+    in
+    match cg with
+    | Box (cPsi, Atom typ, _lfTyp) ->
+       let typ' = Whnf.cnormTyp (typ,ms) in
+       let cPsi' = Whnf.cnormDCtx (cPsi, ms) in
+       Box (cPsi', Atom typ', _lfTyp)
+    | Implies ((r, td), cg') ->
+       let cg'' = normCompGoal ms cg' in
+       let r' = normCompRes ms r in
+       let td' = Whnf.cnormCCDecl (td, ms) in
+       Implies ((r', td'), cg'')
+    | Forall (td, cg') ->
+       let td' = Whnf.cnormCDecl (td, ms) in
+       let cg'' = normCompGoal ms cg' in
+       Forall (td', cg'')
+    | Atomic (cid, aS) ->
+       let aS' = normAtomicSpine ms aS in
+       Atomic (cid, aS')
+
+  let rec normSubGoals ms sg =
+    match sg with
+    | Proved -> sg
+    | Solve (sg', cg) ->
+       let cg' = normCompGoal ms cg in
+       Solve (normSubGoals ms sg', cg')
+(*
+  let rec mapp_fun s ms =
+    match ms with
+    | LF.MShift 0 -> s
+    | LF.MDot (mf, ms') ->
+       let LF.ClObj ((Some (LF.CtxName name), offset), LF.MObj tM') = mf in
+       let cPsi = Context.hatToDCtx (Some (LF.CtxName name), offset) in
+       let cltyp = ? in 
+       let mtyp = LF.ClTyp (cltyp, cPsi) in 
+       mapp_fun (Comp.MApp (noLoc, s,(noLoc, mf), mtyp, `implicit)) ms'  *)
+
 
   let rec cgSolve' (cD: LF.mctx) (cG: Comp.gctx) (cPool: cPool)
             (mq:mquery) (sc: Comp.exp_chk -> unit) =
@@ -1732,7 +1791,7 @@ module CSolver = struct
   and solveCClauseSubGoals cD cG cPool cid sg ms sc =
     match sg with
     | Proved ->
-       sc (Comp.DataConst (noLoc, cid))
+       sc (Comp.DataConst (noLoc, cid)) 
     | Solve (sg', cg) ->
        cgSolve' cD cG cPool (cg, ms)
          (fun e ->
@@ -1776,12 +1835,13 @@ module CSolver = struct
     let matchSgnCClause (cidTerm, sCCl) sc =      
       let ms' = C.mctxToMSub cD (sCCl.cMVars, (LF.MShift 0)) (Context.length sCCl.cMVars) in
       let tau = if isBox cg then C.boxToTypBox cg else C.atomicToBase cg in
+      let sg = normSubGoals ms' sCCl.cSubGoals in
       (try
          Solver.trail
            begin fun () ->
              unify cD (tau, ms) (sCCl.cHead, ms')
                (fun () ->
-                solveCClauseSubGoals cD cG cPool cidTerm sCCl.cSubGoals ms 
+                solveCClauseSubGoals cD cG cPool cidTerm sg ms' 
                   (fun e' -> sc (Comp.Syn (noLoc, e'))))
             end   
          with
@@ -2204,9 +2264,9 @@ module Frontend = struct
      
     let solutions = ref 0 in
       (* Type checking function. *)
-      let check cD cG (e : Comp.exp_chk) ms =
-        Check.Comp.check None cD cG [] e (sgnMQuery.skinnyCompTyp, ms) 
-      in  
+    let check cD cG (e : Comp.exp_chk) ms =
+      Check.Comp.check None cD cG [] e (sgnMQuery.skinnyCompTyp, ms)
+    in  
 
     (* Success continuation function *)
     let scInit e =

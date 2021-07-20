@@ -114,7 +114,9 @@ type comp_goal =                                (* Comp Goal cg :=       *)
 
 and atomic_spine =
   | End
-  | Spine of atomic_spine * (comp_goal * LF.mfront)
+  | Spine of atomic_spine * (Comp.meta_typ
+                             * LF.mfront
+                             * Syncom.LF.plicity) (* For recreating type*)
             
 and comp_res =                          (* Residual Comp Goals   *)
   | Base of Comp.typ                    (* cr ::= A              *)
@@ -307,7 +309,7 @@ module Convert = struct
     | LF.Atom _ ->
        Head (Shift.shiftAtom tM (-cS, -dS, dR)) 
 
-
+(*
   and cTypToCompGoal ctyp =
     match ctyp with
     | LF.ClTyp (LF.MTyp typ, cPsi) ->
@@ -322,16 +324,16 @@ module Convert = struct
     | Box (cPsi, Atom tA, Some M) ->
        LF.ClTyp (LF.MTyp tA, cPsi)
     | Box (cPsi, Atom tA, Some P) ->
-       LF.ClTyp (LF.PTyp tA, cPsi)
+       LF.ClTyp (LF.PTyp tA, cPsi) *)
 
            
   and comptypToCompGoal tau  =
     (* convert spine into the required shape (atomic_spine) *)
-    let rec sToAs s =
+    let rec msToAs s =
       match s with
       | Comp.MetaNil -> End
-      | Comp.MetaApp ((_loc,mf), ctyp, s', _) ->
-         Spine  (sToAs s', (cTypToCompGoal ctyp, mf))
+      | Comp.MetaApp ((_loc, mf), ctyp, s', plicity) ->
+         Spine  (msToAs s', (ctyp, mf, plicity))
     in
     match tau with
     | Comp.TypBox (_loc, LF.ClTyp (LF.MTyp tA, cPsi)) ->
@@ -355,7 +357,7 @@ module Convert = struct
        let typ_dec = Comp.CTypDecl (name, tau1 , true) in 
        Implies ((cr1,typ_dec), cg2)  
     | Comp.TypBase (_, comp_cid, s) ->
-       Atomic (comp_cid, sToAs s)
+       Atomic (comp_cid, msToAs s)
        
   and comptypToCompRes tau =
     match tau with
@@ -412,17 +414,16 @@ module Convert = struct
 
   (* Converts an atomic comp goal to a Comp.TypBase *) 
   let atomicToBase atomic =
-    let rec asToS aS =
+    let rec asToMs aS =
       match aS with
       | End -> Comp.MetaNil
-      | Spine (aS', (cg, mf)) ->
-         let ctdec = compGoalToCTyp cg in 
-         Comp.MetaApp ((Syntax.Loc.ghost, mf), ctdec, asToS aS', `explicit)
+      | Spine (aS', (mt, mf, pl)) ->
+         Comp.MetaApp ((Syntax.Loc.ghost, mf), mt, asToMs aS', pl)
     in
     match atomic with
     | Atomic (cid, aS) ->
        let loc = Syntax.Loc.ghost in
-       let mS = asToS aS in
+       let mS = asToMs aS in
        Comp.TypBase (loc, cid, mS)
         
 
@@ -499,11 +500,6 @@ module Convert = struct
          LF.ClObj ((Some (LF.CtxName name), offset), LF.PObj hd) in
        LF.MDot (mfront, ms')
 
-  let rec list_of_obj aS =
-    match aS with
-    | End -> []
-    | Spine (aS', (_cg, mf)) ->
-       List.rev (mf :: (list_of_obj aS'))
 
   (** typToQuery (M, i)  = ((g, s), xs)
       Transform a reconstructed LF.typ into a query, accumulating all
@@ -703,7 +699,7 @@ module Index = struct
   let compileSgnConstClause cidCompTerm =
     let ctermEntry = Cid.CompConst.get cidCompTerm in
     let tau = ctermEntry.Cid.CompConst.Entry.typ in
-    (cidCompTerm, Convert.comptypToCClause tau)      
+    (cidCompTerm, Convert.comptypToCClause tau)
     
 
   (* termName c = Id.name
@@ -757,6 +753,7 @@ module Index = struct
      DynArray with the clauses corresponding to the comp. term constants 
      associated  with c.
    *)
+
     
   let storeCompTypConst (cidCompTyp, compTypEntry) =
     let ctypConstr = !(compTypEntry.Cid.CompTyp.Entry.constructors) in  
@@ -860,7 +857,8 @@ module Index = struct
     DynArray.clear queries;
     DynArray.clear mqueries;             
     Hashtbl.clear types;
-    Hashtbl.clear compITypes
+    Hashtbl.clear compITypes;
+    Hashtbl.clear compTTypes
 
 
   let singleQuery (p, (tA, i), cD, e, t) f =
@@ -883,7 +881,8 @@ module Index = struct
     f sgnQ;
     Options.chatter := bchatter;
     Hashtbl.clear types;
-    Hashtbl.clear compITypes
+    Hashtbl.clear compITypes;
+    Hashtbl.clear compTTypes
 end
 
 
@@ -917,8 +916,9 @@ module Printer = struct
          Id.print x
          (fmt_ppr_typ cD cPsi) (tA, s)
 
-  let fmt_ppr_lf_ctyp_decl cD ppf (ctdec, s) =
-    match ctdec with
+  let fmt_ppr_lf_ctyp_decl cD ppf ctdec =
+    P.fmt_ppr_lf_ctyp_decl cD ppf ctdec
+ (*   match ctdec with
     | LF.Decl (name, LF.ClTyp (LF.MTyp tA, cPsi), _) ->
        fprintf ppf "%a : [ %a |- %a ]"
          Id.print name
@@ -929,9 +929,15 @@ module Printer = struct
          Id.print name
          (fmt_ppr_dctx cD) (cPsi)
          (fmt_ppr_typ cD cPsi) (tA, s)
+    | LF.Decl (name, LF.ClTyp (styp, cPsi), _dep) ->
+       raise NotImplementedYet
+    | LF.Decl (name, LF.CTyp (Some cPsi), _dep) ->
+       fprintf ppf "%a : %a"
+         Id.print name
+         (fmt_ppr_dctx cD) (cPsi)
     | LF.DeclOpt (x, _) ->
        fprintf ppf "%a : _"
-         Id.print x
+         Id.print x *)
     
 
   (* goalToString Psi (g, s) = string
@@ -955,29 +961,22 @@ module Printer = struct
        fprintf ppf "(∀%a. %a)"
          (fmt_ppr_decl cD cPsi) (tD, s)
          (fmt_ppr_goal cD (LF.DDec (cPsi, S.decSub tD s))) (g', S.dot1 s)
-
-  and fmt_ppr_atomic_spine cD ppf aS =
-    fprintf ppf "@[<v>%a@]"
-    (pp_print_list ~pp_sep: pp_print_cut
-      (fun ppf mf ->
-        fprintf ppf "%a"
-        (P.fmt_ppr_cmp_meta_obj cD P.l0) (Loc.ghost, mf)))
-      (List.rev (Convert.list_of_obj aS)) 
         
   and fmt_ppr_cmp_goal cD ppf (cg, s) =
     match cg with
     | Box (cPsi, _g, lfTy) ->
-       let typ = Convert.boxToTypBox cg in 
+       let tau = Convert.boxToTypBox cg in 
        fprintf ppf " %a "
-         (fmt_ppr_cmp_typ cD) (typ)
+         (fmt_ppr_cmp_typ cD) (tau)
     | Atomic (cid, aSpine) ->
-       fprintf ppf "@[<2>%s @[%a@]@]"
-         (Store.Cid.DefaultRenderer.render_cid_comp_typ cid)
-         (fmt_ppr_atomic_spine cD) aSpine
+       let tau = Convert.atomicToBase cg in 
+       fprintf ppf " %a "
+         (fmt_ppr_cmp_typ cD) (tau)
     | Forall (ctdec, cg') ->
+       let cD' = Whnf.extend_mctx cD (ctdec, LF.MShift 0) in
        fprintf ppf "(∀%a. %a)"
-         (fmt_ppr_lf_ctyp_decl cD) (ctdec, s)
-         (fmt_ppr_cmp_goal cD) (cg', s)
+         (fmt_ppr_lf_ctyp_decl cD) ctdec
+         (fmt_ppr_cmp_goal cD') (cg', S.dot1 s)
     | Implies ((cr, ctdec), cg') ->
        fprintf ppf "%a -> %a"
          (fmt_ppr_cmp_res cD) (cr, s)
@@ -996,21 +995,16 @@ module Printer = struct
 
   and fmt_ppr_cmp_res cD ppf (cr, s) =
     match cr with
-    | Base (Comp.TypBox (_, LF.ClTyp (LF.MTyp typ, cPsi))) ->
-       fprintf ppf "[%a |- %a]"
-         (fmt_ppr_dctx cD) (cPsi)
-         (fmt_ppr_typ cD cPsi) (typ, s)
-    | Base (Comp.TypBox (_, LF.ClTyp (LF.PTyp typ, cPsi))) ->
-       fprintf ppf "[%a |- %a]"
-         (fmt_ppr_dctx cD) (cPsi)
-         (fmt_ppr_typ cD cPsi) (typ, s)
+    | Base (tau) ->
+       fprintf ppf "%a"
+         (fmt_ppr_cmp_typ cD) tau
     | CAnd (cg', cr') ->
        fprintf ppf "%a -> %a"
          (fmt_ppr_cmp_goal cD) (cg', s)
          (fmt_ppr_cmp_res cD) (cr', s)
     | CExists (ctdec, cr') ->
        fprintf ppf "(∃%a. %a)"
-         (fmt_ppr_lf_ctyp_decl cD) (ctdec, s)
+         (fmt_ppr_lf_ctyp_decl cD) (ctdec)
          (fmt_ppr_cmp_res cD) (cr', s)
        
     
@@ -1072,8 +1066,8 @@ module Printer = struct
     fprintf ppf "@[<v 2>@[%a@] : @[%a@]@,%a@]"
       Id.print (compConstName cidTerm)
       (fmt_ppr_cmp_typ sCCl.cMVars) (sCCl.cHead)
-      (fmt_ppr_csubgoals sCCl.cMVars) (sCCl.cSubGoals)  
-     
+      (fmt_ppr_csubgoals sCCl.cMVars) (sCCl.cSubGoals)
+      
 
   let fmt_ppr_bound ppf =
     function
@@ -1136,12 +1130,13 @@ module Printer = struct
     iterAllISClauses
       (fun w ->
         fprintf std_formatter "%a@."
-          fmt_ppr_sgn_compclause w)    
+          fmt_ppr_sgn_compclause w)
+        
 
   let printAllSig () =
     printSignature (); 
     printCompSignature ();
-    printCompConstSignature ()  
+    printCompConstSignature ()
     
 end
 
@@ -1572,7 +1567,7 @@ module CSolver = struct
        Box (cPsi', Atom tA', Some P) ->
        Id.cid_equals (Solver.cidFromAtom tA) (Solver.cidFromAtom tA') &&
          unify_psi cD cPsi cPsi'
-    | (Comp.TypBase (_, cid, meta_spine), Atomic (cid', atomic_spine)) ->
+    | (Comp.TypBase (_, cid, _meta_spine), Atomic (cid', _atomic_spine)) ->
        Id.cid_equals cid cid'
     | (Comp.TypArr (_, tau1, tau2), cg) ->
        matchHead cD tau2 cg
@@ -1669,11 +1664,10 @@ module CSolver = struct
     let rec normAtomicSpine ms aS =
       match aS with
       | End -> aS
-      | Spine (aS', (cg', mf)) ->
+      | Spine (aS', (mt, mf,pl)) ->
          let aS'' = normAtomicSpine ms aS' in
-         let cg'' = normCompGoal ms cg' in
          let mf' = Whnf.cnormMFt mf ms in
-         Spine (aS'', (cg'', mf'))
+         Spine (aS'', (mt, mf',pl))
     in
     match cg with
     | Box (cPsi, Atom typ, _lfTyp) ->

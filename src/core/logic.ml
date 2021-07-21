@@ -1818,37 +1818,46 @@ module CSolver = struct
     cD ; cGamma  > e : Q   ====> Q
    *)
 
-  and solveSubGoals cD cG cPool (sg, k) ms sc =
+  and solveSubGoals cD cG cPool (sg, k) ms mV sc =
     match sg with
     | Proved -> 
-       sc (Comp.Var (noLoc, k))
+      let k = Context.length mV in 
+       let e' = (Comp.Var (noLoc, k)) in
+       let e = 
+       (createMApp e' (rev_ms ms (LF.MShift 0) k) (rev_mctx mV LF.Empty)) in
+       sc e
     | Solve (sg', cg') ->
        cgSolve' cD cG cPool (cg', ms) 
          (fun e ->
-           solveSubGoals cD cG cPool (sg', k) ms
+           solveSubGoals cD cG cPool (sg', k) ms mV
              (fun e' -> sc (Comp.Apply (noLoc, e', e))))
 
-  and solveCClauseSubGoals cD cG cPool cid sg ms sc =
+  and solveCClauseSubGoals cD cG cPool cid sg ms mV sc =
     match sg with
     | Proved ->
- (*      let e' = (Comp.DataConst (noLoc, cid)) in
+       let k = Context.length mV in 
+       let e' = (Comp.DataConst (noLoc, cid)) in
        let e = 
-         (createMApp e' (rev_ms ms'' (LF.MShift 0) k) (rev_mctx sCCl.cMVars LF.Empty))) in sc e *)
-       sc (Comp.DataConst (noLoc, cid)) 
+       (createMApp e' (rev_ms ms (LF.MShift 0) k) (rev_mctx mV LF.Empty)) in
+       sc e
     | Solve (sg', cg) ->
        cgSolve' cD cG cPool (cg, ms)
          (fun e ->
-           solveCClauseSubGoals cD cG cPool cid sg' ms
+           solveCClauseSubGoals cD cG cPool cid sg' ms mV
              (fun e' -> sc (Comp.Apply (noLoc, e', e))))
 
-  and solveTheoremSubGoals cD cG cPool cid sg ms sc =
+  and solveTheoremSubGoals cD cG cPool cid sg ms mV sc =
     match sg with
     | Proved ->
-       sc (Comp.Const (noLoc, cid))
+      let k = Context.length mV in 
+       let e' = (Comp.Const (noLoc, cid)) in
+       let e = 
+       (createMApp e' (rev_ms ms (LF.MShift 0) k) (rev_mctx mV LF.Empty)) in
+       sc e
     | Solve (sg', cg) ->
        cgSolve' cD cG cPool (cg, ms)
          (fun e ->
-           solveTheoremSubGoals cD cG cPool cid sg' ms
+           solveTheoremSubGoals cD cG cPool cid sg' ms mV
              (fun e' -> sc (Comp.Apply (noLoc, e', e))))
          
   (* We focus on one of the computation-type theorems *)
@@ -1859,15 +1868,13 @@ module CSolver = struct
       then (* If so, since there are no subgoals, return the assumption *)
         let ms' = C.mctxToMSub cD (sCCl.cMVars, (LF.MShift 0)) (Context.length sCCl.cMVars) in    
         let tau = if isBox cg then C.boxToTypBox cg else C.atomicToBase cg in
-        let ms'' = ms' in
-        let k = Context.length sCCl.cMVars in
         (try
            Solver.trail
              begin fun () ->
                unify cD (tau, ms) (sCCl.cHead, ms')
                  (fun () ->
-                  solveTheoremSubGoals cD cG cPool cid sCCl.cSubGoals ms 
-                    (fun e' -> sc (Whnf.cnormExp (Comp.Syn (noLoc,((createMApp e' (rev_ms ms'' (LF.MShift 0) k) (rev_mctx sCCl.cMVars LF.Empty)))), ms''))))
+                  solveTheoremSubGoals cD cG cPool cid sCCl.cSubGoals ms sCCl.cMVars
+                    (fun e' -> sc (Comp.Syn (noLoc, e'))))
               end   
          with
            | U.Failure _ -> ())
@@ -1881,14 +1888,13 @@ module CSolver = struct
       let ms' = C.mctxToMSub cD (sCCl.cMVars, (LF.MShift 0)) (Context.length sCCl.cMVars) in
       let tau = if isBox cg then C.boxToTypBox cg else C.atomicToBase cg in
       let sg = normSubGoals ms' sCCl.cSubGoals in
-      let ms'' = ms' in
       (try
          Solver.trail
            begin fun () ->
              unify cD (tau, ms) (sCCl.cHead, ms')
                (fun () ->
-                solveCClauseSubGoals cD cG cPool cidTerm sg ms' 
-                  (fun e' -> sc (Whnf.cnormExp (Comp.Syn (noLoc, e'), ms''))))
+                solveCClauseSubGoals cD cG cPool cidTerm sg ms' sCCl.cMVars
+                  (fun e' -> sc (Comp.Syn (noLoc, e'))))
             end   
          with
          | U.Failure _ -> ())
@@ -1918,16 +1924,14 @@ module CSolver = struct
        then (* If so, try to solve the subgoals *)
          let ms' = C.mctxToMSub cD (cMVars, (LF.MShift 0)) (Context.length cMVars) in
          let tau = if isBox cg then C.boxToTypBox cg else C.atomicToBase cg in
-         let ms'' = ms' in
-         let k = Context.length cMVars in
          (* Trail to undo MVar instantiations. *)
          (try
            Solver.trail
              begin fun () ->
              unify cD (tau, ms) (hd, ms')
                (fun () ->
-               solveSubGoals cD cG cPool_all (sg, k') ms 
-                 (fun e' -> sc (Whnf.cnormExp (Comp.Syn (noLoc,((createMApp e' (rev_ms ms'' (LF.MShift 0) k) (rev_mctx cMVars LF.Empty)))), ms''))))
+               solveSubGoals cD cG cPool_all (sg, k') ms cMVars
+                 (fun e' -> sc  (Comp.Syn (noLoc, e'))))
              end   
          with
          | U.Failure _ -> ()); 
@@ -1958,7 +1962,6 @@ module CSolver = struct
               sc (Comp.Box(noLoc, meta_obj, meta_typ)))
           in
           Solver.solve cD cPsi (g, S.id) sc';
-      (*    printf "hi"; *)
           focusG cD cG cPool cPool cg ms sc;
           focusT cD cG cPool cg ms sc; 
     | Box (_cPsi, _g, Some P) ->

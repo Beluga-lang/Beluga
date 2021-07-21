@@ -16,7 +16,7 @@ open Debug.Fmt
 module Options = struct
   (* Enable the logic programming engine (disabled by default). *)
   let enableLogic = ref true
-
+ 
   (* Control verbosity level:
        0 => No output.
        1 => Query and success notification.
@@ -486,19 +486,20 @@ module Convert = struct
     | LF.Dec (mV', LF.Decl (name, LF.ClTyp (LF.MTyp tA, cPsi),_)) ->
        let ms' = mctxToMSub cD (mV', ms) (k-1) in
        let tM' = etaExpand cD cPsi (tA, S.id) in
-       let offset = k in
+       let dctx_hat = Context.dctxToHat cPsi in 
        let mfront =
-         LF.ClObj ((Some (LF.CtxName name), offset), LF.MObj tM') in
+         LF.ClObj (dctx_hat, LF.MObj tM') in
        LF.MDot (mfront, ms')
     | LF.Dec (mV', LF.Decl (name, LF.ClTyp (LF.PTyp tA, cPsi),_)) ->
        (* TODO:: Correct? *)
        let ms' = mctxToMSub cD (mV', ms) (k-1) in
        let tM' = etaExpand cD cPsi (tA, S.id) in
        let LF.Root (noLoc, hd, LF.Nil, _) = tM' in
-       let offset = k in
+       let dctx_hat = Context.dctxToHat cPsi in 
        let mfront =
-         LF.ClObj ((Some (LF.CtxName name), offset), LF.PObj hd) in
+         LF.ClObj (dctx_hat, LF.PObj hd) in
        LF.MDot (mfront, ms')
+    | _ -> raise NotImplementedYet
 
 
   (** typToQuery (M, i)  = ((g, s), xs)
@@ -820,11 +821,22 @@ module Index = struct
     with
     | _ -> ()   
 
-
+  (* Store all signature constants in their respective tables *)
   let robAll () =
     robStore ();
     robSecondStore ();
-    robThirdStore ()  
+    robThirdStore ()
+
+  (* Retrieve the total_dec from each comp. theorem in the signature *) 
+  let getTDecs () =
+    let total_dec = ref [] in
+    let make_TDec_list total_decs (cid, _entry) =
+      total_dec := (Cid.Comp.get_total_decl cid) :: !total_decs
+    in
+    try List.iter (make_TDec_list total_dec) (Cid.Comp.current_entries ());
+        !total_dec
+    with
+    | _ -> !total_dec
     
  
   (* iterSClauses f c = ()
@@ -859,6 +871,7 @@ module Index = struct
     Hashtbl.clear types;
     Hashtbl.clear compITypes;
     Hashtbl.clear compTTypes
+    
 
 
   let singleQuery (p, (tA, i), cD, e, t) f =
@@ -1694,15 +1707,48 @@ module CSolver = struct
        let cg' = normCompGoal ms cg in
        Solve (normSubGoals ms sg', cg')
 (*
-  let rec mapp_fun s ms =
-    match ms with
-    | LF.MShift 0 -> s
-    | LF.MDot (mf, ms') ->
-       let LF.ClObj ((Some (LF.CtxName name), offset), LF.MObj tM') = mf in
-       let cPsi = Context.hatToDCtx (Some (LF.CtxName name), offset) in
-       let cltyp = ? in 
-       let mtyp = LF.ClTyp (cltyp, cPsi) in 
-       mapp_fun (Comp.MApp (noLoc, s,(noLoc, mf), mtyp, `implicit)) ms'  *)
+  let rec createMApp e mctx =
+    let rec rev_mctx mctx mctx_ret =
+      match mctx with
+      | LF.Empty ->  mctx_ret
+      | LF.Dec (mctx', d) ->
+         rev_mctx mctx' (LF.Dec (mctx_ret, d))
+    in
+    match rev_mctx mctx LF.Empty with
+    | LF.Empty -> e
+    | LF.Dec (mctx', LF.Decl (name, cltyp, LF.Maybe)) ->
+       let mmV = Whnf.newMMVar' (Some name) (LF.Empty, cltyp) LF.Maybe in
+       let mf = Whnf.mmVarToMFront noLoc mmV cltyp in 
+       let mo = (noLoc, mf) in 
+       Comp.MApp (noLoc, (createMApp e mctx'), mo, cltyp, `implicit)
+    | LF.Dec (mctx', LF.Decl (name, cltyp, LF.No)) ->
+       let mmV = Whnf.newMMVar' (Some name) (LF.Empty, cltyp) LF.Maybe in
+       let mf = Whnf.mmVarToMFront noLoc mmV cltyp in 
+       let mo = (noLoc, mf) in
+       Comp.MApp (noLoc, (createMApp e mctx'), mo, cltyp, `explicit) *)
+
+  let rec rev_mctx mctx mctx_ret =
+      match mctx with
+      | LF.Empty ->  mctx_ret
+      | LF.Dec (mctx', d) ->
+         rev_mctx mctx' (LF.Dec (mctx_ret, d))
+  
+  let rec rev_ms ms ms_ret k =
+      match (ms,k) with
+      | (LF.MDot (mf, ms'), k) when k > 0 ->
+         rev_ms ms' (LF.MDot (mf, ms_ret)) (k-1)
+      | _ -> ms_ret
+       
+  let rec createMApp e ms mctx =
+    match (ms, mctx) with
+    | (LF.MShift 0, _) -> e
+    | (LF.MDot (mf, ms'), LF.Dec (mctx', LF.Decl(x,cltyp, LF.Maybe))) ->
+       Comp.MApp (noLoc, (createMApp e ms' mctx'), (noLoc, mf), cltyp, `implicit)
+    | (LF.MDot (mf, ms'), LF.Dec (mctx', LF.Decl(x,cltyp, LF.No))) ->
+       Comp.MApp (noLoc, (createMApp e ms' mctx'), (noLoc, mf), cltyp, `explicit)
+    | _ -> raise NotImplementedYet
+
+
 
 
   let rec cgSolve' (cD: LF.mctx) (cG: Comp.gctx) (cPool: cPool)
@@ -1785,6 +1831,9 @@ module CSolver = struct
   and solveCClauseSubGoals cD cG cPool cid sg ms sc =
     match sg with
     | Proved ->
+ (*      let e' = (Comp.DataConst (noLoc, cid)) in
+       let e = 
+         (createMApp e' (rev_ms ms'' (LF.MShift 0) k) (rev_mctx sCCl.cMVars LF.Empty))) in sc e *)
        sc (Comp.DataConst (noLoc, cid)) 
     | Solve (sg', cg) ->
        cgSolve' cD cG cPool (cg, ms)
@@ -1810,13 +1859,15 @@ module CSolver = struct
       then (* If so, since there are no subgoals, return the assumption *)
         let ms' = C.mctxToMSub cD (sCCl.cMVars, (LF.MShift 0)) (Context.length sCCl.cMVars) in    
         let tau = if isBox cg then C.boxToTypBox cg else C.atomicToBase cg in
+        let ms'' = ms' in
+        let k = Context.length sCCl.cMVars in
         (try
            Solver.trail
              begin fun () ->
                unify cD (tau, ms) (sCCl.cHead, ms')
                  (fun () ->
                   solveTheoremSubGoals cD cG cPool cid sCCl.cSubGoals ms 
-                    (fun e' -> sc (Comp.Syn (noLoc, e'))))
+                    (fun e' -> sc (Whnf.cnormExp (Comp.Syn (noLoc,((createMApp e' (rev_ms ms'' (LF.MShift 0) k) (rev_mctx sCCl.cMVars LF.Empty)))), ms''))))
               end   
          with
            | U.Failure _ -> ())
@@ -1830,13 +1881,14 @@ module CSolver = struct
       let ms' = C.mctxToMSub cD (sCCl.cMVars, (LF.MShift 0)) (Context.length sCCl.cMVars) in
       let tau = if isBox cg then C.boxToTypBox cg else C.atomicToBase cg in
       let sg = normSubGoals ms' sCCl.cSubGoals in
+      let ms'' = ms' in
       (try
          Solver.trail
            begin fun () ->
              unify cD (tau, ms) (sCCl.cHead, ms')
                (fun () ->
                 solveCClauseSubGoals cD cG cPool cidTerm sg ms' 
-                  (fun e' -> sc (Comp.Syn (noLoc, e'))))
+                  (fun e' -> sc (Whnf.cnormExp (Comp.Syn (noLoc, e'), ms''))))
             end   
          with
          | U.Failure _ -> ())
@@ -1866,6 +1918,8 @@ module CSolver = struct
        then (* If so, try to solve the subgoals *)
          let ms' = C.mctxToMSub cD (cMVars, (LF.MShift 0)) (Context.length cMVars) in
          let tau = if isBox cg then C.boxToTypBox cg else C.atomicToBase cg in
+         let ms'' = ms' in
+         let k = Context.length cMVars in
          (* Trail to undo MVar instantiations. *)
          (try
            Solver.trail
@@ -1873,7 +1927,7 @@ module CSolver = struct
              unify cD (tau, ms) (hd, ms')
                (fun () ->
                solveSubGoals cD cG cPool_all (sg, k') ms 
-                 (fun e' -> sc (Comp.Syn (noLoc, e'))))
+                 (fun e' -> sc (Whnf.cnormExp (Comp.Syn (noLoc,((createMApp e' (rev_ms ms'' (LF.MShift 0) k) (rev_mctx cMVars LF.Empty)))), ms''))))
              end   
          with
          | U.Failure _ -> ()); 
@@ -2255,11 +2309,14 @@ module Frontend = struct
   *)
     
   let msolve sgnMQuery =
+
+    (* Retrieve the total_dec list of the signature *)
+    let total_dec = getTDecs () in
      
     let solutions = ref 0 in
       (* Type checking function. *)
     let check cD cG (e : Comp.exp_chk) ms =
-      Check.Comp.check None cD cG [] e (sgnMQuery.skinnyCompTyp, ms)
+      Check.Comp.check None cD cG total_dec e (sgnMQuery.skinnyCompTyp, ms)
     in  
 
     (* Success continuation function *)

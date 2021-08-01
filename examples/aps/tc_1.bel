@@ -25,7 +25,7 @@ le_s : le N M -> le (succ N) (succ M).
 
 --mquery 1 * 2 {N:[ |- nat]}{D:[ |- even N]} [ |- even (succ (succ N))].
 
---mquery 0 * 5 {N:[ |- nat]}[ |- even (succ (succ N))].
+--mquery 0 * 1 {N:[ |- nat]}[ |- even (succ (succ N))].
 
 --mquery 1 * * {N1:[ ⊢ nat]}{D : [ ⊢ odd N1]} {F:[ ⊢ even (succ N1)]}
 	   [ |- even (succ (succ (succ N1)))].

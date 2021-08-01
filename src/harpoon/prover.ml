@@ -198,6 +198,7 @@ let process_command
               h.info.compSolution <- Some e; 
               raise Logic.Frontend.Done
             end
+            (Some 999)
         with
           | Logic.Frontend.Done ->
               State.printf s "logic programming finished@,@?"; 

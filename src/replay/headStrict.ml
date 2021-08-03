@@ -1,3 +1,5 @@
+open Support
+
 (** A head-strict stream is non-empty and its head is a value. *)
 type 'a t =
   { head : 'a;

@@ -1,6 +1,6 @@
 open Support
 
-type t = string -> string option -> unit -> string option
+type t = string -> string option -> string Gen.gen
 
 let terminal : t =
   fun msg history_file () ->
@@ -25,8 +25,7 @@ let create_file (path, k) (test_start : int option) : t =
     GenMisc.iter_through (fun x -> print_string (x ^ "\n")) g
   in
   let g_mirror_with msg =
-    let open GenMisc in
-    iter_through (fun x -> print_string msg; print_string (x ^ "\n")) g
+    GenMisc.iter_through (fun x -> print_string msg; print_string (x ^ "\n")) g
   in
   begin
     match test_start with

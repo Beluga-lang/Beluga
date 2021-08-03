@@ -1,2 +1,3 @@
-(lang dune 1.1)
+(lang dune 1.7)
 (name beluga)
+(implicit_transitive_deps false)

@@ -13,8 +13,8 @@ module S = B.Substitution
 
 open Comp
 
-let (dprintf, _, _) = B.Debug.(makeFunctions' (toFlags [11]))
-open B.Debug.Fmt
+let (dprintf, _, _) = Debug.(makeFunctions' (toFlags [11]))
+open Debug.Fmt
 
 type t = Theorem.t -> proof_state -> bool
 type automation = t

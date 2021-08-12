@@ -1564,8 +1564,8 @@ module CSolver = struct
 
   let checkDepth x y =
       match (x, y) with
-      | (Some i, Some j) -> i >= j
-      | (Some i, None) -> true
+      | (Some i, Some j) -> i > j
+      | (Some i, None) -> false
       | (None, _) -> false
 
     (* Abort mquery. *)
@@ -1940,10 +1940,6 @@ module CSolver = struct
          matchHead cD sCCl.cHead cg;
       then (* If so, since there are no subgoals, return the assumption *)
         (let ms' = C.mctxToMSub cD (sCCl.cMVars, ms) in
-         fprintf std_formatter "\n ms' = \n %a \n"
-           (Pretty.Int.DefaultPrinter.fmt_ppr_lf_msub cD Pretty.Int.DefaultPrinter.l0) ms';
-         fprintf std_formatter "\n ms = \n %a \n"
-          (Pretty.Int.DefaultPrinter.fmt_ppr_lf_msub cD Pretty.Int.DefaultPrinter.l0) ms;
          let tau = if isBox cg then C.boxToTypBox cg else C.atomicToBase cg in
          let sg = normSubGoals ms' sCCl.cSubGoals in
         (try

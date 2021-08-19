@@ -495,7 +495,8 @@ module Convert = struct
     let noLoc = Syntax.Loc.ghost in
     match mV with
     | LF.Empty -> (ms, fS) 
-    | LF.Dec (mV', LF.Decl (name, LF.ClTyp (LF.MTyp tA, cPsi), dep)) ->
+    | LF.Dec (mV',
+              LF.Decl (name, ((LF.ClTyp (LF.MTyp tA, cPsi)) as ctyp), dep)) ->
        let (ms', fS') = mctxToMSub cD (mV', ms) fS in
        let tM = etaExpand cD cPsi (tA, S.id) in
        let dctx_hat = Context.dctxToHat cPsi in
@@ -507,9 +508,10 @@ module Convert = struct
          LF.ClObj (dctx_hat, LF.MObj tM) in
        let mf = Whnf.cnormMFt mfront ms' in 
        (LF.MDot (mf, ms'),
-        (fun s -> fS' (Comp.MApp (noLoc, s, (noLoc, mf),
-                                  LF.ClTyp (LF.MTyp tA, cPsi), plicity))))
-    | LF.Dec (mV', LF.Decl (name, LF.ClTyp (LF.PTyp tA, cPsi), dep)) ->
+        (fun s ->
+          fS' (Comp.MApp (noLoc, s, (noLoc, mf), ctyp, plicity))))
+    | LF.Dec (mV',
+              LF.Decl (name, ((LF.ClTyp (LF.PTyp tA, cPsi)) as ctyp), dep)) ->
        (* TODO:: Correct? *)
        let (ms', fS') = mctxToMSub cD (mV', ms) fS in
        let tM' = etaExpand cD cPsi (tA, S.id) in
@@ -522,8 +524,20 @@ module Convert = struct
        let mfront =
          LF.ClObj (dctx_hat, LF.PObj hd) in
        (LF.MDot (mfront, ms'),
-        (fun s -> fS' (Comp.MApp (noLoc, s, (noLoc, mfront),
-                                  LF.ClTyp (LF.PTyp tA, cPsi), plicity))))
+        (fun s ->
+          fS' (Comp.MApp (noLoc, s, (noLoc, mfront), ctyp, plicity))))
+    | LF.Dec (mV',
+              LF.Decl (name, ((LF.CTyp (Some cid)) as ctyp), dep)) ->
+       let (ms', fS') = mctxToMSub cD (mV', ms) fS in
+       let plicity = match dep with
+         | LF.No -> `explicit
+         | LF.Maybe -> `implicit
+       in
+       let dctx = Whnf.newCVar (Some name) cD (Some cid) dep in
+       let mfront = LF.CObj (LF.CtxVar dctx) in 
+       (LF.MDot (mfront, ms'),
+        (fun s -> fS'
+                    (Comp.MApp (noLoc, s, (noLoc, mfront), ctyp, plicity))))
     | _ -> raise NotImplementedYet   
 
 
@@ -1613,13 +1627,13 @@ module CSolver = struct
       try U.unifyDCtx cD cPsi1 cPsi2 ;
           true
       with
-      | Failure _ -> false
+      | _ -> false
     in
     match (assump, cg) with
     | (Comp.TypBox (_, LF.ClTyp (LF.MTyp tA, cPsi))),
        Box (cPsi', Atom tA', Some M) ->
-       Id.cid_equals (Solver.cidFromAtom tA) (Solver.cidFromAtom tA') &&
-       unify_psi cD cPsi cPsi'
+       Id.cid_equals (Solver.cidFromAtom tA) (Solver.cidFromAtom tA') (* &&
+       unify_psi cD cPsi cPsi' *)
     | (Comp.TypBox (_, LF.ClTyp (LF.PTyp tA, cPsi))),
        Box (cPsi', Atom tA', Some P) ->
        Id.cid_equals (Solver.cidFromAtom tA) (Solver.cidFromAtom tA') &&
@@ -1981,7 +1995,7 @@ module CSolver = struct
          with
          | U.Failure _ -> ()))
       else
-        ()
+        ();
     in
     Index.iterAllTSClauses (fun w -> mS w)
     

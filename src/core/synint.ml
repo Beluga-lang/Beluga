@@ -21,7 +21,7 @@ module LF = struct
     | PTyp of typ
     | STyp of svar_class * dctx
 
-  and ctyp =
+  and ctyp =                                   
     | ClTyp of cltyp * dctx
     | CTyp of cid_schema option
 
@@ -373,6 +373,7 @@ module LF = struct
     | tS when k = 0 -> tS
     | Nil -> Nil
     | App (_, tS') -> drop_spine (k-1) tS'
+    | SClo (tS', _) -> drop_spine (k-1) tS'
 end
 
 (* Internal Computation Syntax *)

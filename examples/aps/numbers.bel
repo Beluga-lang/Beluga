@@ -1,0 +1,406 @@
+% Object- nat
+
+LF nat : type =
+  | z : nat
+  | S : nat → nat
+;
+
+
+
+% Even/Odd Properties of nat
+
+LF even : nat → type =
+  | even_z : even z
+  | even_ss : even N → even (S (S N))
+;
+
+LF ev : nat → type =
+  | e_z : ev z
+  | e_s : odd N → ev (S N)
+and odd : nat → type =
+  | o_sz : odd (S z)
+  | o_s : ev N → odd (S N)
+;
+
+inductive Ev : [⊢ nat] → ctype =
+  | ZEv : Ev [⊢ z]
+  | SEv : Ev [⊢ N] → Ev [⊢ S (S N)]
+;
+
+rec ev_two : Ev [⊢ S (S z)] =
+SEv ZEv;
+
+inductive Od : [⊢ nat] → ctype =
+  | SZOd : Od [⊢ S z]
+  | SOd :  Od [⊢ N] → Od [⊢ S (S N)]
+;
+
+
+
+% New object- num, and its' properties
+
+LF num : nat → type =
+   | num_z : num z
+   | num_s : num N → num (S N)
+;
+
+rec all_num : {N : [⊢ nat]} [⊢ num N] =
+/ total n (all_num n) /
+mlam N ⇒ case [⊢ N] of
+  | [⊢ z] ⇒ [⊢ num_z]
+  | [⊢ S M] ⇒ let [⊢ num_m ] = all_num [⊢ M] in
+	      [⊢ num_s num_m]
+;
+
+rec all_all_num : {N : [ ⊢ nat]} [⊢ num N] → [⊢ num N] =
+/ total m (all_all_num n m) /
+mlam n ⇒ fn m ⇒ m
+; 
+
+rec again_all_num : {N : [⊢ nat]} {M : [⊢ nat]} [⊢ num M] → [⊢ num N] =
+/ total n (again_all_num n m u) /
+mlam n,m ⇒ fn U ⇒ all_num [⊢ n]
+;
+
+
+
+% ctx schema declaration.
+
+schema ctx = nat;
+
+
+
+% nat addition operation, and its' properties 
+
+plus : nat -> nat -> nat -> type.
+p_z : {N: nat} plus z N N.
+p_s : plus N M K -> plus (S N) M (S K).
+
+rec two : [⊢ plus (S z) (S z) (S (S z))] =
+[⊢ p_s (p_z (S z))];
+
+rec two_ctx : {g:ctx} [g ⊢ plus (S z) (S z) (S (S z))] =
+/ total g (two_ctx g) /
+mlam g ⇒
+    [g ⊢ p_s (p_z (S z))];
+
+rec two_imp_ctx : (g:ctx) [g ⊢ plus (S z) (S z) (S (S z))] =
+[_ ⊢ p_s (p_z (S z))];
+
+
+rec plusz_sym : {N : [⊢ nat]} [⊢ plus z N N] → [⊢ plus N z N] =
+/ total n (plusz_sym n p) /
+mlam N ⇒ fn p ⇒ case [⊢ N] of
+  | [⊢ z] ⇒ p
+  | [⊢ S M] ⇒ let [⊢ p_zM] = plusz_sym [⊢ M][⊢ p_z M] in 
+	      [⊢ p_s p_zM]
+;
+
+rec plusz2_sym : {N : [⊢ nat]} [⊢ plus N z N] → [⊢ plus z N N] =
+/ total n (plusz2_sym n p) /
+mlam N ⇒ fn p ⇒ [⊢ p_z N]
+;
+
+
+
+% Ordering of nat.
+
+inductive Le : [⊢ nat] → [⊢ nat] → ctype =
+  | zLe : Le [⊢ z] [⊢ S z]
+  | SLe : LE [⊢ N] [⊢ M] → Le [⊢ N] [⊢ S M]
+
+and inductive LE : {M : [⊢ nat]} {N : [⊢ nat]} ctype =
+  | zLE : LE [⊢ z] [⊢ N]
+  | SLE : Le [⊢ N] [⊢ M] → LE [⊢ S N] [⊢ M]
+;
+
+inductive lessEq : [⊢ nat] → [⊢ nat] → [⊢ nat] → ctype =
+  | zle : lessEq [⊢ z] [⊢ N] [⊢ z]
+  | lez : lessEq [⊢ N] [⊢ z] [⊢ z]
+  | sle : lessEq [⊢ N] [⊢ M] [⊢ M] → lessEq [⊢ S N] [⊢ S M] [⊢ S M]
+  | les : lessEq [⊢ N] [⊢ M] [⊢ N] → lessEq [⊢ S N] [⊢ S M] [⊢ S N]
+;
+
+rec oneLEtwo : lessEq [⊢ S z] [⊢ S (S z)] [⊢ S z] =
+les zle;
+
+%{
+
+rec trans1Le : {N1 : [⊢ nat]} {N2 : [⊢ nat]} Le [⊢ N1] [⊢ N2] → Le [⊢ N1] [⊢ S N2] =
+/ total a (trans1Le n m a) /
+mlam N1, N2 ⇒ fn a ⇒ case [⊢ N1] of
+  | [⊢ z] ⇒ SLe zLE 
+  | [⊢ S N] ⇒ let SLe lENM = a in
+	      let SLE lenm = lENM in
+	      let d = trans1Le [⊢ N] [⊢ _] lenm in
+	      SLe (SLE d)
+;
+
+rec trans2Le : {N1 : [⊢ nat]} {N2 : [⊢ nat]} Le [⊢ N1] [⊢ N2] → Le [⊢ S N1] [⊢ S N2] =
+/ total a (trans2Le n m a) /
+mlam N1, N2 ⇒ fn a ⇒ SLe (SLE a)	       
+;
+
+
+rec transLe : {N1 : [⊢ nat]} {N2 : [⊢ nat]} {N3 : [⊢ nat]} Le [⊢ N1] [⊢ N2] → Le [⊢ N2] [⊢ N3] → Le [⊢ N1] [⊢ N3] =
+/ total a (transLe n m q a b) /
+mlam N1, N2, N3 ⇒ fn a,b ⇒ case a of
+  | zLe ⇒ let SLe lenm = b in
+	   let SLE lemc = lenm in
+	   trans1Le [⊢ N1] [⊢ _] lemc
+  | SLe lENM ⇒ (case [⊢ N1] of
+		 | [⊢ z] ⇒ let SLe lEMP = b in
+			     SLe zLE
+		 | [⊢ S N] ⇒
+		       let SLE lenm = lENM in
+	               let SLe lEMP = b in
+	               let SLE lemp = lEMP in
+	               let d = transLe [⊢ _] [⊢ _] [⊢ _] lenm lemp in
+	               trans2Le [⊢ _] [⊢ _] d)  
+;
+
+rec sLE : {N1 : [⊢ nat]} {N2 : [⊢ nat]} LE [⊢ N1] [⊢ N2] → LE [⊢ S N1] [⊢ S N2] = / total a (sLE n m a) /
+mlam N1, N2 ⇒ fn a ⇒ SLE (SLe a)
+;
+
+rec leLE : {N1 : [⊢ nat]} {N2 : [⊢ nat]} Le [⊢ N1] [⊢ N2] → LE [⊢ N1] [⊢ N2] = / total a (leLE n m a) /
+mlam N1, N2 ⇒ fn a ⇒ case a of
+  | zLe ⇒ zLE
+  | SLe lENM ⇒ (case [⊢ N1] of
+		 | [⊢ z] ⇒ zLE
+		 | [⊢ S N] ⇒ let SLE lenm = lENM in
+			       let d = leLE [⊢ _] [⊢ _] lenm in 
+                               sLE [⊢ _] [⊢ _] d)
+;
+
+rec lemma2 : {N1 : [⊢ nat]} {N2 : [⊢ nat]} Le [⊢ N1] [⊢ N2] → Le [⊢ N1] [⊢ S N2] =
+/ total a (lemma2 n m a) /
+mlam N1, N2 ⇒ fn a ⇒ case a of
+  | zLe ⇒ SLe zLE
+  | SLe lENM ⇒ (case [⊢ N1] of
+		 | [⊢ z] ⇒ SLe zLE 
+		 | [⊢ S N] ⇒ let SLE lenm = lENM in
+			       let d = lemma2 [⊢ _] [⊢ _] lenm in 
+                               trans2Le [⊢ _] [⊢ _] d)
+;
+
+rec lemma3 : {N1 : [⊢ nat]} {N2 : [⊢ nat]} Le [⊢ z] [⊢ N1] → LE [⊢ N1] [⊢ N2] → Le [⊢ z] [⊢ N2] =
+/ total a (lemma3 n m a b) /
+mlam N1, N2 ⇒ fn a, b ⇒ case a of
+  | zLe ⇒ let SLE lenm = b in
+	  (case lenm of
+	    | zLe ⇒ SLe zLE
+	    | SLe leNM ⇒ SLe zLE)
+  | SLe lENM ⇒ let SLE lenm = b in
+	       (case lenm of
+	    | zLe ⇒ SLe zLE
+	    | SLe leNM ⇒ SLe zLE)
+;
+
+
+rec lemma1 : {N1 : [⊢ nat]} {N2 : [⊢ nat]} {N3 : [⊢ nat]} Le [⊢ N1] [⊢ N2] → LE [⊢ N2] [⊢ N3] → Le [⊢ N1] [⊢ N3] =
+/ total a (lemma1 n m p a b) /
+mlam N1, N2, N3 ⇒ fn a,b ⇒ case a of
+  | zLe ⇒ let SLE lenm = b in
+	  lenm
+  | SLe lENM ⇒ (case [⊢ N1] of
+		 | [⊢ z] ⇒ lemma3 [⊢ _] [⊢ _] a b
+		 | [⊢ S N] ⇒ let SLE lenm = b in
+	                     let SLE leab = lENM in
+			     (case leab of
+			       | zLe ⇒ ?
+			       | SLe lEAB ⇒
+			     let d = lemma1 [⊢ _] [⊢ _] [⊢ _] leab lEAB in
+			     trans2Le [⊢ _] [⊢ _] d))
+			     
+; 
+
+
+rec transLE : {N1 : [⊢ nat]} {N2 : [⊢ nat]} {N3 : [⊢ nat]} LE [⊢ N1] [⊢ N2] → LE [⊢ N2] [⊢ N3] → LE [⊢ N1] [⊢ N3] =
+/ total n (transLE n m q a b) /
+mlam N1, N2, N3 ⇒ fn a,b ⇒ case a of
+  | zLE ⇒ zLE
+  | SLE lenm ⇒ let lEBC = leLE [⊢ _] [⊢ _] lenm in
+	        let d = transle [⊢ _] [⊢ _] [⊢ _] 
+	        
+;
+}%
+
+%{
+rec plus_sym : {N : [⊢ nat]} {M : [⊢ nat]} [⊢ plus N M K] →
+	       [⊢ plus M N K] =
+/ total n (plus_sym n m p) /
+mlam N,M ⇒ fn p ⇒ case [⊢ N] of
+  | [⊢ z] ⇒ [⊢ plusz_sym M p]
+  | [⊢ S L] ⇒ let [⊢ p_s O] = p in
+	      plus_sym _ _ (
+;
+
+
+rec ev_sym : {N : [⊢ nat]} {P : [⊢ plus z N K]} Ev [⊢ K] → Ev [⊢ N] =
+/ total p (ev_sym n p e) /
+mlam N ⇒ mlam P ⇒ fn e ⇒ case e of
+  | ZEv ⇒ let p_z = P in
+	   e
+  | SEv e' ⇒ e
+;  
+
+	        
+						
+	    
+}%
+
+% Box
+
+% B1
+--mquery 1 * * [⊢ even z].
+% [ |- even_z]
+
+% B2
+--mquery 1 * * [⊢ plus z z z].
+% [ |- p_z z]
+
+% B3
+--mquery 1 * * [M:nat, D:nat, Q:nat  ⊢ plus z D D].
+% [M : nat, D : nat, Q : nat |- p_z D]
+
+% B4
+--mquery 4 * 1 [⊢ plus (S z) (S z) (S (S z))].
+% [ |- p_s (p_z S z)]
+% two
+% two_ctx []
+% two_imp_ctx
+
+
+% B5
+--mquery 3 * 1 [D:nat ⊢ plus (S z) (S z) (S (S z))].
+% [D : nat |- p_s (p_z S z)]
+% two_ctx [D : nat]
+% two_imp_ctx
+
+
+% B6
+--mquery 5 * 1  [⊢ num (S (S (S z)))].
+% [ |- num_s (num_s (num_s num_z))]
+% all_num [ |- S (S (S z))]
+% all_all_num [ |- S (S (S z))] [ |- num_s (num_s (num_s num_z))]
+% all_all_num [ |- S (S (S z))] (all_num [ |- S (S (S z))])
+%No solution found: Maximum depth reached! -- Current Depth 2 , Maximum Depth allowed 1 
+
+
+
+% Atomic
+
+% A1
+--mquery 2 * * Ev [⊢ S (S z)].
+% SEv ZEv
+% ev_two
+
+% A2
+--mquery 1 * * LE [⊢ z] [⊢ z].
+% zLE
+
+% A3
+--mquery 1 * * lessEq [⊢ S (S (S z))] [⊢ S (S z)] [⊢ S (S z)].
+% sle (sle lez)
+
+% A4 
+--mquery 1 * * Ev [⊢ S (S (S (S z)))].
+% SEv (SEv ZEv)
+
+% A5
+--mquery 2 * * lessEq [⊢ S z] [⊢ S (S z)] [⊢ S z].
+% les (zle)
+% oneLEtwo
+
+% A6
+--mquery 1 * * Le [⊢ z] [⊢ S (S z)].
+% SLe (zLE)
+% 
+
+
+
+% Forall
+
+% F1
+--mquery 1 * * {N: [⊢ nat]} {N2: [⊢ nat]} {N3: [⊢ nat]} [⊢ even z].
+%  mlam N => mlam N2 => mlam N3 => [ |- even_z]
+
+% F2
+--mquery 2 * * {E: [⊢ even z]} [⊢ even z].
+%  mlam E => [ |- E]
+%  mlam E => [ |- even_z]
+
+% F3
+--mquery 1 * * {N : [⊢ nat]} {E: [⊢ even N]} [⊢ even z].
+% mlam N => mlam E => [ |- even_z]
+
+% F4
+--mquery 4 * * {N : [⊢ nat]} [⊢ num N].
+% mlam N => all_num [ |- N]
+% mlam N => all_all_num [ |- N] (all_num [ |- N])
+% mlam N => all_all_num [ |- N] (all_all_num [ |- N] (all_num [ |- N]))
+% mlam N => all_all_num [ |- N]
+%    (all_all_num [ |- N] (all_all_num [ |- N] (all_num [ |- N])))
+
+% F5
+--mquery 1 * * {D : [⊢ nat]} [⊢ plus z D D].  
+% mlam D => [ |- p_z D]
+
+% F6
+--mquery 4 * * {E: [⊢ even z]} [⊢ even z] → [⊢ even z].
+% mlam E => fn x2 => let [ |- X] = x2 in [ |- X]
+% mlam E => fn x2 => let [ |- X] = x2 in [ |- E]
+% mlam E => fn x2 => let [ |- X] = x2 in [ |- even_z]
+% mlam E => fn z6 => let [ |- X7] = z6 in z6
+
+
+
+% F7
+--mquery 5 * * {N : [⊢ nat]} [⊢ num N] → [⊢ num N].
+% mlam N => fn z6 => let [ |- X] = y7 in [ |- X] 
+% mlam N => fn z6 => let [ |- X] = z6 in z6
+% mlam N => fn z6 => let [ |- X] = z6 in all_num [ |- N]
+% mlam N => fn z6 => let [ |- X] = z6 in
+%    all_all_num [ |- N] [⊢ X]
+% mlam N => fn z6 => let [ |- X] = z6 in
+%    all_all_num [ |- N] (all_num [ |- N])
+
+
+
+% F8
+--mquery 1 * * {M : [⊢ nat]} {N : [⊢ nat]} [⊢ num N].
+% mlam M => mlam N => all_num [ |- N]
+
+% F9
+--mquery 1 * * {N : [⊢ nat]} [⊢ even N] → [⊢ num N] → [⊢ even (S (S N))].
+% mlam N => fn z7 => fn x7 =>
+%   let [ |- X28] = x7 in let [ |- Z28] = z7 in [ |- even_ss Z28]
+
+% F10
+--mquery 1 * * {N : [⊢ nat]} ([⊢ num N] → [⊢ even N]) → [⊢ even (S (S N))].
+% Query error: Wrong number of solutions -- expected 1 in * tries, but found 0
+
+
+
+
+%%%%%%%%            | Base | Box | PiBox | Implies |%%%%%%%%
+%-------------------|------|----------------------
+%  Sig              |      |
+%  ctx match        |      |
+%-------------------|------|----------------------
+%  ctx do not match |      |
+%-------------------|------|-----------------------
+%  Gamma            |      |
+%  ctx match        |      |
+%-------------------|------|-----------------------------
+%  ctx do not match |      |
+%-------------------|------|-------------------------------------
+%  Theorems         |      |
+%  cM               |      |
+%  cDNM             |      |
+
+
+
+% -mctx match, dctx match, get answer from multiple sources, size of ctx, number of subgoals of focused clause
+% note any ctx match means ctx1 = ctx2 or ctx1 < ctx2 or ctx2 < ctx1 or ctx1 n ctx2 =\= {} or ctx1 n ctx2 = {}, 5 cases!!!

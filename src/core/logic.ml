@@ -948,7 +948,7 @@ module Printer = struct
     P.fmt_ppr_cmp_gctx cD P.l0 ppf cG 
 
   let fmt_ppr_mctx ppf cD = 
-    P.fmt_ppr_lf_mctx P.l0 ppf cD    *)
+    P.fmt_ppr_lf_mctx P.l0 ppf cD *)   
      
   let fmt_ppr_typ cD cPsi ppf sA =
     P.fmt_ppr_lf_typ cD cPsi P.l0 ppf (Whnf.normTyp sA)
@@ -1853,9 +1853,9 @@ module CSolver = struct
        let e = fS e' in
        sc e
     | Solve (sg', cg) ->
- (*   printf "solve sig SG \n";
+  (*  printf "solve sig SG \n";
     let cg'= normCompGoal ms' cg in 
-    Printer.printState cD cG (cg') ms';  *)
+    Printer.printState cD cG (cg') ms'; *) 
        cgSolve' cD cG cPool (cg, ms')
          (fun e ->
            solveCClauseSubGoals cD cG cPool cid sg' ms ms' mV
@@ -1882,9 +1882,8 @@ module CSolver = struct
          
   (* We focus on one of the computation-type theorems *)
   and focusT cD cG cPool cg ms sc currDepth maxDepth =
-  (*  printf "focus Theorem \n";
-    let cg'= normCompGoal ms cg in 
-    Printer.printState cD cG cg' ms; *) 
+    (*  printf "focus Theorem \n";
+    Printer.printState cD cG cg ms; *) 
     let mS (cid, sCCl) =
       if (* Check to see if the comp goal is the head of the assumption *)
          matchHead cD sCCl.cHead cg;
@@ -1910,12 +1909,11 @@ module CSolver = struct
   (* Focus on the clause in the static Comp signature with head matching
      type constant c. *)
   and focusS cidTyp cD cG cPool cg ms sc currDepth maxDepth =
-  (*  printf "focus Sig \n";
-    let cg'= normCompGoal ms cg in 
-    Printer.printState cD cG cg' ms; *)
+    (*  printf "focus Sig \n"; 
+    Printer.printState cD cG cg ms; *)
     let matchSgnCClause (cidTerm, sCCl) sc =
       let (ms'', fS) = C.mctxToMSub cD (sCCl.cMVars, ms) (fun s -> s) in
-      let tau =  C.atomicToBase cg in
+      let tau = C.atomicToBase cg in
       let ms'= rev_ms ms'' ms (Context.length sCCl.cMVars) in  
       (try
          Solver.trail
@@ -1945,9 +1943,8 @@ module CSolver = struct
 
   (* We focus on one of the computation assumptions in cPool/Gamma *)
   and focusG cD cG cPool cPool_all cg ms sc currDepth maxDepth =
-  (*  printf "focus Gamma \n";
-    let cg'= normCompGoal ms cg in 
-    Printer.printState cD cG cg' ms; *) 
+    (*  printf "focus Gamma \n"; 
+    Printer.printState cD cG cg ms; *)
     match cPool with
     | Emp -> ()
     | Full (cPool', ({cHead = hd; cMVars; cSubGoals = sg}, k', _s)) ->
@@ -1976,45 +1973,42 @@ module CSolver = struct
       
         
   and focus cD cG cPool cg ms sc currDepth maxDepth =
-  (*  printf "FOCUS \n";
-    let cg'= normCompGoal ms cg in 
-    Printer.printState cD cG (cg') ms;  *)
+    (*  printf "FOCUS \n"; *)
+    let cg = normCompGoal ms cg in 
+  (*  Printer.printState cD cG (cg') ms;  *)
     match cg with
     | Box (cPsi, g, Some M) ->
        (* If our goal is of box type, we first try to find the  
           proof term in the LF level, otherwise we focus on 
           an assumption in our computation context cG          *)
-
-       let cg'= normCompGoal ms cg in
-       let Box (_,g',_) = cg' in
-       let Atom tA = g' in
+       let Atom tA = g in
           (* note, we take the goal's type because the main check
              is checking the meta_obj against meta_typ of the goal *)
           let cltyp = LF.MTyp tA in
           let sc' =
-            (fun (cPsi, tM) ->
-              let dctx_hat = Context.dctxToHat cPsi in 
+            (fun (cPsi', tM) ->
+              let dctx_hat = Context.dctxToHat cPsi' in 
               let mfront = LF.ClObj (dctx_hat, LF.MObj tM) in
               let meta_obj = (noLoc, mfront) in
-              let meta_typ = LF.ClTyp (cltyp, cPsi) in
+              let meta_typ = LF.ClTyp (cltyp, cPsi') in
               sc (Comp.Box(noLoc, meta_obj, meta_typ)))
           in
-          Solver.solve cD cPsi (g', S.id) sc';
+          Solver.solve cD cPsi (g, S.id) sc';
           focusG cD cG cPool cPool cg ms sc currDepth maxDepth;
           focusT cD cG cPool cg ms sc currDepth maxDepth; 
-    | Box (_cPsi, _g, Some P) ->
-       let Atom tA = _g in
+    | Box (cPsi, g, Some P) ->
+       let Atom tA = g in
        let cltyp = LF.PTyp tA in
        let sc' =
-         (fun (cPsi, tM) ->
+         (fun (cPsi', tM) ->
            let LF.Root (_,hd,_,_) = tM in
-           let dctx_hat = Context.dctxToHat cPsi in 
+           let dctx_hat = Context.dctxToHat cPsi' in 
            let mfront = LF.ClObj (dctx_hat, LF.PObj hd) in
            let meta_obj = (noLoc, mfront) in
-           let meta_typ = LF.ClTyp (cltyp, cPsi) in
+           let meta_typ = LF.ClTyp (cltyp, cPsi') in
            sc (Comp.Box(noLoc, meta_obj, meta_typ)))
        in
-       Solver.solve cD _cPsi (_g, S.id) sc';
+       Solver.solve cD cPsi (g, S.id) sc';
        focusG cD cG cPool cPool cg ms sc currDepth maxDepth;
        focusT cD cG cPool cg ms sc currDepth maxDepth;
     | Atomic (name, spine) ->
@@ -2130,7 +2124,7 @@ module CSolver = struct
        let cPool'' = cnormCPool (cPool', LF.MShift 1) cD' in
        let cPool_ret' = prependToCPool (boxME cP) cPool_ret in
        let cPool_ret'' = cnormCPool (cPool_ret', LF.MShift 1) cD' in
-       let cg' = normCompGoal (LF.MShift 1) cg in
+       let cg' = normCompGoal (LF.MShift 1) cg in 
        uniform_left cD' cG' cPool'' cPool_ret'' cg' ms' sc' currDepth maxDepth
     | Full (cPool', x) ->
        (* Otherwise we leave the assumption in cG *)

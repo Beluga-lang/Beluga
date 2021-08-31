@@ -452,18 +452,6 @@ module Convert = struct
          , x
          , etaExpand cD (LF.DDec (cPsi, S.decSub tD s)) (tB, S.dot1 s)
          )
-(*  let rec etaExpand2 cD cPsi sA k =
-    let (tA, s) = Whnf.whnfTyp sA in
-    match tA with
-    | LF.Atom _ ->
-       LF.Root (Syntax.Loc.ghost, LF.MVar (LF.Offset k, S.id), LF.Nil, `explicit)
-    | LF.PiTyp ((LF.TypDecl (x, tA) as tD, _), tB) ->
-       LF.Lam
-         ( Syntax.Loc.ghost
-         , x
-         , etaExpand2 cD (LF.DDec (cPsi, S.decSub tD s)) (tB, S.dot1 s) k
-         )
- *)
 
       
   (* dctxToSub Delta Psi (eV, s) fS = sub * (spine -> spine)
@@ -490,7 +478,9 @@ module Convert = struct
     | LF.CtxVar _ ->
        invalid_arg
          "Logic.Convert.dctxToSub: Match conflict with LF.CtxVar _."
-      
+
+  (* TODO:: instead of using etaExpand which creates an MVar
+      create an MMVar?? *)
   let rec mctxToMSub cD (mV, ms) fS =
     let noLoc = Syntax.Loc.ghost in
     match mV with
@@ -505,7 +495,10 @@ module Convert = struct
          | LF.Maybe -> `implicit
        in
        let mfront = LF.ClObj (dctx_hat, LF.MObj tM) in
-       let mf = Whnf.cnormMFt mfront ms' in 
+       let mf = Whnf.cnormMFt mfront ms' in
+
+       (* TODO:: TRY normalizing ctyp as well!!!! *)
+        
        (LF.MDot (mf, ms'),
         (fun s ->
           fS' (Comp.MApp (noLoc, s, (noLoc, mf), ctyp, plicity))))
@@ -522,9 +515,10 @@ module Convert = struct
        in
        let mfront =
          LF.ClObj (dctx_hat, LF.PObj hd) in
-       (LF.MDot (mfront, ms'),
+       let mf = Whnf.cnormMFt mfront ms' in
+       (LF.MDot (mf, ms'),
         (fun s ->
-          fS' (Comp.MApp (noLoc, s, (noLoc, mfront), ctyp, plicity))))
+          fS' (Comp.MApp (noLoc, s, (noLoc, mf), ctyp, plicity))))
     | LF.Dec (mV',
               LF.Decl (name, ((LF.CTyp (Some cid)) as ctyp), dep)) ->
        let (ms', fS') = mctxToMSub cD (mV', ms) fS in
@@ -533,10 +527,11 @@ module Convert = struct
          | LF.Maybe -> `implicit
        in
        let dctx = Whnf.newCVar (Some name) cD (Some cid) dep in
-       let mfront = LF.CObj (LF.CtxVar dctx) in 
-       (LF.MDot (mfront, ms'),
+       let mfront = LF.CObj (LF.CtxVar dctx) in
+       let mf = Whnf.cnormMFt mfront ms' in
+       (LF.MDot (mf, ms'),
         (fun s -> fS'
-                    (Comp.MApp (noLoc, s, (noLoc, mfront), ctyp, plicity))))
+                    (Comp.MApp (noLoc, s, (noLoc, mf), ctyp, plicity))))
     | _ -> raise NotImplementedYet   
 
 
@@ -1741,7 +1736,33 @@ module CSolver = struct
          rev_ms ms' (LF.MDot (mf, ms_ret)) (k-1)
       | _ -> ms_ret
        
-
+  (*
+  let least_cases cD =
+    let consOfTyp cltyp =
+      let typ =
+        match cltyp with
+        | LF.MTyp tA | LF.PTyp tA -> tA
+      in
+      let cid = Solver.cidFromAtom typ in
+      let typEntry = Store.Cid.Typ.get cid in
+      let typConstructors = !(typEntry.Store.Cid.Typ.Entry.constructors) in
+      (List.length typConstructors, typConstructors)
+    in
+    let rec find_max cD cltyp_d k lst =
+      match cD with
+      | LF.Empty -> (cltyp_d, lst)
+      | LF.Dec (cD', ((LF.Decl (name, LF.ClTyp (cltyp', _cPsi), _dep)) as cltyp_d')) ->
+         let (k', lst') = consOfTyp cltyp' in
+         if k' < k then
+           find_max cD' cltyp_d' k' lst'
+         else
+           find_max cD' cltyp_d k lst
+    in
+    match cD with
+    | LF.Empty -> raise NotImplementedYet
+    | LF.Dec (cD', ((LF.Decl (name, LF.ClTyp (cltyp, _cPsi), _dep)) as cltyp_d)) ->
+       let (k, lst) = consOfTyp cltyp in
+       find_max cD' cltyp_d k lst *)
 
   let rec cgSolve' (cD: LF.mctx) (cG: Comp.gctx) (cPool: cPool)
             (mq:mquery) (sc: Comp.exp_chk -> unit) (currDepth: bound) (maxDepth: bound) =
@@ -1970,7 +1991,48 @@ module CSolver = struct
        else (* Otherwise, try the remaining comp assumptions *)
          focusG cD cG cPool' cPool_all cg ms sc currDepth maxDepth
 
+(*
+  and solveBranch cD cG cPool cg con xs b_list ms currD maxD =
+    let termEntry = Store.Cid.Term.get con in
+    let tA = termEntry.Store.Cid.Term.Entry.typ in
+    let pattern = Comp.PatMetaObj (noLoc,(noLoc,
+                    LF.ClObj ((None, 0),
+                      LF.MObj (
+                        LF.Root (noLoc, LF.Const con, LF.Nil, `explicit)))))
+                
+    in                                                  
+    let makeBranch =
+      (fun e -> Comp.Branch
+                  (noLoc, LF.Empty, (cD, LF.Empty), pattern, LF.MShift 0, e))
+    in
+    let cg' = instcG in
+    cgSolve' cD cG cPool (cg', ms)
+      (fun e -> SolveCases cD cG cPool cg xs ms sc ((makeBranch e)::b_list) currD maxD) currD maxD
+    
       
+  and solveCases cD cG cPool cg constructors ms sc b_list currD maxD =
+    match constructors with
+    | [] -> sc b_list
+    | con :: xs ->
+       let branch = solveBranch cD cG cPool cg con xs b_list ms sc currD maxD in
+       let b_list' = branch :: b_list in
+       solveCases cD cG cPool cg xs ms sc b_list' currD maxD
+      
+  and msplit cD cG cPool cg ms sc currD maxD =
+    let (ctyp_d, constructors) = least_cases cD in
+    let LF.Decl (name, ctyp, dep) = ctyp_d in
+    let LF.ClTyp (cltyp, cPsi) = ctyp in 
+    let hd = LF.FVar name in 
+    let norm = LF.Root (noLoc, hd, LF.Nil, `explicit) in
+    let mf = LF.ClObj (Context.dctxToHat cPsi, LF.MObj norm) in
+    let mo = (noLoc, mf) in
+    let var = Comp.AnnBox (mo, ctyp) in
+    let sc' =
+      (fun e ->
+        sc (Comp.Case (noLoc, Comp.PragmaCase, var, e)))
+    in
+    solveCases cD cG cPool cg constructors ms sc' [] currD maxD *)
+    
         
   and focus cD cG cPool cg ms sc currDepth maxDepth =
     (*  printf "FOCUS \n"; *)
@@ -1995,7 +2057,8 @@ module CSolver = struct
           in
           Solver.solve cD cPsi (g, S.id) sc';
           focusG cD cG cPool cPool cg ms sc currDepth maxDepth;
-          focusT cD cG cPool cg ms sc currDepth maxDepth; 
+          focusT cD cG cPool cg ms sc currDepth maxDepth;
+    (*  msplit cD cG cPool cg ms sc currDepth maxDepth; *)
     | Box (cPsi, g, Some P) ->
        let Atom tA = g in
        let cltyp = LF.PTyp tA in

@@ -150,9 +150,9 @@ module List = struct
       This is used for partial applications. *)
   let cons x xs = x :: xs
 
-  let rec equals by l1 l2 = match l1, l2 with
+  let rec equals eq l1 l2 = match l1, l2 with
     | [], [] -> true
-    | x :: xs, y :: ys -> by x y && equals by xs ys
+    | x :: xs, y :: ys -> if eq x y then equals eq xs ys else false
     | _ -> false
 
   let hd_opt = function

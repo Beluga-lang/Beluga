@@ -162,12 +162,14 @@ module List = struct
   let index l = List.mapi (fun i x -> (i, x)) l
 
   let mapi2 f l1 l2 =
-    let rec go i = function
-      | ( [], [] ) -> []
-      | ( x::xs, y::ys) -> f i x y :: go (i + 1) (xs, ys)
+    let rec mapi2 index l1 l2 return =
+      match l1, l2 with
+      | [], [] -> return []
+      | x :: xs, y :: ys ->
+        mapi2 (index + 1) xs ys (fun tl -> return (f index x y :: tl))
       | _ -> raise (Invalid_argument "mapi2")
     in
-    go 0 (l1, l2)
+    mapi2 0 l1 l2 Fun.id
 
   let rec drop n = function
     | l when n <= 0 -> l

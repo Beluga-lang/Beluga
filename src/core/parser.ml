@@ -689,7 +689,7 @@ let rec traverse_ (f : 'a -> unit parser) (xs : 'a list) : unit parser =
                      (*
 (** Runs a sequence of parsers in order and collects their results. *)
 let sequence (ps : 'a parser list) : 'a list parser =
-  traverse (Misc.id) ps
+  traverse Fun.id ps
                       *)
 
                                 (*

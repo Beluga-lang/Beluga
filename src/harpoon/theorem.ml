@@ -296,7 +296,7 @@ let rename_variable src dst level t g =
      $> fun cD -> { g.context with cD }
   end
   $> (fun context -> { g with context; solution = ref None })
-  $> (fun g' -> apply_subgoal_replacement t "rename" g' Misc.id g)
+  $> (fun g' -> apply_subgoal_replacement t "rename" g' Fun.id g)
   |> is_some
 
 (** Registers the theorem in the store.

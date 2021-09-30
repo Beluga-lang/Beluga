@@ -3,7 +3,7 @@ type 'a t = 'a * 'a list
 
 type 'a nonempty = 'a t
 
-let uncons : 'a t -> 'a * 'a list = Misc.id
+let uncons : 'a t -> 'a * 'a list = Fun.id
 let head = fst
 let tail = snd
 

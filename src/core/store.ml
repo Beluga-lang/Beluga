@@ -70,10 +70,7 @@ module OpPragmas = struct
       incr pragmaCount
 
   let getPragma name =
-    try
-      Some (List.find (fun p -> Id.equals name p.name) !pragmas)
-    with
-    | _ -> None
+    List.find_opt (fun p -> Id.equals name p.name) !pragmas
 
   let pragmaExists name =
     List.exists (fun x -> Id.equals x.name name) !pragmas
@@ -121,9 +118,9 @@ module Modules = struct
     match
       List.fold_left
         begin fun acc (ab,o) ->
-        if Misc.(List.equals String.equals) o x
-        then Some ab
-        else acc
+          if Misc.(List.equals String.equals) o x
+          then Some ab
+          else acc
         end
         None
         !abbrevs
@@ -1151,7 +1148,7 @@ module Var = struct
     in
     loop 1 store
 
-  let to_list (l : entry list) = Misc.id l
+  let to_list (l : entry list) = Fun.id l
   let create () = []
   let extend ctx e = e :: ctx
   let append vars vars' = vars @ vars'

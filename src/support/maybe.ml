@@ -24,7 +24,7 @@ let is_none (o : 'a option) : bool =
 let get' (e : exn) (o : 'a option) : 'a =
   eliminate
     (Misc.throw e)
-    (Misc.id)
+    (Fun.id)
     o
 
 let get o = get' NoValue o
@@ -32,7 +32,7 @@ let get o = get' NoValue o
 let get_default def o =
   eliminate
     (Misc.const def)
-    (Misc.id)
+    (Fun.id)
     o
 
 let of_bool =
@@ -120,7 +120,7 @@ let rec filter_map (f : 'a -> 'b option) (l : 'a list) : 'b list =
        (fun y -> y :: filter_map f xs)
 
 let cat_options (l : 'a option list) : 'a list =
-  filter_map Misc.id l
+  filter_map Fun.id l
 
 (** Specialized effectful eliminator for option types. *)
 let when_some (l : 'a option) (f : 'a -> unit) : unit =

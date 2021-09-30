@@ -1616,7 +1616,7 @@ and index_branch cvars vars fcvars =
      (* computing fcvars' is unnecessary? -bp *)
      let fcvars' =
        Maybe.eliminate
-         (Misc.const Misc.id)
+         (Misc.const Fun.id)
          extending_by
          (get_ctxvar_mobj mO)
          (empty_fvars `open_term)

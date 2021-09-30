@@ -177,8 +177,6 @@ module List = struct
     | _ :: xs (* n > 0 *) -> drop (n-1) xs
 end
 
-let id (x : 'a) : 'a = x
-
 type void = { impossible: 'a. 'a }
 
 module DynArray = struct

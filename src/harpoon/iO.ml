@@ -63,4 +63,4 @@ let rec parsed_prompt ?(source = default_prompt_source) io msg use_history (p : 
             Parser.print_error err;
           parsed_prompt io msg use_history p
           end
-          Misc.id
+          Fun.id

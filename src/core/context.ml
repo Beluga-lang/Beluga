@@ -192,7 +192,7 @@ let to_list_map (ctx : 'a LF.ctx) (f : 'a LF.ctx -> 'a -> 'b) : 'b list =
     See `to_list_map_rev` for a remark about the "reverse" nature of this.
  *)
 let to_list_rev (ctx : 'a LF.ctx) : 'a list =
-  to_list_map_rev ctx (Misc.const Misc.id)
+  to_list_map_rev ctx (Misc.const Fun.id)
 
 (** Convert the context to a list, with subcontexts.
     See `to_list_map_rev` for a remark about the "reverse" nature of this.
@@ -203,7 +203,7 @@ let to_sublist_rev (ctx : 'a LF.ctx) : ('a LF.ctx * 'a) list =
 (** Convert the context to a list.
  *)
 let to_list (ctx : 'a LF.ctx) : 'a list =
-  to_list_map ctx (Misc.const Misc.id)
+  to_list_map ctx (Misc.const Fun.id)
 
 let to_sublist (ctx : 'a LF.ctx) : ('a LF.ctx * 'a) list =
   to_list_map ctx Misc.tuple
@@ -217,10 +217,10 @@ let of_list_map_rev (l : 'a list) (f : 'a -> 'b) : 'b LF.ctx =
   List.fold_left (fun acc x -> LF.Dec (acc, f x)) LF.Empty l
 
 let of_list (l : 'a list) : 'a LF.ctx =
-  of_list_map l Misc.id
+  of_list_map l Fun.id
 
 let of_list_rev (l : 'a list) : 'a LF.ctx =
-  of_list_map_rev l Misc.id
+  of_list_map_rev l Fun.id
 
 (** Iterate over a context from left to right (oldest variable first).
     The callback `f` gets both the subcontext of the variable _and_ the variable as input.

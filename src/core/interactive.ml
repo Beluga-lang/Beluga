@@ -497,7 +497,7 @@ let iterGctx (cD : LF.mctx) (cG : Comp.gctx) (ttau : Comp.tclo) : Id.name list =
   aux [] cG
 
 let thin_line =
-  let replicate n c = String.init n (Misc.const c) in
+  let replicate n c = String.init n (Fun.const c) in
   replicate 80 '_'
 
 let thin_line ppf () = Format.fprintf ppf "%s" thin_line

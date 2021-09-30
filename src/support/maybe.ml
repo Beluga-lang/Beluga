@@ -31,7 +31,7 @@ let get o = get' NoValue o
 
 let get_default def o =
   eliminate
-    (Misc.const def)
+    (Fun.const def)
     (Fun.id)
     o
 

@@ -1093,7 +1093,7 @@ let index_cltyp' : Ext.LF.cltyp -> Apx.LF.cltyp index =
        let (phi', _, fvars) =
          index_dctx c.disambiguate_name c.cvars (BVar.create ()) fvars phi
        in
-       modify_fvars (Misc.const fvars)
+       modify_fvars (Fun.const fvars)
        $$ pure (Apx.LF.STyp (index_svar_class cl, phi'))
 
 let index_cltyp loc cvars fvars =
@@ -1616,7 +1616,7 @@ and index_branch cvars vars fcvars =
      (* computing fcvars' is unnecessary? -bp *)
      let fcvars' =
        Maybe.eliminate
-         (Misc.const Fun.id)
+         (Fun.const Fun.id)
          extending_by
          (get_ctxvar_mobj mO)
          (empty_fvars `open_term)

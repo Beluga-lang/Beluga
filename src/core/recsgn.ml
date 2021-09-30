@@ -1084,7 +1084,7 @@ let recSgnDecls decls =
                Loc.print_short thm_loc
              end;
            let v =Int.(Comp.ThmValue (thm_cid, e_r', LF.MShift 0, Comp.Empty)) in
-           Comp.set_prog thm_cid (Misc.const (Some v));
+           Comp.set_prog thm_cid (Fun.const (Some v));
            let open Int.Sgn in
            { thm_name = thm_cid
            ; thm_body = e_r'

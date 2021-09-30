@@ -60,16 +60,6 @@ let enumerate (l : 'a list) : (int * 'a) list =
 let tuple (x : 'a) (y : 'b) : 'a * 'b =
   (x, y)
 
-(** Forms a constant function returning the given value.
-    Warning: since OCaml is an eager language, the expression `const x`
-    will fully evaluate `x` before forming the constant function.
-    Therefore, if evaluation of `x` produces side-effects, they will
-    be performed at the time that the constant function is _formed_
-    rather than when it is _run_.
- *)
-let const (x : 'b) : 'a -> 'b =
-  fun _ -> x
-
 (** Creates a constant function that raises the given exception.
     Useful when eliminating option-types.
  *)

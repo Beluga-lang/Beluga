@@ -515,8 +515,8 @@ let split (k : Command.split_kind) (i : Comp.exp_syn) (tau : Comp.typ) mfs : t =
              Theorem.(apply t (Action.make action_name s children p))
         in
         match k with
-        | `meta -> finish (Misc.const make_meta_branch) Comp.meta_split
-        | `comp -> finish (Misc.const make_comp_branch) Comp.comp_split
+        | `meta -> finish (Fun.const make_meta_branch) Comp.meta_split
+        | `comp -> finish (Fun.const make_comp_branch) Comp.comp_split
         | `context -> finish make_context_branch Comp.context_split
 
 (** Constructs a new proof state from `g` in which the meta-context is

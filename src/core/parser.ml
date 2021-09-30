@@ -892,7 +892,7 @@ let check_codatatype_decl loc a cs : unit parser =
 (****** Simple parsers *****)
 
 let satisfy' (expected : content) (f : T.t -> 'a option) : 'a parser =
-  satisfy (fun t -> f t |> Maybe.eliminate (Misc.const (Either.Left t)) Either.pure)
+  satisfy (fun t -> f t |> Maybe.eliminate (Fun.const (Either.Left t)) Either.pure)
   |> span
   $ fun (loc, x) ->
     match x with
@@ -1859,7 +1859,7 @@ let clf_ctyp_decl_bare : type a. a name_parser -> (a -> LF.depend * Id.name) -> 
       let subst_variable =
         let subst_class =
           maybe (token T.HASH)
-          $> Maybe.eliminate (Misc.const LF.Subst) (Misc.const LF.Ren)
+          $> Maybe.eliminate (Fun.const LF.Subst) (Fun.const LF.Ren)
         in
         dollar_variable_decl (seq2 subst_class clf_dctx)
         |> span
@@ -1937,7 +1937,7 @@ let clf_ctyp_decl =
       let subst_variable =
         let subst_class =
           maybe (token T.HASH)
-          $> Maybe.eliminate (Misc.const LF.Subst) (Misc.const LF.Ren)
+          $> Maybe.eliminate (Fun.const LF.Subst) (Fun.const LF.Ren)
         in
         labelled "substitution/renaming variable"
           begin

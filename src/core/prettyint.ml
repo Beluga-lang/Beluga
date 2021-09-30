@@ -1595,7 +1595,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
 
   and fmt_ppr_cmp_gctx ?(sep = Fmt.comma) cD lvl =
     fmt_ppr_ctx_filter ~sep: sep
-      (Misc.const true)
+      (Fun.const true)
       (fun ppf (_, d) -> fmt_ppr_cmp_ctyp_decl cD l0 ppf d)
 
   let fmt_ppr_cmp_gctx_typing ppf (cD, cG) =

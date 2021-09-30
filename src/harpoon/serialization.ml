@@ -81,14 +81,14 @@ let replace_locs (replacees : (Loc.t * (Format.formatter -> unit -> unit)) list)
                   begin fun _ ->
                   if !read_length < stop_offset
                   then
-                    with_uchar raise_edited_error (Misc.const true)
+                    with_uchar raise_edited_error (Fun.const true)
                   else
                     false
                   end
                 end;
            Misc.Function.until
              begin fun _ ->
-             with_uchar (Misc.const false)
+             with_uchar (Fun.const false)
                begin fun v ->
                Buffer.clear outbuf;
                Buffer.add_utf_8_uchar outbuf v;

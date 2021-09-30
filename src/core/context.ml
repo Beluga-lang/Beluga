@@ -192,7 +192,7 @@ let to_list_map (ctx : 'a LF.ctx) (f : 'a LF.ctx -> 'a -> 'b) : 'b list =
     See `to_list_map_rev` for a remark about the "reverse" nature of this.
  *)
 let to_list_rev (ctx : 'a LF.ctx) : 'a list =
-  to_list_map_rev ctx (Misc.const Fun.id)
+  to_list_map_rev ctx (Fun.const Fun.id)
 
 (** Convert the context to a list, with subcontexts.
     See `to_list_map_rev` for a remark about the "reverse" nature of this.
@@ -203,7 +203,7 @@ let to_sublist_rev (ctx : 'a LF.ctx) : ('a LF.ctx * 'a) list =
 (** Convert the context to a list.
  *)
 let to_list (ctx : 'a LF.ctx) : 'a list =
-  to_list_map ctx (Misc.const Fun.id)
+  to_list_map ctx (Fun.const Fun.id)
 
 let to_sublist (ctx : 'a LF.ctx) : ('a LF.ctx * 'a) list =
   to_list_map ctx Misc.tuple
@@ -258,7 +258,7 @@ let find_with_index (ctx : 'a LF.ctx) (f : 'a LF.ctx -> 'a * int -> bool) : ('a 
   go ctx 1
 
 let find_with_index' (ctx : 'a LF.ctx) (f : 'a * int -> bool) : ('a * int) option =
-  find_with_index ctx (Misc.const f)
+  find_with_index ctx (Fun.const f)
 
 let find_with_index_rev (ctx : 'a LF.ctx) (f : 'a LF.ctx -> 'a * int -> bool) : ('a * int) option =
   let rec go (ctx : 'a LF.ctx) (idx : int) =
@@ -275,7 +275,7 @@ let find_with_index_rev (ctx : 'a LF.ctx) (f : 'a LF.ctx -> 'a * int -> bool) : 
   go ctx 1
 
 let find_with_index_rev' (ctx : 'a LF.ctx) (f : 'a * int -> bool) : ('a * int) option =
-  find_with_index_rev ctx (Misc.const f)
+  find_with_index_rev ctx (Fun.const f)
 
 (** Find an item satisfying a condition in a context from left to right
     (oldest one first)
@@ -285,7 +285,7 @@ let find (ctx : 'a LF.ctx) (f : 'a LF.ctx -> 'a -> bool) : 'a option =
   |> Maybe.map fst
 
 let find' (ctx : 'a LF.ctx) (f : 'a -> bool) : 'a option =
-  find ctx (Misc.const f)
+  find ctx (Fun.const f)
 
 (** Find an item satisfying a condition in a context from right to left
     (most recent one first)
@@ -302,7 +302,7 @@ let rec find_rev (ctx : 'a LF.ctx) (f : 'a LF.ctx -> 'a -> bool) : 'a option =
      else find_rev ctx' f
 
 let find_rev' (ctx : 'a LF.ctx) (f : 'a -> bool) : 'a option =
-  find_rev ctx (Misc.const f)
+  find_rev ctx (Fun.const f)
 
 let find_index (ctx : 'a LF.ctx) (f : 'a LF.ctx -> 'a -> bool) : int option =
   find_with_index ctx (fun ctx' (x, _) -> f ctx' x)

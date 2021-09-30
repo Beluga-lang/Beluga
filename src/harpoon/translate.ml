@@ -173,7 +173,7 @@ and directive cD cG (d : Comp.directive) tau : Comp.exp_chk =
      let _, (i', ttau_i') =
        Check.Comp.genMApp
          Loc.ghost
-         (Misc.const true)
+         (Fun.const true)
          cD
          (i, ttau_i)
      in

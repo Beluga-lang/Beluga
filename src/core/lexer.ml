@@ -98,7 +98,7 @@ let string_literal = [%sedlex.regexp? string_delimiter, Star (Compl '"'), string
     Calls itself recursively upon encountering a nested block comment.
     Consumes the block_comment_end symbol. *)
 let rec skip_nested_block_comment loc lexbuf =
-  (* let const t = Misc.const t (get_lexeme loc lexbuf) in *)
+  (* let const t = Fun.const t (get_lexeme loc lexbuf) in *)
   let skip () = update_loc_by_lexeme loc lexbuf in
   match%sedlex lexbuf with
   | block_comment_begin ->
@@ -114,7 +114,7 @@ let rec skip_nested_block_comment loc lexbuf =
 
 
 let rec tokenize loc lexbuf =
-  let const t = Misc.const t (get_lexeme loc lexbuf) in
+  let const t = Fun.const t (get_lexeme loc lexbuf) in
   let skip () = update_loc_by_lexeme loc lexbuf in
   let module T = Token in
   match%sedlex lexbuf with

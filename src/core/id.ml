@@ -100,7 +100,7 @@ let gen_fresh_name (ns : name list) (n : name) : name =
       begin fun n' ->
       Misc.String.equals n'.hint_name n.hint_name
       |> of_bool
-      $> Misc.const n'.hint_cnt
+      $> Fun.const n'.hint_cnt
       end
       ns
   in

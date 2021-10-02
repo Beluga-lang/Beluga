@@ -980,8 +980,8 @@ let recSgnDecls decls =
           so we can register each theorem in the store.
         *)
        let thm_cid_list =
-         Comp.add_mutual_group total_decs
-         |> Misc.Function.sequence registers
+          registers
+          |> List.ap_one (Comp.add_mutual_group total_decs)
        in
 
        let reconThm loc (f, cid, thm, tau) =

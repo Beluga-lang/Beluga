@@ -75,3 +75,7 @@ let rec drop n = function
   | l when n <= 0 -> l
   | [] -> []
   | _ :: xs (* n > 0 *) -> drop (n - 1) xs
+
+let ap xs = map2 (fun x f -> f x) xs
+
+let ap_one x = map (fun f -> f x)

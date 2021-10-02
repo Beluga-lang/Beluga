@@ -80,3 +80,11 @@ val mapi2 : (int -> 'a -> 'b -> 'c) -> 'a list -> 'b list -> 'c list
     [k] elements, then [[]] is returned.
 *)
 val drop : int -> 'a list -> 'a list
+
+(** [ap [x1; x2; ...; xn] [f1; f2; ...; fn]] is [[f1 x1; f2 x2; ...; fn xn]].
+*)
+val ap : 'a list -> ('a -> 'b) list -> 'b list
+
+(** [ap_one x [f1; f2; ...; fn]] is [[f1 x; f2 x; ...; fn x]].
+*)
+val ap_one : 'a -> ('a -> 'b) list -> 'b list

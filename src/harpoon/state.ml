@@ -7,8 +7,8 @@ module DynArray = Misc.DynArray
 module CompS = Beluga.Store.Cid.Comp
 module P = Beluga.Pretty.Int.DefaultPrinter
 
-let dprintf, _, _ = Beluga.Debug.(makeFunctions' (toFlags [14]))
-open Beluga.Debug.Fmt
+let dprintf, _, _ = Debug.(makeFunctions' (toFlags [14]))
+open Debug.Fmt
 
 type triple = Session.t * Theorem.t * Comp.proof_state
 

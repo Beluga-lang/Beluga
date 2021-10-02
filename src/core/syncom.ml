@@ -1,8 +1,7 @@
 (** Common syntax elements that are used in multiple stages of the
     Beluga syntax.
  *)
-
-module Loc = Location
+open Support
 
 module Common = struct
   type plicity =
@@ -84,15 +83,15 @@ module Comp = struct
   type case_pragma = PragmaCase | PragmaNotCase
 
   type context_case =
-    | EmptyContext of Loc.t
-    | ExtendedBy of Loc.t * int (* specifies a schema element *)
+    | EmptyContext of Location.t
+    | ExtendedBy of Location.t * int (* specifies a schema element *)
 
   type case_label =
-    | NamedCase of Loc.t * Id.name
-    | BVarCase of Loc.t
+    | NamedCase of Location.t * Id.name
+    | BVarCase of Location.t
     | ContextCase of context_case
     | PVarCase
-      of Loc.t
+      of Location.t
          * int (* schema element number (1-based) *)
          * int option (* the number of the projection, if any (1-based) *)
 
@@ -105,7 +104,7 @@ module Comp = struct
   (** Type specified in an interactive use of `suffices` *)
   type 'a generic_suffices_typ =
     [ `exact of 'a (* user specified an exact type annotation *)
-    | `infer of Loc.t (* user specified `_` and expects the type to be known *)
+    | `infer of Location.t (* user specified `_` and expects the type to be known *)
     ]
 
   let map_suffices_typ (f : 'a -> 'b) : 'a generic_suffices_typ -> 'b generic_suffices_typ =

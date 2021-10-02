@@ -1,5 +1,3 @@
-open Support
-
 type pos =
   { line : int
   ; bol : int

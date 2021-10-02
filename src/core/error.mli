@@ -1,14 +1,14 @@
-module Loc = Location
+open Support
 
 exception Violation of string
 
 (** Raises a Violation exception with the given message. *)
 val violation : string -> 'a
 
-exception NotImplemented of Loc.t option * string
+exception NotImplemented of Location.t option * string
 
 (** Raises a NotImplemented exception at the given location, with the given message. *)
-val not_implemented : Loc.t -> string -> 'a
+val not_implemented : Location.t -> string -> 'a
 
 (** Raises a NotImplemented exception with the given message. *)
 val not_implemented' : string -> 'a
@@ -38,7 +38,7 @@ val register_printing_function : (exn -> 'a option)
 
 (** Registers a printer for an exception that carries a location using
     the given exception selection function and exception formatter. *)
-val register_located_printing_function : (exn -> (Loc.t * 'a) option)
+val register_located_printing_function : (exn -> (Location.t * 'a) option)
                                          -> (Format.formatter -> 'a -> unit)
                                          -> unit
 
@@ -46,7 +46,7 @@ val register_located_printing_function : (exn -> (Loc.t * 'a) option)
 val print : (Format.formatter -> unit) -> print_result
 
 (** Use supplied formatter for printing errors decorated with location information. *)
-val print_with_location : Loc.t -> (Format.formatter -> unit) -> print_result
+val print_with_location : Location.t -> (Format.formatter -> unit) -> print_result
 
 (** Helper function to construct an error message reporting a mismatch
     between something that was expected and what was actually

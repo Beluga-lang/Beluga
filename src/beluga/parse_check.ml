@@ -1,3 +1,5 @@
+open Support
+
 module P = Beluga.Pretty.Ext.DefaultPrinter
 module LF = Beluga.Syntax.Ext.LF
 

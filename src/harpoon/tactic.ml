@@ -11,8 +11,8 @@ module P = B.Pretty.Int.DefaultPrinter
 
 open B.Syntax.Int
 
-let dprintf, dprint, _ = B.Debug.(makeFunctions' (toFlags [11]))
-open B.Debug.Fmt
+let dprintf, dprint, _ = Debug.(makeFunctions' (toFlags [11]))
+open Debug.Fmt
 
 type t = Theorem.t -> Comp.proof_state -> unit
 

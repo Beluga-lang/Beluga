@@ -6,13 +6,6 @@
   (modules main beli version))
 
 (executable
-  (name replay)
-  (public_name replay)
-  (package beluga)
-  (libraries support beluga)
-  (modules replay))
-
-(executable
   (name lex_check)
   (public_name lex_check)
   (package beluga)

@@ -76,7 +76,8 @@ module DynArray = struct
     | Invalid_arg _ -> None
 
   (** [rfind_opt_idx d p] is [Some (i, l)] where [l] is the last element in [d]
-      that satisfies [p] and [i] is the index of [l] in [d], and [None] otherwise.
+      that satisfies [p] and [i] is the index of [l] in [d], and [None]
+      otherwise.
   *)
   let rfind_opt_idx d p =
     let rec go = function

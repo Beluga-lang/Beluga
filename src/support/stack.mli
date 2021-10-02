@@ -1,7 +1,5 @@
 include module type of Stdlib.Stack
 
-val popping : 'a t -> ('a option -> 'b) -> 'b
-
 (** [to_list s] converts [s] into a list, where the top element of [s] is the
     last element of the output list.
 *)

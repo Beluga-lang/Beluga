@@ -327,7 +327,7 @@ let fmt_ppr_theorem_list ppf c =
   (* It may be better to add the current session name to this message *)
   fprintf ppf
     "@[<v>%a@]"
-    fmt_ppr_indexed_theorems (Misc.List.index theorem_list)
+    fmt_ppr_indexed_theorems (List.index theorem_list)
 
 let materialize_theorems c =
   if DynArray.length c.theorems > 0 then

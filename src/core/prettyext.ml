@@ -302,7 +302,7 @@ module Make (_ : Store.Cid.RENDERER) : Printer.Ext.T = struct
          if it is: print a comma, then each term comma-separated.
          else, just print each term comma-separated *)
 
-      if nonempty && Misc.List.nonempty tms
+      if nonempty && List.nonempty tms
       then Fmt.comma ppf ();
 
       pp_print_list ~pp_sep: Fmt.comma

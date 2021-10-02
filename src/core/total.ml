@@ -677,7 +677,7 @@ let rec gen_rec_calls' cD cG cIH (cG0, j) mfs =
     computed.
  *)
 let wf_rec_calls cD cG mfs =
-  if Misc.List.null mfs
+  if List.null mfs
   then LF.Empty
   else
     begin
@@ -1432,7 +1432,7 @@ let rec select_ihs name = function
     ihctx. *)
 let drop_args n =
   Context.map begin fun (Comp.WfRec (name, args, tau)) ->
-    Comp.WfRec (name, Misc.List.drop n args, tau)
+    Comp.WfRec (name, List.drop n args, tau)
     end
 
 (** Drops one argument from all recursive calls in a given ihctx. *)

@@ -223,7 +223,7 @@ let select_subgoal_satisfying (t : t) (p: Comp.proof_state -> bool) : Comp.proof
   let open Maybe in
   t.remaining_subgoals
   |> DynArray.to_list
-  |> Misc.List.index_of p
+  |> List.index_of p
   $> begin fun idx ->
      let sg = DynArray.get t.remaining_subgoals idx in
      DynArray.delete t.remaining_subgoals idx;

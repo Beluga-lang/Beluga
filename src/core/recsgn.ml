@@ -851,7 +851,7 @@ let recSgnDecls decls =
     | Ext.Sgn.Theorem (loc, recFuns) ->
        let pos loc x args =
          match
-           Misc.List.index_of
+           List.index_of
              (fun a -> Maybe.equals Id.equals a (Some x))
              args
          with
@@ -1071,7 +1071,7 @@ let recSgnDecls decls =
          (thm_r' , tau)
        in
 
-       if Misc.List.null recFuns
+       if List.null recFuns
        then Error.violation "[recsgn] no recursive function defined";
 
        let ds =

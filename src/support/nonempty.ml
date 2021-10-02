@@ -91,7 +91,7 @@ let group_by (p : 'a -> 'key) (l : 'a list) : ('key * 'a t) list =
       DynArray.add d x;
       Hashtbl.replace h k d
     in
-    Misc.List.for_each_ l (fun x -> insert (p x) x)
+    List.for_each_ l (fun x -> insert (p x) x)
   in
   (* The use of unsafe_of_list here is justified because every
      dynarray we create has one element added immediately to it, and is

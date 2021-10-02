@@ -1410,7 +1410,7 @@ let genPVarCovGoal (cD, cPsi, tP) psi e =
 
 (** Generates all parameter variable goals for a given schema. *)
 let genPVarCovGoals (cD, cPsi, tP) psi elems =
-  Misc.List.concat_map (genPVarCovGoal (cD, cPsi, tP) psi) elems
+  List.concat_map (genPVarCovGoal (cD, cPsi, tP) psi) elems
 
 let genPVar (cD, cPsi, tP) =
   dprintf
@@ -2077,7 +2077,7 @@ let genNthSchemaElemGoal names cD n w =
  *)
 let genCtx names (LF.Dec (cD', LF.Decl _) as cD) cpsi =
   let nonempty_cases = List.map (genSchemaElemGoal names cD cpsi) in
-  let empty_case = Misc.List.cons (cD', LF.Null, LF.MShift 0) in
+  let empty_case = List.cons (cD', LF.Null, LF.MShift 0) in
   F.(empty_case ++ nonempty_cases)
   (* WARNING: the order of the list here is used *CRUCIALLY* by
      Harpoon's split tactic when dealing with a context split.
@@ -2728,7 +2728,7 @@ let best_split_candidate cD candidates =
     p.fmt "[best_split_candidate] @[<v>candidates:@,@[%a@]@]"
       Prettycov.fmt_ppr_mvlist mv_list_sorted
     end;
-  if Misc.List.null cv_list_sorted
+  if List.null cv_list_sorted
   then best_cand (cD, mv_list_sorted) 1 []
   else
     begin
@@ -3383,7 +3383,7 @@ let rec revisit_opengoals names : open_cov_problems -> open_cov_problems * open_
 let check_coverage_success problem =
   match problem.prag with
   | Comp.PragmaCase ->
-     if Misc.List.null !open_cov_problems
+     if List.null !open_cov_problems
      then
        begin
          dprint
@@ -3406,7 +3406,7 @@ let check_coverage_success problem =
 
   | Comp.PragmaNotCase ->
      let open Format in
-     if Misc.List.null !open_cov_problems
+     if List.null !open_cov_problems
      then
        begin
          let s =
@@ -3517,7 +3517,7 @@ let covers problem projObj =
 let is_impossible cD tau =
   (* Use an empty list of names here because we don't care about
      whether the generated pattern variables make sense. *)
-  Misc.List.null (genPatCGoals [] withPatFVar cD tau)
+  List.null (genPatCGoals [] withPatFVar cD tau)
 
 let process problem projObj =
   reset_open_cov_problems ();

@@ -82,7 +82,7 @@ let intros' : Theorem.t ->
   in
   fun t ->
   let rec go updated active_names user_names cD cG tau =
-    let next_name = Maybe.(user_names $ Misc.List.uncons) in
+    let next_name = Maybe.(user_names $ List.uncons) in
     match tau with
     | Comp.TypArr (_, tau_1, tau_2) ->
        let (name, user_names) =

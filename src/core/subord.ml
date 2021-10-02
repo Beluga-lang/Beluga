@@ -121,7 +121,7 @@ and relevantTypRec tRec basis =
 and relevantSchema (Schema sch_elems) basis =
   List.exists
     begin fun (SchElem (_, typRec)) ->
-    Misc.List.nonempty (relevantTypRec typRec basis)
+    List.nonempty (relevantTypRec typRec basis)
     end
     sch_elems
 

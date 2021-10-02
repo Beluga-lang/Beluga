@@ -14,7 +14,6 @@ let (dprintf, dprint, dprnt) = Debug.makeFunctions' (Debug.toFlags [5])
 open Debug.Fmt
 
 module LF = Lfcheck
-module List = Misc.List
 
 module Comp = struct
   open Syntax

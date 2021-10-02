@@ -306,12 +306,12 @@ let process_command
      let (past, future) = Theorem.get_history_names t in
      let future = List.rev future in
      let line ppf = function
-       | _ when Misc.List.nonempty future ->
+       | _ when List.nonempty future ->
           fprintf ppf "@,-----@,"
        | _ -> ()
      in
      let future_remark ppf = function
-       | _ when Misc.List.nonempty future ->
+       | _ when List.nonempty future ->
           fprintf ppf "- @[%a@]"
             pp_print_string
             "Commands below the line would be undone. \

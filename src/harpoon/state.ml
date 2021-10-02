@@ -279,7 +279,7 @@ let save s =
          | `loaded -> false
          end
     |> List.map Session.full_theorem_list
-    |> List.filter Misc.List.nonempty
+    |> List.filter List.nonempty
   in
   Serialization.update_existing_holes existing_holes;
   Serialization.append_sessions
@@ -326,4 +326,4 @@ let fmt_ppr_session_list ppf s =
       Session.fmt_ppr_theorem_list c
   in
   printf s "@[<v>%a@]"
-    (print_list print_indexed_session) (Misc.List.index session_list)
+    (print_list print_indexed_session) (List.index session_list)

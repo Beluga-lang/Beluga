@@ -118,7 +118,7 @@ module Modules = struct
     match
       List.fold_left
         begin fun acc (ab,o) ->
-          if Misc.(List.equals String.equals) o x
+          if List.equals String.equals o x
           then Some ab
           else acc
         end
@@ -225,7 +225,7 @@ module Modules = struct
   let correct (l : string list) : string list =
     let rec aux m l =
       match (m, l) with
-      | _ when Misc.(List.equals String.equals) m l -> m
+      | _ when List.equals String.equals m l -> m
       | ([], _) -> l
       | (h :: t, h' :: t') when String.equals h h' -> aux t t'
       | _ -> m
@@ -276,10 +276,10 @@ module CidStore (M : ENTRY) : CIDSTORE
   (*
     let entries () =
       DynArray.to_list store
-      |> Misc.List.concat_mapi
+      |> List.concat_mapi
            begin fun l x ->
            DynArray.to_list x
-           |> Misc.List.mapi (fun n e -> ((l, n), e))
+           |> List.mapi (fun n e -> ((l, n), e))
            end
    *)
 
@@ -287,7 +287,7 @@ module CidStore (M : ENTRY) : CIDSTORE
     let l = !Modules.current in
     DynArray.get store l
     |> DynArray.to_list
-    |> Misc.List.mapi (fun n e -> ((l, n), e))
+    |> List.mapi (fun n e -> ((l, n), e))
 
   let clear () =
     DynArray.clear directory;

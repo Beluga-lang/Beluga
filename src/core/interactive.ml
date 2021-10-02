@@ -556,7 +556,7 @@ let fmt_ppr_hole ppf (i, (Holes.Exists (w, h)) : HoleId.t * Holes.some_hole) : u
           (* Need to check both the LF context and the meta-variable context. *)
           iterMctx cD cPsi lfGoal @ iterDctx cD cPsi lfGoal
         in
-        if Misc.List.nonempty suggestions
+        if List.nonempty suggestions
         then
           fprintf ppf
             "@,@[<hov 2>Variable%a of this type:@ @[<h>%a@]@]"
@@ -582,7 +582,7 @@ let fmt_ppr_hole ppf (i, (Holes.Exists (w, h)) : HoleId.t * Holes.some_hole) : u
      | None ->
         (* Collect a list of variables that already have the goal type. *)
         let suggestions = iterGctx cD cG (tau, theta) in
-        if Misc.List.nonempty suggestions
+        if List.nonempty suggestions
         then
           fprintf ppf
             "@,@,Variable%a of this type: @[<h>%a@]"

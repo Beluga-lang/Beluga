@@ -91,7 +91,3 @@ module DynArray = struct
     in
     go (length d - 1)
 end
-
-module Char = struct
-  let equals (c1 : char) (c2 : char) = Stdlib.(=) c1 c2
-end

@@ -23,10 +23,10 @@ let rec trim_comment str =
   let len = String.length str in
   match str with
   | "" -> ""
-  | s when Misc.Char.equals s.[0] ' ' -> trim_comment (String.sub s 1 (len - 1))
-  | s when Misc.Char.equals s.[0] '\t' -> trim_comment (String.sub s 1 (len - 1))
-  | s when Misc.Char.equals s.[0] '%' -> ""
-  | s when Misc.Char.equals s.[len - 1] ' ' -> trim_comment (String.sub s 0 (len - 1))
+  | s when Char.equal s.[0] ' ' -> trim_comment (String.sub s 1 (len - 1))
+  | s when Char.equal s.[0] '\t' -> trim_comment (String.sub s 1 (len - 1))
+  | s when Char.equal s.[0] '%' -> ""
+  | s when Char.equal s.[len - 1] ' ' -> trim_comment (String.sub s 0 (len - 1))
   | s -> s
 
 let filter_lines files =

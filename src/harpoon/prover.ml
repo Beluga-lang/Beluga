@@ -270,7 +270,7 @@ let process_command
   | Command.Info (k, n) ->
      begin match k with
      | `prog ->
-        let open Maybe in
+        let open Option in
         begin match CompS.(index_of_name_opt n $> get) with
         | None ->
            State.printf s
@@ -283,7 +283,7 @@ let process_command
      end
 
   | Command.Translate n ->
-     let open Maybe in
+     let open Option in
      begin match CompS.(index_of_name_opt n $> get) with
      | Some e ->
         State.printf s "%a"

@@ -948,7 +948,7 @@ module Frontend = struct
   (* boundEq B1 B2 = b
      Equality function for bounds.
   *)
-  let boundEq x y = Maybe.equals (=) x y
+  let boundEq x y = Option.equal (=) x y
 
   (* lowerBound B1 B2 = min (B1, B2) *)
   let lowerBound x y =

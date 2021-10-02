@@ -380,7 +380,7 @@ let split (e : string) (hi : HoleId.t * Holes.comp_hole_info Holes.hole) : Comp.
     | _ ->
        failwith "mCtx contains something we can't split on"
   in
-  Maybe.(lazy (searchGctx 1 cG0) <|> lazy (searchMctx 1 cD0 []))
+  Option.(lazy (searchGctx 1 cG0) <|> lazy (searchMctx 1 cD0 []))
   |> Lazy.force
 
 let whale_str =

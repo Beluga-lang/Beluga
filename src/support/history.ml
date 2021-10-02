@@ -21,7 +21,7 @@ module Direction = struct
 end
 
 let step d { past; future } =
-  let open Maybe in
+  let open Option in
   match d with
   | `forward ->
      Stack.pop_opt future

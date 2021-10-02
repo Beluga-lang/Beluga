@@ -148,7 +148,7 @@ let apply t a =
   record_action t a
 
 let history_step t d : bool =
-  let open Maybe in
+  let open Option in
   History.step d t.history
   $> apply' d t
   |> is_some
@@ -179,7 +179,7 @@ let serialize ppf (t : t) =
   let s = t.initial_state in
   let goal = Whnf.cnormCTyp s.Comp.goal in
   let fmt_ppr_order =
-    Maybe.print
+    Option.print
       begin fun ppf ->
       function
       | `inductive order ->
@@ -191,7 +191,7 @@ let serialize ppf (t : t) =
       end
   in
   let order =
-    let open Maybe in
+    let open Option in
     Total.lookup_dec name (CompS.total_decs t.cid)
     $> fun o -> o.Comp.order
   in
@@ -220,7 +220,7 @@ let next_subgoal (t : t) : Comp.proof_state option =
     predicate and makes it the active subgoal.
  *)
 let select_subgoal_satisfying (t : t) (p: Comp.proof_state -> bool) : Comp.proof_state option =
-  let open Maybe in
+  let open Option in
   t.remaining_subgoals
   |> DynArray.to_list
   |> List.index_of p
@@ -285,7 +285,7 @@ let apply_subgoal_replacement t name g' f g =
     (`comp or `meta) in the subgoal `g`.
  *)
 let rename_variable src dst level t g =
-  let open Maybe in
+  let open Option in
   let open Comp in
   begin match level with
   | `comp ->
@@ -397,4 +397,4 @@ let count_subgoals t = DynArray.length t.remaining_subgoals
 
 let materialize t =
   CompS.set_decl t.cid
-    Maybe.(eliminate F.(pure ++ Decl.next) pure)
+    Option.(eliminate F.(some ++ Decl.next) some)

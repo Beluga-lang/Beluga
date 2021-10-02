@@ -47,7 +47,7 @@ exception Empty
     Raises the exception Empty if the list was empty.
  *)
 let unsafe_of_list (l : 'a list) : 'a t =
-  Maybe.get' Empty (of_list l)
+  Option.get' Empty (of_list l)
 
 let to_list ((x, l) : 'a t) : 'a list =
   x :: l

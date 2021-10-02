@@ -326,9 +326,9 @@ module CidStore (M : ENTRY) : CIDSTORE
 
     (*
   let lookup (n : Id.name) f : (cid * entry) option =
-    Maybe.flat_map
+    Option.flat_map
       begin fun cid ->
-      Maybe.map (fun e -> (cid, e)) (f (get cid))
+      Option.map (fun e -> (cid, e)) (f (get cid))
       end
       (index_of_name_opt n)
      *)

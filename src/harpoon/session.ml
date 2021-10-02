@@ -69,7 +69,7 @@ let infer_invocation_kind s (i : Comp.exp_syn) : Comp.invoke_kind =
   | _ -> `lemma
 
 let lookup_theorem c name =
-  let open Maybe in
+  let open Option in
   Misc.DynArray.rfind_opt_idx
     c.theorems
     F.(flip Theorem.has_name_of name)
@@ -170,7 +170,7 @@ let prepare_translated_proofs tes total_decs =
          entries to themselves.
    *)
   let cid_map k =
-    Hashtbl.find_opt h k |> Maybe.get_default k
+    Hashtbl.find_opt h k |> Option.get_default k
   in
   let etaus =
     List.map
@@ -197,7 +197,7 @@ type translation_check_result =
 let check_translated_proofs c : translation_check_result =
   match
     DynArray.to_list c.finished_theorems
-    |> Maybe.(traverse (fun (t, e) -> e $> fun e -> (t, e)))
+    |> Option.(traverse (fun (t, e) -> e $> fun e -> (t, e)))
   with
   | None -> `some_translations_failed
   | Some tes ->

@@ -1115,7 +1115,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
     | `ctor cid -> fprintf ppf "%s" (R.render_cid_term cid)
     | `pvar k ->
        fprintf ppf "#%a"
-         (Maybe.print (fun ppf -> fprintf ppf ".%d"))
+         (Option.print (fun ppf -> fprintf ppf ".%d"))
          k
     | `bvar -> fprintf ppf "head variable"
 
@@ -1631,7 +1631,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
       implicit_arguments
       (R.render_cid_mutual_group mutual_group)
       (pp_print_list ~pp_sep: pp_print_cut fmt_ppr_cmp_total_dec) ds
-      (Maybe.print (fmt_ppr_cmp_value l0)) prog
+      (Option.print (fmt_ppr_cmp_value l0)) prog
 
   let fmt_ppr_cmp_thm ppf =
     function

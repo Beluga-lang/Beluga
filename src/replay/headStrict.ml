@@ -8,7 +8,7 @@ type 'a t =
 
 (** Constructs a head-strict stream. *)
 let rec unfold (seed : 's) (next : 's -> ('a * 's) option) : 'a t option =
-  let open Maybe in
+  let open Option in
   next seed $>
     fun (x, seed) ->
     { head = x;

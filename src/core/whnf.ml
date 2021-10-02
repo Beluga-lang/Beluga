@@ -1439,7 +1439,7 @@ and convDCtx cPsi cPsi' =
   | _ -> false
 
 and convDCtxHat (c1, d1) (c2, d2) =
-  Maybe.equals convCtxVar c1 c2 && d1 = d2
+  Option.equal convCtxVar c1 c2 && d1 = d2
 
 (* convCtx cPsi cPsi' = true iff
  * cD |- cPsi = cPsi'  where cD |- cPsi ctx,  cD |- cPsi' ctx
@@ -1532,7 +1532,7 @@ let prefixSchElem (SchElem (cSome1, typRec1)) (SchElem (cSome2, typRec2)) =
 
 let mctxLookupDep cD k =
   Context.lookup' cD k
-  |> Maybe.get'
+  |> Option.get'
        (Error.Violation
           ( "Meta-variable out of bounds -- looking for "
             ^ string_of_int k
@@ -1955,7 +1955,7 @@ let convMTyp thetaT1 thetaT2 =
   | ((ClTyp (t1, cPsi1)), (ClTyp (t2, cPsi2))) ->
      convClTyp (t1, t2) && convDCtx cPsi1 cPsi2
   | ((CTyp cid_schema), (CTyp cid_schema')) ->
-     Maybe.equals Id.cid_equals cid_schema cid_schema'
+     Option.equal Id.cid_equals cid_schema cid_schema'
   | _ -> false (* ClTyp is never convertible to CTyp *)
 
 let convMetaTyp thetaT1 thetaT2 = convMTyp thetaT1 thetaT2
@@ -2334,7 +2334,7 @@ let rec conv_subgoal_path p1 p2 =
        when k1 = k2 ->
      conv_subgoal_path p1 p2
   | (MetaSplit (_, `pvar k1, p1), MetaSplit (_, `pvar k2, p2))
-       when Maybe.equals (=) k1 k2 ->
+       when Option.equal (=) k1 k2 ->
      conv_subgoal_path p1 p2
   | (MetaSplit (_, `ctor c1, p1), MetaSplit (_, `ctor c2, p2))
        when Id.cid_equals c1 c2 ->

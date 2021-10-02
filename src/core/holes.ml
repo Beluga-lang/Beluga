@@ -112,8 +112,8 @@ let (holes : (HoleId.t, some_hole) Hashtbl.t) = Hashtbl.create 32
 
 let find (p : some_hole -> bool) : (HoleId.t * some_hole) option =
   let f k h m =
-    let open Maybe in
-    m <|> lazy (p h |> of_bool &> pure (k, h))
+    let open Option in
+    m <|> lazy (p h |> of_bool &> some (k, h))
   in
   Hashtbl.fold f holes (lazy None)
   |> Lazy.force
@@ -142,10 +142,10 @@ let loc_within (loc : Loc.t) (loc' : Loc.t) : bool =
 let destroy_holes_within loc =
   Hashtbl.filter_map_inplace
     begin fun k (Exists (w, h)) ->
-    let open Maybe in
+    let open Option in
     not (loc_within loc h.loc)
     |> of_bool
-    &> pure (Exists (w, h))
+    &> some (Exists (w, h))
     end
     holes
 
@@ -170,7 +170,7 @@ let by_id (i : HoleId.t) : lookup_strategy =
       end
   ; action =
       fun () ->
-      let open Maybe in
+      let open Option in
       Hashtbl.find_opt holes i
       $> fun h -> (i, h)
   }
@@ -195,7 +195,7 @@ let get_snapshot () : snapshot =
 let holes_since (past : snapshot) : (HoleId.t * some_hole) list =
   let f k =
     Hashtbl.find_opt holes k
-    |> Maybe.get' (Error.Violation "membership of hole is guaranteed by snapshot")
+    |> Option.get' (Error.Violation "membership of hole is guaranteed by snapshot")
     |> Pair.left k
   in
   let present = get_snapshot () in
@@ -240,7 +240,7 @@ let list () =
 
 let parse_lookup_strategy (s : string) : lookup_strategy option =
   try
-    int_of_string s |> HoleId.of_int |> by_id |> Maybe.pure
+    int_of_string s |> HoleId.of_int |> by_id |> Option.some
   with
   | Failure _ -> Some (by_name s)
 

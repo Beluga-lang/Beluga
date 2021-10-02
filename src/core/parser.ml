@@ -151,13 +151,13 @@ type state =
   (*
 (** Peeks at the next token in the input stream in the given state. *)
 let peek_at (s : state) : T.t locd option =
-  Maybe.(LinkStream.observe s.input $> fst)
+  Option.(LinkStream.observe s.input $> fst)
    *)
 
   (*
 (** Like `peek_at` but forgets the location. *)
 let next_token s =
-  Maybe.(peek_at s $> snd |> get_default T.EOI)
+  Option.(peek_at s $> snd |> get_default T.EOI)
    *)
 
 (***** ERROR HANDLING *****)
@@ -211,7 +211,7 @@ type content =
 let print_content ppf : content -> unit =
   let open Format in
   let format_option_with g ppf t =
-    Maybe.print (fun ppf t -> fprintf ppf " `%a'" g t) ppf t
+    Option.print (fun ppf t -> fprintf ppf " `%a'" g t) ppf t
   in
   let string_option = format_option_with pp_print_string in
   let int_option = format_option_with pp_print_int in
@@ -304,7 +304,7 @@ let push_label (l : string) : error -> error =
          (*
 (** Adds a label to an error path, if any. *)
 let push_label_option (l : string option) (e : error) : error =
-  let open Maybe in
+  let open Option in
   l $> (fun l -> push_label l e)
   |> get_default e
           *)
@@ -316,7 +316,7 @@ let print_path ppf (path : path) : unit =
   let open Format in
   let print_entry ppf { label; location } : unit =
     fprintf ppf "in `%s'%a" label
-      (Maybe.print
+      (Option.print
          (fun ppf x -> fprintf ppf " at %a" Loc.print x))
       location
   in
@@ -341,7 +341,7 @@ let print_error ppf ({path; loc; _} as e : error) =
        fprintf ppf "Expected:@,  @[<v>";
        pp_print_list ~pp_sep: (fun _ _ -> ())
          (fun ppf x ->
-           Maybe.print
+           Option.print
              (fun ppf x -> fprintf ppf "%s@," x.label)
              ppf
              (path_head x.path))
@@ -779,11 +779,11 @@ let satisfy (f : T.t -> ('e, 'b) Either.t) : ('e, 'b) Either.t parser =
 (** Tries a parser, and if it fails returns None *)
 let maybe (p : 'a parser) : 'a option parser =
   shifted "optionally"
-    (alt (p $> Maybe.pure) (pure None))
+    (alt (p $> Option.some) (pure None))
 
 (** Tries a parser, and if it fails uses a default value. *)
 let maybe_default (p : 'a parser) (x : 'a) : 'a parser =
-  maybe p $> Maybe.get_default x
+  maybe p $> Option.get_default x
 
 (** Internal implementation of `many` that doesn't label. *)
 let rec many' (p : 'a parser) : 'a list parser =
@@ -892,7 +892,7 @@ let check_codatatype_decl loc a cs : unit parser =
 (****** Simple parsers *****)
 
 let satisfy' (expected : content) (f : T.t -> 'a option) : 'a parser =
-  satisfy (fun t -> f t |> Maybe.eliminate (Fun.const (Either.Left t)) Either.pure)
+  satisfy (fun t -> f t |> Option.eliminate (Fun.const (Either.Left t)) Either.pure)
   |> span
   $ fun (loc, x) ->
     match x with
@@ -905,7 +905,7 @@ let satisfy' (expected : content) (f : T.t -> 'a option) : 'a parser =
 (** Parses an exact token. *)
 let token (t : T.t) : unit parser =
   satisfy' (`token (Some t))
-    (fun x -> Maybe.of_bool (Token.equals x t))
+    (fun x -> Option.of_bool (Token.equals x t))
 
 (** Parses an exact sequence of tokens. *)
 let tokens (ts : T.t list) : unit parser =
@@ -918,7 +918,7 @@ let tokens (ts : T.t list) : unit parser =
  *)
 let keyword (kw : string) : unit parser =
   satisfy' (`keyword (Some kw))
-    F.(Maybe.of_bool ++ Token.equals (T.IDENT kw))
+    F.(Option.of_bool ++ Token.equals (T.IDENT kw))
 
 let identifier : string parser =
   satisfy' (`identifier None)
@@ -1859,7 +1859,7 @@ let clf_ctyp_decl_bare : type a. a name_parser -> (a -> LF.depend * Id.name) -> 
       let subst_variable =
         let subst_class =
           maybe (token T.HASH)
-          $> Maybe.eliminate (Fun.const LF.Subst) (Fun.const LF.Ren)
+          $> Option.eliminate (Fun.const LF.Subst) (Fun.const LF.Ren)
         in
         dollar_variable_decl (seq2 subst_class clf_dctx)
         |> span
@@ -1937,7 +1937,7 @@ let clf_ctyp_decl =
       let subst_variable =
         let subst_class =
           maybe (token T.HASH)
-          $> Maybe.eliminate (Fun.const LF.Subst) (Fun.const LF.Ren)
+          $> Option.eliminate (Fun.const LF.Subst) (Fun.const LF.Ren)
         in
         labelled "substitution/renaming variable"
           begin
@@ -2515,7 +2515,7 @@ and cmp_exp_syn' =
 
 let call_arg =
   alt
-    (name $> Maybe.pure)
+    (name $> Option.some)
     (token T.UNDERSCORE &> pure None)
   |> labelled "call argument"
 
@@ -2656,7 +2656,7 @@ let sgn_query_pragma =
   let bound =
     alt
       (token T.STAR &> pure None)
-      (integer $> Maybe.pure)
+      (integer $> Option.some)
     |> labelled "search bound"
   in
   pragma "query" &>

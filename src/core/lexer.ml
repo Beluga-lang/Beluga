@@ -23,7 +23,7 @@ let _ =
             | UnlexableCharacter c -> fprintf ppf "unrecognizable character(s) %s" c
             | MismatchedBlockComment -> fprintf ppf "unexpected end of block comment"
             | Violation msg -> fprintf ppf "(internal error) %s" msg)
-        |> Maybe.pure
+        |> Option.some
      | _ -> None)
 
 let (dprintf, _, _) = Debug.makeFunctions' (Debug.toFlags [11])

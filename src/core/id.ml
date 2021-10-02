@@ -95,7 +95,7 @@ let gen_fresh_name (ns : name list) (n : name) : name =
     else y
   in
   let cnts =
-    let open Maybe in
+    let open Option in
     filter_map
       begin fun n' ->
       String.equals n'.hint_name n.hint_name
@@ -129,7 +129,7 @@ let max_usage (ctx : name list) (s : string) : max_usage =
        p.fmt "[max_usage] @[<v 2>%s is USED, k = %a in@,\
               @[%a@]@]"
          s
-         (Maybe.show Format.pp_print_int) k
+         (Option.show Format.pp_print_int) k
          print_list ctx
        end;
      `used k

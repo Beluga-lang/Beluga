@@ -205,12 +205,12 @@ module TranscriptRunner = struct
         (string, env) Either.t =
     let open Either in
     let string_of_line : int option -> string =
-      Maybe.eliminate
+      Option.eliminate
         (fun () -> "<unknown>")
         string_of_int
     in
     rpc i.request e |>
-      Maybe.eliminate
+      Option.eliminate
         (fun () ->
           Left
             ( "interaction on line "
@@ -262,7 +262,7 @@ type error =
 
 let rec listify (s : 'a IStream.t) : 'a list =
   s.IStream.next () |>
-    Maybe.eliminate
+    Option.eliminate
       (fun () -> [])
       (fun (x, s) -> x :: listify s)
 

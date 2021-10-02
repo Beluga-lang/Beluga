@@ -270,7 +270,7 @@ let _ =
       begin fun ppf ->
       fprintf ppf "@[<v>%a%a@]"
         print_error err
-        (Maybe.print
+        (Option.print
            begin fun ppf h ->
            fprintf ppf "@,- @[<hov>%a@]"
              print_hint h
@@ -438,7 +438,7 @@ and shunting_yard' (l : Ext.LF.normal list) : Ext.LF.normal =
     function
     | Ext.LF.Root (_, Ext.LF.Name (_, name, _), Ext.LF.Nil)
       | Ext.LF.Root (_, Ext.LF.PVar (_, name, _), Ext.LF.Nil) ->
-       Maybe.get (Store.OpPragmas.getPragma name)
+       Option.get (Store.OpPragmas.getPragma name)
   in
   let pragmaExists =
     function
@@ -813,7 +813,7 @@ and disambiguate_name' f : name_disambiguator =
       Id.print name
       kind
       Loc.print_short loc
-      (Maybe.print
+      (Option.print
          (fun ppf x -> Format.fprintf ppf "--> index %d" x))
       k
   in
@@ -912,7 +912,7 @@ and index_sub_opt : Ext.LF.sub option -> Apx.LF.sub option index =
   function
   | None -> pure None
   | Some s ->
-     index_sub s $> Maybe.pure
+     index_sub s $> Option.some
 
 and index_sub : Ext.LF.sub -> Apx.LF.sub index =
   let open Bind in
@@ -1296,7 +1296,7 @@ let rec index_comptyp (tau : Ext.Comp.typ) cvars : Apx.Comp.typ fvar_state =
 (* disambiguation strategies for computational names *)
 let d_var, d_const, d_dataconst, d_codataobs =
   let mk ty f con loc x =
-    let open Maybe in
+    let open Option in
     lazy
       (trying_index
          (fun () ->
@@ -1311,7 +1311,7 @@ let d_var, d_const, d_dataconst, d_codataobs =
   var, const, dataconst, codataobs
 
 let disambiguate loc x ps =
-  Maybe.choice (List.map (fun f -> f loc x) ps)
+  Option.choice (List.map (fun f -> f loc x) ps)
   |> Lazy.force
 
 let rec index_exp cvars vars fcvars =
@@ -1366,7 +1366,7 @@ let rec index_exp cvars vars fcvars =
         -je
       *)
      disambiguate loc' name [d_dataconst]
-     |> Maybe.eliminate
+     |> Option.eliminate
           (fun _ -> (* the name is not a data constructor *)
             let i' = index_exp' cvars vars fcvars i in
             let vars1 = Var.extend vars (Var.mk_entry name) in
@@ -1391,7 +1391,7 @@ and index_exp' cvars vars fcvars =
   function
   | Ext.Comp.Name (loc, x) ->
      disambiguate loc x [ d_var vars; d_const; d_dataconst ]
-     |> Maybe.eliminate
+     |> Option.eliminate
           (fun _ -> throw loc (UnboundCompName x))
           (fun x -> x)
 
@@ -1409,7 +1409,7 @@ and index_exp' cvars vars fcvars =
       *)
      let mk_apply f loc' x =
        lazy
-         Maybe.(
+         Option.(
          f loc' x
          |> Lazy.force
          $> fun h e' -> Apx.Comp.Apply (loc, h, e'))
@@ -1421,10 +1421,10 @@ and index_exp' cvars vars fcvars =
        ; mk_apply d_dataconst
        ; d_codataobs
        ]
-     |> Maybe.eliminate
+     |> Option.eliminate
           (fun _ ->
             let hint =
-              Maybe.(trying_index (fun _ -> CVar.index_of_name cvars c) &> pure `needs_box)
+              Option.(trying_index (fun _ -> CVar.index_of_name cvars c) &> some `needs_box)
             in
             throw_hint' loc' hint (UnboundCompName c))
           (fun f -> index_exp cvars vars fcvars e |> f)
@@ -1615,7 +1615,7 @@ and index_branch cvars vars fcvars =
      dprint (fun () -> "index_branch");
      (* computing fcvars' is unnecessary? -bp *)
      let fcvars' =
-       Maybe.eliminate
+       Option.eliminate
          (Fun.const Fun.id)
          extending_by
          (get_ctxvar_mobj mO)

@@ -38,4 +38,4 @@ let list_of_order : I.order -> int list option =
        | I.Arg x -> Some x
        | _ -> None (* We don't support nested lexicographic orders. *)
      in
-     Maybe.traverse f xs
+     Option.traverse f xs

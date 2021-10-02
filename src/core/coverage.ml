@@ -1186,7 +1186,7 @@ let rec genSpine k names cD cPsi sA tP =
               tN = @[%a@]@]"
          P.(fmt_ppr_lf_normal cD cPsi l0) tN
        end;
-     let open Maybe in
+     let open Option in
      genSpine (k-1) (u :: names) cD cPsi (tB, LF.Dot (LF.Obj (tN), s)) tP
      $> fun tS ->
         LF.App (tN, tS)
@@ -1236,7 +1236,7 @@ let genObj (cD, cPsi, tP) (tH, tA, k) =
 
   let names = Context.(names_of_mctx cD @ names_of_dctx cPsi) in
   match
-    let open Maybe in
+    let open Option in
     genSpine k names LF.Empty cPsi' (tA', S.LF.id) tP'
     $ begin fun tS ->
       try
@@ -1274,7 +1274,7 @@ let genObj (cD, cPsi, tP) (tH, tA, k) =
        end;
      Some (cD', (cPsi', tR', (tP', S.LF.id)), ms')
 
-let genAllObj cg = Maybe.filter_map (genObj cg)
+let genAllObj cg = Option.filter_map (genObj cg)
 
 let genConst (cD, cPsi, (a, tS)) =
   Types.freeze a;
@@ -2055,7 +2055,7 @@ let genSchemaElemGoal names cD psi (LF.SchElem (cPhi, trec)) =
   (cD0, cPsi', t)
 
 let genNthSchemaElemGoal names cD n w =
-  let open Maybe in
+  let open Option in
   let (LF.Schema elems) = Store.Cid.Schema.get_schema w in
   List.nth_opt elems (n - 1)
   $> begin fun e ->
@@ -2520,7 +2520,7 @@ let genPatt names mk_pat_var (cD_p, tau_v) (c, tau_c) =
      raise e
 
 let genAllPatt names mk_pat_var ((cD_v, tau_v) : LF.mctx * Comp.typ) =
-  Maybe.filter_map
+  Option.filter_map
     begin fun (c, tau_c) ->
     genPatt names mk_pat_var (cD_v, tau_v) (c, tau_c)
     end

@@ -107,7 +107,7 @@ let replace_locs (replacees : (Loc.t * (Format.formatter -> unit -> unit)) list)
        end
 
 let update_existing_holes existing_holes =
-  let open Maybe in
+  let open Option in
   existing_holes
   |> filter_map
        begin fun (loc, ps) ->

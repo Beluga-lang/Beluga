@@ -39,7 +39,7 @@ let make prompt' ppf =
   (* instrument the InputPrompt.t so that every successful call
      increments the prompt number *)
   let prompt x y () =
-    let open Maybe in
+    let open Option in
     prompt' x y () $> fun x -> incr prompt_number; x
   in
   { prompt; ppf; prompt_number }

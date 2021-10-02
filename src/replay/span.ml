@@ -16,7 +16,7 @@ let of_pair (start : loc) (stop : loc) : t option =
 exception InvalidSpan
 let of_pair' (start : loc) (stop : loc) : t =
   of_pair start stop |>
-    Maybe.eliminate
+    Option.eliminate
       (fun () -> raise InvalidSpan)
       (fun x -> x)
 

@@ -230,7 +230,7 @@ let fmt_ppr_result ppf =
 
 let entry { CompS.Entry.prog; typ = tau; name; _ } =
   let prog =
-    Maybe.get'
+    Option.get'
       (Error.Violation
          ("The body of theorem "
           ^ Id.render_name name ^ " is unknown."))

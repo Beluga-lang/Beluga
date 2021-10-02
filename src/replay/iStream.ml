@@ -8,7 +8,7 @@ type 'a istream = 'a t
 let rec map (f : 'a -> 'b) (s : 'a t) =
   { next =
       fun () ->
-      Maybe.map (Pair.bimap f (map f)) (s.next ())
+      Option.map (Pair.bimap f (map f)) (s.next ())
   }
 
 let empty : 'a t =
@@ -93,7 +93,7 @@ module AsBasicStream = struct
   let rec unfold (f : 's -> ('a * 's) option) (s : 's) : 'a t =
     { next =
         fun () ->
-        f s |> Maybe.map (Pair.rmap (unfold f))
+        f s |> Option.map (Pair.rmap (unfold f))
     }
 
   let observe (s : 'a t) : ('a * 'a t) option = s.next ()

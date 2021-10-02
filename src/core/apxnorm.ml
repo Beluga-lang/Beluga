@@ -53,11 +53,11 @@ and shiftApxHead k =
   function
   | Apx.LF.BVar x -> Apx.LF.BVar (x+k)
   | Apx.LF.FMVar (u, s) ->
-     Apx.LF.FMVar (u, Maybe.(s $> fun s -> shiftApxSub k s))
+     Apx.LF.FMVar (u, Option.(s $> fun s -> shiftApxSub k s))
   | Apx.LF.FPVar (p, s) ->
-     Apx.LF.FMVar (p, Maybe.(s $> fun s -> shiftApxSub k s))
+     Apx.LF.FMVar (p, Option.(s $> fun s -> shiftApxSub k s))
   | Apx.LF.MVar (u, s) ->
-     Apx.LF.MVar (u, Maybe.(s $> fun s -> shiftApxSub k s))
+     Apx.LF.MVar (u, Option.(s $> fun s -> shiftApxSub k s))
   | h -> h
 
 and shiftApxSpine k =
@@ -193,7 +193,7 @@ and cnormApxHead cD delta h (cD'', t) =
   | _ -> h
 
 and cnormApxSubOpt cD delta s (cD'', t) =
-  Maybe.(s $> fun s -> cnormApxSub cD delta s (cD'', t))
+  Option.(s $> fun s -> cnormApxSub cD delta s (cD'', t))
 
 and cnormApxSub cD delta (s : Apx.LF.sub) (cD'', t) =
   match s with
@@ -720,7 +720,7 @@ and fmvApxHead fMVs cD ((_, _, k) as d_param) =
   | h -> h
 
 and fmvApxSubOpt fMVs cD d_param s =
-  Maybe.(s $> fmvApxSub fMVs cD d_param)
+  Option.(s $> fmvApxSub fMVs cD d_param)
 
 and fmvApxSub fMVs cD ((_, _, k) as d_param) =
   function

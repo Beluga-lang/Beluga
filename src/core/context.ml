@@ -146,7 +146,7 @@ let rec ctxVar =
   | CtxVar psi -> Some psi
   | DDec (cPsi, _) -> ctxVar cPsi
 
-let hasCtxVar cPsi = Maybe.is_some (ctxVar cPsi)
+let hasCtxVar cPsi = Option.is_some (ctxVar cPsi)
 
 (* append (d1,...,dn) (d'1,...,d'k) = (d1,...,dn,d'1,...,d'k) *)
 let append left =
@@ -250,7 +250,7 @@ let find_with_index (ctx : 'a LF.ctx) (f : 'a LF.ctx -> 'a * int -> bool) : ('a 
     match ctx with
     | Empty -> None
     | Dec (ctx', x) ->
-       let open Maybe in
+       let open Option in
        lazy (go ctx' (idx + 1))
        <|> lazy (of_bool (f ctx' (x, idx)) &> Some (x, idx))
        |> Lazy.force
@@ -265,7 +265,7 @@ let find_with_index_rev (ctx : 'a LF.ctx) (f : 'a LF.ctx -> 'a * int -> bool) : 
     match ctx with
     | Empty -> None
     | Dec (ctx', x) ->
-       (** The following does not use Maybe.(<|>) to be optimized by
+       (** The following does not use Option.(<|>) to be optimized by
            TCO (Tail Call Optimzations)
         *)
        if f ctx' (x, idx)
@@ -282,7 +282,7 @@ let find_with_index_rev' (ctx : 'a LF.ctx) (f : 'a * int -> bool) : ('a * int) o
  *)
 let find (ctx : 'a LF.ctx) (f : 'a LF.ctx -> 'a -> bool) : 'a option =
   find_with_index ctx (fun ctx' (x, _) -> f ctx' x)
-  |> Maybe.map fst
+  |> Option.map fst
 
 let find' (ctx : 'a LF.ctx) (f : 'a -> bool) : 'a option =
   find ctx (Fun.const f)
@@ -294,7 +294,7 @@ let rec find_rev (ctx : 'a LF.ctx) (f : 'a LF.ctx -> 'a -> bool) : 'a option =
   match ctx with
   | Empty -> None
   | Dec (ctx', x) ->
-     (** The following does not use Maybe.(<|>) to be optimized by
+     (** The following does not use Option.(<|>) to be optimized by
          TCO (Tail Call Optimzations)
       *)
      if f ctx' x
@@ -306,19 +306,19 @@ let find_rev' (ctx : 'a LF.ctx) (f : 'a -> bool) : 'a option =
 
 let find_index (ctx : 'a LF.ctx) (f : 'a LF.ctx -> 'a -> bool) : int option =
   find_with_index ctx (fun ctx' (x, _) -> f ctx' x)
-  |> Maybe.map snd
+  |> Option.map snd
 
 let find_index' (ctx : 'a LF.ctx) (f : 'a -> bool) : int option =
   find_with_index' ctx (fun (x, _) -> f x)
-  |> Maybe.map snd
+  |> Option.map snd
 
 let find_index_rev (ctx : 'a LF.ctx) (f : 'a LF.ctx -> 'a -> bool) : int option =
   find_with_index_rev ctx (fun ctx' (x, _) -> f ctx' x)
-  |> Maybe.map snd
+  |> Option.map snd
 
 let find_index_rev' (ctx : 'a LF.ctx) (f : 'a -> bool) : int option =
   find_with_index_rev' ctx (fun (x, _) -> f x)
-  |> Maybe.map snd
+  |> Option.map snd
 
 let rec length =
   function
@@ -403,14 +403,14 @@ let rec lookup' ctx k =
   | _ -> None
 
 let lookup_dep (cD : LF.mctx) k =
-  let open Maybe in
+  let open Option in
   lookup' cD k
   $ function
     | LF.Decl (_, tau, dep) -> Some (tau, dep)
     | _ -> None
 
 let lookup cG k =
-  let open Maybe in
+  let open Option in
   lookup' cG k
   $ function
     | Comp.CTypDecl (_, tau, _) -> Some tau
@@ -447,7 +447,7 @@ let rec rename src dst get_name rename_decl =
   | LF.Dec (ctx', d) when Id.equals (get_name d) src ->
      Some (LF.Dec (ctx', rename_decl (fun _ -> dst) d))
   | LF.Dec (ctx', d) ->
-     let open Maybe in
+     let open Option in
      rename src dst get_name rename_decl ctx'
      $> fun ctx' -> LF.Dec (ctx', d)
 

@@ -82,12 +82,12 @@ let intros' : Theorem.t ->
   in
   fun t ->
   let rec go updated active_names user_names cD cG tau =
-    let next_name = Maybe.(user_names $ List.uncons) in
+    let next_name = Option.(user_names $ List.uncons) in
     match tau with
     | Comp.TypArr (_, tau_1, tau_2) ->
        let (name, user_names) =
          next_name
-         |> Maybe.eliminate
+         |> Option.eliminate
               (fun _ -> gen_var_for_typ active_names tau_1 , None)
               begin fun (name, user_names) ->
               ( B.Id.(mk_name (SomeString name))
@@ -479,7 +479,7 @@ let split (k : Command.split_kind) (i : Comp.exp_syn) (tau : Comp.typ) mfs : t =
      match
        List.map decide_split_kind cgs
        |> Nonempty.of_list
-       |> Maybe.map Nonempty.all_equal
+       |> Option.map Nonempty.all_equal
      with
      | None ->
         let open Theorem in

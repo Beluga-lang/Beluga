@@ -1387,7 +1387,7 @@ module Make (T : TRAIL) : UNIFY = struct
        (id, cPsi1)
 
     | (MSVar (cshift, ((mmvar, _), sigma)), cPsi1) ->
-       assert (Maybe.is_none mmvar.instantiation.contents);
+       assert (Option.is_none mmvar.instantiation.contents);
        let ClTyp (STyp (_, cPhi2), cPhi1) = mmvar.typ in
        let cPhi1' = Whnf.cnormDCtx (cPhi1, Whnf.m_id) in
        ignore (invSub cD0 phat (sigma, cPhi1') ss rOccur);
@@ -2641,7 +2641,7 @@ module Make (T : TRAIL) : UNIFY = struct
        let CTyp schema1, CTyp schema2 = mmvar1.typ, mmvar2.typ in
        if mmvar1.instantiation == mmvar2.instantiation
        then
-         if Maybe.equals Id.cid_equals schema1 schema2
+         if Option.equal Id.cid_equals schema1 schema2
          then
            if isPatMSub theta1 && isPatMSub theta2
            then
@@ -2817,7 +2817,7 @@ module Make (T : TRAIL) : UNIFY = struct
        unifyDCtx1 Unification cD cPsi1 cPsi2;
        unifyClTyp Unification cD cPsi1 (tp1, tp2)
     | (CTyp schema1, CTyp schema2) ->
-       if not (Maybe.equals Id.cid_equals schema1 schema2)
+       if not (Option.equal Id.cid_equals schema1 schema2)
        then raise (Failure "CtxPi schema clash")
     | _ -> raise (Failure "Computation-level Type Clash")
 

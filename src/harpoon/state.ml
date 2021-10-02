@@ -183,7 +183,7 @@ let select_theorem s name =
   match
     Misc.DynArray.rfind_opt_idx
       s.sessions
-      F.(Maybe.is_some ++ flip Session.lookup_theorem name)
+      F.(Option.is_some ++ flip Session.lookup_theorem name)
   with
   | None -> false
   | Some (i, c) ->
@@ -300,7 +300,7 @@ let parsed_prompt s ?(source = IO.default_prompt_source) msg use_history p =
   IO.parsed_prompt s.io ~source: source msg use_history p
 
 let session_configuration_wizard s =
-  let open Maybe in
+  let open Option in
   Session.configuration_wizard s.io
     [run_automation s.automation_state]
   $> add_session s

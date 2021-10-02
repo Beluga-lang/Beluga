@@ -4,7 +4,7 @@ type t = string -> string option -> string Gen.gen
 
 let terminal : t =
   fun msg history_file () ->
-  let open Maybe in
+  let open Option in
   flush_all ();
   LNoise.linenoise msg
   $> fun str ->

@@ -94,7 +94,7 @@ let _ =
            (pp_print_list
               ~pp_sep: Fmt.comma
               (fun ppf ->
-                (Maybe.eliminate
+                (Option.eliminate
                    (fun _ -> fprintf ppf "_")
                    (Id.print ppf))))
            args
@@ -852,7 +852,7 @@ let recSgnDecls decls =
        let pos loc x args =
          match
            List.index_of
-             (fun a -> Maybe.equals Id.equals a (Some x))
+             (fun a -> Option.equal Id.equals a (Some x))
              args
          with
          | None -> throw loc (UnboundArg (x, args))
@@ -893,18 +893,18 @@ let recSgnDecls decls =
            List.map (fun t -> Ext.Sgn.(t.thm_name, t.thm_order)) recFuns
          in
          let go p =
-           Maybe.filter_map
+           Option.filter_map
              (fun (name, x) -> if p x then Some (name, x) else None)
              prelim_total_decs
          in
          match
-           go Maybe.is_some,
-           go Fun.(not ++ Maybe.is_some)
+           go Option.is_some,
+           go Fun.(not ++ Option.is_some)
          with
          | [], [] ->
             Error.violation "[recSgn] empty mutual block is impossible"
          | haves, [] ->
-            Some (List.map Fun.(Maybe.get ++ snd) haves)
+            Some (List.map Fun.(Option.get ++ snd) haves)
          (* safe because they're haves *)
          | [], have_nots -> None
          | haves, have_nots ->
@@ -1154,7 +1154,7 @@ let recSgnDecls decls =
        with
        | Some cid ->
           let m = Some (Gensym.MVarData.name_gensym m_name) in
-          let v = Maybe.(v_name $> Gensym.VarData.name_gensym) in
+          let v = Option.(v_name $> Gensym.VarData.name_gensym) in
           Typ.set_name_convention cid m v;
           Int.Sgn.Pragma (Int.LF.NamePrag cid)
        | None ->

@@ -427,7 +427,7 @@ module Comp = struct
        end
 
   let apply_unbox_modifier_opt cD modifier_opt =
-    Maybe.(get_default (fun x -> (x, S.LF.id)) (modifier_opt $> apply_unbox_modifier cD))
+    Option.(get_default (fun x -> (x, S.LF.id)) (modifier_opt $> apply_unbox_modifier cD))
 
   (** Marks the variable at index k in cD as Inductive. *)
   let mark_ind cD k =
@@ -592,7 +592,7 @@ module Comp = struct
 
   let lookup cG k =
     Context.lookup' cG k
-    |> Maybe.get
+    |> Option.get
     |> fun (CTypDecl (u, tau, wf_tag)) ->
        (u, tau, wf_tag)
 
@@ -1233,7 +1233,7 @@ module Comp = struct
           end;
           dprintf
             begin fun p ->
-            let open Maybe in
+            let open Option in
             ignore
               begin
                 cIH_opt
@@ -1405,7 +1405,7 @@ module Comp = struct
 
   (** See documentation in check.mli *)
   let decompose_function_type cD =
-    let open Maybe in
+    let open Option in
     (* Checks that there are no interleaved Pis later and splits
        nested arrow types into a list of input types and one output type.
        Returns None if the type contained interleaved Pis (invalid type).

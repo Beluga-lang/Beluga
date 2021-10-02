@@ -119,7 +119,7 @@ let sequence (gs : 'a Gen.gen list) : 'a Gen.gen =
 (** Construct a generator that will execute f on each element before yielding it. *)
 let iter_through (f : 'a -> unit) (g : 'a Gen.gen) : 'a Gen.gen =
   let go () =
-    let open Maybe in
+    let open Option in
     Gen.next g $> fun x -> f x; x
   in
   go

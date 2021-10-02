@@ -121,4 +121,4 @@ let ids = ref []
 let addId s =
   ids := s::!ids
 
-let idExists s = List.exists (Misc.String.equals s) !ids
+let idExists s = List.exists (String.equals s) !ids

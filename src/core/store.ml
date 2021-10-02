@@ -227,7 +227,7 @@ module Modules = struct
       match (m, l) with
       | _ when Misc.(List.equals String.equals) m l -> m
       | ([], _) -> l
-      | (h :: t, h' :: t') when Misc.String.equals h h' -> aux t t'
+      | (h :: t, h' :: t') when String.equals h h' -> aux t t'
       | _ -> m
     in
     aux (List.fold_left aux l (List.map name_of_id !opened)) !currentName

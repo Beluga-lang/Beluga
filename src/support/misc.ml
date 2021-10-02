@@ -16,27 +16,6 @@ exception NotImplemented of string
 
 let not_implemented (msg : string) : 'a = raise (NotImplemented msg)
 
-module String = struct
-  include String
-
-  (** Unpacks a string into a list of characters. *)
-  let unpack (s : string) : char list =
-    let n = length s in
-    let rec go i = match () with
-      | () when i < n -> String.get s i :: go (i + 1)
-      | () -> []
-    in
-    go 0
-
-  (** Converts a list of characters into an equivalent string. *)
-  let pack (cs : char list) : string =
-    concat "" (List.map (make 1) cs)
-
-  let drop n s : string = sub s n (length s - n)
-
-  let equals (s1 : string) (s2 : string) = Stdlib.(=) s1 s2
-end
-
 (** Enumerates a list using a state transformer to generate indices.
     The initial seed {!s!} contains the initial state and the function
     {!f!} transforms this state to compute a new state and an index.

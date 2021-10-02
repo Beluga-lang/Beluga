@@ -98,7 +98,7 @@ let gen_fresh_name (ns : name list) (n : name) : name =
     let open Maybe in
     filter_map
       begin fun n' ->
-      Misc.String.equals n'.hint_name n.hint_name
+      String.equals n'.hint_name n.hint_name
       |> of_bool
       $> Fun.const n'.hint_cnt
       end
@@ -108,7 +108,7 @@ let gen_fresh_name (ns : name list) (n : name) : name =
 
 let max_usage (ctx : name list) (s : string) : max_usage =
   let same_head s name =
-    Misc.String.equals name.hint_name s
+    String.equals name.hint_name s
   in
   let max' k name = max k name.hint_cnt in
   match Nonempty.of_list (List.filter (same_head s) ctx) with
@@ -198,7 +198,7 @@ let mk_name ?(loc = Location.ghost) ?(modules=[]) : name_guide -> name =
   | SomeString x -> mk_name_helper x
 
 let equals n1 n2 =
-  Misc.String.equals (string_of_name n1) (string_of_name n2)
+  String.equals (string_of_name n1) (string_of_name n2)
 
 let cid_equals (l1, n1) (l2, n2) =
   l1 = l2 && n1 = n2

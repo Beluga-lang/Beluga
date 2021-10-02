@@ -121,7 +121,7 @@ let find (p : some_hole -> bool) : (HoleId.t * some_hole) option =
 let lookup (name : string) : (HoleId.t * some_hole) option =
   let matches_name =
     function
-    | { name = HoleId.Named n; _ } -> Misc.String.equals n name
+    | { name = HoleId.Named n; _ } -> String.equals n name
     | _ -> false
   in
   find (fun (Exists (_, h)) -> matches_name h)

@@ -172,7 +172,7 @@ let rec tokenize loc lexbuf =
   | "toshow" -> const T.KW_TOSHOW
 
   (* SYMBOLS *)
-  | pragma -> T.PRAGMA (Misc.String.drop 2 (get_lexeme loc lexbuf))
+  | pragma -> T.PRAGMA (String.drop 2 (get_lexeme loc lexbuf))
   | arrow -> const T.ARROW
   | thick_arrow -> const T.THICK_ARROW
   | turnstile -> const T.TURNSTILE
@@ -196,11 +196,11 @@ let rec tokenize loc lexbuf =
   | "/" -> const T.SLASH
   | "+" -> const T.PLUS
 
-  | hole -> T.HOLE (Misc.String.drop 1 (get_lexeme loc lexbuf))
+  | hole -> T.HOLE (String.drop 1 (get_lexeme loc lexbuf))
   | "_" -> const T.UNDERSCORE
   | ident -> T.IDENT (get_lexeme loc lexbuf)
 
-  | dot_number -> T.DOT_NUMBER (int_of_string (Misc.String.drop 1 (get_lexeme loc lexbuf)))
+  | dot_number -> T.DOT_NUMBER (int_of_string (String.drop 1 (get_lexeme loc lexbuf)))
   | dots -> const T.DOTS
   | hash_blank -> T.HASH_BLANK
   | hash_ident -> T.HASH_IDENT (get_lexeme loc lexbuf)

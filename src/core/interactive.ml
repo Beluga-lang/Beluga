@@ -296,7 +296,7 @@ let split (e : string) (hi : HoleId.t * Holes.comp_hole_info Holes.hole) : Comp.
     function
     | LF.Empty -> None
     | LF.Dec (cG', Comp.CTypDecl (n, tau, _))
-         when Misc.String.equals (Id.string_of_name n) e ->
+         when String.equals (Id.string_of_name n) e ->
        let rec matchTyp =
          function
          | Comp.TypBox (l, _)
@@ -329,7 +329,7 @@ let split (e : string) (hi : HoleId.t * Holes.comp_hole_info Holes.hole) : Comp.
     match cD with
     | LF.Empty -> None
     | LF.Dec (cD', (LF.Decl (n, mtyp, dep) as cd)) ->
-       if Misc.String.equals (Id.string_of_name n) e
+       if String.equals (Id.string_of_name n) e
        then
          begin
            let cgs = genCGoals cD' cd cD_tail in

@@ -8,7 +8,7 @@
 open Beluga
 open Printf
 module P = Parser
-module F = Support.Misc.Function
+module F = Support.Fun
 
 let bailout msg =
   fprintf stderr "%s\n" msg;

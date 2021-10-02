@@ -2318,7 +2318,7 @@ and closedPattern =
   | Comp.PatAnn (_, pat, tau, _) ->
      closedPattern pat && closedCTyp tau
 
-let mcomp' = Misc.Function.flip mcomp
+let mcomp' = Fun.flip mcomp
 
 let collapse_sigma =
   function

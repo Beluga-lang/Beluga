@@ -5,7 +5,7 @@ module Command = Beluga.Syntax.Ext.Harpoon
 module Id = Beluga.Id
 module Total = Beluga.Total
 module Whnf = B.Whnf
-module F = Misc.Function
+module F = Fun
 
 module P = B.Pretty.Int.DefaultPrinter
 
@@ -648,7 +648,7 @@ let suffices
   (* generate the subgoals for the arguments.
      by unification it doesn't matter which list we use. *)
   let children, subproofs =
-    Misc.Function.flip List.mapi tau_args
+    Fun.flip List.mapi tau_args
       begin fun k tau ->
       (* it is necessary to normalize the type here, because the type
          returned by unify_suffices, although guaranteed to be closed,

@@ -899,12 +899,12 @@ let recSgnDecls decls =
          in
          match
            go Maybe.is_some,
-           go Misc.Function.(not ++ Maybe.is_some)
+           go Fun.(not ++ Maybe.is_some)
          with
          | [], [] ->
             Error.violation "[recSgn] empty mutual block is impossible"
          | haves, [] ->
-            Some (List.map Misc.Function.(Maybe.get ++ snd) haves)
+            Some (List.map Fun.(Maybe.get ++ snd) haves)
          (* safe because they're haves *)
          | [], have_nots -> None
          | haves, have_nots ->

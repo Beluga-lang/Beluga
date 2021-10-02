@@ -98,7 +98,7 @@ let group_by (p : 'a -> 'key) (l : 'a list) : ('key * 'a t) list =
      hence nonempty
    *)
   Hashtbl.to_seq h
-  |> Seq.map (Pair.rmap Misc.Function.(unsafe_of_list ++ DynArray.to_list))
+  |> Seq.map (Pair.rmap Fun.(unsafe_of_list ++ DynArray.to_list))
   |> Seq.to_list
 
 module Syntax = struct

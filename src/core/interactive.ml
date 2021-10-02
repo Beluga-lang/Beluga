@@ -3,7 +3,7 @@ open Support.Equality
 
 open Support
 
-module F = Misc.Function
+module F = Fun
 module P = Pretty.Int.DefaultPrinter
 module PExt = Pretty.Ext.DefaultPrinter
 module Loc = Syntax.Loc

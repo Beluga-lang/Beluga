@@ -5,7 +5,7 @@
 *)
 
 
-module F = Support.Misc.Function
+module F = Support.Fun
 module P = Pretty.Int.DefaultPrinter
 module R = Store.Cid.DefaultRenderer
 open Support

@@ -1,6 +1,6 @@
 open Support
 open Beluga
-module F = Misc.Function
+module F = Fun
 module LF = Syntax.Int.LF
 module Comp = Syntax.Int.Comp
 open Id

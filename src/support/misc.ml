@@ -58,14 +58,14 @@ module DynArray = struct
   let rec append_list d = function
     | [] -> ()
     | x :: xs -> add d x; append_list d xs
-  
+
   (** [head d] is [Some h] with [h] being the first element of [d] if [d] is
     non-empty, and [None] otherwise.
   *)
   let head = function
     | d when empty d -> None
     | d -> Some (get d 0)
-  
+
   (** [get_opt d i] is [Some (get d i)] if [d] has an element at index [i], and
       [None] otherwise.
   *)
@@ -74,7 +74,7 @@ module DynArray = struct
       Some (get d i)
     with
     | Invalid_arg _ -> None
-  
+
   (** [rfind_opt_idx d p] is [Some (i, l)] where [l] is the last element in [d]
       that satisfies [p] and [i] is the index of [l] in [d], and [None] otherwise.
   *)
@@ -89,39 +89,6 @@ module DynArray = struct
            go (k-1)
     in
     go (length d - 1)
-end
-
-module Function = struct
-  let (++) : ('b -> 'c) -> ('a -> 'b) -> 'a -> 'c =
-    fun f g x -> f (g x)
-
-  let flip (f : 'a -> 'b -> 'c) : 'b -> 'a -> 'c =
-    fun y x -> f x y
-
-  let sequence (l : ('a -> 'b) list) (x : 'a) =
-    List.map (fun f -> f x) l
-
-  let rec until (f : unit -> bool) : unit =
-    if f ()
-    then until f
-    else ()
-
-  (** A convenient way to execute an effect in the middle of a
-      composition pipeline.
-      ... |> through (fun x -> print_string x) |> ...
-   *)
-  let through (f : 'a -> unit) : 'a -> 'a =
-    fun x -> f x; x
-
-  (** A convenient way to execute an effect *after* running a
-      function, without needing a use a let-expression to store the result
-      of the function.
-   *)
-  let after (f : unit -> unit) : 'a -> 'a =
-    fun x -> f (); x
-
-  let curry f x y = f (x, y)
-  let uncurry f (x, y) = f x y
 end
 
 module Hashtbl = struct

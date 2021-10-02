@@ -3,7 +3,7 @@ open Beluga
 open Syntax.Int
 
 module CompS = Store.Cid.Comp
-module F = Misc.Function
+module F = Fun
 module P = Pretty.Int.DefaultPrinter
 
 let dprintf, _, _ = Beluga.Debug.(makeFunctions' (toFlags [15]))

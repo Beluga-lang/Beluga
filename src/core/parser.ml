@@ -127,7 +127,7 @@ module Comp = Syntax.Ext.Comp
 module LF = Syntax.Ext.LF
 module Sgn = Syntax.Ext.Sgn
 module T = Token
-module F = Misc.Function
+module F = Fun
 
 (***** Parser state definition *****)
 
@@ -560,7 +560,7 @@ let (<&) p1 p2 = p1 $ fun x -> p2 &> pure x
 let ($>) (p : 'a parser) (f : 'a -> 'b) : 'b parser =
   p $ fun x -> pure (f x)
 
-let map x y = Misc.Function.flip ($>) x y
+let map x y = Fun.flip ($>) x y
 
              (*
 (** Forgets the result of a parser. *)

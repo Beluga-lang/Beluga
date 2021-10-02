@@ -6,7 +6,7 @@ open Support.Equality
 
 open Support
 
-module F = Misc.Function
+module F = Fun
 
 module Comp = Syntax.Int.Comp
 module LF = Syntax.Int.LF

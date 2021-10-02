@@ -1,6 +1,6 @@
 open Support
 
-module F = Misc.Function
+module F = Fun
 module Loc = Location
 
 open Debug.Fmt

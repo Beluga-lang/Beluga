@@ -1,7 +1,7 @@
 (* Loading files *)
 
 open Support
-module F = Misc.Function
+module F = Fun
 
 let (dprintf, _, _) = Debug.(makeFunctions' (toFlags [11]))
 open Debug.Fmt

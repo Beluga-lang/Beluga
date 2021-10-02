@@ -914,7 +914,7 @@ module Cid = struct
     let name cid = (get cid).name
 
     let total_decs =
-      Misc.Function.(lookup_mutual_group ++ mutual_group)
+      Fun.(lookup_mutual_group ++ mutual_group)
 
     let set cid f =
       get cid

@@ -2,7 +2,7 @@ open Support
 open Beluga
 open Syntax.Int
 
-module F = Misc.Function
+module F = Fun
 module Loc = Syntax.Loc
 module P = Pretty.Int.DefaultPrinter
 
@@ -58,7 +58,7 @@ let replace_locs (replacees : (Loc.t * (Format.formatter -> unit -> unit)) list)
                 begin fun (loc, printer) ->
                 let start_offset = Loc.start_offset loc in
                 let stop_offset = Loc.stop_offset loc in
-                Misc.Function.until
+                Fun.until
                   begin fun _ ->
                   if !read_length < start_offset
                   then
@@ -77,7 +77,7 @@ let replace_locs (replacees : (Loc.t * (Format.formatter -> unit -> unit)) list)
                 printer ppf ();
                 Format.pp_close_box ppf ();
                 Format.pp_print_flush ppf ();
-                Misc.Function.until
+                Fun.until
                   begin fun _ ->
                   if !read_length < stop_offset
                   then
@@ -86,7 +86,7 @@ let replace_locs (replacees : (Loc.t * (Format.formatter -> unit -> unit)) list)
                     false
                   end
                 end;
-           Misc.Function.until
+           Fun.until
              begin fun _ ->
              with_uchar (Fun.const false)
                begin fun v ->

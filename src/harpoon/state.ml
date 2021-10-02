@@ -1,7 +1,7 @@
 open Support
 open Beluga.Syntax.Int
 
-module F = Misc.Function
+module F = Fun
 module DynArray = Misc.DynArray
 
 module CompS = Beluga.Store.Cid.Comp

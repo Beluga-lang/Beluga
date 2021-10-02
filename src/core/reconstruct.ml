@@ -12,7 +12,7 @@ open Substitution
 open Id
 open ConvSigma
 
-module F = Misc.Function
+module F = Fun
 
 (* module Unify = Unify.EmptyTrail  *)
 module Unify = Unify.StdTrail

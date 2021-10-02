@@ -9,8 +9,6 @@
    @author Clare Jang
  *)
 
-open Util
-
 (**
    A type built by a user using functions in this module.
    A value of this type will be merged and checked in the functions of {!OptSpec} module.
@@ -170,7 +168,7 @@ let check spec =
   | Ok name ->
      Ok
        { name
-       ; meta_vars = Option.fold ~none:["args"] ~some:id spec.meta_vars
+       ; meta_vars = Option.fold ~none:["args"] ~some:Fun.id spec.meta_vars
        ; help_msg = spec.help_msg
        ; default_argument = spec.default_argument
        ; optional = spec.optional

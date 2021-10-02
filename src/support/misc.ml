@@ -53,32 +53,42 @@ type void = { impossible: 'a. 'a }
 module DynArray = struct
   include DynArray
 
+  (** [append_list dst l] effectfully appends all the elements of [l] to [dst].
+  *)
   let rec append_list d = function
     | [] -> ()
-    | x :: xs -> DynArray.add d x; append_list d xs
-
+    | x :: xs -> add d x; append_list d xs
+  
+  (** [head d] is [Some h] with [h] being the first element of [d] if [d] is
+    non-empty, and [None] otherwise.
+  *)
   let head = function
-    | d when DynArray.empty d -> None
-    | d -> Some (DynArray.get d 0)
-
+    | d when empty d -> None
+    | d -> Some (get d 0)
+  
+  (** [get_opt d i] is [Some (get d i)] if [d] has an element at index [i], and
+      [None] otherwise.
+  *)
   let get_opt d i =
     try
-      Some (DynArray.get d i)
+      Some (get d i)
     with
-    | DynArray.Invalid_arg _ -> None
-
-  (** Finds the *last* element in the array satisfying p, and returns also its index. *)
-  let rfind_opt_idx (type a) (d : a DynArray.t) (p : a -> bool) : (int * a) option =
+    | Invalid_arg _ -> None
+  
+  (** [rfind_opt_idx d p] is [Some (i, l)] where [l] is the last element in [d]
+      that satisfies [p] and [i] is the index of [l] in [d], and [None] otherwise.
+  *)
+  let rfind_opt_idx d p =
     let rec go = function
       | -1 -> None
       | k ->
-         let x = DynArray.get d k in
+         let x = get d k in
          if p x then
            Some (k, x)
          else
            go (k-1)
     in
-    go (DynArray.length d - 1)
+    go (length d - 1)
 end
 
 module Function = struct

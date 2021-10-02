@@ -91,40 +91,6 @@ module DynArray = struct
     go (length d - 1)
 end
 
-module Hashtbl = struct
-  include Hashtbl
-
-  (** Constructs a new hashtable by mapping the given function over the values.
-      This is somewhat inefficient as the hastable is converted into a
-      sequence, mapped, and converted back, but it should run in
-      linear time in one pass due to the lazy nature of Seq.t.
-   *)
-  let map (f : 'a -> 'b) : ('k, 'a) Hashtbl.t -> ('k, 'b) Hashtbl.t =
-    fun h ->
-    to_seq h
-    |> Seq.map (fun (k, x) -> (k, f x))
-    |> of_seq
-
-  (** Constructs a hashtable from a list by using a function to send
-      each element to a key.
-   *)
-  let group_by (p : 'a -> 'k) (l : 'a list) : ('k, 'a list) Hashtbl.t =
-    let h = Hashtbl.create 32 in
-    let () =
-      let insert k x =
-        let d =
-          match Hashtbl.find_opt h k with
-          | None -> DynArray.make 32
-          | Some d -> d
-        in
-        DynArray.add d x;
-        Hashtbl.replace h k d
-      in
-      List.for_each_ l (fun x -> insert (p x) x)
-    in
-    map DynArray.to_list h
-end
-
 module Char = struct
   let equals (c1 : char) (c2 : char) = Stdlib.(=) c1 c2
 end

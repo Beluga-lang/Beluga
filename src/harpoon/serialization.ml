@@ -15,7 +15,7 @@ open Debug.Fmt
  *)
 let replace_locs (replacees : (Loc.t * (Format.formatter -> unit -> unit)) list) : unit =
   replacees
-  |> Misc.Hashtbl.group_by F.(Loc.filename ++ fst)
+  |> Hashtbl.group_by F.(Loc.filename ++ fst)
   (* iterate over replacee groups
    (* open file stream *)
    (* sort items in the group *)

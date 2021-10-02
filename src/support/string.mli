@@ -12,8 +12,3 @@ val pack : char list -> string
     characters.
 *)
 val drop : int -> string -> string
-
-(** [equals s1 s2] is true if and only if [s1] and [s2] are structurally
-    equal.
-*)
-val equals : string -> string -> bool

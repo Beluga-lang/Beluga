@@ -580,7 +580,7 @@ let register cmd f hp =
 let is_command str =
   let str' = strip str in
   let l = String.length str' in
-  if l > 1 && String.(equals (sub str' 0 2) "%:")
+  if l > 1 && String.(equal (sub str' 0 2) "%:")
   then
     begin
       let (_, cmd) = ExtString.String.split str' ":" in
@@ -599,7 +599,7 @@ let do_command ppf cmd =
       | cmd_name :: args ->
          begin match
            List.find_opt
-             (fun x -> String.equals cmd_name x.name)
+             (fun x -> String.equal cmd_name x.name)
              !reg
          with
          | None -> pure (fprintf ppf "- No such command %s;\n@?" cmd_name)

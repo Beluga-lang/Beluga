@@ -52,14 +52,14 @@ val concat_mapi : (int -> 'a -> 'b list) -> 'a list -> 'b list
 *)
 val index_of : ('a -> bool) -> 'a list -> int option
 
-(** [equals eq [a1; ...; an] [b1; ..; bm]] holds when the two input lists have
+(** [equal eq [a1; ...; an] [b1; ..; bm]] holds when the two input lists have
     the same length, and for each pair of elements [ai], [bi] at the same
     position we have [eq ai bi].
     Note: the [eq] function may be called even if the lists have different
     lengths. If you know your equality function is costly, you may want to
     check {!compare_lengths} first.
 *)
-val equals : ('a -> 'a -> bool) -> 'a list -> 'a list -> bool
+val equal : ('a -> 'a -> bool) -> 'a list -> 'a list -> bool
 
 (** [hd_opt l] is [Some (hd l)] if [l <> []] and [None] otherwise.
 *)

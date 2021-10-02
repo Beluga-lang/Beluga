@@ -50,9 +50,9 @@ let index_of p l =
   in
   go 0 l
 
-let rec equals eq l1 l2 = match l1, l2 with
+let rec equal eq l1 l2 = match l1, l2 with
   | [], [] -> true
-  | x :: xs, y :: ys -> if eq x y then equals eq xs ys else false
+  | x :: xs, y :: ys -> if eq x y then equal eq xs ys else false
   | _ -> false
 
 let hd_opt = function

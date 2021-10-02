@@ -12,5 +12,3 @@ let pack cs =
   concat "" (List.map (make 1) cs)
 
 let drop n s = sub s n (length s - n)
-
-let equals s1 s2 = Stdlib.(=) s1 s2

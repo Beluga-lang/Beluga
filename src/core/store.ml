@@ -118,7 +118,7 @@ module Modules = struct
     match
       List.fold_left
         begin fun acc (ab,o) ->
-          if List.equals String.equals o x
+          if List.equal String.equal o x
           then Some ab
           else acc
         end
@@ -225,9 +225,9 @@ module Modules = struct
   let correct (l : string list) : string list =
     let rec aux m l =
       match (m, l) with
-      | _ when List.equals String.equals m l -> m
+      | _ when List.equal String.equal m l -> m
       | ([], _) -> l
-      | (h :: t, h' :: t') when String.equals h h' -> aux t t'
+      | (h :: t, h' :: t') when String.equal h h' -> aux t t'
       | _ -> m
     in
     aux (List.fold_left aux l (List.map name_of_id !opened)) !currentName

@@ -99,7 +99,7 @@ let group_by (p : 'a -> 'key) (l : 'a list) : ('key * 'a t) list =
    *)
   Hashtbl.to_seq h
   |> Seq.map (Pair.rmap Misc.Function.(unsafe_of_list ++ DynArray.to_list))
-  |> Misc.Seq.to_list
+  |> Seq.to_list
 
 module Syntax = struct
   let ($>) (p : 'a t) (f : 'a -> 'b) : 'b t =

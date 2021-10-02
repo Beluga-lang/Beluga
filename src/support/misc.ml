@@ -124,15 +124,6 @@ module Function = struct
   let uncurry f (x, y) = f x y
 end
 
-module Seq = struct
-  include Seq
-
-  let rec to_list s =
-    match s () with
-    | Seq.Nil -> []
-    | Seq.Cons (x, s) -> x :: to_list s
-end
-
 module Hashtbl = struct
   include Hashtbl
 

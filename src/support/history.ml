@@ -24,11 +24,11 @@ let step d { past; future } =
   let open Maybe in
   match d with
   | `forward ->
-     Misc.Stack.pop_opt future
+     Stack.pop_opt future
      $> fun x -> Stack.push x past; x
   | `backward ->
-     Misc.Stack.pop_opt past
+     Stack.pop_opt past
      $> fun x -> Stack.push x future; x
 
 let to_lists { past; future } =
-  Pair.both Misc.Stack.to_list_rev (past, future)
+  Pair.both Stack.to_list_rev (past, future)

@@ -94,38 +94,3 @@ end
 module Char = struct
   let equals (c1 : char) (c2 : char) = Stdlib.(=) c1 c2
 end
-
-module Stack = struct
-  include Stack
-
-  let top_opt s =
-    try Some (Stack.top s)
-    with Stack.Empty -> None
-
-  let pop_opt s =
-    try Some (Stack.pop s)
-    with Stack.Empty -> None
-
-  (** Pops an item from a stack and runs the given function on it.
-      If the function raises an exception, the item is placed back onto
-      the stack.
-      The given function must not modify the stack.
-   *)
-  let popping s f =
-    let x = top_opt s in
-    let y = f x in
-    let _ = pop_opt s in
-    y
-
-  (** Converts the stack into a list.
-      The top element of the stack is the *last* element of the list.
-   *)
-  let to_list s =
-    fold (fun l x -> x :: l) [] s
-
-  (** Converts the stack into a list.
-      The top element of the stack is the *first* element of the
-      list. *)
-  let to_list_rev s =
-    fold (fun k x -> fun l -> k (x :: l)) (fun x -> x) s []
-end

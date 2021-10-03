@@ -5,10 +5,10 @@
 *)
 
 
-module F = Support.Fun
 module P = Pretty.Int.DefaultPrinter
 module R = Store.Cid.DefaultRenderer
 open Support
+module F = Fun
 
 let (dprintf, dprint, dprnt) = Debug.makeFunctions' (Debug.toFlags [5])
 open Debug.Fmt

@@ -47,10 +47,9 @@ let of_option (o : 'a option) : (unit, 'a) t =
 let of_option' (f : unit -> 'e) (o : 'a option) : ('e, 'a) t =
   Option.eliminate (fun () -> f () |> left) (fun x -> x |> pure) o
 
-let to_option (e : ('e, 'a) t) : 'a option =
-  match e with
+let to_option = function
   | Right x -> Some x
-  | _ -> None
+  | Left _ -> None
 
 let ( $ ) (e : ('e, 'a) t) (k : ('a -> ('e, 'b) t)) : ('e, 'b) t =
   bind k e

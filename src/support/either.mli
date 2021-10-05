@@ -55,7 +55,7 @@ val of_option : 'a option -> (unit, 'a) t
 
 (** Converts a {!Pervasives.option} into a union with a left-hand side
     constructed from a thunk in case the {!Pervasives.option}
-    contained {!Maybe.Nothing}.
+    contained {!Option.Nothing}.
  *)
 val of_option' : (unit -> 'e) -> 'a option -> ('e, 'a) t
 

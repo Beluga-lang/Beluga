@@ -94,7 +94,7 @@ let _ =
            (pp_print_list
               ~pp_sep: Fmt.comma
               (fun ppf ->
-                (Maybe.eliminate
+                (Option.eliminate
                    (fun _ -> fprintf ppf "_")
                    (Id.print ppf))))
            args
@@ -851,8 +851,8 @@ let recSgnDecls decls =
     | Ext.Sgn.Theorem (loc, recFuns) ->
        let pos loc x args =
          match
-           Misc.List.index_of
-             (fun a -> Maybe.equals Id.equals a (Some x))
+           List.index_of
+             (fun a -> Option.equal Id.equals a (Some x))
              args
          with
          | None -> throw loc (UnboundArg (x, args))
@@ -893,18 +893,18 @@ let recSgnDecls decls =
            List.map (fun t -> Ext.Sgn.(t.thm_name, t.thm_order)) recFuns
          in
          let go p =
-           Maybe.filter_map
+           Option.filter_map
              (fun (name, x) -> if p x then Some (name, x) else None)
              prelim_total_decs
          in
          match
-           go Maybe.is_some,
-           go Misc.Function.(not ++ Maybe.is_some)
+           go Option.is_some,
+           go Fun.(not ++ Option.is_some)
          with
          | [], [] ->
             Error.violation "[recSgn] empty mutual block is impossible"
          | haves, [] ->
-            Some (List.map Misc.Function.(Maybe.get ++ snd) haves)
+            Some (List.map Fun.(Option.get ++ snd) haves)
          (* safe because they're haves *)
          | [], have_nots -> None
          | haves, have_nots ->
@@ -980,8 +980,8 @@ let recSgnDecls decls =
           so we can register each theorem in the store.
         *)
        let thm_cid_list =
-         Comp.add_mutual_group total_decs
-         |> Misc.Function.sequence registers
+          registers
+          |> List.ap_one (Comp.add_mutual_group total_decs)
        in
 
        let reconThm loc (f, cid, thm, tau) =
@@ -1071,7 +1071,7 @@ let recSgnDecls decls =
          (thm_r' , tau)
        in
 
-       if Misc.List.null recFuns
+       if List.null recFuns
        then Error.violation "[recsgn] no recursive function defined";
 
        let ds =
@@ -1084,7 +1084,7 @@ let recSgnDecls decls =
                Loc.print_short thm_loc
              end;
            let v =Int.(Comp.ThmValue (thm_cid, e_r', LF.MShift 0, Comp.Empty)) in
-           Comp.set_prog thm_cid (Misc.const (Some v));
+           Comp.set_prog thm_cid (Fun.const (Some v));
            let open Int.Sgn in
            { thm_name = thm_cid
            ; thm_body = e_r'
@@ -1154,7 +1154,7 @@ let recSgnDecls decls =
        with
        | Some cid ->
           let m = Some (Gensym.MVarData.name_gensym m_name) in
-          let v = Maybe.(v_name $> Gensym.VarData.name_gensym) in
+          let v = Option.(v_name $> Gensym.VarData.name_gensym) in
           Typ.set_name_convention cid m v;
           Int.Sgn.Pragma (Int.LF.NamePrag cid)
        | None ->

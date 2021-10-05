@@ -127,7 +127,7 @@ let _ =
             @,    to context:            @[%a@]\
             @]"
            P.(fmt_ppr_lf_sub cD cPsi P.l0) s
-           (Maybe.print
+           (Option.print
               (fun ppf x ->
                 Format.fprintf ppf
                   "@,    applied to term: @[%a@]"

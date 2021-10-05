@@ -70,10 +70,7 @@ module OpPragmas = struct
       incr pragmaCount
 
   let getPragma name =
-    try
-      Some (List.find (fun p -> Id.equals name p.name) !pragmas)
-    with
-    | _ -> None
+    List.find_opt (fun p -> Id.equals name p.name) !pragmas
 
   let pragmaExists name =
     List.exists (fun x -> Id.equals x.name name) !pragmas
@@ -121,9 +118,9 @@ module Modules = struct
     match
       List.fold_left
         begin fun acc (ab,o) ->
-        if Misc.(List.equals String.equals) o x
-        then Some ab
-        else acc
+          if List.equal String.equal o x
+          then Some ab
+          else acc
         end
         None
         !abbrevs
@@ -228,9 +225,9 @@ module Modules = struct
   let correct (l : string list) : string list =
     let rec aux m l =
       match (m, l) with
-      | _ when Misc.(List.equals String.equals) m l -> m
+      | _ when List.equal String.equal m l -> m
       | ([], _) -> l
-      | (h :: t, h' :: t') when Misc.String.equals h h' -> aux t t'
+      | (h :: t, h' :: t') when String.equal h h' -> aux t t'
       | _ -> m
     in
     aux (List.fold_left aux l (List.map name_of_id !opened)) !currentName
@@ -279,10 +276,10 @@ module CidStore (M : ENTRY) : CIDSTORE
   (*
     let entries () =
       DynArray.to_list store
-      |> Misc.List.concat_mapi
+      |> List.concat_mapi
            begin fun l x ->
            DynArray.to_list x
-           |> Misc.List.mapi (fun n e -> ((l, n), e))
+           |> List.mapi (fun n e -> ((l, n), e))
            end
    *)
 
@@ -290,7 +287,7 @@ module CidStore (M : ENTRY) : CIDSTORE
     let l = !Modules.current in
     DynArray.get store l
     |> DynArray.to_list
-    |> Misc.List.mapi (fun n e -> ((l, n), e))
+    |> List.mapi (fun n e -> ((l, n), e))
 
   let clear () =
     DynArray.clear directory;
@@ -329,9 +326,9 @@ module CidStore (M : ENTRY) : CIDSTORE
 
     (*
   let lookup (n : Id.name) f : (cid * entry) option =
-    Maybe.flat_map
+    Option.flat_map
       begin fun cid ->
-      Maybe.map (fun e -> (cid, e)) (f (get cid))
+      Option.map (fun e -> (cid, e)) (f (get cid))
       end
       (index_of_name_opt n)
      *)
@@ -917,7 +914,7 @@ module Cid = struct
     let name cid = (get cid).name
 
     let total_decs =
-      Misc.Function.(lookup_mutual_group ++ mutual_group)
+      Fun.(lookup_mutual_group ++ mutual_group)
 
     let set cid f =
       get cid
@@ -1151,7 +1148,7 @@ module Var = struct
     in
     loop 1 store
 
-  let to_list (l : entry list) = Misc.id l
+  let to_list (l : entry list) = Fun.id l
   let create () = []
   let extend ctx e = e :: ctx
   let append vars vars' = vars @ vars'

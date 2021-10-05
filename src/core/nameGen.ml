@@ -1,5 +1,3 @@
-open Support
-
 module LF = Syntax.Int.LF
 module Comp = Syntax.Int.Comp
 
@@ -47,5 +45,5 @@ let var tau = Id.(mk_name (SomeString (var_string tau)))
 
 let renumber (ctx : Id.name list) name =
   match Id.max_usage ctx (Id.base_name name) with
-  | `unused -> Id.modify_number (Misc.const None) name
-  | `used k -> Id.modify_number (Misc.const (Id.inc_hint_cnt k)) name
+  | `unused -> Id.modify_number (Fun.const None) name
+  | `used k -> Id.modify_number (Fun.const (Id.inc_hint_cnt k)) name

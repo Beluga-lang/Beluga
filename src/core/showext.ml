@@ -105,7 +105,7 @@ module LF = struct
          show_tuple t
     | LFHole (_, s) ->
        fprintf ppf "LFHole(%a)"
-         (Maybe.print pp_print_string) s
+         (Option.print pp_print_string) s
     | Ann (_, m, t) ->
        fprintf ppf "Ann(@[<hv>%a,@ %a@])"
          show_normal m

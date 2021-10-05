@@ -209,7 +209,7 @@ module Make (_ : Store.Cid.RENDERER) : Printer.Ext.T = struct
        fprintf ppf "%s%s%a%s"
          (l_paren_if (paren s))
          (Id.render_name x)
-         (Maybe.print
+         (Option.print
             (fun ppf sub ->
               fprintf ppf "[%a]"
                 (fmt_ppr_lf_sub 0) sub))
@@ -219,7 +219,7 @@ module Make (_ : Store.Cid.RENDERER) : Printer.Ext.T = struct
     | LF.Name (_, x, s) ->
        fprintf ppf "%s%a"
          (to_html (Id.render_name x) LinkOption)
-         (Maybe.print
+         (Option.print
             (fun ppf sub ->
               fprintf ppf "[%a]"
                 (fmt_ppr_lf_sub 0) sub))
@@ -258,7 +258,7 @@ module Make (_ : Store.Cid.RENDERER) : Printer.Ext.T = struct
       Otherwise prints nothing.
    *)
   and fmt_ppr_lf_sub_opt lvl =
-    Maybe.print
+    Option.print
       begin fun ppf sub ->
       fprintf ppf "[%a]"
         (fmt_ppr_lf_sub lvl) sub
@@ -276,7 +276,7 @@ module Make (_ : Store.Cid.RENDERER) : Printer.Ext.T = struct
     let print_svar s s_opt =
       fprintf ppf "%s%a"
         (Id.render_name s)
-        (Maybe.print
+        (Option.print
            begin fun ppf sub ->
            fprintf ppf "[%a]"
              (fmt_ppr_lf_sub ~pp_empty: (fun ppf () -> fprintf ppf "^"; true) 0) sub
@@ -302,7 +302,7 @@ module Make (_ : Store.Cid.RENDERER) : Printer.Ext.T = struct
          if it is: print a comma, then each term comma-separated.
          else, just print each term comma-separated *)
 
-      if nonempty && Misc.List.nonempty tms
+      if nonempty && List.nonempty tms
       then Fmt.comma ppf ();
 
       pp_print_list ~pp_sep: Fmt.comma

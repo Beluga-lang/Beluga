@@ -173,7 +173,7 @@ and directive cD cG (d : Comp.directive) tau : Comp.exp_chk =
      let _, (i', ttau_i') =
        Check.Comp.genMApp
          Loc.ghost
-         (Misc.const true)
+         (Fun.const true)
          cD
          (i, ttau_i)
      in
@@ -230,7 +230,7 @@ let fmt_ppr_result ppf =
 
 let entry { CompS.Entry.prog; typ = tau; name; _ } =
   let prog =
-    Maybe.get'
+    Option.get'
       (Error.Violation
          ("The body of theorem "
           ^ Id.render_name name ^ " is unknown."))

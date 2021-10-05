@@ -1,6 +1,6 @@
 open Support
 
-module F = Misc.Function
+module F = Fun
 
 open Debug.Fmt
 
@@ -47,7 +47,7 @@ let register_printing_function
     : unit =
   let open F in
   register_printer'
-    (Maybe.map (fun e -> print (fun ppf -> fmt_ppr ppf e)) ++ extract)
+    (Option.map (fun e -> print (fun ppf -> fmt_ppr ppf e)) ++ extract)
 
 let register_located_printing_function
       (extract : exn -> (Location.t * 'a) option)
@@ -62,7 +62,7 @@ let register_located_printing_function
       end
   in
   let open F in
-  register_printer' (Maybe.map f ++ extract)
+  register_printer' (Option.map f ++ extract)
 
 let print_location loc =
   Format.fprintf error_format "%a:@," Location.print loc
@@ -133,7 +133,7 @@ let _ =
     begin fun (NotImplemented (loc, msg)) ->
     print
       begin fun ppf ->
-      Maybe.when_some loc print_location;
+      Option.when_some loc print_location;
       Format.fprintf ppf "@[<v>Not implemented.@,@[%a@]@]"
         Format.pp_print_string msg
       end

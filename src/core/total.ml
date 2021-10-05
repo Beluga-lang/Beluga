@@ -277,7 +277,7 @@ let get_order_for mfs f : int list option =
        if Id.equals Comp.(dec.name) f
        then
          begin
-           let open Maybe in
+           let open Option in
            Comp.(dec.order |> option_of_total_dec_kind $ Order.list_of_order)
          end
        else
@@ -677,7 +677,7 @@ let rec gen_rec_calls' cD cG cIH (cG0, j) mfs =
     computed.
  *)
 let wf_rec_calls cD cG mfs =
-  if Misc.List.null mfs
+  if List.null mfs
   then LF.Empty
   else
     begin
@@ -975,15 +975,15 @@ let filter cD cG cIH (loc, e) =
 let annotate'
       (tau : Syntax.Int.Comp.typ) (order : int list)
     : Syntax.Int.Comp.typ option =
-  let open Maybe in
+  let open Option in
   let rec ann tau pos =
     match (tau, pos) with
     | (Comp.TypPiBox (loc, LF.Decl (x, cU, _), tau), 1) ->
        Comp.TypPiBox (loc, LF.Decl (x, cU, LF.Inductive), tau)
-       |> pure
+       |> some
     | (Comp.TypArr (loc, tau1, tau2), 1) ->
        Comp.TypArr (loc, Comp.TypInd tau1, tau2)
-       |> pure
+       |> some
     | (Comp.TypArr (loc, tau1, tau2), n) ->
        ann tau2 (n - 1)
        $> fun tau2' ->
@@ -1343,14 +1343,14 @@ let is_comp_inductive (cG : Comp.gctx) (m : Comp.exp_syn) : bool =
   let open Comp in
   let is_inductive_comp_variable (k : offset) : bool =
     Context.lookup' cG k
-    |> Maybe.get' (Failure "Computational variable out of bounds")
+    |> Option.get' (Failure "Computational variable out of bounds")
     |> function
       (* Either it's a TypInd or the WF flag is true *)
       | CTypDecl (u, tau, true) -> true
       | CTypDecl (u, TypInd _, _) -> true
       | _ -> false
   in
-  let open Maybe in
+  let open Option in
   variable_of_exp m
   $> is_inductive_comp_variable
   $ of_bool
@@ -1365,12 +1365,12 @@ let is_meta_inductive (cD : LF.mctx) (mf : LF.mfront) : bool =
   let open LF in
   let is_inductive_meta_variable (k : offset) : bool =
     Context.lookup_dep cD k
-    |> Maybe.get' (Failure "Metavariable out of bounds or missing type")
+    |> Option.get' (Failure "Metavariable out of bounds or missing type")
     |> function
        | (_, LF.Inductive) -> true
        | _ -> false
   in
-  let open Maybe in
+  let open Option in
   variable_of_mfront mf
   $> fst
   (* this `fst` is possibly sketchy because of projected parameter
@@ -1386,7 +1386,7 @@ let is_meta_inductive (cD : LF.mctx) (mf : LF.mfront) : bool =
 let is_inductive_split (cD : LF.mctx) (cG : Comp.gctx) (i : Comp.exp_syn) : bool =
   is_comp_inductive cG i
   || begin
-      let open Maybe in
+      let open Option in
       Comp.is_meta_obj i
       $> snd
       $> is_meta_inductive cD
@@ -1410,10 +1410,10 @@ let annotate loc order tau =
   match Comp.option_of_total_dec_kind order with
   | Some order ->
      Order.list_of_order order
-     |> Maybe.get'
+     |> Option.get'
           (error (NotImplemented "lexicographic order not fully supported"))
      |> annotate' tau
-     |> Maybe.get'
+     |> Option.get'
           (error TooManyArg)
   | None -> tau
 
@@ -1432,7 +1432,7 @@ let rec select_ihs name = function
     ihctx. *)
 let drop_args n =
   Context.map begin fun (Comp.WfRec (name, args, tau)) ->
-    Comp.WfRec (name, Misc.List.drop n args, tau)
+    Comp.WfRec (name, List.drop n args, tau)
     end
 
 (** Drops one argument from all recursive calls in a given ihctx. *)

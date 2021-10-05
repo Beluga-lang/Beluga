@@ -181,7 +181,7 @@ let print_error ppf =
 
   | SynthesizableLFHole name ->
      fprintf ppf "This LF hole%a is appearing in a synthesizable position, but LF holes must appear in checkable positions."
-       (Maybe.print
+       (Option.print
           (fun ppf x -> fprintf ppf ", ?%s," x))
        name
 
@@ -625,7 +625,7 @@ let flattenProjPatHead loc cD h conv_list cPsi =
      Apx.LF.BVar k'
 
 let flattenProjPat loc cD s conv_list cPsi =
-  let open Maybe in
+  let open Option in
   s
   $> fun s ->
      let rec go =

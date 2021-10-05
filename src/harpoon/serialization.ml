@@ -2,7 +2,7 @@ open Support
 open Beluga
 open Syntax.Int
 
-module F = Misc.Function
+module F = Fun
 module Loc = Syntax.Loc
 module P = Pretty.Int.DefaultPrinter
 
@@ -15,7 +15,7 @@ open Debug.Fmt
  *)
 let replace_locs (replacees : (Loc.t * (Format.formatter -> unit -> unit)) list) : unit =
   replacees
-  |> Misc.Hashtbl.group_by F.(Loc.filename ++ fst)
+  |> Hashtbl.group_by F.(Loc.filename ++ fst)
   (* iterate over replacee groups
    (* open file stream *)
    (* sort items in the group *)
@@ -58,7 +58,7 @@ let replace_locs (replacees : (Loc.t * (Format.formatter -> unit -> unit)) list)
                 begin fun (loc, printer) ->
                 let start_offset = Loc.start_offset loc in
                 let stop_offset = Loc.stop_offset loc in
-                Misc.Function.until
+                Fun.until
                   begin fun _ ->
                   if !read_length < start_offset
                   then
@@ -77,18 +77,18 @@ let replace_locs (replacees : (Loc.t * (Format.formatter -> unit -> unit)) list)
                 printer ppf ();
                 Format.pp_close_box ppf ();
                 Format.pp_print_flush ppf ();
-                Misc.Function.until
+                Fun.until
                   begin fun _ ->
                   if !read_length < stop_offset
                   then
-                    with_uchar raise_edited_error (Misc.const true)
+                    with_uchar raise_edited_error (Fun.const true)
                   else
                     false
                   end
                 end;
-           Misc.Function.until
+           Fun.until
              begin fun _ ->
-             with_uchar (Misc.const false)
+             with_uchar (Fun.const false)
                begin fun v ->
                Buffer.clear outbuf;
                Buffer.add_utf_8_uchar outbuf v;
@@ -107,7 +107,7 @@ let replace_locs (replacees : (Loc.t * (Format.formatter -> unit -> unit)) list)
        end
 
 let update_existing_holes existing_holes =
-  let open Maybe in
+  let open Option in
   existing_holes
   |> filter_map
        begin fun (loc, ps) ->

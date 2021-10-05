@@ -1,15 +1,6 @@
-(** Thrown when attempting to get a maybe when there's None. *)
-exception NoValue
+include module type of Stdlib.Option
 
 val eliminate : (unit -> 'b) -> ('a -> 'b) -> 'a option -> 'b
-
-val is_some : 'a option -> bool
-
-val is_none : 'a option -> bool
-
-(** Compare options for equality. *)
-val equals : ('a -> 'a -> bool) ->
-             'a option -> 'a option -> bool
 
 (** Gets the value from an option if it exists. Otherwise gives a default value. *)
 val get_default : 'a -> 'a option -> 'a
@@ -17,17 +8,12 @@ val get_default : 'a -> 'a option -> 'a
 (** Gets the value from an option if it exists. Otherwise raises the given exception. *)
 val get' : exn -> 'a option -> 'a
 
-(** Gets the value from an option if it exists. Otherwise raises `NoValue`. *)
-val get : 'a option -> 'a
-
 (** Convert a boolean to an option.
     When used with other monadic operations, this is (a specialized)
     `guard` function from Haskell, which allows to abort a monadic
     computation on account of a boolean check.
  *)
 val of_bool : bool -> unit option
-
-val map : ('a -> 'b) -> 'a option -> 'b option
 
 val ( $ ) : 'a option -> ('a -> 'b option) -> 'b option
 
@@ -43,8 +29,6 @@ val choice : 'a option Lazy.t list -> 'a option Lazy.t
 
 (** Returns the first option that isn't None, if any. *)
 val alt : 'a option -> 'a option -> 'a option
-
-val pure : 'a -> 'a option
 
 (** Maps a function that may fail over a list, and eagerly fails as
     soon as any individual call fails.
@@ -64,8 +48,6 @@ val traverse_ : ('a -> unit option) -> 'a list -> unit option
     processed.
  *)
 val fold_left : ('b -> 'a -> 'b option) -> 'b -> 'a list -> 'b option
-
-val none : 'a option
 
 (** Transforms the contents of an option with a pure function. *)
 val ( $> ) : 'a option -> ('a -> 'b) -> 'b option

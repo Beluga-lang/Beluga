@@ -3,7 +3,7 @@ open Support.Equality
 
 open Support
 
-module F = Misc.Function
+module F = Fun
 module P = Pretty.Int.DefaultPrinter
 module PExt = Pretty.Ext.DefaultPrinter
 module Loc = Syntax.Loc
@@ -296,7 +296,7 @@ let split (e : string) (hi : HoleId.t * Holes.comp_hole_info Holes.hole) : Comp.
     function
     | LF.Empty -> None
     | LF.Dec (cG', Comp.CTypDecl (n, tau, _))
-         when Misc.String.equals (Id.string_of_name n) e ->
+         when String.equal (Id.string_of_name n) e ->
        let rec matchTyp =
          function
          | Comp.TypBox (l, _)
@@ -329,7 +329,7 @@ let split (e : string) (hi : HoleId.t * Holes.comp_hole_info Holes.hole) : Comp.
     match cD with
     | LF.Empty -> None
     | LF.Dec (cD', (LF.Decl (n, mtyp, dep) as cd)) ->
-       if Misc.String.equals (Id.string_of_name n) e
+       if String.equal (Id.string_of_name n) e
        then
          begin
            let cgs = genCGoals cD' cd cD_tail in
@@ -380,7 +380,7 @@ let split (e : string) (hi : HoleId.t * Holes.comp_hole_info Holes.hole) : Comp.
     | _ ->
        failwith "mCtx contains something we can't split on"
   in
-  Maybe.(lazy (searchGctx 1 cG0) <|> lazy (searchMctx 1 cD0 []))
+  Option.(lazy (searchGctx 1 cG0) <|> lazy (searchMctx 1 cD0 []))
   |> Lazy.force
 
 let whale_str =
@@ -497,7 +497,7 @@ let iterGctx (cD : LF.mctx) (cG : Comp.gctx) (ttau : Comp.tclo) : Id.name list =
   aux [] cG
 
 let thin_line =
-  let replicate n c = String.init n (Misc.const c) in
+  let replicate n c = String.init n (Fun.const c) in
   replicate 80 '_'
 
 let thin_line ppf () = Format.fprintf ppf "%s" thin_line
@@ -556,7 +556,7 @@ let fmt_ppr_hole ppf (i, (Holes.Exists (w, h)) : HoleId.t * Holes.some_hole) : u
           (* Need to check both the LF context and the meta-variable context. *)
           iterMctx cD cPsi lfGoal @ iterDctx cD cPsi lfGoal
         in
-        if Misc.List.nonempty suggestions
+        if List.nonempty suggestions
         then
           fprintf ppf
             "@,@[<hov 2>Variable%a of this type:@ @[<h>%a@]@]"
@@ -582,7 +582,7 @@ let fmt_ppr_hole ppf (i, (Holes.Exists (w, h)) : HoleId.t * Holes.some_hole) : u
      | None ->
         (* Collect a list of variables that already have the goal type. *)
         let suggestions = iterGctx cD cG (tau, theta) in
-        if Misc.List.nonempty suggestions
+        if List.nonempty suggestions
         then
           fprintf ppf
             "@,@,Variable%a of this type: @[<h>%a@]"

@@ -138,7 +138,7 @@ let auto_solve_trivial : t =
        let open Loc in
        Syn (ghost, Var (ghost, idx))
   in
-  let open Maybe in
+  let open Option in
   let opt_mwitness =
     lazy
       (Context.find_with_index' cD m_is_witness

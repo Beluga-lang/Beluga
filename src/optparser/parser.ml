@@ -4,8 +4,6 @@
    @author Clare Jang
  *)
 
-open Util
-
 let is_short_opt arg = String.get arg 0 = '-' && String.get arg 1 != '-'
 let is_long_opt arg = String.get arg 0 = '-'
 

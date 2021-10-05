@@ -447,7 +447,7 @@ module Make (P : ParserInfo) = struct
         let (s, e) = peek.run s in
         ( s,
           e $
-            (Maybe.eliminate
+            (Option.eliminate
               (fun _ -> Left (error_of_state "unexpected end of input" s))
               (fun x -> pure x))
         )
@@ -535,7 +535,7 @@ module Make (P : ParserInfo) = struct
   input. *)
   let eof : unit t =
     peek $
-      Maybe.eliminate
+      Option.eliminate
         pure
         (fun _ -> throw "expected to be at end of file")
 
@@ -564,7 +564,7 @@ module Make (P : ParserInfo) = struct
   let initialize (input : item Token.t Stream.t) : state =
     { input =
         lazy
-          (Maybe.eliminate
+          (Option.eliminate
              (fun _ -> Either.Left Loc.initial)
              (fun s -> Either.Right s)
              (let module M = HeadStrict.OfBasicStream (Stream) in M.f input)

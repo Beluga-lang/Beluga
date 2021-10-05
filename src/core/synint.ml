@@ -207,7 +207,7 @@ module LF = struct
    *)
   let mm_var_inst (u : mm_var) (t : msub) (s : sub): mm_var_inst = (u, t), s
 
-  let is_mmvar_instantiated mmvar = Maybe.is_some (mmvar.instantiation.contents)
+  let is_mmvar_instantiated mmvar = Option.is_some (mmvar.instantiation.contents)
 
   let rename_ctyp_decl f =
     function

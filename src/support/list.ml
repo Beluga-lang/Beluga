@@ -1,0 +1,81 @@
+include Stdlib.List
+
+let rec last l = match l with
+  | [] -> raise (Invalid_argument "last")
+  | [x] -> x
+  | _ :: xs -> last xs
+
+let rec pairs l =
+  match l with
+  | [] | [_] -> []
+  | x1 :: x2 :: xs -> (x1, x2) :: pairs (x2 :: xs)
+
+let null = function
+  | [] -> true
+  | _ -> false
+
+let nonempty l = not (null l)
+
+let filter_rev p l =
+  let rec go acc = function
+    | [] -> acc
+    | x :: xs -> go (if p x then x :: acc else acc) xs
+  in
+  go [] l
+
+let for_each l f = map f l
+
+let for_each_ l f = iter f l
+
+let uncons = function
+  | [] -> None
+  | x :: xs -> Some (x, xs)
+
+let rec concat_map f = function
+  | [] -> []
+  | x :: xs -> f x @ concat_map f xs
+
+let concat_mapi f =
+  let rec go i = function
+    | [] -> []
+    | x :: xs -> f i x @ go (i + 1) xs
+  in
+  go 0
+
+let index_of p l =
+  let rec go k = function
+    | [] -> None
+    | x :: _ when p x -> Some k
+    | _ :: xs -> go (k + 1) xs
+  in
+  go 0 l
+
+let rec equal eq l1 l2 = match l1, l2 with
+  | [], [] -> true
+  | x :: xs, y :: ys -> if eq x y then equal eq xs ys else false
+  | _ -> false
+
+let hd_opt = function
+  | [] -> None
+  | x :: _ -> Some x
+
+let index l = mapi (fun i x -> (i, x)) l
+
+let mapi2 f l1 l2 =
+  let rec mapi2 index l1 l2 return =
+    match l1, l2 with
+    | [], [] -> return []
+    | x :: xs, y :: ys ->
+      mapi2 (index + 1) xs ys (fun tl -> return (f index x y :: tl))
+    | _ -> raise (Invalid_argument "mapi2")
+  in
+  mapi2 0 l1 l2 Fun.id
+
+let rec drop n = function
+  | l when n <= 0 -> l
+  | [] -> []
+  | _ :: xs (* n > 0 *) -> drop (n - 1) xs
+
+let ap xs = map2 (fun x f -> f x) xs
+
+let ap_one x = map (fun f -> f x)

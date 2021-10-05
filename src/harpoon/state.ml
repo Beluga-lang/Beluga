@@ -1,7 +1,7 @@
 open Support
 open Beluga.Syntax.Int
 
-module F = Misc.Function
+module F = Fun
 module DynArray = Misc.DynArray
 
 module CompS = Beluga.Store.Cid.Comp
@@ -183,7 +183,7 @@ let select_theorem s name =
   match
     Misc.DynArray.rfind_opt_idx
       s.sessions
-      F.(Maybe.is_some ++ flip Session.lookup_theorem name)
+      F.(Option.is_some ++ flip Session.lookup_theorem name)
   with
   | None -> false
   | Some (i, c) ->
@@ -279,7 +279,7 @@ let save s =
          | `loaded -> false
          end
     |> List.map Session.full_theorem_list
-    |> List.filter Misc.List.nonempty
+    |> List.filter List.nonempty
   in
   Serialization.update_existing_holes existing_holes;
   Serialization.append_sessions
@@ -300,7 +300,7 @@ let parsed_prompt s ?(source = IO.default_prompt_source) msg use_history p =
   IO.parsed_prompt s.io ~source: source msg use_history p
 
 let session_configuration_wizard s =
-  let open Maybe in
+  let open Option in
   Session.configuration_wizard s.io
     [run_automation s.automation_state]
   $> add_session s
@@ -326,4 +326,4 @@ let fmt_ppr_session_list ppf s =
       Session.fmt_ppr_theorem_list c
   in
   printf s "@[<v>%a@]"
-    (print_list print_indexed_session) (Misc.List.index session_list)
+    (print_list print_indexed_session) (List.index session_list)

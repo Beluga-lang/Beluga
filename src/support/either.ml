@@ -39,18 +39,17 @@ let bind (k : 'a -> ('e, 'b) t) (e : ('e, 'a) t) : ('e, 'b) t =
   eliminate left k e
 
 let forget (e : ('e, 'a) t) : 'a option =
-  eliminate (fun _ -> None) Maybe.pure e
+  eliminate (fun _ -> None) Option.some e
 
 let of_option (o : 'a option) : (unit, 'a) t =
-  Maybe.eliminate (fun _ -> Left ()) pure o
+  Option.eliminate (fun _ -> Left ()) pure o
 
 let of_option' (f : unit -> 'e) (o : 'a option) : ('e, 'a) t =
-  Maybe.eliminate (fun () -> f () |> left) (fun x -> x |> pure) o
+  Option.eliminate (fun () -> f () |> left) (fun x -> x |> pure) o
 
-let to_option (e : ('e, 'a) t) : 'a option =
-  match e with
+let to_option = function
   | Right x -> Some x
-  | _ -> None
+  | Left _ -> None
 
 let ( $ ) (e : ('e, 'a) t) (k : ('a -> ('e, 'b) t)) : ('e, 'b) t =
   bind k e

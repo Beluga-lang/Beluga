@@ -270,7 +270,7 @@ let process_command
   | Command.Info (k, n) ->
      begin match k with
      | `prog ->
-        let open Maybe in
+        let open Option in
         begin match CompS.(index_of_name_opt n $> get) with
         | None ->
            State.printf s
@@ -283,7 +283,7 @@ let process_command
      end
 
   | Command.Translate n ->
-     let open Maybe in
+     let open Option in
      begin match CompS.(index_of_name_opt n $> get) with
      | Some e ->
         State.printf s "%a"
@@ -306,12 +306,12 @@ let process_command
      let (past, future) = Theorem.get_history_names t in
      let future = List.rev future in
      let line ppf = function
-       | _ when Misc.List.nonempty future ->
+       | _ when List.nonempty future ->
           fprintf ppf "@,-----@,"
        | _ -> ()
      in
      let future_remark ppf = function
-       | _ when Misc.List.nonempty future ->
+       | _ when List.nonempty future ->
           fprintf ppf "- @[%a@]"
             pp_print_string
             "Commands below the line would be undone. \

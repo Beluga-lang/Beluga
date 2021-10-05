@@ -23,7 +23,7 @@ let _ =
             | UnlexableCharacter c -> fprintf ppf "unrecognizable character(s) %s" c
             | MismatchedBlockComment -> fprintf ppf "unexpected end of block comment"
             | Violation msg -> fprintf ppf "(internal error) %s" msg)
-        |> Maybe.pure
+        |> Option.some
      | _ -> None)
 
 let (dprintf, _, _) = Debug.makeFunctions' (Debug.toFlags [11])
@@ -64,7 +64,7 @@ let get_lexeme loc lexbuf =
  *)
 let count_linebreaks loc s =
   let n = ref 0 in
-  String.iter (fun c -> if Misc.Char.equals c '\n' then incr n) s;
+  String.iter (fun c -> if Char.equal c '\n' then incr n) s;
   if !n <> 0 then loc := Loc.move_line !n !loc
 
 let arrow =       [%sedlex.regexp? ("->" | 0x2192)]
@@ -98,7 +98,7 @@ let string_literal = [%sedlex.regexp? string_delimiter, Star (Compl '"'), string
     Calls itself recursively upon encountering a nested block comment.
     Consumes the block_comment_end symbol. *)
 let rec skip_nested_block_comment loc lexbuf =
-  (* let const t = Misc.const t (get_lexeme loc lexbuf) in *)
+  (* let const t = Fun.const t (get_lexeme loc lexbuf) in *)
   let skip () = update_loc_by_lexeme loc lexbuf in
   match%sedlex lexbuf with
   | block_comment_begin ->
@@ -114,7 +114,7 @@ let rec skip_nested_block_comment loc lexbuf =
 
 
 let rec tokenize loc lexbuf =
-  let const t = Misc.const t (get_lexeme loc lexbuf) in
+  let const t = Fun.const t (get_lexeme loc lexbuf) in
   let skip () = update_loc_by_lexeme loc lexbuf in
   let module T = Token in
   match%sedlex lexbuf with
@@ -172,7 +172,7 @@ let rec tokenize loc lexbuf =
   | "toshow" -> const T.KW_TOSHOW
 
   (* SYMBOLS *)
-  | pragma -> T.PRAGMA (Misc.String.drop 2 (get_lexeme loc lexbuf))
+  | pragma -> T.PRAGMA (String.drop 2 (get_lexeme loc lexbuf))
   | arrow -> const T.ARROW
   | thick_arrow -> const T.THICK_ARROW
   | turnstile -> const T.TURNSTILE
@@ -196,11 +196,11 @@ let rec tokenize loc lexbuf =
   | "/" -> const T.SLASH
   | "+" -> const T.PLUS
 
-  | hole -> T.HOLE (Misc.String.drop 1 (get_lexeme loc lexbuf))
+  | hole -> T.HOLE (String.drop 1 (get_lexeme loc lexbuf))
   | "_" -> const T.UNDERSCORE
   | ident -> T.IDENT (get_lexeme loc lexbuf)
 
-  | dot_number -> T.DOT_NUMBER (int_of_string (Misc.String.drop 1 (get_lexeme loc lexbuf)))
+  | dot_number -> T.DOT_NUMBER (int_of_string (String.drop 1 (get_lexeme loc lexbuf)))
   | dots -> const T.DOTS
   | hash_blank -> T.HASH_BLANK
   | hash_ident -> T.HASH_IDENT (get_lexeme loc lexbuf)

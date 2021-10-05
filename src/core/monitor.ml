@@ -59,7 +59,7 @@ init_tab ();;
 let writeTime (name, time, array) =
   let found = ref false in
   for i = 1 to 16 do
-    if Misc.String.equals name etapes.(i)
+    if String.equal name etapes.(i)
     then
       begin
         array.(i) <- array.(i) +. time;

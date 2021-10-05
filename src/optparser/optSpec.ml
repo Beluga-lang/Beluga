@@ -7,7 +7,6 @@
    are included.
    @author Clare Jang
  *)
-open Util
 
 (**
    An error type that might be emitted from {!Parser.parse} function.

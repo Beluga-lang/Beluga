@@ -46,7 +46,7 @@ let init (filename : string option) : unit =
      init_formatter (Format.formatter_of_out_channel oc)
 
 let print' f =
-  let ppf = Maybe.get' NotInitialized !out in
+  let ppf = Option.get' NotInitialized !out in
   begin
     let fmt x = Format.fprintf ppf x in
     try

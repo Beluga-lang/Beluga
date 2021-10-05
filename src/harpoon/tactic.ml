@@ -5,7 +5,7 @@ module Command = Beluga.Syntax.Ext.Harpoon
 module Id = Beluga.Id
 module Total = Beluga.Total
 module Whnf = B.Whnf
-module F = Misc.Function
+module F = Fun
 
 module P = B.Pretty.Int.DefaultPrinter
 
@@ -82,12 +82,12 @@ let intros' : Theorem.t ->
   in
   fun t ->
   let rec go updated active_names user_names cD cG tau =
-    let next_name = Maybe.(user_names $ Misc.List.uncons) in
+    let next_name = Option.(user_names $ List.uncons) in
     match tau with
     | Comp.TypArr (_, tau_1, tau_2) ->
        let (name, user_names) =
          next_name
-         |> Maybe.eliminate
+         |> Option.eliminate
               (fun _ -> gen_var_for_typ active_names tau_1 , None)
               begin fun (name, user_names) ->
               ( B.Id.(mk_name (SomeString name))
@@ -479,7 +479,7 @@ let split (k : Command.split_kind) (i : Comp.exp_syn) (tau : Comp.typ) mfs : t =
      match
        List.map decide_split_kind cgs
        |> Nonempty.of_list
-       |> Maybe.map Nonempty.all_equal
+       |> Option.map Nonempty.all_equal
      with
      | None ->
         let open Theorem in
@@ -515,8 +515,8 @@ let split (k : Command.split_kind) (i : Comp.exp_syn) (tau : Comp.typ) mfs : t =
              Theorem.(apply t (Action.make action_name s children p))
         in
         match k with
-        | `meta -> finish (Misc.const make_meta_branch) Comp.meta_split
-        | `comp -> finish (Misc.const make_comp_branch) Comp.comp_split
+        | `meta -> finish (Fun.const make_meta_branch) Comp.meta_split
+        | `comp -> finish (Fun.const make_comp_branch) Comp.comp_split
         | `context -> finish make_context_branch Comp.context_split
 
 (** Constructs a new proof state from `g` in which the meta-context is
@@ -648,7 +648,7 @@ let suffices
   (* generate the subgoals for the arguments.
      by unification it doesn't matter which list we use. *)
   let children, subproofs =
-    Misc.Function.flip List.mapi tau_args
+    Fun.flip List.mapi tau_args
       begin fun k tau ->
       (* it is necessary to normalize the type here, because the type
          returned by unify_suffices, although guaranteed to be closed,

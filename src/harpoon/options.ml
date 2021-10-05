@@ -134,7 +134,7 @@ let options_spec : parsed_t Optparser.OptSpec.t =
        ; OptInfo.help_msg
            "specify the input signature"
        ]
-  <& opt1 (fun s -> Maybe.pure (Maybe.pure s))
+  <& opt1 (fun s -> Option.some (Option.some s))
        [ OptInfo.long_name "test"
        ; OptInfo.meta_vars ["path"]
        ; OptInfo.optional None
@@ -153,7 +153,7 @@ let options_spec : parsed_t Optparser.OptSpec.t =
         ]
       $> fun b -> if b then `incomplete else `complete
      )
-  <& opt1 (fun s -> Option.map Maybe.pure (int_of_string_opt s))
+  <& opt1 (fun s -> Option.map Option.some (int_of_string_opt s))
        [ OptInfo.long_name "test-start"
        ; OptInfo.meta_vars ["number"]
        ; OptInfo.optional None

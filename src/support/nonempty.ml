@@ -3,7 +3,7 @@ type 'a t = 'a * 'a list
 
 type 'a nonempty = 'a t
 
-let uncons : 'a t -> 'a * 'a list = Misc.id
+let uncons : 'a t -> 'a * 'a list = Fun.id
 let head = fst
 let tail = snd
 
@@ -47,7 +47,7 @@ exception Empty
     Raises the exception Empty if the list was empty.
  *)
 let unsafe_of_list (l : 'a list) : 'a t =
-  Maybe.get' Empty (of_list l)
+  Option.get' Empty (of_list l)
 
 let to_list ((x, l) : 'a t) : 'a list =
   x :: l
@@ -91,15 +91,15 @@ let group_by (p : 'a -> 'key) (l : 'a list) : ('key * 'a t) list =
       DynArray.add d x;
       Hashtbl.replace h k d
     in
-    Misc.List.for_each_ l (fun x -> insert (p x) x)
+    List.for_each_ l (fun x -> insert (p x) x)
   in
   (* The use of unsafe_of_list here is justified because every
      dynarray we create has one element added immediately to it, and is
      hence nonempty
    *)
   Hashtbl.to_seq h
-  |> Seq.map (Pair.rmap Misc.Function.(unsafe_of_list ++ DynArray.to_list))
-  |> Misc.Seq.to_list
+  |> Seq.map (Pair.rmap Fun.(unsafe_of_list ++ DynArray.to_list))
+  |> Seq.to_list
 
 module Syntax = struct
   let ($>) (p : 'a t) (f : 'a -> 'b) : 'b t =

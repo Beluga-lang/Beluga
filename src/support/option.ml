@@ -1,22 +1,9 @@
-exception NoValue
+include Stdlib.Option
 
 let eliminate (def : unit -> 'b) (f : 'a -> 'b) : 'a option -> 'b =
   function
   | None -> def ()
   | Some x -> f x
-
-(** Compare options for equality. *)
-let equals by o1 o2 =
-  match o1, o2 with
-  | Some x, Some y -> by x y
-  | None, None -> true
-  | _ -> false
-
-let is_some (o : 'a option) : bool =
-  eliminate (fun _ -> false) (fun _ -> true) o
-
-let is_none (o : 'a option) : bool =
-  not (is_some o)
 
 (** Extracts the value from an option, throwing an exception if
     there's None.
@@ -24,15 +11,13 @@ let is_none (o : 'a option) : bool =
 let get' (e : exn) (o : 'a option) : 'a =
   eliminate
     (Misc.throw e)
-    (Misc.id)
+    (Fun.id)
     o
-
-let get o = get' NoValue o
 
 let get_default def o =
   eliminate
-    (Misc.const def)
-    (Misc.id)
+    (Fun.const def)
+    (Fun.id)
     o
 
 let of_bool =
@@ -40,11 +25,7 @@ let of_bool =
   | true -> Some ()
   | false -> None
 
-let map (f : 'a -> 'b) (o : 'a option) : 'b option =
-  eliminate (fun _ -> None) (fun x -> Some (f x)) o
-
-let ( $ ) (o : 'a option) (k : 'a -> 'b option) : 'b option =
-  eliminate (fun _ -> None) k o
+let ( $ ) = bind
 
 let flat_map k o = o $ k
 
@@ -71,9 +52,6 @@ let alt (o1 : 'a option) (o2 : 'a option) : 'a option =
   | _, Some y -> Some y
   | _ -> None
 
-let pure (x : 'a) : 'a option =
-  Some x
-
 let rec traverse (f : 'a -> 'b option) (xs : 'a list) : 'b list option =
   match xs with
   | [] -> Some []
@@ -82,7 +60,7 @@ let rec traverse (f : 'a -> 'b option) (xs : 'a list) : 'b list option =
      $ fun y ->
        traverse f xs
        $ fun ys ->
-         pure (y :: ys)
+         Some (y :: ys)
 
 let rec traverse_ (f : 'a -> unit option) (xs : 'a list) : unit option =
   match xs with
@@ -97,11 +75,8 @@ let rec fold_left
   | x :: xs ->
      f acc x $ fun acc' -> fold_left f acc' xs
 
-let none : 'a option =
-  None
-
 let ( $> ) (o : 'a option) (f : 'a -> 'b) : 'b option =
-  o $ fun x -> pure (f x)
+  o $ fun x -> Some (f x)
 
 (** Ignores the result of the first option and gives the second. *)
 let ( &> ) (o : 'a option) (o' : 'b option) : 'b option =
@@ -120,7 +95,7 @@ let rec filter_map (f : 'a -> 'b option) (l : 'a list) : 'b list =
        (fun y -> y :: filter_map f xs)
 
 let cat_options (l : 'a option list) : 'a list =
-  filter_map Misc.id l
+  filter_map Fun.id l
 
 (** Specialized effectful eliminator for option types. *)
 let when_some (l : 'a option) (f : 'a -> unit) : unit =

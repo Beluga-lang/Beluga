@@ -337,7 +337,7 @@ let rec checkW cD cPsi sM sA =
      end
   | ((Root (loc, _, _, _), _ (* id *)), _ ) ->
      raise (Error (loc, CheckError (cD, cPsi, sM, sA)))
-    
+
 and check cD cPsi sM sA = checkW cD cPsi (Whnf.whnf sM) (Whnf.whnfTyp sA)
 
 and checkTuple loc cD cPsi (tuple, s1) (trec, s2) =

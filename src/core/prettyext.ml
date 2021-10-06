@@ -881,7 +881,13 @@ module Make (_ : Store.Cid.RENDERER) : Printer.Ext.T = struct
        fprintf ppf "@\n| %s : %a"
          (to_html (Id.render_name n) (ID Constructor))
          (fmt_ppr_cmp_typ 1)  tA
-    | Sgn.CompDest (_, n, cD, tA, tA') ->
+    | Sgn.CompDest
+      { identifier=n
+      ; mctx=cD
+      ; observation_typ=tA
+      ; return_typ=tA'
+      ; _
+      } ->
        fprintf ppf "@\n| (%s : %a) :: %a"
          (to_html (Id.render_name n) (ID Constructor))
          (fmt_ppr_cmp_typ 1)  tA

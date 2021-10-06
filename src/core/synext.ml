@@ -355,8 +355,18 @@ module Sgn = struct
     | Typ of Location.t * name * LF.kind
     | CompTyp of Location.t * name * Comp.kind * datatype_flavour
     | CompCotyp of Location.t * name * Comp.kind
-    | CompConst of Location.t * name * Comp.typ
-    | CompDest of Location.t * name * LF.mctx * Comp.typ * Comp.typ
+    | CompConst of
+      { location: Location.t
+      ; identifier: name
+      ; typ: Comp.typ
+      } (** Computation-level type constructor declaration *)
+    | CompDest of
+      { location: Location.t
+      ; identifier: name
+      ; mctx: LF.mctx
+      ; observation_typ: Comp.typ
+      ; return_typ: Comp.typ
+      } (** Computation-level type destructor declaration *)
     | CompTypAbbrev of Location.t * name * Comp.kind * Comp.typ
     | Schema of Location.t * name * LF.schema
     | Pragma of Location.t * pragma

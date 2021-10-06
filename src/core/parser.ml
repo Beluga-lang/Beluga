@@ -880,7 +880,7 @@ let check_codatatype_decl loc a cs : unit parser =
   in
   traverse_
     (function
-     | Sgn.CompDest (_, c, _, tau0, _) ->
+     | Sgn.CompDest { identifier=c; observation_typ=tau0; _} ->
         retname tau0
         $ fun a' ->
           if not (Id.equals a a')
@@ -2629,8 +2629,14 @@ let sgn_cmp_typ_decl =
              <& token T.DOUBLE_COLON)
             cmp_typ
           |> span
-          $> fun (loc, ((* cD, *) (a, tau0), tau1)) ->
-             Sgn.CompDest (loc, a, (* cD, *) LF.Empty, tau0, tau1)
+          $> fun (location, ((* cD, *) (identifier, tau0), tau1)) ->
+             Sgn.CompDest
+              { location
+              ; identifier
+              ; mctx=LF.Empty
+              ; observation_typ=tau0
+              ; return_typ=tau1
+              }
 
         in
         seq4

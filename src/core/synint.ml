@@ -893,15 +893,40 @@ module Sgn = struct
     }
 
   type decl =
-    | Typ           of Loc.t * cid_typ  * LF.kind
-    | Const         of Loc.t * cid_term * LF.typ
-    | CompTyp       of Loc.t * name * Comp.kind  *  positivity_flag
-    | CompCotyp     of Loc.t * name * Comp.kind
-    | CompConst     of Loc.t * name * Comp.typ
-    | CompDest      of Loc.t * name * LF.mctx * Comp.typ * Comp.typ
-    | CompTypAbbrev of Loc.t * name * Comp.kind * Comp.typ
-    | Schema        of cid_schema * LF.schema
-    | Theorem       of thm_decl list
+    | Typ of
+      { location: Location.t
+      ; identifier: cid_typ
+      ; kind: LF.kind
+      } (** LF type family declaration *)
+    | Const of
+      { location: Location.t
+      ; identifier: cid_term
+      ; typ: LF.typ
+      } (** LF type constant decalaration *)
+    | CompTyp       of Location.t * name * Comp.kind  *  positivity_flag
+    | CompCotyp     of Location.t * name * Comp.kind
+    | CompConst of
+      { location: Location.t
+      ; identifier: name
+      ; typ: Comp.typ
+      } (** Computation-level type constructor declaration *)
+    | CompDest of
+      { location: Location.t
+      ; identifier: name
+      ; mctx: LF.mctx
+      ; observation_typ: Comp.typ
+      ; return_typ: Comp.typ
+      } (** Computation-level type destructor declaration *)
+    | CompTypAbbrev of Location.t * name * Comp.kind * Comp.typ
+    | Schema of
+      { location: Location.t
+      ; identifier: cid_schema
+      ; schema: LF.schema
+      } (** Declaration of a specification for a set of contexts *)
+    | Theorem of
+      { location: Location.t
+      ; theorems: thm_decl list
+      } (** Mutually recursive theorem declaration(s) *)
     | Proof         of Comp.typ * Comp.proof
     | Pragma        of LF.prag
     | Val           of Loc.t * name * Comp.typ * Comp.exp_chk * Comp.value option

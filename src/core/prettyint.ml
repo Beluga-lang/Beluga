@@ -1693,12 +1693,18 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
          (Id.render_name a)
          (fmt_ppr_cmp_kind LF.Empty l0) cK
 
-    | Sgn.CompDest (_, c, cD, tau0, tau1) ->
+    | Sgn.CompDest
+      { identifier=c
+      ; mctx=cD
+      ; observation_typ=tau0
+      ; return_typ=tau1
+      ; _
+      } ->
        fprintf ppf "@ | (%s : @[%a@] :: @[%a@]@\n"
          (Id.render_name c)
          (fmt_ppr_cmp_typ cD l0) tau0
          (fmt_ppr_cmp_typ cD l0) tau1
-    | Sgn.CompConst (_, c, tau) ->
+    | Sgn.CompConst { identifier=c; typ=tau; _ } ->
        fprintf ppf "@ | %s : @[%a@]@\n"
          (Id.render_name c)
          (fmt_ppr_cmp_typ LF.Empty l0) tau

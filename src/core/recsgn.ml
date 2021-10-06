@@ -421,15 +421,15 @@ let recSgnDecls decls =
        sgn
 
 
-    | Ext.Sgn.CompConst (loc , c, tau) ->
+    | Ext.Sgn.CompConst { location; identifier; typ=tau } ->
        dprintf
          (fun p ->
            p.fmt "[RecSgn Checking] CompConst at: %a"
-             Syntax.Loc.print_short loc);
-       dprint (fun () -> "\nIndexing computation-level data-type constructor " ^ string_of_name c);
+             Syntax.Loc.print_short location);
+       dprint (fun () -> "\nIndexing computation-level data-type constructor " ^ string_of_name identifier);
        let apx_tau = Index.comptyp tau in
        let cD = Int.LF.Empty in
-       dprint (fun () -> "\nElaborating data-type constructor " ^ string_of_name c);
+       dprint (fun () -> "\nElaborating data-type constructor " ^ string_of_name identifier);
        let tau' =
          Monitor.timer
            ( "Data-type Constant: Type Elaboration"
@@ -448,7 +448,7 @@ let recSgnDecls decls =
        dprintf
          begin fun p ->
          p.fmt "[recsgn] @[<v>@[<hov>@[%a@] :@ @[%a@]@]@,with %d implicit parameters@]"
-           Id.print c
+           Id.print identifier
            (P.fmt_ppr_cmp_typ cD P.l0) tau'
            i
          end;
@@ -465,11 +465,11 @@ let recSgnDecls decls =
        | Int.Sgn.Positivity ->
           if Total.positive cid_ctypfamily tau'
           then ()
-          else raise (Error (loc, (NoPositive (string_of_name c))))
+          else raise (Error (location, (NoPositive (string_of_name identifier))))
        | Int.Sgn.Stratify (loc_s, n) ->
           if Total.stratify cid_ctypfamily tau' n
           then ()
-          else raise (Error (loc, (NoStratify (string_of_name c))))
+          else raise (Error (location, (NoStratify (string_of_name identifier))))
        | Int.Sgn.StratifyAll loc_s ->
           let t = Total.stratifyAll cid_ctypfamily tau' in
           let t' = (t land (!Total.stratNum)) in
@@ -491,17 +491,23 @@ let recSgnDecls decls =
         *     else raise (Error (loc, (NoPositive (string_of_name c))))
         *   else ()
         * end; *)
-       ignore (CompConst.add cid_ctypfamily (fun _ -> CompConst.mk_entry c tau' i));
-       let sgn = Int.Sgn.CompConst (loc, c, tau') in
+       ignore (CompConst.add cid_ctypfamily (fun _ -> CompConst.mk_entry identifier tau' i));
+       let sgn = Int.Sgn.CompConst { location; identifier; typ=tau' } in
        Store.Modules.addSgnToCurrent sgn;
        sgn
 
 
 
-    | Ext.Sgn.CompDest (loc , c, cD, tau0, tau1) ->
+    | Ext.Sgn.CompDest
+      { location
+      ; identifier=c
+      ; mctx=cD
+      ; observation_typ=tau0
+      ; return_typ=tau1
+      } ->
        dprintf
          (fun p ->
-           p.fmt "[RecSgn Checking] CompDest at: %a" Syntax.Loc.print_short loc);
+           p.fmt "[RecSgn Checking] CompDest at: %a" Syntax.Loc.print_short location);
        dprint (fun () -> "\nIndexing computation-level codata-type destructor " ^ string_of_name c);
        let cD = Index.mctx cD in
        let cD = Reconstruct.mctx cD in
@@ -552,7 +558,14 @@ let recSgnDecls decls =
          );
        let cid_ctypfamily = get_target_cid_compcotyp tau0' in
        ignore (CompDest.add cid_ctypfamily (fun _ -> CompDest.mk_entry c cD1 tau0' tau1' i));
-       let sgn = Int.Sgn.CompDest (loc, c, cD1, tau0', tau1') in
+       let sgn =
+        Int.Sgn.CompDest
+        { location
+        ; identifier=c
+        ; mctx=cD1
+        ; observation_typ=tau0'
+        ; return_typ=tau1'
+        } in
        Store.Modules.addSgnToCurrent sgn;
        sgn
 

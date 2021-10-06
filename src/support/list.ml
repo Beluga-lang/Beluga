@@ -23,10 +23,6 @@ let filter_rev p l =
   in
   go [] l
 
-let for_each l f = map f l
-
-let for_each_ l f = iter f l
-
 let uncons = function
   | [] -> None
   | x :: xs -> Some (x, xs)

@@ -25,14 +25,6 @@ val nonempty : 'a list -> bool
 *)
 val filter_rev : ('a -> bool) -> 'a list -> 'a list
 
-(** [for_each l f] is [map f l].
-*)
-val for_each : 'a list -> ('a -> 'b) -> 'b list
-
-(** [for_each_ l f] is [iter f l]
-*)
-val for_each_ : 'a list -> ('a -> unit) -> unit
-
 (** [uncons l] is [Some (hd l, tl l)] if [l <> []] and [None] otherwise.
 *)
 val uncons : 'a list -> ('a * 'a list) option

@@ -1709,7 +1709,10 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
          (Id.render_name c)
          (fmt_ppr_cmp_typ LF.Empty l0) tau
 
-    | Sgn.MRecTyp(_, l) -> List.iter (fmt_ppr_sgn_decl ppf) (List.flatten l)
+    | Sgn.MRecTyp { declarations; _ } ->
+      declarations
+      |> List.flatten
+      |> List.iter (fmt_ppr_sgn_decl ppf)
 
     | Sgn.Val (_, x, tau, i, None) ->
        fprintf ppf "@\nlet %s : %a = %a@\n"

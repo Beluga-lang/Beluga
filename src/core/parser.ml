@@ -1339,8 +1339,8 @@ let sgn_lf_typ_decl : Sgn.decl parser =
          $> Nonempty.to_list)
      <& token T.SEMICOLON
      |> span
-     $> fun (loc, f) ->
-        Sgn.MRecTyp (loc, f))
+     $> fun (location, declarations) ->
+        Sgn.MRecTyp { location; declarations })
 
   (*
 let ctyp_decl, implicit_ctyp_decl =
@@ -2655,7 +2655,7 @@ let sgn_cmp_typ_decl =
       $> Nonempty.to_list
       <& token T.SEMICOLON
       |> span
-      $> fun (loc, ds) -> Sgn.MRecTyp (loc, ds)
+      $> fun (location, declarations) -> Sgn.MRecTyp { location; declarations }
     end
 
 let sgn_query_pragma =

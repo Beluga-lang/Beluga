@@ -979,8 +979,8 @@ module Make (_ : Store.Cid.RENDERER) : Printer.Ext.T = struct
        let aux ppf t = List.iter (fmt_ppr_sgn_decl ppf) t in
        fprintf ppf "@[%s %s = %s@ @[<v2>%a@]@ %s;@]@\n"
          (to_html "module" Keyword) (name) (to_html "struct" Keyword) (aux) decls (to_html "end" Keyword)
-    | Sgn.MRecTyp (l, decls) ->
-       fmt_ppr_mrecs 0 ppf decls
+    | Sgn.MRecTyp { declarations; _ } ->
+       fmt_ppr_mrecs 0 ppf declarations
     | _ -> ()
 
   let fmt_ppr_sgn ppf sgn = List.iter (fmt_ppr_sgn_decl ppf) sgn

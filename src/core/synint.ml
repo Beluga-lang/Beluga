@@ -939,7 +939,10 @@ module Sgn = struct
     | Proof         of Comp.typ * Comp.proof
     | Pragma        of LF.prag
     | Val           of Location.t * name * Comp.typ * Comp.exp_chk * Comp.value option
-    | MRecTyp       of Location.t * decl list list
+    | MRecTyp of
+      { location: Location.t
+      ; declarations: decl list list
+      } (** Mutually-recursive LF type family declaration *)
     | Module        of Location.t * string * decl list
     | Query of
       { location: Location.t

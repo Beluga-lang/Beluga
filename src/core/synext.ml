@@ -388,8 +388,14 @@ module Sgn = struct
     | Schema of Location.t * name * LF.schema
     | Pragma of Location.t * pragma
     | GlobalPragma of Location.t * global_pragma
-    | MRecTyp of Location.t * (decl * decl list) list
-    | Theorem of Location.t * thm_decl list
+    | MRecTyp of
+      { location: Location.t
+      ; declarations: (decl * decl list) list
+      } (** Mutually-recursive LF type family declaration *)
+    | Theorem of
+      { location: Location.t
+      ; theorems: thm_decl list
+      } (** Mutually recursive theorem declaration(s) *)
     | Val of Location.t * name * Comp.typ option * Comp.exp_syn
     | Query of
       { location: Location.t

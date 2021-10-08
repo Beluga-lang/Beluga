@@ -850,16 +850,19 @@ let recSgnDecls decls =
        Store.Modules.addSgnToCurrent sgn;
        sgn
 
-    | Ext.Sgn.MRecTyp (loc, recDats) ->
+    | Ext.Sgn.MRecTyp { location; declarations=recDats } ->
        dprintf
          (fun p ->
-           p.fmt "[recsgn] MRecTyp at %a" Loc.print_short loc);
+           p.fmt "[recsgn] MRecTyp at %a" Loc.print_short location);
        let recTyps = List.map (fun (k, _) -> k) recDats in
        let recTyps' = List.map (recSgnDecl ~pauseHtml:true) recTyps in
        let recConts = List.map (fun (_, cs) -> cs) recDats in
        let recConts' = List.map (List.map (recSgnDecl ~pauseHtml:true)) recConts in
        List.iter freeze_from_name recTyps;
-       Int.Sgn.MRecTyp (loc, List.map2 (fun x y -> x :: y) recTyps' recConts')
+       Int.Sgn.MRecTyp
+        { location
+        ; declarations=List.map2 (fun x y -> x :: y) recTyps' recConts'
+        }
 
     | Ext.Sgn.Theorem (loc, recFuns) ->
        let pos loc x args =

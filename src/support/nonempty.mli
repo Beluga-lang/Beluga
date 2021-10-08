@@ -25,6 +25,11 @@ val fold_left : ('a -> 'b) (* for the Sing case *) ->
                 'a t ->
                 'b
 
+(** [destructure f l] is [f h t], where [h] and [t] are the head and tail of [l]
+    respectively.
+*)
+val destructure : ('a -> 'a list -> 'b) -> 'a t -> 'b
+
 (** Counts the number of elements in the nonempty list. *)
 val length : 'a t -> int
 

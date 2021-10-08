@@ -36,6 +36,8 @@ let rec fold_right f g (h, l) =
 let fold_left (type a) (type b) (f : a -> b) (g : b -> a -> b) (x, l) =
   List.fold_left g (f x) l
 
+let destructure f l = f (head l) (tail l)
+
 let of_list (l : 'a list) : 'a t option =
   match l with
   | [] -> None

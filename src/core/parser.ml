@@ -3070,7 +3070,6 @@ let rec sgn_decl : Sgn.decl parser =
           (* term declarations *)
           ; sgn_let_decl
           ; sgn_thm_decl
-          ; sgn_module_decl
           ]
         |> labelled "top-level declaration"
       in
@@ -3087,8 +3086,8 @@ and sgn_module_decl : Sgn.decl parser =
         <& T.(tokens [KW_END; SEMICOLON])
         |> span
         |> labelled "module declaration"
-        $> fun (loc, (x, decls)) ->
-           Sgn.Module (loc, x, decls)
+        $> fun (location, (identifier, declarations)) ->
+           Sgn.Module { location; identifier; declarations }
       in
       p.run s
   }

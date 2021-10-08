@@ -949,7 +949,11 @@ module Sgn = struct
       { location: Location.t
       ; declarations: decl list Nonempty.t
       } (** Mutually-recursive LF type family declaration *)
-    | Module        of Location.t * string * decl list
+    | Module of
+      { location: Location.t
+      ; identifier: string
+      ; declarations: decl list
+      } (** Namespace declaration for other declarations *)
     | Query of
       { location: Location.t
       ; name: name option

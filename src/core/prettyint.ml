@@ -1757,17 +1757,17 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
 
     | Sgn.Pragma _ -> ()
 
-    | Sgn.Module(_, name, decls) ->
+    | Sgn.Module { identifier; declarations; _ } ->
        let aux fmt t = List.iter (fun x -> (fmt_ppr_sgn_decl fmt x)) t in
 
        (* Necessary to enforce correct printing *)
        let (_, origName, _, _) as state = Store.Modules.getState () in
-       let newName = origName@[name] in
+       let newName = origName@[identifier] in
        Store.Modules.current := (Store.Modules.id_of_name newName);
        Store.Modules.currentName := newName;
        fprintf ppf "@\nmodule %s = struct@\n@[<v2>%a@]@\nend;@\n"
-         name
-         aux decls;
+         identifier
+         aux declarations;
        Store.Modules.setState state
 
     | _ -> ()

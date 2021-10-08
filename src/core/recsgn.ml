@@ -1188,13 +1188,13 @@ let recSgnDecls decls =
            throw loc (UnboundNamePragma typ_name)
        end
 
-    | Ext.Sgn.Module (loc, name, decls) ->
+    | Ext.Sgn.Module { location; identifier; declarations=decls } ->
        let state = Store.Modules.getState () in
-       ignore (Store.Modules.instantiateModule name);
+       ignore (Store.Modules.instantiateModule identifier);
        let decls' = List.map recSgnDecl decls in
 
        Store.Modules.setState state;
-       let sgn = Int.Sgn.Module (loc, name, decls') in
+       let sgn = Int.Sgn.Module { location; identifier; declarations=decls' } in
        Store.Modules.addSgnToCurrent sgn;
        sgn
 

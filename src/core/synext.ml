@@ -409,7 +409,14 @@ module Sgn = struct
       ; expected_solutions: int option
       ; maximum_tries: int option
       } (** Logic programming query on LF type *)
-    | Module of Location.t * string * decl list
-    | Comment of Location.t * string
+    | Module of
+      { location: Location.t
+      ; identifier: string
+      ; declarations: decl list
+      } (** Namespace declaration for other declarations *)
+    | Comment of
+      { location: Location.t
+      ; content: string
+      } (** Documentation comment *)
   type sgn = decl list
 end

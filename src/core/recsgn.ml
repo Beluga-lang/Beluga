@@ -710,12 +710,12 @@ let recSgnDecls decls =
 
 
 
-    | Ext.Sgn.Val (loc, x, None, i) ->
+    | Ext.Sgn.Val { location; identifier; typ=None; expression } ->
        dprintf
          (fun p ->
            p.fmt "[RecSgn Checking] Val at: %a"
-             Syntax.Loc.print_short loc);
-       let apx_i = Index.exp' (Var.create ()) i in
+             Syntax.Loc.print_short location);
+       let apx_i = Index.exp' (Var.create ()) expression in
        let (cD, cG) = (Int.LF.Empty, Int.LF.Empty) in
        let (i', (tau, theta)) =
          Monitor.timer
@@ -725,40 +725,40 @@ let recSgnDecls decls =
        in
        Unify.forceGlobalCnstr ();
        let tau' = Whnf.cnormCTyp (tau, theta) in
-       let i' = Whnf.cnormExp' (i', Whnf.m_id) in
+       let expression' = Whnf.cnormExp' (i', Whnf.m_id) in
 
        dprintf
          begin fun p ->
          p.fmt "[AFTER Reconstruction Val] @[<v 2>let %a : %a =@ %a@]"
-           Id.print x
+           Id.print identifier
            (P.fmt_ppr_cmp_typ cD P.l0) tau'
-           (P.fmt_ppr_cmp_exp_syn cD cG P.l0) i'
+           (P.fmt_ppr_cmp_exp_syn cD cG P.l0) expression'
          end;
-       let cQ, i'' =
+       let cQ, expression'' =
          Monitor.timer
            ( "Function Abstraction"
            , fun _ ->
-             Abstract.exp (Int.Comp.Syn (loc, i'))
+             Abstract.exp (Int.Comp.Syn (location, expression'))
            )
        in
-       storeLeftoverVars cQ loc;
+       storeLeftoverVars cQ location;
        Monitor.timer
          ( "Function Check"
-         , fun _ -> Check.Comp.check None cD cG [] i'' (tau', C.m_id)
+         , fun _ -> Check.Comp.check None cD cG [] expression'' (tau', C.m_id)
          );
 
        let v =
          if Holes.none () && is_empty cQ
          then
            begin
-             let v = Some (Opsem.eval i'') in
+             let v = Some (Opsem.eval expression'') in
              let open Comp in
              add begin fun _ ->
                let mgid =
                  Comp.add_mutual_group
-                   Int.Comp.[{ name = x; tau = tau'; order = `not_recursive }]
+                   Int.Comp.[{ name = identifier; tau = tau'; order = `not_recursive }]
                in
-               mk_entry (Some (Decl.next ())) x tau' 0 mgid v
+               mk_entry (Some (Decl.next ())) identifier tau' 0 mgid v
                end
              |> ignore;
              v
@@ -766,15 +766,15 @@ let recSgnDecls decls =
          else
            None
        in
-       let sgn = Int.Sgn.Val (loc, x, tau', i'', v) in
+       let sgn = Int.Sgn.Val { location; identifier; typ=tau'; expression=expression''; expression_value=v } in
        Store.Modules.addSgnToCurrent sgn;
        sgn
 
-    | Ext.Sgn.Val (loc, x, Some tau, i) ->
+    | Ext.Sgn.Val { location; identifier; typ=Some tau; expression } ->
        dprintf
          (fun p ->
            p.fmt "[RecSgn Checking] Val at %a"
-             Syntax.Loc.print_short loc
+             Syntax.Loc.print_short location
          );
        let apx_tau = Index.comptyp tau in
        let (cD, cG) = (Int.LF.Empty, Int.LF.Empty) in
@@ -795,50 +795,49 @@ let recSgnDecls decls =
          ( "Function Type Check"
          , fun () -> Check.Comp.checkTyp cD tau'
          );
-       let apx_i = Index.exp' (Var.create ()) i in
+       let apx_i = Index.exp' (Var.create ()) expression in
        let i' =
          Monitor.timer
            ( "Function Elaboration"
            , fun _ ->
-             Reconstruct.exp cG (Apx.Comp.Syn(loc, apx_i)) (tau', C.m_id)
+             Reconstruct.exp cG (Apx.Comp.Syn(location, apx_i)) (tau', C.m_id)
            )
        in
-       let i' = Whnf.cnormExp (i', Whnf.m_id) in
+       let expression' = Whnf.cnormExp (i', Whnf.m_id) in
        Unify.forceGlobalCnstr ();
        let tau' = Whnf.cnormCTyp (tau', C.m_id) in
        dprintf
          begin fun p ->
            p.fmt "[AFTER Reconstruction Val - 2] let %s : %a =@,%a"
-             (Id.render_name x)
+             (Id.render_name identifier)
              (P.fmt_ppr_cmp_typ cD P.l0) tau'
-             (P.fmt_ppr_cmp_exp_chk cD cG P.l0) i'
+             (P.fmt_ppr_cmp_exp_chk cD cG P.l0) expression'
          end;
 
-       let cQ, i'' =
+       let cQ, expression'' =
          Monitor.timer
            ( "Function Abstraction"
-           , fun () -> Abstract.exp i'
+           , fun () -> Abstract.exp expression'
            )
        in
-       storeLeftoverVars cQ loc;
+       storeLeftoverVars cQ location;
        Monitor.timer
          ( "Function Check"
          , fun _ ->
-           Check.Comp.check None cD cG [] i'' (tau', C.m_id)
+           Check.Comp.check None cD cG [] expression'' (tau', C.m_id)
          );
-
        let v =
          if Holes.none () && is_empty cQ
          then
            begin
-             let v = Some (Opsem.eval i'') in
+             let v = Some (Opsem.eval expression'') in
              let open Comp in
              let mgid =
                add_mutual_group
-                 Int.Comp.[ {name = x; tau = tau'; order = `not_recursive } ]
+                 Int.Comp.[ {name = identifier; tau = tau'; order = `not_recursive } ]
              in
              add begin fun _ ->
-               mk_entry (Some (Decl.next ())) x tau' 0 mgid v
+               mk_entry (Some (Decl.next ())) identifier tau' 0 mgid v
                end;
              |> ignore;
              v
@@ -846,7 +845,7 @@ let recSgnDecls decls =
          else
            None
        in
-       let sgn = Int.Sgn.Val (loc, x, tau', i'', v) in
+       let sgn = Int.Sgn.Val { location; identifier; typ=tau'; expression=expression''; expression_value=v } in
        Store.Modules.addSgnToCurrent sgn;
        sgn
 

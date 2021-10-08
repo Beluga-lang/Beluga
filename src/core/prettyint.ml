@@ -1715,18 +1715,18 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
       |> List.flatten
       |> List.iter (fmt_ppr_sgn_decl ppf)
 
-    | Sgn.Val (_, x, tau, i, None) ->
+    | Sgn.Val { identifier; typ; expression; expression_value=None; _ } ->
        fprintf ppf "@\nlet %s : %a = %a@\n"
-         (Id.render_name x)
-         (fmt_ppr_cmp_typ LF.Empty l0) tau
-         (fmt_ppr_cmp_exp_chk LF.Empty LF.Empty l0) i
+         (Id.render_name identifier)
+         (fmt_ppr_cmp_typ LF.Empty l0) typ
+         (fmt_ppr_cmp_exp_chk LF.Empty LF.Empty l0) expression
 
-    | Sgn.Val (_, x, tau, i, Some v) ->
+    | Sgn.Val { identifier; typ; expression; expression_value=Some value; _ } ->
        fprintf ppf "@\nlet %s : %a = %a@\n   ===> %a@\n"
-         (Id.render_name x)
-         (fmt_ppr_cmp_typ LF.Empty l0) tau
-         (fmt_ppr_cmp_exp_chk LF.Empty LF.Empty l0) i
-         (fmt_ppr_cmp_value l0) v
+         (Id.render_name identifier)
+         (fmt_ppr_cmp_typ LF.Empty l0) typ
+         (fmt_ppr_cmp_exp_chk LF.Empty LF.Empty l0) expression
+         (fmt_ppr_cmp_value l0) value
 
     | Sgn.Schema (w, schema) ->
        fprintf ppf "@\nschema %s = @[%a@];@\n"

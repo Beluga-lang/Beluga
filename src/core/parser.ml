@@ -2636,7 +2636,6 @@ let sgn_cmp_typ_decl =
               ; observation_typ=tau0
               ; return_typ=tau1
               }
-
         in
         seq4
           (token T.KW_COINDUCTIVE &> name <& token T.COLON)
@@ -2820,8 +2819,8 @@ let sgn_let_decl : Sgn.decl parser =
     (token T.EQUALS &> cmp_exp_syn <& token T.SEMICOLON)
   |> span
   |> labelled "value declaration"
-  $> fun (loc, ((x, tau), i)) ->
-     Sgn.Val (loc, x, tau, i)
+  $> fun (location, ((identifier, typ), expression)) ->
+     Sgn.Val { location; identifier; typ; expression }
 
 let boxity =
   choice

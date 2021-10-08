@@ -396,7 +396,12 @@ module Sgn = struct
       { location: Location.t
       ; theorems: thm_decl list
       } (** Mutually recursive theorem declaration(s) *)
-    | Val of Location.t * name * Comp.typ option * Comp.exp_syn
+    | Val of
+      { location: Location.t
+      ; identifier: name
+      ; typ: Comp.typ option
+      ; expression: Comp.exp_syn
+      } (** Computation-level value declaration *)
     | Query of
       { location: Location.t
       ; name: name option

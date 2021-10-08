@@ -938,7 +938,13 @@ module Sgn = struct
       } (** Mutually recursive theorem declaration(s) *)
     | Proof         of Comp.typ * Comp.proof
     | Pragma        of LF.prag
-    | Val           of Location.t * name * Comp.typ * Comp.exp_chk * Comp.value option
+    | Val of
+      { location: Location.t
+      ; identifier: name
+      ; typ: Comp.typ
+      ; expression: Comp.exp_chk
+      ; expression_value: Comp.value option
+      } (** Computation-level value declaration *)
     | MRecTyp of
       { location: Location.t
       ; declarations: decl list Nonempty.t

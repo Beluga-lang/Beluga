@@ -961,18 +961,18 @@ module Make (_ : Store.Cid.RENDERER) : Printer.Ext.T = struct
          | Some x -> x
          end
 
-    | Sgn.Val (_, x, None, i) ->
+    | Sgn.Val { identifier; typ=None; expression; _ } ->
        fprintf ppf "@[%s %s = %a;@]@\n"
          (to_html "let" Keyword)
-         (Id.render_name  x)
-         (fmt_ppr_cmp_exp_syn l0) i
+         (Id.render_name  identifier)
+         (fmt_ppr_cmp_exp_syn l0) expression
 
-    | Sgn.Val (_, x, Some tA, i) ->
+    | Sgn.Val { identifier; typ=Some typ; expression; _ } ->
        fprintf ppf "@[%s %s : %a =@ %a;@]@\n"
          (to_html "let" Keyword)
-         (Id.render_name  x)
-         (fmt_ppr_cmp_typ 0) tA
-         (fmt_ppr_cmp_exp_syn l0) i
+         (Id.render_name  identifier)
+         (fmt_ppr_cmp_typ 0) typ
+         (fmt_ppr_cmp_exp_syn l0) expression
 
     | Sgn.Query _ ->
        fprintf ppf "%s"

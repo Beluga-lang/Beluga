@@ -1711,6 +1711,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
 
     | Sgn.MRecTyp { declarations; _ } ->
       declarations
+      |> Nonempty.to_list
       |> List.flatten
       |> List.iter (fmt_ppr_sgn_decl ppf)
 

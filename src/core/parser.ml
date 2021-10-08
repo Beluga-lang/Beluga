@@ -1335,8 +1335,7 @@ let sgn_lf_typ_decl : Sgn.decl parser =
 
   labelled "LF type declaration block"
     (token T.KW_LF
-     &> (sep_by1 lf_typ_decl_body (token T.KW_AND)
-         $> Nonempty.to_list)
+     &> (sep_by1 lf_typ_decl_body (token T.KW_AND))
      <& token T.SEMICOLON
      |> span
      $> fun (location, declarations) ->
@@ -2652,7 +2651,6 @@ let sgn_cmp_typ_decl =
       in
 
       sep_by1 (alt cmp_typ_decl cmp_cotyp_decl) (token T.KW_AND)
-      $> Nonempty.to_list
       <& token T.SEMICOLON
       |> span
       $> fun (location, declarations) -> Sgn.MRecTyp { location; declarations }

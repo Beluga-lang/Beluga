@@ -390,7 +390,7 @@ module Sgn = struct
     | GlobalPragma of Location.t * global_pragma
     | MRecTyp of
       { location: Location.t
-      ; declarations: (decl * decl list) list
+      ; declarations: (decl * decl list) Nonempty.t
       } (** Mutually-recursive LF type family declaration *)
     | Theorem of
       { location: Location.t

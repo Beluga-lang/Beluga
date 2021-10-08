@@ -941,7 +941,7 @@ module Sgn = struct
     | Val           of Location.t * name * Comp.typ * Comp.exp_chk * Comp.value option
     | MRecTyp of
       { location: Location.t
-      ; declarations: decl list list
+      ; declarations: decl list Nonempty.t
       } (** Mutually-recursive LF type family declaration *)
     | Module        of Location.t * string * decl list
     | Query of

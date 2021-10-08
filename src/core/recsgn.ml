@@ -854,14 +854,14 @@ let recSgnDecls decls =
        dprintf
          (fun p ->
            p.fmt "[recsgn] MRecTyp at %a" Loc.print_short location);
-       let recTyps = List.map (fun (k, _) -> k) recDats in
-       let recTyps' = List.map (recSgnDecl ~pauseHtml:true) recTyps in
-       let recConts = List.map (fun (_, cs) -> cs) recDats in
-       let recConts' = List.map (List.map (recSgnDecl ~pauseHtml:true)) recConts in
-       List.iter freeze_from_name recTyps;
+       let recTyps = Nonempty.map (fun (k, _) -> k) recDats in
+       let recTyps' = Nonempty.map (recSgnDecl ~pauseHtml:true) recTyps in
+       let recConts = Nonempty.map (fun (_, cs) -> cs) recDats in
+       let recConts' = Nonempty.map (List.map (recSgnDecl ~pauseHtml:true)) recConts in
+       Nonempty.iter freeze_from_name recTyps;
        Int.Sgn.MRecTyp
         { location
-        ; declarations=List.map2 (fun x y -> x :: y) recTyps' recConts'
+        ; declarations=Nonempty.map2 (fun x y -> x :: y) recTyps' recConts'
         }
 
     | Ext.Sgn.Theorem (loc, recFuns) ->

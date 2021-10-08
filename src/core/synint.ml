@@ -903,8 +903,17 @@ module Sgn = struct
       ; identifier: cid_term
       ; typ: LF.typ
       } (** LF type constant decalaration *)
-    | CompTyp       of Location.t * name * Comp.kind  *  positivity_flag
-    | CompCotyp     of Location.t * name * Comp.kind
+    | CompTyp of
+      { location: Location.t
+      ; identifier: name
+      ; kind: Comp.kind
+      ; positivity_flag: positivity_flag
+      } (** Computation-level data type constant declaration *)
+    | CompCotyp of
+      { location: Location.t
+      ; identifier: name
+      ; kind: Comp.kind
+      } (** Computation-level codata type constant declaration *)
     | CompConst of
       { location: Location.t
       ; identifier: name

@@ -1683,15 +1683,15 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
          (R.render_cid_typ a)
          (fmt_ppr_lf_kind LF.Null l0) k
 
-    | Sgn.CompTyp (_, a, cK, _) ->
+    | Sgn.CompTyp { identifier; kind; _ } ->
        fprintf ppf "@\ndatatype %s : @[%a@] = @\n"
-         (Id.render_name a)
-         (fmt_ppr_cmp_kind LF.Empty l0) cK
+         (Id.render_name identifier)
+         (fmt_ppr_cmp_kind LF.Empty l0) kind
 
-    | Sgn.CompCotyp (_, a, cK) ->
+    | Sgn.CompCotyp { identifier; kind; _ } ->
        fprintf ppf "@\ncodatatype %s : @[%a@] = @\n"
-         (Id.render_name a)
-         (fmt_ppr_cmp_kind LF.Empty l0) cK
+         (Id.render_name identifier)
+         (fmt_ppr_cmp_kind LF.Empty l0) kind
 
     | Sgn.CompDest
       { identifier=c

@@ -351,10 +351,27 @@ module Sgn = struct
     }
 
   type decl =
-    | Const of Location.t * name * LF.typ
-    | Typ of Location.t * name * LF.kind
-    | CompTyp of Location.t * name * Comp.kind * datatype_flavour
-    | CompCotyp of Location.t * name * Comp.kind
+    | Typ of
+      { location: Location.t
+      ; identifier: name
+      ; kind: LF.kind
+      } (** LF type family declaration *)
+    | Const of
+      { location: Location.t
+      ; identifier: name
+      ; typ: LF.typ
+      } (** LF type constant decalaration *)
+    | CompTyp of
+      { location: Location.t
+      ; identifier: name
+      ; kind: Comp.kind
+      ; datatype_flavour: datatype_flavour
+      } (** Computation-level data type constant declaration *)
+    | CompCotyp of
+      { location: Location.t
+      ; identifier: name
+      ; kind: Comp.kind
+      } (** Computation-level codata type constant declaration *)
     | CompConst of
       { location: Location.t
       ; identifier: name

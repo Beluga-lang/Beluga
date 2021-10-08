@@ -2598,10 +2598,10 @@ let sgn_cmp_typ_decl =
           (sep_by0 sgn_cmp_typ_decl_body (token T.PIPE))
           get_state
         |> span
-        $ fun (loc, (flavour, name, kind, decls, s)) ->
-          check_datatype_decl loc name decls
+        $ fun (location, (datatype_flavour, identifier, kind, decls, s)) ->
+          check_datatype_decl location identifier decls
           $> fun () ->
-             Sgn.CompTyp (loc, name, kind, flavour), decls
+             Sgn.CompTyp { location; identifier; kind; datatype_flavour }, decls
       in
       let cmp_cotyp_decl =
         let cmp_cotyp_body =
@@ -2645,10 +2645,10 @@ let sgn_cmp_typ_decl =
           (sep_by0 cmp_cotyp_body (token T.PIPE))
           get_state
         |> span
-        $ fun (loc, (a, k, decls, s)) ->
-          check_codatatype_decl loc a decls
+        $ fun (location, (identifier, kind, decls, s)) ->
+          check_codatatype_decl location identifier decls
           $> fun () ->
-             Sgn.CompCotyp (loc, a, k), decls
+             Sgn.CompCotyp { location; identifier; kind }, decls
       in
 
       sep_by1 (alt cmp_typ_decl cmp_cotyp_decl) (token T.KW_AND)

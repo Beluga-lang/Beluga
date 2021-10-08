@@ -142,12 +142,12 @@ let freeze_from_name tau =
      let a = Typ.index_of_name n in
      Typ.freeze a;
      ()
-  | Ext.Sgn.CompTyp (_, n, _, _) ->
-     let a = CompTyp.index_of_name n in
+  | Ext.Sgn.CompTyp { identifier; _ } ->
+     let a = CompTyp.index_of_name identifier in
      CompTyp.freeze a;
      ()
-  | Ext.Sgn.CompCotyp (_, n, _) ->
-     let a = CompCotyp.index_of_name n in
+  | Ext.Sgn.CompCotyp { identifier; _ } ->
+     let a = CompCotyp.index_of_name identifier in
      CompCotyp.freeze a;
      ()
 
@@ -318,11 +318,11 @@ let recSgnDecls decls =
        Store.Modules.addSgnToCurrent sgn;
        sgn
 
-    | Ext.Sgn.CompTyp (loc , a, extK, pflag) ->
-       dprint (fun () -> "Indexing computation-level data-type constant " ^ string_of_name a);
+    | Ext.Sgn.CompTyp { location; identifier; kind=extK; datatype_flavour=pflag } ->
+       dprint (fun () -> "Indexing computation-level data-type constant " ^ string_of_name identifier);
        let apxK = Index.compkind extK in
        FVar.clear ();
-       dprint (fun () -> "Elaborating data-type declaration " ^ string_of_name a);
+       dprint (fun () -> "Elaborating data-type declaration " ^ string_of_name identifier);
        let cK =
          Monitor.timer
            ( "CType Elaboration"
@@ -344,7 +344,7 @@ let recSgnDecls decls =
        dprintf
          begin fun p ->
          p.fmt "%a : %a"
-           Id.print a
+           Id.print identifier
            (P.fmt_ppr_cmp_kind Int.LF.Empty P.l0) cK'
          end;
        Monitor.timer
@@ -353,7 +353,7 @@ let recSgnDecls decls =
          );
        dprint
          (fun () ->
-           "\nDOUBLE CHECK for data type constant " ^ string_of_name a ^ " successful!");
+           "\nDOUBLE CHECK for data type constant " ^ string_of_name identifier ^ " successful!");
        (* let p =
         *   match pflag with
         *   | None -> Int.Sgn. Noflag
@@ -364,24 +364,24 @@ let recSgnDecls decls =
 
        let p =
          match pflag with
-         | Ext.Sgn.StratifiedDatatype -> Int.Sgn.StratifyAll loc
+         | Ext.Sgn.StratifiedDatatype -> Int.Sgn.StratifyAll location
          | Ext.Sgn.InductiveDatatype -> Int.Sgn.Positivity
        in
        Total.stratNum := -1;
-       ignore (CompTyp.add (fun _ -> CompTyp.mk_entry a cK' i p));
-       let sgn = Int.Sgn.CompTyp (loc, a, cK', p) in
+       ignore (CompTyp.add (fun _ -> CompTyp.mk_entry identifier cK' i p));
+       let sgn = Int.Sgn.CompTyp { location; identifier; kind=cK'; positivity_flag=p } in
        Store.Modules.addSgnToCurrent sgn;
        sgn
 
-    | Ext.Sgn.CompCotyp (loc , a, extK) ->
+    | Ext.Sgn.CompCotyp { location; identifier; kind=extK } ->
        dprintf
          (fun p ->
            p.fmt "[RecSgn Checking] CompCotyp at: %a"
-             Syntax.Loc.print loc);
-       dprint (fun () -> "\nIndexing computation-level codata-type constant " ^ string_of_name a);
+             Syntax.Loc.print location);
+       dprint (fun () -> "\nIndexing computation-level codata-type constant " ^ string_of_name identifier);
        let apxK = Index.compkind extK in
        FVar.clear ();
-       dprint (fun () -> "\nElaborating codata-type declaration " ^ string_of_name a);
+       dprint (fun () -> "\nElaborating codata-type declaration " ^ string_of_name identifier);
        let cK =
          Monitor.timer
            ( "CType Elaboration"
@@ -404,7 +404,7 @@ let recSgnDecls decls =
        dprintf
          begin fun p ->
          p.fmt "%a : %a"
-           Id.print a
+           Id.print identifier
            (P.fmt_ppr_cmp_kind Int.LF.Empty P.l0) cK'
          end;
        Monitor.timer
@@ -413,10 +413,10 @@ let recSgnDecls decls =
          );
        dprint
          (fun () ->
-           "\nDOUBLE CHECK for codata type constant " ^ string_of_name a ^
+           "\nDOUBLE CHECK for codata type constant " ^ string_of_name identifier ^
              " successful!");
-       ignore (CompCotyp.add (fun _ -> CompCotyp.mk_entry a cK' i));
-       let sgn = Int.Sgn.CompCotyp (loc, a, cK') in
+       ignore (CompCotyp.add (fun _ -> CompCotyp.mk_entry identifier cK' i));
+       let sgn = Int.Sgn.CompCotyp { location; identifier; kind=cK' } in
        Store.Modules.addSgnToCurrent sgn;
        sgn
 

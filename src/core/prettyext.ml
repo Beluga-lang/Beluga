@@ -871,13 +871,13 @@ module Make (_ : Store.Cid.RENDERER) : Printer.Ext.T = struct
        fprintf ppf "@\n| %s : %a"
          (to_html (Id.render_name n) (ID Constructor))
          (fmt_ppr_lf_typ 0)  tA
-    | Sgn.CompTyp (_, n, kA, _)
-      | Sgn.CompCotyp (_, n, kA) ->
+    | Sgn.CompTyp { identifier; kind; _ }
+      | Sgn.CompCotyp { identifier; kind; _ } ->
        fprintf ppf "%s %s : %a = "
          (to_html prefix Keyword)
-         (to_html (Id.render_name n) (ID Typ))
-         (fmt_ppr_cmp_kind 1) kA
-    | Sgn.CompConst (_, n, tA) ->
+         (to_html (Id.render_name identifier) (ID Typ))
+         (fmt_ppr_cmp_kind 1) kind
+    | Sgn.CompConst { identifier=n; typ=tA; _ } ->
        fprintf ppf "@\n| %s : %a"
          (to_html (Id.render_name n) (ID Constructor))
          (fmt_ppr_cmp_typ 1)  tA
@@ -897,9 +897,9 @@ module Make (_ : Store.Cid.RENDERER) : Printer.Ext.T = struct
   (* TODO: Refactor this *)
   let fl_to_prefix =
     function
-    | Sgn.CompTyp (_, _, _, _) -> "inductive"
-    | Sgn.CompCotyp (_, _, _) -> "coinductive"
-    | Sgn.Typ (_, _, _) -> "LF"
+    | Sgn.CompTyp _ -> "inductive"
+    | Sgn.CompCotyp _ -> "coinductive"
+    | Sgn.Typ _ -> "LF"
 
   let fmt_ppr_mrec' lvl ppf (k, body) =
     fmt_ppr_mrec (fl_to_prefix k) lvl ppf k;
@@ -936,11 +936,11 @@ module Make (_ : Store.Cid.RENDERER) : Printer.Ext.T = struct
          (fmt_ppr_cmp_kind 0) k
          (fmt_ppr_cmp_typ 0)  a
 
-    | Sgn.CompTyp (_, x, k, _) ->
+    | Sgn.CompTyp { identifier; kind; _ } ->
        fprintf ppf "@[<v>%s %s : %a = @]@\n"
          (to_html "datatype" Keyword)
-         (to_html (Id.render_name x) (ID Typ))
-         (fmt_ppr_cmp_kind 0) k
+         (to_html (Id.render_name identifier) (ID Typ))
+         (fmt_ppr_cmp_kind 0) kind
 
     | Sgn.Schema (_, x, schema) ->
        fprintf ppf "@[<h>%s %s = %a;@]@\n"

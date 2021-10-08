@@ -57,6 +57,9 @@ let to_list ((x, l) : 'a t) : 'a list =
 let map (f : 'a -> 'b) (x, l : 'a t) : 'b t =
   (f x, List.map f l)
 
+let map2 f (h1, t1) (h2, t2) =
+  f h1 h2, List.map2 f t1 t2
+
 let iter (f : 'a -> unit) (x, l : 'a t) : unit =
   List.iter f (x :: l)
 

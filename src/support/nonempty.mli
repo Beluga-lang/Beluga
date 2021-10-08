@@ -42,6 +42,13 @@ val to_list : 'a t -> 'a list
 (** Maps a function over the nonempty list. *)
 val map : ('a -> 'b) -> 'a t -> 'b t
 
+(** [map2 f (a1, [a2; ...; an]) (b1, [b2; ...; bn])] is
+    [(f a1 b1, [f a2 b2; ...; f an bn])].
+    @raise Invalid_argument if the two lists are determined to have different
+    lengths.
+*)
+val map2 : ('a -> 'b -> 'c) -> 'a t -> 'b t -> 'c t
+
 (** Runs an effectful function over the nonempty list. *)
 val iter : ('a -> unit) -> 'a t -> unit
 

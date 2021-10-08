@@ -938,11 +938,20 @@ module Sgn = struct
       } (** Mutually recursive theorem declaration(s) *)
     | Proof         of Comp.typ * Comp.proof
     | Pragma        of LF.prag
-    | Val           of Loc.t * name * Comp.typ * Comp.exp_chk * Comp.value option
-    | MRecTyp       of Loc.t * decl list list
-    | Module        of Loc.t * string * decl list
-    | Query         of Loc.t * name option * (LF.typ  * Id.offset) * int option * int option
-    | Comment       of Loc.t * string
+    | Val           of Location.t * name * Comp.typ * Comp.exp_chk * Comp.value option
+    | MRecTyp       of Location.t * decl list list
+    | Module        of Location.t * string * decl list
+    | Query of
+      { location: Location.t
+      ; name: name option
+      ; typ: (LF.typ * Id.offset)
+      ; expected_solutions: int option
+      ; maximum_tries: int option
+      } (** Logic programming query on LF type *)
+    | Comment of
+      { location: Location.t
+      ; content: string
+      } (** Documentation comment *)
 
   type sgn = decl list
 

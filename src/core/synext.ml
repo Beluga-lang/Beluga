@@ -391,7 +391,13 @@ module Sgn = struct
     | MRecTyp of Location.t * (decl * decl list) list
     | Theorem of Location.t * thm_decl list
     | Val of Location.t * name * Comp.typ option * Comp.exp_syn
-    | Query of Location.t * name option * LF.typ * int option * int option
+    | Query of
+      { location: Location.t
+      ; name: name option
+      ; typ: LF.typ
+      ; expected_solutions: int option
+      ; maximum_tries: int option
+      } (** Logic programming query on LF type *)
     | Module of Location.t * string * decl list
     | Comment of Location.t * string
   type sgn = decl list

@@ -2673,8 +2673,8 @@ let sgn_query_pragma =
   <& token T.DOT
   |> span
   |> labelled "logic programming engine query pragma"
-  $> fun (loc, ((e, t), x, a)) ->
-     Sgn.Query (loc, x, a, e, t)
+  $> fun (location, ((expected_solutions, maximum_tries), name, typ)) ->
+     Sgn.Query { location; name; typ; expected_solutions; maximum_tries }
 
 let sgn_oldstyle_lf_decl =
   labelled

@@ -1111,11 +1111,17 @@ let recSgnDecls decls =
        Store.Modules.addSgnToCurrent decl;
        decl
 
-    | Ext.Sgn.Query (loc, name, extT, expected, tries) ->
+    | Ext.Sgn.Query
+      { location
+      ; name
+      ; typ=extT
+      ; expected_solutions=expected
+      ; maximum_tries=tries
+      } ->
        dprintf
          (fun p ->
            p.fmt "[RecSgn Checking] Query at %a"
-             Syntax.Loc.print_short loc);
+             Syntax.Loc.print_short location);
        let (_, apxT) = Index.typ Index.disambiguate_to_fvars extT in
        dprint (fun () -> "Reconstructing query.");
        FVar.clear ();
@@ -1154,7 +1160,13 @@ let recSgnDecls decls =
            Check.LF.checkTyp Int.LF.Empty Int.LF.Null (tA', S.LF.id)
          );
        Logic.storeQuery name (tA', i) expected tries;
-       Int.Sgn.Query (loc, name, (tA', i), expected, tries)
+       Int.Sgn.Query
+       { location
+       ; name
+       ; typ=(tA', i)
+       ; expected_solutions=expected
+       ; maximum_tries=tries
+       }
 
     | Ext.Sgn.Pragma (loc, Ext.Sgn.NamePrag (typ_name, m_name, v_name)) ->
        dprintf

@@ -475,7 +475,7 @@ let query =
       begin fun ppf arglist ->
       try
         begin
-          let [Synext.Sgn.Query (_, name, extT, expected, tries)] =
+          let [Synext.Sgn.Query { name; typ=extT; expected_solutions=expected; maximum_tries=tries; _ }] =
             let expected = List.hd arglist in
             let tries = List.hd (List.tl arglist) in
             let str = String.concat " " (List.tl (List.tl arglist)) in

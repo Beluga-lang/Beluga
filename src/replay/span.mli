@@ -16,7 +16,7 @@ exception InvalidSpan
 
 (** Constructs a span from a pair of locations.
     If the second location comes before the first, then the result is
-    {!Pervasives.None}.
+    {!Stdlib.None}.
  *)
 val of_pair : Loc.t -> Loc.t -> t option
 

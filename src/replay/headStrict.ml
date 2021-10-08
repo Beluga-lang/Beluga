@@ -17,7 +17,7 @@ let rec unfold (seed : 's) (next : 's -> ('a * 's) option) : 'a t option =
 
 (** Converts any basic stream into a head-strict stream.
     Since the basic stream might be empty, the return type is in an
-    {!Pervasives.option}.
+    {!Stdlib.option}.
  *)
 module OfBasicStream (S : Types.BasicStream) = struct
   let f (s : 'a S.t) : 'a t option =

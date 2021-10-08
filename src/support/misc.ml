@@ -17,8 +17,8 @@ exception NotImplemented of string
 let not_implemented (msg : string) : 'a = raise (NotImplemented msg)
 
 (** Enumerates a list using a state transformer to generate indices.
-    The initial seed {!s!} contains the initial state and the function
-    {!f!} transforms this state to compute a new state and an index.
+    The initial seed [s] contains the initial state and the function
+    [f] transforms this state to compute a new state and an index.
     These indices are sequentially zipped with the given list to
     produce an indexed list, and the final state is returned.
  *)

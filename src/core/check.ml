@@ -169,7 +169,7 @@ module Comp = struct
          Id.print name
 
     | NotRecursiveDst name ->
-       fprintf ppf "A recursive call to nonrecursive fucntion %a is forbidden."
+       fprintf ppf "A recursive call to nonrecursive function %a is forbidden."
          Id.print name
 
     | IllegalParamTyp (cD, cPsi, tA) ->

@@ -116,6 +116,17 @@ val combine : 'a t -> 'b t -> ('a * 'b) t
 *)
 val partition : ('a -> bool) -> 'a t -> 'a list * 'a list
 
+(** [ap (x1, [x2; ...; xn]) (f1, [f2; ...; fn])] is
+    [(f1 x1, [f2 x2; ...; fn xn])].
+    @raise Invalid_argument if the two lists are determined to have different
+    lengths.
+*)
+val ap : 'a t -> ('a -> 'b) t -> 'b t
+
+(** [ap_one x (f1, [f2; ...; fn])] is [(f1 x, [f2 x; ...; fn x])].
+*)
+val ap_one : 'a -> ('a -> 'b) t -> 'b t
+
 module Syntax : sig
   val ($>) : 'a t -> ('a -> 'b) -> 'b t
 end

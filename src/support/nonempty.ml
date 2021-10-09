@@ -125,6 +125,11 @@ let combine (a, l1) (b, l2) =
 let partition f (h, l) =
   let (l1, l2) = List.partition f l in
   if f h then (h :: l1, l2) else (l1, h :: l2)
+
+let ap xs = map2 (fun x f -> f x) xs
+
+let ap_one x = map (fun f -> f x)
+
 module Syntax = struct
   let ($>) (p : 'a t) (f : 'a -> 'b) : 'b t =
     map f p

@@ -2761,8 +2761,8 @@ let sgn_typedef_decl : Sgn.decl parser =
     (token T.EQUALS &> cmp_typ <& token T.SEMICOLON)
   |> span
   |> labelled "type synonym declaration"
-  $> fun (loc, (x, k, tau)) ->
-     Sgn.CompTypAbbrev (loc, x, k, tau)
+  $> fun (location, (identifier, kind, typ)) ->
+     Sgn.CompTypAbbrev { location; identifier; kind; typ }
 
 let lf_schema_some : LF.typ_decl LF.ctx parser =
   alt

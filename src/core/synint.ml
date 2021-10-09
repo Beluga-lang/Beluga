@@ -926,7 +926,12 @@ module Sgn = struct
       ; observation_typ: Comp.typ
       ; return_typ: Comp.typ
       } (** Computation-level type destructor declaration *)
-    | CompTypAbbrev of Location.t * name * Comp.kind * Comp.typ
+    | CompTypAbbrev of
+      { location: Location.t
+      ; identifier: name
+      ; kind: Comp.kind
+      ; typ: Comp.typ
+      } (** Synonym declaration for computation-level type *)
     | Schema of
       { location: Location.t
       ; identifier: cid_schema

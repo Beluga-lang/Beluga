@@ -384,8 +384,17 @@ module Sgn = struct
       ; observation_typ: Comp.typ
       ; return_typ: Comp.typ
       } (** Computation-level type destructor declaration *)
-    | CompTypAbbrev of Location.t * name * Comp.kind * Comp.typ
-    | Schema of Location.t * name * LF.schema
+    | CompTypAbbrev of
+      { location: Location.t
+      ; identifier: name
+      ; kind: Comp.kind
+      ; typ: Comp.typ
+      } (** Synonym declaration for computation-level type *)
+    | Schema of
+      { location: Location.t
+      ; identifier: name
+      ; schema: LF.schema
+      } (** Declaration of a specification for a set of contexts *)
     | Pragma of Location.t * pragma
     | GlobalPragma of Location.t * global_pragma
     | MRecTyp of

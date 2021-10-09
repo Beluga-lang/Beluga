@@ -1672,8 +1672,8 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
 
   let rec fmt_ppr_sgn_decl ppf =
     function
-    | Sgn.CompTypAbbrev (_, _, _, _) -> ()
-    | Sgn.Const (_, c, a) ->
+    | Sgn.CompTypAbbrev _ -> ()
+    | Sgn.Const { identifier=c; typ=a; _ } ->
        fprintf ppf "%s : %a.@\n"
          (R.render_cid_term c)
          (fmt_ppr_lf_typ LF.Empty LF.Null l0) a

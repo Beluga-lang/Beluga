@@ -298,14 +298,14 @@ let recSgnDecls decls =
        in
        Int.Sgn.Pragma (Int.LF.FixPrag (name, fix', precedence, assoc'))
 
-    | Ext.Sgn.CompTypAbbrev (loc, a, cK, cT) ->
+    | Ext.Sgn.CompTypAbbrev { location; identifier; kind=cK; typ=cT } ->
        (* index cT in a context which contains arguments to cK *)
        let (apx_tau, apxK) = Index.comptypdef (cT, cK) in
-       let ((cD, tau), i, cK) = Reconstruct.comptypdef loc a (apx_tau, apxK) in
+       let ((cD, tau), i, cK) = Reconstruct.comptypdef location identifier (apx_tau, apxK) in
        dprintf
          begin fun p ->
          p.fmt "typedef %a : %a = %a"
-           Id.print a
+           Id.print identifier
            (P.fmt_ppr_cmp_kind Int.LF.Empty P.l0) cK
            (P.fmt_ppr_cmp_typ cD P.l0) tau
          end;
@@ -313,8 +313,8 @@ let recSgnDecls decls =
          ("Type abbrev. : Kind Check", fun () -> Check.Comp.checkKind Int.LF.Empty cK);
        Monitor.timer
          ("Type abbrev. : Type Check", fun () -> Check.Comp.checkTyp cD tau);
-       ignore (CompTypDef.add (fun _ -> CompTypDef.mk_entry a i (cD, tau) cK));
-       let sgn = Int.Sgn.CompTypAbbrev (loc, a, cK, tau) in
+       ignore (CompTypDef.add (fun _ -> CompTypDef.mk_entry identifier i (cD, tau) cK));
+       let sgn = Int.Sgn.CompTypAbbrev { location; identifier; kind=cK; typ=tau } in
        Store.Modules.addSgnToCurrent sgn;
        sgn
 

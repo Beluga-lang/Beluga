@@ -932,12 +932,12 @@ module Make (_ : Store.Cid.RENDERER) : Printer.Ext.T = struct
          (to_html (Id.render_name x) (ID Constructor))
          (fmt_ppr_cmp_typ l0)  a
 
-    | Sgn.CompTypAbbrev (_, x, k, a) ->
+    | Sgn.CompTypAbbrev { identifier; kind; typ; _ } ->
        fprintf ppf "@[<v>%s %s : %a =@ %a;@]@\n"
          (to_html "datatype" Keyword)
-         (Id.render_name  x)
-         (fmt_ppr_cmp_kind 0) k
-         (fmt_ppr_cmp_typ 0)  a
+         (Id.render_name  identifier)
+         (fmt_ppr_cmp_kind 0) kind
+         (fmt_ppr_cmp_typ 0)  typ
 
     | Sgn.CompTyp { identifier; kind; _ } ->
        fprintf ppf "@[<v>%s %s : %a = @]@\n"

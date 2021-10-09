@@ -83,3 +83,13 @@ let split l =
     | (x, y) :: l -> split l (fun (xs, ys) -> return (x :: xs, y :: ys))
   in
   split l Fun.id
+
+let combine l1 l2 =
+  let rec combine l1 l2 return =
+    match l1, l2 with
+    | [], [] -> return []
+    | a1 :: l1, a2 :: l2 ->
+      combine l1 l2 (fun rest -> return ((a1, a2) :: rest))
+    | _ -> raise (Invalid_argument "List.combine")
+  in
+  combine l1 l2 Fun.id

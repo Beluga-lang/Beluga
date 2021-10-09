@@ -86,3 +86,8 @@ val ap_one : 'a -> ('a -> 'b) list -> 'b list
 *)
 val split : ('a * 'b) list -> 'a list * 'b list
 
+(** Transform a pair of lists into a list of pairs:
+   [combine [a1; ...; an] [b1; ...; bn]] is [[(a1, b1); ...; (an, bn)]].
+   @raise Invalid_argument if the two lists have different lengths.
+*)
+val combine : 'a list -> 'b list -> ('a * 'b) list

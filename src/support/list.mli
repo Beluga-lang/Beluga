@@ -74,6 +74,8 @@ val mapi2 : (int -> 'a -> 'b -> 'c) -> 'a list -> 'b list -> 'c list
 val drop : int -> 'a list -> 'a list
 
 (** [ap [x1; x2; ...; xn] [f1; f2; ...; fn]] is [[f1 x1; f2 x2; ...; fn xn]].
+    @raise Invalid_argument if the two lists are determined to have different
+    lengths.
 *)
 val ap : 'a list -> ('a -> 'b) list -> 'b list
 

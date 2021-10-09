@@ -63,7 +63,7 @@ let mapi2 f l1 l2 =
     | [], [] -> return []
     | x :: xs, y :: ys ->
       mapi2 (index + 1) xs ys (fun tl -> return (f index x y :: tl))
-    | _ -> raise (Invalid_argument "mapi2")
+    | _ -> raise (Invalid_argument "List.mapi2")
   in
   mapi2 0 l1 l2 Fun.id
 

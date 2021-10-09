@@ -80,3 +80,9 @@ val ap : 'a list -> ('a -> 'b) list -> 'b list
 (** [ap_one x [f1; f2; ...; fn]] is [[f1 x; f2 x; ...; fn x]].
 *)
 val ap_one : 'a -> ('a -> 'b) list -> 'b list
+
+(** Transform a list of pairs into a pair of lists:
+    [split [(a1, b1); ...; (an, bn)]] is [([a1; ...; an], [b1; ...; bn])].
+*)
+val split : ('a * 'b) list -> 'a list * 'b list
+

@@ -75,3 +75,11 @@ let rec drop n = function
 let ap xs = map2 (fun x f -> f x) xs
 
 let ap_one x = map (fun f -> f x)
+
+let split l =
+  let rec split l return =
+    match l with
+    | [] -> return ([], [])
+    | (x, y) :: l -> split l (fun (xs, ys) -> return (x :: xs, y :: ys))
+  in
+  split l Fun.id

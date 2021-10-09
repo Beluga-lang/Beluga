@@ -107,6 +107,15 @@ val split : ('a * 'b) t -> 'a t * 'b t
     @raise Invalid_argument if the two lists have different lengths.
 *)
 val combine : 'a t -> 'b t -> ('a * 'b) t
+
+(** [partition f l] returns a pair of lists [(l1, l2)], where [l1] is the list
+    of all the elements of [l] that satisfy the predicate [f], and [l2] is the
+    list of all the elements of [l] that do not satisfy [f]. The order of
+    elements in the input list is preserved. At least one of [l1] and [l2] is
+    non-empty.
+*)
+val partition : ('a -> bool) -> 'a t -> 'a list * 'a list
+
 module Syntax : sig
   val ($>) : 'a t -> ('a -> 'b) -> 'b t
 end

@@ -122,6 +122,9 @@ let split ((x, y), t) =
 let combine (a, l1) (b, l2) =
   ((a, b), List.combine l1 l2)
 
+let partition f (h, l) =
+  let (l1, l2) = List.partition f l in
+  if f h then (h :: l1, l2) else (l1, h :: l2)
 module Syntax = struct
   let ($>) (p : 'a t) (f : 'a -> 'b) : 'b t =
     map f p

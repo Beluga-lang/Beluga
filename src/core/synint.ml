@@ -941,7 +941,6 @@ module Sgn = struct
       { location: Location.t
       ; theorems: thm_decl list
       } (** Mutually recursive theorem declaration(s) *)
-    | Proof         of Comp.typ * Comp.proof
     | Pragma of
       { pragma: LF.prag
       } (** Compiler directive *)

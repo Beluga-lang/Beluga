@@ -95,6 +95,11 @@ val print : ?pp_sep:(Format.formatter -> unit -> unit) ->
             'a t ->
             unit
 
+(** Transform a non-empty list of pairs into a pair of non-empty lists:
+    [split ((a1, b1), [(a2, b2); ...; (an, bn)])] is
+    [(a1, [a2; ...; an]), (b1, [b2; ...; bn])].
+*)
+val split : ('a * 'b) t -> 'a t * 'b t
 module Syntax : sig
   val ($>) : 'a t -> ('a -> 'b) -> 'b t
 end

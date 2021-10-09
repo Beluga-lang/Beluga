@@ -115,6 +115,9 @@ let group_by (p : 'a -> 'key) (l : 'a list) : ('key * 'a t) list =
   |> Seq.map (Pair.rmap Fun.(unsafe_of_list ++ DynArray.to_list))
   |> Seq.to_list
 
+let split ((x, y), t) =
+  let (xs, ys) = List.split t in
+  (x, xs), (y, ys)
 module Syntax = struct
   let ($>) (p : 'a t) (f : 'a -> 'b) : 'b t =
     map f p

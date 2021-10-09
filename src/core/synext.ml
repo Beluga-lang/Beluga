@@ -399,7 +399,10 @@ module Sgn = struct
       { location: Location.t
       ; pragma: pragma
       } (** Compiler directive *)
-    | GlobalPragma of Location.t * global_pragma
+    | GlobalPragma of
+      { location: Location.t
+      ; pragma: global_pragma
+      } (** Global directive *)
     | MRecTyp of
       { location: Location.t
       ; declarations: (decl * decl list) Nonempty.t

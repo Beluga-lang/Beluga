@@ -1095,8 +1095,8 @@ let only p = p <& eoi
 open Syntax.Ext
 
 let sgn_global_prag : Sgn.decl parser =
-  let g s = span (pragma (s)) in
-  let f prag (loc, _) = Sgn.GlobalPragma (loc, prag) in
+  let g s = span (pragma s) in
+  let f pragma (location, _) = Sgn.GlobalPragma { location; pragma } in
   let h s a = g s $> f a in
   labelled "global pragma"
     begin

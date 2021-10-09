@@ -166,10 +166,10 @@ let sgnDeclToHtml =
 
 let rec apply_global_pragmas =
   function
-  | Synext.Sgn.GlobalPragma (_, Synext.Sgn.NoStrengthen) :: t ->
+  | Synext.Sgn.GlobalPragma { pragma=Synext.Sgn.NoStrengthen; _ } :: t ->
      Lfrecon.strengthen := false;
      apply_global_pragmas t
-  | Synext.Sgn.GlobalPragma (_, Synext.Sgn.Coverage(opt)) :: t ->
+  | Synext.Sgn.GlobalPragma { pragma=Synext.Sgn.Coverage opt; _ } :: t ->
      Coverage.enableCoverage := true;
      begin match opt with
      | `Warn -> Coverage.warningOnly := true
@@ -213,12 +213,12 @@ let recSgnDecls decls =
     (* %not declaration with nothing following *)
     | [Ext.Sgn.Pragma { pragma=Ext.Sgn.NotPrag; _ }] -> []
 
-    | Ext.Sgn.GlobalPragma (loc, Ext.Sgn.Coverage `Warn) :: rest ->
-       raise (Error (loc, IllegalOptsPrag "--warncoverage"))
-    | Ext.Sgn.GlobalPragma (loc, Ext.Sgn.Coverage `Error) :: rest ->
-       raise (Error (loc, IllegalOptsPrag "--coverage"))
-    | Ext.Sgn.GlobalPragma (loc, Ext.Sgn.NoStrengthen) :: rest ->
-       raise (Error (loc, IllegalOptsPrag "--nostrengthen"))
+    | Ext.Sgn.GlobalPragma { pragma=Ext.Sgn.Coverage `Warn; location } :: rest ->
+       raise (Error (location, IllegalOptsPrag "--warncoverage"))
+    | Ext.Sgn.GlobalPragma { pragma=Ext.Sgn.Coverage `Error; location } :: rest ->
+       raise (Error (location, IllegalOptsPrag "--coverage"))
+    | Ext.Sgn.GlobalPragma { pragma=Ext.Sgn.NoStrengthen; location } :: rest ->
+       raise (Error (location, IllegalOptsPrag "--nostrengthen"))
 
     | decl :: rest ->
        let decl' = recSgnDecl decl in

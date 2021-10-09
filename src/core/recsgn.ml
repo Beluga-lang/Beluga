@@ -138,8 +138,8 @@ let rec get_target_cid_compcotyp tau =
 
 let freeze_from_name tau =
   match tau with
-  | Ext.Sgn.Typ { identifier=n; _ } ->
-     let a = Typ.index_of_name n in
+  | Ext.Sgn.Typ { identifier; _ } ->
+     let a = Typ.index_of_name identifier in
      Typ.freeze a;
      ()
   | Ext.Sgn.CompTyp { identifier; _ } ->
@@ -501,7 +501,7 @@ let recSgnDecls decls =
 
     | Ext.Sgn.CompDest
       { location
-      ; identifier=c
+      ; identifier
       ; mctx=cD
       ; observation_typ=tau0
       ; return_typ=tau1
@@ -509,12 +509,12 @@ let recSgnDecls decls =
        dprintf
          (fun p ->
            p.fmt "[RecSgn Checking] CompDest at: %a" Syntax.Loc.print_short location);
-       dprint (fun () -> "\nIndexing computation-level codata-type destructor " ^ string_of_name c);
+       dprint (fun () -> "\nIndexing computation-level codata-type destructor " ^ string_of_name identifier);
        let cD = Index.mctx cD in
        let cD = Reconstruct.mctx cD in
        let apx_tau0 = Index.comptyp tau0 in
        let apx_tau1 = Index.comptyp tau1 in
-       dprint (fun () -> "\nElaborating codata-type destructor " ^ string_of_name c);
+       dprint (fun () -> "\nElaborating codata-type destructor " ^ string_of_name identifier);
        let tau0' =
          Monitor.timer
            ( "Codata-type Constant: Type Elaboration"
@@ -545,7 +545,7 @@ let recSgnDecls decls =
        dprintf
          begin fun p ->
          p.fmt "%a : %a :: %a"
-           Id.print c
+           Id.print identifier
            (P.fmt_ppr_cmp_typ cD1 P.l0) tau0'
            (P.fmt_ppr_cmp_typ cD1 P.l0) tau1'
          end;
@@ -558,11 +558,11 @@ let recSgnDecls decls =
          , fun () -> Check.Comp.checkTyp cD1 tau1'
          );
        let cid_ctypfamily = get_target_cid_compcotyp tau0' in
-       ignore (CompDest.add cid_ctypfamily (fun _ -> CompDest.mk_entry c cD1 tau0' tau1' i));
+       ignore (CompDest.add cid_ctypfamily (fun _ -> CompDest.mk_entry identifier cD1 tau0' tau1' i));
        let sgn =
         Int.Sgn.CompDest
         { location
-        ; identifier=c
+        ; identifier
         ; mctx=cD1
         ; observation_typ=tau0'
         ; return_typ=tau1'
@@ -708,8 +708,6 @@ let recSgnDecls decls =
        let sgn = Int.Sgn.Schema { location; identifier=sch; schema=sW' } in
        Store.Modules.addSgnToCurrent sgn;
        sgn
-
-
 
     | Ext.Sgn.Val { location; identifier; typ=None; expression } ->
        dprintf

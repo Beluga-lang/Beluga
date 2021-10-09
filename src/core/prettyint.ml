@@ -1673,15 +1673,15 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
   let rec fmt_ppr_sgn_decl ppf =
     function
     | Sgn.CompTypAbbrev _ -> ()
-    | Sgn.Const { identifier=c; typ=a; _ } ->
+    | Sgn.Const { identifier; typ; _ } ->
        fprintf ppf "%s : %a.@\n"
-         (R.render_cid_term c)
-         (fmt_ppr_lf_typ LF.Empty LF.Null l0) a
+         (R.render_cid_term identifier)
+         (fmt_ppr_lf_typ LF.Empty LF.Null l0) typ
 
-    | Sgn.Typ { identifier=a; kind=k; _ } ->
+    | Sgn.Typ { identifier; kind; _ } ->
        fprintf ppf "%s : %a.@\n"
-         (R.render_cid_typ a)
-         (fmt_ppr_lf_kind LF.Null l0) k
+         (R.render_cid_typ identifier)
+         (fmt_ppr_lf_kind LF.Null l0) kind
 
     | Sgn.CompTyp { identifier; kind; _ } ->
        fprintf ppf "@\ndatatype %s : @[%a@] = @\n"
@@ -1694,20 +1694,21 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
          (fmt_ppr_cmp_kind LF.Empty l0) kind
 
     | Sgn.CompDest
-      { identifier=c
+      { identifier
       ; mctx=cD
       ; observation_typ=tau0
       ; return_typ=tau1
       ; _
       } ->
        fprintf ppf "@ | (%s : @[%a@] :: @[%a@]@\n"
-         (Id.render_name c)
+         (Id.render_name identifier)
          (fmt_ppr_cmp_typ cD l0) tau0
          (fmt_ppr_cmp_typ cD l0) tau1
-    | Sgn.CompConst { identifier=c; typ=tau; _ } ->
+
+    | Sgn.CompConst { identifier; typ; _ } ->
        fprintf ppf "@ | %s : @[%a@]@\n"
-         (Id.render_name c)
-         (fmt_ppr_cmp_typ LF.Empty l0) tau
+         (Id.render_name identifier)
+         (fmt_ppr_cmp_typ LF.Empty l0) typ
 
     | Sgn.MRecTyp { declarations; _ } ->
       declarations
@@ -1728,9 +1729,9 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
          (fmt_ppr_cmp_exp_chk LF.Empty LF.Empty l0) expression
          (fmt_ppr_cmp_value l0) value
 
-    | Sgn.Schema { identifier=w; schema; _ } ->
+    | Sgn.Schema { identifier; schema; _ } ->
        fprintf ppf "@\nschema %s = @[%a@];@\n"
-         (R.render_cid_schema w)
+         (R.render_cid_schema identifier)
          (fmt_ppr_lf_schema ~useName:false l0) schema
 
     | Sgn.Theorem { theorems; _ } ->

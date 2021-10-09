@@ -863,11 +863,11 @@ let check_datatype_decl loc a cs : unit parser =
   in
   traverse_
     (function
-     | Sgn.CompConst { identifier=c; typ=tau; _ } ->
-        retname tau
+     | Sgn.CompConst { identifier; typ; _ } ->
+        retname typ
         $ fun a' ->
           if not (Id.equals a a')
-          then fail (WrongConstructorType (c, a, a'))
+          then fail (WrongConstructorType (identifier, a, a'))
           else pure ()
      | _ -> fail (Violation "check_datatype_decl invalid input"))
     cs
@@ -880,11 +880,11 @@ let check_codatatype_decl loc a cs : unit parser =
   in
   traverse_
     (function
-     | Sgn.CompDest { identifier=c; observation_typ=tau0; _} ->
+     | Sgn.CompDest { identifier; observation_typ=tau0; _} ->
         retname tau0
         $ fun a' ->
           if not (Id.equals a a')
-          then fail (WrongConstructorType (c, a, a'))
+          then fail (WrongConstructorType (identifier, a, a'))
           else pure ()
      | _ -> fail (Violation "check_codatatype_decl invalid input"))
     cs
@@ -2681,10 +2681,10 @@ let sgn_oldstyle_lf_decl =
         (name <& token T.COLON)
         (lf_kind_or_typ <& token T.DOT)
       |> span
-      $> fun (location, (a_or_c, k_or_a)) ->
+      $> fun (location, (identifier, k_or_a)) ->
          match k_or_a with
-         | `Kind kind -> Sgn.Typ { location; identifier=a_or_c; kind }
-         | `Typ typ -> Sgn.Const { location; identifier=a_or_c; typ }
+         | `Kind kind -> Sgn.Typ { location; identifier; kind }
+         | `Typ typ -> Sgn.Const { location; identifier; typ }
     end
 
 let sgn_not_pragma : Sgn.decl parser =

@@ -100,6 +100,13 @@ val print : ?pp_sep:(Format.formatter -> unit -> unit) ->
     [(a1, [a2; ...; an]), (b1, [b2; ...; bn])].
 *)
 val split : ('a * 'b) t -> 'a t * 'b t
+
+(** Transform a pair of lists into a list of pairs:
+    [combine (a1, [a2; ...; an]) (b1, [b2; ...; bn])] is
+    [((a1, b1), [(a2, b2); ...; (an, bn)])].
+    @raise Invalid_argument if the two lists have different lengths.
+*)
+val combine : 'a t -> 'b t -> ('a * 'b) t
 module Syntax : sig
   val ($>) : 'a t -> ('a -> 'b) -> 'b t
 end

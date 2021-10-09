@@ -107,17 +107,17 @@ let replace_locs (replacees : (Loc.t * (Format.formatter -> unit -> unit)) list)
        end
 
 let update_existing_holes existing_holes =
-  let open Option in
   existing_holes
-  |> filter_map
-       begin fun (loc, ps) ->
-       let open Comp in
-       !(ps.solution)
-       $> fun p ->
-          ( loc
-          , fun fmt _ -> P.fmt_ppr_cmp_proof ps.context.cD ps.context.cG fmt p
-          )
-       end
+  |> List.filter_map
+      begin fun (loc, ps) ->
+        let open Option in
+        let open Comp in
+        !(ps.solution)
+        $> fun p ->
+           ( loc
+           , fun fmt _ -> P.fmt_ppr_cmp_proof ps.context.cD ps.context.cG fmt p
+           )
+      end
   |> replace_locs
 
 let append_sessions target_file_name new_mutual_rec_thmss =

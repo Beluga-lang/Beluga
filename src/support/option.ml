@@ -85,17 +85,8 @@ let ( &> ) (o : 'a option) (o' : 'b option) : 'b option =
 let void (o : 'a option) : unit option =
   o $> fun _ -> ()
 
-let rec filter_map (f : 'a -> 'b option) (l : 'a list) : 'b list =
-  match l with
-  | [] -> []
-  | x :: xs ->
-     f x
-     |> eliminate
-       (fun () -> filter_map f xs)
-       (fun y -> y :: filter_map f xs)
-
 let cat_options (l : 'a option list) : 'a list =
-  filter_map Fun.id l
+  List.filter_map Fun.id l
 
 (** Specialized effectful eliminator for option types. *)
 let when_some (l : 'a option) (f : 'a -> unit) : unit =

@@ -95,12 +95,12 @@ let gen_fresh_name (ns : name list) (n : name) : name =
     else y
   in
   let cnts =
-    let open Option in
-    filter_map
+    List.filter_map
       begin fun n' ->
-      String.equal n'.hint_name n.hint_name
-      |> of_bool
-      $> Fun.const n'.hint_cnt
+        let open Option in
+        String.equal n'.hint_name n.hint_name
+        |> of_bool
+        $> Fun.const n'.hint_cnt
       end
       ns
   in

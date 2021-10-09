@@ -60,14 +60,6 @@ val ( &> ) : 'a option -> 'b option -> 'b option
 val void : 'a option -> unit option
 
 (**
- * Applies a transformation to a list that may fail, removing failed results.
- * Side-effects are guaranteed to run from left to right.
- * This is the same as composing `List.map` with `cat_options`, but
- * incurs only one traversal of the list.
- *)
-val filter_map : ('a -> 'b option) -> 'a list -> 'b list
-
-(**
  * Removes all `None` options from the list.
  *
  * In fact, `cat_options` is implemented in terms of `filter_map`.

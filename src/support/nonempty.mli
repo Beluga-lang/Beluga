@@ -52,6 +52,11 @@ val map : ('a -> 'b) -> 'a t -> 'b t
 *)
 val map2 : ('a -> 'b -> 'c) -> 'a t -> 'b t -> 'c t
 
+(** [filter_map f l] applies [f] to every element of [l], filters out the [None]
+    elements and returns the list of the arguments of the [Some] elements.
+*)
+val filter_map : ('a -> 'b option) -> 'a t -> 'b list
+
 (** Runs an effectful function over the nonempty list. *)
 val iter : ('a -> unit) -> 'a t -> unit
 

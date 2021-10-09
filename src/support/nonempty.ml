@@ -62,6 +62,13 @@ let map (f : 'a -> 'b) (x, l : 'a t) : 'b t =
 let map2 f (h1, t1) (h2, t2) =
   f h1 h2, List.map2 f t1 t2
 
+let filter_map f (h, t) =
+  let rest = List.filter_map f t in
+  f h
+  |> Option.fold
+    ~none:rest
+    ~some:(fun h -> h :: rest)
+
 let iter (f : 'a -> unit) (x, l : 'a t) : unit =
   List.iter f (x :: l)
 

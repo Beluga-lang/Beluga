@@ -13,6 +13,9 @@ val last : 'a t -> 'a
 (** Constructs a nonempty list given an element. *)
 val from : 'a -> 'a list -> 'a t
 
+(** [singleton e] is the non-empty list with the single element [e] in it. *)
+val singleton : 'a -> 'a t
+
 (** Elimination principle for `Nonempty.t'. *)
 val fold_right : ('a -> 'b) (* for the Sing case *) ->
                  ('a -> 'b -> 'b) (* for the Cons case *) ->

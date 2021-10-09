@@ -26,7 +26,9 @@ let rec last (h, t) =
 
 let length (_, l) = 1 + List.length l
 
-let from x l = x , l
+let from x l = x, l
+
+let singleton x = x, []
 
 let rec fold_right f g (h, l) =
   match l with

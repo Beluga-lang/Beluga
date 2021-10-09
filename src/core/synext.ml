@@ -350,33 +350,39 @@ module Sgn = struct
     ; thm_body : Comp.thm
     }
 
+  (** Parsed signature element *)
   type decl =
     | Typ of
       { location: Location.t
       ; identifier: name
       ; kind: LF.kind
       } (** LF type family declaration *)
+
     | Const of
       { location: Location.t
       ; identifier: name
       ; typ: LF.typ
       } (** LF type constant decalaration *)
+
     | CompTyp of
       { location: Location.t
       ; identifier: name
       ; kind: Comp.kind
       ; datatype_flavour: datatype_flavour
       } (** Computation-level data type constant declaration *)
+
     | CompCotyp of
       { location: Location.t
       ; identifier: name
       ; kind: Comp.kind
       } (** Computation-level codata type constant declaration *)
+
     | CompConst of
       { location: Location.t
       ; identifier: name
       ; typ: Comp.typ
       } (** Computation-level type constructor declaration *)
+
     | CompDest of
       { location: Location.t
       ; identifier: name
@@ -384,39 +390,47 @@ module Sgn = struct
       ; observation_typ: Comp.typ
       ; return_typ: Comp.typ
       } (** Computation-level type destructor declaration *)
+
     | CompTypAbbrev of
       { location: Location.t
       ; identifier: name
       ; kind: Comp.kind
       ; typ: Comp.typ
       } (** Synonym declaration for computation-level type *)
+
     | Schema of
       { location: Location.t
       ; identifier: name
       ; schema: LF.schema
       } (** Declaration of a specification for a set of contexts *)
+
     | Pragma of
       { location: Location.t
       ; pragma: pragma
       } (** Compiler directive *)
+
     | GlobalPragma of
       { location: Location.t
       ; pragma: global_pragma
       } (** Global directive *)
+
     | MRecTyp of
       { location: Location.t
       ; declarations: (decl * decl list) Nonempty.t
       } (** Mutually-recursive LF type family declaration *)
+
     | Theorem of
       { location: Location.t
       ; theorems: thm_decl list
       } (** Mutually recursive theorem declaration(s) *)
+
     | Val of
       { location: Location.t
       ; identifier: name
       ; typ: Comp.typ option
       ; expression: Comp.exp_syn
       } (** Computation-level value declaration *)
+
     | Query of
       { location: Location.t
       ; name: name option
@@ -424,14 +438,19 @@ module Sgn = struct
       ; expected_solutions: int option
       ; maximum_tries: int option
       } (** Logic programming query on LF type *)
+
     | Module of
       { location: Location.t
       ; identifier: string
       ; declarations: decl list
       } (** Namespace declaration for other declarations *)
+
     | Comment of
       { location: Location.t
       ; content: string
       } (** Documentation comment *)
+
+  (** Parsed Beluga project *)
   type sgn = decl list
+
 end

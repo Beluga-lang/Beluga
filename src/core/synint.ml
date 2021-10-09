@@ -892,33 +892,39 @@ module Sgn = struct
     ; thm_loc : Loc.t
     }
 
+  (** Reconstructed signature element *)
   type decl =
     | Typ of
       { location: Location.t
       ; identifier: cid_typ
       ; kind: LF.kind
       } (** LF type family declaration *)
+
     | Const of
       { location: Location.t
       ; identifier: cid_term
       ; typ: LF.typ
       } (** LF type constant decalaration *)
+
     | CompTyp of
       { location: Location.t
       ; identifier: name
       ; kind: Comp.kind
       ; positivity_flag: positivity_flag
       } (** Computation-level data type constant declaration *)
+
     | CompCotyp of
       { location: Location.t
       ; identifier: name
       ; kind: Comp.kind
       } (** Computation-level codata type constant declaration *)
+
     | CompConst of
       { location: Location.t
       ; identifier: name
       ; typ: Comp.typ
       } (** Computation-level type constructor declaration *)
+
     | CompDest of
       { location: Location.t
       ; identifier: name
@@ -926,24 +932,29 @@ module Sgn = struct
       ; observation_typ: Comp.typ
       ; return_typ: Comp.typ
       } (** Computation-level type destructor declaration *)
+
     | CompTypAbbrev of
       { location: Location.t
       ; identifier: name
       ; kind: Comp.kind
       ; typ: Comp.typ
       } (** Synonym declaration for computation-level type *)
+
     | Schema of
       { location: Location.t
       ; identifier: cid_schema
       ; schema: LF.schema
       } (** Declaration of a specification for a set of contexts *)
+
     | Theorem of
       { location: Location.t
       ; theorems: thm_decl list
       } (** Mutually recursive theorem declaration(s) *)
+
     | Pragma of
       { pragma: LF.prag
       } (** Compiler directive *)
+
     | Val of
       { location: Location.t
       ; identifier: name
@@ -951,15 +962,18 @@ module Sgn = struct
       ; expression: Comp.exp_chk
       ; expression_value: Comp.value option
       } (** Computation-level value declaration *)
+
     | MRecTyp of
       { location: Location.t
       ; declarations: decl list Nonempty.t
       } (** Mutually-recursive LF type family declaration *)
+
     | Module of
       { location: Location.t
       ; identifier: string
       ; declarations: decl list
       } (** Namespace declaration for other declarations *)
+
     | Query of
       { location: Location.t
       ; name: name option
@@ -967,11 +981,13 @@ module Sgn = struct
       ; expected_solutions: int option
       ; maximum_tries: int option
       } (** Logic programming query on LF type *)
+
     | Comment of
       { location: Location.t
       ; content: string
       } (** Documentation comment *)
 
+  (** Reconstructed Beluga project *)
   type sgn = decl list
 
 end

@@ -57,7 +57,9 @@ let to_list ((x, l) : 'a t) : 'a list =
   x :: l
 
 let map (f : 'a -> 'b) (x, l : 'a t) : 'b t =
-  (f x, List.map f l)
+  let h = f x in
+  let t = List.map f l in
+  h, t
 
 let map2 f (h1, t1) (h2, t2) =
   f h1 h2, List.map2 f t1 t2

@@ -450,7 +450,11 @@ let printfun =
                ; thm_loc = Syntax.Loc.ghost
                }
              in
-             P.fmt_ppr_sgn_decl ppf (Synint.Sgn.Theorem { location=Syntax.Loc.ghost; theorems=[d] })
+             P.fmt_ppr_sgn_decl ppf
+              (Synint.Sgn.Theorem
+                { location=Syntax.Loc.ghost
+                ; theorems=Nonempty.singleton d
+                })
           | _  -> fprintf ppf "- %s is not a function.;\n@?" arg
         with
         | Not_found ->

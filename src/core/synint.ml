@@ -946,7 +946,7 @@ module Sgn = struct
 
     | Theorem of
       { location: Location.t
-      ; theorems: thm_decl list
+      ; theorems: thm_decl Nonempty.t
       } (** Mutually recursive theorem declaration(s) *)
 
     | Pragma of

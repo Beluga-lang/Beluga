@@ -904,21 +904,18 @@ let recSgnDecls decls =
        (* and check that all or none of the declarations are present. *)
        let total_decs =
          let prelim_total_decs =
-           List.map (fun t -> Ext.Sgn.(t.thm_name, t.thm_order)) recFuns
-         in
-         let go p =
-           Option.filter_map
-             (fun (name, x) -> if p x then Some (name, x) else None)
-             prelim_total_decs
+           Nonempty.map (fun t -> Ext.Sgn.(t.thm_name, t.thm_order)) recFuns
          in
          match
-           go Option.is_some,
-           go Fun.(not ++ Option.is_some)
+            Nonempty.partition
+              (fun (_, order) -> Option.is_some order) prelim_total_decs
          with
          | [], [] ->
             Error.violation "[recSgn] empty mutual block is impossible"
          | haves, [] ->
-            Some (List.map Fun.(Option.get ++ snd) haves)
+            haves
+            |> List.map Fun.(Option.get ++ snd)
+            |> Nonempty.of_list
          (* safe because they're haves *)
          | [], have_nots -> None
          | haves, have_nots ->
@@ -927,7 +924,7 @@ let recSgnDecls decls =
        in
 
        let preprocess =
-         List.map
+         Nonempty.map
            begin fun Ext.Sgn.{ thm_typ; thm_name; thm_loc; thm_body; _ } ->
            let apx_tau = Index.comptyp thm_typ in
            let tau' =
@@ -969,7 +966,7 @@ let recSgnDecls decls =
            end
        in
 
-       let (thm_list, registers) = List.split (preprocess recFuns) in
+       let (thm_list, registers) = Nonempty.split (preprocess recFuns) in
 
        (* We have the elaborated types of the theorems,
           so we construct the final list of totality declarations for
@@ -977,14 +974,14 @@ let recSgnDecls decls =
        let total_decs =
          match total_decs with
          | Some total_decs ->
-            List.map2
+            Nonempty.map2
               (fun (thm_name, _, _, tau) decl ->
                 mk_total_decl thm_name tau decl
                 |> Int.Comp.make_total_dec thm_name tau)
               thm_list
               total_decs
          | None ->
-            List.map
+            Nonempty.map
               (fun (thm_name, _, _, tau) ->
                 Int.Comp.make_total_dec thm_name tau `partial)
               thm_list
@@ -995,7 +992,7 @@ let recSgnDecls decls =
         *)
        let thm_cid_list =
           registers
-          |> List.ap_one (Comp.add_mutual_group total_decs)
+          |> Nonempty.ap_one (Comp.add_mutual_group (Nonempty.to_list total_decs))
        in
 
        let reconThm loc (f, cid, thm, tau) =
@@ -1053,7 +1050,7 @@ let recSgnDecls decls =
          let thm_r' = Whnf.cnormThm (thm_r, Whnf.m_id) in
 
          let tau_ann =
-           match Total.lookup_dec f total_decs with
+           match Total.lookup_dec f (Nonempty.to_list total_decs) with
            | None -> tau
            | Some d ->
               let tau = Total.annotate loc d.Int.Comp.order tau in
@@ -1073,20 +1070,17 @@ let recSgnDecls decls =
                       @,@[<hv 2>total_decs =@ @[<v>%a@]@]\
                       @,tau_ann = @[%a@]@]"
                  Id.print f
-                 (Format.pp_print_list ~pp_sep: Format.pp_print_cut
+                 (Nonempty.print ~pp_sep: Format.pp_print_cut
                     P.(fmt_ppr_cmp_total_dec))
                  total_decs
                  P.(fmt_ppr_cmp_typ Int.LF.Empty l0) tau_ann
                end;
-             Total.enabled := Total.requires_checking f total_decs;
-             Check.Comp.thm (Some cid) Int.LF.Empty Int.LF.Empty total_decs thm_r' (tau_ann, C.m_id);
+             Total.enabled := Total.requires_checking f (Nonempty.to_list total_decs);
+             Check.Comp.thm (Some cid) Int.LF.Empty Int.LF.Empty (Nonempty.to_list total_decs) thm_r' (tau_ann, C.m_id);
              Total.enabled := false;
            );
          (thm_r' , tau)
        in
-
-       if List.null recFuns
-       then Error.violation "[recsgn] no recursive function defined";
 
        let ds =
          let reconOne (thm_cid, (thm_name, thm_body, thm_loc, thm_typ)) =
@@ -1097,7 +1091,7 @@ let recSgnDecls decls =
                Id.print thm_name
                Loc.print_short thm_loc
              end;
-           let v =Int.(Comp.ThmValue (thm_cid, e_r', LF.MShift 0, Comp.Empty)) in
+           let v = Int.(Comp.ThmValue (thm_cid, e_r', LF.MShift 0, Comp.Empty)) in
            Comp.set_prog thm_cid (Fun.const (Some v));
            let open Int.Sgn in
            { thm_name = thm_cid
@@ -1106,7 +1100,7 @@ let recSgnDecls decls =
            ; thm_typ = tau'
            }
          in
-         List.map reconOne (List.combine thm_cid_list thm_list)
+         Nonempty.map reconOne (Nonempty.combine thm_cid_list thm_list)
        in
        let decl = Int.Sgn.(Theorem { location; theorems=ds }) in
        Store.Modules.addSgnToCurrent decl;

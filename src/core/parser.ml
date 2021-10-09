@@ -3043,7 +3043,6 @@ let sgn_thm_decl : Sgn.decl parser =
   sep_by1
     (choice [program_decl; proof_decl])
     (token T.KW_AND)
-  $> Nonempty.to_list
   <& token T.SEMICOLON
   |> span
   |> labelled "(mutual) recursive function declaration(s)"

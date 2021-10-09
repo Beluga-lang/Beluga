@@ -144,8 +144,8 @@ module Modules = struct
     let l =
       x ::
         ( !(DynArray.get modules x)
-          |> List.filter (function (Int.Sgn.Pragma(Int.LF.OpenPrag _)) -> true | _ -> false)
-          |> List.map (fun (Int.Sgn.Pragma(Int.LF.OpenPrag x)) -> x)
+          |> List.filter (function (Int.Sgn.Pragma { pragma=Int.LF.OpenPrag _ }) -> true | _ -> false)
+          |> List.map (fun (Int.Sgn.Pragma { pragma=Int.LF.OpenPrag x }) -> x)
         )
     in
     opened := l @ !opened;

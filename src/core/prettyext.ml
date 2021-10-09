@@ -951,7 +951,7 @@ module Make (_ : Store.Cid.RENDERER) : Printer.Ext.T = struct
          (to_html (Id.render_name  x) (ID Schema))
          (fmt_ppr_lf_schema 0) schema
 
-    | Sgn.Pragma (_, Sgn.NamePrag (name, s, s_opt)) ->
+    | Sgn.Pragma { pragma=Sgn.NamePrag (name, s, s_opt); _ } ->
        fprintf ppf "@[<h>%s %s %s %s@]@\n"
          (to_html "%name" Keyword)
          (Id.render_name name)

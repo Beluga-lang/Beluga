@@ -194,7 +194,7 @@ let recSgnDecls decls =
     function
     | [] -> []
 
-    | Ext.Sgn.Pragma (loc, Ext.Sgn.NotPrag) :: not'd_decl :: rest ->
+    | Ext.Sgn.Pragma { location=loc; pragma=Ext.Sgn.NotPrag } :: not'd_decl :: rest ->
        let not'd_decl_succeeds =
            begin
              try
@@ -211,7 +211,7 @@ let recSgnDecls decls =
        else recSgnDecls' rest
 
     (* %not declaration with nothing following *)
-    | [Ext.Sgn.Pragma (_, Ext.Sgn.NotPrag)] -> []
+    | [Ext.Sgn.Pragma { pragma=Ext.Sgn.NotPrag; _ }] -> []
 
     | Ext.Sgn.GlobalPragma (loc, Ext.Sgn.Coverage `Warn) :: rest ->
        raise (Error (loc, IllegalOptsPrag "--warncoverage"))
@@ -231,16 +231,17 @@ let recSgnDecls decls =
     if !Html.generate && not pauseHtml
     then sgnDeclToHtml d;
     match d with
-    | Ext.Sgn.Comment (l, s) -> Int.Sgn.Comment (l, s)
-    | Ext.Sgn.Pragma (loc, Ext.Sgn.AbbrevPrag (orig, abbrev)) ->
+    | Ext.Sgn.Comment { location; content } ->
+        Int.Sgn.Comment { location; content }
+    | Ext.Sgn.Pragma { location=loc; pragma=Ext.Sgn.AbbrevPrag (orig, abbrev) } ->
        begin
          try
            Store.Modules.addAbbrev orig abbrev
          with
          | Not_found -> raise (Error (loc, InvalidAbbrev (orig, abbrev)))
        end;
-       Int.Sgn.Pragma (Int.LF.AbbrevPrag (orig, abbrev))
-    | Ext.Sgn.Pragma (loc, Ext.Sgn.DefaultAssocPrag a) ->
+       Int.Sgn.Pragma { pragma=Int.LF.AbbrevPrag (orig, abbrev) }
+    | Ext.Sgn.Pragma { location=loc; pragma=Ext.Sgn.DefaultAssocPrag a } ->
        OpPragmas.default := a;
        let a' =
          match a with
@@ -248,8 +249,8 @@ let recSgnDecls decls =
          | Ext.Sgn.Right -> Int.LF.Right
          | Ext.Sgn.None -> Int.LF.NoAssoc
        in
-       Int.Sgn.Pragma (Int.LF.DefaultAssocPrag a')
-    | Ext.Sgn.Pragma (loc, Ext.Sgn.FixPrag (name, fix, precedence, assoc)) ->
+       Int.Sgn.Pragma { pragma=Int.LF.DefaultAssocPrag a' }
+    | Ext.Sgn.Pragma { location=loc; pragma=Ext.Sgn.FixPrag (name, fix, precedence, assoc) } ->
        dprint (fun () -> "Pragma found for " ^ (Id.render_name name));
        begin match fix with
        | Ext.Sgn.Prefix ->
@@ -296,7 +297,7 @@ let recSgnDecls decls =
          | Ext.Sgn.Prefix -> Int.LF.Prefix
          | Ext.Sgn.Infix -> Int.LF.Infix
        in
-       Int.Sgn.Pragma (Int.LF.FixPrag (name, fix', precedence, assoc'))
+       Int.Sgn.Pragma { pragma=Int.LF.FixPrag (name, fix', precedence, assoc') }
 
     | Ext.Sgn.CompTypAbbrev { location; identifier; kind=cK; typ=cT } ->
        (* index cT in a context which contains arguments to cK *)
@@ -1170,7 +1171,7 @@ let recSgnDecls decls =
        ; maximum_tries=tries
        }
 
-    | Ext.Sgn.Pragma (loc, Ext.Sgn.NamePrag (typ_name, m_name, v_name)) ->
+    | Ext.Sgn.Pragma { location=loc; pragma=Ext.Sgn.NamePrag (typ_name, m_name, v_name) } ->
        dprintf
          (fun p ->
            p.fmt "[RecSgn Checking] Pragma at %a"
@@ -1183,7 +1184,7 @@ let recSgnDecls decls =
           let m = Some (Gensym.MVarData.name_gensym m_name) in
           let v = Option.(v_name $> Gensym.VarData.name_gensym) in
           Typ.set_name_convention cid m v;
-          Int.Sgn.Pragma (Int.LF.NamePrag cid)
+          Int.Sgn.Pragma { pragma=Int.LF.NamePrag cid }
        | None ->
            throw loc (UnboundNamePragma typ_name)
        end
@@ -1198,10 +1199,10 @@ let recSgnDecls decls =
        Store.Modules.addSgnToCurrent sgn;
        sgn
 
-    | Ext.Sgn.Pragma (loc, Ext.Sgn.OpenPrag n) ->
+    | Ext.Sgn.Pragma { location=loc; pragma=Ext.Sgn.OpenPrag n } ->
        try
          let x = Modules.open_module n in
-         let sgn = Int.Sgn.Pragma (Int.LF.OpenPrag x) in
+         let sgn = Int.Sgn.Pragma { pragma=Int.LF.OpenPrag x } in
          Store.Modules.addSgnToCurrent sgn;
          sgn
        with

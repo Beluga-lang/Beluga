@@ -1114,8 +1114,8 @@ let sgn_name_pragma : Sgn.decl parser =
     (maybe identifier <& token T.DOT)
   |> labelled "name pragma"
   |> span
-  $> fun (loc, (w, mv, x)) ->
-     Sgn.Pragma (loc, Sgn.NamePrag (w, mv, x))
+  $> fun (location, (w, mv, x)) ->
+     Sgn.Pragma { location; pragma=Sgn.NamePrag (w, mv, x) }
 
 (** Parses the `type' kind. *)
 let type_kind =
@@ -2690,7 +2690,7 @@ let sgn_oldstyle_lf_decl =
 let sgn_not_pragma : Sgn.decl parser =
   pragma "not"
   |> span
-  $> fun (loc, _) -> Sgn.Pragma (loc, Sgn.NotPrag)
+  $> fun (location, _) -> Sgn.Pragma { location; pragma=Sgn.NotPrag }
 
 let associativity =
   [ "left", Sgn.Left
@@ -2706,16 +2706,22 @@ let sgn_fixity_pragma : Sgn.decl parser =
     &> seq3 name integer (maybe associativity)
     <& token T.DOT
     |> span
-    $> fun (loc, (x, precedence, assoc)) ->
-       Sgn.Pragma (loc, Sgn.FixPrag (x, Sgn.Infix, precedence, assoc))
+    $> fun (location, (x, precedence, assoc)) ->
+       Sgn.Pragma
+       { location
+       ; pragma=Sgn.FixPrag (x, Sgn.Infix, precedence, assoc)
+       }
   in
   let prefix_pragma : Sgn.decl parser =
     pragma "prefix"
     &> seq2 name integer
     <& token T.DOT
     |> span
-    $> fun (loc, (x, precedence)) ->
-       Sgn.Pragma (loc, Sgn.FixPrag (x, Sgn.Prefix, precedence, Some Sgn.Left))
+    $> fun (location, (x, precedence)) ->
+       Sgn.Pragma
+       { location
+       ; pragma=Sgn.FixPrag (x, Sgn.Prefix, precedence, Some Sgn.Left)
+       }
   in
   alt infix_pragma prefix_pragma
 
@@ -2724,7 +2730,8 @@ let sgn_associativity_pragma : Sgn.decl parser =
   &> associativity
   <& token T.DOT
   |> span
-  $> fun (loc, assoc) -> Sgn.Pragma (loc, Sgn.DefaultAssocPrag assoc)
+  $> fun (location, assoc) ->
+    Sgn.Pragma { location; pragma=Sgn.DefaultAssocPrag assoc}
 
 let sgn_open_pragma : Sgn.decl parser =
   pragma "open"
@@ -2732,8 +2739,8 @@ let sgn_open_pragma : Sgn.decl parser =
   |> span
   |> labelled "open pragma"
   <& token T.DOT
-  $> fun (loc, id) ->
-     Sgn.Pragma (loc, Sgn.OpenPrag (Nonempty.to_list id))
+  $> fun (location, id) ->
+     Sgn.Pragma { location; pragma=Sgn.OpenPrag (Nonempty.to_list id) }
 
 let sgn_abbrev_pragma : Sgn.decl parser =
   pragma "abbrev"
@@ -2741,9 +2748,9 @@ let sgn_abbrev_pragma : Sgn.decl parser =
   <& token T.DOT
   |> span
   |> labelled "module abbreviation pragma"
-  $> fun (loc, (fq, x)) ->
+  $> fun (location, (fq, x)) ->
      let fq = Nonempty.to_list fq in
-     Sgn.Pragma (loc, Sgn.AbbrevPrag (fq, x))
+     Sgn.Pragma { location; pragma=Sgn.AbbrevPrag (fq, x) }
 
 let sgn_comment : Sgn.decl parser =
   satisfy' `html_comment

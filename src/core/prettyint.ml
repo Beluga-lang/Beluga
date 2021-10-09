@@ -1750,7 +1750,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
        List.iter (fmt_ppr_rec l0 ppf ("and"^total)) t
      *)
 
-    | Sgn.Pragma (LF.OpenPrag n) ->
+    | Sgn.Pragma { pragma=LF.OpenPrag n } ->
        let n' = Store.Modules.name_of_id n in
        ignore (Store.Modules.open_module n');
        fprintf ppf "@\n--open %s@\n" (String.concat "." n')

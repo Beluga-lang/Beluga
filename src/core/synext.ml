@@ -395,7 +395,10 @@ module Sgn = struct
       ; identifier: name
       ; schema: LF.schema
       } (** Declaration of a specification for a set of contexts *)
-    | Pragma of Location.t * pragma
+    | Pragma of
+      { location: Location.t
+      ; pragma: pragma
+      } (** Compiler directive *)
     | GlobalPragma of Location.t * global_pragma
     | MRecTyp of
       { location: Location.t

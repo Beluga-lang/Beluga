@@ -1678,7 +1678,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
          (R.render_cid_term c)
          (fmt_ppr_lf_typ LF.Empty LF.Null l0) a
 
-    | Sgn.Typ (_, a, k) ->
+    | Sgn.Typ { identifier=a; kind=k; _ } ->
        fprintf ppf "%s : %a.@\n"
          (R.render_cid_typ a)
          (fmt_ppr_lf_kind LF.Null l0) k
@@ -1728,18 +1728,18 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
          (fmt_ppr_cmp_exp_chk LF.Empty LF.Empty l0) expression
          (fmt_ppr_cmp_value l0) value
 
-    | Sgn.Schema (w, schema) ->
+    | Sgn.Schema { identifier=w; schema; _ } ->
        fprintf ppf "@\nschema %s = @[%a@];@\n"
          (R.render_cid_schema w)
          (fmt_ppr_lf_schema ~useName:false l0) schema
 
-    | Sgn.Theorem thms ->
+    | Sgn.Theorem { theorems; _ } ->
        fprintf ppf "@[<v>%a@]"
          (pp_print_list ~pp_sep: (fun ppf _ -> fprintf ppf "@,and ")
             (fun ppf x ->
               fprintf ppf "@[%a@]"
                 fmt_ppr_sgn_thm_decl x))
-         thms
+         theorems
 
     (*
     | Sgn.Rec (((f, _, _) as h)::t) ->

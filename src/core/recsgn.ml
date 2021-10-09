@@ -138,7 +138,7 @@ let rec get_target_cid_compcotyp tau =
 
 let freeze_from_name tau =
   match tau with
-  | Ext.Sgn.Typ (_, n, _) ->
+  | Ext.Sgn.Typ { identifier=n; _ } ->
      let a = Typ.index_of_name n in
      Typ.freeze a;
      ()
@@ -153,7 +153,7 @@ let freeze_from_name tau =
 
 let sgnDeclToHtml =
   function
-  | Ext.Sgn.Comment (_, x) -> Html.appendAsComment x
+  | Ext.Sgn.Comment { content; _ } -> Html.appendAsComment content
   | d ->
     let margin = Format.pp_get_margin Format.str_formatter () in
     Html.printing := true;
@@ -571,11 +571,11 @@ let recSgnDecls decls =
        sgn
 
 
-    | Ext.Sgn.Typ (loc, a, extK) ->
+    | Ext.Sgn.Typ { location; identifier=a; kind=extK } ->
        dprintf
          (fun p ->
            p.fmt "[RecSgn Checking] Typ at: %a"
-             Syntax.Loc.print_short loc);
+             Syntax.Loc.print_short location);
        dprint (fun () -> "\nIndexing type constant " ^ string_of_name a);
        let (_, apxK) = Index.kind Index.disambiguate_to_fvars extK in
        FVar.clear ();
@@ -615,17 +615,17 @@ let recSgnDecls decls =
          ^ string_of_name a
          ^ " successful!"
          end;
-       Typeinfo.Sgn.add loc (Typeinfo.Sgn.mk_entry (Typeinfo.Sgn.Kind tK')) "";
+       Typeinfo.Sgn.add location (Typeinfo.Sgn.mk_entry (Typeinfo.Sgn.Kind tK')) "";
        let cid = Typ.add (fun _ -> Typ.mk_entry a tK' i) in
-       let sgn = Int.Sgn.Typ (loc, cid, tK') in
+       let sgn = Int.Sgn.Typ { location; identifier=cid; kind=tK' } in
        Store.Modules.addSgnToCurrent sgn;
        sgn
 
-    | Ext.Sgn.Const (loc, c, extT) ->
+    | Ext.Sgn.Const { location; identifier=c; typ=extT } ->
        dprintf
          (fun p ->
            p.fmt "[RecSgn Checking] Const at: %a"
-             Syntax.Loc.print_short loc);
+             Syntax.Loc.print_short location);
        let (_, apxT) = Index.typ Index.disambiguate_to_fvars extT in
        let rec get_type_family =
          function
@@ -670,17 +670,17 @@ let recSgnDecls decls =
          ( "Constant Check"
          , fun () -> Check.LF.checkTyp Int.LF.Empty Int.LF.Null (tA', S.LF.id)
          );
-       Typeinfo.Sgn.add loc (Typeinfo.Sgn.mk_entry (Typeinfo.Sgn.Typ tA')) "";
-       let cid = Term.add' loc constructedType (fun _ -> Term.mk_entry c tA' i) in
-       let sgn = Int.Sgn.Const (loc, cid, tA') in
+       Typeinfo.Sgn.add location (Typeinfo.Sgn.mk_entry (Typeinfo.Sgn.Typ tA')) "";
+       let cid = Term.add' location constructedType (fun _ -> Term.mk_entry c tA' i) in
+       let sgn = Int.Sgn.Const { location; identifier=cid; typ=tA' } in
        Store.Modules.addSgnToCurrent sgn;
        sgn
 
-    | Ext.Sgn.Schema (loc, g, schema) ->
+    | Ext.Sgn.Schema { location; identifier=g; schema } ->
        dprintf
          (fun p ->
            p.fmt "[RecSgn Checking] Schema at: %a"
-             Syntax.Loc.print_short loc);
+             Syntax.Loc.print_short location);
        let apx_schema = Index.schema schema in
        dprint (fun () -> "\nReconstructing schema " ^ string_of_name g ^ "\n");
        FVar.clear ();
@@ -705,7 +705,7 @@ let recSgnDecls decls =
        Check.LF.checkSchemaWf sW';
        dprint (fun () -> "\nTYPE CHECK for schema " ^ string_of_name g ^ " successful");
        let sch = Schema.add (fun _ -> Schema.mk_entry g sW') in
-       let sgn = Int.Sgn.Schema(sch, sW') in
+       let sgn = Int.Sgn.Schema { location; identifier=sch; schema=sW' } in
        Store.Modules.addSgnToCurrent sgn;
        sgn
 
@@ -864,7 +864,7 @@ let recSgnDecls decls =
         ; declarations=Nonempty.map2 (fun x y -> x :: y) recTyps' recConts'
         }
 
-    | Ext.Sgn.Theorem (loc, recFuns) ->
+    | Ext.Sgn.Theorem { location; theorems=recFuns } ->
        let pos loc x args =
          match
            List.index_of
@@ -924,7 +924,7 @@ let recSgnDecls decls =
          (* safe because they're haves *)
          | [], have_nots -> None
          | haves, have_nots ->
-            throw loc
+            throw location
               (MutualTotalDecl (List.map fst haves, List.map fst have_nots))
        in
 
@@ -1092,7 +1092,7 @@ let recSgnDecls decls =
 
        let ds =
          let reconOne (thm_cid, (thm_name, thm_body, thm_loc, thm_typ)) =
-           let (e_r', tau') = reconThm loc (thm_name, thm_cid, thm_body, thm_typ) in
+           let (e_r', tau') = reconThm location (thm_name, thm_cid, thm_body, thm_typ) in
            dprintf
              begin fun p ->
              p.fmt "[reconRecFun] @[<v>DOUBLE CHECK of function %a at %a successful@,Adding definition to the store.@]"
@@ -1110,7 +1110,7 @@ let recSgnDecls decls =
          in
          List.map reconOne (List.combine thm_cid_list thm_list)
        in
-       let decl = Int.Sgn.(Theorem ds) in
+       let decl = Int.Sgn.(Theorem { location; theorems=ds }) in
        Store.Modules.addSgnToCurrent decl;
        decl
 

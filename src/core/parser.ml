@@ -863,7 +863,7 @@ let check_datatype_decl loc a cs : unit parser =
   in
   traverse_
     (function
-     | Sgn.CompConst (_, c, tau) ->
+     | Sgn.CompConst { identifier=c; typ=tau; _ } ->
         retname tau
         $ fun a' ->
           if not (Id.equals a a')
@@ -1314,8 +1314,8 @@ let lf_const_decl (* sgn_lf_typ *) =
        (name <& token T.COLON)
        lf_typ
      |> span
-     $ fun (loc, (id, tA)) ->
-       pure (Sgn.Const (loc, id, tA)))
+     $ fun (location, (identifier, typ)) ->
+       pure (Sgn.Const { location; identifier; typ }))
 
 let sgn_lf_typ_decl : Sgn.decl parser =
   let lf_typ_decl_body (* cmp_dat *) =
@@ -1329,8 +1329,8 @@ let sgn_lf_typ_decl : Sgn.decl parser =
       (maybe (token T.PIPE)
        &> sep_by0 lf_const_decl (token (T.PIPE)))
     |> span
-    $> fun (loc, ((a, k), const_decls)) ->
-       Sgn.Typ (loc, a, k), const_decls
+    $> fun (location, ((identifier, kind), const_decls)) ->
+       Sgn.Typ { location; identifier; kind }, const_decls
   in
 
   labelled "LF type declaration block"
@@ -2587,8 +2587,8 @@ let sgn_cmp_typ_decl =
             (name <& token (T.COLON))
             cmp_typ
           |> span
-          $> fun (loc, (x, tau)) ->
-             Sgn.CompConst (loc, x, tau)
+          $> fun (location, (identifier, typ)) ->
+             Sgn.CompConst { location; identifier; typ }
         in
         seq5
           flavour
@@ -2681,10 +2681,10 @@ let sgn_oldstyle_lf_decl =
         (name <& token T.COLON)
         (lf_kind_or_typ <& token T.DOT)
       |> span
-      $> fun (loc, (a_or_c, k_or_a)) ->
+      $> fun (location, (a_or_c, k_or_a)) ->
          match k_or_a with
-         | `Kind k -> Sgn.Typ (loc, a_or_c, k)
-         | `Typ a -> Sgn.Const (loc, a_or_c, a)
+         | `Kind kind -> Sgn.Typ { location; identifier=a_or_c; kind }
+         | `Typ typ -> Sgn.Const { location; identifier=a_or_c; typ }
     end
 
 let sgn_not_pragma : Sgn.decl parser =
@@ -2759,7 +2759,7 @@ let sgn_comment : Sgn.decl parser =
      | _ -> None)
   |> span
   |> labelled "HTML comment"
-  $> fun (loc, s) -> Sgn.Comment (loc, s)
+  $> fun (location, content) -> Sgn.Comment { location; content }
 
 let sgn_typedef_decl : Sgn.decl parser =
   seq3
@@ -2814,8 +2814,8 @@ let sgn_schema_decl : Sgn.decl parser =
   <& token T.SEMICOLON
   |> span
   |> labelled "schema declaration"
-  $> fun (loc, (x, bs)) ->
-     Sgn.Schema (loc, x, LF.Schema bs)
+  $> fun (location, (identifier, bs)) ->
+     Sgn.Schema { location; identifier; schema=LF.Schema bs }
 
 let sgn_let_decl : Sgn.decl parser =
   seq2
@@ -3047,7 +3047,7 @@ let sgn_thm_decl : Sgn.decl parser =
   <& token T.SEMICOLON
   |> span
   |> labelled "(mutual) recursive function declaration(s)"
-  $> fun (loc, f) -> Sgn.Theorem (loc, f)
+  $> fun (location, theorems) -> Sgn.Theorem { location; theorems }
 
 let rec sgn_decl : Sgn.decl parser =
   { run =
@@ -3210,7 +3210,8 @@ let interactive_harpoon_command =
     in
     keyword "rename"
     &> seq3 level name name
-    $> fun (level, x_src, x_dst) -> H.Rename (x_src, x_dst, level)
+    $> fun (level, rename_from, rename_to) ->
+      H.Rename { rename_from; rename_to; level }
   in
   let basic_command =
     choice

@@ -286,10 +286,11 @@ module Harpoon = struct
 
   type command =
     (* Administrative commands *)
-    | Rename
-      of name (* from *)
-         * name (* to *)
-         * level
+    | Rename of
+      { rename_from: name
+      ; rename_to: name
+      ; level: level
+      }
     | ToggleAutomation of automation_kind * automation_change
 
     | Type of Comp.exp_syn

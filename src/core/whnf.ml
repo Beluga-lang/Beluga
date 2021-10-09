@@ -23,7 +23,7 @@ module T = Store.Cid.Typ
 exception Fmvar_not_found
 exception FreeMVar of head
 exception NonInvertible
-exception InvalidLFHole of Loc.t
+exception InvalidLFHole of Location.t
 
 let m_id = MShift 0
 

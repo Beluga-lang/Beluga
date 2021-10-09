@@ -1,3 +1,5 @@
+open Support
+
 val generate_annotations : bool ref
 val print_annot : string -> unit
 val clear_all : unit -> unit
@@ -8,11 +10,11 @@ module Annot : sig
     { typ : string
     }
 
-  val store : (Syntax.Int.Loc.t, entry) Hashtbl.t
+  val store : (Location.t, entry) Hashtbl.t
   val mk_entry : string -> entry
 
-  val add : Syntax.Int.Loc.t -> entry -> unit
-  val get : Syntax.Int.Loc.t -> entry
+  val add : Location.t -> entry -> unit
+  val get : Location.t -> entry
   val clear : unit -> unit
   val to_string : entry -> string
 end
@@ -26,8 +28,8 @@ module LF : sig
 
   val mk_entry : Syntax.Int.LF.mctx -> Syntax.Int.LF.dctx -> Syntax.Int.LF.tclo -> entry
 
-  val add : Syntax.Int.Loc.t -> entry -> string -> unit
-  val get : Syntax.Int.Loc.t -> entry
+  val add : Location.t -> entry -> string -> unit
+  val get : Location.t -> entry
   val clear : unit -> unit
 end
 
@@ -39,8 +41,8 @@ module Comp : sig
 
   val mk_entry : Syntax.Int.LF.mctx -> Syntax.Int.Comp.tclo -> entry
 
-  val add : Syntax.Int.Loc.t -> entry -> string -> unit
-  val get : Syntax.Int.Loc.t -> entry
+  val add : Location.t -> entry -> string -> unit
+  val get : Location.t -> entry
   val clear : unit -> unit
 end
 
@@ -53,7 +55,7 @@ module Sgn : sig
 
   val mk_entry : typ_or_kind -> entry
 
-  val add : Syntax.Int.Loc.t -> entry -> string -> unit
-  val get : Syntax.Int.Loc.t -> entry
+  val add : Location.t -> entry -> string -> unit
+  val get : Location.t -> entry
   val clear : unit -> unit
 end

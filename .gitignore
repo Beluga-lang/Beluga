@@ -12,8 +12,14 @@ _build/
 *.byte
 *.native
 
+# Coverage
+_coverage/
+
 # Merlin configuring files
 .merlin
+
+# VSCode configuration files
+.vscode/
 
 # Dune generated files
 *.install

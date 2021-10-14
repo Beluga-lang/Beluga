@@ -21,18 +21,6 @@ declare -r ROOTDIR=${ROOTDIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")" > /dev/null 
 declare -r TEMPDIR=${TEMPDIR:-$(mktemp -d)}
 declare SKIP_RSYNC=0
 
-# Path to the Beluga executable to test.
-declare -r EXE=${EXE:-"./bin/beluga"}
-
-# Path to the Beluga lex_check to test.
-declare -r LEX_CHECK=${LEX_CHECK:-"./bin/lex_check"}
-
-# Path to the Beluga replay to test.
-declare -r REPLAY=${REPLAY:-"./bin/replay"}
-
-# Path to the Harpoon to test.
-declare -r HARPOON=${HARPOON:-"./bin/harpoon"}
-
 declare -r TESTROOTDIR=${TESTROOTDIR:-"./t"}
 declare -r TESTDIR=${TESTDIR:-"${TESTROOTDIR}/code"}
 declare -r EXAMPLEDIR=${EXAMPLEDIR:-"./examples"}
@@ -42,25 +30,11 @@ declare -r HARPOON_TESTDIR=${HARPOON_TESTDIR:-"${TESTROOTDIR}/harpoon"}
 declare -i TIMEOUT=${TIMEOUT:-10}
 
 function rsync_test_artifacts {
-    ln -s "${ROOTDIR}/bin/" "${TEMPDIR}/bin"
     rsync -ak "${ROOTDIR}/.admissible-fail" "${TEMPDIR}/.admissible-fail"
     rsync -ak "${ROOTDIR}/run_harpoon_test.sh" "${TEMPDIR}/run_harpoon_test.sh"
     rsync -ak "${ROOTDIR}/${TESTROOTDIR}/" "${TEMPDIR}/${TESTROOTDIR}"
     rsync -ak "${ROOTDIR}/${EXAMPLEDIR}/" "${TEMPDIR}/${EXAMPLEDIR}"
 }
-
-function die {
-    echo "Fatal error: " "$@" >&2
-    exit 1
-}
-
-function require_program_exists {
-    command -v "$1" >/dev/null 2>&1 || die "program" "$1" "could not found."
-}
-
-for p in "${EXE}" "${LEX_CHECK}" "${REPLAY}" "${HARPOON}" ; do
-    require_program_exists "${p}"
-done
 
 declare -i TEST_RESULT_TOTAL=0
 declare -i TEST_RESULT_SUCCESS=0
@@ -191,7 +165,8 @@ function do_testing {
         for f in $(find "${INTERACTIVE_TESTDIR}" -type f | sort -n) ; do
             start_test_case "${f}"
 
-            local output="$(${REPLAY} "${EXE}" "${f}")"
+            local exe=$(which beluga)
+            local output="$(replay "${exe}" "${f}")"
             exit_code=$?
 
             if [ "${exit_code}" -eq 152 ] ; then
@@ -240,7 +215,7 @@ function lex_check_test_case {
 
     local exit_code
 
-    ${LEX_CHECK} "${file_path}" > /dev/null 2>&1
+    lex_check "${file_path}" > /dev/null 2>&1
     exit_code=$?
 
     if [ "${exit_code}" -eq 2 ] ; then
@@ -267,7 +242,7 @@ function check_compiler_test_case {
 
     # ${...[@]+${...[@]}} is a workaround for bash < 4.4
     # In bash < 4.4, array without an item is considered as an undefined variable.
-    output=$(${EXE} +test "${BELUGA_FLAGS[@]+${BELUGA_FLAGS[@]}}" "${file_path}" 2>&1)
+    output=$(beluga +test "${BELUGA_FLAGS[@]+${BELUGA_FLAGS[@]}}" "${file_path}" 2>&1)
     exit_code=$?
     diff_output=$(printf "%s" "${output}" | diff -b -u "${file_path}.out" - 2>/dev/null)
     # diff responds 0 if same, 1 if different, 2 if couldn't compare.
@@ -385,9 +360,6 @@ function usage {
 function print_paths {
     echo "Parameters for this run (override as necessary using environment variables):"
     echo
-    echo -e "\t EXE: ${EXE}"
-    echo -e "\t LEX_CHECK: ${LEX_CHECK}"
-    echo -e "\t REPLAY: ${REPLAY}"
     echo -e "\t TESTDIR: ${TESTDIR}"
     echo -e "\t INTERACTIVE_TESTDIR: ${INTERACTIVE_TESTDIR}"
     echo -e "\t EXAMPLEDIR: ${EXAMPLEDIR}"

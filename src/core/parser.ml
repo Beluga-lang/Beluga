@@ -863,11 +863,11 @@ let check_datatype_decl loc a cs : unit parser =
   in
   traverse_
     (function
-     | Sgn.CompConst (_, c, tau) ->
-        retname tau
+     | Sgn.CompConst { identifier; typ; _ } ->
+        retname typ
         $ fun a' ->
           if not (Id.equals a a')
-          then fail (WrongConstructorType (c, a, a'))
+          then fail (WrongConstructorType (identifier, a, a'))
           else pure ()
      | _ -> fail (Violation "check_datatype_decl invalid input"))
     cs
@@ -880,11 +880,11 @@ let check_codatatype_decl loc a cs : unit parser =
   in
   traverse_
     (function
-     | Sgn.CompDest (_, c, _, tau0, _) ->
+     | Sgn.CompDest { identifier; observation_typ=tau0; _} ->
         retname tau0
         $ fun a' ->
           if not (Id.equals a a')
-          then fail (WrongConstructorType (c, a, a'))
+          then fail (WrongConstructorType (identifier, a, a'))
           else pure ()
      | _ -> fail (Violation "check_codatatype_decl invalid input"))
     cs
@@ -1095,8 +1095,8 @@ let only p = p <& eoi
 open Syntax.Ext
 
 let sgn_global_prag : Sgn.decl parser =
-  let g s = span (pragma (s)) in
-  let f prag (loc, _) = Sgn.GlobalPragma (loc, prag) in
+  let g s = span (pragma s) in
+  let f pragma (location, _) = Sgn.GlobalPragma { location; pragma } in
   let h s a = g s $> f a in
   labelled "global pragma"
     begin
@@ -1114,8 +1114,8 @@ let sgn_name_pragma : Sgn.decl parser =
     (maybe identifier <& token T.DOT)
   |> labelled "name pragma"
   |> span
-  $> fun (loc, (w, mv, x)) ->
-     Sgn.Pragma (loc, Sgn.NamePrag (w, mv, x))
+  $> fun (location, (w, mv, x)) ->
+     Sgn.Pragma { location; pragma=Sgn.NamePrag (w, mv, x) }
 
 (** Parses the `type' kind. *)
 let type_kind =
@@ -1314,8 +1314,8 @@ let lf_const_decl (* sgn_lf_typ *) =
        (name <& token T.COLON)
        lf_typ
      |> span
-     $ fun (loc, (id, tA)) ->
-       pure (Sgn.Const (loc, id, tA)))
+     $ fun (location, (identifier, typ)) ->
+       pure (Sgn.Const { location; identifier; typ }))
 
 let sgn_lf_typ_decl : Sgn.decl parser =
   let lf_typ_decl_body (* cmp_dat *) =
@@ -1329,18 +1329,17 @@ let sgn_lf_typ_decl : Sgn.decl parser =
       (maybe (token T.PIPE)
        &> sep_by0 lf_const_decl (token (T.PIPE)))
     |> span
-    $> fun (loc, ((a, k), const_decls)) ->
-       Sgn.Typ (loc, a, k), const_decls
+    $> fun (location, ((identifier, kind), const_decls)) ->
+       Sgn.Typ { location; identifier; kind }, const_decls
   in
 
   labelled "LF type declaration block"
     (token T.KW_LF
-     &> (sep_by1 lf_typ_decl_body (token T.KW_AND)
-         $> Nonempty.to_list)
+     &> (sep_by1 lf_typ_decl_body (token T.KW_AND))
      <& token T.SEMICOLON
      |> span
-     $> fun (loc, f) ->
-        Sgn.MRecTyp (loc, f))
+     $> fun (location, declarations) ->
+        Sgn.MRecTyp { location; declarations })
 
   (*
 let ctyp_decl, implicit_ctyp_decl =
@@ -2588,8 +2587,8 @@ let sgn_cmp_typ_decl =
             (name <& token (T.COLON))
             cmp_typ
           |> span
-          $> fun (loc, (x, tau)) ->
-             Sgn.CompConst (loc, x, tau)
+          $> fun (location, (identifier, typ)) ->
+             Sgn.CompConst { location; identifier; typ }
         in
         seq5
           flavour
@@ -2598,10 +2597,10 @@ let sgn_cmp_typ_decl =
           (sep_by0 sgn_cmp_typ_decl_body (token T.PIPE))
           get_state
         |> span
-        $ fun (loc, (flavour, name, kind, decls, s)) ->
-          check_datatype_decl loc name decls
+        $ fun (location, (datatype_flavour, identifier, kind, decls, s)) ->
+          check_datatype_decl location identifier decls
           $> fun () ->
-             Sgn.CompTyp (loc, name, kind, flavour), decls
+             Sgn.CompTyp { location; identifier; kind; datatype_flavour }, decls
       in
       let cmp_cotyp_decl =
         let cmp_cotyp_body =
@@ -2629,9 +2628,14 @@ let sgn_cmp_typ_decl =
              <& token T.DOUBLE_COLON)
             cmp_typ
           |> span
-          $> fun (loc, ((* cD, *) (a, tau0), tau1)) ->
-             Sgn.CompDest (loc, a, (* cD, *) LF.Empty, tau0, tau1)
-
+          $> fun (location, ((* cD, *) (identifier, tau0), tau1)) ->
+             Sgn.CompDest
+              { location
+              ; identifier
+              ; mctx=LF.Empty
+              ; observation_typ=tau0
+              ; return_typ=tau1
+              }
         in
         seq4
           (token T.KW_COINDUCTIVE &> name <& token T.COLON)
@@ -2639,17 +2643,16 @@ let sgn_cmp_typ_decl =
           (sep_by0 cmp_cotyp_body (token T.PIPE))
           get_state
         |> span
-        $ fun (loc, (a, k, decls, s)) ->
-          check_codatatype_decl loc a decls
+        $ fun (location, (identifier, kind, decls, s)) ->
+          check_codatatype_decl location identifier decls
           $> fun () ->
-             Sgn.CompCotyp (loc, a, k), decls
+             Sgn.CompCotyp { location; identifier; kind }, decls
       in
 
       sep_by1 (alt cmp_typ_decl cmp_cotyp_decl) (token T.KW_AND)
-      $> Nonempty.to_list
       <& token T.SEMICOLON
       |> span
-      $> fun (loc, ds) -> Sgn.MRecTyp (loc, ds)
+      $> fun (location, declarations) -> Sgn.MRecTyp { location; declarations }
     end
 
 let sgn_query_pragma =
@@ -2667,8 +2670,8 @@ let sgn_query_pragma =
   <& token T.DOT
   |> span
   |> labelled "logic programming engine query pragma"
-  $> fun (loc, ((e, t), x, a)) ->
-     Sgn.Query (loc, x, a, e, t)
+  $> fun (location, ((expected_solutions, maximum_tries), name, typ)) ->
+     Sgn.Query { location; name; typ; expected_solutions; maximum_tries }
 
 let sgn_oldstyle_lf_decl =
   labelled
@@ -2678,16 +2681,16 @@ let sgn_oldstyle_lf_decl =
         (name <& token T.COLON)
         (lf_kind_or_typ <& token T.DOT)
       |> span
-      $> fun (loc, (a_or_c, k_or_a)) ->
+      $> fun (location, (identifier, k_or_a)) ->
          match k_or_a with
-         | `Kind k -> Sgn.Typ (loc, a_or_c, k)
-         | `Typ a -> Sgn.Const (loc, a_or_c, a)
+         | `Kind kind -> Sgn.Typ { location; identifier; kind }
+         | `Typ typ -> Sgn.Const { location; identifier; typ }
     end
 
 let sgn_not_pragma : Sgn.decl parser =
   pragma "not"
   |> span
-  $> fun (loc, _) -> Sgn.Pragma (loc, Sgn.NotPrag)
+  $> fun (location, _) -> Sgn.Pragma { location; pragma=Sgn.NotPrag }
 
 let associativity =
   [ "left", Sgn.Left
@@ -2703,16 +2706,22 @@ let sgn_fixity_pragma : Sgn.decl parser =
     &> seq3 name integer (maybe associativity)
     <& token T.DOT
     |> span
-    $> fun (loc, (x, precedence, assoc)) ->
-       Sgn.Pragma (loc, Sgn.FixPrag (x, Sgn.Infix, precedence, assoc))
+    $> fun (location, (x, precedence, assoc)) ->
+       Sgn.Pragma
+       { location
+       ; pragma=Sgn.FixPrag (x, Sgn.Infix, precedence, assoc)
+       }
   in
   let prefix_pragma : Sgn.decl parser =
     pragma "prefix"
     &> seq2 name integer
     <& token T.DOT
     |> span
-    $> fun (loc, (x, precedence)) ->
-       Sgn.Pragma (loc, Sgn.FixPrag (x, Sgn.Prefix, precedence, Some Sgn.Left))
+    $> fun (location, (x, precedence)) ->
+       Sgn.Pragma
+       { location
+       ; pragma=Sgn.FixPrag (x, Sgn.Prefix, precedence, Some Sgn.Left)
+       }
   in
   alt infix_pragma prefix_pragma
 
@@ -2721,7 +2730,8 @@ let sgn_associativity_pragma : Sgn.decl parser =
   &> associativity
   <& token T.DOT
   |> span
-  $> fun (loc, assoc) -> Sgn.Pragma (loc, Sgn.DefaultAssocPrag assoc)
+  $> fun (location, assoc) ->
+    Sgn.Pragma { location; pragma=Sgn.DefaultAssocPrag assoc}
 
 let sgn_open_pragma : Sgn.decl parser =
   pragma "open"
@@ -2729,8 +2739,8 @@ let sgn_open_pragma : Sgn.decl parser =
   |> span
   |> labelled "open pragma"
   <& token T.DOT
-  $> fun (loc, id) ->
-     Sgn.Pragma (loc, Sgn.OpenPrag (Nonempty.to_list id))
+  $> fun (location, id) ->
+     Sgn.Pragma { location; pragma=Sgn.OpenPrag (Nonempty.to_list id) }
 
 let sgn_abbrev_pragma : Sgn.decl parser =
   pragma "abbrev"
@@ -2738,9 +2748,9 @@ let sgn_abbrev_pragma : Sgn.decl parser =
   <& token T.DOT
   |> span
   |> labelled "module abbreviation pragma"
-  $> fun (loc, (fq, x)) ->
+  $> fun (location, (fq, x)) ->
      let fq = Nonempty.to_list fq in
-     Sgn.Pragma (loc, Sgn.AbbrevPrag (fq, x))
+     Sgn.Pragma { location; pragma=Sgn.AbbrevPrag (fq, x) }
 
 let sgn_comment : Sgn.decl parser =
   satisfy' `html_comment
@@ -2749,7 +2759,7 @@ let sgn_comment : Sgn.decl parser =
      | _ -> None)
   |> span
   |> labelled "HTML comment"
-  $> fun (loc, s) -> Sgn.Comment (loc, s)
+  $> fun (location, content) -> Sgn.Comment { location; content }
 
 let sgn_typedef_decl : Sgn.decl parser =
   seq3
@@ -2758,8 +2768,8 @@ let sgn_typedef_decl : Sgn.decl parser =
     (token T.EQUALS &> cmp_typ <& token T.SEMICOLON)
   |> span
   |> labelled "type synonym declaration"
-  $> fun (loc, (x, k, tau)) ->
-     Sgn.CompTypAbbrev (loc, x, k, tau)
+  $> fun (location, (identifier, kind, typ)) ->
+     Sgn.CompTypAbbrev { location; identifier; kind; typ }
 
 let lf_schema_some : LF.typ_decl LF.ctx parser =
   alt
@@ -2804,8 +2814,8 @@ let sgn_schema_decl : Sgn.decl parser =
   <& token T.SEMICOLON
   |> span
   |> labelled "schema declaration"
-  $> fun (loc, (x, bs)) ->
-     Sgn.Schema (loc, x, LF.Schema bs)
+  $> fun (location, (identifier, bs)) ->
+     Sgn.Schema { location; identifier; schema=LF.Schema bs }
 
 let sgn_let_decl : Sgn.decl parser =
   seq2
@@ -2816,8 +2826,8 @@ let sgn_let_decl : Sgn.decl parser =
     (token T.EQUALS &> cmp_exp_syn <& token T.SEMICOLON)
   |> span
   |> labelled "value declaration"
-  $> fun (loc, ((x, tau), i)) ->
-     Sgn.Val (loc, x, tau, i)
+  $> fun (location, ((identifier, typ), expression)) ->
+     Sgn.Val { location; identifier; typ; expression }
 
 let boxity =
   choice
@@ -3033,11 +3043,10 @@ let sgn_thm_decl : Sgn.decl parser =
   sep_by1
     (choice [program_decl; proof_decl])
     (token T.KW_AND)
-  $> Nonempty.to_list
   <& token T.SEMICOLON
   |> span
   |> labelled "(mutual) recursive function declaration(s)"
-  $> fun (loc, f) -> Sgn.Theorem (loc, f)
+  $> fun (location, theorems) -> Sgn.Theorem { location; theorems }
 
 let rec sgn_decl : Sgn.decl parser =
   { run =
@@ -3067,7 +3076,6 @@ let rec sgn_decl : Sgn.decl parser =
           (* term declarations *)
           ; sgn_let_decl
           ; sgn_thm_decl
-          ; sgn_module_decl
           ]
         |> labelled "top-level declaration"
       in
@@ -3084,8 +3092,8 @@ and sgn_module_decl : Sgn.decl parser =
         <& T.(tokens [KW_END; SEMICOLON])
         |> span
         |> labelled "module declaration"
-        $> fun (loc, (x, decls)) ->
-           Sgn.Module (loc, x, decls)
+        $> fun (location, (identifier, declarations)) ->
+           Sgn.Module { location; identifier; declarations }
       in
       p.run s
   }
@@ -3201,7 +3209,8 @@ let interactive_harpoon_command =
     in
     keyword "rename"
     &> seq3 level name name
-    $> fun (level, x_src, x_dst) -> H.Rename (x_src, x_dst, level)
+    $> fun (level, rename_from, rename_to) ->
+      H.Rename { rename_from; rename_to; level }
   in
   let basic_command =
     choice

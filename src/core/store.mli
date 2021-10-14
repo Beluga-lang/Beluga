@@ -1,3 +1,4 @@
+open Support
 open Id
 open Syntax.Int
 
@@ -117,7 +118,7 @@ module Cid : sig
 
     val mk_entry : name -> LF.typ -> int -> entry
     val get : cid_term -> entry
-    val add' : Loc.t -> cid_typ -> (cid_term -> entry) -> cid_term
+    val add' : Location.t -> cid_typ -> (cid_term -> entry) -> cid_term
     val get_implicit_arguments : cid_term -> int
     val index_of_name : name -> cid_term
     val args_of_name : name -> int

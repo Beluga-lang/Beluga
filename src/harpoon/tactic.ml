@@ -269,7 +269,7 @@ let split (k : Command.split_kind) (i : Comp.exp_syn) (tau : Comp.typ) mfs : t =
             meta-context, accounting for dependent pattern matching on
             `m`. *)
          Reconstruct.synPatRefine
-           Loc.ghost
+           Location.ghost
            (Reconstruct.case_type (lazy pat) i)
            (s.context.cD, cD)
            t
@@ -410,15 +410,15 @@ let split (k : Command.split_kind) (i : Comp.exp_syn) (tau : Comp.typ) mfs : t =
        | PatMetaObj (_, (_, LF.CObj cPsi)) ->
           let case_label =
             match cPsi with
-            | LF.Null -> EmptyContext Loc.ghost
-            | LF.(DDec _) -> ExtendedBy (Loc.ghost, k)
+            | LF.Null -> EmptyContext Location.ghost
+            | LF.(DDec _) -> ExtendedBy (Location.ghost, k)
             | _ -> B.Error.violation "[get_context_branch] pattern not a context"
           in
           let label =
             Comp.SubgoalPath.build_context_split i case_label
           in
           let g' = new_state label in
-          let p = incomplete_proof Loc.ghost g' in
+          let p = incomplete_proof Location.ghost g' in
           ( g'
           , context_branch case_label (cG_p, pat) theta context p
           )
@@ -447,7 +447,7 @@ let split (k : Command.split_kind) (i : Comp.exp_syn) (tau : Comp.typ) mfs : t =
           in
           let label = Comp.SubgoalPath.build_meta_split i c in
           let g' = new_state label in
-          let p = incomplete_proof Loc.ghost g' in
+          let p = incomplete_proof Location.ghost g' in
           ( g'
           , meta_branch c (cG_p, pat) theta context p
           )
@@ -461,7 +461,7 @@ let split (k : Command.split_kind) (i : Comp.exp_syn) (tau : Comp.typ) mfs : t =
             Comp.SubgoalPath.build_comp_split i cid
           in
           let g' = new_state label in
-          let p = incomplete_proof Loc.ghost g' in
+          let p = incomplete_proof Location.ghost g' in
           ( g'
           , comp_branch cid (cG_p, pat) theta context p
           )
@@ -667,7 +667,7 @@ let suffices
             Comp.SubgoalPath.(append g.label (build_suffices i_head k))
         }
       in
-      (new_state, (Loc.ghost, tau, incomplete_proof Loc.ghost new_state))
+      (new_state, (Location.ghost, tau, incomplete_proof Location.ghost new_state))
       end
     |> List.split
   in

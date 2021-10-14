@@ -286,10 +286,11 @@ module Harpoon = struct
 
   type command =
     (* Administrative commands *)
-    | Rename
-      of name (* from *)
-         * name (* to *)
-         * level
+    | Rename of
+      { rename_from: name
+      ; rename_to: name
+      ; level: level
+      }
     | ToggleAutomation of automation_kind * automation_change
 
     | Type of Comp.exp_syn
@@ -350,22 +351,107 @@ module Sgn = struct
     ; thm_body : Comp.thm
     }
 
+  (** Parsed signature element *)
   type decl =
-    | Const of Location.t * name * LF.typ
-    | Typ of Location.t * name * LF.kind
-    | CompTyp of Location.t * name * Comp.kind * datatype_flavour
-    | CompCotyp of Location.t * name * Comp.kind
-    | CompConst of Location.t * name * Comp.typ
-    | CompDest of Location.t * name * LF.mctx * Comp.typ * Comp.typ
-    | CompTypAbbrev of Location.t * name * Comp.kind * Comp.typ
-    | Schema of Location.t * name * LF.schema
-    | Pragma of Location.t * pragma
-    | GlobalPragma of Location.t * global_pragma
-    | MRecTyp of Location.t * (decl * decl list) list
-    | Theorem of Location.t * thm_decl list
-    | Val of Location.t * name * Comp.typ option * Comp.exp_syn
-    | Query of Location.t * name option * LF.typ * int option * int option
-    | Module of Location.t * string * decl list
-    | Comment of Location.t * string
+    | Typ of
+      { location: Location.t
+      ; identifier: name
+      ; kind: LF.kind
+      } (** LF type family declaration *)
+
+    | Const of
+      { location: Location.t
+      ; identifier: name
+      ; typ: LF.typ
+      } (** LF type constant decalaration *)
+
+    | CompTyp of
+      { location: Location.t
+      ; identifier: name
+      ; kind: Comp.kind
+      ; datatype_flavour: datatype_flavour
+      } (** Computation-level data type constant declaration *)
+
+    | CompCotyp of
+      { location: Location.t
+      ; identifier: name
+      ; kind: Comp.kind
+      } (** Computation-level codata type constant declaration *)
+
+    | CompConst of
+      { location: Location.t
+      ; identifier: name
+      ; typ: Comp.typ
+      } (** Computation-level type constructor declaration *)
+
+    | CompDest of
+      { location: Location.t
+      ; identifier: name
+      ; mctx: LF.mctx
+      ; observation_typ: Comp.typ
+      ; return_typ: Comp.typ
+      } (** Computation-level type destructor declaration *)
+
+    | CompTypAbbrev of
+      { location: Location.t
+      ; identifier: name
+      ; kind: Comp.kind
+      ; typ: Comp.typ
+      } (** Synonym declaration for computation-level type *)
+
+    | Schema of
+      { location: Location.t
+      ; identifier: name
+      ; schema: LF.schema
+      } (** Declaration of a specification for a set of contexts *)
+
+    | Pragma of
+      { location: Location.t
+      ; pragma: pragma
+      } (** Compiler directive *)
+
+    | GlobalPragma of
+      { location: Location.t
+      ; pragma: global_pragma
+      } (** Global directive *)
+
+    | MRecTyp of
+      { location: Location.t
+      ; declarations: (decl * decl list) Nonempty.t
+      } (** Mutually-recursive LF type family declaration *)
+
+    | Theorem of
+      { location: Location.t
+      ; theorems: thm_decl Nonempty.t
+      } (** Mutually recursive theorem declaration(s) *)
+
+    | Val of
+      { location: Location.t
+      ; identifier: name
+      ; typ: Comp.typ option
+      ; expression: Comp.exp_syn
+      } (** Computation-level value declaration *)
+
+    | Query of
+      { location: Location.t
+      ; name: name option
+      ; typ: LF.typ
+      ; expected_solutions: int option
+      ; maximum_tries: int option
+      } (** Logic programming query on LF type *)
+
+    | Module of
+      { location: Location.t
+      ; identifier: string
+      ; declarations: decl list
+      } (** Namespace declaration for other declarations *)
+
+    | Comment of
+      { location: Location.t
+      ; content: string
+      } (** Documentation comment *)
+
+  (** Parsed Beluga project *)
   type sgn = decl list
+
 end

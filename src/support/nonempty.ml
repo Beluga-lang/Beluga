@@ -26,7 +26,9 @@ let rec last (h, t) =
 
 let length (_, l) = 1 + List.length l
 
-let from x l = x , l
+let from x l = x, l
+
+let singleton x = x, []
 
 let rec fold_right f g (h, l) =
   match l with
@@ -35,6 +37,8 @@ let rec fold_right f g (h, l) =
 
 let fold_left (type a) (type b) (f : a -> b) (g : b -> a -> b) (x, l) =
   List.fold_left g (f x) l
+
+let destructure f l = f (head l) (tail l)
 
 let of_list (l : 'a list) : 'a t option =
   match l with
@@ -53,7 +57,19 @@ let to_list ((x, l) : 'a t) : 'a list =
   x :: l
 
 let map (f : 'a -> 'b) (x, l : 'a t) : 'b t =
-  (f x, List.map f l)
+  let h = f x in
+  let t = List.map f l in
+  h, t
+
+let map2 f (h1, t1) (h2, t2) =
+  f h1 h2, List.map2 f t1 t2
+
+let filter_map f (h, t) =
+  let rest = List.filter_map f t in
+  f h
+  |> Option.fold
+    ~none:rest
+    ~some:(fun h -> h :: rest)
 
 let iter (f : 'a -> unit) (x, l : 'a t) : unit =
   List.iter f (x :: l)
@@ -91,7 +107,7 @@ let group_by (p : 'a -> 'key) (l : 'a list) : ('key * 'a t) list =
       DynArray.add d x;
       Hashtbl.replace h k d
     in
-    List.for_each_ l (fun x -> insert (p x) x)
+    List.iter (fun x -> insert (p x) x) l
   in
   (* The use of unsafe_of_list here is justified because every
      dynarray we create has one element added immediately to it, and is
@@ -100,6 +116,21 @@ let group_by (p : 'a -> 'key) (l : 'a list) : ('key * 'a t) list =
   Hashtbl.to_seq h
   |> Seq.map (Pair.rmap Fun.(unsafe_of_list ++ DynArray.to_list))
   |> Seq.to_list
+
+let split ((x, y), t) =
+  let (xs, ys) = List.split t in
+  (x, xs), (y, ys)
+
+let combine (a, l1) (b, l2) =
+  ((a, b), List.combine l1 l2)
+
+let partition f (h, l) =
+  let (l1, l2) = List.partition f l in
+  if f h then (h :: l1, l2) else (l1, h :: l2)
+
+let ap xs = map2 (fun x f -> f x) xs
+
+let ap_one x = map (fun f -> f x)
 
 module Syntax = struct
   let ($>) (p : 'a t) (f : 'a -> 'b) : 'b t =

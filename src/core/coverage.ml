@@ -1274,7 +1274,7 @@ let genObj (cD, cPsi, tP) (tH, tA, k) =
        end;
      Some (cD', (cPsi', tR', (tP', S.LF.id)), ms')
 
-let genAllObj cg = Option.filter_map (genObj cg)
+let genAllObj cg = List.filter_map (genObj cg)
 
 let genConst (cD, cPsi, (a, tS)) =
   Types.freeze a;
@@ -2520,7 +2520,7 @@ let genPatt names mk_pat_var (cD_p, tau_v) (c, tau_c) =
      raise e
 
 let genAllPatt names mk_pat_var ((cD_v, tau_v) : LF.mctx * Comp.typ) =
-  Option.filter_map
+  List.filter_map
     begin fun (c, tau_c) ->
     genPatt names mk_pat_var (cD_v, tau_v) (c, tau_c)
     end

@@ -247,7 +247,7 @@ let process_command
          "There is no theorem by name %a."
          Id.print name
 
-  | Command.Rename (x_src, x_dst, level) ->
+  | Command.Rename { rename_from=x_src; rename_to=x_dst; level } ->
      if not (Theorem.rename_variable x_src x_dst level t g) then
        Error.(throw (NoSuchVariable (x_src, level)))
 

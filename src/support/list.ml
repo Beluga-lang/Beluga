@@ -23,10 +23,6 @@ let filter_rev p l =
   in
   go [] l
 
-let for_each l f = map f l
-
-let for_each_ l f = iter f l
-
 let uncons = function
   | [] -> None
   | x :: xs -> Some (x, xs)
@@ -67,7 +63,7 @@ let mapi2 f l1 l2 =
     | [], [] -> return []
     | x :: xs, y :: ys ->
       mapi2 (index + 1) xs ys (fun tl -> return (f index x y :: tl))
-    | _ -> raise (Invalid_argument "mapi2")
+    | _ -> raise (Invalid_argument "List.mapi2")
   in
   mapi2 0 l1 l2 Fun.id
 
@@ -79,3 +75,21 @@ let rec drop n = function
 let ap xs = map2 (fun x f -> f x) xs
 
 let ap_one x = map (fun f -> f x)
+
+let split l =
+  let rec split l return =
+    match l with
+    | [] -> return ([], [])
+    | (x, y) :: l -> split l (fun (xs, ys) -> return (x :: xs, y :: ys))
+  in
+  split l Fun.id
+
+let combine l1 l2 =
+  let rec combine l1 l2 return =
+    match l1, l2 with
+    | [], [] -> return []
+    | a1 :: l1, a2 :: l2 ->
+      combine l1 l2 (fun rest -> return ((a1, a2) :: rest))
+    | _ -> raise (Invalid_argument "List.combine")
+  in
+  combine l1 l2 Fun.id

@@ -1672,64 +1672,75 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
 
   let rec fmt_ppr_sgn_decl ppf =
     function
-    | Sgn.CompTypAbbrev (_, _, _, _) -> ()
-    | Sgn.Const (_, c, a) ->
+    | Sgn.CompTypAbbrev _ -> ()
+    | Sgn.Const { identifier; typ; _ } ->
        fprintf ppf "%s : %a.@\n"
-         (R.render_cid_term c)
-         (fmt_ppr_lf_typ LF.Empty LF.Null l0) a
+         (R.render_cid_term identifier)
+         (fmt_ppr_lf_typ LF.Empty LF.Null l0) typ
 
-    | Sgn.Typ (_, a, k) ->
+    | Sgn.Typ { identifier; kind; _ } ->
        fprintf ppf "%s : %a.@\n"
-         (R.render_cid_typ a)
-         (fmt_ppr_lf_kind LF.Null l0) k
+         (R.render_cid_typ identifier)
+         (fmt_ppr_lf_kind LF.Null l0) kind
 
-    | Sgn.CompTyp (_, a, cK, _) ->
+    | Sgn.CompTyp { identifier; kind; _ } ->
        fprintf ppf "@\ndatatype %s : @[%a@] = @\n"
-         (Id.render_name a)
-         (fmt_ppr_cmp_kind LF.Empty l0) cK
+         (Id.render_name identifier)
+         (fmt_ppr_cmp_kind LF.Empty l0) kind
 
-    | Sgn.CompCotyp (_, a, cK) ->
+    | Sgn.CompCotyp { identifier; kind; _ } ->
        fprintf ppf "@\ncodatatype %s : @[%a@] = @\n"
-         (Id.render_name a)
-         (fmt_ppr_cmp_kind LF.Empty l0) cK
+         (Id.render_name identifier)
+         (fmt_ppr_cmp_kind LF.Empty l0) kind
 
-    | Sgn.CompDest (_, c, cD, tau0, tau1) ->
+    | Sgn.CompDest
+      { identifier
+      ; mctx=cD
+      ; observation_typ=tau0
+      ; return_typ=tau1
+      ; _
+      } ->
        fprintf ppf "@ | (%s : @[%a@] :: @[%a@]@\n"
-         (Id.render_name c)
+         (Id.render_name identifier)
          (fmt_ppr_cmp_typ cD l0) tau0
          (fmt_ppr_cmp_typ cD l0) tau1
-    | Sgn.CompConst (_, c, tau) ->
+
+    | Sgn.CompConst { identifier; typ; _ } ->
        fprintf ppf "@ | %s : @[%a@]@\n"
-         (Id.render_name c)
-         (fmt_ppr_cmp_typ LF.Empty l0) tau
+         (Id.render_name identifier)
+         (fmt_ppr_cmp_typ LF.Empty l0) typ
 
-    | Sgn.MRecTyp(_, l) -> List.iter (fmt_ppr_sgn_decl ppf) (List.flatten l)
+    | Sgn.MRecTyp { declarations; _ } ->
+      declarations
+      |> Nonempty.to_list
+      |> List.flatten
+      |> List.iter (fmt_ppr_sgn_decl ppf)
 
-    | Sgn.Val (_, x, tau, i, None) ->
+    | Sgn.Val { identifier; typ; expression; expression_value=None; _ } ->
        fprintf ppf "@\nlet %s : %a = %a@\n"
-         (Id.render_name x)
-         (fmt_ppr_cmp_typ LF.Empty l0) tau
-         (fmt_ppr_cmp_exp_chk LF.Empty LF.Empty l0) i
+         (Id.render_name identifier)
+         (fmt_ppr_cmp_typ LF.Empty l0) typ
+         (fmt_ppr_cmp_exp_chk LF.Empty LF.Empty l0) expression
 
-    | Sgn.Val (_, x, tau, i, Some v) ->
+    | Sgn.Val { identifier; typ; expression; expression_value=Some value; _ } ->
        fprintf ppf "@\nlet %s : %a = %a@\n   ===> %a@\n"
-         (Id.render_name x)
-         (fmt_ppr_cmp_typ LF.Empty l0) tau
-         (fmt_ppr_cmp_exp_chk LF.Empty LF.Empty l0) i
-         (fmt_ppr_cmp_value l0) v
+         (Id.render_name identifier)
+         (fmt_ppr_cmp_typ LF.Empty l0) typ
+         (fmt_ppr_cmp_exp_chk LF.Empty LF.Empty l0) expression
+         (fmt_ppr_cmp_value l0) value
 
-    | Sgn.Schema (w, schema) ->
+    | Sgn.Schema { identifier; schema; _ } ->
        fprintf ppf "@\nschema %s = @[%a@];@\n"
-         (R.render_cid_schema w)
+         (R.render_cid_schema identifier)
          (fmt_ppr_lf_schema ~useName:false l0) schema
 
-    | Sgn.Theorem thms ->
+    | Sgn.Theorem { theorems; _ } ->
        fprintf ppf "@[<v>%a@]"
-         (pp_print_list ~pp_sep: (fun ppf _ -> fprintf ppf "@,and ")
+         (Nonempty.print ~pp_sep: (fun ppf _ -> fprintf ppf "@,and ")
             (fun ppf x ->
               fprintf ppf "@[%a@]"
                 fmt_ppr_sgn_thm_decl x))
-         thms
+         theorems
 
     (*
     | Sgn.Rec (((f, _, _) as h)::t) ->
@@ -1740,24 +1751,24 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
        List.iter (fmt_ppr_rec l0 ppf ("and"^total)) t
      *)
 
-    | Sgn.Pragma (LF.OpenPrag n) ->
+    | Sgn.Pragma { pragma=LF.OpenPrag n } ->
        let n' = Store.Modules.name_of_id n in
        ignore (Store.Modules.open_module n');
        fprintf ppf "@\n--open %s@\n" (String.concat "." n')
 
     | Sgn.Pragma _ -> ()
 
-    | Sgn.Module(_, name, decls) ->
+    | Sgn.Module { identifier; declarations; _ } ->
        let aux fmt t = List.iter (fun x -> (fmt_ppr_sgn_decl fmt x)) t in
 
        (* Necessary to enforce correct printing *)
        let (_, origName, _, _) as state = Store.Modules.getState () in
-       let newName = origName@[name] in
+       let newName = origName@[identifier] in
        Store.Modules.current := (Store.Modules.id_of_name newName);
        Store.Modules.currentName := newName;
        fprintf ppf "@\nmodule %s = struct@\n@[<v2>%a@]@\nend;@\n"
-         name
-         aux decls;
+         identifier
+         aux declarations;
        Store.Modules.setState state
 
     | _ -> ()

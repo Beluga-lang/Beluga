@@ -25,14 +25,6 @@ val nonempty : 'a list -> bool
 *)
 val filter_rev : ('a -> bool) -> 'a list -> 'a list
 
-(** [for_each l f] is [map f l].
-*)
-val for_each : 'a list -> ('a -> 'b) -> 'b list
-
-(** [for_each_ l f] is [iter f l]
-*)
-val for_each_ : 'a list -> ('a -> unit) -> unit
-
 (** [uncons l] is [Some (hd l, tl l)] if [l <> []] and [None] otherwise.
 *)
 val uncons : 'a list -> ('a * 'a list) option
@@ -82,9 +74,22 @@ val mapi2 : (int -> 'a -> 'b -> 'c) -> 'a list -> 'b list -> 'c list
 val drop : int -> 'a list -> 'a list
 
 (** [ap [x1; x2; ...; xn] [f1; f2; ...; fn]] is [[f1 x1; f2 x2; ...; fn xn]].
+    @raise Invalid_argument if the two lists are determined to have different
+    lengths.
 *)
 val ap : 'a list -> ('a -> 'b) list -> 'b list
 
 (** [ap_one x [f1; f2; ...; fn]] is [[f1 x; f2 x; ...; fn x]].
 *)
 val ap_one : 'a -> ('a -> 'b) list -> 'b list
+
+(** Transform a list of pairs into a pair of lists:
+    [split [(a1, b1); ...; (an, bn)]] is [([a1; ...; an], [b1; ...; bn])].
+*)
+val split : ('a * 'b) list -> 'a list * 'b list
+
+(** Transform a pair of lists into a list of pairs:
+   [combine [a1; ...; an] [b1; ...; bn]] is [[(a1, b1); ...; (an, bn)]].
+   @raise Invalid_argument if the two lists have different lengths.
+*)
+val combine : 'a list -> 'b list -> ('a * 'b) list

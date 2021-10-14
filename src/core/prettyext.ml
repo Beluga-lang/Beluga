@@ -862,87 +862,96 @@ module Make (_ : Store.Cid.RENDERER) : Printer.Ext.T = struct
 
   let fmt_ppr_mrec prefix lvl ppf =
     function
-    | Sgn.Typ (_, n, kA) ->
+    | Sgn.Typ { identifier; kind; _ } ->
        fprintf ppf "%s %s : %a = "
          (to_html prefix Keyword)
-         (to_html (Id.render_name n) (ID Typ))
-         (fmt_ppr_lf_kind 0) kA
-    | Sgn.Const (_, n, tA) ->
+         (to_html (Id.render_name identifier) (ID Typ))
+         (fmt_ppr_lf_kind 0) kind
+    | Sgn.Const { identifier; typ; _ } ->
        fprintf ppf "@\n| %s : %a"
-         (to_html (Id.render_name n) (ID Constructor))
-         (fmt_ppr_lf_typ 0)  tA
-    | Sgn.CompTyp (_, n, kA, _)
-      | Sgn.CompCotyp (_, n, kA) ->
+         (to_html (Id.render_name identifier) (ID Constructor))
+         (fmt_ppr_lf_typ 0)  typ
+    | Sgn.CompTyp { identifier; kind; _ }
+      | Sgn.CompCotyp { identifier; kind; _ } ->
        fprintf ppf "%s %s : %a = "
          (to_html prefix Keyword)
-         (to_html (Id.render_name n) (ID Typ))
-         (fmt_ppr_cmp_kind 1) kA
-    | Sgn.CompConst (_, n, tA) ->
+         (to_html (Id.render_name identifier) (ID Typ))
+         (fmt_ppr_cmp_kind 1) kind
+    | Sgn.CompConst { identifier; typ; _ } ->
        fprintf ppf "@\n| %s : %a"
-         (to_html (Id.render_name n) (ID Constructor))
-         (fmt_ppr_cmp_typ 1)  tA
-    | Sgn.CompDest (_, n, cD, tA, tA') ->
+         (to_html (Id.render_name identifier) (ID Constructor))
+         (fmt_ppr_cmp_typ 1)  typ
+    | Sgn.CompDest
+      { identifier
+      ; mctx=cD
+      ; observation_typ=tA
+      ; return_typ=tA'
+      ; _
+      } ->
        fprintf ppf "@\n| (%s : %a) :: %a"
-         (to_html (Id.render_name n) (ID Constructor))
-         (fmt_ppr_cmp_typ 1)  tA
-         (fmt_ppr_cmp_typ 1)  tA'
+         (to_html (Id.render_name identifier) (ID Constructor))
+         (fmt_ppr_cmp_typ 1) tA
+         (fmt_ppr_cmp_typ 1) tA'
     | _ -> ()
 
   (* TODO: Refactor this *)
   let fl_to_prefix =
     function
-    | Sgn.CompTyp (_, _, _, _) -> "inductive"
-    | Sgn.CompCotyp (_, _, _) -> "coinductive"
-    | Sgn.Typ (_, _, _) -> "LF"
+    | Sgn.CompTyp _ -> "inductive"
+    | Sgn.CompCotyp _ -> "coinductive"
+    | Sgn.Typ _ -> "LF"
 
   let fmt_ppr_mrec' lvl ppf (k, body) =
     fmt_ppr_mrec (fl_to_prefix k) lvl ppf k;
     List.iter (fun d -> fmt_ppr_mrec "" lvl ppf d) body
 
-  let rec fmt_ppr_mrecs lvl ppf =
-    function
-    | [h] -> fmt_ppr_mrec' lvl ppf h; fprintf ppf ";@\n"
-    | h :: t -> fmt_ppr_mrec' lvl ppf h;
-              fprintf ppf "@\n%s " (to_html "and" Keyword);
-              fmt_ppr_mrecs lvl ppf t
+  let fmt_ppr_mrecs lvl ppf =
+    Nonempty.destructure (fun h t ->
+      fmt_ppr_mrec' lvl ppf h;
+      t |> List.iter (fun e ->
+        fprintf ppf "@\n%s " (to_html "and" Keyword);
+        fmt_ppr_mrec' lvl ppf e
+      );
+      fprintf ppf ";@\n"
+    )
 
   let rec fmt_ppr_sgn_decl ppf =
     function
-    | Sgn.Const (_, x, a) ->
+    | Sgn.Const { identifier; typ; _ } ->
        fprintf ppf "@[<h>%s : %a.@]@\n"
-         (to_html (Id.render_name x) (ID Constructor))
-         (fmt_ppr_lf_typ l0)  a
+         (to_html (Id.render_name identifier) (ID Constructor))
+         (fmt_ppr_lf_typ l0) typ
 
-    | Sgn.Typ (_, x, k) ->
+    | Sgn.Typ { identifier; kind; _ } ->
        fprintf ppf "@[<h>%s : %a.@]@\n"
-         (to_html (Id.render_name x) (ID Typ))
-         (fmt_ppr_lf_kind l0) k
+         (to_html (Id.render_name identifier) (ID Typ))
+         (fmt_ppr_lf_kind l0) kind
 
-    | Sgn.CompConst (_, x, a) ->
+    | Sgn.CompConst { identifier; typ; _ } ->
        fprintf ppf "@[<h>| %s : %a@]@\n"
-         (to_html (Id.render_name x) (ID Constructor))
-         (fmt_ppr_cmp_typ l0)  a
+         (to_html (Id.render_name identifier) (ID Constructor))
+         (fmt_ppr_cmp_typ l0) typ
 
-    | Sgn.CompTypAbbrev (_, x, k, a) ->
+    | Sgn.CompTypAbbrev { identifier; kind; typ; _ } ->
        fprintf ppf "@[<v>%s %s : %a =@ %a;@]@\n"
          (to_html "datatype" Keyword)
-         (Id.render_name  x)
-         (fmt_ppr_cmp_kind 0) k
-         (fmt_ppr_cmp_typ 0)  a
+         (Id.render_name  identifier)
+         (fmt_ppr_cmp_kind 0) kind
+         (fmt_ppr_cmp_typ 0) typ
 
-    | Sgn.CompTyp (_, x, k, _) ->
+    | Sgn.CompTyp { identifier; kind; _ } ->
        fprintf ppf "@[<v>%s %s : %a = @]@\n"
          (to_html "datatype" Keyword)
-         (to_html (Id.render_name x) (ID Typ))
-         (fmt_ppr_cmp_kind 0) k
+         (to_html (Id.render_name identifier) (ID Typ))
+         (fmt_ppr_cmp_kind 0) kind
 
-    | Sgn.Schema (_, x, schema) ->
+    | Sgn.Schema { identifier; schema; _ } ->
        fprintf ppf "@[<h>%s %s = %a;@]@\n"
          (to_html "schema" Keyword)
-         (to_html (Id.render_name  x) (ID Schema))
+         (to_html (Id.render_name  identifier) (ID Schema))
          (fmt_ppr_lf_schema 0) schema
 
-    | Sgn.Pragma (_, Sgn.NamePrag (name, s, s_opt)) ->
+    | Sgn.Pragma { pragma=Sgn.NamePrag (name, s, s_opt); _ } ->
        fprintf ppf "@[<h>%s %s %s %s@]@\n"
          (to_html "%name" Keyword)
          (Id.render_name name)
@@ -952,29 +961,34 @@ module Make (_ : Store.Cid.RENDERER) : Printer.Ext.T = struct
          | Some x -> x
          end
 
-    | Sgn.Val (_, x, None, i) ->
+    | Sgn.Val { identifier; typ=None; expression; _ } ->
        fprintf ppf "@[%s %s = %a;@]@\n"
          (to_html "let" Keyword)
-         (Id.render_name  x)
-         (fmt_ppr_cmp_exp_syn l0) i
+         (Id.render_name  identifier)
+         (fmt_ppr_cmp_exp_syn l0) expression
 
-    | Sgn.Val (_, x, Some tA, i) ->
+    | Sgn.Val { identifier; typ=Some typ; expression; _ } ->
        fprintf ppf "@[%s %s : %a =@ %a;@]@\n"
          (to_html "let" Keyword)
-         (Id.render_name  x)
-         (fmt_ppr_cmp_typ 0) tA
-         (fmt_ppr_cmp_exp_syn l0) i
+         (Id.render_name  identifier)
+         (fmt_ppr_cmp_typ 0) typ
+         (fmt_ppr_cmp_exp_syn l0) expression
 
     | Sgn.Query _ ->
        fprintf ppf "%s"
          (to_html "query" Keyword)
 
-    | Sgn.Module (_, name, decls) ->
-       let aux ppf t = List.iter (fmt_ppr_sgn_decl ppf) t in
+    | Sgn.Module { identifier; declarations; _ } ->
+       let aux ppf = List.iter (fmt_ppr_sgn_decl ppf) in
        fprintf ppf "@[%s %s = %s@ @[<v2>%a@]@ %s;@]@\n"
-         (to_html "module" Keyword) (name) (to_html "struct" Keyword) (aux) decls (to_html "end" Keyword)
-    | Sgn.MRecTyp (l, decls) ->
-       fmt_ppr_mrecs 0 ppf decls
+         (to_html "module" Keyword)
+         identifier
+         (to_html "struct" Keyword)
+         aux declarations
+         (to_html "end" Keyword)
+
+    | Sgn.MRecTyp { declarations; _ } ->
+       fmt_ppr_mrecs 0 ppf declarations
     | _ -> ()
 
   let fmt_ppr_sgn ppf sgn = List.iter (fmt_ppr_sgn_decl ppf) sgn

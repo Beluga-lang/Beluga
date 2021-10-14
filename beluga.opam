@@ -16,11 +16,13 @@ build: [
   ["dune" "build" "-p" name "-j" jobs]
 ]
 depends: [
-  "dune" {>= "1.7"}
+  "dune" {>= "2.8"}
   "dune-build-info"
   "extlib"
   "gen"
   "linenoise"
   "ocaml" {>= "4.08"}
   "sedlex"
+  "ounit2" {dev}
+  "bisect_ppx" {dev}
 ]

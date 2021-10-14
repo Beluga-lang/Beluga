@@ -4,7 +4,14 @@ build:
 	dune build
 
 test: build
+	dune runtest --force
 	dune exec ./TEST
+
+coverage:
+	dune build --instrument-with bisect_ppx --force
+	dune runtest --instrument-with bisect_ppx --force
+	bisect-ppx-report html
+	bisect-ppx-report summary
 
 harpoon-test: build
 	dune exec ./TEST -- --harpoon

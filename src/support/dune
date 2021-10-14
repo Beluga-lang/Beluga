@@ -1,3 +1,4 @@
 (library
   (name support)
-  (libraries gen extlib))
+  (libraries gen extlib)
+  (instrumentation (backend bisect_ppx --bisect-silent yes)))

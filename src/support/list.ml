@@ -1,7 +1,7 @@
 include Stdlib.List
 
 let rec last l = match l with
-  | [] -> raise (Invalid_argument "last")
+  | [] -> raise (Invalid_argument "List.last")
   | [x] -> x
   | _ :: xs -> last xs
 

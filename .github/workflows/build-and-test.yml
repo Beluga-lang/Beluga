@@ -45,7 +45,7 @@ jobs:
           ocaml-version: ${{ matrix.ocaml-version }}
 
       - name: Install dependencies
-        run: opam install --deps-only .
+        run: opam install --deps-only --with-test .
 
       - name: Build
         run: opam exec -- make

@@ -18,7 +18,6 @@ harpoon-test: build
 
 all-test: test
 	dune exec ./TEST -- +htmltest
-	dune exec ./TEST -- +sexp
 
 clean:
 	dune clean

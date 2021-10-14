@@ -56,7 +56,7 @@ To start working on Beluga, clone the repository and create an opam switch with 
 ```bash
 git clone https://github.com/Beluga-lang/Beluga.git Beluga
 cd Beluga
-opam switch create . --deps-only
+opam switch create . --deps-only --with-test --yes
 eval $(opam env)
 ```
 
@@ -72,8 +72,8 @@ dune exec beluga path/to/program.bel
 
 You can run a Harpoon session using the compiled development version of `harpoon` using:
 
-```
-bash exec harpoon -- --sig path/to/program.bel
+```bash
+dune exec harpoon -- --sig path/to/program.bel
 ```
 
 See the [`MakeFile`](./MakeFile) for other available development commands.

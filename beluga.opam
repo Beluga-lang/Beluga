@@ -23,6 +23,6 @@ depends: [
   "linenoise"
   "ocaml" {>= "4.08"}
   "sedlex"
-  "ounit2" {dev}
-  "bisect_ppx" {dev}
+  "ounit2" {with-test}
+  "bisect_ppx" {with-test}
 ]

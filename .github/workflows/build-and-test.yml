@@ -51,9 +51,7 @@ jobs:
         run: opam exec -- make
 
       - name: Test
-        run: |
-          opam exec -- make test
-          opam exec -- dune exec ./TEST -- +htmltest
+        run: opam exec -- make all-test
 
       - name: Check whitespaces
         run: opam exec -- ./LINT

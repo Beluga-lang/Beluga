@@ -1,0 +1,3 @@
+(test
+ (name test)
+ (libraries ounit2 support))

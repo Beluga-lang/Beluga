@@ -5,7 +5,9 @@ build:
 
 test: build
 	dune runtest --force
-	dune exec chmod a+x ./TEST
+	dune exec ls ./ -- -al
+	dune exec chmod 777 ./TEST
+	dune exec ls ./ -- -al
 	dune exec ./TEST
 
 coverage:

@@ -5,7 +5,8 @@ build:
 
 test: build
 	dune runtest --force
-	dune exec chmod a+x ./TEST && ./TEST
+	dune exec chmod a+x ./TEST
+	dune exec ./TEST
 
 coverage:
 	dune build --instrument-with bisect_ppx --force

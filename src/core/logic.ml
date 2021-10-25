@@ -73,7 +73,6 @@ type goal =                             (* Goals            *)
   | Atom of LF.typ                      (* g ::= A          *)
   | Impl of (res * LF.typ_decl) * goal  (*     | r => g'    *)
   | All of LF.typ_decl * goal           (*     | ∀x:A. g'   *)
-  | Comp of Comp.typ                    (*     | [ g' ]     *)
 
 and res =                               (* Residual Goals   *)
   | Head of LF.typ                      (* r ::= A          *)
@@ -299,7 +298,7 @@ module Convert = struct
     | LF.PiTyp ((LF.TypDecl (x, tA) as tdec, LF.No), tB) ->
        Impl ((typToRes tA (cS, dS, dR), tdec), typToGoal tB (cS, dS, dR + 1))
     | LF.Atom _ ->
-       Atom (Shift.shiftAtom tM (-cS, -dS, dR))
+       Atom (Shift.shiftAtom tA (-cS, -dS, dR))
 
   and typToRes tM (cS, dS, dR) =
     match tM with
@@ -1167,7 +1166,7 @@ module Printer = struct
 
  (* Prints the current state of proof loop
     (used for debugging) *)
-
+(*
   let printState cD cG cg ms =
     let fmt_ppr_gctx cD ppf cG =
       P.fmt_ppr_cmp_gctx cD P.l0 ppf cG
@@ -1184,7 +1183,7 @@ module Printer = struct
         (fmt_ppr_gctx cD) cG
         (fmt_ppr_cmp_goal cD) (cg,S.id)
         (Pretty.Int.DefaultPrinter.fmt_ppr_lf_msub cD Pretty.Int.DefaultPrinter.l0) ms
-
+*)
 end
 
 module Solver = struct
@@ -1860,7 +1859,7 @@ module CSolver = struct
        (* printf "solve sig SG \n"; *)
       (* let cg' = normCompGoal (cg', ms) in
        let ms = Whnf.cnormMSub ms in *)
-       Printer.printState cD cG (cg') ms;
+       (*Printer.printState cD cG (cg') ms;*)
        cgSolve' cD cG cPool (cg', ms)
          (fun e ->
            solveCClauseSubGoals cD cG cPool cid sg' ms mV
@@ -2435,8 +2434,6 @@ module Frontend = struct
     (* Success continuation function *)
     let scInit e =
       incr solutions;
-      fprintf std_formatter "\n FINAL check e = \n %a \n"
-          (P.fmt_ppr_cmp_exp_chk LF.Empty LF.Empty) e;
 
        (* Rebuild the substitution and type check the proof term. *)
       if !Options.checkProofs
@@ -2519,8 +2516,6 @@ let prepare () =
   Index.robAll ();
 
 (*
-
-
 let runLogicOn n (cD, cPsi, tA, i) e t  =
   Index.singleQuery (n, (tA, i), e, t) Frontend.solve
  *)

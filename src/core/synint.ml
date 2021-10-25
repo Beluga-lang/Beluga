@@ -452,13 +452,13 @@ module Comp = struct
   and exp_chk =                                                              (* e :=                                              *)
     | Syn        of Location.t * exp_syn                                     (* | n                                               *)
     | Fn         of Location.t * name * exp_chk                              (* | \x. e'                                          *)
-    | Fun        of Location.t * fun_branches                                (* | b_1...b_k                                       *) 
+    | Fun        of Location.t * fun_branches                                (* | b_1...b_k                                       *)
     | MLam       of Location.t * name * exp_chk * plicity                    (* | Pi X.e'                                         *)
     | Pair       of Location.t * exp_chk * exp_chk                           (* | (e_1, e_2)                                      *)
     | LetPair    of Location.t * exp_syn * (name * name * exp_chk)           (* | letpair n (x, y, e) := let (x=n.1, y=n.2) in  e *)
     | Let        of Location.t * exp_syn * (name * exp_chk)                  (* | let x = n in e                                  *)
     | Box        of Location.t * meta_obj * meta_typ (* type annotation,     (* | Box ([cPsihat |- tM]) : [cPsi |- tA]            *)
-                                            used for pretty-printing *)              
+                                            used for pretty-printing *)
     | Case       of Location.t * case_pragma * exp_syn * branch list
     | Impossible of Location.t * exp_syn
     | Hole       of Location.t * HoleId.t * HoleId.name

@@ -2671,14 +2671,14 @@ let sgn_query_pragma =
   <& token T.DOT
   |> span
   |> labelled "logic programming engine query pragma"
-  $> fun (location, ((expected_solutions, maximum_tries), cD name, typ)) ->
+  $> fun (location, ((expected_solutions, maximum_tries), cD, name, typ)) ->
      Sgn.Query { location; name; mctx=cD; typ; expected_solutions; maximum_tries }
 
 let sgn_mquery_pragma =
   let bound =
     alt
       (token T.STAR &> pure None)
-      (integer $> Maybe.pure)
+      (integer $> Option.some)
     |> labelled "search bound"
   in
   pragma "mquery" &>

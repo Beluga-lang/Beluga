@@ -172,7 +172,7 @@ let process_command
         (HoleId.string_of_name_or_id (h.Holes.name, id))
       end;
     let { name; Holes.cD = cDh; info; _ } = h in
-    match w with 
+    match w with
     | Holes.CompInfo ->
       begin
         let { compGoal; Holes.cG = cGh; compSolution } = h.info
@@ -194,17 +194,17 @@ let process_command
             begin
               fun e ->
               State.printf s "found solution: @[%a@]@,@?"
-                (P.fmt_ppr_cmp_exp_chk cDh cGh P.l0) e;           
-              h.info.compSolution <- Some e; 
+                (P.fmt_ppr_cmp_exp_chk cDh cGh P.l0) e;
+              h.info.compSolution <- Some e;
               raise Logic.Frontend.Done
             end
             (Some 999)
         with
           | Logic.Frontend.Done ->
-              State.printf s "logic programming finished@,@?"; 
+              State.printf s "logic programming finished@,@?";
               ()
              end
-         
+
     | Holes.LFInfo ->
        let { lfGoal; cPsi; lfSolution } = h.info in
        assert (lfSolution = None);
@@ -229,7 +229,7 @@ let process_command
        with
        | Logic.Frontend.Done ->
           State.printf s "logic programming finished@,@?";
-          () 
+          ()
   in
 
   let { cD; cG; cIH } = g.context in

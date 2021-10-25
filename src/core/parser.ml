@@ -2692,7 +2692,7 @@ let sgn_mquery_pragma =
   $> fun (loc, ((e, t, d), tau)) ->
      Sgn.MQuery (loc, tau,e,t,d)
 
-     
+
 let sgn_oldstyle_lf_decl =
   labelled
     "old-style LF type or constant declaration"

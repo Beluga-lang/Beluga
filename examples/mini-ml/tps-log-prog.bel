@@ -185,7 +185,7 @@ od_sz: odd (suc z).
 od_s : odd N -> odd (suc (suc N)).
 
 --query 2 2 D : even (suc N).             % does the exist a solution for D and N st. D : [even (suc N)] 
---mquery 1 *  [ |- even (suc (suc z))].    
+--mquery 1 *  * [ |- even (suc (suc z))].    
 
 
 

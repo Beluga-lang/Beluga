@@ -259,11 +259,11 @@ and lowerMMVar cD =
 *)
 
 (*************************************)
-    
+
 (* mvar_dot1 t = t'
    Invariant:
 
-   If  cD |- t : cD' 
+   If  cD |- t : cD'
    then t' = u. (mshift t 1)
         cD, u::[|t|]U |- t' : cD', u:U
  *)
@@ -1642,7 +1642,7 @@ and cnormMetaSpine (mS, t) =
 
 let cnormCDecl (cdecl, t) =
   match cdecl with
-  | Decl (u, mtyp, dep) -> Decl (u, cnormMTyp (mtyp, t), dep) 
+  | Decl (u, mtyp, dep) -> Decl (u, cnormMTyp (mtyp, t), dep)
 
 let rec cnormCTyp =
   function
@@ -2433,7 +2433,6 @@ let dotMMVar loc' cD t (u, cU, dep) =
  *)
 let extend_mctx cD (cdecl, t) =
   Dec(cD, cnormCDecl (cdecl, t))
-  
+
 let extend_gctx cG (cdecl, t) =
   Dec(cG, cnormCCDecl (cdecl, t))
-    

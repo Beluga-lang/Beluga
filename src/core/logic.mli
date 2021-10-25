@@ -1,26 +1,27 @@
 open Syntax.Int
 
 type goal
+type comp_goal
 type query
 type mquery
 type comp_res
-   
+
 
 module Options : sig
   val enableLogic : bool ref
 end
 
 module Convert : sig
-  val comptypToCompGoal : Comp.typ -> comp_goal 
+  val comptypToCompGoal : Comp.typ -> comp_goal
   val typToQuery : LF.mctx -> LF.dctx -> LF.typ * Id.offset
                    -> query * LF.typ * LF.sub * (Id.name * LF.normal) list
   val comptypToMQuery : Comp.typ * Id.offset -> mquery * Comp.typ * LF.msub * (Id.name * Comp.meta_obj) list
 end
 
 module Index : sig
-  type inst 
+  type inst
 end
-     
+
 
 module Frontend : sig
   exception Done
@@ -34,8 +35,8 @@ type bound = int option
 
 module CSolver : sig
   val cgSolve : LF.mctx -> Comp.gctx -> mquery -> (Comp.exp_chk -> unit) -> bound-> unit
-end 
-     
+end
+
 val storeQuery : Id.name option -> LF.typ * Id.offset -> LF.mctx -> bound -> bound -> unit
 val storeMQuery: Comp.typ * Id.offset -> bound -> bound -> bound -> unit
 val runLogic : unit -> unit

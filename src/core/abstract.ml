@@ -354,7 +354,7 @@ let rec mctxToCtx =
   | I.Dec (cQ', I.Decl (x, I.CTyp (Some w), dep)) ->
      I.Dec (mctxToCtx cQ', CtxV (x, w, dep))
   | I.Dec (cQ', I.Decl (n, ityp, dep)) ->
-     I.Dec (mctxToCtx cQ', FDecl (FV n, Pure (MetaTyp (ityp, dep))))   
+     I.Dec (mctxToCtx cQ', FDecl (FV n, Pure (MetaTyp (ityp, dep))))
 
 let rec ctxToMCtx_pattern names =
   function
@@ -1596,7 +1596,7 @@ let abstrCompTypcD cD tau =
   let l' = lengthCollection cQ in
   let p = prefixCompTyp tau' in (* p = number of explicitely declared mvars *)
   (* extend cQ with any variables found in tau' *)
-  let (cQ, tau1) = collectCompTyp (l' + p) cQ tau' in 
+  let (cQ, tau1) = collectCompTyp (l' + p) cQ tau' in
   let k = lengthCollection cQ in
   let l = (k - l') in
   (* l: count of variables *excluding* leading context variables *)
@@ -1604,14 +1604,14 @@ let abstrCompTypcD cD tau =
   (* let cQ' = abstractMVarCtx cQ (l-1) in *)
   let tau' = abstractMVarCompTyp cQ' (l, 0) tau1 in
   let cD' = ctxToMCtx (fun _ -> I.Maybe) cQ' in
-  
+
   let tau'' = raiseCompTyp cD' tau' in
   (* We can't just subtract l' because l' counts also implicit context quantifications.
      Instead we drop all explicit context contexts from cD' and then
      take the length in order to get the correct count of implicit
      parameters. *)
   (tau'', Context.length (dropExplicitCTyp cD'))
- 
+
 
 let abstrCodataTyp cD tau tau' =
   let rec split =

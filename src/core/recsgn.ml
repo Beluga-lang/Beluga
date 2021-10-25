@@ -1150,7 +1150,7 @@ let recSgnDecls decls =
          begin fun p ->
            p.fmt "Reconstruction (with abstraction) of query: %a with %s abstracted variables"
              (P.fmt_ppr_lf_typ cD Int.LF.Null P.l0) tA'
-             (string_of_int i)   
+             (string_of_int i)
          end;
        Monitor.timer
          ( "Constant Check"
@@ -1198,18 +1198,18 @@ let recSgnDecls decls =
         begin fun p ->
         p.fmt "Reconstruction (with abstraction) of mquery: %a with %s abstracted variables"
           (P.fmt_ppr_cmp_typ (Int.LF.Empty) P.l0) tau'
-          (string_of_int i)   
+          (string_of_int i)
         end;
         Monitor.timer
           ( "Constant Check"
           , fun () ->
            Check.Comp.checkTyp Int.LF.Empty tau'
           );
-        Logic.storeMQuery (tau', i) expected tries depth)   ;                 
+        Logic.storeMQuery (tau', i) expected tries depth)   ;
         Int.Sgn.MQuery (loc, (tau', i), expected, tries, depth)))
 
 
-       
+
     | Ext.Sgn.Pragma (loc, Ext.Sgn.NamePrag (typ_name, m_name, v_name)) ->
        dprintf
          (fun p ->

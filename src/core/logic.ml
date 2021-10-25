@@ -16,7 +16,7 @@ open Debug.Fmt
 module Options = struct
   (* Enable the logic programming engine (disabled by default). *)
   let enableLogic = ref true
- 
+
   (* Control verbosity level:
        0 => No output.
        1 => Query and success notification.
@@ -34,7 +34,8 @@ module Options = struct
 end
 
 
-exception NotImplementedYet 
+exception NotImplementedYet
+
 
 (* Naming conventions:
      g : goal
@@ -55,8 +56,8 @@ exception NotImplementedYet
    Dynamic clause.
      sCl : clause
    Clause from LF signature.
-     sCCl : clause 
-   Clause from Signature of computation type. 
+     sCCl : clause
+   Clause from Signature of computation type.
      cS : int
    Constant shift for BVar indices bound to existential variables.
      dS : int
@@ -67,7 +68,7 @@ exception NotImplementedYet
 
 type lfTyp =  (* Used to classify the kind of LF object an LF type represents *)
   | M | P
-                     
+
 type goal =                             (* Goals            *)
   | Atom of LF.typ                      (* g ::= A          *)
   | Impl of (res * LF.typ_decl) * goal  (*     | r => g'    *)
@@ -81,7 +82,7 @@ and res =                               (* Residual Goals   *)
 
 type conjunction =                       (* Subgoals         *)
   | True                                 (* cG ::= True      *)
-  | Conjunct of conjunction * goal       (*      | cG' ∧ g   *) 
+  | Conjunct of conjunction * goal       (*      | cG' ∧ g   *)
 
 let rec list_of_conjunction : conjunction -> goal list =
   function
@@ -101,23 +102,23 @@ type clause =                    (* Horn Clause ::= eV |- A :- cG   *)
 (* Naming conventions:
 
   cg : comp_goal (computation-level goal)
-  mq : mquery    (a query for a cg) 
+  mq : mquery    (a query for a cg)
 
  *)
 
 type comp_goal =                                (* Comp Goal cg :=       *)
   | Box of LF.dctx  * goal * lfTyp option       (*     | Box (cPsi , g)  *)
   | Implies of (comp_res * Comp.ctyp_decl)      (*     | r -> cg'        *)
-               * comp_goal  
+               * comp_goal
   | Forall of  LF.ctyp_decl * comp_goal         (*     | ∀x:U. cg        *)
-  | Atomic of Id.cid_comp_typ * atomic_spine    (*     | a meta_spine    *)    
+  | Atomic of Id.cid_comp_typ * atomic_spine    (*     | a meta_spine    *)
 
 and atomic_spine =
   | End
   | Spine of atomic_spine * (Comp.meta_typ
                              * LF.mfront
                              * Syncom.LF.plicity) (* For recreating type*)
-            
+
 and comp_res =                          (* Residual Comp Goals   *)
   | Base of Comp.typ                    (* cr ::= A              *)
   | CAnd of comp_goal * comp_res        (*     | cg ∧ r'         *)
@@ -126,23 +127,23 @@ and comp_res =                          (* Residual Comp Goals   *)
 type subgoals =                     (* Subgoals         *)
   | Proved                          (* sg ::= Proved    *)
   | Solve of subgoals * comp_goal   (*      | sg ∧ cg   *)
-           
+
 let rec list_of_subgoals : subgoals -> comp_goal list =
   function
   | Proved -> []
   | Solve (c, x) -> x :: list_of_subgoals c
-           
+
 type mquery = comp_goal * LF.msub       (* mq := (cg, ms)  *)
 
-            
+
 (*  bp : modelling the computation level clause following the LF clause definition *)
-type cclause =                       (* Comp. Horn Clause ::= cD |- tau_atomic  :- subgoals   *) 
+type cclause =                       (* Comp. Horn Clause ::= cD |- tau_atomic  :- subgoals   *)
   { cHead : Comp.typ                 (* Head tau_atomic := TypBox U | TypBase (c, S) *)
   ; cMVars : LF.mctx                 (* Context cD : meta-vars  bound in compTyp     *)
   ; cSubGoals : subgoals             (* Subgoals that need to be solved              *)
-  }  
-  
-  
+  }
+
+
 module Shift : sig
   val shiftAtom : LF.typ -> int * int * int -> LF.typ
 end = struct
@@ -229,7 +230,7 @@ end
 
 
 module Convert = struct
-  
+
   (* typToClause' eV cG tA (cS, dS, dR) = clause
      Invariants:
        If BV(i) is free in tA, then BV(i) is bound in (eV |- tA).
@@ -248,31 +249,31 @@ module Convert = struct
        ; subGoals = cG
        }
 
-      
+
   (* comptypToCClause' cD tau subgoals  = cclause
      Invariants:
 
-       cD |- tau 
-       cD |- subgoals 
+       cD |- tau
+       cD |- subgoals
 
        If tau = TypPiBox (u:U, tau) then cD := cD, u:U
        If tau = TypArr tau1 tau2 then subgoals := Solve (subgoals, tau1)
-     
-      
-   To do: 
-   - add other types (such as codata, etc. ) abort gracefull 
+
+
+   To do:
+   - add other types (such as codata, etc. ) abort gracefull
   *)
-      
+
   and comptypToCClause' cD tau subgoals  =
     match tau with
     | Comp.TypBox (_, _U) ->
-       { cHead = tau  
+       { cHead = tau
        ; cMVars = cD
-       ; cSubGoals = subgoals 
+       ; cSubGoals = subgoals
        }
     | Comp.TypPiBox (l, tdecl, tau') ->
        let cD' = Whnf.extend_mctx cD (tdecl, LF.MShift 0) in
-       comptypToCClause' cD' tau' subgoals 
+       comptypToCClause' cD' tau' subgoals
     | Comp.TypArr (_, t1, t2) ->
        let cg = comptypToCompGoal t1 in
        comptypToCClause' cD t2 (Solve (subgoals, cg))
@@ -286,11 +287,11 @@ module Convert = struct
        ; cMVars = cD
        ; cSubGoals = subgoals
        }
-   
+
 
   (* Write out invariant / comment
-     in particular: what is cS, dS, dR 
-   *)       
+     in particular: what is cS, dS, dR
+   *)
   and typToGoal tA (cS, dS, dR) =
     match tA with
     | LF.PiTyp ((tdec, LF.Maybe), tA') ->
@@ -307,9 +308,9 @@ module Convert = struct
     | LF.PiTyp ((LF.TypDecl (_, tA), LF.No), tB) ->
        And (typToGoal tA (cS, dS, dR), typToRes tB (cS + 1, dS + 1, dR + 1))
     | LF.Atom _ ->
-       Head (Shift.shiftAtom tM (-cS, -dS, dR)) 
+       Head (Shift.shiftAtom tM (-cS, -dS, dR))
 
-           
+
   and comptypToCompGoal tau  =
     (* convert spine into the required shape (atomic_spine) *)
     let rec msToAs s =
@@ -324,7 +325,7 @@ module Convert = struct
        Box (cPsi, Atom tA, Some M)
        (* possibly needs to have PiBox variables shifted;
           note: Pibox variables are indexed with respect to cD (Delta)
-                LF Pi variables are indexed with respect to LF context 
+                LF Pi variables are indexed with respect to LF context
                 (hence one cannot simply re-use the module Shift, but would need a module MShift)
         *)
     | Comp.TypBox (_loc, LF.ClTyp (LF.PTyp tA, cPsi)) ->
@@ -337,11 +338,11 @@ module Convert = struct
        let cr1 = comptypToCompRes tau1 in
        let cg2 = comptypToCompGoal tau2 in
        let name = Id.mk_name Id.NoName in
-       let typ_dec = Comp.CTypDecl (name, tau1 , true) in 
-       Implies ((cr1,typ_dec), cg2)  
+       let typ_dec = Comp.CTypDecl (name, tau1 , true) in
+       Implies ((cr1,typ_dec), cg2)
     | Comp.TypBase (_, comp_cid, s) ->
        Atomic (comp_cid, msToAs s)
-       
+
   and comptypToCompRes tau =
     match tau with
     | Comp.TypBox (_) | Comp.TypBase(_) ->
@@ -376,7 +377,7 @@ module Convert = struct
 
   let cResToCClause (cr, ms) =
     cResToCClause' LF.Empty Proved (cr, ms)
-       
+
   let typToClause tA =
     typToClause' LF.Null True tA (0, 0, 0)
 
@@ -395,7 +396,7 @@ module Convert = struct
        let ctyp = LF.ClTyp (LF.PTyp tA, cPsi) in
        Comp.TypBox (loc, ctyp)
 
-  (* Converts an atomic comp goal to a Comp.TypBase *) 
+  (* Converts an atomic comp goal to a Comp.TypBase *)
   let atomicToBase atomic =
     let rec asToMs aS =
       match aS with
@@ -408,7 +409,7 @@ module Convert = struct
        let loc = Syntax.Loc.ghost in
        let mS = asToMs aS in
        Comp.TypBase (loc, cid, mS)
-        
+
 
   (* etaExpand Psi (A, s) = normal
      Invariants:
@@ -418,7 +419,7 @@ module Convert = struct
      Effects:
        None.
 
-    Example: tA = \x. X[x] : nat -> nat 
+    Example: tA = \x. X[x] : nat -> nat
         meta-variable X generated by newMMVar at type nat in a context cPsi := x:nat
         (instead of a meta-variable of type nat -> nat)
 
@@ -436,7 +437,7 @@ module Convert = struct
          , etaExpand cD (LF.DDec (cPsi, S.decSub tD s)) (tB, S.dot1 s)
          )
 
-      
+
   (* dctxToSub Delta Psi (eV, s) fS = sub * (spine -> spine)
      Invariants:
        eV = Null | ((Null, Dec (x, M)), ...)
@@ -471,7 +472,7 @@ module Convert = struct
     in
     let noLoc = Syntax.Loc.ghost in
     match mV with
-    | LF.Empty -> (ms, fS) 
+    | LF.Empty -> (ms, fS)
     | LF.Dec (mV',
               LF.Decl (name, ((LF.ClTyp (LF.MTyp tA, cPsi)) as ctyp), dep)) ->
        let (ms', fS') = mctxToMSub cD (mV', ms) fS in
@@ -487,7 +488,7 @@ module Convert = struct
 
        (* TODO:: TRY normalizing ctyp as well!!!! *)
        (* let ctyp' = Whnf.cnormMTyp (ctyp, ms') in *)
-        
+
        (LF.MDot (mfront, ms'),
         (fun s ->
           fS' (Comp.MApp (noLoc, s, (noLoc, mfront), ctyp, plicity))))
@@ -521,7 +522,7 @@ module Convert = struct
        (LF.MDot (mf, ms'),
         (fun s -> fS'
                     (Comp.MApp (noLoc, s, (noLoc, mf), ctyp, plicity))))
-    | _ -> raise NotImplementedYet   
+    | _ -> raise NotImplementedYet
 
 
   (** typToQuery (M, i)  = ((g, s), xs)
@@ -551,16 +552,16 @@ module Convert = struct
     | [] -> LF.MShift 0
     | (x, tN) :: xs ->
        LF.MDot (tN, solToMSub xs)
-       
-                                     
- 
+
+
+
 (*
-  comptypToMQuery (tau,i) = comp_goal  
+  comptypToMQuery (tau,i) = comp_goal
 
    Precondition:
 
      . |- tau : ctyp  (i.e. tau is a closed computation-level type)
-          i  = # Pibox quantified variables in tau that denote existential variables, 
+          i  = # Pibox quantified variables in tau that denote existential variables,
                i.e. we want to find instantiation for those variables during proof search.
 
    Postcondition (result)
@@ -570,18 +571,18 @@ module Convert = struct
  *)
 let comptypToMQuery (tau, i) =
   let rec comptypToMQuery' (tau, i) ms xs =
-    (* 
-     Invariant: 
+    (*
+     Invariant:
 
-       cD' |- tau 
-       .   |- ms : cD'     ms is a meta-substitution that provides existential variables (refs that will instantiated) 
+       cD' |- tau
+       .   |- ms : cD'     ms is a meta-substitution that provides existential variables (refs that will instantiated)
                               for all the bound meta-variables in cD'
-       .   |- [ms]tau 
+       .   |- [ms]tau
 
      *)
       match tau with
       | Comp.TypBox (_loc, LF.ClTyp (LF.MTyp _tA, _cPsi)) ->
-          (((comptypToCompGoal tau),ms), tau, ms, xs) 
+          (((comptypToCompGoal tau),ms), tau, ms, xs)
       | Comp.TypBox (_loc, LF.ClTyp (LF.PTyp _tA, _cPsi)) ->
          (((comptypToCompGoal tau),ms), tau, ms, xs)
       | Comp.TypBox (loc, LF.ClTyp (LF.STyp (_svar_c, _cPhi),  _cPsi)) ->
@@ -591,7 +592,7 @@ let comptypToMQuery (tau, i) =
           (* generate a meta-variable (instantiated by unification) of type (LF.MTyp tA, cPsi)
              and make sure it is an mfront *)
           let mmV = Whnf.newMMVar' (Some x) (LF.Empty, mtyp) dep in
-          let mfront = Whnf.mmVarToMFront loc mmV mtyp in 
+          let mfront = Whnf.mmVarToMFront loc mmV mtyp in
           comptypToMQuery' (tau', i-1) (LF.MDot (mfront, ms)) ((x, (loc, mfront)) :: xs)
       | Comp.TypPiBox (_,_, tau') when i = 0 ->
          (((comptypToCompGoal tau),ms), tau, ms, xs)
@@ -605,7 +606,7 @@ let comptypToMQuery (tau, i) =
 
 end
 
-    
+
 module Index = struct
   open Store
 
@@ -616,7 +617,7 @@ module Index = struct
   let compTTypes = Hashtbl.create 0     (* comp theorem Hashtbl.t      *)
 
   type inst = (Id.name *  LF.normal)    (* I ::= (x, Y[s]) where Y is an MVar        *)
-  type minst = (Id.name * LF.mfront)    (* I ::= (x, mf)   where mf is (Psihat.term) *)            
+  type minst = (Id.name * LF.mfront)    (* I ::= (x, mf)   where mf is (Psihat.term) *)
                                         (* where mf contains an MMVar *)
   type sgnQuery =
     { query : query                   (* Query ::= (g, s)            *)
@@ -637,10 +638,10 @@ module Index = struct
     ; depth : bound                   (* Depth of search tree.       *)
     ; instMMVars : minst list         (* MMVar instantiations.       *)
     }
-    
+
 
   let queries = DynArray.create ()      (* sgnQuery DynArray.t         *)
-  let mqueries = DynArray.create ()     (* sgnMQuery DynArray.t        *)              
+  let mqueries = DynArray.create ()     (* sgnMQuery DynArray.t        *)
 
   let querySub = ref S.id
 
@@ -654,23 +655,23 @@ module Index = struct
 
   (* addCompTyp c = sgnCClause DynArray.t
      Create new entry for a compTyp constant c in the `compITypes' table
-     and return its mapping 
+     and return its mapping
   *)
-    
+
   let addCompTyp cidTyp =
     Hashtbl.add compITypes cidTyp (DynArray.create ());
     Hashtbl.find compITypes cidTyp
 
   let addComp cidTyp =
     Hashtbl.add compTTypes cidTyp (DynArray.create ());
-    Hashtbl.find compTTypes cidTyp 
+    Hashtbl.find compTTypes cidTyp
 
   (* addSgnClause tC, sCl = ()
      Add a new sgnClause, sCl, to the DynArray tC.
   *)
   let addSgnClause typConst sgnClause =
     DynArray.add typConst sgnClause
- 
+
   (* addSgnQuery (p, (g, s), cD, xs, e, t)  = ()
      Add a new sgnQuery to the `queries' DynArray.
   *)
@@ -680,13 +681,13 @@ module Index = struct
       ; typ = a
       ; skinnyTyp = a'
       ; optName = p
-      ; cD = cD 
+      ; cD = cD
       ; expected = e
       ; tries = t
       ; instMVars = xs
       }
 
-    
+
   (* addSgnMQuery (tau', ttau, xs, e, t)  = ()
      Add a new sgnMQuery to the `mqueries' DynArray.
    *)
@@ -698,13 +699,13 @@ module Index = struct
       ; mtries = t
       ; depth = d
       ; instMMVars = xs
-      }    
-    
+      }
+
   (* compile _ Clause c = (c, sCl)
      Retrieve type for term constant c, clausify it, and
      return the respective clause (c, sCl).
    *)
-    
+
   (* LF Constants  *)
   let compileSgnClause cidTerm =
     let termEntry = Cid.Term.get cidTerm in
@@ -715,14 +716,14 @@ module Index = struct
   let compileSgnCClause cidTerm =
     let termEntry = Cid.Comp.get cidTerm in
     let tau = termEntry.Cid.Comp.Entry.typ in
-    (cidTerm, Convert.comptypToCClause tau)   
-    
+    (cidTerm, Convert.comptypToCClause tau)
+
   (* Computation Inductive Constants *)
   let compileSgnConstClause cidCompTerm =
     let ctermEntry = Cid.CompConst.get cidCompTerm in
     let tau = ctermEntry.Cid.CompConst.Entry.typ in
     (cidCompTerm, Convert.comptypToCClause tau)
-    
+
 
   (* termName c = Id.name
      Get the string representation of term constant c.
@@ -731,10 +732,10 @@ module Index = struct
     (Cid.Term.get cidTerm).Cid.Term.Entry.name
 
   let compName cidTerm =
-    (Cid.Comp.get cidTerm).Cid.Comp.Entry.name  
+    (Cid.Comp.get cidTerm).Cid.Comp.Entry.name
 
   let compConstName cidTerm =
-    (Cid.CompConst.get cidTerm).Cid.CompConst.Entry.name  
+    (Cid.CompConst.get cidTerm).Cid.CompConst.Entry.name
 
   (* storeTypConst c = ()
      Add a new entry in `types' for type constant c and fill the DynArray
@@ -759,26 +760,26 @@ module Index = struct
     revIter regSgnClause typConstr
 
   (* storeCompConst c = ()
-     Add a new entry in `compTTypes' for comptype constant c and fill the 
-     DynArray with the clause corresponding to the comp. theorem 
+     Add a new entry in `compTTypes' for comptype constant c and fill the
+     DynArray with the clause corresponding to the comp. theorem
      associated  with c.
    *)
-    
+
   let storeCompConst (cidTyp, typEntry) =
-    (* TODO:: Typ or CompTyp?? *) 
+    (* TODO:: Typ or CompTyp?? *)
     let typConst = addComp cidTyp in
     addSgnClause typConst (compileSgnCClause cidTyp)
-  
+
 
   (* storeCompTypConst c = ()
-     Add a new entry in `Comptypes' for comptype constant c and fill the 
-     DynArray with the clauses corresponding to the comp. term constants 
+     Add a new entry in `Comptypes' for comptype constant c and fill the
+     DynArray with the clauses corresponding to the comp. term constants
      associated  with c.
    *)
 
-    
+
   let storeCompTypConst (cidCompTyp, compTypEntry) =
-    let ctypConstr = !(compTypEntry.Cid.CompTyp.Entry.constructors) in  
+    let ctypConstr = !(compTypEntry.Cid.CompTyp.Entry.constructors) in
     let ctypConst = addCompTyp cidCompTyp in
     let regSgnCClause cidCompTerm =
       addSgnClause ctypConst (compileSgnConstClause cidCompTerm)
@@ -790,7 +791,7 @@ module Index = struct
          revIter f l';
          f h
     in
-    revIter regSgnCClause ctypConstr 
+    revIter regSgnCClause ctypConstr
 
 
   (* storeQuery (p, (tA, i), cD, e, t) = ()
@@ -814,7 +815,7 @@ module Index = struct
     let (mq, tau', ms, xs) = (Convert.comptypToMQuery (tau, i)) in
     addSgnMQuery (tau', mq, [], e, t, d)
 
-    
+
   (* robStore () = ()
      Store all type constants in the `types' table.
   *)
@@ -831,7 +832,7 @@ module Index = struct
     try
       List.iter storeCompConst (Cid.Comp.current_entries ())
     with
-    | _ -> ()   
+    | _ -> ()
 
   (* robThirdStore () = ()
      Store all  comptyp Inductive constants in the `compITypes' table.
@@ -840,15 +841,15 @@ module Index = struct
     try
       List.iter storeCompTypConst (Cid.CompTyp.current_entries ())
     with
-    | _ -> ()   
+    | _ -> ()
 
   (* Store all signature constants in their respective tables *)
   let robAll () =
     robStore ();
     robSecondStore ();
     robThirdStore ()
-    
- 
+
+
   (* iterSClauses f c = ()
      Iterate over all signature clauses associated with c.
   *)
@@ -860,10 +861,10 @@ module Index = struct
 
   let iterISClauses f cidTyp =
     DynArray.iter f (Hashtbl.find compITypes cidTyp)
-   
+
   let iterAllISClauses f =
     Hashtbl.iter (fun k v -> DynArray.iter f v) compITypes
-   
+
   let iterAllTSClauses f =
     Hashtbl.iter (fun k v -> DynArray.iter f v) compTTypes
 
@@ -877,11 +878,11 @@ module Index = struct
   *)
   let clearIndex () =
     DynArray.clear queries;
-    DynArray.clear mqueries;             
+    DynArray.clear mqueries;
     Hashtbl.clear types;
     Hashtbl.clear compITypes;
     Hashtbl.clear compTTypes
-    
+
 
 
   let singleQuery (p, (tA, i), cD, e, t) f =
@@ -918,11 +919,11 @@ module Printer = struct
     P.fmt_ppr_lf_dctx cD P.l0 ppf cPsi
 
  (* let fmt_ppr_gctx cD ppf cG =
-    P.fmt_ppr_cmp_gctx cD P.l0 ppf cG 
+    P.fmt_ppr_cmp_gctx cD P.l0 ppf cG
 
-  let fmt_ppr_mctx ppf cD = 
+  let fmt_ppr_mctx ppf cD =
     P.fmt_ppr_lf_mctx P.l0 ppf cD     *)
-     
+
   let fmt_ppr_typ cD cPsi ppf sA =
     P.fmt_ppr_lf_typ cD cPsi P.l0 ppf (Whnf.normTyp sA)
 
@@ -964,7 +965,7 @@ module Printer = struct
     | LF.DeclOpt (x, _) ->
        fprintf ppf "%a : _"
          Id.print x *)
-    
+
 
   (* goalToString Psi (g, s) = string
      Invariants:
@@ -987,15 +988,15 @@ module Printer = struct
        fprintf ppf "(∀%a. %a)"
          (fmt_ppr_decl cD cPsi) (tD, s)
          (fmt_ppr_goal cD (LF.DDec (cPsi, S.decSub tD s))) (g', S.dot1 s)
-        
+
   and fmt_ppr_cmp_goal cD ppf (cg, s) =
     match cg with
     | Box (cPsi, _g, lfTy) ->
-       let tau = Convert.boxToTypBox cg in 
+       let tau = Convert.boxToTypBox cg in
        fprintf ppf " %a "
          (fmt_ppr_cmp_typ cD) (tau)
     | Atomic (cid, aSpine) ->
-       let tau = Convert.atomicToBase cg in 
+       let tau = Convert.atomicToBase cg in
        fprintf ppf " %a "
          (fmt_ppr_cmp_typ cD) (tau)
     | Forall (ctdec, cg') ->
@@ -1007,7 +1008,7 @@ module Printer = struct
        fprintf ppf "%a -> %a"
          (fmt_ppr_cmp_res cD) (cr, s)
          (fmt_ppr_cmp_goal cD) (cg', s)
-    
+
 
   (* resToString cPsi (r, s) = string
      Invariants:
@@ -1032,8 +1033,8 @@ module Printer = struct
        fprintf ppf "(∃%a. %a)"
          (fmt_ppr_lf_ctyp_decl cD) (ctdec)
          (fmt_ppr_cmp_res cD) (cr', s)
-       
-    
+
+
   and fmt_ppr_res cD cPsi ppf (r, s) =
     match r with
     | Head tH ->
@@ -1051,7 +1052,7 @@ module Printer = struct
   let fmt_ppr_cmp_exp_chk cD cG ppf eChk =
     P.fmt_ppr_cmp_exp_chk cD cG P.l0 ppf eChk
 
-  
+
   (** Prints each subgoal with a leading `<-`. *)
   let fmt_ppr_subgoals cD cPsi ppf (cG, s) =
     fprintf ppf "@[<v>%a@]"
@@ -1070,7 +1071,7 @@ module Printer = struct
              (fmt_ppr_cmp_goal cD) (sg, S.id)))
          (list_of_subgoals subgoals)
 
-    
+
   (* sgnClauseToString (c, sCl) = string
      String representation of signature clause.
   *)
@@ -1093,7 +1094,7 @@ module Printer = struct
       Id.print (compConstName cidTerm)
       (fmt_ppr_cmp_typ sCCl.cMVars) (sCCl.cHead)
       (fmt_ppr_csubgoals sCCl.cMVars) (sCCl.cSubGoals)
-      
+
 
   let fmt_ppr_bound ppf =
     function
@@ -1135,7 +1136,7 @@ module Printer = struct
 
   let printMQuery mq =
     fprintf std_formatter "%a.@.@."
-      fmt_ppr_sgn_mquery mq  
+      fmt_ppr_sgn_mquery mq
 
   (* Prints all LF signatures *)
   let printSignature () =
@@ -1149,7 +1150,7 @@ module Printer = struct
     iterAllTSClauses
       (fun w ->
         fprintf std_formatter "%a@."
-          fmt_ppr_sgn_cclause w)    
+          fmt_ppr_sgn_cclause w)
 
   (* Prints all Inductive type signatures *)
   let printCompConstSignature () =
@@ -1157,33 +1158,33 @@ module Printer = struct
       (fun w ->
         fprintf std_formatter "%a@."
           fmt_ppr_sgn_compclause w)
-        
+
 
   let printAllSig () =
-    printSignature (); 
+    printSignature ();
     printCompSignature ();
     printCompConstSignature ()
 
- (* Prints the current state of proof loop 
+ (* Prints the current state of proof loop
     (used for debugging) *)
-    
+
   let printState cD cG cg ms =
     let fmt_ppr_gctx cD ppf cG =
       P.fmt_ppr_cmp_gctx cD P.l0 ppf cG
     in
-    let fmt_ppr_mctx ppf cD = 
+    let fmt_ppr_mctx ppf cD =
       P.fmt_ppr_lf_mctx P.l0 ppf cD
     in
     fprintf std_formatter "Current State: \n
                  cD = %a \n
-                 cG = %a \n 
+                 cG = %a \n
                  goal = %a \n
                  ms = %a \n"
         (fmt_ppr_mctx) cD
         (fmt_ppr_gctx cD) cG
         (fmt_ppr_cmp_goal cD) (cg,S.id)
-        (Pretty.Int.DefaultPrinter.fmt_ppr_lf_msub cD Pretty.Int.DefaultPrinter.l0) ms  
-    
+        (Pretty.Int.DefaultPrinter.fmt_ppr_lf_msub cD Pretty.Int.DefaultPrinter.l0) ms
+
 end
 
 module Solver = struct
@@ -1496,7 +1497,7 @@ module Solver = struct
             end
         with
         | U.Failure _ -> ()
-      end 
+      end
 
     in
     (* ^ end of the gigantic let of all the helpers for matchAtom;
@@ -1552,27 +1553,27 @@ module CSolver = struct
   module I = Index
 
   (* Unboxed status of assumptions in Gamma *)
-  (* We use this tag to tell us when a boxed assumption from Gamma has 
-     been unboxed (and thus no longer considered to be in Gamma). Once 
+  (* We use this tag to tell us when a boxed assumption from Gamma has
+     been unboxed (and thus no longer considered to be in Gamma). Once
      unboxed, the assumption is not able to be unboxed again or focused on.
      All assumptions begin tagged 'Boxed'.
    *)
   type status =
     | Boxed
     | Unboxed
-    
+
     (* Dynamic Computation Assumptions *)
   type cPool =                             (* cP ::=                    *)
     | Emp                                  (*   | Emp                   *)
     | Full of
         (cPool * (cclause * int * status)) (*   | Full (cP', (cc, k,s)) *)
-                                           (*      where k denotes the 
+                                           (*      where k denotes the
                                                    postion of the
                                                    correspoding type
-                                                   declaration in cG   *) 
+                                                   declaration in cG   *)
 
   let noLoc = Syntax.Loc.ghost
-            
+
   exception AbortMQuery of string
 
   (* unify (A, s) (B, s') sc = ()
@@ -1618,10 +1619,10 @@ module CSolver = struct
     match (assump, cg) with
     | (Comp.TypBox (_, LF.ClTyp (LF.MTyp tA, cPsi))),
        Box (cPsi', Atom tA', Some M) ->
-       Id.cid_equals (Solver.cidFromAtom tA) (Solver.cidFromAtom tA') 
+       Id.cid_equals (Solver.cidFromAtom tA) (Solver.cidFromAtom tA')
     | (Comp.TypBox (_, LF.ClTyp (LF.PTyp tA, cPsi))),
        Box (cPsi', Atom tA', Some P) ->
-       Id.cid_equals (Solver.cidFromAtom tA) (Solver.cidFromAtom tA') 
+       Id.cid_equals (Solver.cidFromAtom tA) (Solver.cidFromAtom tA')
     | (Comp.TypBase (_, cid, _meta_spine), Atomic (cid', _atomic_spine)) ->
        Id.cid_equals cid cid'
     | (Comp.TypArr (_, tau1, tau2), cg) ->
@@ -1629,7 +1630,7 @@ module CSolver = struct
     | (Comp. TypPiBox (_, ctdec, tau), cg) ->
        matchHead cD tau cg
     | _ -> false
-      
+
 
   (* prepend a clause to cPool *)
   let rec prependToCPool x cPool =
@@ -1638,10 +1639,10 @@ module CSolver = struct
     | Full (cPool', c) ->
        Full (prependToCPool x cPool', c)
 
-  (* shifts the index of the cPool by k 
+  (* shifts the index of the cPool by k
      ex) shift_cPool (Full (Full (Emp, (A, 4)), (B, 3))) 1 =
                       Full (Full (Emp, (A, 5)), (B, 4))
-         
+
          shift_cPool (Full (Full (Emp, (A, 4)), (B, 3))) (-2) =
                       Full (Full (Emp, (A, 2)), (B, 1))       *)
   let rec shift_cPool cPool k =
@@ -1657,7 +1658,7 @@ module CSolver = struct
      then
      [|ms|] cg = cg'
      cD' ; cG |- cg'                     *)
-        
+
   let rec normCompGoal (cg, ms) =
     let rec normCompRes ms r =
       match r with
@@ -1712,8 +1713,8 @@ module CSolver = struct
        let hd' = Whnf.cnormCTyp (hd, ms) in
        let sg' = normSubGoals ms sg cD in
        Full (cPool'', ({cHead = hd'; cMVars = mV; cSubGoals = sg'}, _k, _s))
- 
-   (*    
+
+   (*
   (* mctx -> ctyp_decl *)
   let least_cases cD =
     let consOfTyp cltyp =
@@ -1745,7 +1746,7 @@ module CSolver = struct
 
   let rec cgSolve' (cD: LF.mctx) (cG: Comp.gctx) (cPool: cPool)
             (mq:mquery) (sc: Comp.exp_chk -> unit) (currDepth: bound) (maxDepth: bound) =
-    
+
     (* fprintf std_formatter
           "No solution found: Maximum depth reached! -- \
           Current Depth %a , Maximum Depth allowed %a \n"
@@ -1766,47 +1767,47 @@ module CSolver = struct
       let ((cg:comp_goal), (ms:LF.msub)) = mq in
       uniform_right cD cG cPool cg ms sc currDepth maxDepth
     end
-    
+
   (* Stable phase : cD ; cG >> . ==> e : Q
 
 
        cD ; cGamma  >> e : Q   (prove Q from the stable context cGamma and meta-context cD)
 
 
-       CHOICE: 
+       CHOICE:
 
       1)   Q = Box(cPsi, A)      cD ; cG >> box(cPsihat.M) :Box(cPsi, A)
 
-             cD ; cPsi ==>  M: A     (this is solve!) 
-            -----------------------------------------------------    [in Harpoon some msolve (args) ] 
+             cD ; cPsi ==>  M: A     (this is solve!)
+            -----------------------------------------------------    [in Harpoon some msolve (args) ]
                cD ; cG >> box(cPsihat.M) : Box(cPsi, A)                (assumes that cG is stable)
 
 
-      2) Q = Inductive(Atomic) 
+      2) Q = Inductive(Atomic)
 
          matchCompAtom (Signature) (a) = computation-level clauses c (for example Ev_z) that have a (for example Even) in its cHead
          this will result in some subgoals (cgᵢ)
 
          for all i.   cD ; cG ===>  eᵢ :  cgᵢ   (uniform right phase)
-         --------------------------------------------------------------------[in Harpoon some auto-solve] 
+         --------------------------------------------------------------------[in Harpoon some auto-solve]
          cD ; cG >> c e₁ ...en  : Inductive(a, meta-spine)                       (assumes that cG is stable)
- 
+
 
       For example:
 
-      inductive Even: [ |- nat] -> ctype = 
+      inductive Even: [ |- nat] -> ctype =
       | Ev_z : Even [ |- z]
-      | Ev_ss: Pi N:[ |- nat]. Even [ |- N] -> Even [ |- suc (suc N)] 
+      | Ev_ss: Pi N:[ |- nat]. Even [ |- N] -> Even [ |- suc (suc N)]
 
 
     3) Q = Box(cPsi,A) or Inductive(a, meta-spine)  we solve it using some assumption from cG
 
-      cG might contain  f: tau₁ -> Q  , x:tau₁   ===> Q 
+      cG might contain  f: tau₁ -> Q  , x:tau₁   ===> Q
 
 
-      focus left  (on some comp_goal cgᵢ in cG)  
+      focus left  (on some comp_goal cgᵢ in cG)
 
-        cD ; cGamma > f:cgᵢ ===> e : Q     
+        cD ; cGamma > f:cgᵢ ===> e : Q
        --------------------------------- transition to focus left
        cD ; cGamma  >> e : Q
 
@@ -1814,12 +1815,12 @@ module CSolver = struct
 
 
     cD ; cGamma > e e₁ : cg₂ ==>   Q     cD ; cGamma ===> e1 : cg₁
-    ----------------------------------------------------------------- 
+    -----------------------------------------------------------------
      cD ; cGamma > e : cg₁ -> cg₂ ==>   Q
 
 
 
-    cD ; cGamma > e C : [C/X]cg₂ ==>   Q     
+    cD ; cGamma > e C : [C/X]cg₂ ==>   Q
     ----------------------------------------
      cD ; cGamma > e : Pi X:U. cg₂ ==>   Q
 
@@ -1830,16 +1831,16 @@ module CSolver = struct
 
   and solveSubGoals cD cG cPool (sg, k) ms mV sc fS currDepth maxDepth =
     match sg with
-    | Proved -> 
+    | Proved ->
        let e' = (Comp.Var (noLoc, k)) in
        let e = fS e' in
        let e' = Whnf.cnormExp' (e,ms) in
        sc e'
     | Solve (sg', cg') ->
        (*      printf "solve gamma SG \n"; *)
-       (* let cg' = normCompGoal (cg', ms') in *) 
+       (* let cg' = normCompGoal (cg', ms') in *)
     (* Printer.printState cD cG (cg) ms';  *)
-       cgSolve' cD cG cPool (cg', ms) 
+       cgSolve' cD cG cPool (cg', ms)
          (fun e ->
            solveSubGoals cD cG cPool (sg', k) ms mV
              (fun e' -> sc (Comp.Apply (noLoc, e', e))) fS currDepth maxDepth)
@@ -1848,7 +1849,7 @@ module CSolver = struct
 
   and solveCClauseSubGoals cD cG cPool cid sg ms mV sc fS currDepth maxDepth =
    (* fprintf std_formatter "CID = %a \n"
-      Id.print (Index.compConstName cid); *)  
+      Id.print (Index.compConstName cid); *)
     match sg with
     | Proved ->
        let e' = (Comp.DataConst (noLoc, cid)) in
@@ -1859,21 +1860,21 @@ module CSolver = struct
        (* printf "solve sig SG \n"; *)
       (* let cg' = normCompGoal (cg', ms) in
        let ms = Whnf.cnormMSub ms in *)
-       Printer.printState cD cG (cg') ms;  
+       Printer.printState cD cG (cg') ms;
        cgSolve' cD cG cPool (cg', ms)
          (fun e ->
            solveCClauseSubGoals cD cG cPool cid sg' ms mV
              (fun e' -> sc (Comp.Apply (noLoc, e', e))) fS currDepth maxDepth)
              (succ currDepth) maxDepth
- 
+
   and solveTheoremSubGoals cD cG cPool cid sg ms mV sc fS currDepth maxDepth =
     (*fprintf std_formatter "CID = %a \n"
-      Id.print (Index.compName cid);*)  
+      Id.print (Index.compName cid);*)
     match sg with
     | Proved ->
        let e' = (Comp.Const (noLoc, cid)) in
        let e = fS e' in
-       let e' = Whnf.cnormExp' (e,ms) in 
+       let e' = Whnf.cnormExp' (e,ms) in
        sc e'
     | Solve (sg', cg') ->
    (*    let cg'= normCompGoal (cg',ms) in *)
@@ -1882,15 +1883,15 @@ module CSolver = struct
            solveTheoremSubGoals cD cG cPool cid sg' ms mV
              (fun e' -> sc (Comp.Apply (noLoc, e', e))) fS currDepth maxDepth)
             (succ currDepth) maxDepth
-         
+
   (* We focus on one of the computation-type theorems *)
   and focusT cD cG cPool cg ms sc currDepth maxDepth =
      (* printf "focus Theorem \n";
-      Printer.printState cD cG cg ms; *)  
+      Printer.printState cD cG cg ms; *)
     let focus (cid, sCCl) =
       if (* Check to see if the comp goal is the head of the assumption *)
          matchHead cD sCCl.cHead cg;
-      then 
+      then
         (let (ms', fS) = C.mctxToMSub cD (sCCl.cMVars, (LF.MShift (Context.length cD))) (fun s -> s) in
          let tau = if isBox cg then C.boxToTypBox cg else C.atomicToBase cg in
         (try
@@ -1900,28 +1901,28 @@ module CSolver = struct
                  (fun () ->
                   solveTheoremSubGoals cD cG cPool cid sCCl.cSubGoals ms' sCCl.cMVars
                     (fun e' -> sc (Comp.Syn (noLoc, e'))) fS currDepth maxDepth)
-              end   
+              end
          with
          | U.Failure _ -> ();))
       else
         ();
     in
     Index.iterAllTSClauses (fun w -> focus w)
-    
+
   (* Focus on the clause in the static Comp signature with head matching
      type constant c. *)
   and focusS cidTyp cD cG cPool cg ms sc currDepth maxDepth =
-    (* printf "focus Sig \n"; 
+    (* printf "focus Sig \n";
     Printer.printState cD cG cg ms; *)
     let focus (cidTerm, sCCl) sc =
       let (ms', fS) = C.mctxToMSub cD (sCCl.cMVars, LF.MShift (Context.length cD)) (fun s -> s) in
-     (* printf "focus Sig NEW MS \n"; 
-      Printer.printState cD cG cg ms'; 
+     (* printf "focus Sig NEW MS \n";
+      Printer.printState cD cG cg ms';
       let ms'' = Whnf.cnormMSub ms' in
-      printf "focus Sig normedd MS \n"; 
+      printf "focus Sig normedd MS \n";
       Printer.printState cD cG cg ms''; *)
       let tau = C.atomicToBase cg in
-      (* printf "focus Sig match with assump head: \n"; 
+      (* printf "focus Sig match with assump head: \n";
       Printer.fmt_ppr_cmp_typ cD std_formatter sCCl.cHead; *)
       (try
          Solver.trail
@@ -1930,29 +1931,29 @@ module CSolver = struct
                (fun () ->
                 solveCClauseSubGoals cD cG cPool cidTerm sCCl.cSubGoals ms' sCCl.cMVars
                   (fun e' -> sc (Comp.Syn (noLoc, e'))) fS currDepth maxDepth)
-            end   
+            end
          with
          | U.Failure _ -> ())
     in
     I.iterISClauses (fun w -> focus w sc) cidTyp
 
- 
-(*      Focusing Gamma Phase:   cD ; cG  > tau ==> e: Q 
- 
 
-      if our cPool is empty, 
+(*      Focusing Gamma Phase:   cD ; cG  > tau ==> e: Q
+
+
+      if our cPool is empty,
         we finish the loop.
-      otherwise, we investigate each clause in cPool, starting 
+      otherwise, we investigate each clause in cPool, starting
         with most recently added
-        if the head of the clause we are looking at  
-          matches cg, we focus on that clause, and try to solve 
+        if the head of the clause we are looking at
+          matches cg, we focus on that clause, and try to solve
           the subgoals (if any)
-     *) 
+     *)
 
   (* We focus on one of the computation assumptions in cPool/Gamma *)
   and focusG cD cG cPool cPool_all cg ms sc currDepth maxDepth =
-    (* printf "focus Gamma \n"; 
-    Printer.printState cD cG cg ms; *) 
+    (* printf "focus Gamma \n";
+    Printer.printState cD cG cg ms; *)
     match cPool with
     | Emp -> ()
     | Full (cPool', ({cHead = hd; cMVars; cSubGoals = sg}, k', Boxed)) ->
@@ -1969,17 +1970,17 @@ module CSolver = struct
                (fun () ->
                solveSubGoals cD cG cPool_all (sg, k') ms' cMVars
                  (fun e' -> sc  (Comp.Syn (noLoc, e'))) fS currDepth maxDepth)
-             end   
+             end
          with
-         | U.Failure _ -> ()); 
+         | U.Failure _ -> ());
          focusG cD cG cPool' cPool_all cg ms sc currDepth maxDepth
-               
+
        else (* Otherwise, try the remaining comp assumptions *)
          focusG cD cG cPool' cPool_all cg ms sc currDepth maxDepth
     | Full (cPool', cc) -> focusG cD cG cPool' cPool_all cg ms sc currDepth maxDepth
 
       (*
-  (* creates the set-up to build the branch corresponding to the current 
+  (* creates the set-up to build the branch corresponding to the current
      constructor/case.  *)
   and solveBranch cD cG cPool cg (name, con) con_list b_list ms sc currD maxD =
  (*   let termEntry = Store.Cid.Term.get con in
@@ -1999,8 +2000,8 @@ module CSolver = struct
 
   and instMV cg n cD cG cPool =
     (cD, LF.MShift 0, cG, cPool, cg)
-    
-  (* solve the top case of the split; 
+
+  (* solve the top case of the split;
      when done, tests the returned branch list  *)
   and solveCases cD cG cPool cg (name, constructors) ms sc b_list currD maxD =
     match constructors with
@@ -2011,9 +2012,9 @@ module CSolver = struct
        let hd = LF.Const con in
        let norm = LF.Root (noLoc, hd, LF.Nil, `explicit) in
        let (cD', ms', cG', cPool', cg') = instMV cg norm cD cG cPool in
-       solveBranch cD' cG' cPool' cg' (name, con) con_list b_list ms' sc currD maxD 
-       
-  (* finds the mvar with the least constructors and "splits" on it; 
+       solveBranch cD' cG' cPool' cg' (name, con) con_list b_list ms' sc currD maxD
+
+  (* finds the mvar with the least constructors and "splits" on it;
      tries to solve with that split.
      if fails, splits on next smallest, ect.  *)
   and msplit mvars cD cG cPool cg ms sc currD maxD =
@@ -2039,16 +2040,16 @@ module CSolver = struct
           msplit mvars' cD cG cPool cg ms sc currD maxD
 
           *)
-        
+
   and focus cD cG cPool cg ms sc currDepth maxDepth =
-   (*  printf "FOCUS \n"; 
+   (*  printf "FOCUS \n";
     let ms = Whnf.cnormMSub ms in
-    let cg = normCompGoal (cg, ms) in 
-    Printer.printState cD cG cg ms;*)   
+    let cg = normCompGoal (cg, ms) in
+    Printer.printState cD cG cg ms;*)
     match cg with
     | Box (cPsi, g, Some M) ->
-       (* If our goal is of box type, we first try to find the  
-          proof term in the LF level, otherwise we focus on 
+       (* If our goal is of box type, we first try to find the
+          proof term in the LF level, otherwise we focus on
           an assumption in our computation context cG          *)
        let cg' = normCompGoal (cg, ms) in
        let Box(_,g',_) = cg' in
@@ -2058,7 +2059,7 @@ module CSolver = struct
        let cltyp = LF.MTyp tA in
        let sc' =
          (fun (cPsi', tM) ->
-           let dctx_hat = Context.dctxToHat cPsi' in 
+           let dctx_hat = Context.dctxToHat cPsi' in
            let mfront = LF.ClObj (dctx_hat, LF.MObj tM) in
            let meta_obj = (noLoc, mfront) in
            let meta_typ = LF.ClTyp (cltyp, cPsi') in
@@ -2074,7 +2075,7 @@ module CSolver = struct
        let sc' =
          (fun (cPsi', tM) ->
            let LF.Root (_,hd,_,_) = tM in
-           let dctx_hat = Context.dctxToHat cPsi' in 
+           let dctx_hat = Context.dctxToHat cPsi' in
            let mfront = LF.ClObj (dctx_hat, LF.PObj hd) in
            let meta_obj = (noLoc, mfront) in
            let meta_typ = LF.ClTyp (cltyp, cPsi') in
@@ -2085,17 +2086,17 @@ module CSolver = struct
        focusT cD cG cPool cg ms sc currDepth maxDepth;
     | Atomic (name, spine) ->
        (* If our goal is of atomic type, we first try looking for
-          a solution in the computation signature, cG, and in the 
+          a solution in the computation signature, cG, and in the
           theorems                                                *)
        focusS name cD cG cPool cg ms sc currDepth maxDepth;
        focusG cD cG cPool cPool cg ms sc currDepth maxDepth;
        focusT cD cG cPool cg ms sc currDepth maxDepth;
 
-       
-  
-    (* uniform_left_ cD cG cG_ret cPool cPool_ret cg ms sc = 
+
+
+    (* uniform_left_ cD cG cG_ret cPool cPool_ret cg ms sc =
          (cD', cPool_ret, cG_ret, sc')
-        (where the sc continuation builds skeleton term 
+        (where the sc continuation builds skeleton term
         ex. (fn e -> let box X = x in ..... in e ))
 
     Pre-conditions:
@@ -2103,54 +2104,54 @@ module CSolver = struct
        cD : meta-context
        cPool, cPool_ret : computation assumptions in clausal form
        cPool  ~~ cG
-       cPool_ret ~~ cG_ret 
+       cPool_ret ~~ cG_ret
        k = |cPool|
        cg : comp_goal
        ms : msub
        sc : exp_chk -> unit
-      
+
 
       if cD |- cPool   (list of comp_goals is well-formed in cD)
-      then 
-         cD' |- cPool_ret  where 
+      then
+         cD' |- cPool_ret  where
 
       cD'       : meta-context and is an extension of cD
-      cPool_ret : cPool where each entry is a clause representing 
+      cPool_ret : cPool where each entry is a clause representing
                   either an implication, a universal, or Atomic (Inductive)
       cG_ret    : stable computation-context and is a reduction of cG
- 
 
 
-      Uniform Phase on the left:   cD ; cG  ==> e : Q 
- 
 
-        cD ; (cG @ cG_ret) |- e : Q 
- 
+      Uniform Phase on the left:   cD ; cG  ==> e : Q
 
-                cD, X:U; cG >> cG_ret => e : Q  
-       ------------------------------------------------ box left 
-        cD; cG, x:[U] >> cG_ret => let box X = x in e : Q 
+
+        cD ; (cG @ cG_ret) |- e : Q
+
+
+                cD, X:U; cG >> cG_ret => e : Q
+       ------------------------------------------------ box left
+        cD; cG, x:[U] >> cG_ret => let box X = x in e : Q
 
 
        tau =/= [U]   D; cG >> x:tau, cG_ret => e : Q   (x:tau, cG_ret ~~ {cHead; MV; subG}, cPool_ret)
-       ------------------------------------------------------------------------------------ tau is left synchronous 
-                             cD; cG, x:tau >> cG_ret => e : Q 
+       ------------------------------------------------------------------------------------ tau is left synchronous
+                             cD; cG, x:tau >> cG_ret => e : Q
 
-                                           
-               cD ; cG_ret  >> e : Q           (prove Q from the stable context 
+
+               cD ; cG_ret  >> e : Q           (prove Q from the stable context
        ----------------------------------   cG and meta-context cD)
-            cD ; . >> cG_ret  => e  : Q   
-         
+            cD ; . >> cG_ret  => e  : Q
 
 
-     cG (gctx)  ~~ cPool (clausal comp assumptions) 
+
+     cG (gctx)  ~~ cPool (clausal comp assumptions)
 
      *)
-    
+
 
   and uniform_left cD cG cPool cPool_ret cg ms sc currDepth maxDepth =
  (*   printf "UNIFORM LEFT \n";
-    let cg'= normCompGoal (cg, ms) in 
+    let cg'= normCompGoal (cg, ms) in
     Printer.printState cD cG (cg') ms; *)
     let unbox cp =
       match cp with
@@ -2160,7 +2161,7 @@ module CSolver = struct
     | Emp ->
        focus cD cG cPool_ret cg ms sc currDepth maxDepth
     | Full (cPool', ((({cHead = Comp.TypBox(m,r); cMVars = cmv;cSubGoals = Proved }, k', Boxed)) as cP)) ->
-       (* In this case, we want to "unbox" the assumption and add it to 
+       (* In this case, we want to "unbox" the assumption and add it to
           the cD.
           When an assumption gets unboxed, we no longer consider it in Gamma. *)
        let name = Id.mk_name (Whnf.newMTypName r) in
@@ -2197,17 +2198,17 @@ module CSolver = struct
        let cPool'' = cnormCPool (cPool', LF.MShift 1) cD' in
        let cPool_ret' = prependToCPool (unbox cP) cPool_ret in
        let cPool_ret'' = cnormCPool (cPool_ret', LF.MShift 1) cD' in
-       let cg' = normCompGoal (cg, (LF.MShift 1)) in 
+       let cg' = normCompGoal (cg, (LF.MShift 1)) in
        uniform_left cD' cG' cPool'' cPool_ret'' cg' ms' sc' currDepth maxDepth
     | Full (cPool', x) ->
        (* Otherwise we leave the assumption in cG *)
-       let cPool_ret' = prependToCPool x cPool_ret in 
+       let cPool_ret' = prependToCPool x cPool_ret in
        uniform_left cD cG cPool' cPool_ret' cg ms sc currDepth maxDepth
 
-       
-       (* uniform_right cD cG cPool cg ms sc = 
+
+       (* uniform_right cD cG cPool cg ms sc =
          (cD', cG', cPool', cg', sc')
-        (where the sc continuation builds skeleton term 
+        (where the sc continuation builds skeleton term
         ex. (fn e -> let box X = x in ..... in e ))
 
     Pre-conditions:
@@ -2220,36 +2221,36 @@ module CSolver = struct
        sc : exp_chk -> unit
 
       if cD ; cG |- cg   (comp_goal is well-formed in cD and cG)
-      then 
-         cD' ; cG' |- cg'  where 
+      then
+         cD' ; cG' |- cg'  where
 
       cD'       : meta-context holding meta assumption from cg
-      cPool'    : cPool where each entry is a clause representing 
-                  a computation assumption 
+      cPool'    : cPool where each entry is a clause representing
+                  a computation assumption
       cG'       : computation-context holding computation assumptions from cg
       cg'       : comp_goal is either a Box or an Atomic comp goal
 
-       Uniform Right Phase : 
- 
-       cD; cG >> .  => e : Q  
+       Uniform Right Phase :
+
+       cD; cG >> .  => e : Q
        ------------------------ (where Q is either Box or Atomic (Inductive) type)
-       cD; cG => e : Q 
+       cD; cG => e : Q
 
 
         cD; cG, x:tau  => e : cg   (cG, x:tau ~~ cPool, {cHead; MV; subG})
-       ------------------------------------------------------------------ tau is left synchronous 
+       ------------------------------------------------------------------ tau is left synchronous
                cD;cG => fn x -> e  : (res , tau) -> cg
 
-         cD, X:U ; cG => e : cg    
+         cD, X:U ; cG => e : cg
        ------------------------------------------------------
-       cD ; cG  => mlam X -> e  : forall X:U. cg   
-       
+       cD ; cG  => mlam X -> e  : forall X:U. cg
+
        *)
-           
+
      (* First we break our goal down into an atomic one *)
   and uniform_right cD cG cPool cg ms sc currDepth maxDepth =
 (*    printf "UNIFORM RIGHT \n";
-    let cg'= normCompGoal (cg, ms) cg in 
+    let cg'= normCompGoal (cg, ms) cg in
     Printer.printState cD cG (cg') ms;  *)
     match cg with
     | Box (_) | Atomic (_) ->
@@ -2261,7 +2262,7 @@ module CSolver = struct
        let cG' = Whnf.cnormGCtx (cG, LF.MShift 1) in
        let cPool' = cnormCPool (cPool, LF.MShift 1) cD in
        let sc' =
-         (fun e -> 
+         (fun e ->
            sc (Comp.MLam (noLoc, name, e, `explicit))) in
        uniform_right cD' cG' cPool' cg' (Whnf.mvar_dot1 ms) sc' currDepth maxDepth
     | Implies ((r, tdecl), cg') ->
@@ -2274,12 +2275,12 @@ module CSolver = struct
          (fun e ->
             sc (Comp.Fn (noLoc, name, e))) in
        uniform_right cD cG' cPool' cg' ms sc' currDepth maxDepth
-     
+
 
   let cgSolve cD cG mq sc maxDepth =
     cgSolve' cD cG Emp mq sc None maxDepth
 
-end 
+end
 
 module Frontend = struct
   module P = Printer
@@ -2408,55 +2409,55 @@ module Frontend = struct
     else if !Options.chatter >= 2
     then printf "Skipping query -- bound for tries = 0.\n"
 
-  (* 
-     msolve (sgnMQ: {mquery        : mquery; 
-                     skinnyCompTyp : Comp.typ; 
-                     mexpected     : bound;  
+  (*
+     msolve (sgnMQ: {mquery        : mquery;
+                     skinnyCompTyp : Comp.typ;
+                     mexpected     : bound;
                      mtries        : bound
                      depth         : bound
-                     instMMVars    : minst list})= 
-      
-     
+                     instMMVars    : minst list})=
+
+
   *)
-    
+
   let msolve sgnMQuery =
 
     (* Retrieve the total_dec list of the signature *)
-    let total_dec = [] in 
+    let total_dec = [] in
   (*  getTDecs () in *)
-     
+
     let solutions = ref 0 in
       (* Type checking function. *)
     let check cD cG (e : Comp.exp_chk) ms =
       Check.Comp.check None cD cG total_dec e (sgnMQuery.skinnyCompTyp, ms)
-    in  
+    in
 
     (* Success continuation function *)
     let scInit e =
       incr solutions;
       fprintf std_formatter "\n FINAL check e = \n %a \n"
-          (P.fmt_ppr_cmp_exp_chk LF.Empty LF.Empty) e; 
+          (P.fmt_ppr_cmp_exp_chk LF.Empty LF.Empty) e;
 
        (* Rebuild the substitution and type check the proof term. *)
       if !Options.checkProofs
       then
         check LF.Empty LF.Empty e (Convert.solToMSub sgnMQuery.instMMVars);
-                
+
       if !Options.chatter >= 3
       then
         begin
-          fprintf std_formatter  "@[<v>---------- Solution %d ----------\n %a@,@,@]" 
+          fprintf std_formatter  "@[<v>---------- Solution %d ----------\n %a@,@,@]"
             (*              "@[<hov 2>@[%a@] |-@ @[%a@]@]" *)
             (!solutions)
             (P.fmt_ppr_cmp_exp_chk LF.Empty LF.Empty) e
         end;
 
       (* Stop when no. of solutions exceeds tries. *)
-      if exceeds (Some !solutions) sgnMQuery.mtries   
+      if exceeds (Some !solutions) sgnMQuery.mtries
       then raise Done;
 
       (* Temporary: Exiting as soon as we receive as many solutions as required *)
-      if exceeds (Some !solutions) sgnMQuery.mexpected   
+      if exceeds (Some !solutions) sgnMQuery.mexpected
       then raise Done;
     in
     if not (boundEq sgnMQuery.mtries (Some 0))
@@ -2488,7 +2489,7 @@ let storeQuery p (tA, i) cD e t =
 let storeMQuery  (tau, i) e t d =
   Index.storeMQuery ((tau, i), e, t, d)
 
-  
+
 (* runLogic () = ()
    If !enabledLogic, run the logic programming engine. Otherwise
    do nothing, i.e. return unit.
@@ -2500,11 +2501,11 @@ let runLogic () =
       (* Transform signature into clauses. *)
       Index.robAll ();
       (* Optional: Print signature clauses. *)
-      if !Options.chatter >= 4
+      if !Options.chatter >= 5
       then Printer.printAllSig ();
       (* Solve! *)
       Index.iterQueries Frontend.solve;
-      Index.iterMQueries Frontend.msolve;      
+      Index.iterMQueries Frontend.msolve;
       (* Clear the local storage.  *)
       Index.clearIndex ()
     end

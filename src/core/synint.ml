@@ -21,7 +21,7 @@ module LF = struct
     | PTyp of typ
     | STyp of svar_class * dctx
 
-  and ctyp =                                   
+  and ctyp =
     | ClTyp of cltyp * dctx
     | CTyp of cid_schema option
 

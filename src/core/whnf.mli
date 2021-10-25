@@ -239,7 +239,3 @@ val dotMMVar : Location.t -> mctx -> msub -> Id.name * ctyp * depend
 val extend_mctx : mctx -> (LF.ctyp_decl * msub ) -> mctx
 
 val extend_gctx : Comp.gctx -> (Comp.ctyp_decl * msub) -> Comp.gctx
-
-                                                      
-
-                                                     

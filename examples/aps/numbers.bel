@@ -6,10 +6,9 @@ LF nat : type =
 ;
 
 
-
 % Even/Odd Properties of nat
 
-LF even : nat → type =
+LF even : nat → type = 
   | even_z : even z
   | even_ss : even N → even (S (S N))
 ;
@@ -37,7 +36,7 @@ inductive Od : [⊢ nat] → ctype =
 
 
 
-% New object- num, and its' properties
+% New object- num, and its properties
 
 LF num : nat → type =
    | num_z : num z
@@ -62,7 +61,7 @@ rec again_all_num : {N : [⊢ nat]} {M : [⊢ nat]} [⊢ num M] → [⊢ num N] 
 mlam n,m ⇒ fn U ⇒ all_num [⊢ n]
 ;
 
-
+rec numThenEven : {N : [⊢ nat]} [⊢ num N] → [⊢ even z] = mlam N ⇒ fn n ⇒ [⊢ even_z];
 
 % ctx schema declaration.
 
@@ -70,7 +69,7 @@ schema ctx = nat;
 
 
 
-% nat addition operation, and its' properties 
+% nat addition operation, and its properties 
 
 plus : nat -> nat -> nat -> type.
 p_z : {N: nat} plus z N N.
@@ -249,12 +248,15 @@ mlam N ⇒ mlam P ⇒ fn e ⇒ case e of
 						
 	    
 }%
+%{
 
 % Box
 
 % B1
---mquery 1 * * [⊢ even z].
+--mquery 2 * * [⊢ even z].
 % [ |- even_z]
+% numThenEven [ |- z] [ |- num_z]
+
 
 % B2
 --mquery 1 * * [⊢ plus z z z].
@@ -271,13 +273,11 @@ mlam N ⇒ mlam P ⇒ fn e ⇒ case e of
 % two_ctx []
 % two_imp_ctx
 
-
 % B5
 --mquery 3 * 1 [D:nat ⊢ plus (S z) (S z) (S (S z))].
 % [D : nat |- p_s (p_z S z)]
 % two_ctx [D : nat]
 % two_imp_ctx
-
 
 % B6
 --mquery 5 * 1  [⊢ num (S (S (S z)))].
@@ -285,8 +285,11 @@ mlam N ⇒ mlam P ⇒ fn e ⇒ case e of
 % all_num [ |- S (S (S z))]
 % all_all_num [ |- S (S (S z))] [ |- num_s (num_s (num_s num_z))]
 % all_all_num [ |- S (S (S z))] (all_num [ |- S (S (S z))])
-%No solution found: Maximum depth reached! -- Current Depth 2 , Maximum Depth allowed 1 
+% No solution found: Maximum depth reached! -- Current Depth 2 , Maximum Depth allowed 1 
 
+% B7
+--mquery 1 * * [⊢ even (S (S (S (S z))))].
+% [ |-even_ss (even_ss even_z)]
 
 
 % Atomic
@@ -300,9 +303,13 @@ mlam N ⇒ mlam P ⇒ fn e ⇒ case e of
 --mquery 1 * * LE [⊢ z] [⊢ z].
 % zLE
 
+}%
+
 % A3
 --mquery 1 * * lessEq [⊢ S (S (S z))] [⊢ S (S z)] [⊢ S (S z)].
 % sle (sle lez)
+
+%{
 
 % A4 
 --mquery 1 * * Ev [⊢ S (S (S (S z)))].
@@ -312,6 +319,7 @@ mlam N ⇒ mlam P ⇒ fn e ⇒ case e of
 --mquery 2 * * lessEq [⊢ S z] [⊢ S (S z)] [⊢ S z].
 % les (zle)
 % oneLEtwo
+
 
 % A6
 --mquery 1 * * Le [⊢ z] [⊢ S (S z)].
@@ -348,24 +356,21 @@ mlam N ⇒ mlam P ⇒ fn e ⇒ case e of
 % mlam D => [ |- p_z D]
 
 % F6
---mquery 4 * * {E: [⊢ even z]} [⊢ even z] → [⊢ even z].
+--mquery 3 * * {E: [⊢ even z]} [⊢ even z] → [⊢ even z].
 % mlam E => fn x2 => let [ |- X] = x2 in [ |- X]
 % mlam E => fn x2 => let [ |- X] = x2 in [ |- E]
 % mlam E => fn x2 => let [ |- X] = x2 in [ |- even_z]
-% mlam E => fn z6 => let [ |- X7] = z6 in z6
 
 
 
 % F7
---mquery 5 * * {N : [⊢ nat]} [⊢ num N] → [⊢ num N].
-% mlam N => fn z6 => let [ |- X] = y7 in [ |- X] 
-% mlam N => fn z6 => let [ |- X] = z6 in z6
+--mquery 4 * * {N : [⊢ nat]} [⊢ num N] → [⊢ num N].
+% mlam N => fn z6 => let [ |- X] = z6 in [ |- X] 
 % mlam N => fn z6 => let [ |- X] = z6 in all_num [ |- N]
 % mlam N => fn z6 => let [ |- X] = z6 in
 %    all_all_num [ |- N] [⊢ X]
 % mlam N => fn z6 => let [ |- X] = z6 in
 %    all_all_num [ |- N] (all_num [ |- N])
-
 
 
 % F8
@@ -382,6 +387,20 @@ mlam N ⇒ mlam P ⇒ fn e ⇒ case e of
 % Query error: Wrong number of solutions -- expected 1 in * tries, but found 0
 
 
+% F11
+--mquery 1 * * [⊢ even (S z)] → [⊢ even (S (S (S z)))].
+% fn x8 => let [ |- Y32] = x8 in [ |- even_ss Y32]
+
+
+
+--mquery 1 * * [⊢ num N].
+
+
+}%
+
+--mquery 1 * * {N : [⊢ nat]} ({M:[⊢ nat]} [⊢ num M] → [⊢ even M]) → [⊢ even (S (S N))].
+
+% --query 2 2 D : even N. 
 
 
 %%%%%%%%            | Base | Box | PiBox | Implies |%%%%%%%%
@@ -404,3 +423,6 @@ mlam N ⇒ mlam P ⇒ fn e ⇒ case e of
 
 % -mctx match, dctx match, get answer from multiple sources, size of ctx, number of subgoals of focused clause
 % note any ctx match means ctx1 = ctx2 or ctx1 < ctx2 or ctx2 < ctx1 or ctx1 n ctx2 =\= {} or ctx1 n ctx2 = {}, 5 cases!!!
+
+
+

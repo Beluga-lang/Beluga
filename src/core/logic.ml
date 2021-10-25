@@ -2434,7 +2434,10 @@ module Frontend = struct
     (* Success continuation function *)
     let scInit e =
       incr solutions;
-
+      (*
+      fprintf std_formatter "\n FINAL check e = \n %a \n"
+        (P.fmt_ppr_cmp_exp_chk LF.Empty LF.Empty) e;  *)
+      
        (* Rebuild the substitution and type check the proof term. *)
       if !Options.checkProofs
       then
@@ -2498,7 +2501,7 @@ let runLogic () =
       (* Transform signature into clauses. *)
       Index.robAll ();
       (* Optional: Print signature clauses. *)
-      if !Options.chatter >= 5
+      if !Options.chatter >= 4
       then Printer.printAllSig ();
       (* Solve! *)
       Index.iterQueries Frontend.solve;

@@ -8,7 +8,7 @@ LF nat : type =
 
 % Even/Odd Properties of nat
 
-LF even : nat → type = 
+LF even : nat → type =
   | even_z : even z
   | even_ss : even N → even (S (S N))
 ;
@@ -54,7 +54,7 @@ mlam N ⇒ case [⊢ N] of
 rec all_all_num : {N : [ ⊢ nat]} [⊢ num N] → [⊢ num N] =
 / total m (all_all_num n m) /
 mlam n ⇒ fn m ⇒ m
-; 
+;
 
 rec again_all_num : {N : [⊢ nat]} {M : [⊢ nat]} [⊢ num M] → [⊢ num N] =
 / total n (again_all_num n m u) /
@@ -69,7 +69,7 @@ schema ctx = nat;
 
 
 
-% nat addition operation, and its properties 
+% nat addition operation, and its properties
 
 plus : nat -> nat -> nat -> type.
 p_z : {N: nat} plus z N N.
@@ -91,7 +91,7 @@ rec plusz_sym : {N : [⊢ nat]} [⊢ plus z N N] → [⊢ plus N z N] =
 / total n (plusz_sym n p) /
 mlam N ⇒ fn p ⇒ case [⊢ N] of
   | [⊢ z] ⇒ p
-  | [⊢ S M] ⇒ let [⊢ p_zM] = plusz_sym [⊢ M][⊢ p_z M] in 
+  | [⊢ S M] ⇒ let [⊢ p_zM] = plusz_sym [⊢ M][⊢ p_z M] in
 	      [⊢ p_s p_zM]
 ;
 
@@ -128,7 +128,7 @@ les zle;
 rec trans1Le : {N1 : [⊢ nat]} {N2 : [⊢ nat]} Le [⊢ N1] [⊢ N2] → Le [⊢ N1] [⊢ S N2] =
 / total a (trans1Le n m a) /
 mlam N1, N2 ⇒ fn a ⇒ case [⊢ N1] of
-  | [⊢ z] ⇒ SLe zLE 
+  | [⊢ z] ⇒ SLe zLE
   | [⊢ S N] ⇒ let SLe lENM = a in
 	      let SLE lenm = lENM in
 	      let d = trans1Le [⊢ N] [⊢ _] lenm in
@@ -137,7 +137,7 @@ mlam N1, N2 ⇒ fn a ⇒ case [⊢ N1] of
 
 rec trans2Le : {N1 : [⊢ nat]} {N2 : [⊢ nat]} Le [⊢ N1] [⊢ N2] → Le [⊢ S N1] [⊢ S N2] =
 / total a (trans2Le n m a) /
-mlam N1, N2 ⇒ fn a ⇒ SLe (SLE a)	       
+mlam N1, N2 ⇒ fn a ⇒ SLe (SLE a)
 ;
 
 
@@ -155,7 +155,7 @@ mlam N1, N2, N3 ⇒ fn a,b ⇒ case a of
 	               let SLe lEMP = b in
 	               let SLE lemp = lEMP in
 	               let d = transLe [⊢ _] [⊢ _] [⊢ _] lenm lemp in
-	               trans2Le [⊢ _] [⊢ _] d)  
+	               trans2Le [⊢ _] [⊢ _] d)
 ;
 
 rec sLE : {N1 : [⊢ nat]} {N2 : [⊢ nat]} LE [⊢ N1] [⊢ N2] → LE [⊢ S N1] [⊢ S N2] = / total a (sLE n m a) /
@@ -168,7 +168,7 @@ mlam N1, N2 ⇒ fn a ⇒ case a of
   | SLe lENM ⇒ (case [⊢ N1] of
 		 | [⊢ z] ⇒ zLE
 		 | [⊢ S N] ⇒ let SLE lenm = lENM in
-			       let d = leLE [⊢ _] [⊢ _] lenm in 
+			       let d = leLE [⊢ _] [⊢ _] lenm in
                                sLE [⊢ _] [⊢ _] d)
 ;
 
@@ -177,9 +177,9 @@ rec lemma2 : {N1 : [⊢ nat]} {N2 : [⊢ nat]} Le [⊢ N1] [⊢ N2] → Le [⊢ 
 mlam N1, N2 ⇒ fn a ⇒ case a of
   | zLe ⇒ SLe zLE
   | SLe lENM ⇒ (case [⊢ N1] of
-		 | [⊢ z] ⇒ SLe zLE 
+		 | [⊢ z] ⇒ SLe zLE
 		 | [⊢ S N] ⇒ let SLE lenm = lENM in
-			       let d = lemma2 [⊢ _] [⊢ _] lenm in 
+			       let d = lemma2 [⊢ _] [⊢ _] lenm in
                                trans2Le [⊢ _] [⊢ _] d)
 ;
 
@@ -211,8 +211,8 @@ mlam N1, N2, N3 ⇒ fn a,b ⇒ case a of
 			       | SLe lEAB ⇒
 			     let d = lemma1 [⊢ _] [⊢ _] [⊢ _] leab lEAB in
 			     trans2Le [⊢ _] [⊢ _] d))
-			     
-; 
+
+;
 
 
 rec transLE : {N1 : [⊢ nat]} {N2 : [⊢ nat]} {N3 : [⊢ nat]} LE [⊢ N1] [⊢ N2] → LE [⊢ N2] [⊢ N3] → LE [⊢ N1] [⊢ N3] =
@@ -220,8 +220,8 @@ rec transLE : {N1 : [⊢ nat]} {N2 : [⊢ nat]} {N3 : [⊢ nat]} LE [⊢ N1] [�
 mlam N1, N2, N3 ⇒ fn a,b ⇒ case a of
   | zLE ⇒ zLE
   | SLE lenm ⇒ let lEBC = leLE [⊢ _] [⊢ _] lenm in
-	        let d = transle [⊢ _] [⊢ _] [⊢ _] 
-	        
+	        let d = transle [⊢ _] [⊢ _] [⊢ _]
+
 ;
 }%
 
@@ -242,13 +242,12 @@ mlam N ⇒ mlam P ⇒ fn e ⇒ case e of
   | ZEv ⇒ let p_z = P in
 	   e
   | SEv e' ⇒ e
-;  
+;
 
-	        
-						
-	    
+
+
+
 }%
-%{
 
 % Box
 
@@ -285,7 +284,7 @@ mlam N ⇒ mlam P ⇒ fn e ⇒ case e of
 % all_num [ |- S (S (S z))]
 % all_all_num [ |- S (S (S z))] [ |- num_s (num_s (num_s num_z))]
 % all_all_num [ |- S (S (S z))] (all_num [ |- S (S (S z))])
-% No solution found: Maximum depth reached! -- Current Depth 2 , Maximum Depth allowed 1 
+% No solution found: Maximum depth reached! -- Current Depth 2 , Maximum Depth allowed 1
 
 % B7
 --mquery 1 * * [⊢ even (S (S (S (S z))))].
@@ -303,15 +302,11 @@ mlam N ⇒ mlam P ⇒ fn e ⇒ case e of
 --mquery 1 * * LE [⊢ z] [⊢ z].
 % zLE
 
-}%
-
 % A3
 --mquery 1 * * lessEq [⊢ S (S (S z))] [⊢ S (S z)] [⊢ S (S z)].
 % sle (sle lez)
 
-%{
-
-% A4 
+% A4
 --mquery 1 * * Ev [⊢ S (S (S (S z)))].
 % SEv (SEv ZEv)
 
@@ -324,7 +319,7 @@ mlam N ⇒ mlam P ⇒ fn e ⇒ case e of
 % A6
 --mquery 1 * * Le [⊢ z] [⊢ S (S z)].
 % SLe (zLE)
-% 
+%
 
 
 
@@ -352,7 +347,7 @@ mlam N ⇒ mlam P ⇒ fn e ⇒ case e of
 %    (all_all_num [ |- N] (all_all_num [ |- N] (all_num [ |- N])))
 
 % F5
---mquery 1 * * {D : [⊢ nat]} [⊢ plus z D D].  
+--mquery 1 * * {D : [⊢ nat]} [⊢ plus z D D].
 % mlam D => [ |- p_z D]
 
 % F6
@@ -365,7 +360,7 @@ mlam N ⇒ mlam P ⇒ fn e ⇒ case e of
 
 % F7
 --mquery 4 * * {N : [⊢ nat]} [⊢ num N] → [⊢ num N].
-% mlam N => fn z6 => let [ |- X] = z6 in [ |- X] 
+% mlam N => fn z6 => let [ |- X] = z6 in [ |- X]
 % mlam N => fn z6 => let [ |- X] = z6 in all_num [ |- N]
 % mlam N => fn z6 => let [ |- X] = z6 in
 %    all_all_num [ |- N] [⊢ X]
@@ -391,16 +386,11 @@ mlam N ⇒ mlam P ⇒ fn e ⇒ case e of
 --mquery 1 * * [⊢ even (S z)] → [⊢ even (S (S (S z)))].
 % fn x8 => let [ |- Y32] = x8 in [ |- even_ss Y32]
 
-
-
 --mquery 1 * * [⊢ num N].
-
-
-}%
 
 --mquery 1 * * {N : [⊢ nat]} ({M:[⊢ nat]} [⊢ num M] → [⊢ even M]) → [⊢ even (S (S N))].
 
-% --query 2 2 D : even N. 
+% --query 2 2 D : even N.
 
 
 %%%%%%%%            | Base | Box | PiBox | Implies |%%%%%%%%

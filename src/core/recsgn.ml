@@ -1210,7 +1210,10 @@ let recSgnDecls decls =
 
 
 
-    | Ext.Sgn.Pragma (loc, Ext.Sgn.NamePrag (typ_name, m_name, v_name)) ->
+    | Ext.Sgn.Pragma
+      { location=loc
+      ; pragma=Ext.Sgn.NamePrag (typ_name, m_name, v_name)
+      } ->
        dprintf
          (fun p ->
            p.fmt "[RecSgn Checking] Pragma at %a"

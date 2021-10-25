@@ -67,7 +67,7 @@ r_reach: reach B C -> edge A B -> reach A C.
 %       in this example our 1. subgoal will be edge A B and our 2. subgoal reach B C.
 %       This is important, when we use depth first search
 
---mquery 1 * * [ |- reach a d].
+--mquery 2 * * [ |- reach a d].
 % succeeds, finding the first solution, but in fact there are 2 expected solutions.
 
 --mquery 2 * * [ |- reach a d].

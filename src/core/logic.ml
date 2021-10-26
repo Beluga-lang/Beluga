@@ -24,7 +24,7 @@ module Options = struct
        3 => + Solutions and proof terms.
        4 => + LF signature & Comp Sig.
   *)
-  let chatter = ref 3
+  let chatter = ref 4
 
   (* Ask before giving more solutions (à la Prolog). *)
   let askSolution = ref false
@@ -2501,7 +2501,7 @@ let runLogic () =
       (* Transform signature into clauses. *)
       Index.robAll ();
       (* Optional: Print signature clauses. *)
-      if !Options.chatter >= 4
+      if !Options.chatter >= 5
       then Printer.printAllSig ();
       (* Solve! *)
       Index.iterQueries Frontend.solve;

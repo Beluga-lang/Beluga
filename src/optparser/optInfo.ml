@@ -155,21 +155,26 @@ type check_error =
    @author Clare Jang
  *)
 let check spec =
-  let name_result =
-    let open OptName in
+  ( let open OptName in
     match spec.long_name, spec.short_name with
-    | None, None -> Error NoName
-    | Some ln, None -> Ok (Names ("--" ^ ln, []))
-    | None, Some sn -> Ok (Names ("-" ^ String.make 1 sn, []))
-    | Some ln, Some sn -> Ok (Names ("--" ^ ln, ["-" ^ String.make 1 sn]))
-  in
-  match name_result with
-  | Error e -> Error e
-  | Ok name ->
-     Ok
-       { name
-       ; meta_vars = Option.fold ~none:["args"] ~some:Fun.id spec.meta_vars
-       ; help_msg = spec.help_msg
-       ; default_argument = spec.default_argument
-       ; optional = spec.optional
-       }
+    | None, None ->
+        Error NoName
+
+    | Some ln, None ->
+        Ok { canonical = "--" ^ ln; aliases = [] }
+
+    | None, Some sn ->
+        Ok { canonical = "-" ^ String.make 1 sn; aliases = [] }
+
+    | Some ln, Some sn ->
+        Ok { canonical = "--" ^ ln; aliases = ["-" ^ String.make 1 sn] }
+  )
+  |> Result.map
+  (fun name ->
+    { name
+    ; meta_vars = Option.value ~default:["args"] spec.meta_vars
+    ; help_msg = spec.help_msg
+    ; default_argument = spec.default_argument
+    ; optional = spec.optional
+    }
+  )

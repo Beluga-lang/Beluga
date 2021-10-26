@@ -2437,7 +2437,6 @@ module Frontend = struct
       (*
       fprintf std_formatter "\n FINAL check e = \n %a \n"
         (P.fmt_ppr_cmp_exp_chk LF.Empty LF.Empty) e;  *)
-      
        (* Rebuild the substitution and type check the proof term. *)
       if !Options.checkProofs
       then

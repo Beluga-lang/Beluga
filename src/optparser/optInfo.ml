@@ -24,7 +24,7 @@ type 'a unchecked =
   ; optional : 'a option
   }
 
-let make_empty () : 'a unchecked =
+let empty : 'a unchecked =
   { long_name = None
   ; short_name = None
   ; other_names = None
@@ -40,7 +40,8 @@ let make_empty () : 'a unchecked =
    For example, with the input parameter ["abc"], the real CLI option name will be [--abc]
    @author Clare Jang
  *)
-let long_name ln : 'a unchecked = { (make_empty ()) with long_name = Some ln }
+let long_name ln : 'a unchecked =
+  { empty with long_name = Some ln }
 
 (**
    A function configures the option name that comprises a single character.
@@ -48,7 +49,8 @@ let long_name ln : 'a unchecked = { (make_empty ()) with long_name = Some ln }
    For example, with the input parameter ['s'], the real CLI option name will be [-s]
    @author Clare Jang
  *)
-let short_name sn : 'a unchecked = { (make_empty ()) with short_name = Some sn }
+let short_name sn : 'a unchecked =
+  { empty with short_name = Some sn }
 
 (**
    A function configures the option name that does not start with ["-"] or ["--"].
@@ -56,13 +58,15 @@ let short_name sn : 'a unchecked = { (make_empty ()) with short_name = Some sn }
    so a user must specify an exact option name used in CLI.
    @author Clare Jang
  *)
-let other_names ns : 'a unchecked = { (make_empty ()) with other_names = Some ns }
+let other_names ns : 'a unchecked =
+  { empty with other_names = Some ns }
 
 (**
    A function configures the help message for the option.
    @author Clare Jang
  *)
-let help_msg hm : 'a unchecked = { (make_empty ()) with help_msg = Some hm }
+let help_msg hm : 'a unchecked =
+  { empty with help_msg = Some hm }
 
 (**
    A function configures the default argument of the option.
@@ -72,7 +76,8 @@ let help_msg hm : 'a unchecked = { (make_empty ()) with help_msg = Some hm }
    To make the option itself, see {!optional}.
    @author Clare Jang
  *)
-let default_argument (dv : 'a) : 'a unchecked = { (make_empty ()) with default_argument = Some dv }
+let default_argument (dv : 'a) : 'a unchecked =
+  { empty with default_argument = Some dv }
 
 (**
    A function configures the names of arguments in the help message for the option.
@@ -82,7 +87,8 @@ let default_argument (dv : 'a) : 'a unchecked = { (make_empty ()) with default_a
    pass that name to this function.
    @author Clare Jang
  *)
-let meta_vars mvs : 'a unchecked = { (make_empty ()) with meta_vars = Some mvs }
+let meta_vars mvs : 'a unchecked =
+  { empty with meta_vars = Some mvs }
 
 (**
    A function configures whether the option is mandatory or not.
@@ -92,20 +98,25 @@ let meta_vars mvs : 'a unchecked = { (make_empty ()) with meta_vars = Some mvs }
    see {!default_argument}.
    @author Clare Jang
  *)
-let optional op : 'a unchecked = { (make_empty ()) with optional = Some op }
+let optional op : 'a unchecked =
+  { empty with optional = Some op }
 
 (**
    An internal function used in {!OptSpec} module.
    @author Clare Jang
  *)
 let lift (spec : unit unchecked) : 'a unchecked =
-  { long_name = spec.long_name
-  ; short_name = spec.short_name
-  ; other_names = spec.other_names
-  ; meta_vars = spec.meta_vars
-  ; help_msg = spec.help_msg
-  ; default_argument = None
-  ; optional = None
+  { spec with default_argument = None ; optional = None }
+
+let (<|>) (spec0 : 'a unchecked) (spec1 : 'a unchecked) : 'a unchecked =
+  let open Option in
+  { long_name = spec0.long_name <|> spec1.long_name
+  ; short_name = spec0.short_name <|> spec1.short_name
+  ; other_names = spec0.other_names <|> spec1.other_names
+  ; meta_vars = spec0.meta_vars <|> spec1.meta_vars
+  ; help_msg = spec0.help_msg <|> spec1.help_msg
+  ; default_argument = spec0.default_argument <|> spec1.default_argument
+  ; optional = spec0.optional <|> spec1.optional
   }
 
 (**
@@ -117,19 +128,8 @@ let lift (spec : unit unchecked) : 'a unchecked =
   By eta-conversion, it loses its polymorphicity,
   and fails to check against its signature
  *)
-let merge (specs : 'a unchecked list) : 'a unchecked =
-  let combine (spec0 : 'a unchecked) (spec1 : 'a unchecked) : 'a unchecked =
-    let open Option in
-    { long_name = fold ~none:spec1.long_name ~some spec0.long_name
-    ; short_name = fold ~none:spec1.short_name ~some spec0.short_name
-    ; other_names = fold ~none:spec1.other_names ~some spec0.other_names
-    ; meta_vars = fold ~none:spec1.meta_vars ~some spec0.meta_vars
-    ; help_msg = fold ~none:spec1.help_msg ~some spec0.help_msg
-    ; default_argument = fold ~none:spec1.default_argument ~some spec0.default_argument
-    ; optional = fold ~none:spec1.optional ~some spec0.optional
-    }
-  in
-  List.fold_left combine (make_empty ()) specs
+let merge: 'a unchecked list -> 'a unchecked =
+  List.fold_left (<|>) empty
 
 (**
    An internal type used in {!OptSpec} module.

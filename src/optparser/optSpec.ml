@@ -57,9 +57,7 @@ let make infos opt_arity build_arg_parser =
   in
   let opt_name = OptName.to_string info.name in
   let initial_res =
-    match info.optional with
-    | Some a -> Ok a
-    | None -> Error (MissingMandatory opt_name)
+    Option.to_result ~none:(MissingMandatory opt_name) info.optional
   in
   let res_ref = ref initial_res in
   let opt =

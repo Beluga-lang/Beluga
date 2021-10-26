@@ -24,7 +24,7 @@ module Options = struct
        3 => + Solutions and proof terms.
        4 => + LF signature & Comp Sig.
   *)
-  let chatter = ref 4
+  let chatter = ref 3
 
   (* Ask before giving more solutions (à la Prolog). *)
   let askSolution = ref false
@@ -462,12 +462,15 @@ module Convert = struct
        invalid_arg
          "Logic.Convert.dctxToSub: Match conflict with LF.CtxVar _."
 
-  (* TODO:: instead of using etaExpand which creates an MVar
-      create an MMVar?? *)
   let rec mctxToMSub cD (mV, ms) fS =
     let etaExpand' cD cPsi (tA, ms) name =
       let cvar = Whnf.newMMVar (Some name) (cD, cPsi, tA) LF.Maybe in
        LF.Root (Syntax.Loc.ghost, LF.MMVar((cvar, ms), S.id), LF.Nil, `explicit)
+    in
+    let get_plicity dep =
+      match dep with
+      | LF.No -> `explicit
+      | LF.Maybe -> `implicit
     in
     let noLoc = Syntax.Loc.ghost in
     match mV with
@@ -478,16 +481,10 @@ module Convert = struct
        (* Only apply original ms to term?? *)
        let tM = etaExpand' cD cPsi (tA, ms') name in
        let dctx_hat = Context.dctxToHat cPsi in
-       let plicity = match dep with
-         | LF.No -> `explicit
-         | LF.Maybe -> `implicit
-       in
+       let plicity = get_plicity dep in
        let mfront = LF.ClObj (dctx_hat, LF.MObj tM) in
        (* let mf = Whnf.cnormMFt mfront ms' in *)
-
-       (* TODO:: TRY normalizing ctyp as well!!!! *)
        (* let ctyp' = Whnf.cnormMTyp (ctyp, ms') in *)
-
        (LF.MDot (mfront, ms'),
         (fun s ->
           fS' (Comp.MApp (noLoc, s, (noLoc, mfront), ctyp, plicity))))
@@ -498,29 +495,23 @@ module Convert = struct
        let tM = etaExpand' cD cPsi (tA, ms') name in
        let LF.Root (noLoc, hd, LF.Nil, _) = tM in
        let dctx_hat = Context.dctxToHat cPsi in
-       let plicity = match dep with
-         | LF.No -> `explicit
-         | LF.Maybe -> `implicit
-       in
+       let plicity = get_plicity dep in
        let mfront =
          LF.ClObj (dctx_hat, LF.PObj hd) in
-       let mf = Whnf.cnormMFt mfront ms' in
-       (LF.MDot (mf, ms'),
+       (* let mf = Whnf.cnormMFt mfront ms' in *)
+       (LF.MDot (mfront, ms'),
         (fun s ->
-          fS' (Comp.MApp (noLoc, s, (noLoc, mf), ctyp, plicity))))
+          fS' (Comp.MApp (noLoc, s, (noLoc, mfront), ctyp, plicity))))
     | LF.Dec (mV',
               LF.Decl (name, ((LF.CTyp (Some cid)) as ctyp), dep)) ->
        let (ms', fS') = mctxToMSub cD (mV', ms) fS in
-       let plicity = match dep with
-         | LF.No -> `explicit
-         | LF.Maybe -> `implicit
-       in
+       let plicity = get_plicity dep in
        let dctx = Whnf.newCVar (Some name) cD (Some cid) dep in
        let mfront = LF.CObj (LF.CtxVar dctx) in
-       let mf = Whnf.cnormMFt mfront ms' in
-       (LF.MDot (mf, ms'),
+       (* let mf = Whnf.cnormMFt mfront ms' in *)
+       (LF.MDot (mfront, ms'),
         (fun s -> fS'
-                    (Comp.MApp (noLoc, s, (noLoc, mf), ctyp, plicity))))
+                    (Comp.MApp (noLoc, s, (noLoc, mfront), ctyp, plicity))))
     | _ -> raise NotImplementedYet
 
 
@@ -944,27 +935,6 @@ module Printer = struct
 
   let fmt_ppr_lf_ctyp_decl cD ppf ctdec =
     P.fmt_ppr_lf_ctyp_decl cD ppf ctdec
- (*   match ctdec with
-    | LF.Decl (name, LF.ClTyp (LF.MTyp tA, cPsi), _) ->
-       fprintf ppf "%a : [ %a |- %a ]"
-         Id.print name
-         (fmt_ppr_dctx cD) (cPsi)
-         (fmt_ppr_typ cD cPsi) (tA, s)
-    | LF.Decl (name, LF.ClTyp (LF.PTyp tA, cPsi), _) ->
-       fprintf ppf "%a : [ %a |- %a ]"
-         Id.print name
-         (fmt_ppr_dctx cD) (cPsi)
-         (fmt_ppr_typ cD cPsi) (tA, s)
-    | LF.Decl (name, LF.ClTyp (styp, cPsi), _dep) ->
-       raise NotImplementedYet
-    | LF.Decl (name, LF.CTyp (Some cPsi), _dep) ->
-       fprintf ppf "%a : %a"
-         Id.print name
-         (fmt_ppr_dctx cD) (cPsi)
-    | LF.DeclOpt (x, _) ->
-       fprintf ppf "%a : _"
-         Id.print x *)
-
 
   (* goalToString Psi (g, s) = string
      Invariants:
@@ -1833,11 +1803,11 @@ module CSolver = struct
     | Proved ->
        let e' = (Comp.Var (noLoc, k)) in
        let e = fS e' in
-       let e' = Whnf.cnormExp' (e,ms) in
-       sc e'
+       let e = Whnf.cnormExp' (e,ms) in 
+       sc e
     | Solve (sg', cg') ->
        (*      printf "solve gamma SG \n"; *)
-       (* let cg' = normCompGoal (cg', ms') in *)
+       let cg' = normCompGoal (cg', ms) in 
     (* Printer.printState cD cG (cg) ms';  *)
        cgSolve' cD cG cPool (cg', ms)
          (fun e ->
@@ -1853,12 +1823,12 @@ module CSolver = struct
     | Proved ->
        let e' = (Comp.DataConst (noLoc, cid)) in
        let e = fS e' in
-       (* let e = Whnf.cnormExp' (e,ms) in *)
+       let e = Whnf.cnormExp' (e,ms) in
        sc e
     | Solve (sg', cg') ->
        (* printf "solve sig SG \n"; *)
-      (* let cg' = normCompGoal (cg', ms) in
-       let ms = Whnf.cnormMSub ms in *)
+      let cg' = normCompGoal (cg', ms) in
+      (* let ms = Whnf.cnormMSub ms in *)
        (*Printer.printState cD cG (cg') ms;*)
        cgSolve' cD cG cPool (cg', ms)
          (fun e ->
@@ -1873,10 +1843,10 @@ module CSolver = struct
     | Proved ->
        let e' = (Comp.Const (noLoc, cid)) in
        let e = fS e' in
-       let e' = Whnf.cnormExp' (e,ms) in
-       sc e'
+       let e = Whnf.cnormExp' (e,ms) in 
+       sc e
     | Solve (sg', cg') ->
-   (*    let cg'= normCompGoal (cg',ms) in *)
+       let cg'= normCompGoal (cg',ms) in 
        cgSolve' cD cG cPool (cg', ms)
          (fun e ->
            solveTheoremSubGoals cD cG cPool cid sg' ms mV
@@ -1887,7 +1857,7 @@ module CSolver = struct
   and focusT cD cG cPool cg ms sc currDepth maxDepth =
      (* printf "focus Theorem \n";
       Printer.printState cD cG cg ms; *)
-    let focus (cid, sCCl) =
+    let matchThm (cid, sCCl) =
       if (* Check to see if the comp goal is the head of the assumption *)
          matchHead cD sCCl.cHead cg;
       then
@@ -1906,14 +1876,14 @@ module CSolver = struct
       else
         ();
     in
-    Index.iterAllTSClauses (fun w -> focus w)
+    Index.iterAllTSClauses (fun w -> matchThm w)
 
   (* Focus on the clause in the static Comp signature with head matching
      type constant c. *)
   and focusS cidTyp cD cG cPool cg ms sc currDepth maxDepth =
     (* printf "focus Sig \n";
     Printer.printState cD cG cg ms; *)
-    let focus (cidTerm, sCCl) sc =
+    let matchSig (cidTerm, sCCl) sc =
       let (ms', fS) = C.mctxToMSub cD (sCCl.cMVars, LF.MShift (Context.length cD)) (fun s -> s) in
      (* printf "focus Sig NEW MS \n";
       Printer.printState cD cG cg ms';
@@ -1934,7 +1904,7 @@ module CSolver = struct
          with
          | U.Failure _ -> ())
     in
-    I.iterISClauses (fun w -> focus w sc) cidTyp
+    I.iterISClauses (fun w -> matchSig w sc) cidTyp
 
 
 (*      Focusing Gamma Phase:   cD ; cG  > tau ==> e: Q
@@ -2501,7 +2471,7 @@ let runLogic () =
       (* Transform signature into clauses. *)
       Index.robAll ();
       (* Optional: Print signature clauses. *)
-      if !Options.chatter >= 5
+      if !Options.chatter >= 4
       then Printer.printAllSig ();
       (* Solve! *)
       Index.iterQueries Frontend.solve;

@@ -51,7 +51,7 @@ exception SpecError of OptInfo.check_error
 let make infos opt_arity build_arg_parser =
   let open OptInfo in
   let info =
-    match check (merge infos) with
+    match check (merge_all infos) with
     | Error e -> raise (SpecError e)
     | Ok s -> s
   in

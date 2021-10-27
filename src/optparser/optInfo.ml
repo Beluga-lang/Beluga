@@ -108,7 +108,7 @@ let optional op : 'a unchecked =
 let lift (spec : unit unchecked) : 'a unchecked =
   { spec with default_argument = None ; optional = None }
 
-let (<|>) (spec0 : 'a unchecked) (spec1 : 'a unchecked) : 'a unchecked =
+let merge spec0 spec1 =
   let open Option in
   { long_name = spec0.long_name <|> spec1.long_name
   ; short_name = spec0.short_name <|> spec1.short_name
@@ -128,8 +128,8 @@ let (<|>) (spec0 : 'a unchecked) (spec1 : 'a unchecked) : 'a unchecked =
   By eta-conversion, it loses its polymorphicity,
   and fails to check against its signature
  *)
-let merge: 'a unchecked list -> 'a unchecked =
-  List.fold_left (<|>) empty
+let merge_all specs =
+  List.fold_left merge empty specs
 
 (**
    An internal type used in {!OptSpec} module.

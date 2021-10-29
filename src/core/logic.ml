@@ -1150,7 +1150,7 @@ module Printer = struct
         (fmt_ppr_mctx) cD
         (fmt_ppr_gctx cD) cG
         (fmt_ppr_cmp_goal cD) (cg,S.id)
-        (Pretty.Int.DefaultPrinter.fmt_ppr_lf_msub cD Pretty.Int.DefaultPrinter.l0) ms *) 
+        (Pretty.Int.DefaultPrinter.fmt_ppr_lf_msub cD Pretty.Int.DefaultPrinter.l0) ms *)
 
 end
 
@@ -1711,7 +1711,7 @@ module CSolver = struct
        find_max cD' cltyp_d k lst
     *)
 
-  (* rev_ms ms k = 
+  (* rev_ms ms k =
        reverses ms with first sub MShift k
  *)
 

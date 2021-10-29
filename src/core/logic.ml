@@ -478,8 +478,7 @@ module Convert = struct
     | LF.Dec (mV',
               LF.Decl (name, ((LF.ClTyp (LF.MTyp tA, cPsi)) as ctyp), dep)) ->
        let (ms', fS') = mctxToMSub cD (mV', ms) fS in
-       (* Only apply original ms to term?? *)
-       let tM = etaExpand' cD cPsi (tA, ms') name in
+       let tM = etaExpand' cD cPsi (tA, ms) name in
        let dctx_hat = Context.dctxToHat cPsi in
        let plicity = get_plicity dep in
        let mfront = LF.ClObj (dctx_hat, LF.MObj tM) in
@@ -490,7 +489,6 @@ module Convert = struct
           fS' (Comp.MApp (noLoc, s, (noLoc, mfront), ctyp, plicity))))
     | LF.Dec (mV',
               LF.Decl (name, ((LF.ClTyp (LF.PTyp tA, cPsi)) as ctyp), dep)) ->
-       (* TODO:: Correct? *)
        let (ms', fS') = mctxToMSub cD (mV', ms) fS in
        let tM = etaExpand' cD cPsi (tA, ms') name in
        let LF.Root (noLoc, hd, LF.Nil, _) = tM in
@@ -1137,7 +1135,7 @@ module Printer = struct
  (* Prints the current state of proof loop
     (used for debugging) *)
 (*
-  let printState cD cG cg ms =
+   let printState cD cG cg ms =
     let fmt_ppr_gctx cD ppf cG =
       P.fmt_ppr_cmp_gctx cD P.l0 ppf cG
     in
@@ -1152,8 +1150,8 @@ module Printer = struct
         (fmt_ppr_mctx) cD
         (fmt_ppr_gctx cD) cG
         (fmt_ppr_cmp_goal cD) (cg,S.id)
-        (Pretty.Int.DefaultPrinter.fmt_ppr_lf_msub cD Pretty.Int.DefaultPrinter.l0) ms
-*)
+        (Pretty.Int.DefaultPrinter.fmt_ppr_lf_msub cD Pretty.Int.DefaultPrinter.l0) ms *) 
+
 end
 
 module Solver = struct
@@ -1584,7 +1582,7 @@ module CSolver = struct
 
   (* Check to see if the cid of the head of an assumption
      matches the cid of the comp_goal                         *)
-  let rec matchHead cD assump cg =
+  let rec matchHead assump cg =
     match (assump, cg) with
     | (Comp.TypBox (_, LF.ClTyp (LF.MTyp tA, cPsi))),
        Box (cPsi', Atom tA', Some M) ->
@@ -1595,9 +1593,9 @@ module CSolver = struct
     | (Comp.TypBase (_, cid, _meta_spine), Atomic (cid', _atomic_spine)) ->
        Id.cid_equals cid cid'
     | (Comp.TypArr (_, tau1, tau2), cg) ->
-       matchHead cD tau2 cg
+       matchHead tau2 cg
     | (Comp. TypPiBox (_, ctdec, tau), cg) ->
-       matchHead cD tau cg
+       matchHead tau cg
     | _ -> false
 
 
@@ -1713,6 +1711,19 @@ module CSolver = struct
        find_max cD' cltyp_d k lst
     *)
 
+  (* rev_ms ms k = 
+       reverses ms with first sub MShift k
+ *)
+
+  let rev_ms ms k =
+    let rec rev ms ms_ret =
+      match ms with
+      | LF.MShift k' -> ms_ret
+      | LF.MDot (mf, ms') -> rev ms' (LF.MDot (mf, ms_ret))
+    in
+    rev ms (LF.MShift k)
+    
+    
   let rec cgSolve' (cD: LF.mctx) (cG: Comp.gctx) (cPool: cPool)
             (mq:mquery) (sc: Comp.exp_chk -> unit) (currDepth: bound) (maxDepth: bound) =
 
@@ -1803,12 +1814,12 @@ module CSolver = struct
     | Proved ->
        let e' = (Comp.Var (noLoc, k)) in
        let e = fS e' in
-       let e = Whnf.cnormExp' (e,ms) in 
+       let e = Whnf.cnormExp' (e,ms) in
        sc e
     | Solve (sg', cg') ->
-       (*      printf "solve gamma SG \n"; *)
-       let cg' = normCompGoal (cg', ms) in 
-    (* Printer.printState cD cG (cg) ms';  *)
+       (* printf "solve gamma SG \n"; *)
+       let cg' = normCompGoal (cg', ms) in
+       (* Printer.printState cD cG cg' ms; *)
        cgSolve' cD cG cPool (cg', ms)
          (fun e ->
            solveSubGoals cD cG cPool (sg', k) ms mV
@@ -1837,16 +1848,17 @@ module CSolver = struct
              (succ currDepth) maxDepth
 
   and solveTheoremSubGoals cD cG cPool cid sg ms mV sc fS currDepth maxDepth =
-    (*fprintf std_formatter "CID = %a \n"
-      Id.print (Index.compName cid);*)
+     (* fprintf std_formatter "CID = %a \n"
+       Id.print (Index.compName cid); *)
     match sg with
     | Proved ->
        let e' = (Comp.Const (noLoc, cid)) in
        let e = fS e' in
-       let e = Whnf.cnormExp' (e,ms) in 
+       let e = Whnf.cnormExp' (e,ms) in
        sc e
     | Solve (sg', cg') ->
-       let cg'= normCompGoal (cg',ms) in 
+       let cg'= normCompGoal (cg',ms) in
+      (* Printer.printState cD cG cg' ms; *)
        cgSolve' cD cG cPool (cg', ms)
          (fun e ->
            solveTheoremSubGoals cD cG cPool cid sg' ms mV
@@ -1856,49 +1868,53 @@ module CSolver = struct
   (* We focus on one of the computation-type theorems *)
   and focusT cD cG cPool cg ms sc currDepth maxDepth =
      (* printf "focus Theorem \n";
-      Printer.printState cD cG cg ms; *)
+     Printer.printState cD cG cg ms; *)
     let matchThm (cid, sCCl) =
       if (* Check to see if the comp goal is the head of the assumption *)
-         matchHead cD sCCl.cHead cg;
+         matchHead sCCl.cHead cg;
       then
-        (let (ms', fS) = C.mctxToMSub cD (sCCl.cMVars, (LF.MShift (Context.length cD))) (fun s -> s) in
+        (let (ms', fS) = C.mctxToMSub cD (sCCl.cMVars, LF.MShift 0) (fun s -> s) in
+         let ms'' = rev_ms ms' (Context.length (sCCl.cMVars)) in
+      (*  printf "focus Thm NEW MS \n";
+         Printer.printState cD cG cg ms';
+         let ms''' = Whnf.cnormMSub ms' in
+         printf "focus Thm normedd MS \n";
+         Printer.printState cD cG cg ms'''; *)
          let tau = if isBox cg then C.boxToTypBox cg else C.atomicToBase cg in
         (try
            Solver.trail
              begin fun () ->
-               unify cD (tau, ms) (sCCl.cHead, ms')
+               unify cD (tau, ms) (sCCl.cHead, ms'')
                  (fun () ->
-                  solveTheoremSubGoals cD cG cPool cid sCCl.cSubGoals ms' sCCl.cMVars
+                  solveTheoremSubGoals cD cG cPool cid sCCl.cSubGoals ms'' sCCl.cMVars
                     (fun e' -> sc (Comp.Syn (noLoc, e'))) fS currDepth maxDepth)
               end
          with
-         | U.Failure _ -> ();))
+         | U.Failure _ -> ()))
       else
-        ();
+        ()
     in
     Index.iterAllTSClauses (fun w -> matchThm w)
 
   (* Focus on the clause in the static Comp signature with head matching
      type constant c. *)
   and focusS cidTyp cD cG cPool cg ms sc currDepth maxDepth =
-    (* printf "focus Sig \n";
-    Printer.printState cD cG cg ms; *)
+     (* printf "focus Sig \n";
+     Printer.printState cD cG cg ms; *)
     let matchSig (cidTerm, sCCl) sc =
-      let (ms', fS) = C.mctxToMSub cD (sCCl.cMVars, LF.MShift (Context.length cD)) (fun s -> s) in
-     (* printf "focus Sig NEW MS \n";
-      Printer.printState cD cG cg ms';
-      let ms'' = Whnf.cnormMSub ms' in
-      printf "focus Sig normedd MS \n";
-      Printer.printState cD cG cg ms''; *)
+      let (ms', fS) = C.mctxToMSub cD (sCCl.cMVars, LF.MShift 0) (fun s -> s) in
+      let ms'' = rev_ms ms' (Context.length ((sCCl.cMVars))) in
+      (* printf "focus Sig NEW MS \n";
+      Printer.printState cD cG cg ms'; *)
       let tau = C.atomicToBase cg in
       (* printf "focus Sig match with assump head: \n";
       Printer.fmt_ppr_cmp_typ cD std_formatter sCCl.cHead; *)
       (try
          Solver.trail
            begin fun () ->
-           unify cD (tau, ms) (sCCl.cHead, ms')
+           unify cD (tau, ms) (sCCl.cHead, ms'')
                (fun () ->
-                solveCClauseSubGoals cD cG cPool cidTerm sCCl.cSubGoals ms' sCCl.cMVars
+                solveCClauseSubGoals cD cG cPool cidTerm sCCl.cSubGoals ms'' sCCl.cMVars
                   (fun e' -> sc (Comp.Syn (noLoc, e'))) fS currDepth maxDepth)
             end
          with
@@ -1922,22 +1938,23 @@ module CSolver = struct
   (* We focus on one of the computation assumptions in cPool/Gamma *)
   and focusG cD cG cPool cPool_all cg ms sc currDepth maxDepth =
     (* printf "focus Gamma \n";
-    Printer.printState cD cG cg ms; *)
+    Printer.printState cD cG cg ms;  *)
     match cPool with
     | Emp -> ()
     | Full (cPool', ({cHead = hd; cMVars; cSubGoals = sg}, k', Boxed)) ->
        if (* Check to see if the comp goal is the head of the assumption *)
-         matchHead cD hd cg
+         matchHead hd cg
        then (* If so, try to solve the subgoals *)
-         let (ms', fS) = C.mctxToMSub cD (cMVars, LF.MShift k') (fun s -> s) in
+         let (ms', fS) = C.mctxToMSub cD (cMVars, LF.MShift 0) (fun s -> s) in
+         let ms'' = rev_ms ms' (Context.length (cMVars)) in
          let tau = if isBox cg then C.boxToTypBox cg else C.atomicToBase cg in
          (* Trail to undo MVar instantiations. *)
          (try
            Solver.trail
              begin fun () ->
-             unify cD (tau, ms) (hd, ms')
+             unify cD (tau, ms) (hd, ms'')
                (fun () ->
-               solveSubGoals cD cG cPool_all (sg, k') ms' cMVars
+               solveSubGoals cD cG cPool_all (sg, k') ms'' cMVars
                  (fun e' -> sc  (Comp.Syn (noLoc, e'))) fS currDepth maxDepth)
              end
          with
@@ -2012,9 +2029,9 @@ module CSolver = struct
 
   and focus cD cG cPool cg ms sc currDepth maxDepth =
    (*  printf "FOCUS \n";
-    let ms = Whnf.cnormMSub ms in
-    let cg = normCompGoal (cg, ms) in
-    Printer.printState cD cG cg ms;*)
+    (* let ms = Whnf.cnormMSub ms in
+    let cg = normCompGoal (cg, ms) in *)
+    Printer.printState cD cG cg ms; *)
     match cg with
     | Box (cPsi, g, Some M) ->
        (* If our goal is of box type, we first try to find the
@@ -2034,7 +2051,7 @@ module CSolver = struct
            let meta_typ = LF.ClTyp (cltyp, cPsi') in
            sc (Comp.Box(noLoc, meta_obj, meta_typ)))
        in
-       Solver.solve cD cPsi (g, S.id) sc';
+       Solver.solve cD cPsi (g', S.id) sc';
        focusG cD cG cPool cPool cg ms sc currDepth maxDepth;
        focusT cD cG cPool cg ms sc currDepth maxDepth;
      (*  msplit cD cD cG cPool cg ms sc currDepth maxDepth; *)
@@ -2218,9 +2235,8 @@ module CSolver = struct
 
      (* First we break our goal down into an atomic one *)
   and uniform_right cD cG cPool cg ms sc currDepth maxDepth =
-(*    printf "UNIFORM RIGHT \n";
-    let cg'= normCompGoal (cg, ms) cg in
-    Printer.printState cD cG (cg') ms;  *)
+    (* printf "UNIFORM RIGHT \n";
+    Printer.printState cD cG cg ms;*)
     match cg with
     | Box (_) | Atomic (_) ->
        uniform_left cD cG cPool Emp cg ms sc currDepth maxDepth
@@ -2407,7 +2423,7 @@ module Frontend = struct
       (*
       fprintf std_formatter "\n FINAL check e = \n %a \n"
         (P.fmt_ppr_cmp_exp_chk LF.Empty LF.Empty) e;  *)
-       (* Rebuild the substitution and type check the proof term. *)
+        (* Rebuild the substitution and type check the proof term. *)
       if !Options.checkProofs
       then
         check LF.Empty LF.Empty e (Convert.solToMSub sgnMQuery.instMMVars);

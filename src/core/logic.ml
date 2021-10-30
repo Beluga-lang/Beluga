@@ -799,9 +799,16 @@ module Index = struct
        t = expected number of tries to find soln.
   *)
   let storeMQuery ((tau, i), e, t, d) =
-    (*  TO BE IMPLEMENTED AND FINISHED *)
+    let rec get_minst xs =
+      match xs with
+      | [] -> []
+      | (a,(loc,b)) :: ys ->
+         let ys' = get_minst ys in
+         (a,b) :: ys'
+    in
     let (mq, tau', ms, xs) = (Convert.comptypToMQuery (tau, i)) in
-    addSgnMQuery (tau', mq, [], e, t, d)
+    let xs' = get_minst xs in
+    addSgnMQuery (tau', mq, xs', e, t, d)
 
 
   (* robStore () = ()
@@ -1134,8 +1141,8 @@ module Printer = struct
 
  (* Prints the current state of proof loop
     (used for debugging) *)
-(*
-   let printState cD cG cg ms =
+
+  (* let printState cD cG cg ms =
     let fmt_ppr_gctx cD ppf cG =
       P.fmt_ppr_cmp_gctx cD P.l0 ppf cG
     in
@@ -1875,7 +1882,7 @@ module CSolver = struct
       then
         (let (ms', fS) = C.mctxToMSub cD (sCCl.cMVars, LF.MShift 0) (fun s -> s) in
          let ms'' = rev_ms ms' (Context.length (sCCl.cMVars)) in
-      (*  printf "focus Thm NEW MS \n";
+        (* printf "focus Thm NEW MS \n";
          Printer.printState cD cG cg ms';
          let ms''' = Whnf.cnormMSub ms' in
          printf "focus Thm normedd MS \n";
@@ -1903,12 +1910,8 @@ module CSolver = struct
      Printer.printState cD cG cg ms; *)
     let matchSig (cidTerm, sCCl) sc =
       let (ms', fS) = C.mctxToMSub cD (sCCl.cMVars, LF.MShift 0) (fun s -> s) in
-      let ms'' = rev_ms ms' (Context.length ((sCCl.cMVars))) in
-      (* printf "focus Sig NEW MS \n";
-      Printer.printState cD cG cg ms'; *)
+      let ms'' = rev_ms ms' (Context.length (sCCl.cMVars)) in
       let tau = C.atomicToBase cg in
-      (* printf "focus Sig match with assump head: \n";
-      Printer.fmt_ppr_cmp_typ cD std_formatter sCCl.cHead; *)
       (try
          Solver.trail
            begin fun () ->
@@ -2451,9 +2454,9 @@ module Frontend = struct
          if !Options.chatter >= 1
            then P.printMQuery sgnMQuery;
          try
-             CSolver.cgSolve LF.Empty LF.Empty sgnMQuery.mquery scInit sgnMQuery.depth;
-             (* Check solution bounds. *)
-             checkSolutions sgnMQuery.mexpected sgnMQuery.mtries !solutions
+           CSolver.cgSolve LF.Empty LF.Empty sgnMQuery.mquery scInit sgnMQuery.depth;
+           (* Check solution bounds. *)
+           checkSolutions sgnMQuery.mexpected sgnMQuery.mtries !solutions
            with
            | Done -> printf "Done.\n"
            | AbortQuery s -> printf "%s\n" s

@@ -61,7 +61,30 @@ rec again_all_num : {N : [⊢ nat]} {M : [⊢ nat]} [⊢ num M] → [⊢ num N] 
 mlam n,m ⇒ fn U ⇒ all_num [⊢ n]
 ;
 
+
 rec numThenEven : {N : [⊢ nat]} [⊢ num N] → [⊢ even z] = mlam N ⇒ fn n ⇒ [⊢ even_z];
+
+LF numm : nat → type =
+  | all : {N : nat} numm N
+;
+
+rec all_all_numm : {N : [ ⊢ nat]} [⊢ numm N] → [⊢ numm N] =
+/ total m (all_all_numm n m) /
+mlam n ⇒ fn m ⇒ m
+;
+
+rec nummThenEven : ({N : [⊢ nat]} [⊢ numm N]) → [⊢ even z] = fn n ⇒ [⊢ even_z];
+
+% rec test_num: {M: [⊢ nat]} {Q: [⊢ nat]} {N: [⊢ nat]} [⊢ num N] =
+% / total n (test_num n) /
+% mlam M,Q,N ⇒ case [⊢ N] of
+%  | [⊢ z] ⇒ [⊢ num_z]
+%  | [⊢ S M] ⇒ let [⊢ num_m ] = all_num [⊢ M] in
+%	      [⊢ num_s num_m]
+%;
+% In mquery F8, can't find instantiations for M and Q, but they
+% are unused so unnecessary
+
 
 % ctx schema declaration.
 
@@ -249,12 +272,15 @@ mlam N ⇒ mlam P ⇒ fn e ⇒ case e of
 
 }%
 
+
 % Box
 
+
 % B1
---mquery 2 * * [⊢ even z].
+--mquery 3 * 1 [⊢ even z].
 % [ |- even_z]
-% numThenEven [ |- z] [ |- num_z]
+% will find if numTheEven commented out- nummThenEven (mlam N => [ |- all N])
+% ERROR: cannot find numThenEven [ |- z] [ |- num_z]
 
 
 % B2
@@ -277,6 +303,7 @@ mlam N ⇒ mlam P ⇒ fn e ⇒ case e of
 % [D : nat |- p_s (p_z S z)]
 % two_ctx [D : nat]
 % two_imp_ctx
+
 
 % B6
 --mquery 5 * 1  [⊢ num (S (S (S z)))].
@@ -302,9 +329,13 @@ mlam N ⇒ mlam P ⇒ fn e ⇒ case e of
 --mquery 1 * * LE [⊢ z] [⊢ z].
 % zLE
 
+
+
 % A3
 --mquery 1 * * lessEq [⊢ S (S (S z))] [⊢ S (S z)] [⊢ S (S z)].
 % sle (sle lez)
+
+
 
 % A4
 --mquery 1 * * Ev [⊢ S (S (S (S z)))].
@@ -338,6 +369,7 @@ mlam N ⇒ mlam P ⇒ fn e ⇒ case e of
 --mquery 1 * * {N : [⊢ nat]} {E: [⊢ even N]} [⊢ even z].
 % mlam N => mlam E => [ |- even_z]
 
+
 % F4
 --mquery 4 * * {N : [⊢ nat]} [⊢ num N].
 % mlam N => all_num [ |- N]
@@ -345,6 +377,7 @@ mlam N ⇒ mlam P ⇒ fn e ⇒ case e of
 % mlam N => all_all_num [ |- N] (all_all_num [ |- N] (all_num [ |- N]))
 % mlam N => all_all_num [ |- N]
 %    (all_all_num [ |- N] (all_all_num [ |- N] (all_num [ |- N])))
+
 
 % F5
 --mquery 1 * * {D : [⊢ nat]} [⊢ plus z D D].
@@ -355,7 +388,6 @@ mlam N ⇒ mlam P ⇒ fn e ⇒ case e of
 % mlam E => fn x2 => let [ |- X] = x2 in [ |- X]
 % mlam E => fn x2 => let [ |- X] = x2 in [ |- E]
 % mlam E => fn x2 => let [ |- X] = x2 in [ |- even_z]
-
 
 
 % F7
@@ -369,13 +401,16 @@ mlam N ⇒ mlam P ⇒ fn e ⇒ case e of
 
 
 % F8
---mquery 1 * * {M : [⊢ nat]} {N : [⊢ nat]} [⊢ num N].
+--mquery 2 * * {M : [⊢ nat]} {N : [⊢ nat]} [⊢ num N].
 % mlam M => mlam N => all_num [ |- N]
+% mlam M => mlam N => all_all_num [ |- N] (all_num [ |- N])
+
 
 % F9
 --mquery 1 * * {N : [⊢ nat]} [⊢ even N] → [⊢ num N] → [⊢ even (S (S N))].
 % mlam N => fn z7 => fn x7 =>
 %   let [ |- X28] = x7 in let [ |- Z28] = z7 in [ |- even_ss Z28]
+
 
 % F10
 --mquery 1 * * {N : [⊢ nat]} ([⊢ num N] → [⊢ even N]) → [⊢ even (S (S N))].
@@ -386,11 +421,37 @@ mlam N ⇒ mlam P ⇒ fn e ⇒ case e of
 --mquery 1 * * [⊢ even (S z)] → [⊢ even (S (S (S z)))].
 % fn x8 => let [ |- Y32] = x8 in [ |- even_ss Y32]
 
---mquery 1 * * [⊢ num N].
 
---mquery 1 * * {N : [⊢ nat]} ({M:[⊢ nat]} [⊢ num M] → [⊢ even M]) → [⊢ even (S (S N))].
 
-% --query 2 2 D : even N.
+
+
+--mquery 1 * * [N:nat ⊢ numm N].
+% [N : nat |- all N]
+
+
+
+--mquery 1 * * {N : [⊢ nat]} ({M:[⊢ nat]} [⊢ numm M] → [⊢ even M]) → [⊢ even (S (S N))].
+% ERROR
+
+
+
+--mquery 2 * 1 [ |- numm (S (S (S z)))].
+% [ |- all S (S (S z))]
+% all_all_numm [ |- S (S (S z))] [ |- all S (S (S z))]
+
+
+
+--mquery 1 * * {N : [⊢ nat]} lessEq [⊢ S (S (S N))] [⊢ S (S z)] [⊢ S (S z)].
+% ERROR
+
+--mquery 3 * * Ev [⊢ N].
+% ZEv
+% ERROR
+
+--mquery 3 * * [⊢ even N].
+% [ |- even_z]
+% [ |- even_ss even_z]
+% [ |- even_ss (even_ss even_z)]
 
 
 %%%%%%%%            | Base | Box | PiBox | Implies |%%%%%%%%

@@ -1672,12 +1672,12 @@ module CSolver = struct
        let aS' = normAtomicSpine ms aS in
        Atomic (cid, aS')
 
-  let rec normSubGoals ms sg cD =
+  let rec normSubGoals (sg, ms) cD =
     match sg with
     | Proved -> sg
     | Solve (sg', cg) ->
        let cg' = normCompGoal (cg, ms) in
-       Solve (normSubGoals ms sg' cD, cg')
+       Solve (normSubGoals (sg', ms) cD, cg')
 
   let rec cnormCPool (cPool, ms) cD =
     match cPool with
@@ -1685,9 +1685,9 @@ module CSolver = struct
     | Full (cPool', ({cHead = hd; cMVars = mV; cSubGoals = sg}, _k, _s)) ->
        let cPool'' = cnormCPool (cPool', ms) cD in
        let hd' = Whnf.cnormCTyp (hd, ms) in
-       let sg' = normSubGoals ms sg cD in
+       let sg' = normSubGoals (sg, ms) cD in
        Full (cPool'', ({cHead = hd'; cMVars = mV; cSubGoals = sg'}, _k, _s))
-
+   
    (*
   (* mctx -> ctyp_decl *)
   let least_cases cD =
@@ -1821,7 +1821,7 @@ module CSolver = struct
     | Proved ->
        let e' = (Comp.Var (noLoc, k)) in
        let e = fS e' in
-       let e = Whnf.cnormExp' (e,ms) in
+       let e = Whnf.cnormExp' (e, LF.MShift 0) in
        sc e
     | Solve (sg', cg') ->
         (* printf "solve gamma SG \n";
@@ -1841,7 +1841,7 @@ module CSolver = struct
     | Proved ->
        let e' = (Comp.DataConst (noLoc, cid)) in
        let e = fS e' in
-       let e = Whnf.cnormExp' (e,ms) in
+       let e = Whnf.cnormExp' (e, LF.MShift 0) in
        sc e
     | Solve (sg', cg') ->
        (* printf "solve sig SG \n";
@@ -1860,7 +1860,7 @@ module CSolver = struct
     | Proved ->
        let e' = (Comp.Const (noLoc, cid)) in
        let e = fS e' in
-       let e = Whnf.cnormExp' (e,ms) in
+       let e = Whnf.cnormExp' (e, LF.MShift 0) in
        sc e
     | Solve (sg', cg') ->
        (* printf "solve thm SG \n";

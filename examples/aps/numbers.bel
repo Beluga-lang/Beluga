@@ -444,14 +444,19 @@ mlam N ⇒ mlam P ⇒ fn e ⇒ case e of
 --mquery 1 * * {N : [⊢ nat]} lessEq [⊢ S (S (S N))] [⊢ S (S z)] [⊢ S (S z)].
 % ERROR
 
+
+
 --mquery 3 * * Ev [⊢ N].
 % ZEv
-% ERROR
+% SEv ZEv
+% SEv (SEv ZEv)
 
 --mquery 3 * * [⊢ even N].
 % [ |- even_z]
 % [ |- even_ss even_z]
 % [ |- even_ss (even_ss even_z)]
+
+
 
 
 %%%%%%%%            | Base | Box | PiBox | Implies |%%%%%%%%

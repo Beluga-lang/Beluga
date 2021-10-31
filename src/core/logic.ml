@@ -1824,9 +1824,9 @@ module CSolver = struct
        let e = Whnf.cnormExp' (e,ms) in
        sc e
     | Solve (sg', cg') ->
-       (* printf "solve gamma SG \n"; *)
-       let cg' = normCompGoal (cg', ms) in
-       (* Printer.printState cD cG cg' ms; *)
+        (* printf "solve gamma SG \n";
+        let cg = normCompGoal (cg', ms) in
+        Printer.printState cD cG cg ms; *)
        cgSolve' cD cG cPool (cg', ms)
          (fun e ->
            solveSubGoals cD cG cPool (sg', k) ms mV
@@ -1844,10 +1844,9 @@ module CSolver = struct
        let e = Whnf.cnormExp' (e,ms) in
        sc e
     | Solve (sg', cg') ->
-       (* printf "solve sig SG \n"; *)
-      let cg' = normCompGoal (cg', ms) in
-      (* let ms = Whnf.cnormMSub ms in *)
-       (*Printer.printState cD cG (cg') ms;*)
+       (* printf "solve sig SG \n";
+       let cg = normCompGoal (cg', ms) in
+       Printer.printState cD cG cg ms; *)
        cgSolve' cD cG cPool (cg', ms)
          (fun e ->
            solveCClauseSubGoals cD cG cPool cid sg' ms mV
@@ -1864,8 +1863,9 @@ module CSolver = struct
        let e = Whnf.cnormExp' (e,ms) in
        sc e
     | Solve (sg', cg') ->
-       let cg'= normCompGoal (cg',ms) in
-      (* Printer.printState cD cG cg' ms; *)
+       (* printf "solve thm SG \n";
+       let cg = normCompGoal (cg',ms) in
+       Printer.printState cD cG cg ms; *)
        cgSolve' cD cG cPool (cg', ms)
          (fun e ->
            solveTheoremSubGoals cD cG cPool cid sg' ms mV
@@ -2033,8 +2033,8 @@ module CSolver = struct
   and focus cD cG cPool cg ms sc currDepth maxDepth =
    (*  printf "FOCUS \n";
     (* let ms = Whnf.cnormMSub ms in
-    let cg = normCompGoal (cg, ms) in *)
-    Printer.printState cD cG cg ms; *)
+    let cg' = normCompGoal (cg, ms) in *)
+    Printer.printState cD cG cg' ms; *)
     match cg with
     | Box (cPsi, g, Some M) ->
        (* If our goal is of box type, we first try to find the

@@ -279,9 +279,8 @@ mlam N ⇒ mlam P ⇒ fn e ⇒ case e of
 % B1
 --mquery 3 * 1 [⊢ even z].
 % [ |- even_z]
-% will find if numTheEven commented out- nummThenEven (mlam N => [ |- all N])
-% ERROR: cannot find numThenEven [ |- z] [ |- num_z]
-
+% numThenEven [ |- z] [ |- num_z]
+% numThenEven [ |- S z] [ |- num_s num_z]
 
 % B2
 --mquery 1 * * [⊢ plus z z z].
@@ -303,7 +302,6 @@ mlam N ⇒ mlam P ⇒ fn e ⇒ case e of
 % [D : nat |- p_s (p_z S z)]
 % two_ctx [D : nat]
 % two_imp_ctx
-
 
 % B6
 --mquery 5 * 1  [⊢ num (S (S (S z)))].
@@ -329,13 +327,9 @@ mlam N ⇒ mlam P ⇒ fn e ⇒ case e of
 --mquery 1 * * LE [⊢ z] [⊢ z].
 % zLE
 
-
-
 % A3
 --mquery 1 * * lessEq [⊢ S (S (S z))] [⊢ S (S z)] [⊢ S (S z)].
 % sle (sle lez)
-
-
 
 % A4
 --mquery 1 * * Ev [⊢ S (S (S (S z)))].
@@ -345,7 +339,6 @@ mlam N ⇒ mlam P ⇒ fn e ⇒ case e of
 --mquery 2 * * lessEq [⊢ S z] [⊢ S (S z)] [⊢ S z].
 % les (zle)
 % oneLEtwo
-
 
 % A6
 --mquery 1 * * Le [⊢ z] [⊢ S (S z)].
@@ -369,7 +362,6 @@ mlam N ⇒ mlam P ⇒ fn e ⇒ case e of
 --mquery 1 * * {N : [⊢ nat]} {E: [⊢ even N]} [⊢ even z].
 % mlam N => mlam E => [ |- even_z]
 
-
 % F4
 --mquery 4 * * {N : [⊢ nat]} [⊢ num N].
 % mlam N => all_num [ |- N]
@@ -377,7 +369,6 @@ mlam N ⇒ mlam P ⇒ fn e ⇒ case e of
 % mlam N => all_all_num [ |- N] (all_all_num [ |- N] (all_num [ |- N]))
 % mlam N => all_all_num [ |- N]
 %    (all_all_num [ |- N] (all_all_num [ |- N] (all_num [ |- N])))
-
 
 % F5
 --mquery 1 * * {D : [⊢ nat]} [⊢ plus z D D].
@@ -389,7 +380,6 @@ mlam N ⇒ mlam P ⇒ fn e ⇒ case e of
 % mlam E => fn x2 => let [ |- X] = x2 in [ |- E]
 % mlam E => fn x2 => let [ |- X] = x2 in [ |- even_z]
 
-
 % F7
 --mquery 4 * * {N : [⊢ nat]} [⊢ num N] → [⊢ num N].
 % mlam N => fn z6 => let [ |- X] = z6 in [ |- X]
@@ -399,52 +389,36 @@ mlam N ⇒ mlam P ⇒ fn e ⇒ case e of
 % mlam N => fn z6 => let [ |- X] = z6 in
 %    all_all_num [ |- N] (all_num [ |- N])
 
-
 % F8
 --mquery 2 * * {M : [⊢ nat]} {N : [⊢ nat]} [⊢ num N].
 % mlam M => mlam N => all_num [ |- N]
 % mlam M => mlam N => all_all_num [ |- N] (all_num [ |- N])
-
 
 % F9
 --mquery 1 * * {N : [⊢ nat]} [⊢ even N] → [⊢ num N] → [⊢ even (S (S N))].
 % mlam N => fn z7 => fn x7 =>
 %   let [ |- X28] = x7 in let [ |- Z28] = z7 in [ |- even_ss Z28]
 
-
 % F10
 --mquery 1 * * {N : [⊢ nat]} ([⊢ num N] → [⊢ even N]) → [⊢ even (S (S N))].
 % Query error: Wrong number of solutions -- expected 1 in * tries, but found 0
-
 
 % F11
 --mquery 1 * * [⊢ even (S z)] → [⊢ even (S (S (S z)))].
 % fn x8 => let [ |- Y32] = x8 in [ |- even_ss Y32]
 
-
-
-
-
 --mquery 1 * * [N:nat ⊢ numm N].
 % [N : nat |- all N]
 
-
-
 --mquery 1 * * {N : [⊢ nat]} ({M:[⊢ nat]} [⊢ numm M] → [⊢ even M]) → [⊢ even (S (S N))].
-% ERROR
-
-
+%  mlam N => fn y9 => y9 [ |- S (S N)] [ |- all S (S N)]
 
 --mquery 2 * 1 [ |- numm (S (S (S z)))].
 % [ |- all S (S (S z))]
 % all_all_numm [ |- S (S (S z))] [ |- all S (S (S z))]
 
-
-
 --mquery 1 * * {N : [⊢ nat]} lessEq [⊢ S (S (S N))] [⊢ S (S z)] [⊢ S (S z)].
-% ERROR
-
-
+% mlam N => sle (sle lez)
 
 --mquery 3 * * Ev [⊢ N].
 % ZEv

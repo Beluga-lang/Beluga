@@ -2420,14 +2420,12 @@ let dotMMVar loc' cD t (u, cU, dep) =
   let mO = mmVarToMFront loc' (newMMVar' (Some u) (cD, cU) dep) cU in
   ((loc', mO), MDot (mO, t))
 
-
-
-(* extend_mctx cD (cdecl, t) = cD'
+(** extend_mctx cD (cdecl, t) = cD'
 
    if cD mctx
       cD' |- cU   where cdecl = _ : cU
-      cD  |- t : cD
-   the
+      cD  |- t : cD'
+   then
       cD, x:[t]U  mctx
 
  *)

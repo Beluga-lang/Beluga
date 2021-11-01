@@ -204,7 +204,6 @@ let process_command
               State.printf s "logic programming finished@,@?";
               ()
              end
-
     | Holes.LFInfo ->
        let { lfGoal; cPsi; lfSolution } = h.info in
        assert (lfSolution = None);

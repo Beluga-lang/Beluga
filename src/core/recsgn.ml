@@ -1119,7 +1119,7 @@ let recSgnDecls decls =
            p.fmt "[RecSgn Checking] Query at %a"
              Syntax.Loc.print_short location);
        let (_, apxT) = Index.typ Index.disambiguate_to_fvars extT in
-                                                                            dprint (fun () -> "Reconstructing query.");
+       dprint (fun () -> "Reconstructing query.");
        FVar.clear ();
        let tA =
          Monitor.timer

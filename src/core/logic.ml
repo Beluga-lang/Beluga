@@ -1687,7 +1687,7 @@ module CSolver = struct
        let hd' = Whnf.cnormCTyp (hd, ms) in
        let sg' = normSubGoals (sg, ms) cD in
        Full (cPool'', ({cHead = hd'; cMVars = mV; cSubGoals = sg'}, _k, _s))
-   
+
    (*
   (* mctx -> ctyp_decl *)
   let least_cases cD =
@@ -1729,8 +1729,8 @@ module CSolver = struct
       | LF.MDot (mf, ms') -> rev ms' (LF.MDot (mf, ms_ret))
     in
     rev ms (LF.MShift k)
-    
-    
+
+
   let rec cgSolve' (cD: LF.mctx) (cG: Comp.gctx) (cPool: cPool)
             (mq:mquery) (sc: Comp.exp_chk -> unit) (currDepth: bound) (maxDepth: bound) =
 

@@ -82,9 +82,6 @@ rec nummThenEven : ({N : [⊢ nat]} [⊢ numm N]) → [⊢ even z] = fn n ⇒ [�
 %  | [⊢ S M] ⇒ let [⊢ num_m ] = all_num [⊢ M] in
 %	      [⊢ num_s num_m]
 %;
-% In mquery F8, can't find instantiations for M and Q, but they
-% are unused so unnecessary
-
 
 % ctx schema declaration.
 
@@ -315,6 +312,21 @@ mlam N ⇒ mlam P ⇒ fn e ⇒ case e of
 --mquery 1 * * [⊢ even (S (S (S (S z))))].
 % [ |-even_ss (even_ss even_z)]
 
+% B8
+--mquery 1 * * [N:nat ⊢ numm N].
+% [N : nat |- all N]
+
+% B9
+--mquery 2 * 1 [ |- numm (S (S (S z)))].
+% [ |- all S (S (S z))]
+% all_all_numm [ |- S (S (S z))] [ |- all S (S (S z))]
+
+% B10
+--mquery 3 * * [⊢ even N].
+% [ |- even_z]
+% [ |- even_ss even_z]
+% [ |- even_ss (even_ss even_z)]
+
 
 % Atomic
 
@@ -343,11 +355,19 @@ mlam N ⇒ mlam P ⇒ fn e ⇒ case e of
 % A6
 --mquery 1 * * Le [⊢ z] [⊢ S (S z)].
 % SLe (zLE)
-%
+
+% A7
+--mquery 3 * * Ev [⊢ N].
+% ZEv
+% SEv ZEv
+% SEv (SEv ZEv)
+
+% A8
+--mquery 1 * * lessEq [⊢ S (S (S N))] [⊢ S (S z)] [⊢ S (S z)].
+% sle (sle lez)
 
 
-
-% Forall
+% Forall + implication
 
 % F1
 --mquery 1 * * {N: [⊢ nat]} {N2: [⊢ nat]} {N3: [⊢ nat]} [⊢ even z].
@@ -407,52 +427,14 @@ mlam N ⇒ mlam P ⇒ fn e ⇒ case e of
 --mquery 1 * * [⊢ even (S z)] → [⊢ even (S (S (S z)))].
 % fn x8 => let [ |- Y32] = x8 in [ |- even_ss Y32]
 
---mquery 1 * * [N:nat ⊢ numm N].
-% [N : nat |- all N]
-
+% F12
 --mquery 1 * * {N : [⊢ nat]} ({M:[⊢ nat]} [⊢ numm M] → [⊢ even M]) → [⊢ even (S (S N))].
 %  mlam N => fn y9 => y9 [ |- S (S N)] [ |- all S (S N)]
 
---mquery 2 * 1 [ |- numm (S (S (S z)))].
-% [ |- all S (S (S z))]
-% all_all_numm [ |- S (S (S z))] [ |- all S (S (S z))]
-
+% F13
 --mquery 1 * * {N : [⊢ nat]} lessEq [⊢ S (S (S N))] [⊢ S (S z)] [⊢ S (S z)].
 % mlam N => sle (sle lez)
 
---mquery 3 * * Ev [⊢ N].
-% ZEv
-% SEv ZEv
-% SEv (SEv ZEv)
-
---mquery 3 * * [⊢ even N].
-% [ |- even_z]
-% [ |- even_ss even_z]
-% [ |- even_ss (even_ss even_z)]
-
-
-
-
-%%%%%%%%            | Base | Box | PiBox | Implies |%%%%%%%%
-%-------------------|------|----------------------
-%  Sig              |      |
-%  ctx match        |      |
-%-------------------|------|----------------------
-%  ctx do not match |      |
-%-------------------|------|-----------------------
-%  Gamma            |      |
-%  ctx match        |      |
-%-------------------|------|-----------------------------
-%  ctx do not match |      |
-%-------------------|------|-------------------------------------
-%  Theorems         |      |
-%  cM               |      |
-%  cDNM             |      |
-
-
-
-% -mctx match, dctx match, get answer from multiple sources, size of ctx, number of subgoals of focused clause
-% note any ctx match means ctx1 = ctx2 or ctx1 < ctx2 or ctx2 < ctx1 or ctx1 n ctx2 =\= {} or ctx1 n ctx2 = {}, 5 cases!!!
 
 
 

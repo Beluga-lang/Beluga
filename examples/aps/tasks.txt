@@ -1,10 +1,3 @@
-- Extend solve to bounded depth-first search
-
-- Similar to solve, design solve for inductive types
-  --> Extend the data type for comp_goals and add data type for computation-level clauses  
-  --> Compile computation-level types into computation goals and clauses
-  --> Do proof search over the computation goals and clauses
-
 - Build a bridge between Harpoon and msolve(logic.ml).
   Note: * Harpoon will have a meta-context cD and a computation-level type T (typically Box or Inductive) it tries to prove
         * msolve and sgnMQuery work on the computation-level type Pibox cD . T
@@ -16,4 +9,15 @@
       to obtain cD together with a computation-level type T (typically Box or Inductive)
  
 
+- Introduce automated split in proof-loop
+  --> add in another argument to mquery in which the user will specify the var. to split on
+  --> generate induction hyp. if there is one (try to use the split tactic from Harpoon)
 
+
+- Introduce a 'blurring' phase in the loop
+  --> this will involve focusing on assumptions in which the heads don't unify with the goal
+  --> once we have focused on the head of such an assumption, we add that atomic type to either cD or cG (depending on the type) and continue again with focusing
+                              L
+                 cD ; cG, R' ===> R
+	      ----------------------- blur
+		 cD ; cG > R' ===> R

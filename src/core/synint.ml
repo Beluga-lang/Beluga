@@ -985,7 +985,13 @@ module Sgn = struct
       ; maximum_tries: int option
       } (** Logic programming query on LF type *)
 
-    | MQuery of Location.t * (Comp.typ * Id.offset)  * int option * int option * int option
+    | MQuery of
+      { location: Location.t
+      ; typ: (Comp.typ * Id.offset)
+      ; expected_solutions: int option
+      ; search_tries: int option
+      ; search_depth: int option
+      } (** Logic programming mquery on Comp. type *)
 
     | Comment of
       { location: Location.t

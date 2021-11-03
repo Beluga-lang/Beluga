@@ -1168,7 +1168,13 @@ let recSgnDecls decls =
        }
 
 
-    | Ext.Sgn.MQuery (loc, tau, expected, tries, depth) ->
+    | Ext.Sgn.MQuery
+      { location=loc
+      ; typ=tau
+      ; expected_solutions=expected
+      ; search_tries=tries
+      ; search_depth=depth
+      } ->
        (dprintf
          (fun p ->
            p.fmt "[RecSgn Checking] MQuery at %a"
@@ -1206,8 +1212,13 @@ let recSgnDecls decls =
            Check.Comp.checkTyp Int.LF.Empty tau'
           );
         Logic.storeMQuery (tau', i) expected tries depth)   ;
-        Int.Sgn.MQuery (loc, (tau', i), expected, tries, depth)))
-
+        Int.Sgn.MQuery
+        { location=loc
+        ; typ=(tau',i)
+        ; expected_solutions=expected
+        ; search_tries=tries
+        ; search_depth=depth
+        }))
 
 
     | Ext.Sgn.Pragma

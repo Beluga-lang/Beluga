@@ -2689,8 +2689,8 @@ let sgn_mquery_pragma =
   <& token T.DOT
   |> span
   |> labelled "meta-logic search engine mquery pragma"
-  $> fun (loc, ((e, t, d), tau)) ->
-     Sgn.MQuery (loc, tau,e,t,d)
+  $> fun (location, ((expected_solutions, search_tries, search_depth), tau)) ->
+     Sgn.MQuery { location; typ=tau; expected_solutions; search_tries; search_depth }
 
 
 let sgn_oldstyle_lf_decl =

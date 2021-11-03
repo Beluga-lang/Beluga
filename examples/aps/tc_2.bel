@@ -7,6 +7,6 @@ inductive Even : [ |- nat] -> ctype =
 | Ev_z : Even [ |- z]
 | Ev_ss: Even [ |- N] -> Even [ |- succ (succ N)]	;
 
-% 
-% --mquery 1 *  Even [ |- succ (succ z)].
+
+ --mquery 1 *  * Even [ |- succ (succ z)].
 

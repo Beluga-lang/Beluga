@@ -482,8 +482,6 @@ module Convert = struct
        let dctx_hat = Context.dctxToHat cPsi in
        let plicity = get_plicity dep in
        let mfront = LF.ClObj (dctx_hat, LF.MObj tM) in
-       (* let mf = Whnf.cnormMFt mfront ms' in *)
-       (* let ctyp' = Whnf.cnormMTyp (ctyp, ms') in *)
        (LF.MDot (mfront, ms'),
         (fun s ->
           fS' (Comp.MApp (noLoc, s, (noLoc, mfront), ctyp, plicity))))
@@ -496,7 +494,6 @@ module Convert = struct
        let plicity = get_plicity dep in
        let mfront =
          LF.ClObj (dctx_hat, LF.PObj hd) in
-       (* let mf = Whnf.cnormMFt mfront ms' in *)
        (LF.MDot (mfront, ms'),
         (fun s ->
           fS' (Comp.MApp (noLoc, s, (noLoc, mfront), ctyp, plicity))))
@@ -1373,7 +1370,7 @@ module Solver = struct
      * In that case, it will call matchSigma to figure out the
        appropriate projection to use on the variable, if any.
      *)
-     and matchDelta (cD' : LF.mctx) =
+    and matchDelta (cD' : LF.mctx) =
       let rec loop cD' k =
         match cD' with
         | LF.Empty -> matchDProg dPool
@@ -1442,7 +1439,7 @@ module Solver = struct
        I.iterSClauses (fun w -> matchSgnClause w sc) cidTyp
 
     (* matchSgnClause (c, sCl) sc = ()
-       Try to unify the LF type of sCl with A[s]. If unification succeeds,
+       Try to unify the head of sCl with A[s]. If unification succeeds,
        attempt to solve the subgoals of sCl.
      *)
     and matchSgnClause (cidTerm, sCl) sc =
@@ -1475,7 +1472,7 @@ module Solver = struct
 
     in
     (* ^ end of the gigantic let of all the helpers for matchAtom;
-         Now here's the actual body of matchAtom: *)
+      Now here's the actual body of matchAtom: *)
     matchDelta cD
 
   (* spineFromRevList : LF.normal list -> LF.spine
@@ -1687,7 +1684,7 @@ module CSolver = struct
        let hd' = Whnf.cnormCTyp (hd, ms) in
        let sg' = normSubGoals (sg, ms) cD in
        Full (cPool'', ({cHead = hd'; cMVars = mV; cSubGoals = sg'}, _k, _s))
-   
+
    (*
   (* mctx -> ctyp_decl *)
   let least_cases cD =
@@ -1729,8 +1726,8 @@ module CSolver = struct
       | LF.MDot (mf, ms') -> rev ms' (LF.MDot (mf, ms_ret))
     in
     rev ms (LF.MShift k)
-    
-    
+
+
   let rec cgSolve' (cD: LF.mctx) (cG: Comp.gctx) (cPool: cPool)
             (mq:mquery) (sc: Comp.exp_chk -> unit) (currDepth: bound) (maxDepth: bound) =
 
@@ -1824,9 +1821,9 @@ module CSolver = struct
        let e = Whnf.cnormExp' (e, LF.MShift 0) in
        sc e
     | Solve (sg', cg') ->
-        (* printf "solve gamma SG \n";
+        (*printf "solve gamma SG \n";
         let cg = normCompGoal (cg', ms) in
-        Printer.printState cD cG cg ms; *)
+        Printer.printState cD cG cg ms;*)
        cgSolve' cD cG cPool (cg', ms)
          (fun e ->
            solveSubGoals cD cG cPool (sg', k) ms mV
@@ -1844,9 +1841,9 @@ module CSolver = struct
        let e = Whnf.cnormExp' (e, LF.MShift 0) in
        sc e
     | Solve (sg', cg') ->
-       (* printf "solve sig SG \n";
+       (*printf "solve sig SG \n";
        let cg = normCompGoal (cg', ms) in
-       Printer.printState cD cG cg ms; *)
+       Printer.printState cD cG cg ms;*)
        cgSolve' cD cG cPool (cg', ms)
          (fun e ->
            solveCClauseSubGoals cD cG cPool cid sg' ms mV
@@ -1863,9 +1860,9 @@ module CSolver = struct
        let e = Whnf.cnormExp' (e, LF.MShift 0) in
        sc e
     | Solve (sg', cg') ->
-       (* printf "solve thm SG \n";
+       (*printf "solve thm SG \n";
        let cg = normCompGoal (cg',ms) in
-       Printer.printState cD cG cg ms; *)
+       Printer.printState cD cG cg ms;*)
        cgSolve' cD cG cPool (cg', ms)
          (fun e ->
            solveTheoremSubGoals cD cG cPool cid sg' ms mV
@@ -1882,11 +1879,6 @@ module CSolver = struct
       then
         (let (ms', fS) = C.mctxToMSub cD (sCCl.cMVars, LF.MShift 0) (fun s -> s) in
          let ms'' = rev_ms ms' (Context.length (sCCl.cMVars)) in
-        (* printf "focus Thm NEW MS \n";
-         Printer.printState cD cG cg ms';
-         let ms''' = Whnf.cnormMSub ms' in
-         printf "focus Thm normedd MS \n";
-         Printer.printState cD cG cg ms'''; *)
          let tau = if isBox cg then C.boxToTypBox cg else C.atomicToBase cg in
         (try
            Solver.trail
@@ -2031,10 +2023,9 @@ module CSolver = struct
           *)
 
   and focus cD cG cPool cg ms sc currDepth maxDepth =
-   (*  printf "FOCUS \n";
-    (* let ms = Whnf.cnormMSub ms in
-    let cg' = normCompGoal (cg, ms) in *)
-    Printer.printState cD cG cg' ms; *)
+    (*printf "FOCUS \n";
+    let cg' = normCompGoal (cg, ms) in
+    Printer.printState cD cG cg' ms;*)
     match cg with
     | Box (cPsi, g, Some M) ->
        (* If our goal is of box type, we first try to find the
@@ -2238,7 +2229,7 @@ module CSolver = struct
 
      (* First we break our goal down into an atomic one *)
   and uniform_right cD cG cPool cg ms sc currDepth maxDepth =
-    (* printf "UNIFORM RIGHT \n";
+    (*printf "UNIFORM RIGHT \n";
     Printer.printState cD cG cg ms;*)
     match cg with
     | Box (_) | Atomic (_) ->

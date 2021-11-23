@@ -1,5 +1,7 @@
 (library
-  (name optparser))
+ (name optparser))
+
 (env
-  (dev
-    (flags (:standard -w A-42-44 -warn-error A-42-44))))
+ (dev
+  (flags
+   (:standard -w A-42-44 -warn-error A-42-44))))

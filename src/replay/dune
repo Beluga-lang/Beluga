@@ -1,5 +1,5 @@
 (executable
-  (name replay)
-  (public_name replay)
-  (package beluga)
-  (libraries support beluga))
+ (name replay)
+ (public_name replay)
+ (package beluga)
+ (libraries support beluga))

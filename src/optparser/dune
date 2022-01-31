@@ -4,4 +4,4 @@
 (env
  (dev
   (flags
-   (:standard -w A-42-44 -warn-error A-42-44))))
+   (:standard -w A-42-44-70 -warn-error A-42-44))))

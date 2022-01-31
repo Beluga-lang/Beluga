@@ -7,17 +7,20 @@
 
     @author Clare Jang *)
 
-(** An error type that might be emitted from {!Parser.parse} function.
+type option_error = { option_name : string }
 
-    @author Clare Jang *)
+type invalid_argument_length =
+  { option_name : string
+  ; expected_argument_count : int
+  ; actual_argument_count : int
+  }
+
 type error =
-  | MissingMandatory of string (* option name *)
-  | InvalidArgLength of
-      string (* option name *) * int (* expected number of arguments *) * int
-  (* actual number of arguments *)
-  | ArgReaderFailure of string (* option name *)
-  | NotAnOption of string
-(* option name *)
+  [ `Missing_mandatory_option of option_error
+  | `Invalid_argument_length of invalid_argument_length
+  | `Argument_reader_failure of option_error
+  | `Not_an_option of option_error
+  ]
 
 type help_entry =
   OptName.t (* option name *)
@@ -58,7 +61,9 @@ let make infos opt_arity build_arg_parser =
   let open OptInfo.Checked in
   let opt_name = OptName.to_string info.name in
   let initial_res =
-    Option.to_result ~none:(MissingMandatory opt_name) info.optional
+    Option.to_result
+      ~none:(`Missing_mandatory_option { option_name = opt_name })
+      info.optional
   in
   let res_ref = ref initial_res in
   let opt =
@@ -110,10 +115,11 @@ let opt0 (a : 'a) (infos : 'a OptInfo.Unchecked.t list) : 'a t =
     | args ->
         res_ref :=
           Error
-            (InvalidArgLength
-               ( OptName.to_string info.OptInfo.Checked.name
-               , arity
-               , List.length args ) )
+            (`Invalid_argument_length
+              { option_name = OptName.to_string info.OptInfo.Checked.name
+              ; expected_argument_count = arity
+              ; actual_argument_count = List.length args
+              } )
   in
   make infos (Some arity) build_arg_parser
 
@@ -132,18 +138,30 @@ let opt1
     | [] ->
       ( match info.OptInfo.Checked.default_argument with
       | None ->
-          res_ref := Error (InvalidArgLength (opt_name, arity, 0))
+          res_ref :=
+            Error
+              (`Invalid_argument_length
+                { option_name = opt_name
+                ; expected_argument_count = arity
+                ; actual_argument_count = 0
+                } )
       | Some defArgVal ->
           res_ref := Ok defArgVal )
     | [ arg ] ->
       ( match read_arg arg with
       | None ->
-          res_ref := Error (ArgReaderFailure opt_name)
+          res_ref :=
+            Error (`Argument_reader_failure { option_name = opt_name })
       | Some x ->
           res_ref := Ok x )
     | args ->
         res_ref :=
-          Error (InvalidArgLength (opt_name, arity, List.length args))
+          Error
+            (`Invalid_argument_length
+              { option_name = opt_name
+              ; expected_argument_count = arity
+              ; actual_argument_count = List.length args
+              } )
   in
   make infos (Some arity) build_arg_parser
 
@@ -219,7 +237,12 @@ let impure_opt0 (impure_fn : unit -> 'a) (infos : 'a OptInfo.Unchecked.t list)
         res_ref := Ok (impure_fn ())
     | args ->
         res_ref :=
-          Error (InvalidArgLength (opt_name, arity, List.length args))
+          Error
+            (`Invalid_argument_length
+              { option_name = opt_name
+              ; expected_argument_count = arity
+              ; actual_argument_count = List.length args
+              } )
   in
   make infos (Some arity) build_arg_parser
 
@@ -238,10 +261,11 @@ let help_opt0
     | args ->
         res_ref :=
           Error
-            (InvalidArgLength
-               ( OptName.to_string info.OptInfo.Checked.name
-               , arity
-               , List.length args ) )
+            (`Invalid_argument_length
+              { option_name = OptName.to_string info.OptInfo.Checked.name
+              ; expected_argument_count = arity
+              ; actual_argument_count = List.length args
+              } )
   in
   make infos (Some arity) arg_parser
 

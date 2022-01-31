@@ -94,7 +94,7 @@ let parse (spec : 'a OptSpec.t) (args : string list) :
           fn (pp_print_help spec) sub_args ;
           cont []
       | None ->
-          Error (OptSpec.NotAnOption name)
+          Error OptSpec.(`Not_an_option { option_name = name })
     in
     function
     | [] ->

@@ -129,63 +129,56 @@ let options_spec : parsed_t Optparser.OptSpec.t =
   }
   end
   <$ string_opt1
-       [ OptInfo.long_name "sig"
-       ; OptInfo.meta_vars ["path"]
-       ; OptInfo.help_msg
-           "specify the input signature"
+       [ OptInfo.Unchecked.long_name "sig"
+       ; OptInfo.Unchecked.meta_vars [ "path" ]
+       ; OptInfo.Unchecked.help_msg "specify the input signature"
        ]
-  <& opt1 (fun s -> Option.some (Option.some s))
-       [ OptInfo.long_name "test"
-       ; OptInfo.meta_vars ["path"]
-       ; OptInfo.optional None
-       ; OptInfo.help_msg
-           ("specify the test input file that is used as "
-            ^ "a test input instead of stdin user input"
-           )
+  <& opt1
+       (fun s -> Option.some (Option.some s))
+       [ OptInfo.Unchecked.long_name "test"
+       ; OptInfo.Unchecked.meta_vars [ "path" ]
+       ; OptInfo.Unchecked.optional None
+       ; OptInfo.Unchecked.help_msg
+           ( "specify the test input file that is used as "
+           ^ "a test input instead of stdin user input" )
        ]
-  <& (switch_opt
-        [ OptInfo.long_name "incomplete"
-        ; OptInfo.help_msg
-            ("mark the test input file as incomplete so that stdin user "
+  <& ( switch_opt
+         [ OptInfo.Unchecked.long_name "incomplete"
+         ; OptInfo.Unchecked.help_msg
+             ( "mark the test input file as incomplete so that stdin user "
              ^ "input is followed after the test input "
-             ^ "(valid only when --test option is provided)"
-            )
+             ^ "(valid only when --test option is provided)" )
         ]
-      $> fun b -> if b then `incomplete else `complete
-     )
-  <& opt1 (fun s -> Option.map Option.some (int_of_string_opt s))
-       [ OptInfo.long_name "test-start"
-       ; OptInfo.meta_vars ["number"]
-       ; OptInfo.optional None
-       ; OptInfo.help_msg
+     $> fun b -> if b then `incomplete else `complete )
+  <& opt1
+       (fun s -> Option.map Option.some (int_of_string_opt s))
+       [ OptInfo.Unchecked.long_name "test-start"
+       ; OptInfo.Unchecked.meta_vars [ "number" ]
+       ; OptInfo.Unchecked.optional None
+       ; OptInfo.Unchecked.help_msg
            "specify the first line of test file considered as test input"
        ]
-  <& (switch_opt
-        [ OptInfo.long_name "stop"
-        ]
-      $> fun b -> if b then `stop else `go_on
-     )
-  <& switch_opt
-       [ OptInfo.long_name "no-load-holes"
-       ]
-  <& (switch_opt
-        [ OptInfo.long_name "no-save-back"
-        ]
-      $> fun b -> if b then `no_save_back else `save_back
-     )
-  <! impure_opt0 handle_debug
-       [ OptInfo.long_name "debug"
-       ; OptInfo.help_msg
+  <& ( switch_opt [ OptInfo.Unchecked.long_name "stop" ]
+     $> fun b -> if b then `stop else `go_on )
+  <& switch_opt [ OptInfo.Unchecked.long_name "no-load-holes" ]
+  <& ( switch_opt [ OptInfo.Unchecked.long_name "no-save-back" ]
+     $> fun b -> if b then `no_save_back else `save_back )
+  <! impure_opt0
+       handle_debug
+       [ OptInfo.Unchecked.long_name "debug"
+       ; OptInfo.Unchecked.help_msg
            "use debugging mode (writes to debug.out in CWD)"
        ]
-  <! impure_opt0 handle_implicit
-       [ OptInfo.long_name "implicit"
-       ; OptInfo.help_msg "print implicit variables"
+  <! impure_opt0
+       handle_implicit
+       [ OptInfo.Unchecked.long_name "implicit"
+       ; OptInfo.Unchecked.help_msg "print implicit variables"
        ]
-  <! help_opt0 handle_help
-       [ OptInfo.long_name "help"
-       ; OptInfo.short_name 'h'
-       ; OptInfo.help_msg "print this message"
+  <! help_opt0
+       handle_help
+       [ OptInfo.Unchecked.long_name "help"
+       ; OptInfo.Unchecked.short_name 'h'
+       ; OptInfo.Unchecked.help_msg "print this message"
        ]
   <! rest_args
        begin function

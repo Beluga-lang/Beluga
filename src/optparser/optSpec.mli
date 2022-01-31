@@ -1,11 +1,17 @@
+type option_error = { option_name : string }
+
+type invalid_argument_length =
+  { option_name : string
+  ; expected_argument_count : int
+  ; actual_argument_count : int
+  }
+
 type error =
-  | MissingMandatory of string (* option name *)
-  | InvalidArgLength of
-      string (* option name *) * int (* expected number of arguments *) * int
-  (* actual number of arguments *)
-  | ArgReaderFailure of string (* option name *)
-  | NotAnOption of string
-(* option name *)
+  [ `Missing_mandatory_option of option_error
+  | `Invalid_argument_length of invalid_argument_length
+  | `Argument_reader_failure of option_error
+  | `Not_an_option of option_error
+  ]
 
 type help_entry =
   OptName.t (* option name *)

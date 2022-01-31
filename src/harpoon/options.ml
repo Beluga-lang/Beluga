@@ -19,31 +19,37 @@ module Error = struct
   let format_error ppf = function
     | OptparserError e ->
        let open Optparser.OptSpec in
-       begin match e with
-       | MissingMandatory name ->
-          fprintf ppf "Mandatory option %s is missing.@."
-            name
-       | InvalidArgLength (name, exp, act) ->
-          fprintf ppf "Option %s requires %d arguments. Got %d.@."
-            name
+        ( match e with
+        | `Missing_mandatory_option { option_name; _ } ->
+            fprintf ppf "Mandatory option %s is missing.@." option_name
+        | `Invalid_argument_length
+            { option_name
+            ; expected_argument_count = exp
+            ; actual_argument_count = act
+            } ->
+            fprintf
+              ppf
+              "Option %s requires %d arguments. Got %d.@."
+              option_name
             exp
             act
-       | ArgReaderFailure name ->
-          fprintf ppf "%s"
-            name
-       | NotAnOption name ->
-          fprintf ppf "%s is not an option"
-            name
-       end
+        | `Argument_reader_failure { option_name; _ } ->
+            fprintf ppf "%s" option_name
+        | `Not_an_option { option_name; _ } ->
+            fprintf ppf "%s is not an option" option_name )
     | InvalidIncomplete ->
        fprintf ppf "--incomplete can be specified only after --test@."
     | InvalidStop ->
-       fprintf ppf "%a@."
-         pp_print_string "--stop can only be specified with --test and without --incomplete"
+        fprintf
+          ppf
+          "%a@."
+          pp_print_string
+          "--stop can only be specified with --test and without --incomplete"
     | DanglingArguments args ->
-       fprintf ppf "Unexpected remaining command-line arguments:@,  @[%a@]@."
-         (pp_print_list ~pp_sep: Fmt.comma
-            (fun ppf -> fprintf ppf "%s"))
+        fprintf
+          ppf
+          "Unexpected remaining command-line arguments:@,  @[%a@]@."
+          (pp_print_list ~pp_sep:Fmt.comma (fun ppf -> fprintf ppf "%s"))
          args
 end
 

@@ -1,6 +1,6 @@
 type option_error = { option_name : string }
 
-type invalid_argument_length =
+type invalid_argument_length_error =
   { option_name : string
   ; expected_argument_count : int
   ; actual_argument_count : int
@@ -8,7 +8,7 @@ type invalid_argument_length =
 
 type error =
   [ `Missing_mandatory_option of option_error
-  | `Invalid_argument_length of invalid_argument_length
+  | `Invalid_argument_length of invalid_argument_length_error
   | `Argument_reader_failure of option_error
   | `Not_an_option of option_error
   ]

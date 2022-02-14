@@ -60,10 +60,10 @@ let make infos opt_arity build_arg_parser =
         s
   in
   let open OptInfo.Checked in
-  let opt_name = OptName.to_string info.name in
+  let option_name = OptName.to_string info.name in
   let initial_res =
     Option.to_result
-      ~none:(`Missing_mandatory_option { option_name = opt_name })
+      ~none:(`Missing_mandatory_option { option_name })
       info.optional
   in
   let res_ref = ref initial_res in
@@ -81,14 +81,14 @@ let make infos opt_arity build_arg_parser =
   let meta_names =
     match opt_arity with
     | Some arity ->
-        List.take_circularly arity info.meta_vars
+        List.take_circularly arity info.meta_variables
     | None ->
-        [ "[" ^ List.hd info.meta_vars ^ "]" ]
+        [ "[" ^ List.hd info.meta_variables ^ "]" ]
   in
   let help_entry =
     [ { HelpEntry.option_name = info.name
       ; arguments = meta_names
-      ; help_message = info.help_msg
+      ; help_message = info.help_message
       }
     ]
   in

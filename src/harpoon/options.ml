@@ -136,21 +136,21 @@ let options_spec : parsed_t Optparser.OptSpec.t =
   end
   <$ string_opt1
        [ OptInfo.Unchecked.long_name "sig"
-       ; OptInfo.Unchecked.meta_vars [ "path" ]
-       ; OptInfo.Unchecked.help_msg "specify the input signature"
+       ; OptInfo.Unchecked.meta_variables [ "path" ]
+       ; OptInfo.Unchecked.help_message "specify the input signature"
        ]
   <& opt1
        (fun s -> Option.some (Option.some s))
        [ OptInfo.Unchecked.long_name "test"
-       ; OptInfo.Unchecked.meta_vars [ "path" ]
+       ; OptInfo.Unchecked.meta_variables [ "path" ]
        ; OptInfo.Unchecked.optional None
-       ; OptInfo.Unchecked.help_msg
+       ; OptInfo.Unchecked.help_message
            ( "specify the test input file that is used as "
            ^ "a test input instead of stdin user input" )
        ]
   <& ( switch_opt
          [ OptInfo.Unchecked.long_name "incomplete"
-         ; OptInfo.Unchecked.help_msg
+         ; OptInfo.Unchecked.help_message
              ( "mark the test input file as incomplete so that stdin user "
              ^ "input is followed after the test input "
              ^ "(valid only when --test option is provided)" )
@@ -159,9 +159,9 @@ let options_spec : parsed_t Optparser.OptSpec.t =
   <& opt1
        (fun s -> Option.map Option.some (int_of_string_opt s))
        [ OptInfo.Unchecked.long_name "test-start"
-       ; OptInfo.Unchecked.meta_vars [ "number" ]
+       ; OptInfo.Unchecked.meta_variables [ "number" ]
        ; OptInfo.Unchecked.optional None
-       ; OptInfo.Unchecked.help_msg
+       ; OptInfo.Unchecked.help_message
            "specify the first line of test file considered as test input"
        ]
   <& ( switch_opt [ OptInfo.Unchecked.long_name "stop" ]
@@ -172,19 +172,19 @@ let options_spec : parsed_t Optparser.OptSpec.t =
   <! impure_opt0
        handle_debug
        [ OptInfo.Unchecked.long_name "debug"
-       ; OptInfo.Unchecked.help_msg
+       ; OptInfo.Unchecked.help_message
            "use debugging mode (writes to debug.out in CWD)"
        ]
   <! impure_opt0
        handle_implicit
        [ OptInfo.Unchecked.long_name "implicit"
-       ; OptInfo.Unchecked.help_msg "print implicit variables"
+       ; OptInfo.Unchecked.help_message "print implicit variables"
        ]
   <! help_opt0
        handle_help
        [ OptInfo.Unchecked.long_name "help"
        ; OptInfo.Unchecked.short_name 'h'
-       ; OptInfo.Unchecked.help_msg "print this message"
+       ; OptInfo.Unchecked.help_message "print this message"
        ]
   <! rest_args
        begin function

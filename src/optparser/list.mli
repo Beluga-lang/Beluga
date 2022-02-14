@@ -7,3 +7,7 @@ include module type of Stdlib.List
 
     @raise Invalid_argument if the input list is empty. *)
 val take_circularly : int -> 'a t -> 'a t
+
+(** [maximum_element max default xs] is the maximum element in [xs] by
+    comparison using [maximum], or [default] if [xs] is empty. *)
+val maximum_element : ('a -> 'a -> 'a) -> 'a -> 'a list -> 'a

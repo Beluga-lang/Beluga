@@ -22,7 +22,7 @@ module Error = struct
         ( match e with
         | `Missing_mandatory_option { option_name; _ } ->
             fprintf ppf "Mandatory option %s is missing.@." option_name
-        | `Invalid_argument_length
+        | `Invalid_arguments_length
             { option_name
             ; expected_argument_count = exp
             ; actual_argument_count = act

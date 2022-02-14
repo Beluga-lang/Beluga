@@ -9,7 +9,7 @@
 
 type option_error = { option_name : string }
 
-type invalid_argument_length_error =
+type invalid_arguments_length_error =
   { option_name : string
   ; expected_argument_count : int
   ; actual_argument_count : int
@@ -17,7 +17,7 @@ type invalid_argument_length_error =
 
 type error =
   [ `Missing_mandatory_option of option_error
-  | `Invalid_argument_length of invalid_argument_length_error
+  | `Invalid_arguments_length of invalid_arguments_length_error
   | `Argument_reader_failure of option_error
   | `Not_an_option of option_error
   ]
@@ -122,7 +122,7 @@ let opt0 (a : 'a) (infos : 'a OptInfo.Unchecked.t list) : 'a t =
     | args ->
         res_ref :=
           Error
-            (`Invalid_argument_length
+            (`Invalid_arguments_length
               { option_name = OptName.to_string info.OptInfo.Checked.name
               ; expected_argument_count = arity
               ; actual_argument_count = List.length args
@@ -147,7 +147,7 @@ let opt1
       | None ->
           res_ref :=
             Error
-              (`Invalid_argument_length
+              (`Invalid_arguments_length
                 { option_name = opt_name
                 ; expected_argument_count = arity
                 ; actual_argument_count = 0
@@ -164,7 +164,7 @@ let opt1
     | args ->
         res_ref :=
           Error
-            (`Invalid_argument_length
+            (`Invalid_arguments_length
               { option_name = opt_name
               ; expected_argument_count = arity
               ; actual_argument_count = List.length args
@@ -245,7 +245,7 @@ let impure_opt0 (impure_fn : unit -> 'a) (infos : 'a OptInfo.Unchecked.t list)
     | args ->
         res_ref :=
           Error
-            (`Invalid_argument_length
+            (`Invalid_arguments_length
               { option_name = opt_name
               ; expected_argument_count = arity
               ; actual_argument_count = List.length args
@@ -268,7 +268,7 @@ let help_opt0
     | args ->
         res_ref :=
           Error
-            (`Invalid_argument_length
+            (`Invalid_arguments_length
               { option_name = OptName.to_string info.OptInfo.Checked.name
               ; expected_argument_count = arity
               ; actual_argument_count = List.length args

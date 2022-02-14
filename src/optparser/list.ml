@@ -12,3 +12,7 @@ let take_circularly n ls =
   if ls = []
   then raise (Invalid_argument "'ls' should have more than one element")
   else go n ls
+
+
+let maximum_element : type a. (a -> a -> a) -> a -> a list -> a =
+ fun maximum default -> fold_left maximum default

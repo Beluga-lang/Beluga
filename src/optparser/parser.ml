@@ -60,7 +60,7 @@ let pp_print_help (spec : 'a OptSpec.t) (usage : string) ppf () : unit =
   let max_title_len =
     mandatory_fieldss @ optional_fieldss
     |> List.map (fun (title, _) -> String.length title)
-    |> List.fold_left max 0
+    |> List.maximum_element max 0
   in
   Format.pp_open_vbox ppf 0 ;
   Format.fprintf ppf "%s@,@," usage ;

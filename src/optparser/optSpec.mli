@@ -13,12 +13,13 @@ type error =
   | `Not_an_option of option_error
   ]
 
-type help_entry =
-  OptName.t (* option name *)
-  * string list
-  (* names for arguments *)
-  * string option
-(* help message for option *)
+module HelpEntry : sig
+  type t =
+    { option_name : OptName.t
+    ; arguments : string list
+    ; help_message : string option
+    }
+end
 
 type help_printer = string -> Format.formatter -> unit -> unit
 
@@ -31,9 +32,9 @@ val find_opt :
 
 val get_comp_value : 'a t -> string list -> ('a, error) result
 
-val get_mandatory_help_entries : 'a t -> help_entry list
+val get_mandatory_help_entries : 'a t -> HelpEntry.t list
 
-val get_optional_help_entries : 'a t -> help_entry list
+val get_optional_help_entries : 'a t -> HelpEntry.t list
 
 val opt0 : 'a -> 'a OptInfo.Unchecked.t list -> 'a t
 

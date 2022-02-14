@@ -22,12 +22,13 @@ type error =
   | `Not_an_option of option_error
   ]
 
-type help_entry =
-  OptName.t (* option name *)
-  * string list
-  (* names for arguments *)
-  * string option
-(* help message for option *)
+module HelpEntry = struct
+  type t =
+    { option_name : OptName.t
+    ; arguments : string list
+    ; help_message : string option
+    }
+end
 
 type help_printer = string -> Format.formatter -> unit -> unit
 
@@ -44,8 +45,8 @@ type 'a t =
   { opt_tbl :
       (string, int option * (help_printer -> string list -> unit)) Hashtbl.t
   ; comp_value : string list -> ('a, error) result
-  ; mandatory_help_entries : help_entry list
-  ; optional_help_entries : help_entry list
+  ; mandatory_help_entries : HelpEntry.t list
+  ; optional_help_entries : HelpEntry.t list
   }
 
 exception SpecError of OptInfo.check_error
@@ -84,7 +85,13 @@ let make infos opt_arity build_arg_parser =
     | None ->
         [ "[" ^ List.hd info.meta_vars ^ "]" ]
   in
-  let help_entry = [ (info.name, meta_names, info.help_msg) ] in
+  let help_entry =
+    [ { HelpEntry.option_name = info.name
+      ; arguments = meta_names
+      ; help_message = info.help_msg
+      }
+    ]
+  in
   match info.optional with
   | Some _ ->
       { opt with

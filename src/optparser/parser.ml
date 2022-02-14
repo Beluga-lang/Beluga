@@ -11,6 +11,16 @@ let pp_print_help (spec : 'a OptSpec.t) (usage : string) ppf () : unit =
   let entry_to_help_fields (name, meta_names, desc) =
     (OptName.to_string name ^ " " ^ String.concat " " meta_names, desc)
   in
+  let collect_help_entries_to_help_fields :
+      OptSpec.HelpEntry.t list -> (string * string) list =
+   fun help_entries ->
+    help_entries
+    |> List.filter_map
+         (fun { OptSpec.HelpEntry.option_name; arguments; help_message } ->
+           help_message
+           |> Option.map (fun message -> (option_name, arguments, message)) )
+    |> List.map entry_to_help_fields
+  in
   let pp_print_desc ppf desc =
     let desc_words = String.split_on_char ' ' desc in
     Format.pp_open_hovbox ppf 0 ;
@@ -41,15 +51,11 @@ let pp_print_help (spec : 'a OptSpec.t) (usage : string) ppf () : unit =
   in
   let mandatory_fieldss =
     OptSpec.get_mandatory_help_entries spec
-    |> List.filter_map (fun (name, meta_name, msg_opt) ->
-           Option.map (fun msg -> (name, meta_name, msg)) msg_opt )
-    |> List.map entry_to_help_fields
+    |> collect_help_entries_to_help_fields
   in
   let optional_fieldss =
     OptSpec.get_optional_help_entries spec
-    |> List.filter_map (fun (name, meta_name, msg_opt) ->
-           Option.map (fun msg -> (name, meta_name, msg)) msg_opt )
-    |> List.map entry_to_help_fields
+    |> collect_help_entries_to_help_fields
   in
   let max_title_len =
     mandatory_fieldss @ optional_fieldss

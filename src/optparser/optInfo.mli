@@ -5,8 +5,8 @@ module Unchecked : sig
     { long_name : string option
     ; short_name : char option
     ; other_names : string list option
-    ; meta_vars : string list option
-    ; help_msg : string option
+    ; meta_variables : string list option
+    ; help_message : string option
     ; default_argument : 'a option
     ; optional : 'a option
     }
@@ -31,7 +31,7 @@ module Unchecked : sig
   val other_names : string list -> 'a t
 
   (** A function configures the help message for the option. *)
-  val help_msg : string -> 'a t
+  val help_message : string -> 'a t
 
   (** A function configures the default argument of the option. The default
       argument is an argument used when the option accepts an argument but
@@ -44,7 +44,7 @@ module Unchecked : sig
       option takes one argument, default help message for that option starts
       with [  --file args   ...]. If you want to display [PATH] or
       [TARGET_FILE] instead of [args], pass that name to this function. *)
-  val meta_vars : string list -> 'a t
+  val meta_variables : string list -> 'a t
 
   (** A function configures whether the option is mandatory or not. A value
       provided to this function is the default value used when a user does
@@ -66,8 +66,8 @@ end
 module Checked : sig
   type +'a t =
     { name : OptName.t
-    ; meta_vars : string list
-    ; help_msg : string option
+    ; meta_variables : string list
+    ; help_message : string option
     ; default_argument : 'a option
     ; optional : 'a option
     }

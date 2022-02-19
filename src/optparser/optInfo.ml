@@ -61,8 +61,6 @@ module Unchecked = struct
     }
 
 
-  (* It's not possible to do eta-conversion. By eta-conversion, it loses its
-     polymorphicity, and fails to check against its signature *)
   let merge_all specs = List.fold_left merge empty specs
 end
 

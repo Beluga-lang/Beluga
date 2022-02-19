@@ -53,7 +53,7 @@ exception SpecError of OptInfo.check_error
 
 let make infos opt_arity build_arg_parser =
   let info =
-    match OptInfo.check (OptInfo.Unchecked.merge_all infos) with
+    match OptInfo.check (OptInfo.Unchecked.make infos) with
     | Error e ->
         raise (SpecError e)
     | Ok s ->
@@ -62,9 +62,8 @@ let make infos opt_arity build_arg_parser =
   let open OptInfo.Checked in
   let option_name = OptName.to_string info.name in
   let initial_res =
-    Option.to_result
-      ~none:(`Missing_mandatory_option { option_name })
-      info.optional
+    info.optional
+    |> Option.to_result ~none:(`Missing_mandatory_option { option_name })
   in
   let res_ref = ref initial_res in
   let opt =
@@ -114,7 +113,7 @@ let get_optional_help_entries t = t.optional_help_entries
 (** A function to define an option with no extra arguments.
 
     @author Clare Jang *)
-let opt0 (a : 'a) (infos : 'a OptInfo.Unchecked.t list) : 'a t =
+let opt0 (a : 'a) (infos : 'a OptInfo.Unchecked.transform list) : 'a t =
   let arity = 0 in
   let build_arg_parser info res_ref _ = function
     | [] ->
@@ -136,8 +135,8 @@ let opt0 (a : 'a) (infos : 'a OptInfo.Unchecked.t list) : 'a t =
     @param read_arg a function that parses the extra argument.
     @author Clare Jang *)
 let opt1
-    (read_arg : string -> 'a option) (infos : 'a OptInfo.Unchecked.t list) :
-    'a t =
+    (read_arg : string -> 'a option)
+    (infos : 'a OptInfo.Unchecked.transform list) : 'a t =
   let arity = 1 in
   let build_arg_parser info res_ref _ =
     let opt_name = OptName.to_string info.OptInfo.Checked.name in
@@ -177,7 +176,7 @@ let opt1
     "false".
 
     @author Clare Jang *)
-let bool_opt1 : bool OptInfo.Unchecked.t list -> bool t =
+let bool_opt1 : bool OptInfo.Unchecked.transform list -> bool t =
   opt1 bool_of_string_opt
 
 
@@ -185,13 +184,15 @@ let bool_opt1 : bool OptInfo.Unchecked.t list -> bool t =
     integer.
 
     @author Clare Jang *)
-let int_opt1 : int OptInfo.Unchecked.t list -> int t = opt1 int_of_string_opt
+let int_opt1 : int OptInfo.Unchecked.transform list -> int t =
+  opt1 int_of_string_opt
+
 
 (** A function to define an option with one extra argument which is any
     string without a space.
 
     @author Clare Jang *)
-let string_opt1 : string OptInfo.Unchecked.t list -> string t =
+let string_opt1 : string OptInfo.Unchecked.transform list -> string t =
   opt1 Option.some
 
 
@@ -203,10 +204,8 @@ let string_opt1 : string OptInfo.Unchecked.t list -> string t =
     {!OptInfo.optional} value inside of [infos].
 
     @author Clare Jang *)
-let switch_opt (infos : unit OptInfo.Unchecked.t list) : bool t =
-  infos
-  |> List.map OptInfo.Unchecked.lift
-  |> List.append [ OptInfo.Unchecked.optional false ]
+let switch_opt (infos : bool OptInfo.Unchecked.transform list) : bool t =
+  infos @ [ OptInfo.Unchecked.erase_default_argument; OptInfo.Unchecked.optional false ]
   |> opt0 true
 
 
@@ -214,7 +213,7 @@ let switch_opt (infos : unit OptInfo.Unchecked.t list) : bool t =
     the arguments (options) starting with "-".
 
     @author Clare Jang *)
-let takes_all_opt (infos : string list OptInfo.Unchecked.t list) :
+let takes_all_opt (infos : string list OptInfo.Unchecked.transform list) :
     string list t =
   let build_arg_parser info res_ref _ = function
     | [] ->
@@ -234,8 +233,9 @@ let takes_all_opt (infos : string list OptInfo.Unchecked.t list) :
     with {!(<!)}.
 
     @author Clare Jang *)
-let impure_opt0 (impure_fn : unit -> 'a) (infos : 'a OptInfo.Unchecked.t list)
-    : 'a t =
+let impure_opt0
+    (impure_fn : unit -> 'a) (infos : 'a OptInfo.Unchecked.transform list) :
+    'a t =
   let arity = 0 in
   let build_arg_parser info res_ref _ =
     let opt_name = OptName.to_string info.OptInfo.Checked.name in
@@ -260,7 +260,7 @@ let impure_opt0 (impure_fn : unit -> 'a) (infos : 'a OptInfo.Unchecked.t list)
     @author Clare Jang *)
 let help_opt0
     (print_fn : (string -> Format.formatter -> unit -> unit) -> 'a)
-    (infos : 'a OptInfo.Unchecked.t list) : 'a t =
+    (infos : 'a OptInfo.Unchecked.transform list) : 'a t =
   let arity = 0 in
   let arg_parser info res_ref build_help_string = function
     | [] ->
@@ -300,16 +300,16 @@ let rest_args (impure_fn : string list -> 'a) : 'a t =
      }
      end
      <$ switch_opt
-        \[ OptInfo.long_name "verbose"
-        ; OptInfo.short_name 'v'
-        ; OptInfo.default_argument false
-        ; OptInfo.help_msg
+        \[ OptInfo.Unchecked.long_name "verbose"
+        ; OptInfo.Unchecked.short_name 'v'
+        ; OptInfo.Unchecked.default_argument false
+        ; OptInfo.Unchecked.help_msg
             "for verbose output"
         \]
      <& string_opt1
-        \[ OptInfo.long_name "skipInput"
-        ; OptInfo.default_argument "^$"
-        ; OptInfo.help_msg
+        \[ OptInfo.Unchecked.long_name "skipInput"
+        ; OptInfo.Unchecked.default_argument "^$"
+        ; OptInfo.Unchecked.help_msg
             "REGEX infoifying files to ignore"
         \]
    ] *)

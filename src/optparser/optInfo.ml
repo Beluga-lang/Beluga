@@ -35,35 +35,21 @@ module Unchecked = struct
     }
 
 
-  let long_name ln = { empty with long_name = Some ln }
+  let long_name ln spec = { spec with long_name = Some ln }
 
-  let short_name sn = { empty with short_name = Some sn }
+  let short_name sn spec = { spec with short_name = Some sn }
 
-  let other_names ns = { empty with other_names = Some ns }
+  let other_names ns spec = { spec with other_names = Some ns }
 
-  let help_message hm = { empty with help_message = Some hm }
+  let help_message hm spec = { spec with help_message = Some hm }
 
-  let default_argument dv = { empty with default_argument = Some dv }
+  let default_argument dv spec = { spec with default_argument = Some dv }
 
-  let meta_variables mvs = { empty with meta_variables = Some mvs }
+  let meta_variables mvs spec = { spec with meta_variables = Some mvs }
 
-  let optional op = { empty with optional = Some op }
+  let optional op spec = { spec with optional = Some op }
 
-  let lift spec = { spec with default_argument = None; optional = None }
-
-  let merge spec0 spec1 =
-    let open Option in
-    { long_name = spec0.long_name <|> spec1.long_name
-    ; short_name = spec0.short_name <|> spec1.short_name
-    ; other_names = spec0.other_names <|> spec1.other_names
-    ; meta_variables = spec0.meta_variables <|> spec1.meta_variables
-    ; help_message = spec0.help_message <|> spec1.help_message
-    ; default_argument = spec0.default_argument <|> spec1.default_argument
-    ; optional = spec0.optional <|> spec1.optional
-    }
-
-
-  let merge_all specs = List.fold_left merge empty specs
+  let erase_default_argument spec = { spec with default_argument = None }
 
   let make transforms = transforms |> List.fold_left ( |> ) empty
 end

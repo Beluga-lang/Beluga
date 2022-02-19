@@ -36,7 +36,7 @@ module Unchecked : sig
   (** A function configures the default argument of the option. The default
       argument is an argument used when the option accepts an argument but
       none is passed. This function makes only the argument of the option
-      optional. To make the option itself, see {!optional}. *)
+      optional. To make the option itself, see {!val-optional}. *)
   val default_argument : 'a -> 'a t
 
   (** A function configures the names of arguments in the help message for
@@ -49,7 +49,7 @@ module Unchecked : sig
   (** A function configures whether the option is mandatory or not. A value
       provided to this function is the default value used when a user does
       not pass the option. To make the argument of the option optional
-      instead of the option itself, see {!default_argument}. *)
+      instead of the option itself, see {!val-default_argument}. *)
   val optional : 'a -> 'a t
 
   (** An internal function used in {!OptSpec} module. *)

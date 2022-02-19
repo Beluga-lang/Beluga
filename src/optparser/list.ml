@@ -18,12 +18,12 @@ let maximum_element : type a. (a -> a -> a) -> a -> a list -> a =
  fun maximum default -> fold_left maximum default
 
 
-let split n =
-  let rec loop n = function
+let split =
+  let rec split n list return =
+    match list with
     | x :: xs when n > 0 ->
-        let xs', ys = loop (n - 1) xs in
-        (x :: xs', ys)
+        split (n - 1) xs (fun (xs', ys) -> return (x :: xs', ys))
     | xs ->
-        ([], xs)
+        return ([], xs)
   in
-  loop n
+  fun n list -> split n list Fun.id

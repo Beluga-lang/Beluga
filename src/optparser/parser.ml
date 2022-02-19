@@ -79,21 +79,11 @@ let pp_print_help (spec : 'a OptSpec.t) (usage : string) ppf () : unit =
     @author Clare Jang *)
 let parse (spec : 'a OptSpec.t) (args : string list) :
     ('a, OptSpec.error) result =
-  let split n =
-    let rec loop n = function
-      | x :: xs when n > 0 ->
-          let xs', ys = loop (n - 1) xs in
-          (x :: xs', ys)
-      | xs ->
-          ([], xs)
-    in
-    loop n
-  in
   let rec go rest_args =
     let go_for_single_option name sub_args cont =
       match OptSpec.find_opt spec name with
       | Some (Some arity, fn) ->
-          let fn_args, next_args = split arity sub_args in
+          let fn_args, next_args = List.split arity sub_args in
           fn (pp_print_help spec) fn_args ;
           cont next_args
       | Some (None, fn) ->

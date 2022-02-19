@@ -22,6 +22,8 @@ module Unchecked = struct
     ; optional : 'a option
     }
 
+  type 'a transform = 'a t -> 'a t
+
   let empty =
     { long_name = None
     ; short_name = None
@@ -62,6 +64,8 @@ module Unchecked = struct
 
 
   let merge_all specs = List.fold_left merge empty specs
+
+  let make transforms = transforms |> List.fold_left ( |> ) empty
 end
 
 module Checked = struct

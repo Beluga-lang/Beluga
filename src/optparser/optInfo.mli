@@ -13,6 +13,11 @@ module Unchecked : sig
 
   val empty : 'a t
 
+  (** A ['a transform] is a function for transforming a {!t}. Transforms can
+      be chained starting from {!empty} as in {!make} to construct a {!t} in
+      steps. *)
+  type 'a transform = 'a t -> 'a t
+
   (** A function configures the option name that contains more than two
       characters. In command line interface, it will be prepended by ["--"].
       For example, with the input parameter ["abc"], the real CLI option name
@@ -61,6 +66,10 @@ module Unchecked : sig
 
       @author Clare Jang *)
   val merge_all : 'a t list -> 'a t
+
+  (** [make ts] makes a {!t} by composing the transforms [ts] and applying
+      them to {!empty}. *)
+  val make : 'a transform list -> 'a t
 end
 
 module Checked : sig

@@ -13,9 +13,6 @@ all-test: test
 	dune exec ./TEST -- +htmltest
 	dune exec ./TEST -- +sexp
 
-fmt:
-	dune build @fmt --auto-promote
-
 clean:
 	dune clean
 

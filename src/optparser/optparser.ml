@@ -1,5 +1,3 @@
-module Error = OptSpec.Error
-
 type +'a option_specification = 'a OptInfo.Unchecked.t
 
 type 'a option_specification_step = 'a OptInfo.Unchecked.transform
@@ -40,14 +38,18 @@ let impure_opt0 = OptSpec.impure_opt0
 
 let help_opt0 = OptSpec.help_opt0
 
+let takes_all_opt = OptSpec.takes_all_opt
+
 let rest_args = OptSpec.rest_args
 
 let ( <$ ) = OptSpec.( <$ )
 
-let ( <& ) = OptSpec.( <& )
-
 let ( $> ) = OptSpec.( $> )
 
+let ( <& ) = OptSpec.( <& )
+
 let ( <! ) = OptSpec.( <! )
+
+module Error = OptSpec.Error
 
 let parse = Parser.parse

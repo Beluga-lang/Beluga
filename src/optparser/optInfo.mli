@@ -78,4 +78,6 @@ end
 
 type check_error = [ `No_name ]
 
+(** [check spec] verifies that at least a long name or a short name is
+    specified in [spec], yielding a checked specification. *)
 val check : 'a Unchecked.t -> ('a Checked.t, [> check_error ]) result

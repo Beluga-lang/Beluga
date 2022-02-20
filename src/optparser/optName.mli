@@ -1,3 +1,4 @@
+(** The type of validated option names. *)
 type t =
   { canonical : string
   ; aliases : string list

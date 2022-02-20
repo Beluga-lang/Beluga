@@ -7,20 +7,26 @@
 
     @author Clare Jang *)
 
-type option_error = { option_name : string }
+module Error = struct
+  module Option = struct
+    type option_error = { option_name : string }
+  end
 
-type invalid_arguments_length_error =
-  { option_name : string
-  ; expected_argument_count : int
-  ; actual_argument_count : int
-  }
+  module Argument = struct
+    type invalid_arguments_length_error =
+      { option_name : string
+      ; expected_argument_count : int
+      ; actual_argument_count : int
+      }
+  end
 
-type error =
-  [ `Missing_mandatory_option of option_error
-  | `Invalid_arguments_length of invalid_arguments_length_error
-  | `Argument_reader_failure of option_error
-  | `Not_an_option of option_error
-  ]
+  type t =
+    [ `Missing_mandatory_option of Option.option_error
+    | `Invalid_arguments_length of Argument.invalid_arguments_length_error
+    | `Argument_reader_failure of Option.option_error
+    | `Not_an_option of Option.option_error
+    ]
+end
 
 module HelpEntry = struct
   type t =
@@ -41,10 +47,10 @@ type help_printer = string -> Format.formatter -> unit -> unit
       {!Parser.parse}
 
     @author Clare Jang *)
-type 'a t =
+type +'a t =
   { opt_tbl :
       (string, int option * (help_printer -> string list -> unit)) Hashtbl.t
-  ; comp_value : string list -> ('a, error) result
+  ; comp_value : string list -> ('a, Error.t) result
   ; mandatory_help_entries : HelpEntry.t list
   ; optional_help_entries : HelpEntry.t list
   }
@@ -63,7 +69,8 @@ let make infos opt_arity build_arg_parser =
   let option_name = OptName.to_string info.name in
   let initial_res =
     info.optional
-    |> Option.to_result ~none:(`Missing_mandatory_option { option_name })
+    |> Option.to_result
+         ~none:(`Missing_mandatory_option { Error.Option.option_name })
   in
   let res_ref = ref initial_res in
   let opt =
@@ -122,7 +129,8 @@ let opt0 (a : 'a) (infos : 'a OptInfo.Unchecked.transform list) : 'a t =
         res_ref :=
           Error
             (`Invalid_arguments_length
-              { option_name = OptName.to_string info.OptInfo.Checked.name
+              { Error.Argument.option_name =
+                  OptName.to_string info.OptInfo.Checked.name
               ; expected_argument_count = arity
               ; actual_argument_count = List.length args
               } )
@@ -147,7 +155,7 @@ let opt1
           res_ref :=
             Error
               (`Invalid_arguments_length
-                { option_name = opt_name
+                { Error.Argument.option_name = opt_name
                 ; expected_argument_count = arity
                 ; actual_argument_count = 0
                 } )
@@ -157,14 +165,16 @@ let opt1
       ( match read_arg arg with
       | None ->
           res_ref :=
-            Error (`Argument_reader_failure { option_name = opt_name })
+            Error
+              (`Argument_reader_failure
+                { Error.Option.option_name = opt_name } )
       | Some x ->
           res_ref := Ok x )
     | args ->
         res_ref :=
           Error
             (`Invalid_arguments_length
-              { option_name = opt_name
+              { Error.Argument.option_name = opt_name
               ; expected_argument_count = arity
               ; actual_argument_count = List.length args
               } )
@@ -205,7 +215,10 @@ let string_opt1 : string OptInfo.Unchecked.transform list -> string t =
 
     @author Clare Jang *)
 let switch_opt (infos : bool OptInfo.Unchecked.transform list) : bool t =
-  infos @ [ OptInfo.Unchecked.erase_default_argument; OptInfo.Unchecked.optional false ]
+  infos
+  @ [ OptInfo.Unchecked.erase_default_argument
+    ; OptInfo.Unchecked.optional false
+    ]
   |> opt0 true
 
 
@@ -246,7 +259,7 @@ let impure_opt0
         res_ref :=
           Error
             (`Invalid_arguments_length
-              { option_name = opt_name
+              { Error.Argument.option_name = opt_name
               ; expected_argument_count = arity
               ; actual_argument_count = List.length args
               } )
@@ -269,7 +282,8 @@ let help_opt0
         res_ref :=
           Error
             (`Invalid_arguments_length
-              { option_name = OptName.to_string info.OptInfo.Checked.name
+              { Error.Argument.option_name =
+                  OptName.to_string info.OptInfo.Checked.name
               ; expected_argument_count = arity
               ; actual_argument_count = List.length args
               } )

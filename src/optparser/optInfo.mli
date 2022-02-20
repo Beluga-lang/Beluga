@@ -44,6 +44,10 @@ module Unchecked : sig
       optional. To make the option itself, see {!val-optional}. *)
   val default_argument : 'a -> 'a transform
 
+  (** [erase_default_argument spec] reconstructs [spec] without its default
+      argument. *)
+  val erase_default_argument : 'a transform
+
   (** A function configures the names of arguments in the help message for
       the option. Default meta name is ["args"]. For example, if [--file]
       option takes one argument, default help message for that option starts
@@ -56,10 +60,6 @@ module Unchecked : sig
       not pass the option. To make the argument of the option optional
       instead of the option itself, see {!val-default_argument}. *)
   val optional : 'a -> 'a transform
-
-  (** [erase_default_argument spec] constructs [spec] without its default
-      argument. *)
-  val erase_default_argument : 'a transform
 
   (** [make ts] makes a {!t} by composing the transforms [ts] and applying
       them to {!empty}. *)

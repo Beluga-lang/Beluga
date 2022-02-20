@@ -45,11 +45,11 @@ module Unchecked = struct
 
   let default_argument dv spec = { spec with default_argument = Some dv }
 
+  let erase_default_argument spec = { spec with default_argument = None }
+
   let meta_variables mvs spec = { spec with meta_variables = Some mvs }
 
   let optional op spec = { spec with optional = Some op }
-
-  let erase_default_argument spec = { spec with default_argument = None }
 
   let make transforms = transforms |> List.fold_left ( |> ) empty
 end

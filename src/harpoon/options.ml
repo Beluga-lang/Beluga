@@ -6,7 +6,7 @@ module PC = B.Printer.Control
 
 module Error = struct
   type t =
-    | OptparserError of Optparser.OptSpec.error
+    | OptparserError of Optparser.Error.t
     | InvalidIncomplete
     | InvalidStop
     | DanglingArguments
@@ -18,12 +18,11 @@ module Error = struct
   open Format
   let format_error ppf = function
     | OptparserError e ->
-       let open Optparser.OptSpec in
         ( match e with
-        | `Missing_mandatory_option { option_name; _ } ->
+        | `Missing_mandatory_option { Optparser.Error.Option.option_name; _ } ->
             fprintf ppf "Mandatory option %s is missing.@." option_name
         | `Invalid_arguments_length
-            { option_name
+            { Optparser.Error.Argument.option_name
             ; expected_argument_count = exp
             ; actual_argument_count = act
             } ->
@@ -33,9 +32,9 @@ module Error = struct
               option_name
             exp
             act
-        | `Argument_reader_failure { option_name; _ } ->
+        | `Argument_reader_failure { Optparser.Error.Option.option_name; _ } ->
             fprintf ppf "%s" option_name
-        | `Not_an_option { option_name; _ } ->
+        | `Not_an_option { Optparser.Error.Option.option_name; _ } ->
             fprintf ppf "%s is not an option" option_name )
     | InvalidIncomplete ->
        fprintf ppf "--incomplete can be specified only after --test@."
@@ -95,7 +94,7 @@ type parsed_t =
 type elaborated_t =
   (string, string list) t
 
-let options_spec : parsed_t Optparser.OptSpec.t =
+let options_spec : parsed_t Optparser.options_specification =
   let handle_debug () =
     Debug.enable ();
     Printexc.record_backtrace true
@@ -112,17 +111,17 @@ let options_spec : parsed_t Optparser.OptSpec.t =
       (pp_print_help usage_string) ();
     exit 1
   in
+  let module E = Error in
   let open Optparser in
-  let open OptSpec in
   begin fun path test_opt test_kind test_start test_stop no_load_holes save_back ->
   let test_file =
     match test_opt, test_kind, test_stop with
     | None, `incomplete, _ ->
-       Error.(throw InvalidIncomplete)
+       E.(throw InvalidIncomplete)
     | None, _, `stop ->
-       Error.(throw InvalidStop)
+       E.(throw InvalidStop)
     | Some _, `incomplete, `stop ->
-       Error.(throw InvalidStop)
+       E.(throw InvalidStop)
     | _ -> Option.map (fun test -> (test, test_kind)) test_opt
   in
   { path
@@ -135,22 +134,22 @@ let options_spec : parsed_t Optparser.OptSpec.t =
   }
   end
   <$ string_opt1
-       [ OptInfo.Unchecked.long_name "sig"
-       ; OptInfo.Unchecked.meta_variables [ "path" ]
-       ; OptInfo.Unchecked.help_message "specify the input signature"
+       [ long_name "sig"
+       ; meta_variables [ "path" ]
+       ; help_message "specify the input signature"
        ]
   <& opt1
        (fun s -> Option.some (Option.some s))
-       [ OptInfo.Unchecked.long_name "test"
-       ; OptInfo.Unchecked.meta_variables [ "path" ]
-       ; OptInfo.Unchecked.optional None
-       ; OptInfo.Unchecked.help_message
+       [ long_name "test"
+       ; meta_variables [ "path" ]
+       ; optional None
+       ; help_message
            ( "specify the test input file that is used as "
            ^ "a test input instead of stdin user input" )
        ]
   <& ( switch_opt
-         [ OptInfo.Unchecked.long_name "incomplete"
-         ; OptInfo.Unchecked.help_message
+         [ long_name "incomplete"
+         ; help_message
              ( "mark the test input file as incomplete so that stdin user "
              ^ "input is followed after the test input "
              ^ "(valid only when --test option is provided)" )
@@ -158,47 +157,48 @@ let options_spec : parsed_t Optparser.OptSpec.t =
      $> fun b -> if b then `incomplete else `complete )
   <& opt1
        (fun s -> Option.map Option.some (int_of_string_opt s))
-       [ OptInfo.Unchecked.long_name "test-start"
-       ; OptInfo.Unchecked.meta_variables [ "number" ]
-       ; OptInfo.Unchecked.optional None
-       ; OptInfo.Unchecked.help_message
+       [ long_name "test-start"
+       ; meta_variables [ "number" ]
+       ; optional None
+       ; help_message
            "specify the first line of test file considered as test input"
        ]
-  <& ( switch_opt [ OptInfo.Unchecked.long_name "stop" ]
+  <& ( switch_opt [ long_name "stop" ]
      $> fun b -> if b then `stop else `go_on )
-  <& switch_opt [ OptInfo.Unchecked.long_name "no-load-holes" ]
-  <& ( switch_opt [ OptInfo.Unchecked.long_name "no-save-back" ]
+  <& switch_opt [ long_name "no-load-holes" ]
+  <& ( switch_opt [ long_name "no-save-back" ]
      $> fun b -> if b then `no_save_back else `save_back )
   <! impure_opt0
        handle_debug
-       [ OptInfo.Unchecked.long_name "debug"
-       ; OptInfo.Unchecked.help_message
+       [ long_name "debug"
+       ; help_message
            "use debugging mode (writes to debug.out in CWD)"
        ]
   <! impure_opt0
        handle_implicit
-       [ OptInfo.Unchecked.long_name "implicit"
-       ; OptInfo.Unchecked.help_message "print implicit variables"
+       [ long_name "implicit"
+       ; help_message "print implicit variables"
        ]
   <! help_opt0
        handle_help
-       [ OptInfo.Unchecked.long_name "help"
-       ; OptInfo.Unchecked.short_name 'h'
-       ; OptInfo.Unchecked.help_message "print this message"
+       [ long_name "help"
+       ; short_name 'h'
+       ; help_message "print this message"
        ]
   <! rest_args
        begin function
          | [] -> ()
-         | rest -> Error.(throw (DanglingArguments rest))
+         | rest -> E.(throw (DanglingArguments rest))
        end
 
 (** Parses argument list and
     returns parsed result and leftover arguments.
  *)
 let parse_arguments args : parsed_t =
-  match Optparser.Parser.parse options_spec args with
-  | Ok options -> options
-  | Error e -> Error.(throw (OptparserError e))
+  Optparser.parse options_spec args
+  |> Result.fold
+    ~ok:Fun.id
+    ~error:(fun e -> Error.(throw @@ OptparserError e))
 
 (** Loads the specified signature and elaborates the theorem.
     Returns also the path of the last file loaded.

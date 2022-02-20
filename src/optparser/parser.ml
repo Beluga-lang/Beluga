@@ -77,8 +77,7 @@ let pp_print_help (spec : 'a OptSpec.t) (usage : string) ppf () : unit =
     returns ['a] as the result of the parsing.
 
     @author Clare Jang *)
-let parse (spec : 'a OptSpec.t) (args : string list) :
-    ('a, OptSpec.error) result =
+let parse spec args =
   let rec go rest_args =
     let go_for_single_option name sub_args cont =
       match OptSpec.find_opt spec name with
@@ -90,7 +89,7 @@ let parse (spec : 'a OptSpec.t) (args : string list) :
           fn (pp_print_help spec) sub_args ;
           cont []
       | None ->
-          Error OptSpec.(`Not_an_option { option_name = name })
+          Error (`Not_an_option { OptSpec.Error.Option.option_name = name })
     in
     function
     | [] ->

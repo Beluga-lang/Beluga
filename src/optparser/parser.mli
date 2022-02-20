@@ -1,1 +1,1 @@
-val parse : 'a OptSpec.t -> string list -> ('a, OptSpec.error) result
+val parse : 'a OptSpec.t -> string list -> ('a, OptSpec.Error.t) result

@@ -1,9 +1,8 @@
 (** A module for the functions that operate on an option and a set of
-    options. For example,
-
+    options. For example, these include:
     - functions that lift option info into an option
     - functions that merge option sets
-    - etc. are included.
+    - etc.
 
     @author Clare Jang *)
 

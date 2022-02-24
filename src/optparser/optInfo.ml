@@ -1,11 +1,9 @@
 (** A module for functions to give information for an option. For example,
-    functions that configure
+    these include functions that configure
     - the name of an option
     - the help message of an option
     - the fallback value of an optional option
     - etc.
-    
-    are included.
 
     @author Clare Jang *)
 

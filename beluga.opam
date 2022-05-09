@@ -8,9 +8,9 @@ dev-repo: "git+https://github.com/Beluga-lang/Beluga.git"
 license: "GPLv3"
 
 run-test: [
-  [ "./TEST" ]
-  [ "./TEST" "--" "+htmltest" ]
-  [ "./TEST" "--harpoon" ]
+  [ "./TEST.sh" ]
+  [ "./TEST.sh" "--" "+htmltest" ]
+  [ "./TEST.sh" "--harpoon" ]
 ]
 build: [
   ["dune" "build" "-p" name "-j" jobs]

@@ -34,7 +34,7 @@ make clean
 make || ( echo 'native make failed; aborting release.' ; exit 1 )
 
 echo 'Running TEST (native) ...'
-./TEST --examples || ( echo 'TEST failed; aborting release.' ; exit 1 )
+./TEST.sh --examples || ( echo 'TEST failed; aborting release.' ; exit 1 )
 
 if [ -e "${release}" ]; then
     echo "Release directory ${release} already exists."

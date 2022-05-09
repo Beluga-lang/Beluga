@@ -5,8 +5,7 @@ build:
 
 test: build
 	dune runtest --force
-	dune exec chmod 777 ./TEST
-	dune exec ./TEST
+	dune exec ./TEST.sh
 
 coverage:
 	dune build --instrument-with bisect_ppx --force
@@ -15,10 +14,10 @@ coverage:
 	bisect-ppx-report summary
 
 harpoon-test: build
-	dune exec ./TEST -- --harpoon
+	dune exec ./TEST.sh -- --harpoon
 
 all-test: test
-	dune exec ./TEST -- -- +htmltest
+	dune exec ./TEST.sh -- -- +htmltest
 
 clean:
 	dune clean

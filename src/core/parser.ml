@@ -1127,7 +1127,7 @@ let rec lf_kind =
       fun s ->
       let pi_kind =
         seq2
-          (lf_typ_decl () |> braces <& maybe (token T.ARROW))
+          (lf_typ_decl |> braces <& maybe (token T.ARROW))
           lf_kind
         |> span
         $> fun (loc, (d, k)) -> LF.PiKind (loc, d, k)
@@ -1203,12 +1203,17 @@ and lf_head =
   $> fun (loc, n) -> LF.Name (loc, n, None)
 
 (** An LF type declaration, `x : a'. *)
-and lf_typ_decl () =
-  seq2
-    (name <& token T.COLON)
-    lf_typ
-  |> labelled "LF type declaration"
-  $> fun (x, a) -> LF.TypDecl (x, a)
+and lf_typ_decl =
+  { run =
+      fun s ->
+      let p =
+        seq2
+          (name <& token T.COLON)
+          lf_typ
+        |> labelled "LF type declaration"
+        $> fun (x, a) -> LF.TypDecl (x, a) in
+      run p s
+  }
 
 (** Parses an LF kind or type.
     This is an optimization. In situations where either a type or a
@@ -1220,7 +1225,7 @@ and lf_kind_or_typ : kind_or_typ parser =
       fun s ->
       let pi =
         seq2
-          (lf_typ_decl () |> braces <& maybe (token T.ARROW))
+          (lf_typ_decl |> braces <& maybe (token T.ARROW))
           lf_kind_or_typ
         |> span
         |> labelled "LF Pi kind or type"
@@ -1258,7 +1263,7 @@ and lf_typ : LF.typ parser =
       let p =
         let pi_typ =
           seq2
-            (trying (lf_typ_decl () |> braces <& maybe (token T.ARROW)))
+            (trying (lf_typ_decl |> braces <& maybe (token T.ARROW)))
             lf_typ
           |> span
           $> fun (loc, (d, ty2)) ->
@@ -2796,7 +2801,7 @@ let lf_schema_some : LF.typ_decl LF.ctx parser =
     (token T.KW_SOME
      &> bracks
           (sep_by0
-             (lf_typ_decl ())
+             lf_typ_decl
              (token T.COMMA))
      $> fun ds -> List.fold_left (fun ctx d -> LF.Dec (ctx, d)) LF.Empty ds)
     (pure LF.Empty)

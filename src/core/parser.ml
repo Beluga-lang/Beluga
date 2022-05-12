@@ -1276,26 +1276,41 @@ and lf_typ : LF.typ parser =
   { run =
       fun s ->
       let p =
-        let pi_typ =
-          seq2
-            (trying (lf_typ_decl |> braces <& maybe (token T.ARROW)))
-            lf_typ
-          |> span
-          $> fun (loc, (d, ty2)) ->
-            LF.PiTyp (loc, d, ty2)
-        in
         choice
-          [ label pi_typ "LF Pi type"
-          ; seq2
-              (trying (lf_typ_atomic <& token T.ARROW))
-              lf_typ
-            |> span
-            $> (fun (loc, (a1, a2)) -> LF.ArrTyp (loc, a1, a2))
+          [ lf_typ_pi
+          ; lf_typ_arr
           ; lf_typ_atomic
           ]
-        |> labelled "LF type"
       in
-      run p s
+      run (p |> labelled "LF type") s
+  }
+
+and lf_typ_pi : LF.typ parser =
+  { run =
+      fun s ->
+      let pi_typ =
+        seq2
+          (trying (lf_typ_decl |> braces <& maybe (token T.ARROW)))
+          lf_typ
+        |> span
+        $> fun (loc, (d, ty2)) ->
+          LF.PiTyp (loc, d, ty2)
+      in
+      run (pi_typ |> labelled "LF pi type") s
+  }
+
+
+and lf_typ_arr : LF.typ parser =
+  { run =
+      fun s ->
+      let arr_typ =
+        seq2
+          (trying (lf_typ_atomic <& token T.ARROW))
+          lf_typ
+        |> span
+        $> (fun (loc, (a1, a2)) -> LF.ArrTyp (loc, a1, a2))
+      in
+      run (arr_typ |> labelled "LF arrow type") s
   }
 
 and lf_typ_atomic =
@@ -1303,39 +1318,25 @@ and lf_typ_atomic =
       fun s ->
       let p =
         alt
-          begin
-            span lf_term_sequence
+          (span lf_term_sequence
             $> function
               | (loc, LF.NTyp (_, t)) -> t
               | (loc, LF.TList (_, [LF.NTyp (_, t)])) -> t
               | (loc, LF.TList (_, [n])) -> LF.AtomTerm (loc, n)
-              | (loc, t) -> LF.AtomTerm (loc, t)
-          end
+              | (loc, t) -> LF.AtomTerm (loc, t))
           (parens lf_typ)
-        |> labelled "atomic LF type"
       in
-      run p s
+      run (p |> labelled "LF atomic type") s
   }
 
-  (*
-let lf_typ_decl (* sgn_lf_kind *) =
-  labelled "LF type declaration"
-    (seq2
-       (name <& token T.COLON)
-       lf_kind
-     |> span
-     $> fun (loc, (id, tK)) ->
-        Sgn.Typ (loc, id, tK))
-   *)
-
-let lf_const_decl (* sgn_lf_typ *) =
-  labelled "LF constant declaration"
-    (seq2
-       (name <& token T.COLON)
-       lf_typ
-     |> span
-     $ fun (location, (identifier, typ)) ->
-       pure (Sgn.Const { location; identifier; typ }))
+let sgn_lf_const_decl (* sgn_lf_typ *) =
+  (seq2
+    (name <& token T.COLON)
+    lf_typ
+  |> span
+  $ fun (location, (identifier, typ)) ->
+    pure (Sgn.Const { location; identifier; typ }))
+  |> labelled "LF constant declaration"
 
 let sgn_lf_typ_decl : Sgn.decl parser =
   let lf_typ_decl_body (* cmp_dat *) =
@@ -1347,7 +1348,7 @@ let sgn_lf_typ_decl : Sgn.decl parser =
     seq2
       (typ_decl <& token T.EQUALS)
       (maybe (token T.PIPE)
-       &> sep_by0 lf_const_decl (token (T.PIPE)))
+       &> sep_by0 sgn_lf_const_decl (token (T.PIPE)))
     |> span
     $> fun (location, ((identifier, kind), const_decls)) ->
        Sgn.Typ { location; identifier; kind }, const_decls

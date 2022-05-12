@@ -1153,23 +1153,48 @@ let rec lf_kind =
 and lf_term =
   { run =
       fun s ->
-      let p =
-        span (some lf_term_lam) $> (fun (loc, ms) -> LF.TList (loc, ms))
-        |> labelled "LF term sequence"
+      let term =
+        choice
+          [ lf_term_lam
+          ; lf_term_head
+          ; lf_term_atomic
+          ]
       in
-      run p s
+      run (term |> labelled "LF term") s
+  }
+
+and lf_term_sequence =
+  { run =
+      fun s ->
+      let terms =
+        span (some lf_term) $> (fun (loc, ms) -> LF.TList (loc, ms))
+      in
+      run (terms |> labelled "LF term sequence") s
   }
 
 and lf_term_lam =
   { run =
       fun s ->
-      let lam =
-        seq4 (token T.LAMBDA) name (token T.DOT) lf_term
+      let lam = seq4 (token T.LAMBDA) name (token T.DOT) lf_term_sequence
         |> span
-        |> labelled "LF lambda term"
         $> fun (loc, (_, x, _, ms)) ->
-           LF.Lam (loc, x, ms)
+            LF.Lam (loc, x, ms)
       in
+      run (lam |> labelled "LF lambda term") s
+  }
+
+and lf_term_head =
+  { run =
+      fun s ->
+      let head =
+        span lf_head $> fun (loc, h) -> LF.Root (loc, h, LF.Nil)
+      in
+      run (head |> labelled "LF head term") s
+  }
+
+and lf_term_atomic =
+  { run =
+      fun s ->
       let atomic =
         choice
           [ span (token T.UNDERSCORE)
@@ -1183,18 +1208,8 @@ and lf_term_lam =
               | _, _ -> fail (Violation "invalid atomic LF term")
                                      (* ^ XXX not sure if this is a violation or a user error -je *)
           ]
-        |> labelled "atomic LF term"
       in
-      let head =
-        span lf_head $> fun (loc, h) -> LF.Root (loc, h, LF.Nil)
-      in
-      run (choice
-         [ lam
-         ; head
-         ; atomic
-         ]
-       |> labelled "LF term"
-      ) s
+      run (atomic |> labelled "LF atomic term") s
   }
 
 and lf_head =
@@ -1289,7 +1304,7 @@ and lf_typ_atomic =
       let p =
         alt
           begin
-            span lf_term
+            span lf_term_sequence
             $> function
               | (loc, LF.NTyp (_, t)) -> t
               | (loc, LF.TList (_, [LF.NTyp (_, t)])) -> t

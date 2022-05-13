@@ -7,6 +7,7 @@ val initial_pos : pos
 
 type t
 val initial : string -> t
+val make : string -> start_position:Lexing.position -> stop_position:Lexing.position -> t
 val join : t -> t -> t
 val is_ghost : t -> bool
 val ghost : t

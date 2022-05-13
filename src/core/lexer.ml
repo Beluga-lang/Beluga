@@ -29,6 +29,25 @@ let _ =
 let (dprintf, _, _) = Debug.makeFunctions' (Debug.toFlags [11])
 (* open Debug.Fmt *)
 
+(** [get_location lexbuf] is the current location of [lexbuf]. *)
+let get_location lexbuf =
+  let (start_position, stop_position) = Sedlexing.lexing_positions lexbuf in
+  let filename = start_position.Lexing.pos_fname in
+  Location.make filename ~start_position ~stop_position
+
+let get_lexeme = Sedlexing.Utf8.lexeme
+
+let set_location location lexbuf =
+  let filename = Location.filename location in
+  Sedlexing.set_filename lexbuf filename;
+  (Sedlexing.set_position lexbuf
+  @@ Lexing.
+       { pos_fname = filename
+       ; pos_lnum = Location.start_line location
+       ; pos_bol = Location.start_bol location
+       ; pos_cnum = Location.start_offset location
+       })
+
 let sym_head = [%sedlex.regexp? id_start | '_']
 let sym_tail = [%sedlex.regexp? id_continue | Chars "\'-*+@=^/#?" ]
 
@@ -42,31 +61,6 @@ let hash_blank = [%sedlex.regexp? "#_"]
 let dollar_ident = [%sedlex.regexp? '$', ident]
 let dollar_blank = [%sedlex.regexp? "$_"]
 let dot_number = [%sedlex.regexp? '.', number]
-
-let shift_by_lexeme lexbuf loc =
-  Loc.shift (Sedlexing.lexeme_length lexbuf) loc
-
-let advance_lines (n : int) (lexbuf : Sedlexing.lexbuf) (loc : Loc.t) : Loc.t =
-  Loc.move_line n (Loc.shift (Sedlexing.lexeme_length lexbuf) loc)
-
-let advance_line : Sedlexing.lexbuf -> Loc.t -> Loc.t = advance_lines 1
-
-let update_loc loc f = loc := f !loc
-
-let update_loc_by_lexeme loc lexbuf = update_loc loc (shift_by_lexeme lexbuf)
-
-let get_lexeme loc lexbuf =
-  update_loc_by_lexeme loc lexbuf;
-  Sedlexing.Utf8.lexeme lexbuf
-
-(** Counts the linebreaks in the string and adds them to the
- * location's line counter.
- *)
-let count_linebreaks loc s =
-  let n = ref 0 in
-  String.iter (fun c -> if Char.equal c '\n' then incr n) s;
-  if !n <> 0 then loc := Loc.move_line !n !loc
-
 let arrow =       [%sedlex.regexp? ("->" | 0x2192)]
 let turnstile =   [%sedlex.regexp? ("|-" | 0x22a2)]
 let thick_arrow = [%sedlex.regexp? ("=>" | 0x21d2)]
@@ -97,42 +91,38 @@ let string_literal = [%sedlex.regexp? string_delimiter, Star (Compl '"'), string
 (** Skips the _body_ of a block comment.
     Calls itself recursively upon encountering a nested block comment.
     Consumes the block_comment_end symbol. *)
-let rec skip_nested_block_comment loc lexbuf =
+let rec skip_nested_block_comment lexbuf =
   (* let const t = Fun.const t (get_lexeme loc lexbuf) in *)
-  let skip () = update_loc_by_lexeme loc lexbuf in
   match%sedlex lexbuf with
   | block_comment_begin ->
-     skip ();
-     skip_nested_block_comment loc lexbuf; (* for the body of the new comment *)
-     skip_nested_block_comment loc lexbuf (* for the remaining characters in this comment *)
-  | block_comment_end -> skip ()
+     skip_nested_block_comment lexbuf; (* for the body of the new comment *)
+     skip_nested_block_comment lexbuf (* for the remaining characters in this comment *)
+  | block_comment_end -> ()
   | any ->
-     get_lexeme loc lexbuf |> count_linebreaks loc;
-     skip_nested_block_comment loc lexbuf
+     ignore @@ get_lexeme lexbuf;
+     skip_nested_block_comment lexbuf
   | _ ->
-     throw !loc (Violation "catch-all case for skip_nested_block_comment should be unreachable")
+     throw (get_location lexbuf) (Violation "catch-all case for skip_nested_block_comment should be unreachable")
 
 
-let rec tokenize loc lexbuf =
-  let const t = Fun.const t (get_lexeme loc lexbuf) in
-  let skip () = update_loc_by_lexeme loc lexbuf in
+let rec tokenize lexbuf =
+  let const t = Fun.const t (get_lexeme lexbuf) in
   let module T = Token in
   match%sedlex lexbuf with
   (* comments *)
   | eof -> const T.EOI
   | white_space ->
-     get_lexeme loc lexbuf |> count_linebreaks loc;
-     tokenize loc lexbuf
+     ignore @@ get_lexeme lexbuf;
+     tokenize lexbuf
   | block_comment_begin ->
-     skip ();
-     skip_nested_block_comment loc lexbuf;
-     tokenize loc lexbuf
-  | block_comment_end -> throw !loc MismatchedBlockComment
-  | line_comment -> skip (); tokenize loc lexbuf
+     skip_nested_block_comment lexbuf;
+     tokenize lexbuf
+  | block_comment_end -> throw (get_location lexbuf) MismatchedBlockComment
+  | line_comment -> tokenize lexbuf
 
   (* STRING LITERALS *)
   | string_literal ->
-     let s = get_lexeme loc lexbuf in
+     let s = get_lexeme lexbuf in
      T.STRING (String.sub s 1 (String.length s - 2))
 
   (* KEYWORDS *)
@@ -172,7 +162,7 @@ let rec tokenize loc lexbuf =
   | "toshow" -> const T.KW_TOSHOW
 
   (* SYMBOLS *)
-  | pragma -> T.PRAGMA (String.drop 2 (get_lexeme loc lexbuf))
+  | pragma -> T.PRAGMA (String.drop 2 (get_lexeme lexbuf))
   | arrow -> const T.ARROW
   | thick_arrow -> const T.THICK_ARROW
   | turnstile -> const T.TURNSTILE
@@ -196,33 +186,33 @@ let rec tokenize loc lexbuf =
   | "/" -> const T.SLASH
   | "+" -> const T.PLUS
 
-  | hole -> T.HOLE (String.drop 1 (get_lexeme loc lexbuf))
+  | hole -> T.HOLE (String.drop 1 (get_lexeme lexbuf))
   | "_" -> const T.UNDERSCORE
-  | ident -> T.IDENT (get_lexeme loc lexbuf)
+  | ident -> T.IDENT (get_lexeme lexbuf)
 
-  | dot_number -> T.DOT_NUMBER (int_of_string (String.drop 1 (get_lexeme loc lexbuf)))
+  | dot_number -> T.DOT_NUMBER (int_of_string (String.drop 1 (get_lexeme lexbuf)))
   | dots -> const T.DOTS
   | hash_blank -> T.HASH_BLANK
-  | hash_ident -> T.HASH_IDENT (get_lexeme loc lexbuf)
+  | hash_ident -> T.HASH_IDENT (get_lexeme lexbuf)
   | dollar_blank -> T.DOLLAR_BLANK
-  | dollar_ident -> T.DOLLAR_IDENT (get_lexeme loc lexbuf)
+  | dollar_ident -> T.DOLLAR_IDENT (get_lexeme lexbuf)
   | "." -> const T.DOT
   | "#" -> const T.HASH
   | "$" -> const T.DOLLAR
 
   | eof -> const T.EOI
 
-  | number -> T.INTLIT (get_lexeme loc lexbuf |> int_of_string)
-  | _ -> throw !loc (UnlexableCharacter (get_lexeme loc lexbuf))
+  | number -> T.INTLIT (get_lexeme lexbuf |> int_of_string)
+  | _ -> throw (get_location lexbuf) (UnlexableCharacter (get_lexeme lexbuf))
 
 (** From a given generator for UTF-8, constructs a generator for tokens.
     Raises `Error` if a lexical error is encountered.
  *)
 let mk initial_loc gen =
   let lexbuf = Sedlexing.Utf8.from_gen gen in
-  let loc = ref initial_loc in
+  set_location initial_loc lexbuf;
   let next () =
-    let t = tokenize loc lexbuf in
-    Some (!loc, t)
+    let t = tokenize lexbuf in
+    Some (get_location lexbuf, t)
   in
   next

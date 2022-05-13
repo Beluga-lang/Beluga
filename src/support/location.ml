@@ -57,6 +57,19 @@ let initial filename =
 
 let ghost = { (initial "_ghost") with ghost = true }
 
+let make filename ~start_position ~stop_position =
+  let pos p =
+    { line = p.Lexing.pos_lnum
+    ; bol = p.Lexing.pos_bol
+    ; offset = p.Lexing.pos_cnum
+    }
+  in
+  { filename
+  ; start = pos start_position
+  ; stop = pos stop_position
+  ; ghost = false
+  }
+
 (** Shifts the column offset of the location *)
 let shift n s : t =
   { s with

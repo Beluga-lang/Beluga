@@ -520,6 +520,26 @@ module Make (_ : Store.Cid.RENDERER) : Printer.Ext.T = struct
          (symbol_to_html RArr)
          (fmt_ppr_cmp_kind 1) cK
          (r_paren_if cond)
+    | Comp.ArrKind (loc, (loc', LF.ClTyp (LF.STyp (_, cPhi), cPsi), depend), cK) ->
+      let cond = lvl > 1 in
+      fprintf ppf "%s[%a %s %a] %s %a%s"
+        (l_paren_if cond)
+        (fmt_ppr_lf_dctx 1) cPsi
+        (symbol_to_html Turnstile)
+        (fmt_ppr_lf_dctx 1) cPhi
+        (symbol_to_html RArr)
+        (fmt_ppr_cmp_kind 1) cK
+        (r_paren_if cond)
+    | Comp.ArrKind (loc, (loc', LF.ClTyp (LF.MTyp tA, cPsi), depend), cK) ->
+      let cond = lvl > 1 in
+      fprintf ppf "%s{_ : [%a %s %a]} %s %a%s"
+        (l_paren_if cond)
+        (fmt_ppr_lf_dctx 1) cPsi
+        (symbol_to_html Turnstile)
+        (fmt_ppr_lf_typ 1) tA
+        (symbol_to_html RArr)
+        (fmt_ppr_cmp_kind 1) cK
+        (r_paren_if cond)
 
   let rec fmt_ppr_meta_spine lvl ppf =
     function

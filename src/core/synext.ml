@@ -140,6 +140,7 @@ module Comp = struct
 
   type kind =
     | Ctype of Location.t
+    | ArrKind of Location.t * (Location.t * LF.ctyp * LF.depend) * kind
     | PiKind of Location.t * LF.ctyp_decl * kind
 
   type meta_obj = Location.t * LF.mfront

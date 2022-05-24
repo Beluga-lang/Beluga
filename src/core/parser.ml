@@ -2158,22 +2158,18 @@ let rec cmp_kind =
               cmp_kind
             |> span
             $> fun (loc, ((loc', (cPsi, a)), k)) ->
-               let x = Id.mk_name ~loc: loc (Id.NoName) in
-               Comp.PiKind
+               Comp.ArrKind
                  ( loc
-                 , LF.Decl
-                     ( x
-                     , ( loc'
-                       , LF.ClTyp
-                           ( begin match a with
-                             | `Ctx cPhi -> LF.STyp (LF.Subst, cPhi)
-                             | `Typ a -> LF.MTyp a
-                             end
-                           , cPsi
-                           )
+                 , (loc'
+                   , LF.ClTyp
+                       ( begin match a with
+                         | `Ctx cPhi -> LF.STyp (LF.Subst, cPhi)
+                         | `Typ a -> LF.MTyp a
+                         end
+                       , cPsi
                        )
-                     , LF.No
-                     )
+                   , LF.No
+                   )
                  , k
                  )
           end

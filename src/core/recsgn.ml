@@ -158,7 +158,7 @@ let sgnDeclToHtml =
     Html.printing := true;
 
     let html_buffer = Buffer.create 16 in
-    let html_formatter = Format.formatter_of_buffer html_buffer in 
+    let html_formatter = Format.formatter_of_buffer html_buffer in
     Format.pp_set_margin html_formatter 200;
     Format.fprintf html_formatter "%a" Pretty.Ext.DefaultPrinter.fmt_ppr_sgn_decl d;
     Format.pp_print_flush html_formatter ();

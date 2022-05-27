@@ -420,7 +420,7 @@ let whale_str =
 
 let whale =
   let open Format in
-  let emit = fprintf str_formatter "%s" in
+  let emit = pp_print_string str_formatter in
   let pass c = emit (String.make 1 c) in
   let full_block = "\xe2\x96\x88" in
   let light_shade = "\xe2\x96\x91" in

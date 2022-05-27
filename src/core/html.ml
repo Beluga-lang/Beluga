@@ -62,7 +62,8 @@ let generatePage orig =
   let orig = Filename.basename orig in
   (* Merge different code blocks into, as long as there isn't anything inbetween *)
   let fixCodeRegex = Str.regexp "</code></pre>\\(\\([\r\n\t]\\|<br>\\)*?\\)<pre><code>" in
-  let page = Str.global_replace fixCodeRegex "\\1" (Buffer.contents page) in
+  let page = Buffer.contents page in
+  let page = Str.global_replace fixCodeRegex "\\1" page in
   let page = Str.global_replace (Str.regexp_string "|-") "&#8866;" page in
   let page = Str.global_replace (Str.regexp_string "..") "&hellip;" page in
   let page = Str.global_replace (Str.regexp_string "->") "&#x2192" page in

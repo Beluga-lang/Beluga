@@ -284,7 +284,7 @@ module Make (_ : Store.Cid.RENDERER) : Printer.Ext.T = struct
         match start with
         | LF.EmptySub _ -> pp_empty ppf ()
         | LF.Id _ ->
-           fprintf ppf "%s" (symbol_to_html Dots);
+           pp_print_string ppf (symbol_to_html Dots);
            true
         | LF.SVar (_, s, sub') ->
            print_svar s sub';
@@ -299,10 +299,10 @@ module Make (_ : Store.Cid.RENDERER) : Printer.Ext.T = struct
       then Fmt.comma ppf ();
 
       pp_print_list ~pp_sep: Fmt.comma
-        print_tm ppf tms;
+        print_tm ppf tms
     in
 
-    fprintf ppf "@[<h>%a@]" go ();
+    fprintf ppf "@[<h>%a@]" go ()
 
   and fmt_ppr_lf_typ_rec ppf typrec =
     let ppr_element ppf suffix (x, tA) =
@@ -406,17 +406,15 @@ module Make (_ : Store.Cid.RENDERER) : Printer.Ext.T = struct
          (Id.render_name x)
          (fmt_ppr_lf_typ lvl) tA
     | LF.TypDeclOpt x ->
-       fprintf ppf "%s" (Id.render_name x)
+       pp_print_string ppf (Id.render_name x)
 
   and fmt_ppr_lf_dctx lvl ppf =
     function
     | LF.CtxHole -> fprintf ppf "_"
-    | LF.Null ->
-       fprintf ppf ""
+    | LF.Null -> ()
 
     | LF.CtxVar (_, x) ->
-       fprintf ppf "%s"
-         (Id.render_name x)
+       pp_print_string ppf (Id.render_name x)
 
     | LF.DDec (LF.Null, d) ->
        fmt_ppr_lf_typ_decl lvl ppf d
@@ -536,8 +534,7 @@ module Make (_ : Store.Cid.RENDERER) : Printer.Ext.T = struct
 
   let rec fmt_ppr_meta_spine lvl ppf =
     function
-    | Comp.MetaNil ->
-       fprintf ppf ""
+    | Comp.MetaNil -> ()
     | Comp.MetaApp (mO, mS) ->
        fprintf ppf " %a%a"
          (fmt_ppr_cmp_meta_obj (lvl + 1)) mO

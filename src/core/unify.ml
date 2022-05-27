@@ -1248,10 +1248,8 @@ module Make (T : TRAIL) : UNIFY = struct
        begin match bvarSub k ssubst with
        | Undef ->
           let s =
-            let open Format in
-            fprintf str_formatter "[Prune] Bound variable dependency : head = %a"
-              (P.fmt_ppr_lf_head cD0 cPsi' P.l0) head;
-            flush_str_formatter ()
+            Format.asprintf "[Prune] Bound variable dependency : head = %a"
+              (P.fmt_ppr_lf_head cD0 cPsi' P.l0) head
           in
           raise (Failure s)
        | Head (BVar _ as h') -> h'
@@ -2498,12 +2496,10 @@ module Make (T : TRAIL) : UNIFY = struct
 
     | _ ->
        let s =
-         let open Format in
          let f = P.fmt_ppr_lf_sub cD0 cPsi P.l0 in
-         fprintf str_formatter "@[<v>Substitution mismatch:@,%a |- %a =/= %a@]"
+         Format.asprintf "@[<v>Substitution mismatch:@,%a |- %a =/= %a@]"
            (P.fmt_ppr_lf_dctx cD0 P.l0) cPsi
-           f s1 f s2;
-         flush_str_formatter ()
+           f s1 f s2
        in
        raise (Failure s)
 
@@ -2976,11 +2972,9 @@ module Make (T : TRAIL) : UNIFY = struct
          with
          | Failure msg ->
             let cnstr_string =
-              let open Format in
-              fprintf str_formatter "@[<v>@[%a@]@,@[%a@]@]"
+              Format.asprintf "@[<v>@[%a@]@,@[%s@]@]"
                 P.fmt_ppr_lf_constraint c'
-                pp_print_string msg;
-              flush_str_formatter ()
+                msg
             in
             raise (GlobalCnstrFailure (Loc.ghost, cnstr_string))
        end;

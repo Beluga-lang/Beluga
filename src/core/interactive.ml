@@ -269,8 +269,6 @@ let genCGoals cD' (LF.Decl (n, mtyp, dep)) cD_tail =
      |> List.map
           begin fun (cDg', cg, ms) ->
           let Cover.CovGoal (cPsi', tR, sA') = cg in
-          (* let _ = Printf.printf "\n[Generated CovGoal] %s\n %s\n"
-            (P.mctxToString cDg') (Cover.covGoalToString cDg' cg); Format.flush_str_formatter () in  *)
           let ms' = LF.MDot (LF.ClObj (Context.dctxToHat cPsi', LF.MObj tR), ms) in
           let k = List.length cD_tail in
           let (cD'', ms0) = Coverage.addToMCtx cDg' (cD_tail, ms') in
@@ -281,8 +279,6 @@ let genCGoals cD' (LF.Decl (n, mtyp, dep)) cD_tail =
               , (Whnf.cnormTyp (Whnf.normTyp sA', LF.MShift k), S.LF.id)
               )
           in
-          (*        let _ = Printf.printf "\n[Generated CovGoal – shifted] k = %s\n cD'' = %s\n %s\n"
-                   (string_of_int k) (P.mctxToString cD'') (Cover.covGoalToString cD'' cg'); Format.flush_str_formatter () in *)
           (cD'', cg', ms0)
           end
 

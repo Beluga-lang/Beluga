@@ -254,10 +254,8 @@ let rec checkW cD cPsi sM sA =
        (tB, S.LF.dot1 s2);
      Typeinfo.LF.add loc (Typeinfo.LF.mk_entry cD cPsi sA)
        begin
-         let open Format in
-         fprintf str_formatter "Lam %a"
-           (P.fmt_ppr_lf_normal cD cPsi P.l0) (Whnf.norm sM);
-         flush_str_formatter ()
+         Format.asprintf "Lam %a"
+           (P.fmt_ppr_lf_normal cD cPsi P.l0) (Whnf.norm sM)
        end
 
   | ((LFHole (loc, id, name), s), sA) ->
@@ -290,10 +288,8 @@ let rec checkW cD cPsi sM sA =
      checkTuple loc cD cPsi (tuple, s1) (typRec, s2);
      Typeinfo.LF.add loc (Typeinfo.LF.mk_entry cD cPsi sA)
        begin
-         let open Format in
-         fprintf str_formatter "Tuple %a"
-           (P.fmt_ppr_lf_normal cD cPsi P.l0) (Whnf.norm sM);
-         flush_str_formatter ()
+         Format.asprintf "Tuple %a"
+           (P.fmt_ppr_lf_normal cD cPsi P.l0) (Whnf.norm sM)
        end
 
   | ((Tuple (loc, _), _), _) ->
@@ -323,10 +319,8 @@ let rec checkW cD cPsi sM sA =
            end;
          Typeinfo.LF.add loc (Typeinfo.LF.mk_entry cD cPsi sA)
            begin
-             let open Format in
-             fprintf str_formatter "Root %a"
-               (P.fmt_ppr_lf_normal cD cPsi P.l0) (Whnf.norm sM);
-             flush_str_formatter ()
+             Format.asprintf "Root %a"
+               (P.fmt_ppr_lf_normal cD cPsi P.l0) (Whnf.norm sM)
            end;
          let (tP', tQ') = (Whnf.normTyp sP, Whnf.normTyp sA) in
          if not (Whnf.convTyp (tP', S.LF.id) (tQ', S.LF.id))
@@ -1120,12 +1114,10 @@ and checkMSub loc cD ms cD' =
 
   | _ ->
      let s =
-       let open Format in
-       fprintf str_formatter "@[<v 2>Contextual substitution ill-typed@,\
+       Format.asprintf "@[<v 2>Contextual substitution ill-typed@,\
                               %a |- %a <= %a"
          (P.fmt_ppr_lf_mctx P.l0) cD
          (P.fmt_ppr_lf_msub cD P.l0) ms
-         (P.fmt_ppr_lf_mctx P.l0) cD';
-       flush_str_formatter ()
+         (P.fmt_ppr_lf_mctx P.l0) cD'
      in
      raise (Error.Violation s)

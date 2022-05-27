@@ -1624,11 +1624,9 @@ and elTerm' recT cD cPsi r sP =
                match synSchemaElem loc recT cD cPhi (tP, S.LF.id) (h, proj) schema with
                | (None, _) ->
                   let s =
-                    let open Format in
-                    fprintf str_formatter "type sP = %a not in schema %a"
+                    Format.asprintf "type sP = %a not in schema %a"
                       (P.fmt_ppr_lf_typ cD cPhi P.l0) tP
-                      (P.fmt_ppr_lf_schema P.l0) schema;
-                    flush_str_formatter ()
+                      (P.fmt_ppr_lf_schema P.l0) schema
                   in
                   raise (Error.Violation s)
                | (Some (typrec, subst), index) -> (typrec, subst, index)

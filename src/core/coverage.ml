@@ -700,11 +700,9 @@ and pre_match cD cD_p covGoal patt matchCands splitCands =
 
      | No ->
         let s =
-          let open Format in
-          fprintf str_formatter "Head mismatch @[<v>@[%a@]@ =/=@ @[%a@]@]"
+          Format.asprintf "Head mismatch @[<v>@[%a@]@ =/=@ @[%a@]@]"
             (P.fmt_ppr_lf_head cD cPsi P.l0) tH
-            (P.fmt_ppr_lf_head cD_p cPhi P.l0) tH';
-          flush_str_formatter ()
+            (P.fmt_ppr_lf_head cD_p cPhi P.l0) tH'
         in
         raise (Error (loc, MatchError (s)))
 
@@ -975,17 +973,15 @@ let match_metaobj cD cD_p ((loc, mO), mt) ((loc', mO_p), mtp) mC sC =
 
      | _ ->
         let s =
-          let open Format in
           let mobj cD = P.fmt_ppr_cmp_meta_obj cD P.l0 in
           let mtyp cD = P.fmt_ppr_cmp_meta_typ cD in
-          fprintf str_formatter "[coverage] @[<v>[match_metaobj] @,\
+          Format.asprintf "[coverage] @[<v>[match_metaobj] @,\
                                  Found covgoal @[%a@ : %a@]@,
                                  Pattern: @[%a@ : %a@]"
             (mobj cD) (loc, mO)
             (mtyp cD) mt
             (mobj cD_p) (loc', mO_p)
-            (mtyp cD_p) mtp;
-          flush_str_formatter ()
+            (mtyp cD_p) mtp
         in
         Error.violation s
 (*
@@ -3395,10 +3391,8 @@ let check_coverage_success problem =
      else
        begin
          let s =
-           let open Format in
-           fprintf str_formatter "@[<v>CASE(S) NOT COVERED:@,@[%a@]@]"
-             Prettycov.fmt_ppr_open_cov_problems !open_cov_problems;
-           flush_str_formatter ()
+           Format.asprintf "@[<v>CASE(S) NOT COVERED:@,@[%a@]@]"
+             Prettycov.fmt_ppr_open_cov_problems !open_cov_problems
          in
          (* Check if the open coverage goals can be proven to be impossible *)
          Failure s
@@ -3410,10 +3404,8 @@ let check_coverage_success problem =
      then
        begin
          let s =
-           fprintf str_formatter
-             "\n##   Case expression covers : ##\n##   %a\n##\n\n"
-             Loc.print problem.loc;
-           flush_str_formatter ()
+           Format.asprintf "\n##   Case expression covers : ##\n##   %a\n##\n\n"
+             Loc.print problem.loc
          in
          Failure s
        end

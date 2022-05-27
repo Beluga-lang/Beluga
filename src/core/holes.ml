@@ -163,11 +163,7 @@ let check_hole_uniqueness (Exists (_, h) : some_hole) : unit =
 
 let by_id (i : HoleId.t) : lookup_strategy =
   { repr =
-      begin
-        let open Format in
-        fprintf str_formatter "by id '%a'" HoleId.fmt_ppr_id i;
-        flush_str_formatter ()
-      end
+      Format.asprintf "by id '%a'" HoleId.fmt_ppr_id i
   ; action =
       fun () ->
       let open Option in

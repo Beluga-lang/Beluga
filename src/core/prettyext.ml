@@ -43,13 +43,6 @@ module Make (_ : Store.Cid.RENDERER) : Printer.Ext.T = struct
     | LinkOption when Html.idExists s -> "<a href=\"#" ^ s ^ "\">" ^ s ^ "</a>"
     | LinkOption -> s
 
-  let iteri f =
-    let rec iteri' i =
-      function
-      | [] -> ()
-      | x::xs -> (f i x); iteri' (i+1) xs
-    in iteri' 0
-
   type symbol =
     | Turnstile
     | RArr
@@ -193,7 +186,7 @@ module Make (_ : Store.Cid.RENDERER) : Printer.Ext.T = struct
        let length = List.length l in
        fprintf ppf "%s" (l_paren_if (lvl > 0));
        l
-       |> iteri
+       |> List.iteri
             begin fun i x ->
             if i = length - 1
             then fprintf ppf "%a" (fmt_ppr_lf_normal (lvl + 1)) x

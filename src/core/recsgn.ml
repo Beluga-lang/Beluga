@@ -155,13 +155,15 @@ let sgnDeclToHtml =
   function
   | Ext.Sgn.Comment { content; _ } -> Html.appendAsComment content
   | d ->
-    let margin = Format.pp_get_margin Format.str_formatter () in
     Html.printing := true;
-    (* Format.set_margin 150; *)
-    Format.pp_set_margin Format.str_formatter 200;
-    Pretty.Ext.DefaultPrinter.fmt_ppr_sgn_decl Format.str_formatter d;
-    Html.append (Format.flush_str_formatter ());
-    Format.pp_set_margin (Format.str_formatter) margin;
+
+    let html_buffer = Buffer.create 16 in
+    let html_formatter = Format.formatter_of_buffer html_buffer in 
+    Format.pp_set_margin html_formatter 200;
+    Format.fprintf html_formatter "%a" Pretty.Ext.DefaultPrinter.fmt_ppr_sgn_decl d;
+    Format.pp_print_flush html_formatter ();
+    Html.append (Buffer.contents html_buffer);
+
     Html.printing := false
 
 let rec apply_global_pragmas =

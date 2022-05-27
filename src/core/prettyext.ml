@@ -966,7 +966,7 @@ module Make (_ : Store.Cid.RENDERER) : Printer.Ext.T = struct
 
     | Sgn.Pragma { pragma=Sgn.NamePrag (name, s, s_opt); _ } ->
        fprintf ppf "@[<h>%s %s %s %s@]@\n"
-         (to_html "%name" Keyword)
+         (to_html "--name" Keyword)
          (Id.render_name name)
          s
          begin match s_opt with

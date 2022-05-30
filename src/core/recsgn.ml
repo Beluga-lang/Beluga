@@ -1018,7 +1018,7 @@ let recSgnDecls decls =
            try
              Unify.forceGlobalCnstr ()
            with
-           | Unify.GlobalCnstrFailure (loc,cnstr) ->
+           | Unify.GlobalCnstrFailure (loc, cnstr) ->
               raise
                 ( Check.Comp.Error
                     ( loc
@@ -1216,7 +1216,7 @@ let recSgnDecls decls =
         Logic.storeMQuery (tau', i) expected tries depth)   ;
         Int.Sgn.MQuery
         { location=loc
-        ; typ=(tau',i)
+        ; typ=(tau', i)
         ; expected_solutions=expected
         ; search_tries=tries
         ; search_depth=depth

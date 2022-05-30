@@ -601,7 +601,7 @@ module Make (_ : Store.Cid.RENDERER) : Printer.Ext.T = struct
        fprintf ppf "(%a * %a)"
          (fmt_ppr_cmp_typ 0) tau1
          (fmt_ppr_cmp_typ 0) tau2
-    | Comp.TypPiBox (_, LF.Decl (name, (l, LF.CTyp schema), LF.Maybe), tau) ->
+    | Comp.TypPiBox (_, LF.Decl (name, (l, LF.CTyp schema), Plicity.Implicit), tau) ->
        let cond = lvl > 1 in
        fprintf ppf "%s(%s:%s) %a%s"
          (l_paren_if cond)
@@ -623,7 +623,7 @@ module Make (_ : Store.Cid.RENDERER) : Printer.Ext.T = struct
     | Comp.PatNil _ -> fprintf ppf ""
     | Comp.PatApp (_, pat, pat_spine) ->
        fprintf ppf "%a %a"
-         (fmt_ppr_pat_obj (lvl+1)) pat
+         (fmt_ppr_pat_obj (lvl + 1)) pat
          (fmt_ppr_pat_spine lvl) pat_spine
     | Comp.PatObs (_, x, pat_spine) ->
        fprintf ppf "%s %a"

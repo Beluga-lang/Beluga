@@ -43,7 +43,7 @@ let lengthApxMCtx = Context.length
 (* EtaExpansion of approximate terms *)
 let rec shiftApxTerm k =
   function
-  | Apx.LF.Lam (loc, x, m') -> Apx.LF.Lam(loc, x, shiftApxTerm (k+1) m')
+  | Apx.LF.Lam (loc, x, m') -> Apx.LF.Lam(loc, x, shiftApxTerm (k + 1) m')
   | Apx.LF.Root (loc, h , spine) ->
      let h' = shiftApxHead k h in
      let spine' = shiftApxSpine k spine in
@@ -51,7 +51,7 @@ let rec shiftApxTerm k =
 
 and shiftApxHead k =
   function
-  | Apx.LF.BVar x -> Apx.LF.BVar (x+k)
+  | Apx.LF.BVar x -> Apx.LF.BVar (x + k)
   | Apx.LF.FMVar (u, s) ->
      Apx.LF.FMVar (u, Option.(s $> fun s -> shiftApxSub k s))
   | Apx.LF.FPVar (p, s) ->
@@ -230,10 +230,10 @@ let rec cnormApxTyp cD delta a (cD'', t) =
   | Apx.LF.Atom (loc, c, spine) ->
      Apx.LF.Atom (loc, c, cnormApxSpine cD delta spine (cD'', t))
 
-  | Apx.LF.PiTyp ((t_decl, dep), a) ->
+  | Apx.LF.PiTyp ((t_decl, plicity), a) ->
      let t_decl' = cnormApxTypDecl cD delta t_decl (cD'', t) in
      let a' = cnormApxTyp cD delta a (cD'', t) in
-     Apx.LF.PiTyp ((t_decl', dep), a')
+     Apx.LF.PiTyp ((t_decl', plicity), a')
 
   | Apx.LF.Sigma typ_rec ->
      let typ_rec' = cnormApxTypRec cD delta typ_rec (cD'', t) in
@@ -295,7 +295,7 @@ let rec cnormApxExp cD delta e (cD'', t) =
      dprint (fun () -> "cnormApxExp -- MLam (or could be PLam)");
      let e' =
        cnormApxExp cD (Apx.LF.Dec(delta, Apx.LF.DeclOpt u)) e
-         (Int.LF.Dec (cD'', Int.LF.DeclOpt (u, `explicit)), Whnf.mvar_dot1 t)
+         (Int.LF.Dec (cD'', Int.LF.DeclOpt (u, Plicity.explicit)), Whnf.mvar_dot1 t)
      in
      Apx.Comp.MLam (loc, u, e')
 
@@ -304,10 +304,10 @@ let rec cnormApxExp cD delta e (cD'', t) =
      let e2' = cnormApxExp cD delta e2 (cD'', t) in
      Apx.Comp.Pair (loc, e1', e2')
 
-  | Apx.Comp.LetPair (loc, i, (x,y, e)) ->
+  | Apx.Comp.LetPair (loc, i, (x, y, e)) ->
      let i' = cnormApxExp' cD delta i (cD'', t) in
      let e' = cnormApxExp cD delta e (cD'', t) in
-     Apx.Comp.LetPair (loc, i', (x,y, e'))
+     Apx.Comp.LetPair (loc, i', (x, y, e'))
 
   | Apx.Comp.Let (loc, i, (x, e)) ->
      let i' = cnormApxExp' cD delta i (cD'', t) in
@@ -364,7 +364,7 @@ and cnormApxExp' cD delta i cDt =
      let mobj' = cnormApxMetaObj cD delta mobj cDt in
      Apx.Comp.BoxVal (loc, mobj')
 
-and cnormApxMetaObj cD delta (loc,mobj) cDt =
+and cnormApxMetaObj cD delta (loc, mobj) cDt =
   ( loc
   , match mobj with
     | Apx.Comp.ClObj (psi, sigma) ->
@@ -397,9 +397,9 @@ and cnormApxBranch cD delta b (cD'', t) =
   let rec append_mctx cD'' =
     function
     | Apx.LF.Empty -> cD''
-    | Apx.LF.Dec (delta2', Apx.LF.Decl(x, _, dep)) ->
+    | Apx.LF.Dec (delta2', Apx.LF.Decl (x, _, plicity)) ->
        let cD1'' = append_mctx cD'' delta2' in
-       Int.LF.Dec (cD1'', Int.LF.DeclOpt (x, Int.LF.Depend.to_plicity dep))
+       Int.LF.Dec (cD1'', Int.LF.DeclOpt (x, plicity))
   in
 
   match b with
@@ -482,10 +482,10 @@ and collectApxSub fMVs =
   | Apx.LF.Dot (Apx.LF.Obj m, s) ->
      let fMVs' = collectApxTerm fMVs m in
      collectApxSub fMVs' s
-  | Apx.LF.SVar (i,s) ->
+  | Apx.LF.SVar (i, s) ->
      collectApxSubOpt fMVs s
-  | Apx.LF.FSVar (n,s) ->
-     collectApxSubOpt (n::fMVs) s
+  | Apx.LF.FSVar (n, s) ->
+     collectApxSubOpt (n :: fMVs) s
 
 and collectApxSpine fMVs =
   function
@@ -566,7 +566,7 @@ let rec collectApxTyp fMVd =
   function
   | Apx.LF.Atom (loc, c, tS) ->
      collectApxSpine fMVd tS
-  | Apx.LF.PiTyp ((Apx.LF.TypDecl (x, tA),_ ), tB) ->
+  | Apx.LF.PiTyp ((Apx.LF.TypDecl (x, tA), _ ), tB) ->
      let fMVd1 = collectApxTyp fMVd tA in
      collectApxTyp fMVd1 tB
   | Apx.LF.Sigma trec ->
@@ -588,7 +588,7 @@ let collectApxCDecl fMVd =
     | Apx.LF.Decl(_, Apx.LF.ClTyp (Apx.LF.PTyp tA, cPsi), _) ->
      let fMVd1 = collectApxDCtx fMVd cPsi in
      collectApxTyp fMVd1 tA
-  | Apx.LF.Decl (_,Apx.LF.CTyp _,_) -> fMVd
+  | Apx.LF.Decl (_, Apx.LF.CTyp _, _) -> fMVd
 
 let rec collectApxCompTyp fMVd =
   function
@@ -601,11 +601,11 @@ let rec collectApxCompTyp fMVd =
   | Apx.Comp.TypPiBox (_, cdecl, tau) ->
      let fMVd1 = collectApxCDecl fMVd cdecl in
      collectApxCompTyp fMVd1 tau
-  | Apx.Comp.TypBox (loc, (loc',Apx.LF.ClTyp(Apx.LF.MTyp tA, cPsi)))
-    | Apx.Comp.TypBox (loc, (loc',Apx.LF.ClTyp(Apx.LF.PTyp tA, cPsi))) ->
+  | Apx.Comp.TypBox (loc, (loc', Apx.LF.ClTyp(Apx.LF.MTyp tA, cPsi)))
+    | Apx.Comp.TypBox (loc, (loc', Apx.LF.ClTyp(Apx.LF.PTyp tA, cPsi))) ->
      let fMVd1 = collectApxDCtx fMVd cPsi in
      collectApxTyp fMVd1 tA
-  | Apx.Comp.TypBox (loc, (loc',Apx.LF.ClTyp(Apx.LF.STyp (_ , cPhi), cPsi))) ->
+  | Apx.Comp.TypBox (loc, (loc', Apx.LF.ClTyp(Apx.LF.STyp (_ , cPhi), cPsi))) ->
      let fMVd1 = collectApxDCtx fMVd cPsi in
      collectApxDCtx fMVd1 cPhi
   | Apx.Comp.TypBase (_loc, _c, mS) ->
@@ -764,10 +764,10 @@ let rec fmvApxTyp fMVs cD d_param =
   | Apx.LF.Atom (loc, c, spine) ->
      Apx.LF.Atom (loc, c, fmvApxSpine fMVs cD d_param spine)
 
-  | Apx.LF.PiTyp ((t_decl, dep), a) ->
+  | Apx.LF.PiTyp ((t_decl, plicity), a) ->
      let t_decl' = fmvApxTypDecl fMVs cD d_param t_decl in
      let a' = fmvApxTyp fMVs cD d_param a in
-     Apx.LF.PiTyp ((t_decl', dep), a')
+     Apx.LF.PiTyp ((t_decl', plicity), a')
 
   | Apx.LF.Sigma typ_rec ->
      let typ_rec' = fmvApxTypRec fMVs cD d_param typ_rec in
@@ -853,10 +853,10 @@ let rec fmvApxExp fMVs cD ((l_cd1, l_delta, k) as d_param) =
      let e1' = fmvApxExp fMVs cD d_param e1 in
      let e2' = fmvApxExp fMVs cD d_param e2 in
      Apx.Comp.Pair (loc, e1', e2')
-  | Apx.Comp.LetPair (loc, i, (x,y, e)) ->
+  | Apx.Comp.LetPair (loc, i, (x, y, e)) ->
      let i' = fmvApxExp' fMVs cD d_param i in
      let e' = fmvApxExp fMVs cD d_param e in
-     Apx.Comp.LetPair (loc, i', (x,y, e'))
+     Apx.Comp.LetPair (loc, i', (x, y, e'))
   | Apx.Comp.Let (loc, i, (x, e)) ->
      let i' = fmvApxExp' fMVs cD d_param i in
      let e' = fmvApxExp fMVs cD d_param e in

@@ -349,7 +349,7 @@ let rec getNameDCtx cPsi k =
 
 let rec getNameMCtx cD k =
   match (cD, k) with
-  | (Dec (_, Decl (u, _, _)), 1) -> u
+  | (Dec (_, Decl (u, _, _, _)), 1) -> u
   | (Dec (_, DeclOpt (u, _)), 1) -> u
   | (Dec (cD, _), k) ->
      getNameMCtx cD (k - 1)
@@ -402,11 +402,11 @@ let rec lookup' ctx k =
   | (Dec (ctx', _), k) -> lookup' ctx' (k - 1)
   | _ -> None
 
-let lookup_dep (cD : LF.mctx) k =
+let lookup_inductivity (cD : LF.mctx) k =
   let open Option in
   lookup' cD k
   $ function
-    | LF.Decl (_, tau, dep) -> Some (tau, dep)
+    | LF.Decl (_, tau, _, inductivity) -> Some (tau, inductivity)
     | _ -> None
 
 let lookup cG k =
@@ -418,7 +418,7 @@ let lookup cG k =
 
 let rec lookupSchema cD psi_offset =
   match (cD, psi_offset) with
-  | (Dec (_, Decl (_, CTyp (Some cid_schema), _)), 1) -> cid_schema
+  | (Dec (_, Decl (_, CTyp (Some cid_schema), _, _)), 1) -> cid_schema
   | (Dec (cD, _) , i) ->
      lookupSchema cD (i - 1)
 
@@ -426,7 +426,7 @@ and lookupCtxVar cD cvar =
   let rec lookup cD offset =
     match cD with
     | Empty -> raise (Error.Violation "Context variable not found")
-    | Dec (cD, Decl (psi, CTyp (Some schemaName), _)) ->
+    | Dec (cD, Decl (psi, CTyp (Some schemaName), _, _)) ->
        begin match cvar with
        | CtxName phi when Id.equals psi phi -> (psi, schemaName)
        | CtxName _ -> lookup cD (offset + 1)
@@ -435,7 +435,7 @@ and lookupCtxVar cD cvar =
           then (psi, schemaName)
           else lookup cD (offset + 1)
        end
-    | Dec (cD, _) -> lookup cD (offset+1)
+    | Dec (cD, _) -> lookup cD (offset + 1)
   in
   lookup cD 0
 
@@ -485,8 +485,8 @@ let names_of_proof_state g =
 
 let rec steal_mctx_names cD cD' =
   match (cD, cD') with
-  | (Dec (cD, Decl (_, cU, dep)), Dec (cD', Decl (u', _, _))) ->
-     Dec (steal_mctx_names cD cD', Decl (u', cU, dep))
+  | (Dec (cD, Decl (_, cU, plicity, inductivity)), Dec (cD', Decl (u', _, _, _))) ->
+     Dec (steal_mctx_names cD cD', Decl (u', cU, plicity, inductivity))
   | (Empty, Empty) -> Empty
   | _ -> Error.violation "[steal_mctx_names] inputs weren't convertible"
 

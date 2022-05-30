@@ -84,7 +84,7 @@ module Elab = struct
     let p (d, _) = Id.equals name (LF.name_of_ctyp_decl d) in
     match Context.find_with_index_rev' cD p with
     | None -> Lfrecon.(throw loc (UnboundName name))
-    | Some LF.(Decl (_, cT, dep), k) ->
+    | Some LF.(Decl (_, cT, _, _), k) ->
        let cT = Whnf.cnormMTyp (cT, LF.MShift k) in
        dprintf
          begin fun p ->
@@ -186,8 +186,8 @@ let process_command
           end;
         Logic.prepare ();
         let (mquery, skinnyCTyp, mquerySub, instMMVars) =
-          let (typ',k) = Abstract.comptyp typ in
-          Logic.Convert.comptypToMQuery (typ',k)
+          let (typ', k) = Abstract.comptyp typ in
+          Logic.Convert.comptypToMQuery (typ', k)
         in
            try
           Logic.CSolver.cgSolve cDh cGh mquery

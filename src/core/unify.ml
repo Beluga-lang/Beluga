@@ -189,12 +189,12 @@ module Make (T : TRAIL) : UNIFY = struct
     let ssi' = Substitution.LF.invert ss' in
     (* cPhi' |- ssi : cPhi *)
     (* cPhi' |- [ssi]tQ    *)
-    let u = Whnf.newMMVar None (cD, cPhi', TClo (tQ, ssi')) Maybe in
+    let u = Whnf.newMMVar None (cD, cPhi', TClo (tQ, ssi')) Plicity.implicit Inductivity.not_inductive in
     (* cPhi |- ss'    : cPhi'
          cPsi |- s_proj : cPhi
          cPsi |- comp  ss' s_proj   : cPhi' *)
     let ss_proj = Substitution.LF.comp ss' s_proj in
-    Root (loc, MMVar ((u, Whnf.m_id), ss_proj), Nil, `explicit)
+    Root (loc, MMVar ((u, Whnf.m_id), ss_proj), Nil, Plicity.explicit)
 
   (* isPatSub s = B
 
@@ -490,7 +490,7 @@ module Make (T : TRAIL) : UNIFY = struct
 
   let expandMVarAtType loc (v, (mt, s)) =
     function
-    | MTyp _ -> INorm (Root (loc, MMVar ((v, mt), s), Nil, `explicit))
+    | MTyp _ -> INorm (Root (loc, MMVar ((v, mt), s), Nil, Plicity.explicit))
     | PTyp _ -> IHead (MPVar ((v, mt), s))
     | STyp _ -> ISub (MSVar (0, ((v, mt), s)))
 
@@ -571,7 +571,7 @@ module Make (T : TRAIL) : UNIFY = struct
    | (MShift k, Dec _) ->
        pruneMCtx' cD (MDot (MV (k + 1), MShift (k + 1)), cD1) ms
 
-   | (MDot (MV k, mt), Dec (cD1, Decl (n, ctyp, dep))) ->
+   | (MDot (MV k, mt), Dec (cD1, Decl (n, ctyp, plicity, inductivity))) ->
       let (mt', cD2) = pruneMCtx' cD (mt, cD1) ms in
       (* cD1 |- mt' <= cD2 *)
       begin match applyMSub k ms with
@@ -583,7 +583,7 @@ module Make (T : TRAIL) : UNIFY = struct
          (* cD1, u:A[Psi] |- mt' <= cD2, u:([mt']^-1 (A[cPsi])) since
                   A = [mt']([mt']^-1 A)  and cPsi = [mt']([mt']^-1 cPsi *)
          let mtt' = Whnf.m_invert (Whnf.cnormMSub mt') in
-         (Whnf.mvar_dot1 mt', Dec (cD2, (Decl (n, Whnf.cnormMTyp (ctyp, mtt'), dep))))
+         (Whnf.mvar_dot1 mt', Dec (cD2, (Decl (n, Whnf.cnormMTyp (ctyp, mtt'), plicity, inductivity))))
       end
 
    | (MDot (MUndef, mt), Dec (cD1, _)) ->
@@ -689,7 +689,7 @@ module Make (T : TRAIL) : UNIFY = struct
   *)
   let rec m_intersection subst1 subst2 cD' =
     match (subst1, subst2, cD') with
-    | (MDot (MV k1, mt1), MDot (MV k2, mt2), Dec (cD', Decl (x, ctyp, dep))) ->
+    | (MDot (MV k1, mt1), MDot (MV k2, mt2), Dec (cD', Decl (x, ctyp, plicity, inductivity))) ->
        let (mt', cD'') = m_intersection mt1 mt2 cD' in
        (* cD' |- mt' : cD'' where cD'' =< cD' *)
        if k1 = k2
@@ -698,7 +698,7 @@ module Make (T : TRAIL) : UNIFY = struct
            let mtt' = Whnf.m_invert (Whnf.cnormMSub mt') in
            (* cD'' |- mtt' <= cD' *)
            (* NOTE: Can't create m-closures CtxMClo (cPsi, mtt') and TMClo (tA'', mtt') *)
-           (Whnf.mvar_dot1 mt', Dec (cD'', Decl (x, Whnf.cnormMTyp (ctyp, mtt'), dep)))
+           (Whnf.mvar_dot1 mt', Dec (cD'', Decl (x, Whnf.cnormMTyp (ctyp, mtt'), plicity, inductivity)))
          end
        else
          (Whnf.mcomp mt' (MShift 1), cD'')
@@ -821,7 +821,7 @@ module Make (T : TRAIL) : UNIFY = struct
        end
 
     | (Root (loc, FMVar (u, t), _ (* Nil *), plicity), s (* id *)) ->
-       let (cD_d, Decl (_, ClTyp (_, cPsi1), _)) = Store.FCVar.get u in
+       let (cD_d, Decl (_, ClTyp (_, cPsi1), _, _)) = Store.FCVar.get u in
        let d = Context.length cD0 - Context.length cD_d in
        let cPsi1 =
          if d = 0
@@ -832,7 +832,7 @@ module Make (T : TRAIL) : UNIFY = struct
        Root (loc, FMVar (u, s'), Nil, plicity)
 
     | (Root (loc, FPVar (p, t), _ (* Nil *), plicity), s (* id *)) ->
-       let (cD_d, Decl (_, ClTyp (_, cPsi1), _)) = Store.FCVar.get p in
+       let (cD_d, Decl (_, ClTyp (_, cPsi1), _, _)) = Store.FCVar.get p in
        let d = Context.length cD0 - Context.length cD_d in
        let cPsi1 =
          if d = 0
@@ -1032,7 +1032,7 @@ module Make (T : TRAIL) : UNIFY = struct
        end
     | (FSVar (n, (s_name, t)), cPsi1) ->
        dprint (fun () -> "invSub FSVar");
-       let (_, Decl (_, ClTyp (STyp (LF.Subst, _), cPsi'), _)) = Store.FCVar.get s_name in
+       let (_, Decl (_, ClTyp (STyp (LF.Subst, _), cPsi'), _, _)) = Store.FCVar.get s_name in
        FSVar (n, (s_name, invSub cD0 phat (t, cPsi') ss rOccur))
        (* if ssubst = id
         * then s
@@ -1064,7 +1064,7 @@ module Make (T : TRAIL) : UNIFY = struct
   and invMSub cD0 (mt, cD1) ms rOccur =
     match (mt, cD1) with
     | (MShift n, _) -> checkDefined (Whnf.mcomp (MShift n) ms)
-    | (MDot (ClObj (phat, SObj sigma), mt'), Dec (cD', Decl (_, ClTyp (STyp (_, cPhi), _), _))) ->
+    | (MDot (ClObj (phat, SObj sigma), mt'), Dec (cD', Decl (_, ClTyp (STyp (_, cPhi), _), _, _))) ->
        let sigma' = invSub cD0 phat (sigma, cPhi) (ms, id) rOccur in
        MDot (ClObj (phat, SObj sigma'), invMSub cD0 (mt', cD') ms rOccur)
     | (MDot (mobj, mt'), Dec (cD', _)) ->
@@ -1179,7 +1179,7 @@ module Make (T : TRAIL) : UNIFY = struct
       begin
         let (id2, (cD2, cPsi2')) = pruneBoth cD0 cPsi' (mtt, (mmvar.cD, cPsi1)) ss rOccur in
         let tP' = normClTyp2 (tp, invert2 id2) in
-        let v = Whnf.newMMVar' (Some mmvar.name) (cD2, ClTyp (tP', cPsi2')) mmvar.depend in
+        let v = Whnf.newMMVar' (Some mmvar.name) (cD2, ClTyp (tP', cPsi2')) mmvar.plicity mmvar.inductivity in
         instantiateMMVarWithMMVar mmvar.instantiation loc (v, id2) tP' mmvar.constraints.contents;
         let (mr, r) = comp2 (comp2 id2 mtt) ss in
         ((v, mr), r)
@@ -1192,16 +1192,16 @@ module Make (T : TRAIL) : UNIFY = struct
     else
       let (idsub, cPsi2) = pruneSub cD0 cPsi' (Context.dctxToHat cPsi') (t, cPsi1) ss rOccur in
       let tP' = Whnf.normTyp (tP, invert idsub) in
-      let v = Whnf.newMVar (Some mmvar.name) (cPsi2, tP') mmvar.depend in
+      let v = Whnf.newMVar (Some mmvar.name) (cPsi2, tP') mmvar.plicity mmvar.inductivity in
       instantiateMVar
         ( mmvar.instantiation
-        , Root (loc, MVar (v, idsub), Nil, `explicit)
+        , Root (loc, MVar (v, idsub), Nil, Plicity.explicit)
         , mmvar.constraints.contents
         );
       (v, comp (comp idsub t) ssubst)
 
   and pruneFVar cD0 cPsi (u, t) ss rOccur =
-   let (cD_d, Decl (_, ClTyp (_, cPsi1), _)) = Store.FCVar.get u in
+   let (cD_d, Decl (_, ClTyp (_, cPsi1), _, _)) = Store.FCVar.get u in
    let d = Context.length cD0 - Context.length cD_d in
    let cPsi1 =
      if d = 0
@@ -1397,7 +1397,7 @@ module Make (T : TRAIL) : UNIFY = struct
               D ; Psi'' |- ss <= Psi
               [ss] ([s[sigma] ] id) exists
         *)
-       let (_, Decl (_, ClTyp (STyp _, cPsi'), _)) = Store.FCVar.get s in
+       let (_, Decl (_, ClTyp (STyp _, cPsi'), _, _)) = Store.FCVar.get s in
        ignore (invSub cD0 phat (sigma, cPsi') ss rOccur);
        (id, cPsi1)
 
@@ -1475,14 +1475,14 @@ module Make (T : TRAIL) : UNIFY = struct
   and pruneTypW cD0 cPsi phat sA (mss, ss) rOccur =
     match sA with
     | (Atom (loc, a, tS), s) -> Atom (loc, a, pruneSpine cD0 cPsi phat (tS, s) (mss, ss) rOccur)
-    | (PiTyp ((TypDecl (x, tA), dep), tB), s) ->
+    | (PiTyp ((TypDecl (x, tA), plicity), tB), s) ->
        let tA' = pruneTyp cD0 cPsi phat (tA, s) (mss, ss) rOccur in
        let tB' = pruneTyp cD0 cPsi phat (tB, dot1 s) (mss, dot1 ss) rOccur in
-       PiTyp ((TypDecl (x, tA'), dep), tB')
+       PiTyp ((TypDecl (x, tA'), plicity), tB')
 
-    | (PiTyp ((TypDeclOpt x, dep), tB), s) ->
+    | (PiTyp ((TypDeclOpt x, plicity), tB), s) ->
        let tB' = pruneTyp cD0 cPsi phat (tB, dot1 s) (mss, dot1 ss) rOccur in
-       PiTyp ((TypDeclOpt x, dep), tB')
+       PiTyp ((TypDeclOpt x, plicity), tB')
 
     | (Sigma typ_rec, s) ->
        let typ_rec' = pruneTypRec cD0 cPsi phat (typ_rec, s) (mss, ss) rOccur in
@@ -1700,7 +1700,7 @@ module Make (T : TRAIL) : UNIFY = struct
                cPsi  |- tN <= [s]tA
                cPsi |- tN . s <= cPsi', x:A
              *)
-            let tN = Whnf.etaExpandMV cPsi1 (tA, s) n id LF.Maybe in
+            let tN = Whnf.etaExpandMV cPsi1 (tA, s) n id Plicity.implicit Inductivity.not_inductive in
             let tS = genSpine cD1 cPsi1 (tB, LF.Dot (LF.Obj tN, s)) in
             LF.App (tN, tS)
 
@@ -1723,7 +1723,7 @@ module Make (T : TRAIL) : UNIFY = struct
             cPsi |- tN . s <= cPsi', x:A
           *)
          let tN =
-           ConvSigma.etaExpandMMVstr Loc.ghost cD1 cPsi1 (tA, s) Maybe (Some n)
+           ConvSigma.etaExpandMMVstr Loc.ghost cD1 cPsi1 (tA, s) Plicity.implicit (Some n)
              Context.(names_of_dctx cPsi @ names_of_mctx cD0)
          in
          let tS = genSpine cD1 cPsi1 (tB, LF.Dot (LF.Obj tN, s)) in
@@ -1748,7 +1748,7 @@ module Make (T : TRAIL) : UNIFY = struct
 
     | Root (loc, MPVar _, _, plicity) ->
        dprnt "[craftMMVTerm] MPVar ...";
-       let p = Whnf.newMPVar None (mmvar.cD, cPsi1, tB) Maybe in
+       let p = Whnf.newMPVar None (mmvar.cD, cPsi1, tB) Plicity.implicit Inductivity.not_inductive in
        let tM1 =
          Root
            ( loc
@@ -1886,8 +1886,9 @@ module Make (T : TRAIL) : UNIFY = struct
     let cPsi_n = Whnf.cnormDCtx (cPsi', mtt') in
     let tp1' = normClTyp2 (tp1, (mtt', ss')) in
 
-    let dep = Depend.max mmvar1.depend mmvar2.depend in
-    let w = Whnf.newMMVar' (Some mmvar1.name) (cD', ClTyp (tp1', cPsi_n)) dep in
+    let plicity = Plicity.max mmvar1.plicity mmvar2.plicity in
+    let inductivity = Inductivity.max mmvar1.inductivity mmvar2.inductivity in
+    let w = Whnf.newMMVar' (Some mmvar1.name) (cD', ClTyp (tp1', cPsi_n)) plicity inductivity in
     (* w :: [s'^-1](tP1)[cPsi'] in cD'            *)
     (* cD' ; cPsi1 |- w[s'] <= [s']([s'^-1] tP1)
        [|w[s']/u|](u[t1]) = [t1](w[s'])
@@ -1933,7 +1934,7 @@ module Make (T : TRAIL) : UNIFY = struct
            in
            (* cD ; cPsi' |- [s']^-1(tP1) <= type *)
 
-           let w = Whnf.newMVar None (cPsi', TClo (tP1, ss')) mmvar1.depend in
+           let w = Whnf.newMVar None (cPsi', TClo (tP1, ss')) mmvar1.plicity mmvar1.inductivity in
            (* w::[s'^-1](tP1)[cPsi'] in cD'            *)
            (* cD' ; cPsi1 |- w[s'] <= [s']([s'^-1] tP1)
              [|w[s']/u|](u[t1]) = [t1](w[s'])
@@ -1941,7 +1942,7 @@ module Make (T : TRAIL) : UNIFY = struct
             *)
            instantiateMVar
              ( mmvar1.instantiation
-             , Root (Syntax.Loc.ghost, MVar (w, s'), Nil, `explicit)
+             , Root (Syntax.Loc.ghost, MVar (w, s'), Nil, Plicity.explicit)
              , mmvar1.constraints.contents
              )
          end
@@ -2042,7 +2043,7 @@ module Make (T : TRAIL) : UNIFY = struct
              end;
            instantiateMMVar
              ( mmvar2.instantiation
-             , Root (loc', MMVar (mv, id), tS', `explicit)
+             , Root (loc', MMVar (mv, id), tS', Plicity.explicit)
              , mmvar2.constraints.contents
              );
            dprintf
@@ -2109,7 +2110,7 @@ module Make (T : TRAIL) : UNIFY = struct
        begin
          try
            unifySub mflag cD0 cPsi s1 EmptySub;
-           instantiateMMVar (instantiation, Root (loc', MVar (Offset u, id), tS', `explicit), !constraints)
+           instantiateMMVar (instantiation, Root (loc', MVar (Offset u, id), tS', Plicity.explicit), !constraints)
          with _ ->
            let id = next_constraint_id () in
            addConstraint (constraints, ref (Eqn (id, cD0, cPsi, INorm sM1, INorm sM2)))
@@ -2142,7 +2143,7 @@ module Make (T : TRAIL) : UNIFY = struct
          try
            unifyDCtx1 mflag cD0 cPsi1 cPsi;unifyTyp mflag cD0 cPsi (tP, id) (tQ, id);
            unifySub mflag cD0 cPsi s1 s2;
-           instantiateMMVar (instantiation, Root (loc', MVar (Offset u, id), tS', `explicit), !constraints)
+           instantiateMMVar (instantiation, Root (loc', MVar (Offset u, id), tS', Plicity.explicit), !constraints)
          with _ ->
            let id = next_constraint_id () in
            addConstraint (constraints, ref (Eqn (id, cD0, cPsi, INorm sM1, INorm sM2)))
@@ -2198,7 +2199,7 @@ module Make (T : TRAIL) : UNIFY = struct
              unifyTyp mflag cD0 cPsi0 (tP0, Substitution.LF.id) (tP1', Substitution.LF.id);
              instantiateMMVar
                ( instantiation
-               , Root (loc, MVar (Offset (u - k), Substitution.LF.id), tS, `explicit)
+               , Root (loc, MVar (Offset (u - k), Substitution.LF.id), tS, Plicity.explicit)
                , !constraints
                );
              unifySub mflag cD0 cPsi0 s s'
@@ -2216,7 +2217,7 @@ module Make (T : TRAIL) : UNIFY = struct
                unifyTyp mflag cD0 cPsi0 (tP0, Substitution.LF.id) (tP1', Substitution.LF.id);
                instantiateMMVar
                  ( instantiation
-                 , Root (loc, MVar (Offset (u - k), Substitution.LF.id), tS, `explicit)
+                 , Root (loc, MVar (Offset (u - k), Substitution.LF.id), tS, Plicity.explicit)
                  , !constraints
                  )
              else
@@ -2556,7 +2557,7 @@ module Make (T : TRAIL) : UNIFY = struct
          mflag
          cD0
          cPsi
-         (Root (Syntax.Loc.ghost, head, Nil, `explicit), id)
+         (Root (Syntax.Loc.ghost, head, Nil, Plicity.explicit), id)
          (tN, id)
 
     | (Undef, Undef) -> ()
@@ -2586,7 +2587,7 @@ module Make (T : TRAIL) : UNIFY = struct
          end;
        raise (Failure "Type constant clash")
 
-    | ((PiTyp ((TypDecl (x, tA1), dep), tA2), s1), (PiTyp ((TypDecl (_, tB1), _), tB2), s2)) ->
+    | ((PiTyp ((TypDecl (x, tA1), _), tA2), s1), (PiTyp ((TypDecl (_, tB1), _), tB2), s2)) ->
        unifyTyp mflag cD0 cPsi (tA1, s1) (tB1, s2);
        unifyTyp mflag cD0 (DDec (cPsi, TypDecl (x, tA1))) (tA2, dot1 s1) (tB2, dot1 s2)
 
@@ -2656,7 +2657,8 @@ module Make (T : TRAIL) : UNIFY = struct
                        instantiation = ref None;
                        cD = cD';
                        constraints = ref [];
-                       depend = Maybe
+                       plicity = Plicity.implicit;
+                       inductivity = Inductivity.not_inductive;
                      }
                    in
                    let cPsi = CtxVar (CInst (mmvar, mt')) in
@@ -2704,7 +2706,7 @@ module Make (T : TRAIL) : UNIFY = struct
                   ignore (FCVar.get psi)
                 with
                 | Not_found ->
-                   FCVar.add psi (cD0, Decl (psi, CTyp s_cid, Maybe))
+                   FCVar.add psi (cD0, Decl (psi, CTyp s_cid, Plicity.implicit, Inductivity.not_inductive))
               end
            | _ -> ()
          end
@@ -2750,7 +2752,7 @@ module Make (T : TRAIL) : UNIFY = struct
 
   (* **************************************************************** *)
   let rec unifyMetaObj cD (mO, t) (mO', t') (cdecl, mt) =
-    let Decl (_, cT, _) = cdecl in
+    let Decl (_, cT, _, _) = cdecl in
     unifyMObj cD (mO, t) (mO', t') (cT, mt)
 
   and unifyClObj' cD mO mO' mT =
@@ -2887,14 +2889,14 @@ module Make (T : TRAIL) : UNIFY = struct
           else
             raise (Failure "CtxPi schema clash")
      *)
-    | ( (Comp.TypPiBox (_, (Decl (u, ctyp1, dep)), tau), t)
-      , (Comp.TypPiBox (_, (Decl (_, ctyp2, _)), tau'), t')
+    | ( (Comp.TypPiBox (_, (Decl (u, ctyp1, plicity, inductivity)), tau), t)
+      , (Comp.TypPiBox (_, (Decl (_, ctyp2, _, _)), tau'), t')
       ) ->
        let ctyp1n = Whnf.cnormMTyp (ctyp1, t) in
        let ctyp2n = Whnf.cnormMTyp (ctyp2, t') in
        unifyCLFTyp Unification cD ctyp1n ctyp2n;
        unifyCompTyp
-         (Dec (cD, Decl (u, ctyp1n, dep)))
+         (Dec (cD, Decl (u, ctyp1n, plicity, inductivity)))
          (tau, Whnf.mvar_dot1 t)
          (tau', Whnf.mvar_dot1 t')
 
@@ -3082,7 +3084,8 @@ module Make (T : TRAIL) : UNIFY = struct
                   { mmvar1 with
                     instantiation = ref None;
                     cD = cD';
-                    depend = Maybe;
+                    plicity = Plicity.implicit;
+                    inductivity = Inductivity.not_inductive;
                     constraints = ref []
                   }
                 in
@@ -3099,7 +3102,13 @@ module Make (T : TRAIL) : UNIFY = struct
           then
             begin
               let mtt1 = Whnf.m_invert (Whnf.cnormMSub theta1) in
-              let mmvar2' = { mmvar2 with depend = Maybe; constraints = ref [] } in
+              let mmvar2' =
+                { mmvar2 with
+                  plicity = Plicity.implicit;
+                  inductivity = Inductivity.not_inductive;
+                  constraints = ref []
+                }
+              in
               (* why do we drop the constraints here ? -je *)
               let i = CInst (mmvar2', Whnf.mcomp theta2 mtt1) in
               mmvar1.instantiation := Some (ICtx (CtxVar i))
@@ -3126,7 +3135,7 @@ module Make (T : TRAIL) : UNIFY = struct
           then mmvar1.instantiation := Some (ICtx Null)
           else if d' < d
           then
-            (* (Some (cref), d) == (None, d') d' = d0+d *)
+            (* (Some (cref), d) == (None, d') d' = d0 + d *)
             fail "Hat Context's do not unify"
           else
             begin

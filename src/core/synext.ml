@@ -28,7 +28,7 @@ module LF = struct
   and loc_ctyp = Location.t * ctyp
 
   and ctyp_decl =
-    | Decl of name * loc_ctyp * depend
+    | Decl of name * loc_ctyp * Plicity.t
     | DeclOpt of name
 
   and typ =
@@ -140,7 +140,7 @@ module Comp = struct
 
   type kind =
     | Ctype of Location.t
-    | ArrKind of Location.t * (Location.t * LF.ctyp * LF.depend) * kind
+    | ArrKind of Location.t * (Location.t * LF.ctyp * Plicity.t) * kind
     | PiKind of Location.t * LF.ctyp_decl * kind
 
   type meta_obj = Location.t * LF.mfront

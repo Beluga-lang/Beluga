@@ -3,79 +3,16 @@
  *)
 open Support
 
-module Common = struct
-  type plicity =
-    [ `implicit
-    | `explicit
-    ]
-
-  let is_explicit : plicity -> bool =
-    function
-    | `explicit -> true
-    | _ -> false
-
-  let is_implicit : plicity -> bool =
-    function
-    | `implicit -> true
-    | _ -> false
-end
-
 (** General snoc-lists. *)
 module LF = struct
-  include Common
-
   type 'a ctx =                          (* Generic context declaration    *)
     | Empty                              (* C ::= Empty                    *)
     | Dec of 'a ctx * 'a                 (* | C, x:'a                      *)
 
   type svar_class = Ren | Subst
-
-  type depend =
-    | Maybe     (* implicit *)
-    | No        (* explicit *)
-    | Inductive (* used for induction *)
-
-  module Depend = struct
-    type t = depend
-
-    let equals d1 d2 =
-      match d1, d2 with
-      | Maybe, Maybe -> true
-      | No, No -> true
-      | Inductive, Inductive -> true
-      | _ -> false
-
-    let of_plicity : plicity -> t =
-      function
-      | `implicit -> Maybe
-      | `explicit -> No
-
-    let to_plicity : t -> plicity =
-      function
-      | Maybe -> `implicit
-      | No -> `explicit
-      | Inductive ->
-         Error.violation
-           "[Depend] [to_plicity] Inductive is impossible"
-
-    (** Variant of to_plicity that does not fail on Inductive, instead
-        sending it to `explicit.
-     *)
-    let to_plicity' : t -> plicity =
-      function
-      | Inductive -> `explicit
-      | d -> to_plicity d
-
-    let max d1 d2 =
-      match d1, d2 with
-      | No, No -> No
-      | _ -> Maybe
-  end
 end
 
 module Comp = struct
-  include Common
-
   type unbox_modifier =
     [ `strengthened
     ]

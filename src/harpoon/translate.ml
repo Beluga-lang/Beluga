@@ -28,11 +28,10 @@ let rec unroll cD cG = function
      (cD', cG', fun e -> Comp.Fn (Loc.ghost, x, f e))
   | Comp.TypPiBox (_, _, tau2) ->
      let (cD', cG', f) = unroll cD cG tau2 in
-     let LF.Dec (cD', LF.Decl (x, _, dep)) = cD' in
+     let LF.Dec (cD', LF.Decl (x, _, plicity, _)) = cD' in
      ( cD'
      , cG'
-     , let plicity = LF.Depend.to_plicity dep in
-       fun e -> Comp.MLam (Loc.ghost, x, f e, plicity)
+     , fun e -> Comp.MLam (Loc.ghost, x, f e, plicity)
      )
   | _ -> (cD, cG, fun e -> e)
 
@@ -49,7 +48,7 @@ let unbox cD cG i x cU modifier =
     p.fmt "[unbox] cU = @[%a@]"
       P.(fmt_ppr_cmp_meta_typ cD) cU
     end;
-  let cD' = LF.(Dec (cD, Decl (x, cU', No))) in
+  let cD' = LF.(Dec (cD, Decl (x, cU', Plicity.explicit, Inductivity.not_inductive))) in
   let t = LF.MShift 1 in
   let pat =
     Comp.PatMetaObj
@@ -63,7 +62,7 @@ let unbox cD cG i x cU modifier =
                  ( Loc.ghost
                  , MVar (Offset 1, s)
                  , Nil
-                 , `explicit
+                 , Plicity.explicit
                  )
              in
              ClObj (Context.dctxToHat (Whnf.cnormDCtx (cPsi, t)), MObj tM)

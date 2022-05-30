@@ -53,8 +53,8 @@ let _ =
 (* ************************************************************************ *)
 let rec map conv_list k =
   match (conv_list, k) with
-  | (d::conv_list', 1) -> d
-  | (d::conv_list', _) -> d + map conv_list' (k-1)
+  | (d :: conv_list', 1) -> d
+  | (d :: conv_list', _) -> d + map conv_list' (k - 1)
 
 let rec strans_norm cD cPsi sM conv_list =
   strans_normW cD cPsi (Whnf.whnf sM) conv_list
@@ -182,10 +182,10 @@ and strans_typW cD cPsi (tA, s) conv_list =
   | LF.Atom (loc, a, tS ) ->
      LF.Atom (loc, a, strans_spine cD cPsi (tS, s) conv_list )
 
-  | LF.PiTyp ((LF.TypDecl (x, tA), dep), tB) ->
+  | LF.PiTyp ((LF.TypDecl (x, tA), plicity), tB) ->
      let tA' = strans_typ cD cPsi (tA, s) conv_list in
-     let tB' = strans_typ cD cPsi (tB, S.LF.dot1 s) (1::conv_list) in
-     LF.PiTyp ((LF.TypDecl (x, tA'), dep), tB')
+     let tB' = strans_typ cD cPsi (tB, S.LF.dot1 s) (1 :: conv_list) in
+     LF.PiTyp ((LF.TypDecl (x, tA'), plicity), tB')
 
   (* no sigma types allowed *)
 
@@ -283,7 +283,7 @@ let gen_proj_sub conv_list =
       gen_projs
         (LF.Dot (LF.Head (LF.Proj (LF.BVar pos, index)), s))
         pos
-        (k, index+1)
+        (k, index + 1)
   in
   let rec gen_sub conv_list pos =
     match conv_list with
@@ -303,11 +303,11 @@ let gen_tup_sub conv_list =
     if k = index
     then
       (* only correct if pos stands for a variable of atomic type *)
-      LF.Last (LF.Root (Syntax.Loc.ghost, LF.BVar pos, LF.Nil, `explicit))
+      LF.Last (LF.Root (Syntax.Loc.ghost, LF.BVar pos, LF.Nil, Plicity.explicit))
     else
       begin
-        let tM = LF.Root (Syntax.Loc.ghost, LF.BVar pos, LF.Nil, `explicit) in
-        let tTup = gen_tup (pos - 1) (k, index+1) in
+        let tM = LF.Root (Syntax.Loc.ghost, LF.BVar pos, LF.Nil, Plicity.explicit) in
+        let tTup = gen_tup (pos - 1) (k, index + 1) in
         LF.Cons (tM, tTup)
       end
   in
@@ -332,19 +332,19 @@ let gen_tup_sub conv_list =
     head. *)
 let rec etaExpandTuple tRec h k =
   let open LF in
-  let tM = Root (Loc.ghost, Proj (h, k), Nil, `explicit) in
+  let tM = Root (Loc.ghost, Proj (h, k), Nil, Plicity.explicit) in
   match tRec with
   | SigmaLast (_, _) -> Last tM
   | LF.SigmaElem (_, _, tRec) ->
-     LF.Cons (tM, etaExpandTuple tRec h (k+1))
+     LF.Cons (tM, etaExpandTuple tRec h (k + 1))
    *)
 
-let rec etaExpandStrGeneric new_mxvar mk_head loc cD cPsi sA dep n names =
+let rec etaExpandStrGeneric new_mxvar mk_head loc cD cPsi sA plicity n names =
   match Whnf.whnfTyp sA with
   | LF.Sigma tRec as tA, s ->
      (* XXX this doesn't do any strengthening !! -je *)
      let tH =
-       mk_head ((new_mxvar n (cD, cPsi, LF.tclo tA s) dep, Whnf.m_id), s)
+       mk_head ((new_mxvar n (cD, cPsi, LF.tclo tA s) plicity Inductivity.not_inductive, Whnf.m_id), s)
      in
      (*
      let tTup =
@@ -352,7 +352,7 @@ let rec etaExpandStrGeneric new_mxvar mk_head loc cD cPsi sA dep n names =
      in
      LF.Tuple (Loc.ghost, tTup)
       *)
-     LF.Root (Loc.ghost, tH, LF.Nil, `explicit)
+     LF.Root (Loc.ghost, tH, LF.Nil, Plicity.explicit)
 
   | (LF.Atom (_, a, _tS) as tP, s) ->
       let (cPhi, conv_list) = flattenDCtx cD cPsi in
@@ -369,7 +369,7 @@ let rec etaExpandStrGeneric new_mxvar mk_head loc cD cPsi sA dep n names =
       let ssi' = S.LF.invert ss' in
       (* cPhi' |- ssi : cPhi *)
       (* cPhi' |- [ssi]tQ    *)
-      let u = new_mxvar n (cD, cPhi', LF.TClo (tQ, ssi')) dep in
+      let u = new_mxvar n (cD, cPhi', LF.TClo (tQ, ssi')) plicity Inductivity.not_inductive in
       (* cPhi |- ss'    : cPhi'
          cPsi |- s_proj : cPhi
          cPsi |- comp  ss' s_proj   : cPhi' *)
@@ -378,7 +378,7 @@ let rec etaExpandStrGeneric new_mxvar mk_head loc cD cPsi sA dep n names =
         ( loc
         , mk_head ((u, Whnf.m_id), ss_proj)
         , LF.Nil
-        , `explicit
+        , Plicity.explicit
         )
 
   | (LF.PiTyp ((LF.TypDecl (x, tA), _), tB), s) ->
@@ -386,7 +386,7 @@ let rec etaExpandStrGeneric new_mxvar mk_head loc cD cPsi sA dep n names =
      let decl = LF.TypDecl (x, tA) in
      let cPsi' = LF.DDec (cPsi, S.LF.decSub decl s) in
      let tN =
-       etaExpandStrGeneric new_mxvar mk_head loc cD cPsi' (tB, S.LF.dot1 s) dep n (x :: names)
+       etaExpandStrGeneric new_mxvar mk_head loc cD cPsi' (tB, S.LF.dot1 s) plicity n (x :: names)
      in
      LF.Lam (loc, x, tN)
 

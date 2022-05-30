@@ -141,7 +141,7 @@ let index_cvar' cvars (u : Id.name) : (cvar_error_status, Id.offset) Either.t =
     trying_index (fun _ -> CVar.index_of_name cvars u)
   with
   | None -> Either.Left `unbound
-  | Some (`implicit, _) -> Either.Left `implicit
+  | Some (Plicity.Implicit, _) -> Either.Left `implicit
   | Some (_, k) ->
      dprintf
        begin fun p ->
@@ -342,7 +342,7 @@ let rec index_kind (k : Ext.LF.kind) : Apx.LF.kind index =
   let open Bind in
   let pi x a k =
     seq2 (index_typ a) (locally (extending_bvars x) (index_kind k))
-    $> fun (a', k') -> Apx.LF.PiKind ((Apx.LF.TypDecl (x, a'), Apx.LF.No), k')
+    $> fun (a', k') -> Apx.LF.PiKind ((Apx.LF.TypDecl (x, a'), Plicity.explicit), k')
   in
   match k with
   | Ext.LF.Typ _ ->
@@ -371,12 +371,12 @@ and index_typ (a : Ext.LF.typ) : Apx.LF.typ index =
      let x = Id.mk_name Id.NoName in
      seq2 (index_typ a) (locally (extending_bvars x) (index_typ b))
      $> fun (a', b') ->
-        Apx.LF.PiTyp ((Apx.LF.TypDecl (x, a'), Apx.LF.No), b')
+        Apx.LF.PiTyp ((Apx.LF.TypDecl (x, a'), Plicity.explicit), b')
 
   | Ext.LF.PiTyp (_, Ext.LF.TypDecl (x, a), b) ->
      seq2 (index_typ a) (locally (extending_bvars x) (index_typ b))
      $> fun (a', b') ->
-        Apx.LF.PiTyp ((Apx.LF.TypDecl (x, a'), Apx.LF.Maybe), b')
+        Apx.LF.PiTyp ((Apx.LF.TypDecl (x, a'), Plicity.implicit), b')
 
   | Ext.LF.Sigma (_, typRec) ->
      index_typ_rec typRec $> fun typRec' -> Apx.LF.Sigma typRec'
@@ -425,7 +425,7 @@ and shunting_yard (l : Ext.LF.normal list) : Ext.LF.normal =
   (*
   let rec normalListToSpine : Ext.LF.normal list -> Ext.LF.spine = function
     | [] -> Ext.LF.Nil
-    | h::t -> Ext.LF.App (locOfNormal h, h, normalListToSpine t)
+    | h :: t -> Ext.LF.App (locOfNormal h, h, normalListToSpine t)
   in
   match l with
   | Ext.LF.Root (loc, h, Ext.LF.Nil) :: ms ->
@@ -477,7 +477,7 @@ and shunting_yard' (l : Ext.LF.normal list) : Ext.LF.normal =
   let rec normalListToSpine : Ext.LF.normal list -> Ext.LF.spine =
     function
     | [] -> Ext.LF.Nil
-    | h::t -> Ext.LF.App (locOfNormal h, h, normalListToSpine t)
+    | h :: t -> Ext.LF.App (locOfNormal h, h, normalListToSpine t)
   in
   let rec parse : int
                   * Ext.LF.normal list
@@ -495,7 +495,7 @@ and shunting_yard' (l : Ext.LF.normal list) : Ext.LF.normal =
          when pragmaExists h ->
        let p = get_pragma h in
        let loc = locOfNormal h in
-       parse (i+1, t, exps, [(i, p, loc)])
+       parse (i + 1, t, exps, [(i, p, loc)])
     | (i, h :: t, exps, (x, o, loc_o) :: os)
          when pragmaExists h ->
        let p = get_pragma h in
@@ -658,7 +658,7 @@ and shunting_yard' (l : Ext.LF.normal list) : Ext.LF.normal =
   and take i l =
     let rec aux n l c =
       match l with
-      | h :: t when n > 0 -> aux (n-1) t (h::c)
+      | h :: t when n > 0 -> aux (n - 1) t (h :: c)
       | _ -> (c, l)
     in
     aux i l []
@@ -1118,20 +1118,12 @@ let index_cltyp loc cvars fvars =
           throw loc (UnboundCtxSchemaName schema_name)
      end
 
-let index_dep =
-  function
-  | Ext.LF.Maybe -> Apx.LF.Maybe
-  | Ext.LF.No -> Apx.LF.No
-  | Ext.LF.Inductive ->
-     Error.violation
-       "[index_dep] Inductive not allowed in external syntax"
-
-let index_cdecl plicity_of_dep cvars fvars =
+let index_cdecl f cvars fvars =
   function
   | Ext.LF.DeclOpt _ ->
      Error.violation
        "[index_cdecl] DeclOpt not allowed in external syntax"
-  | Ext.LF.Decl (u, (loc, cl), dep) ->
+  | Ext.LF.Decl (u, (loc, cl), plicity) ->
      let (fvars, cl) = index_cltyp loc cvars fvars cl in
      dprintf
        begin fun p ->
@@ -1146,9 +1138,9 @@ let index_cdecl plicity_of_dep cvars fvars =
        | Either.Left _ ->
           let cvars =
             CVar.extend cvars
-              (CVar.mk_entry u (plicity_of_dep dep))
+              (CVar.mk_entry u (f plicity))
           in
-          (Apx.LF.Decl (u, cl, index_dep dep), cvars, fvars)
+          (Apx.LF.Decl (u, cl, plicity), cvars, fvars)
      end
 
 let rec index_mctx cvars fvars =
@@ -1157,7 +1149,7 @@ let rec index_mctx cvars fvars =
   | Ext.LF.Dec (delta, cdec) ->
      let (delta', cvars', fvars') = index_mctx cvars fvars delta in
      let (cdec', cvars'', fvars'') =
-       index_cdecl Ext.LF.Depend.to_plicity cvars' fvars' cdec
+       index_cdecl Fun.id cvars' fvars' cdec
      in
      (Apx.LF.Dec (delta', cdec'), cvars'', fvars'')
 
@@ -1232,14 +1224,14 @@ let rec index_compkind cvars fcvars =
   | Ext.Comp.Ctype loc -> Apx.Comp.Ctype loc
   | Ext.Comp.PiKind (loc, cdecl, cK) ->
      let (cdecl', cvars', fcvars') =
-       index_cdecl (fun _ -> `explicit) cvars fcvars cdecl
+       index_cdecl (Fun.const Plicity.explicit) cvars fcvars cdecl
      in
      let cK' = index_compkind cvars' fcvars' cK in
      Apx.Comp.PiKind (loc, cdecl', cK')
-  | Ext.Comp.ArrKind (loc, (loc', ctau, dep), cK) ->
+  | Ext.Comp.ArrKind (loc, (loc', ctau, plicity), cK) ->
     let x = Id.mk_name ~loc Id.NoName in
     index_compkind cvars fcvars
-    @@ Ext.Comp.PiKind (loc, Ext.LF.Decl (x, (loc', ctau), dep), cK)
+    @@ Ext.Comp.PiKind (loc, Ext.LF.Decl (x, (loc', ctau), plicity), cK)
 
 let rec index_comptyp (tau : Ext.Comp.typ) cvars : Apx.Comp.typ fvar_state =
   fun fvars ->
@@ -1286,7 +1278,7 @@ let rec index_comptyp (tau : Ext.Comp.typ) cvars : Apx.Comp.typ fvar_state =
 
   | Ext.Comp.TypPiBox (loc, cdecl, tau) ->
      let (cdecl', cvars, fvars) =
-       index_cdecl (fun _ -> `explicit) cvars fvars cdecl
+       index_cdecl (Fun.const Plicity.explicit) cvars fvars cdecl
      in
      let (fvars, tau') = index_comptyp tau cvars fvars in
      (fvars, Apx.Comp.TypPiBox (loc, cdecl', tau'))
@@ -1334,7 +1326,7 @@ let rec index_exp cvars vars fcvars =
      Apx.Comp.Fun (loc, index_fbranches cvars vars fcvars fbr)
 
   | Ext.Comp.MLam (loc, u, e) ->
-     let cvars' = CVar.extend cvars (CVar.mk_entry u `explicit) in
+     let cvars' = CVar.extend cvars (CVar.mk_entry u Plicity.explicit) in
      Apx.Comp.MLam (loc, u, index_exp cvars' vars fcvars e)
 
   | Ext.Comp.Pair (loc, e1, e2) ->
@@ -1699,7 +1691,7 @@ and index_command cvars vars fvars =
      Apx.Comp.By (loc, i', x), vars, cvars
   | Ext.Comp.Unbox (loc, i, x, modifier) ->
      let i' = index_exp' cvars vars fvars i in
-     let cvars = CVar.extend cvars (CVar.mk_entry x `explicit) in
+     let cvars = CVar.extend cvars (CVar.mk_entry x Plicity.explicit) in
      Apx.Comp.Unbox (loc, i', x, modifier), vars, cvars
 
 and index_directive cvars vars fvars =
@@ -1740,7 +1732,7 @@ and index_hypothetical h =
   let Ext.Comp.{ hypotheses = { cD; cG }; proof; hypothetical_loc } = h in
   let cvars =
     Context.to_list_map_rev cD
-      Ext.LF.(fun _ (Decl (x, _, dep)) -> (x, Depend.to_plicity dep))
+      Ext.LF.(fun _ (Decl (x, _, plicity)) -> (x, plicity))
     |> CVar.of_list
   in
   let vars =
@@ -1761,8 +1753,8 @@ let comptypdef (cT, cK) =
   let rec unroll cK cvars =
     match cK with
     | Apx.Comp.Ctype _ -> cvars
-    | Apx.Comp.PiKind (loc, Apx.LF.Decl (u, ctyp, dep), cK) ->
-       let cvars' = CVar.extend cvars (CVar.mk_entry u `explicit) in
+    | Apx.Comp.PiKind (loc, Apx.LF.Decl (u, ctyp, _), cK) ->
+       let cvars' = CVar.extend cvars (CVar.mk_entry u Plicity.explicit) in
        unroll cK cvars'
   in
   let (_, tau) =

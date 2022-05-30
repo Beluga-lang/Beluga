@@ -97,11 +97,6 @@ let rec shiftIH k =
 
 let shift = shiftIH 1
 
-let is_inductive =
-  function
-  | LF.Inductive -> true
-  | _ -> false
-
 let sub_smaller (_, n) =
   function
   | LF.Shift n' ->
@@ -215,7 +210,7 @@ let is_valid_args tau n =
  P.expSynToString cD cG i ^ " - comparing to arg. "
  ^ string_of_int y ^
  " - comparing to relative position " ^ string_of_int (y-k) ^ "? - No\n");*)
- relative_order (Comp.Var x) (tau, order, l+1, k, w))
+ relative_order (Comp.Var x) (tau, order, l + 1, k, w))
 
  | _ -> false)
 
@@ -300,20 +295,20 @@ let gen_var' loc cD (x, cU) =
   match cU with
   | LF.ClTyp (LF.MTyp tA, cPsi) ->
      let psihat = Context.dctxToHat cPsi in
-     let tM = Whnf.etaExpandMMV loc cD cPsi (tA, Substitution.LF.id) x Substitution.LF.id LF.Maybe in
+     let tM = Whnf.etaExpandMMV loc cD cPsi (tA, Substitution.LF.id) x Substitution.LF.id Plicity.implicit Inductivity.not_inductive in
      ( (loc, LF.ClObj (psihat, LF.MObj tM))
      , LF.ClObj (psihat, LF.MObj tM)
      )
   | LF.ClTyp (LF.PTyp tA, cPsi) ->
      let psihat = Context.dctxToHat cPsi in
-     let p = Whnf.newMPVar (Some x) (cD, cPsi, tA) LF.Maybe in
+     let p = Whnf.newMPVar (Some x) (cD, cPsi, tA) Plicity.implicit Inductivity.not_inductive in
      let h = LF.MPVar ((p, Whnf.m_id), Substitution.LF.id) in
      ( (loc, LF.ClObj (psihat, LF.PObj h))
      , LF.ClObj (psihat, LF.PObj h)
      )
   | LF.ClTyp (LF.STyp (cl, cPhi), cPsi) ->
      let psihat = Context.dctxToHat cPsi in
-     let s = Whnf.newMSVar (Some x) (cD, cl, cPsi, cPhi) LF.Maybe in
+     let s = Whnf.newMSVar (Some x) (cD, cl, cPsi, cPhi) Plicity.implicit Inductivity.not_inductive in
      let sigma = LF.MSVar (0, ((s, Whnf.m_id), Substitution.LF.id)) in
      ( (loc, LF.ClObj (psihat, LF.SObj sigma))
      , LF.ClObj (psihat, LF.SObj sigma)
@@ -322,14 +317,14 @@ let gen_var' loc cD (x, cU) =
   | LF.CTyp (schema_cid) ->
      let mmvar =
        let open! LF in
-       Whnf.newMMVar' (Some x) (cD, CTyp schema_cid) Maybe
+       Whnf.newMMVar' (Some x) (cD, CTyp schema_cid) Plicity.implicit Inductivity.not_inductive
      in
      let cPsi = LF.CtxVar (LF.CInst (mmvar, Whnf.m_id)) in
      ( (loc, LF.CObj cPsi)
      , LF.CObj (cPsi)
      )
 
-let gen_var loc cD (LF.Decl (x, cU, dep)) =
+let gen_var loc cD (LF.Decl (x, cU, _, _)) =
   gen_var' loc cD (x, cU)
 
 (* Given i and tau, compute vector V
@@ -358,7 +353,7 @@ let rec rec_spine cD (cM, cU) =
       (Comp.DC :: spine, tau_r)
       else
    *)
-  | (1, (Comp.TypPiBox (_, (LF.Decl (_, cU', _)), tau), theta)) ->
+  | (1, (Comp.TypPiBox (_, (LF.Decl (_, cU', _, _)), tau), theta)) ->
      begin
        try
          (*print_string ("rec_spine: Unify " ^ P.cdeclToString cD cdecl ^
@@ -378,7 +373,7 @@ let rec rec_spine cD (cM, cU) =
        try
          Unify.unifyMetaTyp cD (cU, Whnf.m_id) (cU', theta);
          let (spine, tau_r) = rec_spine cD (cM, cU) (0, (tau, theta)) in
-         (Comp.M cM::spine, tau_r)
+         (Comp.M cM :: spine, tau_r)
        with
        | e ->
           raise Not_compatible
@@ -446,7 +441,7 @@ let gen_meta_obj (cdecl, theta) k =
      let phat = Context.dctxToHat cPsi in
      let psihat' = Whnf.cnorm_psihat phat theta in
      let mv = LF.MVar (LF.Offset k, Substitution.LF.id) in
-     let tM = LF.Root (Syntax.Loc.ghost, mv, LF.Nil, `explicit) in
+     let tM = LF.Root (Syntax.Loc.ghost, mv, LF.Nil, Plicity.explicit) in
      (Syntax.Loc.ghost, LF.ClObj (psihat', LF.MObj tM))
 
   | LF.ClTyp (LF.PTyp tA, cPsi) ->
@@ -488,7 +483,7 @@ let rec generalize =
      then Comp.DC :: generalize args
      else Comp.M cM :: generalize args
   | Comp.V x :: args ->
-     Comp.V x:: generalize args
+     Comp.V x :: generalize args
   | Comp.DC :: args ->
      Comp.DC :: generalize args
 
@@ -501,8 +496,7 @@ let rec gen_rec_calls cD cIH (cD', j) mfs =
   match cD' with
   | LF.Empty -> cIH
 
-  | LF.Dec (cD', LF.Decl (u, cU, dep))
-       when not (is_inductive dep) ->
+  | LF.Dec (cD', LF.Decl (u, cU, _, Inductivity.NotInductive)) ->
      dprintf
        begin fun p ->
        p.fmt "[gen_rec_calls] @[<v>ignoring cD' entry %d, i.e.\
@@ -513,9 +507,9 @@ let rec gen_rec_calls cD cIH (cD', j) mfs =
          Id.print u
          P.(fmt_ppr_cmp_meta_typ cD') cU
        end;
-     gen_rec_calls cD cIH (cD', j+1) mfs
+     gen_rec_calls cD cIH (cD', j + 1) mfs
 
-  | LF.Dec (cD', LF.Decl (u, cU, dep)) ->
+  | LF.Dec (cD', LF.Decl (u, cU, plicity, inductivity)) ->
      let cM = gen_meta_obj (cU, LF.MShift (j + 1)) (j + 1) in
      let cU' = Whnf.cnormMTyp (cU, LF.MShift (j + 1)) in
      let mf_list = get_order mfs in
@@ -523,7 +517,7 @@ let rec gen_rec_calls cD cIH (cD', j) mfs =
        begin fun p ->
        p.fmt "[gen_rec_calls] @[<v>Generate rec. calls given variable@,@[%a@]\
               @,considering a total of %d recursive functions@]"
-         (P.fmt_ppr_lf_ctyp_decl cD') (LF.Decl (u, cU, dep))
+         (P.fmt_ppr_lf_ctyp_decl cD') (LF.Decl (u, cU, plicity, inductivity))
          (List.length mf_list)
        end;
 
@@ -532,7 +526,7 @@ let rec gen_rec_calls cD cIH (cD', j) mfs =
          begin fun p ->
          p.fmt "[mk_wf_rec] @[<v>for @[%a@] for position %d\
                 @,@[<hv 2>type of recursive call:@ @[%a@]@]@]"
-           (P.fmt_ppr_lf_ctyp_decl cD') (LF.Decl (u, cU, dep))
+           (P.fmt_ppr_lf_ctyp_decl cD') (LF.Decl (u, cU, plicity, inductivity))
            x
            (P.fmt_ppr_cmp_typ cD P.l0) (Whnf.cnormCTyp ttau)
          end;
@@ -589,8 +583,8 @@ let rec gen_rec_calls cD cIH (cD', j) mfs =
      in
      dprint (fun () -> "[gen_rec_calls] for j = " ^ string_of_int j ^ "\n");
      let cIH' = mk_all (cIH, j) mf_list in
-     dprint (fun () -> "[gen_rec_calls] for j = " ^ string_of_int (j+1) ^ "\n");
-     gen_rec_calls cD cIH' (cD', j+1) mfs
+     dprint (fun () -> "[gen_rec_calls] for j = " ^ string_of_int (j + 1) ^ "\n");
+     gen_rec_calls cD cIH' (cD', j + 1) mfs
 
 (* Generating recursive calls on computation-level variables *)
 let rec get_return_type cD x =
@@ -848,7 +842,7 @@ let shiftMetaObj cM (cPsi', s_proj, cPsi) =
   | (l, LF.ClObj (phat', LF.PObj tH))
        when Whnf.convDCtxHat phat phat' ->
      let LF.Root (_, tH', _, _) =
-       Whnf.norm (LF.Root (l, tH, LF.Nil, `explicit), s_proj)
+       Whnf.norm (LF.Root (l, tH, LF.Nil, Plicity.explicit), s_proj)
      in
      (l, LF.ClObj (phat0, LF.PObj tH'))
 
@@ -978,12 +972,12 @@ let annotate'
   let open Option in
   let rec ann tau pos =
     match (tau, pos) with
-    | (Comp.TypPiBox (loc, LF.Decl (x, cU, _), tau), 1) ->
-       Comp.TypPiBox (loc, LF.Decl (x, cU, LF.Inductive), tau)
-       |> some
+    | (Comp.TypPiBox (loc, LF.Decl (x, cU, plicity, _), tau), 1) ->
+      Option.some
+      @@ Comp.TypPiBox (loc, LF.Decl (x, cU, plicity, Inductivity.inductive), tau)
     | (Comp.TypArr (loc, tau1, tau2), 1) ->
-       Comp.TypArr (loc, Comp.TypInd tau1, tau2)
-       |> some
+      Option.some
+      @@ Comp.TypArr (loc, Comp.TypInd tau1, tau2)
     | (Comp.TypArr (loc, tau1, tau2), n) ->
        ann tau2 (n - 1)
        $> fun tau2' ->
@@ -996,23 +990,12 @@ let annotate'
   in
   fold_left (fun tau' x -> ann tau' x) tau order
 
-(* TODO rethink LF.Inductive annotations for pi-types.
-   Inductivity markings are ORTHOGONAL to plicity markings
-   (explicit vs implicit) so there ought to be two flags on each
-   pi-type: plicity and inductivity. -je
- *)
-(** Removes all TypInd marks in a computational type.
-    WARNING: this is NOT an inverse for `annotate`.
-    This function will only remove TypInd annotations, but not
-    LF.Inductive annotations on Pi-types, which are in fact also
-    generated by annotate.
-    This is by design, as it is IMPOSSIBLE to remove LF.Inductive
-    annotations correctly: we can't figure out whether the pi-type was
-    explicit or implicit.
- *)
+(** Removes all TypInd marks in a computational type. *)
 let rec strip : Syntax.Int.Comp.typ -> Syntax.Int.Comp.typ =
   function
   | Comp.TypInd tau' -> strip tau'
+  | Comp.TypPiBox (loc, LF.Decl (x, cU, plicity, Inductivity.Inductive), tau') ->
+    Comp.TypPiBox (loc, LF.Decl (x, cU, plicity, Inductivity.not_inductive), strip tau')
   | Comp.TypPiBox (loc, d, tau') -> Comp.TypPiBox (loc, d, strip tau')
   | Comp.TypArr (loc, tau1, tau2) -> Comp.TypArr (loc, strip tau1, strip tau2)
   | Comp.TypCross (loc, tau1, tau2) -> Comp.TypCross (loc, strip tau1, strip tau2)
@@ -1364,10 +1347,10 @@ let is_meta_inductive (cD : LF.mctx) (mf : LF.mfront) : bool =
   let open Id in
   let open LF in
   let is_inductive_meta_variable (k : offset) : bool =
-    Context.lookup_dep cD k
+    Context.lookup_inductivity cD k
     |> Option.get' (Failure "Metavariable out of bounds or missing type")
     |> function
-       | (_, LF.Inductive) -> true
+       | (_, Inductivity.Inductive) -> true
        | _ -> false
   in
   let open Option in

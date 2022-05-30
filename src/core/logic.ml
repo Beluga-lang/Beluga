@@ -116,7 +116,7 @@ and atomic_spine =
   | End
   | Spine of atomic_spine * (Comp.meta_typ
                              * LF.mfront
-                             * Syncom.LF.plicity) (* For recreating type*)
+                             * Plicity.t) (* For recreating type*)
 
 and comp_res =                          (* Residual Comp Goals   *)
   | Base of Comp.typ                    (* cr ::= A              *)
@@ -237,9 +237,9 @@ module Convert = struct
   *)
   let rec typToClause' eV cG tA (cS, dS, dR) =
     match tA with
-    | LF.PiTyp ((tD, LF.Maybe), tA') ->
+    | LF.PiTyp ((tD, Plicity.Implicit), tA') ->
        typToClause' (LF.DDec (eV, tD)) cG tA' (cS, dS, dR)
-    | LF.PiTyp ((LF.TypDecl (_, tA), LF.No), tB) ->
+    | LF.PiTyp ((LF.TypDecl (_, tA), Plicity.Explicit), tB) ->
        typToClause' eV (Conjunct (cG, typToGoal tA (cS, dS, dR)))
          tB (cS + 1, dS, dR)
     | LF.Atom _ ->
@@ -293,18 +293,18 @@ module Convert = struct
    *)
   and typToGoal tA (cS, dS, dR) =
     match tA with
-    | LF.PiTyp ((tdec, LF.Maybe), tA') ->
+    | LF.PiTyp ((tdec, Plicity.Implicit), tA') ->
        All (tdec, typToGoal tA' (cS, dS, dR + 1))
-    | LF.PiTyp ((LF.TypDecl (x, tA) as tdec, LF.No), tB) ->
+    | LF.PiTyp ((LF.TypDecl (x, tA) as tdec, Plicity.Explicit), tB) ->
        Impl ((typToRes tA (cS, dS, dR), tdec), typToGoal tB (cS, dS, dR + 1))
     | LF.Atom _ ->
        Atom (Shift.shiftAtom tA (-cS, -dS, dR))
 
   and typToRes tM (cS, dS, dR) =
     match tM with
-    | LF.PiTyp ((tD, LF.Maybe), tM') ->
+    | LF.PiTyp ((tD, Plicity.Implicit), tM') ->
        Exists (tD, typToRes tM' (cS, dS, dR + 1))
-    | LF.PiTyp ((LF.TypDecl (_, tA), LF.No), tB) ->
+    | LF.PiTyp ((LF.TypDecl (_, tA), Plicity.Explicit), tB) ->
        And (typToGoal tA (cS, dS, dR), typToRes tB (cS + 1, dS + 1, dR + 1))
     | LF.Atom _ ->
        Head (Shift.shiftAtom tM (-cS, -dS, dR))
@@ -338,7 +338,7 @@ module Convert = struct
        let cg2 = comptypToCompGoal tau2 in
        let name = Id.mk_name Id.NoName in
        let typ_dec = Comp.CTypDecl (name, tau1 , true) in
-       Implies ((cr1,typ_dec), cg2)
+       Implies ((cr1, typ_dec), cg2)
     | Comp.TypBase (_, comp_cid, s) ->
        Atomic (comp_cid, msToAs s)
 
@@ -346,9 +346,9 @@ module Convert = struct
     match tau with
     | Comp.TypBox (_) | Comp.TypBase(_) ->
        Base tau
-    | Comp.TypArr (_,tau1,tau2) ->
+    | Comp.TypArr (_, tau1, tau2) ->
        CAnd (comptypToCompGoal tau1, comptypToCompRes tau2)
-    | Comp.TypPiBox (_,typ_dec, tau') ->
+    | Comp.TypPiBox (_, typ_dec, tau') ->
        CExists (typ_dec, comptypToCompRes tau')
 
   let rec resToClause' eV cG (r, s) =
@@ -427,8 +427,8 @@ module Convert = struct
     let (tA, s) = Whnf.whnfTyp sA in
     match tA with
     | LF.Atom _ ->
-       let u = LF.Inst (Whnf.newMMVar None (cD, cPsi, LF.TClo (tA, s)) LF.Maybe) in
-       LF.Root (Syntax.Loc.ghost, LF.MVar (u, S.id), LF.Nil, `explicit)
+       let u = LF.Inst (Whnf.newMMVar None (cD, cPsi, LF.TClo (tA, s)) Plicity.implicit Inductivity.not_inductive) in
+       LF.Root (Syntax.Loc.ghost, LF.MVar (u, S.id), LF.Nil, Plicity.explicit)
     | LF.PiTyp ((LF.TypDecl (x, tA) as tD, _), tB) ->
        LF.Lam
          ( Syntax.Loc.ghost
@@ -464,44 +464,36 @@ module Convert = struct
 
   let rec mctxToMSub cD (mV, ms) fS =
     let etaExpand' cD cPsi (tA, ms) name =
-      let cvar = Whnf.newMMVar (Some name) (cD, cPsi, tA) LF.Maybe in
-       LF.Root (Syntax.Loc.ghost, LF.MMVar((cvar, ms), S.id), LF.Nil, `explicit)
-    in
-    let get_plicity dep =
-      match dep with
-      | LF.No -> `explicit
-      | LF.Maybe -> `implicit
+      let cvar = Whnf.newMMVar (Some name) (cD, cPsi, tA) Plicity.implicit Inductivity.not_inductive in
+       LF.Root (Syntax.Loc.ghost, LF.MMVar((cvar, ms), S.id), LF.Nil, Plicity.explicit)
     in
     let noLoc = Syntax.Loc.ghost in
     match mV with
     | LF.Empty -> (ms, fS)
     | LF.Dec (mV',
-              LF.Decl (name, ((LF.ClTyp (LF.MTyp tA, cPsi)) as ctyp), dep)) ->
+              LF.Decl (name, ((LF.ClTyp (LF.MTyp tA, cPsi)) as ctyp), plicity, _)) ->
        let (ms', fS') = mctxToMSub cD (mV', ms) fS in
        let tM = etaExpand' cD cPsi (tA, ms) name in
        let dctx_hat = Context.dctxToHat cPsi in
-       let plicity = get_plicity dep in
        let mfront = LF.ClObj (dctx_hat, LF.MObj tM) in
        (LF.MDot (mfront, ms'),
         (fun s ->
           fS' (Comp.MApp (noLoc, s, (noLoc, mfront), ctyp, plicity))))
     | LF.Dec (mV',
-              LF.Decl (name, ((LF.ClTyp (LF.PTyp tA, cPsi)) as ctyp), dep)) ->
+              LF.Decl (name, ((LF.ClTyp (LF.PTyp tA, cPsi)) as ctyp), plicity, _)) ->
        let (ms', fS') = mctxToMSub cD (mV', ms) fS in
        let tM = etaExpand' cD cPsi (tA, ms') name in
        let LF.Root (noLoc, hd, LF.Nil, _) = tM in
        let dctx_hat = Context.dctxToHat cPsi in
-       let plicity = get_plicity dep in
        let mfront =
          LF.ClObj (dctx_hat, LF.PObj hd) in
        (LF.MDot (mfront, ms'),
         (fun s ->
           fS' (Comp.MApp (noLoc, s, (noLoc, mfront), ctyp, plicity))))
     | LF.Dec (mV',
-              LF.Decl (name, ((LF.CTyp (Some cid)) as ctyp), dep)) ->
+              LF.Decl (name, ((LF.CTyp (Some cid)) as ctyp), plicity, inductivity)) ->
        let (ms', fS') = mctxToMSub cD (mV', ms) fS in
-       let plicity = get_plicity dep in
-       let dctx = Whnf.newCVar (Some name) cD (Some cid) dep in
+       let dctx = Whnf.newCVar (Some name) cD (Some cid) plicity inductivity in
        let mfront = LF.CObj (LF.CtxVar dctx) in
        (* let mf = Whnf.cnormMFt mfront ms' in *)
        (LF.MDot (mfront, ms'),
@@ -521,7 +513,7 @@ module Convert = struct
   let typToQuery cD cPsi (tA, i) =
     let rec typToQuery' (tA, i) s xs =
       match tA with
-      | LF.PiTyp ((LF.TypDecl (x, tA), LF.Maybe), tB) when i > 0 ->
+      | LF.PiTyp ((LF.TypDecl (x, tA), Plicity.Implicit), tB) when i > 0 ->
          let tN' = etaExpand cD cPsi (tA, s) in
          typToQuery' (tB, i - 1) (LF.Dot (LF.Obj tN', s)) ((x, tN') :: xs)
       | _ -> ((typToGoal tA (0, 0, 0), s), tA, s, xs)
@@ -541,7 +533,7 @@ module Convert = struct
 
 
 (*
-  comptypToMQuery (tau,i) = comp_goal
+  comptypToMQuery (tau, i) = comp_goal
 
    Precondition:
 
@@ -567,24 +559,24 @@ let comptypToMQuery (tau, i) =
      *)
       match tau with
       | Comp.TypBox (_loc, LF.ClTyp (LF.MTyp _tA, _cPsi)) ->
-          (((comptypToCompGoal tau),ms), tau, ms, xs)
+          (((comptypToCompGoal tau), ms), tau, ms, xs)
       | Comp.TypBox (_loc, LF.ClTyp (LF.PTyp _tA, _cPsi)) ->
-         (((comptypToCompGoal tau),ms), tau, ms, xs)
+         (((comptypToCompGoal tau), ms), tau, ms, xs)
       | Comp.TypBox (loc, LF.ClTyp (LF.STyp (_svar_c, _cPhi),  _cPsi)) ->
           raise NotImplementedYet
       | Comp.TypPiBox (loc, mdecl, tau')  when i > 0 ->
-          let LF.Decl(x, mtyp, dep) = mdecl in  (* where mtyp = (LF.MTyp tA, cPsi) *)
+          let LF.Decl(x, mtyp, plicity, inductivity) = mdecl in  (* where mtyp = (LF.MTyp tA, cPsi) *)
           (* generate a meta-variable (instantiated by unification) of type (LF.MTyp tA, cPsi)
              and make sure it is an mfront *)
-          let mmV = Whnf.newMMVar' (Some x) (LF.Empty, mtyp) dep in
+          let mmV = Whnf.newMMVar' (Some x) (LF.Empty, mtyp) plicity inductivity in
           let mfront = Whnf.mmVarToMFront loc mmV mtyp in
-          comptypToMQuery' (tau', i-1) (LF.MDot (mfront, ms)) ((x, (loc, mfront)) :: xs)
-      | Comp.TypPiBox (_,_, tau') when i = 0 ->
-         (((comptypToCompGoal tau),ms), tau, ms, xs)
+          comptypToMQuery' (tau', i - 1) (LF.MDot (mfront, ms)) ((x, (loc, mfront)) :: xs)
+      | Comp.TypPiBox (_, _, tau') when i = 0 ->
+         (((comptypToCompGoal tau), ms), tau, ms, xs)
       | Comp.TypArr (loc, tau1, tau2) ->
-         (((comptypToCompGoal tau),ms), tau, ms, xs)
+         (((comptypToCompGoal tau), ms), tau, ms, xs)
       | Comp.TypBase (_) ->
-         (((comptypToCompGoal tau),ms), tau, ms, xs)
+         (((comptypToCompGoal tau), ms), tau, ms, xs)
       | _ -> raise NotImplementedYet
     in
     comptypToMQuery' (tau, i) (LF.MShift 0) []
@@ -799,9 +791,9 @@ module Index = struct
     let rec get_minst xs =
       match xs with
       | [] -> []
-      | (a,(loc,b)) :: ys ->
+      | (a, (loc, b)) :: ys ->
          let ys' = get_minst ys in
-         (a,b) :: ys'
+         (a, b) :: ys'
     in
     let (mq, tau', ms, xs) = (Convert.comptypToMQuery (tau, i)) in
     let xs' = get_minst xs in
@@ -1153,7 +1145,7 @@ module Printer = struct
                  ms = %a \n"
         (fmt_ppr_mctx) cD
         (fmt_ppr_gctx cD) cG
-        (fmt_ppr_cmp_goal cD) (cg,S.id)
+        (fmt_ppr_cmp_goal cD) (cg, S.id)
         (Pretty.Int.DefaultPrinter.fmt_ppr_lf_msub cD Pretty.Int.DefaultPrinter.l0) ms *)
 
 end
@@ -1267,7 +1259,7 @@ module Solver = struct
   *)
   and matchAtom dPool cD (cPsi, k) (tA, s) sc =
     (* some shorthands for creating syntax *)
-    let root x = LF.Root (Syntax.Loc.ghost, x, LF.Nil, `explicit) in
+    let root x = LF.Root (Syntax.Loc.ghost, x, LF.Nil, Plicity.explicit) in
     let pvar k = LF.PVar (k, LF.Shift 0) in
     let mvar k = LF.MVar (LF.Offset k, LF.Shift 0) in
     let proj x k = LF.Proj (x, k) in
@@ -1297,7 +1289,7 @@ module Solver = struct
                          ( Syntax.Loc.ghost
                          , LF.BVar (k - k')
                          , fS (spineFromRevList tS)
-                         , `explicit
+                         , Plicity.explicit
                          )
                      in
                      sc (u, tM)
@@ -1374,7 +1366,7 @@ module Solver = struct
       let rec loop cD' k =
         match cD' with
         | LF.Empty -> matchDProg dPool
-        | LF.Dec (cD', LF.Decl (_, LF.ClTyp (cltyp, psi), _)) ->
+        | LF.Dec (cD', LF.Decl (_, LF.ClTyp (cltyp, psi), _, _)) ->
            begin
              let psi' = Whnf.cnormDCtx (psi, LF.MShift k) in
              let cltyp' = Whnf.cnormClTyp (cltyp, LF.MShift k) in
@@ -1460,7 +1452,7 @@ module Solver = struct
                   ( Syntax.Loc.ghost
                   , LF.Const (cidTerm)
                   , fS (spineFromRevList tS)
-                  , `explicit
+                  , Plicity.explicit
                   )
               in
               sc (u, tM)
@@ -1534,14 +1526,14 @@ module CSolver = struct
     | Unboxed
 
     (* Dynamic Computation Assumptions *)
-  type cPool =                             (* cP ::=                    *)
-    | Emp                                  (*   | Emp                   *)
+  type cPool =                             (* cP ::=                     *)
+    | Emp                                  (*   | Emp                    *)
     | Full of
-        (cPool * (cclause * int * status)) (*   | Full (cP', (cc, k,s)) *)
+        (cPool * (cclause * int * status)) (*   | Full (cP', (cc, k, s)) *)
                                            (*      where k denotes the
                                                    postion of the
                                                    correspoding type
-                                                   declaration in cG   *)
+                                                   declaration in cG    *)
 
   let noLoc = Syntax.Loc.ghost
 
@@ -1646,14 +1638,14 @@ module CSolver = struct
     let rec normAtomicSpine ms aS =
       match aS with
       | End -> aS
-      | Spine (aS', (mt, mf,pl)) ->
+      | Spine (aS', (mt, mf, pl)) ->
          let aS'' = normAtomicSpine ms aS' in
          let mf' = Whnf.cnormMFt mf ms in
-         Spine (aS'', (mt, mf',pl))
+         Spine (aS'', (mt, mf', pl))
     in
     match cg with
     | Box (cPsi, Atom typ, _lfTyp) ->
-       let typ' = Whnf.cnormTyp (typ,ms) in
+       let typ' = Whnf.cnormTyp (typ, ms) in
        let cPsi' = Whnf.cnormDCtx (cPsi, ms) in
        Box (cPsi', Atom typ', _lfTyp)
     | Implies ((r, td), cg') ->
@@ -1701,7 +1693,7 @@ module CSolver = struct
     let rec find_max cD cltyp_d k lst =
       match cD with
       | LF.Empty -> (cltyp_d, lst)
-      | LF.Dec (cD', ((LF.Decl (name, LF.ClTyp (cltyp', _cPsi), _dep)) as cltyp_d')) ->
+      | LF.Dec (cD', ((LF.Decl (name, LF.ClTyp (cltyp', _cPsi), _)) as cltyp_d')) ->
          let (k', lst') = consOfTyp cltyp' in
          if k' < k then
            find_max cD' cltyp_d' k' lst'
@@ -1710,7 +1702,7 @@ module CSolver = struct
     in
     match cD with
     | LF.Empty -> raise NotImplementedYet
-    | LF.Dec (cD', ((LF.Decl (name, LF.ClTyp (cltyp, _cPsi), _dep)) as cltyp_d)) ->
+    | LF.Dec (cD', ((LF.Decl (name, LF.ClTyp (cltyp, _cPsi), _)) as cltyp_d)) ->
        let (k, lst) = consOfTyp cltyp in
        find_max cD' cltyp_d k lst
     *)
@@ -1784,7 +1776,7 @@ module CSolver = struct
       | Ev_ss: Pi N:[ |- nat]. Even [ |- N] -> Even [ |- suc (suc N)]
 
 
-    3) Q = Box(cPsi,A) or Inductive(a, meta-spine)  we solve it using some assumption from cG
+    3) Q = Box(cPsi, A) or Inductive(a, meta-spine)  we solve it using some assumption from cG
 
       cG might contain  f: tau₁ -> Q  , x:tau₁   ===> Q
 
@@ -1861,7 +1853,7 @@ module CSolver = struct
        sc e
     | Solve (sg', cg') ->
        (*printf "solve thm SG \n";
-       let cg = normCompGoal (cg',ms) in
+       let cg = normCompGoal (cg', ms) in
        Printer.printState cD cG cg ms;*)
        cgSolve' cD cG cPool (cg', ms)
          (fun e ->
@@ -1967,7 +1959,7 @@ module CSolver = struct
  (*   let termEntry = Store.Cid.Term.get con in
     let tA = termEntry.Store.Cid.Term.Entry.typ in *)
     let hd = LF.Const con in
-    let norm = LF.Root (noLoc, hd, LF.Nil, `explicit) in
+    let norm = LF.Root (noLoc, hd, LF.Nil, Plicity.explicit) in
     let pattern = Comp.PatMetaObj (noLoc,(noLoc,
                     LF.ClObj ((None, 0),
                       LF.MObj (norm)))) in
@@ -1991,7 +1983,7 @@ module CSolver = struct
       (* let termEntry = Store.Cid.Term.get con in
        let tA = termEntry.Store.Cid.Term.Entry.typ in *)
        let hd = LF.Const con in
-       let norm = LF.Root (noLoc, hd, LF.Nil, `explicit) in
+       let norm = LF.Root (noLoc, hd, LF.Nil, Plicity.explicit) in
        let (cD', ms', cG', cPool', cg') = instMV cg norm cD cG cPool in
        solveBranch cD' cG' cPool' cg' (name, con) con_list b_list ms' sc currD maxD
 
@@ -2007,7 +1999,7 @@ module CSolver = struct
           let LF.Decl (name, ctyp, dep) = ctyp_d in
           let LF.ClTyp (cltyp, cPsi) = ctyp in
           let hd = LF.FVar name in
-          let norm = LF.Root (noLoc, hd, LF.Nil, `explicit) in
+          let norm = LF.Root (noLoc, hd, LF.Nil, Plicity.explicit) in
           let mf = LF.ClObj (Context.dctxToHat cPsi, LF.MObj norm) in
           let mo = (noLoc, mf) in
           let var = Comp.AnnBox (mo, ctyp) in
@@ -2032,7 +2024,7 @@ module CSolver = struct
           proof term in the LF level, otherwise we focus on
           an assumption in our computation context cG          *)
        let cg' = normCompGoal (cg, ms) in
-       let Box(_,g',_) = cg' in
+       let Box(_, g', _) = cg' in
        let Atom tA = g' in
        (* note, we take the goal's type because the main check
           is checking the meta_obj against meta_typ of the goal *)
@@ -2054,7 +2046,7 @@ module CSolver = struct
        let cltyp = LF.PTyp tA in
        let sc' =
          (fun (cPsi', tM) ->
-           let LF.Root (_,hd,_,_) = tM in
+           let LF.Root (_, hd, _, _) = tM in
            let dctx_hat = Context.dctxToHat cPsi' in
            let mfront = LF.ClObj (dctx_hat, LF.PObj hd) in
            let meta_obj = (noLoc, mfront) in
@@ -2140,12 +2132,12 @@ module CSolver = struct
     match cPool with
     | Emp ->
        focus cD cG cPool_ret cg ms sc currDepth maxDepth
-    | Full (cPool', ((({cHead = Comp.TypBox(m,r); cMVars = cmv;cSubGoals = Proved }, k', Boxed)) as cP)) ->
+    | Full (cPool', ((({cHead = Comp.TypBox(m, r); cMVars = cmv;cSubGoals = Proved }, k', Boxed)) as cP)) ->
        (* In this case, we want to "unbox" the assumption and add it to
           the cD.
           When an assumption gets unboxed, we no longer consider it in Gamma. *)
        let name = Id.mk_name (Whnf.newMTypName r) in
-       let mctx_decl = LF.Decl (name, r, LF.No) in
+       let mctx_decl = LF.Decl (name, r, Plicity.explicit, Inductivity.not_inductive) in
        let cD' = Whnf.extend_mctx cD (mctx_decl, ms) in
        let cG' = Whnf.cnormGCtx (cG, LF.MShift 1) in
        let box = Comp.Var (noLoc, k') in
@@ -2155,10 +2147,10 @@ module CSolver = struct
           | LF.ClTyp (LF.MTyp _, cPsi) ->
              let tM =
                LF.Root
-                 (noLoc
-                 ,LF.MVar (LF.Offset 1, S.id)
+                 ( noLoc
+                 , LF.MVar (LF.Offset 1, S.id)
                  , LF.Nil
-                 , `explicit
+                 , Plicity.explicit
                  )
              in
              LF.ClObj (Context.dctxToHat (Whnf.cnormDCtx (cPsi, LF.MShift 1)), LF.MObj tM)
@@ -2173,7 +2165,7 @@ module CSolver = struct
        let sc' =
          (fun e ->
            sc (Comp.Case (noLoc, Comp.PragmaNotCase, box,
-                          [Comp.Branch (noLoc, LF.Empty, (cD', LF.Empty), pattern, LF.MShift 1,e)]))) in
+                          [Comp.Branch (noLoc, LF.Empty, (cD', LF.Empty), pattern, LF.MShift 1, e)]))) in
        let ms' = Whnf.mvar_dot1 ms in
        let cPool'' = cnormCPool (cPool', LF.MShift 1) cD' in
        let cPool_ret' = prependToCPool (unbox cP) cPool_ret in
@@ -2242,7 +2234,7 @@ module CSolver = struct
        let cPool' = cnormCPool (cPool, LF.MShift 1) cD in
        let sc' =
          (fun e ->
-           sc (Comp.MLam (noLoc, name, e, `explicit))) in
+           sc (Comp.MLam (noLoc, name, e, Plicity.explicit))) in
        uniform_right cD' cG' cPool' cg' (Whnf.mvar_dot1 ms) sc' currDepth maxDepth
     | Implies ((r, tdecl), cg') ->
        (* We gain an assumption for the computation context *)

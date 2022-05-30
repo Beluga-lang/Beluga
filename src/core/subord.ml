@@ -213,7 +213,7 @@ let thin0 cD a cPsi =
              | CtxOffset _ -> Context.lookupCtxVarSchema cD psi
              | CInst ({ typ = CTyp (Some cid_schema); _ }, _) -> cid_schema
              | CtxName psi ->
-                let (_, Decl (_, CTyp (Some s_cid), _)) = Store.FCVar.get psi in
+                let (_, Decl (_, CTyp (Some s_cid), _, _)) = Store.FCVar.get psi in
                 s_cid
              | _ -> raise NoSchema
            in
@@ -247,7 +247,7 @@ let thin' cD a cPsi =
        try
          dprintf
            begin fun p ->
-           let (_, Decl (_, CTyp _, _)) = Store.FCVar.get psi in
+           let (_, Decl (_, CTyp _, _, _)) = Store.FCVar.get psi in
            p.fmt "[thin'] CtxName psi = %a FOUND"
              Id.print psi
            end;

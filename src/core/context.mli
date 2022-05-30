@@ -83,7 +83,7 @@ val emptyContextVariable : dctx -> dctx
 
 val lookup' : 'a LF.ctx -> int -> 'a option
 
-(** Looks up an index in a meta-context, giving the type and `depend` field.
+(** Looks up an index in a meta-context, giving the type and `inductivity` field.
     - Warning: This function does not MShift the type it returns;
       typically you should do this so the type makes sense in the
       whole context Delta.
@@ -92,7 +92,7 @@ val lookup' : 'a LF.ctx -> int -> 'a option
       DeclOpt).  If you need to distinguish these cases, then you
       should use `lookup'` and match on the `ctyp_decl` yourself.
  *)
-val lookup_dep : LF.mctx -> int -> (LF.ctyp * LF.depend) option
+val lookup_inductivity : LF.mctx -> int -> (LF.ctyp * Inductivity.t) option
 val lookup : Comp.gctx -> int -> Comp.typ option
 
 val lookupSchema : mctx -> int -> Id.cid_schema

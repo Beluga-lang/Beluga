@@ -14,3 +14,5 @@ let max p1 p2 =
 let is_explicit = ( = ) explicit
 
 let is_implicit = ( = ) implicit
+
+let equal = ( = )

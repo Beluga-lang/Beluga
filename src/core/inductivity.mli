@@ -24,3 +24,7 @@ val is_not_inductive : t -> bool
 
 (** [is_inductive ind] is [true] if and only if [ind] is [Inductive]. *)
 val is_inductive : t -> bool
+
+(** [equal p1 p2] is [true] if and only if [p1] and [p2] are both [Explicit]
+    or [Implicit]. *)
+val equal : t -> t -> bool

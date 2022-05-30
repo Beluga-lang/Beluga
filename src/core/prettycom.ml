@@ -29,22 +29,22 @@ type depend_print_style =
 
 let fmt_ppr_plicity ppf =
   function
-  | `explicit -> fprintf ppf "explicit"
-  | `implicit -> fprintf ppf "implicit"
+  | Plicity.Implicit -> pp_print_string ppf "implicit"
+  | Plicity.Explicit -> pp_print_string ppf "explicit"
 
 let fmt_ppr_lf_depend_clean ppf _ = ()
 
 let fmt_ppr_lf_depend_inductive ppf =
   function
-  | LF.No -> fprintf ppf ""
-  | LF.Maybe -> fprintf ppf ""
-  | LF.Inductive -> fprintf ppf "*"
+  | Inductivity.NotInductive -> pp_print_string ppf ""
+  | Inductivity.Inductive -> pp_print_string ppf "*"
 
 let fmt_ppr_lf_depend ppf =
   function
-  | LF.No -> fprintf ppf "^e"
-  | LF.Maybe -> fprintf ppf "^i"
-  | LF.Inductive -> fprintf ppf "*"
+  | Plicity.Implicit, Inductivity.NotInductive -> pp_print_string ppf "^i"
+  | Plicity.Explicit, Inductivity.NotInductive -> pp_print_string ppf "^e"
+  | Plicity.Implicit, Inductivity.Inductive -> pp_print_string ppf "*i"
+  | Plicity.Explicit, Inductivity.Inductive -> pp_print_string ppf "*e"
 
 let fmt_ppr_cmp_split_kind ppf =
   function

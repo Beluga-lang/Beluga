@@ -159,7 +159,7 @@ val genPatCGoals : Id.name list
                    -> LF.mctx -> Comp.typ
                    -> (Comp.gctx * Comp.pattern * Comp.tclo) inside list
 
-val genContextGoals : LF.mctx -> Id.name * LF.ctyp * LF.depend
+val genContextGoals : LF.mctx -> Id.name * LF.ctyp * Plicity.t * Inductivity.t
                       -> LF.dctx inside list
 
 val genCGoals : LF.mctx -> LF.ctyp -> (LF.mctx * cov_goal * LF.msub) list * depend

@@ -92,20 +92,20 @@ let auto_solve_trivial : t =
         (P.fmt_ppr_lf_ctyp_decl cD) m
       end;
     match m with
-    | LF.Decl (_, mtyp, _) ->
+    | LF.Decl (_, mtyp, _, _) ->
        Whnf.convCTyp g.goal (TypBox (Loc.ghost, mtyp), LF.MShift idx)
     | LF.DeclOpt _ ->
        B.Error.violation "[auto_solve_trivial] Unexpected DeclOpt"
   in
   let build_mwitness (m : LF.ctyp_decl * int) =
     match m with
-    | (LF.Decl (_, (LF.ClTyp (_, _) as cU), _), idx) ->
+    | (LF.Decl (_, (LF.ClTyp (_, _) as cU), _, _), idx) ->
        let open LF in
        let open Loc in
        let t = LF.MShift idx in
        let LF.ClTyp (_, cPsi) as cU = Whnf.cnormMTyp (cU, t) in
        let head = MVar (Offset idx, S.LF.id) in
-       let clobj = MObj (Root (ghost, head, Nil, `explicit)) in
+       let clobj = MObj (Root (ghost, head, Nil, B.Plicity.explicit)) in
        let psi_hat = Context.dctxToHat cPsi in
        Box
          ( ghost

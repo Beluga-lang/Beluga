@@ -120,6 +120,6 @@ let appendAsComment innerHtml =
 let ids = ref []
 
 let addId s =
-  ids := s::!ids
+  ids := s :: !ids
 
 let idExists s = List.exists (String.equal s) !ids

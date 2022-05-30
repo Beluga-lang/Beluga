@@ -967,11 +967,11 @@ let name_or_blank : name_or_blank parser =
     (name $> fun x -> `name x)
     (token T.UNDERSCORE |> blankify)
 
-(** Converts a name or blank into a depend and a name. *)
-let dep_name_of_nb =
+(** Converts a name or blank into a plicity and a name. *)
+let plicity_name_of_nb =
   function
-  | `blank loc' -> (LF.Maybe, Id.mk_blank (Some loc'))
-  | `name x -> (LF.No, x)
+  | `blank loc' -> (Plicity.implicit, Id.mk_blank (Some loc'))
+  | `name x -> (Plicity.explicit, x)
 
 let dot_name : Id.name t =
   token T.DOT &> name
@@ -1843,8 +1843,8 @@ let cltyp : (LF.dctx * typ_or_ctx) parser =
         (label ctx "contextual context type")
     end
 
-let clf_ctyp_decl_bare : type a. a name_parser -> (a -> LF.depend * Id.name) -> LF.ctyp_decl t =
-  fun nameclass dep_of_name ->
+let clf_ctyp_decl_bare : type a. a name_parser -> (a -> Plicity.t * Id.name) -> LF.ctyp_decl t =
+  fun nameclass plicity_of_name ->
   { run =
       fun s ->
       let hash_variable_decl p =
@@ -1859,15 +1859,15 @@ let clf_ctyp_decl_bare : type a. a name_parser -> (a -> LF.depend * Id.name) -> 
           (sigil_bracks_or_opt_parens T.DOLLAR)
           p
       in
-      let mk_decl dep f (loc, (p, w)) =
-        LF.Decl (p, (loc, f w), dep)
+      let mk_decl plicity f (loc, (p, w)) =
+        LF.Decl (p, (loc, f w), plicity)
       in
-      let mk_cltyp_decl dep f d =
-        mk_decl dep (fun (cPsi, x) -> LF.ClTyp (f x, cPsi)) d
+      let mk_cltyp_decl plicity f d =
+        mk_decl plicity (fun (cPsi, x) -> LF.ClTyp (f x, cPsi)) d
       in
       let mk_cltyp_decl_blank f (loc, (nb, (cPsi, tA))) =
-        let dep, x = dep_of_name nb in
-        mk_cltyp_decl dep f (loc, (x, (cPsi, tA)))
+        let plicity, x = plicity_of_name nb in
+        mk_cltyp_decl plicity f (loc, (x, (cPsi, tA)))
       in
       let param_variable =
         hash_variable_decl (trying clf_typ_atomic)
@@ -1898,17 +1898,17 @@ let clf_ctyp_decl_bare : type a. a name_parser -> (a -> LF.depend * Id.name) -> 
            *)
           ; nameclass `ordinary <& token T.COLON |> span
             $ fun (loc1, nb) ->
-              let dep, x = dep_of_name nb in
+              let plicity, x = plicity_of_name nb in
               alt
                 (span name
                  $> fun (loc2, ctx) ->
-                    mk_decl dep
+                    mk_decl plicity
                       (fun w -> LF.CTyp w)
                       (Loc.join loc1 loc2, (x, ctx)))
                 (bracks_or_opt_parens (contextual clf_typ_atomic) |> span
                  $> fun (loc2, d) ->
                     mk_cltyp_decl
-                      dep
+                      plicity
                       (fun tA -> LF.MTyp tA)
                       (Loc.join loc1 loc2, (x, d)))
           ]
@@ -1924,7 +1924,7 @@ let ctx_variable =
         (trying (name <& token T.COLON))
         (name <& not_followed_by meta_obj)
       |> span
-      $> fun (loc, (p, w)) -> LF.Decl (p, (loc, LF.CTyp w), LF.Maybe)
+      $> fun (loc, (p, w)) -> LF.Decl (p, (loc, LF.CTyp w), Plicity.implicit)
     end
 
 (** Contextual LF contextual type declaration *)
@@ -1938,11 +1938,11 @@ let clf_ctyp_decl =
       let dollar_variable_decl p =
         contextual_variable_decl dollar_name bracks_or_opt_parens p
       in
-      let mk_decl dep f (loc, (p, w)) =
-        LF.Decl (p, (loc, f w), dep)
+      let mk_decl plicity f (loc, (p, w)) =
+        LF.Decl (p, (loc, f w), plicity)
       in
       let mk_cltyp_decl f d =
-        mk_decl LF.No (fun (cPsi, x) -> LF.ClTyp (f x, cPsi)) d
+        mk_decl Plicity.explicit (fun (cPsi, x) -> LF.ClTyp (f x, cPsi)) d
       in
 
       let param_variable =
@@ -1981,7 +1981,7 @@ let clf_ctyp_decl =
               alt
                 (span name
                  $> fun (loc2, ctx) ->
-                    mk_decl LF.No
+                    mk_decl Plicity.explicit
                       (fun w -> LF.CTyp w)
                       (Loc.join loc1 loc2, (x, ctx)))
                 (bracks_or_opt_parens (contextual clf_typ_atomic)
@@ -2030,7 +2030,7 @@ let rec cmp_typ =
       in
       let pibox =
         labelled "Pi-box type"
-          (pibox (clf_ctyp_decl_bare name' (fun x -> LF.No, x) |> braces) cmp_typ
+          (pibox (clf_ctyp_decl_bare name' (fun x -> Plicity.explicit, x) |> braces) cmp_typ
              (fun loc ctyp_decl tau ->
                Comp.TypPiBox (loc, ctyp_decl, tau)))
       in
@@ -2168,7 +2168,7 @@ let rec cmp_kind =
                          end
                        , cPsi
                        )
-                   , LF.No
+                   , Plicity.explicit
                    )
                  , k
                  )
@@ -2232,7 +2232,7 @@ and cmp_branch =
       fun s ->
       let p =
         seq3
-          (mctx ~sep: (pure ()) (clf_ctyp_decl_bare name' (fun x -> LF.No, x) |> braces))
+          (mctx ~sep: (pure ()) (clf_ctyp_decl_bare name' (fun x -> Plicity.explicit, x) |> braces))
           cmp_pattern
           (token T.THICK_ARROW &> cmp_exp_chk)
         |> span
@@ -2374,7 +2374,7 @@ and cmp_exp_chk' =
       let lets =
         let let_pattern =
           seq4
-            (mctx ~sep: (pure ()) (clf_ctyp_decl_bare name' (fun x -> LF.No, x) |> braces))
+            (mctx ~sep: (pure ()) (clf_ctyp_decl_bare name' (fun x -> Plicity.explicit, x) |> braces))
             (cmp_pattern <& token T.EQUALS)
             (cmp_exp_syn <& token T.KW_IN)
             cmp_exp_chk
@@ -2681,7 +2681,7 @@ let sgn_query_pragma =
   pragma "query" &>
     seq4
       (seq2 bound bound)
-      (mctx ~sep: (pure ()) (clf_ctyp_decl_bare name' (fun x -> LF.No, x) |> braces))
+      (mctx ~sep: (pure ()) (clf_ctyp_decl_bare name' (fun x -> Plicity.explicit, x) |> braces))
       (maybe (name <& token T.COLON))
       lf_typ
   <& token T.DOT
@@ -3020,7 +3020,7 @@ and harpoon_hypothetical : Comp.hypothetical parser =
   let open Comp in
   let hypotheses =
     seq2
-      (mctx (clf_ctyp_decl_bare name_or_blank' dep_name_of_nb) <& token T.PIPE)
+      (mctx (clf_ctyp_decl_bare name_or_blank' plicity_name_of_nb) <& token T.PIPE)
       gctx
     $> fun (cD, cG) -> { cD; cG }
   in

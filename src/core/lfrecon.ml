@@ -251,7 +251,7 @@ let _ =
 let rec conv_listToString =
   function
   | [] -> " "
-  | x::xs -> string_of_int x ^ ", " ^ conv_listToString xs
+  | x :: xs -> string_of_int x ^ ", " ^ conv_listToString xs
 
 let rec what_head =
   function
@@ -318,7 +318,7 @@ let unify_phat cD psihat =
           begin
             begin match c_var with
             | CtxName psi ->
-               FCVar.add psi (cD, Decl (psi, CTyp s_cid, Maybe))
+               FCVar.add psi (cD, Decl (psi, CTyp s_cid, Plicity.implicit, Inductivity.not_inductive))
             | _ -> ()
             end;
             mmvar1.instantiation := Some (ICtx (CtxVar (c_var)));
@@ -350,7 +350,7 @@ let getSchema cD ctxvar loc =
   | Some (Int.LF.CtxName n) ->
      begin
        try
-         let (_, Int.LF.Decl (_, Int.LF.CTyp (Some s_cid), _dep)) = FCVar.get n in
+         let (_, Int.LF.Decl (_, Int.LF.CTyp (Some s_cid), _, _)) = FCVar.get n in
          Schema.get_schema s_cid
        with
        | _ -> throw loc (CtxVarSchema n)
@@ -380,7 +380,7 @@ let etaExpSub k s tA =
     function
     | Int.LF.Atom _ -> (k, s)
     | Int.LF.PiTyp (_, tA) ->
-       let (k', s') = go (k+1) s tA in
+       let (k', s') = go (k + 1) s tA in
        (k' - 1, Apx.LF.Dot (Apx.LF.Head (Apx.LF.BVar k'), s'))
   in
   match tA, s with
@@ -401,8 +401,8 @@ let etaExpandHead loc h tA =
     function
     | Int.LF.Atom _ -> (k, tS)
     | Int.LF.PiTyp (_, tA') ->
-       let tN = Int.LF.Root (loc, Int.LF.BVar k, Int.LF.Nil, `explicit) in
-       etaExpSpine (k+1) (Int.LF.App (tN, tS)) tA'
+       let tN = Int.LF.Root (loc, Int.LF.BVar k, Int.LF.Nil, Plicity.explicit) in
+       etaExpSpine (k + 1) (Int.LF.App (tN, tS)) tA'
   in
 
   let rec etaExpPrefix loc (tM, tA) =
@@ -415,10 +415,10 @@ let etaExpandHead loc h tA =
   let (k, tS') = etaExpSpine 1 (Int.LF.Nil) tA in
   let h' =
     match h with
-    | Int.LF.BVar x -> Int.LF.BVar (x+k-1)
+    | Int.LF.BVar x -> Int.LF.BVar (x + k - 1)
     | Int.LF.FVar _ -> h
   in
-  etaExpPrefix loc (Int.LF.Root (loc, h', tS', `explicit), tA)
+  etaExpPrefix loc (Int.LF.Root (loc, h', tS', Plicity.explicit), tA)
 
 
 
@@ -431,7 +431,7 @@ let etaExpandHead loc h tA =
  *     | Int.LF.Atom _ -> (k, tS)
  *     | Int.LF.PiTyp (_, tA') ->
  *        let tN = Apx.LF.Root (loc, Apx.LF.BVar k, Apx.LF.Nil) in
- *        etaExpApxSpine (k+1) (Apx.LF.App (tN, tS)) tA'
+ *        etaExpApxSpine (k + 1) (Apx.LF.App (tN, tS)) tA'
  *   in
  *   let rec etaExpApxPrefix loc (tM, tA) =
  *     match tA with
@@ -442,7 +442,7 @@ let etaExpandHead loc h tA =
  *   let (k, tS') = etaExpApxSpine 1 (Apx.LF.Nil) tA in
  *   let h' =
  *     match h with
- *     | Apx.LF.BVar x -> Apx.LF.BVar (x+k-1)
+ *     | Apx.LF.BVar x -> Apx.LF.BVar (x + k - 1)
  *     | Apx.LF.FVar _ -> h
  *   in
  *   etaExpApxPrefix loc (Apx.LF.Root (loc, h', tS'), tA) *)
@@ -453,7 +453,7 @@ let etaExpandApxTerm loc h tS tA =
     | Int.LF.Atom _ -> (k, tS)
     | Int.LF.PiTyp (_, tA') ->
        let tN = Apx.LF.Root (loc, Apx.LF.BVar k, Apx.LF.Nil) in
-       etaExpApxSpine (k+1) (Apx.LF.App (tN, tS)) tA'
+       etaExpApxSpine (k + 1) (Apx.LF.App (tN, tS)) tA'
   in
   let rec etaExpApxPrefix loc (tM, tA) =
     match tA with
@@ -477,7 +477,7 @@ let etaExpandApxTerm loc h tS tA =
 
   let h' =
     match h with
-    | Apx.LF.BVar x -> Apx.LF.BVar (x+k-1)
+    | Apx.LF.BVar x -> Apx.LF.BVar (x + k - 1)
     | _ -> h
   in
   etaExpApxPrefix loc (Apx.LF.Root (loc, h', tS''), tA)
@@ -494,7 +494,7 @@ let etaExpandApxTerm loc h tS tA =
 let rec patSpine spine =
   let rec etaUnroll k =
     function
-    | Apx.LF.Lam (_, _, n) -> etaUnroll (k+1) n
+    | Apx.LF.Lam (_, _, n) -> etaUnroll (k + 1) n
     | m -> (k, m)
   in
 
@@ -518,8 +518,8 @@ let rec patSpine spine =
           if l' = k && x > k
           then
             begin
-              let (l, p_spine) = patSpine' ((x-k)::seen_vars) spine in
-              (l+1, Apx.LF.App (Apx.LF.Root (loc, Apx.LF.BVar (x-k), Apx.LF.Nil), p_spine))
+              let (l, p_spine) = patSpine' ((x - k) :: seen_vars) spine in
+              (l + 1, Apx.LF.App (Apx.LF.Root (loc, Apx.LF.BVar (x - k), Apx.LF.Nil), p_spine))
             end
           else
             raise NotPatSpine
@@ -529,7 +529,7 @@ let rec patSpine spine =
           then
             begin
               let (l, p_spine) = patSpine' seen_vars spine in
-              (l+1, Apx.LF.App (Apx.LF.Root (loc, Apx.LF.FVar x, Apx.LF.Nil), p_spine))
+              (l + 1, Apx.LF.App (Apx.LF.Root (loc, Apx.LF.FVar x, Apx.LF.Nil), p_spine))
             end
           else
             raise NotPatSpine
@@ -872,16 +872,11 @@ exception SubTypingFailure
 let rec elKind cD cPsi =
   function
   | Apx.LF.Typ -> Int.LF.Typ
-  | Apx.LF.PiKind ((Apx.LF.TypDecl (x, a), dep), k) ->
-     let dep' =
-       match dep with
-       | Apx.LF.No -> Int.LF.No
-       | Apx.LF.Maybe -> Int.LF.Maybe
-     in
+  | Apx.LF.PiKind ((Apx.LF.TypDecl (x, a), plicity), k) ->
      let tA = elTyp Pi (*cD=*)Int.LF.Empty cPsi a in
      let cPsi' = Int.LF.DDec (cPsi, Int.LF.TypDecl (x, tA)) in
      let tK = elKind cD cPsi' k in
-     Int.LF.PiKind ((Int.LF.TypDecl (x, tA), dep'), tK)
+     Int.LF.PiKind ((Int.LF.TypDecl (x, tA), plicity), tK)
 
 (* elTyp recT cD cPsi a = A
  *
@@ -909,16 +904,11 @@ and elTyp recT cD cPsi =
      let tS = elKSpineI loc recT cD cPsi s i (tK, s') in
      Int.LF.Atom (loc, a, tS)
 
-  | Apx.LF.PiTyp ((Apx.LF.TypDecl (x, a), dep), b) ->
-     let dep' =
-       match dep with
-       | Apx.LF.No -> Int.LF.No
-       | Apx.LF.Maybe -> Int.LF.Maybe
-     in
+  | Apx.LF.PiTyp ((Apx.LF.TypDecl (x, a), plicity), b) ->
      let tA = elTyp recT cD cPsi a in
      let cPsi' = Int.LF.DDec (cPsi, Int.LF.TypDecl (x, tA)) in
      let tB = elTyp recT cD cPsi' b in
-     Int.LF.PiTyp ((Int.LF.TypDecl (x, tA), dep'), tB)
+     Int.LF.PiTyp ((Int.LF.TypDecl (x, tA), plicity), tB)
 
   | Apx.LF.Sigma typRec ->
      let typRec' = elTypRec recT cD cPsi typRec in
@@ -1064,7 +1054,7 @@ and elTerm' recT cD cPsi r sP =
      (* let s = mkShift recT cPsi in *)
      let s = S.LF.id in
      let (tS, sQ) = elSpineI loc recT cD cPsi spine i (tA, s) in
-     let tR = Int.LF.Root (loc, Int.LF.Const c, tS, `explicit) in
+     let tR = Int.LF.Root (loc, Int.LF.Const c, tS, Plicity.explicit) in
      begin
        try
          Unify.unifyTyp cD cPsi sQ sP;
@@ -1084,7 +1074,7 @@ and elTerm' recT cD cPsi r sP =
          begin
            try
              Unify.unifyTyp cD cPsi sQ sP;
-             Int.LF.Root (loc, Int.LF.BVar x, tS, `explicit)
+             Int.LF.Root (loc, Int.LF.BVar x, tS, Plicity.explicit)
            with
            | Unify.Failure msg ->
               throw loc (TypMismatchElab (cD, cPsi, sP, sQ))
@@ -1111,7 +1101,7 @@ and elTerm' recT cD cPsi r sP =
             begin
               try
                 Unify.unifyTyp cD cPsi sQ sP;
-                Int.LF.Root (loc, Int.LF.FVar x, tS, `explicit)
+                Int.LF.Root (loc, Int.LF.FVar x, tS, Plicity.explicit)
               with
               | Unify.Failure msg ->
                  throw loc (TypMismatchElab (cD, cPsi, sP, sQ))
@@ -1131,14 +1121,14 @@ and elTerm' recT cD cPsi r sP =
                   *  This will be enforced during abstraction.
                   *)
                  FVar.add x (Int.LF.Type tA);
-                 Int.LF.Root (loc, Int.LF.FVar x, tS, `explicit)
+                 Int.LF.Root (loc, Int.LF.FVar x, tS, Plicity.explicit)
                with
                | NotPatSpine ->
                   dprint (fun () -> "[elTerm'] FVar case -- Not a pattern spine...");
-                  let v = Whnf.newMVar None (cPsi, Int.LF.TClo sP) Int.LF.Maybe in
+                  let v = Whnf.newMVar None (cPsi, Int.LF.TClo sP) Plicity.implicit Inductivity.not_inductive in
                   let tAvar = Int.LF.TypVar (Int.LF.TInst (ref None, cPsi, Int.LF.Typ, ref [])) in
                   add_fvarCnstr (tAvar, r, v);
-                  Int.LF.Root (loc, Int.LF.MVar (v, S.LF.id), Int.LF.Nil, `explicit)
+                  Int.LF.Root (loc, Int.LF.MVar (v, S.LF.id), Int.LF.Nil, Plicity.explicit)
              end
         end
      | Pibox -> throw loc (UnboundName x)
@@ -1166,8 +1156,8 @@ and elTerm' recT cD cPsi r sP =
          | Pi ->
             (* let u = Whnf.newMVar (cPsi, tA) in
                Int.LF.Root (loc, Int.LF.MVar (u, S.LF.id), tS) *)
-            let u = Whnf.newMVar None (Int.LF.Null, tA) Int.LF.Maybe in
-            Int.LF.Root (loc, Int.LF.MVar (u, sshift), tS, `implicit)
+            let u = Whnf.newMVar None (Int.LF.Null, tA) Plicity.implicit Inductivity.not_inductive in
+            Int.LF.Root (loc, Int.LF.MVar (u, sshift), tS, Plicity.implicit)
          | Pibox ->
             begin match tA with
             | Int.LF.Atom (_, a, _) ->
@@ -1189,17 +1179,17 @@ and elTerm' recT cD cPsi r sP =
                      (* cPhi' |- ssi : cPhi *)
                      (* cPhi' |- [ssi]tQ    *)
                      let u =
-                       Whnf.newMMVar None (cD, cPhi', Int.LF.TClo (tA', ssi')) Int.LF.Maybe
+                       Whnf.newMMVar None (cD, cPhi', Int.LF.TClo (tA', ssi')) Plicity.implicit Inductivity.not_inductive
                      in
                      Int.LF.MMVar ((u, Whnf.m_id), S.LF.comp ss' s_proj)
                    end
                  else
                    begin
-                     let u = Whnf.newMMVar None (cD, cPhi, tA') Int.LF.Maybe in
+                     let u = Whnf.newMMVar None (cD, cPhi, tA') Plicity.implicit Inductivity.not_inductive in
                      Int.LF.MMVar ((u, Whnf.m_id), s_proj)
                    end
                in
-               Int.LF.Root (loc, h, tS, `implicit)
+               Int.LF.Root (loc, h, tS, Plicity.implicit)
             | _ -> throw loc HolesFunction
             end
          end
@@ -1211,7 +1201,7 @@ and elTerm' recT cD cPsi r sP =
   | Apx.LF.Root (loc, Apx.LF.FMVar (u, s), Apx.LF.Nil) ->
      begin
        try
-         let (cD_d, Int.LF.Decl (_, Int.LF.ClTyp (Int.LF.MTyp tQ, cPhi), _)) = FCVar.get u in
+         let (cD_d, Int.LF.Decl (_, Int.LF.ClTyp (Int.LF.MTyp tQ, cPhi), _, _)) = FCVar.get u in
          dprintf
            begin fun p ->
            p.fmt "[elTerm'] @[<v>FMV %a of type %a[%a]@,in cD_d = %a@,and cD = %a@]"
@@ -1268,7 +1258,7 @@ and elTerm' recT cD cPsi r sP =
            end;
          (* We do not check here that tP approx. [s']tP' --
           * this check is delayed to reconstruction *)
-         let tR = Int.LF.Root (loc, Int.LF.FMVar (u, s''), Int.LF.Nil, `explicit) in
+         let tR = Int.LF.Root (loc, Int.LF.FMVar (u, s''), Int.LF.Nil, Plicity.explicit) in
          begin
            try
              Unify.unifyTyp cD cPsi (tQ', s'') sP;
@@ -1348,9 +1338,9 @@ and elTerm' recT cD cPsi r sP =
                  (P.fmt_ppr_lf_typ cD cPhi P.l0) tP
                end;
 
-             FCVar.add u (cD, Int.LF.Decl (u, Int.LF.ClTyp (Int.LF.MTyp tP, cPhi), Int.LF.Maybe));
+             FCVar.add u (cD, Int.LF.Decl (u, Int.LF.ClTyp (Int.LF.MTyp tP, cPhi), Plicity.implicit, Inductivity.not_inductive));
              (*The depend paramater here affects both mlam vars and case vars*)
-             Int.LF.Root (loc, Int.LF.FMVar (u, s''), Int.LF.Nil, `explicit)
+             Int.LF.Root (loc, Int.LF.FMVar (u, s''), Int.LF.Nil, Plicity.explicit)
           | _ when isProjPatSub s ->
              dprint (fun () -> "Synthesize domain for meta-variable " ^ string_of_name u);
              dprint (fun () -> "isProjPatSub ... ");
@@ -1416,8 +1406,8 @@ and elTerm' recT cD cPsi r sP =
                  (P.fmt_ppr_lf_dctx cD P.l0) cPhi
                end;
 
-             FCVar.add u (cD, Int.LF.Decl (u, Int.LF.ClTyp (Int.LF.MTyp tP, cPhi), Int.LF.Maybe));
-             Int.LF.Root (loc, Int.LF.FMVar (u, sorig), Int.LF.Nil, `explicit)
+             FCVar.add u (cD, Int.LF.Decl (u, Int.LF.ClTyp (Int.LF.MTyp tP, cPhi), Plicity.implicit, Inductivity.not_inductive));
+             Int.LF.Root (loc, Int.LF.FMVar (u, sorig), Int.LF.Nil, Plicity.explicit)
 
           | _ ->
              (*  TO BE ADDED, if we want to synthesize the type of meta-variables
@@ -1449,9 +1439,9 @@ and elTerm' recT cD cPsi r sP =
               *
               * else *)
              (* if s = substvar whose type is known *)
-             let v = Whnf.newMMVar None (cD, cPsi, Int.LF.TClo sP) Int.LF.Maybe in
+             let v = Whnf.newMMVar None (cD, cPsi, Int.LF.TClo sP)  Plicity.implicit Inductivity.not_inductive in
              add_fcvarCnstr (r, v);
-             Int.LF.Root (loc, Int.LF.MMVar ((v, Int.LF.MShift 0), S.LF.id), Int.LF.Nil, `explicit)
+             Int.LF.Root (loc, Int.LF.MMVar ((v, Int.LF.MShift 0), S.LF.id), Int.LF.Nil, Plicity.explicit)
      end
 
 
@@ -1459,7 +1449,7 @@ and elTerm' recT cD cPsi r sP =
   | Apx.LF.Root (loc, Apx.LF.FPVar (p, s), spine) ->
      begin
        try
-         let (cD_d, Int.LF.Decl (_, Int.LF.ClTyp (Int.LF.PTyp tA, cPhi), _)) = FCVar.get p in
+         let (cD_d, Int.LF.Decl (_, Int.LF.ClTyp (Int.LF.PTyp tA, cPhi), _, _)) = FCVar.get p in
          let d = Context.length cD - Context.length cD_d in
          let (tA, cPhi) =
            if d = 0
@@ -1473,7 +1463,7 @@ and elTerm' recT cD cPsi r sP =
 
          let s'' = elSub loc recT cD cPsi s Int.LF.Subst cPhi in
          let (tS, sQ) = elSpine loc recT cD cPsi spine (tA, s'') in
-         let tR = Int.LF.Root (loc, Int.LF.FPVar (p, s''), tS, `explicit) in
+         let tR = Int.LF.Root (loc, Int.LF.FPVar (p, s''), tS, Plicity.explicit) in
          begin
            try
              Unify.unifyTyp cD cPsi sQ sP;
@@ -1520,8 +1510,8 @@ and elTerm' recT cD cPsi r sP =
                     end
                | _ -> ()
              end;
-             FCVar.add p (cD, Int.LF.Decl (p, Int.LF.ClTyp (Int.LF.PTyp (Whnf.normTyp (tP, S.LF.id)), cPhi), Int.LF.Maybe));
-             Int.LF.Root (loc, Int.LF.FPVar (p, s''), Int.LF.Nil, `explicit)
+             FCVar.add p (cD, Int.LF.Decl (p, Int.LF.ClTyp (Int.LF.PTyp (Whnf.normTyp (tP, S.LF.id)), cPhi), Plicity.implicit, Inductivity.not_inductive));
+             Int.LF.Root (loc, Int.LF.FPVar (p, s''), Int.LF.Nil, Plicity.explicit)
 
           | (Apx.LF.Nil, false) ->
              (* cD ; cPsi |- #p[s] : sP *)
@@ -1547,7 +1537,7 @@ and elTerm' recT cD cPsi r sP =
            ^ "."
            ^ string_of_proj proj
            end;
-         let (cD_d, Int.LF.Decl (_, Int.LF.ClTyp (Int.LF.PTyp ((Int.LF.Sigma typRec) as tA), cPhi), _)) =
+         let (cD_d, Int.LF.Decl (_, Int.LF.ClTyp (Int.LF.PTyp ((Int.LF.Sigma typRec) as tA), cPhi), _, _)) =
            FCVar.get p
          in
          let d = Context.length cD - Context.length cD_d in
@@ -1577,7 +1567,7 @@ and elTerm' recT cD cPsi r sP =
          begin
            try
              Unify.unifyTyp cD cPsi (Int.LF.TClo sQ, s'') sP;
-             Int.LF.Root (loc, Int.LF.Proj (Int.LF.FPVar (p, s''), k), tS, `explicit)
+             Int.LF.Root (loc, Int.LF.Proj (Int.LF.FPVar (p, s''), k), tS, Plicity.explicit)
            with
            | Unify.Failure msg ->
               throw loc (TypMismatchElab (cD, cPsi, sP, sQ))
@@ -1634,9 +1624,9 @@ and elTerm' recT cD cPsi r sP =
              let tB = Whnf.collapse_sigma typRec in
              FCVar.add p
                ( cD
-               , Int.LF.(Decl (p, ClTyp (PTyp (Whnf.normTyp (tB, s_inst)), cPhi), Maybe))
+               , Int.LF.(Decl (p, ClTyp (PTyp (Whnf.normTyp (tB, s_inst)), cPhi), Plicity.implicit, Inductivity.not_inductive))
                );
-             Int.LF.Root (loc, Int.LF.Proj (Int.LF.FPVar (p, s''), kIndex), Int.LF.Nil, `explicit)
+             Int.LF.Root (loc, Int.LF.Proj (Int.LF.FPVar (p, s''), kIndex), Int.LF.Nil, Plicity.explicit)
 
           | (false, Apx.LF.Nil) -> failwith "Not implemented"
           (* let q = Whnf.newPVar None (cPsi, Int.LF.TClo sP) in *)
@@ -1744,7 +1734,7 @@ and elTerm' recT cD cPsi r sP =
          let (_, tA, cPhi) = Whnf.mctxMDec cD u in
          let s'' = elSub loc recT cD cPsi s' Int.LF.Subst cPhi in
          let (tS, sQ) = elSpine loc recT cD cPsi spine (tA, s'') in
-         let tR = Int.LF.Root (loc, Int.LF.MVar (Int.LF.Offset u, s''), tS, `explicit) in
+         let tR = Int.LF.Root (loc, Int.LF.MVar (Int.LF.Offset u, s''), tS, Plicity.explicit) in
          dprintf
            begin fun p ->
            p.fmt "cPsi = %a"
@@ -1784,12 +1774,12 @@ and elTerm' recT cD cPsi r sP =
        | Int.LF.BVar k ->
           begin match S.LF.bvarSub k s'' with
           | Int.LF.Head (Int.LF.BVar j) ->
-             Int.LF.Root (loc, Int.LF.BVar j, tS, `explicit)
+             Int.LF.Root (loc, Int.LF.BVar j, tS, Plicity.explicit)
           | Int.LF.Head (Int.LF.PVar (p, r')) ->
-             Int.LF.Root (loc, Int.LF.PVar (p, S.LF.comp r' s''), tS, `explicit)
+             Int.LF.Root (loc, Int.LF.PVar (p, S.LF.comp r' s''), tS, Plicity.explicit)
           end
        | Int.LF.PVar (p, r) ->
-          Int.LF.Root (loc, Int.LF.PVar (p, S.LF.comp r s''), tS, `explicit)
+          Int.LF.Root (loc, Int.LF.PVar (p, S.LF.comp r s''), tS, Plicity.explicit)
        (* | Int.LF.Proj (Int.LF.PVar (p, r), i) -> Int.LF.Root (loc, Int.LF) *)
        end
        (* with
@@ -1804,15 +1794,15 @@ and elTerm' recT cD cPsi r sP =
 
        dprintf
          (fun p ->
-           let (u, tp, dep) = Whnf.mctxLookupDep cD k in
+           let (u, tp, plicity, inductivity) = Whnf.mctxLookupDep cD k in
            p.fmt "[elTerm'] elaborating parameter variable at index %d -> %a"
              k
-             (P.fmt_ppr_lf_ctyp_decl cD) (Int.LF.Decl (u, tp, dep))
+             (P.fmt_ppr_lf_ctyp_decl cD) (Int.LF.Decl (u, tp, plicity, inductivity))
          );
        let (_, tA, cPhi) = Whnf.mctxPDec cD k in
        let s'' = elSub loc recT cD cPsi s' Int.LF.Subst cPhi in
        let (tS, sQ) = elSpine loc recT cD cPsi spine (tA, s'') in
-       let tR = Int.LF.Root (loc, Int.LF.PVar (k, s''), tS, `explicit) in
+       let tR = Int.LF.Root (loc, Int.LF.PVar (k, s''), tS, Plicity.explicit) in
        begin
          try
            Unify.unifyTyp cD cPsi sQ sP;
@@ -1849,7 +1839,7 @@ and elTerm' recT cD cPsi r sP =
      begin
        try
          Unify.unifyTyp cD cPsi sQ sP;
-         Int.LF.Root (loc, Int.LF.Proj (Int.LF.BVar x, k), tS, `explicit)
+         Int.LF.Root (loc, Int.LF.Proj (Int.LF.BVar x, k), tS, Plicity.explicit)
        with
        | Unify.Failure msg ->
           throw loc (TypMismatchElab (cD, cPsi, sP, sQ))
@@ -1877,7 +1867,7 @@ and elTerm' recT cD cPsi r sP =
           begin
             try
               Unify.unifyTyp cD cPsi sQ sP;
-              Int.LF.Root (loc, Int.LF.Proj (Int.LF.PVar (p, t'), k), tS, `explicit)
+              Int.LF.Root (loc, Int.LF.Proj (Int.LF.PVar (p, t'), k), tS, Plicity.explicit)
             with
             | Unify.Failure msg ->
                throw loc (TypMismatchElab (cD, cPsi, sP, sQ))
@@ -1917,13 +1907,13 @@ and elTerm' recT cD cPsi r sP =
          | Int.LF.BVar y ->
             begin match S.LF.bvarSub y s'' with
             | Int.LF.Head (Int.LF.BVar x) ->
-               Int.LF.Root (loc, Int.LF.Proj (Int.LF.BVar x, k), tS, `explicit)
+               Int.LF.Root (loc, Int.LF.Proj (Int.LF.BVar x, k), tS, Plicity.explicit)
             | Int.LF.Head (Int.LF.PVar (p, r')) ->
                Int.LF.Root
                  ( loc
                  , Int.LF.Proj (Int.LF.PVar (p, S.LF.comp r' s''), k)
                  , tS
-                 , `explicit
+                 , Plicity.explicit
                  )
             end
          | Int.LF.PVar (p, r) ->
@@ -1931,7 +1921,7 @@ and elTerm' recT cD cPsi r sP =
               ( loc
               , Int.LF.Proj (Int.LF.PVar (p, S.LF.comp r s''), k)
               , tS
-              , `explicit
+              , Plicity.explicit
               )
          end
        with
@@ -2074,12 +2064,12 @@ and elClosedTerm' recT cD cPsi =
      (* let s = mkShift recT cPsi in *)
      let s = S.LF.id in
      let (tS, sQ) = elSpineI loc recT cD cPsi spine i (tA, s) in
-     (Int.LF.Root (loc, Int.LF.Const c, tS, `explicit), sQ)
+     (Int.LF.Root (loc, Int.LF.Const c, tS, Plicity.explicit), sQ)
 
   | Apx.LF.Root (loc, Apx.LF.BVar x, spine) ->
      let Int.LF.TypDecl (_, tA) = Context.ctxDec cPsi x in
      let (tS, sQ) = elSpine loc recT cD cPsi spine (tA, S.LF.id) in
-     (Int.LF.Root (loc, Int.LF.BVar x, tS, `explicit), sQ)
+     (Int.LF.Root (loc, Int.LF.BVar x, tS, Plicity.explicit), sQ)
 
   | Apx.LF.Root (loc, Apx.LF.MVar (Apx.LF.Offset u, s), spine) ->
      begin
@@ -2087,7 +2077,7 @@ and elClosedTerm' recT cD cPsi =
          let (_, tA, cPhi) = Whnf.mctxMDec cD u in
          let s'' = elSub loc recT cD cPsi s Int.LF.Subst cPhi in
          let (tS, sQ) = elSpine loc recT cD cPsi spine (tA, s'') in
-         (Int.LF.Root (loc, Int.LF.MVar (Int.LF.Offset u, s''), tS, `explicit), sQ)
+         (Int.LF.Root (loc, Int.LF.MVar (Int.LF.Offset u, s''), tS, Plicity.explicit), sQ)
        with
        | Error.Violation msg -> (* XXX this is probably bad -je *)
           dprint (fun () -> "[elClosedTerm] Violation: " ^ msg);
@@ -2100,7 +2090,7 @@ and elClosedTerm' recT cD cPsi =
          let (_, tA, cPhi) = Whnf.mctxPDec cD p in
          let s'' = elSub loc recT cD cPsi s' Int.LF.Subst cPhi in
          let (tS, sQ) = elSpine loc recT cD cPsi spine (tA, s'') in
-         (Int.LF.Root (loc, Int.LF.PVar (p, s''), tS, `explicit), sQ)
+         (Int.LF.Root (loc, Int.LF.PVar (p, s''), tS, Plicity.explicit), sQ)
        with
        | Error.Violation msg -> (* XXX this is probably bad -je *)
           dprint (fun () -> "[elClosedTerm] Violation: " ^ msg);
@@ -2113,7 +2103,7 @@ and elClosedTerm' recT cD cPsi =
        try
          let s'' = elSub loc recT cD cPsi s' Int.LF.Subst cPhi in
          let (tS, sQ) = elSpine loc recT cD cPsi spine (tA, s'') in
-         (Int.LF.Root (loc, Int.LF.PVar (p0, S.LF.comp s0 s''), tS, `explicit), sQ)
+         (Int.LF.Root (loc, Int.LF.PVar (p0, S.LF.comp s0 s''), tS, Plicity.explicit), sQ)
        with
        | Error.Violation msg ->
          dprint (fun () -> "[elClosedTerm] Violation: " ^ msg);
@@ -2144,7 +2134,7 @@ and elClosedTerm' recT cD cPsi =
           throw loc (ProjNotValid (cD, cPsi, k, (Int.LF.Sigma recA, S.LF.id)))
      in
      let (tS, sQ) = elSpine loc recT cD cPsi spine sA in
-     (Int.LF.Root (loc, Int.LF.Proj (Int.LF.BVar x, k), tS, `explicit), sQ)
+     (Int.LF.Root (loc, Int.LF.Proj (Int.LF.BVar x, k), tS, Plicity.explicit), sQ)
 
   | Apx.LF.Root (loc, Apx.LF.Proj (Apx.LF.PVar (Apx.LF.Offset p, t), proj), spine) ->
      begin match Whnf.mctxPDec cD p with
@@ -2158,7 +2148,7 @@ and elClosedTerm' recT cD cPsi =
           | _ -> throw loc (ProjNotValid (cD, cPsi, k, (Int.LF.Sigma recA, t')))
         in
         let (tS, sQ) = elSpine loc recT cD cPsi spine sA in
-        (Int.LF.Root (loc, Int.LF.Proj (Int.LF.PVar (p, t'), k), tS, `explicit), sQ)
+        (Int.LF.Root (loc, Int.LF.Proj (Int.LF.PVar (p, t'), k), tS, Plicity.explicit), sQ)
      | _ ->
         dprintf
           begin fun pr ->
@@ -2179,7 +2169,7 @@ and elClosedTerm' recT cD cPsi =
           try
             let sA = Int.LF.getType (Int.LF.PVar (p, s)) (recA, t') k 1 in
             let (tS, sQ) = elSpine loc recT cD cPsi spine sA in
-            (Int.LF.Root (loc, Int.LF.Proj (Int.LF.PVar (p, s), k), tS, `explicit), sQ)
+            (Int.LF.Root (loc, Int.LF.Proj (Int.LF.PVar (p, s), k), tS, Plicity.explicit), sQ)
           with
           | _ -> throw loc (ProjNotValid (cD, cPsi, k, (Int.LF.Sigma recA, t')))
         end
@@ -2251,7 +2241,7 @@ and elSub loc recT cD cPsi s cl cPhi =
         *)
        begin
          try
-           let (cD_d, Int.LF.Decl (_, Int.LF.ClTyp (Int.LF.STyp (cl0, cPhi0), cPsi0), dep)) =
+           let (cD_d, Int.LF.Decl (_, Int.LF.ClTyp (Int.LF.STyp (cl0, cPhi0), cPsi0), _, _)) =
              FCVar.get s_name
            in
            svar_le (cl0, cl);
@@ -2267,7 +2257,7 @@ and elSub loc recT cD cPsi s cl cPhi =
                  let rec createMSub d =
                    if d = 0
                    then Int.LF.MShift 0
-                   else Int.LF.MDot (Int.LF.MUndef, createMSub (d+1))
+                   else Int.LF.MDot (Int.LF.MUndef, createMSub (d + 1))
                  in
                  let t = createMSub d in
                  (Whnf.cnormDCtx (cPhi0, t), Whnf.cnormDCtx (cPsi0, t))
@@ -2297,7 +2287,8 @@ and elSub loc recT cD cPsi s cl cPhi =
                   , Int.LF.Decl
                       ( s_name
                       , Int.LF.ClTyp (Int.LF.STyp (cl, cPhi), cPsi')
-                      , Int.LF.Maybe
+                      , Plicity.implicit
+                      , Inductivity.not_inductive
                       )
                   );
                 Int.LF.FSVar (0, (s_name, sigma'))
@@ -2627,7 +2618,7 @@ and elSpineIW loc recT cD cPsi spine i sA =
         * s.t.  cPsi |- u[s'] => [s']A'  where cPsi |- s' : .
         *   and    [s]A = [s']A'. Therefore A' = [s']^-1([s]A)
         *)
-       let tN = Whnf.etaExpandMV cPsi (tA, s) n S.LF.id Int.LF.Maybe in
+       let tN = Whnf.etaExpandMV cPsi (tA, s) n S.LF.id Plicity.implicit Inductivity.not_inductive in
        let (spine', sP) = elSpineI loc recT cD cPsi spine (i - 1) (tB, Int.LF.Dot (Int.LF.Obj tN, s)) in
        (Int.LF.App (tN, spine'), sP)
 
@@ -2642,9 +2633,9 @@ and elSpineIW loc recT cD cPsi spine i sA =
        (* let tN = Whnf.etaExpandMMV loc cD cPsi (tA, s) n S.LF.id in *)
        let tN =
          if !strengthen
-         then ConvSigma.etaExpandMMVstr loc cD cPsi (tA, s) Int.LF.Maybe (Some n)
+         then ConvSigma.etaExpandMMVstr loc cD cPsi (tA, s) Plicity.implicit (Some n)
                 Context.(names_of_dctx cPsi @ names_of_mctx cD)
-         else Whnf.etaExpandMMV loc cD cPsi (tA, s) n S.LF.id Int.LF.Maybe
+         else Whnf.etaExpandMMV loc cD cPsi (tA, s) n S.LF.id Plicity.implicit Inductivity.not_inductive
        in
 
        let (spine', sP) = elSpineI loc recT cD cPsi spine (i - 1) (tB, Int.LF.Dot (Int.LF.Obj tN, s)) in
@@ -2654,7 +2645,7 @@ and elSpineIW loc recT cD cPsi spine i sA =
 
 (* elSpine loc recT cD cPsi spine sA = S
  * elSpineW cD cPsi spine sA = S
- *   where sA = (A,s) and sA in whnf
+ *   where sA = (A, s) and sA in whnf
  *
  * Pre-condition:
  *   U = free variables
@@ -2719,7 +2710,7 @@ and elKSpineI loc recT cD cPsi spine i sK =
     | ((Int.LF.PiKind ((Int.LF.TypDecl (n, tA), _), tK), s), Pi) ->
        (* let sshift = mkShift recT cPsi in *)
        (* let tN = Whnf.etaExpandMV Int.LF.Null (tA, s) sshift in *)
-       let tN = Whnf.etaExpandMV cPsi (tA, s) n S.LF.id Int.LF.Maybe in
+       let tN = Whnf.etaExpandMV cPsi (tA, s) n S.LF.id Plicity.implicit Inductivity.not_inductive in
        let spine' = elKSpineI loc recT cD cPsi spine (i - 1) (tK, Int.LF.Dot (Int.LF.Obj tN, s)) in
        Int.LF.App (tN, spine')
     | ((Int.LF.PiKind ((Int.LF.TypDecl (n, tA), _), tK), s), Pibox) ->
@@ -2728,10 +2719,10 @@ and elKSpineI loc recT cD cPsi spine i sK =
        let tN =
          if !strengthen
          then
-           ConvSigma.etaExpandMMVstr Syntax.Loc.ghost cD cPsi (tA, s) Int.LF.Maybe (Some n)
+           ConvSigma.etaExpandMMVstr Syntax.Loc.ghost cD cPsi (tA, s) Plicity.implicit (Some n)
              Context.(names_of_dctx cPsi @ names_of_mctx cD)
          else
-           Whnf.etaExpandMMV Syntax.Loc.ghost cD cPsi (tA, s) n S.LF.id Int.LF.Maybe
+           Whnf.etaExpandMMV Syntax.Loc.ghost cD cPsi (tA, s) n S.LF.id Plicity.implicit Inductivity.not_inductive
        in
        let spine' = elKSpineI loc recT cD cPsi spine (i - 1) (tK, Int.LF.Dot (Int.LF.Obj tN, s)) in
        Int.LF.App (tN, spine')
@@ -2829,7 +2820,7 @@ and elSpineSynth recT cD cPsi spine s' sP =
      let tB' =
        Int.LF.PiTyp
          ( ( Int.LF.TypDecl (Id.mk_name (Id.BVarName (Typ.gen_var_name tA')), tA')
-           , Int.LF.Maybe
+           , Plicity.implicit
            )
          , tB
          )
@@ -2850,7 +2841,7 @@ let rec elDCtx recT cD =
   function
   | Apx.LF.CtxHole ->
      dprint (fun () -> "Encountered _ (underscore) for context...");
-     Int.LF.CtxVar (Whnf.newCVar (Some (Id.mk_name (Id.SomeString "j"))) cD None Int.LF.Maybe)
+     Int.LF.CtxVar (Whnf.newCVar (Some (Id.mk_name (Id.SomeString "j"))) cD None Plicity.implicit Inductivity.not_inductive)
   | Apx.LF.Null -> Int.LF.Null
 
   | Apx.LF.CtxVar c_var ->
@@ -2896,7 +2887,7 @@ let checkCtxVar loc cD c_var w =
             )
          )
   | Apx.LF.CtxName psi ->
-     FCVar.add psi (cD, Int.LF.Decl (psi, Int.LF.CTyp (Some w), Int.LF.Maybe));
+     FCVar.add psi (cD, Int.LF.Decl (psi, Int.LF.CTyp (Some w), Plicity.implicit, Inductivity.not_inductive));
      Int.LF.CtxName psi
 
 (* ******************************************************************* *)
@@ -2924,7 +2915,7 @@ let rec solve_fvarCnstr recT cD =
                begin
                  try
                    Unify.unifyTyp cD cPsi sQ (tP, S.LF.id);
-                   instantiation := Some (Int.LF.INorm (Int.LF.Root (loc, Int.LF.FVar x, tS, `explicit)));
+                   instantiation := Some (Int.LF.INorm (Int.LF.Root (loc, Int.LF.FVar x, tS, Plicity.explicit)));
                    solve_fvarCnstr recT cD cnstrs
                  with
                  | Unify.Failure msg ->
@@ -2955,7 +2946,7 @@ let rec solve_fvarCnstr recT cD =
                  try
                    Unify.unifyTyp cD cPsi sQ (tP, S.LF.id);
                    Unify.unify cD cPsi
-                     (Int.LF.Root (loc, Int.LF.FVar x, tS, `explicit), S.LF.id)
+                     (Int.LF.Root (loc, Int.LF.FVar x, tS, Plicity.explicit), S.LF.id)
                      (tR, S.LF.id);
                    (* r := Some (Int.LF.Root (loc, Int.LF.FVar x, tS)); *)
                    solve_fvarCnstr recT cD cnstrs
@@ -2992,20 +2983,20 @@ let solve_fcvarCnstr cnstrs =
     match tM, Int.LF.(v.typ) with
     | Apx.LF.(Root (loc, FMVar (u, s), _nil_spine)), Int.LF.(ClTyp (MTyp _, cPsi)) ->
        assert (match _nil_spine with Apx.LF.Nil -> true | _ -> false);
-       let (cD_d, Int.LF.(Decl (_, ClTyp (MTyp _tP, cPhi), _))) =
+       let (cD_d, Int.LF.(Decl (_, ClTyp (MTyp _tP, cPhi), _, _))) =
          lookup_fcvar loc u
        in
        let cPhi = weakenAppropriately cD_d cPhi in
        let s'' = elSub loc cPsi s cPhi in
-       Int.LF.(v.instantiation := Some (INorm (Root (loc, FMVar (u, s''), Nil, `explicit))))
+       Int.LF.(v.instantiation := Some (INorm (Root (loc, FMVar (u, s''), Nil, Plicity.explicit))))
     | Apx.LF.(Root (loc, FPVar (x, s), spine)), Int.LF.(ClTyp (MTyp _, cPsi)) ->
-       let (cD_d, Int.LF.(Decl (_, ClTyp (PTyp tA, cPhi), _))) =
+       let (cD_d, Int.LF.(Decl (_, ClTyp (PTyp tA, cPhi), _, _))) =
          lookup_fcvar loc x
        in
        let cPhi = weakenAppropriately cD_d cPhi in
        let s'' = elSub loc cPsi s cPhi in
        let (tS, _) = elSpine loc Pibox Int.LF.(v.cD) cPsi spine (tA, s'') in
-       Int.LF.(v.instantiation := Some (INorm (Root (loc, FPVar (x, s''), tS, `explicit))))
+       Int.LF.(v.instantiation := Some (INorm (Root (loc, FPVar (x, s''), tS, Plicity.explicit))))
   in
   List.iter solve_one cnstrs
 

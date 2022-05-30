@@ -10,7 +10,7 @@ module LF = struct
 
   type kind =
     | Typ
-    | PiKind of (typ_decl * depend) * kind
+    | PiKind of (typ_decl * Plicity.t) * kind
 
   and typ_decl =                                (* LF Declarations                *)
     | TypDecl of name * typ                     (* D := x:A                       *)
@@ -26,12 +26,12 @@ module LF = struct
     | CTyp of cid_schema option
 
   and ctyp_decl =                               (* Contextual Declarations        *)
-    | Decl of name * ctyp * depend
-    | DeclOpt of name * plicity
+    | Decl of name * ctyp * Plicity.t * Inductivity.t
+    | DeclOpt of name * Plicity.t
 
   and typ =                                     (* LF level                       *)
-    | Atom of Location.t * cid_typ * spine           (* A ::= a M1 ... Mn              *)
-    | PiTyp of (typ_decl * depend) * typ        (*   | Pi x:A.B                   *)
+    | Atom of Location.t * cid_typ * spine      (* A ::= a M1 ... Mn              *)
+    | PiTyp of (typ_decl * Plicity.t) * typ     (*   | Pi x:A.B                   *)
     | Sigma of typ_rec
     | TClo of (typ * sub)                       (*   | TClo(A,s)                  *)
 
@@ -39,11 +39,11 @@ module LF = struct
   (* The plicity annotation is set to `implicit when reconstructing an
      a hole (_) so that when printing, it can be reproduced correctly.
    *)
-  and normal =                                  (* normal terms                   *)
+  and normal =                                       (* normal terms                   *)
     | Lam of Location.t * name * normal              (* M ::= \x.M                *)
-    | Root of Location.t * head * spine * plicity    (*   | h . S                 *)
+    | Root of Location.t * head * spine * Plicity.t  (*   | h . S                 *)
     | LFHole of Location.t * HoleId.t * HoleId.name
-    | Clo of (normal * sub)                     (*   | Clo(N,s)                   *)
+    | Clo of (normal * sub)                          (*   | Clo(N,s)                   *)
     | Tuple of Location.t * tuple
 
   (* TODO: Heads ought to carry their location.
@@ -120,7 +120,8 @@ module LF = struct
     ; mmvar_id : int (* unique to each MMVar *)
     ; typ : ctyp
     ; constraints : cnstr list ref (* not really used *)
-    ; depend : depend
+    ; plicity : Plicity.t
+    ; inductivity : Inductivity.t
     }
 
   and mm_var_inst' = mm_var * msub
@@ -209,7 +210,7 @@ module LF = struct
 
   let rename_ctyp_decl f =
     function
-    | Decl (x, tA, ind) -> Decl (f x, tA, ind)
+    | Decl (x, tA, plicity, inductivity) -> Decl (f x, tA, plicity, inductivity)
     | DeclOpt (x, plicity) -> DeclOpt (f x, plicity)
 
   (** Embeds a head into a normal by using an empty spine.
@@ -218,7 +219,7 @@ module LF = struct
       carry a location.
    *)
   let head (tH : head) : normal =
-    Root (Location.ghost, tH, Nil, `explicit)
+    Root (Location.ghost, tH, Nil, Plicity.explicit)
 
   let mvar cvar sub : head =
     MVar (cvar, sub)
@@ -231,9 +232,9 @@ module LF = struct
       not a DeclOpt.
       Raises a violation if it is a DeclOpt.
    *)
-  let require_decl : ctyp_decl -> Id.name * ctyp * depend =
+  let require_decl : ctyp_decl -> Id.name * ctyp * Plicity.t * Inductivity.t =
     function
-    | Decl (u, cU, dep) -> (u, cU, dep)
+    | Decl (u, cU, plicity, inductivity) -> (u, cU, plicity, inductivity)
     | DeclOpt _ ->
        Error.violation "[require_decl] DeclOpt is forbidden"
 
@@ -328,18 +329,13 @@ module LF = struct
 
   let is_explicit =
     function
-    | Decl(_, _, dep) ->
-       begin
-         match dep with
-         | No -> true
-         | Maybe -> false
-         | Inductive -> true
-       end
-    | _ -> true
+    | Decl(_, _, _, Inductivity.Inductive)
+    | Decl(_, _, Plicity.Explicit, _) -> true
+    | _ -> false
 
   let name_of_ctyp_decl (d : ctyp_decl) =
     match d with
-    | Decl (n, _, _) -> n
+    | Decl (n, _, _, _) -> n
     | DeclOpt (n, _) -> n
 
   (** Decides whether the given mfront is a variable,
@@ -350,14 +346,14 @@ module LF = struct
    *)
   let variable_of_mfront (mf : mfront) : (offset * offset option) option =
     match mf with
-    | ClObj (_, MObj (Root (_, MVar (Offset x,_), _, _)))
+    | ClObj (_, MObj (Root (_, MVar (Offset x, _), _, _)))
       | CObj (CtxVar (CtxOffset x))
-      | ClObj (_ , MObj (Root (_,PVar (x,_), _, _)))
-      | ClObj (_ , PObj (PVar (x,_)))  ->
+      | ClObj (_ , MObj (Root (_, PVar (x, _), _, _)))
+      | ClObj (_ , PObj (PVar (x, _)))  ->
        Some (x, None)
 
-    | ClObj (_, MObj (Root (_, Proj (PVar (x, _), k ),_, _)))
-      | ClObj (_, PObj (Proj (PVar (x,_), k))) ->
+    | ClObj (_, MObj (Root (_, Proj (PVar (x, _), k ), _, _)))
+      | ClObj (_, PObj (Proj (PVar (x, _), k))) ->
        Some (x, Some k)
 
     | _ -> None
@@ -391,7 +387,7 @@ module Comp = struct
   type meta_spine =
     | MetaNil
     | MetaApp of meta_obj * meta_typ (* annotation for pretty printing*)
-                 * meta_spine * plicity
+                 * meta_spine * Plicity.t
 
   type typ =
     | TypBase of Location.t * cid_comp_typ * meta_spine
@@ -452,7 +448,7 @@ module Comp = struct
     | Syn        of Location.t * exp_syn                                     (* | n                                               *)
     | Fn         of Location.t * name * exp_chk                              (* | \x. e'                                          *)
     | Fun        of Location.t * fun_branches                                (* | b_1...b_k                                       *)
-    | MLam       of Location.t * name * exp_chk * plicity                    (* | Pi X.e'                                         *)
+    | MLam       of Location.t * name * exp_chk * Plicity.t                    (* | Pi X.e'                                         *)
     | Pair       of Location.t * exp_chk * exp_chk                           (* | (e_1, e_2)                                      *)
     | LetPair    of Location.t * exp_syn * (name * name * exp_chk)           (* | letpair n (x, y, e) := let (x=n.1, y=n.2) in  e *)
     | Let        of Location.t * exp_syn * (name * exp_chk)                  (* | let x = n in e                                  *)
@@ -470,7 +466,7 @@ and exp_syn =                                                                   
     | Const     of Location.t * cid_prog                                         (* | theorem cp                                    *)
     | Apply     of Location.t * exp_syn * exp_chk                                (* | (n:tau_1 -> tau_2) (e:tau_1)                  *)
     | MApp      of Location.t * exp_syn * meta_obj * meta_typ (* annotation, *)  (* | (Pi X:U. n': tau) ([cPsihat |- tM] : [U'])    *)
-                    * plicity                            (* for printing *)
+                    * Plicity.t                            (* for printing *)
     | AnnBox    of meta_obj * meta_typ                                           (* | [cPsihat |- tM] : [cPsi |- tA]                *)
     | PairVal   of Location.t * exp_syn * exp_syn
 
@@ -480,7 +476,7 @@ and exp_syn =                                                                   
     | PatFVar of Location.t * name (* used only _internally_ by coverage *)
     | PatVar of Location.t * offset
     | PatPair of Location.t * pattern * pattern
-    | PatAnn of Location.t * pattern * typ * plicity
+    | PatAnn of Location.t * pattern * typ * Plicity.t
 
   and pattern_spine =
     | PatNil

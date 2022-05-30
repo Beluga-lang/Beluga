@@ -229,7 +229,7 @@ let rec ctxToSub' cPhi =
   | Null -> Ctxsub.ctxShift cPhi (* S.LF.id *)
   | DDec (cPsi', TypDecl (n, tA)) ->
      let s = (ctxToSub' cPhi cPsi' : sub) in
-     let u = Whnf.etaExpandMV cPhi (tA, s) n S.LF.id Maybe in
+     let u = Whnf.etaExpandMV cPhi (tA, s) n S.LF.id Plicity.implicit Inductivity.not_inductive in
      Dot (Obj u, s)
 
 (* check cD cPsi (tM, s1) (tA, s2) = ()
@@ -479,7 +479,7 @@ and inferHead loc cD cPsi head cl =
   | (Const _, Ren)
     | (MVar _, Ren)
     | (MMVar _, Ren) ->
-     raise (Error (loc, TermWhenVar (cD, cPsi, (Root (loc, head, Nil, `explicit)))))
+     raise (Error (loc, TermWhenVar (cD, cPsi, (Root (loc, head, Nil, Plicity.explicit)))))
 
   | (PVar (p, s), _) ->
      (* cD ; cPsi' |- tA <= type *)
@@ -888,7 +888,7 @@ and existsInstOfSchElemProj loc cD cPsi sA (h, i, n) elem =
         instanceOfSchElemProj cD cPsi sA (h, i) elem
       with
       | _ ->
-         existsInstOfSchElemProj loc cD cPsi sA (h, i+1, n) elem
+         existsInstOfSchElemProj loc cD cPsi sA (h, i + 1, n) elem
     end
 
 
@@ -931,7 +931,7 @@ and checkElementAgainstSchema cD sch_elem elements =
 
 (*  and subset f list =
     begin match list with [] -> true
-    | elem::elems -> f elem
+    | elem :: elems -> f elem
  *)
 
 and checkSchema loc cD cPsi schema_name (Schema elements as schema) =
@@ -1105,10 +1105,10 @@ and checkMSub loc cD ms cD' =
 
   | (MShift k, cD') ->
      if k >= 0
-     then checkMSub loc cD (MDot (MV (k+1), MShift (k+1))) cD'
+     then checkMSub loc cD (MDot (MV (k + 1), MShift (k + 1))) cD'
      else raise (Error.Violation ("Contextual substitution ill-formed"))
 
-  | (MDot (mft, ms), Dec (cD1, Decl (_, mtyp, _))) ->
+  | (MDot (mft, ms), Dec (cD1, Decl (_, mtyp, _, _))) ->
      checkMetaObj cD (loc, mft) (mtyp, ms);
      checkMSub loc cD ms cD1
 

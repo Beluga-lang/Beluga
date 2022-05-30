@@ -240,7 +240,7 @@ let extend_mctx cD (_, cdecl, t) =
 
 let mk_name_cdec =
   function
-  | Int.LF.Decl (u, _, _) -> mk_name (SomeName u)
+  | Int.LF.Decl (u, _, _, _) -> mk_name (SomeName u)
 
 (* etaExpandMMV loc cD cPsi sA  = tN
  *
@@ -282,17 +282,14 @@ let elNumericOrder (tau : I.typ) (order : Ext.Comp.numeric_order)
   let rec skip tau n =
     match tau, n with
     | _, 0 -> 0
-    | I.TypPiBox (_, Int.LF.Decl (u, cU, dep), tau), n ->
-       begin match dep with
-       | Int.LF.Inductive ->
-          Error.violation "[elaborate_numeric_order] impossible LF.Inductive"
-       | Int.LF.Maybe ->
-          1 + skip tau n (* implicits are free *)
-       | Int.LF.No ->
-          1 + skip tau (n - 1) (* explicits pi-types cost 1 *)
-       end
+    | I.TypPiBox (_, Int.LF.Decl (u, cU, _, Inductivity.Inductive), tau), n ->
+      Error.violation "[elNumericOrder] impossible LF.Inductive"
+    | I.TypPiBox (_, Int.LF.Decl (u, cU, Plicity.Implicit, _), tau), n ->
+      1 + skip tau n (* implicits are free *)
+    | I.TypPiBox (_, Int.LF.Decl (u, cU, Plicity.Explicit, _), tau), n ->
+      1 + skip tau (n - 1) (* explicits pi-types cost 1 *)
     | I.TypArr (_, _, tau), n ->
-       1 + skip tau (n - 1) (* simple functions cost 1 *)
+      1 + skip tau (n - 1) (* simple functions cost 1 *)
   in
   Ext.Comp.map_order (skip tau) order
   |> Order.of_numeric_order
@@ -306,7 +303,7 @@ let rec elDCtxAgainstSchema loc recT cD psi s_cid =
        end;
      Int.LF.Null
   | Apx.LF.CtxHole ->
-     Int.LF.CtxVar (Whnf.newCVar None cD (Some s_cid) Int.LF.Maybe)
+     Int.LF.CtxVar (Whnf.newCVar None cD (Some s_cid) Plicity.implicit Inductivity.not_inductive)
 
   | Apx.LF.CtxVar ((Apx.LF.CtxOffset _) as c_var) ->
      let { Schema.Entry.name; schema; decl = _ } = Schema.get s_cid in
@@ -318,7 +315,7 @@ let rec elDCtxAgainstSchema loc recT cD psi s_cid =
      (* This case should only be executed when c_var occurs in a pattern *)
      begin
        try
-         let (_, Int.LF.Decl (_, Int.LF.CTyp (Some s_cid'), _)) = FCVar.get psi in
+         let (_, Int.LF.Decl (_, Int.LF.CTyp (Some s_cid'), _, _)) = FCVar.get psi in
          if Id.cid_equals s_cid s_cid'
          then Int.LF.CtxVar (Int.LF.CtxName psi)
          else
@@ -327,7 +324,7 @@ let rec elDCtxAgainstSchema loc recT cD psi s_cid =
            Check.LF.(CtxVarMismatch (cD, c_var', name, schema) |> throw (Id.loc_of_name psi))
        with
        | Not_found ->
-          FCVar.add psi (cD, Int.LF.Decl (psi, Int.LF.CTyp (Some s_cid), Int.LF.Maybe));
+          FCVar.add psi (cD, Int.LF.Decl (psi, Int.LF.CTyp (Some s_cid), Plicity.implicit, Inductivity.not_inductive));
           Int.LF.CtxVar (Int.LF.CtxName psi)
      end
 
@@ -367,7 +364,7 @@ let unifyDCtxWithFCVar loc cD cPsi1 cPsi2 =
          match Context.ctxVar cPsi with
          | None -> ()
          | Some (Int.LF.CtxName psi) ->
-            FCVar.add psi (cD, Int.LF.(Decl (psi, CTyp (Some s_cid), v.depend)))
+            FCVar.add psi (cD, Int.LF.(Decl (psi, CTyp (Some s_cid), v.plicity, v.inductivity)))
          | _ -> ()
        end
 
@@ -468,13 +465,8 @@ let elCTyp recT cD =
      Int.LF.ClTyp (elClTyp recT cD cPsi cl, cPsi)
   | Apx.LF.CTyp schema_cid -> Int.LF.CTyp (Some schema_cid)
 
-let elCDecl recT cD (Apx.LF.Decl (u, ctyp, dep)) =
-  let dep =
-    match dep with
-    | Apx.LF.No -> Int.LF.No
-    | Apx.LF.Maybe -> Int.LF.Maybe
-  in
-  Int.LF.Decl (u, elCTyp recT cD ctyp, dep)
+let elCDecl recT cD (Apx.LF.Decl (u, ctyp, plicity)) =
+  Int.LF.Decl (u, elCTyp recT cD ctyp, plicity, Inductivity.not_inductive)
 
 
 let rec elMCtx recT =
@@ -528,7 +520,7 @@ let mgAtomicTyp cD cPsi a kK =
     | (Int.LF.Typ, _s) ->
        Int.LF.Nil
 
-    | (Int.LF.(PiKind ((TypDecl (u, tA1), dep), kK), s)) ->
+    | (Int.LF.(PiKind ((TypDecl (u, tA1), plicity), kK), s)) ->
        let tA1' = strans_typ cD cPsi (tA1, s) conv_list in
        let tR =
          if !strengthen
@@ -542,10 +534,10 @@ let mgAtomicTyp cD cPsi a kK =
                Id.print u
              end;
            Whnf.etaExpandMMV Loc.ghost cD
-             cPhi' (tA1', ssi') u ss_proj dep
+             cPhi' (tA1', ssi') u ss_proj plicity Inductivity.not_inductive
          else
            Whnf.etaExpandMMV Loc.ghost cD
-             flat_cPsi (tA1', Substitution.LF.id) u s_proj dep
+             flat_cPsi (tA1', Substitution.LF.id) u s_proj plicity Inductivity.not_inductive
        in
        dprintf
          begin fun p ->
@@ -570,10 +562,10 @@ let rec mgTyp cD cPsi =
   | Int.LF.Sigma trec ->
      Int.LF.Sigma (mgTypRec cD cPsi trec)
 
-  | Int.LF.PiTyp ((tdecl, dep), tA) ->
+  | Int.LF.PiTyp ((tdecl, plicity), tA) ->
      let tdecl' = mgTypDecl cD cPsi tdecl in
      Int.LF.PiTyp
-       ( (tdecl', dep)
+       ( (tdecl', plicity)
        , mgTyp cD (Int.LF.DDec (cPsi, tdecl')) tA
        )
 
@@ -630,7 +622,7 @@ let elClObj cD loc cPsi' clobj mtyp =
   | ( Apx.LF.Dot (Apx.LF.Obj (Apx.LF.Root (_, Apx.LF.Hole, Apx.LF.Nil)), Apx.LF.EmptySub)
     , Int.LF.PTyp _tA'
     ) ->
-     let mV = Whnf.newMMVar' None (cD, Int.LF.ClTyp (mtyp, cPsi')) Int.LF.Maybe in
+     let mV = Whnf.newMMVar' None (cD, Int.LF.ClTyp (mtyp, cPsi')) Plicity.implicit Inductivity.not_inductive in
      Whnf.mmVarToClObj loc mV mtyp
 
   (* ordinary parameter variable elaboration *)
@@ -716,13 +708,13 @@ and elMetaSpine loc cD s cKt =
   | (Apx.Comp.MetaApp (m, s), (Int.Comp.Ctype _, _)) ->
      raise (Error (loc, TooManyMetaObj))
 
-  | (s, (Int.Comp.PiKind (loc', Int.LF.Decl (u, cU, Int.LF.Maybe), cK), t)) ->
-     let (mO, t') = Whnf.dotMMVar loc cD t (u, cU, Int.LF.Maybe) in
-     Int.Comp.MetaApp(mO, Whnf.cnormMTyp (cU, t), elMetaSpine loc cD s (cK, t'), `implicit)
+  | (s, (Int.Comp.PiKind (loc', Int.LF.Decl (u, cU, Plicity.Implicit, inductivity), cK), t)) ->
+     let (mO, t') = Whnf.dotMMVar loc cD t (u, cU, Plicity.implicit, inductivity) in
+     Int.Comp.MetaApp(mO, Whnf.cnormMTyp (cU, t), elMetaSpine loc cD s (cK, t'), Plicity.implicit)
 
-  | (Apx.Comp.MetaApp (m, s), (Int.Comp.PiKind (_, Int.LF.Decl(_, ctyp, _), cK), theta)) ->
+  | (Apx.Comp.MetaApp (m, s), (Int.Comp.PiKind (_, Int.LF.Decl(_, ctyp, _, _), cK), theta)) ->
      let (mO, t') = elMetaObjCTyp loc cD m theta ctyp in
-     Int.Comp.MetaApp(mO, Whnf.cnormMTyp (ctyp, theta), elMetaSpine loc cD s (cK, t'), `explicit)
+     Int.Comp.MetaApp(mO, Whnf.cnormMTyp (ctyp, theta), elMetaSpine loc cD s (cK, t'), Plicity.explicit)
 
 let rec spineToMSub cS' ms =
   match cS' with
@@ -796,10 +788,10 @@ let mgCompTypSpine cD (loc, cK) =
   let rec genMetaSpine =
     function
     | (Int.Comp.Ctype _, _t) -> Int.Comp.MetaNil
-    | (Int.Comp.PiKind (loc', Int.LF.Decl(u, cU, dep), cK), t) ->
-       let (mO, t') = Whnf.dotMMVar loc cD t (u, cU, dep) in
+    | (Int.Comp.PiKind (loc', Int.LF.Decl(u, cU, plicity, inductivity), cK), t) ->
+       let (mO, t') = Whnf.dotMMVar loc cD t (u, cU, plicity, inductivity) in
        let mS = genMetaSpine (cK, t') in
-       Int.Comp.MetaApp (mO, Whnf.cnormMTyp (cU, t), mS, Int.LF.Depend.to_plicity dep)
+       Int.Comp.MetaApp (mO, Whnf.cnormMTyp (cU, t), mS, plicity)
   in
   genMetaSpine (cK, Whnf.m_id)
 
@@ -831,7 +823,7 @@ let rec mgCtx cD' (cD, cPsi) =
      let (n, sW) = Whnf.mctxCDec cD psi_var in
      let v =
        let open Int.LF in
-       Whnf.newMMVar' (Some n) (cD', CTyp (Some sW)) Maybe
+       Whnf.newMMVar' (Some n) (cD', CTyp (Some sW)) Plicity.implicit Inductivity.not_inductive
      in
      Int.LF.(CtxVar (CInst (v, Whnf.m_id)))
   | Int.LF.Null -> Int.LF.Null
@@ -874,13 +866,13 @@ let rec inferPatTyp' cD' (cD_s, tau_s) =
      let tau2' = inferPatTyp' cD' (cD_s, tau2) in
      Int.Comp.TypArr (loc, tau1', tau2')
 
-  | Int.Comp.TypPiBox (loc, (Int.LF.Decl (x, mtyp, dep)), tau) ->
+  | Int.Comp.TypPiBox (loc, (Int.LF.Decl (x, mtyp, plicity, inductivity)), tau) ->
      let mtyp' = mgCTyp cD' cD_s mtyp in
      let tau' =
-       inferPatTyp' (Int.LF.Dec (cD', Int.LF.Decl(x, mtyp', dep)))
-         (Int.LF.Dec (cD_s, Int.LF.Decl(x, mtyp, dep)), tau)
+       inferPatTyp' (Int.LF.Dec (cD', Int.LF.Decl(x, mtyp', plicity, inductivity)))
+         (Int.LF.Dec (cD_s, Int.LF.Decl(x, mtyp, plicity, inductivity)), tau)
      in
-     Int.Comp.TypPiBox (loc, Int.LF.Decl (x, mtyp', dep), tau')
+     Int.Comp.TypPiBox (loc, Int.LF.Decl (x, mtyp', plicity, inductivity), tau')
 
   | Int.Comp.TypBox (loc, mtyp) ->
      let mtyp' = mgCTyp cD' cD_s mtyp in
@@ -1000,22 +992,22 @@ and elExpW cD cG e theta_tau =
 
   (* Allow uniform abstractions for all meta-objects *)
   | ( Apx.Comp.MLam (loc, u, e)
-    , (Int.Comp.TypPiBox(_, (Int.LF.Decl (_, _, Int.LF.No) as cdec), tau), theta)
+    , (Int.Comp.TypPiBox(_, (Int.LF.Decl (_, _, Plicity.Explicit, _) as cdec), tau), theta)
     ) ->
      let cD' = extend_mctx cD (u, cdec, theta) in
      let cG' = Whnf.cnormGCtx (cG, Int.LF.MShift 1) in
      let e' = elExp cD' cG' e (tau, C.mvar_dot1 theta) in
-     Int.Comp.MLam (loc, u, e', `explicit)
+     Int.Comp.MLam (loc, u, e', Plicity.explicit)
 
   | ( e
-    , (Int.Comp.TypPiBox(_, (Int.LF.Decl(_, _, Int.LF.Maybe) as cdec), tau), theta)
+    , (Int.Comp.TypPiBox(_, (Int.LF.Decl(_, _, Plicity.Implicit, _) as cdec), tau), theta)
     ) ->
      let u = mk_name_cdec cdec in
      let cG' = Whnf.cnormGCtx (cG, Int.LF.MShift 1) in
      let cD' = extend_mctx cD (u, cdec, theta) in
      let e' = Apxnorm.cnormApxExp cD (Apx.LF.Empty) e (cD', Int.LF.MShift 1) in
      let e' = elExp cD' cG' e' (tau, C.mvar_dot1 theta) in
-     Int.Comp.MLam (Syntax.Loc.ghost, u, e', `implicit)
+     Int.Comp.MLam (Syntax.Loc.ghost, u, e', Plicity.implicit)
 
   | (Apx.Comp.Syn (loc, i), (tau, t)) ->
      dprintf
@@ -1303,7 +1295,7 @@ and elExp' cD cG i =
             MetaObj are off *)
         (i'', (tau', Whnf.m_id))
 
-     | Apx.Comp.Box (_, cM), (Int.Comp.TypPiBox (_, Int.LF.Decl (_, ctyp, _), tau), theta) ->
+     | Apx.Comp.Box (_, cM), (Int.Comp.TypPiBox (_, Int.LF.Decl (_, ctyp, _, _), tau), theta) ->
         dprintf
           begin fun p ->
           p.fmt "[elExp'] @[<v>Apply -> elMetaObj at type\
@@ -1311,11 +1303,11 @@ and elExp' cD cG i =
             P.(fmt_ppr_cmp_meta_typ cD) (Whnf.cnormMTyp (ctyp, theta))
           end;
         let cM = elMetaObj cD cM (ctyp, theta) in
-        ( Int.Comp.MApp (loc, i', cM, Whnf.cnormMTyp (ctyp, theta), `explicit)
+        ( Int.Comp.MApp (loc, i', cM, Whnf.cnormMTyp (ctyp, theta), Plicity.explicit)
         , (tau, Int.LF.MDot (metaObjToFt cM, theta))
         )
 
-     | Apx.Comp.BoxHole loc, (Int.Comp.TypPiBox (_, Int.LF.Decl (_, ctyp, _), tau), theta) ->
+     | Apx.Comp.BoxHole loc, (Int.Comp.TypPiBox (_, Int.LF.Decl (_, ctyp, _, _), tau), theta) ->
         dprintf
           begin fun p ->
           p.fmt "[elExp'] @[<v>Apply -> elMetaObj at type\
@@ -1323,7 +1315,7 @@ and elExp' cD cG i =
             P.(fmt_ppr_cmp_meta_typ cD) (Whnf.cnormMTyp (ctyp, theta))
           end;
         let cM = elMetaObj cD (box_hole_cM loc ctyp) (ctyp, theta) in
-        ( Int.Comp.MApp (loc, i', cM, Whnf.cnormMTyp (ctyp, theta), `explicit)
+        ( Int.Comp.MApp (loc, i', cM, Whnf.cnormMTyp (ctyp, theta), Plicity.explicit)
         , (tau, Int.LF.MDot (metaObjToFt cM, theta))
         )
 
@@ -1594,7 +1586,7 @@ and elPatSyn (cD : Int.LF.mctx) (cG : Int.Comp.gctx) =
   | Apx.Comp.PatAnn (loc, pat, tau) ->
      let tau' = elCompTyp cD tau in
      let (cG', pat') = elPatChk cD cG pat (tau', Whnf.m_id) in
-     (cG', Int.Comp.PatAnn (loc, pat', tau', `explicit), (tau', Whnf.m_id))
+     (cG', Int.Comp.PatAnn (loc, pat', tau', Plicity.explicit), (tau', Whnf.m_id))
 
   | Apx.Comp.PatConst (loc, c, pat_spine) ->
      let tau = (CompConst.get c).CompConst.Entry.typ in
@@ -1609,8 +1601,8 @@ and elPatSpineW cD cG pat_spine ttau =
   match pat_spine with
   | Apx.Comp.PatNil loc ->
      begin match ttau with
-     | (Int.Comp.TypPiBox (_, Int.LF.Decl (u, cU, Int.LF.Maybe), tau), t) ->
-        let (mO, t') = Whnf.dotMMVar loc cD t (u, cU, Int.LF.Maybe) in
+     | (Int.Comp.TypPiBox (_, Int.LF.Decl (u, cU, Plicity.Implicit, inductivity), tau), t) ->
+        let (mO, t') = Whnf.dotMMVar loc cD t (u, cU, Plicity.implicit, inductivity) in
         let pat' = Int.Comp.PatMetaObj (loc, mO) in
         let ttau' = (tau, t') in
         let (cG', pat_spine', ttau2) = elPatSpine cD cG pat_spine ttau' in
@@ -1630,13 +1622,13 @@ and elPatSpineW cD cG pat_spine ttau =
         let (cG', pat) = elPatChk cD cG pat' (tau1, theta) in
         let (cG'', pat_spine, ttau2) = elPatSpine cD cG' pat_spine' (tau2, theta) in
         (cG'', Int.Comp.PatApp (loc, pat, pat_spine), ttau2)
-     | (Int.Comp.TypPiBox (_, (Int.LF.Decl (u, cU, Int.LF.Maybe)), tau), theta) ->
+     | (Int.Comp.TypPiBox (_, (Int.LF.Decl (u, cU, Plicity.Implicit, inductivity)), tau), theta) ->
         dprintf
           begin fun p ->
           p.fmt "[elPatSpine] @[<v>TypPiBox implicit ttau =@,@[%a@]@]"
             (P.fmt_ppr_cmp_typ cD P.l0) (Whnf.cnormCTyp ttau)
           end;
-        let (mO, t') = Whnf.dotMMVar loc cD theta (u, cU, Int.LF.Maybe) in
+        let (mO, t') = Whnf.dotMMVar loc cD theta (u, cU, Plicity.implicit, inductivity) in
         let pat' = Int.Comp.PatMetaObj (loc, mO) in
         let ttau' = (tau, t')
         in
@@ -1649,7 +1641,7 @@ and elPatSpineW cD cG pat_spine ttau =
         let (cG', pat_spine', ttau2) = elPatSpine cD cG pat_spine ttau' in
         (cG', Int.Comp.PatApp (loc, pat', pat_spine'), ttau2)
 
-     | (Int.Comp.TypPiBox (_, Int.LF.Decl (_, ctyp, dep), tau), theta) ->
+     | (Int.Comp.TypPiBox (_, Int.LF.Decl (_, ctyp, _, _), tau), theta) ->
         dprintf
           begin fun p ->
           p.fmt "[elPatSpine] @[<v>TypPiBox explicit ttau = @[%a@]"
@@ -1711,8 +1703,8 @@ and elPatSpineW cD cG pat_spine ttau =
           | Unify.Failure _ ->
              raise (Error (loc, TypMismatch (cD, ttau, (tau0, t))))
         end
-     | (Int.Comp.TypPiBox (_, Int.LF.Decl (u, cU, Int.LF.Maybe), tau), theta) ->
-        let (mO, t') = Whnf.dotMMVar loc cD theta (u, cU, Int.LF.Maybe) in
+     | (Int.Comp.TypPiBox (_, Int.LF.Decl (u, cU, Plicity.Implicit, inductivity), tau), theta) ->
+        let (mO, t') = Whnf.dotMMVar loc cD theta (u, cU, Plicity.implicit, inductivity) in
         let pat' = Int.Comp.PatMetaObj (loc, mO) in
         let ttau' = (tau, t') in
         let (cG', pat_spine', ttau2) = elPatSpine cD cG pat_spine ttau' in
@@ -1741,7 +1733,7 @@ and recPatObj' cD pat (cD_s, tau_s) =
      let ttau' = (tau', Whnf.m_id) in
      let (cG', pat') = elPatChk cD Int.LF.Empty pat' ttau' in
      (* Return annotated pattern? Int.Comp.PatAnn (l, pat', tau') *)
-     (cG', Int.Comp.PatAnn (l, pat', tau', `explicit), ttau')
+     (cG', Int.Comp.PatAnn (l, pat', tau', Plicity.explicit), ttau')
 
   | Apx.Comp.PatAnn (_, pat, tau) ->
      dprintf
@@ -1793,7 +1785,7 @@ and recPatObj' cD pat (cD_s, tau_s) =
      let (cG', pat') = elPatChk cD Int.LF.Empty pat ttau' in
      (* here the annotation is implicit because it did not appear in
         the user-supplied syntax; we just reconstructed it. *)
-     (cG', Int.Comp.PatAnn(loc, pat', tau_p, `implicit), ttau')
+     (cG', Int.Comp.PatAnn(loc, pat', tau_p, Plicity.implicit), ttau')
 
   | _ ->
      dprintf
@@ -2090,7 +2082,7 @@ and elCommand cD cG =
        |> Whnf.cnormMTyp
        |> Check.Comp.apply_unbox_modifier_opt cD modifier
      in
-     let d = Int.LF.(Decl (x, cU, No)) in
+     let d = Int.LF.(Decl (x, cU, Plicity.explicit, Inductivity.not_inductive)) in
      let t = Int.LF.MShift 1 in
      (* No need to check for shadowing since that already happened
         during indexing. *)
@@ -2232,7 +2224,7 @@ and elSplit loc cD cG pb i tau_i bs ttau =
              , let open Int.LF in
                ClObj
                  ( Context.dctxToHat cPsi'
-                 , MObj (Root (Loc.ghost, (proj_maybe h k), Nil, `explicit))
+                 , MObj (Root (Loc.ghost, (proj_maybe h k), Nil, Plicity.explicit))
                  )
              )
            )

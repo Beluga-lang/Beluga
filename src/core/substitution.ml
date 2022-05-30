@@ -47,9 +47,9 @@ module LF = struct
     | (0, s) -> s
     | (n, EmptySub) -> raise (NotComposable ("Shift " ^ string_of_int n ^", EmptySub"))
     | (n, Undefs) -> Undefs
-    | (n, SVar (s, k, r)) -> SVar (s, (k+n), r)
-    | (n, MSVar (k, ((s, t), r))) -> MSVar (k+n, ((s, t), r))
-    | (n, FSVar (k, (s, tau))) -> FSVar (k+n, (s, tau))
+    | (n, SVar (s, k, r)) -> SVar (s, (k + n), r)
+    | (n, MSVar (k, ((s, t), r))) -> MSVar (k + n, ((s, t), r))
+    | (n, FSVar (k, (s, tau))) -> FSVar (k + n, (s, tau))
     | (n, Shift m) -> Shift (n + m)
     | (n, Dot (_, s)) -> shiftComp (n - 1) s
 
@@ -108,16 +108,16 @@ module LF = struct
     | (n, Shift k) -> Head (BVar (n + k))
 (*    | (n, MSVar (s, (_cshift, k), (mt, sigma ))) ->
         (* Should be fixed; we really need phat of n to avoid printing
-           Free BVar (n+k) ...
-           (Head (HClo (phat. BVar n+k, s, sigma ))
+           Free BVar (n + k) ...
+           (Head (HClo (phat. BVar n + k, s, sigma ))
            -bp *)
-        Head (HMClo (n+k, s, (mt, sigma)))
+        Head (HMClo (n + k, s, (mt, sigma)))
 
       Can this happen ?
  *)
     | (n, SVar (s, k, sigma)) ->
        (* Should be fixed; we really need phat of n to avoid printing
-           Free BVar (n+k) ... -bp *)
+           Free BVar (n + k) ... -bp *)
        Head (HClo (n + k, s, sigma))
     | (n, MSVar (k, ((s, t), sigma))) ->
        Head (HMClo (n + k, ((s, t), sigma)))

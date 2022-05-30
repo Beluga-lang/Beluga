@@ -101,9 +101,9 @@ let intros' : Theorem.t ->
             tau_2
        | `duplicate -> Either.Left (DuplicateName (cD, cG, d))
        end
-    | Comp.TypPiBox (_, (LF.Decl (x, cU, dep)), tau_2) ->
+    | Comp.TypPiBox (_, (LF.Decl (x, cU, plicity, inductivity)), tau_2) ->
        let x = B.NameGen.renumber active_names x in
-       let d = LF.Decl (x, cU, dep) in
+       let d = LF.Decl (x, cU, plicity, inductivity) in
        go true (x :: active_names) user_names (LF.Dec (cD, d)) cG tau_2
     | _ when updated -> Either.Right (cD, cG, tau)
     | _ -> Either.Left NothingToIntro
@@ -586,7 +586,7 @@ let solve_with_new_comp_decl action_name decl f t g =
        g
 
 let solve_by_unbox' f (cT : Comp.meta_typ) (name : B.Id.name) : t =
-  solve_with_new_meta_decl "unbox" LF.(Decl (name, cT, No)) f
+  solve_with_new_meta_decl "unbox" LF.(Decl (name, cT, B.Plicity.explicit, B.Inductivity.not_inductive)) f
 
 let solve_by_unbox (m : Comp.exp_syn) (mk_cmd : Comp.meta_typ -> Comp.command) (tau : Comp.typ) (name : B.Id.name) modifier : t =
   let open Comp in

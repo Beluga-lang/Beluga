@@ -6,11 +6,10 @@ open Support
 module LF = struct
   open Syntax.Ext.LF
 
-  let show_dep ppf =
+  let show_plicity ppf =
     function
-    | Maybe -> fprintf ppf "Maybe"
-    | No -> fprintf ppf "No"
-    | Inductive -> fprintf ppf "Inductive"
+    | Plicity.Implicit -> pp_print_string ppf "Implicit"
+    | Plicity.Explicit -> pp_print_string ppf "Explicit"
 
   let rec show_kind ppf =
     function
@@ -57,11 +56,11 @@ module LF = struct
 
   and show_ctyp_decl ppf =
     function
-    | Decl (x, d, dep) ->
+    | Decl (x, d, plicity) ->
        fprintf ppf "Decl(@[<hv>%a,@ %a,@ %a@])"
          Id.print x
          show_loc_ctyp d
-         show_dep dep
+         show_plicity plicity
     | DeclOpt x ->
        fprintf ppf "DeclOpt(%a)"
          Id.print x

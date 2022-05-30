@@ -37,7 +37,7 @@ let rec raiseType cPsi tA =
   match cPsi with
   | Null -> tA
   | DDec (cPsi', decl) ->
-     raiseType cPsi' (PiTyp ((decl, Maybe), tA))
+     raiseType cPsi' (PiTyp ((decl, Plicity.implicit), tA))
 
 (* Eta-contract elements in substitutions *)
 let etaContract =
@@ -108,7 +108,7 @@ let next_mmvar_id =
   incr c;
   !c
 
-let newMMVar' n (cD, mtyp) depend =
+let newMMVar' n (cD, mtyp) plicity inductivity =
   let name =
     match n with
     | None ->
@@ -122,47 +122,48 @@ let newMMVar' n (cD, mtyp) depend =
   ; cD
   ; typ = mtyp
   ; constraints = ref []
-  ; depend
+  ; plicity
+  ; inductivity
   }
 
-let newMMVar n (cD, cPsi, tA) dep = newMMVar' n (cD, ClTyp (MTyp tA, cPsi)) dep
-let newMPVar n (cD, cPsi, tA) dep = newMMVar' n (cD, ClTyp (PTyp tA, cPsi)) dep
+let newMMVar n (cD, cPsi, tA) plicity inductivity = newMMVar' n (cD, ClTyp (MTyp tA, cPsi)) plicity inductivity
+let newMPVar n (cD, cPsi, tA) plicity inductivity = newMMVar' n (cD, ClTyp (PTyp tA, cPsi)) plicity inductivity
 
-let newMSVar n (cD, cl, cPsi, cPhi) dep = newMMVar' n (cD, ClTyp (STyp (cl, cPhi), cPsi)) dep
-let newCVar n cD (sW) dep = CInst (newMMVar' n (cD, CTyp sW) dep, MShift 0)
+let newMSVar n (cD, cl, cPsi, cPhi) plicity inductivity = newMMVar' n (cD, ClTyp (STyp (cl, cPhi), cPsi)) plicity inductivity
+let newCVar n cD (sW) plicity inductivity = CInst (newMMVar' n (cD, CTyp sW) plicity inductivity, MShift 0)
 
-let newMVar n (cPsi, tA) dep = Inst (newMMVar' n (Empty, ClTyp (MTyp tA, cPsi)) dep)
+let newMVar n (cPsi, tA) plicity inductivity = Inst (newMMVar' n (Empty, ClTyp (MTyp tA, cPsi)) plicity inductivity)
 
 (******************************)
 (* Lowering                   *)
 (******************************)
 
 (* lowerMVar' cPsi tA[s] = (u, tM), see lowerMVar *)
-let rec lowerMVar' cPsi sA' dep =
+let rec lowerMVar' cPsi sA' plicity inductivity =
   match sA' with
   | (PiTyp ((decl, _), tA'), s') ->
      let (u', tM) =
        lowerMVar'
          (DDec (cPsi, LF.decSub decl s'))
          (tA', LF.dot1 s')
-         dep
+         plicity inductivity
      in
      (u', Lam (Syntax.Loc.ghost, Id.mk_name Id.NoName, tM))
 
   | (TClo (tA, s), s') ->
-     lowerMVar' cPsi (tA, LF.comp s s') dep
+     lowerMVar' cPsi (tA, LF.comp s s') plicity inductivity
 
   | (Atom (loc, a, tS), s') ->
-     let u' = newMVar None (cPsi, Atom (loc, a, SClo (tS, s'))) dep in
-     (u', Root (Syntax.Loc.ghost, MVar (u', LF.id), Nil, Depend.to_plicity dep)) (* cvar * normal *)
+     let u' = newMVar None (cPsi, Atom (loc, a, SClo (tS, s'))) plicity inductivity in
+     (u', Root (Syntax.Loc.ghost, MVar (u', LF.id), Nil, plicity)) (* cvar * normal *)
 
 (* lowerMVar1 (u, tA[s]), tA[s] in whnf, see lowerMVar *)
 and lowerMVar1 u sA =
   match (u, sA) with
-  | ( Inst { instantiation; typ = ClTyp (_, cPsi); depend; _ }
+  | ( Inst { instantiation; typ = ClTyp (_, cPsi); plicity; inductivity; _ }
     , (PiTyp _, _)
     ) ->
-     let (u', tM) = lowerMVar' cPsi sA depend in
+     let (u', tM) = lowerMVar' cPsi sA plicity inductivity in
      instantiation := Some (INorm tM); (* [| tM / u |] *)
      u' (* this is the new lowered meta-variable of atomic type *)
 
@@ -568,8 +569,8 @@ and normTyp (tA, sigma) =
   | Atom (loc, a, tS) ->
      Atom (loc, a, normSpine (tS, sigma))
 
-  | PiTyp ((TypDecl _ as decl, dep), tB) ->
-     PiTyp ((normDecl (decl, sigma), dep), normTyp (tB, LF.dot1 sigma))
+  | PiTyp ((TypDecl _ as decl, plicity), tB) ->
+     PiTyp ((normDecl (decl, sigma), plicity), normTyp (tB, LF.dot1 sigma))
 
   | TClo (tA, s) ->
      normTyp (tA, LF.comp s sigma)
@@ -628,8 +629,8 @@ and cnorm_psihat (phat : dctx_hat) t =
      | Some (ICtx cPsi) ->
         (* | (Some (CInst ((_, { contents = Some (ICtx cPsi) }, _, _, _, _), theta)), k) -> *)
         begin match Context.dctxToHat (cnormDCtx (cPsi, mcomp theta t)) with
-        | (None, i) -> (None, k+i) (* cnorm_psihat (None, k+i) t *)
-        | (Some cvar', i) -> (Some cvar', i+k) (* cnorm_psihat (Some cvar', i+k) t *)
+        | (None, i) -> (None, k + i) (* cnorm_psihat (None, k + i) t *)
+        | (Some cvar', i) -> (Some cvar', k + i) (* cnorm_psihat (Some cvar', k + i) t *)
         end
      end
   | (Some (CtxOffset offset), k) ->
@@ -637,7 +638,7 @@ and cnorm_psihat (phat : dctx_hat) t =
      | CObj cPsi ->
         begin match Context.dctxToHat cPsi with
         | (None, i) -> (None, k + i)
-        | (Some cvar', i) -> (Some cvar', i + k)
+        | (Some cvar', i) -> (Some cvar', k + i)
         end
      | MV offset' -> (Some (CtxOffset offset'), k)
      | ClObj _ ->
@@ -799,8 +800,8 @@ and cnormTyp (tA, t) =
   | Atom (loc, a, tS) ->
      Atom (loc, a, cnormSpine (tS, t))
 
-  | PiTyp ((TypDecl _ as decl, dep), tB) ->
-     PiTyp ((cnormDecl (decl, t), dep), cnormTyp (tB, t))
+  | PiTyp ((TypDecl _ as decl, plicity), tB) ->
+     PiTyp ((cnormDecl (decl, t), plicity), cnormTyp (tB, t))
 
   | TClo (tA, s) -> normTyp (cnormTyp (tA, t), cnormSub (s, t))
 
@@ -881,8 +882,8 @@ and cnormMSub =
 and normKind =
   function
   | (Typ, _) -> Typ
-  | (PiKind ((decl, dep), tK), s) ->
-     PiKind ((normDecl (decl, s), dep), normKind (tK, LF.dot1 s))
+  | (PiKind ((decl, plicity), tK), s) ->
+     PiKind ((normDecl (decl, s), plicity), normKind (tK, LF.dot1 s))
 
 and normDCtx =
   function
@@ -1538,13 +1539,13 @@ let mctxLookupDep cD k =
           )
        )
   |> function
-    | Decl (u, mtyp, dep) ->
-       (u, cnormMTyp (mtyp, MShift k), dep)
+    | Decl (u, mtyp, plicity, inductivity) ->
+       (u, cnormMTyp (mtyp, MShift k), plicity, inductivity)
     | DeclOpt _ ->
        raise (Error.Violation "Expected declaration to have a type")
 
 let mctxLookup cD k =
-  let (u, tp, dep) = mctxLookupDep cD k in
+  let (u, tp, _, _) = mctxLookupDep cD k in
   (u, tp)
 
 (* ************************************************* *)
@@ -1576,7 +1577,7 @@ let mctxCDec cD k =
 let mctxMVarPos cD u =
   let rec lookup cD k =
     match cD with
-    | Dec (cD, Decl (v, mtyp, _)) ->
+    | Dec (cD, Decl (v, mtyp, _, _)) ->
        if Id.equals v u
        then (k, cnormMTyp (mtyp, MShift k))
        else lookup cD (k + 1)
@@ -1622,8 +1623,9 @@ let rec normCTyp =
   | Comp.TypCross (loc, tT1, tT2) ->
      Comp.TypCross (loc, normCTyp tT1, normCTyp tT2)
 
-  | Comp.TypPiBox (loc, (Decl (u, mtyp, dep)), tau) ->
-     Comp.TypPiBox (loc, (Decl (u, normMTyp mtyp, dep)), normCTyp tau)
+  | Comp.TypPiBox (loc, (Decl (u, mtyp, plicity, inductivity)), tau) ->
+    Comp.TypPiBox
+      (loc, (Decl (u, normMTyp mtyp, plicity, inductivity)), normCTyp tau)
 
   | Comp.TypInd tau -> Comp.TypInd (normCTyp tau)
 
@@ -1642,7 +1644,8 @@ and cnormMetaSpine (mS, t) =
 
 let cnormCDecl (cdecl, t) =
   match cdecl with
-  | Decl (u, mtyp, dep) -> Decl (u, cnormMTyp (mtyp, t), dep)
+  | Decl (u, mtyp, plicity, inductivity) ->
+    Decl (u, cnormMTyp (mtyp, t), plicity, inductivity)
 
 let rec cnormCTyp =
   function
@@ -1673,7 +1676,7 @@ let rec cnormCTyp =
 let cnormCCDecl (cdecl, t) =
   match cdecl with
   | Comp.CTypDecl(n, typ, wf_t) ->
-     Comp.CTypDecl(n, cnormCTyp (typ,t), wf_t)
+     Comp.CTypDecl(n, cnormCTyp (typ, t), wf_t)
 
 let rec cnormCKind (cK, t) =
   match cK with
@@ -1935,7 +1938,8 @@ let normGCtx = Context.map normCTypDecl
 let rec normMCtx cD =
   match cD with
   | Empty -> Empty
-  | Dec (cD, Decl (u, mtyp, dep)) -> Dec (normMCtx cD, Decl (u, normMTyp mtyp, dep))
+  | Dec (cD, Decl (u, mtyp, plicity, inductivity)) ->
+    Dec (normMCtx cD, Decl (u, normMTyp mtyp, plicity, inductivity))
 
 
 (* ----------------------------------------------------------- *)
@@ -2002,8 +2006,8 @@ and convCTyp' thetaT1 thetaT2 =
   | ((Comp.TypCross (_, tT1, tT2), t), (Comp.TypCross (_, tT1', tT2'), t')) ->
      convCTyp (tT1, t) (tT1', t') && convCTyp (tT2, t) (tT2', t')
 
-  | ( (Comp.TypPiBox (_, Decl (_, mtyp1, _), tT), t)
-    , (Comp.TypPiBox (_, Decl (_, mtyp2, _), tT'), t')
+  | ( (Comp.TypPiBox (_, Decl (_, mtyp1, _, _), tT), t)
+    , (Comp.TypPiBox (_, Decl (_, mtyp2, _, _), tT'), t')
     ) ->
      convMTyp (cnormMTyp (mtyp1, t)) (cnormMTyp (mtyp2, t'))
      && convCTyp (tT, mvar_dot1 t) (tT', mvar_dot1 t')
@@ -2024,8 +2028,10 @@ and convSchElem (SchElem (cPsi, trec)) (SchElem (cPsi', trec')) =
 
 let convCTypDecl d1 d2 =
   match (d1, d2) with
-  | (Decl (x1, cT1, dep1), Decl (x2, cT2, dep2)) ->
-     Id.equals x1 x2 && Depend.equals dep1 dep2
+  | (Decl (x1, cT1, plicity1, inductivity1), Decl (x2, cT2, plicity2, inductivity2)) ->
+     Id.equals x1 x2
+     && Plicity.equal plicity1 plicity2
+     && Inductivity.equal inductivity1 inductivity2
      && convMTyp cT1 cT2
   | (DeclOpt (x1, _), DeclOpt (x2, _)) ->
      Id.equals x1 x2
@@ -2056,20 +2062,20 @@ let mctx_to_list_shifted x =
  *
  *  cPsi'  |- tN   <= [s'][s]A
  *)
-let rec etaExpandMV cPsi sA n s' dep =
-  etaExpandMV' cPsi (whnfTyp sA) n s' dep
+let rec etaExpandMV cPsi sA n s' plicity inductivity =
+  etaExpandMV' cPsi (whnfTyp sA) n s' plicity inductivity
 
-and etaExpandMV' cPsi sA n s' dep =
+and etaExpandMV' cPsi sA n s' plicity inductivity =
   match sA with
   | (Atom (loc, _, _) as tP, s) ->
-     let u = newMVar (Some (Id.inc n)) (cPsi, tclo tP s) dep in
-     Root (loc, MVar (u, s'), Nil, Depend.to_plicity dep)
+     let u = newMVar (Some (Id.inc n)) (cPsi, tclo tP s) plicity inductivity in
+     Root (loc, MVar (u, s'), Nil, plicity)
 
   | (PiTyp ((TypDecl (x, _) as decl, _), tB), s) ->
      Lam
        ( Id.loc_of_name x
        , x
-       , etaExpandMV (DDec (cPsi, LF.decSub decl s)) (tB, LF.dot1 s) n (LF.dot1 s') dep
+       , etaExpandMV (DDec (cPsi, LF.decSub decl s)) (tB, LF.dot1 s) n (LF.dot1 s') plicity inductivity
        )
 
 (* Coverage.etaExpandMVstr s' cPsi sA *)
@@ -2081,17 +2087,21 @@ and etaExpandMV' cPsi sA n s' dep =
  *
  *  cD ; cPsi'  |- tN   <= [s'][s]A
  *)
-let rec etaExpandMMV loc cD cPsi sA n s' dep =
-  etaExpandMMV' loc cD cPsi (whnfTyp sA) n s' dep
+let rec etaExpandMMV loc cD cPsi sA n s' plicity inductivity =
+  etaExpandMMV' loc cD cPsi (whnfTyp sA) n s' plicity inductivity
 
-and etaExpandMMV' loc cD cPsi sA n s' dep =
+and etaExpandMMV' loc cD cPsi sA n s' plicity inductivity =
   match sA with
   | (Atom _ as tP, s) ->
-     let u = newMMVar (Some (Id.inc n)) (cD, cPsi, tclo tP s) dep in
-     Root (loc, MMVar ((u, m_id), s'), Nil, Depend.to_plicity dep)
+     let u = newMMVar (Some (Id.inc n)) (cD, cPsi, tclo tP s) plicity inductivity in
+     Root (loc, MMVar ((u, m_id), s'), Nil, plicity)
 
   | (PiTyp ((TypDecl (x, _) as decl, _), tB), s) ->
-     Lam (loc, x, etaExpandMMV loc cD (DDec (cPsi, LF.decSub decl s)) (tB, LF.dot1 s) n (LF.dot1 s') dep)
+     Lam
+       ( loc
+       , x
+       , etaExpandMMV loc cD (DDec (cPsi, LF.decSub decl s)) (tB, LF.dot1 s) n (LF.dot1 s') plicity inductivity
+       )
 
 let rec closed sM = closedW (whnf sM)
 
@@ -2211,7 +2221,7 @@ and closedMetaObj (_, mF) = closedMFront mF
 
 let closedDecl =
   function
-  | Decl (_, cU, _) -> closedMetaTyp cU
+  | Decl (_, cU, _, _) -> closedMetaTyp cU
   | DeclOpt _ ->
      Error.violation "[closedDecl] DeclOpt outside printing"
 
@@ -2380,7 +2390,7 @@ let convGCtx (cG1, t1) (cG2, t2) =
   conv_ctx f cG1 cG2
 
 let convMCtx cD1 cD2 =
-  let f (Decl (_, cU1, _)) (Decl (_, cU2, _)) =
+  let f (Decl (_, cU1, _, _)) (Decl (_, cU2, _, _)) =
     convMetaTyp cU1 cU2
   in
   conv_ctx f cD1 cD2
@@ -2392,7 +2402,7 @@ let rec lowerTyp cPsi =
 
 let mmVarToClObj loc' (mV : mm_var) : cltyp -> clobj =
   function
-  | MTyp tA -> MObj (Root (loc', MMVar ((mV, m_id), LF.id), Nil, `explicit))
+  | MTyp tA -> MObj (Root (loc', MMVar ((mV, m_id), LF.id), Nil, Plicity.explicit))
   | PTyp tA -> PObj (MPVar ((mV, m_id), LF.id))
   | STyp (_, cPhi) -> SObj (MSVar (0, ((mV, m_id), LF.id)))
 
@@ -2404,20 +2414,20 @@ let mmVarToMFront loc' mV =
      CObj (CtxVar (CInst (mV, m_id)))
 
 (** Extends the given meta-substitution with a fresh unification
-    variable for the contextual declaration (u, cU, dep).
+    variable for the contextual declaration (u, cU, plicity, inductivity).
     Returns a meta-object containing the MMVar and the extended
     substitution.
 
-    dotMMVar loc' cD t (u, cU, dep) = (cM, t') if
+    dotMMVar loc' cD t (u, cU, plicity, inductivity) = (cM, t') if
     * cD |- [t]cU metatype
 
     This function is useful when eliminating PiBoxes via unification.
 
     See {!require_decl}.
  *)
-let dotMMVar loc' cD t (u, cU, dep) =
+let dotMMVar loc' cD t (u, cU, plicity, inductivity) =
   let cU = cnormMTyp (cU, t) in
-  let mO = mmVarToMFront loc' (newMMVar' (Some u) (cD, cU) dep) cU in
+  let mO = mmVarToMFront loc' (newMMVar' (Some u) (cD, cU) plicity inductivity) cU in
   ((loc', mO), MDot (mO, t))
 
 (** extend_mctx cD (cdecl, t) = cD'

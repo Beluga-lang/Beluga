@@ -10,7 +10,7 @@ let of_gen (g : unit -> 'a option) : 'a t =
     lazy
       begin match g () with
       | None -> Nil
-      | Some x -> Cons (x, go (n+1))
+      | Some x -> Cons (x, go (n + 1))
       end
   in
   go 0
@@ -26,7 +26,7 @@ let of_stream (s : 'a Stream.t) : 'a t =
         | Stream.Failure -> None
       with
       | None -> Nil
-      | Some x -> Cons (x, go (n+1))
+      | Some x -> Cons (x, go (n + 1))
       end
   in
   go 0

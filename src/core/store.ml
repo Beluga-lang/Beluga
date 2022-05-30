@@ -117,7 +117,7 @@ module Modules = struct
     let x = DynArray.get rev_directory id in
     match
       List.fold_left
-        begin fun acc (ab,o) ->
+        begin fun acc (ab, o) ->
           if List.equal String.equal o x
           then Some ab
           else acc
@@ -1074,7 +1074,7 @@ module FPatVar = struct
   let store = ref Syntax.Int.LF.Empty
 
   let add x tau =
-      store := Syntax.Int.LF.Dec (!store, Syntax.Int.Comp.CTypDecl (x,tau, false))
+      store := Syntax.Int.LF.Dec (!store, Syntax.Int.Comp.CTypDecl (x, tau, false))
 
   let get x =
     let rec lookup str = match str with
@@ -1177,7 +1177,7 @@ module CVar = struct
 
   type entry =
     { name : cvar
-    ; plicity : Int.Comp.plicity
+    ; plicity : Plicity.t
     }
 
   let mk_entry name plicity =
@@ -1218,13 +1218,15 @@ module CVar = struct
     let f d v =
       let open Int.LF in
       match d with
-      | Decl (u, _, dep) -> mk_entry u (f dep) |> extend v
+      | Decl (u, _, plicity, inductivity) ->
+        let plicity' = f (plicity, inductivity) in
+        mk_entry u plicity' |> extend v
       | DeclOpt _ ->
          Error.violation "[of_mctx] DeclOpt impossible"
     in
     List.fold_right f (Context.to_list_rev cD) (create ())
 
-  let of_list (l : (Id.name * Int.Comp.plicity) list) : t =
+  let of_list (l : (Id.name * Plicity.t) list) : t =
     List.map (fun (u, p) -> mk_entry u p) l
 end
 

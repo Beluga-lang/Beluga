@@ -40,7 +40,7 @@ let ctxShift cPsi = EmptySub (* match cPsi with *)
   (* | CtxVar psi -> Shift (CtxShift psi, 0) *)
   (* | DDec (cPsi, _x) -> *)
   (*     let Shift (cshift, n) = ctxShift cPsi in *)
-(*       Shift (cshift, n+1) *)
+(*       Shift (cshift, n + 1) *)
 
 
 
@@ -62,7 +62,7 @@ let rec lowerMVar cPsi sA' =
          ( Loc.ghost
          , MVar (Offset 1, Substitution.LF.id)
          , Nil
-         , `explicit
+         , Plicity.explicit
          ) ,
       ClTyp(MTyp (TClo sA') , cPsi))
 
@@ -79,7 +79,7 @@ let rec lowerMVar cPsi sA' =
    s.t. cD, cD_ext; psi |- u1[id]/x1 ... un[id]/xn : cPsi
         and where cD_ext = u1:A1[psi], ... un:An[psi]
 
-   if  ctxToSub_mclosed  cD psi cPsi = (cD',s) then
+   if  ctxToSub_mclosed  cD psi cPsi = (cD', s) then
    cD' ; psi |- s : cPsi
 
    Concretely, this will extend the input cD with one MVar for each
@@ -101,7 +101,7 @@ let rec ctxToSub_mclosed cD psi =
          ( Loc.ghost
          , MVar (Offset 1, Substitution.LF.id)
          , Nil
-         , `explicit
+         , Plicity.explicit
          )
      in
 
@@ -120,7 +120,8 @@ let rec ctxToSub_mclosed cD psi =
          , Decl
              ( u_name
              , ClTyp (MTyp tA', Whnf.cnormDCtx (CtxVar psi, MShift k))
-             , Maybe
+             , Plicity.implicit
+             , Inductivity.not_inductive
              )
          )
      , result
@@ -137,7 +138,7 @@ let rec ctxToSub_mclosed cD psi =
      let tA' = TClo (tA, s) in
      (* cD', u: _   ; psi |- s : cPsi', x:tA *)
      let s' = Whnf.cnormSub (s, MShift 1) in
-     let tM , clT = lowerMVar (Whnf.cnormDCtx (CtxVar psi, MShift k)) (tA,s) in   (* where clT is the type of the mvar in M *)
+     let tM , clT = lowerMVar (Whnf.cnormDCtx (CtxVar psi, MShift k)) (tA, s) in   (* where clT is the type of the mvar in M *)
      let u_name = Id.mk_name (Id.MVarName (Typ.gen_mvar_name tA')) in
      let result = Dot (Obj tM, s') in
      (* dprint (fun () -> "[ctxToSub_mclosed] result = " ^ subToString result); *)
@@ -146,7 +147,8 @@ let rec ctxToSub_mclosed cD psi =
          , Decl
              ( u_name
              , clT
-             , Maybe
+             , Plicity.implicit
+             , Inductivity.not_inductive
              )
          )
      , result
@@ -204,7 +206,7 @@ let rec ctxToSub' cD cPhi =
       dprint (fun () -> "composition = " ^ subToString composition);
       let u = Whnf.etaExpandMMV None cD cPhi (tA, composition) Substitution.LF.id in
 *)
-     let u = Whnf.etaExpandMMV Syntax.Loc.ghost cD cPhi (tA, s) n Substitution.LF.id Maybe in
+     let u = Whnf.etaExpandMMV Syntax.Loc.ghost cD cPhi (tA, s) n Substitution.LF.id Plicity.implicit Inductivity.not_inductive in
      let front = (Obj ((* Root (MVar (u, S.LF.id), Nil) *) u) : front) in
      (* cD ; cPhi |- s : cPsi' *)
      (* cD ; cPhi |- u[id] : [s]tA *)
@@ -217,42 +219,42 @@ let rec ctxToSub' cD cPhi =
 
 
 
-let mdeclToMMVar cD0 n mtyp dep =
+let mdeclToMMVar cD0 n mtyp plicity inductivity =
   match mtyp with
   | ClTyp (MTyp tA, cPsi) ->
-     let u = Whnf.newMMVar (Some n) (cD0, cPsi, tA) dep in
+     let u = Whnf.newMMVar (Some n) (cD0, cPsi, tA) plicity inductivity in
      let phat = Context.dctxToHat cPsi in
      let tR =
        Root
          ( Loc.ghost
          , MMVar ((u, Whnf.m_id), Substitution.LF.id)
          , Nil
-         , `explicit
+         , Plicity.explicit
          )
      in
      ClObj (phat, MObj tR)
 
   | ClTyp (STyp (cl, cPhi), cPsi) ->
-     let u = Whnf.newMSVar (Some n) (cD0, cl, cPsi, cPhi) dep in
+     let u = Whnf.newMSVar (Some n) (cD0, cl, cPsi, cPhi) plicity inductivity in
      let phat = Context.dctxToHat cPsi in
      ClObj (phat, SObj (MSVar (0, ((u, Whnf.m_id), Substitution.LF.id))))
 
   | ClTyp (PTyp tA, cPsi) ->
-     let p = Whnf.newMPVar (Some n) (cD0, cPsi, tA) dep in
+     let p = Whnf.newMPVar (Some n) (cD0, cPsi, tA) plicity inductivity in
      let phat = dctxToHat cPsi in
      ClObj (phat, PObj (MPVar ((p, Whnf.m_id), Substitution.LF.id)))
 
   | CTyp sW ->
-     let cvar = Whnf.newCVar (Some n) cD0 sW dep in
+     let cvar = Whnf.newCVar (Some n) cD0 sW plicity inductivity in
      CObj (CtxVar cvar)
 
 let rec mctxToMMSub cD0 =
   function
   | Empty -> MShift (Context.length cD0)
-  | Dec (cD', Decl (n, mtyp, dep)) ->
+  | Dec (cD', Decl (n, mtyp, plicity, inductivity)) ->
      let t = mctxToMMSub cD0 cD' in
-     let mtyp' = Whnf.cnormMTyp (mtyp,t) in
-     MDot (mdeclToMMVar cD0 n mtyp' dep, t)
+     let mtyp' = Whnf.cnormMTyp (mtyp, t) in
+     MDot (mdeclToMMVar cD0 n mtyp' plicity inductivity, t)
 
 let mctxToMSub cD = mctxToMMSub Empty cD
 

@@ -462,10 +462,10 @@ module CVar : sig
 
   type entry =
     { name : cvar
-    ; plicity : Comp.plicity
+    ; plicity : Plicity.t
     }
 
-  val mk_entry : cvar -> Comp.plicity -> entry
+  val mk_entry : cvar -> Plicity.t -> entry
 
   type t (* NOTE: t is an ordered data structure *)
 
@@ -477,14 +477,14 @@ module CVar : sig
       Raises Not_found if no such variable is in scope.
       Returns the plicity of the variable together with its offset.
    *)
-  val index_of_name : t -> cvar -> Comp.plicity * offset
+  val index_of_name : t -> cvar -> Plicity.t * offset
   val append : t -> t -> t
   val length : t -> int
 
   (** Erases the context down to a list of names using the given
       function to interpret the plicity of declarations. *)
-  val of_mctx : (LF.depend -> Comp.plicity) -> LF.mctx -> t
+  val of_mctx : (Plicity.t * Inductivity.t -> Plicity.t) -> LF.mctx -> t
 
   val to_string : t -> string
-  val of_list : (Id.name * Comp.plicity) list -> t
+  val of_list : (Id.name * Plicity.t) list -> t
 end

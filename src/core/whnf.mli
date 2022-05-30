@@ -40,20 +40,21 @@ val convDCtxHat : dctx_hat -> dctx_hat -> bool
 (* Creating new contextual variables *)
 (*************************************)
 
-val newMMVar' : Id.name option -> mctx * ctyp -> depend -> mm_var
-val newMMVar : Id.name option -> mctx * dctx * typ -> depend -> mm_var
-val newMPVar : Id.name option -> mctx * dctx * typ -> depend -> mm_var
+val newMMVar' : Id.name option -> mctx * ctyp -> Plicity.t -> Inductivity.t -> mm_var
+val newMMVar : Id.name option -> mctx * dctx * typ -> Plicity.t -> Inductivity.t -> mm_var
+val newMPVar : Id.name option -> mctx * dctx * typ -> Plicity.t -> Inductivity.t -> mm_var
 val newMSVar : Id.name option
                -> mctx (* cD *)
                   * svar_class
                   * dctx (* cPsi *)
                   * dctx (* cPhi *)
-               -> depend
+               -> Plicity.t
+               -> Inductivity.t
                -> mm_var
                (* cD ; cPsi |- msvar : cPhi *)
 
-val newMVar : Id.name option -> dctx * typ -> depend -> cvar
-val newCVar : Id.name option -> mctx -> Id.cid_schema option -> depend -> ctx_var
+val newMVar : Id.name option -> dctx * typ -> Plicity.t -> Inductivity.t -> cvar
+val newCVar : Id.name option -> mctx -> Id.cid_schema option -> Plicity.t -> Inductivity.t -> ctx_var
 
 val raiseType : dctx -> typ -> typ
 
@@ -61,9 +62,9 @@ val raiseType : dctx -> typ -> typ
 (* Other operations *)
 (*************************************)
 
-val etaExpandMV : dctx -> tclo -> Id.name -> sub -> depend -> normal
+val etaExpandMV : dctx -> tclo -> Id.name -> sub -> Plicity.t -> Inductivity.t -> normal
 
-val etaExpandMMV : Location.t -> mctx -> dctx -> tclo -> Id.name -> sub -> depend -> normal
+val etaExpandMMV : Location.t -> mctx -> dctx -> tclo -> Id.name -> sub -> Plicity.t -> Inductivity.t -> normal
 
 
 exception Fmvar_not_found
@@ -123,7 +124,7 @@ val m_invert : msub -> msub
 val invTerm : normal * msub -> int -> normal
 *)
 val mctxLookup : mctx -> int -> Id.name * ctyp
-val mctxLookupDep : mctx -> int -> Id.name * ctyp * depend
+val mctxLookupDep : mctx -> int -> Id.name * ctyp * Plicity.t * Inductivity.t
 val mctxMDec : mctx -> int -> Id.name * typ * dctx
 val mctxPDec : mctx -> int -> Id.name * typ * dctx
 val mctxSDec : mctx -> int -> Id.name * dctx * svar_class * dctx
@@ -233,7 +234,7 @@ val mmVarToClObj : Location.t -> mm_var -> cltyp -> clobj
 (** Converts an MMVar to a meta object according to its meta type. *)
 val mmVarToMFront : Location.t -> mm_var -> Comp.meta_typ -> mfront
 
-val dotMMVar : Location.t -> mctx -> msub -> Id.name * ctyp * depend
+val dotMMVar : Location.t -> mctx -> msub -> Id.name * ctyp * Plicity.t * Inductivity.t
                -> Comp.meta_obj * msub
 
 val extend_mctx : mctx -> (LF.ctyp_decl * msub ) -> mctx

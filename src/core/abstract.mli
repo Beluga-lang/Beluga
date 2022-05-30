@@ -18,14 +18,14 @@ type error =
 
 type sort =
   | LFTyp of LF.typ
-  | MetaTyp of LF.ctyp * LF.depend
+  | MetaTyp of LF.ctyp * Plicity.t * Inductivity.t
 type marker =
   | Pure of sort
   | Impure
 
 type free_var =
   | FDecl of kind * marker
-  | CtxV of (Id.name * Id.cid_schema * LF.depend)
+  | CtxV of (Id.name * Id.cid_schema * Plicity.t * Inductivity.t)
 
 type fctx = free_var LF.ctx
 

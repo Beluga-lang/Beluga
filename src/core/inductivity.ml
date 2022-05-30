@@ -14,3 +14,5 @@ let max ind1 ind2 =
 let is_not_inductive = ( = ) not_inductive
 
 let is_inductive = ( = ) inductive
+
+let equal = ( = )

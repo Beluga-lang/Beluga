@@ -18,7 +18,7 @@ open Support
 
 module type ParserInfo = sig
   type item
-  module Stream : Types.BasicStream
+  module Stream : Types.BASIC_STREAM
 end
 
 module type Base = sig
@@ -27,7 +27,7 @@ module type Base = sig
    *)
   type item
 
-  module Stream : Types.BasicStream
+  module Stream : Types.BASIC_STREAM
 
   module Token : Annotated.Base with type annotation = Span.t
 

@@ -7,7 +7,7 @@ type 'a t =
 transformer. *)
 val unfold : 's -> ('s -> ('a * 's) option) -> 'a t option
 
-module OfBasicStream (S : Types.BasicStream) : sig
+module OfBasicStream (S : Types.BASIC_STREAM) : sig
   val f : 'a S.t -> 'a t option
 end
 

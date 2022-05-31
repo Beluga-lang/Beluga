@@ -19,7 +19,7 @@ let rec unfold (seed : 's) (next : 's -> ('a * 's) option) : 'a t option =
     Since the basic stream might be empty, the return type is in an
     {!Stdlib.option}.
  *)
-module OfBasicStream (S : Types.BasicStream) = struct
+module OfBasicStream (S : Types.BASIC_STREAM) = struct
   let f (s : 'a S.t) : 'a t option =
     unfold s (fun s -> S.observe s)
 end

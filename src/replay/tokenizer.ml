@@ -4,7 +4,7 @@ open Support
 module type TokenizerInfo = sig
   type 'a token
 
-  module Stream : Types.BasicStream
+  module Stream : Types.BASIC_STREAM
 
   (** A way to construct a token. *)
   val token : 'a -> Span.t -> 'a token
@@ -16,7 +16,7 @@ module type Base = sig
   type 'a token
 
   (** The streams processed by the tokenizer. *)
-  module Stream : Types.BasicStream
+  module Stream : Types.BASIC_STREAM
 
   (** Considers everything to be on the same line, and sequentially
   numbers each token. *)

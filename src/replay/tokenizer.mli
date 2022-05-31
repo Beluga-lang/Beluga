@@ -1,6 +1,6 @@
 (** The things needed to build a tokenizer. *)
 module type TokenizerInfo = sig
-  module Stream : Types.BasicStream
+  module Stream : Types.BASIC_STREAM
 
   type 'a token
 
@@ -13,7 +13,7 @@ module type Base = sig
   (** The type of tokens emitted by the tokenizer. *)
   type 'a token
 
-  module Stream : Types.BasicStream
+  module Stream : Types.BASIC_STREAM
 
   (** Considers everything to be on the same line, and sequentially
   numbers each token. *)

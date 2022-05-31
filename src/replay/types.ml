@@ -1,4 +1,4 @@
-module type BasicStream = sig
+module type BASIC_STREAM = sig
   type 'a t
 
   (** The observation for streams. *)

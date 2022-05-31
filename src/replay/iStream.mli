@@ -24,5 +24,5 @@ val take_while_str : (char -> bool) -> char t -> string * (char * char t) option
 (** Constructs an empty stream. *)
 val empty : 'a t
 
-module AsBasicStream : Types.BasicStream
+module AsBasicStream : Types.BASIC_STREAM
        with type 'a t = 'a istream

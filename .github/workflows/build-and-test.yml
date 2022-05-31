@@ -13,7 +13,7 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        ocaml-version:
+        ocaml-compiler:
           - 4.11.0
           - 4.10.1
           - 4.09.1
@@ -28,21 +28,21 @@ jobs:
       - uses: fkirc/skip-duplicate-actions@master
 
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Retrieve opam cache
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         id: cache-opam
         with:
           path: ~/.opam
-          key: v1-${{ runner.os }}-opam-${{ matrix.ocaml-version }}-${{ hashFiles('*.opam') }}
+          key: v1-${{ runner.os }}-opam-${{ matrix.ocaml-compiler }}-${{ hashFiles('*.opam') }}
           restore-keys: |
-            v1-${{ runner.os }}-opam-${{ matrix.ocaml-version }}-
+            v1-${{ runner.os }}-opam-${{ matrix.ocaml-compiler }}-
 
-      - name: Use OCaml ${{ matrix.ocaml-version }}
-        uses: avsm/setup-ocaml@v1
+      - name: Use OCaml ${{ matrix.ocaml-compiler }}
+        uses: ocaml/setup-ocaml@v2
         with:
-          ocaml-version: ${{ matrix.ocaml-version }}
+          ocaml-compiler: ${{ matrix.ocaml-compiler }}
 
       - name: Install dependencies
         run: opam install --deps-only --with-test .

@@ -20,22 +20,22 @@ let terminal : t =
 
 let create_file (path, k) (test_start : int option) : t =
   let h = open_in path in
-  let g = GenMisc.of_in_channel_lines h in
+  let g = Gen.of_in_channel_lines h in
   let g_mirror =
-    GenMisc.iter_through (fun x -> print_string (x ^ "\n")) g
+    Gen.iter_through (fun x -> print_string (x ^ "\n")) g
   in
   let g_mirror_with msg =
-    GenMisc.iter_through (fun x -> print_string msg; print_string (x ^ "\n")) g
+    Gen.iter_through (fun x -> print_string msg; print_string (x ^ "\n")) g
   in
   begin
     match test_start with
     | None -> ()
-    | Some ln -> GenMisc.drop_lines g_mirror (ln - 1)
+    | Some ln -> Gen.drop_lines g_mirror (ln - 1)
   end;
   match k with
   | `incomplete ->
      fun msg history_file ->
-     GenMisc.sequence [g_mirror_with msg; terminal msg history_file]
+     Gen.sequence [g_mirror_with msg; terminal msg history_file]
   | `complete ->
      fun msg _ _ ->
      print_string msg;

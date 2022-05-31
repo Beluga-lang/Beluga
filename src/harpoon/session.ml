@@ -54,7 +54,7 @@ let defer_theorem s =
         i.e. all theorems in the mutual block have been proven.
  *)
 let next_theorem s : Theorem.t option =
-  Misc.DynArray.head s.theorems
+  DynArray.head s.theorems
 
 (** Decides whether a given `cid` is in among the currently being
         proven theorems. *)
@@ -70,7 +70,7 @@ let infer_invocation_kind s (i : Comp.exp_syn) : Comp.invoke_kind =
 
 let lookup_theorem c name =
   let open Option in
-  Misc.DynArray.rfind_opt_idx
+  DynArray.rfind_opt_idx
     c.theorems
     F.(flip Theorem.has_name_of name)
   $> snd
@@ -80,7 +80,7 @@ let lookup_theorem c name =
  *)
 let select_theorem c name =
   match
-    Misc.DynArray.rfind_opt_idx
+    DynArray.rfind_opt_idx
       c.theorems
       (F.flip Theorem.has_name_of name)
   with

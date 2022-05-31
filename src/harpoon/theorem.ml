@@ -339,7 +339,7 @@ let configure cid ppf hooks initial_state gs =
     }
   in
   let hooks = List.map (fun h -> h t) hooks in
-  Misc.DynArray.append_list t.subgoal_hooks hooks;
+  DynArray.append_list t.subgoal_hooks hooks;
   add_subgoals t gs;
   t
 

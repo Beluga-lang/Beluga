@@ -2,8 +2,6 @@ open Support.Equality
 open Support
 open Syntax
 
-module DynArray = Misc.DynArray
-
 module NameTable =
   Hashtbl.Make
     (struct

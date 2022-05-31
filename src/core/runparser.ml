@@ -11,8 +11,8 @@ let parse_file loc (p : 'a Parser.t) : Parser.state * 'a Parser.result =
 
 let parse_channel loc (chan : in_channel) (p : 'a Parser.t)
     : Parser.state * 'a Parser.result =
-  parse_gen loc (GenMisc.of_in_channel chan) p
+  parse_gen loc (Gen.of_in_channel chan) p
 
 let parse_string loc (input : string) (p : 'a Parser.t)
     : Parser.state * 'a Parser.result =
-  parse_gen loc (GenMisc.of_string input) p
+  parse_gen loc (Gen.of_string input) p

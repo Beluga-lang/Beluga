@@ -2,7 +2,6 @@ open Support
 open Beluga.Syntax.Int
 
 module F = Fun
-module DynArray = Misc.DynArray
 
 module CompS = Beluga.Store.Cid.Comp
 module P = Beluga.Pretty.Int.DefaultPrinter
@@ -122,7 +121,7 @@ let defer_session s =
   DynArray.delete s.sessions 0;
   DynArray.add s.sessions c
 
-let next_session s = Misc.DynArray.head s.sessions
+let next_session s = DynArray.head s.sessions
 
 let remove_current_session s =
   DynArray.delete s.sessions 0
@@ -180,7 +179,7 @@ let add_session s c =
  *)
 let select_theorem s name =
   match
-    Misc.DynArray.rfind_opt_idx
+    DynArray.rfind_opt_idx
       s.sessions
       F.(Option.is_some ++ flip Session.lookup_theorem name)
   with

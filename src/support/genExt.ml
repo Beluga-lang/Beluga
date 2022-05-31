@@ -1,7 +1,8 @@
+include Gen
+
 (** Additional helpers for using generator. *)
 
-(** Converts a string into a generator yielding individual characters. *)
-let of_string (s : string) : char Gen.gen =
+let of_string s =
   let n = ref 0 in
   let n_max = String.length s in
   fun () ->
@@ -13,23 +14,14 @@ let of_string (s : string) : char Gen.gen =
   else
     None
 
-(** Constructs a generator yielding successive lines from an input
-    channel until it encounters an error.
- *)
-let of_in_channel_lines (chan : in_channel) : string Gen.gen =
+let of_in_channel_lines chan =
   fun () ->
   try
     Some (input_line chan)
   with
   | _ -> None
 
-(** Constructs a generator yielding successive characters from an
-    input channel.
-    Channel reads are internally buffered according to the optional
-    argument buffer_size, which defaults to one KiB.
-    When the channel hits end-of-file, it is automatically closed.
- *)
-let of_in_channel ?(buffer_size : int = 1024) (chan : in_channel) : char Gen.gen =
+let of_in_channel ?(buffer_size = 1024) chan =
   let bs = Bytes.create buffer_size in
   let count = ref 0 in
   let i = ref 0 in
@@ -60,8 +52,7 @@ let of_in_channel ?(buffer_size : int = 1024) (chan : in_channel) : char Gen.gen
      end
   | () -> failwith "impossible"
 
-(** Drops the first `ln` elements from the generator `g`. *)
-let drop_lines (g : 'a Gen.gen) (ln : int) : unit =
+let drop_lines g ln =
   let rec go n =
     if n <= 0
     then ()
@@ -73,13 +64,7 @@ let drop_lines (g : 'a Gen.gen) (ln : int) : unit =
   in
   go ln
 
-(** Transform a character generator into a line generator.
-    This function assumes unix line endings, so it is not portable.
-
-    This function also imposes a maximum line length specified via the
-    `buffer_size` optional argument. (So that it uses constant memory.)
- *)
-let line_generator ?(buffer_size = 2048) (g : char Gen.gen) : string Gen.gen =
+let line_generator ?(buffer_size = 2048) g =
   let bs = Bytes.create buffer_size in
   let finished = ref false in
   function
@@ -100,11 +85,7 @@ let line_generator ?(buffer_size = 2048) (g : char Gen.gen) : string Gen.gen =
      done;
      Some (Bytes.sub_string bs 0 !i)
 
-(** Sequence a list of generators into one generator.
-    Of course, if any generator in the sequence is infinite,
-    subsequence generators will never be pulled from.
- *)
-let sequence (gs : 'a Gen.gen list) : 'a Gen.gen =
+let sequence gs =
   let rgs = ref gs in
   let rec go () =
     match !rgs with
@@ -116,8 +97,7 @@ let sequence (gs : 'a Gen.gen list) : 'a Gen.gen =
   in
   go
 
-(** Construct a generator that will execute f on each element before yielding it. *)
-let iter_through (f : 'a -> unit) (g : 'a Gen.gen) : 'a Gen.gen =
+let iter_through f g =
   let go () =
     let open Option in
     Gen.next g $> fun x -> f x; x

@@ -287,24 +287,24 @@ module LF = struct
      then
          Psi |- [s']tA  <= type
 
-     CLIENTS: pass 1 for the last argument j
-
-    (* getType head s_recA target 1 *)
-    val getType : head -> trec_clo -> int -> int -> tclo
+    val getType : head -> trec_clo -> int -> tclo
   *)
-  let rec getType head s_recA target j =
-    match (s_recA, target) with
-    | ((SigmaLast (_, lastA), s), 1) ->
-        (lastA, s)
+  let getType =
+    let rec getType head s_recA target j =
+      match (s_recA, target) with
+      | ((SigmaLast (_, lastA), s), 1) ->
+          (lastA, s)
 
-    | ((SigmaElem (_x, tA, _recA), s), 1) ->
-        (tA, s)
+      | ((SigmaElem (_x, tA, _recA), s), 1) ->
+          (tA, s)
 
-    | ((SigmaElem (_x, _tA, recA), s), target) ->
-        let tPj = Proj (head, j) in
+      | ((SigmaElem (_x, _tA, recA), s), target) ->
+          let tPj = Proj (head, j) in
           getType head (recA, Dot (Head tPj, s)) (target - 1) (j + 1)
 
-    | _ -> raise Not_found
+      | _ -> raise Not_found
+    in
+    fun head s_recA target -> getType head s_recA target 1
 
   (* getIndex traverses the typ_rec from left to right;
      target is the name of the projection we're looking for

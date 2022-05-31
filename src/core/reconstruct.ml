@@ -2240,7 +2240,7 @@ and elSplit loc cD cG pb i tau_i bs ttau =
            match k, tA' with
            | Some k, Int.LF.Sigma tRec ->
               (* Compute the type of the kth projection of tRec. *)
-              Int.LF.getType h (tRec, LF.id) k 1
+              Int.LF.getType h (tRec, LF.id) k
               |> Whnf.normTyp
 
            | None, Int.LF.Sigma _ ->

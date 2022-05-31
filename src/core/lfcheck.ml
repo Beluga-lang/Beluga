@@ -416,7 +416,7 @@ and inferHead loc cD cPsi head cl =
           (recA, s)
        | FPVar (name, _) -> raise (Error (loc, LeftoverFV name))
      in
-     let (_, s) as sA = getType tuple_head srecA target 1 in
+     let (_, s) as sA = getType tuple_head srecA target in
      dprintf
        begin fun p ->
        p.fmt "[inferHead-Proj] @[<v>getType (%a) = %a@,s = %a@]"
@@ -893,7 +893,7 @@ and existsInstOfSchElemProj loc cD cPsi sA (h, i, n) elem =
 
 
 and instanceOfSchElemProj cD cPsi (tA, s) (var, k) (SchElem (cPhi, trec)) =
-  let tA_k (* : tclo *) = getType var (trec, S.LF.id) k 1 in
+  let tA_k (* : tclo *) = getType var (trec, S.LF.id) k in
   dprint (fun () -> "instanceOfSchElemProj...");
   let (_, subst) =
     instanceOfSchElem cD cPsi (tA, s) (SchElem (cPhi, SigmaLast (None, TClo tA_k)))

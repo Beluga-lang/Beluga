@@ -1305,7 +1305,7 @@ let expand_head_sigma (tH, tA) =
        then []
        else
          begin
-           let tA_p = F.uncurry LF.tclo (LF.getType tH (tRec, s) i 1) in
+           let tA_p = F.uncurry LF.tclo (LF.getType tH (tRec, s) i) in
            let tH_p = LF.Proj (tH, i) in
            (tH_p, tA_p) :: getComponents (i + 1)
          end

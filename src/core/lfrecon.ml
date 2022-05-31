@@ -820,7 +820,7 @@ let rec synHead cD loc cPsi =
      let (tp, h') = synHead cD loc cPsi h in
      let j = getProjIndexFromType loc cD cPsi tp nj in
      let Int.LF.TypDecl (x, Int.LF.Sigma typRec) = tp in
-     let sQ = Int.LF.getType h' (typRec, S.LF.id) j 1 in
+     let sQ = Int.LF.getType h' (typRec, S.LF.id) j in
      Int.LF.TypDecl (x, Int.LF.TClo sQ), Int.LF.Proj (h', j)
 
 let rec synDom cD loc cPsi =
@@ -1559,7 +1559,7 @@ and elTerm' recT cD cPsi r sP =
          let s'' = elSub loc recT cD cPsi s Int.LF.Subst cPhi in
          let sA =
            try
-             Int.LF.getType (Int.LF.FPVar (p, s'')) (typRec, s'') k 1
+             Int.LF.getType (Int.LF.FPVar (p, s'')) (typRec, s'') k
            with
            | _ -> throw loc (ProjNotValid (cD, cPhi, k, (tA, S.LF.id)))
          in
@@ -1831,7 +1831,7 @@ and elTerm' recT cD cPsi r sP =
      let k = getProjIndex loc cD cPsi recA proj in
      let sA =
        try
-         Int.LF.getType (Int.LF.BVar x) (recA, S.LF.id) k 1
+         Int.LF.getType (Int.LF.BVar x) (recA, S.LF.id) k
        with
        | _ -> throw loc (ProjNotValid (cD, cPsi, k, (Int.LF.Sigma recA, S.LF.id)))
      in
@@ -1853,7 +1853,7 @@ and elTerm' recT cD cPsi r sP =
           let k = getProjIndex loc cD cPsi recA proj in
           let sA =
             try
-              Int.LF.getType (Int.LF.PVar (p, t')) (recA, t') k 1
+              Int.LF.getType (Int.LF.PVar (p, t')) (recA, t') k
             with
             | _ -> throw loc (ProjNotValid (cD, cPsi, k, (Int.LF.Sigma recA, t')))
           in
@@ -1897,7 +1897,7 @@ and elTerm' recT cD cPsi r sP =
          let k = getProjIndex loc cD cPsi recA proj in
          let sA =
            try
-             Int.LF.getType h (recA, s'') k 1
+             Int.LF.getType h (recA, s'') k
            with
            | _ -> throw loc (ProjNotValid (cD, cPsi, k, (Int.LF.Sigma recA, s'')))
          in
@@ -2011,7 +2011,7 @@ and instanceOfSchElemProj loc cD cPsi (tA, s) (var, proj) (Int.LF.SchElem (cPhi,
       (P.fmt_ppr_lf_head cD cPsi P.l0) var
     end;
   let k = getProjIndex loc cD cPsi trec proj in
-  let sA_k (* : tclo *) = Int.LF.getType var (trec, S.LF.id) k 1 in  (* bp - generates  general type with some-part still intact; this tA_k is supposed to be the type of #p.1 s - hence, eventually it the some part needs to be restricted appropriately. Tue May 25 10:13:07 2010 -bp *)
+  let sA_k (* : tclo *) = Int.LF.getType var (trec, S.LF.id) k in  (* bp - generates  general type with some-part still intact; this tA_k is supposed to be the type of #p.1 s - hence, eventually it the some part needs to be restricted appropriately. Tue May 25 10:13:07 2010 -bp *)
   dprintf
     begin fun p ->
     p.fmt "[instanceOfSchElemProj] retrieved the type @[%a@]"
@@ -2128,7 +2128,7 @@ and elClosedTerm' recT cD cPsi =
      let k = getProjIndex loc cD cPsi recA proj in
      let sA =
        try
-         Int.LF.getType (Int.LF.BVar x) (recA, S.LF.id) k 1
+         Int.LF.getType (Int.LF.BVar x) (recA, S.LF.id) k
        with
        | _ ->
           throw loc (ProjNotValid (cD, cPsi, k, (Int.LF.Sigma recA, S.LF.id)))
@@ -2143,7 +2143,7 @@ and elClosedTerm' recT cD cPsi =
         let k = getProjIndex loc cD cPsi recA proj in
         let sA =
           try
-            Int.LF.getType (Int.LF.PVar (p, t')) (recA, t') k 1
+            Int.LF.getType (Int.LF.PVar (p, t')) (recA, t') k
           with
           | _ -> throw loc (ProjNotValid (cD, cPsi, k, (Int.LF.Sigma recA, t')))
         in
@@ -2167,7 +2167,7 @@ and elClosedTerm' recT cD cPsi =
         let k = getProjIndex loc cD cPsi recA proj in
         begin
           try
-            let sA = Int.LF.getType (Int.LF.PVar (p, s)) (recA, t') k 1 in
+            let sA = Int.LF.getType (Int.LF.PVar (p, s)) (recA, t') k in
             let (tS, sQ) = elSpine loc recT cD cPsi spine sA in
             (Int.LF.Root (loc, Int.LF.Proj (Int.LF.PVar (p, s), k), tS, Plicity.explicit), sQ)
           with
@@ -2558,7 +2558,7 @@ and elHead loc recT cD cPsi head cl =
        match Whnf.whnfTyp sA with
        | (Int.LF.Sigma tA'rec, s') ->
           let i = getProjIndex loc cD cPsi tA'rec proj in
-          (Int.LF.getType head' (tA'rec, s') i 1, i)
+          (Int.LF.getType head' (tA'rec, s') i, i)
        | (tA', s') ->
           throw loc (InvalidProjection (cD, cPsi, tA', proj))
      in

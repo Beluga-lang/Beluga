@@ -66,18 +66,17 @@ let recover_theorem ppf hooks (cid, gs) =
     ppf
     hooks
     initial_state
-    (Nonempty.to_list gs)
+    (List1.to_list gs)
 
 let recover_session ppf hooks (mutual_group, thm_confs) =
   let theorems =
-    let open Nonempty in
     let f = recover_theorem ppf hooks in
     (* XXX to_list -> of_list later is inefficient
            It would be best to add a function to obtain a Seq.t from
-           an Nonempty.t, lazily map the sequence, and the force the
+           an List1.t, lazily map the sequence, and the force the
            sequence with DynArray.of_seq
      *)
-    map f thm_confs |> to_list
+    List1.map f thm_confs |> List1.to_list
   in
   dprintf begin fun p ->
     p.fmt "[recover_session] @[<v>recovered a session with the following theorems:\
@@ -99,7 +98,7 @@ let recover_sessions ppf hooks (gs : Comp.open_subgoal list) =
      - group theorems by mutual group
      - construct a session for each mutual group
    *)
-  Nonempty.(
+  List1.(
     group_by fst gs
     |> List.map (Pair.rmap (map snd))
     |> group_by F.(CompS.mutual_group ++ fst)

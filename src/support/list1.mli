@@ -16,13 +16,13 @@ val from : 'a -> 'a list -> 'a t
 (** [singleton e] is the non-empty list with the single element [e] in it. *)
 val singleton : 'a -> 'a t
 
-(** Elimination principle for `Nonempty.t'. *)
+(** Elimination principle for `List1.t'. *)
 val fold_right : ('a -> 'b) (* for the Sing case *) ->
                  ('a -> 'b -> 'b) (* for the Cons case *) ->
                  'a t ->
                  'b
 
-(** Elimination principle for `Nonempty.t'. *)
+(** Elimination principle for `List1.t'. *)
 val fold_left : ('a -> 'b) (* for the Sing case *) ->
                 ('b -> 'a -> 'b) (* for the Cons cas *) ->
                 'a t ->

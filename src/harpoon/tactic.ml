@@ -478,8 +478,8 @@ let split (k : Command.split_kind) (i : Comp.exp_syn) (tau : Comp.typ) mfs : t =
      in
      match
        List.map decide_split_kind cgs
-       |> Nonempty.of_list
-       |> Option.map Nonempty.all_equal
+       |> List1.of_list
+       |> Option.map List1.all_equal
      with
      | None ->
         let open Theorem in

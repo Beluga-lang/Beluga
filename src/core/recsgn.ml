@@ -854,14 +854,14 @@ let recSgnDecls decls =
        dprintf
          (fun p ->
            p.fmt "[recsgn] MRecTyp at %a" Loc.print_short location);
-       let recTyps = Nonempty.map (fun (k, _) -> k) recDats in
-       let recTyps' = Nonempty.map (recSgnDecl ~pauseHtml:true) recTyps in
-       let recConts = Nonempty.map (fun (_, cs) -> cs) recDats in
-       let recConts' = Nonempty.map (List.map (recSgnDecl ~pauseHtml:true)) recConts in
-       Nonempty.iter freeze_from_name recTyps;
+       let recTyps = List1.map (fun (k, _) -> k) recDats in
+       let recTyps' = List1.map (recSgnDecl ~pauseHtml:true) recTyps in
+       let recConts = List1.map (fun (_, cs) -> cs) recDats in
+       let recConts' = List1.map (List.map (recSgnDecl ~pauseHtml:true)) recConts in
+       List1.iter freeze_from_name recTyps;
        Int.Sgn.MRecTyp
         { location
-        ; declarations=Nonempty.map2 (fun x y -> x :: y) recTyps' recConts'
+        ; declarations=List1.map2 (fun x y -> x :: y) recTyps' recConts'
         }
 
     | Ext.Sgn.Theorem { location; theorems=recFuns } ->
@@ -906,10 +906,10 @@ let recSgnDecls decls =
        (* and check that all or none of the declarations are present. *)
        let total_decs =
          let prelim_total_decs =
-           Nonempty.map (fun t -> Ext.Sgn.(t.thm_name, t.thm_order)) recFuns
+           List1.map (fun t -> Ext.Sgn.(t.thm_name, t.thm_order)) recFuns
          in
          match
-            Nonempty.partition
+            List1.partition
               (fun (_, order) -> Option.is_some order) prelim_total_decs
          with
          | [], [] ->
@@ -917,7 +917,7 @@ let recSgnDecls decls =
          | haves, [] ->
             haves
             |> List.map Fun.(Option.get ++ snd)
-            |> Nonempty.of_list
+            |> List1.of_list
          (* safe because they're haves *)
          | [], have_nots -> None
          | haves, have_nots ->
@@ -926,7 +926,7 @@ let recSgnDecls decls =
        in
 
        let preprocess =
-         Nonempty.map
+         List1.map
            begin fun Ext.Sgn.{ thm_typ; thm_name; thm_loc; thm_body; _ } ->
            let apx_tau = Index.comptyp thm_typ in
            let tau' =
@@ -968,7 +968,7 @@ let recSgnDecls decls =
            end
        in
 
-       let (thm_list, registers) = Nonempty.split (preprocess recFuns) in
+       let (thm_list, registers) = List1.split (preprocess recFuns) in
 
        (* We have the elaborated types of the theorems,
           so we construct the final list of totality declarations for
@@ -976,14 +976,14 @@ let recSgnDecls decls =
        let total_decs =
          match total_decs with
          | Some total_decs ->
-            Nonempty.map2
+            List1.map2
               (fun (thm_name, _, _, tau) decl ->
                 mk_total_decl thm_name tau decl
                 |> Int.Comp.make_total_dec thm_name tau)
               thm_list
               total_decs
          | None ->
-            Nonempty.map
+            List1.map
               (fun (thm_name, _, _, tau) ->
                 Int.Comp.make_total_dec thm_name tau `partial)
               thm_list
@@ -994,7 +994,7 @@ let recSgnDecls decls =
         *)
        let thm_cid_list =
           registers
-          |> Nonempty.ap_one (Comp.add_mutual_group (Nonempty.to_list total_decs))
+          |> List1.ap_one (Comp.add_mutual_group (List1.to_list total_decs))
        in
 
        let reconThm loc (f, cid, thm, tau) =
@@ -1052,7 +1052,7 @@ let recSgnDecls decls =
          let thm_r' = Whnf.cnormThm (thm_r, Whnf.m_id) in
 
          let tau_ann =
-           match Total.lookup_dec f (Nonempty.to_list total_decs) with
+           match Total.lookup_dec f (List1.to_list total_decs) with
            | None -> tau
            | Some d ->
               let tau = Total.annotate loc d.Int.Comp.order tau in
@@ -1072,13 +1072,13 @@ let recSgnDecls decls =
                       @,@[<hv 2>total_decs =@ @[<v>%a@]@]\
                       @,tau_ann = @[%a@]@]"
                  Id.print f
-                 (Nonempty.print ~pp_sep: Format.pp_print_cut
+                 (List1.print ~pp_sep: Format.pp_print_cut
                     P.(fmt_ppr_cmp_total_dec))
                  total_decs
                  P.(fmt_ppr_cmp_typ Int.LF.Empty l0) tau_ann
                end;
-             Total.enabled := Total.requires_checking f (Nonempty.to_list total_decs);
-             Check.Comp.thm (Some cid) Int.LF.Empty Int.LF.Empty (Nonempty.to_list total_decs) thm_r' (tau_ann, C.m_id);
+             Total.enabled := Total.requires_checking f (List1.to_list total_decs);
+             Check.Comp.thm (Some cid) Int.LF.Empty Int.LF.Empty (List1.to_list total_decs) thm_r' (tau_ann, C.m_id);
              Total.enabled := false;
            );
          (thm_r' , tau)
@@ -1102,7 +1102,7 @@ let recSgnDecls decls =
            ; thm_typ = tau'
            }
          in
-         Nonempty.map reconOne (Nonempty.combine thm_cid_list thm_list)
+         List1.map reconOne (List1.combine thm_cid_list thm_list)
        in
        let decl = Int.Sgn.(Theorem { location; theorems=ds }) in
        Store.Modules.addSgnToCurrent decl;

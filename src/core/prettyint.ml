@@ -1705,7 +1705,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
 
     | Sgn.MRecTyp { declarations; _ } ->
       declarations
-      |> Nonempty.to_list
+      |> List1.to_list
       |> List.flatten
       |> List.iter (fmt_ppr_sgn_decl ppf)
 
@@ -1729,7 +1729,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
 
     | Sgn.Theorem { theorems; _ } ->
        fprintf ppf "@[<v>%a@]"
-         (Nonempty.print ~pp_sep: (fun ppf _ -> fprintf ppf "@,and ")
+         (List1.print ~pp_sep: (fun ppf _ -> fprintf ppf "@,and ")
             (fun ppf x ->
               fprintf ppf "@[%a@]"
                 fmt_ppr_sgn_thm_decl x))

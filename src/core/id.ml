@@ -111,7 +111,7 @@ let max_usage (ctx : name list) (s : string) : max_usage =
     String.equal name.hint_name s
   in
   let max' k name = max k name.hint_cnt in
-  match Nonempty.of_list (List.filter (same_head s) ctx) with
+  match List1.of_list (List.filter (same_head s) ctx) with
   | None ->
      dprintf
        begin fun p ->
@@ -123,7 +123,7 @@ let max_usage (ctx : name list) (s : string) : max_usage =
        end;
      `unused
   | Some names ->
-     let k = Nonempty.fold_left (fun x -> x.hint_cnt) max' names in
+     let k = List1.fold_left (fun x -> x.hint_cnt) max' names in
      dprintf
        begin fun p ->
        p.fmt "[max_usage] @[<v 2>%s is USED, k = %a in@,\

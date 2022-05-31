@@ -836,13 +836,13 @@ let sep_by0 (p : 'a parser) (sep : unit parser) : 'a list parser =
     Remark: the separator parser must not produce a result; to forget
     the result of a parser, use `void`.
  *)
-let sep_by1 (p : 'a parser) (sep : unit parser) : 'a Nonempty.t parser =
+let sep_by1 (p : 'a parser) (sep : unit parser) : 'a List1.t parser =
   shifted "some separated"
     { run =
         fun s ->
         let q =
           seq2 p (many' (sep &> p))
-          $> fun (x, xs) -> Nonempty.from x xs
+          $> fun (x, xs) -> List1.from x xs
         in
         run q s
     }
@@ -1031,7 +1031,7 @@ let fqname =
   fqidentifier
   |> span
   $> fun (loc, is) ->
-     let (ms, i) = Nonempty.unsnoc is in
+     let (ms, i) = List1.unsnoc is in
      Id.mk_name ~loc: loc ~modules: ms (Id.SomeString i)
 
 let pragma s = token (T.PRAGMA s)
@@ -1389,7 +1389,7 @@ let rec_block (p : (Id.name * LF.typ) parser) =
   &> opt_parens (sep_by1 p (token T.COMMA))
   |> span
   $> fun (loc, es) ->
-     Nonempty.fold_right
+     List1.fold_right
        (fun (x, a) -> LF.SigmaLast (Some x, a))
        (fun (x, a) s -> LF.SigmaElem (x, a, s))
        es
@@ -1689,7 +1689,7 @@ and clf_normal =
         $> fun (loc, ms) ->
            LF.Tuple
              ( loc
-             , Nonempty.fold_right
+             , List1.fold_right
                  (fun x -> LF.Last x)
                  (fun x r -> LF.Cons (x, r))
                  ms
@@ -2194,7 +2194,7 @@ let nested (type a) (p : a parser) (g : a locd -> a) (f : a locd -> a locd -> a)
   |> span
   |> parens
   $> fun (loc', l) ->
-     Nonempty.fold_left g (fun acc p -> f (loc', acc) p) l
+     List1.fold_left g (fun acc p -> f (loc', acc) p) l
      (* We use a left fold because the tuples in Beluga naturally nest on the left.
         We always use the loc' location on the accumulator since `f`
         should join the locations of its inputs. Location joining uses
@@ -2318,7 +2318,7 @@ and cmp_exp_chk' =
       fun s ->
       let abstraction param c =
         seq2
-          (sep_by1 param (token T.COMMA) $> Nonempty.to_list)
+          (sep_by1 param (token T.COMMA) $> List1.to_list)
           (token T.THICK_ARROW &> cmp_exp_chk)
         |> span
         $> fun (loc, (params, i)) ->
@@ -2341,7 +2341,7 @@ and cmp_exp_chk' =
         token T.KW_FUN
         &> maybe (token T.PIPE)
         &> sep_by1 (span cmp_copat_spine) (token T.PIPE)
-        $> Nonempty.to_list
+        $> List1.to_list
         |> span
         |> labelled "copattern abstraction"
         $> fun (loc, branches) ->
@@ -2359,7 +2359,7 @@ and cmp_exp_chk' =
           (token T.KW_OF &> case_pragma)
           (maybe (token T.PIPE)
            &> sep_by1 cmp_branch (token T.PIPE)
-           $> Nonempty.to_list)
+           $> List1.to_list)
         |> span
         |> labelled "case expression"
         $> fun (loc, (i, prag, bs)) ->
@@ -2776,7 +2776,7 @@ let sgn_open_pragma : Sgn.decl parser =
   |> labelled "open pragma"
   <& token T.DOT
   $> fun (location, id) ->
-     Sgn.Pragma { location; pragma=Sgn.OpenPrag (Nonempty.to_list id) }
+     Sgn.Pragma { location; pragma=Sgn.OpenPrag (List1.to_list id) }
 
 let sgn_abbrev_pragma : Sgn.decl parser =
   pragma "abbrev"
@@ -2785,7 +2785,7 @@ let sgn_abbrev_pragma : Sgn.decl parser =
   |> span
   |> labelled "module abbreviation pragma"
   $> fun (location, (fq, x)) ->
-     let fq = Nonempty.to_list fq in
+     let fq = List1.to_list fq in
      Sgn.Pragma { location; pragma=Sgn.AbbrevPrag (fq, x) }
 
 let sgn_comment : Sgn.decl parser =
@@ -2846,7 +2846,7 @@ let sgn_schema_decl : Sgn.decl parser =
   seq2
     (token T.KW_SCHEMA &> name <& token T.EQUALS)
     (sep_by1 lf_schema_elem (token T.PLUS)
-     $> Nonempty.to_list)
+     $> List1.to_list)
   <& token T.SEMICOLON
   |> span
   |> labelled "schema declaration"

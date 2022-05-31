@@ -946,7 +946,7 @@ module Sgn = struct
 
     | Theorem of
       { location: Location.t
-      ; theorems: thm_decl Nonempty.t
+      ; theorems: thm_decl List1.t
       } (** Mutually recursive theorem declaration(s) *)
 
     | Pragma of
@@ -963,7 +963,7 @@ module Sgn = struct
 
     | MRecTyp of
       { location: Location.t
-      ; declarations: decl list Nonempty.t
+      ; declarations: decl list List1.t
       } (** Mutually-recursive LF type family declaration *)
 
     | Module of

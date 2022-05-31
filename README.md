@@ -64,19 +64,19 @@ Use `make` to compile, `make test` to compile and run the tests, and `make clean
 Use `./LINT` to find code style errors.
 
 To use any of the compiled executables as if they were installed from opam, use `dune exec [executable]`.
-For instance, you can run Beluga programs using the compiled development version of `beluga` using:
+For instance, you can run Beluga programs using the compiled development version of `beluga` with:
 
 ```bash
 dune exec beluga path/to/program.bel
 ```
 
-You can run a Harpoon session using the compiled development version of `harpoon` using:
+You can run a Harpoon session using the compiled development version of `harpoon` with:
 
 ```bash
 dune exec harpoon -- --sig path/to/program.bel
 ```
 
-See the [`MakeFile`](./MakeFile) for other available development commands.
+See the [`Makefile`](./Makefile) for other available development commands.
 
 ## Interactive Mode
 

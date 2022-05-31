@@ -1,4 +1,4 @@
-module type Type = sig
+module type TYPE = sig
   type t
 end
 
@@ -16,7 +16,7 @@ module type Base = sig
   val amap : (annotation -> annotation) -> 'a t -> 'a t
 end
 
-module Make (T : Type) : Base with type annotation = T.t = struct
+module Make (T : TYPE) : Base with type annotation = T.t = struct
   type annotation = T.t
 
   type 'a t =

@@ -3,7 +3,7 @@
     represents its location inside the input stream.
  *)
 
-module type Type = sig
+module type TYPE = sig
   type t
 end
 
@@ -24,4 +24,4 @@ module type Base = sig
 end
 
 (** Constructs an annotated type. *)
-module Make (T : Type) : Base with type annotation = T.t
+module Make (T : TYPE) : Base with type annotation = T.t

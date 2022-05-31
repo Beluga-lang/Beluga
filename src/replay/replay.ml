@@ -116,8 +116,6 @@ module TranscriptRunner = struct
   module Parser = Mupc.StringParser
   module Tokenizer = Tokenizer.ForParser (Parser)
 
-  type 'a istream = 'a IStream.t
-
   (** The environment in which the transcript runner executes. *)
   type env =
     { beluga_out : Parser.state;
@@ -259,12 +257,6 @@ end
 type error =
   | ParseError of string
   | InteractionError of string
-
-let rec listify (s : 'a IStream.t) : 'a list =
-  s.IStream.next () |>
-    Option.eliminate
-      (fun () -> [])
-      (fun (x, s) -> x :: listify s)
 
 let main () =
   let real_main () : (error, TranscriptRunner.env) Either.t =

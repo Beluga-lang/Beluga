@@ -45,8 +45,6 @@ let usage () =
     Sys.argv.(0) options;
   exit 2
 
-let externall = ref false
-
 module PC = Printer.Control
 
 let process_option arg rest =
@@ -108,8 +106,6 @@ let rec process_options = function
           process_options (process_option arg rest)
         else  (* reached end of options: return this and remaining arguments *)
           arg :: rest
-
-exception SessionFatal
 
 let main () =
   let args   = List.tl (Array.to_list Sys.argv) in

@@ -12,7 +12,7 @@ module S = Substitution
 module P = Pretty.Int.DefaultPrinter
 
 let fmt_ppr_conv_list =
-  Format.(pp_print_list ~pp_sep: Support.Fmt.comma pp_print_int)
+  Format.(pp_print_list ~pp_sep: Support.Format.comma pp_print_int)
 
 (* blockdeclInDctx is unused as of commit c899234fe2caf15a42699db013ce9070de54c9c8 -osavary *)
 let rec _blockdeclInDctx =

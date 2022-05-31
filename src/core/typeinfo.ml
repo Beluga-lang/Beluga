@@ -89,7 +89,7 @@ module LF = struct
     then
       begin
         (* dprint (fun () -> "[TypeInfo.LF] Entry of " ^ P.typToString e.ctx e.psi e.tc ^ " added at: \n" ^ Location.to_string l ^ "\n"); *)
-        Fmt.stringify (P.fmt_ppr_lf_typ e.ctx e.psi P.l0) (Whnf.normTyp e.tc)
+        Format.stringify (P.fmt_ppr_lf_typ e.ctx e.psi P.l0) (Whnf.normTyp e.tc)
         |> Annot.mk_entry
         |> Annot.add l;
         Hashtbl.add store l e
@@ -117,7 +117,7 @@ module Comp = struct
     then
       begin
         (* dprint (fun () -> "[TypeInfo.Comp] Entry of " ^ P.subCompTypToString e.ctx e.tc ^ " added at: \n" ^ Location.to_string l ^ "\n"); *)
-        Fmt.stringify (P.fmt_ppr_cmp_typ e.ctx P.l0) (Whnf.cnormCTyp e.tc)
+        Format.stringify (P.fmt_ppr_cmp_typ e.ctx P.l0) (Whnf.cnormCTyp e.tc)
         |> Annot.mk_entry
         |> Annot.add l;
         Hashtbl.add store l e
@@ -147,9 +147,9 @@ module Sgn = struct
         begin
           match e.sgn with
           | Typ t ->
-             Fmt.stringify (P.fmt_ppr_lf_typ LF.Empty LF.Null P.l0) t
+             Format.stringify (P.fmt_ppr_lf_typ LF.Empty LF.Null P.l0) t
           | Kind k ->
-             Fmt.stringify (P.fmt_ppr_lf_kind LF.Null P.l0) k
+             Format.stringify (P.fmt_ppr_lf_kind LF.Null P.l0) k
         end
         |> Annot.mk_entry
         |> Annot.add l;

@@ -6,7 +6,7 @@ type flags = int
 
 type 'a io = 'a -> unit
 
-module Fmt = Fmt
+module Fmt = Format
 open Fmt
 
 let r_flags : flags ref = ref 0

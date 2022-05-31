@@ -188,5 +188,5 @@ let print (c : class_or_string) ppf =
   | HASH_BLANK -> case (lazy (p "#_")) (lazy (p "HASH_BLANK"))
   | DOLLAR_BLANK -> case (lazy (p "$_")) (lazy (p "DOLLAR_BLANK"))
 
-let to_string t = Fmt.stringify (print `TOKEN) t
-let class_to_string t = Fmt.stringify (print `CLASS) t
+let to_string t = Format.stringify (print `TOKEN) t
+let class_to_string t = Format.stringify (print `CLASS) t

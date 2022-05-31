@@ -457,7 +457,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
        ()
     | _ ->
        fprintf ppf "%a"
-         (pp_print_list ~pp_sep: Fmt.comma
+         (pp_print_list ~pp_sep: Format.comma
             (fun ppf f -> f ppf ()))
          (self lvl s)
 
@@ -753,7 +753,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
   and fmt_ppr_lf_dctx cD lvl ppf cPsi =
     fprintf ppf "@[<hv>%a@]" (fmt_ppr_lf_dctx' cD) cPsi
 
-  and fmt_ppr_lf_mctx ?(all = false) ?(sep = Fmt.comma) lvl ppf cD =
+  and fmt_ppr_lf_mctx ?(all = false) ?(sep = Format.comma) lvl ppf cD =
     let should_print =
       if all
       then fun _ -> true
@@ -1554,7 +1554,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
 
   and fmt_ppr_cmp_hypotheses ppf =
     let open Comp in
-    let comma_sep_by fmt l = pp_print_list ~pp_sep: Fmt.comma fmt l in
+    let comma_sep_by fmt l = pp_print_list ~pp_sep: Format.comma fmt l in
     fun { cD; cG; _ } ->
     fprintf ppf "@[<hv>%a@]@,| @[<hv>%a@]@,;"
       (comma_sep_by
@@ -1586,7 +1586,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
          fprintf ppf "%a : _" Id.print x
       end
 
-  and fmt_ppr_cmp_gctx ?(sep = Fmt.comma) cD lvl =
+  and fmt_ppr_cmp_gctx ?(sep = Format.comma) cD lvl =
     fmt_ppr_ctx_filter ~sep: sep
       (Fun.const true)
       (fun ppf (_, d) -> fmt_ppr_cmp_ctyp_decl cD l0 ppf d)

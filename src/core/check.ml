@@ -770,7 +770,7 @@ module Comp = struct
          | Unify.Failure _ ->
             Error.violation
               ("[syn] type annotation not unifiable with PiBox type "
-               ^ Fmt.stringify Loc.print_short loc
+               ^ Format.stringify Loc.print_short loc
               )
        end;
        checkMetaSpine loc cD mS (cK, I.MDot (metaObjToMFront mO, t))
@@ -926,7 +926,7 @@ module Comp = struct
       LF.checkMetaObj cD cM (cT, t);
       Typeinfo.Comp.add (getLoc cM)
         (Typeinfo.Comp.mk_entry cD (TypBox (getLoc cM, cT), t))
-        ("Box " ^ Fmt.stringify (P.fmt_ppr_cmp_meta_obj cD P.l0) cM)
+        ("Box " ^ Format.stringify (P.fmt_ppr_cmp_meta_obj cD P.l0) cM)
     with
     | Whnf.FreeMVar (I.FMVar (u, _)) ->
        Error.violation ("Free meta-variable " ^ Id.render_name u)
@@ -954,7 +954,7 @@ module Comp = struct
     | (Fn (loc, x, e), (TypArr (_, tau1, tau2), t)) ->
        check mcid cD (I.Dec (cG, CTypDecl (x, Whnf.cnormCTyp (tau1, t), false)), (Total.shift cIH)) total_decs e (tau2, t);
        Typeinfo.Comp.add loc (Typeinfo.Comp.mk_entry cD ttau)
-         ("Fn " ^ Fmt.stringify (P.fmt_ppr_cmp_exp_chk cD cG P.l0) e)
+         ("Fn " ^ Format.stringify (P.fmt_ppr_cmp_exp_chk cD cG P.l0) e)
 
     | (Fun (loc, fbr), _) ->
        checkFBranches mcid cD (cG, cIH) total_decs fbr ttau
@@ -963,13 +963,13 @@ module Comp = struct
        check mcid (extend_mctx cD (u, cdec, t))
          (C.cnormGCtx (cG, I.MShift 1), C.cnormIHCtx (cIH, I.MShift 1)) total_decs e (tau, C.mvar_dot1 t);
        Typeinfo.Comp.add loc (Typeinfo.Comp.mk_entry cD ttau)
-         ("MLam " ^ Fmt.stringify (P.fmt_ppr_cmp_exp_chk cD cG P.l0) e)
+         ("MLam " ^ Format.stringify (P.fmt_ppr_cmp_exp_chk cD cG P.l0) e)
 
     | (Pair (loc, e1, e2), (TypCross (_, tau1, tau2), t)) ->
        check mcid cD (cG, cIH) total_decs e1 (tau1, t);
        check mcid cD (cG, cIH) total_decs e2 (tau2, t);
        Typeinfo.Comp.add loc (Typeinfo.Comp.mk_entry cD ttau)
-         ("Pair " ^ Fmt.stringify (P.fmt_ppr_cmp_exp_chk cD cG P.l0) e)
+         ("Pair " ^ Format.stringify (P.fmt_ppr_cmp_exp_chk cD cG P.l0) e)
 
     | (Let (loc, i, (x, e)), (tau, t)) ->
        let (_, tau', t') = syn mcid cD (cG, cIH) total_decs i in
@@ -977,7 +977,7 @@ module Comp = struct
        let cG' = I.Dec (cG, CTypDecl (x, Whnf.cnormCTyp (tau', t'), false)) in
        check mcid cD (cG', Total.shift cIH) total_decs e (tau, t);
        Typeinfo.Comp.add loc (Typeinfo.Comp.mk_entry cD ttau)
-         ("Let " ^ Fmt.stringify (P.fmt_ppr_cmp_exp_chk cD cG P.l0) e)
+         ("Let " ^ Format.stringify (P.fmt_ppr_cmp_exp_chk cD cG P.l0) e)
 
     | (LetPair (_, i, (x, y, e)), (tau, t)) ->
        let (_, tau', t') = syn mcid cD (cG, cIH) total_decs i in
@@ -1038,13 +1038,13 @@ module Comp = struct
        if C.convCTyp (tau, Whnf.m_id) (tau', Whnf.m_id)
        then
          Typeinfo.Comp.add loc (Typeinfo.Comp.mk_entry cD ttau)
-           ("Syn " ^ Fmt.stringify (P.fmt_ppr_cmp_exp_chk cD cG P.l0) e)
+           ("Syn " ^ Format.stringify (P.fmt_ppr_cmp_exp_chk cD cG P.l0) e)
        else
          raise (Error (loc, MismatchChk (cD, cG, e, (tau, t), (tau', t'))))
 
     | (Hole (loc, id, name), (tau, t)) ->
        Typeinfo.Comp.add loc (Typeinfo.Comp.mk_entry cD ttau)
-         ("Hole " ^ Fmt.stringify (P.fmt_ppr_cmp_exp_chk cD cG P.l0) e);
+         ("Hole " ^ Format.stringify (P.fmt_ppr_cmp_exp_chk cD cG P.l0) e);
        let open Holes in
        begin match get (by_id id) with
        | None ->
@@ -1092,7 +1092,7 @@ module Comp = struct
     | Var (loc, x) as e ->
        let (f,tau', _) = lookup cG x in
        Typeinfo.Comp.add loc (Typeinfo.Comp.mk_entry cD (tau', C.m_id))
-         ("Var " ^ Fmt.stringify (P.fmt_ppr_cmp_exp_syn cD cG P.l0) e);
+         ("Var " ^ Format.stringify (P.fmt_ppr_cmp_exp_syn cD cG P.l0) e);
 
        (* We need to strip the type of any variable here because check
           works with annotated types in general. So variables would
@@ -1108,7 +1108,7 @@ module Comp = struct
        let tau = CompConst.((get c).Entry.typ) in
        Typeinfo.Comp.add loc
          (Typeinfo.Comp.mk_entry cD (tau, C.m_id))
-         ("DataConst " ^ Fmt.stringify (P.fmt_ppr_cmp_exp_syn cD cG P.l0) e);
+         ("DataConst " ^ Format.stringify (P.fmt_ppr_cmp_exp_syn cD cG P.l0) e);
        (None, tau, C.m_id)
 
     | Obs (loc, e, t, obs) ->
@@ -1128,7 +1128,7 @@ module Comp = struct
          entry.typ, entry.decl, entry.name
        in
        Typeinfo.Comp.add loc (Typeinfo.Comp.mk_entry cD (tau, C.m_id))
-         ("Const " ^ Fmt.stringify (P.fmt_ppr_cmp_exp_syn cD cG P.l0) e);
+         ("Const " ^ Format.stringify (P.fmt_ppr_cmp_exp_syn cD cG P.l0) e);
        (* First we need to decide whether we are calling a function in
           the current mutual block. *)
        begin match Total.lookup_dec entry.Comp.Entry.name total_decs with
@@ -1185,7 +1185,7 @@ module Comp = struct
           Typeinfo.Comp.add
             loc
             (Typeinfo.Comp.mk_entry cD (tau, t))
-            ("Apply " ^ Fmt.stringify (P.fmt_ppr_cmp_exp_syn cD cG P.l0) e);
+            ("Apply " ^ Format.stringify (P.fmt_ppr_cmp_exp_syn cD cG P.l0) e);
           (useIH loc cD cG cIH_opt e2, tau, t)
 
        | (tau, t) ->
@@ -1226,7 +1226,7 @@ module Comp = struct
             | Unify.Failure _ ->
                Error.violation
                  ("[syn] type annotation not unifiable with PiBox type "
-                  ^ Fmt.stringify Loc.print_short loc)
+                  ^ Format.stringify Loc.print_short loc)
           end;
           dprintf
             begin fun p ->

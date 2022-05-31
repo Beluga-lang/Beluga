@@ -48,7 +48,7 @@ module Error = struct
         fprintf
           ppf
           "Unexpected remaining command-line arguments:@,  @[%a@]@."
-          (pp_print_list ~pp_sep:Fmt.comma (fun ppf -> fprintf ppf "%s"))
+          (pp_print_list ~pp_sep:Format.comma (fun ppf -> fprintf ppf "%s"))
          args
 end
 

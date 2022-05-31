@@ -55,8 +55,8 @@ let _ =
            "This mutual definition block does not have
             consistent totality declarations. Either all or none of
             functions must be declared total."
-           (pp_print_list ~pp_sep: Fmt.comma Id.print) haves
-           (pp_print_list ~pp_sep: Fmt.comma Id.print) have_nots
+           (pp_print_list ~pp_sep: Format.comma Id.print) haves
+           (pp_print_list ~pp_sep: Format.comma Id.print) have_nots
       | NoPositive n ->
          fprintf ppf "Positivity checking of constructor %s fails.\n" n
       | NoStratify n ->
@@ -92,7 +92,7 @@ let _ =
          fprintf ppf "Argument %a does not appear in argument list @[<h>%a@]."
            Id.print a
            (pp_print_list
-              ~pp_sep: Fmt.comma
+              ~pp_sep: Format.comma
               (fun ppf ->
                 (Option.eliminate
                    (fun _ -> fprintf ppf "_")

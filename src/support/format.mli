@@ -1,4 +1,4 @@
-open Format
+include module type of Stdlib.Format
 
 
 type fmt =

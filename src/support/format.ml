@@ -1,4 +1,4 @@
-open Format
+include Stdlib.Format
 
 (** The type of formatting functions. *)
 type 'a t = formatter -> 'a -> unit

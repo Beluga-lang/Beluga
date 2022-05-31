@@ -303,7 +303,7 @@ let lookup_fv (m : Id.name) : bool index =
 let print_fvars ppf (vs : Var.t) =
   let open Format in
   pp_print_list
-    ~pp_sep: Fmt.comma
+    ~pp_sep: Format.comma
     (fun ppf x -> Id.print ppf x.Var.name)
     ppf
     (Var.to_list vs)
@@ -311,7 +311,7 @@ let print_fvars ppf (vs : Var.t) =
 let print_fcvars ppf fcvars =
   let open Format in
   pp_print_list
-    ~pp_sep: Fmt.comma
+    ~pp_sep: Format.comma
     (fun ppf x ->
       fprintf ppf "FMV %s" (Id.render_name x))
     ppf

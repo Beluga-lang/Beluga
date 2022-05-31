@@ -881,7 +881,7 @@ let rec inferPatTyp' cD' (cD_s, tau_s) =
   | Int.Comp.TypInd typ -> inferPatTyp' cD' (cD_s, typ)
 
   | _ ->
-     let s = Support.Fmt.stringify (P.fmt_ppr_cmp_typ cD_s P.l0) tau_s in
+     let s = Support.Format.stringify (P.fmt_ppr_cmp_typ cD_s P.l0) tau_s in
      Error.violation ("uninferrable pattern type for: " ^ s)
 
 let inferPatTyp cD' (cD_s, tau_s) =

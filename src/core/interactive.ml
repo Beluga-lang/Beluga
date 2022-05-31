@@ -557,7 +557,7 @@ let fmt_ppr_hole ppf (i, (Holes.Exists (w, h)) : HoleId.t * Holes.some_hole) : u
           fprintf ppf
             "@,@[<hov 2>Variable%a of this type:@ @[<h>%a@]@]"
             plural (List.length suggestions = 1)
-            (pp_print_list ~pp_sep: Fmt.comma Id.print) suggestions
+            (pp_print_list ~pp_sep: Format.comma Id.print) suggestions
      | Some sM ->
         fprintf ppf "@[<v 2>This hole is solved:@,@[%a@]@]"
           (P.fmt_ppr_lf_normal cD cPsi P.l0) (Whnf.norm sM)
@@ -583,7 +583,7 @@ let fmt_ppr_hole ppf (i, (Holes.Exists (w, h)) : HoleId.t * Holes.some_hole) : u
           fprintf ppf
             "@,@,Variable%a of this type: @[<h>%a@]"
             plural (List.length suggestions = 1)
-            (pp_print_list ~pp_sep: Fmt.comma Id.print) suggestions
+            (pp_print_list ~pp_sep: Format.comma Id.print) suggestions
      | Some e ->
         fprintf ppf "@[<v 2>This hole is solved:@,@[%a@]@]"
           (P.fmt_ppr_cmp_exp_chk cD cG P.l0) e

@@ -296,9 +296,9 @@ module Make (_ : Store.Cid.RENDERER) : Printer.Ext.T = struct
          else, just print each term comma-separated *)
 
       if nonempty && List.nonempty tms
-      then Fmt.comma ppf ();
+      then Format.comma ppf ();
 
-      pp_print_list ~pp_sep: Fmt.comma
+      pp_print_list ~pp_sep: Format.comma
         print_tm ppf tms
     in
 
@@ -424,7 +424,7 @@ module Make (_ : Store.Cid.RENDERER) : Printer.Ext.T = struct
          (fmt_ppr_lf_dctx 0) cPsi
          (fmt_ppr_lf_typ_decl lvl) d
 
-  and fmt_ppr_lf_mctx ?(sep = Fmt.comma) lvl ppf =
+  and fmt_ppr_lf_mctx ?(sep = Format.comma) lvl ppf =
     function
     | LF.Empty ->
        fprintf ppf "."

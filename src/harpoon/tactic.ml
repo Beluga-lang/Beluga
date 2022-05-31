@@ -205,7 +205,7 @@ let split (k : Command.split_kind) (i : Comp.exp_syn) (tau : Comp.typ) mfs : t =
        k, TypBox(loc, mT'), p_opt
     | _ -> None, tau, None
   in
-  let action_name = Fmt.stringify P.fmt_ppr_cmp_split_kind k in
+  let action_name = Format.stringify P.fmt_ppr_cmp_split_kind k in
   let cgs = generate_pattern_coverage_goals tau s t in
   match is_valid_goals_for_split_kind k cgs with
   | `cant_invert ->

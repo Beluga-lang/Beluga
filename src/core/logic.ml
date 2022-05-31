@@ -11,7 +11,7 @@ open Format
 open Syntax.Int
 
 let (dprintf, _, _) = Debug.makeFunctions' (Debug.toFlags [11])
-open Debug.Fmt
+open! Debug.Fmt
 
 module Options = struct
   (* Enable the logic programming engine (disabled by default). *)

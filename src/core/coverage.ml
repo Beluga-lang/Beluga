@@ -235,7 +235,7 @@ end = struct
     | [] ->
        fprintf ppf "<no mvs>"
     | vars ->
-       pp_print_list ~pp_sep: Fmt.comma
+       pp_print_list ~pp_sep: Format.comma
          begin fun ppf ->
          function
          | LF.Offset k ->
@@ -3022,9 +3022,8 @@ let refine names ((cD, cG, candidates, patt) as cov_problem) =
      let r_cands = refine_patt_cands names cov_problem (pv_splits, pv) in
      dprintf
        begin fun p ->
-       let open Format in
        p.fmt "[refine] @[<v>refined cov_problem:@,@[%a@]@]"
-         (pp_print_list ~pp_sep: pp_print_cut Prettycov.fmt_ppr_cov_problem)
+         (Format.pp_print_list ~pp_sep: Format.pp_print_cut Prettycov.fmt_ppr_cov_problem)
          r_cands
        end;
      r_cands

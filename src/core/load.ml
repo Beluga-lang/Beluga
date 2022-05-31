@@ -158,7 +158,7 @@ let load ppf f =
            @,resolved %s =\
            @,  @[<hv>%a@]@]"
       f
-      (Format.pp_print_list ~pp_sep: Fmt.comma
+      (Format.pp_print_list ~pp_sep: Format.comma
          (fun ppf x -> Format.fprintf ppf "%s" x))
       all_paths
     end;

@@ -17,7 +17,7 @@ declare STOP_ON_FAILURE=""
 
 declare -a BELUGA_FLAGS=()
 
-declare -r ROOTDIR=${ROOTDIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")" > /dev/null 2>&1 && pwd)}
+declare -r ROOTDIR=${ROOTDIR:-$(pwd)}
 declare -r TEMPDIR=${TEMPDIR:-$(mktemp -d)}
 declare SKIP_RSYNC=0
 

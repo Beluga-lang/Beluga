@@ -1072,7 +1072,7 @@ let recSgnDecls decls =
                       @,@[<hv 2>total_decs =@ @[<v>%a@]@]\
                       @,tau_ann = @[%a@]@]"
                  Id.print f
-                 (List1.print ~pp_sep: Format.pp_print_cut
+                 (List1.pp ~pp_sep: Format.pp_print_cut
                     P.(fmt_ppr_cmp_total_dec))
                  total_decs
                  P.(fmt_ppr_cmp_typ Int.LF.Empty l0) tau_ann

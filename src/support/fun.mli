@@ -1,22 +1,22 @@
 include module type of Stdlib.Fun
 
-(** [f ++ g] is the function composition of [f] and [g], such that [(f ++ g) x]
-    is [f (g x)].
-*)
-val (++) : ('b -> 'c) -> ('a -> 'b) -> ('a -> 'c)
+(** [f ++ g] is the function composition of [f] and [g], such that
+    [(f ++ g) x] is [f (g x)]. *)
+val ( ++ ) : ('b -> 'c) -> ('a -> 'b) -> 'a -> 'c
 
 (** [f >> g] is the function composition of [f] and [g], such that
     [x |> (f >> g)] is [g (f x)]. *)
 val ( >> ) : ('a -> 'b) -> ('b -> 'c) -> 'a -> 'c
 
-(** [flip f x y] is [f y x].
-*)
-val flip : ('a -> 'b -> 'c) -> ('b -> 'a -> 'c)
+(** [apply x f] is [f x]. This is useful when a function pipeline ends in a
+    call to the generated function. *)
+val apply : 'a -> ('a -> 'b) -> 'b
+
+(** [flip f x y] is [f y x]. *)
+val flip : ('a -> 'b -> 'c) -> 'b -> 'a -> 'c
 
 (** [until f] repeatedly calls the effectful function [f] until [f ()] is
-    [false].
-    If [f] always returns [true], then [until f] will not terminate.
-*)
+    [false]. If [f] always returns [true], then [until f] does not terminate. *)
 val until : (unit -> bool) -> unit
 
 (** [through f x] applies the effectful function [f] on [x] and returns [x].
@@ -30,10 +30,8 @@ val through : ('a -> unit) -> 'a -> 'a
 *)
 val after : (unit -> unit) -> 'a -> 'a
 
-(** Converts an uncurried function to a curried function.
-*)
+(** Converts an uncurried function to a curried function. *)
 val curry : ('a * 'b -> 'c) -> 'a -> 'b -> 'c
 
-(** Converts a curried function to a function on pairs.
-*)
+(** Converts a curried function to a function on pairs. *)
 val uncurry : ('a -> 'b -> 'c) -> 'a * 'b -> 'c

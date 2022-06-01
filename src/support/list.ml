@@ -1,13 +1,14 @@
 include Stdlib.List
 
-let rec last l = match l with
+let rec last l =
+  match l with
   | [] -> raise (Invalid_argument "List.last")
-  | [x] -> x
+  | [ x ] -> x
   | _ :: xs -> last xs
 
 let rec pairs l =
   match l with
-  | [] | [_] -> []
+  | [] | [ _ ] -> []
   | x1 :: x2 :: xs -> (x1, x2) :: pairs (x2 :: xs)
 
 let null = function
@@ -46,7 +47,8 @@ let index_of p l =
   in
   go 0 l
 
-let rec equal eq l1 l2 = match l1, l2 with
+let rec equal eq l1 l2 =
+  match (l1, l2) with
   | [], [] -> true
   | x :: xs, y :: ys -> if eq x y then equal eq xs ys else false
   | _ -> false
@@ -59,7 +61,7 @@ let index l = mapi (fun i x -> (i, x)) l
 
 let mapi2 f l1 l2 =
   let rec mapi2 index l1 l2 return =
-    match l1, l2 with
+    match (l1, l2) with
     | [], [] -> return []
     | x :: xs, y :: ys ->
       mapi2 (index + 1) xs ys (fun tl -> return (f index x y :: tl))
@@ -86,10 +88,34 @@ let split l =
 
 let combine l1 l2 =
   let rec combine l1 l2 return =
-    match l1, l2 with
+    match (l1, l2) with
     | [], [] -> return []
     | a1 :: l1, a2 :: l2 ->
       combine l1 l2 (fun rest -> return ((a1, a2) :: rest))
     | _ -> raise (Invalid_argument "List.combine")
   in
   combine l1 l2 Fun.id
+
+let pp = Format.pp_print_list
+
+let show ?(pp_sep = Format.pp_print_cut) pp_v l =
+  Format.asprintf "%a" (pp ~pp_sep pp_v) l
+
+module MakeEq (E : Eq.EQ) : Eq.EQ with type t = E.t t = Eq.Make (struct
+  type nonrec t = E.t t
+
+  let equal = equal E.equal
+end)
+
+module MakeOrd (O : Ord.ORD) : Ord.ORD with type t = O.t t = Ord.Make (struct
+  type nonrec t = O.t t
+
+  let compare = compare O.compare
+end)
+
+module MakeShow (S : Show.SHOW) : Show.SHOW with type t = S.t t =
+Show.Make (struct
+  type nonrec t = S.t t
+
+  let pp = pp S.pp
+end)

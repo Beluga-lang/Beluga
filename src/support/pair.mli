@@ -42,3 +42,36 @@ val swap : 'a * 'b -> 'b * 'a
 val uncurry : ('a -> 'b -> 'c) -> 'a * 'b -> 'c
 
 val curry : ('a * 'b -> 'c) -> 'a -> 'b -> 'c
+
+val equal :
+     ('a -> 'a -> bool)
+  -> ('b -> 'b -> bool)
+  -> ('a, 'b) t
+  -> ('a, 'b) t
+  -> bool
+
+val compare :
+  ('a -> 'a -> int) -> ('b -> 'b -> int) -> ('a, 'b) t -> ('a, 'b) t -> int
+
+val pp :
+     (Format.formatter -> 'a -> unit)
+  -> (Format.formatter -> 'b -> unit)
+  -> Format.formatter
+  -> 'a * 'b
+  -> unit
+
+val show :
+     (Format.formatter -> 'a -> unit)
+  -> (Format.formatter -> 'b -> unit)
+  -> 'a * 'b
+  -> string
+
+(** {1 Instances} *)
+
+module MakeEq (E1 : Eq.EQ) (E2 : Eq.EQ) : Eq.EQ with type t = (E1.t, E2.t) t
+
+module MakeOrd (O1 : Ord.ORD) (O2 : Ord.ORD) :
+  Ord.ORD with type t = (O1.t, O2.t) t
+
+module MakeShow (S1 : Show.SHOW) (S2 : Show.SHOW) :
+  Show.SHOW with type t = (S1.t, S2.t) t

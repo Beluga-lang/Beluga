@@ -1729,7 +1729,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
 
     | Sgn.Theorem { theorems; _ } ->
        fprintf ppf "@[<v>%a@]"
-         (List1.print ~pp_sep: (fun ppf _ -> fprintf ppf "@,and ")
+         (List1.pp ~pp_sep: (fun ppf _ -> fprintf ppf "@,and ")
             (fun ppf x ->
               fprintf ppf "@[%a@]"
                 fmt_ppr_sgn_thm_decl x))

@@ -258,7 +258,7 @@ module Make (P : ParserInfo) = struct
                  (* pull out the input eagerly to avoid putting the
                  whole state inside the closure *)
                  let i = Lazy.force s.input in
-                 let x = Either.pure (HeadStrict.cons t (lazy (Either.forget i))) in
+                 let x = Either.right (HeadStrict.cons t (lazy (Either.forget i))) in
                  lazy x
                end;
              stk = stk;
@@ -285,7 +285,7 @@ module Make (P : ParserInfo) = struct
   yields the given value. *)
   let pure (x : 'a) : 'a t =
     { run =
-        fun s -> (s, Either.pure x)
+        fun s -> (s, Either.right x)
     }
 
   (** A sequencing operator for parsers.
@@ -299,10 +299,9 @@ module Make (P : ParserInfo) = struct
     { run =
         fun s ->
         let (s', e) = p.run s in
-        let open Either in
         match e with
-        | Left err -> (s', Left err)
-        | Right x -> (k x).run s'
+        | Either.Left err -> (s', Either.left err)
+        | Either.Right x -> (k x).run s'
     }
 
   (** A flipped, operator version of `map`. *)
@@ -312,7 +311,7 @@ module Make (P : ParserInfo) = struct
   (** A parser that simply yields the internal parser state. *)
   let get : state t =
     { run =
-        fun s -> (s, Either.pure s)
+        fun s -> (s, Either.right s)
     }
 
   (** Gets the location that the parser is currently at. *)
@@ -373,7 +372,6 @@ module Make (P : ParserInfo) = struct
         let (s, e) = p1.run s in
         (* see where we are after running it *)
         let n' = s.count in
-        let open Either in
         match e with
         | Left e ->
            (* If the first parser fails without consuming input, or if
@@ -389,13 +387,13 @@ module Make (P : ParserInfo) = struct
            if d = 0 || e.error_is_recoverable && is_rewind_possible d s.stk then
                p2.run (rewind d s)
            else
-             (s, Left e)
-        | Right x -> (s, Right x)
+             (s, Either.left e)
+        | Right x -> (s, Either.right x)
     }
 
   let throw (msg : string) : 'a t =
     { run =
-        fun s -> (s, Either.Left (error_of_state msg s))
+        fun s -> (s, Either.left (error_of_state msg s))
     }
 
   (** Observes the head of the input stream without consuming any
@@ -408,7 +406,6 @@ module Make (P : ParserInfo) = struct
   (** Pops a token from the input stream, if any.
   Returns `Nothing` if the input is already empty. *)
   let car (s : state) : 'c Token.t option * state =
-    let open Either in
     let open HeadStrict in
     match s.input with
     | lazy (Left _) ->
@@ -425,8 +422,8 @@ module Make (P : ParserInfo) = struct
              input =
                lazy
                  (match tail with
-                  | lazy None -> Left head.Token.annotation.Span.stop
-                  | lazy (Some x) -> Right x
+                  | lazy None -> Either.left head.Token.annotation.Span.stop
+                  | lazy (Some x) -> Either.right x
                  )
                ;
            }
@@ -437,7 +434,7 @@ module Make (P : ParserInfo) = struct
 
   let peek : item Token.t option t =
     { run =
-        fun s -> (s, Either.pure (Either.forget (peeks s)))
+        fun s -> (s, Either.right (Either.forget (peeks s)))
     }
 
   let peek' : item Token.t t =
@@ -448,8 +445,8 @@ module Make (P : ParserInfo) = struct
         ( s,
           e
           >>= Option.eliminate
-              (fun () -> Left (error_of_state "unexpected end of input" s))
-              (fun x -> pure x)
+              (fun () -> Either.left (error_of_state "unexpected end of input" s))
+              (fun x -> Either.right x)
         )
     }
 
@@ -461,9 +458,9 @@ module Make (P : ParserInfo) = struct
         fun s ->
         let open Token in
         match car s with
-        | (None, s) -> (s, Either.Left (error_of_state "unexpected end of input" s))
+        | (None, s) -> (s, Either.left (error_of_state "unexpected end of input" s))
         | (Some { value; _ }, s) ->
-           ( s, Either.Right value )
+           ( s, Either.right value )
     }
 
     (*
@@ -556,7 +553,7 @@ module Make (P : ParserInfo) = struct
         let n' = s.count in
         let d = n' - n in
         if PureStack.length s.stk < d then
-          (s, Either.Left (error_of_state "lookahead failed" s))
+          (s, Either.left (error_of_state "lookahead failed" s))
         else
           (rewind (n' - n) s, e)
     }
@@ -565,8 +562,8 @@ module Make (P : ParserInfo) = struct
     { input =
         lazy
           (Option.eliminate
-             (fun _ -> Either.Left Loc.initial)
-             (fun s -> Either.Right s)
+             (fun _ -> Either.left Loc.initial)
+             (fun s -> Either.right s)
              (let module M = HeadStrict.OfBasicStream (Stream) in M.f input)
           );
       semantic_loc = [];

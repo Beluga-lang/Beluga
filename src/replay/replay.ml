@@ -161,12 +161,11 @@ module TranscriptRunner = struct
   *)
   let rpc (request : string) (env : env) : (string * env) option =
     beluga_send request env;
-    let open Either in
     match beluga_read_response env.beluga_out with
-    | (_, Left err) ->
+    | (_, Either.Left err) ->
        Printf.printf "parse error: %s\n" (Parser.string_of_parse_error err);
        None
-    | (s, Right x) -> Some (x, { env with beluga_out = s } )
+    | (s, Either.Right x) -> Some (x, { env with beluga_out = s } )
 
   let write_file (path : string) (contents : string) : unit =
     let h = open_out_bin path in
@@ -201,7 +200,6 @@ module TranscriptRunner = struct
 
   let run_interaction (i : interaction) (e : env) :
         (string, env) Either.t =
-    let open Either in
     let string_of_line : int option -> string =
       Option.eliminate
         (fun () -> "<unknown>")
@@ -210,7 +208,7 @@ module TranscriptRunner = struct
     rpc i.request e |>
       Option.eliminate
         (fun () ->
-          Left
+          Either.left
             ( "interaction on line "
               ^ string_of_line i.line_num
               ^ " failed: Beluga subprocess unexpectedly closed "
@@ -220,9 +218,9 @@ module TranscriptRunner = struct
           match string_match res i.response with
           | Equal ->
               write_file "last-output.bel" (drop_semi res);
-              Right e'
+              Either.right e'
           | LengthDiffers (l1, l2) ->
-             Left
+             Either.left
                ( "interaction on line "
                  ^ string_of_line i.line_num
                  ^ " failed: length mismatch\n"
@@ -230,7 +228,7 @@ module TranscriptRunner = struct
                  ^ "expected length: " ^ string_of_int l2 ^ "\n"
                )
           | MismatchAt n ->
-             Left
+             Either.left
                ( "interaction on line "
                  ^ string_of_line i.line_num
                  ^ " failed: output mismatch at byte " ^ string_of_int n ^ "\n"
@@ -243,7 +241,7 @@ module TranscriptRunner = struct
           (string, env) Either.t =
     let open Either in
     match ints with
-    | [] -> pure e
+    | [] -> Either.right e
     | (i :: ints) ->
        run_interaction i e
        >>= fun e' ->

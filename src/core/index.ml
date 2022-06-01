@@ -140,8 +140,8 @@ let index_cvar' cvars (u : Id.name) : (cvar_error_status, Id.offset) Either.t =
   match
     trying_index (fun _ -> CVar.index_of_name cvars u)
   with
-  | None -> Either.Left `unbound
-  | Some (Plicity.Implicit, _) -> Either.Left `implicit
+  | None -> Either.left `unbound
+  | Some (Plicity.Implicit, _) -> Either.left `implicit
   | Some (_, k) ->
      dprintf
        begin fun p ->
@@ -150,7 +150,7 @@ let index_cvar' cvars (u : Id.name) : (cvar_error_status, Id.offset) Either.t =
          k
          Loc.print_short (Id.loc_of_name u)
        end;
-     Either.Right k
+     Either.right k
 
 let index_cvar (name : Id.name) : (cvar_error_status, Id.offset) Either.t index =
   fun c fvars -> (fvars, index_cvar' c.cvars name)
@@ -991,17 +991,17 @@ let index_ctx_var name : (cvar_error_status, Apx.LF.dctx) Either.t index =
   let open Bind in
   lookup_fv name
   >>= function
-    | true -> Either.Right (Apx.LF.CtxVar (Apx.LF.CtxName name)) |> return
+    | true -> Either.right (Apx.LF.CtxVar (Apx.LF.CtxName name)) |> return
     | false ->
        seq2 (get_fvars) (index_cvar name)
        >>= function
          | (_, Either.Right k) ->
-            Either.Right (Apx.LF.CtxVar (Apx.LF.CtxOffset k)) |> return
+            Either.right (Apx.LF.CtxVar (Apx.LF.CtxOffset k)) |> return
          | (fvars, Either.Left e) ->
             match fvars.open_flag with
-            | `closed_term -> return (Either.Left e)
+            | `closed_term -> return (Either.left e)
             | `open_term ->
-               Either.Right (Apx.LF.CtxVar (Apx.LF.CtxName name)) |> return
+               Either.right (Apx.LF.CtxVar (Apx.LF.CtxName name)) |> return
                <& modify_fvars (extending_by name)
 
 let rec index_dctx disambiguate_name cvars bvars (fvars : fvars) =

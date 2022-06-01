@@ -16,16 +16,16 @@ type 'a e = (Format.formatter -> unit -> unit, 'a) Either.t
  *)
 let run_safe (f : unit -> 'a) : 'a e =
   try
-    Either.Right (f ())
+    Either.right (f ())
   with
   | IO.Error.E e ->
-     Either.Left
+     Either.left
        begin fun ppf () ->
        Format.fprintf ppf "@[<v>%a@]@."
          IO.Error.fmt_ppr e
        end
   | Prover.Error.E e ->
-     Either.Left
+     Either.left
        begin fun ppf () ->
        Format.fprintf ppf "@[<v>%a@]@."
          Prover.Error.fmt_ppr e
@@ -33,7 +33,7 @@ let run_safe (f : unit -> 'a) : 'a e =
   | e ->
      let s = Printexc.to_string e in
      let bt = Printexc.get_backtrace () in
-     Either.Left
+     Either.left
        begin fun ppf () ->
        Format.fprintf ppf "@[<v>Internal error. (State may be undefined.)@,%s@,%s@]"
          s bt

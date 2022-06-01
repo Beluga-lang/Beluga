@@ -598,18 +598,18 @@ let is_command str =
 let do_command ppf cmd =
   let e =
     let open Either in
-    trap (fun () -> ExtString.String.nsplit cmd " ")
+    Either.trap (fun () -> ExtString.String.nsplit cmd " ")
     >>= fun args ->
       match args with
-      | [] -> pure ()
+      | [] -> Either.right ()
       | cmd_name :: args ->
          begin match
            List.find_opt
              (fun x -> String.equal cmd_name x.name)
              !reg
          with
-         | None -> pure (fprintf ppf "- No such command %s;\n@?" cmd_name)
-         | Some command -> trap (fun () -> command.run ppf args)
+         | None -> Either.right (fprintf ppf "- No such command %s;\n@?" cmd_name)
+         | Some command -> Either.trap (fun () -> command.run ppf args)
          end
   in
   Either.eliminate

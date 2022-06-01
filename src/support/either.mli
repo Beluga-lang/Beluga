@@ -1,5 +1,5 @@
 (** An ad hoc disjoint union of two types. *)
-type ('e, 'a) t =
+type (+'e, +'a) t = private
   | Left of 'e
   | Right of 'a
 
@@ -13,7 +13,7 @@ val is_right : ('e, 'a) t -> bool
 val is_left : ('e, 'a) t -> bool
 
 (** Right injection into the union. *)
-val pure : 'a -> ('e, 'a) t
+val right : 'a -> ('e, 'a) t
 
 (** Left injection into the union. *)
 val left : 'e -> ('e, 'a) t
@@ -39,7 +39,7 @@ val void : ('e, 'a) t -> (unit, unit) t
 (** Promotes a function that constructs a union into a function that
     transforms a union.
 
-    {!Either.bind} and {!Either.pure} witness that {!Either.t} is a monad if
+    {!Either.bind} and {!Either.right} witness that {!Either.t} is a monad if
     the left-hand type is fixed. *)
 val bind : ('a -> ('e, 'b) t) -> ('e, 'a) t -> ('e, 'b) t
 

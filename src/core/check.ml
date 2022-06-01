@@ -1488,24 +1488,23 @@ module Comp = struct
                (* user did not provide an explicit type *)
                (* instead, consider that the synthesized argument type
                   was specified by the user *)
-               (i, lazy loc, Either.Left tau_arg)
+               (i, lazy loc, Either.left tau_arg)
             | `exact (tau_ann, true) ->
                (* user provided an explicit type & we could unify it *)
-               (i, l, Either.Right tau_ann)
+               (i, l, Either.right tau_ann)
             | `exact (tau_ann, false) ->
                (* used provided an explicit type & we couldn't unify it *)
                SufficesBadAnnotation (cD, tau_i, (i + 1), tau_ann) |> throw loc
             end
        |> List.map
             begin fun (k, l, e) ->
-            let open Either in
             match e with
-            | Left tau_arg
+            | Either.Left tau_arg
                  when Bool.not (Whnf.closedCTyp tau_arg) ->
                SufficesPremiseNotClosed (cD, k, `infer (Lazy.force l))
                |> throw (Lazy.force l)
 
-            | Right tau_ann
+            | Either.Right tau_ann
                  when Bool.not (Whnf.closedCTyp tau_ann) ->
                (* This error should be rare; perhaps it is impossible.
                   If the user provides an explicit type, how could the
@@ -1519,7 +1518,7 @@ module Comp = struct
                  )
                |> throw (Lazy.force l)
 
-            | (Left tau_arg | Right tau_arg) -> tau_arg
+            | (Either.Left tau_arg | Either.Right tau_arg) -> tau_arg
             end
 
   let require_syn_typbox cD cG loc i (tau, t) =

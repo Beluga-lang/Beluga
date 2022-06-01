@@ -99,14 +99,14 @@ let intros' : Theorem.t ->
        | `unique ->
           go true (name :: active_names) user_names cD (LF.Dec (cG, d))
             tau_2
-       | `duplicate -> Either.Left (DuplicateName (cD, cG, d))
+       | `duplicate -> Either.left (DuplicateName (cD, cG, d))
        end
     | Comp.TypPiBox (_, (LF.Decl (x, cU, plicity, inductivity)), tau_2) ->
        let x = B.NameGen.renumber active_names x in
        let d = LF.Decl (x, cU, plicity, inductivity) in
        go true (x :: active_names) user_names (LF.Dec (cD, d)) cG tau_2
-    | _ when updated -> Either.Right (cD, cG, tau)
-    | _ -> Either.Left NothingToIntro
+    | _ when updated -> Either.right (cD, cG, tau)
+    | _ -> Either.left NothingToIntro
   in
   fun user_names active_names cD cG tau ->
   go false active_names user_names cD cG tau

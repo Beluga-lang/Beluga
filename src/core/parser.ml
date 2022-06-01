@@ -440,9 +440,8 @@ let to_either (r : 'a result) : (error, 'a) Either.t = r
 (** Extracts the value from a parse result.
     If the parse was unsuccessful, then this raises a parse error exception. *)
 let extract =
-  let open Either in
   function
-  | (s, Left e) -> raise (Error (s, e))
+  | (s, Either.Left e) -> raise @@ Error (s, e)
   | (_, Either.Right x) -> x
 
 type 'a t = 'a parser
@@ -462,17 +461,16 @@ let catch (p : 'a parser) (handler : state * 'a result -> state * 'b result) : '
     Use a constant function to replace an error path with a new one.
  *)
 let repathing (l : path -> path) (p : 'a parser) : 'a parser =
-  let open Either in
   catch p
     (function
-     | Left {error; path} -> Left {error; path = l path}
+     | Either.Left {error; path} -> Either.left {error; path = l path}
      | x -> x)
    *)
 
 (** Constructs a failure result for a given state. *)
 let fail_at' s loc path error =
   ( s
-  , Either.Left {error ; path; loc}
+  , Either.left {error ; path; loc}
   )
 
 (** Fail with no error path. *)
@@ -486,7 +484,7 @@ let fail' path e : 'a parser =
 let fail e : 'a parser = fail' [] e
 
 let return_at s x =
-  (s, Either.Right x)
+  (s, Either.right x)
 
 (** Gets the current parser state. *)
 let get_state : state parser =
@@ -509,9 +507,8 @@ let get_loc =
 let trying p =
   { run =
       fun s ->
-      let open Either in
       match run p s with
-      | (s, Left e) -> ({ s with backtrack = true}, Left e)
+      | (s, Either.Left e) -> ({ s with backtrack = true}, Either.left e)
       | x -> x
   }
 
@@ -525,7 +522,7 @@ module M = Monad.Make (struct
       fun s ->
       match run p s with
       | (s, Either.Right x) -> run (k x) s
-      | (s, Either.Left e) -> (s, Either.Left e)
+      | (s, Either.Left e) -> (s, Either.left e)
     }
 end)
 
@@ -571,10 +568,9 @@ let span p =
 let relabelling (type a) (p : a parser) (f : Loc.t -> path -> path) : a parser =
   next_loc
   >>= fun loc ->
-    let open Either in
     catch p
       (function
-       | s, Left e -> s, Left {e with path = f loc e.path }
+       | s, Either.Left e -> s, Either.left {e with path = f loc e.path }
        | x -> x)
 
     (*
@@ -635,7 +631,7 @@ let not_followed_by (p : 'a parser) : unit parser =
           run (put_state s) s'
        | _, Either.Right _ ->
           (* if `p` succeeds, then we need to fail *)
-          s, Either.Left { error = NotFollowedBy; path = []; loc = loc }
+          s, Either.left { error = NotFollowedBy; path = []; loc = loc }
       )
 
 (***** Parsing lists. *****)
@@ -681,15 +677,14 @@ let peek : (Loc.t * Token.t) option parser = anon_parser (fun s -> return_at s (
     Backtracking is enabled by the `trying` combinator.
  *)
 let alt (p1 : 'a parser) (p2 : 'a parser) : 'a parser =
-  let open Either in
   { run =
       fun s ->
       match run p1 s with
-      | (s', Left e) ->
+      | (s', Either.Left e) ->
          let consumed_input = LinkStream.position s.input < LinkStream.position s'.input in
          if Bool.not consumed_input || s'.backtrack
          then run p2 s
-         else (s', Left e)
+         else (s', Either.left e)
       | x -> x
   }
 
@@ -706,7 +701,7 @@ let choice (ps : 'a parser list) : 'a parser =
                  let consumed_input = LinkStream.position s.input < LinkStream.position s'.input in
                  if Bool.not consumed_input || s'.backtrack
                  then run (go (e :: es) ps') s
-                 else (s', Either.Left e)
+                 else (s', Either.left e)
               | x -> x)
       in
       run (go [] ps) s
@@ -741,10 +736,9 @@ let satisfy (f : T.t -> ('e, 'b) Either.t) : ('e, 'b) Either.t parser =
            (* construct the new state with the input depending on
               whether the predicate succeeded.
             *)
-           let open Either in
            match r with
-           | Left _ -> s
-           | Right _ -> { s with input = xs; last_loc = loc }
+           | Either.Left _ -> s
+           | Either.Right _ -> { s with input = xs; last_loc = loc }
          in
          return_at s' r
   }
@@ -865,7 +859,7 @@ let check_codatatype_decl loc a cs : unit parser =
 (****** Simple parsers *****)
 
 let satisfy' (expected : content) (f : T.t -> 'a option) : 'a parser =
-  satisfy (fun t -> f t |> Option.eliminate (Fun.const (Either.Left t)) Either.pure)
+  satisfy (fun t -> f t |> Option.eliminate (Fun.const (Either.left t)) Either.right)
   |> span
   >>= fun (loc, x) ->
     match x with

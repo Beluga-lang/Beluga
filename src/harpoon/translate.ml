@@ -200,9 +200,9 @@ let theorem thm tau = match thm with
 
 let trap f =
   try
-    Either.Right (f ())
+    Either.right (f ())
   with
-  | Error e -> Either.Left e
+  | Error e -> Either.left e
 
 let fmt_ppr_error ppf =
   let open Format in

@@ -262,7 +262,7 @@ let configuration_wizard' io automation_state : Id.cid_mutual_group * Theorem.t 
            let open Parser in
            alt
              (trust_order $> Either.left)
-             (total_order numeric_total_order $> Either.pure)
+             (total_order numeric_total_order $> Either.right)
            $> begin function
                 | Either.Right no ->
                    let order = Reconstruct.numeric_order tau no in
@@ -273,7 +273,7 @@ let configuration_wizard' io automation_state : Id.cid_mutual_group * Theorem.t 
                        P.(fmt_ppr_cmp_numeric_order) order
                        k
                      end;
-                   Either.Right order
+                   Either.right order
                 | trust -> trust
               (* TODO we should check that the order is legit
                         here so that we can right away prompt the user

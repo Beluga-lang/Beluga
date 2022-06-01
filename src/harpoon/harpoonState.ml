@@ -197,14 +197,14 @@ let select_theorem s name =
 (** Gets the next state triple from the prover. *)
 let next_triple (s : t) =
   match next_session s with
-  | None -> Either.Left `no_session
+  | None -> Either.left `no_session
   | Some c ->
      match Session.next_theorem c with
-     | None -> Either.Left (`no_theorem c)
+     | None -> Either.left (`no_theorem c)
      | Some t ->
         match Theorem.next_subgoal t with
-        | None -> Either.Left (`no_subgoal (c, t))
-        | Some g -> Either.Right (c, t, g)
+        | None -> Either.left (`no_subgoal (c, t))
+        | Some g -> Either.right (c, t, g)
 
 (** Drops all state and reloads from the signature.
     Typically, this is called after serialization reflects the

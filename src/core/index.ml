@@ -1019,7 +1019,7 @@ let rec index_dctx disambiguate_name cvars bvars (fvars : fvars) =
 
   | Ext.LF.CtxVar (loc, psi_name) ->
      index_ctx_var psi_name {cvars; bvars; disambiguate_name} fvars
-     |> Pair.rmap
+     |> Pair.map_right
           begin
             function
             | Either.Right x -> x

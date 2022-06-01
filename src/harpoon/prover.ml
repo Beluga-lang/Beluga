@@ -65,7 +65,7 @@ module Elab = struct
   let exp mcid cIH cD cG mfs t ttau =
     Holes.catch
       begin fun _ ->
-      let e = Interactive.elaborate_exp cD cG t (Pair.lmap Total.strip ttau) in
+      let e = Interactive.elaborate_exp cD cG t (Pair.map_left Total.strip ttau) in
       let e = Whnf.(cnormExp (e, m_id)) in
       Check.Comp.check mcid ~cIH: cIH cD cG mfs e ttau;
       e

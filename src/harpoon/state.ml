@@ -99,7 +99,7 @@ let recover_sessions ppf hooks (gs : Comp.open_subgoal list) =
    *)
   List1.(
     group_by fst gs
-    |> List.map (Pair.rmap (map snd))
+    |> List.map (Pair.map_right (map snd))
     |> group_by F.(CompS.mutual_group ++ fst)
   )
   |> List.map (recover_session ppf hooks)

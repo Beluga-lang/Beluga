@@ -278,7 +278,7 @@ module Make (P : ParserInfo) = struct
 
   let map (f : 'a -> 'b) (p : 'a t) : 'b t =
     { run =
-        fun s -> Pair.rmap (Either.rmap f) (p.run s)
+        fun s -> Pair.map_right (Either.rmap f) (p.run s)
     }
 
   (** Constructs a parser that doesn't affect its state and simply
@@ -476,7 +476,7 @@ module Make (P : ParserInfo) = struct
   given parser, and pops the semantic location. *)
   let label (l : string) (p : 'a t) : 'a t =
     { run =
-        fun s -> Pair.lmap pop_semantic_loc (p.run (push_semantic_loc l s))
+        fun s -> Pair.map_left pop_semantic_loc (p.run (push_semantic_loc l s))
     }
 
   (** Tries all the parsers from left to right.

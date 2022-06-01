@@ -406,7 +406,7 @@ module Comp = struct
              (* cPhi |- s_tup : cPsi *)
              let (ss', cPhi') =
                Subord.thin' cD a cPhi
-               |> Pair.rmap Whnf.normDCtx
+               |> Pair.map_right Whnf.normDCtx
              in
              dprintf
                begin fun p ->
@@ -712,7 +712,7 @@ module Comp = struct
            )
        in
        genMApp loc p cD (i, (tau, t'))
-       |> Pair.lmap ((+) 1)
+       |> Pair.map_left ((+) 1)
 
     | _ ->
        dprintf
@@ -1378,7 +1378,7 @@ module Comp = struct
       (cG_b, cIH_b)
       total_decs
       e
-      (Pair.rmap (Whnf.mcomp' t') ttau)
+      (Pair.map_right (Whnf.mcomp' t') ttau)
 
   and checkFBranches mcid cD (cG, cIH) total_decs fbr ttau =
     match fbr with
@@ -1532,7 +1532,7 @@ module Comp = struct
     | TypPiBox (_, c_decl, tau') ->
        (* TODO ensure c_decl name is unique in context *)
        let cD' = I.Dec (cD, c_decl) in
-       unroll' cD' cG tau' |> Pair.rmap ((+) 1)
+       unroll' cD' cG tau' |> Pair.map_right ((+) 1)
     | TypArr (_, t1, t2) ->
        (* TODO use contextual name generation *)
        let name = Id.mk_name Id.NoName in
@@ -1593,7 +1593,7 @@ module Comp = struct
 
     | Command (cmd, p) ->
        let (cD, cG, cIH, t) = command mcid cD cG cIH total_decs cmd in
-       let ttau = Pair.rmap (Whnf.mcomp' t) ttau in
+       let ttau = Pair.map_right (Whnf.mcomp' t) ttau in
        proof mcid cD cG cIH total_decs p ttau
 
     | Directive d ->
@@ -1653,7 +1653,7 @@ module Comp = struct
         let Hypothetical (_, ctx, _) = h in
         prepare_branch_contexts ctx.cD pat t cD (cG, cG_pat) cIH i total_decs
       in
-      let ttau_b = Pair.rmap (Whnf.mcomp' t) ttau in
+      let ttau_b = Pair.map_right (Whnf.mcomp' t) ttau in
       hypothetical mcid cD_b cG_b cIH_b total_decs h ttau_b
     in
     match d with

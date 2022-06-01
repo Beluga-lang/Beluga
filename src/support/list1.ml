@@ -114,7 +114,7 @@ let group_by (p : 'a -> 'key) (l : 'a list) : ('key * 'a t) list =
      hence nonempty
    *)
   Hashtbl.to_seq h
-  |> Seq.map (Pair.rmap Fun.(unsafe_of_list ++ DynArray.to_list))
+  |> Seq.map (Pair.map_right Fun.(unsafe_of_list ++ DynArray.to_list))
   |> Seq.to_list
 
 let split ((x, y), t) =

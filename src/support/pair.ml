@@ -1,8 +1,8 @@
 type ('a, 'b) t = 'a * 'b
 
-let rmap f (x, a) = (x, f a)
+let map_right f (x, a) = (x, f a)
 
-let lmap f (a, x) = (f a, x)
+let map_left f (a, x) = (f a, x)
 
 let bimap f g (x, y) = (f x, g y)
 

@@ -1,10 +1,10 @@
 type ('a, 'b) t = 'a * 'b
 
 (** Transforms the right component of a pair. *)
-val rmap : ('a -> 'b) -> 'x * 'a -> 'x * 'b
+val map_right : ('a -> 'b) -> 'x * 'a -> 'x * 'b
 
 (** Transforms the left component of a pair. *)
-val lmap : ('a -> 'b) -> 'a * 'x -> 'b * 'x
+val map_left : ('a -> 'b) -> 'a * 'x -> 'b * 'x
 
 (** Transforms both components of a pair. *)
 val bimap : ('a -> 'b) -> ('c -> 'd) -> 'a * 'c -> 'b * 'd

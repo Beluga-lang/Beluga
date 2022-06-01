@@ -81,11 +81,11 @@ let take_while (p : 'a -> bool) (s : 'a t) :
        else
          (acc, Some (c, s))
   in
-  go [] s |> Pair.lmap List.rev
+  go [] s |> Pair.map_left List.rev
 
 let take_while_str (p : char -> bool) (s : char t) :
       string * (char * char t) option =
-  take_while p s |> Pair.lmap String.pack
+  take_while p s |> Pair.map_left String.pack
 
 module AsBasicStream = struct
   type 'a t = 'a istream
@@ -93,7 +93,7 @@ module AsBasicStream = struct
   let rec unfold (f : 's -> ('a * 's) option) (s : 's) : 'a t =
     { next =
         fun () ->
-        f s |> Option.map (Pair.rmap (unfold f))
+        f s |> Option.map (Pair.map_right (unfold f))
     }
 
   let observe (s : 'a t) : ('a * 'a t) option = s.next ()

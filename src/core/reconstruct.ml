@@ -2067,7 +2067,7 @@ let rec elHypothetical cD cG label hyp ttau =
 and elCommand cD cG =
   function
   | A.By (loc, i, x) ->
-     let (i, tau_i) = elExp' cD cG i |> Pair.rmap Whnf.cnormCTyp in
+     let (i, tau_i) = elExp' cD cG i |> Pair.map_right Whnf.cnormCTyp in
      let i = Whnf.(cnormExp' (i, m_id)) in
      let tau_i = Whnf.(cnormCTyp (tau_i, m_id)) in
      if not Whnf.(closedExp' i && closedCTyp tau_i)
@@ -2104,7 +2104,7 @@ and elProof cD cG (pb : I.SubgoalPath.builder) (p : Apx.Comp.proof) ttau =
   | A.Command (loc, cmd, p) ->
      dprnt "[elProof] --> elCommand @[%a@]";
      let (cD', cG', t, cmd) = elCommand cD cG cmd in
-     let ttau' = Pair.rmap (Whnf.mcomp' t) ttau in
+     let ttau' = Pair.map_right (Whnf.mcomp' t) ttau in
      dprintf begin fun p ->
        p.fmt "[elProof] @[<v>elCommand done.\
               @,cmd = @[%a@]\
@@ -2133,7 +2133,7 @@ and elSplit loc cD cG pb i tau_i bs ttau =
            (tau_i, tau_i)
        in
        let cG_b = Whnf.cnormGCtx (cG, t') in
-       let ttau' = Pair.rmap Whnf.(mcomp' t') ttau in
+       let ttau' = Pair.map_right Whnf.(mcomp' t') ttau in
        let hyp' = elHypothetical cD_b cG_b pb' hyp ttau' in
        (* No need to apply the msub to pat, since pat is closed. *)
        I.SplitBranch (I.EmptyContext loc, (Int.LF.Empty, pat), t', hyp')
@@ -2157,7 +2157,7 @@ and elSplit loc cD cG pb i tau_i bs ttau =
                substitution. -je *)
           in
           let cG_b = Whnf.cnormGCtx (cG, t') in
-          let ttau_b = Pair.rmap (Whnf.mcomp' t') ttau in
+          let ttau_b = Pair.map_right (Whnf.mcomp' t') ttau in
           let pat' = Whnf.cnormPattern (pat, t1) in
           let l' = I.ExtendedBy (loc, n) in
           let pb' = I.SubgoalPath.(append pb (build_context_split i l')) in
@@ -2274,7 +2274,7 @@ and elSplit loc cD cG pb i tau_i bs ttau =
 
        (* Compute the goal type inside the branch. *)
        (* cD_b |- ttau_b <== type *)
-       let ttau_b = Pair.rmap (Whnf.mcomp' t') ttau in
+       let ttau_b = Pair.map_right (Whnf.mcomp' t') ttau in
 
        let l' = `pvar k in
        let pb' = I.SubgoalPath.(append pb (build_meta_split i l')) in
@@ -2353,7 +2353,7 @@ and elSplit loc cD cG pb i tau_i bs ttau =
           cD_b |- t1 : cD'
         *)
        let cG_b = Whnf.cnormGCtx (cG, t') in
-       let ttau_b = Pair.rmap (Whnf.mcomp' t') ttau in
+       let ttau_b = Pair.map_right (Whnf.mcomp' t') ttau in
        dprintf
          begin fun p ->
          p.fmt "[elSplit] @[<v>goal outside: @[%a@]\
@@ -2418,7 +2418,7 @@ and elSplit loc cD cG pb i tau_i bs ttau =
        in
        let pat' = Whnf.cnormPattern (pat, t1) in
        let cG_b = Whnf.cnormGCtx (cG, t') in
-       let ttau_b = Pair.rmap (Whnf.mcomp' t') ttau in
+       let ttau_b = Pair.map_right (Whnf.mcomp' t') ttau in
        let l' = `bvar in
        let pb' = I.SubgoalPath.(append pb (build_meta_split i l')) in
        let hyp' = elHypothetical cD_b cG_b pb' hyp ttau_b in
@@ -2488,7 +2488,7 @@ and elSplit loc cD cG pb i tau_i bs ttau =
            cG_pat
        in
 
-       let ttau_b = Pair.rmap (Whnf.mcomp' t') ttau in
+       let ttau_b = Pair.map_right (Whnf.mcomp' t') ttau in
 
        dprintf
          begin fun p ->
@@ -2549,7 +2549,7 @@ and elDirective cD cG pb (d : Apx.Comp.directive) ttau : Int.Comp.directive =
      I.Solve e
 
   | A.Split (loc, i, bs) ->
-     let (i, tau_i) = elExp' cD cG i |> Pair.rmap Whnf.cnormCTyp in
+     let (i, tau_i) = elExp' cD cG i |> Pair.map_right Whnf.cnormCTyp in
      dprintf begin fun p ->
        p.fmt "[elDirective] @[<v>split @[%a@] as...\
               @,tau_i = @[%a@]@]"
@@ -2559,7 +2559,7 @@ and elDirective cD cG pb (d : Apx.Comp.directive) ttau : Int.Comp.directive =
      elSplit loc cD cG pb i tau_i bs ttau
 
   | A.Suffices (loc, i, ps) ->
-     let (i, tau_i) = elExp' cD cG i |> Pair.rmap Whnf.cnormCTyp in
+     let (i, tau_i) = elExp' cD cG i |> Pair.map_right Whnf.cnormCTyp in
      let ps =
        List.map (fun (loc, tau, p) -> (loc, elCompTyp cD tau, p)) ps
      in

@@ -48,7 +48,7 @@ let rec loop ppf =
            Runparser.parse_string (Location.initial "<interactive>") input Parser.(only cmp_exp_syn)
            |> Parser.extract
            |> Interactive.elaborate_exp' LF.Empty LF.Empty
-           |> Pair.rmap Whnf.cnormCTyp
+           |> Pair.map_right Whnf.cnormCTyp
          in
          fprintf ppf "%a : %a"
            (P.fmt_ppr_cmp_exp_syn LF.Empty LF.Empty P.l0) exp

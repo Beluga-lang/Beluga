@@ -397,7 +397,7 @@ let split (k : Command.split_kind) (i : Comp.exp_syn) (tau : Comp.typ) mfs : t =
        let context = { cD; cG; cIH } in
        let new_state label =
          { context
-         ; goal = Pair.rmap (fun s -> Whnf.mcomp s t') s.goal
+         ; goal = Pair.map_right (fun s -> Whnf.mcomp s t') s.goal
          ; solution = ref None
          ; label = Comp.SubgoalPath.append s.label label
          }
@@ -510,7 +510,7 @@ let split (k : Command.split_kind) (i : Comp.exp_syn) (tau : Comp.typ) mfs : t =
           in
           List.mapi f' cgs
           |> List.split
-          |> Pair.rmap F.(g i tau ++ List.rev)
+          |> Pair.map_right F.(g i tau ++ List.rev)
           |> fun (children, p) ->
              Theorem.(apply t (Action.make action_name s children p))
         in
@@ -536,7 +536,7 @@ let extending_meta_context decl g =
       ; cG = Whnf.cnormGCtx (g.context.cG, shift)
       ; cIH = Whnf.cnormIHCtx (g.context.cIH, shift)
       }
-  ; goal = Pair.rmap (fun t -> Whnf.mcomp t shift) g.goal
+  ; goal = Pair.map_right (fun t -> Whnf.mcomp t shift) g.goal
   ; solution = ref None
   ; label = g.label
   }

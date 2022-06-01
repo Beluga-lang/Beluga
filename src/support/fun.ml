@@ -2,6 +2,8 @@ include Stdlib.Fun
 
 let (++) f g x = f (g x)
 
+let[@inline] ( >> ) f g x = x |> f |> g
+
 let flip f y x = f x y
 
 let rec until f =

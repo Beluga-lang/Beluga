@@ -5,6 +5,10 @@ include module type of Stdlib.Fun
 *)
 val (++) : ('b -> 'c) -> ('a -> 'b) -> ('a -> 'c)
 
+(** [f >> g] is the function composition of [f] and [g], such that
+    [x |> (f >> g)] is [g (f x)]. *)
+val ( >> ) : ('a -> 'b) -> ('b -> 'c) -> 'a -> 'c
+
 (** [flip f x y] is [f y x].
 *)
 val flip : ('a -> 'b -> 'c) -> ('b -> 'a -> 'c)

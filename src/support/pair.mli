@@ -1,5 +1,11 @@
 type ('a, 'b) t = 'a * 'b
 
+(** [fst (x, _)] is [x]. *)
+val fst : 'a * _ -> 'a
+
+(** [snd (_, y)] is [y]. *)
+val snd : _ * 'b -> 'b
+
 (** Transforms the right component of a pair. *)
 val map_right : ('a -> 'b) -> 'x * 'a -> 'x * 'b
 

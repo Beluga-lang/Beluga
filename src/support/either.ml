@@ -2,63 +2,44 @@ type ('e, 'a) t =
   | Left of 'e
   | Right of 'a
 
-let eliminate (left : 'e -> 'c) (right : 'a -> 'c) : ('e, 'a) t -> 'c =
-  function
+let eliminate left right = function
   | Left e -> left e
   | Right x -> right x
 
-let is_right (e : ('e, 'a) t) : bool =
-  eliminate (fun _ -> false) (fun _ -> true) e
+let is_right e = eliminate (Fun.const false) (Fun.const true) e
 
-let is_left (e : ('e, 'a) t) : bool = is_right e |> not
+let is_left e = not @@ is_right e
 
-let pure (x : 'a) : ('e, 'a) t = Right x
+let pure x = Right x
 
-let left (x : 'e) : ('e, 'a) t = Left x
+let left x = Left x
 
-let rmap (f : 'a -> 'b) (e : ('e, 'a) t) : ('e, 'b) t =
-  eliminate left (fun x -> Right (f x)) e
+let rmap f e = eliminate left (fun x -> Right (f x)) e
 
-let lmap (f : 'e1 -> 'e2) (e : ('e1, 'a) t) : ('e2, 'a) t =
-  eliminate (fun e -> Left (f e)) pure e
+let lmap f e = eliminate (fun e -> Left (f e)) pure e
 
-let bimap (f : 'e1 -> 'e2) (g : 'a -> 'b) (e : ('e1, 'a) t) :
-      ('e2, 'b) t =
-  eliminate (fun e -> Left (f e)) (fun x -> Right (g x)) e
+let bimap f g e = eliminate (fun e -> Left (f e)) (fun x -> Right (g x)) e
 
-let rvoid (e : ('e, 'a) t) : ('e, unit) t =
-  rmap (fun _ -> ()) e
+let rvoid e = rmap (fun _ -> ()) e
 
-let lvoid (e : ('e, 'a) t) : (unit, 'a) t =
-  lmap (fun _ -> ()) e
+let lvoid e = lmap (fun _ -> ()) e
 
-let void (e : ('e, 'a) t) : (unit, unit) t =
-  bimap (fun _ -> ()) (fun _ -> ()) e
+let void e = bimap (fun _ -> ()) (fun _ -> ()) e
 
-let bind (k : 'a -> ('e, 'b) t) (e : ('e, 'a) t) : ('e, 'b) t =
-  eliminate left k e
+let bind k e = eliminate left k e
 
-let forget (e : ('e, 'a) t) : 'a option =
-  eliminate (fun _ -> None) Option.some e
+let forget e = eliminate (fun _ -> None) Option.some e
 
-let of_option (o : 'a option) : (unit, 'a) t =
-  Option.eliminate (fun _ -> Left ()) pure o
+let of_option o = Option.eliminate (fun () -> Left ()) pure o
 
-let of_option' (f : unit -> 'e) (o : 'a option) : ('e, 'a) t =
-  Option.eliminate (fun () -> f () |> left) (fun x -> x |> pure) o
+let of_option' f o = Option.eliminate (fun () -> f () |> left) pure o
 
 let to_option = function
   | Right x -> Some x
   | Left _ -> None
 
-let ( >>= ) (e : ('e, 'a) t) (k : ('a -> ('e, 'b) t)) : ('e, 'b) t =
-  bind k e
+let ( >>= ) e k = bind k e
 
-let ( $> ) (e : ('e, 'a) t) (f : ('a -> 'b)) : ('e, 'b) t =
-  rmap f e
+let ( $> ) e f = rmap f e
 
-let trap (f : unit -> 'a) =
-  try
-    Right (f ())
-  with
-  | e -> Left e
+let trap f = try Right (f ()) with e -> Left e

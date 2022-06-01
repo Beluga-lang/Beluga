@@ -531,34 +531,34 @@ let seq : type a b. a parser -> (a -> b parser) -> b parser =
   }
 
 (** Infix operator form of `seq`. *)
-let ($) = seq
+let ( >>= ) = seq
 
 (** Sequence two parsers. *)
 let seq2 : type a b. a parser -> b parser -> (a * b) parser =
   fun p1 p2 ->
-  p1 $ fun x -> p2 $ fun y -> pure (x, y)
+  p1 >>= fun x -> p2 >>= fun y -> pure (x, y)
 
 (** Sequence three parsers. *)
 let seq3 p1 p2 p3 =
-  p1 $ fun x1 -> p2 $ fun x2 -> p3 $ fun x3 -> pure (x1, x2, x3)
+  p1 >>= fun x1 -> p2 >>= fun x2 -> p3 >>= fun x3 -> pure (x1, x2, x3)
 
 (** Sequence four parsers. *)
 let seq4 p1 p2 p3 p4 =
-  p1 $ fun x1 -> p2 $ fun x2 -> p3 $ fun x3 -> p4 $ fun x4 -> pure (x1, x2, x3, x4)
+  p1 >>= fun x1 -> p2 >>= fun x2 -> p3 >>= fun x3 -> p4 >>= fun x4 -> pure (x1, x2, x3, x4)
 
 (** Sequence five parsers. *)
 let seq5 p1 p2 p3 p4 p5 =
-  p1 $ fun x1 -> p2 $ fun x2 -> p3 $ fun x3 -> p4 $ fun x4 -> p5 $ fun x5 -> pure (x1, x2, x3, x4, x5)
+  p1 >>= fun x1 -> p2 >>= fun x2 -> p3 >>= fun x3 -> p4 >>= fun x4 -> p5 >>= fun x5 -> pure (x1, x2, x3, x4, x5)
 
 (** Runs p1 and p2, discarding the result of p1. *)
-let (&>) p1 p2 = p1 $ fun _ -> p2
+let (&>) p1 p2 = p1 >>= fun _ -> p2
 
 (** Runs p1 and p2, discarding the result of p2. *)
-let (<&) p1 p2 = p1 $ fun x -> p2 &> pure x
+let (<&) p1 p2 = p1 >>= fun x -> p2 &> pure x
 
 (** Transforms the result of a parser with a pure function. *)
 let ($>) (p : 'a parser) (f : 'a -> 'b) : 'b parser =
-  p $ fun x -> pure (f x)
+  p >>= fun x -> pure (f x)
 
 let map x y = Fun.flip ($>) x y
 
@@ -597,7 +597,7 @@ let span p =
  *)
 let relabelling (type a) (p : a parser) (f : Loc.t -> path -> path) : a parser =
   next_loc
-  $ fun loc ->
+  >>= fun loc ->
     let open Either in
     catch p
       (function
@@ -654,7 +654,7 @@ let renamed label p =
  *)
 let not_followed_by (p : 'a parser) : unit parser =
   span get_state
-  $ fun (loc, s) ->
+  >>= fun (loc, s) ->
     catch p
       (function
        | s', Either.Left _ ->
@@ -796,7 +796,7 @@ let rec many' (p : 'a parser) : 'a list parser =
 and some' (p : 'a parser) : 'a list parser =
   { run =
       fun s ->
-      run (p $ fun x -> many' p $ fun xs -> pure (x :: xs)) s
+      run (p >>= fun x -> many' p >>= fun xs -> pure (x :: xs)) s
   }
 
 (** `many p` repeats the parser `p` zero or more times and collects
@@ -826,7 +826,7 @@ let sep_by0 (p : 'a parser) (sep : unit parser) : 'a list parser =
              | None -> pure []
              | Some x ->
                 many' (sep &> p)
-                $ fun xs -> pure (x :: xs))
+                >>= fun xs -> pure (x :: xs))
         in
         run q s
     }
@@ -865,7 +865,7 @@ let check_datatype_decl loc a cs : unit parser =
     (function
      | Sgn.CompConst { identifier; typ; _ } ->
         retname typ
-        $ fun a' ->
+        >>= fun a' ->
           if not (Id.equals a a')
           then fail (WrongConstructorType (identifier, a, a'))
           else pure ()
@@ -882,7 +882,7 @@ let check_codatatype_decl loc a cs : unit parser =
     (function
      | Sgn.CompDest { identifier; observation_typ=tau0; _} ->
         retname tau0
-        $ fun a' ->
+        >>= fun a' ->
           if not (Id.equals a a')
           then fail (WrongConstructorType (identifier, a, a'))
           else pure ()
@@ -894,7 +894,7 @@ let check_codatatype_decl loc a cs : unit parser =
 let satisfy' (expected : content) (f : T.t -> 'a option) : 'a parser =
   satisfy (fun t -> f t |> Option.eliminate (Fun.const (Either.Left t)) Either.pure)
   |> span
-  $ fun (loc, x) ->
+  >>= fun (loc, x) ->
     match x with
     | Either.Left t ->
        fail'
@@ -1200,7 +1200,7 @@ and lf_term_atomic =
           [ span (token T.UNDERSCORE)
             $> (fun (loc, _) -> LF.Root (loc, LF.Hole loc, LF.Nil))
           ; span (parens (seq2 lf_typ (maybe (token T.COLON &> lf_typ))))
-            $ fun (loc, (m, q)) ->
+            >>= fun (loc, (m, q)) ->
               match q, m with
               | None, LF.AtomTerm (_, t) -> pure t
               | None, _ -> LF.NTyp (loc, m) |> pure
@@ -1334,7 +1334,7 @@ let sgn_lf_const_decl (* sgn_lf_typ *) =
     (name <& token T.COLON)
     lf_typ
   |> span
-  $ fun (location, (identifier, typ)) ->
+  >>= fun (location, (identifier, typ)) ->
     pure (Sgn.Const { location; identifier; typ }))
   |> labelled "LF constant declaration"
 
@@ -1897,7 +1897,7 @@ let clf_ctyp_decl_bare : type a. a name_parser -> (a -> Plicity.t * Id.name) -> 
              a ctx var) or a box (so an mvar)
            *)
           ; nameclass `ordinary <& token T.COLON |> span
-            $ fun (loc1, nb) ->
+            >>= fun (loc1, nb) ->
               let plicity, x = plicity_of_name nb in
               alt
                 (span name
@@ -1977,7 +1977,7 @@ let clf_ctyp_decl =
              a ctx var) or a box (so an mvar)
            *)
           ; name <& token T.COLON |> span
-            $ fun (loc1, x) ->
+            >>= fun (loc1, x) ->
               alt
                 (span name
                  $> fun (loc2, ctx) ->
@@ -2613,7 +2613,7 @@ let sgn_cmp_typ_decl =
           (sep_by0 sgn_cmp_typ_decl_body (token T.PIPE))
           get_state
         |> span
-        $ fun (location, (datatype_flavour, identifier, kind, decls, s)) ->
+        >>= fun (location, (datatype_flavour, identifier, kind, decls, s)) ->
           check_datatype_decl location identifier decls
           $> fun () ->
              Sgn.CompTyp { location; identifier; kind; datatype_flavour }, decls
@@ -2659,7 +2659,7 @@ let sgn_cmp_typ_decl =
           (sep_by0 cmp_cotyp_body (token T.PIPE))
           get_state
         |> span
-        $ fun (location, (identifier, kind, decls, s)) ->
+        >>= fun (location, (identifier, kind, decls, s)) ->
           check_codatatype_decl location identifier decls
           $> fun () ->
              Sgn.CompCotyp { location; identifier; kind }, decls

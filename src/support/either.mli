@@ -65,7 +65,7 @@ val of_option' : (unit -> 'e) -> 'a option -> ('e, 'a) t
 val to_option : ('e, 'a) t -> 'a option
 
 (** Infix form of {!Either.bind}. *)
-val ( $ ) : ('e, 'a) t -> ('a -> ('e, 'b) t) -> ('e, 'b) t
+val ( >>= ) : ('e, 'a) t -> ('a -> ('e, 'b) t) -> ('e, 'b) t
 
 (** Infix form of {!Either.rmap}. *)
 val ( $> ) : ('e, 'a) t -> ('a -> 'b) -> ('e, 'b) t

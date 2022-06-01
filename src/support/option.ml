@@ -25,9 +25,9 @@ let of_bool =
   | true -> Some ()
   | false -> None
 
-let ( $ ) = bind
+let ( >>= ) = bind
 
-let flat_map k o = o $ k
+let flat_map k o = o >>= k
 
 (** Prioritized choice between options.
     This will force the first option, but will never force the second.
@@ -57,15 +57,15 @@ let rec traverse (f : 'a -> 'b option) (xs : 'a list) : 'b list option =
   | [] -> Some []
   | x :: xs ->
      f x
-     $ fun y ->
+     >>= fun y ->
        traverse f xs
-       $ fun ys ->
+       >>= fun ys ->
          Some (y :: ys)
 
 let rec traverse_ (f : 'a -> unit option) (xs : 'a list) : unit option =
   match xs with
   | [] -> Some ()
-  | x :: xs -> f x $ fun _ -> traverse_ f xs
+  | x :: xs -> f x >>= fun _ -> traverse_ f xs
 
 let rec fold_left
           (f : 'b -> 'a -> 'b option) (acc : 'b) (xs : 'a list)
@@ -73,14 +73,14 @@ let rec fold_left
   match xs with
   | [] -> Some acc
   | x :: xs ->
-     f acc x $ fun acc' -> fold_left f acc' xs
+     f acc x >>= fun acc' -> fold_left f acc' xs
 
 let ( $> ) (o : 'a option) (f : 'a -> 'b) : 'b option =
-  o $ fun x -> Some (f x)
+  o >>= fun x -> Some (f x)
 
 (** Ignores the result of the first option and gives the second. *)
 let ( &> ) (o : 'a option) (o' : 'b option) : 'b option =
-  o $ fun _ -> o'
+  o >>= fun _ -> o'
 
 let void (o : 'a option) : unit option =
   o $> fun _ -> ()

@@ -598,8 +598,8 @@ let is_command str =
 let do_command ppf cmd =
   let e =
     let open Either in
-    trap (fun () -> ExtString.String.nsplit cmd " ") $
-      fun args ->
+    trap (fun () -> ExtString.String.nsplit cmd " ")
+    >>= fun args ->
       match args with
       | [] -> pure ()
       | cmd_name :: args ->

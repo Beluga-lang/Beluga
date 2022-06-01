@@ -1234,7 +1234,7 @@ let genObj (cD, cPsi, tP) (tH, tA, k) =
   match
     let open Option in
     genSpine k names LF.Empty cPsi' (tA', S.LF.id) tP'
-    $ begin fun tS ->
+    >>= begin fun tS ->
       try
         U.forceGlobalCnstr ();
         dprnt "[genObj] global constraints forced!";

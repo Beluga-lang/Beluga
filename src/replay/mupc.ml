@@ -92,7 +92,7 @@ module type Base = sig
       This operator passes the output state of the left parser to run
       the new parser.
    *)
-  val ( $ ) : 'a t -> ('a -> 'b t) -> 'b t
+  val ( >>= ) : 'a t -> ('a -> 'b t) -> 'b t
 
   (** A flipped, operator version of `map`. *)
   val ( $> ) : 'a t -> ('a -> 'b) -> 'b t
@@ -295,7 +295,7 @@ module Make (P : ParserInfo) = struct
   new parser.
   This operator passes the output state of the left parser to run the
   new parser. *)
-  let ( $ ) (p : 'a t) (k : 'a -> 'b t) : 'b t =
+  let ( >>= ) (p : 'a t) (k : 'a -> 'b t) : 'b t =
     { run =
         fun s ->
         let (s', e) = p.run s in
@@ -307,7 +307,7 @@ module Make (P : ParserInfo) = struct
 
   (** A flipped, operator version of `map`. *)
   let ( $> ) (p : 'a t) (f : 'a -> 'b) : 'b t =
-    p $ fun x -> pure (f x)
+    p >>= fun x -> pure (f x)
 
   (** A parser that simply yields the internal parser state. *)
   let get : state t =
@@ -446,10 +446,10 @@ module Make (P : ParserInfo) = struct
         let open Either in
         let (s, e) = peek.run s in
         ( s,
-          e $
-            (Option.eliminate
-              (fun _ -> Left (error_of_state "unexpected end of input" s))
-              (fun x -> pure x))
+          e
+          >>= Option.eliminate
+              (fun () -> Left (error_of_state "unexpected end of input" s))
+              (fun x -> pure x)
         )
     }
 
@@ -493,14 +493,14 @@ module Make (P : ParserInfo) = struct
   at least once. *)
   let rec many (p : 'a t) : 'a list t = alt (some p) (pure [])
   and some (p : 'a t) : 'a list t =
-    p $ fun x -> many p $ fun xs -> pure (x :: xs)
+    p >>= fun x -> many p >>= fun xs -> pure (x :: xs)
 
   (** Constructs a parser that consumes a single character of input,
   returning it, if that character satisfies the given predicate. *)
   let satisfy (f : item -> bool) : item t =
     let open Token in
-    (peek' $> fun c -> f c.value) $
-      function
+    (peek' $> fun c -> f c.value)
+      >>= function
       | true -> any (* if it passes, then consume a character *)
       | false -> throw "predicate failed"
 
@@ -513,9 +513,9 @@ module Make (P : ParserInfo) = struct
   parser stops.
   `some_till` does the same, but `p` must succeed at least once. *)
   let rec many_till (p : 'a t) (pend : unit t) : 'a list t =
-    alt (pend $ fun _ -> pure []) (some_till p pend)
+    alt (pend >>= fun _ -> pure []) (some_till p pend)
   and some_till (p : 'a t) (pend : unit t) : 'a list t =
-    p $ fun x -> many_till p pend $ fun xs -> pure (x :: xs)
+    p >>= fun x -> many_till p pend >>= fun xs -> pure (x :: xs)
 
   (** Forgets the result of a parser, preserving only its effects. *)
   let void (p : 'a t) : unit t = map (fun _ -> ()) p
@@ -524,8 +524,8 @@ module Make (P : ParserInfo) = struct
   a line. *)
   let bol : unit t =
     let open Loc in
-    get_loc $
-      fun { bol; offset; _ } ->
+    get_loc
+    >>= fun { bol; offset; _ } ->
       if bol = offset then
         pure ()
       else
@@ -534,8 +534,8 @@ module Make (P : ParserInfo) = struct
   (** A parser that succeeds only if the parser is at the end of the
   input. *)
   let eof : unit t =
-    peek $
-      Option.eliminate
+    peek
+    >>= Option.eliminate
         pure
         (fun _ -> throw "expected to be at end of file")
 
@@ -594,6 +594,6 @@ module StringParser = struct
       let (c, str') =
         (str.[0], String.sub str 1 (String.length str - 1))
       in
-      label (Printf.sprintf "= %C" c) (satisfy (fun c' -> c = c') $
-        fun _ -> string str')
+      label (Printf.sprintf "= %C" c) (satisfy (fun c' -> c = c')
+        >>= fun _ -> string str')
 end

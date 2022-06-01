@@ -108,7 +108,7 @@ module type Base = sig
       This operator passes the output state of the left parser to run
       the new parser.
    *)
-  val ( $ ) : 'a t -> ('a -> 'b t) -> 'b t
+  val ( >>= ) : 'a t -> ('a -> 'b t) -> 'b t
 
   (** A flipped, operator version of `map`. *)
   val ( $> ) : 'a t -> ('a -> 'b) -> 'b t

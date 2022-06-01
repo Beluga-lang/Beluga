@@ -61,14 +61,14 @@ module TranscriptParser = struct
   (** A parser for the interactive mode command sigil `%:` *)
   let sigil : string parser = label "command sigil" (string "%:")
 
-  let bol_sigil : string parser = bol $ fun _ -> sigil
+  let bol_sigil : string parser = bol >>= fun _ -> sigil
 
   (** A parser for an interactive mode command, which is a line
   beginning with a sigil. *)
   let command : string parser =
     label "command"
-      ( trying bol_sigil $
-          fun _ ->
+      ( trying bol_sigil
+        >>= fun _ ->
           many_till any (void (trying (string "\n"))) $>
             String.pack $>
             fun s -> "%:" ^ s ^ "\n" )
@@ -77,10 +77,10 @@ module TranscriptParser = struct
   response. *)
   let interaction : interaction parser =
     label "interaction"
-      ( get_line $
-          fun line_num ->
-          command $
-            fun cmd ->
+      ( get_line
+        >>= fun line_num ->
+          command
+          >>= fun cmd ->
             many_till any (trying (lookahead (alt (void bol_sigil) eof))) $>
               String.pack $>
               fun resp ->
@@ -96,15 +96,15 @@ module TranscriptParser = struct
       begin
         let p =
           many_till any (void (trying (lookahead bol_sigil))) in
-        label "input beluga code" p $> String.pack $
-          fun bel ->
+        label "input beluga code" p $> String.pack
+        >>= fun bel ->
           let f ints =
             { input_file = bel;
               interactions = ints;
             }
           in
-          map f (label "interactions block" (some interaction)) $
-            fun trans -> eof $> fun _ -> trans
+          map f (label "interactions block" (some interaction))
+          >>= fun trans -> eof $> fun _ -> trans
       end
 
   let parse_transcript (input : char Token.t Parser.Stream.t) :
@@ -245,8 +245,8 @@ module TranscriptRunner = struct
     match ints with
     | [] -> pure e
     | (i :: ints) ->
-       run_interaction i e $
-         fun e' ->
+       run_interaction i e
+       >>= fun e' ->
          run_interactions ints e'
 
   let run_transcript (transcript : transcript) (e : env) : (string, env) Either.t =
@@ -270,8 +270,8 @@ let main () =
       lmap
         (fun e ->
           TranscriptParser.Parser.string_of_parse_error e |>
-            fun x -> ParseError x) $
-      fun transcript ->
+            fun x -> ParseError x)
+      >>= fun transcript ->
       let open TranscriptRunner in
       let env = create_env exe in
       run_transcript transcript env |>

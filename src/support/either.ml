@@ -51,7 +51,7 @@ let to_option = function
   | Right x -> Some x
   | Left _ -> None
 
-let ( $ ) (e : ('e, 'a) t) (k : ('a -> ('e, 'b) t)) : ('e, 'b) t =
+let ( >>= ) (e : ('e, 'a) t) (k : ('a -> ('e, 'b) t)) : ('e, 'b) t =
   bind k e
 
 let ( $> ) (e : ('e, 'a) t) (f : ('a -> 'b)) : ('e, 'b) t =

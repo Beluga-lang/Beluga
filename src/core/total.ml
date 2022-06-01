@@ -273,7 +273,7 @@ let get_order_for mfs f : int list option =
        then
          begin
            let open Option in
-           Comp.(dec.order |> option_of_total_dec_kind $ Order.list_of_order)
+           Comp.(dec.order |> option_of_total_dec_kind >>= Order.list_of_order)
          end
        else
          find decs
@@ -1336,7 +1336,7 @@ let is_comp_inductive (cG : Comp.gctx) (m : Comp.exp_syn) : bool =
   let open Option in
   variable_of_exp m
   $> is_inductive_comp_variable
-  $ of_bool
+  >>= of_bool
   |> is_some
 
 (** Decides whether an index object is something we're doing
@@ -1361,7 +1361,7 @@ let is_meta_inductive (cD : LF.mctx) (mf : LF.mfront) : bool =
      inductive, so I don't *think* it's a problem.
      -je *)
   $> is_inductive_meta_variable
-  $ of_bool
+  >>= of_bool
   |> is_some
 
 (** Checks if the scrutinee of a case is on an inductive computational

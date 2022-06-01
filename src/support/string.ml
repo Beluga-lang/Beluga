@@ -1,5 +1,7 @@
 include Stdlib.String
 
+let empty = ""
+
 let unpack s =
   let n = length s in
   let rec unpack i return =

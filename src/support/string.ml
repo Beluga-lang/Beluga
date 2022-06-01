@@ -37,6 +37,11 @@ include (
 module Set = Set.Make (Stdlib.String)
 module Map = Map.Make (Stdlib.String)
 
+module Hamt = HamtExt.Make (struct
+  include Ord
+  include Hash
+end)
+
 let is_empty = ( = ) empty
 
 let is_non_empty = ( <> ) empty

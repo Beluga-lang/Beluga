@@ -10,6 +10,7 @@ module Format = Format
 module Fun = Fun
 module Functor = Functor
 module Gen = GenExt
+module Hamt = HamtExt
 module Hash = Hash
 module Hashtbl = Hashtbl
 module History = History

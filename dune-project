@@ -35,5 +35,6 @@
   (ocaml
    (>= 4.08))
   sedlex
+  hamt
   (ounit2 :with-test)
   (bisect_ppx :with-test)))

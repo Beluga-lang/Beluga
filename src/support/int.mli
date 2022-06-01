@@ -6,6 +6,8 @@ module Set : Set.S with type elt = t
 
 module Map : Map.S with type key = t
 
+module Hamt : HamtExt.S with type key = t
+
 (** {1 Instances} *)
 
 include Eq.EQ with type t := t

@@ -14,15 +14,15 @@ let pure x = Right x
 
 let left x = Left x
 
-let rmap f e = eliminate left (fun x -> Right (f x)) e
+let map_right f e = eliminate left (fun x -> Right (f x)) e
 
-let lmap f e = eliminate (fun e -> Left (f e)) pure e
+let map_left f e = eliminate (fun e -> Left (f e)) pure e
 
 let bimap f g e = eliminate (fun e -> Left (f e)) (fun x -> Right (g x)) e
 
-let rvoid e = rmap (fun _ -> ()) e
+let rvoid e = map_right (fun _ -> ()) e
 
-let lvoid e = lmap (fun _ -> ()) e
+let lvoid e = map_left (fun _ -> ()) e
 
 let void e = bimap (fun _ -> ()) (fun _ -> ()) e
 
@@ -40,6 +40,6 @@ let to_option = function
 
 let ( >>= ) e k = bind k e
 
-let ( $> ) e f = rmap f e
+let ( $> ) e f = map_right f e
 
 let trap f = try Right (f ()) with e -> Left e

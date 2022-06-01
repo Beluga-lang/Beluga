@@ -19,10 +19,10 @@ val pure : 'a -> ('e, 'a) t
 val left : 'e -> ('e, 'a) t
 
 (** Transforms the right-hand type in the union, if any. *)
-val rmap : ('a -> 'b) -> ('e, 'a) t -> ('e, 'b) t
+val map_right : ('a -> 'b) -> ('e, 'a) t -> ('e, 'b) t
 
 (** Transforms the left-hand type in the union, if any. *)
-val lmap : ('e1 -> 'e2) -> ('e1, 'a) t -> ('e2, 'a) t
+val map_left : ('e1 -> 'e2) -> ('e1, 'a) t -> ('e2, 'a) t
 
 (** Transforms both sides of the union. *)
 val bimap : ('e1 -> 'e2) -> ('a -> 'b) -> ('e1, 'a) t -> ('e2, 'b) t

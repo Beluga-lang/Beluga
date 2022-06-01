@@ -267,7 +267,7 @@ let main () =
     let open Either in
     TranscriptParser.parse_transcript input |>
       Pair.snd |>
-      lmap
+      Either.map_left
         (fun e ->
           TranscriptParser.Parser.string_of_parse_error e |>
             fun x -> ParseError x)
@@ -275,7 +275,7 @@ let main () =
       let open TranscriptRunner in
       let env = create_env exe in
       run_transcript transcript env |>
-        lmap (fun e -> InteractionError e)
+        Either.map_left (fun e -> InteractionError e)
   in
   real_main () |>
     Either.eliminate

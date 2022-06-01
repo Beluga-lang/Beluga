@@ -278,7 +278,7 @@ module Make (P : ParserInfo) = struct
 
   let map (f : 'a -> 'b) (p : 'a t) : 'b t =
     { run =
-        fun s -> Pair.map_right (Either.rmap f) (p.run s)
+        fun s -> Pair.map_right (Either.map_right f) (p.run s)
     }
 
   (** Constructs a parser that doesn't affect its state and simply

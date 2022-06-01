@@ -166,29 +166,21 @@ let index_bvar (name : Id.name) : Id.offset option index =
 let get_closed_status : open_or_closed index =
   fun c fvars -> (fvars, fvars.open_flag)
 
-module Bind = struct
-  let pure (type a) (x : a) : a index =
-    fun _ fvars -> (fvars, x)
-
-  let ( >>= ) (type a) (type b) (m : a index) (k : a -> b index) : b index =
-    fun c fvars ->
-    let (fvars', x) = m c fvars in
-    k x c fvars'
-
-  let ( $> ) (type a) (type b) (m : a index) (f : a -> b) : b index =
-    m >>= fun x -> pure (f x)
-
-  (** Runs `m' ignoring the unit, then runs `m''. *)
-  let ( &> ) (type a) (m : unit index) (m' : a index) : a index =
-    m >>= fun _ -> m'
-
-  let (<&) (type a) (m1 : a index) (m2 : unit index) : a index =
-    m1 >>= fun x -> m2 &> pure x
-
-  (** Runs two actions, and combines the result into a tuple. *)
-  let seq2 (type a1) (type a2) (m1 : a1 index) (m2 : a2 index)
-      : (a1 * a2) index =
-    m1 >>= fun x1 -> m2 >>= fun x2 -> pure (x1, x2)
+module rec Bind : sig
+  include Monad.MONAD with type 'a t = 'a index
+  include Functor.FUNCTOR with type 'a t := 'a index
+  include Apply.APPLY with type 'a t := 'a index
+end = struct
+  include Monad.Make (struct
+    type 'a t = 'a index
+    let return x = fun _ fvars -> (fvars, x)
+    let bind k m =
+      fun c fvars ->
+      let (fvars', x) = m c fvars in
+      k x c fvars'
+  end)
+  include Functor.Make (Bind)
+  include Apply.Make (Bind)
 end
 
 (** Hints can be attached to certain errors. *)
@@ -346,7 +338,7 @@ let rec index_kind (k : Ext.LF.kind) : Apx.LF.kind index =
   in
   match k with
   | Ext.LF.Typ _ ->
-     pure Apx.LF.Typ
+     return Apx.LF.Typ
   | Ext.LF.ArrKind (_, a, k) ->
      pi (Id.mk_name Id.NoName) a k
   | Ext.LF.PiKind (_, Ext.LF.TypDecl (x, a), k) ->
@@ -715,7 +707,7 @@ and index_term : Ext.LF.normal -> Apx.LF.normal index =
      seq2 (index_head h) (index_spine s)
      $> fun (h', s') -> Apx.LF.Root (loc, h', s')
 
-  | Ext.LF.LFHole (loc, name) -> pure (Apx.LF.LFHole (loc, name))
+  | Ext.LF.LFHole (loc, name) -> return (Apx.LF.LFHole (loc, name))
 
   | Ext.LF.Ann (loc, m, a) ->
      seq2 (index_typ a) (index_term m)
@@ -745,7 +737,7 @@ and index_head : Ext.LF.head -> Apx.LF.head index =
      index_head h $> fun h' -> Apx.LF.Proj (h', index_proj k)
 
   | Ext.LF.Hole _ ->
-     pure Apx.LF.Hole
+     return Apx.LF.Hole
 
   | Ext.LF.PVar (loc, p, s) ->
      lookup_fv p
@@ -760,7 +752,7 @@ and index_head : Ext.LF.head -> Apx.LF.head index =
                index_sub_opt s
                >>= fun s' ->
                  modify_fvars (extending_by p)
-                 &> pure (Apx.LF.FPVar (p, s'))
+                 &> return (Apx.LF.FPVar (p, s'))
             | (_, Either.Right offset) ->
                index_sub_opt s
                $> fun s' ->
@@ -791,7 +783,7 @@ and index_spine : Ext.LF.spine -> Apx.LF.spine index =
     $> fun (m', s') -> Apx.LF.App (m', s')
   in
   function
-  | Ext.LF.Nil -> pure Apx.LF.Nil
+  | Ext.LF.Nil -> return Apx.LF.Nil
   | Ext.LF.App (_, Ext.LF.TList (_, nl), s) -> app (shunting_yard nl) s
   | Ext.LF.App (_, m, s) -> app m s
 
@@ -910,7 +902,7 @@ and disambiguate_to_fvars : name_disambiguator =
 and index_sub_opt : Ext.LF.sub option -> Apx.LF.sub option index =
   let open Bind in
   function
-  | None -> pure None
+  | None -> return None
   | Some s ->
      index_sub s $> Option.some
 
@@ -929,10 +921,10 @@ and index_sub : Ext.LF.sub -> Apx.LF.sub index =
      $> fun (s', h') -> Apx.LF.Dot (to_head_or_obj h', s')
 
   | (Ext.LF.Id loc, []) ->
-     pure Apx.LF.Id
+     return Apx.LF.Id
 
   | (Ext.LF.EmptySub _, []) ->
-     pure Apx.LF.EmptySub
+     return Apx.LF.EmptySub
 
   | (Ext.LF.SVar (loc, u, s), []) ->
      lookup_fv u
@@ -949,7 +941,7 @@ and index_sub : Ext.LF.sub -> Apx.LF.sub index =
                index_sub_opt s
                >>= fun s' ->
                  modify_fvars (extending_by u)
-                 &> pure (Apx.LF.FSVar (u, s'))
+                 &> return (Apx.LF.FSVar (u, s'))
             | (_, Either.Right offset) ->
                index_sub_opt s
                $> fun s' -> Apx.LF.SVar (Apx.LF.Offset offset, s')
@@ -999,17 +991,17 @@ let index_ctx_var name : (cvar_error_status, Apx.LF.dctx) Either.t index =
   let open Bind in
   lookup_fv name
   >>= function
-    | true -> Either.Right (Apx.LF.CtxVar (Apx.LF.CtxName name)) |> pure
+    | true -> Either.Right (Apx.LF.CtxVar (Apx.LF.CtxName name)) |> return
     | false ->
        seq2 (get_fvars) (index_cvar name)
        >>= function
          | (_, Either.Right k) ->
-            Either.Right (Apx.LF.CtxVar (Apx.LF.CtxOffset k)) |> pure
+            Either.Right (Apx.LF.CtxVar (Apx.LF.CtxOffset k)) |> return
          | (fvars, Either.Left e) ->
             match fvars.open_flag with
-            | `closed_term -> pure (Either.Left e)
+            | `closed_term -> return (Either.Left e)
             | `open_term ->
-               Either.Right (Apx.LF.CtxVar (Apx.LF.CtxName name)) |> pure
+               Either.Right (Apx.LF.CtxVar (Apx.LF.CtxName name)) |> return
                <& modify_fvars (extending_by name)
 
 let rec index_dctx disambiguate_name cvars bvars (fvars : fvars) =
@@ -1075,7 +1067,7 @@ let index_cltyp' : Ext.LF.cltyp -> Apx.LF.cltyp index =
         index_ctx_var name
         >>= begin function
           | None -> index_as_ptyp ()
-          | Some x -> Apx.LF.STyp (Apx.LF.Subst, x) |> pure
+          | Some x -> Apx.LF.STyp (Apx.LF.Subst, x) |> return
           end
      | _ -> index_as_ptyp ()
      end
@@ -1094,7 +1086,7 @@ let index_cltyp' : Ext.LF.cltyp -> Apx.LF.cltyp index =
          index_dctx c.disambiguate_name c.cvars (BVar.create ()) fvars phi
        in
        modify_fvars (Fun.const fvars)
-       &> pure (Apx.LF.STyp (index_svar_class cl, phi'))
+       &> return (Apx.LF.STyp (index_svar_class cl, phi'))
 
 let index_cltyp loc cvars fvars =
   function

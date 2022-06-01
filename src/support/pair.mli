@@ -6,6 +6,9 @@ val fst : 'a * _ -> 'a
 (** [snd (_, y)] is [y]. *)
 val snd : _ * 'b -> 'b
 
+(** [map ~fst ~snd (x, y)] is [(fst x, snd y)]. *)
+val map : fst:('a -> 'b) -> snd:('c -> 'd) -> 'a * 'c -> 'b * 'd
+
 (** Transforms the right component of a pair. *)
 val map_right : ('a -> 'b) -> 'x * 'a -> 'x * 'b
 

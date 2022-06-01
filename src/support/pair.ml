@@ -4,6 +4,8 @@ let fst = fst
 
 let snd = snd
 
+let map ~fst ~snd (x, y) = (fst x, snd y)
+
 let map_right f (x, a) = (x, f a)
 
 let map_left f (a, x) = (f a, x)

@@ -96,6 +96,15 @@ let combine l1 l2 =
   in
   combine l1 l2 Fun.id
 
+let rec compare cmp l1 l2 =
+  match (l1, l2) with
+  | [], [] -> 0
+  | [], _ :: _ -> -1
+  | _ :: _, [] -> 1
+  | a1 :: l1, a2 :: l2 ->
+    let c = cmp a1 a2 in
+    if c <> 0 then c else compare cmp l1 l2
+
 let pp = Format.pp_print_list
 
 let show ?(pp_sep = Format.pp_print_cut) pp_v l =

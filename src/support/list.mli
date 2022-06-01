@@ -83,6 +83,18 @@ val split : ('a * 'b) list -> 'a list * 'b list
     @raise Invalid_argument if the two lists have different lengths. *)
 val combine : 'a list -> 'b list -> ('a * 'b) list
 
+(** [compare cmp \[a1; ...; an\] \[b1; ...; bm\]] performs a lexicographic
+    comparison of the two input lists, using the same ['a -> 'a -> int]
+    interface as {!Stdlib.compare}:
+
+    - [a1 :: l1] is smaller than [a2 :: l2] (negative result) if [a1] is
+      smaller than [a2], or if they are equal (0 result) and [l1] is smaller
+      than [l2]
+    - the empty list [\[\]] is strictly smaller than non-empty lists Note:
+      the [cmp] function will be called even if the lists have different
+      lengths. *)
+val compare : ('a -> 'a -> int) -> 'a list -> 'a list -> int
+
 (** {1 Printing} *)
 
 (** [pp ?pp_sep pp_v ppf l] prints the items of the list [l] using [pp_v] to

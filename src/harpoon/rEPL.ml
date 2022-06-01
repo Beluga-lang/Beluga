@@ -51,7 +51,7 @@ let run_safe (f : unit -> 'a) : 'a e =
       not executed.
  *)
 let process_command_sequence s (c, t, g) cmds =
-  let printf x = State.printf s x in
+  let printf x = HarpoonState.printf s x in
   (* Idea:
      - count the commands to run
      - count the commands we were able to process
@@ -77,17 +77,17 @@ let process_command_sequence s (c, t, g) cmds =
   with
   | Either.Left f ->
      printf "%a" f ();
-     if State.interaction_mode s = `stop then
+     if HarpoonState.interaction_mode s = `stop then
        exit 1;
      `error
   | Either.Right b ->
      if b then `ok else `stopped_short
 
-let rec loop (s : State.t) : unit =
-  let printf x = State.printf s x in
-  match State.next_triple s with
+let rec loop (s : HarpoonState.t) : unit =
+  let printf x = HarpoonState.printf s x in
+  match HarpoonState.next_triple s with
   | Either.Left `no_session ->
-     if State.session_configuration_wizard s then
+     if HarpoonState.session_configuration_wizard s then
        loop s
      else
        printf "@,Harpoon terminated.@,"
@@ -100,18 +100,18 @@ let rec loop (s : State.t) : unit =
         printf "- @[%a@]@,"
           Format.pp_print_text
           "Skipped checking translated proofs because some translations failed.";
-          if State.interaction_mode s = `stop then
+          if HarpoonState.interaction_mode s = `stop then
             exit 1
      | `check_error e ->
         printf "- @[<v>An error occurred when checking the translated proofs.\
                 @,Please report this as a bug.\
                 @,@[%s@]@]@,"
           (Printexc.to_string e);
-        if State.interaction_mode s = `stop then
+        if HarpoonState.interaction_mode s = `stop then
           exit 1
      end;
      printf "@,@[<v>Proof complete! (No theorems left.)@,@]";
-     State.on_session_completed s c;
+     HarpoonState.on_session_completed s c;
      loop s
   | Either.Left (`no_subgoal (c, t)) ->
      (* TODO: record the proof into the Store *)
@@ -138,7 +138,7 @@ let rec loop (s : State.t) : unit =
 
     (* Parse the input and run the command *)
     match
-      State.parsed_prompt s "> " None Parser.interactive_harpoon_command_sequence
+      HarpoonState.parsed_prompt s "> " None Parser.interactive_harpoon_command_sequence
       |> process_command_sequence s (c, t, g)
     with
     | `ok | `error -> loop s
@@ -153,13 +153,13 @@ let start
       (gs : Comp.open_subgoal list)
       (io : IO.t)
     : unit =
-  let s = State.make save_back stop sig_path all_paths io gs in
+  let s = HarpoonState.make save_back stop sig_path all_paths io gs in
   (* If no sessions were created by loading the subgoal list
      then (it must have been empty so) we need to create the default
      session and configure it. *)
   Gensym.reset ();
-  match State.completeness s with
+  match HarpoonState.completeness s with
   | `complete ->
-    if State.session_configuration_wizard s then
+    if HarpoonState.session_configuration_wizard s then
       loop s
   | `incomplete -> loop s

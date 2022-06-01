@@ -142,8 +142,8 @@ let dump_proof t path =
   close_out out
 
 let process_command
-      (s : State.t)
-      ( (c, t, g) : State.triple)
+      (s : HarpoonState.t)
+      ( (c, t, g) : HarpoonState.triple)
       (cmd : Command.command)
     : unit =
   let mfs =
@@ -189,11 +189,11 @@ let process_command
           let (typ', k) = Abstract.comptyp typ in
           Logic.Convert.comptypToMQuery (typ', k)
         in
-           try
+        try
           Logic.CSolver.cgSolve cDh cGh mquery
             begin
               fun e ->
-              State.printf s "found solution: @[%a@]@,@?"
+                HarpoonState.printf s "found solution: @[%a@]@,@?"
                 (P.fmt_ppr_cmp_exp_chk cDh cGh P.l0) e;
               h.info.compSolution <- Some e;
               raise Logic.Frontend.Done
@@ -201,9 +201,8 @@ let process_command
             (Some 999)
         with
           | Logic.Frontend.Done ->
-              State.printf s "logic programming finished@,@?";
-              ()
-             end
+            HarpoonState.printf s "logic programming finished@,@?"
+      end
     | Holes.LFInfo ->
        let { lfGoal; cPsi; lfSolution } = h.info in
        assert (lfSolution = None);
@@ -220,15 +219,14 @@ let process_command
        try
          Logic.Solver.solve cDh cPsi query
            begin fun (cPsi, tM) ->
-           State.printf s "found solution: @[%a@]@,@?"
+           HarpoonState.printf s "found solution: @[%a@]@,@?"
              (P.fmt_ppr_lf_normal cDh cPsi P.l0) tM;
            h.info.lfSolution <- Some (tM, LF.Shift 0);
            raise Logic.Frontend.Done
            end
        with
        | Logic.Frontend.Done ->
-          State.printf s "logic programming finished@,@?";
-          ()
+          HarpoonState.printf s "logic programming finished@,@?"
   in
 
   let { cD; cG; cIH } = g.context in
@@ -238,19 +236,19 @@ let process_command
   | Command.Theorem cmd ->
      begin match cmd with
      | `list ->
-        State.printf s "@[<v>%a@,@,Current theorem is first.@]"
+        HarpoonState.printf s "@[<v>%a@,@,Current theorem is first.@]"
           Session.fmt_ppr_theorem_list c
      | `defer -> Session.defer_theorem c
      | `show_ihs ->
         let f i =
-          State.printf s "%d. @[%a@]@,"
+          HarpoonState.printf s "%d. @[%a@]@,"
             (i + 1)
             (P.fmt_ppr_cmp_ih g.context.cD g.context.cG)
         in
-        State.printf s "@[<v>There are %d IHs:@,"
+        HarpoonState.printf s "@[<v>There are %d IHs:@,"
           (Context.length g.context.cIH);
         Context.to_list g.context.cIH |> List.iteri f;
-        State.printf s "@]"
+        HarpoonState.printf s "@]"
      | `dump_proof path ->
         dump_proof t path
      | `show_proof ->
@@ -259,11 +257,11 @@ let process_command
   | Command.Session cmd ->
      begin match cmd with
      | `list ->
-        State.printf s "@[<v>%a@,@,Current session and theorem are first.@]"
-          State.fmt_ppr_session_list s
-     | `defer -> State.defer_session s
-     | `create -> ignore (State.session_configuration_wizard s)
-     | `serialize -> State.serialize s (c, t, g)
+        HarpoonState.printf s "@[<v>%a@,@,Current session and theorem are first.@]"
+          HarpoonState.fmt_ppr_session_list s
+     | `defer -> HarpoonState.defer_session s
+     | `create -> ignore (HarpoonState.session_configuration_wizard s)
+     | `serialize -> HarpoonState.serialize s (c, t, g)
      end
   | Command.Subgoal cmd ->
      begin match cmd with
@@ -272,8 +270,8 @@ let process_command
      end
 
   | Command.SelectTheorem name ->
-     if Bool.not (State.select_theorem s name) then
-       State.printf s
+     if Bool.not (HarpoonState.select_theorem s name) then
+       HarpoonState.printf s
          "There is no theorem by name %a."
          Id.print name
 
@@ -283,7 +281,7 @@ let process_command
 
   | Command.ToggleAutomation (automation_kind, automation_change) ->
      Automation.toggle
-       (State.automation_state s)
+       (HarpoonState.automation_state s)
        automation_kind
        automation_change
 
@@ -292,7 +290,7 @@ let process_command
        Elab.exp' (Some (Theorem.get_cid t))
          cIH cD cG (Lazy.force mfs) i
      in
-     State.printf s
+     HarpoonState.printf s
        "- @[<hov 2>@[%a@] :@ @[%a@]@]"
        P.(fmt_ppr_cmp_exp_syn cD cG l0) i
        P.(fmt_ppr_cmp_typ cD l0) tau
@@ -303,10 +301,10 @@ let process_command
         let open Option in
         begin match CompS.(index_of_name_opt n $> get) with
         | None ->
-           State.printf s
+           HarpoonState.printf s
              "- No such theorem by name %a" Id.print n
         | Some e ->
-           State.printf s
+           HarpoonState.printf s
              "- @[%a@]"
              P.fmt_ppr_cmp_comp_prog_info e
         end
@@ -316,20 +314,20 @@ let process_command
      let open Option in
      begin match CompS.(index_of_name_opt n $> get) with
      | Some e ->
-        State.printf s "%a"
+        HarpoonState.printf s "%a"
           Translate.fmt_ppr_result (Translate.entry e)
      | None ->
-        State.printf s "No such theorem by name %a defined."
+        HarpoonState.printf s "No such theorem by name %a defined."
           Id.print n
      end
 
   | Command.Undo ->
      if Bool.not Theorem.(history_step t Direction.backward) then
-       State.printf s "Nothing to undo in the current theorem's timeline."
+       HarpoonState.printf s "Nothing to undo in the current theorem's timeline."
 
   | Command.Redo ->
      if Bool.not Theorem.(history_step t Direction.forward) then
-       State.printf s "Nothing to redo in the current theorem's timeline."
+       HarpoonState.printf s "Nothing to redo in the current theorem's timeline."
 
   | Command.History ->
      let open Format in
@@ -348,7 +346,7 @@ let process_command
              Commands above the line would be redone."
        | _ -> ()
      in
-     State.printf s
+     HarpoonState.printf s
        "@[<v 2>History:\
         @,@[<v>%a@]%a@[<v>%a@]@]@,%a@,"
        (pp_print_list ~pp_sep: pp_print_cut pp_print_string)
@@ -359,7 +357,7 @@ let process_command
        future_remark ()
 
   | Command.Help ->
-     State.printf s
+     HarpoonState.printf s
        "@[<v>Built-in help is not implemented.\
         @,See online documentation: https://beluga-lang.readthedocs.io/@]"
 
@@ -397,7 +395,7 @@ let process_command
      if Whnf.closedExp' i then
        (List.iter solve_hole hs; Tactic.invoke i tau name t g)
      else
-       State.printf s
+       HarpoonState.printf s
          "@[<v>Elaborated expression\
           @,  @[%a@]\
           @,of type\
@@ -414,7 +412,7 @@ let process_command
      in
      begin match Session.infer_invocation_kind c i with
      | `ih ->
-        State.printf s "inductive use of `suffices by ...` is not currently supported"
+        HarpoonState.printf s "inductive use of `suffices by ...` is not currently supported"
      | `lemma ->
         begin match hs with
         | _ :: _ ->
@@ -443,4 +441,4 @@ let process_command
      if Whnf.closedExp e then
        (Comp.solve e |> Tactic.solve) t g
      else
-       State.printf s "Solution contains uninstantiated metavariables."
+       HarpoonState.printf s "Solution contains uninstantiated metavariables."

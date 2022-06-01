@@ -78,7 +78,7 @@ val process : problem -> int option -> unit (* check coverage immediately *)
     matching (see Reconstruct.synPatRefine) eliminates this extra
     variable later.  However, the preliminary branch context
  *)
-val genNthSchemaElemGoal : Id.name list
+val genNthSchemaElemGoal : Name.t list
                            -> LF.mctx -> int -> Id.cid_schema
                            -> LF.dctx inside option
 
@@ -148,18 +148,18 @@ val genObj : LF.mctx * LF.dctx * LF.typ -> LF.head * LF.typ * int
     The given list of names are those in the current scope, to ensure
     that generated names do not shadow.
  *)
-val genPatt : Id.name list
+val genPatt : Name.t list
               -> gen_pat_var_strategy
               -> LF.mctx * Comp.typ
               -> Id.cid_comp_typ * Comp.typ
               -> (Comp.gctx * Comp.pattern * Comp.tclo) inside option
 
-val genPatCGoals : Id.name list
+val genPatCGoals : Name.t list
                    -> gen_pat_var_strategy
                    -> LF.mctx -> Comp.typ
                    -> (Comp.gctx * Comp.pattern * Comp.tclo) inside list
 
-val genContextGoals : LF.mctx -> Id.name * LF.ctyp * Plicity.t * Inductivity.t
+val genContextGoals : LF.mctx -> Name.t * LF.ctyp * Plicity.t * Inductivity.t
                       -> LF.dctx inside list
 
 val genCGoals : LF.mctx -> LF.ctyp -> (LF.mctx * cov_goal * LF.msub) list * depend

@@ -40,10 +40,10 @@ val convDCtxHat : dctx_hat -> dctx_hat -> bool
 (* Creating new contextual variables *)
 (*************************************)
 
-val newMMVar' : Id.name option -> mctx * ctyp -> Plicity.t -> Inductivity.t -> mm_var
-val newMMVar : Id.name option -> mctx * dctx * typ -> Plicity.t -> Inductivity.t -> mm_var
-val newMPVar : Id.name option -> mctx * dctx * typ -> Plicity.t -> Inductivity.t -> mm_var
-val newMSVar : Id.name option
+val newMMVar' : Name.t option -> mctx * ctyp -> Plicity.t -> Inductivity.t -> mm_var
+val newMMVar : Name.t option -> mctx * dctx * typ -> Plicity.t -> Inductivity.t -> mm_var
+val newMPVar : Name.t option -> mctx * dctx * typ -> Plicity.t -> Inductivity.t -> mm_var
+val newMSVar : Name.t option
                -> mctx (* cD *)
                   * svar_class
                   * dctx (* cPsi *)
@@ -53,8 +53,8 @@ val newMSVar : Id.name option
                -> mm_var
                (* cD ; cPsi |- msvar : cPhi *)
 
-val newMVar : Id.name option -> dctx * typ -> Plicity.t -> Inductivity.t -> cvar
-val newCVar : Id.name option -> mctx -> Id.cid_schema option -> Plicity.t -> Inductivity.t -> ctx_var
+val newMVar : Name.t option -> dctx * typ -> Plicity.t -> Inductivity.t -> cvar
+val newCVar : Name.t option -> mctx -> Id.cid_schema option -> Plicity.t -> Inductivity.t -> ctx_var
 
 val raiseType : dctx -> typ -> typ
 
@@ -62,9 +62,9 @@ val raiseType : dctx -> typ -> typ
 (* Other operations *)
 (*************************************)
 
-val etaExpandMV : dctx -> tclo -> Id.name -> sub -> Plicity.t -> Inductivity.t -> normal
+val etaExpandMV : dctx -> tclo -> Name.t -> sub -> Plicity.t -> Inductivity.t -> normal
 
-val etaExpandMMV : Location.t -> mctx -> dctx -> tclo -> Id.name -> sub -> Plicity.t -> Inductivity.t -> normal
+val etaExpandMMV : Location.t -> mctx -> dctx -> tclo -> Name.t -> sub -> Plicity.t -> Inductivity.t -> normal
 
 
 exception Fmvar_not_found
@@ -72,7 +72,7 @@ exception FreeMVar of head
 exception NonInvertible
 exception InvalidLFHole of Location.t
 
-val newMTypName : ctyp -> Id.name_guide
+val newMTypName : ctyp -> Name.name_guide
 
 val m_id : msub
 (* val mshift: msub -> int -> msub
@@ -123,14 +123,14 @@ val m_invert : msub -> msub
 (* val invExp : Comp.exp_chk * msub -> int -> Comp.exp_chk
 val invTerm : normal * msub -> int -> normal
 *)
-val mctxLookup : mctx -> int -> Id.name * ctyp
-val mctxLookupDep : mctx -> int -> Id.name * ctyp * Plicity.t * Inductivity.t
-val mctxMDec : mctx -> int -> Id.name * typ * dctx
-val mctxPDec : mctx -> int -> Id.name * typ * dctx
-val mctxSDec : mctx -> int -> Id.name * dctx * svar_class * dctx
-val mctxCDec : mctx -> int -> Id.name * Id.cid_schema
+val mctxLookup : mctx -> int -> Name.t * ctyp
+val mctxLookupDep : mctx -> int -> Name.t * ctyp * Plicity.t * Inductivity.t
+val mctxMDec : mctx -> int -> Name.t * typ * dctx
+val mctxPDec : mctx -> int -> Name.t * typ * dctx
+val mctxSDec : mctx -> int -> Name.t * dctx * svar_class * dctx
+val mctxCDec : mctx -> int -> Name.t * Id.cid_schema
 
-val mctxMVarPos : mctx -> Id.name -> Id.offset * ctyp
+val mctxMVarPos : mctx -> Name.t -> Id.offset * ctyp
 
 val cnorm : normal * msub -> normal
 val cnormHead : head * msub -> head
@@ -234,7 +234,7 @@ val mmVarToClObj : Location.t -> mm_var -> cltyp -> clobj
 (** Converts an MMVar to a meta object according to its meta type. *)
 val mmVarToMFront : Location.t -> mm_var -> Comp.meta_typ -> mfront
 
-val dotMMVar : Location.t -> mctx -> msub -> Id.name * ctyp * Plicity.t * Inductivity.t
+val dotMMVar : Location.t -> mctx -> msub -> Name.t * ctyp * Plicity.t * Inductivity.t
                -> Comp.meta_obj * msub
 
 val extend_mctx : mctx -> (LF.ctyp_decl * msub ) -> mctx

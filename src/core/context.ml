@@ -49,7 +49,7 @@ let rec hatToDCtx =
   | (ctx_v, k) ->
      LF.DDec
        ( hatToDCtx (ctx_v, k-1)
-       , LF.TypDeclOpt Id.(mk_name (SomeString ("x" ^ string_of_int k))))
+       , LF.TypDeclOpt Name.(mk_name (SomeString ("x" ^ string_of_int k))))
 
 
 (* Declaration Contexts *)
@@ -428,7 +428,7 @@ and lookupCtxVar cD cvar =
     | Empty -> raise (Error.Violation "Context variable not found")
     | Dec (cD, Decl (psi, CTyp (Some schemaName), _, _)) ->
        begin match cvar with
-       | CtxName phi when Id.equals psi phi -> (psi, schemaName)
+       | CtxName phi when Name.equal psi phi -> (psi, schemaName)
        | CtxName _ -> lookup cD (offset + 1)
        | CtxOffset n ->
           if n - offset = 1
@@ -444,7 +444,7 @@ and lookupCtxVarSchema cO phi = Pair.snd (lookupCtxVar cO phi)
 let rec rename src dst get_name rename_decl =
   function
   | LF.Empty -> None
-  | LF.Dec (ctx', d) when Id.equals (get_name d) src ->
+  | LF.Dec (ctx', d) when Name.equal (get_name d) src ->
      Some (LF.Dec (ctx', rename_decl (fun _ -> dst) d))
   | LF.Dec (ctx', d) ->
      let open Option in

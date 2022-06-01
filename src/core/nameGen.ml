@@ -16,14 +16,14 @@ let bvar_string tA =
   | None -> "x"
   | Some g -> g ()
 
-let mvar (tA : LF.typ) : Id.name =
-  Id.(mk_name (SomeString (mvar_string tA)))
+let mvar (tA : LF.typ) : Name.t =
+  Name.(mk_name (SomeString (mvar_string tA)))
 
-let pvar (tA : LF.typ) : Id.name =
-  Id.(mk_name (SomeString ("#" ^ pvar_string tA)))
+let pvar (tA : LF.typ) : Name.t =
+  Name.(mk_name (SomeString ("#" ^ pvar_string tA)))
 
-let bvar (tA : LF.typ) : Id.name =
-  Id.(mk_name (SomeString (bvar_string tA)))
+let bvar (tA : LF.typ) : Name.t =
+  Name.(mk_name (SomeString (bvar_string tA)))
 
 let rec var_string =
   function
@@ -41,9 +41,9 @@ let rec var_string =
      var_string tau
   | _ -> "x"
 
-let var tau = Id.(mk_name (SomeString (var_string tau)))
+let var tau = Name.(mk_name (SomeString (var_string tau)))
 
-let renumber (ctx : Id.name list) name =
-  match Id.max_usage ctx (Id.base_name name) with
-  | `unused -> Id.modify_number (Fun.const None) name
-  | `used k -> Id.modify_number (Fun.const (Id.inc_hint_cnt k)) name
+let renumber (ctx : Name.t list) name =
+  match Name.max_usage ctx (Name.base_name name) with
+  | `unused -> Name.modify_number (Fun.const None) name
+  | `used k -> Name.modify_number (Fun.const (Name.inc_hint_cnt k)) name

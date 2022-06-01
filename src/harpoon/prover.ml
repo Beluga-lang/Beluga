@@ -14,7 +14,7 @@ open Debug.Fmt
 
 module Error = struct
   type t =
-    | NoSuchVariable of Id.name * [ `meta | `comp ]
+    | NoSuchVariable of Name.t * [ `meta | `comp ]
 
   exception E of t
 
@@ -30,7 +30,7 @@ module Error = struct
        in
        fprintf ppf "No such %a %a."
          format_variable_kind level
-         Id.print name
+         Name.pp name
 
   let _ =
     Error.register_printing_function
@@ -81,7 +81,7 @@ module Elab = struct
        just a name (or a hash_name), and we do all the elaboration "by
        hand" here instead of using Lfrecon and Index.
      *)
-    let p (d, _) = Id.equals name (LF.name_of_ctyp_decl d) in
+    let p (d, _) = Name.equal name (LF.name_of_ctyp_decl d) in
     match Context.find_with_index_rev' cD p with
     | None -> Lfrecon.(throw loc (UnboundName name))
     | Some LF.(Decl (_, cT, _, _), k) ->
@@ -91,7 +91,7 @@ module Elab = struct
          p.fmt "[harpoon] [Elab.mvar] @[<v>found index %d for metavariable@,\
                 @[<hov 2>%a :@ @[%a@]@]@]"
            k
-           Id.print name
+           Name.pp name
            P.(fmt_ppr_cmp_meta_typ cD) cT
          end;
        let mF =
@@ -127,7 +127,7 @@ end
     let n = DynArray.length s.theorems in
     let rec loop = function
       | i when i >= n -> ()
-      | i when Id.equals name (DynArray.get s.theorems i).Theorem.name ->
+      | i when Name.equal name (DynArray.get s.theorems i).Theorem.name ->
          DynArray.delete s.theorems i
       | i -> loop (i + 1)
     in
@@ -273,7 +273,7 @@ let process_command
      if Bool.not (HarpoonState.select_theorem s name) then
        HarpoonState.printf s
          "There is no theorem by name %a."
-         Id.print name
+         Name.pp name
 
   | Command.Rename { rename_from=x_src; rename_to=x_dst; level } ->
      if Bool.not (Theorem.rename_variable x_src x_dst level t g) then
@@ -302,7 +302,7 @@ let process_command
         begin match CompS.(index_of_name_opt n $> get) with
         | None ->
            HarpoonState.printf s
-             "- No such theorem by name %a" Id.print n
+             "- No such theorem by name %a" Name.pp n
         | Some e ->
            HarpoonState.printf s
              "- @[%a@]"
@@ -318,7 +318,7 @@ let process_command
           Translate.fmt_ppr_result (Translate.entry e)
      | None ->
         HarpoonState.printf s "No such theorem by name %a defined."
-          Id.print n
+          Name.pp n
      end
 
   | Command.Undo ->

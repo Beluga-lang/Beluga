@@ -262,9 +262,9 @@ type error' =
    *)
   (* | Custom of string (* Generic external error. *) *)
   | WrongConstructorType of
-      Id.name (* constructor name *)
-      * Id.name (* expected type name *)
-      * Id.name (* actual type name *)
+      Name.t (* constructor name *)
+      * Name.t (* expected type name *)
+      * Name.t (* actual type name *)
   | NoMoreChoices of error list (* all alternatives failed *)
 
   (* Internal errors: our fault; these should never go to the user. *)
@@ -365,9 +365,9 @@ let print_error ppf ({path; loc; _} as e : error) =
            ^^ "Actual type %s"
            ^^ "@]"
          )
-         (Id.string_of_name c)
-         (Id.string_of_name exp)
-         (Id.string_of_name act)
+         (Name.string_of_name c)
+         (Name.string_of_name exp)
+         (Name.string_of_name act)
     (* | Custom s -> fprintf ppf "%s" s *)
     | Violation s -> fprintf ppf "%s" s
   in
@@ -833,7 +833,7 @@ let check_datatype_decl loc a cs : unit parser =
      | Sgn.CompConst { identifier; typ; _ } ->
         retname typ
         >>= fun a' ->
-          if Bool.not (Id.equals a a')
+          if Name.(a <> a')
           then fail (WrongConstructorType (identifier, a, a'))
           else return ()
      | _ -> fail (Violation "check_datatype_decl invalid input"))
@@ -850,7 +850,7 @@ let check_codatatype_decl loc a cs : unit parser =
      | Sgn.CompDest { identifier; observation_typ=tau0; _} ->
         retname tau0
         >>= fun a' ->
-          if Bool.not (Id.equals a a')
+          if Name.(a <> a')
           then fail (WrongConstructorType (identifier, a, a'))
           else return ()
      | _ -> fail (Violation "check_codatatype_decl invalid input"))
@@ -917,14 +917,14 @@ let dollar_blank : unit parser =
      | T.DOLLAR_BLANK -> Some ()
      | _ -> None)
 
-let namify (p : string t) : Id.name t =
+let namify (p : string t) : Name.t t =
   p |> span
-  $> fun (loc, x) -> Id.(mk_name ~loc: loc (SomeString x))
+  $> fun (loc, x) -> Name.(mk_name ~loc: loc (SomeString x))
 
-let name : Id.name parser =
+let name : Name.t parser =
   namify identifier
 
-type name_or_blank = [ `name of Id.name | `blank of Loc.t ]
+type name_or_blank = [ `name of Name.t | `blank of Loc.t ]
 
 let blankify (p : unit t) : name_or_blank t =
   p |> span $> fun (loc, _) -> `blank loc
@@ -937,13 +937,13 @@ let name_or_blank : name_or_blank parser =
 (** Converts a name or blank into a plicity and a name. *)
 let plicity_name_of_nb =
   function
-  | `blank loc' -> (Plicity.implicit, Id.mk_blank (Some loc'))
+  | `blank loc' -> (Plicity.implicit, Name.mk_blank (Some loc'))
   | `name x -> (Plicity.explicit, x)
 
-let dot_name : Id.name t =
+let dot_name : Name.t t =
   token T.DOT &> name
 
-let hash_name : Id.name t =
+let hash_name : Name.t t =
   namify hash_identifier
 
 let hash_name_or_blank : name_or_blank t =
@@ -951,7 +951,7 @@ let hash_name_or_blank : name_or_blank t =
     (hash_name $> fun x -> `name x)
     (hash_blank |> blankify)
 
-let dollar_name : Id.name t =
+let dollar_name : Name.t t =
   namify dollar_identifier
 
 let dollar_name_or_blank : name_or_blank t =
@@ -973,7 +973,7 @@ let name_or_blank' : name_or_blank name_parser =
   | `dollar -> dollar_name_or_blank
   | `hash -> hash_name_or_blank
 
-let name' : Id.name name_parser =
+let name' : Name.t name_parser =
   function
   | `ordinary -> name
   | `dollar -> dollar_name
@@ -999,7 +999,7 @@ let fqname =
   |> span
   $> fun (loc, is) ->
      let (ms, i) = List1.unsnoc is in
-     Id.mk_name ~loc: loc ~modules: ms (Id.SomeString i)
+     Name.(mk_name ~loc: loc ~modules: ms (SomeString i))
 
 let pragma s = token (T.PRAGMA s)
 
@@ -1351,7 +1351,7 @@ let hole : string option parser =
      | _ -> None)
   |> labelled "hole"
 
-let rec_block (p : (Id.name * LF.typ) parser) =
+let rec_block (p : (Name.t * LF.typ) parser) =
   token T.KW_BLOCK
   &> opt_parens (sep_by1 p (token T.COMMA))
   |> span
@@ -1810,7 +1810,7 @@ let cltyp : (LF.dctx * typ_or_ctx) parser =
         (label ctx "contextual context type")
     end
 
-let clf_ctyp_decl_bare : type a. a name_parser -> (a -> Plicity.t * Id.name) -> LF.ctyp_decl t =
+let clf_ctyp_decl_bare : type a. a name_parser -> (a -> Plicity.t * Name.t) -> LF.ctyp_decl t =
   fun nameclass plicity_of_name ->
   { run =
       fun s ->

@@ -16,8 +16,8 @@ module Unify = Unify.EmptyTrail
 module S = Substitution
 
 type error =
-  | CtxVarMisCheck of mctx * dctx * tclo * Id.name * schema
-  | CtxVarMismatch of mctx * ctx_var * Id.name * schema
+  | CtxVarMisCheck of mctx * dctx * tclo * Name.t * schema
+  | CtxVarMismatch of mctx * ctx_var * Name.t * schema
   | CtxVarDiffer of mctx * ctx_var * ctx_var
   | CheckError of mctx * dctx * nclo * tclo
   | TupleArity of mctx * dctx * nclo * trec_clo
@@ -26,7 +26,7 @@ type error =
   | TypMismatch of mctx * dctx * nclo * tclo * tclo
   | IllTypedSub of mctx * dctx * sub * dctx * normal option
   | SpineIllTyped of int * int
-  | LeftoverFV of Id.name
+  | LeftoverFV of Name.t
   | ParamVarInst of mctx * dctx * tclo
   | CtxHatMismatch of mctx * dctx (* expected *) * dctx_hat (* found *) * (Syntax.Loc.t * mfront)
   | IllTypedMetaObj of mctx * clobj * dctx * cltyp
@@ -56,7 +56,7 @@ let _ =
             @,doesn't check against schema\
             @,  @[<hv 2>%a =@ @[<hv>%a@]@]@]"
            (P.fmt_ppr_lf_typ c0 cPsi P.l0) (Whnf.normTyp sA)
-           Id.print name
+           Name.pp name
            (P.fmt_ppr_lf_schema P.l0) sEl
 
       | CtxVarMismatch (cO, var, name, expected) ->
@@ -67,7 +67,7 @@ let _ =
             @,  @[<hv 2>%a =@ @[<hv>%a@]@]\
             @]"
            (P.fmt_ppr_lf_ctx_var cO) var
-           Id.print name
+           Name.pp name
            (P.fmt_ppr_lf_schema P.l0) expected
 
       | CtxVarDiffer (cO, var, var1) ->
@@ -144,7 +144,7 @@ let _ =
 
       | LeftoverFV name ->
          Format.fprintf ppf "Leftover free variable %a. Perhaps it is misspelled?"
-           Id.print name
+           Name.pp name
       | IllTypedMetaObj (cD, cM, cPsi, mT) ->
          Format.fprintf ppf
            "Meta object %a does not have type %a."
@@ -700,7 +700,7 @@ and checkTypRec cD cPsi (typRec, s) =
   | SigmaElem (_, tA, recA) ->
      checkTyp cD cPsi (tA, s);
      checkTypRec cD
-       (DDec (cPsi, S.LF.decSub (TypDecl (Id.mk_name Id.NoName, tA)) s))
+       (DDec (cPsi, S.LF.decSub (TypDecl (Name.mk_name Name.NoName, tA)) s))
        (recA, S.LF.dot1 s)
 
 (* checkKind cD cPsi K
@@ -945,7 +945,7 @@ and checkSchema loc cD cPsi schema_name (Schema elements as schema) =
   | Null -> ()
   | CtxVar (CtxName name) ->
      (* free ctxvar names should not appear here *)
-     throw (Id.loc_of_name name) (LeftoverFV name)
+     throw (Name.loc_of_name name) (LeftoverFV name)
   | CtxVar (CInst (mmvar, _)) ->
      (* Manually chasing the MMVar instantiation here is sketchy.
           Shouldn't the term already be in normal form when we enter

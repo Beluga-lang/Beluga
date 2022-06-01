@@ -1,7 +1,6 @@
 (* External Syntax *)
 
 open Support
-open Id
 
 (** External LF Syntax *)
 module LF = struct
@@ -13,8 +12,8 @@ module LF = struct
     | PiKind of Location.t * typ_decl * kind
 
   and typ_decl =
-    | TypDecl of name * typ
-    | TypDeclOpt of name
+    | TypDecl of Name.t * typ
+    | TypDeclOpt of Name.t
 
   and cltyp =
     | MTyp of typ
@@ -23,16 +22,16 @@ module LF = struct
 
   and ctyp =
     | ClTyp of cltyp * dctx
-    | CTyp of name
+    | CTyp of Name.t
 
   and loc_ctyp = Location.t * ctyp
 
   and ctyp_decl =
-    | Decl of name * loc_ctyp * Plicity.t
-    | DeclOpt of name
+    | Decl of Name.t * loc_ctyp * Plicity.t
+    | DeclOpt of Name.t
 
   and typ =
-    | Atom of Location.t * name * spine
+    | Atom of Location.t * Name.t * spine
     | ArrTyp of Location.t * typ * typ
     | PiTyp of Location.t * typ_decl * typ
     | Sigma of Location.t * typ_rec
@@ -40,7 +39,7 @@ module LF = struct
     | AtomTerm of Location.t * normal
 
   and normal =
-    | Lam of Location.t * name * normal
+    | Lam of Location.t * Name.t * normal
     | Root of Location.t * head * spine
     | Tuple of Location.t * tuple
     | LFHole of Location.t * string option
@@ -50,14 +49,14 @@ module LF = struct
     | PatEmpty of Location.t
 
   and head =
-    | Name of Location.t * name * sub option
+    | Name of Location.t * Name.t * sub option
     | Hole of Location.t
-    | PVar of Location.t * name * sub option
+    | PVar of Location.t * Name.t * sub option
     | Proj of Location.t * head * proj
 
   and proj =
     | ByPos of int
-    | ByName of name
+    | ByName of Name.t
 
   and spine =
     | Nil
@@ -66,13 +65,13 @@ module LF = struct
   and sub_start =
     | EmptySub of Location.t
     | Id of Location.t
-    | SVar of Location.t * name * sub option
+    | SVar of Location.t * Name.t * sub option
 
   and sub = sub_start * normal list
 
   and typ_rec =
-    | SigmaLast of name option * typ
-    | SigmaElem of name * typ * typ_rec
+    | SigmaLast of Name.t option * typ
+    | SigmaElem of Name.t * typ * typ_rec
 
   and tuple =
     | Last of normal
@@ -80,7 +79,7 @@ module LF = struct
 
   and dctx =
     | Null
-    | CtxVar of Location.t * name
+    | CtxVar of Location.t * Name.t
     | DDec of dctx * typ_decl
     | CtxHole
 
@@ -152,29 +151,29 @@ module Comp = struct
   type meta_typ = LF.loc_ctyp
 
   type typ =                                           (* Computation-level types *)
-    | TypBase of Location.t * name * meta_spine        (*    | c mS               *)
+    | TypBase of Location.t * Name.t * meta_spine      (*    | c mS               *)
     | TypBox of Location.t * meta_typ                  (*    | [U]                *)
     | TypArr of Location.t * typ * typ                 (*    | tau -> tau         *)
     | TypCross of Location.t * typ * typ               (*    | tau * tau          *)
     | TypPiBox of Location.t * LF.ctyp_decl * typ      (*    | Pi u::U.tau        *)
     | TypInd of typ
 
-  and exp_chk =                                                      (* Computation-level expressions *)
-    | Syn        of Location.t * exp_syn                             (*  e ::= i                      *)
-    | Fn         of Location.t * name * exp_chk                      (*    | fn x => e                *)
-    | Fun        of Location.t * fun_branches                        (*    | fun fbranches            *)
-    | MLam       of Location.t * name * exp_chk                      (*    | mlam f => e              *)
-    | Pair       of Location.t * exp_chk * exp_chk                   (*    | (e1 , e2)                *)
-    | LetPair    of Location.t * exp_syn * (name * name * exp_chk)   (*    | let (x,y) = i in e       *)
-    | Let        of Location.t * exp_syn * (name * exp_chk)          (*    | let x = i in e           *)
-    | Box        of Location.t * meta_obj                            (*    | [C]                      *)
-    | Impossible of Location.t * exp_syn                             (*    | impossible i             *)
-    | Case       of Location.t * case_pragma * exp_syn * branch list (*    | case i of branches       *)
-    | Hole       of Location.t * string option                       (*    | ?name                    *)
-    | BoxHole    of Location.t                                       (*    | _                        *)
+  and exp_chk =                                                        (* Computation-level expressions *)
+    | Syn        of Location.t * exp_syn                               (*  e ::= i                      *)
+    | Fn         of Location.t * Name.t * exp_chk                      (*    | fn x => e                *)
+    | Fun        of Location.t * fun_branches                          (*    | fun fbranches            *)
+    | MLam       of Location.t * Name.t * exp_chk                      (*    | mlam f => e              *)
+    | Pair       of Location.t * exp_chk * exp_chk                     (*    | (e1 , e2)                *)
+    | LetPair    of Location.t * exp_syn * (Name.t * Name.t * exp_chk) (*    | let (x,y) = i in e       *)
+    | Let        of Location.t * exp_syn * (Name.t * exp_chk)          (*    | let x = i in e           *)
+    | Box        of Location.t * meta_obj                              (*    | [C]                      *)
+    | Impossible of Location.t * exp_syn                               (*    | impossible i             *)
+    | Case       of Location.t * case_pragma * exp_syn * branch list   (*    | case i of branches       *)
+    | Hole       of Location.t * string option                         (*    | ?name                    *)
+    | BoxHole    of Location.t                                         (*    | _                        *)
 
   and exp_syn =
-    | Name of Location.t * name                          (*  i ::= x/c               *)
+    | Name of Location.t * Name.t                          (*  i ::= x/c               *)
     | Apply of Location.t * exp_syn * exp_chk            (*    | i e                 *)
     | BoxVal of Location.t * meta_obj                    (*    | [C]                 *)
     | PairVal of Location.t * exp_syn * exp_syn          (*    | (i , i)             *)
@@ -187,14 +186,14 @@ module Comp = struct
 
   and pattern =
     | PatMetaObj of Location.t * meta_obj
-    | PatName of Location.t * name * pattern_spine
+    | PatName of Location.t * Name.t * pattern_spine
     | PatPair of Location.t * pattern * pattern
     | PatAnn of Location.t * pattern * typ
 
   and pattern_spine =
     | PatNil of Location.t
     | PatApp of Location.t * pattern * pattern_spine
-    | PatObs of Location.t * name * pattern_spine
+    | PatObs of Location.t * Name.t * pattern_spine
 
   and branch =
     | Branch of Location.t *  LF.ctyp_decl LF.ctx  * pattern * exp_chk
@@ -211,16 +210,16 @@ module Comp = struct
 
   type suffices_typ = typ generic_suffices_typ
 
-  type named_order = name generic_order
+  type named_order = Name.t generic_order
   type numeric_order = int generic_order
 
   type total_dec =
     | NumericTotal of Location.t * numeric_order option
-    | NamedTotal of Location.t * named_order option * name * name option list
+    | NamedTotal of Location.t * named_order option * Name.t * Name.t option list
     | Trust of Location.t
 
   type ctyp_decl =
-    | CTypDecl of name * typ
+    | CTypDecl of Name.t * typ
 
   type gctx = ctyp_decl LF.ctx
 
@@ -235,8 +234,8 @@ module Comp = struct
     | Directive of Location.t * directive
 
   and command =
-    | By of Location.t * exp_syn * name
-    | Unbox of Location.t * exp_syn * name * unbox_modifier option
+    | By of Location.t * exp_syn * Name.t
+    | Unbox of Location.t * exp_syn * Name.t * unbox_modifier option
 
   and directive =
     | Intros of Location.t * hypothetical
@@ -288,15 +287,15 @@ module Harpoon = struct
   type command =
     (* Administrative commands *)
     | Rename of
-      { rename_from: name
-      ; rename_to: name
+      { rename_from: Name.t
+      ; rename_to: Name.t
       ; level: level
       }
     | ToggleAutomation of automation_kind * automation_change
 
     | Type of Comp.exp_syn
-    | Info of info_kind * Id.name
-    | SelectTheorem of Id.name
+    | Info of info_kind * Name.t
+    | SelectTheorem of Name.t
     | Theorem of [ basic_command | `show_ihs | `show_proof | `dump_proof of string ]
     | Session of [ basic_command | `create | `serialize ]
     | Subgoal of basic_command
@@ -304,16 +303,16 @@ module Harpoon = struct
     | Redo
     | History
 
-    | Translate of Id.name
+    | Translate of Name.t
 
     (* Actual tactics *)
     | Intros of string list option (* list of names for introduced variables *)
 
     | Split of split_kind * Comp.exp_syn (* the expression to split on *)
-    | MSplit of Location.t * Id.name (* split on a metavariable *)
+    | MSplit of Location.t * Name.t (* split on a metavariable *)
     | Solve of Comp.exp_chk (* the expression to solve the current subgoal with *)
-    | Unbox of Comp.exp_syn * Id.name * Comp.unbox_modifier option
-    | By of Comp.exp_syn * Id.name
+    | Unbox of Comp.exp_syn * Name.t * Comp.unbox_modifier option
+    | By of Comp.exp_syn * Name.t
     | Suffices of Comp.exp_syn * Comp.suffices_typ list
     | Help
 end
@@ -332,8 +331,8 @@ module Sgn = struct
 
   type pragma =
     | OptsPrag          of string list
-    | NamePrag          of name * string * string option
-    | FixPrag           of name * fix * precedence * assoc option
+    | NamePrag          of Name.t * string * string option
+    | FixPrag           of Name.t * fix * precedence * assoc option
     | NotPrag
     | DefaultAssocPrag  of assoc
     | OpenPrag          of string list
@@ -346,7 +345,7 @@ module Sgn = struct
 
   type thm_decl =
     { thm_loc : Location.t
-    ; thm_name : name
+    ; thm_name : Name.t
     ; thm_typ : Comp.typ
     ; thm_order : Comp.total_dec option
     ; thm_body : Comp.thm
@@ -356,38 +355,38 @@ module Sgn = struct
   type decl =
     | Typ of
       { location: Location.t
-      ; identifier: name
+      ; identifier: Name.t
       ; kind: LF.kind
       } (** LF type family declaration *)
 
     | Const of
       { location: Location.t
-      ; identifier: name
+      ; identifier: Name.t
       ; typ: LF.typ
       } (** LF type constant decalaration *)
 
     | CompTyp of
       { location: Location.t
-      ; identifier: name
+      ; identifier: Name.t
       ; kind: Comp.kind
       ; datatype_flavour: datatype_flavour
       } (** Computation-level data type constant declaration *)
 
     | CompCotyp of
       { location: Location.t
-      ; identifier: name
+      ; identifier: Name.t
       ; kind: Comp.kind
       } (** Computation-level codata type constant declaration *)
 
     | CompConst of
       { location: Location.t
-      ; identifier: name
+      ; identifier: Name.t
       ; typ: Comp.typ
       } (** Computation-level type constructor declaration *)
 
     | CompDest of
       { location: Location.t
-      ; identifier: name
+      ; identifier: Name.t
       ; mctx: LF.mctx
       ; observation_typ: Comp.typ
       ; return_typ: Comp.typ
@@ -395,14 +394,14 @@ module Sgn = struct
 
     | CompTypAbbrev of
       { location: Location.t
-      ; identifier: name
+      ; identifier: Name.t
       ; kind: Comp.kind
       ; typ: Comp.typ
       } (** Synonym declaration for computation-level type *)
 
     | Schema of
       { location: Location.t
-      ; identifier: name
+      ; identifier: Name.t
       ; schema: LF.schema
       } (** Declaration of a specification for a set of contexts *)
 
@@ -428,14 +427,14 @@ module Sgn = struct
 
     | Val of
       { location: Location.t
-      ; identifier: name
+      ; identifier: Name.t
       ; typ: Comp.typ option
       ; expression: Comp.exp_syn
       } (** Computation-level value declaration *)
 
     | Query of
       { location: Location.t
-      ; name: name option
+      ; name: Name.t option
       ; mctx: LF.mctx
       ; typ: LF.typ
       ; expected_solutions: int option

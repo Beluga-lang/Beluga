@@ -81,7 +81,7 @@ let recover_session ppf hooks (mutual_group, thm_confs) =
     p.fmt "[recover_session] @[<v>recovered a session with the following theorems:\
            @,  @[<hv>%a@]@]"
       (Format.pp_print_list ~pp_sep: Format.comma
-         (fun ppf t -> Format.fprintf ppf "%a" Id.print (Theorem.get_name t)))
+         (fun ppf t -> Format.fprintf ppf "%a" Name.pp (Theorem.get_name t)))
       theorems
     end;
   Session.make mutual_group theorems

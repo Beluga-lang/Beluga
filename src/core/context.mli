@@ -73,9 +73,9 @@ val find_with_index' : 'a ctx -> ('a * int -> bool) -> ('a * int) option
 val find_with_index_rev : 'a ctx -> ('a ctx -> 'a * int -> bool) -> ('a * int) option
 val find_with_index_rev': 'a ctx -> ('a * int -> bool) -> ('a * int) option
 
-val getNameDCtx : dctx -> int -> Id.name
-val getNameMCtx : mctx -> int -> Id.name
-val getNameCtx : Comp.gctx -> int -> Id.name
+val getNameDCtx : dctx -> int -> Name.t
+val getNameMCtx : mctx -> int -> Name.t
+val getNameCtx : Comp.gctx -> int -> Name.t
 
 val projectCtxIntoDctx : typ_decl ctx -> dctx
 val splitContextVariable : dctx -> typ_decl -> dctx
@@ -96,43 +96,43 @@ val lookup_inductivity : LF.mctx -> int -> (LF.ctyp * Inductivity.t) option
 val lookup : Comp.gctx -> int -> Comp.typ option
 
 val lookupSchema : mctx -> int -> Id.cid_schema
-val lookupCtxVar : mctx -> ctx_var -> Id.name * Id.cid_schema
+val lookupCtxVar : mctx -> ctx_var -> Name.t * Id.cid_schema
 val lookupCtxVarSchema : mctx -> ctx_var -> Id.cid_schema
 
 (** Renames a variable in a meta-context.
     Returns None if there is no such variable, and otherwise returns
     the adjusted context with the name changed.
  *)
-val rename_mctx : Id.name -> Id.name -> LF.mctx -> LF.mctx option
+val rename_mctx : Name.t -> Name.t -> LF.mctx -> LF.mctx option
 
 (** Renames a variable in a computational context.
     Returns None if there is no such variable, and otherwise returns
     the adjusted context with the name changed.
  *)
-val rename_gctx : Id.name -> Id.name -> Comp.gctx -> Comp.gctx option
+val rename_gctx : Name.t -> Name.t -> Comp.gctx -> Comp.gctx option
 
 val concat : 'a LF.ctx list -> 'a LF.ctx
 
 (** Erases an LF context to a list of names.
     To be used in preparation for contextual name generation.
     See nameGen.ml. *)
-val names_of_dctx : LF.dctx -> Id.name list
+val names_of_dctx : LF.dctx -> Name.t list
 
 (** Erases a meta-context to a list of names.
     To be used in preparation for contextual name generation.
     See nameGen.ml. *)
-val names_of_mctx : LF.mctx -> Id.name list
+val names_of_mctx : LF.mctx -> Name.t list
 
 (** Erases a program context to a list of names.
     To be used in preparation for contextual name generation.
     See nameGen.ml. *)
-val names_of_gctx : Comp.gctx -> Id.name list
+val names_of_gctx : Comp.gctx -> Name.t list
 
 (** Computes the names in a proof state.
     This is the names from the meta-context and the program context.
     To be used in preparation for contextual name generation.
     See nameGen.ml. *)
-val names_of_proof_state : Comp.proof_state -> Id.name list
+val names_of_proof_state : Comp.proof_state -> Name.t list
 
 val is_null : LF.dctx -> bool
 val is_empty : 'a LF.ctx -> bool

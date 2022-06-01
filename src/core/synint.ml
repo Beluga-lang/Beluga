@@ -13,8 +13,8 @@ module LF = struct
     | PiKind of (typ_decl * Plicity.t) * kind
 
   and typ_decl =                                (* LF Declarations                *)
-    | TypDecl of name * typ                     (* D := x:A                       *)
-    | TypDeclOpt of name                        (*   |  x:_                       *)
+    | TypDecl of Name.t * typ                   (* D := x:A                       *)
+    | TypDeclOpt of Name.t                      (*   |  x:_                       *)
 
   and cltyp =
     | MTyp of typ
@@ -26,8 +26,8 @@ module LF = struct
     | CTyp of cid_schema option
 
   and ctyp_decl =                               (* Contextual Declarations        *)
-    | Decl of name * ctyp * Plicity.t * Inductivity.t
-    | DeclOpt of name * Plicity.t
+    | Decl of Name.t * ctyp * Plicity.t * Inductivity.t
+    | DeclOpt of Name.t * Plicity.t
 
   and typ =                                     (* LF level                       *)
     | Atom of Location.t * cid_typ * spine      (* A ::= a M1 ... Mn              *)
@@ -40,7 +40,7 @@ module LF = struct
      a hole (_) so that when printing, it can be reproduced correctly.
    *)
   and normal =                                       (* normal terms                   *)
-    | Lam of Location.t * name * normal              (* M ::= \x.M                *)
+    | Lam of Location.t * Name.t * normal            (* M ::= \x.M                *)
     | Root of Location.t * head * spine * Plicity.t  (*   | h . S                 *)
     | LFHole of Location.t * HoleId.t * HoleId.name
     | Clo of (normal * sub)                          (*   | Clo(N,s)                   *)
@@ -60,7 +60,7 @@ module LF = struct
     | AnnH of head * typ                        (*   | (H:A)                      *)
     | Proj of head * int                        (*   | x.k | #p.k s               *)
 
-    | FVar of name                              (* free variable for type
+    | FVar of Name.t                            (* free variable for type
                                                    reconstruction                 *)
     | FMVar of fvarsub                          (* free meta-variable for type
                                                    reconstruction                 *)
@@ -69,7 +69,7 @@ module LF = struct
     | HClo of offset * offset * sub             (*   | HClo(x, #S[sigma])         *)
     | HMClo of offset * mm_var_inst             (*   | HMClo(x, #S[theta;sigma])  *)
 
-  and fvarsub = name * sub
+  and fvarsub = Name.t * sub
   and spine =                                   (* spine                          *)
     | Nil                                       (* S ::= Nil                      *)
     | App of normal * spine                     (*   | M . S                      *)
@@ -114,7 +114,7 @@ module LF = struct
     | Inst of mm_var                            (* D ; Psi |- M <= A provided constraint *)
 
   and mm_var =
-    { name : name
+    { name : Name.t
     ; instantiation : iterm option ref
     ; cD : mctx
     ; mmvar_id : int (* unique to each MMVar *)
@@ -153,7 +153,7 @@ module LF = struct
     | DDec of dctx * typ_decl              (* | Psi, x:A   or x:block ...    *)
 
   and ctx_var =
-    | CtxName of name
+    | CtxName of Name.t
     | CtxOffset of offset
     | CInst of mm_var_inst'
        (* D |- Psi : schema   *)
@@ -173,8 +173,8 @@ module LF = struct
 
 
   and typ_rec =                            (* Sigma x1:A1 ... xn:An. B *)
-    |  SigmaLast of name option * typ      (* ... . B *)
-    |  SigmaElem of name * typ * typ_rec   (* xk : Ak, ... *)
+    |  SigmaLast of Name.t option * typ    (* ... . B *)
+    |  SigmaElem of Name.t * typ * typ_rec (* xk : Ak, ... *)
 
   and tuple =
     | Last of normal
@@ -232,7 +232,7 @@ module LF = struct
       not a DeclOpt.
       Raises a violation if it is a DeclOpt.
    *)
-  let require_decl : ctyp_decl -> Id.name * ctyp * Plicity.t * Inductivity.t =
+  let require_decl : ctyp_decl -> Name.t * ctyp * Plicity.t * Inductivity.t =
     function
     | Decl (u, cU, plicity, inductivity) -> (u, cU, plicity, inductivity)
     | DeclOpt _ ->
@@ -265,7 +265,7 @@ module LF = struct
     | NotPrag
     | OpenPrag of module_id
     | DefaultAssocPrag of assoc
-    | FixPrag of name * fix * int * assoc option
+    | FixPrag of Name.t * fix * int * assoc option
     | AbbrevPrag of string list * string
 
   (**********************)
@@ -317,11 +317,11 @@ module LF = struct
     match trec with
     | SigmaLast(None, _) -> raise Not_found
     | SigmaLast(Some name, _) ->
-       if String.compare (string_of_name name) (string_of_name target) == 0
+       if String.compare (Name.string_of_name name) (Name.string_of_name target) == 0
        then acc
        else failwith "Projection Not found"
     | SigmaElem(name, _, trec') ->
-       if String.compare (string_of_name name) (string_of_name target) == 0
+       if String.compare (Name.string_of_name name) (Name.string_of_name target) == 0
        then acc
        else getIndex' trec' target (acc + 1)
 
@@ -426,13 +426,13 @@ module Comp = struct
   type wf_tag = bool  (* indicates whether the argument is smaller *)
 
   type ctyp_decl =
-    | CTypDecl of name * typ * wf_tag
+    | CTypDecl of Name.t * typ * wf_tag
 
     (** Used during pretty-printing when going under lambdas. *)
-    | CTypDeclOpt of name
+    | CTypDeclOpt of Name.t
 
   type ih_decl =
-    | WfRec of name * ih_arg list * typ
+    | WfRec of Name.t * ih_arg list * typ
 
   let rename_ctyp_decl f =
     function
@@ -446,12 +446,12 @@ module Comp = struct
   (* normal comp. terms  *)
   and exp_chk =                                                              (* e :=                                              *)
     | Syn        of Location.t * exp_syn                                     (* | n                                               *)
-    | Fn         of Location.t * name * exp_chk                              (* | \x. e'                                          *)
+    | Fn         of Location.t * Name.t * exp_chk                            (* | \x. e'                                          *)
     | Fun        of Location.t * fun_branches                                (* | b_1...b_k                                       *)
-    | MLam       of Location.t * name * exp_chk * Plicity.t                    (* | Pi X.e'                                         *)
+    | MLam       of Location.t * Name.t * exp_chk * Plicity.t                (* | Pi X.e'                                         *)
     | Pair       of Location.t * exp_chk * exp_chk                           (* | (e_1, e_2)                                      *)
-    | LetPair    of Location.t * exp_syn * (name * name * exp_chk)           (* | letpair n (x, y, e) := let (x=n.1, y=n.2) in  e *)
-    | Let        of Location.t * exp_syn * (name * exp_chk)                  (* | let x = n in e                                  *)
+    | LetPair    of Location.t * exp_syn * (Name.t * Name.t * exp_chk)       (* | letpair n (x, y, e) := let (x=n.1, y=n.2) in  e *)
+    | Let        of Location.t * exp_syn * (Name.t * exp_chk)                (* | let x = n in e                                  *)
     | Box        of Location.t * meta_obj * meta_typ (* type annotation,     (* | Box ([cPsihat |- tM]) : [cPsi |- tA]            *)
                                             used for pretty-printing *)
     | Case       of Location.t * case_pragma * exp_syn * branch list
@@ -473,7 +473,7 @@ and exp_syn =                                                                   
   and pattern =
     | PatMetaObj of Location.t * meta_obj
     | PatConst of Location.t * cid_comp_const * pattern_spine
-    | PatFVar of Location.t * name (* used only _internally_ by coverage *)
+    | PatFVar of Location.t * Name.t (* used only _internally_ by coverage *)
     | PatVar of Location.t * offset
     | PatPair of Location.t * pattern * pattern
     | PatAnn of Location.t * pattern * typ * Plicity.t
@@ -550,7 +550,7 @@ and exp_syn =                                                                   
     | Hole (loc, _, _) -> loc
 
   type total_dec =
-    { name : Id.name
+    { name : Name.t
     ; tau  : typ
     ; order: order total_dec_kind
     }
@@ -658,8 +658,8 @@ and exp_syn =                                                                   
     | Directive of directive (* which can end proofs or split into subgoals *)
 
   and command =
-    | By of exp_syn * name * typ
-    | Unbox of exp_syn * name * LF.ctyp * unbox_modifier option
+    | By of exp_syn * Name.t * typ
+    | Unbox of exp_syn * Name.t * LF.ctyp * unbox_modifier option
   (* ^ The stored ctyp is the type synthesized for the exp_syn, BEFORE
      the application of any unbox_modifier *)
 
@@ -846,11 +846,11 @@ and exp_syn =                                                                   
   (* Syntax of values, used by the operational semantics *)
 
   and value =
-    | FnValue    of name * exp_chk * LF.msub * env
+    | FnValue    of Name.t * exp_chk * LF.msub * env
     | FunValue   of fun_branches_value
     | ThmValue   of cid_prog * thm * LF.msub * env
-    | MLamValue  of name * exp_chk * LF.msub * env
-    | CtxValue   of name * exp_chk * LF.msub * env
+    | MLamValue  of Name.t * exp_chk * LF.msub * env
+    | CtxValue   of Name.t * exp_chk * LF.msub * env
     | BoxValue   of meta_obj
     | ConstValue of cid_prog
     | DataValue  of cid_comp_const * data_spine
@@ -874,7 +874,7 @@ module Sgn = struct
   (* type positivity_flag =  *)
   (*   | Noflag *)
   (*   | Positivity *)
-  (*   | Stratify of Location.t * Comp.order * name * (name option) list  *)
+  (*   | Stratify of Location.t * Comp.order * Name.t * (Name.t option) list  *)
 
 
   type positivity_flag =
@@ -906,26 +906,26 @@ module Sgn = struct
 
     | CompTyp of
       { location: Location.t
-      ; identifier: name
+      ; identifier: Name.t
       ; kind: Comp.kind
       ; positivity_flag: positivity_flag
       } (** Computation-level data type constant declaration *)
 
     | CompCotyp of
       { location: Location.t
-      ; identifier: name
+      ; identifier: Name.t
       ; kind: Comp.kind
       } (** Computation-level codata type constant declaration *)
 
     | CompConst of
       { location: Location.t
-      ; identifier: name
+      ; identifier: Name.t
       ; typ: Comp.typ
       } (** Computation-level type constructor declaration *)
 
     | CompDest of
       { location: Location.t
-      ; identifier: name
+      ; identifier: Name.t
       ; mctx: LF.mctx
       ; observation_typ: Comp.typ
       ; return_typ: Comp.typ
@@ -933,7 +933,7 @@ module Sgn = struct
 
     | CompTypAbbrev of
       { location: Location.t
-      ; identifier: name
+      ; identifier: Name.t
       ; kind: Comp.kind
       ; typ: Comp.typ
       } (** Synonym declaration for computation-level type *)
@@ -955,7 +955,7 @@ module Sgn = struct
 
     | Val of
       { location: Location.t
-      ; identifier: name
+      ; identifier: Name.t
       ; typ: Comp.typ
       ; expression: Comp.exp_chk
       ; expression_value: Comp.value option
@@ -974,7 +974,7 @@ module Sgn = struct
 
     | Query of
       { location: Location.t
-      ; name: name option
+      ; name: Name.t option
       ; mctx: LF.mctx
       ; typ: (LF.typ * Id.offset)
       ; expected_solutions: int option

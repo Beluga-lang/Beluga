@@ -6,15 +6,15 @@
 open Syntax.Int
 
 type kind =
-  | MMV of (Id.name * LF.iterm option ref)
-  | FV of Id.name
+  | MMV of (Name.t * LF.iterm option ref)
+  | FV of Name.t
 
 type error =
   | LeftoverVars
   | LeftoverConstraints
   | CyclicDependency of kind
   | UnknownIdentifier
-  | UnknownMTyp of Id.name
+  | UnknownMTyp of Name.t
 
 type sort =
   | LFTyp of LF.typ
@@ -25,7 +25,7 @@ type marker =
 
 type free_var =
   | FDecl of kind * marker
-  | CtxV of (Id.name * Id.cid_schema * Plicity.t * Inductivity.t)
+  | CtxV of (Name.t * Id.cid_schema * Plicity.t * Inductivity.t)
 
 type fctx = free_var LF.ctx
 
@@ -51,10 +51,10 @@ val exp : Comp.exp_chk -> fctx * Comp.exp_chk
 val thm : Comp.thm -> fctx * Comp.thm
 
 val patobj : Syntax.Loc.t -> LF.mctx -> Comp.gctx -> Comp.pattern
-             -> Id.name list -> Comp.typ
+             -> Name.t list -> Comp.typ
              -> LF.mctx * Comp.gctx * Comp.pattern * Comp.typ
 val pattern_spine: Syntax.Loc.t -> LF.mctx -> Comp.gctx -> Comp.pattern_spine
-                   -> Id.name list -> Comp.typ
+                   -> Name.t list -> Comp.typ
                    -> LF.mctx * Comp.gctx * Comp.pattern_spine * Comp.typ
 
 val closedTyp : (LF.dctx * LF.typ) -> bool

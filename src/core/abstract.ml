@@ -21,15 +21,15 @@ open Debug.Fmt
 
 
 type kind =
-  | MMV of (Id.name * I.iterm option ref)
-  | FV of Id.name
+  | MMV of (Name.t * I.iterm option ref)
+  | FV of Name.t
 
 type error =
   | LeftoverVars
   | LeftoverConstraints
   | CyclicDependency of kind
   | UnknownIdentifier
-  | UnknownMTyp of name
+  | UnknownMTyp of Name.t
 
 let pat_flag = ref false
 
@@ -48,7 +48,7 @@ let _ =
       match err with
       | UnknownMTyp psi ->
          Format.fprintf ppf "Unable to infer type for variable %s"
-           (Id.render_name psi)
+           (Name.render_name psi)
       | LeftoverVars ->
          Format.fprintf ppf "Leftover meta-variables in computation-level expression; provide a type annotation"
       | LeftoverConstraints ->
@@ -136,7 +136,7 @@ type free_var =
   | FDecl of kind * marker
   (* Bound variables. I think we could allow these to be more general than just contexts *)
   (* Would these in general be a kind of FDecl and have a marker? *)
-  | CtxV of (Id.name * cid_schema * Plicity.t * Inductivity.t)
+  | CtxV of (Name.t * cid_schema * Plicity.t * Inductivity.t)
 
 type fctx = free_var I.ctx
 
@@ -184,7 +184,7 @@ let rec fmt_ppr_collection ppf : free_var I.ctx -> unit =
   | I.Dec (cQ, FDecl (FV u, Pure (MetaTyp (mtyp, _, _)))) ->
      fprintf ppf "%a %a : %a@,"
        fmt_ppr_collection cQ
-       Id.print u
+       Name.pp u
        (P.fmt_ppr_cmp_meta_typ I.Empty) mtyp
   | I.Dec (cQ, FDecl (FV _, Impure)) ->
      fprintf ppf "%a, FV _ .@,"
@@ -193,7 +193,7 @@ let rec fmt_ppr_collection ppf : free_var I.ctx -> unit =
   | I.Dec (cQ, FDecl (FV n, Pure (LFTyp tA))) ->
      fprintf ppf "%a, FV %a : (%a)@,"
        fmt_ppr_collection cQ
-       Id.print n
+       Name.pp n
        (P.fmt_ppr_lf_typ I.Empty I.Null P.l0) tA
 
   | I.Dec _ ->
@@ -214,7 +214,7 @@ type occurs = Yes | No
 let eqVar mmV1 mmV2 =
   match (mmV1, mmV2) with
   | (MMV (_, r1), MMV (_, r2)) -> r1 == r2
-  | (FV n1, FV n2) -> Id.equals n1 n2
+  | (FV n1, FV n2) -> Name.equal n1 n2
   | _ -> false
 
 let rec checkOccurrence loc p =
@@ -319,12 +319,12 @@ let rec ctxToCtx =
   | I.Dec (cQ', FDecl (MMV _, Pure (MetaTyp (I.ClTyp (I.MTyp tA, cPsi), _, _)))) ->
      begin match raiseType cPsi tA with
      | (None, tA') ->
-        let x = Id.mk_name (Id.MVarName (Typ.gen_mvar_name tA')) in
+        let x = Name.mk_name (Name.MVarName (Typ.gen_mvar_name tA')) in
         I.Dec (ctxToCtx cQ', I.TypDecl (x, tA'))
      | (Some _, _) -> raise (Error.Violation "ctxToDctx generates LF-dctx with context variable.")
      end
   | I.Dec (cQ', FDecl (FV x, Pure (LFTyp tA))) ->
-     (* let x = Id.mk_name (Id.BVarName (Typ.gen_var_name tA)) in *)
+     (* let x = Name.mk_name (Id.BVarName (Typ.gen_var_name tA)) in *)
      I.Dec (ctxToCtx cQ', I.TypDecl (x, tA))
 
   | I.Dec (cQ', FDecl (_, Impure)) ->
@@ -710,7 +710,7 @@ and collectDctx' loc p cQ ((cvar, offset)) =
      dprintf
        begin fun p ->
        p.fmt "[collectDctx'] a type is required for variable %a"
-         Id.print x
+         Name.pp x
        end;
      failwith "missing type information"
 
@@ -997,7 +997,7 @@ and abstractMVarHead cQ loff =
      dprintf
        begin fun p ->
        p.fmt "[abstractMVarHead] FMV %a --> Offset %d"
-         Id.print u
+         Name.pp u
          x
        end;
      I.MVar (I.Offset x, s')

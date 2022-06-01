@@ -11,9 +11,9 @@
  *)
 
 open Beluga.Syntax.Int
+open Beluga
 
 module Command = Beluga.Syntax.Ext.Harpoon
-module Id = Beluga.Id
 module Total = Beluga.Total
 
 (** Tactics operate on an incomplete proof in a tactic context.
@@ -34,7 +34,7 @@ type intros'_failure =
 (** Introduces the arguments to a function type, with the given names, if any. *)
 val intros' : Theorem.t ->
               string list option -> (* names to use instead of generation *)
-              Id.name list -> (* names to avoid for generation *)
+              Name.t list -> (* names to avoid for generation *)
               Beluga.Syntax.Int.LF.mctx ->
               Comp.gctx ->
               Comp.typ ->
@@ -52,7 +52,7 @@ val split : Command.split_kind -> Comp.exp_syn -> Comp.typ -> Comp.total_dec lis
 (** Performs unboxing of the given synthesizable expression of the given type.
     The tactic will itself verify that the type is a box-type.
  *)
-val unbox : Comp.exp_syn -> Comp.typ -> Id.name -> Comp.unbox_modifier option -> t
+val unbox : Comp.exp_syn -> Comp.typ -> Name.t -> Comp.unbox_modifier option -> t
 
 (** It is verified that the given expression is an application.
     The result of the invocation is assigned to the variable of the
@@ -61,7 +61,7 @@ val unbox : Comp.exp_syn -> Comp.typ -> Id.name -> Comp.unbox_modifier option ->
     Otherwise, with `unboxed, the name is a new variable declaration
     in cD.
  *)
-val invoke : Comp.exp_syn -> Comp.typ -> Id.name -> t
+val invoke : Comp.exp_syn -> Comp.typ -> Name.t -> t
 
 (** Solves the current goal with an implication whose conclusion is
    compatible with the goal type. Subgoals are generated for each

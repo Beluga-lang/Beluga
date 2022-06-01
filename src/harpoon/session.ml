@@ -111,7 +111,7 @@ let get_session_kind c : [`introduced | `loaded] =
 
 let prepare_translated_proofs tes total_decs =
   let trans_name name =
-    Id.(mk_name (SomeString ("_" ^ render_name name ^ "_trans")))
+    Name.(mk_name (SomeString ("_" ^ render_name name ^ "_trans")))
   in
   (* create the totality declarations for the translated
          proofs, and allocate the mutual group with them. *)
@@ -318,7 +318,7 @@ let fmt_ppr_theorem_list ppf c =
   in
   let fmt_ppr_indexed_theorem ppf (i, t) =
     fprintf ppf "%d. %a%a" (i + 1)
-      Id.print (Theorem.get_name t)
+      Name.pp (Theorem.get_name t)
       fmt_ppr_theorem_completeness t
   in
   let fmt_ppr_indexed_theorems =

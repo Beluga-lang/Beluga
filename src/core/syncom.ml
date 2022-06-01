@@ -24,7 +24,7 @@ module Comp = struct
     | ExtendedBy of Location.t * int (* specifies a schema element *)
 
   type case_label =
-    | NamedCase of Location.t * Id.name
+    | NamedCase of Location.t * Name.t
     | BVarCase of Location.t
     | ContextCase of context_case
     | PVarCase

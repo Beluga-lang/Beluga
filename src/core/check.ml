@@ -84,10 +84,10 @@ module Comp = struct
          * tclo (* expected *)
          * tclo (* inferred *)
     | TypMismatch of I.mctx * tclo * tclo
-    | UnsolvableConstraints of Id.name option * string
+    | UnsolvableConstraints of Name.t option * string
     | InvalidRecCall
-    | NotRecursiveSrc of Id.name
-    | NotRecursiveDst of Id.name
+    | NotRecursiveSrc of Name.t
+    | NotRecursiveDst of Name.t
     | MissingTotal of Id.cid_prog
     | NotImpossible of I.mctx * gctx * typ * exp_syn
     | InvalidHypotheses
@@ -166,11 +166,11 @@ module Comp = struct
 
     | NotRecursiveSrc name ->
        fprintf ppf "A recursive call is forbidden in nonrecursive total function %a."
-         Id.print name
+         Name.pp name
 
     | NotRecursiveDst name ->
        fprintf ppf "A recursive call to nonrecursive function %a is forbidden."
-         Id.print name
+         Name.pp name
 
     | IllegalParamTyp (cD, cPsi, tA) ->
        fprintf ppf
@@ -180,7 +180,7 @@ module Comp = struct
        let fname =
          match f with
          | None -> ""
-         | Some g -> " " ^ (Id.render_name g)
+         | Some g -> " " ^ (Name.render_name g)
        in
        let msg1 =
          "Unification in type reconstruction encountered constraints \
@@ -800,7 +800,7 @@ module Comp = struct
        checkClTyp loc cD cPsi tp
 
   let checkCDecl cD (I.Decl (x, ctyp, _, _)) =
-    checkCLFTyp (Id.loc_of_name x) cD ctyp
+    checkCLFTyp (Name.loc_of_name x) cD ctyp
 
   let rec checkKind cD =
     function
@@ -929,7 +929,7 @@ module Comp = struct
         ("Box " ^ Format.stringify (P.fmt_ppr_cmp_meta_obj cD P.l0) cM)
     with
     | Whnf.FreeMVar (I.FMVar (u, _)) ->
-       Error.violation ("Free meta-variable " ^ Id.render_name u)
+       Error.violation ("Free meta-variable " ^ Name.render_name u)
 
   let rec checkW mcid cD (cG, (cIH : ihctx)) total_decs e ttau =
     (** If cD; cG; cIH |- i ==> tau_sc then
@@ -1319,7 +1319,7 @@ module Comp = struct
        dprintf
          begin fun p ->
          p.fmt "[synPattern] PatFVar %a impossible"
-           Id.print x
+           Name.pp x
          end;
        Error.violation "[synPattern] PatFVar impossible"
     | pat ->
@@ -1534,7 +1534,7 @@ module Comp = struct
        unroll' cD' cG tau' |> Pair.map_right ((+) 1)
     | TypArr (_, t1, t2) ->
        (* TODO use contextual name generation *)
-       let name = Id.mk_name Id.NoName in
+       let name = Name.mk_name Name.NoName in
        let cG' = I.(Dec (cG, CTypDecl (name, t1, false))) in
        unroll' cD cG' t2
     | _ -> (cD, cG, tau), 0
@@ -1621,7 +1621,7 @@ module Comp = struct
          p.fmt "[check] [command] @[<v>@[<hv 2>by @[%a@] as@ %a@]\
                 @,tau' = @[%a@]@]"
            P.(fmt_ppr_cmp_exp_syn cD cG l0) i
-           Id.print name
+           Name.pp name
            P.(fmt_ppr_cmp_typ cD l0) (Whnf.cnormCTyp (tau', t))
          end;
        let (cU, _) =

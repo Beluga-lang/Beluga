@@ -27,7 +27,7 @@ module LF = struct
     function
     | TypDecl (x, t) ->
        fprintf ppf "TypDecl(@[<hv>%a,@ %a@])"
-         Id.print x
+         Name.pp x
          show_type t
 
   and show_cltyp ppf =
@@ -58,18 +58,18 @@ module LF = struct
     function
     | Decl (x, d, plicity) ->
        fprintf ppf "Decl(@[<hv>%a,@ %a,@ %a@])"
-         Id.print x
+         Name.pp x
          show_loc_ctyp d
          show_plicity plicity
     | DeclOpt x ->
        fprintf ppf "DeclOpt(%a)"
-         Id.print x
+         Name.pp x
 
   and show_type ppf =
     function
     | Atom (_, x, sp) ->
        fprintf ppf "Atom(@[<hv>%a,@ %a@])"
-         Id.print x
+         Name.pp x
          show_spine sp
     | ArrTyp (_, t1, t2) ->
        fprintf ppf "ArrTyp(@[<hv>%a,@ %a@])"
@@ -93,7 +93,7 @@ module LF = struct
     function
     | Lam (_, x, m) ->
        fprintf ppf "Lam(@[<hv>%a,@ %a@])"
-         Id.print x
+         Name.pp x
          show_normal m
     | Root (_, h, s) ->
        fprintf ppf "Root(@[<hv>%a,@ %a@])"
@@ -124,12 +124,12 @@ module LF = struct
     function
     | Name (_, name, s) ->
        fprintf ppf "Name(@[<hv>%a,@ %a@])"
-         Id.print name
+         Name.pp name
          show_sub_opt s
     | Hole _ -> fprintf ppf "Hole"
     | PVar (_, name, s) ->
        fprintf ppf "PVar(@[<hv>#%a,@ %a@])"
-         Id.print name
+         Name.pp name
          show_sub_opt s
     | Proj (_, h, p) ->
        fprintf ppf "Proj(@[<hv>%a,@ %a@])"
@@ -139,7 +139,7 @@ module LF = struct
   and show_proj ppf =
     function
     | ByPos k -> fprintf ppf ".%d" k
-    | ByName name -> fprintf ppf ".%a" Id.print name
+    | ByName name -> fprintf ppf ".%a" Name.pp name
 
   and show_spine ppf sp =
     let ms = list_of_spine sp |> List.rev in
@@ -155,7 +155,7 @@ module LF = struct
     | Id _ -> fprintf ppf ".."
     | SVar (_, name, s) ->
        fprintf ppf "SVar(@[<hv>#%a,@ %a@])"
-         Id.print name
+         Name.pp name
          show_sub_opt s
 
   and show_sub_opt ppf =

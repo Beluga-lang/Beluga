@@ -165,7 +165,7 @@ let get_entry' t =
 let get_cid t = t.cid
 let get_entry t = get_entry' t |> Pair.snd
 let get_name t = (get_entry t).CompS.Entry.name
-let has_name_of t name = equals (get_name t) name
+let has_name_of t name = Name.equal (get_name t) name
 let has_cid_of t cid = t.cid = cid
 
 let get_statement t = t.initial_state.Comp.goal
@@ -174,7 +174,7 @@ let serialize ppf (t : t) =
   let name = CompS.name t.cid in
   dprintf begin fun p ->
     p.fmt "[theorem] [serialize] begin serialization of theorem '%a'"
-      Id.print name
+      Name.pp name
     end;
   let s = t.initial_state in
   let goal = Whnf.cnormCTyp s.Comp.goal in
@@ -198,7 +198,7 @@ let serialize ppf (t : t) =
   Printer.with_implicits false
     begin fun _ ->
     Format.fprintf ppf "@[<v>proof %a : %a =@,%a@,%a@,@]"
-      Id.print name
+      Name.pp name
       Comp.(P.fmt_ppr_cmp_typ s.context.cD P.l0) goal
       fmt_ppr_order order
       Comp.(P.fmt_ppr_cmp_proof s.context.cD s.context.cG) (Comp.incomplete_proof Loc.ghost s)
@@ -327,7 +327,7 @@ let register name tau p mutual_group k : cid_prog =
 let configure cid ppf hooks initial_state gs =
   dprintf begin fun p ->
     p.fmt "[theorem] configuring theorem %a"
-      Id.print (CompS.name cid)
+      Name.pp (CompS.name cid)
     end;
   let t =
     { cid

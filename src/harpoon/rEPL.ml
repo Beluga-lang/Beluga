@@ -128,7 +128,7 @@ let rec loop (s : HarpoonState.t) : unit =
   | Either.Right (c, t, g) ->
     (* Show the proof state and the prompt *)
     printf "@,@[<v>@,Theorem: %a@,%a@,@]@?"
-      Id.print (Theorem.get_name t)
+      Name.pp (Theorem.get_name t)
       P.fmt_ppr_cmp_proof_state g;
     (*
       printf "@,@[<v>@,%a@,There are %d IHs.@,@]@?"

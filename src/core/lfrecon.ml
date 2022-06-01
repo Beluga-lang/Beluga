@@ -3,7 +3,6 @@ open Support
 open Store
 open Store.Cid
 open Syntax
-open Id
 
 (* module Unify = Unify.EmptyTrail  *)
 module Unify = Unify.StdTrail
@@ -28,8 +27,8 @@ type typeVariant =
   | VariantSigma
 
 type hint =
-  [ `accidental_free_variable of name
-  | `maybe_eta_expand of name
+  [ `accidental_free_variable of Name.t
+  | `maybe_eta_expand of Name.t
   ]
 
 type error =
@@ -41,18 +40,18 @@ type error =
   | TypMismatchElab of Int.LF.mctx * Int.LF.dctx * Int.LF.tclo * Int.LF.tclo
   | IllTypedElab of Int.LF.mctx * Int.LF.dctx * Int.LF.tclo * typeVariant
   | IllTypedSub of Int.LF.mctx * Int.LF.dctx * Apx.LF.sub option * Int.LF.dctx
-  | LeftoverConstraints of Id.name
+  | LeftoverConstraints of Name.t
   | PruningFailed
   | CompTypAnn
   | SynthesizableLFHole of string option
   | CompTypAnnSub
   | NotPatternSpine
-  | MissingSchemaForCtxVar of Id.name
+  | MissingSchemaForCtxVar of Name.t
   | ProjNotValid of Int.LF.mctx * Int.LF.dctx * int * Int.LF.tclo
-  | ProjNotFound of Int.LF.mctx * Int.LF.dctx * name * Int.LF.tclo
+  | ProjNotFound of Int.LF.mctx * Int.LF.dctx * Name.t * Int.LF.tclo
   | HolesFunction
   | ParamFun
-  | CtxVarSchema of Id.name
+  | CtxVarSchema of Name.t
   | SigmaTypImpos of Int.LF.mctx * Int.LF.dctx * Int.LF.tclo
   | SpineLengthMisMatch
   | IllTypedSubVar of Int.LF.mctx * Int.LF.dctx * Int.LF.dctx
@@ -61,8 +60,8 @@ type error =
   | TermWhenVar of Int.LF.mctx * Int.LF.dctx * Apx.LF.normal
   | SubWhenRen of Int.LF.mctx * Int.LF.dctx * Apx.LF.sub
   | HOMVarNotSupported
-  | SubstVarConflict of Id.name
-  | UnboundName of Id.name
+  | SubstVarConflict of Name.t
+  | UnboundName of Name.t
   | UnboundIdSub
   | InvalidProjection of Int.LF.mctx * Int.LF.dctx * Int.LF.typ * Apx.LF.proj
 
@@ -80,7 +79,7 @@ let string_of_typeVariant =
 let string_of_proj =
   function
   | Apx.LF.ByPos k -> string_of_int k
-  | Apx.LF.ByName n -> Id.render_name n
+  | Apx.LF.ByName n -> Name.render_name n
 
 let print_error ppf =
   let open Format in
@@ -113,7 +112,7 @@ let print_error ppf =
   | CtxVarSchema psi ->
      fprintf ppf
        "Reconstruction cannot infer the schema for context %s."
-       (Id.render_name psi)
+       (Name.render_name psi)
   | SigmaTypImpos (cD, cPsi, sA) ->
      fprintf ppf
        "Ill-typed expression. @ @ The head of a spine has type %a. "
@@ -133,7 +132,7 @@ let print_error ppf =
   | ProjNotFound (cD, cPsi, k, sA) ->
      fprintf ppf
        "There is no projection named %s in type %a."
-       (string_of_name k)
+       (Name.string_of_name k)
        (P.fmt_ppr_lf_typ cD cPsi P.l0) (Whnf.normTyp sA)
 
   | TypMismatchElab (cD, cPsi, sA1, sA2) ->
@@ -165,7 +164,7 @@ let print_error ppf =
   | LeftoverConstraints x ->
      fprintf ppf
        "Cannot reconstruct a type for free variable %s (leftover constraints)."
-       (Id.render_name x)
+       (Name.render_name x)
 
   | IdCtxsub ->
      fprintf ppf
@@ -201,7 +200,7 @@ let print_error ppf =
   | MissingSchemaForCtxVar psi ->
      fprintf ppf
        "Missing schema for context variable %s."
-       (Id.render_name psi)
+       (Name.render_name psi)
   | IncompatibleSchemaForCtxVar (_cD, _psi, w, w') ->
      (* (Pretty.fmt_ppr_lf_dctx cD 0) (Int.LF.CtxVar psi) *)
      Error.report_mismatch ppf
@@ -218,9 +217,9 @@ let print_error ppf =
   | SubstVarConflict x ->
      fprintf ppf
        "The variable %s was expected to be a substitution variable.\n\nPlease note that $%s and %s both denote the same variable and so the use of both concurrently to denote different things is disallowed."
-       (Id.render_name x) (Id.render_name x) (Id.render_name x)
+       (Name.render_name x) (Name.render_name x) (Name.render_name x)
   | UnboundName name ->
-     fprintf ppf "Unbound identifier %a." Id.print name
+     fprintf ppf "Unbound identifier %a." Name.pp name
   | UnboundIdSub ->
      fprintf ppf "Identity substitution used without context variable."
 
@@ -229,10 +228,10 @@ let print_hint ppf : hint -> unit =
   function
   | `accidental_free_variable x ->
      fprintf ppf "The variable %a is free; is this intentional?"
-       Id.print x
+       Name.pp x
   | `maybe_eta_expand x ->
      fprintf ppf "Maybe you want to eta-expand %a?"
-       Id.print x
+       Name.pp x
 
 let _ =
   let open Format in
@@ -718,7 +717,7 @@ let rec sigmifyDctx cPhi s =
      let cPhi1, tA, vars_proj, k = extractBlock cPhi tM k' in (* where tA is some Sigma-type *)
      let cPhi', rho = sigmifyDctx cPhi1 s in
      let rho' = extend rho vars_proj in
-     ( Int.LF.DDec (cPhi', Int.LF.TypDecl (Id.mk_name None, tA))
+     ( Int.LF.DDec (cPhi', Int.LF.TypDecl (Name.mk_name None, tA))
      , rho'
      , k' + k
      )
@@ -931,7 +930,7 @@ and elTypRec recT cD cPsi =
      dprintf
        begin fun p ->
        p.fmt "[elTypRec] %a : %a"
-         Id.print name
+         Name.pp name
          (P.fmt_ppr_lf_typ cD cPsi P.l0) tA
        end;
      let cPsi' = Int.LF.DDec (cPsi, Int.LF.TypDecl (name, tA)) in
@@ -1205,7 +1204,7 @@ and elTerm' recT cD cPsi r sP =
          dprintf
            begin fun p ->
            p.fmt "[elTerm'] @[<v>FMV %a of type %a[%a]@,in cD_d = %a@,and cD = %a@]"
-             Id.print u
+             Name.pp u
              (P.fmt_ppr_lf_typ cD_d cPhi P.l0) tQ
              (P.fmt_ppr_lf_dctx cD_d P.l0) cPhi
              (P.fmt_ppr_lf_mctx P.l0) cD_d
@@ -1243,7 +1242,7 @@ and elTerm' recT cD cPsi r sP =
          dprintf
            begin fun p ->
            p.fmt "[elTerm] @[<v>Normalized retrieved type of FMV %a@,of type %a[%a]@]"
-             Id.print u
+             Name.pp u
              (P.fmt_ppr_lf_typ cD cPhi' P.l0) tQ'
              (P.fmt_ppr_lf_dctx cD P.l0) cPhi'
            end;
@@ -1282,7 +1281,7 @@ and elTerm' recT cD cPsi r sP =
              dprintf
                begin fun p ->
                p.fmt "[elTerm] synthesize domain for meta-variable %a in context %a"
-                 Id.print u
+                 Name.pp u
                  (P.fmt_ppr_lf_dctx cD P.l0) cPsi
                end;
              let (cPhi, s'') = synDomOpt cD loc cPsi s in
@@ -1333,7 +1332,7 @@ and elTerm' recT cD cPsi r sP =
              dprintf
                begin fun p ->
                p.fmt "[elTerm'] @[<v>Add FMVar %a@ of type %a |- %a@]"
-                 Id.print u
+                 Name.pp u
                  (P.fmt_ppr_lf_dctx cD P.l0) cPhi
                  (P.fmt_ppr_lf_typ cD cPhi P.l0) tP
                end;
@@ -1342,7 +1341,7 @@ and elTerm' recT cD cPsi r sP =
              (*The depend paramater here affects both mlam vars and case vars*)
              Int.LF.Root (loc, Int.LF.FMVar (u, s''), Int.LF.Nil, Plicity.explicit)
           | _ when isProjPatSub s ->
-             dprint (fun () -> "Synthesize domain for meta-variable " ^ string_of_name u);
+             dprint (fun () -> "Synthesize domain for meta-variable " ^ Name.string_of_name u);
              dprint (fun () -> "isProjPatSub ... ");
              let (flat_cPsi, conv_list) = ConvSigma.flattenDCtx cD cPsi in
              dprintf
@@ -1401,7 +1400,7 @@ and elTerm' recT cD cPsi r sP =
              dprintf
                begin fun p ->
                p.fmt "[synDom] Type of mvar %a : %a[%a]"
-                 Id.print u
+                 Name.pp u
                  (P.fmt_ppr_lf_typ cD cPhi P.l0) tP
                  (P.fmt_ppr_lf_dctx cD P.l0) cPhi
                end;
@@ -1431,7 +1430,7 @@ and elTerm' recT cD cPsi r sP =
               *   let rho = elSub loc recT cD cPhi' rho' cPhi in
               *   let s0 = elSub loc recT cD cPsi s cPhi' in
               *   let tP' = Whnf.normTyp (tP, rho) in
-              *   let _ = dprint (fun () -> "Added FMVar " ^ Id.render_name u ^
+              *   let _ = dprint (fun () -> "Added FMVar " ^ Name.render_name u ^
               *                               " of type " ^ P.typToString cD cPhi' (tP', S.LF.id) ^
               *                                 "[" ^ P.dctxToString cD cPhi' ^ "]") in
               *   FCVar.add u (cD, Int.LF.MDecl (u, Whnf.norm (tP, rho), cPhi'));
@@ -1533,7 +1532,7 @@ and elTerm' recT cD cPsi r sP =
          dprint
            begin fun () ->
            "[Reconstruct Projection Parameter] #"
-           ^ string_of_name p
+           ^ Name.string_of_name p
            ^ "."
            ^ string_of_proj proj
            end;
@@ -1579,7 +1578,7 @@ and elTerm' recT cD cPsi r sP =
           dprint
             begin fun () ->
             "[Reconstruct Projection Parameter] #"
-            ^ string_of_name p
+            ^ Name.string_of_name p
             ^ "."
             ^ string_of_proj proj
             ^ " NOT FOUND"
@@ -2819,7 +2818,7 @@ and elSpineSynth recT cD cPsi spine s' sP =
      dprint (fun () -> "elSpineSynth done \n");
      let tB' =
        Int.LF.PiTyp
-         ( ( Int.LF.TypDecl (Id.mk_name (Id.BVarName (Typ.gen_var_name tA')), tA')
+         ( ( Int.LF.TypDecl (Name.mk_name (Name.BVarName (Typ.gen_var_name tA')), tA')
            , Plicity.implicit
            )
          , tB
@@ -2841,7 +2840,7 @@ let rec elDCtx recT cD =
   function
   | Apx.LF.CtxHole ->
      dprint (fun () -> "Encountered _ (underscore) for context...");
-     Int.LF.CtxVar (Whnf.newCVar (Some (Id.mk_name (Id.SomeString "j"))) cD None Plicity.implicit Inductivity.not_inductive)
+     Int.LF.CtxVar (Whnf.newCVar (Some (Name.mk_name (Name.SomeString "j"))) cD None Plicity.implicit Inductivity.not_inductive)
   | Apx.LF.Null -> Int.LF.Null
 
   | Apx.LF.CtxVar c_var ->
@@ -2864,7 +2863,7 @@ let rec elDCtx recT cD =
      dprintf
        begin fun p ->
        p.fmt "[elDCtx] %a : %a"
-         Id.print x
+         Name.pp x
          (P.fmt_ppr_lf_typ cD cPsi P.l0) tA
        end;
      Int.LF.DDec (cPsi, Int.LF.TypDecl (x, tA))

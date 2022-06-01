@@ -81,7 +81,7 @@ let types =
           (pp_print_list ~pp_sep:pp_print_cut
              (fun ppf x ->
                fprintf ppf "%a : %a"
-                 Id.print x.Typ.Entry.name
+                 Name.pp x.Typ.Entry.name
                  (P.fmt_ppr_lf_kind dctx P.l0) x.Typ.Entry.kind))
           entrylist
         end
@@ -311,7 +311,7 @@ let constructors =
   ; run =
       command_with_arguments 1
         begin fun ppf arglist ->
-        let typ_name = Id.(mk_name (SomeString (List.hd arglist))) in
+        let typ_name = Name.(mk_name (SomeString (List.hd arglist))) in
         let entry =
           Typ.index_of_name typ_name |> Typ.get
         in
@@ -322,7 +322,7 @@ let constructors =
           (pp_print_list ~pp_sep: pp_print_cut
              (fun ppf x ->
                fprintf ppf "%a : [%d] %a"
-                 Id.print x.Term.Entry.name
+                 Name.pp x.Term.Entry.name
                  x.Term.Entry.implicit_arguments
                  (P.fmt_ppr_lf_typ LF.Empty LF.Null P.l0) x.Term.Entry.typ))
           termlist
@@ -391,7 +391,7 @@ let compconst =
   ; run =
       command_with_arguments 1
         begin fun ppf [arg] ->
-        let name = Id.(mk_name (SomeString arg)) in
+        let name = Name.(mk_name (SomeString arg)) in
         try
           let entry =
             CompTyp.index_of_name name |> CompTyp.get
@@ -403,7 +403,7 @@ let compconst =
             (pp_print_list ~pp_sep: pp_print_cut
                (fun ppf x ->
                  fprintf ppf "%s : [%d] %a"
-                   (Id.string_of_name x.CompConst.Entry.name)
+                   (Name.string_of_name x.CompConst.Entry.name)
                    x.CompConst.Entry.implicit_arguments
                    (P.fmt_ppr_cmp_typ LF.Empty P.l0) x.CompConst.Entry.typ))
             termlist;
@@ -419,12 +419,12 @@ let signature =
       command_with_arguments 1
         begin fun ppf [arg] ->
         try
-          let name = Id.(mk_name (SomeString arg)) in
+          let name = Name.(mk_name (SomeString arg)) in
           let entry =
             Store.Cid.Comp.index_of_name name |> Store.Cid.Comp.get
           in
           fprintf ppf "%a : %a;@."
-            Id.print entry.Store.Cid.Comp.Entry.name
+            Name.pp entry.Store.Cid.Comp.Entry.name
             (P.fmt_ppr_cmp_typ LF.Empty P.l0) entry.Store.Cid.Comp.Entry.typ
         with
         | Not_found -> fprintf ppf "- The function does not exist;\n@?"
@@ -438,7 +438,7 @@ let printfun =
       command_with_arguments 1
         begin fun ppf [arg] ->
         try
-          let n = Id.(mk_name (SomeString arg)) in
+          let n = Name.(mk_name (SomeString arg)) in
           let entry = Store.Cid.Comp.(index_of_name n |> get) in
           match Store.Cid.Comp.Entry.(entry.prog) with
           | Some (Synint.Comp.ThmValue (thm_name, thm_body, _ms, _env)) ->

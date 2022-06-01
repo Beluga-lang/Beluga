@@ -10,8 +10,8 @@ module LF : sig
   open Int.LF
 
   type error =
-    | CtxVarMisCheck of mctx * dctx * tclo * Id.name * schema
-    | CtxVarMismatch of mctx * ctx_var * Id.name * schema
+    | CtxVarMisCheck of mctx * dctx * tclo * Name.t * schema
+    | CtxVarMismatch of mctx * ctx_var * Name.t * schema
     | CtxVarDiffer of mctx * ctx_var * ctx_var
     | CheckError of mctx * dctx * nclo * tclo
     | TupleArity of mctx * dctx * nclo * trec_clo
@@ -20,7 +20,7 @@ module LF : sig
     | TypMismatch of mctx * dctx * nclo * tclo * tclo
     | IllTypedSub of mctx * dctx * sub * dctx * normal option
     | SpineIllTyped of int * int
-    | LeftoverFV of Id.name
+    | LeftoverFV of Name.t
     | ParamVarInst of mctx * dctx * tclo
     | CtxHatMismatch
       of mctx
@@ -44,7 +44,7 @@ module LF : sig
   val checkDCtx : mctx -> dctx -> unit
 
   val checkSchemaWf : schema -> unit
-  val checkSchema : Location.t -> mctx -> dctx -> Id.name -> schema -> unit
+  val checkSchema : Location.t -> mctx -> dctx -> Name.t -> schema -> unit
   val subsumes : mctx -> ctx_var -> ctx_var -> bool
 
   (** Checks that a type exists within a given schema.
@@ -55,7 +55,7 @@ module LF : sig
       The input name will be a part of the error message, and should
       be the declared name of the schema.
    *)
-  val checkTypeAgainstSchema: Location.t -> mctx -> dctx -> typ -> Id.name -> sch_elem list
+  val checkTypeAgainstSchema: Location.t -> mctx -> dctx -> typ -> Name.t -> sch_elem list
                               -> typ_rec * sub
   val instanceOfSchElem : mctx -> dctx -> tclo -> sch_elem -> (typ_rec * sub)
   val instanceOfSchElemProj : mctx -> dctx -> tclo -> (head * int) -> sch_elem -> (typ_rec * sub)
@@ -92,10 +92,10 @@ module Comp : sig
     | SBoxMismatch of LF.mctx * gctx * LF.dctx * LF.dctx
     | SynMismatch of LF.mctx * tclo (* expected *) * tclo (* inferred *)
     | TypMismatch of LF.mctx * tclo * tclo
-    | UnsolvableConstraints of Id.name option * string
+    | UnsolvableConstraints of Name.t option * string
     | InvalidRecCall
-    | NotRecursiveSrc of Id.name
-    | NotRecursiveDst of Id.name
+    | NotRecursiveSrc of Name.t
+    | NotRecursiveDst of Name.t
     | MissingTotal of Id.cid_prog
     | NotImpossible of LF.mctx * gctx * typ * exp_syn
     | InvalidHypotheses

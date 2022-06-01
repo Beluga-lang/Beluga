@@ -97,10 +97,10 @@ let etaContract =
 
 let newMTypName =
   function
-  | ClTyp (MTyp tA, _) -> Id.MVarName (T.gen_mvar_name tA)
-  | ClTyp (PTyp tA, _) -> Id.PVarName (T.gen_var_name tA)
-  | ClTyp (STyp _, _) -> Id.SVarName None
-  | CTyp _ -> Id.NoName
+  | ClTyp (MTyp tA, _) -> Name.MVarName (T.gen_mvar_name tA)
+  | ClTyp (PTyp tA, _) -> Name.PVarName (T.gen_var_name tA)
+  | ClTyp (STyp _, _) -> Name.SVarName None
+  | CTyp _ -> Name.NoName
 
 let next_mmvar_id =
   let c = ref 0 in
@@ -112,9 +112,9 @@ let newMMVar' n (cD, mtyp) plicity inductivity =
   let name =
     match n with
     | None ->
-      Id.mk_name (newMTypName mtyp)
+      Name.mk_name (newMTypName mtyp)
     | Some n ->
-       Id.inc n
+       Name.inc n
   in
   { name
   ; instantiation = ref None
@@ -148,7 +148,7 @@ let rec lowerMVar' cPsi sA' plicity inductivity =
          (tA', LF.dot1 s')
          plicity inductivity
      in
-     (u', Lam (Syntax.Loc.ghost, Id.mk_name Id.NoName, tM))
+     (u', Lam (Syntax.Loc.ghost, Name.mk_name Name.NoName, tM))
 
   | (TClo (tA, s), s') ->
      lowerMVar' cPsi (tA, LF.comp s s') plicity inductivity
@@ -205,7 +205,7 @@ and lowerMMVar' cD cPsi sA' dep =
   match sA' with
   | (PiTyp ((decl, _), tA'), s') ->
      let (u', tM) = lowerMMVar' cD (DDec (cPsi, LF.decSub decl s')) (tA', LF.dot1 s') dep in
-     (u', Lam (Syntax.Loc.ghost, Id.mk_name Id.NoName, tM))
+     (u', Lam (Syntax.Loc.ghost, Name.mk_name Name.NoName, tM))
 
   | (TClo (tA, s), s') ->
      lowerMMVar' cD cPsi (tA, LF.comp s s') dep
@@ -772,7 +772,7 @@ and cnormSub (s, t) =
         dprintf
           begin fun p ->
           p.fmt "[cnormSub] @[<v>MSVar - MSInst for @[%s@]@]"
-            (Id.render_name mmvar.name)
+            (Name.render_name mmvar.name)
           end;
         let s0 = cnormSub (LF.comp (normSub s) (normSub s'), mt) in
         let s0' = LF.comp (Shift n) s0 in
@@ -1264,11 +1264,11 @@ and convHead (head1, s1) (head2, s2) =
      && convSub (LF.comp s' s1) (LF.comp s'' s2)
 
   | (FPVar (p, s'), FPVar (q, s'')) ->
-     Id.equals p q
+     Name.equal p q
      && convSub (LF.comp s' s1) (LF.comp s'' s2)
 
   | (FMVar (u, s'), FMVar (w, s'')) ->
-     Id.equals u w
+     Name.equal u w
      && convSub (LF.comp s' s1) (LF.comp s'' s2)
 
   | (Proj (BVar k1, i), Proj (BVar k2, j)) ->
@@ -1279,7 +1279,7 @@ and convHead (head1, s1) (head2, s2) =
      && convSub (LF.comp s' s1) (LF.comp s'' s2)
   (* additional case: p[x] = x ? -bp*)
 
-  | (FVar x, FVar y) -> Id.equals x y
+  | (FVar x, FVar y) -> Name.equal x y
   | _ ->
      dprint (fun () -> "[convHead] falls through ");
      false
@@ -1306,7 +1306,7 @@ and convSub subst1 subst2 =
      && convSub sigma1 sigma2
 
   | FSVar (k1, (u1, s1)), FSVar (k2, (u2, s2)) ->
-     k1 = k2 && Id.equals u1 u2 && convSub s1 s2
+     k1 = k2 && Name.equal u1 u2 && convSub s1 s2
 
   | (Dot (f, s), Dot (f', s')) ->
      convFront f f' && convSub s s'
@@ -1418,7 +1418,7 @@ and convTypRec sArec sBrec =
 
 and convCtxVar psi psi' =
   match (psi, psi') with
-  | (CtxName n1, CtxName n2) -> Id.equals n1 n2
+  | (CtxName n1, CtxName n2) -> Name.equal n1 n2
   | (CtxOffset k1, CtxOffset k2) -> k1 = k2
   | _ -> false
 
@@ -1578,7 +1578,7 @@ let mctxMVarPos cD u =
   let rec lookup cD k =
     match cD with
     | Dec (cD, Decl (v, mtyp, _, _)) ->
-       if Id.equals v u
+       if Name.equal v u
        then (k, cnormMTyp (mtyp, MShift k))
        else lookup cD (k + 1)
     | Dec (cD, _) -> lookup cD (k + 1)
@@ -2029,12 +2029,12 @@ and convSchElem (SchElem (cPsi, trec)) (SchElem (cPsi', trec')) =
 let convCTypDecl d1 d2 =
   match (d1, d2) with
   | (Decl (x1, cT1, plicity1, inductivity1), Decl (x2, cT2, plicity2, inductivity2)) ->
-     Id.equals x1 x2
+     Name.equal x1 x2
      && Plicity.equal plicity1 plicity2
      && Inductivity.equal inductivity1 inductivity2
      && convMTyp cT1 cT2
   | (DeclOpt (x1, _), DeclOpt (x2, _)) ->
-     Id.equals x1 x2
+     Name.equal x1 x2
 
 (** Checks if two declarations are convertible.
       If they're coming from a metacontext you should shift them so
@@ -2043,9 +2043,9 @@ let convCTypDecl d1 d2 =
 let convCompCTypDecl d1 d2 =
   let open Comp in
   match (d1, d2) with
-  | (CTypDeclOpt x1, CTypDeclOpt x2) -> Id.equals x1 x2
+  | (CTypDeclOpt x1, CTypDeclOpt x2) -> Name.equal x1 x2
   | (CTypDecl (x1, tau1, w1), CTypDecl (x2, tau2, w2)) ->
-     Id.equals x1 x2 && Stdlib.(=) w1 w2
+     Name.equal x1 x2 && Stdlib.(=) w1 w2
      && convCTyp (tau1, m_id) (tau2, m_id)
 
 let mctx_to_list_shifted x =
@@ -2068,12 +2068,12 @@ let rec etaExpandMV cPsi sA n s' plicity inductivity =
 and etaExpandMV' cPsi sA n s' plicity inductivity =
   match sA with
   | (Atom (loc, _, _) as tP, s) ->
-     let u = newMVar (Some (Id.inc n)) (cPsi, tclo tP s) plicity inductivity in
+     let u = newMVar (Some (Name.inc n)) (cPsi, tclo tP s) plicity inductivity in
      Root (loc, MVar (u, s'), Nil, plicity)
 
   | (PiTyp ((TypDecl (x, _) as decl, _), tB), s) ->
      Lam
-       ( Id.loc_of_name x
+       ( Name.loc_of_name x
        , x
        , etaExpandMV (DDec (cPsi, LF.decSub decl s)) (tB, LF.dot1 s) n (LF.dot1 s') plicity inductivity
        )
@@ -2093,7 +2093,7 @@ let rec etaExpandMMV loc cD cPsi sA n s' plicity inductivity =
 and etaExpandMMV' loc cD cPsi sA n s' plicity inductivity =
   match sA with
   | (Atom _ as tP, s) ->
-     let u = newMMVar (Some (Id.inc n)) (cD, cPsi, tclo tP s) plicity inductivity in
+     let u = newMMVar (Some (Name.inc n)) (cD, cPsi, tclo tP s) plicity inductivity in
      Root (loc, MMVar ((u, m_id), s'), Nil, plicity)
 
   | (PiTyp ((TypDecl (x, _) as decl, _), tB), s) ->

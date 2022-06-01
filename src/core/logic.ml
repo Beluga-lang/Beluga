@@ -336,7 +336,7 @@ module Convert = struct
     | Comp.TypArr (loc, tau1, tau2) ->
        let cr1 = comptypToCompRes tau1 in
        let cg2 = comptypToCompGoal tau2 in
-       let name = Id.mk_name Id.NoName in
+       let name = Name.mk_name Name.NoName in
        let typ_dec = Comp.CTypDecl (name, tau1 , true) in
        Implies ((cr1, typ_dec), cg2)
     | Comp.TypBase (_, comp_cid, s) ->
@@ -593,14 +593,14 @@ module Index = struct
 
   let compTTypes = Hashtbl.create 0     (* comp theorem Hashtbl.t      *)
 
-  type inst = (Id.name *  LF.normal)    (* I ::= (x, Y[s]) where Y is an MVar        *)
-  type minst = (Id.name * LF.mfront)    (* I ::= (x, mf)   where mf is (Psihat.term) *)
+  type inst = (Name.t *  LF.normal)    (* I ::= (x, Y[s]) where Y is an MVar        *)
+  type minst = (Name.t * LF.mfront)    (* I ::= (x, mf)   where mf is (Psihat.term) *)
                                         (* where mf contains an MMVar *)
   type sgnQuery =
     { query : query                   (* Query ::= (g, s)            *)
     ; typ : LF.typ                    (* Query as LF.typ.            *)
     ; skinnyTyp : LF.typ              (* Query stripped of E-vars.   *)
-    ; optName : Id.name option        (* Opt. name of proof term.    *)
+    ; optName : Name.t option        (* Opt. name of proof term.    *)
     ; cD : LF.mctx                    (* Meta context.               *)
     ; expected : bound                (* Expected no. of solutions.  *)
     ; tries : bound                   (* No. of tries to find soln.  *)
@@ -702,7 +702,7 @@ module Index = struct
     (cidCompTerm, Convert.comptypToCClause tau)
 
 
-  (* termName c = Id.name
+  (* termName c = Name.t
      Get the string representation of term constant c.
   *)
   let termName cidTerm =
@@ -921,10 +921,10 @@ module Printer = struct
     match tD with
     | LF.TypDeclOpt x ->
        fprintf ppf "%a : _"
-         Id.print x
+         Name.pp x
     | LF.TypDecl (x, tA) ->
        fprintf ppf "%a : %a"
-         Id.print x
+         Name.pp x
          (fmt_ppr_typ cD cPsi) (tA, s)
 
   let fmt_ppr_lf_ctyp_decl cD ppf ctdec =
@@ -1040,21 +1040,21 @@ module Printer = struct
   *)
   let fmt_ppr_sgn_clause ppf (cidTerm, sCl) =
     fprintf ppf "@[<v 2>@[%a@] : @[%a@]@,%a@]"
-      Id.print (termName cidTerm)
+      Name.pp (termName cidTerm)
       (fmt_ppr_typ LF.Empty sCl.eVars) (sCl.tHead, S.id)
       (fmt_ppr_subgoals LF.Empty sCl.eVars) (sCl.subGoals, S.id)
 
   (** Prints a Computation Type clause *)
   let fmt_ppr_sgn_cclause ppf (cidTerm, sCCl) =
     fprintf ppf "@[<v 2>@[%a@] : @[%a@]@,%a@]"
-      Id.print (compName cidTerm)
+      Name.pp (compName cidTerm)
       (fmt_ppr_cmp_typ sCCl.cMVars) (sCCl.cHead)
       (fmt_ppr_csubgoals sCCl.cMVars) (sCCl.cSubGoals)
 
    (** Prints clausal form of a Computation Constant *)
   let fmt_ppr_sgn_compclause ppf (cidTerm, sCCl) =
     fprintf ppf "@[<v 2>@[%a@] : @[%a@]@,%a@]"
-      Id.print (compConstName cidTerm)
+      Name.pp (compConstName cidTerm)
       (fmt_ppr_cmp_typ sCCl.cMVars) (sCCl.cHead)
       (fmt_ppr_csubgoals sCCl.cMVars) (sCCl.cSubGoals)
 
@@ -1089,7 +1089,7 @@ module Printer = struct
          (pp_print_list ~pp_sep: pp_print_cut
             (fun ppf (x, tA) ->
               fprintf ppf "%a = %a;"
-                Id.print x
+                Name.pp x
                 (fmt_ppr_normal LF.Empty LF.Null) (tA, S.id)))
          xs
 
@@ -1825,7 +1825,7 @@ module CSolver = struct
 
   and solveCClauseSubGoals cD cG cPool cid sg ms mV sc fS currDepth maxDepth =
    (* fprintf std_formatter "CID = %a \n"
-      Id.print (Index.compConstName cid); *)
+      Name.pp (Index.compConstName cid); *)
     match sg with
     | Proved ->
        let e' = (Comp.DataConst (noLoc, cid)) in
@@ -1844,7 +1844,7 @@ module CSolver = struct
 
   and solveTheoremSubGoals cD cG cPool cid sg ms mV sc fS currDepth maxDepth =
      (* fprintf std_formatter "CID = %a \n"
-       Id.print (Index.compName cid); *)
+       Name.pp (Index.compName cid); *)
     match sg with
     | Proved ->
        let e' = (Comp.Const (noLoc, cid)) in
@@ -2136,7 +2136,7 @@ module CSolver = struct
        (* In this case, we want to "unbox" the assumption and add it to
           the cD.
           When an assumption gets unboxed, we no longer consider it in Gamma. *)
-       let name = Id.mk_name (Whnf.newMTypName r) in
+       let name = Name.mk_name (Whnf.newMTypName r) in
        let mctx_decl = LF.Decl (name, r, Plicity.explicit, Inductivity.not_inductive) in
        let cD' = Whnf.extend_mctx cD (mctx_decl, ms) in
        let cG' = Whnf.cnormGCtx (cG, LF.MShift 1) in

@@ -141,7 +141,7 @@ and cnormApxObj cD l_delta offset t =
            p.fmt "[cnormApxObj] @[<v>instantiated with reconstructed object\
                   @,%a : @[%a@]\
                   @,from index %d = %d (offset) - %d (l_delta) in the msub@]"
-             Id.print u
+             Name.pp u
              P.(fmt_ppr_cmp_meta_typ cD) mtyp
              offset'
              offset
@@ -684,7 +684,7 @@ and fmvApxHead fMVs cD ((_, _, k) as d_param) =
   (* free meta-variables / parameter variables *)
   | Apx.LF.FPVar (p, s) ->
      let s' = fmvApxSubOpt fMVs cD d_param s in
-     if List.exists (Id.equals p) fMVs then
+     if List.exists (Name.equal p) fMVs then
        Apx.LF.FPVar (p, s')
      else
        let (offset, _) = Whnf.mctxMVarPos cD p in
@@ -692,7 +692,7 @@ and fmvApxHead fMVs cD ((_, _, k) as d_param) =
 
   | Apx.LF.FMVar (u, s) ->
      let s' = fmvApxSubOpt fMVs cD d_param s in
-     if List.exists (Id.equals u) fMVs
+     if List.exists (Name.equal u) fMVs
      then Apx.LF.FMVar (u, s')
      else
        begin
@@ -700,7 +700,7 @@ and fmvApxHead fMVs cD ((_, _, k) as d_param) =
          dprintf
            begin fun p ->
            p.fmt "[fmvApxHead] FMVar %a --> index %d"
-             Id.print u
+             Name.pp u
              offset
            end;
          Apx.LF.MVar (Apx.LF.Offset (offset + k), s')
@@ -738,7 +738,7 @@ and fmvApxSub fMVs cD ((_, _, k) as d_param) =
 
   | Apx.LF.FSVar (u, sigma) ->
      let sigma' = fmvApxSubOpt fMVs cD d_param sigma in
-     if List.exists (Id.equals u) fMVs
+     if List.exists (Name.equal u) fMVs
      then Apx.LF.FSVar (u, sigma')
      else
        begin
@@ -797,7 +797,7 @@ let rec fmvApxDCtx loc fMVs cD ((l_cd1, l_delta, k) as d_param) =
      else psi
 
   | Apx.LF.CtxVar (Apx.LF.CtxName x) as psi ->
-     if List.exists (Id.equals x) fMVs
+     if List.exists (Name.equal x) fMVs
      then psi
      else
        begin
@@ -809,7 +809,7 @@ let rec fmvApxDCtx loc fMVs cD ((l_cd1, l_delta, k) as d_param) =
             throw loc
               (IndexInvariantFailed
                  (fun ppf () ->
-                   Format.fprintf ppf "unbound context %s" (Id.render_name x)))
+                   Format.fprintf ppf "unbound context %s" (Name.render_name x)))
        end
 
   | Apx.LF.DDec (psi, t_decl) ->
@@ -824,7 +824,7 @@ let fmvApxHat loc fMVs cD (l_cd1, l_delta, k) phat =
      then (Some (Int.LF.CtxOffset (offset + l_cd1)), d)
      else phat
   | (Some (Int.LF.CtxName psi), d) ->
-     if List.exists (Id.equals psi) fMVs
+     if List.exists (Name.equal psi) fMVs
      then phat
      else
        begin
@@ -836,7 +836,7 @@ let fmvApxHat loc fMVs cD (l_cd1, l_delta, k) phat =
             throw loc
               (IndexInvariantFailed
                  (fun ppf () ->
-                   Format.fprintf ppf "unbound context variable %s" (Id.render_name psi)))
+                   Format.fprintf ppf "unbound context variable %s" (Name.render_name psi)))
        end
   | _ -> phat
 

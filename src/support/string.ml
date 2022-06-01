@@ -12,7 +12,7 @@ let unpack s =
   in
   unpack 0 Fun.id
 
-let pack cs = concat "" (List.map (make 1) cs)
+let pack cs = concat empty (List.map (make 1) cs)
 
 let drop n s = sub s n (length s - n)
 

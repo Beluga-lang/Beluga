@@ -49,7 +49,7 @@ let _ =
       end
     end
 
-type gen_pat_var_strategy = Id.name -> int -> Comp.pattern
+type gen_pat_var_strategy = Name.t -> int -> Comp.pattern
 
 let withPatVar name k = Comp.PatVar (Loc.ghost, k)
 let withPatFVar name k = Comp.PatFVar (Loc.ghost, name)
@@ -60,7 +60,7 @@ let withPatFVar name k = Comp.PatFVar (Loc.ghost, name)
 let lookup (cG : Comp.gctx) x =
   let open Comp in
   let Some (CTypDecl (_, tau, _)) =
-    Context.find' cG (fun (CTypDecl (y, _, _)) -> Id.equals x y)
+    Context.find' cG (fun (CTypDecl (y, _, _)) -> Name.equal x y)
   in
   tau
 
@@ -2058,7 +2058,7 @@ let genNthSchemaElemGoal names cD n w =
   List.nth_opt elems (n - 1)
   $> begin fun e ->
      let x =
-       Id.(mk_name (SomeString "g"))
+       Name.(mk_name (SomeString "g"))
        |> NameGen.renumber names
      in
      let cD' = LF.Dec (cD, LF.Decl (x, LF.CTyp (Some w), Plicity.implicit, Inductivity.not_inductive)) in
@@ -2114,13 +2114,13 @@ let genSVCovGoals (cD, (cPsi, (r0, cPhi))) (* cov_problem *) =
      let LF.TypDecl (x, tA) = decl in
      let s = LF.SVar (2, 0, S.LF.id) in
      let mT = LF.ClTyp (LF.STyp (r0, cPhi'), cPsi) in
-     let cD' = LF.Dec (cD, LF.Decl (Id.mk_name (Whnf.newMTypName mT), mT, Plicity.explicit, Inductivity.not_inductive)) in
+     let cD' = LF.Dec (cD, LF.Decl (Name.mk_name (Whnf.newMTypName mT), mT, Plicity.explicit, Inductivity.not_inductive)) in
      (* if ren = renaming, generate parameter variable *)
      let tM = LF.Root (Loc.ghost, LF.MVar (LF.Offset 1, S.LF.id), LF.Nil, Plicity.explicit) in
      let tA0 = Whnf.cnormTyp (tA, LF.MShift 1) in
      let cPhi0 = Whnf.cnormDCtx (cPhi', LF.MShift 1) in
      let mT' = LF.ClTyp (LF.MTyp tA0, cPhi0) in
-     let cD'' = LF.Dec (cD', LF.Decl (Id.mk_name (Whnf.newMTypName mT'), mT', Plicity.explicit, Inductivity.not_inductive)) in
+     let cD'' = LF.Dec (cD', LF.Decl (Name.mk_name (Whnf.newMTypName mT'), mT', Plicity.explicit, Inductivity.not_inductive)) in
      let cPsi' = Whnf.cnormDCtx (cPsi, LF.MShift 2) in
      let cPhi'' = Whnf.cnormDCtx (cPhi, LF.MShift 2) in
      [(cD'', CovSub (cPsi', LF.Dot (LF.Obj tM, s), LF.STyp (r0, cPhi'')), LF.MShift 2)]
@@ -2324,7 +2324,7 @@ let rec genPattSpine names mk_pat_var k =
      dprintf begin fun p ->
        p.fmt "[genPattSpine] @[<v>[TypArr] generated pattern var\
               @,%a : @[%a@]@]"
-         Id.print pv1
+         Name.pp pv1
          P.(fmt_ppr_cmp_typ LF.Empty l0) tau_p
        end;
 
@@ -2580,7 +2580,7 @@ let genPatCGoals names mk_pat_var (cD : LF.mctx) tau =
         let LF.Schema elems = Store.Cid.Schema.get_schema w in
         let cD' =
           let u =
-            Id.(mk_name (SomeString "g"))
+            Name.(mk_name (SomeString "g"))
             |> NameGen.renumber names
           in
           LF.Dec (cD, LF.Decl (u, LF.CTyp (Some w), Plicity.implicit, Inductivity.not_inductive))
@@ -2816,7 +2816,7 @@ let refine_mv ((cD, cG, candidates, patt) as cov_problem) =
 let rec subst_pattern (pat_r, pv) pattern =
   match pattern with
   | Comp.PatFVar (loc, y) ->
-     if Id.equals y pv
+     if Name.equal y pv
      then pat_r
      else pattern
   | Comp.PatPair (loc, pat1, pat2) ->
@@ -2844,7 +2844,7 @@ let rec subst_spliteqn (cD, cG) (pat_r, pv) (cD_p, cG_p, ml) =
   | [] -> (ml, [])
   | (SplitPat ((Comp.PatFVar (_, x), ttau), (patt_p, ttau_p)) as seqn) :: sl ->
      let (ml', sl') = subst_spliteqn (cD, cG) (pat_r, pv) (cD_p, cG_p, ml) sl in
-     if Id.equals x pv
+     if Name.equal x pv
      then
        begin
          dprintf
@@ -2919,7 +2919,7 @@ let best_pv_cand names (cD, cG) (x :: pvlist) =
   dprintf
     begin fun p ->
     p.fmt "[genPatCGoals] @[<v>for %a@,@[%a@]@]"
-      Id.print x
+      Name.pp x
       Prettycov.(fmt_ppr_insides (with_mctx fmt_ppr_covpatt))
       cov_goals'
     end;
@@ -2939,7 +2939,7 @@ let rec pvInSplitCand sl pvlist =
   | SplitPat ((Comp.PatFVar (_, x), ttau), (patt_p, ttau_p)) :: sl ->
      dprint
        begin fun _ ->
-       "[pvInSplitCand] Patttern variable " ^ Id.render_name x
+       "[pvInSplitCand] Patttern variable " ^ Name.render_name x
        end;
      if List.mem x pvlist
      then pvInSplitCand sl pvlist
@@ -3169,7 +3169,7 @@ let gen_candidates loc cD covGoal pats =
 let initialize_coverage problem projOpt : cov_problems =
   match problem.ctype with
   | Comp.TypBox (loc, LF.CTyp w) ->
-     let cD' = LF.Dec (problem.cD, LF.Decl (Id.mk_name (Whnf.newMTypName (LF.CTyp w)), LF.CTyp w, Plicity.implicit, Inductivity.not_inductive)) in
+     let cD' = LF.Dec (problem.cD, LF.Decl (Name.mk_name (Whnf.newMTypName (LF.CTyp w)), LF.CTyp w, Plicity.implicit, Inductivity.not_inductive)) in
      let cG' = Whnf.cnormGCtx (problem.cG, LF.MShift 1) in
      let cPsi = LF.CtxVar (LF.CtxOffset 1) in
      (* let covGoal = CovPatt (LF.Empty, Comp.PatMetaObj (loc, LF.CObj cPsi)) in *)
@@ -3198,7 +3198,7 @@ let initialize_coverage problem projOpt : cov_problems =
             P.fmt_ppr_lf_sub_typing (problem.cD, cPsi, s, cPsi')
           end;
         let mT = Whnf.(cnormMTyp (LF.ClTyp (LF.MTyp tA', cPsi'), m_id)) in
-        let name = Id.mk_name (Whnf.newMTypName mT) in
+        let name = Name.mk_name (Whnf.newMTypName mT) in
         let cD' =
           LF.Dec (problem.cD, LF.Decl (name, mT, Plicity.implicit, Inductivity.not_inductive))
         in
@@ -3239,7 +3239,7 @@ let initialize_coverage problem projOpt : cov_problems =
   | Comp.TypBox (loc, LF.ClTyp (LF.PTyp tA, cPsi)) ->
      let (s, (cPsi', tA')) = gen_str problem.cD cPsi tA in
      let mT = LF.ClTyp (LF.PTyp tA', cPsi') in
-     let cD' = LF.Dec (problem.cD, LF.Decl (Id.mk_name (Whnf.newMTypName mT), mT, Plicity.implicit, Inductivity.not_inductive)) in
+     let cD' = LF.Dec (problem.cD, LF.Decl (Name.mk_name (Whnf.newMTypName mT), mT, Plicity.implicit, Inductivity.not_inductive)) in
      let cG' = Whnf.cnormGCtx (problem.cG, LF.MShift 1) in
      let mv =
        match projOpt with
@@ -3257,7 +3257,7 @@ let initialize_coverage problem projOpt : cov_problems =
      [(cD', cG', cand_list, mC)]
 
   | Comp.TypBox (loc, ((LF.ClTyp (LF.STyp (r, cPhi), cPsi)) as mT)) ->
-     let cD' = LF.Dec (problem.cD, LF.Decl (Id.mk_name (Whnf.newMTypName mT), mT, Plicity.implicit, Inductivity.not_inductive)) in
+     let cD' = LF.Dec (problem.cD, LF.Decl (Name.mk_name (Whnf.newMTypName mT), mT, Plicity.implicit, Inductivity.not_inductive)) in
      let cG' = Whnf.cnormGCtx (problem.cG, LF.MShift 1) in
      let s = LF.SVar (1, 0, S.LF.id) in
      let cPhi = Whnf.cnormDCtx (cPhi, LF.MShift 1) in

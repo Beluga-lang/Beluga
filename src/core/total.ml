@@ -52,15 +52,15 @@ let _ =
       | NoPositiveCheck n ->
          Format.fprintf ppf "Datatype %s has not been checked for positivity or stratification."
            n
-           (* (Id.render_name n) *)
+           (* (Name.render_name n) *)
       | NoStratifyCheck n ->
          Format.fprintf ppf "Datatype %s has not been checked for stratification."
            n
-           (* (Id.render_name n) *)
+           (* (Name.render_name n) *)
       | NoStratifyOrPositiveCheck n ->
          Format.fprintf ppf "Datatype %s has not been checked for stratification or positivity."
            n
-           (* (Id.render_name n) *)
+           (* (Name.render_name n) *)
       | WrongArgNum (n, num) ->
          Format.fprintf ppf "Stratification declaration for %s uses the argument number %d which is out of bounds."
            (R.render_cid_comp_typ n)
@@ -259,7 +259,7 @@ let get_order (mfs : Comp.total_dec list) =
 
 (** Looks up a declaration based on a function name *)
 let lookup_dec f : Comp.total_dec list -> Comp.total_dec option =
-  List.find_opt (fun d -> Id.equals Comp.(d.name) f)
+  List.find_opt (fun d -> Name.equal Comp.(d.name) f)
 
 (** Gets the induction order for the function with name `f`
     Returns None if the
@@ -269,7 +269,7 @@ let get_order_for mfs f : int list option =
     function
     | [] -> None
     | dec :: decs ->
-       if Id.equals Comp.(dec.name) f
+       if Name.equal Comp.(dec.name) f
        then
          begin
            let open Option in
@@ -504,7 +504,7 @@ let rec gen_rec_calls cD cIH (cD', j) mfs =
               @,since it isn't inductive\
               @]"
          j
-         Id.print u
+         Name.pp u
          P.(fmt_ppr_cmp_meta_typ cD') cU
        end;
      gen_rec_calls cD cIH (cD', j + 1) mfs
@@ -556,7 +556,7 @@ let rec gen_rec_calls cD cIH (cD', j) mfs =
                 p.fmt "[mk_wfrec_all] @[<v>trying recursive call on argument %d\
                        @,of function %a@]"
                   x
-                  Id.print f
+                  Name.pp f
                 end;
               mk_wfrec (f, x, ttau) :: mk_wfrec_all (f, ttau) xs
             with
@@ -607,7 +607,7 @@ let rec gen_rec_calls' cD cG cIH (cG0, j) mfs =
        begin fun p ->
        p.fmt "[gen_rec_calls'] @[<v>for variable %a of type \
               @,@[%a@]@]"
-         Id.print x
+         Name.pp x
          (P.fmt_ppr_cmp_typ cD P.l0) tau0
        end;
      let (_, ttau0') =
@@ -620,7 +620,7 @@ let rec gen_rec_calls' cD cG cIH (cG0, j) mfs =
             @,type of function: %a : %a@]"
            (P.fmt_ppr_cmp_typ cD P.l0) (Whnf.cnormCTyp ttau0')
            x
-           Id.print f
+           Name.pp f
            (P.fmt_ppr_cmp_typ cD P.l0) (Whnf.cnormCTyp ttau)
          end;
        let (args, tau) = rec_spine' cD (j, ttau0') (x, ttau) in
@@ -653,7 +653,7 @@ let rec gen_rec_calls' cD cG cIH (cG0, j) mfs =
           dprintf
             begin fun p ->
             p.fmt "[mk_all] function %a with order %a"
-              Id.print f
+              Name.pp f
               Format.(pp_print_list ~pp_sep: pp_print_space pp_print_int)
               xs
             end;
@@ -1405,7 +1405,7 @@ let annotate loc order tau =
 let rec select_ihs name = function
   | LF.Empty -> LF.Empty
   | LF.Dec (cIH, Comp.(WfRec (name', args, tau) as d))
-       when Id.equals name name' ->
+       when Name.equal name name' ->
      LF.Dec (select_ihs name cIH, d)
   | LF.Dec (cIH, _) ->
      (* Remove the declaration if the name doesn't match. *)

@@ -215,15 +215,15 @@ let intro (h : Holes.comp_hole_info Holes.hole) =
        begin
          match t1 with
          | Comp.TypBox (l, LF.ClTyp (LF.MTyp tA, psi)) ->
-            let nam = Id.mk_name (Id.BVarName (genVarName tA)) in
+            let nam = Name.mk_name (Name.BVarName (genVarName tA)) in
             let exp = crawl cD (LF.Dec (cG, Comp.CTypDecl (nam, t1, false))) t2 in
             Comp.Fn(l, nam, exp)
          | Comp.TypBox (l, LF.ClTyp (LF.PTyp tA, psi)) ->
-            let nam = Id.mk_name (Id.PVarName (genVarName tA)) in
+            let nam = Name.mk_name (Name.PVarName (genVarName tA)) in
             let exp = crawl cD (LF.Dec (cG, Comp.CTypDecl (nam, t1, false))) t2 in
             Comp.Fn(l, nam, exp)
          | _ ->
-            let nam = Id.mk_name (Id.NoName) in
+            let nam = Name.mk_name (Name.NoName) in
             let exp = crawl cD (LF.Dec (cG, Comp.CTypDecl (nam, t1, false))) t2 in
             Comp.Fn(Loc.ghost, nam, exp)
        end
@@ -292,7 +292,7 @@ let split (e : string) (hi : HoleId.t * Holes.comp_hole_info Holes.hole) : Comp.
     function
     | LF.Empty -> None
     | LF.Dec (cG', Comp.CTypDecl (n, tau, _))
-         when String.equal (Id.string_of_name n) e ->
+         when String.equal (Name.string_of_name n) e ->
        let rec matchTyp =
          function
          | Comp.TypBox (l, _)
@@ -315,7 +315,7 @@ let split (e : string) (hi : HoleId.t * Holes.comp_hole_info Holes.hole) : Comp.
          | _ ->
             failwith
               ( "Found variable in gCtx, cannot split on "
-                ^ Id.string_of_name n
+                ^ Name.string_of_name n
               )
        in
        matchTyp tau
@@ -325,7 +325,7 @@ let split (e : string) (hi : HoleId.t * Holes.comp_hole_info Holes.hole) : Comp.
     match cD with
     | LF.Empty -> None
     | LF.Dec (cD', (LF.Decl (n, mtyp, _, _) as cd)) ->
-       if String.equal (Id.string_of_name n) e
+       if String.equal (Name.string_of_name n) e
        then
          begin
            let cgs = genCGoals cD' cd cD_tail in
@@ -438,7 +438,7 @@ let whale =
   String.iter f whale_str;
   flush_str_formatter ()
 
-let iterMctx (cD : LF.mctx) (cPsi : LF.dctx) (tA : LF.tclo) : Id.name list =
+let iterMctx (cD : LF.mctx) (cPsi : LF.dctx) (tA : LF.tclo) : Name.t list =
   let (_, sub) = tA in
   let rec aux acc c =
     function
@@ -458,7 +458,7 @@ let iterMctx (cD : LF.mctx) (cPsi : LF.dctx) (tA : LF.tclo) : Id.name list =
   in
   aux [] 1 cD
 
-let iterDctx (cD : LF.mctx) (cPsi : LF.dctx) (tA : LF.tclo) : Id.name list =
+let iterDctx (cD : LF.mctx) (cPsi : LF.dctx) (tA : LF.tclo) : Name.t list =
   let rec aux acc =
     function
     | LF.DDec (cPsi', LF.TypDecl(n, tA')) ->
@@ -475,7 +475,7 @@ let iterDctx (cD : LF.mctx) (cPsi : LF.dctx) (tA : LF.tclo) : Id.name list =
   in
   aux [] cPsi
 
-let iterGctx (cD : LF.mctx) (cG : Comp.gctx) (ttau : Comp.tclo) : Id.name list =
+let iterGctx (cD : LF.mctx) (cG : Comp.gctx) (ttau : Comp.tclo) : Name.t list =
   let rec aux acc =
     function
     | LF.Empty -> acc
@@ -557,7 +557,7 @@ let fmt_ppr_hole ppf (i, (Holes.Exists (w, h)) : HoleId.t * Holes.some_hole) : u
           fprintf ppf
             "@,@[<hov 2>Variable%a of this type:@ @[<h>%a@]@]"
             plural (List.length suggestions = 1)
-            (pp_print_list ~pp_sep: Format.comma Id.print) suggestions
+            (pp_print_list ~pp_sep: Format.comma Name.pp) suggestions
      | Some sM ->
         fprintf ppf "@[<v 2>This hole is solved:@,@[%a@]@]"
           (P.fmt_ppr_lf_normal cD cPsi P.l0) (Whnf.norm sM)
@@ -583,7 +583,7 @@ let fmt_ppr_hole ppf (i, (Holes.Exists (w, h)) : HoleId.t * Holes.some_hole) : u
           fprintf ppf
             "@,@,Variable%a of this type: @[<h>%a@]"
             plural (List.length suggestions = 1)
-            (pp_print_list ~pp_sep: Format.comma Id.print) suggestions
+            (pp_print_list ~pp_sep: Format.comma Name.pp) suggestions
      | Some e ->
         fprintf ppf "@[<v 2>This hole is solved:@,@[%a@]@]"
           (P.fmt_ppr_cmp_exp_chk cD cG P.l0) e

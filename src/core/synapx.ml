@@ -14,8 +14,8 @@ module LF = struct
     | PiKind of (typ_decl * Plicity.t) * kind
 
   and typ_decl =
-    | TypDecl of name * typ
-    | TypDeclOpt of name
+    | TypDecl of Name.t * typ
+    | TypDeclOpt of Name.t
 
   and cltyp =
     | MTyp of typ
@@ -27,8 +27,8 @@ module LF = struct
     | CTyp of cid_schema
 
   and ctyp_decl =
-    | Decl of name * ctyp * Plicity.t
-    | DeclOpt of name
+    | Decl of Name.t * ctyp * Plicity.t
+    | DeclOpt of Name.t
 
   and typ =
     | Atom of Location.t * cid_typ * spine
@@ -36,15 +36,15 @@ module LF = struct
     | Sigma of typ_rec
 
   and typ_rec =
-    | SigmaLast of name option * typ
-    | SigmaElem of name * typ * typ_rec
+    | SigmaLast of Name.t option * typ
+    | SigmaElem of Name.t * typ * typ_rec
 
   and tuple =
     | Last of normal
     | Cons of normal * tuple
 
   and normal =
-    | Lam of Location.t * name * normal
+    | Lam of Location.t * Name.t * normal
     | Root of Location.t * head * spine
     | LFHole of Location.t * string option
     | Tuple of Location.t * tuple
@@ -57,13 +57,13 @@ module LF = struct
     | Proj of head * proj
     | Hole
     | PVar of cvar * sub option
-    | FVar of name
-    | FMVar of name * sub option
-    | FPVar of name * sub option
+    | FVar of Name.t
+    | FMVar of Name.t * sub option
+    | FPVar of Name.t * sub option
 
   and proj =
     | ByPos of int
-    | ByName of name
+    | ByName of Name.t
 
   and spine =
     | Nil
@@ -74,7 +74,7 @@ module LF = struct
     | Id
     | Dot of front * sub
     | SVar of cvar * sub option
-    | FSVar of name * sub option
+    | FSVar of Name.t * sub option
 
   and front =
     | Head of head
@@ -91,7 +91,7 @@ module LF = struct
     | CtxHole
 
   and ctx_var =
-    | CtxName of name
+    | CtxName of Name.t
     | CtxOffset of offset
 
   and mctx = ctyp_decl ctx
@@ -138,12 +138,12 @@ module Comp = struct
 
   and exp_chk =
      | Syn of Location.t * exp_syn
-     | Fn of Location.t * name * exp_chk                             (* fn x => e           *)
+     | Fn of Location.t * Name.t * exp_chk                           (* fn x => e           *)
      | Fun of Location.t * fun_branches                              (* fun   fbranches     *)
-     | MLam of Location.t * name * exp_chk                           (* mlam f => e         *)
+     | MLam of Location.t * Name.t * exp_chk                         (* mlam f => e         *)
      | Pair of Location.t * exp_chk * exp_chk                        (* (e1 , e2)           *)
-     | LetPair of Location.t * exp_syn * (name * name * exp_chk)     (* let (x,y) = i in e  *)
-     | Let of Location.t * exp_syn * (name * exp_chk)                (* let x = i in e      *)
+     | LetPair of Location.t * exp_syn * (Name.t * Name.t * exp_chk) (* let (x,y) = i in e  *)
+     | Let of Location.t * exp_syn * (Name.t * exp_chk)              (* let x = i in e      *)
      | Box of Location.t * meta_obj                                  (* box (Psi hat. M)    *)
      | Case of Location.t * case_pragma * exp_syn * branch list      (* case i of bs *)
      | Impossible of Location.t * exp_syn                            (* impossible i *)
@@ -152,7 +152,7 @@ module Comp = struct
 
   and exp_syn =
     | Var of Location.t * offset                                    (* x              *)
-     | FVar of name                                                 (* x              *)
+     | FVar of Name.t                                               (* x              *)
      | DataConst of Location.t * cid_comp_const                     (* c              *)
      | Obs of Location.t * exp_chk * cid_comp_dest                  (* e.d            *)
      | Const of Location.t * cid_prog                               (* c              *)
@@ -164,8 +164,8 @@ module Comp = struct
   and pattern =
     | PatMetaObj of Location.t * meta_obj
     | PatConst of Location.t * cid_comp_const * pattern_spine
-    | PatFVar of Location.t * name (* used only temporarily during indexing *)
-    | PatVar of Location.t * name * offset
+    | PatFVar of Location.t * Name.t (* used only temporarily during indexing *)
+    | PatVar of Location.t * Name.t * offset
     | PatPair of Location.t * pattern * pattern
     | PatAnn of Location.t * pattern * typ
 
@@ -189,7 +189,7 @@ module Comp = struct
      | EmptyPattern
 
   type ctyp_decl =
-    | CTypDecl of name * typ
+    | CTypDecl of Name.t * typ
 
   type gctx = ctyp_decl LF.ctx
 
@@ -204,8 +204,8 @@ module Comp = struct
     | Directive of Location.t * directive
 
   and command =
-    | By of Location.t * exp_syn * name
-    | Unbox of Location.t * exp_syn * name * unbox_modifier option
+    | By of Location.t * exp_syn * Name.t
+    | Unbox of Location.t * exp_syn * Name.t * unbox_modifier option
 
   and directive =
     | Intros of Location.t * hypothetical

@@ -194,7 +194,7 @@ let rec flattenSigmaTyp cD cPsi strec conv_list =
   match strec with
   | (LF.SigmaLast (n, tA), s) ->
      let tA' = strans_typ cD cPsi (tA, s) conv_list in
-     (LF.DDec (cPsi, LF.TypDecl (Id.mk_name Id.NoName, tA')), 1)
+     (LF.DDec (cPsi, LF.TypDecl (Name.mk_name Name.NoName, tA')), 1)
 
   | (LF.SigmaElem (x, tA, trec), s) ->
      let tA' = strans_typ cD cPsi (tA, s) conv_list in

@@ -18,7 +18,7 @@ val make : Id.cid_mutual_group -> Theorem.t list -> t
 val get_mutual_decs : t -> Comp.total_dec list
 
 (** Looks up an incomplete theorem by name in the session. *)
-val lookup_theorem : t -> Id.name -> Theorem.t option
+val lookup_theorem : t -> Name.t -> Theorem.t option
 
 (** Gets the list of all complete and incomplete theorems in this
     session. *)
@@ -52,7 +52,7 @@ val infer_invocation_kind : t -> Comp.exp_syn -> Comp.invoke_kind
     Selection fails only when there is no incomplete theorem by the
     given name.
  *)
-val select_theorem : t -> Id.name -> bool
+val select_theorem : t -> Name.t -> bool
 
 (** Decides what kind of session this is.
     `introduced: this session was created within Harpoon, via the

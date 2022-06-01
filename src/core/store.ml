@@ -5,9 +5,9 @@ open Syntax
 module NameTable =
   Hashtbl.Make
     (struct
-      type t = Id.name
-      let equal x y = Id.equals x y
-      let hash i = Hashtbl.hash (Id.render_name i)
+      type t = Name.t
+      let equal x y = Name.equal x y
+      let hash i = Hashtbl.hash (Name.render_name i)
     end)
 
 type error =
@@ -18,7 +18,7 @@ exception Error of Syntax.Loc.t * error
 (* Register error printer at the end of this module. *)
 module OpPragmas = struct
   type fixPragma =
-    { name : Id.name
+    { name : Name.t
     ; fix : Ext.Sgn.fix
     ; precedence : int
     ; assoc : Ext.Sgn.assoc option
@@ -40,12 +40,12 @@ module OpPragmas = struct
       | Some x -> x
       | None -> default_precedence
     in
-    if List.exists (fun x -> Id.equals x.name n) !pragmas
+    if List.exists (fun x -> Name.equal x.name n) !pragmas
     then
       pragmas :=
         List.map
           begin fun x ->
-          if Id.equals x.name n
+          if Name.equal x.name n
           then
             { name = n
             ; fix = f
@@ -68,10 +68,10 @@ module OpPragmas = struct
       incr pragmaCount
 
   let getPragma name =
-    List.find_opt (fun p -> Id.equals name p.name) !pragmas
+    List.find_opt (fun p -> Name.equal name p.name) !pragmas
 
   let pragmaExists name =
-    List.exists (fun x -> Id.equals x.name name) !pragmas
+    List.exists (fun x -> Name.equal x.name name) !pragmas
 end
 
 module Modules = struct
@@ -155,8 +155,8 @@ module Modules = struct
     else raise Not_found
 
   (* Precondition: the name check in f is using a name with Id.modules = [] *)
-  let find (n : Id.name) (x : 'a DynArray.t) (f : 'a -> 'b) : 'b =
-    let m = Id.get_module n in
+  let find (n : Name.t) (x : 'a DynArray.t) (f : 'a -> 'b) : 'b =
+    let m = Name.get_module n in
     let m =
       match m with
       | [m'] ->
@@ -233,7 +233,7 @@ end
 
 module type ENTRY = sig
   type t
-  val name_of_entry : t -> Id.name
+  val name_of_entry : t -> Name.t
 
   type cid = Id.module_id * int
 end
@@ -244,11 +244,11 @@ module type CIDSTORE = sig
 
   (** Generic lookup function that includes configurable additional
       lookup failure and result transformation. *)
-  (* val lookup : Id.name -> (entry -> entry option) -> (cid * entry) option *)
-  val index_of_name : Id.name -> cid
-  val index_of_name_opt : Id.name -> cid option
+  (* val lookup : Name.t -> (entry -> entry option) -> (cid * entry) option *)
+  val index_of_name : Name.t -> cid
+  val index_of_name_opt : Name.t -> cid option
   val replace_entry : cid -> entry -> unit
-  val fixed_name_of : cid -> Id.name
+  val fixed_name_of : cid -> Name.t
   val get : cid -> entry
   val add : (cid -> entry) -> cid
   val clear : unit -> unit
@@ -295,15 +295,15 @@ module CidStore (M : ENTRY) : CIDSTORE
     let s = DynArray.get store l in
     DynArray.set s n e
 
-  let index_of_name (n : Id.name) : cid =
+  let index_of_name (n : Name.t) : cid =
     let n' =
-      match Id.get_module n with
+      match Name.get_module n with
       | [] -> n
-      | _ -> Id.mk_name (Id.SomeString (Id.string_of_name n))
+      | _ -> Name.mk_name (Name.SomeString (Name.string_of_name n))
     in
     Modules.find n directory (fun x -> NameTable.find x n')
 
-  let index_of_name_opt (n : Id.name) : cid option =
+  let index_of_name_opt (n : Name.t) : cid option =
     try
       Some (index_of_name n)
     with
@@ -317,13 +317,13 @@ module CidStore (M : ENTRY) : CIDSTORE
       else []
     in
     let e = DynArray.get (DynArray.get store l) n in
-    Id.(mk_name ~modules:m' (SomeString (string_of_name (name_of_entry e))))
+    Name.(mk_name ~modules:m' (SomeString (string_of_name (name_of_entry e))))
 
   let get (l, n) =
     DynArray.get (DynArray.get store l) n
 
     (*
-  let lookup (n : Id.name) f : (cid * entry) option =
+  let lookup (n : Name.t) f : (cid * entry) option =
     Option.flat_map
       begin fun cid ->
       Option.map (fun e -> (cid, e)) (f (get cid))
@@ -371,7 +371,7 @@ module Cid = struct
     (* type entry = *)
     module Entry = struct
       type t =
-        { name : Id.name
+        { name : Name.t
         ; implicit_arguments : int
         ; kind : Int.LF.kind
         ; var_generator : (unit -> string) option
@@ -611,7 +611,7 @@ module Cid = struct
   module Term = struct
     module Entry = struct
       type t =
-        { name : Id.name
+        { name : Name.t
         ; implicit_arguments : int
         ; typ : Int.LF.typ
         ; decl : Decl.t
@@ -650,7 +650,7 @@ module Cid = struct
   module Schema = struct
     module Entry = struct
       type t =
-        { name : Id.name
+        { name : Name.t
         ; schema : Int.LF.schema
         ; decl : Decl.t
         }
@@ -685,7 +685,7 @@ module Cid = struct
   module CompTyp = struct
     module Entry = struct
       type t =
-        { name: Id.name
+        { name: Name.t
         (* bp : this is misgleding with the current design where
            explicitly declared context variables are factored into
            implicit arguments
@@ -736,7 +736,7 @@ module Cid = struct
   module CompCotyp = struct
     module Entry = struct
       type t =
-        { name : Id.name
+        { name : Name.t
         (* bp : this is misgleding with the current design where explicitly declared context variables
           are factored into implicit arguments *)
         ; implicit_arguments : int
@@ -771,7 +771,7 @@ module Cid = struct
   module CompConst = struct
     module Entry = struct
       type t =
-        { name : Id.name
+        { name : Name.t
         ; implicit_arguments : int
         ; typ : Int.Comp.typ
         ; decl : Decl.t
@@ -800,7 +800,7 @@ module Cid = struct
   module CompDest = struct
     module Entry = struct
       type t =
-        { name : Id.name
+        { name : Name.t
         ; implicit_arguments : int
         ; mctx : Int.LF.mctx
         ; obs_type : Int.Comp.typ
@@ -833,7 +833,7 @@ module Cid = struct
   module CompTypDef = struct
     module Entry = struct
       type t =
-        { name : Id.name
+        { name : Name.t
         ; implicit_arguments : int
         ; kind : Int.Comp.kind
         ; mctx : Int.LF.mctx
@@ -861,7 +861,7 @@ module Cid = struct
   module Comp = struct
     module Entry = struct
       type t =
-        { name : Id.name
+        { name : Name.t
         ; implicit_arguments : int
         ; typ : Int.Comp.typ
         ; prog : Int.Comp.value option
@@ -900,7 +900,7 @@ module Cid = struct
       let mg = lookup_mutual_group e.Entry.mutual_group in
       match
         List.find_opt
-          (fun d -> Id.equals d.Int.Comp.name name)
+          (fun d -> Name.equal d.Int.Comp.name name)
           mg
       with
       | Some d -> d
@@ -949,32 +949,30 @@ module Cid = struct
 
   (* RENDERER for Internal Syntax using names *)
   module NamedRenderer : RENDERER = struct
-    open Id
-
-    let render_cid_comp_typ c = render_name (CompTyp.fixed_name_of c)
-    let render_cid_comp_cotyp c = render_name (CompCotyp.fixed_name_of c)
-    let render_cid_comp_const c = render_name (CompConst.fixed_name_of c)
-    let render_cid_comp_dest c = render_name (CompDest.fixed_name_of c)
-    let render_cid_typ a = render_name (Typ.fixed_name_of a)
-    let render_cid_term c = render_name (Term.fixed_name_of c)
-    let render_cid_schema w = render_name (Schema.fixed_name_of w)
-    let render_cid_prog f = render_name (Comp.fixed_name_of f)
+    let render_cid_comp_typ c = Name.render_name (CompTyp.fixed_name_of c)
+    let render_cid_comp_cotyp c = Name.render_name (CompCotyp.fixed_name_of c)
+    let render_cid_comp_const c = Name.render_name (CompConst.fixed_name_of c)
+    let render_cid_comp_dest c = Name.render_name (CompDest.fixed_name_of c)
+    let render_cid_typ a = Name.render_name (Typ.fixed_name_of a)
+    let render_cid_term c = Name.render_name (Term.fixed_name_of c)
+    let render_cid_schema w = Name.render_name (Schema.fixed_name_of w)
+    let render_cid_prog f = Name.render_name (Comp.fixed_name_of f)
     let render_cid_mutual_group c = string_of_int c
     let render_ctx_var cO g =
       try
-        render_name (Context.getNameMCtx cO g)
+        Name.render_name (Context.getNameMCtx cO g)
       with
       | _ -> "FREE CtxVar " ^ string_of_int g
 
     let render_cvar cD u =
       try
-        render_name (Context.getNameMCtx cD u)
+        Name.render_name (Context.getNameMCtx cD u)
       with
       | _ -> "FREE MVar " ^ string_of_int u
 
     let render_bvar cPsi i =
       try
-        render_name (Context.getNameDCtx cPsi i)
+        Name.render_name (Context.getNameDCtx cPsi i)
       with
       | _ -> "FREE BVar " ^ string_of_int i
 
@@ -982,7 +980,7 @@ module Cid = struct
 
     let render_var cG x =
       try
-        render_name (Context.getNameCtx cG x)
+        Name.render_name (Context.getNameCtx cG x)
       with
       | _ -> "FREE Var " ^ string_of_int x
 
@@ -1005,7 +1003,7 @@ end
 (* LF Bound variables *)
 module BVar = struct
 
-  type entry = { name : Id.name }
+  type entry = { name : Name.t }
 
   let mk_entry n = { name = n }
 
@@ -1016,7 +1014,7 @@ module BVar = struct
       function
       | [] -> raise Not_found
       | e :: es ->
-         if Id.equals e.name n
+         if Name.equal e.name n
          then i
          else loop (i + 1) es
     in
@@ -1038,7 +1036,7 @@ module FVar = struct
       match str with
       | [] -> [(x, tA)]
       | (y, tA') :: str' ->
-         if Id.equals x y
+         if Name.equal x y
          then
            begin match (tA, tA') with
            | (Int.LF.Type tB,
@@ -1055,7 +1053,7 @@ module FVar = struct
   let get x =
     let rec lookup str = match str with
       | ((y, tA)::str') ->
-          if Id.equals x y then tA else lookup str'
+          if Name.equal x y then tA else lookup str'
       | _ -> raise Not_found
     in
     lookup (!store)
@@ -1077,7 +1075,7 @@ module FPatVar = struct
   let get x =
     let rec lookup str = match str with
       | Syntax.Int.LF.Dec (str', Syntax.Int.Comp.CTypDecl ((y, tau, _))) ->
-          if Id.equals x y then tau else lookup str'
+          if Name.equal x y then tau else lookup str'
       | _ -> raise Not_found
     in
       lookup (!store)
@@ -1126,7 +1124,7 @@ end
 module Var = struct
 
   type entry =
-    { name : Id.name
+    { name : Name.t
     }
 
   let mk_entry name =
@@ -1140,7 +1138,7 @@ module Var = struct
       function
       | [] -> raise Not_found
       | (e :: es) ->
-         if Id.equals e.name n
+         if Name.equal e.name n
          then i
          else loop (i + 1) es
     in
@@ -1162,7 +1160,7 @@ module Var = struct
     let f d v = Int.Comp.name_of_ctyp_decl d |> mk_entry |> extend v in
     List.fold_right f (Context.to_list_rev cG) (create ())
 
-  let of_list (l : Id.name list) : t =
+  let of_list (l : Name.t list) : t =
     List.map mk_entry l
 end
 
@@ -1171,7 +1169,7 @@ end
 (* Contextual variables *)
 module CVar = struct
 
-  type cvar = Id.name
+  type cvar = Name.t
 
   type entry =
     { name : cvar
@@ -1187,7 +1185,7 @@ module CVar = struct
     let rec loop i = function
       | [] -> raise Not_found
       | (e :: es) ->
-         if Id.equals e.name x then
+         if Name.equal e.name x then
            (i, e)
          else
            loop (i + 1) es
@@ -1208,7 +1206,7 @@ module CVar = struct
     let rec go s =
       function
       | [] -> s
-      | x :: xs -> go (s ^ ", " ^ Id.string_of_name x.name) xs
+      | x :: xs -> go (s ^ ", " ^ Name.string_of_name x.name) xs
     in
     go "" cvars
 
@@ -1224,7 +1222,7 @@ module CVar = struct
     in
     List.fold_right f (Context.to_list_rev cD) (create ())
 
-  let of_list (l : (Id.name * Plicity.t) list) : t =
+  let of_list (l : (Name.t * Plicity.t) list) : t =
     List.map (fun (u, p) -> mk_entry u p) l
 end
 

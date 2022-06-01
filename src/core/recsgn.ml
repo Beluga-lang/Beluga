@@ -1,6 +1,5 @@
 open Support.Equality
 open Support
-open Id
 open Store
 open Store.Cid
 open Syntax
@@ -19,20 +18,20 @@ type leftover_vars = (Abstract.free_var Int.LF.ctx * Syntax.Loc.t) list
 
 type error =
   | UnexpectedSucess
-  | TotalDeclError of name * name
+  | TotalDeclError of Name.t * Name.t
   | MutualTotalDecl
-    of name list (* functions with total decls *)
-       * name list (* functions without total decls *)
+    of Name.t list (* functions with total decls *)
+       * Name.t list (* functions without total decls *)
   | NoPositive of string
   | NoStratify of string
   | NoStratifyOrPositive of string
-  | TotalArgsError of name
+  | TotalArgsError of Name.t
   | IllegalOptsPrag of string
-  | IllegalOperatorPrag of name * Ext.Sgn.fix * int
+  | IllegalOperatorPrag of Name.t * Ext.Sgn.fix * int
   | InvalidOpenPrag of string
   | InvalidAbbrev of string list * string
-  | UnboundArg of Id.name * Id.name option list
-  | UnboundNamePragma of Id.name
+  | UnboundArg of Name.t * Name.t option list
+  | UnboundNamePragma of Name.t
 
 exception Error of Syntax.Loc.t * error
 
@@ -47,7 +46,7 @@ let _ =
       match err with
       | TotalDeclError (f, f') ->
          fprintf ppf "Expected totality declaration for %s \nFound totality declaration for %s\n"
-           (Id.render_name f) (Id.string_of_name f')
+           (Name.render_name f) (Name.string_of_name f')
       | MutualTotalDecl (haves, have_nots) ->
          fprintf ppf "@[<v>%a@,The functions@,  @[<hov>%a@]@,have totality declarations, \
                       but the functions@,  @[<hov>%a@]@,are missing totality declarations."
@@ -55,8 +54,8 @@ let _ =
            "This mutual definition block does not have
             consistent totality declarations. Either all or none of
             functions must be declared total."
-           (pp_print_list ~pp_sep: Format.comma Id.print) haves
-           (pp_print_list ~pp_sep: Format.comma Id.print) have_nots
+           (pp_print_list ~pp_sep: Format.comma Name.pp) haves
+           (pp_print_list ~pp_sep: Format.comma Name.pp) have_nots
       | NoPositive n ->
          fprintf ppf "Positivity checking of constructor %s fails.\n" n
       | NoStratify n ->
@@ -65,7 +64,7 @@ let _ =
       | NoStratifyOrPositive n ->
          fprintf ppf "Stratification or positivity checking of datatype %s fails.\n" n
       | TotalArgsError f ->
-         fprintf ppf "Totality declaration for %s takes too many arguments.\n" (Id.render_name f)
+         fprintf ppf "Totality declaration for %s takes too many arguments.\n" (Name.render_name f)
 
       | UnexpectedSucess ->
          fprintf ppf "Unexpected success: expected failure of type reconstruction for --not'ed declaration."
@@ -80,7 +79,7 @@ let _ =
          fprintf ppf
            "Illegal %s operator %s. Operator declared with %d arguments, but only operators with %d args permitted"
            fix
-           (Id.render_name n)
+           (Name.render_name n)
            actual
            expected
       | InvalidOpenPrag s ->
@@ -90,16 +89,16 @@ let _ =
            (String.concat "." l) s
       | UnboundArg (a, args) ->
          fprintf ppf "Argument %a does not appear in argument list @[<h>%a@]."
-           Id.print a
+           Name.pp a
            (pp_print_list
               ~pp_sep: Format.comma
               (fun ppf ->
                 (Option.eliminate
                    (fun _ -> fprintf ppf "_")
-                   (Id.print ppf))))
+                   (Name.pp ppf))))
            args
       | UnboundNamePragma typ_name ->
-         fprintf ppf "Name pragma refers to unbound type %a." Id.print typ_name
+         fprintf ppf "Name pragma refers to unbound type %a." Name.pp typ_name
       end
     end
 
@@ -253,7 +252,7 @@ let recSgnDecls decls =
        in
        Int.Sgn.Pragma { pragma=Int.LF.DefaultAssocPrag a' }
     | Ext.Sgn.Pragma { location=loc; pragma=Ext.Sgn.FixPrag (name, fix, precedence, assoc) } ->
-       dprint (fun () -> "Pragma found for " ^ (Id.render_name name));
+       dprint (fun () -> "Pragma found for " ^ (Name.render_name name));
        begin match fix with
        | Ext.Sgn.Prefix ->
           OpPragmas.addPragma name fix (Some precedence) assoc
@@ -308,7 +307,7 @@ let recSgnDecls decls =
        dprintf
          begin fun p ->
          p.fmt "typedef %a : %a = %a"
-           Id.print identifier
+           Name.pp identifier
            (P.fmt_ppr_cmp_kind Int.LF.Empty P.l0) cK
            (P.fmt_ppr_cmp_typ cD P.l0) tau
          end;
@@ -322,10 +321,10 @@ let recSgnDecls decls =
        sgn
 
     | Ext.Sgn.CompTyp { location; identifier; kind=extK; datatype_flavour=pflag } ->
-       dprint (fun () -> "Indexing computation-level data-type constant " ^ string_of_name identifier);
+       dprint (fun () -> "Indexing computation-level data-type constant " ^ Name.string_of_name identifier);
        let apxK = Index.compkind extK in
        FVar.clear ();
-       dprint (fun () -> "Elaborating data-type declaration " ^ string_of_name identifier);
+       dprint (fun () -> "Elaborating data-type declaration " ^ Name.string_of_name identifier);
        let cK =
          Monitor.timer
            ( "CType Elaboration"
@@ -347,7 +346,7 @@ let recSgnDecls decls =
        dprintf
          begin fun p ->
          p.fmt "%a : %a"
-           Id.print identifier
+           Name.pp identifier
            (P.fmt_ppr_cmp_kind Int.LF.Empty P.l0) cK'
          end;
        Monitor.timer
@@ -356,12 +355,12 @@ let recSgnDecls decls =
          );
        dprint
          (fun () ->
-           "\nDOUBLE CHECK for data type constant " ^ string_of_name identifier ^ " successful!");
+           "\nDOUBLE CHECK for data type constant " ^ Name.string_of_name identifier ^ " successful!");
        (* let p =
         *   match pflag with
         *   | None -> Int.Sgn. Noflag
-        *   | Some Ext. Sgn.Stratify (loc, x, Id.mk_name (Id.SomeString r), args)
-        *     -> Int.Sgn.Stratify (loc, x, Id.mk_name (Id.SomeString r), args)
+        *   | Some Ext. Sgn.Stratify (loc, x, Name.mk_name (Id.SomeString r), args)
+        *     -> Int.Sgn.Stratify (loc, x, Name.mk_name (Id.SomeString r), args)
         *   | Some _ -> Int.Sgn.Positivity
         * in *)
 
@@ -381,10 +380,10 @@ let recSgnDecls decls =
          (fun p ->
            p.fmt "[RecSgn Checking] CompCotyp at: %a"
              Syntax.Loc.print location);
-       dprint (fun () -> "\nIndexing computation-level codata-type constant " ^ string_of_name identifier);
+       dprint (fun () -> "\nIndexing computation-level codata-type constant " ^ Name.string_of_name identifier);
        let apxK = Index.compkind extK in
        FVar.clear ();
-       dprint (fun () -> "\nElaborating codata-type declaration " ^ string_of_name identifier);
+       dprint (fun () -> "\nElaborating codata-type declaration " ^ Name.string_of_name identifier);
        let cK =
          Monitor.timer
            ( "CType Elaboration"
@@ -407,7 +406,7 @@ let recSgnDecls decls =
        dprintf
          begin fun p ->
          p.fmt "%a : %a"
-           Id.print identifier
+           Name.pp identifier
            (P.fmt_ppr_cmp_kind Int.LF.Empty P.l0) cK'
          end;
        Monitor.timer
@@ -416,7 +415,7 @@ let recSgnDecls decls =
          );
        dprint
          (fun () ->
-           "\nDOUBLE CHECK for codata type constant " ^ string_of_name identifier ^
+           "\nDOUBLE CHECK for codata type constant " ^ Name.string_of_name identifier ^
              " successful!");
        ignore (CompCotyp.add (fun _ -> CompCotyp.mk_entry identifier cK' i));
        let sgn = Int.Sgn.CompCotyp { location; identifier; kind=cK' } in
@@ -429,10 +428,10 @@ let recSgnDecls decls =
          (fun p ->
            p.fmt "[RecSgn Checking] CompConst at: %a"
              Syntax.Loc.print_short location);
-       dprint (fun () -> "\nIndexing computation-level data-type constructor " ^ string_of_name identifier);
+       dprint (fun () -> "\nIndexing computation-level data-type constructor " ^ Name.string_of_name identifier);
        let apx_tau = Index.comptyp tau in
        let cD = Int.LF.Empty in
-       dprint (fun () -> "\nElaborating data-type constructor " ^ string_of_name identifier);
+       dprint (fun () -> "\nElaborating data-type constructor " ^ Name.string_of_name identifier);
        let tau' =
          Monitor.timer
            ( "Data-type Constant: Type Elaboration"
@@ -451,7 +450,7 @@ let recSgnDecls decls =
        dprintf
          begin fun p ->
          p.fmt "[recsgn] @[<v>@[<hov>@[%a@] :@ @[%a@]@]@,with %d implicit parameters@]"
-           Id.print identifier
+           Name.pp identifier
            (P.fmt_ppr_cmp_typ cD P.l0) tau'
            i
          end;
@@ -468,11 +467,11 @@ let recSgnDecls decls =
        | Int.Sgn.Positivity ->
           if Total.positive cid_ctypfamily tau'
           then ()
-          else raise (Error (location, (NoPositive (string_of_name identifier))))
+          else raise (Error (location, (NoPositive (Name.string_of_name identifier))))
        | Int.Sgn.Stratify (loc_s, n) ->
           if Total.stratify cid_ctypfamily tau' n
           then ()
-          else raise (Error (location, (NoStratify (string_of_name identifier))))
+          else raise (Error (location, (NoStratify (Name.string_of_name identifier))))
        | Int.Sgn.StratifyAll loc_s ->
           let t = Total.stratifyAll cid_ctypfamily tau' in
           let t' = (t land (!Total.stratNum)) in
@@ -511,12 +510,12 @@ let recSgnDecls decls =
        dprintf
          (fun p ->
            p.fmt "[RecSgn Checking] CompDest at: %a" Syntax.Loc.print_short location);
-       dprint (fun () -> "\nIndexing computation-level codata-type destructor " ^ string_of_name identifier);
+       dprint (fun () -> "\nIndexing computation-level codata-type destructor " ^ Name.string_of_name identifier);
        let cD = Index.mctx cD in
        let cD = Reconstruct.mctx cD in
        let apx_tau0 = Index.comptyp tau0 in
        let apx_tau1 = Index.comptyp tau1 in
-       dprint (fun () -> "\nElaborating codata-type destructor " ^ string_of_name identifier);
+       dprint (fun () -> "\nElaborating codata-type destructor " ^ Name.string_of_name identifier);
        let tau0' =
          Monitor.timer
            ( "Codata-type Constant: Type Elaboration"
@@ -547,7 +546,7 @@ let recSgnDecls decls =
        dprintf
          begin fun p ->
          p.fmt "%a : %a :: %a"
-           Id.print identifier
+           Name.pp identifier
            (P.fmt_ppr_cmp_typ cD1 P.l0) tau0'
            (P.fmt_ppr_cmp_typ cD1 P.l0) tau1'
          end;
@@ -578,11 +577,11 @@ let recSgnDecls decls =
          (fun p ->
            p.fmt "[RecSgn Checking] Typ at: %a"
              Syntax.Loc.print_short location);
-       dprint (fun () -> "\nIndexing type constant " ^ string_of_name a);
+       dprint (fun () -> "\nIndexing type constant " ^ Name.string_of_name a);
        let (_, apxK) = Index.kind Index.disambiguate_to_fvars extK in
        FVar.clear ();
 
-       dprint (fun () -> "\nElaborating type constant " ^ string_of_name a);
+       dprint (fun () -> "\nElaborating type constant " ^ Name.string_of_name a);
        let tK =
          Monitor.timer
            ( "Type Elaboration"
@@ -604,7 +603,7 @@ let recSgnDecls decls =
        dprintf
          begin fun p ->
          p.fmt "%a : %a"
-           Id.print a
+           Name.pp a
            (P.fmt_ppr_lf_kind Int.LF.Null P.l0) tK'
          end;
        Monitor.timer
@@ -614,7 +613,7 @@ let recSgnDecls decls =
        dprint
          begin fun () ->
          "\nDOUBLE CHECK for type constant "
-         ^ string_of_name a
+         ^ Name.string_of_name a
          ^ " successful!"
          end;
        Typeinfo.Sgn.add location (Typeinfo.Sgn.mk_entry (Typeinfo.Sgn.Kind tK')) "";
@@ -635,7 +634,7 @@ let recSgnDecls decls =
          | Apx.LF.PiTyp ((_, _), t) -> get_type_family t
        in
        let constructedType = get_type_family apxT in
-       dprint (fun () -> "Reconstructing term constant " ^ (string_of_name c));
+       dprint (fun () -> "Reconstructing term constant " ^ (Name.string_of_name c));
        FVar.clear ();
        let tA =
          Monitor.timer
@@ -650,7 +649,7 @@ let recSgnDecls decls =
        dprintf
          begin fun p ->
          p.fmt "[recSgnDecl] [Const] %a : %a"
-           Id.print c
+           Name.pp c
            (P.fmt_ppr_lf_typ cD Int.LF.Null P.l0) tA
          end;
        Unify.forceGlobalCnstr ();
@@ -665,7 +664,7 @@ let recSgnDecls decls =
        dprintf
          begin fun p ->
          p.fmt "[recSgnDecl] [Const] Reconstruction (with abstraction) of constant: %a : %a"
-           Id.print c
+           Name.pp c
            (P.fmt_ppr_lf_typ cD Int.LF.Null P.l0) tA'
          end;
        Monitor.timer
@@ -684,13 +683,13 @@ let recSgnDecls decls =
            p.fmt "[RecSgn Checking] Schema at: %a"
              Syntax.Loc.print_short location);
        let apx_schema = Index.schema schema in
-       dprint (fun () -> "\nReconstructing schema " ^ string_of_name g ^ "\n");
+       dprint (fun () -> "\nReconstructing schema " ^ Name.string_of_name g ^ "\n");
        FVar.clear ();
        let sW = Reconstruct.schema apx_schema in
        dprintf
          begin fun p ->
          p.fmt "Elaborated schema %a : %a"
-           Id.print g
+           Name.pp g
            (P.fmt_ppr_lf_schema P.l0) sW
          end;
        Reconstruct.solve_fvarCnstr Lfrecon.Pi;
@@ -701,11 +700,11 @@ let recSgnDecls decls =
        dprintf
          begin fun p ->
          p.fmt "Schema %a : %a after abstraction"
-           Id.print g
+           Name.pp g
            (P.fmt_ppr_lf_schema P.l0) sW'
          end;
        Check.LF.checkSchemaWf sW';
-       dprint (fun () -> "\nTYPE CHECK for schema " ^ string_of_name g ^ " successful");
+       dprint (fun () -> "\nTYPE CHECK for schema " ^ Name.string_of_name g ^ " successful");
        let sch = Schema.add (fun _ -> Schema.mk_entry g sW') in
        let sgn = Int.Sgn.Schema { location; identifier=sch; schema=sW' } in
        Store.Modules.addSgnToCurrent sgn;
@@ -731,7 +730,7 @@ let recSgnDecls decls =
        dprintf
          begin fun p ->
          p.fmt "[AFTER Reconstruction Val] @[<v 2>let %a : %a =@ %a@]"
-           Id.print identifier
+           Name.pp identifier
            (P.fmt_ppr_cmp_typ cD P.l0) tau'
            (P.fmt_ppr_cmp_exp_syn cD cG P.l0) expression'
          end;
@@ -810,7 +809,7 @@ let recSgnDecls decls =
        dprintf
          begin fun p ->
            p.fmt "[AFTER Reconstruction Val - 2] let %s : %a =@,%a"
-             (Id.render_name identifier)
+             (Name.render_name identifier)
              (P.fmt_ppr_cmp_typ cD P.l0) tau'
              (P.fmt_ppr_cmp_exp_chk cD cG P.l0) expression'
          end;
@@ -868,7 +867,7 @@ let recSgnDecls decls =
        let pos loc x args =
          match
            List.index_of
-             (fun a -> Option.equal Id.equals a (Some x))
+             (fun a -> Option.equal Name.equal a (Some x))
              args
          with
          | None -> throw loc (UnboundArg (x, args))
@@ -884,7 +883,7 @@ let recSgnDecls decls =
             (* Validate the inputs: can't have too many args or the wrong name *)
             if Bool.not (Total.is_valid_args tau (List.length args))
             then raise (Error (loc, TotalArgsError f))
-            else if Bool.not (Id.equals f f')
+            else if Bool.not (Name.equal f f')
             then raise (Error (loc, TotalDeclError (f, f')))
             else
               begin match order with
@@ -1010,7 +1009,7 @@ let recSgnDecls decls =
          dprintf
            begin fun p ->
            p.fmt "[reconThm] @[<v>Elaboration of theorem %a : %a@,result: @[%a@]@]"
-             Id.print f
+             Name.pp f
              (P.fmt_ppr_cmp_typ Int.LF.Empty P.l0) tau
              P.fmt_ppr_cmp_thm thm'
            end;
@@ -1032,7 +1031,7 @@ let recSgnDecls decls =
          dprintf
            begin fun p ->
            p.fmt "[AFTER reconstruction] @[<v>Function %a : %a@,@[%a@]@]"
-             Id.print f
+             Name.pp f
              (P.fmt_ppr_cmp_typ Int.LF.Empty P.l0) tau
              P.fmt_ppr_cmp_thm thm'
            end;
@@ -1071,7 +1070,7 @@ let recSgnDecls decls =
                p.fmt "[recThm] @[<v>begin checking theorem %a.\
                       @,@[<hv 2>total_decs =@ @[<v>%a@]@]\
                       @,tau_ann = @[%a@]@]"
-                 Id.print f
+                 Name.pp f
                  (List1.pp ~pp_sep: Format.pp_print_cut
                     P.(fmt_ppr_cmp_total_dec))
                  total_decs
@@ -1090,7 +1089,7 @@ let recSgnDecls decls =
            dprintf
              begin fun p ->
              p.fmt "[reconRecFun] @[<v>DOUBLE CHECK of function %a at %a successful@,Adding definition to the store.@]"
-               Id.print thm_name
+               Name.pp thm_name
                Loc.print_short thm_loc
              end;
            let v = Int.(Comp.ThmValue (thm_cid, e_r', LF.MShift 0, Comp.Empty)) in

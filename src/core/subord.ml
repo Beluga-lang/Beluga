@@ -249,7 +249,7 @@ let thin' cD a cPsi =
            begin fun p ->
            let (_, Decl (_, CTyp _, _, _)) = Store.FCVar.get psi in
            p.fmt "[thin'] CtxName psi = %a FOUND"
-             Id.print psi
+             Name.pp psi
            end;
          thin0 cD a cPsi
        with
@@ -257,7 +257,7 @@ let thin' cD a cPsi =
           dprintf
             begin fun p ->
             p.fmt "[thin'] CtxName psi = %a NOT FOUND"
-              Id.print psi
+              Name.pp psi
             end;
           (Shift 0, cPsi)
      end

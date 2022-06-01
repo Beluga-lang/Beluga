@@ -5,7 +5,7 @@ module CompS = Store.Cid.Comp
 
 module Conf : sig
   type t
-  val make : Id.name -> order total_dec_kind -> typ -> int -> t
+  val make : Name.t -> order total_dec_kind -> typ -> int -> t
 end
 
 module Action : sig
@@ -62,10 +62,10 @@ val get_cid : t -> Id.cid_prog
 (** Gets the Store entry for this theorem. *)
 val get_entry : t -> CompS.Entry.t
 
-val get_name : t -> Id.name
+val get_name : t -> Name.t
 
 (** Checks if the theorem's name is equal to the given name. *)
-val has_name_of : t -> Id.name -> bool
+val has_name_of : t -> Name.t -> bool
 
 (** Checks if the theorem's cid is equal to the given cid. *)
 val has_cid_of : t -> Id.cid_prog -> bool
@@ -111,7 +111,7 @@ val apply_subgoal_replacement : t -> string -> proof_state -> (proof -> proof) -
     Returns true iff such a variable could be renamed.
     Else, there was no such variable.
  *)
-val rename_variable : Id.name -> Id.name -> [ `comp | `meta ] -> t -> proof_state -> bool
+val rename_variable : Name.t -> Name.t -> [ `comp | `meta ] -> t -> proof_state -> bool
 
 val configure : Id.cid_comp_const -> Format.formatter -> (t -> unit subgoal_hook) list ->
                 proof_state -> proof_state list -> t

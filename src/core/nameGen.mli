@@ -11,7 +11,7 @@
     The general idiom to use this generator is:
         NameGen.(var tau |> renumber names)
     where
-        names : Id.name list
+        names : Name.t list
     can be calculated using helper functions from context.ml.
     (See the names_of_Xctx family of functions.)
 
@@ -35,18 +35,18 @@ open Syntax.Int
 (** Generates a raw parameter variable name for a given LF type.
     Uses the programmer-supplied name hint, with a fallback.
  *)
-val pvar : LF.typ -> Id.name
+val pvar : LF.typ -> Name.t
 
 (** Generates a raw bound variable name for a given LF type.
     Uses the programmer-supplied name hint, with a fallback.
  *)
-val bvar : LF.typ -> Id.name
+val bvar : LF.typ -> Name.t
 
 (** Generate a raw metavariable name for a given LF type.
     Uses programmer-supplied name hints with a fallback.
  *)
-val mvar : LF.typ -> Id.name
+val mvar : LF.typ -> Name.t
 
-val var : Comp.typ -> Id.name
+val var : Comp.typ -> Name.t
 
-val renumber : Id.name list -> Id.name -> Id.name
+val renumber : Name.t list -> Name.t -> Name.t

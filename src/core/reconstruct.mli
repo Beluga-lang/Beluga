@@ -66,7 +66,7 @@ val compkind : Apx.Comp.kind -> Int.Comp.kind
 val comptyp : Apx.Comp.typ -> Int.Comp.typ
 val comptyp_cD : Int.LF.mctx -> Apx.Comp.typ -> Int.Comp.typ
 val comptypdef : Syntax.Loc.t
-                 -> Id.name -> (Apx.Comp.typ * Apx.Comp.kind)
+                 -> Name.t -> (Apx.Comp.typ * Apx.Comp.kind)
                  -> (Int.LF.mctx * Int.Comp.typ) * Id.offset * Int.Comp.kind
 val elExp : Int.LF.mctx
             -> Int.Comp.gctx

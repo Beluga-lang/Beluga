@@ -38,7 +38,7 @@ val defer_session : t -> unit
  *)
 val session_configuration_wizard : t -> bool
 
-val select_theorem : t -> Beluga.Id.name -> bool
+val select_theorem : t -> Beluga.Name.t -> bool
 
 val automation_state : t -> Automation.State.t
 

@@ -23,8 +23,8 @@ let throw loc e = raise (Error (loc, e))
 let thm_thm loc cid1 =
   let get_decl cid = Comp.( (get cid).Entry.decl ) in
   let name = Comp.name cid1 in
-  let loc' = Id.loc_of_name name in
-  let name = Id.render_name name in
+  let loc' = Name.loc_of_name name in
+  let name = Name.render_name name in
   function
   | None -> () (* no cid from whose POV to do the scopechecking *)
   | Some cid2 ->
@@ -67,7 +67,7 @@ let format_error ppf =
   | FixedFixed (item_name, item_loc, thm_cid) ->
      let e = Comp.get thm_cid in
      let thm_name = e.Comp.Entry.name in
-     let thm_loc = Id.loc_of_name thm_name in
+     let thm_loc = Name.loc_of_name thm_name in
      fprintf ppf
        "@[<v>Ill-scoped reference.\
         @,The %s defined at\
@@ -79,7 +79,7 @@ let format_error ppf =
         @,- @[<hov>%a@]@]"
        item_name
        Loc.print item_loc
-       Id.print thm_name
+       Name.pp thm_name
        Loc.print thm_loc
        pp_print_text
        "Hint: If you are using Harpoon, you may want to save your \
@@ -97,8 +97,8 @@ let format_error ppf =
         @,- @[<hov>%a@]\
         @,- @[<hov>%a@]\
         @,- @[<hov>%a@]@]"
-       Id.print name1
-       Id.print name2
+       Name.pp name1
+       Name.pp name2
        pp_print_text
        "The theorems have not been materialized in the signature, so \
         their relative scoping cannot be established."

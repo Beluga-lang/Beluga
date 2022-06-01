@@ -72,7 +72,7 @@ val alt : 'a t -> 'a t -> 'a t
 (** Parser for a full Beluga signature. *)
 val sgn : Syntax.Ext.Sgn.decl list t
 
-val name : Id.name t
+val name : Name.t t
 
 (** Parser for a Harpoon command. *)
 val interactive_harpoon_command : Syntax.Ext.Harpoon.command t
@@ -93,7 +93,7 @@ val cmp_exp_chk : Comp.exp_chk t
 val cmp_exp_syn : Comp.exp_syn t
 
 (** Parser for the next theorem name in Harpoon. *)
-val next_theorem : [ `quit | `next of Id.name ] t
+val next_theorem : [ `quit | `next of Name.t ] t
 
   (*
 (* exports for debugging! *)

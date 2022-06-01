@@ -9,7 +9,6 @@ open Store
 open Store.Cid
 open Syntax
 open Substitution
-open Id
 open ConvSigma
 
 module F = Fun
@@ -39,7 +38,7 @@ type error =
   | MetaObjectClash of Int.LF.mctx * (Int.Comp.meta_typ)
   | MissingMetaObj
   | TooManyMetaObj
-  | TypeAbbrev of Id.name
+  | TypeAbbrev of Name.t
   | PatternMobj
   | UnsupportedTypeAnnotation
   | MCtxIllformed of Int.LF.mctx
@@ -48,7 +47,7 @@ type error =
   | InvalidSchemaElementIndex of int * Id.cid_schema
   | UnboundCaseLabel
     of [ `comp | `meta ]
-       * Id.name
+       * Name.t
        * Int.LF.mctx
        * Int.Comp.typ
   | CaseLabelMismatch
@@ -83,7 +82,7 @@ let _ =
       | TypeAbbrev a ->
          fprintf ppf
            "Type definition %s cannot contain any free meta-variables in its type."
-           (Id.render_name a)
+           (Name.render_name a)
 
       | IllegalCase (cD, cG, i, tau) ->
          fprintf ppf
@@ -184,7 +183,7 @@ let _ =
             @,@[A %a constructor is expected, due to the type of the scrutinee, namely@]\
             @,  @[%a@]
             @]"
-           Id.print name
+           Name.pp name
            print_case_label_kind kind
            P.(fmt_ppr_cmp_typ cD l0) tau
 
@@ -240,7 +239,7 @@ let extend_mctx cD (_, cdecl, t) =
 
 let mk_name_cdec =
   function
-  | Int.LF.Decl (u, _, _, _) -> mk_name (SomeName u)
+  | Int.LF.Decl (u, _, _, _) -> Name.mk_name (Name.SomeName u)
 
 (* etaExpandMMV loc cD cPsi sA  = tN
  *
@@ -321,7 +320,7 @@ let rec elDCtxAgainstSchema loc recT cD psi s_cid =
          else
            let { Schema.Entry.name; schema; decl = _ } = Schema.get s_cid in
            let c_var' = Int.LF.CtxName psi in
-           Check.LF.(CtxVarMismatch (cD, c_var', name, schema) |> throw (Id.loc_of_name psi))
+           Check.LF.(CtxVarMismatch (cD, c_var', name, schema) |> throw (Name.loc_of_name psi))
        with
        | Not_found ->
           FCVar.add psi (cD, Int.LF.Decl (psi, Int.LF.CTyp (Some s_cid), Plicity.implicit, Inductivity.not_inductive));
@@ -337,12 +336,12 @@ let rec elDCtxAgainstSchema loc recT cD psi s_cid =
         dprintf
           begin fun p ->
           p.fmt "[elDCtxAgainstSchema] %a : %a"
-            Id.print x
+            Name.pp x
             (P.fmt_ppr_lf_typ cD cPsi P.l0) tA
           end;
         Int.LF.DDec (cPsi, Int.LF.TypDecl (x, tA))
      | Apx.LF.TypDeclOpt x ->
-        raise (Check.LF.Error (loc, Check.LF.MissingType (Id.string_of_name x)))
+        raise (Check.LF.Error (loc, Check.LF.MissingType (Name.string_of_name x)))
      end
 
 (* performs reconstruction of cPsi2 while comparing it with cPsi1
@@ -372,7 +371,7 @@ let unifyDCtxWithFCVar loc cD cPsi1 cPsi2 =
     | (Int.LF.CtxVar (Int.LF.CtxOffset psi1_var), Apx.LF.CtxVar (Apx.LF.CtxOffset psi2_var))
          when psi1_var = psi2_var -> ()
     | (Int.LF.CtxVar (Int.LF.CtxName g), Apx.LF.CtxVar (Apx.LF.CtxName h))
-         when Id.equals g h -> ()
+         when Name.equal g h -> ()
 
     | ( Int.LF.DDec (cPsi1, Int.LF.TypDecl(_, tA1))
       , Apx.LF.DDec (cPsi2, Apx.LF.TypDecl(_, tA2))
@@ -398,7 +397,7 @@ let rec apx_length_typ_rec =
   function
   | Apx.LF.SigmaLast _ -> 1
   | Apx.LF.SigmaElem (x, _, rest) ->
-     print_string (Id.render_name x ^ "  ");
+     print_string (Name.render_name x ^ "  ");
      1 + apx_length_typ_rec rest
 
 let rec lookup cG k =
@@ -531,7 +530,7 @@ let mgAtomicTyp cD cPsi a kK =
              p.fmt "[mgAtomicTyp] @[<v>PiKind ssi' = @[%a@]\
                     @,name = @[%a@]@]"
                P.(fmt_ppr_lf_sub cD cPhi' l0) ssi'
-               Id.print u
+               Name.pp u
              end;
            Whnf.etaExpandMMV Loc.ghost cD
              cPhi' (tA1', ssi') u ss_proj plicity Inductivity.not_inductive
@@ -971,7 +970,7 @@ and elExpW cD cG e theta_tau =
      dprintf
        begin fun p ->
        p.fmt "[elExp] @[<v>Fn %a done@,cD = %a@,cG = %a@,expression %a@,has type %a@]"
-         Id.print x
+         Name.pp x
          (P.fmt_ppr_lf_mctx P.l0) cD
          (P.fmt_ppr_cmp_gctx cD P.l0) cG'
          (P.fmt_ppr_cmp_exp_chk cD cG' P.l0) e''
@@ -1515,7 +1514,7 @@ and elPatChk (cD:Int.LF.mctx) (cG:Int.Comp.gctx) pat ttau =
      dprintf
        begin fun p ->
        p.fmt "[elPatChk] @[<v>Inferred type of pat var %a as@,@[%a@]@]"
-         Id.print name
+         Name.pp name
          (P.fmt_ppr_cmp_typ cD P.l0) tau'
        end;
      ( Int.LF.Dec(cG, Int.Comp.CTypDecl (name, tau', false))
@@ -1676,7 +1675,7 @@ and elPatSpineW cD cG pat_spine ttau =
           begin fun p ->
           let name = (CompDest.get obs).CompDest.Entry.name in
           p.fmt "[elPatSpine] @[<v>Observation: %a@,cD = @[%a@]@,cD' = @[%a@]@]"
-            Id.print name
+            Name.pp name
             (P.fmt_ppr_lf_mctx P.l0) cD
             (P.fmt_ppr_lf_mctx P.l0) cD'
           end;
@@ -2462,7 +2461,7 @@ and elSplit loc cD cG pb i tau_i bs ttau =
                 @[<hv 2>@[<hv>%a@] |-@ @[%a@] :@ @[%a@]@]\
                 @,current goal = @[%a@]\
                 @,cG' = @[%a@]@]"
-           Id.print name
+           Name.pp name
            P.(fmt_ppr_lf_mctx l0) cD'
            P.(fmt_ppr_cmp_pattern cD' cG' l0) pat
            P.(fmt_ppr_cmp_typ cD' l0) tau_p

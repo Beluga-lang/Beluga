@@ -75,7 +75,7 @@ type 'a fvar_state = (fvars, 'a) state
     These are abstracted into computational Pi-box types.
  *)
 type name_disambiguator =
-  CVar.t -> BVar.t -> Syntax.Loc.t * Id.name -> Ext.LF.sub option -> Apx.LF.head fvar_state
+  CVar.t -> BVar.t -> Syntax.Loc.t * Name.t -> Ext.LF.sub option -> Apx.LF.head fvar_state
 
 type lf_indexing_context =
   { disambiguate_name : name_disambiguator
@@ -94,10 +94,10 @@ let modify_bvars (f : BVar.t -> BVar.t) (c : lf_indexing_context) : lf_indexing_
   { c with bvars = f c.bvars }
 
 (** Extends the bound variable list in an indexing context with a new entry. *)
-let extending_bvars (x : Id.name) (c : lf_indexing_context) : lf_indexing_context =
+let extending_bvars (x : Name.t) (c : lf_indexing_context) : lf_indexing_context =
   modify_bvars (fun bvars -> BVar.extend bvars (BVar.mk_entry x)) c
 
-let extending_by (x : Id.name) (fvars : fvars) : fvars =
+let extending_by (x : Name.t) (fvars : fvars) : fvars =
   { fvars with vars = x :: fvars.vars }
 
 type 'a index = lf_indexing_context -> 'a fvar_state
@@ -136,7 +136,7 @@ let cvar_error_to_hint =
   | `implicit -> Some `implicit_variable
   | _ -> None
 
-let index_cvar' cvars (u : Id.name) : (cvar_error_status, Id.offset) Either.t =
+let index_cvar' cvars (u : Name.t) : (cvar_error_status, Id.offset) Either.t =
   match
     trying_index (fun _ -> CVar.index_of_name cvars u)
   with
@@ -146,17 +146,17 @@ let index_cvar' cvars (u : Id.name) : (cvar_error_status, Id.offset) Either.t =
      dprintf
        begin fun p ->
        p.fmt "[index_cvar'] indexed %a to offset %d at %a"
-         Id.print u
+         Name.pp u
          k
-         Loc.print_short (Id.loc_of_name u)
+         Loc.print_short (Name.loc_of_name u)
        end;
      Either.right k
 
-let index_cvar (name : Id.name) : (cvar_error_status, Id.offset) Either.t index =
+let index_cvar (name : Name.t) : (cvar_error_status, Id.offset) Either.t index =
   fun c fvars -> (fvars, index_cvar' c.cvars name)
 
   (*
-let index_bvar (name : Id.name) : Id.offset option index =
+let index_bvar (name : Name.t) : Id.offset option index =
   fun c fvars ->
   ( fvars
   , trying_index (fun () -> BVar.index_of_name c.bvars name)
@@ -190,19 +190,19 @@ type hint =
   ]
 
 type error =
-  | UnboundName of Id.name
-  | UnboundCtxSchemaName of Id.name
-  | UnboundCompName of Id.name
-  | UnboundObs of Id.name
-  | UnboundOperator of Id.name
+  | UnboundName of Name.t
+  | UnboundCtxSchemaName of Name.t
+  | UnboundCompName of Name.t
+  | UnboundObs of Name.t
+  | UnboundOperator of Name.t
   | PatVarNotUnique
   | IllFormedCompTyp
-  | MisplacedOperator of Id.name
-  | MissingArguments of Id.name * int * int
+  | MisplacedOperator of Name.t
+  | MissingArguments of Name.t * int * int
   | ParseError
-  | NameOvershadowing of Id.name
+  | NameOvershadowing of Name.t
   | SubstitutionNotAllowed of illegal_subst_term
-  | NonemptyPatternSpineForVariable of Id.name
+  | NonemptyPatternSpineForVariable of Name.t
 
 exception Error of Syntax.Loc.t * error * hint option
 
@@ -214,22 +214,22 @@ let print_error ppf =
   let open Format in
   function
   | NameOvershadowing n ->
-     fprintf ppf ("The declaration %a is overshadowing an earlier one.") Id.print n
+     fprintf ppf ("The declaration %a is overshadowing an earlier one.") Name.pp n
   | MisplacedOperator n ->
-     fprintf ppf ("Illegal use of operator %a.") Id.print n
+     fprintf ppf ("Illegal use of operator %a.") Name.pp n
   | MissingArguments (n, expected, found) ->
-     fprintf ppf ("Operator %a expected %d arguments, found %d.") Id.print n expected found
+     fprintf ppf ("Operator %a expected %d arguments, found %d.") Name.pp n expected found
 
   | UnboundName n ->
      fprintf ppf
        "Unbound data-level variable (ordinary or meta-variable) or constructor: %a."
-       Id.print n
+       Name.pp n
   | UnboundCtxSchemaName n ->
-     fprintf ppf "Unbound context schema: %a." Id.print n
+     fprintf ppf "Unbound context schema: %a." Name.pp n
   | UnboundCompName n ->
-     fprintf ppf "Unbound computation-level identifier: %a." Id.print n
+     fprintf ppf "Unbound computation-level identifier: %a." Name.pp n
   | UnboundObs n ->
-     fprintf ppf "Unbound computation-level observation: %a." Id.print n
+     fprintf ppf "Unbound computation-level observation: %a." Name.pp n
   | PatVarNotUnique ->
      fprintf ppf "Pattern variable not linear."
   | IllFormedCompTyp ->
@@ -240,7 +240,7 @@ let print_error ppf =
      fprintf ppf "Substitution is not allowed in %a" print_illegal_subst_term s
   | NonemptyPatternSpineForVariable x ->
      fprintf ppf "Variable patterns may not be applied; is %a misspelled?"
-       Id.print x
+       Name.pp x
 
 let print_hint ppf : hint -> unit =
   let open Format in
@@ -281,22 +281,22 @@ let require_no_sub loc (case : illegal_subst_term) =
     context.
  *)
 let disambiguate_name :
-      Syntax.Loc.t * Id.name -> Ext.LF.sub option ->
+      Syntax.Loc.t * Name.t -> Ext.LF.sub option ->
       Apx.LF.head index =
   fun p s c fvars ->
   c.disambiguate_name c.cvars c.bvars p s fvars
 
-let lookup_fv' (m : Id.name) fvars =
-  List.exists (Id.equals m) fvars.vars
+let lookup_fv' (m : Name.t) fvars =
+  List.exists (Name.equal m) fvars.vars
 
-let lookup_fv (m : Id.name) : bool index =
+let lookup_fv (m : Name.t) : bool index =
   Bind.(get_fvars $> lookup_fv' m)
 
 let print_fvars ppf (vs : Var.t) =
   let open Format in
   pp_print_list
     ~pp_sep: Format.comma
-    (fun ppf x -> Id.print ppf x.Var.name)
+    (fun ppf x -> Name.pp ppf x.Var.name)
     ppf
     (Var.to_list vs)
 
@@ -305,7 +305,7 @@ let print_fcvars ppf fcvars =
   pp_print_list
     ~pp_sep: Format.comma
     (fun ppf x ->
-      fprintf ppf "FMV %s" (Id.render_name x))
+      fprintf ppf "FMV %s" (Name.render_name x))
     ppf
     fcvars.vars
 
@@ -327,7 +327,7 @@ let rec length_typ_rec =
   function
   | Ext.LF.SigmaLast _ -> 1
   | Ext.LF.SigmaElem (x, _, rest) ->
-     print_string (Id.render_name x ^ "  ");
+     print_string (Name.render_name x ^ "  ");
      1 + length_typ_rec rest
 
 let rec index_kind (k : Ext.LF.kind) : Apx.LF.kind index =
@@ -340,7 +340,7 @@ let rec index_kind (k : Ext.LF.kind) : Apx.LF.kind index =
   | Ext.LF.Typ _ ->
      return Apx.LF.Typ
   | Ext.LF.ArrKind (_, a, k) ->
-     pi (Id.mk_name Id.NoName) a k
+     pi (Name.mk_name Name.NoName) a k
   | Ext.LF.PiKind (_, Ext.LF.TypDecl (x, a), k) ->
      pi x a k
 
@@ -360,7 +360,7 @@ and index_typ (a : Ext.LF.typ) : Apx.LF.typ index =
 
   | Ext.LF.ArrTyp (_, a, b) ->
      (* TODO use contextual name generation here *)
-     let x = Id.mk_name Id.NoName in
+     let x = Name.mk_name Name.NoName in
      seq2 (index_typ a) (locally (extending_bvars x) (index_typ b))
      $> fun (a', b') ->
         Apx.LF.PiTyp ((Apx.LF.TypDecl (x, a'), Plicity.explicit), b')
@@ -383,7 +383,7 @@ and index_typ (a : Ext.LF.typ) : Apx.LF.typ index =
                ~pp_sep: Format.pp_print_space
                (P.fmt_ppr_lf_normal P.l0))
             nl
-            Id.print a
+            Name.pp a
             (P.fmt_ppr_lf_spine P.l0) tS'
           end;
         index_typ (Ext.LF.Atom (loc, a, tS'))
@@ -729,7 +729,7 @@ and index_head : Ext.LF.head -> Apx.LF.head index =
      dprintf
        (fun p ->
          p.fmt "[index_head] indexing name/variable %a at %a"
-           Id.print n
+           Name.pp n
            Loc.print_short loc);
      disambiguate_name (loc, n) o
 
@@ -802,7 +802,7 @@ and disambiguate_name' f : name_disambiguator =
   fun cvars bvars (loc, name) sub_opt fvars ->
   let disambiguation_message kind k p =
     p.fmt "[disambiguate_name] variable %a -> %s (at %a) %a"
-      Id.print name
+      Name.pp name
       kind
       Loc.print_short loc
       (Option.print
@@ -844,7 +844,7 @@ and disambiguate_name' f : name_disambiguator =
        begin match index_cvar' cvars name with
        | Either.Left `implicit ->
           throw_hint
-            (Id.loc_of_name name)
+            (Name.loc_of_name name)
             `implicit_variable
             (UnboundName name)
        | Either.Right offset ->
@@ -876,7 +876,7 @@ and disambiguate_to_fmvars : name_disambiguator =
   fun cvars bvars (loc, name) sub_opt fvars ->
   disambiguate_name'
     begin fun c (loc, name) sub_opt fvars ->
-    dprintf (fun p -> p.fmt "[disambiguate_name] disambiguating %a to FMVar" Id.print name);
+    dprintf (fun p -> p.fmt "[disambiguate_name] disambiguating %a to FMVar" Name.pp name);
     match fvars.open_flag with
     | `closed_term -> throw loc (UnboundName name)
     | `open_term ->
@@ -891,9 +891,9 @@ and disambiguate_to_fvars : name_disambiguator =
   fun cvars bvars (loc, name) sub_opt fvars ->
   disambiguate_name'
     begin fun _ (loc, name) sub_opt fvars ->
-    dprintf (fun p -> p.fmt "[disambiguate_name] disambiguating %a to FVar" Id.print name);
+    dprintf (fun p -> p.fmt "[disambiguate_name] disambiguating %a to FVar" Name.pp name);
     require_no_sub loc `pure_lf sub_opt;
-    dprintf (fun p -> p.fmt "FVar %a at %a" Id.print name Loc.print loc);
+    dprintf (fun p -> p.fmt "FVar %a at %a" Name.pp name Loc.print loc);
     (fvars, Apx.LF.FVar name)
     end
     cvars bvars (loc, name) sub_opt fvars
@@ -1120,7 +1120,7 @@ let index_cdecl f cvars fvars =
      dprintf
        begin fun p ->
        p.fmt "[index_cdecl] %a at %a"
-         Id.print u
+         Name.pp u
          Loc.print_short loc
        end;
      begin
@@ -1221,7 +1221,7 @@ let rec index_compkind cvars fcvars =
      let cK' = index_compkind cvars' fcvars' cK in
      Apx.Comp.PiKind (loc, cdecl', cK')
   | Ext.Comp.ArrKind (loc, (loc', ctau, plicity), cK) ->
-    let x = Id.mk_name ~loc Id.NoName in
+    let x = Name.mk_name ~loc Name.NoName in
     index_compkind cvars fcvars
     @@ Ext.Comp.PiKind (loc, Ext.LF.Decl (x, (loc', ctau), plicity), cK)
 
@@ -1462,7 +1462,7 @@ and index_pattern cvars fcvars fvars =
         dprintf
           begin fun p ->
           p.fmt "[index_pattern] %a is matching a constructor"
-            Id.print c
+            Name.pp c
           end;
         let (pat_spine', fcvars', fvars') = index_pat_spine cvars fcvars fvars pat_spine in
         (Apx.Comp.PatConst (loc, k, pat_spine'), fcvars', fvars')
@@ -1478,7 +1478,7 @@ and index_pattern cvars fcvars fvars =
                 dprintf
                   begin fun p ->
                   p.fmt "[index_pattern] %a is a variable"
-                    Id.print c
+                    Name.pp c
                   end;
                 let fvars' = Var.extend fvars (Var.mk_entry c) in
                 (Apx.Comp.PatFVar (loc, c), fcvars, fvars')

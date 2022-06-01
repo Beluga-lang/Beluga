@@ -85,7 +85,7 @@ module LF = struct
     }
 
   let add (l : Location.t) (e : entry) (_ : string) =
-    if not (Location.is_ghost l)
+    if Bool.not (Location.is_ghost l)
     then
       begin
         (* dprint (fun () -> "[TypeInfo.LF] Entry of " ^ P.typToString e.ctx e.psi e.tc ^ " added at: \n" ^ Location.to_string l ^ "\n"); *)
@@ -113,7 +113,7 @@ module Comp = struct
     }
 
   let add (l : Location.t) (e : entry) (_ : string) =
-    if not (Location.is_ghost l)
+    if Bool.not (Location.is_ghost l)
     then
       begin
         (* dprint (fun () -> "[TypeInfo.Comp] Entry of " ^ P.subCompTypToString e.ctx e.tc ^ " added at: \n" ^ Location.to_string l ^ "\n"); *)
@@ -141,7 +141,7 @@ module Sgn = struct
     }
 
   let add (l : Location.t) (e : entry) (_ : string) : unit =
-    if not (Location.is_ghost l)
+    if Bool.not (Location.is_ghost l)
     then
       begin
         begin

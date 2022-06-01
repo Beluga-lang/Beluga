@@ -1946,7 +1946,7 @@ module Make (T : TRAIL) : UNIFY = struct
              , mmvar1.constraints.contents
              )
          end
-       else if not (Whnf.convDCtx cPsi1 cPsi2 && Whnf.convSub t1 t2)
+       else if Bool.not (Whnf.convDCtx cPsi1 cPsi2 && Whnf.convSub t1 t2)
        then
          begin
            let id = next_constraint_id () in
@@ -2285,15 +2285,15 @@ module Make (T : TRAIL) : UNIFY = struct
   and unifyHead mflag cD0 cPsi head1 head2 =
     match (head1, head2) with
     | (BVar k1, BVar k2) ->
-       if not (k1 = k2)
+       if Bool.not (k1 = k2)
        then raise (Failure "Bound variable clash")
 
     | (Const (i, id), Const (i', id')) ->
-       if not (i = i' && id = id')
+       if Bool.not (i = i' && id = id')
        then raise (Failure "Constant clash")
 
     | (FVar x1, FVar x2) ->
-       if not (Id.equals x1 x2)
+       if Bool.not (Id.equals x1 x2)
        then raise (Failure "Free Variable clash")
 
     | (MVar (Offset k, s), MVar (Offset k', s')) ->
@@ -2511,7 +2511,7 @@ module Make (T : TRAIL) : UNIFY = struct
        then raise (Failure "Front BVar mismatch")
 
     | (Head (Const i), Head (Const k)) ->
-       if not (Id.cid_equals i k)
+       if Bool.not (Id.cid_equals i k)
        then raise (Failure "Front Constant mismatch")
 
     | (Head (PVar (q, s)), Head (PVar (p, s'))) ->
@@ -2546,7 +2546,7 @@ module Make (T : TRAIL) : UNIFY = struct
        else raise (Failure "Front Proj mismatch")
 
     | (Head (FVar x), Head (FVar y)) ->
-       if not (Id.equals x y)
+       if Bool.not (Id.equals x y)
        then raise (Failure "Front FVar mismatch")
 
     | (Obj tM, Obj tN) ->
@@ -2634,7 +2634,7 @@ module Make (T : TRAIL) : UNIFY = struct
     | ( CtxVar (CInst (mmvar1 (* (n1, ({contents = None} as cvar_ref1), cD1, CTyp schema1, _, _) *), theta1))
       , CtxVar (CInst (mmvar2 (* (_, ({contents = None} as cvar_ref2), _, CTyp schema2, _, _) *), theta2))
       )
-         when not (is_mmvar_instantiated mmvar1) && not (is_mmvar_instantiated mmvar2) ->
+         when Bool.not (is_mmvar_instantiated mmvar1) && Bool.not (is_mmvar_instantiated mmvar2) ->
        let CTyp schema1, CTyp schema2 = mmvar1.typ, mmvar2.typ in
        if mmvar1.instantiation == mmvar2.instantiation
        then
@@ -2643,7 +2643,7 @@ module Make (T : TRAIL) : UNIFY = struct
            if isPatMSub theta1 && isPatMSub theta2
            then
              begin
-               if not (Whnf.convMSub theta1 theta2)
+               if Bool.not (Whnf.convMSub theta1 theta2)
                then
                  begin
                    let (mt', cD') =
@@ -2815,7 +2815,7 @@ module Make (T : TRAIL) : UNIFY = struct
        unifyDCtx1 Unification cD cPsi1 cPsi2;
        unifyClTyp Unification cD cPsi1 (tp1, tp2)
     | (CTyp schema1, CTyp schema2) ->
-       if not (Option.equal Id.cid_equals schema1 schema2)
+       if Bool.not (Option.equal Id.cid_equals schema1 schema2)
        then raise (Failure "CtxPi schema clash")
     | _ -> raise (Failure "Computation-level Type Clash")
 
@@ -2922,7 +2922,7 @@ module Make (T : TRAIL) : UNIFY = struct
           forceCnstr mflag (nextCnstr ())
        | Eqn (c_id, cD, cPsi, INorm tM1, INorm tM2) ->
           solveConstraint cnstr;
-          if not (Whnf.conv (tM1, id) (tM2, id))
+          if Bool.not (Whnf.conv (tM1, id) (tM2, id))
           then unifyTerm mflag cD cPsi (tM1, id) (tM2, id);
           forceCnstr mflag (nextCnstr ())
        | Eqn (id, cD, cPsi, IHead h1, IHead h2) ->
@@ -3063,13 +3063,13 @@ module Make (T : TRAIL) : UNIFY = struct
     let phihat = Whnf.cnorm_psihat phihat (MShift 0) in
     match phihat with
     | (Some (CInst (mmvar1, theta1)), d)
-         when not (is_mmvar_instantiated mmvar1) ->
+         when Bool.not (is_mmvar_instantiated mmvar1) ->
        begin match psihat with
        | (Some (CInst (mmvar2, theta2)), d')
-            when not (is_mmvar_instantiated mmvar2) ->
+            when Bool.not (is_mmvar_instantiated mmvar2) ->
           if mmvar1.instantiation == mmvar2.instantiation
           then
-            if Whnf.convMSub theta1 theta2 && not (d = d')
+            if Whnf.convMSub theta1 theta2 && Bool.not (d = d')
             then fail "Hat context mismatch- 1"
             else if isPatMSub theta1 && isPatMSub theta2
             then
@@ -3145,7 +3145,7 @@ module Make (T : TRAIL) : UNIFY = struct
        end
 
     | _ ->
-       if not (Whnf.convDCtxHat psihat phihat)
+       if Bool.not (Whnf.convDCtxHat psihat phihat)
        then fail "Hat context mismatch - 2"
 
    (* **************************************************************** *)

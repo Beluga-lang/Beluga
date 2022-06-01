@@ -467,7 +467,7 @@ end = struct
 
   let check_branch cD cG tau_sc (Comp.Branch (_, _, (cD_p, _), patt, t, _)) =
     let b = check_pattern cD cG tau_sc cD_p t patt in
-    if not b
+    if Bool.not b
     then
       dprintf
         begin fun p ->
@@ -3482,7 +3482,7 @@ let covers problem projObj =
      Nontrivial coverage problems are discharged to the main function
      covers'.
    *)
-  if not (!Total.enabled || !enableCoverage)
+  if Bool.not (!Total.enabled || !enableCoverage)
   then
     (* if coverage and totality checking are disabled, then all
        coverage problems succeed. *)

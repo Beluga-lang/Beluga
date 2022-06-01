@@ -14,7 +14,7 @@ let null = function
   | [] -> true
   | _ -> false
 
-let nonempty l = not (null l)
+let nonempty l = Bool.not (null l)
 
 let filter_rev p l =
   let rec go acc = function

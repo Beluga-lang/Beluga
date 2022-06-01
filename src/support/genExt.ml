@@ -72,7 +72,7 @@ let line_generator ?(buffer_size = 2048) g =
   | _ ->
      let got_nl = ref false in
      let i = ref 0 in
-     while not !got_nl do
+     while Bool.not !got_nl do
        let c = g () in
        match c with
        | None ->

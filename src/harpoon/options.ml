@@ -129,7 +129,7 @@ let options_spec : parsed_t Optparser.options_specification =
   ; test_file
   ; test_start
   ; test_stop
-  ; load_holes = not no_load_holes
+  ; load_holes = Bool.not no_load_holes
   ; save_back
   }
   end

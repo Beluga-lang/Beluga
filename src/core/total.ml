@@ -1011,7 +1011,7 @@ exception Unimplemented
 let rec no_occurs a =
   function
   | Comp.TypBase (loc, c, _) ->
-     not (Id.cid_equals a c)
+     Bool.not (Id.cid_equals a c)
      && begin match (Store.Cid.CompTyp.get c).Store.Cid.CompTyp.Entry.positivity with
         | Sgn.Positivity -> true
         | Sgn.Stratify _ -> true

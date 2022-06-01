@@ -29,7 +29,7 @@ let thm_thm loc cid1 =
   | None -> () (* no cid from whose POV to do the scopechecking *)
   | Some cid2 ->
      match get_decl cid1, get_decl cid2 with
-     | Some d1, Some d2 when not Decl.(d1 < d2) ->
+     | Some d1, Some d2 when Bool.not Decl.(d1 < d2) ->
         FixedFixed ( "theorem " ^ name, loc', cid2 )
         |> throw loc
      | None, Some _ ->
@@ -56,7 +56,7 @@ let other_thm loc name d1 loc' = function
      match Comp.( (get cid).Entry.decl ) with
      | None -> ()
      | Some d2 ->
-        if not Decl.(d1 < d2) then
+        if Bool.not Decl.(d1 < d2) then
           FixedFixed (name, loc', cid)
           |> throw loc
 

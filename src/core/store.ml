@@ -312,7 +312,7 @@ module CidStore (M : ENTRY) : CIDSTORE
   let fixed_name_of (l, n) =
     let l' = Modules.name_of_id l in
     let m' =
-      if l <> !Modules.current && not (List.exists (fun x -> x = l) !Modules.opened)
+      if l <> !Modules.current && Bool.not (List.exists (fun x -> x = l) !Modules.opened)
       then Modules.correct l'
       else []
     in
@@ -472,7 +472,7 @@ module Cid = struct
       let (a_l, a_n) = a in
       let a_e = get a in
       let b_e = get b in
-      if not (BitSet.is_set !(b_e.subordinates) a_n)
+      if Bool.not (BitSet.is_set !(b_e.subordinates) a_n)
       then
         begin
           (* a is not yet in the subordinate relation for b, i.e. b depends on a *)

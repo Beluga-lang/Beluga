@@ -33,7 +33,7 @@ module Make (_ : Store.Cid.RENDERER) : Printer.Ext.T = struct
 
   let to_html (s : string) (tag : html) : string =
     match tag with
-    | _ when not !Html.printing -> s
+    | _ when Bool.not !Html.printing -> s
     | Keyword -> "<keyword>" ^ s ^ "</keyword>"
     | ID Constructor -> Html.addId s; "<span class=\"constructor\" id=\"" ^ s ^ "\">" ^ s ^ "</span>"
     | ID Typ -> Html.addId s; "<span class=\"typ\" id=\"" ^ s ^ "\">" ^ s ^ "</span>"

@@ -117,7 +117,7 @@ let load_file ppf file_name =
   then Chatter.print 2 "## Coverage checking done: %s  ##@." file_name;
 
   Logic.runLogic (); (* TODO Logic needs to accept a formatter -je *)
-  if not (Holes.none ())
+  if Bool.not (Holes.none ())
   then
     begin
       let open Format in

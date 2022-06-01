@@ -1796,7 +1796,7 @@ let rec fvarInCollection =
 let closedTyp (cPsi, tA) =
   let (cQ1, _) = collectDctx Syntax.Loc.ghost 0 I.Empty (None, 0) cPsi in
   let (cQ2, _) = collectTyp 0 cQ1 (Context.dctxToHat cPsi) (tA, LF.id) in
-  not (fvarInCollection cQ2)
+  Bool.not (fvarInCollection cQ2)
 
 
 (* We abstract over the MVars in cPsi, tM, and tA *)

@@ -1123,7 +1123,7 @@ and elExpW cD cG e theta_tau =
      let tau_s = Whnf.cnormCTyp ttau' in
      let ct = fun pat -> case_type pat i in
 
-     if not Whnf.(closedExp' i && closedCTyp tau_s && closedGCtx cG)
+     if Bool.not Whnf.(closedExp' i && closedCTyp tau_s && closedGCtx cG)
      then raise (Error (loc, ClosedTermRequired (cD, cG, i, tau_s)));
 
      let branches' =
@@ -2070,7 +2070,7 @@ and elCommand cD cG =
      let (i, tau_i) = elExp' cD cG i |> Pair.map_right Whnf.cnormCTyp in
      let i = Whnf.(cnormExp' (i, m_id)) in
      let tau_i = Whnf.(cnormCTyp (tau_i, m_id)) in
-     if not Whnf.(closedExp' i && closedCTyp tau_i)
+     if Bool.not Whnf.(closedExp' i && closedCTyp tau_i)
      then throw loc (ClosedTermRequired (cD, cG, i, tau_i));
      let c = I.By (i, x, tau_i) in
      (cD, Int.LF.Dec (cG, I.CTypDecl (x, tau_i, false)), Whnf.m_id, c)

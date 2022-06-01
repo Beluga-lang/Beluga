@@ -241,7 +241,7 @@ end = struct
       match inst with
       | `on -> true
       | `off -> false
-      | `toggle -> not !b
+      | `toggle -> Bool.not !b
     in
     b := v
 

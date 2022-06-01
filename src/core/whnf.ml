@@ -2122,7 +2122,7 @@ and closedTuple =
 and closedHead =
   function
   | (MMVar ((mmvar, _), _) | MPVar ((mmvar, _), _) | MVar (Inst mmvar, _))
-       when not (is_mmvar_instantiated mmvar) ->
+       when Bool.not (is_mmvar_instantiated mmvar) ->
      false
   | PVar (_, r) ->
      closedSub r

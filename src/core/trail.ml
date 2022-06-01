@@ -36,7 +36,7 @@ module StdTrail : TRAIL = struct
   let reset trail = Stack.clear trail
   let mark trail = Stack.push (Mark) trail
   let rec unwind trail undo =
-    if not (Stack.is_empty trail)
+    if Bool.not (Stack.is_empty trail)
     then
       begin match Stack.pop trail with
       | Mark -> ()

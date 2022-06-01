@@ -57,7 +57,7 @@ let is_solved : some_hole -> bool =
   | _ -> false
 
 let is_unsolved : some_hole -> bool =
-  fun h -> not (is_solved h)
+  fun h -> Bool.not (is_solved h)
 
 type lookup_strategy =
   { repr : string

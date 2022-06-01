@@ -272,13 +272,13 @@ let process_command
      end
 
   | Command.SelectTheorem name ->
-     if not (State.select_theorem s name) then
+     if Bool.not (State.select_theorem s name) then
        State.printf s
          "There is no theorem by name %a."
          Id.print name
 
   | Command.Rename { rename_from=x_src; rename_to=x_dst; level } ->
-     if not (Theorem.rename_variable x_src x_dst level t g) then
+     if Bool.not (Theorem.rename_variable x_src x_dst level t g) then
        Error.(throw (NoSuchVariable (x_src, level)))
 
   | Command.ToggleAutomation (automation_kind, automation_change) ->
@@ -324,11 +324,11 @@ let process_command
      end
 
   | Command.Undo ->
-     if not Theorem.(history_step t Direction.backward) then
+     if Bool.not Theorem.(history_step t Direction.backward) then
        State.printf s "Nothing to undo in the current theorem's timeline."
 
   | Command.Redo ->
-     if not Theorem.(history_step t Direction.forward) then
+     if Bool.not Theorem.(history_step t Direction.forward) then
        State.printf s "Nothing to redo in the current theorem's timeline."
 
   | Command.History ->

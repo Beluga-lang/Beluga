@@ -38,7 +38,7 @@ let init_repl ppf =
 let rec loop ppf =
   begin
     try
-      if not !Options.emacs then fprintf ppf "# @?";
+      if Bool.not !Options.emacs then fprintf ppf "# @?";
       let input = read_line () in
       match Command.is_command input with
       | `Cmd cmd ->
@@ -87,7 +87,7 @@ let run args =
     |Failure _ -> fprintf ppf "Please provide the file name\n" ;
   else begin if List.length files > 1 then fprintf ppf "Please supply only 1 file" end;
 
-  if not !Options.emacs then
+  if Bool.not !Options.emacs then
     begin
       init_repl ppf;
       Command.print_usage ppf

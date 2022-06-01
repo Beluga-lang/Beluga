@@ -714,7 +714,7 @@ let alt (p1 : 'a parser) (p2 : 'a parser) : 'a parser =
       match run p1 s with
       | (s', Left e) ->
          let consumed_input = LinkStream.position s.input < LinkStream.position s'.input in
-         if not consumed_input || s'.backtrack
+         if Bool.not consumed_input || s'.backtrack
          then run p2 s
          else (s', Left e)
       | x -> x
@@ -731,7 +731,7 @@ let choice (ps : 'a parser list) : 'a parser =
              (function
               | (s', Either.Left e) ->
                  let consumed_input = LinkStream.position s.input < LinkStream.position s'.input in
-                 if not consumed_input || s'.backtrack
+                 if Bool.not consumed_input || s'.backtrack
                  then run (go (e :: es) ps') s
                  else (s', Either.Left e)
               | x -> x)
@@ -866,7 +866,7 @@ let check_datatype_decl loc a cs : unit parser =
      | Sgn.CompConst { identifier; typ; _ } ->
         retname typ
         >>= fun a' ->
-          if not (Id.equals a a')
+          if Bool.not (Id.equals a a')
           then fail (WrongConstructorType (identifier, a, a'))
           else pure ()
      | _ -> fail (Violation "check_datatype_decl invalid input"))
@@ -883,7 +883,7 @@ let check_codatatype_decl loc a cs : unit parser =
      | Sgn.CompDest { identifier; observation_typ=tau0; _} ->
         retname tau0
         >>= fun a' ->
-          if not (Id.equals a a')
+          if Bool.not (Id.equals a a')
           then fail (WrongConstructorType (identifier, a, a'))
           else pure ()
      | _ -> fail (Violation "check_codatatype_decl invalid input"))

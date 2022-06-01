@@ -383,7 +383,7 @@ module Comp = struct
 
   (** Verifies that the pairs of contexts are convertible. *)
   let validate_contexts loc (cD, cD') (cG, cG') =
-    if not Whnf.(convMCtx cD cD' && convGCtx (cG, m_id) (cG', m_id))
+    if Bool.not Whnf.(convMCtx cD cD' && convGCtx (cG, m_id) (cG', m_id))
     then
       InvalidHypotheses
         ( { cD; cG; cIH = Int.LF.Empty }
@@ -1006,7 +1006,7 @@ module Comp = struct
 
     | Impossible (loc, i), (tau, t) ->
        let (tau_sc, tau_sc', projOpt) = prepare_case_scrutinee_type i in
-       if not (Coverage.is_impossible cD tau_sc')
+       if Bool.not (Coverage.is_impossible cD tau_sc')
        then throw loc (NotImpossible (cD, cG, tau_sc, i));
 
     | (Case (loc, prag, i, branches), (tau, t)) ->
@@ -1302,7 +1302,7 @@ module Comp = struct
            (P.fmt_ppr_cmp_typ cD P.l0) tau
            (P.fmt_ppr_cmp_typ cD P.l0) tau'
          end;
-       if not (C.convCTyp ttau ttau')
+       if Bool.not (C.convCTyp ttau ttau')
        then raise (Error (loc, PatIllTyped (cD, cG, pat, ttau, ttau')))
 
   and synPattern cD cG =
@@ -1501,12 +1501,12 @@ module Comp = struct
             let open Either in
             match e with
             | Left tau_arg
-                 when not (Whnf.closedCTyp tau_arg) ->
+                 when Bool.not (Whnf.closedCTyp tau_arg) ->
                SufficesPremiseNotClosed (cD, k, `infer (Lazy.force l))
                |> throw (Lazy.force l)
 
             | Right tau_ann
-                 when not (Whnf.closedCTyp tau_ann) ->
+                 when Bool.not (Whnf.closedCTyp tau_ann) ->
                (* This error should be rare; perhaps it is impossible.
                   If the user provides an explicit type, how could the
                   unification result in a type still containing

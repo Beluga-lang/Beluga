@@ -298,10 +298,10 @@ let pruningTyp locOpt cD cPsi phat sA (ms, ss) =
 let unify_phat cD psihat =
   function
   | (Some (Int.LF.CInst (mmvar1, _)), d)
-       when not (Int.LF.is_mmvar_instantiated mmvar1) ->
+       when Bool.not (Int.LF.is_mmvar_instantiated mmvar1) ->
      begin match psihat with
      | (Some (Int.LF.CInst (mmvar2, _) as c_var), d')
-          when not (Int.LF.is_mmvar_instantiated mmvar2) ->
+          when Bool.not (Int.LF.is_mmvar_instantiated mmvar2) ->
         let open Int.LF in
         if mmvar1.instantiation == mmvar2.instantiation
         then d = d'
@@ -503,7 +503,7 @@ let rec patSpine spine =
     | Apx.LF.Nil ->
        (0, Apx.LF.Nil)
     | Apx.LF.App (Apx.LF.Root (loc, Apx.LF.BVar x, Apx.LF.Nil), spine) ->
-       if not (List.mem x seen_vars)
+       if Bool.not (List.mem x seen_vars)
        then
          begin
            let (k, p_spine) = patSpine' (x :: seen_vars) spine in

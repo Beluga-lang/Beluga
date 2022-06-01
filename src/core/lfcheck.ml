@@ -323,7 +323,7 @@ let rec checkW cD cPsi sM sA =
                (P.fmt_ppr_lf_normal cD cPsi P.l0) (Whnf.norm sM)
            end;
          let (tP', tQ') = (Whnf.normTyp sP, Whnf.normTyp sA) in
-         if not (Whnf.convTyp (tP', S.LF.id) (tQ', S.LF.id))
+         if Bool.not (Whnf.convTyp (tP', S.LF.id) (tQ', S.LF.id))
          then raise (Error (loc, TypMismatch (cD, cPsi, sM, sA, sP)))
        with
        | SpineMismatch ->
@@ -445,7 +445,7 @@ and inferHead loc cD cPsi head cl =
     TClo (tA, s)
 
   | (MVar (Inst mmvar, s), Subst)
-       when not (is_mmvar_instantiated mmvar) ->
+       when Bool.not (is_mmvar_instantiated mmvar) ->
      let ClTyp (MTyp tA, cPsi') = mmvar.typ in
      dprintf
        begin fun p ->
@@ -460,7 +460,7 @@ and inferHead loc cD cPsi head cl =
      TClo (tA, s)
 
   | (MMVar ((mmvar, t'), r), Subst)
-       when not (is_mmvar_instantiated mmvar) ->
+       when Bool.not (is_mmvar_instantiated mmvar) ->
      let ClTyp (MTyp tA, cPsi') = mmvar.typ in
      dprintf
        begin fun p ->
@@ -580,7 +580,7 @@ and checkSub loc cD cPsi1 ?(tM_opt = None) s1 cl cPsi1' =
 
     | (CtxVar psi, Shift 0, CtxVar psi') ->
        (* if psi = psi' then *)
-       if not (Whnf.convCtxVar psi psi')
+       if Bool.not (Whnf.convCtxVar psi psi')
        then
          (*      if not (subsumes cD psi' psi) then *)
          raise (Error (loc, IllTypedSub (cD, cPsi1, s1, cPsi1', tM_opt)))
@@ -607,7 +607,7 @@ and checkSub loc cD cPsi1 ?(tM_opt = None) s1 cl cPsi1' =
        checkSub loc cD cPsi' s' cPsi;
        (* ensures that s' is well-typed before comparing types tA1 =[s']tA2 *)
        let tA1 = inferHead loc cD cPsi' h cl in
-       if not (Whnf.convTyp (tA1, S.LF.id) (tA2, s'))
+       if Bool.not (Whnf.convTyp (tA1, S.LF.id) (tA2, s'))
        then die ()
 
     | (cPsi, Dot (Obj tM, s'), DDec (cPsi'', TypDecl (_, tA2))) ->
@@ -1057,7 +1057,7 @@ and checkClObj cD loc cPsi' cM cTt =
               %a@]"
          f tA f tA'
        end;
-     if not (Whnf.convTyp (tA, S.LF.id) (tA', S.LF.id))
+     if Bool.not (Whnf.convTyp (tA, S.LF.id) (tA', S.LF.id))
      then raise (Error (loc, (IllTypedMetaObj (cD, cM, cPsi', Whnf.cnormClTyp cTt))))
 
   | _ -> raise (Error (loc, (IllTypedMetaObj (cD, cM, cPsi', Whnf.cnormClTyp cTt))))
@@ -1080,7 +1080,7 @@ and checkMetaObj cD (loc, cM) cTt =
          (P.fmt_ppr_lf_dctx cD P.l0) cPsi'
          (P.fmt_ppr_lf_dctx_hat cD P.l0) cPhi
        end;
-     if not (Whnf.convDCtxHat (Context.dctxToHat cPhi) (Context.dctxToHat cPsi'))
+     if Bool.not (Whnf.convDCtxHat (Context.dctxToHat cPhi) (Context.dctxToHat cPsi'))
      then raise (Error (loc, CtxHatMismatch (cD, cPsi', phat, (loc, cM))));
 
      checkClObj cD loc cPsi' tM (tp, t)
@@ -1088,7 +1088,7 @@ and checkMetaObj cD (loc, cM) cTt =
   | (MV u, (mtyp1, t)) ->
      let mtyp1 = Whnf.cnormMTyp (mtyp1, t) in
      let (_, mtyp2) = Whnf.mctxLookup cD u in
-     if not (Whnf.convMTyp mtyp1 mtyp2)
+     if Bool.not (Whnf.convMTyp mtyp1 mtyp2)
      then raise (Error.Violation ("Contextual substitution ill-typed"))
 
 

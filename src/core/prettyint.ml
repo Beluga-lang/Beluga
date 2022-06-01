@@ -208,7 +208,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
     | LF.Clo(tM, s) ->
        fmt_ppr_lf_normal cD cPsi lvl ppf (Whnf.norm (tM, s))
 
-    | LF.Root (_, _, _, Plicity.Implicit) when not !PC.printImplicit ->
+    | LF.Root (_, _, _, Plicity.Implicit) when Bool.not !PC.printImplicit ->
        fprintf ppf "_" (* XXX what to do about spines? -je *)
 
     | LF.Root (_, h, LF.Nil, _) ->
@@ -242,10 +242,10 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
 
   and fmt_ppr_lf_head cD cPsi lvl ppf head =
     let paren s =
-      not (PC.db()) && lvl > 0
+      Bool.not (PC.db()) && lvl > 0
       && match s with
          | LF.EmptySub | LF.Undefs -> false
-         | LF.Shift _ when not (Context.hasCtxVar cPsi) -> false
+         | LF.Shift _ when Bool.not (Context.hasCtxVar cPsi) -> false
          | _ -> true
     in
     let rec fmt_head_with proj =
@@ -452,7 +452,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
          self lvl s @ [fun ppf _ -> print_front ppf f]
     in
     match s with
-    | LF.Shift _ when not (Context.hasCtxVar cPsi) ->
+    | LF.Shift _ when Bool.not (Context.hasCtxVar cPsi) ->
        (* Print nothing at all, because the user would have written nothing at all *)
        ()
     | _ ->
@@ -760,9 +760,9 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
       else
         function
         | (_, LF.Decl (_, _, Plicity.Explicit, _)) ->
-           not !Printer.Control.printNormal
+           Bool.not !Printer.Control.printNormal
         | (_, LF.Decl (_, _, Plicity.Implicit, _)) ->
-           not !Printer.Control.printNormal
+           Bool.not !Printer.Control.printNormal
            && !Printer.Control.printImplicit
         | _ -> true
     in
@@ -987,7 +987,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
 
     | Comp.TypPiBox (_, ctyp_decl, tau) ->
        let ctyp_decl = fresh_name_ctyp_decl cD ctyp_decl in
-       if not !PC.printImplicit && isImplicitDecl ctyp_decl
+       if Bool.not !PC.printImplicit && isImplicitDecl ctyp_decl
        then
          fprintf ppf "%a" (fmt_ppr_cmp_typ (LF.Dec (cD, ctyp_decl)) 1) tau
        else

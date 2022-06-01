@@ -230,7 +230,7 @@ let recSgnDecls decls =
   and recSgnDecl ?(pauseHtml=false) d =
     Reconstruct.reset_fvarCnstr ();
     FCVar.clear ();
-    if !Html.generate && not pauseHtml
+    if !Html.generate && Bool.not pauseHtml
     then sgnDeclToHtml d;
     match d with
     | Ext.Sgn.Comment { location; content } ->
@@ -882,9 +882,9 @@ let recSgnDecls decls =
             `inductive (Reconstruct.numeric_order tau order)
          | Ext.Comp.NamedTotal (loc, order, f', args) ->
             (* Validate the inputs: can't have too many args or the wrong name *)
-            if not (Total.is_valid_args tau (List.length args))
+            if Bool.not (Total.is_valid_args tau (List.length args))
             then raise (Error (loc, TotalArgsError f))
-            else if not (Id.equals f f')
+            else if Bool.not (Id.equals f f')
             then raise (Error (loc, TotalDeclError (f, f')))
             else
               begin match order with

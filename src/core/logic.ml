@@ -2295,7 +2295,7 @@ module Frontend = struct
     match (e, t) with
     | (None, None) -> ()
     | _ ->
-       if not (boundEq (lowerBound e t) (Some s))
+       if Bool.not (boundEq (lowerBound e t) (Some s))
        then
          abort
            begin fun ppf () ->
@@ -2363,7 +2363,7 @@ module Frontend = struct
       then raise Done
     in
 
-    if not (boundEq sgnQuery.tries (Some 0))
+    if Bool.not (boundEq sgnQuery.tries (Some 0))
     then
       begin
         if !Options.chatter >= 1
@@ -2431,7 +2431,7 @@ module Frontend = struct
       if exceeds (Some !solutions) sgnMQuery.mexpected
       then raise Done;
     in
-    if not (boundEq sgnMQuery.mtries (Some 0))
+    if Bool.not (boundEq sgnMQuery.mtries (Some 0))
     then
       begin
          if !Options.chatter >= 1

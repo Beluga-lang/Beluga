@@ -65,7 +65,7 @@ let print' f =
   flush_all ()
 
 let printf flags (f : fmt -> unit) : unit =
-  if not (flags land !r_flags = 0)
+  if Bool.not (flags land !r_flags = 0)
   then print' f
 
 let print flags f =

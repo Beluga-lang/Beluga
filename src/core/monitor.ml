@@ -66,7 +66,7 @@ let writeTime (name, time, array) =
         found := true
       end
   done;
-  if not !found
+  if Bool.not !found
   then
     Printf.printf "Non existing argument for function writeTime (name, time).\n"
 

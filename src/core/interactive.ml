@@ -202,7 +202,7 @@ let mapHoleThm f =
 (*********************)
 
 let is_inferred decl =
-  not (LF.is_explicit decl)
+  Bool.not (LF.is_explicit decl)
 
 (* intro: int -> Comp.exp_chk option *)
 let intro (h : Holes.comp_hole_info Holes.hole) =
@@ -228,7 +228,7 @@ let intro (h : Holes.comp_hole_info Holes.hole) =
             Comp.Fn(Loc.ghost, nam, exp)
        end
     | Comp.TypPiBox (_, tdec, t')
-         when not (is_inferred tdec) ->
+         when Bool.not (is_inferred tdec) ->
        let nam = LF.name_of_ctyp_decl tdec in
        let exp = crawl (LF.Dec (cD, tdec)) cG t' in
        Comp.MLam (Loc.ghost, nam, exp, Plicity.explicit)

@@ -189,7 +189,7 @@ let select_theorem s name =
      (* select the desired theorem within the session;
             this should be guaranteed to succeed due to the
             lookup_theorem having succeeded in this case *)
-     if not (Session.select_theorem c name) then
+     if Bool.not (Session.select_theorem c name) then
        Error.violation
          "[select_theorem] selected session does not contain the theorem";
      true
@@ -236,7 +236,7 @@ let keeping_focus s (c, t, g) f =
   let curr_thm_name = Theorem.get_name t in
   let curr_sg_label = g.Comp.label in
   f ();
-  if not (select_theorem s curr_thm_name) then
+  if Bool.not (select_theorem s curr_thm_name) then
     Error.violation
       "[reset] reloaded signature does not contain the theorem \
        we were working on";

@@ -82,7 +82,7 @@ module type Base = sig
   (** Constructs a parser that doesn't affect its state and simply
       yields the given value.
    *)
-  val pure : 'a -> 'a t
+  val return : 'a -> 'a t
 
   (** A sequencing operator for parsers.
       This operator takes a parser on the left and a continuation on the
@@ -283,7 +283,7 @@ module Make (P : ParserInfo) = struct
 
   (** Constructs a parser that doesn't affect its state and simply
   yields the given value. *)
-  let pure (x : 'a) : 'a t =
+  let return (x : 'a) : 'a t =
     { run =
         fun s -> (s, Either.right x)
     }
@@ -306,7 +306,7 @@ module Make (P : ParserInfo) = struct
 
   (** A flipped, operator version of `map`. *)
   let ( $> ) (p : 'a t) (f : 'a -> 'b) : 'b t =
-    p >>= fun x -> pure (f x)
+    p >>= fun x -> return (f x)
 
   (** A parser that simply yields the internal parser state. *)
   let get : state t =
@@ -488,9 +488,9 @@ module Make (P : ParserInfo) = struct
   input, producing an empty list.
   `some` repeatedly applies a parser until it fails, but must succeed
   at least once. *)
-  let rec many (p : 'a t) : 'a list t = alt (some p) (pure [])
+  let rec many (p : 'a t) : 'a list t = alt (some p) (return [])
   and some (p : 'a t) : 'a list t =
-    p >>= fun x -> many p >>= fun xs -> pure (x :: xs)
+    p >>= fun x -> many p >>= fun xs -> return (x :: xs)
 
   (** Constructs a parser that consumes a single character of input,
   returning it, if that character satisfies the given predicate. *)
@@ -510,9 +510,9 @@ module Make (P : ParserInfo) = struct
   parser stops.
   `some_till` does the same, but `p` must succeed at least once. *)
   let rec many_till (p : 'a t) (pend : unit t) : 'a list t =
-    alt (pend >>= fun _ -> pure []) (some_till p pend)
+    alt (pend >>= fun _ -> return []) (some_till p pend)
   and some_till (p : 'a t) (pend : unit t) : 'a list t =
-    p >>= fun x -> many_till p pend >>= fun xs -> pure (x :: xs)
+    p >>= fun x -> many_till p pend >>= fun xs -> return (x :: xs)
 
   (** Forgets the result of a parser, preserving only its effects. *)
   let void (p : 'a t) : unit t = map (fun _ -> ()) p
@@ -524,7 +524,7 @@ module Make (P : ParserInfo) = struct
     get_loc
     >>= fun { bol; offset; _ } ->
       if bol = offset then
-        pure ()
+        return ()
       else
         throw "expected to be at beginning of line"
 
@@ -533,7 +533,7 @@ module Make (P : ParserInfo) = struct
   let eof : unit t =
     peek
     >>= Option.eliminate
-        pure
+        return
         (fun _ -> throw "expected to be at end of file")
 
   (** `lookahead p` runs parser `p`, but resets the parser input state
@@ -586,7 +586,7 @@ module StringParser = struct
   (** Constructs a parser that matches exactly the given string. *)
   let rec string (str : string) : string t =
     if str = "" then
-      pure ""
+      return ""
     else
       let (c, str') =
         (str.[0], String.sub str 1 (String.length str - 1))

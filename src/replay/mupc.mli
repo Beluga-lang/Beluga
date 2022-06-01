@@ -98,7 +98,7 @@ module type Base = sig
   (** Constructs a parser that doesn't affect its state and simply
       yields the given value.
    *)
-  val pure : 'a -> 'a t
+  val return : 'a -> 'a t
 
   (** A sequencing operator for parsers.
       This operator takes a parser on the left and a continuation on the

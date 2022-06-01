@@ -17,7 +17,7 @@ let process_bel name chan =
   Printexc.record_backtrace true;
   try
     Runparser.parse_channel (Location.initial name) chan target
-    |> snd
+    |> Pair.snd
     |> Parser.handle
          (fun e ->
            Parser.print_error ppf e;

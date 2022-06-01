@@ -4,8 +4,8 @@ type 'a t = 'a * 'a list
 type 'a nonempty = 'a t
 
 let uncons : 'a t -> 'a * 'a list = Fun.id
-let head = fst
-let tail = snd
+let head = Pair.fst
+let tail = Pair.snd
 
 (** Gets the last element of the nonempty list and the list of all elements
     before the last.

@@ -519,7 +519,7 @@ and shunting_yard' (l : Ext.LF.normal list) : Ext.LF.normal =
             in
             let (ops, es) = take args_expected exps in
             let loc = loc_o in
-            let ops = List.map snd ops in
+            let ops = List.map Pair.snd ops in
             let e' =
               Ext.LF.Root
                 ( loc
@@ -649,7 +649,7 @@ and shunting_yard' (l : Ext.LF.normal list) : Ext.LF.normal =
     | (l, []) ->
        let l' = List.rev l in
        let (_, Ext.LF.Root (loc, h, Ext.LF.Nil)) :: t = l' in
-       let t = List.map snd t in
+       let t = List.map Pair.snd t in
        Ext.LF.Root (loc, h, normalListToSpine t)
 
     | a, b ->

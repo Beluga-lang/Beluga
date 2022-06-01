@@ -34,7 +34,7 @@ let get_mutual_decs (s : t) : Comp.total_dec list =
  *)
 let full_theorem_list c =
   DynArray.to_list c.theorems
-  @ List.map fst (DynArray.to_list c.finished_theorems)
+  @ List.map Pair.fst (DynArray.to_list c.finished_theorems)
 
 let remove_current_theorem s =
   DynArray.delete s.theorems 0
@@ -73,7 +73,7 @@ let lookup_theorem c name =
   DynArray.rfind_opt_idx
     c.theorems
     F.(flip Theorem.has_name_of name)
-  $> snd
+  $> Pair.snd
 
 (** Selects a theorem by name in the current session.
         Returns whether the selection succeeded. (A theorem by such name could be found.)
@@ -101,7 +101,7 @@ let get_session_kind c : [`introduced | `loaded] =
     |> List.exists
          begin fun thm ->
          existing_holes
-         |> List.map F.(fst ++ snd)
+         |> List.map F.(Pair.fst ++ Pair.snd)
          |> List.exists (Theorem.has_cid_of thm)
          end
   in
@@ -333,4 +333,4 @@ let materialize_theorems c =
   if DynArray.length c.theorems > 0 then
     Error.violation
       "[materialize_theorems] not all theorems are complete";
-  DynArray.iter F.(Theorem.materialize ++ fst) c.finished_theorems
+  DynArray.iter F.(Theorem.materialize ++ Pair.fst) c.finished_theorems

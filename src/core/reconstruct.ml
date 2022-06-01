@@ -1245,7 +1245,7 @@ and elExp' cD cG i =
      let i' = elExp' cD cG i in
      dprintf begin fun p ->
        p.fmt "[elExp'] @[<v>genMApp for@,@[<hv 2>i' =@ @[%a@]@]@]"
-         P.(fmt_ppr_cmp_exp_syn cD cG l0) (fst i')
+         P.(fmt_ppr_cmp_exp_syn cD cG l0) (Pair.fst i')
        end;
      let k, (i', tau_theta') =
        Check.Comp.genMApp loc F.(not ++ Int.LF.is_explicit) cD i'

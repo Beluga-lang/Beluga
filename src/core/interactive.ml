@@ -265,7 +265,7 @@ let genCGoals cD' (LF.Decl (n, mtyp, plicity, inductivity)) cD_tail =
 
   | _ ->
      Cover.genCGoals cD' mtyp
-     |> fst
+     |> Pair.fst
      |> List.map
           begin fun (cDg', cg, ms) ->
           let Cover.CovGoal (cPsi', tR, sA') = cg in

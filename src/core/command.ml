@@ -74,7 +74,7 @@ let types =
       command_with_arguments 0
         begin fun ppf _ ->
         let entrylist =
-          List.map snd (Typ.current_entries ())
+          List.map Pair.snd (Typ.current_entries ())
         in
         let dctx = Synint.LF.Null in
         fprintf ppf "@[<v>%a@];\n@?"

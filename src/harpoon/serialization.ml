@@ -15,7 +15,7 @@ open Debug.Fmt
  *)
 let replace_locs (replacees : (Loc.t * (Format.formatter -> unit -> unit)) list) : unit =
   replacees
-  |> Hashtbl.group_by F.(Loc.filename ++ fst)
+  |> Hashtbl.group_by F.(Loc.filename ++ Pair.fst)
   (* iterate over replacee groups
    (* open file stream *)
    (* sort items in the group *)
@@ -53,7 +53,7 @@ let replace_locs (replacees : (Loc.t * (Format.formatter -> unit -> unit)) list)
            dprintf (fun p -> p.fmt "[replace_locs] opened %s" temp_file_name);
            let outbuf = Buffer.create 4 in
            replacees
-           |> List.sort (Misc.on fst Loc.compare_start)
+           |> List.sort (Misc.on Pair.fst Loc.compare_start)
            |> List.iter
                 begin fun (loc, printer) ->
                 let start_offset = Loc.start_offset loc in

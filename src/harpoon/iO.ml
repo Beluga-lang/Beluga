@@ -56,7 +56,7 @@ let rec parsed_prompt ?(source = default_prompt_source) io msg use_history (p : 
        (Loc.(move_line (next_prompt_number io) (initial source)))
        line
        (Parser.only p)
-     |> snd
+     |> Pair.snd
      |> Parser.handle
           begin fun err ->
           printf io "@[%a@]@."

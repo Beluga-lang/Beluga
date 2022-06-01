@@ -163,7 +163,7 @@ let get_entry' t =
   (cid, CompS.get cid)
 
 let get_cid t = t.cid
-let get_entry t = get_entry' t |> snd
+let get_entry t = get_entry' t |> Pair.snd
 let get_name t = (get_entry t).CompS.Entry.name
 let has_name_of t name = equals (get_name t) name
 let has_cid_of t cid = t.cid = cid
@@ -350,7 +350,7 @@ let configure_set ppf (hooks : (t -> Comp.proof_state -> unit) list) (confs : Co
     : Id.cid_mutual_group * t list =
   let mutual_group =
     CompS.add_mutual_group
-      (List.map fst confs)
+      (List.map Pair.fst confs)
   in
   let configure ({ Comp.name; tau; order }, k) =
     let tau' = Total.annotate Loc.ghost order tau in

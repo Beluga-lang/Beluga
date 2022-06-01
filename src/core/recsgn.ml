@@ -916,13 +916,13 @@ let recSgnDecls decls =
             Error.violation "[recSgn] empty mutual block is impossible"
          | haves, [] ->
             haves
-            |> List.map Fun.(Option.get ++ snd)
+            |> List.map Fun.(Option.get ++ Pair.snd)
             |> List1.of_list
          (* safe because they're haves *)
          | [], have_nots -> None
          | haves, have_nots ->
             throw location
-              (MutualTotalDecl (List.map fst haves, List.map fst have_nots))
+              (MutualTotalDecl (List.map Pair.fst haves, List.map Pair.fst have_nots))
        in
 
        let preprocess =

@@ -1471,7 +1471,7 @@ module Comp = struct
             |> throw loc
        in
        (* first unify the goal *)
-       if unify tau_out tau_g |> snd |> not
+       if unify tau_out tau_g |> Pair.snd |> not
        then SufficesBadGoal (cD, tau_i, tau_g) |> throw loc;
 
        (* Two phases:

@@ -20,7 +20,7 @@ let realMain () =
   let stubs =
     if options.load_holes then
       B.Holes.get_harpoon_subgoals ()
-      |> List.map snd
+      |> List.map Pair.snd
     else
       []
   in

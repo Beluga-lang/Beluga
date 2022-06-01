@@ -1355,8 +1355,8 @@ let is_meta_inductive (cD : LF.mctx) (mf : LF.mfront) : bool =
   in
   let open Option in
   variable_of_mfront mf
-  $> fst
-  (* this `fst` is possibly sketchy because of projected parameter
+  $> Pair.fst
+  (* this `Pair.fst` is possibly sketchy because of projected parameter
      variables, but I don't think parameter variables can ever be
      inductive, so I don't *think* it's a problem.
      -je *)
@@ -1371,7 +1371,7 @@ let is_inductive_split (cD : LF.mctx) (cG : Comp.gctx) (i : Comp.exp_syn) : bool
   || begin
       let open Option in
       Comp.is_meta_obj i
-      $> snd
+      $> Pair.snd
       $> is_meta_inductive cD
       |> is_some
     end

@@ -1,3 +1,5 @@
+open Support
+
 type 'a t' =
   | Nil
   | Cons of 'a * 'a t
@@ -32,15 +34,15 @@ let of_stream (s : 'a Stream.t) : 'a t =
   go 0
 
 let rec iter f s =
-  match snd s with
+  match Pair.snd s with
   | lazy Nil -> ()
   | lazy (Cons (x, s)) ->
      f x;
      iter f s
 
-let position s = fst s
+let position s = Pair.fst s
 
 let observe s =
-  match snd s with
+  match Pair.snd s with
   | lazy Nil -> None
   | lazy (Cons (x, s)) -> Some (x, s)

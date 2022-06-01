@@ -282,7 +282,7 @@ let find_with_index_rev' (ctx : 'a LF.ctx) (f : 'a * int -> bool) : ('a * int) o
  *)
 let find (ctx : 'a LF.ctx) (f : 'a LF.ctx -> 'a -> bool) : 'a option =
   find_with_index ctx (fun ctx' (x, _) -> f ctx' x)
-  |> Option.map fst
+  |> Option.map Pair.fst
 
 let find' (ctx : 'a LF.ctx) (f : 'a -> bool) : 'a option =
   find ctx (Fun.const f)
@@ -306,19 +306,19 @@ let find_rev' (ctx : 'a LF.ctx) (f : 'a -> bool) : 'a option =
 
 let find_index (ctx : 'a LF.ctx) (f : 'a LF.ctx -> 'a -> bool) : int option =
   find_with_index ctx (fun ctx' (x, _) -> f ctx' x)
-  |> Option.map snd
+  |> Option.map Pair.snd
 
 let find_index' (ctx : 'a LF.ctx) (f : 'a -> bool) : int option =
   find_with_index' ctx (fun (x, _) -> f x)
-  |> Option.map snd
+  |> Option.map Pair.snd
 
 let find_index_rev (ctx : 'a LF.ctx) (f : 'a LF.ctx -> 'a -> bool) : int option =
   find_with_index_rev ctx (fun ctx' (x, _) -> f ctx' x)
-  |> Option.map snd
+  |> Option.map Pair.snd
 
 let find_index_rev' (ctx : 'a LF.ctx) (f : 'a -> bool) : int option =
   find_with_index_rev' ctx (fun (x, _) -> f x)
-  |> Option.map snd
+  |> Option.map Pair.snd
 
 let rec length =
   function
@@ -439,7 +439,7 @@ and lookupCtxVar cD cvar =
   in
   lookup cD 0
 
-and lookupCtxVarSchema cO phi = snd (lookupCtxVar cO phi)
+and lookupCtxVarSchema cO phi = Pair.snd (lookupCtxVar cO phi)
 
 let rec rename src dst get_name rename_decl =
   function

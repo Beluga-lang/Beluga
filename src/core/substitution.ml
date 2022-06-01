@@ -1,10 +1,11 @@
-open Support.Equality
 (** Substitutions
 
     @author Brigitte Pientka
 *)
 
 
+open Support
+open Support.Equality
 open Syntax.Int.LF
 
 module LF = struct
@@ -158,7 +159,7 @@ module LF = struct
             | (Cons (u, tuple), n) -> nth (Dot (Obj u, s)) (tuple, n - 1)
           in
           (*              Obj (Clo (nth s (tuple, k))) *)
-          Obj (fst (nth s (tuple, k)))
+          Obj (Pair.fst (nth s (tuple, k)))
        | Obj (Lam _ ) -> failwith "Found Lam - should be tuple"
        | Obj (Clo (Tuple (_, tuple), s')) ->
           let rec nth s =
@@ -168,7 +169,7 @@ module LF = struct
             | (Cons (u, tuple), n) -> nth (Dot (Obj u, s)) (tuple, n - 1)
           in
           (*              Obj (Clo (nth s (tuple, k))) *)
-          Obj (Clo (fst (nth s (tuple, k)), s'))
+          Obj (Clo (Pair.fst (nth s (tuple, k)), s'))
 
        | Obj (Clo ((Root (_, (PVar _ ), Nil, _)), _ )) -> failwith "Found Clo - PVar "
        | Obj (Clo ((Root (_, (BVar _ ), Nil, _)), _ )) -> failwith "Found Clo - BVar "
@@ -200,7 +201,7 @@ module LF = struct
             | (Cons (u, tuple), n) -> nth (Dot (Obj u, s)) (tuple, n - 1)
           in
           (*              Obj (Clo (nth s (tuple, k))) *)
-          Obj (fst (nth s (tuple, k)))
+          Obj (Pair.fst (nth s (tuple, k)))
        end
 
     | Head (AnnH (h, a)) ->

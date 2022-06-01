@@ -266,7 +266,7 @@ let main () =
     let input = input_chan |> IStream.of_channel |> TranscriptParser.Tokenizer.char_tokenize_from Loc.initial in
     let open Either in
     TranscriptParser.parse_transcript input |>
-      snd |>
+      Pair.snd |>
       lmap
         (fun e ->
           TranscriptParser.Parser.string_of_parse_error e |>

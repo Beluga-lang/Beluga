@@ -2573,7 +2573,7 @@ let genPatCGoals names mk_pat_var (cD : LF.mctx) tau =
           | PTyp _ -> fun sA -> PTyp (TClo sA)
         in
         genCGoals cD mT
-        |> fst
+        |> Pair.fst
         |> List.map (remap_cltyp_to_covpatt loc f)
 
      | LF.CTyp (Some w) -> (* require that a schema be present *)

@@ -19,10 +19,8 @@ let assert_int_list1_equal =
 
 let test_uncons (input, expected) _ =
   assert_equal
-    ?printer:(Option.some (Pair.show Int.pp (List.pp Int.pp)))
-    ?cmp:
-      (Option.some (fun x y ->
-           Pair.equal Int.equal (List.equal Int.equal) x y))
+    ?printer:(Option.some @@ Pair.show Int.pp (List.pp Int.pp))
+    ?cmp:(Option.some @@ Pair.equal Int.equal (List.equal Int.equal))
     expected (List1.uncons input)
 
 let test_length (input, expected) _ =

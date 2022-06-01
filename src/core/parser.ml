@@ -485,24 +485,22 @@ let fail' path e : 'a parser =
 (** A parser that fails with the given error and an empty path. *)
 let fail e : 'a parser = fail' [] e
 
-let pure_at s x =
+let return_at s x =
   (s, Either.Right x)
-let pure x : 'a parser =
-  { run = fun s -> pure_at s x }
 
 (** Gets the current parser state. *)
 let get_state : state parser =
-  { run = fun s -> pure_at s s }
+  { run = fun s -> return_at s s }
 
 (** Sets the current parser state. *)
 let put_state (s : state) : unit parser =
-  { run = fun _ -> pure_at s () }
+  { run = fun _ -> return_at s () }
 
   (*
 (** Keeps the state unchanged, but reads the current location. *)
 let get_loc =
   anon_parser
-    (fun s -> pure_at s (s.loc))
+    (fun s -> return_at s (s.loc))
    *)
 
 (***** Parser combinators *****)
@@ -517,54 +515,29 @@ let trying p =
       | x -> x
   }
 
-(** Sequential composition of parsers.
-    This runs `p` and uses its result to compute the next parser to run.
-    (This is a monadic bind operation.)
- *)
-let seq : type a b. a parser -> (a -> b parser) -> b parser =
-  fun p k ->
-  { run =
+module M = Monad.Make (struct
+  type nonrec 'a t = 'a t
+
+  let return x = { run = fun s -> return_at s x }
+
+  let bind k p =
+    { run =
       fun s ->
       match run p s with
       | (s, Either.Right x) -> run (k x) s
       | (s, Either.Left e) -> (s, Either.Left e)
-  }
+    }
+end)
 
-(** Infix operator form of `seq`. *)
-let ( >>= ) = seq
+include (M : Monad.MONAD with type 'a t := 'a t)
 
-(** Sequence two parsers. *)
-let seq2 : type a b. a parser -> b parser -> (a * b) parser =
-  fun p1 p2 ->
-  p1 >>= fun x -> p2 >>= fun y -> pure (x, y)
+include (Functor.Make (M) : Functor.FUNCTOR with type 'a t := 'a t)
 
-(** Sequence three parsers. *)
-let seq3 p1 p2 p3 =
-  p1 >>= fun x1 -> p2 >>= fun x2 -> p3 >>= fun x3 -> pure (x1, x2, x3)
-
-(** Sequence four parsers. *)
-let seq4 p1 p2 p3 p4 =
-  p1 >>= fun x1 -> p2 >>= fun x2 -> p3 >>= fun x3 -> p4 >>= fun x4 -> pure (x1, x2, x3, x4)
-
-(** Sequence five parsers. *)
-let seq5 p1 p2 p3 p4 p5 =
-  p1 >>= fun x1 -> p2 >>= fun x2 -> p3 >>= fun x3 -> p4 >>= fun x4 -> p5 >>= fun x5 -> pure (x1, x2, x3, x4, x5)
-
-(** Runs p1 and p2, discarding the result of p1. *)
-let (&>) p1 p2 = p1 >>= fun _ -> p2
-
-(** Runs p1 and p2, discarding the result of p2. *)
-let (<&) p1 p2 = p1 >>= fun x -> p2 &> pure x
-
-(** Transforms the result of a parser with a pure function. *)
-let ($>) (p : 'a parser) (f : 'a -> 'b) : 'b parser =
-  p >>= fun x -> pure (f x)
-
-let map x y = Fun.flip ($>) x y
+include (Apply.Make (M) : Apply.APPLY with type 'a t := 'a t)
 
              (*
 (** Forgets the result of a parser. *)
-let void (p : 'a parser) : unit parser = p &> pure ()
+let void (p : 'a parser) : unit parser = p &> return ()
               *)
 
 (***** Combinators for handling error labels. *****)
@@ -673,7 +646,7 @@ let not_followed_by (p : 'a parser) : unit parser =
  *)
 let rec traverse (f : 'a -> 'b parser) (xs : 'a list) : 'b list parser =
   match xs with
-  | [] -> pure []
+  | [] -> return []
   | x :: xs ->
      seq2 (f x) (traverse f xs)
      $> fun (x, xs) -> x :: xs
@@ -682,7 +655,7 @@ let rec traverse (f : 'a -> 'b parser) (xs : 'a list) : 'b list parser =
 (** Like `traverse' but for parsers without interesting outputs. *)
 let rec traverse_ (f : 'a -> unit parser) (xs : 'a list) : unit parser =
   match xs with
-  | [] -> pure ()
+  | [] -> return ()
   | x :: xs ->
      f x &> traverse_ f xs
 
@@ -694,7 +667,7 @@ let sequence (ps : 'a parser list) : 'a list parser =
 
                                 (*
 (** Gets the next item in the input stream without advancing the parser. *)
-let peek : (Loc.t * Token.t) option parser = anon_parser (fun s -> pure_at s (peek_at s))
+let peek : (Loc.t * Token.t) option parser = anon_parser (fun s -> return_at s (peek_at s))
                                  *)
 
 (***** Prioritized choice *****)
@@ -744,7 +717,7 @@ let eoi : unit parser =
   { run =
       fun s ->
       match LinkStream.observe s.input with
-      | None | Some ((_, T.EOI), _) -> pure_at s ()
+      | None | Some ((_, T.EOI), _) -> return_at s ()
       | Some ((_, t), _) -> fail_at s (Unexpected (`eoi, `token (Some t)))
   }
   |> labelled "end of input"
@@ -773,13 +746,13 @@ let satisfy (f : T.t -> ('e, 'b) Either.t) : ('e, 'b) Either.t parser =
            | Left _ -> s
            | Right _ -> { s with input = xs; last_loc = loc }
          in
-         pure_at s' r
+         return_at s' r
   }
 
 (** Tries a parser, and if it fails returns None *)
 let maybe (p : 'a parser) : 'a option parser =
   shifted "optionally"
-    (alt (p $> Option.some) (pure None))
+    (alt (p $> Option.some) (return None))
 
 (** Tries a parser, and if it fails uses a default value. *)
 let maybe_default (p : 'a parser) (x : 'a) : 'a parser =
@@ -789,14 +762,14 @@ let maybe_default (p : 'a parser) (x : 'a) : 'a parser =
 let rec many' (p : 'a parser) : 'a list parser =
   { run =
       fun s ->
-      run (alt (some' p) (pure [])) s
+      run (alt (some' p) (return [])) s
   }
 
 (** Internal implementation of `some` that doesn't label. *)
 and some' (p : 'a parser) : 'a list parser =
   { run =
       fun s ->
-      run (p >>= fun x -> many' p >>= fun xs -> pure (x :: xs)) s
+      run (p >>= fun x -> many' p >>= fun xs -> return (x :: xs)) s
   }
 
 (** `many p` repeats the parser `p` zero or more times and collects
@@ -821,12 +794,12 @@ let sep_by0 (p : 'a parser) (sep : unit parser) : 'a list parser =
     { run =
         fun s ->
         let q =
-          seq (maybe p)
-            (function
-             | None -> pure []
+          maybe p
+          >>= (function
+             | None -> return []
              | Some x ->
                 many' (sep &> p)
-                >>= fun xs -> pure (x :: xs))
+                >>= fun xs -> return (x :: xs))
         in
         run q s
     }
@@ -856,7 +829,7 @@ let sep_by1 (p : 'a parser) (sep : unit parser) : 'a List1.t parser =
 let check_datatype_decl loc a cs : unit parser =
   let rec retname =
     function
-    | Comp.TypBase (_, c', _) -> pure c'
+    | Comp.TypBase (_, c', _) -> return c'
     | Comp.TypArr (_, _, tau) -> retname tau
     | Comp.TypPiBox (_, _, tau) -> retname tau
     | _ -> fail IllFormedDataDecl
@@ -868,14 +841,14 @@ let check_datatype_decl loc a cs : unit parser =
         >>= fun a' ->
           if Bool.not (Id.equals a a')
           then fail (WrongConstructorType (identifier, a, a'))
-          else pure ()
+          else return ()
      | _ -> fail (Violation "check_datatype_decl invalid input"))
     cs
 
 let check_codatatype_decl loc a cs : unit parser =
   let retname =
     function
-    | Comp.TypBase (_, c', _) -> pure c'
+    | Comp.TypBase (_, c', _) -> return c'
     | _ -> fail IllFormedDataDecl
   in
   traverse_
@@ -885,7 +858,7 @@ let check_codatatype_decl loc a cs : unit parser =
         >>= fun a' ->
           if Bool.not (Id.equals a a')
           then fail (WrongConstructorType (identifier, a, a'))
-          else pure ()
+          else return ()
      | _ -> fail (Violation "check_codatatype_decl invalid input"))
     cs
 
@@ -900,7 +873,7 @@ let satisfy' (expected : content) (f : T.t -> 'a option) : 'a parser =
        fail'
          [ Entry { location = Some loc; label = Format.stringify print_content expected } ]
          (Unexpected (expected, `token (Some t)))
-    | Either.Right x -> pure x
+    | Either.Right x -> return x
 
 (** Parses an exact token. *)
 let token (t : T.t) : unit parser =
@@ -1074,7 +1047,7 @@ let bracks_or_opt_parens' prefix p =
 
 (** See bracks_or_opt_parens'. This is a prefixless instance. *)
 let bracks_or_opt_parens p =
-  bracks_or_opt_parens' (pure ()) p
+  bracks_or_opt_parens' (return ()) p
 
 (** See bracks_or_opt_parens'.
     This instance uses an optional hash sign as the prefix and is used
@@ -1202,9 +1175,9 @@ and lf_term_atomic =
           ; span (parens (seq2 lf_typ (maybe (token T.COLON &> lf_typ))))
             >>= fun (loc, (m, q)) ->
               match q, m with
-              | None, LF.AtomTerm (_, t) -> pure t
-              | None, _ -> LF.NTyp (loc, m) |> pure
-              | Some a, LF.AtomTerm (_, t) -> LF.Ann (loc, t, a) |> pure
+              | None, LF.AtomTerm (_, t) -> return t
+              | None, _ -> LF.NTyp (loc, m) |> return
+              | Some a, LF.AtomTerm (_, t) -> LF.Ann (loc, t, a) |> return
               | _, _ -> fail (Violation "invalid atomic LF term")
                                      (* ^ XXX not sure if this is a violation or a user error -je *)
           ]
@@ -1335,7 +1308,7 @@ let sgn_lf_const_decl (* sgn_lf_typ *) =
     lf_typ
   |> span
   >>= fun (location, (identifier, typ)) ->
-    pure (Sgn.Const { location; identifier; typ }))
+    return (Sgn.Const { location; identifier; typ }))
   |> labelled "LF constant declaration"
 
 let sgn_lf_typ_decl : Sgn.decl parser =
@@ -1489,7 +1462,7 @@ and clf_typ_pure =
         alt
           (lf_function_type clf_typ_pure clf_typ_pure_atomic)
           (clf_typ_pure_atomic)
-        |> labelled "pure contextual LF type"
+        |> labelled "return contextual LF type"
       in
       run p s
   }
@@ -1512,7 +1485,7 @@ and clf_typ_pure_atomic =
                      )
                  )
           ]
-        |> labelled "atomic pure contextual LF type"
+        |> labelled "atomic return contextual LF type"
       in
       run p s
   }
@@ -1608,7 +1581,7 @@ and clf_sub_new =
         $> fun ((s, ts), xs) -> (s, List.rev xs @ ts)
       in
       let emptysub =
-        span (pure ()) $> fun (loc, _) -> (LF.EmptySub loc, [])
+        span (return ()) $> fun (loc, _) -> (LF.EmptySub loc, [])
       in
       let p =
         alt nonemptysub emptysub
@@ -1731,7 +1704,7 @@ and clf_dctx : LF.dctx parser =
        *)
       let start =
         choice
-          [ token T.UNDERSCORE &> pure LF.CtxHole
+          [ token T.UNDERSCORE &> return LF.CtxHole
           ; span clf_typ_decl
             $> fun (loc, d) ->
                (* This is nasty. XXX
@@ -1767,7 +1740,7 @@ and clf_dctx : LF.dctx parser =
               (many (token T.COMMA &> clf_typ_decl))
             $> (fun (cPsi, ds) ->
               List.fold_left (fun acc d -> LF.DDec (acc, d)) cPsi ds)
-          ; pure LF.Null
+          ; return LF.Null
           ]
         |> labelled "contextual LF context"
       in
@@ -2210,7 +2183,7 @@ let nested (type a) (p : a parser) (g : a locd -> a) (f : a locd -> a locd -> a)
  *)
 let case_pragma =
   maybe_default
-    (pragma "not" &> pure Comp.PragmaNotCase)
+    (pragma "not" &> return Comp.PragmaNotCase)
     Comp.PragmaCase
 
 (** Parses a checkable computation term *)
@@ -2232,7 +2205,7 @@ and cmp_branch =
       fun s ->
       let p =
         seq3
-          (mctx ~sep: (pure ()) (clf_ctyp_decl_bare name' (fun x -> Plicity.explicit, x) |> braces))
+          (mctx ~sep: (return ()) (clf_ctyp_decl_bare name' (fun x -> Plicity.explicit, x) |> braces))
           cmp_pattern
           (token T.THICK_ARROW &> cmp_exp_chk)
         |> span
@@ -2310,7 +2283,7 @@ and cmp_pattern_atomic =
       run p s
   }
 
-(** Parses a pure checkable computation term,
+(** Parses a return checkable computation term,
     i.e. a checkable term *except* for applications.
  *)
 and cmp_exp_chk' =
@@ -2374,7 +2347,7 @@ and cmp_exp_chk' =
       let lets =
         let let_pattern =
           seq4
-            (mctx ~sep: (pure ()) (clf_ctyp_decl_bare name' (fun x -> Plicity.explicit, x) |> braces))
+            (mctx ~sep: (return ()) (clf_ctyp_decl_bare name' (fun x -> Plicity.explicit, x) |> braces))
             (cmp_pattern <& token T.EQUALS)
             (cmp_exp_syn <& token T.KW_IN)
             cmp_exp_chk
@@ -2441,7 +2414,7 @@ and cmp_copat_spine =
               |> span
               |> labelled "application pattern"
               $> (fun (loc, (x, acc)) -> Comp.PatApp (loc, x, acc))
-            ; span (pure ()) $> fun (loc, _) -> Comp.PatNil loc
+            ; span (return ()) $> fun (loc, _) -> Comp.PatNil loc
             ]
         in
         run p s
@@ -2531,7 +2504,7 @@ and cmp_exp_syn' =
 let call_arg =
   alt
     (name $> Option.some)
-    (token T.UNDERSCORE &> pure None)
+    (token T.UNDERSCORE &> return None)
   |> labelled "call argument"
 
 let named_total_arg : Comp.named_order t =
@@ -2595,8 +2568,8 @@ let sgn_cmp_typ_decl =
       let cmp_typ_decl =
         let flavour =
           alt
-            (token T.KW_INDUCTIVE &> pure Sgn.InductiveDatatype)
-            (token T.KW_STRATIFIED &> pure Sgn.StratifiedDatatype)
+            (token T.KW_INDUCTIVE &> return Sgn.InductiveDatatype)
+            (token T.KW_STRATIFIED &> return Sgn.StratifiedDatatype)
         in
         let sgn_cmp_typ_decl_body =
           seq2
@@ -2674,14 +2647,14 @@ let sgn_cmp_typ_decl =
 let sgn_query_pragma =
   let bound =
     alt
-      (token T.STAR &> pure None)
+      (token T.STAR &> return None)
       (integer $> Option.some)
     |> labelled "search bound"
   in
   pragma "query" &>
     seq4
       (seq2 bound bound)
-      (mctx ~sep: (pure ()) (clf_ctyp_decl_bare name' (fun x -> Plicity.explicit, x) |> braces))
+      (mctx ~sep: (return ()) (clf_ctyp_decl_bare name' (fun x -> Plicity.explicit, x) |> braces))
       (maybe (name <& token T.COLON))
       lf_typ
   <& token T.DOT
@@ -2693,14 +2666,14 @@ let sgn_query_pragma =
 let sgn_mquery_pragma =
   let bound =
     alt
-      (token T.STAR &> pure None)
+      (token T.STAR &> return None)
       (integer $> Option.some)
     |> labelled "search bound"
   in
   pragma "mquery" &>
     seq2
       (seq3 bound bound bound)
-      (*      (mctx ~sep: (pure ()) (clf_ctyp_decl_bare name' (fun x -> LF.No, x) |> braces)) *)
+      (*      (mctx ~sep: (return ()) (clf_ctyp_decl_bare name' (fun x -> LF.No, x) |> braces)) *)
       cmp_typ
   <& token T.DOT
   |> span
@@ -2732,7 +2705,7 @@ let associativity =
   [ "left", Sgn.Left
   ; "right", Sgn.Right
   ; "none", Sgn.None ]
-  |> List.map (fun (k, r) -> keyword k &> pure r |> labelled ("associativity `" ^ k ^ "'"))
+  |> List.map (fun (k, r) -> keyword k &> return r |> labelled ("associativity `" ^ k ^ "'"))
   |> choice
   |> labelled "associativity"
 
@@ -2815,7 +2788,7 @@ let lf_schema_some : LF.typ_decl LF.ctx parser =
              lf_typ_decl
              (token T.COMMA))
      $> fun ds -> List.fold_left (fun ctx d -> LF.Dec (ctx, d)) LF.Empty ds)
-    (pure LF.Empty)
+    (return LF.Empty)
   |> labelled "existential declaration"
 
 let lf_typ_rec_elem = seq2 (name <& token T.COLON) lf_typ
@@ -2867,9 +2840,9 @@ let sgn_let_decl : Sgn.decl parser =
 
 let boxity =
   choice
-    [ keyword "boxed" &> pure `boxed
-    ; keyword "unboxed" &> pure `unboxed
-    ; keyword "strengthened" &> pure `strengthened
+    [ keyword "boxed" &> return `boxed
+    ; keyword "unboxed" &> return `unboxed
+    ; keyword "strengthened" &> return `strengthened
     ]
 
 let harpoon_command : Comp.command parser =
@@ -3221,15 +3194,15 @@ let interactive_harpoon_command =
   in
   let automation_kind =
     choice
-      [ keyword "auto-intros" &> pure `auto_intros
-      ; keyword "auto-solve-trivial" &> pure `auto_solve_trivial
+      [ keyword "auto-intros" &> return `auto_intros
+      ; keyword "auto-solve-trivial" &> return `auto_solve_trivial
       ]
   in
   let automation_change =
     choice
-      [ keyword "on" &> pure `on
-      ; keyword "off" &> pure `off
-      ; keyword "toggle" &> pure `toggle
+      [ keyword "on" &> return `on
+      ; keyword "off" &> return `off
+      ; keyword "toggle" &> return `toggle
       ]
   in
   let toggle_automation =
@@ -3240,8 +3213,8 @@ let interactive_harpoon_command =
   let rename =
     let level =
       choice
-        [ keyword "comp" &> pure `comp
-        ; keyword "meta" &> pure `meta
+        [ keyword "comp" &> return `comp
+        ; keyword "meta" &> return `meta
         ]
     in
     keyword "rename"
@@ -3251,16 +3224,16 @@ let interactive_harpoon_command =
   in
   let basic_command =
     choice
-      [ keyword "list" &> pure `list
-      ; keyword "defer" &> pure `defer
+      [ keyword "list" &> return `list
+      ; keyword "defer" &> return `defer
       ]
   in
   let select_theorem =
     keyword "select" &> name $> fun x -> H.SelectTheorem x
   in
   let create_command, serialize_command =
-    ( keyword "create" &> pure `create
-    , keyword "serialize" &> pure `serialize
+    ( keyword "create" &> return `create
+    , keyword "serialize" &> return `serialize
     )
   in
   let theorem_command =
@@ -3273,7 +3246,7 @@ let interactive_harpoon_command =
       choice
         ( basic_command
           :: dump_proof
-          :: List.map (fun (k, k') -> keyword k &> pure k')
+          :: List.map (fun (k, k') -> keyword k &> return k')
                [ ("show-ihs", `show_ihs)
                ; ("show-proof", `show_proof)
                ]
@@ -3291,11 +3264,11 @@ let interactive_harpoon_command =
     $> fun cmd -> H.Subgoal cmd
   in
   let defer =
-    keyword "defer" &> pure (H.Subgoal `defer)
+    keyword "defer" &> return (H.Subgoal `defer)
   in
   let info_kind =
     choice
-      [ keyword "theorem" &> pure `prog
+      [ keyword "theorem" &> return `prog
       ]
   in
   let info =
@@ -3308,11 +3281,11 @@ let interactive_harpoon_command =
     &> name
     $> fun name -> H.Translate name
   in
-  let undo = keyword "undo" &> pure H.Undo in
-  let redo = keyword "redo" &> pure H.Redo in
-  let history = keyword "history" &> pure H.History in
-  let help = keyword "help" &> pure H.Help in
-  let save = keyword "save" &> pure (H.Session `serialize) in
+  let undo = keyword "undo" &> return H.Undo in
+  let redo = keyword "redo" &> return H.Redo in
+  let history = keyword "history" &> return H.History in
+  let help = keyword "help" &> return H.Help in
+  let save = keyword "save" &> return (H.Session `serialize) in
   choice
     [ intros
     ; info
@@ -3346,5 +3319,5 @@ let interactive_harpoon_command_sequence =
 
 let next_theorem =
   alt
-    (token T.COLON &> keyword "quit" &> pure `quit)
+    (token T.COLON &> keyword "quit" &> return `quit)
     (name $> fun name -> `next name)

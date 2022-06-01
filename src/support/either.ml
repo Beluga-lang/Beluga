@@ -20,9 +20,9 @@ let map_left f e = eliminate (fun e -> Left (f e)) right e
 
 let bimap f g e = eliminate (fun e -> Left (f e)) (fun x -> Right (g x)) e
 
-let rvoid e = map_right (fun _ -> ()) e
+let void_right e = map_right (fun _ -> ()) e
 
-let lvoid e = map_left (fun _ -> ()) e
+let void_left e = map_left (fun _ -> ()) e
 
 let void e = bimap (fun _ -> ()) (fun _ -> ()) e
 

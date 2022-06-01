@@ -28,10 +28,10 @@ val map_left : ('e1 -> 'e2) -> ('e1, 'a) t -> ('e2, 'a) t
 val bimap : ('e1 -> 'e2) -> ('a -> 'b) -> ('e1, 'a) t -> ('e2, 'b) t
 
 (** Forgets the right-hand side of the union. *)
-val rvoid : ('e, 'a) t -> ('e, unit) t
+val void_right : ('e, 'a) t -> ('e, unit) t
 
 (** Forgets the left-hand side of the union. *)
-val lvoid : ('e, 'a) t -> (unit, 'a) t
+val void_left : ('e, 'a) t -> (unit, 'a) t
 
 (** Forgets both sides of the union. *)
 val void : ('e, 'a) t -> (unit, unit) t
@@ -61,7 +61,7 @@ val to_option : ('e, 'a) t -> 'a option
 (** Infix form of {!Either.bind}. *)
 val ( >>= ) : ('e, 'a) t -> ('a -> ('e, 'b) t) -> ('e, 'b) t
 
-(** Infix form of {!Either.rmap}. *)
+(** Infix form of {!Either.map_right}. *)
 val ( $> ) : ('e, 'a) t -> ('a -> 'b) -> ('e, 'b) t
 
 (** Traps exceptions thrown by evaluating a function into a union. You can

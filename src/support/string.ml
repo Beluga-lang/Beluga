@@ -2,13 +2,41 @@ include Stdlib.String
 
 let unpack s =
   let n = length s in
-  let rec go i = match () with
-    | () when i < n -> get s i :: go (i + 1)
-    | () -> []
+  let rec unpack i return =
+    if i < n then
+      let c = get s i in
+      unpack (i + 1) (fun cs -> return (c :: cs))
+    else return []
   in
-  go 0
+  unpack 0 Fun.id
 
-let pack cs =
-  concat "" (List.map (make 1) cs)
+let pack cs = concat "" (List.map (make 1) cs)
 
 let drop n s = sub s n (length s - n)
+
+module type ORD = Ord.ORD
+
+module Ord : Ord.ORD with type t = t = Ord.Make (Stdlib.String)
+
+include (Ord : ORD with type t := t)
+
+module type HASH = Hash.HASH
+
+module Hash : HASH with type t := t = Hash.Make (Stdlib.String)
+
+include (Hash : HASH with type t := t)
+
+include (
+  Show.Make (struct
+    type nonrec t = t
+
+    let pp = Format.pp_print_string
+  end) :
+    Show.SHOW with type t := t)
+
+module Set = Set.Make (Stdlib.String)
+module Map = Map.Make (Stdlib.String)
+
+let is_empty = ( = ) empty
+
+let is_non_empty = ( <> ) empty

@@ -173,7 +173,7 @@ module Comp = struct
     | BoxHole    of Location.t                                         (*    | _                        *)
 
   and exp_syn =
-    | Name of Location.t * Name.t                          (*  i ::= x/c               *)
+    | Name of Location.t * Name.t                        (*  i ::= x/c               *)
     | Apply of Location.t * exp_syn * exp_chk            (*    | i e                 *)
     | BoxVal of Location.t * meta_obj                    (*    | [C]                 *)
     | PairVal of Location.t * exp_syn * exp_syn          (*    | (i , i)             *)
@@ -201,12 +201,6 @@ module Comp = struct
   and fun_branches =
     | NilFBranch of Location.t
     | ConsFBranch of Location.t * (pattern_spine * exp_chk) * fun_branches
-
-  (* the definition of branch_pattern will be removed and replaced by the more general notion of patterns;
-     it remains currently so we can still use the old parser without modifications -bp *)
-  and branch_pattern =
-    | NormalPattern of LF.normal * exp_chk
-    | EmptyPattern
 
   type suffices_typ = typ generic_suffices_typ
 

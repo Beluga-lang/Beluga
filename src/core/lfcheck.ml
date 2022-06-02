@@ -945,7 +945,7 @@ and checkSchema loc cD cPsi schema_name (Schema elements as schema) =
   | Null -> ()
   | CtxVar (CtxName name) ->
      (* free ctxvar names should not appear here *)
-     throw (Name.loc_of_name name) (LeftoverFV name)
+     throw (Name.location name) (LeftoverFV name)
   | CtxVar (CInst (mmvar, _)) ->
      (* Manually chasing the MMVar instantiation here is sketchy.
           Shouldn't the term already be in normal form when we enter

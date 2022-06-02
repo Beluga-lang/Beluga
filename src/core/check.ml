@@ -800,7 +800,7 @@ module Comp = struct
        checkClTyp loc cD cPsi tp
 
   let checkCDecl cD (I.Decl (x, ctyp, _, _)) =
-    checkCLFTyp (Name.loc_of_name x) cD ctyp
+    checkCLFTyp (Name.location x) cD ctyp
 
   let rec checkKind cD =
     function

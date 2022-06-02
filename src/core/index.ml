@@ -148,7 +148,7 @@ let index_cvar' cvars (u : Name.t) : (cvar_error_status, Id.offset) Either.t =
        p.fmt "[index_cvar'] indexed %a to offset %d at %a"
          Name.pp u
          k
-         Loc.print_short (Name.loc_of_name u)
+         Loc.print_short (Name.location u)
        end;
      Either.right k
 
@@ -844,7 +844,7 @@ and disambiguate_name' f : name_disambiguator =
        begin match index_cvar' cvars name with
        | Either.Left `implicit ->
           throw_hint
-            (Name.loc_of_name name)
+            (Name.location name)
             `implicit_variable
             (UnboundName name)
        | Either.Right offset ->
@@ -1220,10 +1220,10 @@ let rec index_compkind cvars fcvars =
      in
      let cK' = index_compkind cvars' fcvars' cK in
      Apx.Comp.PiKind (loc, cdecl', cK')
-  | Ext.Comp.ArrKind (loc, (loc', ctau, plicity), cK) ->
-    let x = Name.mk_name ~loc Name.NoName in
+  | Ext.Comp.ArrKind (location, (loc', ctau, plicity), cK) ->
+    let x = Name.mk_name ~location Name.NoName in
     index_compkind cvars fcvars
-    @@ Ext.Comp.PiKind (loc, Ext.LF.Decl (x, (loc', ctau), plicity), cK)
+    @@ Ext.Comp.PiKind (location, Ext.LF.Decl (x, (loc', ctau), plicity), cK)
 
 let rec index_comptyp (tau : Ext.Comp.typ) cvars : Apx.Comp.typ fvar_state =
   fun fvars ->

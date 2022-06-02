@@ -26,7 +26,7 @@ val inc : t -> t
 
 (** Retrieves the location of this identifier. For identifiers generated
     internally, this will be a ghost. *)
-val loc_of_name : t -> Location.t
+val location : t -> Location.t
 
 (** Finds the maximum number used for the given name hint in the given
     context. Returns None if the name hint is unused. *)
@@ -47,7 +47,7 @@ type name_guide =
 (** Smart constructor for [t].
 
     [mk_name] generates a [t] with a guaranteed unique [string]. *)
-val mk_name : ?loc:Location.t -> ?modules:string list -> name_guide -> t
+val mk_name : ?location:Location.t -> ?modules:string list -> name_guide -> t
 
 val string_of_name : t -> string
 

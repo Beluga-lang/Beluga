@@ -10,7 +10,7 @@ type t =
   ; hint_cnt : int option
   ; was_generated : bool
   ; counter : int
-  ; loc : Location.t
+  ; location : Location.t
   }
 
 (* For reporting whether a name is used in a context. *)
@@ -19,7 +19,7 @@ type max_usage =
   | `unused
   ]
 
-let loc_of_name n = n.loc
+let[@inline] location { location; _ } = location
 
 (** Computes a string representation of a name, without modules. *)
 let string_of_name n =
@@ -127,7 +127,7 @@ type name_guide =
   | SomeName of t
   | SomeString of string
 
-let mk_name ?(loc = Location.ghost) ?(modules = []) : name_guide -> t =
+let mk_name ?(location = Location.ghost) ?(modules = []) : name_guide -> t =
   let mk_name_helper (nm : string) : t =
     let nm', cnt = split_name nm in
     { modules
@@ -135,7 +135,7 @@ let mk_name ?(loc = Location.ghost) ?(modules = []) : name_guide -> t =
     ; was_generated = true
     ; counter = 0
     ; hint_cnt = cnt
-    ; loc
+    ; location
     }
   in
   function
@@ -156,7 +156,7 @@ let mk_name ?(loc = Location.ghost) ?(modules = []) : name_guide -> t =
   | SomeString x -> mk_name_helper x
 
 let mk_blank = function
-  | Some loc -> mk_name ~loc (SomeString "_")
+  | Some location -> mk_name ~location (SomeString "_")
   | None -> mk_name (SomeString "_")
 
 include (

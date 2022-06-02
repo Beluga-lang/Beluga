@@ -2073,7 +2073,7 @@ and etaExpandMV' cPsi sA n s' plicity inductivity =
 
   | (PiTyp ((TypDecl (x, _) as decl, _), tB), s) ->
      Lam
-       ( Name.loc_of_name x
+       ( Name.location x
        , x
        , etaExpandMV (DDec (cPsi, LF.decSub decl s)) (tB, LF.dot1 s) n (LF.dot1 s') plicity inductivity
        )

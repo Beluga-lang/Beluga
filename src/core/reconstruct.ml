@@ -320,7 +320,7 @@ let rec elDCtxAgainstSchema loc recT cD psi s_cid =
          else
            let { Schema.Entry.name; schema; decl = _ } = Schema.get s_cid in
            let c_var' = Int.LF.CtxName psi in
-           Check.LF.(CtxVarMismatch (cD, c_var', name, schema) |> throw (Name.loc_of_name psi))
+           Check.LF.(CtxVarMismatch (cD, c_var', name, schema) |> throw (Name.location psi))
        with
        | Not_found ->
           FCVar.add psi (cD, Int.LF.Decl (psi, Int.LF.CTyp (Some s_cid), Plicity.implicit, Inductivity.not_inductive));

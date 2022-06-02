@@ -919,7 +919,7 @@ let dollar_blank : unit parser =
 
 let namify (p : string t) : Name.t t =
   p |> span
-  $> fun (loc, x) -> Name.(mk_name ~loc: loc (SomeString x))
+  $> fun (location, x) -> Name.mk_name ~location (Name.SomeString x)
 
 let name : Name.t parser =
   namify identifier
@@ -997,9 +997,9 @@ let fqidentifier = sep_by1 (trying identifier) (token T.DOUBLE_COLON)
 let fqname =
   fqidentifier
   |> span
-  $> fun (loc, is) ->
-     let (ms, i) = List1.unsnoc is in
-     Name.(mk_name ~loc: loc ~modules: ms (SomeString i))
+  $> fun (location, is) ->
+     let (modules, i) = List1.unsnoc is in
+     Name.mk_name ~location ~modules Name.(SomeString i)
 
 let pragma s = token (T.PRAGMA s)
 

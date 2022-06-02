@@ -23,7 +23,7 @@ let throw loc e = raise (Error (loc, e))
 let thm_thm loc cid1 =
   let get_decl cid = Comp.( (get cid).Entry.decl ) in
   let name = Comp.name cid1 in
-  let loc' = Name.loc_of_name name in
+  let loc' = Name.location name in
   let name = Name.render_name name in
   function
   | None -> () (* no cid from whose POV to do the scopechecking *)
@@ -67,7 +67,7 @@ let format_error ppf =
   | FixedFixed (item_name, item_loc, thm_cid) ->
      let e = Comp.get thm_cid in
      let thm_name = e.Comp.Entry.name in
-     let thm_loc = Name.loc_of_name thm_name in
+     let thm_loc = Name.location thm_name in
      fprintf ppf
        "@[<v>Ill-scoped reference.\
         @,The %s defined at\

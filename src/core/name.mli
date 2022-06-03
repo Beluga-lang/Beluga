@@ -22,8 +22,6 @@ val inc_hint_cnt : int option -> int option
 
 val gen_fresh_name : t list -> t -> t
 
-val inc : t -> t
-
 (** Retrieves the location of this identifier. For identifiers generated
     internally, this will be a ghost. *)
 val location : t -> Location.t

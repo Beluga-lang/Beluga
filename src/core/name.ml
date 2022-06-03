@@ -8,8 +8,6 @@ type t =
   { modules : string list
   ; hint_name : string
   ; hint_cnt : int option
-  ; was_generated : bool
-  ; counter : int
   ; location : Location.t
   }
 
@@ -56,8 +54,6 @@ let base_name x = x.hint_name
 let modify_number f name = { name with hint_cnt = f name.hint_cnt }
 
 let get_module n = n.modules
-
-let inc n = { n with counter = n.counter + 1 }
 
 let split_name s =
   try
@@ -132,8 +128,6 @@ let mk_name ?(location = Location.ghost) ?(modules = []) : name_guide -> t =
     let nm', cnt = split_name nm in
     { modules
     ; hint_name = nm'
-    ; was_generated = true
-    ; counter = 0
     ; hint_cnt = cnt
     ; location
     }

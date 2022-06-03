@@ -113,8 +113,7 @@ let newMMVar' n (cD, mtyp) plicity inductivity =
     match n with
     | None ->
       Name.mk_name (newMTypName mtyp)
-    | Some n ->
-       Name.inc n
+    | Some n -> n
   in
   { name
   ; instantiation = ref None
@@ -2068,7 +2067,7 @@ let rec etaExpandMV cPsi sA n s' plicity inductivity =
 and etaExpandMV' cPsi sA n s' plicity inductivity =
   match sA with
   | (Atom (loc, _, _) as tP, s) ->
-     let u = newMVar (Some (Name.inc n)) (cPsi, tclo tP s) plicity inductivity in
+     let u = newMVar (Some n) (cPsi, tclo tP s) plicity inductivity in
      Root (loc, MVar (u, s'), Nil, plicity)
 
   | (PiTyp ((TypDecl (x, _) as decl, _), tB), s) ->
@@ -2093,7 +2092,7 @@ let rec etaExpandMMV loc cD cPsi sA n s' plicity inductivity =
 and etaExpandMMV' loc cD cPsi sA n s' plicity inductivity =
   match sA with
   | (Atom _ as tP, s) ->
-     let u = newMMVar (Some (Name.inc n)) (cD, cPsi, tclo tP s) plicity inductivity in
+     let u = newMMVar (Some n) (cD, cPsi, tclo tP s) plicity inductivity in
      Root (loc, MMVar ((u, m_id), s'), Nil, plicity)
 
   | (PiTyp ((TypDecl (x, _) as decl, _), tB), s) ->

@@ -35,3 +35,15 @@ end) : EQ with type t = T.t
     values of type ['t] by the {!EQ} instance [eq] for values of type ['s]. *)
 val contramap :
   (module EQ with type t = 's) -> ('t -> 's) -> (module EQ with type t = 't)
+
+(** If [val f1 : 't -> 's1] and [val f2 : 't -> 's2], then
+    [conjunction eq1 eq2 f1 f2] is an instance of {!EQ} for values of type
+    ['t] that first checks equality by contramapping by [eq1] and [f1], and
+    if that check was [true] then checks equality by contramapping by [eq2]
+    and [f2]. *)
+val conjunction :
+     (module EQ with type t = 's1)
+  -> (module EQ with type t = 's2)
+  -> ('t -> 's1)
+  -> ('t -> 's2)
+  -> (module EQ with type t = 't)

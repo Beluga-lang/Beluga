@@ -1,3 +1,5 @@
+open Support
+
 (** The type of annotation for implicit or explicit parameters.
 
     A parameter is implicit if
@@ -31,6 +33,6 @@ val is_explicit : t -> bool
 (** [is_implicit p] is [true] if and only if [p] is [Implicit]. *)
 val is_implicit : t -> bool
 
-(** [equal p1 p2] is [true] if and only if [p1] and [p2] are both [Explicit]
-    or [Implicit]. *)
-val equal : t -> t -> bool
+(** {1 Instances} *)
+
+include Eq.EQ with type t := t

@@ -1,3 +1,5 @@
+open Support
+
 (** The type of annotation for inductive or not inductive parameters.
 
     An inductive parameter generates induction hypotheses when split on. *)
@@ -25,6 +27,6 @@ val is_not_inductive : t -> bool
 (** [is_inductive ind] is [true] if and only if [ind] is [Inductive]. *)
 val is_inductive : t -> bool
 
-(** [equal p1 p2] is [true] if and only if [p1] and [p2] are both [Explicit]
-    or [Implicit]. *)
-val equal : t -> t -> bool
+(** {1 Instances} *)
+
+include Eq.EQ with type t := t

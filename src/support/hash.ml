@@ -12,13 +12,13 @@ end) : HASH with type t = T.t = struct
   let hash = Hashtbl.hash
 end
 
-let contramap (type t t') (hash : (module HASH with type t = t'))
-    (f : t -> t') =
+let contramap (type t s) (hash : (module HASH with type t = s))
+    (f : t -> s) =
   (module struct
     type nonrec t = t
 
-    let hash x =
+    let hash =
       let (module Hash) = hash in
-      Hash.hash (f x)
+      fun x -> Hash.hash (f x)
   end : HASH
     with type t = t)

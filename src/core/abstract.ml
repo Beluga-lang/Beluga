@@ -214,7 +214,7 @@ type occurs = Yes | No
 let eqVar mmV1 mmV2 =
   match (mmV1, mmV2) with
   | (MMV (_, r1), MMV (_, r2)) -> r1 == r2
-  | (FV n1, FV n2) -> Name.equal n1 n2
+  | (FV n1, FV n2) -> Name.(n1 = n2)
   | _ -> false
 
 let rec checkOccurrence loc p =

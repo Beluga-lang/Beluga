@@ -1263,11 +1263,11 @@ and convHead (head1, s1) (head2, s2) =
      && convSub (LF.comp s' s1) (LF.comp s'' s2)
 
   | (FPVar (p, s'), FPVar (q, s'')) ->
-     Name.equal p q
+     Name.(p = q)
      && convSub (LF.comp s' s1) (LF.comp s'' s2)
 
   | (FMVar (u, s'), FMVar (w, s'')) ->
-     Name.equal u w
+     Name.(u = w)
      && convSub (LF.comp s' s1) (LF.comp s'' s2)
 
   | (Proj (BVar k1, i), Proj (BVar k2, j)) ->
@@ -1278,7 +1278,7 @@ and convHead (head1, s1) (head2, s2) =
      && convSub (LF.comp s' s1) (LF.comp s'' s2)
   (* additional case: p[x] = x ? -bp*)
 
-  | (FVar x, FVar y) -> Name.equal x y
+  | (FVar x, FVar y) -> Name.(x = y)
   | _ ->
      dprint (fun () -> "[convHead] falls through ");
      false
@@ -1305,7 +1305,7 @@ and convSub subst1 subst2 =
      && convSub sigma1 sigma2
 
   | FSVar (k1, (u1, s1)), FSVar (k2, (u2, s2)) ->
-     k1 = k2 && Name.equal u1 u2 && convSub s1 s2
+     Int.(k1 = k2) && Name.(u1 = u2) && convSub s1 s2
 
   | (Dot (f, s), Dot (f', s')) ->
      convFront f f' && convSub s s'
@@ -1417,8 +1417,8 @@ and convTypRec sArec sBrec =
 
 and convCtxVar psi psi' =
   match (psi, psi') with
-  | (CtxName n1, CtxName n2) -> Name.equal n1 n2
-  | (CtxOffset k1, CtxOffset k2) -> k1 = k2
+  | (CtxName n1, CtxName n2) -> Name.(n1 = n2)
+  | (CtxOffset k1, CtxOffset k2) -> Int.(k1 = k2)
   | _ -> false
 
 (* convDCtx cPsi cPsi' = true iff
@@ -1577,7 +1577,7 @@ let mctxMVarPos cD u =
   let rec lookup cD k =
     match cD with
     | Dec (cD, Decl (v, mtyp, _, _)) ->
-       if Name.equal v u
+       if Name.(v = u)
        then (k, cnormMTyp (mtyp, MShift k))
        else lookup cD (k + 1)
     | Dec (cD, _) -> lookup cD (k + 1)
@@ -2028,12 +2028,12 @@ and convSchElem (SchElem (cPsi, trec)) (SchElem (cPsi', trec')) =
 let convCTypDecl d1 d2 =
   match (d1, d2) with
   | (Decl (x1, cT1, plicity1, inductivity1), Decl (x2, cT2, plicity2, inductivity2)) ->
-     Name.equal x1 x2
-     && Plicity.equal plicity1 plicity2
-     && Inductivity.equal inductivity1 inductivity2
+     Name.(x1 = x2)
+     && Plicity.(plicity1 = plicity2)
+     && Inductivity.(inductivity1 = inductivity2)
      && convMTyp cT1 cT2
   | (DeclOpt (x1, _), DeclOpt (x2, _)) ->
-     Name.equal x1 x2
+     Name.(x1 = x2)
 
 (** Checks if two declarations are convertible.
       If they're coming from a metacontext you should shift them so
@@ -2042,9 +2042,9 @@ let convCTypDecl d1 d2 =
 let convCompCTypDecl d1 d2 =
   let open Comp in
   match (d1, d2) with
-  | (CTypDeclOpt x1, CTypDeclOpt x2) -> Name.equal x1 x2
+  | (CTypDeclOpt x1, CTypDeclOpt x2) -> Name.(x1 = x2)
   | (CTypDecl (x1, tau1, w1), CTypDecl (x2, tau2, w2)) ->
-     Name.equal x1 x2 && Stdlib.(=) w1 w2
+     Name.(x1 = x2) && Stdlib.(=) w1 w2
      && convCTyp (tau1, m_id) (tau2, m_id)
 
 let mctx_to_list_shifted x =

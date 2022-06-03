@@ -27,7 +27,7 @@ let solve ?(action_name = "solve") (proof : Comp.proof) : t =
  *)
 let check_variable_uniqueness variable_kind ctx decl name_of_decl print t =
   let name = name_of_decl decl in
-  let p d = B.Name.equal (name_of_decl d) name in
+  let p d = B.Name.(name_of_decl d = name) in
   match Context.find_rev' ctx p with
   | Some d ->
      Theorem.printf t

@@ -428,7 +428,7 @@ and lookupCtxVar cD cvar =
     | Empty -> raise (Error.Violation "Context variable not found")
     | Dec (cD, Decl (psi, CTyp (Some schemaName), _, _)) ->
        begin match cvar with
-       | CtxName phi when Name.equal psi phi -> (psi, schemaName)
+       | CtxName phi when Name.(psi = phi) -> (psi, schemaName)
        | CtxName _ -> lookup cD (offset + 1)
        | CtxOffset n ->
           if n - offset = 1
@@ -444,7 +444,7 @@ and lookupCtxVarSchema cO phi = Pair.snd (lookupCtxVar cO phi)
 let rec rename src dst get_name rename_decl =
   function
   | LF.Empty -> None
-  | LF.Dec (ctx', d) when Name.equal (get_name d) src ->
+  | LF.Dec (ctx', d) when Name.(get_name d = src) ->
      Some (LF.Dec (ctx', rename_decl (fun _ -> dst) d))
   | LF.Dec (ctx', d) ->
      let open Option in

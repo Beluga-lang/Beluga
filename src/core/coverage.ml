@@ -60,7 +60,7 @@ let withPatFVar name k = Comp.PatFVar (Loc.ghost, name)
 let lookup (cG : Comp.gctx) x =
   let open Comp in
   let Some (CTypDecl (_, tau, _)) =
-    Context.find' cG (fun (CTypDecl (y, _, _)) -> Name.equal x y)
+    Context.find' cG (fun (CTypDecl (y, _, _)) -> Name.(x = y))
   in
   tau
 
@@ -2816,7 +2816,7 @@ let refine_mv ((cD, cG, candidates, patt) as cov_problem) =
 let rec subst_pattern (pat_r, pv) pattern =
   match pattern with
   | Comp.PatFVar (loc, y) ->
-     if Name.equal y pv
+     if Name.(y = pv)
      then pat_r
      else pattern
   | Comp.PatPair (loc, pat1, pat2) ->
@@ -2844,7 +2844,7 @@ let rec subst_spliteqn (cD, cG) (pat_r, pv) (cD_p, cG_p, ml) =
   | [] -> (ml, [])
   | (SplitPat ((Comp.PatFVar (_, x), ttau), (patt_p, ttau_p)) as seqn) :: sl ->
      let (ml', sl') = subst_spliteqn (cD, cG) (pat_r, pv) (cD_p, cG_p, ml) sl in
-     if Name.equal x pv
+     if Name.(x = pv)
      then
        begin
          dprintf

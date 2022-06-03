@@ -867,7 +867,7 @@ let recSgnDecls decls =
        let pos loc x args =
          match
            List.index_of
-             (fun a -> Option.equal Name.equal a (Some x))
+             (Option.equal Name.( = ) (Some x))
              args
          with
          | None -> throw loc (UnboundArg (x, args))
@@ -883,7 +883,7 @@ let recSgnDecls decls =
             (* Validate the inputs: can't have too many args or the wrong name *)
             if Bool.not (Total.is_valid_args tau (List.length args))
             then raise (Error (loc, TotalArgsError f))
-            else if Bool.not (Name.equal f f')
+            else if Name.(f <> f')
             then raise (Error (loc, TotalDeclError (f, f')))
             else
               begin match order with

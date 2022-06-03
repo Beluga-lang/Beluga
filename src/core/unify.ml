@@ -2293,7 +2293,7 @@ module Make (T : TRAIL) : UNIFY = struct
        then raise (Failure "Constant clash")
 
     | (FVar x1, FVar x2) ->
-       if Bool.not (Name.equal x1 x2)
+       if Name.(x1 <> x2)
        then raise (Failure "Free Variable clash")
 
     | (MVar (Offset k, s), MVar (Offset k', s')) ->
@@ -2302,12 +2302,12 @@ module Make (T : TRAIL) : UNIFY = struct
        else raise (Failure (Format.sprintf "Bound MVar clash: %d with %d" k k'))
 
     | (FMVar (u, s), FMVar (u', s')) ->
-       if Name.equal u u'
+       if Name.(u = u')
        then unifySub mflag cD0 cPsi s s'
        else raise (Failure "Bound FMVar clash'")
 
     | (FPVar (q, s), FPVar (p, s')) ->
-       if Name.equal p q
+       if Name.(q = p)
        then unifySub mflag cD0 cPsi s s'
        else raise (Failure "Front FPVar mismatch")
 
@@ -2446,7 +2446,7 @@ module Make (T : TRAIL) : UNIFY = struct
        then raise (Error "Substitutions not well-typed")
 
     | (FSVar (n1, (s1, sigma1)), FSVar (n2, (s2, sigma2))) ->
-       if Name.equal s1 s2 && n1 = n2
+       if Name.(s1 = s2) && Int.(n1 = n2)
        then unifySub mflag cD0 cPsi sigma1 sigma2
        else raise (Failure "FSVar mismatch")
 
@@ -2520,7 +2520,7 @@ module Make (T : TRAIL) : UNIFY = struct
        else raise (Failure "Front PVar mismatch")
 
     | (Head (FPVar (q, s)), Head (FPVar (p, s'))) ->
-       if Name.equal p q
+       if Name.(p = q)
        then unifySub mflag cD0 cPsi s s'
        else raise (Failure "Front FPVar mismatch")
 
@@ -2536,7 +2536,7 @@ module Make (T : TRAIL) : UNIFY = struct
        else raise (Failure "Front MVar mismatch")
 
     | (Head (FMVar (u, s)), Head (FMVar (v, s'))) ->
-       if Name.equal u v
+       if Name.(u = v)
        then unifySub mflag cD0 cPsi s s'
        else raise (Failure "Front FMVar mismatch")
 
@@ -2546,7 +2546,7 @@ module Make (T : TRAIL) : UNIFY = struct
        else raise (Failure "Front Proj mismatch")
 
     | (Head (FVar x), Head (FVar y)) ->
-       if Bool.not (Name.equal x y)
+       if Name.(x <> y)
        then raise (Failure "Front FVar mismatch")
 
     | (Obj tM, Obj tN) ->
@@ -2716,8 +2716,8 @@ module Make (T : TRAIL) : UNIFY = struct
             context variables are not pattern substitutions \
             should not happen and is not implemented for now"
 
-    | (CtxVar (CtxName c1), CtxVar (CtxName c2)) when Name.equal c1 c2 -> ()
-    | (CtxVar (CtxOffset k1), CtxVar (CtxOffset k2)) when k1 = k2 -> ()
+    | (CtxVar (CtxName c1), CtxVar (CtxName c2)) when Name.(c1 = c2) -> ()
+    | (CtxVar (CtxOffset k1), CtxVar (CtxOffset k2)) when Int.(k1 = k2) -> ()
     | (CtxVar _, CtxVar _) -> (* else, the variables are unequal *)
        dprintf
          begin fun p ->

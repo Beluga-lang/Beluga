@@ -28,44 +28,28 @@ module OpPragmas = struct
 
   let default_precedence = -1
 
-  let addPragma n f p_option a =
-    let p =
-      match p_option with
-      | Some x -> x
-      | None -> default_precedence
-    in
-    if List.exists (fun x -> Name.equal x.name n) !pragmas
-    then
-      pragmas :=
-        List.map
-          begin fun x ->
-          if Name.equal x.name n
-          then
-            { name = n
-            ; fix = f
-            ; precedence = p
-            ; assoc = a
-            }
-          else
-            x
-          end
-          !pragmas
-    else
-      let new_entry =
-        { name = n
-        ; fix = f
-        ; precedence = p
-        ; assoc = a
-        }
-      in
-      pragmas := new_entry :: !pragmas;
-      incr pragmaCount
-
   let getPragma name =
-    List.find_opt (fun p -> Name.equal name p.name) !pragmas
+    !pragmas
+    |> List.find_opt (fun { name = pragma_name; _ } -> Name.(pragma_name = name))
 
   let pragmaExists name =
-    List.exists (fun x -> Name.equal x.name name) !pragmas
+    !pragmas
+    |> List.exists (fun { name = pragma_name; _ } -> Name.(pragma_name = name))
+
+  let addPragma name fix precedence_opt assoc =
+    let precedence = Option.value ~default:default_precedence precedence_opt in
+    if pragmaExists name
+    then
+      pragmas :=
+        !pragmas
+        |> List.map (fun ({ name = pragma_name; _ } as x) ->
+          if Name.(pragma_name = name)
+          then { name; fix; precedence; assoc }
+          else x)
+    else
+      let new_entry = { name; fix; precedence; assoc } in
+      pragmas := new_entry :: !pragmas;
+      incr pragmaCount
 end
 
 module Modules = struct
@@ -894,7 +878,7 @@ module Cid = struct
       let mg = lookup_mutual_group e.Entry.mutual_group in
       match
         List.find_opt
-          (fun d -> Name.equal d.Int.Comp.name name)
+          (fun d -> Name.(d.Int.Comp.name = name))
           mg
       with
       | Some d -> d
@@ -1007,8 +991,8 @@ module BVar = struct
     let rec loop i =
       function
       | [] -> raise Not_found
-      | e :: es ->
-         if Name.equal e.name n
+      | { name; _ } :: es ->
+         if Name.(name = n)
          then i
          else loop (i + 1) es
     in
@@ -1030,7 +1014,7 @@ module FVar = struct
       match str with
       | [] -> [(x, tA)]
       | (y, tA') :: str' ->
-         if Name.equal x y
+         if Name.(x = y)
          then
            begin match (tA, tA') with
            | (Int.LF.Type tB,
@@ -1047,7 +1031,7 @@ module FVar = struct
   let get x =
     let rec lookup str = match str with
       | ((y, tA)::str') ->
-          if Name.equal x y then tA else lookup str'
+          if Name.(x = y) then tA else lookup str'
       | _ -> raise Not_found
     in
     lookup (!store)
@@ -1069,7 +1053,7 @@ module FPatVar = struct
   let get x =
     let rec lookup str = match str with
       | Syntax.Int.LF.Dec (str', Syntax.Int.Comp.CTypDecl ((y, tau, _))) ->
-          if Name.equal x y then tau else lookup str'
+          if Name.(x = y) then tau else lookup str'
       | _ -> raise Not_found
     in
       lookup (!store)
@@ -1132,7 +1116,7 @@ module Var = struct
       function
       | [] -> raise Not_found
       | (e :: es) ->
-         if Name.equal e.name n
+         if Name.(e.name = n)
          then i
          else loop (i + 1) es
     in
@@ -1179,7 +1163,7 @@ module CVar = struct
     let rec loop i = function
       | [] -> raise Not_found
       | (e :: es) ->
-         if Name.equal e.name x then
+         if Name.(e.name = x) then
            (i, e)
          else
            loop (i + 1) es

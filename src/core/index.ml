@@ -287,7 +287,7 @@ let disambiguate_name :
   c.disambiguate_name c.cvars c.bvars p s fvars
 
 let lookup_fv' (m : Name.t) fvars =
-  List.exists (Name.equal m) fvars.vars
+  List.exists (Name.( = ) m) fvars.vars
 
 let lookup_fv (m : Name.t) : bool index =
   Bind.(get_fvars $> lookup_fv' m)

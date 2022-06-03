@@ -81,7 +81,7 @@ module Elab = struct
        just a name (or a hash_name), and we do all the elaboration "by
        hand" here instead of using Lfrecon and Index.
      *)
-    let p (d, _) = Name.equal name (LF.name_of_ctyp_decl d) in
+    let p (d, _) = Name.(LF.name_of_ctyp_decl d = name) in
     match Context.find_with_index_rev' cD p with
     | None -> Lfrecon.(throw loc (UnboundName name))
     | Some LF.(Decl (_, cT, _, _), k) ->

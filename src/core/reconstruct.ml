@@ -371,7 +371,7 @@ let unifyDCtxWithFCVar loc cD cPsi1 cPsi2 =
     | (Int.LF.CtxVar (Int.LF.CtxOffset psi1_var), Apx.LF.CtxVar (Apx.LF.CtxOffset psi2_var))
          when psi1_var = psi2_var -> ()
     | (Int.LF.CtxVar (Int.LF.CtxName g), Apx.LF.CtxVar (Apx.LF.CtxName h))
-         when Name.equal g h -> ()
+         when Name.(g = h) -> ()
 
     | ( Int.LF.DDec (cPsi1, Int.LF.TypDecl(_, tA1))
       , Apx.LF.DDec (cPsi2, Apx.LF.TypDecl(_, tA2))

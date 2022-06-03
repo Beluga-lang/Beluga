@@ -259,21 +259,23 @@ let get_order (mfs : Comp.total_dec list) =
 
 (** Looks up a declaration based on a function name *)
 let lookup_dec f : Comp.total_dec list -> Comp.total_dec option =
-  List.find_opt (fun d -> Name.equal Comp.(d.name) f)
+  let open Comp in
+  List.find_opt (fun { name; _ } -> Name.(name = f))
 
 (** Gets the induction order for the function with name `f`
     Returns None if the
  *)
 let get_order_for mfs f : int list option =
+  let open Comp in
   let rec find =
     function
     | [] -> None
-    | dec :: decs ->
-       if Name.equal Comp.(dec.name) f
+    | { name; order; _ } :: decs ->
+       if Name.(name = f)
        then
          begin
            let open Option in
-           Comp.(dec.order |> option_of_total_dec_kind >>= Order.list_of_order)
+           order |> option_of_total_dec_kind >>= Order.list_of_order
          end
        else
          find decs
@@ -1405,7 +1407,7 @@ let annotate loc order tau =
 let rec select_ihs name = function
   | LF.Empty -> LF.Empty
   | LF.Dec (cIH, Comp.(WfRec (name', args, tau) as d))
-       when Name.equal name name' ->
+       when Name.(name = name') ->
      LF.Dec (select_ihs name cIH, d)
   | LF.Dec (cIH, _) ->
      (* Remove the declaration if the name doesn't match. *)

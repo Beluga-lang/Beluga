@@ -63,3 +63,5 @@ val pp_list : Format.formatter -> t list -> unit
 include Eq.EQ with type t := t
 
 include Show.SHOW with type t := t
+
+include Hash.HASH with type t := t

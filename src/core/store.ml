@@ -2,13 +2,7 @@ open Support.Equality
 open Support
 open Syntax
 
-module NameTable =
-  Hashtbl.Make
-    (struct
-      type t = Name.t
-      let equal x y = Name.equal x y
-      let hash i = Hashtbl.hash (Name.render_name i)
-    end)
+module NameTable = Hashtbl.Make (Name)
 
 type error =
   | FrozenType of Id.cid_typ

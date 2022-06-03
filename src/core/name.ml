@@ -125,12 +125,8 @@ type name_guide =
 
 let mk_name ?(location = Location.ghost) ?(modules = []) : name_guide -> t =
   let mk_name_helper (nm : string) : t =
-    let nm', cnt = split_name nm in
-    { modules
-    ; hint_name = nm'
-    ; hint_cnt = cnt
-    ; location
-    }
+    let hint_name, hint_cnt = split_name nm in
+    { modules; hint_name; hint_cnt; location }
   in
   function
   (* If no {!name} is given, create a new unique {!name}. This prevents the
@@ -160,3 +156,5 @@ include (
     let equal n1 n2 = String.equal (string_of_name n1) (string_of_name n2)
   end) :
     Eq.EQ with type t := t)
+
+let hash = Fun.(render_name >> Hashtbl.hash)

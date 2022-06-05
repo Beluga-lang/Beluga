@@ -252,7 +252,7 @@ let find_with_index (ctx : 'a LF.ctx) (f : 'a LF.ctx -> 'a * int -> bool) : ('a 
     | Dec (ctx', x) ->
        let open Option in
        lazy (go ctx' (idx + 1))
-       <|> lazy (of_bool (f ctx' (x, idx)) &> Some (x, idx))
+       <||> lazy (of_bool (f ctx' (x, idx)) &> Some (x, idx))
        |> Lazy.force
   in
   go ctx 1

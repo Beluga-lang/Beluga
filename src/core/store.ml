@@ -302,11 +302,11 @@ module CidStore (M : ENTRY) : CIDSTORE
 
     (*
   let lookup (n : Name.t) f : (cid * entry) option =
-    Option.flat_map
-      begin fun cid ->
+    let open Option in
+    index_of_name_opt n
+    >>= begin fun cid ->
       Option.map (fun e -> (cid, e)) (f (get cid))
       end
-      (index_of_name_opt n)
      *)
 
   let add f =

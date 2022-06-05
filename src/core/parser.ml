@@ -749,8 +749,8 @@ let maybe (p : 'a parser) : 'a option parser =
     (alt (p $> Option.some) (return None))
 
 (** Tries a parser, and if it fails uses a default value. *)
-let maybe_default (p : 'a parser) (x : 'a) : 'a parser =
-  maybe p $> Option.get_default x
+let maybe_default (p : 'a parser) (default : 'a) : 'a parser =
+  maybe p $> Option.value ~default
 
 (** Internal implementation of `many` that doesn't label. *)
 let rec many' (p : 'a parser) : 'a list parser =

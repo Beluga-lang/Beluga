@@ -151,7 +151,7 @@ let auto_solve_trivial : t =
        $> build_cwitness
       )
   in
-  let opt_witness = opt_mwitness <|> opt_cwitness in
+  let opt_witness = opt_mwitness <||> opt_cwitness in
   match opt_witness with
   | lazy None ->
      dprintf

@@ -1,99 +1,83 @@
 include module type of Stdlib.Option
 
-val eliminate : (unit -> 'b) -> ('a -> 'b) -> 'a option -> 'b
+(** [eliminate none_handler some_handler o] is [some_handler v] if [o] is
+    [Some v], and [none_handler ()] otherwise. *)
+val eliminate : (unit -> 'b) -> ('a -> 'b) -> 'a t -> 'b
 
-(** Gets the value from an option if it exists. Otherwise gives a default value. *)
-val get_default : 'a -> 'a option -> 'a
+(** [get' exn o] is [v] if [o] is [Some v], and otherwise [exn] is raised. *)
+val get' : exn -> 'a t -> 'a
 
-(** Gets the value from an option if it exists. Otherwise raises the given exception. *)
-val get' : exn -> 'a option -> 'a
+(** [get_or_else f o] is [f ()] if [o] is [None] and [v] if [o] is [Some v]. *)
+val get_or_else : (unit -> 'a) -> 'a t -> 'a
 
-(** Convert a boolean to an option.
-    When used with other monadic operations, this is (a specialized)
-    `guard` function from Haskell, which allows to abort a monadic
-    computation on account of a boolean check.
- *)
-val of_bool : bool -> unit option
+(** [of_bool b] is [Some ()] if [b] is [true], and [None] otherwise.
 
-val ( >>= ) : 'a option -> ('a -> 'b option) -> 'b option
+    When used with other monadic operations, this is (a specialized) [guard]
+    function from Haskell, which allows to abort a monadic computation on
+    account of a boolean check. *)
+val of_bool : bool -> unit t
 
-(** Named, flipped version of ($). *)
-val flat_map : ('a -> 'b option) -> 'a option -> 'b option
+(** [from_predicate p a] is [Some a] if [p a], and [None] otherwise. *)
+val from_predicate : ('a -> bool) -> 'a -> 'a t
 
-val ( <|> ) : 'a option Lazy.t -> 'a option Lazy.t -> 'a option Lazy.t
+(** [lazy_alt a1 a2] is [a1] if it is not [lazy None], and [a2] otherwise. *)
+val lazy_alt : 'a t Lazy.t -> 'a t Lazy.t -> 'a t Lazy.t
 
-(** Selects the first alternative that succeeds.
-    Forces every thunk until one computes `Some x'.
- *)
-val choice : 'a option Lazy.t list -> 'a option Lazy.t
+(** Infix operator alias of {!lazy_alt}. *)
+val ( <||> ) : 'a t Lazy.t -> 'a t Lazy.t -> 'a t Lazy.t
 
-(** Returns the first option that isn't None, if any. *)
-val alt : 'a option -> 'a option -> 'a option
+(** Selects the first alternative that succeeds. Forces every thunk until one
+    computes [Some x]. *)
+val choice : 'a t Lazy.t List.t -> 'a t Lazy.t
 
-(** Maps a function that may fail over a list, and eagerly fails as
-    soon as any individual call fails.
-    Note that elements beyond the first failing one will not be
-    processed.
- *)
-val traverse : ('a -> 'b option) -> 'a list -> 'b list option
+(** Maps a function that may fail over a list, and eagerly fails as soon as
+    any individual call fails. Note that elements beyond the first failing
+    one will not be processed. *)
+val traverse : ('a -> 'b t) -> 'a List.t -> 'b List.t t
 
-(** Maps a function that may fail over a list, and eagerly fails as
-    soon as an individual call fails. The functions themselves may not
-    compute interesting results.
- *)
-val traverse_ : ('a -> unit option) -> 'a list -> unit option
+(** Maps a function that may fail over a list, and eagerly fails as soon as
+    an individual call fails. The functions themselves may not compute
+    interesting results. *)
+val traverse_ : ('a -> unit t) -> 'a List.t -> unit t
 
-(** Folds a list with a function that may fail, eagerly failing.
-    Note that elements beyond the first failing one will not be
-    processed.
- *)
-val fold_left : ('b -> 'a -> 'b option) -> 'b -> 'a list -> 'b option
+(** Folds a list with a function that may fail, eagerly failing. Note that
+    elements beyond the first failing one will not be processed. *)
+val fold_left : ('b -> 'a -> 'b t) -> 'b -> 'a List.t -> 'b t
 
-(** Transforms the contents of an option with a pure function. *)
-val ( $> ) : 'a option -> ('a -> 'b) -> 'b option
+val void : 'a t -> unit t
 
-(** Returns the second option only if the first is `Some _'.
-    In a sense, this is the opposite of <|>.
- *)
-val ( &> ) : 'a option -> 'b option -> 'b option
-
-val void : 'a option -> unit option
-
-(**
- * Removes all `None` options from the list.
- *
- * In fact, `cat_options` is implemented in terms of `filter_map`.
- *)
-val cat_options : 'a option list -> 'a list
+(** Removes all [None] options from the list. In fact, [cat_options] is
+    implemented in terms of {!List.filter_map}. *)
+val cat_options : 'a t List.t -> 'a List.t
 
 (** Specialized effectful eliminator for option types. *)
-val when_some : 'a option -> ('a -> unit) -> unit
+val when_some : 'a t -> ('a -> unit) -> unit
 
-type 'a all_or_none =
-  [ `all of 'a list
-  | `mixed of 'a list
-  | `none
-  | `empty
-  ]
+(** Prints an option by doing nothing if it is [None]; else it uses the given
+    printer. *)
+val print :
+  (Format.formatter -> 'a -> unit) -> Format.formatter -> 'a t -> unit
 
-val all_or_none : 'a option list -> 'a all_or_none
+(** Prints an option by showing ["None"] or ["Some(X)"] where ["X"] is
+    generated by the given formatting function. *)
+val pp : (Format.formatter -> 'a -> unit) -> Format.formatter -> 'a t -> unit
 
-(**
- * Specialized eliminator for options to print them generally.
- *)
-val print' : (Format.formatter -> unit -> unit) ->
-             (Format.formatter -> 'a -> unit) ->
-             Format.formatter ->
-             'a option ->
-             unit
+(** {1 Instances} *)
 
-(**
- * Prints an option by doing nothing if it is `None`; else it uses the given printer.
- *)
-val print : (Format.formatter -> 'a -> unit) -> Format.formatter -> 'a option -> unit
+include Monad.MONAD with type 'a t := 'a t
 
-(**
- * Prints an option by showing `None` or `Some X` where X is generated
- * by the given formatting function.
- *)
-val show : (Format.formatter -> 'a -> unit) -> Format.formatter -> 'a option -> unit
+include Functor.FUNCTOR with type 'a t := 'a t
+
+include Apply.APPLY with type 'a t := 'a t
+
+include Alternative.ALTERNATIVE with type 'a t := 'a t
+
+(** Functor for an instance of {!Eq.EQ} over option values using {!equal}. *)
+module MakeEq (E : Eq.EQ) : Eq.EQ with type t = E.t t
+
+(** Functor for an instance of {!Ord.ORD} over option values using
+    {!compare}. *)
+module MakeOrd (O : Ord.ORD) : Ord.ORD with type t = O.t t
+
+(** Functor for an instance of {!Show.SHOW} over option values using {!pp}. *)
+module MakeShow (S : Show.SHOW) : Show.SHOW with type t = S.t t

@@ -170,7 +170,7 @@ let prepare_translated_proofs tes total_decs =
          entries to themselves.
    *)
   let cid_map k =
-    Hashtbl.find_opt h k |> Option.get_default k
+    Hashtbl.find_opt h k |> Option.value ~default:k
   in
   let etaus =
     List.map

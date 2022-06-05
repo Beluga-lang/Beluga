@@ -113,7 +113,7 @@ let (holes : (HoleId.t, some_hole) Hashtbl.t) = Hashtbl.create 32
 let find (p : some_hole -> bool) : (HoleId.t * some_hole) option =
   let f k h m =
     let open Option in
-    m <|> lazy (p h |> of_bool &> some (k, h))
+    m <||> lazy (p h |> of_bool &> some (k, h))
   in
   Hashtbl.fold f holes (lazy None)
   |> Lazy.force

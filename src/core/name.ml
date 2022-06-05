@@ -110,7 +110,7 @@ let max_usage ctx s =
     let k = List1.fold_left (fun x -> x.hint_cnt) max' names in
     dprintf (fun p ->
         p.fmt "[max_usage] @[<v 2>%s is USED, k = %a in@,@[%a@]@]" s
-          (Option.show Format.pp_print_int)
+          (Option.pp Format.pp_print_int)
           k pp_list ctx);
     `used k
 

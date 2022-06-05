@@ -1,145 +1,107 @@
 include Stdlib.Option
 
-let eliminate (def : unit -> 'b) (f : 'a -> 'b) : 'a option -> 'b =
-  function
-  | None -> def ()
+module M = Monad.Make (struct
+  type nonrec 'a t = 'a t
+
+  let return = some
+
+  let bind f x = bind x f
+end)
+
+include (M : Monad.MONAD with type 'a t := 'a t)
+
+include (Functor.Make (M) : Functor.FUNCTOR with type 'a t := 'a t)
+
+include (Apply.Make (M) : Apply.APPLY with type 'a t := 'a t)
+
+let eliminate default f = function
+  | None -> default ()
   | Some x -> f x
 
-(** Extracts the value from an option, throwing an exception if
-    there's None.
- *)
-let get' (e : exn) (o : 'a option) : 'a =
-  eliminate
-    (Misc.throw e)
-    (Fun.id)
-    o
+let get' e o = eliminate (Misc.throw e) Fun.id o
 
-let get_default def o =
-  eliminate
-    (Fun.const def)
-    (Fun.id)
-    o
+let get_or_else default = eliminate default Fun.id
 
-let of_bool =
-  function
-  | true -> Some ()
-  | false -> None
+let of_bool = function
+  | true -> some ()
+  | false -> none
 
-let ( >>= ) = bind
+let from_predicate p a = if p a then some a else none
 
-let flat_map k o = o >>= k
+let empty = none
 
-(** Prioritized choice between options.
-    This will force the first option, but will never force the second.
-    This operation is associative.
- *)
-let ( <|> ) (p : 'a option Lazy.t) (q : 'a option Lazy.t) : 'a option Lazy.t =
-  begin match Lazy.force p with
-  | Some _ -> p
-  | None -> q
-  end
+let lazy_alt p q =
+  lazy
+    (let p = Lazy.force p in
+     match p with
+     | Some _ -> p
+     | None -> Lazy.force q)
 
-(* This is hoisted out so that forcing becomes a no-op after the first force. *)
-let lazy_none = lazy None
+let ( <||> ) = lazy_alt
 
-let choice (ps : 'a option Lazy.t list) : 'a option Lazy.t =
-  List.fold_left ( <|> ) lazy_none ps
+let rec choice ps =
+  lazy
+    (match ps with
+    | x :: xs -> (
+      match Lazy.force x with
+      | Some v -> some v
+      | None -> Lazy.force (choice xs))
+    | [] -> None)
 
-(** Non-lazy version of `<|>'. *)
-let alt (o1 : 'a option) (o2 : 'a option) : 'a option =
-  match o1, o2 with
+let alt o1 o2 =
+  match (o1, o2) with
   | Some x, _ -> Some x
   | _, Some y -> Some y
   | _ -> None
 
-let rec traverse (f : 'a -> 'b option) (xs : 'a list) : 'b list option =
-  match xs with
-  | [] -> Some []
-  | x :: xs ->
-     f x
-     >>= fun y ->
-       traverse f xs
-       >>= fun ys ->
-         Some (y :: ys)
+let ( <|> ) = alt
 
-let rec traverse_ (f : 'a -> unit option) (xs : 'a list) : unit option =
+let rec traverse f xs =
   match xs with
-  | [] -> Some ()
+  | [] -> some []
+  | x :: xs ->
+    f x >>= fun y ->
+    traverse f xs >>= fun ys -> some (y :: ys)
+
+let rec traverse_ f xs =
+  match xs with
+  | [] -> some ()
   | x :: xs -> f x >>= fun _ -> traverse_ f xs
 
-let rec fold_left
-          (f : 'b -> 'a -> 'b option) (acc : 'b) (xs : 'a list)
-        : 'b option =
+let rec fold_left f acc xs =
   match xs with
-  | [] -> Some acc
-  | x :: xs ->
-     f acc x >>= fun acc' -> fold_left f acc' xs
+  | [] -> some acc
+  | x :: xs -> f acc x >>= fun acc' -> fold_left f acc' xs
 
-let ( $> ) (o : 'a option) (f : 'a -> 'b) : 'b option =
-  o >>= fun x -> Some (f x)
+let void o = o $> Fun.const ()
 
-(** Ignores the result of the first option and gives the second. *)
-let ( &> ) (o : 'a option) (o' : 'b option) : 'b option =
-  o >>= fun _ -> o'
+let cat_options l = List.filter_map Fun.id l
 
-let void (o : 'a option) : unit option =
-  o $> fun _ -> ()
+let when_some l f = eliminate (Fun.const ()) f l
 
-let cat_options (l : 'a option list) : 'a list =
-  List.filter_map Fun.id l
+let print ppv ppf = function
+  | None -> ()
+  | Some v -> Format.fprintf ppf "%a" ppv v
 
-(** Specialized effectful eliminator for option types. *)
-let when_some (l : 'a option) (f : 'a -> unit) : unit =
-  eliminate (fun _ -> ()) f l
+let pp ppv ppf = function
+  | None -> Format.fprintf ppf "None"
+  | Some v -> Format.fprintf ppf "Some (@[%a@])" ppv v
 
-type 'a all_or_none =
-  [ `all of 'a list
-  | `mixed of 'a list
-  | `none
-  | `empty
-  ]
+module MakeEq (E : Eq.EQ) : Eq.EQ with type t = E.t t = Eq.Make (struct
+  type nonrec t = E.t t
 
-(** Checks whether all or none of the list of options has a value. *)
-let rec all_or_none = function
-  | None :: xs ->
-     begin match all_or_none xs with
-     | `all xs | `mixed xs -> `mixed xs
-     | `none | `empty -> `none
-     end
-  | Some x :: xs ->
-     begin match all_or_none xs with
-     | `all xs -> `all (x :: xs)
-     | `empty -> `all [x]
-     | `mixed xs -> `mixed (x :: xs)
-     | `none -> `mixed [x]
-     end
-  | [] -> `empty
+  let equal = equal E.equal
+end)
 
-(** Eliminate the option into a printer. *)
-let print'
-      (none : Format.formatter -> unit -> unit)
-      (some : Format.formatter -> 'a -> unit)
-      (ppf : Format.formatter)
-      (m : 'a option)
-    : unit =
-  eliminate (none ppf) (some ppf) m
+module MakeOrd (O : Ord.ORD) : Ord.ORD with type t = O.t t = Ord.Make (struct
+  type nonrec t = O.t t
 
-(** Eliminate the option into a printer, emitting nothing if there's
-    nothing there.
- *)
-let print
-      (f : Format.formatter -> 'a -> unit)
-      (ppf : Format.formatter)
-      (m : 'a option)
-    : unit =
-  print' (fun _ _ -> ()) f ppf m
+  let compare = compare O.compare
+end)
 
-(** Print an option for debugging. *)
-let show
-      (f : Format.formatter -> 'a -> unit)
-      (ppf : Format.formatter)
-    : 'a option -> unit =
-  let open Format in
-  eliminate
-    (fun () -> fprintf ppf "None")
-    (fun x -> fprintf ppf "Some (@[%a@])" f x)
+module MakeShow (S : Show.SHOW) : Show.SHOW with type t = S.t t =
+Show.Make (struct
+  type nonrec t = S.t t
+
+  let pp = pp S.pp
+end)

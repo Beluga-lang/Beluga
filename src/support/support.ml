@@ -1,3 +1,4 @@
+module Alternative = Alternative
 module Annotated = Annotated
 module Apply = Apply
 module Debug = Debug

@@ -8,8 +8,6 @@ type cid_term = module_id * int
 
 type cid_schema = module_id * int
 
-type cid_coercion = module_id * int
-
 type cid_comp_typ = module_id * int
 
 type cid_comp_cotyp = module_id * int
@@ -36,8 +34,6 @@ let cid_typ_equal = cid_equal
 let cid_term_equal = cid_equal
 
 let cid_schema_equal = cid_equal
-
-let cid_coercion_equal = cid_equal
 
 let cid_comp_typ_equal = cid_equal
 

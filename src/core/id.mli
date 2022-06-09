@@ -9,9 +9,6 @@ type cid_term = module_id * int
 (** A constant identifier for schemas *)
 type cid_schema = module_id * int
 
-(** A constant identifier for coercions *)
-type cid_coercion = module_id * int
-
 (** A constant identifier for computation-level data-types *)
 type cid_comp_typ = module_id * int
 
@@ -47,8 +44,6 @@ val cid_typ_equal : cid_typ -> cid_typ -> bool
 val cid_term_equal : cid_term -> cid_term -> bool
 
 val cid_schema_equal : cid_schema -> cid_schema -> bool
-
-val cid_coercion_equal : cid_coercion -> cid_coercion -> bool
 
 val cid_comp_typ_equal : cid_comp_typ -> cid_comp_typ -> bool
 

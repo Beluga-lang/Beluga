@@ -1013,7 +1013,7 @@ exception Unimplemented
 let rec no_occurs a =
   function
   | Comp.TypBase (loc, c, _) ->
-     Bool.not (Id.cid_equals a c)
+     Bool.not (Id.cid_comp_typ_equal a c)
      && begin match (Store.Cid.CompTyp.get c).Store.Cid.CompTyp.Entry.positivity with
         | Sgn.Positivity -> true
         | Sgn.Stratify _ -> true
@@ -1037,7 +1037,7 @@ let rec no_occurs a =
 let rec check_positive a =
   function
   | Comp.TypBase (loc, c, _) ->
-     Id.cid_equals a c
+     Id.cid_comp_typ_equal a c
      || begin match (Store.Cid.CompTyp.get c).Store.Cid.CompTyp.Entry.positivity with
         | Sgn.Positivity -> true
         | Sgn.Stratify _ -> true
@@ -1189,7 +1189,7 @@ cD0 is used to track the common parts, then we shift the differences.
 let rec compare a cD tau1 mC2 n =
   match tau1 with
   | Comp.TypBase (loc, c, mS1) ->
-     if Id.cid_equals a c
+     if Id.cid_comp_typ_equal a c
      then
        begin
          let mC1 = find_meta_obj mS1 n in

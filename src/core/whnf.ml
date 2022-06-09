@@ -1244,7 +1244,7 @@ and convHead (head1, s1) (head2, s2) =
      k1 = k2
 
   | (Const c1, Const c2) ->
-     Id.cid_equals c1 c2
+     Id.cid_term_equal c1 c2
 
   | (MVar (Offset u, s'), MVar (Offset w, s'')) ->
      u = w
@@ -1960,7 +1960,7 @@ let convMTyp thetaT1 thetaT2 =
   | ((ClTyp (t1, cPsi1)), (ClTyp (t2, cPsi2))) ->
      convClTyp (t1, t2) && convDCtx cPsi1 cPsi2
   | ((CTyp cid_schema), (CTyp cid_schema')) ->
-     Option.equal Id.cid_equals cid_schema cid_schema'
+     Option.equal Id.cid_schema_equal cid_schema cid_schema'
   | _ -> false (* ClTyp is never convertible to CTyp *)
 
 let convMetaTyp thetaT1 thetaT2 = convMTyp thetaT1 thetaT2
@@ -1988,12 +1988,12 @@ and convCTyp' thetaT1 thetaT2 =
   match (thetaT1, thetaT2) with
   | ((Comp.TypBase (_, c1, mS1), _), (Comp.TypBase (_, c2, mS2), _)) ->
      (* t1 = t2 = id by invariant *)
-     Id.cid_equals c1 c2
+     Id.cid_comp_typ_equal c1 c2
      && convMetaSpine (cnormMetaSpine (mS1, m_id)) (cnormMetaSpine (mS2, m_id))
 
   | ((Comp.TypCobase (_, c1, mS1), _), (Comp.TypCobase (_, c2, mS2), _)) ->
      (* t1 = t2 = id by invariant *)
-     Id.cid_equals c1 c2
+     Id.cid_comp_cotyp_equal c1 c2
      && convMetaSpine mS1 mS2
 
   | ((Comp.TypBox (_, cT1), _), (Comp.TypBox (_, cT2), _)) (* t1 = t2 = id *) ->
@@ -2348,12 +2348,12 @@ let rec conv_subgoal_path p1 p2 =
        when Option.equal (=) k1 k2 ->
      conv_subgoal_path p1 p2
   | (MetaSplit (_, `ctor c1, p1), MetaSplit (_, `ctor c2, p2))
-       when Id.cid_equals c1 c2 ->
+       when Id.cid_term_equal c1 c2 ->
      conv_subgoal_path p1 p2
   | (MetaSplit (_, `bvar, p1), MetaSplit (_, `bvar, p2)) ->
      conv_subgoal_path p1 p2
   | (CompSplit (_, c1, p1), CompSplit (_, c2, p2))
-       when Id.cid_equals c1 c2 ->
+       when Id.cid_comp_const_equal c1 c2 ->
      conv_subgoal_path p1 p2
   | (ContextSplit (_, Comp.EmptyContext _, p1), ContextSplit (_, Comp.EmptyContext _, p2)) ->
      conv_subgoal_path p1 p2

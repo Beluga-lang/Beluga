@@ -2511,7 +2511,7 @@ module Make (T : TRAIL) : UNIFY = struct
        then raise (Failure "Front BVar mismatch")
 
     | (Head (Const i), Head (Const k)) ->
-       if Bool.not (Id.cid_equals i k)
+       if Bool.not (Id.cid_term_equal i k)
        then raise (Failure "Front Constant mismatch")
 
     | (Head (PVar (q, s)), Head (PVar (p, s'))) ->
@@ -2638,7 +2638,7 @@ module Make (T : TRAIL) : UNIFY = struct
        let CTyp schema1, CTyp schema2 = mmvar1.typ, mmvar2.typ in
        if mmvar1.instantiation == mmvar2.instantiation
        then
-         if Option.equal Id.cid_equals schema1 schema2
+         if Option.equal Id.cid_schema_equal schema1 schema2
          then
            if isPatMSub theta1 && isPatMSub theta2
            then
@@ -2815,7 +2815,7 @@ module Make (T : TRAIL) : UNIFY = struct
        unifyDCtx1 Unification cD cPsi1 cPsi2;
        unifyClTyp Unification cD cPsi1 (tp1, tp2)
     | (CTyp schema1, CTyp schema2) ->
-       if Bool.not (Option.equal Id.cid_equals schema1 schema2)
+       if Bool.not (Option.equal Id.cid_schema_equal schema1 schema2)
        then raise (Failure "CtxPi schema clash")
     | _ -> raise (Failure "Computation-level Type Clash")
 
@@ -2832,7 +2832,7 @@ module Make (T : TRAIL) : UNIFY = struct
     | tau_t, (Comp.TypInd tau', t') -> unifyCompTyp cD tau_t (tau', t')
 
     | ((Comp.TypBase (_, c, mS), t), (Comp.TypBase (_, c', mS'), t')) ->
-       if Id.cid_equals c c'
+       if Id.cid_comp_typ_equal c c'
        then
          let tK = (Store.Cid.CompTyp.get c).Store.Cid.CompTyp.Entry.kind in
          unifyMetaSpine cD (mS, t) (mS', t') (tK, Whnf.m_id)
@@ -2844,7 +2844,7 @@ module Make (T : TRAIL) : UNIFY = struct
          raise (Failure "Type Constant Clash")
 
     | ((Comp.TypCobase (_, c, mS), t), (Comp.TypCobase (_, c', mS'), t')) ->
-       if Id.cid_equals c c'
+       if Id.cid_comp_cotyp_equal c c'
        then
          let tK = (Store.Cid.CompCotyp.get c).Store.Cid.CompCotyp.Entry.kind in
          unifyMetaSpine cD (mS, t) (mS', t') (tK, Whnf.m_id);

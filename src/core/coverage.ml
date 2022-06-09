@@ -600,7 +600,7 @@ let rec pre_match_head cD cD' (cPsi, tH) (cPsi', tH') =
             (* CtxSplitCand (pre_match_dctx cD cD_p cPsi cPsi_p [] []) *)
      end
   | (LF.Const c, LF.Const c') ->
-     if Id.cid_equals c c'
+     if Id.cid_term_equal c c'
      then
        begin
          let tA = (Const.get c).Const.Entry.typ in
@@ -845,7 +845,7 @@ and pre_match_typ cD cD_p (cPsi, sA) (cPhi, sB) matchCands splitCands =
      let tK2 = (Types.get b).Types.Entry.kind in
      let tS1' = Whnf.normSpine (tS1, s1) in
      let tS2' = Whnf.normSpine (tS2, s2) in
-     if Id.cid_equals a b
+     if Id.cid_typ_equal a b
      then
        pre_match_typ_spine
          cD
@@ -1015,7 +1015,7 @@ let rec match_pattern (cD, cG) (cD_p, cG_p) (pat, ttau) (pat_p, ttau_p) mC sC =
   | Comp.( (PatConst (_, c, pS), (TypBase _, t))
          , (PatConst (loc, c', pS'), (TypBase _, t'))
     ) ->
-     if Id.cid_equals c c'
+     if Id.cid_comp_const_equal c c'
      then
        begin
          let ttau = ((Store.Cid.CompConst.get c).Store.Cid.CompConst.Entry.typ, Whnf.m_id) in

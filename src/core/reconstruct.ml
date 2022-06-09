@@ -315,7 +315,7 @@ let rec elDCtxAgainstSchema loc recT cD psi s_cid =
      begin
        try
          let (_, Int.LF.Decl (_, Int.LF.CTyp (Some s_cid'), _, _)) = FCVar.get psi in
-         if Id.cid_equals s_cid s_cid'
+         if Id.cid_schema_equal s_cid s_cid'
          then Int.LF.CtxVar (Int.LF.CtxName psi)
          else
            let { Schema.Entry.name; schema; decl = _ } = Schema.get s_cid in

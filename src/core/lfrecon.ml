@@ -2874,7 +2874,7 @@ let rec elDCtx recT cD =
 let checkCtxVar loc cD c_var w =
   match c_var with
   | Apx.LF.CtxOffset offset ->
-     if Id.cid_equals (Context.lookupSchema cD offset) w
+     if Id.cid_schema_equal (Context.lookupSchema cD offset) w
      then Int.LF.CtxOffset offset
      else
        throw loc

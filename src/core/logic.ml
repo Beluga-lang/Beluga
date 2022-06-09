@@ -1192,7 +1192,7 @@ module Solver = struct
   *)
   let eqHead tA dCl =
     match (tA, dCl.tHead) with
-    | (LF.Atom (_, i, _), LF.Atom (_, j, _)) -> Id.cid_equals i j
+    | (LF.Atom (_, i, _), LF.Atom (_, j, _)) -> Id.cid_typ_equal i j
     | _ -> false
 
   (* cidFromAtom A = cid_typ *)
@@ -1582,12 +1582,12 @@ module CSolver = struct
     match (assump, cg) with
     | (Comp.TypBox (_, LF.ClTyp (LF.MTyp tA, cPsi))),
        Box (cPsi', Atom tA', Some M) ->
-       Id.cid_equals (Solver.cidFromAtom tA) (Solver.cidFromAtom tA')
+       Id.cid_typ_equal (Solver.cidFromAtom tA) (Solver.cidFromAtom tA')
     | (Comp.TypBox (_, LF.ClTyp (LF.PTyp tA, cPsi))),
        Box (cPsi', Atom tA', Some P) ->
-       Id.cid_equals (Solver.cidFromAtom tA) (Solver.cidFromAtom tA')
+       Id.cid_typ_equal (Solver.cidFromAtom tA) (Solver.cidFromAtom tA')
     | (Comp.TypBase (_, cid, _meta_spine), Atomic (cid', _atomic_spine)) ->
-       Id.cid_equals cid cid'
+       Id.cid_comp_typ_equal cid cid'
     | (Comp.TypArr (_, tau1, tau2), cg) ->
        matchHead tau2 cg
     | (Comp. TypPiBox (_, ctdec, tau), cg) ->

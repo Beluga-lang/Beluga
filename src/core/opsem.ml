@@ -117,16 +117,16 @@ let rec eval_syn i (theta, eta) =
   | Comp.DataConst (_, cid) ->
      Comp.DataValue (cid, Comp.DataNil)
 
-  | Comp.Obs(_, e, _, cid) ->
+  | Comp.Obs (_, e, _, cid) ->
      let Comp.FunValue fbr = eval_chk e (theta, eta) in
      let rec trim =
        function
        | Comp.NilValBranch -> FunBranch Comp.NilValBranch
        | Comp.ConsValBranch ((Comp.PatObs(_, cid', _, Comp.PatNil), e, theta, eta), br)
-            when Id.cid_equals cid cid' ->
+            when Id.cid_comp_dest_equal cid cid' ->
           Value (eval_chk e (theta, eta)) (* should we append theta' and eta'? *)
        | Comp.ConsValBranch ((Comp.PatObs(_, cid', _, ps), e, theta, eta), br)
-            when Id.cid_equals cid cid' ->
+            when Id.cid_comp_dest_equal cid cid' ->
           begin match trim br with
           | FunBranch br' -> FunBranch (Comp.ConsValBranch ((ps, e, theta, eta), br'))
           (* this is kind of a degenerate case where there's a

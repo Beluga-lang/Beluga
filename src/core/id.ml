@@ -29,4 +29,26 @@ type offset = int
 
 type var = int
 
-let cid_equals = Pair.equal Int.equal Int.equal
+let cid_equal = Pair.equal Int.equal Int.equal
+
+let cid_typ_equal = cid_equal
+
+let cid_term_equal = cid_equal
+
+let cid_schema_equal = cid_equal
+
+let cid_coercion_equal = cid_equal
+
+let cid_comp_typ_equal = cid_equal
+
+let cid_comp_cotyp_equal = cid_equal
+
+let cid_comp_const_equal = cid_equal
+
+let cid_comp_dest_equal = cid_equal
+
+let cid_comp_typdef_equal = cid_equal
+
+let cid_prog_equal = cid_equal
+
+let cid_mutual_group_equal = Int.(=)

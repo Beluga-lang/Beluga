@@ -150,11 +150,6 @@ let mk_blank = function
   | None -> mk_name (SomeString "_")
 
 include (
-  Eq.Make (struct
-    type nonrec t = t
-
-    let equal n1 n2 = String.(string_of_name n1 = string_of_name n2)
-  end) :
-    Eq.EQ with type t := t)
+  (val Eq.contramap (module String) string_of_name) : Eq.EQ with type t := t)
 
 let hash = Fun.(render_name >> Hashtbl.hash)

@@ -319,7 +319,7 @@ module Sgn = struct
     | InductiveDatatype
     | StratifiedDatatype
 
-  type assoc = Left | Right | None
+  type assoc = Left | Right | NoAssoc
   type precedence = int
   type fix = Prefix | Postfix | Infix
 

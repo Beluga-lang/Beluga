@@ -18,7 +18,7 @@ module OpPragmas = struct
     ; assoc : Ext.Sgn.assoc option
     }
 
-  let default = ref Syntax.Ext.Sgn.None
+  let default = ref Syntax.Ext.Sgn.NoAssoc
 
   let pragmaCount = ref 0
 

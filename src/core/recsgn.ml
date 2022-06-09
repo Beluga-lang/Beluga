@@ -248,7 +248,7 @@ let recSgnDecls decls =
          match a with
          | Ext.Sgn.Left -> Int.LF.Left
          | Ext.Sgn.Right -> Int.LF.Right
-         | Ext.Sgn.None -> Int.LF.NoAssoc
+         | Ext.Sgn.NoAssoc -> Int.LF.NoAssoc
        in
        Int.Sgn.Pragma { pragma=Int.LF.DefaultAssocPrag a' }
     | Ext.Sgn.Pragma { location=loc; pragma=Ext.Sgn.FixPrag (name, fix, precedence, assoc) } ->
@@ -286,7 +286,7 @@ let recSgnDecls decls =
            function
            | Ext.Sgn.Left -> Int.LF.Left
            | Ext.Sgn.Right -> Int.LF.Right
-           | Ext.Sgn.None -> Int.LF.NoAssoc
+           | Ext.Sgn.NoAssoc -> Int.LF.NoAssoc
          in
          match assoc with
          | None -> None

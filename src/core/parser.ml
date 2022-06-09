@@ -2698,7 +2698,7 @@ let sgn_not_pragma : Sgn.decl parser =
 let associativity =
   [ "left", Sgn.Left
   ; "right", Sgn.Right
-  ; "none", Sgn.None ]
+  ; "none", Sgn.NoAssoc ]
   |> List.map (fun (k, r) -> keyword k &> return r |> labelled ("associativity `" ^ k ^ "'"))
   |> choice
   |> labelled "associativity"

@@ -1375,8 +1375,8 @@ and convMFront front1 front2 =
 
 and convTyp' sA sB =
   match (sA, sB) with
-  | ((Atom (_, (a, b), spine1), s1), (Atom (_, (a', b'), spine2), s2)) ->
-     if a = a' && b = b'
+  | ((Atom (_, a1, spine1), s1), (Atom (_, a2, spine2), s2)) ->
+     if Id.cid_typ_equal a1 a2
      then convSpine (spine1, s1) (spine2, s2)
      else false
   (*      a1 = a2 && convSpine (spine1, s1) (spine2, s2)*)

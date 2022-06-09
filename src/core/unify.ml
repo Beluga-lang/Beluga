@@ -2288,8 +2288,8 @@ module Make (T : TRAIL) : UNIFY = struct
        if Bool.not (k1 = k2)
        then raise (Failure "Bound variable clash")
 
-    | (Const (i, id), Const (i', id')) ->
-       if Bool.not (i = i' && id = id')
+    | (Const a, Const b) ->
+       if Bool.not (Id.cid_term_equal a b)
        then raise (Failure "Constant clash")
 
     | (FVar x1, FVar x2) ->
@@ -2569,10 +2569,10 @@ module Make (T : TRAIL) : UNIFY = struct
 
   and unifyTypW mflag cD0 cPsi sA sB =
     match (sA, sB) with
-    | ( (Atom (_, (a, b), tS1), s1)
-      , (Atom (_, (a', b'), tS2), s2)
+    | ( (Atom (_, a1, tS1), s1)
+      , (Atom (_, a2, tS2), s2)
       )
-         when a = a' && b = b' ->
+         when Id.cid_typ_equal a1 a2 ->
        unifySpine mflag cD0 cPsi (tS1, s1) (tS2, s2)
 
     | ((Atom _, _), (Atom _, _)) ->

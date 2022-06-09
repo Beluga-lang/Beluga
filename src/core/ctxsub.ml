@@ -12,26 +12,26 @@ open Store.Cid
 
 module Loc = Syntax.Loc
 
-let (dprintf, dprint, _) = Debug.makeFunctions' (Debug.toFlags [12])
+let (dprintf, _, _) = Debug.makeFunctions' (Debug.toFlags [12])
 open Debug.Fmt
 
 (* module P = Pretty.Int.DefaultPrinter *)
 
-let rec subToString =
+let rec pp_sub ppf =
   function
-  | Shift n -> "Shift(NoCtxShift, " ^ string_of_int n ^ ")"
-  | SVar _ -> "SVar(_,_)"
-  | FSVar (i, (n, _)) -> "FSVar(" ^ Name.string_of_name n ^ ", " ^ string_of_int i ^ ")"
-  | Dot (front, s) -> "Dot(" ^ frontToString front ^ ", " ^ subToString s ^ ")"
-  | MSVar _ -> "MSVar_"
-  | EmptySub -> "EmptySub"
-  | Undefs -> "Undefs"
+  | Shift n -> Format.fprintf ppf "Shift(NoCtxShift, %d)" n
+  | SVar _ -> Format.pp_print_string ppf "SVar(_,_)"
+  | FSVar (i, (n, _)) -> Format.fprintf ppf "FSVar(%a, %d)" Name.pp n i
+  | Dot (front, s) -> Format.fprintf ppf "Dot(%a, %a)" pp_front front pp_sub s
+  | MSVar _ -> Format.pp_print_string ppf "MSVar_"
+  | EmptySub -> Format.pp_print_string ppf "EmptySub"
+  | Undefs -> Format.pp_print_string ppf "Undefs"
 
-and frontToString =
+and pp_front ppf =
   function
-  | Head _ -> "Head _"
-  | Obj _ -> "Obj _"
-  | Undef -> "Undef"
+  | Head _ -> Format.pp_print_string ppf "Head _"
+  | Obj _ -> Format.pp_print_string ppf "Obj _"
+  | Undef -> Format.pp_print_string ppf "Undef"
 
 (* module Comp = Syntax.Int.Comp *)
 
@@ -94,7 +94,7 @@ let rec ctxToSub_mclosed cD psi =
 
   | DDec (cPsi', TypDecl (_, (Atom _ as tA))) ->
      let (cD', s, k) = ctxToSub_mclosed cD psi cPsi' in (* cD' ; psi |- s : cPsi' *)
-     dprint (fun () -> "s = " ^ subToString s);
+     dprintf (fun p -> p.fmt "s = %a@." pp_sub s);
 
      let u =
        Root
@@ -130,7 +130,7 @@ let rec ctxToSub_mclosed cD psi =
 
   | DDec (cPsi', TypDecl (_, (PiTyp _ as tA))) ->
      let (cD', s, k) = ctxToSub_mclosed cD psi cPsi' in (* cD' ; psi |- s : cPsi' *)
-     dprint (fun () -> "s = " ^ subToString s);
+     dprintf (fun p -> p.fmt "s = %a@." pp_sub s);
 
      (* cD' ; psi |- s : cPsi' *)
      (* cD' ; psi |- u[id] : [s]tA *)
@@ -183,7 +183,7 @@ let rec ctxToSub' cD cPhi =
      let s = (ctxToSub' cD cPhi cPsi' : sub) in
      (* cD ; cPhi |- s : cPsi' *)
      dprintf (fun p -> p.fmt "@]");
-     dprint (fun () -> "s = " ^ subToString s);
+     dprintf (fun p -> p.fmt "s = %a@." pp_sub s);
      (* For the moment, assume tA atomic. *)
      (* lower tA? *)
      (* A = A_1 -> ... -> A_n -> P
@@ -214,7 +214,7 @@ let rec ctxToSub' cD cPhi =
      (* let shifted = Substitution.LF.comp s Substitution.LF.shift in*)
      (* dprint (fun () -> "shifted = " ^ subToString shifted);*)
      let result = Dot (front, s) in
-     dprint (fun () -> "result = " ^ subToString result);
+     dprintf (fun p -> p.fmt "result = %a@." pp_sub result);
      result
 
 

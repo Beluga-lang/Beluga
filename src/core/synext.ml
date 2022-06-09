@@ -196,7 +196,7 @@ module Comp = struct
     | PatObs of Location.t * Name.t * pattern_spine
 
   and branch =
-    | Branch of Location.t *  LF.ctyp_decl LF.ctx  * pattern * exp_chk
+    | Branch of Location.t * LF.ctyp_decl LF.ctx * pattern * exp_chk
 
   and fun_branches =
     | NilFBranch of Location.t

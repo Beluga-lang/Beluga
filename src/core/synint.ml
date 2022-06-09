@@ -329,8 +329,8 @@ module LF = struct
 
   let is_explicit =
     function
-    | Decl(_, _, _, Inductivity.Inductive)
-    | Decl(_, _, Plicity.Explicit, _) -> true
+    | Decl (_, _, _, Inductivity.Inductive)
+    | Decl (_, _, Plicity.Explicit, _) -> true
     | _ -> false
 
   let name_of_ctyp_decl (d : ctyp_decl) =
@@ -367,8 +367,8 @@ module LF = struct
     function
     | tS when k = 0 -> tS
     | Nil -> Nil
-    | App (_, tS') -> drop_spine (k-1) tS'
-    | SClo (tS', _) -> drop_spine (k-1) tS'
+    | App (_, tS') -> drop_spine (k - 1) tS'
+    | SClo (tS', _) -> drop_spine (k - 1) tS'
 end
 
 (* Internal Computation Syntax *)
@@ -443,7 +443,7 @@ module Comp = struct
 
   type ihctx = ih_decl LF.ctx
 
-  (* normal comp. terms  *)
+  (** Normal computational terms *)
   and exp_chk =                                                              (* e :=                                              *)
     | Syn        of Location.t * exp_syn                                     (* | n                                               *)
     | Fn         of Location.t * Name.t * exp_chk                            (* | \x. e'                                          *)
@@ -458,8 +458,8 @@ module Comp = struct
     | Impossible of Location.t * exp_syn
     | Hole       of Location.t * HoleId.t * HoleId.name
 
-  (* neutral com. terms *)
-and exp_syn =                                                                    (* n :=                                            *)
+  (** Neutral computational terms *)
+  and exp_syn =                                                                  (* n :=                                            *)
     | Var       of Location.t * offset                                           (* | x:tau in cG                                   *)
     | DataConst of Location.t * cid_comp_const                                   (* | c:tau in Comp. Sig.                           *)
     | Obs       of Location.t * exp_chk * LF.msub * cid_comp_dest                (* | observation (e, ms, destructor={typ, ret_typ} *)

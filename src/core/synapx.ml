@@ -136,6 +136,7 @@ module Comp = struct
     | TypPiBox of Location.t * LF.ctyp_decl * typ
     | TypInd of typ
 
+  (** Normal computational terms *)
   and exp_chk =
      | Syn of Location.t * exp_syn
      | Fn of Location.t * Name.t * exp_chk                           (* fn x => e           *)
@@ -145,13 +146,14 @@ module Comp = struct
      | LetPair of Location.t * exp_syn * (Name.t * Name.t * exp_chk) (* let (x,y) = i in e  *)
      | Let of Location.t * exp_syn * (Name.t * exp_chk)              (* let x = i in e      *)
      | Box of Location.t * meta_obj                                  (* box (Psi hat. M)    *)
-     | Case of Location.t * case_pragma * exp_syn * branch list      (* case i of bs *)
-     | Impossible of Location.t * exp_syn                            (* impossible i *)
-     | Hole of Location.t * string option                            (* ?name *)
-     | BoxHole of Location.t                                         (* _ *)
+     | Case of Location.t * case_pragma * exp_syn * branch list      (* case i of bs        *)
+     | Impossible of Location.t * exp_syn                            (* impossible i        *)
+     | Hole of Location.t * string option                            (* ?name               *)
+     | BoxHole of Location.t                                         (* _                   *)
 
+  (** Neutral computational terms *)
   and exp_syn =
-    | Var of Location.t * offset                                    (* x              *)
+     | Var of Location.t * offset                                   (* x              *)
      | FVar of Name.t                                               (* x              *)
      | DataConst of Location.t * cid_comp_const                     (* c              *)
      | Obs of Location.t * exp_chk * cid_comp_dest                  (* e.d            *)

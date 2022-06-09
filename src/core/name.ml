@@ -153,7 +153,7 @@ include (
   Eq.Make (struct
     type nonrec t = t
 
-    let equal n1 n2 = String.equal (string_of_name n1) (string_of_name n2)
+    let equal n1 n2 = String.(string_of_name n1 = string_of_name n2)
   end) :
     Eq.EQ with type t := t)
 

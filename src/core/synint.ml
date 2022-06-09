@@ -308,24 +308,17 @@ module LF = struct
 
   (* getIndex traverses the typ_rec from left to right;
      target is the name of the projection we're looking for
-
-    Precondition: acc is 1 when the function is 1st called
-     acc is an accumulator set to 1 when the function is called
-
   *)
-  let rec getIndex' trec target acc =
-    match trec with
-    | SigmaLast(None, _) -> raise Not_found
-    | SigmaLast(Some name, _) ->
-       if String.compare (Name.string_of_name name) (Name.string_of_name target) == 0
-       then acc
-       else failwith "Projection Not found"
-    | SigmaElem(name, _, trec') ->
-       if String.compare (Name.string_of_name name) (Name.string_of_name target) == 0
-       then acc
-       else getIndex' trec' target (acc + 1)
-
-  let getIndex trec target = getIndex' trec target 1
+  let getIndex =
+    let rec getIndex' trec target acc =
+      match trec with
+      | SigmaLast (None, _) -> raise Not_found
+      | ( SigmaLast (Some name, _)
+        | SigmaElem (name, _, _)
+        ) when Name.(name = target) -> acc
+      | SigmaLast (Some _, _) -> failwith "Projection Not found"
+      | SigmaElem (_, _, trec') -> getIndex' trec' target (acc + 1)
+    in fun trec target -> getIndex' trec target 1
 
   let is_explicit =
     function

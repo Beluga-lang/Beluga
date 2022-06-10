@@ -12,7 +12,10 @@ let unpack s =
   in
   unpack 0 Fun.id
 
-let pack cs = concat empty (List.map (make 1) cs)
+let pack cs =
+  let b = Buffer.create 16 in
+  List.iter (Buffer.add_char b) cs;
+  Buffer.contents b
 
 let drop n s = sub s n (length s - n)
 

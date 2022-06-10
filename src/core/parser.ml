@@ -260,9 +260,11 @@ type error' =
    *)
   (* | Custom of string (* Generic external error. *) *)
   | WrongConstructorType of
-      Name.t (* constructor name *)
-      * Name.t (* expected type name *)
-      * Name.t (* actual type name *)
+    { constructor_name : Name.t
+    ; expected_type_name : Name.t
+    ; actual_type_name : Name.t
+    }
+
   | NoMoreChoices of error list (* all alternatives failed *)
 
   (* Internal errors: our fault; these should never go to the user. *)
@@ -356,7 +358,11 @@ let print_error ppf ({path; loc; _} as e : error) =
          ( "Ill-formed constructor declaration.@," ^^
              "The type of a constructor must be a base type or function type."
          )
-    | WrongConstructorType (c, exp, act) ->
+    | WrongConstructorType
+      { constructor_name = c
+      ; expected_type_name = exp
+      ; actual_type_name = act
+      } ->
        fprintf ppf
          ( "Wrong datatype for constructor %s.@,  @[<v>"
            ^^ "Expected type %s@,"
@@ -833,7 +839,12 @@ let check_datatype_decl loc a cs : unit parser =
         retname typ
         >>= fun a' ->
           if Name.(a <> a')
-          then fail (WrongConstructorType (identifier, a, a'))
+          then fail
+            (WrongConstructorType
+              { constructor_name = identifier
+              ; expected_type_name = a
+              ; actual_type_name = a'
+              })
           else return ()
      | _ -> fail (Violation "check_datatype_decl invalid input"))
     cs
@@ -850,7 +861,12 @@ let check_codatatype_decl loc a cs : unit parser =
         retname tau0
         >>= fun a' ->
           if Name.(a <> a')
-          then fail (WrongConstructorType (identifier, a, a'))
+          then fail
+            (WrongConstructorType
+              { constructor_name = identifier
+              ; expected_type_name = a
+              ; actual_type_name = a'
+              })
           else return ()
      | _ -> fail (Violation "check_codatatype_decl invalid input"))
     cs

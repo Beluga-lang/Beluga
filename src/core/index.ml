@@ -393,15 +393,6 @@ and index_typ (a : Ext.LF.typ) : Apx.LF.typ index =
   | Ext.LF.AtomTerm (loc, Ext.LF.Root (loc', Ext.LF.Name (_, name, None), tS)) ->
      index_typ (Ext.LF.Atom (loc', name, tS))
 
-and locOfNormal =
-  function
-  | Ext.LF.Lam (l, _, _) -> l
-  | Ext.LF.Root (l, _, _) -> l
-  | Ext.LF.Tuple (l, _) -> l
-  | Ext.LF.Ann (l, _, _) -> l
-  | Ext.LF.TList (l, _) -> l
-  | Ext.LF.LFHole (l, _) -> l
-
 (* Adaptation of Dijkstra's 'shunting yard' algorithm for
  * parsing infix, postfix, and prefix operators from a list
  *
@@ -469,7 +460,7 @@ and shunting_yard' (l : Ext.LF.normal list) : Ext.LF.normal =
   let rec normalListToSpine : Ext.LF.normal list -> Ext.LF.spine =
     function
     | [] -> Ext.LF.Nil
-    | h :: t -> Ext.LF.App (locOfNormal h, h, normalListToSpine t)
+    | h :: t -> Ext.LF.App (Ext.LF.loc_of_normal h, h, normalListToSpine t)
   in
   let rec parse : int
                   * Ext.LF.normal list
@@ -486,12 +477,12 @@ and shunting_yard' (l : Ext.LF.normal list) : Ext.LF.normal =
     | (i, h :: t, exps, [])
          when pragmaExists h ->
        let p = get_pragma h in
-       let loc = locOfNormal h in
+       let loc = Ext.LF.loc_of_normal h in
        parse (i + 1, t, exps, [(i, p, loc)])
     | (i, h :: t, exps, (x, o, loc_o) :: os)
          when pragmaExists h ->
        let p = get_pragma h in
-       let loc = locOfNormal h in
+       let loc = Ext.LF.loc_of_normal h in
        if lte p o
        then
          begin match o.Store.OpPragmas.fix with
@@ -523,7 +514,7 @@ and shunting_yard' (l : Ext.LF.normal list) : Ext.LF.normal =
 
          | Ext.Sgn.Postfix ->
             let (_, e) :: es = exps in
-            let loc = locOfNormal e in
+            let loc = Ext.LF.loc_of_normal e in
             let e' =
               Ext.LF.Root
                 ( loc
@@ -535,7 +526,7 @@ and shunting_yard' (l : Ext.LF.normal list) : Ext.LF.normal =
 
          | Ext.Sgn.Infix ->
             let (_, e2) :: (_, e1) :: es = exps in
-            let loc = locOfNormal e1 in
+            let loc = Ext.LF.loc_of_normal e1 in
             let e' =
               Ext.LF.Root
                 ( loc
@@ -547,7 +538,7 @@ and shunting_yard' (l : Ext.LF.normal list) : Ext.LF.normal =
          end
        else
          begin
-           let loc_p = locOfNormal h in
+           let loc_p = Ext.LF.loc_of_normal h in
            parse (i + 1, t, exps, (i, p, loc_p) :: (x, o, loc_o) :: os)
          end
     | (i, h :: t, y, z) -> parse (i + 1, t, (i, h) :: y, z)
@@ -583,7 +574,7 @@ and shunting_yard' (l : Ext.LF.normal list) : Ext.LF.normal =
            then
              try
                let (_, x) = List.hd ops in
-               locOfNormal x
+               Ext.LF.loc_of_normal x
              with
              | _ ->
                 throw
@@ -604,7 +595,7 @@ and shunting_yard' (l : Ext.LF.normal list) : Ext.LF.normal =
 
     | ((i2, e2) :: (i1, e1) :: es, (i, o, _) :: os)
          when o.Store.OpPragmas.fix = Ext.Sgn.Infix ->
-       let loc = locOfNormal e1 in
+       let loc = Ext.LF.loc_of_normal e1 in
        if i2 > i && i > i1
        then
          begin
@@ -622,7 +613,7 @@ and shunting_yard' (l : Ext.LF.normal list) : Ext.LF.normal =
 
     | ((i1, e) :: es, (i, o, _) :: os)
          when o.Store.OpPragmas.fix = Ext.Sgn.Postfix ->
-       let loc = locOfNormal e in
+       let loc = Ext.LF.loc_of_normal e in
        if i > i1
        then
          begin

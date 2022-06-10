@@ -253,9 +253,7 @@ let print_content ppf : content -> unit =
 
 type error' =
   (* External errors: the user's fault. *)
-  | Unexpected of
-      content (* expected *)
-      * content (* actual *)
+  | Unexpected of { expected : content; actual : content }
   | IllFormedDataDecl
   (* ^ incorrect constructor type: the type of a constructor must be a
      base type or a function type.
@@ -349,7 +347,7 @@ let print_error ppf ({path; loc; _} as e : error) =
          ss;
        fprintf ppf "@]"
     (* fprintf ppf "Next token: %a@." Token.(print `TOKEN) (next_token s) *)
-    | Unexpected (t_exp, t_act) ->
+    | Unexpected { expected = t_exp; actual = t_act; _ } ->
        fprintf ppf "Unexpected token in stream@,  @[<v>Expected %a@,Got %a@]@,"
          print_content t_exp
          print_content t_act
@@ -713,7 +711,8 @@ let eoi : unit parser =
       fun s ->
       match LinkStream.observe s.input with
       | None | Some ((_, T.EOI), _) -> return_at s ()
-      | Some ((_, t), _) -> fail_at s (Unexpected (`eoi, `token (Some t)))
+      | Some ((_, t), _) ->
+        fail_at s (Unexpected { expected = `eoi; actual = `token (Some t) })
   }
   |> labelled "end of input"
 
@@ -866,7 +865,7 @@ let satisfy' (expected : content) (f : T.t -> 'a option) : 'a parser =
     | Either.Left t ->
        fail'
          [ Entry { location = Some loc; label = Format.stringify print_content expected } ]
-         (Unexpected (expected, `token (Some t)))
+         (Unexpected { expected; actual = `token (Some t) })
     | Either.Right x -> return x
 
 (** Parses an exact token. *)

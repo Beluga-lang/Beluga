@@ -40,8 +40,8 @@ module LF = struct
      a hole (_) so that when printing, it can be reproduced correctly.
    *)
   and normal =                                       (* normal terms                   *)
-    | Lam of Location.t * Name.t * normal            (* M ::= \x.M                *)
-    | Root of Location.t * head * spine * Plicity.t  (*   | h . S                 *)
+    | Lam of Location.t * Name.t * normal            (* M ::= \x.M                     *)
+    | Root of Location.t * head * spine * Plicity.t  (*   | h . S                      *)
     | LFHole of Location.t * HoleId.t * HoleId.name
     | Clo of (normal * sub)                          (*   | Clo(N,s)                   *)
     | Tuple of Location.t * tuple

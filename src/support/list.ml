@@ -96,6 +96,14 @@ let combine l1 l2 =
   in
   combine l1 l2 Fun.id
 
+let take =
+  let rec take k l acc =
+    match l with
+    | x :: xs when k > 0 -> take (k - 1) xs (x :: acc)
+    | _ -> (acc, l)
+  in
+  fun k l -> take k l []
+
 let rec compare cmp l1 l2 =
   match (l1, l2) with
   | [], [] -> 0

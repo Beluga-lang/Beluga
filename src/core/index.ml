@@ -509,7 +509,7 @@ and shunting_yard' (l : Ext.LF.normal list) : Ext.LF.normal =
                       throw loc (UnboundOperator o.Store.OpPragmas.name)
                  end
             in
-            let (ops, es) = take args_expected exps in
+            let (ops, es) = List.take args_expected exps in
             let loc = loc_o in
             let ops = List.map Pair.snd ops in
             let e' =
@@ -575,7 +575,7 @@ and shunting_yard' (l : Ext.LF.normal list) : Ext.LF.normal =
                  throw loc_o (UnboundOperator name)
             end
        in
-       let (ops, es) = take args_expected exps in
+       let (ops, es) = List.take args_expected exps in
        let loc =
          if Syntax.Loc.is_ghost loc_o
          then
@@ -646,14 +646,6 @@ and shunting_yard' (l : Ext.LF.normal list) : Ext.LF.normal =
 
     | a, b ->
        failwith "Error in indexing"
-
-  and take i l =
-    let rec aux n l c =
-      match l with
-      | h :: t when n > 0 -> aux (n - 1) t (h :: c)
-      | _ -> (c, l)
-    in
-    aux i l []
   in
   try
     parse (0, l, [], [])

@@ -83,6 +83,15 @@ val split : ('a * 'b) list -> 'a list * 'b list
     @raise Invalid_argument if the two lists have different lengths. *)
 val combine : 'a list -> 'b list -> ('a * 'b) list
 
+(** [take k \[x1; x2; ...; xn\]] is
+    [(\[x1; x2; ...; xk\], \[x(k+1); x(k+2); ...; xn\])].
+
+    - If [k <= 0], then [take k \[x1; x2; ...; xn\]] is
+      [(\[\], \[x1; x2; ...; xn\])].
+    - If [k >= n], then [take k \[x1; x2; ...; xn\]] is
+      [(\[x1; x2; ...; xn\], \[\])]. *)
+val take : int -> 'a list -> 'a list * 'a list
+
 (** [compare cmp \[a1; ...; an\] \[b1; ...; bm\]] performs a lexicographic
     comparison of the two input lists, using the same ['a -> 'a -> int]
     interface as {!Stdlib.compare}:

@@ -47,7 +47,7 @@ end
 module Reverse (Ord : ORD) : ORD with type t = Ord.t = Make (struct
   type t = Ord.t
 
-  let compare x y = -Ord.compare x y
+  let compare x y = Ord.compare y x
 end)
 
 let contramap (type t s) (ord : (module ORD with type t = s)) (f : t -> s) =

@@ -3521,7 +3521,7 @@ let process problem projObj =
      then
        begin
          print_string "WARNING: CASES DID NOT COVER\n";
-         Error.addInformation ("WARNING: Cases didn't cover: " ^ message)
+         Error.add_information ("WARNING: Cases didn't cover: " ^ message)
        end
      else
        raise (Error (problem.loc, NoCover message))

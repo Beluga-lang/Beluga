@@ -60,7 +60,8 @@ val report_mismatch : Format.formatter -> string
                       -> string -> (Format.formatter -> 'b -> unit) -> 'b
                       -> unit
 
-val resetInformation : unit -> unit
-val getInformation : unit -> string
+val reset_information : unit -> unit
 
-val addInformation : string -> unit
+val get_information : unit -> string
+
+val add_information : string -> unit

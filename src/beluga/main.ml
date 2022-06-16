@@ -117,7 +117,7 @@ let main () =
      ()
   | _ -> bailout "Wrong number of command line arguments."
   end;
-  printf "%s" (Error.getInformation ())
+  printf "%s" (Error.get_information ())
 
 let _ =
   Format.set_margin 80;

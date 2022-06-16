@@ -93,7 +93,7 @@ let gen_fresh_name ns n =
       (fun n' ->
         let open Option in
         String.equal n'.hint_name n.hint_name
-        |> of_bool $> Fun.const n'.hint_cnt)
+        |> Option.of_bool $> Fun.const n'.hint_cnt)
       ns
   in
   { n with hint_cnt = next_unused n.hint_cnt cnts }

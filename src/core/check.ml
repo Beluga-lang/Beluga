@@ -757,7 +757,7 @@ module Comp = struct
     match (mS, cKt) with
     | (MetaNil, (Ctype _, _)) -> ()
     | (MetaApp (mO, mT, mS, plicity_app), (PiKind (_, I.Decl (_, ctyp, plicity_pi, inductivity), cK), t)) ->
-       if not (Plicity.equal plicity_app plicity_pi)
+       if Plicity.(plicity_app <> plicity_pi)
        then Error.violation "[checkMetaSpine] plicity mismatch";
        let loc = getLoc mO in
        LF.checkMetaObj cD mO (ctyp, t);

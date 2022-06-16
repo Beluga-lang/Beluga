@@ -1,6 +1,6 @@
 (** Pretty printing for external and internal syntax.
 
-    @see http://caml.inria.fr/resources/doc/guides/format.html
+    @see https://v2.ocaml.org/api/Format.html
     This explains the various "@" escape sequences used inside format
     strings, which control boxes.
 *)

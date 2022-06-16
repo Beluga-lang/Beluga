@@ -62,17 +62,18 @@ let generatePage orig =
   let orig = Filename.basename orig in
   (* Merge different code blocks into, as long as there isn't anything inbetween *)
   let fixCodeRegex = Str.regexp "</code></pre>\\(\\([\r\n\t]\\|<br>\\)*?\\)<pre><code>" in
-  let page = Buffer.contents page in
-  let page = Str.global_replace fixCodeRegex "\\1" page in
-  let page = Str.global_replace (Str.regexp_string "|-") "&#8866;" page in
-  let page = Str.global_replace (Str.regexp_string "..") "&hellip;" page in
-  let page = Str.global_replace (Str.regexp_string "->") "&#x2192" page in
-  let page = Str.global_replace (Str.regexp_string "=>") "&#x21D2" page in
-  let page = Str.global_replace (Str.regexp_string "#S") "&sigma;" page in
-  let page = Str.global_replace (Str.regexp_string "phi") "&phi;" page in
-  let page = Str.global_replace (Str.regexp_string "psi") "&psi;" page in
-  let page = Str.global_replace (Str.regexp_string "gamma") "&gamma;" page in
-  let page = Str.global_replace (Str.regexp "\\\\\\([a-z][a-z0-9]*\\.\\)") "&lambda;\\1" page in
+  let page =
+    Buffer.contents page
+    |> Str.global_replace fixCodeRegex "\\1"
+    |> Str.global_replace (Str.regexp_string "|-") "&#8866;"
+    |> Str.global_replace (Str.regexp_string "..") "&hellip;"
+    |> Str.global_replace (Str.regexp_string "->") "&#x2192"
+    |> Str.global_replace (Str.regexp_string "=>") "&#x21D2"
+    |> Str.global_replace (Str.regexp_string "#S") "&sigma;"
+    |> Str.global_replace (Str.regexp_string "phi") "&phi;"
+    |> Str.global_replace (Str.regexp_string "psi") "&psi;"
+    |> Str.global_replace (Str.regexp_string "gamma") "&gamma;"
+    |> Str.global_replace (Str.regexp "\\\\\\([a-z][a-z0-9]*\\.\\)") "&lambda;\\1" in
   (* Output the HTML file *)
   let oc = open_out out_path in
   let out = output_string oc in
@@ -81,8 +82,6 @@ let generatePage orig =
 
 let append innerHtml =
   Buffer.add_string page ("<br><pre><code>" ^ innerHtml ^ "</code></pre>")
-
-let (|>) x f = f x
 
 let appendAsComment innerHtml =
   let from_markdown s =

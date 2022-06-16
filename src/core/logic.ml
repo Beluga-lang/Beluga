@@ -685,20 +685,17 @@ module Index = struct
 
   (* LF Constants  *)
   let compileSgnClause cidTerm =
-    let termEntry = Cid.Term.get cidTerm in
-    let tA = termEntry.Cid.Term.Entry.typ in
+    let { Cid.Term.Entry.typ = tA; _ } = Cid.Term.get cidTerm in
     (cidTerm, Convert.typToClause tA)
 
   (* Computation Theorem Constants  *)
   let compileSgnCClause cidTerm =
-    let termEntry = Cid.Comp.get cidTerm in
-    let tau = termEntry.Cid.Comp.Entry.typ in
+    let { Cid.Comp.Entry.typ = tau; _ } = Cid.Comp.get cidTerm in
     (cidTerm, Convert.comptypToCClause tau)
 
   (* Computation Inductive Constants *)
   let compileSgnConstClause cidCompTerm =
-    let ctermEntry = Cid.CompConst.get cidCompTerm in
-    let tau = ctermEntry.Cid.CompConst.Entry.typ in
+    let { Cid.CompConst.Entry.typ = tau; _ } = Cid.CompConst.get cidCompTerm in
     (cidCompTerm, Convert.comptypToCClause tau)
 
 

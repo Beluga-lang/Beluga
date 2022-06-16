@@ -896,8 +896,7 @@ let rec elKind cD cPsi =
 and elTyp recT cD cPsi =
   function
   | Apx.LF.Atom (loc, a, s) ->
-     let tK = (Typ.get a).Typ.Entry.kind in
-     let i = (Typ.get a).Typ.Entry.implicit_arguments in
+     let { Typ.Entry.kind = tK; implicit_arguments = i; _ } = Typ.get a in
      let s' = mkShift recT cPsi in
      (* let s' = S.LF.id in *)
      let tS = elKSpineI loc recT cD cPsi s i (tK, s') in
@@ -1048,8 +1047,7 @@ and elTerm' recT cD cPsi r sP =
      Int.LF.LFHole (loc, id, name)
 
   | Apx.LF.Root (loc, Apx.LF.Const c, spine) ->
-     let tA = (Term.get c).Term.Entry.typ in
-     let i = (Term.get c).Term.Entry.implicit_arguments in
+     let { Term.Entry.typ = tA; implicit_arguments = i; _ } = Term.get c in
      (* let s = mkShift recT cPsi in *)
      let s = S.LF.id in
      let (tS, sQ) = elSpineI loc recT cD cPsi spine i (tA, s) in
@@ -2058,8 +2056,7 @@ and elClosedTerm' recT cD cPsi =
      throw loc (SynthesizableLFHole name)
 
   | Apx.LF.Root (loc, Apx.LF.Const c, spine) ->
-     let tA = (Term.get c).Term.Entry.typ in
-     let i = (Term.get c).Term.Entry.implicit_arguments in
+     let { Term.Entry.typ = tA; implicit_arguments = i; _ } = Term.get c in
      (* let s = mkShift recT cPsi in *)
      let s = S.LF.id in
      let (tS, sQ) = elSpineI loc recT cD cPsi spine i (tA, s) in

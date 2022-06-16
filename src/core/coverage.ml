@@ -2605,6 +2605,8 @@ let genPatCGoals names mk_pat_var (cD : LF.mctx) tau =
        p.fmt "[genPatCGoals] for @[%a@]"
          (P.fmt_ppr_cmp_typ cD P.l0) tau
        end;
+     (* Reverse the list so coverage will be checked in the order that the
+        constructors were declared, which is more natural to the user *)
      let constructors =
        !((Store.Cid.CompTyp.get c).Store.Cid.CompTyp.Entry.constructors)
        |> List.rev

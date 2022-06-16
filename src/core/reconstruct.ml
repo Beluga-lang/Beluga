@@ -1208,10 +1208,12 @@ and elExp' cD cG i =
      (Int.Comp.DataConst (loc, c), (tau, C.m_id))
 
   | Apx.Comp.Obs (loc, e, obs) ->
-     let cD' = (CompDest.get obs).CompDest.Entry.mctx in
+     let { CompDest.Entry.mctx = cD'
+         ; obs_type = tau0
+         ; return_type = tau1
+         ; _
+         } = CompDest.get obs in
      let t = Ctxsub.mctxToMMSub cD cD' in
-     let tau0 = (CompDest.get obs).CompDest.Entry.obs_type in
-     let tau1 = (CompDest.get obs).CompDest.Entry.return_type in
      dprintf
        begin fun p ->
        p.fmt "[Obs] @[<v>tau0 = @[%a@]@,tau1 = @[%a@]@,t (before) = @[%a@]@]"
@@ -1588,8 +1590,8 @@ and elPatSyn (cD : Int.LF.mctx) (cG : Int.Comp.gctx) =
      (cG', Int.Comp.PatAnn (loc, pat', tau', Plicity.explicit), (tau', Whnf.m_id))
 
   | Apx.Comp.PatConst (loc, c, pat_spine) ->
-     let tau = (CompConst.get c).CompConst.Entry.typ in
-     dprint (fun () -> "[elPat] PatConst = " ^ R.render_cid_comp_const c);
+     let { CompConst.Entry.typ = tau; _ } = CompConst.get c in
+     dprintf (fun p -> p.fmt "[elPat] PatConst = %s@." (R.render_cid_comp_const c));
      let (cG1, pat_spine', ttau') = elPatSpine cD cG pat_spine (tau, Whnf.m_id) in
      (cG1, Int.Comp.PatConst (loc, c, pat_spine'), ttau')
 
@@ -1669,18 +1671,20 @@ and elPatSpineW cD cG pat_spine ttau =
 
   | Apx.Comp.PatObs (loc, obs, pat_spine') ->
      begin match ttau with
-     | (Int.Comp.TypCobase (loc', cid, mspine), theta) ->
-        let cD' = (CompDest.get obs).CompDest.Entry.mctx in
+     | (Int.Comp.TypCobase (_, _, _), _) ->
+        let { CompDest.Entry.name
+            ; mctx = cD'
+            ; obs_type = tau0
+            ; return_type = tau1
+            ; _
+            } = CompDest.get obs in
         dprintf
           begin fun p ->
-          let name = (CompDest.get obs).CompDest.Entry.name in
           p.fmt "[elPatSpine] @[<v>Observation: %a@,cD = @[%a@]@,cD' = @[%a@]@]"
             Name.pp name
             (P.fmt_ppr_lf_mctx P.l0) cD
             (P.fmt_ppr_lf_mctx P.l0) cD'
           end;
-        let tau0 = (CompDest.get obs).CompDest.Entry.obs_type in
-        let tau1 = (CompDest.get obs).CompDest.Entry.return_type in
         let t = Ctxsub.mctxToMMSub cD cD' in
         dprintf
           begin fun p ->
@@ -2438,8 +2442,7 @@ and elSplit loc cD cG pb i tau_i bs ttau =
             UnboundCaseLabel (`comp, name, cD, tau_i)
             |> throw loc
        in
-       let e = CompConst.get cid in
-       let tau_c = CompConst.Entry.(e.typ) in
+       let { CompConst.Entry.typ = tau_c; _ } = CompConst.get cid in
 
        dprintf
          begin fun p ->

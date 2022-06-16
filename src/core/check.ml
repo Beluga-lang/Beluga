@@ -812,11 +812,11 @@ module Comp = struct
   let rec checkTyp cD =
     function
     | TypBase (loc, c, mS) ->
-       let cK = (CompTyp.get c).CompTyp.Entry.kind in
+       let { CompTyp.Entry.kind = cK; _ } = CompTyp.get c in
        checkMetaSpine loc cD mS (cK, C.m_id)
 
     | TypCobase (loc, c, mS) ->
-       let cK = (CompCotyp.get c).CompCotyp.Entry.kind in
+       let { CompCotyp.Entry.kind = cK; _ } = CompCotyp.get c in
        checkMetaSpine loc cD mS (cK, C.m_id)
 
     | TypBox (loc, ctyp) -> checkCLFTyp loc cD ctyp
@@ -1112,8 +1112,9 @@ module Comp = struct
        (None, tau, C.m_id)
 
     | Obs (loc, e, t, obs) ->
-       let tau0 = (CompDest.get obs).CompDest.Entry.obs_type in
-       let tau1 = (CompDest.get obs).CompDest.Entry.return_type in
+       let { CompDest.Entry.obs_type = tau0
+           ; return_type = tau1
+           ; _ } = CompDest.get obs in
        check mcid cD (cG, cIH) total_decs e (tau0, t);
        (None, tau1, t)
 
@@ -1122,16 +1123,15 @@ module Comp = struct
     (*     (None,(CompDest.get c).CompDest.typ, C.m_id)) *)
 
     | Const (loc, prog) as e ->
-       let entry = Comp.get prog in
-       let tau, d1, name =
-         let open! Comp.Entry in
-         entry.typ, entry.decl, entry.name
-       in
+       let { Comp.Entry.typ = tau
+           ; decl = d1
+           ; name
+           ; _ } = Comp.get prog in
        Typeinfo.Comp.add loc (Typeinfo.Comp.mk_entry cD (tau, C.m_id))
          ("Const " ^ Format.stringify (P.fmt_ppr_cmp_exp_syn cD cG P.l0) e);
        (* First we need to decide whether we are calling a function in
           the current mutual block. *)
-       begin match Total.lookup_dec entry.Comp.Entry.name total_decs with
+       begin match Total.lookup_dec name total_decs with
        | None -> (* No, we aren't. *)
           (* Since we're not calling a function in the mutual block,
              we need to decide whether the call is well-scoped.
@@ -1165,7 +1165,7 @@ module Comp = struct
              (* cIH contains *all* available induction hypotheses, so
              we need to pare it down to only those IHs whose head is
              the function we see here. *)
-             let cIH' = Total.select_ihs entry.Comp.Entry.name cIH in
+             let cIH' = Total.select_ihs name cIH in
              dprintf begin fun p ->
                p.fmt "[syn] [Const] @[<v>cIH = @[%a@]\
                       @,cIH' = @[%a@]@]"
@@ -1308,7 +1308,7 @@ module Comp = struct
   and synPattern cD cG =
     function
     | PatConst (loc, c, pat_spine) ->
-       let tau = (CompConst.get c).CompConst.Entry.typ in
+       let { CompConst.Entry.typ = tau; _ } = CompConst.get c in
        (loc, synPatSpine cD cG pat_spine (tau, C.m_id))
     | PatVar (loc, k) -> (loc, (lookup' cG k, C.m_id))
     | PatAnn (loc, pat, tau, _) ->
@@ -1349,8 +1349,11 @@ module Comp = struct
          p.fmt "[synPatSpine] t = %a"
            (P.fmt_ppr_lf_msub cD P.l0) t
          end;
-       let tau0 = (CompDest.get obs).CompDest.Entry.obs_type in
-       let tau1 = (CompDest.get obs).CompDest.Entry.return_type in
+       let CompDest.Entry.
+         { obs_type = tau0
+         ; return_type = tau1
+         ; _
+         } = CompDest.get obs in
        if Whnf.convCTyp (tau, theta) (tau0, t)
        then synPatSpine cD cG pat_spine (tau1, t)
        else raise (Error (loc, TypMismatch (cD, (tau, theta), (tau0, t))))

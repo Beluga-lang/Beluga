@@ -405,16 +405,6 @@ and index_typ (a : Ext.LF.typ) : Apx.LF.typ index =
 *)
 and shunting_yard (l : Ext.LF.normal list) : Ext.LF.normal =
   shunting_yard' l
-  (*
-  let rec normalListToSpine : Ext.LF.normal list -> Ext.LF.spine = function
-    | [] -> Ext.LF.Nil
-    | h :: t -> Ext.LF.App (locOfNormal h, h, normalListToSpine t)
-  in
-  match l with
-  | Ext.LF.Root (loc, h, Ext.LF.Nil) :: ms ->
-     Ext.LF.Root (loc, h, normalListToSpine ms)
-  | _ -> failwith "cannot be empty"
-   *)
 
 and shunting_yard' (l : Ext.LF.normal list) : Ext.LF.normal =
   let get_pragma =
@@ -545,11 +535,29 @@ and shunting_yard' (l : Ext.LF.normal list) : Ext.LF.normal =
     | (_, [], y, z) ->
        reconstruct (y, z)
 
+  (** [reconstruct (operands, operators)] is the normal term reconstructed by
+      iteratively rewritting the {i stack} of operands [operands] using the
+      {i stack} of operators [operators] following Dijkstra's shunting yard
+      algorithm.
+
+      The input operands and operators are indexed by their initial position in
+      the list of normal terms to rewrite. This allows for more precise error
+      reporting:
+
+        - The operands of a prefix operator must have initially appeared after
+          the operator.
+        - The left operand of an infix operator must have initially appeared
+          before the operator, and similarly the right operand must have
+          appeared after the operator.
+        - The operands of a postfix operator must have initially appeared
+          before the operator.
+      *)
   and reconstruct : (int * Ext.LF.normal) list
                     * (int * Store.OpPragmas.fixPragma * Syntax.Loc.t) list
                     -> Ext.LF.normal =
     function
     | ([(_, e)], []) -> e
+
     | (exps, (i, o, loc_o) :: os)
          when (o.Store.OpPragmas.fix = Ext.Sgn.Prefix) ->
        let args_expected =

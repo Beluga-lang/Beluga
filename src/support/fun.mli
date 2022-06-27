@@ -35,3 +35,6 @@ val curry : ('a * 'b -> 'c) -> 'a -> 'b -> 'c
 
 (** Converts a curried function to a function on pairs. *)
 val uncurry : ('a -> 'b -> 'c) -> 'a * 'b -> 'c
+
+(** The fixpoint combinator. *)
+val fix : (('a -> 'b) -> 'a -> 'b) -> 'a -> 'b

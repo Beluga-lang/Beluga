@@ -21,3 +21,7 @@ let after f x =
 let[@inline] curry f x y = f (x, y)
 
 let[@inline] uncurry f (x, y) = f x y
+
+let fix f =
+  let rec f' = lazy (f (fun t -> Lazy.force f' t)) in
+  Lazy.force f'

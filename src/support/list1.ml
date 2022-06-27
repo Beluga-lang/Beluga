@@ -69,6 +69,8 @@ let filter_map f (h, t) =
 
 let for_all f l = List.for_all f (to_list l)
 
+let exists f l = List.exists f (to_list l)
+
 let rec all_equal (x, l) =
   match l with
   | [] -> Some x
@@ -95,7 +97,9 @@ exception Empty
     list was empty. *)
 let unsafe_of_list l = Option.get' Empty (of_list l)
 
-let find_opt p l = l |> to_list |> List.find_opt p
+let find_opt p l = List.find_opt p (to_list l)
+
+let find_map f l = List.find_map f (to_list l)
 
 let minimum_by ( < ) (x, l) =
   List.fold_left (fun min x -> if x < min then x else min) x l

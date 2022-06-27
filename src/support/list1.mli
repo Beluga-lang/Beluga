@@ -114,11 +114,20 @@ val map2 : ('a -> 'b -> 'c) -> 'a t -> 'b t -> 'c t
     [(p a1) && (p a2) && ... && (p an)]. *)
 val for_all : ('a -> bool) -> 'a t -> bool
 
+(** [exists p (a1, \[a2; ...; an\])] checks if any element of the non-empty
+    list satisfies the predicate [p]. That is, it returns
+    [(p a1) || (p a2) || ... || (p an)]. *)
+val exists : ('a -> bool) -> 'a t -> bool
+
 (** {1 List searching} *)
 
 (** [find_opt p l] is the first element in [l] satisfying the predicate [p].
     Returns [None] if there is no such element. *)
 val find_opt : ('a -> bool) -> 'a t -> 'a option
+
+(** [find_map f l] applies [f] to the elements of [l] in order, and returns
+    the first result of the form [Some v], or [None] if non exist. *)
+val find_map : ('a -> 'b option) -> 'a t -> 'b option
 
 (** Finds the leftmost minimal element of the sequence according to the given
     decision procedure for the strict less-than relation on 'a. *)

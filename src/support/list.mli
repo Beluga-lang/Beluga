@@ -22,6 +22,10 @@ val nonempty : 'a list -> bool
     reversed. *)
 val filter_rev : ('a -> bool) -> 'a list -> 'a list
 
+(** [find_map f l] applies [f] to the elements of [l] in order, and returns
+    the first result of the form [Some v], or [None] if none exist. *)
+val find_map : ('a -> 'b option) -> 'a list -> 'b option
+
 (** [uncons l] is [Some (hd l, tl l)] if [l <> \[\]] and [None] otherwise. *)
 val uncons : 'a list -> ('a * 'a list) option
 

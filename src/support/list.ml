@@ -24,6 +24,13 @@ let filter_rev p l =
   in
   go [] l
 
+let rec find_map f = function
+  | [] -> None
+  | x :: l -> (
+    match f x with
+    | Some _ as result -> result
+    | None -> find_map f l)
+
 let uncons = function
   | [] -> None
   | x :: xs -> Some (x, xs)

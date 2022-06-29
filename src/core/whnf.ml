@@ -1986,17 +1986,21 @@ let rec convCTyp thetaT1 thetaT2 = convCTyp' (cwhnfCTyp thetaT1) (cwhnfCTyp thet
 
 and convCTyp' thetaT1 thetaT2 =
   match (thetaT1, thetaT2) with
-  | ((Comp.TypBase (_, c1, mS1), _), (Comp.TypBase (_, c2, mS2), _)) ->
-     (* t1 = t2 = id by invariant *)
+  | ((Comp.TypBase (_, c1, mS1), t1), (Comp.TypBase (_, c2, mS2), t2)) ->
+     assert (Substitution.LF.isMId t1);
+     assert (Substitution.LF.isMId t2);
      Id.cid_comp_typ_equal c1 c2
      && convMetaSpine (cnormMetaSpine (mS1, m_id)) (cnormMetaSpine (mS2, m_id))
 
-  | ((Comp.TypCobase (_, c1, mS1), _), (Comp.TypCobase (_, c2, mS2), _)) ->
-     (* t1 = t2 = id by invariant *)
+  | ((Comp.TypCobase (_, c1, mS1), t1), (Comp.TypCobase (_, c2, mS2), t2)) ->
+     assert (Substitution.LF.isMId t1);
+     assert (Substitution.LF.isMId t2);
      Id.cid_comp_cotyp_equal c1 c2
      && convMetaSpine mS1 mS2
 
-  | ((Comp.TypBox (_, cT1), _), (Comp.TypBox (_, cT2), _)) (* t1 = t2 = id *) ->
+  | ((Comp.TypBox (_, cT1), t1), (Comp.TypBox (_, cT2), t2)) ->
+     assert (Substitution.LF.isMId t1);
+     assert (Substitution.LF.isMId t2);
      convMetaTyp cT1 cT2
 
   | ((Comp.TypArr (_, tT1, tT2), t), (Comp.TypArr (_, tT1', tT2'), t')) ->

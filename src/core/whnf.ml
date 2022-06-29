@@ -2034,6 +2034,7 @@ let convCTypDecl d1 d2 =
      && convMTyp cT1 cT2
   | (DeclOpt (x1, _), DeclOpt (x2, _)) ->
      Name.(x1 = x2)
+  | _ -> false
 
 (** Checks if two declarations are convertible.
       If they're coming from a metacontext you should shift them so

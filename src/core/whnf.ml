@@ -1980,7 +1980,7 @@ and convMetaSpine mS mS' =
      convMetaObj mO mO'
      && convMetaTyp mT mT'
      && convMetaSpine mS mS'
-     && Stdlib.(=) p1 p2
+     && Plicity.(p1 = p2)
 
 let rec convCTyp thetaT1 thetaT2 = convCTyp' (cwhnfCTyp thetaT1) (cwhnfCTyp thetaT2)
 

@@ -523,7 +523,7 @@ module Make (P : ParserInfo) = struct
     let open Loc in
     get_loc
     >>= fun { bol; offset; _ } ->
-      if bol = offset then
+      if Int.(bol = offset) then
         return ()
       else
         throw "expected to be at beginning of line"

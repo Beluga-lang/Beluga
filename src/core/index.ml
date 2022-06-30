@@ -1275,12 +1275,10 @@ let rec index_comptyp (tau : Ext.Comp.typ) cvars : Apx.Comp.typ fvar_state =
 let d_var, d_const, d_dataconst, d_codataobs =
   let mk ty f con loc x =
     let open Option in
-    lazy
-      (trying_index
-         (fun () ->
-           dprintf (fun p -> p.fmt "disambiguting as %s" ty);
-           f x)
-       $> fun k -> con loc k)
+    trying_index (fun () ->
+      dprintf (fun p -> p.fmt "disambiguting as %s" ty);
+      f x
+    ) $> fun k -> con loc k
   in
   let var vars = mk "variable" (Var.index_of_name vars) (fun loc k -> Apx.Comp.Var (loc, k)) in
   let const = mk "constant" Comp.index_of_name (fun loc k -> Apx.Comp.Const (loc, k)) in
@@ -1289,8 +1287,7 @@ let d_var, d_const, d_dataconst, d_codataobs =
   var, const, dataconst, codataobs
 
 let disambiguate loc x ps =
-  Option.choice (List.map (fun f -> f loc x) ps)
-  |> Lazy.force
+  List.find_map (fun f -> f loc x) ps
 
 let rec index_exp cvars vars fcvars =
   function
@@ -1369,9 +1366,7 @@ and index_exp' cvars vars fcvars =
   function
   | Ext.Comp.Name (loc, x) ->
      disambiguate loc x [ d_var vars; d_const; d_dataconst ]
-     |> Option.eliminate
-          (fun _ -> throw loc (UnboundCompName x))
-          (fun x -> x)
+     |> Option.get_or_else (fun _ -> throw loc (UnboundCompName x))
 
   (* Since observations are syntactically indistinguishable from
      function applications, they get parsed as applications in the
@@ -1386,11 +1381,8 @@ and index_exp' cvars vars fcvars =
         observation.
       *)
      let mk_apply f loc' x =
-       lazy
-         Option.(
-         f loc' x
-         |> Lazy.force
-         $> fun h e' -> Apx.Comp.Apply (loc, h, e'))
+       let open Option in
+       f loc' x $> fun h e' -> Apx.Comp.Apply (loc, h, e')
      in
      dprint (fun _ -> "[index_exp'] name disambiguation hack for observations");
      disambiguate loc' c

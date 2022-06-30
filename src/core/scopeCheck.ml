@@ -24,13 +24,12 @@ let thm_thm loc cid1 =
   let get_decl cid = Comp.( (get cid).Entry.decl ) in
   let name = Comp.name cid1 in
   let loc' = Name.location name in
-  let name = Name.render_name name in
   function
   | None -> () (* no cid from whose POV to do the scopechecking *)
   | Some cid2 ->
      match get_decl cid1, get_decl cid2 with
      | Some d1, Some d2 when Bool.not Decl.(d1 < d2) ->
-        FixedFixed ( "theorem " ^ name, loc', cid2 )
+        FixedFixed (Format.asprintf "theorem %a" Name.pp name, loc', cid2)
         |> throw loc
      | None, Some _ ->
         Error.violation

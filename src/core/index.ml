@@ -305,7 +305,7 @@ let print_fcvars ppf fcvars =
   pp_print_list
     ~pp_sep: Format.comma
     (fun ppf x ->
-      fprintf ppf "FMV %s" (Name.render_name x))
+      fprintf ppf "FMV %a" Name.pp x)
     ppf
     fcvars.vars
 

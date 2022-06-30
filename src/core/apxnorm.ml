@@ -809,7 +809,7 @@ let rec fmvApxDCtx loc fMVs cD ((l_cd1, l_delta, k) as d_param) =
             throw loc
               (IndexInvariantFailed
                  (fun ppf () ->
-                   Format.fprintf ppf "unbound context %s" (Name.render_name x)))
+                   Format.fprintf ppf "unbound context %a" Name.pp x))
        end
 
   | Apx.LF.DDec (psi, t_decl) ->
@@ -836,7 +836,7 @@ let fmvApxHat loc fMVs cD (l_cd1, l_delta, k) phat =
             throw loc
               (IndexInvariantFailed
                  (fun ppf () ->
-                   Format.fprintf ppf "unbound context variable %s" (Name.render_name psi)))
+                   Format.fprintf ppf "unbound context variable %a" Name.pp psi))
        end
   | _ -> phat
 

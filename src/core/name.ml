@@ -28,12 +28,6 @@ let string_of_name n =
   in
   n.hint_name ^ suf
 
-(** Computes a string representation of a name, with all modules. *)
-let render_name n =
-  match n.modules with
-  | [] -> string_of_name n
-  | l -> String.concat "::" l ^ "::" ^ string_of_name n
-
 let pp ppf n =
   Format.fprintf ppf "%a%s"
     (Format.pp_print_list
@@ -41,6 +35,7 @@ let pp ppf n =
        (fun ppf x -> Format.fprintf ppf "%s::" x))
     n.modules (string_of_name n)
 
+(** Computes a string representation of a name, with all modules. *)
 let show n =
   match n.modules with
   | [] -> string_of_name n
@@ -152,4 +147,4 @@ let mk_blank = function
 include (
   (val Eq.contramap (module String) string_of_name) : Eq.EQ with type t := t)
 
-let hash = Fun.(render_name >> Hashtbl.hash)
+let hash = Fun.(show >> Hashtbl.hash)

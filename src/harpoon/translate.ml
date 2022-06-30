@@ -230,7 +230,7 @@ let entry { CompS.Entry.prog; typ = tau; name; _ } =
     Option.get'
       (Error.Violation
          (Format.asprintf
-           "The body of theorem %s is unknown." (Name.render_name name)))
+           "The body of theorem %a is unknown." Name.pp name))
       prog
   in
   let thm =

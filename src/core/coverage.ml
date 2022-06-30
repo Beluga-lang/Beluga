@@ -2929,10 +2929,9 @@ let rec pvInSplitCand sl pvlist =
   | Split (CovSub _, _) :: sl -> pvInSplitCand sl pvlist
   | SplitCtx _ :: sl -> pvInSplitCand sl pvlist
   | SplitPat ((Comp.PatFVar (_, x), ttau), (patt_p, ttau_p)) :: sl ->
-     dprint
-       begin fun _ ->
-       "[pvInSplitCand] Patttern variable " ^ Name.render_name x
-       end;
+     dprintf (fun p ->
+       p.fmt "[pvInSplitCand] Patttern variable %a" Name.pp x
+     );
      if List.mem x pvlist
      then pvInSplitCand sl pvlist
      else pvInSplitCand sl (x :: pvlist)

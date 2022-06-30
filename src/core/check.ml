@@ -180,7 +180,7 @@ module Comp = struct
        let fname =
          match f with
          | None -> ""
-         | Some g -> " " ^ (Name.render_name g)
+         | Some g -> " " ^ (Name.show g)
        in
        let msg1 =
          "Unification in type reconstruction encountered constraints \
@@ -930,7 +930,7 @@ module Comp = struct
         (Format.asprintf "Box %a" (P.fmt_ppr_cmp_meta_obj cD P.l0) cM)
     with
     | Whnf.FreeMVar (I.FMVar (u, _)) ->
-       Error.violation (Format.asprintf "Free meta-variable %s" (Name.render_name u))
+       Error.violation (Format.asprintf "Free meta-variable %a" Name.pp u)
 
   let rec checkW mcid cD (cG, (cIH : ihctx)) total_decs e ttau =
     (** If cD; cG; cIH |- i ==> tau_sc then

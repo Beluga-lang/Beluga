@@ -49,8 +49,6 @@ val mk_name : ?location:Location.t -> ?modules:string list -> name_guide -> t
 
 val string_of_name : t -> string
 
-val render_name : t -> string
-
 (** Prints a list of space-separated names. This printer does not open a box! *)
 val pp_list : Format.formatter -> t list -> unit
 

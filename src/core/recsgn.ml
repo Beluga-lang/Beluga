@@ -45,8 +45,11 @@ let _ =
       begin fun ppf ->
       match err with
       | TotalDeclError (f, f') ->
-         fprintf ppf "Expected totality declaration for %s \nFound totality declaration for %s\n"
-           (Name.render_name f) (Name.string_of_name f')
+         fprintf ppf
+           "Expected totality declaration for %a@.@
+           Found totality declaration for %s@."
+           Name.pp f
+           (Name.string_of_name f')
       | MutualTotalDecl (haves, have_nots) ->
          fprintf ppf "@[<v>%a@,The functions@,  @[<hov>%a@]@,have totality declarations, \
                       but the functions@,  @[<hov>%a@]@,are missing totality declarations."
@@ -57,14 +60,15 @@ let _ =
            (pp_print_list ~pp_sep: Format.comma Name.pp) haves
            (pp_print_list ~pp_sep: Format.comma Name.pp) have_nots
       | NoPositive n ->
-         fprintf ppf "Positivity checking of constructor %s fails.\n" n
+         fprintf ppf "Positivity checking of constructor %s fails.@." n
       | NoStratify n ->
-         fprintf ppf "Stratification checking of constructor %s fails.\n" n
+         fprintf ppf "Stratification checking of constructor %s fails.@." n
 
       | NoStratifyOrPositive n ->
-         fprintf ppf "Stratification or positivity checking of datatype %s fails.\n" n
+         fprintf ppf "Stratification or positivity checking of datatype %s fails.@." n
       | TotalArgsError f ->
-         fprintf ppf "Totality declaration for %s takes too many arguments.\n" (Name.render_name f)
+         fprintf ppf "Totality declaration for %a takes too many arguments.@."
+         Name.pp f
 
       | UnexpectedSucess ->
          fprintf ppf "Unexpected success: expected failure of type reconstruction for --not'ed declaration."
@@ -77,9 +81,9 @@ let _ =
            | Ext.Sgn.Postfix -> ("postfix", 1)
          in
          fprintf ppf
-           "Illegal %s operator %s. Operator declared with %d arguments, but only operators with %d args permitted"
+           "Illegal %s operator %a. Operator declared with %d arguments, but only operators with %d args permitted"
            fix
-           (Name.render_name n)
+           Name.pp n
            actual
            expected
       | InvalidOpenPrag s ->
@@ -252,7 +256,7 @@ let recSgnDecls decls =
        in
        Int.Sgn.Pragma { pragma=Int.LF.DefaultAssocPrag a' }
     | Ext.Sgn.Pragma { location=loc; pragma=Ext.Sgn.FixPrag (name, fix, precedence, assoc) } ->
-       dprint (fun () -> "Pragma found for " ^ (Name.render_name name));
+       dprintf (fun p -> p.fmt "Pragma found for %a" Name.pp name);
        begin match fix with
        | Ext.Sgn.Prefix ->
           OpPragmas.addPragma name fix (Some precedence) assoc
@@ -807,8 +811,8 @@ let recSgnDecls decls =
        let tau' = Whnf.cnormCTyp (tau', C.m_id) in
        dprintf
          begin fun p ->
-           p.fmt "[AFTER Reconstruction Val - 2] let %s : %a =@,%a"
-             (Name.render_name identifier)
+           p.fmt "[AFTER Reconstruction Val - 2] let %a : %a =@,%a"
+             Name.pp identifier
              (P.fmt_ppr_cmp_typ cD P.l0) tau'
              (P.fmt_ppr_cmp_exp_chk cD cG P.l0) expression'
          end;

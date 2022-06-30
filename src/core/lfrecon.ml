@@ -79,7 +79,7 @@ let string_of_typeVariant =
 let string_of_proj =
   function
   | Apx.LF.ByPos k -> string_of_int k
-  | Apx.LF.ByName n -> Name.render_name n
+  | Apx.LF.ByName n -> Name.show n
 
 let print_error ppf =
   let open Format in
@@ -111,8 +111,8 @@ let print_error ppf =
        "Too few or to many arguments supplied to a type family."
   | CtxVarSchema psi ->
      fprintf ppf
-       "Reconstruction cannot infer the schema for context %s."
-       (Name.render_name psi)
+       "Reconstruction cannot infer the schema for context %a."
+       Name.pp psi
   | SigmaTypImpos (cD, cPsi, sA) ->
      fprintf ppf
        "Ill-typed expression. @ @ The head of a spine has type %a. "
@@ -163,8 +163,8 @@ let print_error ppf =
 
   | LeftoverConstraints x ->
      fprintf ppf
-       "Cannot reconstruct a type for free variable %s (leftover constraints)."
-       (Name.render_name x)
+       "Cannot reconstruct a type for free variable %a (leftover constraints)."
+       Name.pp x
 
   | IdCtxsub ->
      fprintf ppf
@@ -199,8 +199,8 @@ let print_error ppf =
 
   | MissingSchemaForCtxVar psi ->
      fprintf ppf
-       "Missing schema for context variable %s."
-       (Name.render_name psi)
+       "Missing schema for context variable %a."
+       Name.pp psi
   | IncompatibleSchemaForCtxVar (_cD, _psi, w, w') ->
      (* (Pretty.fmt_ppr_lf_dctx cD 0) (Int.LF.CtxVar psi) *)
      Error.report_mismatch ppf
@@ -216,8 +216,11 @@ let print_error ppf =
      fprintf ppf "Higher-order meta-variables not (currently) supported"
   | SubstVarConflict x ->
      fprintf ppf
-       "The variable %s was expected to be a substitution variable.\n\nPlease note that $%s and %s both denote the same variable and so the use of both concurrently to denote different things is disallowed."
-       (Name.render_name x) (Name.render_name x) (Name.render_name x)
+       "The variable %a was expected to be a substitution variable.@.@.\
+       Please note that $%a and %a both denote the same variable and so the use of both concurrently to denote different things is disallowed."
+       Name.pp x
+       Name.pp x
+       Name.pp x
   | UnboundName name ->
      fprintf ppf "Unbound identifier %a." Name.pp name
   | UnboundIdSub ->

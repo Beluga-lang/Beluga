@@ -770,8 +770,8 @@ and cnormSub (s, t) =
      | Some (ISub s) ->
         dprintf
           begin fun p ->
-          p.fmt "[cnormSub] @[<v>MSVar - MSInst for @[%s@]@]"
-            (Name.render_name mmvar.name)
+          p.fmt "[cnormSub] @[<v>MSVar - MSInst for @[%a@]@]"
+            Name.pp mmvar.name
           end;
         let s0 = cnormSub (LF.comp (normSub s) (normSub s'), mt) in
         let s0' = LF.comp (Shift n) s0 in

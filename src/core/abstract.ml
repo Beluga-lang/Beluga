@@ -47,8 +47,8 @@ let _ =
       begin fun ppf ->
       match err with
       | UnknownMTyp psi ->
-         Format.fprintf ppf "Unable to infer type for variable %s"
-           (Name.render_name psi)
+         Format.fprintf ppf "Unable to infer type for variable %a"
+           Name.pp psi
       | LeftoverVars ->
          Format.fprintf ppf "Leftover meta-variables in computation-level expression; provide a type annotation"
       | LeftoverConstraints ->

@@ -81,8 +81,8 @@ let _ =
            "Expected a meta-object; Found a computation-level pattern"
       | TypeAbbrev a ->
          fprintf ppf
-           "Type definition %s cannot contain any free meta-variables in its type."
-           (Name.render_name a)
+           "Type definition %a cannot contain any free meta-variables in its type."
+           Name.pp a
 
       | IllegalCase (cD, cG, i, tau) ->
          fprintf ppf
@@ -397,7 +397,6 @@ let rec apx_length_typ_rec =
   function
   | Apx.LF.SigmaLast _ -> 1
   | Apx.LF.SigmaElem (x, _, rest) ->
-     print_string (Name.render_name x ^ "  ");
      1 + apx_length_typ_rec rest
 
 let rec lookup cG k =

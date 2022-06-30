@@ -927,30 +927,30 @@ module Cid = struct
 
   (* RENDERER for Internal Syntax using names *)
   module NamedRenderer : RENDERER = struct
-    let render_cid_comp_typ c = Name.render_name (CompTyp.fixed_name_of c)
-    let render_cid_comp_cotyp c = Name.render_name (CompCotyp.fixed_name_of c)
-    let render_cid_comp_const c = Name.render_name (CompConst.fixed_name_of c)
-    let render_cid_comp_dest c = Name.render_name (CompDest.fixed_name_of c)
-    let render_cid_typ a = Name.render_name (Typ.fixed_name_of a)
-    let render_cid_term c = Name.render_name (Term.fixed_name_of c)
-    let render_cid_schema w = Name.render_name (Schema.fixed_name_of w)
-    let render_cid_prog f = Name.render_name (Comp.fixed_name_of f)
+    let render_cid_comp_typ c = Name.show (CompTyp.fixed_name_of c)
+    let render_cid_comp_cotyp c = Name.show (CompCotyp.fixed_name_of c)
+    let render_cid_comp_const c = Name.show (CompConst.fixed_name_of c)
+    let render_cid_comp_dest c = Name.show (CompDest.fixed_name_of c)
+    let render_cid_typ a = Name.show (Typ.fixed_name_of a)
+    let render_cid_term c = Name.show (Term.fixed_name_of c)
+    let render_cid_schema w = Name.show (Schema.fixed_name_of w)
+    let render_cid_prog f = Name.show (Comp.fixed_name_of f)
     let render_cid_mutual_group c = string_of_int c
     let render_ctx_var cO g =
       try
-        Name.render_name (Context.getNameMCtx cO g)
+        Name.show (Context.getNameMCtx cO g)
       with
       | _ -> "FREE CtxVar " ^ string_of_int g
 
     let render_cvar cD u =
       try
-        Name.render_name (Context.getNameMCtx cD u)
+        Name.show (Context.getNameMCtx cD u)
       with
       | _ -> "FREE MVar " ^ string_of_int u
 
     let render_bvar cPsi i =
       try
-        Name.render_name (Context.getNameDCtx cPsi i)
+        Name.show (Context.getNameDCtx cPsi i)
       with
       | _ -> "FREE BVar " ^ string_of_int i
 
@@ -958,7 +958,7 @@ module Cid = struct
 
     let render_var cG x =
       try
-        Name.render_name (Context.getNameCtx cG x)
+        Name.show (Context.getNameCtx cG x)
       with
       | _ -> "FREE Var " ^ string_of_int x
 

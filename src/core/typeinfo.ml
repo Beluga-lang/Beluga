@@ -195,4 +195,6 @@ let type_of_position (line : int) (col : int) : string =
   match List.fold_left (fun acc x -> if contains_pos x then Some x else acc) None sorted with
   | Some (_, s) -> s.Annot.typ ^ ";\n"
   | None ->
-     "No type information found for point: (" ^ string_of_int line ^ ", " ^ string_of_int col ^ ");\n"
+     Format.asprintf "No type information found for point: (%d, %d);@."
+       line
+       col

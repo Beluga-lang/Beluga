@@ -345,7 +345,7 @@ let recSgnDecls decls =
        Unify.resetGlobalCnstrs ();
        dprintf
          begin fun p ->
-         p.fmt "%a : %a"
+         p.fmt "%a : %a@."
            Name.pp identifier
            (P.fmt_ppr_cmp_kind Int.LF.Empty P.l0) cK'
          end;
@@ -353,9 +353,11 @@ let recSgnDecls decls =
          ( "Type Check"
          , fun () -> Check.Comp.checkKind Int.LF.Empty cK'
          );
-       dprint
-         (fun () ->
-           "\nDOUBLE CHECK for data type constant " ^ Name.string_of_name identifier ^ " successful!");
+       dprintf
+         (fun p ->
+           p.fmt "DOUBLE CHECK for data type constant %s successful!"
+           (Name.string_of_name identifier)
+         );
        (* let p =
         *   match pflag with
         *   | None -> Int.Sgn. Noflag
@@ -602,7 +604,7 @@ let recSgnDecls decls =
        Unify.resetGlobalCnstrs ();
        dprintf
          begin fun p ->
-         p.fmt "%a : %a"
+         p.fmt "%a : %a@."
            Name.pp a
            (P.fmt_ppr_lf_kind Int.LF.Null P.l0) tK'
          end;
@@ -610,12 +612,9 @@ let recSgnDecls decls =
          ( "Type Check"
          , fun () -> Check.LF.checkKind Int.LF.Empty Int.LF.Null tK'
          );
-       dprint
-         begin fun () ->
-         "\nDOUBLE CHECK for type constant "
-         ^ Name.string_of_name a
-         ^ " successful!"
-         end;
+       dprintf (fun p ->
+         p.fmt "DOUBLE CHECK for type constant %s successful!" (Name.string_of_name a)
+       );
        Typeinfo.Sgn.add location (Typeinfo.Sgn.mk_entry (Typeinfo.Sgn.Kind tK')) "";
        let cid = Typ.add (fun _ -> Typ.mk_entry a tK' i) in
        let sgn = Int.Sgn.Typ { location; identifier=cid; kind=tK' } in
@@ -680,10 +679,10 @@ let recSgnDecls decls =
     | Ext.Sgn.Schema { location; identifier=g; schema } ->
        dprintf
          (fun p ->
-           p.fmt "[RecSgn Checking] Schema at: %a"
+           p.fmt "[RecSgn Checking] Schema at: %a@."
              Syntax.Loc.print_short location);
        let apx_schema = Index.schema schema in
-       dprint (fun () -> "\nReconstructing schema " ^ Name.string_of_name g ^ "\n");
+       dprintf (fun p -> p.fmt "Reconstructing schema %s@." (Name.string_of_name g));
        FVar.clear ();
        let sW = Reconstruct.schema apx_schema in
        dprintf
@@ -699,12 +698,12 @@ let recSgnDecls decls =
        let sW' = Abstract.schema sW in
        dprintf
          begin fun p ->
-         p.fmt "Schema %a : %a after abstraction"
+         p.fmt "Schema %a : %a after abstraction@."
            Name.pp g
            (P.fmt_ppr_lf_schema P.l0) sW'
          end;
        Check.LF.checkSchemaWf sW';
-       dprint (fun () -> "\nTYPE CHECK for schema " ^ Name.string_of_name g ^ " successful");
+       dprintf (fun p -> p.fmt "TYPE CHECK for schema %s successful@." (Name.string_of_name g));
        let sch = Schema.add (fun _ -> Schema.mk_entry g sW') in
        let sgn = Int.Sgn.Schema { location; identifier=sch; schema=sW' } in
        Store.Modules.addSgnToCurrent sgn;

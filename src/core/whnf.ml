@@ -48,10 +48,10 @@ let etaContract =
      let rec etaUnroll k =
        function
        | Lam (_, _, tN) ->
-          dprint (fun () -> "etaUnroll k =" ^ string_of_int k ^ "\n");
+          dprintf (fun p -> p.fmt "etaUnroll k = %d@." k);
           etaUnroll (k + 1) tN
        | _ ->
-          dprint (fun () -> "etaUnroll k =" ^ string_of_int k ^ "\n");
+          dprintf (fun p -> p.fmt "etaUnroll k = %d@." k);
           (k, tM)
      in
      let rec etaSpine k tS =
@@ -70,7 +70,7 @@ let etaContract =
      in
      begin match etaUnroll 0 tM with
      | (k, Root (_, BVar x, tS, _)) ->
-        dprint (fun () -> "check etaSpine k =" ^ string_of_int k ^ "\n");
+        dprintf (fun p -> p.fmt "check etaSpine k = %d@." k);
         if etaSpine k tS && x > k
         then Head (BVar (x - k))
         else Obj tM
@@ -642,7 +642,7 @@ and cnorm_psihat (phat : dctx_hat) t =
      | MV offset' -> (Some (CtxOffset offset'), k)
      | ClObj _ ->
         Error.violation
-          ("[cnorm_psihat] ClObj impossible; offset " ^ string_of_int offset)
+          (Format.asprintf "[cnorm_psihat] ClObj impossible; offset %d" offset)
      end
   | _ -> phat
 
@@ -969,7 +969,7 @@ and whnf  =
            | Head (BVar k) -> (Root (loc, BVar k, SClo (tS, sigma), plicity), LF.id)
            | Head h -> whnf (Root (loc, h, SClo (tS, sigma), plicity), LF.id)
            | Undef ->
-              Error.violation ("[whnf] Undef looked up at " ^ string_of_int i)
+              Error.violation (Format.asprintf "[whnf] Undef looked up at %d" i)
            end
         | PVar (p, s) ->
            let h' = PVar (p, LF.comp (LF.comp s r) sigma) in
@@ -1531,10 +1531,10 @@ let mctxLookupDep cD k =
   Context.lookup' cD k
   |> Option.get'
        (Error.Violation
-          ( "Meta-variable out of bounds -- looking for "
-            ^ string_of_int k
-            ^ " in context of length "
-            ^ string_of_int (List.length (Context.to_list cD))
+          (Format.asprintf
+            "Meta-variable out of bounds -- looking for %d in context of length %d"
+            k
+            (List.length (Context.to_list cD))
           )
        )
   |> function

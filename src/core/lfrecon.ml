@@ -247,11 +247,6 @@ let _ =
       end
     end
 
-let rec conv_listToString =
-  function
-  | [] -> " "
-  | x :: xs -> string_of_int x ^ ", " ^ conv_listToString xs
-
 let rec what_head =
   function
   | Apx.LF.BVar _ -> "BVar"
@@ -470,7 +465,7 @@ let etaExpandApxTerm loc h tS tA =
   in
 
   let (k, tS') = etaExpApxSpine 1 (Apx.LF.Nil) tA in
-  dprint (fun () -> "etaExpApxSpine k = " ^ string_of_int k);
+  dprintf (fun p -> p.fmt "etaExpApxSpine k = %d" k);
   let tS'' = appendSpine (Apxnorm.shiftApxSpine (k-1) tS) tS' in
   (* let tS'' = appendSpine tS tS' in *)
 
@@ -619,7 +614,7 @@ let flattenProjPatHead loc cD h conv_list cPsi =
        | _ -> raise Not_found
      in
      let j = getProjIndexFromType loc cD cPsi tp p in
-     dprint (fun () -> "flattenProjPat Proj Case: k = " ^ string_of_int k ^ "    j = " ^ string_of_int j ^ "\n");
+     dprintf (fun p -> p.fmt "flattenProjPat Proj Case: k = %d    j = %d@." k j);
      let k' = ConvSigma.map conv_list k - j + 1 in
      Apx.LF.BVar k'
 
@@ -1210,7 +1205,7 @@ and elTerm' recT cD cPsi r sP =
            end;
          let d = Context.length cD - Context.length cD_d in
 
-         dprint (fun () -> "d = " ^ string_of_int d);
+         dprintf (fun p -> p.fmt "d = %d" d);
          let (tQ', cPhi') =
            if d = 0
            then (tQ, cPhi)
@@ -1268,7 +1263,7 @@ and elTerm' recT cD cPsi r sP =
          end
        with
        | Error.Violation msg ->
-          dprint (fun () -> "[elClosedTerm] Violation: " ^ msg);
+          dprintf (fun p -> p.fmt "[elClosedTerm] Violation: %s" msg);
           throw loc CompTypAnn
        | Not_found ->
           match () with
@@ -1527,13 +1522,11 @@ and elTerm' recT cD cPsi r sP =
      (* Other case where spine is not empty is not implemented -bp *)
      begin
        try
-         dprint
-           begin fun () ->
-           "[Reconstruct Projection Parameter] #"
-           ^ Name.string_of_name p
-           ^ "."
-           ^ string_of_proj proj
-           end;
+         dprintf (fun d ->
+           d.fmt "[Reconstruct Projection Parameter] #%s.%s"
+           (Name.string_of_name p)
+           (string_of_proj proj)
+         );
          let (cD_d, Int.LF.Decl (_, Int.LF.ClTyp (Int.LF.PTyp ((Int.LF.Sigma typRec) as tA), cPhi), _, _)) =
            FCVar.get p
          in
@@ -1573,14 +1566,11 @@ and elTerm' recT cD cPsi r sP =
          end
        with
        | Not_found ->
-          dprint
-            begin fun () ->
-            "[Reconstruct Projection Parameter] #"
-            ^ Name.string_of_name p
-            ^ "."
-            ^ string_of_proj proj
-            ^ " NOT FOUND"
-            end;
+          dprintf (fun d ->
+            d.fmt "[Reconstruct Projection Parameter] #%s.%s. NOT FOUND"
+            (Name.string_of_name p)
+            (string_of_proj proj)
+          );
           begin match (isPatSubOpt s, spine) with
           | (true, Apx.LF.Nil) ->
              let (cPhi, s'') = synDomOpt cD loc cPsi s in
@@ -1756,7 +1746,7 @@ and elTerm' recT cD cPsi r sP =
          end
        with
        | Error.Violation msg ->
-          dprint (fun () -> "[elTerm] Violation: " ^ msg);
+          dprintf (fun p -> p.fmt "[elTerm] Violation: %s" msg);
           throw loc CompTypAnn
      end
 
@@ -1940,7 +1930,7 @@ and elTerm' recT cD cPsi r sP =
      throw_hint loc HOMVarNotSupported [`accidental_free_variable x; `maybe_eta_expand x]
 
   | Apx.LF.Root (loc, h, _) ->
-     dprint (fun () -> "[elTerm' **] h = " ^ what_head h ^ "\n");
+     dprintf (fun p -> p.fmt "[elTerm' **] h = %s@." (what_head h));
      throw loc CompTypAnn
 
 and instanceOfSchElem loc cD cPsi (tA, s) (some_part, sB) =

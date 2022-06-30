@@ -2387,7 +2387,7 @@ module Make (T : TRAIL) : UNIFY = struct
        if i1 = i2
        then unifyHead mflag cD0 cPsi h1 h2
        else
-         raise (Failure ("(Proj) Index clash: " ^ string_of_int i1 ^ " /= " ^ string_of_int i2))
+         raise (Failure (Format.asprintf "(Proj) Index clash: %d /= %d" i1 i2))
 
     | (FVar _, Proj (PVar _, _)) ->
        print_string "[UnifyHead] Unify free variable with projection of parameter variable\n";
@@ -3224,7 +3224,7 @@ module Make (T : TRAIL) : UNIFY = struct
       unifyCompTyp cD ttau ttau'
     with
     | Failure msg ->
-      dprint (fun () -> "[unifyCompTyp] " ^ msg);
+      dprintf (fun p -> p.fmt "[unifyCompTyp] %s" msg);
       raise (Failure msg)
 end
 

@@ -327,7 +327,6 @@ let rec length_typ_rec =
   function
   | Ext.LF.SigmaLast _ -> 1
   | Ext.LF.SigmaElem (x, _, rest) ->
-     print_string (Name.render_name x ^ "  ");
      1 + length_typ_rec rest
 
 let rec index_kind (k : Ext.LF.kind) : Apx.LF.kind index =
@@ -1279,7 +1278,7 @@ let d_var, d_const, d_dataconst, d_codataobs =
     lazy
       (trying_index
          (fun () ->
-           dprint (fun _ -> "disambiguting as " ^ ty);
+           dprintf (fun p -> p.fmt "disambiguting as %s" ty);
            f x)
        $> fun k -> con loc k)
   in

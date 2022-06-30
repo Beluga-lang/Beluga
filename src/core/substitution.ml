@@ -46,7 +46,7 @@ module LF = struct
   let rec shiftComp n s2 =
     match (n, s2) with
     | (0, s) -> s
-    | (n, EmptySub) -> raise (NotComposable ("Shift " ^ string_of_int n ^", EmptySub"))
+    | (n, EmptySub) -> raise (NotComposable (Format.asprintf "Shift %d, EmptySub" n))
     | (n, Undefs) -> Undefs
     | (n, SVar (s, k, r)) -> SVar (s, (k + n), r)
     | (n, MSVar (k, ((s, t), r))) -> MSVar (k + n, ((s, t), r))

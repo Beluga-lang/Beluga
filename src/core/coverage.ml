@@ -1538,24 +1538,21 @@ let rec solve' cD (matchCand, ms) cD_p mCands' sCands' =
         begin
           try
             U.forceGlobalCnstr ();
-            dprint
-              begin fun _ ->
+            dprint (fun () ->
               "[solve'] All global constraints are true."
-              end;
+            );
             Solved
           with
           | U.Failure "Unresolved constraints" ->
-             dprint
-               begin fun _ ->
+             dprint (fun () ->
                "001 – Global constraints failed"
-               end;
+             );
              (* PossSolvable (Cand (cD_p, LF.Empty, mCands, sCands)) *)
              NotSolvable
           | U.GlobalCnstrFailure (_, cnstr) ->
-             dprint
-               begin fun _ ->
-               "002 – Unification of global constraint " ^ cnstr ^ " failed."
-               end;
+             dprintf (fun p ->
+               p.fmt "002 – Unification of global constraint %s failed." cnstr
+             );
              NotSolvable
         end
      | _ -> PossSolvable (Cand (cD_p, LF.Empty, mCands', sCands'))
@@ -1574,19 +1571,17 @@ let rec solve' cD (matchCand, ms) cD_p mCands' sCands' =
             solve' cD (mCands, ms) cD_p (mc :: mCands') sCands'
           with
           | U.GlobalCnstrFailure (_, cnstr) ->
-             dprint
-               begin fun _ ->
-               "003  UNIFY FAILURE – GLOBAL CONSTRAINT FAILURE"
-               end;
+             dprint (fun () ->
+               "003 UNIFY FAILURE – GLOBAL CONSTRAINT FAILURE"
+             );
              NotSolvable
           | U.Failure msg ->
              if U.unresolvedGlobalCnstrs ()
              then
                begin
-                 dprint
-                   begin fun _ ->
-                   " UNIFY FAILURE " ^ msg ^ "\n MOVED BACK TO SPLIT CAND"
-                   end;
+                 dprintf (fun p ->
+                   p.fmt " UNIFY FAILURE %s@. MOVED BACK TO SPLIT CANDIDATE" msg
+                 );
                  let sc = Split (CovSub (cPsi, s, sT), MetaSub (cPsi_p, s_p, sT_p)) in
                  solve' cD (mCands, ms) cD_p mCands' (sc :: sCands')
                end
@@ -1602,10 +1597,9 @@ let rec solve' cD (matchCand, ms) cD_p mCands' sCands' =
                   solve' cD (mCands, ms) cD_p (mCands') (sc :: sCands')
                | _ ->
                   (* we are not trying to be clever and see if a context split would lead to progress *)
-                  dprint
-                    begin fun _ ->
-                    "004 UNIFY FAILURE " ^ msg ^ " \n NOT SOLVABLE\n"
-                    end;
+                  dprintf (fun p ->
+                    p.fmt "004 UNIFY FAILURE %s@. NOT SOLVABLE@." msg
+                  );
                   NotSolvable
                end
         end
@@ -1644,7 +1638,7 @@ let rec solve' cD (matchCand, ms) cD_p mCands' sCands' =
             dprint (fun _ -> "[solve'] matched terms; now going to solve remaining equations");
             solve' cD (mCands, ms) cD_p (mc :: mCands') sCands'
           with
-          (* should this case betaken care of during pre_match phase ? *)
+          (* should this case be taken care of during pre_match phase ? *)
           | U.GlobalCnstrFailure (_, cnstr) ->
              print_string ("005 Unification of pre-solved equation failed due to the fact the constraint " ^ cnstr ^ " cannot be solved.\n");
              NotSolvable
@@ -1663,10 +1657,9 @@ let rec solve' cD (matchCand, ms) cD_p mCands' sCands' =
              if U.unresolvedGlobalCnstrs ()
              then
                begin
-                 dprint
-                   begin fun _ ->
-                   " UNIFY FAILURE " ^ msg ^ "\n MOVED BACK TO SPLIT CAND"
-                   end;
+                 dprintf (fun p ->
+                   p.fmt " UNIFY FAILURE %s@. MOVED BACK TO SPLIT CANDIDATE" msg
+                 );
                  let sc = Split (CovGoal (cPsi, tR, sA), MetaPatt (cPsi_p, tR_p, sA_p)) in
                  solve' cD (mCands, ms) cD_p mCands' (sc :: sCands')
                end
@@ -1677,10 +1670,9 @@ let rec solve' cD (matchCand, ms) cD_p mCands' sCands' =
                   let sc = Split (CovGoal (cPsi, tR, sA), MetaPatt (cPsi_p, tR_p, sA_p)) in
                   solve' cD (mCands, ms) cD_p (mCands') (sc :: sCands')
                | _ ->
-                  dprint
-                    begin fun _ ->
-                    "006 UNIFY FAILURE " ^ msg ^ " \n NOT SOLVABLE\n"
-                    end;
+                  dprintf (fun p ->
+                    p.fmt "006 UNIFY FAILURE %s@. NOT SOLVABLE@." msg
+                  );
                   NotSolvable
                end
         end
@@ -1861,12 +1853,10 @@ let rec refine_pattern cov_goals ((cD, cG, candidates, patt) as cov_problem) =
        end;
      let cG' = Whnf.cnormGCtx (cG, t) in
      let candidates' = refine_candidates (cD_cg, cG', t) (cD, cG, candidates) in
-     dprint
-       begin fun _ ->
-       "[refine_pattern] DONE : "
-       ^ "Remaining #refined candidates = "
-       ^ string_of_int (List.length candidates')
-       end;
+     dprintf (fun p ->
+       p.fmt "[refine_pattern] DONE : Remaining #refined candidates = %d"
+       (List.length candidates')
+     );
      let pat' = Whnf.cnormPattern (patt, t) in
      dprintf
        begin fun p ->

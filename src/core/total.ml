@@ -248,7 +248,10 @@ let get_order (mfs : Comp.total_dec list) =
        (dec.name, Some [x], (tau, Whnf.m_id))
     | `inductive (Lex xs) ->
        let xs = List.map (fun (Arg x) -> x) xs in
-       dprint (fun () -> "[get_order] " ^ List.fold_right (fun x s -> (string_of_int x) ^ " " ^ s) xs "");
+       dprintf (fun p ->
+         p.fmt "[get_order] %a"
+         (List.pp ~pp_sep:Format.pp_print_space Format.pp_print_int) xs
+       );
        (dec.name, Some xs, (tau, Whnf.m_id))
     | `not_recursive
       | `trust
@@ -564,7 +567,7 @@ let rec gen_rec_calls cD cIH (cD', j) mfs =
             with
             | Not_compatible ->
                dprint
-                 begin fun _ ->
+                 begin fun () ->
                  "[wk_wfrec_all] skipped Not_compatible recursive call"
                  end;
                mk_wfrec_all (f, ttau) xs
@@ -583,9 +586,9 @@ let rec gen_rec_calls cD cIH (cD', j) mfs =
              a given schema *)
           mk_all (cIH', j) mf_list
      in
-     dprint (fun () -> "[gen_rec_calls] for j = " ^ string_of_int j ^ "\n");
+     dprintf (fun p -> p.fmt "[gen_rec_calls] for j = %d@." j);
      let cIH' = mk_all (cIH, j) mf_list in
-     dprint (fun () -> "[gen_rec_calls] for j = " ^ string_of_int (j + 1) ^ "\n");
+     dprintf (fun p -> p.fmt "[gen_rec_calls] for j = %d" (j + 1));
      gen_rec_calls cD cIH' (cD', j + 1) mfs
 
 (* Generating recursive calls on computation-level variables *)

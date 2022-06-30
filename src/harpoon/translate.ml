@@ -205,24 +205,22 @@ let trap f =
   | Error e -> Either.left e
 
 let fmt_ppr_error ppf =
-  let open Format in
   function
   | IncompleteProof ->
-     fprintf ppf "The proof is incomplete."
+     Format.fprintf ppf "The proof is incomplete."
 
 let fmt_ppr_result ppf =
-  let open Format in
   function
   | Either.Right e ->
      Printer.with_implicits false
        begin fun _ ->
-       fprintf ppf
+       Format.fprintf ppf
          "@[<v>Translation generated program:\
           @,  @[%a@]@,@,@]"
          P.(fmt_ppr_cmp_exp_chk LF.Empty LF.Empty l0) e
        end
   | Either.Left err ->
-     fprintf ppf
+     Format.fprintf ppf
        "@[<v>Translation failed.\
         @,@[%a@]@]"
        fmt_ppr_error err
@@ -231,8 +229,8 @@ let entry { CompS.Entry.prog; typ = tau; name; _ } =
   let prog =
     Option.get'
       (Error.Violation
-         ("The body of theorem "
-          ^ Name.render_name name ^ " is unknown."))
+         (Format.asprintf
+           "The body of theorem %s is unknown." (Name.render_name name)))
       prog
   in
   let thm =

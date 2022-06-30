@@ -144,7 +144,7 @@ let rec eval_syn i (theta, eta) =
      end
 
   | Comp.Var (_, x) ->
-     dprint (fun () -> "[eval_syn] Looking up " ^ string_of_int x ^ " in environment");
+     dprintf (fun p -> p.fmt "[eval_syn] Looking up %d in environment" x);
      begin match lookupValue x eta with
      | Comp.ThmValue (cid, Comp.Program e', theta', eta') ->
         dprintf

@@ -260,7 +260,7 @@ let rec cnormApxDCtx loc cD delta psi ((_ , t) as cDt) =
   | Apx.LF.Null -> psi
   | Apx.LF.CtxVar (Apx.LF.CtxOffset offset) ->
      let l_delta = lengthApxMCtx delta in
-     dprint (fun () -> "[cnormApxDCtx] CtxOffset = " ^ string_of_int offset ^ "\n");
+     dprintf (fun p -> p.fmt "[cnormApxDCtx] CtxOffset = %d@." offset);
      (* let offset' = (offset - l_delta) in *)
      if offset > l_delta
      then

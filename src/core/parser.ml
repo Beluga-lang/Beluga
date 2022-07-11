@@ -32,66 +32,8 @@ So our parsing function type now looks like:
 
 > type 'a parser = state -> state * (error, 'a) Either.t
 
-where `state` contains a `(Loc.t * Token.t) LinkStream.t` for the
+where `state` contains a `(Location.t * Token.t) LinkStream.t` for the
 input as well as extra stuff for handling backtracking.
-
-In reality, we wrap the parsing function into a record so that we can
-possibly extend parsing functions later with metadata.
-
-**** OCaml shortcomings
-
-OCaml is a strict language, so one cannot define recursive values that
-are _not functions_ in which the recursion is not guarded by a
-constructor.
-For instance, one can write `let rec zeroes = 0 :: zeroes`, but not
-`let rec x = x`. We get the error "this kind of expression is not
-allowed on the right-hand side of `let rec'."
-
-So suppose we are parsing arithmetic expressions with addition and
-multiplication. We would like to write:
-
-> let rec term =
->   seq2
->     factor
->     (maybe (token T.PLUS &> term))
->   $> fun (x, y) ->
->      match y with
->      | Some y -> Add (x, y)
->      | None -> x
-> and factor = ...
-> and literal = ...
-
-But now we have a problem, because clearly `term` refers to itself and
-it isn't syntactically a function, nor guarded by a constructor.
-Really, though, this *is* a
-function. In fact, it has function type. So what we can do is
-eta-expand the definition to make `term` syntactically a function,
-thus avoiding the recursive value error.
-
-> let rec term =
->   { run =
->       fun s ->
->       let p =
->         seq2
->           factor
->           (maybe (token T.PLUS &> term))
->         $> fun (x, y) ->
->            match y with
->            | Some y -> Add (x, y)
->            | None -> x
->       in
->       run p s
->   }
-> and ...
-
-Because our parsing functions are wrapped in records, we also need to
-eta-expand the records, which amounts to wrapping and unwrapping.
-But we can see that our original implementation appears verbatim
-within the expanded version. (Perhaps one could write a PPX rewriter
-that does this transformation and avoids the administrative clutter of
-eta-expanding.)
-This trick is used extensively in the definition of the parsers below,
-so it's important to be aware of it.
 
 ***** Backtracking
 
@@ -423,17 +365,11 @@ let initial_state input =
 type 'a result = (error, 'a) Either .t
 
 (** A parsing function transforms a state and produces a parsing result. *)
-type 'a parser' = state -> state * 'a result
-
-(** An annotated parsing function with an optional label. *)
-type 'a parser =
-  { run : 'a parser' (** The parsing function. *)
-             (* ; label : string option (** The name of the parser. Used to generate error messages. *) *)
-  }
+type 'a parser = state -> state * 'a result
 
 (** Run a parser.
     In other words, extracts the parsing function from a parser. *)
-let[@inline] run p = p.run
+let[@inline] run p s = p s
 
 (** Eliminator for parse results. *)
 let handle catch f = Either.eliminate catch f
@@ -457,7 +393,7 @@ type 'a t = 'a parser
     and is used to implement "low-level" parser transformations.
  *)
 let catch (p : 'a parser) (handler : state * 'a result -> state * 'b result) : 'b parser =
-  { run = fun s -> run p s |> handler }
+  fun s -> run p s |> handler
 
   (*
 (** Runs p. If it fails, its error path is transformed by the given
@@ -482,7 +418,7 @@ let fail_at s error = fail_at' s (next_loc_at s) [] error
 
 (** A parser that fails with the given error and path. *)
 let fail' path e : 'a parser =
-  { run = fun s -> fail_at' s (next_loc_at s) path e }
+  fun s -> fail_at' s (next_loc_at s) path e
 
 (** A parser that fails with the given error and an empty path. *)
 let fail e : 'a parser = fail' [] e
@@ -492,11 +428,11 @@ let return_at s x =
 
 (** Gets the current parser state. *)
 let get_state : state parser =
-  { run = fun s -> return_at s s }
+  fun s -> return_at s s
 
 (** Sets the current parser state. *)
 let put_state (s : state) : unit parser =
-  { run = fun _ -> return_at s () }
+  fun _ -> return_at s ()
 
   (*
 (** Keeps the state unchanged, but reads the current location. *)
@@ -509,25 +445,20 @@ let get_loc =
 
 (** Runs the parser `p` with unlimited backtracking enabled. *)
 let trying p =
-  { run =
-      fun s ->
-      match run p s with
-      | (s, Either.Left e) -> ({ s with backtrack = true}, Either.left e)
-      | x -> x
-  }
-
+  fun s ->
+    match run p s with
+    | (s, Either.Left e) -> ({ s with backtrack = true}, Either.left e)
+    | x -> x
 module M = Monad.Make (struct
   type nonrec 'a t = 'a t
 
-  let return x = { run = fun s -> return_at s x }
+  let return x = fun s -> return_at s x
 
   let bind k p =
-    { run =
-      fun s ->
-      match run p s with
-      | (s, Either.Right x) -> run (k x) s
-      | (s, Either.Left e) -> (s, Either.left e)
-    }
+    fun s ->
+    match run p s with
+    | (s, Either.Right x) -> run (k x) s
+    | (s, Either.Left e) -> (s, Either.left e)
 end)
 
 include (M : Monad.MONAD with type 'a t := 'a t)
@@ -556,15 +487,12 @@ let prev_loc : Loc.t parser =
 
 (** Runs `p` tracking the span of source material processed by it. *)
 let span p =
-  { run =
-      fun s ->
-      let p =
-        seq3 next_loc p prev_loc
-        $> fun (l1, x, l2) -> (Loc.join l1 l2, x)
-      in
-      run p s
-  }
-
+  fun s ->
+  let p =
+    seq3 next_loc p prev_loc
+    $> fun (l1, x, l2) -> (Loc.join l1 l2, x)
+  in
+  run p s
 (** Runs the parser, and if it fails, runs the given function to
     transform the label stack.
     Also provides the location of the very next token `p` would see.
@@ -681,45 +609,39 @@ let peek : (Loc.t * Token.t) option parser = anon_parser (fun s -> return_at s (
     Backtracking is enabled by the `trying` combinator.
  *)
 let alt (p1 : 'a parser) (p2 : 'a parser) : 'a parser =
-  { run =
-      fun s ->
-      match run p1 s with
-      | (s', Either.Left e) ->
-         let consumed_input = LinkStream.position s.input < LinkStream.position s'.input in
-         if Bool.not consumed_input || s'.backtrack
-         then run p2 s
-         else (s', Either.left e)
-      | x -> x
-  }
+  fun s ->
+  match run p1 s with
+  | (s', Either.Left e) ->
+      let consumed_input = LinkStream.position s.input < LinkStream.position s'.input in
+      if Bool.not consumed_input || s'.backtrack
+      then run p2 s
+      else (s', Either.left e)
+  | x -> x
 
 let choice (ps : 'a parser list) : 'a parser =
-  { run =
-      fun s ->
-      let rec go es =
-        function
-        | [] -> fail (NoMoreChoices es)
-        | p :: ps' ->
-           catch p
-             (function
-              | (s', Either.Left e) ->
-                 let consumed_input = LinkStream.position s.input < LinkStream.position s'.input in
-                 if Bool.not consumed_input || s'.backtrack
-                 then run (go (e :: es) ps') s
-                 else (s', Either.left e)
-              | x -> x)
-      in
-      run (go [] ps) s
-  }
+  fun s ->
+  let rec go es =
+    function
+    | [] -> fail (NoMoreChoices es)
+    | p :: ps' ->
+        catch p
+          (function
+          | (s', Either.Left e) ->
+              let consumed_input = LinkStream.position s.input < LinkStream.position s'.input in
+              if Bool.not consumed_input || s'.backtrack
+              then run (go (e :: es) ps') s
+              else (s', Either.left e)
+          | x -> x)
+  in
+  run (go [] ps) s
 
 (** Succeeds only if the stream has reached the end of the input. *)
 let eoi : unit parser =
-  { run =
-      fun s ->
-      match LinkStream.observe s.input with
-      | None | Some ((_, T.EOI), _) -> return_at s ()
-      | Some ((_, t), _) ->
-        fail_at s (Unexpected { expected = `eoi; actual = `token (Some t) })
-  }
+  (fun s ->
+  match LinkStream.observe s.input with
+  | None | Some ((_, T.EOI), _) -> return_at s ()
+  | Some ((_, t), _) ->
+    fail_at s (Unexpected { expected = `eoi; actual = `token (Some t) }))
   |> labelled "end of input"
 
 (** Constructs a parser that accepts the current token if it satisfies
@@ -731,22 +653,20 @@ let eoi : unit parser =
     The input stream advances only if the predicate succeeds.
  *)
 let satisfy (f : T.t -> ('e, 'b) Either.t) : ('e, 'b) Either.t parser =
-  { run =
-      fun s ->
-      match LinkStream.observe s.input with
-      | None -> failwith "lexer invariant failed: end-of-input is a token"
-      | Some ((loc, t), xs) ->
-         let r = f t in
-         let s' =
-           (* construct the new state with the input depending on
-              whether the predicate succeeded.
-            *)
-           match r with
-           | Either.Left _ -> s
-           | Either.Right _ -> { s with input = xs; last_loc = loc }
-         in
-         return_at s' r
-  }
+  fun s ->
+  match LinkStream.observe s.input with
+  | None -> failwith "lexer invariant failed: end-of-input is a token"
+  | Some ((loc, t), xs) ->
+      let r = f t in
+      let s' =
+        (* construct the new state with the input depending on
+          whether the predicate succeeded.
+        *)
+        match r with
+        | Either.Left _ -> s
+        | Either.Right _ -> { s with input = xs; last_loc = loc }
+      in
+      return_at s' r
 
 (** Tries a parser, and if it fails returns None *)
 let maybe (p : 'a parser) : 'a option parser =
@@ -759,17 +679,13 @@ let maybe_default (p : 'a parser) (default : 'a) : 'a parser =
 
 (** Internal implementation of `many` that doesn't label. *)
 let rec many' (p : 'a parser) : 'a list parser =
-  { run =
-      fun s ->
-      run (alt (some' p) (return [])) s
-  }
+  fun s ->
+  run (alt (some' p) (return [])) s
 
 (** Internal implementation of `some` that doesn't label. *)
 and some' (p : 'a parser) : 'a list parser =
-  { run =
-      fun s ->
-      run (p >>= fun x -> many' p >>= fun xs -> return (x :: xs)) s
-  }
+  fun s ->
+  run (p >>= fun x -> many' p >>= fun xs -> return (x :: xs)) s
 
 (** `many p` repeats the parser `p` zero or more times and collects
     the results in a list.
@@ -789,19 +705,17 @@ let some (p : 'a parser) : 'a list parser =
     the result of a parser, use `void`.
  *)
 let sep_by0 (p : 'a parser) (sep : unit parser) : 'a list parser =
-  shifted "many separated"
-    { run =
-        fun s ->
-        let q =
-          maybe p
-          >>= (function
-             | None -> return []
-             | Some x ->
-                many' (sep &> p)
-                >>= fun xs -> return (x :: xs))
-        in
-        run q s
-    }
+  (fun s ->
+  let q =
+    maybe p
+    >>= (function
+        | None -> return []
+        | Some x ->
+          many' (sep &> p)
+          >>= fun xs -> return (x :: xs))
+  in
+  run q s)
+  |> shifted "many separated"
 
 (** `sep_by1 p sep` parses one or more occurrences of `p` separated by
     `sep` and collects the results in a list.
@@ -809,15 +723,13 @@ let sep_by0 (p : 'a parser) (sep : unit parser) : 'a list parser =
     the result of a parser, use `void`.
  *)
 let sep_by1 (p : 'a parser) (sep : unit parser) : 'a List1.t parser =
-  shifted "some separated"
-    { run =
-        fun s ->
-        let q =
-          seq2 p (many' (sep &> p))
-          $> fun (x, xs) -> List1.from x xs
-        in
-        run q s
-    }
+  (fun s ->
+  let q =
+    seq2 p (many' (sep &> p))
+    $> fun (x, xs) -> List1.from x xs
+  in
+  run q s)
+  |> shifted "some separated"
 
 (***** Unmixing & other checks *****)
 
@@ -1105,94 +1017,82 @@ let type_kind =
     (span (token T.KW_TYPE) $> fun (loc, _) -> LF.Typ loc)
 
 let rec lf_kind =
-  { run =
-      fun s ->
-      let pi_kind =
-        seq2
-          (lf_typ_decl |> braces <& maybe (token T.ARROW))
-          lf_kind
-        |> span
-        $> fun (loc, (d, k)) -> LF.PiKind (loc, d, k)
-      in
-      let arr_kind =
-        seq2
-          (lf_typ_atomic <& token T.ARROW)
-          lf_kind
-        |> span
-        $> fun (loc, (a, k)) -> LF.ArrKind (loc, a, k)
-      in
-      let p =
-        choice
-          [ label pi_kind "LF Pi kind"
-          ; label arr_kind "LF arrow kind"
-          ; type_kind
-          ]
-        |> labelled "LF kind"
-      in
-      run p s
-  }
+  fun s ->
+  let pi_kind =
+    seq2
+      (lf_typ_decl |> braces <& maybe (token T.ARROW))
+      lf_kind
+    |> span
+    $> fun (loc, (d, k)) -> LF.PiKind (loc, d, k)
+  in
+  let arr_kind =
+    seq2
+      (lf_typ_atomic <& token T.ARROW)
+      lf_kind
+    |> span
+    $> fun (loc, (a, k)) -> LF.ArrKind (loc, a, k)
+  in
+  let p =
+    choice
+      [ label pi_kind "LF Pi kind"
+      ; label arr_kind "LF arrow kind"
+      ; type_kind
+      ]
+    |> labelled "LF kind"
+  in
+  run p s
 
 and lf_term =
-  { run =
-      fun s ->
-      let term =
-        choice
-          [ lf_term_lam
-          ; lf_term_head
-          ; lf_term_atomic
-          ]
-      in
-      run (term |> labelled "LF term") s
-  }
+  fun s ->
+  let term =
+    choice
+      [ lf_term_lam
+      ; lf_term_head
+      ; lf_term_atomic
+      ]
+  in
+  run (term |> labelled "LF term") s
 
 and lf_term_sequence =
-  { run =
-      fun s ->
-      let terms =
-        span (some lf_term) $> (fun (loc, ms) -> LF.TList (loc, ms))
-      in
-      run (terms |> labelled "LF term sequence") s
-  }
+  fun s ->
+  let terms =
+    span (some lf_term) $> (fun (loc, ms) -> LF.TList (loc, ms))
+  in
+  run (terms |> labelled "LF term sequence") s
 
 and lf_term_lam =
-  { run =
-      fun s ->
-      let lam = seq4 (token T.LAMBDA) name (token T.DOT) lf_term_sequence
-        |> span
-        $> fun (loc, (_, x, _, ms)) ->
-            LF.Lam (loc, x, ms)
-      in
-      run (lam |> labelled "LF lambda term") s
-  }
+  fun s ->
+  let lam = seq4 (token T.LAMBDA) name (token T.DOT) lf_term_sequence
+    |> span
+    $> fun (loc, (_, x, _, ms)) ->
+        LF.Lam (loc, x, ms)
+  in
+  run (lam |> labelled "LF lambda term") s
 
 and lf_term_head =
-  { run =
-      fun s ->
-      let head =
-        span lf_head $> fun (loc, h) -> LF.Root (loc, h, LF.Nil)
-      in
-      run (head |> labelled "LF head term") s
-  }
+  fun s ->
+  let head =
+    span lf_head $> fun (loc, h) -> LF.Root (loc, h, LF.Nil)
+  in
+  run (head |> labelled "LF head term") s
 
 and lf_term_atomic =
-  { run =
-      fun s ->
-      let atomic =
-        choice
-          [ span (token T.UNDERSCORE)
-            $> (fun (loc, _) -> LF.Root (loc, LF.Hole loc, LF.Nil))
-          ; span (parens (seq2 lf_typ (maybe (token T.COLON &> lf_typ))))
-            >>= fun (loc, (m, q)) ->
-              match q, m with
-              | None, LF.AtomTerm (_, t) -> return t
-              | None, _ -> LF.NTyp (loc, m) |> return
-              | Some a, LF.AtomTerm (_, t) -> LF.Ann (loc, t, a) |> return
-              | _, _ -> fail (Violation "invalid atomic LF term")
-                                     (* ^ XXX not sure if this is a violation or a user error -je *)
-          ]
-      in
-      run (atomic |> labelled "LF atomic term") s
-  }
+  fun s ->
+  let atomic =
+    choice
+      [ span (token T.UNDERSCORE)
+        $> (fun (loc, _) -> LF.Root (loc, LF.Hole loc, LF.Nil))
+      ; span (parens (seq2 lf_typ (maybe (token T.COLON &> lf_typ))))
+        >>= fun (loc, (m, q)) ->
+          match q, m with
+          | None, LF.AtomTerm (_, t) -> return t
+          | None, _ -> LF.NTyp (loc, m) |> return
+          | Some a, LF.AtomTerm (_, t) -> LF.Ann (loc, t, a) |> return
+          | _, _ -> fail (Violation "invalid atomic LF term")
+                                  (* ^ XXX not sure if this is a violation or a user error -je *)
+      ]
+  in
+  run (atomic |> labelled "LF atomic term") s
 
 and lf_head =
   span fqname
@@ -1201,16 +1101,14 @@ and lf_head =
 
 (** An LF type declaration, `x : a'. *)
 and lf_typ_decl =
-  { run =
-      fun s ->
-      let p =
-        seq2
-          (name <& token T.COLON)
-          lf_typ
-        |> labelled "LF type declaration"
-        $> fun (x, a) -> LF.TypDecl (x, a) in
-      run p s
-  }
+  fun s ->
+  let p =
+    seq2
+      (name <& token T.COLON)
+      lf_typ
+    |> labelled "LF type declaration"
+    $> fun (x, a) -> LF.TypDecl (x, a) in
+  run p s
 
 (** Parses an LF kind or type.
     This is an optimization. In situations where either a type or a
@@ -1218,98 +1116,88 @@ and lf_typ_decl =
     returned. This is more efficient than backtracking the parser.
  *)
 and lf_kind_or_typ : kind_or_typ parser =
-  { run =
-      fun s ->
-      let pi =
-        seq2
-          (lf_typ_decl |> braces <& maybe (token T.ARROW))
-          lf_kind_or_typ
-        |> span
-        |> labelled "LF Pi kind or type"
-        $> fun (loc, (name, k_or_a)) ->
-           match k_or_a with
-           | `Kind k -> `Kind (LF.PiKind (loc, name, k))
-           | `Typ a -> `Typ (LF.PiTyp (loc, name, a))
-      in
-      let arrow =
-        seq2
-          lf_typ_atomic
-          (maybe (token T.ARROW &> lf_kind_or_typ))
-        |> span
-        |> labelled "LF arrow kind or type"
-        $> fun (loc, (a, k_or_a)) ->
-           match k_or_a with
-           | None -> `Typ a
-           | Some (`Kind k) -> `Kind (LF.ArrKind (loc, a, k))
-           | Some (`Typ a') -> `Typ (LF.ArrTyp (loc, a, a'))
-      in
-      let p =
-        choice
-          [ pi
-          ; type_kind $> (fun a -> `Kind a)
-          ; arrow
-          ]
-        |> labelled "LF kind or type"
-      in
-      run p s
-  }
+  fun s ->
+  let pi =
+    seq2
+      (lf_typ_decl |> braces <& maybe (token T.ARROW))
+      lf_kind_or_typ
+    |> span
+    |> labelled "LF Pi kind or type"
+    $> fun (loc, (name, k_or_a)) ->
+        match k_or_a with
+        | `Kind k -> `Kind (LF.PiKind (loc, name, k))
+        | `Typ a -> `Typ (LF.PiTyp (loc, name, a))
+  in
+  let arrow =
+    seq2
+      lf_typ_atomic
+      (maybe (token T.ARROW &> lf_kind_or_typ))
+    |> span
+    |> labelled "LF arrow kind or type"
+    $> fun (loc, (a, k_or_a)) ->
+        match k_or_a with
+        | None -> `Typ a
+        | Some (`Kind k) -> `Kind (LF.ArrKind (loc, a, k))
+        | Some (`Typ a') -> `Typ (LF.ArrTyp (loc, a, a'))
+  in
+  let p =
+    choice
+      [ pi
+      ; type_kind $> (fun a -> `Kind a)
+      ; arrow
+      ]
+    |> labelled "LF kind or type"
+  in
+  run p s
 
 and lf_typ : LF.typ parser =
-  { run =
-      fun s ->
-      let p =
-        choice
-          [ lf_typ_pi
-          ; lf_typ_arr
-          ; lf_typ_atomic
-          ]
-      in
-      run (p |> labelled "LF type") s
-  }
+  fun s ->
+  let p =
+    choice
+      [ lf_typ_pi
+      ; lf_typ_arr
+      ; lf_typ_atomic
+      ]
+  in
+  run (p |> labelled "LF type") s
 
 and lf_typ_pi : LF.typ parser =
-  { run =
-      fun s ->
-      let pi_typ =
-        seq2
-          (trying (lf_typ_decl |> braces <& maybe (token T.ARROW)))
-          lf_typ
-        |> span
-        $> fun (loc, (d, ty2)) ->
-          LF.PiTyp (loc, d, ty2)
-      in
-      run (pi_typ |> labelled "LF pi type") s
-  }
+  fun s ->
+  let pi_typ =
+    seq2
+      (trying (lf_typ_decl |> braces <& maybe (token T.ARROW)))
+      lf_typ
+    |> span
+    $> fun (loc, (d, ty2)) ->
+      LF.PiTyp (loc, d, ty2)
+  in
+  run (pi_typ |> labelled "LF pi type") s
 
 
 and lf_typ_arr : LF.typ parser =
-  { run =
-      fun s ->
-      let arr_typ =
-        seq2
-          (trying (lf_typ_atomic <& token T.ARROW))
-          lf_typ
-        |> span
-        $> (fun (loc, (a1, a2)) -> LF.ArrTyp (loc, a1, a2))
-      in
-      run (arr_typ |> labelled "LF arrow type") s
-  }
+  fun s ->
+  let arr_typ =
+    seq2
+      (trying (lf_typ_atomic <& token T.ARROW))
+      lf_typ
+    |> span
+    $> (fun (loc, (a1, a2)) -> LF.ArrTyp (loc, a1, a2))
+  in
+  run (arr_typ |> labelled "LF arrow type") s
 
 and lf_typ_atomic =
-  { run =
-      fun s ->
-      let p =
-        alt
-          (span lf_term_sequence
-            $> function
-              | (loc, LF.NTyp (_, t)) -> t
-              | (loc, LF.TList (_, [LF.NTyp (_, t)])) -> t
-              | (loc, LF.TList (_, [n])) -> LF.AtomTerm (loc, n)
-              | (loc, t) -> LF.AtomTerm (loc, t))
-          (parens lf_typ)
-      in
-      run (p |> labelled "LF atomic type") s
-  }
+  fun s ->
+  let p =
+    alt
+      (span lf_term_sequence
+        $> function
+          | (loc, LF.NTyp (_, t)) -> t
+          | (loc, LF.TList (_, [LF.NTyp (_, t)])) -> t
+          | (loc, LF.TList (_, [n])) -> LF.AtomTerm (loc, n)
+          | (loc, t) -> LF.AtomTerm (loc, t))
+      (parens lf_typ)
+  in
+  run (p |> labelled "LF atomic type") s
 
 let sgn_lf_const_decl (* sgn_lf_typ *) =
   (seq2
@@ -1406,290 +1294,268 @@ let rec lf_function_type p p_atomic =
     into a TList for infix operator parsing later during indexing.
  *)
 and clf_term_app =
-  { run =
-      fun s ->
-      let normal_list =
-        some clf_normal
-        |> span
-        $> fun (loc, ms) -> LF.TList (loc, ms)
-      in
-      let p =
-        choice
-          [ normal_list
-          ; span T.(tokens [LBRACE; RBRACE])
-            $> (fun (loc, _) -> LF.PatEmpty loc)
-          ; span clf_typ
-            $> (fun (loc, a) -> LF.NTyp (loc, a))
-          ]
-        |> labelled "contextual LF application"
-      in
-      run p s
-  }
+  fun s ->
+  let normal_list =
+    some clf_normal
+    |> span
+    $> fun (loc, ms) -> LF.TList (loc, ms)
+  in
+  let p =
+    choice
+      [ normal_list
+      ; span T.(tokens [LBRACE; RBRACE])
+        $> (fun (loc, _) -> LF.PatEmpty loc)
+      ; span clf_typ
+        $> (fun (loc, a) -> LF.NTyp (loc, a))
+      ]
+    |> labelled "contextual LF application"
+  in
+  run p s
 
 and clf_typ_atomic =
-  { run =
-      fun s ->
-      let a =
-        labelled
-          "nonempty sequence of contextual LF normal terms"
-          begin
-            some clf_normal
-            |> span
-            $> fun (loc, ms) ->
-               match ms with
-               | [LF.NTyp (_, a)] -> a
-               | _ -> LF.AtomTerm (loc, LF.TList (loc, ms))
-          end
-      in
-      let b =
-        seq2
-          name
-          (many clf_normal)
+  fun s ->
+  let a =
+    labelled
+      "nonempty sequence of contextual LF normal terms"
+      begin
+        some clf_normal
         |> span
-        $> fun (loc, (x, ms)) ->
-           LF.AtomTerm
-             ( loc
-             , LF.TList (loc, (LF.Root (loc, LF.Name (loc, x, None), LF.Nil)) :: ms)
-             )
-      in
-      let p =
-        choice
-          [ a
-          ; b
-          ; parens clf_typ
-          ; clf_typ_rec_block |> span $> fun (loc, r) -> LF.Sigma (loc, r)
-          ]
-        |> labelled "atomic contextual LF type"
-      in
-      run p s
-  }
+        $> fun (loc, ms) ->
+            match ms with
+            | [LF.NTyp (_, a)] -> a
+            | _ -> LF.AtomTerm (loc, LF.TList (loc, ms))
+      end
+  in
+  let b =
+    seq2
+      name
+      (many clf_normal)
+    |> span
+    $> fun (loc, (x, ms)) ->
+        LF.AtomTerm
+          ( loc
+          , LF.TList (loc, (LF.Root (loc, LF.Name (loc, x, None), LF.Nil)) :: ms)
+          )
+  in
+  let p =
+    choice
+      [ a
+      ; b
+      ; parens clf_typ
+      ; clf_typ_rec_block |> span $> fun (loc, r) -> LF.Sigma (loc, r)
+      ]
+    |> labelled "atomic contextual LF type"
+  in
+  run p s
 
 and clf_typ_pure =
-  { run =
-      fun s ->
-      let p =
-        alt
-          (lf_function_type clf_typ_pure clf_typ_pure_atomic)
-          (clf_typ_pure_atomic)
-        |> labelled "return contextual LF type"
-      in
-      run p s
-  }
+  fun s ->
+  let p =
+    alt
+      (lf_function_type clf_typ_pure clf_typ_pure_atomic)
+      (clf_typ_pure_atomic)
+    |> labelled "return contextual LF type"
+  in
+  run p s
 
 and clf_typ_pure_atomic =
-  { run =
-      fun s ->
-      let p =
-        choice
-          [ parens clf_typ_pure
-          ; seq2 name (many clf_normal)
-            |> span
-            $> fun (loc, (x, ms)) ->
-               LF.AtomTerm
-                 ( loc
-                 , LF.TList
-                     ( loc
-                     , LF.Root (loc, LF.Name (loc, x, None), LF.Nil)
-                       :: ms
-                     )
-                 )
-          ]
-        |> labelled "atomic return contextual LF type"
-      in
-      run p s
-  }
+  fun s ->
+  let p =
+    choice
+      [ parens clf_typ_pure
+      ; seq2 name (many clf_normal)
+        |> span
+        $> fun (loc, (x, ms)) ->
+            LF.AtomTerm
+              ( loc
+              , LF.TList
+                  ( loc
+                  , LF.Root (loc, LF.Name (loc, x, None), LF.Nil)
+                    :: ms
+                  )
+              )
+      ]
+    |> labelled "atomic return contextual LF type"
+  in
+  run p s
 
 and clf_typ_rec_elem =
-  { run =
-      fun s ->
-      let p =
-        seq2 (name <& token T.COLON) clf_typ_pure
-        |> labelled "contextual LF block element"
-      in
-      run p s
-  }
+  fun s ->
+  let p =
+    seq2 (name <& token T.COLON) clf_typ_pure
+    |> labelled "contextual LF block element"
+  in
+  run p s
 
 and clf_typ_rec_block =
-  { run =
-      fun s ->
-      let p =
-        rec_block clf_typ_rec_elem
-        |> labelled "contextual LF block"
-      in
-      run p s
-  }
+  fun s ->
+  let p =
+    rec_block clf_typ_rec_elem
+    |> labelled "contextual LF block"
+  in
+  run p s
 
 and clf_typ =
-  { run =
-      fun s ->
-      let pi_decl =
-        seq2
-          (name <& token T.COLON)
-          clf_typ
-        |> braces
-      in
-      let pi =
-        seq2
-          (pi_decl <& maybe (token T.ARROW))
-          clf_typ
-        |> span
-        $> fun (loc, ((x, a), a')) ->
-           LF.PiTyp (loc, LF.TypDecl (x, a), a')
-      in
-      let arrow_or_atomic =
-        seq2
-          clf_typ_atomic
-          (maybe (token T.ARROW &> clf_typ))
-        |> span
-        $> fun (loc, (a, b)) ->
-           match b with
-           | None -> a
-           | Some b -> LF.ArrTyp (loc, a, b)
-      in
-      run (choice
-         [ pi; arrow_or_atomic ]
-       |> labelled "contextual LF type"
-      ) s
-  }
+  fun s ->
+  let pi_decl =
+    seq2
+      (name <& token T.COLON)
+      clf_typ
+    |> braces
+  in
+  let pi =
+    seq2
+      (pi_decl <& maybe (token T.ARROW))
+      clf_typ
+    |> span
+    $> fun (loc, ((x, a), a')) ->
+        LF.PiTyp (loc, LF.TypDecl (x, a), a')
+  in
+  let arrow_or_atomic =
+    seq2
+      clf_typ_atomic
+      (maybe (token T.ARROW &> clf_typ))
+    |> span
+    $> fun (loc, (a, b)) ->
+        match b with
+        | None -> a
+        | Some b -> LF.ArrTyp (loc, a, b)
+  in
+  run (choice
+      [ pi; arrow_or_atomic ]
+    |> labelled "contextual LF type"
+  ) s
 
 and clf_sub_term =
-  { run =
-      fun s ->
-      let p =
-        choice
-          [ token T.HAT |> span $> (fun (loc, _) -> LF.EmptySub loc)
-          ; token T.DOTS |> span $> (fun (loc, _) -> LF.Id loc)
-          ; seq2
-              dollar_name
-              (maybe (bracks clf_sub_new))
-            |> span
-            $> fun (loc, (x, s)) -> LF.SVar (loc, x, s)
-          ]
-        |> labelled "contextual LF substitution term"
-      in
-      run p s
-  }
+  fun s ->
+  let p =
+    choice
+      [ token T.HAT |> span $> (fun (loc, _) -> LF.EmptySub loc)
+      ; token T.DOTS |> span $> (fun (loc, _) -> LF.Id loc)
+      ; seq2
+          dollar_name
+          (maybe (bracks clf_sub_new))
+        |> span
+        $> fun (loc, (x, s)) -> LF.SVar (loc, x, s)
+      ]
+    |> labelled "contextual LF substitution term"
+  in
+  run p s
 
 and clf_sub_new =
-  { run =
-      fun s ->
-      let start =
-        alt
-          (clf_sub_term
-           $> fun t -> (t, []))
-          (span clf_term_app
-           $> fun (loc, tM) -> (LF.EmptySub loc, [tM]))
-      in
-      let nonemptysub =
-        seq2 start (many (token T.COMMA &> clf_term_app))
-        (* we need to reverse xs because the *rightmost* element
-           (textually) must be the head of the list.
-           This is also why ts comes after xs, despite being *parsed*
-           before!
-         *)
-        $> fun ((s, ts), xs) -> (s, List.rev xs @ ts)
-      in
-      let emptysub =
-        span (return ()) $> fun (loc, _) -> (LF.EmptySub loc, [])
-      in
-      let p =
-        alt nonemptysub emptysub
-        |> labelled "contextual LF substitution"
-      in
-      run p s
-  }
+  fun s ->
+  let start =
+    alt
+      (clf_sub_term
+        $> fun t -> (t, []))
+      (span clf_term_app
+        $> fun (loc, tM) -> (LF.EmptySub loc, [tM]))
+  in
+  let nonemptysub =
+    seq2 start (many (token T.COMMA &> clf_term_app))
+    (* we need to reverse xs because the *rightmost* element
+        (textually) must be the head of the list.
+        This is also why ts comes after xs, despite being *parsed*
+        before!
+      *)
+    $> fun ((s, ts), xs) -> (s, List.rev xs @ ts)
+  in
+  let emptysub =
+    span (return ()) $> fun (loc, _) -> (LF.EmptySub loc, [])
+  in
+  let p =
+    alt nonemptysub emptysub
+    |> labelled "contextual LF substitution"
+  in
+  run p s
 
 and clf_head =
-  { run =
-      fun s ->
-      let var =
-        seq3
-          (alt
-             (hash_name $> fun x -> fun loc sigma -> LF.PVar (loc, x, sigma))
-             (fqname $> fun x -> fun loc sigma -> LF.Name (loc, x, sigma)))
-          (maybe clf_projection)
-          (maybe (bracks clf_sub_new))
-        |> shifted "variable head"
-        |> span
-        $> fun (loc, (f, proj, sigma)) ->
-           let m = f loc sigma in
-           match proj with
-           | Some k -> LF.Proj (loc, m, k)
-           | None -> m
-      in
-      let hole =
-        token T.UNDERSCORE
-        |> span
-        $> fun (loc, _) -> LF.Hole loc
-      in
-      run (choice [hole ; var]) s
-  }
+  fun s ->
+  let var =
+    seq3
+      (alt
+          (hash_name $> fun x -> fun loc sigma -> LF.PVar (loc, x, sigma))
+          (fqname $> fun x -> fun loc sigma -> LF.Name (loc, x, sigma)))
+      (maybe clf_projection)
+      (maybe (bracks clf_sub_new))
+    |> shifted "variable head"
+    |> span
+    $> fun (loc, (f, proj, sigma)) ->
+        let m = f loc sigma in
+        match proj with
+        | Some k -> LF.Proj (loc, m, k)
+        | None -> m
+  in
+  let hole =
+    token T.UNDERSCORE
+    |> span
+    $> fun (loc, _) -> LF.Hole loc
+  in
+  run (choice [hole ; var]) s
 
 and clf_normal =
-  { run =
-      fun s ->
-      let lam =
-        seq2
-          (token T.LAMBDA &> name)
-          (token T.DOT &> clf_term_app)
-        |> span
-        |> labelled "LF lambda"
-        $> fun (loc, (x, m)) ->
-           LF.Lam (loc, x, m)
-      in
-      (*
-      let modul =
-        span fqname $> fun (loc, x) -> LF.Root (loc, LF.Name (loc, x), LF.Nil)
-      in
-       *)
-      let head =
-        span clf_head
-        $> fun (loc, h) -> LF.Root (loc, h, LF.Nil)
-      in
-      let app =
-        seq2
-          clf_term_app
-          (maybe (token T.COLON &> clf_typ))
-        |> parens
-        |> span
-        |> labelled "LF application"
-        $> fun (loc, (tm, ann)) ->
-           match ann with
-           | None -> tm
-           | Some a -> LF.Ann (loc, tm, a)
-      in
-      let lfhole =
-        span hole
-        |> labelled "LF hole"
-        $> fun (loc, h) -> LF.LFHole (loc, h)
-      in
-      let tuple =
-        sep_by1 clf_term_app (token T.SEMICOLON)
-        |> angles
-        |> span
-        |> labelled "LF tuple"
-        $> fun (loc, ms) ->
-           LF.Tuple
-             ( loc
-             , List1.fold_right
-                 (fun x -> LF.Last x)
-                 (fun x r -> LF.Cons (x, r))
-                 ms
-             )
-      in
-      let p =
-        choice
-          [ lam
-          (* ; modul *) (* modules are wacky *)
-          ; app
-          ; head
-          ; lfhole
-          ; tuple
-          ]
-        |> labelled "contextual LF normal term"
-      in
-      run p s
-  }
+  fun s ->
+  let lam =
+    seq2
+      (token T.LAMBDA &> name)
+      (token T.DOT &> clf_term_app)
+    |> span
+    |> labelled "LF lambda"
+    $> fun (loc, (x, m)) ->
+        LF.Lam (loc, x, m)
+  in
+  (*
+  let modul =
+    span fqname $> fun (loc, x) -> LF.Root (loc, LF.Name (loc, x), LF.Nil)
+  in
+    *)
+  let head =
+    span clf_head
+    $> fun (loc, h) -> LF.Root (loc, h, LF.Nil)
+  in
+  let app =
+    seq2
+      clf_term_app
+      (maybe (token T.COLON &> clf_typ))
+    |> parens
+    |> span
+    |> labelled "LF application"
+    $> fun (loc, (tm, ann)) ->
+        match ann with
+        | None -> tm
+        | Some a -> LF.Ann (loc, tm, a)
+  in
+  let lfhole =
+    span hole
+    |> labelled "LF hole"
+    $> fun (loc, h) -> LF.LFHole (loc, h)
+  in
+  let tuple =
+    sep_by1 clf_term_app (token T.SEMICOLON)
+    |> angles
+    |> span
+    |> labelled "LF tuple"
+    $> fun (loc, ms) ->
+        LF.Tuple
+          ( loc
+          , List1.fold_right
+              (fun x -> LF.Last x)
+              (fun x r -> LF.Cons (x, r))
+              ms
+          )
+  in
+  let p =
+    choice
+      [ lam
+      (* ; modul *) (* modules are wacky *)
+      ; app
+      ; head
+      ; lfhole
+      ; tuple
+      ]
+    |> labelled "contextual LF normal term"
+  in
+  run p s
 
 (** Parses an LF context, commonly referred to by cPsi.
     This parser allows declarations without a type; if you require
@@ -1697,64 +1563,62 @@ and clf_normal =
     context after.
  *)
 and clf_dctx : LF.dctx parser =
-  { run =
-      fun s ->
-      let clf_typ_decl =
-        seq2
-          name
-          (maybe (token T.COLON &> clf_typ))
-        $> fun (x, tA) ->
-           match tA with
-           | Some tA -> LF.TypDecl (x, tA)
-           | None -> LF.TypDeclOpt x
-      in
-      (* the different ways a context can begin:
-         a hole, a variable, or a declaration
-       *)
-      let start =
-        choice
-          [ token T.UNDERSCORE &> return LF.CtxHole
-          ; span clf_typ_decl
-            $> fun (loc, d) ->
-               (* This is nasty. XXX
-                  We need this to handle context variables, which are
-                  syntactically indistinguishable from a concrete
-                  context beginning with a variable whose type is
-                  omitted (to be solved by unification later).
-                  A better way to do this would be to change, in the
-                  external syntax, the type `dctx` to be something like
-                  ```
-                  type dctx_start = Null | CtxHole
-                  type dctx = dctx_start * typ_decl list
-                  ```
-                  The empty context would be `(Null, [])`.
-                  A context like `g, x:tm` would be `(Null, [TypDeclOpt g; TypDecl (x, tm)])`
-                  A disambiguation would be performed during indexing in the case of a context that
-                  - begins with Null; and
-                  - whose first entry is a TypDeclOpt that refers to a context variable.
-                  This would be transformed into a proper context
-                  beginning with a context variable in the approximate
-                  syntax.
-                *)
-               match d with
-               | LF.TypDeclOpt x -> LF.CtxVar (loc, x)
-               | _ -> LF.DDec (LF.Null, d)
+  fun s ->
+  let clf_typ_decl =
+    seq2
+      name
+      (maybe (token T.COLON &> clf_typ))
+    $> fun (x, tA) ->
+        match tA with
+        | Some tA -> LF.TypDecl (x, tA)
+        | None -> LF.TypDeclOpt x
+  in
+  (* the different ways a context can begin:
+      a hole, a variable, or a declaration
+    *)
+  let start =
+    choice
+      [ token T.UNDERSCORE &> return LF.CtxHole
+      ; span clf_typ_decl
+        $> fun (loc, d) ->
+            (* This is nasty. XXX
+              We need this to handle context variables, which are
+              syntactically indistinguishable from a concrete
+              context beginning with a variable whose type is
+              omitted (to be solved by unification later).
+              A better way to do this would be to change, in the
+              external syntax, the type `dctx` to be something like
+              ```
+              type dctx_start = Null | CtxHole
+              type dctx = dctx_start * typ_decl list
+              ```
+              The empty context would be `(Null, [])`.
+              A context like `g, x:tm` would be `(Null, [TypDeclOpt g; TypDecl (x, tm)])`
+              A disambiguation would be performed during indexing in the case of a context that
+              - begins with Null; and
+              - whose first entry is a TypDeclOpt that refers to a context variable.
+              This would be transformed into a proper context
+              beginning with a context variable in the approximate
+              syntax.
+            *)
+            match d with
+            | LF.TypDeclOpt x -> LF.CtxVar (loc, x)
+            | _ -> LF.DDec (LF.Null, d)
 
-          ]
-      in
-      let p =
-        choice
-          [ seq2
-              start
-              (many (token T.COMMA &> clf_typ_decl))
-            $> (fun (cPsi, ds) ->
-              List.fold_left (fun acc d -> LF.DDec (acc, d)) cPsi ds)
-          ; return LF.Null
-          ]
-        |> labelled "contextual LF context"
-      in
-      run p s
-  }
+      ]
+  in
+  let p =
+    choice
+      [ seq2
+          start
+          (many (token T.COMMA &> clf_typ_decl))
+        $> (fun (cPsi, ds) ->
+          List.fold_left (fun acc d -> LF.DDec (acc, d)) cPsi ds)
+      ; return LF.Null
+      ]
+    |> labelled "contextual LF context"
+  in
+  run p s
 
 (** Parses
     `[ dctx |- p ]`
@@ -1768,25 +1632,23 @@ and contextual : type a. a parser -> (LF.dctx * a) parser =
     p
 
 let meta_obj =
-  { run =
-      fun s ->
-      let p =
-        let clobj =
-          seq2
-            clf_dctx
-            (maybe (token T.TURNSTILE &> clf_sub_new))
-          |> span
-          $> fun (loc, (cPsi, tR)) ->
-             match tR with
-             | Some tR -> (loc, LF.ClObj (cPsi, tR))
-             | None -> (loc, LF.CObj cPsi)
-        in
-        clobj
-        |> bracks
-        |> labelled "meta object"
-      in
-      run p s
-  }
+  fun s ->
+  let p =
+    let clobj =
+      seq2
+        clf_dctx
+        (maybe (token T.TURNSTILE &> clf_sub_new))
+      |> span
+      $> fun (loc, (cPsi, tR)) ->
+          match tR with
+          | Some tR -> (loc, LF.ClObj (cPsi, tR))
+          | None -> (loc, LF.CObj cPsi)
+    in
+    clobj
+    |> bracks
+    |> labelled "meta object"
+  in
+  run p s
 
 (** Parses the `ctype` kind, the kind of computation types. *)
 let ctype_kind =
@@ -1827,76 +1689,74 @@ let cltyp : (LF.dctx * typ_or_ctx) parser =
 
 let clf_ctyp_decl_bare : type a. a name_parser -> (a -> Plicity.t * Name.t) -> LF.ctyp_decl t =
   fun nameclass plicity_of_name ->
-  { run =
-      fun s ->
-      let hash_variable_decl p =
-        contextual_variable_decl
-          (nameclass `hash)
-          (sigil_bracks_or_opt_parens T.HASH)
-          p
+    fun s ->
+    let hash_variable_decl p =
+      contextual_variable_decl
+        (nameclass `hash)
+        (sigil_bracks_or_opt_parens T.HASH)
+        p
+    in
+    let dollar_variable_decl p =
+      contextual_variable_decl
+        (nameclass `dollar)
+        (sigil_bracks_or_opt_parens T.DOLLAR)
+        p
+    in
+    let mk_decl plicity f (loc, (p, w)) =
+      LF.Decl (p, (loc, f w), plicity)
+    in
+    let mk_cltyp_decl plicity f d =
+      mk_decl plicity (fun (cPsi, x) -> LF.ClTyp (f x, cPsi)) d
+    in
+    let mk_cltyp_decl_blank f (loc, (nb, (cPsi, tA))) =
+      let plicity, x = plicity_of_name nb in
+      mk_cltyp_decl plicity f (loc, (x, (cPsi, tA)))
+    in
+    let param_variable =
+      hash_variable_decl (trying clf_typ_atomic)
+      |> span
+      $> mk_cltyp_decl_blank (fun tA -> LF.PTyp tA)
+      |> labelled "parameter variable declaration"
+    in
+    let subst_variable =
+      let subst_class =
+        maybe (token T.HASH)
+        $> Option.eliminate (Fun.const LF.Subst) (Fun.const LF.Ren)
       in
-      let dollar_variable_decl p =
-        contextual_variable_decl
-          (nameclass `dollar)
-          (sigil_bracks_or_opt_parens T.DOLLAR)
-          p
-      in
-      let mk_decl plicity f (loc, (p, w)) =
-        LF.Decl (p, (loc, f w), plicity)
-      in
-      let mk_cltyp_decl plicity f d =
-        mk_decl plicity (fun (cPsi, x) -> LF.ClTyp (f x, cPsi)) d
-      in
-      let mk_cltyp_decl_blank f (loc, (nb, (cPsi, tA))) =
-        let plicity, x = plicity_of_name nb in
-        mk_cltyp_decl plicity f (loc, (x, (cPsi, tA)))
-      in
-      let param_variable =
-        hash_variable_decl (trying clf_typ_atomic)
-        |> span
-        $> mk_cltyp_decl_blank (fun tA -> LF.PTyp tA)
-        |> labelled "parameter variable declaration"
-      in
-      let subst_variable =
-        let subst_class =
-          maybe (token T.HASH)
-          $> Option.eliminate (Fun.const LF.Subst) (Fun.const LF.Ren)
-        in
-        dollar_variable_decl (seq2 subst_class clf_dctx)
-        |> span
-        $> mk_cltyp_decl_blank (fun (sclass, cPhi) -> LF.STyp (sclass, cPhi))
-        |> labelled "substitution/renaming variable"
-      in
-      let q =
-        choice
-          [ param_variable
-          ; subst_variable
-          (* since a name followed by a colon happens in both
-             the case for an mvar and the case for a context
-             variable, we refactor the grammar to parse first the
-             name followed by the colon, and *then* we perform an
-             alternation to see whether we have another name (so
-             a ctx var) or a box (so an mvar)
-           *)
-          ; nameclass `ordinary <& token T.COLON |> span
-            >>= fun (loc1, nb) ->
-              let plicity, x = plicity_of_name nb in
-              alt
-                (span name
-                 $> fun (loc2, ctx) ->
-                    mk_decl plicity
-                      (fun w -> LF.CTyp w)
-                      (Loc.join loc1 loc2, (x, ctx)))
-                (bracks_or_opt_parens (contextual clf_typ_atomic) |> span
-                 $> fun (loc2, d) ->
-                    mk_cltyp_decl
-                      plicity
-                      (fun tA -> LF.MTyp tA)
-                      (Loc.join loc1 loc2, (x, d)))
-          ]
-      in
-      run q s
-  }
+      dollar_variable_decl (seq2 subst_class clf_dctx)
+      |> span
+      $> mk_cltyp_decl_blank (fun (sclass, cPhi) -> LF.STyp (sclass, cPhi))
+      |> labelled "substitution/renaming variable"
+    in
+    let q =
+      choice
+        [ param_variable
+        ; subst_variable
+        (* since a name followed by a colon happens in both
+            the case for an mvar and the case for a context
+            variable, we refactor the grammar to parse first the
+            name followed by the colon, and *then* we perform an
+            alternation to see whether we have another name (so
+            a ctx var) or a box (so an mvar)
+          *)
+        ; nameclass `ordinary <& token T.COLON |> span
+          >>= fun (loc1, nb) ->
+            let plicity, x = plicity_of_name nb in
+            alt
+              (span name
+                $> fun (loc2, ctx) ->
+                  mk_decl plicity
+                    (fun w -> LF.CTyp w)
+                    (Loc.join loc1 loc2, (x, ctx)))
+              (bracks_or_opt_parens (contextual clf_typ_atomic) |> span
+                $> fun (loc2, d) ->
+                  mk_cltyp_decl
+                    plicity
+                    (fun tA -> LF.MTyp tA)
+                    (Loc.join loc1 loc2, (x, d)))
+        ]
+    in
+    run q s
 
 (* parses `name : name` *)
 let ctx_variable =
@@ -1911,76 +1771,74 @@ let ctx_variable =
 
 (** Contextual LF contextual type declaration *)
 let clf_ctyp_decl =
-  { run =
-      fun s ->
-      (* Parses `#name : [ dctx |- p ]` *)
-      let hash_variable_decl p =
-        contextual_variable_decl hash_name bracks_or_opt_parens p
-      in
-      let dollar_variable_decl p =
-        contextual_variable_decl dollar_name bracks_or_opt_parens p
-      in
-      let mk_decl plicity f (loc, (p, w)) =
-        LF.Decl (p, (loc, f w), plicity)
-      in
-      let mk_cltyp_decl f d =
-        mk_decl Plicity.explicit (fun (cPsi, x) -> LF.ClTyp (f x, cPsi)) d
-      in
+  fun s ->
+  (* Parses `#name : [ dctx |- p ]` *)
+  let hash_variable_decl p =
+    contextual_variable_decl hash_name bracks_or_opt_parens p
+  in
+  let dollar_variable_decl p =
+    contextual_variable_decl dollar_name bracks_or_opt_parens p
+  in
+  let mk_decl plicity f (loc, (p, w)) =
+    LF.Decl (p, (loc, f w), plicity)
+  in
+  let mk_cltyp_decl f d =
+    mk_decl Plicity.explicit (fun (cPsi, x) -> LF.ClTyp (f x, cPsi)) d
+  in
 
-      let param_variable =
-        labelled "parameter variable declaration"
-          begin
-            hash_variable_decl (trying clf_typ_atomic)
-            |> span
-            $> mk_cltyp_decl (fun tA -> LF.PTyp tA)
-          end
-      in
-      let subst_variable =
-        let subst_class =
-          maybe (token T.HASH)
-          $> Option.eliminate (Fun.const LF.Subst) (Fun.const LF.Ren)
-        in
-        labelled "substitution/renaming variable"
-          begin
-            dollar_variable_decl (seq2 subst_class clf_dctx)
-            |> span
-            $> mk_cltyp_decl (fun (sclass, cPhi) -> LF.STyp (sclass, cPhi))
-          end
-      in
-      let q =
-        choice
-          [ param_variable
-          ; subst_variable
-          (* since a name followed by a colon happens in both
-             the case for an mvar and the case for a context
-             variable, we refactor the grammar to parse first the
-             name followed by the colon, and *then* we perform an
-             alternation to see whether we have another name (so
-             a ctx var) or a box (so an mvar)
-           *)
-          ; name <& token T.COLON |> span
-            >>= fun (loc1, x) ->
-              alt
-                (span name
-                 $> fun (loc2, ctx) ->
-                    mk_decl Plicity.explicit
-                      (fun w -> LF.CTyp w)
-                      (Loc.join loc1 loc2, (x, ctx)))
-                (bracks_or_opt_parens (contextual clf_typ_atomic)
-                 |> span
-                 $> fun (loc2, d) ->
-                    mk_cltyp_decl
-                      (fun tA -> LF.MTyp tA)
-                      (Loc.join loc1 loc2, (x, d)))
-          ]
-        |> braces
-      in
-      let p =
-        labelled "contextual type declaration"
-          (alt (parens ctx_variable) q)
-      in
-      run p s
-  }
+  let param_variable =
+    labelled "parameter variable declaration"
+      begin
+        hash_variable_decl (trying clf_typ_atomic)
+        |> span
+        $> mk_cltyp_decl (fun tA -> LF.PTyp tA)
+      end
+  in
+  let subst_variable =
+    let subst_class =
+      maybe (token T.HASH)
+      $> Option.eliminate (Fun.const LF.Subst) (Fun.const LF.Ren)
+    in
+    labelled "substitution/renaming variable"
+      begin
+        dollar_variable_decl (seq2 subst_class clf_dctx)
+        |> span
+        $> mk_cltyp_decl (fun (sclass, cPhi) -> LF.STyp (sclass, cPhi))
+      end
+  in
+  let q =
+    choice
+      [ param_variable
+      ; subst_variable
+      (* since a name followed by a colon happens in both
+          the case for an mvar and the case for a context
+          variable, we refactor the grammar to parse first the
+          name followed by the colon, and *then* we perform an
+          alternation to see whether we have another name (so
+          a ctx var) or a box (so an mvar)
+        *)
+      ; name <& token T.COLON |> span
+        >>= fun (loc1, x) ->
+          alt
+            (span name
+              $> fun (loc2, ctx) ->
+                mk_decl Plicity.explicit
+                  (fun w -> LF.CTyp w)
+                  (Loc.join loc1 loc2, (x, ctx)))
+            (bracks_or_opt_parens (contextual clf_typ_atomic)
+              |> span
+              $> fun (loc2, d) ->
+                mk_cltyp_decl
+                  (fun tA -> LF.MTyp tA)
+                  (Loc.join loc1 loc2, (x, d)))
+      ]
+    |> braces
+  in
+  let p =
+    labelled "contextual type declaration"
+      (alt (parens ctx_variable) q)
+  in
+  run p s
 
 let mctx ?(sep = token T.COMMA) p =
   sep_by0 p sep
@@ -2002,170 +1860,162 @@ let arrow atomic r f =
   $> fun (loc, (a1, a2)) -> f loc a1 a2
 
 let rec cmp_typ =
-  { run =
-      fun s ->
-      let ctx_pibox =
-        labelled "Context variable Pi-box type"
-          (pibox (ctx_variable |> parens) cmp_typ
-             (fun loc decl tau ->
-               Comp.TypPiBox (loc, decl, tau)))
-      in
-      let pibox =
-        labelled "Pi-box type"
-          (pibox (clf_ctyp_decl_bare name' (fun x -> Plicity.explicit, x) |> braces) cmp_typ
-             (fun loc ctyp_decl tau ->
-               Comp.TypPiBox (loc, ctyp_decl, tau)))
-      in
-      let arr =
-        labelled "Arrow computation type"
-          (arrow cmp_typ_cross cmp_typ
-             (fun loc a1 a2 -> Comp.TypArr (loc, a1, a2)))
-      in
-      let p =
-        choice
-          [ pibox
-          ; ctx_pibox
-          ; arr
-          ; cmp_typ_cross
-          ]
-        |> labelled "computation type"
-      in
-      run p s
-  }
+  fun s ->
+  let ctx_pibox =
+    labelled "Context variable Pi-box type"
+      (pibox (ctx_variable |> parens) cmp_typ
+          (fun loc decl tau ->
+            Comp.TypPiBox (loc, decl, tau)))
+  in
+  let pibox =
+    labelled "Pi-box type"
+      (pibox (clf_ctyp_decl_bare name' (fun x -> Plicity.explicit, x) |> braces) cmp_typ
+          (fun loc ctyp_decl tau ->
+            Comp.TypPiBox (loc, ctyp_decl, tau)))
+  in
+  let arr =
+    labelled "Arrow computation type"
+      (arrow cmp_typ_cross cmp_typ
+          (fun loc a1 a2 -> Comp.TypArr (loc, a1, a2)))
+  in
+  let p =
+    choice
+      [ pibox
+      ; ctx_pibox
+      ; arr
+      ; cmp_typ_cross
+      ]
+    |> labelled "computation type"
+  in
+  run p s
 
 and cmp_typ_cross =
-  { run =
-      fun s ->
-      let p =
-        seq2
-          cmp_typ_atomic
-          (maybe (token T.STAR &> cmp_typ_cross))
-        |> span
-        |> labelled "computation product type"
-        $> fun (loc, (tau, m)) ->
-           match m with
-           | None -> tau
-           | Some tau' -> Comp.TypCross (loc, tau, tau')
-      in
-      run p s
-  }
+  fun s ->
+  let p =
+    seq2
+      cmp_typ_atomic
+      (maybe (token T.STAR &> cmp_typ_cross))
+    |> span
+    |> labelled "computation product type"
+    $> fun (loc, (tau, m)) ->
+        match m with
+        | None -> tau
+        | Some tau' -> Comp.TypCross (loc, tau, tau')
+  in
+  run p s
 
 and cmp_typ_atomic : Comp.typ parser =
-  { run =
-      fun s ->
-      let base =
-        labelled "base computation type"
-          (seq2 name (many meta_obj)
-           |> span
-           $> fun (loc, (a, ms)) ->
-              let sp = List.fold_right (fun t s -> Comp.MetaApp (t, s)) ms Comp.MetaNil in
-              Comp.TypBase (loc, a, sp))
-      in
-      let pbox =
-        token T.HASH
-        &> bracks (contextual (some clf_normal |> span))
+  fun s ->
+  let base =
+    labelled "base computation type"
+      (seq2 name (many meta_obj)
         |> span
-        $> fun (loc, (cPsi, (loc', ms))) ->
-           Comp.TypBox
-             ( loc
-             , ( loc
-               , LF.ClTyp
-                   ( LF.PTyp (LF.AtomTerm (loc, LF.TList (loc, ms)))
-                   , cPsi
-                   )
-               )
-             )
-      in
-      let sub =
-        token T.DOLLAR
-        &> bracks (contextual clf_dctx)
-        |> span
-        $> fun (loc, (cPsi, cPhi)) ->
-           Comp.TypBox
-             ( loc
-             , ( loc
-               , LF.ClTyp
-                   ( LF.STyp (LF.Subst, cPhi), cPsi)
-               )
-             )
-      in
-      let ctx =
-        span fqname
-        $> fun (loc, schema) ->
-           Comp.TypBox (loc, (loc, LF.CTyp schema))
-      in
-      let ordinary =
-        seq2
-          (trying (clf_dctx <& token T.TURNSTILE))
-          (some clf_normal)
-        |> span
-        |> labelled "boxed type"
-        $> fun (loc, (cPsi, ms)) ->
-           Comp.TypBox (loc, (loc, LF.ClTyp (LF.MTyp (LF.AtomTerm (loc, LF.TList (loc, ms))), cPsi)))
-      in
-      let p =
-        choice
-          [ base
-          ; ctx
-          ; pbox
-          ; sub
-          ; bracks (alt ordinary ctx)
-          ; parens cmp_typ
-          ]
-        |> labelled "atomic computation type"
-      in
-      run p s
-  }
+        $> fun (loc, (a, ms)) ->
+          let sp = List.fold_right (fun t s -> Comp.MetaApp (t, s)) ms Comp.MetaNil in
+          Comp.TypBase (loc, a, sp))
+  in
+  let pbox =
+    token T.HASH
+    &> bracks (contextual (some clf_normal |> span))
+    |> span
+    $> fun (loc, (cPsi, (loc', ms))) ->
+        Comp.TypBox
+          ( loc
+          , ( loc
+            , LF.ClTyp
+                ( LF.PTyp (LF.AtomTerm (loc, LF.TList (loc, ms)))
+                , cPsi
+                )
+            )
+          )
+  in
+  let sub =
+    token T.DOLLAR
+    &> bracks (contextual clf_dctx)
+    |> span
+    $> fun (loc, (cPsi, cPhi)) ->
+        Comp.TypBox
+          ( loc
+          , ( loc
+            , LF.ClTyp
+                ( LF.STyp (LF.Subst, cPhi), cPsi)
+            )
+          )
+  in
+  let ctx =
+    span fqname
+    $> fun (loc, schema) ->
+        Comp.TypBox (loc, (loc, LF.CTyp schema))
+  in
+  let ordinary =
+    seq2
+      (trying (clf_dctx <& token T.TURNSTILE))
+      (some clf_normal)
+    |> span
+    |> labelled "boxed type"
+    $> fun (loc, (cPsi, ms)) ->
+        Comp.TypBox (loc, (loc, LF.ClTyp (LF.MTyp (LF.AtomTerm (loc, LF.TList (loc, ms))), cPsi)))
+  in
+  let p =
+    choice
+      [ base
+      ; ctx
+      ; pbox
+      ; sub
+      ; bracks (alt ordinary ctx)
+      ; parens cmp_typ
+      ]
+    |> labelled "atomic computation type"
+  in
+  run p s
 
 let rec cmp_kind =
-  { run =
-      fun s ->
-      let pibox =
-        labelled "Pi-box kind"
-          begin
-            seq2
-              (trying (clf_ctyp_decl <& maybe (token T.ARROW)))
-              cmp_kind
-            |> span
-            $> fun (loc, (ctyp_decl, k)) ->
-               (* XXX the ctyp_decl must be for an ordinary box-type. *)
-               Comp.PiKind (loc, ctyp_decl, k)
-          end
-      in
-      let arrow =
-        labelled "arrow kind"
-          begin
-            seq2
-              (trying (cltyp <& token T.ARROW) |> span)
-              cmp_kind
-            |> span
-            $> fun (loc, ((loc', (cPsi, a)), k)) ->
-               Comp.ArrKind
-                 ( loc
-                 , (loc'
-                   , LF.ClTyp
-                       ( begin match a with
-                         | `Ctx cPhi -> LF.STyp (LF.Subst, cPhi)
-                         | `Typ a -> LF.MTyp a
-                         end
-                       , cPsi
-                       )
-                   , Plicity.explicit
-                   )
-                 , k
-                 )
-          end
-      in
-      let p =
-        choice
-          [ ctype_kind
-          ; pibox
-          ; arrow
-          ]
-        |> labelled "computation kind"
-      in
-      run p s
-  }
+  fun s ->
+  let pibox =
+    labelled "Pi-box kind"
+      begin
+        seq2
+          (trying (clf_ctyp_decl <& maybe (token T.ARROW)))
+          cmp_kind
+        |> span
+        $> fun (loc, (ctyp_decl, k)) ->
+            (* XXX the ctyp_decl must be for an ordinary box-type. *)
+            Comp.PiKind (loc, ctyp_decl, k)
+      end
+  in
+  let arrow =
+    labelled "arrow kind"
+      begin
+        seq2
+          (trying (cltyp <& token T.ARROW) |> span)
+          cmp_kind
+        |> span
+        $> fun (loc, ((loc', (cPsi, a)), k)) ->
+            Comp.ArrKind
+              ( loc
+              , (loc'
+                , LF.ClTyp
+                    ( begin match a with
+                      | `Ctx cPhi -> LF.STyp (LF.Subst, cPhi)
+                      | `Typ a -> LF.MTyp a
+                      end
+                    , cPsi
+                    )
+                , Plicity.explicit
+                )
+              , k
+              )
+      end
+  in
+  let p =
+    choice
+      [ ctype_kind
+      ; pibox
+      ; arrow
+      ]
+    |> labelled "computation kind"
+  in
+  run p s
 
 (** Parses a sequence of `p` separated by commas, in parentheses.
     This is used to parse nested & tuple patterns and expressions
@@ -2197,318 +2047,298 @@ let case_pragma =
 
 (** Parses a checkable computation term *)
 let rec cmp_exp_chk =
-  { run =
-      fun s ->
-      let p =
-        choice
-          [ cmp_exp_chk'
-          ; span cmp_exp_syn
-            $> fun (loc, i) -> Comp.Syn (loc, i)
-          ]
-      in
-      run p s
-  }
+  fun s ->
+  let p =
+    choice
+      [ cmp_exp_chk'
+      ; span cmp_exp_syn
+        $> fun (loc, i) -> Comp.Syn (loc, i)
+      ]
+  in
+  run p s
 
 and cmp_branch =
-  { run =
-      fun s ->
-      let p =
-        seq3
-          (mctx ~sep: (return ()) (clf_ctyp_decl_bare name' (fun x -> Plicity.explicit, x) |> braces))
-          cmp_pattern
-          (token T.THICK_ARROW &> cmp_exp_chk)
-        |> span
-        |> labelled "case branch"
-        $> fun (loc, (ctyp_decls, pat, rhs)) ->
-           Comp.Branch (loc, ctyp_decls, pat, rhs)
-      in
-      run p s
-  }
+  fun s ->
+  let p =
+    seq3
+      (mctx ~sep: (return ()) (clf_ctyp_decl_bare name' (fun x -> Plicity.explicit, x) |> braces))
+      cmp_pattern
+      (token T.THICK_ARROW &> cmp_exp_chk)
+    |> span
+    |> labelled "case branch"
+    $> fun (loc, (ctyp_decls, pat, rhs)) ->
+        Comp.Branch (loc, ctyp_decls, pat, rhs)
+  in
+  run p s
 
 and cmp_pattern =
-  { run =
-      fun s ->
-      let pattern_spine =
-        many (span cmp_pattern_atomic)
-        |> span
-        $> fun (loc, s) ->
-           List.fold_right
-             (fun (loc, t) s -> Comp.PatApp (loc, t, s))
-             s
-             (Comp.PatNil loc)
-      in
-      let app =
-        seq2
-          name
-          pattern_spine
-        |> span
-        |> labelled "variable or inductive type pattern"
-        $> fun (loc, (x, ps)) -> Comp.PatName (loc, x, ps)
-      in
-      let pattern = alt app cmp_pattern_atomic in
-      let p =
-        seq2
-          pattern
-          (maybe (token T.COLON &> cmp_typ))
-        |> labelled "possibly annotated pattern"
-        |> span
-        $> fun (loc, (p, tau)) ->
-           match tau with
-           | None -> p
-           | Some tau -> Comp.PatAnn (loc, p, tau)
-      in
-      run p s
-  }
+  fun s ->
+  let pattern_spine =
+    many (span cmp_pattern_atomic)
+    |> span
+    $> fun (loc, s) ->
+        List.fold_right
+          (fun (loc, t) s -> Comp.PatApp (loc, t, s))
+          s
+          (Comp.PatNil loc)
+  in
+  let app =
+    seq2
+      name
+      pattern_spine
+    |> span
+    |> labelled "variable or inductive type pattern"
+    $> fun (loc, (x, ps)) -> Comp.PatName (loc, x, ps)
+  in
+  let pattern = alt app cmp_pattern_atomic in
+  let p =
+    seq2
+      pattern
+      (maybe (token T.COLON &> cmp_typ))
+    |> labelled "possibly annotated pattern"
+    |> span
+    $> fun (loc, (p, tau)) ->
+        match tau with
+        | None -> p
+        | Some tau -> Comp.PatAnn (loc, p, tau)
+  in
+  run p s
 
 and cmp_pattern_atomic =
-  { run =
-      fun s ->
-      let mobj_pat =
-        span meta_obj
-        |> labelled "meta object pattern"
-        $> fun (loc, mobj) -> Comp.PatMetaObj (loc, mobj)
-      in
-      let nested =
-        nested cmp_pattern
-          Pair.snd
-          (fun (l1, p1) (l2, p2) ->
-            Comp.PatPair (Loc.join l1 l2, p1, p2))
-        |> labelled "nested/pair pattern"
-      in
-      let var =
-        name
-        |> span
-        |> labelled "variable pattern"
-        $> fun (loc, x) -> Comp.PatName (loc, x, Comp.PatNil loc)
-      in
-      let p =
-        choice
-          [ mobj_pat
-          ; nested
-          ; var
-          ]
-        |> labelled "bare pattern"
-      in
-      run p s
-  }
+  fun s ->
+  let mobj_pat =
+    span meta_obj
+    |> labelled "meta object pattern"
+    $> fun (loc, mobj) -> Comp.PatMetaObj (loc, mobj)
+  in
+  let nested =
+    nested cmp_pattern
+      Pair.snd
+      (fun (l1, p1) (l2, p2) ->
+        Comp.PatPair (Loc.join l1 l2, p1, p2))
+    |> labelled "nested/pair pattern"
+  in
+  let var =
+    name
+    |> span
+    |> labelled "variable pattern"
+    $> fun (loc, x) -> Comp.PatName (loc, x, Comp.PatNil loc)
+  in
+  let p =
+    choice
+      [ mobj_pat
+      ; nested
+      ; var
+      ]
+    |> labelled "bare pattern"
+  in
+  run p s
 
 (** Parses a return checkable computation term,
     i.e. a checkable term *except* for applications.
  *)
 and cmp_exp_chk' =
-  { run =
-      fun s ->
-      let abstraction param c =
-        seq2
-          (sep_by1 param (token T.COMMA) $> List1.to_list)
-          (token T.THICK_ARROW &> cmp_exp_chk)
-        |> span
-        $> fun (loc, (params, i)) ->
-           List.fold_left
-             (fun acc f -> c loc f acc) i (List.rev params)
-      in
-      let fn =
-        token T.KW_FN
-        &> abstraction name
-             (fun loc f acc -> Comp.Fn (loc, f, acc))
-        |> labelled "ordinary function abstraction"
-      in
-      let mlam =
-        token T.KW_MLAM
-        &> abstraction (choice [hash_name; dollar_name; name])
-             (fun loc f acc -> Comp.MLam (loc, f, acc))
-        |> labelled "meta function abstraction"
-      in
-      let matching_fun =
-        token T.KW_FUN
-        &> maybe (token T.PIPE)
-        &> sep_by1 (span cmp_copat_spine) (token T.PIPE)
-        $> List1.to_list
-        |> span
-        |> labelled "copattern abstraction"
-        $> fun (loc, branches) ->
-           let branches =
-             List.fold_left
-               (fun acc (loc, pat) -> Comp.ConsFBranch (loc, pat, acc))
-               (Comp.NilFBranch loc)
-               (List.rev branches)
-           in
-           Comp.Fun (loc, branches)
-      in
-      let case =
-        seq3
-          (token T.KW_CASE &> cmp_exp_syn)
-          (token T.KW_OF &> case_pragma)
-          (maybe (token T.PIPE)
-           &> sep_by1 cmp_branch (token T.PIPE)
-           $> List1.to_list)
-        |> span
-        |> labelled "case expression"
-        $> fun (loc, (i, prag, bs)) ->
-           Comp.Case (loc, prag, i, bs)
-      in
-      let impossible =
-        token T.KW_IMPOSSIBLE
-        &> cmp_exp_syn
-        |> span
-        $> fun (loc, i) -> Comp.Impossible (loc, i)
-      in
-      let lets =
-        let let_pattern =
-          seq4
-            (mctx ~sep: (return ()) (clf_ctyp_decl_bare name' (fun x -> Plicity.explicit, x) |> braces))
-            (cmp_pattern <& token T.EQUALS)
-            (cmp_exp_syn <& token T.KW_IN)
-            cmp_exp_chk
-          |> span
-          $> fun (loc, (ctyp_decls, pat, i, e)) ->
-             let branch = Comp.Branch (loc, ctyp_decls, pat, e) in
-             Comp.(Case (loc, PragmaCase, i, [branch]))
+  fun s ->
+  let abstraction param c =
+    seq2
+      (sep_by1 param (token T.COMMA) $> List1.to_list)
+      (token T.THICK_ARROW &> cmp_exp_chk)
+    |> span
+    $> fun (loc, (params, i)) ->
+        List.fold_left
+          (fun acc f -> c loc f acc) i (List.rev params)
+  in
+  let fn =
+    token T.KW_FN
+    &> abstraction name
+          (fun loc f acc -> Comp.Fn (loc, f, acc))
+    |> labelled "ordinary function abstraction"
+  in
+  let mlam =
+    token T.KW_MLAM
+    &> abstraction (choice [hash_name; dollar_name; name])
+          (fun loc f acc -> Comp.MLam (loc, f, acc))
+    |> labelled "meta function abstraction"
+  in
+  let matching_fun =
+    token T.KW_FUN
+    &> maybe (token T.PIPE)
+    &> sep_by1 (span cmp_copat_spine) (token T.PIPE)
+    $> List1.to_list
+    |> span
+    |> labelled "copattern abstraction"
+    $> fun (loc, branches) ->
+        let branches =
+          List.fold_left
+            (fun acc (loc, pat) -> Comp.ConsFBranch (loc, pat, acc))
+            (Comp.NilFBranch loc)
+            (List.rev branches)
         in
-        token T.KW_LET
-        (* XXX
-           there is ambiguity between let_exp and let_pattern, in
-           particular because exp is a proper subclass of pattern:
-           i.e. a variable is a valid pattern.
-           Furthermore, there is no syntactic way we can tell,
-           since variables may be any case.
-           During parsing, we will prioritize let_pattern, and during
-           indexing, when we have scoping information, we will
-           disambiguate.
-           -je
-         *)
-        &> let_pattern
-      in
-      let nested =
-        nested cmp_exp_chk
-          Pair.snd
-          (fun (l1, e1) (l2, e2) ->
-            Comp.Pair (Loc.join l1 l2, e1, e2))
-      in
-      let hole = hole |> span $> fun (loc, h) -> Comp.Hole (loc, h) in
-      let box_hole = token T.UNDERSCORE |> span $> fun (loc, _) -> Comp.BoxHole loc in
-      let meta_obj =
-        meta_obj
-        |> span
-        $> fun (loc, tR) -> Comp.Box (loc, tR)
-      in
-      let p =
-        choice
-          [ fn (* fn introduction form *)
-          ; mlam (* mlam introduction form *)
-          ; matching_fun (* generalized fun form *)
-          ; case (* case expression *)
-          ; impossible (* empty case expression *)
-          ; nested (* an expression nested in parens or a tuple *)
-          ; hole
-          ; box_hole
-          ; meta_obj
-          ; lets (* let expressions: true let and pattern let *)
-          ]
-      in
-      run p s
-  }
+        Comp.Fun (loc, branches)
+  in
+  let case =
+    seq3
+      (token T.KW_CASE &> cmp_exp_syn)
+      (token T.KW_OF &> case_pragma)
+      (maybe (token T.PIPE)
+        &> sep_by1 cmp_branch (token T.PIPE)
+        $> List1.to_list)
+    |> span
+    |> labelled "case expression"
+    $> fun (loc, (i, prag, bs)) ->
+        Comp.Case (loc, prag, i, bs)
+  in
+  let impossible =
+    token T.KW_IMPOSSIBLE
+    &> cmp_exp_syn
+    |> span
+    $> fun (loc, i) -> Comp.Impossible (loc, i)
+  in
+  let lets =
+    let let_pattern =
+      seq4
+        (mctx ~sep: (return ()) (clf_ctyp_decl_bare name' (fun x -> Plicity.explicit, x) |> braces))
+        (cmp_pattern <& token T.EQUALS)
+        (cmp_exp_syn <& token T.KW_IN)
+        cmp_exp_chk
+      |> span
+      $> fun (loc, (ctyp_decls, pat, i, e)) ->
+          let branch = Comp.Branch (loc, ctyp_decls, pat, e) in
+          Comp.(Case (loc, PragmaCase, i, [branch]))
+    in
+    token T.KW_LET
+    (* XXX
+        there is ambiguity between let_exp and let_pattern, in
+        particular because exp is a proper subclass of pattern:
+        i.e. a variable is a valid pattern.
+        Furthermore, there is no syntactic way we can tell,
+        since variables may be any case.
+        During parsing, we will prioritize let_pattern, and during
+        indexing, when we have scoping information, we will
+        disambiguate.
+        -je
+      *)
+    &> let_pattern
+  in
+  let nested =
+    nested cmp_exp_chk
+      Pair.snd
+      (fun (l1, e1) (l2, e2) ->
+        Comp.Pair (Loc.join l1 l2, e1, e2))
+  in
+  let hole = hole |> span $> fun (loc, h) -> Comp.Hole (loc, h) in
+  let box_hole = token T.UNDERSCORE |> span $> fun (loc, _) -> Comp.BoxHole loc in
+  let meta_obj =
+    meta_obj
+    |> span
+    $> fun (loc, tR) -> Comp.Box (loc, tR)
+  in
+  let p =
+    choice
+      [ fn (* fn introduction form *)
+      ; mlam (* mlam introduction form *)
+      ; matching_fun (* generalized fun form *)
+      ; case (* case expression *)
+      ; impossible (* empty case expression *)
+      ; nested (* an expression nested in parens or a tuple *)
+      ; hole
+      ; box_hole
+      ; meta_obj
+      ; lets (* let expressions: true let and pattern let *)
+      ]
+  in
+  run p s
 
 and cmp_copat_spine =
   let rec go =
-    { run =
-        fun s ->
-        let p =
-          choice
-            [ seq2 dot_name go
-              |> span
-              |> labelled "observation pattern"
-              $> (fun (loc, (x, acc)) -> Comp.PatObs (loc, x, acc))
-            ; seq2 cmp_pattern_atomic go
-              |> span
-              |> labelled "application pattern"
-              $> (fun (loc, (x, acc)) -> Comp.PatApp (loc, x, acc))
-            ; span (return ()) $> fun (loc, _) -> Comp.PatNil loc
-            ]
-        in
-        run p s
-    }
+    fun s ->
+    let p =
+      choice
+        [ seq2 dot_name go
+          |> span
+          |> labelled "observation pattern"
+          $> (fun (loc, (x, acc)) -> Comp.PatObs (loc, x, acc))
+        ; seq2 cmp_pattern_atomic go
+          |> span
+          |> labelled "application pattern"
+          $> (fun (loc, (x, acc)) -> Comp.PatApp (loc, x, acc))
+        ; span (return ()) $> fun (loc, _) -> Comp.PatNil loc
+        ]
+    in
+    run p s
   in
-  { run =
-      fun s ->
-      let p =
-        seq2
-          (go <& token T.THICK_ARROW)
-          cmp_exp_chk
-        |> shifted "copattern spine"
-      in
-      run p s
-  }
+  fun s ->
+  let p =
+    seq2
+      (go <& token T.THICK_ARROW)
+      cmp_exp_chk
+    |> shifted "copattern spine"
+  in
+  run p s
 
 (** Parses a synthesizable expression *)
 and cmp_exp_syn =
-  { run =
-      fun s ->
-      let p =
-        seq2
-          cmp_exp_syn'
-          (many (span cmp_exp_chk''))
-        |> span
-        $> fun (loc, (i, es)) ->
-           let rec fold i es =
-             match es with
-             | [] -> i
-             | (loc', e) :: es ->
-                let i = Comp.Apply (Loc.join loc loc', i, e) in
-                fold i es
-           in
-           fold i es
-      in
-      run p s
-  }
+  fun s ->
+  let p =
+    seq2
+      cmp_exp_syn'
+      (many (span cmp_exp_chk''))
+    |> span
+    $> fun (loc, (i, es)) ->
+        let rec fold i es =
+          match es with
+          | [] -> i
+          | (loc', e) :: es ->
+            let i = Comp.Apply (Loc.join loc loc', i, e) in
+            fold i es
+        in
+        fold i es
+  in
+  run p s
 
 (** Parses a purely checkable expression or an atomic
     (non-application) synthesizable expression.
  *)
 and cmp_exp_chk'' =
-  { run =
-      fun s ->
-      let p =
-        choice
-          [ cmp_exp_chk'
-          ; span cmp_exp_syn' $> fun (loc, i) -> Comp.Syn (loc, i)
-          ]
-      in
-      run p s
-  }
+  fun s ->
+  let p =
+    choice
+      [ cmp_exp_chk'
+      ; span cmp_exp_syn' $> fun (loc, i) -> Comp.Syn (loc, i)
+      ]
+  in
+  run p s
 
 (** Parses a synthesizable expression except applications. *)
 and cmp_exp_syn' =
-  { run =
-      fun s ->
-      let meta_obj =
-        meta_obj
-        |> span
-        |> labelled "synthesizable box"
-        $> fun (loc, tR) -> Comp.BoxVal (loc, tR)
-      in
-      let nested =
-        nested cmp_exp_syn
-          Pair.snd
-          (fun (l1, i1) (l2, i2) ->
-            Comp.PairVal (Loc.join l1 l2, i1, i2))
-        |> labelled "nested synthesizable expression or pair"
-      in
-      let name =
-        fqname
-        |> span
-        |> labelled "computation variable or constructor"
-        $> fun (loc, x) -> Comp.Name (loc, x)
-      in
-      let p =
-        choice
-          [ name
-          ; meta_obj
-          ; nested
-          ]
-      in
-      run p s
-  }
+  fun s ->
+  let meta_obj =
+    meta_obj
+    |> span
+    |> labelled "synthesizable box"
+    $> fun (loc, tR) -> Comp.BoxVal (loc, tR)
+  in
+  let nested =
+    nested cmp_exp_syn
+      Pair.snd
+      (fun (l1, i1) (l2, i2) ->
+        Comp.PairVal (Loc.join l1 l2, i1, i2))
+    |> labelled "nested synthesizable expression or pair"
+  in
+  let name =
+    fqname
+    |> span
+    |> labelled "computation variable or constructor"
+    $> fun (loc, x) -> Comp.Name (loc, x)
+  in
+  let p =
+    choice
+      [ name
+      ; meta_obj
+      ; nested
+      ]
+  in
+  run p s
 
 let call_arg =
   alt
@@ -2927,76 +2757,72 @@ let case_label : Comp.case_label parser =
     ]
 
 let rec harpoon_proof : Comp.proof parser =
-  { run =
-      fun s ->
-      let incomplete_proof =
-        hole
-        |> span
-        |> labelled "Harpoon incomplete proof `?'"
-        $> fun (loc, h) -> Comp.Incomplete (loc, h)
-      in
-      let command_proof =
-        seq2
-          (harpoon_command <& token T.SEMICOLON)
-          harpoon_proof
-        |> span
-        $> fun (loc, (cmd, prf)) -> Comp.Command (loc, cmd, prf)
-      in
-      let directive_proof =
-        harpoon_directive
-        |> span
-        $> fun (loc, d) -> Comp.Directive (loc, d)
-      in
-      let p =
-        choice
-          [ incomplete_proof
-          ; command_proof
-          ; directive_proof
-          ]
-        |> labelled "Harpoon proof"
-      in
-      run p s
-  }
+  fun s ->
+  let incomplete_proof =
+    hole
+    |> span
+    |> labelled "Harpoon incomplete proof `?'"
+    $> fun (loc, h) -> Comp.Incomplete (loc, h)
+  in
+  let command_proof =
+    seq2
+      (harpoon_command <& token T.SEMICOLON)
+      harpoon_proof
+    |> span
+    $> fun (loc, (cmd, prf)) -> Comp.Command (loc, cmd, prf)
+  in
+  let directive_proof =
+    harpoon_directive
+    |> span
+    $> fun (loc, d) -> Comp.Directive (loc, d)
+  in
+  let p =
+    choice
+      [ incomplete_proof
+      ; command_proof
+      ; directive_proof
+      ]
+    |> labelled "Harpoon proof"
+  in
+  run p s
 
 and harpoon_directive : Comp.directive parser =
-  { run =
-      fun s ->
-      let p =
-        choice
-          [ keyword "intros"
-            &> harpoon_hypothetical
-            |> span
-            $> (fun (loc, h) -> Comp.Intros (loc, h))
-          ; keyword "solve"
-            &> cmp_exp_chk
-            |> span
-            $> (fun (loc, e) -> Comp.Solve (loc, e))
-          ; keyword "split"
-            &> seq2
-                 (cmp_exp_syn <& token T.KW_AS)
-                 (many harpoon_split_branch)
-            |> span
-            $> (fun (loc, (i, bs)) -> Comp.Split (loc, i, bs))
-          ; token T.KW_IMPOSSIBLE
-            &> cmp_exp_syn
-            |> span
-            $> (fun (loc, i) -> Comp.Split (loc, i, []))
-          ; let suffices_arg =
-              seq2 cmp_typ (harpoon_proof |> braces)
-              |> span
-              $> fun (loc, (tau, p)) -> (loc, tau, p)
-            in
-            tokens T.[KW_SUFFICES; KW_BY] &>
-              seq2
-                (cmp_exp_syn <& token T.KW_TOSHOW)
-                (many suffices_arg)
-            |> span
-            $> (fun (loc, (i, args)) -> Comp.Suffices (loc, i, args))
-          ]
-        |> shifted "Harpoon directive"
-      in
-      run p s
-  }
+  fun s ->
+  let p =
+    choice
+      [ keyword "intros"
+        &> harpoon_hypothetical
+        |> span
+        $> (fun (loc, h) -> Comp.Intros (loc, h))
+      ; keyword "solve"
+        &> cmp_exp_chk
+        |> span
+        $> (fun (loc, e) -> Comp.Solve (loc, e))
+      ; keyword "split"
+        &> seq2
+              (cmp_exp_syn <& token T.KW_AS)
+              (many harpoon_split_branch)
+        |> span
+        $> (fun (loc, (i, bs)) -> Comp.Split (loc, i, bs))
+      ; token T.KW_IMPOSSIBLE
+        &> cmp_exp_syn
+        |> span
+        $> (fun (loc, i) -> Comp.Split (loc, i, []))
+      ; let suffices_arg =
+          seq2 cmp_typ (harpoon_proof |> braces)
+          |> span
+          $> fun (loc, (tau, p)) -> (loc, tau, p)
+        in
+        tokens T.[KW_SUFFICES; KW_BY] &>
+          seq2
+            (cmp_exp_syn <& token T.KW_TOSHOW)
+            (many suffices_arg)
+        |> span
+        $> (fun (loc, (i, args)) -> Comp.Suffices (loc, i, args))
+      ]
+    |> shifted "Harpoon directive"
+  in
+  run p s
 
 and harpoon_hypothetical : Comp.hypothetical parser =
   let open Comp in
@@ -3006,37 +2832,33 @@ and harpoon_hypothetical : Comp.hypothetical parser =
       gctx
     $> fun (cD, cG) -> { cD; cG }
   in
-  { run =
-      fun s ->
-      let p =
-        seq2
-          (hypotheses <& token T.SEMICOLON)
-          harpoon_proof
-        |> braces
-        |> span
-        |> labelled "Harpoon hypothetical"
-        $> fun (hypothetical_loc, (hypotheses, proof)) ->
-           { hypotheses; proof; hypothetical_loc }
-      in
-      run p s
-  }
+  fun s ->
+  let p =
+    seq2
+      (hypotheses <& token T.SEMICOLON)
+      harpoon_proof
+    |> braces
+    |> span
+    |> labelled "Harpoon hypothetical"
+    $> fun (hypothetical_loc, (hypotheses, proof)) ->
+        { hypotheses; proof; hypothetical_loc }
+  in
+  run p s
 
 and harpoon_split_branch : Comp.split_branch parser =
-  { run =
-      fun s ->
-      let p =
-        token T.KW_CASE &>
-          seq2
-            (case_label <& token T.COLON)
-            harpoon_hypothetical
-        |> span
-        |> labelled "Harpoon split branch"
-        $> fun (split_branch_loc, (case_label, branch_body)) ->
-           let open Comp in
-           { case_label; branch_body; split_branch_loc }
-      in
-      run p s
-  }
+  fun s ->
+  let p =
+    token T.KW_CASE &>
+      seq2
+        (case_label <& token T.COLON)
+        harpoon_hypothetical
+    |> span
+    |> labelled "Harpoon split branch"
+    $> fun (split_branch_loc, (case_label, branch_body)) ->
+        let open Comp in
+        { case_label; branch_body; split_branch_loc }
+  in
+  run p s
 
 let thm p =
   seq4
@@ -3066,55 +2888,51 @@ let sgn_thm_decl : Sgn.decl parser =
   $> fun (location, theorems) -> Sgn.Theorems { location; theorems }
 
 let rec sgn_decl : Sgn.decl parser =
-  { run =
-      fun s ->
-      let p =
-        choice
-          (* pragmas *)
-          [ sgn_name_pragma
-          ; sgn_query_pragma
-          ; sgn_mquery_pragma
-          ; sgn_not_pragma
-          ; sgn_fixity_pragma
-          ; sgn_associativity_pragma
-          ; sgn_open_pragma
-          ; sgn_abbrev_pragma
-          ; sgn_comment
+  fun s ->
+  let p =
+    choice
+      (* pragmas *)
+      [ sgn_name_pragma
+      ; sgn_query_pragma
+      ; sgn_mquery_pragma
+      ; sgn_not_pragma
+      ; sgn_fixity_pragma
+      ; sgn_associativity_pragma
+      ; sgn_open_pragma
+      ; sgn_abbrev_pragma
+      ; sgn_comment
 
-          (* misc declarations *)
-          ; sgn_module_decl
-          ; sgn_typedef_decl
+      (* misc declarations *)
+      ; sgn_module_decl
+      ; sgn_typedef_decl
 
-          (* type declarations *)
-          ; sgn_lf_typ_decl
-          ; sgn_cmp_typ_decl
-          ; sgn_oldstyle_lf_decl
-          ; sgn_schema_decl
+      (* type declarations *)
+      ; sgn_lf_typ_decl
+      ; sgn_cmp_typ_decl
+      ; sgn_oldstyle_lf_decl
+      ; sgn_schema_decl
 
-          (* term declarations *)
-          ; sgn_let_decl
-          ; sgn_thm_decl
-          ]
-        |> labelled "top-level declaration"
-      in
-      run p s
-  }
+      (* term declarations *)
+      ; sgn_let_decl
+      ; sgn_thm_decl
+      ]
+    |> labelled "top-level declaration"
+  in
+  run p s
 
 and sgn_module_decl : Sgn.decl parser =
-  { run =
-      fun s ->
-      let p =
-        seq2
-          (token T.KW_MODULE &> identifier)
-          (T.(tokens [EQUALS; KW_STRUCT]) &> some sgn_decl)
-        <& T.(tokens [KW_END; SEMICOLON])
-        |> span
-        |> labelled "module declaration"
-        $> fun (location, (identifier, declarations)) ->
-           Sgn.Module { location; identifier; declarations }
-      in
-      run p s
-  }
+  fun s ->
+  let p =
+    seq2
+      (token T.KW_MODULE &> identifier)
+      (T.(tokens [EQUALS; KW_STRUCT]) &> some sgn_decl)
+    <& T.(tokens [KW_END; SEMICOLON])
+    |> span
+    |> labelled "module declaration"
+    $> fun (location, (identifier, declarations)) ->
+        Sgn.Module { location; identifier; declarations }
+  in
+  run p s
 
 let sgn =
   seq2

@@ -1,69 +1,69 @@
-type 'a t = 'a * 'a list
+type 'a t = T of 'a * 'a list [@unboxed]
 
-let from x l = (x, l)
+let[@inline] from x l = T (x, l)
 
-let singleton x = (x, [])
+let[@inline] singleton x = T (x, [])
 
-let cons element (h, l) = (element, h :: l)
+let[@inline] cons element (T (h, l)) = T (element, h :: l)
 
-let uncons = Fun.id
+let[@inline] uncons (T (h, t)) = (h, t)
 
-let head = Pair.fst
+let[@inline] head (T (h, _)) = h
 
-let tail = Pair.snd
+let[@inline] tail (T (_, t)) = t
 
 let rev =
-  let rec rev l ((hd, tl) as acc) =
+  let rec rev l (T (hd, tl) as acc) =
     match l with
     | [] -> acc
-    | x :: xs -> rev xs (x, hd :: tl)
+    | x :: xs -> rev xs (T (x, hd :: tl))
   in
-  fun (hd, tl) -> rev tl (hd, [])
+  fun (T (hd, tl)) -> rev tl (T (hd, []))
 
 let unsnoc =
-  let rec unsnoc (h, t) return =
-    match t with
-    | [] -> return ([], h)
-    | x :: xs -> unsnoc (x, xs) (fun (t', last) -> return (h :: t', last))
+  let rec unsnoc (T (hd, tl)) ~return =
+    match tl with
+    | [] -> return ([], hd)
+    | x :: xs ->
+      unsnoc (T (x, xs)) ~return:(fun (t', last) -> return (hd :: t', last))
   in
-  fun l -> unsnoc l Fun.id
+  fun l -> unsnoc l ~return:Fun.id
 
-let rec last (h, t) =
-  match t with
-  | [] -> h
-  | x :: xs -> last (x, xs)
+let last = function
+  | T (hd, []) -> hd
+  | T (_, tl) -> List.last tl
 
-let to_list (x, l) = x :: l
+let to_list (T (hd, tl)) = hd :: tl
 
-let length (_, l) = 1 + List.length l
+let length (T (_, tl)) = 1 + List.length tl
 
-let equal eq (h1, t1) (h2, t2) = eq h1 h2 && List.equal eq t1 t2
+let equal eq (T (h1, t1)) (T (h2, t2)) = eq h1 h2 && List.equal eq t1 t2
 
-let compare_lengths (_, t1) (_, t2) = List.compare_lengths t1 t2
+let compare_lengths (T (_, t1)) (T (_, t2)) = List.compare_lengths t1 t2
 
-let compare cmp (h1, t1) (h2, t2) =
+let compare cmp (T (h1, t1)) (T (h2, t2)) =
   match cmp h1 h2 with
   | 0 -> List.compare cmp t1 t2
   | x -> x
 
 let iter f l = List.iter f (to_list l)
 
-let map f (x, l) =
+let map f (T (x, l)) =
   let h = f x in
   let t = List.map f l in
-  (h, t)
+  T (h, t)
 
 let fold_right f g l =
-  let rec fold_right (h, l) return =
+  let rec fold_right (T (h, l)) return =
     match l with
     | [] -> return (f h)
-    | x :: xs -> fold_right (x, xs) (fun a -> return (g h a))
+    | x :: xs -> fold_right (T (x, xs)) (fun a -> return (g h a))
   in
   fold_right l Fun.id
 
-let fold_left f g (x, l) = List.fold_left g (f x) l
+let fold_left f g (T (x, l)) = List.fold_left g (f x) l
 
-let filter_map f (h, t) =
+let filter_map f (T (h, t)) =
   let rest = List.filter_map f t in
   f h |> Option.fold ~none:rest ~some:(fun h -> h :: rest)
 
@@ -71,25 +71,24 @@ let for_all f l = List.for_all f (to_list l)
 
 let exists f l = List.exists f (to_list l)
 
-let rec all_equal (x, l) =
+let rec all_equal (T (x, l)) =
   match l with
   | [] -> Some x
-  | x' :: xs when x = x' -> all_equal (x, xs)
+  | x' :: xs when x = x' -> all_equal (T (x, xs))
   | _ -> None
 
-let traverse f (x, l) =
+let traverse f (T (x, l)) =
   Option.(
     f x >>= fun y ->
-    traverse f l >>= fun ys -> Some (y, ys))
+    traverse f l >>= fun ys -> Some (T (y, ys)))
 
-let map2 f (h1, t1) (h2, t2) =
-  try (f h1 h2, List.map2 f t1 t2)
+let map2 f (T (h1, t1)) (T (h2, t2)) =
+  try T (f h1 h2, List.map2 f t1 t2)
   with Invalid_argument _ -> invalid_arg "List1.map2"
 
-let of_list l =
-  match l with
+let of_list = function
   | [] -> None
-  | x :: xs -> Some (x, xs)
+  | x :: xs -> Some (T (x, xs))
 
 exception Empty
 
@@ -101,14 +100,14 @@ let find_opt p l = List.find_opt p (to_list l)
 
 let find_map f l = List.find_map f (to_list l)
 
-let minimum_by ( < ) (x, l) =
+let minimum_by ( < ) (T (x, l)) =
   List.fold_left (fun min x -> if x < min then x else min) x l
 
 let minimum l = minimum_by ( < ) l
 
 let maximum l = minimum_by ( > ) l
 
-let partition f (h, l) =
+let partition f (T (h, l)) =
   let l1, l2 = List.partition f l in
   if f h then (h :: l1, l2) else (l1, h :: l2)
 
@@ -132,19 +131,19 @@ let group_by p l =
   |> Seq.map (Pair.map_right Fun.(DynArray.to_list >> unsafe_of_list))
   |> Seq.to_list
 
-let split ((x, y), t) =
+let split (T ((x, y), t)) =
   let xs, ys = List.split t in
-  ((x, xs), (y, ys))
+  (T (x, xs), T (y, ys))
 
-let combine (a, l1) (b, l2) =
-  try ((a, b), List.combine l1 l2)
+let combine (T (a, l1)) (T (b, l2)) =
+  try T ((a, b), List.combine l1 l2)
   with Invalid_argument _ -> invalid_arg "List1.combine"
 
 let ap xs = map2 Fun.apply xs
 
 let ap_one x = map (Fun.apply x)
 
-let pp ?(pp_sep = Format.pp_print_cut) pp_v ppf (h, t) =
+let pp ?(pp_sep = Format.pp_print_cut) pp_v ppf (T (h, t)) =
   pp_v ppf h;
   List.iter
     (fun v ->
@@ -152,12 +151,7 @@ let pp ?(pp_sep = Format.pp_print_cut) pp_v ppf (h, t) =
       pp_v ppf v)
     t
 
-let show ?(pp_sep = Format.pp_print_cut) pp_v l =
-  Format.asprintf "%a" (pp ~pp_sep pp_v) l
-
-module Syntax = struct
-  let ( $> ) p f = map f p
-end
+let show ?pp_sep pp_v l = Format.asprintf "%a" (pp ?pp_sep pp_v) l
 
 module MakeEq (E : Eq.EQ) : Eq.EQ with type t = E.t t = Eq.Make (struct
   type nonrec t = E.t t

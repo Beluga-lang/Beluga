@@ -1,5 +1,5 @@
 (** The type of lists of length at least [1]. *)
-type 'a t
+type 'a t = private T of 'a * 'a list
 
 (** {1 Constructors} *)
 
@@ -207,12 +207,6 @@ val of_list : 'a list -> 'a t option
 
 (** Converts a nonempty list to a list. *)
 val to_list : 'a t -> 'a list
-
-(** {1 Operators}*)
-
-module Syntax : sig
-  val ( $> ) : 'a t -> ('a -> 'b) -> 'b t
-end
 
 (** {1 Instances} *)
 

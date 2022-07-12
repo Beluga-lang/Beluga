@@ -97,11 +97,9 @@ let recover_sessions ppf hooks (gs : Comp.open_subgoal list) =
      - group theorems by mutual group
      - construct a session for each mutual group
    *)
-  List1.(
-    group_by Pair.fst gs
-    |> List.map (Pair.map_right (map Pair.snd))
-    |> group_by F.(CompS.mutual_group ++ Pair.fst)
-  )
+  List1.group_by Pair.fst gs
+  |> List.map (Pair.map_right (List1.map Pair.snd))
+  |> List1.group_by F.(Pair.fst >> CompS.mutual_group)
   |> List.map (recover_session ppf hooks)
 
 (** Drops all sessions from the prover, replacing with the given

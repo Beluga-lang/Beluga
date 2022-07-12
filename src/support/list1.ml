@@ -63,9 +63,7 @@ let fold_right f g l =
 
 let fold_left f g (T (x, l)) = List.fold_left g (f x) l
 
-let filter_map f (T (h, t)) =
-  let rest = List.filter_map f t in
-  f h |> Option.fold ~none:rest ~some:(fun h -> h :: rest)
+let filter_map f l = List.filter_map f (to_list l)
 
 let for_all f l = List.for_all f (to_list l)
 

@@ -23,10 +23,12 @@ val nonempty : 'a list -> bool
 val filter_rev : ('a -> bool) -> 'a list -> 'a list
 
 (** [find_map f l] applies [f] to the elements of [l] in order, and returns
-    the first result of the form [Some v], or [None] if none exist. *)
+    the first result of the form [Option.Some v], or [Option.None] if none
+    exist. *)
 val find_map : ('a -> 'b option) -> 'a list -> 'b option
 
-(** [uncons l] is [Some (hd l, tl l)] if [l <> \[\]] and [None] otherwise. *)
+(** [uncons l] is [Option.Some (hd l, tl l)] if [l <> \[\]] and [Option.None]
+    otherwise. *)
 val uncons : 'a list -> ('a * 'a list) option
 
 (** [concat_map f \[x1; x2; ...; xn\]] is [f x1 @ f x2 @ ... @ f xn]. It is
@@ -38,7 +40,7 @@ val concat_map : ('a -> 'b list) -> 'a list -> 'b list
 val concat_mapi : (int -> 'a -> 'b list) -> 'a list -> 'b list
 
 (** [index_of p l] is the index of the first element in [l] that satisfies
-    the predicate [p]. Returns [None] if no such element was found. *)
+    the predicate [p]. Returns [Option.None] if no such element was found. *)
 val index_of : ('a -> bool) -> 'a list -> int option
 
 (** [equal eq \[a1; ...; an\] \[b1; ..; bm\]] holds when the two input lists
@@ -48,7 +50,8 @@ val index_of : ('a -> bool) -> 'a list -> int option
     function is costly, you may want to check {!compare_lengths} first. *)
 val equal : ('a -> 'a -> bool) -> 'a list -> 'a list -> bool
 
-(** [hd_opt l] is [Some (hd l)] if [l <> \[\]] and [None] otherwise. *)
+(** [hd_opt l] is [Option.Some (hd l)] if [l <> \[\]] and [Option.None]
+    otherwise. *)
 val hd_opt : 'a list -> 'a option
 
 (** [index \[x0; x1; ...; xn\]] is [\[(0, x0); (1, x1); ...; (n, xn)\]]. *)

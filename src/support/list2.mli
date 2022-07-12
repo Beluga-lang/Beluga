@@ -1,37 +1,25 @@
-(** The type of lists of length at least [1]. *)
-type 'a t = private T of 'a * 'a list
+(** The type of lists of length at least [2]. *)
+type 'a t = private T of 'a * 'a * 'a list
 
 (** {1 Constructors} *)
 
-(** [from h t] is the non-empty list obtained by prepending [h] onto the list
-    [t]. *)
-val from : 'a -> 'a list -> 'a t
+(** [from x1 x2 xs] is the list obtained by prepending [x2], then [x1] onto
+    the list [xs]. *)
+val from : 'a -> 'a -> 'a list -> 'a t
 
-(** [singleton e] is the non-empty list with the single element [e] in it. *)
-val singleton : 'a -> 'a t
+(** [from1 x xs] is the list obtained by prepending [x] onto the list [xs]. *)
+val from1 : 'a -> 'a List1.t -> 'a t
 
-(** [cons e l] is the non-empty list obtained by prepending [e] onto [l]. *)
+(** [pair x1 x2] is the list with the elements [x1] and [x2] in it. *)
+val pair : 'a -> 'a -> 'a t
+
+(** [cons x xs] is the list obtained by prepending [x] onto [xs]. *)
 val cons : 'a -> 'a t -> 'a t
 
 (** [rev l] is [l] in reverse order. *)
 val rev : 'a t -> 'a t
 
 (** {1 Destructors} *)
-
-(** [uncons l] is [(head l, tail l)]. *)
-val uncons : 'a t -> 'a * 'a list
-
-(** [head l] is the first element in [l]. *)
-val head : 'a t -> 'a
-
-(** [tail l] is the list of elements that succeed the head of [l]. *)
-val tail : 'a t -> 'a list
-
-(** [unsnoc (a_1, \[a_2; ...; a_(n-1); a_n\])] is
-    [(\[a_1; a_2; ...; a_(n-1)\], a_n)], with [a_n] being the last element in
-    the non-empty list, and [\[a_1; a_2; ...; a_(n-1)\]] being the list of
-    elements that precede [a_n] in order. *)
-val unsnoc : 'a t -> 'a list * 'a
 
 (** [last l] is the last element in [l]. *)
 val last : 'a t -> 'a
@@ -46,23 +34,24 @@ val length : 'a t -> int
     list. *)
 val compare_lengths : 'a t -> 'b t -> int
 
-(** [equal eq (a1, \[a2; ...; an\]) (b1, \[b2; ...; bm\])] holds when the two
-    input lists have the same length, and for each pair of elements [ai],
-    [bi] at the same position we have [eq ai bi].
+(** [equal eq (a1, a2, \[a3; ...; an\]) (b1, b2, \[b3; ...; bm\])] holds when
+    the two input lists have the same length, and for each pair of elements
+    [ai], [bi] at the same position we have [eq ai bi].
 
     Note: the [eq] function may be called even if the lists have different
     lengths. If you know your equality function is costly, you may want to
-    check {!List1.compare_lengths} first. *)
+    check {!List2.compare_lengths} first. *)
 val equal : ('a -> 'a -> bool) -> 'a t -> 'a t -> bool
 
-(** [compare cmp (a1, \[a2; ...; an\]) (b1, \[b2; ...; bm\])] performs a
-    lexicographic comparison of the two input lists, using the same
-    ['a -> 'a -> int] interface as {!Stdlib.compare}:
+(** [compare cmp (a1, a2, \[a3; ...; an\]) (b1, b2, \[b3; ...; bm\])]
+    performs a lexicographic comparison of the two input lists, using the
+    same ['a -> 'a -> int] interface as {!Stdlib.compare}:
 
     - [cons a1 l1] is smaller than [cons a2 l2] (negative result) if [a1] is
       smaller than [a2], or if they are equal (0 result) and [l1] is smaller
       than [l2]
-    - [singleton a] is smaller than [singleton b] if [a] is smaller than [b]
+    - [pair a1 a2] is smaller than [pair b1 b2] if [a1] is smaller than [b1],
+      or if [a1 = b1] and [a2] is smaller than [b2]
 
     Note: the [cmp] function will be called even if the lists have different
     lengths. *)
@@ -70,34 +59,32 @@ val compare : ('a -> 'a -> int) -> 'a t -> 'a t -> int
 
 (** {1 Iterators} *)
 
-(** [iter f (a1, \[a2; ...; an\])] applies function [f] in turn to
+(** [iter f (a1, a2, \[a3; ...; an\])] applies function [f] in turn to
     [\[a1; ...; an\]]. It is equivalent to
     [begin f a1; f a2; ...; f an; () end]. *)
 val iter : ('a -> unit) -> 'a t -> unit
 
-(** Maps a function over the non-empty list. *)
+(** Maps a function over the list. *)
 val map : ('a -> 'b) -> 'a t -> 'b t
 
-(** [fold_right sing cons (a1, \[a2; ...; an\])] is
-    [cons a1 (cons a2 (... (sing an) ...))]. *)
-val fold_right : ('a -> 'b) -> ('a -> 'b -> 'b) -> 'a t -> 'b
+(** [fold_right fst snd cons (a1, a2, \[a3; ...; an\])] is
+    [cons a1 (cons a2 (... (snd a(n-1) (fst an)) ...))]. *)
+val fold_right :
+  ('a -> 'b) -> ('a -> 'b -> 'c) -> ('a -> 'c -> 'c) -> 'a t -> 'c
 
-(** [fold_left sing cons (a1, \[a2; ...; an\])] is
-    [cons (... (cons (sing a1) a2) ....) an]. *)
-val fold_left : ('a -> 'b) -> ('b -> 'a -> 'b) -> 'a t -> 'b
+(** [fold_left fst snd cons (a1, a2, \[a3; ...; an\])] is
+    [cons (... (cons a3 (snd (fst a1) a2)) ....) an]. *)
+val fold_left :
+  ('a -> 'b) -> ('b -> 'a -> 'c) -> ('c -> 'a -> 'c) -> 'a t -> 'c
 
 (** [filter_map f l] applies [f] to every element of [l], filters out the
     [Option.None] elements and returns the list of the arguments of the
     [Option.Some] elements. *)
 val filter_map : ('a -> 'b option) -> 'a t -> 'b list
 
-(** Collapses a non-empty sequence to a single element, provided all elements
-    are (structurally) equal. *)
-val all_equal : 'a t -> 'a option
-
-(** Maps a function that may fail over a non-empty list, and eagerly fails as
-    soon as any individual call fails. Note that elements beyond the first
-    failing one will not be processed. *)
+(** Maps a function that may fail over a list, and eagerly fails as soon as
+    any individual call fails. Note that elements beyond the first failing
+    one will not be processed. *)
 val traverse : ('a -> 'b option) -> 'a t -> 'b t option
 
 (** {1 Iterators on two lists} *)
@@ -132,18 +119,6 @@ val find_opt : ('a -> bool) -> 'a t -> 'a option
     exist. *)
 val find_map : ('a -> 'b option) -> 'a t -> 'b option
 
-(** Finds the leftmost minimal element of the sequence according to the given
-    decision procedure for the strict less-than relation on 'a. *)
-val minimum_by : ('a -> 'a -> bool) -> 'a t -> 'a
-
-(** Finds the leftmost minimal element of the sequence according to the
-    default ordering for the type 'a. *)
-val minimum : 'a t -> 'a
-
-(** Finds the leftmost maximal element of the sequence according to the
-    default ordering for the type 'a. *)
-val maximum : 'a t -> 'a
-
 (** [partition f l] returns a pair of lists [(l1, l2)], where [l1] is the
     list of all the elements of [l] that satisfy the predicate [f], and [l2]
     is the list of all the elements of [l] that do not satisfy [f]. The order
@@ -151,15 +126,9 @@ val maximum : 'a t -> 'a
     is non-empty. *)
 val partition : ('a -> bool) -> 'a t -> 'a list * 'a list
 
-(** Groups elements of a list according to a key computed from the element.
-    The input list need not be sorted. (The algorithm inserts every element
-    of the list into a hashtable in order to construct the grouping.) Each
-    group is guaranteed to be non-empty. *)
-val group_by : ('a -> 'key) -> 'a list -> ('key * 'a t) list
-
 (** {1 Non-empty lists of pairs}*)
 
-(** Transform a non-empty list of pairs into a pair of non-empty lists:
+(** Transform a list of pairs into a pair of lists:
     [split ((a1, b1), \[(a2, b2); ...; (an, bn)\])] is
     [(a1, \[a2; ...; an\]), (b1, \[b2; ...; bn\])]. *)
 val split : ('a * 'b) t -> 'a t * 'b t
@@ -185,9 +154,9 @@ val ap_one : 'a -> ('a -> 'b) t -> 'b t
 
 (** {1 Printing} *)
 
-(** [pp ?pp_sep pp_v ppf l] prints the items of the non-empty list [l] using
-    [pp_v] to print each item and calling [pp_sep] between items on the
-    formatter [ppf]. *)
+(** [pp ?pp_sep pp_v ppf l] prints the items of the list [l] using [pp_v] to
+    print each item and calling [pp_sep] between items on the formatter
+    [ppf]. *)
 val pp :
      ?pp_sep:(Format.formatter -> unit -> unit)
   -> (Format.formatter -> 'a -> unit)
@@ -195,8 +164,8 @@ val pp :
   -> 'a t
   -> unit
 
-(** [show ?pp_sep pp_v l] shows as a string the items of the non-empty list
-    [l] using [pp_v] to show each item and calling [pp_sep] between items. *)
+(** [show ?pp_sep pp_v l] shows as a string the items of the list [l] using
+    [pp_v] to show each item and calling [pp_sep] between items. *)
 val show :
      ?pp_sep:(Format.formatter -> unit -> unit)
   -> (Format.formatter -> 'a -> unit)
@@ -205,11 +174,17 @@ val show :
 
 (** {1 Interoperability} *)
 
-(** Converts a list to a non-empty list. *)
+(** Converts a list to a [T]. *)
 val of_list : 'a list -> 'a t option
 
-(** Converts a non-empty list to a list. *)
+(** Converts a [T] to a list. *)
 val to_list : 'a t -> 'a list
+
+(** Converts a [List1.T] to a [T]. *)
+val of_list1 : 'a List1.t -> 'a t option
+
+(** Converts a [T] to a [List1.T]. *)
+val to_list1 : 'a t -> 'a List1.t
 
 (** {1 Instances} *)
 

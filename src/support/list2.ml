@@ -68,6 +68,8 @@ let filter_map f l = List.filter_map f (to_list l)
 
 let for_all f l = List.for_all f (to_list l)
 
+let for_all2 f l1 l2 = List.for_all2 f (to_list l1) (to_list l2)
+
 let exists f l = List.exists f (to_list l)
 
 let traverse f (T (x1, x2, xs)) =

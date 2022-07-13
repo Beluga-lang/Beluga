@@ -98,13 +98,18 @@ val map2 : ('a -> 'b -> 'c) -> 'a t -> 'b t -> 'c t
 
 (** {1 List scanning} *)
 
-(** [for_all p (a1, \[a2; ...; an\])] checks if all elements of the non-empty
-    list satisfy the predicate [p]. That is, it returns
+(** [for_all p (a1, a2, \[a3; ...; an\])] checks if all elements of the list
+    satisfy the predicate [p]. That is, it returns
     [(p a1) && (p a2) && ... && (p an)]. *)
 val for_all : ('a -> bool) -> 'a t -> bool
 
-(** [exists p (a1, \[a2; ...; an\])] checks if any element of the non-empty
-    list satisfies the predicate [p]. That is, it returns
+(** [for_all2 p (a1, a2, \[a3; ...; an\]) (b1, b2, \[b3; ...; bn\])] checks
+    if, pairwise, all elements of the lists satisfy the predicate [p]. That
+    is, it returns [(p a1 b1) && (p a2 b2) && ... && (p an bn)]. *)
+val for_all2 : ('a -> 'b -> bool) -> 'a t -> 'b t -> bool
+
+(** [exists p (a1, \[a2; ...; an\])] checks if any element of the list
+    satisfies the predicate [p]. That is, it returns
     [(p a1) || (p a2) || ... || (p an)]. *)
 val exists : ('a -> bool) -> 'a t -> bool
 
@@ -123,10 +128,10 @@ val find_map : ('a -> 'b option) -> 'a t -> 'b option
     list of all the elements of [l] that satisfy the predicate [f], and [l2]
     is the list of all the elements of [l] that do not satisfy [f]. The order
     of elements in the input list is preserved. At least one of [l1] and [l2]
-    is non-empty. *)
+    is. *)
 val partition : ('a -> bool) -> 'a t -> 'a list * 'a list
 
-(** {1 Non-empty lists of pairs}*)
+(** {1 Lists of pairs}*)
 
 (** Transform a list of pairs into a pair of lists:
     [split ((a1, b1), \[(a2, b2); ...; (an, bn)\])] is

@@ -55,6 +55,21 @@ let map f (T (x1, x2, xs)) =
   let ys = List.map f xs in
   T (y1, y2, ys)
 
+let mapi =
+  let rec mapi i f l return =
+    match l with
+    | [] -> return []
+    | x :: xs ->
+      mapi (i + 1) f xs (fun ys ->
+          let y = f i x in
+          return (y :: ys))
+  in
+  fun f (T (x0, x1, xs)) ->
+    let y0 = f 0 x0 in
+    let y1 = f 1 x1 in
+    let ys = mapi 2 f xs Fun.id in
+    T (y0, y1, ys)
+
 let map2 f (T (x1, x2, xs)) (T (y1, y2, ys)) =
   T (f x1 y1, f x2 y2, List.map2 f xs ys)
 

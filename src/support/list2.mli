@@ -76,6 +76,10 @@ val iter2 : ('a -> 'b -> unit) -> 'a t -> 'b t -> unit
 (** [map f (a1, a2, \[a3; ...; an\])] is [(f a1, f a2, \[f a3; ...; f an\])]. *)
 val map : ('a -> 'b) -> 'a t -> 'b t
 
+(** [mapi f (a0, a1, \[a2; ...; an\])] is
+    [(f 0 a0, f 1 a1, \[f 2 a2; ...; f n an\])]. *)
+val mapi : (int -> 'a -> 'b) -> 'a t -> 'b t
+
 (** [map2 f (a1, a2, \[a3; ...; an\]) (b1, b2, \[b3; ...; bn\])] is
     [(f a1 b1, f a2 b2, \[f a3 b3; ...; f an bn\])].
 

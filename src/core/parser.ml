@@ -982,11 +982,6 @@ let sgn_name_pragma : Sgn.decl parser =
   $> fun (location, (w, mv, x)) ->
      Sgn.Pragma { location; pragma=Sgn.NamePrag (w, mv, x) }
 
-(** Parses the `type' kind. *)
-let type_kind =
-  labelled "`type' kind"
-    (span (token T.KW_TYPE) $> fun (loc, _) -> LF.Typ loc)
-
 module rec LF_parsers : sig
   val lf_kind : LF.kind t
   val lf_typ : LF.typ t
@@ -1070,6 +1065,11 @@ end = struct
       ; lf_typ_atomic
       ]
     |> labelled "LF type"
+
+  (** Parses the `type' kind. *)
+  let type_kind =
+    labelled "`type' kind"
+      (span (token T.KW_TYPE) $> fun (loc, _) -> LF.Typ loc)
 
   let lf_kind =
     let pi_kind =
@@ -2609,118 +2609,120 @@ let sgn_let_decl : Sgn.decl parser =
   $> fun (location, ((identifier, typ), expression)) ->
      Sgn.Val { location; identifier; typ; expression }
 
-let boxity =
-  choice
-    [ keyword "boxed" &> return `boxed
-    ; keyword "unboxed" &> return `unboxed
-    ; keyword "strengthened" &> return `strengthened
-    ]
-
-let harpoon_command : Comp.command parser =
-  let by =
-    token T.KW_BY &>
-      seq3
-        (cmp_exp_syn <& token T.KW_AS)
-        name
-        (maybe_default boxity `boxed)
-    |> span
-    |> labelled "Harpoon command"
-    $> fun (loc, (i, x, b)) ->
-       match b with
-       | `boxed -> Comp.By (loc, i, x)
-       | `unboxed -> Comp.Unbox (loc, i, x, Option.none)
-       | `strengthened -> Comp.Unbox (loc, i, x, Option.some `strengthened)
-  in
-  let unbox =
-    keyword "unbox" &>
-      seq2
-        ((span cmp_exp_syn) <& token T.KW_AS)
-        name
-    $> fun ((loc, i), x) -> Comp.Unbox (loc, i, x, Option.none)
-  in
-  let strengthen =
-    keyword "strengthend" &>
-      seq2
-        (span cmp_exp_syn <& token T.KW_AS)
-        name
-    $> fun ((loc, i), x) -> Comp.Unbox (loc, i, x, Option.some `strengthened)
-  in
-  choice [ by; unbox; strengthen ]
-
-let case_label : Comp.case_label parser =
-  let extension_case_label =
-    trying (keyword "extended" &> token T.KW_BY) &> integer
-    |> span
-    |> labelled "context extension case label"
-    $> fun (loc, n) -> Comp.(ContextCase (ExtendedBy (loc, n)))
-  in
-  let empty_case_label =
-    trying (keyword "empty" &> keyword "context")
-    |> span
-    |> labelled "empty context case label"
-    $> fun (loc, _) -> Comp.(ContextCase (EmptyContext loc))
-  in
-  let named_case_label =
-    name
-    |> span
-    |> labelled "constructor case label"
-    $> fun (loc, name) -> Comp.NamedCase (loc, name)
-  in
-  let pvar_case_label =
-    token T.HASH &>
-      seq2
-        (maybe_default integer 1)
-        (maybe dot_integer)
-    |> span
-    |> labelled "parameter variable case label"
-    $> fun (loc, (n, k)) -> Comp.PVarCase (loc, n, k)
-  in
-  let bvar_case_label =
-    trying (keyword "head" &> keyword "variable")
-    |> span
-    $> fun (loc, _) -> Comp.BVarCase loc
-  in
-  choice
-    [ bvar_case_label
-    ; extension_case_label
-    ; empty_case_label
-    ; named_case_label
-    ; pvar_case_label
-    ]
-
-let rec harpoon_proof : Comp.proof parser =
-  fun s ->
-  let incomplete_proof =
-    hole
-    |> span
-    |> labelled "Harpoon incomplete proof `?'"
-    $> fun (loc, h) -> Comp.Incomplete (loc, h)
-  in
-  let command_proof =
-    seq2
-      (harpoon_command <& token T.SEMICOLON)
-      harpoon_proof
-    |> span
-    $> fun (loc, (cmd, prf)) -> Comp.Command (loc, cmd, prf)
-  in
-  let directive_proof =
-    harpoon_directive
-    |> span
-    $> fun (loc, d) -> Comp.Directive (loc, d)
-  in
-  let p =
+module rec Harpoon_parsers : sig
+  val harpoon_proof : Comp.proof parser
+  val interactive_harpoon_command : Harpoon.command t
+  val interactive_harpoon_command_sequence : Harpoon.command list t
+  val next_theorem : [> `next of Name.t | `quit ] t
+end = struct
+  let boxity =
     choice
-      [ incomplete_proof
-      ; command_proof
-      ; directive_proof
+      [ keyword "boxed" &> return `boxed
+      ; keyword "unboxed" &> return `unboxed
+      ; keyword "strengthened" &> return `strengthened
       ]
-    |> labelled "Harpoon proof"
-  in
-  run p s
 
-and harpoon_directive : Comp.directive parser =
-  fun s ->
-  let p =
+  let harpoon_command : Comp.command parser =
+    let by =
+      token T.KW_BY &>
+        seq3
+          (cmp_exp_syn <& token T.KW_AS)
+          name
+          (maybe_default boxity `boxed)
+      |> span
+      |> labelled "Harpoon command"
+      $> fun (loc, (i, x, b)) ->
+         match b with
+         | `boxed -> Comp.By (loc, i, x)
+         | `unboxed -> Comp.Unbox (loc, i, x, Option.none)
+         | `strengthened -> Comp.Unbox (loc, i, x, Option.some `strengthened)
+    in
+    let unbox =
+      keyword "unbox" &>
+        seq2
+          ((span cmp_exp_syn) <& token T.KW_AS)
+          name
+      $> fun ((loc, i), x) -> Comp.Unbox (loc, i, x, Option.none)
+    in
+    let strengthen =
+      keyword "strengthend" &>
+        seq2
+          (span cmp_exp_syn <& token T.KW_AS)
+          name
+      $> fun ((loc, i), x) -> Comp.Unbox (loc, i, x, Option.some `strengthened)
+    in
+    choice [ by; unbox; strengthen ]
+
+  let case_label : Comp.case_label parser =
+    let extension_case_label =
+      trying (keyword "extended" &> token T.KW_BY) &> integer
+      |> span
+      |> labelled "context extension case label"
+      $> fun (loc, n) -> Comp.(ContextCase (ExtendedBy (loc, n)))
+    in
+    let empty_case_label =
+      trying (keyword "empty" &> keyword "context")
+      |> span
+      |> labelled "empty context case label"
+      $> fun (loc, _) -> Comp.(ContextCase (EmptyContext loc))
+    in
+    let named_case_label =
+      name
+      |> span
+      |> labelled "constructor case label"
+      $> fun (loc, name) -> Comp.NamedCase (loc, name)
+    in
+    let pvar_case_label =
+      token T.HASH &>
+        seq2
+          (maybe_default integer 1)
+          (maybe dot_integer)
+      |> span
+      |> labelled "parameter variable case label"
+      $> fun (loc, (n, k)) -> Comp.PVarCase (loc, n, k)
+    in
+    let bvar_case_label =
+      trying (keyword "head" &> keyword "variable")
+      |> span
+      $> fun (loc, _) -> Comp.BVarCase loc
+    in
+    choice
+      [ bvar_case_label
+      ; extension_case_label
+      ; empty_case_label
+      ; named_case_label
+      ; pvar_case_label
+      ]
+
+  let harpoon_hypothetical : Comp.hypothetical parser =
+    let open Comp in
+    let hypotheses =
+      seq2
+        (mctx (clf_ctyp_decl_bare name_or_blank' plicity_name_of_nb) <& token T.PIPE)
+        gctx
+      $> fun (cD, cG) -> { cD; cG }
+    in
+    seq2
+      (hypotheses <& token T.SEMICOLON)
+      Harpoon_parsers.harpoon_proof
+    |> braces
+    |> span
+    |> labelled "Harpoon hypothetical"
+    $> fun (hypothetical_loc, (hypotheses, proof)) ->
+        { hypotheses; proof; hypothetical_loc }
+
+  let harpoon_split_branch : Comp.split_branch parser =
+    token T.KW_CASE &>
+      seq2
+        (case_label <& token T.COLON)
+        harpoon_hypothetical
+    |> span
+    |> labelled "Harpoon split branch"
+    $> fun (split_branch_loc, (case_label, branch_body)) ->
+        let open Comp in
+        { case_label; branch_body; split_branch_loc }
+
+  let harpoon_directive : Comp.directive parser =
     choice
       [ keyword "intros"
         &> harpoon_hypothetical
@@ -2741,7 +2743,7 @@ and harpoon_directive : Comp.directive parser =
         |> span
         $> (fun (loc, i) -> Comp.Split (loc, i, []))
       ; let suffices_arg =
-          seq2 cmp_typ (harpoon_proof |> braces)
+          seq2 cmp_typ (Harpoon_parsers.harpoon_proof |> braces)
           |> span
           $> fun (loc, (tau, p)) -> (loc, tau, p)
         in
@@ -2753,44 +2755,249 @@ and harpoon_directive : Comp.directive parser =
         $> (fun (loc, (i, args)) -> Comp.Suffices (loc, i, args))
       ]
     |> shifted "Harpoon directive"
-  in
-  run p s
 
-and harpoon_hypothetical : Comp.hypothetical parser =
-  let open Comp in
-  let hypotheses =
-    seq2
-      (mctx (clf_ctyp_decl_bare name_or_blank' plicity_name_of_nb) <& token T.PIPE)
-      gctx
-    $> fun (cD, cG) -> { cD; cG }
-  in
-  fun s ->
-  let p =
-    seq2
-      (hypotheses <& token T.SEMICOLON)
-      harpoon_proof
-    |> braces
-    |> span
-    |> labelled "Harpoon hypothetical"
-    $> fun (hypothetical_loc, (hypotheses, proof)) ->
-        { hypotheses; proof; hypothetical_loc }
-  in
-  run p s
-
-and harpoon_split_branch : Comp.split_branch parser =
-  fun s ->
-  let p =
-    token T.KW_CASE &>
+  let harpoon_proof : Comp.proof parser =
+    let incomplete_proof =
+      hole
+      |> span
+      |> labelled "Harpoon incomplete proof `?'"
+      $> fun (loc, h) -> Comp.Incomplete (loc, h)
+    in
+    let command_proof =
       seq2
-        (case_label <& token T.COLON)
-        harpoon_hypothetical
-    |> span
-    |> labelled "Harpoon split branch"
-    $> fun (split_branch_loc, (case_label, branch_body)) ->
-        let open Comp in
-        { case_label; branch_body; split_branch_loc }
-  in
-  run p s
+        (harpoon_command <& token T.SEMICOLON)
+        Harpoon_parsers.harpoon_proof
+      |> span
+      $> fun (loc, (cmd, prf)) -> Comp.Command (loc, cmd, prf)
+    in
+    let directive_proof =
+      harpoon_directive
+      |> span
+      $> fun (loc, d) -> Comp.Directive (loc, d)
+    in
+    choice
+      [ incomplete_proof
+      ; command_proof
+      ; directive_proof
+      ]
+    |> labelled "Harpoon proof"
+
+  let interactive_harpoon_command =
+    let module H = Syntax.Ext.Harpoon in
+    let intros =
+      keyword "intros"
+      &> maybe (some identifier)
+      $> fun xs -> H.Intros xs
+    in
+    let split =
+      keyword "split"
+      &> cmp_exp_syn
+      $> fun t -> H.(Split (`split, t))
+    in
+    let msplit =
+      keyword "msplit"
+      &> span (choice [ dollar_name; hash_name; name ])
+      $> fun (loc, name) -> H.MSplit (loc, name)
+    in
+    let invert =
+      keyword "invert"
+      &> cmp_exp_syn
+      $> fun t -> H.(Split (`invert, t))
+    in
+    let impossible =
+      token T.KW_IMPOSSIBLE
+      &> cmp_exp_syn
+      $> fun t -> H.(Split (`impossible, t))
+    in
+    let solve =
+      keyword "solve"
+      &> cmp_exp_chk
+      $> fun t -> H.Solve t
+    in
+    let by =
+      token T.KW_BY &>
+        seq3
+          cmp_exp_syn
+          (token T.KW_AS &> name)
+          (maybe_default boxity `boxed)
+      $> fun (i, name, b) ->
+        match b with
+        | `strengthened -> H.Unbox (i, name, Option.some `strengthened)
+        | `unboxed -> H.Unbox (i, name, Option.none)
+        | `boxed -> H.By (i, name)
+    in
+    let compute_type =
+      token T.KW_TYPE
+      &> cmp_exp_syn
+      $> fun i -> H.Type i
+    in
+    let suffices =
+      let tau_list_item =
+        alt
+          (cmp_typ $> fun tau -> `exact tau)
+          (token T.UNDERSCORE |> span $> fun (loc, _) -> `infer loc)
+      in
+      seq2
+        (tokens [T.KW_SUFFICES; T.KW_BY]
+        &> cmp_exp_syn)
+        (token T.KW_TOSHOW
+        &> sep_by0 tau_list_item (token T.COMMA))
+      $> fun (i, tau_list) ->
+        H.Suffices (i, tau_list)
+    in
+    let unbox =
+      keyword "unbox" &>
+        seq2
+          cmp_exp_syn
+          (token T.KW_AS &> name)
+      $> fun (i, name) -> H.Unbox (i, name, Option.none)
+    in
+    let strengthen =
+      keyword "strengthen" &>
+        seq2
+          cmp_exp_syn
+          (token T.KW_AS &> name)
+      $> fun (i, name) -> H.Unbox (i, name, Option.some `strengthened)
+    in
+    let automation_kind =
+      choice
+        [ keyword "auto-intros" &> return `auto_intros
+        ; keyword "auto-solve-trivial" &> return `auto_solve_trivial
+        ]
+    in
+    let automation_change =
+      choice
+        [ keyword "on" &> return `on
+        ; keyword "off" &> return `off
+        ; keyword "toggle" &> return `toggle
+        ]
+    in
+    let toggle_automation =
+      keyword "toggle-automation"
+      &> seq2 automation_kind (maybe_default automation_change `toggle)
+      $> fun (t, c) -> H.ToggleAutomation (t, c)
+    in
+    let rename =
+      let level =
+        choice
+          [ keyword "comp" &> return `comp
+          ; keyword "meta" &> return `meta
+          ]
+      in
+      keyword "rename"
+      &> seq3 level name name
+      $> fun (level, rename_from, rename_to) ->
+        H.Rename { rename_from; rename_to; level }
+    in
+    let basic_command =
+      choice
+        [ keyword "list" &> return `list
+        ; keyword "defer" &> return `defer
+        ]
+    in
+    let select_theorem =
+      keyword "select" &> name $> fun x -> H.SelectTheorem x
+    in
+    let create_command, serialize_command =
+      ( keyword "create" &> return `create
+      , keyword "serialize" &> return `serialize
+      )
+    in
+    let theorem_command =
+      let dump_proof =
+        keyword "dump-proof"
+        &> string_literal
+        $> fun s -> `dump_proof s
+      in
+      keyword "theorem" &>
+        choice
+          ( basic_command
+            :: dump_proof
+            :: List.map (fun (k, k') -> keyword k &> return k')
+                [ ("show-ihs", `show_ihs)
+                ; ("show-proof", `show_proof)
+                ]
+          )
+      $> fun cmd -> H.Theorem cmd
+    in
+    let session_command =
+      keyword "session"
+      &> choice [ basic_command; create_command; serialize_command ]
+      $> fun cmd -> H.Session cmd
+    in
+    let subgoal_command =
+      keyword "subgoal"
+      &> basic_command
+      $> fun cmd -> H.Subgoal cmd
+    in
+    let defer =
+      keyword "defer" &> return (H.Subgoal `defer)
+    in
+    let info_kind =
+      choice
+        [ keyword "theorem" &> return `prog
+        ]
+    in
+    let info =
+      keyword "info"
+      &> seq2 info_kind name
+      $> fun (k, name) -> H.Info (k, name)
+    in
+    let translate =
+      keyword "translate"
+      &> name
+      $> fun name -> H.Translate name
+    in
+    let undo = keyword "undo" &> return H.Undo in
+    let redo = keyword "redo" &> return H.Redo in
+    let history = keyword "history" &> return H.History in
+    let help = keyword "help" &> return H.Help in
+    let save = keyword "save" &> return (H.Session `serialize) in
+    choice
+      [ intros
+      ; info
+      ; split
+      ; msplit
+      ; compute_type
+      ; invert
+      ; impossible
+      ; solve
+      ; by
+      ; suffices
+      ; unbox
+      ; strengthen
+      ; translate
+      ; toggle_automation
+      ; rename
+      ; defer
+      ; select_theorem
+      ; theorem_command
+      ; session_command
+      ; subgoal_command
+      ; undo
+      ; redo
+      ; history
+      ; help
+      ; save
+      ]
+
+  let interactive_harpoon_command_sequence =
+    sep_by0 interactive_harpoon_command (token T.SEMICOLON)
+
+  let next_theorem =
+    alt
+      (token T.COLON &> keyword "quit" &> return `quit)
+      (name $> fun name -> `next name)
+end
+
+let harpoon_proof = Harpoon_parsers.harpoon_proof
+
+let interactive_harpoon_command = Harpoon_parsers.interactive_harpoon_command
+
+let interactive_harpoon_command_sequence =
+  Harpoon_parsers.interactive_harpoon_command_sequence
+
+let next_theorem = Harpoon_parsers.next_theorem
 
 let thm p =
   seq4
@@ -2872,210 +3079,3 @@ let sgn =
     (many sgn_decl |> renamed "zero or more top-level declarations")
   $> fun (prags, decls) ->
      prags @ decls
-
-let interactive_harpoon_command =
-  let module H = Syntax.Ext.Harpoon in
-  let intros =
-    keyword "intros"
-    &> maybe (some identifier)
-    $> fun xs -> H.Intros xs
-  in
-  let split =
-    keyword "split"
-    &> cmp_exp_syn
-    $> fun t -> H.(Split (`split, t))
-  in
-  let msplit =
-    keyword "msplit"
-    &> span (choice [ dollar_name; hash_name; name ])
-    $> fun (loc, name) -> H.MSplit (loc, name)
-  in
-  let invert =
-    keyword "invert"
-    &> cmp_exp_syn
-    $> fun t -> H.(Split (`invert, t))
-  in
-  let impossible =
-    token T.KW_IMPOSSIBLE
-    &> cmp_exp_syn
-    $> fun t -> H.(Split (`impossible, t))
-  in
-  let solve =
-    keyword "solve"
-    &> cmp_exp_chk
-    $> fun t -> H.Solve t
-  in
-  let by =
-    token T.KW_BY &>
-      seq3
-        cmp_exp_syn
-        (token T.KW_AS &> name)
-        (maybe_default boxity `boxed)
-    $> fun (i, name, b) ->
-       match b with
-       | `strengthened -> H.Unbox (i, name, Option.some `strengthened)
-       | `unboxed -> H.Unbox (i, name, Option.none)
-       | `boxed -> H.By (i, name)
-  in
-  let compute_type =
-    token T.KW_TYPE
-    &> cmp_exp_syn
-    $> fun i -> H.Type i
-  in
-  let suffices =
-    let tau_list_item =
-      alt
-        (cmp_typ $> fun tau -> `exact tau)
-        (token T.UNDERSCORE |> span $> fun (loc, _) -> `infer loc)
-    in
-    seq2
-      (tokens [T.KW_SUFFICES; T.KW_BY]
-       &> cmp_exp_syn)
-      (token T.KW_TOSHOW
-       &> sep_by0 tau_list_item (token T.COMMA))
-    $> fun (i, tau_list) ->
-       H.Suffices (i, tau_list)
-  in
-  let unbox =
-    keyword "unbox" &>
-      seq2
-        cmp_exp_syn
-        (token T.KW_AS &> name)
-    $> fun (i, name) -> H.Unbox (i, name, Option.none)
-  in
-  let strengthen =
-    keyword "strengthen" &>
-      seq2
-        cmp_exp_syn
-        (token T.KW_AS &> name)
-    $> fun (i, name) -> H.Unbox (i, name, Option.some `strengthened)
-  in
-  let automation_kind =
-    choice
-      [ keyword "auto-intros" &> return `auto_intros
-      ; keyword "auto-solve-trivial" &> return `auto_solve_trivial
-      ]
-  in
-  let automation_change =
-    choice
-      [ keyword "on" &> return `on
-      ; keyword "off" &> return `off
-      ; keyword "toggle" &> return `toggle
-      ]
-  in
-  let toggle_automation =
-    keyword "toggle-automation"
-    &> seq2 automation_kind (maybe_default automation_change `toggle)
-    $> fun (t, c) -> H.ToggleAutomation (t, c)
-  in
-  let rename =
-    let level =
-      choice
-        [ keyword "comp" &> return `comp
-        ; keyword "meta" &> return `meta
-        ]
-    in
-    keyword "rename"
-    &> seq3 level name name
-    $> fun (level, rename_from, rename_to) ->
-      H.Rename { rename_from; rename_to; level }
-  in
-  let basic_command =
-    choice
-      [ keyword "list" &> return `list
-      ; keyword "defer" &> return `defer
-      ]
-  in
-  let select_theorem =
-    keyword "select" &> name $> fun x -> H.SelectTheorem x
-  in
-  let create_command, serialize_command =
-    ( keyword "create" &> return `create
-    , keyword "serialize" &> return `serialize
-    )
-  in
-  let theorem_command =
-    let dump_proof =
-      keyword "dump-proof"
-      &> string_literal
-      $> fun s -> `dump_proof s
-    in
-    keyword "theorem" &>
-      choice
-        ( basic_command
-          :: dump_proof
-          :: List.map (fun (k, k') -> keyword k &> return k')
-               [ ("show-ihs", `show_ihs)
-               ; ("show-proof", `show_proof)
-               ]
-        )
-    $> fun cmd -> H.Theorem cmd
-  in
-  let session_command =
-    keyword "session"
-    &> choice [ basic_command; create_command; serialize_command ]
-    $> fun cmd -> H.Session cmd
-  in
-  let subgoal_command =
-    keyword "subgoal"
-    &> basic_command
-    $> fun cmd -> H.Subgoal cmd
-  in
-  let defer =
-    keyword "defer" &> return (H.Subgoal `defer)
-  in
-  let info_kind =
-    choice
-      [ keyword "theorem" &> return `prog
-      ]
-  in
-  let info =
-    keyword "info"
-    &> seq2 info_kind name
-    $> fun (k, name) -> H.Info (k, name)
-  in
-  let translate =
-    keyword "translate"
-    &> name
-    $> fun name -> H.Translate name
-  in
-  let undo = keyword "undo" &> return H.Undo in
-  let redo = keyword "redo" &> return H.Redo in
-  let history = keyword "history" &> return H.History in
-  let help = keyword "help" &> return H.Help in
-  let save = keyword "save" &> return (H.Session `serialize) in
-  choice
-    [ intros
-    ; info
-    ; split
-    ; msplit
-    ; compute_type
-    ; invert
-    ; impossible
-    ; solve
-    ; by
-    ; suffices
-    ; unbox
-    ; strengthen
-    ; translate
-    ; toggle_automation
-    ; rename
-    ; defer
-    ; select_theorem
-    ; theorem_command
-    ; session_command
-    ; subgoal_command
-    ; undo
-    ; redo
-    ; history
-    ; help
-    ; save
-    ]
-
-let interactive_harpoon_command_sequence =
-  sep_by0 interactive_harpoon_command (token T.SEMICOLON)
-
-let next_theorem =
-  alt
-    (token T.COLON &> keyword "quit" &> return `quit)
-    (name $> fun name -> `next name)

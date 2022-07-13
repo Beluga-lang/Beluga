@@ -64,6 +64,15 @@ val compare : ('a -> 'a -> int) -> 'a t -> 'a t -> int
     [begin f a1; f a2; ...; f an; () end]. *)
 val iter : ('a -> unit) -> 'a t -> unit
 
+(** [iter2 f (a1, a2, \[a3; ...; an\]) (b1, b2, \[b3; ...; bn\])] applies
+    function [f] in turn, pairwise, to [\[a1; ...; an\]] and
+    [\[b1; ...; bn\]]. It is equivalent to
+    [begin f a1 b1; f a2 b2; ...; f an bn; () end].
+
+    @raise Invalid_argument
+      if the two lists are determined to have different lengths. *)
+val iter2 : ('a -> 'b -> unit) -> 'a t -> 'b t -> unit
+
 (** Maps a function over the list. *)
 val map : ('a -> 'b) -> 'a t -> 'b t
 
@@ -105,7 +114,10 @@ val for_all : ('a -> bool) -> 'a t -> bool
 
 (** [for_all2 p (a1, a2, \[a3; ...; an\]) (b1, b2, \[b3; ...; bn\])] checks
     if, pairwise, all elements of the lists satisfy the predicate [p]. That
-    is, it returns [(p a1 b1) && (p a2 b2) && ... && (p an bn)]. *)
+    is, it returns [(p a1 b1) && (p a2 b2) && ... && (p an bn)].
+
+    @raise Invalid_argument
+      if the two lists are determined to have different lengths. *)
 val for_all2 : ('a -> 'b -> bool) -> 'a t -> 'b t -> bool
 
 (** [exists p (a1, \[a2; ...; an\])] checks if any element of the list

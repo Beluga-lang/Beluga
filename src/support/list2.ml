@@ -47,6 +47,8 @@ let compare cmp (T (x1, x2, xs)) (T (y1, y2, ys)) =
 
 let iter f l = List.iter f (to_list l)
 
+let iter2 f l1 l2 = List.iter2 f (to_list l1) (to_list l2)
+
 let map f (T (x1, x2, xs)) =
   let y1 = f x1 in
   let y2 = f x2 in

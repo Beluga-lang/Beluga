@@ -112,24 +112,22 @@ type path' =
   | Shift of error_entry * path
 and path = path' list
 
-         (*
-let entry (location : Location.t) (label : string) : path' =
-  Entry { location = Some location; label }
-          *)
+let entry ?location label =
+  Entry { location; label }
 
 let rec path_head (p : path) : error_entry option =
   match p with
-  | [] -> None
-  | x :: _ -> Some (path'_head x)
+  | [] -> Option.none
+  | x :: _ -> Option.some (path'_head x)
 
 and path'_head (p' : path') : error_entry =
   match p' with
   | Entry e -> e
   | Shift (e, p) ->
      match path_head p with
-     | Some e' ->
+     | Option.Some e' ->
         { e with label = e.label ^ " " ^ e'.label }
-     | None -> e
+     | Option.None -> e
 
 type content =
   [ `token of Token.t option
@@ -324,10 +322,10 @@ let _ =
     begin
       function
       | Error (s, e) ->
-         Some
+         Option.some
            (Error.print_with_location e.loc
               (fun ppf -> print_error ppf e))
-      | _ -> None
+      | _ -> Option.none
     end
 
 (***** Syntax mangling helpers *****)
@@ -337,19 +335,14 @@ type typ_or_ctx =
   | `Ctx of LF.dctx
   ]
 
-type kind_or_typ =
-  [ `Kind of LF.kind
-  | `Typ of LF.typ
-  ]
-
 (***** Parser type definition *****)
 
 (** Gets the location of the next item in the input stream *)
 let next_loc_at (s : state) : Location.t =
   match LinkStream.observe s.input with
-  | None -> failwith "lexer invariant failed"
+  | Option.None -> failwith "lexer invariant failed"
   (* the lexer should infinitely repeat "EOI" when it's done. *)
-  | Some ((loc, _), _) -> loc
+  | Option.Some ((loc, _), _) -> loc
 
 let prev_loc_at (s : state) : Location.t = s.last_loc
 
@@ -447,6 +440,7 @@ let trying p =
     match run p s with
     | (s, Either.Left e) -> ({ s with backtrack = true}, Either.left e)
     | x -> x
+
 module M = Monad.Make (struct
   type nonrec 'a t = 'a t
 
@@ -485,12 +479,8 @@ let prev_loc : Location.t parser =
 
 (** Runs `p` tracking the span of source material processed by it. *)
 let span p =
-  fun s ->
-  let p =
-    seq3 next_loc p prev_loc
-    $> fun (l1, x, l2) -> (Location.join l1 l2, x)
-  in
-  run p s
+  seq3 next_loc p prev_loc $> fun (l1, x, l2) -> (Location.join l1 l2, x)
+
 (** Runs the parser, and if it fails, runs the given function to
     transform the label stack.
     Also provides the location of the very next token `p` would see.
@@ -512,7 +502,7 @@ let shift p s =
   relabelling p
     begin fun loc path ->
     [ Shift
-        ( { location = Some loc
+        ( { location = Option.some loc
           ; label = s
           }
         , path
@@ -524,14 +514,7 @@ let shifted s p = shift p s
 
 (** Adds the given label to the stack if `p` fails. *)
 let label p s =
-  relabelling p
-    begin fun loc path ->
-    Entry
-      { location = Some loc
-      ; label = s
-      }
-    :: path
-    end
+  relabelling p (fun location path -> entry ~location s :: path)
 
 (** Flipped version of `label'. *)
 let labelled s p = label p s
@@ -578,7 +561,7 @@ let rec traverse (f : 'a -> 'b parser) (xs : 'a list) : 'b list parser =
      $> fun (x, xs) -> x :: xs
      *)
 
-(** Like `traverse' but for parsers without interesting outputs. *)
+(** Like {!traverse} but for parsers without interesting outputs. *)
 let rec traverse_ (f : 'a -> unit parser) (xs : 'a list) : unit parser =
   match xs with
   | [] -> return ()
@@ -637,9 +620,9 @@ let choice (ps : 'a parser list) : 'a parser =
 let eoi : unit parser =
   (fun s ->
   match LinkStream.observe s.input with
-  | None | Some ((_, T.EOI), _) -> return_at s ()
-  | Some ((_, t), _) ->
-    fail_at s (Unexpected { expected = `eoi; actual = `token (Some t) }))
+  | Option.None | Option.Some ((_, T.EOI), _) -> return_at s ()
+  | Option.Some ((_, t), _) ->
+    fail_at s (Unexpected { expected = `eoi; actual = `token (Option.some t) }))
   |> labelled "end of input"
 
 (** Constructs a parser that accepts the current token if it satisfies
@@ -653,8 +636,8 @@ let eoi : unit parser =
 let satisfy (f : T.t -> ('e, 'b) Either.t) : ('e, 'b) Either.t parser =
   fun s ->
   match LinkStream.observe s.input with
-  | None -> failwith "lexer invariant failed: end-of-input is a token"
-  | Some ((loc, t), xs) ->
+  | Option.None -> failwith "lexer invariant failed: end-of-input is a token"
+  | Option.Some ((loc, t), xs) ->
       let r = f t in
       let s' =
         (* construct the new state with the input depending on
@@ -666,10 +649,10 @@ let satisfy (f : T.t -> ('e, 'b) Either.t) : ('e, 'b) Either.t parser =
       in
       return_at s' r
 
-(** Tries a parser, and if it fails returns None *)
+(** Tries a parser, and if it fails returns [Option.none] *)
 let maybe (p : 'a parser) : 'a option parser =
   shifted "optionally"
-    (alt (p $> Option.some) (return None))
+    (alt (p $> Option.some) (return Option.none))
 
 (** Tries a parser, and if it fails uses a default value. *)
 let maybe_default (p : 'a parser) (default : 'a) : 'a parser =
@@ -677,13 +660,11 @@ let maybe_default (p : 'a parser) (default : 'a) : 'a parser =
 
 (** Internal implementation of `many` that doesn't label. *)
 let rec many' (p : 'a parser) : 'a list parser =
-  fun s ->
-  run (alt (some' p) (return [])) s
+  alt (some' p) (return [])
 
 (** Internal implementation of `some` that doesn't label. *)
 and some' (p : 'a parser) : 'a list parser =
-  fun s ->
-  run (p >>= fun x -> many' p >>= fun xs -> return (x :: xs)) s
+  p >>= fun x -> many' p >>= fun xs -> return (x :: xs)
 
 (** `many p` repeats the parser `p` zero or more times and collects
     the results in a list.
@@ -703,16 +684,12 @@ let some (p : 'a parser) : 'a list parser =
     the result of a parser, use `void`.
  *)
 let sep_by0 (p : 'a parser) (sep : unit parser) : 'a list parser =
-  (fun s ->
-  let q =
-    maybe p
-    >>= (function
-        | None -> return []
-        | Some x ->
-          many' (sep &> p)
-          >>= fun xs -> return (x :: xs))
-  in
-  run q s)
+  maybe p
+  >>= (function
+      | Option.None -> return []
+      | Option.Some x ->
+        many' (sep &> p)
+        >>= fun xs -> return (x :: xs))
   |> shifted "many separated"
 
 (** `sep_by1 p sep` parses one or more occurrences of `p` separated by
@@ -721,12 +698,8 @@ let sep_by0 (p : 'a parser) (sep : unit parser) : 'a list parser =
     the result of a parser, use `void`.
  *)
 let sep_by1 (p : 'a parser) (sep : unit parser) : 'a List1.t parser =
-  (fun s ->
-  let q =
-    seq2 p (many' (sep &> p))
-    $> fun (x, xs) -> List1.from x xs
-  in
-  run q s)
+  seq2 p (many' (sep &> p))
+  $> (fun (x, xs) -> List1.from x xs)
   |> shifted "some separated"
 
 (***** Unmixing & other checks *****)
@@ -786,17 +759,17 @@ let check_codatatype_decl loc a cs : unit parser =
 let satisfy' (expected : content) (f : T.t -> 'a option) : 'a parser =
   satisfy (fun t -> f t |> Option.eliminate (Fun.const (Either.left t)) Either.right)
   |> span
-  >>= fun (loc, x) ->
+  >>= fun (location, x) ->
     match x with
     | Either.Left t ->
        fail'
-         [ Entry { location = Some loc; label = Format.stringify print_content expected } ]
-         (Unexpected { expected; actual = `token (Some t) })
+         [ entry ~location (Format.stringify print_content expected) ]
+         (Unexpected { expected; actual = `token (Option.some t) })
     | Either.Right x -> return x
 
 (** Parses an exact token. *)
 let token (t : T.t) : unit parser =
-  satisfy' (`token (Some t))
+  satisfy' (`token (Option.some t))
     (fun x -> Option.of_bool (Token.equals x t))
 
 (** Parses an exact sequence of tokens. *)
@@ -809,38 +782,38 @@ let tokens (ts : T.t list) : unit parser =
     restricted contexts as keywords.
  *)
 let keyword (kw : string) : unit parser =
-  satisfy' (`keyword (Some kw))
+  satisfy' (`keyword (Option.some kw))
     Fun.(Token.equals (T.IDENT kw) >> Option.of_bool)
 
 let identifier : string parser =
-  satisfy' (`identifier None)
+  satisfy' (`identifier Option.none)
     (function
-     | T.IDENT s -> Some s
-     | _ -> None)
+     | T.IDENT s -> Option.some s
+     | _ -> Option.none)
 
 let hash_identifier : string parser =
-  satisfy' (`hash_identifier None)
+  satisfy' (`hash_identifier Option.none)
     (function
-     | T.HASH_IDENT s -> Some s
-     | _ -> None)
+     | T.HASH_IDENT s -> Option.some s
+     | _ -> Option.none)
 
 let dollar_identifier : string parser =
-  satisfy' (`dollar_identifier None)
+  satisfy' (`dollar_identifier Option.none)
     (function
-     | T.DOLLAR_IDENT s -> Some s
-     | _ -> None)
+     | T.DOLLAR_IDENT s -> Option.some s
+     | _ -> Option.none)
 
 let hash_blank : unit parser =
   satisfy' `hash_blank
     (function
-     | T.HASH_BLANK -> Some ()
-     | _ -> None)
+     | T.HASH_BLANK -> Option.some ()
+     | _ -> Option.none)
 
 let dollar_blank : unit parser =
   satisfy' `dollar_blank
     (function
-     | T.DOLLAR_BLANK -> Some ()
-     | _ -> None)
+     | T.DOLLAR_BLANK -> Option.some ()
+     | _ -> Option.none)
 
 let namify (p : string t) : Name.t t =
   p |> span
@@ -862,7 +835,7 @@ let name_or_blank : name_or_blank parser =
 (** Converts a name or blank into a plicity and a name. *)
 let plicity_name_of_nb =
   function
-  | `blank loc' -> (Plicity.implicit, Name.mk_blank (Some loc'))
+  | `blank loc' -> (Plicity.implicit, Name.mk_blank (Option.some loc'))
   | `name x -> (Plicity.explicit, x)
 
 let dot_name : Name.t t =
@@ -905,16 +878,16 @@ let name' : Name.t name_parser =
   | `hash -> hash_name
 
 let integer : int parser =
-  satisfy' (`integer None)
+  satisfy' (`integer Option.none)
     (function
-     | T.INTLIT k -> Some k
-     | _ -> None)
+     | T.INTLIT k -> Option.some k
+     | _ -> Option.none)
 
 let dot_integer : int parser =
   satisfy' `dot_integer
     (function
-     | T.DOT_NUMBER k -> Some k
-     | _ -> None)
+     | T.DOT_NUMBER k -> Option.some k
+     | _ -> Option.none)
 
 let fqidentifier = sep_by1 (trying identifier) (token T.DOUBLE_COLON)
 
@@ -931,8 +904,8 @@ let pragma s = token (T.PRAGMA s)
 let string_literal =
   satisfy' `string_literal
     (function
-     | T.STRING s -> Some s
-     | _ -> None)
+     | T.STRING s -> Option.some s
+     | _ -> Option.none)
 
 (** Runs the parser `p` between two parsers whose results are
     ignored. *)
@@ -1014,178 +987,64 @@ let type_kind =
   labelled "`type' kind"
     (span (token T.KW_TYPE) $> fun (loc, _) -> LF.Typ loc)
 
-let rec lf_kind =
-  fun s ->
-  let pi_kind =
-    seq2
-      (lf_typ_decl |> braces <& maybe (token T.ARROW))
-      lf_kind
-    |> span
-    $> fun (loc, (d, k)) -> LF.PiKind (loc, d, k)
-  in
-  let arr_kind =
-    seq2
-      (lf_typ_atomic <& token T.ARROW)
-      lf_kind
-    |> span
-    $> fun (loc, (a, k)) -> LF.ArrKind (loc, a, k)
-  in
-  let p =
-    choice
-      [ label pi_kind "LF Pi kind"
-      ; label arr_kind "LF arrow kind"
-      ; type_kind
-      ]
-    |> labelled "LF kind"
-  in
-  run p s
+module rec LF_parsers : sig
+  val lf_kind : LF.kind t
+  val lf_typ : LF.typ t
+  val lf_kind_or_typ : [ `Kind of LF.kind | `Typ of LF.typ] t
+  val lf_typ_decl : LF.typ_decl t
+  val lf_term : LF.normal t
+end = struct
+  let lf_term_sequence =
+    span (some LF_parsers.lf_term) $> (fun (loc, ms) -> LF.TList (loc, ms))
+    |> labelled "LF term sequence"
 
-and lf_term =
-  fun s ->
-  let term =
-    choice
-      [ lf_term_lam
-      ; lf_term_head
-      ; lf_term_atomic
-      ]
-  in
-  run (term |> labelled "LF term") s
+  let lf_term_lam =
+    seq2 (token T.LAMBDA &> name <& token T.DOT) lf_term_sequence
+      |> span
+      $> (fun (loc, (x, ms)) -> LF.Lam (loc, x, ms))
+    |> labelled "LF lambda term"
 
-and lf_term_sequence =
-  fun s ->
-  let terms =
-    span (some lf_term) $> (fun (loc, ms) -> LF.TList (loc, ms))
-  in
-  run (terms |> labelled "LF term sequence") s
+  let lf_head =
+    span fqname
+    |> labelled "LF application head"
+    $> fun (loc, n) -> LF.Name (loc, n, Option.none)
 
-and lf_term_lam =
-  fun s ->
-  let lam = seq4 (token T.LAMBDA) name (token T.DOT) lf_term_sequence
-    |> span
-    $> fun (loc, (_, x, _, ms)) ->
-        LF.Lam (loc, x, ms)
-  in
-  run (lam |> labelled "LF lambda term") s
+  let lf_term_head =
+    span lf_head $> (fun (loc, h) -> LF.Root (loc, h, LF.Nil))
+    |> labelled "LF head term"
 
-and lf_term_head =
-  fun s ->
-  let head =
-    span lf_head $> fun (loc, h) -> LF.Root (loc, h, LF.Nil)
-  in
-  run (head |> labelled "LF head term") s
-
-and lf_term_atomic =
-  fun s ->
-  let atomic =
+  let lf_term_atomic =
     choice
       [ span (token T.UNDERSCORE)
         $> (fun (loc, _) -> LF.Root (loc, LF.Hole loc, LF.Nil))
-      ; span (parens (seq2 lf_typ (maybe (token T.COLON &> lf_typ))))
+      ; span (parens (seq2 LF_parsers.lf_typ (maybe (token T.COLON &> LF_parsers.lf_typ))))
         >>= fun (loc, (m, q)) ->
           match q, m with
-          | None, LF.AtomTerm (_, t) -> return t
-          | None, _ -> LF.NTyp (loc, m) |> return
-          | Some a, LF.AtomTerm (_, t) -> LF.Ann (loc, t, a) |> return
+          | Option.None, LF.AtomTerm (_, t) -> return t
+          | Option.None, _ -> LF.NTyp (loc, m) |> return
+          | Option.Some a, LF.AtomTerm (_, t) -> LF.Ann (loc, t, a) |> return
           | _, _ -> fail (Violation "invalid atomic LF term")
                                   (* ^ XXX not sure if this is a violation or a user error -je *)
       ]
-  in
-  run (atomic |> labelled "LF atomic term") s
+    |> labelled "LF atomic term"
 
-and lf_head =
-  span fqname
-  |> labelled "LF application head"
-  $> fun (loc, n) -> LF.Name (loc, n, None)
-
-(** An LF type declaration, `x : a'. *)
-and lf_typ_decl =
-  fun s ->
-  let p =
+  (** An LF type declaration, `x : a'. *)
+  let lf_typ_decl =
     seq2
       (name <& token T.COLON)
-      lf_typ
+      LF_parsers.lf_typ
     |> labelled "LF type declaration"
-    $> fun (x, a) -> LF.TypDecl (x, a) in
-  run p s
+    $> fun (x, a) -> LF.TypDecl (x, a)
 
-(** Parses an LF kind or type.
-    This is an optimization. In situations where either a type or a
-    kind could appear, use this and then match on the `typ_or_kind`
-    returned. This is more efficient than backtracking the parser.
- *)
-and lf_kind_or_typ : kind_or_typ parser =
-  fun s ->
-  let pi =
-    seq2
-      (lf_typ_decl |> braces <& maybe (token T.ARROW))
-      lf_kind_or_typ
-    |> span
-    |> labelled "LF Pi kind or type"
-    $> fun (loc, (name, k_or_a)) ->
-        match k_or_a with
-        | `Kind k -> `Kind (LF.PiKind (loc, name, k))
-        | `Typ a -> `Typ (LF.PiTyp (loc, name, a))
-  in
-  let arrow =
-    seq2
-      lf_typ_atomic
-      (maybe (token T.ARROW &> lf_kind_or_typ))
-    |> span
-    |> labelled "LF arrow kind or type"
-    $> fun (loc, (a, k_or_a)) ->
-        match k_or_a with
-        | None -> `Typ a
-        | Some (`Kind k) -> `Kind (LF.ArrKind (loc, a, k))
-        | Some (`Typ a') -> `Typ (LF.ArrTyp (loc, a, a'))
-  in
-  let p =
-    choice
-      [ pi
-      ; type_kind $> (fun a -> `Kind a)
-      ; arrow
-      ]
-    |> labelled "LF kind or type"
-  in
-  run p s
-
-and lf_typ : LF.typ parser =
-  fun s ->
-  let p =
-    choice
-      [ lf_typ_pi
-      ; lf_typ_arr
-      ; lf_typ_atomic
-      ]
-  in
-  run (p |> labelled "LF type") s
-
-and lf_typ_pi : LF.typ parser =
-  fun s ->
-  let pi_typ =
+  let lf_typ_pi : LF.typ parser =
     seq2
       (trying (lf_typ_decl |> braces <& maybe (token T.ARROW)))
-      lf_typ
+      LF_parsers.lf_typ
     |> span
-    $> fun (loc, (d, ty2)) ->
-      LF.PiTyp (loc, d, ty2)
-  in
-  run (pi_typ |> labelled "LF pi type") s
+    $> (fun (loc, (d, ty2)) -> LF.PiTyp (loc, d, ty2))
+    |> labelled "LF pi type"
 
-
-and lf_typ_arr : LF.typ parser =
-  fun s ->
-  let arr_typ =
-    seq2
-      (trying (lf_typ_atomic <& token T.ARROW))
-      lf_typ
-    |> span
-    $> (fun (loc, (a1, a2)) -> LF.ArrTyp (loc, a1, a2))
-  in
-  run (arr_typ |> labelled "LF arrow type") s
-
-and lf_typ_atomic =
-  fun s ->
-  let p =
+  let lf_typ_atomic =
     alt
       (span lf_term_sequence
         $> function
@@ -1193,9 +1052,96 @@ and lf_typ_atomic =
           | (loc, LF.TList (_, [LF.NTyp (_, t)])) -> t
           | (loc, LF.TList (_, [n])) -> LF.AtomTerm (loc, n)
           | (loc, t) -> LF.AtomTerm (loc, t))
-      (parens lf_typ)
-  in
-  run (p |> labelled "LF atomic type") s
+      (parens LF_parsers.lf_typ)
+    |> labelled "LF atomic type"
+
+  let lf_typ_arr : LF.typ parser =
+    seq2
+      (trying (lf_typ_atomic <& token T.ARROW))
+      LF_parsers.lf_typ
+    |> span
+    $> (fun (loc, (a1, a2)) -> LF.ArrTyp (loc, a1, a2))
+    |> labelled "LF arrow type"
+
+  let lf_typ : LF.typ parser =
+    choice
+      [ lf_typ_pi
+      ; lf_typ_arr
+      ; lf_typ_atomic
+      ]
+    |> labelled "LF type"
+
+  let lf_kind =
+    let pi_kind =
+      seq2
+        (braces lf_typ_decl)
+        LF_parsers.lf_kind
+      |> span
+      $> fun (loc, (d, k)) -> LF.PiKind (loc, d, k)
+    in
+    let arr_kind =
+      seq2
+        (lf_typ_atomic <& token T.ARROW)
+        LF_parsers.lf_kind
+      |> span
+      $> fun (loc, (a, k)) -> LF.ArrKind (loc, a, k)
+    in
+    choice
+      [ label pi_kind "LF Pi kind"
+      ; label arr_kind "LF arrow kind"
+      ; type_kind
+      ]
+    |> labelled "LF kind"
+
+  let lf_term =
+    choice
+      [ lf_term_lam
+      ; lf_term_head
+      ; lf_term_atomic
+      ]
+    |> labelled "LF term"
+
+  (** Parses an LF kind or type.
+      This is an optimization. In situations where either a type or a
+      kind could appear, use this and then match on the `typ_or_kind`
+      returned. This is more efficient than backtracking the parser.
+   *)
+  let lf_kind_or_typ : [ `Kind of LF.kind | `Typ of LF.typ] t =
+    let pi =
+      seq2
+        (braces lf_typ_decl)
+        LF_parsers.lf_kind_or_typ
+      |> span
+      |> labelled "LF Pi kind or type"
+      $> fun (loc, (name, k_or_a)) ->
+          match k_or_a with
+          | `Kind k -> `Kind (LF.PiKind (loc, name, k))
+          | `Typ a -> `Typ (LF.PiTyp (loc, name, a))
+    in
+    let arrow =
+      seq2
+        lf_typ_atomic
+        (maybe (token T.ARROW &> LF_parsers.lf_kind_or_typ))
+      |> span
+      |> labelled "LF arrow kind or type"
+      $> fun (loc, (a, k_or_a)) ->
+          match k_or_a with
+          | Option.None -> `Typ a
+          | Option.Some (`Kind k) -> `Kind (LF.ArrKind (loc, a, k))
+          | Option.Some (`Typ a') -> `Typ (LF.ArrTyp (loc, a, a'))
+    in
+    choice
+      [ pi
+      ; type_kind $> (fun a -> `Kind a)
+      ; arrow
+      ]
+    |> labelled "LF kind or type"
+end
+
+let lf_kind = LF_parsers.lf_kind
+let lf_typ = LF_parsers.lf_typ
+let lf_kind_or_typ = LF_parsers.lf_kind_or_typ
+let lf_typ_decl = LF_parsers.lf_typ_decl
 
 let sgn_lf_const_decl (* sgn_lf_typ *) =
   (seq2
@@ -1246,10 +1192,10 @@ let ctyp_decl, implicit_ctyp_decl =
    *)
 
 let hole : string option parser =
-  satisfy' (`hole None)
+  satisfy' (`hole Option.none)
     (function
-     | T.HOLE s -> Some (match s with "" -> None | _ -> Some s)
-     | _ -> None)
+     | T.HOLE s -> Option.some (match s with "" -> Option.none | _ -> Option.some s)
+     | _ -> Option.none)
   |> labelled "hole"
 
 let rec_block (p : (Name.t * LF.typ) parser) =
@@ -1332,7 +1278,7 @@ and clf_typ_atomic =
     $> fun (loc, (x, ms)) ->
         LF.AtomTerm
           ( loc
-          , LF.TList (loc, (LF.Root (loc, LF.Name (loc, x, None), LF.Nil)) :: ms)
+          , LF.TList (loc, (LF.Root (loc, LF.Name (loc, x, Option.none), LF.Nil)) :: ms)
           )
   in
   let p =
@@ -1368,7 +1314,7 @@ and clf_typ_pure_atomic =
               ( loc
               , LF.TList
                   ( loc
-                  , LF.Root (loc, LF.Name (loc, x, None), LF.Nil)
+                  , LF.Root (loc, LF.Name (loc, x, Option.none), LF.Nil)
                     :: ms
                   )
               )
@@ -1416,8 +1362,8 @@ and clf_typ =
     |> span
     $> fun (loc, (a, b)) ->
         match b with
-        | None -> a
-        | Some b -> LF.ArrTyp (loc, a, b)
+        | Option.None -> a
+        | Option.Some b -> LF.ArrTyp (loc, a, b)
   in
   run (choice
       [ pi; arrow_or_atomic ]
@@ -1481,8 +1427,8 @@ and clf_head =
     $> fun (loc, (f, proj, sigma)) ->
         let m = f loc sigma in
         match proj with
-        | Some k -> LF.Proj (loc, m, k)
-        | None -> m
+        | Option.Some k -> LF.Proj (loc, m, k)
+        | Option.None -> m
   in
   let hole =
     token T.UNDERSCORE
@@ -1520,8 +1466,8 @@ and clf_normal =
     |> labelled "LF application"
     $> fun (loc, (tm, ann)) ->
         match ann with
-        | None -> tm
-        | Some a -> LF.Ann (loc, tm, a)
+        | Option.None -> tm
+        | Option.Some a -> LF.Ann (loc, tm, a)
   in
   let lfhole =
     span hole
@@ -1568,8 +1514,8 @@ and clf_dctx : LF.dctx parser =
       (maybe (token T.COLON &> clf_typ))
     $> fun (x, tA) ->
         match tA with
-        | Some tA -> LF.TypDecl (x, tA)
-        | None -> LF.TypDeclOpt x
+        | Option.Some tA -> LF.TypDecl (x, tA)
+        | Option.None -> LF.TypDeclOpt x
   in
   (* the different ways a context can begin:
       a hole, a variable, or a declaration
@@ -1630,23 +1576,19 @@ and contextual : type a. a parser -> (LF.dctx * a) parser =
     p
 
 let meta_obj =
-  fun s ->
-  let p =
-    let clobj =
-      seq2
-        clf_dctx
-        (maybe (token T.TURNSTILE &> clf_sub_new))
-      |> span
-      $> fun (loc, (cPsi, tR)) ->
-          match tR with
-          | Some tR -> (loc, LF.ClObj (cPsi, tR))
-          | None -> (loc, LF.CObj cPsi)
-    in
-    clobj
-    |> bracks
-    |> labelled "meta object"
+  let clobj =
+    seq2
+      clf_dctx
+      (maybe (token T.TURNSTILE &> clf_sub_new))
+    |> span
+    $> fun (loc, (cPsi, tR)) ->
+        match tR with
+        | Option.Some tR -> (loc, LF.ClObj (cPsi, tR))
+        | Option.None -> (loc, LF.CObj cPsi)
   in
-  run p s
+  clobj
+  |> bracks
+  |> labelled "meta object"
 
 (** Parses the `ctype` kind, the kind of computation types. *)
 let ctype_kind =
@@ -1687,7 +1629,6 @@ let cltyp : (LF.dctx * typ_or_ctx) parser =
 
 let clf_ctyp_decl_bare : type a. a name_parser -> (a -> Plicity.t * Name.t) -> LF.ctyp_decl t =
   fun nameclass plicity_of_name ->
-    fun s ->
     let hash_variable_decl p =
       contextual_variable_decl
         (nameclass `hash)
@@ -1726,35 +1667,32 @@ let clf_ctyp_decl_bare : type a. a name_parser -> (a -> Plicity.t * Name.t) -> L
       $> mk_cltyp_decl_blank (fun (sclass, cPhi) -> LF.STyp (sclass, cPhi))
       |> labelled "substitution/renaming variable"
     in
-    let q =
-      choice
-        [ param_variable
-        ; subst_variable
-        (* since a name followed by a colon happens in both
-            the case for an mvar and the case for a context
-            variable, we refactor the grammar to parse first the
-            name followed by the colon, and *then* we perform an
-            alternation to see whether we have another name (so
-            a ctx var) or a box (so an mvar)
-          *)
-        ; nameclass `ordinary <& token T.COLON |> span
-          >>= fun (loc1, nb) ->
-            let plicity, x = plicity_of_name nb in
-            alt
-              (span name
-                $> fun (loc2, ctx) ->
-                  mk_decl plicity
-                    (fun w -> LF.CTyp w)
-                    (Location.join loc1 loc2, (x, ctx)))
-              (bracks_or_opt_parens (contextual clf_typ_atomic) |> span
-                $> fun (loc2, d) ->
-                  mk_cltyp_decl
-                    plicity
-                    (fun tA -> LF.MTyp tA)
-                    (Location.join loc1 loc2, (x, d)))
-        ]
-    in
-    run q s
+    choice
+      [ param_variable
+      ; subst_variable
+      (* since a name followed by a colon happens in both
+          the case for an mvar and the case for a context
+          variable, we refactor the grammar to parse first the
+          name followed by the colon, and *then* we perform an
+          alternation to see whether we have another name (so
+          a ctx var) or a box (so an mvar)
+        *)
+      ; nameclass `ordinary <& token T.COLON |> span
+        >>= fun (loc1, nb) ->
+          let plicity, x = plicity_of_name nb in
+          alt
+            (span name
+              $> fun (loc2, ctx) ->
+                mk_decl plicity
+                  (fun w -> LF.CTyp w)
+                  (Location.join loc1 loc2, (x, ctx)))
+            (bracks_or_opt_parens (contextual clf_typ_atomic) |> span
+              $> fun (loc2, d) ->
+                mk_cltyp_decl
+                  plicity
+                  (fun tA -> LF.MTyp tA)
+                  (Location.join loc1 loc2, (x, d)))
+      ]
 
 (* parses `name : name` *)
 let ctx_variable =
@@ -1769,7 +1707,6 @@ let ctx_variable =
 
 (** Contextual LF contextual type declaration *)
 let clf_ctyp_decl =
-  fun s ->
   (* Parses `#name : [ dctx |- p ]` *)
   let hash_variable_decl p =
     contextual_variable_decl hash_name bracks_or_opt_parens p
@@ -1832,11 +1769,8 @@ let clf_ctyp_decl =
       ]
     |> braces
   in
-  let p =
-    labelled "contextual type declaration"
-      (alt (parens ctx_variable) q)
-  in
-  run p s
+  labelled "contextual type declaration"
+    (alt (parens ctx_variable) q)
 
 let mctx ?(sep = token T.COMMA) p =
   sep_by0 p sep
@@ -1897,8 +1831,8 @@ and cmp_typ_cross =
     |> labelled "computation product type"
     $> fun (loc, (tau, m)) ->
         match m with
-        | None -> tau
-        | Some tau' -> Comp.TypCross (loc, tau, tau')
+        | Option.None -> tau
+        | Option.Some tau' -> Comp.TypCross (loc, tau, tau')
   in
   run p s
 
@@ -2097,8 +2031,8 @@ and cmp_pattern =
     |> span
     $> fun (loc, (p, tau)) ->
         match tau with
-        | None -> p
-        | Some tau -> Comp.PatAnn (loc, p, tau)
+        | Option.None -> p
+        | Option.Some tau -> Comp.PatAnn (loc, p, tau)
   in
   run p s
 
@@ -2341,7 +2275,7 @@ and cmp_exp_syn' =
 let call_arg =
   alt
     (name $> Option.some)
-    (token T.UNDERSCORE &> return None)
+    (token T.UNDERSCORE &> return Option.none)
   |> labelled "call argument"
 
 let named_total_arg : Comp.named_order t =
@@ -2484,7 +2418,7 @@ let sgn_cmp_typ_decl =
 let sgn_query_pragma =
   let bound =
     alt
-      (token T.STAR &> return None)
+      (token T.STAR &> return Option.none)
       (integer $> Option.some)
     |> labelled "search bound"
   in
@@ -2503,7 +2437,7 @@ let sgn_query_pragma =
 let sgn_mquery_pragma =
   let bound =
     alt
-      (token T.STAR &> return None)
+      (token T.STAR &> return Option.none)
       (integer $> Option.some)
     |> labelled "search bound"
   in
@@ -2601,8 +2535,8 @@ let sgn_abbrev_pragma : Sgn.decl parser =
 let sgn_comment : Sgn.decl parser =
   satisfy' `html_comment
     (function
-     | T.BLOCK_COMMENT s -> Some s
-     | _ -> None)
+     | T.BLOCK_COMMENT s -> Option.some s
+     | _ -> Option.none)
   |> span
   |> labelled "HTML comment"
   $> fun (location, content) -> Sgn.Comment { location; content }
@@ -2641,8 +2575,8 @@ let lf_typ_rec =
      $> fun a ->
         let x =
           match a with
-          | LF.Atom (_, n, _) -> Some n
-          | _ -> None
+          | LF.Atom (_, n, _) -> Option.some n
+          | _ -> Option.none
         in
         LF.SigmaLast (x, a))
 
@@ -2694,22 +2628,22 @@ let harpoon_command : Comp.command parser =
     $> fun (loc, (i, x, b)) ->
        match b with
        | `boxed -> Comp.By (loc, i, x)
-       | `unboxed -> Comp.Unbox (loc, i, x, None)
-       | `strengthened -> Comp.Unbox (loc, i, x, Some `strengthened)
+       | `unboxed -> Comp.Unbox (loc, i, x, Option.none)
+       | `strengthened -> Comp.Unbox (loc, i, x, Option.some `strengthened)
   in
   let unbox =
     keyword "unbox" &>
       seq2
         ((span cmp_exp_syn) <& token T.KW_AS)
         name
-    $> fun ((loc, i), x) -> Comp.Unbox (loc, i, x, None)
+    $> fun ((loc, i), x) -> Comp.Unbox (loc, i, x, Option.none)
   in
   let strengthen =
     keyword "strengthend" &>
       seq2
         (span cmp_exp_syn <& token T.KW_AS)
         name
-    $> fun ((loc, i), x) -> Comp.Unbox (loc, i, x, Some `strengthened)
+    $> fun ((loc, i), x) -> Comp.Unbox (loc, i, x, Option.some `strengthened)
   in
   choice [ by; unbox; strengthen ]
 
@@ -2979,8 +2913,8 @@ let interactive_harpoon_command =
         (maybe_default boxity `boxed)
     $> fun (i, name, b) ->
        match b with
-       | `strengthened -> H.Unbox (i, name, Some `strengthened)
-       | `unboxed -> H.Unbox (i, name, None)
+       | `strengthened -> H.Unbox (i, name, Option.some `strengthened)
+       | `unboxed -> H.Unbox (i, name, Option.none)
        | `boxed -> H.By (i, name)
   in
   let compute_type =
@@ -3007,14 +2941,14 @@ let interactive_harpoon_command =
       seq2
         cmp_exp_syn
         (token T.KW_AS &> name)
-    $> fun (i, name) -> H.Unbox (i, name, None)
+    $> fun (i, name) -> H.Unbox (i, name, Option.none)
   in
   let strengthen =
     keyword "strengthen" &>
       seq2
         cmp_exp_syn
         (token T.KW_AS &> name)
-    $> fun (i, name) -> H.Unbox (i, name, Some `strengthened)
+    $> fun (i, name) -> H.Unbox (i, name, Option.some `strengthened)
   in
   let automation_kind =
     choice

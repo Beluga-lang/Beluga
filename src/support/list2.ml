@@ -69,6 +69,14 @@ let fold_left fst snd cons (T (x1, x2, xs)) =
 let fold_left2 fst snd cons (T (x1, x2, xs)) (T (y1, y2, ys)) =
   List.fold_left2 cons (snd (fst x1 y1) x2 y2) xs ys
 
+let fold_left3 fst snd cons (T (x1, x2, xs)) (T (y1, y2, ys))
+    (T (z1, z2, zs)) =
+  List.fold_left3 cons (snd (fst x1 y1 z1) x2 y2 z2) xs ys zs
+
+let fold_left4 fst snd cons (T (x1, x2, xs)) (T (y1, y2, ys))
+    (T (z1, z2, zs)) (T (w1, w2, ws)) =
+  List.fold_left4 cons (snd (fst x1 y1 z1 w1) x2 y2 z2 w2) xs ys zs ws
+
 let filter_map f l = List.filter_map f (to_list l)
 
 let for_all f l = List.for_all f (to_list l)

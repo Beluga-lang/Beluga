@@ -66,6 +66,19 @@ let hd_opt = function
 
 let index l = mapi (fun i x -> (i, x)) l
 
+let rec fold_left3 f accu l1 l2 l3 =
+  match (l1, l2, l3) with
+  | [], [], [] -> accu
+  | a1 :: l1, a2 :: l2, a3 :: l3 -> fold_left3 f (f accu a1 a2 a3) l1 l2 l3
+  | _, _, _ -> invalid_arg "List.fold_left3"
+
+let rec fold_left4 f accu l1 l2 l3 l4 =
+  match (l1, l2, l3, l4) with
+  | [], [], [], [] -> accu
+  | a1 :: l1, a2 :: l2, a3 :: l3, a4 :: l4 ->
+    fold_left4 f (f accu a1 a2 a3 a4) l1 l2 l3 l4
+  | _, _, _, _ -> invalid_arg "List.fold_left4"
+
 let mapi2 f l1 l2 =
   let rec mapi2 index l1 l2 return =
     match (l1, l2) with

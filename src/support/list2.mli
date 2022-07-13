@@ -99,6 +99,27 @@ val fold_left2 :
   -> 'b t
   -> 'd
 
+(** Same as {!fold_left2} but for three lists. *)
+val fold_left3 :
+     ('a1 -> 'a2 -> 'a3 -> 'b)
+  -> ('b -> 'a1 -> 'a2 -> 'a3 -> 'c)
+  -> ('c -> 'a1 -> 'a2 -> 'a3 -> 'c)
+  -> 'a1 t
+  -> 'a2 t
+  -> 'a3 t
+  -> 'c
+
+(** Same as {!fold_left3} but for four lists. *)
+val fold_left4 :
+     ('a1 -> 'a2 -> 'a3 -> 'a4 -> 'b)
+  -> ('b -> 'a1 -> 'a2 -> 'a3 -> 'a4 -> 'c)
+  -> ('c -> 'a1 -> 'a2 -> 'a3 -> 'a4 -> 'c)
+  -> 'a1 t
+  -> 'a2 t
+  -> 'a3 t
+  -> 'a4 t
+  -> 'c
+
 (** [filter_map f l] applies [f] to every element of [l], filters out the
     [Option.None] elements and returns the list of the arguments of the
     [Option.Some] elements. *)

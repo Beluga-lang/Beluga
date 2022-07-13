@@ -57,6 +57,20 @@ val hd_opt : 'a list -> 'a option
 (** [index \[x0; x1; ...; xn\]] is [\[(0, x0); (1, x1); ...; (n, xn)\]]. *)
 val index : 'a list -> (int * 'a) list
 
+(** Same as {!fold_left2} but for three lists. *)
+val fold_left3 :
+  ('b -> 'a1 -> 'a2 -> 'a3 -> 'b) -> 'b -> 'a1 t -> 'a2 t -> 'a3 t -> 'b
+
+(** Same as {!fold_left3} but for four lists. *)
+val fold_left4 :
+     ('b -> 'a1 -> 'a2 -> 'a3 -> 'a4 -> 'b)
+  -> 'b
+  -> 'a1 t
+  -> 'a2 t
+  -> 'a3 t
+  -> 'a4 t
+  -> 'b
+
 (** [mapi2 f \[x0; x1; ...; xn\] \[y0; y1; ...; yn\]] is
     [\[f 0 x0 y0; f 1 x1 y1; ...; f n xn yn\]].
 

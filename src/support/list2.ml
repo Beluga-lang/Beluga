@@ -66,6 +66,9 @@ let fold_right fst snd cons l =
 let fold_left fst snd cons (T (x1, x2, xs)) =
   List.fold_left cons (snd (fst x1) x2) xs
 
+let fold_left2 fst snd cons (T (x1, x2, xs)) (T (y1, y2, ys)) =
+  List.fold_left2 cons (snd (fst x1 y1) x2 y2) xs ys
+
 let filter_map f l = List.filter_map f (to_list l)
 
 let for_all f l = List.for_all f (to_list l)

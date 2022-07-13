@@ -82,9 +82,22 @@ val fold_right :
   ('a -> 'b) -> ('a -> 'b -> 'c) -> ('a -> 'c -> 'c) -> 'a t -> 'c
 
 (** [fold_left fst snd cons (a1, a2, \[a3; ...; an\])] is
-    [cons (... (cons a3 (snd (fst a1) a2)) ....) an]. *)
+    [cons (... (cons (snd (fst a1) a2) a3) ....) an]. *)
 val fold_left :
   ('a -> 'b) -> ('b -> 'a -> 'c) -> ('c -> 'a -> 'c) -> 'a t -> 'c
+
+(** [fold_left2 fst snd cons (a1, a2, \[a3; ...; an\]) (b1, b2, \[b3; ...; bn\])]
+    is [cons (... (cons (snd (fst a1 b1) a2 b2) a3 b3) ....) an bn].
+
+    @raise Invalid_argument
+      if the two lists are determined to have different lengths. *)
+val fold_left2 :
+     ('a -> 'b -> 'c)
+  -> ('c -> 'a -> 'b -> 'd)
+  -> ('d -> 'a -> 'b -> 'd)
+  -> 'a t
+  -> 'b t
+  -> 'd
 
 (** [filter_map f l] applies [f] to every element of [l], filters out the
     [Option.None] elements and returns the list of the arguments of the

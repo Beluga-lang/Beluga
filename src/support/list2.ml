@@ -55,6 +55,20 @@ let map f (T (x1, x2, xs)) =
   let ys = List.map f xs in
   T (y1, y2, ys)
 
+let map2 f (T (x1, x2, xs)) (T (y1, y2, ys)) =
+  T (f x1 y1, f x2 y2, List.map2 f xs ys)
+
+let mapi2 =
+  let rec mapi2 index f l1 l2 return =
+    match (l1, l2) with
+    | [], [] -> return []
+    | x :: xs, y :: ys ->
+      mapi2 (index + 1) f xs ys (fun tl -> return (f index x y :: tl))
+    | _ -> raise (Invalid_argument "List2.mapi2")
+  in
+  fun f (T (x1, x2, xs)) (T (y1, y2, ys)) ->
+    T (f 0 x1 y1, f 1 x2 y2, mapi2 2 f xs ys Fun.id)
+
 let fold_right fst snd cons l =
   let rec fold_right (T (x1, x2, xs)) return =
     match xs with
@@ -90,10 +104,6 @@ let traverse f (T (x1, x2, xs)) =
   f x1 >>= fun y1 ->
   f x2 >>= fun y2 ->
   traverse f xs >>= fun ys -> Some (T (y1, y2, ys))
-
-let map2 f (T (x1, x2, xs)) (T (y1, y2, ys)) =
-  try T (f x1 y1, f x2 y2, List.map2 f xs ys)
-  with Invalid_argument _ -> invalid_arg "List2.map2"
 
 let find_opt p l = List.find_opt p (to_list l)
 

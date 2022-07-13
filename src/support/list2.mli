@@ -73,8 +73,22 @@ val iter : ('a -> unit) -> 'a t -> unit
       if the two lists are determined to have different lengths. *)
 val iter2 : ('a -> 'b -> unit) -> 'a t -> 'b t -> unit
 
-(** Maps a function over the list. *)
+(** [map f (a1, a2, \[a3; ...; an\])] is [(f a1, f a2, \[f a3; ...; f an\])]. *)
 val map : ('a -> 'b) -> 'a t -> 'b t
+
+(** [map2 f (a1, a2, \[a3; ...; an\]) (b1, b2, \[b3; ...; bn\])] is
+    [(f a1 b1, f a2 b2, \[f a3 b3; ...; f an bn\])].
+
+    @raise Invalid_argument
+      if the two lists are determined to have different lengths. *)
+val map2 : ('a -> 'b -> 'c) -> 'a t -> 'b t -> 'c t
+
+(** [mapi2 f (a0, a1, \[a2; ...; an\]) (b0, b1, \[b2; ...; bn\])] is
+    [(f 0 a0 b0, f 1 a1 b1, \[f 2 a2 b2; ...; f n an bn\])].
+
+    @raise Invalid_argument
+      if the two lists are determined to have different lengths. *)
+val mapi2 : (int -> 'a -> 'b -> 'c) -> 'a t -> 'b t -> 'c t
 
 (** [fold_right fst snd cons (a1, a2, \[a3; ...; an\])] is
     [cons a1 (cons a2 (... (snd a(n-1) (fst an)) ...))]. *)
@@ -129,15 +143,6 @@ val filter_map : ('a -> 'b option) -> 'a t -> 'b list
     any individual call fails. Note that elements beyond the first failing
     one will not be processed. *)
 val traverse : ('a -> 'b option) -> 'a t -> 'b t option
-
-(** {1 Iterators on two lists} *)
-
-(** [map2 f (a1, \[a2; ...; an\]) (b1, \[b2; ...; bn\])] is
-    [(f a1 b1, \[f a2 b2; ...; f an bn\])].
-
-    @raise Invalid_argument
-      if the two lists are determined to have different lengths. *)
-val map2 : ('a -> 'b -> 'c) -> 'a t -> 'b t -> 'c t
 
 (** {1 List scanning} *)
 

@@ -1,6 +1,12 @@
 open OUnit2
 open Support
 
+let assert_raises_invalid_argument f =
+  try
+    ignore (f ());
+    assert_failure "Expected exception [Invalid_argument _] to be raised"
+  with Invalid_argument _ -> ()
+
 let pp_print_list ppv ppf =
   Format.fprintf ppf "[%a]"
     (List.pp ~pp_sep:(fun ppf () -> Format.pp_print_string ppf "; ") ppv)
@@ -69,15 +75,14 @@ let tests =
                ]
               |> List.map Fun.(test_map >> OUnit2.test_case))
        ; "map2"
-         >::: ("raises `Invalid_argument \"List1.map2\"` on lists of \
-                different lengths"
+         >::: ("raises [Invalid_argument _] on lists of different lengths"
               >::: ([ ((fun _ _ -> ()), List1.from 1 [ 2 ], List1.from 1 [])
                     ; ((fun _ _ -> ()), List1.from 1 [], List1.from 1 [ 2 ])
                     ]
                    |> List.map (fun (f, l1, l2) ->
                           OUnit2.test_case (fun _ ->
-                              assert_raises (Invalid_argument "List1.map2")
-                                (fun () -> List1.map2 f l1 l2)))))
+                              assert_raises_invalid_argument (fun () ->
+                                  List1.map2 f l1 l2)))))
               :: ([ ( (( + ), List1.from 1 [ 2 ], List1.from 3 [ 4 ])
                     , List1.from 4 [ 6 ] )
                   ]

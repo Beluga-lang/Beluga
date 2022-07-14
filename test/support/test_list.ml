@@ -1,6 +1,12 @@
 open OUnit2
 open Support
 
+let assert_raises_invalid_argument f =
+  try
+    ignore (f ());
+    assert_failure "Expected exception [Invalid_argument _] to be raised"
+  with Invalid_argument _ -> ()
+
 let test_equal ((eq, l1, l2), expected) _ =
   assert_equal expected (List.equal eq l1 l2)
 
@@ -67,10 +73,8 @@ let tests =
                ]
               |> List.map Fun.(test_equal >> OUnit2.test_case))
        ; "last"
-         >::: ( "raises `Invalid_argument \"List.last\"` on empty list"
-              >:: fun _ ->
-                assert_raises (Invalid_argument "List.last") (fun () ->
-                    List.last []) )
+         >::: ( "raises [Invalid_argument _] on empty list" >:: fun _ ->
+                assert_raises_invalid_argument (fun () -> List.last []) )
               :: ([ ([ 1 ], 1); ([ 1; 2 ], 2); ([ 1; 2; 3 ], 3) ]
                  |> List.map Fun.(test_last >> OUnit2.test_case))
        ; "rev"
@@ -121,8 +125,7 @@ let tests =
          >::: ([ [ 1; 2; 3 ]; [ 1 ]; [] ]
               |> List.map Fun.(test_iter >> OUnit2.test_case))
        ; "mapi2"
-         >::: ("raises `Invalid_argument \"List.mapi2\"` on lists of \
-                different lengths"
+         >::: ("raises [Invalid_argument _] on lists of different lengths"
               >::: ([ ((fun _ _ _ -> ()), [ 1; 2 ], [ 1 ])
                     ; ((fun _ _ _ -> ()), [ 1 ], [ 1; 2 ])
                     ; ((fun _ _ _ -> ()), [], [ 1 ])
@@ -130,8 +133,8 @@ let tests =
                     ]
                    |> List.map (fun (f, l1, l2) ->
                           OUnit2.test_case (fun _ ->
-                              assert_raises (Invalid_argument "List.mapi2")
-                                (fun () -> List.mapi2 f l1 l2)))))
+                              assert_raises_invalid_argument (fun () ->
+                                  List.mapi2 f l1 l2)))))
               :: ([ (((fun i _ _ -> i), [ 1; 2 ], [ 1; 2 ]), [ 0; 1 ])
                   ; (((fun _ -> ( + )), [ 1; 2 ], [ 3; 4 ]), [ 4; 6 ])
                   ]

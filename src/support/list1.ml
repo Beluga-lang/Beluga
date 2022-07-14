@@ -81,8 +81,7 @@ let traverse f (T (x, l)) =
     traverse f l >>= fun ys -> Some (T (y, ys)))
 
 let map2 f (T (h1, t1)) (T (h2, t2)) =
-  try T (f h1 h2, List.map2 f t1 t2)
-  with Invalid_argument _ -> invalid_arg "List1.map2"
+  T (f h1 h2, List.map2 f t1 t2)
 
 let of_list = function
   | [] -> None
@@ -134,8 +133,7 @@ let split (T ((x, y), t)) =
   (T (x, xs), T (y, ys))
 
 let combine (T (a, l1)) (T (b, l2)) =
-  try T ((a, b), List.combine l1 l2)
-  with Invalid_argument _ -> invalid_arg "List1.combine"
+  T ((a, b), List.combine l1 l2)
 
 let ap xs = map2 Fun.apply xs
 

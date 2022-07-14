@@ -133,8 +133,7 @@ let split (T ((x1, y1), (x2, y2), t)) =
   (T (x1, x2, xs), T (y1, y2, ys))
 
 let combine (T (x1, x2, l1)) (T (y1, y2, l2)) =
-  try T ((x1, y1), (x2, y2), List.combine l1 l2)
-  with Invalid_argument _ -> invalid_arg "List2.combine"
+  T ((x1, y1), (x2, y2), List.combine l1 l2)
 
 let ap xs = map2 Fun.apply xs
 

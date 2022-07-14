@@ -1160,106 +1160,67 @@ let rec_block (p : (Name.t * LF.typ) parser) =
        (fun (x, a) s -> LF.SigmaElem (x, a, s))
        es
 
-let clf_projection : LF.proj parser =
-  alt
-    (dot_integer $> (fun k -> LF.ByPos k))
-    (dot_name $> (fun x -> LF.ByName x))
+module rec Contextual_LF_parsers : sig
+  val meta_obj : Comp.meta_obj t
+  val contextual : 'a parser -> (LF.dctx * 'a) parser
+  val clf_typ : LF.typ t
+  val clf_typ_pure : LF.typ t
+  val clf_normal : LF.normal t
+  val clf_dctx : LF.dctx t
+  val ctx_variable : LF.ctyp_decl t
+  val clf_ctyp_decl_bare : 'a name_parser -> ('a -> Plicity.t * Name.t) -> LF.ctyp_decl t
+  val clf_ctyp_decl : LF.ctyp_decl t
+  val cltyp : (LF.dctx * typ_or_ctx) t
+  val clf_sub_term : LF.sub_start t
+end = struct
+  let clf_projection : LF.proj parser =
+    alt
+      (dot_integer $> (fun k -> LF.ByPos k))
+      (dot_name $> (fun x -> LF.ByName x))
 
-(** Parses an LF function type (uniform pi or arrow)
-    using the given parsers for types and atomic types.
- *)
-let rec lf_function_type p p_atomic =
-  let pi =
-    let d =
-      seq2 (name <& token T.COLON) p
-      |> braces
-      $> fun (name, a) -> LF.TypDecl (name, a)
+  (** Parses an LF function type (uniform pi or arrow)
+      using the given parsers for types and atomic types.
+   *)
+  let lf_function_type p p_atomic =
+    let pi =
+      let d =
+        seq2 (name <& token T.COLON) p
+        |> braces
+        $> fun (name, a) -> LF.TypDecl (name, a)
+      in
+      seq2 d p
+      |> span
+      $> fun (loc, (d, b)) -> LF.PiTyp (loc, d, b)
     in
-    seq2 d p
-    |> span
-    $> fun (loc, (d, b)) -> LF.PiTyp (loc, d, b)
-  in
-  let arrow =
-    seq2 (trying (p_atomic <& token T.ARROW)) p
-    |> span
-    $> fun (loc, (a, b)) -> LF.ArrTyp (loc, a, b)
-  in
-  alt pi arrow
+    let arrow =
+      seq2 (trying (p_atomic <& token T.ARROW)) p
+      |> span
+      $> fun (loc, (a, b)) -> LF.ArrTyp (loc, a, b)
+    in
+    alt pi arrow
 
-(** Parses a sequence of contextual LF normal terms and packages them
-    into a TList for infix operator parsing later during indexing.
- *)
-and clf_term_app =
-  fun s ->
-  let normal_list =
-    some clf_normal
-    |> span
-    $> fun (loc, ms) -> LF.TList (loc, ms)
-  in
-  let p =
+  (** Parses a sequence of contextual LF normal terms and packages them
+      into a TList for infix operator parsing later during indexing.
+   *)
+  let clf_term_app =
+    let normal_list =
+      some Contextual_LF_parsers.clf_normal
+      |> span
+      $> fun (loc, ms) -> LF.TList (loc, ms)
+    in
     choice
       [ normal_list
       ; span T.(tokens [LBRACE; RBRACE])
         $> (fun (loc, _) -> LF.PatEmpty loc)
-      ; span clf_typ
+      ; span Contextual_LF_parsers.clf_typ
         $> (fun (loc, a) -> LF.NTyp (loc, a))
       ]
     |> labelled "contextual LF application"
-  in
-  run p s
 
-and clf_typ_atomic =
-  fun s ->
-  let a =
-    labelled
-      "nonempty sequence of contextual LF normal terms"
-      begin
-        some clf_normal
-        |> span
-        $> fun (loc, ms) ->
-            match ms with
-            | [LF.NTyp (_, a)] -> a
-            | _ -> LF.AtomTerm (loc, LF.TList (loc, ms))
-      end
-  in
-  let b =
-    seq2
-      name
-      (many clf_normal)
-    |> span
-    $> fun (loc, (x, ms)) ->
-        LF.AtomTerm
-          ( loc
-          , LF.TList (loc, (LF.Root (loc, LF.Name (loc, x, Option.none), LF.Nil)) :: ms)
-          )
-  in
-  let p =
+  let clf_typ_pure_atomic =
     choice
-      [ a
-      ; b
-      ; parens clf_typ
-      ; clf_typ_rec_block |> span $> fun (loc, r) -> LF.Sigma (loc, r)
-      ]
-    |> labelled "atomic contextual LF type"
-  in
-  run p s
-
-and clf_typ_pure =
-  fun s ->
-  let p =
-    alt
-      (lf_function_type clf_typ_pure clf_typ_pure_atomic)
-      (clf_typ_pure_atomic)
-    |> labelled "return contextual LF type"
-  in
-  run p s
-
-and clf_typ_pure_atomic =
-  fun s ->
-  let p =
-    choice
-      [ parens clf_typ_pure
-      ; seq2 name (many clf_normal)
+      [ parens Contextual_LF_parsers.clf_typ_pure
+      ; seq2 name (many Contextual_LF_parsers.clf_normal)
         |> span
         $> fun (loc, (x, ms)) ->
             LF.AtomTerm
@@ -1272,59 +1233,105 @@ and clf_typ_pure_atomic =
               )
       ]
     |> labelled "atomic return contextual LF type"
-  in
-  run p s
 
-and clf_typ_rec_elem =
-  fun s ->
-  let p =
+  let clf_typ_pure =
+    alt
+      (lf_function_type Contextual_LF_parsers.clf_typ_pure clf_typ_pure_atomic)
+      (clf_typ_pure_atomic)
+    |> labelled "return contextual LF type"
+
+  let clf_typ_rec_elem =
     seq2 (name <& token T.COLON) clf_typ_pure
     |> labelled "contextual LF block element"
-  in
-  run p s
 
-and clf_typ_rec_block =
-  fun s ->
-  let p =
+  let clf_typ_rec_block =
     rec_block clf_typ_rec_elem
     |> labelled "contextual LF block"
-  in
-  run p s
 
-and clf_typ =
-  fun s ->
-  let pi_decl =
-    seq2
-      (name <& token T.COLON)
-      clf_typ
-    |> braces
-  in
-  let pi =
-    seq2
-      (pi_decl <& maybe (token T.ARROW))
-      clf_typ
-    |> span
-    $> fun (loc, ((x, a), a')) ->
-        LF.PiTyp (loc, LF.TypDecl (x, a), a')
-  in
-  let arrow_or_atomic =
-    seq2
-      clf_typ_atomic
-      (maybe (token T.ARROW &> clf_typ))
-    |> span
-    $> fun (loc, (a, b)) ->
-        match b with
-        | Option.None -> a
-        | Option.Some b -> LF.ArrTyp (loc, a, b)
-  in
-  run (choice
-      [ pi; arrow_or_atomic ]
+  let clf_typ_atomic =
+    let a =
+      labelled
+        "nonempty sequence of contextual LF normal terms"
+        begin
+          some Contextual_LF_parsers.clf_normal
+          |> span
+          $> fun (loc, ms) ->
+              match ms with
+              | [LF.NTyp (_, a)] -> a
+              | _ -> LF.AtomTerm (loc, LF.TList (loc, ms))
+        end
+    in
+    let b =
+      seq2
+        name
+        (many Contextual_LF_parsers.clf_normal)
+      |> span
+      $> fun (loc, (x, ms)) ->
+          LF.AtomTerm
+            ( loc
+            , LF.TList (loc, (LF.Root (loc, LF.Name (loc, x, Option.none), LF.Nil)) :: ms)
+            )
+    in
+    choice
+      [ a
+      ; b
+      ; parens Contextual_LF_parsers.clf_typ
+      ; clf_typ_rec_block |> span $> fun (loc, r) -> LF.Sigma (loc, r)
+      ]
+    |> labelled "atomic contextual LF type"
+
+  let clf_typ =
+    let pi_decl =
+      seq2
+        (name <& token T.COLON)
+        Contextual_LF_parsers.clf_typ
+      |> braces
+    in
+    let pi =
+      seq2
+        (pi_decl <& maybe (token T.ARROW))
+        Contextual_LF_parsers.clf_typ
+      |> span
+      $> fun (loc, ((x, a), a')) ->
+          LF.PiTyp (loc, LF.TypDecl (x, a), a')
+    in
+    let arrow_or_atomic =
+      seq2
+        clf_typ_atomic
+        (maybe (token T.ARROW &> Contextual_LF_parsers.clf_typ))
+      |> span
+      $> fun (loc, (a, b)) ->
+          match b with
+          | Option.None -> a
+          | Option.Some b -> LF.ArrTyp (loc, a, b)
+    in
+    choice [ pi; arrow_or_atomic ]
     |> labelled "contextual LF type"
-  ) s
 
-and clf_sub_term =
-  fun s ->
-  let p =
+  let clf_sub_new =
+    let start =
+      alt
+        (Contextual_LF_parsers.clf_sub_term
+          $> fun t -> (t, []))
+        (span clf_term_app
+          $> fun (loc, tM) -> (LF.EmptySub loc, [tM]))
+    in
+    let nonemptysub =
+      seq2 start (many (token T.COMMA &> clf_term_app))
+      (* we need to reverse xs because the *rightmost* element
+          (textually) must be the head of the list.
+          This is also why ts comes after xs, despite being *parsed*
+          before!
+        *)
+      $> fun ((s, ts), xs) -> (s, List.rev xs @ ts)
+    in
+    let emptysub =
+      span (return ()) $> fun (loc, _) -> (LF.EmptySub loc, [])
+    in
+    alt nonemptysub emptysub
+    |> labelled "contextual LF substitution"
+
+  let clf_sub_term =
     choice
       [ token T.HAT |> span $> (fun (loc, _) -> LF.EmptySub loc)
       ; token T.DOTS |> span $> (fun (loc, _) -> LF.Id loc)
@@ -1335,112 +1342,80 @@ and clf_sub_term =
         $> fun (loc, (x, s)) -> LF.SVar (loc, x, s)
       ]
     |> labelled "contextual LF substitution term"
-  in
-  run p s
 
-and clf_sub_new =
-  fun s ->
-  let start =
-    alt
-      (clf_sub_term
-        $> fun t -> (t, []))
-      (span clf_term_app
-        $> fun (loc, tM) -> (LF.EmptySub loc, [tM]))
-  in
-  let nonemptysub =
-    seq2 start (many (token T.COMMA &> clf_term_app))
-    (* we need to reverse xs because the *rightmost* element
-        (textually) must be the head of the list.
-        This is also why ts comes after xs, despite being *parsed*
-        before!
+  let clf_head =
+    let var =
+      seq3
+        (alt
+            (hash_name $> fun x -> fun loc sigma -> LF.PVar (loc, x, sigma))
+            (fqname $> fun x -> fun loc sigma -> LF.Name (loc, x, sigma)))
+        (maybe clf_projection)
+        (maybe (bracks clf_sub_new))
+      |> shifted "variable head"
+      |> span
+      $> fun (loc, (f, proj, sigma)) ->
+          let m = f loc sigma in
+          match proj with
+          | Option.Some k -> LF.Proj (loc, m, k)
+          | Option.None -> m
+    in
+    let hole =
+      token T.UNDERSCORE
+      |> span
+      $> fun (loc, _) -> LF.Hole loc
+    in
+    choice [hole ; var]
+
+  let clf_normal =
+    let lam =
+      seq2
+        (token T.LAMBDA &> name)
+        (token T.DOT &> clf_term_app)
+      |> span
+      |> labelled "LF lambda"
+      $> fun (loc, (x, m)) ->
+          LF.Lam (loc, x, m)
+    in
+    (*
+    let modul =
+      span fqname $> fun (loc, x) -> LF.Root (loc, LF.Name (loc, x), LF.Nil)
+    in
       *)
-    $> fun ((s, ts), xs) -> (s, List.rev xs @ ts)
-  in
-  let emptysub =
-    span (return ()) $> fun (loc, _) -> (LF.EmptySub loc, [])
-  in
-  let p =
-    alt nonemptysub emptysub
-    |> labelled "contextual LF substitution"
-  in
-  run p s
-
-and clf_head =
-  fun s ->
-  let var =
-    seq3
-      (alt
-          (hash_name $> fun x -> fun loc sigma -> LF.PVar (loc, x, sigma))
-          (fqname $> fun x -> fun loc sigma -> LF.Name (loc, x, sigma)))
-      (maybe clf_projection)
-      (maybe (bracks clf_sub_new))
-    |> shifted "variable head"
-    |> span
-    $> fun (loc, (f, proj, sigma)) ->
-        let m = f loc sigma in
-        match proj with
-        | Option.Some k -> LF.Proj (loc, m, k)
-        | Option.None -> m
-  in
-  let hole =
-    token T.UNDERSCORE
-    |> span
-    $> fun (loc, _) -> LF.Hole loc
-  in
-  run (choice [hole ; var]) s
-
-and clf_normal =
-  fun s ->
-  let lam =
-    seq2
-      (token T.LAMBDA &> name)
-      (token T.DOT &> clf_term_app)
-    |> span
-    |> labelled "LF lambda"
-    $> fun (loc, (x, m)) ->
-        LF.Lam (loc, x, m)
-  in
-  (*
-  let modul =
-    span fqname $> fun (loc, x) -> LF.Root (loc, LF.Name (loc, x), LF.Nil)
-  in
-    *)
-  let head =
-    span clf_head
-    $> fun (loc, h) -> LF.Root (loc, h, LF.Nil)
-  in
-  let app =
-    seq2
-      clf_term_app
-      (maybe (token T.COLON &> clf_typ))
-    |> parens
-    |> span
-    |> labelled "LF application"
-    $> fun (loc, (tm, ann)) ->
-        match ann with
-        | Option.None -> tm
-        | Option.Some a -> LF.Ann (loc, tm, a)
-  in
-  let lfhole =
-    span hole
-    |> labelled "LF hole"
-    $> fun (loc, h) -> LF.LFHole (loc, h)
-  in
-  let tuple =
-    sep_by1 clf_term_app (token T.SEMICOLON)
-    |> angles
-    |> span
-    |> labelled "LF tuple"
-    $> fun (loc, ms) ->
-        LF.Tuple
-          ( loc
-          , List1.fold_right
-              (fun x -> LF.Last x)
-              (fun x r -> LF.Cons (x, r))
-              ms
-          )
-  in
-  let p =
+    let head =
+      span clf_head
+      $> fun (loc, h) -> LF.Root (loc, h, LF.Nil)
+    in
+    let app =
+      seq2
+        clf_term_app
+        (maybe (token T.COLON &> clf_typ))
+      |> parens
+      |> span
+      |> labelled "LF application"
+      $> fun (loc, (tm, ann)) ->
+          match ann with
+          | Option.None -> tm
+          | Option.Some a -> LF.Ann (loc, tm, a)
+    in
+    let lfhole =
+      span hole
+      |> labelled "LF hole"
+      $> fun (loc, h) -> LF.LFHole (loc, h)
+    in
+    let tuple =
+      sep_by1 clf_term_app (token T.SEMICOLON)
+      |> angles
+      |> span
+      |> labelled "LF tuple"
+      $> fun (loc, ms) ->
+          LF.Tuple
+            ( loc
+            , List1.fold_right
+                (fun x -> LF.Last x)
+                (fun x r -> LF.Cons (x, r))
+                ms
+            )
+    in
     choice
       [ lam
       (* ; modul *) (* modules are wacky *)
@@ -1450,60 +1425,56 @@ and clf_normal =
       ; tuple
       ]
     |> labelled "contextual LF normal term"
-  in
-  run p s
 
-(** Parses an LF context, commonly referred to by cPsi.
-    This parser allows declarations without a type; if you require
-    that all declarations give a type, then separately validate the
-    context after.
- *)
-and clf_dctx : LF.dctx parser =
-  fun s ->
-  let clf_typ_decl =
-    seq2
-      name
-      (maybe (token T.COLON &> clf_typ))
-    $> fun (x, tA) ->
-        match tA with
-        | Option.Some tA -> LF.TypDecl (x, tA)
-        | Option.None -> LF.TypDeclOpt x
-  in
-  (* the different ways a context can begin:
-      a hole, a variable, or a declaration
-    *)
-  let start =
-    choice
-      [ token T.UNDERSCORE &> return LF.CtxHole
-      ; span clf_typ_decl
-        $> fun (loc, d) ->
-            (* This is nasty. XXX
-              We need this to handle context variables, which are
-              syntactically indistinguishable from a concrete
-              context beginning with a variable whose type is
-              omitted (to be solved by unification later).
-              A better way to do this would be to change, in the
-              external syntax, the type `dctx` to be something like
-              ```
-              type dctx_start = Null | CtxHole
-              type dctx = dctx_start * typ_decl list
-              ```
-              The empty context would be `(Null, [])`.
-              A context like `g, x:tm` would be `(Null, [TypDeclOpt g; TypDecl (x, tm)])`
-              A disambiguation would be performed during indexing in the case of a context that
-              - begins with Null; and
-              - whose first entry is a TypDeclOpt that refers to a context variable.
-              This would be transformed into a proper context
-              beginning with a context variable in the approximate
-              syntax.
-            *)
-            match d with
-            | LF.TypDeclOpt x -> LF.CtxVar (loc, x)
-            | _ -> LF.DDec (LF.Null, d)
+  (** Parses an LF context, commonly referred to by cPsi.
+      This parser allows declarations without a type; if you require
+      that all declarations give a type, then separately validate the
+      context after.
+   *)
+  let clf_dctx : LF.dctx parser =
+    let clf_typ_decl =
+      seq2
+        name
+        (maybe (token T.COLON &> clf_typ))
+      $> fun (x, tA) ->
+          match tA with
+          | Option.Some tA -> LF.TypDecl (x, tA)
+          | Option.None -> LF.TypDeclOpt x
+    in
+    (* the different ways a context can begin:
+        a hole, a variable, or a declaration
+      *)
+    let start =
+      choice
+        [ token T.UNDERSCORE &> return LF.CtxHole
+        ; span clf_typ_decl
+          $> fun (loc, d) ->
+              (* This is nasty. XXX
+                We need this to handle context variables, which are
+                syntactically indistinguishable from a concrete
+                context beginning with a variable whose type is
+                omitted (to be solved by unification later).
+                A better way to do this would be to change, in the
+                external syntax, the type `dctx` to be something like
+                ```
+                type dctx_start = Null | CtxHole
+                type dctx = dctx_start * typ_decl list
+                ```
+                The empty context would be `(Null, [])`.
+                A context like `g, x:tm` would be `(Null, [TypDeclOpt g; TypDecl (x, tm)])`
+                A disambiguation would be performed during indexing in the case of a context that
+                - begins with Null; and
+                - whose first entry is a TypDeclOpt that refers to a context variable.
+                This would be transformed into a proper context
+                beginning with a context variable in the approximate
+                syntax.
+              *)
+              match d with
+              | LF.TypDeclOpt x -> LF.CtxVar (loc, x)
+              | _ -> LF.DDec (LF.Null, d)
 
-      ]
-  in
-  let p =
+        ]
+    in
     choice
       [ seq2
           start
@@ -1513,216 +1484,220 @@ and clf_dctx : LF.dctx parser =
       ; return LF.Null
       ]
     |> labelled "contextual LF context"
-  in
-  run p s
 
-(** Parses
-    `[ dctx |- p ]`
-    Since this is pretty common for various choices of `p`.
-    Returns the parse of the dctx and p in a tuple.
- *)
-and contextual : type a. a parser -> (LF.dctx * a) parser =
-  fun p ->
-  seq2
-    (clf_dctx <& token T.TURNSTILE)
-    p
-
-let meta_obj =
-  let clobj =
+  (** Parses
+      `[ dctx |- p ]`
+      Since this is pretty common for various choices of `p`.
+      Returns the parse of the dctx and p in a tuple.
+   *)
+  let contextual : type a. a parser -> (LF.dctx * a) parser =
+    fun p ->
     seq2
-      clf_dctx
-      (maybe (token T.TURNSTILE &> clf_sub_new))
-    |> span
-    $> fun (loc, (cPsi, tR)) ->
-        match tR with
-        | Option.Some tR -> (loc, LF.ClObj (cPsi, tR))
-        | Option.None -> (loc, LF.CObj cPsi)
-  in
-  clobj
-  |> bracks
-  |> labelled "meta object"
+      (clf_dctx <& token T.TURNSTILE)
+      p
 
-(** Parses the `ctype` kind, the kind of computation types. *)
-let ctype_kind =
-  token T.KW_CTYPE |> span
-  $> fun (loc, _) -> Comp.Ctype loc
+  let meta_obj =
+    let clobj =
+      seq2
+        clf_dctx
+        (maybe (token T.TURNSTILE &> clf_sub_new))
+      |> span
+      $> fun (loc, (cPsi, tR)) ->
+          match tR with
+          | Option.Some tR -> (loc, LF.ClObj (cPsi, tR))
+          | Option.None -> (loc, LF.CObj cPsi)
+    in
+    clobj
+    |> bracks
+    |> labelled "meta object"
 
-(** Parses a variable declaration for a contextual type.
-    `name : [ dctx |- p ]`
-    Note that this doesn't include the braces around the declaration!
-    The shape of the box is configurable via the `box` parameter.
- *)
-let contextual_variable_decl
-      (name : 'name t) (box : (LF.dctx * 'a) t -> 'b t) (p : 'a t)
-    : ('name * 'b) t =
-  seq2
-    (name <& token T.COLON)
-    (box (contextual p))
 
-let cltyp : (LF.dctx * typ_or_ctx) parser =
-  labelled "boxed type"
-    begin
-      let typ =
-        contextual clf_typ_atomic
-        |> bracks
-        $> fun (cPsi, a) ->
-           (cPsi, `Typ a)
+  (** Parses a variable declaration for a contextual type.
+      `name : [ dctx |- p ]`
+      Note that this doesn't include the braces around the declaration!
+      The shape of the box is configurable via the `box` parameter.
+   *)
+  let contextual_variable_decl
+        (name : 'name t) (box : (LF.dctx * 'a) t -> 'b t) (p : 'a t)
+      : ('name * 'b) t =
+    seq2
+      (name <& token T.COLON)
+      (box (contextual p))
+
+  let cltyp : (LF.dctx * typ_or_ctx) parser =
+    labelled "boxed type"
+      begin
+        let typ =
+          contextual clf_typ_atomic
+          |> bracks
+          $> fun (cPsi, a) ->
+             (cPsi, `Typ a)
+        in
+        let ctx =
+          contextual clf_dctx
+          |> bracks
+          $> fun (cPsi, cPhi) ->
+             (cPsi, `Ctx cPhi)
+        in
+        alt
+          (label typ "proper contextual type")
+          (label ctx "contextual context type")
+      end
+
+  let clf_ctyp_decl_bare : type a. a name_parser -> (a -> Plicity.t * Name.t) -> LF.ctyp_decl t =
+    fun nameclass plicity_of_name ->
+      let hash_variable_decl p =
+        contextual_variable_decl
+          (nameclass `hash)
+          (sigil_bracks_or_opt_parens T.HASH)
+          p
       in
-      let ctx =
-        contextual clf_dctx
-        |> bracks
-        $> fun (cPsi, cPhi) ->
-           (cPsi, `Ctx cPhi)
+      let dollar_variable_decl p =
+        contextual_variable_decl
+          (nameclass `dollar)
+          (sigil_bracks_or_opt_parens T.DOLLAR)
+          p
       in
-      alt
-        (label typ "proper contextual type")
-        (label ctx "contextual context type")
-    end
+      let mk_decl plicity f (loc, (p, w)) =
+        LF.Decl (p, (loc, f w), plicity)
+      in
+      let mk_cltyp_decl plicity f d =
+        mk_decl plicity (fun (cPsi, x) -> LF.ClTyp (f x, cPsi)) d
+      in
+      let mk_cltyp_decl_blank f (loc, (nb, (cPsi, tA))) =
+        let plicity, x = plicity_of_name nb in
+        mk_cltyp_decl plicity f (loc, (x, (cPsi, tA)))
+      in
+      let param_variable =
+        hash_variable_decl (trying clf_typ_atomic)
+        |> span
+        $> mk_cltyp_decl_blank (fun tA -> LF.PTyp tA)
+        |> labelled "parameter variable declaration"
+      in
+      let subst_variable =
+        let subst_class =
+          maybe (token T.HASH)
+          $> Option.eliminate (Fun.const LF.Subst) (Fun.const LF.Ren)
+        in
+        dollar_variable_decl (seq2 subst_class clf_dctx)
+        |> span
+        $> mk_cltyp_decl_blank (fun (sclass, cPhi) -> LF.STyp (sclass, cPhi))
+        |> labelled "substitution/renaming variable"
+      in
+      choice
+        [ param_variable
+        ; subst_variable
+        (* since a name followed by a colon happens in both
+            the case for an mvar and the case for a context
+            variable, we refactor the grammar to parse first the
+            name followed by the colon, and *then* we perform an
+            alternation to see whether we have another name (so
+            a ctx var) or a box (so an mvar)
+          *)
+        ; nameclass `ordinary <& token T.COLON |> span
+          >>= fun (loc1, nb) ->
+            let plicity, x = plicity_of_name nb in
+            alt
+              (span name
+                $> fun (loc2, ctx) ->
+                  mk_decl plicity
+                    (fun w -> LF.CTyp w)
+                    (Location.join loc1 loc2, (x, ctx)))
+              (bracks_or_opt_parens (contextual clf_typ_atomic) |> span
+                $> fun (loc2, d) ->
+                  mk_cltyp_decl
+                    plicity
+                    (fun tA -> LF.MTyp tA)
+                    (Location.join loc1 loc2, (x, d)))
+        ]
 
-let clf_ctyp_decl_bare : type a. a name_parser -> (a -> Plicity.t * Name.t) -> LF.ctyp_decl t =
-  fun nameclass plicity_of_name ->
+  (* parses `name : name` *)
+  let ctx_variable =
+    labelled "context variable declaration"
+      begin
+        seq2
+          (trying (name <& token T.COLON))
+          (name <& not_followed_by meta_obj)
+        |> span
+        $> fun (loc, (p, w)) -> LF.Decl (p, (loc, LF.CTyp w), Plicity.implicit)
+      end
+
+  (** Contextual LF contextual type declaration *)
+  let clf_ctyp_decl =
+    (* Parses `#name : [ dctx |- p ]` *)
     let hash_variable_decl p =
-      contextual_variable_decl
-        (nameclass `hash)
-        (sigil_bracks_or_opt_parens T.HASH)
-        p
+      contextual_variable_decl hash_name bracks_or_opt_parens p
     in
     let dollar_variable_decl p =
-      contextual_variable_decl
-        (nameclass `dollar)
-        (sigil_bracks_or_opt_parens T.DOLLAR)
-        p
+      contextual_variable_decl dollar_name bracks_or_opt_parens p
     in
     let mk_decl plicity f (loc, (p, w)) =
       LF.Decl (p, (loc, f w), plicity)
     in
-    let mk_cltyp_decl plicity f d =
-      mk_decl plicity (fun (cPsi, x) -> LF.ClTyp (f x, cPsi)) d
+    let mk_cltyp_decl f d =
+      mk_decl Plicity.explicit (fun (cPsi, x) -> LF.ClTyp (f x, cPsi)) d
     in
-    let mk_cltyp_decl_blank f (loc, (nb, (cPsi, tA))) =
-      let plicity, x = plicity_of_name nb in
-      mk_cltyp_decl plicity f (loc, (x, (cPsi, tA)))
-    in
+
     let param_variable =
-      hash_variable_decl (trying clf_typ_atomic)
-      |> span
-      $> mk_cltyp_decl_blank (fun tA -> LF.PTyp tA)
-      |> labelled "parameter variable declaration"
+      labelled "parameter variable declaration"
+        begin
+          hash_variable_decl (trying clf_typ_atomic)
+          |> span
+          $> mk_cltyp_decl (fun tA -> LF.PTyp tA)
+        end
     in
     let subst_variable =
       let subst_class =
         maybe (token T.HASH)
         $> Option.eliminate (Fun.const LF.Subst) (Fun.const LF.Ren)
       in
-      dollar_variable_decl (seq2 subst_class clf_dctx)
-      |> span
-      $> mk_cltyp_decl_blank (fun (sclass, cPhi) -> LF.STyp (sclass, cPhi))
-      |> labelled "substitution/renaming variable"
+      labelled "substitution/renaming variable"
+        begin
+          dollar_variable_decl (seq2 subst_class clf_dctx)
+          |> span
+          $> mk_cltyp_decl (fun (sclass, cPhi) -> LF.STyp (sclass, cPhi))
+        end
     in
-    choice
-      [ param_variable
-      ; subst_variable
-      (* since a name followed by a colon happens in both
-          the case for an mvar and the case for a context
-          variable, we refactor the grammar to parse first the
-          name followed by the colon, and *then* we perform an
-          alternation to see whether we have another name (so
-          a ctx var) or a box (so an mvar)
-        *)
-      ; nameclass `ordinary <& token T.COLON |> span
-        >>= fun (loc1, nb) ->
-          let plicity, x = plicity_of_name nb in
-          alt
-            (span name
-              $> fun (loc2, ctx) ->
-                mk_decl plicity
-                  (fun w -> LF.CTyp w)
-                  (Location.join loc1 loc2, (x, ctx)))
-            (bracks_or_opt_parens (contextual clf_typ_atomic) |> span
-              $> fun (loc2, d) ->
-                mk_cltyp_decl
-                  plicity
-                  (fun tA -> LF.MTyp tA)
-                  (Location.join loc1 loc2, (x, d)))
-      ]
-
-(* parses `name : name` *)
-let ctx_variable =
-  labelled "context variable declaration"
-    begin
-      seq2
-        (trying (name <& token T.COLON))
-        (name <& not_followed_by meta_obj)
-      |> span
-      $> fun (loc, (p, w)) -> LF.Decl (p, (loc, LF.CTyp w), Plicity.implicit)
-    end
-
-(** Contextual LF contextual type declaration *)
-let clf_ctyp_decl =
-  (* Parses `#name : [ dctx |- p ]` *)
-  let hash_variable_decl p =
-    contextual_variable_decl hash_name bracks_or_opt_parens p
-  in
-  let dollar_variable_decl p =
-    contextual_variable_decl dollar_name bracks_or_opt_parens p
-  in
-  let mk_decl plicity f (loc, (p, w)) =
-    LF.Decl (p, (loc, f w), plicity)
-  in
-  let mk_cltyp_decl f d =
-    mk_decl Plicity.explicit (fun (cPsi, x) -> LF.ClTyp (f x, cPsi)) d
-  in
-
-  let param_variable =
-    labelled "parameter variable declaration"
-      begin
-        hash_variable_decl (trying clf_typ_atomic)
-        |> span
-        $> mk_cltyp_decl (fun tA -> LF.PTyp tA)
-      end
-  in
-  let subst_variable =
-    let subst_class =
-      maybe (token T.HASH)
-      $> Option.eliminate (Fun.const LF.Subst) (Fun.const LF.Ren)
+    let q =
+      choice
+        [ param_variable
+        ; subst_variable
+        (* since a name followed by a colon happens in both
+            the case for an mvar and the case for a context
+            variable, we refactor the grammar to parse first the
+            name followed by the colon, and *then* we perform an
+            alternation to see whether we have another name (so
+            a ctx var) or a box (so an mvar)
+          *)
+        ; name <& token T.COLON |> span
+          >>= fun (loc1, x) ->
+            alt
+              (span name
+                $> fun (loc2, ctx) ->
+                  mk_decl Plicity.explicit
+                    (fun w -> LF.CTyp w)
+                    (Location.join loc1 loc2, (x, ctx)))
+              (bracks_or_opt_parens (contextual clf_typ_atomic)
+                |> span
+                $> fun (loc2, d) ->
+                  mk_cltyp_decl
+                    (fun tA -> LF.MTyp tA)
+                    (Location.join loc1 loc2, (x, d)))
+        ]
+      |> braces
     in
-    labelled "substitution/renaming variable"
-      begin
-        dollar_variable_decl (seq2 subst_class clf_dctx)
-        |> span
-        $> mk_cltyp_decl (fun (sclass, cPhi) -> LF.STyp (sclass, cPhi))
-      end
-  in
-  let q =
-    choice
-      [ param_variable
-      ; subst_variable
-      (* since a name followed by a colon happens in both
-          the case for an mvar and the case for a context
-          variable, we refactor the grammar to parse first the
-          name followed by the colon, and *then* we perform an
-          alternation to see whether we have another name (so
-          a ctx var) or a box (so an mvar)
-        *)
-      ; name <& token T.COLON |> span
-        >>= fun (loc1, x) ->
-          alt
-            (span name
-              $> fun (loc2, ctx) ->
-                mk_decl Plicity.explicit
-                  (fun w -> LF.CTyp w)
-                  (Location.join loc1 loc2, (x, ctx)))
-            (bracks_or_opt_parens (contextual clf_typ_atomic)
-              |> span
-              $> fun (loc2, d) ->
-                mk_cltyp_decl
-                  (fun tA -> LF.MTyp tA)
-                  (Location.join loc1 loc2, (x, d)))
-      ]
-    |> braces
-  in
-  labelled "contextual type declaration"
-    (alt (parens ctx_variable) q)
+    labelled "contextual type declaration"
+      (alt (parens ctx_variable) q)
+end
+
+let meta_obj = Contextual_LF_parsers.meta_obj
+let contextual = Contextual_LF_parsers.contextual
+let clf_normal = Contextual_LF_parsers.clf_normal
+let clf_dctx = Contextual_LF_parsers.clf_dctx
+let ctx_variable = Contextual_LF_parsers.ctx_variable
+let clf_ctyp_decl_bare = Contextual_LF_parsers.clf_ctyp_decl_bare
+let clf_ctyp_decl = Contextual_LF_parsers.clf_ctyp_decl
+let cltyp = Contextual_LF_parsers.cltyp
 
 let mctx ?(sep = token T.COMMA) p =
   sep_by0 p sep
@@ -1849,6 +1824,11 @@ end = struct
       ; cmp_typ_cross
       ]
     |> labelled "computation type"
+
+  (** Parses the `ctype` kind, the kind of computation types. *)
+  let ctype_kind =
+    token T.KW_CTYPE |> span
+    $> fun (loc, _) -> Comp.Ctype loc
 
   let cmp_kind =
     let pibox =

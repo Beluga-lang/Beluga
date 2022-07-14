@@ -1016,8 +1016,8 @@ end = struct
         >>= fun (loc, (m, q)) ->
           match q, m with
           | Option.None, LF.AtomTerm (_, t) -> return t
-          | Option.None, _ -> LF.NTyp (loc, m) |> return
-          | Option.Some a, LF.AtomTerm (_, t) -> LF.Ann (loc, t, a) |> return
+          | Option.None, _ -> return @@ LF.NTyp (loc, m)
+          | Option.Some a, LF.AtomTerm (_, t) -> return @@ LF.Ann (loc, t, a)
           | _, _ -> fail (Violation "invalid atomic LF term")
                                   (* ^ XXX not sure if this is a violation or a user error -je *)
       ]
@@ -1142,54 +1142,6 @@ let lf_kind = LF_parsers.lf_kind
 let lf_typ = LF_parsers.lf_typ
 let lf_kind_or_typ = LF_parsers.lf_kind_or_typ
 let lf_typ_decl = LF_parsers.lf_typ_decl
-
-let sgn_lf_const_decl (* sgn_lf_typ *) =
-  (seq2
-    (name <& token T.COLON)
-    lf_typ
-  |> span
-  >>= fun (location, (identifier, typ)) ->
-    return (Sgn.Const { location; identifier; typ }))
-  |> labelled "LF constant declaration"
-
-let sgn_lf_typ_decl : Sgn.decl parser =
-  let lf_typ_decl_body (* cmp_dat *) =
-    let typ_decl =
-      seq2
-        (name <& token T.COLON)
-        lf_kind
-    in
-    seq2
-      (typ_decl <& token T.EQUALS)
-      (maybe (token T.PIPE)
-       &> sep_by0 sgn_lf_const_decl (token (T.PIPE)))
-    |> span
-    $> fun (location, ((identifier, kind), const_decls)) ->
-       Sgn.Typ { location; identifier; kind }, const_decls
-  in
-
-  labelled "LF type declaration block"
-    (token T.KW_LF
-     &> (sep_by1 lf_typ_decl_body (token T.KW_AND))
-     <& token T.SEMICOLON
-     |> span
-     $> fun (location, declarations) ->
-        Sgn.MRecTyp { location; declarations })
-
-  (*
-let ctyp_decl, implicit_ctyp_decl =
-  let f g =
-    seq2
-      (name <& token T.COLON)
-      fqname
-    |> span
-    |> g
-    $> fun (loc, (psi, w)) ->
-       LF.Decl (psi, (loc, LF.CTyp w), LF.No)
-  in
-  f braces,
-  f parens
-   *)
 
 let hole : string option parser =
   satisfy' (`hole Option.none)
@@ -2626,6 +2578,38 @@ module rec Signature_parsers : sig
   val numeric_total_order : int Comp.generic_order t
   val optional_numeric_total_order : int Comp.generic_order option t
 end = struct
+  let sgn_lf_const_decl =
+    seq2
+      (name <& token T.COLON)
+      lf_typ
+    |> span
+    $> (fun (location, (identifier, typ)) ->
+          Sgn.Const { location; identifier; typ })
+    |> labelled "LF constant declaration"
+
+  let sgn_lf_typ_decl : Sgn.decl parser =
+    let lf_typ_decl_body =
+      let typ_decl =
+        seq2
+          (name <& token T.COLON)
+          lf_kind
+      in
+      seq2
+        (typ_decl <& token T.EQUALS)
+        (maybe (token T.PIPE)
+        &> sep_by0 sgn_lf_const_decl (token (T.PIPE)))
+      |> span
+      $> fun (location, ((identifier, kind), const_decls)) ->
+        Sgn.Typ { location; identifier; kind }, const_decls
+    in
+    labelled "LF type declaration block"
+      (token T.KW_LF
+      &> (sep_by1 lf_typ_decl_body (token T.KW_AND))
+      <& token T.SEMICOLON
+      |> span
+      $> fun (location, declarations) ->
+          Sgn.MRecTyp { location; declarations })
+
   let call_arg =
     alt
       (name $> Option.some)

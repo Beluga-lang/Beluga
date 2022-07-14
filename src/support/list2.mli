@@ -163,7 +163,7 @@ val for_all : ('a -> bool) -> 'a t -> bool
       if the two lists are determined to have different lengths. *)
 val for_all2 : ('a -> 'b -> bool) -> 'a t -> 'b t -> bool
 
-(** [exists p (a1, \[a2; ...; an\])] checks if any element of the list
+(** [exists p (a1, a2, \[a3; ...; an\])] checks if any element of the list
     satisfies the predicate [p]. That is, it returns
     [(p a1) || (p a2) || ... || (p an)]. *)
 val exists : ('a -> bool) -> 'a t -> bool
@@ -189,27 +189,28 @@ val partition : ('a -> bool) -> 'a t -> 'a list * 'a list
 (** {1 Lists of pairs}*)
 
 (** Transform a list of pairs into a pair of lists:
-    [split ((a1, b1), \[(a2, b2); ...; (an, bn)\])] is
-    [(a1, \[a2; ...; an\]), (b1, \[b2; ...; bn\])]. *)
+    [split ((a1, b1), (a2, b2), \[(a3, b3); ...; (an, bn)\])] is
+    [(a1, a2, \[a3; ...; an\]), (b1, b2, \[b3; ...; bn\])]. *)
 val split : ('a * 'b) t -> 'a t * 'b t
 
 (** Transform a pair of lists into a list of pairs:
-    [combine (a1, \[a2; ...; an\]) (b1, \[b2; ...; bn\])] is
-    [((a1, b1), \[(a2, b2); ...; (an, bn)\])].
+    [combine (a1, a2, \[a3; ...; an\]) (b1, b2, \[b3; ...; bn\])] is
+    [((a1, b1), (a2, b2), \[(a3, b3); ...; (an, bn)\])].
 
     @raise Invalid_argument if the two lists have different lengths. *)
 val combine : 'a t -> 'b t -> ('a * 'b) t
 
 (** {1 Apply} *)
 
-(** [ap (x1, \[x2; ...; xn\]) (f1, \[f2; ...; fn\])] is
-    [(f1 x1, \[f2 x2; ...; fn xn\])].
+(** [ap (x1, x2, \[x3; ...; xn\]) (f1, f2, \[f3; ...; fn\])] is
+    [(f1 x1, f2 x2, \[f3 x3; ...; fn xn\])].
 
     @raise Invalid_argument
       if the two lists are determined to have different lengths. *)
 val ap : 'a t -> ('a -> 'b) t -> 'b t
 
-(** [ap_one x (f1, \[f2; ...; fn\])] is [(f1 x, \[f2 x; ...; fn x\])]. *)
+(** [ap_one x (f1, f2, \[f3; ...; fn\])] is
+    [(f1 x, f2 x, \[f3 x; ...; fn x\])]. *)
 val ap_one : 'a -> ('a -> 'b) t -> 'b t
 
 (** {1 Printing} *)

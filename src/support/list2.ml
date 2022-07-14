@@ -110,11 +110,12 @@ let fold_left4 fst snd cons (T (x1, x2, xs)) (T (y1, y2, ys))
 
 let filter_map f l = List.filter_map f (to_list l)
 
-let for_all f l = List.for_all f (to_list l)
+let for_all p (T (x1, x2, xs)) = p x1 && p x2 && List.for_all p xs
 
-let for_all2 f l1 l2 = List.for_all2 f (to_list l1) (to_list l2)
+let for_all2 p (T (x1, x2, xs)) (T (y1, y2, ys)) =
+  p x1 y1 && p x2 y2 && List.for_all2 p xs ys
 
-let exists f l = List.exists f (to_list l)
+let exists p (T (x1, x2, xs)) = p x1 || p x2 || List.exists p xs
 
 let traverse f (T (x1, x2, xs)) =
   let open Option in
@@ -134,8 +135,8 @@ let split (T ((x1, y1), (x2, y2), t)) =
   let xs, ys = List.split t in
   (T (x1, x2, xs), T (y1, y2, ys))
 
-let combine (T (x1, x2, l1)) (T (y1, y2, l2)) =
-  T ((x1, y1), (x2, y2), List.combine l1 l2)
+let combine (T (x1, x2, xs)) (T (y1, y2, ys)) =
+  T ((x1, y1), (x2, y2), List.combine xs ys)
 
 let ap xs = map2 Fun.apply xs
 

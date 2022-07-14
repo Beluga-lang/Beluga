@@ -46,12 +46,14 @@ let compare cmp (T (h1, t1)) (T (h2, t2)) =
   | 0 -> List.compare cmp t1 t2
   | x -> x
 
-let iter f l = List.iter f (to_list l)
+let iter f (T (x, xs)) =
+  f x;
+  List.iter f xs
 
-let map f (T (x, l)) =
-  let h = f x in
-  let t = List.map f l in
-  T (h, t)
+let map f (T (x, xs)) =
+  let y = f x in
+  let ys = List.map f xs in
+  T (y, ys)
 
 let fold_right f g l =
   let rec fold_right (T (h, l)) return =
@@ -61,30 +63,33 @@ let fold_right f g l =
   in
   fold_right l Fun.id
 
-let fold_left f g (T (x, l)) = List.fold_left g (f x) l
+let fold_left sing cons (T (x, xs)) = List.fold_left cons (sing x) xs
 
-let filter_map f l = List.filter_map f (to_list l)
+let filter_map f (T (x, xs)) =
+  match f x with
+  | Option.Some y -> y :: List.filter_map f xs
+  | Option.None -> List.filter_map f xs
 
-let for_all f l = List.for_all f (to_list l)
+let for_all p (T (x, xs)) = p x && List.for_all p xs
 
-let exists f l = List.exists f (to_list l)
+let exists p (T (x, xs)) = p x || List.exists p xs
 
-let rec all_equal (T (x, l)) =
-  match l with
-  | [] -> Some x
-  | x' :: xs when x = x' -> all_equal (T (x, xs))
-  | _ -> None
+let all_equal (T (x, xs)) =
+  if List.for_all (Stdlib.( = ) x) xs then Option.some x else Option.none
 
 let traverse f (T (x, l)) =
-  Option.(
-    f x >>= fun y ->
-    List.traverse f l >>= fun ys -> Some (T (y, ys)))
+  let open Option in
+  f x >>= fun y ->
+  List.traverse f l >>= fun ys -> Option.some (T (y, ys))
 
-let map2 f (T (h1, t1)) (T (h2, t2)) = T (f h1 h2, List.map2 f t1 t2)
+let map2 f (T (x, xs)) (T (y, ys)) =
+  let z = f x y
+  and zs = List.map2 f xs ys in
+  T (z, zs)
 
 let of_list = function
-  | [] -> None
-  | x :: xs -> Some (T (x, xs))
+  | [] -> Option.none
+  | x :: xs -> Option.some (T (x, xs))
 
 exception Empty
 

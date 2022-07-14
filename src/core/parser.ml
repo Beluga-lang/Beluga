@@ -1776,41 +1776,120 @@ let mctx ?(sep = token T.COMMA) p =
   sep_by0 p sep
   $> Context.of_list_rev
 
-let pibox p r f =
-  seq2
-    (p <& maybe (token T.ARROW))
-    r
-  |> span
-  $> fun (loc, (ctyp_decl, x)) ->
-     f loc ctyp_decl x
+module rec Comp_parsers : sig
+  val cmp_kind : Comp.kind t
+  val cmp_typ : Comp.typ t
+  val cmp_typ_cross : Comp.typ t
+  val cmp_pattern : Comp.pattern t
+  val cmp_exp_chk : Comp.exp_chk t
+  val cmp_exp_syn : Comp.exp_syn t
+  val gctx : Comp.gctx t
+end = struct
+  let pibox p r f =
+    seq2
+      (p <& maybe (token T.ARROW))
+      r
+    |> span
+    $> fun (loc, (ctyp_decl, x)) ->
+       f loc ctyp_decl x
 
-let arrow atomic r f =
-  seq2
-    (trying (atomic <& token T.ARROW))
-    r
-  |> span
-  $> fun (loc, (a1, a2)) -> f loc a1 a2
+  let arrow atomic r f =
+    seq2
+      (trying (atomic <& token T.ARROW))
+      r
+    |> span
+    $> fun (loc, (a1, a2)) -> f loc a1 a2
 
-let rec cmp_typ =
-  fun s ->
-  let ctx_pibox =
-    labelled "Context variable Pi-box type"
-      (pibox (ctx_variable |> parens) cmp_typ
-          (fun loc decl tau ->
-            Comp.TypPiBox (loc, decl, tau)))
-  in
-  let pibox =
-    labelled "Pi-box type"
-      (pibox (clf_ctyp_decl_bare name' (fun x -> Plicity.explicit, x) |> braces) cmp_typ
-          (fun loc ctyp_decl tau ->
-            Comp.TypPiBox (loc, ctyp_decl, tau)))
-  in
-  let arr =
-    labelled "Arrow computation type"
-      (arrow cmp_typ_cross cmp_typ
-          (fun loc a1 a2 -> Comp.TypArr (loc, a1, a2)))
-  in
-  let p =
+    let cmp_typ_atomic : Comp.typ parser =
+      let base =
+        labelled "base computation type"
+          (seq2 name (many meta_obj)
+            |> span
+            $> fun (loc, (a, ms)) ->
+              let sp = List.fold_right (fun t s -> Comp.MetaApp (t, s)) ms Comp.MetaNil in
+              Comp.TypBase (loc, a, sp))
+      in
+      let pbox =
+        token T.HASH
+        &> bracks (contextual (some clf_normal |> span))
+        |> span
+        $> fun (loc, (cPsi, (loc', ms))) ->
+            Comp.TypBox
+              ( loc
+              , ( loc
+                , LF.ClTyp
+                    ( LF.PTyp (LF.AtomTerm (loc, LF.TList (loc, ms)))
+                    , cPsi
+                    )
+                )
+              )
+      in
+      let sub =
+        token T.DOLLAR
+        &> bracks (contextual clf_dctx)
+        |> span
+        $> fun (loc, (cPsi, cPhi)) ->
+            Comp.TypBox
+              ( loc
+              , ( loc
+                , LF.ClTyp
+                    ( LF.STyp (LF.Subst, cPhi), cPsi)
+                )
+              )
+      in
+      let ctx =
+        span fqname
+        $> fun (loc, schema) ->
+            Comp.TypBox (loc, (loc, LF.CTyp schema))
+      in
+      let ordinary =
+        seq2
+          (trying (clf_dctx <& token T.TURNSTILE))
+          (some clf_normal)
+        |> span
+        |> labelled "boxed type"
+        $> fun (loc, (cPsi, ms)) ->
+            Comp.TypBox (loc, (loc, LF.ClTyp (LF.MTyp (LF.AtomTerm (loc, LF.TList (loc, ms))), cPsi)))
+      in
+      choice
+        [ base
+        ; ctx
+        ; pbox
+        ; sub
+        ; bracks (alt ordinary ctx)
+        ; parens Comp_parsers.cmp_typ
+        ]
+      |> labelled "atomic computation type"
+
+  let cmp_typ_cross =
+    seq2
+      cmp_typ_atomic
+      (many (token T.STAR &> Comp_parsers.cmp_typ_cross))
+    |> span
+    |> labelled "computation product type"
+    $> fun (loc, (tau1, taus)) ->
+        match taus with
+        | [] -> tau1
+        | tau2 :: taus -> Comp.TypCross (loc, List2.from tau1 tau2 taus)
+
+  let cmp_typ =
+    let ctx_pibox =
+      labelled "Context variable Pi-box type"
+        (pibox (ctx_variable |> parens) Comp_parsers.cmp_typ
+            (fun loc decl tau ->
+              Comp.TypPiBox (loc, decl, tau)))
+    in
+    let pibox =
+      labelled "Pi-box type"
+        (pibox (clf_ctyp_decl_bare name' (fun x -> Plicity.explicit, x) |> braces) Comp_parsers.cmp_typ
+            (fun loc ctyp_decl tau ->
+              Comp.TypPiBox (loc, ctyp_decl, tau)))
+    in
+    let arr =
+      labelled "Arrow computation type"
+        (arrow cmp_typ_cross Comp_parsers.cmp_typ
+            (fun loc a1 a2 -> Comp.TypArr (loc, a1, a2)))
+    in
     choice
       [ pibox
       ; ctx_pibox
@@ -1818,194 +1897,107 @@ let rec cmp_typ =
       ; cmp_typ_cross
       ]
     |> labelled "computation type"
-  in
-  run p s
 
-and cmp_typ_cross =
-  fun s ->
-  let p =
-    seq2
-      cmp_typ_atomic
-      (many (token T.STAR &> cmp_typ_cross))
-    |> span
-    |> labelled "computation product type"
-    $> fun (loc, (tau1, taus)) ->
-        match taus with
-        | [] -> tau1
-        | tau2 :: taus -> Comp.TypCross (loc, List2.from tau1 tau2 taus)
-  in
-  run p s
-
-and cmp_typ_atomic : Comp.typ parser =
-  fun s ->
-  let base =
-    labelled "base computation type"
-      (seq2 name (many meta_obj)
-        |> span
-        $> fun (loc, (a, ms)) ->
-          let sp = List.fold_right (fun t s -> Comp.MetaApp (t, s)) ms Comp.MetaNil in
-          Comp.TypBase (loc, a, sp))
-  in
-  let pbox =
-    token T.HASH
-    &> bracks (contextual (some clf_normal |> span))
-    |> span
-    $> fun (loc, (cPsi, (loc', ms))) ->
-        Comp.TypBox
-          ( loc
-          , ( loc
-            , LF.ClTyp
-                ( LF.PTyp (LF.AtomTerm (loc, LF.TList (loc, ms)))
-                , cPsi
+  let cmp_kind =
+    let pibox =
+      labelled "Pi-box kind"
+        begin
+          seq2
+            (trying (clf_ctyp_decl <& maybe (token T.ARROW)))
+            Comp_parsers.cmp_kind
+          |> span
+          $> fun (loc, (ctyp_decl, k)) ->
+              (* XXX the ctyp_decl must be for an ordinary box-type. *)
+              Comp.PiKind (loc, ctyp_decl, k)
+        end
+    in
+    let arrow =
+      labelled "arrow kind"
+        begin
+          seq2
+            (trying (cltyp <& token T.ARROW) |> span)
+            Comp_parsers.cmp_kind
+          |> span
+          $> fun (loc, ((loc', (cPsi, a)), k)) ->
+              Comp.ArrKind
+                ( loc
+                , (loc'
+                  , LF.ClTyp
+                      ( begin match a with
+                        | `Ctx cPhi -> LF.STyp (LF.Subst, cPhi)
+                        | `Typ a -> LF.MTyp a
+                        end
+                      , cPsi
+                      )
+                  , Plicity.explicit
+                  )
+                , k
                 )
-            )
-          )
-  in
-  let sub =
-    token T.DOLLAR
-    &> bracks (contextual clf_dctx)
-    |> span
-    $> fun (loc, (cPsi, cPhi)) ->
-        Comp.TypBox
-          ( loc
-          , ( loc
-            , LF.ClTyp
-                ( LF.STyp (LF.Subst, cPhi), cPsi)
-            )
-          )
-  in
-  let ctx =
-    span fqname
-    $> fun (loc, schema) ->
-        Comp.TypBox (loc, (loc, LF.CTyp schema))
-  in
-  let ordinary =
-    seq2
-      (trying (clf_dctx <& token T.TURNSTILE))
-      (some clf_normal)
-    |> span
-    |> labelled "boxed type"
-    $> fun (loc, (cPsi, ms)) ->
-        Comp.TypBox (loc, (loc, LF.ClTyp (LF.MTyp (LF.AtomTerm (loc, LF.TList (loc, ms))), cPsi)))
-  in
-  let p =
-    choice
-      [ base
-      ; ctx
-      ; pbox
-      ; sub
-      ; bracks (alt ordinary ctx)
-      ; parens cmp_typ
-      ]
-    |> labelled "atomic computation type"
-  in
-  run p s
-
-let rec cmp_kind =
-  fun s ->
-  let pibox =
-    labelled "Pi-box kind"
-      begin
-        seq2
-          (trying (clf_ctyp_decl <& maybe (token T.ARROW)))
-          cmp_kind
-        |> span
-        $> fun (loc, (ctyp_decl, k)) ->
-            (* XXX the ctyp_decl must be for an ordinary box-type. *)
-            Comp.PiKind (loc, ctyp_decl, k)
-      end
-  in
-  let arrow =
-    labelled "arrow kind"
-      begin
-        seq2
-          (trying (cltyp <& token T.ARROW) |> span)
-          cmp_kind
-        |> span
-        $> fun (loc, ((loc', (cPsi, a)), k)) ->
-            Comp.ArrKind
-              ( loc
-              , (loc'
-                , LF.ClTyp
-                    ( begin match a with
-                      | `Ctx cPhi -> LF.STyp (LF.Subst, cPhi)
-                      | `Typ a -> LF.MTyp a
-                      end
-                    , cPsi
-                    )
-                , Plicity.explicit
-                )
-              , k
-              )
-      end
-  in
-  let p =
+        end
+    in
     choice
       [ ctype_kind
       ; pibox
       ; arrow
       ]
     |> labelled "computation kind"
-  in
-  run p s
 
-(** Parses a pragma that can appear before a case.
-    Either it's the `--not' pragma, or there's no pragma. In the
-    latter case we produce `Pragma.RegularCase' without consuming any
-    input.
- *)
-let case_pragma =
-  maybe_default
-    (pragma "not" &> return Comp.PragmaNotCase)
-    Comp.PragmaCase
+  (** Parses a pragma that can appear before a case.
+      Either it's the `--not' pragma, or there's no pragma. In the
+      latter case we produce `Pragma.RegularCase' without consuming any
+      input.
+   *)
+  let case_pragma =
+    maybe_default
+      (pragma "not" &> return Comp.PragmaNotCase)
+      Comp.PragmaCase
 
-(** Parses a checkable computation term *)
-let rec cmp_exp_chk =
-  fun s ->
-  let p =
-    choice
-      [ cmp_exp_chk'
-      ; span cmp_exp_syn
-        $> fun (loc, i) -> Comp.Syn (loc, i)
-      ]
-  in
-  run p s
-
-and cmp_branch =
-  fun s ->
-  let p =
-    seq3
-      (mctx ~sep: (return ()) (clf_ctyp_decl_bare name' (fun x -> Plicity.explicit, x) |> braces))
-      cmp_pattern
-      (token T.THICK_ARROW &> cmp_exp_chk)
-    |> span
-    |> labelled "case branch"
-    $> fun (loc, (ctyp_decls, pat, rhs)) ->
-        Comp.Branch (loc, ctyp_decls, pat, rhs)
-  in
-  run p s
-
-and cmp_pattern =
-  fun s ->
-  let pattern_spine =
-    many (span cmp_pattern_atomic)
-    |> span
-    $> fun (loc, s) ->
-        List.fold_right
-          (fun (loc, t) s -> Comp.PatApp (loc, t, s))
-          s
-          (Comp.PatNil loc)
-  in
-  let app =
-    seq2
+  let cmp_pattern_atomic =
+    let mobj_pat =
+      span meta_obj
+      |> labelled "meta object pattern"
+      $> fun (loc, mobj) -> Comp.PatMetaObj (loc, mobj)
+    in
+    let nested (* `(' p (, p)* `)' *) =
+      span (parens (seq2 Comp_parsers.cmp_pattern (many (token T.COMMA &> Comp_parsers.cmp_pattern))))
+      $> (fun (location, (p1, ps)) ->
+        match ps with
+        | [] -> p1
+        | p2 :: ps -> Comp.PatTuple (location, List2.from p1 p2 ps))
+      |> labelled "parenthesized or tuple pattern"
+    in
+    let var =
       name
-      pattern_spine
-    |> span
-    |> labelled "variable or inductive type pattern"
-    $> fun (loc, (x, ps)) -> Comp.PatName (loc, x, ps)
-  in
-  let pattern = alt app cmp_pattern_atomic in
-  let p =
+      |> span
+      |> labelled "variable pattern"
+      $> fun (loc, x) -> Comp.PatName (loc, x, Comp.PatNil loc)
+    in
+    choice
+      [ mobj_pat
+      ; nested
+      ; var
+      ]
+    |> labelled "bare pattern"
+
+  let cmp_pattern =
+    let pattern_spine =
+      many (span cmp_pattern_atomic)
+      |> span
+      $> fun (loc, s) ->
+          List.fold_right
+            (fun (loc, t) s -> Comp.PatApp (loc, t, s))
+            s
+            (Comp.PatNil loc)
+    in
+    let app =
+      seq2
+        name
+        pattern_spine
+      |> span
+      |> labelled "variable or inductive type pattern"
+      $> fun (loc, (x, ps)) -> Comp.PatName (loc, x, ps)
+    in
+    let pattern = alt app cmp_pattern_atomic in
     seq2
       pattern
       (maybe (token T.COLON &> cmp_typ))
@@ -2015,142 +2007,136 @@ and cmp_pattern =
         match tau with
         | Option.None -> p
         | Option.Some tau -> Comp.PatAnn (loc, p, tau)
-  in
-  run p s
 
-and cmp_pattern_atomic =
-  fun s ->
-  let mobj_pat =
-    span meta_obj
-    |> labelled "meta object pattern"
-    $> fun (loc, mobj) -> Comp.PatMetaObj (loc, mobj)
-  in
-  let nested (* `(' p (, p)* `)' *) =
-    span (parens (seq2 cmp_pattern (many (token T.COMMA &> cmp_pattern))))
-    $> (fun (location, (p1, ps)) ->
-      match ps with
-      | [] -> p1
-      | p2 :: ps -> Comp.PatTuple (location, List2.from p1 p2 ps))
-    |> labelled "parenthesized or tuple pattern"
-  in
-  let var =
-    name
-    |> span
-    |> labelled "variable pattern"
-    $> fun (loc, x) -> Comp.PatName (loc, x, Comp.PatNil loc)
-  in
-  let p =
-    choice
-      [ mobj_pat
-      ; nested
-      ; var
-      ]
-    |> labelled "bare pattern"
-  in
-  run p s
-
-(** Parses a return checkable computation term,
-    i.e. a checkable term *except* for applications.
- *)
-and cmp_exp_chk' =
-  fun s ->
-  let abstraction param c =
-    seq2
-      (sep_by1 param (token T.COMMA) $> List1.to_list)
-      (token T.THICK_ARROW &> cmp_exp_chk)
-    |> span
-    $> fun (loc, (params, i)) ->
-        List.fold_left
-          (fun acc f -> c loc f acc) i (List.rev params)
-  in
-  let fn =
-    token T.KW_FN
-    &> abstraction name
-          (fun loc f acc -> Comp.Fn (loc, f, acc))
-    |> labelled "ordinary function abstraction"
-  in
-  let mlam =
-    token T.KW_MLAM
-    &> abstraction (choice [hash_name; dollar_name; name])
-          (fun loc f acc -> Comp.MLam (loc, f, acc))
-    |> labelled "meta function abstraction"
-  in
-  let matching_fun =
-    token T.KW_FUN
-    &> maybe (token T.PIPE)
-    &> sep_by1 (span cmp_copat_spine) (token T.PIPE)
-    $> List1.to_list
-    |> span
-    |> labelled "copattern abstraction"
-    $> fun (loc, branches) ->
-        let branches =
-          List.fold_left
-            (fun acc (loc, pat) -> Comp.ConsFBranch (loc, pat, acc))
-            (Comp.NilFBranch loc)
-            (List.rev branches)
-        in
-        Comp.Fun (loc, branches)
-  in
-  let case =
-    seq3
-      (token T.KW_CASE &> cmp_exp_syn)
-      (token T.KW_OF &> case_pragma)
-      (maybe (token T.PIPE)
-        &> sep_by1 cmp_branch (token T.PIPE)
-        $> List1.to_list)
-    |> span
-    |> labelled "case expression"
-    $> fun (loc, (i, prag, bs)) ->
-        Comp.Case (loc, prag, i, bs)
-  in
-  let impossible =
-    token T.KW_IMPOSSIBLE
-    &> cmp_exp_syn
-    |> span
-    $> fun (loc, i) -> Comp.Impossible (loc, i)
-  in
-  let lets =
-    let let_pattern =
-      seq4
-        (mctx ~sep: (return ()) (clf_ctyp_decl_bare name' (fun x -> Plicity.explicit, x) |> braces))
-        (cmp_pattern <& token T.EQUALS)
-        (cmp_exp_syn <& token T.KW_IN)
-        cmp_exp_chk
-      |> span
-      $> fun (loc, (ctyp_decls, pat, i, e)) ->
-          let branch = Comp.Branch (loc, ctyp_decls, pat, e) in
-          Comp.(Case (loc, PragmaCase, i, [branch]))
+  let cmp_copat_spine =
+    let go =
+      Fun.fix (fun go -> choice
+        [ seq2 dot_name go
+          |> span
+          |> labelled "observation pattern"
+          $> (fun (loc, (x, acc)) -> Comp.PatObs (loc, x, acc))
+        ; seq2 cmp_pattern_atomic go
+          |> span
+          |> labelled "application pattern"
+          $> (fun (loc, (x, acc)) -> Comp.PatApp (loc, x, acc))
+        ; span (return ()) $> fun (loc, _) -> Comp.PatNil loc
+        ])
     in
-    token T.KW_LET
-    (* XXX
-        there is ambiguity between let_exp and let_pattern, in
-        particular because exp is a proper subclass of pattern:
-        i.e. a variable is a valid pattern.
-        Furthermore, there is no syntactic way we can tell,
-        since variables may be any case.
-        During parsing, we will prioritize let_pattern, and during
-        indexing, when we have scoping information, we will
-        disambiguate.
-        -je
-      *)
-    &> let_pattern
-  in
-  let nested (* `(' e (, e)* `)' *) =
-    span (parens (seq2 cmp_exp_chk (many (token T.COMMA &> cmp_exp_chk))))
-    $> (fun (location, (p1, ps)) ->
-      match ps with
-      | [] -> p1
-      | p2 :: ps -> Comp.Tuple (location, List2.from p1 p2 ps))
-    |> labelled "parenthesized or tuple checkable expression"
-  in
-  let hole = hole |> span $> fun (loc, h) -> Comp.Hole (loc, h) in
-  let box_hole = token T.UNDERSCORE |> span $> fun (loc, _) -> Comp.BoxHole loc in
-  let meta_obj =
-    meta_obj
+    seq2
+      (go <& token T.THICK_ARROW)
+      Comp_parsers.cmp_exp_chk
+    |> shifted "copattern spine"
+
+  let cmp_branch =
+    seq3
+      (mctx ~sep: (return ()) (clf_ctyp_decl_bare name' (fun x -> Plicity.explicit, x) |> braces))
+      cmp_pattern
+      (token T.THICK_ARROW &> Comp_parsers.cmp_exp_chk)
     |> span
-    $> fun (loc, tR) -> Comp.Box (loc, tR)
-  in
-  let p =
+    |> labelled "case branch"
+    $> fun (loc, (ctyp_decls, pat, rhs)) ->
+        Comp.Branch (loc, ctyp_decls, pat, rhs)
+
+  (** Parses a return checkable computation term,
+      i.e. a checkable term *except* for applications.
+   *)
+  let cmp_exp_chk' =
+    let abstraction param c =
+      seq2
+        (sep_by1 param (token T.COMMA) $> List1.to_list)
+        (token T.THICK_ARROW &> Comp_parsers.cmp_exp_chk)
+      |> span
+      $> fun (loc, (params, i)) ->
+          List.fold_left
+            (fun acc f -> c loc f acc) i (List.rev params)
+    in
+    let fn =
+      token T.KW_FN
+      &> abstraction name
+            (fun loc f acc -> Comp.Fn (loc, f, acc))
+      |> labelled "ordinary function abstraction"
+    in
+    let mlam =
+      token T.KW_MLAM
+      &> abstraction (choice [hash_name; dollar_name; name])
+            (fun loc f acc -> Comp.MLam (loc, f, acc))
+      |> labelled "meta function abstraction"
+    in
+    let matching_fun =
+      token T.KW_FUN
+      &> maybe (token T.PIPE)
+      &> sep_by1 (span cmp_copat_spine) (token T.PIPE)
+      $> List1.to_list
+      |> span
+      |> labelled "copattern abstraction"
+      $> fun (loc, branches) ->
+          let branches =
+            List.fold_left
+              (fun acc (loc, pat) -> Comp.ConsFBranch (loc, pat, acc))
+              (Comp.NilFBranch loc)
+              (List.rev branches)
+          in
+          Comp.Fun (loc, branches)
+    in
+    let case =
+      seq3
+        (token T.KW_CASE &> Comp_parsers.cmp_exp_syn)
+        (token T.KW_OF &> case_pragma)
+        (maybe (token T.PIPE)
+          &> sep_by1 cmp_branch (token T.PIPE)
+          $> List1.to_list)
+      |> span
+      |> labelled "case expression"
+      $> fun (loc, (i, prag, bs)) ->
+          Comp.Case (loc, prag, i, bs)
+    in
+    let impossible =
+      token T.KW_IMPOSSIBLE
+      &> Comp_parsers.cmp_exp_syn
+      |> span
+      $> fun (loc, i) -> Comp.Impossible (loc, i)
+    in
+    let lets =
+      let let_pattern =
+        seq4
+          (mctx ~sep: (return ()) (clf_ctyp_decl_bare name' (fun x -> Plicity.explicit, x) |> braces))
+          (cmp_pattern <& token T.EQUALS)
+          (Comp_parsers.cmp_exp_syn <& token T.KW_IN)
+          Comp_parsers.cmp_exp_chk
+        |> span
+        $> fun (loc, (ctyp_decls, pat, i, e)) ->
+            let branch = Comp.Branch (loc, ctyp_decls, pat, e) in
+            Comp.(Case (loc, PragmaCase, i, [branch]))
+      in
+      token T.KW_LET
+      (* XXX
+          there is ambiguity between let_exp and let_pattern, in
+          particular because exp is a proper subclass of pattern:
+          i.e. a variable is a valid pattern.
+          Furthermore, there is no syntactic way we can tell,
+          since variables may be any case.
+          During parsing, we will prioritize let_pattern, and during
+          indexing, when we have scoping information, we will
+          disambiguate.
+          -je
+        *)
+      &> let_pattern
+    in
+    let nested (* `(' e (, e)* `)' *) =
+      span (parens (seq2 Comp_parsers.cmp_exp_chk (many (token T.COMMA &> Comp_parsers.cmp_exp_chk))))
+      $> (fun (location, (p1, ps)) ->
+        match ps with
+        | [] -> p1
+        | p2 :: ps -> Comp.Tuple (location, List2.from p1 p2 ps))
+      |> labelled "parenthesized or tuple checkable expression"
+    in
+    let hole = hole |> span $> fun (loc, h) -> Comp.Hole (loc, h) in
+    let box_hole = token T.UNDERSCORE |> span $> fun (loc, _) -> Comp.BoxHole loc in
+    let meta_obj =
+      meta_obj
+      |> span
+      $> fun (loc, tR) -> Comp.Box (loc, tR)
+    in
     choice
       [ fn (* fn introduction form *)
       ; mlam (* mlam introduction form *)
@@ -2163,40 +2149,46 @@ and cmp_exp_chk' =
       ; meta_obj
       ; lets (* let expressions: true let and pattern let *)
       ]
-  in
-  run p s
 
-and cmp_copat_spine =
-  let rec go =
-    fun s ->
-    let p =
-      choice
-        [ seq2 dot_name go
-          |> span
-          |> labelled "observation pattern"
-          $> (fun (loc, (x, acc)) -> Comp.PatObs (loc, x, acc))
-        ; seq2 cmp_pattern_atomic go
-          |> span
-          |> labelled "application pattern"
-          $> (fun (loc, (x, acc)) -> Comp.PatApp (loc, x, acc))
-        ; span (return ()) $> fun (loc, _) -> Comp.PatNil loc
-        ]
+  (** Parses a synthesizable expression except applications. *)
+  let cmp_exp_syn' =
+    let meta_obj =
+      meta_obj
+      |> span
+      |> labelled "synthesizable box"
+      $> fun (loc, tR) -> Comp.BoxVal (loc, tR)
     in
-    run p s
-  in
-  fun s ->
-  let p =
-    seq2
-      (go <& token T.THICK_ARROW)
-      cmp_exp_chk
-    |> shifted "copattern spine"
-  in
-  run p s
+    let nested (* `(' i (, i)* `)' *) =
+      span (parens (seq2 Comp_parsers.cmp_exp_syn (many (token T.COMMA &> Comp_parsers.cmp_exp_syn))))
+      $> (fun (location, (p1, ps)) ->
+        match ps with
+        | [] -> p1
+        | p2 :: ps -> Comp.TupleVal (location, List2.from p1 p2 ps))
+      |> labelled "parenthesized or tuple synthesizable expression"
+    in
+    let name =
+      fqname
+      |> span
+      |> labelled "computation variable or constructor"
+      $> fun (loc, x) -> Comp.Name (loc, x)
+    in
+    choice
+      [ name
+      ; meta_obj
+      ; nested
+      ]
 
-(** Parses a synthesizable expression *)
-and cmp_exp_syn =
-  fun s ->
-  let p =
+  (** Parses a purely checkable expression or an atomic
+      (non-application) synthesizable expression.
+   *)
+  let cmp_exp_chk'' =
+    choice
+      [ cmp_exp_chk'
+      ; span cmp_exp_syn' $> fun (loc, i) -> Comp.Syn (loc, i)
+      ]
+
+  (** Parses a synthesizable expression *)
+  let cmp_exp_syn =
     seq2
       cmp_exp_syn'
       (many (span cmp_exp_chk''))
@@ -2210,63 +2202,31 @@ and cmp_exp_syn =
             fold i es
         in
         fold i es
-  in
-  run p s
 
-(** Parses a purely checkable expression or an atomic
-    (non-application) synthesizable expression.
- *)
-and cmp_exp_chk'' =
-  fun s ->
-  let p =
+  (** Parses a checkable computation term *)
+  let cmp_exp_chk =
     choice
       [ cmp_exp_chk'
-      ; span cmp_exp_syn' $> fun (loc, i) -> Comp.Syn (loc, i)
+      ; span cmp_exp_syn
+        $> fun (loc, i) -> Comp.Syn (loc, i)
       ]
-  in
-  run p s
 
-(** Parses a synthesizable expression except applications. *)
-and cmp_exp_syn' =
-  fun s ->
-  let meta_obj =
-    meta_obj
-    |> span
-    |> labelled "synthesizable box"
-    $> fun (loc, tR) -> Comp.BoxVal (loc, tR)
-  in
-  let nested (* `(' i (, i)* `)' *) =
-    span (parens (seq2 cmp_exp_syn (many (token T.COMMA &> cmp_exp_syn))))
-    $> (fun (location, (p1, ps)) ->
-      match ps with
-      | [] -> p1
-      | p2 :: ps -> Comp.TupleVal (location, List2.from p1 p2 ps))
-    |> labelled "parenthesized or tuple synthesizable expression"
-  in
-  let name =
-    fqname
-    |> span
-    |> labelled "computation variable or constructor"
-    $> fun (loc, x) -> Comp.Name (loc, x)
-  in
-  let p =
-    choice
-      [ name
-      ; meta_obj
-      ; nested
-      ]
-  in
-  run p s
+  (** Parses `x : tau`. *)
+  let cmp_ctyp_decl =
+    seq2 (name <& token T.COLON) cmp_typ
+    |> labelled "computational type declaration"
+    $> fun (x, tau) -> Comp.CTypDecl (x, tau)
 
-(** Parses `x : tau`. *)
-let cmp_ctyp_decl =
-  seq2 (name <& token T.COLON) cmp_typ
-  |> labelled "computational type declaration"
-  $> fun (x, tau) -> Comp.CTypDecl (x, tau)
+  let gctx =
+    sep_by0 cmp_ctyp_decl (token T.COMMA)
+    $> Context.of_list_rev
+end
 
-let gctx =
-  sep_by0 cmp_ctyp_decl (token T.COMMA)
-  $> Context.of_list_rev
+let cmp_kind = Comp_parsers.cmp_kind
+let cmp_typ = Comp_parsers.cmp_typ
+let cmp_exp_chk = Comp_parsers.cmp_exp_chk
+let cmp_exp_syn = Comp_parsers.cmp_exp_syn
+let gctx = Comp_parsers.gctx
 
 module rec Harpoon_parsers : sig
   val harpoon_proof : Comp.proof t

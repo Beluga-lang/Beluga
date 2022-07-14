@@ -2875,9 +2875,9 @@ module Make (T : TRAIL) : UNIFY = struct
        unifyCompTyp cD (tau2, t) (tau2', t')
 
 
-    | ((Comp.TypCross (_, tau1, tau2), t), (Comp.TypCross (_, tau1', tau2'), t')) ->
-       unifyCompTyp cD (tau1, t) (tau1', t');
-       unifyCompTyp cD (tau2, t) (tau2', t')
+    | ((Comp.TypCross (_, taus), t), (Comp.TypCross (_, taus'), t')) ->
+       List2.iter2
+         (fun tau tau' -> unifyCompTyp cD (tau, t) (tau', t')) taus taus'
 
     (* !!      | ((Comp.TypPiBox ((Decl (psi, CTyp schema, dep)), tau), t)
          , (Comp.TypPiBox ((Decl (_, CTyp schema', dep')), tau'), t')) ->

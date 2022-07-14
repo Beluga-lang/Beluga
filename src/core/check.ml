@@ -69,7 +69,7 @@ module Comp = struct
     | `mlam
     | `box
     | `ctxfun
-    | `pair
+    | `tuple
     ]
 
   type error =
@@ -247,7 +247,7 @@ module Comp = struct
          | `mlam -> p "meta abstraction (mlam)"
          | `ctxfun -> p "context abstraction"
          | `box -> p "box-expression"
-         | `pair -> p "tuple"
+         | `tuple -> p "tuple"
        in
        fprintf ppf "@[<v>Found@,  %a@,but expected expression of type@,  %a@]"
          print_mismatch_kind k
@@ -520,7 +520,10 @@ module Comp = struct
     | PatConst (_, _, pat_spine) -> fmv_pat_spine cD pat_spine
     | PatVar _
       | PatFVar _ -> cD
-    | PatPair (_, pat1, pat2) -> fmv (fmv cD pat1) pat2
+    | PatTuple (_, pats) ->
+      pats
+      |> List2.to_list
+      |> List.fold_left (fun cD pat -> fmv cD pat) cD
     | PatMetaObj (_, cM) -> fmv_mobj cD cM
     | PatAnn (_, pat, _, _) -> fmv cD pat
 
@@ -826,9 +829,8 @@ module Comp = struct
        checkTyp cD tau1;
        checkTyp cD tau2
 
-    | TypCross (_, tau1, tau2) ->
-       checkTyp cD tau1;
-       checkTyp cD tau2
+    | TypCross (_, taus) ->
+       List2.iter (checkTyp cD) taus
 
     | TypPiBox (_, cdecl, tau') as tau ->
        dprintf
@@ -966,11 +968,10 @@ module Comp = struct
        Typeinfo.Comp.add loc (Typeinfo.Comp.mk_entry cD ttau)
          (Format.asprintf "MLam %a" (P.fmt_ppr_cmp_exp_chk cD cG P.l0) e)
 
-    | (Pair (loc, e1, e2), (TypCross (_, tau1, tau2), t)) ->
-       check mcid cD (cG, cIH) total_decs e1 (tau1, t);
-       check mcid cD (cG, cIH) total_decs e2 (tau2, t);
+    | (Tuple (loc, es), (TypCross (_, taus), t)) ->
+       List2.iter2 (fun e tau -> check mcid cD (cG, cIH) total_decs e (tau, t)) es taus;
        Typeinfo.Comp.add loc (Typeinfo.Comp.mk_entry cD ttau)
-         (Format.asprintf "Pair %a" (P.fmt_ppr_cmp_exp_chk cD cG P.l0) e)
+         (Format.asprintf "Tuple %a" (P.fmt_ppr_cmp_exp_chk cD cG P.l0) e)
 
     | (Let (loc, i, (x, e)), (tau, t)) ->
        let (_, tau', t') = syn mcid cD (cG, cIH) total_decs i in
@@ -980,16 +981,18 @@ module Comp = struct
        Typeinfo.Comp.add loc (Typeinfo.Comp.mk_entry cD ttau)
          (Format.asprintf "Let %a" (P.fmt_ppr_cmp_exp_chk cD cG P.l0) e)
 
-    | (LetPair (_, i, (x, y, e)), (tau, t)) ->
+    | (LetTuple (_, i, (ns, e)), (tau, t)) ->
        let (_, tau', t') = syn mcid cD (cG, cIH) total_decs i in
        let (tau', t') = C.cwhnfCTyp (tau', t') in
        begin match (tau', t') with
-       | (TypCross (_, tau1, tau2), t') ->
+       | (TypCross (_, taus), t') ->
           let cG' =
-            I.Dec
-              ( I.Dec (cG, CTypDecl (x, Whnf.cnormCTyp (tau1, t'), false))
-              , CTypDecl (y, Whnf.cnormCTyp (tau2, t'), false)
+            List.fold_left2
+              (fun cG' n tau ->
+                I.Dec (cG', CTypDecl (n, Whnf.cnormCTyp (tau, t'), false))
               )
+              cG
+              (List2.to_list ns) (List2.to_list taus)
           in
           check mcid cD (cG', (Total.shift (Total.shift cIH))) total_decs e (tau, t)
        | _ -> raise (Error.Violation "Case scrutinee not of product type")
@@ -1247,19 +1250,17 @@ module Comp = struct
           raise (Error (loc, MismatchSyn (cD, cG, e, VariantPiBox, (tau,t))))
        end
 
-    | PairVal (loc, i1, i2) ->
-       let (_, tau1, t1) = syn mcid cD (cG, cIH) total_decs i1 in
-       let (_, tau2, t2) = syn mcid cD (cG, cIH) total_decs i2 in
-       let (tau1, t1) = C.cwhnfCTyp (tau1, t1) in
-       let (tau2, t2) = C.cwhnfCTyp (tau2, t2) in
-       ( None
-       , TypCross
-           ( loc
-           , TypClo (tau1, t1)
-           , TypClo (tau2, t2)
+    | TupleVal (loc, is) ->
+       let taus =
+         List2.map
+           (fun i ->
+             let (_, tau, t) = syn mcid cD (cG, cIH) total_decs i in
+             let (tau, t) = C.cwhnfCTyp (tau, t) in
+             TypClo (tau, t)
            )
-       , C.m_id
-       )
+           is
+       in
+       (None, TypCross (loc, taus), C.m_id)
 
     | AnnBox (cM, cT) ->
        checkMetaObj cD cM cT C.m_id;
@@ -1285,12 +1286,11 @@ module Comp = struct
           LF.checkMetaObj cD mO (ctyp, theta)
        | _ -> raise (Error (loc, BasicMismatch (`box, cD, I.Empty, ttau)))
        end
-    | PatPair (loc, pat1, pat2) ->
+    | PatTuple (loc, pats) ->
        begin match ttau with
-       | (TypCross (_, tau1, tau2), theta) ->
-          checkPattern cD cG pat1 (tau1, theta);
-          checkPattern cD cG pat2 (tau2, theta)
-       | _ -> raise (Error (loc, BasicMismatch (`pair, cD, cG, ttau)))
+       | (TypCross (_, taus), theta) ->
+          List2.iter2 (fun pat tau -> checkPattern cD cG pat (tau, theta)) pats taus
+       | _ -> raise @@ Error (loc, BasicMismatch (`tuple, cD, cG, ttau))
        end
 
     | pat ->

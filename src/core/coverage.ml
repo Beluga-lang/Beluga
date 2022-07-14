@@ -1033,15 +1033,19 @@ let rec match_pattern (cD, cG) (cD_p, cG_p) (pat, ttau) (pat_p, ttau_p) mC sC =
   | ((Comp.PatFVar _, ttau), (pat_p, ttau')) ->
      (mC, SplitPat ((pat, ttau), (pat_p, ttau')) :: sC)
 
-  | Comp.( (PatPair (_, pat1, pat2), (TypCross (_, tau1, tau2), t))
-         , (PatPair (_, pat1', pat2'), (TypCross (_, tau1', tau2'), t'))
+  | Comp.( (PatTuple (_, pats), (TypCross (_, taus), t))
+         , (PatTuple (_, pats'), (TypCross (_, taus'), t'))
     ) ->
-     let (mC1, sC1) =
-       match_pattern (cD, cG) (cD_p, cG_p)
-         (pat1, (tau1, t)) (pat1', (tau1', t')) mC sC
-     in
-     match_pattern (cD, cG) (cD_p, cG_p)
-       (pat2, (tau2, t)) (pat2', (tau2', t')) mC1 sC1
+     List.fold_left4
+       (fun (mC, sC) pat tau pat' tau' ->
+          match_pattern (cD, cG) (cD_p, cG_p) (pat, (tau, t)) (pat', (tau', t')) mC sC
+       )
+       (mC, sC)
+       (List2.to_list pats)
+       (List2.to_list taus)
+       (List2.to_list pats')
+       (List2.to_list taus')
+
   | (pat_ttau, (Comp.PatAnn (_, pat', tau', _), (_, t'))) ->
      match_pattern (cD, cG) (cD_p, cG_p) pat_ttau (pat', (tau', t')) mC sC
   | ((Comp.PatAnn (_, pat', tau', _), (_, t')), pat_ttau) ->
@@ -2532,26 +2536,33 @@ let genPatCGoals names mk_pat_var (cD : LF.mctx) tau =
       end
   in
   match tau with
-  | Comp.TypCross (_, tau1, tau2) ->
-     let pv1 = NameGen.(var tau1 |> renumber names) in
-     let names = pv1 :: names in
-     let pv2 = NameGen.(var tau1 |> renumber names) in
-
-     let cG1' =
+  | Comp.TypCross (_, taus) ->
+     let pvs =
+       taus
+       |> List2.fold_left
+       (fun tau1 ->
+          let pv1 = NameGen.(var tau1 |> renumber names) in
+          (pv1, pv1 :: names)
+       )
+       (fun (pv1, names) tau2 ->
+          let pv2 = NameGen.(var tau2 |> renumber names) in
+          (List2.pair pv2 pv1 (* intentionally reversed *), pv2 :: names)
+       )
+       (fun (pvs, names) tau ->
+          let pv = NameGen.(var tau |> renumber names) in
+          (List2.cons pv pvs, pv :: names)
+       )
+       |> Pair.fst
+       |> List2.rev in
+     let cG' =
        LF.Empty
-       |> Context.decs
-            [ Comp.CTypDecl (pv1, tau1, false)
-            ; Comp.CTypDecl (pv2, tau2, false)
-            ]
+       |> Context.decs (List2.map2 (fun pv tau -> Comp.CTypDecl (pv, tau, false)) pvs taus |> List2.to_list)
      in
+     let length = List2.length taus in
      let pat =
-       Comp.PatPair
-         ( Loc.ghost
-         , mk_pat_var pv1 2
-         , mk_pat_var pv2 1
-         )
+       Comp.PatTuple (Loc.ghost, List2.mapi (fun i pv -> mk_pat_var pv (length - i)) pvs)
      in
-     [(cD, (cG1', pat, (tau, Whnf.m_id)), Whnf.m_id)]
+     [(cD, (cG', pat, (tau, Whnf.m_id)), Whnf.m_id)]
 
   | Comp.TypBox (loc, mT) ->
      begin match mT with
@@ -2811,10 +2822,9 @@ let rec subst_pattern (pat_r, pv) pattern =
      if Name.(y = pv)
      then pat_r
      else pattern
-  | Comp.PatPair (loc, pat1, pat2) ->
-     let pat1' = subst_pattern (pat_r, pv) pat1 in
-     let pat2' = subst_pattern (pat_r, pv) pat2 in
-     Comp.PatPair (loc, pat1', pat2')
+  | Comp.PatTuple (loc, pats) ->
+     let pats' = List2.map (subst_pattern (pat_r, pv)) pats in
+     Comp.PatTuple (loc, pats')
   | Comp.PatAnn (loc, pat, tau, plicity) ->
      let pat' = subst_pattern (pat_r, pv) pat in
      Comp.PatAnn (loc, pat', tau, plicity)

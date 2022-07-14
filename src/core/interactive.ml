@@ -157,14 +157,13 @@ let rec mapHoleChk f =
      let es' = mapHoleSyn f es in
      let ec' = mapHoleChk f ec in
      Let (t, es', (n, ec'))
-  | LetPair (t, es, (n1, n2, ec)) ->
+  | LetTuple (t, es, (ns, ec)) ->
      let es' = mapHoleSyn f es in
      let ec' = mapHoleChk f ec in
-     LetPair (t, es', (n1, n2, ec'))
-  | Pair (l, ec1, ec2) ->
-     let ec1' = mapHoleChk f ec1 in
-     let ec2' = mapHoleChk f ec2 in
-     Pair (l, ec1', ec2')
+     LetTuple (t, es', (ns, ec'))
+  | Tuple (l, ecs) ->
+     let ecs' = List2.map (mapHoleChk f) ecs in
+     Tuple (l, ecs')
   | Case (l, s, es, bs) ->
      let es' = mapHoleSyn f es in
      let bs' = List.map (mapHoleBranch f) bs in
@@ -180,10 +179,9 @@ and mapHoleSyn f =
   | MApp (l, es, cM, cU, pl) ->
      let es' = mapHoleSyn f es in
      MApp (l, es', cM, cU, pl)
-  | PairVal(l, es1, es2) ->
-     let es1' = mapHoleSyn f es1 in
-     let es2' = mapHoleSyn f es2 in
-     PairVal (l, es1', es2')
+  | TupleVal (l, es) ->
+     let es' = List2.map (mapHoleSyn f) es in
+     TupleVal (l, es')
   | e -> e
 
 and mapHoleBranch f =

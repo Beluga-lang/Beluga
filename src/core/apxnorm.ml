@@ -299,15 +299,14 @@ let rec cnormApxExp cD delta e (cD'', t) =
      in
      Apx.Comp.MLam (loc, u, e')
 
-  | Apx.Comp.Pair (loc, e1, e2) ->
-     let e1' = cnormApxExp cD delta e1 (cD'', t) in
-     let e2' = cnormApxExp cD delta e2 (cD'', t) in
-     Apx.Comp.Pair (loc, e1', e2')
+  | Apx.Comp.Tuple (loc, es) ->
+     let es' = List2.map (fun e -> cnormApxExp cD delta e (cD'', t)) es in
+     Apx.Comp.Tuple (loc, es')
 
-  | Apx.Comp.LetPair (loc, i, (x, y, e)) ->
+  | Apx.Comp.LetTuple (loc, i, (xs, e)) ->
      let i' = cnormApxExp' cD delta i (cD'', t) in
      let e' = cnormApxExp cD delta e (cD'', t) in
-     Apx.Comp.LetPair (loc, i', (x, y, e'))
+     Apx.Comp.LetTuple (loc, i', (xs, e'))
 
   | Apx.Comp.Let (loc, i, (x, e)) ->
      let i' = cnormApxExp' cD delta i (cD'', t) in
@@ -350,10 +349,9 @@ and cnormApxExp' cD delta i cDt =
      let e' = cnormApxExp cD delta e cDt in
      Apx.Comp.Obs (loc, e', obs)
   | Apx.Comp.Const _ -> i
-  | Apx.Comp.PairVal (loc, i1, i2) ->
-     let i1' = cnormApxExp' cD delta i1 cDt in
-     let i2' = cnormApxExp' cD delta i2 cDt in
-     Apx.Comp.PairVal (loc, i1', i2')
+  | Apx.Comp.TupleVal (loc, is) ->
+     let is' = List2.map (fun i -> cnormApxExp' cD delta i cDt) is in
+     Apx.Comp.TupleVal (loc, is')
 
   | Apx.Comp.Apply (loc, i, e) ->
      let i' = cnormApxExp' cD delta i cDt in
@@ -595,9 +593,10 @@ let rec collectApxCompTyp fMVd =
   | Apx.Comp.TypArr (_, tau1, tau2) ->
      let fMVd1 = collectApxCompTyp fMVd tau1 in
      collectApxCompTyp fMVd1 tau2
-  | Apx.Comp.TypCross (_, tau1, tau2) ->
-     let fMVd1 = collectApxCompTyp fMVd tau1 in
-     collectApxCompTyp fMVd1 tau2
+  | Apx.Comp.TypCross (_, taus) ->
+     taus
+     |> List2.to_list
+     |> List.fold_left collectApxCompTyp fMVd
   | Apx.Comp.TypPiBox (_, cdecl, tau) ->
      let fMVd1 = collectApxCDecl fMVd cdecl in
      collectApxCompTyp fMVd1 tau
@@ -618,9 +617,10 @@ let rec collectApxPattern fMVd =
   | Apx.Comp.PatConst (loc, c, pat_spine) ->
      collectApxPatSpine fMVd pat_spine
   | Apx.Comp.PatVar (loc, n, offset) -> fMVd
-  | Apx.Comp.PatPair (loc, pat1, pat2) ->
-     let fMVs1 = collectApxPattern fMVd pat1 in
-     collectApxPattern fMVs1 pat2
+  | Apx.Comp.PatTuple (loc, pats) ->
+     pats
+     |> List2.to_list
+     |> List.fold_left collectApxPattern fMVd
   | Apx.Comp.PatAnn (loc, pat, tau) ->
      let fMVd1 = collectApxCompTyp fMVd tau in
      collectApxPattern fMVd1 pat
@@ -849,14 +849,13 @@ let rec fmvApxExp fMVs cD ((l_cd1, l_delta, k) as d_param) =
      Apx.Comp.Fun (loc, fmvApxFBranches fMVs cD d_param fbr)
   | Apx.Comp.MLam (loc, u, e) ->
      Apx.Comp.MLam (loc, u, fmvApxExp fMVs cD (l_cd1, l_delta, (k + 1)) e)
-  | Apx.Comp.Pair (loc, e1, e2) ->
-     let e1' = fmvApxExp fMVs cD d_param e1 in
-     let e2' = fmvApxExp fMVs cD d_param e2 in
-     Apx.Comp.Pair (loc, e1', e2')
-  | Apx.Comp.LetPair (loc, i, (x, y, e)) ->
+  | Apx.Comp.Tuple (loc, es) ->
+     let es' = List2.map (fun e -> fmvApxExp fMVs cD d_param e) es in
+     Apx.Comp.Tuple (loc, es')
+  | Apx.Comp.LetTuple (loc, i, (xs, e)) ->
      let i' = fmvApxExp' fMVs cD d_param i in
      let e' = fmvApxExp fMVs cD d_param e in
-     Apx.Comp.LetPair (loc, i', (x, y, e'))
+     Apx.Comp.LetTuple (loc, i', (xs, e'))
   | Apx.Comp.Let (loc, i, (x, e)) ->
      let i' = fmvApxExp' fMVs cD d_param i in
      let e' = fmvApxExp fMVs cD d_param e in
@@ -894,10 +893,9 @@ and fmvApxExp' fMVs cD d_param =
      let mobj' = fmvApxMetaObj fMVs cD d_param mobj in
      Apx.Comp.BoxVal (loc, mobj')
 
-  | Apx.Comp.PairVal (loc, i1, i2) ->
-     let i1' = fmvApxExp' fMVs cD d_param i1 in
-     let i2' = fmvApxExp' fMVs cD d_param i2 in
-     Apx.Comp.PairVal (loc, i1', i2')
+  | Apx.Comp.TupleVal (loc, is) ->
+     let is' = List2.map (fun i -> fmvApxExp' fMVs cD d_param i) is in
+     Apx.Comp.TupleVal (loc, is')
 
 and fmvApxMetaObj fMVs cD d_param (loc, mobj) =
   ( loc

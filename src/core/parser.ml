@@ -1826,13 +1826,13 @@ and cmp_typ_cross =
   let p =
     seq2
       cmp_typ_atomic
-      (maybe (token T.STAR &> cmp_typ_cross))
+      (many (token T.STAR &> cmp_typ_cross))
     |> span
     |> labelled "computation product type"
-    $> fun (loc, (tau, m)) ->
-        match m with
-        | Option.None -> tau
-        | Option.Some tau' -> Comp.TypCross (loc, tau, tau')
+    $> fun (loc, (tau1, taus)) ->
+        match taus with
+        | [] -> tau1
+        | tau2 :: taus -> Comp.TypCross (loc, List2.from tau1 tau2 taus)
   in
   run p s
 
@@ -1949,24 +1949,6 @@ let rec cmp_kind =
   in
   run p s
 
-(** Parses a sequence of `p` separated by commas, in parentheses.
-    This is used to parse nested & tuple patterns and expressions
-    generically.
- *)
-let nested (type a) (p : a parser) (g : a locd -> a) (f : a locd -> a locd -> a) : a parser =
-  sep_by1 (span p) (token T.COMMA)
-  |> span
-  |> parens
-  $> fun (loc', l) ->
-     List1.fold_left g (fun acc p -> f (loc', acc) p) l
-     (* We use a left fold because the tuples in Beluga naturally nest on the left.
-        We always use the loc' location on the accumulator since `f`
-        should join the locations of its inputs. Location joining uses
-        the start of the first input and the stop of the second, so
-        the effect is to generate progressively right-expanding
-        location spans.
-      *)
-
 (** Parses a pragma that can appear before a case.
     Either it's the `--not' pragma, or there's no pragma. In the
     latter case we produce `Pragma.RegularCase' without consuming any
@@ -2043,12 +2025,13 @@ and cmp_pattern_atomic =
     |> labelled "meta object pattern"
     $> fun (loc, mobj) -> Comp.PatMetaObj (loc, mobj)
   in
-  let nested =
-    nested cmp_pattern
-      Pair.snd
-      (fun (l1, p1) (l2, p2) ->
-        Comp.PatPair (Location.join l1 l2, p1, p2))
-    |> labelled "nested/pair pattern"
+  let nested (* `(' p (, p)* `)' *) =
+    span (parens (seq2 cmp_pattern (many (token T.COMMA &> cmp_pattern))))
+    $> (fun (location, (p1, ps)) ->
+      match ps with
+      | [] -> p1
+      | p2 :: ps -> Comp.PatTuple (location, List2.from p1 p2 ps))
+    |> labelled "parenthesized or tuple pattern"
   in
   let var =
     name
@@ -2152,11 +2135,13 @@ and cmp_exp_chk' =
       *)
     &> let_pattern
   in
-  let nested =
-    nested cmp_exp_chk
-      Pair.snd
-      (fun (l1, e1) (l2, e2) ->
-        Comp.Pair (Location.join l1 l2, e1, e2))
+  let nested (* `(' e (, e)* `)' *) =
+    span (parens (seq2 cmp_exp_chk (many (token T.COMMA &> cmp_exp_chk))))
+    $> (fun (location, (p1, ps)) ->
+      match ps with
+      | [] -> p1
+      | p2 :: ps -> Comp.Tuple (location, List2.from p1 p2 ps))
+    |> labelled "parenthesized or tuple checkable expression"
   in
   let hole = hole |> span $> fun (loc, h) -> Comp.Hole (loc, h) in
   let box_hole = token T.UNDERSCORE |> span $> fun (loc, _) -> Comp.BoxHole loc in
@@ -2250,12 +2235,13 @@ and cmp_exp_syn' =
     |> labelled "synthesizable box"
     $> fun (loc, tR) -> Comp.BoxVal (loc, tR)
   in
-  let nested =
-    nested cmp_exp_syn
-      Pair.snd
-      (fun (l1, i1) (l2, i2) ->
-        Comp.PairVal (Location.join l1 l2, i1, i2))
-    |> labelled "nested synthesizable expression or pair"
+  let nested (* `(' i (, i)* `)' *) =
+    span (parens (seq2 cmp_exp_syn (many (token T.COMMA &> cmp_exp_syn))))
+    $> (fun (location, (p1, ps)) ->
+      match ps with
+      | [] -> p1
+      | p2 :: ps -> Comp.TupleVal (location, List2.from p1 p2 ps))
+    |> labelled "parenthesized or tuple synthesizable expression"
   in
   let name =
     fqname

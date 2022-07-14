@@ -132,43 +132,43 @@ module Comp = struct
     | TypDef of Location.t * cid_comp_typ * meta_spine
     | TypBox of Location.t * meta_typ
     | TypArr of Location.t * typ * typ
-    | TypCross of Location.t * typ * typ
+    | TypCross of Location.t * typ List2.t
     | TypPiBox of Location.t * LF.ctyp_decl * typ
     | TypInd of typ
 
   (** Normal computational terms *)
-  and exp_chk =
-     | Syn of Location.t * exp_syn
-     | Fn of Location.t * Name.t * exp_chk                           (* fn x => e           *)
-     | Fun of Location.t * fun_branches                              (* fun   fbranches     *)
-     | MLam of Location.t * Name.t * exp_chk                         (* mlam f => e         *)
-     | Pair of Location.t * exp_chk * exp_chk                        (* (e1 , e2)           *)
-     | LetPair of Location.t * exp_syn * (Name.t * Name.t * exp_chk) (* let (x,y) = i in e  *)
-     | Let of Location.t * exp_syn * (Name.t * exp_chk)              (* let x = i in e      *)
-     | Box of Location.t * meta_obj                                  (* box (Psi hat. M)    *)
-     | Case of Location.t * case_pragma * exp_syn * branch list      (* case i of bs        *)
-     | Impossible of Location.t * exp_syn                            (* impossible i        *)
-     | Hole of Location.t * string option                            (* ?name               *)
-     | BoxHole of Location.t                                         (* _                   *)
+  and exp_chk =                                                      (* e ::=                              *)
+     | Syn of Location.t * exp_syn                                   (*   | i                              *)
+     | Fn of Location.t * Name.t * exp_chk                           (*   | fn x => e                      *)
+     | Fun of Location.t * fun_branches                              (*   | fun   fbranches                *)
+     | MLam of Location.t * Name.t * exp_chk                         (*   | mlam f => e                    *)
+     | Tuple of Location.t * exp_chk List2.t                         (*   | (e1, e2, ..., en)              *)
+     | LetTuple of Location.t * exp_syn * (Name.t List2.t * exp_chk) (*   | let (x1, x2, ..., xn) = i in e *)
+     | Let of Location.t * exp_syn * (Name.t * exp_chk)              (*   | let x = i in e                 *)
+     | Box of Location.t * meta_obj                                  (*   | box (Psi hat. M)               *)
+     | Case of Location.t * case_pragma * exp_syn * branch list      (*   | case i of bs                   *)
+     | Impossible of Location.t * exp_syn                            (*   | impossible i                   *)
+     | Hole of Location.t * string option                            (*   | ?name                          *)
+     | BoxHole of Location.t                                         (*   | _                              *)
 
   (** Neutral computational terms *)
-  and exp_syn =
-     | Var of Location.t * offset                                   (* x              *)
-     | FVar of Name.t                                               (* x              *)
-     | DataConst of Location.t * cid_comp_const                     (* c              *)
-     | Obs of Location.t * exp_chk * cid_comp_dest                  (* e.d            *)
-     | Const of Location.t * cid_prog                               (* c              *)
-     | Apply of Location.t * exp_syn * exp_chk                      (* i e            *)
-     | BoxVal of Location.t * meta_obj
-     | PairVal of Location.t * exp_syn * exp_syn
-     | Ann of exp_chk * typ                                         (* e : tau        *)
+  and exp_syn =                                                     (* i ::=                 *)
+     | Var of Location.t * offset                                   (*   | x                 *)
+     | FVar of Name.t                                               (*   | x                 *)
+     | DataConst of Location.t * cid_comp_const                     (*   | c                 *)
+     | Obs of Location.t * exp_chk * cid_comp_dest                  (*   | e.d               *)
+     | Const of Location.t * cid_prog                               (*   | c                 *)
+     | Apply of Location.t * exp_syn * exp_chk                      (*   | i e               *)
+     | BoxVal of Location.t * meta_obj                              (*   | [C]               *)
+     | TupleVal of Location.t * exp_syn List2.t                     (*   | (i1, i2, ..., in) *)
+     | Ann of exp_chk * typ                                         (*   | e : tau           *)
 
   and pattern =
     | PatMetaObj of Location.t * meta_obj
     | PatConst of Location.t * cid_comp_const * pattern_spine
     | PatFVar of Location.t * Name.t (* used only temporarily during indexing *)
     | PatVar of Location.t * Name.t * offset
-    | PatPair of Location.t * pattern * pattern
+    | PatTuple of Location.t * pattern List2.t
     | PatAnn of Location.t * pattern * typ
 
   and pattern_spine =

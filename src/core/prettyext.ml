@@ -597,10 +597,10 @@ module Make (_ : Store.Cid.RENDERER) : Printer.Ext.T = struct
          (fmt_ppr_cmp_typ 0) tau2
          (r_paren_if cond)
 
-    | Comp.TypCross (_, tau1, tau2) ->
-       fprintf ppf "(%a * %a)"
-         (fmt_ppr_cmp_typ 0) tau1
-         (fmt_ppr_cmp_typ 0) tau2
+    | Comp.TypCross (_, taus) ->
+       fprintf ppf "(%a)"
+         (List2.pp
+           ~pp_sep:(fun ppf () -> fprintf ppf " *@ ") (fmt_ppr_cmp_typ 0)) taus
     | Comp.TypPiBox (_, LF.Decl (name, (l, LF.CTyp schema), Plicity.Implicit), tau) ->
        let cond = lvl > 1 in
        fprintf ppf "%s(%a:%s) %a%s"
@@ -647,10 +647,10 @@ module Make (_ : Store.Cid.RENDERER) : Printer.Ext.T = struct
          (fmt_ppr_pat_spine 2) pat_spine
          (r_paren_if cond)
 
-    | Comp.PatPair (_, pat1, pat2) ->
-       fprintf ppf "(%a , %a)"
-         (fmt_ppr_pat_obj 0) pat1
-         (fmt_ppr_pat_obj 0) pat2
+    | Comp.PatTuple (_, pats) ->
+       fprintf ppf "(%a)"
+         (List2.pp
+           ~pp_sep:(fun ppf () -> fprintf ppf ",@ ") (fmt_ppr_pat_obj 0)) pats
     | Comp.PatAnn (_, pat, tau) ->
        fprintf ppf "%a : %a"
          (fmt_ppr_pat_obj 0) pat
@@ -687,19 +687,17 @@ module Make (_ : Store.Cid.RENDERER) : Printer.Ext.T = struct
          (fmt_ppr_cmp_exp_chk 0) e
          (r_paren_if cond);
 
-    | Comp.Pair (_, e1, e2) ->
-       fprintf ppf "(%a , %a)"
-         (fmt_ppr_cmp_exp_chk 0) e1
-         (fmt_ppr_cmp_exp_chk 0) e2
+    | Comp.Tuple (_, es) ->
+       fprintf ppf "(%a)"
+         (List2.pp
+           ~pp_sep:(fun ppf () -> fprintf ppf ",@ ") (fmt_ppr_cmp_exp_chk 0)) es
 
-
-    | Comp.LetPair (_, i, (x, y, e)) ->
+    | Comp.LetTuple (_, i, (xs, e)) ->
        let cond = lvl > 1 in
-       fprintf ppf "@[%s%s <%a,%a> =@ %a %s %a%s@]"
+       fprintf ppf "@[%s%s (%a) =@ %a %s %a%s@]"
          (l_paren_if cond)
          (to_html "let" Keyword)
-         Name.pp x
-         Name.pp y
+         (List2.pp ~pp_sep:(fun ppf () -> fprintf ppf ",@ ") Name.pp) xs
          (fmt_ppr_cmp_exp_syn 0) i
          (to_html "in" Keyword)
          (fmt_ppr_cmp_exp_chk 0) e
@@ -783,10 +781,10 @@ module Make (_ : Store.Cid.RENDERER) : Printer.Ext.T = struct
          (fmt_ppr_cmp_meta_obj 0) m0
          (r_paren_if cond)
 
-    | Comp.PairVal (_, i1, i2) ->
-       fprintf ppf "(%a , %a)"
-         (fmt_ppr_cmp_exp_syn 1) i1
-         (fmt_ppr_cmp_exp_syn 1) i2
+    | Comp.TupleVal (_, is) ->
+       fprintf ppf "(%a)"
+         (List2.pp
+           ~pp_sep:(fun ppf () -> fprintf ppf ",@ ") (fmt_ppr_cmp_exp_syn 1)) is
 
 
   and fmt_ppr_cmp_branch_prefix ppf : LF.mctx -> unit =

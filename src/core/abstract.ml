@@ -1245,10 +1245,19 @@ let rec collectCompTyp p cQ =
      let (cQ2, tau2') = collectCompTyp p cQ1 tau2 in
      (cQ2, Comp.TypArr (l, tau1', tau2'))
 
-  | Comp.TypCross (l, tau1, tau2) ->
-     let (cQ1, tau1') = collectCompTyp p cQ tau1 in
-     let (cQ2, tau2') = collectCompTyp p cQ1 tau2 in
-     (cQ2, Comp.TypCross (l, tau1', tau2'))
+  | Comp.TypCross (l, taus) ->
+     let (cQ', taus') = List2.fold_left
+       (fun tau1 -> collectCompTyp p cQ tau1)
+       (fun (cQ1, tau1') tau2 ->
+         let (cQ2, tau2') = collectCompTyp p cQ1 tau2 in
+         (cQ2, List2.pair tau2' tau1' (* intentionally reversed *))
+       )
+       (fun (cQ', taus') tau ->
+         let (cQ'', tau') = collectCompTyp p cQ' tau in
+         (cQ'', List2.cons tau' taus')
+       )
+       taus in
+     (cQ', Comp.TypCross (l, List2.rev taus'))
 
   | Comp.TypPiBox (l, cdecl, tau) ->
      let (cQ', cdecl') = collectCDecl p cQ cdecl in
@@ -1289,15 +1298,24 @@ let rec collectExp cQ =
      let (cQ', e') = collectExp cQ e in
      (cQ', Comp.MLam (loc, u, e', plicity))
 
-  | Comp.Pair (loc, e1, e2) ->
-     let (cQ1, e1') = collectExp cQ e1 in
-     let (cQ2, e2') = collectExp cQ1 e2 in
-     (cQ2, Comp.Pair (loc, e1', e2'))
+  | Comp.Tuple (loc, es) ->
+     let (cQ', es') = List2.fold_left
+       (fun e1 -> collectExp cQ e1)
+       (fun (cQ1, e1') e2 ->
+         let (cQ2, e2') = collectExp cQ1 e2 in
+         (cQ2, List2.pair e2' e1' (* intentionally reversed *))
+       )
+       (fun (cQ', es') e ->
+         let (cQ', e') = collectExp cQ' e in
+         (cQ', List2.cons e' es')
+       )
+       es in
+     (cQ', Comp.Tuple (loc, List2.rev es'))
 
-  | Comp.LetPair (loc, i, (x, y, e)) ->
+  | Comp.LetTuple (loc, i, (xs, e)) ->
      let (cQi, i') = collectExp' cQ i in
      let (cQ2, e') = collectExp cQi e in
-     (cQ2, Comp.LetPair (loc, i', (x, y, e')))
+     (cQ2, Comp.LetTuple (loc, i', (xs, e')))
 
   | Comp.Let (loc, i, (x, e)) ->
      let (cQi, i') = collectExp' cQ i in
@@ -1347,20 +1365,37 @@ and collectExp' cQ =
      let (cQ'', cT') = collectMetaTyp Syntax.Loc.ghost 0 cQ' cT in
      (cQ'', Comp.AnnBox (cM', cT'))
 
-  | Comp.PairVal (loc, i1, i2) ->
-     let (cQ', i1') = collectExp' cQ i1 in
-     let (cQ'', i2') = collectExp' cQ' i2 in
-     (cQ'', Comp.PairVal (loc, i1', i2'))
-
+  | Comp.TupleVal (loc, is) ->
+     let (cQ', is') = List2.fold_left
+       (fun i1 -> collectExp' cQ i1)
+       (fun (cQ1, i1') i2 ->
+         let (cQ2, i2') = collectExp' cQ1 i2 in
+         (cQ2, List2.pair i2' i1' (* intentionally reversed *))
+       )
+       (fun (cQ', is') i ->
+         let (cQ', i') = collectExp' cQ' i in
+         (cQ', List2.cons i' is')
+       )
+       is in
+     (cQ', Comp.TupleVal (loc, List2.rev is'))
 
 and collectPatObj cQ =
   function
   | Comp.PatFVar _ as pat -> (cQ, pat)
   | Comp.PatVar _ as pat -> (cQ, pat)
-  | Comp.PatPair (loc, pat1, pat2) ->
-     let (cQ1, pat1') = collectPatObj cQ pat1 in
-     let (cQ2, pat2') = collectPatObj cQ1 pat2 in
-     (cQ2, Comp.PatPair (loc, pat1', pat2'))
+  | Comp.PatTuple (loc, pats) ->
+     let (cQ', pats') = List2.fold_left
+       (fun pat1 -> collectPatObj cQ pat1)
+       (fun (cQ1, pat1') pat2 ->
+         let (cQ2, pat2') = collectPatObj cQ1 pat2 in
+         (cQ2, List2.pair pat2' pat1' (* intentionally reversed *))
+       )
+       (fun (cQ', pats') pat ->
+         let (cQ', pat') = collectPatObj cQ' pat in
+         (cQ', List2.cons pat' pats')
+       )
+       pats in
+     (cQ', Comp.PatTuple (loc, List2.rev pats'))
   | Comp.PatAnn (loc, pat, tau, plicity) ->
      let (cQ1, pat') = collectPatObj cQ pat in
      let (cQ2, tau') = collectCompTyp 0 cQ1 tau in
@@ -1443,12 +1478,9 @@ let rec abstractMVarCompTyp cQ ((l, d) as offset) =
        , abstractMVarCompTyp cQ offset tau2
        )
 
-  | Comp.TypCross (loc, tau1, tau2) ->
-     Comp.TypCross
-       ( loc
-       , abstractMVarCompTyp cQ offset tau1
-       , abstractMVarCompTyp cQ offset tau2
-       )
+  | Comp.TypCross (loc, taus) ->
+     let taus' = List2.map (abstractMVarCompTyp cQ offset) taus in
+     Comp.TypCross (loc, taus')
 
   | Comp.TypPiBox (loc, cdecl, tau) ->
      Comp.TypPiBox
@@ -1473,10 +1505,9 @@ let rec abstractMVarPatObj cQ cG offset =
   | Comp.PatVar _ as pat -> pat
   | Comp.PatFVar _ as pat -> pat
 
-  | Comp.PatPair (loc, pat1, pat2) ->
-     let pat1' = abstractMVarPatObj cQ cG offset pat1 in
-     let pat2' = abstractMVarPatObj cQ cG offset pat2 in
-     Comp.PatPair (loc, pat1', pat2')
+  | Comp.PatTuple (loc, pats) ->
+     let pats' = List2.map (abstractMVarPatObj cQ cG offset) pats in
+     Comp.PatTuple (loc, pats')
   | Comp.PatAnn (loc, pat, tau, plicity) ->
      let pat' = abstractMVarPatObj cQ cG offset pat in
      let tau' = abstractMVarCompTyp cQ offset tau in

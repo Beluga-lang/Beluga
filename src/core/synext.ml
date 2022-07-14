@@ -150,32 +150,32 @@ module Comp = struct
 
   type meta_typ = LF.loc_ctyp
 
-  type typ =                                           (* Computation-level types *)
-    | TypBase of Location.t * Name.t * meta_spine      (*    | c mS               *)
-    | TypBox of Location.t * meta_typ                  (*    | [U]                *)
-    | TypArr of Location.t * typ * typ                 (*    | tau -> tau         *)
-    | TypCross of Location.t * typ * typ               (*    | tau * tau          *)
-    | TypPiBox of Location.t * LF.ctyp_decl * typ      (*    | Pi u::U.tau        *)
+  type typ =                                           (* Computation-level types       *)
+    | TypBase of Location.t * Name.t * meta_spine      (*    | c mS                     *)
+    | TypBox of Location.t * meta_typ                  (*    | [U]                      *)
+    | TypArr of Location.t * typ * typ                 (*    | tau -> tau               *)
+    | TypCross of Location.t * typ List2.t             (*    | tau1 * tau2 * ... * taun *)
+    | TypPiBox of Location.t * LF.ctyp_decl * typ      (*    | Pi u::U.tau              *)
 
-  and exp_chk =                                                        (* Computation-level expressions *)
-    | Syn        of Location.t * exp_syn                               (*  e ::= i                      *)
-    | Fn         of Location.t * Name.t * exp_chk                      (*    | fn x => e                *)
-    | Fun        of Location.t * fun_branches                          (*    | fun fbranches            *)
-    | MLam       of Location.t * Name.t * exp_chk                      (*    | mlam f => e              *)
-    | Pair       of Location.t * exp_chk * exp_chk                     (*    | (e1 , e2)                *)
-    | LetPair    of Location.t * exp_syn * (Name.t * Name.t * exp_chk) (*    | let (x,y) = i in e       *)
-    | Let        of Location.t * exp_syn * (Name.t * exp_chk)          (*    | let x = i in e           *)
-    | Box        of Location.t * meta_obj                              (*    | [C]                      *)
-    | Impossible of Location.t * exp_syn                               (*    | impossible i             *)
-    | Case       of Location.t * case_pragma * exp_syn * branch list   (*    | case i of branches       *)
-    | Hole       of Location.t * string option                         (*    | ?name                    *)
-    | BoxHole    of Location.t                                         (*    | _                        *)
+  and exp_chk =                                                        (* Computation-level expressions       *)
+    | Syn        of Location.t * exp_syn                               (*  e ::= i                            *)
+    | Fn         of Location.t * Name.t * exp_chk                      (*    | fn x => e                      *)
+    | Fun        of Location.t * fun_branches                          (*    | fun fbranches                  *)
+    | MLam       of Location.t * Name.t * exp_chk                      (*    | mlam f => e                    *)
+    | Tuple      of Location.t * exp_chk List2.t                       (*    | (e1, e2, ..., en)              *)
+    | LetTuple   of Location.t * exp_syn * (Name.t List2.t * exp_chk)  (*    | let (x1, x2, ..., xn) = i in e *)
+    | Let        of Location.t * exp_syn * (Name.t * exp_chk)          (*    | let x = i in e                 *)
+    | Box        of Location.t * meta_obj                              (*    | [C]                            *)
+    | Impossible of Location.t * exp_syn                               (*    | impossible i                   *)
+    | Case       of Location.t * case_pragma * exp_syn * branch list   (*    | case i of branches             *)
+    | Hole       of Location.t * string option                         (*    | ?name                          *)
+    | BoxHole    of Location.t                                         (*    | _                              *)
 
   and exp_syn =
     | Name of Location.t * Name.t                        (*  i ::= x/c               *)
     | Apply of Location.t * exp_syn * exp_chk            (*    | i e                 *)
     | BoxVal of Location.t * meta_obj                    (*    | [C]                 *)
-    | PairVal of Location.t * exp_syn * exp_syn          (*    | (i , i)             *)
+    | TupleVal of Location.t * exp_syn List2.t           (*    | (i1, i2, ..., in)   *)
   (* Note that observations are missing.
      In the external syntax, observations are syntactically
      indistinguishable from applications, so we parse them as
@@ -186,7 +186,7 @@ module Comp = struct
   and pattern =
     | PatMetaObj of Location.t * meta_obj
     | PatName of Location.t * Name.t * pattern_spine
-    | PatPair of Location.t * pattern * pattern
+    | PatTuple of Location.t * pattern List2.t
     | PatAnn of Location.t * pattern * typ
 
   and pattern_spine =

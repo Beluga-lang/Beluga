@@ -962,12 +962,13 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
          (fmt_ppr_cmp_typ cD 1) tau2
          (r_paren_if cond)
 
-    | Comp.TypCross (_, tau1, tau2) ->
+    | Comp.TypCross (_, taus) ->
        let cond = lvl > 0 in
-       fprintf ppf "%s@[<2>@[%a@]@ * @[%a@]@]%s"
+       fprintf ppf "%s@[<2>%a@]%s"
          (l_paren_if cond)
-         (fmt_ppr_cmp_typ cD 1) tau1
-         (fmt_ppr_cmp_typ cD 0) tau2
+         (List2.pp
+           ~pp_sep:(fun ppf () -> fprintf ppf "@ * ")
+           (fmt_ppr_cmp_typ cD 1)) taus
          (r_paren_if cond)
 
     (* Special case for printing implicit context variable
@@ -1049,10 +1050,12 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
          (fmt_ppr_pat_spine cD cG 2) pat_spine
          (r_paren_if cond)
 
-    | Comp.PatPair (_, pat1, pat2) ->
-       fprintf ppf "(%a , %a)"
-         (fmt_ppr_cmp_pattern cD cG 0) pat1
-         (fmt_ppr_cmp_pattern cD cG 0) pat2
+    | Comp.PatTuple (_, pats) ->
+       fprintf ppf "(@[%a@])"
+         (List2.pp
+           ~pp_sep:(fun ppf () -> fprintf ppf ",@ ")
+           (fmt_ppr_cmp_pattern cD cG 0)) pats
+
     | Comp.PatAnn (_, pat, _, Plicity.Implicit) ->
        fmt_ppr_cmp_pattern cD cG 0 ppf pat
 
@@ -1158,22 +1161,24 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
        let cG' = Whnf.cnormGCtx (cG, LF.MShift 1) in
        fmt_ppr_cmp_exp_chk cD' cG' 0 ppf e
 
-    | Comp.Pair (_, e1, e2) ->
-       fprintf ppf "(%a , %a)"
-         (fmt_ppr_cmp_exp_chk cD cG 0) e1
-         (fmt_ppr_cmp_exp_chk cD cG 0) e2
+    | Comp.Tuple (_, es) ->
+       fprintf ppf "(@[%a@])"
+         (List2.pp
+           ~pp_sep:(fun ppf () -> fprintf ppf ",@ ")
+           (fmt_ppr_cmp_exp_chk cD cG 0)) es
 
-
-    | Comp.LetPair(_, i, (x, y, e)) ->
-       let x = fresh_name_gctx cG x in
-       let y = fresh_name_gctx cG y in
+    | Comp.LetTuple (_, i, (xs, e)) ->
+       let xs' = List2.map (fresh_name_gctx cG) xs in
+       let cG' =
+         xs'
+         |> List2.to_list
+         |> List.fold_left (fun cG x -> LF.Dec (cG, Comp.CTypDeclOpt x)) cG in
        let cond = lvl > 1 in
-       fprintf ppf "@[<2>%slet <%a,%a> = %a@ in %a%s@]"
+       fprintf ppf "@[<2>%slet (@[%a@]) = %a@ in %a%s@]"
          (l_paren_if cond)
-         Name.pp x
-         Name.pp y
+         (List2.pp ~pp_sep:(fun ppf () -> fprintf ppf ",@ ") Name.pp) xs'
          (fmt_ppr_cmp_exp_syn cD cG 0) i
-         (fmt_ppr_cmp_exp_chk cD (LF.Dec(LF.Dec(cG, Comp.CTypDeclOpt x), Comp.CTypDeclOpt y)) 0) e
+         (fmt_ppr_cmp_exp_chk cD cG' 0) e
          (r_paren_if cond)
 
 
@@ -1281,10 +1286,11 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
       else
         fmt_ppr_cmp_exp_syn cD cG lvl ppf i (* not printing implicits *)
 
-    | Comp.PairVal (loc, i1, i2) ->
-       fprintf ppf "@[( %a@,, %a)@]"
-         (fmt_ppr_cmp_exp_syn cD cG 0) i1
-         (fmt_ppr_cmp_exp_syn cD cG 0) i2
+    | Comp.TupleVal (loc, is) ->
+       fprintf ppf "(@[%a@])"
+         (List2.pp
+           ~pp_sep:(fun ppf () -> fprintf ppf ",@ ")
+           (fmt_ppr_cmp_exp_syn cD cG 0)) is
 
     | Comp.AnnBox (cM, cT) ->
        fmt_ppr_cmp_meta_obj_typed cD 1 ppf (cM, cT)
@@ -1297,10 +1303,9 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
     | Comp.CtxValue _ -> fprintf ppf " mlam "
     | Comp.BoxValue mC -> fprintf ppf "%a" (fmt_ppr_cmp_meta_obj LF.Empty 0) mC
     | Comp.ConstValue _ -> fprintf ppf " const "
-    | Comp.PairValue (v1, v2) ->
-       fprintf ppf "(%a , %a)"
-         (fmt_ppr_cmp_value 0) v1
-         (fmt_ppr_cmp_value 0) v2
+    | Comp.TupleValue vs ->
+       fprintf ppf "(@[%a@])"
+         (List2.pp ~pp_sep:(fun ppf () -> fprintf ppf ",@ ") (fmt_ppr_cmp_value 0)) vs
     | Comp.DataValue (c, spine) ->
        (* Note: Arguments in data spines are accumulated in reverse order, to
           allow applications of data values in constant time. *)

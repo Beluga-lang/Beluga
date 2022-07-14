@@ -254,10 +254,9 @@ let rec eval_syn i (theta, eta) =
      let loc, cM' = eval_meta_obj cM theta in
      Comp.BoxValue (loc, cM')
 
-  | Comp.PairVal (_, i1, i2) ->
-     let v1 = eval_syn i1 (theta, eta) in
-     let v2 = eval_syn i2 (theta, eta) in
-     Comp.PairValue (v1, v2)
+  | Comp.TupleVal (_, is) ->
+     let vs = List2.map (fun i -> eval_syn i (theta, eta)) is in
+     Comp.TupleValue vs
 
 and eval_chk (e : Comp.exp_chk) (theta, eta) =
   match e with
@@ -280,10 +279,9 @@ and eval_chk (e : Comp.exp_chk) (theta, eta) =
      Comp.FunValue (convert_fbranches fbr)
 
 
-  | Comp.Pair (_, e1, e2) ->
-     let v1 = eval_chk e1 (theta, eta) in
-     let v2 = eval_chk e2 (theta, eta) in
-     Comp.PairValue (v1, v2)
+  | Comp.Tuple (_, es) ->
+     let vs = List2.map (fun e -> eval_chk e (theta, eta)) es in
+     Comp.TupleValue vs
 
   | Comp.Let (loc, i, (x, e)) ->
      let w = eval_syn i (theta, eta) in
@@ -390,12 +388,11 @@ and match_pattern  (v, eta) (pat, mt) =
     | (_, Comp.PatConst _) ->
        raise (Error.Violation "Expected data value.")
 
-    | (Comp.PairValue (v1, v2), Comp.PatPair (_, pat1, pat2)) ->
-       dprint (fun () -> "[evBranch] matching a pair.");
-       loop v1 pat1;
-       loop v2 pat2
-    | (_, Comp.PatPair _) ->
-       raise (Error.Violation "Expected pair value.")
+    | (Comp.TupleValue vs, Comp.PatTuple (_, pats)) ->
+       dprint (fun () -> "[evBranch] matching a tuple.");
+       List2.iter2 loop vs pats
+    | (_, Comp.PatTuple _) ->
+       raise (Error.Violation "Expected tuple value.")
 
     | (_, Comp.PatFVar _) ->
        raise (Error.Violation "Found PatFVar in opsem.")

@@ -80,7 +80,7 @@ module Comp : sig
     | `mlam
     | `box
     | `ctxfun
-    | `pair
+    | `tuple
     ]
 
   type error =

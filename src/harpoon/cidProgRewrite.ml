@@ -5,6 +5,7 @@
     recursive calls with calls to the translated functions.
  *)
 
+open Support
 open Beluga
 open Syntax.Int.Comp
 
@@ -15,9 +16,11 @@ let rec exp_chk f = function
   | Fn (loc, x, e) -> Fn (loc, x, exp_chk f e)
   | Fun (loc, fbs) -> Fun (loc, fun_branches f fbs)
   | MLam (loc, u, e, plicity) -> MLam (loc, u, exp_chk f e, plicity)
-  | Pair (loc, e1, e2) -> Pair (loc, exp_chk f e1, exp_chk f e2)
-  | LetPair (loc, i, (x1, x2, e)) ->
-     LetPair (loc, exp_syn f i, (x1, x2, exp_chk f e))
+  | Tuple (loc, es) ->
+    let es' = List2.map (exp_chk f) es in
+    Tuple (loc, es')
+  | LetTuple (loc, i, (ns, e)) ->
+     LetTuple (loc, exp_syn f i, (ns, exp_chk f e))
   | Let (loc, i, (x, e)) -> Let (loc, exp_syn f i, (x, exp_chk f e))
   | Box (loc, cM, cU) -> Box (loc, cM, cU)
   | Case (loc, prag, i, bs) ->
@@ -34,8 +37,9 @@ and exp_syn f = function
   | MApp (loc, i, cM, cU, plicity) ->
      MApp (loc, exp_syn f i, cM, cU, plicity)
   | AnnBox (cM, cU) -> AnnBox (cM, cU)
-  | PairVal (loc, i1, i2) ->
-     PairVal (loc, exp_syn f i1, exp_syn f i2)
+  | TupleVal (loc, is) ->
+     let is' = List2.map (exp_syn f) is in
+     TupleVal (loc, is')
 
 and branch f (Branch (loc, cD_pref, (cD_b, cG_b), pat, t, e)) =
   Branch (loc, cD_pref, (cD_b, cG_b), pat, t, exp_chk f e)

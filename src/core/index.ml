@@ -1238,10 +1238,19 @@ let rec index_comptyp (tau : Ext.Comp.typ) cvars : Apx.Comp.typ fvar_state =
      let (fvars, tau2) = index_comptyp tau' cvars fvars in
      (fvars, Apx.Comp.TypArr (loc, tau1, tau2))
 
-  | Ext.Comp.TypCross (loc, tau, tau') ->
-     let (fvars, tau) = index_comptyp tau cvars fvars in
-     let (fvars, tau') = index_comptyp tau' cvars fvars in
-     (fvars, Apx.Comp.TypCross (loc, tau, tau'))
+  | Ext.Comp.TypCross (loc, taus) ->
+     let (fvars, taus') = List2.fold_left
+       (fun tau1 -> index_comptyp tau1 cvars fvars)
+       (fun (fvars, tau1') tau2 ->
+         let (fvars, tau2') = index_comptyp tau2 cvars fvars in
+         (fvars, List2.pair tau2' tau1' (* intentionally reversed *))
+       )
+       (fun (fvars, taus') tau ->
+         let (fvars, tau') = index_comptyp tau cvars fvars in
+         (fvars, List2.cons tau' taus')
+       )
+       taus in
+     (fvars, Apx.Comp.TypCross (loc, List2.rev taus'))
 
   | Ext.Comp.TypPiBox (loc, cdecl, tau) ->
      let (cdecl', cvars, fvars) =
@@ -1293,17 +1302,19 @@ let rec index_exp cvars vars fcvars =
      let cvars' = CVar.extend cvars (CVar.mk_entry u Plicity.explicit) in
      Apx.Comp.MLam (loc, u, index_exp cvars' vars fcvars e)
 
-  | Ext.Comp.Pair (loc, e1, e2) ->
-     let e1 = index_exp cvars vars fcvars e1 in
-     let e2 = index_exp cvars vars fcvars e2 in
-     Apx.Comp.Pair (loc, e1, e2)
+  | Ext.Comp.Tuple (loc, es) ->
+     let es' = List2.map (fun e -> index_exp cvars vars fcvars e) es in
+     Apx.Comp.Tuple (loc, es')
 
-  | Ext.Comp.LetPair (loc, i, (x, y, e)) ->
+  | Ext.Comp.LetTuple (loc, i, (xs, e)) ->
      let i' = index_exp' cvars vars fcvars i in
-     let vars1 = Var.extend vars (Var.mk_entry x) in
-     let vars2 = Var.extend vars1 (Var.mk_entry y) in
-     let e' = index_exp cvars vars2 fcvars e in
-     Apx.Comp.LetPair (loc, i', (x, y, e'))
+     let vars' =
+       xs
+       |> List2.to_list
+       |> List.fold_left (fun vars x -> Var.extend vars (Var.mk_entry x)) vars
+       in
+     let e' = index_exp cvars vars' fcvars e in
+     Apx.Comp.LetTuple (loc, i', (xs, e'))
 
   | Ext.Comp.Let (loc, i, (x, e)) ->
      let i' = index_exp' cvars vars fcvars i in
@@ -1409,10 +1420,9 @@ and index_exp' cvars vars fcvars =
      let (mobj', _) = index_meta_obj cvars fcvars m0 in
      Apx.Comp.BoxVal (loc, mobj')
 
-  | Ext.Comp.PairVal (loc, i1, i2) ->
-     let i1' = index_exp' cvars vars fcvars i1 in
-     let i2' = index_exp' cvars vars fcvars i2 in
-     Apx.Comp.PairVal (loc, i1', i2')
+  | Ext.Comp.TupleVal (loc, is) ->
+     let is' = List2.map (fun i -> index_exp' cvars vars fcvars i) is in
+     Apx.Comp.TupleVal (loc, is')
 
 (* patterns can contain free contextual variables as well as free *computational* variables.
    `fvars` refers to computational variables whereas `fcvars` refers to contextual variables.
@@ -1455,10 +1465,23 @@ and index_pattern cvars fcvars fvars =
         end
      end
 
-  | Ext.Comp.PatPair (loc, pat1, pat2) ->
-     let (pat1, fcvars1, fvars1) = index_pattern cvars fcvars fvars pat1 in
-     let (pat2, fcvars2, fvars2) = index_pattern cvars fcvars1 fvars1 pat2 in
-     (Apx.Comp.PatPair (loc, pat1, pat2), fcvars2, fvars2)
+  | Ext.Comp.PatTuple (loc, pats) ->
+     dprintf
+       begin fun p ->
+       p.fmt "[index_pattern] indexing a tuple pattern"
+       end;
+     let (pats', fcvars', fvars') = List2.fold_left
+       (fun pat1 -> index_pattern cvars fcvars fvars pat1)
+       (fun (pat1', fcvars, fvars) pat2 ->
+         let (pat2', fcvars, fvars) = index_pattern cvars fcvars fvars pat2 in
+         (List2.pair pat2' pat1' (* intentionally reversed *), fcvars, fvars)
+       )
+       (fun (pats', fcvars, fvars) pat ->
+         let (pat', fcvars, fvars) = index_pattern cvars fcvars fvars pat in
+         (List2.cons pat' pats', fcvars, fvars)
+       )
+       pats in
+     (Apx.Comp.PatTuple (loc, List2.rev pats'), fcvars', fvars')
 
   | Ext.Comp.PatMetaObj (loc, mO) ->
      let (mO', fcvars1) = index_meta_obj cvars fcvars mO in
@@ -1540,10 +1563,10 @@ and reindex_pattern fvars =
      let offset = Var.index_of_name fvars x in
      Apx.Comp.PatVar (loc, x, offset)
 
-  | Apx.Comp.PatPair (loc, pat1, pat2) ->
-     let pat1 = reindex_pattern fvars pat1 in
-     let pat2 = reindex_pattern fvars pat2 in
-     Apx.Comp.PatPair (loc, pat1, pat2)
+  | Apx.Comp.PatTuple (loc, pats) ->
+     let pats' = List2.map (fun pat -> reindex_pattern fvars pat) pats in
+     Apx.Comp.PatTuple (loc, pats')
+
   | Apx.Comp.PatConst (loc, c, pat_spine) ->
      let pat_spine' = reindex_pat_spine fvars pat_spine in
      Apx.Comp.PatConst (loc, c, pat_spine')

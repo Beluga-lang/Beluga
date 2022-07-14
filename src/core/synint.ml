@@ -387,7 +387,7 @@ module Comp = struct
     | TypDef of Location.t * cid_comp_typ * meta_spine
     | TypBox of Location.t * meta_typ
     | TypArr of Location.t * typ * typ
-    | TypCross of Location.t * typ * typ
+    | TypCross of Location.t * typ List2.t
     | TypPiBox of Location.t * LF.ctyp_decl * typ
     | TypClo of typ *  LF.msub
     | TypInd of typ
@@ -397,7 +397,7 @@ module Comp = struct
   let rec loc_of_typ : typ -> Location.t =
     function
     | TypBase (l, _, _) | TypCobase (l, _, _) | TypDef (l, _, _)
-      | TypBox (l, _) | TypArr (l, _, _) | TypCross (l, _, _)
+      | TypBox (l, _) | TypArr (l, _, _) | TypCross (l, _)
       | TypPiBox (l, _, _) ->
        l
     | TypClo (tau, _) | TypInd tau -> loc_of_typ tau
@@ -441,8 +441,8 @@ module Comp = struct
     | Fn         of Location.t * Name.t * exp_chk                            (* | \x. e'                                          *)
     | Fun        of Location.t * fun_branches                                (* | b_1...b_k                                       *)
     | MLam       of Location.t * Name.t * exp_chk * Plicity.t                (* | Pi X.e'                                         *)
-    | Pair       of Location.t * exp_chk * exp_chk                           (* | (e_1, e_2)                                      *)
-    | LetPair    of Location.t * exp_syn * (Name.t * Name.t * exp_chk)       (* | letpair n (x, y, e) := let (x=n.1, y=n.2) in  e *)
+    | Tuple      of Location.t * exp_chk List2.t                             (* | (e_1, e_2)                                      *)
+    | LetTuple   of Location.t * exp_syn * (Name.t List2.t * exp_chk)        (* | let (x1=i.1, x2=i.2, ..., xn=i.n) = i in e      *)
     | Let        of Location.t * exp_syn * (Name.t * exp_chk)                (* | let x = n in e                                  *)
     | Box        of Location.t * meta_obj * meta_typ (* type annotation,     (* | Box ([cPsihat |- tM]) : [cPsi |- tA]            *)
                                             used for pretty-printing *)
@@ -460,14 +460,14 @@ module Comp = struct
     | MApp      of Location.t * exp_syn * meta_obj * meta_typ (* annotation, *)  (* | (Pi X:U. n': tau) ([cPsihat |- tM] : [U'])    *)
                     * Plicity.t                            (* for printing *)
     | AnnBox    of meta_obj * meta_typ                                           (* | [cPsihat |- tM] : [cPsi |- tA]                *)
-    | PairVal   of Location.t * exp_syn * exp_syn
+    | TupleVal  of Location.t * exp_syn List2.t
 
   and pattern =
     | PatMetaObj of Location.t * meta_obj
     | PatConst of Location.t * cid_comp_const * pattern_spine
     | PatFVar of Location.t * Name.t (* used only _internally_ by coverage *)
     | PatVar of Location.t * offset
-    | PatPair of Location.t * pattern * pattern
+    | PatTuple of Location.t * pattern List2.t
     | PatAnn of Location.t * pattern * typ * Plicity.t
 
   and pattern_spine =
@@ -525,7 +525,7 @@ module Comp = struct
     | Apply (loc, _, _) -> loc
     | MApp (loc, _, _, _, _) -> loc
     | AnnBox ((loc, _), _) -> loc
-    | PairVal (loc, _, _) -> loc
+    | TupleVal (loc, _) -> loc
 
   let loc_of_exp_chk =
     function
@@ -533,8 +533,8 @@ module Comp = struct
     | Fn (loc, _, _) -> loc
     | Fun (loc, _) -> loc
     | MLam (loc, _, _, _) -> loc
-    | Pair (loc, _, _) -> loc
-    | LetPair (loc, _, _) -> loc
+    | Tuple (loc, _) -> loc
+    | LetTuple (loc, _, _) -> loc
     | Let (loc, _, _) -> loc
     | Box (loc, _, _) -> loc
     | Case (loc, _, _, _) -> loc
@@ -585,8 +585,8 @@ module Comp = struct
   (** Removes all type annotations from a pattern. *)
   let rec strip_pattern : pattern -> pattern =
     function
-    | PatPair (loc, p1, p2) ->
-       PatPair (loc, strip_pattern p1, strip_pattern p2)
+    | PatTuple (loc, ps) ->
+       PatTuple (loc, List2.map strip_pattern ps)
     | PatAnn (loc, p, _, _) -> p
     | PatConst (loc, c, pS) ->
        PatConst (loc, c, strip_pattern_spine pS)
@@ -846,7 +846,7 @@ module Comp = struct
     | BoxValue   of meta_obj
     | ConstValue of cid_prog
     | DataValue  of cid_comp_const * data_spine
-    | PairValue  of value * value
+    | TupleValue of value List2.t
 
   (* Arguments in data spines are accumulated in reverse order, to
      allow applications of data values in constant time. *)

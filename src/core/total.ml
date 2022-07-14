@@ -146,9 +146,9 @@ let rec struct_smaller =
   | Comp.PatMetaObj (loc', (_, mO)) -> smaller_meta_obj mO
   | Comp.PatConst _ -> true
   | Comp.PatVar _ -> false
-  | Comp.PatPair (_, pat1, pat2) ->
+  | Comp.PatTuple (_, pats) ->
      (* This is quite naive - possibly one of them being smaller is enough *)
-     struct_smaller pat1 && struct_smaller pat2
+     List2.for_all struct_smaller pats
   | Comp.PatAnn (_, pat, _, _) -> struct_smaller pat
   | _ -> false
 
@@ -1003,7 +1003,7 @@ let rec strip : Syntax.Int.Comp.typ -> Syntax.Int.Comp.typ =
     Comp.TypPiBox (loc, LF.Decl (x, cU, plicity, Inductivity.not_inductive), strip tau')
   | Comp.TypPiBox (loc, d, tau') -> Comp.TypPiBox (loc, d, strip tau')
   | Comp.TypArr (loc, tau1, tau2) -> Comp.TypArr (loc, strip tau1, strip tau2)
-  | Comp.TypCross (loc, tau1, tau2) -> Comp.TypCross (loc, strip tau1, strip tau2)
+  | Comp.TypCross (loc, taus) -> Comp.TypCross (loc, List2.map strip taus)
   | Comp.TypClo (tau', ms) -> Comp.TypClo (strip tau', ms)
   | tau -> tau
 
@@ -1033,7 +1033,7 @@ let rec no_occurs a =
   | Comp.TypDef _ -> raise Unimplemented
   | Comp.TypBox _ -> true
   | Comp.TypArr (_, tau1, tau2) -> no_occurs a tau1 && no_occurs a tau2
-  | Comp.TypCross (_, tau1, tau2) -> no_occurs a tau1 && no_occurs a tau2
+  | Comp.TypCross (_, taus) -> List2.for_all (no_occurs a) taus
   | Comp.TypPiBox (_, _, tau') -> no_occurs a tau'
   | Comp.TypClo _ -> raise Unimplemented
 
@@ -1056,7 +1056,7 @@ let rec check_positive a =
   | Comp.TypDef _ -> raise Unimplemented
   | Comp.TypBox _ -> true
   | Comp.TypArr (_, tau1, tau2) -> no_occurs a tau1 && check_positive a tau2
-  | Comp.TypCross (_, tau1, tau2) -> check_positive a tau1 && check_positive a tau2
+  | Comp.TypCross (_, taus) -> List2.for_all (check_positive a) taus
   | Comp.TypPiBox (_, _, tau') -> check_positive a tau'
   | Comp.TypClo _ -> raise Unimplemented
 
@@ -1068,7 +1068,7 @@ let rec positive a =
   | Comp.TypDef _ -> raise Unimplemented
   | Comp.TypBox _ -> true
   | Comp.TypArr (_, tau1, tau2) -> check_positive a tau1 && positive a tau2
-  | Comp.TypCross (_, tau1, tau2) -> positive a tau1 && positive a tau2
+  | Comp.TypCross (_, taus) -> List2.for_all (positive a) taus
   | Comp.TypPiBox (_, _, tau') -> positive a tau'
   | Comp.TypClo _ -> raise Unimplemented
 
@@ -1217,9 +1217,11 @@ let rec compare a cD tau1 mC2 n =
           let n = R.render_cid_comp_typ c in
           throw loc (NoStratifyOrPositiveCheck n)
        end
-  | Comp.TypArr (_, tau, tau')
-    | Comp.TypCross (_, tau, tau') ->
+  | Comp.TypArr (_, tau, tau') ->
      compare a cD tau mC2 n && compare a cD tau' mC2 n
+
+  | Comp.TypCross (_, taus) ->
+     List2.for_all (fun tau -> compare a cD tau mC2 n) taus
 
   | Comp.TypPiBox (_, dec, tau) ->
      compare a (LF.Dec (cD, dec)) tau (Whnf.cnormMetaObj (mC2, LF.MShift 1)) n
@@ -1266,12 +1268,12 @@ let stratify a tau n =
            let tau1' = Whnf.cnormCTyp (tau1, LF.MShift (k - k0)) in
            (compare a cD tau1' mC n) && (strat cD0 tau2)
 
-        | Comp.TypCross (_, tau1, tau2) ->
+        | Comp.TypCross (_, taus) ->
            let k0 = Context.length cD0 in
            let k = Context.length cD in
-           let tau1' = Whnf.cnormCTyp (tau1, LF.MShift (k - k0)) in
-           let tau2' = Whnf.cnormCTyp (tau2, LF.MShift (k - k0)) in
-           (compare a cD tau1' mC n) && (compare a cD tau2' mC n)
+           let msub = LF.MShift (k - k0) in
+           let taus' = List2.map (fun tau -> Whnf.cnormCTyp (tau, msub)) taus in
+           List2.for_all (fun tau' -> compare a cD tau' mC n) taus'
 
         | Comp.TypPiBox (_, dec, tau') -> strat (LF.Dec (cD0, dec)) tau'
 

@@ -767,10 +767,9 @@ let rec elCompTyp cD =
      let tau2' = elCompTyp cD tau2 in
      Int.Comp.TypArr (loc, tau1', tau2')
 
-  | Apx.Comp.TypCross (loc, tau1, tau2) ->
-     let tau1' = elCompTyp cD tau1 in
-     let tau2' = elCompTyp cD tau2 in
-     Int.Comp.TypCross (loc, tau1', tau2')
+  | Apx.Comp.TypCross (loc, taus) ->
+     let taus' = List2.map (elCompTyp cD) taus in
+     Int.Comp.TypCross (loc, taus')
 
   | Apx.Comp.TypPiBox (loc, cdecl, tau) ->
      let cdecl' = elCDecl Lfrecon.Pibox cD cdecl in
@@ -848,10 +847,9 @@ and mgCTyp cD' cD_s =
 
 let rec inferPatTyp' cD' (cD_s, tau_s) =
   match tau_s with
-  | Int.Comp.TypCross (loc, tau1, tau2) ->
-     let tau1' = inferPatTyp' cD' (cD_s, tau1) in
-     let tau2' = inferPatTyp' cD' (cD_s, tau2) in
-     Int.Comp.TypCross (loc, tau1', tau2')
+  | Int.Comp.TypCross (loc, taus) ->
+     let taus' = List2.map (fun tau -> inferPatTyp' cD' (cD_s, tau)) taus in
+     Int.Comp.TypCross (loc, taus')
 
   | Int.Comp.TypBase (loc, c, _) -> mgCompTyp cD' (loc, c)
 
@@ -1056,28 +1054,26 @@ and elExpW cD cG e theta_tau =
           raise (Check.Comp.Error (loc, Check.Comp.SynMismatch (cD, (tau, t), tau_t')))
      end
 
-  | (Apx.Comp.Pair(loc, e1, e2), (Int.Comp.TypCross (_, tau1, tau2), theta)) ->
-     let e1' = elExp cD cG e1 (tau1, theta) in
-     let e2' = elExp cD cG e2 (tau2, theta) in
-     Int.Comp.Pair (loc, e1', e2')
+  | (Apx.Comp.Tuple (loc, es), (Int.Comp.TypCross (_, taus), theta)) ->
+     let es' = List2.map2 (fun e tau -> elExp cD cG e (tau, theta)) es taus in
+     Int.Comp.Tuple (loc, es')
 
-  | (Apx.Comp.LetPair (loc, i, (x, y, e)), (tau, theta)) ->
-     let (i', tau_theta') = elExp' cD cG i in
-     begin match C.cwhnfCTyp tau_theta' with
-     | (Int.Comp.TypCross (_, tau1, tau2), t) ->
+  | (Apx.Comp.LetTuple (loc, i, (ns, e)), ttau) ->
+     let (i', ttau') = elExp' cD cG i in
+     begin match C.cwhnfCTyp ttau' with
+     | (Int.Comp.TypCross (_, taus), t) ->
         let cG' =
-          Int.LF.Dec
-            ( Int.LF.Dec
-                ( cG
-                , Int.Comp.CTypDecl (x, Whnf.cnormCTyp (tau1, t), false)
-                )
-            , Int.Comp.CTypDecl (y, Whnf.cnormCTyp (tau2, t), false)
-            )
+          List.fold_left2 (fun cG' n tau ->
+            Int.LF.Dec
+              ( cG'
+              , Int.Comp.CTypDecl (n, Whnf.cnormCTyp (tau, t), false)
+              )
+          ) cG (List2.to_list ns) (List2.to_list taus)
         in
-        let e' = elExp cD cG' e (tau, theta) in
-        Int.Comp.LetPair (loc, i', (x, y, e'))
+        let e' = elExp cD cG' e ttau in
+        Int.Comp.LetTuple (loc, i', (ns, e'))
 
-     | _ -> raise (Check.Comp.Error (loc, Check.Comp.MismatchSyn (cD, cG, i', Check.Comp.VariantCross, tau_theta')))
+     | _ -> raise (Check.Comp.Error (loc, Check.Comp.MismatchSyn (cD, cG, i', Check.Comp.VariantCross, ttau')))
      (* TODO postpone to reconstruction *)
      end
 
@@ -1105,7 +1101,7 @@ and elExpW cD cG e theta_tau =
   | (Apx.Comp.Case (loc, prag, i, branches), ttau) ->
      dprintf (fun p -> p.fmt "[elExp] case at %a" Loc.print_short loc);
      dprintf (fun p -> p.fmt "[elExp] elaborating scrutinee");
-     let (i', ttau') = (elExp' cD cG i) in
+     let (i', ttau') = elExp' cD cG i in
      dprintf
        begin fun p ->
        p.fmt "[elExp] @[<v>case on @[@[%a@]@ @[%a@]@]@,cD = @[%a@]@,cG = @[%a@]@]"
@@ -1155,8 +1151,8 @@ and elExpW cD cG e theta_tau =
      raise (Check.Comp.Error (loc, Check.Comp.BasicMismatch (`fn, cD, cG, tau_theta)))
   | (Apx.Comp.MLam (loc, _, _), tau_theta) ->
      raise (Check.Comp.Error (loc, Check.Comp.BasicMismatch (`mlam, cD, cG, tau_theta)))
-  | (Apx.Comp.Pair(loc, _, _), tau_theta) ->
-     raise (Check.Comp.Error (loc, Check.Comp.BasicMismatch (`pair, cD, cG, tau_theta)))
+  | (Apx.Comp.Tuple (loc, _), tau_theta) ->
+     raise (Check.Comp.Error (loc, Check.Comp.BasicMismatch (`tuple, cD, cG, tau_theta)))
   | (Apx.Comp.Box (loc, _), tau_theta) ->
      raise (Check.Comp.Error (loc, Check.Comp.BasicMismatch (`box, cD, cG, tau_theta)))
   | (Apx.Comp.BoxHole loc, tau_theta) ->
@@ -1435,12 +1431,18 @@ and elExp' cD cG i =
           end
      end
 
-  | Apx.Comp.PairVal (loc, i1, i2) ->
-     let f = F.(not ++ Int.LF.is_explicit) in
-     let _, (i1', (tau1, t1)) = Check.Comp.genMApp loc f cD (elExp' cD cG i1) in
-     let _, (i2', (tau2, t2)) = Check.Comp.genMApp loc f cD (elExp' cD cG i2) in
-     ( Int.Comp.PairVal (loc, i1', i2')
-     , ( Int.Comp.TypCross (loc, Whnf.cnormCTyp (tau1, t1), Whnf.cnormCTyp (tau2, t2))
+  | Apx.Comp.TupleVal (loc, is) ->
+     let is_not_explicit = F.(Int.LF.is_explicit >> Bool.not) in
+     let (is', ttaus') =
+       is
+       |> List2.map
+            (fun i ->
+              Pair.snd @@ Check.Comp.genMApp loc is_not_explicit cD (elExp' cD cG i))
+       |> List2.split
+       |> Pair.map_right (List2.map Whnf.cnormCTyp)
+     in
+     ( Int.Comp.TupleVal (loc, is')
+     , ( Int.Comp.TypCross (loc, ttaus')
        , C.m_id
        )
      )
@@ -1505,7 +1507,7 @@ and elPatMetaObj cD pat (cdecl, theta) =
   | Apx.Comp.PatConst (loc, _, _) -> raise (Error (loc, PatternMobj))
   | Apx.Comp.PatFVar (loc, _) -> raise (Error (loc, PatternMobj))
   | Apx.Comp.PatVar (loc, _, _) -> raise (Error (loc, PatternMobj))
-  | Apx.Comp.PatPair (loc, _, _) -> raise (Error (loc, PatternMobj))
+  | Apx.Comp.PatTuple (loc, _) -> raise (Error (loc, PatternMobj))
   | Apx.Comp.PatAnn (loc, _, _) -> raise (Error (loc, UnsupportedTypeAnnotation))
 
 and elPatChk (cD:Int.LF.mctx) (cG:Int.Comp.gctx) pat ttau =
@@ -1544,23 +1546,29 @@ and elPatChk (cD:Int.LF.mctx) (cG:Int.Comp.gctx) pat ttau =
           raise (Check.Comp.Error (loc, Check.Comp.SynMismatch (cD, ttau, ttau')))
      end
 
-  | (Apx.Comp.PatPair (loc, pat1, pat2), (Int.Comp.TypCross (_, tau1, tau2), theta)) ->
-     let (cG1, pat1') = elPatChk cD cG pat1 (tau1, theta) in
-     let (cG2, pat2') = elPatChk cD cG1 pat2 (tau2, theta) in
-     (cG2, Int.Comp.PatPair (loc, pat1', pat2'))
+  | (Apx.Comp.PatTuple (loc, pats), (Int.Comp.TypCross (_, taus), theta)) ->
+     let (cG', pats') = List2.fold_left2
+       (fun pat1 tau1 -> elPatChk cD cG pat1 (tau1, theta))
+       (fun (cG1, pat1') pat2 tau2 ->
+         let (cG2, pat2') = elPatChk cD cG1 pat2 (tau2, theta) in
+         (cG2, List2.pair pat2' pat1' (* intentionally reversed *))
+       )
+       (fun (cG', pats') pat tau ->
+         let (cG', pat') = elPatChk cD cG' pat (tau, theta) in
+         (cG', List2.cons pat' pats')
+       ) pats taus in
+     (cG', Int.Comp.PatTuple (loc, List2.rev pats'))
 
   | (Apx.Comp.PatMetaObj (loc, cM), (Int.Comp.TypBox (_loc, ctyp), theta)) ->
      (cG, Int.Comp.PatMetaObj (loc, elMetaObj cD cM (ctyp, theta)))
 
   (* Error handling cases *)
-  | (Apx.Comp.PatPair(loc, _, _), tau_theta) ->
-     let open Check.Comp in
-     BasicMismatch (`pair, cD, Int.LF.Empty, tau_theta)
-     |> throw loc
+  | (Apx.Comp.PatTuple (loc, _), ttau) ->
+     Check.Comp.BasicMismatch (`tuple, cD, Int.LF.Empty, ttau)
+     |> Check.Comp.throw loc
   | (Apx.Comp.PatMetaObj (loc, _), tau_theta) ->
-     let open Check.Comp in
-     BasicMismatch (`box, cD, Int.LF.Empty, tau_theta)
-     |> throw loc
+     Check.Comp.BasicMismatch (`box, cD, Int.LF.Empty, tau_theta)
+     |> Check.Comp.throw loc
 
   (* annotated general pattern *)
   | (Apx.Comp.PatAnn (loc, _, _), ttau) ->

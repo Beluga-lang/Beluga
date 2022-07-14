@@ -1619,8 +1619,9 @@ let rec normCTyp =
   | Comp.TypArr (loc, tT1, tT2) ->
      Comp.TypArr (loc, normCTyp tT1, normCTyp tT2)
 
-  | Comp.TypCross (loc, tT1, tT2) ->
-     Comp.TypCross (loc, normCTyp tT1, normCTyp tT2)
+  | Comp.TypCross (loc, tTs) ->
+     let tTs' = List2.map (fun tT -> normCTyp tT) tTs in
+     Comp.TypCross (loc, tTs')
 
   | Comp.TypPiBox (loc, (Decl (u, mtyp, plicity, inductivity)), tau) ->
     Comp.TypPiBox
@@ -1660,8 +1661,9 @@ let rec cnormCTyp =
   | (Comp.TypArr (loc, tT1, tT2), t) ->
      Comp.TypArr (loc, cnormCTyp (tT1, t), cnormCTyp (tT2, t))
 
-  | (Comp.TypCross (loc, tT1, tT2), t) ->
-     Comp.TypCross (loc, cnormCTyp (tT1, t), cnormCTyp (tT2, t))
+  | (Comp.TypCross (loc, tTs), t) ->
+     let tTs' = List2.map (fun tT -> cnormCTyp (tT, t)) tTs in
+     Comp.TypCross (loc, tTs')
 
   | (Comp.TypPiBox (loc, cdecl, tau), t) ->
      let cdecl' = cnormCDecl (cdecl, t) in
@@ -1727,10 +1729,12 @@ let rec cnormExp =
   | (Comp.Fn (loc, x, e), t) -> Comp.Fn (loc, x, cnormExp (e, t))
   | (Comp.Fun (loc, fbr), t) -> Comp.Fun (loc, cnormFBranches (fbr, t))
   | (Comp.MLam (loc, u, e, plicity), t) -> Comp.MLam (loc, u, cnormExp (e, mvar_dot1 t), plicity)
-  | (Comp.Pair (loc, e1, e2), t) -> Comp.Pair (loc, cnormExp (e1, t), cnormExp (e2, t))
+  | (Comp.Tuple (loc, es), t) ->
+     let es' = List2.map (fun e -> cnormExp (e, t)) es in
+     Comp.Tuple (loc, es')
   | (Comp.Impossible (loc, i), t) -> Comp.Impossible (loc, cnormExp' (i, t))
-  | (Comp.LetPair (loc, i, (x, y, e)), t) ->
-     Comp.LetPair (loc, cnormExp' (i, t), (x, y, cnormExp (e, t)))
+  | (Comp.LetTuple (loc, i, (xs, e)), t) ->
+     Comp.LetTuple (loc, cnormExp' (i, t), (xs, cnormExp (e, t)))
   | (Comp.Let (loc, i, (x, e)), t) ->
      Comp.Let (loc, cnormExp' (i, t), (x, cnormExp (e, t)))
 
@@ -1755,8 +1759,9 @@ and cnormExp' =
      Comp.Obs (loc, cnormExp (e, t), cnormMSub' (t', t), obs)
   | (Comp.Apply (loc, i, e), t) ->
      Comp.Apply (loc, cnormExp' (i, t), cnormExp (e, t))
-  | (Comp.PairVal (loc, i1, i2), t) ->
-     Comp.PairVal (loc, cnormExp' (i1, t), cnormExp' (i2, t))
+  | (Comp.TupleVal (loc, is), t) ->
+     let is' = List2.map (fun i -> cnormExp' (i, t)) is in
+     Comp.TupleVal (loc, is')
   | (Comp.MApp (loc, i, cM, cU, pl), t) ->
      Comp.MApp (loc, cnormExp' (i, t), cnormMetaObj (cM, t), cnormMTyp (cU, t), pl)
 
@@ -1773,12 +1778,9 @@ and cnormPattern (pat, t) =
      Comp.PatConst (loc, c, cnormPatSpine (patSpine, t))
   | Comp.PatFVar _ -> pat
   | Comp.PatVar _ -> pat
-  | Comp.PatPair (loc, pat1, pat2) ->
-     Comp.PatPair
-       ( loc
-       , cnormPattern (pat1, t)
-       , cnormPattern (pat2, t)
-       )
+  | Comp.PatTuple (loc, pats) ->
+     let pats' = List2.map (fun pat -> cnormPattern (pat, t)) pats in
+     Comp.PatTuple(loc, pats')
   | Comp.PatAnn (loc, pat, tau, plicity) ->
      Comp.PatAnn
        ( loc
@@ -2006,8 +2008,8 @@ and convCTyp' thetaT1 thetaT2 =
   | ((Comp.TypArr (_, tT1, tT2), t), (Comp.TypArr (_, tT1', tT2'), t')) ->
      convCTyp (tT1, t) (tT1', t') && convCTyp (tT2, t) (tT2', t')
 
-  | ((Comp.TypCross (_, tT1, tT2), t), (Comp.TypCross (_, tT1', tT2'), t')) ->
-     convCTyp (tT1, t) (tT1', t') && convCTyp (tT2, t) (tT2', t')
+  | ((Comp.TypCross (_, tTs), t), (Comp.TypCross (_, tTs'), t')) ->
+     List2.for_all2 (fun tT tT' -> convCTyp (tT, t) (tT', t')) tTs tTs'
 
   | ( (Comp.TypPiBox (_, Decl (_, mtyp1, _, _), tT), t)
     , (Comp.TypPiBox (_, Decl (_, mtyp2, _, _), tT'), t')
@@ -2235,7 +2237,7 @@ let rec closedCTyp =
   | Comp.TypCobase (_, _, mS) -> closedMetaSpine mS
   | Comp.TypBox (_, cT) -> closedMetaTyp cT
   | Comp.TypArr (_, cT1, cT2) -> closedCTyp cT1 && closedCTyp cT2
-  | Comp.TypCross (_, cT1, cT2) -> closedCTyp cT1 && closedCTyp cT2
+  | Comp.TypCross (_, cTs) -> List2.for_all (fun cT -> closedCTyp cT) cTs
   | Comp.TypPiBox (_, ctyp_decl, cT) ->
       closedCTyp cT && closedDecl ctyp_decl
   | Comp.TypClo (cT, t) -> closedCTyp (cnormCTyp (cT, t)) (* to be improved Sun Dec 13 11:45:15 2009 -bp *)
@@ -2272,8 +2274,8 @@ let rec closedExp =
   | Comp.Fn (_, _, e) -> closedExp e
   | Comp.Fun (_, bs) -> closedFunBranches bs
   | Comp.MLam (_, _, e, plicity) -> closedExp e
-  | Comp.Pair (_, e1, e2) -> closedExp e1 && closedExp e2
-  | Comp.LetPair (_, i, (_, _, e)) -> closedExp' i && closedExp e
+  | Comp.Tuple (_, es) -> List2.for_all (fun e -> closedExp e) es
+  | Comp.LetTuple (_, i, (_, e)) -> closedExp' i && closedExp e
   | Comp.Let (_, i, (_, e)) -> closedExp' i && closedExp e
   | Comp.Box (_, cM, cU) -> closedMetaObj cM && closedMetaTyp cU
   | Comp.Case (_, _, i, bs) -> closedExp' i && List.for_all closedBranch bs
@@ -2292,8 +2294,8 @@ and closedExp' =
      closedExp' i && closedMetaObj cM && closedMetaTyp cU
   | Comp.AnnBox (cM, cU) ->
      closedMetaObj cM && closedMetaTyp cU
-  | Comp.PairVal (_, i1, i2) ->
-     closedExp' i1 && closedExp' i2
+  | Comp.TupleVal (_, is) ->
+     List2.for_all (fun i -> closedExp' i) is
 
 and closedBranch =
   function
@@ -2329,8 +2331,7 @@ and closedPattern =
   | Comp.PatFVar _ ->
      Error.violation "[closedPattern] PatFVar outside coverage"
   | Comp.PatVar _ -> true
-  | Comp.PatPair (_, pat1, pat2) ->
-     closedPattern pat1 && closedPattern pat2
+  | Comp.PatTuple (_, pats) -> List2.for_all (fun pat -> closedPattern pat) pats
   | Comp.PatAnn (_, pat, tau, _) ->
      closedPattern pat && closedCTyp tau
 

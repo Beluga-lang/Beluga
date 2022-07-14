@@ -1,24 +1,24 @@
 type 'a t = T of 'a * 'a * 'a list [@unboxed]
 
-let[@inline] from x1 x2 l = T (x1, x2, l)
+let[@inline] from x1 x2 xs = T (x1, x2, xs)
 
-let[@inline] from1 x1 (List1.T (x2, l)) = from x1 x2 l
+let[@inline] from1 x1 (List1.T (x2, xs)) = from x1 x2 xs
 
 let[@inline] pair x1 x2 = from x1 x2 []
 
-let[@inline] cons element (T (x1, x2, l)) = T (element, x1, x2 :: l)
+let[@inline] cons element (T (x1, x2, xs)) = T (element, x1, x2 :: xs)
 
 let rev =
-  let rec rev l (T (x1, x2, tl) as acc) =
+  let rec rev l (T (x1, x2, xs) as acc) =
     match l with
     | [] -> acc
-    | x :: xs -> rev xs (T (x, x1, x2 :: tl))
+    | x0 :: xs' -> rev xs' (T (x0, x1, x2 :: xs))
   in
-  fun (T (x1, x2, tl)) -> rev tl (T (x2, x1, []))
+  fun (T (x1, x2, xs)) -> rev xs (T (x2, x1, []))
 
 let last = function
   | T (_, x2, []) -> x2
-  | T (_, _, tl) -> List.last tl
+  | T (_, _, xs) -> List.last xs
 
 let to_list (T (x1, x2, xs)) = x1 :: x2 :: xs
 
@@ -78,7 +78,9 @@ let mapi2 =
     match (l1, l2) with
     | [], [] -> return []
     | x :: xs, y :: ys ->
-      mapi2 (index + 1) f xs ys (fun tl -> return (f index x y :: tl))
+      mapi2 (index + 1) f xs ys (fun zs ->
+          let z = f index x y in
+          return (z :: zs))
     | _ -> raise (Invalid_argument "List2.mapi2")
   in
   fun f (T (x1, x2, xs)) (T (y1, y2, ys)) ->
@@ -118,7 +120,7 @@ let traverse f (T (x1, x2, xs)) =
   let open Option in
   f x1 >>= fun y1 ->
   f x2 >>= fun y2 ->
-  traverse f xs >>= fun ys -> Some (T (y1, y2, ys))
+  List.traverse f xs >>= fun ys -> Option.some (T (y1, y2, ys))
 
 let find_opt p l = List.find_opt p (to_list l)
 

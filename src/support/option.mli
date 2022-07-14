@@ -26,29 +26,7 @@ val lazy_alt : 'a t Lazy.t -> 'a t Lazy.t -> 'a t Lazy.t
 (** Infix operator alias of {!lazy_alt}. *)
 val ( <||> ) : 'a t Lazy.t -> 'a t Lazy.t -> 'a t Lazy.t
 
-(** Selects the first alternative that succeeds. Forces every thunk until one
-    computes [Some x]. *)
-val choice : 'a t Lazy.t List.t -> 'a t Lazy.t
-
-(** Maps a function that may fail over a list, and eagerly fails as soon as
-    any individual call fails. Note that elements beyond the first failing
-    one will not be processed. *)
-val traverse : ('a -> 'b t) -> 'a List.t -> 'b List.t t
-
-(** Maps a function that may fail over a list, and eagerly fails as soon as
-    an individual call fails. The functions themselves may not compute
-    interesting results. *)
-val traverse_ : ('a -> unit t) -> 'a List.t -> unit t
-
-(** Folds a list with a function that may fail, eagerly failing. Note that
-    elements beyond the first failing one will not be processed. *)
-val fold_left : ('b -> 'a -> 'b t) -> 'b -> 'a List.t -> 'b t
-
 val void : 'a t -> unit t
-
-(** Removes all [None] options from the list. In fact, [cat_options] is
-    implemented in terms of {!List.filter_map}. *)
-val cat_options : 'a t List.t -> 'a List.t
 
 (** Specialized effectful eliminator for option types. *)
 val when_some : 'a t -> ('a -> unit) -> unit

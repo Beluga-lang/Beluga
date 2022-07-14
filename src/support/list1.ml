@@ -78,10 +78,9 @@ let rec all_equal (T (x, l)) =
 let traverse f (T (x, l)) =
   Option.(
     f x >>= fun y ->
-    traverse f l >>= fun ys -> Some (T (y, ys)))
+    List.traverse f l >>= fun ys -> Some (T (y, ys)))
 
-let map2 f (T (h1, t1)) (T (h2, t2)) =
-  T (f h1 h2, List.map2 f t1 t2)
+let map2 f (T (h1, t1)) (T (h2, t2)) = T (f h1 h2, List.map2 f t1 t2)
 
 let of_list = function
   | [] -> None
@@ -132,8 +131,7 @@ let split (T ((x, y), t)) =
   let xs, ys = List.split t in
   (T (x, xs), T (y, ys))
 
-let combine (T (a, l1)) (T (b, l2)) =
-  T ((a, b), List.combine l1 l2)
+let combine (T (a, l1)) (T (b, l2)) = T ((a, b), List.combine l1 l2)
 
 let ap xs = map2 Fun.apply xs
 

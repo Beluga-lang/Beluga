@@ -39,15 +39,6 @@ let lazy_alt p q =
 
 let ( <||> ) = lazy_alt
 
-let rec choice ps =
-  lazy
-    (match ps with
-    | x :: xs -> (
-      match Lazy.force x with
-      | Some v -> some v
-      | None -> Lazy.force (choice xs))
-    | [] -> None)
-
 let alt o1 o2 =
   match (o1, o2) with
   | Some x, _ -> Some x
@@ -56,26 +47,7 @@ let alt o1 o2 =
 
 let ( <|> ) = alt
 
-let rec traverse f xs =
-  match xs with
-  | [] -> some []
-  | x :: xs ->
-    f x >>= fun y ->
-    traverse f xs >>= fun ys -> some (y :: ys)
-
-let rec traverse_ f xs =
-  match xs with
-  | [] -> some ()
-  | x :: xs -> f x >>= fun _ -> traverse_ f xs
-
-let rec fold_left f acc xs =
-  match xs with
-  | [] -> some acc
-  | x :: xs -> f acc x >>= fun acc' -> fold_left f acc' xs
-
 let void o = o $> Fun.const ()
-
-let cat_options l = List.filter_map Fun.id l
 
 let when_some l f = eliminate (Fun.const ()) f l
 

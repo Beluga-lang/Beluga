@@ -197,7 +197,7 @@ type translation_check_result =
 let check_translated_proofs c : translation_check_result =
   match
     DynArray.to_list c.finished_theorems
-    |> Option.(traverse (fun (t, e) -> e $> fun e -> (t, e)))
+    |> List.traverse (fun (t, e) -> let open Option in e $> fun e -> (t, e))
   with
   | None -> `some_translations_failed
   | Some tes ->

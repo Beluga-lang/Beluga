@@ -34,27 +34,6 @@ let test_lazy_alt (o1, o2, expected) _ =
   assert_int_option_equal (Lazy.force expected)
     (Lazy.force @@ Option.lazy_alt o1 o2)
 
-let test_choice (cs, expected_index) _ =
-  let c = List.nth cs expected_index in
-  let actual = Lazy.force @@ Option.choice cs in
-  assert_int_option_equal (Lazy.force c) actual
-
-let test_choice_does_not_unnecessarily_force_later_choices _ =
-  let cs =
-    [ lazy (Fun.const Option.none ())
-    ; lazy (Option.some 1)
-    ; lazy (Fun.const Option.none ())
-    ; lazy (Fun.const Option.none ())
-    ]
-  in
-  ignore (Lazy.force @@ Option.choice cs : Int.t Option.t);
-  List.iteri
-    (fun i c ->
-      assert_bool
-        (Format.asprintf "unnecessarily forced choice %d" i)
-        (if i <= 1 then Lazy.is_val c else Bool.not @@ Lazy.is_val c))
-    cs
-
 let tests =
   "Option"
   >::: [ "[from_predicate p o]"
@@ -88,39 +67,4 @@ let tests =
                  ; (lazy Option.none, lazy Option.none, lazy Option.none)
                  ]
                 |> List.map Fun.(test_lazy_alt >> OUnit2.test_case))
-       ; "[choice cs]"
-         >::: [ ( "is [lazy None] if [cs] is [[]]" >:: fun _ ->
-                  assert_int_option_equal Option.none
-                    (Lazy.force @@ Option.choice []) )
-              ; ( "forces all elements in [cs] if they are all [lazy None]"
-                >:: fun _ ->
-                  let cs =
-                    [ lazy (Fun.const Option.none ())
-                    ; lazy (Fun.const Option.none ())
-                    ; lazy (Fun.const Option.none ())
-                    ]
-                  in
-                  ignore (Lazy.force @@ Option.choice cs : 'a Option.t);
-                  List.iteri
-                    (fun i c ->
-                      assert_bool
-                        (Format.asprintf "did not force element %d" i)
-                        (Lazy.is_val c))
-                    cs )
-              ; "does not unnecessarily force later choices"
-                >:: test_choice_does_not_unnecessarily_force_later_choices
-              ]
-              @ ([ ([ lazy (Option.some 0); lazy Option.none ], 0)
-                 ; ( [ lazy Option.none
-                     ; lazy (Option.some 1)
-                     ; lazy (Option.some 2)
-                     ]
-                   , 1 )
-                 ; ( [ lazy Option.none
-                     ; lazy Option.none
-                     ; lazy (Option.some 2)
-                     ]
-                   , 2 )
-                 ]
-                |> List.map Fun.(test_choice >> OUnit2.test_case))
        ]

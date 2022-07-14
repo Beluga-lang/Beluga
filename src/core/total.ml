@@ -993,7 +993,7 @@ let annotate'
           Comp.TypPiBox (loc, cd, tau2')
     | _ -> None
   in
-  fold_left (fun tau' x -> ann tau' x) tau order
+  List.fold_left_opt (fun tau' x -> ann tau' x) tau order
 
 (** Removes all TypInd marks in a computational type. *)
 let rec strip : Syntax.Int.Comp.typ -> Syntax.Int.Comp.typ =

@@ -183,7 +183,7 @@ val find_map : ('a -> 'b option) -> 'a t -> 'b option
     list of all the elements of [l] that satisfy the predicate [f], and [l2]
     is the list of all the elements of [l] that do not satisfy [f]. The order
     of elements in the input list is preserved. At least one of [l1] and [l2]
-    is. *)
+    is non-empty. *)
 val partition : ('a -> bool) -> 'a t -> 'a list * 'a list
 
 (** {1 Lists of pairs}*)

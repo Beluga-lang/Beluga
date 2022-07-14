@@ -17,6 +17,20 @@ val null : 'a list -> bool
 (** [nonempty l] is true if and only if [l <> \[\]]. *)
 val nonempty : 'a list -> bool
 
+(** Maps a function that may fail over a list, and eagerly fails as soon as
+    any individual call fails. Elements beyond the first failing one will not
+    be processed. *)
+val traverse : ('a -> 'b option) -> 'a t -> 'b t option
+
+(** Maps a function that may fail over a list, and eagerly fails as soon as
+    an individual call fails. The functions themselves may not compute
+    interesting results. *)
+val traverse_ : ('a -> unit option) -> 'a t -> unit option
+
+(** Folds a list with a function that may fail, eagerly failing. Note that
+    elements beyond the first failing one will not be processed. *)
+val fold_left_opt : ('b -> 'a -> 'b option) -> 'b -> 'a t -> 'b option
+
 (** [filter_rev p l] returns all the elements of the list [l] that satisfy
     the predicate [f]. The order of the elements in the input list is
     reversed. *)

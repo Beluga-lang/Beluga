@@ -1,13 +1,11 @@
 include Stdlib.List
 
-let rec last l =
-  match l with
-  | [] -> raise (Invalid_argument "List.last")
+let rec last = function
+  | [] -> raise @@ Invalid_argument "List.last"
   | [ x ] -> x
   | _ :: xs -> last xs
 
-let rec pairs l =
-  match l with
+let rec pairs = function
   | [] | [ _ ] -> []
   | x1 :: x2 :: xs -> (x1, x2) :: pairs (x2 :: xs)
 
@@ -16,6 +14,25 @@ let null = function
   | _ -> false
 
 let nonempty l = Bool.not (null l)
+
+let rec traverse f xs =
+  match xs with
+  | [] -> Stdlib.Option.some []
+  | x :: xs ->
+    Stdlib.Option.bind (f x) (fun y ->
+        Stdlib.Option.bind (traverse f xs) (fun ys ->
+            Stdlib.Option.some (y :: ys)))
+
+let rec traverse_ f xs =
+  match xs with
+  | [] -> Stdlib.Option.some ()
+  | x :: xs -> Stdlib.Option.bind (f x) (fun _ -> traverse_ f xs)
+
+let rec fold_left_opt f acc xs =
+  match xs with
+  | [] -> Stdlib.Option.some acc
+  | x :: xs ->
+    Stdlib.Option.bind (f acc x) (fun acc' -> fold_left_opt f acc' xs)
 
 let filter_rev p l =
   let rec go acc = function

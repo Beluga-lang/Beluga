@@ -167,7 +167,7 @@ let print_content ppf : content -> unit =
        (format_option_with
           (fun ppf (ss, s) ->
             fprintf ppf "%a%s"
-              (pp_print_list ~pp_sep: (fun ppf _ -> fprintf ppf ".")
+              (pp_print_list ~pp_sep: (fun ppf () -> fprintf ppf ".")
                  pp_print_string) ss
               s))
        i
@@ -277,7 +277,7 @@ let print_error ppf ({path; loc; _} as e : error) =
     match e with
     | NoMoreChoices ss ->
        fprintf ppf "Expected:@,  @[<v>";
-       pp_print_list ~pp_sep: (fun _ _ -> ())
+       pp_print_list ~pp_sep: (fun _ () -> ())
          (fun ppf x ->
            Option.print
              (fun ppf x -> fprintf ppf "%s@," x.label)
@@ -317,7 +317,7 @@ let print_error ppf ({path; loc; _} as e : error) =
   if Debug.flag 11 then fprintf ppf "@,%a" print_path path;
   fprintf ppf "@]"
 
-let _ =
+let () =
   Error.register_printer'
     begin
       function
@@ -740,7 +740,7 @@ let check_codatatype_decl loc a cs : unit parser =
   in
   traverse_
     (function
-     | Sgn.CompDest { identifier; observation_typ=tau0; _} ->
+     | Sgn.CompDest { identifier; observation_typ = tau0; _} ->
         retname tau0
         >>= fun a' ->
           if Name.(a <> a')
@@ -825,7 +825,7 @@ let name : Name.t parser =
 type name_or_blank = [ `name of Name.t | `blank of Location.t ]
 
 let blankify (p : unit t) : name_or_blank t =
-  p |> span $> fun (loc, _) -> `blank loc
+  p |> span $> fun (loc, ()) -> `blank loc
 
 let name_or_blank : name_or_blank parser =
   alt
@@ -916,15 +916,17 @@ let bracketed start stop p =
     `b` whose results are ignored. *)
 let bracketed' b p = bracketed b b p
 
-(** Helpers for parsing something between parens, braces, or brackets. *)
-let parens, braces, bracks, angles =
-  let f l r p = bracketed (token l) (token r) p in
-  (* The functions here must be eta-expanded to avoid the value restriction ! *)
-  let open T in
-  (fun p -> f LPAREN RPAREN p),
-  (fun p -> f LBRACE RBRACE p),
-  (fun p -> f LBRACK RBRACK p),
-  (fun p -> f LANGLE RANGLE p)
+(** [parens p] parses [`(` p `)`]. *)
+let parens p = bracketed (token T.LPAREN) (token T.RPAREN) p
+
+(** [braces p] parses [`{` p `}`]. *)
+let braces p = bracketed (token T.LBRACE) (token T.RBRACE) p
+
+(** [bracks p] parses [`[` p `]`]. *)
+let bracks p = bracketed (token T.LBRACK) (token T.RBRACK) p
+
+(** [angles p] parses [`<` p `>`]. *)
+let angles p = bracketed (token T.LANGLE) (token T.RANGLE) p
 
 (** bracks_or_opt_parens' prefix p
     parses p surrounded optionally by square brackets or parentheses,
@@ -980,7 +982,7 @@ let sgn_name_pragma : Sgn.decl parser =
   |> labelled "name pragma"
   |> span
   $> fun (location, (w, mv, x)) ->
-     Sgn.Pragma { location; pragma=Sgn.NamePrag (w, mv, x) }
+     Sgn.Pragma { location; pragma = Sgn.NamePrag (w, mv, x) }
 
 module rec LF_parsers : sig
   val lf_kind : LF.kind t
@@ -1011,7 +1013,7 @@ end = struct
   let lf_term_atomic =
     choice
       [ span (token T.UNDERSCORE)
-        $> (fun (loc, _) -> LF.Root (loc, LF.Hole loc, LF.Nil))
+        $> (fun (loc, ()) -> LF.Root (loc, LF.Hole loc, LF.Nil))
       ; span (parens (seq2 LF_parsers.lf_typ (maybe (token T.COLON &> LF_parsers.lf_typ))))
         >>= fun (loc, (m, q)) ->
           match q, m with
@@ -1069,7 +1071,7 @@ end = struct
   (** Parses the `type' kind. *)
   let type_kind =
     labelled "`type' kind"
-      (span (token T.KW_TYPE) $> fun (loc, _) -> LF.Typ loc)
+      (span (token T.KW_TYPE) $> fun (loc, ()) -> LF.Typ loc)
 
   let lf_kind =
     let pi_kind =
@@ -1146,7 +1148,8 @@ let lf_typ_decl = LF_parsers.lf_typ_decl
 let hole : string option parser =
   satisfy' (`hole Option.none)
     (function
-     | T.HOLE s -> Option.some (match s with "" -> Option.none | _ -> Option.some s)
+     | T.HOLE "" -> Option.some Option.none
+     | T.HOLE s -> Option.some (Option.some s)
      | _ -> Option.none)
   |> labelled "hole"
 
@@ -1211,7 +1214,7 @@ end = struct
     choice
       [ normal_list
       ; span T.(tokens [LBRACE; RBRACE])
-        $> (fun (loc, _) -> LF.PatEmpty loc)
+        $> (fun (loc, ()) -> LF.PatEmpty loc)
       ; span Contextual_LF_parsers.clf_typ
         $> (fun (loc, a) -> LF.NTyp (loc, a))
       ]
@@ -1326,15 +1329,15 @@ end = struct
       $> fun ((s, ts), xs) -> (s, List.rev xs @ ts)
     in
     let emptysub =
-      span (return ()) $> fun (loc, _) -> (LF.EmptySub loc, [])
+      span (return ()) $> fun (loc, ()) -> (LF.EmptySub loc, [])
     in
     alt nonemptysub emptysub
     |> labelled "contextual LF substitution"
 
   let clf_sub_term =
     choice
-      [ token T.HAT |> span $> (fun (loc, _) -> LF.EmptySub loc)
-      ; token T.DOTS |> span $> (fun (loc, _) -> LF.Id loc)
+      [ token T.HAT |> span $> (fun (loc, ()) -> LF.EmptySub loc)
+      ; token T.DOTS |> span $> (fun (loc, ()) -> LF.Id loc)
       ; seq2
           dollar_name
           (maybe (bracks clf_sub_new))
@@ -1362,7 +1365,7 @@ end = struct
     let hole =
       token T.UNDERSCORE
       |> span
-      $> fun (loc, _) -> LF.Hole loc
+      $> fun (loc, ()) -> LF.Hole loc
     in
     choice [hole ; var]
 
@@ -1828,7 +1831,7 @@ end = struct
   (** Parses the `ctype` kind, the kind of computation types. *)
   let ctype_kind =
     token T.KW_CTYPE |> span
-    $> fun (loc, _) -> Comp.Ctype loc
+    $> fun (loc, ()) -> Comp.Ctype loc
 
   let cmp_kind =
     let pibox =
@@ -1951,7 +1954,7 @@ end = struct
           |> span
           |> labelled "application pattern"
           $> (fun (loc, (x, acc)) -> Comp.PatApp (loc, x, acc))
-        ; span (return ()) $> fun (loc, _) -> Comp.PatNil loc
+        ; span (return ()) $> fun (loc, ()) -> Comp.PatNil loc
         ])
     in
     seq2
@@ -2063,7 +2066,7 @@ end = struct
       |> labelled "parenthesized or tuple checkable expression"
     in
     let hole = hole |> span $> fun (loc, h) -> Comp.Hole (loc, h) in
-    let box_hole = token T.UNDERSCORE |> span $> fun (loc, _) -> Comp.BoxHole loc in
+    let box_hole = token T.UNDERSCORE |> span $> fun (loc, ()) -> Comp.BoxHole loc in
     let meta_obj =
       meta_obj
       |> span
@@ -2215,7 +2218,7 @@ end = struct
       trying (keyword "empty" &> keyword "context")
       |> span
       |> labelled "empty context case label"
-      $> fun (loc, _) -> Comp.(ContextCase (EmptyContext loc))
+      $> fun (loc, ()) -> Comp.(ContextCase (EmptyContext loc))
     in
     let named_case_label =
       name
@@ -2235,7 +2238,7 @@ end = struct
     let bvar_case_label =
       trying (keyword "head" &> keyword "variable")
       |> span
-      $> fun (loc, _) -> Comp.BVarCase loc
+      $> fun (loc, ()) -> Comp.BVarCase loc
     in
     choice
       [ bvar_case_label
@@ -2386,7 +2389,7 @@ end = struct
       let tau_list_item =
         alt
           (cmp_typ $> fun tau -> `exact tau)
-          (token T.UNDERSCORE |> span $> fun (loc, _) -> `infer loc)
+          (token T.UNDERSCORE |> span $> fun (loc, ()) -> `infer loc)
       in
       seq2
         (tokens [T.KW_SUFFICES; T.KW_BY]
@@ -2612,7 +2615,7 @@ end = struct
     token T.KW_TRUST
     |> span
     |> labelled "trust totality"
-    $> fun (loc, _) -> Comp.Trust loc
+    $> fun (loc, ()) -> Comp.Trust loc
 
   (** Parses a totality declaration whose arguments are parsed by `arg` *)
   let total_decl : Comp.total_dec t =
@@ -2700,9 +2703,9 @@ end = struct
                Sgn.CompDest
                 { location
                 ; identifier
-                ; mctx=LF.Empty
-                ; observation_typ=tau0
-                ; return_typ=tau1
+                ; mctx = LF.Empty
+                ; observation_typ = tau0
+                ; return_typ = tau1
                 }
           in
           seq4
@@ -2740,7 +2743,7 @@ end = struct
     |> span
     |> labelled "logic programming engine query pragma"
     $> fun (location, ((expected_solutions, maximum_tries), cD, name, typ)) ->
-       Sgn.Query { location; name; mctx=cD; typ; expected_solutions; maximum_tries }
+       Sgn.Query { location; name; mctx = cD; typ; expected_solutions; maximum_tries }
 
   let sgn_mquery_pragma =
     let bound =
@@ -2757,8 +2760,8 @@ end = struct
     <& token T.DOT
     |> span
     |> labelled "meta-logic search engine mquery pragma"
-    $> fun (location, ((expected_solutions, search_tries, search_depth), tau)) ->
-       Sgn.MQuery { location; typ=tau; expected_solutions; search_tries; search_depth }
+    $> fun (location, ((expected_solutions, search_tries, search_depth), typ)) ->
+       Sgn.MQuery { location; typ; expected_solutions; search_tries; search_depth }
 
 
   let sgn_oldstyle_lf_decl =
@@ -2778,7 +2781,7 @@ end = struct
   let sgn_not_pragma : Sgn.decl parser =
     pragma "not"
     |> span
-    $> fun (location, _) -> Sgn.Pragma { location; pragma=Sgn.NotPrag }
+    $> fun (location, ()) -> Sgn.Pragma { location; pragma=Sgn.NotPrag }
 
   let associativity =
     [ "left", Sgn.Left
@@ -2819,7 +2822,7 @@ end = struct
     <& token T.DOT
     |> span
     $> fun (location, assoc) ->
-      Sgn.Pragma { location; pragma=Sgn.DefaultAssocPrag assoc}
+      Sgn.Pragma { location; pragma = Sgn.DefaultAssocPrag assoc}
 
   let sgn_open_pragma : Sgn.decl parser =
     pragma "open"
@@ -2828,7 +2831,7 @@ end = struct
     |> labelled "open pragma"
     <& token T.DOT
     $> fun (location, id) ->
-       Sgn.Pragma { location; pragma=Sgn.OpenPrag (List1.to_list id) }
+       Sgn.Pragma { location; pragma = Sgn.OpenPrag (List1.to_list id) }
 
   let sgn_abbrev_pragma : Sgn.decl parser =
     pragma "abbrev"
@@ -2838,7 +2841,7 @@ end = struct
     |> labelled "module abbreviation pragma"
     $> fun (location, (fq, x)) ->
        let fq = List1.to_list fq in
-       Sgn.Pragma { location; pragma=Sgn.AbbrevPrag (fq, x) }
+       Sgn.Pragma { location; pragma = Sgn.AbbrevPrag (fq, x) }
 
   let sgn_comment : Sgn.decl parser =
     satisfy' `html_comment
@@ -2903,7 +2906,7 @@ end = struct
     |> span
     |> labelled "schema declaration"
     $> fun (location, (identifier, bs)) ->
-       Sgn.Schema { location; identifier; schema=LF.Schema bs }
+       Sgn.Schema { location; identifier; schema = LF.Schema bs }
 
   let sgn_let_decl : Sgn.decl parser =
     seq2

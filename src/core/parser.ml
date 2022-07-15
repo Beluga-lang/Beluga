@@ -1181,27 +1181,6 @@ end = struct
       (dot_integer $> (fun k -> LF.ByPos k))
       (dot_name $> (fun x -> LF.ByName x))
 
-  (** Parses an LF function type (uniform pi or arrow)
-      using the given parsers for types and atomic types.
-   *)
-  let lf_function_type p p_atomic =
-    let pi =
-      let d =
-        seq2 (name <& token T.COLON) p
-        |> braces
-        $> fun (name, a) -> LF.TypDecl (name, a)
-      in
-      seq2 d p
-      |> span
-      $> fun (loc, (d, b)) -> LF.PiTyp (loc, d, b)
-    in
-    let arrow =
-      seq2 (trying (p_atomic <& token T.ARROW)) p
-      |> span
-      $> fun (loc, (a, b)) -> LF.ArrTyp (loc, a, b)
-    in
-    alt pi arrow
-
   (** Parses a sequence of contextual LF normal terms and packages them
       into a TList for infix operator parsing later during indexing.
    *)
@@ -1237,10 +1216,29 @@ end = struct
       ]
     |> labelled "atomic return contextual LF type"
 
+  (** Parses an LF function type (uniform pi or arrow). *)
+  let lf_function_type =
+    let pi =
+      let d =
+        seq2 (name <& token T.COLON) Contextual_LF_parsers.clf_typ_pure
+        |> braces
+        $> fun (name, a) -> LF.TypDecl (name, a)
+      in
+      seq2 d Contextual_LF_parsers.clf_typ_pure
+      |> span
+      $> fun (loc, (d, b)) -> LF.PiTyp (loc, d, b)
+    in
+    let arrow =
+      seq2 (trying (clf_typ_pure_atomic <& token T.ARROW)) Contextual_LF_parsers.clf_typ_pure
+      |> span
+      $> fun (loc, (a, b)) -> LF.ArrTyp (loc, a, b)
+    in
+    alt pi arrow
+
   let clf_typ_pure =
     alt
-      (lf_function_type Contextual_LF_parsers.clf_typ_pure clf_typ_pure_atomic)
-      (clf_typ_pure_atomic)
+      lf_function_type
+      clf_typ_pure_atomic
     |> labelled "return contextual LF type"
 
   let clf_typ_rec_elem =

@@ -8,7 +8,6 @@ open Support
 type t =
   (* End of Input, usually the same thing as EOF. *)
   | EOI
-  | DUMMY
 
   (* Symbols *)
   | LPAREN (* ( *)
@@ -111,7 +110,6 @@ let print (c : class_or_string) ppf =
   in
   function
   | EOI       -> case (lazy (p "EOI")) (lazy (p "EOI"))
-  | DUMMY -> case (lazy (p "DUMMY")) (lazy (p "DUMMY"))
 
   | LPAREN (* ( *) -> case (lazy (p "(")) (lazy (p "LPAREN"))
   | RPAREN (* ) *) -> case (lazy (p ")")) (lazy (p "RPAREN"))

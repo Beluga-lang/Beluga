@@ -2117,7 +2117,7 @@ end = struct
   let cmp_exp_chk'' =
     choice
       [ cmp_exp_chk'
-      ; span cmp_exp_syn' $> fun (loc, i) -> Comp.Syn (loc, i)
+      ; cmp_exp_syn'
       ]
 
   (** Parses a synthesizable expression *)
@@ -2140,8 +2140,7 @@ end = struct
   let cmp_exp_chk =
     choice
       [ cmp_exp_chk'
-      ; span cmp_exp_syn
-        $> fun (loc, i) -> Comp.Syn (loc, i)
+      ; cmp_exp_syn
       ]
 
   (** Parses `x : tau`. *)

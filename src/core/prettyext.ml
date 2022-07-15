@@ -659,9 +659,6 @@ module Make (_ : Store.Cid.RENDERER) : Printer.Ext.T = struct
 
   let rec fmt_ppr_cmp_exp_chk lvl ppf =
     function
-    | Comp.Syn (_, i) ->
-       fmt_ppr_cmp_exp_syn lvl ppf i
-
     | Comp.Fn (_, x, e) ->
        let cond = lvl > 0 in
        fprintf ppf "%s%s %a %s %a%s"

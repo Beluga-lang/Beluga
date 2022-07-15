@@ -159,7 +159,6 @@ module Comp = struct
 
   (** Computation-level expressions *)
   and exp =                                                        (*  e ::=                               *)
-    | Syn        of Location.t * exp                               (*    | e                               *)
     | Fn         of Location.t * Name.t * exp                      (*    | fn x => e                       *)
     | Fun        of Location.t * fun_branches                      (*    | fun fbranches                   *)
     | MLam       of Location.t * Name.t * exp                      (*    | mlam f => e                     *)
@@ -250,6 +249,23 @@ module Comp = struct
   type thm =
     | Program of exp
     | Proof of proof
+
+  let loc_of_exp = function
+    | Fn (loc, _, _)
+    | Fun (loc, _)
+    | MLam (loc, _, _)
+    | Tuple (loc, _)
+    | LetTuple (loc, _, _)
+    | Let (loc, _, _)
+    | Box (loc, _)
+    | Impossible (loc, _)
+    | Case (loc, _, _, _)
+    | Hole (loc, _)
+    | BoxHole loc
+    | Name (loc, _)
+    | Apply (loc, _, _)
+    | BoxVal (loc, _)
+    | TupleVal (loc, _) -> loc
 end
 
 (** Syntax of Harpoon commands. *)

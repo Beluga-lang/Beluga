@@ -1285,9 +1285,6 @@ let disambiguate loc x ps =
 
 let rec index_exp cvars vars fcvars =
   function
-  | Ext.Comp.Syn (loc, i) ->
-     Apx.Comp.Syn (loc, index_exp' cvars vars fcvars i)
-
   | Ext.Comp.Impossible (loc, i) ->
      Apx.Comp.Impossible (loc, index_exp' cvars vars fcvars i)
 
@@ -1357,6 +1354,9 @@ let rec index_exp cvars vars fcvars =
   | Ext.Comp.Hole (loc, name) -> Apx.Comp.Hole (loc, name)
 
   | Ext.Comp.BoxHole loc -> Apx.Comp.BoxHole loc
+
+  | i ->
+    Apx.Comp.Syn (Ext.Comp.loc_of_exp i, index_exp' cvars vars fcvars i)
 
 and index_exp' cvars vars fcvars =
   function

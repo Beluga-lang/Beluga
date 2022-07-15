@@ -1709,8 +1709,8 @@ module rec Comp_parsers : sig
   val cmp_typ : Comp.typ t
   val cmp_typ_cross : Comp.typ t
   val cmp_pattern : Comp.pattern t
-  val cmp_exp_chk : Comp.exp_chk t
-  val cmp_exp_syn : Comp.exp_syn t
+  val cmp_exp_chk : Comp.exp t
+  val cmp_exp_syn : Comp.exp t
   val gctx : Comp.gctx t
 end = struct
   let pibox p r f =

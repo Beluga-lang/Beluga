@@ -84,10 +84,10 @@ val optional_numeric_total_order : Syntax.Ext.Comp.numeric_order option t
 val cmp_typ : Comp.typ t
 
 (** Parser for computation checkable expressions. *)
-val cmp_exp_chk : Comp.exp_chk t
+val cmp_exp_chk : Comp.exp t
 
 (** Parser for computation synthesizable expressions. *)
-val cmp_exp_syn : Comp.exp_syn t
+val cmp_exp_syn : Comp.exp t
 
 (** Parser for the next theorem name in Harpoon. *)
 val next_theorem : [ `quit | `next of Name.t ] t

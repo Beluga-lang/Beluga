@@ -47,7 +47,7 @@ let elaborate_typ (cD : LF.mctx) (tau : ExtComp.typ) : Comp.typ * int =
   |> F.through (fun (tau, _) -> Check.Comp.checkTyp cD tau)
 
 let elaborate_exp (cD : LF.mctx) (cG : Comp.gctx)
-      (t : ExtComp.exp_chk) (tp : Comp.typ * LF.msub)
+      (t : ExtComp.exp) (tp : Comp.typ * LF.msub)
     : Comp.exp_chk =
   dprintf
     begin fun p ->
@@ -63,7 +63,7 @@ let elaborate_exp (cD : LF.mctx) (cG : Comp.gctx)
   let t = Index.hexp cvar_store var_store t in
   Reconstruct.elExp cD cG t tp
 
-let elaborate_exp' (cD : LF.mctx) (cG : Comp.gctx) (t : ExtComp.exp_syn)
+let elaborate_exp' (cD : LF.mctx) (cG : Comp.gctx) (t : ExtComp.exp)
     : Comp.exp_syn * Comp.tclo =
   dprintf
     begin fun p ->

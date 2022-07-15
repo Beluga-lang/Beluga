@@ -760,7 +760,7 @@ module Make (_ : Store.Cid.RENDERER) : Printer.Ext.T = struct
         (to_html "impossible" Keyword)
         (fmt_ppr_cmp_exp_syn 0) i
 
-  and fmt_ppr_cmp_exp_syn lvl ppf : Comp.exp_syn -> unit =
+  and fmt_ppr_cmp_exp_syn lvl ppf =
     function
     | Comp.Name (_, x) ->
        fprintf ppf "%s"

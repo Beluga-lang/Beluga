@@ -157,25 +157,24 @@ module Comp = struct
     | TypCross of Location.t * typ List2.t             (*    | tau1 * tau2 * ... * taun *)
     | TypPiBox of Location.t * LF.ctyp_decl * typ      (*    | Pi u::U.tau              *)
 
-  and exp_chk =                                                        (* Computation-level expressions       *)
-    | Syn        of Location.t * exp_syn                               (*  e ::= i                            *)
-    | Fn         of Location.t * Name.t * exp_chk                      (*    | fn x => e                      *)
-    | Fun        of Location.t * fun_branches                          (*    | fun fbranches                  *)
-    | MLam       of Location.t * Name.t * exp_chk                      (*    | mlam f => e                    *)
-    | Tuple      of Location.t * exp_chk List2.t                       (*    | (e1, e2, ..., en)              *)
-    | LetTuple   of Location.t * exp_syn * (Name.t List2.t * exp_chk)  (*    | let (x1, x2, ..., xn) = i in e *)
-    | Let        of Location.t * exp_syn * (Name.t * exp_chk)          (*    | let x = i in e                 *)
-    | Box        of Location.t * meta_obj                              (*    | [C]                            *)
-    | Impossible of Location.t * exp_syn                               (*    | impossible i                   *)
-    | Case       of Location.t * case_pragma * exp_syn * branch list   (*    | case i of branches             *)
-    | Hole       of Location.t * string option                         (*    | ?name                          *)
-    | BoxHole    of Location.t                                         (*    | _                              *)
-
-  and exp_syn =
-    | Name of Location.t * Name.t                        (*  i ::= x/c               *)
-    | Apply of Location.t * exp_syn * exp_chk            (*    | i e                 *)
-    | BoxVal of Location.t * meta_obj                    (*    | [C]                 *)
-    | TupleVal of Location.t * exp_syn List2.t           (*    | (i1, i2, ..., in)   *)
+  (** Computation-level expressions *)
+  and exp =                                                        (*  e ::=                               *)
+    | Syn        of Location.t * exp                               (*    | e                               *)
+    | Fn         of Location.t * Name.t * exp                      (*    | fn x => e                       *)
+    | Fun        of Location.t * fun_branches                      (*    | fun fbranches                   *)
+    | MLam       of Location.t * Name.t * exp                      (*    | mlam f => e                     *)
+    | Tuple      of Location.t * exp List2.t                       (*    | (e1, e2, ..., en)               *)
+    | LetTuple   of Location.t * exp * (Name.t List2.t * exp)      (*    | let (x1, x2, ..., xn) = e in e' *)
+    | Let        of Location.t * exp * (Name.t * exp)              (*    | let x = e in e'                 *)
+    | Box        of Location.t * meta_obj                          (*    | [C]                             *)
+    | Impossible of Location.t * exp                               (*    | impossible e                    *)
+    | Case       of Location.t * case_pragma * exp * branch list   (*    | case e of branches              *)
+    | Hole       of Location.t * string option                     (*    | ?name                           *)
+    | BoxHole    of Location.t                                     (*    | _                               *)
+    | Name       of Location.t * Name.t                            (*    | x/c                             *)
+    | Apply      of Location.t * exp * exp                         (*    | e e'                            *)
+    | BoxVal     of Location.t * meta_obj                          (*    | [C]                             *)
+    | TupleVal   of Location.t * exp List2.t                       (*    | (e1, e2, ..., en)               *)
   (* Note that observations are missing.
      In the external syntax, observations are syntactically
      indistinguishable from applications, so we parse them as
@@ -195,11 +194,11 @@ module Comp = struct
     | PatObs of Location.t * Name.t * pattern_spine
 
   and branch =
-    | Branch of Location.t * LF.ctyp_decl LF.ctx * pattern * exp_chk
+    | Branch of Location.t * LF.ctyp_decl LF.ctx * pattern * exp
 
   and fun_branches =
     | NilFBranch of Location.t
-    | ConsFBranch of Location.t * (pattern_spine * exp_chk) * fun_branches
+    | ConsFBranch of Location.t * (pattern_spine * exp) * fun_branches
 
   type suffices_typ = typ generic_suffices_typ
 
@@ -227,14 +226,14 @@ module Comp = struct
     | Directive of Location.t * directive
 
   and command =
-    | By of Location.t * exp_syn * Name.t
-    | Unbox of Location.t * exp_syn * Name.t * unbox_modifier option
+    | By of Location.t * exp * Name.t
+    | Unbox of Location.t * exp * Name.t * unbox_modifier option
 
   and directive =
     | Intros of Location.t * hypothetical
-    | Solve of Location.t * exp_chk
-    | Split of Location.t * exp_syn * split_branch list
-    | Suffices of Location.t * exp_syn * (Location.t * typ * proof) list
+    | Solve of Location.t * exp
+    | Split of Location.t * exp * split_branch list
+    | Suffices of Location.t * exp * (Location.t * typ * proof) list
 
   and split_branch =
     { case_label : case_label
@@ -249,7 +248,7 @@ module Comp = struct
     }
 
   type thm =
-    | Program of exp_chk
+    | Program of exp
     | Proof of proof
 end
 
@@ -286,7 +285,7 @@ module Harpoon = struct
       }
     | ToggleAutomation of automation_kind * automation_change
 
-    | Type of Comp.exp_syn
+    | Type of Comp.exp
     | Info of info_kind * Name.t
     | SelectTheorem of Name.t
     | Theorem of [ basic_command | `show_ihs | `show_proof | `dump_proof of string ]
@@ -301,12 +300,12 @@ module Harpoon = struct
     (* Actual tactics *)
     | Intros of string list option (* list of names for introduced variables *)
 
-    | Split of split_kind * Comp.exp_syn (* the expression to split on *)
+    | Split of split_kind * Comp.exp (* the expression to split on *)
     | MSplit of Location.t * Name.t (* split on a metavariable *)
-    | Solve of Comp.exp_chk (* the expression to solve the current subgoal with *)
-    | Unbox of Comp.exp_syn * Name.t * Comp.unbox_modifier option
-    | By of Comp.exp_syn * Name.t
-    | Suffices of Comp.exp_syn * Comp.suffices_typ list
+    | Solve of Comp.exp (* the expression to solve the current subgoal with *)
+    | Unbox of Comp.exp * Name.t * Comp.unbox_modifier option
+    | By of Comp.exp * Name.t
+    | Suffices of Comp.exp * Comp.suffices_typ list
     | Help
 end
 
@@ -422,7 +421,7 @@ module Sgn = struct
       { location: Location.t
       ; identifier: Name.t
       ; typ: Comp.typ option
-      ; expression: Comp.exp_syn
+      ; expression: Comp.exp
       } (** Computation-level value declaration *)
 
     | Query of

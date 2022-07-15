@@ -33,8 +33,8 @@ val hcomptyp : Store.CVar.t -> Ext.Comp.typ -> Apx.Comp.typ
 val comptypdef : Ext.Comp.typ * Ext.Comp.kind
                  -> Apx.Comp.typ * Apx.Comp.kind
 
-val exp : Store.Var.t -> Ext.Comp.exp_chk -> Apx.Comp.exp_chk
-val exp' : Store.Var.t -> Ext.Comp.exp_syn -> Apx.Comp.exp_syn
-val hexp : Store.CVar.t -> Store.Var.t -> Ext.Comp.exp_chk -> Apx.Comp.exp_chk
-val hexp' : Store.CVar.t -> Store.Var.t -> Ext.Comp.exp_syn -> Apx.Comp.exp_syn
+val exp : Store.Var.t -> Ext.Comp.exp -> Apx.Comp.exp_chk
+val exp' : Store.Var.t -> Ext.Comp.exp -> Apx.Comp.exp_syn
+val hexp : Store.CVar.t -> Store.Var.t -> Ext.Comp.exp -> Apx.Comp.exp_chk
+val hexp' : Store.CVar.t -> Store.Var.t -> Ext.Comp.exp -> Apx.Comp.exp_syn
 val thm : Store.Var.t -> Ext.Comp.thm -> Apx.Comp.thm

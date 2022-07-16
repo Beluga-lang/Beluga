@@ -651,6 +651,7 @@ module Make (_ : Store.Cid.RENDERER) : Printer.Ext.T = struct
        fprintf ppf "(%a)"
          (List2.pp
            ~pp_sep:(fun ppf () -> fprintf ppf ",@ ") (fmt_ppr_pat_obj 0)) pats
+
     | Comp.PatAnn (_, pat, tau) ->
        fprintf ppf "%a : %a"
          (fmt_ppr_pat_obj 0) pat
@@ -756,6 +757,8 @@ module Make (_ : Store.Cid.RENDERER) : Printer.Ext.T = struct
       fprintf ppf "%s %a"
         (to_html "impossible" Keyword)
         (fmt_ppr_cmp_exp_syn 0) i
+
+    | i -> fmt_ppr_cmp_exp_syn lvl ppf i
 
   and fmt_ppr_cmp_exp_syn lvl ppf =
     function

@@ -274,8 +274,8 @@ let _ =
 (** Require that a substitution be None in the given situation `case'. *)
 let require_no_sub loc (case : illegal_subst_term) =
   function
-  | None -> ()
-  | Some o -> throw loc (SubstitutionNotAllowed case)
+  | Option.None -> ()
+  | Option.Some o -> throw loc (SubstitutionNotAllowed case)
 
 (** Invokes the name disambiguation procedure from the indexing
     context.
@@ -468,23 +468,18 @@ and shunting_yard (l : Ext.LF.normal list) : Ext.LF.normal =
     | (i, h :: t, exps, (x, o, loc_o) :: os)
          when pragmaExists h ->
        let p = get_pragma h in
-       let loc = Ext.LF.loc_of_normal h in
        if lte p o
        then
          begin match o.Store.OpPragmas.fix with
          | Ext.Sgn.Prefix ->
             let args_expected =
-              try
-                Typ.args_of_name o.Store.OpPragmas.name
-              with
-              | _ ->
-                 begin
-                   try
-                     Term.args_of_name o.Store.OpPragmas.name
-                   with
-                   | _ ->
-                      throw loc (UnboundOperator o.Store.OpPragmas.name)
-                 end
+              o.Store.OpPragmas.name
+              |> List.find_apply
+                [ Typ.args_of_name_opt
+                ; Term.args_of_name_opt
+                ]
+              |> Option.get_or_else
+                  (fun () -> throw loc_o (UnboundOperator o.Store.OpPragmas.name))
             in
             let (ops, es) = List.take args_expected exps in
             let loc = loc_o in
@@ -557,18 +552,13 @@ and shunting_yard (l : Ext.LF.normal list) : Ext.LF.normal =
     | (exps, (i, o, loc_o) :: os)
          when (o.Store.OpPragmas.fix = Ext.Sgn.Prefix) ->
        let args_expected =
-         let name = o.Store.OpPragmas.name in
-         try
-           Typ.args_of_name name
-         with
-         | _ ->
-            begin
-              try
-                Term.args_of_name name
-              with
-              | _ ->
-                 throw loc_o (UnboundOperator name)
-            end
+         o.Store.OpPragmas.name
+         |> List.find_apply
+           [ Typ.args_of_name_opt
+           ; Term.args_of_name_opt
+           ]
+         |> Option.get_or_else
+             (fun () -> throw loc_o (UnboundOperator o.Store.OpPragmas.name))
        in
        let (ops, es) = List.take args_expected exps in
        let loc =
@@ -1216,31 +1206,29 @@ let rec index_comptyp (tau : Ext.Comp.typ) cvars : Apx.Comp.typ fvar_state =
   fun fvars ->
   match tau with
   | Ext.Comp.TypBase (loc, a, ms) ->
-     begin
-       try
-         let a' = CompTyp.index_of_name a in
-         let (ms', fvars) = index_meta_spine cvars fvars ms in
-         (fvars, Apx.Comp.TypBase (loc, a', ms'))
-       with
-       | Not_found ->
-          begin
-            try
-              let a' = CompCotyp.index_of_name a in
+     a
+     |> List.find_apply
+       [ (fun a ->
+            let open Option in
+            CompTyp.index_of_name_opt a
+            $> fun a' ->
               let (ms', fvars) = index_meta_spine cvars fvars ms in
-              (fvars, Apx.Comp.TypCobase (loc, a', ms'))
-            with
-            | Not_found ->
-               begin
-                 try
-                   let a' = CompTypDef.index_of_name a in
-                   let (ms', fvars) = index_meta_spine cvars fvars ms in
-                   (fvars, Apx.Comp.TypDef (loc, a', ms'))
-                 with
-                 | Not_found ->
-                    throw loc (UnboundName a)
-               end
-          end
-     end
+              (fvars, Apx.Comp.TypBase (loc, a', ms')))
+       ; (fun a ->
+            let open Option in
+            CompCotyp.index_of_name_opt a
+            $> fun a' ->
+              let (ms', fvars) = index_meta_spine cvars fvars ms in
+              (fvars, Apx.Comp.TypCobase (loc, a', ms')))
+       ; (fun a ->
+            let open Option in
+            CompTypDef.index_of_name_opt a
+            $> fun a' ->
+              let (ms', fvars) = index_meta_spine cvars fvars ms in
+              (fvars, Apx.Comp.TypDef (loc, a', ms')))
+       ]
+     |> Option.get_or_else (fun () -> throw loc (UnboundName a))
+
   | Ext.Comp.TypBox (loc, (loc', mU)) ->
      let (fvars, mU') = index_cltyp loc cvars fvars mU in
      (fvars, Apx.Comp.TypBox (loc, (loc', mU')))
@@ -1436,7 +1424,7 @@ and index_pattern cvars fcvars fvars =
         First see if it's a defined constructor.
         Otherwise, it's a variable.
       *)
-     begin match trying_index (fun _ -> CompConst.index_of_name c) with
+     begin match trying_index (fun () -> CompConst.index_of_name c) with
      | Some k ->
         dprintf
           begin fun p ->
@@ -1582,11 +1570,9 @@ and index_branch cvars vars fcvars =
      dprint (fun () -> "index_branch");
      (* computing fcvars' is unnecessary? -bp *)
      let fcvars' =
-       Option.eliminate
-         (Fun.const Fun.id)
-         extending_by
-         (get_ctxvar_mobj mO)
-         (empty_fvars `open_term)
+       match get_ctxvar_mobj mO with
+       | Option.Some mobj -> extending_by mobj @@ empty_fvars `open_term
+       | Option.None -> empty_fvars `open_term
      in
      dprintf
        begin fun p ->

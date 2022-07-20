@@ -41,6 +41,11 @@ val filter_rev : ('a -> bool) -> 'a list -> 'a list
     exist. *)
 val find_map : ('a -> 'b option) -> 'a list -> 'b option
 
+(** [find_apply fs a] applies [a] to the functions in [fs] in order until one
+    of them returns [Option.Some v] for some [v]. Otherwise, [Option.None] is
+    returned. *)
+val find_apply : ('a -> 'b option) list -> 'a -> 'b option
+
 (** [uncons l] is [Option.Some (hd l, tl l)] if [l <> \[\]] and [Option.None]
     otherwise. *)
 val uncons : 'a list -> ('a * 'a list) option

@@ -48,6 +48,14 @@ let rec find_map f = function
     | Some _ as result -> result
     | None -> find_map f l)
 
+let rec find_apply fs a =
+  match fs with
+  | [] -> Stdlib.Option.none
+  | f :: fs -> (
+    match f a with
+    | Stdlib.Option.Some _ as v -> v
+    | Stdlib.Option.None -> find_apply fs a)
+
 let uncons = function
   | [] -> None
   | x :: xs -> Some (x, xs)

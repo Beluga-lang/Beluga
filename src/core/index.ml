@@ -373,7 +373,7 @@ and index_typ (a : Ext.LF.typ) : Apx.LF.typ index =
      index_typ_rec typRec $> fun typRec' -> Apx.LF.Sigma typRec'
 
   | Ext.LF.AtomTerm (loc, Ext.LF.TList (loc', nl)) ->
-     begin match shunting_yard' nl with
+     begin match shunting_yard nl with
      | Ext.LF.Root (_, Ext.LF.Name (_, a, None), tS') ->
         dprintf
           begin fun p ->
@@ -403,9 +403,6 @@ and index_typ (a : Ext.LF.typ) : Apx.LF.typ index =
  *
 *)
 and shunting_yard (l : Ext.LF.normal list) : Ext.LF.normal =
-  shunting_yard' l
-
-and shunting_yard' (l : Ext.LF.normal list) : Ext.LF.normal =
   let get_pragma =
     function
     | Ext.LF.Root (_, Ext.LF.Name (_, name, _), Ext.LF.Nil)

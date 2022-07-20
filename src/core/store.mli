@@ -93,6 +93,7 @@ module Cid : sig
     val addConstructor : Syntax.Loc.t -> cid_typ -> cid_term -> LF.typ -> unit
     val clear : unit -> unit
     val args_of_name : Name.t -> int
+    val args_of_name_opt : Name.t -> int option
     val current_entries : unit -> (cid_typ * entry) list
 
     (* see subord.ml for an explanation of term-level subordination
@@ -122,6 +123,7 @@ module Cid : sig
     val get_implicit_arguments : cid_term -> int
     val index_of_name : Name.t -> cid_term
     val args_of_name : Name.t -> int
+    val args_of_name_opt : Name.t -> int option
     val clear : unit -> unit
   end
 
@@ -150,6 +152,7 @@ module Cid : sig
     val freeze : cid_comp_typ -> unit
     val addConstructor : cid_comp_const -> cid_comp_typ -> unit
     val index_of_name : Name.t -> cid_comp_typ
+    val index_of_name_opt : Name.t -> cid_comp_typ option
     val clear : unit -> unit
     val get_implicit_arguments : cid_comp_typ -> int
   end
@@ -179,6 +182,7 @@ module Cid : sig
     val freeze : cid_comp_cotyp -> unit
     val addDestructor : cid_comp_dest -> cid_comp_cotyp -> unit
     val index_of_name : Name.t -> cid_comp_typ
+    val index_of_name_opt : Name.t -> cid_comp_typ option
     val clear : unit -> unit
   end
 
@@ -202,6 +206,7 @@ module Cid : sig
     val get : cid_comp_const -> entry
     val get_implicit_arguments : cid_comp_const -> int
     val index_of_name : Name.t -> cid_comp_const
+    val index_of_name_opt : Name.t -> cid_comp_const option
     val clear : unit -> unit
   end
 
@@ -254,6 +259,7 @@ module Cid : sig
     val fixed_name_of : cid_comp_typdef -> Name.t
     val get_implicit_arguments : cid_comp_typdef -> int
     val index_of_name : Name.t -> cid_comp_typdef
+    val index_of_name_opt : Name.t -> cid_comp_typdef option
     val clear : unit -> unit
   end
 

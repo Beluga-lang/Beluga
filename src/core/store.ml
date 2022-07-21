@@ -1010,7 +1010,7 @@ module BVar = struct
     in
     loop 1 store
 
-  let create () = []
+  let empty = []
   let extend ctx e = e :: ctx
   let length = List.length
   let get = List.nth
@@ -1135,7 +1135,7 @@ module Var = struct
     loop 1 store
 
   let to_list (l : entry list) = Fun.id l
-  let create () = []
+  let empty = []
   let extend ctx e = e :: ctx
   let append vars vars' = vars @ vars'
   let get = List.nth
@@ -1148,7 +1148,7 @@ module Var = struct
    *)
   let of_gctx (cG : Int.Comp.gctx) : t =
     let f d v = Int.Comp.name_of_ctyp_decl d |> mk_entry |> extend v in
-    List.fold_right f (Context.to_list_rev cG) (create ())
+    List.fold_right f (Context.to_list_rev cG) empty
 
   let of_list (l : Name.t list) : t =
     List.map mk_entry l
@@ -1186,7 +1186,7 @@ module CVar = struct
     let (i, e) = lookup store x in
     (e.plicity, i)
 
-  let create () = []
+  let empty = []
   let extend cvars e = e :: cvars
   let get = List.nth
   let append cvars cvars' = cvars @ cvars'
@@ -1210,7 +1210,7 @@ module CVar = struct
       | DeclOpt _ ->
          Error.violation "[of_mctx] DeclOpt impossible"
     in
-    List.fold_right f (Context.to_list_rev cD) (create ())
+    List.fold_right f (Context.to_list_rev cD) empty
 
   let of_list (l : (Name.t * Plicity.t) list) : t =
     List.map (fun (u, p) -> mk_entry u p) l

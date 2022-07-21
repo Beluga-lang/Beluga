@@ -13,8 +13,6 @@
  *)
 
 open Support
-open Store
-open Store.Cid
 open Syntax
 module Ext = Syntax.Ext
 module Apx = Syntax.Apx
@@ -50,7 +48,7 @@ type open_or_closed =
 
 type fvars =
   { open_flag : open_or_closed
-  ; vars : CVar.cvar list
+  ; vars : Store.CVar.cvar list
   }
 
 let append_fvars f1 f2 flag =
@@ -75,27 +73,27 @@ type 'a fvar_state = (fvars, 'a) state
     These are abstracted into computational Pi-box types.
  *)
 type name_disambiguator =
-  CVar.t -> BVar.t -> Syntax.Loc.t * Name.t -> Ext.LF.sub option -> Apx.LF.head fvar_state
+  Store.CVar.t -> Store.BVar.t -> Syntax.Loc.t * Name.t -> Ext.LF.sub option -> Apx.LF.head fvar_state
 
 type lf_indexing_context =
   { disambiguate_name : name_disambiguator
-  ; cvars : CVar.t
-  ; bvars : BVar.t
+  ; cvars : Store.CVar.t
+  ; bvars : Store.BVar.t
   }
 
 let empty_lf_indexing_context disambiguate_name =
-  { cvars = CVar.create ()
-  ; bvars = BVar.create ()
+  { cvars = Store.CVar.empty
+  ; bvars = Store.BVar.empty
   ; disambiguate_name
   }
 
 (** Transforms the bound variable list in an indexing context. *)
-let modify_bvars (f : BVar.t -> BVar.t) (c : lf_indexing_context) : lf_indexing_context =
+let modify_bvars (f : Store.BVar.t -> Store.BVar.t) (c : lf_indexing_context) : lf_indexing_context =
   { c with bvars = f c.bvars }
 
 (** Extends the bound variable list in an indexing context with a new entry. *)
 let extending_bvars (x : Name.t) (c : lf_indexing_context) : lf_indexing_context =
-  modify_bvars (fun bvars -> BVar.extend bvars (BVar.mk_entry x)) c
+  modify_bvars (fun bvars -> Store.BVar.extend bvars (Store.BVar.mk_entry x)) c
 
 let extending_by (x : Name.t) (fvars : fvars) : fvars =
   { fvars with vars = x :: fvars.vars }
@@ -138,7 +136,7 @@ let cvar_error_to_hint =
 
 let index_cvar' cvars (u : Name.t) : (cvar_error_status, Id.offset) Either.t =
   match
-    trying_index (fun _ -> CVar.index_of_name cvars u)
+    trying_index (fun _ -> Store.CVar.index_of_name cvars u)
   with
   | None -> Either.left `unbound
   | Some (Plicity.Implicit, _) -> Either.left `implicit
@@ -159,7 +157,7 @@ let index_cvar (name : Name.t) : (cvar_error_status, Id.offset) Either.t index =
 let index_bvar (name : Name.t) : Id.offset option index =
   fun c fvars ->
   ( fvars
-  , trying_index (fun () -> BVar.index_of_name c.bvars name)
+  , trying_index (fun () -> Store.BVar.index_of_name c.bvars name)
   )
    *)
 
@@ -292,13 +290,13 @@ let lookup_fv' (m : Name.t) fvars =
 let lookup_fv (m : Name.t) : bool index =
   Bind.(get_fvars $> lookup_fv' m)
 
-let print_fvars ppf (vs : Var.t) =
+let print_fvars ppf (vs : Store.Var.t) =
   let open Format in
   pp_print_list
     ~pp_sep: Format.comma
-    (fun ppf x -> Name.pp ppf x.Var.name)
+    (fun ppf x -> Name.pp ppf x.Store.Var.name)
     ppf
-    (Var.to_list vs)
+    (Store.Var.to_list vs)
 
 let print_fcvars ppf fcvars =
   let open Format in
@@ -349,7 +347,7 @@ and index_typ (a : Ext.LF.typ) : Apx.LF.typ index =
   | Ext.LF.Atom (loc, a, s) ->
      let a' =
        try
-         Typ.index_of_name a
+         Store.Cid.Typ.index_of_name a
        with
        | Not_found ->
           throw loc (UnboundName a)
@@ -414,16 +412,12 @@ and shunting_yard (l : Ext.LF.normal list) : Ext.LF.normal =
     | Ext.LF.Root (_, Ext.LF.Name (_, name, _), Ext.LF.Nil)
       | Ext.LF.Root (_, Ext.LF.PVar (_, name, _), Ext.LF.Nil) ->
        let args_expected =
-         try
-           Typ.args_of_name name
-         with
-         | _ ->
-            begin
-              try
-                Term.args_of_name name
-              with
-              | _ -> -1
-            end
+         name
+         |> List.find_apply
+              [ Store.Cid.Typ.args_of_name_opt
+              ; Store.Cid.Term.args_of_name_opt
+              ]
+         |> Option.value ~default:(-1)
        in
        Store.OpPragmas.pragmaExists name && args_expected > 0
     | _ -> false
@@ -475,8 +469,8 @@ and shunting_yard (l : Ext.LF.normal list) : Ext.LF.normal =
             let args_expected =
               o.Store.OpPragmas.name
               |> List.find_apply
-                [ Typ.args_of_name_opt
-                ; Term.args_of_name_opt
+                [ Store.Cid.Typ.args_of_name_opt
+                ; Store.Cid.Term.args_of_name_opt
                 ]
               |> Option.get_or_else
                   (fun () -> throw loc_o (UnboundOperator o.Store.OpPragmas.name))
@@ -554,8 +548,8 @@ and shunting_yard (l : Ext.LF.normal list) : Ext.LF.normal =
        let args_expected =
          o.Store.OpPragmas.name
          |> List.find_apply
-           [ Typ.args_of_name_opt
-           ; Term.args_of_name_opt
+           [ Store.Cid.Typ.args_of_name_opt
+           ; Store.Cid.Term.args_of_name_opt
            ]
          |> Option.get_or_else
              (fun () -> throw loc_o (UnboundOperator o.Store.OpPragmas.name))
@@ -737,7 +731,7 @@ and index_head : Ext.LF.head -> Apx.LF.head index =
 
 (*
           try
-            let offset = CVar.index_of_name cvars p in
+            let offset = Store.CVar.index_of_name cvars p in
             let (s', fvs') = index_sub_opt cvars bvars fvs s in
             (Apx.LF.PVar (Apx.LF.Offset offset, s'), fvs')
           with Not_found ->
@@ -790,7 +784,7 @@ and disambiguate_name' f : name_disambiguator =
   let c = { cvars; bvars; disambiguate_name = disambiguate_name' f } in
   try
     ( fvars
-    , ( let k = BVar.index_of_name bvars name in
+    , ( let k = Store.BVar.index_of_name bvars name in
         require_no_sub loc `bvar sub_opt;
         dprintf (disambiguation_message "bound variable" (Some k));
         Apx.LF.BVar k
@@ -832,7 +826,7 @@ and disambiguate_name' f : name_disambiguator =
           begin
             try
               ( fvars
-              , ( let k = Term.index_of_name name in
+              , ( let k = Store.Cid.Term.index_of_name name in
                   require_no_sub loc `const sub_opt;
                   dprintf (disambiguation_message "LF constant" None);
                   Apx.LF.Const k
@@ -930,7 +924,7 @@ and index_sub : Ext.LF.sub -> Apx.LF.sub index =
       else
         begin
           try
-            let offset = CVar.index_of_name cvars u in
+            let offset = Store.CVar.index_of_name cvars u in
             let (s', fvs') = index_sub_opt cvars bvars fvars s in
             let _ = dprint (fun () -> "[index_sub] s = " ^ string_of_int offset) in
             (Apx.LF.SVar (Apx.LF.Offset offset, s'), fvs')
@@ -947,17 +941,17 @@ and index_sub : Ext.LF.sub -> Apx.LF.sub index =
         end
                        *)
 
-let index_decl disambiguate_name (cvars : CVar.t) (bvars : BVar.t) fvars =
+let index_decl disambiguate_name (cvars : Store.CVar.t) (bvars : Store.BVar.t) fvars =
   function
   | (Ext.LF.TypDecl (x, a)) ->
      let (fvars', a') =
        index_typ a { cvars; bvars; disambiguate_name } fvars
      in
-     let bvars = BVar.extend bvars (BVar.mk_entry x) in
+     let bvars = Store.BVar.extend bvars (Store.BVar.mk_entry x) in
      (Apx.LF.TypDecl (x, a'), bvars, fvars')
 
   | (Ext.LF.TypDeclOpt x) ->
-     let bvars' = BVar.extend bvars (BVar.mk_entry x) in
+     let bvars' = Store.BVar.extend bvars (Store.BVar.mk_entry x) in
      (Apx.LF.TypDeclOpt x, bvars', fvars)
 
 (** Tries to index the given name as a context variable.
@@ -1060,7 +1054,7 @@ let index_cltyp' : Ext.LF.cltyp -> Apx.LF.cltyp index =
      seq2 get_env get_fvars
      >>= fun (c, fvars) ->
        let (phi', _, fvars) =
-         index_dctx c.disambiguate_name c.cvars (BVar.create ()) fvars phi
+         index_dctx c.disambiguate_name c.cvars Store.BVar.empty fvars phi
        in
        modify_fvars (Fun.const fvars)
        &> return (Apx.LF.STyp (index_svar_class cl, phi'))
@@ -1070,7 +1064,7 @@ let index_cltyp loc cvars fvars =
   | Ext.LF.ClTyp (cl, psi) ->
      let disambiguate_name = disambiguate_to_fmvars in
      let (psi', bvars, fvars) =
-       index_dctx disambiguate_name cvars (BVar.create ()) fvars psi
+       index_dctx disambiguate_name cvars Store.BVar.empty fvars psi
      in
      let (fvars, cl) =
        index_cltyp' cl {cvars; bvars; disambiguate_name} fvars
@@ -1080,7 +1074,7 @@ let index_cltyp loc cvars fvars =
   | Ext.LF.CTyp schema_name ->
      begin
        try
-         let schema_cid = Schema.index_of_name schema_name in
+         let schema_cid = Store.Cid.Schema.index_of_name schema_name in
          (fvars, Apx.LF.CTyp schema_cid)
        with
        | Not_found ->
@@ -1106,8 +1100,8 @@ let index_cdecl f cvars fvars =
           throw loc (NameOvershadowing u)
        | Either.Left _ ->
           let cvars =
-            CVar.extend cvars
-              (CVar.mk_entry u (f plicity))
+            Store.CVar.extend cvars
+              (Store.CVar.mk_entry u (f plicity))
           in
           (Apx.LF.Decl (u, cl, plicity), cvars, fvars)
      end
@@ -1127,8 +1121,8 @@ let rec index_mctx cvars fvars =
 let rec index_elements el_list = List.map index_el el_list
 
 and index_el (Ext.LF.SchElem (_, typ_ctx, typ_rec)) =
-  let cvars = CVar.create () in
-  let bvars = BVar.create () in
+  let cvars = Store.CVar.empty in
+  let bvars = Store.BVar.empty in
   let fvars = empty_fvars `open_term in
   let disambiguate_name = disambiguate_to_fvars in
   let (typ_ctx', bvars, _) = index_ctx disambiguate_name cvars bvars fvars typ_ctx in
@@ -1160,7 +1154,7 @@ let rec index_meta_obj cvars fcvars (l, cM) =
   match cM with
   | Ext.LF.CObj cpsi ->
      let (cPsi, _, fcvars') =
-       index_dctx disambiguate_to_fmvars cvars (BVar.create ()) fcvars cpsi
+       index_dctx disambiguate_to_fmvars cvars Store.BVar.empty fcvars cpsi
      in
      ( (l, Apx.Comp.CObj (cPsi))
      , fcvars'
@@ -1168,7 +1162,7 @@ let rec index_meta_obj cvars fcvars (l, cM) =
 
   | Ext.LF.ClObj (cpsi, s) ->
      let (cPsi, bvars, fcvars') =
-       index_dctx disambiguate_to_fmvars cvars (BVar.create ()) fcvars cpsi
+       index_dctx disambiguate_to_fmvars cvars Store.BVar.empty fcvars cpsi
      in
      let disambiguate_name = disambiguate_to_fmvars in
      let (fcvars'', s') =
@@ -1210,19 +1204,19 @@ let rec index_comptyp (tau : Ext.Comp.typ) cvars : Apx.Comp.typ fvar_state =
      |> List.find_apply
        [ (fun a ->
             let open Option in
-            CompTyp.index_of_name_opt a
+            Store.Cid.CompTyp.index_of_name_opt a
             $> fun a' ->
               let (ms', fvars) = index_meta_spine cvars fvars ms in
               (fvars, Apx.Comp.TypBase (loc, a', ms')))
        ; (fun a ->
             let open Option in
-            CompCotyp.index_of_name_opt a
+            Store.Cid.CompCotyp.index_of_name_opt a
             $> fun a' ->
               let (ms', fvars) = index_meta_spine cvars fvars ms in
               (fvars, Apx.Comp.TypCobase (loc, a', ms')))
        ; (fun a ->
             let open Option in
-            CompTypDef.index_of_name_opt a
+            Store.Cid.CompTypDef.index_of_name_opt a
             $> fun a' ->
               let (ms', fvars) = index_meta_spine cvars fvars ms in
               (fvars, Apx.Comp.TypDef (loc, a', ms')))
@@ -1274,10 +1268,14 @@ let d_var, d_const, d_dataconst, d_codataobs =
       f x
     ) $> fun k -> con loc k
   in
-  let var vars = mk "variable" (Var.index_of_name vars) (fun loc k -> Apx.Comp.Var (loc, k)) in
-  let const = mk "constant" Comp.index_of_name (fun loc k -> Apx.Comp.Const (loc, k)) in
-  let dataconst = mk "data constructor" CompConst.index_of_name (fun loc k -> Apx.Comp.DataConst (loc, k)) in
-  let codataobs = mk "observation" CompDest.index_of_name (fun loc k e' -> Apx.Comp.Obs (loc, e', k)) in
+  let var vars =
+    mk "variable" (Store.Var.index_of_name vars) (fun loc k -> Apx.Comp.Var (loc, k))
+  and const =
+    mk "constant" Store.Cid.Comp.index_of_name (fun loc k -> Apx.Comp.Const (loc, k))
+  and dataconst =
+    mk "data constructor" Store.Cid.CompConst.index_of_name (fun loc k -> Apx.Comp.DataConst (loc, k))
+  and codataobs =
+    mk "observation" Store.Cid.CompDest.index_of_name (fun loc k e' -> Apx.Comp.Obs (loc, e', k)) in
   var, const, dataconst, codataobs
 
 let disambiguate loc x ps =
@@ -1290,7 +1288,7 @@ let rec index_exp cvars vars fcvars =
      Apx.Comp.Impossible (loc, i')
 
   | Ext.Comp.Fn (loc, x, e) ->
-     let vars' = Var.extend vars (Var.mk_entry x) in
+     let vars' = Store.Var.extend vars (Store.Var.mk_entry x) in
      let e' = index_exp cvars vars' fcvars e in
      Apx.Comp.Fn (loc, x, e')
 
@@ -1299,7 +1297,7 @@ let rec index_exp cvars vars fcvars =
      Apx.Comp.Fun (loc, fbr')
 
   | Ext.Comp.MLam (loc, u, e) ->
-     let cvars' = CVar.extend cvars (CVar.mk_entry u Plicity.explicit) in
+     let cvars' = Store.CVar.extend cvars (Store.CVar.mk_entry u Plicity.explicit) in
      let e' = index_exp cvars' vars fcvars e in
      Apx.Comp.MLam (loc, u, e')
 
@@ -1312,14 +1310,14 @@ let rec index_exp cvars vars fcvars =
      let vars' =
        xs
        |> List2.to_list
-       |> List.fold_left (fun vars x -> Var.extend vars (Var.mk_entry x)) vars
+       |> List.fold_left (fun vars x -> Store.Var.extend vars (Store.Var.mk_entry x)) vars
        in
      let e' = index_exp cvars vars' fcvars e in
      Apx.Comp.LetTuple (loc, i', (xs, e'))
 
   | Ext.Comp.Let (loc, i, (x, e)) ->
      let i' = index_exp cvars vars fcvars i in
-     let vars1 = Var.extend vars (Var.mk_entry x) in
+     let vars1 = Store.Var.extend vars (Store.Var.mk_entry x) in
      let e' = index_exp cvars vars1 fcvars e in
      Apx.Comp.Let (loc, i', (x, e'))
 
@@ -1341,7 +1339,7 @@ let rec index_exp cvars vars fcvars =
      |> Option.eliminate
           (fun _ -> (* the name is not a data constructor *)
             let i' = index_exp cvars vars fcvars i in
-            let vars1 = Var.extend vars (Var.mk_entry name) in
+            let vars1 = Store.Var.extend vars (Store.Var.mk_entry name) in
             let e' = index_exp cvars vars1 fcvars e in
             Apx.Comp.Let (loc, i', (name, e')))
           (fun x ->
@@ -1389,7 +1387,7 @@ let rec index_exp cvars vars fcvars =
      |> Option.eliminate
           (fun _ ->
             let hint =
-              Option.(trying_index (fun _ -> CVar.index_of_name cvars c) &> some `needs_box)
+              Option.(trying_index (fun _ -> Store.CVar.index_of_name cvars c) &> some `needs_box)
             in
             throw_hint' loc' hint (UnboundCompName c))
           (fun f -> index_exp cvars vars fcvars e |> f)
@@ -1425,7 +1423,7 @@ and index_pattern cvars fcvars fvars =
         First see if it's a defined constructor.
         Otherwise, it's a variable.
       *)
-     begin match trying_index (fun () -> CompConst.index_of_name c) with
+     begin match trying_index (fun () -> Store.Cid.CompConst.index_of_name c) with
      | Some k ->
         dprintf
           begin fun p ->
@@ -1437,7 +1435,7 @@ and index_pattern cvars fcvars fvars =
      | None ->
         begin
           try
-            let _ = Var.index_of_name fvars c in
+            let _ = Store.Var.index_of_name fvars c in
             throw loc PatVarNotUnique
           with
           | Not_found ->
@@ -1448,7 +1446,7 @@ and index_pattern cvars fcvars fvars =
                   p.fmt "[index_pattern] %a is a variable"
                     Name.pp c
                   end;
-                let fvars' = Var.extend fvars (Var.mk_entry c) in
+                let fvars' = Store.Var.extend fvars (Store.Var.mk_entry c) in
                 (Apx.Comp.PatFVar (loc, c), fcvars, fvars')
              | _ ->
                 throw loc (NonemptyPatternSpineForVariable c)
@@ -1502,11 +1500,8 @@ and index_pat_spine cvars fcvars fvars =
   | Ext.Comp.PatObs (loc, obs, pat_spine) ->
      let (pat_spine', fcvars1, fvars1) = index_pat_spine cvars fcvars fvars pat_spine in
      let cid =
-       try
-         CompDest.index_of_name obs
-       with
-       | Not_found ->
-          throw loc (UnboundObs obs)
+       Store.Cid.CompDest.index_of_name_opt obs
+       |> Option.get_or_else (fun () -> throw loc (UnboundObs obs))
      in
      ( Apx.Comp.PatObs (loc, cid, pat_spine')
      , fcvars1
@@ -1520,10 +1515,10 @@ and index_fbranches cvars vars fcvars =
      let (patS', fcvars1, vars1) =
        index_pat_spine cvars
          (empty_fvars `open_term)
-         (Var.create ())
+         Store.Var.empty
          patS
      in
-     let vars_all = Var.append vars1 vars in
+     let vars_all = Store.Var.append vars1 vars in
      let patS'' = reindex_pat_spine vars1 patS' in
      dprintf
        begin fun p ->
@@ -1551,7 +1546,7 @@ and reindex_pattern fvars =
   function
   | Apx.Comp.PatFVar (loc, x) ->
      (* all free variable names must be in fvars *)
-     let offset = Var.index_of_name fvars x in
+     let offset = Store.Var.index_of_name fvars x in
      Apx.Comp.PatVar (loc, x, offset)
 
   | Apx.Comp.PatTuple (loc, pats) ->
@@ -1593,14 +1588,14 @@ and index_branch cvars vars fcvars =
        p.fmt "[index_branch] indexing cD in branch at %a"
          Loc.print_short loc
        end;
-     let (cD', cvars1, fcvars1) = index_mctx (CVar.create ()) fcvars' cD in
+     let (cD', cvars1, fcvars1) = index_mctx Store.CVar.empty fcvars' cD in
      let (mO', fcvars2) = index_meta_obj cvars1 fcvars1 mO in
      dprintf
        begin fun p ->
        p.fmt "fcvars in pattern = @[<h>%a@]"
          print_fcvars fcvars2
        end;
-     let cvars_all = CVar.append cvars1 cvars in
+     let cvars_all = Store.CVar.append cvars1 cvars in
      let fcvars3 =
        { open_flag = `closed_term
        ; vars = List.append fcvars2.vars fcvars.vars
@@ -1617,11 +1612,11 @@ and index_branch cvars vars fcvars =
        p.fmt "[index_branch] general pattern at %a"
          Loc.print_short loc
        end;
-     let (cD', cvars1, fcvars1) = index_mctx (CVar.create ()) empty_fcvars cD in
-     let (pat', fcvars2, fvars2) = index_pattern cvars1 fcvars1 (Var.create ()) pat in
+     let (cD', cvars1, fcvars1) = index_mctx Store.CVar.empty empty_fcvars cD in
+     let (pat', fcvars2, fvars2) = index_pattern cvars1 fcvars1 Store.Var.empty pat in
      dprint (fun () -> "[index_branch] index_pattern done");
-     let cvars_all = CVar.append cvars1 cvars in
-     let vars_all = Var.append fvars2 vars in
+     let cvars_all = Store.CVar.append cvars1 cvars in
+     let vars_all = Store.Var.append fvars2 vars in
      let pat'' = reindex_pattern fvars2 pat' in
      dprint (fun () -> "[index_branch] reindex_pattern done");
      dprintf
@@ -1640,7 +1635,7 @@ let rec index_gctx cvars vars fvars =
   | Ext.LF.Dec (cG, Ext.Comp.CTypDecl (x, tau)) ->
      let (cG', vars, fvars) = index_gctx cvars vars fvars cG in
      let (fvars, tau') = index_comptyp tau cvars fvars in
-     let vars = Var.extend vars (Var.mk_entry x) in
+     let vars = Store.Var.extend vars (Store.Var.mk_entry x) in
      Apx.LF.Dec (cG', Apx.Comp.CTypDecl (x, tau')), vars, fvars
 
 let rec index_proof cvars vars fvars =
@@ -1658,12 +1653,12 @@ and index_command cvars vars fvars =
   function
   | Ext.Comp.By (loc, i, x) ->
      let i' = index_exp cvars vars fvars i in
-     let vars = Var.extend vars (Var.mk_entry x) in
+     let vars = Store.Var.extend vars (Store.Var.mk_entry x) in
      Apx.Comp.By (loc, i', x), vars, cvars
 
   | Ext.Comp.Unbox (loc, i, x, modifier) ->
      let i' = index_exp cvars vars fvars i in
-     let cvars = CVar.extend cvars (CVar.mk_entry x Plicity.explicit) in
+     let cvars = Store.CVar.extend cvars (Store.CVar.mk_entry x Plicity.explicit) in
      Apx.Comp.Unbox (loc, i', x, modifier), vars, cvars
 
 and index_directive cvars vars fvars =
@@ -1708,32 +1703,32 @@ and index_hypothetical h =
   let cvars =
     Context.to_list_map_rev cD
       Ext.LF.(fun _ (Decl (x, _, plicity)) -> (x, plicity))
-    |> CVar.of_list
+    |> Store.CVar.of_list
   in
   let vars =
     Context.to_list_map_rev cG
       (fun _ (Ext.Comp.CTypDecl (x, _)) -> x)
-    |> Var.of_list
+    |> Store.Var.of_list
   in
   let proof = index_proof cvars vars (empty_fvars `closed_term) proof in
-  let (cD, cvars, fvars) = index_mctx (CVar.create ()) (empty_fvars `closed_term) cD in
-  let (cG, vars, fvars) = index_gctx cvars (Var.create ()) fvars cG in
+  let (cD, cvars, fvars) = index_mctx Store.CVar.empty (empty_fvars `closed_term) cD in
+  let (cG, vars, fvars) = index_gctx cvars Store.Var.empty fvars cG in
   ( cvars
   , fvars
   , Apx.Comp.({ hypotheses = { cD; cG }; proof; hypothetical_loc })
   )
 
 let comptypdef (cT, cK) =
-  let cK' = index_compkind (CVar.create ()) (empty_fvars `closed_term) cK in
+  let cK' = index_compkind Store.CVar.empty (empty_fvars `closed_term) cK in
   let rec unroll cK cvars =
     match cK with
     | Apx.Comp.Ctype _ -> cvars
     | Apx.Comp.PiKind (loc, Apx.LF.Decl (u, ctyp, _), cK) ->
-       let cvars' = CVar.extend cvars (CVar.mk_entry u Plicity.explicit) in
+       let cvars' = Store.CVar.extend cvars (Store.CVar.mk_entry u Plicity.explicit) in
        unroll cK cvars'
   in
   let (_, tau) =
-    index_comptyp cT (unroll cK' (CVar.create ())) (empty_fvars `closed_term)
+    index_comptyp cT (unroll cK' Store.CVar.empty) (empty_fvars `closed_term)
   in
   (tau, cK')
 
@@ -1745,22 +1740,22 @@ let typ d tA = run_empty d (index_typ tA)
 let schema = index_schema
 let mctx cD =
   let (cD', _, _) =
-    index_mctx (CVar.create ()) (empty_fvars `open_term) cD
+    index_mctx Store.CVar.empty (empty_fvars `open_term) cD
   in
   cD'
-let compkind = index_compkind (CVar.create ()) (empty_fvars `open_term)
+let compkind = index_compkind Store.CVar.empty (empty_fvars `open_term)
 
 let hcomptyp cvars tau =
   let (_, tau') = index_comptyp tau cvars (empty_fvars `open_term) in
   tau'
 
-let comptyp = hcomptyp (CVar.create ())
+let comptyp = hcomptyp Store.CVar.empty
 
 let exp vars e =
-  index_exp (CVar.create ()) vars (empty_fvars `closed_term) e
+  index_exp Store.CVar.empty vars (empty_fvars `closed_term) e
 
 let proof vars p =
-  index_proof (CVar.create ()) vars (empty_fvars `closed_term) p
+  index_proof Store.CVar.empty vars (empty_fvars `closed_term) p
 
 let thm vars =
   function

@@ -233,6 +233,7 @@ module Cid : sig
     val fixed_name_of : cid_comp_dest -> Name.t
     val get_implicit_arguments : cid_comp_dest -> int
     val index_of_name : Name.t -> cid_comp_dest
+    val index_of_name_opt : Name.t -> cid_comp_dest option
     val clear : unit -> unit
   end
 
@@ -386,6 +387,9 @@ end
 
 val clear : unit -> unit
 
+(** Persistent stack-based store for LF bound variables.
+
+    Used for indexing. *)
 module BVar : sig
   type entry =
     private
@@ -394,7 +398,7 @@ module BVar : sig
 
   val mk_entry : Name.t -> entry
   type t (* NOTE: t is an ordered data structure *)
-  val create : unit -> t
+  val empty : t
   val extend : t -> entry -> t
   val get : t -> var -> entry
   val length : t -> int
@@ -443,6 +447,9 @@ module FPVar : sig
 end
 *)
 
+(** Persistent stack-based store for computational variables.
+
+    Used for indexing. *)
 module Var : sig
   type entry =
     { name : Name.t
@@ -451,7 +458,7 @@ module Var : sig
   val mk_entry : Name.t -> entry
   type t (* NOTE: t is an ordered data structure *)
   val to_list : t -> entry list
-  val create : unit -> t
+  val empty : t
   val extend : t -> entry -> t
   val get : t -> var -> entry
   val append : t -> t -> t
@@ -463,6 +470,9 @@ module Var : sig
   val of_list : Name.t list -> t
 end
 
+(** Persistent stack-based store for contextual variables.
+
+    Used for indexing. *)
 module CVar : sig
   type cvar = Name.t
 
@@ -475,14 +485,14 @@ module CVar : sig
 
   type t (* NOTE: t is an ordered data structure *)
 
-  val create : unit -> t
+  val empty : t
   val extend : t -> entry -> t
   val get : t -> var -> entry
 
-  (** Looks up the index of a given name in scope.
-      Raises Not_found if no such variable is in scope.
-      Returns the plicity of the variable together with its offset.
-   *)
+  (** [index_of_name scope name] is [(plicity, offset)] where [offset] is the
+      de Bruijn index of [name] in [scope], and [plicity] is whether that
+      variable was explicitly declared or not.
+      @raises Not_found if no such variable is in scope. *)
   val index_of_name : t -> cvar -> Plicity.t * offset
   val append : t -> t -> t
   val length : t -> int

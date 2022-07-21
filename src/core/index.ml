@@ -1286,25 +1286,29 @@ let disambiguate loc x ps =
 let rec index_exp cvars vars fcvars =
   function
   | Ext.Comp.Impossible (loc, i) ->
-     Apx.Comp.Impossible (loc, index_exp' cvars vars fcvars i)
+     let i' = index_exp cvars vars fcvars i in
+     Apx.Comp.Impossible (loc, i')
 
   | Ext.Comp.Fn (loc, x, e) ->
      let vars' = Var.extend vars (Var.mk_entry x) in
-     Apx.Comp.Fn (loc, x, index_exp cvars vars' fcvars e)
+     let e' = index_exp cvars vars' fcvars e in
+     Apx.Comp.Fn (loc, x, e')
 
   | Ext.Comp.Fun (loc, fbr) ->
-     Apx.Comp.Fun (loc, index_fbranches cvars vars fcvars fbr)
+     let fbr' = index_fbranches cvars vars fcvars fbr in
+     Apx.Comp.Fun (loc, fbr')
 
   | Ext.Comp.MLam (loc, u, e) ->
      let cvars' = CVar.extend cvars (CVar.mk_entry u Plicity.explicit) in
-     Apx.Comp.MLam (loc, u, index_exp cvars' vars fcvars e)
+     let e' = index_exp cvars' vars fcvars e in
+     Apx.Comp.MLam (loc, u, e')
 
   | Ext.Comp.Tuple (loc, es) ->
      let es' = List2.map (fun e -> index_exp cvars vars fcvars e) es in
      Apx.Comp.Tuple (loc, es')
 
   | Ext.Comp.LetTuple (loc, i, (xs, e)) ->
-     let i' = index_exp' cvars vars fcvars i in
+     let i' = index_exp cvars vars fcvars i in
      let vars' =
        xs
        |> List2.to_list
@@ -1314,7 +1318,7 @@ let rec index_exp cvars vars fcvars =
      Apx.Comp.LetTuple (loc, i', (xs, e'))
 
   | Ext.Comp.Let (loc, i, (x, e)) ->
-     let i' = index_exp' cvars vars fcvars i in
+     let i' = index_exp cvars vars fcvars i in
      let vars1 = Var.extend vars (Var.mk_entry x) in
      let e' = index_exp cvars vars1 fcvars e in
      Apx.Comp.Let (loc, i', (x, e'))
@@ -1336,17 +1340,17 @@ let rec index_exp cvars vars fcvars =
      disambiguate loc' name [d_dataconst]
      |> Option.eliminate
           (fun _ -> (* the name is not a data constructor *)
-            let i' = index_exp' cvars vars fcvars i in
+            let i' = index_exp cvars vars fcvars i in
             let vars1 = Var.extend vars (Var.mk_entry name) in
             let e' = index_exp cvars vars1 fcvars e in
             Apx.Comp.Let (loc, i', (name, e')))
           (fun x ->
-            let i' = index_exp' cvars vars fcvars i in
+            let i' = index_exp cvars vars fcvars i in
             let branches' = List.map (index_branch cvars vars fcvars) branches in
             Apx.Comp.Case (loc, prag, i', branches'))
 
   | Ext.Comp.Case (loc, prag, i, branches) ->
-     let i' = index_exp' cvars vars fcvars i in
+     let i' = index_exp cvars vars fcvars i in
      dprint (fun () -> "index case");
      let branches' = List.map (index_branch cvars vars fcvars) branches in
      Apx.Comp.Case (loc, prag, i', branches')
@@ -1355,11 +1359,6 @@ let rec index_exp cvars vars fcvars =
 
   | Ext.Comp.BoxHole loc -> Apx.Comp.BoxHole loc
 
-  | i ->
-    Apx.Comp.Syn (Ext.Comp.loc_of_exp i, index_exp' cvars vars fcvars i)
-
-and index_exp' cvars vars fcvars =
-  function
   | Ext.Comp.Name (loc, x) ->
      disambiguate loc x [ d_var vars; d_const; d_dataconst ]
      |> Option.get_or_else (fun _ -> throw loc (UnboundCompName x))
@@ -1412,17 +1411,9 @@ and index_exp' cvars vars fcvars =
     end
    *)
   | Ext.Comp.Apply (loc, i, e) ->
-     let i' = index_exp' cvars vars fcvars i in
+     let i' = index_exp cvars vars fcvars i in
      let e' = index_exp cvars vars fcvars e in
      Apx.Comp.Apply (loc, i', e')
-
-  | Ext.Comp.BoxVal (loc, m0) ->
-     let (mobj', _) = index_meta_obj cvars fcvars m0 in
-     Apx.Comp.BoxVal (loc, mobj')
-
-  | Ext.Comp.TupleVal (loc, is) ->
-     let is' = List2.map (fun i -> index_exp' cvars vars fcvars i) is in
-     Apx.Comp.TupleVal (loc, is')
 
 (* patterns can contain free contextual variables as well as free *computational* variables.
    `fvars` refers to computational variables whereas `fcvars` refers to contextual variables.
@@ -1666,11 +1657,12 @@ let rec index_proof cvars vars fvars =
 and index_command cvars vars fvars =
   function
   | Ext.Comp.By (loc, i, x) ->
-     let i' = index_exp' cvars vars fvars i in
+     let i' = index_exp cvars vars fvars i in
      let vars = Var.extend vars (Var.mk_entry x) in
      Apx.Comp.By (loc, i', x), vars, cvars
+
   | Ext.Comp.Unbox (loc, i, x, modifier) ->
-     let i' = index_exp' cvars vars fvars i in
+     let i' = index_exp cvars vars fvars i in
      let cvars = CVar.extend cvars (CVar.mk_entry x Plicity.explicit) in
      Apx.Comp.Unbox (loc, i', x, modifier), vars, cvars
 
@@ -1679,15 +1671,18 @@ and index_directive cvars vars fvars =
   | Ext.Comp.Intros (loc, h) ->
      let (_, _, h') = index_hypothetical h in
      Apx.Comp.Intros (loc, h')
+
   | Ext.Comp.Solve (loc, e) ->
      let e' = index_exp cvars vars fvars e in
      Apx.Comp.Solve (loc, e')
+
   | Ext.Comp.Split (loc, i, bs) ->
-     let i' = index_exp' cvars vars fvars i in
+     let i' = index_exp cvars vars fvars i in
      let bs' = List.map index_split_branch bs in
      Apx.Comp.Split (loc, i', bs')
+
   | Ext.Comp.Suffices (loc, i, tau_ps) ->
-     let i' = index_exp' cvars vars fvars i in
+     let i' = index_exp cvars vars fvars i in
      let ps' =
        List.map
          begin fun (loc, tau, p) ->
@@ -1764,9 +1759,6 @@ let comptyp = hcomptyp (CVar.create ())
 let exp vars e =
   index_exp (CVar.create ()) vars (empty_fvars `closed_term) e
 
-let exp' vars i =
-  index_exp' (CVar.create ()) vars (empty_fvars `closed_term) i
-
 let proof vars p =
   index_proof (CVar.create ()) vars (empty_fvars `closed_term) p
 
@@ -1782,11 +1774,3 @@ let hexp cvars vars e =
     else `open_term
   in
   index_exp cvars vars (empty_fvars closed) e
-
-let hexp' cvars vars e =
-  let closed =
-    if Store.CVar.length cvars = 0
-    then `closed_term
-    else `open_term
-  in
-  index_exp' cvars vars (empty_fvars closed) e

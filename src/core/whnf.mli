@@ -120,7 +120,7 @@ val mcomp' : msub -> msub -> msub
 
 val m_invert : msub -> msub
 
-(* val invExp : Comp.exp_chk * msub -> int -> Comp.exp_chk
+(* val invExp : Comp.exp * msub -> int -> Comp.exp
 val invTerm : normal * msub -> int -> normal
 *)
 val mctxLookup : mctx -> int -> Name.t * ctyp
@@ -162,8 +162,7 @@ val cnormCDecl : LF.ctyp_decl * msub -> LF.ctyp_decl
 val cwhnfCTyp : Comp.typ * msub -> Comp.typ * msub
 val cwhnfCtx : Comp.gctx * msub -> Comp.gctx
 
-val cnormExp : Comp.exp_chk * msub -> Comp.exp_chk
-val cnormExp' : Comp.exp_syn * msub -> Comp.exp_syn
+val cnormExp : Comp.exp * msub -> Comp.exp
 val cnormThm : Comp.thm * msub -> Comp.thm
 
 val normGCtx : Comp.gctx -> Comp.gctx
@@ -187,8 +186,7 @@ val closedDCtx : dctx -> bool
 val closedCTyp : Comp.typ -> bool
 val closedGCtx : Comp.gctx -> bool
 val closedMetaObj : Comp.meta_obj -> bool
-val closedExp : Comp.exp_chk -> bool
-val closedExp' : Comp.exp_syn -> bool
+val closedExp : Comp.exp -> bool
 
 val constraints_solved : cnstr list -> bool
 

@@ -11,7 +11,7 @@ open Debug.Fmt
 
 type t =
   { theorems : Theorem.t DynArray.t
-  ; finished_theorems: (Theorem.t * Comp.exp_chk option) DynArray.t
+  ; finished_theorems: (Theorem.t * Comp.exp option) DynArray.t
   ; mutual_group : Id.cid_mutual_group
   }
 
@@ -63,7 +63,7 @@ let cid_is_in_current_theorem_set s c =
 
 (** Infer invocation kind based on `exp_syn` and the current theorem
  *)
-let infer_invocation_kind s (i : Comp.exp_syn) : Comp.invoke_kind =
+let infer_invocation_kind s (i : Comp.exp) : Comp.invoke_kind =
   match Comp.head_of_application i with
   | Comp.Const (_, c) when cid_is_in_current_theorem_set s c -> `ih
   | _ -> `lemma
@@ -174,7 +174,7 @@ let prepare_translated_proofs tes total_decs =
   in
   let etaus =
     List.map
-      (fun (e, tau) -> (CidProgRewrite.exp_chk cid_map e, tau))
+      (fun (e, tau) -> (CidProgRewrite.exp cid_map e, tau))
       etaus
   in
   (etaus, total_decs)

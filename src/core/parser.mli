@@ -91,10 +91,3 @@ val cmp_exp_syn : Comp.exp t
 
 (** Parser for the next theorem name in Harpoon. *)
 val next_theorem : [ `quit | `next of Name.t ] t
-
-  (*
-(* exports for debugging! *)
-val cmp_kind : Comp.kind t
-val cmp_exp_syn : Comp.exp_syn t
-val clf_typ_rec_block : LF.typ_rec t
-   *)

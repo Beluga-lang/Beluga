@@ -28,7 +28,7 @@ val full_theorem_list : t -> Theorem.t list
     the finished theorem stack, and associates it to the given
     checkable term that is its translation.
  *)
-val mark_current_theorem_as_proven : t -> Comp.exp_chk option -> unit
+val mark_current_theorem_as_proven : t -> Comp.exp option -> unit
 
 (** Moves the current theorem to the bottom of the incomplete theorem
     stack, selecting the next one. *)
@@ -44,7 +44,7 @@ val next_theorem : t -> Theorem.t option
     The implementation is quite naive about detecting recursive calls,
     and will only find one in an application head position.
  *)
-val infer_invocation_kind : t -> Comp.exp_syn -> Comp.invoke_kind
+val infer_invocation_kind : t -> Comp.exp -> Comp.invoke_kind
 
 (** Selects a given theorem by name in the session, moving it to the
     top of the incomplete theorem stack.

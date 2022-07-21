@@ -47,7 +47,7 @@ val compkind : Comp.kind -> Comp.kind * Id.offset (* where the offset indicates 
 val comptyp : Comp.typ -> Comp.typ * Id.offset    (* where the offset indicates the #implicit arguments *)
 val comptyp_cD : LF.mctx -> Comp.typ -> Comp.typ * Id.offset
 val codatatyp : LF.mctx -> Comp.typ -> Comp.typ -> LF.mctx * Comp.typ * Comp.typ * Id.offset
-val exp : Comp.exp_chk -> fctx * Comp.exp_chk
+val exp : Comp.exp -> fctx * Comp.exp
 val thm : Comp.thm -> fctx * Comp.thm
 
 val patobj : Syntax.Loc.t -> LF.mctx -> Comp.gctx -> Comp.pattern

@@ -16,7 +16,7 @@ type error =
 exception Error of error
 let throw e = raise (Error e)
 
-type result = (error, Comp.exp_chk) Either.t
+type result = (error, Comp.exp) Either.t
 
 (* peels off assumptions, prepending the appropriate mlam- and fn-expressions
  * along the way)
@@ -79,7 +79,7 @@ let unbox cD cG i x cU modifier =
   )
 
 (* translate a Harpoon proof into Beluga internal syntax *)
-let rec proof cD cG (p : Comp.proof) tau : Comp.exp_chk =
+let rec proof cD cG (p : Comp.proof) tau : Comp.exp =
   match p with
   | Comp.Incomplete (_, g) ->
      begin match !Comp.(g.solution) with
@@ -125,7 +125,7 @@ and comp_split_branch cD cG (Comp.SplitBranch (_, (cG_p, pat), t, hyp)) tau =
 and context_split_branch cD cG (Comp.SplitBranch (_, (cG_p, pat), t, hyp)) tau =
   split_branch cD cG (cG_p, pat) t hyp tau
 
-and directive cD cG (d : Comp.directive) tau : Comp.exp_chk =
+and directive cD cG (d : Comp.directive) tau : Comp.exp =
   match d with
   | Comp.Solve e_chk -> e_chk
 
@@ -147,7 +147,7 @@ and directive cD cG (d : Comp.directive) tau : Comp.exp_chk =
          P.(fmt_ppr_cmp_gctx cD l0) cG
          P.(fmt_ppr_cmp_gctx cD_orig l0) cG_orig
          end;
-     assert Whnf.(convMCtx cD_orig cD && convGCtx (cG_orig, m_id) (cG, t));
+     assert (Whnf.convMCtx cD_orig cD && Whnf.convGCtx (cG_orig, Whnf.m_id) (cG, t));
      f e
 
   | Comp.MetaSplit (i, _, sbs) ->
@@ -168,7 +168,7 @@ and directive cD cG (d : Comp.directive) tau : Comp.exp_chk =
      (* XXX consider storing tau_i inside Suffices to avoid
         needing to synthesize it here? -je *)
      let _, ttau_i = Check.Comp.syn None cD cG [] i in
-     let loc = Comp.loc_of_exp_syn i in
+     let loc = Comp.loc_of_exp i in
      let _, (i', ttau_i') =
        Check.Comp.genMApp
          Loc.ghost
@@ -192,7 +192,7 @@ and directive cD cG (d : Comp.directive) tau : Comp.exp_chk =
      let es =
        List.map (fun (_, tau_p, p) -> proof cD cG p tau_p) args
      in
-     Comp.(Syn (Loc.ghost, apply_many i' es))
+     Comp.apply_many i' es
 
 let theorem thm tau = match thm with
   | Comp.Proof p -> proof LF.Empty LF.Empty p tau
@@ -217,7 +217,7 @@ let fmt_ppr_result ppf =
        Format.fprintf ppf
          "@[<v>Translation generated program:\
           @,  @[%a@]@,@,@]"
-         P.(fmt_ppr_cmp_exp_chk LF.Empty LF.Empty l0) e
+         P.(fmt_ppr_cmp_exp LF.Empty LF.Empty l0) e
        end
   | Either.Left err ->
      Format.fprintf ppf

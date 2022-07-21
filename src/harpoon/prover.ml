@@ -52,9 +52,9 @@ module Elab = struct
           begin fun p ->
           p.fmt "[elaborate_exp'] @[<v>done:@,\
                  i = @[%a@] (internal)@]"
-            P.(fmt_ppr_cmp_exp_syn cD cG l0) i
+            P.(fmt_ppr_cmp_exp cD cG l0) i
           end;
-        let i = Whnf.(cnormExp' (i, m_id)) in
+        let i = Whnf.cnormExp (i, Whnf.m_id) in
         let _ = Check.Comp.syn mcid ~cIH: cIH cD cG mfs i in  (* (tau, theta); *)
         (i, Whnf.cnormCTyp (tau, theta))
         end
@@ -66,7 +66,7 @@ module Elab = struct
     Holes.catch
       begin fun _ ->
       let e = Interactive.elaborate_exp cD cG t (Pair.map_left Total.strip ttau) in
-      let e = Whnf.(cnormExp (e, m_id)) in
+      let e = Whnf.cnormExp (e, Whnf.m_id) in
       Check.Comp.check mcid ~cIH: cIH cD cG mfs e ttau;
       e
       end
@@ -110,12 +110,8 @@ module Elab = struct
             let cPsi = LF.(CtxVar (CtxOffset k)) in
             CObj cPsi
        in
-       let i =
-         Comp.AnnBox ( (loc, mF), cT )
-       in
-       let tau =
-         Comp.TypBox (loc, cT)
-       in
+       let i = Comp.AnnBox (Location.ghost, (loc, mF), cT)
+       and tau = Comp.TypBox (loc, cT) in
        (i, tau)
     | _ -> E.violation "[harpoon] [Elab] [mvar] cD decl has no type"
 
@@ -194,7 +190,7 @@ let process_command
             begin
               fun e ->
                 HarpoonState.printf s "found solution: @[%a@]@,@?"
-                (P.fmt_ppr_cmp_exp_chk cDh cGh P.l0) e;
+                (P.fmt_ppr_cmp_exp cDh cGh P.l0) e;
               h.info.compSolution <- Some e;
               raise Logic.Frontend.Done
             end
@@ -292,8 +288,8 @@ let process_command
      in
      HarpoonState.printf s
        "- @[<hov 2>@[%a@] :@ @[%a@]@]"
-       P.(fmt_ppr_cmp_exp_syn cD cG l0) i
-       P.(fmt_ppr_cmp_typ cD l0) tau
+       (P.fmt_ppr_cmp_exp cD cG P.l0) i
+       (P.fmt_ppr_cmp_typ cD P.l0) tau
 
   | Command.Info (k, n) ->
      begin match k with
@@ -389,10 +385,10 @@ let process_command
      dprintf
        begin fun p ->
        p.fmt "@[<v>[harpoon-By] elaborated invocation:@,%a@ : %a@]"
-         (P.fmt_ppr_cmp_exp_syn cD cG P.l0) i
+         (P.fmt_ppr_cmp_exp cD cG P.l0) i
          (P.fmt_ppr_cmp_typ cD P.l0) tau
        end;
-     if Whnf.closedExp' i then
+     if Whnf.closedExp i then
        (List.iter solve_hole hs; Tactic.invoke i tau name t g)
      else
        HarpoonState.printf s
@@ -402,8 +398,8 @@ let process_command
           @,  @[%a@]\
           @,is not closed.\
           @,Both the expression and its type must be closed for use with `by`.@]"
-         P.(fmt_ppr_cmp_exp_syn cD cG l0) i
-         P.(fmt_ppr_cmp_typ cD l0) tau
+         (P.fmt_ppr_cmp_exp cD cG P.l0) i
+         (P.fmt_ppr_cmp_typ cD P.l0) tau
 
   | Command.Suffices (i, tau_list) ->
      let (hs, i, tau) =
@@ -437,7 +433,7 @@ let process_command
      dprnt "[harpoon] [solve] double-check!";
      Check.Comp.check (Some cid) cD cG (Lazy.force mfs) ~cIH: cIH e g.goal;
      dprnt "[harpoon] [solve] double-check DONE";
-     let e = Whnf.(cnormExp (e, m_id)) in
+     let e = Whnf.cnormExp (e, Whnf.m_id) in
      if Whnf.closedExp e then
        (Comp.solve e |> Tactic.solve) t g
      else

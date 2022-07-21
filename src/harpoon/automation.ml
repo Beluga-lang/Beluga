@@ -132,11 +132,7 @@ let auto_solve_trivial : t =
     | CTypDeclOpt _ ->
        B.Error.violation "[auto_solve_trivial] Unexpected CTypDeclOpt"
   in
-  let build_cwitness (c : ctyp_decl * int) =
-    match c with
-    | (_, idx) ->
-       let open Loc in
-       Syn (ghost, Var (ghost, idx))
+  let build_cwitness (_, idx) = Var (Loc.ghost, idx)
   in
   let open Option in
   let opt_mwitness =
@@ -185,7 +181,7 @@ let auto_solve_trivial : t =
        (P.fmt_ppr_cmp_subgoal_path cD cG)
        (g.label Comp.SubgoalPath.Here)
        (P.fmt_ppr_cmp_typ cD P.l0) (Whnf.cnormCTyp g.goal)
-       (P.fmt_ppr_cmp_exp_chk cD cG P.l0) w;
+       (P.fmt_ppr_cmp_exp cD cG P.l0) w;
      false
 
 module State : sig

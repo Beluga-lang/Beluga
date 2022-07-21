@@ -31,8 +31,8 @@ open Debug.Fmt
 type case_label_variant = [`named | `context | `pvar | `bvar]
 
 type error =
-  | IllegalCase of Int.LF.mctx * Int.Comp.gctx * Int.Comp.exp_syn * Int.Comp.typ
-  | ClosedTermRequired of Int.LF.mctx * Int.Comp.gctx * Int.Comp.exp_syn * Int.Comp.typ
+  | IllegalCase of Int.LF.mctx * Int.Comp.gctx * Int.Comp.exp * Int.Comp.typ
+  | ClosedTermRequired of Int.LF.mctx * Int.Comp.gctx * Int.Comp.exp * Int.Comp.typ
   | MetaObjContextClash of Int.LF.mctx * Int.LF.dctx * Int.LF.dctx
   | PatternContextClash of Int.LF.mctx * Int.LF.dctx * Int.LF.mctx * Int.LF.dctx
   | MetaObjectClash of Int.LF.mctx * (Int.Comp.meta_typ)
@@ -92,7 +92,7 @@ let _ =
             @,of type\
             @,  @[%a@]\
             @]"
-           (P.fmt_ppr_cmp_exp_syn cD cG P.l0) i
+           (P.fmt_ppr_cmp_exp cD cG P.l0) i
            (P.fmt_ppr_cmp_typ cD P.l0) tau
 
       | ClosedTermRequired (cD, cG, i, tau) ->
@@ -108,16 +108,16 @@ let _ =
             @,Computation context:\
             @,  @[%a@]\
             @]"
-           P.(fmt_ppr_cmp_exp_syn cD cG l0) i
-           P.(fmt_ppr_cmp_typ cD l0) tau
+           (P.fmt_ppr_cmp_exp cD cG P.l0) i
+           (P.fmt_ppr_cmp_typ cD P.l0) tau
            pp_print_string
            "which is not closed, or which requires that some \
             metavariables are futher \
             restricted, i.e. some variable dependencies cannot happen.
             This error may indicate that some reconstructed implicit
             arguments should be restricted."
-           P.(fmt_ppr_lf_mctx l0) cD
-           P.(fmt_ppr_cmp_gctx cD l0) cG
+           (P.fmt_ppr_lf_mctx P.l0) cD
+           (P.fmt_ppr_cmp_gctx cD P.l0) cG
 
       | MetaObjContextClash (cD, cPsi, cPhi) ->
          Error.report_mismatch ppf
@@ -256,7 +256,7 @@ type case_type = (* IndexObj of Int.LF.psi_hat * Int.LF.normal *)
 (** Decides what the case type is. *)
 let case_type pat =
   function
-  | Int.Comp.AnnBox (mC, _) ->
+  | Int.Comp.AnnBox (_, mC, _) ->
      IndexObj (Lazy.force pat, mC)
   | _ -> DataObj
 
@@ -904,7 +904,7 @@ let synPatRefine loc caseT (cD, cD') t (tau_s, tau_p) =
     match caseT with
     | DataObj -> () (* not dependent pattern matching; nothing to do *)
     | IndexObj (Int.Comp.(PatMetaObj (_, mC_p) | PatAnn (_, PatMetaObj (_, mC_p), _, _)), mC) ->
-       let mC_p = Whnf.(cnormMetaObj (mC_p, m_id)) in
+       let mC_p = Whnf.cnormMetaObj (mC_p, Whnf.m_id) in
        (* tau_p' _has_ to be a box type if caseT is an IndexObj  *)
        let Int.Comp.TypBox (_, mT) = tau_p' in
        dprintf
@@ -970,7 +970,7 @@ and elExpW cD cG e theta_tau =
          Name.pp x
          (P.fmt_ppr_lf_mctx P.l0) cD
          (P.fmt_ppr_cmp_gctx cD P.l0) cG'
-         (P.fmt_ppr_cmp_exp_chk cD cG' P.l0) e''
+         (P.fmt_ppr_cmp_exp cD cG' P.l0) e''
          (P.fmt_ppr_cmp_typ cD P.l0) (Whnf.cnormCTyp theta_tau)
        end;
      e''
@@ -1005,7 +1005,8 @@ and elExpW cD cG e theta_tau =
      let e' = elExp cD' cG' e' (tau, C.mvar_dot1 theta) in
      Int.Comp.MLam (Syntax.Loc.ghost, u, e', Plicity.implicit)
 
-  | (Apx.Comp.Syn (loc, i), (tau, t)) ->
+  | (Apx.Comp.Var _ | Apx.Comp.FVar _ | Apx.Comp.DataConst _ | Apx.Comp.Obs _ | Apx.Comp.Const _ | Apx.Comp.Apply _ | Apx.Comp.Ann _ as i, (tau, t)) ->
+     let loc = Apx.Comp.loc_of_exp i in
      dprintf
        begin fun p ->
        p.fmt "[elExp] @[<v>Syn@,expected type: %a@,cG = %a@]"
@@ -1016,7 +1017,7 @@ and elExpW cD cG e theta_tau =
      dprintf
        begin fun p ->
        p.fmt "[elExp] @[<v>Syn i = @[%a@]@,done: @[%a@]@]"
-         (P.fmt_ppr_cmp_exp_syn cD cG P.l0) (Whnf.cnormExp' (i1, Whnf.m_id))
+         (P.fmt_ppr_cmp_exp cD cG P.l0) (Whnf.cnormExp (i1, Whnf.m_id))
          P.fmt_ppr_cmp_typ_typing (cD, Whnf.cnormCTyp tau1)
        end;
      let (_, (i', tau_t')) =
@@ -1045,8 +1046,7 @@ and elExpW cD cG e theta_tau =
            Crucially, this makes later typechecking of Harpoon proofs
            succeed. -je
           *)
-         let i' = Whnf.(cnormExp' (i', m_id)) in
-         Int.Comp.Syn (loc, i')
+         Whnf.cnormExp (i', Whnf.m_id)
        with
        | ConvSigma.Error (_loc, msg) ->
           raise (ConvSigma.Error (loc, msg))
@@ -1105,7 +1105,7 @@ and elExpW cD cG e theta_tau =
      dprintf
        begin fun p ->
        p.fmt "[elExp] @[<v>case on @[@[%a@]@ @[%a@]@]@,cD = @[%a@]@,cG = @[%a@]@]"
-         (P.fmt_ppr_cmp_exp_syn cD cG P.l0) (Whnf.cnormExp' (i', Whnf.m_id))
+         (P.fmt_ppr_cmp_exp cD cG P.l0) (Whnf.cnormExp (i', Whnf.m_id))
          (P.fmt_ppr_cmp_typ cD P.l0) (Whnf.cnormCTyp ttau')
          (P.fmt_ppr_lf_mctx P.l0) cD
          (P.fmt_ppr_cmp_gctx cD P.l0) cG
@@ -1113,11 +1113,11 @@ and elExpW cD cG e theta_tau =
      let _, (i, ttau') =
        Check.Comp.genMApp loc F.(not ++ Int.LF.is_explicit) cD (i', ttau')
      in
-     let i = Whnf.(cnormExp' (i, m_id)) in
+     let i = Whnf.cnormExp (i, Whnf.m_id) in
      let tau_s = Whnf.cnormCTyp ttau' in
      let ct = fun pat -> case_type pat i in
 
-     if Bool.not Whnf.(closedExp' i && closedCTyp tau_s && closedGCtx cG)
+     if Bool.not @@ Whnf.closedExp i && Whnf.closedCTyp tau_s && Whnf.closedGCtx cG
      then raise (Error (loc, ClosedTermRequired (cD, cG, i, tau_s)));
 
      let branches' =
@@ -1179,7 +1179,7 @@ and elExp' cD cG i =
     let cT = Int.LF.ClTyp (Int.LF.MTyp (Int.LF.TClo sP), cPsi) in
     let tau = Int.Comp.TypBox (Loc.ghost, cT) in
     let cM = (loc, Int.LF.ClObj (phat, Int.LF.MObj tR)) in
-    (Int.Comp.AnnBox (cM, cT), (tau, C.m_id))
+    (Int.Comp.AnnBox (loc, cM, cT), (tau, C.m_id))
   in
   match i with
   | Apx.Comp.Var (loc, offset) ->
@@ -1241,7 +1241,7 @@ and elExp' cD cG i =
      let i' = elExp' cD cG i in
      dprintf begin fun p ->
        p.fmt "[elExp'] @[<v>genMApp for@,@[<hv 2>i' =@ @[%a@]@]@]"
-         P.(fmt_ppr_cmp_exp_syn cD cG l0) (Pair.fst i')
+         P.(fmt_ppr_cmp_exp cD cG l0) (Pair.fst i')
        end;
      let k, (i', tau_theta') =
        Check.Comp.genMApp loc F.(not ++ Int.LF.is_explicit) cD i'
@@ -1251,7 +1251,7 @@ and elExp' cD cG i =
        p.fmt "[elExp'] @[<v>Apply - generated %d implicit arguments:@,\
               i' = @[%a@]@]"
          k
-         P.(fmt_ppr_cmp_exp_syn cD cG l0) i'
+         P.(fmt_ppr_cmp_exp cD cG l0) i'
        end;
      begin match e, tau_theta' with
      | e, (Int.Comp.TypArr (loc', tau2, tau), theta) ->
@@ -1260,8 +1260,8 @@ and elExp' cD cG i =
           p.fmt "[elExp'] @[<v>i' = @[%a@]@,inferred type: @[%a@]@,\
                  check argument has type: @[%a@]@,\
                  result has type: @[%a@]@]"
-            (P.fmt_ppr_cmp_exp_syn cD cG P.l0)
-            (Whnf.cnormExp' (i', Whnf.m_id))
+            (P.fmt_ppr_cmp_exp cD cG P.l0)
+            (Whnf.cnormExp (i', Whnf.m_id))
             (P.fmt_ppr_cmp_typ cD P.l0)
             (Whnf.cnormCTyp (Int.Comp.TypArr (loc', tau2, tau), theta))
             (P.fmt_ppr_cmp_typ cD P.l0)
@@ -1283,7 +1283,7 @@ and elExp' cD cG i =
                  i'' = @[%a@]@,\
                  has type: @[%a@]@]"
             (P.fmt_ppr_lf_mctx P.l0) cD
-            (P.fmt_ppr_cmp_exp_syn cD cG P.l0) (Whnf.cnormExp' (i'', Whnf.m_id))
+            (P.fmt_ppr_cmp_exp cD cG P.l0) (Whnf.cnormExp (i'', Whnf.m_id))
             (P.fmt_ppr_cmp_typ cD P.l0) tau'
           end;
         (*  (i'', (tau, theta))  - not returnig the type in normal form
@@ -1332,11 +1332,11 @@ and elExp' cD cG i =
      substitutions in general is not allowed (only matching on
      substitution variables is), so we can safely disambiguate this to
      a boxed *term*. -je *)
-  | Apx.Comp.BoxVal (loc, (loc', Apx.Comp.ClObj (psi, Apx.LF.Dot (Apx.LF.Head h, Apx.LF.EmptySub)))) ->
+  | Apx.Comp.Box (loc, (loc', Apx.Comp.ClObj (psi, Apx.LF.Dot (Apx.LF.Head h, Apx.LF.EmptySub)))) ->
      (* package the head into a full term *)
      elBoxVal loc loc' psi (Apx.LF.Root (Loc.ghost, h, Apx.LF.Nil))
 
-  | Apx.Comp.BoxVal (loc, (loc', Apx.Comp.ClObj (psi, Apx.LF.Dot (Apx.LF.Obj r, Apx.LF.EmptySub)))) ->
+  | Apx.Comp.Box (loc, (loc', Apx.Comp.ClObj (psi, Apx.LF.Dot (Apx.LF.Obj r, Apx.LF.EmptySub)))) ->
      elBoxVal loc loc' psi r
 
      (* old elaboration
@@ -1353,7 +1353,7 @@ and elExp' cD cG i =
         (Int.Comp.Ann (Int.Comp.Box (loc, cM), tau), (tau, C.m_id))
       *)
 
-  | Apx.Comp.BoxVal (loc, (_loc', Apx.Comp.ClObj (phi, Apx.LF.SVar (Apx.LF.Offset k, id)))) ->
+  | Apx.Comp.Box (loc, (_loc', Apx.Comp.ClObj (phi, Apx.LF.SVar (Apx.LF.Offset k, id)))) ->
      dprint (fun () -> "Case Analysis on SubstVar");
      let isId =
        match id with
@@ -1374,12 +1374,12 @@ and elExp' cD cG i =
        let cT = Int.LF.ClTyp (Int.LF.STyp (cl, cPsi), cPhi) in
        let tau = Int.Comp.TypBox (Syntax.Loc.ghost, cT) in
        let cM = (loc, Int.LF.ClObj(phat, Int.LF.SObj sv)) in
-       (Int.Comp.AnnBox (cM, cT), (tau, C.m_id))
+       (Int.Comp.AnnBox (loc, cM, cT), (tau, C.m_id))
      else
        throw loc IllegalSubstMatch
   (* (ErrorMsg "Found a Substitution – Only Pattern Matching on Substitution Variables is supported") *)
 
-  | Apx.Comp.BoxVal (loc, (_loc', Apx.Comp.ClObj (phi2, Apx.LF.SVar (s, s')))) ->
+  | Apx.Comp.Box (loc, (_loc', Apx.Comp.ClObj (phi2, Apx.LF.SVar (s, s')))) ->
       let Apx.LF.MInst (Int.LF.SObj s0, Int.LF.ClTyp (Int.LF.STyp (cl, cPsi), cPhi)) = s in
       let cPhi2 = Lfrecon.elDCtx Lfrecon.Pibox cD phi2 in
       let s' = Lfrecon.elSub loc Lfrecon.Pibox cD cPhi2 s' cl cPhi in
@@ -1399,14 +1399,14 @@ and elExp' cD cG i =
            let cT = Int.LF.ClTyp (Int.LF.STyp (cl, cPsi), cPhi2) in
            let tau = Int.Comp.TypBox (Syntax.Loc.ghost, cT) in
            let cM = (loc, Int.LF.ClObj(phat, Int.LF.SObj s0')) in
-           (Int.Comp.AnnBox (cM, cT), (tau, C.m_id))
+           (Int.Comp.AnnBox (loc, cM, cT), (tau, C.m_id))
          else
            throw loc IllegalSubstMatch
       | _ -> throw loc IllegalSubstMatch
       end
 
 
-  | Apx.Comp.BoxVal (loc, (loc', Apx.Comp.CObj (cpsi))) ->
+  | Apx.Comp.Box (loc, (loc', Apx.Comp.CObj (cpsi))) ->
      dprintf (fun p -> p.fmt "[elExp'] BoxVal");
      begin
        match cpsi with
@@ -1419,7 +1419,7 @@ and elExp' cD cG i =
                let sW = Context.lookupCtxVarSchema cD phi in
                let cT = Int.LF.CTyp (Some sW) in
                let tau = Int.Comp.TypBox (Syntax.Loc.ghost, cT) in
-               (Int.Comp.AnnBox (cM, cT), (tau, C.m_id))
+               (Int.Comp.AnnBox (loc, cM, cT), (tau, C.m_id))
             | _ ->
                NotImplemented
                  begin fun ppf _ ->
@@ -1431,7 +1431,7 @@ and elExp' cD cG i =
           end
      end
 
-  | Apx.Comp.TupleVal (loc, is) ->
+  | Apx.Comp.Tuple (loc, is) ->
      let is_not_explicit = F.(Int.LF.is_explicit >> Bool.not) in
      let (is', ttaus') =
        is
@@ -1441,7 +1441,7 @@ and elExp' cD cG i =
        |> List2.split
        |> Pair.map_right (List2.map Whnf.cnormCTyp)
      in
-     ( Int.Comp.TupleVal (loc, is')
+     ( Int.Comp.Tuple (loc, is')
      , ( Int.Comp.TypCross (loc, ttaus')
        , C.m_id
        )
@@ -2017,7 +2017,7 @@ and elFBranch cD cG fbr theta_tau =
      dprintf
        begin fun p ->
        p.fmt "[elExp] @[<v>Fun: Done@,expression @[%a@]@,has type @[%a@]@]"
-         (P.fmt_ppr_cmp_exp_chk cD1 cG_ext P.l0) e''
+         (P.fmt_ppr_cmp_exp cD1 cG_ext P.l0) e''
          (P.fmt_ppr_cmp_typ cD1 P.l0) (Whnf.cnormCTyp (tau1, Whnf.m_id))
        end;
      Int.Comp.ConsFBranch (loc, (cD1, cG1, ps1, e''), elFBranch cD cG fbr' theta_tau)
@@ -2078,9 +2078,9 @@ and elCommand cD cG =
   function
   | A.By (loc, i, x) ->
      let (i, tau_i) = elExp' cD cG i |> Pair.map_right Whnf.cnormCTyp in
-     let i = Whnf.(cnormExp' (i, m_id)) in
-     let tau_i = Whnf.(cnormCTyp (tau_i, m_id)) in
-     if Bool.not Whnf.(closedExp' i && closedCTyp tau_i)
+     let i = Whnf.cnormExp (i, Whnf.m_id) in
+     let tau_i = Whnf.cnormCTyp (tau_i, Whnf.m_id) in
+     if Bool.not @@ Whnf.closedExp i && Whnf.closedCTyp tau_i
      then throw loc (ClosedTermRequired (cD, cG, i, tau_i));
      let c = I.By (i, x, tau_i) in
      (cD, Int.LF.Dec (cG, I.CTypDecl (x, tau_i, false)), Whnf.m_id, c)
@@ -2092,7 +2092,7 @@ and elCommand cD cG =
        |> Whnf.cnormMTyp
        |> Check.Comp.apply_unbox_modifier_opt cD modifier
      in
-     let d = Int.LF.(Decl (x, cU, Plicity.explicit, Inductivity.not_inductive)) in
+     let d = Int.LF.Decl (x, cU, Plicity.explicit, Inductivity.not_inductive) in
      let t = Int.LF.MShift 1 in
      (* No need to check for shadowing since that already happened
         during indexing. *)
@@ -2143,7 +2143,7 @@ and elSplit loc cD cG pb i tau_i bs ttau =
            (tau_i, tau_i)
        in
        let cG_b = Whnf.cnormGCtx (cG, t') in
-       let ttau' = Pair.map_right Whnf.(mcomp' t') ttau in
+       let ttau' = Pair.map_right (Whnf.mcomp' t') ttau in
        let hyp' = elHypothetical cD_b cG_b pb' hyp ttau' in
        (* No need to apply the msub to pat, since pat is closed. *)
        I.SplitBranch (I.EmptyContext loc, (Int.LF.Empty, pat), t', hyp')
@@ -2552,7 +2552,7 @@ and elDirective cD cG pb (d : Apx.Comp.directive) ttau : Int.Comp.directive =
      dprintf begin fun p ->
        p.fmt "[elDirective] [solve] @[<v>elExp done.\
               @,@[@[%a@] :@ @[%a@]@]@]"
-         P.(fmt_ppr_cmp_exp_chk cD cG l0) e
+         P.(fmt_ppr_cmp_exp cD cG l0) e
          P.(fmt_ppr_cmp_typ cD l0) (Whnf.cnormCTyp ttau)
        end;
      I.Solve e
@@ -2562,7 +2562,7 @@ and elDirective cD cG pb (d : Apx.Comp.directive) ttau : Int.Comp.directive =
      dprintf begin fun p ->
        p.fmt "[elDirective] @[<v>split @[%a@] as...\
               @,tau_i = @[%a@]@]"
-         P.(fmt_ppr_cmp_exp_syn cD cG l0) i
+         P.(fmt_ppr_cmp_exp cD cG l0) i
          P.(fmt_ppr_cmp_typ cD l0) tau_i
        end;
      elSplit loc cD cG pb i tau_i bs ttau
@@ -2578,7 +2578,7 @@ and elDirective cD cG pb (d : Apx.Comp.directive) ttau : Int.Comp.directive =
      |> ignore;
      (* Unification of the goal & annotations may instantiate MMVars
         present in the scrutinee, so we need to normalize it here. *)
-     let i = Whnf.(cnormExp' (i, m_id)) in
+     let i = Whnf.cnormExp (i, Whnf.m_id) in
      let ps =
        let i_head = I.head_of_application i in
        List.mapi

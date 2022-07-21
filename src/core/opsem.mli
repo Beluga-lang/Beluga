@@ -1,3 +1,3 @@
 open Syntax.Int
 
-val eval : Comp.exp_chk -> Comp.value
+val eval : Comp.exp -> Comp.value

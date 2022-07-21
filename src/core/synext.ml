@@ -172,8 +172,6 @@ module Comp = struct
     | BoxHole    of Location.t                                     (*    | _                               *)
     | Name       of Location.t * Name.t                            (*    | x/c                             *)
     | Apply      of Location.t * exp * exp                         (*    | e e'                            *)
-    | BoxVal     of Location.t * meta_obj                          (*    | [C]                             *)
-    | TupleVal   of Location.t * exp List2.t                       (*    | (e1, e2, ..., en)               *)
   (* Note that observations are missing.
      In the external syntax, observations are syntactically
      indistinguishable from applications, so we parse them as
@@ -263,9 +261,7 @@ module Comp = struct
     | Hole (loc, _)
     | BoxHole loc
     | Name (loc, _)
-    | Apply (loc, _, _)
-    | BoxVal (loc, _)
-    | TupleVal (loc, _) -> loc
+    | Apply (loc, _, _) -> loc
 end
 
 (** Syntax of Harpoon commands. *)

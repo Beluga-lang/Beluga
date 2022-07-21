@@ -10,4 +10,4 @@ open Syntax.Int.Comp
 
 type cid_map = Id.cid_prog -> Id.cid_prog
 
-val exp_chk : cid_map -> exp_chk -> exp_chk
+val exp : cid_map -> exp -> exp

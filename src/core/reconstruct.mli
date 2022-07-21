@@ -24,7 +24,7 @@ type case_type
     lazy (Error.violation "appropriate message")
     as the pattern.
  *)
-val case_type : Int.Comp.pattern Lazy.t -> Int.Comp.exp_syn -> case_type
+val case_type : Int.Comp.pattern Lazy.t -> Int.Comp.exp -> case_type
 
 (** Transforms a case_type if it was actually an index object. *)
 val map_case_type : (Int.Comp.pattern * Int.Comp.meta_obj
@@ -70,17 +70,17 @@ val comptypdef : Syntax.Loc.t
                  -> (Int.LF.mctx * Int.Comp.typ) * Id.offset * Int.Comp.kind
 val elExp : Int.LF.mctx
             -> Int.Comp.gctx
-            -> Apx.Comp.exp_chk
+            -> Apx.Comp.exp
             -> Int.Comp.typ * Int.LF.msub
-            -> Int.Comp.exp_chk
+            -> Int.Comp.exp
 
 val elExp' : Int.LF.mctx
              -> Int.Comp.gctx
-             -> Apx.Comp.exp_syn
-             -> Int.Comp.exp_syn * Int.Comp.tclo
+             -> Apx.Comp.exp
+             -> Int.Comp.exp * Int.Comp.tclo
 
-val exp : Int.Comp.gctx -> Apx.Comp.exp_chk -> Int.Comp.typ * Int.LF.msub -> Int.Comp.exp_chk
-val exp' : Int.Comp.gctx -> Apx.Comp.exp_syn -> Int.Comp.exp_syn * Int.Comp.tclo
+val exp : Int.Comp.gctx -> Apx.Comp.exp -> Int.Comp.typ * Int.LF.msub -> Int.Comp.exp
+val exp' : Int.Comp.gctx -> Apx.Comp.exp -> Int.Comp.exp * Int.Comp.tclo
 
 val thm : Int.Comp.gctx -> Apx.Comp.thm -> Int.Comp.typ * Int.LF.msub -> Int.Comp.thm
 

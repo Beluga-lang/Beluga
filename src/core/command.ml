@@ -351,7 +351,7 @@ let do_split ppf (hi : HoleId.t * Holes.comp_hole_info Holes.hole) (var : string
      let (_, h) = hi in
      let { Holes.cG; _ } = h.Holes.info in
      Printer.Control.printNormal := true;
-     fprintf ppf "%a;\n@?" (P.fmt_ppr_cmp_exp_chk h.Holes.cD cG P.l0) exp;
+     fprintf ppf "%a;\n@?" (P.fmt_ppr_cmp_exp h.Holes.cD cG P.l0) exp;
      Printer.Control.printNormal := false
 
 let split =
@@ -378,7 +378,7 @@ let intro =
              let Holes.{ cD; info = { Holes.cG; _ }; _ } = h in
              Printer.Control.printNormal := true;
              fprintf ppf "%a;\n@?"
-               (P.fmt_ppr_cmp_exp_chk cD cG P.l0) exp;
+               (P.fmt_ppr_cmp_exp cD cG P.l0) exp;
              Printer.Control.printNormal := false
              end
           )

@@ -43,18 +43,18 @@ let elaborate_typ (cD : LF.mctx) (tau : ExtComp.typ) : Comp.typ * int =
   Index.hcomptyp cvars tau
   |> Reconstruct.comptyp_cD cD
   |> Abstract.comptyp
-  |> Pair.map_left (fun tau -> Whnf.(cnormCTyp (tau, m_id)))
+  |> Pair.map_left (fun tau -> Whnf.cnormCTyp (tau, Whnf.m_id))
   |> F.through (fun (tau, _) -> Check.Comp.checkTyp cD tau)
 
 let elaborate_exp (cD : LF.mctx) (cG : Comp.gctx)
       (t : ExtComp.exp) (tp : Comp.typ * LF.msub)
-    : Comp.exp_chk =
+    : Comp.exp =
   dprintf
     begin fun p ->
     p.fmt "[elaborate_exp] @[<v>e = @[%a@] (external)@,\
            cD = @[%a@]@,\
            cG = @[%a@]@]"
-      PExt.(fmt_ppr_cmp_exp_chk l0) t
+      PExt.(fmt_ppr_cmp_exp l0) t
       (P.fmt_ppr_lf_mctx P.l0) cD
       (P.fmt_ppr_cmp_gctx cD P.l0) cG
     end;
@@ -64,19 +64,19 @@ let elaborate_exp (cD : LF.mctx) (cG : Comp.gctx)
   Reconstruct.elExp cD cG t tp
 
 let elaborate_exp' (cD : LF.mctx) (cG : Comp.gctx) (t : ExtComp.exp)
-    : Comp.exp_syn * Comp.tclo =
+    : Comp.exp * Comp.tclo =
   dprintf
     begin fun p ->
     p.fmt "[elaborate_exp] @[<v>i = @[%a@] (external)@,\
            cD = @[%a@]@,\
            cG = @[%a@]@]"
-      PExt.(fmt_ppr_cmp_exp_syn l0) t
+      PExt.(fmt_ppr_cmp_exp l0) t
       (P.fmt_ppr_lf_mctx P.l0) cD
       (P.fmt_ppr_cmp_gctx cD P.l0) cG
     end;
   let var_store = Store.Var.of_gctx cG in
   let cvar_store = Store.CVar.of_mctx (function _, Inductivity.Inductive -> Plicity.explicit | plicity, _ -> plicity) cD in
-  let t = Index.hexp' cvar_store var_store t in
+  let t = Index.hexp cvar_store var_store t in
   Reconstruct.elExp' cD cG t
 
 
@@ -141,58 +141,57 @@ let genVarName tA = Store.Cid.Typ.gen_var_name tA
 
 (** Traverses a computation-level type-checkable expression and
  * applies the given function to all computational holes. *)
-let rec mapHoleChk f =
+let rec mapHoleExp f =
   function
   | Hole (l, id, name) -> f name l
-  | Syn (l, es) ->
-     let es' = mapHoleSyn f es in
-     Syn (l, es')
+
   | Fn (l, n, ec) ->
-     let ec' = mapHoleChk f ec in
+     let ec' = mapHoleExp f ec in
      Fn (l, n, ec')
+
   | MLam (l, n, ec, p) ->
-     let ec' = mapHoleChk f ec in
+     let ec' = mapHoleExp f ec in
      MLam (l, n, ec', p)
+
   | Let (t, es, (n, ec)) ->
-     let es' = mapHoleSyn f es in
-     let ec' = mapHoleChk f ec in
+     let es' = mapHoleExp f es in
+     let ec' = mapHoleExp f ec in
      Let (t, es', (n, ec'))
+
   | LetTuple (t, es, (ns, ec)) ->
-     let es' = mapHoleSyn f es in
-     let ec' = mapHoleChk f ec in
+     let es' = mapHoleExp f es in
+     let ec' = mapHoleExp f ec in
      LetTuple (t, es', (ns, ec'))
+
   | Tuple (l, ecs) ->
-     let ecs' = List2.map (mapHoleChk f) ecs in
+     let ecs' = List2.map (mapHoleExp f) ecs in
      Tuple (l, ecs')
+
   | Case (l, s, es, bs) ->
-     let es' = mapHoleSyn f es in
+     let es' = mapHoleExp f es in
      let bs' = List.map (mapHoleBranch f) bs in
      Case (l, s, es', bs')
-  | e -> e
 
-and mapHoleSyn f =
-  function
   | Apply (l, es, ec) ->
-     let es' = mapHoleSyn f es in
-     let ec' = mapHoleChk f ec in
+     let es' = mapHoleExp f es in
+     let ec' = mapHoleExp f ec in
      Apply (l, es', ec')
+
   | MApp (l, es, cM, cU, pl) ->
-     let es' = mapHoleSyn f es in
+     let es' = mapHoleExp f es in
      MApp (l, es', cM, cU, pl)
-  | TupleVal (l, es) ->
-     let es' = List2.map (mapHoleSyn f) es in
-     TupleVal (l, es')
+
   | e -> e
 
 and mapHoleBranch f =
   function
   | Branch (l, cD, cG, p, mS, ec) ->
-     let ec' = mapHoleChk f ec in
+     let ec' = mapHoleExp f ec in
      Branch (l, cD, cG, p, mS, ec')
 
 let mapHoleThm f =
   function
-  | Program e -> Program (mapHoleChk f e)
+  | Program e -> Program (mapHoleExp f e)
   | Proof p -> Misc.not_implemented "mapHoleThm"
 
 (*********************)
@@ -202,7 +201,6 @@ let mapHoleThm f =
 let is_inferred decl =
   Bool.not (LF.is_explicit decl)
 
-(* intro: int -> Comp.exp_chk option *)
 let intro (h : Holes.comp_hole_info Holes.hole) =
   let { Holes.cD = cDT; Holes.info = { Holes.cG = cGT; Holes.compGoal = (tau, _); _ }; _ } =
     h
@@ -280,8 +278,7 @@ let genCGoals cD' (LF.Decl (n, mtyp, plicity, inductivity)) cD_tail =
           (cD'', cg', ms0)
           end
 
-(* split : String -> Holes.look -> Comp.exp_chk option *)
-let split (e : string) (hi : HoleId.t * Holes.comp_hole_info Holes.hole) : Comp.exp_chk option =
+let split (e : string) (hi : HoleId.t * Holes.comp_hole_info Holes.hole) : Comp.exp option =
   let (_, { Holes.cD = cD0; Holes.info = { Holes.cG = cG0; _ }; _ }) =
     hi
   in
@@ -366,7 +363,7 @@ let split (e : string) (hi : HoleId.t * Holes.comp_hole_info Holes.hole) : Comp.
                 )
              | _ -> failwith "Interactive Splitting on Substitution Variables not supported"
            in
-           let entry = Comp.AnnBox (m0, mtyp') in
+           let entry = Comp.AnnBox (Loc.ghost, m0, mtyp') in
            Some (matchFromPatterns (Loc.ghost) entry bl)
          end
        else
@@ -584,7 +581,7 @@ let fmt_ppr_hole ppf (i, (Holes.Exists (w, h)) : HoleId.t * Holes.some_hole) : u
             (pp_print_list ~pp_sep: Format.comma Name.pp) suggestions
      | Some e ->
         fprintf ppf "@[<v 2>This hole is solved:@,@[%a@]@]"
-          (P.fmt_ppr_cmp_exp_chk cD cG P.l0) e
+          (P.fmt_ppr_cmp_exp cD cG P.l0) e
      end
   end;
   fprintf ppf "@]@]"

@@ -12,7 +12,7 @@ type lf_hole_info =
 type comp_hole_info =
   { cG : Comp.gctx
   ; compGoal : Comp.typ * LF.msub
-  ; mutable compSolution : Comp.exp_chk option
+  ; mutable compSolution : Comp.exp option
   }
 
 type _ hole_info =

@@ -2089,14 +2089,14 @@ end = struct
       meta_obj
       |> span
       |> labelled "synthesizable box"
-      $> fun (loc, tR) -> Comp.BoxVal (loc, tR)
+      $> fun (loc, tR) -> Comp.Box (loc, tR)
     in
     let nested (* `(' i (, i)* `)' *) =
       span (parens (seq2 Comp_parsers.cmp_exp_syn (many (token T.COMMA &> Comp_parsers.cmp_exp_syn))))
       $> (fun (location, (p1, ps)) ->
         match ps with
         | [] -> p1
-        | p2 :: ps -> Comp.TupleVal (location, List2.from p1 p2 ps))
+        | p2 :: ps -> Comp.Tuple (location, List2.from p1 p2 ps))
       |> labelled "parenthesized or tuple synthesizable expression"
     in
     let name =

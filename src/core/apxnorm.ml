@@ -284,15 +284,15 @@ let rec cnormApxDCtx loc cD delta psi ((_ , t) as cDt) =
      Apx.LF.DDec (psi', t_decl')
 
 
-let rec cnormApxExp cD delta e (cD'', t) =
+let rec cnormApxExp cD delta e cDt =
   match e with
-  | Apx.Comp.Syn (loc, i) -> Apx.Comp.Syn (loc, cnormApxExp' cD delta i (cD'', t))
   | Apx.Comp.Fn (loc, f, e) ->
-     Apx.Comp.Fn (loc, f, cnormApxExp cD delta e (cD'', t))
+     Apx.Comp.Fn (loc, f, cnormApxExp cD delta e cDt)
   | Apx.Comp.Fun (loc, fbr) ->
-     Apx.Comp.Fun (loc, cnormApxFBranches cD delta fbr (cD'', t))
+     Apx.Comp.Fun (loc, cnormApxFBranches cD delta fbr cDt)
   | Apx.Comp.MLam (loc, u, e) ->
      dprint (fun () -> "cnormApxExp -- MLam (or could be PLam)");
+     let (cD'', t) = cDt in
      let e' =
        cnormApxExp cD (Apx.LF.Dec(delta, Apx.LF.DeclOpt u)) e
          (Int.LF.Dec (cD'', Int.LF.DeclOpt (u, Plicity.explicit)), Whnf.mvar_dot1 t)
@@ -300,26 +300,26 @@ let rec cnormApxExp cD delta e (cD'', t) =
      Apx.Comp.MLam (loc, u, e')
 
   | Apx.Comp.Tuple (loc, es) ->
-     let es' = List2.map (fun e -> cnormApxExp cD delta e (cD'', t)) es in
+     let es' = List2.map (fun e -> cnormApxExp cD delta e cDt) es in
      Apx.Comp.Tuple (loc, es')
 
   | Apx.Comp.LetTuple (loc, i, (xs, e)) ->
-     let i' = cnormApxExp' cD delta i (cD'', t) in
-     let e' = cnormApxExp cD delta e (cD'', t) in
+     let i' = cnormApxExp cD delta i cDt in
+     let e' = cnormApxExp cD delta e cDt in
      Apx.Comp.LetTuple (loc, i', (xs, e'))
 
   | Apx.Comp.Let (loc, i, (x, e)) ->
-     let i' = cnormApxExp' cD delta i (cD'', t) in
-     let e' = cnormApxExp cD delta e (cD'', t) in
+     let i' = cnormApxExp cD delta i cDt in
+     let e' = cnormApxExp cD delta e cDt in
      Apx.Comp.Let (loc, i', (x, e'))
 
   | Apx.Comp.Box (loc, m) ->
      dprint (fun () -> "[cnormApxExp] BOX");
-     let m' = cnormApxMetaObj cD delta m (cD'', t) in
+     let m' = cnormApxMetaObj cD delta m cDt in
      Apx.Comp.Box (loc, m')
 
   | Apx.Comp.Impossible (loc, i) ->
-     let i' = cnormApxExp' cD delta i (cD'', t) in
+     let i' = cnormApxExp cD delta i cDt in
      Apx.Comp.Impossible (loc, i')
 
   | Apx.Comp.Case (loc, prag, i, branch) ->
@@ -329,9 +329,9 @@ let rec cnormApxExp cD delta e (cD'', t) =
        p.fmt "[cnormApxExp] cD = %a"
          (P.fmt_ppr_lf_mctx P.l0) cD
        end;
-     let e' = cnormApxExp' cD delta i (cD'', t) in
+     let e' = cnormApxExp cD delta i cDt in
      dprint (fun () -> "[cnormApxExp] Case Scrutinee done");
-     let bs' = cnormApxBranches cD delta branch (cD'', t) in
+     let bs' = cnormApxBranches cD delta branch cDt in
      dprint (fun () -> "[cnormApxExp] Case Body done ");
      let c = Apx.Comp.Case (loc, prag, e', bs') in
      dprint (fun () -> "[cnormApxExp] Case done");
@@ -341,26 +341,18 @@ let rec cnormApxExp cD delta e (cD'', t) =
 
   | Apx.Comp.BoxHole loc -> Apx.Comp.BoxHole loc
 
-and cnormApxExp' cD delta i cDt =
-  match i with
-  | Apx.Comp.Var _ -> i
-  | Apx.Comp.DataConst _ -> i
   | Apx.Comp.Obs (loc, e, obs) ->
-     let e' = cnormApxExp cD delta e cDt in
-     Apx.Comp.Obs (loc, e', obs)
-  | Apx.Comp.Const _ -> i
-  | Apx.Comp.TupleVal (loc, is) ->
-     let is' = List2.map (fun i -> cnormApxExp' cD delta i cDt) is in
-     Apx.Comp.TupleVal (loc, is')
+    let e' = cnormApxExp cD delta e cDt in
+    Apx.Comp.Obs (loc, e', obs)
 
   | Apx.Comp.Apply (loc, i, e) ->
-     let i' = cnormApxExp' cD delta i cDt in
-     let e' = cnormApxExp cD delta e cDt in
-     Apx.Comp.Apply (loc, i', e')
+    let i' = cnormApxExp cD delta i cDt in
+    let e' = cnormApxExp cD delta e cDt in
+    Apx.Comp.Apply (loc, i', e')
 
-  | Apx.Comp.BoxVal (loc, mobj) ->
-     let mobj' = cnormApxMetaObj cD delta mobj cDt in
-     Apx.Comp.BoxVal (loc, mobj')
+  | Apx.Comp.Var _
+    | Apx.Comp.DataConst _
+    | Apx.Comp.Const _ -> e
 
 and cnormApxMetaObj cD delta (loc, mobj) cDt =
   ( loc
@@ -842,22 +834,26 @@ let fmvApxHat loc fMVs cD (l_cd1, l_delta, k) phat =
 
 let rec fmvApxExp fMVs cD ((l_cd1, l_delta, k) as d_param) =
   function
-  | Apx.Comp.Syn (loc, i) -> Apx.Comp.Syn (loc, fmvApxExp' fMVs cD d_param i)
   | Apx.Comp.Fn (loc, f, e) ->
      Apx.Comp.Fn (loc, f, fmvApxExp fMVs cD d_param e)
+
   | Apx.Comp.Fun (loc, fbr) ->
      Apx.Comp.Fun (loc, fmvApxFBranches fMVs cD d_param fbr)
+
   | Apx.Comp.MLam (loc, u, e) ->
      Apx.Comp.MLam (loc, u, fmvApxExp fMVs cD (l_cd1, l_delta, (k + 1)) e)
+
   | Apx.Comp.Tuple (loc, es) ->
      let es' = List2.map (fun e -> fmvApxExp fMVs cD d_param e) es in
      Apx.Comp.Tuple (loc, es')
+
   | Apx.Comp.LetTuple (loc, i, (xs, e)) ->
-     let i' = fmvApxExp' fMVs cD d_param i in
+     let i' = fmvApxExp fMVs cD d_param i in
      let e' = fmvApxExp fMVs cD d_param e in
      Apx.Comp.LetTuple (loc, i', (xs, e'))
+
   | Apx.Comp.Let (loc, i, (x, e)) ->
-     let i' = fmvApxExp' fMVs cD d_param i in
+     let i' = fmvApxExp fMVs cD d_param i in
      let e' = fmvApxExp fMVs cD d_param e in
      Apx.Comp.Let (loc, i', (x, e'))
 
@@ -866,36 +862,28 @@ let rec fmvApxExp fMVs cD ((l_cd1, l_delta, k) as d_param) =
      Apx.Comp.Box (loc, m')
 
   | Apx.Comp.Impossible (loc, i) ->
-     Apx.Comp.Impossible (loc, fmvApxExp' fMVs cD d_param i)
+     Apx.Comp.Impossible (loc, fmvApxExp fMVs cD d_param i)
 
   | Apx.Comp.Case (loc, prag, i, branch) ->
-     Apx.Comp.Case (loc, prag, fmvApxExp' fMVs cD d_param i,
+     Apx.Comp.Case (loc, prag, fmvApxExp fMVs cD d_param i,
                     fmvApxBranches fMVs cD d_param branch)
 
   | Apx.Comp.Hole (loc, name) -> Apx.Comp.Hole (loc, name)
 
   | Apx.Comp.BoxHole loc -> Apx.Comp.BoxHole loc
 
-and fmvApxExp' fMVs cD d_param =
-  function
-  | Apx.Comp.Var _ as i -> i
-  | Apx.Comp.DataConst _ as i -> i
   | Apx.Comp.Obs (loc, e, obs) ->
-     let e' = fmvApxExp fMVs cD d_param e in
-     Apx.Comp.Obs (loc, e', obs)
-  | Apx.Comp.Const _ as i -> i
+    let e' = fmvApxExp fMVs cD d_param e in
+    Apx.Comp.Obs (loc, e', obs)
+
   | Apx.Comp.Apply (loc, i, e) ->
-     let i' = fmvApxExp' fMVs cD d_param i in
-     let e' = fmvApxExp fMVs cD d_param e in
-     Apx.Comp.Apply (loc, i', e')
+    let i' = fmvApxExp fMVs cD d_param i in
+    let e' = fmvApxExp fMVs cD d_param e in
+    Apx.Comp.Apply (loc, i', e')
 
-  | Apx.Comp.BoxVal (loc, mobj) ->
-     let mobj' = fmvApxMetaObj fMVs cD d_param mobj in
-     Apx.Comp.BoxVal (loc, mobj')
-
-  | Apx.Comp.TupleVal (loc, is) ->
-     let is' = List2.map (fun i -> fmvApxExp' fMVs cD d_param i) is in
-     Apx.Comp.TupleVal (loc, is')
+  | Apx.Comp.Var _
+    | Apx.Comp.DataConst _
+    | Apx.Comp.Const _ as  i -> i
 
 and fmvApxMetaObj fMVs cD d_param (loc, mobj) =
   ( loc

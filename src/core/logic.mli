@@ -32,7 +32,7 @@ end
 type bound = int option
 
 module CSolver : sig
-  val cgSolve : LF.mctx -> Comp.gctx -> mquery -> (Comp.exp_chk -> unit) -> bound-> unit
+  val cgSolve : LF.mctx -> Comp.gctx -> mquery -> (Comp.exp -> unit) -> bound-> unit
 end
 val storeQuery : Name.t option -> LF.typ * Id.offset -> LF.mctx -> bound -> bound -> unit
 val storeMQuery: Comp.typ * Id.offset -> bound -> bound -> bound -> unit

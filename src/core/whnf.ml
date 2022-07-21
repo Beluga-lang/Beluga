@@ -1725,50 +1725,71 @@ let rec cwhnfCTyp =
 
 let rec cnormExp =
   function
-  | (Comp.Syn (loc, i), t) -> Comp.Syn (loc, cnormExp' (i, t))
-  | (Comp.Fn (loc, x, e), t) -> Comp.Fn (loc, x, cnormExp (e, t))
-  | (Comp.Fun (loc, fbr), t) -> Comp.Fun (loc, cnormFBranches (fbr, t))
-  | (Comp.MLam (loc, u, e, plicity), t) -> Comp.MLam (loc, u, cnormExp (e, mvar_dot1 t), plicity)
+  | (Comp.Fn (loc, x, e), t) ->
+     let e' = cnormExp (e, t) in
+     Comp.Fn (loc, x, e')
+
+  | (Comp.Fun (loc, fbr), t) ->
+     let fbr' = cnormFBranches (fbr, t) in
+     Comp.Fun (loc, fbr')
+
+  | (Comp.MLam (loc, u, e, plicity), t) ->
+     let e' = cnormExp (e, mvar_dot1 t) in
+     Comp.MLam (loc, u, e', plicity)
+
   | (Comp.Tuple (loc, es), t) ->
      let es' = List2.map (fun e -> cnormExp (e, t)) es in
      Comp.Tuple (loc, es')
-  | (Comp.Impossible (loc, i), t) -> Comp.Impossible (loc, cnormExp' (i, t))
+
+  | (Comp.Impossible (loc, i), t) ->
+     let i' = cnormExp (i, t) in
+     Comp.Impossible (loc, i')
+
   | (Comp.LetTuple (loc, i, (xs, e)), t) ->
-     Comp.LetTuple (loc, cnormExp' (i, t), (xs, cnormExp (e, t)))
+     let i' = cnormExp (i, t)
+     and e' = cnormExp (e, t) in
+     Comp.LetTuple (loc, i', (xs, e'))
+
   | (Comp.Let (loc, i, (x, e)), t) ->
-     Comp.Let (loc, cnormExp' (i, t), (x, cnormExp (e, t)))
+     let i' = cnormExp (i, t)
+     and e' = cnormExp (e, t) in
+     Comp.Let (loc, i', (x, e'))
 
   | (Comp.Box (loc, cM, cU), t) ->
-     let cM' = cnormMetaObj (cM, t) in
-     let cU' = cnormMTyp (cU, t) in
+     let cM' = cnormMetaObj (cM, t)
+     and cU' = cnormMTyp (cU, t) in
      Comp.Box (loc, cM', cU')
 
   | (Comp.Case (loc, prag, i, branches), t) ->
-     let i' = cnormExp' (i, t) in
-     let branches' = List.map (fun b -> cnormBranch (b, t)) branches in
+     let i' = cnormExp (i, t)
+     and branches' = List.map (fun b -> cnormBranch (b, t)) branches in
      Comp.Case (loc, prag, i', branches')
 
-  | (Comp.Hole (loc, id, name), _) -> Comp.Hole (loc, id, name)
-
-and cnormExp' =
-  function
-  | (Comp.Var _ as i, _) -> i
-  | (Comp.DataConst _ as i, _) -> i
-  | (Comp.Const _ as i, _) -> i
   | (Comp.Obs (loc, e, t', obs), t) ->
-     Comp.Obs (loc, cnormExp (e, t), cnormMSub' (t', t), obs)
-  | (Comp.Apply (loc, i, e), t) ->
-     Comp.Apply (loc, cnormExp' (i, t), cnormExp (e, t))
-  | (Comp.TupleVal (loc, is), t) ->
-     let is' = List2.map (fun i -> cnormExp' (i, t)) is in
-     Comp.TupleVal (loc, is')
-  | (Comp.MApp (loc, i, cM, cU, pl), t) ->
-     Comp.MApp (loc, cnormExp' (i, t), cnormMetaObj (cM, t), cnormMTyp (cU, t), pl)
+     let e' = cnormExp (e, t)
+     and t'' = cnormMSub' (t', t) in
+     Comp.Obs (loc, e', t'', obs)
 
-  | (Comp.AnnBox (cM, cT), t') ->
+  | (Comp.Apply (loc, i, e), t) ->
+     let i' = cnormExp (i, t)
+     and e' = cnormExp (e, t) in
+     Comp.Apply (loc, i', e')
+
+  | (Comp.MApp (loc, i, cM, cU, pl), t) ->
+     let i' = cnormExp (i, t)
+     and cM' = cnormMetaObj (cM, t)
+     and cU' = cnormMTyp (cU, t) in
+     Comp.MApp (loc, i', cM', cU', pl)
+
+  | (Comp.AnnBox (loc, cM, cT), t') ->
      let cM' = cnormMetaObj (cM, t') in
      let cT' = cnormMTyp (cT, t') in
-     Comp.AnnBox (cM', cT')
+     Comp.AnnBox (loc, cM', cT')
+
+  | (Comp.Hole _ as e, _)
+  | (Comp.Var _ as e, _)
+  | (Comp.DataConst _ as e, _)
+  | (Comp.Const _ as e, _) -> e
 
 and cnormPattern (pat, t) =
   match pat with
@@ -2270,32 +2291,26 @@ let rec closedMSub =
 
 let rec closedExp =
   function
-  | Comp.Syn (_, i) -> closedExp' i
   | Comp.Fn (_, _, e) -> closedExp e
   | Comp.Fun (_, bs) -> closedFunBranches bs
   | Comp.MLam (_, _, e, plicity) -> closedExp e
   | Comp.Tuple (_, es) -> List2.for_all (fun e -> closedExp e) es
-  | Comp.LetTuple (_, i, (_, e)) -> closedExp' i && closedExp e
-  | Comp.Let (_, i, (_, e)) -> closedExp' i && closedExp e
+  | Comp.LetTuple (_, i, (_, e)) -> closedExp i && closedExp e
+  | Comp.Let (_, i, (_, e)) -> closedExp i && closedExp e
   | Comp.Box (_, cM, cU) -> closedMetaObj cM && closedMetaTyp cU
-  | Comp.Case (_, _, i, bs) -> closedExp' i && List.for_all closedBranch bs
-  | Comp.Impossible (_, i) -> closedExp' i
+  | Comp.Case (_, _, i, bs) -> closedExp i && List.for_all closedBranch bs
+  | Comp.Impossible (_, i) -> closedExp i
   | Comp.Hole _ -> false
-
-and closedExp' =
-  function
   | Comp.Var _
     | Comp.DataConst _
     | Comp.Const _ ->
      true
   | Comp.Obs (_, e, t, _) -> closedExp e && closedMSub t
-  | Comp.Apply (_, i, e) -> closedExp' i && closedExp e
+  | Comp.Apply (_, i, e) -> closedExp i && closedExp e
   | Comp.MApp (_, i, cM, cU, _) ->
-     closedExp' i && closedMetaObj cM && closedMetaTyp cU
-  | Comp.AnnBox (cM, cU) ->
+     closedExp i && closedMetaObj cM && closedMetaTyp cU
+  | Comp.AnnBox (_, cM, cU) ->
      closedMetaObj cM && closedMetaTyp cU
-  | Comp.TupleVal (_, is) ->
-     List2.for_all (fun i -> closedExp' i) is
 
 and closedBranch =
   function

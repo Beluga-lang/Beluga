@@ -51,7 +51,7 @@ let rec loop ppf =
            |> Pair.map_right Whnf.cnormCTyp
          in
          fprintf ppf "%a : %a"
-           (P.fmt_ppr_cmp_exp_syn LF.Empty LF.Empty P.l0) exp
+           (P.fmt_ppr_cmp_exp LF.Empty LF.Empty P.l0) exp
            (P.fmt_ppr_cmp_typ LF.Empty P.l0) tau
       | `Input _ -> ()
     with

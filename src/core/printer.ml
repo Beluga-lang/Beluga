@@ -110,8 +110,7 @@ module Int = struct
     val fmt_ppr_cmp_ctyp_decl : LF.mctx -> lvl -> formatter -> Comp.ctyp_decl -> unit
     val fmt_ppr_cmp_gctx : ?sep:(formatter -> unit -> unit) ->
                                    LF.mctx -> lvl -> formatter -> Comp.gctx -> unit
-    val fmt_ppr_cmp_exp_chk : LF.mctx -> Comp.gctx -> lvl -> formatter -> Comp.exp_chk -> unit
-    val fmt_ppr_cmp_exp_syn : LF.mctx -> Comp.gctx -> lvl -> formatter -> Comp.exp_syn -> unit
+    val fmt_ppr_cmp_exp : LF.mctx -> Comp.gctx -> lvl -> formatter -> Comp.exp -> unit
     val fmt_ppr_cmp_value : lvl -> formatter -> Comp.value -> unit
     val fmt_ppr_cmp_branches : Comp.gctx -> formatter -> Comp.branch list -> unit
     val fmt_ppr_cmp_branch : Comp.gctx -> formatter -> Comp.branch -> unit
@@ -176,8 +175,7 @@ module Ext = struct
                                 -> lvl -> formatter -> LF.mctx -> unit
     val fmt_ppr_cmp_kind : lvl -> formatter -> Comp.kind -> unit
     val fmt_ppr_cmp_typ : lvl -> formatter -> Comp.typ -> unit
-    val fmt_ppr_cmp_exp_chk : lvl -> Format.formatter -> Comp.exp -> unit
-    val fmt_ppr_cmp_exp_syn : lvl -> Format.formatter -> Comp.exp -> unit
+    val fmt_ppr_cmp_exp : lvl -> Format.formatter -> Comp.exp -> unit
     val fmt_ppr_cmp_branches : Format.formatter -> Comp.branch list -> unit
     val fmt_ppr_cmp_branch : Format.formatter -> Comp.branch -> unit
     val fmt_ppr_pat_obj : lvl -> Format.formatter -> Comp.pattern -> unit

@@ -712,7 +712,7 @@ let recSgnDecls decls =
          (fun p ->
            p.fmt "[RecSgn Checking] Val at: %a"
              Syntax.Loc.print_short location);
-       let apx_i = Index.exp' (Var.create ()) expression in
+       let apx_i = Index.exp (Var.create ()) expression in
        let (cD, cG) = (Int.LF.Empty, Int.LF.Empty) in
        let (i', (tau, theta)) =
          Monitor.timer
@@ -722,20 +722,20 @@ let recSgnDecls decls =
        in
        Unify.forceGlobalCnstr ();
        let tau' = Whnf.cnormCTyp (tau, theta) in
-       let expression' = Whnf.cnormExp' (i', Whnf.m_id) in
+       let expression' = Whnf.cnormExp (i', Whnf.m_id) in
 
        dprintf
          begin fun p ->
          p.fmt "[AFTER Reconstruction Val] @[<v 2>let %a : %a =@ %a@]"
            Name.pp identifier
            (P.fmt_ppr_cmp_typ cD P.l0) tau'
-           (P.fmt_ppr_cmp_exp_syn cD cG P.l0) expression'
+           (P.fmt_ppr_cmp_exp cD cG P.l0) expression'
          end;
        let cQ, expression'' =
          Monitor.timer
            ( "Function Abstraction"
            , fun _ ->
-             Abstract.exp (Int.Comp.Syn (location, expression'))
+             Abstract.exp expression'
            )
        in
        storeLeftoverVars cQ location;
@@ -792,12 +792,12 @@ let recSgnDecls decls =
          ( "Function Type Check"
          , fun () -> Check.Comp.checkTyp cD tau'
          );
-       let apx_i = Index.exp' (Var.create ()) expression in
+       let apx_i = Index.exp (Var.create ()) expression in
        let i' =
          Monitor.timer
            ( "Function Elaboration"
            , fun _ ->
-             Reconstruct.exp cG (Apx.Comp.Syn(location, apx_i)) (tau', C.m_id)
+             Reconstruct.exp cG apx_i (tau', C.m_id)
            )
        in
        let expression' = Whnf.cnormExp (i', Whnf.m_id) in
@@ -808,7 +808,7 @@ let recSgnDecls decls =
            p.fmt "[AFTER Reconstruction Val - 2] let %a : %a =@,%a"
              Name.pp identifier
              (P.fmt_ppr_cmp_typ cD P.l0) tau'
-             (P.fmt_ppr_cmp_exp_chk cD cG P.l0) expression'
+             (P.fmt_ppr_cmp_exp cD cG P.l0) expression'
          end;
 
        let cQ, expression'' =

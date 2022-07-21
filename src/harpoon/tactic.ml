@@ -178,7 +178,7 @@ let generate_pattern_coverage_goals
   in
   B.Coverage.(genPatCGoals names withPatVar g.context.cD (B.Total.strip tau))
 
-let split (k : Command.split_kind) (i : Comp.exp_syn) (tau : Comp.typ) mfs : t =
+let split (k : Command.split_kind) (i : Comp.exp) (tau : Comp.typ) mfs : t =
   let open B in
   let open Comp in
   fun t s ->
@@ -188,13 +188,13 @@ let split (k : Command.split_kind) (i : Comp.exp_syn) (tau : Comp.typ) mfs : t =
     p.fmt "[harpoon-split] @[<v>@[%a@] on @[%a@]@,\
            with type @[%a@]@]"
       P.fmt_ppr_cmp_split_kind k
-      (P.fmt_ppr_cmp_exp_syn s.context.cD s.context.cG P.l0) i
+      (P.fmt_ppr_cmp_exp s.context.cD s.context.cG P.l0) i
       (P.fmt_ppr_cmp_typ s.context.cD P.l0) tau
     end;
   (* hack for parameter variables, as usual *)
   let _, tau, _ =
     match i, tau with
-    | AnnBox ((_, mC), _), TypBox (loc, mT) ->
+    | AnnBox (_, (_, mC), _), TypBox (loc, mT) ->
        let k, mT', p_opt = Check.Comp.fixParamTyp mC mT in
        dprintf
          begin fun p ->
@@ -209,12 +209,12 @@ let split (k : Command.split_kind) (i : Comp.exp_syn) (tau : Comp.typ) mfs : t =
   match is_valid_goals_for_split_kind k cgs with
   | `cant_invert ->
      Theorem.printf t "Can't invert @[%a@]. (Not a unique case.)@,"
-       (P.fmt_ppr_cmp_exp_syn s.context.cD s.context.cG P.l0) i
+       (P.fmt_ppr_cmp_exp s.context.cD s.context.cG P.l0) i
   | `not_impossible ->
      Theorem.printf t "Can't eliminate @[%a@] as impossible@ as its type\
                        @,  @[%a@]@,\
                        cannot be shown to be empty."
-       (P.fmt_ppr_cmp_exp_syn s.context.cD s.context.cG P.l0) i
+       (P.fmt_ppr_cmp_exp s.context.cD s.context.cG P.l0) i
        (P.fmt_ppr_cmp_typ s.context.cD P.l0) tau
   | `ok ->
      dprintf
@@ -587,7 +587,7 @@ let solve_with_new_comp_decl action_name decl f t g =
 let solve_by_unbox' f (cT : Comp.meta_typ) (name : B.Name.t) : t =
   solve_with_new_meta_decl "unbox" LF.(Decl (name, cT, B.Plicity.explicit, B.Inductivity.not_inductive)) f
 
-let solve_by_unbox (m : Comp.exp_syn) (mk_cmd : Comp.meta_typ -> Comp.command) (tau : Comp.typ) (name : B.Name.t) modifier : t =
+let solve_by_unbox (m : Comp.exp) (mk_cmd : Comp.meta_typ -> Comp.command) (tau : Comp.typ) (name : B.Name.t) modifier : t =
   let open Comp in
   fun t g ->
   let {cD; cG; cIH} = g.context in
@@ -601,26 +601,26 @@ let solve_by_unbox (m : Comp.exp_syn) (mk_cmd : Comp.meta_typ -> Comp.command) (
         Theorem.printf t
           "@[<v>The expression@,  @[%a@]@,\
            cannot be unboxed as its type@,  @[%a@]@,is not a box.@]"
-          (P.fmt_ppr_cmp_exp_syn cD cG P.l0) m
+          (P.fmt_ppr_cmp_exp cD cG P.l0) m
           (P.fmt_ppr_cmp_typ cD P.l0) tau
 
-let unbox (m : Comp.exp_syn) (tau : Comp.typ) (name : B.Name.t) modifier : t =
+let unbox (m : Comp.exp) (tau : Comp.typ) (name : B.Name.t) modifier : t =
   let open Comp in
   solve_by_unbox m (fun cT -> Unbox (m, name, cT, modifier)) tau name modifier
 
-let invoke (i : Comp.exp_syn) (tau : Comp.typ) (name : B.Name.t) : t =
+let invoke (i : Comp.exp) (tau : Comp.typ) (name : B.Name.t) : t =
   let open Comp in
   solve_with_new_comp_decl "by" (CTypDecl (name, tau, false))
     (prepend_commands [By (i, name, tau)])
 
 let suffices
-      (i : Comp.exp_syn)
+      (i : Comp.exp)
       (tau_args : Comp.suffices_typ list)
       (tau_i : Comp.typ) : t =
   fun t g ->
   let open Comp in
   let i_head = head_of_application i in
-  let loc = loc_of_exp_syn i in
+  let loc = loc_of_exp i in
   let _, (i', ttau_i) =
     B.Check.Comp.genMApp
       loc
@@ -643,7 +643,7 @@ let suffices
      these MMVars will be *instantiated* MMVars, which print
      incorrectly by showing an msub. So we need to normalize here to
      replace the instantiated MMVars with their instantiations. *)
-  let i' = Whnf.(cnormExp' (i', m_id)) in
+  let i' = Whnf.cnormExp (i', Whnf.m_id) in
   (* generate the subgoals for the arguments.
      by unification it doesn't matter which list we use. *)
   let children, subproofs =
@@ -657,7 +657,7 @@ let suffices
          their associated msub when printed. But this is no good
          because msubs cannot be parsed. Since these annotations
          appear in the external syntax, we can't have that. *)
-      let tau = Whnf.(cnormCTyp (tau, m_id)) in
+      let tau = Whnf.cnormCTyp (tau, Whnf.m_id) in
       let new_state =
         { context = g.context
         ; goal = (tau, Whnf.m_id)

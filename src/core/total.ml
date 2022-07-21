@@ -81,7 +81,7 @@ let enabled = ref false
 
 type rec_arg =
   | M of Comp.meta_obj
-  | V of Comp.exp_syn
+  | V of Comp.exp
 
 let shiftArg k =
   function
@@ -1328,7 +1328,7 @@ let stratifyAll a tau =
     This is similar to the logic used in check.ml to determine the
     kind of a branch: [Ind]DataObj or [Ind]IndexObj.
  *)
-let is_comp_inductive (cG : Comp.gctx) (m : Comp.exp_syn) : bool =
+let is_comp_inductive (cG : Comp.gctx) (m : Comp.exp) : bool =
   let open Id in
   let open Comp in
   let is_inductive_comp_variable (k : offset) : bool =
@@ -1373,7 +1373,7 @@ let is_meta_inductive (cD : LF.mctx) (mf : LF.mfront) : bool =
 
 (** Checks if the scrutinee of a case is on an inductive computational
     variable or an inductive meta-variable. *)
-let is_inductive_split (cD : LF.mctx) (cG : Comp.gctx) (i : Comp.exp_syn) : bool =
+let is_inductive_split (cD : LF.mctx) (cG : Comp.gctx) (i : Comp.exp) : bool =
   is_comp_inductive cG i
   || begin
       let open Option in

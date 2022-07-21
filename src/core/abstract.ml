@@ -1282,10 +1282,6 @@ let rec collectGctx cQ =
 
 let rec collectExp cQ =
   function
-  | Comp.Syn (loc, i) ->
-     let (cQ', i') = collectExp' cQ i in
-     (cQ', Comp.Syn (loc, i'))
-
   | Comp.Fn (loc, x, e) ->
      let (cQ', e') = collectExp cQ e in
      (cQ', Comp.Fn (loc, x, e'))
@@ -1313,12 +1309,12 @@ let rec collectExp cQ =
      (cQ', Comp.Tuple (loc, List2.rev es'))
 
   | Comp.LetTuple (loc, i, (xs, e)) ->
-     let (cQi, i') = collectExp' cQ i in
+     let (cQi, i') = collectExp cQ i in
      let (cQ2, e') = collectExp cQi e in
      (cQ2, Comp.LetTuple (loc, i', (xs, e')))
 
   | Comp.Let (loc, i, (x, e)) ->
-     let (cQi, i') = collectExp' cQ i in
+     let (cQi, i') = collectExp cQ i in
      let (cQ2, e') = collectExp cQi e in
      (cQ2, Comp.Let (loc, i', (x, e')))
 
@@ -1328,20 +1324,20 @@ let rec collectExp cQ =
      (cQ'', Comp.Box (loc, cM', cU'))
 
   | Comp.Case (loc, prag, i, branches) ->
-     let (cQ', i') = collectExp' cQ i in
+     let (cQ', i') = collectExp cQ i in
      let (cQ2, branches') = collectBranches cQ' branches in
      (cQ2, Comp.Case (loc, prag, i', branches'))
 
   | Comp.Hole (loc, id, name) -> (cQ, Comp.Hole (loc, id, name))
 
   | Comp.Impossible (loc, i) ->
-     let (cQ', i') = collectExp' cQ i in
+     let (cQ', i') = collectExp cQ i in
      (cQ', Comp.Impossible (loc, i))
 
-and collectExp' cQ =
-  function
   | Comp.Var _ as i -> (cQ, i)
+
   | Comp.DataConst _ as i -> (cQ, i)
+
   | Comp.Const _ as i -> (cQ, i)
 
   | Comp.Obs (loc, e, t, obs) ->
@@ -1350,34 +1346,20 @@ and collectExp' cQ =
      (cQ1, Comp.Obs (loc, e', t', obs))
 
   | Comp.Apply (loc, i, e) ->
-     let (cQ', i') = collectExp' cQ i in
+     let (cQ', i') = collectExp cQ i in
      let (cQ'', e') = collectExp cQ' e in
      (cQ'', Comp.Apply (loc, i', e'))
 
   | Comp.MApp (loc, i, cM, cU, pl) ->
-     let (cQ', i') = collectExp' cQ i in
+     let (cQ', i') = collectExp cQ i in
      let (cQ'', cM') = collect_meta_obj 0 cQ' cM in
      let (cQ''', cU') = collectMetaTyp loc 0 cQ'' cU in
      (cQ''', Comp.MApp (loc, i', cM', cU', pl))
 
-  | Comp.AnnBox (cM, cT) ->
+  | Comp.AnnBox (loc, cM, cT) ->
      let (cQ', cM') = collect_meta_obj 0 cQ cM in
      let (cQ'', cT') = collectMetaTyp Syntax.Loc.ghost 0 cQ' cT in
-     (cQ'', Comp.AnnBox (cM', cT'))
-
-  | Comp.TupleVal (loc, is) ->
-     let (cQ', is') = List2.fold_left
-       (fun i1 -> collectExp' cQ i1)
-       (fun (cQ1, i1') i2 ->
-         let (cQ2, i2') = collectExp' cQ1 i2 in
-         (cQ2, List2.pair i2' i1' (* intentionally reversed *))
-       )
-       (fun (cQ', is') i ->
-         let (cQ', i') = collectExp' cQ' i in
-         (cQ', List2.cons i' is')
-       )
-       is in
-     (cQ', Comp.TupleVal (loc, List2.rev is'))
+     (cQ'', Comp.AnnBox (loc, cM', cT'))
 
 and collectPatObj cQ =
   function

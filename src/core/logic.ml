@@ -1009,8 +1009,8 @@ module Printer = struct
          (fmt_ppr_res cD (LF.DDec (cPsi, S.decSub tD s))) (r', S.dot1 s)
 
 
-  let fmt_ppr_cmp_exp_chk cD cG ppf eChk =
-    P.fmt_ppr_cmp_exp_chk cD cG P.l0 ppf eChk
+  let fmt_ppr_cmp_exp cD cG ppf eChk =
+    P.fmt_ppr_cmp_exp cD cG P.l0 ppf eChk
 
 
   (** Prints each subgoal with a leading `<-`. *)
@@ -1718,7 +1718,7 @@ module CSolver = struct
 
 
   let rec cgSolve' (cD: LF.mctx) (cG: Comp.gctx) (cPool: cPool)
-            (mq:mquery) (sc: Comp.exp_chk -> unit) (currDepth: bound) (maxDepth: bound) =
+            (mq:mquery) (sc: Comp.exp -> unit) (currDepth: bound) (maxDepth: bound) =
 
     (* fprintf std_formatter
           "No solution found: Maximum depth reached! -- \
@@ -1807,7 +1807,7 @@ module CSolver = struct
     | Proved ->
        let e' = (Comp.Var (noLoc, k)) in
        let e = fS e' in
-       let e = Whnf.cnormExp' (e, LF.MShift 0) in
+       let e = Whnf.cnormExp (e, LF.MShift 0) in
        sc e
     | Solve (sg', cg') ->
         (*printf "solve gamma SG \n";
@@ -1827,7 +1827,7 @@ module CSolver = struct
     | Proved ->
        let e' = (Comp.DataConst (noLoc, cid)) in
        let e = fS e' in
-       let e = Whnf.cnormExp' (e, LF.MShift 0) in
+       let e = Whnf.cnormExp (e, LF.MShift 0) in
        sc e
     | Solve (sg', cg') ->
        (*printf "solve sig SG \n";
@@ -1846,7 +1846,7 @@ module CSolver = struct
     | Proved ->
        let e' = (Comp.Const (noLoc, cid)) in
        let e = fS e' in
-       let e = Whnf.cnormExp' (e, LF.MShift 0) in
+       let e = Whnf.cnormExp (e, LF.MShift 0) in
        sc e
     | Solve (sg', cg') ->
        (*printf "solve thm SG \n";
@@ -1875,7 +1875,7 @@ module CSolver = struct
                unify cD (tau, ms) (sCCl.cHead, ms'')
                  (fun () ->
                   solveTheoremSubGoals cD cG cPool cid sCCl.cSubGoals ms'' sCCl.cMVars
-                    (fun e' -> sc (Comp.Syn (noLoc, e'))) fS currDepth maxDepth)
+                    sc fS currDepth maxDepth)
               end
          with
          | U.Failure _ -> ()))
@@ -1899,7 +1899,7 @@ module CSolver = struct
            unify cD (tau, ms) (sCCl.cHead, ms'')
                (fun () ->
                 solveCClauseSubGoals cD cG cPool cidTerm sCCl.cSubGoals ms'' sCCl.cMVars
-                  (fun e' -> sc (Comp.Syn (noLoc, e'))) fS currDepth maxDepth)
+                  sc fS currDepth maxDepth)
             end
          with
          | U.Failure _ -> ())
@@ -1939,7 +1939,7 @@ module CSolver = struct
              unify cD (tau, ms) (hd, ms'')
                (fun () ->
                solveSubGoals cD cG cPool_all (sg, k') ms'' cMVars
-                 (fun e' -> sc  (Comp.Syn (noLoc, e'))) fS currDepth maxDepth)
+                 sc fS currDepth maxDepth)
              end
          with
          | U.Failure _ -> ());
@@ -2396,7 +2396,7 @@ module Frontend = struct
 
     let solutions = ref 0 in
       (* Type checking function. *)
-    let check cD cG (e : Comp.exp_chk) ms =
+    let check cD cG (e : Comp.exp) ms =
       Check.Comp.check None cD cG total_dec e (sgnMQuery.skinnyCompTyp, ms)
     in
 
@@ -2405,7 +2405,7 @@ module Frontend = struct
       incr solutions;
       (*
       fprintf std_formatter "\n FINAL check e = \n %a \n"
-        (P.fmt_ppr_cmp_exp_chk LF.Empty LF.Empty) e;  *)
+        (P.fmt_ppr_cmp_exp LF.Empty LF.Empty) e;  *)
         (* Rebuild the substitution and type check the proof term. *)
       if !Options.checkProofs
       then
@@ -2417,7 +2417,7 @@ module Frontend = struct
           fprintf std_formatter  "@[<v>---------- Solution %d ----------\n %a@,@,@]"
             (*              "@[<hov 2>@[%a@] |-@ @[%a@]@]" *)
             (!solutions)
-            (P.fmt_ppr_cmp_exp_chk LF.Empty LF.Empty) e
+            (P.fmt_ppr_cmp_exp LF.Empty LF.Empty) e
         end;
 
       (* Stop when no. of solutions exceeds tries. *)

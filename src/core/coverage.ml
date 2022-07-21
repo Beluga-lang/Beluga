@@ -3198,7 +3198,7 @@ let initialize_coverage problem projOpt : cov_problems =
                  @[%a@]@]"
             P.fmt_ppr_lf_sub_typing (problem.cD, cPsi, s, cPsi')
           end;
-        let mT = Whnf.(cnormMTyp (LF.ClTyp (LF.MTyp tA', cPsi'), m_id)) in
+        let mT = Whnf.cnormMTyp (LF.ClTyp (LF.MTyp tA', cPsi'), Whnf.m_id) in
         let name = Name.mk_name (Whnf.newMTypName mT) in
         let cD' =
           LF.Dec (problem.cD, LF.Decl (name, mT, Plicity.implicit, Inductivity.not_inductive))

@@ -47,12 +47,12 @@ val intros' : Theorem.t ->
     In particular, this is used to implement variants of splitting,
     e.g. inversion and impossible.
  *)
-val split : Command.split_kind -> Comp.exp_syn -> Comp.typ -> Comp.total_dec list -> t
+val split : Command.split_kind -> Comp.exp -> Comp.typ -> Comp.total_dec list -> t
 
 (** Performs unboxing of the given synthesizable expression of the given type.
     The tactic will itself verify that the type is a box-type.
  *)
-val unbox : Comp.exp_syn -> Comp.typ -> Name.t -> Comp.unbox_modifier option -> t
+val unbox : Comp.exp -> Comp.typ -> Name.t -> Comp.unbox_modifier option -> t
 
 (** It is verified that the given expression is an application.
     The result of the invocation is assigned to the variable of the
@@ -61,7 +61,7 @@ val unbox : Comp.exp_syn -> Comp.typ -> Name.t -> Comp.unbox_modifier option -> 
     Otherwise, with `unboxed, the name is a new variable declaration
     in cD.
  *)
-val invoke : Comp.exp_syn -> Comp.typ -> Name.t -> t
+val invoke : Comp.exp -> Comp.typ -> Name.t -> t
 
 (** Solves the current goal with an implication whose conclusion is
    compatible with the goal type. Subgoals are generated for each
@@ -96,4 +96,4 @@ val invoke : Comp.exp_syn -> Comp.typ -> Name.t -> t
 
     by <lemma/ih> i suffices tau_1, ..., tau_k
  *)
-val suffices : Comp.exp_syn -> Comp.suffices_typ list -> Comp.typ -> t
+val suffices : Comp.exp -> Comp.suffices_typ list -> Comp.typ -> t

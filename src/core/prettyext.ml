@@ -658,7 +658,7 @@ module Make (_ : Store.Cid.RENDERER) : Printer.Ext.T = struct
          (fmt_ppr_cmp_typ 0) tau
 
 
-  let rec fmt_ppr_cmp_exp_chk lvl ppf =
+  let rec fmt_ppr_cmp_exp lvl ppf =
     function
     | Comp.Fn (_, x, e) ->
        let cond = lvl > 0 in
@@ -667,7 +667,7 @@ module Make (_ : Store.Cid.RENDERER) : Printer.Ext.T = struct
          (to_html "fn" Keyword)
          Name.pp x
          (symbol_to_html DblRArr)
-         (fmt_ppr_cmp_exp_chk 0) e
+         (fmt_ppr_cmp_exp 0) e
          (r_paren_if cond);
 
     | Comp.Fun (_, b) ->
@@ -682,13 +682,13 @@ module Make (_ : Store.Cid.RENDERER) : Printer.Ext.T = struct
          (to_html "mlam" Keyword)
          Name.pp x
          (symbol_to_html DblRArr)
-         (fmt_ppr_cmp_exp_chk 0) e
+         (fmt_ppr_cmp_exp 0) e
          (r_paren_if cond);
 
     | Comp.Tuple (_, es) ->
        fprintf ppf "(%a)"
          (List2.pp
-           ~pp_sep:(fun ppf () -> fprintf ppf ",@ ") (fmt_ppr_cmp_exp_chk 0)) es
+           ~pp_sep:(fun ppf () -> fprintf ppf ",@ ") (fmt_ppr_cmp_exp 0)) es
 
     | Comp.LetTuple (_, i, (xs, e)) ->
        let cond = lvl > 1 in
@@ -696,9 +696,9 @@ module Make (_ : Store.Cid.RENDERER) : Printer.Ext.T = struct
          (l_paren_if cond)
          (to_html "let" Keyword)
          (List2.pp ~pp_sep:(fun ppf () -> fprintf ppf ",@ ") Name.pp) xs
-         (fmt_ppr_cmp_exp_syn 0) i
+         (fmt_ppr_cmp_exp 0) i
          (to_html "in" Keyword)
-         (fmt_ppr_cmp_exp_chk 0) e
+         (fmt_ppr_cmp_exp 0) e
          (r_paren_if cond)
 
     | Comp.Let (_, i, (x, e)) ->
@@ -707,9 +707,9 @@ module Make (_ : Store.Cid.RENDERER) : Printer.Ext.T = struct
          (l_paren_if cond)
          (to_html "let" Keyword)
          Name.pp x
-         (fmt_ppr_cmp_exp_syn 0) i
+         (fmt_ppr_cmp_exp 0) i
          (to_html "in" Keyword)
-         (fmt_ppr_cmp_exp_chk 0) e
+         (fmt_ppr_cmp_exp 0) e
          (r_paren_if cond)
 
     | Comp.Box (_, m) ->
@@ -724,24 +724,24 @@ module Make (_ : Store.Cid.RENDERER) : Printer.Ext.T = struct
             (to_html "let" Keyword)
             fmt_ppr_cmp_branch_prefix cD'
             (fmt_ppr_cmp_meta_obj 0) m0
-            (fmt_ppr_cmp_exp_syn 0) i
+            (fmt_ppr_cmp_exp 0) i
             (to_html "in" Keyword)
-            (fmt_ppr_cmp_exp_chk 0) e
+            (fmt_ppr_cmp_exp 0) e
        | Comp.Branch (_, cD', pat, e) ->
           fprintf ppf "@[%s %a %a=@ %a %s@ @]%a"
             (to_html "let" Keyword)
             fmt_ppr_cmp_branch_prefix cD'
             (fmt_ppr_pat_obj 0) pat
-            (fmt_ppr_cmp_exp_syn 0) i
+            (fmt_ppr_cmp_exp 0) i
             (to_html "in" Keyword)
-            (fmt_ppr_cmp_exp_chk 0) e
+            (fmt_ppr_cmp_exp 0) e
        end
 
     | Comp.Case (_, prag, i, bs) ->
        let open Comp in
        fprintf ppf "%s %a %s %s%a"
          (to_html "case" Keyword)
-         (fmt_ppr_cmp_exp_syn 0) i
+         (fmt_ppr_cmp_exp 0) i
          (to_html "of" Keyword)
          begin match prag with
          | PragmaCase -> ""
@@ -756,12 +756,8 @@ module Make (_ : Store.Cid.RENDERER) : Printer.Ext.T = struct
     | Comp.Impossible (_, i) ->
       fprintf ppf "%s %a"
         (to_html "impossible" Keyword)
-        (fmt_ppr_cmp_exp_syn 0) i
+        (fmt_ppr_cmp_exp 0) i
 
-    | i -> fmt_ppr_cmp_exp_syn lvl ppf i
-
-  and fmt_ppr_cmp_exp_syn lvl ppf =
-    function
     | Comp.Name (_, x) ->
        fprintf ppf "%s"
          (to_html (Name.show x) LinkOption)
@@ -770,21 +766,9 @@ module Make (_ : Store.Cid.RENDERER) : Printer.Ext.T = struct
        let cond = lvl > 1 in
        fprintf ppf "%s%a %a%s"
          (l_paren_if cond)
-         (fmt_ppr_cmp_exp_syn 1) i
-         (fmt_ppr_cmp_exp_chk 2) e
+         (fmt_ppr_cmp_exp 1) i
+         (fmt_ppr_cmp_exp 2) e
          (r_paren_if cond)
-
-    | Comp.BoxVal (_, m0) ->
-       let cond = lvl > 1 in
-       fprintf ppf "%s%a%s"
-         (l_paren_if cond)
-         (fmt_ppr_cmp_meta_obj 0) m0
-         (r_paren_if cond)
-
-    | Comp.TupleVal (_, is) ->
-       fprintf ppf "(%a)"
-         (List2.pp
-           ~pp_sep:(fun ppf () -> fprintf ppf ",@ ") (fmt_ppr_cmp_exp_syn 1)) is
 
 
   and fmt_ppr_cmp_branch_prefix ppf : LF.mctx -> unit =
@@ -823,12 +807,12 @@ module Make (_ : Store.Cid.RENDERER) : Printer.Ext.T = struct
        fprintf ppf "%a%s@[%a@]"
          (fmt_ppr_pat_spine lvl) ps
          (symbol_to_html DblRArr)
-         (fmt_ppr_cmp_exp_chk lvl) e
+         (fmt_ppr_cmp_exp lvl) e
     | Comp.ConsFBranch (_, (ps, e), br) ->
        fprintf ppf "%a%s@[%a@]@\n@[<hov2>| %a"
          (fmt_ppr_pat_spine lvl) ps
          (symbol_to_html DblRArr)
-         (fmt_ppr_cmp_exp_chk lvl) e
+         (fmt_ppr_cmp_exp lvl) e
          (fmt_ppr_cmp_fbranches lvl) br
 
   and fmt_ppr_patternOpt ppf =
@@ -847,14 +831,14 @@ module Make (_ : Store.Cid.RENDERER) : Printer.Ext.T = struct
           * -bp
           *)
          (symbol_to_html DblRArr)
-         (fmt_ppr_cmp_exp_chk 0) e
+         (fmt_ppr_cmp_exp 0) e
 
     | Comp.Branch (_, cD1', pat, e) ->
        fprintf ppf "@\n@[<hov2>| %a%a %s@ @[<v>%a@]@]"
          fmt_ppr_cmp_branch_prefix cD1'
          (fmt_ppr_pat_obj 0) pat
          (symbol_to_html DblRArr)
-         (fmt_ppr_cmp_exp_chk 0) e
+         (fmt_ppr_cmp_exp 0) e
 
   (*
     and fmt_ppr_cmp_gctx cD lvl ppf = function
@@ -971,14 +955,14 @@ module Make (_ : Store.Cid.RENDERER) : Printer.Ext.T = struct
        fprintf ppf "@[%s %s = %a;@]@\n"
          (to_html "let" Keyword)
          (Name.show  identifier)
-         (fmt_ppr_cmp_exp_syn l0) expression
+         (fmt_ppr_cmp_exp l0) expression
 
     | Sgn.Val { identifier; typ=Some typ; expression; _ } ->
        fprintf ppf "@[%s %s : %a =@ %a;@]@\n"
          (to_html "let" Keyword)
          (Name.show  identifier)
          (fmt_ppr_cmp_typ 0) typ
-         (fmt_ppr_cmp_exp_syn l0) expression
+         (fmt_ppr_cmp_exp l0) expression
 
     | Sgn.Query _ ->
        fprintf ppf "%s"

@@ -85,8 +85,8 @@ module Comp : sig
 
   type error =
     | IllegalParamTyp of LF.mctx * LF.dctx * LF.typ
-    | MismatchChk of LF.mctx * gctx * exp_chk * tclo * tclo
-    | MismatchSyn of LF.mctx * gctx * exp_syn * typeVariant * tclo
+    | MismatchChk of LF.mctx * gctx * exp * tclo * tclo
+    | MismatchSyn of LF.mctx * gctx * exp * typeVariant * tclo
     | PatIllTyped of LF.mctx * gctx * pattern * tclo * tclo
     | BasicMismatch of mismatch_kind * LF.mctx * gctx * tclo
     | SBoxMismatch of LF.mctx * gctx * LF.dctx * LF.dctx
@@ -97,7 +97,7 @@ module Comp : sig
     | NotRecursiveSrc of Name.t
     | NotRecursiveDst of Name.t
     | MissingTotal of Id.cid_prog
-    | NotImpossible of LF.mctx * gctx * typ * exp_syn
+    | NotImpossible of LF.mctx * gctx * typ * exp
     | InvalidHypotheses
       of hypotheses (* expected *)
          * hypotheses (* actual *)
@@ -180,7 +180,7 @@ module Comp : sig
               (* ^ the group of mutual recursive functions the expression is being checked in *)
               -> ?cIH: ihctx
               (* ^ the context of available induction hypotheses *)
-              -> exp_chk
+              -> exp
               (* ^ The expression to check *)
               -> tclo
               (* ^ The type it should have *)
@@ -195,7 +195,7 @@ module Comp : sig
             (* ^ The group of mutual recursive functions the expression is being checked in *)
             -> ?cIH: ihctx
             (* ^ The context of available induction hypotheses *)
-            -> exp_syn
+            -> exp
             (* ^ The expression whose type to synthesize *)
             -> ihctx option * tclo
             (* ^ A possibly refined context of induction hypotheses and the synthesized type *)
@@ -250,7 +250,7 @@ module Comp : sig
       else, raises a synthesis mismatch error for the expression i
       saying that the type of i is expected to be a box-type.
    *)
-  val require_syn_typbox : LF.mctx -> gctx -> Location.t -> exp_syn -> tclo -> meta_typ * LF.msub
+  val require_syn_typbox : LF.mctx -> gctx -> Location.t -> exp -> tclo -> meta_typ * LF.msub
 
 
   (** Processes all leading PiBoxes to replace them with unification
@@ -310,5 +310,5 @@ module Comp : sig
       the type (together with a delayed meta-substitution) of the
       produced expression.
    *)
-  val genMApp : Location.t -> (LF.ctyp_decl -> bool) -> LF.mctx -> exp_syn * tclo -> int * (exp_syn * tclo)
+  val genMApp : Location.t -> (LF.ctyp_decl -> bool) -> LF.mctx -> exp * tclo -> int * (exp * tclo)
 end

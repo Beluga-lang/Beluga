@@ -436,31 +436,24 @@ module Comp = struct
   type ihctx = ih_decl LF.ctx
 
   (** Normal computational terms *)
-  and exp_chk =                                                              (* e :=                                              *)
-    | Syn        of Location.t * exp_syn                                     (* | n                                               *)
-    | Fn         of Location.t * Name.t * exp_chk                            (* | \x. e'                                          *)
-    | Fun        of Location.t * fun_branches                                (* | b_1...b_k                                       *)
-    | MLam       of Location.t * Name.t * exp_chk * Plicity.t                (* | Pi X.e'                                         *)
-    | Tuple      of Location.t * exp_chk List2.t                             (* | (e_1, e_2)                                      *)
-    | LetTuple   of Location.t * exp_syn * (Name.t List2.t * exp_chk)        (* | let (x1=i.1, x2=i.2, ..., xn=i.n) = i in e      *)
-    | Let        of Location.t * exp_syn * (Name.t * exp_chk)                (* | let x = n in e                                  *)
-    | Box        of Location.t * meta_obj * meta_typ (* type annotation,     (* | Box ([cPsihat |- tM]) : [cPsi |- tA]            *)
-                                            used for pretty-printing *)
-    | Case       of Location.t * case_pragma * exp_syn * branch list
-    | Impossible of Location.t * exp_syn
-    | Hole       of Location.t * HoleId.t * HoleId.name
-
-  (** Neutral computational terms *)
-  and exp_syn =                                                                  (* n :=                                            *)
-    | Var       of Location.t * offset                                           (* | x:tau in cG                                   *)
-    | DataConst of Location.t * cid_comp_const                                   (* | c:tau in Comp. Sig.                           *)
-    | Obs       of Location.t * exp_chk * LF.msub * cid_comp_dest                (* | observation (e, ms, destructor={typ, ret_typ} *)
-    | Const     of Location.t * cid_prog                                         (* | theorem cp                                    *)
-    | Apply     of Location.t * exp_syn * exp_chk                                (* | (n:tau_1 -> tau_2) (e:tau_1)                  *)
-    | MApp      of Location.t * exp_syn * meta_obj * meta_typ (* annotation, *)  (* | (Pi X:U. n': tau) ([cPsihat |- tM] : [U'])    *)
-                    * Plicity.t                            (* for printing *)
-    | AnnBox    of meta_obj * meta_typ                                           (* | [cPsihat |- tM] : [cPsi |- tA]                *)
-    | TupleVal  of Location.t * exp_syn List2.t
+  and exp =                                                                              (* e :=                                              *)
+    | Fn         of Location.t * Name.t * exp                                            (* | \x. e'                                          *)
+    | Fun        of Location.t * fun_branches                                            (* | b_1...b_k                                       *)
+    | MLam       of Location.t * Name.t * exp * Plicity.t                                (* | Pi X.e'                                         *)
+    | Tuple      of Location.t * exp List2.t                                             (* | (e1, e2, ..., en)                               *)
+    | LetTuple   of Location.t * exp * (Name.t List2.t * exp)                            (* | let (x1=i.1, x2=i.2, ..., xn=i.n) = i in e      *)
+    | Let        of Location.t * exp * (Name.t * exp)                                    (* | let x = n in e                                  *)
+    | Box        of Location.t * meta_obj * meta_typ (* for printing *)                  (* | Box ([cPsihat |- tM]) : [cPsi |- tA]            *)
+    | Case       of Location.t * case_pragma * exp * branch list                         (* | case e of branches                              *)
+    | Impossible of Location.t * exp                                                     (* | impossible e                                    *)
+    | Hole       of Location.t * HoleId.t * HoleId.name                                  (* | _                                               *)
+    | Var        of Location.t * offset                                                  (* | x:tau in cG                                     *)
+    | DataConst  of Location.t * cid_comp_const                                          (* | c:tau in Comp. Sig.                             *)
+    | Obs        of Location.t * exp * LF.msub * cid_comp_dest                           (* | observation (e, ms, destructor={typ, ret_typ}   *)
+    | Const      of Location.t * cid_prog                                                (* | theorem cp                                      *)
+    | Apply      of Location.t * exp * exp                                               (* | (n:tau_1 -> tau_2) (e:tau_1)                    *)
+    | MApp       of Location.t * exp * meta_obj * meta_typ (* for printing *) * Plicity.t (* | (Pi X:U. n': tau) ([cPsihat |- tM] : [U'])      *)
+    | AnnBox     of Location.t * meta_obj * meta_typ                                      (* | [cPsihat |- tM] : [cPsi |- tA]                  *)
 
   and pattern =
     | PatMetaObj of Location.t * meta_obj
@@ -482,11 +475,11 @@ module Comp = struct
          * (LF.mctx * gctx) (* branch contexts *)
          * pattern
          * LF.msub (* refinement substitution for the branch *)
-         * exp_chk
+         * exp
 
   and fun_branches =
-   | NilFBranch of Location.t
-   | ConsFBranch of Location.t * (LF.mctx * gctx * pattern_spine * exp_chk) * fun_branches
+   | NilFBranch  of Location.t
+   | ConsFBranch of Location.t * (LF.mctx * gctx * pattern_spine * exp) * fun_branches
 
   type tclo = typ * LF.msub
 
@@ -516,30 +509,25 @@ module Comp = struct
     | [] -> i
     | e :: es -> apply_many (Apply (Location.ghost, i, e)) es
 
-  let loc_of_exp_syn =
+  let loc_of_exp =
     function
-    | Var (loc, _) -> loc
-    | DataConst (loc, _) -> loc
-    | Obs (loc, _, _, _) -> loc
-    | Const (loc, _) -> loc
-    | Apply (loc, _, _) -> loc
-    | MApp (loc, _, _, _, _) -> loc
-    | AnnBox ((loc, _), _) -> loc
-    | TupleVal (loc, _) -> loc
-
-  let loc_of_exp_chk =
-    function
-    | Syn (loc, _) -> loc
-    | Fn (loc, _, _) -> loc
-    | Fun (loc, _) -> loc
-    | MLam (loc, _, _, _) -> loc
-    | Tuple (loc, _) -> loc
-    | LetTuple (loc, _, _) -> loc
-    | Let (loc, _, _) -> loc
-    | Box (loc, _, _) -> loc
-    | Case (loc, _, _, _) -> loc
-    | Impossible (loc, _) -> loc
-    | Hole (loc, _, _) -> loc
+    | Fn (loc, _, _)
+    | Fun (loc, _)
+    | MLam (loc, _, _, _)
+    | Tuple (loc, _)
+    | LetTuple (loc, _, _)
+    | Let (loc, _, _)
+    | Box (loc, _, _)
+    | Case (loc, _, _, _)
+    | Impossible (loc, _)
+    | Hole (loc, _, _)
+    | Var (loc, _)
+    | DataConst (loc, _)
+    | Obs (loc, _, _, _)
+    | Const (loc, _)
+    | Apply (loc, _, _)
+    | MApp (loc, _, _, _, _)
+    | AnnBox (loc, _, _) -> loc
 
   type total_dec =
     { name : Name.t
@@ -553,9 +541,9 @@ module Comp = struct
   (** Decides whether this synthesizable expression is actually an
       annotated box.
    *)
-  let is_meta_obj : exp_syn -> meta_obj option =
+  let is_meta_obj : exp -> meta_obj option =
     function
-    | AnnBox (m, _)  -> Some m
+    | AnnBox (_, m, _)  -> Some m
     | _ -> None
 
   let head_of_meta_obj : meta_obj -> (LF.dctx_hat * LF.head) option =
@@ -576,7 +564,7 @@ module Comp = struct
   (** Finds the head of an application. Chases meta-applications and
       computation applications.
    *)
-  let rec head_of_application : exp_syn -> exp_syn =
+  let rec head_of_application : exp -> exp =
     function
     | Apply (_, i, _) -> head_of_application i
     | MApp (_, i, _, _, _) -> head_of_application i
@@ -619,11 +607,11 @@ module Comp = struct
   module SubgoalPath = struct
     type t =
       | Here
-      | Intros of t
-      | Suffices of exp_syn * int * t
-      | MetaSplit of exp_syn * meta_branch_label * t
-      | CompSplit of exp_syn * cid_comp_const * t
-      | ContextSplit of exp_syn * context_case * t
+      | Intros       of t
+      | Suffices     of exp * int * t
+      | MetaSplit    of exp * meta_branch_label * t
+      | CompSplit    of exp * cid_comp_const * t
+      | ContextSplit of exp * context_case * t
 
     let equals p1 p2 = assert false
 
@@ -650,9 +638,9 @@ module Comp = struct
     | Directive of directive (* which can end proofs or split into subgoals *)
 
   and command =
-    | By of exp_syn * Name.t * typ
-    | Unbox of exp_syn * Name.t * LF.ctyp * unbox_modifier option
-  (* ^ The stored ctyp is the type synthesized for the exp_syn, BEFORE
+    | By    of exp * Name.t * typ
+    | Unbox of exp * Name.t * LF.ctyp * unbox_modifier option
+  (* ^ The stored ctyp is the type synthesized for the exp, BEFORE
      the application of any unbox_modifier *)
 
   and proof_state =
@@ -674,24 +662,24 @@ module Comp = struct
     | Intros (* Prove a function type by a hypothetical derivation. *)
       of hypothetical
     | Solve (* End the proof with the given term *)
-      of exp_chk
+      of exp
     | ImpossibleSplit
-      of exp_syn
+      of exp
     | Suffices
-      of exp_syn (* i -- the function to invoke *)
+      of exp (* i -- the function to invoke *)
          * suffices_arg list
          (* ^ the arguments of the function *)
 
     | MetaSplit (* Splitting on an LF object *)
-      of exp_syn (* The object to split on *)
+      of exp (* The object to split on *)
          * typ (* The type of the object that we're splitting on *)
          * meta_branch list
     | CompSplit (* Splitting on an inductive type *)
-      of exp_syn (* THe computational term to split on *)
+      of exp (* THe computational term to split on *)
          * typ (* The type of the object to split on *)
          * comp_branch list
     | ContextSplit (* Splitting on a context *)
-      of exp_syn (* The scrutinee *)
+      of exp (* The scrutinee *)
          * typ (* The type of the scrutinee *)
          * context_branch list
 
@@ -755,15 +743,15 @@ module Comp = struct
   let intros (h : hypotheses) (proof : proof) : proof =
     Directive (Intros (Hypothetical (Location.ghost, h, proof)))
 
-  let suffices (i : exp_syn) (ps : suffices_arg list) : proof =
+  let suffices (i : exp) (ps : suffices_arg list) : proof =
     Directive (Suffices (i, ps))
 
   let proof_cons (stmt : command) (proof : proof) = Command (stmt, proof)
 
-  let solve (t : exp_chk) : proof =
+  let solve (t : exp) : proof =
     Directive (Solve t)
 
-  let context_split (i : exp_syn) (tau : typ) (bs : context_branch list)
+  let context_split (i : exp) (tau : typ) (bs : context_branch list)
       : proof =
     Directive (ContextSplit (i, tau, bs))
 
@@ -771,11 +759,11 @@ module Comp = struct
       : context_branch =
     SplitBranch (c, (cG_p, pat), t, (Hypothetical (Location.ghost, h, p)))
 
-  let meta_split (m : exp_syn) (a : typ) (bs : meta_branch list)
+  let meta_split (m : exp) (a : typ) (bs : meta_branch list)
       : proof =
     Directive (MetaSplit (m, a, bs))
 
-  let impossible_split (i : exp_syn) : proof =
+  let impossible_split (i : exp) : proof =
     Directive (ImpossibleSplit i)
 
   let meta_branch
@@ -787,7 +775,7 @@ module Comp = struct
       : meta_branch =
     SplitBranch (c, (cG_p, pat), t, (Hypothetical (Location.ghost, h, p)))
 
-  let comp_split (t : exp_syn) (tau : typ) (bs : comp_branch list)
+  let comp_split (t : exp) (tau : typ) (bs : comp_branch list)
       : proof =
     Directive (CompSplit (t, tau, bs))
 
@@ -814,22 +802,22 @@ module Comp = struct
       index object.
       See `LF.variable_of_mfront`.
    *)
-  let metavariable_of_exp : exp_syn -> (offset * offset option) option =
+  let metavariable_of_exp : exp -> (offset * offset option) option =
     function
-    | AnnBox ((_, mf), _) -> LF.variable_of_mfront mf
+    | AnnBox (_, (_, mf), _) -> LF.variable_of_mfront mf
     | _ -> None
 
   (* Decides whether the given term is a computational variable.
      Returns the offset of the variable.
    *)
-  let variable_of_exp : exp_syn -> offset option =
+  let variable_of_exp : exp -> offset option =
     function
     | Var (_, k) -> Some k
     | _ -> None
 
   type thm =
     | Proof of proof
-    | Program of exp_chk
+    | Program of exp
 
   type env =
     | Empty
@@ -838,11 +826,11 @@ module Comp = struct
   (* Syntax of values, used by the operational semantics *)
 
   and value =
-    | FnValue    of Name.t * exp_chk * LF.msub * env
+    | FnValue    of Name.t * exp * LF.msub * env
     | FunValue   of fun_branches_value
     | ThmValue   of cid_prog * thm * LF.msub * env
-    | MLamValue  of Name.t * exp_chk * LF.msub * env
-    | CtxValue   of Name.t * exp_chk * LF.msub * env
+    | MLamValue  of Name.t * exp * LF.msub * env
+    | CtxValue   of Name.t * exp * LF.msub * env
     | BoxValue   of meta_obj
     | ConstValue of cid_prog
     | DataValue  of cid_comp_const * data_spine
@@ -856,7 +844,7 @@ module Comp = struct
 
   and fun_branches_value =
     | NilValBranch
-    | ConsValBranch of (pattern_spine * exp_chk * LF.msub * env) * fun_branches_value
+    | ConsValBranch of (pattern_spine * exp * LF.msub * env) * fun_branches_value
 end
 
 
@@ -950,7 +938,7 @@ module Sgn = struct
       { location: Location.t
       ; identifier: Name.t
       ; typ: Comp.typ
-      ; expression: Comp.exp_chk
+      ; expression: Comp.exp
       ; expression_value: Comp.value option
       } (** Computation-level value declaration *)
 

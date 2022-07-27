@@ -336,12 +336,13 @@ module Sgn = struct
     | Coverage of [`Error | `Warn]
 
   type thm_decl =
-    { thm_loc : Location.t
-    ; thm_name : Name.t
-    ; thm_typ : Comp.typ
-    ; thm_order : Comp.total_dec option
-    ; thm_body : Comp.thm
-    }
+    | Theorem of
+      { location : Location.t
+      ; name : Name.t
+      ; typ : Comp.typ
+      ; order : Comp.total_dec option
+      ; body : Comp.thm
+      }
 
   (** Parsed signature element *)
   type decl =

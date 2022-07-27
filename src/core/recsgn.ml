@@ -902,7 +902,7 @@ let recSgnDecls decls =
        (* and check that all or none of the declarations are present. *)
        let total_decs =
          let prelim_total_decs =
-           List1.map (fun t -> Ext.Sgn.(t.thm_name, t.thm_order)) recFuns
+           List1.map (fun (Ext.Sgn.Theorem { name; order; _ }) -> (name, order)) recFuns
          in
          match
             List1.partition
@@ -923,8 +923,8 @@ let recSgnDecls decls =
 
        let preprocess =
          List1.map
-           begin fun Ext.Sgn.{ thm_typ; thm_name; thm_loc; thm_body; _ } ->
-           let apx_tau = Index.comptyp thm_typ in
+           begin fun (Ext.Sgn.Theorem { typ; name; location; body; _ }) ->
+           let apx_tau = Index.comptyp typ in
            let tau' =
              Monitor.timer
                ( "Function Type Elaboration"
@@ -955,10 +955,10 @@ let recSgnDecls decls =
            let register =
              fun total_decs ->
              Comp.add begin fun cid ->
-               Comp.mk_entry (Some (Decl.next ())) thm_name tau' 0 total_decs None
+               Comp.mk_entry (Some (Decl.next ())) name tau' 0 total_decs None
                end
            in
-           ( (thm_name, thm_body, thm_loc, tau')
+           ( (name, body, location, tau')
            , register
            )
            end

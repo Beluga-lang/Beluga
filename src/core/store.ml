@@ -13,7 +13,7 @@ exception Error of Syntax.Loc.t * error
 module OpPragmas = struct
   type fixPragma =
     { name : Name.t
-    ; fix : Ext.Sgn.fix
+    ; fix : Fixity.t
     ; precedence : int
     ; assoc : Ext.Sgn.assoc option
     }

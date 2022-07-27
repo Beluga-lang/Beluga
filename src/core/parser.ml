@@ -2727,7 +2727,7 @@ let sgn_fixity_pragma : Sgn.decl parser =
     $> fun (location, (x, precedence, assoc)) ->
        Sgn.Pragma
        { location
-       ; pragma=Sgn.FixPrag (x, Sgn.Infix, precedence, assoc)
+       ; pragma=Sgn.FixPrag (x, Fixity.infix, precedence, assoc)
        }
   in
   let prefix_pragma : Sgn.decl parser =
@@ -2738,7 +2738,7 @@ let sgn_fixity_pragma : Sgn.decl parser =
     $> fun (location, (x, precedence)) ->
        Sgn.Pragma
        { location
-       ; pragma=Sgn.FixPrag (x, Sgn.Prefix, precedence, Some Sgn.Left)
+       ; pragma=Sgn.FixPrag (x, Fixity.prefix, precedence, Some Sgn.Left)
        }
   in
   alt infix_pragma prefix_pragma

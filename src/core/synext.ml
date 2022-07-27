@@ -321,12 +321,11 @@ module Sgn = struct
 
   type assoc = Left | Right | NoAssoc
   type precedence = int
-  type fix = Prefix | Postfix | Infix
 
   type pragma =
     | OptsPrag          of string list
     | NamePrag          of Name.t * string * string option
-    | FixPrag           of Name.t * fix * precedence * assoc option
+    | FixPrag           of Name.t * Fixity.t * precedence * assoc option
     | NotPrag
     | DefaultAssocPrag  of assoc
     | OpenPrag          of string list

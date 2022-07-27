@@ -123,11 +123,11 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
 
   and fmt_ppr_lf_operator cD cPsi ppf (fixity, name, spine) =
     match fixity with
-    | Ext.Sgn.Prefix ->
+    | Fixity.Prefix ->
        fmt_ppr_lf_prefix_operator cD cPsi ppf (name, spine)
-    | Ext.Sgn.Postfix ->
+    | Fixity.Postfix ->
        fmt_ppr_lf_postfix_operator cD cPsi ppf (name, spine)
-    | Ext.Sgn.Infix ->
+    | Fixity.Infix ->
        fmt_ppr_lf_infix_operator cD cPsi ppf (name, spine)
 
   and fmt_ppr_lf_prefix_operator cD cPsi ppf =

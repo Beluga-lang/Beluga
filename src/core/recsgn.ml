@@ -27,7 +27,7 @@ type error =
   | NoStratifyOrPositive of string
   | TotalArgsError of Name.t
   | IllegalOptsPrag of string
-  | IllegalOperatorPrag of Name.t * Ext.Sgn.fix * int
+  | IllegalOperatorPrag of Name.t * Fixity.t * int
   | InvalidOpenPrag of string
   | InvalidAbbrev of string list * string
   | UnboundArg of Name.t * Name.t option list
@@ -77,8 +77,8 @@ let _ =
       | IllegalOperatorPrag(n, f, actual) ->
          let (fix, expected) =
            match f with
-           | Ext.Sgn.Infix -> ("infix", 2)
-           | Ext.Sgn.Postfix -> ("postfix", 1)
+           | Fixity.Infix -> ("infix", 2)
+           | Fixity.Postfix -> ("postfix", 1)
          in
          fprintf ppf
            "Illegal %s operator %a. Operator declared with %d arguments, but only operators with %d args permitted"
@@ -258,13 +258,13 @@ let recSgnDecls decls =
     | Ext.Sgn.Pragma { location=loc; pragma=Ext.Sgn.FixPrag (name, fix, precedence, assoc) } ->
        dprintf (fun p -> p.fmt "Pragma found for %a" Name.pp name);
        begin match fix with
-       | Ext.Sgn.Prefix ->
+       | Fixity.Prefix ->
           OpPragmas.addPragma name fix (Some precedence) assoc
-       | _ ->
+       | (Fixity.Infix | Fixity.Postfix) ->
           let args_expected =
             match fix with
-            | Ext.Sgn.Postfix -> 1
-            | Ext.Sgn.Infix -> 2
+            | Fixity.Postfix -> 1
+            | Fixity.Infix -> 2
           in
           let actual =
             try
@@ -296,13 +296,7 @@ let recSgnDecls decls =
          | None -> None
          | Some x -> Some (assoc_map x)
        in
-       let fix' =
-         match fix with
-         | Ext.Sgn.Postfix -> Int.LF.Postfix
-         | Ext.Sgn.Prefix -> Int.LF.Prefix
-         | Ext.Sgn.Infix -> Int.LF.Infix
-       in
-       Int.Sgn.Pragma { pragma=Int.LF.FixPrag (name, fix', precedence, assoc') }
+       Int.Sgn.Pragma { pragma=Int.LF.FixPrag (name, fix, precedence, assoc') }
 
     | Ext.Sgn.CompTypAbbrev { location; identifier; kind=cK; typ=cT } ->
        (* index cT in a context which contains arguments to cK *)

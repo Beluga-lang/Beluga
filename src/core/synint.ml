@@ -259,13 +259,12 @@ module LF = struct
   type trec_clo = typ_rec * sub          (* [s]Arec                        *)
 
   type assoc = Left | Right | NoAssoc
-  type fix = Prefix | Postfix | Infix
   type prag =
     | NamePrag of cid_typ
     | NotPrag
     | OpenPrag of module_id
     | DefaultAssocPrag of assoc
-    | FixPrag of Name.t * fix * int * assoc option
+    | FixPrag of Name.t * Fixity.t * int * assoc option
     | AbbrevPrag of string list * string
 
   (**********************)

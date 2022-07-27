@@ -5,7 +5,7 @@ open Syntax.Int
 module OpPragmas : sig
   type fixPragma =
     { name : Name.t
-    ; fix : Syntax.Ext.Sgn.fix
+    ; fix : Fixity.t
     ; precedence : int
     ; assoc : Syntax.Ext.Sgn.assoc option
     }
@@ -14,7 +14,7 @@ module OpPragmas : sig
 
   val clear : unit -> unit
 
-  val addPragma : Name.t -> Syntax.Ext.Sgn.fix -> int option -> Syntax.Ext.Sgn.assoc option-> unit
+  val addPragma : Name.t -> Fixity.t -> int option -> Syntax.Ext.Sgn.assoc option-> unit
 
   val getPragma : Name.t -> fixPragma option
 

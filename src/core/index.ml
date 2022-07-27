@@ -471,7 +471,7 @@ and shunting_yard (l : Ext.LF.normal list) : Ext.LF.normal =
        if lte p o
        then
          begin match o.Store.OpPragmas.fix with
-         | Ext.Sgn.Prefix ->
+         | Fixity.Prefix ->
             let args_expected =
               o.Store.OpPragmas.name
               |> List.find_apply
@@ -493,7 +493,7 @@ and shunting_yard (l : Ext.LF.normal list) : Ext.LF.normal =
             in
             parse (i + 1, h :: t, (i, e') :: es, os)
 
-         | Ext.Sgn.Postfix ->
+         | Fixity.Postfix ->
             let (_, e) :: es = exps in
             let loc = Ext.LF.loc_of_normal e in
             let e' =
@@ -505,7 +505,7 @@ and shunting_yard (l : Ext.LF.normal list) : Ext.LF.normal =
             in
             parse (i + 1, h :: t, (i, e') :: es, os)
 
-         | Ext.Sgn.Infix ->
+         | Fixity.Infix ->
             let (_, e2) :: (_, e1) :: es = exps in
             let loc = Ext.LF.loc_of_normal e1 in
             let e' =
@@ -550,7 +550,7 @@ and shunting_yard (l : Ext.LF.normal list) : Ext.LF.normal =
     | ([(_, e)], []) -> e
 
     | (exps, (i, o, loc_o) :: os)
-         when (o.Store.OpPragmas.fix = Ext.Sgn.Prefix) ->
+         when (Fixity.is_prefix o.Store.OpPragmas.fix) ->
        let args_expected =
          o.Store.OpPragmas.name
          |> List.find_apply
@@ -588,7 +588,7 @@ and shunting_yard (l : Ext.LF.normal list) : Ext.LF.normal =
          throw loc (MisplacedOperator o.Store.OpPragmas.name)
 
     | ((i2, e2) :: (i1, e1) :: es, (i, o, _) :: os)
-         when o.Store.OpPragmas.fix = Ext.Sgn.Infix ->
+         when (Fixity.is_infix o.Store.OpPragmas.fix) ->
        let loc = Ext.LF.loc_of_normal e1 in
        if i2 > i && i > i1
        then
@@ -606,7 +606,7 @@ and shunting_yard (l : Ext.LF.normal list) : Ext.LF.normal =
          throw loc (MisplacedOperator o.Store.OpPragmas.name)
 
     | ((i1, e) :: es, (i, o, _) :: os)
-         when o.Store.OpPragmas.fix = Ext.Sgn.Postfix ->
+         when (Fixity.is_postfix o.Store.OpPragmas.fix) ->
        let loc = Ext.LF.loc_of_normal e in
        if i > i1
        then

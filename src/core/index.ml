@@ -549,8 +549,8 @@ and shunting_yard (l : Ext.LF.normal list) : Ext.LF.normal =
     function
     | ([(_, e)], []) -> e
 
-    | (exps, (i, o, loc_o) :: os)
-         when (Fixity.is_prefix o.Store.OpPragmas.fix) ->
+    | (exps,
+       (i, ({ Store.OpPragmas.fix = Fixity.Prefix; _ } as o), loc_o) :: os) ->
        let args_expected =
          o.Store.OpPragmas.name
          |> List.find_apply
@@ -587,8 +587,8 @@ and shunting_yard (l : Ext.LF.normal list) : Ext.LF.normal =
        else
          throw loc (MisplacedOperator o.Store.OpPragmas.name)
 
-    | ((i2, e2) :: (i1, e1) :: es, (i, o, _) :: os)
-         when (Fixity.is_infix o.Store.OpPragmas.fix) ->
+    | ((i2, e2) :: (i1, e1) :: es,
+       (i, ({ Store.OpPragmas.fix = Fixity.Infix; _ } as o), _) :: os) ->
        let loc = Ext.LF.loc_of_normal e1 in
        if i2 > i && i > i1
        then
@@ -605,8 +605,8 @@ and shunting_yard (l : Ext.LF.normal list) : Ext.LF.normal =
        else
          throw loc (MisplacedOperator o.Store.OpPragmas.name)
 
-    | ((i1, e) :: es, (i, o, _) :: os)
-         when (Fixity.is_postfix o.Store.OpPragmas.fix) ->
+    | ((i1, e) :: es,
+       (i, ({ Store.OpPragmas.fix = Fixity.Postfix; _ } as o), _) :: os) ->
        let loc = Ext.LF.loc_of_normal e in
        if i > i1
        then

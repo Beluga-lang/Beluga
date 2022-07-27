@@ -451,9 +451,9 @@ let printfun =
                }
              in
              P.fmt_ppr_sgn_decl ppf
-              (Synint.Sgn.Theorem
-                { location=Syntax.Loc.ghost
-                ; theorems=List1.singleton d
+              (Synint.Sgn.Theorems
+                { location = Syntax.Loc.ghost
+                ; theorems = List1.singleton d
                 })
           | _  -> fprintf ppf "- %s is not a function.;\n@?" arg
         with

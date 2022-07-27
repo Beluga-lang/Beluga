@@ -936,7 +936,7 @@ module Sgn = struct
       ; schema: LF.schema
       } (** Declaration of a specification for a set of contexts *)
 
-    | Theorem of
+    | Theorems of
       { location: Location.t
       ; theorems: thm_decl List1.t
       } (** Mutually recursive theorem declaration(s) *)

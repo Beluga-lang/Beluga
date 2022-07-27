@@ -1724,7 +1724,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
          (R.render_cid_schema identifier)
          (fmt_ppr_lf_schema ~useName:false l0) schema
 
-    | Sgn.Theorem { theorems; _ } ->
+    | Sgn.Theorems { theorems; _ } ->
        fprintf ppf "@[<v>%a@]"
          (List1.pp ~pp_sep: (fun ppf _ -> fprintf ppf "@,and ")
             (fun ppf x ->

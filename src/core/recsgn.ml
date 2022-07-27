@@ -1100,7 +1100,7 @@ let recSgnDecls decls =
          in
          List1.map reconOne (List1.combine thm_cid_list thm_list)
        in
-       let decl = Int.Sgn.(Theorem { location; theorems=ds }) in
+       let decl = Int.Sgn.Theorems { location; theorems = ds } in
        Store.Modules.addSgnToCurrent decl;
        decl
 

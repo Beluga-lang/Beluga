@@ -156,7 +156,6 @@ module Comp = struct
     | TypArr of Location.t * typ * typ                 (*    | tau -> tau         *)
     | TypCross of Location.t * typ * typ               (*    | tau * tau          *)
     | TypPiBox of Location.t * LF.ctyp_decl * typ      (*    | Pi u::U.tau        *)
-    | TypInd of typ
 
   and exp_chk =                                                        (* Computation-level expressions *)
     | Syn        of Location.t * exp_syn                               (*  e ::= i                      *)

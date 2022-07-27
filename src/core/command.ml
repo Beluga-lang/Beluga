@@ -441,14 +441,14 @@ let printfun =
           let n = Name.(mk_name (SomeString arg)) in
           let entry = Store.Cid.Comp.(index_of_name n |> get) in
           match Store.Cid.Comp.Entry.(entry.prog) with
-          | Some (Synint.Comp.ThmValue (thm_name, thm_body, _ms, _env)) ->
+          | Some (Synint.Comp.ThmValue (name, body, _ms, _env)) ->
              let d =
-               let open Syntax.Int.Sgn in
-               { thm_name
-               ; thm_typ = Store.Cid.Comp.Entry.(entry.typ)
-               ; thm_body
-               ; thm_loc = Syntax.Loc.ghost
-               }
+               Syntax.Int.Sgn.Theorem
+                 { name
+                 ; typ = entry.Store.Cid.Comp.Entry.typ
+                 ; body
+                 ; location = Syntax.Loc.ghost
+                 }
              in
              P.fmt_ppr_sgn_decl ppf
               (Synint.Sgn.Theorems

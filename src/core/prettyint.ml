@@ -1653,12 +1653,12 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
 
   let fmt_ppr_sgn_thm_decl ppf =
     function
-    | Sgn.({ thm_name; thm_typ; thm_body; thm_loc }) ->
+    | Sgn.Theorem { name; typ; body; _ } ->
        fprintf ppf "%a %s : %a =@ @[<v2>%a;@]"
-         fmt_ppr_cmp_thm_prefix thm_body
-         (R.render_cid_prog thm_name)
-         (fmt_ppr_cmp_typ LF.Empty 0) thm_typ
-         fmt_ppr_cmp_thm thm_body
+         fmt_ppr_cmp_thm_prefix body
+         (R.render_cid_prog name)
+         (fmt_ppr_cmp_typ LF.Empty 0) typ
+         fmt_ppr_cmp_thm body
 
   let rec fmt_ppr_sgn_decl ppf =
     function

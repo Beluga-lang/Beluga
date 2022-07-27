@@ -876,11 +876,12 @@ module Sgn = struct
     | StratifyAll of Location.t
 
   type thm_decl =
-    { thm_name : cid_prog
-    ; thm_typ : Comp.typ
-    ; thm_body : Comp.thm
-    ; thm_loc : Location.t
-    }
+    | Theorem of
+      { name : cid_prog
+      ; typ : Comp.typ
+      ; body : Comp.thm
+      ; location : Location.t
+      }
 
   (** Reconstructed signature element *)
   type decl =

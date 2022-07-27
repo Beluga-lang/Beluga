@@ -1081,22 +1081,22 @@ let recSgnDecls decls =
        in
 
        let ds =
-         let reconOne (thm_cid, (thm_name, thm_body, thm_loc, thm_typ)) =
-           let (e_r', tau') = reconThm location (thm_name, thm_cid, thm_body, thm_typ) in
+         let reconOne (thm_cid, (thm_name, thm_body, thm_location, thm_typ)) =
+           let (e_r', tau') = reconThm thm_location (thm_name, thm_cid, thm_body, thm_typ) in
            dprintf
              begin fun p ->
              p.fmt "[reconRecFun] @[<v>DOUBLE CHECK of function %a at %a successful@,Adding definition to the store.@]"
                Name.pp thm_name
-               Loc.print_short thm_loc
+               Loc.print_short thm_location
              end;
            let v = Int.(Comp.ThmValue (thm_cid, e_r', LF.MShift 0, Comp.Empty)) in
            Comp.set_prog thm_cid (Fun.const (Some v));
-           let open Int.Sgn in
-           { thm_name = thm_cid
-           ; thm_body = e_r'
-           ; thm_loc
-           ; thm_typ = tau'
-           }
+           Int.Sgn.Theorem
+             { name = thm_cid
+             ; body = e_r'
+             ; location = thm_location
+             ; typ = tau'
+             }
          in
          List1.map reconOne (List1.combine thm_cid_list thm_list)
        in

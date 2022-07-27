@@ -860,7 +860,7 @@ let recSgnDecls decls =
         ; declarations=List1.map2 (fun x y -> x :: y) recTyps' recConts'
         }
 
-    | Ext.Sgn.Theorem { location; theorems=recFuns } ->
+    | Ext.Sgn.Theorems { location; theorems=recFuns } ->
        let pos loc x args =
          match
            List.index_of

@@ -412,7 +412,7 @@ module Sgn = struct
       ; declarations: (decl * decl list) List1.t
       } (** Mutually-recursive LF type family declaration *)
 
-    | Theorem of
+    | Theorems of
       { location: Location.t
       ; theorems: thm_decl List1.t
       } (** Mutually recursive theorem declaration(s) *)

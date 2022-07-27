@@ -3064,7 +3064,7 @@ let sgn_thm_decl : Sgn.decl parser =
   <& token T.SEMICOLON
   |> span
   |> labelled "(mutual) recursive function declaration(s)"
-  $> fun (location, theorems) -> Sgn.Theorem { location; theorems }
+  $> fun (location, theorems) -> Sgn.Theorems { location; theorems }
 
 let rec sgn_decl : Sgn.decl parser =
   { run =

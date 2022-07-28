@@ -2,7 +2,7 @@ open Support
 
 (** The type of annotation for the fixity of an operator.
 
-    If [f] is an operator and [a1], [a2], ..., [an] are arguments, then
+    Let [f] be an operator and [a1], [a2], ..., [an] be arguments. Then,
 
     - if [f] is prefix, then it is called as [f a1 a2 ... an]
     - if [f] is infix, then it is called as [a1 f a2]

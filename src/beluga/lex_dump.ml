@@ -14,8 +14,15 @@ let dump_lex path =
     (fun stream ->
       let out = Lexer.mk (Loc.initial path) stream in
       let ppf = Format.formatter_of_out_channel stdout in
-      let f (l, t) = Format.fprintf ppf "%a %a: %a\n" (Token.print `CLASS) t (Token.print `TOKEN) t print_loc l in
-      Gen.iter f out)
+      Gen.iter
+        (fun (l, t) ->
+          Format.fprintf ppf "%a %a: %a\n"
+            Token.Class.pp t
+            Token.pp t
+            print_loc l
+        )
+        out
+    )
 
 let main () =
   Debug.enable ();

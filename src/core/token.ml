@@ -94,97 +94,181 @@ type t =
   | HOLE of string
   (* An integer literal. *)
   | INTLIT  of int
-  (* A block comment of the form %{{ ... %}} *)
+  (* A block comment of the form %{{ ... }}% *)
   | BLOCK_COMMENT of string
 
-let equals (t1 : t) (t2 : t) = (t1 = t2)
+include (Eq.Make (struct
+  type nonrec t = t
 
-type class_or_string = [ `CLASS | `TOKEN ]
+  let equal = Stdlib.(=)
+end) : Eq.EQ with type t := t)
 
-let print (c : class_or_string) ppf =
-  let p x = Format.fprintf ppf x in
-  let case p1 p2 =
-    match c with
-    | `TOKEN -> Lazy.force p1
-    | `CLASS -> Lazy.force p2
-  in
-  function
-  | EOI       -> case (lazy (p "EOI")) (lazy (p "EOI"))
+include (Show.Make (struct
+  type nonrec t = t
 
-  | LPAREN (* ( *) -> case (lazy (p "(")) (lazy (p "LPAREN"))
-  | RPAREN (* ) *) -> case (lazy (p ")")) (lazy (p "RPAREN"))
-  | LBRACK (* [ *) -> case (lazy (p "[")) (lazy (p "LBRACK"))
-  | RBRACK (* ] *) -> case (lazy (p "]")) (lazy (p "RBRACK"))
-  | LBRACE (* { *) -> case (lazy (p "{")) (lazy (p "LBRACE"))
-  | RBRACE (* } *) -> case (lazy (p "}")) (lazy (p "RBRACE"))
-  | LANGLE (* < *) -> case (lazy (p "<")) (lazy (p "LANGLE"))
-  | RANGLE (* > *) -> case (lazy (p ">")) (lazy (p "RANGLE"))
-  | COMMA (* , *) -> case (lazy (p ",")) (lazy (p "COMMA"))
-  | DOUBLE_COLON (* :: *) -> case (lazy (p "::")) (lazy (p "DOUBLE_COLON"))
-  | COLON (* : *) -> case (lazy (p ":")) (lazy (p "COLON" ))
-  | SEMICOLON (* ; *) -> case (lazy (p ";")) (lazy (p "SEMICOLON"))
-  | PIPE (* | *) -> case (lazy (p "|")) (lazy (p "PIPE"))
-  | TURNSTILE (* |- *) -> case (lazy (p "|-")) (lazy (p "TURNSTILE"))
-  | DOTS (* .. *) -> case (lazy (p "..")) (lazy (p "DOTS"))
-  | ARROW (* -> *) -> case (lazy (p "->")) (lazy (p "ARROW" ))
-  | THICK_ARROW (* => *) -> case (lazy (p "=>")) (lazy (p "THICK_ARROW"))
-  | HAT (* ^ *) -> case (lazy (p "^")) (lazy (p "HAT"))
-  | DOT (* . *) -> case (lazy (p ".")) (lazy (p "DOT"))
-  | LAMBDA (* \ *) -> case (lazy (p "\\")) (lazy (p "LAMBDA"))
-  | STAR (* * *) -> case (lazy (p "*")) (lazy (p "STAR"))
-  | EQUALS (* = *) -> case (lazy (p "=")) (lazy (p "EQUALS"))
-  | SLASH (* / *) -> case (lazy (p "/")) (lazy (p "SLASH"))
-  | UNDERSCORE (* _ *) -> case (lazy (p "_")) (lazy (p "UNDERSCORE"))
-  | HASH (* # *) -> case (lazy (p "#")) (lazy (p "HASH"))
-  | DOLLAR (* $ *) -> case (lazy (p "$")) (lazy (p "DOLLAR"))
-  | PLUS (* + *) -> case (lazy (p "+")) (lazy (p "PLUS"))
+  let pp ppf =
+    let p x = Format.fprintf ppf x in
+    function
+    | EOI -> p "EOI"
 
-  | KW_AND -> case (lazy (p "and")) (lazy (p "KW_AND"))
-  | KW_BLOCK -> case (lazy (p "block")) (lazy (p "KW_BLOCK"))
-  | KW_CASE -> case (lazy (p "case")) (lazy (p "KW_CASE"))
-  | KW_IF -> case (lazy (p "if")) (lazy (p "KW_IF"))
-  | KW_THEN -> case (lazy (p "then")) (lazy (p "KW_THEN"))
-  | KW_ELSE -> case (lazy (p "else")) (lazy (p "KW_ELSE"))
-  | KW_IMPOSSIBLE -> case (lazy (p "impossible")) (lazy (p "KW_IMPOSSIBLE"))
-  | KW_LET -> case (lazy (p "let")) (lazy (p "KW_LET"))
-  | KW_IN -> case (lazy (p "in")) (lazy (p "KW_IN"))
-  | KW_OF -> case (lazy (p "of")) (lazy (p "KW_OF"))
-  | KW_REC -> case (lazy (p "rec")) (lazy (p "KW_REC"))
-  | KW_SCHEMA -> case (lazy (p "schema")) (lazy (p "KW_SCHEMA"))
-  | KW_SOME -> case (lazy (p "some")) (lazy (p "KW_SOME"))
-  | KW_FN -> case (lazy (p "fn")) (lazy (p "KW_FN"))
-  | KW_MLAM -> case (lazy (p "mlam")) (lazy (p "KW_MLAM"))
-  | KW_MODULE -> case (lazy (p "module")) (lazy (p "KW_MODULE"))
-  | KW_STRUCT -> case (lazy (p "struct")) (lazy (p "KW_STRUCT"))
-  | KW_END -> case (lazy (p "end")) (lazy (p "KW_END"))
-  | KW_TOTAL -> case (lazy (p "total")) (lazy (p "KW_TOTAL"))
-  | KW_TRUST -> case (lazy (p "trust")) (lazy (p "KW_TRUST"))
-  | KW_TYPE -> case (lazy (p "type")) (lazy (p "KW_TYPE"))
-  | KW_CTYPE -> case (lazy (p "ctype")) (lazy (p "KW_CTYPE"))
-  | KW_PROP -> case (lazy (p "prop")) (lazy (p "KW_PROP"))
-  | KW_INDUCTIVE -> case (lazy (p "inductive")) (lazy (p "KW_INDUCTIVE"))
-  | KW_COINDUCTIVE -> case (lazy (p "coinductive")) (lazy (p "KW_COINDUCTIVE"))
-  | KW_STRATIFIED -> case (lazy (p "stratified")) (lazy (p "KW_STRATIFIED"))
-  | KW_LF -> case (lazy (p "LF")) (lazy (p "KW_LF"))
-  | KW_FUN -> case (lazy (p "fun")) (lazy (p "KW_FUN"))
-  | KW_TYPEDEF -> case (lazy (p "typedef")) (lazy (p "KW_TYPEDEF"))
-  | KW_PROOF -> case (lazy (p "proof")) (lazy (p "KW_PROOF"))
-  | KW_AS -> case (lazy (p "as")) (lazy (p "KW_AS"))
-  | KW_BY -> case (lazy (p "by")) (lazy (p "KW_BY"))
-  | KW_SUFFICES -> case (lazy (p "suffices")) (lazy (p "KW_SUFFICES"))
-  | KW_TOSHOW -> case (lazy (p "toshow")) (lazy (p "KW_TOSHOW"))
+    | LPAREN -> p "("
+    | RPAREN -> p ")"
+    | LBRACK -> p "["
+    | RBRACK -> p "]"
+    | LBRACE -> p "{"
+    | RBRACE -> p "}"
+    | LANGLE -> p "<"
+    | RANGLE -> p ">"
+    | COMMA -> p ","
+    | DOUBLE_COLON -> p "::"
+    | COLON -> p ":"
+    | SEMICOLON -> p ";"
+    | PIPE -> p "|"
+    | TURNSTILE -> p "|-"
+    | DOTS -> p ".."
+    | ARROW -> p "->"
+    | THICK_ARROW -> p "=>"
+    | HAT -> p "^"
+    | DOT -> p "."
+    | LAMBDA -> p "\\"
+    | STAR -> p "*"
+    | EQUALS -> p "="
+    | SLASH -> p "/"
+    | UNDERSCORE -> p "_"
+    | HASH -> p "#"
+    | DOLLAR -> p "$"
+    | PLUS -> p "+"
 
-  | STRING s -> case (lazy (p "STRING %S" s)) (lazy (p "STRING"))
-  | BLOCK_COMMENT s -> case (lazy (p "%%{{ %s %%}}" s)) (lazy (p "BLOCK_COMMENT"))
-  | IDENT s -> case (lazy (p "%s" s)) (lazy (p "IDENT"))
-  | HOLE s -> case (lazy (p "?%s" s)) (lazy (p "HOLE"))
-  | INTLIT n -> case (lazy (p "%d" n)) (lazy (p "INTLIT"))
-  | DOT_NUMBER k -> case (lazy (p ".%d" k)) (lazy (p "DOT_NUMBER"))
-  | HASH_IDENT s -> case (lazy (p "#%s" s)) (lazy (p "HASH_IDENT"))
-  | DOLLAR_IDENT s -> case (lazy (p "$%s" s)) (lazy (p "DOLLAR_IDENT"))
-  | PRAGMA s -> case (lazy (p "--%s" s)) (lazy (p "PRAGMA"))
-  | HASH_BLANK -> case (lazy (p "#_")) (lazy (p "HASH_BLANK"))
-  | DOLLAR_BLANK -> case (lazy (p "$_")) (lazy (p "DOLLAR_BLANK"))
+    | KW_AND -> p "and"
+    | KW_BLOCK -> p "block"
+    | KW_CASE -> p "case"
+    | KW_IF -> p "if"
+    | KW_THEN -> p "then"
+    | KW_ELSE -> p "else"
+    | KW_IMPOSSIBLE -> p "impossible"
+    | KW_LET -> p "let"
+    | KW_IN -> p "in"
+    | KW_OF -> p "of"
+    | KW_REC -> p "rec"
+    | KW_SCHEMA -> p "schema"
+    | KW_SOME -> p "some"
+    | KW_FN -> p "fn"
+    | KW_MLAM -> p "mlam"
+    | KW_MODULE -> p "module"
+    | KW_STRUCT -> p "struct"
+    | KW_END -> p "end"
+    | KW_TOTAL -> p "total"
+    | KW_TRUST -> p "trust"
+    | KW_TYPE -> p "type"
+    | KW_CTYPE -> p "ctype"
+    | KW_PROP -> p "prop"
+    | KW_INDUCTIVE -> p "inductive"
+    | KW_COINDUCTIVE -> p "coinductive"
+    | KW_STRATIFIED -> p "stratified"
+    | KW_LF -> p "LF"
+    | KW_FUN -> p "fun"
+    | KW_TYPEDEF -> p "typedef"
+    | KW_PROOF -> p "proof"
+    | KW_AS -> p "as"
+    | KW_BY -> p "by"
+    | KW_SUFFICES -> p "suffices"
+    | KW_TOSHOW -> p "toshow"
 
-let to_string t = Format.stringify (print `TOKEN) t
-let class_to_string t = Format.stringify (print `CLASS) t
+    | STRING s -> p "STRING %S" s
+    | BLOCK_COMMENT s -> p "%%{{ %s %%}}" s
+    | IDENT s -> p "%s" s
+    | HOLE s -> p "?%s" s
+    | INTLIT n -> p "%d" n
+    | DOT_NUMBER k -> p ".%d" k
+    | HASH_IDENT s -> p "#%s" s
+    | DOLLAR_IDENT s -> p "$%s" s
+    | PRAGMA s -> p "--%s" s
+    | HASH_BLANK -> p "#_"
+    | DOLLAR_BLANK -> p "$_"
+end) : Show.SHOW with type t := t)
+
+module Class = struct
+  include (Show.Make (struct
+    type nonrec t = t
+
+    let pp ppf =
+      let p x = Format.fprintf ppf x in
+      function
+      | EOI -> p "EOI"
+
+      | LPAREN -> p "LPAREN"
+      | RPAREN -> p "RPAREN"
+      | LBRACK -> p "LBRACK"
+      | RBRACK -> p "RBRACK"
+      | LBRACE -> p "LBRACE"
+      | RBRACE -> p "RBRACE"
+      | LANGLE -> p "LANGLE"
+      | RANGLE -> p "RANGLE"
+      | COMMA -> p "COMMA"
+      | DOUBLE_COLON -> p "DOUBLE_COLON"
+      | COLON -> p "COLON"
+      | SEMICOLON -> p "SEMICOLON"
+      | PIPE -> p "PIPE"
+      | TURNSTILE -> p "TURNSTILE"
+      | DOTS -> p "DOTS"
+      | ARROW -> p "ARROW"
+      | THICK_ARROW -> p "THICK_ARROW"
+      | HAT -> p "HAT"
+      | DOT -> p "DOT"
+      | LAMBDA -> p "LAMBDA"
+      | STAR -> p "STAR"
+      | EQUALS -> p "EQUALS"
+      | SLASH -> p "SLASH"
+      | UNDERSCORE -> p "UNDERSCORE"
+      | HASH -> p "HASH"
+      | DOLLAR -> p "DOLLAR"
+      | PLUS -> p "PLUS"
+
+      | KW_AND -> p "KW_AND"
+      | KW_BLOCK -> p "KW_BLOCK"
+      | KW_CASE -> p "KW_CASE"
+      | KW_IF -> p "KW_IF"
+      | KW_THEN -> p "KW_THEN"
+      | KW_ELSE -> p "KW_ELSE"
+      | KW_IMPOSSIBLE -> p "KW_IMPOSSIBLE"
+      | KW_LET -> p "KW_LET"
+      | KW_IN -> p "KW_IN"
+      | KW_OF -> p "KW_OF"
+      | KW_REC -> p "KW_REC"
+      | KW_SCHEMA -> p "KW_SCHEMA"
+      | KW_SOME -> p "KW_SOME"
+      | KW_FN -> p "KW_FN"
+      | KW_MLAM -> p "KW_MLAM"
+      | KW_MODULE -> p "KW_MODULE"
+      | KW_STRUCT -> p "KW_STRUCT"
+      | KW_END -> p "KW_END"
+      | KW_TOTAL -> p "KW_TOTAL"
+      | KW_TRUST -> p "KW_TRUST"
+      | KW_TYPE -> p "KW_TYPE"
+      | KW_CTYPE -> p "KW_CTYPE"
+      | KW_PROP -> p "KW_PROP"
+      | KW_INDUCTIVE -> p "KW_INDUCTIVE"
+      | KW_COINDUCTIVE -> p "KW_COINDUCTIVE"
+      | KW_STRATIFIED -> p "KW_STRATIFIED"
+      | KW_LF -> p "KW_LF"
+      | KW_FUN -> p "KW_FUN"
+      | KW_TYPEDEF -> p "KW_TYPEDEF"
+      | KW_PROOF -> p "KW_PROOF"
+      | KW_AS -> p "KW_AS"
+      | KW_BY -> p "KW_BY"
+      | KW_SUFFICES -> p "KW_SUFFICES"
+      | KW_TOSHOW -> p "KW_TOSHOW"
+
+      | STRING _ -> p "STRING"
+      | BLOCK_COMMENT _ -> p "BLOCK_COMMENT"
+      | IDENT _ -> p "IDENT"
+      | HOLE _ -> p "HOLE"
+      | INTLIT _ -> p "INTLIT"
+      | DOT_NUMBER _ -> p "DOT_NUMBER"
+      | HASH_IDENT _ -> p "HASH_IDENT"
+      | DOLLAR_IDENT _ -> p "DOLLAR_IDENT"
+      | PRAGMA _ -> p "PRAGMA"
+      | HASH_BLANK -> p "HASH_BLANK"
+      | DOLLAR_BLANK -> p "DOLLAR_BLANK"
+  end) : Show.SHOW with type t := t)
+end

@@ -46,7 +46,6 @@ module LF = struct
     | Ann of Location.t * normal * typ
     | TList of Location.t * normal list
     | NTyp of Location.t * typ
-    | PatEmpty of Location.t
 
   and head =
     | Name of Location.t * Name.t * sub option
@@ -119,7 +118,6 @@ module LF = struct
     | Ann (l, _, _) -> l
     | TList (l, _) -> l
     | NTyp (l, _) -> l
-    | PatEmpty l -> l
 
   let loc_of_head =
     function

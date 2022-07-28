@@ -1202,8 +1202,6 @@ end = struct
     in
     choice
       [ normal_list
-      ; span T.(tokens [LBRACE; RBRACE])
-        $> (fun (loc, ()) -> LF.PatEmpty loc)
       ; span Contextual_LF_parsers.clf_typ
         $> (fun (loc, a) -> LF.NTyp (loc, a))
       ]

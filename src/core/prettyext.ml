@@ -193,7 +193,6 @@ module Make (_ : Store.Cid.RENDERER) : Printer.Ext.T = struct
             else fprintf ppf "%a " (fmt_ppr_lf_normal (lvl + 1)) x
             end;
        fprintf ppf "%s" (r_paren_if (lvl > 0));
-    | LF.PatEmpty _ -> fprintf ppf "{}"
 
   and fmt_ppr_lf_head lvl ppf head =
     let paren s = lvl > 0 && true in

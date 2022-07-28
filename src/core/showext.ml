@@ -118,7 +118,6 @@ module LF = struct
     | NTyp (_, t) ->
        fprintf ppf "NTyp %a"
          show_type t
-    | PatEmpty _ -> fprintf ppf "PatEmpty"
 
   and show_head ppf =
     function

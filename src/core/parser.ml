@@ -2773,13 +2773,25 @@ end = struct
     |> span
     $> fun (location, ()) -> Sgn.Pragma { location; pragma=Sgn.NotPrag }
 
+  let left_associativity =
+    labelled "associativity `left'" (keyword "left")
+    $> Fun.const Associativity.left_associative
+
+  let right_associativity =
+    labelled "associativity `right'" (keyword "right")
+    $> Fun.const Associativity.right_associative
+
+  let non_associativity =
+    labelled "associativity `none'" (keyword "none")
+    $> Fun.const Associativity.non_associative
+
   let associativity =
-    [ "left", Associativity.left_associative
-    ; "right", Associativity.right_associative
-    ; "none", Associativity.non_associative ]
-    |> List.map (fun (k, r) -> keyword k &> return r |> labelled ("associativity `" ^ k ^ "'"))
-    |> choice
-    |> labelled "associativity"
+    labelled "associativity"
+    @@ choice
+         [ left_associativity
+         ; right_associativity
+         ; non_associativity
+         ]
 
   let sgn_fixity_pragma : Sgn.decl parser =
     let infix_pragma : Sgn.decl parser =

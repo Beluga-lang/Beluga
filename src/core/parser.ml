@@ -961,18 +961,28 @@ let only p = p <& eoi
 
 open Syntax.Ext
 
+let nostrenghten_pragma =
+  span (pragma "nostrengthen")
+  $> fun (location, ()) ->
+    Sgn.GlobalPragma { location; pragma = Sgn.NoStrengthen }
+
+let coverage_pragma =
+  span (pragma "coverage")
+  $> fun (location, ()) ->
+    Sgn.GlobalPragma { location; pragma = Sgn.Coverage `Error }
+
+let warncoverage_pragma =
+  span (pragma "warncoverage")
+  $> fun (location, ()) ->
+    Sgn.GlobalPragma { location; pragma = Sgn.Coverage `Warn }
+
 let sgn_global_prag : Sgn.decl parser =
-  let g s = span (pragma s) in
-  let f pragma (location, _) = Sgn.GlobalPragma { location; pragma } in
-  let h s a = g s $> f a in
   labelled "global pragma"
-    begin
-      choice
-        [ h "nostrengthen" Sgn.NoStrengthen
-        ; h "coverage" (Sgn.Coverage `Error)
-        ; h "warncoverage" (Sgn.Coverage `Warn)
-        ]
-    end
+  @@ choice
+       [ nostrenghten_pragma
+       ; coverage_pragma
+       ; warncoverage_pragma
+       ]
 
 let sgn_name_pragma : Sgn.decl parser =
   seq3

@@ -655,7 +655,7 @@ let maybe (p : 'a parser) : 'a option parser =
     (alt (p $> Option.some) (return Option.none))
 
 (** Tries a parser, and if it fails uses a default value. *)
-let maybe_default (p : 'a parser) (default : 'a) : 'a parser =
+let maybe_default p ~default =
   maybe p $> Option.value ~default
 
 (** Internal implementation of `many` that doesn't label. *)
@@ -1886,7 +1886,7 @@ end = struct
   let case_pragma =
     maybe_default
       (pragma "not" &> return Comp.PragmaNotCase)
-      Comp.PragmaCase
+      ~default:Comp.PragmaCase
 
   let cmp_pattern_atomic =
     let mobj_pat =
@@ -2182,7 +2182,7 @@ end = struct
         seq3
           (cmp_exp_syn <& token T.KW_AS)
           name
-          (maybe_default boxity `boxed)
+          (maybe_default boxity ~default:`boxed)
       |> span
       |> labelled "Harpoon command"
       $> fun (loc, (i, x, b)) ->
@@ -2229,7 +2229,7 @@ end = struct
     let pvar_case_label =
       token T.HASH &>
         seq2
-          (maybe_default integer 1)
+          (maybe_default integer ~default:1)
           (maybe dot_integer)
       |> span
       |> labelled "parameter variable case label"
@@ -2383,7 +2383,7 @@ end = struct
         seq3
           cmp_exp_syn
           (token T.KW_AS &> name)
-          (maybe_default boxity `boxed)
+          (maybe_default boxity ~default:`boxed)
       $> fun (i, name, b) ->
         match b with
         | `strengthened -> H.Unbox (i, name, Option.some `strengthened)
@@ -2438,7 +2438,7 @@ end = struct
     in
     let toggle_automation =
       keyword "toggle-automation"
-      &> seq2 automation_kind (maybe_default automation_change `toggle)
+      &> seq2 automation_kind (maybe_default automation_change ~default:`toggle)
       $> fun (t, c) -> H.ToggleAutomation (t, c)
     in
     let rename =

@@ -329,15 +329,14 @@ module Sgn = struct
     | InductiveDatatype
     | StratifiedDatatype
 
-  type assoc = Left | Right | NoAssoc
   type precedence = int
 
   type pragma =
     | OptsPrag          of string list
     | NamePrag          of Name.t * string * string option
-    | FixPrag           of Name.t * Fixity.t * precedence * assoc option
+    | FixPrag           of Name.t * Fixity.t * precedence * Associativity.t option
     | NotPrag
-    | DefaultAssocPrag  of assoc
+    | DefaultAssocPrag  of Associativity.t
     | OpenPrag          of string list
     | AbbrevPrag        of string list * string
 

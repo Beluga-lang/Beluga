@@ -7,14 +7,14 @@ module OpPragmas : sig
     { name : Name.t
     ; fix : Fixity.t
     ; precedence : int
-    ; assoc : Syntax.Ext.Sgn.assoc option
+    ; assoc : Associativity.t option
     }
 
-  val default : Syntax.Ext.Sgn.assoc ref
+  val default : Associativity.t ref
 
   val clear : unit -> unit
 
-  val addPragma : Name.t -> Fixity.t -> int option -> Syntax.Ext.Sgn.assoc option-> unit
+  val addPragma : Name.t -> Fixity.t -> int option -> Associativity.t option-> unit
 
   val getPragma : Name.t -> fixPragma option
 

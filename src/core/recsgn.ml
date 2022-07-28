@@ -248,13 +248,7 @@ let recSgnDecls decls =
        Int.Sgn.Pragma { pragma=Int.LF.AbbrevPrag (orig, abbrev) }
     | Ext.Sgn.Pragma { location=loc; pragma=Ext.Sgn.DefaultAssocPrag a } ->
        OpPragmas.default := a;
-       let a' =
-         match a with
-         | Ext.Sgn.Left -> Int.LF.Left
-         | Ext.Sgn.Right -> Int.LF.Right
-         | Ext.Sgn.NoAssoc -> Int.LF.NoAssoc
-       in
-       Int.Sgn.Pragma { pragma=Int.LF.DefaultAssocPrag a' }
+       Int.Sgn.Pragma { pragma=Int.LF.DefaultAssocPrag a }
     | Ext.Sgn.Pragma { location=loc; pragma=Ext.Sgn.FixPrag (name, fix, precedence, assoc) } ->
        dprintf (fun p -> p.fmt "Pragma found for %a" Name.pp name);
        begin match fix with
@@ -285,18 +279,7 @@ let recSgnDecls decls =
              else
                raise (Error (loc, IllegalOperatorPrag (name, fix, actual)))
        end;
-       let assoc' =
-         let assoc_map =
-           function
-           | Ext.Sgn.Left -> Int.LF.Left
-           | Ext.Sgn.Right -> Int.LF.Right
-           | Ext.Sgn.NoAssoc -> Int.LF.NoAssoc
-         in
-         match assoc with
-         | None -> None
-         | Some x -> Some (assoc_map x)
-       in
-       Int.Sgn.Pragma { pragma=Int.LF.FixPrag (name, fix, precedence, assoc') }
+       Int.Sgn.Pragma { pragma=Int.LF.FixPrag (name, fix, precedence, assoc) }
 
     | Ext.Sgn.CompTypAbbrev { location; identifier; kind=cK; typ=cT } ->
        (* index cT in a context which contains arguments to cK *)

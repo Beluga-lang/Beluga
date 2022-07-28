@@ -15,10 +15,10 @@ module OpPragmas = struct
     { name : Name.t
     ; fix : Fixity.t
     ; precedence : int
-    ; assoc : Ext.Sgn.assoc option
+    ; assoc : Associativity.t option
     }
 
-  let default = ref Syntax.Ext.Sgn.NoAssoc
+  let default = ref Associativity.non_associative
 
   let pragmaCount = ref 0
 

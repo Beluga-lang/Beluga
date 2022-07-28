@@ -431,7 +431,7 @@ and shunting_yard (l : Ext.LF.normal list) : Ext.LF.normal =
       | None -> !Store.OpPragmas.default
     in
     p_p < o_p ||
-      (p_p = o_p && p_a = Ext.Sgn.Left)
+      (p_p = o_p && Associativity.is_left_associative p_a)
   (* p.Store.OpPragmas.precedence < o.Store.OpPragmas.precedence ||
    * (p.Store.OpPragmas.precedence = o.Store.OpPragmas.precedence &&
    *    ((o.Store.OpPragmas.assoc = None && !Store.OpPragmas.default = Ext.Sgn.Left) ||

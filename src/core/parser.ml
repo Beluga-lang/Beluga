@@ -2781,9 +2781,9 @@ end = struct
     $> fun (location, ()) -> Sgn.Pragma { location; pragma=Sgn.NotPrag }
 
   let associativity =
-    [ "left", Sgn.Left
-    ; "right", Sgn.Right
-    ; "none", Sgn.NoAssoc ]
+    [ "left", Associativity.left_associative
+    ; "right", Associativity.right_associative
+    ; "none", Associativity.non_associative ]
     |> List.map (fun (k, r) -> keyword k &> return r |> labelled ("associativity `" ^ k ^ "'"))
     |> choice
     |> labelled "associativity"
@@ -2808,7 +2808,7 @@ end = struct
       $> fun (location, (x, precedence)) ->
          Sgn.Pragma
          { location
-         ; pragma = Sgn.FixPrag (x, Fixity.prefix, precedence, Option.some Sgn.Left)
+         ; pragma = Sgn.FixPrag (x, Fixity.prefix, precedence, Option.some Associativity.left_associative)
          }
     in
     alt infix_pragma prefix_pragma

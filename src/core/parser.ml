@@ -1632,19 +1632,13 @@ end = struct
     let dollar_variable_decl p =
       contextual_variable_decl dollar_name bracks_or_opt_parens p
     in
-    let mk_decl plicity f (loc, (p, w)) =
-      LF.Decl (p, (loc, f w), plicity)
-    in
-    let mk_cltyp_decl f d =
-      mk_decl Plicity.explicit (fun (cPsi, x) -> LF.ClTyp (f x, cPsi)) d
-    in
-
     let param_variable =
       labelled "parameter variable declaration"
         begin
           hash_variable_decl (trying clf_typ_atomic)
           |> span
-          $> mk_cltyp_decl (fun tA -> LF.PTyp tA)
+          $> fun (loc, (p, (cPsi, tA))) ->
+               LF.Decl (p, (loc, LF.ClTyp (LF.PTyp tA, cPsi)), Plicity.explicit)
         end
     in
     let subst_variable =
@@ -1656,7 +1650,8 @@ end = struct
         begin
           dollar_variable_decl (seq2 subst_class clf_dctx)
           |> span
-          $> mk_cltyp_decl (fun (sclass, cPhi) -> LF.STyp (sclass, cPhi))
+          $> fun (loc, (p, (cPsi, (sclass, cPhi)))) ->
+               LF.Decl (p, (loc, LF.ClTyp (LF.STyp (sclass, cPhi), cPsi)), Plicity.explicit)
         end
     in
     let q =
@@ -1675,15 +1670,13 @@ end = struct
             alt
               (span name
                 $> fun (loc2, ctx) ->
-                  mk_decl Plicity.explicit
-                    (fun w -> LF.CTyp w)
-                    (Location.join loc1 loc2, (x, ctx)))
+                     let loc = Location.join loc1 loc2 in
+                     LF.Decl (x, (loc, LF.CTyp ctx), Plicity.explicit))
               (bracks_or_opt_parens (contextual clf_typ_atomic)
                 |> span
-                $> fun (loc2, d) ->
-                  mk_cltyp_decl
-                    (fun tA -> LF.MTyp tA)
-                    (Location.join loc1 loc2, (x, d)))
+                $> fun (loc2, (cPsi, tA)) ->
+                     let loc = Location.join loc1 loc2 in
+                     LF.Decl (x, (loc, LF.ClTyp (LF.MTyp tA, cPsi)), Plicity.explicit))
         ]
       |> braces
     in

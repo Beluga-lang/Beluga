@@ -1,8 +1,8 @@
 open Support
 
-(** The type of annotation for the associtivity of an infix operator.
+(** The type of annotation for the associativity of an infix operator.
 
-    Let [f] be an operator and [a1], [a2], and [a3] be arguments. Then,
+    Let [f] be an infix operator and [a1], [a2], and [a3] be arguments. Then,
 
     - if [f] is left-associative, then [a1 f a2 f a3] is parsed as
       [(a1 f a2) f a3]

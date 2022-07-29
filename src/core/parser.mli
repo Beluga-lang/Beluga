@@ -1,5 +1,5 @@
 open Support
-open Syntax.Ext
+open Syntax.Prs
 
 type input = (Location.t * Token.t) LinkStream.t
 type state
@@ -67,18 +67,18 @@ val alt : 'a t -> 'a t -> 'a t
 (***** Exported productions *****)
 
 (** Parser for a full Beluga signature. *)
-val sgn : Syntax.Ext.Sgn.decl list t
+val sgn : Sgn.decl list t
 
 val name : Name.t t
 
 (** Parser for a Harpoon command. *)
-val interactive_harpoon_command : Syntax.Ext.Harpoon.command t
-val interactive_harpoon_command_sequence : Syntax.Ext.Harpoon.command list t
+val interactive_harpoon_command : Harpoon.command t
+val interactive_harpoon_command_sequence : Harpoon.command list t
 
 val trust_order : Comp.total_dec t
 val total_order : 'a Comp.generic_order t -> 'a Comp.generic_order t
-val numeric_total_order : Syntax.Ext.Comp.numeric_order t
-val optional_numeric_total_order : Syntax.Ext.Comp.numeric_order option t
+val numeric_total_order : Comp.numeric_order t
+val optional_numeric_total_order : Comp.numeric_order option t
 
 (** Parser for computation type. *)
 val cmp_typ : Comp.typ t

@@ -264,7 +264,26 @@ end
 
 (** Syntax of Harpoon commands. *)
 module Harpoon = struct
-  include Syncom.Harpoon
+  type defer_kind =
+    [ `subgoal
+    | `theorem
+    ]
+
+  type invoke_kind =
+    [ `ih
+    | `lemma
+    ]
+
+  type split_kind =
+    [ `split
+    | `invert
+    | `impossible
+    ]
+
+  type level =
+    [ `meta
+    | `comp
+    ]
 
   type automation_kind =
     [ `auto_intros

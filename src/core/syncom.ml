@@ -55,26 +55,3 @@ module Comp = struct
     | Lex xs -> Lex (List.map (map_order f) xs)
     | Simul xs -> Simul (List.map (map_order f) xs)
 end
-
-module Harpoon = struct
-  type defer_kind =
-    [ `subgoal
-    | `theorem
-    ]
-
-  type invoke_kind =
-    [ `ih
-    | `lemma
-    ]
-
-  type split_kind =
-    [ `split
-    | `invert
-    | `impossible
-    ]
-
-  type level =
-    [ `meta
-    | `comp
-    ]
-end

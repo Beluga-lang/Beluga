@@ -362,7 +362,6 @@ end
 
 (* Internal Computation Syntax *)
 module Comp = struct
-  include Syncom.Harpoon
   include Syncom.Comp
 
   type kind =
@@ -582,6 +581,27 @@ module Comp = struct
     | PatNil -> PatNil
     | PatApp (loc, p, pS) ->
        PatApp (loc, strip_pattern p, strip_pattern_spine pS)
+
+  type defer_kind =
+    [ `subgoal
+    | `theorem
+    ]
+
+  type invoke_kind =
+    [ `ih
+    | `lemma
+    ]
+
+  type split_kind =
+    [ `split
+    | `invert
+    | `impossible
+    ]
+
+  type level =
+    [ `meta
+    | `comp
+    ]
 
   (* Bundle of LF and computational hypotheses. *)
   type hypotheses =

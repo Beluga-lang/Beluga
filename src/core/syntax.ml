@@ -10,3 +10,4 @@ module Common = Syncom
 module Int = Synint
 module Apx = Synapx
 module Ext = Synext
+module Prs = Synprs

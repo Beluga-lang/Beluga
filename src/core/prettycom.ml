@@ -52,7 +52,7 @@ let fmt_ppr_cmp_split_kind ppf =
   | `invert -> fprintf ppf "invert"
   | `impossible -> fprintf ppf "impossible"
 
-let fmt_ppr_invoke_kind ppf : Harpoon.invoke_kind -> unit =
+let fmt_ppr_invoke_kind ppf =
   function
   | `ih -> fprintf ppf "ih"
   | `lemma -> fprintf ppf "lemma"

@@ -64,9 +64,10 @@ backtrack out of the parser for case expressions.
 
 open Support
 
-module Comp = Syntax.Ext.Comp
-module LF = Syntax.Ext.LF
-module Sgn = Syntax.Ext.Sgn
+module Comp = Syntax.Prs.Comp
+module LF = Syntax.Prs.LF
+module Harpoon = Syntax.Prs.Harpoon
+module Sgn = Syntax.Prs.Sgn
 
 (***** Parser state definition *****)
 
@@ -248,7 +249,7 @@ let push_label_option (l : string option) (e : error) : error =
 
 exception Error of state * error
 
-(** Pretty-print an error path. *)
+(** Pretty-print an error patHarpoon. *)
 let print_path ppf (path : path) : unit =
   let open Format in
   let print_entry ppf { label; location } : unit =
@@ -403,14 +404,14 @@ let fail_at' s loc path error =
   , Either.left {error ; path; loc}
   )
 
-(** Fail with no error path. *)
+(** Fail with no error patHarpoon. *)
 let fail_at s error = fail_at' s (next_loc_at s) [] error
 
-(** A parser that fails with the given error and path. *)
+(** A parser that fails with the given error and patHarpoon. *)
 let fail' path e : 'a parser =
   fun s -> fail_at' s (next_loc_at s) path e
 
-(** A parser that fails with the given error and an empty path. *)
+(** A parser that fails with the given error and an empty patHarpoon. *)
 let fail e : 'a parser = fail' [] e
 
 let return_at s x =
@@ -518,7 +519,7 @@ let label p s =
 (** Flipped version of `label'. *)
 let labelled s p = label p s
 
-(** Replaces the _name_ of the last entry on the path. *)
+(** Replaces the _name_ of the last entry on the patHarpoon. *)
 let renamed label p =
   relabelling p
     begin fun loc ->
@@ -958,8 +959,6 @@ let only p = p <& eoi
 
 (***** Production rules *****)
 
-open Syntax.Ext
-
 let nostrenghten_pragma =
   span (pragma "nostrengthen")
   $> fun (location, ()) ->
@@ -998,7 +997,7 @@ module rec LF_parsers : sig
   val lf_typ : LF.typ t
   val lf_kind_or_typ : [ `Kind of LF.kind | `Typ of LF.typ] t
   val lf_typ_decl : LF.typ_decl t
-  val lf_term : LF.normal t
+  val lf_term : LF.term t
 end = struct
   let lf_term_sequence =
     span (some LF_parsers.lf_term) $> (fun (loc, ms) -> LF.TList (loc, ms))
@@ -1177,7 +1176,7 @@ module rec Contextual_LF_parsers : sig
   val contextual : 'a parser -> (LF.dctx * 'a) parser
   val clf_typ : LF.typ t
   val clf_typ_pure : LF.typ t
-  val clf_normal : LF.normal t
+  val clf_normal : LF.term t
   val clf_dctx : LF.dctx t
   val ctx_variable : LF.ctyp_decl t
   val clf_ctyp_decl_bare : 'a name_parser -> ('a -> Plicity.t * Name.t) -> LF.ctyp_decl t
@@ -2333,37 +2332,36 @@ end = struct
       ]
     |> labelled "Harpoon proof"
 
-  let interactive_harpoon_command =
-    let module H = Syntax.Ext.Harpoon in
+  let interactive_harpoon_command : Harpoon.command t =
     let intros =
       keyword "intros"
       &> maybe (some identifier)
-      $> fun xs -> H.Intros xs
+      $> fun xs -> Harpoon.Intros xs
     in
     let split =
       keyword "split"
       &> cmp_exp_syn
-      $> fun t -> H.(Split (`split, t))
+      $> fun t -> Harpoon.Split (`split, t)
     in
     let msplit =
       keyword "msplit"
       &> span (choice [ dollar_name; hash_name; name ])
-      $> fun (loc, name) -> H.MSplit (loc, name)
+      $> fun (loc, name) -> Harpoon.MSplit (loc, name)
     in
     let invert =
       keyword "invert"
       &> cmp_exp_syn
-      $> fun t -> H.(Split (`invert, t))
+      $> fun t -> Harpoon.Split (`invert, t)
     in
     let impossible =
       token Token.KW_IMPOSSIBLE
       &> cmp_exp_syn
-      $> fun t -> H.(Split (`impossible, t))
+      $> fun t -> Harpoon.Split (`impossible, t)
     in
     let solve =
       keyword "solve"
       &> cmp_exp_chk
-      $> fun t -> H.Solve t
+      $> fun t -> Harpoon.Solve t
     in
     let auto_invert_solve =
       keyword "auto-invert-solve"
@@ -2383,14 +2381,14 @@ end = struct
           (maybe_default boxity ~default:`boxed)
       $> fun (i, name, b) ->
         match b with
-        | `strengthened -> H.Unbox (i, name, Option.some `strengthened)
-        | `unboxed -> H.Unbox (i, name, Option.none)
-        | `boxed -> H.By (i, name)
+        | `strengthened -> Harpoon.Unbox (i, name, Option.some `strengthened)
+        | `unboxed -> Harpoon.Unbox (i, name, Option.none)
+        | `boxed -> Harpoon.By (i, name)
     in
     let compute_type =
       token Token.KW_TYPE
       &> cmp_exp_syn
-      $> fun i -> H.Type i
+      $> fun i -> Harpoon.Type i
     in
     let suffices =
       let tau_list_item =
@@ -2404,21 +2402,21 @@ end = struct
         (token Token.KW_TOSHOW
         &> sep_by0 tau_list_item (token Token.COMMA))
       $> fun (i, tau_list) ->
-        H.Suffices (i, tau_list)
+        Harpoon.Suffices (i, tau_list)
     in
     let unbox =
       keyword "unbox" &>
         seq2
           cmp_exp_syn
           (token Token.KW_AS &> name)
-      $> fun (i, name) -> H.Unbox (i, name, Option.none)
+      $> fun (i, name) -> Harpoon.Unbox (i, name, Option.none)
     in
     let strengthen =
       keyword "strengthen" &>
         seq2
           cmp_exp_syn
           (token Token.KW_AS &> name)
-      $> fun (i, name) -> H.Unbox (i, name, Option.some `strengthened)
+      $> fun (i, name) -> Harpoon.Unbox (i, name, Option.some `strengthened)
     in
     let automation_kind =
       choice
@@ -2436,7 +2434,7 @@ end = struct
     let toggle_automation =
       keyword "toggle-automation"
       &> seq2 automation_kind (maybe_default automation_change ~default:`toggle)
-      $> fun (t, c) -> H.ToggleAutomation (t, c)
+      $> fun (t, c) -> Harpoon.ToggleAutomation (t, c)
     in
     let rename =
       let level =
@@ -2448,7 +2446,7 @@ end = struct
       keyword "rename"
       &> seq3 level name name
       $> fun (level, rename_from, rename_to) ->
-        H.Rename { rename_from; rename_to; level }
+        Harpoon.Rename { rename_from; rename_to; level }
     in
     let basic_command =
       choice
@@ -2457,7 +2455,7 @@ end = struct
         ]
     in
     let select_theorem =
-      keyword "select" &> name $> fun x -> H.SelectTheorem x
+      keyword "select" &> name $> fun x -> Harpoon.SelectTheorem x
     in
     let create_command, serialize_command =
       ( keyword "create" &> return `create
@@ -2479,20 +2477,20 @@ end = struct
                 ; ("show-proof", `show_proof)
                 ]
           )
-      $> fun cmd -> H.Theorem cmd
+      $> fun cmd -> Harpoon.Theorem cmd
     in
     let session_command =
       keyword "session"
       &> choice [ basic_command; create_command; serialize_command ]
-      $> fun cmd -> H.Session cmd
+      $> fun cmd -> Harpoon.Session cmd
     in
     let subgoal_command =
       keyword "subgoal"
       &> basic_command
-      $> fun cmd -> H.Subgoal cmd
+      $> fun cmd -> Harpoon.Subgoal cmd
     in
     let defer =
-      keyword "defer" &> return (H.Subgoal `defer)
+      keyword "defer" &> return (Harpoon.Subgoal `defer)
     in
     let info_kind =
       choice
@@ -2502,18 +2500,18 @@ end = struct
     let info =
       keyword "info"
       &> seq2 info_kind name
-      $> fun (k, name) -> H.Info (k, name)
+      $> fun (k, name) -> Harpoon.Info (k, name)
     in
     let translate =
       keyword "translate"
       &> name
-      $> fun name -> H.Translate name
+      $> fun name -> Harpoon.Translate name
     in
-    let undo = keyword "undo" &> return H.Undo in
-    let redo = keyword "redo" &> return H.Redo in
-    let history = keyword "history" &> return H.History in
-    let help = keyword "help" &> return H.Help in
-    let save = keyword "save" &> return (H.Session `serialize) in
+    let undo = keyword "undo" &> return Harpoon.Undo in
+    let redo = keyword "redo" &> return Harpoon.Redo in
+    let history = keyword "history" &> return Harpoon.History in
+    let help = keyword "help" &> return Harpoon.Help in
+    let save = keyword "save" &> return (Harpoon.Session `serialize) in
     choice
       [ intros
       ; info

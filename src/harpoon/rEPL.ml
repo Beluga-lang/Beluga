@@ -139,6 +139,7 @@ let rec loop (s : HarpoonState.t) : unit =
     (* Parse the input and run the command *)
     match
       HarpoonState.parsed_prompt s "> " None Parser.interactive_harpoon_command_sequence
+      |> List.map Synprs_to_synext.Harpoon.elaborate_command
       |> process_command_sequence s (c, t, g)
     with
     | `ok | `error -> loop s

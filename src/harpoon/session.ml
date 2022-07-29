@@ -248,7 +248,7 @@ let configuration_wizard' io automation_state : Id.cid_mutual_group * Theorem.t 
          Store.FCVar.clear ();
          (* Now prompt for the statement, and disallow empty to signal we're done. *)
          IO.parsed_prompt io "  Statement of theorem: " None
-           Parser.(cmp_typ $> Interactive.elaborate_typ LF.Empty)
+           Parser.(cmp_typ $> Fun.(Synprs_to_synext.Comp.elaborate_typ >> Interactive.elaborate_typ LF.Empty))
        in
        dprintf begin fun p ->
          p.fmt "@[<v 2>[harpoon] [configuration_wizard] elaborated type\
@@ -289,7 +289,7 @@ let configuration_wizard' io automation_state : Id.cid_mutual_group * Theorem.t 
        let total_dec_kind =
          match order with
          | Some (Either.Right no) -> `inductive no
-         | Some (Either.Left (Synext.Comp.Trust _)) -> `trust
+         | Some (Either.Left (Synprs.Comp.Trust _)) -> `trust
          | None -> `not_recursive
        in
        let conf = Theorem.Conf.make name total_dec_kind tau k in

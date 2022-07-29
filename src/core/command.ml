@@ -487,6 +487,7 @@ let query =
             let input = "%query " ^ expected ^ " " ^ tries ^ " " ^ str in
             Runparser.parse_string (Location.initial "<query>") input Parser.sgn
             |> Parser.extract
+            |> Synprs_to_synext.Sgn.elaborate_sgn
           in
           let (_, apxT) = Index.typ Index.disambiguate_to_fvars extT in
           Store.FVar.clear ();

@@ -74,6 +74,7 @@ let forbid_leftover_vars path =
 let load_file ppf file_name =
   let sgn =
     Parser.(Runparser.parse_file (Location.initial file_name) (only sgn) |> extract)
+    |> Synprs_to_synext.Sgn.elaborate_sgn
     (* If the file starts with global pragmas then process them now. *)
     |> F.through
          begin fun sgn ->

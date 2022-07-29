@@ -36,15 +36,15 @@ module LF = struct
     | PiTyp of Location.t * typ_decl * typ
     | Sigma of Location.t * typ_rec
     | Ctx of Location.t * dctx
-    | AtomTerm of Location.t * normal
+    | AtomTerm of Location.t * term
 
-  and normal =
-    | Lam of Location.t * Name.t * normal
+  and term =
+    | Lam of Location.t * Name.t * term
     | Root of Location.t * head * spine
     | Tuple of Location.t * tuple
     | LFHole of Location.t * string option
-    | Ann of Location.t * normal * typ
-    | TList of Location.t * normal list
+    | Ann of Location.t * term * typ
+    | TList of Location.t * term list
     | NTyp of Location.t * typ
 
   and head =
@@ -59,22 +59,22 @@ module LF = struct
 
   and spine =
     | Nil
-    | App of Location.t * normal * spine
+    | App of Location.t * term * spine
 
   and sub_start =
     | EmptySub of Location.t
     | Id of Location.t
     | SVar of Location.t * Name.t * sub option
 
-  and sub = sub_start * normal list
+  and sub = sub_start * term list
 
   and typ_rec =
     | SigmaLast of Name.t option * typ
     | SigmaElem of Name.t * typ * typ_rec
 
   and tuple =
-    | Last of normal
-    | Cons of normal * tuple
+    | Last of term
+    | Cons of term * tuple
 
   and dctx =
     | Null
@@ -98,13 +98,13 @@ module LF = struct
        substitution! So it turns out that,
        syntactically, substitutions encompass both
        possibilities: a substitution beginning with
-       EmptySub and having just one normal term in it
+       EmptySub and having just one term term in it
        can represent a boxed term. We disambiguate
        substitutions from terms at a later time. *)
     | CObj of dctx
 
   (** Converts a spine to a list. It is visually "backwards" *)
-  let rec list_of_spine : spine -> (Location.t * normal) list =
+  let rec list_of_spine : spine -> (Location.t * term) list =
     function
     | Nil -> []
     | App (l, m, s) -> (l, m) :: list_of_spine s

@@ -47,6 +47,7 @@ let rec loop ppf =
          let (exp, tau) =
            Runparser.parse_string (Location.initial "<interactive>") input Parser.(only cmp_exp_syn)
            |> Parser.extract
+           |> Synprs_to_synext.Comp.elaborate_exp
            |> Interactive.elaborate_exp' LF.Empty LF.Empty
            |> Pair.map_right Whnf.cnormCTyp
          in
@@ -74,7 +75,7 @@ let run args =
   if List.length files = 1 then
     try
       let arg = List.hd files in
-      let sgn = Runparser.parse_file (Location.initial arg) Parser.(only sgn) |> Parser.extract in
+      let sgn = Runparser.parse_file (Location.initial arg) Parser.(only sgn) |> Parser.extract |> Synprs_to_synext.Sgn.elaborate_sgn in
       let sgn' = begin match Recsgn.recSgnDecls sgn with
     | sgn', None -> sgn'
     | _, Some _ ->

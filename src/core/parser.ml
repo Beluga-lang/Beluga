@@ -67,7 +67,6 @@ open Support
 module Comp = Syntax.Ext.Comp
 module LF = Syntax.Ext.LF
 module Sgn = Syntax.Ext.Sgn
-module T = Token
 
 (***** Parser state definition *****)
 
@@ -77,7 +76,7 @@ type 'a locd = Location.t * 'a
 (** The input to the parser is a backtrackable stream of tokens paired
     with their locations.
  *)
-type input = T.t locd LinkStream.t
+type input = Token.t locd LinkStream.t
 
 (** The parser state contains the input stream as well as control
     information to handle backtracking.
@@ -90,14 +89,14 @@ type state =
 
   (*
 (** Peeks at the next token in the input stream in the given state. *)
-let peek_at (s : state) : T.t locd option =
+let peek_at (s : state) : Token.t locd option =
   Option.(LinkStream.observe s.input $> Pair.fst)
    *)
 
   (*
 (** Like `peek_at` but forgets the location. *)
 let next_token s =
-  Option.(peek_at s $> Pair.snd |> get_default T.EOI)
+  Option.(peek_at s $> Pair.snd |> get_default Token.EOI)
    *)
 
 (***** ERROR HANDLING *****)
@@ -620,7 +619,7 @@ let choice (ps : 'a parser list) : 'a parser =
 let eoi : unit parser =
   (fun s ->
   match LinkStream.observe s.input with
-  | Option.None | Option.Some ((_, T.EOI), _) -> return_at s ()
+  | Option.None | Option.Some ((_, Token.EOI), _) -> return_at s ()
   | Option.Some ((_, t), _) ->
     fail_at s (Unexpected { expected = `eoi; actual = `token (Option.some t) }))
   |> labelled "end of input"
@@ -633,7 +632,7 @@ let eoi : unit parser =
     downstream parser. If you don't care, use unit.
     The input stream advances only if the predicate succeeds.
  *)
-let satisfy (f : T.t -> ('e, 'b) Either.t) : ('e, 'b) Either.t parser =
+let satisfy (f : Token.t -> ('e, 'b) Either.t) : ('e, 'b) Either.t parser =
   fun s ->
   match LinkStream.observe s.input with
   | Option.None -> failwith "lexer invariant failed: end-of-input is a token"
@@ -756,7 +755,7 @@ let check_codatatype_decl loc a cs : unit parser =
 
 (****** Simple parsers *****)
 
-let satisfy' (expected : content) (f : T.t -> 'a option) : 'a parser =
+let satisfy' (expected : content) (f : Token.t -> 'a option) : 'a parser =
   satisfy (fun t -> f t |> Option.eliminate (Fun.const (Either.left t)) Either.right)
   |> span
   >>= fun (location, x) ->
@@ -768,12 +767,12 @@ let satisfy' (expected : content) (f : T.t -> 'a option) : 'a parser =
     | Either.Right x -> return x
 
 (** Parses an exact token. *)
-let token (t : T.t) : unit parser =
+let token (t : Token.t) : unit parser =
   satisfy' (`token (Option.some t))
     (fun x -> Option.of_bool (Token.(x = t)))
 
 (** Parses an exact sequence of tokens. *)
-let tokens (ts : T.t list) : unit parser =
+let tokens (ts : Token.t list) : unit parser =
   traverse_ token ts
 
 (** Parses an identifier and verifies that it is exactly the given
@@ -783,36 +782,36 @@ let tokens (ts : T.t list) : unit parser =
  *)
 let keyword (kw : string) : unit parser =
   satisfy' (`keyword (Option.some kw))
-    Fun.(Token.equal (T.IDENT kw) >> Option.of_bool)
+    Fun.(Token.equal (Token.IDENT kw) >> Option.of_bool)
 
 let identifier : string parser =
   satisfy' (`identifier Option.none)
     (function
-     | T.IDENT s -> Option.some s
+     | Token.IDENT s -> Option.some s
      | _ -> Option.none)
 
 let hash_identifier : string parser =
   satisfy' (`hash_identifier Option.none)
     (function
-     | T.HASH_IDENT s -> Option.some s
+     | Token.HASH_IDENT s -> Option.some s
      | _ -> Option.none)
 
 let dollar_identifier : string parser =
   satisfy' (`dollar_identifier Option.none)
     (function
-     | T.DOLLAR_IDENT s -> Option.some s
+     | Token.DOLLAR_IDENT s -> Option.some s
      | _ -> Option.none)
 
 let hash_blank : unit parser =
   satisfy' `hash_blank
     (function
-     | T.HASH_BLANK -> Option.some ()
+     | Token.HASH_BLANK -> Option.some ()
      | _ -> Option.none)
 
 let dollar_blank : unit parser =
   satisfy' `dollar_blank
     (function
-     | T.DOLLAR_BLANK -> Option.some ()
+     | Token.DOLLAR_BLANK -> Option.some ()
      | _ -> Option.none)
 
 let namify (p : string t) : Name.t t =
@@ -830,7 +829,7 @@ let blankify (p : unit t) : name_or_blank t =
 let name_or_blank : name_or_blank parser =
   alt
     (name $> fun x -> `name x)
-    (token T.UNDERSCORE |> blankify)
+    (token Token.UNDERSCORE |> blankify)
 
 (** Converts a name or blank into a plicity and a name. *)
 let plicity_name_of_nb =
@@ -839,7 +838,7 @@ let plicity_name_of_nb =
   | `name x -> (Plicity.explicit, x)
 
 let dot_name : Name.t t =
-  token T.DOT &> name
+  token Token.DOT &> name
 
 let hash_name : Name.t t =
   namify hash_identifier
@@ -880,16 +879,16 @@ let name' : Name.t name_parser =
 let integer : int parser =
   satisfy' (`integer Option.none)
     (function
-     | T.INTLIT k -> Option.some k
+     | Token.INTLIT k -> Option.some k
      | _ -> Option.none)
 
 let dot_integer : int parser =
   satisfy' `dot_integer
     (function
-     | T.DOT_NUMBER k -> Option.some k
+     | Token.DOT_NUMBER k -> Option.some k
      | _ -> Option.none)
 
-let fqidentifier = sep_by1 (trying identifier) (token T.DOUBLE_COLON)
+let fqidentifier = sep_by1 (trying identifier) (token Token.DOUBLE_COLON)
 
 (** A qualified name, with possible module names before. *)
 let fqname =
@@ -899,12 +898,12 @@ let fqname =
      let (modules, i) = List1.unsnoc is in
      Name.mk_name ~location ~modules Name.(SomeString i)
 
-let pragma s = token (T.PRAGMA s)
+let pragma s = token (Token.PRAGMA s)
 
 let string_literal =
   satisfy' `string_literal
     (function
-     | T.STRING s -> Option.some s
+     | Token.STRING s -> Option.some s
      | _ -> Option.none)
 
 (** Runs the parser `p` between two parsers whose results are
@@ -917,16 +916,16 @@ let bracketed start stop p =
 let bracketed' b p = bracketed b b p
 
 (** [parens p] parses [`(` p `)`]. *)
-let parens p = bracketed (token T.LPAREN) (token T.RPAREN) p
+let parens p = bracketed (token Token.LPAREN) (token Token.RPAREN) p
 
 (** [braces p] parses [`{` p `}`]. *)
-let braces p = bracketed (token T.LBRACE) (token T.RBRACE) p
+let braces p = bracketed (token Token.LBRACE) (token Token.RBRACE) p
 
 (** [bracks p] parses [`[` p `]`]. *)
-let bracks p = bracketed (token T.LBRACK) (token T.RBRACK) p
+let bracks p = bracketed (token Token.LBRACK) (token Token.RBRACK) p
 
 (** [angles p] parses [`<` p `>`]. *)
-let angles p = bracketed (token T.LANGLE) (token T.RANGLE) p
+let angles p = bracketed (token Token.LANGLE) (token Token.RANGLE) p
 
 (** bracks_or_opt_parens' prefix p
     parses p surrounded optionally by square brackets or parentheses,
@@ -988,7 +987,7 @@ let sgn_name_pragma : Sgn.decl parser =
   seq3
     (pragma "name" &> name)
     identifier
-    (maybe identifier <& token T.DOT)
+    (maybe identifier <& token Token.DOT)
   |> labelled "name pragma"
   |> span
   $> fun (location, (w, mv, x)) ->
@@ -1006,7 +1005,7 @@ end = struct
     |> labelled "LF term sequence"
 
   let lf_term_lam =
-    seq2 (token T.LAMBDA &> name <& token T.DOT) lf_term_sequence
+    seq2 (token Token.LAMBDA &> name <& token Token.DOT) lf_term_sequence
       |> span
       $> (fun (loc, (x, ms)) -> LF.Lam (loc, x, ms))
     |> labelled "LF lambda term"
@@ -1022,9 +1021,9 @@ end = struct
 
   let lf_term_atomic =
     choice
-      [ span (token T.UNDERSCORE)
+      [ span (token Token.UNDERSCORE)
         $> (fun (loc, ()) -> LF.Root (loc, LF.Hole loc, LF.Nil))
-      ; span (parens (seq2 LF_parsers.lf_typ (maybe (token T.COLON &> LF_parsers.lf_typ))))
+      ; span (parens (seq2 LF_parsers.lf_typ (maybe (token Token.COLON &> LF_parsers.lf_typ))))
         >>= fun (loc, (m, q)) ->
           match q, m with
           | Option.None, LF.AtomTerm (_, t) -> return t
@@ -1038,14 +1037,14 @@ end = struct
   (** An LF type declaration, `x : a'. *)
   let lf_typ_decl =
     seq2
-      (name <& token T.COLON)
+      (name <& token Token.COLON)
       LF_parsers.lf_typ
     |> labelled "LF type declaration"
     $> fun (x, a) -> LF.TypDecl (x, a)
 
   let lf_typ_pi : LF.typ parser =
     seq2
-      (trying (lf_typ_decl |> braces <& maybe (token T.ARROW)))
+      (trying (lf_typ_decl |> braces <& maybe (token Token.ARROW)))
       LF_parsers.lf_typ
     |> span
     $> (fun (loc, (d, ty2)) -> LF.PiTyp (loc, d, ty2))
@@ -1064,7 +1063,7 @@ end = struct
 
   let lf_typ_arr : LF.typ parser =
     seq2
-      (trying (lf_typ_atomic <& token T.ARROW))
+      (trying (lf_typ_atomic <& token Token.ARROW))
       LF_parsers.lf_typ
     |> span
     $> (fun (loc, (a1, a2)) -> LF.ArrTyp (loc, a1, a2))
@@ -1081,7 +1080,7 @@ end = struct
   (** Parses the `type' kind. *)
   let type_kind =
     labelled "`type' kind"
-      (span (token T.KW_TYPE) $> fun (loc, ()) -> LF.Typ loc)
+      (span (token Token.KW_TYPE) $> fun (loc, ()) -> LF.Typ loc)
 
   let lf_kind =
     let pi_kind =
@@ -1093,7 +1092,7 @@ end = struct
     in
     let arr_kind =
       seq2
-        (lf_typ_atomic <& token T.ARROW)
+        (lf_typ_atomic <& token Token.ARROW)
         LF_parsers.lf_kind
       |> span
       $> fun (loc, (a, k)) -> LF.ArrKind (loc, a, k)
@@ -1133,7 +1132,7 @@ end = struct
     let arrow =
       seq2
         lf_typ_atomic
-        (maybe (token T.ARROW &> LF_parsers.lf_kind_or_typ))
+        (maybe (token Token.ARROW &> LF_parsers.lf_kind_or_typ))
       |> span
       |> labelled "LF arrow kind or type"
       $> fun (loc, (a, k_or_a)) ->
@@ -1158,14 +1157,14 @@ let lf_typ_decl = LF_parsers.lf_typ_decl
 let hole : string option parser =
   satisfy' (`hole Option.none)
     (function
-     | T.HOLE "" -> Option.some Option.none
-     | T.HOLE s -> Option.some (Option.some s)
+     | Token.HOLE "" -> Option.some Option.none
+     | Token.HOLE s -> Option.some (Option.some s)
      | _ -> Option.none)
   |> labelled "hole"
 
 let rec_block (p : (Name.t * LF.typ) parser) =
-  token T.KW_BLOCK
-  &> opt_parens (sep_by1 p (token T.COMMA))
+  token Token.KW_BLOCK
+  &> opt_parens (sep_by1 p (token Token.COMMA))
   |> span
   $> fun (loc, es) ->
      List1.fold_right
@@ -1228,7 +1227,7 @@ end = struct
   let lf_function_type =
     let pi =
       let d =
-        seq2 (name <& token T.COLON) Contextual_LF_parsers.clf_typ_pure
+        seq2 (name <& token Token.COLON) Contextual_LF_parsers.clf_typ_pure
         |> braces
         $> fun (name, a) -> LF.TypDecl (name, a)
       in
@@ -1237,7 +1236,7 @@ end = struct
       $> fun (loc, (d, b)) -> LF.PiTyp (loc, d, b)
     in
     let arrow =
-      seq2 (trying (clf_typ_pure_atomic <& token T.ARROW)) Contextual_LF_parsers.clf_typ_pure
+      seq2 (trying (clf_typ_pure_atomic <& token Token.ARROW)) Contextual_LF_parsers.clf_typ_pure
       |> span
       $> fun (loc, (a, b)) -> LF.ArrTyp (loc, a, b)
     in
@@ -1250,7 +1249,7 @@ end = struct
     |> labelled "return contextual LF type"
 
   let clf_typ_rec_elem =
-    seq2 (name <& token T.COLON) clf_typ_pure
+    seq2 (name <& token Token.COLON) clf_typ_pure
     |> labelled "contextual LF block element"
 
   let clf_typ_rec_block =
@@ -1292,13 +1291,13 @@ end = struct
   let clf_typ =
     let pi_decl =
       seq2
-        (name <& token T.COLON)
+        (name <& token Token.COLON)
         Contextual_LF_parsers.clf_typ
       |> braces
     in
     let pi =
       seq2
-        (pi_decl <& maybe (token T.ARROW))
+        (pi_decl <& maybe (token Token.ARROW))
         Contextual_LF_parsers.clf_typ
       |> span
       $> fun (loc, ((x, a), a')) ->
@@ -1307,7 +1306,7 @@ end = struct
     let arrow_or_atomic =
       seq2
         clf_typ_atomic
-        (maybe (token T.ARROW &> Contextual_LF_parsers.clf_typ))
+        (maybe (token Token.ARROW &> Contextual_LF_parsers.clf_typ))
       |> span
       $> fun (loc, (a, b)) ->
           match b with
@@ -1326,7 +1325,7 @@ end = struct
           $> fun (loc, tM) -> (LF.EmptySub loc, [tM]))
     in
     let nonemptysub =
-      seq2 start (many (token T.COMMA &> clf_term_app))
+      seq2 start (many (token Token.COMMA &> clf_term_app))
       (* we need to reverse xs because the *rightmost* element
           (textually) must be the head of the list.
           This is also why ts comes after xs, despite being *parsed*
@@ -1342,8 +1341,8 @@ end = struct
 
   let clf_sub_term =
     choice
-      [ token T.HAT |> span $> (fun (loc, ()) -> LF.EmptySub loc)
-      ; token T.DOTS |> span $> (fun (loc, ()) -> LF.Id loc)
+      [ token Token.HAT |> span $> (fun (loc, ()) -> LF.EmptySub loc)
+      ; token Token.DOTS |> span $> (fun (loc, ()) -> LF.Id loc)
       ; seq2
           dollar_name
           (maybe (bracks clf_sub_new))
@@ -1369,7 +1368,7 @@ end = struct
           | Option.None -> m
     in
     let hole =
-      token T.UNDERSCORE
+      token Token.UNDERSCORE
       |> span
       $> fun (loc, ()) -> LF.Hole loc
     in
@@ -1378,8 +1377,8 @@ end = struct
   let clf_normal =
     let lam =
       seq2
-        (token T.LAMBDA &> name)
-        (token T.DOT &> clf_term_app)
+        (token Token.LAMBDA &> name)
+        (token Token.DOT &> clf_term_app)
       |> span
       |> labelled "LF lambda"
       $> fun (loc, (x, m)) ->
@@ -1397,7 +1396,7 @@ end = struct
     let app =
       seq2
         clf_term_app
-        (maybe (token T.COLON &> clf_typ))
+        (maybe (token Token.COLON &> clf_typ))
       |> parens
       |> span
       |> labelled "LF application"
@@ -1412,7 +1411,7 @@ end = struct
       $> fun (loc, h) -> LF.LFHole (loc, h)
     in
     let tuple =
-      sep_by1 clf_term_app (token T.SEMICOLON)
+      sep_by1 clf_term_app (token Token.SEMICOLON)
       |> angles
       |> span
       |> labelled "LF tuple"
@@ -1444,7 +1443,7 @@ end = struct
     let clf_typ_decl =
       seq2
         name
-        (maybe (token T.COLON &> clf_typ))
+        (maybe (token Token.COLON &> clf_typ))
       $> fun (x, tA) ->
           match tA with
           | Option.Some tA -> LF.TypDecl (x, tA)
@@ -1455,7 +1454,7 @@ end = struct
       *)
     let start =
       choice
-        [ token T.UNDERSCORE &> return LF.CtxHole
+        [ token Token.UNDERSCORE &> return LF.CtxHole
         ; span clf_typ_decl
           $> fun (loc, d) ->
               (* This is nasty. XXX
@@ -1487,7 +1486,7 @@ end = struct
     choice
       [ seq2
           start
-          (many (token T.COMMA &> clf_typ_decl))
+          (many (token Token.COMMA &> clf_typ_decl))
         $> (fun (cPsi, ds) ->
           List.fold_left (fun acc d -> LF.DDec (acc, d)) cPsi ds)
       ; return LF.Null
@@ -1502,14 +1501,14 @@ end = struct
   let contextual : type a. a parser -> (LF.dctx * a) parser =
     fun p ->
     seq2
-      (clf_dctx <& token T.TURNSTILE)
+      (clf_dctx <& token Token.TURNSTILE)
       p
 
   let meta_obj =
     let clobj =
       seq2
         clf_dctx
-        (maybe (token T.TURNSTILE &> clf_sub_new))
+        (maybe (token Token.TURNSTILE &> clf_sub_new))
       |> span
       $> fun (loc, (cPsi, tR)) ->
           match tR with
@@ -1530,7 +1529,7 @@ end = struct
         (name : 'name t) (box : (LF.dctx * 'a) t -> 'b t) (p : 'a t)
       : ('name * 'b) t =
     seq2
-      (name <& token T.COLON)
+      (name <& token Token.COLON)
       (box (contextual p))
 
   let cltyp : (LF.dctx * typ_or_ctx) parser =
@@ -1558,13 +1557,13 @@ end = struct
       let hash_variable_decl p =
         contextual_variable_decl
           (nameclass `hash)
-          (sigil_bracks_or_opt_parens T.HASH)
+          (sigil_bracks_or_opt_parens Token.HASH)
           p
       in
       let dollar_variable_decl p =
         contextual_variable_decl
           (nameclass `dollar)
-          (sigil_bracks_or_opt_parens T.DOLLAR)
+          (sigil_bracks_or_opt_parens Token.DOLLAR)
           p
       in
       let mk_decl plicity f (loc, (p, w)) =
@@ -1585,7 +1584,7 @@ end = struct
       in
       let subst_variable =
         let subst_class =
-          maybe (token T.HASH)
+          maybe (token Token.HASH)
           $> Option.eliminate (Fun.const LF.Subst) (Fun.const LF.Ren)
         in
         dollar_variable_decl (seq2 subst_class clf_dctx)
@@ -1603,7 +1602,7 @@ end = struct
             alternation to see whether we have another name (so
             a ctx var) or a box (so an mvar)
           *)
-        ; nameclass `ordinary <& token T.COLON |> span
+        ; nameclass `ordinary <& token Token.COLON |> span
           >>= fun (loc1, nb) ->
             let plicity, x = plicity_of_name nb in
             alt
@@ -1625,7 +1624,7 @@ end = struct
     labelled "context variable declaration"
       begin
         seq2
-          (trying (name <& token T.COLON))
+          (trying (name <& token Token.COLON))
           (name <& not_followed_by meta_obj)
         |> span
         $> fun (loc, (p, w)) -> LF.Decl (p, (loc, LF.CTyp w), Plicity.implicit)
@@ -1651,7 +1650,7 @@ end = struct
     in
     let subst_variable =
       let subst_class =
-        maybe (token T.HASH)
+        maybe (token Token.HASH)
         $> Option.eliminate (Fun.const LF.Subst) (Fun.const LF.Ren)
       in
       labelled "substitution/renaming variable"
@@ -1673,7 +1672,7 @@ end = struct
             alternation to see whether we have another name (so
             a ctx var) or a box (so an mvar)
           *)
-        ; name <& token T.COLON |> span
+        ; name <& token Token.COLON |> span
           >>= fun (loc1, x) ->
             alt
               (span name
@@ -1701,7 +1700,7 @@ let clf_ctyp_decl_bare = Contextual_LF_parsers.clf_ctyp_decl_bare
 let clf_ctyp_decl = Contextual_LF_parsers.clf_ctyp_decl
 let cltyp = Contextual_LF_parsers.cltyp
 
-let mctx ?(sep = token T.COMMA) p =
+let mctx ?(sep = token Token.COMMA) p =
   sep_by0 p sep
   $> Context.of_list_rev
 
@@ -1716,7 +1715,7 @@ module rec Comp_parsers : sig
 end = struct
   let pibox p r f =
     seq2
-      (p <& maybe (token T.ARROW))
+      (p <& maybe (token Token.ARROW))
       r
     |> span
     $> fun (loc, (ctyp_decl, x)) ->
@@ -1724,7 +1723,7 @@ end = struct
 
   let arrow atomic r f =
     seq2
-      (trying (atomic <& token T.ARROW))
+      (trying (atomic <& token Token.ARROW))
       r
     |> span
     $> fun (loc, (a1, a2)) -> f loc a1 a2
@@ -1739,7 +1738,7 @@ end = struct
               Comp.TypBase (loc, a, sp))
       in
       let pbox =
-        token T.HASH
+        token Token.HASH
         &> bracks (contextual (some clf_normal |> span))
         |> span
         $> fun (loc, (cPsi, (loc', ms))) ->
@@ -1754,7 +1753,7 @@ end = struct
               )
       in
       let sub =
-        token T.DOLLAR
+        token Token.DOLLAR
         &> bracks (contextual clf_dctx)
         |> span
         $> fun (loc, (cPsi, cPhi)) ->
@@ -1773,7 +1772,7 @@ end = struct
       in
       let ordinary =
         seq2
-          (trying (clf_dctx <& token T.TURNSTILE))
+          (trying (clf_dctx <& token Token.TURNSTILE))
           (some clf_normal)
         |> span
         |> labelled "boxed type"
@@ -1793,7 +1792,7 @@ end = struct
   let cmp_typ_cross =
     seq2
       cmp_typ_atomic
-      (many (token T.STAR &> Comp_parsers.cmp_typ_cross))
+      (many (token Token.STAR &> Comp_parsers.cmp_typ_cross))
     |> span
     |> labelled "computation product type"
     $> fun (loc, (tau1, taus)) ->
@@ -1829,7 +1828,7 @@ end = struct
 
   (** Parses the `ctype` kind, the kind of computation types. *)
   let ctype_kind =
-    token T.KW_CTYPE |> span
+    token Token.KW_CTYPE |> span
     $> fun (loc, ()) -> Comp.Ctype loc
 
   let cmp_kind =
@@ -1837,7 +1836,7 @@ end = struct
       labelled "Pi-box kind"
         begin
           seq2
-            (trying (clf_ctyp_decl <& maybe (token T.ARROW)))
+            (trying (clf_ctyp_decl <& maybe (token Token.ARROW)))
             Comp_parsers.cmp_kind
           |> span
           $> fun (loc, (ctyp_decl, k)) ->
@@ -1849,7 +1848,7 @@ end = struct
       labelled "arrow kind"
         begin
           seq2
-            (trying (cltyp <& token T.ARROW) |> span)
+            (trying (cltyp <& token Token.ARROW) |> span)
             Comp_parsers.cmp_kind
           |> span
           $> fun (loc, ((loc', (cPsi, a)), k)) ->
@@ -1893,7 +1892,7 @@ end = struct
       $> fun (loc, mobj) -> Comp.PatMetaObj (loc, mobj)
     in
     let nested (* `(' p (, p)* `)' *) =
-      span (parens (seq2 Comp_parsers.cmp_pattern (many (token T.COMMA &> Comp_parsers.cmp_pattern))))
+      span (parens (seq2 Comp_parsers.cmp_pattern (many (token Token.COMMA &> Comp_parsers.cmp_pattern))))
       $> (fun (location, (p1, ps)) ->
         match ps with
         | [] -> p1
@@ -1934,7 +1933,7 @@ end = struct
     let pattern = alt app cmp_pattern_atomic in
     seq2
       pattern
-      (maybe (token T.COLON &> cmp_typ))
+      (maybe (token Token.COLON &> cmp_typ))
     |> labelled "possibly annotated pattern"
     |> span
     $> fun (loc, (p, tau)) ->
@@ -1957,7 +1956,7 @@ end = struct
         ])
     in
     seq2
-      (go <& token T.THICK_ARROW)
+      (go <& token Token.THICK_ARROW)
       Comp_parsers.cmp_exp_chk
     |> shifted "copattern spine"
 
@@ -1965,7 +1964,7 @@ end = struct
     seq3
       (mctx ~sep: (return ()) (clf_ctyp_decl_bare name' (fun x -> Plicity.explicit, x) |> braces))
       cmp_pattern
-      (token T.THICK_ARROW &> Comp_parsers.cmp_exp_chk)
+      (token Token.THICK_ARROW &> Comp_parsers.cmp_exp_chk)
     |> span
     |> labelled "case branch"
     $> fun (loc, (ctyp_decls, pat, rhs)) ->
@@ -1977,29 +1976,29 @@ end = struct
   let cmp_exp_chk' =
     let abstraction param c =
       seq2
-        (sep_by1 param (token T.COMMA) $> List1.to_list)
-        (token T.THICK_ARROW &> Comp_parsers.cmp_exp_chk)
+        (sep_by1 param (token Token.COMMA) $> List1.to_list)
+        (token Token.THICK_ARROW &> Comp_parsers.cmp_exp_chk)
       |> span
       $> fun (loc, (params, i)) ->
           List.fold_left
             (fun acc f -> c loc f acc) i (List.rev params)
     in
     let fn =
-      token T.KW_FN
+      token Token.KW_FN
       &> abstraction name
             (fun loc f acc -> Comp.Fn (loc, f, acc))
       |> labelled "ordinary function abstraction"
     in
     let mlam =
-      token T.KW_MLAM
+      token Token.KW_MLAM
       &> abstraction (choice [hash_name; dollar_name; name])
             (fun loc f acc -> Comp.MLam (loc, f, acc))
       |> labelled "meta function abstraction"
     in
     let matching_fun =
-      token T.KW_FUN
-      &> maybe (token T.PIPE)
-      &> sep_by1 (span cmp_copat_spine) (token T.PIPE)
+      token Token.KW_FUN
+      &> maybe (token Token.PIPE)
+      &> sep_by1 (span cmp_copat_spine) (token Token.PIPE)
       $> List1.to_list
       |> span
       |> labelled "copattern abstraction"
@@ -2014,10 +2013,10 @@ end = struct
     in
     let case =
       seq3
-        (token T.KW_CASE &> Comp_parsers.cmp_exp_syn)
-        (token T.KW_OF &> case_pragma)
-        (maybe (token T.PIPE)
-          &> sep_by1 cmp_branch (token T.PIPE)
+        (token Token.KW_CASE &> Comp_parsers.cmp_exp_syn)
+        (token Token.KW_OF &> case_pragma)
+        (maybe (token Token.PIPE)
+          &> sep_by1 cmp_branch (token Token.PIPE)
           $> List1.to_list)
       |> span
       |> labelled "case expression"
@@ -2025,7 +2024,7 @@ end = struct
           Comp.Case (loc, prag, i, bs)
     in
     let impossible =
-      token T.KW_IMPOSSIBLE
+      token Token.KW_IMPOSSIBLE
       &> Comp_parsers.cmp_exp_syn
       |> span
       $> fun (loc, i) -> Comp.Impossible (loc, i)
@@ -2034,15 +2033,15 @@ end = struct
       let let_pattern =
         seq4
           (mctx ~sep: (return ()) (clf_ctyp_decl_bare name' (fun x -> Plicity.explicit, x) |> braces))
-          (cmp_pattern <& token T.EQUALS)
-          (Comp_parsers.cmp_exp_syn <& token T.KW_IN)
+          (cmp_pattern <& token Token.EQUALS)
+          (Comp_parsers.cmp_exp_syn <& token Token.KW_IN)
           Comp_parsers.cmp_exp_chk
         |> span
         $> fun (loc, (ctyp_decls, pat, i, e)) ->
             let branch = Comp.Branch (loc, ctyp_decls, pat, e) in
             Comp.(Case (loc, PragmaCase, i, [branch]))
       in
-      token T.KW_LET
+      token Token.KW_LET
       (* XXX
           there is ambiguity between let_exp and let_pattern, in
           particular because exp is a proper subclass of pattern:
@@ -2057,7 +2056,7 @@ end = struct
       &> let_pattern
     in
     let nested (* `(' e (, e)* `)' *) =
-      span (parens (seq2 Comp_parsers.cmp_exp_chk (many (token T.COMMA &> Comp_parsers.cmp_exp_chk))))
+      span (parens (seq2 Comp_parsers.cmp_exp_chk (many (token Token.COMMA &> Comp_parsers.cmp_exp_chk))))
       $> (fun (location, (p1, ps)) ->
         match ps with
         | [] -> p1
@@ -2065,7 +2064,7 @@ end = struct
       |> labelled "parenthesized or tuple checkable expression"
     in
     let hole = hole |> span $> fun (loc, h) -> Comp.Hole (loc, h) in
-    let box_hole = token T.UNDERSCORE |> span $> fun (loc, ()) -> Comp.BoxHole loc in
+    let box_hole = token Token.UNDERSCORE |> span $> fun (loc, ()) -> Comp.BoxHole loc in
     let meta_obj =
       meta_obj
       |> span
@@ -2093,7 +2092,7 @@ end = struct
       $> fun (loc, tR) -> Comp.Box (loc, tR)
     in
     let nested (* `(' i (, i)* `)' *) =
-      span (parens (seq2 Comp_parsers.cmp_exp_syn (many (token T.COMMA &> Comp_parsers.cmp_exp_syn))))
+      span (parens (seq2 Comp_parsers.cmp_exp_syn (many (token Token.COMMA &> Comp_parsers.cmp_exp_syn))))
       $> (fun (location, (p1, ps)) ->
         match ps with
         | [] -> p1
@@ -2146,12 +2145,12 @@ end = struct
 
   (** Parses `x : tau`. *)
   let cmp_ctyp_decl =
-    seq2 (name <& token T.COLON) cmp_typ
+    seq2 (name <& token Token.COLON) cmp_typ
     |> labelled "computational type declaration"
     $> fun (x, tau) -> Comp.CTypDecl (x, tau)
 
   let gctx =
-    sep_by0 cmp_ctyp_decl (token T.COMMA)
+    sep_by0 cmp_ctyp_decl (token Token.COMMA)
     $> Context.of_list_rev
 end
 
@@ -2176,9 +2175,9 @@ end = struct
 
   let harpoon_command : Comp.command t =
     let by =
-      token T.KW_BY &>
+      token Token.KW_BY &>
         seq3
-          (cmp_exp_syn <& token T.KW_AS)
+          (cmp_exp_syn <& token Token.KW_AS)
           name
           (maybe_default boxity ~default:`boxed)
       |> span
@@ -2192,14 +2191,14 @@ end = struct
     let unbox =
       keyword "unbox" &>
         seq2
-          ((span cmp_exp_syn) <& token T.KW_AS)
+          ((span cmp_exp_syn) <& token Token.KW_AS)
           name
       $> fun ((loc, i), x) -> Comp.Unbox (loc, i, x, Option.none)
     in
     let strengthen =
       keyword "strengthend" &>
         seq2
-          (span cmp_exp_syn <& token T.KW_AS)
+          (span cmp_exp_syn <& token Token.KW_AS)
           name
       $> fun ((loc, i), x) -> Comp.Unbox (loc, i, x, Option.some `strengthened)
     in
@@ -2207,7 +2206,7 @@ end = struct
 
   let case_label : Comp.case_label parser =
     let extension_case_label =
-      trying (keyword "extended" &> token T.KW_BY) &> integer
+      trying (keyword "extended" &> token Token.KW_BY) &> integer
       |> span
       |> labelled "context extension case label"
       $> fun (loc, n) -> Comp.(ContextCase (ExtendedBy (loc, n)))
@@ -2225,7 +2224,7 @@ end = struct
       $> fun (loc, name) -> Comp.NamedCase (loc, name)
     in
     let pvar_case_label =
-      token T.HASH &>
+      token Token.HASH &>
         seq2
           (maybe_default integer ~default:1)
           (maybe dot_integer)
@@ -2250,12 +2249,12 @@ end = struct
     let open Comp in
     let hypotheses =
       seq2
-        (mctx (clf_ctyp_decl_bare name_or_blank' plicity_name_of_nb) <& token T.PIPE)
+        (mctx (clf_ctyp_decl_bare name_or_blank' plicity_name_of_nb) <& token Token.PIPE)
         gctx
       $> fun (cD, cG) -> { cD; cG }
     in
     seq2
-      (hypotheses <& token T.SEMICOLON)
+      (hypotheses <& token Token.SEMICOLON)
       Harpoon_parsers.harpoon_proof
     |> braces
     |> span
@@ -2264,9 +2263,9 @@ end = struct
         { hypotheses; proof; hypothetical_loc }
 
   let harpoon_split_branch : Comp.split_branch parser =
-    token T.KW_CASE &>
+    token Token.KW_CASE &>
       seq2
-        (case_label <& token T.COLON)
+        (case_label <& token Token.COLON)
         harpoon_hypothetical
     |> span
     |> labelled "Harpoon split branch"
@@ -2286,11 +2285,11 @@ end = struct
         $> (fun (loc, e) -> Comp.Solve (loc, e))
       ; keyword "split"
         &> seq2
-              (cmp_exp_syn <& token T.KW_AS)
+              (cmp_exp_syn <& token Token.KW_AS)
               (many harpoon_split_branch)
         |> span
         $> (fun (loc, (i, bs)) -> Comp.Split (loc, i, bs))
-      ; token T.KW_IMPOSSIBLE
+      ; token Token.KW_IMPOSSIBLE
         &> cmp_exp_syn
         |> span
         $> (fun (loc, i) -> Comp.Split (loc, i, []))
@@ -2299,9 +2298,9 @@ end = struct
           |> span
           $> fun (loc, (tau, p)) -> (loc, tau, p)
         in
-        tokens T.[KW_SUFFICES; KW_BY] &>
+        tokens Token.[KW_SUFFICES; KW_BY] &>
           seq2
-            (cmp_exp_syn <& token T.KW_TOSHOW)
+            (cmp_exp_syn <& token Token.KW_TOSHOW)
             (many suffices_arg)
         |> span
         $> (fun (loc, (i, args)) -> Comp.Suffices (loc, i, args))
@@ -2317,7 +2316,7 @@ end = struct
     in
     let command_proof =
       seq2
-        (harpoon_command <& token T.SEMICOLON)
+        (harpoon_command <& token Token.SEMICOLON)
         Harpoon_parsers.harpoon_proof
       |> span
       $> fun (loc, (cmd, prf)) -> Comp.Command (loc, cmd, prf)
@@ -2357,7 +2356,7 @@ end = struct
       $> fun t -> H.(Split (`invert, t))
     in
     let impossible =
-      token T.KW_IMPOSSIBLE
+      token Token.KW_IMPOSSIBLE
       &> cmp_exp_syn
       $> fun t -> H.(Split (`impossible, t))
     in
@@ -2377,10 +2376,10 @@ end = struct
       $> fun n -> H.InductiveAutoSolve n
     in
     let by =
-      token T.KW_BY &>
+      token Token.KW_BY &>
         seq3
           cmp_exp_syn
-          (token T.KW_AS &> name)
+          (token Token.KW_AS &> name)
           (maybe_default boxity ~default:`boxed)
       $> fun (i, name, b) ->
         match b with
@@ -2389,7 +2388,7 @@ end = struct
         | `boxed -> H.By (i, name)
     in
     let compute_type =
-      token T.KW_TYPE
+      token Token.KW_TYPE
       &> cmp_exp_syn
       $> fun i -> H.Type i
     in
@@ -2397,13 +2396,13 @@ end = struct
       let tau_list_item =
         alt
           (cmp_typ $> fun tau -> `exact tau)
-          (token T.UNDERSCORE |> span $> fun (loc, ()) -> `infer loc)
+          (token Token.UNDERSCORE |> span $> fun (loc, ()) -> `infer loc)
       in
       seq2
-        (tokens [T.KW_SUFFICES; T.KW_BY]
+        (tokens [Token.KW_SUFFICES; Token.KW_BY]
         &> cmp_exp_syn)
-        (token T.KW_TOSHOW
-        &> sep_by0 tau_list_item (token T.COMMA))
+        (token Token.KW_TOSHOW
+        &> sep_by0 tau_list_item (token Token.COMMA))
       $> fun (i, tau_list) ->
         H.Suffices (i, tau_list)
     in
@@ -2411,14 +2410,14 @@ end = struct
       keyword "unbox" &>
         seq2
           cmp_exp_syn
-          (token T.KW_AS &> name)
+          (token Token.KW_AS &> name)
       $> fun (i, name) -> H.Unbox (i, name, Option.none)
     in
     let strengthen =
       keyword "strengthen" &>
         seq2
           cmp_exp_syn
-          (token T.KW_AS &> name)
+          (token Token.KW_AS &> name)
       $> fun (i, name) -> H.Unbox (i, name, Option.some `strengthened)
     in
     let automation_kind =
@@ -2546,11 +2545,11 @@ end = struct
       ]
 
   let interactive_harpoon_command_sequence =
-    sep_by0 interactive_harpoon_command (token T.SEMICOLON)
+    sep_by0 interactive_harpoon_command (token Token.SEMICOLON)
 
   let next_theorem =
     alt
-      (token T.COLON &> keyword "quit" &> return `quit)
+      (token Token.COLON &> keyword "quit" &> return `quit)
       (name $> fun name -> `next name)
 end
 
@@ -2573,7 +2572,7 @@ module rec Signature_parsers : sig
 end = struct
   let sgn_lf_const_decl =
     seq2
-      (name <& token T.COLON)
+      (name <& token Token.COLON)
       lf_typ
     |> span
     $> (fun (location, (identifier, typ)) ->
@@ -2584,21 +2583,21 @@ end = struct
     let lf_typ_decl_body =
       let typ_decl =
         seq2
-          (name <& token T.COLON)
+          (name <& token Token.COLON)
           lf_kind
       in
       seq2
-        (typ_decl <& token T.EQUALS)
-        (maybe (token T.PIPE)
-        &> sep_by0 sgn_lf_const_decl (token (T.PIPE)))
+        (typ_decl <& token Token.EQUALS)
+        (maybe (token Token.PIPE)
+        &> sep_by0 sgn_lf_const_decl (token (Token.PIPE)))
       |> span
       $> fun (location, ((identifier, kind), const_decls)) ->
         Sgn.Typ { location; identifier; kind }, const_decls
     in
     labelled "LF type declaration block"
-      (token T.KW_LF
-      &> (sep_by1 lf_typ_decl_body (token T.KW_AND))
-      <& token T.SEMICOLON
+      (token Token.KW_LF
+      &> (sep_by1 lf_typ_decl_body (token Token.KW_AND))
+      <& token Token.SEMICOLON
       |> span
       $> fun (location, declarations) ->
           Sgn.MRecTyp { location; declarations })
@@ -2606,7 +2605,7 @@ end = struct
   let call_arg =
     alt
       (name $> Option.some)
-      (token T.UNDERSCORE &> return Option.none)
+      (token Token.UNDERSCORE &> return Option.none)
     |> labelled "call argument"
 
   let named_total_arg : Comp.named_order t =
@@ -2622,7 +2621,7 @@ end = struct
     |> labelled "totality ordering"
 
   let trust_order : Comp.total_dec t =
-    token T.KW_TRUST
+    token Token.KW_TRUST
     |> span
     |> labelled "trust totality"
     $> fun (loc, ()) -> Comp.Trust loc
@@ -2630,7 +2629,7 @@ end = struct
   (** Parses a totality declaration whose arguments are parsed by `arg` *)
   let total_decl : Comp.total_dec t =
     let total =
-      token T.KW_TOTAL &>
+      token Token.KW_TOTAL &>
         alt
           begin
             seq2
@@ -2660,12 +2659,12 @@ end = struct
         let cmp_typ_decl =
           let flavour =
             alt
-              (token T.KW_INDUCTIVE &> return Sgn.InductiveDatatype)
-              (token T.KW_STRATIFIED &> return Sgn.StratifiedDatatype)
+              (token Token.KW_INDUCTIVE &> return Sgn.InductiveDatatype)
+              (token Token.KW_STRATIFIED &> return Sgn.StratifiedDatatype)
           in
           let sgn_cmp_typ_decl_body =
             seq2
-              (name <& token (T.COLON))
+              (name <& token (Token.COLON))
               cmp_typ
             |> span
             $> fun (location, (identifier, typ)) ->
@@ -2673,9 +2672,9 @@ end = struct
           in
           seq5
             flavour
-            (name <& token (T.COLON))
-            (cmp_kind <& token (T.EQUALS) <& maybe (token (T.PIPE)))
-            (sep_by0 sgn_cmp_typ_decl_body (token T.PIPE))
+            (name <& token (Token.COLON))
+            (cmp_kind <& token (Token.EQUALS) <& maybe (token (Token.PIPE)))
+            (sep_by0 sgn_cmp_typ_decl_body (token Token.PIPE))
             get_state
           |> span
           >>= fun (location, (datatype_flavour, identifier, kind, decls, s)) ->
@@ -2704,9 +2703,9 @@ end = struct
               (* (many clf_ctyp_decl $> List.fold_left (fun acc d -> LF.Dec (acc, d)) LF.Empty) *)
               (opt_parens
                  (seq2
-                    (name <& token T.COLON)
+                    (name <& token Token.COLON)
                     cmp_typ)
-               <& token T.DOUBLE_COLON)
+               <& token Token.DOUBLE_COLON)
               cmp_typ
             |> span
             $> fun (location, ((* cD, *) (identifier, tau0), tau1)) ->
@@ -2719,9 +2718,9 @@ end = struct
                 }
           in
           seq4
-            (token T.KW_COINDUCTIVE &> name <& token T.COLON)
-            (cmp_kind <& token T.EQUALS <& maybe (token T.PIPE))
-            (sep_by0 cmp_cotyp_body (token T.PIPE))
+            (token Token.KW_COINDUCTIVE &> name <& token Token.COLON)
+            (cmp_kind <& token Token.EQUALS <& maybe (token Token.PIPE))
+            (sep_by0 cmp_cotyp_body (token Token.PIPE))
             get_state
           |> span
           >>= fun (location, (identifier, kind, decls, s)) ->
@@ -2730,8 +2729,8 @@ end = struct
                Sgn.CompCotyp { location; identifier; kind }, decls
         in
 
-        sep_by1 (alt cmp_typ_decl cmp_cotyp_decl) (token T.KW_AND)
-        <& token T.SEMICOLON
+        sep_by1 (alt cmp_typ_decl cmp_cotyp_decl) (token Token.KW_AND)
+        <& token Token.SEMICOLON
         |> span
         $> fun (location, declarations) -> Sgn.MRecTyp { location; declarations }
       end
@@ -2739,7 +2738,7 @@ end = struct
   let sgn_query_pragma =
     let bound =
       alt
-        (token T.STAR &> return Option.none)
+        (token Token.STAR &> return Option.none)
         (integer $> Option.some)
       |> labelled "search bound"
     in
@@ -2747,9 +2746,9 @@ end = struct
       seq4
         (seq2 bound bound)
         (mctx ~sep: (return ()) (clf_ctyp_decl_bare name' (fun x -> Plicity.explicit, x) |> braces))
-        (maybe (name <& token T.COLON))
+        (maybe (name <& token Token.COLON))
         lf_typ
-    <& token T.DOT
+    <& token Token.DOT
     |> span
     |> labelled "logic programming engine query pragma"
     $> fun (location, ((expected_solutions, maximum_tries), cD, name, typ)) ->
@@ -2760,8 +2759,8 @@ end = struct
       "old-style LF type or constant declaration"
       begin
         seq2
-          (name <& token T.COLON)
-          (lf_kind_or_typ <& token T.DOT)
+          (name <& token Token.COLON)
+          (lf_kind_or_typ <& token Token.DOT)
         |> span
         $> fun (location, (identifier, k_or_a)) ->
            match k_or_a with
@@ -2798,7 +2797,7 @@ end = struct
     let infix_pragma : Sgn.decl parser =
       pragma "infix"
       &> seq3 name integer (maybe associativity)
-      <& token T.DOT
+      <& token Token.DOT
       |> span
       $> fun (location, (x, precedence, assoc)) ->
          Sgn.Pragma
@@ -2809,7 +2808,7 @@ end = struct
     let prefix_pragma : Sgn.decl parser =
       pragma "prefix"
       &> seq2 name integer
-      <& token T.DOT
+      <& token Token.DOT
       |> span
       $> fun (location, (x, precedence)) ->
          Sgn.Pragma
@@ -2822,7 +2821,7 @@ end = struct
   let sgn_associativity_pragma : Sgn.decl parser =
     pragma "assoc"
     &> associativity
-    <& token T.DOT
+    <& token Token.DOT
     |> span
     $> fun (location, assoc) ->
       Sgn.Pragma { location; pragma = Sgn.DefaultAssocPrag assoc}
@@ -2832,14 +2831,14 @@ end = struct
     &> fqidentifier
     |> span
     |> labelled "open pragma"
-    <& token T.DOT
+    <& token Token.DOT
     $> fun (location, id) ->
        Sgn.Pragma { location; pragma = Sgn.OpenPrag (List1.to_list id) }
 
   let sgn_abbrev_pragma : Sgn.decl parser =
     pragma "abbrev"
     &> seq2 fqidentifier identifier
-    <& token T.DOT
+    <& token Token.DOT
     |> span
     |> labelled "module abbreviation pragma"
     $> fun (location, (fq, x)) ->
@@ -2849,7 +2848,7 @@ end = struct
   let sgn_comment : Sgn.decl parser =
     satisfy' `html_comment
       (function
-       | T.BLOCK_COMMENT s -> Option.some s
+       | Token.BLOCK_COMMENT s -> Option.some s
        | _ -> Option.none)
     |> span
     |> labelled "HTML comment"
@@ -2857,9 +2856,9 @@ end = struct
 
   let sgn_typedef_decl : Sgn.decl parser =
     seq3
-      (token T.KW_TYPEDEF &> name)
-      (token T.COLON &> cmp_kind)
-      (token T.EQUALS &> cmp_typ <& token T.SEMICOLON)
+      (token Token.KW_TYPEDEF &> name)
+      (token Token.COLON &> cmp_kind)
+      (token Token.EQUALS &> cmp_typ <& token Token.SEMICOLON)
     |> span
     |> labelled "type synonym declaration"
     $> fun (location, (identifier, kind, typ)) ->
@@ -2867,16 +2866,16 @@ end = struct
 
   let lf_schema_some : LF.typ_decl LF.ctx parser =
     alt
-      (token T.KW_SOME
+      (token Token.KW_SOME
        &> bracks
             (sep_by0
                lf_typ_decl
-               (token T.COMMA))
+               (token Token.COMMA))
        $> fun ds -> List.fold_left (fun ctx d -> LF.Dec (ctx, d)) LF.Empty ds)
       (return LF.Empty)
     |> labelled "existential declaration"
 
-  let lf_typ_rec_elem = seq2 (name <& token T.COLON) lf_typ
+  let lf_typ_rec_elem = seq2 (name <& token Token.COLON) lf_typ
 
   let lf_typ_rec_block =
     rec_block lf_typ_rec_elem
@@ -2902,10 +2901,10 @@ end = struct
 
   let sgn_schema_decl : Sgn.decl parser =
     seq2
-      (token T.KW_SCHEMA &> name <& token T.EQUALS)
-      (sep_by1 lf_schema_elem (token T.PLUS)
+      (token Token.KW_SCHEMA &> name <& token Token.EQUALS)
+      (sep_by1 lf_schema_elem (token Token.PLUS)
        $> List1.to_list)
-    <& token T.SEMICOLON
+    <& token Token.SEMICOLON
     |> span
     |> labelled "schema declaration"
     $> fun (location, (identifier, bs)) ->
@@ -2913,11 +2912,11 @@ end = struct
 
   let sgn_let_decl : Sgn.decl parser =
     seq2
-      (token T.KW_LET &>
+      (token Token.KW_LET &>
          seq2
            name
-           (maybe (token T.COLON &> cmp_typ)))
-      (token T.EQUALS &> cmp_exp_syn <& token T.SEMICOLON)
+           (maybe (token Token.COLON &> cmp_typ)))
+      (token Token.EQUALS &> cmp_exp_syn <& token Token.SEMICOLON)
     |> span
     |> labelled "value declaration"
     $> fun (location, ((identifier, typ), expression)) ->
@@ -2925,36 +2924,36 @@ end = struct
 
   let thm p =
     seq4
-      (name <& token T.COLON)
-      (cmp_typ <& token T.EQUALS)
-      (maybe (bracketed' (token T.SLASH) total_decl))
+      (name <& token Token.COLON)
+      (cmp_typ <& token Token.EQUALS)
+      (maybe (bracketed' (token Token.SLASH) total_decl))
       p
     |> span
     $> fun (location, (name, typ, order, body)) ->
        Sgn.Theorem { location; name; typ; order; body }
 
   let proof_decl : Sgn.thm_decl parser =
-    token T.KW_PROOF
+    token Token.KW_PROOF
     &> thm (harpoon_proof $> fun p -> Comp.Proof p)
 
   let program_decl : Sgn.thm_decl parser =
-    token T.KW_REC
+    token Token.KW_REC
     &> thm (cmp_exp_chk $> fun e -> Comp.Program e)
 
   let sgn_thm_decl : Sgn.decl t =
     sep_by1
       (choice [program_decl; proof_decl])
-      (token T.KW_AND)
-    <& token T.SEMICOLON
+      (token Token.KW_AND)
+    <& token Token.SEMICOLON
     |> span
     |> labelled "(mutual) recursive function declaration(s)"
     $> fun (location, theorems) -> Sgn.Theorems { location; theorems }
 
   let sgn_module_decl : Sgn.decl t =
     seq2
-      (token T.KW_MODULE &> identifier)
-      (T.(tokens [EQUALS; KW_STRUCT]) &> some Signature_parsers.sgn_decl)
-    <& T.(tokens [KW_END; SEMICOLON])
+      (token Token.KW_MODULE &> identifier)
+      (Token.(tokens [EQUALS; KW_STRUCT]) &> some Signature_parsers.sgn_decl)
+    <& Token.(tokens [KW_END; SEMICOLON])
     |> span
     |> labelled "module declaration"
     $> fun (location, (identifier, declarations)) ->

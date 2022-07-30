@@ -1079,22 +1079,24 @@ end = struct
   (** Parses the `type' kind. *)
   let type_kind =
     labelled "`type' kind"
-      (span (token Token.KW_TYPE) $> fun (loc, ()) -> LF.Typ loc)
+      (span (token Token.KW_TYPE) $> fun (location, ()) -> LF.Typ { location })
 
   let lf_kind =
     let pi_kind =
       seq2
-        (braces lf_typ_decl)
+        (braces (seq2 (name <& token Token.COLON) LF_parsers.lf_typ))
         LF_parsers.lf_kind
       |> span
-      $> fun (loc, (d, k)) -> LF.PiKind (loc, d, k)
+      $> fun (location, ((parameter_name, parameter_type), range)) ->
+        LF.PiKind { location; parameter_name; parameter_type; range }
     in
     let arr_kind =
       seq2
         (lf_typ_atomic <& token Token.ARROW)
         LF_parsers.lf_kind
       |> span
-      $> fun (loc, (a, k)) -> LF.ArrKind (loc, a, k)
+      $> fun (location, (domain, range)) ->
+        LF.ArrKind { location; domain; range }
     in
     choice
       [ label pi_kind "LF Pi kind"
@@ -1119,14 +1121,16 @@ end = struct
   let lf_kind_or_typ : [ `Kind of LF.kind | `Typ of LF.typ] t =
     let pi =
       seq2
-        (braces lf_typ_decl)
+        (braces (seq2 (name <& token Token.COLON) LF_parsers.lf_typ))
         LF_parsers.lf_kind_or_typ
       |> span
       |> labelled "LF Pi kind or type"
-      $> fun (loc, (name, k_or_a)) ->
+      $> fun (location, ((parameter_name, parameter_type), k_or_a)) ->
           match k_or_a with
-          | `Kind k -> `Kind (LF.PiKind (loc, name, k))
-          | `Typ a -> `Typ (LF.PiTyp (loc, name, a))
+          | `Kind range ->
+            `Kind (LF.PiKind { location; parameter_name; parameter_type; range })
+          | `Typ a ->
+            `Typ (LF.PiTyp (location, LF.TypDecl (parameter_name, parameter_type), a))
     in
     let arrow =
       seq2
@@ -1134,11 +1138,11 @@ end = struct
         (maybe (token Token.ARROW &> LF_parsers.lf_kind_or_typ))
       |> span
       |> labelled "LF arrow kind or type"
-      $> fun (loc, (a, k_or_a)) ->
+      $> fun (location, (a, k_or_a)) ->
           match k_or_a with
           | Option.None -> `Typ a
-          | Option.Some (`Kind k) -> `Kind (LF.ArrKind (loc, a, k))
-          | Option.Some (`Typ a') -> `Typ (LF.ArrTyp (loc, a, a'))
+          | Option.Some (`Kind k) -> `Kind (LF.ArrKind { location; domain = a; range = k })
+          | Option.Some (`Typ a') -> `Typ (LF.ArrTyp (location, a, a'))
     in
     choice
       [ pi

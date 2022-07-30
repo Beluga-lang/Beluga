@@ -7,9 +7,18 @@ module LF = struct
   include Syncom.LF
 
   type kind =
-    | Typ of Location.t
-    | ArrKind of Location.t * typ * kind
-    | PiKind of Location.t * typ_decl * kind
+    | Typ of { location : Location.t }
+    | ArrKind of
+        { location : Location.t
+        ; domain : typ
+        ; range : kind
+        }
+    | PiKind of
+        { location : Location.t
+        ; parameter_name : Name.t
+        ; parameter_type : typ
+        ; range : kind
+        }
 
   and typ_decl =
     | TypDecl of Name.t * typ

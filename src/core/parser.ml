@@ -1000,13 +1000,13 @@ module rec LF_parsers : sig
   val lf_term : LF.term t
 end = struct
   let lf_term_sequence =
-    span (some LF_parsers.lf_term) $> (fun (loc, ms) -> LF.TList (loc, ms))
+    span (some LF_parsers.lf_term) $> (fun (location, terms) -> LF.TList { location; terms })
     |> labelled "LF term sequence"
 
   let lf_term_lam =
     seq2 (token Token.LAMBDA &> name <& token Token.DOT) lf_term_sequence
       |> span
-      $> (fun (loc, (x, ms)) -> LF.Lam (loc, x, ms))
+      $> (fun (location, (parameter_name, body)) -> LF.Lam { location; parameter_name; body })
     |> labelled "LF lambda term"
 
   let lf_head =
@@ -1015,19 +1015,19 @@ end = struct
     $> fun (loc, n) -> LF.Name (loc, n, Option.none)
 
   let lf_term_head =
-    span lf_head $> (fun (loc, h) -> LF.Root (loc, h, []))
+    span lf_head $> (fun (location, head) -> LF.Root { location; head; spine = [] })
     |> labelled "LF head term"
 
   let lf_term_atomic =
     choice
       [ span (token Token.UNDERSCORE)
-        $> (fun (loc, ()) -> LF.Root (loc, LF.Hole loc, []))
+        $> (fun (location, ()) -> LF.Root { location; head = LF.Hole location; spine = [] })
       ; span (parens (seq2 LF_parsers.lf_typ (maybe (token Token.COLON &> LF_parsers.lf_typ))))
-        >>= fun (loc, (m, q)) ->
+        >>= fun (location, (m, q)) ->
           match q, m with
           | Option.None, LF.AtomTerm { term; _ } -> return term
-          | Option.None, _ -> return @@ LF.NTyp (loc, m)
-          | Option.Some a, LF.AtomTerm { term; _ } -> return @@ LF.Ann (loc, term, a)
+          | Option.None, _ -> return @@ LF.NTyp { location; typ = m }
+          | Option.Some typ, LF.AtomTerm { term; _ } -> return @@ LF.Ann { location; term; typ }
           | _, _ -> fail (Violation "invalid atomic LF term")
                                   (* ^ XXX not sure if this is a violation or a user error -je *)
       ]
@@ -1055,9 +1055,9 @@ end = struct
     alt
       (span lf_term_sequence
         $> function
-          | (loc, LF.NTyp (_, t)) -> t
-          | (loc, LF.TList (_, [LF.NTyp (_, t)])) -> t
-          | (location, LF.TList (_, [ term ])) -> LF.AtomTerm { location; term }
+          | (loc, LF.NTyp { typ; _ }) -> typ
+          | (loc, LF.TList { terms = [ LF.NTyp { typ; _ } ]; _ }) -> typ
+          | (location, LF.TList { terms = [ term ]; _ }) -> LF.AtomTerm { location; term }
           | (location, term) -> LF.AtomTerm { location; term })
       (parens LF_parsers.lf_typ)
     |> labelled "LF atomic type"
@@ -1203,12 +1203,12 @@ end = struct
     let normal_list =
       some Contextual_LF_parsers.clf_normal
       |> span
-      $> fun (loc, ms) -> LF.TList (loc, ms)
+      $> fun (location, terms) -> LF.TList { location; terms }
     in
     choice
       [ normal_list
       ; span Contextual_LF_parsers.clf_typ
-        $> (fun (loc, a) -> LF.NTyp (loc, a))
+        $> (fun (location, typ) -> LF.NTyp { location; typ })
       ]
     |> labelled "contextual LF application"
 
@@ -1221,10 +1221,10 @@ end = struct
             LF.AtomTerm
               { location
               ; term = LF.TList
-                  ( location
-                  , LF.Root (location, LF.Name (location, x, Option.none), [])
+                  { location
+                  ; terms = LF.Root { location; head = LF.Name (location, x, Option.none); spine = [] }
                     :: ms
-                  )
+                  }
               }
       ]
     |> labelled "atomic return contextual LF type"
@@ -1265,10 +1265,10 @@ end = struct
         begin
           some Contextual_LF_parsers.clf_normal
           |> span
-          $> fun (location, ms) ->
-              match ms with
-              | [LF.NTyp (_, a)] -> a
-              | _ -> LF.AtomTerm { location; term = LF.TList (location, ms) }
+          $> fun (location, terms) ->
+              match terms with
+              | [LF.NTyp { typ; _ }] -> typ
+              | _ -> LF.AtomTerm { location; term = LF.TList { location; terms } }
         end
     in
     let b =
@@ -1279,7 +1279,7 @@ end = struct
       $> fun (location, (x, ms)) ->
           LF.AtomTerm
             { location
-            ; term = LF.TList (location, (LF.Root (location, LF.Name (location, x, Option.none), [])) :: ms)
+            ; term = LF.TList { location; terms = (LF.Root { location; head = LF.Name (location, x, Option.none); spine = [] }) :: ms }
             }
     in
     choice
@@ -1383,8 +1383,8 @@ end = struct
         (token Token.DOT &> clf_term_app)
       |> span
       |> labelled "LF lambda"
-      $> fun (loc, (x, m)) ->
-          LF.Lam (loc, x, m)
+      $> fun (location, (parameter_name, body)) ->
+          LF.Lam { location; parameter_name; body }
     in
     (*
     let modul =
@@ -1393,7 +1393,7 @@ end = struct
       *)
     let head =
       span clf_head
-      $> fun (loc, h) -> LF.Root (loc, h, [])
+      $> fun (location, head) -> LF.Root { location; head; spine = [] }
     in
     let app =
       seq2
@@ -1402,29 +1402,29 @@ end = struct
       |> parens
       |> span
       |> labelled "LF application"
-      $> fun (loc, (tm, ann)) ->
-          match ann with
-          | Option.None -> tm
-          | Option.Some a -> LF.Ann (loc, tm, a)
+      $> fun (location, (term, typ_opt)) ->
+          match typ_opt with
+          | Option.None -> term
+          | Option.Some typ -> LF.Ann { location; term; typ }
     in
     let lfhole =
       span hole
       |> labelled "LF hole"
-      $> fun (loc, h) -> LF.LFHole (loc, h)
+      $> fun (location, label) -> LF.LFHole { location; label }
     in
     let tuple =
       sep_by1 clf_term_app (token Token.SEMICOLON)
       |> angles
       |> span
       |> labelled "LF tuple"
-      $> fun (loc, ms) ->
+      $> fun (location, ms) ->
           LF.Tuple
-            ( loc
-            , List1.fold_right
+            { location
+            ; tuple = List1.fold_right
                 (fun x -> LF.Last x)
                 (fun x r -> LF.Cons (x, r))
                 ms
-            )
+            }
     in
     choice
       [ lam
@@ -1743,12 +1743,12 @@ end = struct
         token Token.HASH
         &> bracks (contextual (some clf_normal |> span))
         |> span
-        $> fun (location, (cPsi, (location', ms))) ->
+        $> fun (location, (cPsi, (location', terms))) ->
             Comp.TypBox
               ( location
               , ( location
                 , LF.ClTyp
-                    ( LF.PTyp (LF.AtomTerm { location; term = LF.TList (location', ms) })
+                    ( LF.PTyp (LF.AtomTerm { location; term = LF.TList { location = location'; terms = terms } })
                     , cPsi
                     )
                 )
@@ -1778,13 +1778,13 @@ end = struct
           (some clf_normal)
         |> span
         |> labelled "boxed type"
-        $> fun (location, (cPsi, ms)) ->
+        $> fun (location, (cPsi, terms)) ->
             Comp.TypBox
               ( location
               , ( location
                 , LF.ClTyp
                     (LF.MTyp
-                      (LF.AtomTerm { location; term = LF.TList (location, ms) })
+                      (LF.AtomTerm { location; term = LF.TList { location; terms } })
                     , cPsi
                     )
                 )

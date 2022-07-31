@@ -44,7 +44,6 @@ module LF = struct
     | ArrTyp of Location.t * typ * typ
     | PiTyp of Location.t * typ_decl * typ
     | Sigma of Location.t * typ_rec
-    | Ctx of Location.t * dctx
     | AtomTerm of Location.t * term
 
   and term =

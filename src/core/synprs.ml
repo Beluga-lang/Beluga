@@ -66,13 +66,37 @@ module LF = struct
         }
 
   and term =
-    | Lam of Location.t * Name.t * term
-    | Root of Location.t * head * (Location.t * term) list
-    | Tuple of Location.t * tuple
-    | LFHole of Location.t * string option
-    | Ann of Location.t * term * typ
-    | TList of Location.t * term list
-    | NTyp of Location.t * typ
+    | Lam of
+        { location : Location.t
+        ; parameter_name : Name.t
+        ; body : term
+        }
+    | Root of
+        { location : Location.t
+        ; head : head
+        ; spine : (Location.t * term) list
+        }
+    | Tuple of
+        { location : Location.t
+        ; tuple : tuple
+        }
+    | LFHole of
+        { location : Location.t
+        ; label : string option
+        }
+    | Ann of
+        { location : Location.t
+        ; term : term
+        ; typ : typ
+        }
+    | TList of
+        { location : Location.t
+        ; terms : term list
+        }
+    | NTyp of
+        { location : Location.t
+        ; typ : typ
+        }
 
   and head =
     | Name of Location.t * Name.t * sub option

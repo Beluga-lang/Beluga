@@ -1025,9 +1025,9 @@ end = struct
       ; span (parens (seq2 LF_parsers.lf_typ (maybe (token Token.COLON &> LF_parsers.lf_typ))))
         >>= fun (loc, (m, q)) ->
           match q, m with
-          | Option.None, LF.AtomTerm (_, t) -> return t
+          | Option.None, LF.AtomTerm { term; _ } -> return term
           | Option.None, _ -> return @@ LF.NTyp (loc, m)
-          | Option.Some a, LF.AtomTerm (_, t) -> return @@ LF.Ann (loc, t, a)
+          | Option.Some a, LF.AtomTerm { term; _ } -> return @@ LF.Ann (loc, term, a)
           | _, _ -> fail (Violation "invalid atomic LF term")
                                   (* ^ XXX not sure if this is a violation or a user error -je *)
       ]
@@ -1042,11 +1042,13 @@ end = struct
     $> fun (x, a) -> LF.TypDecl (x, a)
 
   let lf_typ_pi : LF.typ parser =
+    let lf_typ_declaration = seq2 (name <& token Token.COLON) LF_parsers.lf_typ in
     seq2
-      (trying (lf_typ_decl |> braces <& maybe (token Token.ARROW)))
+      (trying (braces lf_typ_declaration <& maybe (token Token.ARROW)))
       LF_parsers.lf_typ
     |> span
-    $> (fun (loc, (d, ty2)) -> LF.PiTyp (loc, d, ty2))
+    $> (fun (location, ((parameter_name, parameter_type), range)) ->
+          LF.PiTyp { location; parameter_name; parameter_type; range })
     |> labelled "LF pi type"
 
   let lf_typ_atomic =
@@ -1055,8 +1057,8 @@ end = struct
         $> function
           | (loc, LF.NTyp (_, t)) -> t
           | (loc, LF.TList (_, [LF.NTyp (_, t)])) -> t
-          | (loc, LF.TList (_, [n])) -> LF.AtomTerm (loc, n)
-          | (loc, t) -> LF.AtomTerm (loc, t))
+          | (location, LF.TList (_, [ term ])) -> LF.AtomTerm { location; term }
+          | (location, term) -> LF.AtomTerm { location; term })
       (parens LF_parsers.lf_typ)
     |> labelled "LF atomic type"
 
@@ -1065,7 +1067,7 @@ end = struct
       (trying (lf_typ_atomic <& token Token.ARROW))
       LF_parsers.lf_typ
     |> span
-    $> (fun (loc, (a1, a2)) -> LF.ArrTyp (loc, a1, a2))
+    $> (fun (location, (domain, range)) -> LF.ArrTyp { location; domain; range })
     |> labelled "LF arrow type"
 
   let lf_typ : LF.typ parser =
@@ -1082,9 +1084,10 @@ end = struct
       (span (token Token.KW_TYPE) $> fun (location, ()) -> LF.Typ { location })
 
   let lf_kind =
+    let lf_typ_declaration = seq2 (name <& token Token.COLON) LF_parsers.lf_typ in
     let pi_kind =
       seq2
-        (braces (seq2 (name <& token Token.COLON) LF_parsers.lf_typ))
+        (braces lf_typ_declaration)
         LF_parsers.lf_kind
       |> span
       $> fun (location, ((parameter_name, parameter_type), range)) ->
@@ -1129,8 +1132,8 @@ end = struct
           match k_or_a with
           | `Kind range ->
             `Kind (LF.PiKind { location; parameter_name; parameter_type; range })
-          | `Typ a ->
-            `Typ (LF.PiTyp (location, LF.TypDecl (parameter_name, parameter_type), a))
+          | `Typ range ->
+            `Typ (LF.PiTyp { location; parameter_name; parameter_type; range })
     in
     let arrow =
       seq2
@@ -1142,7 +1145,7 @@ end = struct
           match k_or_a with
           | Option.None -> `Typ a
           | Option.Some (`Kind k) -> `Kind (LF.ArrKind { location; domain = a; range = k })
-          | Option.Some (`Typ a') -> `Typ (LF.ArrTyp (location, a, a'))
+          | Option.Some (`Typ a') -> `Typ (LF.ArrTyp { location; domain = a; range = a' })
     in
     choice
       [ pi
@@ -1214,34 +1217,30 @@ end = struct
       [ parens Contextual_LF_parsers.clf_typ_pure
       ; seq2 name (many Contextual_LF_parsers.clf_normal)
         |> span
-        $> fun (loc, (x, ms)) ->
+        $> fun (location, (x, ms)) ->
             LF.AtomTerm
-              ( loc
-              , LF.TList
-                  ( loc
-                  , LF.Root (loc, LF.Name (loc, x, Option.none), [])
+              { location
+              ; term = LF.TList
+                  ( location
+                  , LF.Root (location, LF.Name (location, x, Option.none), [])
                     :: ms
                   )
-              )
+              }
       ]
     |> labelled "atomic return contextual LF type"
 
   (** Parses an LF function type (uniform pi or arrow). *)
   let lf_function_type =
     let pi =
-      let d =
-        seq2 (name <& token Token.COLON) Contextual_LF_parsers.clf_typ_pure
-        |> braces
-        $> fun (name, a) -> LF.TypDecl (name, a)
-      in
-      seq2 d Contextual_LF_parsers.clf_typ_pure
+      seq2 (braces (seq2 (name <& token Token.COLON) Contextual_LF_parsers.clf_typ_pure)) Contextual_LF_parsers.clf_typ_pure
       |> span
-      $> fun (loc, (d, b)) -> LF.PiTyp (loc, d, b)
+      $> fun (location, ((parameter_name, parameter_type), range)) ->
+        LF.PiTyp { location; parameter_name; parameter_type; range }
     in
     let arrow =
       seq2 (trying (clf_typ_pure_atomic <& token Token.ARROW)) Contextual_LF_parsers.clf_typ_pure
       |> span
-      $> fun (loc, (a, b)) -> LF.ArrTyp (loc, a, b)
+      $> fun (location, (domain, range)) -> LF.ArrTyp { location; domain; range }
     in
     alt pi arrow
 
@@ -1266,10 +1265,10 @@ end = struct
         begin
           some Contextual_LF_parsers.clf_normal
           |> span
-          $> fun (loc, ms) ->
+          $> fun (location, ms) ->
               match ms with
               | [LF.NTyp (_, a)] -> a
-              | _ -> LF.AtomTerm (loc, LF.TList (loc, ms))
+              | _ -> LF.AtomTerm { location; term = LF.TList (location, ms) }
         end
     in
     let b =
@@ -1277,17 +1276,17 @@ end = struct
         name
         (many Contextual_LF_parsers.clf_normal)
       |> span
-      $> fun (loc, (x, ms)) ->
+      $> fun (location, (x, ms)) ->
           LF.AtomTerm
-            ( loc
-            , LF.TList (loc, (LF.Root (loc, LF.Name (loc, x, Option.none), [])) :: ms)
-            )
+            { location
+            ; term = LF.TList (location, (LF.Root (location, LF.Name (location, x, Option.none), [])) :: ms)
+            }
     in
     choice
       [ a
       ; b
       ; parens Contextual_LF_parsers.clf_typ
-      ; clf_typ_rec_block |> span $> fun (loc, r) -> LF.Sigma (loc, r)
+      ; clf_typ_rec_block |> span $> (fun (location, block) -> LF.Sigma { location; block })
       ]
     |> labelled "atomic contextual LF type"
 
@@ -1303,18 +1302,18 @@ end = struct
         (pi_decl <& maybe (token Token.ARROW))
         Contextual_LF_parsers.clf_typ
       |> span
-      $> fun (loc, ((x, a), a')) ->
-          LF.PiTyp (loc, LF.TypDecl (x, a), a')
+      $> fun (location, ((parameter_name, parameter_type), range)) ->
+          LF.PiTyp { location; parameter_name; parameter_type; range }
     in
     let arrow_or_atomic =
       seq2
         clf_typ_atomic
         (maybe (token Token.ARROW &> Contextual_LF_parsers.clf_typ))
       |> span
-      $> fun (loc, (a, b)) ->
+      $> fun (location, (a, b)) ->
           match b with
           | Option.None -> a
-          | Option.Some b -> LF.ArrTyp (loc, a, b)
+          | Option.Some b -> LF.ArrTyp { location; domain = a; range = b }
     in
     choice [ pi; arrow_or_atomic ]
     |> labelled "contextual LF type"
@@ -1744,12 +1743,12 @@ end = struct
         token Token.HASH
         &> bracks (contextual (some clf_normal |> span))
         |> span
-        $> fun (loc, (cPsi, (loc', ms))) ->
+        $> fun (location, (cPsi, (location', ms))) ->
             Comp.TypBox
-              ( loc
-              , ( loc
+              ( location
+              , ( location
                 , LF.ClTyp
-                    ( LF.PTyp (LF.AtomTerm (loc, LF.TList (loc, ms)))
+                    ( LF.PTyp (LF.AtomTerm { location; term = LF.TList (location', ms) })
                     , cPsi
                     )
                 )
@@ -1779,8 +1778,17 @@ end = struct
           (some clf_normal)
         |> span
         |> labelled "boxed type"
-        $> fun (loc, (cPsi, ms)) ->
-            Comp.TypBox (loc, (loc, LF.ClTyp (LF.MTyp (LF.AtomTerm (loc, LF.TList (loc, ms))), cPsi)))
+        $> fun (location, (cPsi, ms)) ->
+            Comp.TypBox
+              ( location
+              , ( location
+                , LF.ClTyp
+                    (LF.MTyp
+                      (LF.AtomTerm { location; term = LF.TList (location, ms) })
+                    , cPsi
+                    )
+                )
+              )
       in
       choice
         [ base
@@ -2890,7 +2898,7 @@ end = struct
        $> fun a ->
           let x =
             match a with
-            | LF.Atom (_, n, _) -> Option.some n
+            | LF.Atom { head; _ } -> Option.some head
             | _ -> Option.none
           in
           LF.SigmaLast (x, a))

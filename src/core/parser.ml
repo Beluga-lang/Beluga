@@ -1015,13 +1015,13 @@ end = struct
     $> fun (loc, n) -> LF.Name (loc, n, Option.none)
 
   let lf_term_head =
-    span lf_head $> (fun (loc, h) -> LF.Root (loc, h, LF.Nil))
+    span lf_head $> (fun (loc, h) -> LF.Root (loc, h, []))
     |> labelled "LF head term"
 
   let lf_term_atomic =
     choice
       [ span (token Token.UNDERSCORE)
-        $> (fun (loc, ()) -> LF.Root (loc, LF.Hole loc, LF.Nil))
+        $> (fun (loc, ()) -> LF.Root (loc, LF.Hole loc, []))
       ; span (parens (seq2 LF_parsers.lf_typ (maybe (token Token.COLON &> LF_parsers.lf_typ))))
         >>= fun (loc, (m, q)) ->
           match q, m with
@@ -1219,7 +1219,7 @@ end = struct
               ( loc
               , LF.TList
                   ( loc
-                  , LF.Root (loc, LF.Name (loc, x, Option.none), LF.Nil)
+                  , LF.Root (loc, LF.Name (loc, x, Option.none), [])
                     :: ms
                   )
               )
@@ -1280,7 +1280,7 @@ end = struct
       $> fun (loc, (x, ms)) ->
           LF.AtomTerm
             ( loc
-            , LF.TList (loc, (LF.Root (loc, LF.Name (loc, x, Option.none), LF.Nil)) :: ms)
+            , LF.TList (loc, (LF.Root (loc, LF.Name (loc, x, Option.none), [])) :: ms)
             )
     in
     choice
@@ -1394,7 +1394,7 @@ end = struct
       *)
     let head =
       span clf_head
-      $> fun (loc, h) -> LF.Root (loc, h, LF.Nil)
+      $> fun (loc, h) -> LF.Root (loc, h, [])
     in
     let app =
       seq2

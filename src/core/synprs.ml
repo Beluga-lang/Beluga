@@ -40,7 +40,7 @@ module LF = struct
     | DeclOpt of Name.t
 
   and typ =
-    | Atom of Location.t * Name.t * spine
+    | Atom of Location.t * Name.t * (Location.t * term) list
     | ArrTyp of Location.t * typ * typ
     | PiTyp of Location.t * typ_decl * typ
     | Sigma of Location.t * typ_rec
@@ -49,7 +49,7 @@ module LF = struct
 
   and term =
     | Lam of Location.t * Name.t * term
-    | Root of Location.t * head * spine
+    | Root of Location.t * head * (Location.t * term) list
     | Tuple of Location.t * tuple
     | LFHole of Location.t * string option
     | Ann of Location.t * term * typ
@@ -65,10 +65,6 @@ module LF = struct
   and proj =
     | ByPos of int
     | ByName of Name.t
-
-  and spine =
-    | Nil
-    | App of Location.t * term * spine
 
   and sub_start =
     | EmptySub of Location.t
@@ -111,12 +107,6 @@ module LF = struct
        can represent a boxed term. We disambiguate
        substitutions from terms at a later time. *)
     | CObj of dctx
-
-  (** Converts a spine to a list. It is visually "backwards" *)
-  let rec list_of_spine : spine -> (Location.t * term) list =
-    function
-    | Nil -> []
-    | App (l, m, s) -> (l, m) :: list_of_spine s
 
   let loc_of_normal =
     function

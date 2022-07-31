@@ -40,11 +40,30 @@ module LF = struct
     | DeclOpt of Name.t
 
   and typ =
-    | Atom of Location.t * Name.t * (Location.t * term) list
-    | ArrTyp of Location.t * typ * typ
-    | PiTyp of Location.t * typ_decl * typ
-    | Sigma of Location.t * typ_rec
-    | AtomTerm of Location.t * term
+    | Atom of
+        { location : Location.t
+        ; head : Name.t
+        ; spine : (Location.t * term) list
+        }
+    | ArrTyp of
+        { location : Location.t
+        ; domain : typ
+        ; range : typ
+        }
+    | PiTyp of
+        { location : Location.t
+        ; parameter_name : Name.t
+        ; parameter_type : typ
+        ; range : typ
+        }
+    | Sigma of
+        { location : Location.t
+        ; block : typ_rec
+        }
+    | AtomTerm of
+        { location : Location.t
+        ; term : term
+        }
 
   and term =
     | Lam of Location.t * Name.t * term

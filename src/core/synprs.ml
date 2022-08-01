@@ -150,25 +150,12 @@ module LF = struct
        substitutions from terms at a later time. *)
     | CObj of dctx
 
-  let loc_of_normal =
-    function
-    | Lam (l, _, _) -> l
-    | Root (l, _, _) -> l
-    | Tuple (l, _) -> l
-    | LFHole (l, _) -> l
-    | Ann (l, _, _) -> l
-    | TList (l, _) -> l
-    | NTyp (l, _) -> l
-
   let loc_of_head =
     function
     | Name (l, _, _) -> l
     | Hole l -> l
     | PVar (l, _, _) -> l
     | Proj (l, _, _) -> l
-
-  (** Wraps a term into a dummy substitution. *)
-  let term tM = (EmptySub (loc_of_normal tM), [tM])
 end
 
 

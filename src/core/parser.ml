@@ -1420,10 +1420,7 @@ end = struct
       $> fun (location, ms) ->
           LF.Tuple
             { location
-            ; tuple = List1.fold_right
-                (fun x -> LF.Last x)
-                (fun x r -> LF.Cons (x, r))
-                ms
+            ; tuple = ms
             }
     in
     choice

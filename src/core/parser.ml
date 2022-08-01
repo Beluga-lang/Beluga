@@ -1185,9 +1185,9 @@ module rec Contextual_LF_parsers : sig
   val clf_typ_pure : LF.typ t
   val clf_normal : LF.term t
   val clf_dctx : LF.dctx t
-  val ctx_variable : LF.ctyp_decl t
+  val ctx_variable : (Name.t * LF.ctyp * Plicity.t) t
   val clf_ctyp_decl_bare : 'a name_parser -> ('a -> Plicity.t * Name.t) -> LF.ctyp_decl t
-  val clf_ctyp_decl : LF.ctyp_decl t
+  val clf_ctyp_decl : (Name.t * LF.ctyp * Plicity.t) t
   val cltyp : (LF.dctx * typ_or_ctx) t
   val clf_sub_term : LF.sub_start t
 end = struct
@@ -1619,7 +1619,7 @@ end = struct
           (trying (name <& token Token.COLON))
           (name <& not_followed_by meta_obj)
         |> span
-        $> fun (loc, (p, w)) -> LF.Decl (p, LF.CTyp (loc, w), Plicity.implicit)
+        $> fun (loc, (p, w)) -> (p, LF.CTyp (loc, w), Plicity.implicit)
       end
 
   (** Contextual LF contextual type declaration *)
@@ -1637,7 +1637,7 @@ end = struct
           hash_variable_decl (trying clf_typ_atomic)
           |> span
           $> fun (loc, (p, (cPsi, tA))) ->
-               LF.Decl (p, LF.ClTyp (loc, LF.PTyp tA, cPsi), Plicity.explicit)
+               (p, LF.ClTyp (loc, LF.PTyp tA, cPsi), Plicity.explicit)
         end
     in
     let subst_variable =
@@ -1650,7 +1650,7 @@ end = struct
           dollar_variable_decl (seq2 subst_class clf_dctx)
           |> span
           $> fun (loc, (p, (cPsi, (sclass, cPhi)))) ->
-               LF.Decl (p, LF.ClTyp (loc,  LF.STyp (sclass, cPhi), cPsi), Plicity.explicit)
+               (p, LF.ClTyp (loc,  LF.STyp (sclass, cPhi), cPsi), Plicity.explicit)
         end
     in
     let q =
@@ -1670,12 +1670,12 @@ end = struct
               (span name
                 $> fun (loc2, ctx) ->
                      let loc = Location.join loc1 loc2 in
-                     LF.Decl (x, LF.CTyp (loc, ctx), Plicity.explicit))
+                     (x, LF.CTyp (loc, ctx), Plicity.explicit))
               (bracks_or_opt_parens (contextual clf_typ_atomic)
                 |> span
                 $> fun (loc2, (cPsi, tA)) ->
                      let loc = Location.join loc1 loc2 in
-                     LF.Decl (x, LF.ClTyp (loc, LF.MTyp tA, cPsi), Plicity.explicit))
+                     (x, LF.ClTyp (loc, LF.MTyp tA, cPsi), Plicity.explicit))
         ]
       |> braces
     in
@@ -1803,8 +1803,8 @@ end = struct
     let ctx_pibox =
       labelled "Context variable Pi-box type"
         (pibox (ctx_variable |> parens) Comp_parsers.cmp_typ
-            (fun loc decl tau ->
-              Comp.TypPiBox (loc, decl, tau)))
+            (fun loc (name, ctyp, plicity) tau ->
+              Comp.TypPiBox (loc, LF.Decl (name, ctyp, plicity), tau)))
     in
     let pibox =
       labelled "Pi-box type"
@@ -1828,7 +1828,7 @@ end = struct
   (** Parses the `ctype` kind, the kind of computation types. *)
   let ctype_kind =
     token Token.KW_CTYPE |> span
-    $> fun (loc, ()) -> Comp.Ctype loc
+    $> fun (location, ()) -> Comp.Ctype { location }
 
   let cmp_kind =
     let pibox =
@@ -1838,9 +1838,9 @@ end = struct
             (trying (clf_ctyp_decl <& maybe (token Token.ARROW)))
             Comp_parsers.cmp_kind
           |> span
-          $> fun (loc, (ctyp_decl, k)) ->
+          $> fun (location, ((parameter_name, parameter_type, plicity), range)) ->
               (* XXX the ctyp_decl must be for an ordinary box-type. *)
-              Comp.PiKind (loc, ctyp_decl, k)
+              Comp.PiKind { location; parameter_name; parameter_type; plicity; range }
         end
     in
     let arrow =
@@ -1850,21 +1850,18 @@ end = struct
             (trying (cltyp <& token Token.ARROW) |> span)
             Comp_parsers.cmp_kind
           |> span
-          $> fun (loc, ((loc', (cPsi, a)), k)) ->
-              Comp.ArrKind
-                ( loc
-                , (LF.ClTyp
-                    ( loc'
-                    , begin match a with
-                      | `Ctx cPhi -> LF.STyp (LF.Subst, cPhi)
-                      | `Typ a -> LF.MTyp a
-                      end
-                    , cPsi
-                    )
-                  , Plicity.explicit
+          $> fun (location, ((loc', (cPsi, a)), range)) ->
+              let domain =
+                LF.ClTyp
+                  ( loc'
+                  , begin match a with
+                    | `Ctx cPhi -> LF.STyp (LF.Subst, cPhi)
+                    | `Typ a -> LF.MTyp a
+                    end
+                  , cPsi
                   )
-                , k
-                )
+              in
+              Comp.ArrKind { location; domain; range }
         end
     in
     choice

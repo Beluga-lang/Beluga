@@ -158,9 +158,19 @@ module Comp = struct
   include Syncom.Comp
 
   type kind =
-    | Ctype of Location.t
-    | ArrKind of Location.t * (LF.ctyp * Plicity.t) * kind
-    | PiKind of Location.t * LF.ctyp_decl * kind
+    | Ctype of { location : Location.t }
+    | ArrKind of
+        { location : Location.t
+        ; domain : LF.ctyp
+        ; range : kind
+        }
+    | PiKind of
+        { location : Location.t
+        ; parameter_name : Name.t
+        ; parameter_type : LF.ctyp
+        ; plicity : Plicity.t
+        ; range : kind
+        }
 
   type meta_obj = Location.t * LF.mfront
 

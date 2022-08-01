@@ -711,9 +711,9 @@ let sep_by1 (p : 'a parser) (sep : unit parser) : 'a List1.t parser =
 let check_datatype_decl loc a cs : unit parser =
   let rec retname =
     function
-    | Comp.TypBase (_, c', _) -> return c'
-    | Comp.TypArr (_, _, tau) -> retname tau
-    | Comp.TypPiBox (_, _, tau) -> retname tau
+    | Comp.TypBase { head; _ } -> return head
+    | Comp.TypArr { range; _ } -> retname range
+    | Comp.TypPiBox { range; _ } -> retname range
     | _ -> fail IllFormedDataDecl
   in
   traverse_
@@ -735,7 +735,7 @@ let check_datatype_decl loc a cs : unit parser =
 let check_codatatype_decl loc a cs : unit parser =
   let retname =
     function
-    | Comp.TypBase (_, c', _) -> return c'
+    | Comp.TypBase { head; _ } -> return head
     | _ -> fail IllFormedDataDecl
   in
   traverse_
@@ -1186,7 +1186,7 @@ module rec Contextual_LF_parsers : sig
   val clf_normal : LF.term t
   val clf_dctx : LF.dctx t
   val ctx_variable : (Name.t * LF.ctyp * Plicity.t) t
-  val clf_ctyp_decl_bare : 'a name_parser -> ('a -> Plicity.t * Name.t) -> LF.ctyp_decl t
+  val clf_ctyp_decl_bare : 'a name_parser -> ('a -> Plicity.t * Name.t) -> (Name.t * LF.ctyp * Plicity.t) t
   val clf_ctyp_decl : (Name.t * LF.ctyp * Plicity.t) t
   val cltyp : (LF.dctx * typ_or_ctx) t
   val clf_sub_term : LF.sub_start t
@@ -1551,7 +1551,7 @@ end = struct
           (label ctx "contextual context type")
       end
 
-  let clf_ctyp_decl_bare : type a. a name_parser -> (a -> Plicity.t * Name.t) -> LF.ctyp_decl t =
+  let clf_ctyp_decl_bare =
     fun nameclass plicity_of_name ->
       let hash_variable_decl p =
         contextual_variable_decl
@@ -1570,7 +1570,7 @@ end = struct
         |> span
         $> (fun (loc, (nb, (cPsi, tA))) ->
               let plicity, x = plicity_of_name nb in
-              LF.Decl (x, LF.ClTyp (loc, LF.PTyp tA, cPsi), plicity)
+              (x, LF.ClTyp (loc, LF.PTyp tA, cPsi), plicity)
         )
         |> labelled "parameter variable declaration"
       in
@@ -1583,7 +1583,7 @@ end = struct
         |> span
         $> (fun (loc, (nb, (cPsi, (sclass, cPhi)))) ->
               let plicity, x = plicity_of_name nb in
-              LF.Decl (x, LF.ClTyp (loc, LF.STyp (sclass, cPhi), cPsi), plicity)
+              (x, LF.ClTyp (loc, LF.STyp (sclass, cPhi), cPsi), plicity)
         )
         |> labelled "substitution/renaming variable"
       in
@@ -1604,11 +1604,11 @@ end = struct
               (span name
                 $> fun (loc2, ctx) ->
                   let loc = Location.join loc1 loc2 in
-                  LF.Decl (x, LF.CTyp (loc, ctx), plicity))
+                  (x, LF.CTyp (loc, ctx), plicity))
               (bracks_or_opt_parens (contextual clf_typ_atomic) |> span
                 $> fun (loc2, (cPsi, tA)) ->
                   let loc = Location.join loc1 loc2 in
-                  LF.Decl (x, LF.ClTyp (loc, LF.MTyp tA, cPsi), plicity))
+                  (x, LF.ClTyp (loc, LF.MTyp tA, cPsi), plicity))
         ]
 
   (* parses `name : name` *)
@@ -1725,41 +1725,40 @@ end = struct
         labelled "base computation type"
           (seq2 name (many meta_obj)
             |> span
-            $> fun (loc, (a, ms)) ->
-              let sp = List.fold_right (fun t s -> Comp.MetaApp (t, s)) ms Comp.MetaNil in
-              Comp.TypBase (loc, a, sp))
+            $> fun (location, (head, spine)) ->
+              Comp.TypBase { location; head; spine })
       in
       let pbox =
         token Token.HASH
         &> bracks (contextual (some clf_normal |> span))
         |> span
         $> fun (location, (cPsi, (location', terms))) ->
-            Comp.TypBox
-              ( location
-              , LF.ClTyp
-                  ( location
-                  , LF.PTyp (LF.AtomTerm { location; term = LF.TList { location = location'; terms = terms } })
-                  , cPsi
-                  )
-              )
+            let typ =
+              LF.ClTyp
+                ( location
+                , LF.PTyp (LF.AtomTerm { location; term = LF.TList { location = location'; terms } })
+                , cPsi
+                )
+            in
+            Comp.TypBox { location; typ }
       in
       let sub =
         token Token.DOLLAR
         &> bracks (contextual clf_dctx)
         |> span
-        $> fun (loc, (cPsi, cPhi)) ->
-            Comp.TypBox
-              ( loc
-              , LF.ClTyp
-                  ( loc
-                  , LF.STyp (LF.Subst, cPhi), cPsi
-                  )
-              )
+        $> fun (location, (cPsi, cPhi)) ->
+            let typ =
+              LF.ClTyp
+                ( location
+                , LF.STyp (LF.Subst, cPhi), cPsi
+                )
+            in
+            Comp.TypBox { location; typ }
       in
       let ctx =
         span fqname
-        $> fun (loc, schema) ->
-            Comp.TypBox (loc, LF.CTyp (loc, schema))
+        $> fun (location, schema) ->
+            Comp.TypBox { location; typ = LF.CTyp (location, schema) }
       in
       let ordinary =
         seq2
@@ -1768,15 +1767,15 @@ end = struct
         |> span
         |> labelled "boxed type"
         $> fun (location, (cPsi, terms)) ->
-            Comp.TypBox
-              ( location
-              , LF.ClTyp
-                  ( location
-                  , LF.MTyp
-                    (LF.AtomTerm { location; term = LF.TList { location; terms } })
-                  , cPsi
-                  )
-              )
+            let typ =
+              LF.ClTyp
+                ( location
+                , LF.MTyp
+                  (LF.AtomTerm { location; term = LF.TList { location; terms } })
+                , cPsi
+                )
+            in
+            Comp.TypBox { location; typ }
       in
       choice
         [ base
@@ -1794,28 +1793,28 @@ end = struct
       (many (token Token.STAR &> Comp_parsers.cmp_typ_cross))
     |> span
     |> labelled "computation product type"
-    $> fun (loc, (tau1, taus)) ->
+    $> fun (location, (tau1, taus)) ->
         match taus with
         | [] -> tau1
-        | tau2 :: taus -> Comp.TypCross (loc, List2.from tau1 tau2 taus)
+        | tau2 :: taus -> Comp.TypCross { location; typs = List2.from tau1 tau2 taus }
 
   let cmp_typ =
     let ctx_pibox =
       labelled "Context variable Pi-box type"
         (pibox (ctx_variable |> parens) Comp_parsers.cmp_typ
-            (fun loc (name, ctyp, plicity) tau ->
-              Comp.TypPiBox (loc, LF.Decl (name, ctyp, plicity), tau)))
+            (fun location (parameter_name, parameter_type, plicity) range ->
+              Comp.TypPiBox { location; parameter_name; parameter_type; plicity; range }))
     in
     let pibox =
       labelled "Pi-box type"
         (pibox (clf_ctyp_decl_bare name' (fun x -> Plicity.explicit, x) |> braces) Comp_parsers.cmp_typ
-            (fun loc ctyp_decl tau ->
-              Comp.TypPiBox (loc, ctyp_decl, tau)))
+            (fun location (parameter_name, parameter_type, plicity) range ->
+              Comp.TypPiBox { location; parameter_name; parameter_type; plicity; range }))
     in
     let arr =
       labelled "Arrow computation type"
         (arrow cmp_typ_cross Comp_parsers.cmp_typ
-            (fun loc a1 a2 -> Comp.TypArr (loc, a1, a2)))
+            (fun location domain range -> Comp.TypArr { location; domain; range }))
     in
     choice
       [ pibox
@@ -1958,7 +1957,7 @@ end = struct
 
   let cmp_branch =
     seq3
-      (mctx ~sep: (return ()) (clf_ctyp_decl_bare name' (fun x -> Plicity.explicit, x) |> braces))
+      (mctx ~sep: (return ()) (clf_ctyp_decl_bare name' (fun x -> Plicity.explicit, x) |> braces $> (fun (name, typ, plicity) -> LF.Decl (name, typ, plicity))))
       cmp_pattern
       (token Token.THICK_ARROW &> Comp_parsers.cmp_exp_chk)
     |> span
@@ -2028,7 +2027,7 @@ end = struct
     let lets =
       let let_pattern =
         seq4
-          (mctx ~sep: (return ()) (clf_ctyp_decl_bare name' (fun x -> Plicity.explicit, x) |> braces))
+          (mctx ~sep: (return ()) (clf_ctyp_decl_bare name' (fun x -> Plicity.explicit, x) |> braces $> (fun (name, typ, plicity) -> LF.Decl (name, typ, plicity))))
           (cmp_pattern <& token Token.EQUALS)
           (Comp_parsers.cmp_exp_syn <& token Token.KW_IN)
           Comp_parsers.cmp_exp_chk
@@ -2245,7 +2244,7 @@ end = struct
     let open Comp in
     let hypotheses =
       seq2
-        (mctx (clf_ctyp_decl_bare name_or_blank' plicity_name_of_nb) <& token Token.PIPE)
+        (mctx (clf_ctyp_decl_bare name_or_blank' plicity_name_of_nb $> (fun (name, typ, plicity) -> LF.Decl (name, typ, plicity))) <& token Token.PIPE)
         gctx
       $> fun (cD, cG) -> { cD; cG }
     in
@@ -2740,7 +2739,7 @@ end = struct
     pragma "query" &>
       seq4
         (seq2 bound bound)
-        (mctx ~sep: (return ()) (clf_ctyp_decl_bare name' (fun x -> Plicity.explicit, x) |> braces))
+        (mctx ~sep: (return ()) (clf_ctyp_decl_bare name' (fun x -> Plicity.explicit, x) |> braces $> (fun (name, typ, plicity) -> LF.Decl (name, typ, plicity))))
         (maybe (name <& token Token.COLON))
         lf_typ
     <& token Token.DOT

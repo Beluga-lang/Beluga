@@ -174,18 +174,34 @@ module Comp = struct
 
   type meta_obj = Location.t * LF.mfront
 
-  type meta_spine =                             (* Meta-Spine  mS :=         *)
-    | MetaNil                                   (* | .                       *)
-    | MetaApp of meta_obj * meta_spine          (* | mC mS                   *)
-
   type meta_typ = LF.ctyp
 
-  type typ =                                           (* Computation-level types       *)
-    | TypBase of Location.t * Name.t * meta_spine      (*    | c mS                     *)
-    | TypBox of Location.t * meta_typ                  (*    | [U]                      *)
-    | TypArr of Location.t * typ * typ                 (*    | tau -> tau               *)
-    | TypCross of Location.t * typ List2.t             (*    | tau1 * tau2 * ... * taun *)
-    | TypPiBox of Location.t * LF.ctyp_decl * typ      (*    | Pi u::U.tau              *)
+  type typ =
+    | TypBase of
+        { location : Location.t
+        ; head : Name.t
+        ; spine : meta_obj list
+        }
+    | TypBox of
+        { location : Location.t
+        ; typ : meta_typ
+        }
+    | TypArr of
+        { location : Location.t
+        ; domain : typ
+        ; range : typ
+        }
+    | TypCross of
+        { location : Location.t
+        ; typs : typ List2.t
+        }
+    | TypPiBox of
+        { location : Location.t
+        ; parameter_name : Name.t
+        ; parameter_type : LF.ctyp
+        ; plicity : Plicity.t
+        ; range : typ
+        }
 
   (** Computation-level expressions *)
   and exp =                                                        (*  e ::=                               *)

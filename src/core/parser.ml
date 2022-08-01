@@ -1874,21 +1874,21 @@ end = struct
     let mobj_pat =
       span meta_obj
       |> labelled "meta object pattern"
-      $> fun (loc, mobj) -> Comp.PatMetaObj (loc, mobj)
+      $> fun (location, obj) -> Comp.PatMetaObj { location; obj }
     in
     let nested (* `(' p (, p)* `)' *) =
       span (parens (seq2 Comp_parsers.cmp_pattern (many (token Token.COMMA &> Comp_parsers.cmp_pattern))))
       $> (fun (location, (p1, ps)) ->
         match ps with
         | [] -> p1
-        | p2 :: ps -> Comp.PatTuple (location, List2.from p1 p2 ps))
+        | p2 :: ps -> Comp.PatTuple { location; patterns = List2.from p1 p2 ps })
       |> labelled "parenthesized or tuple pattern"
     in
     let var =
       name
       |> span
       |> labelled "variable pattern"
-      $> fun (loc, x) -> Comp.PatName (loc, x, Comp.PatNil loc)
+      $> fun (location, name) -> Comp.PatName { location; name; spine = [] }
     in
     choice
       [ mobj_pat
@@ -1902,10 +1902,7 @@ end = struct
       many (span cmp_pattern_atomic)
       |> span
       $> fun (loc, s) ->
-          List.fold_right
-            (fun (loc, t) s -> Comp.PatApp (loc, t, s))
-            s
-            (Comp.PatNil loc)
+          List.map (fun (loc, t) -> `PatApp (loc, t)) s
     in
     let app =
       seq2
@@ -1913,7 +1910,7 @@ end = struct
         pattern_spine
       |> span
       |> labelled "variable or inductive type pattern"
-      $> fun (loc, (x, ps)) -> Comp.PatName (loc, x, ps)
+      $> fun (location, (name, spine)) -> Comp.PatName { location; name; spine }
     in
     let pattern = alt app cmp_pattern_atomic in
     seq2
@@ -1921,10 +1918,10 @@ end = struct
       (maybe (token Token.COLON &> cmp_typ))
     |> labelled "possibly annotated pattern"
     |> span
-    $> fun (loc, (p, tau)) ->
-        match tau with
-        | Option.None -> p
-        | Option.Some tau -> Comp.PatAnn (loc, p, tau)
+    $> fun (location, (pattern, typ)) ->
+        match typ with
+        | Option.None -> pattern
+        | Option.Some typ -> Comp.PatAnn { location; pattern; typ }
 
   let cmp_copat_spine =
     let go =
@@ -1932,12 +1929,12 @@ end = struct
         [ seq2 dot_name go
           |> span
           |> labelled "observation pattern"
-          $> (fun (loc, (x, acc)) -> Comp.PatObs (loc, x, acc))
+          $> (fun (loc, (x, acc)) -> `PatObs (loc, x) :: acc)
         ; seq2 cmp_pattern_atomic go
           |> span
           |> labelled "application pattern"
-          $> (fun (loc, (x, acc)) -> Comp.PatApp (loc, x, acc))
-        ; span (return ()) $> fun (loc, ()) -> Comp.PatNil loc
+          $> (fun (loc, (x, acc)) -> `PatApp (loc, x) :: acc)
+        ; return []
         ])
     in
     seq2

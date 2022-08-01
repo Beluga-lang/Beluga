@@ -78,7 +78,7 @@ module LF = struct
         }
     | Tuple of
         { location : Location.t
-        ; tuple : tuple
+        ; tuple : term List1.t
         }
     | LFHole of
         { location : Location.t
@@ -118,10 +118,6 @@ module LF = struct
   and typ_rec =
     | SigmaLast of Name.t option * typ
     | SigmaElem of Name.t * typ * typ_rec
-
-  and tuple =
-    | Last of term
-    | Cons of term * tuple
 
   and dctx =
     | Null

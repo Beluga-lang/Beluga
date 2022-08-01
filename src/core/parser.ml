@@ -1870,16 +1870,6 @@ end = struct
       ]
     |> labelled "computation kind"
 
-  (** Parses a pragma that can appear before a case.
-      Either it's the `--not' pragma, or there's no pragma. In the
-      latter case we produce `Pragma.RegularCase' without consuming any
-      input.
-   *)
-  let case_pragma =
-    maybe_default
-      (pragma "not" &> return Comp.PragmaNotCase)
-      ~default:Comp.PragmaCase
-
   let cmp_pattern_atomic =
     let mobj_pat =
       span meta_obj
@@ -1981,13 +1971,13 @@ end = struct
     let fn =
       token Token.KW_FN
       &> abstraction name
-            (fun loc f acc -> Comp.Fn (loc, f, acc))
+            (fun location parameter_name body -> Comp.Fn { location; parameter_name; body })
       |> labelled "ordinary function abstraction"
     in
     let mlam =
       token Token.KW_MLAM
       &> abstraction (choice [hash_name; dollar_name; name])
-            (fun loc f acc -> Comp.MLam (loc, f, acc))
+            (fun location parameter_name body -> Comp.MLam { location; parameter_name; body })
       |> labelled "meta function abstraction"
     in
     let matching_fun =
@@ -1997,32 +1987,35 @@ end = struct
       $> List1.to_list
       |> span
       |> labelled "copattern abstraction"
-      $> fun (loc, branches) ->
+      $> fun (location, branches) ->
           let branches =
             List.fold_left
               (fun acc (loc, pat) -> Comp.ConsFBranch (loc, pat, acc))
-              (Comp.NilFBranch loc)
+              (Comp.NilFBranch location)
               (List.rev branches)
           in
-          Comp.Fun (loc, branches)
+          Comp.Fun { location; branches }
     in
     let case =
+      let check_exhaustiveness =
+        maybe_default
+          (pragma "not" &> return false)
+          ~default:true
+      in
       seq3
         (token Token.KW_CASE &> Comp_parsers.cmp_exp_syn)
-        (token Token.KW_OF &> case_pragma)
-        (maybe (token Token.PIPE)
-          &> sep_by1 cmp_branch (token Token.PIPE)
-          $> List1.to_list)
+        (token Token.KW_OF &> check_exhaustiveness)
+        (maybe (token Token.PIPE) &> sep_by1 cmp_branch (token Token.PIPE))
       |> span
       |> labelled "case expression"
-      $> fun (loc, (i, prag, bs)) ->
-          Comp.Case (loc, prag, i, bs)
+      $> fun (location, (scrutinee, check_exhaustiveness, branches)) ->
+          Comp.Case { location; check_exhaustiveness; scrutinee; branches }
     in
     let impossible =
       token Token.KW_IMPOSSIBLE
       &> Comp_parsers.cmp_exp_syn
       |> span
-      $> fun (loc, i) -> Comp.Impossible (loc, i)
+      $> fun (location, expression) -> Comp.Impossible { location; expression }
     in
     let lets =
       let let_pattern =
@@ -2032,9 +2025,9 @@ end = struct
           (Comp_parsers.cmp_exp_syn <& token Token.KW_IN)
           Comp_parsers.cmp_exp_chk
         |> span
-        $> fun (loc, (ctyp_decls, pat, i, e)) ->
-            let branch = Comp.Branch (loc, ctyp_decls, pat, e) in
-            Comp.(Case (loc, PragmaCase, i, [branch]))
+        $> fun (location, (ctyp_decls, pat, scrutinee, e)) ->
+            let branch = Comp.Branch (location, ctyp_decls, pat, e) in
+            Comp.Case { location; check_exhaustiveness = true; scrutinee; branches = List1.singleton branch}
       in
       token Token.KW_LET
       (* XXX
@@ -2055,15 +2048,20 @@ end = struct
       $> (fun (location, (p1, ps)) ->
         match ps with
         | [] -> p1
-        | p2 :: ps -> Comp.Tuple (location, List2.from p1 p2 ps))
+        | p2 :: ps -> Comp.Tuple { location; expressions = List2.from p1 p2 ps })
       |> labelled "parenthesized or tuple checkable expression"
     in
-    let hole = hole |> span $> fun (loc, h) -> Comp.Hole (loc, h) in
-    let box_hole = token Token.UNDERSCORE |> span $> fun (loc, ()) -> Comp.BoxHole loc in
+    let hole =
+      hole |> span $> fun (location, label) -> Comp.Hole { location; label } in
+    let box_hole =
+      token Token.UNDERSCORE
+      |> span
+      $> (fun (location, ()) -> Comp.BoxHole { location })
+    in
     let meta_obj =
       meta_obj
       |> span
-      $> fun (loc, tR) -> Comp.Box (loc, tR)
+      $> fun (location, obj) -> Comp.Box { location; obj }
     in
     choice
       [ fn (* fn introduction form *)
@@ -2084,21 +2082,21 @@ end = struct
       meta_obj
       |> span
       |> labelled "synthesizable box"
-      $> fun (loc, tR) -> Comp.Box (loc, tR)
+      $> fun (location, obj) -> Comp.Box { location; obj }
     in
     let nested (* `(' i (, i)* `)' *) =
       span (parens (seq2 Comp_parsers.cmp_exp_syn (many (token Token.COMMA &> Comp_parsers.cmp_exp_syn))))
       $> (fun (location, (p1, ps)) ->
         match ps with
         | [] -> p1
-        | p2 :: ps -> Comp.Tuple (location, List2.from p1 p2 ps))
+        | p2 :: ps -> Comp.Tuple { location; expressions = List2.from p1 p2 ps })
       |> labelled "parenthesized or tuple synthesizable expression"
     in
     let name =
       fqname
       |> span
       |> labelled "computation variable or constructor"
-      $> fun (loc, x) -> Comp.Name (loc, x)
+      $> fun (location, name) -> Comp.Name { location; name }
     in
     choice
       [ name
@@ -2126,7 +2124,8 @@ end = struct
           match es with
           | [] -> i
           | (loc', e) :: es ->
-            let i = Comp.Apply (Location.join loc loc', i, e) in
+            let location = Location.join loc loc' in
+            let i = Comp.Apply { location; applicand = i; argument = e } in
             fold i es
         in
         fold i es

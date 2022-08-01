@@ -203,27 +203,59 @@ module Comp = struct
         ; range : typ
         }
 
-  (** Computation-level expressions *)
-  and exp =                                                        (*  e ::=                               *)
-    | Fn         of Location.t * Name.t * exp                      (*    | fn x => e                       *)
-    | Fun        of Location.t * fun_branches                      (*    | fun fbranches                   *)
-    | MLam       of Location.t * Name.t * exp                      (*    | mlam f => e                     *)
-    | Tuple      of Location.t * exp List2.t                       (*    | (e1, e2, ..., en)               *)
-    | LetTuple   of Location.t * exp * (Name.t List2.t * exp)      (*    | let (x1, x2, ..., xn) = e in e' *)
-    | Let        of Location.t * exp * (Name.t * exp)              (*    | let x = e in e'                 *)
-    | Box        of Location.t * meta_obj                          (*    | [C]                             *)
-    | Impossible of Location.t * exp                               (*    | impossible e                    *)
-    | Case       of Location.t * case_pragma * exp * branch list   (*    | case e of branches              *)
-    | Hole       of Location.t * string option                     (*    | ?name                           *)
-    | BoxHole    of Location.t                                     (*    | _                               *)
-    | Name       of Location.t * Name.t                            (*    | x/c                             *)
-    | Apply      of Location.t * exp * exp                         (*    | e e'                            *)
-  (* Note that observations are missing.
-     In the external syntax, observations are syntactically
-     indistinguishable from applications, so we parse them as
-     applications. During indexing, they are disambiguated into
-     observations.
-   *)
+  and exp =
+    | Fn of
+        { location : Location.t
+        ; parameter_name : Name.t
+        ; body : exp
+        }
+    | Fun of
+        { location : Location.t
+        ; branches : fun_branches
+        }
+    | MLam of
+        { location : Location.t
+        ; parameter_name : Name.t
+        ; body : exp
+        }
+    | Tuple of
+        { location : Location.t
+        ; expressions : exp List2.t
+        }
+    | Let of
+        { location : Location.t
+        ; variable_name : Name.t
+        ; assignee : exp
+        ; body : exp
+        }
+    | Box of
+        { location : Location.t
+        ; obj : meta_obj
+        }
+    | Impossible of
+        { location : Location.t
+        ; expression : exp
+        }
+    | Case of
+        { location : Location.t
+        ; check_exhaustiveness : bool
+        ; scrutinee : exp
+        ; branches : branch List1.t
+        }
+    | Hole of
+        { location : Location.t
+        ; label : string option
+        }
+    | BoxHole of { location : Location.t }
+    | Name of
+        { location : Location.t
+        ; name : Name.t
+        }
+    | Apply of
+        { location : Location.t
+        ; applicand : exp
+        ; argument : exp
+        }
 
   and pattern =
     | PatMetaObj of Location.t * meta_obj
@@ -295,19 +327,18 @@ module Comp = struct
     | Proof of proof
 
   let loc_of_exp = function
-    | Fn (loc, _, _)
-    | Fun (loc, _)
-    | MLam (loc, _, _)
-    | Tuple (loc, _)
-    | LetTuple (loc, _, _)
-    | Let (loc, _, _)
-    | Box (loc, _)
-    | Impossible (loc, _)
-    | Case (loc, _, _, _)
-    | Hole (loc, _)
-    | BoxHole loc
-    | Name (loc, _)
-    | Apply (loc, _, _) -> loc
+    | Fn { location; _ }
+    | Fun { location; _ }
+    | MLam { location; _ }
+    | Tuple { location; _ }
+    | Let { location; _ }
+    | Box { location; _ }
+    | Impossible { location; _ }
+    | Case { location; _ }
+    | Hole { location; _ }
+    | BoxHole { location; _ }
+    | Name { location; _ }
+    | Apply { location; _ } -> location
 end
 
 (** Syntax of Harpoon commands. *)

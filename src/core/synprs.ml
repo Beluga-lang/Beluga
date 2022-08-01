@@ -30,13 +30,11 @@ module LF = struct
     | STyp of svar_class * dctx
 
   and ctyp =
-    | ClTyp of cltyp * dctx
-    | CTyp of Name.t
-
-  and loc_ctyp = Location.t * ctyp
+    | ClTyp of Location.t * cltyp * dctx
+    | CTyp of Location.t * Name.t
 
   and ctyp_decl =
-    | Decl of Name.t * loc_ctyp * Plicity.t
+    | Decl of Name.t * ctyp * Plicity.t
     | DeclOpt of Name.t
 
   and typ =
@@ -161,7 +159,7 @@ module Comp = struct
 
   type kind =
     | Ctype of Location.t
-    | ArrKind of Location.t * (Location.t * LF.ctyp * Plicity.t) * kind
+    | ArrKind of Location.t * (LF.ctyp * Plicity.t) * kind
     | PiKind of Location.t * LF.ctyp_decl * kind
 
   type meta_obj = Location.t * LF.mfront
@@ -170,7 +168,7 @@ module Comp = struct
     | MetaNil                                   (* | .                       *)
     | MetaApp of meta_obj * meta_spine          (* | mC mS                   *)
 
-  type meta_typ = LF.loc_ctyp
+  type meta_typ = LF.ctyp
 
   type typ =                                           (* Computation-level types       *)
     | TypBase of Location.t * Name.t * meta_spine      (*    | c mS                     *)

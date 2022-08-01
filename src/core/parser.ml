@@ -1565,20 +1565,13 @@ end = struct
           (sigil_bracks_or_opt_parens Token.DOLLAR)
           p
       in
-      let mk_decl plicity f (loc, (p, w)) =
-        LF.Decl (p, (loc, f w), plicity)
-      in
-      let mk_cltyp_decl plicity f d =
-        mk_decl plicity (fun (cPsi, x) -> LF.ClTyp (f x, cPsi)) d
-      in
-      let mk_cltyp_decl_blank f (loc, (nb, (cPsi, tA))) =
-        let plicity, x = plicity_of_name nb in
-        mk_cltyp_decl plicity f (loc, (x, (cPsi, tA)))
-      in
       let param_variable =
         hash_variable_decl (trying clf_typ_atomic)
         |> span
-        $> mk_cltyp_decl_blank (fun tA -> LF.PTyp tA)
+        $> (fun (loc, (nb, (cPsi, tA))) ->
+              let plicity, x = plicity_of_name nb in
+              LF.Decl (x, LF.ClTyp (loc, LF.PTyp tA, cPsi), plicity)
+        )
         |> labelled "parameter variable declaration"
       in
       let subst_variable =
@@ -1588,7 +1581,10 @@ end = struct
         in
         dollar_variable_decl (seq2 subst_class clf_dctx)
         |> span
-        $> mk_cltyp_decl_blank (fun (sclass, cPhi) -> LF.STyp (sclass, cPhi))
+        $> (fun (loc, (nb, (cPsi, (sclass, cPhi)))) ->
+              let plicity, x = plicity_of_name nb in
+              LF.Decl (x, LF.ClTyp (loc, LF.STyp (sclass, cPhi), cPsi), plicity)
+        )
         |> labelled "substitution/renaming variable"
       in
       choice
@@ -1607,15 +1603,12 @@ end = struct
             alt
               (span name
                 $> fun (loc2, ctx) ->
-                  mk_decl plicity
-                    (fun w -> LF.CTyp w)
-                    (Location.join loc1 loc2, (x, ctx)))
+                  let loc = Location.join loc1 loc2 in
+                  LF.Decl (x, LF.CTyp (loc, ctx), plicity))
               (bracks_or_opt_parens (contextual clf_typ_atomic) |> span
-                $> fun (loc2, d) ->
-                  mk_cltyp_decl
-                    plicity
-                    (fun tA -> LF.MTyp tA)
-                    (Location.join loc1 loc2, (x, d)))
+                $> fun (loc2, (cPsi, tA)) ->
+                  let loc = Location.join loc1 loc2 in
+                  LF.Decl (x, LF.ClTyp (loc, LF.MTyp tA, cPsi), plicity))
         ]
 
   (* parses `name : name` *)
@@ -1626,7 +1619,7 @@ end = struct
           (trying (name <& token Token.COLON))
           (name <& not_followed_by meta_obj)
         |> span
-        $> fun (loc, (p, w)) -> LF.Decl (p, (loc, LF.CTyp w), Plicity.implicit)
+        $> fun (loc, (p, w)) -> LF.Decl (p, LF.CTyp (loc, w), Plicity.implicit)
       end
 
   (** Contextual LF contextual type declaration *)
@@ -1644,7 +1637,7 @@ end = struct
           hash_variable_decl (trying clf_typ_atomic)
           |> span
           $> fun (loc, (p, (cPsi, tA))) ->
-               LF.Decl (p, (loc, LF.ClTyp (LF.PTyp tA, cPsi)), Plicity.explicit)
+               LF.Decl (p, LF.ClTyp (loc, LF.PTyp tA, cPsi), Plicity.explicit)
         end
     in
     let subst_variable =
@@ -1657,7 +1650,7 @@ end = struct
           dollar_variable_decl (seq2 subst_class clf_dctx)
           |> span
           $> fun (loc, (p, (cPsi, (sclass, cPhi)))) ->
-               LF.Decl (p, (loc, LF.ClTyp (LF.STyp (sclass, cPhi), cPsi)), Plicity.explicit)
+               LF.Decl (p, LF.ClTyp (loc,  LF.STyp (sclass, cPhi), cPsi), Plicity.explicit)
         end
     in
     let q =
@@ -1677,12 +1670,12 @@ end = struct
               (span name
                 $> fun (loc2, ctx) ->
                      let loc = Location.join loc1 loc2 in
-                     LF.Decl (x, (loc, LF.CTyp ctx), Plicity.explicit))
+                     LF.Decl (x, LF.CTyp (loc, ctx), Plicity.explicit))
               (bracks_or_opt_parens (contextual clf_typ_atomic)
                 |> span
                 $> fun (loc2, (cPsi, tA)) ->
                      let loc = Location.join loc1 loc2 in
-                     LF.Decl (x, (loc, LF.ClTyp (LF.MTyp tA, cPsi)), Plicity.explicit))
+                     LF.Decl (x, LF.ClTyp (loc, LF.MTyp tA, cPsi), Plicity.explicit))
         ]
       |> braces
     in
@@ -1743,12 +1736,11 @@ end = struct
         $> fun (location, (cPsi, (location', terms))) ->
             Comp.TypBox
               ( location
-              , ( location
-                , LF.ClTyp
-                    ( LF.PTyp (LF.AtomTerm { location; term = LF.TList { location = location'; terms = terms } })
-                    , cPsi
-                    )
-                )
+              , LF.ClTyp
+                  ( location
+                  , LF.PTyp (LF.AtomTerm { location; term = LF.TList { location = location'; terms = terms } })
+                  , cPsi
+                  )
               )
       in
       let sub =
@@ -1758,16 +1750,16 @@ end = struct
         $> fun (loc, (cPsi, cPhi)) ->
             Comp.TypBox
               ( loc
-              , ( loc
-                , LF.ClTyp
-                    ( LF.STyp (LF.Subst, cPhi), cPsi)
-                )
+              , LF.ClTyp
+                  ( loc
+                  , LF.STyp (LF.Subst, cPhi), cPsi
+                  )
               )
       in
       let ctx =
         span fqname
         $> fun (loc, schema) ->
-            Comp.TypBox (loc, (loc, LF.CTyp schema))
+            Comp.TypBox (loc, LF.CTyp (loc, schema))
       in
       let ordinary =
         seq2
@@ -1778,13 +1770,12 @@ end = struct
         $> fun (location, (cPsi, terms)) ->
             Comp.TypBox
               ( location
-              , ( location
-                , LF.ClTyp
-                    (LF.MTyp
-                      (LF.AtomTerm { location; term = LF.TList { location; terms } })
-                    , cPsi
-                    )
-                )
+              , LF.ClTyp
+                  ( location
+                  , LF.MTyp
+                    (LF.AtomTerm { location; term = LF.TList { location; terms } })
+                  , cPsi
+                  )
               )
       in
       choice
@@ -1862,14 +1853,14 @@ end = struct
           $> fun (loc, ((loc', (cPsi, a)), k)) ->
               Comp.ArrKind
                 ( loc
-                , (loc'
-                  , LF.ClTyp
-                      ( begin match a with
-                        | `Ctx cPhi -> LF.STyp (LF.Subst, cPhi)
-                        | `Typ a -> LF.MTyp a
-                        end
-                      , cPsi
-                      )
+                , (LF.ClTyp
+                    ( loc'
+                    , begin match a with
+                      | `Ctx cPhi -> LF.STyp (LF.Subst, cPhi)
+                      | `Typ a -> LF.MTyp a
+                      end
+                    , cPsi
+                    )
                   , Plicity.explicit
                   )
                 , k

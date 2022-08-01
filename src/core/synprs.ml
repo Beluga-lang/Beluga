@@ -258,15 +258,30 @@ module Comp = struct
         }
 
   and pattern =
-    | PatMetaObj of Location.t * meta_obj
-    | PatName of Location.t * Name.t * pattern_spine
-    | PatTuple of Location.t * pattern List2.t
-    | PatAnn of Location.t * pattern * typ
+    | PatMetaObj of
+        { location : Location.t
+        ; obj : meta_obj
+        }
+    | PatName of
+        { location : Location.t
+        ; name : Name.t
+        ; spine : pattern_spine
+        }
+    | PatTuple of
+        { location : Location.t
+        ; patterns : pattern List2.t
+        }
+    | PatAnn of
+        { location : Location.t
+        ; pattern : pattern
+        ; typ : typ
+        }
 
   and pattern_spine =
-    | PatNil of Location.t
-    | PatApp of Location.t * pattern * pattern_spine
-    | PatObs of Location.t * Name.t * pattern_spine
+    [ `PatApp of Location.t * pattern
+    | `PatObs of Location.t * Name.t
+    ]
+    list
 
   and branch =
     | Branch of Location.t * LF.ctyp_decl LF.ctx * pattern * exp

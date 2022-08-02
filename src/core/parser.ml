@@ -2770,8 +2770,24 @@ end = struct
          ; non_associativity
          ]
 
-  let sgn_fixity_pragma : Sgn.decl parser =
-    let infix_pragma : Sgn.decl parser =
+  let sgn_fixity_pragma =
+    let prefix_pragma =
+      pragma "prefix"
+      &> seq2 name integer
+      <& token Token.DOT
+      |> span
+      $> fun (location, (constant, precedence)) ->
+           let pragma =
+             Sgn.FixPrag
+               { constant
+               ; fixity = Fixity.prefix
+               ; precedence
+               ; associativity = Option.some Associativity.left_associative
+               }
+           in
+           Sgn.Pragma { location; pragma }
+    in
+    let infix_pragma =
       pragma "infix"
       &> seq3 name integer (maybe associativity)
       <& token Token.DOT
@@ -2784,10 +2800,11 @@ end = struct
                ; precedence
                ; associativity
                }
-           in Sgn.Pragma { location; pragma }
+           in
+           Sgn.Pragma { location; pragma }
     in
-    let prefix_pragma : Sgn.decl parser =
-      pragma "prefix"
+    let postfix_pragma =
+      pragma "postfix"
       &> seq2 name integer
       <& token Token.DOT
       |> span
@@ -2795,13 +2812,18 @@ end = struct
            let pragma =
              Sgn.FixPrag
                { constant
-               ; fixity = Fixity.prefix
+               ; fixity = Fixity.postfix
                ; precedence
-               ; associativity = Option.some Associativity.left_associative
-               } in
+               ; associativity = Option.some Associativity.right_associative
+               }
+           in
            Sgn.Pragma { location; pragma }
     in
-    alt infix_pragma prefix_pragma
+    choice
+      [ prefix_pragma
+      ; infix_pragma
+      ; postfix_pragma
+      ]
 
   let sgn_associativity_pragma : Sgn.decl parser =
     pragma "assoc"

@@ -279,6 +279,11 @@ module Comp = struct
         ; pattern : pattern
         ; typ : typ
         }
+    | PatMAnn of
+        { location : Location.t
+        ; pattern : pattern
+        ; typs : (Name.t * LF.ctyp) List1.t
+        }
     | PatObs of
         { location : Location.t
         ; name : Name.t
@@ -287,7 +292,6 @@ module Comp = struct
   and branch =
     | Branch of
         { location : Location.t
-        ; mctx : LF.mctx
         ; pattern : pattern
         ; body : exp
         }

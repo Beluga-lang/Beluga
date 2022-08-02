@@ -1933,14 +1933,13 @@ end = struct
     |> shifted "copattern spine"
 
   let cmp_branch =
-    seq3
-      (mctx ~sep: (return ()) (clf_ctyp_decl_bare name' (fun x -> Plicity.explicit, x) |> braces $> (fun (name, typ, plicity) -> LF.Decl (name, typ, plicity))))
+    seq2
       cmp_pattern
       (token Token.THICK_ARROW &> Comp_parsers.cmp_exp_chk)
     |> span
     |> labelled "case branch"
-    $> fun (location, (mctx, pattern, body)) ->
-        Comp.Branch { location; mctx; pattern; body }
+    $> fun (location, (pattern, body)) ->
+        Comp.Branch { location; pattern; body }
 
   (** Parses a return checkable computation term,
       i.e. a checkable term *except* for applications.
@@ -1977,7 +1976,7 @@ end = struct
           let branches' =
             List1.map
               (fun (location, (pattern, body)) ->
-                Comp.Branch { location; mctx = LF.Empty; pattern; body })
+                Comp.Branch { location; pattern; body })
               branches
           in
           Comp.Fun { location; branches = branches' }
@@ -2005,14 +2004,13 @@ end = struct
     in
     let lets =
       let let_pattern =
-        seq4
-          (mctx ~sep: (return ()) (clf_ctyp_decl_bare name' (fun x -> Plicity.explicit, x) |> braces $> (fun (name, typ, plicity) -> LF.Decl (name, typ, plicity))))
+        seq3
           (cmp_pattern <& token Token.EQUALS)
           (Comp_parsers.cmp_exp_syn <& token Token.KW_IN)
           Comp_parsers.cmp_exp_chk
         |> span
-        $> fun (location, (mctx, pattern, scrutinee, body)) ->
-            let branch = Comp.Branch { location; mctx; pattern; body } in
+        $> fun (location, (pattern, scrutinee, body)) ->
+            let branch = Comp.Branch { location; pattern; body } in
             Comp.Case { location; check_exhaustiveness = true; scrutinee; branches = List1.singleton branch}
       in
       token Token.KW_LET

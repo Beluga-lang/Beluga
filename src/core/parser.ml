@@ -989,8 +989,9 @@ let sgn_name_pragma : Sgn.decl parser =
     (maybe identifier <& token Token.DOT)
   |> labelled "name pragma"
   |> span
-  $> fun (location, (w, mv, x)) ->
-     Sgn.Pragma { location; pragma = Sgn.NamePrag (w, mv, x) }
+  $> fun (location, (constant, meta_name, comp_name)) ->
+       let pragma = Sgn.NamePrag { constant; meta_name; comp_name } in
+       Sgn.Pragma { location; pragma }
 
 module rec LF_parsers : sig
   val lf_kind : LF.kind t
@@ -2777,22 +2778,30 @@ end = struct
       &> seq3 name integer (maybe associativity)
       <& token Token.DOT
       |> span
-      $> fun (location, (x, precedence, assoc)) ->
-         Sgn.Pragma
-         { location
-         ; pragma = Sgn.FixPrag (x, Fixity.infix, precedence, assoc)
-         }
+      $> fun (location, (constant, precedence, associativity)) ->
+           let pragma =
+             Sgn.FixPrag
+               { constant
+               ; fixity = Fixity.infix
+               ; precedence
+               ; associativity
+               }
+           in Sgn.Pragma { location; pragma }
     in
     let prefix_pragma : Sgn.decl parser =
       pragma "prefix"
       &> seq2 name integer
       <& token Token.DOT
       |> span
-      $> fun (location, (x, precedence)) ->
-         Sgn.Pragma
-         { location
-         ; pragma = Sgn.FixPrag (x, Fixity.prefix, precedence, Option.some Associativity.left_associative)
-         }
+      $> fun (location, (constant, precedence)) ->
+           let pragma =
+             Sgn.FixPrag
+               { constant
+               ; fixity = Fixity.prefix
+               ; precedence
+               ; associativity = Option.some Associativity.left_associative
+               } in
+           Sgn.Pragma { location; pragma }
     in
     alt infix_pragma prefix_pragma
 
@@ -2801,8 +2810,9 @@ end = struct
     &> associativity
     <& token Token.DOT
     |> span
-    $> fun (location, assoc) ->
-      Sgn.Pragma { location; pragma = Sgn.DefaultAssocPrag assoc}
+    $> fun (location, associativity) ->
+      let pragma = Sgn.DefaultAssocPrag { associativity } in
+      Sgn.Pragma { location; pragma }
 
   let sgn_open_pragma : Sgn.decl parser =
     pragma "open"

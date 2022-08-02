@@ -1888,7 +1888,7 @@ end = struct
       name
       |> span
       |> labelled "variable pattern"
-      $> fun (location, name) -> Comp.PatName { location; name; spine = [] }
+      $> fun (location, name) -> Comp.PatName { location; name }
     in
     choice
       [ mobj_pat
@@ -1898,19 +1898,15 @@ end = struct
     |> labelled "bare pattern"
 
   let cmp_pattern =
-    let pattern_spine =
-      many (span cmp_pattern_atomic)
-      |> span
-      $> fun (loc, s) ->
-          List.map (fun (loc, t) -> `PatApp (loc, t)) s
-    in
     let app =
       seq2
-        name
-        pattern_spine
+        (span name)
+        (many cmp_pattern_atomic)
       |> span
       |> labelled "variable or inductive type pattern"
-      $> fun (location, (name, spine)) -> Comp.PatName { location; name; spine }
+      $> fun (location, ((location', name), spine)) ->
+           let pat_name = Comp.PatName { location = location'; name } in
+         Comp.RawPatApplication { location; patterns = List1.from pat_name spine }
     in
     let pattern = alt app cmp_pattern_atomic in
     seq2
@@ -1924,18 +1920,11 @@ end = struct
         | Option.Some typ -> Comp.PatAnn { location; pattern; typ }
 
   let cmp_copat_spine =
-    let go =
-      Fun.fix (fun go -> choice
-        [ seq2 dot_name go
-          |> span
-          |> labelled "observation pattern"
-          $> (fun (loc, (x, acc)) -> `PatObs (loc, x) :: acc)
-        ; seq2 cmp_pattern_atomic go
-          |> span
-          |> labelled "application pattern"
-          $> (fun (loc, (x, acc)) -> `PatApp (loc, x) :: acc)
-        ; return []
-        ])
+    let go (* TODO: Incomplete, address when rewriting the parser *) =
+      dot_name
+      |> span
+      |> labelled "observation pattern"
+      $> (fun (location, name) -> Comp.PatObs { location; name })
     in
     seq2
       (go <& token Token.THICK_ARROW)
@@ -1949,8 +1938,8 @@ end = struct
       (token Token.THICK_ARROW &> Comp_parsers.cmp_exp_chk)
     |> span
     |> labelled "case branch"
-    $> fun (loc, (ctyp_decls, pat, rhs)) ->
-        Comp.Branch (loc, ctyp_decls, pat, rhs)
+    $> fun (location, (mctx, pattern, body)) ->
+        Comp.Branch { location; mctx; pattern; body }
 
   (** Parses a return checkable computation term,
       i.e. a checkable term *except* for applications.
@@ -1981,17 +1970,16 @@ end = struct
       token Token.KW_FUN
       &> maybe (token Token.PIPE)
       &> sep_by1 (span cmp_copat_spine) (token Token.PIPE)
-      $> List1.to_list
       |> span
       |> labelled "copattern abstraction"
       $> fun (location, branches) ->
-          let branches =
-            List.fold_left
-              (fun acc (loc, pat) -> Comp.ConsFBranch (loc, pat, acc))
-              (Comp.NilFBranch location)
-              (List.rev branches)
+          let branches' =
+            List1.map
+              (fun (location, (pattern, body)) ->
+                Comp.Branch { location; mctx = LF.Empty; pattern; body })
+              branches
           in
-          Comp.Fun { location; branches }
+          Comp.Fun { location; branches = branches' }
     in
     let case =
       let check_exhaustiveness =
@@ -2022,8 +2010,8 @@ end = struct
           (Comp_parsers.cmp_exp_syn <& token Token.KW_IN)
           Comp_parsers.cmp_exp_chk
         |> span
-        $> fun (location, (ctyp_decls, pat, scrutinee, e)) ->
-            let branch = Comp.Branch (location, ctyp_decls, pat, e) in
+        $> fun (location, (mctx, pattern, scrutinee, body)) ->
+            let branch = Comp.Branch { location; mctx; pattern; body } in
             Comp.Case { location; check_exhaustiveness = true; scrutinee; branches = List1.singleton branch}
       in
       token Token.KW_LET

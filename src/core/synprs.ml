@@ -211,7 +211,7 @@ module Comp = struct
         }
     | Fun of
         { location : Location.t
-        ; branches : fun_branches
+        ; branches : branch List1.t
         }
     | MLam of
         { location : Location.t
@@ -224,7 +224,7 @@ module Comp = struct
         }
     | Let of
         { location : Location.t
-        ; variable_name : Name.t
+        ; pattern : pattern
         ; assignee : exp
         ; body : exp
         }
@@ -262,10 +262,13 @@ module Comp = struct
         { location : Location.t
         ; obj : meta_obj
         }
+    | RawPatApplication of
+        { location : Location.t
+        ; patterns : pattern List1.t
+        }
     | PatName of
         { location : Location.t
         ; name : Name.t
-        ; spine : pattern_spine
         }
     | PatTuple of
         { location : Location.t
@@ -276,19 +279,18 @@ module Comp = struct
         ; pattern : pattern
         ; typ : typ
         }
-
-  and pattern_spine =
-    [ `PatApp of Location.t * pattern
-    | `PatObs of Location.t * Name.t
-    ]
-    list
+    | PatObs of
+        { location : Location.t
+        ; name : Name.t
+        }
 
   and branch =
-    | Branch of Location.t * LF.ctyp_decl LF.ctx * pattern * exp
-
-  and fun_branches =
-    | NilFBranch of Location.t
-    | ConsFBranch of Location.t * (pattern_spine * exp) * fun_branches
+    | Branch of
+        { location : Location.t
+        ; mctx : LF.mctx
+        ; pattern : pattern
+        ; body : exp
+        }
 
   type suffices_typ = typ generic_suffices_typ
 

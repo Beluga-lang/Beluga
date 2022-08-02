@@ -445,13 +445,21 @@ module Sgn = struct
   type precedence = int
 
   type pragma =
-    | OptsPrag          of string list
-    | NamePrag          of Name.t * string * string option
-    | FixPrag           of Name.t * Fixity.t * precedence * Associativity.t option
+    | NamePrag of
+        { constant : Name.t
+        ; meta_name : string
+        ; comp_name : string option
+        }
+    | FixPrag of
+        { constant : Name.t
+        ; fixity : Fixity.t
+        ; precedence : precedence
+        ; associativity : Associativity.t option
+        }
     | NotPrag
-    | DefaultAssocPrag  of Associativity.t
-    | OpenPrag          of string list
-    | AbbrevPrag        of string list * string
+    | DefaultAssocPrag of { associativity : Associativity.t }
+    | OpenPrag of string list
+    | AbbrevPrag of string list * string
 
   (* Pragmas that need to be declared first *)
   type global_pragma =

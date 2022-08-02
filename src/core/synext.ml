@@ -332,7 +332,6 @@ module Sgn = struct
   type precedence = int
 
   type pragma =
-    | OptsPrag          of string list
     | NamePrag          of Name.t * string * string option
     | FixPrag           of Name.t * Fixity.t * precedence * Associativity.t option
     | NotPrag

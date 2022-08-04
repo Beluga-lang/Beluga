@@ -64,8 +64,9 @@ backtrack out of the parser for case expressions.
 
 open Support
 
-module Comp = Syntax.Prs.Comp
 module LF = Syntax.Prs.LF
+module CLF = Syntax.Prs.CLF
+module Comp = Syntax.Prs.Comp
 module Harpoon = Syntax.Prs.Harpoon
 module Sgn = Syntax.Prs.Sgn
 
@@ -206,7 +207,7 @@ type error' =
   | NoMoreChoices of error list (* all alternatives failed *)
 
   (* Internal errors: our fault; these should never go to the user. *)
-  (** Raised by `satisfy` when it fails.
+  (* Raised by `satisfy` when it fails.
       This is an internal error because it is totally uninformative
       and low-level. When a high-level parser is constructed using
       `satisfy`, it should check for this error and rewrite it into a
@@ -214,7 +215,7 @@ type error' =
    *)
   | NotFollowedBy
 
-  (** Generic internal error. *)
+  (* Generic internal error. *)
   | Violation of string
 
 and error =
@@ -232,20 +233,6 @@ and error =
    *)
   ; loc : Location.t (* the location the error occurred at *)
   }
-
-  (*
-(** Adds a label to the error path *)
-let push_label (l : string) : error -> error =
-  fun e -> { e with path = Entry l :: e.path }
-   *)
-
-         (*
-(** Adds a label to an error path, if any. *)
-let push_label_option (l : string option) (e : error) : error =
-  let open Option in
-  l $> (fun l -> push_label l e)
-  |> get_default e
-          *)
 
 exception Error of state * error
 
@@ -331,8 +318,8 @@ let () =
 (***** Syntax mangling helpers *****)
 
 type typ_or_ctx =
-  [ `Typ of LF.typ
-  | `Ctx of LF.dctx
+  [ `Typ of CLF.typ
+  | `Ctx of CLF.dctx
   ]
 
 (***** Parser type definition *****)
@@ -386,18 +373,6 @@ type 'a t = 'a parser
 let catch (p : 'a parser) (handler : state * 'a result -> state * 'b result) : 'b parser =
   fun s -> run p s |> handler
 
-  (*
-(** Runs p. If it fails, its error path is transformed by the given
-    function.
-    Use a constant function to replace an error path with a new one.
- *)
-let repathing (l : path -> path) (p : 'a parser) : 'a parser =
-  catch p
-    (function
-     | Either.Left {error; path} -> Either.left {error; path = l path}
-     | x -> x)
-   *)
-
 (** Constructs a failure result for a given state. *)
 let fail_at' s loc path error =
   ( s
@@ -425,13 +400,6 @@ let get_state : state parser =
 let put_state (s : state) : unit parser =
   fun _ -> return_at s ()
 
-  (*
-(** Keeps the state unchanged, but reads the current location. *)
-let get_loc =
-  anon_parser
-    (fun s -> return_at s (s.loc))
-   *)
-
 (***** Parser combinators *****)
 
 (** Runs the parser `p` with unlimited backtracking enabled. *)
@@ -458,11 +426,6 @@ include (M : Monad.MONAD with type 'a t := 'a t)
 include (Functor.Make (M) : Functor.FUNCTOR with type 'a t := 'a t)
 
 include (Apply.Make (M) : Apply.APPLY with type 'a t := 'a t)
-
-             (*
-(** Forgets the result of a parser. *)
-let void (p : 'a parser) : unit parser = p &> return ()
-              *)
 
 (***** Combinators for handling error labels. *****)
 
@@ -492,11 +455,6 @@ let relabelling (type a) (p : a parser) (f : Location.t -> path -> path) : a par
       (function
        | s, Either.Left e -> s, Either.left {e with path = f loc e.path }
        | x -> x)
-
-    (*
-(** Flipped version of `relabelling` *)
-let relabelled f p = relabelling p f
-     *)
 
 let shift p s =
   relabelling p
@@ -549,35 +507,12 @@ let not_followed_by (p : 'a parser) : unit parser =
 
 (***** Parsing lists. *****)
 
-    (*
-(** Transforms each element of a list into a parser, and sequences the
-    parsers.
- *)
-let rec traverse (f : 'a -> 'b parser) (xs : 'a list) : 'b list parser =
-  match xs with
-  | [] -> return []
-  | x :: xs ->
-     seq2 (f x) (traverse f xs)
-     $> fun (x, xs) -> x :: xs
-     *)
-
 (** Like {!traverse} but for parsers without interesting outputs. *)
 let rec traverse_ (f : 'a -> unit parser) (xs : 'a list) : unit parser =
   match xs with
   | [] -> return ()
   | x :: xs ->
      f x &> traverse_ f xs
-
-                     (*
-(** Runs a sequence of parsers in order and collects their results. *)
-let sequence (ps : 'a parser list) : 'a list parser =
-  traverse Fun.id ps
-                      *)
-
-                                (*
-(** Gets the next item in the input stream without advancing the parser. *)
-let peek : (Location.t * Token.t) option parser = anon_parser (fun s -> return_at s (peek_at s))
-                                 *)
 
 (***** Prioritized choice *****)
 
@@ -660,11 +595,11 @@ let maybe_default p ~default =
 
 (** Internal implementation of `many` that doesn't label. *)
 let rec many' (p : 'a parser) : 'a list parser =
-  alt (some' p) (return [])
+  alt (some' p $> List1.to_list) (return [])
 
 (** Internal implementation of `some` that doesn't label. *)
-and some' (p : 'a parser) : 'a list parser =
-  p >>= fun x -> many' p >>= fun xs -> return (x :: xs)
+and some' (p : 'a parser) : 'a List1.t parser =
+  p >>= fun x -> many' p >>= fun xs -> return (List1.from x xs)
 
 (** `many p` repeats the parser `p` zero or more times and collects
     the results in a list.
@@ -675,7 +610,7 @@ let many (p : 'a parser) : 'a list parser =
 (** `some p` repeats the parser `p` one or more times and collects the
     results in a list.
  *)
-let some (p : 'a parser) : 'a list parser =
+let some (p : 'a parser) : 'a List1.t parser =
   shifted "some" (some' p)
 
 (** `sep_by0 p sep` parses zero or more occurrences of `p` separated
@@ -785,7 +720,7 @@ let keyword (kw : string) : unit parser =
   satisfy' (`keyword (Option.some kw))
     Fun.(Token.equal (Token.IDENT kw) >> Option.of_bool)
 
-let identifier : string parser =
+let identifier' : string parser =
   satisfy' (`identifier Option.none)
     (function
      | Token.IDENT s -> Option.some s
@@ -820,7 +755,7 @@ let namify (p : string t) : Name.t t =
   $> fun (location, x) -> Name.mk_name ~location (Name.SomeString x)
 
 let name : Name.t parser =
-  namify identifier
+  namify identifier'
 
 type name_or_blank = [ `name of Name.t | `blank of Location.t ]
 
@@ -889,7 +824,7 @@ let dot_integer : int parser =
      | Token.DOT_NUMBER k -> Option.some k
      | _ -> Option.none)
 
-let fqidentifier = sep_by1 (trying identifier) (token Token.DOUBLE_COLON)
+let fqidentifier = sep_by1 (trying identifier') (token Token.DOUBLE_COLON)
 
 (** A qualified name, with possible module names before. *)
 let fqname =
@@ -985,181 +920,341 @@ let sgn_global_prag : Sgn.decl parser =
 let sgn_name_pragma : Sgn.decl parser =
   seq3
     (pragma "name" &> name)
-    identifier
-    (maybe identifier <& token Token.DOT)
+    identifier'
+    (maybe identifier' <& token Token.DOT)
   |> labelled "name pragma"
   |> span
   $> fun (location, (constant, meta_name, comp_name)) ->
        let pragma = Sgn.NamePrag { constant; meta_name; comp_name } in
        Sgn.Pragma { location; pragma }
 
+let identifier =
+  span (satisfy' (`identifier Option.none)
+    (function
+      | Token.IDENT s -> Option.some s
+      | _ -> Option.none))
+  $> fun (location, identifier) -> Identifier.make ~location identifier
+
+(*=
+    <omittable-identifier> ::=
+      | `_'
+      | <identifier>
+*)
+let omittable_identifier =
+  alt
+    (token Token.UNDERSCORE $> fun () -> Option.none)
+    (identifier $> Option.some)
+
+(*=
+    <qualified-identifier> ::=
+      | (<identifier> `::')* <identifier>
+*)
+let qualified_identifier =
+  span (sep_by1 (trying identifier) (token Token.DOUBLE_COLON))
+  $> fun (location, identifiers) ->
+    let (modules, identifier) = List1.unsnoc identifiers in
+    QualifiedIdentifier.make ~location ~modules identifier
+
 module rec LF_parsers : sig
-  val lf_kind : LF.kind t
-  val lf_typ : LF.typ t
-  val lf_kind_or_typ : [ `Kind of LF.kind | `Typ of LF.typ] t
-  val lf_typ_decl : LF.typ_decl t
-  val lf_term : LF.term t
+  open LF
+
+  val lf_kind : Kind.t t
+
+  val lf_type : Typ.t t
+
+  val lf_term : Term.t t
 end = struct
-  let lf_term_sequence =
-    span (some LF_parsers.lf_term) $> (fun (location, terms) -> LF.TList { location; terms })
-    |> labelled "LF term sequence"
+  open LF
 
-  let lf_term_lam =
-    seq2 (token Token.LAMBDA &> name <& token Token.DOT) lf_term_sequence
+  (*=
+      Initial grammar:
+
+      <lf-kind> ::=
+        | <lf-kind-pi>
+        | <lf-kind-arrow>
+        | <lf-kind-type>
+        | `(' <lf-kind> `)'
+
+      <lf-kind-pi> ::=
+        | `{' <omittable-identifier> `:' <lf-type> `}' <lf-kind>
+
+      <lf-kind-arrow> ::=
+        | <lf-type> <forward-arrow> <lf-kind>
+
+      <lf-kind-type> ::=
+        | `type'
+
+
+      Rewritten grammar:
+
+      <lf-kind> ::=
+        | `{' <omittable-identifier> `:' <lf-type> `}' <lf-kind>
+        | <lf-type'> <forward-arrow> <lf-kind>
+        | `type'
+        | `(' <lf-kind> `)'
+
+      <lf-type'> ::=
+        | <lf-term>+
+        | `(' <lf-type> `)'
+  *)
+  let lf_type' =
+    let lf_type_atomic =
+      some LF_parsers.lf_term
       |> span
-      $> (fun (location, (parameter_name, body)) -> LF.Lam { location; parameter_name; body })
-    |> labelled "LF lambda term"
-
-  let lf_head =
-    span fqname
-    |> labelled "LF application head"
-    $> fun (loc, n) -> LF.Name (loc, n, Option.none)
-
-  let lf_term_head =
-    span lf_head $> (fun (location, head) -> LF.Root { location; head; spine = [] })
-    |> labelled "LF head term"
-
-  let lf_term_atomic =
+      |> labelled "LF atomic type"
+      $> fun (location, terms) ->
+           Typ.RawApplication { location; terms }
+    in
     choice
-      [ span (token Token.UNDERSCORE)
-        $> (fun (location, ()) -> LF.Root { location; head = LF.Hole location; spine = [] })
-      ; span (parens (seq2 LF_parsers.lf_typ (maybe (token Token.COLON &> LF_parsers.lf_typ))))
-        >>= fun (location, (m, q)) ->
-          match q, m with
-          | Option.None, LF.AtomTerm { term; _ } -> return term
-          | Option.None, _ -> return @@ LF.NTyp { location; typ = m }
-          | Option.Some typ, LF.AtomTerm { term; _ } -> return @@ LF.Ann { location; term; typ }
-          | _, _ -> fail (Violation "invalid atomic LF term")
-                                  (* ^ XXX not sure if this is a violation or a user error -je *)
-      ]
-    |> labelled "LF atomic term"
-
-  (** An LF type declaration, `x : a'. *)
-  let lf_typ_decl =
-    seq2
-      (name <& token Token.COLON)
-      LF_parsers.lf_typ
-    |> labelled "LF type declaration"
-    $> fun (x, a) -> LF.TypDecl (x, a)
-
-  let lf_typ_pi : LF.typ parser =
-    let lf_typ_declaration = seq2 (name <& token Token.COLON) LF_parsers.lf_typ in
-    seq2
-      (trying (braces lf_typ_declaration <& maybe (token Token.ARROW)))
-      LF_parsers.lf_typ
-    |> span
-    $> (fun (location, ((parameter_name, parameter_type), range)) ->
-          LF.PiTyp { location; parameter_name; parameter_type; range })
-    |> labelled "LF pi type"
-
-  let lf_typ_atomic =
-    alt
-      (span lf_term_sequence
-        $> function
-          | (loc, LF.NTyp { typ; _ }) -> typ
-          | (loc, LF.TList { terms = [ LF.NTyp { typ; _ } ]; _ }) -> typ
-          | (location, LF.TList { terms = [ term ]; _ }) -> LF.AtomTerm { location; term }
-          | (location, term) -> LF.AtomTerm { location; term })
-      (parens LF_parsers.lf_typ)
-    |> labelled "LF atomic type"
-
-  let lf_typ_arr : LF.typ parser =
-    seq2
-      (trying (lf_typ_atomic <& token Token.ARROW))
-      LF_parsers.lf_typ
-    |> span
-    $> (fun (location, (domain, range)) -> LF.ArrTyp { location; domain; range })
-    |> labelled "LF arrow type"
-
-  let lf_typ : LF.typ parser =
-    choice
-      [ lf_typ_pi
-      ; lf_typ_arr
-      ; lf_typ_atomic
+      [ lf_type_atomic
+      ; parens LF_parsers.lf_type
       ]
     |> labelled "LF type"
 
-  (** Parses the `type' kind. *)
-  let type_kind =
-    labelled "`type' kind"
-      (span (token Token.KW_TYPE) $> fun (location, ()) -> LF.Typ { location })
-
   let lf_kind =
-    let lf_typ_declaration = seq2 (name <& token Token.COLON) LF_parsers.lf_typ in
-    let pi_kind =
+    let lf_pi_kind =
       seq2
-        (braces lf_typ_declaration)
+        (braces
+          (seq2
+            omittable_identifier
+            (token Token.COLON &> LF_parsers.lf_type)))
         LF_parsers.lf_kind
       |> span
+      |> labelled "LF Pi kind"
       $> fun (location, ((parameter_name, parameter_type), range)) ->
-        LF.PiKind { location; parameter_name; parameter_type; range }
-    in
-    let arr_kind =
-      seq2
-        (lf_typ_atomic <& token Token.ARROW)
-        LF_parsers.lf_kind
+           Kind.Pi { location; parameter_name; parameter_type; range }
+    and lf_arrow_kind =
+      seq2 lf_type' (token Token.ARROW &> LF_parsers.lf_kind)
       |> span
+      |> labelled "LF arrow kind"
       $> fun (location, (domain, range)) ->
-        LF.ArrKind { location; domain; range }
+           Kind.Arrow { location; domain; range }
+    and lf_type_kind =
+      token Token.KW_TYPE
+      |> span
+      |> labelled "LF `type' kind"
+      $> fun (location, ()) ->
+           Kind.Typ { location }
     in
     choice
-      [ label pi_kind "LF Pi kind"
-      ; label arr_kind "LF arrow kind"
-      ; type_kind
+      [ lf_pi_kind
+      ; lf_arrow_kind
+      ; lf_type_kind
+      ; parens LF_parsers.lf_kind
       ]
     |> labelled "LF kind"
 
-  let lf_term =
+  (*=
+      Initial grammar:
+
+      <lf-type> ::=
+        | <lf-type-variable>
+        | <lf-type-constant>
+        | <lf-type-pi>
+        | <lf-type-arrow>
+        | <lf-type-application>
+        | `(' <lf-type> `)'
+
+      <lf-type-variable> ::=
+        | <identifier>
+
+      <lf-type-constant> ::=
+        | <qualified-identifier>
+
+      <lf-type-pi> ::=
+        | `{' <omittable-identifier> `:' <lf-type> `}' <lf-type>
+
+      <lf-type-arrow> ::=
+        | <lf-type> <forward-arrow> <lf-type>
+        | <lf-type> <backward-arrow> <lf-type>
+
+      <lf-type-application> ::=
+        | <lf-type-variable> <lf-term>+
+        | <lf-type-constant> <lf-term>+
+        | <lf-term> <lf-type-constant> <lf-term>
+        | <lf-term> <lf-type-constant>
+
+
+      Rewritten grammar:
+
+      <lf-type> ::=
+        | <lf-type1>
+
+      <lf-type1> ::=
+        | <lf-type2> ((<forward-arrow> | <backward-arrow>) <lf-type2>)*
+
+      <lf-type2> ::=
+        | `{' <omittable-identifier> `:' <lf-type> `}' <lf-type>
+        | <lf-term>+
+        | `(' <lf-type> `)'
+  *)
+  let lf_type_2 =
+    let lf_pi_type =
+      seq2
+        (braces (seq2 omittable_identifier (token Token.COLON &> LF_parsers.lf_type)))
+        LF_parsers.lf_type
+      |> span
+      |> labelled "LF Pi type"
+      $> fun (location, ((parameter_name, parameter_type), range)) ->
+           Typ.Pi { location; parameter_name; parameter_type; range }
+    and lf_application_type =
+      some LF_parsers.lf_term
+      |> span
+      |> labelled "LF application type"
+      $> fun (location, terms) ->
+           Typ.RawApplication { location; terms }
+    in
     choice
-      [ lf_term_lam
-      ; lf_term_head
-      ; lf_term_atomic
+      [ lf_pi_type
+      ; lf_application_type
+      ; parens LF_parsers.lf_type
+      ]
+    |> labelled "LF Pi or application type"
+
+  let lf_type_1 =
+    let forward_arrow = token Token.ARROW $> fun () -> `Forward_arrow
+    and backward_arrow = token Token.BACKARROW $> fun () -> `Backward_arrow in
+    let arrow = alt forward_arrow backward_arrow in
+    seq2 lf_type_2 (many (seq2 arrow lf_type_2))
+    |> labelled "LF atomic or arrow type"
+    $> function
+       | (typ, []) -> typ
+       | (base, typs) ->
+         let rec reduce base typs =
+           match typs with
+           | [] -> base
+           | (`Forward_arrow, typ) :: typs ->
+             let domain = base
+             and range = reduce typ typs in
+             let location =
+               Location.join (location_of_typ domain) (location_of_typ range)
+             in
+             Typ.ForwardArrow { location; domain; range }
+           | (`Backward_arrow, typ) :: typs ->
+             let domain = reduce typ typs
+             and range = base in
+             let location =
+               Location.join (location_of_typ range) (location_of_typ domain)
+             in
+             Typ.BackwardArrow { location; domain; range }
+         in
+         reduce base typs
+
+  let lf_type = lf_type_1
+
+  (*=
+      Original grammar:
+
+      <lf-term> ::=
+        | <lf-term-variable>
+        | <lf-term-constant>
+        | <lf-term-lambda>
+        | <lf-term-application>
+        | <lf-term-wildcard>
+        | <lf-term-annotated>
+        | `(' <lf-term> `)'
+
+      <lf-term-variable> ::=
+        | <identifier>
+
+      <lf-term-constant> ::=
+        | <qualified-identifier>
+
+      <lf-term-lambda> ::=
+        | `\' <omittable-identifier> [`:' <lf-type>] `.' <lf-term>
+
+      <lf-term-application> ::=
+        | <lf-term-variable> <lf-term>+
+        | <lf-term-constant> <lf-term>+
+        | <lf-term> <lf-term-constant> <lf-term>
+        | <lf-term> <lf-term-constant>
+
+      <lf-term-wildcard> ::=
+        | `_'
+
+      <lf-term-annotated> ::=
+        | <lf-term> `:' <lf-type>
+
+
+      Rewritten grammar:
+
+      <lf-term> ::=
+        | <lf-term1>
+
+      <lf-term1> ::=
+        | <lf-term2>+
+
+      <lf-term2> ::=
+        | <identifier> <lf-term-annotation>
+        | <qualified-identifier> <lf-term-annotation>
+        | `\' <omittable-identifier> [`:' <lf-type>] `.' <lf-term>
+        | `_' <lf-term-annotation>
+        | `(' <lf-term> `)' <lf-term-annotation>
+
+      <lf-term-annotation> ::=
+        | [`:' <lf-type>]
+  *)
+  let lf_term_annotation =
+    maybe (token Token.COLON &> LF_parsers.lf_type)
+
+  let lf_term_2 =
+    let possibly_type_annotated term =
+      seq2 term lf_term_annotation
+      |> span
+      |> labelled "LF optionally type-annotated term"
+      $> function
+         | (_, (term, Option.None)) -> term
+         | (location, (term, Option.Some typ)) ->
+           Term.TypeAnnotated { location; term; typ }
+    in
+    let variable =
+      identifier
+      |> span
+      |> labelled "LF variable term"
+      $> fun (location, name) ->
+          Term.RawName { location; name }
+    and constant =
+      qualified_identifier
+      |> span
+      |> labelled "LF constant term"
+      $> fun (location, qualified_name) ->
+           Term.RawQualifiedName { location; qualified_name }
+    and lambda =
+      seq3
+        (token Token.LAMBDA &> omittable_identifier)
+        (maybe (token Token.COLON &> LF_parsers.lf_type))
+        (token Token.DOT &> LF_parsers.lf_term)
+      |> span
+      |> labelled "LF abstraction term"
+      $> fun (location, (parameter_name, parameter_type, body)) ->
+           Term.Abstraction { location; parameter_name; parameter_type; body }
+    and wildcard =
+      token Token.UNDERSCORE
+      |> span
+      |> labelled "LF wildcard term"
+      $> fun (location, ()) ->
+           Term.Wildcard { location }
+    in
+    choice
+      [ possibly_type_annotated variable
+      ; possibly_type_annotated constant
+      ; lambda
+      ; possibly_type_annotated wildcard
+      ; possibly_type_annotated (parens LF_parsers.lf_term)
       ]
     |> labelled "LF term"
 
-  (** Parses an LF kind or type.
-      This is an optimization. In situations where either a type or a
-      kind could appear, use this and then match on the `typ_or_kind`
-      returned. This is more efficient than backtracking the parser.
-   *)
-  let lf_kind_or_typ : [ `Kind of LF.kind | `Typ of LF.typ] t =
-    let pi =
-      seq2
-        (braces (seq2 (name <& token Token.COLON) LF_parsers.lf_typ))
-        LF_parsers.lf_kind_or_typ
-      |> span
-      |> labelled "LF Pi kind or type"
-      $> fun (location, ((parameter_name, parameter_type), k_or_a)) ->
-          match k_or_a with
-          | `Kind range ->
-            `Kind (LF.PiKind { location; parameter_name; parameter_type; range })
-          | `Typ range ->
-            `Typ (LF.PiTyp { location; parameter_name; parameter_type; range })
-    in
-    let arrow =
-      seq2
-        lf_typ_atomic
-        (maybe (token Token.ARROW &> LF_parsers.lf_kind_or_typ))
-      |> span
-      |> labelled "LF arrow kind or type"
-      $> fun (location, (a, k_or_a)) ->
-          match k_or_a with
-          | Option.None -> `Typ a
-          | Option.Some (`Kind k) -> `Kind (LF.ArrKind { location; domain = a; range = k })
-          | Option.Some (`Typ a') -> `Typ (LF.ArrTyp { location; domain = a; range = a' })
-    in
-    choice
-      [ pi
-      ; type_kind $> (fun a -> `Kind a)
-      ; arrow
-      ]
-    |> labelled "LF kind or type"
-end
+  let lf_term_1 =
+    some lf_term_2
+    |> span
+    |> labelled "LF atomic or application term"
+    $> function
+       | (_, List1.T (term, [])) -> term
+       | (location, List1.T (t1, t2 :: rest)) ->
+         Term.RawApplication { location; terms = List2.from t1 t2 rest }
 
-let lf_kind = LF_parsers.lf_kind
-let lf_typ = LF_parsers.lf_typ
-let lf_kind_or_typ = LF_parsers.lf_kind_or_typ
-let lf_typ_decl = LF_parsers.lf_typ_decl
+  let lf_term = lf_term_1
+end
 
 let hole : string option parser =
   satisfy' (`hole Option.none)
@@ -1169,61 +1264,61 @@ let hole : string option parser =
      | _ -> Option.none)
   |> labelled "hole"
 
-let rec_block (p : (Name.t * LF.typ) parser) =
-  token Token.KW_BLOCK
-  &> opt_parens (sep_by1 p (token Token.COMMA))
-  |> span
-  $> fun (loc, es) ->
-     List1.fold_right
-       (fun (x, a) -> LF.SigmaLast (Some x, a))
-       (fun (x, a) s -> LF.SigmaElem (x, a, s))
-       es
-
-module rec Contextual_LF_parsers : sig
+module rec CLF_parsers : sig
   val meta_obj : Comp.meta_obj t
-  val contextual : 'a parser -> (LF.dctx * 'a) parser
-  val clf_typ : LF.typ t
-  val clf_typ_pure : LF.typ t
-  val clf_normal : LF.term t
-  val clf_dctx : LF.dctx t
-  val ctx_variable : (Name.t * LF.ctyp * Plicity.t) t
-  val clf_ctyp_decl_bare : 'a name_parser -> ('a -> Plicity.t * Name.t) -> (Name.t * LF.ctyp * Plicity.t) t
-  val clf_ctyp_decl : (Name.t * LF.ctyp * Plicity.t) t
-  val cltyp : (LF.dctx * typ_or_ctx) t
-  val clf_sub_term : LF.sub_start t
+  val contextual : 'a parser -> (CLF.dctx * 'a) parser
+  val clf_typ : CLF.typ t
+  val clf_typ_pure : CLF.typ t
+  val clf_normal : CLF.term t
+  val clf_dctx : CLF.dctx t
+  val ctx_variable : (Name.t * CLF.ctyp * Plicity.t) t
+  val clf_ctyp_decl_bare : 'a name_parser -> ('a -> Plicity.t * Name.t) -> (Name.t * CLF.ctyp * Plicity.t) t
+  val clf_ctyp_decl : (Name.t * CLF.ctyp * Plicity.t) t
+  val cltyp : (CLF.dctx * typ_or_ctx) t
+  val clf_sub_term : CLF.sub_start t
 end = struct
-  let clf_projection : LF.proj parser =
+  let rec_block (p : (Name.t * CLF.typ) parser) =
+    token Token.KW_BLOCK
+    &> opt_parens (sep_by1 p (token Token.COMMA))
+    |> span
+    $> fun (loc, es) ->
+       List1.fold_right
+         (fun (x, a) -> CLF.SigmaLast (Some x, a))
+         (fun (x, a) s -> CLF.SigmaElem (x, a, s))
+         es
+
+  let clf_projection =
     alt
-      (dot_integer $> (fun k -> LF.ByPos k))
-      (dot_name $> (fun x -> LF.ByName x))
+      (dot_integer $> (fun k -> CLF.ByPos k))
+      (dot_name $> (fun x -> CLF.ByName x))
 
   (** Parses a sequence of contextual LF normal terms and packages them
       into a TList for infix operator parsing later during indexing.
    *)
   let clf_term_app =
     let normal_list =
-      some Contextual_LF_parsers.clf_normal
+      some CLF_parsers.clf_normal
       |> span
-      $> fun (location, terms) -> LF.TList { location; terms }
+      $> fun (location, terms) -> CLF.TList { location; terms = List1.to_list terms }
     in
     choice
       [ normal_list
-      ; span Contextual_LF_parsers.clf_typ
-        $> (fun (location, typ) -> LF.NTyp { location; typ })
+      ; span CLF_parsers.clf_typ
+        $> (fun (location, typ) -> CLF.NTyp { location; typ })
       ]
     |> labelled "contextual LF application"
 
   let clf_typ_pure_atomic =
     choice
-      [ parens Contextual_LF_parsers.clf_typ_pure
-      ; seq2 name (many Contextual_LF_parsers.clf_normal)
+      [ parens CLF_parsers.clf_typ_pure
+      ; seq2 name (many CLF_parsers.clf_normal)
         |> span
         $> fun (location, (x, ms)) ->
-            LF.AtomTerm
+            CLF.AtomTerm
               { location
-              ; term = LF.TList
+              ; term = CLF.TList
                   { location
-                  ; terms = LF.Root { location; head = LF.Name (location, x, Option.none); spine = [] }
+                  ; terms = CLF.Root { location; head = CLF.Name (location, x, Option.none); spine = [] }
                     :: ms
                   }
               }
@@ -1233,15 +1328,15 @@ end = struct
   (** Parses an LF function type (uniform pi or arrow). *)
   let lf_function_type =
     let pi =
-      seq2 (braces (seq2 (name <& token Token.COLON) Contextual_LF_parsers.clf_typ_pure)) Contextual_LF_parsers.clf_typ_pure
+      seq2 (braces (seq2 (name <& token Token.COLON) CLF_parsers.clf_typ_pure)) CLF_parsers.clf_typ_pure
       |> span
       $> fun (location, ((parameter_name, parameter_type), range)) ->
-        LF.PiTyp { location; parameter_name; parameter_type; range }
+        CLF.PiTyp { location; parameter_name; parameter_type; range }
     in
     let arrow =
-      seq2 (trying (clf_typ_pure_atomic <& token Token.ARROW)) Contextual_LF_parsers.clf_typ_pure
+      seq2 (trying (clf_typ_pure_atomic <& token Token.ARROW)) CLF_parsers.clf_typ_pure
       |> span
-      $> fun (location, (domain, range)) -> LF.ArrTyp { location; domain; range }
+      $> fun (location, (domain, range)) -> CLF.ArrTyp { location; domain; range }
     in
     alt pi arrow
 
@@ -1264,30 +1359,30 @@ end = struct
       labelled
         "nonempty sequence of contextual LF normal terms"
         begin
-          some Contextual_LF_parsers.clf_normal
+          some CLF_parsers.clf_normal
           |> span
           $> fun (location, terms) ->
               match terms with
-              | [LF.NTyp { typ; _ }] -> typ
-              | _ -> LF.AtomTerm { location; term = LF.TList { location; terms } }
+              | List1.T (CLF.NTyp { typ; _ }, []) -> typ
+              | _ -> CLF.AtomTerm { location; term = CLF.TList { location; terms = List1.to_list terms } }
         end
     in
     let b =
       seq2
         name
-        (many Contextual_LF_parsers.clf_normal)
+        (many CLF_parsers.clf_normal)
       |> span
       $> fun (location, (x, ms)) ->
-          LF.AtomTerm
+          CLF.AtomTerm
             { location
-            ; term = LF.TList { location; terms = (LF.Root { location; head = LF.Name (location, x, Option.none); spine = [] }) :: ms }
+            ; term = CLF.TList { location; terms = (CLF.Root { location; head = CLF.Name (location, x, Option.none); spine = [] }) :: ms }
             }
     in
     choice
       [ a
       ; b
-      ; parens Contextual_LF_parsers.clf_typ
-      ; clf_typ_rec_block |> span $> (fun (location, block) -> LF.Sigma { location; block })
+      ; parens CLF_parsers.clf_typ
+      ; clf_typ_rec_block |> span $> (fun (location, block) -> CLF.Sigma { location; block })
       ]
     |> labelled "atomic contextual LF type"
 
@@ -1295,26 +1390,26 @@ end = struct
     let pi_decl =
       seq2
         (name <& token Token.COLON)
-        Contextual_LF_parsers.clf_typ
+        CLF_parsers.clf_typ
       |> braces
     in
     let pi =
       seq2
         (pi_decl <& maybe (token Token.ARROW))
-        Contextual_LF_parsers.clf_typ
+        CLF_parsers.clf_typ
       |> span
       $> fun (location, ((parameter_name, parameter_type), range)) ->
-          LF.PiTyp { location; parameter_name; parameter_type; range }
+          CLF.PiTyp { location; parameter_name; parameter_type; range }
     in
     let arrow_or_atomic =
       seq2
         clf_typ_atomic
-        (maybe (token Token.ARROW &> Contextual_LF_parsers.clf_typ))
+        (maybe (token Token.ARROW &> CLF_parsers.clf_typ))
       |> span
       $> fun (location, (a, b)) ->
           match b with
           | Option.None -> a
-          | Option.Some b -> LF.ArrTyp { location; domain = a; range = b }
+          | Option.Some b -> CLF.ArrTyp { location; domain = a; range = b }
     in
     choice [ pi; arrow_or_atomic ]
     |> labelled "contextual LF type"
@@ -1322,10 +1417,10 @@ end = struct
   let clf_sub_new =
     let start =
       alt
-        (Contextual_LF_parsers.clf_sub_term
+        (CLF_parsers.clf_sub_term
           $> fun t -> (t, []))
         (span clf_term_app
-          $> fun (loc, tM) -> (LF.EmptySub loc, [tM]))
+          $> fun (loc, tM) -> (CLF.EmptySub loc, [tM]))
     in
     let nonemptysub =
       seq2 start (many (token Token.COMMA &> clf_term_app))
@@ -1337,20 +1432,20 @@ end = struct
       $> fun ((s, ts), xs) -> (s, List.rev xs @ ts)
     in
     let emptysub =
-      span (return ()) $> fun (loc, ()) -> (LF.EmptySub loc, [])
+      span (return ()) $> fun (loc, ()) -> (CLF.EmptySub loc, [])
     in
     alt nonemptysub emptysub
     |> labelled "contextual LF substitution"
 
   let clf_sub_term =
     choice
-      [ token Token.HAT |> span $> (fun (loc, ()) -> LF.EmptySub loc)
-      ; token Token.DOTS |> span $> (fun (loc, ()) -> LF.Id loc)
+      [ token Token.HAT |> span $> (fun (loc, ()) -> CLF.EmptySub loc)
+      ; token Token.DOTS |> span $> (fun (loc, ()) -> CLF.Id loc)
       ; seq2
           dollar_name
           (maybe (bracks clf_sub_new))
         |> span
-        $> fun (loc, (x, s)) -> LF.SVar (loc, x, s)
+        $> fun (loc, (x, s)) -> CLF.SVar (loc, x, s)
       ]
     |> labelled "contextual LF substitution term"
 
@@ -1358,8 +1453,8 @@ end = struct
     let var =
       seq3
         (alt
-            (hash_name $> fun x -> fun loc sigma -> LF.PVar (loc, x, sigma))
-            (fqname $> fun x -> fun loc sigma -> LF.Name (loc, x, sigma)))
+            (hash_name $> fun x -> fun loc sigma -> CLF.PVar (loc, x, sigma))
+            (fqname $> fun x -> fun loc sigma -> CLF.Name (loc, x, sigma)))
         (maybe clf_projection)
         (maybe (bracks clf_sub_new))
       |> shifted "variable head"
@@ -1367,13 +1462,13 @@ end = struct
       $> fun (loc, (f, proj, sigma)) ->
           let m = f loc sigma in
           match proj with
-          | Option.Some k -> LF.Proj (loc, m, k)
+          | Option.Some k -> CLF.Proj (loc, m, k)
           | Option.None -> m
     in
     let hole =
       token Token.UNDERSCORE
       |> span
-      $> fun (loc, ()) -> LF.Hole loc
+      $> fun (loc, ()) -> CLF.Hole loc
     in
     choice [hole ; var]
 
@@ -1385,16 +1480,16 @@ end = struct
       |> span
       |> labelled "LF lambda"
       $> fun (location, (parameter_name, body)) ->
-          LF.Lam { location; parameter_name; body }
+          CLF.Lam { location; parameter_name; body }
     in
     (*
     let modul =
-      span fqname $> fun (loc, x) -> LF.Root (loc, LF.Name (loc, x), LF.Nil)
+      span fqname $> fun (loc, x) -> CLF.Root (loc, CLF.Name (loc, x), CLF.Nil)
     in
       *)
     let head =
       span clf_head
-      $> fun (location, head) -> LF.Root { location; head; spine = [] }
+      $> fun (location, head) -> CLF.Root { location; head; spine = [] }
     in
     let app =
       seq2
@@ -1406,12 +1501,12 @@ end = struct
       $> fun (location, (term, typ_opt)) ->
           match typ_opt with
           | Option.None -> term
-          | Option.Some typ -> LF.Ann { location; term; typ }
+          | Option.Some typ -> CLF.Ann { location; term; typ }
     in
     let lfhole =
       span hole
       |> labelled "LF hole"
-      $> fun (location, label) -> LF.LFHole { location; label }
+      $> fun (location, label) -> CLF.LFHole { location; label }
     in
     let tuple =
       sep_by1 clf_term_app (token Token.SEMICOLON)
@@ -1419,7 +1514,7 @@ end = struct
       |> span
       |> labelled "LF tuple"
       $> fun (location, ms) ->
-          LF.Tuple
+          CLF.Tuple
             { location
             ; tuple = ms
             }
@@ -1439,22 +1534,22 @@ end = struct
       that all declarations give a type, then separately validate the
       context after.
    *)
-  let clf_dctx : LF.dctx parser =
+  let clf_dctx : CLF.dctx parser =
     let clf_typ_decl =
       seq2
         name
         (maybe (token Token.COLON &> clf_typ))
       $> fun (x, tA) ->
           match tA with
-          | Option.Some tA -> LF.TypDecl (x, tA)
-          | Option.None -> LF.TypDeclOpt x
+          | Option.Some tA -> CLF.TypDecl (x, tA)
+          | Option.None -> CLF.TypDeclOpt x
     in
     (* the different ways a context can begin:
         a hole, a variable, or a declaration
       *)
     let start =
       choice
-        [ token Token.UNDERSCORE &> return LF.CtxHole
+        [ token Token.UNDERSCORE &> return CLF.CtxHole
         ; span clf_typ_decl
           $> fun (loc, d) ->
               (* This is nasty. XXX
@@ -1478,8 +1573,8 @@ end = struct
                 syntax.
               *)
               match d with
-              | LF.TypDeclOpt x -> LF.CtxVar (loc, x)
-              | _ -> LF.DDec (LF.Null, d)
+              | CLF.TypDeclOpt x -> CLF.CtxVar (loc, x)
+              | _ -> CLF.DDec (CLF.Null, d)
 
         ]
     in
@@ -1488,8 +1583,8 @@ end = struct
           start
           (many (token Token.COMMA &> clf_typ_decl))
         $> (fun (cPsi, ds) ->
-          List.fold_left (fun acc d -> LF.DDec (acc, d)) cPsi ds)
-      ; return LF.Null
+          List.fold_left (fun acc d -> CLF.DDec (acc, d)) cPsi ds)
+      ; return CLF.Null
       ]
     |> labelled "contextual LF context"
 
@@ -1498,7 +1593,7 @@ end = struct
       Since this is pretty common for various choices of `p`.
       Returns the parse of the dctx and p in a tuple.
    *)
-  let contextual : type a. a parser -> (LF.dctx * a) parser =
+  let contextual : type a. a parser -> (CLF.dctx * a) parser =
     fun p ->
     seq2
       (clf_dctx <& token Token.TURNSTILE)
@@ -1512,8 +1607,8 @@ end = struct
       |> span
       $> fun (loc, (cPsi, tR)) ->
           match tR with
-          | Option.Some tR -> (loc, LF.ClObj (cPsi, tR))
-          | Option.None -> (loc, LF.CObj cPsi)
+          | Option.Some tR -> (loc, CLF.ClObj (cPsi, tR))
+          | Option.None -> (loc, CLF.CObj cPsi)
     in
     clobj
     |> bracks
@@ -1526,13 +1621,13 @@ end = struct
       The shape of the box is configurable via the `box` parameter.
    *)
   let contextual_variable_decl
-        (name : 'name t) (box : (LF.dctx * 'a) t -> 'b t) (p : 'a t)
+        (name : 'name t) (box : (CLF.dctx * 'a) t -> 'b t) (p : 'a t)
       : ('name * 'b) t =
     seq2
       (name <& token Token.COLON)
       (box (contextual p))
 
-  let cltyp : (LF.dctx * typ_or_ctx) parser =
+  let cltyp : (CLF.dctx * typ_or_ctx) parser =
     labelled "boxed type"
       begin
         let typ =
@@ -1571,20 +1666,20 @@ end = struct
         |> span
         $> (fun (loc, (nb, (cPsi, tA))) ->
               let plicity, x = plicity_of_name nb in
-              (x, LF.ClTyp (loc, LF.PTyp tA, cPsi), plicity)
+              (x, CLF.ClTyp (loc, CLF.PTyp tA, cPsi), plicity)
         )
         |> labelled "parameter variable declaration"
       in
       let subst_variable =
         let subst_class =
           maybe (token Token.HASH)
-          $> Option.eliminate (Fun.const LF.Subst) (Fun.const LF.Ren)
+          $> Option.eliminate (Fun.const CLF.Subst) (Fun.const CLF.Ren)
         in
         dollar_variable_decl (seq2 subst_class clf_dctx)
         |> span
         $> (fun (loc, (nb, (cPsi, (sclass, cPhi)))) ->
               let plicity, x = plicity_of_name nb in
-              (x, LF.ClTyp (loc, LF.STyp (sclass, cPhi), cPsi), plicity)
+              (x, CLF.ClTyp (loc, CLF.STyp (sclass, cPhi), cPsi), plicity)
         )
         |> labelled "substitution/renaming variable"
       in
@@ -1605,11 +1700,11 @@ end = struct
               (span name
                 $> fun (loc2, ctx) ->
                   let loc = Location.join loc1 loc2 in
-                  (x, LF.CTyp (loc, ctx), plicity))
+                  (x, CLF.CTyp (loc, ctx), plicity))
               (bracks_or_opt_parens (contextual clf_typ_atomic) |> span
                 $> fun (loc2, (cPsi, tA)) ->
                   let loc = Location.join loc1 loc2 in
-                  (x, LF.ClTyp (loc, LF.MTyp tA, cPsi), plicity))
+                  (x, CLF.ClTyp (loc, CLF.MTyp tA, cPsi), plicity))
         ]
 
   (* parses `name : name` *)
@@ -1620,7 +1715,7 @@ end = struct
           (trying (name <& token Token.COLON))
           (name <& not_followed_by meta_obj)
         |> span
-        $> fun (loc, (p, w)) -> (p, LF.CTyp (loc, w), Plicity.implicit)
+        $> fun (loc, (p, w)) -> (p, CLF.CTyp (loc, w), Plicity.implicit)
       end
 
   (** Contextual LF contextual type declaration *)
@@ -1638,20 +1733,20 @@ end = struct
           hash_variable_decl (trying clf_typ_atomic)
           |> span
           $> fun (loc, (p, (cPsi, tA))) ->
-               (p, LF.ClTyp (loc, LF.PTyp tA, cPsi), Plicity.explicit)
+               (p, CLF.ClTyp (loc, CLF.PTyp tA, cPsi), Plicity.explicit)
         end
     in
     let subst_variable =
       let subst_class =
         maybe (token Token.HASH)
-        $> Option.eliminate (Fun.const LF.Subst) (Fun.const LF.Ren)
+        $> Option.eliminate (Fun.const CLF.Subst) (Fun.const CLF.Ren)
       in
       labelled "substitution/renaming variable"
         begin
           dollar_variable_decl (seq2 subst_class clf_dctx)
           |> span
           $> fun (loc, (p, (cPsi, (sclass, cPhi)))) ->
-               (p, LF.ClTyp (loc,  LF.STyp (sclass, cPhi), cPsi), Plicity.explicit)
+               (p, CLF.ClTyp (loc,  CLF.STyp (sclass, cPhi), cPsi), Plicity.explicit)
         end
     in
     let q =
@@ -1671,12 +1766,12 @@ end = struct
               (span name
                 $> fun (loc2, ctx) ->
                      let loc = Location.join loc1 loc2 in
-                     (x, LF.CTyp (loc, ctx), Plicity.explicit))
+                     (x, CLF.CTyp (loc, ctx), Plicity.explicit))
               (bracks_or_opt_parens (contextual clf_typ_atomic)
                 |> span
                 $> fun (loc2, (cPsi, tA)) ->
                      let loc = Location.join loc1 loc2 in
-                     (x, LF.ClTyp (loc, LF.MTyp tA, cPsi), Plicity.explicit))
+                     (x, CLF.ClTyp (loc, CLF.MTyp tA, cPsi), Plicity.explicit))
         ]
       |> braces
     in
@@ -1684,14 +1779,14 @@ end = struct
       (alt (parens ctx_variable) q)
 end
 
-let meta_obj = Contextual_LF_parsers.meta_obj
-let contextual = Contextual_LF_parsers.contextual
-let clf_normal = Contextual_LF_parsers.clf_normal
-let clf_dctx = Contextual_LF_parsers.clf_dctx
-let ctx_variable = Contextual_LF_parsers.ctx_variable
-let clf_ctyp_decl_bare = Contextual_LF_parsers.clf_ctyp_decl_bare
-let clf_ctyp_decl = Contextual_LF_parsers.clf_ctyp_decl
-let cltyp = Contextual_LF_parsers.cltyp
+let meta_obj = CLF_parsers.meta_obj
+let contextual = CLF_parsers.contextual
+let clf_normal = CLF_parsers.clf_normal
+let clf_dctx = CLF_parsers.clf_dctx
+let ctx_variable = CLF_parsers.ctx_variable
+let clf_ctyp_decl_bare = CLF_parsers.clf_ctyp_decl_bare
+let clf_ctyp_decl = CLF_parsers.clf_ctyp_decl
+let cltyp = CLF_parsers.cltyp
 
 let mctx ?(sep = token Token.COMMA) p =
   sep_by0 p sep
@@ -1735,9 +1830,9 @@ end = struct
         |> span
         $> fun (location, (cPsi, (location', terms))) ->
             let typ =
-              LF.ClTyp
+              CLF.ClTyp
                 ( location
-                , LF.PTyp (LF.AtomTerm { location; term = LF.TList { location = location'; terms } })
+                , CLF.PTyp (CLF.AtomTerm { location; term = CLF.TList { location = location'; terms = List1.to_list terms } })
                 , cPsi
                 )
             in
@@ -1749,9 +1844,9 @@ end = struct
         |> span
         $> fun (location, (cPsi, cPhi)) ->
             let typ =
-              LF.ClTyp
+              CLF.ClTyp
                 ( location
-                , LF.STyp (LF.Subst, cPhi), cPsi
+                , CLF.STyp (CLF.Subst, cPhi), cPsi
                 )
             in
             Comp.TypBox { location; typ }
@@ -1759,7 +1854,7 @@ end = struct
       let ctx =
         span fqname
         $> fun (location, schema) ->
-            Comp.TypBox { location; typ = LF.CTyp (location, schema) }
+            Comp.TypBox { location; typ = CLF.CTyp (location, schema) }
       in
       let ordinary =
         seq2
@@ -1769,10 +1864,10 @@ end = struct
         |> labelled "boxed type"
         $> fun (location, (cPsi, terms)) ->
             let typ =
-              LF.ClTyp
+              CLF.ClTyp
                 ( location
-                , LF.MTyp
-                  (LF.AtomTerm { location; term = LF.TList { location; terms } })
+                , CLF.MTyp
+                  (CLF.AtomTerm { location; term = CLF.TList { location; terms = List1.to_list terms } })
                 , cPsi
                 )
             in
@@ -1852,11 +1947,11 @@ end = struct
           |> span
           $> fun (location, ((loc', (cPsi, a)), range)) ->
               let domain =
-                LF.ClTyp
+                CLF.ClTyp
                   ( loc'
                   , begin match a with
-                    | `Ctx cPhi -> LF.STyp (LF.Subst, cPhi)
-                    | `Typ a -> LF.MTyp a
+                    | `Ctx cPhi -> CLF.STyp (CLF.Subst, cPhi)
+                    | `Typ a -> CLF.MTyp a
                     end
                   , cPsi
                   )
@@ -2227,7 +2322,7 @@ end = struct
     let open Comp in
     let hypotheses =
       seq2
-        (mctx (clf_ctyp_decl_bare name_or_blank' plicity_name_of_nb $> (fun (name, typ, plicity) -> LF.Decl (name, typ, plicity))) <& token Token.PIPE)
+        (mctx (clf_ctyp_decl_bare name_or_blank' plicity_name_of_nb $> (fun (name, typ, plicity) -> CLF.Decl (name, typ, plicity))) <& token Token.PIPE)
         gctx
       $> fun (cD, cG) -> { cD; cG }
     in
@@ -2314,8 +2409,8 @@ end = struct
   let interactive_harpoon_command : Harpoon.command t =
     let intros =
       keyword "intros"
-      &> maybe (some identifier)
-      $> fun xs -> Harpoon.Intros xs
+      &> maybe (some identifier')
+      $> fun xs -> Harpoon.Intros (Option.map List1.to_list xs)
     in
     let split =
       keyword "split"
@@ -2550,7 +2645,7 @@ end = struct
   let sgn_lf_const_decl =
     seq2
       (name <& token Token.COLON)
-      lf_typ
+      LF_parsers.lf_type
     |> span
     $> (fun (location, (identifier, typ)) ->
           Sgn.Const { location; identifier; typ })
@@ -2561,7 +2656,7 @@ end = struct
       let typ_decl =
         seq2
           (name <& token Token.COLON)
-          lf_kind
+          LF_parsers.lf_kind
       in
       seq2
         (typ_decl <& token Token.EQUALS)
@@ -2594,7 +2689,7 @@ end = struct
   let total_order (arg : 'a Comp.generic_order t) : 'a Comp.generic_order t =
     alt
       arg
-      (braces (some arg) $> fun args -> Comp.Lex args)
+      (braces (some arg) $> fun args -> Comp.Lex (List1.to_list args))
     |> labelled "totality ordering"
 
   let trust_order : Comp.total_dec t =
@@ -2689,7 +2784,7 @@ end = struct
                Sgn.CompDest
                 { location
                 ; identifier
-                ; mctx = LF.Empty
+                ; mctx = CLF.Empty
                 ; observation_typ = tau0
                 ; return_typ = tau1
                 }
@@ -2722,9 +2817,9 @@ end = struct
     pragma "query" &>
       seq4
         (seq2 bound bound)
-        (mctx ~sep: (return ()) (clf_ctyp_decl_bare name' (fun x -> Plicity.explicit, x) |> braces $> (fun (name, typ, plicity) -> LF.Decl (name, typ, plicity))))
+        (mctx ~sep: (return ()) (clf_ctyp_decl_bare name' (fun x -> Plicity.explicit, x) |> braces $> (fun (name, typ, plicity) -> CLF.Decl (name, typ, plicity))))
         (maybe (name <& token Token.COLON))
-        lf_typ
+        CLF_parsers.clf_typ
     <& token Token.DOT
     |> span
     |> labelled "logic programming engine query pragma"
@@ -2737,7 +2832,7 @@ end = struct
       begin
         seq2
           (name <& token Token.COLON)
-          (lf_kind_or_typ <& token Token.DOT)
+          (alt (LF_parsers.lf_kind $> fun kind -> `Kind kind) (LF_parsers.lf_type $> fun typ -> `Typ typ) <& token Token.DOT)
         |> span
         $> fun (location, (identifier, k_or_a)) ->
            match k_or_a with
@@ -2845,7 +2940,7 @@ end = struct
 
   let sgn_abbrev_pragma : Sgn.decl parser =
     pragma "abbrev"
-    &> seq2 fqidentifier identifier
+    &> seq2 fqidentifier identifier'
     <& token Token.DOT
     |> span
     |> labelled "module abbreviation pragma"
@@ -2872,51 +2967,7 @@ end = struct
     $> fun (location, (identifier, kind, typ)) ->
        Sgn.CompTypAbbrev { location; identifier; kind; typ }
 
-  let lf_schema_some : LF.typ_decl LF.ctx parser =
-    alt
-      (token Token.KW_SOME
-       &> bracks
-            (sep_by0
-               lf_typ_decl
-               (token Token.COMMA))
-       $> fun ds -> List.fold_left (fun ctx d -> LF.Dec (ctx, d)) LF.Empty ds)
-      (return LF.Empty)
-    |> labelled "existential declaration"
-
-  let lf_typ_rec_elem = seq2 (name <& token Token.COLON) lf_typ
-
-  let lf_typ_rec_block =
-    rec_block lf_typ_rec_elem
-    |> labelled "LF block"
-
-  let lf_typ_rec =
-    alt lf_typ_rec_block
-      (lf_typ
-       |> labelled "single-entry schema body"
-       $> fun a ->
-          let x =
-            match a with
-            | LF.Atom { head; _ } -> Option.some head
-            | _ -> Option.none
-          in
-          LF.SigmaLast (x, a))
-
-  let lf_schema_elem =
-    seq2 lf_schema_some lf_typ_rec
-    |> span
-    $> fun (loc, (s, a)) ->
-       LF.SchElem (loc, s, a)
-
-  let sgn_schema_decl : Sgn.decl parser =
-    seq2
-      (token Token.KW_SCHEMA &> name <& token Token.EQUALS)
-      (sep_by1 lf_schema_elem (token Token.PLUS)
-       $> List1.to_list)
-    <& token Token.SEMICOLON
-    |> span
-    |> labelled "schema declaration"
-    $> fun (location, (identifier, bs)) ->
-       Sgn.Schema { location; identifier; schema = LF.Schema bs }
+  let sgn_schema_decl : Sgn.decl parser = Obj.magic ()
 
   let sgn_let_decl : Sgn.decl parser =
     seq2
@@ -2959,13 +3010,13 @@ end = struct
 
   let sgn_module_decl : Sgn.decl t =
     seq2
-      (token Token.KW_MODULE &> identifier)
+      (token Token.KW_MODULE &> identifier')
       (Token.(tokens [EQUALS; KW_STRUCT]) &> some Signature_parsers.sgn_decl)
     <& Token.(tokens [KW_END; SEMICOLON])
     |> span
     |> labelled "module declaration"
     $> fun (location, (identifier, declarations)) ->
-        Sgn.Module { location; identifier; declarations }
+        Sgn.Module { location; identifier; declarations = List1.to_list declarations }
 
   let sgn_decl : Sgn.decl t =
     choice

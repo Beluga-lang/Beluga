@@ -20,6 +20,7 @@ type t =
   | PIPE (** | *)
   | TURNSTILE (** |- *)
   | DOTS (** .. *)
+  | BACKARROW (** <- *)
   | ARROW (** -> *)
   | THICK_ARROW (** => *)
   | HAT (** ^ *)

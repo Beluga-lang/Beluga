@@ -2,8 +2,148 @@
 
 open Support
 
-(** Parser LF Syntax *)
+(** {1 Parser LF Syntax}
+
+    Intermediate representation of LF kinds, types and terms to delay the
+    handling of data-dependent aspects of the grammar.
+
+    OCaml constructor names prefixed with `Raw' require data-dependent
+    disambiguation or reduction during the elaboration to the external
+    syntax.
+
+    The parsers associated with these types are only intended to be used in
+    the definition of LF type-level or term-level constants. This is a weak,
+    representational function space without case analysis or recursion. *)
 module LF = struct
+  module rec Kind : sig
+    (** Raw LF kinds. *)
+    type t =
+      | Typ of { location : Location.t }
+          (** [Typ { _ }] is the kind of simple types `type'. *)
+      | Arrow of
+          { location : Location.t
+          ; domain : Typ.t
+          ; range : Kind.t
+          }
+          (** [Arrow { domain; range; _ }] is the kind `domain -> range'. *)
+      | Pi of
+          { location : Location.t
+          ; parameter_name : Identifier.t Option.t
+          ; parameter_type : Typ.t
+          ; range : Kind.t
+          }
+          (** [Pi { parameter_name = x; parameter_type = t; range; _ }] is the
+              dependent product kind `{ x : t } range'. *)
+  end =
+    Kind
+
+  and Typ : sig
+    (** Raw LF types. *)
+    type t =
+      | RawApplication of
+          { location : Location.t
+          ; terms : Term.t List1.t
+          }
+          (** [RawApplication { terms; _ }] is a partially parsed list of
+              operators and operands delimited by white space. The operators
+              therein have not been resolved, and user-defined fixities and
+              associativities have to be taken into account during
+              elaboration to the external syntax. *)
+      | ForwardArrow of
+          { location : Location.t
+          ; domain : Typ.t
+          ; range : Typ.t
+          }
+          (** [ForwardArrow { domain; range; _ }] is the type `domain ->
+              range'. *)
+      | BackwardArrow of
+          { location : Location.t
+          ; domain : Typ.t
+          ; range : Typ.t
+          }
+          (** [BackwardArrow { domain; range; _ }] is the type `domain <-
+              range'. *)
+      | Pi of
+          { location : Location.t
+          ; parameter_name : Identifier.t Option.t
+          ; parameter_type : Typ.t
+          ; range : Typ.t
+          }
+          (** [Pi { parameter_name = x; parameter_type = t; range; _ }] is the
+              dependent product type `{ x : t } range'. *)
+  end =
+    Typ
+
+  and Term : sig
+    (** Raw LF terms. *)
+    type t =
+      | RawName of
+          { location : Location.t
+          ; name : Identifier.t
+          }
+          (** [RawName { name; _ }] is the unresolved name `Name. It may
+              refer to a variable, a term-level constant, or a free variable. *)
+      | RawQualifiedName of
+          { location : Location.t
+          ; qualified_name : QualifiedIdentifier.t
+          }
+          (** [RawQualifiedName { qualified_name; _ }] is the unresolved term
+              `qualified_name'. It may refer to a type-level constant, a
+              term-level constant, or be unbound. *)
+      | RawApplication of
+          { location : Location.t
+          ; terms : Term.t List2.t
+          }
+          (** [RawApplication { terms; _ }] is a partially parsed list of
+              operators and operands delimited by white space. The operators
+              therein have not been resolved, and user-defined fixities and
+              associativities have to be taken into account during
+              elaboration to the external syntax. *)
+      | Abstraction of
+          { location : Location.t
+          ; parameter_name : Identifier.t Option.t
+          ; parameter_type : Typ.t Option.t
+          ; body : Term.t
+          }
+          (** [Abstraction { parameter_name = x; body; _ }] is the term `\x.
+              body'. *)
+      | Wildcard of { location : Location.t }
+          (** [Wildcard { _ }] is the omission of a fresh term-level
+              variable. *)
+      | TypeAnnotated of
+          { location : Location.t
+          ; term : Term.t
+          ; typ : Typ.t
+          }
+          (** [TypeAnnotated { term = u; typ = t; _ }] is the term `u : t`. *)
+  end =
+    Term
+
+  let location_of_kind kind =
+    match kind with
+    | Kind.Typ { location; _ }
+    | Kind.Arrow { location; _ }
+    | Kind.Pi { location; _ } -> location
+
+  let location_of_typ typ =
+    match typ with
+    | Typ.RawApplication { location; _ }
+    | Typ.ForwardArrow { location; _ }
+    | Typ.BackwardArrow { location; _ }
+    | Typ.Pi { location; _ } -> location
+
+  let location_of_term term =
+    match term with
+    | Term.RawName { location; _ }
+    | Term.RawQualifiedName { location; _ }
+    | Term.RawApplication { location; _ }
+    | Term.Abstraction { location; _ }
+    | Term.Wildcard { location; _ }
+    | Term.TypeAnnotated { location; _ } -> location
+end
+
+(** {1 Parser Contextual LF Syntax} *)
+module CLF = struct
   include Syncom.LF
 
   type kind =
@@ -123,37 +263,31 @@ module LF = struct
     | DDec of dctx * typ_decl
     | CtxHole
 
-  and sch_elem =
-    | SchElem of Location.t * typ_decl ctx * typ_rec
+  and sch_elem = SchElem of Location.t * typ_decl ctx * typ_rec
 
-  and schema =
-    | Schema of sch_elem list
+  and schema = Schema of sch_elem list
 
   and mctx = ctyp_decl ctx
 
   type mfront =
     | ClObj of dctx * sub
-    (* ClObj doesn't *really* contain just a substitution.
-       The problem is that syntactically, we can't tell
-       whether `[psi |- a]' is a boxed object or
-       substitution! So it turns out that,
-       syntactically, substitutions encompass both
-       possibilities: a substitution beginning with
-       EmptySub and having just one term term in it
-       can represent a boxed term. We disambiguate
-       substitutions from terms at a later time. *)
+    (* ClObj doesn't *really* contain just a substitution. The problem is
+       that syntactically, we can't tell whether `[psi |- a]' is a boxed
+       object or substitution! So it turns out that, syntactically,
+       substitutions encompass both possibilities: a substitution beginning
+       with EmptySub and having just one term term in it can represent a
+       boxed term. We disambiguate substitutions from terms at a later
+       time. *)
     | CObj of dctx
 
-  let loc_of_head =
-    function
+  let loc_of_head = function
     | Name (l, _, _) -> l
     | Hole l -> l
     | PVar (l, _, _) -> l
     | Proj (l, _, _) -> l
 end
 
-
-(** Parser Computation Syntax *)
+(** {1 Parser Computation Syntax} *)
 module Comp = struct
   include Syncom.Comp
 
@@ -161,20 +295,20 @@ module Comp = struct
     | Ctype of { location : Location.t }
     | ArrKind of
         { location : Location.t
-        ; domain : LF.ctyp
+        ; domain : CLF.ctyp
         ; range : kind
         }
     | PiKind of
         { location : Location.t
         ; parameter_name : Name.t
-        ; parameter_type : LF.ctyp
+        ; parameter_type : CLF.ctyp
         ; plicity : Plicity.t
         ; range : kind
         }
 
-  type meta_obj = Location.t * LF.mfront
+  type meta_obj = Location.t * CLF.mfront
 
-  type meta_typ = LF.ctyp
+  type meta_typ = CLF.ctyp
 
   type typ =
     | TypBase of
@@ -198,7 +332,7 @@ module Comp = struct
     | TypPiBox of
         { location : Location.t
         ; parameter_name : Name.t
-        ; parameter_type : LF.ctyp
+        ; parameter_type : CLF.ctyp
         ; plicity : Plicity.t
         ; range : typ
         }
@@ -282,7 +416,7 @@ module Comp = struct
     | PatMAnn of
         { location : Location.t
         ; pattern : pattern
-        ; typs : (Name.t * LF.ctyp) List1.t
+        ; typs : (Name.t * CLF.ctyp) List1.t
         }
     | PatObs of
         { location : Location.t
@@ -299,20 +433,21 @@ module Comp = struct
   type suffices_typ = typ generic_suffices_typ
 
   type named_order = Name.t generic_order
+
   type numeric_order = int generic_order
 
   type total_dec =
     | NumericTotal of Location.t * numeric_order option
-    | NamedTotal of Location.t * named_order option * Name.t * Name.t option list
+    | NamedTotal of
+        Location.t * named_order option * Name.t * Name.t option list
     | Trust of Location.t
 
-  type ctyp_decl =
-    | CTypDecl of Name.t * typ
+  type ctyp_decl = CTypDecl of Name.t * typ
 
-  type gctx = ctyp_decl LF.ctx
+  type gctx = ctyp_decl CLF.ctx
 
   type hypotheses =
-    { cD : LF.mctx
+    { cD : CLF.mctx
     ; cG : gctx
     }
 
@@ -362,7 +497,7 @@ module Comp = struct
     | Apply { location; _ } -> location
 end
 
-(** Syntax of Harpoon commands. *)
+(** {1 Harpoon Command Syntax} *)
 module Harpoon = struct
   type defer_kind =
     [ `subgoal
@@ -401,47 +536,42 @@ module Harpoon = struct
     | `defer
     ]
 
-  type info_kind =
-    [ `prog
-    ]
+  type info_kind = [ `prog ]
 
   type command =
     (* Administrative commands *)
     | Rename of
-      { rename_from: Name.t
-      ; rename_to: Name.t
-      ; level: level
-      }
+        { rename_from : Name.t
+        ; rename_to : Name.t
+        ; level : level
+        }
     | ToggleAutomation of automation_kind * automation_change
-
     | Type of Comp.exp
     | Info of info_kind * Name.t
     | SelectTheorem of Name.t
-    | Theorem of [ basic_command | `show_ihs | `show_proof | `dump_proof of string ]
+    | Theorem of
+        [ basic_command | `show_ihs | `show_proof | `dump_proof of string ]
     | Session of [ basic_command | `create | `serialize ]
     | Subgoal of basic_command
     | Undo
     | Redo
     | History
-
     | Translate of Name.t
-
     (* Actual tactics *)
-    | Intros of string list option (* list of names for introduced variables *)
-
+    | Intros of
+        string list option (* list of names for introduced variables *)
     | Split of split_kind * Comp.exp (* the expression to split on *)
     | MSplit of Location.t * Name.t (* split on a metavariable *)
-    | Solve of Comp.exp (* the expression to solve the current subgoal with *)
+    | Solve of
+        Comp.exp (* the expression to solve the current subgoal with *)
     | Unbox of Comp.exp * Name.t * Comp.unbox_modifier option
     | By of Comp.exp * Name.t
     | Suffices of Comp.exp * Comp.suffices_typ list
     | Help
 end
 
-
-(** Parser Signature Syntax *)
+(** {1 Parser Signature Syntax} *)
 module Sgn = struct
-
   type datatype_flavour =
     | InductiveDatatype
     | StratifiedDatatype
@@ -468,127 +598,110 @@ module Sgn = struct
   (* Pragmas that need to be declared first *)
   type global_pragma =
     | NoStrengthen
-    | Coverage of [`Error | `Warn]
+    | Coverage of [ `Error | `Warn ]
 
   type thm_decl =
     | Theorem of
-      { location : Location.t
-      ; name : Name.t
-      ; typ : Comp.typ
-      ; order : Comp.total_dec option
-      ; body : Comp.thm
-      }
+        { location : Location.t
+        ; name : Name.t
+        ; typ : Comp.typ
+        ; order : Comp.total_dec option
+        ; body : Comp.thm
+        }
 
   (** Parsed signature element *)
   type decl =
     | Typ of
-      { location: Location.t
-      ; identifier: Name.t
-      ; kind: LF.kind
-      } (** LF type family declaration *)
-
+        { location : Location.t
+        ; identifier : Name.t
+        ; kind : LF.Kind.t
+        }  (** LF type family declaration *)
     | Const of
-      { location: Location.t
-      ; identifier: Name.t
-      ; typ: LF.typ
-      } (** LF type constant decalaration *)
-
+        { location : Location.t
+        ; identifier : Name.t
+        ; typ : LF.Typ.t
+        }  (** LF type constant decalaration *)
     | CompTyp of
-      { location: Location.t
-      ; identifier: Name.t
-      ; kind: Comp.kind
-      ; datatype_flavour: datatype_flavour
-      } (** Computation-level data type constant declaration *)
-
+        { location : Location.t
+        ; identifier : Name.t
+        ; kind : Comp.kind
+        ; datatype_flavour : datatype_flavour
+        }  (** Computation-level data type constant declaration *)
     | CompCotyp of
-      { location: Location.t
-      ; identifier: Name.t
-      ; kind: Comp.kind
-      } (** Computation-level codata type constant declaration *)
-
+        { location : Location.t
+        ; identifier : Name.t
+        ; kind : Comp.kind
+        }  (** Computation-level codata type constant declaration *)
     | CompConst of
-      { location: Location.t
-      ; identifier: Name.t
-      ; typ: Comp.typ
-      } (** Computation-level type constructor declaration *)
-
+        { location : Location.t
+        ; identifier : Name.t
+        ; typ : Comp.typ
+        }  (** Computation-level type constructor declaration *)
     | CompDest of
-      { location: Location.t
-      ; identifier: Name.t
-      ; mctx: LF.mctx
-      ; observation_typ: Comp.typ
-      ; return_typ: Comp.typ
-      } (** Computation-level type destructor declaration *)
-
+        { location : Location.t
+        ; identifier : Name.t
+        ; mctx : CLF.mctx
+        ; observation_typ : Comp.typ
+        ; return_typ : Comp.typ
+        }  (** Computation-level type destructor declaration *)
     | CompTypAbbrev of
-      { location: Location.t
-      ; identifier: Name.t
-      ; kind: Comp.kind
-      ; typ: Comp.typ
-      } (** Synonym declaration for computation-level type *)
-
+        { location : Location.t
+        ; identifier : Name.t
+        ; kind : Comp.kind
+        ; typ : Comp.typ
+        }  (** Synonym declaration for computation-level type *)
     | Schema of
-      { location: Location.t
-      ; identifier: Name.t
-      ; schema: LF.schema
-      } (** Declaration of a specification for a set of contexts *)
-
+        { location : Location.t
+        ; identifier : Name.t
+        ; schema : CLF.schema
+        }  (** Declaration of a specification for a set of contexts *)
     | Pragma of
-      { location: Location.t
-      ; pragma: pragma
-      } (** Compiler directive *)
-
+        { location : Location.t
+        ; pragma : pragma
+        }  (** Compiler directive *)
     | GlobalPragma of
-      { location: Location.t
-      ; pragma: global_pragma
-      } (** Global directive *)
-
+        { location : Location.t
+        ; pragma : global_pragma
+        }  (** Global directive *)
     | MRecTyp of
-      { location: Location.t
-      ; declarations: (decl * decl list) List1.t
-      } (** Mutually-recursive LF type family declaration *)
-
+        { location : Location.t
+        ; declarations : (decl * decl list) List1.t
+        }  (** Mutually-recursive LF type family declaration *)
     | Theorems of
-      { location: Location.t
-      ; theorems: thm_decl List1.t
-      } (** Mutually recursive theorem declaration(s) *)
-
+        { location : Location.t
+        ; theorems : thm_decl List1.t
+        }  (** Mutually recursive theorem declaration(s) *)
     | Val of
-      { location: Location.t
-      ; identifier: Name.t
-      ; typ: Comp.typ option
-      ; expression: Comp.exp
-      } (** Computation-level value declaration *)
-
+        { location : Location.t
+        ; identifier : Name.t
+        ; typ : Comp.typ option
+        ; expression : Comp.exp
+        }  (** Computation-level value declaration *)
     | Query of
-      { location: Location.t
-      ; name: Name.t option
-      ; mctx: LF.mctx
-      ; typ: LF.typ
-      ; expected_solutions: int option
-      ; maximum_tries: int option
-      } (** Logic programming query on LF type *)
-
+        { location : Location.t
+        ; name : Name.t option
+        ; mctx : CLF.mctx
+        ; typ : CLF.typ
+        ; expected_solutions : int option
+        ; maximum_tries : int option
+        }  (** Logic programming query on LF type *)
     | MQuery of
-      { location: Location.t
-      ; typ: Comp.typ
-      ; expected_solutions: int option
-      ; search_tries: int option
-      ; search_depth: int option
-      } (** Logic programming mquery on Comp. type *)
-
+        { location : Location.t
+        ; typ : Comp.typ
+        ; expected_solutions : int option
+        ; search_tries : int option
+        ; search_depth : int option
+        }  (** Logic programming mquery on Comp. type *)
     | Module of
-      { location: Location.t
-      ; identifier: string
-      ; declarations: decl list
-      } (** Namespace declaration for other declarations *)
-
+        { location : Location.t
+        ; identifier : string
+        ; declarations : decl list
+        }  (** Namespace declaration for other declarations *)
     | Comment of
-      { location: Location.t
-      ; content: string
-      } (** Documentation comment *)
+        { location : Location.t
+        ; content : string
+        }  (** Documentation comment *)
 
   (** Parsed Beluga project *)
   type sgn = decl list
-
 end

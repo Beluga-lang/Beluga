@@ -1,9 +1,9 @@
 module LF : sig
-  val elaborate_kind : Synprs.LF.kind -> Synext.LF.kind
+  val elaborate_kind : Synprs.LF.Kind.t -> Synext.LF.kind
 
-  val elaborate_typ : Synprs.LF.typ -> Synext.LF.typ
+  val elaborate_typ : Synprs.LF.Typ.t -> Synext.LF.typ
 
-  val elaborate_term : Synprs.LF.term -> Synext.LF.normal
+  val elaborate_term : Synprs.LF.Term.t -> Synext.LF.normal
 end
 
 module Comp : sig

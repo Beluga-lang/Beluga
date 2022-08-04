@@ -25,6 +25,7 @@ type t =
   | PIPE (* | *)
   | TURNSTILE (* |- *)
   | DOTS (* .. *)
+  | BACKARROW (* <- *)
   | ARROW (* -> *)
   | THICK_ARROW (* => *)
   | HAT (* ^ *)
@@ -126,6 +127,7 @@ include (Show.Make (struct
     | PIPE -> p "|"
     | TURNSTILE -> p "|-"
     | DOTS -> p ".."
+    | BACKARROW -> p "<-"
     | ARROW -> p "->"
     | THICK_ARROW -> p "=>"
     | HAT -> p "^"
@@ -211,6 +213,7 @@ module Class = struct
       | PIPE -> p "PIPE"
       | TURNSTILE -> p "TURNSTILE"
       | DOTS -> p "DOTS"
+      | BACKARROW -> p "BACKARROW"
       | ARROW -> p "ARROW"
       | THICK_ARROW -> p "THICK_ARROW"
       | HAT -> p "HAT"

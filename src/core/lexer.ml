@@ -63,21 +63,23 @@ let ident_continue =
 let ident_start = [%sedlex.regexp? Sub (ident_continue, digit)]
 
 let ident = [%sedlex.regexp? ident_start, Star ident_continue]
-let number = [%sedlex.regexp? Plus digit]
-let hole = [%sedlex.regexp? '?', Opt ident]
-let pragma = [%sedlex.regexp? "--", Plus alphabetic]
-let hash_ident = [%sedlex.regexp? '#', ident]
-let hash_blank = [%sedlex.regexp? "#_"]
+let digit =        [%sedlex.regexp? '0'..'9']
+let number =       [%sedlex.regexp? Plus digit]
+let hole =         [%sedlex.regexp? '?', Opt ident]
+let pragma =       [%sedlex.regexp? "--", Plus alphabetic]
+let hash_ident =   [%sedlex.regexp? '#', ident]
+let hash_blank =   [%sedlex.regexp? "#_"]
 let dollar_ident = [%sedlex.regexp? '$', ident]
 let dollar_blank = [%sedlex.regexp? "$_"]
-let dot_number = [%sedlex.regexp? '.', number]
-let arrow =       [%sedlex.regexp? ("->" | 0x2192)]
-let turnstile =   [%sedlex.regexp? ("|-" | 0x22a2)]
-let thick_arrow = [%sedlex.regexp? ("=>" | 0x21d2)]
-let dots =        [%sedlex.regexp? (".." | 0x2026)]
+let dot_number =   [%sedlex.regexp? '.', number]
+let backarrow =    [%sedlex.regexp? ("<-" | 0x2190)]
+let arrow =        [%sedlex.regexp? ("->" | 0x2192)]
+let turnstile =    [%sedlex.regexp? ("|-" | 0x22a2)]
+let thick_arrow =  [%sedlex.regexp? ("=>" | 0x21d2)]
+let dots =         [%sedlex.regexp? (".." | 0x2026)]
 
 let doc_comment_begin = [%sedlex.regexp? "%{{"]
-let doc_comment_end = [%sedlex.regexp? "}}%"]
+let doc_comment_end =   [%sedlex.regexp? "}}%"]
 
 (** Basically, anything that doesn't terminate the block comment.
     This is somewhat tricky to detect.
@@ -117,10 +119,9 @@ let rec skip_nested_block_comment lexbuf =
 
 let rec tokenize lexbuf =
   let const t = Fun.const t (get_lexeme lexbuf) in
-  let module T = Token in
   match%sedlex lexbuf with
   (* comments *)
-  | eof -> const T.EOI
+  | eof -> const Token.EOI
   | white_space ->
      ignore @@ get_lexeme lexbuf;
      tokenize lexbuf
@@ -133,86 +134,87 @@ let rec tokenize lexbuf =
   (* STRING LITERALS *)
   | string_literal ->
      let s = get_lexeme lexbuf in
-     T.STRING (String.sub s 1 (String.length s - 2))
+     Token.STRING (String.sub s 1 (String.length s - 2))
 
   (* KEYWORDS *)
-  | "and" -> const T.KW_AND
-  | "block" -> const T.KW_BLOCK
-  | "case" -> const T.KW_CASE
-  | "fn" -> const T.KW_FN
-  | "else" -> const T.KW_ELSE
-  | "if" -> const T.KW_IF
-  | "impossible" -> const T.KW_IMPOSSIBLE
-  | "in" -> const T.KW_IN
-  | "let" -> const T.KW_LET
-  | "mlam"  -> const T.KW_MLAM
-  | "of" -> const T.KW_OF
-  | "rec" -> const T.KW_REC
-  | "schema" -> const T.KW_SCHEMA
-  | "some" -> const T.KW_SOME
-  | "then" -> const T.KW_THEN
-  | "module" -> const T.KW_MODULE
-  | "struct" -> const T.KW_STRUCT
-  | "end" -> const T.KW_END
-  | "trust" -> const T.KW_TRUST
-  | "total" -> const T.KW_TOTAL
-  | "type" -> const T.KW_TYPE
-  | "ctype" -> const T.KW_CTYPE
-  | "prop" -> const T.KW_PROP
-  | "inductive" -> const T.KW_INDUCTIVE
-  | "coinductive" -> const T.KW_COINDUCTIVE
-  | "stratified" -> const T.KW_STRATIFIED
-  | "LF" -> const T.KW_LF
-  | "fun" -> const T.KW_FUN
-  | "typedef" -> const T.KW_TYPEDEF
-  | "proof" -> const T.KW_PROOF
-  | "by" -> const T.KW_BY
-  | "as" -> const T.KW_AS
-  | "suffices" -> const T.KW_SUFFICES
-  | "toshow" -> const T.KW_TOSHOW
+  | "and" -> const Token.KW_AND
+  | "block" -> const Token.KW_BLOCK
+  | "case" -> const Token.KW_CASE
+  | "fn" -> const Token.KW_FN
+  | "else" -> const Token.KW_ELSE
+  | "if" -> const Token.KW_IF
+  | "impossible" -> const Token.KW_IMPOSSIBLE
+  | "in" -> const Token.KW_IN
+  | "let" -> const Token.KW_LET
+  | "mlam"  -> const Token.KW_MLAM
+  | "of" -> const Token.KW_OF
+  | "rec" -> const Token.KW_REC
+  | "schema" -> const Token.KW_SCHEMA
+  | "some" -> const Token.KW_SOME
+  | "then" -> const Token.KW_THEN
+  | "module" -> const Token.KW_MODULE
+  | "struct" -> const Token.KW_STRUCT
+  | "end" -> const Token.KW_END
+  | "trust" -> const Token.KW_TRUST
+  | "total" -> const Token.KW_TOTAL
+  | "type" -> const Token.KW_TYPE
+  | "ctype" -> const Token.KW_CTYPE
+  | "prop" -> const Token.KW_PROP
+  | "inductive" -> const Token.KW_INDUCTIVE
+  | "coinductive" -> const Token.KW_COINDUCTIVE
+  | "stratified" -> const Token.KW_STRATIFIED
+  | "LF" -> const Token.KW_LF
+  | "fun" -> const Token.KW_FUN
+  | "typedef" -> const Token.KW_TYPEDEF
+  | "proof" -> const Token.KW_PROOF
+  | "by" -> const Token.KW_BY
+  | "as" -> const Token.KW_AS
+  | "suffices" -> const Token.KW_SUFFICES
+  | "toshow" -> const Token.KW_TOSHOW
 
   (* SYMBOLS *)
-  | pragma -> T.PRAGMA (String.drop 2 (get_lexeme lexbuf))
-  | arrow -> const T.ARROW
-  | thick_arrow -> const T.THICK_ARROW
-  | turnstile -> const T.TURNSTILE
-  | "[" -> const T.LBRACK
-  | "]" -> const T.RBRACK
-  | "{" -> const T.LBRACE
-  | "}" -> const T.RBRACE
-  | "(" -> const T.LPAREN
-  | ")" -> const T.RPAREN
-  | "<" -> const T.LANGLE
-  | ">" -> const T.RANGLE
-  | "^" -> const T.HAT
-  | "," -> const T.COMMA
-  | "::" -> const T.DOUBLE_COLON
-  | ":" -> const T.COLON
-  | ";" -> const T.SEMICOLON
-  | "|" -> const T.PIPE
-  | "\\" -> const T.LAMBDA
-  | "*" -> const T.STAR
-  | "=" -> const T.EQUALS
-  | "/" -> const T.SLASH
-  | "+" -> const T.PLUS
+  | pragma -> Token.PRAGMA (String.drop 2 (get_lexeme lexbuf))
+  | backarrow -> const Token.BACKARROW
+  | arrow -> const Token.ARROW
+  | thick_arrow -> const Token.THICK_ARROW
+  | turnstile -> const Token.TURNSTILE
+  | "[" -> const Token.LBRACK
+  | "]" -> const Token.RBRACK
+  | "{" -> const Token.LBRACE
+  | "}" -> const Token.RBRACE
+  | "(" -> const Token.LPAREN
+  | ")" -> const Token.RPAREN
+  | "<" -> const Token.LANGLE
+  | ">" -> const Token.RANGLE
+  | "^" -> const Token.HAT
+  | "," -> const Token.COMMA
+  | "::" -> const Token.DOUBLE_COLON
+  | ":" -> const Token.COLON
+  | ";" -> const Token.SEMICOLON
+  | "|" -> const Token.PIPE
+  | "\\" -> const Token.LAMBDA
+  | "*" -> const Token.STAR
+  | "=" -> const Token.EQUALS
+  | "/" -> const Token.SLASH
+  | "+" -> const Token.PLUS
 
-  | hole -> T.HOLE (String.drop 1 (get_lexeme lexbuf))
-  | "_" -> const T.UNDERSCORE
+  | hole -> Token.HOLE (String.drop 1 (get_lexeme lexbuf))
+  | "_" -> const Token.UNDERSCORE
 
-  | dot_number -> T.DOT_NUMBER (int_of_string (String.drop 1 (get_lexeme lexbuf)))
-  | dots -> const T.DOTS
-  | hash_blank -> T.HASH_BLANK
-  | hash_ident -> T.HASH_IDENT (get_lexeme lexbuf)
-  | dollar_blank -> T.DOLLAR_BLANK
-  | dollar_ident -> T.DOLLAR_IDENT (get_lexeme lexbuf)
-  | "." -> const T.DOT
-  | "#" -> const T.HASH
-  | "$" -> const T.DOLLAR
+  | dot_number -> Token.DOT_NUMBER (int_of_string (String.drop 1 (get_lexeme lexbuf)))
+  | dots -> const Token.DOTS
+  | hash_blank -> Token.HASH_BLANK
+  | hash_ident -> Token.HASH_IDENT (get_lexeme lexbuf)
+  | dollar_blank -> Token.DOLLAR_BLANK
+  | dollar_ident -> Token.DOLLAR_IDENT (get_lexeme lexbuf)
+  | "." -> const Token.DOT
+  | "#" -> const Token.HASH
+  | "$" -> const Token.DOLLAR
 
-  | eof -> const T.EOI
+  | eof -> const Token.EOI
 
-  | number -> T.INTLIT (get_lexeme lexbuf |> int_of_string)
-  | ident -> T.IDENT (get_lexeme lexbuf)
+  | ident -> Token.IDENT (get_lexeme lexbuf)
+  | number -> Token.INTLIT (get_lexeme lexbuf |> int_of_string)
   | _ -> throw (get_location lexbuf) (UnlexableCharacter (get_lexeme lexbuf))
 
 (** From a given generator for UTF-8, constructs a generator for tokens.

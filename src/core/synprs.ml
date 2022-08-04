@@ -82,7 +82,8 @@ module LF = struct
           ; name : Identifier.t
           }
           (** [RawName { name; _ }] is the unresolved name `Name. It may
-              refer to a variable, a term-level constant, or a free variable. *)
+              refer to a variable, a type-level constant, a term-level
+              constant, or a free variable. *)
       | RawQualifiedName of
           { location : Location.t
           ; qualified_name : QualifiedIdentifier.t

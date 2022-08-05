@@ -998,16 +998,21 @@ end = struct
         | `(' <lf-type> `)'
   *)
   let lf_type' =
-    let lf_type_atomic =
+    let lf_atomic_type =
       some LF_parsers.lf_term
       |> span
       |> labelled "LF atomic type"
       $> fun (location, terms) ->
            Typ.RawApplication { location; terms }
+    and lf_parenthesized_type =
+      parens LF_parsers.lf_type
+      |> span
+      $> fun (location, typ) ->
+           Typ.Parenthesized { location; typ }
     in
     choice
-      [ lf_type_atomic
-      ; parens LF_parsers.lf_type
+      [ lf_atomic_type
+      ; lf_parenthesized_type
       ]
     |> labelled "LF type"
 
@@ -1035,12 +1040,17 @@ end = struct
       |> labelled "LF `type' kind"
       $> fun (location, ()) ->
            Kind.Typ { location }
+    and lf_parenthesized_kind =
+      parens LF_parsers.lf_kind
+      |> span
+      $> fun (location, kind) ->
+           Kind.Parenthesized { location; kind }
     in
     choice
       [ lf_pi_kind
       ; lf_arrow_kind
       ; lf_type_kind
-      ; parens LF_parsers.lf_kind
+      ; lf_parenthesized_kind
       ]
     |> labelled "LF kind"
 
@@ -1103,11 +1113,16 @@ end = struct
       |> labelled "LF application type"
       $> fun (location, terms) ->
            Typ.RawApplication { location; terms }
+    and lf_parenthesized_type =
+      parens LF_parsers.lf_type
+      |> span
+      $> fun (location, typ) ->
+           Typ.Parenthesized { location; typ }
     in
     choice
       [ lf_pi_type
       ; lf_application_type
-      ; parens LF_parsers.lf_type
+      ; lf_parenthesized_type
       ]
     |> labelled "LF Pi or application type"
 
@@ -1234,13 +1249,18 @@ end = struct
       |> labelled "LF wildcard term"
       $> fun (location, ()) ->
            Term.Wildcard { location }
+    and parenthesized =
+      parens LF_parsers.lf_term
+      |> span
+      $> fun (location, term) ->
+           Term.Parenthesized { location; term }
     in
     choice
       [ possibly_type_annotated variable
       ; possibly_type_annotated constant
       ; lambda
       ; possibly_type_annotated wildcard
-      ; possibly_type_annotated (parens LF_parsers.lf_term)
+      ; possibly_type_annotated parenthesized
       ]
     |> labelled "LF term"
 

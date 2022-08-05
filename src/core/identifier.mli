@@ -15,6 +15,10 @@ val location : t -> Location.t
 
 val name : t -> String.t
 
+(** {1 Collections} *)
+
+module Hamt : Hamt.S with type key = t
+
 (** {1 Instances} *)
 
 include Eq.EQ with type t := t

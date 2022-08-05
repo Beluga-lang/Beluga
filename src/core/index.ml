@@ -543,7 +543,7 @@ and shunting_yard (l : Ext.LF.normal list) : Ext.LF.normal =
        reconstruct (y, z)
 
   (** [reconstruct (operands, operators)] is the normal term reconstructed by
-      iteratively rewritting the {i stack} of operands [operands] using the
+      iteratively rewriting the {i stack} of operands [operands] using the
       {i stack} of operators [operators] following Dijkstra's shunting yard
       algorithm.
 

@@ -1,9 +1,17 @@
 (library
-  (name beluga)
-  (modules :standard)
-  (libraries gen sedlex extlib support unix str)
-  (preprocess
-    (pps sedlex.ppx)))
+ (name beluga)
+ (modules :standard)
+ (libraries gen sedlex extlib support unix str)
+ (preprocess
+  (pps sedlex.ppx))
+ (instrumentation
+  (backend bisect_ppx --bisect-silent yes)))
+
 (env
-  (dev
-    (flags (:standard -w +A-z-e-p-44-48-50-58-44-48-50-58-69-70 -warn-error +A-p-37-48-50-60-37-48-50-60))))
+ (dev
+  (flags
+   (:standard
+    -w
+    +A-z-e-p-44-48-50-58-44-48-50-58-69-70
+    -warn-error
+    +A-p-37-48-50-60-37-48-50-60))))

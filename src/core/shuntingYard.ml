@@ -17,11 +17,11 @@ end = struct
 
   let take_opt =
     let rec take_opt k l acc =
-      if k = 0 then Stdlib.Option.some (acc, l)
+      if k = 0 then Option.some (acc, l)
       else
         match l with
         | x :: xs -> take_opt (k - 1) xs (x :: acc)
-        | [] -> Stdlib.Option.none
+        | [] -> Option.none
     in
     fun k l ->
       if k < 0 then raise @@ Invalid_argument "ShuntingYard.List.take_opt"
@@ -48,25 +48,8 @@ end) (Operator : sig
   include Eq.EQ with type t := t
 end) (Writer : sig
   val write : Operator.t -> Operand.t List.t -> Operand.t
-end) : sig
-  exception Empty_expression
-
-  exception Misplaced_operator of Operator.t * Operand.t List.t
-
-  exception Consecutive_non_associative_operators of Operator.t * Operator.t
-
-  exception Arity_mismatch of Operator.t * Operand.t List.t
-
-  exception Leftover_expressions of Operand.t List2.t
-
-  type primitive
-
-  val operand : Operand.t -> primitive
-
-  val operator : Operator.t -> primitive
-
-  val shunting_yard : primitive List.t -> Operand.t
-end = struct
+end) =
+struct
   exception Empty_expression
 
   exception Misplaced_operator of Operator.t * Operand.t List.t

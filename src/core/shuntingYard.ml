@@ -1,5 +1,33 @@
 open Support
 
+module List : sig
+  include module type of List
+
+  (** [take_opt k \[x1; x2; ...; xn\]] is
+      [Option.Some (\[xk; x(k-1); ...; x1\], \[x(k+1); x(k+2); ...; xn\])] if
+      [0 <= k <= n], and [Option.None] otherwise.
+
+      This implementation avoids an extraneous list reversal in the shunting
+      yard algorithm.
+
+      @raise Invalid_argument if [k < 0]. *)
+  val take_opt : int -> 'a list -> ('a list * 'a list) option
+end = struct
+  include List
+
+  let take_opt =
+    let rec take_opt k l acc =
+      if k = 0 then Stdlib.Option.some (acc, l)
+      else
+        match l with
+        | x :: xs -> take_opt (k - 1) xs (x :: acc)
+        | [] -> Stdlib.Option.none
+    in
+    fun k l ->
+      if k < 0 then raise @@ Invalid_argument "ShuntingYard.List.take_opt"
+      else take_opt k l []
+end
+
 module Make (Operand : sig
   type t
 end) (Operator : sig
@@ -63,12 +91,12 @@ end = struct
     in
     match Operator.fixity op with
     | Fixity.Prefix ->
-      if Bool.not @@ List.for_all (fun (j, _) -> j > i) arguments then
+      if Bool.not @@ List.for_all (fun (j, _) -> i < j) arguments then
         raise_misplaced_operator_exception ()
     | Fixity.Infix ->
       let [ (left, _); (right, _) ] = arguments in
       if Bool.not (left < i) then raise_misplaced_operator_exception ();
-      if Bool.not (right > i) then raise_misplaced_operator_exception ()
+      if Bool.not (i < right) then raise_misplaced_operator_exception ()
     | Fixity.Postfix ->
       if Bool.not @@ List.for_all (fun (j, _) -> j < i) arguments then
         raise_misplaced_operator_exception ()
@@ -76,7 +104,6 @@ end = struct
   let write (index, op) output =
     match List.take_opt (Operator.arity op) output with
     | Option.Some (arguments, output) ->
-      let arguments = List.rev arguments in
       validate_argument_indices (index, op) arguments;
       let arguments = List.map Pair.snd arguments in
       let result = Writer.write op arguments in

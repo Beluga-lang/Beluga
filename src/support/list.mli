@@ -132,6 +132,13 @@ val combine : 'a list -> 'b list -> ('a * 'b) list
       [(\[x1; x2; ...; xn\], \[\])]. *)
 val take : int -> 'a list -> 'a list * 'a list
 
+(** [take_opt k \[x1; x2; ...; xn\]] is
+    [Option.Some (\[x1; x2; ...; xk\], \[x(k+1); x(k+2); ...; xn\])] if
+    [0 <= k <= n], and [Option.None] otherwise.
+
+    @raise Invalid_argument if [k < 0]. *)
+val take_opt : int -> 'a list -> ('a list * 'a list) option
+
 (** [compare cmp \[a1; ...; an\] \[b1; ...; bm\]] performs a lexicographic
     comparison of the two input lists, using the same ['a -> 'a -> int]
     interface as {!Stdlib.compare}:

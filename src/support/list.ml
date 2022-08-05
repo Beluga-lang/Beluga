@@ -149,6 +149,18 @@ let take =
   in
   fun k l -> take k l []
 
+let take_opt =
+  let rec take_opt k l acc =
+    if k = 0 then Stdlib.Option.some (acc, l)
+    else
+      match l with
+      | x :: xs -> take_opt (k - 1) xs (x :: acc)
+      | [] -> Stdlib.Option.none
+  in
+  fun k l ->
+    if k < 0 then raise @@ Invalid_argument "List.take_opt"
+    else take_opt k l []
+
 let rec compare cmp l1 l2 =
   match (l1, l2) with
   | [], [] -> 0

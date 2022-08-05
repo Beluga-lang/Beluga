@@ -4,7 +4,7 @@ open Support
 
 (** {1 Parser LF Syntax}
 
-    Intermediate representation of LF kinds, types and terms to delay the
+    The intermediate representation of LF kinds, types and terms to delay the
     handling of data-dependent aspects of the grammar.
 
     OCaml constructor names prefixed with `Raw' require data-dependent
@@ -34,6 +34,10 @@ module LF = struct
           }
           (** [Pi { parameter_name = x; parameter_type = t; range; _ }] is the
               dependent product kind `{ x : t } range'. *)
+      | Parenthesized of
+          { location : Location.t
+          ; kind : Kind.t
+          }  (** [Parenthesized { kind; _ }] is the kind `( kind )`. *)
   end =
     Kind
 
@@ -71,6 +75,10 @@ module LF = struct
           }
           (** [Pi { parameter_name = x; parameter_type = t; range; _ }] is the
               dependent product type `{ x : t } range'. *)
+      | Parenthesized of
+          { location : Location.t
+          ; typ : Typ.t
+          }  (** [Parenthesized { typ; _ }] is the type `( typ )`. *)
   end =
     Typ
 
@@ -117,6 +125,10 @@ module LF = struct
           ; typ : Typ.t
           }
           (** [TypeAnnotated { term = u; typ = t; _ }] is the term `u : t`. *)
+      | Parenthesized of
+          { location : Location.t
+          ; term : Term.t
+          }  (** [Parenthesized { term; _ }] is the term `( term )`. *)
   end =
     Term
 
@@ -124,14 +136,16 @@ module LF = struct
     match kind with
     | Kind.Typ { location; _ }
     | Kind.Arrow { location; _ }
-    | Kind.Pi { location; _ } -> location
+    | Kind.Pi { location; _ }
+    | Kind.Parenthesized { location; _ } -> location
 
   let location_of_typ typ =
     match typ with
     | Typ.RawApplication { location; _ }
     | Typ.ForwardArrow { location; _ }
     | Typ.BackwardArrow { location; _ }
-    | Typ.Pi { location; _ } -> location
+    | Typ.Pi { location; _ }
+    | Typ.Parenthesized { location; _ } -> location
 
   let location_of_term term =
     match term with
@@ -140,7 +154,8 @@ module LF = struct
     | Term.RawApplication { location; _ }
     | Term.Abstraction { location; _ }
     | Term.Wildcard { location; _ }
-    | Term.TypeAnnotated { location; _ } -> location
+    | Term.TypeAnnotated { location; _ }
+    | Term.Parenthesized { location; _ } -> location
 end
 
 (** {1 Parser Contextual LF Syntax} *)

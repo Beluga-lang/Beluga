@@ -11,6 +11,8 @@ type t
 val make :
   location:Location.t -> ?modules:Identifier.t List.t -> Identifier.t -> t
 
+val make_simple : Identifier.t -> t
+
 (** {1 Destructors} *)
 
 val location : t -> Location.t

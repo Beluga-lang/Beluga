@@ -401,6 +401,28 @@ and index_typ (a : Ext.LF.typ) : Apx.LF.typ index =
  *
 *)
 and shunting_yard (l : Ext.LF.normal list) : Ext.LF.normal =
+  let module List : sig
+    include module type of List
+
+    (** [take k \[x1; x2; ...; xn\]] is
+        [(\[x1; x2; ...; xk\], \[x(k+1); x(k+2); ...; xn\])].
+        - If [k <= 0], then [take k \[x1; x2; ...; xn\]] is
+          [(\[\], \[x1; x2; ...; xn\])].
+        - If [k >= n], then [take k \[x1; x2; ...; xn\]] is
+          [(\[x1; x2; ...; xn\], \[\])]. *)
+    val take : int -> 'a list -> 'a list * 'a list
+  end = struct
+    include List
+
+    let take =
+      let rec take k l acc =
+        match l with
+        | x :: xs when k > 0 -> take (k - 1) xs (x :: acc)
+        | _ -> (acc, l)
+      in
+      fun k l -> take k l []
+  end
+  in
   let get_pragma =
     function
     | Ext.LF.Root (_, Ext.LF.Name (_, name, _), Ext.LF.Nil)

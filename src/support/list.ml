@@ -145,13 +145,13 @@ let take =
   let rec take k l acc =
     match l with
     | x :: xs when k > 0 -> take (k - 1) xs (x :: acc)
-    | _ -> (acc, l)
+    | _ -> (rev acc, l)
   in
   fun k l -> take k l []
 
 let take_opt =
   let rec take_opt k l acc =
-    if k = 0 then Stdlib.Option.some (acc, l)
+    if k = 0 then Stdlib.Option.some (rev acc, l)
     else
       match l with
       | x :: xs -> take_opt (k - 1) xs (x :: acc)

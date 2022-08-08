@@ -26,12 +26,12 @@ module LF = struct
           (** [Arrow { domain; range; _ }] is the kind `domain -> range'. *)
       | Pi of
           { location : Location.t
-          ; parameter_name : Identifier.t Option.t
+          ; parameter_identifier : Identifier.t Option.t
           ; parameter_type : Typ.t
-          ; range : Kind.t
+          ; body : Kind.t
           }
-          (** [Pi { parameter_name = x; parameter_type = t; range; _ }] is the
-              dependent product kind `{ x : t } range'. *)
+          (** [Pi { parameter_identifier = x; parameter_type = t; body; _ }] is the
+              dependent product kind `{ x : t } body'. *)
       | Parenthesized of
           { location : Location.t
           ; kind : Kind.t
@@ -42,23 +42,16 @@ module LF = struct
   (** External LF types. *)
   and Typ : sig
     type t =
-      | Variable of
-          { location : Location.t
-          ; name : Identifier.t
-          }
-          (** [Variable { name }] is the type-level variable with name
-              `name', which is either a bound variable having a Pi-type
-              binder, or a free variable having no such corresponding binder. *)
       | Constant of
           { location : Location.t
-          ; name : QualifiedIdentifier.t
+          ; identifier : QualifiedIdentifier.t
           }
-          (** [Constant { name }] is the type-level constant with qualified
-              name `name', which is necessarily bound. *)
+          (** [Constant { identifier; _ }] is the type-level constant with
+              qualified identifier `identifier', which is necessarily bound. *)
       | Application of
           { location : Location.t
           ; applicand : Typ.t
-          ; arguments : Term.t List1.t
+          ; arguments : Term.t List.t
           }
           (** [Application { applicand; arguments }] is the type-level
               application of `applicand' with arguments `arguments'. *)
@@ -78,12 +71,12 @@ module LF = struct
               range'. *)
       | Pi of
           { location : Location.t
-          ; parameter_name : Identifier.t Option.t
+          ; parameter_identifier : Identifier.t Option.t
           ; parameter_type : Typ.t
-          ; range : Typ.t
+          ; body : Typ.t
           }
-          (** [Pi { parameter_name = x; parameter_type = t; range; _ }] is the
-              dependent product type `{ x : t } range'. *)
+          (** [Pi { parameter_identifier = x; parameter_type = t; body; _ }] is the
+              dependent product type `{ x : t } body'. *)
       | Parenthesized of
           { location : Location.t
           ; typ : Typ.t
@@ -96,32 +89,33 @@ module LF = struct
     type t =
       | Variable of
           { location : Location.t
-          ; name : Identifier.t
+          ; identifier : Identifier.t
           }
-          (** [Variable { name }] is the term-level variable with name
-              `name', which is either a bound variable having a lambda
-              binder, or a free variable having no such corresponding binder. *)
+          (** [Variable { identifier; _ }] is the term-level variable with
+              name `identifier', which is either a bound variable having a
+              lambda binder, or a free variable having no such corresponding
+              binder. *)
       | Constant of
           { location : Location.t
-          ; name : QualifiedIdentifier.t
+          ; identifier : QualifiedIdentifier.t
           }
-          (** [Constant { name }] is the term-level constant with qualified
-              name `name', which is necessarily bound. *)
+          (** [Constant { identifier; _ }] is the term-level constant with
+              qualified identifier `identifier', which is necessarily bound. *)
       | Application of
           { location : Location.t
           ; applicand : Term.t
-          ; arguments : Term.t List1.t
+          ; arguments : Term.t List.t
           }
           (** [Application { applicand; arguments }] is the term-level
               application of `applicand' with arguments `arguments'. *)
       | Abstraction of
           { location : Location.t
-          ; parameter_name : Identifier.t Option.t
+          ; parameter_identifier : Identifier.t Option.t
           ; parameter_type : Typ.t Option.t
           ; body : Term.t
           }
-          (** [Abstraction { parameter_name = x; body; _ }] is the term `\x.
-              body'. *)
+          (** [Abstraction { parameter_identifier = x; body; _ }] is the term
+              `\x. body'. *)
       | Wildcard of { location : Location.t }
           (** [Wildcard { _ }] is the omission of a fresh term-level
               variable. *)
@@ -147,7 +141,6 @@ module LF = struct
 
   let location_of_typ typ =
     match typ with
-    | Typ.Variable { location; _ }
     | Typ.Constant { location; _ }
     | Typ.Application { location; _ }
     | Typ.ForwardArrow { location; _ }

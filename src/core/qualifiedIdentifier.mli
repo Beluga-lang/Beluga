@@ -20,3 +20,7 @@ val location : t -> Location.t
 val name : t -> Identifier.t
 
 val modules : t -> Identifier.t List.t
+
+(** {1 Instances} *)
+
+include Eq.EQ with type t := t

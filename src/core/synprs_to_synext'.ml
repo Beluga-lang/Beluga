@@ -5,6 +5,8 @@ module Operator : sig
 
   (** {1 Destructors} *)
 
+  val identifier : t -> QualifiedIdentifier.t
+
   val arity : t -> Int.t
 
   val precedence : t -> Int.t
@@ -17,24 +19,26 @@ module Operator : sig
 
   (** {1 Constructors} *)
 
-  val make_prefix_operator :
-    identifier:Identifier.t -> arity:Int.t -> precedence:Int.t -> t
+  val make_prefix :
+    identifier:QualifiedIdentifier.t -> arity:Int.t -> precedence:Int.t -> t
 
-  val make_infix_operator :
-       identifier:Identifier.t
+  val make_infix :
+       identifier:QualifiedIdentifier.t
     -> associativity:Associativity.t
     -> precedence:Int.t
     -> t
 
-  val make_postfix_operator :
-    identifier:Identifier.t -> arity:Int.t -> precedence:Int.t -> t
+  val make_postfix :
+    identifier:QualifiedIdentifier.t -> arity:Int.t -> precedence:Int.t -> t
+
+  val as_prefix : t -> t
 
   (** {1 Instances} *)
 
   include Eq.EQ with type t := t
 end = struct
   type t =
-    { identifier : Identifier.t
+    { identifier : QualifiedIdentifier.t
     ; arity : Int.t
     ; precedence : Int.t
     ; fixity : Fixity.t
@@ -51,9 +55,10 @@ end = struct
 
   let[@inline] associativity { associativity; _ } = associativity
 
-  let[@inline] location { identifier; _ } = Identifier.location identifier
+  let[@inline] location { identifier; _ } =
+    QualifiedIdentifier.location identifier
 
-  let make_prefix_operator ~identifier ~arity ~precedence =
+  let make_prefix ~identifier ~arity ~precedence =
     { identifier
     ; arity
     ; precedence
@@ -61,7 +66,7 @@ end = struct
     ; associativity = Associativity.right_associative
     }
 
-  let make_infix_operator ~identifier ~associativity ~precedence =
+  let make_infix ~identifier ~associativity ~precedence =
     { identifier
     ; arity = 2
     ; precedence
@@ -69,7 +74,7 @@ end = struct
     ; associativity
     }
 
-  let make_postfix_operator ~identifier ~arity ~precedence =
+  let make_postfix ~identifier ~arity ~precedence =
     { identifier
     ; arity
     ; precedence
@@ -77,8 +82,14 @@ end = struct
     ; associativity = Associativity.left_associative
     }
 
+  let as_prefix operator =
+    { operator with
+      fixity = Fixity.prefix
+    ; associativity = Associativity.right_associative
+    }
+
   include (
-    (val Eq.contramap (module Identifier) identifier) :
+    (val Eq.contramap (module QualifiedIdentifier) identifier) :
       Eq.EQ with type t := t)
 end
 
@@ -181,49 +192,39 @@ end = struct
 
   let add_term = add_entry LF_term
 
-  let add_prefix_lf_type_constant ~arity ~precedence qualified_identifier =
-    let identifier = QualifiedIdentifier.name qualified_identifier in
+  let add_prefix_lf_type_constant ~arity ~precedence identifier =
+    add_nested_entry
+      (LF_type_constant (Operator.make_prefix ~identifier ~arity ~precedence))
+      identifier
+
+  let add_infix_lf_type_constant ~associativity ~precedence identifier =
     add_nested_entry
       (LF_type_constant
-         (Operator.make_prefix_operator ~identifier ~arity ~precedence))
-      qualified_identifier
+         (Operator.make_infix ~identifier ~associativity ~precedence))
+      identifier
 
-  let add_infix_lf_type_constant ~associativity ~precedence
-      qualified_identifier =
-    let identifier = QualifiedIdentifier.name qualified_identifier in
+  let add_postfix_lf_type_constant ~arity ~precedence identifier =
     add_nested_entry
       (LF_type_constant
-         (Operator.make_infix_operator ~identifier ~associativity ~precedence))
-      qualified_identifier
+         (Operator.make_postfix ~identifier ~arity ~precedence))
+      identifier
 
-  let add_postfix_lf_type_constant ~arity ~precedence qualified_identifier =
-    let identifier = QualifiedIdentifier.name qualified_identifier in
+  let add_prefix_lf_term_constant ~arity ~precedence identifier =
     add_nested_entry
-      (LF_type_constant
-         (Operator.make_postfix_operator ~identifier ~arity ~precedence))
-      qualified_identifier
+      (LF_term_constant (Operator.make_prefix ~identifier ~arity ~precedence))
+      identifier
 
-  let add_prefix_lf_term_constant ~arity ~precedence qualified_identifier =
-    let identifier = QualifiedIdentifier.name qualified_identifier in
+  let add_infix_lf_term_constant ~associativity ~precedence identifier =
     add_nested_entry
       (LF_term_constant
-         (Operator.make_prefix_operator ~identifier ~arity ~precedence))
-      qualified_identifier
+         (Operator.make_infix ~identifier ~associativity ~precedence))
+      identifier
 
-  let add_infix_lf_term_constant ~associativity ~precedence
-      qualified_identifier =
-    let identifier = QualifiedIdentifier.name qualified_identifier in
+  let add_postfix_lf_term_constant ~arity ~precedence identifier =
     add_nested_entry
       (LF_term_constant
-         (Operator.make_infix_operator ~identifier ~associativity ~precedence))
-      qualified_identifier
-
-  let add_postfix_lf_term_constant ~arity ~precedence qualified_identifier =
-    let identifier = QualifiedIdentifier.name qualified_identifier in
-    add_nested_entry
-      (LF_term_constant
-         (Operator.make_postfix_operator ~identifier ~arity ~precedence))
-      qualified_identifier
+         (Operator.make_postfix ~identifier ~arity ~precedence))
+      identifier
 
   let add_module module_dictionary =
     add_nested_entry (Module module_dictionary)
@@ -247,118 +248,224 @@ end
 exception Unbound_qualified_identifier of QualifiedIdentifier.t
 
 module LF = struct
-  module Operand = struct
-    type t =
-      | External_typ of Synext'.LF.Typ.t
-      | External_term of Synext'.LF.Term.t
-      | Parser_typ of Synprs.LF.Typ.t
-      | Parser_term of Synprs.LF.Term.t
-  end
+  (* Exceptions for LF kind elaboration *)
 
-  module ShuntingYard =
-    ShuntingYard.Make (Operand) (Operator)
-      (struct
-        let write operator arguments = Obj.magic () (* TODO: *)
-      end)
+  exception Illegal_identifier_kind of Location.t
 
-  (* TODO: Given a list of terms, resolve operators, then only the writer
-     elaborates types and terms. *)
+  exception Illegal_qualified_identifier_kind of Location.t
 
-  let rec elaborate_kind dictionary kind =
-    match kind with
-    | Synprs.LF.Kind.Typ { location } -> Synext'.LF.Kind.Typ { location }
-    | Synprs.LF.Kind.Arrow { location; domain; range } ->
+  exception Illegal_backward_arrow_kind of Location.t
+
+  exception Illegal_hole_kind of Location.t
+
+  exception Illegal_lambda_kind of Location.t
+
+  exception Illegal_annotated_kind of Location.t
+
+  exception Illegal_application_kind of Location.t
+
+  exception Illegal_untyped_pi_kind of Location.t
+
+  (* Exceptions for LF type elaboration *)
+
+  exception Illegal_type_kind_type of Location.t
+
+  exception Illegal_hole_type of Location.t
+
+  exception Illegal_lambda_type of Location.t
+
+  exception Illegal_annotated_type of Location.t
+
+  exception Unbound_type_constant of Location.t * QualifiedIdentifier.t
+
+  (* Exceptions for LF term elaboration *)
+
+  exception Illegal_type_kind_term of Location.t
+
+  exception Illegal_pi_term of Location.t
+
+  exception Illegal_forward_arrow_term of Location.t
+
+  exception Illegal_backward_arrow_term of Location.t
+
+  exception Unbound_term_constant of Location.t * QualifiedIdentifier.t
+
+  (* Exceptions for application rewriting *)
+
+  exception Expected_term_constant of Location.t * Dictionary.entry
+
+  exception Expected_type_constant of Location.t * Dictionary.entry
+
+  exception Expected_term of Synext'.LF.Typ.t
+
+  exception Expected_type of Synext'.LF.Term.t
+
+  exception Empty_expression
+
+  exception Misplaced_operator of Location.t * Location.t List.t
+
+  exception Consecutive_non_associative_operators of Location.t * Location.t
+
+  exception Arity_mismatch of Location.t * Location.t List.t
+
+  exception Leftover_expressions of Location.t List2.t
+
+  (* Elaboration *)
+
+  let resolve_type_constant location dictionary identifier =
+    match Dictionary.lookup identifier dictionary with
+    | Option.Some (Dictionary.LF_type_constant _) ->
+      Synext'.LF.Typ.Constant { location; identifier }
+    | Option.Some entry -> raise @@ Expected_type_constant (location, entry)
+    | Option.None -> raise @@ Unbound_type_constant (location, identifier)
+
+  let resolve_term_constant location dictionary identifier =
+    match Dictionary.lookup identifier dictionary with
+    | Option.Some (Dictionary.LF_term_constant _) ->
+      Synext'.LF.Term.Constant { location; identifier }
+    | Option.Some entry -> raise @@ Expected_term_constant (location, entry)
+    | Option.None -> raise @@ Unbound_term_constant (location, identifier)
+
+  let rec elaborate_kind dictionary object_ =
+    match object_ with
+    | Synprs.LF.Object.RawIdentifier { location; identifier; _ } ->
+      raise @@ Illegal_identifier_kind location
+    | Synprs.LF.Object.RawQualifiedIdentifier { location; identifier; _ } ->
+      raise @@ Illegal_qualified_identifier_kind location
+    | Synprs.LF.Object.RawBackwardArrow { location; _ } ->
+      raise @@ Illegal_backward_arrow_kind location
+    | Synprs.LF.Object.RawHole { location; _ } ->
+      raise @@ Illegal_hole_kind location
+    | Synprs.LF.Object.RawLambda { location; _ } ->
+      raise @@ Illegal_lambda_kind location
+    | Synprs.LF.Object.RawAnnotated { location; _ } ->
+      raise @@ Illegal_annotated_kind location
+    | Synprs.LF.Object.RawApplication { location; _ } ->
+      raise @@ Illegal_application_kind location
+    | Synprs.LF.Object.RawPi { location; parameter_sort = Option.None; _ } ->
+      raise @@ Illegal_untyped_pi_kind location
+    | Synprs.LF.Object.RawType { location } ->
+      Synext'.LF.Kind.Typ { location }
+    | Synprs.LF.Object.RawForwardArrow { location; domain; range } ->
       let domain' = elaborate_typ dictionary domain
       and range' = elaborate_kind dictionary range in
       Synext'.LF.Kind.Arrow { location; domain = domain'; range = range' }
-    | Synprs.LF.Kind.Pi { location; parameter_name; parameter_type; range }
-      ->
+    | Synprs.LF.Object.RawPi
+        { location
+        ; parameter_identifier
+        ; parameter_sort = Option.Some parameter_type
+        ; body
+        } ->
       let parameter_type' = elaborate_typ dictionary parameter_type in
-      let range' =
-        match parameter_name with
-        | Option.None -> elaborate_kind dictionary range
-        | Option.Some name ->
-          let dictionary' = Dictionary.add_type name dictionary in
-          elaborate_kind dictionary' range
+      let body' =
+        match parameter_identifier with
+        | Option.None -> elaborate_kind dictionary body
+        | Option.Some identifier ->
+          let dictionary' = Dictionary.add_type identifier dictionary in
+          elaborate_kind dictionary' body
       in
       Synext'.LF.Kind.Pi
         { location
-        ; parameter_name
+        ; parameter_identifier
         ; parameter_type = parameter_type'
-        ; range = range'
+        ; body = body'
         }
-    | Synprs.LF.Kind.Parenthesized { location; kind } ->
-      let kind' = elaborate_kind dictionary kind in
-      Synext'.LF.Kind.Parenthesized { location; kind = kind' }
+    | Synprs.LF.Object.RawParenthesized { location; object_ } ->
+      let kind = elaborate_kind dictionary object_ in
+      Synext'.LF.Kind.Parenthesized { location; kind }
 
-  and elaborate_typ dictionary typ =
-    match typ with
-    | Synprs.LF.Typ.RawApplication { location; terms } ->
-      Obj.magic () (* TODO: rewrite terms to a type application *)
-    | Synprs.LF.Typ.ForwardArrow { location; domain; range } ->
+  and elaborate_typ dictionary object_ =
+    match object_ with
+    | Synprs.LF.Object.RawType { location; _ } ->
+      raise @@ Illegal_type_kind_type location
+    | Synprs.LF.Object.RawHole { location; _ } ->
+      raise @@ Illegal_hole_type location
+    | Synprs.LF.Object.RawLambda { location; _ } ->
+      raise @@ Illegal_lambda_type location
+    | Synprs.LF.Object.RawAnnotated { location; _ } ->
+      raise @@ Illegal_annotated_type location
+    | Synprs.LF.Object.RawIdentifier { location; identifier } ->
+      let qualified_identifier =
+        QualifiedIdentifier.make_simple identifier
+      in
+      resolve_type_constant location dictionary qualified_identifier
+    | Synprs.LF.Object.RawQualifiedIdentifier { location; identifier } ->
+      resolve_type_constant location dictionary identifier
+    | Synprs.LF.Object.RawForwardArrow { location; domain; range } ->
       let domain' = elaborate_typ dictionary domain
       and range' = elaborate_typ dictionary range in
       Synext'.LF.Typ.ForwardArrow
         { location; domain = domain'; range = range' }
-    | Synprs.LF.Typ.BackwardArrow { location; domain; range } ->
+    | Synprs.LF.Object.RawBackwardArrow { location; domain; range } ->
       let domain' = elaborate_typ dictionary domain
       and range' = elaborate_typ dictionary range in
       Synext'.LF.Typ.BackwardArrow
         { location; domain = domain'; range = range' }
-    | Synprs.LF.Typ.Pi { location; parameter_name; parameter_type; range }
-      -> (
+    | Synprs.LF.Object.RawPi
+        { location
+        ; parameter_identifier
+        ; parameter_sort = Option.Some parameter_type
+        ; body
+        } -> (
       let parameter_type' = elaborate_typ dictionary parameter_type in
-      match parameter_name with
+      match parameter_identifier with
       | Option.None ->
-        let range' = elaborate_typ dictionary range in
+        let body' = elaborate_typ dictionary body in
         Synext'.LF.Typ.Pi
           { location
-          ; parameter_name
+          ; parameter_identifier
           ; parameter_type = parameter_type'
-          ; range = range'
+          ; body = body'
           }
-      | Option.Some name ->
-        let dictionary' = Dictionary.add_type name dictionary in
-        let range' = elaborate_typ dictionary' range in
+      | Option.Some parameter ->
+        let dictionary' = Dictionary.add_type parameter dictionary in
+        let body' = elaborate_typ dictionary' body in
         Synext'.LF.Typ.Pi
           { location
-          ; parameter_name
+          ; parameter_identifier
           ; parameter_type = parameter_type'
-          ; range = range'
+          ; body = body'
           })
-    | Synprs.LF.Typ.Parenthesized { location; typ } ->
-      let typ' = elaborate_typ dictionary typ in
-      Synext'.LF.Typ.Parenthesized { location; typ = typ' }
+    | Synprs.LF.Object.RawApplication { location; objects } -> (
+      match elaborate_application dictionary (List2.to_list objects) with
+      | `Term term -> raise @@ Expected_type term
+      | `Typ typ -> typ)
+    | Synprs.LF.Object.RawParenthesized { location; object_ } ->
+      let typ = elaborate_typ dictionary object_ in
+      Synext'.LF.Typ.Parenthesized { location; typ }
 
-  and elaborate_term dictionary term =
-    match term with
-    | Synprs.LF.Term.RawName { location; name } -> (
-      let qualified_name = QualifiedIdentifier.make_simple name in
-      match Dictionary.lookup qualified_name dictionary with
-      | Option.None | Option.Some Dictionary.LF_term ->
-        Synext'.LF.Term.Variable { location; name }
-      | Option.Some (Dictionary.LF_term_constant _) ->
-        Synext'.LF.Term.Constant { location; name = qualified_name }
-      | Option.Some _ -> Obj.magic () (* TODO: Type error *))
-    | Synprs.LF.Term.RawQualifiedName { location; qualified_name } -> (
-      match Dictionary.lookup qualified_name dictionary with
-      | Option.None -> raise @@ Unbound_qualified_identifier qualified_name
-      | Option.Some (Dictionary.LF_term_constant _) ->
-        Synext'.LF.Term.Constant { location; name = qualified_name }
-      | Option.Some _ -> Obj.magic () (* TODO: Type error *))
-    | Synprs.LF.Term.RawApplication { location; terms } ->
-      Obj.magic () (* TODO: rewrite terms to a term application *)
-    | Synprs.LF.Term.Abstraction
-        { location; parameter_name; parameter_type; body } -> (
-      let parameter_type' =
-        Option.map (elaborate_typ dictionary) parameter_type
+  and elaborate_term dictionary object_ =
+    match object_ with
+    | Synprs.LF.Object.RawType { location; _ } ->
+      raise @@ Illegal_type_kind_term location
+    | Synprs.LF.Object.RawPi { location; _ } ->
+      raise @@ Illegal_pi_term location
+    | Synprs.LF.Object.RawForwardArrow { location; _ } ->
+      raise @@ Illegal_forward_arrow_term location
+    | Synprs.LF.Object.RawBackwardArrow { location; _ } ->
+      raise @@ Illegal_backward_arrow_term location
+    | Synprs.LF.Object.RawIdentifier { location; identifier } ->
+      let qualified_identifier =
+        QualifiedIdentifier.make_simple identifier
       in
-      match parameter_name with
+      resolve_term_constant location dictionary qualified_identifier
+    | Synprs.LF.Object.RawQualifiedIdentifier { location; identifier } ->
+      resolve_term_constant location dictionary identifier
+    | Synprs.LF.Object.RawApplication { location; objects } -> (
+      match elaborate_application dictionary (List2.to_list objects) with
+      | `Typ typ -> raise @@ Expected_term typ
+      | `Term term -> term)
+    | Synprs.LF.Object.RawLambda
+        { location; parameter_identifier; parameter_sort; body } -> (
+      let parameter_type' =
+        Option.map (elaborate_typ dictionary) parameter_sort
+      in
+      match parameter_identifier with
       | Option.None ->
         let body' = elaborate_term dictionary body in
         Synext'.LF.Term.Abstraction
           { location
-          ; parameter_name
+          ; parameter_identifier
           ; parameter_type = parameter_type'
           ; body = body'
           }
@@ -367,17 +474,184 @@ module LF = struct
         let body' = elaborate_term dictionary' body in
         Synext'.LF.Term.Abstraction
           { location
-          ; parameter_name
+          ; parameter_identifier
           ; parameter_type = parameter_type'
           ; body = body'
           })
-    | Synprs.LF.Term.Wildcard { location } ->
+    | Synprs.LF.Object.RawHole { location } ->
       Synext'.LF.Term.Wildcard { location }
-    | Synprs.LF.Term.TypeAnnotated { location; term; typ } ->
-      let term' = elaborate_term dictionary term
-      and typ' = elaborate_typ dictionary typ in
-      Synext'.LF.Term.TypeAnnotated { location; term = term'; typ = typ' }
-    | Synprs.LF.Term.Parenthesized { location; term } ->
-      let term' = elaborate_term dictionary term in
-      Synext'.LF.Term.Parenthesized { location; term = term' }
+    | Synprs.LF.Object.RawAnnotated { location; object_; sort } ->
+      let term = elaborate_term dictionary object_
+      and typ = elaborate_typ dictionary sort in
+      Synext'.LF.Term.TypeAnnotated { location; term; typ }
+    | Synprs.LF.Object.RawParenthesized { location; object_ } ->
+      let term = elaborate_term dictionary object_ in
+      Synext'.LF.Term.Parenthesized { location; term }
+
+  and elaborate_application dictionary =
+    let module LF_operand = struct
+      type t =
+        | External_typ of Synext'.LF.Typ.t
+        | External_term of Synext'.LF.Term.t
+        | Parser_object of Synprs.LF.Object.t
+
+      let location = function
+        | External_typ t -> Synext'.LF.location_of_typ t
+        | External_term t -> Synext'.LF.location_of_term t
+        | Parser_object t -> Synprs.LF.location_of_object t
+    end in
+    let module LF_operator = struct
+      type t =
+        | Type_constant of
+            { operator : Operator.t
+            ; applicand : Synext'.LF.Typ.t
+            }
+        | Term_constant of
+            { operator : Operator.t
+            ; applicand : Synext'.LF.Term.t
+            }
+
+      let operator = function
+        | Type_constant { operator; _ } | Term_constant { operator; _ } ->
+          operator
+
+      let arity = Fun.(operator >> Operator.arity)
+
+      let precedence = Fun.(operator >> Operator.precedence)
+
+      let fixity = Fun.(operator >> Operator.fixity)
+
+      let associativity = Fun.(operator >> Operator.associativity)
+
+      let location operator =
+        match operator with
+        | Type_constant { applicand; _ } ->
+          Synext'.LF.location_of_typ applicand
+        | Term_constant { applicand; _ } ->
+          Synext'.LF.location_of_term applicand
+
+      include (
+        (val Eq.contramap (module Operator) operator) :
+          Eq.EQ with type t := t)
+    end in
+    let module ShuntingYard =
+      ShuntingYard.Make (LF_operand) (LF_operator)
+        (struct
+          let elaborate_arguments arguments =
+            List.map
+              (fun argument ->
+                match argument with
+                | LF_operand.External_term term -> term
+                | LF_operand.External_typ typ -> raise @@ Expected_term typ
+                | LF_operand.Parser_object object_ ->
+                  elaborate_term dictionary object_)
+              arguments
+
+          let write operator arguments =
+            let operator_location = LF_operator.location operator in
+            let location =
+              List.fold_left
+                (fun acc t -> Location.join acc (LF_operand.location t))
+                operator_location arguments
+            in
+            let arguments = elaborate_arguments arguments in
+            match operator with
+            | LF_operator.Type_constant { applicand; _ } ->
+              LF_operand.External_typ
+                (Synext'.LF.Typ.Application
+                   { location; applicand; arguments })
+            | LF_operator.Term_constant { applicand; _ } ->
+              LF_operand.External_term
+                (Synext'.LF.Term.Application
+                   { location; applicand; arguments })
+        end)
+    in
+    let identify_operators dictionary terms =
+      let resolve_qualified_identifier identifier term =
+        match Dictionary.lookup identifier dictionary with
+        | Option.Some (Dictionary.LF_type_constant operator) ->
+          let type' = elaborate_typ dictionary term in
+          ShuntingYard.operator
+            (LF_operator.Type_constant { operator; applicand = type' })
+        | Option.Some (Dictionary.LF_term_constant operator) ->
+          let term' = elaborate_term dictionary term in
+          ShuntingYard.operator
+            (LF_operator.Term_constant { operator; applicand = term' })
+        | Option.Some _ | Option.None ->
+          ShuntingYard.operand (LF_operand.Parser_object term)
+      in
+      let resolve_qualified_identifier_as_prefix identifier term =
+        match Dictionary.lookup identifier dictionary with
+        | Option.Some (Dictionary.LF_type_constant operator) ->
+          let type' = elaborate_typ dictionary term in
+          let operator' = Operator.as_prefix operator in
+          ShuntingYard.operator
+            (LF_operator.Type_constant
+               { operator = operator'; applicand = type' })
+        | Option.Some (Dictionary.LF_term_constant operator) ->
+          let term' = elaborate_term dictionary term in
+          let operator' = Operator.as_prefix operator in
+          ShuntingYard.operator
+            (LF_operator.Term_constant
+               { operator = operator'; applicand = term' })
+        | Option.Some _ | Option.None ->
+          ShuntingYard.operand (LF_operand.Parser_object term)
+      in
+      let identify_operator term =
+        let rec identify_operator_with_quoting nested =
+          match nested with
+          | Synprs.LF.Object.RawIdentifier { identifier; _ } ->
+            let qualified_identifier =
+              QualifiedIdentifier.make_simple identifier
+            in
+            resolve_qualified_identifier_as_prefix qualified_identifier term
+          | Synprs.LF.Object.RawQualifiedIdentifier { identifier; _ } ->
+            resolve_qualified_identifier_as_prefix identifier term
+          | Synprs.LF.Object.RawParenthesized { object_; _ } ->
+            identify_operator_with_quoting object_
+          | _ -> ShuntingYard.operand (LF_operand.Parser_object term)
+        in
+        match term with
+        | Synprs.LF.Object.RawIdentifier { identifier; _ } ->
+          let qualified_identifier =
+            QualifiedIdentifier.make_simple identifier
+          in
+          resolve_qualified_identifier qualified_identifier term
+        | Synprs.LF.Object.RawQualifiedIdentifier { identifier; _ } ->
+          resolve_qualified_identifier identifier term
+        | Synprs.LF.Object.RawParenthesized { object_; _ } ->
+          identify_operator_with_quoting object_
+        | _ -> ShuntingYard.operand (LF_operand.Parser_object term)
+      in
+      List.map identify_operator terms
+    in
+    fun terms ->
+      try
+        match
+          ShuntingYard.shunting_yard (identify_operators dictionary terms)
+        with
+        | LF_operand.External_typ t -> `Typ t
+        | LF_operand.External_term t -> `Term t
+        | LF_operand.Parser_object _ ->
+          Error.violation
+            "Unexpectedly did not elaborate LF operands in rewriting"
+      with
+      | ShuntingYard.Empty_expression -> raise @@ Empty_expression
+      | ShuntingYard.Misplaced_operator (operator, operands) ->
+        raise
+        @@ Misplaced_operator
+             ( LF_operator.location operator
+             , List.map LF_operand.location operands )
+      | ShuntingYard.Consecutive_non_associative_operators (o1, o2) ->
+        raise
+        @@ Consecutive_non_associative_operators
+             (LF_operator.location o1, LF_operator.location o2)
+      | ShuntingYard.Arity_mismatch (operator, operands) ->
+        raise
+        @@ Arity_mismatch
+             ( LF_operator.location operator
+             , List.map LF_operand.location operands )
+      | ShuntingYard.Leftover_expressions expressions ->
+        raise
+        @@ Leftover_expressions (List2.map LF_operand.location expressions)
 end

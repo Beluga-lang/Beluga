@@ -15,147 +15,70 @@ open Support
     the definition of LF type-level or term-level constants. This is a weak,
     representational function space without case analysis or recursion. *)
 module LF = struct
-  module rec Kind : sig
-    (** Raw LF kinds. *)
+  (** LF kinds, types and terms blurred together. *)
+  module rec Object : sig
     type t =
-      | Typ of { location : Location.t }
-          (** [Typ { _ }] is the kind of simple types `type'. *)
-      | Arrow of
+      | RawIdentifier of
           { location : Location.t
-          ; domain : Typ.t
-          ; range : Kind.t
+          ; identifier : Identifier.t
           }
-          (** [Arrow { domain; range; _ }] is the kind `domain -> range'. *)
-      | Pi of
+      | RawQualifiedIdentifier of
           { location : Location.t
-          ; parameter_name : Identifier.t Option.t
-          ; parameter_type : Typ.t
-          ; range : Kind.t
+          ; identifier : QualifiedIdentifier.t
           }
-          (** [Pi { parameter_name = x; parameter_type = t; range; _ }] is the
-              dependent product kind `{ x : t } range'. *)
-      | Parenthesized of
+      | RawType of { location : Location.t }
+      | RawHole of { location : Location.t }
+      | RawPi of
           { location : Location.t
-          ; kind : Kind.t
-          }  (** [Parenthesized { kind; _ }] is the kind `( kind )`. *)
-  end =
-    Kind
-
-  and Typ : sig
-    (** Raw LF types. *)
-    type t =
+          ; parameter_identifier : Identifier.t Option.t
+          ; parameter_sort : Object.t Option.t
+          ; body : Object.t
+          }
+      | RawLambda of
+          { location : Location.t
+          ; parameter_identifier : Identifier.t Option.t
+          ; parameter_sort : Object.t Option.t
+          ; body : Object.t
+          }
+      | RawForwardArrow of
+          { location : Location.t
+          ; domain : Object.t
+          ; range : Object.t
+          }
+      | RawBackwardArrow of
+          { location : Location.t
+          ; domain : Object.t
+          ; range : Object.t
+          }
+      | RawAnnotated of
+          { location : Location.t
+          ; object_ : Object.t
+          ; sort : Object.t
+          }
       | RawApplication of
           { location : Location.t
-          ; terms : Term.t List1.t
+          ; objects : Object.t List2.t
           }
-          (** [RawApplication { terms; _ }] is a partially parsed list of
-              operators and operands delimited by white space. The operators
-              therein have not been resolved, and user-defined fixities and
-              associativities have to be taken into account during
-              elaboration to the external syntax. *)
-      | ForwardArrow of
+      | RawParenthesized of
           { location : Location.t
-          ; domain : Typ.t
-          ; range : Typ.t
+          ; object_ : Object.t
           }
-          (** [ForwardArrow { domain; range; _ }] is the type `domain ->
-              range'. *)
-      | BackwardArrow of
-          { location : Location.t
-          ; domain : Typ.t
-          ; range : Typ.t
-          }
-          (** [BackwardArrow { domain; range; _ }] is the type `domain <-
-              range'. *)
-      | Pi of
-          { location : Location.t
-          ; parameter_name : Identifier.t Option.t
-          ; parameter_type : Typ.t
-          ; range : Typ.t
-          }
-          (** [Pi { parameter_name = x; parameter_type = t; range; _ }] is the
-              dependent product type `{ x : t } range'. *)
-      | Parenthesized of
-          { location : Location.t
-          ; typ : Typ.t
-          }  (** [Parenthesized { typ; _ }] is the type `( typ )`. *)
   end =
-    Typ
+    Object
 
-  and Term : sig
-    (** Raw LF terms. *)
-    type t =
-      | RawName of
-          { location : Location.t
-          ; name : Identifier.t
-          }
-          (** [RawName { name; _ }] is the unresolved name `Name. It may
-              refer to a variable, a type-level constant, a term-level
-              constant, or a free variable. *)
-      | RawQualifiedName of
-          { location : Location.t
-          ; qualified_name : QualifiedIdentifier.t
-          }
-          (** [RawQualifiedName { qualified_name; _ }] is the unresolved term
-              `qualified_name'. It may refer to a type-level constant, a
-              term-level constant, or be unbound. *)
-      | RawApplication of
-          { location : Location.t
-          ; terms : Term.t List2.t
-          }
-          (** [RawApplication { terms; _ }] is a partially parsed list of
-              operators and operands delimited by white space. The operators
-              therein have not been resolved, and user-defined fixities and
-              associativities have to be taken into account during
-              elaboration to the external syntax. *)
-      | Abstraction of
-          { location : Location.t
-          ; parameter_name : Identifier.t Option.t
-          ; parameter_type : Typ.t Option.t
-          ; body : Term.t
-          }
-          (** [Abstraction { parameter_name = x; body; _ }] is the term `\x.
-              body'. *)
-      | Wildcard of { location : Location.t }
-          (** [Wildcard { _ }] is the omission of a fresh term-level
-              variable. *)
-      | TypeAnnotated of
-          { location : Location.t
-          ; term : Term.t
-          ; typ : Typ.t
-          }
-          (** [TypeAnnotated { term = u; typ = t; _ }] is the term `u : t`. *)
-      | Parenthesized of
-          { location : Location.t
-          ; term : Term.t
-          }  (** [Parenthesized { term; _ }] is the term `( term )`. *)
-  end =
-    Term
-
-  let location_of_kind kind =
-    match kind with
-    | Kind.Typ { location; _ }
-    | Kind.Arrow { location; _ }
-    | Kind.Pi { location; _ }
-    | Kind.Parenthesized { location; _ } -> location
-
-  let location_of_typ typ =
-    match typ with
-    | Typ.RawApplication { location; _ }
-    | Typ.ForwardArrow { location; _ }
-    | Typ.BackwardArrow { location; _ }
-    | Typ.Pi { location; _ }
-    | Typ.Parenthesized { location; _ } -> location
-
-  let location_of_term term =
-    match term with
-    | Term.RawName { location; _ }
-    | Term.RawQualifiedName { location; _ }
-    | Term.RawApplication { location; _ }
-    | Term.Abstraction { location; _ }
-    | Term.Wildcard { location; _ }
-    | Term.TypeAnnotated { location; _ }
-    | Term.Parenthesized { location; _ } -> location
+  let location_of_object object_ =
+    match object_ with
+    | Object.RawIdentifier { location; _ }
+    | Object.RawQualifiedIdentifier { location; _ }
+    | Object.RawType { location; _ }
+    | Object.RawHole { location; _ }
+    | Object.RawPi { location; _ }
+    | Object.RawLambda { location; _ }
+    | Object.RawForwardArrow { location; _ }
+    | Object.RawBackwardArrow { location; _ }
+    | Object.RawAnnotated { location; _ }
+    | Object.RawApplication { location; _ }
+    | Object.RawParenthesized { location; _ } -> location
 end
 
 (** {1 Parser Contextual LF Syntax} *)
@@ -630,12 +553,12 @@ module Sgn = struct
     | Typ of
         { location : Location.t
         ; identifier : Name.t
-        ; kind : LF.Kind.t
+        ; kind : LF.Object.t
         }  (** LF type family declaration *)
     | Const of
         { location : Location.t
         ; identifier : Name.t
-        ; typ : LF.Typ.t
+        ; typ : LF.Object.t
         }  (** LF type constant decalaration *)
     | CompTyp of
         { location : Location.t

@@ -956,324 +956,139 @@ let qualified_identifier =
     QualifiedIdentifier.make ~location ~modules identifier
 
 module rec LF_parsers : sig
-  open LF
-
-  val lf_kind : Kind.t t
-
-  val lf_type : Typ.t t
-
-  val lf_term : Term.t t
+  val lf_object : LF.Object.t t
 end = struct
-  open LF
-
   (*=
-      Initial grammar:
+      Original grammar:
 
-      <lf-kind> ::=
-        | <lf-kind-pi>
-        | <lf-kind-arrow>
-        | <lf-kind-type>
-        | `(' <lf-kind> `)'
-
-      <lf-kind-pi> ::=
-        | `{' <omittable-identifier> `:' <lf-type> `}' <lf-kind>
-
-      <lf-kind-arrow> ::=
-        | <lf-type> <forward-arrow> <lf-kind>
-
-      <lf-kind-type> ::=
+      <lf-object> ::=
+        | <identifier>
+        | <qualified-identifier>
         | `type'
+        | `_'
+        | `{' <omittable-identifier> [`:' <lf-object>] `}' <lf-object>
+        | `\' <omittable-identifier> [`:' <lf-object>] `.' <lf-object>
+        | <lf-object> <forward-arrow> <lf-object>
+        | <lf-object> <backward-arrow> <lf-object>
+        | <lf-object> `:' <lf-object>
+        | <lf-object> <lf-object>
+        | `(' <lf-object> `)'
 
 
       Rewritten grammar:
 
-      <lf-kind> ::=
-        | `{' <omittable-identifier> `:' <lf-type> `}' <lf-kind>
-        | <lf-type'> <forward-arrow> <lf-kind>
+      <lf-object> ::=
+        | <lf-object1>
+
+      <lf-object1> ::=
+        | <lf-object2>+
+
+      <lf-object2> ::=
+        | <lf-object3> <forward-arrow> <lf-object>
+        | <lf-object3> <backward-arrow> <lf-object>
+        | <lf-object3>
+
+      <lf-object3> ::=
+        | <lf-object4> `:' <lf-object>
+        | <lf-object4>
+
+      <lf-object4> ::=
+        | <identifier>
+        | <qualified-identifier>
         | `type'
-        | `(' <lf-kind> `)'
-
-      <lf-type'> ::=
-        | <lf-term>+
-        | `(' <lf-type> `)'
+        | `_'
+        | `{' <omittable-identifier> [`:' <lf-object>] `}' <lf-object>
+        | `\' <omittable-identifier> [`:' <lf-object>] `.' <lf-object>
+        | `(' <lf-object> `)'
   *)
-  let lf_type' =
-    let lf_atomic_type =
-      some LF_parsers.lf_term
+  let lf_object4 =
+    let variable =
+      identifier
       |> span
-      |> labelled "LF atomic type"
-      $> fun (location, terms) ->
-           Typ.RawApplication { location; terms }
-    and lf_parenthesized_type =
-      parens LF_parsers.lf_type
+      $> fun (location, identifier) ->
+         LF.Object.RawIdentifier { location; identifier }
+    and constant =
+      qualified_identifier
       |> span
-      $> fun (location, typ) ->
-           Typ.Parenthesized { location; typ }
-    in
-    choice
-      [ lf_atomic_type
-      ; lf_parenthesized_type
-      ]
-    |> labelled "LF type"
-
-  let lf_kind =
-    let lf_pi_kind =
+      $> fun (location, identifier) ->
+         LF.Object.RawQualifiedIdentifier { location; identifier }
+    and type_ =
+      token Token.KW_TYPE
+      |> span
+      $> fun (location, ()) -> LF.Object.RawType { location }
+    and hole =
+      token Token.UNDERSCORE
+      |> span
+      $> fun (location, ()) -> LF.Object.RawHole { location }
+    and pi =
       seq2
         (braces
           (seq2
             omittable_identifier
-            (token Token.COLON &> LF_parsers.lf_type)))
-        LF_parsers.lf_kind
+            (maybe (token Token.COLON &> LF_parsers.lf_object))))
+        LF_parsers.lf_object
       |> span
-      |> labelled "LF Pi kind"
-      $> fun (location, ((parameter_name, parameter_type), range)) ->
-           Kind.Pi { location; parameter_name; parameter_type; range }
-    and lf_arrow_kind =
-      seq2 lf_type' (token Token.ARROW &> LF_parsers.lf_kind)
-      |> span
-      |> labelled "LF arrow kind"
-      $> fun (location, (domain, range)) ->
-           Kind.Arrow { location; domain; range }
-    and lf_type_kind =
-      token Token.KW_TYPE
-      |> span
-      |> labelled "LF `type' kind"
-      $> fun (location, ()) ->
-           Kind.Typ { location }
-    and lf_parenthesized_kind =
-      parens LF_parsers.lf_kind
-      |> span
-      $> fun (location, kind) ->
-           Kind.Parenthesized { location; kind }
-    in
-    choice
-      [ lf_pi_kind
-      ; lf_arrow_kind
-      ; lf_type_kind
-      ; lf_parenthesized_kind
-      ]
-    |> labelled "LF kind"
-
-  (*=
-      Initial grammar:
-
-      <lf-type> ::=
-        | <lf-type-variable>
-        | <lf-type-constant>
-        | <lf-type-pi>
-        | <lf-type-arrow>
-        | <lf-type-application>
-        | `(' <lf-type> `)'
-
-      <lf-type-variable> ::=
-        | <identifier>
-
-      <lf-type-constant> ::=
-        | <qualified-identifier>
-
-      <lf-type-pi> ::=
-        | `{' <omittable-identifier> `:' <lf-type> `}' <lf-type>
-
-      <lf-type-arrow> ::=
-        | <lf-type> <forward-arrow> <lf-type>
-        | <lf-type> <backward-arrow> <lf-type>
-
-      <lf-type-application> ::=
-        | <lf-type-variable> <lf-term>+
-        | <lf-type-constant> <lf-term>+
-        | <lf-term> <lf-type-constant> <lf-term>
-        | <lf-term> <lf-type-constant>
-
-
-      Rewritten grammar:
-
-      <lf-type> ::=
-        | <lf-type1>
-
-      <lf-type1> ::=
-        | <lf-type2> ((<forward-arrow> | <backward-arrow>) <lf-type2>)*
-
-      <lf-type2> ::=
-        | `{' <omittable-identifier> `:' <lf-type> `}' <lf-type>
-        | <lf-term>+
-        | `(' <lf-type> `)'
-  *)
-  let lf_type_2 =
-    let lf_pi_type =
-      seq2
-        (braces (seq2 omittable_identifier (token Token.COLON &> LF_parsers.lf_type)))
-        LF_parsers.lf_type
-      |> span
-      |> labelled "LF Pi type"
-      $> fun (location, ((parameter_name, parameter_type), range)) ->
-           Typ.Pi { location; parameter_name; parameter_type; range }
-    and lf_application_type =
-      some LF_parsers.lf_term
-      |> span
-      |> labelled "LF application type"
-      $> fun (location, terms) ->
-           Typ.RawApplication { location; terms }
-    and lf_parenthesized_type =
-      parens LF_parsers.lf_type
-      |> span
-      $> fun (location, typ) ->
-           Typ.Parenthesized { location; typ }
-    in
-    choice
-      [ lf_pi_type
-      ; lf_application_type
-      ; lf_parenthesized_type
-      ]
-    |> labelled "LF Pi or application type"
-
-  let lf_type_1 =
-    let forward_arrow = token Token.ARROW $> fun () -> `Forward_arrow
-    and backward_arrow = token Token.BACKARROW $> fun () -> `Backward_arrow in
-    let arrow = alt forward_arrow backward_arrow in
-    seq2 lf_type_2 (many (seq2 arrow lf_type_2))
-    |> labelled "LF atomic or arrow type"
-    $> function
-       | (typ, []) -> typ
-       | (base, typs) ->
-         let rec reduce base typs =
-           match typs with
-           | [] -> base
-           | (`Forward_arrow, typ) :: typs ->
-             let domain = base
-             and range = reduce typ typs in
-             let location =
-               Location.join (location_of_typ domain) (location_of_typ range)
-             in
-             Typ.ForwardArrow { location; domain; range }
-           | (`Backward_arrow, typ) :: typs ->
-             let domain = reduce typ typs
-             and range = base in
-             let location =
-               Location.join (location_of_typ range) (location_of_typ domain)
-             in
-             Typ.BackwardArrow { location; domain; range }
-         in
-         reduce base typs
-
-  let lf_type = lf_type_1
-
-  (*=
-      Original grammar:
-
-      <lf-term> ::=
-        | <lf-term-variable>
-        | <lf-term-constant>
-        | <lf-term-lambda>
-        | <lf-term-application>
-        | <lf-term-wildcard>
-        | <lf-term-annotated>
-        | `(' <lf-term> `)'
-
-      <lf-term-variable> ::=
-        | <identifier>
-
-      <lf-term-constant> ::=
-        | <qualified-identifier>
-
-      <lf-term-lambda> ::=
-        | `\' <omittable-identifier> [`:' <lf-type>] `.' <lf-term>
-
-      <lf-term-application> ::=
-        | <lf-term-variable> <lf-term>+
-        | <lf-term-constant> <lf-term>+
-        | <lf-term> <lf-term-constant> <lf-term>
-        | <lf-term> <lf-term-constant>
-
-      <lf-term-wildcard> ::=
-        | `_'
-
-      <lf-term-annotated> ::=
-        | <lf-term> `:' <lf-type>
-
-
-      Rewritten grammar:
-
-      <lf-term> ::=
-        | <lf-term1>
-
-      <lf-term1> ::=
-        | <lf-term2>+
-
-      <lf-term2> ::=
-        | <identifier> <lf-term-annotation>
-        | <qualified-identifier> <lf-term-annotation>
-        | `\' <omittable-identifier> [`:' <lf-type>] `.' <lf-term>
-        | `_' <lf-term-annotation>
-        | `(' <lf-term> `)' <lf-term-annotation>
-
-      <lf-term-annotation> ::=
-        | [`:' <lf-type>]
-  *)
-  let lf_term_annotation =
-    maybe (token Token.COLON &> LF_parsers.lf_type)
-
-  let lf_term_2 =
-    let possibly_type_annotated term =
-      seq2 term lf_term_annotation
-      |> span
-      |> labelled "LF optionally type-annotated term"
-      $> function
-         | (_, (term, Option.None)) -> term
-         | (location, (term, Option.Some typ)) ->
-           Term.TypeAnnotated { location; term; typ }
-    in
-    let variable =
-      identifier
-      |> span
-      |> labelled "LF variable term"
-      $> fun (location, name) ->
-          Term.RawName { location; name }
-    and constant =
-      qualified_identifier
-      |> span
-      |> labelled "LF constant term"
-      $> fun (location, qualified_name) ->
-           Term.RawQualifiedName { location; qualified_name }
+      $> fun (location, ((parameter_identifier, parameter_sort), body)) ->
+         LF.Object.RawPi { location; parameter_identifier; parameter_sort; body }
     and lambda =
-      seq3
-        (token Token.LAMBDA &> omittable_identifier)
-        (maybe (token Token.COLON &> LF_parsers.lf_type))
-        (token Token.DOT &> LF_parsers.lf_term)
+      seq2
+        (token Token.LAMBDA
+          &> (seq2
+              omittable_identifier
+              (maybe (token Token.COLON &> LF_parsers.lf_object)))
+          <& token Token.DOT)
+        LF_parsers.lf_object
       |> span
-      |> labelled "LF abstraction term"
-      $> fun (location, (parameter_name, parameter_type, body)) ->
-           Term.Abstraction { location; parameter_name; parameter_type; body }
-    and wildcard =
-      token Token.UNDERSCORE
-      |> span
-      |> labelled "LF wildcard term"
-      $> fun (location, ()) ->
-           Term.Wildcard { location }
+      $> fun (location, ((parameter_identifier, parameter_sort), body)) ->
+         LF.Object.RawLambda { location; parameter_identifier; parameter_sort; body }
     and parenthesized =
-      parens LF_parsers.lf_term
+      parens LF_parsers.lf_object
       |> span
-      $> fun (location, term) ->
-           Term.Parenthesized { location; term }
+      $> fun (location, object_) ->
+         LF.Object.RawParenthesized { location; object_ }
     in
     choice
-      [ possibly_type_annotated variable
-      ; possibly_type_annotated constant
+      [ variable
+      ; constant
+      ; type_
+      ; hole
+      ; pi
       ; lambda
-      ; possibly_type_annotated wildcard
-      ; possibly_type_annotated parenthesized
+      ; parenthesized
       ]
-    |> labelled "LF term"
 
-  let lf_term_1 =
-    some lf_term_2
+  let lf_object3 =
+    seq2 lf_object4 (maybe (token Token.COLON &> LF_parsers.lf_object))
     |> span
-    |> labelled "LF atomic or application term"
     $> function
-       | (_, List1.T (term, [])) -> term
-       | (location, List1.T (t1, t2 :: rest)) ->
-         Term.RawApplication { location; terms = List2.from t1 t2 rest }
+       | (_, (object_, Option.None)) -> object_
+       | (location, (object_, Option.Some sort)) ->
+         LF.Object.RawAnnotated { location; object_; sort }
 
-  let lf_term = lf_term_1
+  let lf_object2 =
+    let forward_arrow = token Token.ARROW $> fun () -> `Forward_arrow
+    and backward_arrow = token Token.BACKARROW $> fun () -> `Backward_arrow
+    in
+    seq2
+      lf_object3
+      (maybe (seq2 (alt forward_arrow backward_arrow) LF_parsers.lf_object))
+    |> span
+    $> function
+       | (_, (object_, Option.None)) -> object_
+       | (location, (domain, Option.Some (`Forward_arrow, range))) ->
+         LF.Object.RawForwardArrow { location; domain; range }
+       | (location, (domain, Option.Some (`Backward_arrow, range))) ->
+         LF.Object.RawBackwardArrow { location; domain; range }
+
+  let lf_object1 =
+    some lf_object2
+    |> span
+    $> function
+       | (_, List1.T (object_, [])) -> object_
+       | (location, List1.T (o1, o2 :: os)) ->
+         LF.Object.RawApplication { location; objects = List2.from o1 o2 os }
+
+  let lf_object = lf_object1
 end
 
 let hole : string option parser =
@@ -2665,7 +2480,7 @@ end = struct
   let sgn_lf_const_decl =
     seq2
       (name <& token Token.COLON)
-      LF_parsers.lf_type
+      LF_parsers.lf_object
     |> span
     $> (fun (location, (identifier, typ)) ->
           Sgn.Const { location; identifier; typ })
@@ -2676,7 +2491,7 @@ end = struct
       let typ_decl =
         seq2
           (name <& token Token.COLON)
-          LF_parsers.lf_kind
+          LF_parsers.lf_object
       in
       seq2
         (typ_decl <& token Token.EQUALS)
@@ -2852,7 +2667,7 @@ end = struct
       begin
         seq2
           (name <& token Token.COLON)
-          (alt (LF_parsers.lf_kind $> fun kind -> `Kind kind) (LF_parsers.lf_type $> fun typ -> `Typ typ) <& token Token.DOT)
+          (alt (LF_parsers.lf_object $> fun kind -> `Kind kind) (LF_parsers.lf_object $> fun typ -> `Typ typ) <& token Token.DOT) (* FIXME: Disambiguation is impossible at this point *)
         |> span
         $> fun (location, (identifier, k_or_a)) ->
            match k_or_a with

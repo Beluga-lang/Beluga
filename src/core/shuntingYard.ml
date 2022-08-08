@@ -137,7 +137,7 @@ struct
           shunting_yard (write (index, op) output) operators' ps)
       | [] -> (
         let output = pop_all operands operators in
-        match output with
+        match List.rev output with
         | [ (_, e) ] -> e
         | e1 :: e2 :: es ->
           let leftover_expressions =

@@ -17,3 +17,10 @@ let[@inline] location { location; _ } = location
 let[@inline] name { name; _ } = name
 
 let[@inline] modules { modules; _ } = modules
+
+include (
+  (val Eq.conjunction
+         (module Identifier)
+         (module List.MakeEq (Identifier))
+         name modules) :
+    Eq.EQ with type t := t)

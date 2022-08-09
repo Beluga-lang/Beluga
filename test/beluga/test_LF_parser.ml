@@ -119,7 +119,8 @@ module LF_constructors = struct
 
   (* LF type constructors *)
 
-  let ct identifier = Typ.Constant { location; identifier = qid identifier }
+  let ct ?m identifier =
+    Typ.Constant { location; identifier = qid ?m identifier }
 
   let appt applicand arguments =
     Typ.Application { location; applicand; arguments }
@@ -142,7 +143,8 @@ module LF_constructors = struct
 
   let v identifier = Term.Variable { location; identifier = id identifier }
 
-  let c identifier = Term.Constant { location; identifier = qid identifier }
+  let c ?m identifier =
+    Term.Constant { location; identifier = qid ?m identifier }
 
   let app applicand arguments =
     Term.Application { location; applicand; arguments }
@@ -163,7 +165,8 @@ module LF_constructors = struct
 end
 
 let parse_lf_object input =
-  Runparser.parse_string Location.ghost input Parser.LF_parsers.lf_object
+  Runparser.parse_string Location.ghost input
+    (Parser.only Parser.LF_parsers.lf_object)
   |> Parser.extract
 
 let mock_dictionary_1 = Synprs_to_synext'.Dictionary.empty
@@ -179,12 +182,48 @@ let mock_dictionary_2 =
   |> add_prefix_lf_term_constant ~arity:0 ~precedence:1 (qid "sum/z")
   |> add_prefix_lf_term_constant ~arity:1 ~precedence:1 (qid "sum/s")
 
+let mock_dictionary_3 =
+  let open LF_constructors in
+  let open Synprs_to_synext'.Dictionary in
+  empty
+  |> add_prefix_lf_type_constant ~arity:0 ~precedence:1
+       (qid ~m:[ "Nat" ] "nat")
+  |> add_prefix_lf_term_constant ~arity:0 ~precedence:1
+       (qid ~m:[ "Nat" ] "z")
+  |> add_prefix_lf_term_constant ~arity:1 ~precedence:1
+       (qid ~m:[ "Nat" ] "s")
+  |> add_prefix_lf_type_constant ~arity:3 ~precedence:1
+       (qid ~m:[ "Nat" ] "sum")
+  |> add_prefix_lf_term_constant ~arity:0 ~precedence:1
+       (qid ~m:[ "Nat" ] "sum/z")
+  |> add_prefix_lf_term_constant ~arity:1 ~precedence:1
+       (qid ~m:[ "Nat" ] "sum/s")
+
+let mock_dictionary_4 =
+  let open LF_constructors in
+  let open Synprs_to_synext'.Dictionary in
+  empty
+  |> add_prefix_lf_type_constant ~arity:0 ~precedence:1
+       (qid ~m:[ "Util"; "Nat" ] "nat")
+  |> add_prefix_lf_term_constant ~arity:0 ~precedence:1
+       (qid ~m:[ "Util"; "Nat" ] "z")
+  |> add_prefix_lf_term_constant ~arity:1 ~precedence:1
+       (qid ~m:[ "Util"; "Nat" ] "s")
+  |> add_prefix_lf_type_constant ~arity:3 ~precedence:1
+       (qid ~m:[ "Util"; "Nat" ] "sum")
+  |> add_prefix_lf_term_constant ~arity:0 ~precedence:1
+       (qid ~m:[ "Util"; "Nat" ] "sum/z")
+  |> add_prefix_lf_term_constant ~arity:1 ~precedence:1
+       (qid ~m:[ "Util"; "Nat" ] "sum/s")
+
 let test_kind =
   let test_success elaboration_context input expected _test_ctxt =
     OUnit2.assert_equal
       ~printer:(Format.asprintf "%a" Synext'.LF.pp_kind)
       ~cmp:LF.Kind.equal expected
       (parse_lf_object input
+      |> Fun.through
+           (Format.fprintf Format.std_formatter "%a@." Synprs.LF.pp_object)
       |> Synprs_to_synext'.LF.elaborate_kind elaboration_context)
   in
   let success_test_cases =
@@ -199,6 +238,13 @@ let test_kind =
     ; ( mock_dictionary_2
       , "(nat -> nat) -> type"
       , part (ct "nat" => ct "nat") ==> typ )
+    (* TODO: Uncomment ; ( mock_dictionary_3
+      , "Nat::nat -> Nat::nat -> type"
+      , ct ~m:[ "Nat" ] "nat" ==> (ct ~m:[ "Nat" ] "nat" ==> typ) )*)
+    ; ( mock_dictionary_4
+      , "Util::Nat::nat -> Util::Nat::nat -> type"
+      , ct ~m:[ "Util"; "Nat" ] "nat"
+        ==> (ct ~m:[ "Util"; "Nat" ] "nat" ==> typ) )
     ]
   in
   let success_tests =
@@ -220,7 +266,14 @@ let test_type =
   in
   let success_test_cases =
     let open LF_constructors in
-    [ (mock_dictionary_2, "nat -> nat", ct "nat" => ct "nat") ]
+    [ (mock_dictionary_2, "nat -> nat", ct "nat" => ct "nat")
+    ; ( mock_dictionary_2
+      , "nat -> nat -> nat"
+      , ct "nat" => (ct "nat" => ct "nat") )
+    ; ( mock_dictionary_2
+      , "(nat -> nat) -> nat"
+      , part (ct "nat" => ct "nat") => ct "nat" )
+    ]
   in
   let success_tests =
     success_test_cases
@@ -241,7 +294,11 @@ let test_term =
   in
   let success_test_cases =
     let open LF_constructors in
-    [ (mock_dictionary_1, "\\x. x", lam ~x:"x" (v "x")) ]
+    [ (mock_dictionary_1, "\\x. x", lam ~x:"x" (v "x"))
+    ; (mock_dictionary_2, "z", c "z")
+    ; (mock_dictionary_2, "\\x. s x", lam ~x:"x" (app (c "s") [ v "x" ]))
+    ; (mock_dictionary_2, "s z", app (c "s") [ app (c "z") [] ])
+    ]
   in
   let success_tests =
     success_test_cases

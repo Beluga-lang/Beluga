@@ -97,7 +97,6 @@ module Dictionary : sig
   type t
 
   type entry = private
-    | LF_type
     | LF_term
     | LF_type_constant of Operator.t
     | LF_term_constant of Operator.t
@@ -106,8 +105,6 @@ module Dictionary : sig
   (** {1 Constructors} *)
 
   val empty : t
-
-  val add_type : Identifier.t -> t -> t
 
   val add_term : Identifier.t -> t -> t
 
@@ -146,7 +143,6 @@ end = struct
   type t = entry Identifier.Hamt.t
 
   and entry =
-    | LF_type
     | LF_term
     | LF_type_constant of Operator.t
     | LF_term_constant of Operator.t
@@ -187,8 +183,6 @@ end = struct
             dictionary
       in
       add m ms dictionary
-
-  let add_type = add_entry LF_type
 
   let add_term = add_entry LF_term
 
@@ -312,20 +306,6 @@ module LF = struct
 
   (* Elaboration *)
 
-  let resolve_type_constant location dictionary identifier =
-    match Dictionary.lookup identifier dictionary with
-    | Option.Some (Dictionary.LF_type_constant _) ->
-      Synext'.LF.Typ.Constant { location; identifier }
-    | Option.Some entry -> raise @@ Expected_type_constant (location, entry)
-    | Option.None -> raise @@ Unbound_type_constant (location, identifier)
-
-  let resolve_term_constant location dictionary identifier =
-    match Dictionary.lookup identifier dictionary with
-    | Option.Some (Dictionary.LF_term_constant _) ->
-      Synext'.LF.Term.Constant { location; identifier }
-    | Option.Some entry -> raise @@ Expected_term_constant (location, entry)
-    | Option.None -> raise @@ Unbound_term_constant (location, identifier)
-
   let rec elaborate_kind dictionary object_ =
     match object_ with
     | Synprs.LF.Object.RawIdentifier { location; identifier; _ } ->
@@ -361,7 +341,7 @@ module LF = struct
         match parameter_identifier with
         | Option.None -> elaborate_kind dictionary body
         | Option.Some identifier ->
-          let dictionary' = Dictionary.add_type identifier dictionary in
+          let dictionary' = Dictionary.add_term identifier dictionary in
           elaborate_kind dictionary' body
       in
       Synext'.LF.Kind.Pi
@@ -384,13 +364,23 @@ module LF = struct
       raise @@ Illegal_lambda_type location
     | Synprs.LF.Object.RawAnnotated { location; _ } ->
       raise @@ Illegal_annotated_type location
-    | Synprs.LF.Object.RawIdentifier { location; identifier } ->
+    | Synprs.LF.Object.RawIdentifier { location; identifier } -> (
       let qualified_identifier =
         QualifiedIdentifier.make_simple identifier
       in
-      resolve_type_constant location dictionary qualified_identifier
-    | Synprs.LF.Object.RawQualifiedIdentifier { location; identifier } ->
-      resolve_type_constant location dictionary identifier
+      match Dictionary.lookup qualified_identifier dictionary with
+      | Option.Some (Dictionary.LF_type_constant _) ->
+        Synext'.LF.Typ.Constant
+          { location; identifier = qualified_identifier }
+      | Option.Some entry -> raise @@ Expected_type_constant (location, entry)
+      | Option.None ->
+        raise @@ Unbound_type_constant (location, qualified_identifier))
+    | Synprs.LF.Object.RawQualifiedIdentifier { location; identifier } -> (
+      match Dictionary.lookup identifier dictionary with
+      | Option.Some (Dictionary.LF_type_constant _) ->
+        Synext'.LF.Typ.Constant { location; identifier }
+      | Option.Some entry -> raise @@ Expected_type_constant (location, entry)
+      | Option.None -> raise @@ Unbound_type_constant (location, identifier))
     | Synprs.LF.Object.RawForwardArrow { location; domain; range } ->
       let domain' = elaborate_typ dictionary domain
       and range' = elaborate_typ dictionary range in
@@ -418,7 +408,7 @@ module LF = struct
           ; body = body'
           }
       | Option.Some parameter ->
-        let dictionary' = Dictionary.add_type parameter dictionary in
+        let dictionary' = Dictionary.add_term parameter dictionary in
         let body' = elaborate_typ dictionary' body in
         Synext'.LF.Typ.Pi
           { location
@@ -444,13 +434,25 @@ module LF = struct
       raise @@ Illegal_forward_arrow_term location
     | Synprs.LF.Object.RawBackwardArrow { location; _ } ->
       raise @@ Illegal_backward_arrow_term location
-    | Synprs.LF.Object.RawIdentifier { location; identifier } ->
+    | Synprs.LF.Object.RawIdentifier { location; identifier } -> (
       let qualified_identifier =
         QualifiedIdentifier.make_simple identifier
       in
-      resolve_term_constant location dictionary qualified_identifier
-    | Synprs.LF.Object.RawQualifiedIdentifier { location; identifier } ->
-      resolve_term_constant location dictionary identifier
+      match Dictionary.lookup qualified_identifier dictionary with
+      | Option.Some (Dictionary.LF_term_constant _) ->
+        Synext'.LF.Term.Constant
+          { location; identifier = qualified_identifier }
+      | Option.Some Dictionary.LF_term ->
+        Synext'.LF.Term.Variable { location; identifier }
+      | Option.Some entry -> raise @@ Expected_term_constant (location, entry)
+      | Option.None ->
+        raise @@ Unbound_term_constant (location, qualified_identifier))
+    | Synprs.LF.Object.RawQualifiedIdentifier { location; identifier } -> (
+      match Dictionary.lookup identifier dictionary with
+      | Option.Some (Dictionary.LF_term_constant _) ->
+        Synext'.LF.Term.Constant { location; identifier }
+      | Option.Some entry -> raise @@ Expected_term_constant (location, entry)
+      | Option.None -> raise @@ Unbound_term_constant (location, identifier))
     | Synprs.LF.Object.RawApplication { location; objects } -> (
       match elaborate_application dictionary (List2.to_list objects) with
       | `Typ typ -> raise @@ Expected_term typ

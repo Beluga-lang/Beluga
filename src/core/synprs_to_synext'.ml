@@ -153,12 +153,11 @@ end = struct
   let add_entry entry identifier dictionary =
     Identifier.Hamt.add identifier entry dictionary
 
+  (* TODO: Unit test *)
   let add_nested_entry entry qualified_identifier dictionary =
     let name = QualifiedIdentifier.name qualified_identifier
-    and module_identifiers =
-      QualifiedIdentifier.modules qualified_identifier
-    in
-    match module_identifiers with
+    and modules = QualifiedIdentifier.modules qualified_identifier in
+    match modules with
     | [] -> add_entry entry name dictionary
     | m :: ms ->
       let rec add module_to_lookup next_modules dictionary =
@@ -166,20 +165,27 @@ end = struct
         | Option.Some (Module dictionary') -> (
           match next_modules with
           | [] ->
-            Identifier.Hamt.update name
-              (Fun.const Option.some entry)
+            Identifier.Hamt.alter name
+              (Fun.const @@ Option.some entry)
               dictionary'
           | m :: ms ->
             Identifier.Hamt.update module_to_lookup
               (Fun.const Option.some @@ Module (add m ms dictionary'))
               dictionary)
-        | Option.None ->
-          Identifier.Hamt.add module_to_lookup
-            (Module (add m ms empty))
-            dictionary
+        | Option.None -> (
+          match next_modules with
+          | [] ->
+            Identifier.Hamt.add module_to_lookup
+              (Module (add_entry entry name empty))
+              dictionary
+          | m :: ms ->
+            Identifier.Hamt.add module_to_lookup
+              (Module (add m ms empty))
+              dictionary)
         | Option.Some _ ->
-          Identifier.Hamt.update module_to_lookup
-            (Fun.const Option.some @@ Module (add m ms empty))
+          Identifier.Hamt.alter module_to_lookup
+            (Fun.const @@ Option.some
+            @@ Module (add module_to_lookup next_modules empty))
             dictionary
       in
       add m ms dictionary
@@ -225,9 +231,7 @@ end = struct
 
   let lookup qualified_identifier dictionary =
     let name = QualifiedIdentifier.name qualified_identifier
-    and module_identifiers =
-      QualifiedIdentifier.modules qualified_identifier
-    in
+    and modules = QualifiedIdentifier.modules qualified_identifier in
     let rec lookup modules dictionary =
       match modules with
       | [] -> Identifier.Hamt.find_opt name dictionary
@@ -236,7 +240,7 @@ end = struct
         | Option.Some (Module dictionary') -> lookup ms dictionary'
         | Option.Some _ | Option.None -> Option.none)
     in
-    lookup module_identifiers dictionary
+    lookup modules dictionary
 end
 
 exception Unbound_qualified_identifier of QualifiedIdentifier.t

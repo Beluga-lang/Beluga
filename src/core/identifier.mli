@@ -24,3 +24,5 @@ module Hamt : Hamt.S with type key = t
 include Eq.EQ with type t := t
 
 include Ord.ORD with type t := t
+
+include Show.SHOW with type t := t

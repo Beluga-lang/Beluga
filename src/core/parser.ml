@@ -946,14 +946,17 @@ let omittable_identifier =
     (identifier $> Option.some)
 
 (*=
-    <qualified-identifier> ::=
+    <qualified-or-plain-identifier> ::=
       | (<identifier> `::')* <identifier>
 *)
-let qualified_identifier =
-  span (sep_by1 (trying identifier) (token Token.DOUBLE_COLON))
-  $> fun (location, identifiers) ->
-    let (modules, identifier) = List1.unsnoc identifiers in
-    QualifiedIdentifier.make ~location ~modules identifier
+let qualified_or_plain_identifier =
+  sep_by1 identifier (token Token.DOUBLE_COLON)
+  |> span
+  $> function
+     | (_, List1.T (head, [])) -> `Plain head
+     | (location, identifiers) ->
+       let (modules, identifier) = List1.unsnoc identifiers in
+       `Qualified (QualifiedIdentifier.make ~location ~modules identifier)
 
 module rec LF_parsers : sig
   val lf_object : LF.Object.t t
@@ -1002,16 +1005,14 @@ end = struct
         | `(' <lf-object> `)'
   *)
   let lf_object4 =
-    let variable =
-      identifier
+    let constant_or_variable =
+      qualified_or_plain_identifier
       |> span
-      $> fun (location, identifier) ->
-         LF.Object.RawIdentifier { location; identifier }
-    and constant =
-      qualified_identifier
-      |> span
-      $> fun (location, identifier) ->
-         LF.Object.RawQualifiedIdentifier { location; identifier }
+      $> function
+         | (location, `Qualified identifier) ->
+           LF.Object.RawQualifiedIdentifier { location; identifier }
+         | (location, `Plain identifier) ->
+           LF.Object.RawIdentifier { location; identifier }
     and type_ =
       token Token.KW_TYPE
       |> span
@@ -1048,8 +1049,7 @@ end = struct
          LF.Object.RawParenthesized { location; object_ }
     in
     choice
-      [ variable
-      ; constant
+      [ constant_or_variable
       ; type_
       ; hole
       ; pi

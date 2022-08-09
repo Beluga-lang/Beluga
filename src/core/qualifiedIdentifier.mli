@@ -24,3 +24,5 @@ val modules : t -> Identifier.t List.t
 (** {1 Instances} *)
 
 include Eq.EQ with type t := t
+
+include Show.SHOW with type t := t

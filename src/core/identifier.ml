@@ -25,3 +25,8 @@ module Hamt = Support.Hamt.Make (struct
   include Ord
   include Hash
 end)
+
+module Show : Support.Show.SHOW with type t = t =
+  (val Support.Show.contramap (module String) name)
+
+include (Show : Support.Show.SHOW with type t := t)

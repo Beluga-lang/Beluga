@@ -79,6 +79,59 @@ module LF = struct
     | Object.RawAnnotated { location; _ }
     | Object.RawApplication { location; _ }
     | Object.RawParenthesized { location; _ } -> location
+
+  let rec pp_object ppf object_ =
+    match object_ with
+    | Object.RawIdentifier { identifier; _ } ->
+      Format.fprintf ppf "%a" Identifier.pp identifier
+    | Object.RawQualifiedIdentifier { identifier; _ } ->
+      Format.fprintf ppf "%a" QualifiedIdentifier.pp identifier
+    | Object.RawType _ -> Format.fprintf ppf "type"
+    | Object.RawHole _ -> Format.fprintf ppf "_"
+    | Object.RawPi
+        { parameter_identifier = Option.None
+        ; parameter_sort = Option.None
+        ; body
+        ; _
+        } -> Format.fprintf ppf "@[<2>{@ _@ }@ %a@]" pp_object body
+    | Object.RawPi
+        { parameter_identifier = Option.None
+        ; parameter_sort = Option.Some parameter_sort
+        ; body
+        ; _
+        } ->
+      Format.fprintf ppf "@[<2>{@ _@ :@ %a@ }@ %a@]" pp_object parameter_sort
+        pp_object body
+    | Object.RawPi
+        { parameter_identifier = Option.Some parameter_identifier
+        ; parameter_sort = Option.None
+        ; body
+        ; _
+        } ->
+      Format.fprintf ppf "@[<2>{@ %a@ }@ %a@]" Identifier.pp
+        parameter_identifier pp_object body
+    | Object.RawPi
+        { parameter_identifier = Option.Some parameter_identifier
+        ; parameter_sort = Option.Some parameter_sort
+        ; body
+        ; _
+        } ->
+      Format.fprintf ppf "@[<2>{@ %a@ :@ %a@ }@ %a@]" Identifier.pp
+        parameter_identifier pp_object parameter_sort pp_object body
+    | Object.RawLambda { parameter_identifier; parameter_sort; body; _ } ->
+      ()
+    | Object.RawForwardArrow { domain; range; _ } ->
+      Format.fprintf ppf "@[<2>%a@ ->@ %a@]" pp_object domain pp_object range
+    | Object.RawBackwardArrow { domain; range; _ } ->
+      Format.fprintf ppf "@[<2>%a@ <-@ %a@]" pp_object domain pp_object range
+    | Object.RawAnnotated { object_; sort; _ } ->
+      Format.fprintf ppf "@[<2>%a@ :@ %a@]" pp_object object_ pp_object sort
+    | Object.RawApplication { objects; _ } ->
+      Format.fprintf ppf "@[<2>%a@]"
+        (List2.pp ~pp_sep:(fun ppf () -> Format.fprintf ppf "@ ") pp_object)
+        objects
+    | Object.RawParenthesized { object_; _ } ->
+      Format.fprintf ppf "@[<2>(%a)@]" pp_object object_
 end
 
 (** {1 Parser Contextual LF Syntax} *)

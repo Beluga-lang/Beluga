@@ -91,3 +91,7 @@ val cmp_exp_syn : Comp.exp t
 
 (** Parser for the next theorem name in Harpoon. *)
 val next_theorem : [ `quit | `next of Name.t ] t
+
+module LF_parsers : sig
+  val lf_object : LF.Object.t t
+end

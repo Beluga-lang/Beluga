@@ -93,6 +93,10 @@ end = struct
       Eq.EQ with type t := t)
 end
 
+(** A dictionary is a persistent hash map data structure to represent entries
+    currently in scope during the data-dependent elaboration from the parser
+    syntax to the external syntax. Modules are represented as
+    sub-dictionaries for performance. *)
 module Dictionary : sig
   type t
 
@@ -139,6 +143,13 @@ module Dictionary : sig
   (** {1 Lookup} *)
 
   val lookup : QualifiedIdentifier.t -> t -> entry Option.t
+
+  (** {1 Interoperability} *)
+
+  (** [to_seq dictionary] is [dictionary] flattened to a sequence of bindings
+      by qualified name. There is no guarantee on the order of bindings in
+      the resultant sequence. *)
+  val to_seq : t -> (QualifiedIdentifier.t * entry) Seq.t
 end = struct
   type t = entry Identifier.Hamt.t
 
@@ -217,21 +228,39 @@ end = struct
          (Operator.make_postfix ~identifier ~arity ~precedence))
       identifier
 
-  let add_module module_dictionary =
-    add_nested_entry (Module module_dictionary)
+  let add_module module_dictionary identifier =
+    add_nested_entry (Module module_dictionary) identifier
 
   let lookup qualified_identifier dictionary =
     let name = QualifiedIdentifier.name qualified_identifier
     and modules = QualifiedIdentifier.modules qualified_identifier in
     let rec lookup modules dictionary =
       match modules with
-      | [] -> Identifier.Hamt.find_opt name dictionary
-      | m :: ms -> (
+      | [] (* Toplevel declaration *) ->
+        Identifier.Hamt.find_opt name dictionary
+      | m :: ms (* Nested declaration *) -> (
         match Identifier.Hamt.find_opt m dictionary with
         | Option.Some (Module dictionary') -> lookup ms dictionary'
-        | Option.Some _ | Option.None -> Option.none)
+        | Option.Some _ (* Expected a module *) | Option.None (* Unbound *)
+          -> Option.none)
     in
     lookup modules dictionary
+
+  let rec to_seq dictionary =
+    dictionary |> Identifier.Hamt.bindings |> List.to_seq
+    |> Seq.flat_map (function
+         | identifier, (Module nested_dictionary as entry) ->
+           nested_dictionary |> to_seq
+           |> Seq.map (fun (nested_entry_identifier, entry) ->
+                  let identifier =
+                    QualifiedIdentifier.prepend_module identifier
+                      nested_entry_identifier
+                  in
+                  (identifier, entry))
+           |> Seq.cons (QualifiedIdentifier.make_simple identifier, entry)
+         | identifier, entry ->
+           let identifier = QualifiedIdentifier.make_simple identifier in
+           Seq.return (identifier, entry))
 end
 
 exception Unbound_qualified_identifier of QualifiedIdentifier.t

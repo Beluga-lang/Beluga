@@ -222,8 +222,6 @@ let test_kind =
       ~printer:(Format.asprintf "%a" Synext'.LF.pp_kind)
       ~cmp:LF.Kind.equal expected
       (parse_lf_object input
-      |> Fun.through
-           (Format.fprintf Format.std_formatter "%a@." Synprs.LF.pp_object)
       |> Synprs_to_synext'.LF.elaborate_kind elaboration_context)
   in
   let success_test_cases =
@@ -238,9 +236,9 @@ let test_kind =
     ; ( mock_dictionary_2
       , "(nat -> nat) -> type"
       , part (ct "nat" => ct "nat") ==> typ )
-    (* TODO: Uncomment ; ( mock_dictionary_3
+    ; ( mock_dictionary_3
       , "Nat::nat -> Nat::nat -> type"
-      , ct ~m:[ "Nat" ] "nat" ==> (ct ~m:[ "Nat" ] "nat" ==> typ) )*)
+      , ct ~m:[ "Nat" ] "nat" ==> (ct ~m:[ "Nat" ] "nat" ==> typ) )
     ; ( mock_dictionary_4
       , "Util::Nat::nat -> Util::Nat::nat -> type"
       , ct ~m:[ "Util"; "Nat" ] "nat"

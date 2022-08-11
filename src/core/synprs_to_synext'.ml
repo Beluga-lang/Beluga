@@ -153,40 +153,31 @@ end = struct
   let add_entry entry identifier dictionary =
     Identifier.Hamt.add identifier entry dictionary
 
-  (* TODO: Unit test *)
   let add_nested_entry entry qualified_identifier dictionary =
     let name = QualifiedIdentifier.name qualified_identifier
     and modules = QualifiedIdentifier.modules qualified_identifier in
     match modules with
-    | [] -> add_entry entry name dictionary
-    | m :: ms ->
-      let rec add module_to_lookup next_modules dictionary =
-        match Identifier.Hamt.find_opt module_to_lookup dictionary with
-        | Option.Some (Module dictionary') -> (
-          match next_modules with
-          | [] ->
-            Identifier.Hamt.alter name
-              (Fun.const @@ Option.some entry)
-              dictionary'
-          | m :: ms ->
-            Identifier.Hamt.update module_to_lookup
-              (Fun.const Option.some @@ Module (add m ms dictionary'))
-              dictionary)
-        | Option.None -> (
-          match next_modules with
-          | [] ->
-            Identifier.Hamt.add module_to_lookup
-              (Module (add_entry entry name empty))
-              dictionary
-          | m :: ms ->
-            Identifier.Hamt.add module_to_lookup
-              (Module (add m ms empty))
-              dictionary)
-        | Option.Some _ ->
-          Identifier.Hamt.alter module_to_lookup
-            (Fun.const @@ Option.some
-            @@ Module (add module_to_lookup next_modules empty))
-            dictionary
+    | [] (* Toplevel declaration *) -> add_entry entry name dictionary
+    | m :: ms (* Nested declaration *) ->
+      let rec add module_name_to_lookup next_modules dictionary =
+        let dictionary' =
+          match
+            Identifier.Hamt.find_opt module_name_to_lookup dictionary
+          with
+          | Option.Some (Module dictionary')
+          (* Addition to existing module *) -> dictionary'
+          | Option.Some _ (* Entry shadowing *)
+          | Option.None (* Module introduction *) -> empty
+        in
+        match next_modules with
+        | [] (* Finished lookups *) ->
+          add_entry
+            (Module (add_entry entry name dictionary'))
+            module_name_to_lookup dictionary
+        | m :: ms (* Recursively lookup next module *) ->
+          add_entry
+            (Module (add m ms dictionary'))
+            module_name_to_lookup dictionary
       in
       add m ms dictionary
 

@@ -13,6 +13,8 @@ val make :
 
 val make_simple : Identifier.t -> t
 
+val prepend_module : Identifier.t -> t -> t
+
 (** {1 Destructors} *)
 
 val location : t -> Location.t

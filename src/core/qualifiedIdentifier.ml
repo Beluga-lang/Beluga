@@ -12,6 +12,11 @@ let make_simple name =
   let location = Identifier.location name in
   make ~location name
 
+let prepend_module module_name { location; name; modules } =
+  let location = Location.join (Identifier.location module_name) location
+  and modules = module_name :: modules in
+  { location; modules; name }
+
 let[@inline] location { location; _ } = location
 
 let[@inline] name { name; _ } = name

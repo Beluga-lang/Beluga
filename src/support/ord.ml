@@ -50,26 +50,21 @@ module Reverse (Ord : ORD) : ORD with type t = Ord.t = Make (struct
   let compare x y = Ord.compare y x
 end)
 
-let contramap (type t s) (ord : (module ORD with type t = s)) (f : t -> s) =
+let contramap (type t s) (module Ord : ORD with type t = s) (f : t -> s) =
   (module Make (struct
     type nonrec t = t
 
-    let compare =
-      let (module Ord) = ord in
-      fun x y -> Ord.compare (f x) (f y)
+    let compare x y = Ord.compare (f x) (f y)
   end) : ORD
     with type t = t)
 
-let sequence (type s1 s2 t) (ord1 : (module ORD with type t = s1))
-    (ord2 : (module ORD with type t = s2)) f1 f2 =
+let sequence (type s1 s2 t) (module Ord1 : ORD with type t = s1)
+    (module Ord2 : ORD with type t = s2) f1 f2 =
   (module Make (struct
     type nonrec t = t
 
-    let compare =
-      let (module Ord1) = ord1 in
-      let (module Ord2) = ord2 in
-      fun x y ->
-        let cmp1 = Ord1.compare (f1 x) (f1 y) in
-        if cmp1 = 0 then Ord2.compare (f2 x) (f2 y) else cmp1
+    let compare x y =
+      let cmp1 = Ord1.compare (f1 x) (f1 y) in
+      if cmp1 = 0 then Ord2.compare (f2 x) (f2 y) else cmp1
   end) : ORD
     with type t = t)

@@ -150,6 +150,10 @@ module Dictionary : sig
       by qualified name. There is no guarantee on the order of bindings in
       the resultant sequence. *)
   val to_seq : t -> (QualifiedIdentifier.t * entry) Seq.t
+
+  (** {1 Error-Reporting} *)
+
+  val pp_entry_sort : Format.formatter -> entry -> Unit.t
 end = struct
   type t = entry Identifier.Hamt.t
 
@@ -261,6 +265,13 @@ end = struct
          | identifier, entry ->
            let identifier = QualifiedIdentifier.make_simple identifier in
            Seq.return (identifier, entry))
+
+  let pp_entry_sort ppf entry =
+    match entry with
+    | LF_term -> Format.fprintf ppf "an LF term"
+    | LF_type_constant _ -> Format.fprintf ppf "an LF type-level constant"
+    | LF_term_constant _ -> Format.fprintf ppf "an LF term-level constant"
+    | Module _ -> Format.fprintf ppf "a module"
 end
 
 module LF = struct
@@ -296,7 +307,11 @@ module LF = struct
 
   exception Illegal_untyped_pi_type of Location.t
 
-  exception Unbound_type_constant of Location.t * QualifiedIdentifier.t
+  exception
+    Unbound_type_constant of
+      { location : Location.t
+      ; identifier : QualifiedIdentifier.t
+      }
 
   (** {2 Exceptions for LF term elaboration} *)
 
@@ -308,32 +323,280 @@ module LF = struct
 
   exception Illegal_backward_arrow_term of Location.t
 
-  exception Unbound_term_constant of Location.t * QualifiedIdentifier.t
+  exception
+    Unbound_term_constant of
+      { location : Location.t
+      ; identifier : QualifiedIdentifier.t
+      }
 
   (** {2 Exceptions for application rewriting} *)
 
-  exception Expected_term_constant of Location.t * Dictionary.entry
+  exception
+    Expected_term_constant of
+      { location : Location.t
+      ; actual_binding : Dictionary.entry
+      }
 
-  exception Expected_type_constant of Location.t * Dictionary.entry
+  exception
+    Expected_type_constant of
+      { location : Location.t
+      ; actual_binding : Dictionary.entry
+      }
 
-  exception Expected_term of Synext'.LF.Typ.t
+  exception Expected_term of Location.t
 
-  exception Expected_type of Synext'.LF.Term.t
+  exception Expected_type of Location.t
 
-  exception Empty_expression
+  exception
+    Misplaced_operator of
+      { operator_location : Location.t
+      ; operand_locations : Location.t List.t
+      }
 
-  exception Misplaced_operator of Location.t * Location.t List.t
-
-  exception Consecutive_non_associative_operators of Location.t * Location.t
+  exception
+    Consecutive_non_associative_operators of
+      { operator_identifier : QualifiedIdentifier.t
+      ; left_operator_location : Location.t
+      ; right_operator_location : Location.t
+      }
 
   exception
     Arity_mismatch of
-      { operator_location : Location.t
+      { operator_identifier : QualifiedIdentifier.t
+      ; operator_location : Location.t
       ; operator_arity : Int.t
       ; actual_argument_locations : Location.t List.t
       }
 
-  exception Leftover_expressions of Location.t List2.t
+  (* Exception Printers *)
+
+  let () =
+    Printexc.register_printer (function
+      | Illegal_identifier_kind location ->
+        Option.some
+        @@ Format.asprintf "Identifiers may not appear in LF kinds: %a@."
+             Location.pp location
+      | _ -> Option.none)
+
+  let () =
+    Printexc.register_printer (function
+      | Illegal_qualified_identifier_kind location ->
+        Option.some
+        @@ Format.asprintf
+             "Qualified identifiers may not appear in LF kinds: %a@."
+             Location.pp location
+      | _ -> Option.none)
+
+  let () =
+    Printexc.register_printer (function
+      | Illegal_backward_arrow_kind location ->
+        Option.some
+        @@ Format.asprintf "Backward arrows may not appear in LF kinds: %a@."
+             Location.pp location
+      | _ -> Option.none)
+
+  let () =
+    Printexc.register_printer (function
+      | Illegal_hole_kind location ->
+        Option.some
+        @@ Format.asprintf "Holes may not appear in LF kinds: %a@."
+             Location.pp location
+      | _ -> Option.none)
+
+  let () =
+    Printexc.register_printer (function
+      | Illegal_lambda_kind location ->
+        Option.some
+        @@ Format.asprintf "Lambdas may not appear in LF kinds: %a@."
+             Location.pp location
+      | _ -> Option.none)
+
+  let () =
+    Printexc.register_printer (function
+      | Illegal_annotated_kind location ->
+        Option.some
+        @@ Format.asprintf
+             "Type ascriptions may not appear in LF kinds: %a@." Location.pp
+             location
+      | _ -> Option.none)
+
+  let () =
+    Printexc.register_printer (function
+      | Illegal_application_kind location ->
+        Option.some
+        @@ Format.asprintf
+             "Term applications may not appear in LF kinds: %a@." Location.pp
+             location
+      | _ -> Option.none)
+
+  let () =
+    Printexc.register_printer (function
+      | Illegal_untyped_pi_kind location ->
+        Option.some
+        @@ Format.asprintf
+             "The LF Pi kind is missing its parameter type annotation: %a@."
+             Location.pp location
+      | _ -> Option.none)
+
+  let () =
+    Printexc.register_printer (function
+      | Illegal_type_kind_type location ->
+        Option.some
+        @@ Format.asprintf "The kind `type' may not appear in LF types: %a@."
+             Location.pp location
+      | _ -> Option.none)
+
+  let () =
+    Printexc.register_printer (function
+      | Illegal_hole_type location ->
+        Option.some
+        @@ Format.asprintf "Holes may not appear in LF types: %a@."
+             Location.pp location
+      | _ -> Option.none)
+
+  let () =
+    Printexc.register_printer (function
+      | Illegal_lambda_type location ->
+        Option.some
+        @@ Format.asprintf "Lambdas may not appear in LF types: %a@."
+             Location.pp location
+      | _ -> Option.none)
+
+  let () =
+    Printexc.register_printer (function
+      | Illegal_annotated_type location ->
+        Option.some
+        @@ Format.asprintf
+             "Type ascriptions may not appear in LF types: %a@." Location.pp
+             location
+      | _ -> Option.none)
+
+  let () =
+    Printexc.register_printer (function
+      | Illegal_untyped_pi_type location ->
+        Option.some
+        @@ Format.asprintf
+             "The LF Pi type is missing its parameter type annotation: %a@."
+             Location.pp location
+      | _ -> Option.none)
+
+  let () =
+    Printexc.register_printer (function
+      | Unbound_type_constant { location; identifier } ->
+        Option.some
+        @@ Format.asprintf "The LF type-level constant %a is unbound: %a@."
+             QualifiedIdentifier.pp identifier Location.pp location
+      | _ -> Option.none)
+
+  let () =
+    Printexc.register_printer (function
+      | Illegal_type_kind_term location ->
+        Option.some
+        @@ Format.asprintf "The kind `type' may not appear in LF terms: %a@."
+             Location.pp location
+      | _ -> Option.none)
+
+  let () =
+    Printexc.register_printer (function
+      | Illegal_pi_term location ->
+        Option.some
+        @@ Format.asprintf
+             "Pi kinds or types may not appear in LF terms: %a@." Location.pp
+             location
+      | _ -> Option.none)
+
+  let () =
+    Printexc.register_printer (function
+      | Illegal_forward_arrow_term location ->
+        Option.some
+        @@ Format.asprintf "Forward arrows may not appear in LF terms: %a@."
+             Location.pp location
+      | _ -> Option.none)
+
+  let () =
+    Printexc.register_printer (function
+      | Illegal_backward_arrow_term location ->
+        Option.some
+        @@ Format.asprintf "Backward arrows may not appear in LF terms: %a@."
+             Location.pp location
+      | _ -> Option.none)
+
+  let () =
+    Printexc.register_printer (function
+      | Unbound_term_constant { location; identifier } ->
+        Option.some
+        @@ Format.asprintf "The LF term-level constant %a is unbound: %a@."
+             QualifiedIdentifier.pp identifier Location.pp location
+      | _ -> Option.none)
+
+  let () =
+    Printexc.register_printer (function
+      | Expected_term_constant { location; actual_binding } ->
+        Option.some
+        @@ Format.asprintf
+             "Expected an LF term-level constant but found %a instead: %a@."
+             Dictionary.pp_entry_sort actual_binding Location.pp location
+      | _ -> Option.none)
+
+  let () =
+    Printexc.register_printer (function
+      | Expected_type_constant { location; actual_binding } ->
+        Option.some
+        @@ Format.asprintf
+             "Expected an LF type-level constant but found %a instead: %a@."
+             Dictionary.pp_entry_sort actual_binding Location.pp location
+      | _ -> Option.none)
+
+  let () =
+    Printexc.register_printer (function
+      | Expected_term location ->
+        Option.some
+        @@ Format.asprintf
+             "Expected an LF term but found an LF type instead: %a@."
+             Location.pp location
+      | _ -> Option.none)
+
+  let () =
+    Printexc.register_printer (function
+      | Misplaced_operator { operator_location; _ } ->
+        Option.some
+        @@ Format.asprintf
+             "Misplaced LF term-level or type-level operator: %a@."
+             Location.pp operator_location
+      | _ -> Option.none)
+
+  let () =
+    Printexc.register_printer (function
+      | Consecutive_non_associative_operators
+          { operator_identifier
+          ; left_operator_location
+          ; right_operator_location
+          } ->
+        Option.some
+        @@ Format.asprintf
+             "Consecutive occurrences of the LF term-level or type-level \
+              operator %a after rewriting: %a and %a@."
+             QualifiedIdentifier.pp operator_identifier Location.pp
+             left_operator_location Location.pp right_operator_location
+      | _ -> Option.none)
+
+  let () =
+    Printexc.register_printer (function
+      | Arity_mismatch
+          { operator_identifier
+          ; operator_location
+          ; operator_arity
+          ; actual_argument_locations
+          } ->
+        let expected_arguments_count = operator_arity
+        and actual_arguments_count = List.length actual_argument_locations in
+        Option.some
+        @@ Format.asprintf
+             "Operator %a expected %d arguments but got %d: %a@."
+             QualifiedIdentifier.pp operator_identifier
+             expected_arguments_count actual_arguments_count Location.pp
+             operator_location
+      | _ -> Option.none)
 
   (** {1 Elaboration} *)
 
@@ -405,15 +668,20 @@ module LF = struct
       | Option.Some (Dictionary.LF_type_constant _) ->
         Synext'.LF.Typ.Constant
           { location; identifier = qualified_identifier }
-      | Option.Some entry -> raise @@ Expected_type_constant (location, entry)
+      | Option.Some entry ->
+        raise @@ Expected_type_constant { location; actual_binding = entry }
       | Option.None ->
-        raise @@ Unbound_type_constant (location, qualified_identifier))
+        raise
+        @@ Unbound_type_constant
+             { location; identifier = qualified_identifier })
     | Synprs.LF.Object.RawQualifiedIdentifier { location; identifier } -> (
       match Dictionary.lookup identifier dictionary with
       | Option.Some (Dictionary.LF_type_constant _) ->
         Synext'.LF.Typ.Constant { location; identifier }
-      | Option.Some entry -> raise @@ Expected_type_constant (location, entry)
-      | Option.None -> raise @@ Unbound_type_constant (location, identifier))
+      | Option.Some entry ->
+        raise @@ Expected_type_constant { location; actual_binding = entry }
+      | Option.None ->
+        raise @@ Unbound_type_constant { location; identifier })
     | Synprs.LF.Object.RawForwardArrow { location; domain; range } ->
       let domain' = elaborate_typ dictionary domain
       and range' = elaborate_typ dictionary range in
@@ -451,7 +719,9 @@ module LF = struct
           })
     | Synprs.LF.Object.RawApplication { location; objects } -> (
       match elaborate_application dictionary (List2.to_list objects) with
-      | `Term term -> raise @@ Expected_type term
+      | `Term term ->
+        let location = Synext'.LF.location_of_term term in
+        raise @@ Expected_type location
       | `Typ typ -> typ)
     | Synprs.LF.Object.RawParenthesized { location; object_ } ->
       let typ = elaborate_typ dictionary object_ in
@@ -477,17 +747,22 @@ module LF = struct
           { location; identifier = qualified_identifier }
       | Option.Some Dictionary.LF_term ->
         Synext'.LF.Term.Variable { location; identifier }
-      | Option.Some entry -> raise @@ Expected_term_constant (location, entry)
+      | Option.Some entry ->
+        raise @@ Expected_term_constant { location; actual_binding = entry }
       | Option.None -> Synext'.LF.Term.Variable { location; identifier })
     | Synprs.LF.Object.RawQualifiedIdentifier { location; identifier } -> (
       match Dictionary.lookup identifier dictionary with
       | Option.Some (Dictionary.LF_term_constant _) ->
         Synext'.LF.Term.Constant { location; identifier }
-      | Option.Some entry -> raise @@ Expected_term_constant (location, entry)
-      | Option.None -> raise @@ Unbound_term_constant (location, identifier))
+      | Option.Some entry ->
+        raise @@ Expected_term_constant { location; actual_binding = entry }
+      | Option.None ->
+        raise @@ Unbound_term_constant { location; identifier })
     | Synprs.LF.Object.RawApplication { location; objects } -> (
       match elaborate_application dictionary (List2.to_list objects) with
-      | `Typ typ -> raise @@ Expected_term typ
+      | `Typ typ ->
+        let location = Synext'.LF.location_of_typ typ in
+        raise @@ Expected_term location
       | `Term term -> term)
     | Synprs.LF.Object.RawLambda
         { location; parameter_identifier; parameter_sort; body } -> (
@@ -549,6 +824,8 @@ module LF = struct
         | Type_constant { operator; _ } | Term_constant { operator; _ } ->
           operator
 
+      let identifier = Fun.(operator >> Operator.identifier)
+
       let arity = Fun.(operator >> Operator.arity)
 
       let precedence = Fun.(operator >> Operator.precedence)
@@ -576,7 +853,9 @@ module LF = struct
               (fun argument ->
                 match argument with
                 | LF_operand.External_term term -> term
-                | LF_operand.External_typ typ -> raise @@ Expected_term typ
+                | LF_operand.External_typ typ ->
+                  let location = Synext'.LF.location_of_typ typ in
+                  raise @@ Expected_term location
                 | LF_operand.Parser_object object_ ->
                   elaborate_term dictionary object_)
               arguments
@@ -668,41 +947,59 @@ module LF = struct
         | LF_operand.External_term t -> `Term t
         | LF_operand.Parser_object _ ->
           Error.violation
-            "Unexpectedly did not elaborate LF operands in rewriting"
+            "[LF.elaborate_application] unexpectedly did not elaborate LF \
+             operands in rewriting"
       with
-      | ShuntingYard.Empty_expression -> raise @@ Empty_expression
+      | ShuntingYard.Empty_expression ->
+        Error.violation
+          "[LF.elaborate_application] unexpectedly ended with an empty \
+           expression"
       | ShuntingYard.Misplaced_operator { operator; operands } ->
-        raise
-        @@ Misplaced_operator
-             ( LF_operator.location operator
-             , List.map LF_operand.location operands )
+        let operator_location = LF_operator.location operator
+        and operand_locations = List.map LF_operand.location operands in
+        raise @@ Misplaced_operator { operator_location; operand_locations }
       | ShuntingYard.Consecutive_non_associative_operators
-          { left_operator = o1; right_operator = o2 } ->
+          { left_operator; right_operator } ->
+        let operator_identifier = LF_operator.identifier left_operator
+        and left_operator_location = LF_operator.location left_operator
+        and right_operator_location = LF_operator.location right_operator in
         raise
         @@ Consecutive_non_associative_operators
-             (LF_operator.location o1, LF_operator.location o2)
+             { operator_identifier
+             ; left_operator_location
+             ; right_operator_location
+             }
       | ShuntingYard.Arity_mismatch { operator; operator_arity; operands } ->
-        let operator_location = LF_operator.location operator
+        let operator_identifier = LF_operator.identifier operator
+        and operator_location = LF_operator.location operator
         and actual_argument_locations =
           List.map LF_operand.location operands
         in
         raise
         @@ Arity_mismatch
-             { operator_location; operator_arity; actual_argument_locations }
+             { operator_identifier
+             ; operator_location
+             ; operator_arity
+             ; actual_argument_locations
+             }
       | ShuntingYard.Leftover_expressions expressions ->
         let (List2.T (e1, e2, es)) =
           List2.map
             (function
-              | LF_operand.External_term t -> t
-              | LF_operand.External_typ t -> raise @@ Expected_term t
-              | LF_operand.Parser_object o -> elaborate_term dictionary o)
+              | LF_operand.External_term term -> term
+              | LF_operand.External_typ typ ->
+                let location = Synext'.LF.location_of_typ typ in
+                raise @@ Expected_term location
+              | LF_operand.Parser_object object_ ->
+                elaborate_term dictionary object_)
             expressions
         in
         let applicand = e1
         and arguments = e2 :: es in
         let location =
           List.fold_left
-            (fun acc t -> Location.join acc (Synext'.LF.location_of_term t))
+            (fun acc term ->
+              Location.join acc (Synext'.LF.location_of_term term))
             (Synext'.LF.location_of_term applicand)
             arguments
         in

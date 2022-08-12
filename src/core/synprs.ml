@@ -118,8 +118,36 @@ module LF = struct
         } ->
       Format.fprintf ppf "@[<2>{@ %a@ :@ %a@ }@ %a@]" Identifier.pp
         parameter_identifier pp_object parameter_sort pp_object body
-    | Object.RawLambda { parameter_identifier; parameter_sort; body; _ } ->
-      ()
+    | Object.RawLambda
+        { parameter_identifier = Option.None
+        ; parameter_sort = Option.None
+        ; body
+        ; _
+        } -> Format.fprintf ppf "@[<2>\\_.@ %a@]" pp_object body
+    | Object.RawLambda
+        { parameter_identifier = Option.None
+        ; parameter_sort = Option.Some parameter_sort
+        ; body
+        ; _
+        } ->
+      Format.fprintf ppf "@[<2>\\_:%a.@ %a@]" pp_object parameter_sort
+        pp_object body
+    | Object.RawLambda
+        { parameter_identifier = Option.Some parameter_identifier
+        ; parameter_sort = Option.None
+        ; body
+        ; _
+        } ->
+      Format.fprintf ppf "@[<2>\\%a.@ %a@]" Identifier.pp
+        parameter_identifier pp_object body
+    | Object.RawLambda
+        { parameter_identifier = Option.Some parameter_identifier
+        ; parameter_sort = Option.Some parameter_sort
+        ; body
+        ; _
+        } ->
+      Format.fprintf ppf "@[<2>\\%a:%a.@ %a@]" Identifier.pp
+        parameter_identifier pp_object parameter_sort pp_object body
     | Object.RawForwardArrow { domain; range; _ } ->
       Format.fprintf ppf "@[<2>%a@ ->@ %a@]" pp_object domain pp_object range
     | Object.RawBackwardArrow { domain; range; _ } ->

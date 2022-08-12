@@ -1011,24 +1011,28 @@ end = struct
     let constant_or_variable =
       qualified_or_plain_identifier
       |> span
-      $> function
+      $> (function
          | (location, `Qualified identifier) ->
            LF.Object.RawQualifiedIdentifier { location; identifier }
          | (location, `Plain identifier) ->
-           LF.Object.RawIdentifier { location; identifier }
+           LF.Object.RawIdentifier { location; identifier })
+      |> labelled "LF constant or variable object"
     and type_ =
       token Token.KW_TYPE
       |> span
-      $> fun (location, ()) -> LF.Object.RawType { location }
+      $> (fun (location, ()) -> LF.Object.RawType { location })
+      |> labelled "LF `type' kind object"
     and hole =
       token Token.UNDERSCORE
       |> span
-      $> fun (location, ()) -> LF.Object.RawHole { location }
+      $> (fun (location, ()) -> LF.Object.RawHole { location })
+      |> labelled "LF hole object"
     and parenthesized =
       parens LF_parsers.lf_object
       |> span
-      $> fun (location, object_) ->
-         LF.Object.RawParenthesized { location; object_ }
+      $> (fun (location, object_) ->
+         LF.Object.RawParenthesized { location; object_ })
+      |> labelled "LF parenthesized object"
     in
     choice
       [ constant_or_variable
@@ -1040,18 +1044,20 @@ end = struct
   let lf_object4 =
     some lf_object5
     |> span
-    $> function
+    $> (function
        | (_, List1.T (object_, [])) -> object_
        | (location, List1.T (o1, o2 :: os)) ->
-         LF.Object.RawApplication { location; objects = List2.from o1 o2 os }
+         LF.Object.RawApplication { location; objects = List2.from o1 o2 os })
+    |> labelled "LF atomic or application object"
 
   let lf_object3 =
     seq2 lf_object4 (maybe (token Token.COLON &> LF_parsers.lf_object))
     |> span
-    $> function
+    $> (function
        | (_, (object_, Option.None)) -> object_
        | (location, (object_, Option.Some sort)) ->
-         LF.Object.RawAnnotated { location; object_; sort }
+         LF.Object.RawAnnotated { location; object_; sort })
+    |> labelled "LF atomic annotated object"
 
   let lf_object2 =
     let forward_arrow = token Token.ARROW $> fun () -> `Forward_arrow
@@ -1061,12 +1067,13 @@ end = struct
       lf_object3
       (maybe (seq2 (alt forward_arrow backward_arrow) LF_parsers.lf_object))
     |> span
-    $> function
+    $> (function
        | (_, (object_, Option.None)) -> object_
        | (location, (domain, Option.Some (`Forward_arrow, range))) ->
          LF.Object.RawForwardArrow { location; domain; range }
        | (location, (domain, Option.Some (`Backward_arrow, range))) ->
-         LF.Object.RawBackwardArrow { location; domain; range }
+         LF.Object.RawBackwardArrow { location; domain; range })
+    |> labelled "LF atomic, forward arrow or backward arrow object"
 
   let lf_object1 =
     let pi =
@@ -1077,8 +1084,9 @@ end = struct
             (maybe (token Token.COLON &> LF_parsers.lf_object))))
         LF_parsers.lf_object
       |> span
-      $> fun (location, ((parameter_identifier, parameter_sort), body)) ->
-         LF.Object.RawPi { location; parameter_identifier; parameter_sort; body }
+      $> (fun (location, ((parameter_identifier, parameter_sort), body)) ->
+         LF.Object.RawPi { location; parameter_identifier; parameter_sort; body })
+      |> labelled "LF Pi object"
     and lambda =
       seq2
         (token Token.LAMBDA
@@ -1088,8 +1096,9 @@ end = struct
           <& token Token.DOT)
         LF_parsers.lf_object
       |> span
-      $> fun (location, ((parameter_identifier, parameter_sort), body)) ->
-         LF.Object.RawLambda { location; parameter_identifier; parameter_sort; body }
+      $> (fun (location, ((parameter_identifier, parameter_sort), body)) ->
+         LF.Object.RawLambda { location; parameter_identifier; parameter_sort; body })
+      |> labelled "LF lambda object"
     in
     choice
       [ pi
@@ -1097,7 +1106,9 @@ end = struct
       ; lf_object2
       ]
 
-  let lf_object = lf_object1
+  let lf_object =
+    lf_object1
+    |> labelled "LF object"
 end
 
 let hole : string option parser =

@@ -227,6 +227,18 @@ let mock_dictionary_5 =
        ~precedence:2 (qid "arrow")
   |> add_prefix_lf_type_constant ~arity:1 ~precedence:1 (qid "term")
 
+let mock_dictionary_6 =
+  let open LF_constructors in
+  let open Synprs_to_synext'.Dictionary in
+  empty
+  |> add_prefix_lf_type_constant ~arity:0 ~precedence:1 (qid "exp")
+  |> add_infix_lf_term_constant
+       ~associativity:Associativity.right_associative ~precedence:3
+       (qid "app")
+  |> add_prefix_lf_term_constant ~arity:1 ~precedence:1 (qid "lam")
+  |> add_infix_lf_type_constant ~associativity:Associativity.left_associative
+       ~precedence:1 (qid "eq")
+
 let test_kind =
   let test_success elaboration_context input expected _test_ctxt =
     OUnit2.assert_equal
@@ -271,7 +283,6 @@ let test_type =
       ~printer:(Format.asprintf "%a" Synext'.LF.pp_typ)
       ~cmp:LF.Typ.equal expected
       (parse_lf_object input
-      |> Fun.through (Format.fprintf Format.std_formatter "%a@." Synprs.LF.pp_object_debug)
       |> Synprs_to_synext'.LF.elaborate_typ elaboration_context)
   in
   let success_test_cases =
@@ -296,6 +307,52 @@ let test_type =
       , "(term T -> term T') -> term (T arrow T')"
       , part (appt (ct "term") [ v "T" ] => appt (ct "term") [ v "T'" ])
         => appt (ct "term") [ par (app (c "arrow") [ v "T"; v "T'" ]) ] )
+    ; ( mock_dictionary_5
+      , "term (T arrow T') -> term T -> term T'"
+      , appt (ct "term") [ par (app (c "arrow") [ v "T"; v "T'" ]) ]
+        => (appt (ct "term") [ v "T" ] => appt (ct "term") [ v "T'" ]) )
+    ; ( mock_dictionary_5
+      , "(term T -> term T') -> term ((arrow) T T')"
+      , part (appt (ct "term") [ v "T" ] => appt (ct "term") [ v "T'" ])
+        => appt (ct "term") [ par (app (par (c "arrow")) [ v "T"; v "T'" ]) ]
+      )
+    ; ( mock_dictionary_5
+      , "term ((arrow) T T') -> term T -> term T'"
+      , appt (ct "term") [ par (app (par (c "arrow")) [ v "T"; v "T'" ]) ]
+        => (appt (ct "term") [ v "T" ] => appt (ct "term") [ v "T'" ]) )
+    ; ( mock_dictionary_6
+      , "E1 eq F1 -> E2 eq F2 -> (E1 app E2) eq (F1 app F2)"
+      , appt (ct "eq") [ v "E1"; v "F1" ]
+        => (appt (ct "eq") [ v "E2"; v "F2" ]
+           => appt (ct "eq")
+                [ par (app (c "app") [ v "E1"; v "E2" ])
+                ; par (app (c "app") [ v "F1"; v "F2" ])
+                ]) )
+    ; ( mock_dictionary_6
+      , "(eq) E1 F1 -> (eq) E2 F2 -> (eq) ((app) E1 E2) ((app) F1 F2)"
+      , appt (part (ct "eq")) [ v "E1"; v "F1" ]
+        => (appt (part (ct "eq")) [ v "E2"; v "F2" ]
+           => appt
+                (part (ct "eq"))
+                [ par (app (par (c "app")) [ v "E1"; v "E2" ])
+                ; par (app (par (c "app")) [ v "F1"; v "F2" ])
+                ]) )
+    ; ( mock_dictionary_6
+      , "({x : exp} x eq x -> (E x) eq (F x)) -> (lam (\\x. E x)) eq (lam \
+         (\\x. F x))"
+      , part
+          (pit ~x:"x" ~t:(ct "exp")
+             (appt (ct "eq") [ v "x"; v "x" ]
+             => appt (ct "eq")
+                  [ par (app (v "E") [ v "x" ])
+                  ; par (app (v "F") [ v "x" ])
+                  ]))
+        => appt (ct "eq")
+             [ par
+                 (app (c "lam") [ par (lam ~x:"x" (app (v "E") [ v "x" ])) ])
+             ; par
+                 (app (c "lam") [ par (lam ~x:"x" (app (v "F") [ v "x" ])) ])
+             ] )
     ]
   in
   let success_tests =

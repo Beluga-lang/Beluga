@@ -127,7 +127,7 @@ module LF_constructors = struct
 
   let ( => ) domain range = Typ.ForwardArrow { location; domain; range }
 
-  let ( <= ) domain range = Typ.ForwardArrow { location; domain; range }
+  let ( <= ) domain range = Typ.BackwardArrow { location; domain; range }
 
   let pit ?x ~t body =
     Typ.Pi
@@ -216,6 +216,17 @@ let mock_dictionary_4 =
   |> add_prefix_lf_term_constant ~arity:1 ~precedence:1
        (qid ~m:[ "Util"; "Nat" ] "sum/s")
 
+let mock_dictionary_5 =
+  let open LF_constructors in
+  let open Synprs_to_synext'.Dictionary in
+  empty
+  |> add_prefix_lf_type_constant ~arity:0 ~precedence:1 (qid "tp")
+  |> add_prefix_lf_term_constant ~arity:0 ~precedence:1 (qid "bool")
+  |> add_prefix_lf_term_constant ~arity:1 ~precedence:1 (qid "nat")
+  |> add_infix_lf_term_constant ~associativity:Associativity.left_associative
+       ~precedence:2 (qid "arrow")
+  |> add_prefix_lf_type_constant ~arity:1 ~precedence:1 (qid "term")
+
 let test_kind =
   let test_success elaboration_context input expected _test_ctxt =
     OUnit2.assert_equal
@@ -260,6 +271,7 @@ let test_type =
       ~printer:(Format.asprintf "%a" Synext'.LF.pp_typ)
       ~cmp:LF.Typ.equal expected
       (parse_lf_object input
+      |> Fun.through (Format.fprintf Format.std_formatter "%a@." Synprs.LF.pp_object_debug)
       |> Synprs_to_synext'.LF.elaborate_typ elaboration_context)
   in
   let success_test_cases =
@@ -271,6 +283,19 @@ let test_type =
     ; ( mock_dictionary_2
       , "(nat -> nat) -> nat"
       , part (ct "nat" => ct "nat") => ct "nat" )
+    ; ( mock_dictionary_2
+      , "nat <- (nat -> nat)"
+      , ct "nat" <= part (ct "nat" => ct "nat") )
+    ; ( mock_dictionary_2
+      , "nat <- nat -> nat"
+      , ct "nat" <= (ct "nat" => ct "nat") )
+    ; ( mock_dictionary_2
+      , "nat -> nat <- nat -> nat"
+      , ct "nat" => (ct "nat" <= (ct "nat" => ct "nat")) )
+    ; ( mock_dictionary_5
+      , "(term T -> term T') -> term (T arrow T')"
+      , part (appt (ct "term") [ v "T" ] => appt (ct "term") [ v "T'" ])
+        => appt (ct "term") [ par (app (c "arrow") [ v "T"; v "T'" ]) ] )
     ]
   in
   let success_tests =

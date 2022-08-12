@@ -984,7 +984,8 @@ end = struct
         | <lf-object1>
 
       <lf-object1> ::=
-        | <lf-object2>+
+        | <lf-object2> `:' <lf-object>
+        | <lf-object2>
 
       <lf-object2> ::=
         | <lf-object3> <forward-arrow> <lf-object>
@@ -992,8 +993,7 @@ end = struct
         | <lf-object3>
 
       <lf-object3> ::=
-        | <lf-object4> `:' <lf-object>
-        | <lf-object4>
+        | <lf-object4>+
 
       <lf-object4> ::=
         | <identifier>
@@ -1058,12 +1058,12 @@ end = struct
       ]
 
   let lf_object3 =
-    seq2 lf_object4 (maybe (token Token.COLON &> LF_parsers.lf_object))
+    some lf_object4
     |> span
     $> function
-       | (_, (object_, Option.None)) -> object_
-       | (location, (object_, Option.Some sort)) ->
-         LF.Object.RawAnnotated { location; object_; sort }
+       | (_, List1.T (object_, [])) -> object_
+       | (location, List1.T (o1, o2 :: os)) ->
+         LF.Object.RawApplication { location; objects = List2.from o1 o2 os }
 
   let lf_object2 =
     let forward_arrow = token Token.ARROW $> fun () -> `Forward_arrow
@@ -1081,12 +1081,12 @@ end = struct
          LF.Object.RawBackwardArrow { location; domain; range }
 
   let lf_object1 =
-    some lf_object2
+    seq2 lf_object2 (maybe (token Token.COLON &> LF_parsers.lf_object))
     |> span
     $> function
-       | (_, List1.T (object_, [])) -> object_
-       | (location, List1.T (o1, o2 :: os)) ->
-         LF.Object.RawApplication { location; objects = List2.from o1 o2 os }
+       | (_, (object_, Option.None)) -> object_
+       | (location, (object_, Option.Some sort)) ->
+         LF.Object.RawAnnotated { location; object_; sort }
 
   let lf_object = lf_object1
 end

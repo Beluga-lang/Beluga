@@ -239,6 +239,22 @@ let mock_dictionary_6 =
   |> add_infix_lf_type_constant ~associativity:Associativity.left_associative
        ~precedence:1 (qid "eq")
 
+let mock_dictionary_7 =
+  let open LF_constructors in
+  let open Synprs_to_synext'.Dictionary in
+  empty
+  |> add_prefix_lf_type_constant ~arity:0 ~precedence:1
+       (qid ~m:[ "Statics" ] "tp")
+  |> add_prefix_lf_term_constant ~arity:0 ~precedence:1
+       (qid ~m:[ "Statics" ] "bool")
+  |> add_prefix_lf_term_constant ~arity:1 ~precedence:1
+       (qid ~m:[ "Statics" ] "nat")
+  |> add_infix_lf_term_constant ~associativity:Associativity.left_associative
+       ~precedence:2
+       (qid ~m:[ "Statics" ] "arrow")
+  |> add_prefix_lf_type_constant ~arity:1 ~precedence:1
+       (qid ~m:[ "Statics" ] "term")
+
 let test_kind =
   let test_success elaboration_context input expected _test_ctxt =
     OUnit2.assert_equal
@@ -317,6 +333,16 @@ let test_type =
         => appt (ct "term") [ par (app (par (c "arrow")) [ v "T"; v "T'" ]) ]
       )
     ; ( mock_dictionary_5
+      , "(term T -> term T') -> term (((arrow)) T T')"
+      , part (appt (ct "term") [ v "T" ] => appt (ct "term") [ v "T'" ])
+        => appt (ct "term")
+             [ par (app (par (par (c "arrow"))) [ v "T"; v "T'" ]) ] )
+    ; ( mock_dictionary_5
+      , "(term T -> term T') -> term ((((arrow))) T T')"
+      , part (appt (ct "term") [ v "T" ] => appt (ct "term") [ v "T'" ])
+        => appt (ct "term")
+             [ par (app (par (par (par (c "arrow")))) [ v "T"; v "T'" ]) ] )
+    ; ( mock_dictionary_5
       , "term ((arrow) T T') -> term T -> term T'"
       , appt (ct "term") [ par (app (par (c "arrow")) [ v "T"; v "T'" ]) ]
         => (appt (ct "term") [ v "T" ] => appt (ct "term") [ v "T'" ]) )
@@ -352,6 +378,63 @@ let test_type =
                  (app (c "lam") [ par (lam ~x:"x" (app (v "E") [ v "x" ])) ])
              ; par
                  (app (c "lam") [ par (lam ~x:"x" (app (v "F") [ v "x" ])) ])
+             ] )
+    ; ( mock_dictionary_6
+      , "({x : exp} (eq) x x -> (eq) (E x) (F x)) -> (eq) (lam (\\x. E x)) \
+         (lam (\\x. F x))"
+      , part
+          (pit ~x:"x" ~t:(ct "exp")
+             (appt (part (ct "eq")) [ v "x"; v "x" ]
+             => appt
+                  (part (ct "eq"))
+                  [ par (app (v "E") [ v "x" ])
+                  ; par (app (v "F") [ v "x" ])
+                  ]))
+        => appt
+             (part (ct "eq"))
+             [ par
+                 (app (c "lam") [ par (lam ~x:"x" (app (v "E") [ v "x" ])) ])
+             ; par
+                 (app (c "lam") [ par (lam ~x:"x" (app (v "F") [ v "x" ])) ])
+             ] )
+    ; ( mock_dictionary_6
+      , "({x : exp} (eq) x x -> (eq) (E x) (F x)) -> (eq) (lam (\\x. (E) \
+         x)) (lam (\\x. (F) x))"
+      , part
+          (pit ~x:"x" ~t:(ct "exp")
+             (appt (part (ct "eq")) [ v "x"; v "x" ]
+             => appt
+                  (part (ct "eq"))
+                  [ par (app (v "E") [ v "x" ])
+                  ; par (app (v "F") [ v "x" ])
+                  ]))
+        => appt
+             (part (ct "eq"))
+             [ par
+                 (app (c "lam")
+                    [ par (lam ~x:"x" (app (par (v "E")) [ v "x" ])) ])
+             ; par
+                 (app (c "lam")
+                    [ par (lam ~x:"x" (app (par (v "F")) [ v "x" ])) ])
+             ] )
+    ; ( mock_dictionary_7
+      , "(Statics::term T -> Statics::term T') -> Statics::term (T \
+         Statics::arrow T')"
+      , part
+          (appt (ct ~m:[ "Statics" ] "term") [ v "T" ]
+          => appt (ct ~m:[ "Statics" ] "term") [ v "T'" ])
+        => appt
+             (ct ~m:[ "Statics" ] "term")
+             [ par (app (c ~m:[ "Statics" ] "arrow") [ v "T"; v "T'" ]) ] )
+    ; ( mock_dictionary_7
+      , "(Statics::term T -> Statics::term T') -> Statics::term \
+         ((Statics::arrow) T T')"
+      , part
+          (appt (ct ~m:[ "Statics" ] "term") [ v "T" ]
+          => appt (ct ~m:[ "Statics" ] "term") [ v "T'" ])
+        => appt
+             (ct ~m:[ "Statics" ] "term")
+             [ par (app (par (c ~m:[ "Statics" ] "arrow")) [ v "T"; v "T'" ])
              ] )
     ]
   in

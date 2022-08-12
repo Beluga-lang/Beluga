@@ -254,4 +254,101 @@ module LF = struct
       Format.fprintf ppf "@[<2>%a@ :@ %a@]" pp_term term pp_typ typ
     | Term.Parenthesized { term; _ } ->
       Format.fprintf ppf "@[<2>(%a)@]" pp_term term
+
+  let rec pp_kind_debug ppf kind =
+    match kind with
+    | Kind.Typ _ -> Format.fprintf ppf "type"
+    | Kind.Arrow { domain; range; _ } ->
+      Format.fprintf ppf "@[<2>KindArrow(%a@ ->@ %a)@]" pp_typ domain pp_kind_debug range
+    | Kind.Pi { parameter_identifier = Option.None; parameter_type; body; _ }
+      ->
+      Format.fprintf ppf "@[<2>KindPi({@ _@ :@ %a@ }@ %a)@]" pp_typ parameter_type
+        pp_kind_debug body
+    | Kind.Pi
+        { parameter_identifier = Option.Some parameter_identifier
+        ; parameter_type
+        ; body
+        ; _
+        } ->
+      Format.fprintf ppf "@[<2>KindPi({@ %a@ :@ %a@ }@ %a)@]" Identifier.pp
+        parameter_identifier pp_typ parameter_type pp_kind_debug body
+    | Kind.Parenthesized { kind; _ } ->
+      Format.fprintf ppf "@[<2>KindParenthesized(%a)@]" pp_kind_debug kind
+
+  and pp_typ_debug ppf typ =
+    match typ with
+    | Typ.Constant { identifier; _ } ->
+      Format.fprintf ppf "%a" QualifiedIdentifier.pp identifier
+    | Typ.Application { applicand; arguments = []; _ } ->
+      Format.fprintf ppf "@[<2>TypeApplication(%a)@]" pp_typ_debug applicand
+    | Typ.Application { applicand; arguments; _ } ->
+      Format.fprintf ppf "@[<2>TypeApplication(%a@ %a)@]" pp_typ_debug applicand
+        (List.pp ~pp_sep:(fun ppf () -> Format.fprintf ppf "@ ") pp_term_debug)
+        arguments
+    | Typ.ForwardArrow { domain; range; _ } ->
+      Format.fprintf ppf "@[<2>TypeArrow(%a@ ->@ %a)@]" pp_typ_debug domain pp_typ_debug range
+    | Typ.BackwardArrow { domain; range; _ } ->
+      Format.fprintf ppf "@[<2>TypeArrow(%a@ <-@ %a)@]" pp_typ_debug domain pp_typ_debug range
+    | Typ.Pi { parameter_identifier = Option.None; parameter_type; body; _ }
+      ->
+      Format.fprintf ppf "@[<2>TypePi({@ _@ :@ %a@ }@ %a)@]" pp_typ_debug parameter_type
+        pp_typ_debug body
+    | Typ.Pi
+        { parameter_identifier = Option.Some parameter_identifier
+        ; parameter_type
+        ; body
+        ; _
+        } ->
+      Format.fprintf ppf "@[<2>TypePi({@ %a@ :@ %a@ }@ %a)@]" Identifier.pp
+        parameter_identifier pp_typ_debug parameter_type pp_typ_debug body
+    | Typ.Parenthesized { typ; _ } ->
+      Format.fprintf ppf "@[<2>TypeParenthesized(%a)@]" pp_typ_debug typ
+
+  and pp_term_debug ppf term =
+    match term with
+    | Term.Variable { identifier; _ } ->
+      Format.fprintf ppf "%a" Identifier.pp identifier
+    | Term.Constant { identifier; _ } ->
+      Format.fprintf ppf "%a" QualifiedIdentifier.pp identifier
+    | Term.Application { applicand; arguments = []; _ } ->
+      Format.fprintf ppf "@[<2>TermApplication(%a)@]" pp_term_debug applicand
+    | Term.Application { applicand; arguments; _ } ->
+      Format.fprintf ppf "@[<2>TermApplication(%a@ %a)@]" pp_term_debug applicand
+        (List.pp ~pp_sep:(fun ppf () -> Format.fprintf ppf "@ ") pp_term_debug)
+        arguments
+    | Term.Abstraction
+        { parameter_identifier = Option.None
+        ; parameter_type = Option.None
+        ; body
+        ; _
+        } -> Format.fprintf ppf "@[<2>TermAbstraction(\\_.@ %a)@]" pp_term_debug body
+    | Term.Abstraction
+        { parameter_identifier = Option.None
+        ; parameter_type = Option.Some parameter_type
+        ; body
+        ; _
+        } ->
+      Format.fprintf ppf "@[<2>TermAbstraction(\\_:%a.@ %a)@]" pp_typ parameter_type pp_term_debug
+        body
+    | Term.Abstraction
+        { parameter_identifier = Option.Some parameter_identifier
+        ; parameter_type = Option.None
+        ; body
+        ; _
+        } ->
+      Format.fprintf ppf "@[<2>TermAbstraction(\\%a.@ %a)@]" Identifier.pp
+        parameter_identifier pp_term_debug body
+    | Term.Abstraction
+        { parameter_identifier = Option.Some parameter_identifier
+        ; parameter_type = Option.Some parameter_type
+        ; body
+        ; _
+        } ->
+      Format.fprintf ppf "@[<2>TermAbstraction(\\%a:%a.@ %a)@]" Identifier.pp
+        parameter_identifier pp_typ parameter_type pp_term_debug body
+    | Term.Wildcard _ -> Format.fprintf ppf "_"
+    | Term.TypeAnnotated { term; typ; _ } ->
+      Format.fprintf ppf "@[<2>TermAnnotated(%a@ :@ %a)@]" pp_term_debug term pp_typ typ
+    | Term.Parenthesized { term; _ } ->
+      Format.fprintf ppf "@[<2>TermParenthesized(%a)@]" pp_term_debug term
 end

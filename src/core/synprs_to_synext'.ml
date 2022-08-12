@@ -263,10 +263,10 @@ end = struct
            Seq.return (identifier, entry))
 end
 
-exception Unbound_qualified_identifier of QualifiedIdentifier.t
-
 module LF = struct
-  (* Exceptions for LF kind elaboration *)
+  (** {1 Exceptions} *)
+
+  (** {2 Exceptions for LF kind elaboration} *)
 
   exception Illegal_identifier_kind of Location.t
 
@@ -284,7 +284,7 @@ module LF = struct
 
   exception Illegal_untyped_pi_kind of Location.t
 
-  (* Exceptions for LF type elaboration *)
+  (** {2 Exceptions for LF type elaboration} *)
 
   exception Illegal_type_kind_type of Location.t
 
@@ -298,7 +298,7 @@ module LF = struct
 
   exception Unbound_type_constant of Location.t * QualifiedIdentifier.t
 
-  (* Exceptions for LF term elaboration *)
+  (** {2 Exceptions for LF term elaboration} *)
 
   exception Illegal_type_kind_term of Location.t
 
@@ -310,7 +310,7 @@ module LF = struct
 
   exception Unbound_term_constant of Location.t * QualifiedIdentifier.t
 
-  (* Exceptions for application rewriting *)
+  (** {2 Exceptions for application rewriting} *)
 
   exception Expected_term_constant of Location.t * Dictionary.entry
 
@@ -326,11 +326,16 @@ module LF = struct
 
   exception Consecutive_non_associative_operators of Location.t * Location.t
 
-  exception Arity_mismatch of Location.t * Location.t List.t
+  exception
+    Arity_mismatch of
+      { operator_location : Location.t
+      ; operator_arity : Int.t
+      ; actual_argument_locations : Location.t List.t
+      }
 
   exception Leftover_expressions of Location.t List2.t
 
-  (* Elaboration *)
+  (** {1 Elaboration} *)
 
   let rec elaborate_kind dictionary object_ =
     match object_ with
@@ -666,20 +671,24 @@ module LF = struct
             "Unexpectedly did not elaborate LF operands in rewriting"
       with
       | ShuntingYard.Empty_expression -> raise @@ Empty_expression
-      | ShuntingYard.Misplaced_operator (operator, operands) ->
+      | ShuntingYard.Misplaced_operator { operator; operands } ->
         raise
         @@ Misplaced_operator
              ( LF_operator.location operator
              , List.map LF_operand.location operands )
-      | ShuntingYard.Consecutive_non_associative_operators (o1, o2) ->
+      | ShuntingYard.Consecutive_non_associative_operators
+          { left_operator = o1; right_operator = o2 } ->
         raise
         @@ Consecutive_non_associative_operators
              (LF_operator.location o1, LF_operator.location o2)
-      | ShuntingYard.Arity_mismatch (operator, operands) ->
+      | ShuntingYard.Arity_mismatch { operator; operator_arity; operands } ->
+        let operator_location = LF_operator.location operator
+        and actual_argument_locations =
+          List.map LF_operand.location operands
+        in
         raise
         @@ Arity_mismatch
-             ( LF_operator.location operator
-             , List.map LF_operand.location operands )
+             { operator_location; operator_arity; actual_argument_locations }
       | ShuntingYard.Leftover_expressions expressions ->
         let (List2.T (e1, e2, es)) =
           List2.map

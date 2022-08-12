@@ -294,6 +294,8 @@ module LF = struct
 
   exception Illegal_annotated_type of Location.t
 
+  exception Illegal_untyped_pi_type of Location.t
+
   exception Unbound_type_constant of Location.t * QualifiedIdentifier.t
 
   (* Exceptions for LF term elaboration *)
@@ -388,6 +390,8 @@ module LF = struct
       raise @@ Illegal_lambda_type location
     | Synprs.LF.Object.RawAnnotated { location; _ } ->
       raise @@ Illegal_annotated_type location
+    | Synprs.LF.Object.RawPi { location; parameter_sort = Option.None; _ } ->
+      raise @@ Illegal_untyped_pi_type location
     | Synprs.LF.Object.RawIdentifier { location; identifier } -> (
       let qualified_identifier =
         QualifiedIdentifier.make_simple identifier

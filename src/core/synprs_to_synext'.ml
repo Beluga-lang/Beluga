@@ -469,8 +469,7 @@ module LF = struct
       | Option.Some Dictionary.LF_term ->
         Synext'.LF.Term.Variable { location; identifier }
       | Option.Some entry -> raise @@ Expected_term_constant (location, entry)
-      | Option.None ->
-        raise @@ Unbound_term_constant (location, qualified_identifier))
+      | Option.None -> Synext'.LF.Term.Variable { location; identifier })
     | Synprs.LF.Object.RawQualifiedIdentifier { location; identifier } -> (
       match Dictionary.lookup identifier dictionary with
       | Option.Some (Dictionary.LF_term_constant _) ->

@@ -96,8 +96,9 @@ let print_span_short ppf l =
     (stop_column l)
 
 let print ppf l =
-  let open Format in
-  fprintf ppf "%s, %a" l.filename print_short l
+  Format.fprintf ppf "%s, %a" l.filename print_short l
+
+let pp = print
 
 let start_position s = s.start
 let stop_position s = s.stop

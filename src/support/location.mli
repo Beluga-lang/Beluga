@@ -25,6 +25,7 @@ val filename : t -> string
 
 (** Prints `<filename>, line <n>, column <n>'. Suitable for proper errors. *)
 val print : Format.formatter -> t -> unit
+val pp : Format.formatter -> t -> unit
 
 (** Prints `line <n>, column <n>'. More suitable for debug prints. *)
 val print_short : Format.formatter -> t -> unit

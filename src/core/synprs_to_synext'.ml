@@ -681,6 +681,22 @@ module LF = struct
              ( LF_operator.location operator
              , List.map LF_operand.location operands )
       | ShuntingYard.Leftover_expressions expressions ->
-        raise
-        @@ Leftover_expressions (List2.map LF_operand.location expressions)
+        let (List2.T (e1, e2, es)) =
+          List2.map
+            (function
+              | LF_operand.External_term t -> t
+              | LF_operand.External_typ t -> raise @@ Expected_term t
+              | LF_operand.Parser_object o -> elaborate_term dictionary o)
+            expressions
+        in
+        let applicand = e1
+        and arguments = e2 :: es in
+        let location =
+          List.fold_left
+            (fun acc t -> Location.join acc (Synext'.LF.location_of_term t))
+            (Synext'.LF.location_of_term applicand)
+            arguments
+        in
+        `Term
+          (Synext'.LF.Term.Application { location; applicand; arguments })
 end

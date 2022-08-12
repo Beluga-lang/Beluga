@@ -255,6 +255,16 @@ let mock_dictionary_7 =
   |> add_prefix_lf_type_constant ~arity:1 ~precedence:1
        (qid ~m:[ "Statics" ] "term")
 
+let mock_dictionary_8 =
+  let open LF_constructors in
+  let open Synprs_to_synext'.Dictionary in
+  empty
+  |> add_infix_lf_type_constant
+       ~associativity:Associativity.right_associative ~precedence:1
+       (qid "msteps")
+  |> add_prefix_lf_term_constant ~arity:1 ~precedence:1 (qid "lam")
+  |> add_prefix_lf_type_constant ~arity:1 ~precedence:1 (qid "term")
+
 let test_kind =
   let test_success elaboration_context input expected _test_ctxt =
     OUnit2.assert_equal
@@ -282,6 +292,17 @@ let test_kind =
       , "Util::Nat::nat -> Util::Nat::nat -> type"
       , ct ~m:[ "Util"; "Nat" ] "nat"
         ==> (ct ~m:[ "Util"; "Nat" ] "nat" ==> typ) )
+    ; ( mock_dictionary_8
+      , "({ x : term} (M x) msteps (M' x)) -> (lam M) msteps (lam M') -> type"
+      , part
+          (pit ~x:"x" ~t:(ct "term")
+             (appt (ct "msteps")
+                [ par (app (v "M") [ v "x" ]); par (app (v "M'") [ v "x" ]) ]))
+        ==> (appt (ct "msteps")
+               [ par (app (c "lam") [ v "M" ])
+               ; par (app (c "lam") [ v "M'" ])
+               ]
+            ==> typ) )
     ]
   in
   let success_tests =

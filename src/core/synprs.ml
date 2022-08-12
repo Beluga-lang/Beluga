@@ -160,6 +160,95 @@ module LF = struct
         objects
     | Object.RawParenthesized { object_; _ } ->
       Format.fprintf ppf "@[<2>(%a)@]" pp_object object_
+
+  let rec pp_object_debug ppf object_ =
+    match object_ with
+    | Object.RawIdentifier { identifier; _ } ->
+      Format.fprintf ppf "%a" Identifier.pp identifier
+    | Object.RawQualifiedIdentifier { identifier; _ } ->
+      Format.fprintf ppf "%a" QualifiedIdentifier.pp identifier
+    | Object.RawType _ -> Format.fprintf ppf "type"
+    | Object.RawHole _ -> Format.fprintf ppf "_"
+    | Object.RawPi
+        { parameter_identifier = Option.None
+        ; parameter_sort = Option.None
+        ; body
+        ; _
+        } -> Format.fprintf ppf "@[<2>Pi({@ _@ }@ %a)@]" pp_object_debug body
+    | Object.RawPi
+        { parameter_identifier = Option.None
+        ; parameter_sort = Option.Some parameter_sort
+        ; body
+        ; _
+        } ->
+      Format.fprintf ppf "@[<2>Pi({@ _@ :@ %a@ }@ %a)@]" pp_object_debug
+        parameter_sort pp_object_debug body
+    | Object.RawPi
+        { parameter_identifier = Option.Some parameter_identifier
+        ; parameter_sort = Option.None
+        ; body
+        ; _
+        } ->
+      Format.fprintf ppf "@[<2>Pi({@ %a@ }@ %a)@]" Identifier.pp
+        parameter_identifier pp_object_debug body
+    | Object.RawPi
+        { parameter_identifier = Option.Some parameter_identifier
+        ; parameter_sort = Option.Some parameter_sort
+        ; body
+        ; _
+        } ->
+      Format.fprintf ppf "@[<2>Pi({@ %a@ :@ %a@ }@ %a)@]" Identifier.pp
+        parameter_identifier pp_object_debug parameter_sort pp_object_debug
+        body
+    | Object.RawLambda
+        { parameter_identifier = Option.None
+        ; parameter_sort = Option.None
+        ; body
+        ; _
+        } ->
+      Format.fprintf ppf "@[<2>Lambda(\\_.@ %a)@]" pp_object_debug body
+    | Object.RawLambda
+        { parameter_identifier = Option.None
+        ; parameter_sort = Option.Some parameter_sort
+        ; body
+        ; _
+        } ->
+      Format.fprintf ppf "@[<2>Lambda(\\_:%a.@ %a)@]" pp_object_debug
+        parameter_sort pp_object_debug body
+    | Object.RawLambda
+        { parameter_identifier = Option.Some parameter_identifier
+        ; parameter_sort = Option.None
+        ; body
+        ; _
+        } ->
+      Format.fprintf ppf "@[<2>Lambda(\\%a.@ %a)@]" Identifier.pp
+        parameter_identifier pp_object_debug body
+    | Object.RawLambda
+        { parameter_identifier = Option.Some parameter_identifier
+        ; parameter_sort = Option.Some parameter_sort
+        ; body
+        ; _
+        } ->
+      Format.fprintf ppf "@[<2>Lambda(\\%a:%a.@ %a)@]" Identifier.pp
+        parameter_identifier pp_object_debug parameter_sort pp_object_debug
+        body
+    | Object.RawForwardArrow { domain; range; _ } ->
+      Format.fprintf ppf "@[<2>ForwardArrow(%a@ ->@ %a)@]" pp_object_debug
+        domain pp_object_debug range
+    | Object.RawBackwardArrow { domain; range; _ } ->
+      Format.fprintf ppf "@[<2>BackwardArrow(%a@ <-@ %a)@]" pp_object_debug
+        domain pp_object_debug range
+    | Object.RawAnnotated { object_; sort; _ } ->
+      Format.fprintf ppf "@[<2>Annotated(%a@ :@ %a)@]" pp_object_debug
+        object_ pp_object_debug sort
+    | Object.RawApplication { objects; _ } ->
+      Format.fprintf ppf "@[<2>Application(%a)@]"
+        (List2.pp
+           ~pp_sep:(fun ppf () -> Format.fprintf ppf "@ ")
+           pp_object_debug)
+        objects
+    | Object.RawParenthesized { object_; _ } ->
+      Format.fprintf ppf "@[<2>Parenthesized(%a)@]" pp_object_debug object_
 end
 
 (** {1 Parser Contextual LF Syntax} *)

@@ -53,7 +53,7 @@ end) : ORD with type t = T.t
 module Reverse (Ord : ORD) : ORD with type t = Ord.t
 
 (** If [val f : 't -> 's], then [contramap ord f] is an instance of {!ORD}
-    for values of type ['t] by the {!ORD} insance [ord] for values of type
+    for values of type ['t] by the {!ORD} instance [ord] for values of type
     ['s]. *)
 val contramap :
      (module ORD with type t = 's)

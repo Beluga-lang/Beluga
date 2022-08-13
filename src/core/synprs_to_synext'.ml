@@ -368,235 +368,112 @@ module LF = struct
       ; actual_argument_locations : Location.t List.t
       }
 
-  (* Exception Printers *)
+  (** {2 Exception Printing} *)
+
+  let pp_exception ppf = function
+    | Illegal_identifier_kind location ->
+      Format.fprintf ppf "Identifiers may not appear in LF kinds: %a@."
+        Location.pp location
+    | Illegal_qualified_identifier_kind location ->
+      Format.fprintf ppf
+        "Qualified identifiers may not appear in LF kinds: %a@." Location.pp
+        location
+    | Illegal_backward_arrow_kind location ->
+      Format.fprintf ppf "Backward arrows may not appear in LF kinds: %a@."
+        Location.pp location
+    | Illegal_hole_kind location ->
+      Format.fprintf ppf "Holes may not appear in LF kinds: %a@." Location.pp
+        location
+    | Illegal_lambda_kind location ->
+      Format.fprintf ppf "Lambdas may not appear in LF kinds: %a@."
+        Location.pp location
+    | Illegal_annotated_kind location ->
+      Format.fprintf ppf "Type ascriptions may not appear in LF kinds: %a@."
+        Location.pp location
+    | Illegal_application_kind location ->
+      Format.fprintf ppf "Term applications may not appear in LF kinds: %a@."
+        Location.pp location
+    | Illegal_untyped_pi_kind location ->
+      Format.fprintf ppf
+        "The LF Pi kind is missing its parameter type annotation: %a@."
+        Location.pp location
+    | Illegal_type_kind_type location ->
+      Format.fprintf ppf "The kind `type' may not appear in LF types: %a@."
+        Location.pp location
+    | Illegal_hole_type location ->
+      Format.fprintf ppf "Holes may not appear in LF types: %a@." Location.pp
+        location
+    | Illegal_lambda_type location ->
+      Format.fprintf ppf "Lambdas may not appear in LF types: %a@."
+        Location.pp location
+    | Illegal_annotated_type location ->
+      Format.fprintf ppf "Type ascriptions may not appear in LF types: %a@."
+        Location.pp location
+    | Illegal_untyped_pi_type location ->
+      Format.fprintf ppf
+        "The LF Pi type is missing its parameter type annotation: %a@."
+        Location.pp location
+    | Unbound_type_constant { location; identifier } ->
+      Format.fprintf ppf "The LF type-level constant %a is unbound: %a@."
+        QualifiedIdentifier.pp identifier Location.pp location
+    | Illegal_type_kind_term location ->
+      Format.fprintf ppf "The kind `type' may not appear in LF terms: %a@."
+        Location.pp location
+    | Illegal_pi_term location ->
+      Format.fprintf ppf "Pi kinds or types may not appear in LF terms: %a@."
+        Location.pp location
+    | Illegal_forward_arrow_term location ->
+      Format.fprintf ppf "Forward arrows may not appear in LF terms: %a@."
+        Location.pp location
+    | Illegal_backward_arrow_term location ->
+      Format.fprintf ppf "Backward arrows may not appear in LF terms: %a@."
+        Location.pp location
+    | Unbound_term_constant { location; identifier } ->
+      Format.fprintf ppf "The LF term-level constant %a is unbound: %a@."
+        QualifiedIdentifier.pp identifier Location.pp location
+    | Expected_term_constant { location; actual_binding } ->
+      Format.fprintf ppf
+        "Expected an LF term-level constant but found %a instead: %a@."
+        Dictionary.pp_entry_sort actual_binding Location.pp location
+    | Expected_type_constant { location; actual_binding } ->
+      Format.fprintf ppf
+        "Expected an LF type-level constant but found %a instead: %a@."
+        Dictionary.pp_entry_sort actual_binding Location.pp location
+    | Expected_term location ->
+      Format.fprintf ppf
+        "Expected an LF term but found an LF type instead: %a@." Location.pp
+        location
+    | Misplaced_operator { operator_location; _ } ->
+      Format.fprintf ppf
+        "Misplaced LF term-level or type-level operator: %a@." Location.pp
+        operator_location
+    | Consecutive_non_associative_operators
+        { operator_identifier
+        ; left_operator_location
+        ; right_operator_location
+        } ->
+      Format.fprintf ppf
+        "Consecutive occurrences of the LF term-level or type-level \
+         operator %a after rewriting: %a and %a@."
+        QualifiedIdentifier.pp operator_identifier Location.pp
+        left_operator_location Location.pp right_operator_location
+    | Arity_mismatch
+        { operator_identifier
+        ; operator_location
+        ; operator_arity
+        ; actual_argument_locations
+        } ->
+      let expected_arguments_count = operator_arity
+      and actual_arguments_count = List.length actual_argument_locations in
+      Format.fprintf ppf "Operator %a expected %d arguments but got %d: %a@."
+        QualifiedIdentifier.pp operator_identifier expected_arguments_count
+        actual_arguments_count Location.pp operator_location
+    | _ -> raise @@ Invalid_argument "[pp_exception] unsupported exception"
 
   let () =
-    Printexc.register_printer (function
-      | Illegal_identifier_kind location ->
-        Option.some
-        @@ Format.asprintf "Identifiers may not appear in LF kinds: %a@."
-             Location.pp location
-      | _ -> Option.none)
-
-  let () =
-    Printexc.register_printer (function
-      | Illegal_qualified_identifier_kind location ->
-        Option.some
-        @@ Format.asprintf
-             "Qualified identifiers may not appear in LF kinds: %a@."
-             Location.pp location
-      | _ -> Option.none)
-
-  let () =
-    Printexc.register_printer (function
-      | Illegal_backward_arrow_kind location ->
-        Option.some
-        @@ Format.asprintf "Backward arrows may not appear in LF kinds: %a@."
-             Location.pp location
-      | _ -> Option.none)
-
-  let () =
-    Printexc.register_printer (function
-      | Illegal_hole_kind location ->
-        Option.some
-        @@ Format.asprintf "Holes may not appear in LF kinds: %a@."
-             Location.pp location
-      | _ -> Option.none)
-
-  let () =
-    Printexc.register_printer (function
-      | Illegal_lambda_kind location ->
-        Option.some
-        @@ Format.asprintf "Lambdas may not appear in LF kinds: %a@."
-             Location.pp location
-      | _ -> Option.none)
-
-  let () =
-    Printexc.register_printer (function
-      | Illegal_annotated_kind location ->
-        Option.some
-        @@ Format.asprintf
-             "Type ascriptions may not appear in LF kinds: %a@." Location.pp
-             location
-      | _ -> Option.none)
-
-  let () =
-    Printexc.register_printer (function
-      | Illegal_application_kind location ->
-        Option.some
-        @@ Format.asprintf
-             "Term applications may not appear in LF kinds: %a@." Location.pp
-             location
-      | _ -> Option.none)
-
-  let () =
-    Printexc.register_printer (function
-      | Illegal_untyped_pi_kind location ->
-        Option.some
-        @@ Format.asprintf
-             "The LF Pi kind is missing its parameter type annotation: %a@."
-             Location.pp location
-      | _ -> Option.none)
-
-  let () =
-    Printexc.register_printer (function
-      | Illegal_type_kind_type location ->
-        Option.some
-        @@ Format.asprintf "The kind `type' may not appear in LF types: %a@."
-             Location.pp location
-      | _ -> Option.none)
-
-  let () =
-    Printexc.register_printer (function
-      | Illegal_hole_type location ->
-        Option.some
-        @@ Format.asprintf "Holes may not appear in LF types: %a@."
-             Location.pp location
-      | _ -> Option.none)
-
-  let () =
-    Printexc.register_printer (function
-      | Illegal_lambda_type location ->
-        Option.some
-        @@ Format.asprintf "Lambdas may not appear in LF types: %a@."
-             Location.pp location
-      | _ -> Option.none)
-
-  let () =
-    Printexc.register_printer (function
-      | Illegal_annotated_type location ->
-        Option.some
-        @@ Format.asprintf
-             "Type ascriptions may not appear in LF types: %a@." Location.pp
-             location
-      | _ -> Option.none)
-
-  let () =
-    Printexc.register_printer (function
-      | Illegal_untyped_pi_type location ->
-        Option.some
-        @@ Format.asprintf
-             "The LF Pi type is missing its parameter type annotation: %a@."
-             Location.pp location
-      | _ -> Option.none)
-
-  let () =
-    Printexc.register_printer (function
-      | Unbound_type_constant { location; identifier } ->
-        Option.some
-        @@ Format.asprintf "The LF type-level constant %a is unbound: %a@."
-             QualifiedIdentifier.pp identifier Location.pp location
-      | _ -> Option.none)
-
-  let () =
-    Printexc.register_printer (function
-      | Illegal_type_kind_term location ->
-        Option.some
-        @@ Format.asprintf "The kind `type' may not appear in LF terms: %a@."
-             Location.pp location
-      | _ -> Option.none)
-
-  let () =
-    Printexc.register_printer (function
-      | Illegal_pi_term location ->
-        Option.some
-        @@ Format.asprintf
-             "Pi kinds or types may not appear in LF terms: %a@." Location.pp
-             location
-      | _ -> Option.none)
-
-  let () =
-    Printexc.register_printer (function
-      | Illegal_forward_arrow_term location ->
-        Option.some
-        @@ Format.asprintf "Forward arrows may not appear in LF terms: %a@."
-             Location.pp location
-      | _ -> Option.none)
-
-  let () =
-    Printexc.register_printer (function
-      | Illegal_backward_arrow_term location ->
-        Option.some
-        @@ Format.asprintf "Backward arrows may not appear in LF terms: %a@."
-             Location.pp location
-      | _ -> Option.none)
-
-  let () =
-    Printexc.register_printer (function
-      | Unbound_term_constant { location; identifier } ->
-        Option.some
-        @@ Format.asprintf "The LF term-level constant %a is unbound: %a@."
-             QualifiedIdentifier.pp identifier Location.pp location
-      | _ -> Option.none)
-
-  let () =
-    Printexc.register_printer (function
-      | Expected_term_constant { location; actual_binding } ->
-        Option.some
-        @@ Format.asprintf
-             "Expected an LF term-level constant but found %a instead: %a@."
-             Dictionary.pp_entry_sort actual_binding Location.pp location
-      | _ -> Option.none)
-
-  let () =
-    Printexc.register_printer (function
-      | Expected_type_constant { location; actual_binding } ->
-        Option.some
-        @@ Format.asprintf
-             "Expected an LF type-level constant but found %a instead: %a@."
-             Dictionary.pp_entry_sort actual_binding Location.pp location
-      | _ -> Option.none)
-
-  let () =
-    Printexc.register_printer (function
-      | Expected_term location ->
-        Option.some
-        @@ Format.asprintf
-             "Expected an LF term but found an LF type instead: %a@."
-             Location.pp location
-      | _ -> Option.none)
-
-  let () =
-    Printexc.register_printer (function
-      | Misplaced_operator { operator_location; _ } ->
-        Option.some
-        @@ Format.asprintf
-             "Misplaced LF term-level or type-level operator: %a@."
-             Location.pp operator_location
-      | _ -> Option.none)
-
-  let () =
-    Printexc.register_printer (function
-      | Consecutive_non_associative_operators
-          { operator_identifier
-          ; left_operator_location
-          ; right_operator_location
-          } ->
-        Option.some
-        @@ Format.asprintf
-             "Consecutive occurrences of the LF term-level or type-level \
-              operator %a after rewriting: %a and %a@."
-             QualifiedIdentifier.pp operator_identifier Location.pp
-             left_operator_location Location.pp right_operator_location
-      | _ -> Option.none)
-
-  let () =
-    Printexc.register_printer (function
-      | Arity_mismatch
-          { operator_identifier
-          ; operator_location
-          ; operator_arity
-          ; actual_argument_locations
-          } ->
-        let expected_arguments_count = operator_arity
-        and actual_arguments_count = List.length actual_argument_locations in
-        Option.some
-        @@ Format.asprintf
-             "Operator %a expected %d arguments but got %d: %a@."
-             QualifiedIdentifier.pp operator_identifier
-             expected_arguments_count actual_arguments_count Location.pp
-             operator_location
-      | _ -> Option.none)
+    Printexc.register_printer (fun exn ->
+        try Option.some @@ Format.asprintf "%a" pp_exception exn
+        with Invalid_argument _ -> Option.none)
 
   (** {1 Elaboration} *)
 

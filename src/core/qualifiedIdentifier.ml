@@ -24,11 +24,11 @@ let[@inline] name { name; _ } = name
 let[@inline] modules { modules; _ } = modules
 
 include (
-  (val Eq.conjunction
+  (val Ord.sequence
          (module Identifier)
-         (module List.MakeEq (Identifier))
+         (module List.MakeOrd (Identifier))
          name modules) :
-    Eq.EQ with type t := t)
+    Ord.ORD with type t := t)
 
 include (
   Show.Make (struct

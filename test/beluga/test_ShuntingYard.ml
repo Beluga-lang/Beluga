@@ -30,6 +30,10 @@ module Operand = struct
         { left_operand : t
         ; right_operand : t
         }
+    | Postfix2 of
+        { left_operand : t
+        ; right_operand : t
+        }
 end
 
 module Operator = struct
@@ -42,6 +46,7 @@ module Operator = struct
     | Exponent
     | Factorial
     | Less_than
+    | Postfix2
 
   let arity operator =
     match operator with
@@ -50,14 +55,16 @@ module Operator = struct
     | Multiplication
     | Division
     | Exponent
-    | Less_than -> 2
+    | Less_than
+    | Postfix2 -> 2
     | Minus | Factorial -> 1
 
   let precedence operator =
     match operator with
-    | Factorial | Exponent -> 4
-    | Minus -> 3
-    | Multiplication | Division -> 2
+    | Factorial | Exponent -> 5
+    | Minus -> 4
+    | Multiplication | Division -> 3
+    | Postfix2 -> 2
     | Addition | Subtraction -> 1
     | Less_than -> 0
 
@@ -70,12 +77,16 @@ module Operator = struct
     | Division
     | Exponent
     | Less_than -> Fixity.infix
-    | Factorial -> Fixity.postfix
+    | Factorial | Postfix2 -> Fixity.postfix
 
   let associativity operator =
     match operator with
-    | Addition | Subtraction | Factorial | Multiplication | Division ->
-      Associativity.left_associative
+    | Addition
+    | Subtraction
+    | Factorial
+    | Postfix2
+    | Multiplication
+    | Division -> Associativity.left_associative
     | Minus | Exponent -> Associativity.right_associative
     | Less_than -> Associativity.non_associative
 
@@ -105,6 +116,8 @@ module Writer = struct
       Operand.Exponentiation { base; power }
     | Operator.Less_than, [ left_operand; right_operand ] ->
       Operand.Less_than { left_operand; right_operand }
+    | Operator.Postfix2, [ left_operand; right_operand ] ->
+      Operand.Postfix2 { left_operand; right_operand }
     | _ -> raise @@ Invalid_argument "Unexpected write failure"
 end
 
@@ -128,6 +141,8 @@ module Primitive_constructors = struct
   let ( ! ) = ShuntingYard.operator @@ Operator.Factorial
 
   let ( < ) = ShuntingYard.operator @@ Operator.Less_than
+
+  let p2 = ShuntingYard.operator @@ Operator.Postfix2
 end
 
 module Operand_constructors = struct
@@ -153,6 +168,9 @@ module Operand_constructors = struct
 
   let lt left_operand right_operand =
     Operand.Less_than { left_operand; right_operand }
+
+  let p2' left_operand right_operand =
+    Operand.Postfix2 { left_operand; right_operand }
 end
 
 let assert_raises_empty_expression f =
@@ -213,6 +231,10 @@ let test_shunting_yard =
       , add (n 1) (mul (fact (n 2)) (n 3)) )
     ; ([ ( ~- ); n' 2; ( ** ); n' 3 ], minus (exp (n 2) (n 3)))
     ; ([ n' 1; ( * ); n' 2; ( ** ); n' 3 ], mul (n 1) (exp (n 2) (n 3)))
+    ; ([ n' 1; n' 2; p2 ], p2' (n 1) (n 2))
+    ; ([ n' 1; n' 2; ( * ); n' 3; p2 ], p2' (n 1) (mul (n 2) (n 3)))
+    ; ( [ n' 0; ( + ); n' 1; n' 2; ( * ); n' 3; p2 ]
+      , add (n 0) (p2' (n 1) (mul (n 2) (n 3))) )
     ]
   in
   let success_tests =

@@ -142,7 +142,27 @@ module Dictionary : sig
 
   (** {1 Lookup} *)
 
-  val lookup : QualifiedIdentifier.t -> t -> entry Option.t
+  exception Unbound_identifier of QualifiedIdentifier.t
+
+  exception Unbound_module of QualifiedIdentifier.t
+
+  exception
+    Expected_module of
+      { identifier : QualifiedIdentifier.t
+      ; actual_binding : entry
+      }
+
+  (** [lookup identifier dictionary] looks up [identifier] in [dictionary].
+
+      @raise Unbound_identifier if [identifier] is unbound in [dictionary].
+      @raise Unbound_module
+        if a sub-part of [identifier] is unbound in [dictionary], for
+        instance if module [Util::Nat] is unbound when looking up
+        [Util::Nat::zero]
+      @raise Expected_module
+        if a sub-part of [identifier] is bound in [dictionary], but does not
+        refer to a module *)
+  val lookup : QualifiedIdentifier.t -> t -> entry
 
   (** {1 Interoperability} *)
 
@@ -235,20 +255,78 @@ end = struct
   let add_module module_dictionary identifier =
     add_nested_entry (Module module_dictionary) identifier
 
-  let lookup qualified_identifier dictionary =
-    let name = QualifiedIdentifier.name qualified_identifier
-    and modules = QualifiedIdentifier.modules qualified_identifier in
-    let rec lookup modules dictionary =
-      match modules with
-      | [] (* Toplevel declaration *) ->
-        Identifier.Hamt.find_opt name dictionary
+  let pp_entry_sort ppf entry =
+    match entry with
+    | LF_term -> Format.fprintf ppf "an LF term"
+    | LF_type_constant _ -> Format.fprintf ppf "an LF type-level constant"
+    | LF_term_constant _ -> Format.fprintf ppf "an LF term-level constant"
+    | Module _ -> Format.fprintf ppf "a module"
+
+  exception Unbound_identifier of QualifiedIdentifier.t
+
+  exception Unbound_module of QualifiedIdentifier.t
+
+  exception
+    Expected_module of
+      { identifier : QualifiedIdentifier.t
+      ; actual_binding : entry
+      }
+
+  let pp_exception ppf = function
+    | Unbound_identifier identifier ->
+      Format.fprintf ppf "Identifier \"%a\" is unbound: %a"
+        QualifiedIdentifier.pp identifier Location.pp
+        (QualifiedIdentifier.location identifier)
+    | Unbound_module identifier ->
+      Format.fprintf ppf "Module \"%a\" is unbound: %a"
+        QualifiedIdentifier.pp identifier Location.pp
+        (QualifiedIdentifier.location identifier)
+    | Expected_module { identifier; actual_binding } ->
+      Format.fprintf ppf
+        "Expected \"%a\" to be a module but found %a instead: %a@."
+        QualifiedIdentifier.pp identifier pp_entry_sort actual_binding
+        Location.pp
+        (QualifiedIdentifier.location identifier)
+    | _ -> raise @@ Invalid_argument "[pp_exception] unsupported exception"
+
+  let () =
+    Printexc.register_printer (fun exn ->
+        try Option.some @@ Format.asprintf "%a" pp_exception exn
+        with Invalid_argument _ -> Option.none)
+
+  let lookup query dictionary =
+    let rec lookup modules_to_lookup modules_looked_up_so_far dictionary =
+      match modules_to_lookup with
+      | [] (* Toplevel declaration *) -> (
+        let name = QualifiedIdentifier.name query in
+        match Identifier.Hamt.find_opt name dictionary with
+        | Option.Some entry -> entry
+        | Option.None -> raise @@ Unbound_identifier query)
       | m :: ms (* Nested declaration *) -> (
+        let recover_current_module_identifier () =
+          let location =
+            List.fold_left
+              (fun acc i -> Location.join acc (Identifier.location i))
+              (Identifier.location m) modules_looked_up_so_far
+          in
+          QualifiedIdentifier.make ~location
+            ~modules:(List.rev modules_looked_up_so_far)
+            m
+        in
         match Identifier.Hamt.find_opt m dictionary with
-        | Option.Some (Module dictionary') -> lookup ms dictionary'
-        | Option.Some _ (* Expected a module *) | Option.None (* Unbound *)
-          -> Option.none)
+        | Option.Some (Module dictionary') ->
+          lookup ms (m :: modules_looked_up_so_far) dictionary'
+        | Option.Some actual_binding ->
+          raise
+          @@ Expected_module
+               { identifier = recover_current_module_identifier ()
+               ; actual_binding
+               }
+        | Option.None ->
+          raise @@ Unbound_module (recover_current_module_identifier ()))
     in
-    lookup modules dictionary
+    let modules = QualifiedIdentifier.modules query in
+    lookup modules [] dictionary
 
   let rec to_seq dictionary =
     dictionary |> Identifier.Hamt.bindings |> List.to_seq
@@ -265,13 +343,6 @@ end = struct
          | identifier, entry ->
            let identifier = QualifiedIdentifier.make_simple identifier in
            Seq.return (identifier, entry))
-
-  let pp_entry_sort ppf entry =
-    match entry with
-    | LF_term -> Format.fprintf ppf "an LF term"
-    | LF_type_constant _ -> Format.fprintf ppf "an LF type-level constant"
-    | LF_term_constant _ -> Format.fprintf ppf "an LF term-level constant"
-    | Module _ -> Format.fprintf ppf "a module"
 end
 
 module LF = struct
@@ -542,22 +613,22 @@ module LF = struct
         QualifiedIdentifier.make_simple identifier
       in
       match Dictionary.lookup qualified_identifier dictionary with
-      | Option.Some (Dictionary.LF_type_constant _) ->
+      | Dictionary.LF_type_constant _ ->
         Synext'.LF.Typ.Constant
           { location; identifier = qualified_identifier }
-      | Option.Some entry ->
+      | entry ->
         raise @@ Expected_type_constant { location; actual_binding = entry }
-      | Option.None ->
+      | exception Dictionary.Unbound_identifier _ ->
         raise
         @@ Unbound_type_constant
              { location; identifier = qualified_identifier })
     | Synprs.LF.Object.RawQualifiedIdentifier { location; identifier } -> (
       match Dictionary.lookup identifier dictionary with
-      | Option.Some (Dictionary.LF_type_constant _) ->
+      | Dictionary.LF_type_constant _ ->
         Synext'.LF.Typ.Constant { location; identifier }
-      | Option.Some entry ->
+      | entry ->
         raise @@ Expected_type_constant { location; actual_binding = entry }
-      | Option.None ->
+      | exception Dictionary.Unbound_identifier _ ->
         raise @@ Unbound_type_constant { location; identifier })
     | Synprs.LF.Object.RawForwardArrow { location; domain; range } ->
       let domain' = elaborate_typ dictionary domain
@@ -619,21 +690,22 @@ module LF = struct
         QualifiedIdentifier.make_simple identifier
       in
       match Dictionary.lookup qualified_identifier dictionary with
-      | Option.Some (Dictionary.LF_term_constant _) ->
+      | Dictionary.LF_term_constant _ ->
         Synext'.LF.Term.Constant
           { location; identifier = qualified_identifier }
-      | Option.Some Dictionary.LF_term ->
+      | Dictionary.LF_term ->
         Synext'.LF.Term.Variable { location; identifier }
-      | Option.Some entry ->
+      | entry ->
         raise @@ Expected_term_constant { location; actual_binding = entry }
-      | Option.None -> Synext'.LF.Term.Variable { location; identifier })
+      | exception Dictionary.Unbound_identifier _ ->
+        Synext'.LF.Term.Variable { location; identifier })
     | Synprs.LF.Object.RawQualifiedIdentifier { location; identifier } -> (
       match Dictionary.lookup identifier dictionary with
-      | Option.Some (Dictionary.LF_term_constant _) ->
+      | Dictionary.LF_term_constant _ ->
         Synext'.LF.Term.Constant { location; identifier }
-      | Option.Some entry ->
+      | entry ->
         raise @@ Expected_term_constant { location; actual_binding = entry }
-      | Option.None ->
+      | exception Dictionary.Unbound_identifier _ ->
         raise @@ Unbound_term_constant { location; identifier })
     | Synprs.LF.Object.RawApplication { location; objects } -> (
       match elaborate_application dictionary (List2.to_list objects) with
@@ -759,32 +831,32 @@ module LF = struct
     let identify_operators dictionary terms =
       let resolve_qualified_identifier identifier term =
         match Dictionary.lookup identifier dictionary with
-        | Option.Some (Dictionary.LF_type_constant operator) ->
+        | Dictionary.LF_type_constant operator ->
           let type' = elaborate_typ dictionary term in
           ShuntingYard.operator
             (LF_operator.Type_constant { operator; applicand = type' })
-        | Option.Some (Dictionary.LF_term_constant operator) ->
+        | Dictionary.LF_term_constant operator ->
           let term' = elaborate_term dictionary term in
           ShuntingYard.operator
             (LF_operator.Term_constant { operator; applicand = term' })
-        | Option.Some _ | Option.None ->
+        | _ | (exception Dictionary.Unbound_identifier _) ->
           ShuntingYard.operand (LF_operand.Parser_object term)
       in
       let resolve_qualified_identifier_as_prefix identifier term =
         match Dictionary.lookup identifier dictionary with
-        | Option.Some (Dictionary.LF_type_constant operator) ->
+        | Dictionary.LF_type_constant operator ->
           let type' = elaborate_typ dictionary term in
           let operator' = Operator.as_prefix operator in
           ShuntingYard.operator
             (LF_operator.Type_constant
                { operator = operator'; applicand = type' })
-        | Option.Some (Dictionary.LF_term_constant operator) ->
+        | Dictionary.LF_term_constant operator ->
           let term' = elaborate_term dictionary term in
           let operator' = Operator.as_prefix operator in
           ShuntingYard.operator
             (LF_operator.Term_constant
                { operator = operator'; applicand = term' })
-        | Option.Some _ | Option.None ->
+        | _ | (exception Dictionary.Unbound_identifier _) ->
           ShuntingYard.operand (LF_operand.Parser_object term)
       in
       let identify_operator term =
@@ -799,7 +871,8 @@ module LF = struct
             resolve_qualified_identifier_as_prefix identifier term
           | Synprs.LF.Object.RawParenthesized { object_; _ } ->
             identify_operator_with_quoting object_
-          | _ -> ShuntingYard.operand (LF_operand.Parser_object term)
+          | _ | (exception Dictionary.Unbound_identifier _) ->
+            ShuntingYard.operand (LF_operand.Parser_object term)
         in
         match term with
         | Synprs.LF.Object.RawIdentifier { identifier; _ } ->

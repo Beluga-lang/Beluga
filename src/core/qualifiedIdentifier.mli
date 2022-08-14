@@ -27,4 +27,6 @@ val modules : t -> Identifier.t List.t
 
 include Eq.EQ with type t := t
 
+include Ord.ORD with type t := t
+
 include Show.SHOW with type t := t

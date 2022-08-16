@@ -139,6 +139,11 @@ val take : int -> 'a list -> 'a list * 'a list
     @raise Invalid_argument if [k < 0]. *)
 val take_opt : int -> 'a list -> ('a list * 'a list) option
 
+(** [take_while p \[x1; x2; ...; xn\]] is
+    [(\[x1; x2; ...; x(k-1)\], \[xk; x(k+1); ...; xn\])], where [x1], [x2],
+    ..., [x(k-1)] all satisfy [p], and [xk] does not satisfy [p]. *)
+val take_while : ('a -> bool) -> 'a list -> 'a list * 'a list
+
 (** [compare cmp \[a1; ...; an\] \[b1; ...; bm\]] performs a lexicographic
     comparison of the two input lists, using the same ['a -> 'a -> int]
     interface as {!Stdlib.compare}:

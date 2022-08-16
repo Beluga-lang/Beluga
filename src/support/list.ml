@@ -161,6 +161,14 @@ let take_opt =
     if k < 0 then raise @@ Invalid_argument "List.take_opt"
     else take_opt k l []
 
+let take_while p =
+  let rec take_while l acc =
+    match l with
+    | x :: xs when p x -> take_while xs (x :: acc)
+    | _ -> (rev acc, l)
+  in
+  fun l -> take_while l []
+
 let rec compare cmp l1 l2 =
   match (l1, l2) with
   | [], [] -> 0

@@ -133,8 +133,12 @@ val find_opt : ('a -> bool) -> 'a t -> 'a option
 val find_map : ('a -> 'b option) -> 'a t -> 'b option
 
 (** Finds the leftmost minimal element of the sequence according to the given
-    decision procedure for the strict less-than relation on 'a. *)
+    decision procedure for the strict less-than relation on ['a]. *)
 val minimum_by : ('a -> 'a -> bool) -> 'a t -> 'a
+
+(** Finds the leftmost maximal element of the sequence according to the given
+    decision procedure for the strict greater-than relation on ['a]. *)
+val maximum_by : ('a -> 'a -> bool) -> 'a t -> 'a
 
 (** Finds the leftmost minimal element of the sequence according to the
     default ordering for the type 'a. *)

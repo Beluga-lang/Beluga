@@ -104,9 +104,12 @@ let find_map f l = List.find_map f (to_list l)
 let minimum_by ( < ) (T (x, l)) =
   List.fold_left (fun min x -> if x < min then x else min) x l
 
+let maximum_by ( > ) (T (x, l)) =
+  List.fold_left (fun max x -> if x > max then x else max) x l
+
 let minimum l = minimum_by ( < ) l
 
-let maximum l = minimum_by ( > ) l
+let maximum l = maximum_by ( < ) l
 
 let partition f (T (h, l)) =
   let l1, l2 = List.partition f l in

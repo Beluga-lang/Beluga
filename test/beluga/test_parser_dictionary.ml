@@ -87,7 +87,7 @@ module Dictionary_constructors = struct
 
   let add_postfix_lf_type_constant qualified_identifier =
     add qualified_identifier LF_type_constant
-      (Dictionary.add_postfix_lf_type_constant ~arity:0 ~precedence:0)
+      (Dictionary.add_postfix_lf_type_constant ~precedence:0)
 
   let add_prefix_lf_term_constant qualified_identifier =
     add qualified_identifier LF_term_constant
@@ -100,7 +100,7 @@ module Dictionary_constructors = struct
 
   let add_postfix_lf_term_constant qualified_identifier =
     add qualified_identifier LF_term_constant
-      (Dictionary.add_postfix_lf_term_constant ~arity:0 ~precedence:0)
+      (Dictionary.add_postfix_lf_term_constant ~precedence:0)
 end
 
 let id x = Identifier.make ~location:Location.ghost x

@@ -2,7 +2,7 @@ open Support
 
 let assert_raises_invalid_argument f =
   try
-    ignore (f ());
+    ignore @@ f ();
     OUnit2.assert_failure
       "Expected exception [Invalid_argument _] to be raised"
   with Invalid_argument _ -> ()

@@ -169,6 +169,187 @@ let parse_lf_object input =
     (Parser.only Parser.LF_parsers.lf_object)
   |> Parser.extract
 
+let assert_raises_illegal_identifier_kind f =
+  try
+    ignore @@ f ();
+    OUnit2.assert_failure
+      "Expected exception [Illegal_identifier_kind _] to be raised"
+  with Synprs_to_synext'.LF.Illegal_identifier_kind _ -> ()
+
+let assert_raises_illegal_qualified_identifier_kind f =
+  try
+    ignore @@ f ();
+    OUnit2.assert_failure
+      "Expected exception [Illegal_qualified_identifier_kind _] to be raised"
+  with Synprs_to_synext'.LF.Illegal_qualified_identifier_kind _ -> ()
+
+let assert_raises_illegal_backward_arrow_kind f =
+  try
+    ignore @@ f ();
+    OUnit2.assert_failure
+      "Expected exception [Illegal_backward_arrow_kind _] to be raised"
+  with Synprs_to_synext'.LF.Illegal_backward_arrow_kind _ -> ()
+
+let assert_raises_illegal_hole_kind f =
+  try
+    ignore @@ f ();
+    OUnit2.assert_failure
+      "Expected exception [Illegal_hole_kind _] to be raised"
+  with Synprs_to_synext'.LF.Illegal_hole_kind _ -> ()
+
+let assert_raises_illegal_lambda_kind f =
+  try
+    ignore @@ f ();
+    OUnit2.assert_failure
+      "Expected exception [Illegal_lambda_kind _] to be raised"
+  with Synprs_to_synext'.LF.Illegal_lambda_kind _ -> ()
+
+let assert_raises_illegal_annotated_kind f =
+  try
+    ignore @@ f ();
+    OUnit2.assert_failure
+      "Expected exception [Illegal_annotated_kind _] to be raised"
+  with Synprs_to_synext'.LF.Illegal_annotated_kind _ -> ()
+
+let assert_raises_illegal_application_kind f =
+  try
+    ignore @@ f ();
+    OUnit2.assert_failure
+      "Expected exception [Illegal_application_kind _] to be raised"
+  with Synprs_to_synext'.LF.Illegal_application_kind _ -> ()
+
+let assert_raises_illegal_untyped_pi_kind f =
+  try
+    ignore @@ f ();
+    OUnit2.assert_failure
+      "Expected exception [Illegal_untyped_pi_kind _] to be raised"
+  with Synprs_to_synext'.LF.Illegal_untyped_pi_kind _ -> ()
+
+let assert_raises_illegal_type_kind_type f =
+  try
+    ignore @@ f ();
+    OUnit2.assert_failure
+      "Expected exception [Illegal_type_kind_type _] to be raised"
+  with Synprs_to_synext'.LF.Illegal_type_kind_type _ -> ()
+
+let assert_raises_illegal_hole_type f =
+  try
+    ignore @@ f ();
+    OUnit2.assert_failure
+      "Expected exception [Illegal_hole_type _] to be raised"
+  with Synprs_to_synext'.LF.Illegal_hole_type _ -> ()
+
+let assert_raises_illegal_lambda_type f =
+  try
+    ignore @@ f ();
+    OUnit2.assert_failure
+      "Expected exception [Illegal_lambda_type _] to be raised"
+  with Synprs_to_synext'.LF.Illegal_lambda_type _ -> ()
+
+let assert_raises_illegal_annotated_type f =
+  try
+    ignore @@ f ();
+    OUnit2.assert_failure
+      "Expected exception [Illegal_annotated_type _] to be raised"
+  with Synprs_to_synext'.LF.Illegal_annotated_type _ -> ()
+
+let assert_raises_illegal_untyped_pi_type f =
+  try
+    ignore @@ f ();
+    OUnit2.assert_failure
+      "Expected exception [Illegal_untyped_pi_type _] to be raised"
+  with Synprs_to_synext'.LF.Illegal_untyped_pi_type _ -> ()
+
+let assert_raises_unbound_type_constant f =
+  try
+    ignore @@ f ();
+    OUnit2.assert_failure
+      "Expected exception [Unbound_type_constant _] to be raised"
+  with Synprs_to_synext'.LF.Unbound_type_constant _ -> ()
+
+let assert_raises_illegal_type_kind_term f =
+  try
+    ignore @@ f ();
+    OUnit2.assert_failure
+      "Expected exception [Illegal_type_kind_term _] to be raised"
+  with Synprs_to_synext'.LF.Illegal_type_kind_term _ -> ()
+
+let assert_raises_illegal_pi_term f =
+  try
+    ignore @@ f ();
+    OUnit2.assert_failure
+      "Expected exception [Illegal_pi_term _] to be raised"
+  with Synprs_to_synext'.LF.Illegal_pi_term _ -> ()
+
+let assert_raises_illegal_forward_arrow_term f =
+  try
+    ignore @@ f ();
+    OUnit2.assert_failure
+      "Expected exception [Illegal_forward_arrow_term _] to be raised"
+  with Synprs_to_synext'.LF.Illegal_forward_arrow_term _ -> ()
+
+let assert_raises_illegal_backward_arrow_term f =
+  try
+    ignore @@ f ();
+    OUnit2.assert_failure
+      "Expected exception [Illegal_backward_arrow_term _] to be raised"
+  with Synprs_to_synext'.LF.Illegal_backward_arrow_term _ -> ()
+
+let assert_raises_unbound_term_constant f =
+  try
+    ignore @@ f ();
+    OUnit2.assert_failure
+      "Expected exception [Unbound_term_constant _] to be raised"
+  with Synprs_to_synext'.LF.Unbound_term_constant _ -> ()
+
+let assert_raises_expected_term_constant f =
+  try
+    ignore @@ f ();
+    OUnit2.assert_failure
+      "Expected exception [Expected_term_constant _] to be raised"
+  with Synprs_to_synext'.LF.Expected_term_constant _ -> ()
+
+let assert_raises_expected_type_constant f =
+  try
+    ignore @@ f ();
+    OUnit2.assert_failure
+      "Expected exception [Expected_type_constant _] to be raised"
+  with Synprs_to_synext'.LF.Expected_type_constant _ -> ()
+
+let assert_raises_expected_term f =
+  try
+    ignore @@ f ();
+    OUnit2.assert_failure "Expected exception [Expected_term _] to be raised"
+  with Synprs_to_synext'.LF.Expected_term _ -> ()
+
+let assert_raises_expected_type f =
+  try
+    ignore @@ f ();
+    OUnit2.assert_failure "Expected exception [Expected_type _] to be raised"
+  with Synprs_to_synext'.LF.Expected_type _ -> ()
+
+let assert_raises_misplaced_operator f =
+  try
+    ignore @@ f ();
+    OUnit2.assert_failure
+      "Expected exception [Misplaced_operator _] to be raised"
+  with Synprs_to_synext'.LF.Misplaced_operator _ -> ()
+
+let assert_raises_consecutive_non_associative_operators f =
+  try
+    ignore @@ f ();
+    OUnit2.assert_failure
+      "Expected exception [Consecutive_non_associative_operators _] to be \
+       raised"
+  with Synprs_to_synext'.LF.Consecutive_non_associative_operators _ -> ()
+
+let assert_raises_arity_mismatch f =
+  try
+    ignore @@ f ();
+    OUnit2.assert_failure
+      "Expected exception [Arity_mismatch _] to be raised"
+  with Synprs_to_synext'.LF.Arity_mismatch _ -> ()
+
 let mock_dictionary_1 = Synprs_to_synext'.Dictionary.empty
 
 let mock_dictionary_2 =
@@ -226,6 +407,8 @@ let mock_dictionary_5 =
   |> add_infix_lf_term_constant ~associativity:Associativity.left_associative
        ~precedence:2 (qid "arrow")
   |> add_prefix_lf_type_constant ~arity:1 ~precedence:1 (qid "term")
+  |> add_infix_lf_term_constant ~associativity:Associativity.non_associative
+       ~precedence:3 (qid "has_type")
 
 let mock_dictionary_6 =
   let open LF_constructors in
@@ -279,6 +462,10 @@ let test_kind =
       ~cmp:LF.Kind.equal expected
       (parse_lf_object input
       |> Synprs_to_synext'.LF.elaborate_kind elaboration_context)
+  and test_failure elaboration_context input assert_exn _test_ctxt =
+    assert_exn @@ fun () ->
+    parse_lf_object input
+    |> Synprs_to_synext'.LF.elaborate_kind elaboration_context
   in
   let success_test_cases =
     let open LF_constructors in
@@ -322,15 +509,36 @@ let test_kind =
       , pik ~x:"Lf" ~t:(ct "tp")
           (pik ~t:(ct "tp") (appt (ct "target") [ v "Lf" ] ==> typ)) )
     ]
+  and failure_test_cases =
+    [ (mock_dictionary_1, "M", assert_raises_illegal_identifier_kind)
+    ; ( mock_dictionary_1
+      , "Q::M"
+      , assert_raises_illegal_qualified_identifier_kind )
+    ; ( mock_dictionary_2
+      , "type <- nat"
+      , assert_raises_illegal_backward_arrow_kind )
+    ; (mock_dictionary_1, "_", assert_raises_illegal_hole_kind)
+    ; (mock_dictionary_1, "(\\x. _)", assert_raises_illegal_lambda_kind)
+    ; (mock_dictionary_2, "type : _", assert_raises_illegal_annotated_kind)
+    ; (mock_dictionary_2, "nat _", assert_raises_illegal_application_kind)
+    ; ( mock_dictionary_9
+      , "{ Lf } target Lf -> type"
+      , assert_raises_illegal_untyped_pi_kind )
+    ]
   in
   let success_tests =
     success_test_cases
     |> List.map (fun (elaboration_context, input, expected) ->
            OUnit2.test_case
            @@ test_success elaboration_context input expected)
+  and failure_tests =
+    failure_test_cases
+    |> List.map (fun (elaboration_context, input, assert_exn) ->
+           OUnit2.test_case
+           @@ test_failure elaboration_context input assert_exn)
   in
   let open OUnit2 in
-  [ "sucess" >::: success_tests ]
+  [ "sucess" >::: success_tests ] @ [ "failure" >::: failure_tests ]
 
 let test_type =
   let test_success elaboration_context input expected _test_ctxt =
@@ -339,6 +547,10 @@ let test_type =
       ~cmp:LF.Typ.equal expected
       (parse_lf_object input
       |> Synprs_to_synext'.LF.elaborate_typ elaboration_context)
+  and test_failure elaboration_context input assert_exn _test_ctxt =
+    assert_exn @@ fun () ->
+    parse_lf_object input
+    |> Synprs_to_synext'.LF.elaborate_typ elaboration_context
   in
   let success_test_cases =
     let open LF_constructors in
@@ -479,23 +691,43 @@ let test_type =
              [ par (app (par (c ~m:[ "Statics" ] "arrow")) [ v "T"; v "T'" ])
              ] )
     ]
+  and failure_test_cases =
+    [ (mock_dictionary_1, "type", assert_raises_illegal_type_kind_type)
+    ; (mock_dictionary_1, "_", assert_raises_illegal_hole_type)
+    ; (mock_dictionary_1, "\\x. _", assert_raises_illegal_lambda_type)
+    ; (mock_dictionary_2, "nat : type", assert_raises_illegal_annotated_type)
+    ; ( mock_dictionary_6
+      , "{ x } x eq x"
+      , assert_raises_illegal_untyped_pi_type )
+    ; (mock_dictionary_1, "z", assert_raises_unbound_type_constant)
+    ; (mock_dictionary_3, "Nat::add", assert_raises_unbound_type_constant)
+    ]
   in
   let success_tests =
     success_test_cases
     |> List.map (fun (elaboration_context, input, expected) ->
            OUnit2.test_case
            @@ test_success elaboration_context input expected)
+  and failure_tests =
+    failure_test_cases
+    |> List.map (fun (elaboration_context, input, assert_exn) ->
+           OUnit2.test_case
+           @@ test_failure elaboration_context input assert_exn)
   in
   let open OUnit2 in
-  [ "sucess" >::: success_tests ]
+  [ "sucess" >::: success_tests ] @ [ "failure" >::: failure_tests ]
 
 let test_term =
   let test_success elaboration_context input expected _test_ctxt =
     OUnit2.assert_equal
-      ~printer:(Format.asprintf "%a" Synext'.LF.pp_term)
+      ~printer:(Format.asprintf "%a" Synext'.LF.pp_term_debug)
       ~cmp:LF.Term.equal expected
       (parse_lf_object input
       |> Synprs_to_synext'.LF.elaborate_term elaboration_context)
+  and test_failure elaboration_context input assert_exn _test_ctxt =
+    assert_exn @@ fun () ->
+    parse_lf_object input
+    |> Synprs_to_synext'.LF.elaborate_term elaboration_context
   in
   let success_test_cases =
     let open LF_constructors in
@@ -508,6 +740,10 @@ let test_term =
     ; (mock_dictionary_1, "M _ _ _", app (v "M") [ hole; hole; hole ])
     ; (mock_dictionary_1, "\\x. x", lam ~x:"x" (v "x"))
     ; (mock_dictionary_1, "\\x. M x", lam ~x:"x" (app (v "M") [ v "x" ]))
+    ; ( mock_dictionary_1
+      , "\\x. \\y. \\z. M x y z"
+      , lam ~x:"x"
+          (lam ~x:"y" (lam ~x:"z" (app (v "M") [ v "x"; v "y"; v "z" ]))) )
     ; (mock_dictionary_2, "z", c "z")
     ; (mock_dictionary_2, "z : nat", c "z" &: ct "nat")
     ; (mock_dictionary_2, "\\x. s x", lam ~x:"x" (app (c "s") [ v "x" ]))
@@ -527,6 +763,35 @@ let test_term =
       , "(\\x. s x) : nat -> nat"
       , par (lam ~x:"x" (app (c "s") [ v "x" ])) &: (ct "nat" => ct "nat") )
     ; (mock_dictionary_2, "s z", app (c "s") [ app (c "z") [] ])
+    ; ( mock_dictionary_5
+      , "M (arrow) x arrow M' (arrow) y"
+      , app (c "arrow")
+          [ app (v "M") [ par (c "arrow"); v "x" ]
+          ; app (v "M'") [ par (c "arrow"); v "y" ]
+          ] )
+    ; ( mock_dictionary_5
+      , "(arrow) (arrow)"
+      , app (par (c "arrow")) [ par (c "arrow") ] )
+    ]
+  and failure_test_cases =
+    [ (mock_dictionary_1, "type", assert_raises_illegal_type_kind_term)
+    ; (mock_dictionary_2, "{ x : nat } x", assert_raises_illegal_pi_term)
+    ; ( mock_dictionary_1
+      , "\\x. x -> x"
+      , assert_raises_illegal_forward_arrow_term )
+    ; ( mock_dictionary_1
+      , "x <- \\x. x"
+      , assert_raises_illegal_backward_arrow_term )
+    ; (mock_dictionary_3, "Nat::one", assert_raises_unbound_term_constant)
+    ; ( mock_dictionary_5
+      , "has_type has_type"
+      , assert_raises_consecutive_non_associative_operators )
+    ; ( mock_dictionary_5
+      , "x has_type y has_type z"
+      , assert_raises_consecutive_non_associative_operators )
+    ; ( mock_dictionary_5
+      , "x arrow"
+      , assert_raises_arity_mismatch )
     ]
   in
   let success_tests =
@@ -534,9 +799,14 @@ let test_term =
     |> List.map (fun (elaboration_context, input, expected) ->
            OUnit2.test_case
            @@ test_success elaboration_context input expected)
+  and failure_tests =
+    failure_test_cases
+    |> List.map (fun (elaboration_context, input, assert_exn) ->
+           OUnit2.test_case
+           @@ test_failure elaboration_context input assert_exn)
   in
   let open OUnit2 in
-  [ "sucess" >::: success_tests ]
+  [ "sucess" >::: success_tests ] @ [ "failure" >::: failure_tests ]
 
 let tests =
   let open OUnit2 in

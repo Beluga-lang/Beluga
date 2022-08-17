@@ -251,149 +251,95 @@ module LF = struct
       Format.fprintf ppf "@[<2>Parenthesized(%a)@]" pp_object_debug object_
 end
 
-(** {1 Parser Contextual LF Syntax} *)
+(** {1 Parser Contextual LF Syntax}
+
+    The intermediate representation of contextual LF types, terms and
+    patterns to delay the handling of data-dependent aspects of the grammar.
+
+    OCaml constructor names prefixed with `Raw' require data-dependent
+    disambiguation or reduction during the elaboration to the external
+    syntax.
+
+    This is LF augmented with substitutions and blocks. *)
 module CLF = struct
-  include Syncom.LF
+  module rec Object : sig
+    type t =
+      | RawIdentifier of
+          { location : Location.t
+          ; identifier : Identifier.t
+          }
+      | RawQualifiedIdentifier of
+          { location : Location.t
+          ; identifier : QualifiedIdentifier.t
+          }
+      | RawHole of { location : Location.t }
+      | RawPi of
+          { location : Location.t
+          ; parameter_identifier : Identifier.t Option.t
+          ; parameter_sort : Object.t Option.t
+          ; body : Object.t
+          }
+      | RawLambda of
+          { location : Location.t
+          ; parameter_identifier : Identifier.t Option.t
+          ; parameter_sort : Object.t Option.t
+          ; body : Object.t
+          }
+      | RawForwardArrow of
+          { location : Location.t
+          ; domain : Object.t
+          ; range : Object.t
+          }
+      | RawBackwardArrow of
+          { location : Location.t
+          ; domain : Object.t
+          ; range : Object.t
+          }
+      | RawAnnotated of
+          { location : Location.t
+          ; object_ : Object.t
+          ; sort : Object.t
+          }
+      | RawApplication of
+          { location : Location.t
+          ; objects : Object.t List2.t
+          }
+      | RawBlock of
+          { location : Location.t
+          ; elements : (Identifier.t Option.t * Object.t) List1.t
+          }
+      | RawTuple of
+          { location : Location.t
+          ; elements : Object.t List1.t
+          }
+      | RawProjection of
+          { location : Location.t
+          ; object_ : Object.t
+          ; projection : [ `By_name of Identifier.t | `By_position of Int.t ]
+          }
+      | RawSubstitution of
+          { location : Location.t
+          ; object_ : Object.t
+          ; substitution : Substitution.t
+          }
+      | RawParenthesized of
+          { location : Location.t
+          ; object_ : Object.t
+          }
+  end =
+    Object
 
-  type kind =
-    | Typ of { location : Location.t }
-    | ArrKind of
-        { location : Location.t
-        ; domain : typ
-        ; range : kind
-        }
-    | PiKind of
-        { location : Location.t
-        ; parameter_name : Name.t
-        ; parameter_type : typ
-        ; range : kind
-        }
-
-  and typ_decl =
-    | TypDecl of Name.t * typ
-    | TypDeclOpt of Name.t
-
-  and cltyp =
-    | MTyp of typ
-    | PTyp of typ
-    | STyp of svar_class * dctx
-
-  and ctyp =
-    | ClTyp of Location.t * cltyp * dctx
-    | CTyp of Location.t * Name.t
-
-  and ctyp_decl =
-    | Decl of Name.t * ctyp * Plicity.t
-    | DeclOpt of Name.t
-
-  and typ =
-    | Atom of
-        { location : Location.t
-        ; head : Name.t
-        ; spine : (Location.t * term) list
-        }
-    | ArrTyp of
-        { location : Location.t
-        ; domain : typ
-        ; range : typ
-        }
-    | PiTyp of
-        { location : Location.t
-        ; parameter_name : Name.t
-        ; parameter_type : typ
-        ; range : typ
-        }
-    | Sigma of
-        { location : Location.t
-        ; block : typ_rec
-        }
-    | AtomTerm of
-        { location : Location.t
-        ; term : term
-        }
-
-  and term =
-    | Lam of
-        { location : Location.t
-        ; parameter_name : Name.t
-        ; body : term
-        }
-    | Root of
-        { location : Location.t
-        ; head : head
-        ; spine : (Location.t * term) list
-        }
-    | Tuple of
-        { location : Location.t
-        ; tuple : term List1.t
-        }
-    | LFHole of
-        { location : Location.t
-        ; label : string option
-        }
-    | Ann of
-        { location : Location.t
-        ; term : term
-        ; typ : typ
-        }
-    | TList of
-        { location : Location.t
-        ; terms : term list
-        }
-    | NTyp of
-        { location : Location.t
-        ; typ : typ
-        }
-
-  and head =
-    | Name of Location.t * Name.t * sub option
-    | Hole of Location.t
-    | PVar of Location.t * Name.t * sub option
-    | Proj of Location.t * head * proj
-
-  and proj =
-    | ByPos of int
-    | ByName of Name.t
-
-  and sub_start =
-    | EmptySub of Location.t
-    | Id of Location.t
-    | SVar of Location.t * Name.t * sub option
-
-  and sub = sub_start * term list
-
-  and typ_rec =
-    | SigmaLast of Name.t option * typ
-    | SigmaElem of Name.t * typ * typ_rec
-
-  and dctx =
-    | Null
-    | CtxVar of Location.t * Name.t
-    | DDec of dctx * typ_decl
-    | CtxHole
-
-  and sch_elem = SchElem of Location.t * typ_decl ctx * typ_rec
-
-  and schema = Schema of sch_elem list
-
-  and mctx = ctyp_decl ctx
-
-  type mfront =
-    | ClObj of dctx * sub
-    (* ClObj doesn't *really* contain just a substitution. The problem is
-       that syntactically, we can't tell whether `[psi |- a]' is a boxed
-       object or substitution! So it turns out that, syntactically,
-       substitutions encompass both possibilities: a substitution beginning
-       with EmptySub and having just one term term in it can represent a
-       boxed term. We disambiguate substitutions from terms at a later
-       time. *)
-    | CObj of dctx
-
-  let loc_of_head = function
-    | Name (l, _, _) -> l
-    | Hole l -> l
-    | PVar (l, _, _) -> l
-    | Proj (l, _, _) -> l
+  and Substitution : sig
+    type t =
+      | Empty of { location : Location.t }
+      | Identity of { location : Location.t }
+      | Substitution of
+          { location : Location.t
+          ; extends_identity : Bool.t
+          ; objects : Object.t List1.t
+          }
+  end =
+    Substitution
 end
 
 (** {1 Parser Computation Syntax} *)
@@ -404,20 +350,20 @@ module Comp = struct
     | Ctype of { location : Location.t }
     | ArrKind of
         { location : Location.t
-        ; domain : CLF.ctyp
+        ; domain : CLF.Object.t
         ; range : kind
         }
     | PiKind of
         { location : Location.t
         ; parameter_name : Name.t
-        ; parameter_type : CLF.ctyp
+        ; parameter_type : CLF.Object.t
         ; plicity : Plicity.t
         ; range : kind
         }
 
-  type meta_obj = Location.t * CLF.mfront
+  type meta_obj = Location.t * CLF.Object.t
 
-  type meta_typ = CLF.ctyp
+  type meta_typ = CLF.Object.t
 
   type typ =
     | TypBase of
@@ -441,7 +387,7 @@ module Comp = struct
     | TypPiBox of
         { location : Location.t
         ; parameter_name : Name.t
-        ; parameter_type : CLF.ctyp
+        ; parameter_type : CLF.Object.t
         ; plicity : Plicity.t
         ; range : typ
         }
@@ -525,7 +471,7 @@ module Comp = struct
     | PatMAnn of
         { location : Location.t
         ; pattern : pattern
-        ; typs : (Name.t * CLF.ctyp) List1.t
+        ; typs : (Name.t * CLF.Object.t) List1.t
         }
     | PatObs of
         { location : Location.t
@@ -553,10 +499,12 @@ module Comp = struct
 
   type ctyp_decl = CTypDecl of Name.t * typ
 
-  type gctx = ctyp_decl CLF.ctx
+  type mctx = (Identifier.t * CLF.Object.t) List.t
+
+  type gctx = ctyp_decl List.t
 
   type hypotheses =
-    { cD : CLF.mctx
+    { cD : mctx
     ; cG : gctx
     }
 
@@ -679,6 +627,26 @@ module Harpoon = struct
     | Help
 end
 
+module rec Schema : sig
+  type t =
+    | Identifier of
+        { location : Location.t
+        ; identifier : Identifier.t
+        }
+    | Simple of
+        { location : Location.t
+        ; some : (Identifier.t * CLF.Object.t) List.t
+        ; block :
+            (Identifier.t Option.t * CLF.Object.t)
+            * (Identifier.t * CLF.Object.t) List.t
+        }
+    | Alternation of
+        { location : Location.t
+        ; sub_schemas : Schema.t List1.t
+        }
+end =
+  Schema
+
 (** {1 Parser Signature Syntax} *)
 module Sgn = struct
   type datatype_flavour =
@@ -749,7 +717,7 @@ module Sgn = struct
     | CompDest of
         { location : Location.t
         ; identifier : Name.t
-        ; mctx : CLF.mctx
+        ; mctx : (Identifier.t * CLF.Object.t) List.t
         ; observation_typ : Comp.typ
         ; return_typ : Comp.typ
         }  (** Computation-level type destructor declaration *)
@@ -762,7 +730,7 @@ module Sgn = struct
     | Schema of
         { location : Location.t
         ; identifier : Name.t
-        ; schema : CLF.schema
+        ; schema : Schema.t
         }  (** Declaration of a specification for a set of contexts *)
     | Pragma of
         { location : Location.t
@@ -789,8 +757,8 @@ module Sgn = struct
     | Query of
         { location : Location.t
         ; name : Name.t option
-        ; mctx : CLF.mctx
-        ; typ : CLF.typ
+        ; mctx : (Identifier.t * CLF.Object.t) List.t
+        ; typ : CLF.Object.t
         ; expected_solutions : int option
         ; maximum_tries : int option
         }  (** Logic programming query on LF type *)

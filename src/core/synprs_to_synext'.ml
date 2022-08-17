@@ -573,6 +573,67 @@ module LF = struct
       identify_lf_operator dictionary ~quoted:true object_
     | _ -> `Not_an_operator
 
+  module LF_operand = struct
+    type t =
+      | External_typ of Synext'.LF.Typ.t
+      | External_term of Synext'.LF.Term.t
+      | Parser_object of Synprs.LF.Object.t
+      | Application of
+          { applicand :
+              [ `Typ of Synprs.LF.Object.t | `Term of Synprs.LF.Object.t ]
+          ; arguments : Synprs.LF.Object.t List.t
+          }
+
+    let location = function
+      | External_typ t -> Synext'.LF.location_of_typ t
+      | External_term t -> Synext'.LF.location_of_term t
+      | Parser_object t -> Synprs.LF.location_of_object t
+      | Application { applicand; arguments } ->
+        let applicand_location =
+          match applicand with
+          | `Typ applicand | `Term applicand ->
+            Synprs.LF.location_of_object applicand
+        in
+        List.fold_left
+          (fun acc a -> Location.join acc (Synprs.LF.location_of_object a))
+          applicand_location arguments
+  end
+
+  module LF_operator = struct
+    type t =
+      | Type_constant of
+          { operator : Operator.t
+          ; applicand : Synprs.LF.Object.t
+          }
+      | Term_constant of
+          { operator : Operator.t
+          ; applicand : Synprs.LF.Object.t
+          }
+
+    let[@inline] operator = function
+      | Type_constant { operator; _ } | Term_constant { operator; _ } ->
+        operator
+
+    let[@inline] applicand = function
+      | Type_constant { applicand; _ } | Term_constant { applicand; _ } ->
+        applicand
+
+    let identifier = Fun.(operator >> Operator.identifier)
+
+    let arity = Fun.(operator >> Operator.arity)
+
+    let precedence = Fun.(operator >> Operator.precedence)
+
+    let fixity = Fun.(operator >> Operator.fixity)
+
+    let associativity = Fun.(operator >> Operator.associativity)
+
+    let location = Fun.(applicand >> Synprs.LF.location_of_object)
+
+    include (
+      (val Eq.contramap (module Operator) operator) : Eq.EQ with type t := t)
+  end
+
   let rec elaborate_kind dictionary object_ =
     match object_ with
     | Synprs.LF.Object.RawIdentifier { location; identifier; _ } ->
@@ -804,66 +865,6 @@ module LF = struct
              ; arguments = arguments'
              })
     in
-    let module LF_operand = struct
-      type t =
-        | External_typ of Synext'.LF.Typ.t
-        | External_term of Synext'.LF.Term.t
-        | Parser_object of Synprs.LF.Object.t
-        | Application of
-            { applicand :
-                [ `Typ of Synprs.LF.Object.t | `Term of Synprs.LF.Object.t ]
-            ; arguments : Synprs.LF.Object.t List.t
-            }
-
-      let location = function
-        | External_typ t -> Synext'.LF.location_of_typ t
-        | External_term t -> Synext'.LF.location_of_term t
-        | Parser_object t -> Synprs.LF.location_of_object t
-        | Application { applicand; arguments } ->
-          let applicand_location =
-            match applicand with
-            | `Typ applicand | `Term applicand ->
-              Synprs.LF.location_of_object applicand
-          in
-          List.fold_left
-            (fun acc a -> Location.join acc (Synprs.LF.location_of_object a))
-            applicand_location arguments
-    end in
-    let module LF_operator = struct
-      type t =
-        | Type_constant of
-            { operator : Operator.t
-            ; applicand : Synprs.LF.Object.t
-            }
-        | Term_constant of
-            { operator : Operator.t
-            ; applicand : Synprs.LF.Object.t
-            }
-
-      let operator = function
-        | Type_constant { operator; _ } | Term_constant { operator; _ } ->
-          operator
-
-      let applicand = function
-        | Type_constant { applicand; _ } | Term_constant { applicand; _ } ->
-          applicand
-
-      let identifier = Fun.(operator >> Operator.identifier)
-
-      let arity = Fun.(operator >> Operator.arity)
-
-      let precedence = Fun.(operator >> Operator.precedence)
-
-      let fixity = Fun.(operator >> Operator.fixity)
-
-      let associativity = Fun.(operator >> Operator.associativity)
-
-      let location = Fun.(applicand >> Synprs.LF.location_of_object)
-
-      include (
-        (val Eq.contramap (module Operator) operator) :
-          Eq.EQ with type t := t)
-    end in
     let module ShuntingYard =
       ShuntingYard.Make (LF_operand) (LF_operator)
         (struct
@@ -915,18 +916,16 @@ module LF = struct
         end)
     in
     let prepare_terms terms =
+      let is_argument = function
+        | `Not_an_operator, _
+        | `Quoted_type_operator, _
+        | `Quoted_term_operator, _ -> true
+        | `Type_operator _, _ | `Term_operator _, _ -> false
+      in
       let rec reduce_juxtapositions_and_identify_operators terms =
         match terms with
         | (`Not_an_operator, t) :: ts -> (
-          match
-            List.take_while
-              (function
-                | `Not_an_operator, _
-                | `Quoted_type_operator, _
-                | `Quoted_term_operator, _ -> true
-                | `Type_operator _, _ | `Term_operator _, _ -> false)
-              ts
-          with
+          match List.take_while is_argument ts with
           | [], rest (* [t] is an operand not in juxtaposition *) ->
             ShuntingYard.operand (LF_operand.Parser_object t)
             :: reduce_juxtapositions_and_identify_operators rest
@@ -937,38 +936,20 @@ module LF = struct
               (LF_operand.Application
                  { applicand = `Term t; arguments = arguments' })
             :: reduce_juxtapositions_and_identify_operators rest)
-        | (`Quoted_type_operator, t) :: ts -> (
-          match
-            List.take_while
-              (function
-                | `Not_an_operator, _
-                | `Quoted_type_operator, _
-                | `Quoted_term_operator, _ -> true
-                | `Type_operator _, _ | `Term_operator _, _ -> false)
-              ts
-          with
-          | arguments, rest ->
-            let arguments' = List.map Pair.snd arguments in
-            ShuntingYard.operand
-              (LF_operand.Application
-                 { applicand = `Typ t; arguments = arguments' })
-            :: reduce_juxtapositions_and_identify_operators rest)
-        | (`Quoted_term_operator, t) :: ts -> (
-          match
-            List.take_while
-              (function
-                | `Not_an_operator, _
-                | `Quoted_type_operator, _
-                | `Quoted_term_operator, _ -> true
-                | `Type_operator _, _ | `Term_operator _, _ -> false)
-              ts
-          with
-          | arguments, rest ->
-            let arguments' = List.map Pair.snd arguments in
-            ShuntingYard.operand
-              (LF_operand.Application
-                 { applicand = `Term t; arguments = arguments' })
-            :: reduce_juxtapositions_and_identify_operators rest)
+        | (`Quoted_type_operator, t) :: ts ->
+          let arguments, rest = List.take_while is_argument ts in
+          let arguments' = List.map Pair.snd arguments in
+          ShuntingYard.operand
+            (LF_operand.Application
+               { applicand = `Typ t; arguments = arguments' })
+          :: reduce_juxtapositions_and_identify_operators rest
+        | (`Quoted_term_operator, t) :: ts ->
+          let arguments, rest = List.take_while is_argument ts in
+          let arguments' = List.map Pair.snd arguments in
+          ShuntingYard.operand
+            (LF_operand.Application
+               { applicand = `Term t; arguments = arguments' })
+          :: reduce_juxtapositions_and_identify_operators rest
         | (`Type_operator operator, t) :: ts ->
           ShuntingYard.operator
             (LF_operator.Type_constant { operator; applicand = t })

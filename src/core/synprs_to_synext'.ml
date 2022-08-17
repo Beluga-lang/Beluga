@@ -343,6 +343,10 @@ end = struct
            Seq.return (identifier, entry))
 end
 
+(** Elaboration of LF kinds, types and terms from the parser syntax to the
+    external syntax.
+
+    This elaboration does not perform normalization nor validation. *)
 module LF = struct
   (** {1 Exceptions} *)
 
@@ -552,6 +556,9 @@ module LF = struct
 
   (** {1 Elaboration} *)
 
+  (** [resolve_lf_operator dictionary ~quoted identifier] determines whether
+      [identifier] is an LF type-level or term-level operator in
+      [dictionary], and whether it is quoted. *)
   let resolve_lf_operator dictionary ~quoted identifier =
     match Dictionary.lookup identifier dictionary with
     | Dictionary.LF_type_constant operator ->
@@ -560,7 +567,12 @@ module LF = struct
       if quoted then `Quoted_term_operator else `Term_operator operator
     | _ | (exception Dictionary.Unbound_identifier _) -> `Not_an_operator
 
-  let rec identify_lf_operator dictionary ~quoted term =
+  (** [identifier_lf_operator dictionary ?quoted term] identifies whether
+      [term] is an LF type-level or term-level operator in [dictionary] while
+      accounting for operator quoting. If a bound operator appears in
+      parentheses, then it is quoted, meaning that the operator appears
+      either in prefix notation or as an argument to another application. *)
+  let rec identify_lf_operator dictionary ?(quoted = false) term =
     match term with
     | Synprs.LF.Object.RawIdentifier { identifier; _ } ->
       let qualified_identifier =
@@ -573,16 +585,23 @@ module LF = struct
       identify_lf_operator dictionary ~quoted:true object_
     | _ -> `Not_an_operator
 
+  (** LF term-level or type-level operands for rewriting of prefix, infix and
+      postfix operators using {!ShuntingYard}. *)
   module LF_operand = struct
+    (** The type of operands that may appear during rewriting of prefix,
+        infix and postfix operators. *)
     type t =
-      | External_typ of Synext'.LF.Typ.t
-      | External_term of Synext'.LF.Term.t
+      | External_typ of Synext'.LF.Typ.t  (** An elaborated LF type. *)
+      | External_term of Synext'.LF.Term.t  (** An elaborated LF term. *)
       | Parser_object of Synprs.LF.Object.t
+          (** An LF object that has yet to be elaborated. *)
       | Application of
           { applicand :
               [ `Typ of Synprs.LF.Object.t | `Term of Synprs.LF.Object.t ]
           ; arguments : Synprs.LF.Object.t List.t
-          }
+          }  (** An LF type-level or term-level application. *)
+
+    (** {1 Destructors} *)
 
     let location = function
       | External_typ t -> Synext'.LF.location_of_typ t
@@ -599,16 +618,26 @@ module LF = struct
           applicand_location arguments
   end
 
+  (** LF term-level or type-level operators for rewriting of prefix, infix
+      and postfix operators using {!ShuntingYard}. *)
   module LF_operator = struct
+    (** The type of operators that may appear during rewriting of prefix,
+        infix and postfix operators. *)
     type t =
       | Type_constant of
           { operator : Operator.t
           ; applicand : Synprs.LF.Object.t
           }
+          (** An LF type-level constant with its operator definition in the
+              elaboration context, and its corresponding AST. *)
       | Term_constant of
           { operator : Operator.t
           ; applicand : Synprs.LF.Object.t
           }
+          (** An LF term-level constant with its operator definition in the
+              elaboration context, and its corresponding AST. *)
+
+    (** {1 Destructors} *)
 
     let[@inline] operator = function
       | Type_constant { operator; _ } | Term_constant { operator; _ } ->
@@ -630,10 +659,28 @@ module LF = struct
 
     let location = Fun.(applicand >> Synprs.LF.location_of_object)
 
+    (** {1 Instances} *)
+
+    (** Equality instance on type-level and term-level constants. Since
+        operator identifiers share the same namespace, operators having the
+        same name are equal in a rewriting of an application. *)
     include (
       (val Eq.contramap (module Operator) operator) : Eq.EQ with type t := t)
   end
 
+  (** [elaborate_kind dictionary object_] is [object_] rewritten as an LF
+      kind with respect to the elaboration context [dictionary].
+
+      This function imposes syntactic restrictions on [object_], but does not
+      perform normalization nor validation. To see the syntactic restrictions
+      from LF objects to LF kinds, see the Beluga language specification.
+
+      Examples of invalid kinds that may result from this elaboration
+      include:
+
+      - [type -> type]
+      - [(type -> type) -> type]
+      - [{ x : tp } type -> type] *)
   let rec elaborate_kind dictionary object_ =
     match object_ with
     | Synprs.LF.Object.RawIdentifier { location; identifier; _ } ->
@@ -679,9 +726,23 @@ module LF = struct
         ; body = body'
         }
     | Synprs.LF.Object.RawParenthesized { location; object_ } ->
-      let kind = elaborate_kind dictionary object_ in
-      Synext'.LF.Kind.Parenthesized { location; kind }
+      let kind' = elaborate_kind dictionary object_ in
+      Synext'.LF.Kind.Parenthesized { location; kind = kind' }
 
+  (** [elaborate_typ dictionary object_] is [object_] rewritten as an LF type
+      with respect to the elaboration context [dictionary].
+
+      Type applications are rewritten with {!elaborate_application} using
+      Dijkstra's shunting yard algorithm.
+
+      This function imposes syntactic restrictions on [object_], but does not
+      perform normalization nor validation. To see the syntactic restrictions
+      from LF objects to LF types, see the Beluga language specification.
+
+      Examples of invalid types that may result from this elaboration
+      include:
+
+      - [c (_ _) _] *)
   and elaborate_typ dictionary object_ =
     match object_ with
     | Synprs.LF.Object.RawType { location; _ } ->
@@ -695,6 +756,8 @@ module LF = struct
     | Synprs.LF.Object.RawPi { location; parameter_sort = Option.None; _ } ->
       raise @@ Illegal_untyped_pi_type location
     | Synprs.LF.Object.RawIdentifier { location; identifier } -> (
+      (* As an LF type, plain identifiers are necessarily type-level
+         constants. *)
       let qualified_identifier =
         QualifiedIdentifier.make_simple identifier
       in
@@ -709,6 +772,11 @@ module LF = struct
         @@ Unbound_type_constant
              { location; identifier = qualified_identifier })
     | Synprs.LF.Object.RawQualifiedIdentifier { location; identifier } -> (
+      (* Qualified identifiers without modules were parsed as plain
+         identifiers *)
+      assert (List.length (QualifiedIdentifier.modules identifier) >= 1);
+      (* As an LF type, identifiers of the form [(<identifier> `::')+
+         <identifier>] are necessarily type-level constants. *)
       match Dictionary.lookup identifier dictionary with
       | Dictionary.LF_type_constant _ ->
         Synext'.LF.Typ.Constant { location; identifier }
@@ -758,9 +826,24 @@ module LF = struct
         raise @@ Expected_type location
       | `Typ typ -> typ)
     | Synprs.LF.Object.RawParenthesized { location; object_ } ->
-      let typ = elaborate_typ dictionary object_ in
-      Synext'.LF.Typ.Parenthesized { location; typ }
+      let typ' = elaborate_typ dictionary object_ in
+      Synext'.LF.Typ.Parenthesized { location; typ = typ' }
 
+  (** [elaborate_term dictionary object_] is [object_] rewritten as an LF
+      term with respect to the elaboration context [dictionary].
+
+      Term applications are rewritten with {!elaborate_application} using
+      Dijkstra's shunting yard algorithm.
+
+      This function imposes syntactic restrictions on [object_], but does not
+      perform normalization nor validation. To see the syntactic restrictions
+      from LF objects to LF terms, see the Beluga language specification.
+
+      Examples of invalid terms that may result from this elaboration
+      include:
+
+      - [_ _]
+      - [\\_. _ _] *)
   and elaborate_term dictionary object_ =
     match object_ with
     | Synprs.LF.Object.RawType { location; _ } ->
@@ -772,6 +855,8 @@ module LF = struct
     | Synprs.LF.Object.RawBackwardArrow { location; _ } ->
       raise @@ Illegal_backward_arrow_term location
     | Synprs.LF.Object.RawIdentifier { location; identifier } -> (
+      (* As an LF term, plain identifiers are either term-level constants or
+         variables (bound or free). *)
       let qualified_identifier =
         QualifiedIdentifier.make_simple identifier
       in
@@ -780,12 +865,19 @@ module LF = struct
         Synext'.LF.Term.Constant
           { location; identifier = qualified_identifier }
       | Dictionary.LF_term ->
+        (* Bound variable *)
         Synext'.LF.Term.Variable { location; identifier }
       | entry ->
         raise @@ Expected_term_constant { location; actual_binding = entry }
       | exception Dictionary.Unbound_identifier _ ->
+        (* Free variable *)
         Synext'.LF.Term.Variable { location; identifier })
     | Synprs.LF.Object.RawQualifiedIdentifier { location; identifier } -> (
+      (* Qualified identifiers without modules were parsed as plain
+         identifiers *)
+      assert (List.length (QualifiedIdentifier.modules identifier) >= 1);
+      (* As an LF term, identifiers of the form [(<identifier> `::')+
+         <identifier>] are necessarily term-level constants. *)
       match Dictionary.lookup identifier dictionary with
       | Dictionary.LF_term_constant _ ->
         Synext'.LF.Term.Constant { location; identifier }
@@ -825,13 +917,30 @@ module LF = struct
     | Synprs.LF.Object.RawHole { location } ->
       Synext'.LF.Term.Wildcard { location }
     | Synprs.LF.Object.RawAnnotated { location; object_; sort } ->
-      let term = elaborate_term dictionary object_
-      and typ = elaborate_typ dictionary sort in
-      Synext'.LF.Term.TypeAnnotated { location; term; typ }
+      let term' = elaborate_term dictionary object_
+      and typ' = elaborate_typ dictionary sort in
+      Synext'.LF.Term.TypeAnnotated { location; term = term'; typ = typ' }
     | Synprs.LF.Object.RawParenthesized { location; object_ } ->
-      let term = elaborate_term dictionary object_ in
-      Synext'.LF.Term.Parenthesized { location; term }
+      let term' = elaborate_term dictionary object_ in
+      Synext'.LF.Term.Parenthesized { location; term = term' }
 
+  (** [elaborate_application dictionary objects] elaborates [objects] as
+      either a type-level or term-level LF application with respect to the
+      elaboration context [dicitonary].
+
+      In both type-level and term-level LF applications, arguments are LF
+      terms.
+
+      This elaboration is in three steps:
+
+      - First, LF type-level and term-level constants are identified as
+        operators (with or without quoting) using [dictionary], and the rest
+        are identified as operands.
+      - Second, consecutive operands are combined as an application
+        (juxtaposition) that has yet to be elaborated, and written in prefix
+        notation with the first operand being the application head.
+      - Third, Dijkstra's shunting yard algorithm is used to rewrite the
+        identified prefix, infix and postfix operators to applications. *)
   and elaborate_application dictionary =
     let elaborate_juxtaposition applicand arguments =
       let applicand_location =
@@ -868,6 +977,10 @@ module LF = struct
     let module ShuntingYard =
       ShuntingYard.Make (LF_operand) (LF_operator)
         (struct
+          (** [elaborate_argument argument] elaborates [argument] to an LF
+              term.
+
+              @raise Expected_term *)
           let elaborate_argument argument =
             match argument with
             | LF_operand.External_term term -> term
@@ -915,15 +1028,23 @@ module LF = struct
                    })
         end)
     in
-    let prepare_terms terms =
+    (* [prepare_objects objects] identifies operators in [objects] and
+       rewrites juxtapositions to applications in prefix notation. The
+       objects themselves are not elaborated to LF types or terms yet. This
+       is only done in the shunting yard algorithm so that the leftmost
+       syntax error gets reported. *)
+    let prepare_objects objects =
+      (* Predicate for identified objects that may appear as juxtaposed
+         arguments to an application in prefix notation. This predicate does
+         not apply to the application head. *)
       let is_argument = function
         | `Not_an_operator, _
         | `Quoted_type_operator, _
         | `Quoted_term_operator, _ -> true
         | `Type_operator _, _ | `Term_operator _, _ -> false
       in
-      let rec reduce_juxtapositions_and_identify_operators terms =
-        match terms with
+      let rec reduce_juxtapositions_and_identify_operators objects =
+        match objects with
         | (`Not_an_operator, t) :: ts -> (
           match List.take_while is_argument ts with
           | [], rest (* [t] is an operand not in juxtaposition *) ->
@@ -960,18 +1081,15 @@ module LF = struct
           :: reduce_juxtapositions_and_identify_operators ts
         | [] -> []
       in
-      let terms =
-        List2.map
-          (fun term ->
-            let tag = identify_lf_operator dictionary ~quoted:false term in
-            (tag, term))
-          terms
-      in
-      reduce_juxtapositions_and_identify_operators (List2.to_list terms)
+      objects |> List2.to_list
+      |> List.map (fun term ->
+             let tag = identify_lf_operator dictionary term in
+             (tag, term))
+      |> reduce_juxtapositions_and_identify_operators
     in
-    fun terms ->
+    fun objects ->
       try
-        match ShuntingYard.shunting_yard (prepare_terms terms) with
+        match ShuntingYard.shunting_yard (prepare_objects objects) with
         | LF_operand.External_typ t -> `Typ t
         | LF_operand.External_term t -> `Term t
         | LF_operand.Application { applicand; arguments } ->

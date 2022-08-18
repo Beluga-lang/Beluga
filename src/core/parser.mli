@@ -95,3 +95,7 @@ val next_theorem : [ `quit | `next of Name.t ] t
 module LF_parsers : sig
   val lf_object : LF.Object.t t
 end
+
+module CLF_parsers : sig
+  val clf_object : CLF.Object.t t
+end

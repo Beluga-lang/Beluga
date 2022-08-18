@@ -830,11 +830,15 @@ let sgn_name_pragma : Sgn.decl parser =
        Sgn.Pragma { location; pragma }
 
 let identifier =
-  span (satisfy' (`identifier Option.none)
+  satisfy' (`identifier Option.none)
     (function
       | Token.IDENT s -> Option.some s
-      | _ -> Option.none))
+      | _ -> Option.none)
+  |> span
   $> fun (location, identifier) -> Identifier.make ~location identifier
+
+let dot_identifier =
+  token Token.DOT &> identifier
 
 (*=
     <omittable-identifier> ::=
@@ -847,8 +851,19 @@ let omittable_identifier =
     (identifier $> Option.some)
 
 (*=
+   <qualified-identifier> ::= (<identifier> `::')* <identifier>
+*)
+let[@warning "-32"] qualified_identifier =
+  sep_by1 identifier (token Token.DOUBLE_COLON)
+  |> span
+  $> fun (location, identifiers) ->
+       let (modules, identifier) = List1.unsnoc identifiers in
+       QualifiedIdentifier.make ~location ~modules identifier
+
+(*=
     <qualified-or-plain-identifier> ::=
-      | (<identifier> `::')* <identifier>
+      | <identifier>
+      | (<identifier> `::')+ <identifier>
 *)
 let qualified_or_plain_identifier =
   sep_by1 identifier (token Token.DOUBLE_COLON)
@@ -900,6 +915,7 @@ end = struct
 
       <lf-object4> ::=
         | <lf-object5>+
+        | <lf-object5>
 
       <lf-object5> ::=
         | <identifier>
@@ -958,7 +974,7 @@ end = struct
        | (_, (object_, Option.None)) -> object_
        | (location, (object_, Option.Some sort)) ->
          LF.Object.RawAnnotated { location; object_; sort })
-    |> labelled "LF atomic annotated object"
+    |> labelled "LF atomic, application or annotated object"
 
   let lf_object2 =
     let forward_arrow = token Token.ARROW $> fun () -> `Forward_arrow
@@ -974,7 +990,7 @@ end = struct
          LF.Object.RawForwardArrow { location; domain; range }
        | (location, (domain, Option.Some (`Backward_arrow, range))) ->
          LF.Object.RawBackwardArrow { location; domain; range })
-    |> labelled "LF atomic, forward arrow or backward arrow object"
+    |> labelled "LF atomic, application, annotated, forward arrow or backward arrow object"
 
   let lf_object1 =
     let pi =
@@ -1010,6 +1026,280 @@ end = struct
   let lf_object =
     lf_object1
     |> labelled "LF object"
+end
+
+module rec CLF_parsers : sig
+  val clf_object : CLF.Object.t t
+end = struct
+  (*=
+      Original Grammar:
+
+      <substitution> ::=
+        | `[' `]'
+        | `[' `..' `]'
+        | `[' [`..' `,'] <clf-object> (`,' <clf-object>)* `]'
+
+      <clf-object> ::=
+        | <identifier>
+        | <qualified-identifier>
+        | `{' <omittable-identifier> `:' <clf-object> `}' <clf-object>
+        | `\\' <omittable-identifier> [`:' <clf-object>] `.' <clf-object>
+        | <clf-object> <forward-arrow> <clf-object>
+        | <clf-object> <backward-arrow> <clf-object>
+        | `block' `(' <omittable-identifier> `:' <clf-object> (`,' <omittable-identifier> `:' <clf-object>)* `)'
+        | `block' <omittable-identifier> `:' <clf-object> (`,' <omittable-identifier> `:' <clf-object>)*
+        | <clf-object> `:' <clf-object>
+        | <clf-object> <clf-object>
+        | `_'
+        | <clf-object> <substitution>
+        | `<' <clf-object> (`;' <clf-object>)* `>'
+        | <clf-object>`.'<integer>
+        | <clf-object>`.'<identifier>
+        | `(' <clf-object> `)'
+
+
+      Rewritten Grammar:
+
+      <substitution> ::=
+        | `[' `]'
+        | `[' `..' `]'
+        | `[' [`..' `,'] <clf-object> (`,' <clf-object>)* `]'
+
+      <clf-object> ::=
+        | <clf-object1>
+
+      <clf-object1> ::=
+        | `{' <omittable-identifier> [`:' <clf-object>] `}' <clf-object>
+        | `\\' <omittable-identifier> [`:' <clf-object>] `.' <clf-object>
+        | <clf-object2>
+
+      <clf-object2> ::=
+        | <clf-object3> <forward-arrow> <clf-object>
+        | <clf-object3> <backward-arrow> <clf-object>
+        | <clf-object3>
+
+      <clf-object3> ::=
+        | <clf-object4> `:' <clf-object>
+        | <clf-object4>
+
+      <clf-object4> ::=
+        | `block' `(' <omittable-identifier> `:' <clf-object> (`,' <omittable-identifier> `:' <clf-object>)* `)'
+        | `block' <omittable-identifier> `:' <clf-object> (`,' <omittable-identifier> `:' <clf-object>)*
+        | <clf-object5>
+
+      <clf-object5> ::=
+        | <clf-object6> <substitution>
+        | <clf-object6>
+
+      <clf-object6> ::=
+        | <clf-object7>+
+        | <clf-object7>
+
+      <clf-object7> ::=
+        | <clf-object8>(`.'(<integer> | <identifier>))+
+        | <clf-object8>
+
+      <clf-object8> ::=
+        | <identifier>
+        | <qualified-identifier>
+        | `_'
+        | `<' <clf-object> (`;' <clf-object>)* `>'
+        | `(' <clf-object> `)'
+  *)
+  let substitution =
+    let inner_substitution =
+      let identity_extension =
+        token Token.DOTS
+        &> (many (token Token.COMMA &> CLF_parsers.clf_object))
+      and plain =
+        sep_by1 CLF_parsers.clf_object (token Token.COMMA)
+      in
+      maybe
+        (choice
+          [ identity_extension $> (fun s -> `Identity_extension s)
+          ; plain $> (fun s -> `Plain s)
+          ]
+        )
+    in
+    bracks inner_substitution
+    |> span
+    $> (function
+       | (location, Option.None) -> CLF.Substitution.Empty { location }
+       | (location, Option.Some (`Identity_extension [])) ->
+           CLF.Substitution.Identity { location }
+       | (location, Option.Some (`Identity_extension (o :: os))) ->
+           CLF.Substitution.Substitution
+             { location
+             ; extends_identity = true
+             ; objects = List1.from o os
+             }
+       | (location, Option.Some (`Plain objects)) ->
+           CLF.Substitution.Substitution
+             { location
+             ; extends_identity = false
+             ; objects
+             }
+       )
+    |> labelled "Contextual LF substitution"
+
+  let clf_object8 =
+    let constant_or_variable =
+      qualified_or_plain_identifier
+      |> span
+      $> (function
+         | (location, `Qualified identifier) ->
+           CLF.Object.RawQualifiedIdentifier { location; identifier }
+         | (location, `Plain identifier) ->
+           CLF.Object.RawIdentifier { location; identifier })
+      |> labelled "Contextual LF constant or variable object"
+    and hole =
+      token Token.UNDERSCORE
+      |> span
+      $> (fun (location, ()) -> CLF.Object.RawHole { location })
+      |> labelled "Contextual LF hole object"
+    and tuple =
+      angles (sep_by1 CLF_parsers.clf_object (token Token.SEMICOLON))
+      |> span
+      $> (fun (location, elements) ->
+         CLF.Object.RawTuple { location; elements })
+      |> labelled "Contextual LF tuple object"
+    and parenthesized =
+      parens CLF_parsers.clf_object
+      |> span
+      $> (fun (location, object_) ->
+         CLF.Object.RawParenthesized { location; object_ })
+      |> labelled "LF parenthesized object"
+    in
+    choice
+      [ constant_or_variable
+      ; hole
+      ; tuple
+      ; parenthesized
+      ]
+
+  let clf_object7 =
+    let projection =
+      alt
+        (dot_integer $> fun i -> `By_position i)
+        (dot_identifier $> fun n -> `By_name n)
+    in
+    let trailing_projections = many (span projection) in
+    seq2 clf_object8 trailing_projections
+    |> span
+    $> (function
+       | (location, (object_, [])) -> object_
+       | (location, (object_, projections)) ->
+           List.fold_right
+             (fun (projection_location, projection) accumulator ->
+               let location =
+                 Location.join
+                   (CLF.location_of_object accumulator)
+                   projection_location
+               in
+               CLF.Object.RawProjection
+                 { location
+                 ; object_ = accumulator
+                 ; projection
+                 }
+             )
+             projections
+             object_
+       )
+    |> labelled "Contextual LF atomic or projection object"
+
+  let clf_object6 =
+    some clf_object7
+    |> span
+    $> (function
+       | (_, List1.T (object_, [])) -> object_
+       | (location, List1.T (o1, o2 :: os)) ->
+         CLF.Object.RawApplication { location; objects = List2.from o1 o2 os })
+    |> labelled "Contextual LF atomic, projection or application object"
+
+  let clf_object5 =
+    seq2 clf_object6 (maybe substitution)
+    |> span
+    $> (function
+       | (location, (object_, Option.None)) -> object_
+       | (location, (object_, Option.Some substitution)) ->
+           CLF.Object.RawSubstitution { location; object_; substitution }
+       )
+    |> labelled "Contextual LF atomic, projection, application or substitution object"
+
+  let clf_object4 =
+    let block_contents =
+      sep_by1 (seq2 omittable_identifier (CLF_parsers.clf_object)) (token Token.COMMA)
+    in
+    let block =
+      token Token.KW_BLOCK &> alt (parens block_contents) block_contents
+      |> span
+      $> (fun (location, elements) -> CLF.Object.RawBlock { location; elements })
+      |> labelled "Contextual LF block object"
+    in
+    choice
+      [ block
+      ; clf_object5
+      ]
+
+  let clf_object3 =
+    seq2 clf_object4 (maybe (token Token.COLON &> CLF_parsers.clf_object))
+    |> span
+    $> (function
+       | (_, (object_, Option.None)) -> object_
+       | (location, (object_, Option.Some sort)) ->
+         CLF.Object.RawAnnotated { location; object_; sort })
+    |> labelled "Contextual LF atomic or annotated object"
+
+  let clf_object2 =
+        let forward_arrow = token Token.ARROW $> fun () -> `Forward_arrow
+    and backward_arrow = token Token.BACKARROW $> fun () -> `Backward_arrow
+    in
+    seq2
+      clf_object3
+      (maybe (seq2 (alt forward_arrow backward_arrow) CLF_parsers.clf_object))
+    |> span
+    $> (function
+       | (_, (object_, Option.None)) -> object_
+       | (location, (domain, Option.Some (`Forward_arrow, range))) ->
+         CLF.Object.RawForwardArrow { location; domain; range }
+       | (location, (domain, Option.Some (`Backward_arrow, range))) ->
+         CLF.Object.RawBackwardArrow { location; domain; range })
+    |> labelled "Contextual LF atomic, application, annotated, forward arrow or backward arrow object"
+
+  let clf_object1 =
+    let pi =
+      seq2
+        (braces
+          (seq2
+            omittable_identifier
+            (maybe (token Token.COLON &> CLF_parsers.clf_object))))
+        CLF_parsers.clf_object
+      |> span
+      $> (fun (location, ((parameter_identifier, parameter_sort), body)) ->
+         CLF.Object.RawPi { location; parameter_identifier; parameter_sort; body })
+      |> labelled "Contextual LF Pi object"
+    and lambda =
+      seq2
+        (token Token.LAMBDA
+          &> (seq2
+              omittable_identifier
+              (maybe (token Token.COLON &> CLF_parsers.clf_object)))
+          <& token Token.DOT)
+        CLF_parsers.clf_object
+      |> span
+      $> (fun (location, ((parameter_identifier, parameter_sort), body)) ->
+         CLF.Object.RawLambda { location; parameter_identifier; parameter_sort; body })
+      |> labelled "Contextual LF lambda object"
+    in
+    choice
+      [ pi
+      ; lambda
+      ; clf_object2
+      ]
+
+  let clf_object =
+    clf_object1
+    |> labelled "Contextual LF object"
 end
 
 let hole : string option parser =

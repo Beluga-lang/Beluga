@@ -340,6 +340,23 @@ module CLF = struct
           }
   end =
     Substitution
+
+  let location_of_object object_ =
+    match object_ with
+    | Object.RawIdentifier { location; _ }
+    | Object.RawQualifiedIdentifier { location; _ }
+    | Object.RawHole { location; _ }
+    | Object.RawPi { location; _ }
+    | Object.RawLambda { location; _ }
+    | Object.RawForwardArrow { location; _ }
+    | Object.RawBackwardArrow { location; _ }
+    | Object.RawAnnotated { location; _ }
+    | Object.RawApplication { location; _ }
+    | Object.RawBlock { location; _ }
+    | Object.RawTuple { location; _ }
+    | Object.RawProjection { location; _ }
+    | Object.RawSubstitution { location; _ }
+    | Object.RawParenthesized { location; _ } -> location
 end
 
 (** {1 Parser Computation Syntax} *)

@@ -64,7 +64,22 @@
     parse tree once certain conditions have been met. For example, in Beluga,
     after a `case' keyword, we know for sure that we're parsing a case
     expression. Therefore, if we fail afterwards to parse the scrutinee of
-    the case, we should not backtrack out of the parser for case expressions. *)
+    the case, we should not backtrack out of the parser for case expressions.
+
+    {2 Language Design Considerations}
+
+    This parser combinator library is only suited for top-down
+    data-independent parsing. That is, tokens are parsed sequentially from
+    left to right, and no auxiliary data is accumulated during parsing. This
+    means that left-recursive grammars and data-dependent grammars are not
+    supported without either rewriting the grammar, or disambiguating and
+    rewriting parsed ASTs at a later stage.
+
+    It is best to implement a parser with a pre-defined context-free grammar
+    in a language specification document. This grammar may need rewriting to
+    eliminate left recursion, assign precedences and associativities using
+    recursive descent parsing. *)
+
 open Support
 
 module LF = Syntax.Prs.LF

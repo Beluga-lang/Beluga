@@ -583,12 +583,6 @@ module Harpoon = struct
     | `lemma
     ]
 
-  type split_kind =
-    [ `split
-    | `invert
-    | `impossible
-    ]
-
   type level =
     [ `meta
     | `comp
@@ -634,7 +628,9 @@ module Harpoon = struct
     (* Actual tactics *)
     | Intros of
         string list option (* list of names for introduced variables *)
-    | Split of split_kind * Comp.exp (* the expression to split on *)
+    | Split of { scrutinee : Comp.exp }
+    | Invert of { scrutinee : Comp.exp }
+    | Impossible of { scrutinee : Comp.exp }
     | MSplit of Location.t * Name.t (* split on a metavariable *)
     | Solve of
         Comp.exp (* the expression to solve the current subgoal with *)

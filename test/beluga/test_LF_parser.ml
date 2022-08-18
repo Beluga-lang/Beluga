@@ -5,6 +5,8 @@ module LF = struct
   module rec Kind : sig
     include module type of Synext'.LF.Kind
 
+    (** [equal x y] is [true] if and only if kinds [x] and [y] are
+        structurally equal, without regards for locations. *)
     val equal : t -> t -> Bool.t
   end = struct
     include Synext'.LF.Kind
@@ -28,6 +30,8 @@ module LF = struct
   and Typ : sig
     include module type of Synext'.LF.Typ
 
+    (** [equal x y] is [true] if and only if types [x] and [y] are
+        structurally equal, without regards for locations. *)
     val equal : t -> t -> Bool.t
   end = struct
     include Synext'.LF.Typ
@@ -58,6 +62,8 @@ module LF = struct
   and Term : sig
     include module type of Synext'.LF.Term
 
+    (** [equal x y] is [true] if and only if terms [x] and [y] are
+        structurally equal, without regards for locations. *)
     val equal : t -> t -> Bool.t
   end = struct
     include Synext'.LF.Term
@@ -89,6 +95,8 @@ module LF = struct
   end
 end
 
+(** Abbreviated constructors for LF kinds, types and terms. These are
+    strit_cly used for testing. *)
 module LF_constructors = struct
   open Synext'.LF
 
@@ -107,7 +115,7 @@ module LF_constructors = struct
 
   let ( ==> ) domain range = Kind.Arrow { location; domain; range }
 
-  let pik ?x ~t body =
+  let k_pi ?x ~t body =
     Kind.Pi
       { location
       ; parameter_identifier = Option.map id x
@@ -115,21 +123,21 @@ module LF_constructors = struct
       ; body
       }
 
-  let park kind = Kind.Parenthesized { location; kind }
+  let k_par kind = Kind.Parenthesized { location; kind }
 
   (* LF type constructors *)
 
-  let ct ?m identifier =
+  let t_c ?m identifier =
     Typ.Constant { location; identifier = qid ?m identifier }
 
-  let appt applicand arguments =
+  let t_app applicand arguments =
     Typ.Application { location; applicand; arguments }
 
   let ( => ) domain range = Typ.ForwardArrow { location; domain; range }
 
   let ( <= ) domain range = Typ.BackwardArrow { location; domain; range }
 
-  let pit ?x ~t body =
+  let t_pi ?x ~t body =
     Typ.Pi
       { location
       ; parameter_identifier = Option.map id x
@@ -137,7 +145,7 @@ module LF_constructors = struct
       ; body
       }
 
-  let part typ = Typ.Parenthesized { location; typ }
+  let t_par typ = Typ.Parenthesized { location; typ }
 
   (* LF term constructors *)
 
@@ -456,13 +464,13 @@ let mock_dictionary_9 =
   |> add_prefix_lf_type_constant ~arity:1 ~precedence:1 (qid "target")
 
 let test_kind =
-  let test_success elaboration_context input expected _test_ctxt =
+  let test_success elaboration_context input expected _test_t_cxt =
     OUnit2.assert_equal
       ~printer:(Format.asprintf "%a" Synext'.LF.pp_kind)
       ~cmp:LF.Kind.equal expected
       (parse_lf_object input
       |> Synprs_to_synext'.LF.elaborate_kind elaboration_context)
-  and test_failure elaboration_context input assert_exn _test_ctxt =
+  and test_failure elaboration_context input assert_exn _test_t_cxt =
     assert_exn @@ fun () ->
     parse_lf_object input
     |> Synprs_to_synext'.LF.elaborate_kind elaboration_context
@@ -472,42 +480,43 @@ let test_kind =
     [ (mock_dictionary_1, "type", typ)
     ; ( mock_dictionary_2
       , "nat -> nat -> type"
-      , ct "nat" ==> (ct "nat" ==> typ) )
+      , t_c "nat" ==> (t_c "nat" ==> typ) )
     ; ( mock_dictionary_2
       , "nat -> (nat -> type)"
-      , ct "nat" ==> park (ct "nat" ==> typ) )
+      , t_c "nat" ==> k_par (t_c "nat" ==> typ) )
     ; ( mock_dictionary_2
       , "nat -> nat -> nat -> type"
-      , ct "nat" ==> (ct "nat" ==> (ct "nat" ==> typ)) )
+      , t_c "nat" ==> (t_c "nat" ==> (t_c "nat" ==> typ)) )
     ; ( mock_dictionary_2
       , "(nat -> nat) -> type"
-      , part (ct "nat" => ct "nat") ==> typ )
+      , t_par (t_c "nat" => t_c "nat") ==> typ )
     ; ( mock_dictionary_3
       , "Nat::nat -> Nat::nat -> type"
-      , ct ~m:[ "Nat" ] "nat" ==> (ct ~m:[ "Nat" ] "nat" ==> typ) )
+      , t_c ~m:[ "Nat" ] "nat" ==> (t_c ~m:[ "Nat" ] "nat" ==> typ) )
     ; ( mock_dictionary_4
       , "Util::Nat::nat -> Util::Nat::nat -> type"
-      , ct ~m:[ "Util"; "Nat" ] "nat"
-        ==> (ct ~m:[ "Util"; "Nat" ] "nat" ==> typ) )
+      , t_c ~m:[ "Util"; "Nat" ] "nat"
+        ==> (t_c ~m:[ "Util"; "Nat" ] "nat" ==> typ) )
     ; ( mock_dictionary_8
       , "({ x : term } (M x) msteps (M' x)) -> (lam M) msteps (lam M') -> \
          type"
-      , part
-          (pit ~x:"x" ~t:(ct "term")
-             (appt (ct "msteps")
+      , t_par
+          (t_pi ~x:"x" ~t:(t_c "term")
+             (t_app (t_c "msteps")
                 [ par (app (v "M") [ v "x" ]); par (app (v "M'") [ v "x" ]) ]))
-        ==> (appt (ct "msteps")
+        ==> (t_app (t_c "msteps")
                [ par (app (c "lam") [ v "M" ])
                ; par (app (c "lam") [ v "M'" ])
                ]
             ==> typ) )
     ; ( mock_dictionary_9
       , "{ Lf : tp } target Lf -> type"
-      , pik ~x:"Lf" ~t:(ct "tp") (appt (ct "target") [ v "Lf" ] ==> typ) )
+      , k_pi ~x:"Lf" ~t:(t_c "tp") (t_app (t_c "target") [ v "Lf" ] ==> typ)
+      )
     ; ( mock_dictionary_9
       , "{ Lf : tp } { _ : tp } target Lf -> type"
-      , pik ~x:"Lf" ~t:(ct "tp")
-          (pik ~t:(ct "tp") (appt (ct "target") [ v "Lf" ] ==> typ)) )
+      , k_pi ~x:"Lf" ~t:(t_c "tp")
+          (k_pi ~t:(t_c "tp") (t_app (t_c "target") [ v "Lf" ] ==> typ)) )
     ]
   and failure_test_cases =
     [ (mock_dictionary_1, "M", assert_raises_illegal_identifier_kind)
@@ -541,93 +550,93 @@ let test_kind =
   [ "sucess" >::: success_tests ] @ [ "failure" >::: failure_tests ]
 
 let test_type =
-  let test_success elaboration_context input expected _test_ctxt =
+  let test_success elaboration_context input expected _test_t_cxt =
     OUnit2.assert_equal
       ~printer:(Format.asprintf "%a" Synext'.LF.pp_typ)
       ~cmp:LF.Typ.equal expected
       (parse_lf_object input
       |> Synprs_to_synext'.LF.elaborate_typ elaboration_context)
-  and test_failure elaboration_context input assert_exn _test_ctxt =
+  and test_failure elaboration_context input assert_exn _test_t_cxt =
     assert_exn @@ fun () ->
     parse_lf_object input
     |> Synprs_to_synext'.LF.elaborate_typ elaboration_context
   in
   let success_test_cases =
     let open LF_constructors in
-    [ (mock_dictionary_2, "nat -> nat", ct "nat" => ct "nat")
+    [ (mock_dictionary_2, "nat -> nat", t_c "nat" => t_c "nat")
     ; ( mock_dictionary_2
       , "nat -> nat -> nat"
-      , ct "nat" => (ct "nat" => ct "nat") )
+      , t_c "nat" => (t_c "nat" => t_c "nat") )
     ; ( mock_dictionary_2
       , "(nat -> nat) -> nat"
-      , part (ct "nat" => ct "nat") => ct "nat" )
+      , t_par (t_c "nat" => t_c "nat") => t_c "nat" )
     ; ( mock_dictionary_2
       , "nat <- (nat -> nat)"
-      , ct "nat" <= part (ct "nat" => ct "nat") )
+      , t_c "nat" <= t_par (t_c "nat" => t_c "nat") )
     ; ( mock_dictionary_2
       , "nat <- nat -> nat"
-      , ct "nat" <= (ct "nat" => ct "nat") )
+      , t_c "nat" <= (t_c "nat" => t_c "nat") )
     ; ( mock_dictionary_2
       , "nat -> nat <- nat -> nat"
-      , ct "nat" => (ct "nat" <= (ct "nat" => ct "nat")) )
+      , t_c "nat" => (t_c "nat" <= (t_c "nat" => t_c "nat")) )
     ; ( mock_dictionary_5
       , "(term T -> term T') -> term (T arrow T')"
-      , part (appt (ct "term") [ v "T" ] => appt (ct "term") [ v "T'" ])
-        => appt (ct "term") [ par (app (c "arrow") [ v "T"; v "T'" ]) ] )
+      , t_par (t_app (t_c "term") [ v "T" ] => t_app (t_c "term") [ v "T'" ])
+        => t_app (t_c "term") [ par (app (c "arrow") [ v "T"; v "T'" ]) ] )
     ; ( mock_dictionary_5
       , "term (T arrow T') -> term T -> term T'"
-      , appt (ct "term") [ par (app (c "arrow") [ v "T"; v "T'" ]) ]
-        => (appt (ct "term") [ v "T" ] => appt (ct "term") [ v "T'" ]) )
+      , t_app (t_c "term") [ par (app (c "arrow") [ v "T"; v "T'" ]) ]
+        => (t_app (t_c "term") [ v "T" ] => t_app (t_c "term") [ v "T'" ]) )
     ; ( mock_dictionary_5
       , "(term T -> term T') -> term ((arrow) T T')"
-      , part (appt (ct "term") [ v "T" ] => appt (ct "term") [ v "T'" ])
-        => appt (ct "term") [ par (app (par (c "arrow")) [ v "T"; v "T'" ]) ]
-      )
+      , t_par (t_app (t_c "term") [ v "T" ] => t_app (t_c "term") [ v "T'" ])
+        => t_app (t_c "term")
+             [ par (app (par (c "arrow")) [ v "T"; v "T'" ]) ] )
     ; ( mock_dictionary_5
       , "(term T -> term T') -> term (((arrow)) T T')"
-      , part (appt (ct "term") [ v "T" ] => appt (ct "term") [ v "T'" ])
-        => appt (ct "term")
+      , t_par (t_app (t_c "term") [ v "T" ] => t_app (t_c "term") [ v "T'" ])
+        => t_app (t_c "term")
              [ par (app (par (par (c "arrow"))) [ v "T"; v "T'" ]) ] )
     ; ( mock_dictionary_5
       , "(term T -> term T') -> term ((((arrow))) T T')"
-      , part (appt (ct "term") [ v "T" ] => appt (ct "term") [ v "T'" ])
-        => appt (ct "term")
+      , t_par (t_app (t_c "term") [ v "T" ] => t_app (t_c "term") [ v "T'" ])
+        => t_app (t_c "term")
              [ par (app (par (par (par (c "arrow")))) [ v "T"; v "T'" ]) ] )
     ; ( mock_dictionary_5
       , "term ((arrow) T T') -> term T -> term T'"
-      , appt (ct "term") [ par (app (par (c "arrow")) [ v "T"; v "T'" ]) ]
-        => (appt (ct "term") [ v "T" ] => appt (ct "term") [ v "T'" ]) )
+      , t_app (t_c "term") [ par (app (par (c "arrow")) [ v "T"; v "T'" ]) ]
+        => (t_app (t_c "term") [ v "T" ] => t_app (t_c "term") [ v "T'" ]) )
     ; ( mock_dictionary_6
       , "E1 eq F1 -> E2 eq F2 -> (E1 app E2) eq (F1 app F2)"
-      , appt (ct "eq") [ v "E1"; v "F1" ]
-        => (appt (ct "eq") [ v "E2"; v "F2" ]
-           => appt (ct "eq")
+      , t_app (t_c "eq") [ v "E1"; v "F1" ]
+        => (t_app (t_c "eq") [ v "E2"; v "F2" ]
+           => t_app (t_c "eq")
                 [ par (app (c "app") [ v "E1"; v "E2" ])
                 ; par (app (c "app") [ v "F1"; v "F2" ])
                 ]) )
     ; ( mock_dictionary_6
       , "(eq) E1 F1 -> (eq) E2 F2 -> (eq) ((app) E1 E2) ((app) F1 F2)"
-      , appt (part (ct "eq")) [ v "E1"; v "F1" ]
-        => (appt (part (ct "eq")) [ v "E2"; v "F2" ]
-           => appt
-                (part (ct "eq"))
+      , t_app (t_par (t_c "eq")) [ v "E1"; v "F1" ]
+        => (t_app (t_par (t_c "eq")) [ v "E2"; v "F2" ]
+           => t_app
+                (t_par (t_c "eq"))
                 [ par (app (par (c "app")) [ v "E1"; v "E2" ])
                 ; par (app (par (c "app")) [ v "F1"; v "F2" ])
                 ]) )
     ; ( mock_dictionary_6
       , "{ _ : exp } _ eq _"
-      , pit ~t:(ct "exp") (appt (ct "eq") [ hole; hole ]) )
+      , t_pi ~t:(t_c "exp") (t_app (t_c "eq") [ hole; hole ]) )
     ; ( mock_dictionary_6
       , "({x : exp} x eq x -> (E x) eq (F x)) -> (lam (\\x. E x)) eq (lam \
          (\\x. F x))"
-      , part
-          (pit ~x:"x" ~t:(ct "exp")
-             (appt (ct "eq") [ v "x"; v "x" ]
-             => appt (ct "eq")
+      , t_par
+          (t_pi ~x:"x" ~t:(t_c "exp")
+             (t_app (t_c "eq") [ v "x"; v "x" ]
+             => t_app (t_c "eq")
                   [ par (app (v "E") [ v "x" ])
                   ; par (app (v "F") [ v "x" ])
                   ]))
-        => appt (ct "eq")
+        => t_app (t_c "eq")
              [ par
                  (app (c "lam") [ par (lam ~x:"x" (app (v "E") [ v "x" ])) ])
              ; par
@@ -636,16 +645,16 @@ let test_type =
     ; ( mock_dictionary_6
       , "({x : exp} (eq) x x -> (eq) (E x) (F x)) -> (eq) (lam (\\x. E x)) \
          (lam (\\x. F x))"
-      , part
-          (pit ~x:"x" ~t:(ct "exp")
-             (appt (part (ct "eq")) [ v "x"; v "x" ]
-             => appt
-                  (part (ct "eq"))
+      , t_par
+          (t_pi ~x:"x" ~t:(t_c "exp")
+             (t_app (t_par (t_c "eq")) [ v "x"; v "x" ]
+             => t_app
+                  (t_par (t_c "eq"))
                   [ par (app (v "E") [ v "x" ])
                   ; par (app (v "F") [ v "x" ])
                   ]))
-        => appt
-             (part (ct "eq"))
+        => t_app
+             (t_par (t_c "eq"))
              [ par
                  (app (c "lam") [ par (lam ~x:"x" (app (v "E") [ v "x" ])) ])
              ; par
@@ -654,16 +663,16 @@ let test_type =
     ; ( mock_dictionary_6
       , "({x : exp} (eq) x x -> (eq) (E x) (F x)) -> (eq) (lam (\\x. (E) \
          x)) (lam (\\x. (F) x))"
-      , part
-          (pit ~x:"x" ~t:(ct "exp")
-             (appt (part (ct "eq")) [ v "x"; v "x" ]
-             => appt
-                  (part (ct "eq"))
+      , t_par
+          (t_pi ~x:"x" ~t:(t_c "exp")
+             (t_app (t_par (t_c "eq")) [ v "x"; v "x" ]
+             => t_app
+                  (t_par (t_c "eq"))
                   [ par (app (v "E") [ v "x" ])
                   ; par (app (v "F") [ v "x" ])
                   ]))
-        => appt
-             (part (ct "eq"))
+        => t_app
+             (t_par (t_c "eq"))
              [ par
                  (app (c "lam")
                     [ par (lam ~x:"x" (app (par (v "E")) [ v "x" ])) ])
@@ -674,20 +683,20 @@ let test_type =
     ; ( mock_dictionary_7
       , "(Statics::term T -> Statics::term T') -> Statics::term (T \
          Statics::arrow T')"
-      , part
-          (appt (ct ~m:[ "Statics" ] "term") [ v "T" ]
-          => appt (ct ~m:[ "Statics" ] "term") [ v "T'" ])
-        => appt
-             (ct ~m:[ "Statics" ] "term")
+      , t_par
+          (t_app (t_c ~m:[ "Statics" ] "term") [ v "T" ]
+          => t_app (t_c ~m:[ "Statics" ] "term") [ v "T'" ])
+        => t_app
+             (t_c ~m:[ "Statics" ] "term")
              [ par (app (c ~m:[ "Statics" ] "arrow") [ v "T"; v "T'" ]) ] )
     ; ( mock_dictionary_7
       , "(Statics::term T -> Statics::term T') -> Statics::term \
          ((Statics::arrow) T T')"
-      , part
-          (appt (ct ~m:[ "Statics" ] "term") [ v "T" ]
-          => appt (ct ~m:[ "Statics" ] "term") [ v "T'" ])
-        => appt
-             (ct ~m:[ "Statics" ] "term")
+      , t_par
+          (t_app (t_c ~m:[ "Statics" ] "term") [ v "T" ]
+          => t_app (t_c ~m:[ "Statics" ] "term") [ v "T'" ])
+        => t_app
+             (t_c ~m:[ "Statics" ] "term")
              [ par (app (par (c ~m:[ "Statics" ] "arrow")) [ v "T"; v "T'" ])
              ] )
     ]
@@ -718,13 +727,13 @@ let test_type =
   [ "sucess" >::: success_tests ] @ [ "failure" >::: failure_tests ]
 
 let test_term =
-  let test_success elaboration_context input expected _test_ctxt =
+  let test_success elaboration_context input expected _test_t_cxt =
     OUnit2.assert_equal
       ~printer:(Format.asprintf "%a" Synext'.LF.pp_term_debug)
       ~cmp:LF.Term.equal expected
       (parse_lf_object input
       |> Synprs_to_synext'.LF.elaborate_term elaboration_context)
-  and test_failure elaboration_context input assert_exn _test_ctxt =
+  and test_failure elaboration_context input assert_exn _test_t_cxt =
     assert_exn @@ fun () ->
     parse_lf_object input
     |> Synprs_to_synext'.LF.elaborate_term elaboration_context
@@ -745,23 +754,24 @@ let test_term =
       , lam ~x:"x"
           (lam ~x:"y" (lam ~x:"z" (app (v "M") [ v "x"; v "y"; v "z" ]))) )
     ; (mock_dictionary_2, "z", c "z")
-    ; (mock_dictionary_2, "z : nat", c "z" &: ct "nat")
+    ; (mock_dictionary_2, "z : nat", c "z" &: t_c "nat")
     ; (mock_dictionary_2, "\\x. s x", lam ~x:"x" (app (c "s") [ v "x" ]))
     ; ( mock_dictionary_2
       , "\\x. \\_. s x"
       , lam ~x:"x" (lam (app (c "s") [ v "x" ])) )
     ; ( mock_dictionary_2
       , "\\x:nat. s x"
-      , lam ~x:"x" ~t:(ct "nat") (app (c "s") [ v "x" ]) )
+      , lam ~x:"x" ~t:(t_c "nat") (app (c "s") [ v "x" ]) )
     ; ( mock_dictionary_2
       , "\\x. s (x : nat)"
-      , lam ~x:"x" (app (c "s") [ par (v "x" &: ct "nat") ]) )
+      , lam ~x:"x" (app (c "s") [ par (v "x" &: t_c "nat") ]) )
     ; ( mock_dictionary_2
       , "\\x. s x : nat"
-      , lam ~x:"x" (app (c "s") [ v "x" ] &: ct "nat") )
+      , lam ~x:"x" (app (c "s") [ v "x" ] &: t_c "nat") )
     ; ( mock_dictionary_2
       , "(\\x. s x) : nat -> nat"
-      , par (lam ~x:"x" (app (c "s") [ v "x" ])) &: (ct "nat" => ct "nat") )
+      , par (lam ~x:"x" (app (c "s") [ v "x" ])) &: (t_c "nat" => t_c "nat")
+      )
     ; (mock_dictionary_2, "s z", app (c "s") [ app (c "z") [] ])
     ; ( mock_dictionary_5
       , "M (arrow) x arrow M' (arrow) y"
@@ -789,9 +799,7 @@ let test_term =
     ; ( mock_dictionary_5
       , "x has_type y has_type z"
       , assert_raises_consecutive_non_associative_operators )
-    ; ( mock_dictionary_5
-      , "x arrow"
-      , assert_raises_arity_mismatch )
+    ; (mock_dictionary_5, "x arrow", assert_raises_arity_mismatch)
     ]
   in
   let success_tests =

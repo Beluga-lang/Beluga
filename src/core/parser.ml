@@ -1522,7 +1522,7 @@ end = struct
     let split =
       keyword "split"
       &> cmp_exp_syn
-      $> fun t -> Harpoon.Split (`split, t)
+      $> fun scrutinee -> Harpoon.Split { scrutinee }
     in
     let msplit =
       keyword "msplit"
@@ -1532,12 +1532,12 @@ end = struct
     let invert =
       keyword "invert"
       &> cmp_exp_syn
-      $> fun t -> Harpoon.Split (`invert, t)
+      $> fun scrutinee -> Harpoon.Invert { scrutinee }
     in
     let impossible =
       token Token.KW_IMPOSSIBLE
       &> cmp_exp_syn
-      $> fun t -> Harpoon.Split (`impossible, t)
+      $> fun scrutinee -> Harpoon.Impossible { scrutinee }
     in
     let solve =
       keyword "solve"

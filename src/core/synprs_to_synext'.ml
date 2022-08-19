@@ -93,18 +93,13 @@ end = struct
       Eq.EQ with type t := t)
 end
 
-(** A dictionary is a persistent hash map data structure to represent entries
-    currently in scope during the data-dependent elaboration from the parser
-    syntax to the external syntax. Modules are represented as
-    sub-dictionaries for performance. *)
-module Dictionary : sig
+module Elaboration_state : sig
   type t
 
   type entry = private
     | LF_term
     | LF_type_constant of Operator.t
     | LF_term_constant of Operator.t
-    | Module of t
 
   (** {1 Constructors} *)
 
@@ -142,205 +137,77 @@ module Dictionary : sig
 
   (** {1 Lookup} *)
 
-  exception Unbound_identifier of QualifiedIdentifier.t
-
-  exception Unbound_module of QualifiedIdentifier.t
-
-  exception
-    Expected_module of
-      { identifier : QualifiedIdentifier.t
-      ; actual_binding : entry
-      }
-
-  (** [lookup identifier dictionary] looks up [identifier] in [dictionary].
-
-      @raise Unbound_identifier if [identifier] is unbound in [dictionary].
-      @raise Unbound_module
-        if a sub-part of [identifier] is unbound in [dictionary], for
-        instance if module [Util::Nat] is unbound when looking up
-        [Util::Nat::zero]
-      @raise Expected_module
-        if a sub-part of [identifier] is bound in [dictionary], but does not
-        refer to a module *)
-  val lookup : QualifiedIdentifier.t -> t -> entry
-
-  (** {1 Interoperability} *)
-
-  (** [to_seq dictionary] is [dictionary] flattened to a sequence of bindings
-      by qualified name. There is no guarantee on the order of bindings in
-      the resultant sequence. *)
-  val to_seq : t -> (QualifiedIdentifier.t * entry) Seq.t
+  val lookup :
+    QualifiedIdentifier.t -> t -> entry QualifiedIdentifier.Dictionary.value
 
   (** {1 Error-Reporting} *)
 
-  val pp_entry_sort : Format.formatter -> entry -> Unit.t
+  val pp_entry_sort :
+    Format.formatter -> entry QualifiedIdentifier.Dictionary.value -> Unit.t
 end = struct
-  type t = entry Identifier.Hamt.t
+  type t = entry QualifiedIdentifier.Dictionary.t
 
   and entry =
     | LF_term
     | LF_type_constant of Operator.t
     | LF_term_constant of Operator.t
-    | Module of t
 
-  let empty = Identifier.Hamt.empty
+  let empty = QualifiedIdentifier.Dictionary.empty
 
-  let add_entry entry identifier dictionary =
-    Identifier.Hamt.add identifier entry dictionary
-
-  let add_nested_entry entry qualified_identifier dictionary =
-    let name = QualifiedIdentifier.name qualified_identifier
-    and modules = QualifiedIdentifier.modules qualified_identifier in
-    match modules with
-    | [] (* Toplevel declaration *) -> add_entry entry name dictionary
-    | m :: ms (* Nested declaration *) ->
-      let rec add module_name_to_lookup next_modules dictionary =
-        let dictionary' =
-          match
-            Identifier.Hamt.find_opt module_name_to_lookup dictionary
-          with
-          | Option.Some (Module dictionary')
-          (* Addition to existing module *) -> dictionary'
-          | Option.Some _ (* Entry shadowing *)
-          | Option.None (* Module introduction *) -> empty
-        in
-        match next_modules with
-        | [] (* Finished lookups *) ->
-          add_entry
-            (Module (add_entry entry name dictionary'))
-            module_name_to_lookup dictionary
-        | m :: ms (* Recursively lookup next module *) ->
-          add_entry
-            (Module (add m ms dictionary'))
-            module_name_to_lookup dictionary
-      in
-      add m ms dictionary
-
-  let add_term = add_entry LF_term
+  let add_term identifier =
+    let qualified_identifier = QualifiedIdentifier.make_simple identifier in
+    QualifiedIdentifier.Dictionary.add_entry qualified_identifier LF_term
 
   let add_prefix_lf_type_constant ~arity ~precedence identifier =
-    add_nested_entry
-      (LF_type_constant (Operator.make_prefix ~identifier ~arity ~precedence))
-      identifier
+    let operator = Operator.make_prefix ~identifier ~arity ~precedence in
+    QualifiedIdentifier.Dictionary.add_entry identifier
+      (LF_type_constant operator)
 
   let add_infix_lf_type_constant ~associativity ~precedence identifier =
-    add_nested_entry
-      (LF_type_constant
-         (Operator.make_infix ~identifier ~associativity ~precedence))
-      identifier
+    let operator =
+      Operator.make_infix ~identifier ~associativity ~precedence
+    in
+    QualifiedIdentifier.Dictionary.add_entry identifier
+      (LF_type_constant operator)
 
   let add_postfix_lf_type_constant ~precedence identifier =
-    add_nested_entry
-      (LF_type_constant (Operator.make_postfix ~identifier ~precedence))
-      identifier
+    let operator = Operator.make_postfix ~identifier ~precedence in
+    QualifiedIdentifier.Dictionary.add_entry identifier
+      (LF_type_constant operator)
 
   let add_prefix_lf_term_constant ~arity ~precedence identifier =
-    add_nested_entry
-      (LF_term_constant (Operator.make_prefix ~identifier ~arity ~precedence))
-      identifier
+    let operator = Operator.make_prefix ~identifier ~arity ~precedence in
+    QualifiedIdentifier.Dictionary.add_entry identifier
+      (LF_term_constant operator)
 
   let add_infix_lf_term_constant ~associativity ~precedence identifier =
-    add_nested_entry
-      (LF_term_constant
-         (Operator.make_infix ~identifier ~associativity ~precedence))
-      identifier
+    let operator =
+      Operator.make_infix ~identifier ~associativity ~precedence
+    in
+    QualifiedIdentifier.Dictionary.add_entry identifier
+      (LF_term_constant operator)
 
   let add_postfix_lf_term_constant ~precedence identifier =
-    add_nested_entry
-      (LF_term_constant (Operator.make_postfix ~identifier ~precedence))
-      identifier
+    let operator = Operator.make_postfix ~identifier ~precedence in
+    QualifiedIdentifier.Dictionary.add_entry identifier
+      (LF_term_constant operator)
 
   let add_module module_dictionary identifier =
-    add_nested_entry (Module module_dictionary) identifier
+    QualifiedIdentifier.Dictionary.add_module identifier module_dictionary
+
+  let lookup query state =
+    QualifiedIdentifier.Dictionary.lookup query state
 
   let pp_entry_sort ppf entry =
     match entry with
-    | LF_term -> Format.fprintf ppf "an LF term"
-    | LF_type_constant _ -> Format.fprintf ppf "an LF type-level constant"
-    | LF_term_constant _ -> Format.fprintf ppf "an LF term-level constant"
-    | Module _ -> Format.fprintf ppf "a module"
-
-  exception Unbound_identifier of QualifiedIdentifier.t
-
-  exception Unbound_module of QualifiedIdentifier.t
-
-  exception
-    Expected_module of
-      { identifier : QualifiedIdentifier.t
-      ; actual_binding : entry
-      }
-
-  let pp_exception ppf = function
-    | Unbound_identifier identifier ->
-      Format.fprintf ppf "Identifier \"%a\" is unbound: %a"
-        QualifiedIdentifier.pp identifier Location.pp
-        (QualifiedIdentifier.location identifier)
-    | Unbound_module identifier ->
-      Format.fprintf ppf "Module \"%a\" is unbound: %a"
-        QualifiedIdentifier.pp identifier Location.pp
-        (QualifiedIdentifier.location identifier)
-    | Expected_module { identifier; actual_binding } ->
-      Format.fprintf ppf
-        "Expected \"%a\" to be a module but found %a instead: %a@."
-        QualifiedIdentifier.pp identifier pp_entry_sort actual_binding
-        Location.pp
-        (QualifiedIdentifier.location identifier)
-    | _ -> raise @@ Invalid_argument "[pp_exception] unsupported exception"
-
-  let () =
-    Printexc.register_printer (fun exn ->
-        try Option.some @@ Format.asprintf "%a" pp_exception exn
-        with Invalid_argument _ -> Option.none)
-
-  let lookup query dictionary =
-    let rec lookup modules_to_lookup modules_looked_up_so_far dictionary =
-      match modules_to_lookup with
-      | [] (* Toplevel declaration *) -> (
-        let name = QualifiedIdentifier.name query in
-        match Identifier.Hamt.find_opt name dictionary with
-        | Option.Some entry -> entry
-        | Option.None -> raise @@ Unbound_identifier query)
-      | m :: ms (* Nested declaration *) -> (
-        let recover_current_module_identifier () =
-          let location =
-            List.fold_left
-              (fun acc i -> Location.join acc (Identifier.location i))
-              (Identifier.location m) modules_looked_up_so_far
-          in
-          QualifiedIdentifier.make ~location
-            ~modules:(List.rev modules_looked_up_so_far)
-            m
-        in
-        match Identifier.Hamt.find_opt m dictionary with
-        | Option.Some (Module dictionary') ->
-          lookup ms (m :: modules_looked_up_so_far) dictionary'
-        | Option.Some actual_binding ->
-          raise
-          @@ Expected_module
-               { identifier = recover_current_module_identifier ()
-               ; actual_binding
-               }
-        | Option.None ->
-          raise @@ Unbound_module (recover_current_module_identifier ()))
-    in
-    let modules = QualifiedIdentifier.modules query in
-    lookup modules [] dictionary
-
-  let rec to_seq dictionary =
-    dictionary |> Identifier.Hamt.bindings |> List.to_seq
-    |> Seq.flat_map (function
-         | identifier, (Module nested_dictionary as entry) ->
-           nested_dictionary |> to_seq
-           |> Seq.map (fun (nested_entry_identifier, entry) ->
-                  let identifier =
-                    QualifiedIdentifier.prepend_module identifier
-                      nested_entry_identifier
-                  in
-                  (identifier, entry))
-           |> Seq.cons (QualifiedIdentifier.make_simple identifier, entry)
-         | identifier, entry ->
-           let identifier = QualifiedIdentifier.make_simple identifier in
-           Seq.return (identifier, entry))
+    | QualifiedIdentifier.Dictionary.Entry LF_term ->
+      Format.fprintf ppf "an LF term"
+    | QualifiedIdentifier.Dictionary.Entry (LF_type_constant _) ->
+      Format.fprintf ppf "an LF type-level constant"
+    | QualifiedIdentifier.Dictionary.Entry (LF_term_constant _) ->
+      Format.fprintf ppf "an LF term-level constant"
+    | QualifiedIdentifier.Dictionary.Module _ ->
+      Format.fprintf ppf "a module"
 end
 
 (** Elaboration of LF kinds, types and terms from the parser syntax to the
@@ -407,13 +274,15 @@ module LF = struct
   exception
     Expected_term_constant of
       { location : Location.t
-      ; actual_binding : Dictionary.entry
+      ; actual_binding :
+          Elaboration_state.entry QualifiedIdentifier.Dictionary.value
       }
 
   exception
     Expected_type_constant of
       { location : Location.t
-      ; actual_binding : Dictionary.entry
+      ; actual_binding :
+          Elaboration_state.entry QualifiedIdentifier.Dictionary.value
       }
 
   exception Expected_term of Location.t
@@ -509,11 +378,11 @@ module LF = struct
     | Expected_term_constant { location; actual_binding } ->
       Format.fprintf ppf
         "Expected an LF term-level constant but found %a instead: %a@."
-        Dictionary.pp_entry_sort actual_binding Location.pp location
+        Elaboration_state.pp_entry_sort actual_binding Location.pp location
     | Expected_type_constant { location; actual_binding } ->
       Format.fprintf ppf
         "Expected an LF type-level constant but found %a instead: %a@."
-        Dictionary.pp_entry_sort actual_binding Location.pp location
+        Elaboration_state.pp_entry_sort actual_binding Location.pp location
     | Expected_term location ->
       Format.fprintf ppf
         "Expected an LF term but found an LF type instead: %a@." Location.pp
@@ -556,33 +425,36 @@ module LF = struct
 
   (** {1 Elaboration} *)
 
-  (** [resolve_lf_operator dictionary ~quoted identifier] determines whether
+  (** [resolve_lf_operator state ~quoted identifier] determines whether
       [identifier] is an LF type-level or term-level operator in
-      [dictionary], and whether it is quoted. *)
-  let resolve_lf_operator dictionary ~quoted identifier =
-    match Dictionary.lookup identifier dictionary with
-    | Dictionary.LF_type_constant operator ->
+      [state], and whether it is quoted. *)
+  let resolve_lf_operator state ~quoted identifier =
+    match Elaboration_state.lookup identifier state with
+    | QualifiedIdentifier.Dictionary.Entry
+        (Elaboration_state.LF_type_constant operator) ->
       if quoted then `Quoted_type_operator else `Type_operator operator
-    | Dictionary.LF_term_constant operator ->
+    | QualifiedIdentifier.Dictionary.Entry
+        (Elaboration_state.LF_term_constant operator) ->
       if quoted then `Quoted_term_operator else `Term_operator operator
-    | _ | (exception Dictionary.Unbound_identifier _) -> `Not_an_operator
+    | _ | (exception QualifiedIdentifier.Dictionary.Unbound_identifier _) ->
+      `Not_an_operator
 
-  (** [identifier_lf_operator dictionary ?quoted term] identifies whether
-      [term] is an LF type-level or term-level operator in [dictionary] while
+  (** [identifier_lf_operator state ?quoted term] identifies whether
+      [term] is an LF type-level or term-level operator in [state] while
       accounting for operator quoting. If a bound operator appears in
       parentheses, then it is quoted, meaning that the operator appears
       either in prefix notation or as an argument to another application. *)
-  let rec identify_lf_operator dictionary ?(quoted = false) term =
+  let rec identify_lf_operator state ?(quoted = false) term =
     match term with
     | Synprs.LF.Object.RawIdentifier { identifier; _ } ->
       let qualified_identifier =
         QualifiedIdentifier.make_simple identifier
       in
-      resolve_lf_operator dictionary ~quoted qualified_identifier
+      resolve_lf_operator state ~quoted qualified_identifier
     | Synprs.LF.Object.RawQualifiedIdentifier { identifier; _ } ->
-      resolve_lf_operator dictionary ~quoted identifier
+      resolve_lf_operator state ~quoted identifier
     | Synprs.LF.Object.RawParenthesized { object_; _ } ->
-      identify_lf_operator dictionary ~quoted:true object_
+      identify_lf_operator state ~quoted:true object_
     | _ -> `Not_an_operator
 
   (** LF term-level or type-level operands for rewriting of prefix, infix and
@@ -668,8 +540,8 @@ module LF = struct
       (val Eq.contramap (module Operator) operator) : Eq.EQ with type t := t)
   end
 
-  (** [elaborate_kind dictionary object_] is [object_] rewritten as an LF
-      kind with respect to the elaboration context [dictionary].
+  (** [elaborate_kind state object_] is [object_] rewritten as an LF
+      kind with respect to the elaboration context [state].
 
       This function imposes syntactic restrictions on [object_], but does not
       perform normalization nor validation. To see the syntactic restrictions
@@ -681,7 +553,7 @@ module LF = struct
       - [type -> type]
       - [(type -> type) -> type]
       - [{ x : tp } type -> type] *)
-  let rec elaborate_kind dictionary object_ =
+  let rec elaborate_kind state object_ =
     match object_ with
     | Synprs.LF.Object.RawIdentifier { location; identifier; _ } ->
       raise @@ Illegal_identifier_kind location
@@ -702,8 +574,8 @@ module LF = struct
     | Synprs.LF.Object.RawType { location } ->
       Synext'.LF.Kind.Typ { location }
     | Synprs.LF.Object.RawForwardArrow { location; domain; range } ->
-      let domain' = elaborate_typ dictionary domain
-      and range' = elaborate_kind dictionary range in
+      let domain' = elaborate_typ state domain
+      and range' = elaborate_kind state range in
       Synext'.LF.Kind.Arrow { location; domain = domain'; range = range' }
     | Synprs.LF.Object.RawPi
         { location
@@ -711,13 +583,15 @@ module LF = struct
         ; parameter_sort = Option.Some parameter_type
         ; body
         } ->
-      let parameter_type' = elaborate_typ dictionary parameter_type in
+      let parameter_type' = elaborate_typ state parameter_type in
       let body' =
         match parameter_identifier with
-        | Option.None -> elaborate_kind dictionary body
+        | Option.None -> elaborate_kind state body
         | Option.Some identifier ->
-          let dictionary' = Dictionary.add_term identifier dictionary in
-          elaborate_kind dictionary' body
+          let state' =
+            Elaboration_state.add_term identifier state
+          in
+          elaborate_kind state' body
       in
       Synext'.LF.Kind.Pi
         { location
@@ -726,11 +600,11 @@ module LF = struct
         ; body = body'
         }
     | Synprs.LF.Object.RawParenthesized { location; object_ } ->
-      let kind' = elaborate_kind dictionary object_ in
+      let kind' = elaborate_kind state object_ in
       Synext'.LF.Kind.Parenthesized { location; kind = kind' }
 
-  (** [elaborate_typ dictionary object_] is [object_] rewritten as an LF type
-      with respect to the elaboration context [dictionary].
+  (** [elaborate_typ state object_] is [object_] rewritten as an LF type
+      with respect to the elaboration context [state].
 
       Type applications are rewritten with {!elaborate_application} using
       Dijkstra's shunting yard algorithm.
@@ -743,7 +617,7 @@ module LF = struct
       include:
 
       - [c (_ _) _] *)
-  and elaborate_typ dictionary object_ =
+  and elaborate_typ state object_ =
     match object_ with
     | Synprs.LF.Object.RawType { location; _ } ->
       raise @@ Illegal_type_kind_type location
@@ -761,13 +635,14 @@ module LF = struct
       let qualified_identifier =
         QualifiedIdentifier.make_simple identifier
       in
-      match Dictionary.lookup qualified_identifier dictionary with
-      | Dictionary.LF_type_constant _ ->
+      match Elaboration_state.lookup qualified_identifier state with
+      | QualifiedIdentifier.Dictionary.Entry
+          (Elaboration_state.LF_type_constant _) ->
         Synext'.LF.Typ.Constant
           { location; identifier = qualified_identifier }
       | entry ->
         raise @@ Expected_type_constant { location; actual_binding = entry }
-      | exception Dictionary.Unbound_identifier _ ->
+      | exception QualifiedIdentifier.Dictionary.Unbound_identifier _ ->
         raise
         @@ Unbound_type_constant
              { location; identifier = qualified_identifier })
@@ -777,21 +652,22 @@ module LF = struct
       assert (List.length (QualifiedIdentifier.modules identifier) >= 1);
       (* As an LF type, identifiers of the form [(<identifier> `::')+
          <identifier>] are necessarily type-level constants. *)
-      match Dictionary.lookup identifier dictionary with
-      | Dictionary.LF_type_constant _ ->
+      match Elaboration_state.lookup identifier state with
+      | QualifiedIdentifier.Dictionary.Entry
+          (Elaboration_state.LF_type_constant _) ->
         Synext'.LF.Typ.Constant { location; identifier }
       | entry ->
         raise @@ Expected_type_constant { location; actual_binding = entry }
-      | exception Dictionary.Unbound_identifier _ ->
+      | exception QualifiedIdentifier.Dictionary.Unbound_identifier _ ->
         raise @@ Unbound_type_constant { location; identifier })
     | Synprs.LF.Object.RawForwardArrow { location; domain; range } ->
-      let domain' = elaborate_typ dictionary domain
-      and range' = elaborate_typ dictionary range in
+      let domain' = elaborate_typ state domain
+      and range' = elaborate_typ state range in
       Synext'.LF.Typ.ForwardArrow
         { location; domain = domain'; range = range' }
     | Synprs.LF.Object.RawBackwardArrow { location; domain; range } ->
-      let domain' = elaborate_typ dictionary domain
-      and range' = elaborate_typ dictionary range in
+      let domain' = elaborate_typ state domain
+      and range' = elaborate_typ state range in
       Synext'.LF.Typ.BackwardArrow
         { location; domain = domain'; range = range' }
     | Synprs.LF.Object.RawPi
@@ -800,10 +676,10 @@ module LF = struct
         ; parameter_sort = Option.Some parameter_type
         ; body
         } -> (
-      let parameter_type' = elaborate_typ dictionary parameter_type in
+      let parameter_type' = elaborate_typ state parameter_type in
       match parameter_identifier with
       | Option.None ->
-        let body' = elaborate_typ dictionary body in
+        let body' = elaborate_typ state body in
         Synext'.LF.Typ.Pi
           { location
           ; parameter_identifier
@@ -811,8 +687,8 @@ module LF = struct
           ; body = body'
           }
       | Option.Some parameter ->
-        let dictionary' = Dictionary.add_term parameter dictionary in
-        let body' = elaborate_typ dictionary' body in
+        let state' = Elaboration_state.add_term parameter state in
+        let body' = elaborate_typ state' body in
         Synext'.LF.Typ.Pi
           { location
           ; parameter_identifier
@@ -820,17 +696,17 @@ module LF = struct
           ; body = body'
           })
     | Synprs.LF.Object.RawApplication { location; objects } -> (
-      match elaborate_application dictionary objects with
+      match elaborate_application state objects with
       | `Term term ->
         let location = Synext'.LF.location_of_term term in
         raise @@ Expected_type location
       | `Typ typ -> typ)
     | Synprs.LF.Object.RawParenthesized { location; object_ } ->
-      let typ' = elaborate_typ dictionary object_ in
+      let typ' = elaborate_typ state object_ in
       Synext'.LF.Typ.Parenthesized { location; typ = typ' }
 
-  (** [elaborate_term dictionary object_] is [object_] rewritten as an LF
-      term with respect to the elaboration context [dictionary].
+  (** [elaborate_term state object_] is [object_] rewritten as an LF
+      term with respect to the elaboration context [state].
 
       Term applications are rewritten with {!elaborate_application} using
       Dijkstra's shunting yard algorithm.
@@ -844,7 +720,7 @@ module LF = struct
 
       - [_ _]
       - [\\_. _ _] *)
-  and elaborate_term dictionary object_ =
+  and elaborate_term state object_ =
     match object_ with
     | Synprs.LF.Object.RawType { location; _ } ->
       raise @@ Illegal_type_kind_term location
@@ -860,16 +736,17 @@ module LF = struct
       let qualified_identifier =
         QualifiedIdentifier.make_simple identifier
       in
-      match Dictionary.lookup qualified_identifier dictionary with
-      | Dictionary.LF_term_constant _ ->
+      match Elaboration_state.lookup qualified_identifier state with
+      | QualifiedIdentifier.Dictionary.Entry
+          (Elaboration_state.LF_term_constant _) ->
         Synext'.LF.Term.Constant
           { location; identifier = qualified_identifier }
-      | Dictionary.LF_term ->
+      | QualifiedIdentifier.Dictionary.Entry Elaboration_state.LF_term ->
         (* Bound variable *)
         Synext'.LF.Term.Variable { location; identifier }
       | entry ->
         raise @@ Expected_term_constant { location; actual_binding = entry }
-      | exception Dictionary.Unbound_identifier _ ->
+      | exception QualifiedIdentifier.Dictionary.Unbound_identifier _ ->
         (* Free variable *)
         Synext'.LF.Term.Variable { location; identifier })
     | Synprs.LF.Object.RawQualifiedIdentifier { location; identifier } -> (
@@ -878,15 +755,16 @@ module LF = struct
       assert (List.length (QualifiedIdentifier.modules identifier) >= 1);
       (* As an LF term, identifiers of the form [(<identifier> `::')+
          <identifier>] are necessarily term-level constants. *)
-      match Dictionary.lookup identifier dictionary with
-      | Dictionary.LF_term_constant _ ->
+      match Elaboration_state.lookup identifier state with
+      | QualifiedIdentifier.Dictionary.Entry
+          (Elaboration_state.LF_term_constant _) ->
         Synext'.LF.Term.Constant { location; identifier }
       | entry ->
         raise @@ Expected_term_constant { location; actual_binding = entry }
-      | exception Dictionary.Unbound_identifier _ ->
+      | exception QualifiedIdentifier.Dictionary.Unbound_identifier _ ->
         raise @@ Unbound_term_constant { location; identifier })
     | Synprs.LF.Object.RawApplication { location; objects } -> (
-      match elaborate_application dictionary objects with
+      match elaborate_application state objects with
       | `Typ typ ->
         let location = Synext'.LF.location_of_typ typ in
         raise @@ Expected_term location
@@ -894,11 +772,11 @@ module LF = struct
     | Synprs.LF.Object.RawLambda
         { location; parameter_identifier; parameter_sort; body } -> (
       let parameter_type' =
-        Option.map (elaborate_typ dictionary) parameter_sort
+        Option.map (elaborate_typ state) parameter_sort
       in
       match parameter_identifier with
       | Option.None ->
-        let body' = elaborate_term dictionary body in
+        let body' = elaborate_term state body in
         Synext'.LF.Term.Abstraction
           { location
           ; parameter_identifier
@@ -906,8 +784,8 @@ module LF = struct
           ; body = body'
           }
       | Option.Some name ->
-        let dictionary' = Dictionary.add_term name dictionary in
-        let body' = elaborate_term dictionary' body in
+        let state' = Elaboration_state.add_term name state in
+        let body' = elaborate_term state' body in
         Synext'.LF.Term.Abstraction
           { location
           ; parameter_identifier
@@ -917,14 +795,14 @@ module LF = struct
     | Synprs.LF.Object.RawHole { location } ->
       Synext'.LF.Term.Wildcard { location }
     | Synprs.LF.Object.RawAnnotated { location; object_; sort } ->
-      let term' = elaborate_term dictionary object_
-      and typ' = elaborate_typ dictionary sort in
+      let term' = elaborate_term state object_
+      and typ' = elaborate_typ state sort in
       Synext'.LF.Term.TypeAnnotated { location; term = term'; typ = typ' }
     | Synprs.LF.Object.RawParenthesized { location; object_ } ->
-      let term' = elaborate_term dictionary object_ in
+      let term' = elaborate_term state object_ in
       Synext'.LF.Term.Parenthesized { location; term = term' }
 
-  (** [elaborate_application dictionary objects] elaborates [objects] as
+  (** [elaborate_application state objects] elaborates [objects] as
       either a type-level or term-level LF application with respect to the
       elaboration context [dicitonary].
 
@@ -934,14 +812,14 @@ module LF = struct
       This elaboration is in three steps:
 
       - First, LF type-level and term-level constants are identified as
-        operators (with or without quoting) using [dictionary], and the rest
+        operators (with or without quoting) using [state], and the rest
         are identified as operands.
       - Second, consecutive operands are combined as an application
         (juxtaposition) that has yet to be elaborated, and written in prefix
         notation with the first operand being the application head.
       - Third, Dijkstra's shunting yard algorithm is used to rewrite the
         identified prefix, infix and postfix operators to applications. *)
-  and elaborate_application dictionary =
+  and elaborate_application state =
     let elaborate_juxtaposition applicand arguments =
       let applicand_location =
         match applicand with
@@ -956,8 +834,8 @@ module LF = struct
       in
       match applicand with
       | `Term applicand ->
-        let applicand' = elaborate_term dictionary applicand in
-        let arguments' = List.map (elaborate_term dictionary) arguments in
+        let applicand' = elaborate_term state applicand in
+        let arguments' = List.map (elaborate_term state) arguments in
         `Term
           (Synext'.LF.Term.Application
              { location = application_location
@@ -965,8 +843,8 @@ module LF = struct
              ; arguments = arguments'
              })
       | `Typ applicand ->
-        let applicand' = elaborate_typ dictionary applicand in
-        let arguments' = List.map (elaborate_term dictionary) arguments in
+        let applicand' = elaborate_typ state applicand in
+        let arguments' = List.map (elaborate_term state) arguments in
         `Typ
           (Synext'.LF.Typ.Application
              { location = application_location
@@ -988,7 +866,7 @@ module LF = struct
               let location = Synext'.LF.location_of_typ typ in
               raise @@ Expected_term location
             | LF_operand.Parser_object object_ ->
-              elaborate_term dictionary object_
+              elaborate_term state object_
             | LF_operand.Application { applicand; arguments } -> (
               match elaborate_juxtaposition applicand arguments with
               | `Term term -> term
@@ -1009,7 +887,7 @@ module LF = struct
             in
             match operator with
             | LF_operator.Type_constant { applicand; _ } ->
-              let applicand' = elaborate_typ dictionary applicand in
+              let applicand' = elaborate_typ state applicand in
               let arguments' = elaborate_arguments arguments in
               LF_operand.External_typ
                 (Synext'.LF.Typ.Application
@@ -1018,7 +896,7 @@ module LF = struct
                    ; arguments = arguments'
                    })
             | LF_operator.Term_constant { applicand; _ } ->
-              let applicand' = elaborate_term dictionary applicand in
+              let applicand' = elaborate_term state applicand in
               let arguments' = elaborate_arguments arguments in
               LF_operand.External_term
                 (Synext'.LF.Term.Application
@@ -1083,7 +961,7 @@ module LF = struct
       in
       objects |> List2.to_list
       |> List.map (fun term ->
-             let tag = identify_lf_operator dictionary term in
+             let tag = identify_lf_operator state term in
              (tag, term))
       |> reduce_juxtapositions_and_identify_operators
     in

@@ -358,11 +358,11 @@ let assert_raises_arity_mismatch f =
       "Expected exception [Arity_mismatch _] to be raised"
   with Synprs_to_synext'.LF.Arity_mismatch _ -> ()
 
-let mock_dictionary_1 = Synprs_to_synext'.Dictionary.empty
+let mock_state_1 = Synprs_to_synext'.Elaboration_state.empty
 
-let mock_dictionary_2 =
+let mock_state_2 =
   let open LF_constructors in
-  let open Synprs_to_synext'.Dictionary in
+  let open Synprs_to_synext'.Elaboration_state in
   empty
   |> add_prefix_lf_type_constant ~arity:0 ~precedence:1 (qid "nat")
   |> add_prefix_lf_term_constant ~arity:0 ~precedence:1 (qid "z")
@@ -371,9 +371,9 @@ let mock_dictionary_2 =
   |> add_prefix_lf_term_constant ~arity:0 ~precedence:1 (qid "sum/z")
   |> add_prefix_lf_term_constant ~arity:1 ~precedence:1 (qid "sum/s")
 
-let mock_dictionary_3 =
+let mock_state_3 =
   let open LF_constructors in
-  let open Synprs_to_synext'.Dictionary in
+  let open Synprs_to_synext'.Elaboration_state in
   empty
   |> add_prefix_lf_type_constant ~arity:0 ~precedence:1
        (qid ~m:[ "Nat" ] "nat")
@@ -388,9 +388,9 @@ let mock_dictionary_3 =
   |> add_prefix_lf_term_constant ~arity:1 ~precedence:1
        (qid ~m:[ "Nat" ] "sum/s")
 
-let mock_dictionary_4 =
+let mock_state_4 =
   let open LF_constructors in
-  let open Synprs_to_synext'.Dictionary in
+  let open Synprs_to_synext'.Elaboration_state in
   empty
   |> add_prefix_lf_type_constant ~arity:0 ~precedence:1
        (qid ~m:[ "Util"; "Nat" ] "nat")
@@ -405,9 +405,9 @@ let mock_dictionary_4 =
   |> add_prefix_lf_term_constant ~arity:1 ~precedence:1
        (qid ~m:[ "Util"; "Nat" ] "sum/s")
 
-let mock_dictionary_5 =
+let mock_state_5 =
   let open LF_constructors in
-  let open Synprs_to_synext'.Dictionary in
+  let open Synprs_to_synext'.Elaboration_state in
   empty
   |> add_prefix_lf_type_constant ~arity:0 ~precedence:1 (qid "tp")
   |> add_prefix_lf_term_constant ~arity:0 ~precedence:1 (qid "bool")
@@ -418,9 +418,9 @@ let mock_dictionary_5 =
   |> add_infix_lf_term_constant ~associativity:Associativity.non_associative
        ~precedence:3 (qid "has_type")
 
-let mock_dictionary_6 =
+let mock_state_6 =
   let open LF_constructors in
-  let open Synprs_to_synext'.Dictionary in
+  let open Synprs_to_synext'.Elaboration_state in
   empty
   |> add_prefix_lf_type_constant ~arity:0 ~precedence:1 (qid "exp")
   |> add_infix_lf_term_constant
@@ -430,9 +430,9 @@ let mock_dictionary_6 =
   |> add_infix_lf_type_constant ~associativity:Associativity.left_associative
        ~precedence:1 (qid "eq")
 
-let mock_dictionary_7 =
+let mock_state_7 =
   let open LF_constructors in
-  let open Synprs_to_synext'.Dictionary in
+  let open Synprs_to_synext'.Elaboration_state in
   empty
   |> add_prefix_lf_type_constant ~arity:0 ~precedence:1
        (qid ~m:[ "Statics" ] "tp")
@@ -446,9 +446,9 @@ let mock_dictionary_7 =
   |> add_prefix_lf_type_constant ~arity:1 ~precedence:1
        (qid ~m:[ "Statics" ] "term")
 
-let mock_dictionary_8 =
+let mock_state_8 =
   let open LF_constructors in
-  let open Synprs_to_synext'.Dictionary in
+  let open Synprs_to_synext'.Elaboration_state in
   empty
   |> add_infix_lf_type_constant
        ~associativity:Associativity.right_associative ~precedence:1
@@ -456,9 +456,9 @@ let mock_dictionary_8 =
   |> add_prefix_lf_term_constant ~arity:1 ~precedence:1 (qid "lam")
   |> add_prefix_lf_type_constant ~arity:1 ~precedence:1 (qid "term")
 
-let mock_dictionary_9 =
+let mock_state_9 =
   let open LF_constructors in
-  let open Synprs_to_synext'.Dictionary in
+  let open Synprs_to_synext'.Elaboration_state in
   empty
   |> add_prefix_lf_type_constant ~arity:0 ~precedence:1 (qid "tp")
   |> add_prefix_lf_type_constant ~arity:1 ~precedence:1 (qid "target")
@@ -477,27 +477,25 @@ let test_kind =
   in
   let success_test_cases =
     let open LF_constructors in
-    [ (mock_dictionary_1, "type", typ)
-    ; ( mock_dictionary_2
-      , "nat -> nat -> type"
-      , t_c "nat" ==> (t_c "nat" ==> typ) )
-    ; ( mock_dictionary_2
+    [ (mock_state_1, "type", typ)
+    ; (mock_state_2, "nat -> nat -> type", t_c "nat" ==> (t_c "nat" ==> typ))
+    ; ( mock_state_2
       , "nat -> (nat -> type)"
       , t_c "nat" ==> k_par (t_c "nat" ==> typ) )
-    ; ( mock_dictionary_2
+    ; ( mock_state_2
       , "nat -> nat -> nat -> type"
       , t_c "nat" ==> (t_c "nat" ==> (t_c "nat" ==> typ)) )
-    ; ( mock_dictionary_2
+    ; ( mock_state_2
       , "(nat -> nat) -> type"
       , t_par (t_c "nat" => t_c "nat") ==> typ )
-    ; ( mock_dictionary_3
+    ; ( mock_state_3
       , "Nat::nat -> Nat::nat -> type"
       , t_c ~m:[ "Nat" ] "nat" ==> (t_c ~m:[ "Nat" ] "nat" ==> typ) )
-    ; ( mock_dictionary_4
+    ; ( mock_state_4
       , "Util::Nat::nat -> Util::Nat::nat -> type"
       , t_c ~m:[ "Util"; "Nat" ] "nat"
         ==> (t_c ~m:[ "Util"; "Nat" ] "nat" ==> typ) )
-    ; ( mock_dictionary_8
+    ; ( mock_state_8
       , "({ x : term } (M x) msteps (M' x)) -> (lam M) msteps (lam M') -> \
          type"
       , t_par
@@ -509,28 +507,24 @@ let test_kind =
                ; par (app (c "lam") [ v "M'" ])
                ]
             ==> typ) )
-    ; ( mock_dictionary_9
+    ; ( mock_state_9
       , "{ Lf : tp } target Lf -> type"
       , k_pi ~x:"Lf" ~t:(t_c "tp") (t_app (t_c "target") [ v "Lf" ] ==> typ)
       )
-    ; ( mock_dictionary_9
+    ; ( mock_state_9
       , "{ Lf : tp } { _ : tp } target Lf -> type"
       , k_pi ~x:"Lf" ~t:(t_c "tp")
           (k_pi ~t:(t_c "tp") (t_app (t_c "target") [ v "Lf" ] ==> typ)) )
     ]
   and failure_test_cases =
-    [ (mock_dictionary_1, "M", assert_raises_illegal_identifier_kind)
-    ; ( mock_dictionary_1
-      , "Q::M"
-      , assert_raises_illegal_qualified_identifier_kind )
-    ; ( mock_dictionary_2
-      , "type <- nat"
-      , assert_raises_illegal_backward_arrow_kind )
-    ; (mock_dictionary_1, "_", assert_raises_illegal_hole_kind)
-    ; (mock_dictionary_1, "(\\x. _)", assert_raises_illegal_lambda_kind)
-    ; (mock_dictionary_2, "type : _", assert_raises_illegal_annotated_kind)
-    ; (mock_dictionary_2, "nat _", assert_raises_illegal_application_kind)
-    ; ( mock_dictionary_9
+    [ (mock_state_1, "M", assert_raises_illegal_identifier_kind)
+    ; (mock_state_1, "Q::M", assert_raises_illegal_qualified_identifier_kind)
+    ; (mock_state_2, "type <- nat", assert_raises_illegal_backward_arrow_kind)
+    ; (mock_state_1, "_", assert_raises_illegal_hole_kind)
+    ; (mock_state_1, "(\\x. _)", assert_raises_illegal_lambda_kind)
+    ; (mock_state_2, "type : _", assert_raises_illegal_annotated_kind)
+    ; (mock_state_2, "nat _", assert_raises_illegal_application_kind)
+    ; ( mock_state_9
       , "{ Lf } target Lf -> type"
       , assert_raises_illegal_untyped_pi_kind )
     ]
@@ -563,50 +557,50 @@ let test_type =
   in
   let success_test_cases =
     let open LF_constructors in
-    [ (mock_dictionary_2, "nat -> nat", t_c "nat" => t_c "nat")
-    ; ( mock_dictionary_2
+    [ (mock_state_2, "nat -> nat", t_c "nat" => t_c "nat")
+    ; ( mock_state_2
       , "nat -> nat -> nat"
       , t_c "nat" => (t_c "nat" => t_c "nat") )
-    ; ( mock_dictionary_2
+    ; ( mock_state_2
       , "(nat -> nat) -> nat"
       , t_par (t_c "nat" => t_c "nat") => t_c "nat" )
-    ; ( mock_dictionary_2
+    ; ( mock_state_2
       , "nat <- (nat -> nat)"
       , t_c "nat" <= t_par (t_c "nat" => t_c "nat") )
-    ; ( mock_dictionary_2
+    ; ( mock_state_2
       , "nat <- nat -> nat"
       , t_c "nat" <= (t_c "nat" => t_c "nat") )
-    ; ( mock_dictionary_2
+    ; ( mock_state_2
       , "nat -> nat <- nat -> nat"
       , t_c "nat" => (t_c "nat" <= (t_c "nat" => t_c "nat")) )
-    ; ( mock_dictionary_5
+    ; ( mock_state_5
       , "(term T -> term T') -> term (T arrow T')"
       , t_par (t_app (t_c "term") [ v "T" ] => t_app (t_c "term") [ v "T'" ])
         => t_app (t_c "term") [ par (app (c "arrow") [ v "T"; v "T'" ]) ] )
-    ; ( mock_dictionary_5
+    ; ( mock_state_5
       , "term (T arrow T') -> term T -> term T'"
       , t_app (t_c "term") [ par (app (c "arrow") [ v "T"; v "T'" ]) ]
         => (t_app (t_c "term") [ v "T" ] => t_app (t_c "term") [ v "T'" ]) )
-    ; ( mock_dictionary_5
+    ; ( mock_state_5
       , "(term T -> term T') -> term ((arrow) T T')"
       , t_par (t_app (t_c "term") [ v "T" ] => t_app (t_c "term") [ v "T'" ])
         => t_app (t_c "term")
              [ par (app (par (c "arrow")) [ v "T"; v "T'" ]) ] )
-    ; ( mock_dictionary_5
+    ; ( mock_state_5
       , "(term T -> term T') -> term (((arrow)) T T')"
       , t_par (t_app (t_c "term") [ v "T" ] => t_app (t_c "term") [ v "T'" ])
         => t_app (t_c "term")
              [ par (app (par (par (c "arrow"))) [ v "T"; v "T'" ]) ] )
-    ; ( mock_dictionary_5
+    ; ( mock_state_5
       , "(term T -> term T') -> term ((((arrow))) T T')"
       , t_par (t_app (t_c "term") [ v "T" ] => t_app (t_c "term") [ v "T'" ])
         => t_app (t_c "term")
              [ par (app (par (par (par (c "arrow")))) [ v "T"; v "T'" ]) ] )
-    ; ( mock_dictionary_5
+    ; ( mock_state_5
       , "term ((arrow) T T') -> term T -> term T'"
       , t_app (t_c "term") [ par (app (par (c "arrow")) [ v "T"; v "T'" ]) ]
         => (t_app (t_c "term") [ v "T" ] => t_app (t_c "term") [ v "T'" ]) )
-    ; ( mock_dictionary_6
+    ; ( mock_state_6
       , "E1 eq F1 -> E2 eq F2 -> (E1 app E2) eq (F1 app F2)"
       , t_app (t_c "eq") [ v "E1"; v "F1" ]
         => (t_app (t_c "eq") [ v "E2"; v "F2" ]
@@ -614,7 +608,7 @@ let test_type =
                 [ par (app (c "app") [ v "E1"; v "E2" ])
                 ; par (app (c "app") [ v "F1"; v "F2" ])
                 ]) )
-    ; ( mock_dictionary_6
+    ; ( mock_state_6
       , "(eq) E1 F1 -> (eq) E2 F2 -> (eq) ((app) E1 E2) ((app) F1 F2)"
       , t_app (t_par (t_c "eq")) [ v "E1"; v "F1" ]
         => (t_app (t_par (t_c "eq")) [ v "E2"; v "F2" ]
@@ -623,10 +617,10 @@ let test_type =
                 [ par (app (par (c "app")) [ v "E1"; v "E2" ])
                 ; par (app (par (c "app")) [ v "F1"; v "F2" ])
                 ]) )
-    ; ( mock_dictionary_6
+    ; ( mock_state_6
       , "{ _ : exp } _ eq _"
       , t_pi ~t:(t_c "exp") (t_app (t_c "eq") [ hole; hole ]) )
-    ; ( mock_dictionary_6
+    ; ( mock_state_6
       , "({x : exp} x eq x -> (E x) eq (F x)) -> (lam (\\x. E x)) eq (lam \
          (\\x. F x))"
       , t_par
@@ -642,7 +636,7 @@ let test_type =
              ; par
                  (app (c "lam") [ par (lam ~x:"x" (app (v "F") [ v "x" ])) ])
              ] )
-    ; ( mock_dictionary_6
+    ; ( mock_state_6
       , "({x : exp} (eq) x x -> (eq) (E x) (F x)) -> (eq) (lam (\\x. E x)) \
          (lam (\\x. F x))"
       , t_par
@@ -660,7 +654,7 @@ let test_type =
              ; par
                  (app (c "lam") [ par (lam ~x:"x" (app (v "F") [ v "x" ])) ])
              ] )
-    ; ( mock_dictionary_6
+    ; ( mock_state_6
       , "({x : exp} (eq) x x -> (eq) (E x) (F x)) -> (eq) (lam (\\x. (E) \
          x)) (lam (\\x. (F) x))"
       , t_par
@@ -680,7 +674,7 @@ let test_type =
                  (app (c "lam")
                     [ par (lam ~x:"x" (app (par (v "F")) [ v "x" ])) ])
              ] )
-    ; ( mock_dictionary_7
+    ; ( mock_state_7
       , "(Statics::term T -> Statics::term T') -> Statics::term (T \
          Statics::arrow T')"
       , t_par
@@ -689,7 +683,7 @@ let test_type =
         => t_app
              (t_c ~m:[ "Statics" ] "term")
              [ par (app (c ~m:[ "Statics" ] "arrow") [ v "T"; v "T'" ]) ] )
-    ; ( mock_dictionary_7
+    ; ( mock_state_7
       , "(Statics::term T -> Statics::term T') -> Statics::term \
          ((Statics::arrow) T T')"
       , t_par
@@ -701,15 +695,13 @@ let test_type =
              ] )
     ]
   and failure_test_cases =
-    [ (mock_dictionary_1, "type", assert_raises_illegal_type_kind_type)
-    ; (mock_dictionary_1, "_", assert_raises_illegal_hole_type)
-    ; (mock_dictionary_1, "\\x. _", assert_raises_illegal_lambda_type)
-    ; (mock_dictionary_2, "nat : type", assert_raises_illegal_annotated_type)
-    ; ( mock_dictionary_6
-      , "{ x } x eq x"
-      , assert_raises_illegal_untyped_pi_type )
-    ; (mock_dictionary_1, "z", assert_raises_unbound_type_constant)
-    ; (mock_dictionary_3, "Nat::add", assert_raises_unbound_type_constant)
+    [ (mock_state_1, "type", assert_raises_illegal_type_kind_type)
+    ; (mock_state_1, "_", assert_raises_illegal_hole_type)
+    ; (mock_state_1, "\\x. _", assert_raises_illegal_lambda_type)
+    ; (mock_state_2, "nat : type", assert_raises_illegal_annotated_type)
+    ; (mock_state_6, "{ x } x eq x", assert_raises_illegal_untyped_pi_type)
+    ; (mock_state_1, "z", assert_raises_unbound_type_constant)
+    ; (mock_state_3, "Nat::add", assert_raises_unbound_type_constant)
     ]
   in
   let success_tests =
@@ -740,66 +732,62 @@ let test_term =
   in
   let success_test_cases =
     let open LF_constructors in
-    [ (mock_dictionary_1, "M x y z", app (v "M") [ v "x"; v "y"; v "z" ])
-    ; (mock_dictionary_1, "_ x y z", app hole [ v "x"; v "y"; v "z" ])
-    ; (mock_dictionary_1, "M _ y z", app (v "M") [ hole; v "y"; v "z" ])
-    ; (mock_dictionary_1, "M x _ z", app (v "M") [ v "x"; hole; v "z" ])
-    ; (mock_dictionary_1, "M x y _", app (v "M") [ v "x"; v "y"; hole ])
-    ; (mock_dictionary_1, "M _ y _", app (v "M") [ hole; v "y"; hole ])
-    ; (mock_dictionary_1, "M _ _ _", app (v "M") [ hole; hole; hole ])
-    ; (mock_dictionary_1, "\\x. x", lam ~x:"x" (v "x"))
-    ; (mock_dictionary_1, "\\x. M x", lam ~x:"x" (app (v "M") [ v "x" ]))
-    ; ( mock_dictionary_1
+    [ (mock_state_1, "M x y z", app (v "M") [ v "x"; v "y"; v "z" ])
+    ; (mock_state_1, "_ x y z", app hole [ v "x"; v "y"; v "z" ])
+    ; (mock_state_1, "M _ y z", app (v "M") [ hole; v "y"; v "z" ])
+    ; (mock_state_1, "M x _ z", app (v "M") [ v "x"; hole; v "z" ])
+    ; (mock_state_1, "M x y _", app (v "M") [ v "x"; v "y"; hole ])
+    ; (mock_state_1, "M _ y _", app (v "M") [ hole; v "y"; hole ])
+    ; (mock_state_1, "M _ _ _", app (v "M") [ hole; hole; hole ])
+    ; (mock_state_1, "\\x. x", lam ~x:"x" (v "x"))
+    ; (mock_state_1, "\\x. M x", lam ~x:"x" (app (v "M") [ v "x" ]))
+    ; ( mock_state_1
       , "\\x. \\y. \\z. M x y z"
       , lam ~x:"x"
           (lam ~x:"y" (lam ~x:"z" (app (v "M") [ v "x"; v "y"; v "z" ]))) )
-    ; (mock_dictionary_2, "z", c "z")
-    ; (mock_dictionary_2, "z : nat", c "z" &: t_c "nat")
-    ; (mock_dictionary_2, "\\x. s x", lam ~x:"x" (app (c "s") [ v "x" ]))
-    ; ( mock_dictionary_2
+    ; (mock_state_2, "z", c "z")
+    ; (mock_state_2, "z : nat", c "z" &: t_c "nat")
+    ; (mock_state_2, "\\x. s x", lam ~x:"x" (app (c "s") [ v "x" ]))
+    ; ( mock_state_2
       , "\\x. \\_. s x"
       , lam ~x:"x" (lam (app (c "s") [ v "x" ])) )
-    ; ( mock_dictionary_2
+    ; ( mock_state_2
       , "\\x:nat. s x"
       , lam ~x:"x" ~t:(t_c "nat") (app (c "s") [ v "x" ]) )
-    ; ( mock_dictionary_2
+    ; ( mock_state_2
       , "\\x. s (x : nat)"
       , lam ~x:"x" (app (c "s") [ par (v "x" &: t_c "nat") ]) )
-    ; ( mock_dictionary_2
+    ; ( mock_state_2
       , "\\x. s x : nat"
       , lam ~x:"x" (app (c "s") [ v "x" ] &: t_c "nat") )
-    ; ( mock_dictionary_2
+    ; ( mock_state_2
       , "(\\x. s x) : nat -> nat"
       , par (lam ~x:"x" (app (c "s") [ v "x" ])) &: (t_c "nat" => t_c "nat")
       )
-    ; (mock_dictionary_2, "s z", app (c "s") [ app (c "z") [] ])
-    ; ( mock_dictionary_5
+    ; (mock_state_2, "s z", app (c "s") [ app (c "z") [] ])
+    ; ( mock_state_5
       , "M (arrow) x arrow M' (arrow) y"
       , app (c "arrow")
           [ app (v "M") [ par (c "arrow"); v "x" ]
           ; app (v "M'") [ par (c "arrow"); v "y" ]
           ] )
-    ; ( mock_dictionary_5
+    ; ( mock_state_5
       , "(arrow) (arrow)"
       , app (par (c "arrow")) [ par (c "arrow") ] )
     ]
   and failure_test_cases =
-    [ (mock_dictionary_1, "type", assert_raises_illegal_type_kind_term)
-    ; (mock_dictionary_2, "{ x : nat } x", assert_raises_illegal_pi_term)
-    ; ( mock_dictionary_1
-      , "\\x. x -> x"
-      , assert_raises_illegal_forward_arrow_term )
-    ; ( mock_dictionary_1
-      , "x <- \\x. x"
-      , assert_raises_illegal_backward_arrow_term )
-    ; (mock_dictionary_3, "Nat::one", assert_raises_unbound_term_constant)
-    ; ( mock_dictionary_5
+    [ (mock_state_1, "type", assert_raises_illegal_type_kind_term)
+    ; (mock_state_2, "{ x : nat } x", assert_raises_illegal_pi_term)
+    ; (mock_state_1, "\\x. x -> x", assert_raises_illegal_forward_arrow_term)
+    ; (mock_state_1, "x <- \\x. x", assert_raises_illegal_backward_arrow_term)
+    ; (mock_state_3, "Nat::one", assert_raises_unbound_term_constant)
+    ; ( mock_state_5
       , "has_type has_type"
       , assert_raises_consecutive_non_associative_operators )
-    ; ( mock_dictionary_5
+    ; ( mock_state_5
       , "x has_type y has_type z"
       , assert_raises_consecutive_non_associative_operators )
-    ; (mock_dictionary_5, "x arrow", assert_raises_arity_mismatch)
+    ; (mock_state_5, "x arrow", assert_raises_arity_mismatch)
     ]
   in
   let success_tests =

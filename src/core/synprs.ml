@@ -1,4 +1,4 @@
-(* Parser Syntax *)
+(** Parser Syntax *)
 
 open Support
 
@@ -262,6 +262,7 @@ end
 
     This is LF augmented with substitutions and blocks. *)
 module CLF = struct
+  (** Contextual LF types, terms and patterns blurred together. *)
   module rec Object : sig
     type t =
       | RawIdentifier of
@@ -306,7 +307,9 @@ module CLF = struct
           }
       | RawBlock of
           { location : Location.t
-          ; elements : (Identifier.t Option.t * Object.t) List1.t
+          ; elements :
+              (Identifier.t Option.t * Object.t)
+              * (Identifier.t * Object.t) List.t
           }
       | RawTuple of
           { location : Location.t
@@ -315,7 +318,8 @@ module CLF = struct
       | RawProjection of
           { location : Location.t
           ; object_ : Object.t
-          ; projection : [ `By_name of Identifier.t | `By_position of Int.t ]
+          ; projection :
+              [ `By_identifier of Identifier.t | `By_position of Int.t ]
           }
       | RawSubstitution of
           { location : Location.t

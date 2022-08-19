@@ -1064,8 +1064,10 @@ end = struct
         | `\\' <omittable-identifier> [`:' <clf-object>] `.' <clf-object>
         | <clf-object> <forward-arrow> <clf-object>
         | <clf-object> <backward-arrow> <clf-object>
-        | `block' `(' <omittable-identifier> `:' <clf-object> (`,' <omittable-identifier> `:' <clf-object>)* `)'
-        | `block' <omittable-identifier> `:' <clf-object> (`,' <omittable-identifier> `:' <clf-object>)*
+        | `block' `(' <identifier> `:' <clf-type> (`,' <identifier> `:' <clf-type>)+ `)'
+        | `block' <identifier> `:' <clf-type> (`,' <identifier> `:' <clf-type>)+
+        | `block' `(' <clf-type> `)'
+        | `block' <clf-type>
         | <clf-object> `:' <clf-object>
         | <clf-object> <clf-object>
         | `_'
@@ -1101,8 +1103,10 @@ end = struct
         | <clf-object4>
 
       <clf-object4> ::=
-        | `block' `(' <omittable-identifier> `:' <clf-object> (`,' <omittable-identifier> `:' <clf-object>)* `)'
-        | `block' <omittable-identifier> `:' <clf-object> (`,' <omittable-identifier> `:' <clf-object>)*
+        | `block' `(' <identifier> `:' <clf-type> (`,' <identifier> `:' <clf-type>)+ `)'
+        | `block' <identifier> `:' <clf-type> (`,' <identifier> `:' <clf-type>)+
+        | `block' `(' <clf-type> `)'
+        | `block' <clf-type>
         | <clf-object5>
 
       <clf-object5> ::=
@@ -1199,14 +1203,13 @@ end = struct
     let projection =
       alt
         (dot_integer $> fun i -> `By_position i)
-        (dot_identifier $> fun n -> `By_name n)
+        (dot_identifier $> fun n -> `By_identifier n)
     in
     let trailing_projections = many (span projection) in
     seq2 clf_object8 trailing_projections
-    |> span
     $> (function
-       | (location, (object_, [])) -> object_
-       | (location, (object_, projections)) ->
+       | (object_, []) -> object_
+       | (object_, projections) ->
            List.fold_right
              (fun (projection_location, projection) accumulator ->
                let location =
@@ -1238,7 +1241,7 @@ end = struct
     seq2 clf_object6 (maybe substitution)
     |> span
     $> (function
-       | (location, (object_, Option.None)) -> object_
+       | (_, (object_, Option.None)) -> object_
        | (location, (object_, Option.Some substitution)) ->
            CLF.Object.RawSubstitution { location; object_; substitution }
        )
@@ -1246,7 +1249,17 @@ end = struct
 
   let clf_object4 =
     let block_contents =
-      sep_by1 (seq2 omittable_identifier (CLF_parsers.clf_object)) (token Token.COMMA)
+      let many_fields =
+        sep_by1 (seq2 identifier (CLF_parsers.clf_object)) (token Token.COMMA)
+        $> fun (List1.T ((l1, o1), rest)) -> ((Option.Some l1), o1), rest
+      and one_field =
+        CLF_parsers.clf_object
+        $> fun (o) -> ((Option.None, o), [])
+      in
+      choice
+        [ many_fields
+        ; one_field
+        ]
     in
     let block =
       token Token.KW_BLOCK &> alt (parens block_contents) block_contents

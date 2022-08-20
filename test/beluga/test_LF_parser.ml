@@ -100,7 +100,7 @@ end
 module LF_constructors = struct
   open Synext'.LF
 
-  let location = Location.ghost
+  let location = Obj.magic ()
 
   let id n = Identifier.make ~location n
 
@@ -128,7 +128,8 @@ module LF_constructors = struct
   (* LF type constructors *)
 
   let t_c ?m identifier =
-    Typ.Constant { location; identifier = qid ?m identifier }
+    Typ.Constant
+      { location; identifier = qid ?m identifier; operator = Obj.magic () }
 
   let t_app applicand arguments =
     Typ.Application { location; applicand; arguments }
@@ -152,7 +153,8 @@ module LF_constructors = struct
   let v identifier = Term.Variable { location; identifier = id identifier }
 
   let c ?m identifier =
-    Term.Constant { location; identifier = qid ?m identifier }
+    Term.Constant
+      { location; identifier = qid ?m identifier; operator = Obj.magic () }
 
   let app applicand arguments =
     Term.Application { location; applicand; arguments }
@@ -466,7 +468,7 @@ let mock_state_9 =
 let test_kind =
   let test_success elaboration_context input expected _test_t_cxt =
     OUnit2.assert_equal
-      ~printer:(Format.asprintf "%a" Synext'.LF.pp_kind)
+      ~printer:(Format.asprintf "%a" Prettyext'.LF.Debug.pp_kind)
       ~cmp:LF.Kind.equal expected
       (parse_lf_object input
       |> Synprs_to_synext'.LF.elaborate_kind elaboration_context)
@@ -546,7 +548,7 @@ let test_kind =
 let test_type =
   let test_success elaboration_context input expected _test_t_cxt =
     OUnit2.assert_equal
-      ~printer:(Format.asprintf "%a" Synext'.LF.pp_typ)
+      ~printer:(Format.asprintf "%a" Prettyext'.LF.Debug.pp_typ)
       ~cmp:LF.Typ.equal expected
       (parse_lf_object input
       |> Synprs_to_synext'.LF.elaborate_typ elaboration_context)
@@ -721,7 +723,7 @@ let test_type =
 let test_term =
   let test_success elaboration_context input expected _test_t_cxt =
     OUnit2.assert_equal
-      ~printer:(Format.asprintf "%a" Synext'.LF.pp_term_debug)
+      ~printer:(Format.asprintf "%a" Prettyext'.LF.Debug.pp_term)
       ~cmp:LF.Term.equal expected
       (parse_lf_object input
       |> Synprs_to_synext'.LF.elaborate_term elaboration_context)

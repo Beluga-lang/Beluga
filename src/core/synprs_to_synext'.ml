@@ -1,98 +1,5 @@
 open Support
 
-module Operator : sig
-  type t
-
-  (** {1 Destructors} *)
-
-  val identifier : t -> QualifiedIdentifier.t
-
-  val arity : t -> Int.t
-
-  val precedence : t -> Int.t
-
-  val fixity : t -> Fixity.t
-
-  val associativity : t -> Associativity.t
-
-  val location : t -> Location.t
-
-  (** {1 Constructors} *)
-
-  val make_prefix :
-    identifier:QualifiedIdentifier.t -> arity:Int.t -> precedence:Int.t -> t
-
-  val make_infix :
-       identifier:QualifiedIdentifier.t
-    -> associativity:Associativity.t
-    -> precedence:Int.t
-    -> t
-
-  val make_postfix :
-    identifier:QualifiedIdentifier.t -> precedence:Int.t -> t
-
-  val as_prefix : t -> t
-
-  (** {1 Instances} *)
-
-  include Eq.EQ with type t := t
-end = struct
-  type t =
-    { identifier : QualifiedIdentifier.t
-    ; arity : Int.t
-    ; precedence : Int.t
-    ; fixity : Fixity.t
-    ; associativity : Associativity.t
-    }
-
-  let[@inline] identifier { identifier; _ } = identifier
-
-  let[@inline] arity { arity; _ } = arity
-
-  let[@inline] precedence { precedence; _ } = precedence
-
-  let[@inline] fixity { fixity; _ } = fixity
-
-  let[@inline] associativity { associativity; _ } = associativity
-
-  let[@inline] location { identifier; _ } =
-    QualifiedIdentifier.location identifier
-
-  let make_prefix ~identifier ~arity ~precedence =
-    { identifier
-    ; arity
-    ; precedence
-    ; fixity = Fixity.prefix
-    ; associativity = Associativity.right_associative
-    }
-
-  let make_infix ~identifier ~associativity ~precedence =
-    { identifier
-    ; arity = 2
-    ; precedence
-    ; fixity = Fixity.infix
-    ; associativity
-    }
-
-  let make_postfix ~identifier ~precedence =
-    { identifier
-    ; arity = 1
-    ; precedence
-    ; fixity = Fixity.postfix
-    ; associativity = Associativity.left_associative
-    }
-
-  let as_prefix operator =
-    { operator with
-      fixity = Fixity.prefix
-    ; associativity = Associativity.right_associative
-    }
-
-  include (
-    (val Eq.contramap (module QualifiedIdentifier) identifier) :
-      Eq.EQ with type t := t)
-end
-
 module Elaboration_state : sig
   type t
 
@@ -195,8 +102,7 @@ end = struct
   let add_module module_dictionary identifier =
     QualifiedIdentifier.Dictionary.add_module identifier module_dictionary
 
-  let lookup query state =
-    QualifiedIdentifier.Dictionary.lookup query state
+  let lookup query state = QualifiedIdentifier.Dictionary.lookup query state
 
   let pp_entry_sort ppf entry =
     match entry with
@@ -426,24 +332,26 @@ module LF = struct
   (** {1 Elaboration} *)
 
   (** [resolve_lf_operator state ~quoted identifier] determines whether
-      [identifier] is an LF type-level or term-level operator in
-      [state], and whether it is quoted. *)
+      [identifier] is an LF type-level or term-level operator in [state], and
+      whether it is quoted. *)
   let resolve_lf_operator state ~quoted identifier =
     match Elaboration_state.lookup identifier state with
     | QualifiedIdentifier.Dictionary.Entry
         (Elaboration_state.LF_type_constant operator) ->
-      if quoted then `Quoted_type_operator else `Type_operator operator
+      if quoted then `Quoted_type_operator
+      else `Type_operator (identifier, operator)
     | QualifiedIdentifier.Dictionary.Entry
         (Elaboration_state.LF_term_constant operator) ->
-      if quoted then `Quoted_term_operator else `Term_operator operator
+      if quoted then `Quoted_term_operator
+      else `Term_operator (identifier, operator)
     | _ | (exception QualifiedIdentifier.Dictionary.Unbound_identifier _) ->
       `Not_an_operator
 
-  (** [identifier_lf_operator state ?quoted term] identifies whether
-      [term] is an LF type-level or term-level operator in [state] while
-      accounting for operator quoting. If a bound operator appears in
-      parentheses, then it is quoted, meaning that the operator appears
-      either in prefix notation or as an argument to another application. *)
+  (** [identifier_lf_operator state ?quoted term] identifies whether [term]
+      is an LF type-level or term-level operator in [state] while accounting
+      for operator quoting. If a bound operator appears in parentheses, then
+      it is quoted, meaning that the operator appears either in prefix
+      notation or as an argument to another application. *)
   let rec identify_lf_operator state ?(quoted = false) term =
     match term with
     | Synprs.LF.Object.RawIdentifier { identifier; _ } ->
@@ -497,13 +405,15 @@ module LF = struct
         infix and postfix operators. *)
     type t =
       | Type_constant of
-          { operator : Operator.t
+          { identifier : QualifiedIdentifier.t
+          ; operator : Operator.t
           ; applicand : Synprs.LF.Object.t
           }
           (** An LF type-level constant with its operator definition in the
               elaboration context, and its corresponding AST. *)
       | Term_constant of
-          { operator : Operator.t
+          { identifier : QualifiedIdentifier.t
+          ; operator : Operator.t
           ; applicand : Synprs.LF.Object.t
           }
           (** An LF term-level constant with its operator definition in the
@@ -519,7 +429,9 @@ module LF = struct
       | Type_constant { applicand; _ } | Term_constant { applicand; _ } ->
         applicand
 
-    let identifier = Fun.(operator >> Operator.identifier)
+    let[@inline] identifier = function
+      | Type_constant { identifier; _ } | Term_constant { identifier; _ } ->
+        identifier
 
     let arity = Fun.(operator >> Operator.arity)
 
@@ -537,11 +449,12 @@ module LF = struct
         operator identifiers share the same namespace, operators having the
         same name are equal in a rewriting of an application. *)
     include (
-      (val Eq.contramap (module Operator) operator) : Eq.EQ with type t := t)
+      (val Eq.contramap (module QualifiedIdentifier) identifier) :
+        Eq.EQ with type t := t)
   end
 
-  (** [elaborate_kind state object_] is [object_] rewritten as an LF
-      kind with respect to the elaboration context [state].
+  (** [elaborate_kind state object_] is [object_] rewritten as an LF kind
+      with respect to the elaboration context [state].
 
       This function imposes syntactic restrictions on [object_], but does not
       perform normalization nor validation. To see the syntactic restrictions
@@ -555,9 +468,9 @@ module LF = struct
       - [{ x : tp } type -> type] *)
   let rec elaborate_kind state object_ =
     match object_ with
-    | Synprs.LF.Object.RawIdentifier { location; identifier; _ } ->
+    | Synprs.LF.Object.RawIdentifier { location; _ } ->
       raise @@ Illegal_identifier_kind location
-    | Synprs.LF.Object.RawQualifiedIdentifier { location; identifier; _ } ->
+    | Synprs.LF.Object.RawQualifiedIdentifier { location; _ } ->
       raise @@ Illegal_qualified_identifier_kind location
     | Synprs.LF.Object.RawBackwardArrow { location; _ } ->
       raise @@ Illegal_backward_arrow_kind location
@@ -588,9 +501,7 @@ module LF = struct
         match parameter_identifier with
         | Option.None -> elaborate_kind state body
         | Option.Some identifier ->
-          let state' =
-            Elaboration_state.add_term identifier state
-          in
+          let state' = Elaboration_state.add_term identifier state in
           elaborate_kind state' body
       in
       Synext'.LF.Kind.Pi
@@ -603,8 +514,8 @@ module LF = struct
       let kind' = elaborate_kind state object_ in
       Synext'.LF.Kind.Parenthesized { location; kind = kind' }
 
-  (** [elaborate_typ state object_] is [object_] rewritten as an LF type
-      with respect to the elaboration context [state].
+  (** [elaborate_typ state object_] is [object_] rewritten as an LF type with
+      respect to the elaboration context [state].
 
       Type applications are rewritten with {!elaborate_application} using
       Dijkstra's shunting yard algorithm.
@@ -637,9 +548,9 @@ module LF = struct
       in
       match Elaboration_state.lookup qualified_identifier state with
       | QualifiedIdentifier.Dictionary.Entry
-          (Elaboration_state.LF_type_constant _) ->
+          (Elaboration_state.LF_type_constant operator) ->
         Synext'.LF.Typ.Constant
-          { location; identifier = qualified_identifier }
+          { location; identifier = qualified_identifier; operator }
       | entry ->
         raise @@ Expected_type_constant { location; actual_binding = entry }
       | exception QualifiedIdentifier.Dictionary.Unbound_identifier _ ->
@@ -654,8 +565,8 @@ module LF = struct
          <identifier>] are necessarily type-level constants. *)
       match Elaboration_state.lookup identifier state with
       | QualifiedIdentifier.Dictionary.Entry
-          (Elaboration_state.LF_type_constant _) ->
-        Synext'.LF.Typ.Constant { location; identifier }
+          (Elaboration_state.LF_type_constant operator) ->
+        Synext'.LF.Typ.Constant { location; identifier; operator }
       | entry ->
         raise @@ Expected_type_constant { location; actual_binding = entry }
       | exception QualifiedIdentifier.Dictionary.Unbound_identifier _ ->
@@ -695,7 +606,7 @@ module LF = struct
           ; parameter_type = parameter_type'
           ; body = body'
           })
-    | Synprs.LF.Object.RawApplication { location; objects } -> (
+    | Synprs.LF.Object.RawApplication { objects; _ } -> (
       match elaborate_application state objects with
       | `Term term ->
         let location = Synext'.LF.location_of_term term in
@@ -705,8 +616,8 @@ module LF = struct
       let typ' = elaborate_typ state object_ in
       Synext'.LF.Typ.Parenthesized { location; typ = typ' }
 
-  (** [elaborate_term state object_] is [object_] rewritten as an LF
-      term with respect to the elaboration context [state].
+  (** [elaborate_term state object_] is [object_] rewritten as an LF term
+      with respect to the elaboration context [state].
 
       Term applications are rewritten with {!elaborate_application} using
       Dijkstra's shunting yard algorithm.
@@ -738,9 +649,9 @@ module LF = struct
       in
       match Elaboration_state.lookup qualified_identifier state with
       | QualifiedIdentifier.Dictionary.Entry
-          (Elaboration_state.LF_term_constant _) ->
+          (Elaboration_state.LF_term_constant operator) ->
         Synext'.LF.Term.Constant
-          { location; identifier = qualified_identifier }
+          { location; identifier = qualified_identifier; operator }
       | QualifiedIdentifier.Dictionary.Entry Elaboration_state.LF_term ->
         (* Bound variable *)
         Synext'.LF.Term.Variable { location; identifier }
@@ -757,13 +668,13 @@ module LF = struct
          <identifier>] are necessarily term-level constants. *)
       match Elaboration_state.lookup identifier state with
       | QualifiedIdentifier.Dictionary.Entry
-          (Elaboration_state.LF_term_constant _) ->
-        Synext'.LF.Term.Constant { location; identifier }
+          (Elaboration_state.LF_term_constant operator) ->
+        Synext'.LF.Term.Constant { location; identifier; operator }
       | entry ->
         raise @@ Expected_term_constant { location; actual_binding = entry }
       | exception QualifiedIdentifier.Dictionary.Unbound_identifier _ ->
         raise @@ Unbound_term_constant { location; identifier })
-    | Synprs.LF.Object.RawApplication { location; objects } -> (
+    | Synprs.LF.Object.RawApplication { objects; _ } -> (
       match elaborate_application state objects with
       | `Typ typ ->
         let location = Synext'.LF.location_of_typ typ in
@@ -802,9 +713,9 @@ module LF = struct
       let term' = elaborate_term state object_ in
       Synext'.LF.Term.Parenthesized { location; term = term' }
 
-  (** [elaborate_application state objects] elaborates [objects] as
-      either a type-level or term-level LF application with respect to the
-      elaboration context [dicitonary].
+  (** [elaborate_application state objects] elaborates [objects] as either a
+      type-level or term-level LF application with respect to the elaboration
+      context [dicitonary].
 
       In both type-level and term-level LF applications, arguments are LF
       terms.
@@ -812,8 +723,8 @@ module LF = struct
       This elaboration is in three steps:
 
       - First, LF type-level and term-level constants are identified as
-        operators (with or without quoting) using [state], and the rest
-        are identified as operands.
+        operators (with or without quoting) using [state], and the rest are
+        identified as operands.
       - Second, consecutive operands are combined as an application
         (juxtaposition) that has yet to be elaborated, and written in prefix
         notation with the first operand being the application head.
@@ -949,13 +860,15 @@ module LF = struct
             (LF_operand.Application
                { applicand = `Term t; arguments = arguments' })
           :: reduce_juxtapositions_and_identify_operators rest
-        | (`Type_operator operator, t) :: ts ->
+        | (`Type_operator (identifier, operator), t) :: ts ->
           ShuntingYard.operator
-            (LF_operator.Type_constant { operator; applicand = t })
+            (LF_operator.Type_constant
+               { identifier; operator; applicand = t })
           :: reduce_juxtapositions_and_identify_operators ts
-        | (`Term_operator operator, t) :: ts ->
+        | (`Term_operator (identifier, operator), t) :: ts ->
           ShuntingYard.operator
-            (LF_operator.Term_constant { operator; applicand = t })
+            (LF_operator.Term_constant
+               { identifier; operator; applicand = t })
           :: reduce_juxtapositions_and_identify_operators ts
         | [] -> []
       in

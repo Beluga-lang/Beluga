@@ -29,9 +29,9 @@ end) (Operator : sig
 
   (** [precedence operator] is the order of operation value for [operator].
 
-      - If [precedence o1 < precedence o2], then [o2] precedes [o1] such that
-        [a o1 b o2 c] is rewritten to [a o1 (b o2 c)], where [a], [b] and [c]
-        are operands. *)
+      If [precedence o1 < precedence o2], then [o2] precedes [o1] such that
+      [a o1 b o2 c] is rewritten to [a o1 (b o2 c)], where [a], [b] and [c]
+      are operands. *)
   val precedence : t -> Int.t
 
   (** [fixity operator] is the fixity of [operator]. *)
@@ -83,7 +83,7 @@ end) : sig
       [primitives = \[\]]. *)
   exception Empty_expression
 
-  (** [Misplaced_operator {operator; operands}] is raised from
+  (** [Misplaced_operator { operator; operands }] is raised from
       [shunting_yard primitives] if [operator] appears in an illegal position
       in [primitives] such that it would be rewriten with arguments
       [arguments]. *)
@@ -93,7 +93,7 @@ end) : sig
       ; operands : Operand.t List.t
       }
 
-  (** [Consecutive_non_associative_operators {left_operator; right_operator}]
+  (** [Consecutive_non_associative_operators { left_operator; right_operator }]
       is raised from [shunting_yard primitives] if non-associative operator
       [right_operator] appears in an illegal position in [primitives] with
       respect to [left_operator], such that [left_operator = right_operator],
@@ -105,10 +105,10 @@ end) : sig
       ; right_operator : Operator.t
       }
 
-  (** [Arity_mismatch {operator; operator_arity; operands}] is raised from
+  (** [Arity_mismatch { operator; operator_arity; operands }] is raised from
       [shunting_yard primitives] if [operator] appears in an illegal position
-      in [primitives] such that it is applied to too few arguments
-      [arguments], and [operator_arity] arguments were expected. *)
+      in [primitives] such that it is applied to too few arguments, meaning
+      that [List.length arguments < operator_arity]. *)
   exception
     Arity_mismatch of
       { operator : Operator.t

@@ -31,9 +31,11 @@ let[@inline] associativity = function
   | Prefix _ -> Associativity.right_associative
   | Postfix _ -> Associativity.left_associative
 
-let make_prefix ~identifier ~arity ~precedence = Prefix { arity; precedence }
+let make_prefix ~arity ~precedence =
+  assert (arity >= 0);
+  Prefix { arity; precedence }
 
-let make_infix ~identifier ~associativity ~precedence =
+let make_infix ~associativity ~precedence =
   Infix { precedence; associativity }
 
-let make_postfix ~identifier ~precedence = Postfix { precedence }
+let make_postfix ~precedence = Postfix { precedence }

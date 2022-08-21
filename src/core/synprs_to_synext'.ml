@@ -66,36 +66,32 @@ end = struct
     QualifiedIdentifier.Dictionary.add_entry qualified_identifier LF_term
 
   let add_prefix_lf_type_constant ~arity ~precedence identifier =
-    let operator = Operator.make_prefix ~identifier ~arity ~precedence in
+    let operator = Operator.make_prefix ~arity ~precedence in
     QualifiedIdentifier.Dictionary.add_entry identifier
       (LF_type_constant operator)
 
   let add_infix_lf_type_constant ~associativity ~precedence identifier =
-    let operator =
-      Operator.make_infix ~identifier ~associativity ~precedence
-    in
+    let operator = Operator.make_infix ~associativity ~precedence in
     QualifiedIdentifier.Dictionary.add_entry identifier
       (LF_type_constant operator)
 
   let add_postfix_lf_type_constant ~precedence identifier =
-    let operator = Operator.make_postfix ~identifier ~precedence in
+    let operator = Operator.make_postfix ~precedence in
     QualifiedIdentifier.Dictionary.add_entry identifier
       (LF_type_constant operator)
 
   let add_prefix_lf_term_constant ~arity ~precedence identifier =
-    let operator = Operator.make_prefix ~identifier ~arity ~precedence in
+    let operator = Operator.make_prefix ~arity ~precedence in
     QualifiedIdentifier.Dictionary.add_entry identifier
       (LF_term_constant operator)
 
   let add_infix_lf_term_constant ~associativity ~precedence identifier =
-    let operator =
-      Operator.make_infix ~identifier ~associativity ~precedence
-    in
+    let operator = Operator.make_infix ~associativity ~precedence in
     QualifiedIdentifier.Dictionary.add_entry identifier
       (LF_term_constant operator)
 
   let add_postfix_lf_term_constant ~precedence identifier =
-    let operator = Operator.make_postfix ~identifier ~precedence in
+    let operator = Operator.make_postfix ~precedence in
     QualifiedIdentifier.Dictionary.add_entry identifier
       (LF_term_constant operator)
 

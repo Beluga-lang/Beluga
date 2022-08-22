@@ -1006,7 +1006,7 @@ end = struct
        | (_, (object_, Option.None)) -> object_
        | (location, (domain, Option.Some (`Forward_arrow, range))) ->
          LF.Object.RawForwardArrow { location; domain; range }
-       | (location, (domain, Option.Some (`Backward_arrow, range))) ->
+       | (location, (range, Option.Some (`Backward_arrow, domain))) ->
          LF.Object.RawBackwardArrow { location; domain; range })
     |> labelled "LF atomic, application, annotated, forward arrow or backward arrow object"
 
@@ -1293,7 +1293,7 @@ end = struct
        | (_, (object_, Option.None)) -> object_
        | (location, (domain, Option.Some (`Forward_arrow, range))) ->
          CLF.Object.RawForwardArrow { location; domain; range }
-       | (location, (domain, Option.Some (`Backward_arrow, range))) ->
+       | (location, (range, Option.Some (`Backward_arrow, domain))) ->
          CLF.Object.RawBackwardArrow { location; domain; range })
     |> labelled "Contextual LF atomic, application, annotated, forward arrow or backward arrow object"
 

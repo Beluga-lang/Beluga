@@ -136,7 +136,7 @@ module LF_constructors = struct
 
   let ( => ) domain range = Typ.ForwardArrow { location; domain; range }
 
-  let ( <= ) domain range = Typ.BackwardArrow { location; domain; range }
+  let ( <= ) range domain = Typ.BackwardArrow { location; domain; range }
 
   let t_pi ?x ~t body =
     Typ.Pi

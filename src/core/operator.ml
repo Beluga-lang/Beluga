@@ -40,6 +40,18 @@ let make_infix ~associativity ~precedence =
 
 let make_postfix ~precedence = Postfix { precedence }
 
+let is_prefix = Fun.(fixity >> Fixity.is_prefix)
+
+let is_infix = Fun.(fixity >> Fixity.is_infix)
+
+let is_postfix = Fun.(fixity >> Fixity.is_postfix)
+
+let is_nullary = Fun.(arity >> Int.( = ) 0)
+
+let is_unary = Fun.(arity >> Int.( = ) 1)
+
+let is_binary = Fun.(arity >> Int.( = ) 2)
+
 include (
   Eq.Make (struct
     type nonrec t = t

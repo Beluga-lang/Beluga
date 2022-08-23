@@ -39,3 +39,11 @@ let make_infix ~associativity ~precedence =
   Infix { precedence; associativity }
 
 let make_postfix ~precedence = Postfix { precedence }
+
+include (
+  Eq.Make (struct
+    type nonrec t = t
+
+    let equal = Stdlib.( = )
+  end) :
+    Eq.EQ with type t := t)

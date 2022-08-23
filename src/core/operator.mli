@@ -39,3 +39,9 @@ val make_prefix : arity:Int.t -> precedence:Int.t -> t
 val make_infix : associativity:Associativity.t -> precedence:Int.t -> t
 
 val make_postfix : precedence:Int.t -> t
+
+(** {1 Instances} *)
+
+(** Structural equality instance. That is, operators are equal if they have
+    the same arity, precedence, fixity and associativity. *)
+include Eq.EQ with type t := t

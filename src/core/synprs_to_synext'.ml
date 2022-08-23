@@ -891,7 +891,8 @@ module LF = struct
         | `Not_an_operator, _
         | `Quoted_type_operator, _
         | `Quoted_term_operator, _ -> true
-        | `Type_operator _, _ | `Term_operator _, _ -> false
+        | `Type_operator (_, operator), _ | `Term_operator (_, operator), _
+          -> Operator.is_nullary operator
       in
       let rec reduce_juxtapositions_and_identify_operators objects =
         match objects with
@@ -922,15 +923,31 @@ module LF = struct
                { applicand = `Term t; arguments = arguments' })
           :: reduce_juxtapositions_and_identify_operators rest
         | (`Type_operator (identifier, operator), t) :: ts ->
-          ShuntingYard.operator
-            (LF_operator.Type_constant
-               { identifier; operator; applicand = t })
-          :: reduce_juxtapositions_and_identify_operators ts
+          if Operator.is_prefix operator then
+            let arguments, rest = List.take_while is_argument ts in
+            let arguments' = List.map Pair.snd arguments in
+            ShuntingYard.operand
+              (LF_operand.Application
+                 { applicand = `Typ t; arguments = arguments' })
+            :: reduce_juxtapositions_and_identify_operators rest
+          else
+            ShuntingYard.operator
+              (LF_operator.Type_constant
+                 { identifier; operator; applicand = t })
+            :: reduce_juxtapositions_and_identify_operators ts
         | (`Term_operator (identifier, operator), t) :: ts ->
-          ShuntingYard.operator
-            (LF_operator.Term_constant
-               { identifier; operator; applicand = t })
-          :: reduce_juxtapositions_and_identify_operators ts
+          if Operator.is_prefix operator then
+            let arguments, rest = List.take_while is_argument ts in
+            let arguments' = List.map Pair.snd arguments in
+            ShuntingYard.operand
+              (LF_operand.Application
+                 { applicand = `Term t; arguments = arguments' })
+            :: reduce_juxtapositions_and_identify_operators rest
+          else
+            ShuntingYard.operator
+              (LF_operator.Term_constant
+                 { identifier; operator; applicand = t })
+            :: reduce_juxtapositions_and_identify_operators ts
         | [] -> []
       in
       objects |> List2.to_list
@@ -1724,7 +1741,8 @@ module CLF = struct
         | `Not_an_operator, _
         | `Quoted_type_operator, _
         | `Quoted_term_operator, _ -> true
-        | `Type_operator _, _ | `Term_operator _, _ -> false
+        | `Type_operator (_, operator), _ | `Term_operator (_, operator), _
+          -> Operator.is_nullary operator
       in
       let rec reduce_juxtapositions_and_identify_operators objects =
         match objects with
@@ -1755,15 +1773,31 @@ module CLF = struct
                { applicand = `Term t; arguments = arguments' })
           :: reduce_juxtapositions_and_identify_operators rest
         | (`Type_operator (identifier, operator), t) :: ts ->
-          ShuntingYard.operator
-            (CLF_operator.Type_constant
-               { identifier; operator; applicand = t })
-          :: reduce_juxtapositions_and_identify_operators ts
+          if Operator.is_prefix operator then
+            let arguments, rest = List.take_while is_argument ts in
+            let arguments' = List.map Pair.snd arguments in
+            ShuntingYard.operand
+              (CLF_operand.Application
+                 { applicand = `Typ t; arguments = arguments' })
+            :: reduce_juxtapositions_and_identify_operators rest
+          else
+            ShuntingYard.operator
+              (CLF_operator.Type_constant
+                 { identifier; operator; applicand = t })
+            :: reduce_juxtapositions_and_identify_operators ts
         | (`Term_operator (identifier, operator), t) :: ts ->
-          ShuntingYard.operator
-            (CLF_operator.Term_constant
-               { identifier; operator; applicand = t })
-          :: reduce_juxtapositions_and_identify_operators ts
+          if Operator.is_prefix operator then
+            let arguments, rest = List.take_while is_argument ts in
+            let arguments' = List.map Pair.snd arguments in
+            ShuntingYard.operand
+              (CLF_operand.Application
+                 { applicand = `Term t; arguments = arguments' })
+            :: reduce_juxtapositions_and_identify_operators rest
+          else
+            ShuntingYard.operator
+              (CLF_operator.Term_constant
+                 { identifier; operator; applicand = t })
+            :: reduce_juxtapositions_and_identify_operators ts
         | [] -> []
       in
       objects |> List2.to_list

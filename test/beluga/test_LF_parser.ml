@@ -96,7 +96,7 @@ module LF = struct
 end
 
 (** Abbreviated constructors for LF kinds, types and terms. These are
-    strit_cly used for testing. *)
+    strictly used for testing. *)
 module LF_constructors = struct
   open Synext'.LF
 
@@ -466,13 +466,13 @@ let mock_state_9 =
   |> add_prefix_lf_type_constant ~arity:1 ~precedence:1 (qid "target")
 
 let test_kind =
-  let test_success elaboration_context input expected _test_t_cxt =
+  let test_success elaboration_context input expected _test_ctxt =
     OUnit2.assert_equal
       ~printer:(Format.asprintf "%a" Prettyext'.LF.Debug.pp_kind)
       ~cmp:LF.Kind.equal expected
       (parse_lf_object input
       |> Synprs_to_synext'.LF.elaborate_kind elaboration_context)
-  and test_failure elaboration_context input assert_exn _test_t_cxt =
+  and test_failure elaboration_context input assert_exn _test_ctxt =
     assert_exn @@ fun () ->
     parse_lf_object input
     |> Synprs_to_synext'.LF.elaborate_kind elaboration_context
@@ -546,13 +546,13 @@ let test_kind =
   [ "sucess" >::: success_tests ] @ [ "failure" >::: failure_tests ]
 
 let test_type =
-  let test_success elaboration_context input expected _test_t_cxt =
+  let test_success elaboration_context input expected _test_ctxt =
     OUnit2.assert_equal
       ~printer:(Format.asprintf "%a" Prettyext'.LF.Debug.pp_typ)
       ~cmp:LF.Typ.equal expected
       (parse_lf_object input
       |> Synprs_to_synext'.LF.elaborate_typ elaboration_context)
-  and test_failure elaboration_context input assert_exn _test_t_cxt =
+  and test_failure elaboration_context input assert_exn _test_ctxt =
     assert_exn @@ fun () ->
     parse_lf_object input
     |> Synprs_to_synext'.LF.elaborate_typ elaboration_context
@@ -579,6 +579,21 @@ let test_type =
     ; ( mock_state_2
       , "nat -> nat <- nat -> nat"
       , t_c "nat" => t_c "nat" <= (t_c "nat" => t_c "nat") )
+    ; ( mock_state_2
+      , "{ x : nat } sum x x x"
+      , t_pi ~x:"x" ~t:(t_c "nat")
+          (t_app (t_c "sum") [ v "x"; v "x"; v "x" ]) )
+    ; ( mock_state_2
+      , "{ x : nat } { y : nat } sum x y y"
+      , t_pi ~x:"x" ~t:(t_c "nat")
+          (t_pi ~x:"y" ~t:(t_c "nat")
+             (t_app (t_c "sum") [ v "x"; v "y"; v "y" ])) )
+    ; ( mock_state_2
+      , "{ x : nat } { y : nat } { z : nat } sum x y z"
+      , t_pi ~x:"x" ~t:(t_c "nat")
+          (t_pi ~x:"y" ~t:(t_c "nat")
+             (t_pi ~x:"z" ~t:(t_c "nat")
+                (t_app (t_c "sum") [ v "x"; v "y"; v "z" ]))) )
     ; ( mock_state_5
       , "(term T -> term T') -> term (T arrow T')"
       , t_par (t_app (t_c "term") [ v "T" ] => t_app (t_c "term") [ v "T'" ])
@@ -725,13 +740,13 @@ let test_type =
   [ "sucess" >::: success_tests ] @ [ "failure" >::: failure_tests ]
 
 let test_term =
-  let test_success elaboration_context input expected _test_t_cxt =
+  let test_success elaboration_context input expected _test_ctxt =
     OUnit2.assert_equal
       ~printer:(Format.asprintf "%a" Prettyext'.LF.Debug.pp_term)
       ~cmp:LF.Term.equal expected
       (parse_lf_object input
       |> Synprs_to_synext'.LF.elaborate_term elaboration_context)
-  and test_failure elaboration_context input assert_exn _test_t_cxt =
+  and test_failure elaboration_context input assert_exn _test_ctxt =
     assert_exn @@ fun () ->
     parse_lf_object input
     |> Synprs_to_synext'.LF.elaborate_term elaboration_context
@@ -770,7 +785,7 @@ let test_term =
       , "(\\x. s x) : nat -> nat"
       , par (lam ~x:"x" (app (c "s") [ v "x" ])) &: (t_c "nat" => t_c "nat")
       )
-    ; (mock_state_2, "s z", app (c "s") [ app (c "z") [] ])
+    ; (mock_state_2, "s z", app (c "s") [ c "z" ])
     ; ( mock_state_5
       , "M (arrow) x arrow M' (arrow) y"
       , app (c "arrow")

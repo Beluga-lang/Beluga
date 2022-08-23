@@ -6,4 +6,5 @@ let () =
     >::: [ Test_ShuntingYard.tests
          ; Test_qualified_identifier.tests
          ; Test_LF_parser.tests
+         ; Test_prettyext'.tests
          ])

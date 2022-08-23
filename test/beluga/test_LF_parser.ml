@@ -566,6 +566,10 @@ let test_type =
     ; ( mock_state_2
       , "(nat -> nat) -> nat"
       , t_par (t_c "nat" => t_c "nat") => t_c "nat" )
+    ; (mock_state_2, "nat <- nat <- nat", t_c "nat" <= t_c "nat" <= t_c "nat")
+    ; ( mock_state_2
+      , "nat <- nat <- nat <- nat"
+      , t_c "nat" <= t_c "nat" <= t_c "nat" <= t_c "nat" )
     ; ( mock_state_2
       , "nat <- (nat -> nat)"
       , t_c "nat" <= t_par (t_c "nat" => t_c "nat") )
@@ -574,7 +578,7 @@ let test_type =
       , t_c "nat" <= (t_c "nat" => t_c "nat") )
     ; ( mock_state_2
       , "nat -> nat <- nat -> nat"
-      , t_c "nat" => (t_c "nat" <= (t_c "nat" => t_c "nat")) )
+      , t_c "nat" => t_c "nat" <= (t_c "nat" => t_c "nat") )
     ; ( mock_state_5
       , "(term T -> term T') -> term (T arrow T')"
       , t_par (t_app (t_c "term") [ v "T" ] => t_app (t_c "term") [ v "T'" ])

@@ -923,8 +923,7 @@ end = struct
         | <lf-object2>
 
       <lf-object2> ::=
-        | <lf-object3> <forward-arrow> <lf-object>
-        | <lf-object3> <backward-arrow> <lf-object>
+        | <lf-object3> (<forward-arrow> | <backward-arrow>) <lf-object>
         | <lf-object3>
 
       <lf-object3> ::=
@@ -995,6 +994,11 @@ end = struct
     |> labelled "LF atomic, application or annotated object"
 
   let lf_object2 =
+    (* Backward arrows are parsed as right-associative, but are elaborated as
+       left-associative in the elaboration to the external syntax. Bottom-up
+       parsing is otherwise required to handle forward and backward arrows in
+       conjunction with the weak prefix operators for Pi and lambda
+       abstractions. *)
     let forward_arrow = token Token.ARROW $> fun () -> `Forward_arrow
     and backward_arrow = token Token.BACKARROW $> fun () -> `Backward_arrow
     in
@@ -1004,10 +1008,10 @@ end = struct
     |> span
     $> (function
        | (_, (object_, Option.None)) -> object_
-       | (location, (domain, Option.Some (`Forward_arrow, range))) ->
-         LF.Object.RawForwardArrow { location; domain; range }
-       | (location, (range, Option.Some (`Backward_arrow, domain))) ->
-         LF.Object.RawBackwardArrow { location; domain; range })
+       | (location, (left_operand, Option.Some (`Forward_arrow, right_operand))) ->
+         LF.Object.RawArrow { location; left_operand; right_operand; orientation = `Forward }
+       | (location, (left_operand, Option.Some (`Backward_arrow, right_operand))) ->
+         LF.Object.RawArrow { location; left_operand; right_operand; orientation = `Backward })
     |> labelled "LF atomic, application, annotated, forward arrow or backward arrow object"
 
   let lf_object1 =
@@ -1094,8 +1098,7 @@ end = struct
         | <clf-object2>
 
       <clf-object2> ::=
-        | <clf-object3> <forward-arrow> <clf-object>
-        | <clf-object3> <backward-arrow> <clf-object>
+        | <clf-object3> (<forward-arrow> | <backward-arrow>) <clf-object>
         | <clf-object3>
 
       <clf-object3> ::=
@@ -1291,10 +1294,10 @@ end = struct
     |> span
     $> (function
        | (_, (object_, Option.None)) -> object_
-       | (location, (domain, Option.Some (`Forward_arrow, range))) ->
-         CLF.Object.RawForwardArrow { location; domain; range }
-       | (location, (range, Option.Some (`Backward_arrow, domain))) ->
-         CLF.Object.RawBackwardArrow { location; domain; range })
+       | (location, (left_operand, Option.Some (`Forward_arrow, right_operand))) ->
+         CLF.Object.RawArrow { location; left_operand; right_operand; orientation = `Forward }
+       | (location, (left_operand, Option.Some (`Backward_arrow, right_operand))) ->
+         CLF.Object.RawArrow { location; left_operand; right_operand; orientation = `Backward })
     |> labelled "Contextual LF atomic, application, annotated, forward arrow or backward arrow object"
 
   let clf_object1 =

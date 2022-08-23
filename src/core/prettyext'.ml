@@ -56,8 +56,8 @@ module LF = struct
         arguments
     | Typ.ForwardArrow { domain; range; _ } ->
       Format.fprintf ppf "@[<2>%a@ ->@ %a@]" pp_typ domain pp_typ range
-    | Typ.BackwardArrow { domain; range; _ } ->
-      Format.fprintf ppf "@[<2>%a@ <-@ %a@]" pp_typ domain pp_typ range
+    | Typ.BackwardArrow { range; domain; _ } ->
+      Format.fprintf ppf "@[<2>%a@ <-@ %a@]" pp_typ range pp_typ domain
     | Typ.Pi { parameter_identifier = Option.None; parameter_type; body; _ }
       ->
       Format.fprintf ppf "@[<2>{@ _@ :@ %a@ }@ %a@]" pp_typ parameter_type
@@ -176,9 +176,9 @@ module LF = struct
       | Typ.ForwardArrow { domain; range; _ } ->
         Format.fprintf ppf "@[<2>TypeArrow(%a@ ->@ %a)@]" pp_typ domain
           pp_typ range
-      | Typ.BackwardArrow { domain; range; _ } ->
-        Format.fprintf ppf "@[<2>TypeArrow(%a@ <-@ %a)@]" pp_typ domain
-          pp_typ range
+      | Typ.BackwardArrow { range; domain; _ } ->
+        Format.fprintf ppf "@[<2>TypeArrow(%a@ <-@ %a)@]" pp_typ range pp_typ
+          domain
       | Typ.Pi
           { parameter_identifier = Option.None; parameter_type; body; _ } ->
         Format.fprintf ppf "@[<2>TypePi({@ _@ :@ %a@ }@ %a)@]" pp_typ
@@ -262,8 +262,8 @@ module CLF = struct
         arguments
     | Typ.ForwardArrow { domain; range; _ } ->
       Format.fprintf ppf "@[<2>%a@ ->@ %a@]" pp_typ domain pp_typ range
-    | Typ.BackwardArrow { domain; range; _ } ->
-      Format.fprintf ppf "@[<2>%a@ <-@ %a@]" pp_typ domain pp_typ range
+    | Typ.BackwardArrow { range; domain; _ } ->
+      Format.fprintf ppf "@[<2>%a@ <-@ %a@]" pp_typ range pp_typ domain
     | Typ.Pi { parameter_identifier = Option.None; parameter_type; body; _ }
       ->
       Format.fprintf ppf "@[<2>{@ _@ :@ %a@ }@ %a@]" pp_typ parameter_type
@@ -380,9 +380,9 @@ module CLF = struct
       | Typ.ForwardArrow { domain; range; _ } ->
         Format.fprintf ppf "@[<2>TypeArrow(%a@ ->@ %a)@]" pp_typ domain
           pp_typ range
-      | Typ.BackwardArrow { domain; range; _ } ->
-        Format.fprintf ppf "@[<2>TypeArrow(%a@ <-@ %a)@]" pp_typ domain
-          pp_typ range
+      | Typ.BackwardArrow { range; domain; _ } ->
+        Format.fprintf ppf "@[<2>TypeArrow(%a@ <-@ %a)@]" pp_typ range pp_typ
+          domain
       | Typ.Pi
           { parameter_identifier = Option.None; parameter_type; body; _ } ->
         Format.fprintf ppf "@[<2>TypePi({@ _@ :@ %a@ }@ %a)@]" pp_typ

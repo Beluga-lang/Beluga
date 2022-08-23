@@ -469,7 +469,7 @@ module LF = struct
       raise @@ Illegal_identifier_kind location
     | Synprs.LF.Object.RawQualifiedIdentifier { location; _ } ->
       raise @@ Illegal_qualified_identifier_kind location
-    | Synprs.LF.Object.RawBackwardArrow { location; _ } ->
+    | Synprs.LF.Object.RawArrow { location; orientation = `Backward; _ } ->
       raise @@ Illegal_backward_arrow_kind location
     | Synprs.LF.Object.RawHole { location; _ } ->
       raise @@ Illegal_hole_kind location
@@ -483,9 +483,10 @@ module LF = struct
       raise @@ Illegal_untyped_pi_kind location
     | Synprs.LF.Object.RawType { location } ->
       Synext'.LF.Kind.Typ { location }
-    | Synprs.LF.Object.RawForwardArrow { location; domain; range } ->
-      let domain' = elaborate_typ state domain
-      and range' = elaborate_kind state range in
+    | Synprs.LF.Object.RawArrow
+        { location; left_operand; right_operand; orientation = `Forward } ->
+      let domain' = elaborate_typ state left_operand
+      and range' = elaborate_kind state right_operand in
       Synext'.LF.Kind.Arrow { location; domain = domain'; range = range' }
     | Synprs.LF.Object.RawPi
         { location
@@ -568,16 +569,7 @@ module LF = struct
         raise @@ Expected_type_constant { location; actual_binding = entry }
       | exception QualifiedIdentifier.Dictionary.Unbound_identifier _ ->
         raise @@ Unbound_type_constant { location; identifier })
-    | Synprs.LF.Object.RawForwardArrow { location; domain; range } ->
-      let domain' = elaborate_typ state domain
-      and range' = elaborate_typ state range in
-      Synext'.LF.Typ.ForwardArrow
-        { location; domain = domain'; range = range' }
-    | Synprs.LF.Object.RawBackwardArrow { location; domain; range } ->
-      let domain' = elaborate_typ state domain
-      and range' = elaborate_typ state range in
-      Synext'.LF.Typ.BackwardArrow
-        { location; domain = domain'; range = range' }
+    | Synprs.LF.Object.RawArrow _ -> elaborate_arrows state object_
     | Synprs.LF.Object.RawPi
         { location
         ; parameter_identifier
@@ -634,9 +626,9 @@ module LF = struct
       raise @@ Illegal_type_kind_term location
     | Synprs.LF.Object.RawPi { location; _ } ->
       raise @@ Illegal_pi_term location
-    | Synprs.LF.Object.RawForwardArrow { location; _ } ->
+    | Synprs.LF.Object.RawArrow { location; orientation = `Forward; _ } ->
       raise @@ Illegal_forward_arrow_term location
-    | Synprs.LF.Object.RawBackwardArrow { location; _ } ->
+    | Synprs.LF.Object.RawArrow { location; orientation = `Backward; _ } ->
       raise @@ Illegal_backward_arrow_term location
     | Synprs.LF.Object.RawIdentifier { location; identifier } -> (
       (* As an LF term, plain identifiers are either term-level constants or
@@ -710,6 +702,80 @@ module LF = struct
       let term' = elaborate_term state object_ in
       Synext'.LF.Term.Parenthesized { location; term = term' }
 
+  (** [elaborate_arrows state arrow] elaborates the LF arrow type [arrow].
+      Both forward and backward arrows were parsed as right-associative
+      because the parser is top-down whereas bottom-up parsing is required to
+      handle left and right-associative operators of the same precedence.
+
+      This elaboration step uses Dijkstra's shunting yard algorithm in a
+      simpler setting than that of {!elaborate_application}. *)
+  and elaborate_arrows state =
+    let module Arrow_operand = struct
+      type t = Synext'.LF.Typ.t
+    end in
+    let module Arrow_operator = struct
+      type t =
+        | Forward_arrow
+        | Backward_arrow
+
+      let arity _ = 2
+
+      let precedence _ = 0
+
+      let fixity _ = Fixity.infix
+
+      let associativity = function
+        | Forward_arrow -> Associativity.right_associative
+        | Backward_arrow -> Associativity.left_associative
+
+      include (
+        Eq.Make (struct
+          type nonrec t = t
+
+          let equal = Stdlib.( = )
+        end) :
+          Eq.EQ with type t := t)
+    end in
+    let module Arrow_writer = struct
+      (** [write operator operands] writes the application of the forward or
+          backward infix arrow [operator] with the two operands [operands]. *)
+      let write operator operands =
+        let[@warning "-8"] [ left_operand; right_operand ] = operands in
+        let location =
+          Location.join
+            (Synext'.LF.location_of_typ left_operand)
+            (Synext'.LF.location_of_typ right_operand)
+        in
+        match operator with
+        | Arrow_operator.Forward_arrow ->
+          Synext'.LF.Typ.ForwardArrow
+            { location; domain = left_operand; range = right_operand }
+        | Arrow_operator.Backward_arrow ->
+          Synext'.LF.Typ.BackwardArrow
+            { location; range = left_operand; domain = right_operand }
+    end in
+    let module ShuntingYard =
+      ShuntingYard.Make (Arrow_operand) (Arrow_operator) (Arrow_writer)
+    in
+    (* [flatten object_] reduces the chain of parsed right-associative arrows
+       to an alternating list of operands (elaborated LF types) and operators
+       (either forward or backward arrows). *)
+    let rec flatten object_ =
+      match object_ with
+      | Synprs.LF.Object.RawArrow
+          { left_operand; right_operand; orientation = `Backward; _ } ->
+        ShuntingYard.operand (elaborate_typ state left_operand)
+        :: ShuntingYard.operator Arrow_operator.Backward_arrow
+        :: flatten right_operand
+      | Synprs.LF.Object.RawArrow
+          { left_operand; right_operand; orientation = `Forward; _ } ->
+        ShuntingYard.operand (elaborate_typ state left_operand)
+        :: ShuntingYard.operator Arrow_operator.Forward_arrow
+        :: flatten right_operand
+      | _ -> [ ShuntingYard.operand (elaborate_typ state object_) ]
+    in
+    fun arrow -> ShuntingYard.shunting_yard (flatten arrow)
+
   (** [elaborate_application state objects] elaborates [objects] as either a
       type-level or term-level LF application with respect to the elaboration
       context [state].
@@ -760,59 +826,57 @@ module LF = struct
              ; arguments = arguments'
              })
     in
+    let module LF_application_writer = struct
+      (** [elaborate_argument argument] elaborates [argument] to an LF term.
+
+          @raise Expected_term *)
+      let elaborate_argument argument =
+        match argument with
+        | LF_operand.External_term term -> term
+        | LF_operand.External_typ typ ->
+          let location = Synext'.LF.location_of_typ typ in
+          raise @@ Expected_term location
+        | LF_operand.Parser_object object_ -> elaborate_term state object_
+        | LF_operand.Application { applicand; arguments } -> (
+          match elaborate_juxtaposition applicand arguments with
+          | `Term term -> term
+          | `Typ typ ->
+            let location = Synext'.LF.location_of_typ typ in
+            raise @@ Expected_term location)
+
+      let elaborate_arguments arguments =
+        List.map elaborate_argument arguments
+
+      let write operator arguments =
+        let application_location =
+          List.fold_left
+            (fun acc operand ->
+              Location.join acc (LF_operand.location operand))
+            (LF_operator.location operator)
+            arguments
+        in
+        match operator with
+        | LF_operator.Type_constant { applicand; _ } ->
+          let applicand' = elaborate_typ state applicand in
+          let arguments' = elaborate_arguments arguments in
+          LF_operand.External_typ
+            (Synext'.LF.Typ.Application
+               { location = application_location
+               ; applicand = applicand'
+               ; arguments = arguments'
+               })
+        | LF_operator.Term_constant { applicand; _ } ->
+          let applicand' = elaborate_term state applicand in
+          let arguments' = elaborate_arguments arguments in
+          LF_operand.External_term
+            (Synext'.LF.Term.Application
+               { location = application_location
+               ; applicand = applicand'
+               ; arguments = arguments'
+               })
+    end in
     let module ShuntingYard =
-      ShuntingYard.Make (LF_operand) (LF_operator)
-        (struct
-          (** [elaborate_argument argument] elaborates [argument] to an LF
-              term.
-
-              @raise Expected_term *)
-          let elaborate_argument argument =
-            match argument with
-            | LF_operand.External_term term -> term
-            | LF_operand.External_typ typ ->
-              let location = Synext'.LF.location_of_typ typ in
-              raise @@ Expected_term location
-            | LF_operand.Parser_object object_ ->
-              elaborate_term state object_
-            | LF_operand.Application { applicand; arguments } -> (
-              match elaborate_juxtaposition applicand arguments with
-              | `Term term -> term
-              | `Typ typ ->
-                let location = Synext'.LF.location_of_typ typ in
-                raise @@ Expected_term location)
-
-          let elaborate_arguments arguments =
-            List.map elaborate_argument arguments
-
-          let write operator arguments =
-            let application_location =
-              List.fold_left
-                (fun acc operand ->
-                  Location.join acc (LF_operand.location operand))
-                (LF_operator.location operator)
-                arguments
-            in
-            match operator with
-            | LF_operator.Type_constant { applicand; _ } ->
-              let applicand' = elaborate_typ state applicand in
-              let arguments' = elaborate_arguments arguments in
-              LF_operand.External_typ
-                (Synext'.LF.Typ.Application
-                   { location = application_location
-                   ; applicand = applicand'
-                   ; arguments = arguments'
-                   })
-            | LF_operator.Term_constant { applicand; _ } ->
-              let applicand' = elaborate_term state applicand in
-              let arguments' = elaborate_arguments arguments in
-              LF_operand.External_term
-                (Synext'.LF.Term.Application
-                   { location = application_location
-                   ; applicand = applicand'
-                   ; arguments = arguments'
-                   })
-        end)
+      ShuntingYard.Make (LF_operand) (LF_operator) (LF_application_writer)
     in
     (* [prepare_objects objects] identifies operators in [objects] and
        rewrites juxtapositions to applications in prefix notation. The
@@ -1305,16 +1369,7 @@ module CLF = struct
         raise @@ Expected_type_constant { location; actual_binding = entry }
       | exception QualifiedIdentifier.Dictionary.Unbound_identifier _ ->
         raise @@ Unbound_type_constant { location; identifier })
-    | Synprs.CLF.Object.RawForwardArrow { location; domain; range } ->
-      let domain' = elaborate_typ state domain
-      and range' = elaborate_typ state range in
-      Synext'.CLF.Typ.ForwardArrow
-        { location; domain = domain'; range = range' }
-    | Synprs.CLF.Object.RawBackwardArrow { location; domain; range } ->
-      let domain' = elaborate_typ state domain
-      and range' = elaborate_typ state range in
-      Synext'.CLF.Typ.BackwardArrow
-        { location; domain = domain'; range = range' }
+    | Synprs.CLF.Object.RawArrow _ -> elaborate_arrows state object_
     | Synprs.CLF.Object.RawPi
         { location
         ; parameter_identifier
@@ -1375,9 +1430,9 @@ module CLF = struct
     match object_ with
     | Synprs.CLF.Object.RawPi { location; _ } ->
       raise @@ Illegal_pi_term location
-    | Synprs.CLF.Object.RawForwardArrow { location; _ } ->
+    | Synprs.CLF.Object.RawArrow { location; orientation = `Forward; _ } ->
       raise @@ Illegal_forward_arrow_term location
-    | Synprs.CLF.Object.RawBackwardArrow { location; _ } ->
+    | Synprs.CLF.Object.RawArrow { location; orientation = `Backward; _ } ->
       raise @@ Illegal_backward_arrow_term location
     | Synprs.CLF.Object.RawBlock { location; _ } ->
       raise @@ Illegal_block_term location
@@ -1477,6 +1532,80 @@ module CLF = struct
         { location; extends_identity; objects } ->
       let terms' = List.map (elaborate_term state) (List1.to_list objects) in
       Synext'.CLF.Substitution.{ location; extends_identity; terms = terms' }
+
+  (** [elaborate_arrows state arrow] elaborates the LF arrow type [arrow].
+      Both forward and backward arrows were parsed as right-associative
+      because the parser is top-down whereas bottom-up parsing is required to
+      handle left and right-associative operators of the same precedence.
+
+      This elaboration step uses Dijkstra's shunting yard algorithm in a
+      simpler setting than that of {!elaborate_application}. *)
+  and elaborate_arrows state =
+    let module Arrow_operand = struct
+      type t = Synext'.CLF.Typ.t
+    end in
+    let module Arrow_operator = struct
+      type t =
+        | Forward_arrow
+        | Backward_arrow
+
+      let arity _ = 2
+
+      let precedence _ = 0
+
+      let fixity _ = Fixity.infix
+
+      let associativity = function
+        | Forward_arrow -> Associativity.right_associative
+        | Backward_arrow -> Associativity.left_associative
+
+      include (
+        Eq.Make (struct
+          type nonrec t = t
+
+          let equal = Stdlib.( = )
+        end) :
+          Eq.EQ with type t := t)
+    end in
+    let module Arrow_writer = struct
+      (** [write operator operands] writes the application of the forward or
+          backward infix arrow [operator] with the two operands [operands]. *)
+      let write operator operands =
+        let[@warning "-8"] [ left_operand; right_operand ] = operands in
+        let location =
+          Location.join
+            (Synext'.CLF.location_of_typ left_operand)
+            (Synext'.CLF.location_of_typ right_operand)
+        in
+        match operator with
+        | Arrow_operator.Forward_arrow ->
+          Synext'.CLF.Typ.ForwardArrow
+            { location; domain = left_operand; range = right_operand }
+        | Arrow_operator.Backward_arrow ->
+          Synext'.CLF.Typ.BackwardArrow
+            { location; range = left_operand; domain = right_operand }
+    end in
+    let module ShuntingYard =
+      ShuntingYard.Make (Arrow_operand) (Arrow_operator) (Arrow_writer)
+    in
+    (* [flatten object_] reduces the chain of parsed right-associative arrows
+       to an alternating list of operands (elaborated LF types) and operators
+       (either forward or backward arrows). *)
+    let rec flatten object_ =
+      match object_ with
+      | Synprs.CLF.Object.RawArrow
+          { left_operand; right_operand; orientation = `Backward; _ } ->
+        ShuntingYard.operand (elaborate_typ state left_operand)
+        :: ShuntingYard.operator Arrow_operator.Backward_arrow
+        :: flatten right_operand
+      | Synprs.CLF.Object.RawArrow
+          { left_operand; right_operand; orientation = `Forward; _ } ->
+        ShuntingYard.operand (elaborate_typ state left_operand)
+        :: ShuntingYard.operator Arrow_operator.Forward_arrow
+        :: flatten right_operand
+      | _ -> [ ShuntingYard.operand (elaborate_typ state object_) ]
+    in
+    fun arrow -> ShuntingYard.shunting_yard (flatten arrow)
 
   (** [elaborate_application state objects] elaborates [objects] as either a
       type-level or term-level LF application with respect to the elaboration

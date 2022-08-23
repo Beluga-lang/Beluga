@@ -40,16 +40,23 @@ module LF = struct
           ; parameter_sort : Object.t Option.t
           ; body : Object.t
           }
-      | RawForwardArrow of
+      | RawArrow of
           { location : Location.t
-          ; domain : Object.t
-          ; range : Object.t
+          ; orientation : [ `Forward | `Backward ]
+          ; left_operand : Object.t
+          ; right_operand : Object.t
           }
-      | RawBackwardArrow of
-          { location : Location.t
-          ; domain : Object.t
-          ; range : Object.t
-          }
+          (** [RawArrow { left_operand = a; orientation = `Forward; right_operand = b; _ }]
+              is the object `a -> b'.
+              [RawArrow { left_operand = a; orientation = `Backward; right_operand = b; _ }]
+              is the object `a <- b'.
+
+              Right arrows are right-associative, and left arrows are
+              left-associative.
+
+              Both arrows are parsed as right-associative because the parser
+              does not perform bottom-up parsing. They are disentangled in
+              the elaboration to the external syntax. *)
       | RawAnnotated of
           { location : Location.t
           ; object_ : Object.t
@@ -59,6 +66,10 @@ module LF = struct
           { location : Location.t
           ; objects : Object.t List2.t
           }
+          (** [RawApplication { objects; _ }] is the juxtaposition of
+              [objects] delimited by whitespaces. [objects] may contain
+              prefix, infix or postfix operators, along with operands. These
+              are rewritten during the elaboration to the external syntax. *)
       | RawParenthesized of
           { location : Location.t
           ; object_ : Object.t
@@ -74,8 +85,7 @@ module LF = struct
     | Object.RawHole { location; _ }
     | Object.RawPi { location; _ }
     | Object.RawLambda { location; _ }
-    | Object.RawForwardArrow { location; _ }
-    | Object.RawBackwardArrow { location; _ }
+    | Object.RawArrow { location; _ }
     | Object.RawAnnotated { location; _ }
     | Object.RawApplication { location; _ }
     | Object.RawParenthesized { location; _ } -> location
@@ -148,10 +158,14 @@ module LF = struct
         } ->
       Format.fprintf ppf "@[<2>\\%a:%a.@ %a@]" Identifier.pp
         parameter_identifier pp_object parameter_sort pp_object body
-    | Object.RawForwardArrow { domain; range; _ } ->
-      Format.fprintf ppf "@[<2>%a@ ->@ %a@]" pp_object domain pp_object range
-    | Object.RawBackwardArrow { domain; range; _ } ->
-      Format.fprintf ppf "@[<2>%a@ <-@ %a@]" pp_object domain pp_object range
+    | Object.RawArrow
+        { left_operand; right_operand; orientation = `Forward; _ } ->
+      Format.fprintf ppf "@[<2>%a@ ->@ %a@]" pp_object left_operand pp_object
+        right_operand
+    | Object.RawArrow
+        { left_operand; right_operand; orientation = `Backward; _ } ->
+      Format.fprintf ppf "@[<2>%a@ <-@ %a@]" pp_object left_operand pp_object
+        right_operand
     | Object.RawAnnotated { object_; sort; _ } ->
       Format.fprintf ppf "@[<2>%a@ :@ %a@]" pp_object object_ pp_object sort
     | Object.RawApplication { objects; _ } ->
@@ -232,12 +246,14 @@ module LF = struct
       Format.fprintf ppf "@[<2>Lambda(\\%a:%a.@ %a)@]" Identifier.pp
         parameter_identifier pp_object_debug parameter_sort pp_object_debug
         body
-    | Object.RawForwardArrow { domain; range; _ } ->
+    | Object.RawArrow
+        { left_operand; right_operand; orientation = `Forward; _ } ->
       Format.fprintf ppf "@[<2>ForwardArrow(%a@ ->@ %a)@]" pp_object_debug
-        domain pp_object_debug range
-    | Object.RawBackwardArrow { domain; range; _ } ->
+        left_operand pp_object_debug right_operand
+    | Object.RawArrow
+        { left_operand; right_operand; orientation = `Backward; _ } ->
       Format.fprintf ppf "@[<2>BackwardArrow(%a@ <-@ %a)@]" pp_object_debug
-        domain pp_object_debug range
+        left_operand pp_object_debug right_operand
     | Object.RawAnnotated { object_; sort; _ } ->
       Format.fprintf ppf "@[<2>Annotated(%a@ :@ %a)@]" pp_object_debug
         object_ pp_object_debug sort
@@ -286,16 +302,23 @@ module CLF = struct
           ; parameter_sort : Object.t Option.t
           ; body : Object.t
           }
-      | RawForwardArrow of
+      | RawArrow of
           { location : Location.t
-          ; domain : Object.t
-          ; range : Object.t
+          ; left_operand : Object.t
+          ; right_operand : Object.t
+          ; orientation : [ `Forward | `Backward ]
           }
-      | RawBackwardArrow of
-          { location : Location.t
-          ; domain : Object.t
-          ; range : Object.t
-          }
+          (** [RawArrow { left_operand = a; orientation = `Forward; right_operand = b; _ }]
+              is the object `a -> b'.
+              [RawArrow { left_operand = a; orientation = `Backward; right_operand = b; _ }]
+              is the object `a <- b'.
+
+              Right arrows are right-associative, and left arrows are
+              left-associative.
+
+              Both arrows are parsed as right-associative because the parser
+              does not perform bottom-up parsing. They are disentangled in
+              the elaboration to the external syntax. *)
       | RawAnnotated of
           { location : Location.t
           ; object_ : Object.t
@@ -305,6 +328,10 @@ module CLF = struct
           { location : Location.t
           ; objects : Object.t List2.t
           }
+          (** [RawApplication { objects; _ }] is the juxtaposition of
+              [objects] delimited by whitespaces. [objects] may contain
+              prefix, infix or postfix operators, along with operands. These
+              are rewritten during the elaboration to the external syntax. *)
       | RawBlock of
           { location : Location.t
           ; elements :
@@ -352,8 +379,7 @@ module CLF = struct
     | Object.RawHole { location; _ }
     | Object.RawPi { location; _ }
     | Object.RawLambda { location; _ }
-    | Object.RawForwardArrow { location; _ }
-    | Object.RawBackwardArrow { location; _ }
+    | Object.RawArrow { location; _ }
     | Object.RawAnnotated { location; _ }
     | Object.RawApplication { location; _ }
     | Object.RawBlock { location; _ }

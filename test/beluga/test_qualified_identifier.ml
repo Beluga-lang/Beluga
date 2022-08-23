@@ -121,6 +121,11 @@ let test_dictionary =
     [ []
     ; [ add (qid "nat") 1 ]
     ; [ add (qid "nat") 1; add (qid "z") 2; add (qid "s") 3 ]
+    ; [ add (qid "nat") 1
+      ; add (qid "z") 2
+      ; add (qid "s") 3
+      ; add (qid "z") 4
+      ]
     ; [ add (qid ~m:[ "Nat" ] "nat") 1
       ; add (qid ~m:[ "Nat" ] "z") 2
       ; add (qid ~m:[ "Nat" ] "s") 3

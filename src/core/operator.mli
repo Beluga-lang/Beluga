@@ -40,6 +40,29 @@ val make_infix : associativity:Associativity.t -> precedence:Int.t -> t
 
 val make_postfix : precedence:Int.t -> t
 
+(** {1 Predicates} *)
+
+(** [is_prefix operator] is [true] if and only if
+    [fixity operator = Fixity.Prefix]. *)
+val is_prefix : t -> Bool.t
+
+(** [is_infix operator] is [true] if and only if
+    [fixity operator = Fixity.Infix]. *)
+val is_infix : t -> Bool.t
+
+(** [is_postfix operator] is [true] if and only if
+    [fixity operator = Fixity.Postfix]. *)
+val is_postfix : t -> Bool.t
+
+(** [is_nullary] is [true] if and only if [arity operator = 0]. *)
+val is_nullary : t -> Bool.t
+
+(** [is_unary] is [true] if and only if [arity operator = 1]. *)
+val is_unary : t -> Bool.t
+
+(** [is_binary] is [true] if and only if [arity operator = 2]. *)
+val is_binary : t -> Bool.t
+
 (** {1 Instances} *)
 
 (** Structural equality instance. That is, operators are equal if they have

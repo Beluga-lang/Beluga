@@ -2,35 +2,58 @@ open Support
 
 type t =
   { location : Location.t
-  ; name : Identifier.t
   ; modules : Identifier.t List.t
+        (** The qualified identifier's modules in order of appeareance as in
+            the external syntax. *)
+  ; name : Identifier.t
   }
 
 type qualified_identifier = t
 
-let make ~location ?(modules = []) name = { location; name; modules }
+let make ?location ?(modules = []) name =
+  match (location, modules) with
+  | Option.Some location, modules -> { location; modules; name }
+  | Option.None, [] ->
+    let location = Identifier.location name in
+    { location; name; modules }
+  | Option.None, modules ->
+    (* Join all locations *)
+    let location =
+      List.fold_left
+        (fun acc i -> Location.join acc (Identifier.location i))
+        (Identifier.location name)
+        modules
+    in
+    { location; modules; name }
 
 let make_simple name =
   let location = Identifier.location name in
-  make ~location name
+  { location; modules = []; name }
 
-let prepend_module module_name { location; name; modules } =
+let prepend_module module_name { location; modules; name } =
   let location = Location.join (Identifier.location module_name) location
   and modules = module_name :: modules in
   { location; modules; name }
 
 let[@inline] location { location; _ } = location
 
-let[@inline] name { name; _ } = name
-
 let[@inline] modules { modules; _ } = modules
+
+let[@inline] name { name; _ } = name
 
 include (
   (val Ord.sequence
-         (module Identifier)
          (module List.MakeOrd (Identifier))
-         name modules) :
+         (module Identifier)
+         modules name) :
     Ord.ORD with type t := t)
+
+include (
+  (val Eq.conjunction
+         (module Identifier)
+         (module List.MakeEq (Identifier))
+         name modules) :
+    Eq.EQ with type t := t)
 
 include (
   Show.Make (struct
@@ -49,8 +72,6 @@ include (
     Show.SHOW with type t := t)
 
 module Dictionary = struct
-  type key = qualified_identifier
-
   type 'a t = 'a value Identifier.Hamt.t
 
   and 'a value =
@@ -127,12 +148,7 @@ module Dictionary = struct
         | Option.None -> raise @@ Unbound_identifier query)
       | m :: ms (* Nested declaration *) -> (
         let recover_current_module_identifier () =
-          let location =
-            List.fold_left
-              (fun acc i -> Location.join acc (Identifier.location i))
-              (Identifier.location m) modules_looked_up_so_far
-          in
-          make ~location ~modules:(List.rev modules_looked_up_so_far) m
+          make ~modules:(List.rev modules_looked_up_so_far) m
         in
         match Identifier.Hamt.find_opt m dictionary with
         | Option.Some (Module dictionary') ->

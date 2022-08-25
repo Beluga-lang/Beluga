@@ -113,7 +113,7 @@ let test_dictionary =
       Mock_dictionary.symmetric_difference associations dictionary
     in
     OUnit2.assert_bool
-      (Format.asprintf "%a" pp_symmetric_difference symmetric_difference)
+      (Format.stringify pp_symmetric_difference symmetric_difference)
       (List.null a && List.null b)
   in
   let test_cases =

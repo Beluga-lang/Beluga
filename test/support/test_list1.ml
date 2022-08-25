@@ -11,7 +11,7 @@ let pp_print_list ppv ppf =
   Format.fprintf ppf "[%a]"
     (List.pp ~pp_sep:(fun ppf () -> Format.pp_print_string ppf "; ") ppv)
 
-let int_list_printer = Format.asprintf "%a" (pp_print_list Int.pp)
+let int_list_printer = Format.stringify (pp_print_list Int.pp)
 
 let assert_int_list_equal =
   OUnit2.assert_equal ~cmp:(List.equal Int.equal) ~printer:int_list_printer

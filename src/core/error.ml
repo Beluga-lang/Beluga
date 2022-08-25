@@ -101,7 +101,7 @@ let reset_information () =
   information := []
 
 let get_information () =
-  Format.asprintf "%a"
+  Format.stringify
     (List.pp ~pp_sep:Format.pp_print_newline Format.pp_print_string)
     (List.rev !information)
 

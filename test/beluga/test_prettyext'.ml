@@ -239,10 +239,10 @@ let test_pp_kind =
     in
     let kind'' =
       parse_lf_kind elaboration_context
-        (Format.asprintf "%a" Prettyext'.LF.pp_kind kind')
+        (Format.stringify Prettyext'.LF.pp_kind kind')
     in
     OUnit2.assert_equal
-      ~printer:(Format.asprintf "%a" Prettyext'.LF.Debug.pp_kind)
+      ~printer:(Format.stringify Prettyext'.LF.Debug.pp_kind)
       ~cmp:LF.Kind.equal kind' kind''
   in
   let test_cases =
@@ -276,10 +276,10 @@ let test_pp_type =
     in
     let typ'' =
       parse_lf_type elaboration_context
-        (Format.asprintf "%a" Prettyext'.LF.pp_typ typ')
+        (Format.stringify Prettyext'.LF.pp_typ typ')
     in
     OUnit2.assert_equal
-      ~printer:(Format.asprintf "%a" Prettyext'.LF.Debug.pp_typ)
+      ~printer:(Format.stringify Prettyext'.LF.Debug.pp_typ)
       ~cmp:LF.Typ.equal typ' typ''
   in
   let test_cases =
@@ -328,10 +328,10 @@ let test_pp_term =
     in
     let term'' =
       parse_lf_term elaboration_context
-        (Format.asprintf "%a" Prettyext'.LF.pp_term term')
+        (Format.stringify Prettyext'.LF.pp_term term')
     in
     OUnit2.assert_equal
-      ~printer:(Format.asprintf "%a" Prettyext'.LF.Debug.pp_term)
+      ~printer:(Format.stringify Prettyext'.LF.Debug.pp_term)
       ~cmp:LF.Term.equal term' term''
   in
   let test_cases =

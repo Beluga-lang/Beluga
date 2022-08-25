@@ -147,6 +147,10 @@ module Dictionary : sig
       @raise Expected_module *)
   val lookup : qualified_identifier -> 'a t -> 'a value
 
+  (** [toplevel_bindings dictionary] is the HAMT of bindings globally in
+      scope in [dictionary]. *)
+  val toplevel_bindings : 'a t -> 'a value Identifier.Hamt.t
+
   (** {2 Interoperability} *)
 
   (** [to_seq dictionary] is [dictionary] flattened to a sequence of bindings

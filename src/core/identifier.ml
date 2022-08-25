@@ -5,7 +5,7 @@ type t =
   ; name : String.t
   }
 
-let make ~location name = { location; name }
+let make ?(location = Location.ghost) name = { location; name }
 
 let[@inline] location { location; _ } = location
 
@@ -25,6 +25,8 @@ module Hamt = Support.Hamt.Make (struct
   include Ord
   include Hash
 end)
+
+module Set = Set.Make (Ord)
 
 module Show : Support.Show.SHOW with type t = t =
   (val Support.Show.contramap (module String) name)

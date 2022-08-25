@@ -161,6 +161,8 @@ module Dictionary = struct
     let modules = modules query in
     lookup modules [] dictionary
 
+  let toplevel_bindings = Fun.id
+
   let rec to_seq dictionary =
     dictionary |> Identifier.Hamt.bindings |> List.to_seq
     |> Seq.flat_map (function

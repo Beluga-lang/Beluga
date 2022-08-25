@@ -1515,8 +1515,8 @@ module CLF = struct
           ; parameter_type = parameter_type'
           ; body = body'
           })
-    | Synprs.CLF.Object.RawHole { location } ->
-      Synext'.CLF.Term.Hole { location }
+    | Synprs.CLF.Object.RawHole { location; variant } ->
+      Synext'.CLF.Term.Hole { location; variant }
     | Synprs.CLF.Object.RawTuple { location; elements } ->
       let elements' = List1.map (elaborate_term state) elements in
       Synext'.CLF.Term.Tuple { location; terms = elements' }

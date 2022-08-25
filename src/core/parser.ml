@@ -1177,11 +1177,27 @@ end = struct
          | (location, `Plain identifier) ->
            CLF.Object.RawIdentifier { location; identifier })
       |> labelled "Contextual LF constant or variable object"
-    and hole =
+    and underscore_hole =
       token Token.UNDERSCORE
       |> span
-      $> (fun (location, ()) -> CLF.Object.RawHole { location })
+      $> (fun (location, ()) ->
+           CLF.Object.RawHole { location; variant = `Underscore }
+         )
       |> labelled "Contextual LF hole object"
+    and possibly_labelled_hole =
+      satisfy' (`hole Option.none)
+        (function
+         | Token.HOLE "" -> Option.some Option.none
+         | Token.HOLE s -> Option.some (Option.some s)
+         | _ -> Option.none)
+      |> span
+      $> (function
+         | (location, Option.None) ->
+           CLF.Object.RawHole { location; variant = `Unlabelled }
+         | (location, Option.Some label) ->
+           CLF.Object.RawHole { location; variant = `Labelled label }
+         )
+      |> labelled "Contextual LF possibly labelled hole"
     and tuple =
       angles (sep_by1 CLF_parsers.clf_object (token Token.SEMICOLON))
       |> span
@@ -1197,7 +1213,8 @@ end = struct
     in
     choice
       [ constant_or_variable
-      ; hole
+      ; underscore_hole
+      ; possibly_labelled_hole
       ; tuple
       ; parenthesized
       ]

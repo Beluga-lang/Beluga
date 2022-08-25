@@ -465,6 +465,14 @@ let mock_state_9 =
   |> add_prefix_lf_type_constant ~arity:0 ~precedence:1 (qid "tp")
   |> add_prefix_lf_type_constant ~arity:1 ~precedence:1 (qid "target")
 
+let mock_state_10 =
+  let open LF_constructors in
+  let open Synprs_to_synext'.Elaboration_state in
+  empty
+  |> add_prefix_lf_type_constant ~arity:0 ~precedence:1 (qid "a")
+  |> add_prefix_lf_type_constant ~arity:0 ~precedence:1 (qid "b")
+  |> add_prefix_lf_type_constant ~arity:0 ~precedence:1 (qid "c")
+
 let test_kind =
   let test_success elaboration_context input expected _test_ctxt =
     OUnit2.assert_equal
@@ -534,13 +542,13 @@ let test_kind =
   let success_tests =
     success_test_cases
     |> List.map (fun (elaboration_context, input, expected) ->
-           OUnit2.test_case
-           @@ test_success elaboration_context input expected)
+           let open OUnit2 in
+           input >:: test_success elaboration_context input expected)
   and failure_tests =
     failure_test_cases
     |> List.map (fun (elaboration_context, input, assert_exn) ->
-           OUnit2.test_case
-           @@ test_failure elaboration_context input assert_exn)
+           let open OUnit2 in
+           input >:: test_failure elaboration_context input assert_exn)
   in
   let open OUnit2 in
   [ "sucess" >::: success_tests ] @ [ "failure" >::: failure_tests ]
@@ -570,6 +578,14 @@ let test_type =
     ; ( mock_state_2
       , "nat <- nat <- nat <- nat"
       , t_c "nat" <= t_c "nat" <= t_c "nat" <= t_c "nat" )
+    ; (mock_state_10, "a -> b -> c", t_c "a" => (t_c "b" => t_c "c"))
+    ; (mock_state_10, "(a -> b) -> c", t_par (t_c "a" => t_c "b") => t_c "c")
+    ; (mock_state_10, "a <- b <- c", t_c "a" <= t_c "b" <= t_c "c")
+    ; (mock_state_10, "a <- (b <- c)", t_c "a" <= t_par (t_c "b" <= t_c "c"))
+    ; (mock_state_10, "(a <- b) -> c", t_par (t_c "a" <= t_c "b") => t_c "c")
+    ; (mock_state_10, "a <- (b -> c)", t_c "a" <= t_par (t_c "b" => t_c "c"))
+    ; (mock_state_10, "a -> b <- c", t_c "a" => t_c "b" <= t_c "c")
+    ; (mock_state_10, "a <- b -> c", t_c "a" <= (t_c "b" => t_c "c"))
     ; ( mock_state_2
       , "nat <- (nat -> nat)"
       , t_c "nat" <= t_par (t_c "nat" => t_c "nat") )
@@ -728,13 +744,13 @@ let test_type =
   let success_tests =
     success_test_cases
     |> List.map (fun (elaboration_context, input, expected) ->
-           OUnit2.test_case
-           @@ test_success elaboration_context input expected)
+           let open OUnit2 in
+           input >:: test_success elaboration_context input expected)
   and failure_tests =
     failure_test_cases
     |> List.map (fun (elaboration_context, input, assert_exn) ->
-           OUnit2.test_case
-           @@ test_failure elaboration_context input assert_exn)
+           let open OUnit2 in
+           input >:: test_failure elaboration_context input assert_exn)
   in
   let open OUnit2 in
   [ "sucess" >::: success_tests ] @ [ "failure" >::: failure_tests ]
@@ -814,13 +830,13 @@ let test_term =
   let success_tests =
     success_test_cases
     |> List.map (fun (elaboration_context, input, expected) ->
-           OUnit2.test_case
-           @@ test_success elaboration_context input expected)
+           let open OUnit2 in
+           input >:: test_success elaboration_context input expected)
   and failure_tests =
     failure_test_cases
     |> List.map (fun (elaboration_context, input, assert_exn) ->
-           OUnit2.test_case
-           @@ test_failure elaboration_context input assert_exn)
+           let open OUnit2 in
+           input >:: test_failure elaboration_context input assert_exn)
   in
   let open OUnit2 in
   [ "sucess" >::: success_tests ] @ [ "failure" >::: failure_tests ]

@@ -33,7 +33,7 @@ let compare ordx ordy (x1, y1) (x2, y2) =
 
 let pp ppx ppy ppf (x, y) = Format.fprintf ppf "(%a, %a)" ppx x ppy y
 
-let show ppx ppy pair = Format.asprintf "%a" (pp ppx ppy) pair
+let show ppx ppy pair = Format.stringify (pp ppx ppy) pair
 
 module MakeEq (E1 : Eq.EQ) (E2 : Eq.EQ) :
   Eq.EQ with type t = (E1.t, E2.t) t = Eq.Make (struct

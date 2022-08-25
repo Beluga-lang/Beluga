@@ -153,7 +153,7 @@ let pp ?(pp_sep = Format.pp_print_cut) pp_v ppf (T (h, t)) =
       pp_v ppf v)
     t
 
-let show ?pp_sep pp_v l = Format.asprintf "%a" (pp ?pp_sep pp_v) l
+let show ?pp_sep pp_v l = Format.stringify (pp ?pp_sep pp_v) l
 
 module MakeEq (E : Eq.EQ) : Eq.EQ with type t = E.t t = Eq.Make (struct
   type nonrec t = E.t t

@@ -11,13 +11,13 @@ let pp_list ppv ppf =
   Format.fprintf ppf "[@[%a@]]"
     (List.pp ~pp_sep:(fun ppf () -> Format.fprintf ppf ";@ ") ppv)
 
-let int_list_printer = Format.asprintf "%a" (pp_list Int.pp)
+let int_list_printer = Format.stringify (pp_list Int.pp)
 
 let assert_int_list_equal =
   OUnit2.assert_equal ~cmp:(List.equal Int.equal) ~printer:int_list_printer
 
 let int_pair_list_printer =
-  Format.asprintf "%a" (pp_list (Pair.pp Int.pp Int.pp))
+  Format.stringify (pp_list (Pair.pp Int.pp Int.pp))
 
 let assert_int_pair_list_equal =
   OUnit2.assert_equal
@@ -28,7 +28,7 @@ let pp_int_list2 ppf =
   Format.fprintf ppf "[@[%a@]]"
     (List2.pp ~pp_sep:(fun ppf () -> Format.fprintf ppf ";@ ") Int.pp)
 
-let int_list2_printer = Format.asprintf "%a" pp_int_list2
+let int_list2_printer = Format.stringify pp_int_list2
 
 let assert_int_list2_equal =
   OUnit2.assert_equal ~cmp:(List2.equal Int.equal) ~printer:int_list2_printer

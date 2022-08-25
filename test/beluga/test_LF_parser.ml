@@ -476,7 +476,7 @@ let mock_state_10 =
 let test_kind =
   let test_success elaboration_context input expected _test_ctxt =
     OUnit2.assert_equal
-      ~printer:(Format.asprintf "%a" Prettyext'.LF.Debug.pp_kind)
+      ~printer:(Format.stringify Prettyext'.LF.Debug.pp_kind)
       ~cmp:LF.Kind.equal expected
       (parse_lf_object input
       |> Synprs_to_synext'.LF.elaborate_kind elaboration_context)
@@ -556,7 +556,7 @@ let test_kind =
 let test_type =
   let test_success elaboration_context input expected _test_ctxt =
     OUnit2.assert_equal
-      ~printer:(Format.asprintf "%a" Prettyext'.LF.Debug.pp_typ)
+      ~printer:(Format.stringify Prettyext'.LF.Debug.pp_typ)
       ~cmp:LF.Typ.equal expected
       (parse_lf_object input
       |> Synprs_to_synext'.LF.elaborate_typ elaboration_context)
@@ -758,7 +758,7 @@ let test_type =
 let test_term =
   let test_success elaboration_context input expected _test_ctxt =
     OUnit2.assert_equal
-      ~printer:(Format.asprintf "%a" Prettyext'.LF.Debug.pp_term)
+      ~printer:(Format.stringify Prettyext'.LF.Debug.pp_term)
       ~cmp:LF.Term.equal expected
       (parse_lf_object input
       |> Synprs_to_synext'.LF.elaborate_term elaboration_context)

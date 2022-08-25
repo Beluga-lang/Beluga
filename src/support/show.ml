@@ -13,7 +13,7 @@ module Make (T : sig
 end) : SHOW with type t = T.t = struct
   include T
 
-  let show = Format.asprintf "%a" pp
+  let show = Format.stringify pp
 end
 
 let contramap (type t t') (module Show : SHOW with type t = t') (f : t -> t')

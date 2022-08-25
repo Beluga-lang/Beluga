@@ -135,7 +135,7 @@ module Dictionary = struct
 
   let () =
     Printexc.register_printer (fun exn ->
-        try Option.some @@ Format.asprintf "%a" pp_exception exn
+        try Option.some @@ Format.stringify pp_exception exn
         with Invalid_argument _ -> Option.none)
 
   let lookup query dictionary =

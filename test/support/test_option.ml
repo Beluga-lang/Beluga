@@ -1,13 +1,13 @@
 open Support
 
-let int_option_printer = Format.asprintf "%a" (Option.pp Int.pp)
+let int_option_printer = Format.stringify (Option.pp Int.pp)
 
 let assert_int_option_equal =
   OUnit2.assert_equal ~cmp:(Option.equal Int.equal)
     ~printer:int_option_printer
 
 let unit_option_printer =
-  Format.asprintf "%a" (Option.pp (fun ppf () -> Format.fprintf ppf "()"))
+  Format.stringify (Option.pp (fun ppf () -> Format.fprintf ppf "()"))
 
 let assert_unit_option_equal =
   OUnit2.assert_equal

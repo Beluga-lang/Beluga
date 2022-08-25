@@ -716,7 +716,10 @@ module CLF = struct
         Format.fprintf ppf "@[<2>TermAbstraction(\\%a:%a.@ %a)@]"
           Identifier.pp parameter_identifier pp_typ parameter_type pp_term
           body
-      | Term.Hole _ -> Format.fprintf ppf "_"
+      | Term.Hole { variant = `Underscore; _ } -> Format.fprintf ppf "_"
+      | Term.Hole { variant = `Unlabelled; _ } -> Format.fprintf ppf "?"
+      | Term.Hole { variant = `Labelled label; _ } ->
+        Format.fprintf ppf "?%s" label
       | Term.Substitution { term; substitution; _ } ->
         Format.fprintf ppf "@[<2>TermSubstitution(%a%a)@]" pp_term term
           pp_substitution substitution

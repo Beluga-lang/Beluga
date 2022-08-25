@@ -289,7 +289,10 @@ module CLF = struct
           { location : Location.t
           ; identifier : QualifiedIdentifier.t
           }
-      | RawHole of { location : Location.t }
+      | RawHole of
+          { location : Location.t
+          ; variant : [ `Underscore | `Unlabelled | `Labelled of String.t ]
+          }
       | RawPi of
           { location : Location.t
           ; parameter_identifier : Identifier.t Option.t

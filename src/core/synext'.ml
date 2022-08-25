@@ -54,7 +54,7 @@ module LF = struct
           ; applicand : Typ.t
           ; arguments : Term.t List.t
           }
-          (** [Application { applicand; arguments }] is the type-level
+          (** [Application { applicand; arguments; _ }] is the type-level
               application of `applicand' with arguments `arguments'. *)
       | ForwardArrow of
           { location : Location.t
@@ -108,7 +108,7 @@ module LF = struct
           ; applicand : Term.t
           ; arguments : Term.t List.t
           }
-          (** [Application { applicand; arguments }] is the term-level
+          (** [Application { applicand; arguments; _ }] is the term-level
               application of `applicand' with arguments `arguments'. *)
       | Abstraction of
           { location : Location.t
@@ -189,7 +189,7 @@ module CLF = struct
           ; applicand : Typ.t
           ; arguments : Term.t List.t
           }
-          (** [Application { applicand; arguments }] is the type-level
+          (** [Application { applicand; arguments; _ }] is the type-level
               application of `applicand' with arguments `arguments'. *)
       | ForwardArrow of
           { location : Location.t
@@ -261,7 +261,7 @@ module CLF = struct
           ; applicand : Term.t
           ; arguments : Term.t List.t
           }
-          (** [Application { applicand; arguments }] is the term-level
+          (** [Application { applicand; arguments; _ }] is the term-level
               application of `applicand' with arguments `arguments'. *)
       | Abstraction of
           { location : Location.t
@@ -271,8 +271,16 @@ module CLF = struct
           }
           (** [Abstraction { parameter_identifier = x; body; _ }] is the term
               `\x. body'. *)
-      | Hole of { location : Location.t }
-          (** [Hole { _ }] is the omission of a term for reconstruction. *)
+      | Hole of
+          { location : Location.t
+          ; variant : [ `Underscore | `Unlabelled | `Labelled of String.t ]
+          }
+          (** [Hole { variant; _ }] is the omission of a term for
+              reconstruction.
+
+              - If [variant = `Underscore], then it is the hole `_'.
+              - If [variant = `Unlabelled], then it is the hole `?'.
+              - If [variant = `Labelled label], then it is the hole `?label'. *)
       | Tuple of
           { location : Location.t
           ; terms : Term.t List1.t

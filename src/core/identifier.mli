@@ -7,7 +7,7 @@ type t
 
 (** {1 Constructors} *)
 
-val make : location:Location.t -> String.t -> t
+val make : ?location:Location.t -> String.t -> t
 
 (** {1 Destructors} *)
 
@@ -16,6 +16,8 @@ val location : t -> Location.t
 val name : t -> String.t
 
 (** {1 Collections} *)
+
+module Set : Set.S with type elt = t
 
 module Hamt : Hamt.S with type key = t
 

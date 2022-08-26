@@ -342,6 +342,7 @@ let test_pp_type =
     ; ( mock_state_6
       , "({x : exp} x eq x -> (E x) eq (F x)) -> (lam (\\x. (E) x)) eq (lam \
          (\\x. (F) x))" )
+    ; (mock_state_6, "E (x : exp) eq F x")
     ; ( mock_state_6
       , "({x : exp} (x eq (x)) -> ((E (x : exp)) eq (F x))) -> ((lam) (\\x. \
          (E) x)) eq (lam (\\x. (F) x))" )

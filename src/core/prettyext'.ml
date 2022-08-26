@@ -728,6 +728,26 @@ module CLF = struct
       Format.fprintf ppf "%a" QualifiedIdentifier.pp identifier
     | Typ.Application { applicand; arguments = []; _ } ->
       Format.fprintf ppf "@[<2>%a@]" pp_typ applicand
+    | Typ.Application
+        { applicand = Typ.Constant { identifier; operator; _ }
+        ; arguments
+        ; _
+        } -> (
+      match Operator.fixity operator with
+      | Fixity.Prefix ->
+        Format.fprintf ppf "@[<2>%a@ %a@]" QualifiedIdentifier.pp identifier
+          (List.pp ~pp_sep:(fun ppf () -> Format.fprintf ppf "@ ") pp_term)
+          arguments
+      | Fixity.Infix ->
+        assert (List.length arguments = 2);
+        let[@warning "-8"] [ left_argument; right_argument ] = arguments in
+        Format.fprintf ppf "@[<2>%a@ %a@ %a@]" pp_term left_argument
+          QualifiedIdentifier.pp identifier pp_term right_argument
+      | Fixity.Postfix ->
+        assert (List.length arguments = 1);
+        let[@warning "-8"] [ argument ] = arguments in
+        Format.fprintf ppf "@[<2>%a@ %a@]" pp_term argument
+          QualifiedIdentifier.pp identifier)
     | Typ.Application { applicand; arguments; _ } ->
       Format.fprintf ppf "@[<2>%a@ %a@]" pp_typ applicand
         (List.pp ~pp_sep:(fun ppf () -> Format.fprintf ppf "@ ") pp_term)
@@ -772,6 +792,26 @@ module CLF = struct
       Format.fprintf ppf "%a" QualifiedIdentifier.pp identifier
     | Term.Application { applicand; arguments = []; _ } ->
       Format.fprintf ppf "@[<2>%a@]" pp_term applicand
+    | Term.Application
+        { applicand = Term.Constant { identifier; operator; _ }
+        ; arguments
+        ; _
+        } -> (
+      match Operator.fixity operator with
+      | Fixity.Prefix ->
+        Format.fprintf ppf "@[<2>%a@ %a@]" QualifiedIdentifier.pp identifier
+          (List.pp ~pp_sep:(fun ppf () -> Format.fprintf ppf "@ ") pp_term)
+          arguments
+      | Fixity.Infix ->
+        assert (List.length arguments = 2);
+        let[@warning "-8"] [ left_argument; right_argument ] = arguments in
+        Format.fprintf ppf "@[<2>%a@ %a@ %a@]" pp_term left_argument
+          QualifiedIdentifier.pp identifier pp_term right_argument
+      | Fixity.Postfix ->
+        assert (List.length arguments = 1);
+        let[@warning "-8"] [ argument ] = arguments in
+        Format.fprintf ppf "@[<2>%a@ %a@]" pp_term argument
+          QualifiedIdentifier.pp identifier)
     | Term.Application { applicand; arguments; _ } ->
       Format.fprintf ppf "@[<2>%a@ %a@]" pp_term applicand
         (List.pp ~pp_sep:(fun ppf () -> Format.fprintf ppf "@ ") pp_term)

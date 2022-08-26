@@ -52,6 +52,15 @@ let is_unary = Fun.(arity >> Int.( = ) 1)
 
 let is_binary = Fun.(arity >> Int.( = ) 2)
 
+let is_left_associative =
+  Fun.(associativity >> Associativity.is_left_associative)
+
+let is_right_associative =
+  Fun.(associativity >> Associativity.is_right_associative)
+
+let is_non_associative =
+  Fun.(associativity >> Associativity.is_non_associative)
+
 include (
   Eq.Make (struct
     type nonrec t = t

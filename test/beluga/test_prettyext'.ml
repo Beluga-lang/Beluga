@@ -213,6 +213,43 @@ let mock_state_9 =
   |> add_prefix_lf_type_constant ~arity:0 ~precedence:1 (qid "tp")
   |> add_prefix_lf_type_constant ~arity:1 ~precedence:1 (qid "target")
 
+let mock_state_10 =
+  let open LF_constructors in
+  let open Synprs_to_synext'.Elaboration_state in
+  empty
+  |> add_prefix_lf_type_constant ~arity:0 ~precedence:1 (qid "a")
+  |> add_prefix_lf_type_constant ~arity:0 ~precedence:1 (qid "b")
+  |> add_prefix_lf_type_constant ~arity:0 ~precedence:1 (qid "c")
+
+let mock_state_11 =
+  let open LF_constructors in
+  let open Synprs_to_synext'.Elaboration_state in
+  empty
+  |> add_prefix_lf_type_constant ~arity:0 ~precedence:1 (qid "T")
+  |> add_infix_lf_term_constant ~associativity:Associativity.left_associative
+       ~precedence:1 (qid "L1")
+  |> add_infix_lf_term_constant
+       ~associativity:Associativity.right_associative ~precedence:1
+       (qid "R1")
+  |> add_infix_lf_term_constant ~associativity:Associativity.left_associative
+       ~precedence:2 (qid "L2")
+  |> add_infix_lf_term_constant
+       ~associativity:Associativity.right_associative ~precedence:2
+       (qid "R2")
+  |> add_infix_lf_term_constant ~associativity:Associativity.non_associative
+       ~precedence:1 (qid "N1")
+  |> add_infix_lf_term_constant ~associativity:Associativity.non_associative
+       ~precedence:2 (qid "N2")
+  |> add_infix_lf_term_constant ~associativity:Associativity.non_associative
+       ~precedence:3 (qid "N3")
+  |> add_prefix_lf_term_constant ~arity:1 ~precedence:1 (qid "P11")
+  |> add_prefix_lf_term_constant ~arity:1 ~precedence:2 (qid "P12")
+  |> add_prefix_lf_term_constant ~arity:2 ~precedence:1 (qid "P21")
+  |> add_prefix_lf_term_constant ~arity:2 ~precedence:2 (qid "P22")
+  |> add_postfix_lf_term_constant ~precedence:1 (qid "Q1")
+  |> add_postfix_lf_term_constant ~precedence:2 (qid "Q2")
+  |> add_postfix_lf_term_constant ~precedence:3 (qid "Q3")
+
 let parse_lf_object input =
   Runparser.parse_string Location.ghost input
     (Parser.only Parser.LF_parsers.lf_object)
@@ -255,6 +292,7 @@ let test_pp_kind =
     ; (mock_state_2, "(nat -> nat) -> type")
     ; (mock_state_2, "((nat -> nat)) -> type")
     ; (mock_state_2, "{ x : nat } nat -> nat -> type")
+    ; (mock_state_2, "{ _ : nat } nat -> nat -> type")
     ; (mock_state_2, "({ x : nat } nat -> nat) -> type")
     ; (mock_state_3, "({ x : Nat::nat } Nat::nat -> Nat::nat) -> type")
     ]
@@ -262,7 +300,8 @@ let test_pp_kind =
   let tests =
     List.map
       (fun (elaboration_context, input) ->
-        OUnit2.test_case @@ test elaboration_context input)
+        let open OUnit2 in
+        input >:: test elaboration_context input)
       test_cases
   in
   tests
@@ -309,12 +348,25 @@ let test_pp_type =
     ; (mock_state_6, "{x : exp} x eq x")
     ; (mock_state_6, "{x : exp} _ eq _")
     ; (mock_state_6, "{x : exp} (x : exp) eq _")
+    ; (mock_state_10, "a -> b -> c")
+    ; (mock_state_10, "(a -> b) -> c")
+    ; (mock_state_10, "a <- b <- c")
+    ; (mock_state_10, "a <- (b <- c)")
+    ; (mock_state_10, "(a <- b) -> c")
+    ; (mock_state_10, "a <- (b -> c)")
+    ; (mock_state_10, "a -> b <- c")
+    ; (mock_state_10, "a <- b -> c")
+    ; (mock_state_10, "a -> (b -> c)")
+    ; (mock_state_10, "(a <- b) <- c")
+    ; (mock_state_10, "(a -> b) <- c")
+    ; (mock_state_10, "a <- (b -> c)")
     ]
   in
   let tests =
     List.map
       (fun (elaboration_context, input) ->
-        OUnit2.test_case @@ test elaboration_context input)
+        let open OUnit2 in
+        input >:: test elaboration_context input)
       test_cases
   in
   tests
@@ -351,12 +403,64 @@ let test_pp_term =
     ; (mock_state_1, "\\x. (\\y. \\z. M x (y) z)")
     ; (mock_state_1, "\\x. (\\y. (\\z. M x (y) z))")
     ; (mock_state_2, "(\\x. s x) : nat -> nat")
+    ; (mock_state_11, "a R1 b R1 c")
+    ; (mock_state_11, "(a R1 b) R1 c")
+    ; (mock_state_11, "a L1 b L1 c")
+    ; (mock_state_11, "a L1 (b L1 c)")
+    ; (mock_state_11, "(a L1 b) R1 c")
+    ; (mock_state_11, "a L1 (b R1 c)")
+    ; (mock_state_11, "a R1 b L1 c")
+    ; (mock_state_11, "a L1 b R1 c")
+    ; (mock_state_11, "a R1 (b R1 c)")
+    ; (mock_state_11, "(a L1 b) L1 c")
+    ; (mock_state_11, "(a R1 b) L1 c")
+    ; (mock_state_11, "a L1 (b R1 c)")
+    ; (mock_state_11, "a1 L1 a2 R2 a3 Q3")
+    ; (mock_state_11, "x N1 y N2 z N3 w")
+    ; (mock_state_11, "x N1 y N3 z N2 w")
+    ; (mock_state_11, "x N3 y N2 z N1 w")
+    ; (mock_state_11, "x N2 y N3 z N1 w")
+    ; (mock_state_11, "_ N3 _ N2 _ N1 _")
+    ; (mock_state_11, "x N1 y N2 z N3 w")
+    ; (mock_state_11, "(x N1 y) N3 z N2 w")
+    ; (mock_state_11, "x N3 (y N2 z) N1 w")
+    ; (mock_state_11, "x N2 (y N3 (z N1 w))")
+    ; (mock_state_11, "x N1 y R2 z N3 w")
+    ; (mock_state_11, "x R1 y N3 z N2 w")
+    ; (mock_state_11, "x R3 y N2 z L1 w")
+    ; (mock_state_11, "x N2 y L3 z N1 w")
+    ; (mock_state_11, "(_ N3 _) N2 _ N1 _")
+    ; (mock_state_11, "a1 Q3 L1 a2 Q2 Q1 R2 a3 Q3")
+    ; (mock_state_11, "a1 Q3 L1 P11 a2 Q2 Q1 R2 P22 a3 a4 Q3")
+    ; (mock_state_11, "_ Q3 L1 P11 _ Q2 Q1 R2 P22 _ _ Q3")
+    ; (mock_state_11, "_ Q3 L1 P11 _ Q2 Q1 N1 P22 _ _ Q3")
+    ; (mock_state_11, "_ Q3 L1 P11 _ Q2 Q1 N2 P22 _ _ Q3")
+    ; (mock_state_11, "_ Q3 L1 P11 _ Q2 Q1 N3 _ Q3")
+    ; (mock_state_11, "_ Q3 L1 (P11 _ Q2) Q1 N1 P22 _ _ Q3")
+    ; (mock_state_11, "(((_ Q3) L1 ((P11 _) Q2)) Q1) N1 ((P22 _ _) Q3)")
+    ; (mock_state_11, "(((_ Q3) L1 (P11 _) Q2) Q1) R2 (P22 _ _ Q3)")
+    ; (mock_state_11, "_ Q1 Q1 Q1")
+    ; (mock_state_11, "((_ Q1) Q1) Q1")
+    ; (mock_state_11, "_ Q2 Q3 Q1")
+    ; ( mock_state_11
+      , "((a1 : T) Q3) L1 (((P11 (a2 : T)) Q2) Q1) R2 (P22 a3 (a4 Q3))" )
+    ; ( mock_state_11
+      , "((a1 : T) Q3) L1 (((P11 (P21 _ a : T)) Q2) Q1) R2 (P22 a3 (a4 Q3))"
+      )
+    ; ( mock_state_11
+      , "((a1 : T) Q3) L1 ((((P11 (P21 _ a : T)) Q2) Q1) R2 (P22 a3 (a4 \
+         Q3)))" )
+    ; (mock_state_11, "a1 L1 ((a Q1) R2 (P22 a3 (a4 Q3)))")
+    ; (mock_state_11, "(_ L1 _) Q1 R2 _")
+    ; (mock_state_11, "_ L1 (_ Q1) R2 _")
+    ; (mock_state_11, "a Q1 R2 b")
     ]
   in
   let tests =
     List.map
       (fun (elaboration_context, input) ->
-        OUnit2.test_case @@ test elaboration_context input)
+        let open OUnit2 in
+        input >:: test elaboration_context input)
       test_cases
   in
   tests

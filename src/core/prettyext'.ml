@@ -1,12 +1,62 @@
+(** Pretty-printing for the external syntax. *)
+
 open Support
 open Synext'
 
+(** {1 Handling Parentheses}
+
+    The external syntax models parentheses explicitly. This allows for
+    handling operator quoting, whereby infix and postfix operators may be
+    written in prefix notation when the operator is parenthesized. Having
+    parentheses modelled in the AST also allows for better error-reporting
+    since there is a discrepancy between the location of an object and that
+    same object in parentheses. Most importantly, having parentheses modelled
+    in the AST allows for decoupling the elimination of redundant parentheses
+    and the re-introduction of necessary parentheses from the printing
+    functions. This enables finer testing.
+
+    {2 Removing Parentheses}
+
+    The syntax tree structure captures the grouping of terms without the need
+    for parentheses. As part of pretty-printing for the external syntax, we
+    can remove semantically irrelevant parentheses for normalization, and
+    re-introduce them as needed when printing. As such, program generation
+    from the internal syntax to the external syntax does not need to handle
+    parenthesizing.
+
+    {2 Adding Necessary Parentheses}
+
+    Parentheses are re-introduced in the AST for printing using the
+    precedence ordering specified in the parser. Careful thought is required
+    when adding parentheses for user-defined operators, especially when
+    operator precedences are equal.
+
+    Let [->] be a right-associative infix operator and [<-] be a
+    left-associative infix operator, both of the same precedence.
+
+    Parentheses are required in the following cases:
+
+    - [(a <- b) -> c]
+    - [(a -> b) -> c]
+    - [a <- (b -> c)]
+    - [a <- (b <- c)]
+
+    Parentheses are not required in the following cases:
+
+    - [a -> b -> c], which is parsed as [a -> (b -> c)]
+    - [a <- b <- c], which is parsed as [(a <- b) <- c]
+    - [a -> b <- c], which is parsed as [(a -> b) <- c]
+    - [a <- b -> c], which is parsed as [a <- (b -> c)] *)
+
+(** {1 Printing LF Kinds, Types and Terms} *)
 module LF = struct
   open LF
 
+  (** {1 Removing Parentheses} *)
+
   (** [remove_parentheses_kind kind] is [kind] without parentheses, except
-      for quoted type-level and term-level constants. Printing this kind may
-      not result in a syntactically valid LF kind. *)
+      for quoted type-level and term-level constants. Printing this kind with
+      {!pp_kind} may not result in a syntactically valid LF kind. *)
   let rec remove_parentheses_kind kind =
     match kind with
     | Kind.Typ _ -> kind
@@ -26,16 +76,22 @@ module LF = struct
     | Kind.Parenthesized { kind; _ } -> remove_parentheses_kind kind
 
   (** [remove_parentheses_typ typ] is [typ] without parentheses, except for
-      quoted type-level and term-level constants. Printing this type may not
-      result in a syntactically valid LF type. *)
+      quoted type-level and term-level constants. Printing this type with
+      {!pp_typ} may not result in a syntactically valid LF type. *)
   and remove_parentheses_typ typ =
     match typ with
     | Typ.Constant _ -> typ
     | Typ.Application { location; applicand; arguments } ->
       let applicand' = remove_parentheses_typ applicand
       and arguments' = List.map remove_parentheses_term arguments in
+      let applicand'' =
+        match applicand' with
+        | Typ.Parenthesized { typ = Typ.Constant { operator; _ } as c; _ }
+          when Operator.is_prefix operator -> c
+        | _ -> applicand'
+      in
       Typ.Application
-        { location; applicand = applicand'; arguments = arguments' }
+        { location; applicand = applicand''; arguments = arguments' }
     | Typ.ForwardArrow { location; domain; range } ->
       let domain' = remove_parentheses_typ domain
       and range' = remove_parentheses_typ range in
@@ -57,8 +113,8 @@ module LF = struct
     | Typ.Parenthesized { typ; _ } -> remove_parentheses_typ typ
 
   (** [remove_parentheses_term term] is [term] without parentheses, except
-      for quoted type-level and term-level constants. Printing this term may
-      not result in a syntactically valid LF term. *)
+      for quoted type-level and term-level constants. Printing this term with
+      {!pp_term} may not result in a syntactically valid LF term. *)
   and remove_parentheses_term term =
     match term with
     | Term.Variable _ -> term
@@ -66,8 +122,14 @@ module LF = struct
     | Term.Application { location; applicand; arguments } ->
       let applicand' = remove_parentheses_term applicand
       and arguments' = List.map remove_parentheses_term arguments in
+      let applicand'' =
+        match applicand' with
+        | Term.Parenthesized { term = Term.Constant { operator; _ } as c; _ }
+          when Operator.is_prefix operator -> c
+        | _ -> applicand'
+      in
       Term.Application
-        { location; applicand = applicand'; arguments = arguments' }
+        { location; applicand = applicand''; arguments = arguments' }
     | Term.Abstraction
         { location; parameter_identifier; parameter_type; body } ->
       let parameter_type' = Option.map remove_parentheses_typ parameter_type
@@ -84,6 +146,8 @@ module LF = struct
       and typ' = remove_parentheses_typ typ in
       Term.TypeAnnotated { location; term = term'; typ = typ' }
     | Term.Parenthesized { term; _ } -> remove_parentheses_term term
+
+  (** {1 Adding Necessary Parentheses} *)
 
   let add_parentheses_kind kind =
     let location = location_of_kind kind in
@@ -102,7 +166,7 @@ module LF = struct
 
       If this is done after the application of {!remove_parentheses_kind},
       then the resultant LF kind can be parsed to the same AST modulo
-      {!remove_parentheses_kind}. *)
+      {!remove_parentheses_kind} and without considering locations. *)
   let rec parenthesize_kind kind =
     match kind with
     | Kind.Typ _ -> kind
@@ -130,7 +194,7 @@ module LF = struct
 
       If this is done after the application of {!remove_parentheses_typ},
       then the resultant LF type can be parsed to the same AST modulo
-      {!remove_parentheses_typ}. *)
+      {!remove_parentheses_typ} and without considering locations. *)
   and parenthesize_typ typ =
     match typ with
     | Typ.Constant _ -> typ
@@ -140,23 +204,22 @@ module LF = struct
             Typ.Constant { operator = applicand_operator; _ } as applicand
         ; arguments
         } ->
-      let applicand_precedence = Operator.precedence applicand_operator in
       let arguments' =
-        parenthesize_arguments ~applicand_precedence arguments
+        parenthesize_operator_application_arguments applicand_operator
+          arguments
       in
       Typ.Application { location; applicand; arguments = arguments' }
     | Typ.Application { location; applicand; arguments } ->
       let applicand' =
         match applicand with
-        | (Typ.Constant _ | Typ.Parenthesized _) as argument ->
-          parenthesize_typ argument
-        | ( Typ.Application _
-          | Typ.Pi _
-          | Typ.ForwardArrow _
-          | Typ.BackwardArrow _ ) as argument ->
-          add_parentheses_typ (parenthesize_typ argument)
+        | Typ.Application _
+        | Typ.Pi _
+        | Typ.ForwardArrow _
+        | Typ.BackwardArrow _ ->
+          add_parentheses_typ (parenthesize_typ applicand)
+        | _ -> parenthesize_typ applicand
       in
-      let arguments' = parenthesize_arguments arguments in
+      let arguments' = parenthesize_application_arguments arguments in
       Typ.Application
         { location; applicand = applicand'; arguments = arguments' }
     | Typ.ForwardArrow { location; domain; range } ->
@@ -196,7 +259,7 @@ module LF = struct
 
       If this is done after the application of {!remove_parentheses_term},
       then the resultant LF term can be parsed to the same AST modulo
-      {!remove_parentheses_term}. *)
+      {!remove_parentheses_term} and without considering locations. *)
   and parenthesize_term term =
     match term with
     | Term.Variable _ -> term
@@ -207,22 +270,19 @@ module LF = struct
             Term.Constant { operator = applicand_operator; _ } as applicand
         ; arguments
         } ->
-      let applicand_precedence = Operator.precedence applicand_operator in
       let arguments' =
-        parenthesize_arguments ~applicand_precedence arguments
+        parenthesize_operator_application_arguments applicand_operator
+          arguments
       in
       Term.Application { location; applicand; arguments = arguments' }
     | Term.Application { location; applicand; arguments } ->
       let applicand' =
         match applicand with
-        | ( Term.Variable _
-          | Term.Constant _
-          | Term.Wildcard _
-          | Term.Parenthesized _ ) as argument -> parenthesize_term argument
-        | (Term.Application _ | Term.Abstraction _ | Term.TypeAnnotated _) as
-          argument -> add_parentheses_term (parenthesize_term argument)
+        | Term.Application _ | Term.Abstraction _ | Term.TypeAnnotated _ ->
+          add_parentheses_term (parenthesize_term applicand)
+        | _ -> parenthesize_term applicand
       in
-      let arguments' = parenthesize_arguments arguments in
+      let arguments' = parenthesize_application_arguments arguments in
       Term.Application
         { location; applicand = applicand'; arguments = arguments' }
     | Term.Abstraction
@@ -246,24 +306,175 @@ module LF = struct
       Term.TypeAnnotated { location; term = term'; typ = typ' }
     | Term.Parenthesized _ -> term
 
-  and parenthesize_arguments ?(applicand_precedence = -1) arguments =
+  (** [parenthesize_application_arguments arguments] is the arguments in
+      [argument] parenthesized as if they were applied to a non-operator
+      applicand. *)
+  and parenthesize_application_arguments arguments =
     List.map
-      (function
-        | Term.Application
-            { applicand = Term.Constant { operator = argument_operator; _ }
-            ; _
-            } as argument ->
-          let argument_precedence = Operator.precedence argument_operator in
-          if argument_precedence > applicand_precedence then
-            add_parentheses_term (parenthesize_term argument)
-          else parenthesize_term argument
-        | ( Term.Variable _
-          | Term.Constant _
-          | Term.Wildcard _
-          | Term.Parenthesized _ ) as argument -> parenthesize_term argument
-        | (Term.Application _ | Term.Abstraction _ | Term.TypeAnnotated _) as
-          argument -> add_parentheses_term (parenthesize_term argument))
+      (fun argument ->
+        match argument with
+        | Term.Application _ | Term.Abstraction _ | Term.TypeAnnotated _ ->
+          add_parentheses_term (parenthesize_term argument)
+        | _ -> parenthesize_term argument)
       arguments
+
+  (** [parenthesize_operator_application_arguments applicand_operator arguments]
+      is the arguments in [arguments] parenthesized as if they were applied
+      to an operator applicand described by [applicand_operator]. *)
+  and parenthesize_operator_application_arguments applicand_operator
+      arguments =
+    match Operator.fixity applicand_operator with
+    | Fixity.Prefix ->
+      parenthesize_prefix_operator_application_arguments arguments
+    | Fixity.Infix ->
+      assert (List.length arguments = 2);
+      let[@warning "-8"] [ left_argument; right_argument ] = arguments in
+      parenthesize_infix_operator_application_arguments applicand_operator
+        left_argument right_argument
+    | Fixity.Postfix ->
+      assert (List.length arguments = 1);
+      let[@warning "-8"] [ argument ] = arguments in
+      parenthesize_postfix_operator_application_arguments applicand_operator
+        argument
+
+  and parenthesize_prefix_operator_application_arguments arguments =
+    parenthesize_application_arguments arguments
+
+  and parenthesize_infix_operator_application_arguments applicand_operator
+      left_argument right_argument =
+    match Operator.associativity applicand_operator with
+    | Associativity.Left_associative ->
+      parenthesize_infix_left_associative_operator_application_arguments
+        applicand_operator left_argument right_argument
+    | Associativity.Right_associative ->
+      parenthesize_infix_right_associative_operator_application_arguments
+        applicand_operator left_argument right_argument
+    | Associativity.Non_associative ->
+      parenthesize_infix_non_associative_operator_application_arguments
+        applicand_operator left_argument right_argument
+
+  and parenthesize_infix_left_associative_operator_application_arguments
+      applicand_operator left_argument right_argument =
+    let left_argument' =
+      match left_argument with
+      | Term.Application
+          { applicand =
+              Term.Constant { operator = left_argument_operator; _ }
+          ; _
+          }
+        when Bool.not
+               (Operator.precedence applicand_operator
+               > Operator.precedence left_argument_operator) ->
+        parenthesize_term left_argument
+      | Term.Application _ | Term.Abstraction _ | Term.TypeAnnotated _ ->
+        add_parentheses_term (parenthesize_term left_argument)
+      | _ -> parenthesize_term left_argument
+    and right_argument' =
+      match right_argument with
+      | Term.Application
+          { applicand =
+              Term.Constant { operator = right_argument_operator; _ }
+          ; _
+          }
+        when Bool.not
+               (Operator.precedence applicand_operator
+                >= Operator.precedence right_argument_operator
+               && Operator.is_left_associative right_argument_operator) ->
+        parenthesize_term right_argument
+      | Term.Application _ | Term.Abstraction _ | Term.TypeAnnotated _ ->
+        add_parentheses_term (parenthesize_term right_argument)
+      | _ -> parenthesize_term right_argument
+    in
+    [ left_argument'; right_argument' ]
+
+  and parenthesize_infix_right_associative_operator_application_arguments
+      applicand_operator left_argument right_argument =
+    let left_argument' =
+      match left_argument with
+      | Term.Application
+          { applicand =
+              Term.Constant { operator = left_argument_operator; _ }
+          ; _
+          }
+        when Bool.not
+               (Operator.precedence applicand_operator
+               >= Operator.precedence left_argument_operator) ->
+        parenthesize_term left_argument
+      | Term.Application _ | Term.Abstraction _ | Term.TypeAnnotated _ ->
+        add_parentheses_term (parenthesize_term left_argument)
+      | _ -> parenthesize_term left_argument
+    and right_argument' =
+      match right_argument with
+      | Term.Application
+          { applicand =
+              Term.Constant { operator = right_argument_operator; _ }
+          ; _
+          }
+        when Bool.not
+               (Operator.precedence applicand_operator
+               > Operator.precedence right_argument_operator) ->
+        parenthesize_term right_argument
+      | Term.Application _ | Term.Abstraction _ | Term.TypeAnnotated _ ->
+        add_parentheses_term (parenthesize_term right_argument)
+      | _ -> parenthesize_term right_argument
+    in
+    [ left_argument'; right_argument' ]
+
+  and parenthesize_infix_non_associative_operator_application_arguments
+      applicand_operator left_argument right_argument =
+    let left_argument' =
+      match left_argument with
+      | Term.Application
+          { applicand =
+              Term.Constant { operator = left_argument_operator; _ }
+          ; _
+          }
+        when Bool.not
+               (Operator.precedence applicand_operator
+                > Operator.precedence left_argument_operator
+               && Operator.is_non_associative left_argument_operator) ->
+        parenthesize_term left_argument
+      | Term.Application _ | Term.Abstraction _ | Term.TypeAnnotated _ ->
+        add_parentheses_term (parenthesize_term left_argument)
+      | _ -> parenthesize_term left_argument
+    and right_argument' =
+      match right_argument with
+      | Term.Application
+          { applicand =
+              Term.Constant { operator = right_argument_operator; _ }
+          ; _
+          }
+        when Bool.not
+               (Operator.precedence applicand_operator
+                > Operator.precedence right_argument_operator
+               && Operator.is_non_associative right_argument_operator) ->
+        parenthesize_term right_argument
+      | Term.Application _ | Term.Abstraction _ | Term.TypeAnnotated _ ->
+        add_parentheses_term (parenthesize_term right_argument)
+      | _ -> parenthesize_term right_argument
+    in
+    [ left_argument'; right_argument' ]
+
+  and parenthesize_postfix_operator_application_arguments applicand_operator
+      argument =
+    let argument' =
+      match argument with
+      | Term.Application
+          { applicand = Term.Constant { operator = argument_operator; _ }
+          ; _
+          }
+        when Bool.not
+               (Operator.precedence applicand_operator
+               >= Operator.precedence argument_operator)
+             || Operator.is_postfix applicand_operator ->
+        parenthesize_term argument
+      | Term.Application _ | Term.Abstraction _ | Term.TypeAnnotated _ ->
+        add_parentheses_term (parenthesize_term argument)
+      | _ -> parenthesize_term argument
+    in
+    [ argument' ]
+
+  (** {1 Printing} *)
 
   let rec pp_kind ppf kind =
     match kind with
@@ -407,11 +618,11 @@ module LF = struct
       match kind with
       | Kind.Typ _ -> Format.fprintf ppf "type"
       | Kind.Arrow { domain; range; _ } ->
-        Format.fprintf ppf "@[<2>KindArrow(%a@ ->@ %a)@]" pp_typ domain
+        Format.fprintf ppf "@[<2>KindArrow(@,%a@ ->@ %a)@]" pp_typ domain
           pp_kind range
       | Kind.Pi
           { parameter_identifier = Option.None; parameter_type; body; _ } ->
-        Format.fprintf ppf "@[<2>KindPi({@ _@ :@ %a@ }@ %a)@]" pp_typ
+        Format.fprintf ppf "@[<2>KindPi(@,{@ _@ :@ %a@ }@ %a)@]" pp_typ
           parameter_type pp_kind body
       | Kind.Pi
           { parameter_identifier = Option.Some parameter_identifier
@@ -419,30 +630,30 @@ module LF = struct
           ; body
           ; _
           } ->
-        Format.fprintf ppf "@[<2>KindPi({@ %a@ :@ %a@ }@ %a)@]" Identifier.pp
-          parameter_identifier pp_typ parameter_type pp_kind body
+        Format.fprintf ppf "@[<2>KindPi(@,{@ %a@ :@ %a@ }@ %a)@]"
+          Identifier.pp parameter_identifier pp_typ parameter_type pp_kind
+          body
       | Kind.Parenthesized { kind; _ } ->
-        Format.fprintf ppf "@[<2>KindParenthesized(%a)@]" pp_kind kind
+        Format.fprintf ppf "@[<2>KindParenthesized(@,%a)@]" pp_kind kind
 
     and pp_typ ppf typ =
       match typ with
       | Typ.Constant { identifier; _ } ->
         Format.fprintf ppf "%a" QualifiedIdentifier.pp identifier
-      | Typ.Application { applicand; arguments = []; _ } ->
-        Format.fprintf ppf "@[<2>TypeApplication(%a)@]" pp_typ applicand
       | Typ.Application { applicand; arguments; _ } ->
-        Format.fprintf ppf "@[<2>TypeApplication(%a@ %a)@]" pp_typ applicand
-          (List.pp ~pp_sep:(fun ppf () -> Format.fprintf ppf "@ ") pp_term)
+        Format.fprintf ppf "@[<2>TypeApplication(@,%a(%a))@]" pp_typ
+          applicand
+          (List.pp ~pp_sep:(fun ppf () -> Format.fprintf ppf ",@ ") pp_term)
           arguments
       | Typ.ForwardArrow { domain; range; _ } ->
-        Format.fprintf ppf "@[<2>TypeArrow(%a@ ->@ %a)@]" pp_typ domain
+        Format.fprintf ppf "@[<2>TypeArrow(@,%a@ ->@ %a)@]" pp_typ domain
           pp_typ range
       | Typ.BackwardArrow { range; domain; _ } ->
-        Format.fprintf ppf "@[<2>TypeArrow(%a@ <-@ %a)@]" pp_typ range pp_typ
-          domain
+        Format.fprintf ppf "@[<2>TypeArrow(@,%a@ <-@ %a)@]" pp_typ range
+          pp_typ domain
       | Typ.Pi
           { parameter_identifier = Option.None; parameter_type; body; _ } ->
-        Format.fprintf ppf "@[<2>TypePi({@ _@ :@ %a@ }@ %a)@]" pp_typ
+        Format.fprintf ppf "@[<2>TypePi(@,{@ _@ :@ %a@ }@ %a)@]" pp_typ
           parameter_type pp_typ body
       | Typ.Pi
           { parameter_identifier = Option.Some parameter_identifier
@@ -450,10 +661,11 @@ module LF = struct
           ; body
           ; _
           } ->
-        Format.fprintf ppf "@[<2>TypePi({@ %a@ :@ %a@ }@ %a)@]" Identifier.pp
-          parameter_identifier pp_typ parameter_type pp_typ body
+        Format.fprintf ppf "@[<2>TypePi(@,{@ %a@ :@ %a@ }@ %a)@]"
+          Identifier.pp parameter_identifier pp_typ parameter_type pp_typ
+          body
       | Typ.Parenthesized { typ; _ } ->
-        Format.fprintf ppf "@[<2>TypeParenthesized(%a)@]" pp_typ typ
+        Format.fprintf ppf "@[<2>TypeParenthesized(@,%a)@]" pp_typ typ
 
     and pp_term ppf term =
       match term with
@@ -461,11 +673,10 @@ module LF = struct
         Format.fprintf ppf "%a" Identifier.pp identifier
       | Term.Constant { identifier; _ } ->
         Format.fprintf ppf "%a" QualifiedIdentifier.pp identifier
-      | Term.Application { applicand; arguments = []; _ } ->
-        Format.fprintf ppf "@[<2>TermApplication(%a)@]" pp_term applicand
       | Term.Application { applicand; arguments; _ } ->
-        Format.fprintf ppf "@[<2>TermApplication(%a@ %a)@]" pp_term applicand
-          (List.pp ~pp_sep:(fun ppf () -> Format.fprintf ppf "@ ") pp_term)
+        Format.fprintf ppf "@[<2>TermApplication(@,%a(%a))@]" pp_term
+          applicand
+          (List.pp ~pp_sep:(fun ppf () -> Format.fprintf ppf ",@ ") pp_term)
           arguments
       | Term.Abstraction
           { parameter_identifier = Option.None
@@ -473,14 +684,14 @@ module LF = struct
           ; body
           ; _
           } ->
-        Format.fprintf ppf "@[<2>TermAbstraction(\\_.@ %a)@]" pp_term body
+        Format.fprintf ppf "@[<2>TermAbstraction(@,\\_.@ %a)@]" pp_term body
       | Term.Abstraction
           { parameter_identifier = Option.None
           ; parameter_type = Option.Some parameter_type
           ; body
           ; _
           } ->
-        Format.fprintf ppf "@[<2>TermAbstraction(\\_:%a.@ %a)@]" pp_typ
+        Format.fprintf ppf "@[<2>TermAbstraction(@,\\_:%a.@ %a)@]" pp_typ
           parameter_type pp_term body
       | Term.Abstraction
           { parameter_identifier = Option.Some parameter_identifier
@@ -488,23 +699,23 @@ module LF = struct
           ; body
           ; _
           } ->
-        Format.fprintf ppf "@[<2>TermAbstraction(\\%a.@ %a)@]" Identifier.pp
-          parameter_identifier pp_term body
+        Format.fprintf ppf "@[<2>TermAbstraction(@,\\%a.@ %a)@]"
+          Identifier.pp parameter_identifier pp_term body
       | Term.Abstraction
           { parameter_identifier = Option.Some parameter_identifier
           ; parameter_type = Option.Some parameter_type
           ; body
           ; _
           } ->
-        Format.fprintf ppf "@[<2>TermAbstraction(\\%a:%a.@ %a)@]"
+        Format.fprintf ppf "@[<2>TermAbstraction(@,\\%a:%a.@ %a)@]"
           Identifier.pp parameter_identifier pp_typ parameter_type pp_term
           body
       | Term.Wildcard _ -> Format.fprintf ppf "_"
       | Term.TypeAnnotated { term; typ; _ } ->
-        Format.fprintf ppf "@[<2>TermAnnotated(%a@ :@ %a)@]" pp_term term
+        Format.fprintf ppf "@[<2>TermAnnotated(@,%a@ :@ %a)@]" pp_term term
           pp_typ typ
       | Term.Parenthesized { term; _ } ->
-        Format.fprintf ppf "@[<2>TermParenthesized(%a)@]" pp_term term
+        Format.fprintf ppf "@[<2>TermParenthesized(@,%a)@]" pp_term term
   end
 end
 
@@ -632,11 +843,9 @@ module CLF = struct
       match typ with
       | Typ.Constant { identifier; _ } ->
         Format.fprintf ppf "%a" QualifiedIdentifier.pp identifier
-      | Typ.Application { applicand; arguments = []; _ } ->
-        Format.fprintf ppf "@[<2>TypeApplication(%a)@]" pp_typ applicand
       | Typ.Application { applicand; arguments; _ } ->
-        Format.fprintf ppf "@[<2>TypeApplication(%a@ %a)@]" pp_typ applicand
-          (List.pp ~pp_sep:(fun ppf () -> Format.fprintf ppf "@ ") pp_term)
+        Format.fprintf ppf "@[<2>TypeApplication(%a(%a))@]" pp_typ applicand
+          (List.pp ~pp_sep:(fun ppf () -> Format.fprintf ppf ",@ ") pp_term)
           arguments
       | Typ.ForwardArrow { domain; range; _ } ->
         Format.fprintf ppf "@[<2>TypeArrow(%a@ ->@ %a)@]" pp_typ domain
@@ -678,11 +887,9 @@ module CLF = struct
         Format.fprintf ppf "%a" Identifier.pp identifier
       | Term.Constant { identifier; _ } ->
         Format.fprintf ppf "%a" QualifiedIdentifier.pp identifier
-      | Term.Application { applicand; arguments = []; _ } ->
-        Format.fprintf ppf "@[<2>TermApplication(%a)@]" pp_term applicand
       | Term.Application { applicand; arguments; _ } ->
-        Format.fprintf ppf "@[<2>TermApplication(%a@ %a)@]" pp_term applicand
-          (List.pp ~pp_sep:(fun ppf () -> Format.fprintf ppf "@ ") pp_term)
+        Format.fprintf ppf "@[<2>TermApplication(%a(%a))@]" pp_term applicand
+          (List.pp ~pp_sep:(fun ppf () -> Format.fprintf ppf ",@ ") pp_term)
           arguments
       | Term.Abstraction
           { parameter_identifier = Option.None

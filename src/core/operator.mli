@@ -54,14 +54,26 @@ val is_infix : t -> Bool.t
     [fixity operator = Fixity.Postfix]. *)
 val is_postfix : t -> Bool.t
 
-(** [is_nullary] is [true] if and only if [arity operator = 0]. *)
+(** [is_nullary operator] is [true] if and only if [arity operator = 0]. *)
 val is_nullary : t -> Bool.t
 
-(** [is_unary] is [true] if and only if [arity operator = 1]. *)
+(** [is_unary operator] is [true] if and only if [arity operator = 1]. *)
 val is_unary : t -> Bool.t
 
-(** [is_binary] is [true] if and only if [arity operator = 2]. *)
+(** [is_binary operator] is [true] if and only if [arity operator = 2]. *)
 val is_binary : t -> Bool.t
+
+(** [is_left_associative operator] is [true] if and only if
+    [associativity operator = Associativity.Left_associative]. *)
+val is_left_associative : t -> Bool.t
+
+(** [is_right_associative operator] is [true] if and only if
+    [associativity operator = Associativity.Right_associative]. *)
+val is_right_associative : t -> Bool.t
+
+(** [is_non_associative operator] is [true] if and only if
+    [associativity operator = Associativity.Non_associative]. *)
+val is_non_associative : t -> Bool.t
 
 (** {1 Instances} *)
 

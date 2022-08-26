@@ -55,7 +55,17 @@ module LF = struct
           ; arguments : Term.t List.t
           }
           (** [Application { applicand; arguments; _ }] is the type-level
-              application of `applicand' with arguments `arguments'. *)
+              application of `applicand' with arguments `arguments'.
+
+              - If [applicand = Typ.Constant { operator; _ }] and
+                [Operator.is_prefix operator], then
+                [List.length arguments >= 0].
+              - If [applicand = Typ.Constant { operator; _ }] and
+                [Operator.is_infix operator], then
+                [List.length arguments = 2].
+              - If [applicand = Typ.Constant { operator; _ }] and
+                [Operator.is_postfix operator], then
+                [List.length arguments = 1]. *)
       | ForwardArrow of
           { location : Location.t
           ; domain : Typ.t
@@ -109,7 +119,17 @@ module LF = struct
           ; arguments : Term.t List.t
           }
           (** [Application { applicand; arguments; _ }] is the term-level
-              application of `applicand' with arguments `arguments'. *)
+              application of `applicand' with arguments `arguments'.
+
+              - If [applicand = Term.Constant { operator; _ }] and
+                [Operator.is_prefix operator], then
+                [List.length arguments >= 0].
+              - If [applicand = Term.Constant { operator; _ }] and
+                [Operator.is_infix operator], then
+                [List.length arguments = 2].
+              - If [applicand = Term.Constant { operator; _ }] and
+                [Operator.is_postfix operator], then
+                [List.length arguments = 1]. *)
       | Abstraction of
           { location : Location.t
           ; parameter_identifier : Identifier.t Option.t
@@ -190,7 +210,17 @@ module CLF = struct
           ; arguments : Term.t List.t
           }
           (** [Application { applicand; arguments; _ }] is the type-level
-              application of `applicand' with arguments `arguments'. *)
+              application of `applicand' with arguments `arguments'.
+
+              - If [applicand = Typ.Constant { operator; _ }] and
+                [Operator.is_prefix operator], then
+                [List.length arguments >= 0].
+              - If [applicand = Typ.Constant { operator; _ }] and
+                [Operator.is_infix operator], then
+                [List.length arguments = 2].
+              - If [applicand = Typ.Constant { operator; _ }] and
+                [Operator.is_postfix operator], then
+                [List.length arguments = 1]. *)
       | ForwardArrow of
           { location : Location.t
           ; domain : Typ.t
@@ -262,7 +292,17 @@ module CLF = struct
           ; arguments : Term.t List.t
           }
           (** [Application { applicand; arguments; _ }] is the term-level
-              application of `applicand' with arguments `arguments'. *)
+              application of `applicand' with arguments `arguments'.
+
+              - If [applicand = Term.Constant { operator; _ }] and
+                [Operator.is_prefix operator], then
+                [List.length arguments >= 0].
+              - If [applicand = Term.Constant { operator; _ }] and
+                [Operator.is_infix operator], then
+                [List.length arguments = 2].
+              - If [applicand = Term.Constant { operator; _ }] and
+                [Operator.is_postfix operator], then
+                [List.length arguments = 1]. *)
       | Abstraction of
           { location : Location.t
           ; parameter_identifier : Identifier.t Option.t

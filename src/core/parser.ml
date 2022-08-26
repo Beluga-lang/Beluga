@@ -912,7 +912,8 @@ end = struct
         | `(' <lf-object> `)'
 
 
-      Rewritten grammar:
+      Rewritten grammar, to eliminate left-recursions and handle precedence
+      using recursive descent:
 
       <lf-object> ::=
         | <lf-object1>
@@ -1054,7 +1055,7 @@ module rec CLF_parsers : sig
   val clf_object : CLF.Object.t t
 end = struct
   (*=
-      Original Grammar:
+      Original grammar:
 
       <substitution> ::=
         | `[' `]'
@@ -1075,6 +1076,7 @@ end = struct
         | <clf-object> `:' <clf-object>
         | <clf-object> <clf-object>
         | `_'
+        | `?'[<identifier>]
         | <clf-object> <substitution>
         | `<' <clf-object> (`;' <clf-object>)* `>'
         | <clf-object>`.'<integer>
@@ -1082,7 +1084,8 @@ end = struct
         | `(' <clf-object> `)'
 
 
-      Rewritten Grammar:
+      Rewritten grammar, to eliminate left-recursions and handle precedence
+      using recursive descent:
 
       <substitution> ::=
         | `[' `]'
@@ -1113,11 +1116,11 @@ end = struct
         | <clf-object5>
 
       <clf-object5> ::=
-        | <clf-object6> <substitution>
+        | <clf-object6>+
         | <clf-object6>
 
       <clf-object6> ::=
-        | <clf-object7>+
+        | <clf-object7> <substitution>
         | <clf-object7>
 
       <clf-object7> ::=
@@ -1128,6 +1131,7 @@ end = struct
         | <identifier>
         | <qualified-identifier>
         | `_'
+        | `?'[<identifier>]
         | `<' <clf-object> (`;' <clf-object>)* `>'
         | `(' <clf-object> `)'
   *)
@@ -1249,23 +1253,23 @@ end = struct
     |> labelled "Contextual LF atomic or projection object"
 
   let clf_object6 =
-    some clf_object7
-    |> span
-    $> (function
-       | (_, List1.T (object_, [])) -> object_
-       | (location, List1.T (o1, o2 :: os)) ->
-         CLF.Object.RawApplication { location; objects = List2.from o1 o2 os })
-    |> labelled "Contextual LF atomic, projection or application object"
-
-  let clf_object5 =
-    seq2 clf_object6 (maybe substitution)
+    seq2 clf_object7 (maybe substitution)
     |> span
     $> (function
        | (_, (object_, Option.None)) -> object_
        | (location, (object_, Option.Some substitution)) ->
            CLF.Object.RawSubstitution { location; object_; substitution }
        )
-    |> labelled "Contextual LF atomic, projection, application or substitution object"
+    |> labelled "Contextual LF atomic, projection or substitution object"
+
+  let clf_object5 =
+    some clf_object6
+    |> span
+    $> (function
+       | (_, List1.T (object_, [])) -> object_
+       | (location, List1.T (o1, o2 :: os)) ->
+         CLF.Object.RawApplication { location; objects = List2.from o1 o2 os })
+    |> labelled "Contextual LF atomic, projection, substitution or application object"
 
   let clf_object4 =
     let block_contents =
@@ -1302,7 +1306,12 @@ end = struct
     |> labelled "Contextual LF atomic or annotated object"
 
   let clf_object2 =
-        let forward_arrow = token Token.ARROW $> fun () -> `Forward_arrow
+    (* Backward arrows are parsed as right-associative, but are elaborated as
+       left-associative in the elaboration to the external syntax. Bottom-up
+       parsing is otherwise required to handle forward and backward arrows in
+       conjunction with the weak prefix operators for Pi and lambda
+       abstractions. *)
+    let forward_arrow = token Token.ARROW $> fun () -> `Forward_arrow
     and backward_arrow = token Token.BACKARROW $> fun () -> `Backward_arrow
     in
     seq2

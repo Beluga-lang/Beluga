@@ -58,9 +58,6 @@ module LF = struct
               application of `applicand' with arguments `arguments'.
 
               - If [applicand = Typ.Constant { operator; _ }] and
-                [Operator.is_prefix operator], then
-                [List.length arguments >= 0].
-              - If [applicand = Typ.Constant { operator; _ }] and
                 [Operator.is_infix operator], then
                 [List.length arguments = 2].
               - If [applicand = Typ.Constant { operator; _ }] and
@@ -91,7 +88,11 @@ module LF = struct
       | Parenthesized of
           { location : Location.t
           ; typ : Typ.t
-          }  (** [Parenthesized { typ; _ }] is the type `( typ )`. *)
+          }
+          (** [Parenthesized { typ; _ }] is the type `( typ )`.
+
+              If [typ = Constant _], then [Parenthesized { typ; _ }] is a
+              quoted type-level LF operator. *)
   end =
     Typ
 
@@ -122,9 +123,6 @@ module LF = struct
               application of `applicand' with arguments `arguments'.
 
               - If [applicand = Term.Constant { operator; _ }] and
-                [Operator.is_prefix operator], then
-                [List.length arguments >= 0].
-              - If [applicand = Term.Constant { operator; _ }] and
                 [Operator.is_infix operator], then
                 [List.length arguments = 2].
               - If [applicand = Term.Constant { operator; _ }] and
@@ -150,7 +148,11 @@ module LF = struct
       | Parenthesized of
           { location : Location.t
           ; term : Term.t
-          }  (** [Parenthesized { term; _ }] is the term `( term )`. *)
+          }
+          (** [Parenthesized { term; _ }] is the term `( term )`.
+
+              If [term = Constant _], then [Parenthesized { term; _ }] is a
+              quoted term-level LF operator. *)
   end =
     Term
 
@@ -213,9 +215,6 @@ module CLF = struct
               application of `applicand' with arguments `arguments'.
 
               - If [applicand = Typ.Constant { operator; _ }] and
-                [Operator.is_prefix operator], then
-                [List.length arguments >= 0].
-              - If [applicand = Typ.Constant { operator; _ }] and
                 [Operator.is_infix operator], then
                 [List.length arguments = 2].
               - If [applicand = Typ.Constant { operator; _ }] and
@@ -257,7 +256,67 @@ module CLF = struct
       | Parenthesized of
           { location : Location.t
           ; typ : Typ.t
-          }  (** [Parenthesized { typ; _ }] is the type `( typ )`. *)
+          }
+          (** [Parenthesized { typ; _ }] is the type `( typ )`.
+
+              If [typ = Constant _], then [Parenthesized { typ; _ }] is a
+              quoted type-level LF operator. *)
+
+    (** External contextual LF type patterns. *)
+    module rec Pattern : sig
+      type t =
+        | Variable of
+            { location : Location.t
+            ; identifier : Identifier.t
+            }
+            (** [Variable { identifier; _ }] is the type-level variable
+                pattern `identifier'. *)
+        | Constant of
+            { location : Location.t
+            ; identifier : QualifiedIdentifier.t
+            ; operator : Operator.t
+            }
+            (** [Constant { identifier; _ }] is the type-level constant
+                pattern `identifier'. *)
+        | Application of
+            { location : Location.t
+            ; applicand : Typ.Pattern.t
+            ; arguments : Term.Pattern.t List.t
+            }
+            (** [Application { applicand; arguments; _ }] is the type-level
+                application pattern of `applicand' with `arguments'.
+
+                - If [applicand = Typ.Constant { operator; _ }] and
+                  [Operator.is_infix operator], then
+                  [List.length arguments = 2].
+                - If [applicand = Typ.Constant { operator; _ }] and
+                  [Operator.is_postfix operator], then
+                  [List.length arguments = 1]. *)
+        | Wildcard of { location : Location.t }
+            (** [Wildcard _] is the type-level catch-all pattern `_'. *)
+        | Block of
+            { location : Location.t
+            ; elements :
+                (Identifier.t Option.t * Typ.Pattern.t)
+                * (Identifier.t * Typ.Pattern.t) List.t
+            }
+            (** [Block { elements; _ }] is the type-level block pattern
+                `block (elements)'.
+
+                - If [elements = ((Option.None, _typ), rest)], then
+                  [rest = \[\]].
+                - If [elements = ((label, _typ), rest)] with [rest <> \[\]],
+                  then [label = Option.Some identifier]. *)
+        | Parenthesized of
+            { location : Location.t
+            ; pattern : Typ.Pattern.t
+            }
+            (** [Parenthesized { pattern; _ }] is the type-level pattern
+                `(pattern)'
+
+                If [typ = Constant _], then [Parenthesized { typ; _ }] is a
+                quoted type-level LF operator. . *)
+    end
   end =
     Typ
 
@@ -294,9 +353,6 @@ module CLF = struct
           (** [Application { applicand; arguments; _ }] is the term-level
               application of `applicand' with arguments `arguments'.
 
-              - If [applicand = Term.Constant { operator; _ }] and
-                [Operator.is_prefix operator], then
-                [List.length arguments >= 0].
               - If [applicand = Term.Constant { operator; _ }] and
                 [Operator.is_infix operator], then
                 [List.length arguments = 2].
@@ -345,10 +401,94 @@ module CLF = struct
       | Parenthesized of
           { location : Location.t
           ; term : Term.t
-          }  (** [Parenthesized { term; _ }] is the term `( term )`. *)
+          }
+          (** [Parenthesized { term; _ }] is the term `( term )`.
+
+              If [term = Constant _], then [Parenthesized { term; _ }] is a
+              quoted term-level LF operator. *)
+
+    (** External contextual LF term patterns. *)
+    module rec Pattern : sig
+      type t =
+        | Variable of
+            { location : Location.t
+            ; identifier : Identifier.t
+            }
+            (** [Variable { identifier; _ }] is the term-level variable
+                pattern `identifier'. *)
+        | Constant of
+            { location : Location.t
+            ; identifier : QualifiedIdentifier.t
+            ; operator : Operator.t
+            }
+            (** [Constant { identifier; _ }] is the term-level constant
+                pattern `identifier'. *)
+        | Wildcard of { location : Location.t }
+            (** [Wildcard _] is the term-level catch-all pattern `_'. *)
+        | Tuple of
+            { location : Location.t
+            ; terms : Term.Pattern.t List1.t
+            }  (** [Tuple { terms; _ }] is the tuple pattern `<terms>'. *)
+        | Projection of
+            { location : Location.t
+            ; term : Term.Pattern.t
+            ; projection :
+                [ `By_identifier of Identifier.t | `By_position of Int.t ]
+            }
+            (** [Projection { term; _ }] is the pattern for the projection of
+                a tuple `term'. This projection is used to indicate which
+                element of a tuple the scrutinee is matched against in a
+                `case' expression. *)
+        | Abstraction of
+            { location : Location.t
+            ; parameter_identifier : Identifier.t Option.t
+            ; parameter_type : Typ.t Option.t
+            ; body : Term.Pattern.t
+            }
+            (** [Abstraction { parameter_identifier = x; parameter_type = t; body; _ }]
+                is the pattern `\x:t. body'. *)
+        | Substitution of
+            { location : Location.t
+            ; term : Term.Pattern.t
+            ; substitution : Substitution.t
+            }
+            (** [Substitution { term; substitution; _ }] is the pattern
+                `term[substitution]'. *)
+        | Application of
+            { location : Location.t
+            ; applicand : Term.Pattern.t
+            ; arguments : Term.Pattern.t List.t
+            }
+            (** [Application { applicand; arguments; _ }] is the term-level
+                application pattern of `applicand' with arguments
+                `arguments'.
+
+                - If [applicand = Term.Constant { operator; _ }] and
+                  [Operator.is_infix operator], then
+                  [List.length arguments = 2].
+                - If [applicand = Term.Constant { operator; _ }] and
+                  [Operator.is_postfix operator], then
+                  [List.length arguments = 1]. *)
+        | TypeAnnotated of
+            { location : Location.t
+            ; term : Term.Pattern.t
+            ; typ : Typ.t
+            }
+            (** [TypeAnnotated { term = x; typ = t; _ }] is the pattern `x :
+                t'. *)
+        | Parenthesized of
+            { location : Location.t
+            ; pattern : Term.Pattern.t
+            }
+            (** [Parenthesized { term; _ }] is the term pattern `(pattern)`.
+
+                If [term = Constant _], then [Parenthesized { term; _ }] is a
+                quoted term-level LF operator. *)
+    end
   end =
     Term
 
+  (** External contextual LF substitutions. *)
   and Substitution : sig
     (** [{ extends_identity; terms; _ }] is either:
 
@@ -395,4 +535,26 @@ module CLF = struct
   let location_of_substitution substitution =
     match substitution with
     | Substitution.{ location; _ } -> location
+
+  let location_of_typ_pattern typ_pattern =
+    match typ_pattern with
+    | Typ.Pattern.Variable { location; _ }
+    | Typ.Pattern.Constant { location; _ }
+    | Typ.Pattern.Application { location; _ }
+    | Typ.Pattern.Wildcard { location; _ }
+    | Typ.Pattern.Block { location; _ }
+    | Typ.Pattern.Parenthesized { location; _ } -> location
+
+  let location_of_term_pattern term_pattern =
+    match term_pattern with
+    | Term.Pattern.Variable { location; _ }
+    | Term.Pattern.Constant { location; _ }
+    | Term.Pattern.Wildcard { location; _ }
+    | Term.Pattern.Tuple { location; _ }
+    | Term.Pattern.Projection { location; _ }
+    | Term.Pattern.Abstraction { location; _ }
+    | Term.Pattern.Substitution { location; _ }
+    | Term.Pattern.Application { location; _ }
+    | Term.Pattern.TypeAnnotated { location; _ }
+    | Term.Pattern.Parenthesized { location; _ } -> location
 end

@@ -1104,6 +1104,8 @@ module CLF = struct
 
   (** {2 Exceptions for contextual LF type pattern elaboration} *)
 
+  exception Illegal_wildcard_type_pattern of Location.t
+
   exception Illegal_labellable_hole_type_pattern of Location.t
 
   exception Illegal_lambda_type_pattern of Location.t
@@ -1243,6 +1245,10 @@ module CLF = struct
       Format.fprintf ppf
         "Expected a contextual LF type pattern but found a contextual LF \
          term pattern instead: %a@."
+        Location.pp location
+    | Illegal_wildcard_type_pattern location ->
+      Format.fprintf ppf
+        "Wildcards may not appear as contextual LF type patterns: %a@."
         Location.pp location
     | Illegal_labellable_hole_type_pattern location ->
       Format.fprintf ppf
@@ -2104,6 +2110,8 @@ module CLF = struct
       raise @@ Illegal_substitution_type_pattern location
     | Synprs.CLF.Object.RawPi { location; _ } ->
       raise @@ Illegal_pi_type_pattern location
+    | Synprs.CLF.Object.RawHole { location; variant = `Underscore } ->
+      raise @@ Illegal_wildcard_type_pattern location
     | Synprs.CLF.Object.RawHole
         { location; variant = `Unlabelled | `Labelled _ } ->
       raise @@ Illegal_labellable_hole_type_pattern location
@@ -2111,12 +2119,9 @@ module CLF = struct
       raise @@ Illegal_forward_arrow_type_pattern location
     | Synprs.CLF.Object.RawArrow { location; orientation = `Backward; _ } ->
       raise @@ Illegal_backward_arrow_type_pattern location
-    | Synprs.CLF.Object.RawHole { location; variant = `Underscore } ->
-      Synext'.CLF.Typ.Pattern.Wildcard { location }
     | Synprs.CLF.Object.RawIdentifier { location; identifier } -> (
-      (* As an LF type pattern, plain identifiers are either type-level
-         constants, variables already present in the pattern, or new pattern
-         variables. *)
+      (* As an LF type pattern, plain identifiers are necessarily type-level
+         constants. *)
       let qualified_identifier =
         QualifiedIdentifier.make_simple identifier
       in
@@ -2125,7 +2130,12 @@ module CLF = struct
           (Elaboration_state.LF_type_constant operator) ->
         Synext'.CLF.Typ.Pattern.Constant
           { location; identifier = qualified_identifier; operator }
-      | _ -> Synext'.CLF.Typ.Pattern.Variable { location; identifier })
+      | entry ->
+        raise @@ Expected_type_constant { location; actual_binding = entry }
+      | exception QualifiedIdentifier.Dictionary.Unbound_identifier _ ->
+        raise
+        @@ Unbound_type_constant
+             { location; identifier = qualified_identifier })
     | Synprs.CLF.Object.RawQualifiedIdentifier { location; identifier } -> (
       (* Qualified identifiers without modules were parsed as plain
          identifiers *)

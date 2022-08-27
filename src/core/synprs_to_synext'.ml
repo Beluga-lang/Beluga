@@ -1550,8 +1550,8 @@ module CLF = struct
       let typ' = elaborate_typ state object_ in
       Synext'.CLF.Typ.Parenthesized { location; typ = typ' }
 
-  (** [elaborate_term state object_] is [object_] rewritten as an LF term
-      with respect to the elaboration context [state].
+  (** [elaborate_term state object_] is [object_] rewritten as a contextual
+      LF term with respect to the elaboration context [state].
 
       Term applications are rewritten with {!elaborate_application} using
       Dijkstra's shunting yard algorithm.
@@ -1672,10 +1672,11 @@ module CLF = struct
       let terms' = List.map (elaborate_term state) (List1.to_list objects) in
       Synext'.CLF.Substitution.{ location; extends_identity; terms = terms' }
 
-  (** [elaborate_arrows state arrow] elaborates the LF arrow type [arrow].
-      Both forward and backward arrows were parsed as right-associative
-      because the parser is top-down whereas bottom-up parsing is required to
-      handle left and right-associative operators of the same precedence.
+  (** [elaborate_arrows state arrow] elaborates the contextual LF arrow type
+      [arrow]. Both forward and backward arrows were parsed as
+      right-associative because the parser is top-down whereas bottom-up
+      parsing is required to handle left and right-associative operators of
+      the same precedence.
 
       This elaboration step uses Dijkstra's shunting yard algorithm in a
       simpler setting than that of {!elaborate_application}. *)
@@ -1747,11 +1748,11 @@ module CLF = struct
     fun arrow -> ShuntingYard.shunting_yard (flatten arrow)
 
   (** [elaborate_application state objects] elaborates [objects] as either a
-      type-level or term-level LF application with respect to the elaboration
-      context [state].
+      type-level or term-level contextual LF application with respect to the
+      elaboration context [state].
 
-      In both type-level and term-level LF applications, arguments are LF
-      terms.
+      In both type-level and term-level contextual LF applications, arguments
+      are contextual LF terms.
 
       This elaboration is in three steps:
 
@@ -2073,19 +2074,20 @@ module CLF = struct
   end
 
   (** [elaborate_typ state object_] is [object_] rewritten as a contextual LF
-      type with respect to the elaboration context [state].
+      type pattern with respect to the elaboration context [state].
 
-      Type applications are rewritten with {!elaborate_application_pattern}
-      using Dijkstra's shunting yard algorithm.
+      Type pattern applications are rewritten with
+      {!elaborate_application_pattern} using Dijkstra's shunting yard
+      algorithm.
 
       This function imposes syntactic restrictions on [object_], but does not
       perform normalization nor validation. To see the syntactic restrictions
       from LF objects to LF types, see the Beluga language specification.
 
-      Examples of invalid types that may result from this elaboration
+      Examples of invalid type patterns that may result from this elaboration
       include:
 
-      - [c (_ _) _] *)
+      - [c x x], where [x] is a free pattern variable *)
   let rec elaborate_typ_pattern state object_ =
     match object_ with
     | Synprs.CLF.Object.RawLambda { location; _ } ->
@@ -2112,8 +2114,9 @@ module CLF = struct
     | Synprs.CLF.Object.RawHole { location; variant = `Underscore } ->
       Synext'.CLF.Typ.Pattern.Wildcard { location }
     | Synprs.CLF.Object.RawIdentifier { location; identifier } -> (
-      (* As an LF type, plain identifiers are necessarily type-level
-         constants. *)
+      (* As an LF type pattern, plain identifiers are either type-level
+         constants, variables already present in the pattern, or new pattern
+         variables. *)
       let qualified_identifier =
         QualifiedIdentifier.make_simple identifier
       in
@@ -2122,17 +2125,12 @@ module CLF = struct
           (Elaboration_state.LF_type_constant operator) ->
         Synext'.CLF.Typ.Pattern.Constant
           { location; identifier = qualified_identifier; operator }
-      | entry ->
-        raise @@ Expected_type_constant { location; actual_binding = entry }
-      | exception QualifiedIdentifier.Dictionary.Unbound_identifier _ ->
-        raise
-        @@ Unbound_type_constant
-             { location; identifier = qualified_identifier })
+      | _ -> Synext'.CLF.Typ.Pattern.Variable { location; identifier })
     | Synprs.CLF.Object.RawQualifiedIdentifier { location; identifier } -> (
       (* Qualified identifiers without modules were parsed as plain
          identifiers *)
       assert (List.length (QualifiedIdentifier.modules identifier) >= 1);
-      (* As an LF type, identifiers of the form [(<identifier> `::')+
+      (* As an LF type pattern, identifiers of the form [(<identifier> `::')+
          <identifier>] are necessarily type-level constants. *)
       match Elaboration_state.lookup identifier state with
       | QualifiedIdentifier.Dictionary.Entry
@@ -2158,8 +2156,9 @@ module CLF = struct
       let pattern' = elaborate_typ_pattern state object_ in
       Synext'.CLF.Typ.Pattern.Parenthesized { location; pattern = pattern' }
 
-  (** [elaborate_term_pattern state object_] is [object_] rewritten as an LF
-      term with respect to the elaboration context [state].
+  (** [elaborate_term_pattern state object_] is [object_] rewritten as a
+      contextual LF term pattern with respect to the elaboration context
+      [state].
 
       Term applications are rewritten with {!elaborate_application_pattern}
       using Dijkstra's shunting yard algorithm.
@@ -2168,11 +2167,10 @@ module CLF = struct
       perform normalization nor validation. To see the syntactic restrictions
       from LF objects to LF terms, see the Beluga language specification.
 
-      Examples of invalid terms that may result from this elaboration
+      Examples of invalid term patterns that may result from this elaboration
       include:
 
-      - [_ _]
-      - [\\_. _ _] *)
+      - [c x x], where [x] is a free pattern variable *)
   and elaborate_term_pattern state object_ =
     match object_ with
     | Synprs.CLF.Object.RawPi { location; _ } ->
@@ -2187,8 +2185,9 @@ module CLF = struct
         { location; variant = `Unlabelled | `Labelled _ } ->
       raise @@ Illegal_labellable_hole_term_pattern location
     | Synprs.CLF.Object.RawIdentifier { location; identifier } -> (
-      (* As an LF term, plain identifiers are either term-level constants or
-         variables (bound or free). *)
+      (* As an LF term pattern, plain identifiers are either term-level
+         constants, variables already present in the pattern, or new pattern
+         variables. *)
       let qualified_identifier =
         QualifiedIdentifier.make_simple identifier
       in
@@ -2197,19 +2196,12 @@ module CLF = struct
           (Elaboration_state.LF_term_constant operator) ->
         Synext'.CLF.Term.Pattern.Constant
           { location; identifier = qualified_identifier; operator }
-      | QualifiedIdentifier.Dictionary.Entry Elaboration_state.LF_term ->
-        (* Bound variable *)
-        Synext'.CLF.Term.Pattern.Variable { location; identifier }
-      | entry ->
-        raise @@ Expected_term_constant { location; actual_binding = entry }
-      | exception QualifiedIdentifier.Dictionary.Unbound_identifier _ ->
-        (* Free variable *)
-        Synext'.CLF.Term.Pattern.Variable { location; identifier })
+      | _ -> Synext'.CLF.Term.Pattern.Variable { location; identifier })
     | Synprs.CLF.Object.RawQualifiedIdentifier { location; identifier } -> (
       (* Qualified identifiers without modules were parsed as plain
          identifiers *)
       assert (List.length (QualifiedIdentifier.modules identifier) >= 1);
-      (* As an LF term, identifiers of the form [(<identifier> `::')+
+      (* As an LF term pattern, identifiers of the form [(<identifier> `::')+
          <identifier>] are necessarily term-level constants. *)
       match Elaboration_state.lookup identifier state with
       | QualifiedIdentifier.Dictionary.Entry

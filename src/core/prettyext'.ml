@@ -956,9 +956,7 @@ module CLF = struct
   let rec remove_parentheses_typ_pattern ?(unquote_operators = true)
       typ_pattern =
     match typ_pattern with
-    | Typ.Pattern.Variable _ -> typ_pattern
     | Typ.Pattern.Constant _ -> typ_pattern
-    | Typ.Pattern.Wildcard _ -> typ_pattern
     | Typ.Pattern.Application { location; applicand; arguments } ->
       let applicand' =
         remove_parentheses_typ_pattern ~unquote_operators applicand
@@ -1127,9 +1125,7 @@ module CLF = struct
     | Typ.Pattern.Application { applicand = Typ.Pattern.Constant _; _ }
     (* User-defined operator application *) -> 49
     | Typ.Pattern.Application _ -> 50
-    | Typ.Pattern.Variable _
     | Typ.Pattern.Constant _
-    | Typ.Pattern.Wildcard _
     | Typ.Pattern.Parenthesized _ -> 80
 
   (** [term_pattern_precedence term_pattern] is the precedence of
@@ -1500,9 +1496,7 @@ module CLF = struct
       and without considering locations. *)
   let rec parenthesize_typ_pattern typ_pattern =
     match typ_pattern with
-    | Typ.Pattern.Variable _ -> typ_pattern
     | Typ.Pattern.Constant _ -> typ_pattern
-    | Typ.Pattern.Wildcard _ -> typ_pattern
     | Typ.Pattern.Application
         { location
         ; applicand =
@@ -1903,8 +1897,6 @@ module CLF = struct
 
   and pp_typ_pattern ppf typ_pattern =
     match typ_pattern with
-    | Typ.Pattern.Variable { identifier; _ } ->
-      Format.fprintf ppf "%a" Identifier.pp identifier
     | Typ.Pattern.Constant { identifier; _ } ->
       Format.fprintf ppf "%a" QualifiedIdentifier.pp identifier
     | Typ.Pattern.Application { applicand; arguments = []; _ } ->
@@ -1937,7 +1929,6 @@ module CLF = struct
            ~pp_sep:(fun ppf () -> Format.fprintf ppf "@ ")
            pp_term_pattern)
         arguments
-    | Typ.Pattern.Wildcard _ -> Format.fprintf ppf "_"
     | Typ.Pattern.Block { elements = (Option.None, typ), []; _ } ->
       Format.fprintf ppf "@[<2>block %a]" pp_typ_pattern typ
     | Typ.Pattern.Block { elements = (Option.None, _typ), _nt1 :: _nts; _ }

@@ -265,12 +265,6 @@ module CLF = struct
     (** External contextual LF type patterns. *)
     module rec Pattern : sig
       type t =
-        | Variable of
-            { location : Location.t
-            ; identifier : Identifier.t
-            }
-            (** [Variable { identifier; _ }] is the type-level variable
-                pattern `identifier'. *)
         | Constant of
             { location : Location.t
             ; identifier : QualifiedIdentifier.t
@@ -292,8 +286,6 @@ module CLF = struct
                 - If [applicand = Typ.Constant { operator; _ }] and
                   [Operator.is_postfix operator], then
                   [List.length arguments = 1]. *)
-        | Wildcard of { location : Location.t }
-            (** [Wildcard _] is the type-level catch-all pattern `_'. *)
         | Block of
             { location : Location.t
             ; elements :
@@ -538,10 +530,8 @@ module CLF = struct
 
   let location_of_typ_pattern typ_pattern =
     match typ_pattern with
-    | Typ.Pattern.Variable { location; _ }
     | Typ.Pattern.Constant { location; _ }
     | Typ.Pattern.Application { location; _ }
-    | Typ.Pattern.Wildcard { location; _ }
     | Typ.Pattern.Block { location; _ }
     | Typ.Pattern.Parenthesized { location; _ } -> location
 

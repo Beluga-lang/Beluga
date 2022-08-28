@@ -46,7 +46,123 @@ open Synext'
     - [a -> b -> c], which is parsed as [a -> (b -> c)]
     - [a <- b <- c], which is parsed as [(a <- b) <- c]
     - [a -> b <- c], which is parsed as [(a -> b) <- c]
-    - [a <- b -> c], which is parsed as [a <- (b -> c)] *)
+    - [a <- b -> c], which is parsed as [a <- (b -> c)]
+
+    Beluga's specification also mentions weak prefix operators. One such
+    operator is lambda abstraction. Since it is prefix, then it is
+    right-associative. However, in contrast with right-associative operators,
+    its right argument does not need to be parenthesized at all. *)
+
+(** AST nodes that can explicitly be parenthesized. *)
+module type PARENTHESIZABLE = sig
+  (** The type of AST node. *)
+  type t
+
+  (** [add_parentheses node] is [node] with the addition of a pair of outer
+      parentheses. *)
+  val add_parentheses : t -> t
+end
+
+(** Functor for creating a helper module for parenthesizing AST nodes. *)
+module Make_parenthesizer (Argument : sig
+  include PARENTHESIZABLE
+
+  (** [precedence node] is the value corresponding to the order of [node] as
+      it was parsed in a recursive descent parser. *)
+  val precedence : t -> Int.t
+end) : sig
+  (** The type of AST node. *)
+  type t = Argument.t
+
+  (** [add_parentheses node] is [node] with the addition of a pair of outer
+      parentheses. *)
+  val add_parentheses : t -> t
+
+  (** [precedence node] is the value corresponding to the order of [node] as
+      it was parsed in a recursive descent parser. *)
+  val precedence : t -> Int.t
+
+  (** [parenthesize_left_argument_left_associative_operator parent_precedence node]
+      parenthesizes [node] as if it were a left argument to a
+      left-associative infix operator in a parent node of precedence
+      [parent_precedence]. *)
+  val parenthesize_left_argument_left_associative_operator :
+    parent_precedence:Int.t -> t -> t
+
+  (** [parenthesize_right_argument_left_associative_operator parent_precedence node]
+      parenthesizes [node] as if it were a right argument to a
+      left-associative infix operator in a parent node of precedence
+      [parent_precedence]. *)
+  val parenthesize_right_argument_left_associative_operator :
+    parent_precedence:Int.t -> t -> t
+
+  (** [parenthesize_left_argument_right_associative_operator parent_precedence node]
+      parenthesizes [node] as if it were a left argument to a
+      right-associative infix operator in a parent node of precedence
+      [parent_precedence]. *)
+  val parenthesize_left_argument_right_associative_operator :
+    parent_precedence:Int.t -> t -> t
+
+  (** [parenthesize_right_argument_right_associative_operator parent_precedence node]
+      parenthesizes [node] as if it were a right argument to a
+      right-associative infix operator in a parent node of precedence
+      [parent_precedence]. *)
+  val parenthesize_right_argument_right_associative_operator :
+    parent_precedence:Int.t -> t -> t
+
+  (** [parenthesize_argument_non_associative_operator parent_precedence node]
+      parenthesizes [node] as if it were an argument to a non-associative
+      infix operator in a parent node of precedence [parent_precedence]. *)
+  val parenthesize_argument_non_associative_operator :
+    parent_precedence:Int.t -> t -> t
+
+  (** [parenthesize_argument_prefix_operator parent_precedence node]
+      parenthesizes [node] as if it were an argument to a prefix operator in
+      a parent node of precedence [parent_precedence]. *)
+  val parenthesize_argument_prefix_operator :
+    parent_precedence:Int.t -> t -> t
+
+  (** [parenthesize_argument_postfix_operator parent_precedence node]
+      parenthesizes [node] as if it were an argument to a postfix operator in
+      a parent node of precedence [parent_precedence]. *)
+  val parenthesize_argument_postfix_operator :
+    parent_precedence:Int.t -> t -> t
+end = struct
+  include Argument
+
+  let[@inline] parenthesize_argument_of_lesser_precedence ~parent_precedence
+      argument =
+    if precedence argument < parent_precedence then
+      Argument.add_parentheses argument
+    else argument
+
+  let[@inline] parenthesize_argument_of_lesser_than_or_equal_precedence
+      ~parent_precedence argument =
+    if precedence argument <= parent_precedence then
+      Argument.add_parentheses argument
+    else argument
+
+  let parenthesize_left_argument_left_associative_operator =
+    parenthesize_argument_of_lesser_precedence
+
+  let parenthesize_right_argument_left_associative_operator =
+    parenthesize_argument_of_lesser_than_or_equal_precedence
+
+  let parenthesize_left_argument_right_associative_operator =
+    parenthesize_argument_of_lesser_than_or_equal_precedence
+
+  let parenthesize_right_argument_right_associative_operator =
+    parenthesize_argument_of_lesser_precedence
+
+  let parenthesize_argument_non_associative_operator =
+    parenthesize_argument_of_lesser_than_or_equal_precedence
+
+  let parenthesize_argument_prefix_operator =
+    parenthesize_argument_of_lesser_than_or_equal_precedence
+
+  let parenthesize_argument_postfix_operator =
+    parenthesize_argument_of_lesser_than_or_equal_precedence
+end
 
 (** {1 Printing LF Kinds, Types and Terms} *)
 module LF = struct
@@ -178,56 +294,68 @@ module LF = struct
 
   (** {1 Adding Necessary Parentheses} *)
 
-  let add_parentheses_kind kind =
-    let location = location_of_kind kind in
-    Kind.Parenthesized { location; kind }
+  module Kind_parenthesizer = Make_parenthesizer (struct
+    type t = Kind.t
 
-  let add_parentheses_typ typ =
-    let location = location_of_typ typ in
-    Typ.Parenthesized { location; typ }
+    let[@inline] add_parentheses kind =
+      let location = location_of_kind kind in
+      Kind.Parenthesized { location; kind }
 
-  let add_parentheses_term term =
-    let location = location_of_term term in
-    Term.Parenthesized { location; term }
+    (** [precedence kind] is the precedence of [kind] based on the order of
+        the recursive descent parsing of LF objects. *)
+    let precedence kind =
+      match kind with
+      | Kind.Pi _ -> 10
+      | Kind.Arrow _ -> 20
+      | Kind.Typ _ | Kind.Parenthesized _ -> 50
+  end)
 
-  (** [kind_precedence kind] is the precedence of [kind] based on the order
-      of the recursive descent parsing of LF objects. *)
-  let kind_precedence kind =
-    match kind with
-    | Kind.Pi _ -> 10
-    | Kind.Arrow _ -> 20
-    | Kind.Typ _ | Kind.Parenthesized _ -> 50
+  module Typ_parenthesizer = Make_parenthesizer (struct
+    type t = Typ.t
 
-  (** [typ_precedence typ] is the precedence of [typ] based on the order of
-      the recursive descent parsing of LF objects.
+    let[@inline] add_parentheses typ =
+      let location = location_of_typ typ in
+      Typ.Parenthesized { location; typ }
 
-      Exceptionally, the juxtaposition of LF objects has higher precedence
-      than user-defined operator applications. *)
-  let typ_precedence typ =
-    match typ with
-    | Typ.Pi _ -> 10
-    | Typ.ForwardArrow _ | Typ.BackwardArrow _ -> 20
-    | Typ.Application { applicand = Typ.Constant _; _ }
-    (* User-defined operator application *) -> 39
-    | Typ.Application _ -> 40
-    | Typ.Constant _ | Typ.Parenthesized _ -> 50
+    (** [precedence typ] is the precedence of [typ] based on the order of the
+        recursive descent parsing of LF objects.
 
-  (** [term_precedence term] is the precedence of [term] based on the order
-      of the recursive descent parsing of LF objects.
+        Exceptionally, the juxtaposition of LF objects has higher precedence
+        than user-defined operator applications. *)
+    let precedence typ =
+      match typ with
+      | Typ.Pi _ -> 10
+      | Typ.ForwardArrow _ | Typ.BackwardArrow _ -> 20
+      | Typ.Application { applicand = Typ.Constant _; _ }
+      (* User-defined operator application *) -> 39
+      | Typ.Application _ -> 40
+      | Typ.Constant _ | Typ.Parenthesized _ -> 50
+  end)
 
-      Exceptionally, the juxtaposition of LF objects has higher precedence
-      than user-defined operator applications. *)
-  let term_precedence term =
-    match term with
-    | Term.Abstraction _ -> 10
-    | Term.TypeAnnotated _ -> 30
-    | Term.Application { applicand = Term.Constant _; _ }
-    (* User-defined operator application *) -> 39
-    | Term.Application _ -> 40
-    | Term.Wildcard _
-    | Term.Variable _
-    | Term.Constant _
-    | Term.Parenthesized _ -> 60
+  module Term_parenthesizer = Make_parenthesizer (struct
+    type t = Term.t
+
+    let[@inline] add_parentheses term =
+      let location = location_of_term term in
+      Term.Parenthesized { location; term }
+
+    (** [precedence term] is the precedence of [term] based on the order of
+        the recursive descent parsing of LF objects.
+
+        Exceptionally, the juxtaposition of LF objects has higher precedence
+        than user-defined operator applications. *)
+    let precedence term =
+      match term with
+      | Term.Abstraction _ -> 10
+      | Term.TypeAnnotated _ -> 30
+      | Term.Application { applicand = Term.Constant _; _ }
+      (* User-defined operator application *) -> 39
+      | Term.Application _ -> 40
+      | Term.Wildcard _
+      | Term.Variable _
+      | Term.Constant _
+      | Term.Parenthesized _ -> 60
+  end)
 
   (** [parenthesize_kind kind] is [kind] with the addition of necessary
       parentheses for printing.
@@ -237,17 +365,19 @@ module LF = struct
       {!remove_parentheses_kind} and without considering locations. *)
   let rec parenthesize_kind kind =
     match kind with
-    | Kind.Typ _ -> kind
     | Kind.Arrow { location; domain; range } ->
-      (* Arrow kinds are right-associative *)
-      let domain' =
-        if kind_precedence kind >= typ_precedence domain then
-          add_parentheses_typ (parenthesize_typ domain)
-        else parenthesize_typ domain
+      let domain' = parenthesize_typ domain
       and range' = parenthesize_kind range in
-      Kind.Arrow { location; domain = domain'; range = range' }
+      (* Arrows are weakly right-associative *)
+      let domain'' =
+        Typ_parenthesizer
+        .parenthesize_left_argument_right_associative_operator
+          ~parent_precedence:(Kind_parenthesizer.precedence kind)
+          domain'
+      in
+      Kind.Arrow { location; domain = domain''; range = range' }
     | Kind.Pi { location; parameter_identifier; parameter_type; body } ->
-      (* Pi kinds are weak prefix operators *)
+      (* Pis are weak prefix operators *)
       let parameter_type' = parenthesize_typ parameter_type
       and body' = parenthesize_kind body in
       Kind.Pi
@@ -256,7 +386,7 @@ module LF = struct
         ; parameter_type = parameter_type'
         ; body = body'
         }
-    | Kind.Parenthesized _ -> kind
+    | Kind.Typ _ | Kind.Parenthesized _ -> kind
 
   (** [parenthesize_typ typ] is [typ] with the addition of necessary
       parentheses for printing.
@@ -266,59 +396,66 @@ module LF = struct
       {!remove_parentheses_typ} and without considering locations. *)
   and parenthesize_typ typ =
     match typ with
-    | Typ.Constant _ -> typ
     | Typ.Application
         { location
         ; applicand =
             Typ.Constant { operator = applicand_operator; _ } as applicand
         ; arguments
         }
-    (* Type constant application *) ->
+    (* User-defined type constant application *) ->
       let arguments' =
-        parenthesize_operator_application_arguments (typ_precedence typ)
+        parenthesize_operator_application_arguments
+          (Typ_parenthesizer.precedence typ)
           applicand_operator arguments
       in
       Typ.Application { location; applicand; arguments = arguments' }
     | Typ.Application { location; applicand; arguments }
     (* Arbitrary type application *) ->
+      let parent_precedence = Typ_parenthesizer.precedence typ in
+      let applicand' = parenthesize_typ applicand in
       (* Parenthesize as application in prefix notation *)
-      let applicand' =
-        if typ_precedence typ >= typ_precedence applicand then
-          add_parentheses_typ (parenthesize_typ applicand)
-        else parenthesize_typ applicand
+      let applicand'' =
+        Typ_parenthesizer.parenthesize_argument_prefix_operator
+          ~parent_precedence applicand'
       in
       let arguments' =
-        parenthesize_application_arguments (typ_precedence typ) arguments
+        parenthesize_application_arguments parent_precedence arguments
       in
       Typ.Application
-        { location; applicand = applicand'; arguments = arguments' }
+        { location; applicand = applicand''; arguments = arguments' }
     | Typ.ForwardArrow { location; domain; range } ->
-      (* Forward arrow types are right-associative and of equal precedence
-         with backward arrow types *)
-      let domain' =
-        if typ_precedence typ >= typ_precedence domain then
-          add_parentheses_typ (parenthesize_typ domain)
-        else parenthesize_typ domain
+      let domain' = parenthesize_typ domain
       and range' = parenthesize_typ range in
-      Typ.ForwardArrow { location; domain = domain'; range = range' }
-    | Typ.BackwardArrow { location; range; domain } ->
-      (* Backward arrow types are left-associative and of equal precedence
-         with forward arrow types *)
-      let range' =
-        match range with
-        | Typ.BackwardArrow _ -> parenthesize_typ range
-        | range when typ_precedence typ >= typ_precedence range ->
-          add_parentheses_typ (parenthesize_typ range)
-        | range -> parenthesize_typ range
-      and domain' =
-        match domain with
-        | Typ.BackwardArrow _ ->
-          add_parentheses_typ (parenthesize_typ domain)
-        | _ -> parenthesize_typ domain
+      (* Forward arrows are right-associative and of equal precedence with
+         backward arrows *)
+      let domain'' =
+        Typ_parenthesizer
+        .parenthesize_left_argument_right_associative_operator
+          ~parent_precedence:(Typ_parenthesizer.precedence typ)
+          domain'
       in
-      Typ.BackwardArrow { location; range = range'; domain = domain' }
+      Typ.ForwardArrow { location; domain = domain''; range = range' }
+    | Typ.BackwardArrow { location; range; domain } ->
+      let range' = parenthesize_typ range
+      and domain' = parenthesize_typ domain in
+      (* Backward arrows are left-associative and of equal precedence with
+         forward arrows *)
+      let range'' =
+        match range' with
+        | Typ.BackwardArrow _ -> range'
+        | _ ->
+          Typ_parenthesizer
+          .parenthesize_left_argument_left_associative_operator
+            ~parent_precedence:(Typ_parenthesizer.precedence typ)
+            range'
+      and domain'' =
+        match domain' with
+        | Typ.BackwardArrow _ -> Typ_parenthesizer.add_parentheses domain'
+        | _ -> domain'
+      in
+      Typ.BackwardArrow { location; range = range''; domain = domain'' }
     | Typ.Pi { location; parameter_identifier; parameter_type; body } ->
-      (* Pi types are weak prefix operators *)
+      (* Pis are weak prefix operators *)
       let parameter_type' = parenthesize_typ parameter_type
       and body' = parenthesize_typ body in
       Typ.Pi
@@ -327,7 +464,7 @@ module LF = struct
         ; parameter_type = parameter_type'
         ; body = body'
         }
-    | Typ.Parenthesized _ -> typ
+    | Typ.Constant _ | Typ.Parenthesized _ -> typ
 
   (** [parenthesize_term term] is [term] with the addition of necessary
       parentheses for printing.
@@ -337,8 +474,6 @@ module LF = struct
       {!remove_parentheses_term} and without considering locations. *)
   and parenthesize_term term =
     match term with
-    | Term.Variable _ -> term
-    | Term.Constant _ -> term
     | Term.Application
         { location
         ; applicand =
@@ -347,25 +482,28 @@ module LF = struct
         }
     (* Term constant application *) ->
       let arguments' =
-        parenthesize_operator_application_arguments (term_precedence term)
+        parenthesize_operator_application_arguments
+          (Term_parenthesizer.precedence term)
           applicand_operator arguments
       in
       Term.Application { location; applicand; arguments = arguments' }
     | Term.Application { location; applicand; arguments }
     (* Arbitrary term application *) ->
+      let parent_precedence = Term_parenthesizer.precedence term in
+      let applicand' = parenthesize_term applicand in
       (* Parenthesize as term application in prefix notation *)
-      let applicand' =
-        if term_precedence term >= term_precedence applicand then
-          add_parentheses_term (parenthesize_term applicand)
-        else parenthesize_term applicand
+      let applicand'' =
+        Term_parenthesizer.parenthesize_argument_prefix_operator
+          ~parent_precedence applicand'
       in
       let arguments' =
-        parenthesize_application_arguments (term_precedence term) arguments
+        parenthesize_application_arguments parent_precedence arguments
       in
       Term.Application
-        { location; applicand = applicand'; arguments = arguments' }
+        { location; applicand = applicand''; arguments = arguments' }
     | Term.Abstraction
         { location; parameter_identifier; parameter_type; body } ->
+      (* Lambdas are weak prefix operators *)
       let parameter_type' = Option.map parenthesize_typ parameter_type
       and body' = parenthesize_term body in
       Term.Abstraction
@@ -374,195 +512,183 @@ module LF = struct
         ; parameter_type = parameter_type'
         ; body = body'
         }
-    | Term.Wildcard _ -> term
     | Term.TypeAnnotated { location; term = annotated_term; typ } ->
-      let annotated_term' =
-        if term_precedence term >= term_precedence annotated_term then
-          add_parentheses_term (parenthesize_term annotated_term)
-        else parenthesize_term annotated_term
+      (* Type ascriptions are left-associative *)
+      let annotated_term' = parenthesize_term annotated_term in
+      let annotated_term'' =
+        Term_parenthesizer
+        .parenthesize_left_argument_left_associative_operator
+          ~parent_precedence:(Term_parenthesizer.precedence term)
+          annotated_term'
       and typ' = parenthesize_typ typ in
-      Term.TypeAnnotated { location; term = annotated_term'; typ = typ' }
+      Term.TypeAnnotated { location; term = annotated_term''; typ = typ' }
+    | Term.Variable _
+    | Term.Constant _
+    | Term.Wildcard _
     | Term.Parenthesized _ -> term
 
-  (** [parenthesize_application_arguments application_precedence arguments]
-      is the arguments in [argument] parenthesized as if they were applied to
-      a non-operator applicand. *)
-  and parenthesize_application_arguments application_precedence arguments =
+  (** [parenthesize_application_arguments parent_precedence arguments] is the
+      arguments in [argument] parenthesized as if they were applied to a
+      non-operator applicand. *)
+  and parenthesize_application_arguments parent_precedence arguments =
     List.map
       (fun argument ->
-        if application_precedence >= term_precedence argument then
-          add_parentheses_term (parenthesize_term argument)
-        else parenthesize_term argument)
+        let argument' = parenthesize_term argument in
+        Term_parenthesizer.parenthesize_argument_prefix_operator
+          ~parent_precedence argument')
       arguments
 
-  (** [parenthesize_operator_application_arguments application_precedence applicand_operator arguments]
+  (** [parenthesize_operator_application_arguments parent_precedence applicand_operator arguments]
       is the arguments in [arguments] parenthesized as if they were applied
       to an operator applicand described by [applicand_operator]. *)
-  and parenthesize_operator_application_arguments application_precedence
+  and parenthesize_operator_application_arguments parent_precedence
       applicand_operator arguments =
     match Operator.fixity applicand_operator with
     | Fixity.Prefix ->
-      parenthesize_prefix_operator_application_arguments
-        application_precedence arguments
+      parenthesize_prefix_operator_application_arguments parent_precedence
+        arguments
     | Fixity.Infix ->
       assert (List.length arguments = 2);
       let[@warning "-8"] [ left_argument; right_argument ] = arguments in
-      parenthesize_infix_operator_application_arguments
-        application_precedence applicand_operator ~left_argument
-        ~right_argument
+      parenthesize_infix_operator_application_arguments parent_precedence
+        applicand_operator ~left_argument ~right_argument
     | Fixity.Postfix ->
       assert (List.length arguments = 1);
       let[@warning "-8"] [ argument ] = arguments in
-      parenthesize_postfix_operator_application_arguments
-        application_precedence applicand_operator argument
+      parenthesize_postfix_operator_application_arguments parent_precedence
+        applicand_operator argument
 
-  and parenthesize_prefix_operator_application_arguments
-      application_precedence arguments =
-    parenthesize_application_arguments application_precedence arguments
+  and parenthesize_prefix_operator_application_arguments parent_precedence
+      arguments =
+    parenthesize_application_arguments parent_precedence arguments
 
-  and parenthesize_infix_operator_application_arguments
-      application_precedence applicand_operator ~left_argument
-      ~right_argument =
+  and parenthesize_infix_operator_application_arguments parent_precedence
+      applicand_operator ~left_argument ~right_argument =
     match Operator.associativity applicand_operator with
     | Associativity.Left_associative ->
       parenthesize_infix_left_associative_operator_application_arguments
-        application_precedence applicand_operator ~left_argument
-        ~right_argument
+        parent_precedence applicand_operator ~left_argument ~right_argument
     | Associativity.Right_associative ->
       parenthesize_infix_right_associative_operator_application_arguments
-        application_precedence applicand_operator ~left_argument
-        ~right_argument
+        parent_precedence applicand_operator ~left_argument ~right_argument
     | Associativity.Non_associative ->
       parenthesize_infix_non_associative_operator_application_arguments
-        application_precedence applicand_operator ~left_argument
-        ~right_argument
+        parent_precedence applicand_operator ~left_argument ~right_argument
 
   and parenthesize_infix_left_associative_operator_application_arguments
-      application_precedence applicand_operator ~left_argument
-      ~right_argument =
-    let left_argument' =
-      match left_argument with
+      parent_precedence applicand_operator ~left_argument ~right_argument =
+    let left_argument' = parenthesize_term left_argument
+    and right_argument' = parenthesize_term right_argument in
+    let left_argument'' =
+      match left_argument' with
       | Term.Application
           { applicand =
               Term.Constant { operator = left_argument_operator; _ }
           ; _
           }
-        when Bool.not
-               (Operator.precedence applicand_operator
-               > Operator.precedence left_argument_operator) ->
-        parenthesize_term left_argument
-      | left_argument
-        when application_precedence > term_precedence left_argument ->
-        add_parentheses_term (parenthesize_term left_argument)
-      | left_argument -> parenthesize_term left_argument
-    and right_argument' =
-      match right_argument with
+        when Operator.precedence left_argument_operator
+             >= Operator.precedence applicand_operator -> left_argument'
+      | _ ->
+        Term_parenthesizer
+        .parenthesize_left_argument_left_associative_operator
+          ~parent_precedence left_argument'
+    and right_argument'' =
+      match right_argument' with
       | Term.Application
           { applicand =
               Term.Constant { operator = right_argument_operator; _ }
           ; _
           }
-        when Bool.not
-               (Operator.precedence applicand_operator
-               >= Operator.precedence right_argument_operator) ->
-        parenthesize_term right_argument
-      | right_argument
-        when application_precedence >= term_precedence right_argument ->
-        add_parentheses_term (parenthesize_term right_argument)
-      | right_argument -> parenthesize_term right_argument
+        when Operator.precedence right_argument_operator
+             > Operator.precedence applicand_operator -> right_argument'
+      | _ ->
+        Term_parenthesizer
+        .parenthesize_right_argument_left_associative_operator
+          ~parent_precedence right_argument'
     in
-    [ left_argument'; right_argument' ]
+    [ left_argument''; right_argument'' ]
 
   and parenthesize_infix_right_associative_operator_application_arguments
-      application_precedence applicand_operator ~left_argument
-      ~right_argument =
-    let left_argument' =
-      match left_argument with
+      parent_precedence applicand_operator ~left_argument ~right_argument =
+    let left_argument' = parenthesize_term left_argument
+    and right_argument' = parenthesize_term right_argument in
+    let left_argument'' =
+      match left_argument' with
       | Term.Application
           { applicand =
               Term.Constant { operator = left_argument_operator; _ }
           ; _
           }
-        when Bool.not
-               (Operator.precedence applicand_operator
-               >= Operator.precedence left_argument_operator) ->
-        parenthesize_term left_argument
-      | left_argument
-        when application_precedence >= term_precedence left_argument ->
-        add_parentheses_term (parenthesize_term left_argument)
-      | left_argument -> parenthesize_term left_argument
-    and right_argument' =
-      match right_argument with
+        when Operator.precedence left_argument_operator
+             > Operator.precedence applicand_operator -> left_argument'
+      | _ ->
+        Term_parenthesizer
+        .parenthesize_left_argument_right_associative_operator
+          ~parent_precedence left_argument'
+    and right_argument'' =
+      match right_argument' with
       | Term.Application
           { applicand =
               Term.Constant { operator = right_argument_operator; _ }
           ; _
           }
-        when Bool.not
-               (Operator.precedence applicand_operator
-               > Operator.precedence right_argument_operator) ->
-        parenthesize_term right_argument
-      | right_argument
-        when application_precedence > term_precedence right_argument ->
-        add_parentheses_term (parenthesize_term right_argument)
-      | right_argument -> parenthesize_term right_argument
+        when Operator.precedence right_argument_operator
+             >= Operator.precedence applicand_operator -> right_argument'
+      | _ ->
+        Term_parenthesizer
+        .parenthesize_right_argument_right_associative_operator
+          ~parent_precedence right_argument'
     in
-    [ left_argument'; right_argument' ]
+    [ left_argument''; right_argument'' ]
 
   and parenthesize_infix_non_associative_operator_application_arguments
-      application_precedence applicand_operator ~left_argument
-      ~right_argument =
-    let left_argument' =
-      match left_argument with
+      parent_precedence applicand_operator ~left_argument ~right_argument =
+    let left_argument' = parenthesize_term left_argument
+    and right_argument' = parenthesize_term right_argument in
+    let left_argument'' =
+      match left_argument' with
       | Term.Application
           { applicand =
               Term.Constant { operator = left_argument_operator; _ }
           ; _
           }
-        when Bool.not
-               (Operator.precedence applicand_operator
-               > Operator.precedence left_argument_operator) ->
-        parenthesize_term left_argument
-      | left_argument
-        when application_precedence >= term_precedence left_argument ->
-        add_parentheses_term (parenthesize_term left_argument)
-      | left_argument -> parenthesize_term left_argument
-    and right_argument' =
-      match right_argument with
+        when Operator.precedence left_argument_operator
+             >= Operator.precedence applicand_operator -> left_argument'
+      | _ ->
+        Term_parenthesizer.parenthesize_argument_non_associative_operator
+          ~parent_precedence left_argument'
+    and right_argument'' =
+      match right_argument' with
       | Term.Application
           { applicand =
               Term.Constant { operator = right_argument_operator; _ }
           ; _
           }
-        when Bool.not
-               (Operator.precedence applicand_operator
-               > Operator.precedence right_argument_operator) ->
-        parenthesize_term right_argument
-      | right_argument
-        when application_precedence >= term_precedence right_argument ->
-        add_parentheses_term (parenthesize_term right_argument)
-      | right_argument -> parenthesize_term right_argument
+        when Operator.precedence right_argument_operator
+             >= Operator.precedence applicand_operator -> right_argument'
+      | _ ->
+        Term_parenthesizer.parenthesize_argument_non_associative_operator
+          ~parent_precedence right_argument'
     in
-    [ left_argument'; right_argument' ]
+    [ left_argument''; right_argument'' ]
 
-  and parenthesize_postfix_operator_application_arguments
-      application_precedence applicand_operator argument =
-    let argument' =
-      match argument with
+  and parenthesize_postfix_operator_application_arguments parent_precedence
+      applicand_operator argument =
+    let argument' = parenthesize_term argument in
+    let argument'' =
+      match argument' with
       | Term.Application
           { applicand = Term.Constant { operator = argument_operator; _ }
           ; _
           }
-        when Bool.not
-               (Operator.precedence applicand_operator
-               >= Operator.precedence argument_operator)
-             || Operator.is_postfix applicand_operator ->
-        parenthesize_term argument
-      | argument when application_precedence >= term_precedence argument ->
-        add_parentheses_term (parenthesize_term argument)
-      | _ -> parenthesize_term argument
+        when Operator.is_postfix applicand_operator
+             || Operator.precedence argument_operator
+                > Operator.precedence applicand_operator -> argument'
+      | _ ->
+        Term_parenthesizer.parenthesize_argument_postfix_operator
+          ~parent_precedence argument'
     in
-    [ argument' ]
+    [ argument'' ]
 
   (** {1 Printing} *)
 
@@ -1063,91 +1189,105 @@ module CLF = struct
 
   (** {1 Adding Necessary Parentheses} *)
 
-  let add_parentheses_typ typ =
-    let location = location_of_typ typ in
-    Typ.Parenthesized { location; typ }
+  module Typ_parenthesizer = Make_parenthesizer (struct
+    type t = Typ.t
 
-  let add_parentheses_term term =
-    let location = location_of_term term in
-    Term.Parenthesized { location; term }
+    let[@inline] add_parentheses typ =
+      let location = location_of_typ typ in
+      Typ.Parenthesized { location; typ }
 
-  let add_parentheses_typ_pattern pattern =
-    let location = location_of_typ_pattern pattern in
-    Typ.Pattern.Parenthesized { location; pattern }
+    (** [precedence typ] is the precedence of [typ] based on the order of the
+        recursive descent parsing of LF objects.
 
-  let add_parentheses_term_pattern pattern =
-    let location = location_of_term_pattern pattern in
-    Term.Pattern.Parenthesized { location; pattern }
+        Exceptionally, the juxtaposition of LF objects has higher precedence
+        than user-defined operator applications. *)
+    let precedence typ =
+      match typ with
+      | Typ.Pi _ -> 10
+      | Typ.ForwardArrow _ | Typ.BackwardArrow _ -> 20
+      | Typ.Block _ -> 40
+      | Typ.Application { applicand = Typ.Constant _; _ }
+      (* User-defined operator application *) -> 49
+      | Typ.Application _ -> 50
+      | Typ.Constant _ | Typ.Parenthesized _ -> 80
+  end)
 
-  (** [typ_precedence typ] is the precedence of [typ] based on the order of
-      the recursive descent parsing of LF objects.
+  module Term_parenthesizer = Make_parenthesizer (struct
+    type t = Term.t
 
-      Exceptionally, the juxtaposition of LF objects has higher precedence
-      than user-defined operator applications. *)
-  let typ_precedence typ =
-    match typ with
-    | Typ.Pi _ -> 10
-    | Typ.ForwardArrow _ | Typ.BackwardArrow _ -> 20
-    | Typ.Block _ -> 40
-    | Typ.Application { applicand = Typ.Constant _; _ }
-    (* User-defined operator application *) -> 49
-    | Typ.Application _ -> 50
-    | Typ.Constant _ | Typ.Parenthesized _ -> 80
+    let[@inline] add_parentheses term =
+      let location = location_of_term term in
+      Term.Parenthesized { location; term }
 
-  (** [term_precedence term] is the precedence of [term] based on the order
-      of the recursive descent parsing of LF objects.
+    (** [precedence term] is the precedence of [term] based on the order of
+        the recursive descent parsing of LF objects.
 
-      Exceptionally, the juxtaposition of LF objects has higher precedence
-      than user-defined operator applications. *)
-  let term_precedence term =
-    match term with
-    | Term.Abstraction _ -> 10
-    | Term.TypeAnnotated _ -> 30
-    | Term.Application { applicand = Term.Constant _; _ }
-    (* User-defined operator application *) -> 49
-    | Term.Application _ -> 50
-    | Term.Substitution _ -> 60
-    | Term.Projection _ -> 70
-    | Term.Variable _
-    | Term.Constant _
-    | Term.Hole _
-    | Term.Tuple _
-    | Term.Parenthesized _ -> 80
+        Exceptionally, the juxtaposition of LF objects has higher precedence
+        than user-defined operator applications. *)
+    let precedence term =
+      match term with
+      | Term.Abstraction _ -> 10
+      | Term.TypeAnnotated _ -> 30
+      | Term.Application { applicand = Term.Constant _; _ }
+      (* User-defined operator application *) -> 49
+      | Term.Application _ -> 50
+      | Term.Substitution _ -> 60
+      | Term.Projection _ -> 70
+      | Term.Variable _
+      | Term.Constant _
+      | Term.Hole _
+      | Term.Tuple _
+      | Term.Parenthesized _ -> 80
+  end)
 
-  (** [typ_pattern_precedence typ_pattern] is the precedence of [typ_pattern]
-      based on the order of the recursive descent parsing of LF objects.
+  module Typ_pattern_parenthesizer = Make_parenthesizer (struct
+    type t = Typ.Pattern.t
 
-      Exceptionally, the juxtaposition of LF objects has higher precedence
-      than user-defined operator applications. *)
-  let typ_pattern_precedence typ_pattern =
-    match typ_pattern with
-    | Typ.Pattern.Block _ -> 40
-    | Typ.Pattern.Application { applicand = Typ.Pattern.Constant _; _ }
-    (* User-defined operator application *) -> 49
-    | Typ.Pattern.Application _ -> 50
-    | Typ.Pattern.Constant _
-    | Typ.Pattern.Parenthesized _ -> 80
+    let[@inline] add_parentheses pattern =
+      let location = location_of_typ_pattern pattern in
+      Typ.Pattern.Parenthesized { location; pattern }
 
-  (** [term_pattern_precedence term_pattern] is the precedence of
-      [term_pattern] based on the order of the recursive descent parsing of
-      LF objects.
+    (** [precedence typ_pattern] is the precedence of [typ_pattern] based on
+        the order of the recursive descent parsing of LF objects.
 
-      Exceptionally, the juxtaposition of LF objects has higher precedence
-      than user-defined operator applications. *)
-  let term_pattern_precedence term_pattern =
-    match term_pattern with
-    | Term.Pattern.Abstraction _ -> 10
-    | Term.Pattern.TypeAnnotated _ -> 30
-    | Term.Pattern.Application { applicand = Term.Pattern.Constant _; _ }
-    (* User-defined operator application *) -> 49
-    | Term.Pattern.Application _ -> 50
-    | Term.Pattern.Substitution _ -> 60
-    | Term.Pattern.Projection _ -> 70
-    | Term.Pattern.Variable _
-    | Term.Pattern.Constant _
-    | Term.Pattern.Wildcard _
-    | Term.Pattern.Tuple _
-    | Term.Pattern.Parenthesized _ -> 80
+        Exceptionally, the juxtaposition of LF objects has higher precedence
+        than user-defined operator applications. *)
+    let precedence typ_pattern =
+      match typ_pattern with
+      | Typ.Pattern.Block _ -> 40
+      | Typ.Pattern.Application { applicand = Typ.Pattern.Constant _; _ }
+      (* User-defined operator application *) -> 49
+      | Typ.Pattern.Application _ -> 50
+      | Typ.Pattern.Constant _ | Typ.Pattern.Parenthesized _ -> 80
+  end)
+
+  module Term_pattern_parenthesizer = Make_parenthesizer (struct
+    type t = Term.Pattern.t
+
+    let[@inline] add_parentheses pattern =
+      let location = location_of_term_pattern pattern in
+      Term.Pattern.Parenthesized { location; pattern }
+
+    (** [precedence term_pattern] is the precedence of [term_pattern] based
+        on the order of the recursive descent parsing of LF objects.
+
+        Exceptionally, the juxtaposition of LF objects has higher precedence
+        than user-defined operator applications. *)
+    let precedence term_pattern =
+      match term_pattern with
+      | Term.Pattern.Abstraction _ -> 10
+      | Term.Pattern.TypeAnnotated _ -> 30
+      | Term.Pattern.Application { applicand = Term.Pattern.Constant _; _ }
+      (* User-defined operator application *) -> 49
+      | Term.Pattern.Application _ -> 50
+      | Term.Pattern.Substitution _ -> 60
+      | Term.Pattern.Projection _ -> 70
+      | Term.Pattern.Variable _
+      | Term.Pattern.Constant _
+      | Term.Pattern.Wildcard _
+      | Term.Pattern.Tuple _
+      | Term.Pattern.Parenthesized _ -> 80
+  end)
 
   (** [parenthesize_typ typ] is [typ] with the addition of necessary
       parentheses for printing.
@@ -1164,52 +1304,60 @@ module CLF = struct
             Typ.Constant { operator = applicand_operator; _ } as applicand
         ; arguments
         }
-    (* Type constant application *) ->
+    (* (User-defined type constant application *) ->
       let arguments' =
-        parenthesize_operator_application_arguments (typ_precedence typ)
+        parenthesize_operator_application_arguments
+          (Typ_parenthesizer.precedence typ)
           applicand_operator arguments
       in
       Typ.Application { location; applicand; arguments = arguments' }
     | Typ.Application { location; applicand; arguments }
     (* Arbitrary type application *) ->
+      let parent_precedence = Typ_parenthesizer.precedence typ in
+      let applicand' = parenthesize_typ applicand in
       (* Parenthesize as application in prefix notation *)
-      let applicand' =
-        if typ_precedence typ >= typ_precedence applicand then
-          add_parentheses_typ (parenthesize_typ applicand)
-        else parenthesize_typ applicand
+      let applicand'' =
+        Typ_parenthesizer.parenthesize_argument_prefix_operator
+          ~parent_precedence applicand'
       in
       let arguments' =
-        parenthesize_application_arguments (typ_precedence typ) arguments
+        parenthesize_application_arguments parent_precedence arguments
       in
       Typ.Application
-        { location; applicand = applicand'; arguments = arguments' }
+        { location; applicand = applicand''; arguments = arguments' }
     | Typ.ForwardArrow { location; domain; range } ->
-      (* Forward arrow types are right-associative and of equal precedence
-         with backward arrow types *)
-      let domain' =
-        if typ_precedence typ >= typ_precedence domain then
-          add_parentheses_typ (parenthesize_typ domain)
-        else parenthesize_typ domain
+      let domain' = parenthesize_typ domain
       and range' = parenthesize_typ range in
-      Typ.ForwardArrow { location; domain = domain'; range = range' }
-    | Typ.BackwardArrow { location; range; domain } ->
-      (* Backward arrow types are left-associative and of equal precedence
-         with forward arrow types *)
-      let range' =
-        match range with
-        | Typ.BackwardArrow _ -> parenthesize_typ range
-        | range when typ_precedence typ >= typ_precedence range ->
-          add_parentheses_typ (parenthesize_typ range)
-        | range -> parenthesize_typ range
-      and domain' =
-        match domain with
-        | Typ.BackwardArrow _ ->
-          add_parentheses_typ (parenthesize_typ domain)
-        | _ -> parenthesize_typ domain
+      (* Forward arrows are right-associative and of equal precedence with
+         backward arrows *)
+      let domain'' =
+        Typ_parenthesizer
+        .parenthesize_left_argument_right_associative_operator
+          ~parent_precedence:(Typ_parenthesizer.precedence typ)
+          domain'
       in
-      Typ.BackwardArrow { location; range = range'; domain = domain' }
+      Typ.ForwardArrow { location; domain = domain''; range = range' }
+    | Typ.BackwardArrow { location; range; domain } ->
+      let range' = parenthesize_typ range
+      and domain' = parenthesize_typ domain in
+      (* Backward arrows are left-associative and of equal precedence with
+         forward arrows *)
+      let range'' =
+        match range' with
+        | Typ.BackwardArrow _ -> range'
+        | _ ->
+          Typ_parenthesizer
+          .parenthesize_left_argument_left_associative_operator
+            ~parent_precedence:(Typ_parenthesizer.precedence typ)
+            range'
+      and domain'' =
+        match domain' with
+        | Typ.BackwardArrow _ -> Typ_parenthesizer.add_parentheses domain'
+        | _ -> domain'
+      in
+      Typ.BackwardArrow { location; range = range''; domain = domain'' }
     | Typ.Pi { location; parameter_identifier; parameter_type; body } ->
-      (* Pi types are weak prefix operators *)
+      (* Pis are weak prefix operators *)
       let parameter_type' = parenthesize_typ parameter_type
       and body' = parenthesize_typ body in
       Typ.Pi
@@ -1218,10 +1366,12 @@ module CLF = struct
         ; parameter_type = parameter_type'
         ; body = body'
         }
-    | Typ.Block { location; elements = (l1, t1), xs } ->
+    | Typ.Block { location; elements } ->
+      let (l1, t1), xs = elements in
       let t1' = parenthesize_typ t1
       and xs' = List.map (Pair.map_right parenthesize_typ) xs in
-      Typ.Block { location; elements = ((l1, t1'), xs') }
+      let elements' = ((l1, t1'), xs') in
+      Typ.Block { location; elements = elements' }
     | Typ.Parenthesized _ -> typ
 
   (** [parenthesize_term term] is [term] with the addition of necessary
@@ -1236,14 +1386,19 @@ module CLF = struct
     | Term.Constant _ -> term
     | Term.Substitution
         { location; term = term_under_substitution; substitution } ->
+      (* Substitutions are left-associative *)
       let term_under_substitution' =
-        if term_precedence term >= term_precedence term_under_substitution
-        then add_parentheses_term (parenthesize_term term_under_substitution)
-        else parenthesize_term term_under_substitution
+        parenthesize_term term_under_substitution
+      in
+      let term_under_substitution'' =
+        Term_parenthesizer
+        .parenthesize_left_argument_left_associative_operator
+          ~parent_precedence:(Term_parenthesizer.precedence term)
+          term_under_substitution'
       and substitution' = parenthesize_substitution substitution in
       Term.Substitution
         { location
-        ; term = term_under_substitution'
+        ; term = term_under_substitution''
         ; substitution = substitution'
         }
     | Term.Application
@@ -1254,25 +1409,28 @@ module CLF = struct
         }
     (* Term constant application *) ->
       let arguments' =
-        parenthesize_operator_application_arguments (term_precedence term)
+        parenthesize_operator_application_arguments
+          (Term_parenthesizer.precedence term)
           applicand_operator arguments
       in
       Term.Application { location; applicand; arguments = arguments' }
     | Term.Application { location; applicand; arguments }
     (* Arbitrary term application *) ->
+      let parent_precedence = Term_parenthesizer.precedence term in
+      let applicand' = parenthesize_term applicand in
       (* Parenthesize as term application in prefix notation *)
-      let applicand' =
-        if term_precedence term >= term_precedence applicand then
-          add_parentheses_term (parenthesize_term applicand)
-        else parenthesize_term applicand
+      let applicand'' =
+        Term_parenthesizer.parenthesize_argument_prefix_operator
+          ~parent_precedence applicand'
       in
       let arguments' =
-        parenthesize_application_arguments (term_precedence term) arguments
+        parenthesize_application_arguments parent_precedence arguments
       in
       Term.Application
-        { location; applicand = applicand'; arguments = arguments' }
+        { location; applicand = applicand''; arguments = arguments' }
     | Term.Abstraction
         { location; parameter_identifier; parameter_type; body } ->
+      (* Lambdas are weak prefix operators *)
       let parameter_type' = Option.map parenthesize_typ parameter_type
       and body' = parenthesize_term body in
       Term.Abstraction
@@ -1286,200 +1444,189 @@ module CLF = struct
       let terms' = List1.map parenthesize_term terms in
       Term.Tuple { location; terms = terms' }
     | Term.Projection { location; term = projected_term; projection } ->
-      let projected_term' =
-        if term_precedence term > term_precedence projected_term then
-          add_parentheses_term (parenthesize_term projected_term)
-        else parenthesize_term projected_term
+      (* Projections are left-associative *)
+      let projected_term' = parenthesize_term projected_term in
+      let projected_term'' =
+        Term_parenthesizer
+        .parenthesize_left_argument_left_associative_operator
+          ~parent_precedence:(Term_parenthesizer.precedence term)
+          projected_term'
       in
-      Term.Projection { location; term = projected_term'; projection }
+      Term.Projection { location; term = projected_term''; projection }
     | Term.TypeAnnotated { location; term = annotated_term; typ } ->
-      let annotated_term' =
-        if term_precedence term >= term_precedence annotated_term then
-          add_parentheses_term (parenthesize_term annotated_term)
-        else parenthesize_term annotated_term
+      (* Type ascriptions are left-associative *)
+      let annotated_term' = parenthesize_term annotated_term in
+      let annotated_term'' =
+        Term_parenthesizer
+        .parenthesize_left_argument_left_associative_operator
+          ~parent_precedence:(Term_parenthesizer.precedence term)
+          annotated_term'
       and typ' = parenthesize_typ typ in
-      Term.TypeAnnotated { location; term = annotated_term'; typ = typ' }
+      Term.TypeAnnotated { location; term = annotated_term''; typ = typ' }
     | Term.Parenthesized _ -> term
 
-  (** [parenthesize_application_arguments application_precedence arguments]
-      is the arguments in [argument] parenthesized as if they were applied to
-      a non-operator applicand. *)
-  and parenthesize_application_arguments application_precedence arguments =
+  (** [parenthesize_application_arguments parent_precedence arguments] is the
+      arguments in [argument] parenthesized as if they were applied to a
+      non-operator applicand. *)
+  and parenthesize_application_arguments parent_precedence arguments =
     List.map
       (fun argument ->
-        if application_precedence >= term_precedence argument then
-          add_parentheses_term (parenthesize_term argument)
-        else parenthesize_term argument)
+        let argument' = parenthesize_term argument in
+        Term_parenthesizer.parenthesize_argument_prefix_operator
+          ~parent_precedence argument')
       arguments
 
-  (** [parenthesize_operator_application_arguments application_precedence applicand_operator arguments]
+  (** [parenthesize_operator_application_arguments parent_precedence applicand_operator arguments]
       is the arguments in [arguments] parenthesized as if they were applied
       to an operator applicand described by [applicand_operator]. *)
-  and parenthesize_operator_application_arguments application_precedence
+  and parenthesize_operator_application_arguments parent_precedence
       applicand_operator arguments =
     match Operator.fixity applicand_operator with
     | Fixity.Prefix ->
-      parenthesize_prefix_operator_application_arguments
-        application_precedence arguments
+      parenthesize_prefix_operator_application_arguments parent_precedence
+        arguments
     | Fixity.Infix ->
       assert (List.length arguments = 2);
       let[@warning "-8"] [ left_argument; right_argument ] = arguments in
-      parenthesize_infix_operator_application_arguments
-        application_precedence applicand_operator ~left_argument
-        ~right_argument
+      parenthesize_infix_operator_application_arguments parent_precedence
+        applicand_operator ~left_argument ~right_argument
     | Fixity.Postfix ->
       assert (List.length arguments = 1);
       let[@warning "-8"] [ argument ] = arguments in
-      parenthesize_postfix_operator_application_arguments
-        application_precedence applicand_operator argument
+      parenthesize_postfix_operator_application_arguments parent_precedence
+        applicand_operator argument
 
-  and parenthesize_prefix_operator_application_arguments
-      application_precedence arguments =
-    parenthesize_application_arguments application_precedence arguments
+  and parenthesize_prefix_operator_application_arguments parent_precedence
+      arguments =
+    parenthesize_application_arguments parent_precedence arguments
 
-  and parenthesize_infix_operator_application_arguments
-      application_precedence applicand_operator ~left_argument
-      ~right_argument =
+  and parenthesize_infix_operator_application_arguments parent_precedence
+      applicand_operator ~left_argument ~right_argument =
     match Operator.associativity applicand_operator with
     | Associativity.Left_associative ->
       parenthesize_infix_left_associative_operator_application_arguments
-        application_precedence applicand_operator ~left_argument
-        ~right_argument
+        parent_precedence applicand_operator ~left_argument ~right_argument
     | Associativity.Right_associative ->
       parenthesize_infix_right_associative_operator_application_arguments
-        application_precedence applicand_operator ~left_argument
-        ~right_argument
+        parent_precedence applicand_operator ~left_argument ~right_argument
     | Associativity.Non_associative ->
       parenthesize_infix_non_associative_operator_application_arguments
-        application_precedence applicand_operator ~left_argument
-        ~right_argument
+        parent_precedence applicand_operator ~left_argument ~right_argument
 
   and parenthesize_infix_left_associative_operator_application_arguments
-      application_precedence applicand_operator ~left_argument
-      ~right_argument =
-    let left_argument' =
-      match left_argument with
+      parent_precedence applicand_operator ~left_argument ~right_argument =
+    let left_argument' = parenthesize_term left_argument
+    and right_argument' = parenthesize_term right_argument in
+    let left_argument'' =
+      match left_argument' with
       | Term.Application
           { applicand =
               Term.Constant { operator = left_argument_operator; _ }
           ; _
           }
-        when Bool.not
-               (Operator.precedence applicand_operator
-               > Operator.precedence left_argument_operator) ->
-        parenthesize_term left_argument
-      | left_argument
-        when application_precedence > term_precedence left_argument ->
-        add_parentheses_term (parenthesize_term left_argument)
-      | left_argument -> parenthesize_term left_argument
-    and right_argument' =
-      match right_argument with
+        when Operator.precedence left_argument_operator
+             >= Operator.precedence applicand_operator -> left_argument'
+      | _ ->
+        Term_parenthesizer
+        .parenthesize_left_argument_left_associative_operator
+          ~parent_precedence left_argument'
+    and right_argument'' =
+      match right_argument' with
       | Term.Application
           { applicand =
               Term.Constant { operator = right_argument_operator; _ }
           ; _
           }
-        when Bool.not
-               (Operator.precedence applicand_operator
-               >= Operator.precedence right_argument_operator) ->
-        parenthesize_term right_argument
-      | right_argument
-        when application_precedence >= term_precedence right_argument ->
-        add_parentheses_term (parenthesize_term right_argument)
-      | right_argument -> parenthesize_term right_argument
+        when Operator.precedence right_argument_operator
+             > Operator.precedence applicand_operator -> right_argument'
+      | _ ->
+        Term_parenthesizer
+        .parenthesize_right_argument_left_associative_operator
+          ~parent_precedence right_argument'
     in
-    [ left_argument'; right_argument' ]
+    [ left_argument''; right_argument'' ]
 
   and parenthesize_infix_right_associative_operator_application_arguments
-      application_precedence applicand_operator ~left_argument
-      ~right_argument =
-    let left_argument' =
-      match left_argument with
+      parent_precedence applicand_operator ~left_argument ~right_argument =
+    let left_argument' = parenthesize_term left_argument
+    and right_argument' = parenthesize_term right_argument in
+    let left_argument'' =
+      match left_argument' with
       | Term.Application
           { applicand =
               Term.Constant { operator = left_argument_operator; _ }
           ; _
           }
-        when Bool.not
-               (Operator.precedence applicand_operator
-               >= Operator.precedence left_argument_operator) ->
-        parenthesize_term left_argument
-      | left_argument
-        when application_precedence >= term_precedence left_argument ->
-        add_parentheses_term (parenthesize_term left_argument)
-      | left_argument -> parenthesize_term left_argument
-    and right_argument' =
-      match right_argument with
+        when Operator.precedence left_argument_operator
+             > Operator.precedence applicand_operator -> left_argument'
+      | _ ->
+        Term_parenthesizer
+        .parenthesize_left_argument_right_associative_operator
+          ~parent_precedence left_argument'
+    and right_argument'' =
+      match right_argument' with
       | Term.Application
           { applicand =
               Term.Constant { operator = right_argument_operator; _ }
           ; _
           }
-        when Bool.not
-               (Operator.precedence applicand_operator
-               > Operator.precedence right_argument_operator) ->
-        parenthesize_term right_argument
-      | right_argument
-        when application_precedence > term_precedence right_argument ->
-        add_parentheses_term (parenthesize_term right_argument)
-      | right_argument -> parenthesize_term right_argument
+        when Operator.precedence right_argument_operator
+             >= Operator.precedence applicand_operator -> right_argument'
+      | _ ->
+        Term_parenthesizer
+        .parenthesize_right_argument_right_associative_operator
+          ~parent_precedence right_argument'
     in
-    [ left_argument'; right_argument' ]
+    [ left_argument''; right_argument'' ]
 
   and parenthesize_infix_non_associative_operator_application_arguments
-      application_precedence applicand_operator ~left_argument
-      ~right_argument =
-    let left_argument' =
-      match left_argument with
+      parent_precedence applicand_operator ~left_argument ~right_argument =
+    let left_argument' = parenthesize_term left_argument
+    and right_argument' = parenthesize_term right_argument in
+    let left_argument'' =
+      match left_argument' with
       | Term.Application
           { applicand =
               Term.Constant { operator = left_argument_operator; _ }
           ; _
           }
-        when Bool.not
-               (Operator.precedence applicand_operator
-               > Operator.precedence left_argument_operator) ->
-        parenthesize_term left_argument
-      | left_argument
-        when application_precedence >= term_precedence left_argument ->
-        add_parentheses_term (parenthesize_term left_argument)
-      | left_argument -> parenthesize_term left_argument
-    and right_argument' =
-      match right_argument with
+        when Operator.precedence left_argument_operator
+             >= Operator.precedence applicand_operator -> left_argument'
+      | _ ->
+        Term_parenthesizer.parenthesize_argument_non_associative_operator
+          ~parent_precedence left_argument'
+    and right_argument'' =
+      match right_argument' with
       | Term.Application
           { applicand =
               Term.Constant { operator = right_argument_operator; _ }
           ; _
           }
-        when Bool.not
-               (Operator.precedence applicand_operator
-               > Operator.precedence right_argument_operator) ->
-        parenthesize_term right_argument
-      | right_argument
-        when application_precedence >= term_precedence right_argument ->
-        add_parentheses_term (parenthesize_term right_argument)
-      | right_argument -> parenthesize_term right_argument
+        when Operator.precedence right_argument_operator
+             >= Operator.precedence applicand_operator -> right_argument'
+      | _ ->
+        Term_parenthesizer.parenthesize_argument_non_associative_operator
+          ~parent_precedence right_argument'
     in
-    [ left_argument'; right_argument' ]
+    [ left_argument''; right_argument'' ]
 
-  and parenthesize_postfix_operator_application_arguments
-      application_precedence applicand_operator argument =
-    let argument' =
-      match argument with
+  and parenthesize_postfix_operator_application_arguments parent_precedence
+      applicand_operator argument =
+    let argument' = parenthesize_term argument in
+    let argument'' =
+      match argument' with
       | Term.Application
           { applicand = Term.Constant { operator = argument_operator; _ }
           ; _
           }
-        when Bool.not
-               (Operator.precedence applicand_operator
-               >= Operator.precedence argument_operator)
-             || Operator.is_postfix applicand_operator ->
-        parenthesize_term argument
-      | argument when application_precedence >= term_precedence argument ->
-        add_parentheses_term (parenthesize_term argument)
-      | _ -> parenthesize_term argument
+        when Operator.is_postfix applicand_operator
+             || Operator.precedence argument_operator
+                > Operator.precedence applicand_operator -> argument'
+      | _ ->
+        Term_parenthesizer.parenthesize_argument_postfix_operator
+          ~parent_precedence argument'
     in
-    [ argument' ]
+    [ argument'' ]
 
   and parenthesize_substitution substitution =
     match substitution with
@@ -1504,34 +1651,36 @@ module CLF = struct
             applicand
         ; arguments
         }
-    (* Type constant application pattern *) ->
+    (* (User-defined type constant application *) ->
       let arguments' =
         parenthesize_operator_application_pattern_arguments
-          (typ_pattern_precedence typ_pattern)
+          (Typ_pattern_parenthesizer.precedence typ_pattern)
           applicand_operator arguments
       in
       Typ.Pattern.Application { location; applicand; arguments = arguments' }
     | Typ.Pattern.Application { location; applicand; arguments }
-    (* Arbitrary type application pattern *) ->
-      (* Parenthesize as application pattern in prefix notation *)
-      let applicand' =
-        if
-          typ_pattern_precedence typ_pattern
-          >= typ_pattern_precedence applicand
-        then add_parentheses_typ_pattern (parenthesize_typ_pattern applicand)
-        else parenthesize_typ_pattern applicand
+    (* Arbitrary type application *) ->
+      let parent_precedence =
+        Typ_pattern_parenthesizer.precedence typ_pattern
+      in
+      let applicand' = parenthesize_typ_pattern applicand in
+      (* Parenthesize as application in prefix notation *)
+      let applicand'' =
+        Typ_pattern_parenthesizer.parenthesize_argument_prefix_operator
+          ~parent_precedence applicand'
       in
       let arguments' =
-        parenthesize_application_pattern_arguments
-          (typ_pattern_precedence typ_pattern)
+        parenthesize_application_pattern_arguments parent_precedence
           arguments
       in
       Typ.Pattern.Application
-        { location; applicand = applicand'; arguments = arguments' }
-    | Typ.Pattern.Block { location; elements = (l1, t1), xs } ->
+        { location; applicand = applicand''; arguments = arguments' }
+    | Typ.Pattern.Block { location; elements } ->
+      let (l1, t1), xs = elements in
       let t1' = parenthesize_typ_pattern t1
       and xs' = List.map (Pair.map_right parenthesize_typ_pattern) xs in
-      Typ.Pattern.Block { location; elements = ((l1, t1'), xs') }
+      let elements' = ((l1, t1'), xs') in
+      Typ.Pattern.Block { location; elements = elements' }
     | Typ.Pattern.Parenthesized _ -> typ_pattern
 
   (** [parenthesize_term_pattern term_pattern] is [term_pattern] with the
@@ -1547,18 +1696,20 @@ module CLF = struct
     | Term.Pattern.Constant _ -> term_pattern
     | Term.Pattern.Substitution
         { location; term = term_under_substitution; substitution } ->
+      (* Substitutions are left-associative *)
       let term_under_substitution' =
-        if
-          term_pattern_precedence term_pattern
-          >= term_pattern_precedence term_under_substitution
-        then
-          add_parentheses_term_pattern
-            (parenthesize_term_pattern term_under_substitution)
-        else parenthesize_term_pattern term_under_substitution
+        parenthesize_term_pattern term_under_substitution
+      in
+      let term_under_substitution'' =
+        Term_pattern_parenthesizer
+        .parenthesize_left_argument_left_associative_operator
+          ~parent_precedence:
+            (Term_pattern_parenthesizer.precedence term_pattern)
+          term_under_substitution'
       and substitution' = parenthesize_substitution substitution in
       Term.Pattern.Substitution
         { location
-        ; term = term_under_substitution'
+        ; term = term_under_substitution''
         ; substitution = substitution'
         }
     | Term.Pattern.Application
@@ -1571,29 +1722,28 @@ module CLF = struct
     (* Term constant application pattern *) ->
       let arguments' =
         parenthesize_operator_application_pattern_arguments
-          (term_pattern_precedence term_pattern)
+          (Term_pattern_parenthesizer.precedence term_pattern)
           applicand_operator arguments
       in
       Term.Pattern.Application
         { location; applicand; arguments = arguments' }
     | Term.Pattern.Application { location; applicand; arguments }
     (* Arbitrary term application pattern *) ->
-      (* Parenthesize as term application pattern in prefix notation *)
-      let applicand' =
-        if
-          term_pattern_precedence term_pattern
-          >= term_pattern_precedence applicand
-        then
-          add_parentheses_term_pattern (parenthesize_term_pattern applicand)
-        else parenthesize_term_pattern applicand
+      let parent_precedence =
+        Term_pattern_parenthesizer.precedence term_pattern
+      in
+      let applicand' = parenthesize_term_pattern applicand in
+      (* Parenthesize as term application in prefix notation *)
+      let applicand'' =
+        Term_pattern_parenthesizer.parenthesize_argument_prefix_operator
+          ~parent_precedence applicand'
       in
       let arguments' =
-        parenthesize_application_pattern_arguments
-          (term_pattern_precedence term_pattern)
+        parenthesize_application_pattern_arguments parent_precedence
           arguments
       in
       Term.Pattern.Application
-        { location; applicand = applicand'; arguments = arguments' }
+        { location; applicand = applicand''; arguments = arguments' }
     | Term.Pattern.Abstraction
         { location; parameter_identifier; parameter_type; body } ->
       let parameter_type' = Option.map parenthesize_typ parameter_type
@@ -1610,226 +1760,197 @@ module CLF = struct
       Term.Pattern.Tuple { location; terms = terms' }
     | Term.Pattern.Projection { location; term = projected_term; projection }
       ->
-      let projected_term' =
-        if
-          term_pattern_precedence term_pattern
-          > term_pattern_precedence projected_term
-        then
-          add_parentheses_term_pattern
-            (parenthesize_term_pattern projected_term)
-        else parenthesize_term_pattern projected_term
+      (* Projections are left-associative *)
+      let projected_term' = parenthesize_term_pattern projected_term in
+      let projected_term'' =
+        Term_pattern_parenthesizer
+        .parenthesize_left_argument_left_associative_operator
+          ~parent_precedence:
+            (Term_pattern_parenthesizer.precedence term_pattern)
+          projected_term'
       in
       Term.Pattern.Projection
-        { location; term = projected_term'; projection }
+        { location; term = projected_term''; projection }
     | Term.Pattern.TypeAnnotated { location; term = annotated_term; typ } ->
-      let annotated_term' =
-        if
-          term_pattern_precedence term_pattern
-          >= term_pattern_precedence annotated_term
-        then
-          add_parentheses_term_pattern
-            (parenthesize_term_pattern annotated_term)
-        else parenthesize_term_pattern annotated_term
+      (* Type ascriptions are left-associative *)
+      let annotated_term' = parenthesize_term_pattern annotated_term in
+      let annotated_term'' =
+        Term_pattern_parenthesizer
+        .parenthesize_left_argument_left_associative_operator
+          ~parent_precedence:
+            (Term_pattern_parenthesizer.precedence term_pattern)
+          annotated_term'
       and typ' = parenthesize_typ typ in
       Term.Pattern.TypeAnnotated
-        { location; term = annotated_term'; typ = typ' }
+        { location; term = annotated_term''; typ = typ' }
     | Term.Pattern.Parenthesized _ -> term_pattern
 
-  (** [parenthesize_application_pattern_arguments application_precedence arguments]
+  (** [parenthesize_application_pattern_arguments parent_precedence arguments]
       is the arguments in [argument] parenthesized as if they were applied to
       a non-operator applicand. *)
-  and parenthesize_application_pattern_arguments application_precedence
-      arguments =
+  and parenthesize_application_pattern_arguments parent_precedence arguments
+      =
     List.map
       (fun argument ->
-        if application_precedence >= term_pattern_precedence argument then
-          add_parentheses_term_pattern (parenthesize_term_pattern argument)
-        else parenthesize_term_pattern argument)
+        let argument' = parenthesize_term_pattern argument in
+        Term_pattern_parenthesizer.parenthesize_argument_prefix_operator
+          ~parent_precedence argument')
       arguments
 
-  (** [parenthesize_operator_application_pattern_arguments application_precedence applicand_operator arguments]
+  (** [parenthesize_operator_application_pattern_arguments parent_precedence applicand_operator arguments]
       is the arguments in [arguments] parenthesized as if they were applied
       to an operator applicand described by [applicand_operator]. *)
-  and parenthesize_operator_application_pattern_arguments
-      application_precedence applicand_operator arguments =
+  and parenthesize_operator_application_pattern_arguments parent_precedence
+      applicand_operator arguments =
     match Operator.fixity applicand_operator with
     | Fixity.Prefix ->
       parenthesize_prefix_operator_application_pattern_arguments
-        application_precedence arguments
+        parent_precedence arguments
     | Fixity.Infix ->
       assert (List.length arguments = 2);
       let[@warning "-8"] [ left_argument; right_argument ] = arguments in
       parenthesize_infix_operator_application_pattern_arguments
-        application_precedence applicand_operator ~left_argument
-        ~right_argument
+        parent_precedence applicand_operator ~left_argument ~right_argument
     | Fixity.Postfix ->
       assert (List.length arguments = 1);
       let[@warning "-8"] [ argument ] = arguments in
       parenthesize_postfix_operator_application_pattern_arguments
-        application_precedence applicand_operator argument
+        parent_precedence applicand_operator argument
 
   and parenthesize_prefix_operator_application_pattern_arguments
-      application_precedence arguments =
-    parenthesize_application_pattern_arguments application_precedence
-      arguments
+      parent_precedence arguments =
+    parenthesize_application_pattern_arguments parent_precedence arguments
 
   and parenthesize_infix_operator_application_pattern_arguments
-      application_precedence applicand_operator ~left_argument
-      ~right_argument =
+      parent_precedence applicand_operator ~left_argument ~right_argument =
     match Operator.associativity applicand_operator with
     | Associativity.Left_associative ->
       parenthesize_infix_left_associative_operator_application_pattern_arguments
-        application_precedence applicand_operator ~left_argument
-        ~right_argument
+        parent_precedence applicand_operator ~left_argument ~right_argument
     | Associativity.Right_associative ->
       parenthesize_infix_right_associative_operator_application_pattern_arguments
-        application_precedence applicand_operator ~left_argument
-        ~right_argument
+        parent_precedence applicand_operator ~left_argument ~right_argument
     | Associativity.Non_associative ->
       parenthesize_infix_non_associative_operator_application_pattern_arguments
-        application_precedence applicand_operator ~left_argument
-        ~right_argument
+        parent_precedence applicand_operator ~left_argument ~right_argument
 
   and parenthesize_infix_left_associative_operator_application_pattern_arguments
-      application_precedence applicand_operator ~left_argument
-      ~right_argument =
-    let left_argument' =
-      match left_argument with
+      parent_precedence applicand_operator ~left_argument ~right_argument =
+    let left_argument' = parenthesize_term_pattern left_argument
+    and right_argument' = parenthesize_term_pattern right_argument in
+    let left_argument'' =
+      match left_argument' with
       | Term.Pattern.Application
           { applicand =
               Term.Pattern.Constant { operator = left_argument_operator; _ }
           ; _
           }
-        when Bool.not
-               (Operator.precedence applicand_operator
-               > Operator.precedence left_argument_operator) ->
-        parenthesize_term_pattern left_argument
-      | left_argument
-        when application_precedence > term_pattern_precedence left_argument
-        ->
-        add_parentheses_term_pattern
-          (parenthesize_term_pattern left_argument)
-      | left_argument -> parenthesize_term_pattern left_argument
-    and right_argument' =
-      match right_argument with
+        when Operator.precedence left_argument_operator
+             >= Operator.precedence applicand_operator -> left_argument'
+      | _ ->
+        Term_pattern_parenthesizer
+        .parenthesize_left_argument_left_associative_operator
+          ~parent_precedence left_argument'
+    and right_argument'' =
+      match right_argument' with
       | Term.Pattern.Application
           { applicand =
               Term.Pattern.Constant { operator = right_argument_operator; _ }
           ; _
           }
-        when Bool.not
-               (Operator.precedence applicand_operator
-               >= Operator.precedence right_argument_operator) ->
-        parenthesize_term_pattern right_argument
-      | right_argument
-        when application_precedence >= term_pattern_precedence right_argument
-        ->
-        add_parentheses_term_pattern
-          (parenthesize_term_pattern right_argument)
-      | right_argument -> parenthesize_term_pattern right_argument
+        when Operator.precedence right_argument_operator
+             > Operator.precedence applicand_operator -> right_argument'
+      | _ ->
+        Term_pattern_parenthesizer
+        .parenthesize_right_argument_left_associative_operator
+          ~parent_precedence right_argument'
     in
-    [ left_argument'; right_argument' ]
+    [ left_argument''; right_argument'' ]
 
   and parenthesize_infix_right_associative_operator_application_pattern_arguments
-      application_precedence applicand_operator ~left_argument
-      ~right_argument =
-    let left_argument' =
-      match left_argument with
+      parent_precedence applicand_operator ~left_argument ~right_argument =
+    let left_argument' = parenthesize_term_pattern left_argument
+    and right_argument' = parenthesize_term_pattern right_argument in
+    let left_argument'' =
+      match left_argument' with
       | Term.Pattern.Application
           { applicand =
               Term.Pattern.Constant { operator = left_argument_operator; _ }
           ; _
           }
-        when Bool.not
-               (Operator.precedence applicand_operator
-               >= Operator.precedence left_argument_operator) ->
-        parenthesize_term_pattern left_argument
-      | left_argument
-        when application_precedence >= term_pattern_precedence left_argument
-        ->
-        add_parentheses_term_pattern
-          (parenthesize_term_pattern left_argument)
-      | left_argument -> parenthesize_term_pattern left_argument
-    and right_argument' =
-      match right_argument with
+        when Operator.precedence left_argument_operator
+             > Operator.precedence applicand_operator -> left_argument'
+      | _ ->
+        Term_pattern_parenthesizer
+        .parenthesize_left_argument_right_associative_operator
+          ~parent_precedence left_argument'
+    and right_argument'' =
+      match right_argument' with
       | Term.Pattern.Application
           { applicand =
               Term.Pattern.Constant { operator = right_argument_operator; _ }
           ; _
           }
-        when Bool.not
-               (Operator.precedence applicand_operator
-               > Operator.precedence right_argument_operator) ->
-        parenthesize_term_pattern right_argument
-      | right_argument
-        when application_precedence > term_pattern_precedence right_argument
-        ->
-        add_parentheses_term_pattern
-          (parenthesize_term_pattern right_argument)
-      | right_argument -> parenthesize_term_pattern right_argument
+        when Operator.precedence right_argument_operator
+             >= Operator.precedence applicand_operator -> right_argument'
+      | _ ->
+        Term_pattern_parenthesizer
+        .parenthesize_right_argument_right_associative_operator
+          ~parent_precedence right_argument'
     in
-    [ left_argument'; right_argument' ]
+    [ left_argument''; right_argument'' ]
 
   and parenthesize_infix_non_associative_operator_application_pattern_arguments
-      application_precedence applicand_operator ~left_argument
-      ~right_argument =
-    let left_argument' =
-      match left_argument with
+      parent_precedence applicand_operator ~left_argument ~right_argument =
+    let left_argument' = parenthesize_term_pattern left_argument
+    and right_argument' = parenthesize_term_pattern right_argument in
+    let left_argument'' =
+      match left_argument' with
       | Term.Pattern.Application
           { applicand =
               Term.Pattern.Constant { operator = left_argument_operator; _ }
           ; _
           }
-        when Bool.not
-               (Operator.precedence applicand_operator
-               > Operator.precedence left_argument_operator) ->
-        parenthesize_term_pattern left_argument
-      | left_argument
-        when application_precedence >= term_pattern_precedence left_argument
-        ->
-        add_parentheses_term_pattern
-          (parenthesize_term_pattern left_argument)
-      | left_argument -> parenthesize_term_pattern left_argument
-    and right_argument' =
-      match right_argument with
+        when Operator.precedence left_argument_operator
+             >= Operator.precedence applicand_operator -> left_argument'
+      | _ ->
+        Term_pattern_parenthesizer
+        .parenthesize_argument_non_associative_operator ~parent_precedence
+          left_argument'
+    and right_argument'' =
+      match right_argument' with
       | Term.Pattern.Application
           { applicand =
               Term.Pattern.Constant { operator = right_argument_operator; _ }
           ; _
           }
-        when Bool.not
-               (Operator.precedence applicand_operator
-               > Operator.precedence right_argument_operator) ->
-        parenthesize_term_pattern right_argument
-      | right_argument
-        when application_precedence >= term_pattern_precedence right_argument
-        ->
-        add_parentheses_term_pattern
-          (parenthesize_term_pattern right_argument)
-      | right_argument -> parenthesize_term_pattern right_argument
+        when Operator.precedence right_argument_operator
+             >= Operator.precedence applicand_operator -> right_argument'
+      | _ ->
+        Term_pattern_parenthesizer
+        .parenthesize_argument_non_associative_operator ~parent_precedence
+          right_argument'
     in
-    [ left_argument'; right_argument' ]
+    [ left_argument''; right_argument'' ]
 
   and parenthesize_postfix_operator_application_pattern_arguments
-      application_precedence applicand_operator argument =
-    let argument' =
-      match argument with
+      parent_precedence applicand_operator argument =
+    let argument' = parenthesize_term_pattern argument in
+    let argument'' =
+      match argument' with
       | Term.Pattern.Application
           { applicand =
               Term.Pattern.Constant { operator = argument_operator; _ }
           ; _
           }
-        when Bool.not
-               (Operator.precedence applicand_operator
-               >= Operator.precedence argument_operator)
-             || Operator.is_postfix applicand_operator ->
-        parenthesize_term_pattern argument
-      | argument
-        when application_precedence >= term_pattern_precedence argument ->
-        add_parentheses_term_pattern (parenthesize_term_pattern argument)
-      | _ -> parenthesize_term_pattern argument
+        when Operator.is_postfix applicand_operator
+             || Operator.precedence argument_operator
+                > Operator.precedence applicand_operator -> argument'
+      | _ ->
+        Term_pattern_parenthesizer.parenthesize_argument_postfix_operator
+          ~parent_precedence argument'
     in
-    [ argument' ]
+    [ argument'' ]
 
   (** {1 Printing} *)
 

@@ -899,16 +899,16 @@ end = struct
       Original grammar:
 
       <lf-object> ::=
-        | <identifier>
-        | <qualified-identifier>
-        | `type'
-        | `_'
         | `{' <omittable-identifier> [`:' <lf-object>] `}' <lf-object>
         | `\' <omittable-identifier> [`:' <lf-object>] `.' <lf-object>
         | <lf-object> <forward-arrow> <lf-object>
         | <lf-object> <backward-arrow> <lf-object>
         | <lf-object> `:' <lf-object>
         | <lf-object> <lf-object>
+        | <identifier>
+        | <qualified-identifier>
+        | `type'
+        | `_'
         | `(' <lf-object> `)'
 
 
@@ -1063,24 +1063,24 @@ end = struct
         | `[' [`..' `,'] <clf-object> (`,' <clf-object>)* `]'
 
       <clf-object> ::=
-        | <identifier>
-        | <qualified-identifier>
         | `{' <omittable-identifier> `:' <clf-object> `}' <clf-object>
         | `\\' <omittable-identifier> [`:' <clf-object>] `.' <clf-object>
         | <clf-object> <forward-arrow> <clf-object>
         | <clf-object> <backward-arrow> <clf-object>
+        | <clf-object> `:' <clf-object>
         | `block' `(' <identifier> `:' <clf-type> (`,' <identifier> `:' <clf-type>)+ `)'
         | `block' <identifier> `:' <clf-type> (`,' <identifier> `:' <clf-type>)+
         | `block' `(' <clf-type> `)'
         | `block' <clf-type>
-        | <clf-object> `:' <clf-object>
         | <clf-object> <clf-object>
+        | <clf-object> <substitution>
+        | <clf-object>`.'<identifier>
+        | <clf-object>`.'<integer>
         | `_'
         | `?'[<identifier>]
-        | <clf-object> <substitution>
+        | <identifier>
+        | <qualified-identifier>
         | `<' <clf-object> (`;' <clf-object>)* `>'
-        | <clf-object>`.'<integer>
-        | <clf-object>`.'<identifier>
         | `(' <clf-object> `)'
 
 

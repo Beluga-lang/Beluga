@@ -600,7 +600,11 @@ module LF = struct
           ; _
           }
         when Operator.precedence right_argument_operator
-             > Operator.precedence applicand_operator -> right_argument'
+             > Operator.precedence applicand_operator
+             || Operator.is_right_associative right_argument_operator
+                && Operator.precedence right_argument_operator
+                   >= Operator.precedence applicand_operator ->
+        right_argument'
       | _ ->
         Term_parenthesizer
         .parenthesize_right_argument_left_associative_operator
@@ -1304,7 +1308,7 @@ module CLF = struct
             Typ.Constant { operator = applicand_operator; _ } as applicand
         ; arguments
         }
-    (* (User-defined type constant application *) ->
+    (* User-defined type constant application *) ->
       let arguments' =
         parenthesize_operator_application_arguments
           (Typ_parenthesizer.precedence typ)
@@ -1538,7 +1542,11 @@ module CLF = struct
           ; _
           }
         when Operator.precedence right_argument_operator
-             > Operator.precedence applicand_operator -> right_argument'
+             > Operator.precedence applicand_operator
+             || Operator.is_right_associative right_argument_operator
+                && Operator.precedence right_argument_operator
+                   >= Operator.precedence applicand_operator ->
+        right_argument'
       | _ ->
         Term_parenthesizer
         .parenthesize_right_argument_left_associative_operator
@@ -1651,7 +1659,7 @@ module CLF = struct
             applicand
         ; arguments
         }
-    (* (User-defined type constant application *) ->
+    (* User-defined type constant application *) ->
       let arguments' =
         parenthesize_operator_application_pattern_arguments
           (Typ_pattern_parenthesizer.precedence typ_pattern)
@@ -1859,7 +1867,11 @@ module CLF = struct
           ; _
           }
         when Operator.precedence right_argument_operator
-             > Operator.precedence applicand_operator -> right_argument'
+             > Operator.precedence applicand_operator
+             || Operator.is_right_associative right_argument_operator
+                && Operator.precedence right_argument_operator
+                   >= Operator.precedence applicand_operator ->
+        right_argument'
       | _ ->
         Term_pattern_parenthesizer
         .parenthesize_right_argument_left_associative_operator

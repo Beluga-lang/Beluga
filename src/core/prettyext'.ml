@@ -2415,5 +2415,105 @@ module CLF = struct
         Format.fprintf ppf "@[<2>Substitution([..,@,%a])@]"
           (List.pp ~pp_sep:(fun ppf () -> Format.fprintf ppf ",@,") pp_term)
           terms
+
+    let rec pp_typ_pattern ppf typ =
+      match typ with
+      | Typ.Pattern.Constant { identifier; _ } ->
+        Format.fprintf ppf "%a" QualifiedIdentifier.pp identifier
+      | Typ.Pattern.Application { applicand; arguments; _ } ->
+        Format.fprintf ppf "@[<2>TypePatternApplication(%a(%a))@]"
+          pp_typ_pattern applicand
+          (List.pp
+             ~pp_sep:(fun ppf () -> Format.fprintf ppf ",@ ")
+             pp_term_pattern)
+          arguments
+      | Typ.Pattern.Block { elements = (Option.None, typ), []; _ } ->
+        Format.fprintf ppf "@[<2>TypePatternBlock(block %a)]" pp_typ_pattern
+          typ
+      | Typ.Pattern.Block { elements = (Option.None, _typ), _nt1 :: _nts; _ }
+        ->
+        raise
+        @@ Invalid_argument
+             "[pp_typ_pattern] missing identifier for first type in block"
+      | Typ.Pattern.Block { elements = (Option.Some i1, t1), nts; _ } ->
+        Format.fprintf ppf "@[<2>TypePatternBlock(block (%a))]"
+          (List.pp
+             ~pp_sep:(fun ppf () -> Format.fprintf ppf ",@,")
+             (fun ppf (i, t) ->
+               Format.fprintf ppf "%a@ :@ %a" Identifier.pp i pp_typ_pattern
+                 t))
+          ((i1, t1) :: nts)
+      | Typ.Pattern.Parenthesized { pattern; _ } ->
+        Format.fprintf ppf "@[<2>TypePatternParenthesized(%a)@]"
+          pp_typ_pattern pattern
+
+    and pp_term_pattern ppf term =
+      match term with
+      | Term.Pattern.Variable { identifier; _ } ->
+        Format.fprintf ppf "%a" Identifier.pp identifier
+      | Term.Pattern.Constant { identifier; _ } ->
+        Format.fprintf ppf "%a" QualifiedIdentifier.pp identifier
+      | Term.Pattern.Application { applicand; arguments; _ } ->
+        Format.fprintf ppf "@[<2>TermPatternApplication(%a(%a))@]"
+          pp_term_pattern applicand
+          (List.pp
+             ~pp_sep:(fun ppf () -> Format.fprintf ppf ",@ ")
+             pp_term_pattern)
+          arguments
+      | Term.Pattern.Abstraction
+          { parameter_identifier = Option.None
+          ; parameter_type = Option.None
+          ; body
+          ; _
+          } ->
+        Format.fprintf ppf "@[<2>TermPatternAbstraction(\\_.@ %a)@]"
+          pp_term_pattern body
+      | Term.Pattern.Abstraction
+          { parameter_identifier = Option.None
+          ; parameter_type = Option.Some parameter_type
+          ; body
+          ; _
+          } ->
+        Format.fprintf ppf "@[<2>TermPatternAbstraction(\\_:%a.@ %a)@]"
+          pp_typ parameter_type pp_term_pattern body
+      | Term.Pattern.Abstraction
+          { parameter_identifier = Option.Some parameter_identifier
+          ; parameter_type = Option.None
+          ; body
+          ; _
+          } ->
+        Format.fprintf ppf "@[<2>TermPatternAbstraction(\\%a.@ %a)@]"
+          Identifier.pp parameter_identifier pp_term_pattern body
+      | Term.Pattern.Abstraction
+          { parameter_identifier = Option.Some parameter_identifier
+          ; parameter_type = Option.Some parameter_type
+          ; body
+          ; _
+          } ->
+        Format.fprintf ppf "@[<2>TermPatternAbstraction(\\%a:%a.@ %a)@]"
+          Identifier.pp parameter_identifier pp_typ parameter_type
+          pp_term_pattern body
+      | Term.Pattern.Wildcard _ -> Format.fprintf ppf "_"
+      | Term.Pattern.Substitution { term; substitution; _ } ->
+        Format.fprintf ppf "@[<2>TermPatternSubstitution(%a%a)@]"
+          pp_term_pattern term pp_substitution substitution
+      | Term.Pattern.Tuple { terms; _ } ->
+        Format.fprintf ppf "@[<2>TermPatternTuple(<%a>)@]"
+          (List1.pp
+             ~pp_sep:(fun ppf () -> Format.fprintf ppf ";@,")
+             pp_term_pattern)
+          terms
+      | Term.Pattern.Projection { term; projection = `By_position i; _ } ->
+        Format.fprintf ppf "@[<2>TermPatternProjection(%a.%d)@]"
+          pp_term_pattern term i
+      | Term.Pattern.Projection { term; projection = `By_identifier i; _ } ->
+        Format.fprintf ppf "@[<2>TermPatternProjection(%a.%a)@]"
+          pp_term_pattern term Identifier.pp i
+      | Term.Pattern.TypeAnnotated { term; typ; _ } ->
+        Format.fprintf ppf "@[<2>TermPatternAnnotated(%a@ :@ %a)@]"
+          pp_term_pattern term pp_typ typ
+      | Term.Pattern.Parenthesized { pattern; _ } ->
+        Format.fprintf ppf "@[<2>TermPatternParenthesized(%a)@]"
+          pp_term_pattern pattern
   end
 end

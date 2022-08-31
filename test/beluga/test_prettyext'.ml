@@ -270,10 +270,7 @@ let parse_lf_term elaboration_context input =
 let test_pp_kind =
   let test elaboration_context input _test_ctxt =
     let kind = parse_lf_kind elaboration_context input in
-    let kind' =
-      kind |> Prettyext'.LF.remove_parentheses_kind
-      |> Prettyext'.LF.parenthesize_kind
-    in
+    let kind' = Prettyext'.LF.re_parenthesize_kind kind in
     let kind'' =
       parse_lf_kind elaboration_context
         (Format.stringify Prettyext'.LF.pp_kind kind')
@@ -309,10 +306,7 @@ let test_pp_kind =
 let test_pp_type =
   let test elaboration_context input _test_ctxt =
     let typ = parse_lf_type elaboration_context input in
-    let typ' =
-      typ |> Prettyext'.LF.remove_parentheses_typ
-      |> Prettyext'.LF.parenthesize_typ
-    in
+    let typ' = Prettyext'.LF.re_parenthesize_typ typ in
     let typ'' =
       parse_lf_type elaboration_context
         (Format.stringify Prettyext'.LF.pp_typ typ')
@@ -375,10 +369,7 @@ let test_pp_type =
 let test_pp_term =
   let test elaboration_context input _test_ctxt =
     let term = parse_lf_term elaboration_context input in
-    let term' =
-      term |> Prettyext'.LF.remove_parentheses_term
-      |> Prettyext'.LF.parenthesize_term
-    in
+    let term' = Prettyext'.LF.re_parenthesize_term term in
     let term'' =
       parse_lf_term elaboration_context
         (Format.stringify Prettyext'.LF.pp_term term')

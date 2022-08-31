@@ -915,12 +915,15 @@ end = struct
       Rewritten grammar, to eliminate left-recursions and handle precedence
       using recursive descent:
 
+      <lambda> ::=
+        | `\' <omittable-identifier> [`:' <lf-object>] `.' <lf-object>
+
       <lf-object> ::=
         | <lf-object1>
 
       <lf-object1> ::=
         | `{' <omittable-identifier> [`:' <lf-object>] `}' <lf-object>
-        | `\' <omittable-identifier> [`:' <lf-object>] `.' <lf-object>
+        | <lambda>
         | <lf-object2>
 
       <lf-object2> ::=
@@ -931,8 +934,11 @@ end = struct
         | <lf-object4> `:' <lf-object>
         | <lf-object4>
 
+      In an application, if the last argument is a lambda, then parentheses
+      are not required for it
+
       <lf-object4> ::=
-        | <lf-object5>+
+        | <lf-object5>+ [<lambda>]
         | <lf-object5>
 
       <lf-object5> ::=
@@ -942,6 +948,19 @@ end = struct
         | `_'
         | `(' <lf-object> `)'
   *)
+  let lambda =
+    seq2
+      (token Token.LAMBDA
+        &> (seq2
+            omittable_identifier
+            (maybe (token Token.COLON &> LF_parsers.lf_object)))
+        <& token Token.DOT)
+      LF_parsers.lf_object
+    |> span
+    $> (fun (location, ((parameter_identifier, parameter_sort), body)) ->
+       LF.Object.RawLambda { location; parameter_identifier; parameter_sort; body })
+    |> labelled "LF lambda object"
+
   let lf_object5 =
     let constant_or_variable =
       qualified_or_plain_identifier
@@ -977,7 +996,7 @@ end = struct
       ]
 
   let lf_object4 =
-    some lf_object5
+    some (alt lf_object5 lambda)
     |> span
     $> (function
        | (_, List1.T (object_, [])) -> object_
@@ -1027,18 +1046,6 @@ end = struct
       $> (fun (location, ((parameter_identifier, parameter_sort), body)) ->
          LF.Object.RawPi { location; parameter_identifier; parameter_sort; body })
       |> labelled "LF Pi object"
-    and lambda =
-      seq2
-        (token Token.LAMBDA
-          &> (seq2
-              omittable_identifier
-              (maybe (token Token.COLON &> LF_parsers.lf_object)))
-          <& token Token.DOT)
-        LF_parsers.lf_object
-      |> span
-      $> (fun (location, ((parameter_identifier, parameter_sort), body)) ->
-         LF.Object.RawLambda { location; parameter_identifier; parameter_sort; body })
-      |> labelled "LF lambda object"
     in
     choice
       [ pi
@@ -1064,7 +1071,7 @@ end = struct
 
       <clf-object> ::=
         | `{' <omittable-identifier> `:' <clf-object> `}' <clf-object>
-        | `\\' <omittable-identifier> [`:' <clf-object>] `.' <clf-object>
+        | `\' <omittable-identifier> [`:' <clf-object>] `.' <clf-object>
         | <clf-object> <forward-arrow> <clf-object>
         | <clf-object> <backward-arrow> <clf-object>
         | <clf-object> `:' <clf-object>
@@ -1092,12 +1099,15 @@ end = struct
         | `[' `..' `]'
         | `[' [`..' `,'] <clf-object> (`,' <clf-object>)* `]'
 
+      <lambda> ::=
+        | `\' <omittable-identifier> [`:' <clf-object>] `.' <clf-object>
+
       <clf-object> ::=
         | <clf-object1>
 
       <clf-object1> ::=
         | `{' <omittable-identifier> [`:' <clf-object>] `}' <clf-object>
-        | `\\' <omittable-identifier> [`:' <clf-object>] `.' <clf-object>
+        | `\' <omittable-identifier> [`:' <clf-object>] `.' <clf-object>
         | <clf-object2>
 
       <clf-object2> ::=
@@ -1115,8 +1125,11 @@ end = struct
         | `block' <clf-type>
         | <clf-object5>
 
+      In an application, if the last argument is a lambda, then parentheses
+      are not required for it
+
       <clf-object5> ::=
-        | <clf-object6>+
+        | <clf-object6>+ [<lambda>]
         | <clf-object6>
 
       <clf-object6> ::=
@@ -1135,6 +1148,19 @@ end = struct
         | `<' <clf-object> (`;' <clf-object>)* `>'
         | `(' <clf-object> `)'
   *)
+  let lambda =
+    seq2
+      (token Token.LAMBDA
+        &> (seq2
+            omittable_identifier
+            (maybe (token Token.COLON &> CLF_parsers.clf_object)))
+        <& token Token.DOT)
+      CLF_parsers.clf_object
+    |> span
+    $> (fun (location, ((parameter_identifier, parameter_sort), body)) ->
+       CLF.Object.RawLambda { location; parameter_identifier; parameter_sort; body })
+    |> labelled "Contextual LF lambda object"
+
   let substitution =
     let inner_substitution =
       let identity_extension =
@@ -1263,7 +1289,7 @@ end = struct
     |> labelled "Contextual LF atomic, projection or substitution object"
 
   let clf_object5 =
-    some clf_object6
+    some (alt clf_object6 lambda)
     |> span
     $> (function
        | (_, List1.T (object_, [])) -> object_
@@ -1338,18 +1364,6 @@ end = struct
       $> (fun (location, ((parameter_identifier, parameter_sort), body)) ->
          CLF.Object.RawPi { location; parameter_identifier; parameter_sort; body })
       |> labelled "Contextual LF Pi object"
-    and lambda =
-      seq2
-        (token Token.LAMBDA
-          &> (seq2
-              omittable_identifier
-              (maybe (token Token.COLON &> CLF_parsers.clf_object)))
-          <& token Token.DOT)
-        CLF_parsers.clf_object
-      |> span
-      $> (fun (location, ((parameter_identifier, parameter_sort), body)) ->
-         CLF.Object.RawLambda { location; parameter_identifier; parameter_sort; body })
-      |> labelled "Contextual LF lambda object"
     in
     choice
       [ pi

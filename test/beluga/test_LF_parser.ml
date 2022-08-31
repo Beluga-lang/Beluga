@@ -634,6 +634,9 @@ let test_type =
         => t_app (t_c "term")
              [ par (app (par (par (par (c "arrow")))) [ v "T"; v "T'" ]) ] )
     ; ( mock_state_5
+      , "term \\x. T x"
+      , t_app (t_c "term") [ lam ~x:"x" (app (v "T") [ v "x" ]) ] )
+    ; ( mock_state_5
       , "term ((arrow) T T') -> term T -> term T'"
       , t_app (t_c "term") [ par (app (par (c "arrow")) [ v "T"; v "T'" ]) ]
         => (t_app (t_c "term") [ v "T" ] => t_app (t_c "term") [ v "T'" ]) )

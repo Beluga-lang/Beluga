@@ -1084,11 +1084,11 @@ module CLF = struct
   and remove_parentheses_substitution ?(unquote_operators = true)
       substitution =
     match substitution with
-    | Substitution.{ location; extends_identity; terms } ->
+    | Substitution.{ location; head; terms } ->
       let terms' =
         List.map (remove_parentheses_term ~unquote_operators) terms
       in
-      Substitution.{ location; extends_identity; terms = terms' }
+      Substitution.{ location; head; terms = terms' }
 
   (** [remove_parentheses_typ_pattern ?(unquote_operators = true) typ_pattern]
       is [typ_pattern] without parentheses. If [unquote_operators = true],
@@ -1652,9 +1652,9 @@ module CLF = struct
 
   and parenthesize_substitution substitution =
     match substitution with
-    | Substitution.{ location; extends_identity; terms } ->
+    | Substitution.{ location; head; terms } ->
       let terms' = List.map parenthesize_term terms in
-      Substitution.{ location; extends_identity; terms = terms' }
+      Substitution.{ location; head; terms = terms' }
 
   (** [parenthesize_typ_pattern typ_pattern] is [typ_pattern] with the
       addition of necessary parentheses for printing.
@@ -2281,15 +2281,15 @@ module CLF = struct
 
   and pp_substitution ppf substitution =
     match substitution with
-    | Substitution.{ extends_identity = false; terms = []; _ } ->
+    | Substitution.{ head = Head.None; terms = []; _ } ->
       Format.fprintf ppf "[]"
-    | Substitution.{ extends_identity = true; terms = []; _ } ->
+    | Substitution.{ head = Head.Identity _; terms = []; _ } ->
       Format.fprintf ppf "[..]"
-    | Substitution.{ extends_identity = false; terms; _ } ->
+    | Substitution.{ head = Head.None; terms; _ } ->
       Format.fprintf ppf "@[<2>[%a]@]"
         (List.pp ~pp_sep:(fun ppf () -> Format.fprintf ppf ",@,") pp_term)
         terms
-    | Substitution.{ extends_identity = true; terms; _ } ->
+    | Substitution.{ head = Head.Identity _; terms; _ } ->
       Format.fprintf ppf "@[<2>[..,@,%a]@]"
         (List.pp ~pp_sep:(fun ppf () -> Format.fprintf ppf ",@,") pp_term)
         terms
@@ -2403,15 +2403,15 @@ module CLF = struct
 
     and pp_substitution ppf substitution =
       match substitution with
-      | Substitution.{ extends_identity = false; terms = []; _ } ->
+      | Substitution.{ head = Head.None; terms = []; _ } ->
         Format.fprintf ppf "Substitution([])"
-      | Substitution.{ extends_identity = true; terms = []; _ } ->
+      | Substitution.{ head = Head.Identity _; terms = []; _ } ->
         Format.fprintf ppf "Substitution([..])"
-      | Substitution.{ extends_identity = false; terms; _ } ->
+      | Substitution.{ head = Head.None; terms; _ } ->
         Format.fprintf ppf "@[<2>Substitution([%a])@]"
           (List.pp ~pp_sep:(fun ppf () -> Format.fprintf ppf ",@,") pp_term)
           terms
-      | Substitution.{ extends_identity = true; terms; _ } ->
+      | Substitution.{ head = Head.Identity _; terms; _ } ->
         Format.fprintf ppf "@[<2>Substitution([..,@,%a])@]"
           (List.pp ~pp_sep:(fun ppf () -> Format.fprintf ppf ",@,") pp_term)
           terms

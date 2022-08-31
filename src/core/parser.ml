@@ -1179,21 +1179,26 @@ end = struct
     bracks inner_substitution
     |> span
     $> (function
-       | (location, Option.None) -> CLF.Substitution.Empty { location }
+       | (location, Option.None) ->
+         { CLF.Substitution.location
+         ; head = CLF.Substitution.Head.None
+         ; objects = []
+         }
        | (location, Option.Some (`Identity_extension [])) ->
-           CLF.Substitution.Identity { location }
-       | (location, Option.Some (`Identity_extension (o :: os))) ->
-           CLF.Substitution.Substitution
-             { location
-             ; extends_identity = true
-             ; objects = List1.from o os
-             }
+         { CLF.Substitution.location
+         ; head = CLF.Substitution.Head.Identity { location }
+         ; objects = []
+         }
+       | (location, Option.Some (`Identity_extension objects)) ->
+         { CLF.Substitution.location
+         ; head = CLF.Substitution.Head.Identity { location }
+         ; objects
+         }
        | (location, Option.Some (`Plain objects)) ->
-           CLF.Substitution.Substitution
-             { location
-             ; extends_identity = false
-             ; objects
-             }
+         { CLF.Substitution.location
+         ; head = CLF.Substitution.Head.None
+         ; objects = List1.to_list objects
+         }
        )
     |> labelled "Contextual LF substitution"
 

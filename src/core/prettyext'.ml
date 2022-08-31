@@ -694,6 +694,17 @@ module LF = struct
     in
     [ argument'' ]
 
+  let re_parenthesize_kind =
+    Fun.(
+      remove_parentheses_kind ~unquote_operators:true >> parenthesize_kind)
+
+  let re_parenthesize_typ =
+    Fun.(remove_parentheses_typ ~unquote_operators:true >> parenthesize_typ)
+
+  let re_parenthesize_term =
+    Fun.(
+      remove_parentheses_term ~unquote_operators:true >> parenthesize_term)
+
   (** {1 Printing} *)
 
   let rec pp_kind ppf kind =
@@ -1066,7 +1077,10 @@ module CLF = struct
   (** [remove_parentheses_substitution ?(unquote_operators = true) term] is
       [term] without parentheses. If [unquote_operators = true], then
       non-nullary operators that do not appear as application arguments are
-      unquoted. *)
+      unquoted.
+
+      Printing this substitution with {!pp_substitution} may not result in a
+      syntactically valid contextual LF substitution. *)
   and remove_parentheses_substitution ?(unquote_operators = true)
       substitution =
     match substitution with
@@ -1082,7 +1096,7 @@ module CLF = struct
       are unquoted.
 
       Printing this type with {!pp_typ_pattern} may not result in a
-      syntactically valid LF type. *)
+      syntactically valid LF type pattern. *)
   let rec remove_parentheses_typ_pattern ?(unquote_operators = true)
       typ_pattern =
     match typ_pattern with
@@ -1128,7 +1142,7 @@ module CLF = struct
       are unquoted.
 
       Printing this term with {!pp_term_pattern} may not result in a
-      syntactically valid LF term. *)
+      syntactically valid LF term pattern. *)
   and remove_parentheses_term_pattern ?(unquote_operators = true)
       term_pattern =
     match term_pattern with
@@ -1963,6 +1977,28 @@ module CLF = struct
           ~parent_precedence argument'
     in
     [ argument'' ]
+
+  let re_parenthesize_typ =
+    Fun.(remove_parentheses_typ ~unquote_operators:true >> parenthesize_typ)
+
+  let re_parenthesize_typ_pattern =
+    Fun.(
+      remove_parentheses_typ_pattern ~unquote_operators:true
+      >> parenthesize_typ_pattern)
+
+  let re_parenthesize_term =
+    Fun.(
+      remove_parentheses_term ~unquote_operators:true >> parenthesize_term)
+
+  let re_parenthesize_term_pattern =
+    Fun.(
+      remove_parentheses_term_pattern ~unquote_operators:true
+      >> parenthesize_term_pattern)
+
+  let re_parenthesize_substitution =
+    Fun.(
+      remove_parentheses_substitution ~unquote_operators:true
+      >> parenthesize_substitution)
 
   (** {1 Printing} *)
 

@@ -1667,16 +1667,29 @@ module CLF = struct
 
   and elaborate_substitution state substitution =
     match substitution with
-    | Synprs.CLF.Substitution.Empty { location } ->
+    | Synprs.CLF.Substitution.
+        { location; head = Synprs.CLF.Substitution.Head.None; objects } ->
+      let objects' = List.map (elaborate_term state) objects in
       Synext'.CLF.Substitution.
-        { location; extends_identity = false; terms = [] }
-    | Synprs.CLF.Substitution.Identity { location } ->
+        { location
+        ; head = Synext'.CLF.Substitution.Head.None
+        ; terms = objects'
+        }
+    | Synprs.CLF.Substitution.
+        { location
+        ; head =
+            Synprs.CLF.Substitution.Head.Identity
+              { location = head_location }
+        ; objects
+        } ->
+      let objects' = List.map (elaborate_term state) objects in
       Synext'.CLF.Substitution.
-        { location; extends_identity = true; terms = [] }
-    | Synprs.CLF.Substitution.Substitution
-        { location; extends_identity; objects } ->
-      let terms' = List.map (elaborate_term state) (List1.to_list objects) in
-      Synext'.CLF.Substitution.{ location; extends_identity; terms = terms' }
+        { location
+        ; head =
+            Synext'.CLF.Substitution.Head.Identity
+              { location = head_location }
+        ; terms = objects'
+        }
 
   (** [elaborate_arrows state arrow] elaborates the contextual LF arrow type
       [arrow]. Both forward and backward arrows were parsed as

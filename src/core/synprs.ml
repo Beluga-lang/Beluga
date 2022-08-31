@@ -365,13 +365,16 @@ module CLF = struct
 
   and Substitution : sig
     type t =
-      | Empty of { location : Location.t }
-      | Identity of { location : Location.t }
-      | Substitution of
-          { location : Location.t
-          ; extends_identity : Bool.t
-          ; objects : Object.t List1.t
-          }
+      { location : Location.t
+      ; head : Substitution.Head.t
+      ; objects : Object.t List.t
+      }
+
+    module Head : sig
+      type t =
+        | None
+        | Identity of { location : Location.t }
+    end
   end =
     Substitution
 

@@ -482,22 +482,17 @@ module CLF = struct
 
   (** External contextual LF substitutions. *)
   and Substitution : sig
-    (** [{ extends_identity; terms; _ }] is either:
-
-        - The empty substitution `[]' if [extends_identity = false] and
-          [terms = \[\]]
-        - The identity substitution `[..]' if [extends_identity = true] and
-          [terms = \[\]]
-        - A plain substitution `[t1, t2, t3]' if [extends_identity = false]
-          and [terms = \[t1; t2; t3\]]
-        - A substitution that extends the identity substitution
-          `[.., t1, t2, t3]' if [extends_identity = true] and
-          [terms = \[t1; t2; t3\]] *)
     type t =
       { location : Location.t
-      ; extends_identity : Bool.t
+      ; head : Substitution.Head.t
       ; terms : Term.t List.t
       }
+
+    module Head : sig
+      type t =
+        | None
+        | Identity of { location : Location.t }
+    end
   end =
     Substitution
 

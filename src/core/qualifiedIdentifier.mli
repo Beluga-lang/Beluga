@@ -93,6 +93,14 @@ module Dictionary : sig
   (** [empty] is the empty dictionary. *)
   val empty : _ t
 
+  (** [add_toplevel_entry identifier value dictionary] is the dictionary
+      derived from [dictionary] with the added binding of [value] to
+      [identifier].
+
+      If the binding already exists in [dictionary], then it is replaced in
+      the derived dictionary. *)
+  val add_toplevel_entry : Identifier.t -> 'a -> 'a t -> 'a t
+
   (** [add_entry identifier value dictionary] is the dictionary derived from
       [dictionary] with the added binding of [value] to [identifier].
 

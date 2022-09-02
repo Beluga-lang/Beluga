@@ -224,6 +224,10 @@ type error' =
 
   | NoMoreChoices of error list (* all alternatives failed *)
 
+  | AmbiguousUseOfOperator of
+      { associativity : Associativity.t
+      }
+
   (* Internal errors: our fault; these should never go to the user. *)
   (* Raised by `satisfy` when it fails.
       This is an internal error because it is totally uninformative
@@ -254,7 +258,7 @@ and error =
 
 exception Error of state * error
 
-(** Pretty-print an error patHarpoon. *)
+(** Pretty-print an error path. *)
 let print_path ppf (path : path) : unit =
   let open Format in
   let print_entry ppf { label; location } : unit =
@@ -315,6 +319,18 @@ let print_error ppf ({path; loc; _} as e : error) =
          (Name.string_of_name c)
          (Name.string_of_name exp)
          (Name.string_of_name act)
+    | AmbiguousUseOfOperator
+        { associativity = Associativity.Left_associative
+        } ->
+       fprintf ppf "Ambiguous use of a left-associative operator"
+    | AmbiguousUseOfOperator
+        { associativity = Associativity.Right_associative
+        } ->
+       fprintf ppf "Ambiguous use of a right-associative operator"
+    | AmbiguousUseOfOperator
+        { associativity = Associativity.Non_associative
+        } ->
+       fprintf ppf "Ambiguous use of a non-associative operator"
     (* | Custom s -> fprintf ppf "%s" s *)
     | Violation s -> fprintf ppf "%s" s
   in
@@ -390,14 +406,14 @@ let fail_at' s loc path error =
   , Either.left {error ; path; loc}
   )
 
-(** Fail with no error patHarpoon. *)
+(** Fail with no error path. *)
 let fail_at s error = fail_at' s (next_loc_at s) [] error
 
-(** A parser that fails with the given error and patHarpoon. *)
+(** A parser that fails with the given error and path. *)
 let fail' path e : 'a parser =
   fun s -> fail_at' s (next_loc_at s) path e
 
-(** A parser that fails with the given error and an empty patHarpoon. *)
+(** A parser that fails with the given error and an empty path. *)
 let fail e : 'a parser = fail' [] e
 
 let return_at s x =
@@ -488,7 +504,7 @@ let label p s =
 (** Flipped version of `label'. *)
 let labelled s p = label p s
 
-(** Replaces the _name_ of the last entry on the patHarpoon. *)
+(** Replaces the _name_ of the last entry on the path. *)
 let renamed label p =
   relabelling p
     begin fun loc ->
@@ -500,7 +516,7 @@ let renamed label p =
 
 (***** Special combinators *****)
 
-(** `not_followed_by p` succeeds if the parser `p` fails.
+(** [not_followed_by p] succeeds if the parser [p] fails.
     This parser does not consume any input.
  *)
 let[@warning "-32"] not_followed_by (p : 'a parser) : unit parser =
@@ -509,10 +525,10 @@ let[@warning "-32"] not_followed_by (p : 'a parser) : unit parser =
     catch p
       (function
        | s', Either.Left _ ->
-          (* if `p` fails, we restore the original state *)
+          (* if [p] fails, we restore the original state *)
           run (put_state s) s'
        | _, Either.Right _ ->
-          (* if `p` succeeds, then we need to fail *)
+          (* if [p] succeeds, then we need to fail *)
           s, Either.left { error = NotFollowedBy; path = []; loc = loc }
       )
 
@@ -647,6 +663,104 @@ let sep_by1 (p : 'a parser) (sep : unit parser) : 'a List1.t parser =
   seq2 p (many' (sep &> p))
   $> (fun (x, xs) -> List1.from x xs)
   |> shifted "some separated"
+
+(** {1 Expressions Parsing}
+
+    Helpers for parsing expression lists containing pre-defined operators.
+    These pre-defined operators may be prefix, postifx or infix,
+    left-associative, right-associative or non-associative, and with
+    differing predecences.
+
+    This implementation is adapted from the [parsec] library on Hackage:
+
+    @see <https://github.com/haskell/parsec/blob/master/src/Text/Parsec/Expr.hs> *)
+
+(** This data type specifies operators that work on values of type ['operand].
+    An operator is either binary infix or unary prefix or postfix. A binary
+    operator has also an associativity.
+
+    An operator's parser parses the token or identifier corresponding to the
+    operator, and returns the function to construct the operand corresponding
+    to the application of the operator. *)
+type[@warning "-37"] 'operand operator =
+  | Infix of
+      { parser :
+          (left_operand:'operand -> right_operand:'operand -> 'operand) t
+      ; associativity : Associativity.t
+      }
+  | Prefix of { parser : ('operand -> 'operand) t }
+  | Postfix of { parser : ('operand -> 'operand) t }
+
+(** An operator table is a list of operator lists. The list is ordered in
+    descending precedence. All operators in one list have the same precedence
+    (but may have a different associativity). *)
+type 'a operator_table = 'a operator List.t List.t
+
+(** [expression operators operand] is an expression parser with operators in
+    [operators] and operands parsed as [operand]. Operator precedence, fixity
+    and precedence as specified in [operators] are taken into account. *)
+let expression : 'a operator_table -> 'a t -> 'a t =
+  let splitOp operator (rassoc, lassoc, nassoc, prefix, postfix) =
+    match operator with
+    | Infix { parser = op; associativity } -> (
+      match associativity with
+      | Associativity.Non_associative ->
+        (rassoc, lassoc, op :: nassoc, prefix, postfix)
+      | Associativity.Left_associative ->
+        (rassoc, op :: lassoc, nassoc, prefix, postfix)
+      | Associativity.Right_associative ->
+        (op :: rassoc, lassoc, nassoc, prefix, postfix))
+    | Prefix { parser = op } ->
+      (rassoc, lassoc, nassoc, op :: prefix, postfix)
+    | Postfix { parser = op } ->
+      (rassoc, lassoc, nassoc, prefix, op :: postfix)
+  in
+  let makeParser term ops =
+    let rassoc, lassoc, nassoc, prefix, postifx =
+      List.fold_right splitOp ops ([], [], [], [], [])
+    in
+    let rassocOp = choice rassoc
+    and lassocOp = choice lassoc
+    and nassocOp = choice nassoc
+    and prefixOp = choice prefix
+    and postfixOp = choice postifx in
+    let ambiguous associativity op =
+      op >>= fun _ -> fail @@ AmbiguousUseOfOperator { associativity }
+    in
+    let ambiguousRight = ambiguous Associativity.right_associative rassocOp
+    and ambiguousLeft = ambiguous Associativity.left_associative lassocOp
+    and ambiguousNon = ambiguous Associativity.non_associative nassocOp in
+    let postfixP = alt postfixOp (return Fun.id)
+    and prefixP = alt prefixOp (return Fun.id) in
+    let termP =
+      seq3 prefixP term postfixP
+      $> fun (pre, x, post) -> post (pre x)
+    in
+    let rec rassocP left_operand =
+      seq2 rassocOp (termP >>= rassocP1)
+      $> fun (f, right_operand) -> f ~left_operand ~right_operand
+    and rassocP1 left_operand =
+      alt (rassocP left_operand) (return left_operand)
+    in
+    let rec lassocP left_operand =
+      seq2 lassocOp termP
+      >>= fun (f, right_operand) -> lassocP1 (f ~left_operand ~right_operand)
+    and lassocP1 left_operand =
+      alt (lassocP left_operand) (return left_operand)
+    in
+    let nassocP left_operand =
+      seq2 nassocOp termP
+      >>= fun (f, right_operand) ->
+        choice
+          [ ambiguousRight
+          ; ambiguousLeft
+          ; ambiguousNon
+          ; return (f ~left_operand ~right_operand)
+          ]
+    in
+    termP >>= fun x -> choice [ rassocP x; lassocP x; nassocP x; return x ]
+  in
+  fun operators operand -> List.fold_left makeParser operand operators
 
 (***** Unmixing & other checks *****)
 

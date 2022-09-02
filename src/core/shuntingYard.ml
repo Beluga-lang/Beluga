@@ -59,6 +59,12 @@ struct
       }
 
   exception
+    Ambiguous_operator_placement of
+      { left_operator : Operator.t
+      ; right_operator : Operator.t
+      }
+
+  exception
     Consecutive_non_associative_operators of
       { left_operator : Operator.t
       ; right_operator : Operator.t
@@ -133,18 +139,37 @@ struct
       respect to [x] and [output] to ensure that writing [x] respects the
       precedence and associativity of operators in [stack].
 
-      @raise Consecutive_non_associative_operators *)
+      @raise Consecutive_non_associative_operators
+      @raise Ambiguous_operator_placement *)
   let rec pop x output stack =
     match stack with
     | (index, y) :: ys -> (
       match Operator.associativity x with
       | Associativity.Left_associative ->
-        if Int.(Operator.precedence x <= Operator.precedence y) then
-          pop x (write (index, y) output) ys
+        let px = Operator.precedence x
+        and py = Operator.precedence y in
+        if
+          Int.(
+            Associativity.is_right_associative (Operator.associativity y)
+            && px = py)
+        then
+          raise
+          @@ Ambiguous_operator_placement
+               { left_operator = y; right_operator = x };
+        if Int.(px <= py) then pop x (write (index, y) output) ys
         else (output, stack)
       | Associativity.Right_associative ->
-        if Int.(Operator.precedence x < Operator.precedence y) then
-          pop x (write (index, y) output) ys
+        let px = Operator.precedence x
+        and py = Operator.precedence y in
+        if
+          Int.(
+            Associativity.is_left_associative (Operator.associativity y)
+            && px = py)
+        then
+          raise
+          @@ Ambiguous_operator_placement
+               { left_operator = y; right_operator = x };
+        if Int.(px < py) then pop x (write (index, y) output) ys
         else (output, stack)
       | Associativity.Non_associative ->
         if Operator.(x = y) then
@@ -175,6 +200,7 @@ struct
       @raise Arity_mismatch
       @raise Leftover_expressions
       @raise Consecutive_non_associative_operators
+      @raise Ambiguous_operator_placement
       @raise Misplaced_operator *)
   let rec shunting_yard operands operators primitives =
     match primitives with

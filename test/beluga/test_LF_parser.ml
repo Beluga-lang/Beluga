@@ -22,8 +22,6 @@ module LF = struct
         ) ->
         Option.equal Identifier.equal i1 i2
         && Typ.equal t1 t2 && Kind.equal b1 b2
-      | Parenthesized { kind = k1; _ }, Parenthesized { kind = k2; _ } ->
-        Kind.equal k1 k2
       | _ -> false
   end
 
@@ -38,8 +36,9 @@ module LF = struct
 
     let equal x y =
       match (x, y) with
-      | Constant { identifier = i1; _ }, Constant { identifier = i2; _ } ->
-        QualifiedIdentifier.equal i1 i2
+      | ( Constant { identifier = i1; quoted = q1; _ }
+        , Constant { identifier = i2; quoted = q2; _ } ) ->
+        QualifiedIdentifier.equal i1 i2 && Bool.equal q1 q2
       | ( Application { applicand = f1; arguments = as1; _ }
         , Application { applicand = f2; arguments = as2; _ } ) ->
         Typ.equal f1 f2 && List.equal Term.equal as1 as2
@@ -54,8 +53,6 @@ module LF = struct
         ) ->
         Option.equal Identifier.equal i1 i2
         && Typ.equal t1 t2 && Typ.equal b1 b2
-      | Parenthesized { typ = t1; _ }, Parenthesized { typ = t2; _ } ->
-        Typ.equal t1 t2
       | _ -> false
   end
 
@@ -72,8 +69,9 @@ module LF = struct
       match (x, y) with
       | Variable { identifier = i1; _ }, Variable { identifier = i2; _ } ->
         Identifier.equal i1 i2
-      | Constant { identifier = i1; _ }, Constant { identifier = i2; _ } ->
-        QualifiedIdentifier.equal i1 i2
+      | ( Constant { identifier = i1; quoted = q1; _ }
+        , Constant { identifier = i2; quoted = q2; _ } ) ->
+        QualifiedIdentifier.equal i1 i2 && Bool.equal q1 q2
       | ( Application { applicand = f1; arguments = as1; _ }
         , Application { applicand = f2; arguments = as2; _ } ) ->
         Term.equal f1 f2 && List.equal Term.equal as1 as2
@@ -89,8 +87,6 @@ module LF = struct
       | ( TypeAnnotated { term = u1; typ = t1; _ }
         , TypeAnnotated { term = u2; typ = t2; _ } ) ->
         Term.equal u1 u2 && Typ.equal t1 t2
-      | Parenthesized { term = t1; _ }, Parenthesized { term = t2; _ } ->
-        Term.equal t1 t2
       | _ -> false
   end
 end
@@ -123,13 +119,15 @@ module LF_constructors = struct
       ; body
       }
 
-  let k_par kind = Kind.Parenthesized { location; kind }
-
   (* LF type constructors *)
 
-  let t_c ?m identifier =
+  let t_c ?(quoted = false) ?m identifier =
     Typ.Constant
-      { location; identifier = qid ?m identifier; operator = Obj.magic () }
+      { location
+      ; identifier = qid ?m identifier
+      ; operator = Obj.magic ()
+      ; quoted
+      }
 
   let t_app applicand arguments =
     Typ.Application { location; applicand; arguments }
@@ -146,15 +144,17 @@ module LF_constructors = struct
       ; body
       }
 
-  let t_par typ = Typ.Parenthesized { location; typ }
-
   (* LF term constructors *)
 
   let v identifier = Term.Variable { location; identifier = id identifier }
 
-  let c ?m identifier =
+  let c ?(quoted = false) ?m identifier =
     Term.Constant
-      { location; identifier = qid ?m identifier; operator = Obj.magic () }
+      { location
+      ; identifier = qid ?m identifier
+      ; operator = Obj.magic ()
+      ; quoted
+      }
 
   let app applicand arguments =
     Term.Application { location; applicand; arguments }
@@ -170,8 +170,6 @@ module LF_constructors = struct
   let hole = Term.Wildcard { location }
 
   let ( &: ) term typ = Term.TypeAnnotated { location; term; typ }
-
-  let par term = Term.Parenthesized { location; term }
 end
 
 let parse_lf_object input =
@@ -475,9 +473,7 @@ let mock_state_10 =
 
 let test_kind =
   let test_success elaboration_context input expected _test_ctxt =
-    OUnit2.assert_equal
-      ~printer:(Format.stringify Prettyext'.LF.Debug.pp_kind)
-      ~cmp:LF.Kind.equal expected
+    OUnit2.assert_equal ~cmp:LF.Kind.equal expected
       (parse_lf_object input
       |> Synprs_to_synext'.LF.elaborate_kind elaboration_context)
   and test_failure elaboration_context input assert_exn _test_ctxt =
@@ -491,13 +487,11 @@ let test_kind =
     ; (mock_state_2, "nat -> nat -> type", t_c "nat" ==> (t_c "nat" ==> typ))
     ; ( mock_state_2
       , "nat -> (nat -> type)"
-      , t_c "nat" ==> k_par (t_c "nat" ==> typ) )
+      , t_c "nat" ==> (t_c "nat" ==> typ) )
     ; ( mock_state_2
       , "nat -> nat -> nat -> type"
       , t_c "nat" ==> (t_c "nat" ==> (t_c "nat" ==> typ)) )
-    ; ( mock_state_2
-      , "(nat -> nat) -> type"
-      , t_par (t_c "nat" => t_c "nat") ==> typ )
+    ; (mock_state_2, "(nat -> nat) -> type", t_c "nat" => t_c "nat" ==> typ)
     ; ( mock_state_3
       , "Nat::nat -> Nat::nat -> type"
       , t_c ~m:[ "Nat" ] "nat" ==> (t_c ~m:[ "Nat" ] "nat" ==> typ) )
@@ -508,14 +502,11 @@ let test_kind =
     ; ( mock_state_8
       , "({ x : term } (M x) msteps (M' x)) -> (lam M) msteps (lam M') -> \
          type"
-      , t_par
-          (t_pi ~x:"x" ~t:(t_c "term")
-             (t_app (t_c "msteps")
-                [ par (app (v "M") [ v "x" ]); par (app (v "M'") [ v "x" ]) ]))
+      , t_pi ~x:"x" ~t:(t_c "term")
+          (t_app (t_c "msteps")
+             [ app (v "M") [ v "x" ]; app (v "M'") [ v "x" ] ])
         ==> (t_app (t_c "msteps")
-               [ par (app (c "lam") [ v "M" ])
-               ; par (app (c "lam") [ v "M'" ])
-               ]
+               [ app (c "lam") [ v "M" ]; app (c "lam") [ v "M'" ] ]
             ==> typ) )
     ; ( mock_state_9
       , "{ Lf : tp } target Lf -> type"
@@ -555,9 +546,7 @@ let test_kind =
 
 let test_type =
   let test_success elaboration_context input expected _test_ctxt =
-    OUnit2.assert_equal
-      ~printer:(Format.stringify Prettyext'.LF.Debug.pp_typ)
-      ~cmp:LF.Typ.equal expected
+    OUnit2.assert_equal ~cmp:LF.Typ.equal expected
       (parse_lf_object input
       |> Synprs_to_synext'.LF.elaborate_typ elaboration_context)
   and test_failure elaboration_context input assert_exn _test_ctxt =
@@ -573,28 +562,28 @@ let test_type =
       , t_c "nat" => (t_c "nat" => t_c "nat") )
     ; ( mock_state_2
       , "(nat -> nat) -> nat"
-      , t_par (t_c "nat" => t_c "nat") => t_c "nat" )
+      , t_c "nat" => t_c "nat" => t_c "nat" )
     ; (mock_state_2, "nat <- nat <- nat", t_c "nat" <= t_c "nat" <= t_c "nat")
     ; ( mock_state_2
       , "nat <- nat <- nat <- nat"
       , t_c "nat" <= t_c "nat" <= t_c "nat" <= t_c "nat" )
     ; (mock_state_10, "a -> b -> c", t_c "a" => (t_c "b" => t_c "c"))
-    ; (mock_state_10, "(a -> b) -> c", t_par (t_c "a" => t_c "b") => t_c "c")
+    ; (mock_state_10, "(a -> b) -> c", t_c "a" => t_c "b" => t_c "c")
     ; (mock_state_10, "a <- b <- c", t_c "a" <= t_c "b" <= t_c "c")
-    ; (mock_state_10, "a <- (b <- c)", t_c "a" <= t_par (t_c "b" <= t_c "c"))
-    ; (mock_state_10, "(a <- b) -> c", t_par (t_c "a" <= t_c "b") => t_c "c")
-    ; (mock_state_10, "a <- (b -> c)", t_c "a" <= t_par (t_c "b" => t_c "c"))
-    ; (mock_state_10, "a -> b <- c", t_c "a" => t_c "b" <= t_c "c")
-    ; (mock_state_10, "a <- b -> c", t_c "a" <= (t_c "b" => t_c "c"))
+    ; (mock_state_10, "a <- (b <- c)", t_c "a" <= (t_c "b" <= t_c "c"))
+    ; (mock_state_10, "(a <- b) -> c", t_c "a" <= t_c "b" => t_c "c")
+    ; (mock_state_10, "a <- (b -> c)", t_c "a" <= (t_c "b" => t_c "c"))
+    ; (mock_state_10, "a -> (b <- c)", t_c "a" => (t_c "b" <= t_c "c"))
+    ; (mock_state_10, "a <- (b -> c)", t_c "a" <= (t_c "b" => t_c "c"))
     ; ( mock_state_2
       , "nat <- (nat -> nat)"
-      , t_c "nat" <= t_par (t_c "nat" => t_c "nat") )
-    ; ( mock_state_2
-      , "nat <- nat -> nat"
       , t_c "nat" <= (t_c "nat" => t_c "nat") )
     ; ( mock_state_2
-      , "nat -> nat <- nat -> nat"
-      , t_c "nat" => t_c "nat" <= (t_c "nat" => t_c "nat") )
+      , "nat <- (nat <- nat)"
+      , t_c "nat" <= (t_c "nat" <= t_c "nat") )
+    ; ( mock_state_2
+      , "nat -> (nat <- nat) -> nat"
+      , t_c "nat" => (t_c "nat" <= t_c "nat" => t_c "nat") )
     ; ( mock_state_2
       , "{ x : nat } sum x x x"
       , t_pi ~x:"x" ~t:(t_c "nat")
@@ -612,50 +601,53 @@ let test_type =
                 (t_app (t_c "sum") [ v "x"; v "y"; v "z" ]))) )
     ; ( mock_state_5
       , "(term T -> term T') -> term (T arrow T')"
-      , t_par (t_app (t_c "term") [ v "T" ] => t_app (t_c "term") [ v "T'" ])
-        => t_app (t_c "term") [ par (app (c "arrow") [ v "T"; v "T'" ]) ] )
+      , t_app (t_c "term") [ v "T" ]
+        => t_app (t_c "term") [ v "T'" ]
+        => t_app (t_c "term") [ app (c "arrow") [ v "T"; v "T'" ] ] )
     ; ( mock_state_5
       , "term (T arrow T') -> term T -> term T'"
-      , t_app (t_c "term") [ par (app (c "arrow") [ v "T"; v "T'" ]) ]
+      , t_app (t_c "term") [ app (c "arrow") [ v "T"; v "T'" ] ]
         => (t_app (t_c "term") [ v "T" ] => t_app (t_c "term") [ v "T'" ]) )
     ; ( mock_state_5
       , "(term T -> term T') -> term ((arrow) T T')"
-      , t_par (t_app (t_c "term") [ v "T" ] => t_app (t_c "term") [ v "T'" ])
+      , t_app (t_c "term") [ v "T" ]
+        => t_app (t_c "term") [ v "T'" ]
         => t_app (t_c "term")
-             [ par (app (par (c "arrow")) [ v "T"; v "T'" ]) ] )
+             [ app (c ~quoted:true "arrow") [ v "T"; v "T'" ] ] )
     ; ( mock_state_5
       , "(term T -> term T') -> term (((arrow)) T T')"
-      , t_par (t_app (t_c "term") [ v "T" ] => t_app (t_c "term") [ v "T'" ])
+      , t_app (t_c "term") [ v "T" ]
+        => t_app (t_c "term") [ v "T'" ]
         => t_app (t_c "term")
-             [ par (app (par (par (c "arrow"))) [ v "T"; v "T'" ]) ] )
+             [ app (c ~quoted:true "arrow") [ v "T"; v "T'" ] ] )
     ; ( mock_state_5
       , "(term T -> term T') -> term ((((arrow))) T T')"
-      , t_par (t_app (t_c "term") [ v "T" ] => t_app (t_c "term") [ v "T'" ])
+      , t_app (t_c "term") [ v "T" ]
+        => t_app (t_c "term") [ v "T'" ]
         => t_app (t_c "term")
-             [ par (app (par (par (par (c "arrow")))) [ v "T"; v "T'" ]) ] )
+             [ app (c ~quoted:true "arrow") [ v "T"; v "T'" ] ] )
     ; ( mock_state_5
       , "term \\x. T x"
       , t_app (t_c "term") [ lam ~x:"x" (app (v "T") [ v "x" ]) ] )
     ; ( mock_state_5
       , "term ((arrow) T T') -> term T -> term T'"
-      , t_app (t_c "term") [ par (app (par (c "arrow")) [ v "T"; v "T'" ]) ]
+      , t_app (t_c "term") [ app (c ~quoted:true "arrow") [ v "T"; v "T'" ] ]
         => (t_app (t_c "term") [ v "T" ] => t_app (t_c "term") [ v "T'" ]) )
     ; ( mock_state_6
       , "E1 eq F1 -> E2 eq F2 -> (E1 app E2) eq (F1 app F2)"
       , t_app (t_c "eq") [ v "E1"; v "F1" ]
         => (t_app (t_c "eq") [ v "E2"; v "F2" ]
            => t_app (t_c "eq")
-                [ par (app (c "app") [ v "E1"; v "E2" ])
-                ; par (app (c "app") [ v "F1"; v "F2" ])
+                [ app (c "app") [ v "E1"; v "E2" ]
+                ; app (c "app") [ v "F1"; v "F2" ]
                 ]) )
     ; ( mock_state_6
       , "(eq) E1 F1 -> (eq) E2 F2 -> (eq) ((app) E1 E2) ((app) F1 F2)"
-      , t_app (t_par (t_c "eq")) [ v "E1"; v "F1" ]
-        => (t_app (t_par (t_c "eq")) [ v "E2"; v "F2" ]
-           => t_app
-                (t_par (t_c "eq"))
-                [ par (app (par (c "app")) [ v "E1"; v "E2" ])
-                ; par (app (par (c "app")) [ v "F1"; v "F2" ])
+      , t_app (t_c ~quoted:true "eq") [ v "E1"; v "F1" ]
+        => (t_app (t_c ~quoted:true "eq") [ v "E2"; v "F2" ]
+           => t_app (t_c ~quoted:true "eq")
+                [ app (c ~quoted:true "app") [ v "E1"; v "E2" ]
+                ; app (c ~quoted:true "app") [ v "F1"; v "F2" ]
                 ]) )
     ; ( mock_state_6
       , "{ _ : exp } _ eq _"
@@ -663,75 +655,54 @@ let test_type =
     ; ( mock_state_6
       , "({x : exp} x eq x -> (E x) eq (F x)) -> (lam (\\x. E x)) eq (lam \
          (\\x. F x))"
-      , t_par
-          (t_pi ~x:"x" ~t:(t_c "exp")
-             (t_app (t_c "eq") [ v "x"; v "x" ]
-             => t_app (t_c "eq")
-                  [ par (app (v "E") [ v "x" ])
-                  ; par (app (v "F") [ v "x" ])
-                  ]))
+      , t_pi ~x:"x" ~t:(t_c "exp")
+          (t_app (t_c "eq") [ v "x"; v "x" ]
+          => t_app (t_c "eq")
+               [ app (v "E") [ v "x" ]; app (v "F") [ v "x" ] ])
         => t_app (t_c "eq")
-             [ par
-                 (app (c "lam") [ par (lam ~x:"x" (app (v "E") [ v "x" ])) ])
-             ; par
-                 (app (c "lam") [ par (lam ~x:"x" (app (v "F") [ v "x" ])) ])
+             [ app (c "lam") [ lam ~x:"x" (app (v "E") [ v "x" ]) ]
+             ; app (c "lam") [ lam ~x:"x" (app (v "F") [ v "x" ]) ]
              ] )
     ; ( mock_state_6
       , "({x : exp} (eq) x x -> (eq) (E x) (F x)) -> (eq) (lam (\\x. E x)) \
          (lam (\\x. F x))"
-      , t_par
-          (t_pi ~x:"x" ~t:(t_c "exp")
-             (t_app (t_par (t_c "eq")) [ v "x"; v "x" ]
-             => t_app
-                  (t_par (t_c "eq"))
-                  [ par (app (v "E") [ v "x" ])
-                  ; par (app (v "F") [ v "x" ])
-                  ]))
-        => t_app
-             (t_par (t_c "eq"))
-             [ par
-                 (app (c "lam") [ par (lam ~x:"x" (app (v "E") [ v "x" ])) ])
-             ; par
-                 (app (c "lam") [ par (lam ~x:"x" (app (v "F") [ v "x" ])) ])
+      , t_pi ~x:"x" ~t:(t_c "exp")
+          (t_app (t_c ~quoted:true "eq") [ v "x"; v "x" ]
+          => t_app (t_c ~quoted:true "eq")
+               [ app (v "E") [ v "x" ]; app (v "F") [ v "x" ] ])
+        => t_app (t_c ~quoted:true "eq")
+             [ app (c "lam") [ lam ~x:"x" (app (v "E") [ v "x" ]) ]
+             ; app (c "lam") [ lam ~x:"x" (app (v "F") [ v "x" ]) ]
              ] )
     ; ( mock_state_6
       , "({x : exp} (eq) x x -> (eq) (E x) (F x)) -> (eq) (lam (\\x. (E) \
          x)) (lam (\\x. (F) x))"
-      , t_par
-          (t_pi ~x:"x" ~t:(t_c "exp")
-             (t_app (t_par (t_c "eq")) [ v "x"; v "x" ]
-             => t_app
-                  (t_par (t_c "eq"))
-                  [ par (app (v "E") [ v "x" ])
-                  ; par (app (v "F") [ v "x" ])
-                  ]))
-        => t_app
-             (t_par (t_c "eq"))
-             [ par
-                 (app (c "lam")
-                    [ par (lam ~x:"x" (app (par (v "E")) [ v "x" ])) ])
-             ; par
-                 (app (c "lam")
-                    [ par (lam ~x:"x" (app (par (v "F")) [ v "x" ])) ])
+      , t_pi ~x:"x" ~t:(t_c "exp")
+          (t_app (t_c ~quoted:true "eq") [ v "x"; v "x" ]
+          => t_app (t_c ~quoted:true "eq")
+               [ app (v "E") [ v "x" ]; app (v "F") [ v "x" ] ])
+        => t_app (t_c ~quoted:true "eq")
+             [ app (c "lam") [ lam ~x:"x" (app (v "E") [ v "x" ]) ]
+             ; app (c "lam") [ lam ~x:"x" (app (v "F") [ v "x" ]) ]
              ] )
     ; ( mock_state_7
       , "(Statics::term T -> Statics::term T') -> Statics::term (T \
          Statics::arrow T')"
-      , t_par
-          (t_app (t_c ~m:[ "Statics" ] "term") [ v "T" ]
-          => t_app (t_c ~m:[ "Statics" ] "term") [ v "T'" ])
+      , t_app (t_c ~m:[ "Statics" ] "term") [ v "T" ]
+        => t_app (t_c ~m:[ "Statics" ] "term") [ v "T'" ]
         => t_app
              (t_c ~m:[ "Statics" ] "term")
-             [ par (app (c ~m:[ "Statics" ] "arrow") [ v "T"; v "T'" ]) ] )
+             [ app (c ~m:[ "Statics" ] "arrow") [ v "T"; v "T'" ] ] )
     ; ( mock_state_7
       , "(Statics::term T -> Statics::term T') -> Statics::term \
          ((Statics::arrow) T T')"
-      , t_par
-          (t_app (t_c ~m:[ "Statics" ] "term") [ v "T" ]
-          => t_app (t_c ~m:[ "Statics" ] "term") [ v "T'" ])
+      , t_app (t_c ~m:[ "Statics" ] "term") [ v "T" ]
+        => t_app (t_c ~m:[ "Statics" ] "term") [ v "T'" ]
         => t_app
              (t_c ~m:[ "Statics" ] "term")
-             [ par (app (par (c ~m:[ "Statics" ] "arrow")) [ v "T"; v "T'" ])
+             [ app
+                 (c ~quoted:true ~m:[ "Statics" ] "arrow")
+                 [ v "T"; v "T'" ]
              ] )
     ]
   and failure_test_cases =
@@ -760,9 +731,7 @@ let test_type =
 
 let test_term =
   let test_success elaboration_context input expected _test_ctxt =
-    OUnit2.assert_equal
-      ~printer:(Format.stringify Prettyext'.LF.Debug.pp_term)
-      ~cmp:LF.Term.equal expected
+    OUnit2.assert_equal ~cmp:LF.Term.equal expected
       (parse_lf_object input
       |> Synprs_to_synext'.LF.elaborate_term elaboration_context)
   and test_failure elaboration_context input assert_exn _test_ctxt =
@@ -796,24 +765,23 @@ let test_term =
       , lam ~x:"x" ~t:(t_c "nat") (app (c "s") [ v "x" ]) )
     ; ( mock_state_2
       , "\\x. s (x : nat)"
-      , lam ~x:"x" (app (c "s") [ par (v "x" &: t_c "nat") ]) )
+      , lam ~x:"x" (app (c "s") [ v "x" &: t_c "nat" ]) )
     ; ( mock_state_2
       , "\\x. s x : nat"
       , lam ~x:"x" (app (c "s") [ v "x" ] &: t_c "nat") )
     ; ( mock_state_2
       , "(\\x. s x) : nat -> nat"
-      , par (lam ~x:"x" (app (c "s") [ v "x" ])) &: (t_c "nat" => t_c "nat")
-      )
+      , lam ~x:"x" (app (c "s") [ v "x" ]) &: (t_c "nat" => t_c "nat") )
     ; (mock_state_2, "s z", app (c "s") [ c "z" ])
     ; ( mock_state_5
       , "M (arrow) x arrow M' (arrow) y"
       , app (c "arrow")
-          [ app (v "M") [ par (c "arrow"); v "x" ]
-          ; app (v "M'") [ par (c "arrow"); v "y" ]
+          [ app (v "M") [ c ~quoted:true "arrow"; v "x" ]
+          ; app (v "M'") [ c ~quoted:true "arrow"; v "y" ]
           ] )
     ; ( mock_state_5
       , "(arrow) (arrow)"
-      , app (par (c "arrow")) [ par (c "arrow") ] )
+      , app (c ~quoted:true "arrow") [ c ~quoted:true "arrow" ] )
     ]
   and failure_test_cases =
     [ (mock_state_1, "type", assert_raises_illegal_type_kind_term)

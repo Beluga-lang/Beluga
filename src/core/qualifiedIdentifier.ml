@@ -162,6 +162,10 @@ module Dictionary = struct
     let modules = modules query in
     lookup modules [] dictionary
 
+  let lookup_toplevel query dictionary =
+    let query' = make_simple query in
+    lookup query' dictionary
+
   let toplevel_bindings = Fun.id
 
   let rec to_seq dictionary =

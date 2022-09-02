@@ -1026,33 +1026,32 @@ end = struct
         | `(' <lf-object> `)'
 
 
-      Rewritten grammar, to eliminate left-recursions and handle precedence
-      using recursive descent:
+      Rewritten grammar, to eliminate left-recursions, handle precedence
+      using recursive descent, and handle left-associative operators.
+      Weak prefix operators (lambdas and Pis) may appear without parentheses
+      as the rightmost operand of an operator.
 
-      <lambda> ::=
+      <weak-prefix> ::=
+        | `{' <omittable-identifier> [`:' <lf-object>] `}' <lf-object>
         | `\' <omittable-identifier> [`:' <lf-object>] `.' <lf-object>
 
       <lf-object> ::=
         | <lf-object1>
 
       <lf-object1> ::=
-        | `{' <omittable-identifier> [`:' <lf-object>] `}' <lf-object>
-        | <lambda>
+        | <weak-prefix>
         | <lf-object2>
 
       <lf-object2> ::=
-        | <lf-object3> (<forward-arrow> | <backward-arrow>) <lf-object>
+        | <lf-object3> (`:' (<lf-object3> | <weak-prefix>))+
         | <lf-object3>
 
       <lf-object3> ::=
-        | <lf-object4> `:' <lf-object>
+        | <lf-object4> ((<forward-arrow> | <backward-arrow>) (<lf-object4> | <weak-prefix>))+
         | <lf-object4>
 
-      In an application, if the last argument is a lambda, then parentheses
-      are not required for it
-
       <lf-object4> ::=
-        | <lf-object5>+ [<lambda>]
+        | <lf-object5> (<lf-object5> | <weak-prefix>)+
         | <lf-object5>
 
       <lf-object5> ::=
@@ -1062,94 +1061,20 @@ end = struct
         | `_'
         | `(' <lf-object> `)'
   *)
-  let lambda =
-    seq2
-      (token Token.LAMBDA
-        &> (seq2
-            omittable_identifier
-            (maybe (token Token.COLON &> LF_parsers.lf_object)))
-        <& token Token.DOT)
-      LF_parsers.lf_object
-    |> span
-    $> (fun (location, ((parameter_identifier, parameter_sort), body)) ->
-       LF.Object.RawLambda { location; parameter_identifier; parameter_sort; body })
-    |> labelled "LF lambda object"
-
-  let lf_object5 =
-    let constant_or_variable =
-      qualified_or_plain_identifier
+  let weak_prefix =
+    let lambda =
+      seq2
+        (token Token.LAMBDA
+          &> (seq2
+              omittable_identifier
+              (maybe (token Token.COLON &> LF_parsers.lf_object)))
+          <& token Token.DOT)
+        LF_parsers.lf_object
       |> span
-      $> (function
-         | (location, `Qualified identifier) ->
-           LF.Object.RawQualifiedIdentifier { location; identifier }
-         | (location, `Plain identifier) ->
-           LF.Object.RawIdentifier { location; identifier })
-      |> labelled "LF constant or variable object"
-    and type_ =
-      token Token.KW_TYPE
-      |> span
-      $> (fun (location, ()) -> LF.Object.RawType { location })
-      |> labelled "LF `type' kind object"
-    and hole =
-      token Token.UNDERSCORE
-      |> span
-      $> (fun (location, ()) -> LF.Object.RawHole { location })
-      |> labelled "LF hole object"
-    and parenthesized =
-      parens LF_parsers.lf_object
-      |> span
-      $> (fun (location, object_) ->
-         LF.Object.RawParenthesized { location; object_ })
-      |> labelled "LF parenthesized object"
-    in
-    choice
-      [ constant_or_variable
-      ; type_
-      ; hole
-      ; parenthesized
-      ]
-
-  let lf_object4 =
-    some (alt lf_object5 lambda)
-    |> span
-    $> (function
-       | (_, List1.T (object_, [])) -> object_
-       | (location, List1.T (o1, o2 :: os)) ->
-         LF.Object.RawApplication { location; objects = List2.from o1 o2 os })
-    |> labelled "LF atomic or application object"
-
-  let lf_object3 =
-    seq2 lf_object4 (maybe (token Token.COLON &> LF_parsers.lf_object))
-    |> span
-    $> (function
-       | (_, (object_, Option.None)) -> object_
-       | (location, (object_, Option.Some sort)) ->
-         LF.Object.RawAnnotated { location; object_; sort })
-    |> labelled "LF atomic, application or annotated object"
-
-  let lf_object2 =
-    (* Backward arrows are parsed as right-associative, but are elaborated as
-       left-associative in the elaboration to the external syntax. Bottom-up
-       parsing is otherwise required to handle forward and backward arrows in
-       conjunction with the weak prefix operators for Pi and lambda
-       abstractions. *)
-    let forward_arrow = token Token.ARROW $> fun () -> `Forward_arrow
-    and backward_arrow = token Token.BACKARROW $> fun () -> `Backward_arrow
-    in
-    seq2
-      lf_object3
-      (maybe (seq2 (alt forward_arrow backward_arrow) LF_parsers.lf_object))
-    |> span
-    $> (function
-       | (_, (object_, Option.None)) -> object_
-       | (location, (left_operand, Option.Some (`Forward_arrow, right_operand))) ->
-         LF.Object.RawArrow { location; left_operand; right_operand; orientation = `Forward }
-       | (location, (left_operand, Option.Some (`Backward_arrow, right_operand))) ->
-         LF.Object.RawArrow { location; left_operand; right_operand; orientation = `Backward })
-    |> labelled "LF atomic, application, annotated, forward arrow or backward arrow object"
-
-  let lf_object1 =
-    let pi =
+      $> (fun (location, ((parameter_identifier, parameter_sort), body)) ->
+         LF.Object.RawLambda { location; parameter_identifier; parameter_sort; body })
+      |> labelled "LF lambda object"
+    and pi =
       seq2
         (braces
           (seq2
@@ -1162,8 +1087,122 @@ end = struct
       |> labelled "LF Pi object"
     in
     choice
-      [ pi
-      ; lambda
+      [ lambda
+      ; pi
+      ]
+
+  let lf_object5 =
+    let constant_or_variable =
+      qualified_or_plain_identifier
+      |> span
+      $> (function
+         | (location, `Qualified identifier) ->
+           LF.Object.RawQualifiedIdentifier { location; identifier; quoted = false }
+         | (location, `Plain identifier) ->
+           LF.Object.RawIdentifier { location; identifier; quoted = false })
+      |> labelled "LF constant or variable object"
+    and type_ =
+      token Token.KW_TYPE
+      |> span
+      $> (fun (location, ()) -> LF.Object.RawType { location })
+      |> labelled "LF `type' kind object"
+    and hole =
+      token Token.UNDERSCORE
+      |> span
+      $> (fun (location, ()) -> LF.Object.RawHole { location })
+      |> labelled "LF hole object"
+    and parenthesized_or_quoted_constant_or_variable =
+      parens LF_parsers.lf_object
+      $> (function
+         | LF.Object.RawIdentifier i ->
+           LF.Object.RawIdentifier { i with quoted = true }
+         | LF.Object.RawQualifiedIdentifier i ->
+           LF.Object.RawQualifiedIdentifier { i with quoted = true }
+         | o -> o
+         )
+      |> labelled "LF parenthesized object"
+    in
+    choice
+      [ constant_or_variable
+      ; type_
+      ; hole
+      ; parenthesized_or_quoted_constant_or_variable
+      ]
+
+  let lf_object4 =
+    some (alt lf_object5 weak_prefix)
+    |> span
+    $> (function
+       | (_, List1.T (object_, [])) -> object_
+       | (location, List1.T (o1, o2 :: os)) ->
+         LF.Object.RawApplication { location; objects = List2.from o1 o2 os })
+    |> labelled "LF atomic or application object"
+
+  let lf_object3 =
+    let forward_arrow =
+      let parser =
+        token Token.ARROW
+        $> fun () ~left_operand ~right_operand ->
+          let location =
+            Location.join
+              (LF.location_of_object left_operand)
+              (LF.location_of_object right_operand)
+          in
+          LF.Object.RawForwardArrow
+            { location
+            ; domain = left_operand
+            ; range = right_operand
+            }
+      in
+      Infix { parser; associativity = Associativity.right_associative }
+    and backward_arrow =
+      let parser =
+        token Token.BACKARROW
+        $> fun () ~left_operand ~right_operand ->
+          let location =
+            Location.join
+              (LF.location_of_object left_operand)
+              (LF.location_of_object right_operand)
+          in
+          LF.Object.RawBackwardArrow
+            { location
+            ; range = left_operand
+            ; domain = right_operand
+            }
+      in
+      Infix { parser; associativity = Associativity.left_associative }
+    in
+    expression
+      [ [forward_arrow; backward_arrow] ]
+      (alt lf_object4 weak_prefix)
+    |> labelled "LF atomic, application, annotated, forward arrow or backward arrow object"
+
+  let lf_object2 =
+    let annotation_operator =
+      let parser =
+        token Token.COLON
+        $> fun () ~left_operand ~right_operand ->
+          let location =
+            Location.join
+              (LF.location_of_object left_operand)
+              (LF.location_of_object right_operand)
+          in
+          LF.Object.RawAnnotated
+            { location
+            ; object_ = left_operand
+            ; sort = right_operand
+            }
+      in
+      Infix { parser; associativity = Associativity.left_associative }
+    in
+    expression
+      [ [annotation_operator] ]
+      (alt lf_object3 weak_prefix)
+    |> labelled "LF atomic, application, annotated, forward arrow or backward arrow object"
+
+  let lf_object1 =
+    choice
+      [ weak_prefix
       ; lf_object2
       ]
 
@@ -1205,49 +1244,48 @@ end = struct
         | `(' <clf-object> `)'
 
 
-      Rewritten grammar, to eliminate left-recursions and handle precedence
-      using recursive descent:
+      Rewritten grammar, to eliminate left-recursions, handle precedence
+      using recursive descent, and handle left-associative operators.
+      Weak prefix operators (lambdas and Pis) may appear without parentheses
+      as the rightmost operand of an operator.
 
       <substitution> ::=
         | `[' `]'
         | `[' `..' `]'
         | `[' [`..' `,'] <clf-object> (`,' <clf-object>)* `]'
 
-      <lambda> ::=
-        | `\' <omittable-identifier> [`:' <clf-object>] `.' <clf-object>
+      <weak-prefix> ::=
+        | `{' <omittable-identifier> [`:' <lf-object>] `}' <lf-object>
+        | `\' <omittable-identifier> [`:' <lf-object>] `.' <lf-object>
 
       <clf-object> ::=
         | <clf-object1>
 
       <clf-object1> ::=
-        | `{' <omittable-identifier> [`:' <clf-object>] `}' <clf-object>
-        | `\' <omittable-identifier> [`:' <clf-object>] `.' <clf-object>
+        | <weak-prefix>
         | <clf-object2>
 
       <clf-object2> ::=
-        | <clf-object3> (<forward-arrow> | <backward-arrow>) <clf-object>
+        | <clf-object3> (`:' (<clf-object3> | <weak-prefix>))+
         | <clf-object3>
 
       <clf-object3> ::=
-        | <clf-object4> `:' <clf-object>
+        | <clf-object4> ((<forward-arrow> | <backward-arrow>) (<clf-object4> | <weak-prefix>))+
         | <clf-object4>
 
       <clf-object4> ::=
-        | `block' `(' <identifier> `:' <clf-type> (`,' <identifier> `:' <clf-type>)+ `)'
-        | `block' <identifier> `:' <clf-type> (`,' <identifier> `:' <clf-type>)+
-        | `block' `(' <clf-type> `)'
-        | `block' <clf-type>
+        | `block' `(' <identifier> `:' <clf-object> (`,' <identifier> `:' <clf-object>)+ `)'
+        | `block' <identifier> `:' <clf-object> (`,' <identifier> `:' <clf-object>)+
+        | `block' `(' <clf-object> `)'
+        | `block' <clf-object>
         | <clf-object5>
 
-      In an application, if the last argument is a lambda, then parentheses
-      are not required for it
-
       <clf-object5> ::=
-        | <clf-object6>+ [<lambda>]
+        | <clf-object6> (<clf-object6> | <weak-prefix>)+
         | <clf-object6>
 
       <clf-object6> ::=
-        | <clf-object7> <substitution>
+        | <clf-object7> <substitution>+
         | <clf-object7>
 
       <clf-object7> ::=
@@ -1262,18 +1300,35 @@ end = struct
         | `<' <clf-object> (`;' <clf-object>)* `>'
         | `(' <clf-object> `)'
   *)
-  let lambda =
-    seq2
-      (token Token.LAMBDA
-        &> (seq2
+  let weak_prefix =
+    let lambda =
+      seq2
+        (token Token.LAMBDA
+          &> (seq2
+              omittable_identifier
+              (maybe (token Token.COLON &> CLF_parsers.clf_object)))
+          <& token Token.DOT)
+        CLF_parsers.clf_object
+      |> span
+      $> (fun (location, ((parameter_identifier, parameter_sort), body)) ->
+        CLF.Object.RawLambda { location; parameter_identifier; parameter_sort; body })
+      |> labelled "Contextual LF lambda object"
+    and pi =
+      seq2
+        (braces
+          (seq2
             omittable_identifier
-            (maybe (token Token.COLON &> CLF_parsers.clf_object)))
-        <& token Token.DOT)
-      CLF_parsers.clf_object
-    |> span
-    $> (fun (location, ((parameter_identifier, parameter_sort), body)) ->
-       CLF.Object.RawLambda { location; parameter_identifier; parameter_sort; body })
-    |> labelled "Contextual LF lambda object"
+            (maybe (token Token.COLON &> CLF_parsers.clf_object))))
+        CLF_parsers.clf_object
+      |> span
+      $> (fun (location, ((parameter_identifier, parameter_sort), body)) ->
+         CLF.Object.RawPi { location; parameter_identifier; parameter_sort; body })
+      |> labelled "Contextual LF Pi object"
+    in
+    choice
+      [ lambda
+      ; pi
+      ]
 
   let substitution =
     let inner_substitution =
@@ -1322,9 +1377,9 @@ end = struct
       |> span
       $> (function
          | (location, `Qualified identifier) ->
-           CLF.Object.RawQualifiedIdentifier { location; identifier }
+           CLF.Object.RawQualifiedIdentifier { location; identifier; quoted = false }
          | (location, `Plain identifier) ->
-           CLF.Object.RawIdentifier { location; identifier })
+           CLF.Object.RawIdentifier { location; identifier; quoted = false })
       |> labelled "Contextual LF constant or variable object"
     and underscore_hole =
       token Token.UNDERSCORE
@@ -1353,19 +1408,23 @@ end = struct
       $> (fun (location, elements) ->
          CLF.Object.RawTuple { location; elements })
       |> labelled "Contextual LF tuple object"
-    and parenthesized =
+    and parenthesized_or_quoted_constant_or_variable =
       parens CLF_parsers.clf_object
-      |> span
-      $> (fun (location, object_) ->
-         CLF.Object.RawParenthesized { location; object_ })
-      |> labelled "LF parenthesized object"
+      $> (function
+         | CLF.Object.RawIdentifier i ->
+           CLF.Object.RawIdentifier { i with quoted = true }
+         | CLF.Object.RawQualifiedIdentifier i ->
+           CLF.Object.RawQualifiedIdentifier { i with quoted = true }
+         | o -> o
+         )
+      |> labelled "Contextual LF parenthesized object"
     in
     choice
       [ constant_or_variable
       ; underscore_hole
       ; possibly_labelled_hole
       ; tuple
-      ; parenthesized
+      ; parenthesized_or_quoted_constant_or_variable
       ]
 
   let clf_object7 =
@@ -1398,17 +1457,30 @@ end = struct
     |> labelled "Contextual LF atomic or projection object"
 
   let clf_object6 =
-    seq2 clf_object7 (maybe substitution)
-    |> span
+    seq2 clf_object7 (many substitution)
     $> (function
-       | (_, (object_, Option.None)) -> object_
-       | (location, (object_, Option.Some substitution)) ->
-           CLF.Object.RawSubstitution { location; object_; substitution }
+       | (object_, []) -> object_
+       | (object_, substitutions) ->
+           List.fold_right
+             (fun substitution accumulator ->
+               let location =
+                  Location.join
+                    (CLF.location_of_object accumulator)
+                    (CLF.location_of_substitution substitution)
+               in
+               CLF.Object.RawSubstitution
+                 { location
+                 ; object_ = accumulator
+                 ; substitution
+                 }
+             )
+             substitutions
+             object_
        )
     |> labelled "Contextual LF atomic, projection or substitution object"
 
   let clf_object5 =
-    some (alt clf_object6 lambda)
+    some (alt clf_object6 weak_prefix)
     |> span
     $> (function
        | (_, List1.T (object_, [])) -> object_
@@ -1442,51 +1514,71 @@ end = struct
       ]
 
   let clf_object3 =
-    seq2 clf_object4 (maybe (token Token.COLON &> CLF_parsers.clf_object))
-    |> span
-    $> (function
-       | (_, (object_, Option.None)) -> object_
-       | (location, (object_, Option.Some sort)) ->
-         CLF.Object.RawAnnotated { location; object_; sort })
-    |> labelled "Contextual LF atomic or annotated object"
+    let forward_arrow =
+      let parser =
+        token Token.ARROW
+        $> fun () ~left_operand ~right_operand ->
+          let location =
+            Location.join
+              (CLF.location_of_object left_operand)
+              (CLF.location_of_object right_operand)
+          in
+          CLF.Object.RawForwardArrow
+            { location
+            ; domain = left_operand
+            ; range = right_operand
+            }
+      in
+      Infix { parser; associativity = Associativity.right_associative }
+    and backward_arrow =
+      let parser =
+        token Token.BACKARROW
+        $> fun () ~left_operand ~right_operand ->
+          let location =
+            Location.join
+              (CLF.location_of_object left_operand)
+              (CLF.location_of_object right_operand)
+          in
+          CLF.Object.RawBackwardArrow
+            { location
+            ; range = left_operand
+            ; domain = right_operand
+            }
+      in
+      Infix { parser; associativity = Associativity.left_associative }
+    in
+    expression
+      [ [forward_arrow; backward_arrow] ]
+      (alt clf_object4 weak_prefix)
+    |> labelled "Contextual LF atomic, application, annotated, forward arrow or backward arrow object"
+
 
   let clf_object2 =
-    (* Backward arrows are parsed as right-associative, but are elaborated as
-       left-associative in the elaboration to the external syntax. Bottom-up
-       parsing is otherwise required to handle forward and backward arrows in
-       conjunction with the weak prefix operators for Pi and lambda
-       abstractions. *)
-    let forward_arrow = token Token.ARROW $> fun () -> `Forward_arrow
-    and backward_arrow = token Token.BACKARROW $> fun () -> `Backward_arrow
+    let annotation_operator =
+      let parser =
+        token Token.COLON
+        $> fun () ~left_operand ~right_operand ->
+          let location =
+            Location.join
+              (CLF.location_of_object left_operand)
+              (CLF.location_of_object right_operand)
+          in
+          CLF.Object.RawAnnotated
+            { location
+            ; object_ = left_operand
+            ; sort = right_operand
+            }
+      in
+      Infix { parser; associativity = Associativity.left_associative }
     in
-    seq2
-      clf_object3
-      (maybe (seq2 (alt forward_arrow backward_arrow) CLF_parsers.clf_object))
-    |> span
-    $> (function
-       | (_, (object_, Option.None)) -> object_
-       | (location, (left_operand, Option.Some (`Forward_arrow, right_operand))) ->
-         CLF.Object.RawArrow { location; left_operand; right_operand; orientation = `Forward }
-       | (location, (left_operand, Option.Some (`Backward_arrow, right_operand))) ->
-         CLF.Object.RawArrow { location; left_operand; right_operand; orientation = `Backward })
+    expression
+      [ [annotation_operator] ]
+      (alt clf_object3 weak_prefix)
     |> labelled "Contextual LF atomic, application, annotated, forward arrow or backward arrow object"
 
   let clf_object1 =
-    let pi =
-      seq2
-        (braces
-          (seq2
-            omittable_identifier
-            (maybe (token Token.COLON &> CLF_parsers.clf_object))))
-        CLF_parsers.clf_object
-      |> span
-      $> (fun (location, ((parameter_identifier, parameter_sort), body)) ->
-         CLF.Object.RawPi { location; parameter_identifier; parameter_sort; body })
-      |> labelled "Contextual LF Pi object"
-    in
     choice
-      [ pi
-      ; lambda
+      [ weak_prefix
       ; clf_object2
       ]
 

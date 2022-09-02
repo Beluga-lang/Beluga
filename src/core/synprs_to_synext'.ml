@@ -4,9 +4,14 @@ module Elaboration_state : sig
   type t
 
   type entry = private
-    | LF_term
+    | LF_term  (** An LF term-level variable, such as `x' in `\x. T x'. *)
     | LF_type_constant of Operator.t
+        (** An LF type-level constant, such as `tm' in `tm : type'. *)
     | LF_term_constant of Operator.t
+        (** An LF term-level constant, such as `arr' in `arr M N'. *)
+    | Substitution_variable
+        (** A substitution variable, such as `$S' in `[g |- M\[$S\]]' if `$S
+            : [g |- h]'. *)
 
   (** {1 Constructors} *)
 
@@ -40,12 +45,17 @@ module Elaboration_state : sig
   val add_postfix_lf_term_constant :
     precedence:Int.t -> QualifiedIdentifier.t -> t -> t
 
+  val add_substitution_variable : Identifier.t -> t -> t
+
   val add_module : t -> QualifiedIdentifier.t -> t -> t
 
   (** {1 Lookup} *)
 
   val lookup :
     QualifiedIdentifier.t -> t -> entry QualifiedIdentifier.Dictionary.value
+
+  val lookup_toplevel :
+    Identifier.t -> t -> entry QualifiedIdentifier.Dictionary.value
 
   (** {1 Error-Reporting} *)
 
@@ -58,12 +68,12 @@ end = struct
     | LF_term
     | LF_type_constant of Operator.t
     | LF_term_constant of Operator.t
+    | Substitution_variable
 
   let empty = QualifiedIdentifier.Dictionary.empty
 
   let add_term identifier =
-    let qualified_identifier = QualifiedIdentifier.make_simple identifier in
-    QualifiedIdentifier.Dictionary.add_entry qualified_identifier LF_term
+    QualifiedIdentifier.Dictionary.add_toplevel_entry identifier LF_term
 
   let add_prefix_lf_type_constant ~arity ~precedence identifier =
     let operator = Operator.make_prefix ~arity ~precedence in
@@ -95,10 +105,17 @@ end = struct
     QualifiedIdentifier.Dictionary.add_entry identifier
       (LF_term_constant operator)
 
+  let add_substitution_variable identifier =
+    QualifiedIdentifier.Dictionary.add_toplevel_entry identifier
+      Substitution_variable
+
   let add_module module_dictionary identifier =
     QualifiedIdentifier.Dictionary.add_module identifier module_dictionary
 
   let lookup query state = QualifiedIdentifier.Dictionary.lookup query state
+
+  let lookup_toplevel query state =
+    QualifiedIdentifier.Dictionary.lookup_toplevel query state
 
   let pp_entry_sort ppf entry =
     match entry with
@@ -108,6 +125,8 @@ end = struct
       Format.fprintf ppf "an LF type-level constant"
     | QualifiedIdentifier.Dictionary.Entry (LF_term_constant _) ->
       Format.fprintf ppf "an LF term-level constant"
+    | QualifiedIdentifier.Dictionary.Entry Substitution_variable ->
+      Format.fprintf ppf "a substitution variable"
     | QualifiedIdentifier.Dictionary.Module _ ->
       Format.fprintf ppf "a module"
 end
@@ -195,6 +214,13 @@ module LF = struct
     Misplaced_operator of
       { operator_location : Location.t
       ; operand_locations : Location.t List.t
+      }
+
+  exception
+    Ambiguous_operator_placement of
+      { operator_identifier : QualifiedIdentifier.t
+      ; left_operator_location : Location.t
+      ; right_operator_location : Location.t
       }
 
   exception
@@ -298,6 +324,16 @@ module LF = struct
       Format.fprintf ppf
         "Misplaced LF term-level or type-level operator: %a@." Location.pp
         operator_location
+    | Ambiguous_operator_placement
+        { operator_identifier
+        ; left_operator_location
+        ; right_operator_location
+        } ->
+      Format.fprintf ppf
+        "Ambiguous occurrences of the LF term-level or type-level operator \
+         %a after rewriting: %a and %a@."
+        QualifiedIdentifier.pp operator_identifier Location.pp
+        left_operator_location Location.pp right_operator_location
     | Consecutive_non_associative_operators
         { operator_identifier
         ; left_operator_location
@@ -348,22 +384,20 @@ module LF = struct
     | _ | (exception QualifiedIdentifier.Dictionary.Unbound_identifier _) ->
       `Not_an_operator
 
-  (** [identifier_lf_operator state ?quoted term] identifies whether [term]
-      is an LF type-level or term-level operator in [state] while accounting
-      for operator quoting. If a bound operator appears in parentheses, then
-      it is quoted, meaning that the operator appears either in prefix
-      notation or as an argument to another application. *)
-  let rec identify_lf_operator state ?(quoted = false) term =
+  (** [identifier_lf_operator state term] identifies whether [term] is an LF
+      type-level or term-level operator in [state] while accounting for
+      operator quoting. If a bound operator appears in parentheses, then it
+      is quoted, meaning that the operator appears either in prefix notation
+      or as an argument to another application. *)
+  let identify_lf_operator state term =
     match term with
-    | Synprs.LF.Object.RawIdentifier { identifier; _ } ->
+    | Synprs.LF.Object.RawIdentifier { identifier; quoted; _ } ->
       let qualified_identifier =
         QualifiedIdentifier.make_simple identifier
       in
       resolve_lf_operator state ~quoted qualified_identifier
-    | Synprs.LF.Object.RawQualifiedIdentifier { identifier; _ } ->
+    | Synprs.LF.Object.RawQualifiedIdentifier { identifier; quoted; _ } ->
       resolve_lf_operator state ~quoted identifier
-    | Synprs.LF.Object.RawParenthesized { object_; _ } ->
-      identify_lf_operator state ~quoted:true object_
     | _ -> `Not_an_operator
 
   (** LF term-level or type-level operands for rewriting of prefix, infix and
@@ -473,7 +507,7 @@ module LF = struct
       raise @@ Illegal_identifier_kind location
     | Synprs.LF.Object.RawQualifiedIdentifier { location; _ } ->
       raise @@ Illegal_qualified_identifier_kind location
-    | Synprs.LF.Object.RawArrow { location; orientation = `Backward; _ } ->
+    | Synprs.LF.Object.RawBackwardArrow { location; _ } ->
       raise @@ Illegal_backward_arrow_kind location
     | Synprs.LF.Object.RawHole { location; _ } ->
       raise @@ Illegal_hole_kind location
@@ -487,10 +521,9 @@ module LF = struct
       raise @@ Illegal_untyped_pi_kind location
     | Synprs.LF.Object.RawType { location } ->
       Synext'.LF.Kind.Typ { location }
-    | Synprs.LF.Object.RawArrow
-        { location; left_operand; right_operand; orientation = `Forward } ->
-      let domain' = elaborate_typ state left_operand
-      and range' = elaborate_kind state right_operand in
+    | Synprs.LF.Object.RawForwardArrow { location; domain; range } ->
+      let domain' = elaborate_typ state domain
+      and range' = elaborate_kind state range in
       Synext'.LF.Kind.Arrow { location; domain = domain'; range = range' }
     | Synprs.LF.Object.RawPi
         { location
@@ -512,9 +545,6 @@ module LF = struct
         ; parameter_type = parameter_type'
         ; body = body'
         }
-    | Synprs.LF.Object.RawParenthesized { location; object_ } ->
-      let kind' = elaborate_kind state object_ in
-      Synext'.LF.Kind.Parenthesized { location; kind = kind' }
 
   (** [elaborate_typ state object_] is [object_] rewritten as an LF type with
       respect to the elaboration context [state].
@@ -542,7 +572,7 @@ module LF = struct
       raise @@ Illegal_annotated_type location
     | Synprs.LF.Object.RawPi { location; parameter_sort = Option.None; _ } ->
       raise @@ Illegal_untyped_pi_type location
-    | Synprs.LF.Object.RawIdentifier { location; identifier } -> (
+    | Synprs.LF.Object.RawIdentifier { location; identifier; quoted } -> (
       (* As an LF type, plain identifiers are necessarily type-level
          constants. *)
       let qualified_identifier =
@@ -552,14 +582,15 @@ module LF = struct
       | QualifiedIdentifier.Dictionary.Entry
           (Elaboration_state.LF_type_constant operator) ->
         Synext'.LF.Typ.Constant
-          { location; identifier = qualified_identifier; operator }
+          { location; identifier = qualified_identifier; operator; quoted }
       | entry ->
         raise @@ Expected_type_constant { location; actual_binding = entry }
       | exception QualifiedIdentifier.Dictionary.Unbound_identifier _ ->
         raise
         @@ Unbound_type_constant
              { location; identifier = qualified_identifier })
-    | Synprs.LF.Object.RawQualifiedIdentifier { location; identifier } -> (
+    | Synprs.LF.Object.RawQualifiedIdentifier
+        { location; identifier; quoted } -> (
       (* Qualified identifiers without modules were parsed as plain
          identifiers *)
       assert (List.length (QualifiedIdentifier.modules identifier) >= 1);
@@ -568,12 +599,21 @@ module LF = struct
       match Elaboration_state.lookup identifier state with
       | QualifiedIdentifier.Dictionary.Entry
           (Elaboration_state.LF_type_constant operator) ->
-        Synext'.LF.Typ.Constant { location; identifier; operator }
+        Synext'.LF.Typ.Constant { location; identifier; operator; quoted }
       | entry ->
         raise @@ Expected_type_constant { location; actual_binding = entry }
       | exception QualifiedIdentifier.Dictionary.Unbound_identifier _ ->
         raise @@ Unbound_type_constant { location; identifier })
-    | Synprs.LF.Object.RawArrow _ -> elaborate_arrows state object_
+    | Synprs.LF.Object.RawForwardArrow { location; domain; range } ->
+      let domain' = elaborate_typ state domain
+      and range' = elaborate_typ state range in
+      Synext'.LF.Typ.ForwardArrow
+        { location; domain = domain'; range = range' }
+    | Synprs.LF.Object.RawBackwardArrow { location; range; domain } ->
+      let range' = elaborate_typ state range
+      and domain' = elaborate_typ state domain in
+      Synext'.LF.Typ.BackwardArrow
+        { location; range = range'; domain = domain' }
     | Synprs.LF.Object.RawPi
         { location
         ; parameter_identifier
@@ -605,9 +645,6 @@ module LF = struct
         let location = Synext'.LF.location_of_term term in
         raise @@ Expected_type location
       | `Typ typ -> typ)
-    | Synprs.LF.Object.RawParenthesized { location; object_ } ->
-      let typ' = elaborate_typ state object_ in
-      Synext'.LF.Typ.Parenthesized { location; typ = typ' }
 
   (** [elaborate_term state object_] is [object_] rewritten as an LF term
       with respect to the elaboration context [state].
@@ -630,11 +667,11 @@ module LF = struct
       raise @@ Illegal_type_kind_term location
     | Synprs.LF.Object.RawPi { location; _ } ->
       raise @@ Illegal_pi_term location
-    | Synprs.LF.Object.RawArrow { location; orientation = `Forward; _ } ->
+    | Synprs.LF.Object.RawForwardArrow { location; _ } ->
       raise @@ Illegal_forward_arrow_term location
-    | Synprs.LF.Object.RawArrow { location; orientation = `Backward; _ } ->
+    | Synprs.LF.Object.RawBackwardArrow { location; _ } ->
       raise @@ Illegal_backward_arrow_term location
-    | Synprs.LF.Object.RawIdentifier { location; identifier } -> (
+    | Synprs.LF.Object.RawIdentifier { location; identifier; quoted } -> (
       (* As an LF term, plain identifiers are either term-level constants or
          variables (bound or free). *)
       let qualified_identifier =
@@ -644,7 +681,7 @@ module LF = struct
       | QualifiedIdentifier.Dictionary.Entry
           (Elaboration_state.LF_term_constant operator) ->
         Synext'.LF.Term.Constant
-          { location; identifier = qualified_identifier; operator }
+          { location; identifier = qualified_identifier; operator; quoted }
       | QualifiedIdentifier.Dictionary.Entry Elaboration_state.LF_term ->
         (* Bound variable *)
         Synext'.LF.Term.Variable { location; identifier }
@@ -653,7 +690,8 @@ module LF = struct
       | exception QualifiedIdentifier.Dictionary.Unbound_identifier _ ->
         (* Free variable *)
         Synext'.LF.Term.Variable { location; identifier })
-    | Synprs.LF.Object.RawQualifiedIdentifier { location; identifier } -> (
+    | Synprs.LF.Object.RawQualifiedIdentifier
+        { location; identifier; quoted } -> (
       (* Qualified identifiers without modules were parsed as plain
          identifiers *)
       assert (List.length (QualifiedIdentifier.modules identifier) >= 1);
@@ -662,7 +700,7 @@ module LF = struct
       match Elaboration_state.lookup identifier state with
       | QualifiedIdentifier.Dictionary.Entry
           (Elaboration_state.LF_term_constant operator) ->
-        Synext'.LF.Term.Constant { location; identifier; operator }
+        Synext'.LF.Term.Constant { location; identifier; operator; quoted }
       | entry ->
         raise @@ Expected_term_constant { location; actual_binding = entry }
       | exception QualifiedIdentifier.Dictionary.Unbound_identifier _ ->
@@ -702,83 +740,6 @@ module LF = struct
       let term' = elaborate_term state object_
       and typ' = elaborate_typ state sort in
       Synext'.LF.Term.TypeAnnotated { location; term = term'; typ = typ' }
-    | Synprs.LF.Object.RawParenthesized { location; object_ } ->
-      let term' = elaborate_term state object_ in
-      Synext'.LF.Term.Parenthesized { location; term = term' }
-
-  (** [elaborate_arrows state arrow] elaborates the LF arrow type [arrow].
-      Both forward and backward arrows were parsed as right-associative
-      because the parser is top-down whereas bottom-up parsing is required to
-      handle left and right-associative operators of the same precedence.
-
-      This elaboration step uses Dijkstra's shunting yard algorithm in a
-      simpler setting than that of {!elaborate_application}. *)
-  and elaborate_arrows state =
-    let module Arrow_operand = struct
-      type t = Synext'.LF.Typ.t
-    end in
-    let module Arrow_operator = struct
-      type t =
-        | Forward_arrow
-        | Backward_arrow
-
-      let arity _ = 2
-
-      let precedence _ = 0
-
-      let fixity _ = Fixity.infix
-
-      let associativity = function
-        | Forward_arrow -> Associativity.right_associative
-        | Backward_arrow -> Associativity.left_associative
-
-      include (
-        Eq.Make (struct
-          type nonrec t = t
-
-          let equal = Stdlib.( = )
-        end) :
-          Eq.EQ with type t := t)
-    end in
-    let module Arrow_writer = struct
-      (** [write operator operands] writes the application of the forward or
-          backward infix arrow [operator] with the two operands [operands]. *)
-      let write operator operands =
-        let[@warning "-8"] [ left_operand; right_operand ] = operands in
-        let location =
-          Location.join
-            (Synext'.LF.location_of_typ left_operand)
-            (Synext'.LF.location_of_typ right_operand)
-        in
-        match operator with
-        | Arrow_operator.Forward_arrow ->
-          Synext'.LF.Typ.ForwardArrow
-            { location; domain = left_operand; range = right_operand }
-        | Arrow_operator.Backward_arrow ->
-          Synext'.LF.Typ.BackwardArrow
-            { location; range = left_operand; domain = right_operand }
-    end in
-    let module ShuntingYard =
-      ShuntingYard.Make (Arrow_operand) (Arrow_operator) (Arrow_writer)
-    in
-    (* [flatten object_] reduces the chain of parsed right-associative arrows
-       to an alternating list of operands (elaborated LF types) and operators
-       (either forward or backward arrows). *)
-    let rec flatten object_ =
-      match object_ with
-      | Synprs.LF.Object.RawArrow
-          { left_operand; right_operand; orientation = `Backward; _ } ->
-        ShuntingYard.operand (elaborate_typ state left_operand)
-        :: ShuntingYard.operator Arrow_operator.Backward_arrow
-        :: flatten right_operand
-      | Synprs.LF.Object.RawArrow
-          { left_operand; right_operand; orientation = `Forward; _ } ->
-        ShuntingYard.operand (elaborate_typ state left_operand)
-        :: ShuntingYard.operator Arrow_operator.Forward_arrow
-        :: flatten right_operand
-      | _ -> [ ShuntingYard.operand (elaborate_typ state object_) ]
-    in
-    fun arrow -> ShuntingYard.shunting_yard (flatten arrow)
 
   (** [elaborate_application state objects] elaborates [objects] as either a
       type-level or term-level LF application with respect to the elaboration
@@ -984,6 +945,17 @@ module LF = struct
         let operator_location = LF_operator.location operator
         and operand_locations = List.map LF_operand.location operands in
         raise @@ Misplaced_operator { operator_location; operand_locations }
+      | ShuntingYard.Ambiguous_operator_placement
+          { left_operator; right_operator } ->
+        let operator_identifier = LF_operator.identifier left_operator
+        and left_operator_location = LF_operator.location left_operator
+        and right_operator_location = LF_operator.location right_operator in
+        raise
+        @@ Ambiguous_operator_placement
+             { operator_identifier
+             ; left_operator_location
+             ; right_operator_location
+             }
       | ShuntingYard.Consecutive_non_associative_operators
           { left_operator; right_operator } ->
         let operator_identifier = LF_operator.identifier left_operator
@@ -1083,6 +1055,13 @@ module CLF = struct
     Misplaced_operator of
       { operator_location : Location.t
       ; operand_locations : Location.t List.t
+      }
+
+  exception
+    Ambiguous_operator_placement of
+      { operator_identifier : QualifiedIdentifier.t
+      ; left_operator_location : Location.t
+      ; right_operator_location : Location.t
       }
 
   exception
@@ -1207,6 +1186,16 @@ module CLF = struct
       Format.fprintf ppf
         "Expected an LF type but found an LF term instead: %a@." Location.pp
         location
+    | Ambiguous_operator_placement
+        { operator_identifier
+        ; left_operator_location
+        ; right_operator_location
+        } ->
+      Format.fprintf ppf
+        "Ambiguous occurrences of the LF term-level or type-level operator \
+         %a after rewriting: %a and %a@."
+        QualifiedIdentifier.pp operator_identifier Location.pp
+        left_operator_location Location.pp right_operator_location
     | Misplaced_operator { operator_location; _ } ->
       Format.fprintf ppf
         "Misplaced contextual LF term-level or type-level operator: %a@."
@@ -1343,22 +1332,20 @@ module CLF = struct
     | _ | (exception QualifiedIdentifier.Dictionary.Unbound_identifier _) ->
       `Not_an_operator
 
-  (** [identifier_lf_operator state ?quoted term] identifies whether [term]
-      is an LF type-level or term-level operator in [state] while accounting
-      for operator quoting. If a bound operator appears in parentheses, then
-      it is quoted, meaning that the operator appears either in prefix
-      notation or as an argument to another application. *)
-  let rec identify_lf_operator state ?(quoted = false) term =
+  (** [identifier_lf_operator state term] identifies whether [term] is an LF
+      type-level or term-level operator in [state] while accounting for
+      operator quoting. If a bound operator appears in parentheses, then it
+      is quoted, meaning that the operator appears either in prefix notation
+      or as an argument to another application. *)
+  let identify_lf_operator state term =
     match term with
-    | Synprs.CLF.Object.RawIdentifier { identifier; _ } ->
+    | Synprs.CLF.Object.RawIdentifier { identifier; quoted; _ } ->
       let qualified_identifier =
         QualifiedIdentifier.make_simple identifier
       in
       resolve_lf_operator state ~quoted qualified_identifier
-    | Synprs.CLF.Object.RawQualifiedIdentifier { identifier; _ } ->
+    | Synprs.CLF.Object.RawQualifiedIdentifier { identifier; quoted; _ } ->
       resolve_lf_operator state ~quoted identifier
-    | Synprs.CLF.Object.RawParenthesized { object_; _ } ->
-      identify_lf_operator state ~quoted:true object_
     | _ -> `Not_an_operator
 
   (** Contextual LF term-level or type-level operands for rewriting of
@@ -1483,7 +1470,7 @@ module CLF = struct
       raise @@ Illegal_projection_type location
     | Synprs.CLF.Object.RawSubstitution { location; _ } ->
       raise @@ Illegal_substitution_type location
-    | Synprs.CLF.Object.RawIdentifier { location; identifier } -> (
+    | Synprs.CLF.Object.RawIdentifier { location; identifier; quoted } -> (
       (* As an LF type, plain identifiers are necessarily type-level
          constants. *)
       let qualified_identifier =
@@ -1493,14 +1480,15 @@ module CLF = struct
       | QualifiedIdentifier.Dictionary.Entry
           (Elaboration_state.LF_type_constant operator) ->
         Synext'.CLF.Typ.Constant
-          { location; identifier = qualified_identifier; operator }
+          { location; identifier = qualified_identifier; operator; quoted }
       | entry ->
         raise @@ Expected_type_constant { location; actual_binding = entry }
       | exception QualifiedIdentifier.Dictionary.Unbound_identifier _ ->
         raise
         @@ Unbound_type_constant
              { location; identifier = qualified_identifier })
-    | Synprs.CLF.Object.RawQualifiedIdentifier { location; identifier } -> (
+    | Synprs.CLF.Object.RawQualifiedIdentifier
+        { location; identifier; quoted } -> (
       (* Qualified identifiers without modules were parsed as plain
          identifiers *)
       assert (List.length (QualifiedIdentifier.modules identifier) >= 1);
@@ -1509,12 +1497,21 @@ module CLF = struct
       match Elaboration_state.lookup identifier state with
       | QualifiedIdentifier.Dictionary.Entry
           (Elaboration_state.LF_type_constant operator) ->
-        Synext'.CLF.Typ.Constant { location; identifier; operator }
+        Synext'.CLF.Typ.Constant { location; identifier; operator; quoted }
       | entry ->
         raise @@ Expected_type_constant { location; actual_binding = entry }
       | exception QualifiedIdentifier.Dictionary.Unbound_identifier _ ->
         raise @@ Unbound_type_constant { location; identifier })
-    | Synprs.CLF.Object.RawArrow _ -> elaborate_arrows state object_
+    | Synprs.CLF.Object.RawForwardArrow { location; domain; range } ->
+      let domain' = elaborate_typ state domain
+      and range' = elaborate_typ state range in
+      Synext'.CLF.Typ.ForwardArrow
+        { location; domain = domain'; range = range' }
+    | Synprs.CLF.Object.RawBackwardArrow { location; range; domain } ->
+      let range' = elaborate_typ state range
+      and domain' = elaborate_typ state domain in
+      Synext'.CLF.Typ.BackwardArrow
+        { location; range = range'; domain = domain' }
     | Synprs.CLF.Object.RawPi
         { location
         ; parameter_identifier
@@ -1552,9 +1549,6 @@ module CLF = struct
         , List.map (Pair.map_right (elaborate_typ state)) xs )
       in
       Synext'.CLF.Typ.Block { location; elements = elements' }
-    | Synprs.CLF.Object.RawParenthesized { location; object_ } ->
-      let typ' = elaborate_typ state object_ in
-      Synext'.CLF.Typ.Parenthesized { location; typ = typ' }
 
   (** [elaborate_term state object_] is [object_] rewritten as a contextual
       LF term with respect to the elaboration context [state].
@@ -1575,13 +1569,13 @@ module CLF = struct
     match object_ with
     | Synprs.CLF.Object.RawPi { location; _ } ->
       raise @@ Illegal_pi_term location
-    | Synprs.CLF.Object.RawArrow { location; orientation = `Forward; _ } ->
+    | Synprs.CLF.Object.RawForwardArrow { location; _ } ->
       raise @@ Illegal_forward_arrow_term location
-    | Synprs.CLF.Object.RawArrow { location; orientation = `Backward; _ } ->
+    | Synprs.CLF.Object.RawBackwardArrow { location; _ } ->
       raise @@ Illegal_backward_arrow_term location
     | Synprs.CLF.Object.RawBlock { location; _ } ->
       raise @@ Illegal_block_term location
-    | Synprs.CLF.Object.RawIdentifier { location; identifier } -> (
+    | Synprs.CLF.Object.RawIdentifier { location; identifier; quoted } -> (
       (* As an LF term, plain identifiers are either term-level constants or
          variables (bound or free). *)
       let qualified_identifier =
@@ -1591,7 +1585,7 @@ module CLF = struct
       | QualifiedIdentifier.Dictionary.Entry
           (Elaboration_state.LF_term_constant operator) ->
         Synext'.CLF.Term.Constant
-          { location; identifier = qualified_identifier; operator }
+          { location; identifier = qualified_identifier; operator; quoted }
       | QualifiedIdentifier.Dictionary.Entry Elaboration_state.LF_term ->
         (* Bound variable *)
         Synext'.CLF.Term.Variable { location; identifier }
@@ -1600,7 +1594,8 @@ module CLF = struct
       | exception QualifiedIdentifier.Dictionary.Unbound_identifier _ ->
         (* Free variable *)
         Synext'.CLF.Term.Variable { location; identifier })
-    | Synprs.CLF.Object.RawQualifiedIdentifier { location; identifier } -> (
+    | Synprs.CLF.Object.RawQualifiedIdentifier
+        { location; identifier; quoted } -> (
       (* Qualified identifiers without modules were parsed as plain
          identifiers *)
       assert (List.length (QualifiedIdentifier.modules identifier) >= 1);
@@ -1609,7 +1604,7 @@ module CLF = struct
       match Elaboration_state.lookup identifier state with
       | QualifiedIdentifier.Dictionary.Entry
           (Elaboration_state.LF_term_constant operator) ->
-        Synext'.CLF.Term.Constant { location; identifier; operator }
+        Synext'.CLF.Term.Constant { location; identifier; operator; quoted }
       | entry ->
         raise @@ Expected_term_constant { location; actual_binding = entry }
       | exception QualifiedIdentifier.Dictionary.Unbound_identifier _ ->
@@ -1661,110 +1656,51 @@ module CLF = struct
       let term' = elaborate_term state object_
       and typ' = elaborate_typ state sort in
       Synext'.CLF.Term.TypeAnnotated { location; term = term'; typ = typ' }
-    | Synprs.CLF.Object.RawParenthesized { location; object_ } ->
-      let term' = elaborate_term state object_ in
-      Synext'.CLF.Term.Parenthesized { location; term = term' }
 
   and elaborate_substitution state substitution =
-    match substitution with
-    | Synprs.CLF.Substitution.
-        { location; head = Synprs.CLF.Substitution.Head.None; objects } ->
-      let objects' = List.map (elaborate_term state) objects in
-      Synext'.CLF.Substitution.
-        { location
-        ; head = Synext'.CLF.Substitution.Head.None
-        ; terms = objects'
-        }
-    | Synprs.CLF.Substitution.
-        { location
-        ; head =
-            Synprs.CLF.Substitution.Head.Identity
-              { location = head_location }
-        ; objects
-        } ->
-      let objects' = List.map (elaborate_term state) objects in
+    let Synprs.CLF.Substitution.{ location; head; objects } = substitution in
+    match head with
+    | Synprs.CLF.Substitution.Head.None ->
+      let head', objects =
+        match objects with
+        | Synprs.CLF.Object.RawSubstitution
+            { object_ =
+                Synprs.CLF.Object.RawIdentifier { location; identifier; _ }
+            ; substitution = closure
+            ; _
+            } (* Possibly a substitution closure *)
+          :: xs -> (
+          match Elaboration_state.lookup_toplevel identifier state with
+          | QualifiedIdentifier.Dictionary.Entry
+              Elaboration_state.Substitution_variable ->
+            let closure' = elaborate_substitution state closure in
+            ( Synext'.CLF.Substitution.Head.Substitution_variable
+                { location; identifier; closure = Option.some closure' }
+            , xs )
+          | _ -> (Synext'.CLF.Substitution.Head.None, objects))
+        | Synprs.CLF.Object.RawIdentifier { location; identifier; _ }
+            (* Possibly a substitution variable *)
+          :: xs -> (
+          match Elaboration_state.lookup_toplevel identifier state with
+          | QualifiedIdentifier.Dictionary.Entry
+              Elaboration_state.Substitution_variable ->
+            ( Synext'.CLF.Substitution.Head.Substitution_variable
+                { location; identifier; closure = Option.none }
+            , xs )
+          | _ -> (Synext'.CLF.Substitution.Head.None, objects))
+        | _ -> (Synext'.CLF.Substitution.Head.None, objects)
+      in
+      let terms' = List.map (elaborate_term state) objects in
+      Synext'.CLF.Substitution.{ location; head = head'; terms = terms' }
+    | Synprs.CLF.Substitution.Head.Identity { location = head_location } ->
+      let terms' = List.map (elaborate_term state) objects in
       Synext'.CLF.Substitution.
         { location
         ; head =
             Synext'.CLF.Substitution.Head.Identity
               { location = head_location }
-        ; terms = objects'
+        ; terms = terms'
         }
-
-  (** [elaborate_arrows state arrow] elaborates the contextual LF arrow type
-      [arrow]. Both forward and backward arrows were parsed as
-      right-associative because the parser is top-down whereas bottom-up
-      parsing is required to handle left and right-associative operators of
-      the same precedence.
-
-      This elaboration step uses Dijkstra's shunting yard algorithm in a
-      simpler setting than that of {!elaborate_application}. *)
-  and elaborate_arrows state =
-    let module Arrow_operand = struct
-      type t = Synext'.CLF.Typ.t
-    end in
-    let module Arrow_operator = struct
-      type t =
-        | Forward_arrow
-        | Backward_arrow
-
-      let arity _ = 2
-
-      let precedence _ = 0
-
-      let fixity _ = Fixity.infix
-
-      let associativity = function
-        | Forward_arrow -> Associativity.right_associative
-        | Backward_arrow -> Associativity.left_associative
-
-      include (
-        Eq.Make (struct
-          type nonrec t = t
-
-          let equal = Stdlib.( = )
-        end) :
-          Eq.EQ with type t := t)
-    end in
-    let module Arrow_writer = struct
-      (** [write operator operands] writes the application of the forward or
-          backward infix arrow [operator] with the two operands [operands]. *)
-      let write operator operands =
-        let[@warning "-8"] [ left_operand; right_operand ] = operands in
-        let location =
-          Location.join
-            (Synext'.CLF.location_of_typ left_operand)
-            (Synext'.CLF.location_of_typ right_operand)
-        in
-        match operator with
-        | Arrow_operator.Forward_arrow ->
-          Synext'.CLF.Typ.ForwardArrow
-            { location; domain = left_operand; range = right_operand }
-        | Arrow_operator.Backward_arrow ->
-          Synext'.CLF.Typ.BackwardArrow
-            { location; range = left_operand; domain = right_operand }
-    end in
-    let module ShuntingYard =
-      ShuntingYard.Make (Arrow_operand) (Arrow_operator) (Arrow_writer)
-    in
-    (* [flatten object_] reduces the chain of parsed right-associative arrows
-       to an alternating list of operands (elaborated LF types) and operators
-       (either forward or backward arrows). *)
-    let rec flatten object_ =
-      match object_ with
-      | Synprs.CLF.Object.RawArrow
-          { left_operand; right_operand; orientation = `Backward; _ } ->
-        ShuntingYard.operand (elaborate_typ state left_operand)
-        :: ShuntingYard.operator Arrow_operator.Backward_arrow
-        :: flatten right_operand
-      | Synprs.CLF.Object.RawArrow
-          { left_operand; right_operand; orientation = `Forward; _ } ->
-        ShuntingYard.operand (elaborate_typ state left_operand)
-        :: ShuntingYard.operator Arrow_operator.Forward_arrow
-        :: flatten right_operand
-      | _ -> [ ShuntingYard.operand (elaborate_typ state object_) ]
-    in
-    fun arrow -> ShuntingYard.shunting_yard (flatten arrow)
 
   (** [elaborate_application state objects] elaborates [objects] as either a
       type-level or term-level contextual LF application with respect to the
@@ -1972,6 +1908,17 @@ module CLF = struct
         let operator_location = CLF_operator.location operator
         and operand_locations = List.map CLF_operand.location operands in
         raise @@ Misplaced_operator { operator_location; operand_locations }
+      | ShuntingYard.Ambiguous_operator_placement
+          { left_operator; right_operator } ->
+        let operator_identifier = CLF_operator.identifier left_operator
+        and left_operator_location = CLF_operator.location left_operator
+        and right_operator_location = CLF_operator.location right_operator in
+        raise
+        @@ Ambiguous_operator_placement
+             { operator_identifier
+             ; left_operator_location
+             ; right_operator_location
+             }
       | ShuntingYard.Consecutive_non_associative_operators
           { left_operator; right_operator } ->
         let operator_identifier = CLF_operator.identifier left_operator
@@ -2128,11 +2075,11 @@ module CLF = struct
     | Synprs.CLF.Object.RawHole
         { location; variant = `Unlabelled | `Labelled _ } ->
       raise @@ Illegal_labellable_hole_type_pattern location
-    | Synprs.CLF.Object.RawArrow { location; orientation = `Forward; _ } ->
+    | Synprs.CLF.Object.RawForwardArrow { location; _ } ->
       raise @@ Illegal_forward_arrow_type_pattern location
-    | Synprs.CLF.Object.RawArrow { location; orientation = `Backward; _ } ->
+    | Synprs.CLF.Object.RawBackwardArrow { location; _ } ->
       raise @@ Illegal_backward_arrow_type_pattern location
-    | Synprs.CLF.Object.RawIdentifier { location; identifier } -> (
+    | Synprs.CLF.Object.RawIdentifier { location; identifier; quoted } -> (
       (* As an LF type pattern, plain identifiers are necessarily type-level
          constants. *)
       let qualified_identifier =
@@ -2142,14 +2089,15 @@ module CLF = struct
       | QualifiedIdentifier.Dictionary.Entry
           (Elaboration_state.LF_type_constant operator) ->
         Synext'.CLF.Typ.Pattern.Constant
-          { location; identifier = qualified_identifier; operator }
+          { location; identifier = qualified_identifier; operator; quoted }
       | entry ->
         raise @@ Expected_type_constant { location; actual_binding = entry }
       | exception QualifiedIdentifier.Dictionary.Unbound_identifier _ ->
         raise
         @@ Unbound_type_constant
              { location; identifier = qualified_identifier })
-    | Synprs.CLF.Object.RawQualifiedIdentifier { location; identifier } -> (
+    | Synprs.CLF.Object.RawQualifiedIdentifier
+        { location; identifier; quoted } -> (
       (* Qualified identifiers without modules were parsed as plain
          identifiers *)
       assert (List.length (QualifiedIdentifier.modules identifier) >= 1);
@@ -2158,7 +2106,8 @@ module CLF = struct
       match Elaboration_state.lookup identifier state with
       | QualifiedIdentifier.Dictionary.Entry
           (Elaboration_state.LF_type_constant operator) ->
-        Synext'.CLF.Typ.Pattern.Constant { location; identifier; operator }
+        Synext'.CLF.Typ.Pattern.Constant
+          { location; identifier; operator; quoted }
       | entry ->
         raise @@ Expected_type_constant { location; actual_binding = entry }
       | exception QualifiedIdentifier.Dictionary.Unbound_identifier _ ->
@@ -2175,9 +2124,6 @@ module CLF = struct
         , List.map (Pair.map_right (elaborate_typ_pattern state)) xs )
       in
       Synext'.CLF.Typ.Pattern.Block { location; elements = elements' }
-    | Synprs.CLF.Object.RawParenthesized { location; object_ } ->
-      let pattern' = elaborate_typ_pattern state object_ in
-      Synext'.CLF.Typ.Pattern.Parenthesized { location; pattern = pattern' }
 
   (** [elaborate_term_pattern state object_] is [object_] rewritten as a
       contextual LF term pattern with respect to the elaboration context
@@ -2198,16 +2144,16 @@ module CLF = struct
     match object_ with
     | Synprs.CLF.Object.RawPi { location; _ } ->
       raise @@ Illegal_pi_term_pattern location
-    | Synprs.CLF.Object.RawArrow { location; orientation = `Forward; _ } ->
+    | Synprs.CLF.Object.RawForwardArrow { location; _ } ->
       raise @@ Illegal_forward_arrow_term_pattern location
-    | Synprs.CLF.Object.RawArrow { location; orientation = `Backward; _ } ->
+    | Synprs.CLF.Object.RawBackwardArrow { location; _ } ->
       raise @@ Illegal_backward_arrow_term_pattern location
     | Synprs.CLF.Object.RawBlock { location; _ } ->
       raise @@ Illegal_block_term_pattern location
     | Synprs.CLF.Object.RawHole
         { location; variant = `Unlabelled | `Labelled _ } ->
       raise @@ Illegal_labellable_hole_term_pattern location
-    | Synprs.CLF.Object.RawIdentifier { location; identifier } -> (
+    | Synprs.CLF.Object.RawIdentifier { location; identifier; quoted } -> (
       (* As an LF term pattern, plain identifiers are either term-level
          constants, variables already present in the pattern, or new pattern
          variables. *)
@@ -2218,9 +2164,10 @@ module CLF = struct
       | QualifiedIdentifier.Dictionary.Entry
           (Elaboration_state.LF_term_constant operator) ->
         Synext'.CLF.Term.Pattern.Constant
-          { location; identifier = qualified_identifier; operator }
+          { location; identifier = qualified_identifier; operator; quoted }
       | _ -> Synext'.CLF.Term.Pattern.Variable { location; identifier })
-    | Synprs.CLF.Object.RawQualifiedIdentifier { location; identifier } -> (
+    | Synprs.CLF.Object.RawQualifiedIdentifier
+        { location; identifier; quoted } -> (
       (* Qualified identifiers without modules were parsed as plain
          identifiers *)
       assert (List.length (QualifiedIdentifier.modules identifier) >= 1);
@@ -2229,7 +2176,8 @@ module CLF = struct
       match Elaboration_state.lookup identifier state with
       | QualifiedIdentifier.Dictionary.Entry
           (Elaboration_state.LF_term_constant operator) ->
-        Synext'.CLF.Term.Pattern.Constant { location; identifier; operator }
+        Synext'.CLF.Term.Pattern.Constant
+          { location; identifier; operator; quoted }
       | entry ->
         raise @@ Expected_term_constant { location; actual_binding = entry }
       | exception QualifiedIdentifier.Dictionary.Unbound_identifier _ ->
@@ -2283,9 +2231,6 @@ module CLF = struct
       and typ' = elaborate_typ state sort in
       Synext'.CLF.Term.Pattern.TypeAnnotated
         { location; term = term'; typ = typ' }
-    | Synprs.CLF.Object.RawParenthesized { location; object_ } ->
-      let pattern' = elaborate_term_pattern state object_ in
-      Synext'.CLF.Term.Pattern.Parenthesized { location; pattern = pattern' }
 
   (** [elaborate_application_pattern state objects] elaborates [objects] as
       either a type-level or term-level LF application with respect to the
@@ -2499,6 +2444,21 @@ module CLF = struct
           List.map CLF_pattern_operand.location operands
         in
         raise @@ Misplaced_operator { operator_location; operand_locations }
+      | ShuntingYard.Ambiguous_operator_placement
+          { left_operator; right_operator } ->
+        let operator_identifier =
+          CLF_pattern_operator.identifier left_operator
+        and left_operator_location =
+          CLF_pattern_operator.location left_operator
+        and right_operator_location =
+          CLF_pattern_operator.location right_operator
+        in
+        raise
+        @@ Ambiguous_operator_placement
+             { operator_identifier
+             ; left_operator_location
+             ; right_operator_location
+             }
       | ShuntingYard.Consecutive_non_associative_operators
           { left_operator; right_operator } ->
         let operator_identifier =

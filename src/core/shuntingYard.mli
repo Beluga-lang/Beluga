@@ -85,7 +85,7 @@ end) : sig
 
   (** [Misplaced_operator { operator; operands }] is raised from
       [shunting_yard primitives] if [operator] appears in an illegal position
-      in [primitives] such that it would be rewriten with arguments
+      in [primitives] such that it would be rewritten with arguments
       [arguments]. *)
   exception
     Misplaced_operator of
@@ -93,12 +93,38 @@ end) : sig
       ; operands : Operand.t List.t
       }
 
+  (** [Ambiguous_operator_placement { left_operator; right_operator }] is
+      raised from [shunting_yard primitives] if [right_operator] appears in
+      an illegal position in [primitives] with respect to [left_operator],
+      such that [left_operator] and [right_operator] have the same
+      precedence, and would be rewritten as being consecutive while one of
+      [left_operator] and [right_operator] is left-associative with the other
+      being right-associative.
+
+      For instance:
+
+      - [a -> b <- c] is ambiguous if [->] is right-associative and [<-] is
+        left-associative, with [->] and [<-] having the same precedence.
+      - [a <- b -> c] is ambiguous if [<-] is left-associative and [->] is
+        right-associative, with [<-] and [->] having the same precedence.
+      - [++ a + b] is ambiguous if [++] is right-associative and [+] is
+        left-associative, with [++] and [+] having the same precedence.
+      - [++ a !] is ambiguous if [++] is right-associative and [!] is
+        left-associative, with [++] and [!] having the same precedence.
+      - [a ^ b !] is ambiguous if [^] is right-associative and [!] is
+        left-associative, with [^] and [!] having the same precedence. *)
+  exception
+    Ambiguous_operator_placement of
+      { left_operator : Operator.t
+      ; right_operator : Operator.t
+      }
+
   (** [Consecutive_non_associative_operators { left_operator; right_operator }]
       is raised from [shunting_yard primitives] if non-associative operator
       [right_operator] appears in an illegal position in [primitives] with
       respect to [left_operator], such that [left_operator = right_operator],
-      and [left_operator] and [right_operator] would be rewriten as being
-      consecutively, as in [a left_operator b right_operator c]. *)
+      and [left_operator] and [right_operator] would be rewritten as being
+      consecutive, as in [a left_operator b right_operator c]. *)
   exception
     Consecutive_non_associative_operators of
       { left_operator : Operator.t
@@ -128,6 +154,7 @@ end) : sig
 
       @raise Empty_expression
       @raise Misplaced_operator
+      @raise Ambiguous_operator_placement
       @raise Consecutive_non_associative_operators
       @raise Arity_mismatch
       @raise Leftover_expressions *)

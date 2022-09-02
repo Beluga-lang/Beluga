@@ -80,32 +80,33 @@ module Dictionary = struct
 
   let empty = Identifier.Hamt.empty
 
+  let add_toplevel_entry identifier entry dictionary =
+    Identifier.Hamt.add identifier (Entry entry) dictionary
+
   let add_nested qualified_identifier entry dictionary =
-    let name = name qualified_identifier
+    let identifier = name qualified_identifier
     and modules = modules qualified_identifier in
     match modules with
     | [] (* Toplevel declaration *) ->
-      Identifier.Hamt.add name entry dictionary
+      Identifier.Hamt.add identifier entry dictionary
     | m :: ms (* Nested declaration *) ->
-      let rec add_lookup module_name_to_lookup next_modules dictionary =
-        let dictionary' =
-          match
-            Identifier.Hamt.find_opt module_name_to_lookup dictionary
-          with
-          | Option.Some (Module dictionary')
-          (* Addition to existing module *) -> dictionary'
+      let rec add_lookup module_to_lookup next_modules dictionary =
+        let nested_dictionary =
+          match Identifier.Hamt.find_opt module_to_lookup dictionary with
+          | Option.Some (Module nested_dictionary)
+          (* Addition to existing module *) -> nested_dictionary
           | Option.Some (Entry _) (* Entry shadowing *)
           | Option.None (* Module introduction *) -> empty
         in
-        match next_modules with
-        | [] (* Finished lookups *) ->
-          Identifier.Hamt.add module_name_to_lookup
-            (Module (Identifier.Hamt.add name entry dictionary'))
-            dictionary
-        | m :: ms (* Recursively lookup next module *) ->
-          Identifier.Hamt.add module_name_to_lookup
-            (Module (add_lookup m ms dictionary'))
-            dictionary
+        let nested_dictionary' =
+          match next_modules with
+          | [] (* Finished lookups *) ->
+            Identifier.Hamt.add identifier entry nested_dictionary
+          | m :: ms (* Recursively lookup next module *) ->
+            add_lookup m ms nested_dictionary
+        in
+        Identifier.Hamt.add module_to_lookup (Module nested_dictionary')
+          dictionary
       in
       add_lookup m ms dictionary
 

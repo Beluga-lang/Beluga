@@ -155,6 +155,14 @@ module Dictionary : sig
       @raise Expected_module *)
   val lookup : qualified_identifier -> 'a t -> 'a value
 
+  (** [lookup_toplevel identifier dictionary] looks up [identifier] in
+      [dictionary].
+
+      @raise Unbound_identifier
+      @raise Unbound_module
+      @raise Expected_module *)
+  val lookup_toplevel : Identifier.t -> 'a t -> 'a value
+
   (** [toplevel_bindings dictionary] is the HAMT of bindings globally in
       scope in [dictionary]. *)
   val toplevel_bindings : 'a t -> 'a value Identifier.Hamt.t

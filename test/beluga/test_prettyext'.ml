@@ -22,8 +22,6 @@ module LF = struct
         ) ->
         Option.equal Identifier.equal i1 i2
         && Typ.equal t1 t2 && Kind.equal b1 b2
-      | Parenthesized { kind = k1; _ }, Parenthesized { kind = k2; _ } ->
-        Kind.equal k1 k2
       | _ -> false
   end
 
@@ -38,8 +36,9 @@ module LF = struct
 
     let equal x y =
       match (x, y) with
-      | Constant { identifier = i1; _ }, Constant { identifier = i2; _ } ->
-        QualifiedIdentifier.equal i1 i2
+      | ( Constant { identifier = i1; quoted = q1; _ }
+        , Constant { identifier = i2; quoted = q2; _ } ) ->
+        QualifiedIdentifier.equal i1 i2 && Bool.equal q1 q2
       | ( Application { applicand = f1; arguments = as1; _ }
         , Application { applicand = f2; arguments = as2; _ } ) ->
         Typ.equal f1 f2 && List.equal Term.equal as1 as2
@@ -54,8 +53,6 @@ module LF = struct
         ) ->
         Option.equal Identifier.equal i1 i2
         && Typ.equal t1 t2 && Typ.equal b1 b2
-      | Parenthesized { typ = t1; _ }, Parenthesized { typ = t2; _ } ->
-        Typ.equal t1 t2
       | _ -> false
   end
 
@@ -72,8 +69,9 @@ module LF = struct
       match (x, y) with
       | Variable { identifier = i1; _ }, Variable { identifier = i2; _ } ->
         Identifier.equal i1 i2
-      | Constant { identifier = i1; _ }, Constant { identifier = i2; _ } ->
-        QualifiedIdentifier.equal i1 i2
+      | ( Constant { identifier = i1; quoted = q1; _ }
+        , Constant { identifier = i2; quoted = q2; _ } ) ->
+        QualifiedIdentifier.equal i1 i2 && Bool.equal q1 q2
       | ( Application { applicand = f1; arguments = as1; _ }
         , Application { applicand = f2; arguments = as2; _ } ) ->
         Term.equal f1 f2 && List.equal Term.equal as1 as2
@@ -89,8 +87,6 @@ module LF = struct
       | ( TypeAnnotated { term = u1; typ = t1; _ }
         , TypeAnnotated { term = u2; typ = t2; _ } ) ->
         Term.equal u1 u2 && Typ.equal t1 t2
-      | Parenthesized { term = t1; _ }, Parenthesized { term = t2; _ } ->
-        Term.equal t1 t2
       | _ -> false
   end
 end
@@ -270,14 +266,11 @@ let parse_lf_term elaboration_context input =
 let test_pp_kind =
   let test elaboration_context input _test_ctxt =
     let kind = parse_lf_kind elaboration_context input in
-    let kind' = Prettyext'.LF.re_parenthesize_kind kind in
-    let kind'' =
+    let kind' =
       parse_lf_kind elaboration_context
-        (Format.stringify Prettyext'.LF.pp_kind kind')
+        (Format.stringify Prettyext'.LF.pp_kind kind)
     in
-    OUnit2.assert_equal
-      ~printer:(Format.stringify Prettyext'.LF.Debug.pp_kind)
-      ~cmp:LF.Kind.equal kind' kind''
+    OUnit2.assert_equal ~cmp:LF.Kind.equal kind kind'
   in
   let test_cases =
     [ (mock_state_1, "type")
@@ -306,23 +299,18 @@ let test_pp_kind =
 let test_pp_type =
   let test elaboration_context input _test_ctxt =
     let typ = parse_lf_type elaboration_context input in
-    let typ' = Prettyext'.LF.re_parenthesize_typ typ in
-    let typ'' =
+    let typ' =
       parse_lf_type elaboration_context
-        (Format.stringify Prettyext'.LF.pp_typ typ')
+        (Format.stringify Prettyext'.LF.pp_typ typ)
     in
-    OUnit2.assert_equal
-      ~printer:(Format.stringify Prettyext'.LF.Debug.pp_typ)
-      ~cmp:LF.Typ.equal typ' typ''
+    OUnit2.assert_equal ~cmp:LF.Typ.equal typ typ'
   in
   let test_cases =
     [ (mock_state_2, "nat")
-    ; (mock_state_2, "(nat)")
-    ; (mock_state_2, "((nat))")
     ; (mock_state_2, "nat -> nat")
     ; (mock_state_2, "nat -> nat -> nat")
     ; (mock_state_2, "(nat -> nat) -> nat")
-    ; (mock_state_2, "nat <- nat -> nat")
+    ; (mock_state_2, "(nat <- nat) -> nat")
     ; (mock_state_2, "nat <- (nat -> nat)")
     ; (mock_state_2, "{ x : nat } nat")
     ; (mock_state_2, "{ _ : nat } nat")
@@ -349,8 +337,8 @@ let test_pp_type =
     ; (mock_state_10, "a <- (b <- c)")
     ; (mock_state_10, "(a <- b) -> c")
     ; (mock_state_10, "a <- (b -> c)")
-    ; (mock_state_10, "a -> b <- c")
-    ; (mock_state_10, "a <- b -> c")
+    ; (mock_state_10, "(a -> b) <- c")
+    ; (mock_state_10, "a <- (b -> c)")
     ; (mock_state_10, "a -> (b -> c)")
     ; (mock_state_10, "(a <- b) <- c")
     ; (mock_state_10, "(a -> b) <- c")
@@ -369,14 +357,11 @@ let test_pp_type =
 let test_pp_term =
   let test elaboration_context input _test_ctxt =
     let term = parse_lf_term elaboration_context input in
-    let term' = Prettyext'.LF.re_parenthesize_term term in
-    let term'' =
+    let term' =
       parse_lf_term elaboration_context
-        (Format.stringify Prettyext'.LF.pp_term term')
+        (Format.stringify Prettyext'.LF.pp_term term)
     in
-    OUnit2.assert_equal
-      ~printer:(Format.stringify Prettyext'.LF.Debug.pp_term)
-      ~cmp:LF.Term.equal term' term''
+    OUnit2.assert_equal ~cmp:LF.Term.equal term term'
   in
   let test_cases =
     [ (mock_state_1, "M x y z")
@@ -401,8 +386,6 @@ let test_pp_term =
     ; (mock_state_11, "a L1 (b L1 c)")
     ; (mock_state_11, "(a L1 b) R1 c")
     ; (mock_state_11, "a L1 (b R1 c)")
-    ; (mock_state_11, "a R1 b L1 c")
-    ; (mock_state_11, "a L1 b R1 c")
     ; (mock_state_11, "a R1 (b R1 c)")
     ; (mock_state_11, "(a L1 b) L1 c")
     ; (mock_state_11, "(a R1 b) L1 c")

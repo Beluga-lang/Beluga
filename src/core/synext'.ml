@@ -32,10 +32,6 @@ module LF = struct
           }
           (** [Pi { parameter_identifier = x; parameter_type = t; body; _ }] is the
               dependent product kind `{ x : t } body'. *)
-      | Parenthesized of
-          { location : Location.t
-          ; kind : Kind.t
-          }  (** [Parenthesized { kind; _ }] is the kind `( kind )`. *)
   end =
     Kind
 
@@ -46,6 +42,7 @@ module LF = struct
           { location : Location.t
           ; identifier : QualifiedIdentifier.t
           ; operator : Operator.t
+          ; quoted : Bool.t
           }
           (** [Constant { identifier; _ }] is the type-level constant with
               qualified identifier `identifier', which is necessarily bound. *)
@@ -85,14 +82,6 @@ module LF = struct
           }
           (** [Pi { parameter_identifier = x; parameter_type = t; body; _ }] is the
               dependent product type `{ x : t } body'. *)
-      | Parenthesized of
-          { location : Location.t
-          ; typ : Typ.t
-          }
-          (** [Parenthesized { typ; _ }] is the type `( typ )`.
-
-              If [typ = Constant _], then [Parenthesized { typ; _ }] is a
-              quoted type-level LF operator. *)
   end =
     Typ
 
@@ -111,6 +100,7 @@ module LF = struct
           { location : Location.t
           ; identifier : QualifiedIdentifier.t
           ; operator : Operator.t
+          ; quoted : Bool.t
           }
           (** [Constant { identifier; _ }] is the term-level constant with
               qualified identifier `identifier', which is necessarily bound. *)
@@ -145,23 +135,16 @@ module LF = struct
           ; typ : Typ.t
           }
           (** [TypeAnnotated { term = u; typ = t; _ }] is the term `u : t`. *)
-      | Parenthesized of
-          { location : Location.t
-          ; term : Term.t
-          }
-          (** [Parenthesized { term; _ }] is the term `( term )`.
-
-              If [term = Constant _], then [Parenthesized { term; _ }] is a
-              quoted term-level LF operator. *)
   end =
     Term
+
+  type kind = Kind.t
 
   let location_of_kind kind =
     match kind with
     | Kind.Typ { location; _ }
     | Kind.Arrow { location; _ }
-    | Kind.Pi { location; _ }
-    | Kind.Parenthesized { location; _ } -> location
+    | Kind.Pi { location; _ } -> location
 
   let location_of_typ typ =
     match typ with
@@ -169,8 +152,7 @@ module LF = struct
     | Typ.Application { location; _ }
     | Typ.ForwardArrow { location; _ }
     | Typ.BackwardArrow { location; _ }
-    | Typ.Pi { location; _ }
-    | Typ.Parenthesized { location; _ } -> location
+    | Typ.Pi { location; _ } -> location
 
   let location_of_term term =
     match term with
@@ -179,8 +161,7 @@ module LF = struct
     | Term.Application { location; _ }
     | Term.Abstraction { location; _ }
     | Term.Wildcard { location; _ }
-    | Term.TypeAnnotated { location; _ }
-    | Term.Parenthesized { location; _ } -> location
+    | Term.TypeAnnotated { location; _ } -> location
 end
 
 (** {1 External Contextual LF Syntax}
@@ -203,6 +184,7 @@ module CLF = struct
           { location : Location.t
           ; identifier : QualifiedIdentifier.t
           ; operator : Operator.t
+          ; quoted : Bool.t
           }
           (** [Constant { identifier; _ }] is the type-level constant with
               qualified identifier `identifier', which is necessarily bound. *)
@@ -253,14 +235,6 @@ module CLF = struct
                 [rest = \[\]].
               - If [elements = ((label, _typ), rest)] with [rest <> \[\]],
                 then [label = Option.Some identifier]. *)
-      | Parenthesized of
-          { location : Location.t
-          ; typ : Typ.t
-          }
-          (** [Parenthesized { typ; _ }] is the type `( typ )`.
-
-              If [typ = Constant _], then [Parenthesized { typ; _ }] is a
-              quoted type-level LF operator. *)
 
     (** External contextual LF type patterns. *)
     module rec Pattern : sig
@@ -269,6 +243,7 @@ module CLF = struct
             { location : Location.t
             ; identifier : QualifiedIdentifier.t
             ; operator : Operator.t
+            ; quoted : Bool.t
             }
             (** [Constant { identifier; _ }] is the type-level constant
                 pattern `identifier'. *)
@@ -299,15 +274,6 @@ module CLF = struct
                   [rest = \[\]].
                 - If [elements = ((label, _typ), rest)] with [rest <> \[\]],
                   then [label = Option.Some identifier]. *)
-        | Parenthesized of
-            { location : Location.t
-            ; pattern : Typ.Pattern.t
-            }
-            (** [Parenthesized { pattern; _ }] is the type-level pattern
-                `(pattern)'
-
-                If [typ = Constant _], then [Parenthesized { typ; _ }] is a
-                quoted type-level LF operator. . *)
     end
   end =
     Typ
@@ -327,6 +293,7 @@ module CLF = struct
           { location : Location.t
           ; identifier : QualifiedIdentifier.t
           ; operator : Operator.t
+          ; quoted : Bool.t
           }
           (** [Constant { identifier; _ }] is the term-level constant with
               qualified identifier `identifier', which is necessarily bound. *)
@@ -390,14 +357,6 @@ module CLF = struct
           ; typ : Typ.t
           }
           (** [TypeAnnotated { term = u; typ = t; _ }] is the term `u : t`. *)
-      | Parenthesized of
-          { location : Location.t
-          ; term : Term.t
-          }
-          (** [Parenthesized { term; _ }] is the term `( term )`.
-
-              If [term = Constant _], then [Parenthesized { term; _ }] is a
-              quoted term-level LF operator. *)
 
     (** External contextual LF term patterns. *)
     module rec Pattern : sig
@@ -412,6 +371,7 @@ module CLF = struct
             { location : Location.t
             ; identifier : QualifiedIdentifier.t
             ; operator : Operator.t
+            ; quoted : Bool.t
             }
             (** [Constant { identifier; _ }] is the term-level constant
                 pattern `identifier'. *)
@@ -468,14 +428,6 @@ module CLF = struct
             }
             (** [TypeAnnotated { term = x; typ = t; _ }] is the pattern `x :
                 t'. *)
-        | Parenthesized of
-            { location : Location.t
-            ; pattern : Term.Pattern.t
-            }
-            (** [Parenthesized { term; _ }] is the term pattern `(pattern)`.
-
-                If [term = Constant _], then [Parenthesized { term; _ }] is a
-                quoted term-level LF operator. *)
     end
   end =
     Term
@@ -492,6 +444,11 @@ module CLF = struct
       type t =
         | None
         | Identity of { location : Location.t }
+        | Substitution_variable of
+            { location : Location.t
+            ; identifier : Identifier.t
+            ; closure : Substitution.t Option.t
+            }
     end
   end =
     Substitution
@@ -503,8 +460,7 @@ module CLF = struct
     | Typ.ForwardArrow { location; _ }
     | Typ.BackwardArrow { location; _ }
     | Typ.Pi { location; _ }
-    | Typ.Block { location; _ }
-    | Typ.Parenthesized { location; _ } -> location
+    | Typ.Block { location; _ } -> location
 
   let location_of_term term =
     match term with
@@ -516,8 +472,7 @@ module CLF = struct
     | Term.Substitution { location; _ }
     | Term.Tuple { location; _ }
     | Term.Projection { location; _ }
-    | Term.TypeAnnotated { location; _ }
-    | Term.Parenthesized { location; _ } -> location
+    | Term.TypeAnnotated { location; _ } -> location
 
   let location_of_substitution substitution =
     match substitution with
@@ -527,8 +482,7 @@ module CLF = struct
     match typ_pattern with
     | Typ.Pattern.Constant { location; _ }
     | Typ.Pattern.Application { location; _ }
-    | Typ.Pattern.Block { location; _ }
-    | Typ.Pattern.Parenthesized { location; _ } -> location
+    | Typ.Pattern.Block { location; _ } -> location
 
   let location_of_term_pattern term_pattern =
     match term_pattern with
@@ -540,6 +494,5 @@ module CLF = struct
     | Term.Pattern.Abstraction { location; _ }
     | Term.Pattern.Substitution { location; _ }
     | Term.Pattern.Application { location; _ }
-    | Term.Pattern.TypeAnnotated { location; _ }
-    | Term.Pattern.Parenthesized { location; _ } -> location
+    | Term.Pattern.TypeAnnotated { location; _ } -> location
 end

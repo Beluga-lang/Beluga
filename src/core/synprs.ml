@@ -21,10 +21,12 @@ module LF = struct
       | RawIdentifier of
           { location : Location.t
           ; identifier : Identifier.t
+          ; quoted : Bool.t
           }
       | RawQualifiedIdentifier of
           { location : Location.t
           ; identifier : QualifiedIdentifier.t
+          ; quoted : Bool.t
           }
       | RawType of { location : Location.t }
       | RawHole of { location : Location.t }
@@ -40,23 +42,16 @@ module LF = struct
           ; parameter_sort : Object.t Option.t
           ; body : Object.t
           }
-      | RawArrow of
+      | RawForwardArrow of
           { location : Location.t
-          ; orientation : [ `Forward | `Backward ]
-          ; left_operand : Object.t
-          ; right_operand : Object.t
+          ; domain : Object.t
+          ; range : Object.t
           }
-          (** [RawArrow { left_operand = a; orientation = `Forward; right_operand = b; _ }]
-              is the object `a -> b'.
-              [RawArrow { left_operand = a; orientation = `Backward; right_operand = b; _ }]
-              is the object `a <- b'.
-
-              Right arrows are right-associative, and left arrows are
-              left-associative.
-
-              Both arrows are parsed as right-associative because the parser
-              does not perform bottom-up parsing. They are disentangled in
-              the elaboration to the external syntax. *)
+      | RawBackwardArrow of
+          { location : Location.t
+          ; range : Object.t
+          ; domain : Object.t
+          }
       | RawAnnotated of
           { location : Location.t
           ; object_ : Object.t
@@ -70,10 +65,6 @@ module LF = struct
               [objects] delimited by whitespaces. [objects] may contain
               prefix, infix or postfix operators, along with operands. These
               are rewritten during the elaboration to the external syntax. *)
-      | RawParenthesized of
-          { location : Location.t
-          ; object_ : Object.t
-          }
   end =
     Object
 
@@ -85,186 +76,10 @@ module LF = struct
     | Object.RawHole { location; _ }
     | Object.RawPi { location; _ }
     | Object.RawLambda { location; _ }
-    | Object.RawArrow { location; _ }
+    | Object.RawForwardArrow { location; _ }
+    | Object.RawBackwardArrow { location; _ }
     | Object.RawAnnotated { location; _ }
-    | Object.RawApplication { location; _ }
-    | Object.RawParenthesized { location; _ } -> location
-
-  let rec pp_object ppf object_ =
-    match object_ with
-    | Object.RawIdentifier { identifier; _ } ->
-      Format.fprintf ppf "%a" Identifier.pp identifier
-    | Object.RawQualifiedIdentifier { identifier; _ } ->
-      Format.fprintf ppf "%a" QualifiedIdentifier.pp identifier
-    | Object.RawType _ -> Format.fprintf ppf "type"
-    | Object.RawHole _ -> Format.fprintf ppf "_"
-    | Object.RawPi
-        { parameter_identifier = Option.None
-        ; parameter_sort = Option.None
-        ; body
-        ; _
-        } -> Format.fprintf ppf "@[<2>{@ _@ }@ %a@]" pp_object body
-    | Object.RawPi
-        { parameter_identifier = Option.None
-        ; parameter_sort = Option.Some parameter_sort
-        ; body
-        ; _
-        } ->
-      Format.fprintf ppf "@[<2>{@ _@ :@ %a@ }@ %a@]" pp_object parameter_sort
-        pp_object body
-    | Object.RawPi
-        { parameter_identifier = Option.Some parameter_identifier
-        ; parameter_sort = Option.None
-        ; body
-        ; _
-        } ->
-      Format.fprintf ppf "@[<2>{@ %a@ }@ %a@]" Identifier.pp
-        parameter_identifier pp_object body
-    | Object.RawPi
-        { parameter_identifier = Option.Some parameter_identifier
-        ; parameter_sort = Option.Some parameter_sort
-        ; body
-        ; _
-        } ->
-      Format.fprintf ppf "@[<2>{@ %a@ :@ %a@ }@ %a@]" Identifier.pp
-        parameter_identifier pp_object parameter_sort pp_object body
-    | Object.RawLambda
-        { parameter_identifier = Option.None
-        ; parameter_sort = Option.None
-        ; body
-        ; _
-        } -> Format.fprintf ppf "@[<2>\\_.@ %a@]" pp_object body
-    | Object.RawLambda
-        { parameter_identifier = Option.None
-        ; parameter_sort = Option.Some parameter_sort
-        ; body
-        ; _
-        } ->
-      Format.fprintf ppf "@[<2>\\_:%a.@ %a@]" pp_object parameter_sort
-        pp_object body
-    | Object.RawLambda
-        { parameter_identifier = Option.Some parameter_identifier
-        ; parameter_sort = Option.None
-        ; body
-        ; _
-        } ->
-      Format.fprintf ppf "@[<2>\\%a.@ %a@]" Identifier.pp
-        parameter_identifier pp_object body
-    | Object.RawLambda
-        { parameter_identifier = Option.Some parameter_identifier
-        ; parameter_sort = Option.Some parameter_sort
-        ; body
-        ; _
-        } ->
-      Format.fprintf ppf "@[<2>\\%a:%a.@ %a@]" Identifier.pp
-        parameter_identifier pp_object parameter_sort pp_object body
-    | Object.RawArrow
-        { left_operand; right_operand; orientation = `Forward; _ } ->
-      Format.fprintf ppf "@[<2>%a@ ->@ %a@]" pp_object left_operand pp_object
-        right_operand
-    | Object.RawArrow
-        { left_operand; right_operand; orientation = `Backward; _ } ->
-      Format.fprintf ppf "@[<2>%a@ <-@ %a@]" pp_object left_operand pp_object
-        right_operand
-    | Object.RawAnnotated { object_; sort; _ } ->
-      Format.fprintf ppf "@[<2>%a@ :@ %a@]" pp_object object_ pp_object sort
-    | Object.RawApplication { objects; _ } ->
-      Format.fprintf ppf "@[<2>%a@]"
-        (List2.pp ~pp_sep:(fun ppf () -> Format.fprintf ppf "@ ") pp_object)
-        objects
-    | Object.RawParenthesized { object_; _ } ->
-      Format.fprintf ppf "@[<2>(%a)@]" pp_object object_
-
-  let rec pp_object_debug ppf object_ =
-    match object_ with
-    | Object.RawIdentifier { identifier; _ } ->
-      Format.fprintf ppf "%a" Identifier.pp identifier
-    | Object.RawQualifiedIdentifier { identifier; _ } ->
-      Format.fprintf ppf "%a" QualifiedIdentifier.pp identifier
-    | Object.RawType _ -> Format.fprintf ppf "type"
-    | Object.RawHole _ -> Format.fprintf ppf "_"
-    | Object.RawPi
-        { parameter_identifier = Option.None
-        ; parameter_sort = Option.None
-        ; body
-        ; _
-        } -> Format.fprintf ppf "@[<2>Pi({@ _@ }@ %a)@]" pp_object_debug body
-    | Object.RawPi
-        { parameter_identifier = Option.None
-        ; parameter_sort = Option.Some parameter_sort
-        ; body
-        ; _
-        } ->
-      Format.fprintf ppf "@[<2>Pi({@ _@ :@ %a@ }@ %a)@]" pp_object_debug
-        parameter_sort pp_object_debug body
-    | Object.RawPi
-        { parameter_identifier = Option.Some parameter_identifier
-        ; parameter_sort = Option.None
-        ; body
-        ; _
-        } ->
-      Format.fprintf ppf "@[<2>Pi({@ %a@ }@ %a)@]" Identifier.pp
-        parameter_identifier pp_object_debug body
-    | Object.RawPi
-        { parameter_identifier = Option.Some parameter_identifier
-        ; parameter_sort = Option.Some parameter_sort
-        ; body
-        ; _
-        } ->
-      Format.fprintf ppf "@[<2>Pi({@ %a@ :@ %a@ }@ %a)@]" Identifier.pp
-        parameter_identifier pp_object_debug parameter_sort pp_object_debug
-        body
-    | Object.RawLambda
-        { parameter_identifier = Option.None
-        ; parameter_sort = Option.None
-        ; body
-        ; _
-        } ->
-      Format.fprintf ppf "@[<2>Lambda(\\_.@ %a)@]" pp_object_debug body
-    | Object.RawLambda
-        { parameter_identifier = Option.None
-        ; parameter_sort = Option.Some parameter_sort
-        ; body
-        ; _
-        } ->
-      Format.fprintf ppf "@[<2>Lambda(\\_:%a.@ %a)@]" pp_object_debug
-        parameter_sort pp_object_debug body
-    | Object.RawLambda
-        { parameter_identifier = Option.Some parameter_identifier
-        ; parameter_sort = Option.None
-        ; body
-        ; _
-        } ->
-      Format.fprintf ppf "@[<2>Lambda(\\%a.@ %a)@]" Identifier.pp
-        parameter_identifier pp_object_debug body
-    | Object.RawLambda
-        { parameter_identifier = Option.Some parameter_identifier
-        ; parameter_sort = Option.Some parameter_sort
-        ; body
-        ; _
-        } ->
-      Format.fprintf ppf "@[<2>Lambda(\\%a:%a.@ %a)@]" Identifier.pp
-        parameter_identifier pp_object_debug parameter_sort pp_object_debug
-        body
-    | Object.RawArrow
-        { left_operand; right_operand; orientation = `Forward; _ } ->
-      Format.fprintf ppf "@[<2>ForwardArrow(%a@ ->@ %a)@]" pp_object_debug
-        left_operand pp_object_debug right_operand
-    | Object.RawArrow
-        { left_operand; right_operand; orientation = `Backward; _ } ->
-      Format.fprintf ppf "@[<2>BackwardArrow(%a@ <-@ %a)@]" pp_object_debug
-        left_operand pp_object_debug right_operand
-    | Object.RawAnnotated { object_; sort; _ } ->
-      Format.fprintf ppf "@[<2>Annotated(%a@ :@ %a)@]" pp_object_debug
-        object_ pp_object_debug sort
-    | Object.RawApplication { objects; _ } ->
-      Format.fprintf ppf "@[<2>Application(%a)@]"
-        (List2.pp
-           ~pp_sep:(fun ppf () -> Format.fprintf ppf "@ ")
-           pp_object_debug)
-        objects
-    | Object.RawParenthesized { object_; _ } ->
-      Format.fprintf ppf "@[<2>Parenthesized(%a)@]" pp_object_debug object_
+    | Object.RawApplication { location; _ } -> location
 end
 
 (** {1 Parser Contextual LF Syntax}
@@ -284,10 +99,12 @@ module CLF = struct
       | RawIdentifier of
           { location : Location.t
           ; identifier : Identifier.t
+          ; quoted : Bool.t
           }
       | RawQualifiedIdentifier of
           { location : Location.t
           ; identifier : QualifiedIdentifier.t
+          ; quoted : Bool.t
           }
       | RawHole of
           { location : Location.t
@@ -305,23 +122,16 @@ module CLF = struct
           ; parameter_sort : Object.t Option.t
           ; body : Object.t
           }
-      | RawArrow of
+      | RawForwardArrow of
           { location : Location.t
-          ; left_operand : Object.t
-          ; right_operand : Object.t
-          ; orientation : [ `Forward | `Backward ]
+          ; domain : Object.t
+          ; range : Object.t
           }
-          (** [RawArrow { left_operand = a; orientation = `Forward; right_operand = b; _ }]
-              is the object `a -> b'.
-              [RawArrow { left_operand = a; orientation = `Backward; right_operand = b; _ }]
-              is the object `a <- b'.
-
-              Right arrows are right-associative, and left arrows are
-              left-associative.
-
-              Both arrows are parsed as right-associative because the parser
-              does not perform bottom-up parsing. They are disentangled in
-              the elaboration to the external syntax. *)
+      | RawBackwardArrow of
+          { location : Location.t
+          ; range : Object.t
+          ; domain : Object.t
+          }
       | RawAnnotated of
           { location : Location.t
           ; object_ : Object.t
@@ -356,10 +166,6 @@ module CLF = struct
           ; object_ : Object.t
           ; substitution : Substitution.t
           }
-      | RawParenthesized of
-          { location : Location.t
-          ; object_ : Object.t
-          }
   end =
     Object
 
@@ -378,6 +184,21 @@ module CLF = struct
   end =
     Substitution
 
+  and Context : sig
+    type t =
+      { location : Location.t
+      ; head : Context.Head.t
+      ; typings : (Identifier.t * Object.t) List.t
+      }
+
+    module Head : sig
+      type t =
+        | None
+        | Hole of { location : Location.t }
+    end
+  end =
+    Context
+
   let location_of_object object_ =
     match object_ with
     | Object.RawIdentifier { location; _ }
@@ -385,14 +206,18 @@ module CLF = struct
     | Object.RawHole { location; _ }
     | Object.RawPi { location; _ }
     | Object.RawLambda { location; _ }
-    | Object.RawArrow { location; _ }
+    | Object.RawForwardArrow { location; _ }
+    | Object.RawBackwardArrow { location; _ }
     | Object.RawAnnotated { location; _ }
     | Object.RawApplication { location; _ }
     | Object.RawBlock { location; _ }
     | Object.RawTuple { location; _ }
     | Object.RawProjection { location; _ }
-    | Object.RawSubstitution { location; _ }
-    | Object.RawParenthesized { location; _ } -> location
+    | Object.RawSubstitution { location; _ } -> location
+
+  let location_of_substitution substitution =
+    match substitution with
+    | Substitution.{ location; _ } -> location
 end
 
 (** {1 Parser Computation Syntax} *)

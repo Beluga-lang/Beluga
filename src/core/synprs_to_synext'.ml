@@ -12,6 +12,9 @@ module Elaboration_state : sig
     | Substitution_variable
         (** A substitution variable, such as `$S' in `[g |- M\[$S\]]' if `$S
             : [g |- h]'. *)
+    | Context_variable
+        (** A context variable, such as `g' in `[g, x : tm |- _]' if `g :
+            ctx'. *)
 
   (** {1 Constructors} *)
 
@@ -47,6 +50,8 @@ module Elaboration_state : sig
 
   val add_substitution_variable : Identifier.t -> t -> t
 
+  val add_context_variable : Identifier.t -> t -> t
+
   val add_module : t -> QualifiedIdentifier.t -> t -> t
 
   (** {1 Lookup} *)
@@ -69,6 +74,7 @@ end = struct
     | LF_type_constant of Operator.t
     | LF_term_constant of Operator.t
     | Substitution_variable
+    | Context_variable
 
   let empty = QualifiedIdentifier.Dictionary.empty
 
@@ -109,6 +115,10 @@ end = struct
     QualifiedIdentifier.Dictionary.add_toplevel_entry identifier
       Substitution_variable
 
+  let add_context_variable identifier =
+    QualifiedIdentifier.Dictionary.add_toplevel_entry identifier
+      Context_variable
+
   let add_module module_dictionary identifier =
     QualifiedIdentifier.Dictionary.add_module identifier module_dictionary
 
@@ -127,6 +137,8 @@ end = struct
       Format.fprintf ppf "an LF term-level constant"
     | QualifiedIdentifier.Dictionary.Entry Substitution_variable ->
       Format.fprintf ppf "a substitution variable"
+    | QualifiedIdentifier.Dictionary.Entry Context_variable ->
+      Format.fprintf ppf "a context variable"
     | QualifiedIdentifier.Dictionary.Module _ ->
       Format.fprintf ppf "a module"
 end
@@ -1005,6 +1017,8 @@ module CLF = struct
 
   exception Illegal_substitution_type of Location.t
 
+  exception Illegal_unnamed_block_element_type of Location.t
+
   exception
     Unbound_type_constant of
       { location : Location.t
@@ -1091,17 +1105,15 @@ module CLF = struct
 
   exception Illegal_annotated_type_pattern of Location.t
 
+  exception Illegal_untyped_pi_type_pattern of Location.t
+
   exception Illegal_tuple_type_pattern of Location.t
 
   exception Illegal_projection_type_pattern of Location.t
 
   exception Illegal_substitution_type_pattern of Location.t
 
-  exception Illegal_pi_type_pattern of Location.t
-
-  exception Illegal_forward_arrow_type_pattern of Location.t
-
-  exception Illegal_backward_arrow_type_pattern of Location.t
+  exception Illegal_unnamed_block_element_type_pattern of Location.t
 
   (** {2 Exceptions for contextual LF term pattern elaboration} *)
 
@@ -1146,6 +1158,10 @@ module CLF = struct
     | Illegal_substitution_type location ->
       Format.fprintf ppf
         "Substitution terms may not appear as contextual LF types: %a@."
+        Location.pp location
+    | Illegal_unnamed_block_element_type location ->
+      Format.fprintf ppf
+        "Contextual LF block type element missing an identifier: %a@."
         Location.pp location
     | Unbound_type_constant { location; identifier } ->
       Format.fprintf ppf "The LF type-level constant %a is unbound: %a@."
@@ -1253,6 +1269,11 @@ module CLF = struct
         "Type ascriptions to terms may not appear as contextual LF type \
          patterns: %a@."
         Location.pp location
+    | Illegal_untyped_pi_type_pattern location ->
+      Format.fprintf ppf
+        "The contextual LF Pi type pattern is missing its parameter type \
+         annotation: %a@."
+        Location.pp location
     | Illegal_tuple_type_pattern location ->
       Format.fprintf ppf
         "Tuple term patterns may not appear as contextual LF type patterns: \
@@ -1268,19 +1289,9 @@ module CLF = struct
         "Substitution term patterns may not appear as contextual LF type \
          patterns: %a@."
         Location.pp location
-    | Illegal_pi_type_pattern location ->
+    | Illegal_unnamed_block_element_type_pattern location ->
       Format.fprintf ppf
-        "Pi kinds or types may not appear as contextual LF type patterns: \
-         %a@."
-        Location.pp location
-    | Illegal_forward_arrow_type_pattern location ->
-      Format.fprintf ppf
-        "Forward arrow types may not appear as contextual LF type patterns: \
-         %a@."
-        Location.pp location
-    | Illegal_backward_arrow_type_pattern location ->
-      Format.fprintf ppf
-        "Forward arrow types may not appear as contextual LF type patterns: \
+        "Contextual LF block type pattern element missing an identifier: \
          %a@."
         Location.pp location
     | Illegal_pi_term_pattern location ->
@@ -1543,12 +1554,37 @@ module CLF = struct
         let location = Synext'.CLF.location_of_term term in
         raise @@ Expected_type location
       | `Typ typ -> typ)
-    | Synprs.CLF.Object.RawBlock { location; elements = x, xs } ->
-      let elements' =
-        ( Pair.map_right (elaborate_typ state) x
-        , List.map (Pair.map_right (elaborate_typ state)) xs )
+    | Synprs.CLF.Object.RawBlock
+        { location; elements = List1.T ((Option.None, t), []) } ->
+      let t' = elaborate_typ state t in
+      Synext'.CLF.Typ.Block { location; elements = `Unnamed t' }
+    | Synprs.CLF.Object.RawBlock { location; elements } ->
+      let _state', elements' =
+        List1.fold_left
+          (fun element ->
+            match element with
+            | Option.None, typ ->
+              let location = Synprs.CLF.location_of_object typ in
+              raise @@ Illegal_unnamed_block_element_type location
+            | Option.Some identifier, typ ->
+              let typ' = elaborate_typ state typ in
+              let elements' = List1.singleton (identifier, typ')
+              and state' = Elaboration_state.add_term identifier state in
+              (state', elements'))
+          (fun (state', elements') element ->
+            match element with
+            | Option.None, typ ->
+              let location = Synprs.CLF.location_of_object typ in
+              raise @@ Illegal_unnamed_block_element_type location
+            | Option.Some identifier, typ ->
+              let typ' = elaborate_typ state' typ in
+              let elements'' = List1.cons (identifier, typ') elements'
+              and state'' = Elaboration_state.add_term identifier state' in
+              (state'', elements''))
+          elements
       in
-      Synext'.CLF.Typ.Block { location; elements = elements' }
+      let elements'' = List1.rev elements' in
+      Synext'.CLF.Typ.Block { location; elements = `Record elements'' }
 
   (** [elaborate_term state object_] is [object_] rewritten as a contextual
       LF term with respect to the elaboration context [state].
@@ -2061,24 +2097,18 @@ module CLF = struct
     | Synprs.CLF.Object.RawAnnotated { location; _ } ->
       raise @@ Illegal_annotated_type_pattern location
     | Synprs.CLF.Object.RawPi { location; parameter_sort = Option.None; _ }
-      -> raise @@ Illegal_pi_type_pattern location
+      -> raise @@ Illegal_untyped_pi_type_pattern location
     | Synprs.CLF.Object.RawTuple { location; _ } ->
       raise @@ Illegal_tuple_type_pattern location
     | Synprs.CLF.Object.RawProjection { location; _ } ->
       raise @@ Illegal_projection_type_pattern location
     | Synprs.CLF.Object.RawSubstitution { location; _ } ->
       raise @@ Illegal_substitution_type_pattern location
-    | Synprs.CLF.Object.RawPi { location; _ } ->
-      raise @@ Illegal_pi_type_pattern location
     | Synprs.CLF.Object.RawHole { location; variant = `Underscore } ->
       raise @@ Illegal_wildcard_type_pattern location
     | Synprs.CLF.Object.RawHole
         { location; variant = `Unlabelled | `Labelled _ } ->
       raise @@ Illegal_labellable_hole_type_pattern location
-    | Synprs.CLF.Object.RawForwardArrow { location; _ } ->
-      raise @@ Illegal_forward_arrow_type_pattern location
-    | Synprs.CLF.Object.RawBackwardArrow { location; _ } ->
-      raise @@ Illegal_backward_arrow_type_pattern location
     | Synprs.CLF.Object.RawIdentifier { location; identifier; quoted } -> (
       (* As an LF type pattern, plain identifiers are necessarily type-level
          constants. *)
@@ -2112,18 +2142,79 @@ module CLF = struct
         raise @@ Expected_type_constant { location; actual_binding = entry }
       | exception QualifiedIdentifier.Dictionary.Unbound_identifier _ ->
         raise @@ Unbound_type_constant { location; identifier })
+    | Synprs.CLF.Object.RawForwardArrow { location; domain; range } ->
+      let domain' = elaborate_typ_pattern state domain
+      and range' = elaborate_typ_pattern state range in
+      Synext'.CLF.Typ.Pattern.ForwardArrow
+        { location; domain = domain'; range = range' }
+    | Synprs.CLF.Object.RawBackwardArrow { location; range; domain } ->
+      let range' = elaborate_typ_pattern state range
+      and domain' = elaborate_typ_pattern state domain in
+      Synext'.CLF.Typ.Pattern.BackwardArrow
+        { location; range = range'; domain = domain' }
+    | Synprs.CLF.Object.RawPi
+        { location
+        ; parameter_identifier
+        ; parameter_sort = Option.Some parameter_type
+        ; body
+        } -> (
+      let parameter_type' = elaborate_typ state parameter_type in
+      match parameter_identifier with
+      | Option.None ->
+        let body' = elaborate_typ_pattern state body in
+        Synext'.CLF.Typ.Pattern.Pi
+          { location
+          ; parameter_identifier
+          ; parameter_type = parameter_type'
+          ; body = body'
+          }
+      | Option.Some parameter ->
+        let state' = Elaboration_state.add_term parameter state in
+        let body' = elaborate_typ_pattern state' body in
+        Synext'.CLF.Typ.Pattern.Pi
+          { location
+          ; parameter_identifier
+          ; parameter_type = parameter_type'
+          ; body = body'
+          })
     | Synprs.CLF.Object.RawApplication { objects; _ } -> (
       match elaborate_application_pattern state objects with
       | `Term_pattern term_pattern ->
         let location = Synext'.CLF.location_of_term_pattern term_pattern in
         raise @@ Expected_type_pattern location
       | `Typ_pattern typ_pattern -> typ_pattern)
-    | Synprs.CLF.Object.RawBlock { location; elements = x, xs } ->
-      let elements' =
-        ( Pair.map_right (elaborate_typ_pattern state) x
-        , List.map (Pair.map_right (elaborate_typ_pattern state)) xs )
+    | Synprs.CLF.Object.RawBlock
+        { location; elements = List1.T ((Option.None, t), []) } ->
+      let t' = elaborate_typ state t in
+      Synext'.CLF.Typ.Pattern.Block { location; elements = `Unnamed t' }
+    | Synprs.CLF.Object.RawBlock { location; elements } ->
+      let _state', elements' =
+        List1.fold_left
+          (fun element ->
+            match element with
+            | Option.None, typ ->
+              let location = Synprs.CLF.location_of_object typ in
+              raise @@ Illegal_unnamed_block_element_type_pattern location
+            | Option.Some identifier, typ ->
+              let typ' = elaborate_typ state typ in
+              let elements' = List1.singleton (identifier, typ')
+              and state' = Elaboration_state.add_term identifier state in
+              (state', elements'))
+          (fun (state', elements') element ->
+            match element with
+            | Option.None, typ ->
+              let location = Synprs.CLF.location_of_object typ in
+              raise @@ Illegal_unnamed_block_element_type location
+            | Option.Some identifier, typ ->
+              let typ' = elaborate_typ state' typ in
+              let elements'' = List1.cons (identifier, typ') elements'
+              and state'' = Elaboration_state.add_term identifier state' in
+              (state'', elements''))
+          elements
       in
-      Synext'.CLF.Typ.Pattern.Block { location; elements = elements' }
+      let elements'' = List1.rev elements' in
+      Synext'.CLF.Typ.Pattern.Block
+        { location; elements = `Record elements'' }
 
   (** [elaborate_term_pattern state object_] is [object_] rewritten as a
       contextual LF term pattern with respect to the elaboration context

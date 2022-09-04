@@ -147,9 +147,7 @@ module CLF = struct
               are rewritten during the elaboration to the external syntax. *)
       | RawBlock of
           { location : Location.t
-          ; elements :
-              (Identifier.t Option.t * Object.t)
-              * (Identifier.t * Object.t) List.t
+          ; elements : (Identifier.t Option.t * Object.t) List1.t
           }
       | RawTuple of
           { location : Location.t
@@ -218,6 +216,10 @@ module CLF = struct
   let location_of_substitution substitution =
     match substitution with
     | Substitution.{ location; _ } -> location
+
+  let location_of_context context =
+    match context with
+    | Context.{ location; _ } -> location
 end
 
 (** {1 Parser Computation Syntax} *)

@@ -468,6 +468,8 @@ module CLF = struct
 
   let precedence_typ_pattern typ_pattern =
     match typ_pattern with
+    | Typ.Pattern.Pi _ -> 10
+    | Typ.Pattern.ForwardArrow _ | Typ.Pattern.BackwardArrow _ -> 30
     | Typ.Pattern.Block _ -> 40
     | Typ.Pattern.Application
         { applicand = Typ.Pattern.Constant { quoted = false; _ }; _ }
@@ -579,19 +581,15 @@ module CLF = struct
             Identifier.pp ppf parameter_identifier
           | Option.None -> Format.fprintf ppf "_")
         parameter_identifier pp_typ parameter_type pp_typ body
-    | Typ.Block { elements = (Option.None, typ), []; _ } ->
+    | Typ.Block { elements = `Unnamed typ; _ } ->
       Format.fprintf ppf "@[<2>block (%a)]" pp_typ typ
-    | Typ.Block { elements = (Option.None, _typ), _nt1 :: _nts; _ } ->
-      raise
-      @@ Invalid_argument
-           "[pp_typ_pattern] missing identifier for first type in block"
-    | Typ.Block { elements = (Option.Some i1, t1), nts; _ } ->
+    | Typ.Block { elements = `Record nts; _ } ->
       Format.fprintf ppf "@[<2>block (%a)]"
-        (List.pp
+        (List1.pp
            ~pp_sep:(fun ppf () -> Format.fprintf ppf ",@ ")
            (fun ppf (i, t) ->
              Format.fprintf ppf "%a@ :@ %a" Identifier.pp i pp_typ t))
-        ((i1, t1) :: nts)
+        nts
 
   and pp_term ppf term =
     let parent_precedence = precedence_term term in
@@ -764,6 +762,9 @@ module CLF = struct
         terms
 
   and pp_context ppf context =
+    let pp_typing ppf (i, t) =
+      Format.fprintf ppf "%a@ :@ %a" Identifier.pp i pp_typ t
+    in
     match context with
     | Context.{ head = Context.Head.None; typings = []; _ } -> ()
     | Context.{ head = Context.Head.Hole _; typings = []; _ } ->
@@ -775,21 +776,11 @@ module CLF = struct
         } -> Format.fprintf ppf "%a" Identifier.pp identifier
     | Context.{ head = Context.Head.None; typings; _ } ->
       Format.fprintf ppf "@[<2>%a@]"
-        (List.pp
-           ~pp_sep:(fun ppf () -> Format.fprintf ppf ",@ ")
-           (fun ppf -> function
-             | i, Option.Some t ->
-               Format.fprintf ppf "%a@ :@ %a" Identifier.pp i pp_typ t
-             | i, Option.None -> Identifier.pp ppf i))
+        (List.pp ~pp_sep:(fun ppf () -> Format.fprintf ppf ",@ ") pp_typing)
         typings
     | Context.{ head = Context.Head.Hole _; typings; _ } ->
       Format.fprintf ppf "@[<2>_,@ %a@]"
-        (List.pp
-           ~pp_sep:(fun ppf () -> Format.fprintf ppf ",@ ")
-           (fun ppf -> function
-             | i, Option.Some t ->
-               Format.fprintf ppf "%a@ :@ %a" Identifier.pp i pp_typ t
-             | i, Option.None -> Identifier.pp ppf i))
+        (List.pp ~pp_sep:(fun ppf () -> Format.fprintf ppf ",@ ") pp_typing)
         typings
     | Context.
         { head = Context.Head.Context_variable { identifier; _ }
@@ -797,12 +788,7 @@ module CLF = struct
         ; _
         } ->
       Format.fprintf ppf "@[<2>%a,@ %a@]" Identifier.pp identifier
-        (List.pp
-           ~pp_sep:(fun ppf () -> Format.fprintf ppf ",@ ")
-           (fun ppf -> function
-             | i, Option.Some t ->
-               Format.fprintf ppf "%a@ :@ %a" Identifier.pp i pp_typ t
-             | i, Option.None -> Identifier.pp ppf i))
+        (List.pp ~pp_sep:(fun ppf () -> Format.fprintf ppf ",@ ") pp_typing)
         typings
 
   and pp_infix_operator_application ~parent_precedence operator_identifier
@@ -1014,20 +1000,55 @@ module CLF = struct
            (parenthesize_argument_prefix_operator precedence_term_pattern
               ~parent_precedence pp_term_pattern))
         arguments
-    | Typ.Pattern.Block { elements = (Option.None, typ), []; _ } ->
-      Format.fprintf ppf "@[<2>block (%a)]" pp_typ_pattern typ
-    | Typ.Pattern.Block { elements = (Option.None, _typ), _nt1 :: _nts; _ }
-      ->
-      raise
-      @@ Invalid_argument
-           "[pp_typ_pattern] missing identifier for first type in block"
-    | Typ.Pattern.Block { elements = (Option.Some i1, t1), nts; _ } ->
+    | Typ.Pattern.Block { elements = `Unnamed typ; _ } ->
+      Format.fprintf ppf "@[<2>block (%a)]" pp_typ typ
+    | Typ.Pattern.Block { elements = `Record nts; _ } ->
       Format.fprintf ppf "@[<2>block (%a)]"
-        (List.pp
+        (List1.pp
            ~pp_sep:(fun ppf () -> Format.fprintf ppf ",@ ")
            (fun ppf (i, t) ->
-             Format.fprintf ppf "%a@ :@ %a" Identifier.pp i pp_typ_pattern t))
-        ((i1, t1) :: nts)
+             Format.fprintf ppf "%a@ :@ %a" Identifier.pp i pp_typ t))
+        nts
+    | Typ.Pattern.ForwardArrow { domain; range; _ } ->
+      (* Forward arrows are right-associative and of equal precedence with
+         backward arrows *)
+      Format.fprintf ppf "@[<2>%a@ ->@ %a@]"
+        (match domain with
+        | Typ.Pattern.BackwardArrow _ -> parenthesize pp_typ_pattern
+        | _ ->
+          parenthesize_left_argument_right_associative_operator
+            precedence_typ_pattern ~parent_precedence pp_typ_pattern)
+        domain
+        (match range with
+        | Typ.Pattern.BackwardArrow _ -> parenthesize pp_typ_pattern
+        | _ ->
+          parenthesize_right_argument_right_associative_operator
+            precedence_typ_pattern ~parent_precedence pp_typ_pattern)
+        range
+    | Typ.Pattern.BackwardArrow { range; domain; _ } ->
+      (* Backward arrows are left-associative and of equal precedence with
+         forward arrows *)
+      Format.fprintf ppf "@[<2>%a@ <-@ %a@]"
+        (match range with
+        | Typ.Pattern.ForwardArrow _ -> parenthesize pp_typ_pattern
+        | _ ->
+          parenthesize_left_argument_left_associative_operator precedence_typ_pattern
+            ~parent_precedence pp_typ_pattern)
+        range
+        (match domain with
+        | Typ.Pattern.ForwardArrow _ -> parenthesize pp_typ_pattern
+        | _ ->
+          parenthesize_right_argument_left_associative_operator
+            precedence_typ_pattern ~parent_precedence pp_typ_pattern)
+        domain
+    | Typ.Pattern.Pi { parameter_identifier; parameter_type; body; _ } ->
+      (* Pis are weak prefix operators *)
+      Format.fprintf ppf "@[<2>{@ %a@ :@ %a@ }@ %a@]"
+        (fun ppf -> function
+          | Option.Some parameter_identifier ->
+            Identifier.pp ppf parameter_identifier
+          | Option.None -> Format.fprintf ppf "_")
+        parameter_identifier pp_typ parameter_type pp_typ_pattern body
 
   and pp_term_pattern ppf term =
     let parent_precedence = precedence_term_pattern term in

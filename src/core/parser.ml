@@ -1490,17 +1490,9 @@ end = struct
 
   let clf_object4 =
     let block_contents =
-      let many_fields =
-        sep_by1 (seq2 identifier (CLF_parsers.clf_object)) (token Token.COMMA)
-        $> fun (List1.T ((l1, o1), rest)) -> ((Option.Some l1), o1), rest
-      and one_field =
-        CLF_parsers.clf_object
-        $> fun (o) -> ((Option.None, o), [])
-      in
-      choice
-        [ many_fields
-        ; one_field
-        ]
+      sep_by1
+        (seq2 (maybe (identifier <& token Token.COLON)) CLF_parsers.clf_object)
+        (token Token.COMMA)
     in
     let block =
       token Token.KW_BLOCK &> alt (parens block_contents) block_contents

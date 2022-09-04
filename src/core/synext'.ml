@@ -227,14 +227,11 @@ module CLF = struct
       | Block of
           { location : Location.t
           ; elements :
-              (Identifier.t Option.t * Typ.t) * (Identifier.t * Typ.t) List.t
+              [ `Unnamed of Typ.t
+              | `Record of (Identifier.t * Typ.t) List1.t
+              ]
           }
-          (** [Block { elements; _ }] is the block type `block (elements)'.
-
-              - If [elements = ((Option.None, _typ), rest)], then
-                [rest = \[\]].
-              - If [elements = ((label, _typ), rest)] with [rest <> \[\]],
-                then [label = Option.Some identifier]. *)
+          (** [Block { elements; _ }] is the block type `block (elements)'. *)
 
     (** External contextual LF type patterns. *)
     module rec Pattern : sig
@@ -261,19 +258,37 @@ module CLF = struct
                 - If [applicand = Typ.Constant { operator; _ }] and
                   [Operator.is_postfix operator], then
                   [List.length arguments = 1]. *)
+        | ForwardArrow of
+            { location : Location.t
+            ; domain : Typ.Pattern.t
+            ; range : Typ.Pattern.t
+            }
+            (** [ForwardArrow { domain; range; _ }] is the type pattern
+                `domain -> range'. *)
+        | BackwardArrow of
+            { location : Location.t
+            ; domain : Typ.Pattern.t
+            ; range : Typ.Pattern.t
+            }
+            (** [BackwardArrow { domain; range; _ }] is the type pattern
+                `domain <- range'. *)
+        | Pi of
+            { location : Location.t
+            ; parameter_identifier : Identifier.t Option.t
+            ; parameter_type : Typ.t
+            ; body : Typ.Pattern.t
+            }
+            (** [Pi { parameter_identifier = x; parameter_type = t; body; _ }]
+                is the dependent product type pattern `[{ x : t } body]'. *)
         | Block of
             { location : Location.t
             ; elements :
-                (Identifier.t Option.t * Typ.Pattern.t)
-                * (Identifier.t * Typ.Pattern.t) List.t
+                [ `Unnamed of Typ.t
+                | `Record of (Identifier.t * Typ.t) List1.t
+                ]
             }
             (** [Block { elements; _ }] is the type-level block pattern
-                `block (elements)'.
-
-                - If [elements = ((Option.None, _typ), rest)], then
-                  [rest = \[\]].
-                - If [elements = ((label, _typ), rest)] with [rest <> \[\]],
-                  then [label = Option.Some identifier]. *)
+                `block (elements)'. *)
     end
   end =
     Typ
@@ -452,6 +467,22 @@ module CLF = struct
     end
   end =
     Substitution
+
+  and Context : sig
+    type t =
+      { location : Location.t
+      ; head : Context.Head.t
+      ; typings : (Identifier.t * Typ.t) List.t
+      }
+
+    module Head : sig
+      type t =
+        | None
+        | Hole of { location : Location.t }
+        | Context_variable of { identifier : Identifier.t }
+    end
+  end =
+    Context
 
   let location_of_typ typ =
     match typ with

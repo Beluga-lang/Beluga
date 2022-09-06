@@ -1148,10 +1148,11 @@ end = struct
               (LF.location_of_object left_operand)
               (LF.location_of_object right_operand)
           in
-          LF.Object.RawForwardArrow
+          LF.Object.RawArrow
             { location
             ; domain = left_operand
             ; range = right_operand
+            ; orientation = `Forward
             }
       in
       Infix { parser; associativity = Associativity.right_associative }
@@ -1164,10 +1165,11 @@ end = struct
               (LF.location_of_object left_operand)
               (LF.location_of_object right_operand)
           in
-          LF.Object.RawBackwardArrow
+          LF.Object.RawArrow
             { location
             ; range = left_operand
             ; domain = right_operand
+            ; orientation = `Backward
             }
       in
       Infix { parser; associativity = Associativity.left_associative }
@@ -1515,10 +1517,11 @@ end = struct
               (CLF.location_of_object left_operand)
               (CLF.location_of_object right_operand)
           in
-          CLF.Object.RawForwardArrow
+          CLF.Object.RawArrow
             { location
             ; domain = left_operand
             ; range = right_operand
+            ; orientation = `Forward
             }
       in
       Infix { parser; associativity = Associativity.right_associative }
@@ -1531,10 +1534,11 @@ end = struct
               (CLF.location_of_object left_operand)
               (CLF.location_of_object right_operand)
           in
-          CLF.Object.RawBackwardArrow
+          CLF.Object.RawArrow
             { location
             ; range = left_operand
             ; domain = right_operand
+            ; orientation = `Backward
             }
       in
       Infix { parser; associativity = Associativity.left_associative }

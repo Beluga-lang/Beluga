@@ -1,7 +1,5 @@
 (** Pretty-printing for the external syntax. *)
 
-[@@@warning "+A-4-44-66"]
-
 open Support
 open Synext'
 
@@ -13,75 +11,124 @@ open Synext'
 
 let parenthesize pp ppf = Format.fprintf ppf "@[<2>(%a)@]" pp
 
-let[@inline] parenthesize_argument_of_lesser_precedence precedence
-    ~parent_precedence pp ppf argument =
-  if precedence argument < parent_precedence then
-    parenthesize pp ppf argument
-  else pp ppf argument
+module Make_parenthesizer (Precedence : Ord.ORD) = struct
+  let[@inline] parenthesize_argument_of_lesser_precedence precedence
+      ~parent_precedence pp ppf argument =
+    if Precedence.(precedence argument < parent_precedence) then
+      parenthesize pp ppf argument
+    else pp ppf argument
 
-let[@inline] parenthesize_argument_of_lesser_than_or_equal_precedence
-    precedence ~parent_precedence pp ppf argument =
-  if precedence argument <= parent_precedence then
-    parenthesize pp ppf argument
-  else pp ppf argument
+  let[@inline] parenthesize_argument_of_lesser_than_or_equal_precedence
+      precedence ~parent_precedence pp ppf argument =
+    if Precedence.(precedence argument <= parent_precedence) then
+      parenthesize pp ppf argument
+    else pp ppf argument
 
-let parenthesize_left_argument_left_associative_operator =
-  parenthesize_argument_of_lesser_precedence
+  let parenthesize_left_argument_left_associative_operator =
+    parenthesize_argument_of_lesser_precedence
 
-let parenthesize_right_argument_left_associative_operator =
-  parenthesize_argument_of_lesser_than_or_equal_precedence
+  let parenthesize_right_argument_left_associative_operator =
+    parenthesize_argument_of_lesser_than_or_equal_precedence
 
-let parenthesize_left_argument_right_associative_operator =
-  parenthesize_argument_of_lesser_than_or_equal_precedence
+  let parenthesize_left_argument_right_associative_operator =
+    parenthesize_argument_of_lesser_than_or_equal_precedence
 
-let parenthesize_right_argument_right_associative_operator =
-  parenthesize_argument_of_lesser_precedence
+  let parenthesize_right_argument_right_associative_operator =
+    parenthesize_argument_of_lesser_precedence
 
-let parenthesize_argument_non_associative_operator =
-  parenthesize_argument_of_lesser_than_or_equal_precedence
+  let parenthesize_argument_non_associative_operator =
+    parenthesize_argument_of_lesser_than_or_equal_precedence
 
-let parenthesize_argument_prefix_operator =
-  parenthesize_argument_of_lesser_than_or_equal_precedence
+  let parenthesize_argument_prefix_operator =
+    parenthesize_argument_of_lesser_than_or_equal_precedence
 
-let parenthesize_argument_postfix_operator =
-  parenthesize_argument_of_lesser_precedence
+  let parenthesize_argument_postfix_operator =
+    parenthesize_argument_of_lesser_precedence
+end
 
 (** {1 Printing LF Kinds, Types and Terms} *)
 module LF = struct
   open LF
 
-  let precedence_kind kind =
-    match kind with
-    | Kind.Pi _ -> 10
-    | Kind.Arrow _ -> 30
-    | Kind.Typ _ -> 50
+  module Precedence : sig
+    type t
 
-  let precedence_typ typ =
-    match typ with
-    | Typ.Pi _ -> 10
-    | Typ.ForwardArrow _ | Typ.BackwardArrow _ -> 30
-    | Typ.Application { applicand = Typ.Constant { quoted = false; _ }; _ }
-    (* User-defined operator application *) -> 39
-    | Typ.Application _ -> 40
-    | Typ.Constant _ -> 50
+    val of_kind : Kind.t -> t
 
-  let precedence_term term =
-    match term with
-    | Term.Abstraction _ -> 10
-    | Term.TypeAnnotated _ -> 20
-    | Term.Application { applicand = Term.Constant { quoted = false; _ }; _ }
-    (* User-defined operator application *) -> 39
-    | Term.Application _ -> 40
-    | Term.Wildcard _ | Term.Variable _ | Term.Constant _ -> 60
+    val of_typ : Typ.t -> t
+
+    val of_term : Term.t -> t
+
+    include Ord.ORD with type t := t
+  end = struct
+    type t =
+      | Static of Int.t
+      | User_defined of Int.t
+
+    let application_precedence = 4
+
+    let of_kind kind =
+      match kind with
+      | Kind.Pi _ -> Static 1
+      | Kind.Arrow _ -> Static 3
+      | Kind.Typ _ -> Static 5
+
+    let of_typ typ =
+      match typ with
+      | Typ.Pi _ -> Static 1
+      | Typ.Arrow _ -> Static 3
+      | Typ.Application { applicand = Typ.Constant { operator; _ }; _ }
+        when Operator.is_prefix operator
+             (* Juxtapositions are of higher precedence than user-defined
+                operators *) -> Static application_precedence
+      | Typ.Application
+          { applicand = Typ.Constant { operator; quoted = false; _ }; _ }
+      (* User-defined operator application *) ->
+        User_defined (Operator.precedence operator)
+      | Typ.Application _ -> Static application_precedence
+      | Typ.Constant _ -> Static 5
+
+    let of_term term =
+      match term with
+      | Term.Abstraction _ -> Static 1
+      | Term.TypeAnnotated _ -> Static 2
+      | Term.Application { applicand = Term.Constant { operator; _ }; _ }
+        when Operator.is_prefix operator
+             (* Juxtapositions are of higher precedence than user-defined
+                operators *) -> Static application_precedence
+      | Term.Application
+          { applicand = Term.Constant { operator; quoted = false; _ }; _ }
+      (* User-defined operator application *) ->
+        User_defined (Operator.precedence operator)
+      | Term.Application _ -> Static application_precedence
+      | Term.Wildcard _ | Term.Variable _ | Term.Constant _ -> Static 6
+
+    include (
+      Ord.Make (struct
+        type nonrec t = t
+
+        let compare x y =
+          match (x, y) with
+          | Static x, Static y -> Int.compare x y
+          | User_defined x, User_defined y -> Int.compare x y
+          | User_defined _, Static y ->
+            Int.compare ((2 * application_precedence) - 1) (2 * y)
+          | Static x, User_defined _ ->
+            Int.compare (2 * x) ((2 * application_precedence) - 1)
+      end) :
+        Ord.ORD with type t := t)
+  end
+
+  include Make_parenthesizer (Precedence)
 
   let rec pp_kind ppf kind =
-    let parent_precedence = precedence_kind kind in
+    let parent_precedence = Precedence.of_kind kind in
     match kind with
     | Kind.Typ _ -> Format.fprintf ppf "type"
     | Kind.Arrow { domain; range; _ } ->
       Format.fprintf ppf "@[<2>%a@ ->@ %a@]"
-        (parenthesize_left_argument_right_associative_operator precedence_typ
-           ~parent_precedence pp_typ)
+        (parenthesize_left_argument_right_associative_operator
+           Precedence.of_typ ~parent_precedence pp_typ)
         domain pp_kind range
     | Kind.Pi { parameter_identifier = Option.None; parameter_type; body; _ }
       ->
@@ -97,7 +144,7 @@ module LF = struct
         parameter_identifier pp_typ parameter_type pp_kind body
 
   and pp_typ ppf typ =
-    let parent_precedence = precedence_typ typ in
+    let parent_precedence = Precedence.of_typ typ in
     match typ with
     | Typ.Constant { identifier; quoted = true; operator; _ }
       when Operator.is_nullary operator ->
@@ -120,7 +167,7 @@ module LF = struct
         Format.fprintf ppf "@[<2>%a@ %a@]" QualifiedIdentifier.pp identifier
           (List.pp
              ~pp_sep:(fun ppf () -> Format.fprintf ppf "@ ")
-             (parenthesize_argument_prefix_operator precedence_term
+             (parenthesize_argument_prefix_operator Precedence.of_term
                 ~parent_precedence pp_term))
           arguments
       | Fixity.Infix ->
@@ -132,50 +179,50 @@ module LF = struct
         assert (List.length arguments = 1);
         let[@warning "-8"] [ argument ] = arguments in
         Format.fprintf ppf "@[<2>%a@ %a@]"
-          (pp_postfix_operator_argument ~parent_precedence operator)
+          (pp_postfix_operator_argument ~parent_precedence)
           argument QualifiedIdentifier.pp identifier)
     | Typ.Application { applicand; arguments; _ }
     (* Arbitrary type application *) ->
       Format.fprintf ppf "@[<2>%a@ %a@]"
-        (parenthesize_argument_prefix_operator precedence_typ
+        (parenthesize_argument_prefix_operator Precedence.of_typ
            ~parent_precedence pp_typ)
         applicand
         (List.pp
            ~pp_sep:(fun ppf () -> Format.fprintf ppf "@ ")
-           (parenthesize_argument_prefix_operator precedence_term
+           (parenthesize_argument_prefix_operator Precedence.of_term
               ~parent_precedence pp_term))
         arguments
-    | Typ.ForwardArrow { domain; range; _ } ->
+    | Typ.Arrow { domain; range; orientation = `Forward; _ } ->
       (* Forward arrows are right-associative and of equal precedence with
          backward arrows *)
       Format.fprintf ppf "@[<2>%a@ ->@ %a@]"
         (match domain with
-        | Typ.BackwardArrow _ -> parenthesize pp_typ
+        | Typ.Arrow { orientation = `Backward; _ } -> parenthesize pp_typ
         | _ ->
           parenthesize_left_argument_right_associative_operator
-            precedence_typ ~parent_precedence pp_typ)
+            Precedence.of_typ ~parent_precedence pp_typ)
         domain
         (match range with
-        | Typ.BackwardArrow _ -> parenthesize pp_typ
+        | Typ.Arrow { orientation = `Backward; _ } -> parenthesize pp_typ
         | _ ->
           parenthesize_right_argument_right_associative_operator
-            precedence_typ ~parent_precedence pp_typ)
+            Precedence.of_typ ~parent_precedence pp_typ)
         range
-    | Typ.BackwardArrow { range; domain; _ } ->
+    | Typ.Arrow { range; domain; orientation = `Backward; _ } ->
       (* Backward arrows are left-associative and of equal precedence with
          forward arrows *)
       Format.fprintf ppf "@[<2>%a@ <-@ %a@]"
         (match range with
-        | Typ.ForwardArrow _ -> parenthesize pp_typ
+        | Typ.Arrow { orientation = `Forward; _ } -> parenthesize pp_typ
         | _ ->
-          parenthesize_left_argument_left_associative_operator precedence_typ
-            ~parent_precedence pp_typ)
+          parenthesize_left_argument_left_associative_operator
+            Precedence.of_typ ~parent_precedence pp_typ)
         range
         (match domain with
-        | Typ.ForwardArrow _ -> parenthesize pp_typ
+        | Typ.Arrow { orientation = `Forward; _ } -> parenthesize pp_typ
         | _ ->
           parenthesize_right_argument_left_associative_operator
-            precedence_typ ~parent_precedence pp_typ)
+            Precedence.of_typ ~parent_precedence pp_typ)
         domain
     | Typ.Pi { parameter_identifier; parameter_type; body; _ } ->
       (* Pis are weak prefix operators *)
@@ -187,7 +234,7 @@ module LF = struct
         parameter_identifier pp_typ parameter_type pp_typ body
 
   and pp_term ppf term =
-    let parent_precedence = precedence_term term in
+    let parent_precedence = Precedence.of_term term in
     match term with
     | Term.Variable { identifier; _ } ->
       Format.fprintf ppf "%a" Identifier.pp identifier
@@ -212,7 +259,7 @@ module LF = struct
         Format.fprintf ppf "@[<2>%a@ %a@]" QualifiedIdentifier.pp identifier
           (List.pp
              ~pp_sep:(fun ppf () -> Format.fprintf ppf "@ ")
-             (parenthesize_argument_prefix_operator precedence_term
+             (parenthesize_argument_prefix_operator Precedence.of_term
                 ~parent_precedence pp_term))
           arguments
       | Fixity.Infix ->
@@ -224,17 +271,17 @@ module LF = struct
         assert (List.length arguments = 1);
         let[@warning "-8"] [ argument ] = arguments in
         Format.fprintf ppf "@[<2>%a@ %a@]"
-          (pp_postfix_operator_argument ~parent_precedence operator)
+          (pp_postfix_operator_argument ~parent_precedence)
           argument QualifiedIdentifier.pp identifier)
     | Term.Application { applicand; arguments; _ }
     (* Arbitrary term application *) ->
       Format.fprintf ppf "@[<2>%a@ %a@]"
-        (parenthesize_argument_prefix_operator precedence_term
+        (parenthesize_argument_prefix_operator Precedence.of_term
            ~parent_precedence pp_term)
         applicand
         (List.pp
            ~pp_sep:(fun ppf () -> Format.fprintf ppf "@ ")
-           (parenthesize_argument_prefix_operator precedence_term
+           (parenthesize_argument_prefix_operator Precedence.of_term
               ~parent_precedence pp_term))
         arguments
     | Term.Abstraction
@@ -276,8 +323,8 @@ module LF = struct
     | Term.TypeAnnotated { term; typ; _ } ->
       (* Type ascriptions are left-associative *)
       Format.fprintf ppf "@[<2>%a@ :@ %a@]"
-        (parenthesize_left_argument_left_associative_operator precedence_term
-           ~parent_precedence pp_term)
+        (parenthesize_left_argument_left_associative_operator
+           Precedence.of_term ~parent_precedence pp_term)
         term pp_typ typ
 
   and pp_infix_operator_application ~parent_precedence operator_identifier
@@ -301,143 +348,103 @@ module LF = struct
         right_argument
     | Associativity.Non_associative ->
       Format.fprintf ppf "@[<2>%a@ %a@ %a@]"
-        (pp_infix_non_associative_operator_left_argument ~parent_precedence
-           operator)
+        (pp_infix_non_associative_operator_left_argument ~parent_precedence)
         left_argument QualifiedIdentifier.pp operator_identifier
-        (pp_infix_non_associative_operator_right_argument ~parent_precedence
-           operator)
+        (pp_infix_non_associative_operator_right_argument ~parent_precedence)
         right_argument
 
   and pp_infix_left_associative_operator_left_argument ~parent_precedence
       applicand_operator ppf left_argument =
     match left_argument with
     | Term.Application
-        { applicand = Term.Constant { operator = left_argument_operator; _ }
+        { applicand =
+            Term.Constant
+              { operator = left_argument_operator; quoted = false; _ }
         ; _
         }
       when Operator.is_right_associative left_argument_operator
            && Operator.precedence left_argument_operator
               = Operator.precedence applicand_operator ->
       (parenthesize pp_term) ppf left_argument
-    | Term.Application
-        { applicand = Term.Constant { operator = left_argument_operator; _ }
-        ; _
-        }
-      when Operator.precedence left_argument_operator
-           >= Operator.precedence applicand_operator ->
-      pp_term ppf left_argument
     | _ ->
-      parenthesize_left_argument_left_associative_operator precedence_term
+      parenthesize_left_argument_left_associative_operator Precedence.of_term
         ~parent_precedence pp_term ppf left_argument
 
   and pp_infix_left_associative_operator_right_argument ~parent_precedence
       applicand_operator ppf right_argument =
     match right_argument with
     | Term.Application
-        { applicand = Term.Constant { operator = right_argument_operator; _ }
+        { applicand =
+            Term.Constant
+              { operator = right_argument_operator; quoted = false; _ }
         ; _
         }
       when Operator.is_right_associative right_argument_operator
            && Operator.precedence right_argument_operator
               = Operator.precedence applicand_operator ->
       (parenthesize pp_term) ppf right_argument
-    | Term.Application
-        { applicand = Term.Constant { operator = right_argument_operator; _ }
-        ; _
-        }
-      when Operator.precedence right_argument_operator
-           > Operator.precedence applicand_operator ->
-      pp_term ppf right_argument
     | _ ->
-      parenthesize_right_argument_left_associative_operator precedence_term
-        ~parent_precedence pp_term ppf right_argument
+      parenthesize_right_argument_left_associative_operator
+        Precedence.of_term ~parent_precedence pp_term ppf right_argument
 
   and pp_infix_right_associative_operator_left_argument ~parent_precedence
       applicand_operator ppf left_argument =
     match left_argument with
     | Term.Application
-        { applicand = Term.Constant { operator = left_argument_operator; _ }
+        { applicand =
+            Term.Constant
+              { operator = left_argument_operator; quoted = false; _ }
         ; _
         }
       when Operator.is_left_associative left_argument_operator
            && Operator.precedence left_argument_operator
               = Operator.precedence applicand_operator ->
       (parenthesize pp_term) ppf left_argument
-    | Term.Application
-        { applicand = Term.Constant { operator = left_argument_operator; _ }
-        ; _
-        }
-      when Operator.precedence left_argument_operator
-           > Operator.precedence applicand_operator ->
-      pp_term ppf left_argument
     | _ ->
-      parenthesize_left_argument_right_associative_operator precedence_term
-        ~parent_precedence pp_term ppf left_argument
+      parenthesize_left_argument_right_associative_operator
+        Precedence.of_term ~parent_precedence pp_term ppf left_argument
 
   and pp_infix_right_associative_operator_right_argument ~parent_precedence
       applicand_operator ppf right_argument =
     match right_argument with
     | Term.Application
-        { applicand = Term.Constant { operator = right_argument_operator; _ }
+        { applicand =
+            Term.Constant
+              { operator = right_argument_operator; quoted = false; _ }
         ; _
         }
       when Operator.is_left_associative right_argument_operator
            && Operator.precedence right_argument_operator
               = Operator.precedence applicand_operator ->
       (parenthesize pp_term) ppf right_argument
-    | Term.Application
-        { applicand = Term.Constant { operator = right_argument_operator; _ }
-        ; _
-        }
-      when Operator.precedence right_argument_operator
-           >= Operator.precedence applicand_operator ->
-      pp_term ppf right_argument
     | Term.Abstraction _ -> pp_term ppf right_argument
     | _ ->
-      parenthesize_right_argument_right_associative_operator precedence_term
-        ~parent_precedence pp_term ppf right_argument
+      parenthesize_right_argument_right_associative_operator
+        Precedence.of_term ~parent_precedence pp_term ppf right_argument
 
-  and pp_infix_non_associative_operator_left_argument ~parent_precedence
-      applicand_operator ppf left_argument =
-    match left_argument with
-    | Term.Application
-        { applicand = Term.Constant { operator = left_argument_operator; _ }
-        ; _
-        }
-      when Operator.precedence left_argument_operator
-           >= Operator.precedence applicand_operator ->
-      pp_term ppf left_argument
-    | _ ->
-      parenthesize_argument_non_associative_operator precedence_term
-        ~parent_precedence pp_term ppf left_argument
+  and pp_infix_non_associative_operator_left_argument ~parent_precedence ppf
+      left_argument =
+    parenthesize_argument_non_associative_operator Precedence.of_term
+      ~parent_precedence pp_term ppf left_argument
 
-  and pp_infix_non_associative_operator_right_argument ~parent_precedence
-      applicand_operator ppf right_argument =
+  and pp_infix_non_associative_operator_right_argument ~parent_precedence ppf
+      right_argument =
     match right_argument with
-    | Term.Application
-        { applicand = Term.Constant { operator = right_argument_operator; _ }
-        ; _
-        }
-      when Operator.precedence right_argument_operator
-           >= Operator.precedence applicand_operator ->
-      pp_term ppf right_argument
     | Term.Abstraction _ -> pp_term ppf right_argument
     | _ ->
-      parenthesize_argument_non_associative_operator precedence_term
+      parenthesize_argument_non_associative_operator Precedence.of_term
         ~parent_precedence pp_term ppf right_argument
 
-  and pp_postfix_operator_argument ~parent_precedence applicand_operator ppf
-      argument =
+  and pp_postfix_operator_argument ~parent_precedence ppf argument =
     match argument with
     | Term.Application
-        { applicand = Term.Constant { operator = argument_operator; _ }; _ }
+        { applicand =
+            Term.Constant { operator = argument_operator; quoted = false; _ }
+        ; _
+        }
       when Operator.is_postfix argument_operator -> pp_term ppf argument
-    | Term.Application
-        { applicand = Term.Constant { operator = argument_operator; _ }; _ }
-      when Operator.precedence argument_operator
-           > Operator.precedence applicand_operator -> pp_term ppf argument
     | _ ->
-      parenthesize_argument_postfix_operator precedence_term
+      parenthesize_argument_postfix_operator Precedence.of_term
         ~parent_precedence pp_term ppf argument
 end
 
@@ -445,55 +452,121 @@ end
 module CLF = struct
   open CLF
 
-  let precedence_typ typ =
-    match typ with
-    | Typ.Pi _ -> 10
-    | Typ.ForwardArrow _ | Typ.BackwardArrow _ -> 30
-    | Typ.Block _ -> 40
-    | Typ.Application { applicand = Typ.Constant { quoted = false; _ }; _ }
-    (* User-defined operator application *) -> 49
-    | Typ.Application _ -> 50
-    | Typ.Constant _ -> 80
+  module Precedence : sig
+    type t
 
-  let precedence_term term =
-    match term with
-    | Term.Abstraction _ -> 10
-    | Term.TypeAnnotated _ -> 20
-    | Term.Application { applicand = Term.Constant { quoted = false; _ }; _ }
-    (* User-defined operator application *) -> 49
-    | Term.Application _ -> 50
-    | Term.Substitution _ -> 60
-    | Term.Projection _ -> 70
-    | Term.Variable _ | Term.Constant _ | Term.Hole _ | Term.Tuple _ -> 80
+    val of_typ : Typ.t -> t
 
-  let precedence_typ_pattern typ_pattern =
-    match typ_pattern with
-    | Typ.Pattern.Pi _ -> 10
-    | Typ.Pattern.ForwardArrow _ | Typ.Pattern.BackwardArrow _ -> 30
-    | Typ.Pattern.Block _ -> 40
-    | Typ.Pattern.Application
-        { applicand = Typ.Pattern.Constant { quoted = false; _ }; _ }
-    (* User-defined operator application *) -> 49
-    | Typ.Pattern.Application _ -> 50
-    | Typ.Pattern.Constant _ -> 80
+    val of_term : Term.t -> t
 
-  let precedence_term_pattern term_pattern =
-    match term_pattern with
-    | Term.Pattern.Abstraction _ -> 10
-    | Term.Pattern.TypeAnnotated _ -> 20
-    | Term.Pattern.Application
-        { applicand = Term.Pattern.Constant { quoted = false; _ }; _ }
-    (* User-defined operator application *) -> 49
-    | Term.Pattern.Application _ -> 50
-    | Term.Pattern.Substitution _ -> 60
-    | Term.Pattern.Projection _ -> 70
-    | Term.Pattern.Variable _
-    | Term.Pattern.Constant _
-    | Term.Pattern.Wildcard _
-    | Term.Pattern.Tuple _ -> 80
+    val of_typ_pattern : Typ.Pattern.t -> t
+
+    val of_term_pattern : Term.Pattern.t -> t
+
+    include Ord.ORD with type t := t
+  end = struct
+    type t =
+      | Static of Int.t
+      | User_defined of Int.t
+
+    let application_precedence = 5
+
+    let of_typ typ =
+      match typ with
+      | Typ.Pi _ -> Static 1
+      | Typ.Arrow _ -> Static 3
+      | Typ.Block _ -> Static 4
+      | Typ.Application { applicand = Typ.Constant { operator; _ }; _ }
+        when Operator.is_prefix operator
+             (* Juxtapositions are of higher precedence than user-defined
+                operators *) -> Static application_precedence
+      | Typ.Application
+          { applicand = Typ.Constant { operator; quoted = false; _ }; _ }
+      (* User-defined operator application *) ->
+        User_defined (Operator.precedence operator)
+      | Typ.Application _ -> Static application_precedence
+      | Typ.Constant _ -> Static 8
+
+    let of_term term =
+      match term with
+      | Term.Abstraction _ -> Static 1
+      | Term.TypeAnnotated _ -> Static 2
+      | Term.Application { applicand = Term.Constant { operator; _ }; _ }
+        when Operator.is_prefix operator
+             (* Juxtapositions are of higher precedence than user-defined
+                operators *) -> Static application_precedence
+      | Term.Application
+          { applicand = Term.Constant { operator; quoted = false; _ }; _ }
+      (* User-defined operator application *) ->
+        User_defined (Operator.precedence operator)
+      | Term.Application _ -> Static application_precedence
+      | Term.Substitution _ -> Static 6
+      | Term.Projection _ -> Static 7
+      | Term.Variable _ | Term.Constant _ | Term.Hole _ | Term.Tuple _ ->
+        Static 8
+
+    let of_typ_pattern typ =
+      match typ with
+      | Typ.Pattern.Pi _ -> Static 1
+      | Typ.Pattern.Arrow _ -> Static 3
+      | Typ.Pattern.Block _ -> Static 4
+      | Typ.Pattern.Application
+          { applicand = Typ.Pattern.Constant { operator; _ }; _ }
+        when Operator.is_prefix operator
+             (* Juxtapositions are of higher precedence than user-defined
+                operators *) -> Static application_precedence
+      | Typ.Pattern.Application
+          { applicand = Typ.Pattern.Constant { operator; quoted = false; _ }
+          ; _
+          }
+      (* User-defined operator application *) ->
+        User_defined (Operator.precedence operator)
+      | Typ.Pattern.Application _ -> Static application_precedence
+      | Typ.Pattern.Constant _ -> Static 8
+
+    let of_term_pattern term =
+      match term with
+      | Term.Pattern.Abstraction _ -> Static 1
+      | Term.Pattern.TypeAnnotated _ -> Static 2
+      | Term.Pattern.Application
+          { applicand = Term.Pattern.Constant { operator; _ }; _ }
+        when Operator.is_prefix operator
+             (* Juxtapositions are of higher precedence than user-defined
+                operators *) -> Static application_precedence
+      | Term.Pattern.Application
+          { applicand = Term.Pattern.Constant { operator; quoted = false; _ }
+          ; _
+          }
+      (* User-defined operator application *) ->
+        User_defined (Operator.precedence operator)
+      | Term.Pattern.Application _ -> Static application_precedence
+      | Term.Pattern.Substitution _ -> Static 6
+      | Term.Pattern.Projection _ -> Static 7
+      | Term.Pattern.Wildcard _
+      | Term.Pattern.Variable _
+      | Term.Pattern.Constant _
+      | Term.Pattern.Tuple _ -> Static 8
+
+    include (
+      Ord.Make (struct
+        type nonrec t = t
+
+        let compare x y =
+          match (x, y) with
+          | Static x, Static y -> Int.compare x y
+          | User_defined x, User_defined y -> Int.compare x y
+          | User_defined _, Static y ->
+            Int.compare ((2 * application_precedence) - 1) (2 * y)
+          | Static x, User_defined _ ->
+            Int.compare (2 * x) ((2 * application_precedence) - 1)
+      end) :
+        Ord.ORD with type t := t)
+  end
+
+  include Make_parenthesizer (Precedence)
 
   let rec pp_typ ppf typ =
-    let parent_precedence = precedence_typ typ in
+    let parent_precedence = Precedence.of_typ typ in
     match typ with
     | Typ.Constant { identifier; quoted = true; operator; _ }
       when Operator.is_nullary operator ->
@@ -516,7 +589,7 @@ module CLF = struct
         Format.fprintf ppf "@[<2>%a@ %a@]" QualifiedIdentifier.pp identifier
           (List.pp
              ~pp_sep:(fun ppf () -> Format.fprintf ppf "@ ")
-             (parenthesize_argument_prefix_operator precedence_term
+             (parenthesize_argument_prefix_operator Precedence.of_term
                 ~parent_precedence pp_term))
           arguments
       | Fixity.Infix ->
@@ -528,50 +601,50 @@ module CLF = struct
         assert (List.length arguments = 1);
         let[@warning "-8"] [ argument ] = arguments in
         Format.fprintf ppf "@[<2>%a@ %a@]"
-          (pp_postfix_operator_argument ~parent_precedence operator)
+          (pp_postfix_operator_argument ~parent_precedence)
           argument QualifiedIdentifier.pp identifier)
     | Typ.Application { applicand; arguments; _ }
     (* Arbitrary type application *) ->
       Format.fprintf ppf "@[<2>%a@ %a@]"
-        (parenthesize_argument_prefix_operator precedence_typ
+        (parenthesize_argument_prefix_operator Precedence.of_typ
            ~parent_precedence pp_typ)
         applicand
         (List.pp
            ~pp_sep:(fun ppf () -> Format.fprintf ppf "@ ")
-           (parenthesize_argument_prefix_operator precedence_term
+           (parenthesize_argument_prefix_operator Precedence.of_term
               ~parent_precedence pp_term))
         arguments
-    | Typ.ForwardArrow { domain; range; _ } ->
+    | Typ.Arrow { domain; range; orientation = `Forward; _ } ->
       (* Forward arrows are right-associative and of equal precedence with
          backward arrows *)
       Format.fprintf ppf "@[<2>%a@ ->@ %a@]"
         (match domain with
-        | Typ.BackwardArrow _ -> parenthesize pp_typ
+        | Typ.Arrow { orientation = `Backward; _ } -> parenthesize pp_typ
         | _ ->
           parenthesize_left_argument_right_associative_operator
-            precedence_typ ~parent_precedence pp_typ)
+            Precedence.of_typ ~parent_precedence pp_typ)
         domain
         (match range with
-        | Typ.BackwardArrow _ -> parenthesize pp_typ
+        | Typ.Arrow { orientation = `Backward; _ } -> parenthesize pp_typ
         | _ ->
           parenthesize_right_argument_right_associative_operator
-            precedence_typ ~parent_precedence pp_typ)
+            Precedence.of_typ ~parent_precedence pp_typ)
         range
-    | Typ.BackwardArrow { range; domain; _ } ->
+    | Typ.Arrow { range; domain; orientation = `Backward; _ } ->
       (* Backward arrows are left-associative and of equal precedence with
          forward arrows *)
       Format.fprintf ppf "@[<2>%a@ <-@ %a@]"
         (match range with
-        | Typ.ForwardArrow _ -> parenthesize pp_typ
+        | Typ.Arrow { orientation = `Forward; _ } -> parenthesize pp_typ
         | _ ->
-          parenthesize_left_argument_left_associative_operator precedence_typ
-            ~parent_precedence pp_typ)
+          parenthesize_left_argument_left_associative_operator
+            Precedence.of_typ ~parent_precedence pp_typ)
         range
         (match domain with
-        | Typ.ForwardArrow _ -> parenthesize pp_typ
+        | Typ.Arrow { orientation = `Forward; _ } -> parenthesize pp_typ
         | _ ->
           parenthesize_right_argument_left_associative_operator
-            precedence_typ ~parent_precedence pp_typ)
+            Precedence.of_typ ~parent_precedence pp_typ)
         domain
     | Typ.Pi { parameter_identifier; parameter_type; body; _ } ->
       (* Pis are weak prefix operators *)
@@ -592,7 +665,7 @@ module CLF = struct
         nts
 
   and pp_term ppf term =
-    let parent_precedence = precedence_term term in
+    let parent_precedence = Precedence.of_term term in
     match term with
     | Term.Variable { identifier; _ } ->
       Format.fprintf ppf "%a" Identifier.pp identifier
@@ -617,7 +690,7 @@ module CLF = struct
         Format.fprintf ppf "@[<2>%a@ %a@]" QualifiedIdentifier.pp identifier
           (List.pp
              ~pp_sep:(fun ppf () -> Format.fprintf ppf "@ ")
-             (parenthesize_argument_prefix_operator precedence_term
+             (parenthesize_argument_prefix_operator Precedence.of_term
                 ~parent_precedence pp_term))
           arguments
       | Fixity.Infix ->
@@ -629,17 +702,17 @@ module CLF = struct
         assert (List.length arguments = 1);
         let[@warning "-8"] [ argument ] = arguments in
         Format.fprintf ppf "@[<2>%a@ %a@]"
-          (pp_postfix_operator_argument ~parent_precedence operator)
+          (pp_postfix_operator_argument ~parent_precedence)
           argument QualifiedIdentifier.pp identifier)
     | Term.Application { applicand; arguments; _ }
     (* Arbitrary term application *) ->
       Format.fprintf ppf "@[<2>%a@ %a@]"
-        (parenthesize_argument_prefix_operator precedence_term
+        (parenthesize_argument_prefix_operator Precedence.of_term
            ~parent_precedence pp_term)
         applicand
         (List.pp
            ~pp_sep:(fun ppf () -> Format.fprintf ppf "@ ")
-           (parenthesize_argument_prefix_operator precedence_term
+           (parenthesize_argument_prefix_operator Precedence.of_term
               ~parent_precedence pp_term))
         arguments
     | Term.Abstraction
@@ -683,8 +756,8 @@ module CLF = struct
       Format.fprintf ppf "?%s" label
     | Term.Substitution { term; substitution; _ } ->
       Format.fprintf ppf "@[<2>%a%a@]"
-        (parenthesize_left_argument_left_associative_operator precedence_term
-           ~parent_precedence pp_term)
+        (parenthesize_left_argument_left_associative_operator
+           Precedence.of_term ~parent_precedence pp_term)
         term pp_substitution substitution
     | Term.Tuple { terms; _ } ->
       Format.fprintf ppf "@[<2><%a>@]"
@@ -693,20 +766,20 @@ module CLF = struct
     | Term.Projection { term; projection = `By_position i; _ } ->
       (* Projections are left-associative *)
       Format.fprintf ppf "@[<2>%a.%d@]"
-        (parenthesize_left_argument_left_associative_operator precedence_term
-           ~parent_precedence pp_term)
+        (parenthesize_left_argument_left_associative_operator
+           Precedence.of_term ~parent_precedence pp_term)
         term i
     | Term.Projection { term; projection = `By_identifier i; _ } ->
       (* Projections are left-associative *)
       Format.fprintf ppf "@[<2>%a.%a@]"
-        (parenthesize_left_argument_left_associative_operator precedence_term
-           ~parent_precedence pp_term)
+        (parenthesize_left_argument_left_associative_operator
+           Precedence.of_term ~parent_precedence pp_term)
         term Identifier.pp i
     | Term.TypeAnnotated { term; typ; _ } ->
       (* Type ascriptions are left-associative *)
       Format.fprintf ppf "@[<2>%a@ :@ %a@]"
-        (parenthesize_left_argument_left_associative_operator precedence_term
-           ~parent_precedence pp_term)
+        (parenthesize_left_argument_left_associative_operator
+           Precedence.of_term ~parent_precedence pp_term)
         term pp_typ typ
 
   and pp_substitution ppf substitution =
@@ -812,147 +885,107 @@ module CLF = struct
         right_argument
     | Associativity.Non_associative ->
       Format.fprintf ppf "@[<2>%a@ %a@ %a@]"
-        (pp_infix_non_associative_operator_left_argument ~parent_precedence
-           operator)
+        (pp_infix_non_associative_operator_left_argument ~parent_precedence)
         left_argument QualifiedIdentifier.pp operator_identifier
-        (pp_infix_non_associative_operator_right_argument ~parent_precedence
-           operator)
+        (pp_infix_non_associative_operator_right_argument ~parent_precedence)
         right_argument
 
   and pp_infix_left_associative_operator_left_argument ~parent_precedence
       applicand_operator ppf left_argument =
     match left_argument with
     | Term.Application
-        { applicand = Term.Constant { operator = left_argument_operator; _ }
+        { applicand =
+            Term.Constant
+              { operator = left_argument_operator; quoted = false; _ }
         ; _
         }
       when Operator.is_right_associative left_argument_operator
            && Operator.precedence left_argument_operator
               = Operator.precedence applicand_operator ->
       (parenthesize pp_term) ppf left_argument
-    | Term.Application
-        { applicand = Term.Constant { operator = left_argument_operator; _ }
-        ; _
-        }
-      when Operator.precedence left_argument_operator
-           >= Operator.precedence applicand_operator ->
-      pp_term ppf left_argument
     | _ ->
-      parenthesize_left_argument_left_associative_operator precedence_term
+      parenthesize_left_argument_left_associative_operator Precedence.of_term
         ~parent_precedence pp_term ppf left_argument
 
   and pp_infix_left_associative_operator_right_argument ~parent_precedence
       applicand_operator ppf right_argument =
     match right_argument with
     | Term.Application
-        { applicand = Term.Constant { operator = right_argument_operator; _ }
+        { applicand =
+            Term.Constant
+              { operator = right_argument_operator; quoted = false; _ }
         ; _
         }
       when Operator.is_right_associative right_argument_operator
            && Operator.precedence right_argument_operator
               = Operator.precedence applicand_operator ->
       (parenthesize pp_term) ppf right_argument
-    | Term.Application
-        { applicand = Term.Constant { operator = right_argument_operator; _ }
-        ; _
-        }
-      when Operator.precedence right_argument_operator
-           > Operator.precedence applicand_operator ->
-      pp_term ppf right_argument
     | _ ->
-      parenthesize_right_argument_left_associative_operator precedence_term
-        ~parent_precedence pp_term ppf right_argument
+      parenthesize_right_argument_left_associative_operator
+        Precedence.of_term ~parent_precedence pp_term ppf right_argument
 
   and pp_infix_right_associative_operator_left_argument ~parent_precedence
       applicand_operator ppf left_argument =
     match left_argument with
     | Term.Application
-        { applicand = Term.Constant { operator = left_argument_operator; _ }
+        { applicand =
+            Term.Constant
+              { operator = left_argument_operator; quoted = false; _ }
         ; _
         }
       when Operator.is_left_associative left_argument_operator
            && Operator.precedence left_argument_operator
               = Operator.precedence applicand_operator ->
       (parenthesize pp_term) ppf left_argument
-    | Term.Application
-        { applicand = Term.Constant { operator = left_argument_operator; _ }
-        ; _
-        }
-      when Operator.precedence left_argument_operator
-           > Operator.precedence applicand_operator ->
-      pp_term ppf left_argument
     | _ ->
-      parenthesize_left_argument_right_associative_operator precedence_term
-        ~parent_precedence pp_term ppf left_argument
+      parenthesize_left_argument_right_associative_operator
+        Precedence.of_term ~parent_precedence pp_term ppf left_argument
 
   and pp_infix_right_associative_operator_right_argument ~parent_precedence
       applicand_operator ppf right_argument =
     match right_argument with
     | Term.Application
-        { applicand = Term.Constant { operator = right_argument_operator; _ }
+        { applicand =
+            Term.Constant
+              { operator = right_argument_operator; quoted = false; _ }
         ; _
         }
       when Operator.is_left_associative right_argument_operator
            && Operator.precedence right_argument_operator
               = Operator.precedence applicand_operator ->
       (parenthesize pp_term) ppf right_argument
-    | Term.Application
-        { applicand = Term.Constant { operator = right_argument_operator; _ }
-        ; _
-        }
-      when Operator.precedence right_argument_operator
-           >= Operator.precedence applicand_operator ->
-      pp_term ppf right_argument
     | Term.Abstraction _ -> pp_term ppf right_argument
     | _ ->
-      parenthesize_right_argument_right_associative_operator precedence_term
-        ~parent_precedence pp_term ppf right_argument
+      parenthesize_right_argument_right_associative_operator
+        Precedence.of_term ~parent_precedence pp_term ppf right_argument
 
-  and pp_infix_non_associative_operator_left_argument ~parent_precedence
-      applicand_operator ppf left_argument =
-    match left_argument with
-    | Term.Application
-        { applicand = Term.Constant { operator = left_argument_operator; _ }
-        ; _
-        }
-      when Operator.precedence left_argument_operator
-           >= Operator.precedence applicand_operator ->
-      pp_term ppf left_argument
-    | _ ->
-      parenthesize_argument_non_associative_operator precedence_term
-        ~parent_precedence pp_term ppf left_argument
+  and pp_infix_non_associative_operator_left_argument ~parent_precedence ppf
+      left_argument =
+    parenthesize_argument_non_associative_operator Precedence.of_term
+      ~parent_precedence pp_term ppf left_argument
 
-  and pp_infix_non_associative_operator_right_argument ~parent_precedence
-      applicand_operator ppf right_argument =
+  and pp_infix_non_associative_operator_right_argument ~parent_precedence ppf
+      right_argument =
     match right_argument with
-    | Term.Application
-        { applicand = Term.Constant { operator = right_argument_operator; _ }
-        ; _
-        }
-      when Operator.precedence right_argument_operator
-           >= Operator.precedence applicand_operator ->
-      pp_term ppf right_argument
     | Term.Abstraction _ -> pp_term ppf right_argument
     | _ ->
-      parenthesize_argument_non_associative_operator precedence_term
+      parenthesize_argument_non_associative_operator Precedence.of_term
         ~parent_precedence pp_term ppf right_argument
 
-  and pp_postfix_operator_argument ~parent_precedence applicand_operator ppf
-      argument =
+  and pp_postfix_operator_argument ~parent_precedence ppf argument =
     match argument with
     | Term.Application
-        { applicand = Term.Constant { operator = argument_operator; _ }; _ }
+        { applicand =
+            Term.Constant { operator = argument_operator; quoted = false; _ }
+        ; _
+        }
       when Operator.is_postfix argument_operator -> pp_term ppf argument
-    | Term.Application
-        { applicand = Term.Constant { operator = argument_operator; _ }; _ }
-      when Operator.precedence argument_operator
-           > Operator.precedence applicand_operator -> pp_term ppf argument
     | _ ->
-      parenthesize_argument_postfix_operator precedence_term
+      parenthesize_argument_postfix_operator Precedence.of_term
         ~parent_precedence pp_term ppf argument
 
   let rec pp_typ_pattern ppf typ =
-    let parent_precedence = precedence_typ_pattern typ in
+    let parent_precedence = Precedence.of_typ_pattern typ in
     match typ with
     | Typ.Pattern.Constant { identifier; quoted = true; operator; _ }
       when Operator.is_nullary operator ->
@@ -975,8 +1008,8 @@ module CLF = struct
         Format.fprintf ppf "@[<2>%a@ %a@]" QualifiedIdentifier.pp identifier
           (List.pp
              ~pp_sep:(fun ppf () -> Format.fprintf ppf "@ ")
-             (parenthesize_argument_prefix_operator precedence_term_pattern
-                ~parent_precedence pp_term_pattern))
+             (parenthesize_argument_prefix_operator
+                Precedence.of_term_pattern ~parent_precedence pp_term_pattern))
           arguments
       | Fixity.Infix ->
         assert (List.length arguments = 2);
@@ -987,17 +1020,17 @@ module CLF = struct
         assert (List.length arguments = 1);
         let[@warning "-8"] [ argument ] = arguments in
         Format.fprintf ppf "@[<2>%a@ %a@]"
-          (pp_postfix_operator_argument ~parent_precedence operator)
+          (pp_postfix_operator_argument ~parent_precedence)
           argument QualifiedIdentifier.pp identifier)
     | Typ.Pattern.Application { applicand; arguments; _ }
     (* Arbitrary type application *) ->
       Format.fprintf ppf "@[<2>%a@ %a@]"
-        (parenthesize_argument_prefix_operator precedence_typ_pattern
+        (parenthesize_argument_prefix_operator Precedence.of_typ_pattern
            ~parent_precedence pp_typ_pattern)
         applicand
         (List.pp
            ~pp_sep:(fun ppf () -> Format.fprintf ppf "@ ")
-           (parenthesize_argument_prefix_operator precedence_term_pattern
+           (parenthesize_argument_prefix_operator Precedence.of_term_pattern
               ~parent_precedence pp_term_pattern))
         arguments
     | Typ.Pattern.Block { elements = `Unnamed typ; _ } ->
@@ -1009,37 +1042,41 @@ module CLF = struct
            (fun ppf (i, t) ->
              Format.fprintf ppf "%a@ :@ %a" Identifier.pp i pp_typ t))
         nts
-    | Typ.Pattern.ForwardArrow { domain; range; _ } ->
+    | Typ.Pattern.Arrow { domain; range; orientation = `Forward; _ } ->
       (* Forward arrows are right-associative and of equal precedence with
          backward arrows *)
       Format.fprintf ppf "@[<2>%a@ ->@ %a@]"
         (match domain with
-        | Typ.Pattern.BackwardArrow _ -> parenthesize pp_typ_pattern
+        | Typ.Pattern.Arrow { orientation = `Backward; _ } ->
+          parenthesize pp_typ_pattern
         | _ ->
           parenthesize_left_argument_right_associative_operator
-            precedence_typ_pattern ~parent_precedence pp_typ_pattern)
+            Precedence.of_typ_pattern ~parent_precedence pp_typ_pattern)
         domain
         (match range with
-        | Typ.Pattern.BackwardArrow _ -> parenthesize pp_typ_pattern
+        | Typ.Pattern.Arrow { orientation = `Backward; _ } ->
+          parenthesize pp_typ_pattern
         | _ ->
           parenthesize_right_argument_right_associative_operator
-            precedence_typ_pattern ~parent_precedence pp_typ_pattern)
+            Precedence.of_typ_pattern ~parent_precedence pp_typ_pattern)
         range
-    | Typ.Pattern.BackwardArrow { range; domain; _ } ->
+    | Typ.Pattern.Arrow { range; domain; orientation = `Backward; _ } ->
       (* Backward arrows are left-associative and of equal precedence with
          forward arrows *)
       Format.fprintf ppf "@[<2>%a@ <-@ %a@]"
         (match range with
-        | Typ.Pattern.ForwardArrow _ -> parenthesize pp_typ_pattern
+        | Typ.Pattern.Arrow { orientation = `Forward; _ } ->
+          parenthesize pp_typ_pattern
         | _ ->
-          parenthesize_left_argument_left_associative_operator precedence_typ_pattern
-            ~parent_precedence pp_typ_pattern)
+          parenthesize_left_argument_left_associative_operator
+            Precedence.of_typ_pattern ~parent_precedence pp_typ_pattern)
         range
         (match domain with
-        | Typ.Pattern.ForwardArrow _ -> parenthesize pp_typ_pattern
+        | Typ.Pattern.Arrow { orientation = `Forward; _ } ->
+          parenthesize pp_typ_pattern
         | _ ->
           parenthesize_right_argument_left_associative_operator
-            precedence_typ_pattern ~parent_precedence pp_typ_pattern)
+            Precedence.of_typ_pattern ~parent_precedence pp_typ_pattern)
         domain
     | Typ.Pattern.Pi { parameter_identifier; parameter_type; body; _ } ->
       (* Pis are weak prefix operators *)
@@ -1051,7 +1088,7 @@ module CLF = struct
         parameter_identifier pp_typ parameter_type pp_typ_pattern body
 
   and pp_term_pattern ppf term =
-    let parent_precedence = precedence_term_pattern term in
+    let parent_precedence = Precedence.of_term_pattern term in
     match term with
     | Term.Pattern.Variable { identifier; _ } ->
       Format.fprintf ppf "%a" Identifier.pp identifier
@@ -1076,8 +1113,8 @@ module CLF = struct
         Format.fprintf ppf "@[<2>%a@ %a@]" QualifiedIdentifier.pp identifier
           (List.pp
              ~pp_sep:(fun ppf () -> Format.fprintf ppf "@ ")
-             (parenthesize_argument_prefix_operator precedence_term_pattern
-                ~parent_precedence pp_term_pattern))
+             (parenthesize_argument_prefix_operator
+                Precedence.of_term_pattern ~parent_precedence pp_term_pattern))
           arguments
       | Fixity.Infix ->
         assert (List.length arguments = 2);
@@ -1088,17 +1125,17 @@ module CLF = struct
         assert (List.length arguments = 1);
         let[@warning "-8"] [ argument ] = arguments in
         Format.fprintf ppf "@[<2>%a@ %a@]"
-          (pp_postfix_operator_argument ~parent_precedence operator)
+          (pp_postfix_operator_argument ~parent_precedence)
           argument QualifiedIdentifier.pp identifier)
     | Term.Pattern.Application { applicand; arguments; _ }
     (* Arbitrary term application *) ->
       Format.fprintf ppf "@[<2>%a@ %a@]"
-        (parenthesize_argument_prefix_operator precedence_term_pattern
+        (parenthesize_argument_prefix_operator Precedence.of_term_pattern
            ~parent_precedence pp_term_pattern)
         applicand
         (List.pp
            ~pp_sep:(fun ppf () -> Format.fprintf ppf "@ ")
-           (parenthesize_argument_prefix_operator precedence_term_pattern
+           (parenthesize_argument_prefix_operator Precedence.of_term_pattern
               ~parent_precedence pp_term_pattern))
         arguments
     | Term.Pattern.Abstraction
@@ -1140,7 +1177,7 @@ module CLF = struct
     | Term.Pattern.Substitution { term; substitution; _ } ->
       Format.fprintf ppf "@[<2>%a%a@]"
         (parenthesize_left_argument_left_associative_operator
-           precedence_term_pattern ~parent_precedence pp_term_pattern)
+           Precedence.of_term_pattern ~parent_precedence pp_term_pattern)
         term pp_substitution substitution
     | Term.Pattern.Tuple { terms; _ } ->
       Format.fprintf ppf "@[<2><%a>@]"
@@ -1152,19 +1189,19 @@ module CLF = struct
       (* Projections are left-associative *)
       Format.fprintf ppf "@[<2>%a.%d@]"
         (parenthesize_left_argument_left_associative_operator
-           precedence_term_pattern ~parent_precedence pp_term_pattern)
+           Precedence.of_term_pattern ~parent_precedence pp_term_pattern)
         term i
     | Term.Pattern.Projection { term; projection = `By_identifier i; _ } ->
       (* Projections are left-associative *)
       Format.fprintf ppf "@[<2>%a.%a@]"
         (parenthesize_left_argument_left_associative_operator
-           precedence_term_pattern ~parent_precedence pp_term_pattern)
+           Precedence.of_term_pattern ~parent_precedence pp_term_pattern)
         term Identifier.pp i
     | Term.Pattern.TypeAnnotated { term; typ; _ } ->
       (* Type ascriptions are left-associative *)
       Format.fprintf ppf "@[<2>%a@ :@ %a@]"
         (parenthesize_left_argument_left_associative_operator
-           precedence_term_pattern ~parent_precedence pp_term_pattern)
+           Precedence.of_term_pattern ~parent_precedence pp_term_pattern)
         term pp_typ typ
 
   and pp_infix_operator_application ~parent_precedence operator_identifier
@@ -1188,11 +1225,9 @@ module CLF = struct
         right_argument
     | Associativity.Non_associative ->
       Format.fprintf ppf "@[<2>%a@ %a@ %a@]"
-        (pp_infix_non_associative_operator_left_argument ~parent_precedence
-           operator)
+        (pp_infix_non_associative_operator_left_argument ~parent_precedence)
         left_argument QualifiedIdentifier.pp operator_identifier
-        (pp_infix_non_associative_operator_right_argument ~parent_precedence
-           operator)
+        (pp_infix_non_associative_operator_right_argument ~parent_precedence)
         right_argument
 
   and pp_infix_left_associative_operator_left_argument ~parent_precedence
@@ -1200,24 +1235,17 @@ module CLF = struct
     match left_argument with
     | Term.Pattern.Application
         { applicand =
-            Term.Pattern.Constant { operator = left_argument_operator; _ }
+            Term.Pattern.Constant
+              { operator = left_argument_operator; quoted = false; _ }
         ; _
         }
       when Operator.is_right_associative left_argument_operator
            && Operator.precedence left_argument_operator
               = Operator.precedence applicand_operator ->
       (parenthesize pp_term_pattern) ppf left_argument
-    | Term.Pattern.Application
-        { applicand =
-            Term.Pattern.Constant { operator = left_argument_operator; _ }
-        ; _
-        }
-      when Operator.precedence left_argument_operator
-           >= Operator.precedence applicand_operator ->
-      pp_term_pattern ppf left_argument
     | _ ->
       parenthesize_left_argument_left_associative_operator
-        precedence_term_pattern ~parent_precedence pp_term_pattern ppf
+        Precedence.of_term_pattern ~parent_precedence pp_term_pattern ppf
         left_argument
 
   and pp_infix_left_associative_operator_right_argument ~parent_precedence
@@ -1225,24 +1253,17 @@ module CLF = struct
     match right_argument with
     | Term.Pattern.Application
         { applicand =
-            Term.Pattern.Constant { operator = right_argument_operator; _ }
+            Term.Pattern.Constant
+              { operator = right_argument_operator; quoted = false; _ }
         ; _
         }
       when Operator.is_right_associative right_argument_operator
            && Operator.precedence right_argument_operator
               = Operator.precedence applicand_operator ->
       (parenthesize pp_term_pattern) ppf right_argument
-    | Term.Pattern.Application
-        { applicand =
-            Term.Pattern.Constant { operator = right_argument_operator; _ }
-        ; _
-        }
-      when Operator.precedence right_argument_operator
-           > Operator.precedence applicand_operator ->
-      pp_term_pattern ppf right_argument
     | _ ->
       parenthesize_right_argument_left_associative_operator
-        precedence_term_pattern ~parent_precedence pp_term_pattern ppf
+        Precedence.of_term_pattern ~parent_precedence pp_term_pattern ppf
         right_argument
 
   and pp_infix_right_associative_operator_left_argument ~parent_precedence
@@ -1250,24 +1271,17 @@ module CLF = struct
     match left_argument with
     | Term.Pattern.Application
         { applicand =
-            Term.Pattern.Constant { operator = left_argument_operator; _ }
+            Term.Pattern.Constant
+              { operator = left_argument_operator; quoted = false; _ }
         ; _
         }
       when Operator.is_left_associative left_argument_operator
            && Operator.precedence left_argument_operator
               = Operator.precedence applicand_operator ->
       (parenthesize pp_term_pattern) ppf left_argument
-    | Term.Pattern.Application
-        { applicand =
-            Term.Pattern.Constant { operator = left_argument_operator; _ }
-        ; _
-        }
-      when Operator.precedence left_argument_operator
-           > Operator.precedence applicand_operator ->
-      pp_term_pattern ppf left_argument
     | _ ->
       parenthesize_left_argument_right_associative_operator
-        precedence_term_pattern ~parent_precedence pp_term_pattern ppf
+        Precedence.of_term_pattern ~parent_precedence pp_term_pattern ppf
         left_argument
 
   and pp_infix_right_associative_operator_right_argument ~parent_precedence
@@ -1275,77 +1289,45 @@ module CLF = struct
     match right_argument with
     | Term.Pattern.Application
         { applicand =
-            Term.Pattern.Constant { operator = right_argument_operator; _ }
+            Term.Pattern.Constant
+              { operator = right_argument_operator; quoted = false; _ }
         ; _
         }
       when Operator.is_left_associative right_argument_operator
            && Operator.precedence right_argument_operator
               = Operator.precedence applicand_operator ->
       (parenthesize pp_term_pattern) ppf right_argument
-    | Term.Pattern.Application
-        { applicand =
-            Term.Pattern.Constant { operator = right_argument_operator; _ }
-        ; _
-        }
-      when Operator.precedence right_argument_operator
-           >= Operator.precedence applicand_operator ->
-      pp_term_pattern ppf right_argument
     | Term.Pattern.Abstraction _ -> pp_term_pattern ppf right_argument
     | _ ->
       parenthesize_right_argument_right_associative_operator
-        precedence_term_pattern ~parent_precedence pp_term_pattern ppf
+        Precedence.of_term_pattern ~parent_precedence pp_term_pattern ppf
         right_argument
 
-  and pp_infix_non_associative_operator_left_argument ~parent_precedence
-      applicand_operator ppf left_argument =
-    match left_argument with
-    | Term.Pattern.Application
-        { applicand =
-            Term.Pattern.Constant { operator = left_argument_operator; _ }
-        ; _
-        }
-      when Operator.precedence left_argument_operator
-           >= Operator.precedence applicand_operator ->
-      pp_term_pattern ppf left_argument
-    | _ ->
-      parenthesize_argument_non_associative_operator precedence_term_pattern
-        ~parent_precedence pp_term_pattern ppf left_argument
+  and pp_infix_non_associative_operator_left_argument ~parent_precedence ppf
+      left_argument =
+    parenthesize_argument_non_associative_operator Precedence.of_term_pattern
+      ~parent_precedence pp_term_pattern ppf left_argument
 
-  and pp_infix_non_associative_operator_right_argument ~parent_precedence
-      applicand_operator ppf right_argument =
+  and pp_infix_non_associative_operator_right_argument ~parent_precedence ppf
+      right_argument =
     match right_argument with
-    | Term.Pattern.Application
-        { applicand =
-            Term.Pattern.Constant { operator = right_argument_operator; _ }
-        ; _
-        }
-      when Operator.precedence right_argument_operator
-           >= Operator.precedence applicand_operator ->
-      pp_term_pattern ppf right_argument
     | Term.Pattern.Abstraction _ -> pp_term_pattern ppf right_argument
     | _ ->
-      parenthesize_argument_non_associative_operator precedence_term_pattern
-        ~parent_precedence pp_term_pattern ppf right_argument
+      parenthesize_argument_non_associative_operator
+        Precedence.of_term_pattern ~parent_precedence pp_term_pattern ppf
+        right_argument
 
-  and pp_postfix_operator_argument ~parent_precedence applicand_operator ppf
-      argument =
+  and pp_postfix_operator_argument ~parent_precedence ppf argument =
     match argument with
     | Term.Pattern.Application
         { applicand =
-            Term.Pattern.Constant { operator = argument_operator; _ }
+            Term.Pattern.Constant
+              { operator = argument_operator; quoted = false; _ }
         ; _
         }
       when Operator.is_postfix argument_operator ->
       pp_term_pattern ppf argument
-    | Term.Pattern.Application
-        { applicand =
-            Term.Pattern.Constant { operator = argument_operator; _ }
-        ; _
-        }
-      when Operator.precedence argument_operator
-           > Operator.precedence applicand_operator ->
-      pp_term_pattern ppf argument
     | _ ->
-      parenthesize_argument_postfix_operator precedence_term_pattern
+      parenthesize_argument_postfix_operator Precedence.of_term_pattern
         ~parent_precedence pp_term_pattern ppf argument
 end

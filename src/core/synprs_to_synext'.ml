@@ -519,7 +519,7 @@ module LF = struct
       raise @@ Illegal_identifier_kind location
     | Synprs.LF.Object.RawQualifiedIdentifier { location; _ } ->
       raise @@ Illegal_qualified_identifier_kind location
-    | Synprs.LF.Object.RawBackwardArrow { location; _ } ->
+    | Synprs.LF.Object.RawArrow { location; orientation = `Backward; _ } ->
       raise @@ Illegal_backward_arrow_kind location
     | Synprs.LF.Object.RawHole { location; _ } ->
       raise @@ Illegal_hole_kind location
@@ -533,7 +533,8 @@ module LF = struct
       raise @@ Illegal_untyped_pi_kind location
     | Synprs.LF.Object.RawType { location } ->
       Synext'.LF.Kind.Typ { location }
-    | Synprs.LF.Object.RawForwardArrow { location; domain; range } ->
+    | Synprs.LF.Object.RawArrow
+        { location; domain; range; orientation = `Forward } ->
       let domain' = elaborate_typ state domain
       and range' = elaborate_kind state range in
       Synext'.LF.Kind.Arrow { location; domain = domain'; range = range' }
@@ -616,16 +617,11 @@ module LF = struct
         raise @@ Expected_type_constant { location; actual_binding = entry }
       | exception QualifiedIdentifier.Dictionary.Unbound_identifier _ ->
         raise @@ Unbound_type_constant { location; identifier })
-    | Synprs.LF.Object.RawForwardArrow { location; domain; range } ->
+    | Synprs.LF.Object.RawArrow { location; domain; range; orientation } ->
       let domain' = elaborate_typ state domain
       and range' = elaborate_typ state range in
-      Synext'.LF.Typ.ForwardArrow
-        { location; domain = domain'; range = range' }
-    | Synprs.LF.Object.RawBackwardArrow { location; range; domain } ->
-      let range' = elaborate_typ state range
-      and domain' = elaborate_typ state domain in
-      Synext'.LF.Typ.BackwardArrow
-        { location; range = range'; domain = domain' }
+      Synext'.LF.Typ.Arrow
+        { location; domain = domain'; range = range'; orientation }
     | Synprs.LF.Object.RawPi
         { location
         ; parameter_identifier
@@ -679,9 +675,9 @@ module LF = struct
       raise @@ Illegal_type_kind_term location
     | Synprs.LF.Object.RawPi { location; _ } ->
       raise @@ Illegal_pi_term location
-    | Synprs.LF.Object.RawForwardArrow { location; _ } ->
+    | Synprs.LF.Object.RawArrow { location; orientation = `Forward; _ } ->
       raise @@ Illegal_forward_arrow_term location
-    | Synprs.LF.Object.RawBackwardArrow { location; _ } ->
+    | Synprs.LF.Object.RawArrow { location; orientation = `Backward; _ } ->
       raise @@ Illegal_backward_arrow_term location
     | Synprs.LF.Object.RawIdentifier { location; identifier; quoted } -> (
       (* As an LF term, plain identifiers are either term-level constants or
@@ -1513,16 +1509,11 @@ module CLF = struct
         raise @@ Expected_type_constant { location; actual_binding = entry }
       | exception QualifiedIdentifier.Dictionary.Unbound_identifier _ ->
         raise @@ Unbound_type_constant { location; identifier })
-    | Synprs.CLF.Object.RawForwardArrow { location; domain; range } ->
+    | Synprs.CLF.Object.RawArrow { location; domain; range; orientation } ->
       let domain' = elaborate_typ state domain
       and range' = elaborate_typ state range in
-      Synext'.CLF.Typ.ForwardArrow
-        { location; domain = domain'; range = range' }
-    | Synprs.CLF.Object.RawBackwardArrow { location; range; domain } ->
-      let range' = elaborate_typ state range
-      and domain' = elaborate_typ state domain in
-      Synext'.CLF.Typ.BackwardArrow
-        { location; range = range'; domain = domain' }
+      Synext'.CLF.Typ.Arrow
+        { location; domain = domain'; range = range'; orientation }
     | Synprs.CLF.Object.RawPi
         { location
         ; parameter_identifier
@@ -1605,9 +1596,9 @@ module CLF = struct
     match object_ with
     | Synprs.CLF.Object.RawPi { location; _ } ->
       raise @@ Illegal_pi_term location
-    | Synprs.CLF.Object.RawForwardArrow { location; _ } ->
+    | Synprs.CLF.Object.RawArrow { location; orientation = `Forward; _ } ->
       raise @@ Illegal_forward_arrow_term location
-    | Synprs.CLF.Object.RawBackwardArrow { location; _ } ->
+    | Synprs.CLF.Object.RawArrow { location; orientation = `Backward; _ } ->
       raise @@ Illegal_backward_arrow_term location
     | Synprs.CLF.Object.RawBlock { location; _ } ->
       raise @@ Illegal_block_term location
@@ -2142,16 +2133,11 @@ module CLF = struct
         raise @@ Expected_type_constant { location; actual_binding = entry }
       | exception QualifiedIdentifier.Dictionary.Unbound_identifier _ ->
         raise @@ Unbound_type_constant { location; identifier })
-    | Synprs.CLF.Object.RawForwardArrow { location; domain; range } ->
+    | Synprs.CLF.Object.RawArrow { location; domain; range; orientation } ->
       let domain' = elaborate_typ_pattern state domain
       and range' = elaborate_typ_pattern state range in
-      Synext'.CLF.Typ.Pattern.ForwardArrow
-        { location; domain = domain'; range = range' }
-    | Synprs.CLF.Object.RawBackwardArrow { location; range; domain } ->
-      let range' = elaborate_typ_pattern state range
-      and domain' = elaborate_typ_pattern state domain in
-      Synext'.CLF.Typ.Pattern.BackwardArrow
-        { location; range = range'; domain = domain' }
+      Synext'.CLF.Typ.Pattern.Arrow
+        { location; domain = domain'; range = range'; orientation }
     | Synprs.CLF.Object.RawPi
         { location
         ; parameter_identifier
@@ -2235,9 +2221,9 @@ module CLF = struct
     match object_ with
     | Synprs.CLF.Object.RawPi { location; _ } ->
       raise @@ Illegal_pi_term_pattern location
-    | Synprs.CLF.Object.RawForwardArrow { location; _ } ->
+    | Synprs.CLF.Object.RawArrow { location; orientation = `Forward; _ } ->
       raise @@ Illegal_forward_arrow_term_pattern location
-    | Synprs.CLF.Object.RawBackwardArrow { location; _ } ->
+    | Synprs.CLF.Object.RawArrow { location; orientation = `Backward; _ } ->
       raise @@ Illegal_backward_arrow_term_pattern location
     | Synprs.CLF.Object.RawBlock { location; _ } ->
       raise @@ Illegal_block_term_pattern location

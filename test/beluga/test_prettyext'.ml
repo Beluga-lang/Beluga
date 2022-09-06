@@ -42,12 +42,9 @@ module LF = struct
       | ( Application { applicand = f1; arguments = as1; _ }
         , Application { applicand = f2; arguments = as2; _ } ) ->
         Typ.equal f1 f2 && List.equal Term.equal as1 as2
-      | ( ForwardArrow { domain = d1; range = r1; _ }
-        , ForwardArrow { domain = d2; range = r2; _ } ) ->
-        Typ.equal d1 d2 && Typ.equal r1 r2
-      | ( BackwardArrow { domain = d1; range = r1; _ }
-        , BackwardArrow { domain = d2; range = r2; _ } ) ->
-        Typ.equal d1 d2 && Typ.equal r1 r2
+      | ( Arrow { domain = d1; range = r1; orientation = o1; _ }
+        , Arrow { domain = d2; range = r2; orientation = o2; _ } ) ->
+        o1 = o2 && Typ.equal d1 d2 && Typ.equal r1 r2
       | ( Pi { parameter_identifier = i1; parameter_type = t1; body = b1; _ }
         , Pi { parameter_identifier = i2; parameter_type = t2; body = b2; _ }
         ) ->
@@ -303,7 +300,11 @@ let test_pp_type =
       parse_lf_type elaboration_context
         (Format.stringify Prettyext'.LF.pp_typ typ)
     in
-    OUnit2.assert_equal ~cmp:LF.Typ.equal typ typ'
+    OUnit2.assert_equal
+      ~printer:
+        Fun.(
+          Synext'_json.LF.of_typ >> Format.stringify Yojson.Safe.pretty_print)
+      ~cmp:LF.Typ.equal typ typ'
   in
   let test_cases =
     [ (mock_state_2, "nat")
@@ -361,7 +362,12 @@ let test_pp_term =
       parse_lf_term elaboration_context
         (Format.stringify Prettyext'.LF.pp_term term)
     in
-    OUnit2.assert_equal ~cmp:LF.Term.equal term term'
+    OUnit2.assert_equal
+      ~printer:
+        Fun.(
+          Synext'_json.LF.of_term
+          >> Format.stringify Yojson.Safe.pretty_print)
+      ~cmp:LF.Term.equal term term'
   in
   let test_cases =
     [ (mock_state_1, "M x y z")
@@ -426,6 +432,7 @@ let test_pp_term =
       , "((a1 : T) Q3) L1 ((((P11 (P21 _ a : T)) Q2) Q1) R2 (P22 a3 (a4 \
          Q3)))" )
     ; (mock_state_11, "a1 L1 ((a Q1) R2 (P22 a3 (a4 Q3)))")
+    ; (mock_state_11, "(a1 L1 (a Q1)) R2 (P22 a3 (a4 Q3))")
     ; (mock_state_11, "(_ L1 _) Q1 R2 _")
     ; (mock_state_11, "_ L1 (_ Q1) R2 _")
     ; (mock_state_11, "a Q1 R2 b")

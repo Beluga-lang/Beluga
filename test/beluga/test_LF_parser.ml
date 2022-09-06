@@ -42,12 +42,9 @@ module LF = struct
       | ( Application { applicand = f1; arguments = as1; _ }
         , Application { applicand = f2; arguments = as2; _ } ) ->
         Typ.equal f1 f2 && List.equal Term.equal as1 as2
-      | ( ForwardArrow { domain = d1; range = r1; _ }
-        , ForwardArrow { domain = d2; range = r2; _ } ) ->
-        Typ.equal d1 d2 && Typ.equal r1 r2
-      | ( BackwardArrow { domain = d1; range = r1; _ }
-        , BackwardArrow { domain = d2; range = r2; _ } ) ->
-        Typ.equal d1 d2 && Typ.equal r1 r2
+      | ( Arrow { domain = d1; range = r1; orientation = o1; _ }
+        , Arrow { domain = d2; range = r2; orientation = o2; _ } ) ->
+        o1 = o2 && Typ.equal d1 d2 && Typ.equal r1 r2
       | ( Pi { parameter_identifier = i1; parameter_type = t1; body = b1; _ }
         , Pi { parameter_identifier = i2; parameter_type = t2; body = b2; _ }
         ) ->
@@ -132,9 +129,11 @@ module LF_constructors = struct
   let t_app applicand arguments =
     Typ.Application { location; applicand; arguments }
 
-  let ( => ) domain range = Typ.ForwardArrow { location; domain; range }
+  let ( => ) domain range =
+    Typ.Arrow { location; domain; range; orientation = `Forward }
 
-  let ( <= ) range domain = Typ.BackwardArrow { location; domain; range }
+  let ( <= ) range domain =
+    Typ.Arrow { location; domain; range; orientation = `Backward }
 
   let t_pi ?x ~t body =
     Typ.Pi

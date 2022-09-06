@@ -42,15 +42,11 @@ module LF = struct
           ; parameter_sort : Object.t Option.t
           ; body : Object.t
           }
-      | RawForwardArrow of
+      | RawArrow of
           { location : Location.t
           ; domain : Object.t
           ; range : Object.t
-          }
-      | RawBackwardArrow of
-          { location : Location.t
-          ; range : Object.t
-          ; domain : Object.t
+          ; orientation : [ `Forward | `Backward ]
           }
       | RawAnnotated of
           { location : Location.t
@@ -76,8 +72,7 @@ module LF = struct
     | Object.RawHole { location; _ }
     | Object.RawPi { location; _ }
     | Object.RawLambda { location; _ }
-    | Object.RawForwardArrow { location; _ }
-    | Object.RawBackwardArrow { location; _ }
+    | Object.RawArrow { location; _ }
     | Object.RawAnnotated { location; _ }
     | Object.RawApplication { location; _ } -> location
 end
@@ -122,15 +117,11 @@ module CLF = struct
           ; parameter_sort : Object.t Option.t
           ; body : Object.t
           }
-      | RawForwardArrow of
+      | RawArrow of
           { location : Location.t
           ; domain : Object.t
           ; range : Object.t
-          }
-      | RawBackwardArrow of
-          { location : Location.t
-          ; range : Object.t
-          ; domain : Object.t
+          ; orientation : [ `Forward | `Backward ]
           }
       | RawAnnotated of
           { location : Location.t
@@ -204,8 +195,7 @@ module CLF = struct
     | Object.RawHole { location; _ }
     | Object.RawPi { location; _ }
     | Object.RawLambda { location; _ }
-    | Object.RawForwardArrow { location; _ }
-    | Object.RawBackwardArrow { location; _ }
+    | Object.RawArrow { location; _ }
     | Object.RawAnnotated { location; _ }
     | Object.RawApplication { location; _ }
     | Object.RawBlock { location; _ }

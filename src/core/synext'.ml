@@ -31,7 +31,8 @@ module LF = struct
           ; body : Kind.t
           }
           (** [Pi { parameter_identifier = x; parameter_type = t; body; _ }] is the
-              dependent product kind `{ x : t } body'. *)
+              dependent product kind `{ x : t } body'.
+              The variable `x' ranges over LF terms. *)
   end =
     Kind
 
@@ -60,20 +61,16 @@ module LF = struct
               - If [applicand = Typ.Constant { operator; _ }] and
                 [Operator.is_postfix operator], then
                 [List.length arguments = 1]. *)
-      | ForwardArrow of
+      | Arrow of
           { location : Location.t
           ; domain : Typ.t
           ; range : Typ.t
+          ; orientation : [ `Forward | `Backward ]
           }
-          (** [ForwardArrow { domain; range; _ }] is the type `domain ->
-              range'. *)
-      | BackwardArrow of
-          { location : Location.t
-          ; domain : Typ.t
-          ; range : Typ.t
-          }
-          (** [BackwardArrow { domain; range; _ }] is the type `domain <-
-              range'. *)
+          (** - [Arrow { domain; range; orientation = `Forward; _ }] is the
+                type `domain -> range'.
+              - [Arrow { range; domain; orientation = `Backward; _ }] is the
+                type `range <- domain'. *)
       | Pi of
           { location : Location.t
           ; parameter_identifier : Identifier.t Option.t
@@ -81,7 +78,8 @@ module LF = struct
           ; body : Typ.t
           }
           (** [Pi { parameter_identifier = x; parameter_type = t; body; _ }] is the
-              dependent product type `{ x : t } body'. *)
+              dependent product type `{ x : t } body'.
+              The variable `x' ranges over LF terms. *)
   end =
     Typ
 
@@ -125,7 +123,7 @@ module LF = struct
           ; body : Term.t
           }
           (** [Abstraction { parameter_identifier = x; body; _ }] is the term
-              `\x. body'. *)
+              `\x. body'. The variable `x' ranges over LF terms. *)
       | Wildcard of { location : Location.t }
           (** [Wildcard { _ }] is the omission of a fresh term-level
               variable. *)
@@ -150,8 +148,7 @@ module LF = struct
     match typ with
     | Typ.Constant { location; _ }
     | Typ.Application { location; _ }
-    | Typ.ForwardArrow { location; _ }
-    | Typ.BackwardArrow { location; _ }
+    | Typ.Arrow { location; _ }
     | Typ.Pi { location; _ } -> location
 
   let location_of_term term =
@@ -202,20 +199,16 @@ module CLF = struct
               - If [applicand = Typ.Constant { operator; _ }] and
                 [Operator.is_postfix operator], then
                 [List.length arguments = 1]. *)
-      | ForwardArrow of
+      | Arrow of
           { location : Location.t
           ; domain : Typ.t
           ; range : Typ.t
+          ; orientation : [ `Forward | `Backward ]
           }
-          (** [ForwardArrow { domain; range; _ }] is the type `domain ->
-              range'. *)
-      | BackwardArrow of
-          { location : Location.t
-          ; domain : Typ.t
-          ; range : Typ.t
-          }
-          (** [BackwardArrow { domain; range; _ }] is the type `domain <-
-              range'. *)
+          (** - [Arrow { domain; range; orientation = `Forward; _ }] is the
+                type `domain -> range'.
+              - [Arrow { range; domain; orientation = `Backward; _ }] is the
+                type `range <- domain'. *)
       | Pi of
           { location : Location.t
           ; parameter_identifier : Identifier.t Option.t
@@ -223,7 +216,8 @@ module CLF = struct
           ; body : Typ.t
           }
           (** [Pi { parameter_identifier = x; parameter_type = t; body; _ }]
-              is the dependent product type `[{ x : t } body]'. *)
+              is the dependent product type `[{ x : t } body]'. The variable
+              `x' ranges over LF terms. *)
       | Block of
           { location : Location.t
           ; elements :
@@ -231,7 +225,9 @@ module CLF = struct
               | `Record of (Identifier.t * Typ.t) List1.t
               ]
           }
-          (** [Block { elements; _ }] is the block type `block (elements)'. *)
+          (** [Block { elements; _ }] is the block type `block (elements)'.
+              This is a dependent sum type, and the type of elements in
+              [elements] may refer to terms appearing earlier in [elements]. *)
 
     (** External contextual LF type patterns. *)
     module rec Pattern : sig
@@ -258,20 +254,16 @@ module CLF = struct
                 - If [applicand = Typ.Constant { operator; _ }] and
                   [Operator.is_postfix operator], then
                   [List.length arguments = 1]. *)
-        | ForwardArrow of
+        | Arrow of
             { location : Location.t
             ; domain : Typ.Pattern.t
             ; range : Typ.Pattern.t
+            ; orientation : [ `Forward | `Backward ]
             }
-            (** [ForwardArrow { domain; range; _ }] is the type pattern
-                `domain -> range'. *)
-        | BackwardArrow of
-            { location : Location.t
-            ; domain : Typ.Pattern.t
-            ; range : Typ.Pattern.t
-            }
-            (** [BackwardArrow { domain; range; _ }] is the type pattern
-                `domain <- range'. *)
+            (** - [Arrow { domain; range; orientation = `Forward; _ }] is the
+                  type pattern `domain -> range'.
+                - [Arrow { range; domain; orientation = `Backward; _ }] is
+                  the type pattern `range <- domain'. *)
         | Pi of
             { location : Location.t
             ; parameter_identifier : Identifier.t Option.t
@@ -279,7 +271,8 @@ module CLF = struct
             ; body : Typ.Pattern.t
             }
             (** [Pi { parameter_identifier = x; parameter_type = t; body; _ }]
-                is the dependent product type pattern `[{ x : t } body]'. *)
+                is the dependent product type pattern `[{ x : t } body]'. The
+                variable `x' ranges over LF terms. *)
         | Block of
             { location : Location.t
             ; elements :
@@ -288,7 +281,9 @@ module CLF = struct
                 ]
             }
             (** [Block { elements; _ }] is the type-level block pattern
-                `block (elements)'. *)
+                `block (elements)'. This is a dependent sum type, and the
+                type of elements in [elements] may refer to terms appearing
+                earlier in [elements]. *)
     end
   end =
     Typ
@@ -488,8 +483,7 @@ module CLF = struct
     match typ with
     | Typ.Constant { location; _ }
     | Typ.Application { location; _ }
-    | Typ.ForwardArrow { location; _ }
-    | Typ.BackwardArrow { location; _ }
+    | Typ.Arrow { location; _ }
     | Typ.Pi { location; _ }
     | Typ.Block { location; _ } -> location
 
@@ -513,7 +507,9 @@ module CLF = struct
     match typ_pattern with
     | Typ.Pattern.Constant { location; _ }
     | Typ.Pattern.Application { location; _ }
-    | Typ.Pattern.Block { location; _ } -> location
+    | Typ.Pattern.Block { location; _ }
+    | Typ.Pattern.Arrow { location; _ }
+    | Typ.Pattern.Pi { location; _ } -> location
 
   let location_of_term_pattern term_pattern =
     match term_pattern with

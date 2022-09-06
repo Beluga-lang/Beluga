@@ -35,5 +35,6 @@
   (ocaml
    (>= 4.14))
   sedlex
+  (yojson :with-test)
   (ounit2 :with-test)
   (bisect_ppx :with-test)))

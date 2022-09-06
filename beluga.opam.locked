@@ -56,6 +56,7 @@ depends: [
   "tyxml" {= "4.5.0" & with-doc}
   "uchar" {= "0.0.2"}
   "uutf" {= "1.0.3" & with-doc}
+  "yojson" {= "2.0.2" & with-test}
 ]
 build: [
   ["dune" "subst"] {dev}

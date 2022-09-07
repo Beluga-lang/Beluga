@@ -1220,9 +1220,9 @@ end = struct
       Original grammar:
 
       <substitution> ::=
-        | `[' `]'
-        | `[' `..' `]'
-        | `[' [`..' `,'] <clf-object> (`,' <clf-object>)* `]'
+        | [`^']
+        | `..'
+        | `[`..' `,'] <clf-object> (`,' <clf-object>)*
 
       <clf-object> ::=
         | `{' <omittable-identifier> `:' <clf-object> `}' <clf-object>
@@ -1235,7 +1235,7 @@ end = struct
         | `block' `(' <clf-type> `)'
         | `block' <clf-type>
         | <clf-object> <clf-object>
-        | <clf-object> <substitution>
+        | <clf-object> `[' <substitution> `]'
         | <clf-object>`.'<identifier>
         | <clf-object>`.'<integer>
         | `_'
@@ -1252,9 +1252,9 @@ end = struct
       as the rightmost operand of an operator.
 
       <substitution> ::=
-        | `[' `]'
-        | `[' `..' `]'
-        | `[' [`..' `,'] <clf-object> (`,' <clf-object>)* `]'
+        | [`^']
+        | `..'
+        | [`..' `,'] <clf-object> (`,' <clf-object>)*
 
       <weak-prefix> ::=
         | `{' <omittable-identifier> [`:' <lf-object>] `}' <lf-object>
@@ -1287,7 +1287,7 @@ end = struct
         | <clf-object6>
 
       <clf-object6> ::=
-        | <clf-object7> <substitution>+
+        | <clf-object7> (`[' <substitution> `]')+
         | <clf-object7>
 
       <clf-object7> ::=
@@ -1333,24 +1333,29 @@ end = struct
       ]
 
   let substitution =
-    let inner_substitution =
-      let identity_extension =
-        token Token.DOTS
-        &> (many (token Token.COMMA &> CLF_parsers.clf_object))
-      and plain =
-        sep_by1 CLF_parsers.clf_object (token Token.COMMA)
-      in
-      maybe
-        (choice
-          [ identity_extension $> (fun s -> `Identity_extension s)
-          ; plain $> (fun s -> `Plain s)
-          ]
-        )
+    let empty =
+      token Token.HAT
+    and identity_extension =
+      token Token.DOTS
+      &> (many (token Token.COMMA &> CLF_parsers.clf_object))
+    and plain =
+      sep_by1 CLF_parsers.clf_object (token Token.COMMA)
     in
-    bracks inner_substitution
+    maybe
+      (choice
+        [ empty $> (fun () -> `Empty)
+        ; identity_extension $> (fun s -> `Identity_extension s)
+        ; plain $> (fun s -> `Plain s)
+        ]
+      )
     |> span
     $> (function
        | (location, Option.None) ->
+         { CLF.Substitution.location
+         ; head = CLF.Substitution.Head.None
+         ; objects = []
+         }
+       | (location, Option.Some `Empty) ->
          { CLF.Substitution.location
          ; head = CLF.Substitution.Head.None
          ; objects = []
@@ -1459,7 +1464,7 @@ end = struct
     |> labelled "Contextual LF atomic or projection object"
 
   let clf_object6 =
-    seq2 clf_object7 (many substitution)
+    seq2 clf_object7 (many (bracks substitution))
     $> (function
        | (object_, []) -> object_
        | (object_, substitutions) ->

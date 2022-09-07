@@ -755,7 +755,7 @@ module CLF = struct
     | Term.Hole { variant = `Labelled label; _ } ->
       Format.fprintf ppf "?%s" label
     | Term.Substitution { term; substitution; _ } ->
-      Format.fprintf ppf "@[<2>%a%a@]"
+      Format.fprintf ppf "@[<2>%a[%a]@]"
         (parenthesize_left_argument_left_associative_operator
            Precedence.of_term ~parent_precedence pp_term)
         term pp_substitution substitution
@@ -785,15 +785,15 @@ module CLF = struct
   and pp_substitution ppf substitution =
     match substitution with
     | Substitution.{ head = Substitution.Head.None; terms = []; _ } ->
-      Format.fprintf ppf "[]"
+      Format.fprintf ppf "^"
     | Substitution.{ head = Substitution.Head.Identity _; terms = []; _ } ->
-      Format.fprintf ppf "[..]"
+      Format.fprintf ppf ".."
     | Substitution.{ head = Substitution.Head.None; terms; _ } ->
-      Format.fprintf ppf "@[<2>[%a]@]"
+      Format.fprintf ppf "@[<2>%a@]"
         (List.pp ~pp_sep:(fun ppf () -> Format.fprintf ppf ",@ ") pp_term)
         terms
     | Substitution.{ head = Substitution.Head.Identity _; terms; _ } ->
-      Format.fprintf ppf "@[<2>[..,@ %a]@]"
+      Format.fprintf ppf "@[<2>..,@ %a@]"
         (List.pp ~pp_sep:(fun ppf () -> Format.fprintf ppf ",@ ") pp_term)
         terms
     | Substitution.
@@ -802,7 +802,7 @@ module CLF = struct
               { identifier; closure = Option.None; _ }
         ; terms = []
         ; _
-        } -> Format.fprintf ppf "@[<2>[%a]@]" Identifier.pp identifier
+        } -> Format.fprintf ppf "@[<2>%a@]" Identifier.pp identifier
     | Substitution.
         { head =
             Substitution.Head.Substitution_variable
@@ -810,7 +810,7 @@ module CLF = struct
         ; terms = []
         ; _
         } ->
-      Format.fprintf ppf "@[<2>[%a[%a]]@]" Identifier.pp identifier
+      Format.fprintf ppf "@[<2>%a[%a]@]" Identifier.pp identifier
         pp_substitution closure
     | Substitution.
         { head =
@@ -819,7 +819,7 @@ module CLF = struct
         ; terms
         ; _
         } ->
-      Format.fprintf ppf "@[<2>[%a,@ %a]@]" Identifier.pp identifier
+      Format.fprintf ppf "@[<2>%a,@ %a@]" Identifier.pp identifier
         (List.pp ~pp_sep:(fun ppf () -> Format.fprintf ppf ",@ ") pp_term)
         terms
     | Substitution.
@@ -829,7 +829,7 @@ module CLF = struct
         ; terms
         ; _
         } ->
-      Format.fprintf ppf "@[<2>[%a[%a],@ %a]@]" Identifier.pp identifier
+      Format.fprintf ppf "@[<2>%a[%a],@ %a@]" Identifier.pp identifier
         pp_substitution closure
         (List.pp ~pp_sep:(fun ppf () -> Format.fprintf ppf ",@ ") pp_term)
         terms
@@ -1175,7 +1175,7 @@ module CLF = struct
         parameter_identifier pp_typ parameter_type pp_term_pattern body
     | Term.Pattern.Wildcard _ -> Format.fprintf ppf "_"
     | Term.Pattern.Substitution { term; substitution; _ } ->
-      Format.fprintf ppf "@[<2>%a%a@]"
+      Format.fprintf ppf "@[<2>%a[%a]@]"
         (parenthesize_left_argument_left_associative_operator
            Precedence.of_term_pattern ~parent_precedence pp_term_pattern)
         term pp_substitution substitution

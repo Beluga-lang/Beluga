@@ -1695,7 +1695,7 @@ module CLF = struct
     | Synprs.CLF.Object.RawSubstitution { location; object_; substitution }
       ->
       let term' = disambiguate_as_term state object_ in
-      let substitution' = elaborate_substitution state substitution in
+      let substitution' = disambiguate_as_substitution state substitution in
       Synext'.CLF.Term.Substitution
         { location; term = term'; substitution = substitution' }
     | Synprs.CLF.Object.RawAnnotated { location; object_; sort } ->
@@ -1703,7 +1703,7 @@ module CLF = struct
       and typ' = disambiguate_as_typ state sort in
       Synext'.CLF.Term.TypeAnnotated { location; term = term'; typ = typ' }
 
-  and elaborate_substitution state substitution =
+  and disambiguate_as_substitution state substitution =
     let Synprs.CLF.Substitution.{ location; head; objects } = substitution in
     match head with
     | Synprs.CLF.Substitution.Head.None ->
@@ -1719,7 +1719,7 @@ module CLF = struct
           match Disambiguation_state.lookup_toplevel identifier state with
           | QualifiedIdentifier.Dictionary.Entry
               Disambiguation_state.Substitution_variable ->
-            let closure' = elaborate_substitution state closure in
+            let closure' = disambiguate_as_substitution state closure in
             ( Synext'.CLF.Substitution.Head.Substitution_variable
                 { location; identifier; closure = Option.some closure' }
             , xs )
@@ -2328,7 +2328,7 @@ module CLF = struct
     | Synprs.CLF.Object.RawSubstitution { location; object_; substitution }
       ->
       let term' = disambiguate_as_term_pattern state object_ in
-      let substitution' = elaborate_substitution state substitution in
+      let substitution' = disambiguate_as_substitution state substitution in
       Synext'.CLF.Term.Pattern.Substitution
         { location; term = term'; substitution = substitution' }
     | Synprs.CLF.Object.RawAnnotated { location; object_; sort } ->

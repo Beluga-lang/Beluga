@@ -460,9 +460,30 @@ module CLF = struct
             ; closure : Substitution.t Option.t
             }
     end
+
+    (** External contextual LF substitution patterns. *)
+    module Pattern : sig
+      type t =
+        { location : Location.t
+        ; head : Substitution.Pattern.Head.t
+        ; terms : Term.Pattern.t List.t
+        }
+
+      module Head : sig
+        type t =
+          | None
+          | Identity of { location : Location.t }
+          | Substitution_variable of
+              { location : Location.t
+              ; identifier : Identifier.t
+              ; closure : Substitution.t Option.t
+              }
+      end
+    end
   end =
     Substitution
 
+  (** External contextual LF contexts. *)
   and Context : sig
     type t =
       { location : Location.t
@@ -475,6 +496,22 @@ module CLF = struct
         | None
         | Hole of { location : Location.t }
         | Context_variable of { identifier : Identifier.t }
+    end
+
+    (** External contextual LF context patterns. *)
+    module Pattern : sig
+      type t =
+        { location : Location.t
+        ; head : Context.Pattern.Head.t
+        ; typings : (Identifier.t * Typ.Pattern.t) List.t
+        }
+
+      module Head : sig
+        type t =
+          | None
+          | Hole of { location : Location.t }
+          | Context_variable of { identifier : Identifier.t }
+      end
     end
   end =
     Context
@@ -502,6 +539,18 @@ module CLF = struct
   let location_of_substitution substitution =
     match substitution with
     | Substitution.{ location; _ } -> location
+
+  let location_of_substitution_pattern substitution_pattern =
+    match substitution_pattern with
+    | Substitution.Pattern.{ location; _ } -> location
+
+  let location_of_context context =
+    match context with
+    | Context.{ location; _ } -> location
+
+  let location_of_context_pattern context_pattern =
+    match context_pattern with
+    | Context.Pattern.{ location; _ } -> location
 
   let location_of_typ_pattern typ_pattern =
     match typ_pattern with

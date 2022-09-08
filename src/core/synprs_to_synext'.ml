@@ -4,11 +4,12 @@ module Disambiguation_state : sig
   type t
 
   type entry = private
-    | LF_term  (** An LF term-level variable, such as `x' in `\x. T x'. *)
     | LF_type_constant of Operator.t
         (** An LF type-level constant, such as `tm' in `tm : type'. *)
     | LF_term_constant of Operator.t
         (** An LF term-level constant, such as `arr' in `arr M N'. *)
+    | LF_term_variable
+        (** An LF term-level variable, such as `x' in `\x. T x'. *)
     | Substitution_variable
         (** A substitution variable, such as `$S' in `[g |- M\[$S\]]' if `$S
             : [g |- h]'. *)
@@ -20,7 +21,7 @@ module Disambiguation_state : sig
 
   val empty : t
 
-  val add_term : Identifier.t -> t -> t
+  val add_term_variable : Identifier.t -> t -> t
 
   val add_prefix_lf_type_constant :
     arity:Int.t -> precedence:Int.t -> QualifiedIdentifier.t -> t -> t
@@ -70,16 +71,17 @@ end = struct
   type t = entry QualifiedIdentifier.Dictionary.t
 
   and entry =
-    | LF_term
     | LF_type_constant of Operator.t
     | LF_term_constant of Operator.t
+    | LF_term_variable
     | Substitution_variable
     | Context_variable
 
   let empty = QualifiedIdentifier.Dictionary.empty
 
-  let add_term identifier =
-    QualifiedIdentifier.Dictionary.add_toplevel_entry identifier LF_term
+  let add_term_variable identifier =
+    QualifiedIdentifier.Dictionary.add_toplevel_entry identifier
+      LF_term_variable
 
   let add_prefix_lf_type_constant ~arity ~precedence identifier =
     let operator = Operator.make_prefix ~arity ~precedence in
@@ -129,7 +131,7 @@ end = struct
 
   let pp_entry_sort ppf entry =
     match entry with
-    | QualifiedIdentifier.Dictionary.Entry LF_term ->
+    | QualifiedIdentifier.Dictionary.Entry LF_term_variable ->
       Format.fprintf ppf "an LF term"
     | QualifiedIdentifier.Dictionary.Entry (LF_type_constant _) ->
       Format.fprintf ppf "an LF type-level constant"
@@ -551,7 +553,9 @@ module LF = struct
         match parameter_identifier with
         | Option.None -> disambiguate_as_kind state body
         | Option.Some identifier ->
-          let state' = Disambiguation_state.add_term identifier state in
+          let state' =
+            Disambiguation_state.add_term_variable identifier state
+          in
           disambiguate_as_kind state' body
       in
       Synext'.LF.Kind.Pi
@@ -641,7 +645,9 @@ module LF = struct
           ; body = body'
           }
       | Option.Some parameter ->
-        let state' = Disambiguation_state.add_term parameter state in
+        let state' =
+          Disambiguation_state.add_term_variable parameter state
+        in
         let body' = disambiguate_as_typ state' body in
         Synext'.LF.Typ.Pi
           { location
@@ -692,7 +698,8 @@ module LF = struct
           (Disambiguation_state.LF_term_constant operator) ->
         Synext'.LF.Term.Constant
           { location; identifier = qualified_identifier; operator; quoted }
-      | QualifiedIdentifier.Dictionary.Entry Disambiguation_state.LF_term ->
+      | QualifiedIdentifier.Dictionary.Entry
+          Disambiguation_state.LF_term_variable ->
         (* Bound variable *)
         Synext'.LF.Term.Variable { location; identifier }
       | entry ->
@@ -736,7 +743,7 @@ module LF = struct
           ; body = body'
           }
       | Option.Some name ->
-        let state' = Disambiguation_state.add_term name state in
+        let state' = Disambiguation_state.add_term_variable name state in
         let body' = disambiguate_as_term state' body in
         Synext'.LF.Term.Abstraction
           { location
@@ -1536,7 +1543,9 @@ module CLF = struct
           ; body = body'
           }
       | Option.Some parameter ->
-        let state' = Disambiguation_state.add_term parameter state in
+        let state' =
+          Disambiguation_state.add_term_variable parameter state
+        in
         let body' = disambiguate_as_typ state' body in
         Synext'.CLF.Typ.Pi
           { location
@@ -1565,7 +1574,9 @@ module CLF = struct
             | Option.Some identifier, typ ->
               let typ' = disambiguate_as_typ state typ in
               let elements' = List1.singleton (identifier, typ')
-              and state' = Disambiguation_state.add_term identifier state in
+              and state' =
+                Disambiguation_state.add_term_variable identifier state
+              in
               (state', elements'))
           (fun (state', elements') element ->
             match element with
@@ -1576,7 +1587,7 @@ module CLF = struct
               let typ' = disambiguate_as_typ state' typ in
               let elements'' = List1.cons (identifier, typ') elements'
               and state'' =
-                Disambiguation_state.add_term identifier state'
+                Disambiguation_state.add_term_variable identifier state'
               in
               (state'', elements''))
           elements
@@ -1620,7 +1631,8 @@ module CLF = struct
           (Disambiguation_state.LF_term_constant operator) ->
         Synext'.CLF.Term.Constant
           { location; identifier = qualified_identifier; operator; quoted }
-      | QualifiedIdentifier.Dictionary.Entry Disambiguation_state.LF_term ->
+      | QualifiedIdentifier.Dictionary.Entry
+          Disambiguation_state.LF_term_variable ->
         (* Bound variable *)
         Synext'.CLF.Term.Variable { location; identifier }
       | entry ->
@@ -1664,7 +1676,7 @@ module CLF = struct
           ; body = body'
           }
       | Option.Some name ->
-        let state' = Disambiguation_state.add_term name state in
+        let state' = Disambiguation_state.add_term_variable name state in
         let body' = disambiguate_as_term state' body in
         Synext'.CLF.Term.Abstraction
           { location
@@ -2163,7 +2175,9 @@ module CLF = struct
           ; body = body'
           }
       | Option.Some parameter ->
-        let state' = Disambiguation_state.add_term parameter state in
+        let state' =
+          Disambiguation_state.add_term_variable parameter state
+        in
         let body' = disambiguate_as_typ_pattern state' body in
         Synext'.CLF.Typ.Pattern.Pi
           { location
@@ -2192,7 +2206,9 @@ module CLF = struct
             | Option.Some identifier, typ ->
               let typ' = disambiguate_as_typ state typ in
               let elements' = List1.singleton (identifier, typ')
-              and state' = Disambiguation_state.add_term identifier state in
+              and state' =
+                Disambiguation_state.add_term_variable identifier state
+              in
               (state', elements'))
           (fun (state', elements') element ->
             match element with
@@ -2203,7 +2219,7 @@ module CLF = struct
               let typ' = disambiguate_as_typ state' typ in
               let elements'' = List1.cons (identifier, typ') elements'
               and state'' =
-                Disambiguation_state.add_term identifier state'
+                Disambiguation_state.add_term_variable identifier state'
               in
               (state'', elements''))
           elements
@@ -2290,7 +2306,7 @@ module CLF = struct
           ; body = body'
           }
       | Option.Some name ->
-        let state' = Disambiguation_state.add_term name state in
+        let state' = Disambiguation_state.add_term_variable name state in
         let body' = disambiguate_as_term_pattern state' body in
         Synext'.CLF.Term.Pattern.Abstraction
           { location

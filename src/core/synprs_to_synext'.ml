@@ -1,6 +1,6 @@
 open Support
 
-module Elaboration_state : sig
+module Disambiguation_state : sig
   type t
 
   type entry = private
@@ -208,14 +208,14 @@ module LF = struct
     Expected_term_constant of
       { location : Location.t
       ; actual_binding :
-          Elaboration_state.entry QualifiedIdentifier.Dictionary.value
+          Disambiguation_state.entry QualifiedIdentifier.Dictionary.value
       }
 
   exception
     Expected_type_constant of
       { location : Location.t
       ; actual_binding :
-          Elaboration_state.entry QualifiedIdentifier.Dictionary.value
+          Disambiguation_state.entry QualifiedIdentifier.Dictionary.value
       }
 
   exception Expected_term of Location.t
@@ -319,11 +319,13 @@ module LF = struct
     | Expected_term_constant { location; actual_binding } ->
       Format.fprintf ppf
         "Expected an LF term-level constant but found %a instead: %a@."
-        Elaboration_state.pp_entry_sort actual_binding Location.pp location
+        Disambiguation_state.pp_entry_sort actual_binding Location.pp
+        location
     | Expected_type_constant { location; actual_binding } ->
       Format.fprintf ppf
         "Expected an LF type-level constant but found %a instead: %a@."
-        Elaboration_state.pp_entry_sort actual_binding Location.pp location
+        Disambiguation_state.pp_entry_sort actual_binding Location.pp
+        location
     | Expected_term location ->
       Format.fprintf ppf
         "Expected an LF term but found an LF type instead: %a@." Location.pp
@@ -384,13 +386,13 @@ module LF = struct
       [identifier] is an LF type-level or term-level operator in [state], and
       whether it is quoted. *)
   let resolve_lf_operator state ~quoted identifier =
-    match Elaboration_state.lookup identifier state with
+    match Disambiguation_state.lookup identifier state with
     | QualifiedIdentifier.Dictionary.Entry
-        (Elaboration_state.LF_type_constant operator) ->
+        (Disambiguation_state.LF_type_constant operator) ->
       if quoted then `Quoted_type_operator
       else `Type_operator (identifier, operator)
     | QualifiedIdentifier.Dictionary.Entry
-        (Elaboration_state.LF_term_constant operator) ->
+        (Disambiguation_state.LF_term_constant operator) ->
       if quoted then `Quoted_term_operator
       else `Term_operator (identifier, operator)
     | _ | (exception QualifiedIdentifier.Dictionary.Unbound_identifier _) ->
@@ -500,8 +502,8 @@ module LF = struct
         Eq.EQ with type t := t)
   end
 
-  (** [elaborate_kind state object_] is [object_] rewritten as an LF kind
-      with respect to the elaboration context [state].
+  (** [disambiguate_as_kind state object_] is [object_] rewritten as an LF
+      kind with respect to the elaboration context [state].
 
       This function imposes syntactic restrictions on [object_], but does not
       perform normalization nor validation. To see the syntactic restrictions
@@ -513,7 +515,7 @@ module LF = struct
       - [type -> type]
       - [(type -> type) -> type]
       - [{ x : tp } type -> type] *)
-  let rec elaborate_kind state object_ =
+  let rec disambiguate_as_kind state object_ =
     match object_ with
     | Synprs.LF.Object.RawIdentifier { location; _ } ->
       raise @@ Illegal_identifier_kind location
@@ -535,8 +537,8 @@ module LF = struct
       Synext'.LF.Kind.Typ { location }
     | Synprs.LF.Object.RawArrow
         { location; domain; range; orientation = `Forward } ->
-      let domain' = elaborate_typ state domain
-      and range' = elaborate_kind state range in
+      let domain' = disambiguate_as_typ state domain
+      and range' = disambiguate_as_kind state range in
       Synext'.LF.Kind.Arrow { location; domain = domain'; range = range' }
     | Synprs.LF.Object.RawPi
         { location
@@ -544,13 +546,13 @@ module LF = struct
         ; parameter_sort = Option.Some parameter_type
         ; body
         } ->
-      let parameter_type' = elaborate_typ state parameter_type in
+      let parameter_type' = disambiguate_as_typ state parameter_type in
       let body' =
         match parameter_identifier with
-        | Option.None -> elaborate_kind state body
+        | Option.None -> disambiguate_as_kind state body
         | Option.Some identifier ->
-          let state' = Elaboration_state.add_term identifier state in
-          elaborate_kind state' body
+          let state' = Disambiguation_state.add_term identifier state in
+          disambiguate_as_kind state' body
       in
       Synext'.LF.Kind.Pi
         { location
@@ -559,8 +561,8 @@ module LF = struct
         ; body = body'
         }
 
-  (** [elaborate_typ state object_] is [object_] rewritten as an LF type with
-      respect to the elaboration context [state].
+  (** [disambiguate_as_typ state object_] is [object_] rewritten as an LF
+      type with respect to the elaboration context [state].
 
       Type applications are rewritten with {!elaborate_application} using
       Dijkstra's shunting yard algorithm.
@@ -573,7 +575,7 @@ module LF = struct
       include:
 
       - [c (_ _) _] *)
-  and elaborate_typ state object_ =
+  and disambiguate_as_typ state object_ =
     match object_ with
     | Synprs.LF.Object.RawType { location; _ } ->
       raise @@ Illegal_type_kind_type location
@@ -591,9 +593,9 @@ module LF = struct
       let qualified_identifier =
         QualifiedIdentifier.make_simple identifier
       in
-      match Elaboration_state.lookup qualified_identifier state with
+      match Disambiguation_state.lookup qualified_identifier state with
       | QualifiedIdentifier.Dictionary.Entry
-          (Elaboration_state.LF_type_constant operator) ->
+          (Disambiguation_state.LF_type_constant operator) ->
         Synext'.LF.Typ.Constant
           { location; identifier = qualified_identifier; operator; quoted }
       | entry ->
@@ -609,17 +611,17 @@ module LF = struct
       assert (List.length (QualifiedIdentifier.modules identifier) >= 1);
       (* As an LF type, identifiers of the form [(<identifier> `::')+
          <identifier>] are necessarily type-level constants. *)
-      match Elaboration_state.lookup identifier state with
+      match Disambiguation_state.lookup identifier state with
       | QualifiedIdentifier.Dictionary.Entry
-          (Elaboration_state.LF_type_constant operator) ->
+          (Disambiguation_state.LF_type_constant operator) ->
         Synext'.LF.Typ.Constant { location; identifier; operator; quoted }
       | entry ->
         raise @@ Expected_type_constant { location; actual_binding = entry }
       | exception QualifiedIdentifier.Dictionary.Unbound_identifier _ ->
         raise @@ Unbound_type_constant { location; identifier })
     | Synprs.LF.Object.RawArrow { location; domain; range; orientation } ->
-      let domain' = elaborate_typ state domain
-      and range' = elaborate_typ state range in
+      let domain' = disambiguate_as_typ state domain
+      and range' = disambiguate_as_typ state range in
       Synext'.LF.Typ.Arrow
         { location; domain = domain'; range = range'; orientation }
     | Synprs.LF.Object.RawPi
@@ -628,10 +630,10 @@ module LF = struct
         ; parameter_sort = Option.Some parameter_type
         ; body
         } -> (
-      let parameter_type' = elaborate_typ state parameter_type in
+      let parameter_type' = disambiguate_as_typ state parameter_type in
       match parameter_identifier with
       | Option.None ->
-        let body' = elaborate_typ state body in
+        let body' = disambiguate_as_typ state body in
         Synext'.LF.Typ.Pi
           { location
           ; parameter_identifier
@@ -639,8 +641,8 @@ module LF = struct
           ; body = body'
           }
       | Option.Some parameter ->
-        let state' = Elaboration_state.add_term parameter state in
-        let body' = elaborate_typ state' body in
+        let state' = Disambiguation_state.add_term parameter state in
+        let body' = disambiguate_as_typ state' body in
         Synext'.LF.Typ.Pi
           { location
           ; parameter_identifier
@@ -654,8 +656,8 @@ module LF = struct
         raise @@ Expected_type location
       | `Typ typ -> typ)
 
-  (** [elaborate_term state object_] is [object_] rewritten as an LF term
-      with respect to the elaboration context [state].
+  (** [disambiguate_as_term state object_] is [object_] rewritten as an LF
+      term with respect to the elaboration context [state].
 
       Term applications are rewritten with {!elaborate_application} using
       Dijkstra's shunting yard algorithm.
@@ -669,7 +671,7 @@ module LF = struct
 
       - [_ _]
       - [\\_. _ _] *)
-  and elaborate_term state object_ =
+  and disambiguate_as_term state object_ =
     match object_ with
     | Synprs.LF.Object.RawType { location; _ } ->
       raise @@ Illegal_type_kind_term location
@@ -685,12 +687,12 @@ module LF = struct
       let qualified_identifier =
         QualifiedIdentifier.make_simple identifier
       in
-      match Elaboration_state.lookup qualified_identifier state with
+      match Disambiguation_state.lookup qualified_identifier state with
       | QualifiedIdentifier.Dictionary.Entry
-          (Elaboration_state.LF_term_constant operator) ->
+          (Disambiguation_state.LF_term_constant operator) ->
         Synext'.LF.Term.Constant
           { location; identifier = qualified_identifier; operator; quoted }
-      | QualifiedIdentifier.Dictionary.Entry Elaboration_state.LF_term ->
+      | QualifiedIdentifier.Dictionary.Entry Disambiguation_state.LF_term ->
         (* Bound variable *)
         Synext'.LF.Term.Variable { location; identifier }
       | entry ->
@@ -705,9 +707,9 @@ module LF = struct
       assert (List.length (QualifiedIdentifier.modules identifier) >= 1);
       (* As an LF term, identifiers of the form [(<identifier> `::')+
          <identifier>] are necessarily term-level constants. *)
-      match Elaboration_state.lookup identifier state with
+      match Disambiguation_state.lookup identifier state with
       | QualifiedIdentifier.Dictionary.Entry
-          (Elaboration_state.LF_term_constant operator) ->
+          (Disambiguation_state.LF_term_constant operator) ->
         Synext'.LF.Term.Constant { location; identifier; operator; quoted }
       | entry ->
         raise @@ Expected_term_constant { location; actual_binding = entry }
@@ -722,11 +724,11 @@ module LF = struct
     | Synprs.LF.Object.RawLambda
         { location; parameter_identifier; parameter_sort; body } -> (
       let parameter_type' =
-        Option.map (elaborate_typ state) parameter_sort
+        Option.map (disambiguate_as_typ state) parameter_sort
       in
       match parameter_identifier with
       | Option.None ->
-        let body' = elaborate_term state body in
+        let body' = disambiguate_as_term state body in
         Synext'.LF.Term.Abstraction
           { location
           ; parameter_identifier
@@ -734,8 +736,8 @@ module LF = struct
           ; body = body'
           }
       | Option.Some name ->
-        let state' = Elaboration_state.add_term name state in
-        let body' = elaborate_term state' body in
+        let state' = Disambiguation_state.add_term name state in
+        let body' = disambiguate_as_term state' body in
         Synext'.LF.Term.Abstraction
           { location
           ; parameter_identifier
@@ -745,8 +747,8 @@ module LF = struct
     | Synprs.LF.Object.RawHole { location } ->
       Synext'.LF.Term.Wildcard { location }
     | Synprs.LF.Object.RawAnnotated { location; object_; sort } ->
-      let term' = elaborate_term state object_
-      and typ' = elaborate_typ state sort in
+      let term' = disambiguate_as_term state object_
+      and typ' = disambiguate_as_typ state sort in
       Synext'.LF.Term.TypeAnnotated { location; term = term'; typ = typ' }
 
   (** [elaborate_application state objects] elaborates [objects] as either a
@@ -781,8 +783,8 @@ module LF = struct
       in
       match applicand with
       | `Term applicand ->
-        let applicand' = elaborate_term state applicand in
-        let arguments' = List.map (elaborate_term state) arguments in
+        let applicand' = disambiguate_as_term state applicand in
+        let arguments' = List.map (disambiguate_as_term state) arguments in
         `Term
           (Synext'.LF.Term.Application
              { location = application_location
@@ -790,8 +792,8 @@ module LF = struct
              ; arguments = arguments'
              })
       | `Typ applicand ->
-        let applicand' = elaborate_typ state applicand in
-        let arguments' = List.map (elaborate_term state) arguments in
+        let applicand' = disambiguate_as_typ state applicand in
+        let arguments' = List.map (disambiguate_as_term state) arguments in
         `Typ
           (Synext'.LF.Typ.Application
              { location = application_location
@@ -809,7 +811,8 @@ module LF = struct
         | LF_operand.External_typ typ ->
           let location = Synext'.LF.location_of_typ typ in
           raise @@ Expected_term location
-        | LF_operand.Parser_object object_ -> elaborate_term state object_
+        | LF_operand.Parser_object object_ ->
+          disambiguate_as_term state object_
         | LF_operand.Application { applicand; arguments } -> (
           match elaborate_juxtaposition applicand arguments with
           | `Term term -> term
@@ -830,7 +833,7 @@ module LF = struct
         in
         match operator with
         | LF_operator.Type_constant { applicand; _ } ->
-          let applicand' = elaborate_typ state applicand in
+          let applicand' = disambiguate_as_typ state applicand in
           let arguments' = elaborate_arguments arguments in
           LF_operand.External_typ
             (Synext'.LF.Typ.Application
@@ -839,7 +842,7 @@ module LF = struct
                ; arguments = arguments'
                })
         | LF_operator.Term_constant { applicand; _ } ->
-          let applicand' = elaborate_term state applicand in
+          let applicand' = disambiguate_as_term state applicand in
           let arguments' = elaborate_arguments arguments in
           LF_operand.External_term
             (Synext'.LF.Term.Application
@@ -1043,14 +1046,14 @@ module CLF = struct
     Expected_term_constant of
       { location : Location.t
       ; actual_binding :
-          Elaboration_state.entry QualifiedIdentifier.Dictionary.value
+          Disambiguation_state.entry QualifiedIdentifier.Dictionary.value
       }
 
   exception
     Expected_type_constant of
       { location : Location.t
       ; actual_binding :
-          Elaboration_state.entry QualifiedIdentifier.Dictionary.value
+          Disambiguation_state.entry QualifiedIdentifier.Dictionary.value
       }
 
   exception Expected_term of Location.t
@@ -1184,11 +1187,13 @@ module CLF = struct
     | Expected_term_constant { location; actual_binding } ->
       Format.fprintf ppf
         "Expected an LF term-level constant but found %a instead: %a@."
-        Elaboration_state.pp_entry_sort actual_binding Location.pp location
+        Disambiguation_state.pp_entry_sort actual_binding Location.pp
+        location
     | Expected_type_constant { location; actual_binding } ->
       Format.fprintf ppf
         "Expected an LF type-level constant but found %a instead: %a@."
-        Elaboration_state.pp_entry_sort actual_binding Location.pp location
+        Disambiguation_state.pp_entry_sort actual_binding Location.pp
+        location
     | Expected_term location ->
       Format.fprintf ppf
         "Expected a contextual LF term but found a contextual LF type \
@@ -1327,13 +1332,13 @@ module CLF = struct
       [identifier] is an LF type-level or term-level operator in [state], and
       whether it is quoted. *)
   let resolve_lf_operator state ~quoted identifier =
-    match Elaboration_state.lookup identifier state with
+    match Disambiguation_state.lookup identifier state with
     | QualifiedIdentifier.Dictionary.Entry
-        (Elaboration_state.LF_type_constant operator) ->
+        (Disambiguation_state.LF_type_constant operator) ->
       if quoted then `Quoted_type_operator
       else `Type_operator (identifier, operator)
     | QualifiedIdentifier.Dictionary.Entry
-        (Elaboration_state.LF_term_constant operator) ->
+        (Disambiguation_state.LF_term_constant operator) ->
       if quoted then `Quoted_term_operator
       else `Term_operator (identifier, operator)
     | _ | (exception QualifiedIdentifier.Dictionary.Unbound_identifier _) ->
@@ -1447,8 +1452,8 @@ module CLF = struct
         Eq.EQ with type t := t)
   end
 
-  (** [elaborate_typ state object_] is [object_] rewritten as a contextual LF
-      type with respect to the elaboration context [state].
+  (** [disambiguate_as_typ state object_] is [object_] rewritten as a
+      contextual LF type with respect to the elaboration context [state].
 
       Type applications are rewritten with {!elaborate_application} using
       Dijkstra's shunting yard algorithm.
@@ -1461,7 +1466,7 @@ module CLF = struct
       include:
 
       - [c (_ _) _] *)
-  let rec elaborate_typ state object_ =
+  let rec disambiguate_as_typ state object_ =
     match object_ with
     | Synprs.CLF.Object.RawHole { location; _ } ->
       raise @@ Illegal_hole_type location
@@ -1483,9 +1488,9 @@ module CLF = struct
       let qualified_identifier =
         QualifiedIdentifier.make_simple identifier
       in
-      match Elaboration_state.lookup qualified_identifier state with
+      match Disambiguation_state.lookup qualified_identifier state with
       | QualifiedIdentifier.Dictionary.Entry
-          (Elaboration_state.LF_type_constant operator) ->
+          (Disambiguation_state.LF_type_constant operator) ->
         Synext'.CLF.Typ.Constant
           { location; identifier = qualified_identifier; operator; quoted }
       | entry ->
@@ -1501,17 +1506,17 @@ module CLF = struct
       assert (List.length (QualifiedIdentifier.modules identifier) >= 1);
       (* As an LF type, identifiers of the form [(<identifier> `::')+
          <identifier>] are necessarily type-level constants. *)
-      match Elaboration_state.lookup identifier state with
+      match Disambiguation_state.lookup identifier state with
       | QualifiedIdentifier.Dictionary.Entry
-          (Elaboration_state.LF_type_constant operator) ->
+          (Disambiguation_state.LF_type_constant operator) ->
         Synext'.CLF.Typ.Constant { location; identifier; operator; quoted }
       | entry ->
         raise @@ Expected_type_constant { location; actual_binding = entry }
       | exception QualifiedIdentifier.Dictionary.Unbound_identifier _ ->
         raise @@ Unbound_type_constant { location; identifier })
     | Synprs.CLF.Object.RawArrow { location; domain; range; orientation } ->
-      let domain' = elaborate_typ state domain
-      and range' = elaborate_typ state range in
+      let domain' = disambiguate_as_typ state domain
+      and range' = disambiguate_as_typ state range in
       Synext'.CLF.Typ.Arrow
         { location; domain = domain'; range = range'; orientation }
     | Synprs.CLF.Object.RawPi
@@ -1520,10 +1525,10 @@ module CLF = struct
         ; parameter_sort = Option.Some parameter_type
         ; body
         } -> (
-      let parameter_type' = elaborate_typ state parameter_type in
+      let parameter_type' = disambiguate_as_typ state parameter_type in
       match parameter_identifier with
       | Option.None ->
-        let body' = elaborate_typ state body in
+        let body' = disambiguate_as_typ state body in
         Synext'.CLF.Typ.Pi
           { location
           ; parameter_identifier
@@ -1531,8 +1536,8 @@ module CLF = struct
           ; body = body'
           }
       | Option.Some parameter ->
-        let state' = Elaboration_state.add_term parameter state in
-        let body' = elaborate_typ state' body in
+        let state' = Disambiguation_state.add_term parameter state in
+        let body' = disambiguate_as_typ state' body in
         Synext'.CLF.Typ.Pi
           { location
           ; parameter_identifier
@@ -1547,7 +1552,7 @@ module CLF = struct
       | `Typ typ -> typ)
     | Synprs.CLF.Object.RawBlock
         { location; elements = List1.T ((Option.None, t), []) } ->
-      let t' = elaborate_typ state t in
+      let t' = disambiguate_as_typ state t in
       Synext'.CLF.Typ.Block { location; elements = `Unnamed t' }
     | Synprs.CLF.Object.RawBlock { location; elements } ->
       let _state', elements' =
@@ -1558,9 +1563,9 @@ module CLF = struct
               let location = Synprs.CLF.location_of_object typ in
               raise @@ Illegal_unnamed_block_element_type location
             | Option.Some identifier, typ ->
-              let typ' = elaborate_typ state typ in
+              let typ' = disambiguate_as_typ state typ in
               let elements' = List1.singleton (identifier, typ')
-              and state' = Elaboration_state.add_term identifier state in
+              and state' = Disambiguation_state.add_term identifier state in
               (state', elements'))
           (fun (state', elements') element ->
             match element with
@@ -1568,17 +1573,19 @@ module CLF = struct
               let location = Synprs.CLF.location_of_object typ in
               raise @@ Illegal_unnamed_block_element_type location
             | Option.Some identifier, typ ->
-              let typ' = elaborate_typ state' typ in
+              let typ' = disambiguate_as_typ state' typ in
               let elements'' = List1.cons (identifier, typ') elements'
-              and state'' = Elaboration_state.add_term identifier state' in
+              and state'' =
+                Disambiguation_state.add_term identifier state'
+              in
               (state'', elements''))
           elements
       in
       let elements'' = List1.rev elements' in
       Synext'.CLF.Typ.Block { location; elements = `Record elements'' }
 
-  (** [elaborate_term state object_] is [object_] rewritten as a contextual
-      LF term with respect to the elaboration context [state].
+  (** [disambiguate_as_term state object_] is [object_] rewritten as a
+      contextual LF term with respect to the elaboration context [state].
 
       Term applications are rewritten with {!elaborate_application} using
       Dijkstra's shunting yard algorithm.
@@ -1592,7 +1599,7 @@ module CLF = struct
 
       - [_ _]
       - [\\_. _ _] *)
-  and elaborate_term state object_ =
+  and disambiguate_as_term state object_ =
     match object_ with
     | Synprs.CLF.Object.RawPi { location; _ } ->
       raise @@ Illegal_pi_term location
@@ -1608,12 +1615,12 @@ module CLF = struct
       let qualified_identifier =
         QualifiedIdentifier.make_simple identifier
       in
-      match Elaboration_state.lookup qualified_identifier state with
+      match Disambiguation_state.lookup qualified_identifier state with
       | QualifiedIdentifier.Dictionary.Entry
-          (Elaboration_state.LF_term_constant operator) ->
+          (Disambiguation_state.LF_term_constant operator) ->
         Synext'.CLF.Term.Constant
           { location; identifier = qualified_identifier; operator; quoted }
-      | QualifiedIdentifier.Dictionary.Entry Elaboration_state.LF_term ->
+      | QualifiedIdentifier.Dictionary.Entry Disambiguation_state.LF_term ->
         (* Bound variable *)
         Synext'.CLF.Term.Variable { location; identifier }
       | entry ->
@@ -1628,9 +1635,9 @@ module CLF = struct
       assert (List.length (QualifiedIdentifier.modules identifier) >= 1);
       (* As an LF term, identifiers of the form [(<identifier> `::')+
          <identifier>] are necessarily term-level constants. *)
-      match Elaboration_state.lookup identifier state with
+      match Disambiguation_state.lookup identifier state with
       | QualifiedIdentifier.Dictionary.Entry
-          (Elaboration_state.LF_term_constant operator) ->
+          (Disambiguation_state.LF_term_constant operator) ->
         Synext'.CLF.Term.Constant { location; identifier; operator; quoted }
       | entry ->
         raise @@ Expected_term_constant { location; actual_binding = entry }
@@ -1645,11 +1652,11 @@ module CLF = struct
     | Synprs.CLF.Object.RawLambda
         { location; parameter_identifier; parameter_sort; body } -> (
       let parameter_type' =
-        Option.map (elaborate_typ state) parameter_sort
+        Option.map (disambiguate_as_typ state) parameter_sort
       in
       match parameter_identifier with
       | Option.None ->
-        let body' = elaborate_term state body in
+        let body' = disambiguate_as_term state body in
         Synext'.CLF.Term.Abstraction
           { location
           ; parameter_identifier
@@ -1657,8 +1664,8 @@ module CLF = struct
           ; body = body'
           }
       | Option.Some name ->
-        let state' = Elaboration_state.add_term name state in
-        let body' = elaborate_term state' body in
+        let state' = Disambiguation_state.add_term name state in
+        let body' = disambiguate_as_term state' body in
         Synext'.CLF.Term.Abstraction
           { location
           ; parameter_identifier
@@ -1668,20 +1675,20 @@ module CLF = struct
     | Synprs.CLF.Object.RawHole { location; variant } ->
       Synext'.CLF.Term.Hole { location; variant }
     | Synprs.CLF.Object.RawTuple { location; elements } ->
-      let elements' = List1.map (elaborate_term state) elements in
+      let elements' = List1.map (disambiguate_as_term state) elements in
       Synext'.CLF.Term.Tuple { location; terms = elements' }
     | Synprs.CLF.Object.RawProjection { location; object_; projection } ->
-      let term' = elaborate_term state object_ in
+      let term' = disambiguate_as_term state object_ in
       Synext'.CLF.Term.Projection { location; term = term'; projection }
     | Synprs.CLF.Object.RawSubstitution { location; object_; substitution }
       ->
-      let term' = elaborate_term state object_ in
+      let term' = disambiguate_as_term state object_ in
       let substitution' = elaborate_substitution state substitution in
       Synext'.CLF.Term.Substitution
         { location; term = term'; substitution = substitution' }
     | Synprs.CLF.Object.RawAnnotated { location; object_; sort } ->
-      let term' = elaborate_term state object_
-      and typ' = elaborate_typ state sort in
+      let term' = disambiguate_as_term state object_
+      and typ' = disambiguate_as_typ state sort in
       Synext'.CLF.Term.TypeAnnotated { location; term = term'; typ = typ' }
 
   and elaborate_substitution state substitution =
@@ -1697,9 +1704,9 @@ module CLF = struct
             ; _
             } (* Possibly a substitution closure *)
           :: xs -> (
-          match Elaboration_state.lookup_toplevel identifier state with
+          match Disambiguation_state.lookup_toplevel identifier state with
           | QualifiedIdentifier.Dictionary.Entry
-              Elaboration_state.Substitution_variable ->
+              Disambiguation_state.Substitution_variable ->
             let closure' = elaborate_substitution state closure in
             ( Synext'.CLF.Substitution.Head.Substitution_variable
                 { location; identifier; closure = Option.some closure' }
@@ -1708,19 +1715,19 @@ module CLF = struct
         | Synprs.CLF.Object.RawIdentifier { location; identifier; _ }
             (* Possibly a substitution variable *)
           :: xs -> (
-          match Elaboration_state.lookup_toplevel identifier state with
+          match Disambiguation_state.lookup_toplevel identifier state with
           | QualifiedIdentifier.Dictionary.Entry
-              Elaboration_state.Substitution_variable ->
+              Disambiguation_state.Substitution_variable ->
             ( Synext'.CLF.Substitution.Head.Substitution_variable
                 { location; identifier; closure = Option.none }
             , xs )
           | _ -> (Synext'.CLF.Substitution.Head.None, objects))
         | _ -> (Synext'.CLF.Substitution.Head.None, objects)
       in
-      let terms' = List.map (elaborate_term state) objects in
+      let terms' = List.map (disambiguate_as_term state) objects in
       Synext'.CLF.Substitution.{ location; head = head'; terms = terms' }
     | Synprs.CLF.Substitution.Head.Identity { location = head_location } ->
-      let terms' = List.map (elaborate_term state) objects in
+      let terms' = List.map (disambiguate_as_term state) objects in
       Synext'.CLF.Substitution.
         { location
         ; head =
@@ -1761,8 +1768,8 @@ module CLF = struct
       in
       match applicand with
       | `Term applicand ->
-        let applicand' = elaborate_term state applicand in
-        let arguments' = List.map (elaborate_term state) arguments in
+        let applicand' = disambiguate_as_term state applicand in
+        let arguments' = List.map (disambiguate_as_term state) arguments in
         `Term
           (Synext'.CLF.Term.Application
              { location = application_location
@@ -1770,8 +1777,8 @@ module CLF = struct
              ; arguments = arguments'
              })
       | `Typ applicand ->
-        let applicand' = elaborate_typ state applicand in
-        let arguments' = List.map (elaborate_term state) arguments in
+        let applicand' = disambiguate_as_typ state applicand in
+        let arguments' = List.map (disambiguate_as_term state) arguments in
         `Typ
           (Synext'.CLF.Typ.Application
              { location = application_location
@@ -1793,7 +1800,7 @@ module CLF = struct
               let location = Synext'.CLF.location_of_typ typ in
               raise @@ Expected_term location
             | CLF_operand.Parser_object object_ ->
-              elaborate_term state object_
+              disambiguate_as_term state object_
             | CLF_operand.Application { applicand; arguments } -> (
               match elaborate_juxtaposition applicand arguments with
               | `Term term -> term
@@ -1814,7 +1821,7 @@ module CLF = struct
             in
             match operator with
             | CLF_operator.Type_constant { applicand; _ } ->
-              let applicand' = elaborate_typ state applicand in
+              let applicand' = disambiguate_as_typ state applicand in
               let arguments' = elaborate_arguments arguments in
               CLF_operand.External_typ
                 (Synext'.CLF.Typ.Application
@@ -1823,7 +1830,7 @@ module CLF = struct
                    ; arguments = arguments'
                    })
             | CLF_operator.Term_constant { applicand; _ } ->
-              let applicand' = elaborate_term state applicand in
+              let applicand' = disambiguate_as_term state applicand in
               let arguments' = elaborate_arguments arguments in
               CLF_operand.External_term
                 (Synext'.CLF.Term.Application
@@ -2066,8 +2073,9 @@ module CLF = struct
         Eq.EQ with type t := t)
   end
 
-  (** [elaborate_typ state object_] is [object_] rewritten as a contextual LF
-      type pattern with respect to the elaboration context [state].
+  (** [disambiguate_as_typ state object_] is [object_] rewritten as a
+      contextual LF type pattern with respect to the elaboration context
+      [state].
 
       Type pattern applications are rewritten with
       {!elaborate_application_pattern} using Dijkstra's shunting yard
@@ -2081,7 +2089,7 @@ module CLF = struct
       include:
 
       - [c x x], where [x] is a free pattern variable *)
-  let rec elaborate_typ_pattern state object_ =
+  let rec disambiguate_as_typ_pattern state object_ =
     match object_ with
     | Synprs.CLF.Object.RawLambda { location; _ } ->
       raise @@ Illegal_lambda_type_pattern location
@@ -2106,9 +2114,9 @@ module CLF = struct
       let qualified_identifier =
         QualifiedIdentifier.make_simple identifier
       in
-      match Elaboration_state.lookup qualified_identifier state with
+      match Disambiguation_state.lookup qualified_identifier state with
       | QualifiedIdentifier.Dictionary.Entry
-          (Elaboration_state.LF_type_constant operator) ->
+          (Disambiguation_state.LF_type_constant operator) ->
         Synext'.CLF.Typ.Pattern.Constant
           { location; identifier = qualified_identifier; operator; quoted }
       | entry ->
@@ -2124,9 +2132,9 @@ module CLF = struct
       assert (List.length (QualifiedIdentifier.modules identifier) >= 1);
       (* As an LF type pattern, identifiers of the form [(<identifier> `::')+
          <identifier>] are necessarily type-level constants. *)
-      match Elaboration_state.lookup identifier state with
+      match Disambiguation_state.lookup identifier state with
       | QualifiedIdentifier.Dictionary.Entry
-          (Elaboration_state.LF_type_constant operator) ->
+          (Disambiguation_state.LF_type_constant operator) ->
         Synext'.CLF.Typ.Pattern.Constant
           { location; identifier; operator; quoted }
       | entry ->
@@ -2134,8 +2142,8 @@ module CLF = struct
       | exception QualifiedIdentifier.Dictionary.Unbound_identifier _ ->
         raise @@ Unbound_type_constant { location; identifier })
     | Synprs.CLF.Object.RawArrow { location; domain; range; orientation } ->
-      let domain' = elaborate_typ_pattern state domain
-      and range' = elaborate_typ_pattern state range in
+      let domain' = disambiguate_as_typ_pattern state domain
+      and range' = disambiguate_as_typ_pattern state range in
       Synext'.CLF.Typ.Pattern.Arrow
         { location; domain = domain'; range = range'; orientation }
     | Synprs.CLF.Object.RawPi
@@ -2144,10 +2152,10 @@ module CLF = struct
         ; parameter_sort = Option.Some parameter_type
         ; body
         } -> (
-      let parameter_type' = elaborate_typ state parameter_type in
+      let parameter_type' = disambiguate_as_typ state parameter_type in
       match parameter_identifier with
       | Option.None ->
-        let body' = elaborate_typ_pattern state body in
+        let body' = disambiguate_as_typ_pattern state body in
         Synext'.CLF.Typ.Pattern.Pi
           { location
           ; parameter_identifier
@@ -2155,8 +2163,8 @@ module CLF = struct
           ; body = body'
           }
       | Option.Some parameter ->
-        let state' = Elaboration_state.add_term parameter state in
-        let body' = elaborate_typ_pattern state' body in
+        let state' = Disambiguation_state.add_term parameter state in
+        let body' = disambiguate_as_typ_pattern state' body in
         Synext'.CLF.Typ.Pattern.Pi
           { location
           ; parameter_identifier
@@ -2171,7 +2179,7 @@ module CLF = struct
       | `Typ_pattern typ_pattern -> typ_pattern)
     | Synprs.CLF.Object.RawBlock
         { location; elements = List1.T ((Option.None, t), []) } ->
-      let t' = elaborate_typ state t in
+      let t' = disambiguate_as_typ state t in
       Synext'.CLF.Typ.Pattern.Block { location; elements = `Unnamed t' }
     | Synprs.CLF.Object.RawBlock { location; elements } ->
       let _state', elements' =
@@ -2182,9 +2190,9 @@ module CLF = struct
               let location = Synprs.CLF.location_of_object typ in
               raise @@ Illegal_unnamed_block_element_type_pattern location
             | Option.Some identifier, typ ->
-              let typ' = elaborate_typ state typ in
+              let typ' = disambiguate_as_typ state typ in
               let elements' = List1.singleton (identifier, typ')
-              and state' = Elaboration_state.add_term identifier state in
+              and state' = Disambiguation_state.add_term identifier state in
               (state', elements'))
           (fun (state', elements') element ->
             match element with
@@ -2192,9 +2200,11 @@ module CLF = struct
               let location = Synprs.CLF.location_of_object typ in
               raise @@ Illegal_unnamed_block_element_type location
             | Option.Some identifier, typ ->
-              let typ' = elaborate_typ state' typ in
+              let typ' = disambiguate_as_typ state' typ in
               let elements'' = List1.cons (identifier, typ') elements'
-              and state'' = Elaboration_state.add_term identifier state' in
+              and state'' =
+                Disambiguation_state.add_term identifier state'
+              in
               (state'', elements''))
           elements
       in
@@ -2202,8 +2212,8 @@ module CLF = struct
       Synext'.CLF.Typ.Pattern.Block
         { location; elements = `Record elements'' }
 
-  (** [elaborate_term_pattern state object_] is [object_] rewritten as a
-      contextual LF term pattern with respect to the elaboration context
+  (** [disambiguate_as_term_pattern state object_] is [object_] rewritten as
+      a contextual LF term pattern with respect to the elaboration context
       [state].
 
       Term applications are rewritten with {!elaborate_application_pattern}
@@ -2217,7 +2227,7 @@ module CLF = struct
       include:
 
       - [c x x], where [x] is a free pattern variable *)
-  and elaborate_term_pattern state object_ =
+  and disambiguate_as_term_pattern state object_ =
     match object_ with
     | Synprs.CLF.Object.RawPi { location; _ } ->
       raise @@ Illegal_pi_term_pattern location
@@ -2237,9 +2247,9 @@ module CLF = struct
       let qualified_identifier =
         QualifiedIdentifier.make_simple identifier
       in
-      match Elaboration_state.lookup qualified_identifier state with
+      match Disambiguation_state.lookup qualified_identifier state with
       | QualifiedIdentifier.Dictionary.Entry
-          (Elaboration_state.LF_term_constant operator) ->
+          (Disambiguation_state.LF_term_constant operator) ->
         Synext'.CLF.Term.Pattern.Constant
           { location; identifier = qualified_identifier; operator; quoted }
       | _ -> Synext'.CLF.Term.Pattern.Variable { location; identifier })
@@ -2250,9 +2260,9 @@ module CLF = struct
       assert (List.length (QualifiedIdentifier.modules identifier) >= 1);
       (* As an LF term pattern, identifiers of the form [(<identifier> `::')+
          <identifier>] are necessarily term-level constants. *)
-      match Elaboration_state.lookup identifier state with
+      match Disambiguation_state.lookup identifier state with
       | QualifiedIdentifier.Dictionary.Entry
-          (Elaboration_state.LF_term_constant operator) ->
+          (Disambiguation_state.LF_term_constant operator) ->
         Synext'.CLF.Term.Pattern.Constant
           { location; identifier; operator; quoted }
       | entry ->
@@ -2268,11 +2278,11 @@ module CLF = struct
     | Synprs.CLF.Object.RawLambda
         { location; parameter_identifier; parameter_sort; body } -> (
       let parameter_type' =
-        Option.map (elaborate_typ state) parameter_sort
+        Option.map (disambiguate_as_typ state) parameter_sort
       in
       match parameter_identifier with
       | Option.None ->
-        let body' = elaborate_term_pattern state body in
+        let body' = disambiguate_as_term_pattern state body in
         Synext'.CLF.Term.Pattern.Abstraction
           { location
           ; parameter_identifier
@@ -2280,8 +2290,8 @@ module CLF = struct
           ; body = body'
           }
       | Option.Some name ->
-        let state' = Elaboration_state.add_term name state in
-        let body' = elaborate_term_pattern state' body in
+        let state' = Disambiguation_state.add_term name state in
+        let body' = disambiguate_as_term_pattern state' body in
         Synext'.CLF.Term.Pattern.Abstraction
           { location
           ; parameter_identifier
@@ -2291,21 +2301,23 @@ module CLF = struct
     | Synprs.CLF.Object.RawHole { location; variant = `Underscore } ->
       Synext'.CLF.Term.Pattern.Wildcard { location }
     | Synprs.CLF.Object.RawTuple { location; elements } ->
-      let elements' = List1.map (elaborate_term_pattern state) elements in
+      let elements' =
+        List1.map (disambiguate_as_term_pattern state) elements
+      in
       Synext'.CLF.Term.Pattern.Tuple { location; terms = elements' }
     | Synprs.CLF.Object.RawProjection { location; object_; projection } ->
-      let term' = elaborate_term_pattern state object_ in
+      let term' = disambiguate_as_term_pattern state object_ in
       Synext'.CLF.Term.Pattern.Projection
         { location; term = term'; projection }
     | Synprs.CLF.Object.RawSubstitution { location; object_; substitution }
       ->
-      let term' = elaborate_term_pattern state object_ in
+      let term' = disambiguate_as_term_pattern state object_ in
       let substitution' = elaborate_substitution state substitution in
       Synext'.CLF.Term.Pattern.Substitution
         { location; term = term'; substitution = substitution' }
     | Synprs.CLF.Object.RawAnnotated { location; object_; sort } ->
-      let term' = elaborate_term_pattern state object_
-      and typ' = elaborate_typ state sort in
+      let term' = disambiguate_as_term_pattern state object_
+      and typ' = disambiguate_as_typ state sort in
       Synext'.CLF.Term.Pattern.TypeAnnotated
         { location; term = term'; typ = typ' }
 
@@ -2341,8 +2353,10 @@ module CLF = struct
       in
       match applicand with
       | `Term_pattern applicand ->
-        let applicand' = elaborate_term_pattern state applicand in
-        let arguments' = List.map (elaborate_term_pattern state) arguments in
+        let applicand' = disambiguate_as_term_pattern state applicand in
+        let arguments' =
+          List.map (disambiguate_as_term_pattern state) arguments
+        in
         `Term_pattern
           (Synext'.CLF.Term.Pattern.Application
              { location = application_location
@@ -2350,8 +2364,10 @@ module CLF = struct
              ; arguments = arguments'
              })
       | `Typ_pattern applicand ->
-        let applicand' = elaborate_typ_pattern state applicand in
-        let arguments' = List.map (elaborate_term_pattern state) arguments in
+        let applicand' = disambiguate_as_typ_pattern state applicand in
+        let arguments' =
+          List.map (disambiguate_as_term_pattern state) arguments
+        in
         `Typ_pattern
           (Synext'.CLF.Typ.Pattern.Application
              { location = application_location
@@ -2375,7 +2391,7 @@ module CLF = struct
               in
               raise @@ Expected_term_pattern location
             | CLF_pattern_operand.Parser_object object_ ->
-              elaborate_term_pattern state object_
+              disambiguate_as_term_pattern state object_
             | CLF_pattern_operand.Application { applicand; arguments } -> (
               match elaborate_juxtaposition applicand arguments with
               | `Term_pattern term_pattern -> term_pattern
@@ -2398,7 +2414,7 @@ module CLF = struct
             in
             match operator with
             | CLF_pattern_operator.Type_constant { applicand; _ } ->
-              let applicand' = elaborate_typ_pattern state applicand in
+              let applicand' = disambiguate_as_typ_pattern state applicand in
               let arguments' = elaborate_arguments arguments in
               CLF_pattern_operand.External_typ_pattern
                 (Synext'.CLF.Typ.Pattern.Application
@@ -2407,7 +2423,9 @@ module CLF = struct
                    ; arguments = arguments'
                    })
             | CLF_pattern_operator.Term_constant { applicand; _ } ->
-              let applicand' = elaborate_term_pattern state applicand in
+              let applicand' =
+                disambiguate_as_term_pattern state applicand
+              in
               let arguments' = elaborate_arguments arguments in
               CLF_pattern_operand.External_term_pattern
                 (Synext'.CLF.Term.Pattern.Application

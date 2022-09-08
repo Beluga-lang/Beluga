@@ -101,11 +101,11 @@ module LF_constructors = struct
       (id n)
 end
 
-let mock_state_1 = Synprs_to_synext'.Elaboration_state.empty
+let mock_state_1 = Synprs_to_synext'.Disambiguation_state.empty
 
 let mock_state_2 =
   let open LF_constructors in
-  let open Synprs_to_synext'.Elaboration_state in
+  let open Synprs_to_synext'.Disambiguation_state in
   empty
   |> add_prefix_lf_type_constant ~arity:0 ~precedence:1 (qid "nat")
   |> add_prefix_lf_term_constant ~arity:0 ~precedence:1 (qid "z")
@@ -116,7 +116,7 @@ let mock_state_2 =
 
 let mock_state_3 =
   let open LF_constructors in
-  let open Synprs_to_synext'.Elaboration_state in
+  let open Synprs_to_synext'.Disambiguation_state in
   empty
   |> add_prefix_lf_type_constant ~arity:0 ~precedence:1
        (qid ~m:[ "Nat" ] "nat")
@@ -133,7 +133,7 @@ let mock_state_3 =
 
 let mock_state_4 =
   let open LF_constructors in
-  let open Synprs_to_synext'.Elaboration_state in
+  let open Synprs_to_synext'.Disambiguation_state in
   empty
   |> add_prefix_lf_type_constant ~arity:0 ~precedence:1
        (qid ~m:[ "Util"; "Nat" ] "nat")
@@ -150,7 +150,7 @@ let mock_state_4 =
 
 let mock_state_5 =
   let open LF_constructors in
-  let open Synprs_to_synext'.Elaboration_state in
+  let open Synprs_to_synext'.Disambiguation_state in
   empty
   |> add_prefix_lf_type_constant ~arity:0 ~precedence:1 (qid "tp")
   |> add_prefix_lf_term_constant ~arity:0 ~precedence:1 (qid "bool")
@@ -163,7 +163,7 @@ let mock_state_5 =
 
 let mock_state_6 =
   let open LF_constructors in
-  let open Synprs_to_synext'.Elaboration_state in
+  let open Synprs_to_synext'.Disambiguation_state in
   empty
   |> add_prefix_lf_type_constant ~arity:0 ~precedence:1 (qid "exp")
   |> add_infix_lf_term_constant
@@ -175,7 +175,7 @@ let mock_state_6 =
 
 let mock_state_7 =
   let open LF_constructors in
-  let open Synprs_to_synext'.Elaboration_state in
+  let open Synprs_to_synext'.Disambiguation_state in
   empty
   |> add_prefix_lf_type_constant ~arity:0 ~precedence:1
        (qid ~m:[ "Statics" ] "tp")
@@ -191,7 +191,7 @@ let mock_state_7 =
 
 let mock_state_8 =
   let open LF_constructors in
-  let open Synprs_to_synext'.Elaboration_state in
+  let open Synprs_to_synext'.Disambiguation_state in
   empty
   |> add_infix_lf_type_constant
        ~associativity:Associativity.right_associative ~precedence:1
@@ -201,14 +201,14 @@ let mock_state_8 =
 
 let mock_state_9 =
   let open LF_constructors in
-  let open Synprs_to_synext'.Elaboration_state in
+  let open Synprs_to_synext'.Disambiguation_state in
   empty
   |> add_prefix_lf_type_constant ~arity:0 ~precedence:1 (qid "tp")
   |> add_prefix_lf_type_constant ~arity:1 ~precedence:1 (qid "target")
 
 let mock_state_10 =
   let open LF_constructors in
-  let open Synprs_to_synext'.Elaboration_state in
+  let open Synprs_to_synext'.Disambiguation_state in
   empty
   |> add_prefix_lf_type_constant ~arity:0 ~precedence:1 (qid "a")
   |> add_prefix_lf_type_constant ~arity:0 ~precedence:1 (qid "b")
@@ -216,7 +216,7 @@ let mock_state_10 =
 
 let mock_state_11 =
   let open LF_constructors in
-  let open Synprs_to_synext'.Elaboration_state in
+  let open Synprs_to_synext'.Disambiguation_state in
   empty
   |> add_prefix_lf_type_constant ~arity:0 ~precedence:1 (qid "T")
   |> add_infix_lf_term_constant ~associativity:Associativity.left_associative
@@ -250,15 +250,15 @@ let parse_lf_object input =
 
 let parse_lf_kind elaboration_context input =
   parse_lf_object input
-  |> Synprs_to_synext'.LF.elaborate_kind elaboration_context
+  |> Synprs_to_synext'.LF.disambiguate_as_kind elaboration_context
 
 let parse_lf_type elaboration_context input =
   parse_lf_object input
-  |> Synprs_to_synext'.LF.elaborate_typ elaboration_context
+  |> Synprs_to_synext'.LF.disambiguate_as_typ elaboration_context
 
 let parse_lf_term elaboration_context input =
   parse_lf_object input
-  |> Synprs_to_synext'.LF.elaborate_term elaboration_context
+  |> Synprs_to_synext'.LF.disambiguate_as_term elaboration_context
 
 let test_pp_kind =
   let test elaboration_context input _test_ctxt =

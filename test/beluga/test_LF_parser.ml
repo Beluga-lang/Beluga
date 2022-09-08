@@ -357,11 +357,11 @@ let assert_raises_arity_mismatch f =
       "Expected exception [Arity_mismatch _] to be raised"
   with Synprs_to_synext'.LF.Arity_mismatch _ -> ()
 
-let mock_state_1 = Synprs_to_synext'.Elaboration_state.empty
+let mock_state_1 = Synprs_to_synext'.Disambiguation_state.empty
 
 let mock_state_2 =
   let open LF_constructors in
-  let open Synprs_to_synext'.Elaboration_state in
+  let open Synprs_to_synext'.Disambiguation_state in
   empty
   |> add_prefix_lf_type_constant ~arity:0 ~precedence:1 (qid "nat")
   |> add_prefix_lf_term_constant ~arity:0 ~precedence:1 (qid "z")
@@ -372,7 +372,7 @@ let mock_state_2 =
 
 let mock_state_3 =
   let open LF_constructors in
-  let open Synprs_to_synext'.Elaboration_state in
+  let open Synprs_to_synext'.Disambiguation_state in
   empty
   |> add_prefix_lf_type_constant ~arity:0 ~precedence:1
        (qid ~m:[ "Nat" ] "nat")
@@ -389,7 +389,7 @@ let mock_state_3 =
 
 let mock_state_4 =
   let open LF_constructors in
-  let open Synprs_to_synext'.Elaboration_state in
+  let open Synprs_to_synext'.Disambiguation_state in
   empty
   |> add_prefix_lf_type_constant ~arity:0 ~precedence:1
        (qid ~m:[ "Util"; "Nat" ] "nat")
@@ -406,7 +406,7 @@ let mock_state_4 =
 
 let mock_state_5 =
   let open LF_constructors in
-  let open Synprs_to_synext'.Elaboration_state in
+  let open Synprs_to_synext'.Disambiguation_state in
   empty
   |> add_prefix_lf_type_constant ~arity:0 ~precedence:1 (qid "tp")
   |> add_prefix_lf_term_constant ~arity:0 ~precedence:1 (qid "bool")
@@ -419,7 +419,7 @@ let mock_state_5 =
 
 let mock_state_6 =
   let open LF_constructors in
-  let open Synprs_to_synext'.Elaboration_state in
+  let open Synprs_to_synext'.Disambiguation_state in
   empty
   |> add_prefix_lf_type_constant ~arity:0 ~precedence:1 (qid "exp")
   |> add_infix_lf_term_constant
@@ -431,7 +431,7 @@ let mock_state_6 =
 
 let mock_state_7 =
   let open LF_constructors in
-  let open Synprs_to_synext'.Elaboration_state in
+  let open Synprs_to_synext'.Disambiguation_state in
   empty
   |> add_prefix_lf_type_constant ~arity:0 ~precedence:1
        (qid ~m:[ "Statics" ] "tp")
@@ -447,7 +447,7 @@ let mock_state_7 =
 
 let mock_state_8 =
   let open LF_constructors in
-  let open Synprs_to_synext'.Elaboration_state in
+  let open Synprs_to_synext'.Disambiguation_state in
   empty
   |> add_infix_lf_type_constant
        ~associativity:Associativity.right_associative ~precedence:1
@@ -457,14 +457,14 @@ let mock_state_8 =
 
 let mock_state_9 =
   let open LF_constructors in
-  let open Synprs_to_synext'.Elaboration_state in
+  let open Synprs_to_synext'.Disambiguation_state in
   empty
   |> add_prefix_lf_type_constant ~arity:0 ~precedence:1 (qid "tp")
   |> add_prefix_lf_type_constant ~arity:1 ~precedence:1 (qid "target")
 
 let mock_state_10 =
   let open LF_constructors in
-  let open Synprs_to_synext'.Elaboration_state in
+  let open Synprs_to_synext'.Disambiguation_state in
   empty
   |> add_prefix_lf_type_constant ~arity:0 ~precedence:1 (qid "a")
   |> add_prefix_lf_type_constant ~arity:0 ~precedence:1 (qid "b")
@@ -474,11 +474,11 @@ let test_kind =
   let test_success elaboration_context input expected _test_ctxt =
     OUnit2.assert_equal ~cmp:LF.Kind.equal expected
       (parse_lf_object input
-      |> Synprs_to_synext'.LF.elaborate_kind elaboration_context)
+      |> Synprs_to_synext'.LF.disambiguate_as_kind elaboration_context)
   and test_failure elaboration_context input assert_exn _test_ctxt =
     assert_exn @@ fun () ->
     parse_lf_object input
-    |> Synprs_to_synext'.LF.elaborate_kind elaboration_context
+    |> Synprs_to_synext'.LF.disambiguate_as_kind elaboration_context
   in
   let success_test_cases =
     let open LF_constructors in
@@ -547,11 +547,11 @@ let test_type =
   let test_success elaboration_context input expected _test_ctxt =
     OUnit2.assert_equal ~cmp:LF.Typ.equal expected
       (parse_lf_object input
-      |> Synprs_to_synext'.LF.elaborate_typ elaboration_context)
+      |> Synprs_to_synext'.LF.disambiguate_as_typ elaboration_context)
   and test_failure elaboration_context input assert_exn _test_ctxt =
     assert_exn @@ fun () ->
     parse_lf_object input
-    |> Synprs_to_synext'.LF.elaborate_typ elaboration_context
+    |> Synprs_to_synext'.LF.disambiguate_as_typ elaboration_context
   in
   let success_test_cases =
     let open LF_constructors in
@@ -732,11 +732,11 @@ let test_term =
   let test_success elaboration_context input expected _test_ctxt =
     OUnit2.assert_equal ~cmp:LF.Term.equal expected
       (parse_lf_object input
-      |> Synprs_to_synext'.LF.elaborate_term elaboration_context)
+      |> Synprs_to_synext'.LF.disambiguate_as_term elaboration_context)
   and test_failure elaboration_context input assert_exn _test_ctxt =
     assert_exn @@ fun () ->
     parse_lf_object input
-    |> Synprs_to_synext'.LF.elaborate_term elaboration_context
+    |> Synprs_to_synext'.LF.disambiguate_as_term elaboration_context
   in
   let success_test_cases =
     let open LF_constructors in

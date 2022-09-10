@@ -753,7 +753,7 @@ module CLF = struct
     | Term.Hole { variant = `Underscore; _ } -> Format.fprintf ppf "_"
     | Term.Hole { variant = `Unlabelled; _ } -> Format.fprintf ppf "?"
     | Term.Hole { variant = `Labelled label; _ } ->
-      Format.fprintf ppf "?%s" label
+      Format.fprintf ppf "?%a" Identifier.pp label
     | Term.Substitution { term; substitution; _ } ->
       Format.fprintf ppf "@[<2>%a[%a]@]"
         (parenthesize_left_argument_left_associative_operator

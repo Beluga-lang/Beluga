@@ -1406,7 +1406,10 @@ end = struct
          | (location, Option.None) ->
            CLF.Object.RawHole { location; variant = `Unlabelled }
          | (location, Option.Some label) ->
-           CLF.Object.RawHole { location; variant = `Labelled label }
+           CLF.Object.RawHole
+             { location
+             ; variant = `Labelled (Identifier.make ~location label)
+             }
          )
       |> labelled "Contextual LF possibly labelled hole"
     and tuple =

@@ -72,6 +72,7 @@ let hash_blank =   [%sedlex.regexp? "#_"]
 let dollar_ident = [%sedlex.regexp? '$', ident]
 let dollar_blank = [%sedlex.regexp? "$_"]
 let dot_number =   [%sedlex.regexp? '.', number]
+let dot_ident =   [%sedlex.regexp? '.', ident]
 let backarrow =    [%sedlex.regexp? ("<-" | 0x2190)]
 let arrow =        [%sedlex.regexp? ("->" | 0x2192)]
 let turnstile =    [%sedlex.regexp? ("|-" | 0x22a2)]
@@ -202,6 +203,7 @@ let rec tokenize lexbuf =
   | "_" -> const Token.UNDERSCORE
 
   | dot_number -> Token.DOT_NUMBER (int_of_string (String.drop 1 (get_lexeme lexbuf)))
+  | dot_ident -> Token.DOT_IDENT (String.drop 1 (get_lexeme lexbuf))
   | dots -> const Token.DOTS
   | hash_blank -> Token.HASH_BLANK
   | hash_ident -> Token.HASH_IDENT (get_lexeme lexbuf)

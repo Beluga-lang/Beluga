@@ -103,7 +103,7 @@ module CLF = struct
           }
       | RawHole of
           { location : Location.t
-          ; variant : [ `Underscore | `Unlabelled | `Labelled of String.t ]
+          ; variant : [ `Underscore | `Unlabelled | `Labelled of Identifier.t ]
           }
       | RawPi of
           { location : Location.t

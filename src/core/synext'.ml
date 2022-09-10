@@ -336,7 +336,7 @@ module CLF = struct
               `\x. body'. *)
       | Hole of
           { location : Location.t
-          ; variant : [ `Underscore | `Unlabelled | `Labelled of String.t ]
+          ; variant : [ `Underscore | `Unlabelled | `Labelled of Identifier.t ]
           }
           (** [Hole { variant; _ }] is the omission of a term for
               reconstruction.

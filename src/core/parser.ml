@@ -1435,18 +1435,26 @@ end = struct
       ]
 
   let clf_object7 =
+    let integer_projection =
+      dot_integer
+      $> fun i ->
+        `By_position i
+    and identifier_projection =
+      dot_identifier
+      |> span
+      $> fun (location, x) ->
+        `By_identifier (Identifier.make ~location x)
+    in
     let projection =
-      alt
-        (dot_integer $> fun i -> `By_position i)
-        (dot_identifier $> fun n -> `By_identifier n)
+      alt integer_projection identifier_projection
     in
     let trailing_projections = many (span projection) in
     seq2 clf_object8 trailing_projections
     $> (function
        | (object_, []) -> object_
        | (object_, projections) ->
-           List.fold_right
-             (fun (projection_location, projection) accumulator ->
+           List.fold_left
+             (fun accumulator (projection_location, projection) ->
                let location =
                  Location.join
                    (CLF.location_of_object accumulator)
@@ -1458,8 +1466,8 @@ end = struct
                  ; projection
                  }
              )
-             projections
              object_
+             projections
        )
     |> labelled "Contextual LF atomic or projection object"
 

@@ -136,8 +136,6 @@ module LF = struct
   end =
     Term
 
-  type kind = Kind.t
-
   let location_of_kind kind =
     match kind with
     | Kind.Typ { location; _ }
@@ -444,6 +442,26 @@ module CLF = struct
 
   (** External contextual LF substitutions. *)
   and Substitution : sig
+    (** [{ Substitution.head; terms; _ }] is the substitution
+
+        - `^' if [head = Head.None] and [terms = \[\]]
+        - `m1, m2, ..., mn' if [head = Head.None] and
+          [terms = \[m1; m2; ...; mn\]]
+        - `..' if [head = Head.Identity _] and [terms = \[\]]
+        - `.., m1, m2, ..., mn' if [head = Head.Identitiy _] and
+          [terms = \[m1; m2; ...; mn\]]
+        - `$S' if
+          [head = Head.Substitution_variable { identifier = "$S"; closure = Option.None; _ }]
+          and [terms = \[\]]
+        - `$S\[o\]' if
+          [head = Head.Substitution_variable { identifier = "$S"; closure = Option.Some o; _ }]
+          and [terms = \[\]]
+        - `$S, m1, m2, ..., mn' if
+          [head = Head.Substitution_variable { identifier = "$S"; closure = Option.None; _ }]
+          and [terms = \[m1; m2; ...; mn\]]
+        - `$S\[o\], m1, m2, ..., mn' if
+          [head = Head.Substitution_variable { identifier = "$S"; closure = Option.Some o; _ }]
+          and [terms = \[m1; m2; ...; mn\]] *)
     type t =
       { location : Location.t
       ; head : Substitution.Head.t
@@ -485,6 +503,19 @@ module CLF = struct
 
   (** External contextual LF contexts. *)
   and Context : sig
+    (** [{ Context.head; typings; _ }] is the context
+
+        - `^' if [head = Head.None] and [typings = \[\]].
+        - `x1 : t1, x2 : t2, ..., xn : tn' if [head = Head.None] and
+          [typings = \[("x1", t1); ("x2", t2); ..., ("xn", tn)\]].
+        - `_' if [head = Head.Hole] and [typings = \[\]].
+        - `_, x1 : t1, x2 : t2, ..., xn : tn' if [head = Head.Hole] and
+          [typings = \[("x1", t1); ("x2", t2); ..., ("xn", tn)\]].
+        - `g' if [head = Head.Context_variable { identifier = "g"; _ }] and
+          [typings = \[\]].
+        - `g, x1 : t1, x2 : t2, ..., xn : tn' if
+          [head = Head.Context_variable { identifier = "g"; _ }] and
+          [typings = \[("x1", t1); ("x2", t2); ..., ("xn", tn)\]]. *)
     type t =
       { location : Location.t
       ; head : Context.Head.t

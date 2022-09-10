@@ -22,17 +22,15 @@ module LF : sig
 
   val of_term : Term.t -> Yojson.Safe.t
 end = struct
-  open LF
-
   let rec of_kind kind =
     match kind with
-    | Kind.Typ _ -> `List [ `String "LF.Kind.Typ"; `Assoc [] ]
-    | Kind.Arrow { domain; range; _ } ->
+    | LF.Kind.Typ _ -> `List [ `String "LF.Kind.Typ" ]
+    | LF.Kind.Arrow { domain; range; _ } ->
       `List
         [ `String "LF.Kind.Arrow"
         ; `Assoc [ ("domain", of_typ domain); ("range", of_kind range) ]
         ]
-    | Kind.Pi { parameter_identifier; parameter_type; body; _ } ->
+    | LF.Kind.Pi { parameter_identifier; parameter_type; body; _ } ->
       `List
         [ `String "LF.Kind.Pi"
         ; `Assoc
@@ -44,7 +42,7 @@ end = struct
 
   and of_typ typ =
     match typ with
-    | Typ.Constant { identifier; quoted; _ } ->
+    | LF.Typ.Constant { identifier; quoted; _ } ->
       `List
         [ `String "LF.Typ.Constant"
         ; `Assoc
@@ -52,7 +50,7 @@ end = struct
             ; ("quoted", `Bool quoted)
             ]
         ]
-    | Typ.Application { applicand; arguments; _ } ->
+    | LF.Typ.Application { applicand; arguments; _ } ->
       `List
         [ `String "LF.Typ.Application"
         ; `Assoc
@@ -60,7 +58,7 @@ end = struct
             ; ("arguments", `List (List.map of_term arguments))
             ]
         ]
-    | Typ.Arrow { domain; range; orientation; _ } ->
+    | LF.Typ.Arrow { domain; range; orientation; _ } ->
       `List
         [ `String "LF.Typ.Arrow"
         ; `Assoc
@@ -72,7 +70,7 @@ end = struct
                 | `Backward -> `String "backward" )
             ]
         ]
-    | Typ.Pi { parameter_identifier; parameter_type; body; _ } ->
+    | LF.Typ.Pi { parameter_identifier; parameter_type; body; _ } ->
       `List
         [ `String "LF.Typ.Pi"
         ; `Assoc
@@ -84,12 +82,12 @@ end = struct
 
   and of_term term =
     match term with
-    | Term.Variable { identifier; _ } ->
+    | LF.Term.Variable { identifier; _ } ->
       `List
         [ `String "LF.Term.Variable"
         ; `Assoc [ ("identifier", of_identifier identifier) ]
         ]
-    | Term.Constant { identifier; quoted; _ } ->
+    | LF.Term.Constant { identifier; quoted; _ } ->
       `List
         [ `String "LF.Term.Constant"
         ; `Assoc
@@ -97,7 +95,7 @@ end = struct
             ; ("quoted", `Bool quoted)
             ]
         ]
-    | Term.Application { applicand; arguments; _ } ->
+    | LF.Term.Application { applicand; arguments; _ } ->
       `List
         [ `String "LF.Term.Application"
         ; `Assoc
@@ -105,7 +103,8 @@ end = struct
             ; ("arguments", `List (List.map of_term arguments))
             ]
         ]
-    | Term.Abstraction { parameter_identifier; parameter_type; body; _ } ->
+    | LF.Term.Abstraction { parameter_identifier; parameter_type; body; _ }
+      ->
       `List
         [ `String "LF.Term.Abstraction"
         ; `Assoc
@@ -114,10 +113,450 @@ end = struct
             ; ("body", of_term body)
             ]
         ]
-    | Term.Wildcard _ -> `List [ `String "LF.Term.Wildcard"; `Assoc [] ]
-    | Term.TypeAnnotated { term; typ; _ } ->
+    | LF.Term.Wildcard _ -> `List [ `String "LF.Term.Wildcard"; `Assoc [] ]
+    | LF.Term.TypeAnnotated { term; typ; _ } ->
       `List
         [ `String "LF.Term.TypeAnnotated"
         ; `Assoc [ ("term", of_term term); ("typ", of_typ typ) ]
+        ]
+end
+
+module CLF : sig
+  open CLF
+
+  val of_typ : Typ.t -> Yojson.Safe.t
+
+  val of_typ_pattern : Typ.Pattern.t -> Yojson.Safe.t
+
+  val of_term : Term.t -> Yojson.Safe.t
+
+  val of_term_pattern : Term.Pattern.t -> Yojson.Safe.t
+
+  val of_substitution : Substitution.t -> Yojson.Safe.t
+
+  val of_substitution_pattern : Substitution.Pattern.t -> Yojson.Safe.t
+
+  val of_context : Context.t -> Yojson.Safe.t
+
+  val of_context_pattern : Context.Pattern.t -> Yojson.Safe.t
+
+  val of_schema : Schema.t -> Yojson.Safe.t
+end = struct
+  let rec of_typ typ =
+    match typ with
+    | CLF.Typ.Constant { identifier; quoted; _ } ->
+      `List
+        [ `String "CLF.Typ.Constant"
+        ; `Assoc
+            [ ("identifier", of_qualified_identifier identifier)
+            ; ("quoted", `Bool quoted)
+            ]
+        ]
+    | CLF.Typ.Application { applicand; arguments; _ } ->
+      `List
+        [ `String "CLF.Typ.Application"
+        ; `Assoc
+            [ ("applicand", of_typ applicand)
+            ; ("arguments", `List (List.map of_term arguments))
+            ]
+        ]
+    | CLF.Typ.Arrow { domain; range; orientation; _ } ->
+      `List
+        [ `String "CLF.Typ.Arrow"
+        ; `Assoc
+            [ ("domain", of_typ domain)
+            ; ("range", of_typ range)
+            ; ( "orientation"
+              , match orientation with
+                | `Forward -> `String "forward"
+                | `Backward -> `String "backward" )
+            ]
+        ]
+    | CLF.Typ.Pi { parameter_identifier; parameter_type; body; _ } ->
+      `List
+        [ `String "CLF.Typ.Pi"
+        ; `Assoc
+            [ ("parameter_identifier", of_identifier_opt parameter_identifier)
+            ; ("parameter_type", of_typ parameter_type)
+            ; ("body", of_typ body)
+            ]
+        ]
+    | CLF.Typ.Block { elements; _ } ->
+      `List
+        [ `String "CLF.Typ.Block"
+        ; `Assoc
+            [ ( "elements"
+              , match elements with
+                | `Unnamed typ -> of_typ typ
+                | `Record typings ->
+                  `List
+                    (typings
+                    |> List1.map (fun (identifier, typ) ->
+                           `Assoc
+                             [ ("identifier", of_identifier identifier)
+                             ; ("typ", of_typ typ)
+                             ])
+                    |> List1.to_list) )
+            ]
+        ]
+
+  and of_typ_pattern typ_pattern =
+    match typ_pattern with
+    | CLF.Typ.Pattern.Constant { identifier; quoted; _ } ->
+      `List
+        [ `String "CLF.Typ.Pattern.Constant"
+        ; `Assoc
+            [ ("identifier", of_qualified_identifier identifier)
+            ; ("quoted", `Bool quoted)
+            ]
+        ]
+    | CLF.Typ.Pattern.Application { applicand; arguments; _ } ->
+      `List
+        [ `String "CLF.Typ.Pattern.Application"
+        ; `Assoc
+            [ ("applicand", of_typ_pattern applicand)
+            ; ("arguments", `List (List.map of_term_pattern arguments))
+            ]
+        ]
+    | CLF.Typ.Pattern.Arrow { domain; range; orientation; _ } ->
+      `List
+        [ `String "CLF.Typ.Pattern.Arrow"
+        ; `Assoc
+            [ ("domain", of_typ_pattern domain)
+            ; ("range", of_typ_pattern range)
+            ; ( "orientation"
+              , match orientation with
+                | `Forward -> `String "forward"
+                | `Backward -> `String "backward" )
+            ]
+        ]
+    | CLF.Typ.Pattern.Pi { parameter_identifier; parameter_type; body; _ } ->
+      `List
+        [ `String "CLF.Typ.Pattern.Pi"
+        ; `Assoc
+            [ ("parameter_identifier", of_identifier_opt parameter_identifier)
+            ; ("parameter_type", of_typ parameter_type)
+            ; ("body", of_typ_pattern body)
+            ]
+        ]
+    | CLF.Typ.Pattern.Block { elements; _ } ->
+      `List
+        [ `String "CLF.Typ.Pattern.Block"
+        ; `Assoc
+            [ ( "elements"
+              , match elements with
+                | `Unnamed typ -> of_typ typ
+                | `Record typings ->
+                  `List
+                    (typings
+                    |> List1.map (fun (identifier, typ) ->
+                           `Assoc
+                             [ ("identifier", of_identifier identifier)
+                             ; ("typ", of_typ typ)
+                             ])
+                    |> List1.to_list) )
+            ]
+        ]
+
+  and of_term term =
+    match term with
+    | CLF.Term.Variable { identifier; _ } ->
+      `List
+        [ `String "CLF.Term.Variable"
+        ; `Assoc [ ("identifier", of_identifier identifier) ]
+        ]
+    | CLF.Term.Constant { identifier; quoted; _ } ->
+      `List
+        [ `String "CLF.Term.Constant"
+        ; `Assoc
+            [ ("identifier", of_qualified_identifier identifier)
+            ; ("quoted", `Bool quoted)
+            ]
+        ]
+    | CLF.Term.Application { applicand; arguments; _ } ->
+      `List
+        [ `String "CLF.Term.Application"
+        ; `Assoc
+            [ ("applicand", of_term applicand)
+            ; ("arguments", `List (List.map of_term arguments))
+            ]
+        ]
+    | CLF.Term.Abstraction { parameter_identifier; parameter_type; body; _ }
+      ->
+      `List
+        [ `String "CLF.Term.Abstraction"
+        ; `Assoc
+            [ ("parameter_identifier", of_identifier_opt parameter_identifier)
+            ; ("parameter_type", of_option of_typ parameter_type)
+            ; ("body", of_term body)
+            ]
+        ]
+    | CLF.Term.TypeAnnotated { term; typ; _ } ->
+      `List
+        [ `String "CLF.Term.TypeAnnotated"
+        ; `Assoc [ ("term", of_term term); ("typ", of_typ typ) ]
+        ]
+    | CLF.Term.Hole { variant; _ } ->
+      `List
+        [ `String "CLF.Term.Hole"
+        ; `Assoc
+            [ ( "variant"
+              , match variant with
+                | `Underscore -> `String "underscore"
+                | `Unlabelled -> `String "unlabelled"
+                | `Labelled label -> `Assoc [ ("label", `String label) ] )
+            ]
+        ]
+    | CLF.Term.Tuple { terms; _ } ->
+      `List
+        [ `String "CLF.Term.Tuple"
+        ; `Assoc
+            [ ( "elements"
+              , `List (terms |> List1.map of_term |> List1.to_list) )
+            ]
+        ]
+    | CLF.Term.Projection { term; projection; _ } ->
+      `List
+        [ `String "CLF.Term.Projection"
+        ; `Assoc
+            [ ("term", of_term term)
+            ; ( "projection"
+              , match projection with
+                | `By_identifier identifier -> of_identifier identifier
+                | `By_position index -> `Int index )
+            ]
+        ]
+    | CLF.Term.Substitution { term; substitution; _ } ->
+      `List
+        [ `String "CLF.Term.Substitution"
+        ; `Assoc
+            [ ("term", of_term term)
+            ; ("substitution", of_substitution substitution)
+            ]
+        ]
+
+  and of_term_pattern term_pattern =
+    match term_pattern with
+    | CLF.Term.Pattern.Variable { identifier; _ } ->
+      `List
+        [ `String "CLF.Term.Pattern.Variable"
+        ; `Assoc [ ("identifier", of_identifier identifier) ]
+        ]
+    | CLF.Term.Pattern.Constant { identifier; quoted; _ } ->
+      `List
+        [ `String "CLF.Term.Pattern.Constant"
+        ; `Assoc
+            [ ("identifier", of_qualified_identifier identifier)
+            ; ("quoted", `Bool quoted)
+            ]
+        ]
+    | CLF.Term.Pattern.Application { applicand; arguments; _ } ->
+      `List
+        [ `String "CLF.Term.Pattern.Application"
+        ; `Assoc
+            [ ("applicand", of_term_pattern applicand)
+            ; ("arguments", `List (List.map of_term_pattern arguments))
+            ]
+        ]
+    | CLF.Term.Pattern.Abstraction
+        { parameter_identifier; parameter_type; body; _ } ->
+      `List
+        [ `String "CLF.Term.Pattern.Abstraction"
+        ; `Assoc
+            [ ("parameter_identifier", of_identifier_opt parameter_identifier)
+            ; ("parameter_type", of_option of_typ parameter_type)
+            ; ("body", of_term_pattern body)
+            ]
+        ]
+    | CLF.Term.Pattern.TypeAnnotated { term; typ; _ } ->
+      `List
+        [ `String "CLF.Term.Pattern.TypeAnnotated"
+        ; `Assoc [ ("term", of_term_pattern term); ("typ", of_typ typ) ]
+        ]
+    | CLF.Term.Pattern.Wildcard _ ->
+      `List [ `String "CLF.Term.Pattern.Wildcard" ]
+    | CLF.Term.Pattern.Tuple { terms; _ } ->
+      `List
+        [ `String "CLF.Term.Pattern.Tuple"
+        ; `Assoc
+            [ ( "elements"
+              , `List (terms |> List1.map of_term_pattern |> List1.to_list)
+              )
+            ]
+        ]
+    | CLF.Term.Pattern.Projection { term; projection; _ } ->
+      `List
+        [ `String "CLF.Term.Pattern.Projection"
+        ; `Assoc
+            [ ("term", of_term_pattern term)
+            ; ( "projection"
+              , match projection with
+                | `By_identifier identifier -> of_identifier identifier
+                | `By_position index -> `Int index )
+            ]
+        ]
+    | CLF.Term.Pattern.Substitution { term; substitution; _ } ->
+      `List
+        [ `String "CLF.Term.Pattern.Substitution"
+        ; `Assoc
+            [ ("term", of_term_pattern term)
+            ; ("substitution", of_substitution substitution)
+            ]
+        ]
+
+  and of_substitution substition =
+    match substition with
+    | { CLF.Substitution.head; terms; _ } ->
+      `List
+        [ `String "CLF.Substitution"
+        ; `Assoc
+            [ ( "head"
+              , match head with
+                | CLF.Substitution.Head.None ->
+                  `List [ `String "CLF.Substitution.Head.None" ]
+                | CLF.Substitution.Head.Identity _ ->
+                  `List [ `String "CLF.Substitution.Head.Identity" ]
+                | CLF.Substitution.Head.Substitution_variable
+                    { identifier; closure; _ } ->
+                  `List
+                    [ `String "CLF.Substitution.Head.Substitution_variable"
+                    ; `Assoc
+                        [ ("identifier", of_identifier identifier)
+                        ; ("closure", of_option of_substitution closure)
+                        ]
+                    ] )
+            ; ("terms", `List (List.map of_term terms))
+            ]
+        ]
+
+  and of_substitution_pattern substitution_pattern =
+    match substitution_pattern with
+    | { CLF.Substitution.Pattern.head; terms; _ } ->
+      `List
+        [ `String "CLF.Substitution"
+        ; `Assoc
+            [ ( "head"
+              , match head with
+                | CLF.Substitution.Pattern.Head.None ->
+                  `List [ `String "CLF.Substitution.Pattern.Head.None" ]
+                | CLF.Substitution.Pattern.Head.Identity _ ->
+                  `List [ `String "CLF.Substitution.Pattern.Head.Identity" ]
+                | CLF.Substitution.Pattern.Head.Substitution_variable
+                    { identifier; closure; _ } ->
+                  `List
+                    [ `String
+                        "CLF.Substitution.Pattern.Head.Substitution_variable"
+                    ; `Assoc
+                        [ ("identifier", of_identifier identifier)
+                        ; ("closure", of_option of_substitution closure)
+                        ]
+                    ] )
+            ; ("terms", `List (List.map of_term_pattern terms))
+            ]
+        ]
+
+  and of_context context =
+    match context with
+    | { CLF.Context.head; typings; _ } ->
+      `List
+        [ `String "CLF.Context"
+        ; `Assoc
+            [ ( "head"
+              , match head with
+                | CLF.Context.Head.None ->
+                  `List [ `String "CLF.Context.Head.None" ]
+                | CLF.Context.Head.Hole _ ->
+                  `List [ `String "CLF.Context.Head.Hole" ]
+                | CLF.Context.Head.Context_variable { identifier; _ } ->
+                  `List
+                    [ `String "CLF.Context.Head.Context_variable"
+                    ; `Assoc [ ("identifier", of_identifier identifier) ]
+                    ] )
+            ; ( "typings"
+              , `List
+                  (List.map
+                     (fun (identifier, typ) ->
+                       `Assoc
+                         [ ("identifier", of_identifier identifier)
+                         ; ("typ", of_typ typ)
+                         ])
+                     typings) )
+            ]
+        ]
+
+  and of_context_pattern context_pattern =
+    match context_pattern with
+    | { CLF.Context.Pattern.head; typings; _ } ->
+      `List
+        [ `String "CLF.Context.Pattern"
+        ; `Assoc
+            [ ( "head"
+              , match head with
+                | CLF.Context.Pattern.Head.None ->
+                  `List [ `String "CLF.Context.Head.Pattern.None" ]
+                | CLF.Context.Pattern.Head.Hole _ ->
+                  `List [ `String "CLF.Context.Head.Pattern.Hole" ]
+                | CLF.Context.Pattern.Head.Context_variable { identifier; _ }
+                  ->
+                  `List
+                    [ `String "CLF.Context.Pattern.Head.Context_variable"
+                    ; `Assoc [ ("identifier", of_identifier identifier) ]
+                    ] )
+            ; ( "typings"
+              , `List
+                  (List.map
+                     (fun (identifier, typ) ->
+                       `Assoc
+                         [ ("identifier", of_identifier identifier)
+                         ; ("typ", of_typ_pattern typ)
+                         ])
+                     typings) )
+            ]
+        ]
+
+  and of_schema schema =
+    match schema with
+    | CLF.Schema.Constant { identifier; _ } ->
+      `List
+        [ `String "CLF.Schema.Constant"
+        ; `Assoc [ ("identifier", of_qualified_identifier identifier) ]
+        ]
+    | CLF.Schema.Alternation { schemas; _ } ->
+      `List
+        [ `String "CLF.Schema.Alternation"
+        ; `Assoc
+            [ ( "schemas"
+              , `List (schemas |> List2.map of_schema |> List2.to_list) )
+            ]
+        ]
+    | CLF.Schema.Element { some; block; _ } ->
+      `List
+        [ `String "CLF.Schema.Element"
+        ; `Assoc
+            [ ( "some"
+              , of_option
+                  (fun some ->
+                    `List
+                      (some
+                      |> List1.map (fun (identifier, typ) ->
+                             `Assoc
+                               [ ("identifier", of_identifier identifier)
+                               ; ("typ", of_typ typ)
+                               ])
+                      |> List1.to_list))
+                  some )
+            ; ( "block"
+              , match block with
+                | `Unnamed typ -> of_typ typ
+                | `Record typings ->
+                  `List
+                    (typings
+                    |> List1.map (fun (identifier, typ) ->
+                           `Assoc
+                             [ ("identifier", of_identifier identifier)
+                             ; ("typ", of_typ typ)
+                             ])
+                    |> List1.to_list) )
+            ]
         ]
 end

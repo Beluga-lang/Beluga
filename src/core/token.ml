@@ -83,6 +83,8 @@ type t =
   | PRAGMA of string
   (* A dot followed by an integer; used for projections *)
   | DOT_NUMBER of int (* .n *)
+  (* A dot followed by an identifier; used for projections *)
+  | DOT_IDENT of string (* .x *)
   (* A hash followed by an identifier; used for parameter variables. *)
   | HASH_IDENT of string (* #x *)
   (* A dollar followed by an identifier; used for substitution variables. *)
@@ -182,6 +184,7 @@ include (Show.Make (struct
     | HOLE s -> p "?%s" s
     | INTLIT n -> p "%d" n
     | DOT_NUMBER k -> p ".%d" k
+    | DOT_IDENT s -> p ".%s" s
     | HASH_IDENT s -> p "#%s" s
     | DOLLAR_IDENT s -> p "$%s" s
     | PRAGMA s -> p "--%s" s
@@ -268,6 +271,7 @@ module Class = struct
       | HOLE _ -> p "HOLE"
       | INTLIT _ -> p "INTLIT"
       | DOT_NUMBER _ -> p "DOT_NUMBER"
+      | DOT_IDENT _ -> p "DOT_IDENT"
       | HASH_IDENT _ -> p "HASH_IDENT"
       | DOLLAR_IDENT _ -> p "DOLLAR_IDENT"
       | PRAGMA _ -> p "PRAGMA"

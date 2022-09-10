@@ -75,6 +75,8 @@ type t =
   | PRAGMA of string (** Two dashes followed by an identifier *)
   (* A dot followed by an integer; used for projections *)
   | DOT_NUMBER of int (** .n *)
+  (* A dot followed by an identifier; used for projections *)
+  | DOT_IDENT of string (** .x *)
   (* A hash followed by an identifier; used for parameter variables. *)
   | HASH_IDENT of string (** #x *)
   (* A dollar followed by an identifier; used for substitution variables. *)

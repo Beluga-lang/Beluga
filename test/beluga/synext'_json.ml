@@ -304,7 +304,7 @@ end = struct
               , match variant with
                 | `Underscore -> `String "underscore"
                 | `Unlabelled -> `String "unlabelled"
-                | `Labelled label -> `Assoc [ ("label", `String label) ] )
+                | `Labelled label -> `Assoc [ ("label", of_identifier label) ] )
             ]
         ]
     | CLF.Term.Tuple { terms; _ } ->

@@ -547,6 +547,43 @@ module CLF = struct
   end =
     Context
 
+  and Schema : sig
+    type t =
+      | Constant of
+          { location : Location.t
+          ; identifier : QualifiedIdentifier.t
+          }
+          (** [Constant { identifier; _ }] is the schema having identifier
+              `identifier' declared elsewhere in the signature.
+
+              A tuple term has a block type `t' matching against this schema
+              if `t' matches against the schema referred to as `identifier'. *)
+      | Alternation of
+          { location : Location.t
+          ; schemas : Schema.t List2.t
+          }
+          (** [Alternation { schemas; _ }] is the schema `s1 + s2 + ... + sn'
+              if [schemas = \[s1; s2; ...; sn\]].
+
+              A tuple term has a block type `t' matching against this schema
+              if `t' matches against at least one of `s1', `s2', ..., `sn'. *)
+      | Element of
+          { location : Location.t
+          ; some : (Identifier.t * Typ.t) List1.t Option.t
+          ; block :
+              [ `Unnamed of Typ.t
+              | `Record of (Identifier.t * Typ.t) List1.t
+              ]
+          }
+          (** [Element { some = p; block = q; _ }] is the schema `some [p]
+              block (q)'.
+
+              A tuple term has a block type `t' matching against this schema
+              if there exist terms having types in `p' in the context, and if
+              the elements in `t' match against those in `q'. *)
+  end =
+    Schema
+
   let location_of_typ typ =
     match typ with
     | Typ.Constant { location; _ }
@@ -602,4 +639,10 @@ module CLF = struct
     | Term.Pattern.Substitution { location; _ }
     | Term.Pattern.Application { location; _ }
     | Term.Pattern.TypeAnnotated { location; _ } -> location
+
+  let location_of_schema schema =
+    match schema with
+    | Schema.Constant { location; _ }
+    | Schema.Alternation { location; _ }
+    | Schema.Element { location; _ } -> location
 end

@@ -384,7 +384,7 @@ module Sgn = struct
       { location: Location.t
       ; identifier: Name.t
       ; typ: LF.typ
-      } (** LF type constant decalaration *)
+      } (** LF type constant declaration *)
 
     | CompTyp of
       { location: Location.t

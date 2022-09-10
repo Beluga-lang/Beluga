@@ -900,7 +900,7 @@ module Sgn = struct
       { location: Location.t
       ; identifier: cid_term
       ; typ: LF.typ
-      } (** LF type constant decalaration *)
+      } (** LF type constant declaration *)
 
     | CompTyp of
       { location: Location.t

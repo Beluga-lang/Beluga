@@ -563,7 +563,7 @@ module Sgn = struct
         { location : Location.t
         ; identifier : Name.t
         ; typ : LF.Object.t
-        }  (** LF type constant decalaration *)
+        }  (** LF type constant declaration *)
     | CompTyp of
         { location : Location.t
         ; identifier : Name.t

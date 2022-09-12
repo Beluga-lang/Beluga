@@ -107,17 +107,13 @@ type state =
   ; last_loc : Location.t (* Location of the last token seen by the parser. *)
   }
 
-  (*
 (** Peeks at the next token in the input stream in the given state. *)
-let peek_at (s : state) : Token.t locd option =
+let[@warning "-32"] peek_at (s : state) : Token.t locd option =
   Option.(LinkStream.observe s.input $> Pair.fst)
-   *)
 
-  (*
 (** Like `peek_at` but forgets the location. *)
-let next_token s =
-  Option.(peek_at s $> Pair.snd |> get_default Token.EOI)
-   *)
+let[@warning "-32"] next_token s =
+  Option.(peek_at s $> Pair.snd |> Option.value ~default:Token.EOI)
 
 (***** ERROR HANDLING *****)
 
@@ -1558,7 +1554,7 @@ end = struct
   let clf_object4 =
     let block_contents =
       sep_by1
-        (seq2 (maybe (identifier <& token Token.COLON)) CLF_parsers.clf_object)
+        (seq2 (maybe (trying (identifier <& token Token.COLON))) CLF_parsers.clf_object)
         (token Token.COMMA)
     in
     let block =

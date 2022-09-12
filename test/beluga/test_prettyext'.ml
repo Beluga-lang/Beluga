@@ -267,7 +267,12 @@ let test_pp_kind =
       parse_lf_kind elaboration_context
         (Format.stringify Prettyext'.LF.pp_kind kind)
     in
-    OUnit2.assert_equal ~cmp:LF.Kind.equal kind kind'
+    OUnit2.assert_equal
+      ~printer:
+        Fun.(
+          Synext'_json.LF.of_kind
+          >> Format.stringify Yojson.Safe.pretty_print)
+      ~cmp:LF.Kind.equal kind kind'
   in
   let test_cases =
     [ (mock_state_1, "type")

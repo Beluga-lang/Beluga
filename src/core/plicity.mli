@@ -1,3 +1,5 @@
+(** Annotations for implicit or explicit parameters. *)
+
 open Support
 
 (** The type of annotation for implicit or explicit parameters.

@@ -476,7 +476,7 @@ let test_kind =
       ~printer:
         Fun.(
           Synext'_json.LF.of_kind
-          >> Format.stringify Yojson.Safe.pretty_print)
+          >> Format.stringify (Yojson.Safe.pretty_print ~std:true))
       ~cmp:LF.Kind.equal expected
       (parse_lf_object input
       |> Synprs_to_synext'.LF.disambiguate_as_kind elaboration_context)
@@ -553,7 +553,8 @@ let test_type =
     OUnit2.assert_equal
       ~printer:
         Fun.(
-          Synext'_json.LF.of_typ >> Format.stringify Yojson.Safe.pretty_print)
+          Synext'_json.LF.of_typ
+          >> Format.stringify (Yojson.Safe.pretty_print ~std:true))
       ~cmp:LF.Typ.equal expected
       (parse_lf_object input
       |> Synprs_to_synext'.LF.disambiguate_as_typ elaboration_context)
@@ -750,7 +751,7 @@ let test_term =
       ~printer:
         Fun.(
           Synext'_json.LF.of_term
-          >> Format.stringify Yojson.Safe.pretty_print)
+          >> Format.stringify (Yojson.Safe.pretty_print ~std:true))
       ~cmp:LF.Term.equal expected
       (parse_lf_object input
       |> Synprs_to_synext'.LF.disambiguate_as_term elaboration_context)

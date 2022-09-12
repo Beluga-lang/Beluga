@@ -1,6 +1,7 @@
-(** Plain identifiers.
+(** Plain string identifiers.
 
     These are totally ordered for efficient lookups in map data structures. *)
+
 open Support
 
 type t

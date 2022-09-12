@@ -1,3 +1,5 @@
+(** Descrption of user-defined oeprators. *)
+
 open Support
 
 (** The type of description for infix, prefix and postfix operators. *)

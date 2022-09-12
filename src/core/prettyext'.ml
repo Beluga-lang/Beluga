@@ -1047,11 +1047,10 @@ module CLF = struct
          backward arrows *)
       Format.fprintf ppf "@[<2>%a@ ->@ %a@]"
         (match domain with
-        | Typ.Pattern.Arrow { orientation = `Backward; _ } ->
-          parenthesize pp_typ_pattern
+        | Typ.Arrow { orientation = `Backward; _ } -> parenthesize pp_typ
         | _ ->
           parenthesize_left_argument_right_associative_operator
-            Precedence.of_typ_pattern ~parent_precedence pp_typ_pattern)
+            Precedence.of_typ ~parent_precedence pp_typ)
         domain
         (match range with
         | Typ.Pattern.Arrow { orientation = `Backward; _ } ->
@@ -1072,11 +1071,10 @@ module CLF = struct
             Precedence.of_typ_pattern ~parent_precedence pp_typ_pattern)
         range
         (match domain with
-        | Typ.Pattern.Arrow { orientation = `Forward; _ } ->
-          parenthesize pp_typ_pattern
+        | Typ.Arrow { orientation = `Forward; _ } -> parenthesize pp_typ
         | _ ->
           parenthesize_right_argument_left_associative_operator
-            Precedence.of_typ_pattern ~parent_precedence pp_typ_pattern)
+            Precedence.of_typ ~parent_precedence pp_typ)
         domain
     | Typ.Pattern.Pi { parameter_identifier; parameter_type; body; _ } ->
       (* Pis are weak prefix operators *)
@@ -1330,4 +1328,99 @@ module CLF = struct
     | _ ->
       parenthesize_argument_postfix_operator Precedence.of_term_pattern
         ~parent_precedence pp_term_pattern ppf argument
+
+  and pp_substitution_pattern ppf substitution_pattern =
+    match substitution_pattern with
+    | Substitution.Pattern.
+        { head = Substitution.Pattern.Head.None; terms = []; _ } ->
+      Format.fprintf ppf "^"
+    | Substitution.Pattern.
+        { head = Substitution.Pattern.Head.Identity _; terms = []; _ } ->
+      Format.fprintf ppf ".."
+    | Substitution.Pattern.
+        { head = Substitution.Pattern.Head.None; terms; _ } ->
+      Format.fprintf ppf "@[<2>%a@]"
+        (List.pp
+           ~pp_sep:(fun ppf () -> Format.fprintf ppf ",@ ")
+           pp_term_pattern)
+        terms
+    | Substitution.Pattern.
+        { head = Substitution.Pattern.Head.Identity _; terms; _ } ->
+      Format.fprintf ppf "@[<2>..,@ %a@]"
+        (List.pp
+           ~pp_sep:(fun ppf () -> Format.fprintf ppf ",@ ")
+           pp_term_pattern)
+        terms
+    | Substitution.Pattern.
+        { head =
+            Substitution.Pattern.Head.Substitution_variable
+              { identifier; closure = Option.None; _ }
+        ; terms = []
+        ; _
+        } -> Format.fprintf ppf "@[<2>%a@]" Identifier.pp identifier
+    | Substitution.Pattern.
+        { head =
+            Substitution.Pattern.Head.Substitution_variable
+              { identifier; closure = Option.Some closure; _ }
+        ; terms = []
+        ; _
+        } ->
+      Format.fprintf ppf "@[<2>%a[%a]@]" Identifier.pp identifier
+        pp_substitution closure
+    | Substitution.Pattern.
+        { head =
+            Substitution.Pattern.Head.Substitution_variable
+              { identifier; closure = Option.None; _ }
+        ; terms
+        ; _
+        } ->
+      Format.fprintf ppf "@[<2>%a,@ %a@]" Identifier.pp identifier
+        (List.pp
+           ~pp_sep:(fun ppf () -> Format.fprintf ppf ",@ ")
+           pp_term_pattern)
+        terms
+    | Substitution.Pattern.
+        { head =
+            Substitution.Pattern.Head.Substitution_variable
+              { identifier; closure = Option.Some closure; _ }
+        ; terms
+        ; _
+        } ->
+      Format.fprintf ppf "@[<2>%a[%a],@ %a@]" Identifier.pp identifier
+        pp_substitution closure
+        (List.pp
+           ~pp_sep:(fun ppf () -> Format.fprintf ppf ",@ ")
+           pp_term_pattern)
+        terms
+
+  and pp_context_pattern ppf context_pattern =
+    let pp_typing ppf (i, t) =
+      Format.fprintf ppf "%a@ :@ %a" Identifier.pp i pp_typ_pattern t
+    in
+    match context_pattern with
+    | Context.Pattern.{ head = Context.Pattern.Head.None; typings = []; _ }
+      -> ()
+    | Context.Pattern.{ head = Context.Pattern.Head.Hole _; typings = []; _ }
+      -> Format.fprintf ppf "_"
+    | Context.Pattern.
+        { head = Context.Pattern.Head.Context_variable { identifier; _ }
+        ; typings = []
+        ; _
+        } -> Format.fprintf ppf "%a" Identifier.pp identifier
+    | Context.Pattern.{ head = Context.Pattern.Head.None; typings; _ } ->
+      Format.fprintf ppf "@[<2>%a@]"
+        (List.pp ~pp_sep:(fun ppf () -> Format.fprintf ppf ",@ ") pp_typing)
+        typings
+    | Context.Pattern.{ head = Context.Pattern.Head.Hole _; typings; _ } ->
+      Format.fprintf ppf "@[<2>_,@ %a@]"
+        (List.pp ~pp_sep:(fun ppf () -> Format.fprintf ppf ",@ ") pp_typing)
+        typings
+    | Context.Pattern.
+        { head = Context.Pattern.Head.Context_variable { identifier; _ }
+        ; typings
+        ; _
+        } ->
+      Format.fprintf ppf "@[<2>%a,@ %a@]" Identifier.pp identifier
+        (List.pp ~pp_sep:(fun ppf () -> Format.fprintf ppf ",@ ") pp_typing)
+        typings
 end

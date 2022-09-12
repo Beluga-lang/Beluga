@@ -139,8 +139,6 @@ module CLF : sig
   val of_context : Context.t -> Yojson.Safe.t
 
   val of_context_pattern : Context.Pattern.t -> Yojson.Safe.t
-
-  val of_schema : Schema.t -> Yojson.Safe.t
 end = struct
   let rec of_typ typ =
     match typ with
@@ -222,7 +220,7 @@ end = struct
       `List
         [ `String "CLF.Typ.Pattern.Arrow"
         ; `Assoc
-            [ ("domain", of_typ_pattern domain)
+            [ ("domain", of_typ domain)
             ; ("range", of_typ_pattern range)
             ; ( "orientation"
               , match orientation with
@@ -304,7 +302,8 @@ end = struct
               , match variant with
                 | `Underscore -> `String "underscore"
                 | `Unlabelled -> `String "unlabelled"
-                | `Labelled label -> `Assoc [ ("label", of_identifier label) ] )
+                | `Labelled label ->
+                  `Assoc [ ("label", of_identifier label) ] )
             ]
         ]
     | CLF.Term.Tuple { terms; _ } ->
@@ -513,25 +512,31 @@ end = struct
                      typings) )
             ]
         ]
+end
 
-  and of_schema schema =
+module Meta : sig
+  open Meta
+
+  val of_schema : Schema.t -> Yojson.Safe.t
+end = struct
+  let rec of_schema schema =
     match schema with
-    | CLF.Schema.Constant { identifier; _ } ->
+    | Meta.Schema.Constant { identifier; _ } ->
       `List
-        [ `String "CLF.Schema.Constant"
+        [ `String "Meta.Schema.Constant"
         ; `Assoc [ ("identifier", of_qualified_identifier identifier) ]
         ]
-    | CLF.Schema.Alternation { schemas; _ } ->
+    | Meta.Schema.Alternation { schemas; _ } ->
       `List
-        [ `String "CLF.Schema.Alternation"
+        [ `String "Meta.Schema.Alternation"
         ; `Assoc
             [ ( "schemas"
               , `List (schemas |> List2.map of_schema |> List2.to_list) )
             ]
         ]
-    | CLF.Schema.Element { some; block; _ } ->
+    | Meta.Schema.Element { some; block; _ } ->
       `List
-        [ `String "CLF.Schema.Element"
+        [ `String "Meta.Schema.Element"
         ; `Assoc
             [ ( "some"
               , of_option
@@ -541,20 +546,20 @@ end = struct
                       |> List1.map (fun (identifier, typ) ->
                              `Assoc
                                [ ("identifier", of_identifier identifier)
-                               ; ("typ", of_typ typ)
+                               ; ("typ", CLF.of_typ typ)
                                ])
                       |> List1.to_list))
                   some )
             ; ( "block"
               , match block with
-                | `Unnamed typ -> of_typ typ
+                | `Unnamed typ -> CLF.of_typ typ
                 | `Record typings ->
                   `List
                     (typings
                     |> List1.map (fun (identifier, typ) ->
                            `Assoc
                              [ ("identifier", of_identifier identifier)
-                             ; ("typ", of_typ typ)
+                             ; ("typ", CLF.of_typ typ)
                              ])
                     |> List1.to_list) )
             ]

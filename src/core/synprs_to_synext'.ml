@@ -2154,7 +2154,7 @@ module CLF = struct
       | exception QualifiedIdentifier.Dictionary.Unbound_identifier _ ->
         raise @@ Unbound_type_constant { location; identifier })
     | Synprs.CLF.Object.RawArrow { location; domain; range; orientation } ->
-      let domain' = disambiguate_as_typ_pattern state domain
+      let domain' = disambiguate_as_typ state domain
       and range' = disambiguate_as_typ_pattern state range in
       Synext'.CLF.Typ.Pattern.Arrow
         { location; domain = domain'; range = range'; orientation }

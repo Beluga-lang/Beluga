@@ -1,8 +1,6 @@
 open Support
 open Beluga
 
-[@@@warning "+A"]
-
 module CLF = struct
   module rec Typ : sig
     include module type of Synext'.CLF.Typ
@@ -470,7 +468,7 @@ let test_type =
       ~printer:
         Fun.(
           Synext'_json.CLF.of_typ
-          >> Format.stringify Yojson.Safe.pretty_print)
+          >> Format.stringify (Yojson.Safe.pretty_print ~std:true))
       ~cmp:CLF.Typ.equal expected
       (parse_clf_object input
       |> Synprs_to_synext'.CLF.disambiguate_as_typ elaboration_context)
@@ -682,7 +680,7 @@ let test_term =
       ~printer:
         Fun.(
           Synext'_json.CLF.of_term
-          >> Format.stringify Yojson.Safe.pretty_print)
+          >> Format.stringify (Yojson.Safe.pretty_print ~std:true))
       ~cmp:CLF.Term.equal expected
       (parse_clf_object input
       |> Synprs_to_synext'.CLF.disambiguate_as_term elaboration_context)
@@ -778,7 +776,8 @@ let test_term =
           (lam ~x:"y2"
              (lam ~x:"y3"
                 (sub (v "x")
-                   (`None, [ sub (v "y1") (`None, []); v "y2"; v "y3" ])))) )
+                   (`None, [ sub (v "y1") (`None, []); v "y2"; v "y3" ]))))
+      )
     ; ( mock_state_11
       , "\\y1. \\y2. \\y3. x[S, y1, y2, y3]"
       , lam ~x:"y1"

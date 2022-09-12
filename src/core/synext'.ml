@@ -1,17 +1,33 @@
+(** The external syntax of Beluga. *)
+
 open Support
 
-(** {1 External LF Syntax}
+(** {1 External LF Syntax} *)
 
-    The representation of LF kinds, types, and terms after parsing and
-    data-dependent disambiguation. ASTs constructed with the constructors in
-    this module are not necessarily normalized.
+(** The representation of LF kinds, types, and terms after parsing and
+    data-dependent disambiguation.
+
+    ASTs constructed with the constructors in this module are not necessarily
+    normalized.
 
     These types are only intended to be used in the definition of LF
     type-level or term-level constants. This is a weak, representational
     function space without case analysis or recursion.
 
     These types are suited for pretty-printing and elaboration to the
-    internal syntax. Note that this is a named representation. *)
+    internal syntax. Note that this is a named representation.
+
+    The metavariable:
+
+    - [x] ranges over variables
+    - [c] ranges over term-level constants
+    - [a] ranges over type-level constants
+
+    {[
+      Kinds   K    ::= type | Πx:A.K | A → K
+      Types   A, B ::= a | Πx:A.B | A → B | A M1 M2 ... Mn
+      Terms   M, N ::= c | x | λx:A.M | M N1 N2 ... Nn | M:A | _
+    ]} *)
 module LF = struct
   (** External LF kinds. *)
   module rec Kind : sig
@@ -136,6 +152,8 @@ module LF = struct
   end =
     Term
 
+  (** {2 Locations} *)
+
   let location_of_kind kind =
     match kind with
     | Kind.Typ { location; _ }
@@ -159,18 +177,48 @@ module LF = struct
     | Term.TypeAnnotated { location; _ } -> location
 end
 
-(** {1 External Contextual LF Syntax}
+(** {1 External Contextual LF Syntax} *)
 
-    The representation of contextual LF types, terms, and patterns after
-    parsing and data-dependent disambiguation. ASTs constructed with the
-    constructors in this module are not necessarily normalized.
+(** The representation of contextual LF types, terms, and patterns after
+    parsing and data-dependent disambiguation.
+
+    ASTs constructed with the constructors in this module are not necessarily
+    normalized.
 
     The distinction between contextual LF objects and plain LF objects is
     that contextual LF objects may have substitutions, and may appear in
     patterns.
 
     These types are suited for pretty-printing and elaboration to the
-    internal syntax. Note that this is a named representation. *)
+    internal syntax. Note that this is a named representation.
+
+    The metavariable:
+
+    - [x] ranges over variables
+    - [c] ranges over term-level constants
+    - [a] ranges over type-level constants
+    - [s] ranges over substitutions
+    - [g] ranges over context schemas
+    - [id] ranges over identifiers
+    - [#] ranges over integers
+
+    {[
+      Types           A, B ::= a | Πx:A.B | A → B | A M1 M2 ... Mn
+                                 | block (x1:A1, x2:A2, ..., xn:An)
+      Terms           M, N ::= c | x | λx:A.M | M N1 N2 ... Nn | M:A | M[σ]
+                                 | _ | ? | ?id | <M1; M2; ...; Mn> | M.# | M.id
+      Substitutions   σ    ::= ^ | … | σ, M | s[σ]
+      Contexts        Ψ    ::= ^ | g | Ψ, x:A
+
+      Type patterns           Ap, Bp ::= a | Πx:A.Bp | A → Bp
+                                           | Ap Mp1 Mp2 ... Mpn
+                                           | block (x1:A1, x2:A2, ..., xn:An)
+      Term patterns           Mp, Np ::= c | x | λx:A.Mp | Mp Np1 Np2 ... Npn
+                                           | Mp:A | Mp[σ] | _
+                                           | <Mp1; Mp2; ...; Mpn> | Mp.# | Mp.id
+      Substitution patterns   σp     ::= ^ | … | σp, Mp | s[σ]
+      Context patterns        Ψp     ::= ^ | g | Ψp, x:Ap
+    ]} *)
 module CLF = struct
   (** External contextual LF types. *)
   module rec Typ : sig
@@ -254,7 +302,7 @@ module CLF = struct
                   [List.length arguments = 1]. *)
         | Arrow of
             { location : Location.t
-            ; domain : Typ.Pattern.t
+            ; domain : Typ.t
             ; range : Typ.Pattern.t
             ; orientation : [ `Forward | `Backward ]
             }
@@ -336,7 +384,8 @@ module CLF = struct
               `\x. body'. *)
       | Hole of
           { location : Location.t
-          ; variant : [ `Underscore | `Unlabelled | `Labelled of Identifier.t ]
+          ; variant :
+              [ `Underscore | `Unlabelled | `Labelled of Identifier.t ]
           }
           (** [Hole { variant; _ }] is the omission of a term for
               reconstruction.
@@ -547,42 +596,7 @@ module CLF = struct
   end =
     Context
 
-  and Schema : sig
-    type t =
-      | Constant of
-          { location : Location.t
-          ; identifier : QualifiedIdentifier.t
-          }
-          (** [Constant { identifier; _ }] is the schema having identifier
-              `identifier' declared elsewhere in the signature.
-
-              A tuple term has a block type `t' matching against this schema
-              if `t' matches against the schema referred to as `identifier'. *)
-      | Alternation of
-          { location : Location.t
-          ; schemas : Schema.t List2.t
-          }
-          (** [Alternation { schemas; _ }] is the schema `s1 + s2 + ... + sn'
-              if [schemas = \[s1; s2; ...; sn\]].
-
-              A tuple term has a block type `t' matching against this schema
-              if `t' matches against at least one of `s1', `s2', ..., `sn'. *)
-      | Element of
-          { location : Location.t
-          ; some : (Identifier.t * Typ.t) List1.t Option.t
-          ; block :
-              [ `Unnamed of Typ.t
-              | `Record of (Identifier.t * Typ.t) List1.t
-              ]
-          }
-          (** [Element { some = p; block = q; _ }] is the schema `some [p]
-              block (q)'.
-
-              A tuple term has a block type `t' matching against this schema
-              if there exist terms having types in `p' in the context, and if
-              the elements in `t' match against those in `q'. *)
-  end =
-    Schema
+  (** {2 Locations} *)
 
   let location_of_typ typ =
     match typ with
@@ -639,6 +653,256 @@ module CLF = struct
     | Term.Pattern.Substitution { location; _ }
     | Term.Pattern.Application { location; _ }
     | Term.Pattern.TypeAnnotated { location; _ } -> location
+end
+
+(** {1 External Meta-Syntax} *)
+
+(** The representation of meta-types, meta-objects, meta-object patterns,
+    meta-substitutions and meta-contexts after parsing and data-dependent
+    disambiguation.
+
+    ASTs constructed with the constructors in this module are not necessarily
+    normalized.
+
+    These types are suited for pretty-printing and elaboration to the
+    internal syntax. Note that this is a named representation.
+
+    The metavariable:
+
+    - [X] ranges over meta-variables
+    - [g] ranges over context schemas
+
+    {[
+      Meta-Types           U ::= g | Ψ ⊢ A | Ψ ⊢ Ψ | Ψ #⊢ Ψ
+      Meta-Objects         C ::= Ψ | Ψ ⊢ M | Ψ ⊢ σ | Ψ #⊢ σ
+      Meta-Substitutions   θ ::= ^ | θ, C/X
+      Meta-Contexts        Δ ::= ^ | Δ, X:U
+      Schemas              G ::= g | G + G | some [x1:A1, x2:A2, ..., xn:An] block (y1:B1, y2:B2, ..., ym:Bm)
+    ]} *)
+module Meta = struct
+  (** External meta-types. *)
+  module rec Typ : sig
+    type t =
+      | Context_schema_constant of
+          { location : Location.t
+          ; identifier : QualifiedIdentifier.t
+          }
+          (** [Context_schema_constant { identifier; _ }] is the context
+              schema `identifier'. *)
+      | Contextual_typ of
+          { location : Location.t
+          ; context : CLF.Context.t
+          ; typ : CLF.Typ.t
+          }
+          (** [Contextual_typ { context; typ; _ }] is the contextual type
+              `context |- typ'. *)
+      | Plain_substitution_typ of
+          { location : Location.t
+          ; domain : CLF.Context.t
+          ; range : CLF.Context.t
+          }
+          (** [Plain_substitution_typ { domain; range; _ }] is the type for
+              the plain substitution `domain |- range'. *)
+      | Renaming_substitution_typ of
+          { location : Location.t
+          ; domain : CLF.Context.t
+          ; range : CLF.Context.t
+          }
+          (** [Renaming_substitution_typ { domain; range; _ }] is the type
+              for the renaming substitution `domain #|- range'. *)
+
+    module Pattern : sig
+      type t =
+        | Contextual_typ of
+            { location : Location.t
+            ; context : CLF.Context.t
+            ; typ : Typ.Pattern.t
+            }
+            (** [Contextual_typ { context; typ; _ }] is the contextual type
+                pattern `context |- typ'. *)
+        | Plain_substitution_typ of
+            { location : Location.t
+            ; domain : CLF.Context.t
+            ; range : CLF.Context.Pattern.t
+            }
+            (** [Plain_substitution_typ { domain; range; _ }] is the plain
+                substitution type pattern `domain |- range'. *)
+        | Renaming_substitution_typ of
+            { location : Location.t
+            ; domain : CLF.Context.t
+            ; range : CLF.Context.Pattern.t
+            }
+            (** [Renaming_substitution_typ { domain; range; _ }] is the
+                renaming substitution type pattern `domain #|- range'. *)
+    end
+  end =
+    Typ
+
+  (** External meta-objects. *)
+  and Object : sig
+    type t =
+      | Context of
+          { location : Location.t
+          ; context : CLF.Context.t
+          }
+          (** [Context { context; _ }] is the context meta-object `context'. *)
+      | Contextual_term of
+          { location : Location.t
+          ; context : CLF.Context.t
+          ; term : CLF.Term.t
+          }
+          (** [Contextual_term { context; term; _ }] is the contextual term
+              `context |- term'. *)
+      | Plain_substitution of
+          { location : Location.t
+          ; domain : CLF.Context.t
+          ; range : CLF.Substitution.t
+          }
+          (** [Plain_substitution { domain; range; _ }] is the plain
+              substitution `domain |- range'. *)
+      | Renaming_substitution of
+          { location : Location.t
+          ; domain : CLF.Context.t
+          ; range : CLF.Substitution.t
+          }
+          (** [Renaming_substitution { domain; range; _ }] is the renaming
+              substitution `domain #|- range'. *)
+
+    (** External meta-object patterns. *)
+    module Pattern : sig
+      type t =
+        | Context of
+            { location : Location.t
+            ; context : CLF.Context.Pattern.t
+            }
+            (** [Context { context; _ }] is the context meta-object pattern
+                `context'. *)
+        | Contextual_term of
+            { location : Location.t
+            ; context : CLF.Context.Pattern.t
+            ; term : CLF.Term.Pattern.t
+            }
+            (** [Contextual_term { context; term; _ }] is the contextual term
+                pattern `context |- term'. *)
+        | Plain_substitution of
+            { location : Location.t
+            ; domain : CLF.Context.Pattern.t
+            ; range : CLF.Substitution.Pattern.t
+            }
+            (** [Plain_substitution { domain; range; _ }] is the plain
+                substitution pattern `domain |- range'. *)
+        | Renaming_substitution of
+            { location : Location.t
+            ; domain : CLF.Context.Pattern.t
+            ; range : CLF.Substitution.Pattern.t
+            }
+            (** [Renaming_substitution { domain; range; _ }] is the renaming
+                substitution pattern `domain #|- range'. *)
+    end
+  end =
+    Object
+
+  (** External meta-substitutions. *)
+  and Substitution : sig
+    (** [{ Substitution.objects; _ }] is the meta-context
+
+        - `^' if [objects = \[\]]
+        - `m1, m2, ..., mn' if [objects = \[m1; m2; ...; mn\]] *)
+    type t =
+      { location : Location.t
+      ; objects : Object.t List.t
+      }
+  end =
+    Substitution
+
+  (** External meta-contexts. *)
+  and Context : sig
+    (** [{ Context.typings; _ }] is the meta-context
+
+        - `^' if [typings = \[\]]
+        - `x1:a1, x2:a2, ..., xn:an' if
+          [typings = \[("x1", a1); ("x2", a2); ...; ("xn", an)\]] *)
+    type t =
+      { location : Location.t
+      ; typings : (Identifier.t * Typ.t) List.t
+      }
+  end =
+    Context
+
+  (** External context schemas. *)
+  and Schema : sig
+    type t =
+      | Constant of
+          { location : Location.t
+          ; identifier : QualifiedIdentifier.t
+          }
+          (** [Constant { identifier; _ }] is the schema having identifier
+              `identifier' declared elsewhere in the signature.
+
+              A tuple term has a block type `t' matching against this schema
+              if `t' matches against the schema referred to as `identifier'. *)
+      | Alternation of
+          { location : Location.t
+          ; schemas : Schema.t List2.t
+          }
+          (** [Alternation { schemas; _ }] is the schema `g1 + g2 + ... + gn'
+              if [schemas = \[g1; g2; ...; gn\]].
+
+              A tuple term has a block type `t' matching against this schema
+              if `t' matches against at least one of `g1', `g2', ..., `gn'. *)
+      | Element of
+          { location : Location.t
+          ; some : (Identifier.t * CLF.Typ.t) List1.t Option.t
+          ; block :
+              [ `Unnamed of CLF.Typ.t
+              | `Record of (Identifier.t * CLF.Typ.t) List1.t
+              ]
+          }
+          (** [Element { some = p; block = q; _ }] is the schema `some [p]
+              block (q)'.
+
+              A tuple term has a block type `t' matching against this schema
+              if there exist terms having types in `p' in the context, and if
+              the elements in `t' match against those in `q'. *)
+  end =
+    Schema
+
+  (** {2 Locations} *)
+
+  let location_of_meta_type meta_type =
+    match meta_type with
+    | Typ.Context_schema_constant { location; _ }
+    | Typ.Contextual_typ { location; _ }
+    | Typ.Plain_substitution_typ { location; _ }
+    | Typ.Renaming_substitution_typ { location; _ } -> location
+
+  let location_of_meta_type_pattern meta_type_pattern =
+    match meta_type_pattern with
+    | Typ.Pattern.Contextual_typ { location; _ }
+    | Typ.Pattern.Plain_substitution_typ { location; _ }
+    | Typ.Pattern.Renaming_substitution_typ { location; _ } -> location
+
+  let location_of_meta_object meta_object =
+    match meta_object with
+    | Object.Context { location; _ }
+    | Object.Contextual_term { location; _ }
+    | Object.Plain_substitution { location; _ }
+    | Object.Renaming_substitution { location; _ } -> location
+
+  let location_of_meta_object_pattern meta_object_pattern =
+    match meta_object_pattern with
+    | Object.Pattern.Context { location; _ }
+    | Object.Pattern.Contextual_term { location; _ }
+    | Object.Pattern.Plain_substitution { location; _ }
+    | Object.Pattern.Renaming_substitution { location; _ } -> location
+
+  let location_of_substitution substitution =
+    match substitution with
+    | Substitution.{ location; _ } -> location
+
+  let location_of_context context =
+    match context with
+    | Context.{ location; _ } -> location
 
   let location_of_schema schema =
     match schema with

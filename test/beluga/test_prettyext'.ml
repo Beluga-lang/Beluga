@@ -271,7 +271,7 @@ let test_pp_kind =
       ~printer:
         Fun.(
           Synext'_json.LF.of_kind
-          >> Format.stringify Yojson.Safe.pretty_print)
+          >> Format.stringify (Yojson.Safe.pretty_print ~std:true))
       ~cmp:LF.Kind.equal kind kind'
   in
   let test_cases =
@@ -308,7 +308,8 @@ let test_pp_type =
     OUnit2.assert_equal
       ~printer:
         Fun.(
-          Synext'_json.LF.of_typ >> Format.stringify Yojson.Safe.pretty_print)
+          Synext'_json.LF.of_typ
+          >> Format.stringify (Yojson.Safe.pretty_print ~std:true))
       ~cmp:LF.Typ.equal typ typ'
   in
   let test_cases =
@@ -371,7 +372,7 @@ let test_pp_term =
       ~printer:
         Fun.(
           Synext'_json.LF.of_term
-          >> Format.stringify Yojson.Safe.pretty_print)
+          >> Format.stringify (Yojson.Safe.pretty_print ~std:true))
       ~cmp:LF.Term.equal term term'
   in
   let test_cases =

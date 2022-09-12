@@ -1147,72 +1147,72 @@ end = struct
          LF.Object.RawApplication { location; objects = List2.from o1 o2 os })
     |> labelled "LF atomic or application object"
 
-
   let lf_object3 =
+    (* Forward arrows are right-associative, and backward arrows are
+       left-associative. Forward and backward arrows have the same
+       precedence. Mixing forward and backward arrows at the same precedence
+       level is ambiguous. That is, [a -> b <- c] could be parsed as
+       [a -> (b <- c)] when parsed from left to right, or as [(a -> b) <- c]
+       when parsed from right to left. *)
     let forward_arrow = token Token.ARROW $> fun () -> `Forward_arrow
     and backward_arrow = token Token.BACKARROW $> fun () -> `Backward_arrow
     and right_operand = alt lf_object4 weak_prefix in
-    lf_object4
-    >>= fun object_ ->
-      maybe (alt forward_arrow backward_arrow)
-      >>= (function
-            | Option.None -> return (`Singleton object_)
-            | Option.Some `Forward_arrow -> (
-              let backward_arrow =
-                token Token.BACKARROW
-                >>= fun () ->
-                  fail Ambiguous_backward_arrow
-              and forward_arrow = token Token.ARROW in
-              let operator = alt backward_arrow forward_arrow in
-              seq2 right_operand (many (operator &> right_operand))
-              $> fun (x, xs) ->
-                `Forward_arrows (List1.from object_ (x :: xs))
-              )
-            | Option.Some `Backward_arrow -> (
-              let backward_arrow = token Token.BACKARROW
-              and forward_arrow =
-                token Token.ARROW
-                >>= fun () ->
-                  fail Ambiguous_forward_arrow
-              in
-              let operator = alt forward_arrow backward_arrow in
-              seq2 right_operand (many (operator &> right_operand))
-              $> fun (x, xs) ->
-                `Backward_arrows (List1.from object_ (x :: xs))))
+    lf_object4 >>= fun object_ ->
+    maybe (alt forward_arrow backward_arrow)
+    >>= (function
+          | Option.None -> return (`Singleton object_)
+          | Option.Some `Forward_arrow ->
+            (* A forward arrow was parsed. Subsequent backward arrows are
+               ambiguous. *)
+            let backward_arrow =
+              token Token.BACKARROW >>= fun () ->
+              fail Ambiguous_backward_arrow
+            and forward_arrow = token Token.ARROW in
+            let operator = alt backward_arrow forward_arrow in
+            seq2 right_operand (many (operator &> right_operand))
+            $> fun (x, xs) -> `Forward_arrows (List1.from object_ (x :: xs))
+          | Option.Some `Backward_arrow ->
+            (* A backward arrow was parsed. Subsequent forward arrows are
+               ambiguous. *)
+            let backward_arrow = token Token.BACKARROW
+            and forward_arrow =
+              token Token.ARROW >>= fun () -> fail Ambiguous_forward_arrow
+            in
+            let operator = alt forward_arrow backward_arrow in
+            seq2 right_operand (many (operator &> right_operand))
+            $> fun (x, xs) -> `Backward_arrows (List1.from object_ (x :: xs)))
     $> (function
-       | `Singleton x -> x
-       | `Forward_arrows xs ->
-         List1.fold_right Fun.id
-         (fun operand accumulator ->
-           let location =
-             Location.join
-               (LF.location_of_object operand)
-               (LF.location_of_object accumulator)
-           in
-           LF.Object.RawArrow
-             { location
-             ; domain = operand
-             ; range = accumulator
-             ; orientation = `Forward
-             })
-         xs
-       | `Backward_arrows (List1.T (x, xs)) ->
-         List.fold_left
-           (fun accumulator operand ->
-             let location =
-               Location.join
-                 (LF.location_of_object accumulator)
-                 (LF.location_of_object operand)
-             in
-             LF.Object.RawArrow
-               { location
-               ; domain = operand
-               ; range = accumulator
-               ; orientation = `Backward
-               })
-           x
-           xs
-       )
+         | `Singleton x -> x
+         | `Forward_arrows xs ->
+           List1.fold_right Fun.id
+             (fun operand accumulator ->
+               let location =
+                 Location.join
+                   (LF.location_of_object operand)
+                   (LF.location_of_object accumulator)
+               in
+               LF.Object.RawArrow
+                 { location
+                 ; domain = operand
+                 ; range = accumulator
+                 ; orientation = `Forward
+                 })
+             xs
+         | `Backward_arrows (List1.T (x, xs)) ->
+           List.fold_left
+             (fun accumulator operand ->
+               let location =
+                 Location.join
+                   (LF.location_of_object accumulator)
+                   (LF.location_of_object operand)
+               in
+               LF.Object.RawArrow
+                 { location
+                 ; domain = operand
+                 ; range = accumulator
+                 ; orientation = `Backward
+                 })
+             x xs)
     |> labelled
          "LF atomic, application, annotated, forward arrow or backward \
           arrow object"
@@ -1569,72 +1569,74 @@ end = struct
       ]
 
   let clf_object3 =
+    (* Forward arrows are right-associative, and backward arrows are
+       left-associative. Forward and backward arrows have the same
+       precedence. Mixing forward and backward arrows at the same precedence
+       level is ambiguous. That is, [a -> b <- c] could be parsed as
+       [a -> (b <- c)] when parsed from left to right, or as [(a -> b) <- c]
+       when parsed from right to left. *)
     let forward_arrow = token Token.ARROW $> fun () -> `Forward_arrow
     and backward_arrow = token Token.BACKARROW $> fun () -> `Backward_arrow
     and right_operand = alt clf_object4 weak_prefix in
-    clf_object4
-    >>= fun object_ ->
-      maybe (alt forward_arrow backward_arrow)
-      >>= (function
-            | Option.None -> return (`Singleton object_)
-            | Option.Some `Forward_arrow -> (
-              let backward_arrow =
-                token Token.BACKARROW
-                >>= fun () ->
-                  fail Ambiguous_backward_arrow
-              and forward_arrow = token Token.ARROW in
-              let operator = alt backward_arrow forward_arrow in
-              seq2 right_operand (many (operator &> right_operand))
-              $> fun (x, xs) ->
-                `Forward_arrows (List1.from object_ (x :: xs))
-              )
-            | Option.Some `Backward_arrow -> (
-              let backward_arrow = token Token.BACKARROW
-              and forward_arrow =
-                token Token.ARROW
-                >>= fun () ->
-                  fail Ambiguous_forward_arrow
-              in
-              let operator = alt forward_arrow backward_arrow in
-              seq2 right_operand (many (operator &> right_operand))
-              $> fun (x, xs) ->
-                `Backward_arrows (List1.from object_ (x :: xs))))
+    clf_object4 >>= fun object_ ->
+    maybe (alt forward_arrow backward_arrow)
+    >>= (function
+          | Option.None -> return (`Singleton object_)
+          | Option.Some `Forward_arrow ->
+            (* A forward arrow was parsed. Subsequent backward arrows are
+               ambiguous. *)
+            let backward_arrow =
+              token Token.BACKARROW >>= fun () ->
+              fail Ambiguous_backward_arrow
+            and forward_arrow = token Token.ARROW in
+            let operator = alt backward_arrow forward_arrow in
+            seq2 right_operand (many (operator &> right_operand))
+            $> fun (x, xs) -> `Forward_arrows (List1.from object_ (x :: xs))
+          | Option.Some `Backward_arrow ->
+            (* A backward arrow was parsed. Subsequent forward arrows are
+               ambiguous. *)
+            let backward_arrow = token Token.BACKARROW
+            and forward_arrow =
+              token Token.ARROW >>= fun () -> fail Ambiguous_forward_arrow
+            in
+            let operator = alt forward_arrow backward_arrow in
+            seq2 right_operand (many (operator &> right_operand))
+            $> fun (x, xs) -> `Backward_arrows (List1.from object_ (x :: xs)))
     $> (function
-       | `Singleton x -> x
-       | `Forward_arrows xs ->
-         List1.fold_right Fun.id
-         (fun operand accumulator ->
-           let location =
-             Location.join
-               (CLF.location_of_object operand)
-               (CLF.location_of_object accumulator)
-           in
-           CLF.Object.RawArrow
-             { location
-             ; domain = operand
-             ; range = accumulator
-             ; orientation = `Forward
-             })
-         xs
-       | `Backward_arrows (List1.T (x, xs)) ->
-         List.fold_left
-           (fun accumulator operand ->
-             let location =
-               Location.join
-                 (CLF.location_of_object accumulator)
-                 (CLF.location_of_object operand)
-             in
-             CLF.Object.RawArrow
-               { location
-               ; domain = operand
-               ; range = accumulator
-               ; orientation = `Backward
-               })
-           x
-           xs
-       )
-    |> labelled "Contextual LF atomic, application, annotated, forward arrow or backward arrow object"
-
+         | `Singleton x -> x
+         | `Forward_arrows xs ->
+           List1.fold_right Fun.id
+             (fun operand accumulator ->
+               let location =
+                 Location.join
+                   (CLF.location_of_object operand)
+                   (CLF.location_of_object accumulator)
+               in
+               CLF.Object.RawArrow
+                 { location
+                 ; domain = operand
+                 ; range = accumulator
+                 ; orientation = `Forward
+                 })
+             xs
+         | `Backward_arrows (List1.T (x, xs)) ->
+           List.fold_left
+             (fun accumulator operand ->
+               let location =
+                 Location.join
+                   (CLF.location_of_object accumulator)
+                   (CLF.location_of_object operand)
+               in
+               CLF.Object.RawArrow
+                 { location
+                 ; domain = operand
+                 ; range = accumulator
+                 ; orientation = `Backward
+                 })
+             x xs)
+    |> labelled
+         "Contextual LF atomic, application, annotated, forward arrow or \
+          backward arrow object"
 
   let clf_object2 =
     let annotation =

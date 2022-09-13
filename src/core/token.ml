@@ -24,6 +24,7 @@ type t =
   | SEMICOLON (* ; *)
   | PIPE (* | *)
   | TURNSTILE (* |- *)
+  | HASH_TURNSTILE (* #|- *)
   | DOTS (* .. *)
   | BACKARROW (* <- *)
   | ARROW (* -> *)
@@ -128,6 +129,7 @@ include (Show.Make (struct
     | SEMICOLON -> p ";"
     | PIPE -> p "|"
     | TURNSTILE -> p "|-"
+    | HASH_TURNSTILE -> p "#|-"
     | DOTS -> p ".."
     | BACKARROW -> p "<-"
     | ARROW -> p "->"
@@ -215,6 +217,7 @@ module Class = struct
       | SEMICOLON -> p "SEMICOLON"
       | PIPE -> p "PIPE"
       | TURNSTILE -> p "TURNSTILE"
+      | HASH_TURNSTILE -> p "HASH_TURNSTILE"
       | DOTS -> p "DOTS"
       | BACKARROW -> p "BACKARROW"
       | ARROW -> p "ARROW"

@@ -19,6 +19,7 @@ type t =
   | SEMICOLON (** ; *)
   | PIPE (** | *)
   | TURNSTILE (** |- *)
+  | HASH_TURNSTILE (** #|- *)
   | DOTS (** .. *)
   | BACKARROW (** <- *)
   | ARROW (** -> *)

@@ -912,20 +912,37 @@ let bracketed start stop p =
     `b` whose results are ignored. *)
 let bracketed' b p = bracketed b b p
 
-(** [parens p] parses [`(` p `)`]. *)
-let parens p = bracketed (token Token.LPAREN) (token Token.RPAREN) p
+(** [parens p] parses [`(' p `)']. *)
+let parens p =
+  bracketed (token Token.LPAREN) (token Token.RPAREN) p
 
-(** [braces p] parses [`{` p `}`]. *)
-let braces p = bracketed (token Token.LBRACE) (token Token.RBRACE) p
+(** [braces p] parses [`{' p `}']. *)
+let braces p =
+  bracketed (token Token.LBRACE) (token Token.RBRACE) p
 
-(** [bracks p] parses [`[` p `]`]. *)
-let[@warning "-32"] bracks p = bracketed (token Token.LBRACK) (token Token.RBRACK) p
+(** [bracks p] parses [`[' p `]']. *)
+let[@warning "-32"] bracks p =
+  bracketed (token Token.LBRACK) (token Token.RBRACK) p
 
-(** [angles p] parses [`<` p `>`]. *)
-let[@warning "-32"] angles p = bracketed (token Token.LANGLE) (token Token.RANGLE) p
+(** [angles p] parses [`<' p `>']. *)
+let[@warning "-32"] angles p =
+  bracketed (token Token.LANGLE) (token Token.RANGLE) p
 
-(** Helper for parsing something *optionally* between parens. *)
-let opt_parens p = alt (parens p) p
+(** [opt_parens p] parses [`(' p `)' | p]. *)
+let opt_parens p =
+  alt (parens p) p
+
+(** [opt_braces p] parses [`{' p `}' | p]. *)
+let[@warning "-32"] opt_braces p =
+  alt (braces p) p
+
+(** [opt_bracks p] parses [`[' p `]' | p]. *)
+let[@warning "-32"] opt_bracks p =
+  alt (bracks p) p
+
+(** [opt_angles p] parses [`<' p `>' | p]. *)
+let[@warning "-32"] opt_angles p =
+  alt (angles p) p
 
 (** Parses p and requires that the input stream be finished. *)
 let only p = p <& eoi

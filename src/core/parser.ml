@@ -1014,6 +1014,13 @@ let qualified_or_plain_identifier =
        let (modules, identifier) = List1.unsnoc identifiers in
        `Qualified (QualifiedIdentifier.make ~location ~modules identifier)
 
+let hole =
+  satisfy' (`hole Option.none) (function
+    | Token.HOLE "" -> Option.some `Unlabelled
+    | Token.HOLE s -> Option.some (`Labelled s)
+    | _ -> Option.none)
+  |> labelled "hole"
+
 module rec LF_parsers : sig
   val lf_object : LF.Object.t t
 end = struct
@@ -1441,16 +1448,12 @@ end = struct
          )
       |> labelled "Contextual LF hole object"
     and possibly_labelled_hole =
-      satisfy' (`hole Option.none)
-        (function
-         | Token.HOLE "" -> Option.some Option.none
-         | Token.HOLE s -> Option.some (Option.some s)
-         | _ -> Option.none)
+      hole
       |> span
       $> (function
-         | (location, Option.None) ->
+         | (location, `Unlabelled) ->
            CLF.Object.RawHole { location; variant = `Unlabelled }
-         | (location, Option.Some label) ->
+         | (location, `Labelled label) ->
            CLF.Object.RawHole
              { location
              ; variant = `Labelled (Identifier.make ~location label)
@@ -1678,14 +1681,6 @@ end = struct
     |> labelled "Contextual LF object"
 end
 
-let hole : string option parser =
-  satisfy' (`hole Option.none)
-    (function
-     | Token.HOLE "" -> Option.some Option.none
-     | Token.HOLE s -> Option.some (Option.some s)
-     | _ -> Option.none)
-  |> labelled "hole"
-
 let clf_ctyp_decl_bare = Obj.magic ()
 
 let mctx ?(sep = token Token.COMMA) p =
@@ -1850,7 +1845,10 @@ end = struct
       hole
       |> span
       |> labelled "Harpoon incomplete proof `?'"
-      $> fun (loc, h) -> Comp.Incomplete (loc, h)
+      $> (function
+         | (loc, `Unlabelled) -> Comp.Incomplete (loc, Option.none)
+         | (loc, `Labelled label) -> Comp.Incomplete (loc, Option.some label)
+         )
     in
     let command_proof =
       seq2

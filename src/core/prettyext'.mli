@@ -25,8 +25,6 @@ module CLF : sig
 
   val pp_context : Format.formatter -> Context.t -> Unit.t
 
-  val pp_typ_pattern : Format.formatter -> Typ.Pattern.t -> Unit.t
-
   val pp_term_pattern : Format.formatter -> Term.Pattern.t -> Unit.t
 
   val pp_substitution_pattern :

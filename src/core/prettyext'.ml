@@ -459,8 +459,6 @@ module CLF = struct
 
     val of_term : Term.t -> t
 
-    val of_typ_pattern : Typ.Pattern.t -> t
-
     val of_term_pattern : Term.Pattern.t -> t
 
     include Ord.ORD with type t := t
@@ -504,25 +502,6 @@ module CLF = struct
       | Term.Projection _ -> Static 7
       | Term.Variable _ | Term.Constant _ | Term.Hole _ | Term.Tuple _ ->
         Static 8
-
-    let of_typ_pattern typ =
-      match typ with
-      | Typ.Pattern.Pi _ -> Static 1
-      | Typ.Pattern.Arrow _ -> Static 3
-      | Typ.Pattern.Block _ -> Static 4
-      | Typ.Pattern.Application
-          { applicand = Typ.Pattern.Constant { operator; _ }; _ }
-        when Operator.is_prefix operator
-             (* Juxtapositions are of higher precedence than user-defined
-                operators *) -> Static application_precedence
-      | Typ.Pattern.Application
-          { applicand = Typ.Pattern.Constant { operator; quoted = false; _ }
-          ; _
-          }
-      (* User-defined operator application *) ->
-        User_defined (Operator.precedence operator)
-      | Typ.Pattern.Application _ -> Static application_precedence
-      | Typ.Pattern.Constant _ -> Static 8
 
     let of_term_pattern term =
       match term with
@@ -984,108 +963,7 @@ module CLF = struct
       parenthesize_argument_postfix_operator Precedence.of_term
         ~parent_precedence pp_term ppf argument
 
-  let rec pp_typ_pattern ppf typ =
-    let parent_precedence = Precedence.of_typ_pattern typ in
-    match typ with
-    | Typ.Pattern.Constant { identifier; quoted = true; operator; _ }
-      when Operator.is_nullary operator ->
-      Format.fprintf ppf "%a" QualifiedIdentifier.pp identifier
-    | Typ.Pattern.Constant { identifier; quoted = true; _ } ->
-      Format.fprintf ppf "(%a)" QualifiedIdentifier.pp identifier
-    | Typ.Pattern.Constant { identifier; quoted = false; _ } ->
-      Format.fprintf ppf "%a" QualifiedIdentifier.pp identifier
-    | Typ.Pattern.Application { applicand; arguments = []; _ } ->
-      Format.fprintf ppf "@[<2>%a@]" pp_typ_pattern applicand
-    | Typ.Pattern.Application
-        { applicand =
-            Typ.Pattern.Constant { identifier; operator; quoted = false; _ }
-        ; arguments
-        ; _
-        }
-    (* User-defined type constant application *) -> (
-      match Operator.fixity operator with
-      | Fixity.Prefix ->
-        Format.fprintf ppf "@[<2>%a@ %a@]" QualifiedIdentifier.pp identifier
-          (List.pp
-             ~pp_sep:(fun ppf () -> Format.fprintf ppf "@ ")
-             (parenthesize_argument_prefix_operator
-                Precedence.of_term_pattern ~parent_precedence pp_term_pattern))
-          arguments
-      | Fixity.Infix ->
-        assert (List.length arguments = 2);
-        let[@warning "-8"] [ left_argument; right_argument ] = arguments in
-        pp_infix_operator_application ~parent_precedence identifier operator
-          ~left_argument ~right_argument ppf ()
-      | Fixity.Postfix ->
-        assert (List.length arguments = 1);
-        let[@warning "-8"] [ argument ] = arguments in
-        Format.fprintf ppf "@[<2>%a@ %a@]"
-          (pp_postfix_operator_argument ~parent_precedence)
-          argument QualifiedIdentifier.pp identifier)
-    | Typ.Pattern.Application { applicand; arguments; _ }
-    (* Arbitrary type application *) ->
-      Format.fprintf ppf "@[<2>%a@ %a@]"
-        (parenthesize_argument_prefix_operator Precedence.of_typ_pattern
-           ~parent_precedence pp_typ_pattern)
-        applicand
-        (List.pp
-           ~pp_sep:(fun ppf () -> Format.fprintf ppf "@ ")
-           (parenthesize_argument_prefix_operator Precedence.of_term_pattern
-              ~parent_precedence pp_term_pattern))
-        arguments
-    | Typ.Pattern.Block { elements = `Unnamed typ; _ } ->
-      Format.fprintf ppf "@[<2>block (%a)]" pp_typ typ
-    | Typ.Pattern.Block { elements = `Record nts; _ } ->
-      Format.fprintf ppf "@[<2>block (%a)]"
-        (List1.pp
-           ~pp_sep:(fun ppf () -> Format.fprintf ppf ",@ ")
-           (fun ppf (i, t) ->
-             Format.fprintf ppf "%a@ :@ %a" Identifier.pp i pp_typ t))
-        nts
-    | Typ.Pattern.Arrow { domain; range; orientation = `Forward; _ } ->
-      (* Forward arrows are right-associative and of equal precedence with
-         backward arrows *)
-      Format.fprintf ppf "@[<2>%a@ ->@ %a@]"
-        (match domain with
-        | Typ.Arrow { orientation = `Backward; _ } -> parenthesize pp_typ
-        | _ ->
-          parenthesize_left_argument_right_associative_operator
-            Precedence.of_typ ~parent_precedence pp_typ)
-        domain
-        (match range with
-        | Typ.Pattern.Arrow { orientation = `Backward; _ } ->
-          parenthesize pp_typ_pattern
-        | _ ->
-          parenthesize_right_argument_right_associative_operator
-            Precedence.of_typ_pattern ~parent_precedence pp_typ_pattern)
-        range
-    | Typ.Pattern.Arrow { range; domain; orientation = `Backward; _ } ->
-      (* Backward arrows are left-associative and of equal precedence with
-         forward arrows *)
-      Format.fprintf ppf "@[<2>%a@ <-@ %a@]"
-        (match range with
-        | Typ.Pattern.Arrow { orientation = `Forward; _ } ->
-          parenthesize pp_typ_pattern
-        | _ ->
-          parenthesize_left_argument_left_associative_operator
-            Precedence.of_typ_pattern ~parent_precedence pp_typ_pattern)
-        range
-        (match domain with
-        | Typ.Arrow { orientation = `Forward; _ } -> parenthesize pp_typ
-        | _ ->
-          parenthesize_right_argument_left_associative_operator
-            Precedence.of_typ ~parent_precedence pp_typ)
-        domain
-    | Typ.Pattern.Pi { parameter_identifier; parameter_type; body; _ } ->
-      (* Pis are weak prefix operators *)
-      Format.fprintf ppf "@[<2>{@ %a@ :@ %a@ }@ %a@]"
-        (fun ppf -> function
-          | Option.Some parameter_identifier ->
-            Identifier.pp ppf parameter_identifier
-          | Option.None -> Format.fprintf ppf "_")
-        parameter_identifier pp_typ parameter_type pp_typ_pattern body
-
-  and pp_term_pattern ppf term =
+  let rec pp_term_pattern ppf term =
     let parent_precedence = Precedence.of_term_pattern term in
     match term with
     | Term.Pattern.Variable { identifier; _ } ->
@@ -1395,7 +1273,7 @@ module CLF = struct
 
   and pp_context_pattern ppf context_pattern =
     let pp_typing ppf (i, t) =
-      Format.fprintf ppf "%a@ :@ %a" Identifier.pp i pp_typ_pattern t
+      Format.fprintf ppf "%a@ :@ %a" Identifier.pp i pp_typ t
     in
     match context_pattern with
     | Context.Pattern.{ head = Context.Pattern.Head.None; typings = []; _ }

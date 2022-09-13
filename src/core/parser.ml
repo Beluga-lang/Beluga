@@ -1266,14 +1266,20 @@ end
 
 module rec CLF_parsers : sig
   val clf_object : CLF.Object.t t
+  val substitution_object : CLF.Substitution.t t
+  val context_object : CLF.Context.t t
 end = struct
   (*=
       Original grammar:
 
-      <substitution> ::=
+      <substitution-object> ::=
         | [`^']
         | `..'
         | `[`..' `,'] <clf-object> (`,' <clf-object>)*
+
+      <context-object> ::=
+        | [`^']
+        | [<identifier> `:'] <clf-object> (`,' [<identifier> `:'] <clf-object>)*
 
       <clf-object> ::=
         | `{' <omittable-identifier> `:' <clf-object> `}' <clf-object>
@@ -1286,7 +1292,7 @@ end = struct
         | `block' `(' <clf-type> `)'
         | `block' <clf-type>
         | <clf-object> <clf-object>
-        | <clf-object> `[' <substitution> `]'
+        | <clf-object> `[' <substitution-object> `]'
         | <clf-object>`.'<identifier>
         | <clf-object>`.'<integer>
         | `_'
@@ -1302,10 +1308,14 @@ end = struct
       Weak prefix operators (lambdas and Pis) may appear without parentheses
       as the rightmost operand of an operator.
 
-      <substitution> ::=
+      <substitution-object> ::=
         | [`^']
         | `..'
         | [`..' `,'] <clf-object> (`,' <clf-object>)*
+
+      <context-object> ::=
+        | [`^']
+        | [<identifier> `:'] <clf-object> (`,' [<identifier> `:'] <clf-object>)*
 
       <weak-prefix> ::=
         | `{' <omittable-identifier> [`:' <lf-object>] `}' <lf-object>
@@ -1339,7 +1349,7 @@ end = struct
         | <clf-object6>
 
       <clf-object6> ::=
-        | <clf-object7> (`[' <substitution> `]')+
+        | <clf-object7> (`[' <substitution-object> `]')+
         | <clf-object7>
 
       <clf-object7> ::=
@@ -1384,7 +1394,7 @@ end = struct
       ; pi
       ]
 
-  let substitution =
+  let substitution_object =
     let empty =
       token Token.HAT
     and identity_extension =
@@ -1402,19 +1412,9 @@ end = struct
       )
     |> span
     $> (function
-       | (location, Option.None) ->
+       | (location, (Option.None | Option.Some `Empty)) ->
          { CLF.Substitution.location
          ; head = CLF.Substitution.Head.None
-         ; objects = []
-         }
-       | (location, Option.Some `Empty) ->
-         { CLF.Substitution.location
-         ; head = CLF.Substitution.Head.None
-         ; objects = []
-         }
-       | (location, Option.Some (`Identity_extension [])) ->
-         { CLF.Substitution.location
-         ; head = CLF.Substitution.Head.Identity { location }
          ; objects = []
          }
        | (location, Option.Some (`Identity_extension objects)) ->
@@ -1429,6 +1429,29 @@ end = struct
          }
        )
     |> labelled "Contextual LF substitution"
+
+  let context_object : CLF.Context.t t =
+    let empty =
+      token Token.HAT
+    and non_empty =
+      sep_by1
+        (seq2 (maybe (trying (identifier <& token Token.COLON))) CLF_parsers.clf_object)
+        (token Token.COMMA)
+    in
+    maybe
+      (choice
+        [ empty $> (fun () -> `Empty)
+        ; non_empty $> (fun ts -> `Non_empty ts)
+      ])
+    |> span
+    $> (function
+       | (location, (Option.None | Option.Some `Empty)) ->
+         { CLF.Context.location; objects = [] }
+       | (location, Option.Some (`Non_empty ts)) ->
+         let objects = List1.to_list ts in
+         { CLF.Context.location; objects }
+       )
+    |> labelled "Contextual LF context"
 
   let clf_object8 =
     let constant_or_variable =
@@ -1523,7 +1546,7 @@ end = struct
     |> labelled "Contextual LF atomic or projection object"
 
   let clf_object6 =
-    seq2 clf_object7 (many (bracks substitution))
+    seq2 clf_object7 (many (bracks substitution_object))
     $> (function
        | (object_, []) -> object_
        | (object_, substitutions) ->

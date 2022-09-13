@@ -176,15 +176,8 @@ module CLF = struct
   and Context : sig
     type t =
       { location : Location.t
-      ; head : Context.Head.t
-      ; typings : (Identifier.t * Object.t) List.t
+      ; objects : (Identifier.t Option.t * Object.t) List.t
       }
-
-    module Head : sig
-      type t =
-        | None
-        | Hole of { location : Location.t }
-    end
   end =
     Context
 

@@ -126,8 +126,6 @@ module CLF : sig
 
   val of_typ : Typ.t -> Yojson.Safe.t
 
-  val of_typ_pattern : Typ.Pattern.t -> Yojson.Safe.t
-
   val of_term : Term.t -> Yojson.Safe.t
 
   val of_term_pattern : Term.Pattern.t -> Yojson.Safe.t
@@ -182,64 +180,6 @@ end = struct
     | CLF.Typ.Block { elements; _ } ->
       `List
         [ `String "CLF.Typ.Block"
-        ; `Assoc
-            [ ( "elements"
-              , match elements with
-                | `Unnamed typ -> of_typ typ
-                | `Record typings ->
-                  `List
-                    (typings
-                    |> List1.map (fun (identifier, typ) ->
-                           `Assoc
-                             [ ("identifier", of_identifier identifier)
-                             ; ("typ", of_typ typ)
-                             ])
-                    |> List1.to_list) )
-            ]
-        ]
-
-  and of_typ_pattern typ_pattern =
-    match typ_pattern with
-    | CLF.Typ.Pattern.Constant { identifier; quoted; _ } ->
-      `List
-        [ `String "CLF.Typ.Pattern.Constant"
-        ; `Assoc
-            [ ("identifier", of_qualified_identifier identifier)
-            ; ("quoted", `Bool quoted)
-            ]
-        ]
-    | CLF.Typ.Pattern.Application { applicand; arguments; _ } ->
-      `List
-        [ `String "CLF.Typ.Pattern.Application"
-        ; `Assoc
-            [ ("applicand", of_typ_pattern applicand)
-            ; ("arguments", `List (List.map of_term_pattern arguments))
-            ]
-        ]
-    | CLF.Typ.Pattern.Arrow { domain; range; orientation; _ } ->
-      `List
-        [ `String "CLF.Typ.Pattern.Arrow"
-        ; `Assoc
-            [ ("domain", of_typ domain)
-            ; ("range", of_typ_pattern range)
-            ; ( "orientation"
-              , match orientation with
-                | `Forward -> `String "forward"
-                | `Backward -> `String "backward" )
-            ]
-        ]
-    | CLF.Typ.Pattern.Pi { parameter_identifier; parameter_type; body; _ } ->
-      `List
-        [ `String "CLF.Typ.Pattern.Pi"
-        ; `Assoc
-            [ ("parameter_identifier", of_identifier_opt parameter_identifier)
-            ; ("parameter_type", of_typ parameter_type)
-            ; ("body", of_typ_pattern body)
-            ]
-        ]
-    | CLF.Typ.Pattern.Block { elements; _ } ->
-      `List
-        [ `String "CLF.Typ.Pattern.Block"
         ; `Assoc
             [ ( "elements"
               , match elements with
@@ -507,7 +447,7 @@ end = struct
                      (fun (identifier, typ) ->
                        `Assoc
                          [ ("identifier", of_identifier identifier)
-                         ; ("typ", of_typ_pattern typ)
+                         ; ("typ", of_typ typ)
                          ])
                      typings) )
             ]

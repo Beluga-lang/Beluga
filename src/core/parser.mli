@@ -98,4 +98,6 @@ end
 
 module CLF_parsers : sig
   val clf_object : CLF.Object.t t
+  val substitution_object : CLF.Substitution.t t
+  val context_object : CLF.Context.t t
 end

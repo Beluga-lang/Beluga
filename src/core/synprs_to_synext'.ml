@@ -1996,15 +1996,15 @@ module CLF = struct
     (** The type of operands that may appear during rewriting of prefix,
         infix and postfix operators. *)
     type t =
-      | External_typ_pattern of Synext'.CLF.Typ.Pattern.t
-          (** An elaborated contextual LF type pattern. *)
+      | External_typ of Synext'.CLF.Typ.t
+          (** An elaborated contextual LF type. *)
       | External_term_pattern of Synext'.CLF.Term.Pattern.t
           (** An elaborated contextual LF term pattern. *)
       | Parser_object of Synprs.CLF.Object.t
           (** A contextual LF object that has yet to be elaborated. *)
       | Application of
           { applicand :
-              [ `Typ_pattern of Synprs.CLF.Object.t
+              [ `Typ of Synprs.CLF.Object.t
               | `Term_pattern of Synprs.CLF.Object.t
               ]
           ; arguments : Synprs.CLF.Object.t List.t
@@ -2014,13 +2014,13 @@ module CLF = struct
     (** {1 Destructors} *)
 
     let location = function
-      | External_typ_pattern t -> Synext'.CLF.location_of_typ_pattern t
+      | External_typ t -> Synext'.CLF.location_of_typ t
       | External_term_pattern t -> Synext'.CLF.location_of_term_pattern t
       | Parser_object t -> Synprs.CLF.location_of_object t
       | Application { applicand; arguments } ->
         let applicand_location =
           match applicand with
-          | `Typ_pattern applicand | `Term_pattern applicand ->
+          | `Typ applicand | `Term_pattern applicand ->
             Synprs.CLF.location_of_object applicand
         in
         List.fold_left
@@ -2085,149 +2085,6 @@ module CLF = struct
         Eq.EQ with type t := t)
   end
 
-  (** [disambiguate_as_typ state object_] is [object_] rewritten as a
-      contextual LF type pattern with respect to the elaboration context
-      [state].
-
-      Type pattern applications are rewritten with
-      {!elaborate_application_pattern} using Dijkstra's shunting yard
-      algorithm.
-
-      This function imposes syntactic restrictions on [object_], but does not
-      perform normalization nor validation. To see the syntactic restrictions
-      from LF objects to LF types, see the Beluga language specification.
-
-      Examples of invalid type patterns that may result from this elaboration
-      include:
-
-      - [c x x], where [x] is a free pattern variable *)
-  let rec disambiguate_as_typ_pattern state object_ =
-    match object_ with
-    | Synprs.CLF.Object.RawLambda { location; _ } ->
-      raise @@ Illegal_lambda_type_pattern location
-    | Synprs.CLF.Object.RawAnnotated { location; _ } ->
-      raise @@ Illegal_annotated_type_pattern location
-    | Synprs.CLF.Object.RawPi { location; parameter_sort = Option.None; _ }
-      -> raise @@ Illegal_untyped_pi_type_pattern location
-    | Synprs.CLF.Object.RawTuple { location; _ } ->
-      raise @@ Illegal_tuple_type_pattern location
-    | Synprs.CLF.Object.RawProjection { location; _ } ->
-      raise @@ Illegal_projection_type_pattern location
-    | Synprs.CLF.Object.RawSubstitution { location; _ } ->
-      raise @@ Illegal_substitution_type_pattern location
-    | Synprs.CLF.Object.RawHole { location; variant = `Underscore } ->
-      raise @@ Illegal_wildcard_type_pattern location
-    | Synprs.CLF.Object.RawHole
-        { location; variant = `Unlabelled | `Labelled _ } ->
-      raise @@ Illegal_labellable_hole_type_pattern location
-    | Synprs.CLF.Object.RawIdentifier { location; identifier; quoted } -> (
-      (* As an LF type pattern, plain identifiers are necessarily type-level
-         constants. *)
-      let qualified_identifier =
-        QualifiedIdentifier.make_simple identifier
-      in
-      match Disambiguation_state.lookup qualified_identifier state with
-      | QualifiedIdentifier.Dictionary.Entry
-          (Disambiguation_state.LF_type_constant operator) ->
-        Synext'.CLF.Typ.Pattern.Constant
-          { location; identifier = qualified_identifier; operator; quoted }
-      | entry ->
-        raise @@ Expected_type_constant { location; actual_binding = entry }
-      | exception QualifiedIdentifier.Dictionary.Unbound_identifier _ ->
-        raise
-        @@ Unbound_type_constant
-             { location; identifier = qualified_identifier })
-    | Synprs.CLF.Object.RawQualifiedIdentifier
-        { location; identifier; quoted } -> (
-      (* Qualified identifiers without modules were parsed as plain
-         identifiers *)
-      assert (List.length (QualifiedIdentifier.modules identifier) >= 1);
-      (* As an LF type pattern, identifiers of the form [(<identifier> `::')+
-         <identifier>] are necessarily type-level constants. *)
-      match Disambiguation_state.lookup identifier state with
-      | QualifiedIdentifier.Dictionary.Entry
-          (Disambiguation_state.LF_type_constant operator) ->
-        Synext'.CLF.Typ.Pattern.Constant
-          { location; identifier; operator; quoted }
-      | entry ->
-        raise @@ Expected_type_constant { location; actual_binding = entry }
-      | exception QualifiedIdentifier.Dictionary.Unbound_identifier _ ->
-        raise @@ Unbound_type_constant { location; identifier })
-    | Synprs.CLF.Object.RawArrow { location; domain; range; orientation } ->
-      let domain' = disambiguate_as_typ state domain
-      and range' = disambiguate_as_typ_pattern state range in
-      Synext'.CLF.Typ.Pattern.Arrow
-        { location; domain = domain'; range = range'; orientation }
-    | Synprs.CLF.Object.RawPi
-        { location
-        ; parameter_identifier
-        ; parameter_sort = Option.Some parameter_type
-        ; body
-        } -> (
-      let parameter_type' = disambiguate_as_typ state parameter_type in
-      match parameter_identifier with
-      | Option.None ->
-        let body' = disambiguate_as_typ_pattern state body in
-        Synext'.CLF.Typ.Pattern.Pi
-          { location
-          ; parameter_identifier
-          ; parameter_type = parameter_type'
-          ; body = body'
-          }
-      | Option.Some parameter ->
-        let state' =
-          Disambiguation_state.add_term_variable parameter state
-        in
-        let body' = disambiguate_as_typ_pattern state' body in
-        Synext'.CLF.Typ.Pattern.Pi
-          { location
-          ; parameter_identifier
-          ; parameter_type = parameter_type'
-          ; body = body'
-          })
-    | Synprs.CLF.Object.RawApplication { objects; _ } -> (
-      match elaborate_application_pattern state objects with
-      | `Term_pattern term_pattern ->
-        let location = Synext'.CLF.location_of_term_pattern term_pattern in
-        raise @@ Expected_type_pattern location
-      | `Typ_pattern typ_pattern -> typ_pattern)
-    | Synprs.CLF.Object.RawBlock
-        { location; elements = List1.T ((Option.None, t), []) } ->
-      let t' = disambiguate_as_typ state t in
-      Synext'.CLF.Typ.Pattern.Block { location; elements = `Unnamed t' }
-    | Synprs.CLF.Object.RawBlock { location; elements } ->
-      let _state', elements' =
-        List1.fold_left
-          (fun element ->
-            match element with
-            | Option.None, typ ->
-              let location = Synprs.CLF.location_of_object typ in
-              raise @@ Illegal_unnamed_block_element_type_pattern location
-            | Option.Some identifier, typ ->
-              let typ' = disambiguate_as_typ state typ in
-              let elements' = List1.singleton (identifier, typ')
-              and state' =
-                Disambiguation_state.add_term_variable identifier state
-              in
-              (state', elements'))
-          (fun (state', elements') element ->
-            match element with
-            | Option.None, typ ->
-              let location = Synprs.CLF.location_of_object typ in
-              raise @@ Illegal_unnamed_block_element_type location
-            | Option.Some identifier, typ ->
-              let typ' = disambiguate_as_typ state' typ in
-              let elements'' = List1.cons (identifier, typ') elements'
-              and state'' =
-                Disambiguation_state.add_term_variable identifier state'
-              in
-              (state'', elements''))
-          elements
-      in
-      let elements'' = List1.rev elements' in
-      Synext'.CLF.Typ.Pattern.Block
-        { location; elements = `Record elements'' }
-
   (** [disambiguate_as_term_pattern state object_] is [object_] rewritten as
       a contextual LF term pattern with respect to the elaboration context
       [state].
@@ -2243,7 +2100,7 @@ module CLF = struct
       include:
 
       - [c x x], where [x] is a free pattern variable *)
-  and disambiguate_as_term_pattern state object_ =
+  let rec disambiguate_as_term_pattern state object_ =
     match object_ with
     | Synprs.CLF.Object.RawPi { location; _ } ->
       raise @@ Illegal_pi_term_pattern location
@@ -2287,8 +2144,8 @@ module CLF = struct
         raise @@ Unbound_term_constant { location; identifier })
     | Synprs.CLF.Object.RawApplication { objects; _ } -> (
       match elaborate_application_pattern state objects with
-      | `Typ_pattern typ_pattern ->
-        let location = Synext'.CLF.location_of_typ_pattern typ_pattern in
+      | `Typ typ ->
+        let location = Synext'.CLF.location_of_typ typ in
         raise @@ Expected_term_pattern location
       | `Term_pattern term_pattern -> term_pattern)
     | Synprs.CLF.Object.RawLambda
@@ -2358,7 +2215,7 @@ module CLF = struct
     let elaborate_juxtaposition applicand arguments =
       let applicand_location =
         match applicand with
-        | `Term_pattern applicand | `Typ_pattern applicand ->
+        | `Term_pattern applicand | `Typ applicand ->
           Synprs.CLF.location_of_object applicand
       in
       let application_location =
@@ -2379,13 +2236,11 @@ module CLF = struct
              ; applicand = applicand'
              ; arguments = arguments'
              })
-      | `Typ_pattern applicand ->
-        let applicand' = disambiguate_as_typ_pattern state applicand in
-        let arguments' =
-          List.map (disambiguate_as_term_pattern state) arguments
-        in
-        `Typ_pattern
-          (Synext'.CLF.Typ.Pattern.Application
+      | `Typ applicand ->
+        let applicand' = disambiguate_as_typ state applicand in
+        let arguments' = List.map (disambiguate_as_term state) arguments in
+        `Typ
+          (Synext'.CLF.Typ.Application
              { location = application_location
              ; applicand = applicand'
              ; arguments = arguments'
@@ -2394,31 +2249,53 @@ module CLF = struct
     let module ShuntingYard =
       ShuntingYard.Make (CLF_pattern_operand) (CLF_pattern_operator)
         (struct
-          (** [elaborate_argument argument] elaborates [argument] to an LF
-              term.
+          (** [elaborate_argument argument] elaborates [argument] to a
+              contextual LF term or term pattern.
 
-              @raise Expected_term_pattern *)
+              @raise Expected_term_pattern
+              @raise Expected_term *)
           let elaborate_argument argument =
             match argument with
-            | CLF_pattern_operand.External_term_pattern term -> term
-            | CLF_pattern_operand.External_typ_pattern typ_pattern ->
+            | CLF_pattern_operand.External_term_pattern term_pattern ->
               let location =
-                Synext'.CLF.location_of_typ_pattern typ_pattern
+                Synext'.CLF.location_of_term_pattern term_pattern
               in
+              raise @@ Expected_term location
+            | CLF_pattern_operand.External_typ typ ->
+              let location = Synext'.CLF.location_of_typ typ in
+              raise @@ Expected_term_pattern location
+            | CLF_pattern_operand.Parser_object object_ ->
+              disambiguate_as_term state object_
+            | CLF_pattern_operand.Application { applicand; arguments } -> (
+              match elaborate_juxtaposition applicand arguments with
+              | `Term_pattern term_pattern ->
+                let location =
+                  Synext'.CLF.location_of_term_pattern term_pattern
+                in
+                raise @@ Expected_term location
+              | `Typ typ ->
+                let location = Synext'.CLF.location_of_typ typ in
+                raise @@ Expected_term location)
+
+          (** [elaborate_argument_pattern argument] elaborates [argument] to
+              an LF term pattern.
+
+              @raise Expected_term_pattern *)
+          let elaborate_argument_pattern argument =
+            match argument with
+            | CLF_pattern_operand.External_term_pattern term_pattern ->
+              term_pattern
+            | CLF_pattern_operand.External_typ typ ->
+              let location = Synext'.CLF.location_of_typ typ in
               raise @@ Expected_term_pattern location
             | CLF_pattern_operand.Parser_object object_ ->
               disambiguate_as_term_pattern state object_
             | CLF_pattern_operand.Application { applicand; arguments } -> (
               match elaborate_juxtaposition applicand arguments with
               | `Term_pattern term_pattern -> term_pattern
-              | `Typ_pattern typ_pattern ->
-                let location =
-                  Synext'.CLF.location_of_typ_pattern typ_pattern
-                in
+              | `Typ typ ->
+                let location = Synext'.CLF.location_of_typ typ in
                 raise @@ Expected_term_pattern location)
-
-          let elaborate_arguments arguments =
-            List.map elaborate_argument arguments
 
           let write operator arguments =
             let application_location =
@@ -2430,10 +2307,10 @@ module CLF = struct
             in
             match operator with
             | CLF_pattern_operator.Type_constant { applicand; _ } ->
-              let applicand' = disambiguate_as_typ_pattern state applicand in
-              let arguments' = elaborate_arguments arguments in
-              CLF_pattern_operand.External_typ_pattern
-                (Synext'.CLF.Typ.Pattern.Application
+              let applicand' = disambiguate_as_typ state applicand in
+              let arguments' = List.map elaborate_argument arguments in
+              CLF_pattern_operand.External_typ
+                (Synext'.CLF.Typ.Application
                    { location = application_location
                    ; applicand = applicand'
                    ; arguments = arguments'
@@ -2442,7 +2319,9 @@ module CLF = struct
               let applicand' =
                 disambiguate_as_term_pattern state applicand
               in
-              let arguments' = elaborate_arguments arguments in
+              let arguments' =
+                List.map elaborate_argument_pattern arguments
+              in
               CLF_pattern_operand.External_term_pattern
                 (Synext'.CLF.Term.Pattern.Application
                    { location = application_location
@@ -2486,7 +2365,7 @@ module CLF = struct
           let arguments' = List.map Pair.snd arguments in
           ShuntingYard.operand
             (CLF_pattern_operand.Application
-               { applicand = `Typ_pattern t; arguments = arguments' })
+               { applicand = `Typ t; arguments = arguments' })
           :: reduce_juxtapositions_and_identify_operators rest
         | (`Quoted_term_operator, t) :: ts ->
           let arguments, rest = List.take_while is_argument ts in
@@ -2501,7 +2380,7 @@ module CLF = struct
             let arguments' = List.map Pair.snd arguments in
             ShuntingYard.operand
               (CLF_pattern_operand.Application
-                 { applicand = `Typ_pattern t; arguments = arguments' })
+                 { applicand = `Typ t; arguments = arguments' })
             :: reduce_juxtapositions_and_identify_operators rest
           else
             ShuntingYard.operator
@@ -2532,7 +2411,7 @@ module CLF = struct
     fun objects ->
       try
         match ShuntingYard.shunting_yard (prepare_objects objects) with
-        | CLF_pattern_operand.External_typ_pattern t -> `Typ_pattern t
+        | CLF_pattern_operand.External_typ t -> `Typ t
         | CLF_pattern_operand.External_term_pattern t -> `Term_pattern t
         | CLF_pattern_operand.Application { applicand; arguments } ->
           elaborate_juxtaposition applicand arguments

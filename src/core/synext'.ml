@@ -210,14 +210,11 @@ end
       Substitutions   σ    ::= ^ | … | σ, M | s[σ]
       Contexts        Ψ    ::= ^ | g | Ψ, x:A
 
-      Type patterns           Ap, Bp ::= a | Πx:A.Bp | A → Bp
-                                           | Ap Mp1 Mp2 ... Mpn
-                                           | block (x1:A1, x2:A2, ..., xn:An)
       Term patterns           Mp, Np ::= c | x | λx:A.Mp | Mp Np1 Np2 ... Npn
                                            | Mp:A | Mp[σ] | _
                                            | <Mp1; Mp2; ...; Mpn> | Mp.# | Mp.id
       Substitution patterns   σp     ::= ^ | … | σp, Mp | s[σ]
-      Context patterns        Ψp     ::= ^ | g | Ψp, x:Ap
+      Context patterns        Ψp     ::= ^ | g | Ψp, x:A
     ]} *)
 module CLF = struct
   (** External contextual LF types. *)
@@ -274,63 +271,6 @@ module CLF = struct
           (** [Block { elements; _ }] is the block type `block (elements)'.
               This is a dependent sum type, and the type of elements in
               [elements] may refer to terms appearing earlier in [elements]. *)
-
-    (** External contextual LF type patterns. *)
-    module rec Pattern : sig
-      type t =
-        | Constant of
-            { location : Location.t
-            ; identifier : QualifiedIdentifier.t
-            ; operator : Operator.t
-            ; quoted : Bool.t
-            }
-            (** [Constant { identifier; _ }] is the type-level constant
-                pattern `identifier'. *)
-        | Application of
-            { location : Location.t
-            ; applicand : Typ.Pattern.t
-            ; arguments : Term.Pattern.t List.t
-            }
-            (** [Application { applicand; arguments; _ }] is the type-level
-                application pattern of `applicand' with `arguments'.
-
-                - If [applicand = Typ.Constant { operator; _ }] and
-                  [Operator.is_infix operator], then
-                  [List.length arguments = 2].
-                - If [applicand = Typ.Constant { operator; _ }] and
-                  [Operator.is_postfix operator], then
-                  [List.length arguments = 1]. *)
-        | Arrow of
-            { location : Location.t
-            ; domain : Typ.t
-            ; range : Typ.Pattern.t
-            ; orientation : [ `Forward | `Backward ]
-            }
-            (** - [Arrow { domain; range; orientation = `Forward; _ }] is the
-                  type pattern `domain -> range'.
-                - [Arrow { range; domain; orientation = `Backward; _ }] is
-                  the type pattern `range <- domain'. *)
-        | Pi of
-            { location : Location.t
-            ; parameter_identifier : Identifier.t Option.t
-            ; parameter_type : Typ.t
-            ; body : Typ.Pattern.t
-            }
-            (** [Pi { parameter_identifier = x; parameter_type = t; body; _ }]
-                is the dependent product type pattern `[{ x : t } body]'. The
-                variable `x' ranges over LF terms. *)
-        | Block of
-            { location : Location.t
-            ; elements :
-                [ `Unnamed of Typ.t
-                | `Record of (Identifier.t * Typ.t) List1.t
-                ]
-            }
-            (** [Block { elements; _ }] is the type-level block pattern
-                `block (elements)'. This is a dependent sum type, and the
-                type of elements in [elements] may refer to terms appearing
-                earlier in [elements]. *)
-    end
   end =
     Typ
 
@@ -583,7 +523,7 @@ module CLF = struct
       type t =
         { location : Location.t
         ; head : Context.Pattern.Head.t
-        ; typings : (Identifier.t * Typ.Pattern.t) List.t
+        ; typings : (Identifier.t * Typ.t) List.t
         }
 
       module Head : sig
@@ -634,14 +574,6 @@ module CLF = struct
     match context_pattern with
     | Context.Pattern.{ location; _ } -> location
 
-  let location_of_typ_pattern typ_pattern =
-    match typ_pattern with
-    | Typ.Pattern.Constant { location; _ }
-    | Typ.Pattern.Application { location; _ }
-    | Typ.Pattern.Block { location; _ }
-    | Typ.Pattern.Arrow { location; _ }
-    | Typ.Pattern.Pi { location; _ } -> location
-
   let location_of_term_pattern term_pattern =
     match term_pattern with
     | Term.Pattern.Variable { location; _ }
@@ -678,6 +610,8 @@ end
       Meta-Substitutions   θ ::= ^ | θ, C/X
       Meta-Contexts        Δ ::= ^ | Δ, X:U
       Schemas              G ::= g | G + G | some [x1:A1, x2:A2, ..., xn:An] block (y1:B1, y2:B2, ..., ym:Bm)
+
+      Meta-Object Patterns   Cp ::= Ψp | Ψp ⊢ Mp | Ψp ⊢ σp | Ψp #⊢ σp
     ]} *)
 module Meta = struct
   (** External meta-types. *)
@@ -710,31 +644,6 @@ module Meta = struct
           }
           (** [Renaming_substitution_typ { domain; range; _ }] is the type
               for the renaming substitution `domain #|- range'. *)
-
-    module Pattern : sig
-      type t =
-        | Contextual_typ of
-            { location : Location.t
-            ; context : CLF.Context.t
-            ; typ : Typ.Pattern.t
-            }
-            (** [Contextual_typ { context; typ; _ }] is the contextual type
-                pattern `context |- typ'. *)
-        | Plain_substitution_typ of
-            { location : Location.t
-            ; domain : CLF.Context.t
-            ; range : CLF.Context.Pattern.t
-            }
-            (** [Plain_substitution_typ { domain; range; _ }] is the plain
-                substitution type pattern `domain |- range'. *)
-        | Renaming_substitution_typ of
-            { location : Location.t
-            ; domain : CLF.Context.t
-            ; range : CLF.Context.Pattern.t
-            }
-            (** [Renaming_substitution_typ { domain; range; _ }] is the
-                renaming substitution type pattern `domain #|- range'. *)
-    end
   end =
     Typ
 
@@ -875,12 +784,6 @@ module Meta = struct
     | Typ.Contextual_typ { location; _ }
     | Typ.Plain_substitution_typ { location; _ }
     | Typ.Renaming_substitution_typ { location; _ } -> location
-
-  let location_of_meta_type_pattern meta_type_pattern =
-    match meta_type_pattern with
-    | Typ.Pattern.Contextual_typ { location; _ }
-    | Typ.Pattern.Plain_substitution_typ { location; _ }
-    | Typ.Pattern.Renaming_substitution_typ { location; _ } -> location
 
   let location_of_meta_object meta_object =
     match meta_object with

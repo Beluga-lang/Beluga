@@ -450,18 +450,6 @@ let mock_state_10 =
   |> add_prefix_lf_type_constant ~arity:0 ~precedence:1 (qid "b")
   |> add_prefix_lf_type_constant ~arity:0 ~precedence:1 (qid "c")
 
-let mock_state_11 =
-  let open CLF_constructors in
-  let open Synprs_to_synext'.Disambiguation_state in
-  empty
-  |> add_prefix_lf_type_constant ~arity:0 ~precedence:1 (qid "nat")
-  |> add_prefix_lf_term_constant ~arity:0 ~precedence:1 (qid "z")
-  |> add_prefix_lf_term_constant ~arity:1 ~precedence:1 (qid "s")
-  |> add_prefix_lf_type_constant ~arity:3 ~precedence:1 (qid "sum")
-  |> add_prefix_lf_term_constant ~arity:0 ~precedence:1 (qid "sum/z")
-  |> add_prefix_lf_term_constant ~arity:1 ~precedence:1 (qid "sum/s")
-  |> add_substitution_variable (id "$S")
-
 let test_type =
   let test_success elaboration_context input expected _test_ctxt =
     OUnit2.assert_equal
@@ -758,64 +746,35 @@ let test_term =
     ; (mock_state_2, "x[z]", sub (v "x") (`None, [ c "z" ]))
     ; (mock_state_2, "x[\\z. z]", sub (v "x") (`None, [ lam ~x:"z" (v "z") ]))
     ; ( mock_state_2
-      , "\\y1. \\y2. \\y3. x[y1, y2, y3]"
-      , lam ~x:"y1"
-          (lam ~x:"y2"
-             (lam ~x:"y3" (sub (v "x") (`None, [ v "y1"; v "y2"; v "y3" ]))))
-      )
+      , "x[y1, y2, y3]"
+      , sub (v "x") (`None, [ v "y1"; v "y2"; v "y3" ]) )
     ; (mock_state_2, "x[.., z]", sub (v "x") (`Id, [ c "z" ]))
     ; ( mock_state_2
-      , "\\y1. \\y2. \\y3. x[.., y1, y2, y3]"
-      , lam ~x:"y1"
-          (lam ~x:"y2"
-             (lam ~x:"y3" (sub (v "x") (`Id, [ v "y1"; v "y2"; v "y3" ]))))
+      , "x[.., y1, y2, y3]"
+      , sub (v "x") (`Id, [ v "y1"; v "y2"; v "y3" ]) )
+    ; ( mock_state_2
+      , "x[y1[], y2, y3]"
+      , sub (v "x") (`None, [ sub (v "y1") (`None, []); v "y2"; v "y3" ]) )
+    ; ( mock_state_2
+      , "x[$S, y1, y2, y3]"
+      , sub (v "x") (`SVar "$S", [ v "y1"; v "y2"; v "y3" ]) )
+    ; ( mock_state_2
+      , "x[$S[], y1, y2, y3]"
+      , sub (v "x") (`SClo ("$S", (`None, [])), [ v "y1"; v "y2"; v "y3" ])
       )
     ; ( mock_state_2
-      , "\\y1. \\y2. \\y3. x[y1[], y2, y3]"
-      , lam ~x:"y1"
-          (lam ~x:"y2"
-             (lam ~x:"y3"
-                (sub (v "x")
-                   (`None, [ sub (v "y1") (`None, []); v "y2"; v "y3" ]))))
-      )
-    ; ( mock_state_11
-      , "\\y1. \\y2. \\y3. x[$S, y1, y2, y3]"
-      , lam ~x:"y1"
-          (lam ~x:"y2"
-             (lam ~x:"y3"
-                (sub (v "x") (`SVar "$S", [ v "y1"; v "y2"; v "y3" ])))) )
-    ; ( mock_state_11
-      , "\\y1. \\y2. \\y3. x[$S[], y1, y2, y3]"
-      , lam ~x:"y1"
-          (lam ~x:"y2"
-             (lam ~x:"y3"
-                (sub (v "x")
-                   (`SClo ("$S", (`None, [])), [ v "y1"; v "y2"; v "y3" ]))))
-      )
-    ; ( mock_state_11
-      , "\\y1. \\y2. \\y3. x[$S[..], y1, y2, y3]"
-      , lam ~x:"y1"
-          (lam ~x:"y2"
-             (lam ~x:"y3"
-                (sub (v "x")
-                   (`SClo ("$S", (`Id, [])), [ v "y1"; v "y2"; v "y3" ]))))
-      )
-    ; ( mock_state_11
-      , "\\y1. \\y2. \\y3. x[$S[y1, y2, y3], y1, y2, y3]"
-      , lam ~x:"y1"
-          (lam ~x:"y2"
-             (lam ~x:"y3"
-                (sub (v "x")
-                   ( `SClo ("$S", (`None, [ v "y1"; v "y2"; v "y3" ]))
-                   , [ v "y1"; v "y2"; v "y3" ] )))) )
-    ; ( mock_state_11
-      , "\\y1. \\y2. \\y3. x[$S[.., y1, y2, y3], y1, y2, y3]"
-      , lam ~x:"y1"
-          (lam ~x:"y2"
-             (lam ~x:"y3"
-                (sub (v "x")
-                   ( `SClo ("$S", (`Id, [ v "y1"; v "y2"; v "y3" ]))
-                   , [ v "y1"; v "y2"; v "y3" ] )))) )
+      , "x[$S[..], y1, y2, y3]"
+      , sub (v "x") (`SClo ("$S", (`Id, [])), [ v "y1"; v "y2"; v "y3" ]) )
+    ; ( mock_state_2
+      , "x[$S[y1, y2, y3], y1, y2, y3]"
+      , sub (v "x")
+          ( `SClo ("$S", (`None, [ v "y1"; v "y2"; v "y3" ]))
+          , [ v "y1"; v "y2"; v "y3" ] ) )
+    ; ( mock_state_2
+      , "x[$S[.., y1, y2, y3], y1, y2, y3]"
+      , sub (v "x")
+          ( `SClo ("$S", (`Id, [ v "y1"; v "y2"; v "y3" ]))
+          , [ v "y1"; v "y2"; v "y3" ] ) )
     ]
   and failure_test_cases =
     [ (mock_state_2, "{ x : nat } x", assert_raises_illegal_pi_term)

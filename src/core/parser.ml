@@ -62,7 +62,7 @@
 
     The rationale for this is that it allows the parser writer to commit to a
     parse tree once certain conditions have been met. For example, in Beluga,
-    after a `case' keyword, we know for sure that we're parsing a case
+    after a [case] keyword, we know for sure that we're parsing a case
     expression. Therefore, if we fail afterwards to parse the scrutinee of
     the case, we should not backtrack out of the parser for case expressions.
 
@@ -398,8 +398,10 @@ type 'a t = 'a parser
 
 (***** Basic parser helpers *****)
 
-(** Runs `p' and invokes the given handler to modify the outcome.
-    Despite being called "catch", this parser is actually a kind of `map',
+(** [catch p handler] is the parser that runs [p] and invokes [handler] to
+    modify the outcome.
+
+    Despite being called "catch", this parser is actually a kind of "map",
     and is used to implement "low-level" parser transformations.
  *)
 let catch (p : 'a parser) (handler : state * 'a result -> state * 'b result) : 'b parser =
@@ -502,11 +504,11 @@ let shift p s =
 
 let shifted s p = shift p s
 
-(** Adds the given label to the stack if `p` fails. *)
+(** [label p s] is the parser that adds [s] to the stack if [p] fails. *)
 let label p s =
   relabelling p (fun location path -> entry ~location s :: path)
 
-(** Flipped version of `label'. *)
+(** Flipped version of {!label}. *)
 let labelled s p = label p s
 
 (** Replaces the _name_ of the last entry on the path. *)
@@ -625,11 +627,11 @@ let maybe (p : 'a parser) : 'a option parser =
 let maybe_default p ~default =
   maybe p $> Option.value ~default
 
-(** Internal implementation of `many` that doesn't label. *)
+(** Internal implementation of {!many} that doesn't label. *)
 let rec many' (p : 'a parser) : 'a list parser =
   alt (some' p $> List1.to_list) (return [])
 
-(** Internal implementation of `some` that doesn't label. *)
+(** Internal implementation of {!some} that doesn't label. *)
 and some' (p : 'a parser) : 'a List1.t parser =
   p >>= fun x -> many' p >>= fun xs -> return (List1.from x xs)
 
@@ -1301,8 +1303,8 @@ end
 
 module rec CLF_parsers : sig
   val clf_object : CLF.Object.t t
-  val substitution_object : CLF.Substitution.t t
-  val context_object : CLF.Context.t t
+  val clf_substitution_object : CLF.Substitution_object.t t
+  val clf_context_object : CLF.Context_object.t t
 end = struct
   (*=
       Original grammar:
@@ -1429,7 +1431,7 @@ end = struct
       ; pi
       ]
 
-  let substitution_object =
+  let clf_substitution_object =
     let empty =
       token Token.HAT
     and identity_extension =
@@ -1448,24 +1450,24 @@ end = struct
     |> span
     $> (function
        | (location, (Option.None | Option.Some `Empty)) ->
-         { CLF.Substitution.location
-         ; head = CLF.Substitution.Head.None
+         { CLF.Substitution_object.location
+         ; head = CLF.Substitution_object.Head.None
          ; objects = []
          }
        | (location, Option.Some (`Identity_extension objects)) ->
-         { CLF.Substitution.location
-         ; head = CLF.Substitution.Head.Identity { location }
+         { CLF.Substitution_object.location
+         ; head = CLF.Substitution_object.Head.Identity { location }
          ; objects
          }
        | (location, Option.Some (`Plain objects)) ->
-         { CLF.Substitution.location
-         ; head = CLF.Substitution.Head.None
+         { CLF.Substitution_object.location
+         ; head = CLF.Substitution_object.Head.None
          ; objects = List1.to_list objects
          }
        )
     |> labelled "Contextual LF substitution"
 
-  let context_object : CLF.Context.t t =
+  let clf_context_object =
     let empty =
       token Token.HAT
     and non_empty =
@@ -1481,10 +1483,10 @@ end = struct
     |> span
     $> (function
        | (location, (Option.None | Option.Some `Empty)) ->
-         { CLF.Context.location; objects = [] }
+         { CLF.Context_object.location; objects = [] }
        | (location, Option.Some (`Non_empty ts)) ->
          let objects = List1.to_list ts in
-         { CLF.Context.location; objects }
+         { CLF.Context_object.location; objects }
        )
     |> labelled "Contextual LF context"
 
@@ -1611,7 +1613,7 @@ end = struct
     |> labelled "Contextual LF atomic or projection object"
 
   let clf_object6 =
-    seq2 clf_object7 (many (bracks substitution_object))
+    seq2 clf_object7 (many (bracks clf_substitution_object))
     $> (function
        | (object_, []) -> object_
        | (object_, substitutions) ->
@@ -1620,7 +1622,7 @@ end = struct
                let location =
                   Location.join
                     (CLF.location_of_object accumulator)
-                    (CLF.location_of_substitution substitution)
+                    (CLF.location_of_substitution_object substitution)
                in
                CLF.Object.RawSubstitution
                  { location
@@ -1649,7 +1651,7 @@ end = struct
         (token Token.COMMA)
     in
     let block =
-      token Token.KW_BLOCK &> alt (parens block_contents) block_contents
+      token Token.KW_BLOCK &> opt_parens block_contents
       |> span
       $> (fun (location, elements) -> CLF.Object.RawBlock { location; elements })
       |> labelled "Contextual LF block object"

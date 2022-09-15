@@ -1729,9 +1729,11 @@ module CLF = struct
       Synext'.CLF.Term.TypeAnnotated { location; term = term'; typ = typ' }
 
   and disambiguate_as_substitution state substitution =
-    let Synprs.CLF.Substitution.{ location; head; objects } = substitution in
+    let Synprs.CLF.Substitution_object.{ location; head; objects } =
+      substitution
+    in
     match head with
-    | Synprs.CLF.Substitution.Head.None ->
+    | Synprs.CLF.Substitution_object.Head.None ->
       let head', objects =
         match objects with
         | Synprs.CLF.Object.RawSubstitution
@@ -1757,7 +1759,8 @@ module CLF = struct
       in
       let terms' = List.map (disambiguate_as_term state) objects in
       Synext'.CLF.Substitution.{ location; head = head'; terms = terms' }
-    | Synprs.CLF.Substitution.Head.Identity { location = head_location } ->
+    | Synprs.CLF.Substitution_object.Head.Identity
+        { location = head_location } ->
       let terms' = List.map (disambiguate_as_term state) objects in
       Synext'.CLF.Substitution.
         { location

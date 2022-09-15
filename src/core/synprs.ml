@@ -7,7 +7,7 @@ open Support
     The intermediate representation of LF kinds, types and terms to delay the
     handling of data-dependent aspects of the grammar.
 
-    OCaml constructor names prefixed with `Raw' require data-dependent
+    OCaml constructor names prefixed with "Raw" require data-dependent
     disambiguation or reduction during the elaboration to the external
     syntax.
 
@@ -82,7 +82,7 @@ end
     The intermediate representation of contextual LF types, terms and
     patterns to delay the handling of data-dependent aspects of the grammar.
 
-    OCaml constructor names prefixed with `Raw' require data-dependent
+    OCaml constructor names prefixed with "Raw" require data-dependent
     disambiguation or reduction during the elaboration to the external
     syntax.
 
@@ -104,7 +104,8 @@ module CLF = struct
           }
       | RawHole of
           { location : Location.t
-          ; variant : [ `Underscore | `Unlabelled | `Labelled of Identifier.t ]
+          ; variant :
+              [ `Underscore | `Unlabelled | `Labelled of Identifier.t ]
           }
       | RawPi of
           { location : Location.t
@@ -154,15 +155,15 @@ module CLF = struct
       | RawSubstitution of
           { location : Location.t
           ; object_ : Object.t
-          ; substitution : Substitution.t
+          ; substitution : Substitution_object.t
           }
   end =
     Object
 
-  and Substitution : sig
+  and Substitution_object : sig
     type t =
       { location : Location.t
-      ; head : Substitution.Head.t
+      ; head : Substitution_object.Head.t
       ; objects : Object.t List.t
       }
 
@@ -172,15 +173,15 @@ module CLF = struct
         | Identity of { location : Location.t }
     end
   end =
-    Substitution
+    Substitution_object
 
-  and Context : sig
+  and Context_object : sig
     type t =
       { location : Location.t
       ; objects : (Identifier.t Option.t * Object.t) List.t
       }
   end =
-    Context
+    Context_object
 
   let location_of_object object_ =
     match object_ with
@@ -197,13 +198,13 @@ module CLF = struct
     | Object.RawProjection { location; _ }
     | Object.RawSubstitution { location; _ } -> location
 
-  let location_of_substitution substitution =
-    match substitution with
-    | Substitution.{ location; _ } -> location
+  let location_of_substitution_object substitution_object =
+    match substitution_object with
+    | Substitution_object.{ location; _ } -> location
 
-  let location_of_context context =
-    match context with
-    | Context.{ location; _ } -> location
+  let location_of_context_object context_object =
+    match context_object with
+    | Context_object.{ location; _ } -> location
 end
 
 (** {1 Parser Computation Syntax} *)

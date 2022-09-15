@@ -92,7 +92,7 @@ val lookup' : 'a LF.ctx -> int -> 'a option
     - Warning: returns None if the index is out of bounds OR if the
       context declaration does not assign a type (i.e. it's a
       DeclOpt).  If you need to distinguish these cases, then you
-      should use `lookup'` and match on the `ctyp_decl` yourself.
+      should use {!lookup'} and match on the [ctyp_decl] yourself.
  *)
 val lookup_inductivity : LF.mctx -> int -> (LF.ctyp * Inductivity.t) option
 val lookup : Comp.gctx -> int -> Comp.typ option

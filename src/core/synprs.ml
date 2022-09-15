@@ -94,6 +94,7 @@ module CLF = struct
       | RawIdentifier of
           { location : Location.t
           ; identifier : Identifier.t
+          ; modifier : [ `None | `Hash | `Dollar ]
           ; quoted : Bool.t
           }
       | RawQualifiedIdentifier of

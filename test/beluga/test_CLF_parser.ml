@@ -460,7 +460,7 @@ let mock_state_11 =
   |> add_prefix_lf_type_constant ~arity:3 ~precedence:1 (qid "sum")
   |> add_prefix_lf_term_constant ~arity:0 ~precedence:1 (qid "sum/z")
   |> add_prefix_lf_term_constant ~arity:1 ~precedence:1 (qid "sum/s")
-  |> add_substitution_variable (id "S")
+  |> add_substitution_variable (id "$S")
 
 let test_type =
   let test_success elaboration_context input expected _test_ctxt =
@@ -779,41 +779,42 @@ let test_term =
                    (`None, [ sub (v "y1") (`None, []); v "y2"; v "y3" ]))))
       )
     ; ( mock_state_11
-      , "\\y1. \\y2. \\y3. x[S, y1, y2, y3]"
+      , "\\y1. \\y2. \\y3. x[$S, y1, y2, y3]"
       , lam ~x:"y1"
           (lam ~x:"y2"
              (lam ~x:"y3"
-                (sub (v "x") (`SVar "S", [ v "y1"; v "y2"; v "y3" ])))) )
+                (sub (v "x") (`SVar "$S", [ v "y1"; v "y2"; v "y3" ])))) )
     ; ( mock_state_11
-      , "\\y1. \\y2. \\y3. x[S[], y1, y2, y3]"
+      , "\\y1. \\y2. \\y3. x[$S[], y1, y2, y3]"
       , lam ~x:"y1"
           (lam ~x:"y2"
              (lam ~x:"y3"
                 (sub (v "x")
-                   (`SClo ("S", (`None, [])), [ v "y1"; v "y2"; v "y3" ]))))
+                   (`SClo ("$S", (`None, [])), [ v "y1"; v "y2"; v "y3" ]))))
       )
     ; ( mock_state_11
-      , "\\y1. \\y2. \\y3. x[S[..], y1, y2, y3]"
+      , "\\y1. \\y2. \\y3. x[$S[..], y1, y2, y3]"
       , lam ~x:"y1"
           (lam ~x:"y2"
              (lam ~x:"y3"
                 (sub (v "x")
-                   (`SClo ("S", (`Id, [])), [ v "y1"; v "y2"; v "y3" ])))) )
+                   (`SClo ("$S", (`Id, [])), [ v "y1"; v "y2"; v "y3" ]))))
+      )
     ; ( mock_state_11
-      , "\\y1. \\y2. \\y3. x[S[y1, y2, y3], y1, y2, y3]"
+      , "\\y1. \\y2. \\y3. x[$S[y1, y2, y3], y1, y2, y3]"
       , lam ~x:"y1"
           (lam ~x:"y2"
              (lam ~x:"y3"
                 (sub (v "x")
-                   ( `SClo ("S", (`None, [ v "y1"; v "y2"; v "y3" ]))
+                   ( `SClo ("$S", (`None, [ v "y1"; v "y2"; v "y3" ]))
                    , [ v "y1"; v "y2"; v "y3" ] )))) )
     ; ( mock_state_11
-      , "\\y1. \\y2. \\y3. x[S[.., y1, y2, y3], y1, y2, y3]"
+      , "\\y1. \\y2. \\y3. x[$S[.., y1, y2, y3], y1, y2, y3]"
       , lam ~x:"y1"
           (lam ~x:"y2"
              (lam ~x:"y3"
                 (sub (v "x")
-                   ( `SClo ("S", (`Id, [ v "y1"; v "y2"; v "y3" ]))
+                   ( `SClo ("$S", (`Id, [ v "y1"; v "y2"; v "y3" ]))
                    , [ v "y1"; v "y2"; v "y3" ] )))) )
     ]
   and failure_test_cases =

@@ -4,18 +4,12 @@ module Disambiguation_state : sig
   type t
 
   type entry = private
-    | LF_type_constant of Operator.t
-        (** An LF type-level constant, such as `tm' in `tm : type'. *)
-    | LF_term_constant of Operator.t
-        (** An LF term-level constant, such as `arr' in `arr M N'. *)
-    | LF_term_variable
-        (** An LF term-level variable, such as `x' in `\x. T x'. *)
-    | Substitution_variable
-        (** A substitution variable, such as `$S' in `[g |- M\[$S\]]' if `$S
-            : [g |- h]'. *)
-    | Context_variable
-        (** A context variable, such as `g' in `[g, x : tm |- _]' if `g :
-            ctx'. *)
+    | LF_type_constant of Operator.t  (** An LF type-level constant. *)
+    | LF_term_constant of Operator.t  (** An LF term-level constant. *)
+    | LF_term_variable  (** An LF term-level variable. *)
+    | Parameter_variable  (** A parameter variable. *)
+    | Substitution_variable  (** A substitution variable. *)
+    | Context_variable  (** A context variable. *)
 
   (** {1 Constructors} *)
 
@@ -49,6 +43,8 @@ module Disambiguation_state : sig
   val add_postfix_lf_term_constant :
     precedence:Int.t -> QualifiedIdentifier.t -> t -> t
 
+  val add_parameter_variable : Identifier.t -> t -> t
+
   val add_substitution_variable : Identifier.t -> t -> t
 
   val add_context_variable : Identifier.t -> t -> t
@@ -74,6 +70,7 @@ end = struct
     | LF_type_constant of Operator.t
     | LF_term_constant of Operator.t
     | LF_term_variable
+    | Parameter_variable
     | Substitution_variable
     | Context_variable
 
@@ -112,6 +109,10 @@ end = struct
     let operator = Operator.make_postfix ~precedence in
     QualifiedIdentifier.Dictionary.add_entry identifier
       (LF_term_constant operator)
+
+  let add_parameter_variable identifier =
+    QualifiedIdentifier.Dictionary.add_toplevel_entry identifier
+      Parameter_variable
 
   let add_substitution_variable identifier =
     QualifiedIdentifier.Dictionary.add_toplevel_entry identifier
@@ -1025,6 +1026,10 @@ module CLF = struct
 
   exception Illegal_unnamed_block_element_type of Location.t
 
+  exception Illegal_parameter_variable_type of Location.t
+
+  exception Illegal_substitution_variable_type of Location.t
+
   exception
     Unbound_type_constant of
       { location : Location.t
@@ -1168,6 +1173,14 @@ module CLF = struct
     | Illegal_unnamed_block_element_type location ->
       Format.fprintf ppf
         "Contextual LF block type element missing an identifier: %a@."
+        Location.pp location
+    | Illegal_parameter_variable_type location ->
+      Format.fprintf ppf
+        "Parameter variables may not appear as contextual LF types: %a@."
+        Location.pp location
+    | Illegal_substitution_variable_type location ->
+      Format.fprintf ppf
+        "Substitution variables may not appear as contextual LF types: %a@."
         Location.pp location
     | Unbound_type_constant { location; identifier } ->
       Format.fprintf ppf "The LF type-level constant %a is unbound: %a@."
@@ -1489,7 +1502,12 @@ module CLF = struct
       raise @@ Illegal_projection_type location
     | Synprs.CLF.Object.RawSubstitution { location; _ } ->
       raise @@ Illegal_substitution_type location
-    | Synprs.CLF.Object.RawIdentifier { location; identifier; quoted } -> (
+    | Synprs.CLF.Object.RawIdentifier { location; modifier = `Hash; _ } ->
+      raise @@ Illegal_parameter_variable_type location
+    | Synprs.CLF.Object.RawIdentifier { location; modifier = `Dollar; _ } ->
+      raise @@ Illegal_substitution_variable_type location
+    | Synprs.CLF.Object.RawIdentifier { location; identifier; quoted; _ }
+      -> (
       (* As an LF type, plain identifiers are necessarily type-level
          constants. *)
       let qualified_identifier =
@@ -1620,7 +1638,14 @@ module CLF = struct
       raise @@ Illegal_backward_arrow_term location
     | Synprs.CLF.Object.RawBlock { location; _ } ->
       raise @@ Illegal_block_term location
-    | Synprs.CLF.Object.RawIdentifier { location; identifier; quoted } -> (
+    | Synprs.CLF.Object.RawIdentifier
+        { location; identifier; modifier = `Hash; _ } ->
+      Synext'.CLF.Term.Parameter_variable { location; identifier }
+    | Synprs.CLF.Object.RawIdentifier
+        { location; identifier; modifier = `Dollar; _ } ->
+      Synext'.CLF.Term.Substitution_variable { location; identifier }
+    | Synprs.CLF.Object.RawIdentifier { location; identifier; quoted; _ }
+      -> (
       (* As an LF term, plain identifiers are either term-level constants or
          variables (bound or free). *)
       let qualified_identifier =
@@ -1711,29 +1736,23 @@ module CLF = struct
         match objects with
         | Synprs.CLF.Object.RawSubstitution
             { object_ =
-                Synprs.CLF.Object.RawIdentifier { location; identifier; _ }
+                Synprs.CLF.Object.RawIdentifier
+                  { location; identifier; modifier = `Dollar; _ }
             ; substitution = closure
             ; _
-            } (* Possibly a substitution closure *)
-          :: xs -> (
-          match Disambiguation_state.lookup_toplevel identifier state with
-          | QualifiedIdentifier.Dictionary.Entry
-              Disambiguation_state.Substitution_variable ->
-            let closure' = disambiguate_as_substitution state closure in
-            ( Synext'.CLF.Substitution.Head.Substitution_variable
-                { location; identifier; closure = Option.some closure' }
-            , xs )
-          | _ -> (Synext'.CLF.Substitution.Head.None, objects))
-        | Synprs.CLF.Object.RawIdentifier { location; identifier; _ }
-            (* Possibly a substitution variable *)
-          :: xs -> (
-          match Disambiguation_state.lookup_toplevel identifier state with
-          | QualifiedIdentifier.Dictionary.Entry
-              Disambiguation_state.Substitution_variable ->
-            ( Synext'.CLF.Substitution.Head.Substitution_variable
-                { location; identifier; closure = Option.none }
-            , xs )
-          | _ -> (Synext'.CLF.Substitution.Head.None, objects))
+            } (* A substitution closure *)
+          :: xs ->
+          let closure' = disambiguate_as_substitution state closure in
+          ( Synext'.CLF.Substitution.Head.Substitution_variable
+              { location; identifier; closure = Option.some closure' }
+          , xs )
+        | Synprs.CLF.Object.RawIdentifier
+            { location; identifier; modifier = `Dollar; _ }
+            (* A substitution variable *)
+          :: xs ->
+          ( Synext'.CLF.Substitution.Head.Substitution_variable
+              { location; identifier; closure = Option.none }
+          , xs )
         | _ -> (Synext'.CLF.Substitution.Head.None, objects)
       in
       let terms' = List.map (disambiguate_as_term state) objects in
@@ -2113,7 +2132,14 @@ module CLF = struct
     | Synprs.CLF.Object.RawHole
         { location; variant = `Unlabelled | `Labelled _ } ->
       raise @@ Illegal_labellable_hole_term_pattern location
-    | Synprs.CLF.Object.RawIdentifier { location; identifier; quoted } -> (
+    | Synprs.CLF.Object.RawIdentifier
+        { location; identifier; modifier = `Hash; _ } ->
+      Synext'.CLF.Term.Pattern.Parameter_variable { location; identifier }
+    | Synprs.CLF.Object.RawIdentifier
+        { location; identifier; modifier = `Dollar; _ } ->
+      Synext'.CLF.Term.Pattern.Substitution_variable { location; identifier }
+    | Synprs.CLF.Object.RawIdentifier { location; identifier; quoted; _ }
+      -> (
       (* As an LF term pattern, plain identifiers are either term-level
          constants, variables already present in the pattern, or new pattern
          variables. *)

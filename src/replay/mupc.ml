@@ -429,7 +429,7 @@ module Make (P : ParserInfo) = struct
            }
          )
 
-  (* For `peek` and `peek'` we need to write them in eta-long form
+  (* For {!peek} and {!peek'} we need to write them in eta-long form
   without using combinators due to the value restriction. *)
 
   let peek : item Token.t option t =

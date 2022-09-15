@@ -33,22 +33,25 @@ module LF = struct
   module rec Kind : sig
     type t =
       | Typ of { location : Location.t }
-          (** [Typ { _ }] is the kind of simple types `type'. *)
+          (** [Typ { _ }] is the kind of simple types [type]. *)
       | Arrow of
           { location : Location.t
           ; domain : Typ.t
           ; range : Kind.t
           }
-          (** [Arrow { domain; range; _ }] is the kind `domain -> range'. *)
+          (** [Arrow { domain; range; _ }] is the kind [domain -> range]. *)
       | Pi of
           { location : Location.t
           ; parameter_identifier : Identifier.t Option.t
           ; parameter_type : Typ.t
           ; body : Kind.t
           }
-          (** [Pi { parameter_identifier = x; parameter_type = t; body; _ }] is the
-              dependent product kind `{ x : t } body'.
-              The variable `x' ranges over LF terms. *)
+          (** - [Pi { parameter_identifier = Option.Some "x"; parameter_type = t; body; _ }]
+                is the dependent product kind [{ x : t } body]. The variable
+                ["x"] ranges over LF terms.
+
+              - [Pi { parameter_identifier = Option.None; parameter_type = t; body; _ }]
+                is the dependent product kind [{ _ : t } body]. *)
   end =
     Kind
 
@@ -61,15 +64,15 @@ module LF = struct
           ; operator : Operator.t
           ; quoted : Bool.t
           }
-          (** [Constant { identifier; _ }] is the type-level constant with
-              qualified identifier `identifier', which is necessarily bound. *)
+          (** [Constant { identifier = "c"; _ }] is the type-level constant
+              with qualified identifier ["c"], which is necessarily bound. *)
       | Application of
           { location : Location.t
           ; applicand : Typ.t
           ; arguments : Term.t List.t
           }
           (** [Application { applicand; arguments; _ }] is the type-level
-              application of `applicand' with arguments `arguments'.
+              application of [applicand] with [arguments].
 
               - If [applicand = Typ.Constant { operator; _ }] and
                 [Operator.is_infix operator], then
@@ -84,18 +87,21 @@ module LF = struct
           ; orientation : [ `Forward | `Backward ]
           }
           (** - [Arrow { domain; range; orientation = `Forward; _ }] is the
-                type `domain -> range'.
+                type [domain -> range].
               - [Arrow { range; domain; orientation = `Backward; _ }] is the
-                type `range <- domain'. *)
+                type [range <- domain]. *)
       | Pi of
           { location : Location.t
           ; parameter_identifier : Identifier.t Option.t
           ; parameter_type : Typ.t
           ; body : Typ.t
           }
-          (** [Pi { parameter_identifier = x; parameter_type = t; body; _ }] is the
-              dependent product type `{ x : t } body'.
-              The variable `x' ranges over LF terms. *)
+          (** - [Pi { parameter_identifier = Option.Some "x"; parameter_type = t; body; _ }]
+                is the dependent product type [{ x : t } body]. The variable
+                ["x"] ranges over LF terms.
+
+              - [Pi { parameter_identifier = Option.None; parameter_type = t; body; _ }]
+                is the dependent product type [{ _ : t } body]. *)
   end =
     Typ
 
@@ -106,8 +112,8 @@ module LF = struct
           { location : Location.t
           ; identifier : Identifier.t
           }
-          (** [Variable { identifier; _ }] is the term-level variable with
-              name `identifier', which is either a bound variable having a
+          (** [Variable { identifier = "x"; _ }] is the term-level variable
+              with name ["x"], which is either a bound variable having a
               lambda binder, or a free variable having no such corresponding
               binder. *)
       | Constant of
@@ -116,15 +122,15 @@ module LF = struct
           ; operator : Operator.t
           ; quoted : Bool.t
           }
-          (** [Constant { identifier; _ }] is the term-level constant with
-              qualified identifier `identifier', which is necessarily bound. *)
+          (** [Constant { identifier = "c"; _ }] is the term-level constant
+              with qualified identifier ["c"], which is necessarily bound. *)
       | Application of
           { location : Location.t
           ; applicand : Term.t
           ; arguments : Term.t List.t
           }
           (** [Application { applicand; arguments; _ }] is the term-level
-              application of `applicand' with arguments `arguments'.
+              application of [applicand] with [arguments].
 
               - If [applicand = Term.Constant { operator; _ }] and
                 [Operator.is_infix operator], then
@@ -138,17 +144,21 @@ module LF = struct
           ; parameter_type : Typ.t Option.t
           ; body : Term.t
           }
-          (** [Abstraction { parameter_identifier = x; body; _ }] is the term
-              `\x. body'. The variable `x' ranges over LF terms. *)
+          (** - [Abstraction { parameter_identifier = Option.Some "x"; body; _ }]
+                is the term [\x. body]. The variable ["x"] ranges over LF
+                terms.
+
+              - [Abstraction { parameter_identifier = Option.None; body; _ }]
+                is the term [\_. body]. *)
       | Wildcard of { location : Location.t }
-          (** [Wildcard { _ }] is the omission of a fresh term-level
+          (** [Wildcard { _ }] is the omission [_] of a fresh term-level
               variable. *)
       | TypeAnnotated of
           { location : Location.t
           ; term : Term.t
           ; typ : Typ.t
           }
-          (** [TypeAnnotated { term = u; typ = t; _ }] is the term `u : t`. *)
+          (** [TypeAnnotated { term = u; typ = t; _ }] is the term [u : t]. *)
   end =
     Term
 
@@ -229,15 +239,15 @@ module CLF = struct
           ; operator : Operator.t
           ; quoted : Bool.t
           }
-          (** [Constant { identifier; _ }] is the type-level constant with
-              qualified identifier `identifier', which is necessarily bound. *)
+          (** [Constant { identifier = "c"; _ }] is the type-level constant
+              with qualified identifier ["c"], which is necessarily bound. *)
       | Application of
           { location : Location.t
           ; applicand : Typ.t
           ; arguments : Term.t List.t
           }
           (** [Application { applicand; arguments; _ }] is the type-level
-              application of `applicand' with arguments `arguments'.
+              application of [applicand] with [arguments].
 
               - If [applicand = Typ.Constant { operator; _ }] and
                 [Operator.is_infix operator], then
@@ -252,18 +262,21 @@ module CLF = struct
           ; orientation : [ `Forward | `Backward ]
           }
           (** - [Arrow { domain; range; orientation = `Forward; _ }] is the
-                type `domain -> range'.
+                type [domain -> range].
               - [Arrow { range; domain; orientation = `Backward; _ }] is the
-                type `range <- domain'. *)
+                type [range <- domain]. *)
       | Pi of
           { location : Location.t
           ; parameter_identifier : Identifier.t Option.t
           ; parameter_type : Typ.t
           ; body : Typ.t
           }
-          (** [Pi { parameter_identifier = x; parameter_type = t; body; _ }]
-              is the dependent product type `[{ x : t } body]'. The variable
-              `x' ranges over LF terms. *)
+          (** - [Pi { parameter_identifier = Option.Some "x"; parameter_type = t; body; _ }]
+                is the dependent product type [{ x : t } body]. The variable
+                ["x"] ranges over LF terms.
+
+              - [Pi { parameter_identifier = Option.None; parameter_type = t; body; _ }]
+                is the dependent product type [{ _ : t } body]. *)
       | Block of
           { location : Location.t
           ; elements :
@@ -271,9 +284,13 @@ module CLF = struct
               | `Record of (Identifier.t * Typ.t) List1.t
               ]
           }
-          (** [Block { elements; _ }] is the block type `block (elements)'.
-              This is a dependent sum type, and the type of elements in
-              [elements] may refer to terms appearing earlier in [elements]. *)
+          (** - [Block { elements = `Unnamed t; _ }] is the block type
+                [block t].
+
+              - [Block { elements = `Record \[("x1", t1); ("x2", t2); ...; ("xn", tn)\]; _ }]
+                is the block type [block (x1 : t1, x2 : t2, ..., xn : tn)].
+                This is a dependent sum type, with [tj] being able to refer
+                to ["xi"] when [i < j]. *)
   end =
     Typ
 
@@ -284,8 +301,8 @@ module CLF = struct
           { location : Location.t
           ; identifier : Identifier.t
           }
-          (** [Variable { identifier; _ }] is the term-level variable with
-              name `identifier', which is either a bound variable having a
+          (** [Variable { identifier = "x"; _ }] is the term-level variable
+              with name ["x"], which is either a bound variable having a
               lambda binder, or a free variable having no such corresponding
               binder. *)
       | Parameter_variable of
@@ -306,22 +323,22 @@ module CLF = struct
           ; operator : Operator.t
           ; quoted : Bool.t
           }
-          (** [Constant { identifier; _ }] is the term-level constant with
-              qualified identifier `identifier', which is necessarily bound. *)
+          (** [Constant { identifier = "c"; _ }] is the term-level constant
+              with qualified identifier ["c"], which is necessarily bound. *)
       | Substitution of
           { location : Location.t
           ; term : Term.t
           ; substitution : Substitution.t
           }
           (** [Substitution { term; substitution; _ }] is the term
-              `term[substitution]'. *)
+              [term\[substitution\]]. *)
       | Application of
           { location : Location.t
           ; applicand : Term.t
           ; arguments : Term.t List.t
           }
           (** [Application { applicand; arguments; _ }] is the term-level
-              application of `applicand' with arguments `arguments'.
+              application of [applicand] with [arguments].
 
               - If [applicand = Term.Constant { operator; _ }] and
                 [Operator.is_infix operator], then
@@ -335,8 +352,10 @@ module CLF = struct
           ; parameter_type : Typ.t Option.t
           ; body : Term.t
           }
-          (** [Abstraction { parameter_identifier = x; body; _ }] is the term
-              `\x. body'. *)
+          (** - [Abstraction { parameter_identifier = Option.Some "x"; body; _ }]
+                is the term [\x. body].
+              - [Abstraction { parameter_identifier = Option.None; body; _ }]
+                is the term [\_. body]. *)
       | Hole of
           { location : Location.t
           ; variant :
@@ -345,15 +364,15 @@ module CLF = struct
           (** [Hole { variant; _ }] is the omission of a term for
               reconstruction.
 
-              - If [variant = `Underscore], then it is the hole `_'.
-              - If [variant = `Unlabelled], then it is the hole `?'.
-              - If [variant = `Labelled label], then it is the hole `?label'. *)
+              - If [variant = `Underscore], then it is the hole [_].
+              - If [variant = `Unlabelled], then it is the hole [?].
+              - If [variant = `Labelled label], then it is the hole [?label]. *)
       | Tuple of
           { location : Location.t
           ; terms : Term.t List1.t
           }
-          (** [Tuple { terms; _ }] is the tuple term `<t1; t2; t3>' if
-              [List1.to_list terms = \[t1; t2; t3\]].
+          (** [Tuple { terms; _ }] is the tuple term [<t1; t2; ...; tn>] if
+              [List1.to_list terms = \[t1; t2; ...; tn\]].
 
               This should not be confused with computational-level tuples.
               The type of a contextual LF term-level tuple is a block. *)
@@ -368,7 +387,7 @@ module CLF = struct
           ; term : Term.t
           ; typ : Typ.t
           }
-          (** [TypeAnnotated { term = u; typ = t; _ }] is the term `u : t`. *)
+          (** [TypeAnnotated { term = u; typ = t; _ }] is the term [u : t]. *)
 
     (** External contextual LF term patterns. *)
     module rec Pattern : sig
@@ -397,14 +416,16 @@ module CLF = struct
             ; operator : Operator.t
             ; quoted : Bool.t
             }
-            (** [Constant { identifier; _ }] is the term-level constant
-                pattern `identifier'. *)
+            (** [Constant { identifier = "c"; _ }] is the term-level constant
+                pattern ["c"]. *)
         | Wildcard of { location : Location.t }
-            (** [Wildcard _] is the term-level catch-all pattern `_'. *)
+            (** [Wildcard _] is the term-level catch-all pattern [_]. *)
         | Tuple of
             { location : Location.t
             ; terms : Term.Pattern.t List1.t
-            }  (** [Tuple { terms; _ }] is the tuple pattern `<terms>'. *)
+            }
+            (** [Tuple { terms; _ }] is the tuple pattern [<p1; p2; ...; pn>]
+                if [terms = \[p1; p2; ...; pn\]]. *)
         | Projection of
             { location : Location.t
             ; term : Term.Pattern.t
@@ -412,32 +433,31 @@ module CLF = struct
                 [ `By_identifier of Identifier.t | `By_position of Int.t ]
             }
             (** [Projection { term; _ }] is the pattern for the projection of
-                a tuple `term'. This projection is used to indicate which
+                a tuple [term]. This projection is used to indicate which
                 element of a tuple the scrutinee is matched against in a
-                `case' expression. *)
+                [case]-expression. *)
         | Abstraction of
             { location : Location.t
             ; parameter_identifier : Identifier.t Option.t
             ; parameter_type : Typ.t Option.t
             ; body : Term.Pattern.t
             }
-            (** [Abstraction { parameter_identifier = x; parameter_type = t; body; _ }]
-                is the pattern `\x:t. body'. *)
+            (** [Abstraction { parameter_identifier = Option.Some "x"; parameter_type = Option.Some t; body; _ }]
+                is the pattern [\x:t. body]. *)
         | Substitution of
             { location : Location.t
             ; term : Term.Pattern.t
             ; substitution : Substitution.t
             }
             (** [Substitution { term; substitution; _ }] is the pattern
-                `term[substitution]'. *)
+                [term\[substitution\]]. *)
         | Application of
             { location : Location.t
             ; applicand : Term.Pattern.t
             ; arguments : Term.Pattern.t List.t
             }
             (** [Application { applicand; arguments; _ }] is the term-level
-                application pattern of `applicand' with arguments
-                `arguments'.
+                application pattern of [applicand] with [arguments].
 
                 - If [applicand = Term.Constant { operator; _ }] and
                   [Operator.is_infix operator], then
@@ -450,8 +470,8 @@ module CLF = struct
             ; term : Term.Pattern.t
             ; typ : Typ.t
             }
-            (** [TypeAnnotated { term = x; typ = t; _ }] is the pattern `x :
-                t'. *)
+            (** [TypeAnnotated { term = x; typ = t; _ }] is the pattern
+                [x : t]. *)
     end
   end =
     Term
@@ -460,22 +480,22 @@ module CLF = struct
   and Substitution : sig
     (** [{ Substitution.head; terms; _ }] is the substitution
 
-        - `^' if [head = Head.None] and [terms = \[\]]
-        - `m1, m2, ..., mn' if [head = Head.None] and
+        - [^] if [head = Head.None] and [terms = \[\]]
+        - [m1, m2, ..., mn] if [head = Head.None] and
           [terms = \[m1; m2; ...; mn\]]
-        - `..' if [head = Head.Identity _] and [terms = \[\]]
-        - `.., m1, m2, ..., mn' if [head = Head.Identitiy _] and
+        - [..] if [head = Head.Identity _] and [terms = \[\]]
+        - [.., m1, m2, ..., mn] if [head = Head.Identitiy _] and
           [terms = \[m1; m2; ...; mn\]]
-        - `$S' if
+        - [$S] if
           [head = Head.Substitution_variable { identifier = "$S"; closure = Option.None; _ }]
           and [terms = \[\]]
-        - `$S\[o\]' if
+        - [$S\[o\]] if
           [head = Head.Substitution_variable { identifier = "$S"; closure = Option.Some o; _ }]
           and [terms = \[\]]
-        - `$S, m1, m2, ..., mn' if
+        - [$S, m1, m2, ..., mn] if
           [head = Head.Substitution_variable { identifier = "$S"; closure = Option.None; _ }]
           and [terms = \[m1; m2; ...; mn\]]
-        - `$S\[o\], m1, m2, ..., mn' if
+        - [$S\[o\], m1, m2, ..., mn] if
           [head = Head.Substitution_variable { identifier = "$S"; closure = Option.Some o; _ }]
           and [terms = \[m1; m2; ...; mn\]] *)
     type t =
@@ -521,15 +541,15 @@ module CLF = struct
   and Context : sig
     (** [{ Context.head; typings; _ }] is the context
 
-        - `^' if [head = Head.None] and [typings = \[\]].
-        - `x1 : t1, x2 : t2, ..., xn : tn' if [head = Head.None] and
+        - [^] if [head = Head.None] and [typings = \[\]].
+        - [x1 : t1, x2 : t2, ..., xn : tn] if [head = Head.None] and
           [typings = \[("x1", t1); ("x2", t2); ..., ("xn", tn)\]].
-        - `_' if [head = Head.Hole] and [typings = \[\]].
-        - `_, x1 : t1, x2 : t2, ..., xn : tn' if [head = Head.Hole] and
+        - [_] if [head = Head.Hole] and [typings = \[\]].
+        - [_, x1 : t1, x2 : t2, ..., xn : tn] if [head = Head.Hole] and
           [typings = \[("x1", t1); ("x2", t2); ..., ("xn", tn)\]].
-        - `g' if [head = Head.Context_variable { identifier = "g"; _ }] and
+        - [g] if [head = Head.Context_variable { identifier = "g"; _ }] and
           [typings = \[\]].
-        - `g, x1 : t1, x2 : t2, ..., xn : tn' if
+        - [g, x1 : t1, x2 : t2, ..., xn : tn] if
           [head = Head.Context_variable { identifier = "g"; _ }] and
           [typings = \[("x1", t1); ("x2", t2); ..., ("xn", tn)\]]. *)
     type t =
@@ -632,13 +652,13 @@ end
     - [g] ranges over context schemas
 
     {[
-      Meta-Types           U ::= g | Ψ ⊢ A | Ψ ⊢ Ψ | Ψ #⊢ Ψ
-      Meta-Objects         C ::= Ψ | Ψ ⊢ M | Ψ ⊢ σ | Ψ #⊢ σ
-      Meta-Substitutions   θ ::= ^ | θ, C/X
-      Meta-Contexts        Δ ::= ^ | Δ, X:U
+      Meta-types           U ::= g | Ψ ⊢ A | Ψ ⊢ Ψ | Ψ #⊢ Ψ
+      Meta-objects         C ::= Ψ | Ψ ⊢ M | Ψ ⊢ σ | Ψ #⊢ σ
+      Meta-substitutions   θ ::= ^ | θ, C/X
+      Meta-contexts        Δ ::= ^ | Δ, X:U
       Schemas              G ::= g | G + G | some [x1:A1, x2:A2, ..., xn:An] block (y1:B1, y2:B2, ..., ym:Bm)
 
-      Meta-Object Patterns   Cp ::= Ψp | Ψp ⊢ Mp | Ψp ⊢ σp | Ψp #⊢ σp
+      Meta-object patterns   Cp ::= Ψp | Ψp ⊢ Mp | Ψp ⊢ σp | Ψp #⊢ σp
     ]} *)
 module Meta = struct
   (** External meta-types. *)
@@ -648,29 +668,29 @@ module Meta = struct
           { location : Location.t
           ; identifier : QualifiedIdentifier.t
           }
-          (** [Context_schema_constant { identifier; _ }] is the context
-              schema `identifier'. *)
+          (** [Context_schema_constant { identifier = "c"; _ }] is the
+              context schema ["c"]. *)
       | Contextual_typ of
           { location : Location.t
           ; context : CLF.Context.t
           ; typ : CLF.Typ.t
           }
           (** [Contextual_typ { context; typ; _ }] is the contextual type
-              `context |- typ'. *)
+              [context |- typ]. *)
       | Plain_substitution_typ of
           { location : Location.t
           ; domain : CLF.Context.t
           ; range : CLF.Context.t
           }
           (** [Plain_substitution_typ { domain; range; _ }] is the type for
-              the plain substitution `domain |- range'. *)
+              the plain substitution [domain |- range]. *)
       | Renaming_substitution_typ of
           { location : Location.t
           ; domain : CLF.Context.t
           ; range : CLF.Context.t
           }
           (** [Renaming_substitution_typ { domain; range; _ }] is the type
-              for the renaming substitution `domain #|- range'. *)
+              for the renaming substitution [domain #|- range]. *)
   end =
     Typ
 
@@ -681,28 +701,28 @@ module Meta = struct
           { location : Location.t
           ; context : CLF.Context.t
           }
-          (** [Context { context; _ }] is the context meta-object `context'. *)
+          (** [Context { context; _ }] is the context meta-object [context]. *)
       | Contextual_term of
           { location : Location.t
           ; context : CLF.Context.t
           ; term : CLF.Term.t
           }
           (** [Contextual_term { context; term; _ }] is the contextual term
-              `context |- term'. *)
+              [context |- term]. *)
       | Plain_substitution of
           { location : Location.t
           ; domain : CLF.Context.t
           ; range : CLF.Substitution.t
           }
           (** [Plain_substitution { domain; range; _ }] is the plain
-              substitution `domain |- range'. *)
+              substitution [domain |- range]. *)
       | Renaming_substitution of
           { location : Location.t
           ; domain : CLF.Context.t
           ; range : CLF.Substitution.t
           }
           (** [Renaming_substitution { domain; range; _ }] is the renaming
-              substitution `domain #|- range'. *)
+              substitution [domain #|- range]. *)
 
     (** External meta-object patterns. *)
     module Pattern : sig
@@ -719,21 +739,21 @@ module Meta = struct
             ; term : CLF.Term.Pattern.t
             }
             (** [Contextual_term { context; term; _ }] is the contextual term
-                pattern `context |- term'. *)
+                pattern [context |- term]. *)
         | Plain_substitution of
             { location : Location.t
             ; domain : CLF.Context.Pattern.t
             ; range : CLF.Substitution.Pattern.t
             }
             (** [Plain_substitution { domain; range; _ }] is the plain
-                substitution pattern `domain |- range'. *)
+                substitution pattern [domain |- range]. *)
         | Renaming_substitution of
             { location : Location.t
             ; domain : CLF.Context.Pattern.t
             ; range : CLF.Substitution.Pattern.t
             }
             (** [Renaming_substitution { domain; range; _ }] is the renaming
-                substitution pattern `domain #|- range'. *)
+                substitution pattern [domain #|- range]. *)
     end
   end =
     Object
@@ -742,8 +762,8 @@ module Meta = struct
   and Substitution : sig
     (** [{ Substitution.objects; _ }] is the meta-context
 
-        - `^' if [objects = \[\]]
-        - `m1, m2, ..., mn' if [objects = \[m1; m2; ...; mn\]] *)
+        - [^] if [objects = \[\]]
+        - [m1, m2, ..., mn] if [objects = \[m1; m2; ...; mn\]] *)
     type t =
       { location : Location.t
       ; objects : Object.t List.t
@@ -755,8 +775,8 @@ module Meta = struct
   and Context : sig
     (** [{ Context.typings; _ }] is the meta-context
 
-        - `^' if [typings = \[\]]
-        - `x1:a1, x2:a2, ..., xn:an' if
+        - [^] if [typings = \[\]]
+        - [x1 : a1, x2 : a2, ..., xn : an] if
           [typings = \[("x1", a1); ("x2", a2); ...; ("xn", an)\]] *)
     type t =
       { location : Location.t
@@ -772,20 +792,20 @@ module Meta = struct
           { location : Location.t
           ; identifier : QualifiedIdentifier.t
           }
-          (** [Constant { identifier; _ }] is the schema having identifier
-              `identifier' declared elsewhere in the signature.
+          (** [Constant { identifier = "ctx"; _ }] is the schema having
+              identifier ["ctx"] declared elsewhere in the signature.
 
-              A tuple term has a block type `t' matching against this schema
-              if `t' matches against the schema referred to as `identifier'. *)
+              A tuple term has a block type [t] matching against this schema
+              if [t] matches against the schema referred to as `identifier'. *)
       | Alternation of
           { location : Location.t
           ; schemas : Schema.t List2.t
           }
-          (** [Alternation { schemas; _ }] is the schema `g1 + g2 + ... + gn'
-              if [schemas = \[g1; g2; ...; gn\]].
+          (** [Alternation { schemas = \[g1; g2; ...; gn\]; _ }] is the
+              schema [g1 + g2 + ... + gn].
 
-              A tuple term has a block type `t' matching against this schema
-              if `t' matches against at least one of `g1', `g2', ..., `gn'. *)
+              A tuple term has a block type [t] matching against this schema
+              if [t] matches against at least one of [g1], [g2], ..., [gn]. *)
       | Element of
           { location : Location.t
           ; some : (Identifier.t * CLF.Typ.t) List1.t Option.t
@@ -794,12 +814,17 @@ module Meta = struct
               | `Record of (Identifier.t * CLF.Typ.t) List1.t
               ]
           }
-          (** [Element { some = p; block = q; _ }] is the schema `some [p]
-              block (q)'.
+          (** - [Element { some = \[("x1", p1); ("x2", p2); ...; ("xn", pn)\]; block = `Unnamed t; _ }]
+                is the schema
+                [some \[x1 : p1, x2 : p2, ..., xn : pn\] block t].
 
-              A tuple term has a block type `t' matching against this schema
-              if there exist terms having types in `p' in the context, and if
-              the elements in `t' match against those in `q'. *)
+              - [Element { some = \[("x1", p1); ("x2", p2); ...; ("xn", pn)\]; block = `Record \[("y1", q1); ("y2", q2); ...; ("yn", qn)\]; _ }]
+                is the schema
+                [some \[x1 : p1, x2 : p2, ..., xn : pn\] block (y1 : q1, y2 : q2, ..., yn : qn)].
+
+              A tuple term has a block type [t] matching against this schema
+              if there exist terms having types in [p] in the context, and if
+              the elements in [t] match against those in [q]. *)
   end =
     Schema
 

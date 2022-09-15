@@ -205,14 +205,17 @@ end
     {[
       Types           A, B ::= a | Πx:A.B | A → B | A M1 M2 ... Mn
                                  | block (x1:A1, x2:A2, ..., xn:An)
-      Terms           M, N ::= c | x | λx:A.M | M N1 N2 ... Nn | M:A | M[σ]
+      Terms           M, N ::= c | x | #x | $x | λx:A.M | M N1 N2 ... Nn
+                                 | M:A | M[σ]
                                  | _ | ? | ?id | <M1; M2; ...; Mn> | M.# | M.id
       Substitutions   σ    ::= ^ | … | σ, M | s[σ]
       Contexts        Ψ    ::= ^ | g | Ψ, x:A
 
-      Term patterns           Mp, Np ::= c | x | λx:A.Mp | Mp Np1 Np2 ... Npn
+      Term patterns           Mp, Np ::= c | x | #x | $x | λx:A.Mp
+                                           | Mp Np1 Np2 ... Npn
                                            | Mp:A | Mp[σ] | _
-                                           | <Mp1; Mp2; ...; Mpn> | Mp.# | Mp.id
+                                           | <Mp1; Mp2; ...; Mpn>
+                                           | Mp.# | Mp.id
       Substitution patterns   σp     ::= ^ | … | σp, Mp | s[σ]
       Context patterns        Ψp     ::= ^ | g | Ψp, x:A
     ]} *)
@@ -285,6 +288,18 @@ module CLF = struct
               name `identifier', which is either a bound variable having a
               lambda binder, or a free variable having no such corresponding
               binder. *)
+      | Parameter_variable of
+          { location : Location.t
+          ; identifier : Identifier.t
+          }
+          (** [Parameter_variable { identifier = "#x"; _ }] is the term-level
+              parameter variable with name ["#x"]. *)
+      | Substitution_variable of
+          { location : Location.t
+          ; identifier : Identifier.t
+          }
+          (** [Substitution_variable { identifier = "$x"; _ }] is the
+              term-level substitution variable with name ["$x"]. *)
       | Constant of
           { location : Location.t
           ; identifier : QualifiedIdentifier.t
@@ -362,8 +377,20 @@ module CLF = struct
             { location : Location.t
             ; identifier : Identifier.t
             }
-            (** [Variable { identifier; _ }] is the term-level variable
-                pattern `identifier'. *)
+            (** [Variable { identifier = "x"; _ }] is the term-level variable
+                pattern ["x"]. *)
+        | Parameter_variable of
+            { location : Location.t
+            ; identifier : Identifier.t
+            }
+            (** [Parameter_variable { identifier = "#x"; _ }] is the
+                term-level parameter variable pattern with name ["#x"]. *)
+        | Substitution_variable of
+            { location : Location.t
+            ; identifier : Identifier.t
+            }
+            (** [Substitution_variable { identifier = "$x"; _ }] is the
+                term-level substitution variable pattern with name ["$x"]. *)
         | Constant of
             { location : Location.t
             ; identifier : QualifiedIdentifier.t

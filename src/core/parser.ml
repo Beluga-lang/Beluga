@@ -996,6 +996,24 @@ let dot_identifier =
     (function
      | Token.DOT_IDENT x -> Option.some x
      | _ -> Option.none)
+  |> span
+  $> fun (location, identifier) -> Identifier.make ~location identifier
+
+let hash_identifier =
+  satisfy' (`hash_identifier Option.none)
+    (function
+     | Token.HASH_IDENT s -> Option.some s
+     | _ -> Option.none)
+  |> span
+  $> fun (location, identifier) -> Identifier.make ~location identifier
+
+let dollar_identifier =
+  satisfy' (`dollar_identifier Option.none)
+    (function
+     | Token.DOLLAR_IDENT s -> Option.some s
+     | _ -> Option.none)
+  |> span
+  $> fun (location, identifier) -> Identifier.make ~location identifier
 
 (*=
     <omittable-identifier> ::=
@@ -1476,10 +1494,40 @@ end = struct
       |> span
       $> (function
          | (location, `Qualified identifier) ->
-           CLF.Object.RawQualifiedIdentifier { location; identifier; quoted = false }
+           CLF.Object.RawQualifiedIdentifier
+             { location
+             ; identifier
+             ; quoted = false
+             }
          | (location, `Plain identifier) ->
-           CLF.Object.RawIdentifier { location; identifier; quoted = false })
+           CLF.Object.RawIdentifier
+             { location
+             ; identifier
+             ; modifier = `None
+             ; quoted = false
+             }
+         )
       |> labelled "Contextual LF constant or variable object"
+    and parameter_variable =
+      hash_identifier
+      $> fun identifier ->
+        let location = Identifier.location identifier in
+        CLF.Object.RawIdentifier
+          { location
+          ; identifier
+          ; modifier = `Hash
+          ; quoted = false
+          }
+    and substitution_variable =
+      dollar_identifier
+      $> fun identifier ->
+        let location = Identifier.location identifier in
+        CLF.Object.RawIdentifier
+          { location
+          ; identifier
+          ; modifier = `Dollar
+          ; quoted = false
+          }
     and underscore_hole =
       token Token.UNDERSCORE
       |> span
@@ -1519,6 +1567,8 @@ end = struct
     in
     choice
       [ constant_or_variable
+      ; parameter_variable
+      ; substitution_variable
       ; underscore_hole
       ; possibly_labelled_hole
       ; tuple
@@ -1532,9 +1582,7 @@ end = struct
         `By_position i
     and identifier_projection =
       dot_identifier
-      |> span
-      $> fun (location, x) ->
-        `By_identifier (Identifier.make ~location x)
+      $> fun x -> `By_identifier x
     in
     let projection =
       alt integer_projection identifier_projection

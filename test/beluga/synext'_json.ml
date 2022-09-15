@@ -203,6 +203,16 @@ end = struct
         [ `String "CLF.Term.Variable"
         ; `Assoc [ ("identifier", of_identifier identifier) ]
         ]
+    | CLF.Term.Parameter_variable { identifier; _ } ->
+      `List
+        [ `String "CLF.Term.Parameter_variable"
+        ; `Assoc [ ("identifier", of_identifier identifier) ]
+        ]
+    | CLF.Term.Substitution_variable { identifier; _ } ->
+      `List
+        [ `String "CLF.Term.Substitution_variable"
+        ; `Assoc [ ("identifier", of_identifier identifier) ]
+        ]
     | CLF.Term.Constant { identifier; quoted; _ } ->
       `List
         [ `String "CLF.Term.Constant"
@@ -279,6 +289,16 @@ end = struct
     | CLF.Term.Pattern.Variable { identifier; _ } ->
       `List
         [ `String "CLF.Term.Pattern.Variable"
+        ; `Assoc [ ("identifier", of_identifier identifier) ]
+        ]
+    | CLF.Term.Pattern.Parameter_variable { identifier; _ } ->
+      `List
+        [ `String "CLF.Term.Pattern.Parameter_variable"
+        ; `Assoc [ ("identifier", of_identifier identifier) ]
+        ]
+    | CLF.Term.Pattern.Substitution_variable { identifier; _ } ->
+      `List
+        [ `String "CLF.Term.Pattern.Substitution_variable"
         ; `Assoc [ ("identifier", of_identifier identifier) ]
         ]
     | CLF.Term.Pattern.Constant { identifier; quoted; _ } ->

@@ -76,7 +76,7 @@ let dot_ident =   [%sedlex.regexp? '.', ident]
 let backarrow =    [%sedlex.regexp? ("<-" | 0x2190)]
 let arrow =        [%sedlex.regexp? ("->" | 0x2192)]
 let turnstile =    [%sedlex.regexp? ("|-" | 0x22a2)]
-let hash_turnstile =    [%sedlex.regexp? '#', turnstile]
+let turnstile_hash =    [%sedlex.regexp? turnstile, '#']
 let thick_arrow =  [%sedlex.regexp? ("=>" | 0x21d2)]
 let dots =         [%sedlex.regexp? (".." | 0x2026)]
 
@@ -206,7 +206,7 @@ let rec tokenize lexbuf =
   | dot_number -> Token.DOT_NUMBER (int_of_string (String.drop 1 (get_lexeme lexbuf)))
   | dot_ident -> Token.DOT_IDENT (String.drop 1 (get_lexeme lexbuf))
   | dots -> const Token.DOTS
-  | hash_turnstile -> Token.HASH_TURNSTILE
+  | turnstile_hash -> Token.TURNSTILE_HASH
   | hash_blank -> Token.HASH_BLANK
   | hash_ident -> Token.HASH_IDENT (get_lexeme lexbuf)
   | dollar_blank -> Token.DOLLAR_BLANK

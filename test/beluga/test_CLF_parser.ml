@@ -120,7 +120,7 @@ end
 module CLF_constructors = struct
   open Synext'.CLF
 
-  let location = Obj.magic ()
+  let location = Location.ghost
 
   let id n = Identifier.make ~location n
 

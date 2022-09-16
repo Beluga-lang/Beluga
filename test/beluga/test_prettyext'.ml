@@ -91,7 +91,7 @@ end
 (** Abbreviated constructors for LF kinds, types and terms. These are
     strictly used for testing. *)
 module LF_constructors = struct
-  let location = Obj.magic ()
+  let location = Location.ghost
 
   let id n = Identifier.make ~location n
 

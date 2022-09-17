@@ -1617,8 +1617,8 @@ end = struct
     $> (function
        | (object_, []) -> object_
        | (object_, substitutions) ->
-           List.fold_right
-             (fun substitution accumulator ->
+           List.fold_left
+             (fun accumulator substitution ->
                let location =
                   Location.join
                     (CLF.location_of_object accumulator)
@@ -1630,8 +1630,8 @@ end = struct
                  ; substitution
                  }
              )
-             substitutions
              object_
+             substitutions
        )
     |> labelled "Contextual LF atomic, projection or substitution object"
 

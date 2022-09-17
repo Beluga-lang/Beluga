@@ -750,6 +750,12 @@ let test_term =
       , sub (v "x") (`None, [ v "y1"; v "y2"; v "y3" ]) )
     ; (mock_state_2, "x[.., z]", sub (v "x") (`Id, [ c "z" ]))
     ; ( mock_state_2
+      , "x[y1][y2][y3]"
+      , sub
+          (sub (sub (v "x") (`None, [ v "y1" ])) (`None, [ v "y2" ]))
+          (`None, [ v "y3" ]) )
+    ; (mock_state_2, "x[.., z]", sub (v "x") (`Id, [ c "z" ]))
+    ; ( mock_state_2
       , "x[.., y1, y2, y3]"
       , sub (v "x") (`Id, [ v "y1"; v "y2"; v "y3" ]) )
     ; ( mock_state_2

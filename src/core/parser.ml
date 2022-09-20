@@ -1028,6 +1028,26 @@ let omittable_identifier =
     (identifier $> Option.some)
 
 (*=
+    <omittable-hash-identifier> ::=
+      | `#_'
+      | <hash-identifier>
+*)
+let omittable_hash_identifier =
+  alt
+    (token Token.HASH_BLANK $> fun () -> Option.none)
+    (hash_identifier $> Option.some)
+
+(*=
+    <omittable-dollar-identifier> ::=
+      | `$_'
+      | <dollar-identifier>
+*)
+let omittable_dollar_identifier =
+  alt
+    (token Token.DOLLAR_BLANK $> fun () -> Option.none)
+    (dollar_identifier $> Option.some)
+
+(*=
    <qualified-identifier> ::= (<identifier> `::')* <identifier>
 *)
 let[@warning "-32"] qualified_identifier =
@@ -1035,6 +1055,16 @@ let[@warning "-32"] qualified_identifier =
   |> span
   $> fun (location, identifiers) ->
        let (modules, identifier) = List1.unsnoc identifiers in
+       QualifiedIdentifier.make ~location ~modules identifier
+
+(*=
+   <dot-qualified-identifier> ::= <dot-identifier> (`::' <identifier>)*
+*)
+let dot_qualified_identifier =
+  seq2 dot_identifier (many (token Token.DOUBLE_COLON &> identifier))
+  |> span
+  $> fun (location, (x, xs)) ->
+       let (modules, identifier) = List1.unsnoc (List1.from x xs) in
        QualifiedIdentifier.make ~location ~modules identifier
 
 (*=
@@ -1056,6 +1086,12 @@ let hole =
     | Token.HOLE "" -> Option.some `Unlabelled
     | Token.HOLE s -> Option.some (`Labelled s)
     | _ -> Option.none)
+  |> span
+  $> (function
+     | (location, `Unlabelled) -> `Unlabelled
+     | (location, `Labelled label) ->
+       `Labelled (Identifier.make ~location label)
+     )
   |> labelled "hole"
 
 module rec LF_parsers : sig
@@ -1540,16 +1576,10 @@ end = struct
     and possibly_labelled_hole =
       hole
       |> span
-      $> (function
-         | (location, `Unlabelled) ->
-           CLF.Object.RawHole { location; variant = `Unlabelled }
-         | (location, `Labelled label) ->
-           CLF.Object.RawHole
-             { location
-             ; variant = `Labelled (Identifier.make ~location label)
-             }
+      $> (fun (location, variant) ->
+           CLF.Object.RawHole { location; variant }
          )
-      |> labelled "Contextual LF possibly labelled hole"
+      |> labelled "Possibly labelled contextual LF hole"
     and tuple =
       angles (sep_by1 CLF_parsers.clf_object (token Token.SEMICOLON))
       |> span

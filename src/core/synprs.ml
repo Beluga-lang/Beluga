@@ -1,15 +1,17 @@
 (** Parser Syntax *)
 
-open Support
-
-(** {1 Parser LF Syntax}
-
-    The intermediate representation of LF kinds, types and terms to delay the
-    handling of data-dependent aspects of the grammar.
+(** The syntax for Beluga signatures after context-free parsing.
 
     OCaml constructor names prefixed with "Raw" require data-dependent
     disambiguation or reduction during the elaboration to the external
-    syntax.
+    syntax. *)
+
+open Support
+
+(** {1 Parser LF Syntax} *)
+
+(** The intermediate representation of LF kinds, types and terms to delay the
+    handling of data-dependent aspects of the grammar.
 
     The parsers associated with these types are only intended to be used in
     the definition of LF type-level or term-level constants. This is a weak,
@@ -23,11 +25,31 @@ module LF = struct
           ; identifier : Identifier.t
           ; quoted : Bool.t
           }
+          (** - [RawIdentifier { identifier = "x"; quoted = false; _ }] is
+                the variable or constant ["x"].
+              - [RawIdentifier { identifier = "x"; quoted = true; _ }] is the
+                quoted variable or constant ["(x)"].
+
+              A quoted constant may appear as an argument, or as applicand in
+              prefix notation irrespective of its pre-defined fixity and
+              associativity. *)
       | RawQualifiedIdentifier of
           { location : Location.t
           ; identifier : QualifiedIdentifier.t
           ; quoted : Bool.t
           }
+          (** - [RawQualifiedIdentifier { identifier = "M::x"; quoted = false; _ }]
+                is the constant ["M::x"].
+              - [RawQualifiedIdentifier { identifier = "M::x"; quoted = true; _ }]
+                is the quoted constant ["(M::x)"].
+
+              Since identifiers are ambiguous with qualified identifiers in
+              the parser, the following may be assumed during disambiguation:
+              [List.length (QualifiedIdentifier.modules identifier) >= 1].
+
+              A quoted constant may appear as an argument, or as applicand in
+              prefix notation irrespective of its pre-defined fixity and
+              associativity. *)
       | RawType of { location : Location.t }
       | RawHole of { location : Location.t }
       | RawPi of
@@ -36,6 +58,10 @@ module LF = struct
           ; parameter_sort : Object.t Option.t
           ; body : Object.t
           }
+          (** [RawPi { parameter_identifier = Option.Some "x"; parameter_sort = Option.Some t; body; _ }]
+              is the Pi kind or type [{ x : t } body].
+
+              It is a syntax error to omit the parameter sort. *)
       | RawLambda of
           { location : Location.t
           ; parameter_identifier : Identifier.t Option.t
@@ -77,31 +103,50 @@ module LF = struct
     | Object.RawApplication { location; _ } -> location
 end
 
-(** {1 Parser Contextual LF Syntax}
+(** {1 Parser Contextual LF Syntax} *)
 
-    The intermediate representation of contextual LF types, terms and
+(** The intermediate representation of contextual LF types, terms and
     patterns to delay the handling of data-dependent aspects of the grammar.
 
-    OCaml constructor names prefixed with "Raw" require data-dependent
-    disambiguation or reduction during the elaboration to the external
-    syntax.
-
-    This is LF augmented with substitutions and blocks. *)
+    This is LF augmented with substitutions, contexts and blocks. *)
 module CLF = struct
   (** Contextual LF types, terms and patterns blurred together. *)
   module rec Object : sig
     type t =
       | RawIdentifier of
           { location : Location.t
-          ; identifier : Identifier.t
-          ; modifier : [ `None | `Hash | `Dollar ]
+          ; identifier : Identifier.t * [ `Plain | `Hash | `Dollar ]
           ; quoted : Bool.t
           }
+          (** - [RawIdentifier { identifier = "$x"; modifier = `Dollar; _ }]
+                is the substitution variable ["$x"].
+              - [RawIdentifier { identifier = "#x"; modifier = `Hash; _ }] is
+                the parameter variable ["#x"].
+              - [RawIdentifier { identifier = "x"; quoted = false; _ }] is
+                the variable or constant ["x"].
+              - [RawIdentifier { identifier = "x"; quoted = true; _ }] is the
+                quoted variable or constant ["(x)"].
+
+              A quoted constant may appear as an argument, or as applicand in
+              prefix notation irrespective of its pre-defined fixity and
+              associativity. *)
       | RawQualifiedIdentifier of
           { location : Location.t
           ; identifier : QualifiedIdentifier.t
           ; quoted : Bool.t
           }
+          (** - [RawQualifiedIdentifier { identifier = "M::x"; quoted = false; _ }]
+                is the constant ["M::x"].
+              - [RawQualifiedIdentifier { identifier = "M::x"; quoted = true; _ }]
+                is the quoted constant ["(M::x)"].
+
+              Since identifiers are ambiguous with qualified identifiers in
+              the parser, the following may be assumed during disambiguation:
+              [List.length (QualifiedIdentifier.modules identifier) >= 1].
+
+              A quoted constant may appear as an argument, or as applicand in
+              prefix notation irrespective of its pre-defined fixity and
+              associativity. *)
       | RawHole of
           { location : Location.t
           ; variant :
@@ -113,6 +158,10 @@ module CLF = struct
           ; parameter_sort : Object.t Option.t
           ; body : Object.t
           }
+          (** [RawPi { parameter_identifier = Option.Some "x"; parameter_sort = Option.Some t; body; _ }]
+              is the Pi kind or type [{ x : t } body].
+
+              It is a syntax error to omit the parameter sort. *)
       | RawLambda of
           { location : Location.t
           ; parameter_identifier : Identifier.t Option.t

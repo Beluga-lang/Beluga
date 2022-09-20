@@ -1162,7 +1162,7 @@ end = struct
       |> span
       $> (fun (location, ((parameter_identifier, parameter_sort), body)) ->
          LF.Object.RawLambda { location; parameter_identifier; parameter_sort; body })
-      |> labelled "LF lambda object"
+      |> labelled "LF lambda"
     and pi =
       seq2
         (braces
@@ -1173,7 +1173,7 @@ end = struct
       |> span
       $> (fun (location, ((parameter_identifier, parameter_sort), body)) ->
          LF.Object.RawPi { location; parameter_identifier; parameter_sort; body })
-      |> labelled "LF Pi object"
+      |> labelled "LF Pi type or Pi kind"
     in
     choice
       [ lambda
@@ -1189,12 +1189,12 @@ end = struct
            LF.Object.RawQualifiedIdentifier { location; identifier; quoted = false }
          | (location, `Plain identifier) ->
            LF.Object.RawIdentifier { location; identifier; quoted = false })
-      |> labelled "LF constant or variable object"
+      |> labelled "LF constant or variable"
     and type_ =
       token Token.KW_TYPE
       |> span
       $> (fun (location, ()) -> LF.Object.RawType { location })
-      |> labelled "LF `type' kind object"
+      |> labelled "LF `type' kind"
     and hole =
       token Token.UNDERSCORE
       |> span
@@ -1209,7 +1209,7 @@ end = struct
            LF.Object.RawQualifiedIdentifier { i with quoted = true }
          | o -> o
          )
-      |> labelled "LF parenthesized object"
+      |> labelled "LF parenthesized kind, type or term"
     in
     choice
       [ constant_or_variable
@@ -1225,7 +1225,7 @@ end = struct
        | (_, List1.T (object_, [])) -> object_
        | (location, List1.T (o1, o2 :: os)) ->
          LF.Object.RawApplication { location; objects = List2.from o1 o2 os })
-    |> labelled "LF atomic or application object"
+    |> labelled "LF atomic object or application"
 
   let lf_object3 =
     (* Forward arrows are right-associative, and backward arrows are
@@ -1294,10 +1294,11 @@ end = struct
                  })
              x xs)
     |> labelled
-         "LF atomic, application, annotated, forward arrow or backward \
-          arrow object"
+         "LF atomic object, application, annotated term, forward arrow or \
+          backward arrow"
 
   let lf_object2 =
+    (* Annotations are left-associative. *)
     let annotation =
       token Token.COLON &> (alt lf_object3 weak_prefix)
     in
@@ -1324,7 +1325,9 @@ end = struct
            object_
            annotations
        )
-    |> labelled "LF atomic, application, annotated, forward arrow or backward arrow object"
+    |> labelled
+         "LF atomic object, application, annotated term, forward arrow \
+          or backward arrow"
 
   let lf_object1 =
     choice
@@ -1360,10 +1363,10 @@ end = struct
         | <clf-object> <forward-arrow> <clf-object>
         | <clf-object> <backward-arrow> <clf-object>
         | <clf-object> `:' <clf-object>
-        | `block' `(' <identifier> `:' <clf-type> (`,' <identifier> `:' <clf-type>)+ `)'
-        | `block' <identifier> `:' <clf-type> (`,' <identifier> `:' <clf-type>)+
-        | `block' `(' <clf-type> `)'
-        | `block' <clf-type>
+        | `block' `(' <identifier> `:' <clf-object> (`,' <identifier> `:' <clf-object>)+ `)'
+        | `block' <identifier> `:' <clf-object> (`,' <identifier> `:' <clf-object>)+
+        | `block' `(' <clf-object> `)'
+        | `block' <clf-object>
         | <clf-object> <clf-object>
         | <clf-object> `[' <substitution-object> `]'
         | <clf-object>`.'<identifier>
@@ -1449,7 +1452,7 @@ end = struct
       |> span
       $> (fun (location, ((parameter_identifier, parameter_sort), body)) ->
         CLF.Object.RawLambda { location; parameter_identifier; parameter_sort; body })
-      |> labelled "Contextual LF lambda object"
+      |> labelled "Contextual LF lambda term"
     and pi =
       seq2
         (braces
@@ -1460,7 +1463,7 @@ end = struct
       |> span
       $> (fun (location, ((parameter_identifier, parameter_sort), body)) ->
          CLF.Object.RawPi { location; parameter_identifier; parameter_sort; body })
-      |> labelled "Contextual LF Pi object"
+      |> labelled "Contextual LF Pi kind or type"
     in
     choice
       [ lambda
@@ -1508,14 +1511,15 @@ end = struct
       token Token.HAT
     and non_empty =
       sep_by1
-        (seq2 (maybe (trying (identifier <& token Token.COLON))) CLF_parsers.clf_object)
+        (seq2 (maybe (identifier <& trying (token Token.COLON))) CLF_parsers.clf_object)
         (token Token.COMMA)
     in
     maybe
       (choice
         [ empty $> (fun () -> `Empty)
         ; non_empty $> (fun ts -> `Non_empty ts)
-      ])
+        ]
+      )
     |> span
     $> (function
        | (location, (Option.None | Option.Some `Empty)) ->
@@ -1540,20 +1544,18 @@ end = struct
          | (location, `Plain identifier) ->
            CLF.Object.RawIdentifier
              { location
-             ; identifier
-             ; modifier = `None
+             ; identifier = identifier, `Plain
              ; quoted = false
              }
          )
-      |> labelled "Contextual LF constant or variable object"
+      |> labelled "Contextual LF constant or variable"
     and parameter_variable =
       hash_identifier
       $> fun identifier ->
         let location = Identifier.location identifier in
         CLF.Object.RawIdentifier
           { location
-          ; identifier
-          ; modifier = `Hash
+          ; identifier = identifier, `Hash
           ; quoted = false
           }
     and substitution_variable =
@@ -1562,8 +1564,7 @@ end = struct
         let location = Identifier.location identifier in
         CLF.Object.RawIdentifier
           { location
-          ; identifier
-          ; modifier = `Dollar
+          ; identifier = identifier, `Dollar
           ; quoted = false
           }
     and underscore_hole =
@@ -1572,7 +1573,7 @@ end = struct
       $> (fun (location, ()) ->
            CLF.Object.RawHole { location; variant = `Underscore }
          )
-      |> labelled "Contextual LF hole object"
+      |> labelled "Contextual LF hole"
     and possibly_labelled_hole =
       hole
       |> span
@@ -1585,7 +1586,7 @@ end = struct
       |> span
       $> (fun (location, elements) ->
          CLF.Object.RawTuple { location; elements })
-      |> labelled "Contextual LF tuple object"
+      |> labelled "Contextual LF tuple term"
     and parenthesized_or_quoted_constant_or_variable =
       parens CLF_parsers.clf_object
       $> (function
@@ -1595,7 +1596,7 @@ end = struct
            CLF.Object.RawQualifiedIdentifier { i with quoted = true }
          | o -> o
          )
-      |> labelled "Contextual LF parenthesized object"
+      |> labelled "Contextual LF parenthesized kind, type or term"
     in
     choice
       [ constant_or_variable
@@ -1608,6 +1609,7 @@ end = struct
       ]
 
   let clf_object7 =
+    (* Projections are left-associative. *)
     let integer_projection =
       dot_integer
       $> fun i ->
@@ -1640,9 +1642,10 @@ end = struct
              object_
              projections
        )
-    |> labelled "Contextual LF atomic or projection object"
+    |> labelled "Contextual LF atomic object or projection term"
 
   let clf_object6 =
+    (* Substitutions are left-associative. *)
     seq2 clf_object7 (many (bracks clf_substitution_object))
     $> (function
        | (object_, []) -> object_
@@ -1663,7 +1666,9 @@ end = struct
              object_
              substitutions
        )
-    |> labelled "Contextual LF atomic, projection or substitution object"
+    |> labelled
+         "Contextual LF atomic object, projection term or\
+          substitution term"
 
   let clf_object5 =
     some (alt clf_object6 weak_prefix)
@@ -1672,19 +1677,21 @@ end = struct
        | (_, List1.T (object_, [])) -> object_
        | (location, List1.T (o1, o2 :: os)) ->
          CLF.Object.RawApplication { location; objects = List2.from o1 o2 os })
-    |> labelled "Contextual LF atomic, projection, substitution or application object"
+    |> labelled
+         "Contextual LF atomic object, projection term, substitution term \
+          or application"
 
   let clf_object4 =
     let block_contents =
       sep_by1
-        (seq2 (maybe (trying (identifier <& token Token.COLON))) CLF_parsers.clf_object)
+        (seq2 (maybe (identifier <& trying (token Token.COLON))) CLF_parsers.clf_object)
         (token Token.COMMA)
     in
     let block =
       token Token.KW_BLOCK &> opt_parens block_contents
       |> span
       $> (fun (location, elements) -> CLF.Object.RawBlock { location; elements })
-      |> labelled "Contextual LF block object"
+      |> labelled "Contextual LF block type"
     in
     choice
       [ block
@@ -1758,8 +1765,8 @@ end = struct
                  })
              x xs)
     |> labelled
-         "Contextual LF atomic, application, annotated, forward arrow or \
-          backward arrow object"
+         "Contextual LF atomic object, application, annotated term, forward \
+          arrow or backward arrow"
 
   let clf_object2 =
     let annotation =
@@ -1788,7 +1795,9 @@ end = struct
            object_
            annotations
        )
-    |> labelled "Contextual LF atomic, application, annotated, forward arrow or backward arrow object"
+    |> labelled
+         "Contextual LF atomic object, application, annotatedterm, forward\
+          arrow or backward arrow object"
 
   let clf_object1 =
     choice

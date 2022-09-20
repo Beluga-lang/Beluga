@@ -664,12 +664,12 @@ module Meta = struct
   (** External meta-types. *)
   module rec Typ : sig
     type t =
-      | Context_schema_constant of
+      | Context_schema of
           { location : Location.t
-          ; identifier : QualifiedIdentifier.t
+          ; schema : Schema.t
           }
-          (** [Context_schema_constant { identifier = "c"; _ }] is the
-              context schema ["c"]. *)
+          (** [Context_schema_constant { schema; _ }] is the context schema
+              [schema]. *)
       | Contextual_typ of
           { location : Location.t
           ; context : CLF.Context.t
@@ -832,7 +832,7 @@ module Meta = struct
 
   let location_of_meta_type meta_type =
     match meta_type with
-    | Typ.Context_schema_constant { location; _ }
+    | Typ.Context_schema { location; _ }
     | Typ.Contextual_typ { location; _ }
     | Typ.Plain_substitution_typ { location; _ }
     | Typ.Renaming_substitution_typ { location; _ } -> location

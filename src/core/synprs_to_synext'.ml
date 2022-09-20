@@ -1371,7 +1371,8 @@ module CLF = struct
       or as an argument to another application. *)
   let identify_lf_operator state term =
     match term with
-    | Synprs.CLF.Object.RawIdentifier { identifier; quoted; _ } ->
+    | Synprs.CLF.Object.RawIdentifier
+        { identifier = identifier, _modifier; quoted; _ } ->
       let qualified_identifier =
         QualifiedIdentifier.make_simple identifier
       in
@@ -1502,12 +1503,14 @@ module CLF = struct
       raise @@ Illegal_projection_type location
     | Synprs.CLF.Object.RawSubstitution { location; _ } ->
       raise @@ Illegal_substitution_type location
-    | Synprs.CLF.Object.RawIdentifier { location; modifier = `Hash; _ } ->
+    | Synprs.CLF.Object.RawIdentifier
+        { location; identifier = _identifier, `Hash; _ } ->
       raise @@ Illegal_parameter_variable_type location
-    | Synprs.CLF.Object.RawIdentifier { location; modifier = `Dollar; _ } ->
+    | Synprs.CLF.Object.RawIdentifier
+        { location; identifier = _identifier, `Dollar; _ } ->
       raise @@ Illegal_substitution_variable_type location
-    | Synprs.CLF.Object.RawIdentifier { location; identifier; quoted; _ }
-      -> (
+    | Synprs.CLF.Object.RawIdentifier
+        { location; identifier = identifier, `Plain; quoted; _ } -> (
       (* As an LF type, plain identifiers are necessarily type-level
          constants. *)
       let qualified_identifier =
@@ -1639,13 +1642,13 @@ module CLF = struct
     | Synprs.CLF.Object.RawBlock { location; _ } ->
       raise @@ Illegal_block_term location
     | Synprs.CLF.Object.RawIdentifier
-        { location; identifier; modifier = `Hash; _ } ->
+        { location; identifier = identifier, `Hash; _ } ->
       Synext'.CLF.Term.Parameter_variable { location; identifier }
     | Synprs.CLF.Object.RawIdentifier
-        { location; identifier; modifier = `Dollar; _ } ->
+        { location; identifier = identifier, `Dollar; _ } ->
       Synext'.CLF.Term.Substitution_variable { location; identifier }
-    | Synprs.CLF.Object.RawIdentifier { location; identifier; quoted; _ }
-      -> (
+    | Synprs.CLF.Object.RawIdentifier
+        { location; identifier = identifier, `Plain; quoted; _ } -> (
       (* As an LF term, plain identifiers are either term-level constants or
          variables (bound or free). *)
       let qualified_identifier =
@@ -1739,7 +1742,7 @@ module CLF = struct
         | Synprs.CLF.Object.RawSubstitution
             { object_ =
                 Synprs.CLF.Object.RawIdentifier
-                  { location; identifier; modifier = `Dollar; _ }
+                  { location; identifier = identifier, `Dollar; _ }
             ; substitution = closure
             ; _
             } (* A substitution closure *)
@@ -1749,7 +1752,7 @@ module CLF = struct
               { location; identifier; closure = Option.some closure' }
           , xs )
         | Synprs.CLF.Object.RawIdentifier
-            { location; identifier; modifier = `Dollar; _ }
+            { location; identifier = identifier, `Dollar; _ }
             (* A substitution variable *)
           :: xs ->
           ( Synext'.CLF.Substitution.Head.Substitution_variable
@@ -2136,13 +2139,13 @@ module CLF = struct
         { location; variant = `Unlabelled | `Labelled _ } ->
       raise @@ Illegal_labellable_hole_term_pattern location
     | Synprs.CLF.Object.RawIdentifier
-        { location; identifier; modifier = `Hash; _ } ->
+        { location; identifier = identifier, `Hash; _ } ->
       Synext'.CLF.Term.Pattern.Parameter_variable { location; identifier }
     | Synprs.CLF.Object.RawIdentifier
-        { location; identifier; modifier = `Dollar; _ } ->
+        { location; identifier = identifier, `Dollar; _ } ->
       Synext'.CLF.Term.Pattern.Substitution_variable { location; identifier }
-    | Synprs.CLF.Object.RawIdentifier { location; identifier; quoted; _ }
-      -> (
+    | Synprs.CLF.Object.RawIdentifier
+        { location; identifier = identifier, _modifier; quoted; _ } -> (
       (* As an LF term pattern, plain identifiers are either term-level
          constants, variables already present in the pattern, or new pattern
          variables. *)

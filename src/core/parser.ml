@@ -436,7 +436,7 @@ let[@warning "-32"] put_state (s : state) : unit parser =
 
 (***** Parser combinators *****)
 
-(** Runs the parser `p` with unlimited backtracking enabled. *)
+(** [trying p] is [p] with unlimited backtracking enabled. *)
 let trying p =
   fun s ->
     match run p s with
@@ -550,13 +550,13 @@ let rec traverse_ (f : 'a -> unit parser) (xs : 'a list) : unit parser =
 
 (***** Prioritized choice *****)
 
-(** Alternation between parsers.
+(** [alt p1 p2] is the alternation between parsers.
 
-    Runs `p1`. If it fails, p2 is run if one of the following is true.
-    - p1 failed without consuming any input.
-    - p2 failed with backtracking enabled.
+    Runs [p1]. If it fails, [p2] is run if one of the following is true:
+    - [p1] failed without consuming any input.
+    - [p2] failed with backtracking enabled.
 
-    Backtracking is enabled by the `trying` combinator.
+    Backtracking is enabled by the {!trying} combinator.
  *)
 let alt (p1 : 'a parser) (p2 : 'a parser) : 'a parser =
   fun s ->

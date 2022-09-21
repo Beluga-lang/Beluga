@@ -6,8 +6,12 @@ type t =
 
   (* Symbols *)
   | LPAREN (** ( *)
+  | HASH_LPAREN (* #( *)
+  | DOLLAR_LPAREN (* $( *)
   | RPAREN (** ) *)
   | LBRACK (** [\[] *)
+  | HASH_LBRACK (** [#\[] *)
+  | DOLLAR_LBRACK (** [$\[] *)
   | RBRACK (** [\]] *)
   | LBRACE (** [{] *)
   | RBRACE (** [}] *)

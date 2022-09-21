@@ -11,8 +11,12 @@ type t =
 
   (* Symbols *)
   | LPAREN (* ( *)
+  | HASH_LPAREN (* #( *)
+  | DOLLAR_LPAREN (* $( *)
   | RPAREN (* ) *)
   | LBRACK (* [ *)
+  | HASH_LBRACK (* #[ *)
+  | DOLLAR_LBRACK (* $[ *)
   | RBRACK (* ] *)
   | LBRACE (* { *)
   | RBRACE (* } *)
@@ -116,8 +120,12 @@ include (Show.Make (struct
     | EOI -> p "EOI"
 
     | LPAREN -> p "("
+    | HASH_LPAREN -> p "#("
+    | DOLLAR_LPAREN -> p "$("
     | RPAREN -> p ")"
     | LBRACK -> p "["
+    | HASH_LBRACK -> p "#["
+    | DOLLAR_LBRACK -> p "$["
     | RBRACK -> p "]"
     | LBRACE -> p "{"
     | RBRACE -> p "}"
@@ -204,8 +212,12 @@ module Class = struct
       | EOI -> p "EOI"
 
       | LPAREN -> p "LPAREN"
+      | HASH_LPAREN -> p "HASH_LPAREN"
+      | DOLLAR_LPAREN -> p "DOLLAR_LPAREN"
       | RPAREN -> p "RPAREN"
       | LBRACK -> p "LBRACK"
+      | HASH_LBRACK -> p "HASH_LBRACK"
+      | DOLLAR_LBRACK -> p "DOLLAR_LBRACK"
       | RBRACK -> p "RBRACK"
       | LBRACE -> p "LBRACE"
       | RBRACE -> p "RBRACE"

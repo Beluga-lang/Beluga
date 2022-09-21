@@ -180,10 +180,14 @@ let rec tokenize lexbuf =
   | arrow -> const Token.ARROW
   | thick_arrow -> const Token.THICK_ARROW
   | turnstile -> const Token.TURNSTILE
+  | "#[" -> const Token.HASH_LBRACK
+  | "$[" -> const Token.DOLLAR_LBRACK
   | "[" -> const Token.LBRACK
   | "]" -> const Token.RBRACK
   | "{" -> const Token.LBRACE
   | "}" -> const Token.RBRACE
+  | "#(" -> const Token.HASH_LPAREN
+  | "$(" -> const Token.DOLLAR_LPAREN
   | "(" -> const Token.LPAREN
   | ")" -> const Token.RPAREN
   | "<" -> const Token.LANGLE

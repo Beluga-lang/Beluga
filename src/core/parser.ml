@@ -213,10 +213,6 @@ type error' =
 
   | NoMoreChoices of error list (* all alternatives failed *)
 
-  | AmbiguousUseOfOperator of
-      { associativity : Associativity.t
-      }
-
   | Ambiguous_backward_arrow
   | Ambiguous_forward_arrow
 
@@ -289,18 +285,6 @@ let print_error ppf ({path; loc; _} as e : error) =
        fprintf ppf "Unexpected token in stream@,  @[<v>Expected %a@,Got %a@]@,"
          print_content t_exp
          print_content t_act
-    | AmbiguousUseOfOperator
-        { associativity = Associativity.Left_associative
-        } ->
-       fprintf ppf "Ambiguous use of a left-associative operator"
-    | AmbiguousUseOfOperator
-        { associativity = Associativity.Right_associative
-        } ->
-       fprintf ppf "Ambiguous use of a right-associative operator"
-    | AmbiguousUseOfOperator
-        { associativity = Associativity.Non_associative
-        } ->
-       fprintf ppf "Ambiguous use of a non-associative operator"
     | Ambiguous_forward_arrow ->
        fprintf ppf "Ambiguous placement of forward arrow operator"
     | Ambiguous_backward_arrow ->
@@ -637,104 +621,6 @@ let sep_by1 (p : 'a parser) (sep : unit parser) : 'a List1.t parser =
   seq2 p (many' (sep &> p))
   $> (fun (x, xs) -> List1.from x xs)
   |> shifted "some separated"
-
-(** {1 Expressions Parsing}
-
-    Helpers for parsing expression lists containing pre-defined operators.
-    These pre-defined operators may be prefix, postifx or infix,
-    left-associative, right-associative or non-associative, and with
-    differing predecences.
-
-    This implementation is adapted from the [parsec] library on Hackage:
-
-    @see <https://github.com/haskell/parsec/blob/master/src/Text/Parsec/Expr.hs> *)
-
-(** This data type specifies operators that work on values of type ['operand].
-    An operator is either binary infix or unary prefix or postfix. A binary
-    operator has also an associativity.
-
-    An operator's parser parses the token or identifier corresponding to the
-    operator, and returns the function to construct the operand corresponding
-    to the application of the operator. *)
-type[@warning "-37"] 'operand operator =
-  | Infix of
-      { parser :
-          (left_operand:'operand -> right_operand:'operand -> 'operand) t
-      ; associativity : Associativity.t
-      }
-  | Prefix of { parser : ('operand -> 'operand) t }
-  | Postfix of { parser : ('operand -> 'operand) t }
-
-(** An operator table is a list of operator lists. The list is ordered in
-    descending precedence. All operators in one list have the same precedence
-    (but may have a different associativity). *)
-type 'a operator_table = 'a operator List.t List.t
-
-(** [expression operators operand] is an expression parser with operators in
-    [operators] and operands parsed as [operand]. Operator precedence, fixity
-    and precedence as specified in [operators] are taken into account. *)
-let[@warning "-32"] expression : 'a operator_table -> 'a t -> 'a t =
-  let splitOp operator (rassoc, lassoc, nassoc, prefix, postfix) =
-    match operator with
-    | Infix { parser = op; associativity } -> (
-      match associativity with
-      | Associativity.Non_associative ->
-        (rassoc, lassoc, op :: nassoc, prefix, postfix)
-      | Associativity.Left_associative ->
-        (rassoc, op :: lassoc, nassoc, prefix, postfix)
-      | Associativity.Right_associative ->
-        (op :: rassoc, lassoc, nassoc, prefix, postfix))
-    | Prefix { parser = op } ->
-      (rassoc, lassoc, nassoc, op :: prefix, postfix)
-    | Postfix { parser = op } ->
-      (rassoc, lassoc, nassoc, prefix, op :: postfix)
-  in
-  let makeParser term ops =
-    let rassoc, lassoc, nassoc, prefix, postifx =
-      List.fold_right splitOp ops ([], [], [], [], [])
-    in
-    let rassocOp = choice rassoc
-    and lassocOp = choice lassoc
-    and nassocOp = choice nassoc
-    and prefixOp = choice prefix
-    and postfixOp = choice postifx in
-    let ambiguous associativity op =
-      op >>= fun _ -> fail @@ AmbiguousUseOfOperator { associativity }
-    in
-    let ambiguousRight = ambiguous Associativity.right_associative rassocOp
-    and ambiguousLeft = ambiguous Associativity.left_associative lassocOp
-    and ambiguousNon = ambiguous Associativity.non_associative nassocOp in
-    let postfixP = alt postfixOp (return Fun.id)
-    and prefixP = alt prefixOp (return Fun.id) in
-    let termP =
-      seq3 prefixP term postfixP
-      $> fun (pre, x, post) -> post (pre x)
-    in
-    let rec rassocP left_operand =
-      seq2 rassocOp (termP >>= rassocP1)
-      $> fun (f, right_operand) -> f ~left_operand ~right_operand
-    and rassocP1 left_operand =
-      alt (rassocP left_operand) (return left_operand)
-    in
-    let rec lassocP left_operand =
-      seq2 lassocOp termP
-      >>= fun (f, right_operand) -> lassocP1 (f ~left_operand ~right_operand)
-    and lassocP1 left_operand =
-      alt (lassocP left_operand) (return left_operand)
-    in
-    let nassocP left_operand =
-      seq2 nassocOp termP
-      >>= fun (f, right_operand) ->
-        choice
-          [ ambiguousRight
-          ; ambiguousLeft
-          ; ambiguousNon
-          ; return (f ~left_operand ~right_operand)
-          ]
-    in
-    termP >>= fun x -> choice [ rassocP x; lassocP x; nassocP x; return x ]
-  in
-  fun operators operand -> List.fold_left makeParser operand operators
 
 (****** Simple parsers *****)
 

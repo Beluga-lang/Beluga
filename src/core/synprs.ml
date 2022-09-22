@@ -315,7 +315,7 @@ module Meta = struct
       { location : Location.t
       ; bindings :
           ((Identifier.t * [ `Plain | `Hash | `Dollar ])
-          * (Thing.t * [ `Plain | `Hash | `Dollar ]))
+          * (Thing.t * [ `Plain | `Hash | `Dollar ]) Option.t)
           List.t
       }
   end =
@@ -524,7 +524,7 @@ module Comp = struct
   and Context_object : sig
     type t =
       { location : Location.t
-      ; bindings : (Identifier.t * Sort_object.t) List.t
+      ; bindings : (Identifier.t * Sort_object.t Option.t) List.t
       }
   end =
     Context_object
@@ -1033,10 +1033,7 @@ module Sgn = struct
       | Query of
           { location : Location.t
           ; name : Identifier.t Option.t
-          ; meta_context :
-              ((Identifier.t * [ `Plain | `Hash | `Dollar ])
-              * Meta.Thing.t Option.t)
-              List.t
+          ; meta_context : Meta.Context_object.t
           ; typ : CLF.Object.t
           ; expected_solutions : Int.t Option.t
           ; maximum_tries : Int.t Option.t

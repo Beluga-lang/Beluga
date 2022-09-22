@@ -714,6 +714,22 @@ let[@warning "-32"] opt_bracks p =
 let[@warning "-32"] opt_angles p =
   alt (angles p) p
 
+(** [hash_parens p] parses [`#(' p `)']. *)
+let hash_parens p =
+  token Token.HASH_LPAREN &> p <& token Token.RPAREN
+
+(** [dollar_parens p] parses [`$(' p `)']. *)
+let dollar_parens p =
+  token Token.DOLLAR_LPAREN &> p <& token Token.RPAREN
+
+(** [hash_bracks p] parses [`#[' p `]']. *)
+let hash_bracks p =
+  token Token.HASH_LBRACK &> p <& token Token.RBRACK
+
+(** [dollar_bracks p] parses [`$[' p `]']. *)
+let dollar_bracks p =
+  token Token.DOLLAR_LBRACK &> p <& token Token.RBRACK
+
 (** Parses p and requires that the input stream be finished. *)
 let only p = p <& eoi
 
@@ -1780,19 +1796,19 @@ end = struct
       parens Meta_parsers.meta_thing
       $> fun t -> t, `Plain
     and hash_parens =
-      token Token.HASH_LPAREN &> Meta_parsers.meta_thing <& token Token.RPAREN
+      hash_parens Meta_parsers.meta_thing
       $> fun t -> t, `Hash
     and dollar_parens =
-      token Token.DOLLAR_LPAREN &> Meta_parsers.meta_thing <& token Token.RPAREN
+      dollar_parens Meta_parsers.meta_thing
       $> fun t -> t, `Dollar
     and bracks =
       bracks Meta_parsers.meta_thing
       $> fun t -> t, `Plain
     and hash_bracks =
-      token Token.HASH_LBRACK &> Meta_parsers.meta_thing <& token Token.RBRACK
+      hash_bracks Meta_parsers.meta_thing
       $> fun t -> t, `Hash
     and dollar_bracks =
-      token Token.DOLLAR_LBRACK &> Meta_parsers.meta_thing <& token Token.RBRACK
+      dollar_bracks Meta_parsers.meta_thing
       $> fun t -> t, `Dollar
     in
     choice

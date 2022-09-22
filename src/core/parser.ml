@@ -1823,12 +1823,12 @@ end = struct
   (*=
       <meta-context> ::=
         | [`^']
-        | <meta-object-identifier> `:' <boxed-meta-type> (`,' <meta-object-identifier> `:' <boxed-meta-type>)*
+        | <meta-object-identifier> [`:' <boxed-meta-type>] (`,' <meta-object-identifier> [`:' <boxed-meta-type>])*
   *)
   let meta_context =
     let non_empty =
       sep_by0
-        (seq2 (meta_object_identifier <& token Token.COLON) Meta_parsers.boxed_meta_thing)
+        (seq2 meta_object_identifier (maybe (token Token.COLON &> Meta_parsers.boxed_meta_thing)))
         (token Token.COMMA)
       |> span
       $> fun (location, bindings) ->
@@ -2517,12 +2517,12 @@ end = struct
   (*=
       <comp-context> ::=
         | [`^']
-        | <identifier> `:' <comp-type> (`,' <identifier> `:' <comp-type>)*
+        | <identifier> [`:' <comp-type>] (`,' <identifier> [`:' <comp-type>])*
   *)
   let comp_context =
     let non_empty =
       sep_by0
-        (seq2 (identifier <& token Token.COLON) Comp_parsers.comp_sort_object)
+        (seq2 identifier (maybe (token Token.COLON &> Comp_parsers.comp_sort_object)))
         (token Token.COMMA)
       |> span
       $> fun (location, bindings) ->
@@ -3346,8 +3346,11 @@ end = struct
       many
         (braces
           (seq2
-            (meta_object_identifier <& token Token.COLON)
-            (maybe Meta_parsers.meta_thing)))
+            meta_object_identifier
+            (maybe (token Token.COLON &> Meta_parsers.boxed_meta_thing))))
+      |> span
+      $> fun (location, bindings) ->
+        { Meta.Context_object.location; bindings }
     in
     pragma "query"
     &> seq4

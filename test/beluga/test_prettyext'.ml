@@ -245,7 +245,7 @@ let mock_state_11 =
 
 let parse_lf_object input =
   Runparser.parse_string Location.ghost input
-    (Parser.only Parser.LF_parsers.lf_object)
+    (Parser.only Parser.lf_object)
   |> Parser.extract
 
 let parse_lf_kind elaboration_context input =

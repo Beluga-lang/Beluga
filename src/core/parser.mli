@@ -2,6 +2,7 @@ open Support
 open Syntax.Prs
 
 type input = (Location.t * Token.t) LinkStream.t
+
 type state
 
 (** Constructs the initial state for a parser by providing an input stream. *)
@@ -31,17 +32,15 @@ val print_error : Format.formatter -> error -> unit
 
 type 'a t
 
-(** Type of located values, i.e. values paired with their location. *)
-type 'a locd = Location.t * 'a
-
 (* Eliminator for parsers: *)
+
 (** Runs a parser on a given state, resulting in a final state and a result. *)
 val run : 'a t -> state -> state * 'a result
 
 (** Require end of input after the given parser. *)
 val only : 'a t -> 'a t
 
-val span : 'a t -> 'a locd t
+val span : 'a t -> (Location.t * 'a) t
 
 (***** Exported helpers operations *****)
 
@@ -49,7 +48,7 @@ val span : 'a t -> 'a locd t
 val map : ('a -> 'b) -> 'a t -> 'b t
 
 (** Flipped, operator form of `map`. *)
-val ($>) : 'a t -> ('a -> 'b) -> 'b t
+val ( $> ) : 'a t -> ('a -> 'b) -> 'b t
 
 (** Runs the parser, but capturing failure. *)
 val maybe : 'a t -> 'a option t
@@ -57,47 +56,53 @@ val maybe : 'a t -> 'a option t
 (** Alternation between parsers.
 
     Runs `p1`. If it fails, p2 is run if one of the following is true.
+
     - p1 failed without consuming any input.
     - p2 failed with backtracking enabled.
 
-    Backtracking is enabled by the `trying` combinator.
- *)
+    Backtracking is enabled by the `trying` combinator. *)
 val alt : 'a t -> 'a t -> 'a t
 
-(***** Exported productions *****)
+val choice : 'a t List.t -> 'a t
 
-(** Parser for a full Beluga signature. *)
-val sgn : Sgn.decl list t
+val interactive_harpoon_command : Harpoon.Repl.Command.t t
 
-val name : Name.t t
+val interactive_harpoon_command_sequence : Harpoon.Repl.Command.t List.t t
 
-(** Parser for a Harpoon command. *)
-val interactive_harpoon_command : Harpoon.command t
-val interactive_harpoon_command_sequence : Harpoon.command list t
+val next_theorem : [ `quit | `next of Identifier.t ] t
 
-val trust_order : Comp.total_dec t
-val total_order : 'a Comp.generic_order t -> 'a Comp.generic_order t
-val numeric_total_order : Comp.numeric_order t
-val optional_numeric_total_order : Comp.numeric_order option t
+val lf_object : LF.Object.t t
 
-(** Parser for computation type. *)
-val cmp_typ : Comp.typ t
+val clf_object : CLF.Object.t t
 
-(** Parser for computation checkable expressions. *)
-val cmp_exp_chk : Comp.exp t
+val clf_substitution_object : CLF.Substitution_object.t t
 
-(** Parser for computation synthesizable expressions. *)
-val cmp_exp_syn : Comp.exp t
+val clf_context_object : CLF.Context_object.t t
 
-(** Parser for the next theorem name in Harpoon. *)
-val next_theorem : [ `quit | `next of Name.t ] t
+val schema_object : Meta.Schema_object.t t
 
-module LF_parsers : sig
-  val lf_object : LF.Object.t t
-end
+val meta_thing : Meta.Thing.t t
 
-module CLF_parsers : sig
-  val clf_object : CLF.Object.t t
-  val clf_substitution_object : CLF.Substitution_object.t t
-  val clf_context_object : CLF.Context_object.t t
-end
+val boxed_meta_thing : (Meta.Thing.t * [`Plain | `Hash | `Dollar]) t
+
+val meta_context : Meta.Context_object.t t
+
+val comp_sort_object : Comp.Sort_object.t t
+
+val comp_pattern_object : Comp.Pattern_object.t t
+
+val comp_expression_object : Comp.Expression_object.t t
+
+val comp_context : Comp.Context_object.t t
+
+val sgn_decl : Sgn.Declaration.t t
+
+val sgn : Sgn.t t
+
+val trust_totality_declaration : Comp.Totality.Declaration.t t
+
+val named_totality_declaration : Comp.Totality.Declaration.t t
+
+val numeric_totality_declaration : Comp.Totality.Declaration.t t
+
+val totality_declaration : Comp.Totality.Declaration.t t

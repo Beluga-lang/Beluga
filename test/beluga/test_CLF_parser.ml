@@ -223,7 +223,7 @@ end
 
 let parse_clf_object input =
   Runparser.parse_string Location.ghost input
-    (Parser.only Parser.CLF_parsers.clf_object)
+    (Parser.only Parser.clf_object)
   |> Parser.extract
 
 let assert_raises_illegal_hole_type f =

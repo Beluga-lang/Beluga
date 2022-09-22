@@ -248,7 +248,7 @@ let configuration_wizard' io automation_state : Id.cid_mutual_group * Theorem.t 
          Store.FCVar.clear ();
          (* Now prompt for the statement, and disallow empty to signal we're done. *)
          IO.parsed_prompt io "  Statement of theorem: " None
-           Parser.(cmp_typ $> Fun.(Synprs_to_synext.Comp.elaborate_typ >> Interactive.elaborate_typ LF.Empty))
+           Parser.(comp_sort_object $> Fun.(Synprs_to_synext.Comp.elaborate_typ >> Interactive.elaborate_typ LF.Empty))
        in
        dprintf begin fun p ->
          p.fmt "@[<v 2>[harpoon] [configuration_wizard] elaborated type\
@@ -260,12 +260,13 @@ let configuration_wizard' io automation_state : Id.cid_mutual_group * Theorem.t 
        let order =
          let p =
            let open Parser in
-           alt
-             (trust_order $> Either.left)
-             (total_order numeric_total_order $> Either.right)
+           choice
+             [ (Parser.trust_totality_declaration $> fun d -> `Trust d)
+             ; (Parser.numeric_totality_declaration $> fun d -> `Numeric d)
+             ]
            $> begin function
-                | Either.Right no ->
-                   let order = Reconstruct.numeric_order tau no in
+                | `Numeric no ->
+                   let order = Reconstruct.numeric_order tau (Synprs_to_synext.Comp.elaborate_numeric_order no) in
                    dprintf begin fun p ->
                      p.fmt "[configuration_wizard] @[<v>elaborated numeric order\
                        @,  @[%a@]\
@@ -273,8 +274,8 @@ let configuration_wizard' io automation_state : Id.cid_mutual_group * Theorem.t 
                        P.(fmt_ppr_cmp_numeric_order) order
                        k
                      end;
-                   Either.right order
-                | trust -> trust
+                   `Numeric order
+                | `Trust trust -> `Trust trust
               (* TODO we should check that the order is legit
                         here so that we can right away prompt the user
                         for a correct one; currently this check only
@@ -288,11 +289,17 @@ let configuration_wizard' io automation_state : Id.cid_mutual_group * Theorem.t 
        IO.printf io "@]";
        let total_dec_kind =
          match order with
-         | Some (Either.Right no) -> `inductive no
-         | Some (Either.Left (Synprs.Comp.Trust _)) -> `trust
+         | Some (`Numeric no) -> `inductive no
+         | Some (`Trust _) -> `trust
          | None -> `not_recursive
        in
-       let conf = Theorem.Conf.make name total_dec_kind tau k in
+       let conf =
+         Theorem.Conf.make
+           (Synprs_to_synext.name_of_identifier name)
+           total_dec_kind
+           tau
+           k
+       in
        conf :: do_prompts (i + 1)
   in
 

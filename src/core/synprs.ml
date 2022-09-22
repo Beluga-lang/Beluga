@@ -256,439 +256,851 @@ module CLF = struct
     | Context_object.{ location; _ } -> location
 end
 
+(** {1 Parser Meta Syntax} *)
+
+(** The intermediate representation of meta-types, meta-objects and
+    meta-patterns to delay the handling of data-dependent aspects of the
+    grammar. *)
+module Meta = struct
+  (** Meta-objects, meta-types, meta-patterns. *)
+  module rec Thing : sig
+    type t =
+      | RawSchema of
+          { location : Location.t
+          ; schema : Schema_object.t
+          }
+      | RawPlain of
+          { location : Location.t
+          ; object_ : CLF.Context_object.t
+          }
+          (** [RawPlain { object_; _ }] is a meta-thing without a turnstile.
+              This is not a meta-context.
+
+              [object_] may be a schema constant. *)
+      | RawTurnstile of
+          { location : Location.t
+          ; context : CLF.Context_object.t
+          ; object_ : CLF.Context_object.t
+          ; variant : [ `Plain | `Hash ]
+          }
+          (** - [RawTurnstile { context; variant = `Plain; object_; _ } ] is
+                the meta-thing [context |- object_].
+              - [RawTurnstile { context; variant = `Hash; object_; _ } ] is
+                the meta-thing [context |-# object_]. *)
+  end =
+    Thing
+
+  (** Context schemas. *)
+  and Schema_object : sig
+    type t =
+      | RawConstant of
+          { location : Location.t
+          ; identifier : QualifiedIdentifier.t
+          }
+      | RawAlternation of
+          { location : Location.t
+          ; schemas : Schema_object.t List2.t
+          }
+      | RawElement of
+          { location : Location.t
+          ; some : (Identifier.t * CLF.Object.t) List1.t Option.t
+          ; block : (Identifier.t Option.t * CLF.Object.t) List1.t
+          }
+  end =
+    Schema_object
+
+  (** Meta-contexts. *)
+  and Context_object : sig
+    type t =
+      { location : Location.t
+      ; bindings :
+          ((Identifier.t * [ `Plain | `Hash | `Dollar ])
+          * (Thing.t * [ `Plain | `Hash | `Dollar ]))
+          List.t
+      }
+  end =
+    Context_object
+
+  let location_of_meta_thing meta_thing =
+    match meta_thing with
+    | Thing.RawSchema { location; _ }
+    | Thing.RawPlain { location; _ }
+    | Thing.RawTurnstile { location; _ } -> location
+
+  let location_of_schema_object schema_object =
+    match schema_object with
+    | Schema_object.RawConstant { location; _ }
+    | Schema_object.RawAlternation { location; _ }
+    | Schema_object.RawElement { location; _ } -> location
+
+  let location_of_context_object context_object =
+    match context_object with
+    | { Context_object.location; _ } -> location
+end
+
 (** {1 Parser Computation Syntax} *)
+
+(** The intermediate representation of computation-level kinds, types,
+    expressions and patterns to delay the handling of data-dependent aspects
+    of the grammar. *)
 module Comp = struct
-  include Syncom.Comp
+  (** Computational kinds and types blurred together. *)
+  module rec Sort_object : sig
+    type t =
+      | RawIdentifier of
+          { location : Location.t
+          ; identifier : Identifier.t
+          ; quoted : Bool.t
+          }
+      | RawQualifiedIdentifier of
+          { location : Location.t
+          ; identifier : QualifiedIdentifier.t
+          ; quoted : Bool.t
+          }
+      | RawCtype of { location : Location.t }
+      | RawPi of
+          { location : Location.t
+          ; parameter_identifier :
+              Identifier.t Option.t * [ `Plain | `Hash | `Dollar ]
+          ; parameter_sort :
+              (Meta.Thing.t * [ `Plain | `Hash | `Dollar ]) Option.t
+          ; plicity : Plicity.t
+          ; body : Sort_object.t
+          }
+      | RawArrow of
+          { location : Location.t
+          ; domain : Sort_object.t
+          ; range : Sort_object.t
+          ; orientation : [ `Forward | `Backward ]
+          }
+      | RawCross of
+          { location : Location.t
+          ; operands : Sort_object.t List2.t
+          }
+      | RawBox of
+          { location : Location.t
+          ; boxed : Meta.Thing.t * [ `Plain | `Hash | `Dollar ]
+          }
+      | RawApplication of
+          { location : Location.t
+          ; objects : Sort_object.t List2.t
+          }
+      | RawTuple of
+          { location : Location.t
+          ; objects : Sort_object.t List2.t
+          }
+  end =
+    Sort_object
 
-  type kind =
-    | Ctype of { location : Location.t }
-    | ArrKind of
-        { location : Location.t
-        ; domain : CLF.Object.t
-        ; range : kind
-        }
-    | PiKind of
-        { location : Location.t
-        ; parameter_name : Name.t
-        ; parameter_type : CLF.Object.t
-        ; plicity : Plicity.t
-        ; range : kind
-        }
+  module rec Expression_object : sig
+    type t =
+      | RawIdentifier of
+          { location : Location.t
+          ; identifier : Identifier.t
+          ; quoted : Bool.t
+          }
+      | RawQualifiedIdentifier of
+          { location : Location.t
+          ; identifier : QualifiedIdentifier.t
+          ; quoted : Bool.t
+          ; observation : Bool.t
+          }
+      | RawFn of
+          { location : Location.t
+          ; parameters : Identifier.t Option.t List1.t
+          ; body : Expression_object.t
+          }
+      | RawMlam of
+          { location : Location.t
+          ; parameters :
+              (Identifier.t Option.t * [ `Plain | `Hash | `Dollar ]) List1.t
+          ; body : Expression_object.t
+          }
+      | RawFun of
+          { location : Location.t
+          ; branches :
+              (Pattern_object.t List1.t * Expression_object.t) List1.t
+          }
+      | RawBox of
+          { location : Location.t
+          ; boxed : Meta.Thing.t * [ `Plain | `Hash | `Dollar ]
+          }
+      | RawLet of
+          { location : Location.t
+          ; pattern : Pattern_object.t
+          ; scrutinee : Expression_object.t
+          ; body : Expression_object.t
+          }
+      | RawImpossible of
+          { location : Location.t
+          ; scrutinee : Expression_object.t
+          }
+      | RawCase of
+          { location : Location.t
+          ; scrutinee : Expression_object.t
+          ; check_coverage : Bool.t
+          ; branches : (Pattern_object.t * Expression_object.t) List1.t
+          }
+      | RawTuple of
+          { location : Location.t
+          ; elements : Expression_object.t List2.t
+          }
+      | RawHole of
+          { location : Location.t
+          ; label : Identifier.t Option.t
+          }
+      | RawBoxHole of { location : Location.t }
+      | RawApplication of
+          { location : Location.t
+          ; applicand : Expression_object.t
+          ; arguments : Expression_object.t List1.t
+          }
+          (** [Application { applicand; arguments; _ }] is the computational
+              expression-level application pattern of [applicand] with
+              [arguments].
 
-  type meta_obj = Location.t * CLF.Object.t
+              If [applicand = RawQualifiedIdentifier { identifier = "c"; _ }]
+              where ["c"] is a coinductive constant, then the application is
+              actually an observation. *)
+      | RawAnnotated of
+          { location : Location.t
+          ; expression : Expression_object.t
+          ; typ : Sort_object.t
+          }
+  end =
+    Expression_object
 
-  type meta_typ = CLF.Object.t
+  and Pattern_object : sig
+    type t =
+      | RawIdentifier of
+          { location : Location.t
+          ; identifier : Identifier.t
+          ; quoted : Bool.t
+          }
+      | RawQualifiedIdentifier of
+          { location : Location.t
+          ; identifier : QualifiedIdentifier.t
+          ; quoted : Bool.t
+          ; observation : Bool.t
+          }
+      | RawBox of
+          { location : Location.t
+          ; pattern : Meta.Thing.t * [ `Plain | `Hash | `Dollar ]
+          }
+      | RawTuple of
+          { location : Location.t
+          ; elements : Pattern_object.t List2.t
+          }
+      | RawApplication of
+          { location : Location.t
+          ; patterns : Pattern_object.t List2.t
+          }
+      | RawObservation of
+          { location : Location.t
+          ; constant : QualifiedIdentifier.t
+          ; arguments : Pattern_object.t List.t
+          }
+      | RawAnnotated of
+          { location : Location.t
+          ; pattern : Pattern_object.t
+          ; typ : Sort_object.t
+          }
+      | RawMetaAnnotated of
+          { location : Location.t
+          ; parameter_identifier :
+              Identifier.t Option.t * [ `Plain | `Hash | `Dollar ]
+          ; parameter_typ :
+              (Meta.Thing.t * [ `Plain | `Hash | `Dollar ]) Option.t
+          ; pattern : Pattern_object.t
+          }
+          (** [RawMetaAnnotated { paramter_identifier = Option.Some "x"; modifier; parameter_typ = Option.Some t; pattern; _ }]
+              is the the pattern [{ x : t } pattern].
 
-  type typ =
-    | TypBase of
-        { location : Location.t
-        ; head : Name.t
-        ; spine : meta_obj list
-        }
-    | TypBox of
-        { location : Location.t
-        ; typ : meta_typ
-        }
-    | TypArr of
-        { location : Location.t
-        ; domain : typ
-        ; range : typ
-        }
-    | TypCross of
-        { location : Location.t
-        ; typs : typ List2.t
-        }
-    | TypPiBox of
-        { location : Location.t
-        ; parameter_name : Name.t
-        ; parameter_type : CLF.Object.t
-        ; plicity : Plicity.t
-        ; range : typ
-        }
+              It is a syntax error to omit the identifier or the type. *)
+      | RawWildcard of { location : Location.t }
+  end =
+    Pattern_object
 
-  and exp =
-    | Fn of
-        { location : Location.t
-        ; parameter_name : Name.t
-        ; body : exp
-        }
-    | Fun of
-        { location : Location.t
-        ; branches : branch List1.t
-        }
-    | MLam of
-        { location : Location.t
-        ; parameter_name : Name.t
-        ; body : exp
-        }
-    | Tuple of
-        { location : Location.t
-        ; expressions : exp List2.t
-        }
-    | Let of
-        { location : Location.t
-        ; pattern : pattern
-        ; assignee : exp
-        ; body : exp
-        }
-    | Box of
-        { location : Location.t
-        ; obj : meta_obj
-        }
-    | Impossible of
-        { location : Location.t
-        ; expression : exp
-        }
-    | Case of
-        { location : Location.t
-        ; check_exhaustiveness : bool
-        ; scrutinee : exp
-        ; branches : branch List1.t
-        }
-    | Hole of
-        { location : Location.t
-        ; label : string option
-        }
-    | BoxHole of { location : Location.t }
-    | Name of
-        { location : Location.t
-        ; name : Name.t
-        }
-    | Apply of
-        { location : Location.t
-        ; applicand : exp
-        ; argument : exp
-        }
+  and Context_object : sig
+    type t =
+      { location : Location.t
+      ; bindings : (Identifier.t * Sort_object.t) List.t
+      }
+  end =
+    Context_object
 
-  and pattern =
-    | PatMetaObj of
-        { location : Location.t
-        ; obj : meta_obj
-        }
-    | RawPatApplication of
-        { location : Location.t
-        ; patterns : pattern List1.t
-        }
-    | PatName of
-        { location : Location.t
-        ; name : Name.t
-        }
-    | PatTuple of
-        { location : Location.t
-        ; patterns : pattern List2.t
-        }
-    | PatAnn of
-        { location : Location.t
-        ; pattern : pattern
-        ; typ : typ
-        }
-    | PatMAnn of
-        { location : Location.t
-        ; pattern : pattern
-        ; typs : (Name.t * CLF.Object.t) List1.t
-        }
-    | PatObs of
-        { location : Location.t
-        ; name : Name.t
-        }
+  and Totality : sig
+    module rec Declaration : sig
+      type t =
+        | Trust of { location : Location.t }
+        | Numeric of
+            { location : Location.t
+            ; order : Int.t Order.t Option.t
+            }
+        | Named of
+            { location : Location.t
+            ; order : Identifier.t Order.t Option.t
+            ; program : Identifier.t
+            ; argument_labels : Identifier.t Option.t List.t
+            }
+    end
 
-  and branch =
-    | Branch of
-        { location : Location.t
-        ; pattern : pattern
-        ; body : exp
-        }
+    and Order : sig
+      type 'a t =
+        | Argument of
+            { location : Location.t
+            ; argument : 'a
+            }
+        | Lexical_ordering of
+            { location : Location.t
+            ; arguments : 'a Order.t List1.t
+            }
+        | Simultaneous_ordering of
+            { location : Location.t
+            ; arguments : 'a Order.t List1.t
+            }
+    end
+  end =
+    Totality
 
-  type suffices_typ = typ generic_suffices_typ
+  let location_of_sort_object sort_object =
+    match sort_object with
+    | Sort_object.RawIdentifier { location; _ }
+    | Sort_object.RawQualifiedIdentifier { location; _ }
+    | Sort_object.RawCtype { location; _ }
+    | Sort_object.RawPi { location; _ }
+    | Sort_object.RawArrow { location; _ }
+    | Sort_object.RawCross { location; _ }
+    | Sort_object.RawBox { location; _ }
+    | Sort_object.RawApplication { location; _ }
+    | Sort_object.RawTuple { location; _ } -> location
 
-  type named_order = Name.t generic_order
+  let location_of_expression_object expression_object =
+    match expression_object with
+    | Expression_object.RawIdentifier { location; _ }
+    | Expression_object.RawQualifiedIdentifier { location; _ }
+    | Expression_object.RawFn { location; _ }
+    | Expression_object.RawMlam { location; _ }
+    | Expression_object.RawFun { location; _ }
+    | Expression_object.RawBox { location; _ }
+    | Expression_object.RawLet { location; _ }
+    | Expression_object.RawImpossible { location; _ }
+    | Expression_object.RawCase { location; _ }
+    | Expression_object.RawTuple { location; _ }
+    | Expression_object.RawHole { location; _ }
+    | Expression_object.RawBoxHole { location; _ }
+    | Expression_object.RawApplication { location; _ }
+    | Expression_object.RawAnnotated { location; _ } -> location
 
-  type numeric_order = int generic_order
+  let location_of_pattern_object pattern_object =
+    match pattern_object with
+    | Pattern_object.RawIdentifier { location; _ }
+    | Pattern_object.RawQualifiedIdentifier { location; _ }
+    | Pattern_object.RawBox { location; _ }
+    | Pattern_object.RawTuple { location; _ }
+    | Pattern_object.RawApplication { location; _ }
+    | Pattern_object.RawObservation { location; _ }
+    | Pattern_object.RawAnnotated { location; _ }
+    | Pattern_object.RawMetaAnnotated { location; _ }
+    | Pattern_object.RawWildcard { location; _ } -> location
 
-  type total_dec =
-    | NumericTotal of Location.t * numeric_order option
-    | NamedTotal of
-        Location.t * named_order option * Name.t * Name.t option list
-    | Trust of Location.t
+  let location_of_totality_declaration totality_declaration =
+    match totality_declaration with
+    | Totality.Declaration.Trust { location; _ }
+    | Totality.Declaration.Numeric { location; _ }
+    | Totality.Declaration.Named { location; _ } -> location
 
-  type ctyp_decl = CTypDecl of Name.t * typ
-
-  type mctx = (Identifier.t * CLF.Object.t) List.t
-
-  type gctx = ctyp_decl List.t
-
-  type hypotheses =
-    { cD : mctx
-    ; cG : gctx
-    }
-
-  type proof =
-    | Incomplete of Location.t * string option
-    | Command of Location.t * command * proof
-    | Directive of Location.t * directive
-
-  and command =
-    | By of Location.t * exp * Name.t
-    | Unbox of Location.t * exp * Name.t * unbox_modifier option
-
-  and directive =
-    | Intros of Location.t * hypothetical
-    | Solve of Location.t * exp
-    | Split of Location.t * exp * split_branch list
-    | Suffices of Location.t * exp * (Location.t * typ * proof) list
-
-  and split_branch =
-    { case_label : case_label
-    ; branch_body : hypothetical
-    ; split_branch_loc : Location.t
-    }
-
-  and hypothetical =
-    { hypotheses : hypotheses
-    ; proof : proof
-    ; hypothetical_loc : Location.t
-    }
-
-  type thm =
-    | Program of exp
-    | Proof of proof
-
-  let loc_of_exp = function
-    | Fn { location; _ }
-    | Fun { location; _ }
-    | MLam { location; _ }
-    | Tuple { location; _ }
-    | Let { location; _ }
-    | Box { location; _ }
-    | Impossible { location; _ }
-    | Case { location; _ }
-    | Hole { location; _ }
-    | BoxHole { location; _ }
-    | Name { location; _ }
-    | Apply { location; _ } -> location
+  let location_of_totality_order totality_order =
+    match totality_order with
+    | Totality.Order.Argument { location; _ }
+    | Totality.Order.Lexical_ordering { location; _ }
+    | Totality.Order.Simultaneous_ordering { location; _ } -> location
 end
 
-(** {1 Harpoon Command Syntax} *)
+(** {1 Parser Harpoon Syntax} *)
+
+(** The intermediate representation of Harpoon proof scripts and REPL
+    commands to delay the handling of data-dependent aspects of the grammar. *)
 module Harpoon = struct
-  type defer_kind =
-    [ `subgoal
-    | `theorem
-    ]
+  module rec Proof : sig
+    type t =
+      | Incomplete of
+          { location : Location.t
+          ; label : Identifier.t Option.t
+          }
+      | Command of
+          { location : Location.t
+          ; command : Command.t
+          ; body : Proof.t
+          }
+      | Directive of
+          { location : Location.t
+          ; directive : Directive.t
+          }
+  end =
+    Proof
 
-  type invoke_kind =
-    [ `ih
-    | `lemma
-    ]
+  and Command : sig
+    type t =
+      | By of
+          { location : Location.t
+          ; expression : Comp.Expression_object.t
+          ; assignee : Identifier.t
+          }
+      | Unbox of
+          { location : Location.t
+          ; expression : Comp.Expression_object.t
+          ; assignee : Identifier.t
+          ; modifier : [ `Strengthened ] Option.t
+          }
+  end =
+    Command
 
-  type level =
-    [ `meta
-    | `comp
-    ]
+  and Directive : sig
+    type t =
+      | Intros of
+          { location : Location.t
+          ; hypothetical : Hypothetical.t
+          }
+      | Solve of
+          { location : Location.t
+          ; solution : Comp.Expression_object.t
+          }
+      | Split of
+          { location : Location.t
+          ; scrutinee : Comp.Expression_object.t
+          ; branches : Split_branch.t List.t
+          }
+      | Suffices of
+          { location : Location.t
+          ; scrutinee : Comp.Expression_object.t
+          ; branches : Suffices_branch.t List.t
+          }
+  end =
+    Directive
 
-  type automation_kind =
-    [ `auto_intros
-    | `auto_solve_trivial
-    ]
+  and Split_branch : sig
+    type t =
+      { location : Location.t
+      ; label : Split_branch.Label.t
+      ; body : Hypothetical.t
+      }
 
-  type automation_change =
-    [ `on
-    | `off
-    | `toggle
-    ]
+    module Label : sig
+      type t =
+        | Constant of
+            { location : Location.t
+            ; identifier : QualifiedIdentifier.t
+            }
+        | Bound_variable of { location : Location.t }
+        | Empty_context of { location : Location.t }
+        | Extended_context of
+            { location : Location.t
+            ; schema_element : Int.t  (** 1-based *)
+            }
+        | Parameter_variable of
+            { location : Location.t
+            ; schema_element : Int.t  (** 1-based *)
+            ; projection : Int.t Option.t  (** 1-based *)
+            }
+    end
+  end =
+    Split_branch
 
-  type basic_command =
-    [ `list
-    | `defer
-    ]
+  and Suffices_branch : sig
+    type t =
+      { location : Location.t
+      ; goal : Comp.Sort_object.t
+      ; proof : Proof.t
+      }
+  end =
+    Suffices_branch
 
-  type info_kind = [ `prog ]
+  and Hypothetical : sig
+    type t =
+      { location : Location.t
+      ; meta_context : Meta.Context_object.t
+      ; comp_context : Comp.Context_object.t
+      ; proof : Proof.t
+      }
+  end =
+    Hypothetical
 
-  type command =
-    (* Administrative commands *)
-    | Rename of
-        { rename_from : Name.t
-        ; rename_to : Name.t
-        ; level : level
-        }
-    | ToggleAutomation of automation_kind * automation_change
-    | Type of Comp.exp
-    | Info of info_kind * Name.t
-    | SelectTheorem of Name.t
-    | Theorem of
-        [ basic_command | `show_ihs | `show_proof | `dump_proof of string ]
-    | Session of [ basic_command | `create | `serialize ]
-    | Subgoal of basic_command
-    | Undo
-    | Redo
-    | History
-    | Translate of Name.t
-    (* Actual tactics *)
-    | Intros of
-        string list option (* list of names for introduced variables *)
-    | Split of { scrutinee : Comp.exp }
-    | Invert of { scrutinee : Comp.exp }
-    | Impossible of { scrutinee : Comp.exp }
-    | MSplit of Location.t * Name.t (* split on a metavariable *)
-    | Solve of
-        Comp.exp (* the expression to solve the current subgoal with *)
-    | Unbox of Comp.exp * Name.t * Comp.unbox_modifier option
-    | By of Comp.exp * Name.t
-    | Suffices of Comp.exp * Comp.suffices_typ list
-    | Help
+  module rec Repl : sig
+    module Command : sig
+      type t =
+        (* Administrative commands *)
+        | Rename of
+            { location : Location.t
+            ; rename_from : Identifier.t
+            ; rename_to : Identifier.t
+            ; level : [ `meta | `comp ]
+            }
+        | ToggleAutomation of
+            { location : Location.t
+            ; kind : [ `auto_intros | `auto_solve_trivial ]
+            ; change : [ `on | `off | `toggle ]
+            }
+        | Type of
+            { location : Location.t
+            ; scrutinee : Comp.Expression_object.t
+            }
+        | Info of
+            { location : Location.t
+            ; kind : [ `prog ]
+            ; object_identifier : QualifiedIdentifier.t
+            }
+        | SelectTheorem of
+            { location : Location.t
+            ; identifier : QualifiedIdentifier.t
+            }
+        | Theorem of
+            { location : Location.t
+            ; subcommand :
+                [ `list
+                | `defer
+                | `show_ihs
+                | `show_proof
+                | `dump_proof of String.t  (** File path *)
+                ]
+            }
+        | Session of
+            { location : Location.t
+            ; subcommand : [ `list | `defer | `create | `serialize ]
+            }
+        | Subgoal of
+            { location : Location.t
+            ; subcommand : [ `list | `defer ]
+            }
+        | Undo of { location : Location.t }
+        | Redo of { location : Location.t }
+        | History of { location : Location.t }
+        | Translate of
+            { location : Location.t
+            ; theorem : QualifiedIdentifier.t
+            }
+        (* Actual tactics *)
+        | Intros of
+            { location : Location.t
+            ; introduced_variables : Identifier.t List1.t Option.t
+            }
+        | Split of
+            { location : Location.t
+            ; scrutinee : Comp.Expression_object.t
+            }
+        | Invert of
+            { location : Location.t
+            ; scrutinee : Comp.Expression_object.t
+            }
+        | Impossible of
+            { location : Location.t
+            ; scrutinee : Comp.Expression_object.t
+            }
+        | MSplit of
+            { location : Location.t
+            ; identifier : Identifier.t * [ `Plain | `Hash | `Dollar ]
+            }
+        | Solve of
+            { location : Location.t
+            ; solution : Comp.Expression_object.t
+            }
+        | Unbox of
+            { location : Location.t
+            ; expression : Comp.Expression_object.t
+            ; assignee : Identifier.t
+            ; modifier : [ `Strengthened ] Option.t
+            }
+        | By of
+            { location : Location.t
+            ; expression : Comp.Expression_object.t
+            ; assignee : Identifier.t
+            }
+        | Suffices of
+            { location : Location.t
+            ; implication : Comp.Expression_object.t
+            ; goal_premises :
+                [ `exact of Comp.Sort_object.t | `infer of Location.t ]
+                List.t
+            }
+        | Help of { location : Location.t }
+    end
+  end =
+    Repl
+
+  let location_of_proof proof =
+    match proof with
+    | Proof.Incomplete { location; _ }
+    | Proof.Command { location; _ }
+    | Proof.Directive { location; _ } -> location
+
+  let location_of_command command =
+    match command with
+    | Command.By { location; _ } | Command.Unbox { location; _ } -> location
+
+  let location_of_directive directive =
+    match directive with
+    | Directive.Intros { location; _ }
+    | Directive.Solve { location; _ }
+    | Directive.Split { location; _ }
+    | Directive.Suffices { location; _ } -> location
+
+  let location_of_split_branch split_branch =
+    match split_branch with
+    | { Split_branch.location; _ } -> location
+
+  let location_of_split_branch_label split_branch_label =
+    match split_branch_label with
+    | Split_branch.Label.Constant { location; _ }
+    | Split_branch.Label.Bound_variable { location; _ }
+    | Split_branch.Label.Empty_context { location; _ }
+    | Split_branch.Label.Extended_context { location; _ }
+    | Split_branch.Label.Parameter_variable { location; _ } -> location
+
+  let location_of_suffices_branch suffices_branch =
+    match suffices_branch with
+    | { Suffices_branch.location; _ } -> location
+
+  let location_of_hypothetical hypothetical =
+    match hypothetical with
+    | { Hypothetical.location; _ } -> location
+
+  let location_of_repl_command repl_command =
+    match repl_command with
+    | Repl.Command.Rename { location; _ }
+    | Repl.Command.ToggleAutomation { location; _ }
+    | Repl.Command.Type { location; _ }
+    | Repl.Command.Info { location; _ }
+    | Repl.Command.SelectTheorem { location; _ }
+    | Repl.Command.Theorem { location; _ }
+    | Repl.Command.Session { location; _ }
+    | Repl.Command.Subgoal { location; _ }
+    | Repl.Command.Undo { location; _ }
+    | Repl.Command.Redo { location; _ }
+    | Repl.Command.History { location; _ }
+    | Repl.Command.Translate { location; _ }
+    | Repl.Command.Intros { location; _ }
+    | Repl.Command.Split { location; _ }
+    | Repl.Command.Invert { location; _ }
+    | Repl.Command.Impossible { location; _ }
+    | Repl.Command.MSplit { location; _ }
+    | Repl.Command.Solve { location; _ }
+    | Repl.Command.Unbox { location; _ }
+    | Repl.Command.By { location; _ }
+    | Repl.Command.Suffices { location; _ }
+    | Repl.Command.Help { location; _ } -> location
 end
-
-module rec Schema : sig
-  type t =
-    | Identifier of
-        { location : Location.t
-        ; identifier : Identifier.t
-        }
-    | Simple of
-        { location : Location.t
-        ; some : (Identifier.t * CLF.Object.t) List.t
-        ; block :
-            (Identifier.t Option.t * CLF.Object.t)
-            * (Identifier.t * CLF.Object.t) List.t
-        }
-    | Alternation of
-        { location : Location.t
-        ; sub_schemas : Schema.t List1.t
-        }
-end =
-  Schema
 
 (** {1 Parser Signature Syntax} *)
+
+(** The intermediate representation of Beluga signatures to delay the
+    handling of data-dependent aspects of the grammar. *)
 module Sgn = struct
-  type datatype_flavour =
-    | InductiveDatatype
-    | StratifiedDatatype
+  module Pragma = struct
+    type t =
+      | Name of
+          { location : Location.t
+          ; constant : QualifiedIdentifier.t
+          ; meta_variable_base : Identifier.t
+          ; computation_variable_base : Identifier.t Option.t
+          }
+      | Default_associativity of
+          { location : Location.t
+          ; associativity : Associativity.t
+          }
+      | Prefix_fixity of
+          { location : Location.t
+          ; constant : QualifiedIdentifier.t
+          ; precedence : Int.t
+          }
+      | Infix_fixity of
+          { location : Location.t
+          ; constant : QualifiedIdentifier.t
+          ; precedence : Int.t
+          ; associativity : Associativity.t Option.t
+          }
+      | Postfix_fixity of
+          { location : Location.t
+          ; constant : QualifiedIdentifier.t
+          ; precedence : Int.t
+          }
+      | Not of { location : Location.t }
+      | Open_module of
+          { location : Location.t
+          ; module_identifier : QualifiedIdentifier.t
+          }
+      | Abbreviation of
+          { location : Location.t
+          ; module_identifier : QualifiedIdentifier.t
+          ; abbreviation : Identifier.t
+          }
 
-  type precedence = int
+    module Global = struct
+      type t =
+        | No_strengthening of { location : Location.t }
+        | Coverage of
+            { location : Location.t
+            ; variant : [ `Error | `Warn ]
+            }
+    end
+  end
 
-  type pragma =
-    | NamePrag of
-        { constant : Name.t
-        ; meta_name : string
-        ; comp_name : string option
-        }
-    | FixPrag of
-        { constant : Name.t
-        ; fixity : Fixity.t
-        ; precedence : precedence
-        ; associativity : Associativity.t option
-        }
-    | NotPrag
-    | DefaultAssocPrag of { associativity : Associativity.t }
-    | OpenPrag of string list
-    | AbbrevPrag of string list * string
+  module Theorem = struct
+    type t =
+      { location : Location.t
+      ; name : Identifier.t
+      ; typ : Comp.Sort_object.t
+      ; order : Comp.Totality.Declaration.t Option.t
+      ; body :
+          [ `Program of Comp.Expression_object.t
+          | `Proof of Harpoon.Proof.t
+          ]
+      }
+  end
 
-  (* Pragmas that need to be declared first *)
-  type global_pragma =
-    | NoStrengthen
-    | Coverage of [ `Error | `Warn ]
-
-  type thm_decl =
-    | Theorem of
-        { location : Location.t
-        ; name : Name.t
-        ; typ : Comp.typ
-        ; order : Comp.total_dec option
-        ; body : Comp.thm
-        }
-
-  (** Parsed signature element *)
-  type decl =
-    | Typ of
-        { location : Location.t
-        ; identifier : Name.t
-        ; kind : LF.Object.t
-        }  (** LF type family declaration *)
-    | Const of
-        { location : Location.t
-        ; identifier : Name.t
-        ; typ : LF.Object.t
-        }  (** LF type constant declaration *)
-    | CompTyp of
-        { location : Location.t
-        ; identifier : Name.t
-        ; kind : Comp.kind
-        ; datatype_flavour : datatype_flavour
-        }  (** Computation-level data type constant declaration *)
-    | CompCotyp of
-        { location : Location.t
-        ; identifier : Name.t
-        ; kind : Comp.kind
-        }  (** Computation-level codata type constant declaration *)
-    | CompConst of
-        { location : Location.t
-        ; identifier : Name.t
-        ; typ : Comp.typ
-        }  (** Computation-level type constructor declaration *)
-    | CompDest of
-        { location : Location.t
-        ; identifier : Name.t
-        ; mctx : (Identifier.t * CLF.Object.t) List.t
-        ; observation_typ : Comp.typ
-        ; return_typ : Comp.typ
-        }  (** Computation-level type destructor declaration *)
-    | CompTypAbbrev of
-        { location : Location.t
-        ; identifier : Name.t
-        ; kind : Comp.kind
-        ; typ : Comp.typ
-        }  (** Synonym declaration for computation-level type *)
-    | Schema of
-        { location : Location.t
-        ; identifier : Name.t
-        ; schema : Schema.t
-        }  (** Declaration of a specification for a set of contexts *)
-    | Pragma of
-        { location : Location.t
-        ; pragma : pragma
-        }  (** Compiler directive *)
-    | GlobalPragma of
-        { location : Location.t
-        ; pragma : global_pragma
-        }  (** Global directive *)
-    | MRecTyp of
-        { location : Location.t
-        ; declarations : (decl * decl list) List1.t
-        }  (** Mutually-recursive LF type family declaration *)
-    | Theorems of
-        { location : Location.t
-        ; theorems : thm_decl List1.t
-        }  (** Mutually recursive theorem declaration(s) *)
-    | Val of
-        { location : Location.t
-        ; identifier : Name.t
-        ; typ : Comp.typ option
-        ; expression : Comp.exp
-        }  (** Computation-level value declaration *)
-    | Query of
-        { location : Location.t
-        ; name : Name.t option
-        ; mctx : (Identifier.t * CLF.Object.t) List.t
-        ; typ : CLF.Object.t
-        ; expected_solutions : int option
-        ; maximum_tries : int option
-        }  (** Logic programming query on LF type *)
-    | MQuery of
-        { location : Location.t
-        ; typ : Comp.typ
-        ; expected_solutions : int option
-        ; search_tries : int option
-        ; search_depth : int option
-        }  (** Logic programming mquery on Comp. type *)
-    | Module of
-        { location : Location.t
-        ; identifier : string
-        ; declarations : decl list
-        }  (** Namespace declaration for other declarations *)
-    | Comment of
-        { location : Location.t
-        ; content : string
-        }  (** Documentation comment *)
+  module rec Declaration : sig
+    (** Parsed signature element *)
+    type t =
+      | Typ_or_const of
+          { location : Location.t
+          ; identifier : Identifier.t
+          ; typ_or_const : LF.Object.t
+          }
+      | Typ of
+          { location : Location.t
+          ; identifier : Identifier.t
+          ; kind : LF.Object.t
+          }  (** LF type family declaration *)
+      | Const of
+          { location : Location.t
+          ; identifier : Identifier.t
+          ; typ : LF.Object.t
+          }  (** LF type constant declaration *)
+      | CompTyp of
+          { location : Location.t
+          ; identifier : Identifier.t
+          ; kind : Comp.Sort_object.t
+          ; datatype_flavour : [ `Inductive | `Stratified ]
+          }  (** Computation-level data type constant declaration *)
+      | CompCotyp of
+          { location : Location.t
+          ; identifier : Identifier.t
+          ; kind : Comp.Sort_object.t
+          }  (** Computation-level codata type constant declaration *)
+      | CompConst of
+          { location : Location.t
+          ; identifier : Identifier.t
+          ; typ : Comp.Sort_object.t
+          }  (** Computation-level type constructor declaration *)
+      | CompDest of
+          { location : Location.t
+          ; identifier : Identifier.t
+          ; observation_typ : Comp.Sort_object.t
+          ; return_typ : Comp.Sort_object.t
+          }  (** Computation-level type destructor declaration *)
+      | CompTypAbbrev of
+          { location : Location.t
+          ; identifier : Identifier.t
+          ; kind : Comp.Sort_object.t
+          ; typ : Comp.Sort_object.t
+          }  (** Synonym declaration for computation-level type *)
+      | Schema of
+          { location : Location.t
+          ; identifier : Identifier.t
+          ; schema : Meta.Schema_object.t
+          }  (** Declaration of a specification for a set of contexts *)
+      | Pragma of
+          { location : Location.t
+          ; pragma : Pragma.t
+          }  (** Compiler directive *)
+      | GlobalPragma of
+          { location : Location.t
+          ; pragma : Pragma.Global.t
+          }  (** Global directive *)
+      | Mutually_recursive_datatypes of
+          { location : Location.t
+          ; declarations : (Declaration.t * Declaration.t List.t) List1.t
+          }  (** Mutually-recursive datatypes declaration *)
+      | Theorems of
+          { location : Location.t
+          ; theorems : Theorem.t List1.t
+          }  (** Mutually recursive theorem declaration(s) *)
+      | Val of
+          { location : Location.t
+          ; identifier : Identifier.t
+          ; typ : Comp.Sort_object.t Option.t
+          ; expression : Comp.Expression_object.t
+          }  (** Computation-level value declaration *)
+      | Query of
+          { location : Location.t
+          ; name : Identifier.t Option.t
+          ; meta_context :
+              ((Identifier.t * [ `Plain | `Hash | `Dollar ])
+              * Meta.Thing.t Option.t)
+              List.t
+          ; typ : CLF.Object.t
+          ; expected_solutions : Int.t Option.t
+          ; maximum_tries : Int.t Option.t
+          }  (** Logic programming query on an LF type *)
+      | MQuery of
+          { location : Location.t
+          ; typ : Comp.Sort_object.t
+          ; expected_solutions : Int.t Option.t
+          ; search_tries : Int.t Option.t
+          ; search_depth : Int.t Option.t
+          }  (** Logic programming mquery on a computational type *)
+      | Module of
+          { location : Location.t
+          ; identifier : Identifier.t
+          ; declarations : Declaration.t List.t
+          }  (** Namespace declaration for other declarations *)
+      | Comment of
+          { location : Location.t
+          ; content : String.t
+          }  (** Documentation comment *)
+  end =
+    Declaration
 
   (** Parsed Beluga project *)
-  type sgn = decl list
+  type t = Declaration.t List.t
+
+  let location_of_pragma pragma =
+    match pragma with
+    | Pragma.Name { location; _ }
+    | Pragma.Default_associativity { location; _ }
+    | Pragma.Prefix_fixity { location; _ }
+    | Pragma.Infix_fixity { location; _ }
+    | Pragma.Postfix_fixity { location; _ }
+    | Pragma.Not { location; _ }
+    | Pragma.Open_module { location; _ }
+    | Pragma.Abbreviation { location; _ } -> location
+
+  let location_of_global_pragma global_pragma =
+    match global_pragma with
+    | Pragma.Global.No_strengthening { location; _ }
+    | Pragma.Global.Coverage { location; _ } -> location
+
+  let location_of_theorem theorem =
+    match theorem with
+    | { Theorem.location; _ } -> location
+
+  let location_of_declaration declaration =
+    match declaration with
+    | Declaration.Typ_or_const { location; _ }
+    | Declaration.Typ { location; _ }
+    | Declaration.Const { location; _ }
+    | Declaration.CompTyp { location; _ }
+    | Declaration.CompCotyp { location; _ }
+    | Declaration.CompConst { location; _ }
+    | Declaration.CompDest { location; _ }
+    | Declaration.CompTypAbbrev { location; _ }
+    | Declaration.Schema { location; _ }
+    | Declaration.Pragma { location; _ }
+    | Declaration.GlobalPragma { location; _ }
+    | Declaration.Mutually_recursive_datatypes { location; _ }
+    | Declaration.Theorems { location; _ }
+    | Declaration.Val { location; _ }
+    | Declaration.Query { location; _ }
+    | Declaration.MQuery { location; _ }
+    | Declaration.Module { location; _ }
+    | Declaration.Comment { location; _ } -> location
 end

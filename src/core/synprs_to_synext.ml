@@ -15,13 +15,22 @@ module Comp = struct
 
   let elaborate_pattern pattern =
     Error.not_implemented' "[Comp.elaborate_pattern]"
+
+  let elaborate_numeric_order order =
+    Error.not_implemented' "[Comp.elaborate_numeric_order]"
 end
 
 module Harpoon = struct
-  let elaborate_command command =
+  let elaborate_repl_command command =
     Error.not_implemented' "[Harpoon.elaborate_command]"
 end
 
 module Sgn = struct
   let elaborate_sgn sgn = Error.not_implemented' "[Sgn.elaborate_sgn]"
 end
+
+let name_of_identifier identifier =
+  Error.not_implemented' "[name_of_identifier]"
+
+let name_of_qualified_identifier qualified_identifier =
+  Error.not_implemented' "[name_of_qualified_identifier]"

@@ -84,6 +84,7 @@ open Support
 
 module LF = Syntax.Prs.LF
 module CLF = Syntax.Prs.CLF
+module Meta = Syntax.Prs.Meta
 module Comp = Syntax.Prs.Comp
 module Harpoon = Syntax.Prs.Harpoon
 module Sgn = Syntax.Prs.Sgn
@@ -209,16 +210,6 @@ let print_content ppf : content -> unit =
 type error' =
   (* External errors: the user's fault. *)
   | Unexpected of { expected : content; actual : content }
-  | IllFormedDataDecl
-  (* ^ incorrect constructor type: the type of a constructor must be a
-     base type or a function type.
-   *)
-  (* | Custom of string (* Generic external error. *) *)
-  | WrongConstructorType of
-    { constructor_name : Name.t
-    ; expected_type_name : Name.t
-    ; actual_type_name : Name.t
-    }
 
   | NoMoreChoices of error list (* all alternatives failed *)
 
@@ -237,9 +228,6 @@ type error' =
       nicer one for the user.
    *)
   | NotFollowedBy
-
-  (* Generic internal error. *)
-  | Violation of string
 
 and error =
   { error : error'
@@ -301,25 +289,6 @@ let print_error ppf ({path; loc; _} as e : error) =
        fprintf ppf "Unexpected token in stream@,  @[<v>Expected %a@,Got %a@]@,"
          print_content t_exp
          print_content t_act
-    | IllFormedDataDecl ->
-       fprintf ppf
-         ( "Ill-formed constructor declaration.@," ^^
-             "The type of a constructor must be a base type or function type."
-         )
-    | WrongConstructorType
-      { constructor_name = c
-      ; expected_type_name = exp
-      ; actual_type_name = act
-      } ->
-       fprintf ppf
-         ( "Wrong datatype for constructor %s.@,  @[<v>"
-           ^^ "Expected type %s@,"
-           ^^ "Actual type %s"
-           ^^ "@]"
-         )
-         (Name.string_of_name c)
-         (Name.string_of_name exp)
-         (Name.string_of_name act)
     | AmbiguousUseOfOperator
         { associativity = Associativity.Left_associative
         } ->
@@ -336,8 +305,6 @@ let print_error ppf ({path; loc; _} as e : error) =
        fprintf ppf "Ambiguous placement of forward arrow operator"
     | Ambiguous_backward_arrow ->
        fprintf ppf "Ambiguous placement of backward arrow operator"
-    (* | Custom s -> fprintf ppf "%s" s *)
-    | Violation s -> fprintf ppf "%s" s
   in
   fprintf ppf "%a" g e;
   if Debug.flag 11 then fprintf ppf "@,%a" print_path path;
@@ -769,58 +736,6 @@ let[@warning "-32"] expression : 'a operator_table -> 'a t -> 'a t =
   in
   fun operators operand -> List.fold_left makeParser operand operators
 
-(***** Unmixing & other checks *****)
-
-(** Checks that datatype declarations are well formed.
-    We can't do this later because after parsing there is no
-    structural grouping between constructors of a same datatype.
- *)
-let check_datatype_decl loc a cs : unit parser =
-  let rec retname =
-    function
-    | Comp.TypBase { head; _ } -> return head
-    | Comp.TypArr { range; _ } -> retname range
-    | Comp.TypPiBox { range; _ } -> retname range
-    | _ -> fail IllFormedDataDecl
-  in
-  traverse_
-    (function
-     | Sgn.CompConst { identifier; typ; _ } ->
-        retname typ
-        >>= fun a' ->
-          if Name.(a <> a')
-          then fail
-            (WrongConstructorType
-              { constructor_name = identifier
-              ; expected_type_name = a
-              ; actual_type_name = a'
-              })
-          else return ()
-     | _ -> fail (Violation "check_datatype_decl invalid input"))
-    cs
-
-let check_codatatype_decl loc a cs : unit parser =
-  let retname =
-    function
-    | Comp.TypBase { head; _ } -> return head
-    | _ -> fail IllFormedDataDecl
-  in
-  traverse_
-    (function
-     | Sgn.CompDest { identifier; observation_typ = tau0; _} ->
-        retname tau0
-        >>= fun a' ->
-          if Name.(a <> a')
-          then fail
-            (WrongConstructorType
-              { constructor_name = identifier
-              ; expected_type_name = a
-              ; actual_type_name = a'
-              })
-          else return ()
-     | _ -> fail (Violation "check_codatatype_decl invalid input"))
-    cs
-
 (****** Simple parsers *****)
 
 let satisfy' (expected : content) (f : Token.t -> 'a option) : 'a parser =
@@ -852,37 +767,6 @@ let keyword (kw : string) : unit parser =
   satisfy' (`keyword (Option.some kw))
     Fun.(Token.equal (Token.IDENT kw) >> Option.of_bool)
 
-let identifier' : string parser =
-  satisfy' (`identifier Option.none)
-    (function
-     | Token.IDENT s -> Option.some s
-     | _ -> Option.none)
-
-let hash_identifier : string parser =
-  satisfy' (`hash_identifier Option.none)
-    (function
-     | Token.HASH_IDENT s -> Option.some s
-     | _ -> Option.none)
-
-let dollar_identifier : string parser =
-  satisfy' (`dollar_identifier Option.none)
-    (function
-     | Token.DOLLAR_IDENT s -> Option.some s
-     | _ -> Option.none)
-
-let namify (p : string t) : Name.t t =
-  p |> span
-  $> fun (location, x) -> Name.mk_name ~location (Name.SomeString x)
-
-let name : Name.t parser =
-  namify identifier'
-
-let hash_name : Name.t t =
-  namify hash_identifier
-
-let dollar_name : Name.t t =
-  namify dollar_identifier
-
 let integer : int parser =
   satisfy' (`integer Option.none)
     (function
@@ -894,8 +778,6 @@ let dot_integer : int parser =
     (function
      | Token.DOT_NUMBER k -> Option.some k
      | _ -> Option.none)
-
-let fqidentifier = sep_by1 (trying identifier') (token Token.DOUBLE_COLON)
 
 let pragma s = token (Token.PRAGMA s)
 
@@ -950,40 +832,6 @@ let[@warning "-32"] opt_angles p =
 let only p = p <& eoi
 
 (***** Production rules *****)
-
-let nostrenghten_pragma =
-  span (pragma "nostrengthen")
-  $> fun (location, ()) ->
-    Sgn.GlobalPragma { location; pragma = Sgn.NoStrengthen }
-
-let coverage_pragma =
-  span (pragma "coverage")
-  $> fun (location, ()) ->
-    Sgn.GlobalPragma { location; pragma = Sgn.Coverage `Error }
-
-let warncoverage_pragma =
-  span (pragma "warncoverage")
-  $> fun (location, ()) ->
-    Sgn.GlobalPragma { location; pragma = Sgn.Coverage `Warn }
-
-let sgn_global_prag : Sgn.decl parser =
-  labelled "global pragma"
-  @@ choice
-       [ nostrenghten_pragma
-       ; coverage_pragma
-       ; warncoverage_pragma
-       ]
-
-let sgn_name_pragma : Sgn.decl parser =
-  seq3
-    (pragma "name" &> name)
-    identifier'
-    (maybe identifier' <& token Token.DOT)
-  |> labelled "name pragma"
-  |> span
-  $> fun (location, (constant, meta_name, comp_name)) ->
-       let pragma = Sgn.NamePrag { constant; meta_name; comp_name } in
-       Sgn.Pragma { location; pragma }
 
 let identifier =
   satisfy' (`identifier Option.none)
@@ -1080,6 +928,34 @@ let qualified_or_plain_identifier =
      | (location, identifiers) ->
        let (modules, identifier) = List1.unsnoc identifiers in
        `Qualified (QualifiedIdentifier.make ~location ~modules identifier)
+
+let omittable_meta_object_identifier =
+  let plain =
+    omittable_identifier $> fun i -> i, `Plain
+  and hash =
+    omittable_hash_identifier $> fun i -> i, `Hash
+  and dollar =
+    omittable_dollar_identifier $> fun i -> i, `Dollar
+  in
+  choice
+    [ plain
+    ; hash
+    ; dollar
+    ]
+
+let meta_object_identifier =
+  let plain =
+    identifier $> fun i -> i, `Plain
+  and hash =
+    hash_identifier $> fun i -> i, `Hash
+  and dollar =
+    dollar_identifier $> fun i -> i, `Dollar
+  in
+  choice
+    [ plain
+    ; hash
+    ; dollar
+    ]
 
 let hole =
   satisfy' (`hole Option.none) (function
@@ -1340,9 +1216,13 @@ end = struct
     |> labelled "LF object"
 end
 
+let lf_object = LF_parsers.lf_object
+
 module rec CLF_parsers : sig
   val clf_object : CLF.Object.t t
+
   val clf_substitution_object : CLF.Substitution_object.t t
+
   val clf_context_object : CLF.Context_object.t t
 end = struct
   (*=
@@ -1810,110 +1690,1093 @@ end = struct
     |> labelled "Contextual LF object"
 end
 
-let clf_ctyp_decl_bare = Obj.magic ()
+let clf_object = CLF_parsers.clf_object
 
-let mctx ?(sep = token Token.COMMA) p =
-  sep_by0 p sep
-  $> Context.of_list_rev
+let clf_substitution_object = CLF_parsers.clf_substitution_object
 
-let cmp_kind = Obj.magic ()
-let cmp_typ = Obj.magic ()
-let cmp_exp_chk = Obj.magic ()
-let cmp_exp_syn = Obj.magic ()
-let gctx = Obj.magic ()
+let clf_context_object = CLF_parsers.clf_context_object
 
-module rec Harpoon_parsers : sig
-  val harpoon_proof : Comp.proof t
-  val interactive_harpoon_command : Harpoon.command t
-  val interactive_harpoon_command_sequence : Harpoon.command list t
-  val next_theorem : [> `next of Name.t | `quit ] t
+module rec Meta_parsers : sig
+  val schema_object : Meta.Schema_object.t t
+
+  val meta_thing : Meta.Thing.t t
+
+  val boxed_meta_thing : (Meta.Thing.t * [`Plain | `Hash | `Dollar]) t
+
+  val meta_context : Meta.Context_object.t t
 end = struct
-  let boxity =
+  (*=
+      Original grammar:
+
+      <schema-object> ::=
+        | <qualified-identifier>
+        | <schema-object> `+' <schema-object>
+        | [`some' `[' <identifier> `:' <clf-object> (`,' <identifier> `:' <clf-object>) `]']
+          `block' `(' [<identifier> `:'] <clf-object> (`,' [<identifier> `:'] <clf-object>)* `)'
+        | [`some' `[' <identifier> `:' <clf-object> (`,' <identifier> `:' <clf-object>) `]']
+          `block' [<identifier> `:'] <clf-object> (`,' [<identifier> `:'] <clf-object>)*
+
+      <meta-thing> ::=
+        | <schema-object>
+        | <context-object>
+        | <context-object> <turnstile> <context-object>
+        | <context-object> <turnstile-hash> <context-object>
+
+      Rewritten grammar, to eliminate left-recursions, and handle precedence
+      using recursive descent.
+
+      <schema-object> ::=
+        | <schema-object1>
+
+      <schema-object1> ::=
+        | <schema-object2> (`+' <schema-object2>)+
+        | <schema-object2>
+
+      <schema-object2> ::=
+        | <qualified-identifier>
+        | [`some' `[' <identifier> `:' <clf-object> (`,' <identifier> `:' <clf-object>) `]']
+          `block' `(' [<identifier> `:'] <clf-object> (`,' [<identifier> `:'] <clf-object>)* `)'
+        | [`some' `[' <identifier> `:' <clf-object> (`,' <identifier> `:' <clf-object>) `]']
+          `block' [<identifier> `:'] <clf-object> (`,' [<identifier> `:'] <clf-object>)*
+
+      <meta-thing> ::=
+        | <qualified-identifier> `+' <schema-object>
+        | [`some' `[' <identifier> `:' <clf-object> (`,' <identifier> `:' <clf-object>) `]']
+          `block' `(' [<identifier> `:'] <clf-object> (`,' [<identifier> `:'] <clf-object>)* `)' [`+' <schema-object>)]
+        | [`some' `[' <identifier> `:' <clf-object> (`,' <identifier> `:' <clf-object>) `]']
+          `block' [<identifier> `:'] <clf-object> (`,' [<identifier> `:'] <clf-object>)* [`+' <schema-object>]
+        | <context-object>
+        | <context-object> <turnstile> <context-object>
+        | <context-object> <turnstile-hash> <context-object>
+  *)
+  let plus_operator = token Token.PLUS
+
+  let schema_some_clause =
+    let declaration =
+      seq2 identifier (token Token.COLON &> CLF_parsers.clf_object)
+    in
+    token Token.KW_SOME &> bracks (sep_by1 declaration (token Token.COMMA))
+    |> labelled "Context schema `some' clause"
+
+  let schema_block_clause =
+    let block_contents =
+      sep_by1
+        (seq2 (maybe (identifier <& trying (token Token.COLON))) CLF_parsers.clf_object)
+        (token Token.COMMA)
+      |> labelled "Context schema element"
+    in
+    token Token.KW_BLOCK &> opt_parens block_contents
+    |> labelled "Context schema `block' clause"
+
+  let schema_object2 =
+    let constant =
+      qualified_identifier
+      $> fun identifier ->
+        let location = QualifiedIdentifier.location identifier in
+        Meta.Schema_object.RawConstant { location; identifier }
+    and element =
+      seq2 (maybe schema_some_clause) schema_block_clause
+      |> span
+      $> (fun (location, (some_clause, block_clause)) ->
+            Meta.Schema_object.RawElement
+              { location
+              ; some = some_clause
+              ; block = block_clause
+              }
+         )
+      |> labelled "Context schema atom"
+    in
     choice
-      [ keyword "boxed" &> return `boxed
-      ; keyword "unboxed" &> return `unboxed
-      ; keyword "strengthened" &> return `strengthened
+      [ constant
+      ; element
       ]
 
-  let harpoon_command : Comp.command t =
+  let schema_object1 =
+    sep_by1 schema_object2 plus_operator
+    |> span
+    $> (function
+       | (_, List1.T (schema_object, [])) -> schema_object
+       | (location, List1.T (c1, c2 :: cs)) ->
+         let schemas = List2.from c1 c2 cs in
+         Meta.Schema_object.RawAlternation { location; schemas }
+       )
+    |> labelled "Context schema constant, atom or alternation"
+
+  let schema_object = schema_object1
+
+  let meta_thing =
+    let schema =
+      let try_alternation_starting_with_qualified_identifier =
+        seq2 qualified_identifier (trying plus_operator &> Meta_parsers.schema_object)
+        |> span
+        $> fun (location, (x, right_schema)) ->
+            let x_location = QualifiedIdentifier.location x in
+            let schema =
+              Meta.Schema_object.RawConstant
+                { location = x_location
+                ; identifier = x
+                }
+            in
+           match right_schema with
+           | Meta.Schema_object.RawAlternation { schemas; _ } ->
+             let schemas = List2.cons schema schemas in
+             Meta.Schema_object.RawAlternation { location; schemas }
+           | _ ->
+             let schemas = List2.pair schema right_schema in
+             Meta.Schema_object.RawAlternation { location; schemas }
+      and some_block =
+        seq3
+          (span (maybe schema_some_clause))
+          (span schema_block_clause)
+          (maybe (plus_operator &> Meta_parsers.schema_object))
+        |> span
+        $> fun (location, ((some_location, some_opt), (block_location, block), right_schema_opt)) ->
+             let open Option in
+             let schema_location =
+               some_opt
+               $> (fun _ -> Location.join some_location block_location)
+               |> Option.value ~default:block_location
+             in
+             let schema = Meta.Schema_object.RawElement { location = schema_location; some = some_opt; block } in
+             match right_schema_opt with
+             | Option.Some (Meta.Schema_object.RawAlternation { schemas; _ }) ->
+               let schemas = List2.cons schema schemas in
+               Meta.Schema_object.RawAlternation { location; schemas }
+             | Option.Some right_schema ->
+               let schemas = List2.pair schema right_schema in
+               Meta.Schema_object.RawAlternation { location; schemas }
+             | Option.None ->
+               schema
+      in
+      choice
+        [ try_alternation_starting_with_qualified_identifier
+        ; some_block
+        ]
+    in
+    let schema_type =
+      schema
+      $> fun schema ->
+        let location = Meta.location_of_schema_object schema in
+        Meta.Thing.RawSchema { location; schema }
+    and meta_type_or_meta_object =
+      let turnstile =
+        token Token.TURNSTILE $> fun () -> `Plain
+      and turnstile_hash =
+        token Token.TURNSTILE_HASH $> fun () -> `Hash
+      in
+      seq2
+        CLF_parsers.clf_context_object
+        (maybe (seq2 (alt turnstile turnstile_hash) CLF_parsers.clf_context_object))
+      |> span
+      $> function
+         | (location, (object_, Option.None)) ->
+           Meta.Thing.RawPlain { location; object_ }
+         | (location, (context, Option.Some (variant, object_))) ->
+           Meta.Thing.RawTurnstile { location; context; variant; object_ }
+    in
+    choice
+      [ schema_type
+      ; meta_type_or_meta_object
+      ]
+    |> labelled "Meta-type, meta-object, or meta-object pattern"
+
+  (*=
+      <boxed-meta-thing> ::=
+        | `(' <meta-thing> `)'
+        | `#(' <meta-thing> `)'
+        | `$(' <meta-thing> `)'
+        | `[' <meta-thing> `]'
+        | `#[' <meta-thing> `]'
+        | `$[' <meta-thing> `]'
+  *)
+  let boxed_meta_thing =
+    let parens =
+      parens Meta_parsers.meta_thing
+      $> fun t -> t, `Plain
+    and hash_parens =
+      token Token.HASH_LPAREN &> Meta_parsers.meta_thing <& token Token.RPAREN
+      $> fun t -> t, `Hash
+    and dollar_parens =
+      token Token.DOLLAR_LPAREN &> Meta_parsers.meta_thing <& token Token.RPAREN
+      $> fun t -> t, `Dollar
+    and bracks =
+      bracks Meta_parsers.meta_thing
+      $> fun t -> t, `Plain
+    and hash_bracks =
+      token Token.HASH_LBRACK &> Meta_parsers.meta_thing <& token Token.RBRACK
+      $> fun t -> t, `Hash
+    and dollar_bracks =
+      token Token.DOLLAR_LBRACK &> Meta_parsers.meta_thing <& token Token.RBRACK
+      $> fun t -> t, `Dollar
+    in
+    choice
+      [ parens
+      ; hash_parens
+      ; dollar_parens
+      ; bracks
+      ; hash_bracks
+      ; dollar_bracks
+      ]
+
+  (*=
+      <meta-context> ::=
+        | [`^']
+        | <meta-object-identifier> `:' <boxed-meta-type> (`,' <meta-object-identifier> `:' <boxed-meta-type>)*
+  *)
+  let meta_context =
+    let non_empty =
+      sep_by0
+        (seq2 (meta_object_identifier <& token Token.COLON) Meta_parsers.boxed_meta_thing)
+        (token Token.COMMA)
+      |> span
+      $> fun (location, bindings) ->
+        { Meta.Context_object.location; bindings }
+    and empty =
+      maybe (token Token.HAT)
+      |> span
+      $> fun (location, _) -> { Meta.Context_object.location; bindings = [] }
+    in
+    choice
+      [ non_empty
+      ; empty
+      ]
+end
+
+let schema_object = Meta_parsers.schema_object
+
+let meta_thing = Meta_parsers.meta_thing
+
+let boxed_meta_thing = Meta_parsers.boxed_meta_thing
+
+let meta_context = Meta_parsers.meta_context
+
+module rec Comp_parsers : sig
+  val comp_sort_object : Comp.Sort_object.t t
+
+  val comp_pattern_object : Comp.Pattern_object.t t
+
+  val comp_expression_object : Comp.Expression_object.t t
+
+  val comp_context : Comp.Context_object.t t
+end = struct
+  (*=
+      Original grammar:
+
+      <comp-sort-object> ::=
+        | <identifier>
+        | <qualified-identifier>
+        | `ctype'
+        | `{' <omittable-meta-object-identifier> [`:' <boxed-meta-thing>] `}' <comp-sort-object>
+        | `(' <omittable-meta-object-identifier> [`:' <boxed-meta-thing>] `)' <comp-sort-object>
+        | <comp-sort-object> <forward-arrow> <comp-sort-object>
+        | <comp-sort-object> <backward-arrow> <comp-sort-object>
+        | <comp-sort-object> `*' <comp-sort-object>
+        | <comp-sort-object> <comp-sort-object>
+        | <boxed-meta-thing>
+        | `(' <comp-sort-object> `)'
+
+      Rewritten grammar, to eliminate left-recursions, handle precedence
+      using recursive descent, and handle left-associative operators.
+      Weak prefix operators (Pis) may appear without parentheses
+      as the rightmost operand of an operator.
+
+      <weak-prefix> ::=
+        | `{' <omittable-meta-object-identifier> [`:' <boxed-meta-thing>] `}' <comp-sort-object>
+        | `(' <omittable-meta-object-identifier> [`:' <boxed-meta-thing>] `)' <comp-sort-object>
+
+      <comp-sort-object> ::=
+        | <comp-sort-object1>
+
+      <comp-sort-object1> ::=
+        | <weak-prefix>
+        | <comp-sort-object2>
+
+      <comp-sort-object2> ::=
+        | <comp-sort-object3> (<forward-arrow> (<comp-sort-object> | <weak-prefix>))+
+        | <comp-sort-object3> (<backward-arrow> (<comp-sort-object> | <weak-prefix>))+
+        | <comp-sort-object3>
+
+      <comp-sort-object3> ::=
+        | <comp-sort-object4> (`*' <comp-sort-object>)+
+        | <comp-sort-object4>
+
+      <comp-sort-object4> ::=
+        | <comp-sort-object5> (<comp-sort-object5> | <weak-prefix>)+
+        | <comp-sort-object5>
+
+      <comp-sort-object5> ::=
+        | <identifier>
+        | <qualified-identifier>
+        | `ctype'
+        | <boxed-meta-thing>
+        | `(' <comp-sort-object> `)'
+  *)
+  let weak_prefix =
+    let declaration =
+      seq2
+        omittable_meta_object_identifier
+        (maybe (token Token.COLON &> Meta_parsers.boxed_meta_thing))
+    in
+    let explicit_pi =
+      seq2 (braces declaration) Comp_parsers.comp_sort_object
+      |> span
+      $> (fun (location, ((parameter_identifier, parameter_sort), body)) ->
+         Comp.Sort_object.RawPi
+           { location
+           ; parameter_identifier
+           ; parameter_sort
+           ; plicity = Plicity.explicit
+           ; body
+           })
+      |> labelled "Explicit computational Pi kind or type"
+    and implicit_pi =
+      seq2 (parens declaration) Comp_parsers.comp_sort_object
+      |> span
+      $> (fun (location, ((parameter_identifier, parameter_sort), body)) ->
+         Comp.Sort_object.RawPi
+           { location
+           ; parameter_identifier
+           ; parameter_sort
+           ; plicity = Plicity.implicit
+           ; body
+           })
+      |> labelled "Implicit computational Pi kind or type"
+    in
+    choice
+      [ explicit_pi
+      ; implicit_pi
+      ]
+
+  let comp_sort_object5 =
+    let constant_or_variable =
+      qualified_or_plain_identifier
+      |> span
+      $> (function
+         | (location, `Qualified identifier) ->
+           Comp.Sort_object.RawQualifiedIdentifier
+             { location
+             ; identifier
+             ; quoted = false
+             }
+         | (location, `Plain identifier) ->
+           Comp.Sort_object.RawIdentifier
+             { location
+             ; identifier
+             ; quoted = false
+             }
+         )
+      |> labelled "Computational type constant or term variable"
+    and ctype =
+      token Token.KW_CTYPE
+      |> span
+      $> (fun (location, ()) -> Comp.Sort_object.RawCtype { location })
+      |> labelled "Computational `ctype' kind"
+    and boxed_meta_object_of_meta_type =
+      Meta_parsers.boxed_meta_thing
+      |> span
+      $> (fun (location, boxed) -> Comp.Sort_object.RawBox { location; boxed })
+      |> labelled "Computational boxed meta-object or meta-type"
+    and parenthesized =
+      parens Comp_parsers.comp_sort_object
+      $> (function
+         | Comp.Sort_object.RawIdentifier i ->
+           Comp.Sort_object.RawIdentifier { i with quoted = true}
+         | Comp.Sort_object.RawQualifiedIdentifier i ->
+           Comp.Sort_object.RawQualifiedIdentifier { i with quoted = true}
+         | sort -> sort
+         )
+      |> labelled "Parenthesized computational kind or type"
+    in
+    choice
+      [ constant_or_variable
+      ; ctype
+      ; boxed_meta_object_of_meta_type
+      ; parenthesized
+      ]
+
+  let comp_sort_object4 =
+    some (alt comp_sort_object5 weak_prefix)
+    |> span
+    $> (function
+       | (_, List1.T (object_, [])) -> object_
+       | (location, List1.T (o1, o2 :: os)) ->
+         let objects = List2.from o1 o2 os in
+         Comp.Sort_object.RawApplication { location; objects }
+       )
+    |> labelled "Atomic computational kind or type, or type application"
+
+  let comp_sort_object3 =
+    seq2 comp_sort_object4 (many (token Token.STAR &> comp_sort_object4))
+    |> span
+    $> (function
+       | (_, (object_, [])) -> object_
+       | (location, (o1, o2 :: os)) ->
+         let objects = List2.from o1 o2 os in
+         Comp.Sort_object.RawTuple { location; objects })
+    |> labelled
+         "Atomic computational kind or type, type application or tuple type"
+
+  let comp_sort_object2 =
+    (* Forward arrows are right-associative, and backward arrows are
+       left-associative. Forward and backward arrows have the same
+       precedence. Mixing forward and backward arrows at the same precedence
+       level is ambiguous. That is, [a -> b <- c] could be parsed as
+       [a -> (b <- c)] when parsed from left to right, or as [(a -> b) <- c]
+       when parsed from right to left. *)
+    let forward_arrow = token Token.ARROW $> fun () -> `Forward_arrow
+    and backward_arrow = token Token.BACKARROW $> fun () -> `Backward_arrow
+    and right_operand = alt comp_sort_object3 weak_prefix in
+    comp_sort_object3 >>= fun object_ ->
+    maybe (alt forward_arrow backward_arrow)
+    >>= (function
+          | Option.None -> return (`Singleton object_)
+          | Option.Some `Forward_arrow ->
+            (* A forward arrow was parsed. Subsequent backward arrows are
+               ambiguous. *)
+            let backward_arrow =
+              token Token.BACKARROW >>= fun () ->
+              fail Ambiguous_backward_arrow
+            and forward_arrow = token Token.ARROW in
+            let operator = alt backward_arrow forward_arrow in
+            seq2 right_operand (many (operator &> right_operand))
+            $> fun (x, xs) -> `Forward_arrows (List1.from object_ (x :: xs))
+          | Option.Some `Backward_arrow ->
+            (* A backward arrow was parsed. Subsequent forward arrows are
+               ambiguous. *)
+            let backward_arrow = token Token.BACKARROW
+            and forward_arrow =
+              token Token.ARROW >>= fun () -> fail Ambiguous_forward_arrow
+            in
+            let operator = alt forward_arrow backward_arrow in
+            seq2 right_operand (many (operator &> right_operand))
+            $> fun (x, xs) -> `Backward_arrows (List1.from object_ (x :: xs)))
+    $> (function
+         | `Singleton x -> x
+         | `Forward_arrows xs ->
+           List1.fold_right Fun.id
+             (fun operand accumulator ->
+               let location =
+                 Location.join
+                   (Comp.location_of_sort_object operand)
+                   (Comp.location_of_sort_object accumulator)
+               in
+               Comp.Sort_object.RawArrow
+                 { location
+                 ; domain = operand
+                 ; range = accumulator
+                 ; orientation = `Forward
+                 })
+             xs
+         | `Backward_arrows (List1.T (x, xs)) ->
+           List.fold_left
+             (fun accumulator operand ->
+               let location =
+                 Location.join
+                   (Comp.location_of_sort_object accumulator)
+                   (Comp.location_of_sort_object operand)
+               in
+               Comp.Sort_object.RawArrow
+                 { location
+                 ; domain = operand
+                 ; range = accumulator
+                 ; orientation = `Backward
+                 })
+             x xs)
+    |> labelled
+         "Atomic computational kind or type, type application, tuple type, \
+          forward or backward arrow"
+
+  let comp_sort_object1 =
+    choice
+      [ weak_prefix
+      ; comp_sort_object2
+      ]
+
+  let comp_sort_object = comp_sort_object1
+
+  (*=
+      Original grammar:
+
+      <comp-pattern-object> ::=
+        | <identifier>
+        | <qualified-identifier>
+        | <boxed-meta-thing>
+        | `(' <comp-pattern-object> (`,' <comp-pattern-object>)+ `)'
+        | <comp-pattern-object> <comp-pattern-object>
+        | <dot-qualified-identifier> <comp-pattern-object>*
+        | <comp-pattern-object> `:' <comp-type>
+        | `{' <omittable-meta-object-identifier> `:' <boxed-meta-thing> `}' <comp-pattern-object>
+        | `_'
+        | `(' <comp-pattern-object> `)'
+
+      Rewritten grammar, to eliminate left-recursions, handle precedence
+      using recursive descent, and handle left-associative operators.
+      Weak prefix operators (Pis) may appear without parentheses
+      as the rightmost operand of an operator.
+
+      <weak-prefix> ::=
+        | `{' <omittable-meta-object-identifier> `:' <boxed-meta-thing> `}' <comp-pattern-object>
+
+      <comp-pattern-object> ::=
+        | <comp-pattern-object1>
+
+      <comp-pattern-object1> ::=
+        | <weak-prefix>
+        | <comp-pattern-object2>
+
+      <comp-pattern-object2> ::=
+        | <comp-pattern-object3> (`:' <comp-type>)+
+        | <comp-pattern-object3>
+
+      <comp-pattern-object3> ::=
+        | <comp-pattern-object4> (<comp-pattern-object4> | <weak-prefix>)
+        | <comp-pattern-object4>
+
+      <comp-pattern-object4> ::=
+        | <identifier>
+        | <qualified-identifier>
+        | <boxed-meta-thing>
+        | <dot-qualified-identifier> <comp-pattern-object>*
+        | `_'
+        | `(' <comp-pattern-object> (`,' <comp-pattern-object>)+ `)'
+        | `(' <comp-pattern-object> `)'
+  *)
+  let weak_prefix =
+    let pi =
+      seq2
+        (braces
+          (seq2
+            omittable_meta_object_identifier
+            (maybe (token Token.COLON &> Meta_parsers.boxed_meta_thing))))
+        Comp_parsers.comp_pattern_object
+      |> span
+      $> (fun (location, ((parameter_identifier, parameter_typ), pattern)) ->
+         Comp.Pattern_object.RawMetaAnnotated
+           { location
+           ; parameter_identifier
+           ; parameter_typ
+           ; pattern
+           })
+      |> labelled "Explicit computational Pi kind or type"
+    in
+    pi
+
+  let comp_pattern_object4 =
+    let constant_or_variable =
+      qualified_or_plain_identifier
+      |> span
+      $> (function
+         | (location, `Qualified identifier) ->
+           Comp.Pattern_object.RawQualifiedIdentifier
+             { location
+             ; identifier
+             ; observation = false
+             ; quoted = false
+             }
+         | (location, `Plain identifier) ->
+           Comp.Pattern_object.RawIdentifier
+             { location
+             ; identifier
+             ; quoted = false
+             }
+         )
+      |> labelled "Computational type constant or term variable"
+    and box =
+      Meta_parsers.boxed_meta_thing
+      |> span
+      $> (fun (location, pattern) ->
+            Comp.Pattern_object.RawBox { location; pattern }
+         )
+      |> labelled "Meta-object pattern"
+    and observation =
+      seq2 dot_qualified_identifier (many Comp_parsers.comp_pattern_object)
+      |> span
+      $> (fun (location, (constant, arguments)) ->
+            Comp.Pattern_object.RawObservation { location; constant; arguments }
+         )
+    and wildcard =
+      token Token.UNDERSCORE
+      |> span
+      $> (fun (location, ()) -> Comp.Pattern_object.RawWildcard { location })
+      |> labelled "Computational wildcard pattern"
+    and parenthesized_or_tuple =
+      parens (sep_by1 Comp_parsers.comp_pattern_object (token Token.COMMA))
+      |> span
+      $> (function
+         | (_, List1.T (Comp.Pattern_object.RawIdentifier i, [])) ->
+          Comp.Pattern_object.RawIdentifier { i with quoted = true }
+         | (_, List1.T (Comp.Pattern_object.RawQualifiedIdentifier i, [])) ->
+          Comp.Pattern_object.RawQualifiedIdentifier { i with quoted = true }
+         | (_, List1.T (pattern, [])) -> pattern
+         | (location, List1.T (p1, p2 :: ps)) ->
+           let elements = List2.from p1 p2 ps in
+           Comp.Pattern_object.RawTuple { location; elements }
+         )
+      |> labelled "Computational tuple pattern or parenthesized pattern"
+    in
+    choice
+      [ constant_or_variable
+      ; box
+      ; observation
+      ; wildcard
+      ; parenthesized_or_tuple
+      ]
+
+  let comp_pattern_object3 =
+    some (alt comp_pattern_object4 weak_prefix)
+    |> span
+    $> (function
+       | (_, List1.T (pattern, [])) -> pattern
+       | (location, List1.T (p1, p2 :: ps)) ->
+         let patterns = List2.from p1 p2 ps in
+         Comp.Pattern_object.RawApplication { location; patterns })
+    |> labelled "Computational atomic or application pattern"
+
+  let comp_pattern_object2 =
+    let annotation =
+      token Token.COLON &> comp_sort_object
+    in
+    let trailing_annotations =
+      many (span annotation)
+    in
+    seq2 comp_pattern_object3 trailing_annotations
+    $> (function
+       | (pattern, []) -> pattern
+       | (pattern, annotations) ->
+         List.fold_left
+           (fun accumulator (sort_location, typ) ->
+             let location =
+               Location.join
+                 (Comp.location_of_pattern_object accumulator)
+                 sort_location
+             in
+             Comp.Pattern_object.RawAnnotated
+               { location
+               ; pattern = accumulator
+               ; typ
+               }
+           )
+           pattern
+           annotations
+       )
+    |> labelled "Computational annotated, atomic, application or pattern"
+
+  let comp_pattern_object1 =
+    choice
+      [ weak_prefix
+      ; comp_pattern_object2
+      ]
+
+  let comp_pattern_object = comp_pattern_object1
+
+  (*=
+      Original grammar:
+
+      <comp-expression-object> ::=
+        | <identifier>
+        | <qualified-identifier>
+        | `fn' <omittable-identifier> (`,' <omittable-identifier>)* <thick-forward-arrow> <comp-expression>
+        | `fun' [`|'] <comp-pattern-object> (`,' <comp-pattern-object>)* <thick-forward-arrow> <comp-expression-object>
+          (`|' <comp-pattern-object> (`,' <comp-pattern-object>)* <thick-forward-arrow> <comp-expression-object>)*
+        | `mlam' <omittable-meta-object-identifier> (`,' <omittable-meta-object-identifier>)* <thick-forward-arrow> <comp-expression-object>
+        | `let' <comp-pattern-object> `=' <comp-expression-object> `in' <comp-expression-object>
+        | `[' <meta-object> `]'
+        | `impossible' <comp-expression-object>
+        | `case' <comp-expression-object> [`--not'] `of'
+          [`|'] <comp-pattern-object> <thick-forward-arrow> <comp-expression-object>
+          (`|' <comp-pattern-object> <thick-forward-arrow> <comp-expression-object>)*
+        | `(' <comp-expression-object> (`,' <comp-expression-object>)+ `)'
+        | `?' [<identifier>]
+        | `_'
+        | <comp-expression-object> <comp-expression-object>
+        | <qualified-identifier> <comp-expression-object>*
+        | <comp-expression-object> `:' <comp-type>
+        | `(' <comp-expression-object> `)'
+
+      Rewritten grammar, to eliminate left-recursions, handle precedence
+      using recursive descent, and handle left-associative operators.
+
+      <comp-expression-object> ::=
+        | <comp-expression-object1>
+
+      <comp-expression-object1> ::=
+        | <comp-expression-object2> (`:' <comp-sort-object>)+
+        | <comp-expression-object2>
+
+      <comp-expression-object2> ::=
+        | <comp-expression-object3> <comp-expression-object3>+
+        | <comp-expression-object3>
+
+      <comp-expression-object3> ::=
+        | <identifier>
+        | <qualified-identifier>
+        | `fn' <omittable-identifier> (`,' <omittable-identifier>)* <thick-forward-arrow> <comp-expression>
+        | `fun' [`|'] <comp-pattern-object> (`,' <comp-pattern-object>)* <thick-forward-arrow> <comp-expression-object>
+          (`|' <comp-pattern-object> (`,' <comp-pattern-object>)* <thick-forward-arrow> <comp-expression-object>)*
+        | `mlam' <omittable-meta-object-identifier> (`,' <omittable-meta-object-identifier>)* <thick-forward-arrow> <comp-expression-object>
+        | `let' <comp-pattern-object> `=' <comp-expression-object> `in' <comp-expression-object>
+        | `[' <meta-object> `]'
+        | `impossible' <comp-expression-object>
+        | `case' <comp-expression-object> [`--not'] `of'
+          [`|'] <comp-pattern-object> <thick-forward-arrow> <comp-expression-object>
+          (`|' <comp-pattern-object> <thick-forward-arrow> <comp-expression-object>)*
+        | `?' [<identifier>]
+        | `_'
+        | `(' <comp-expression-object> (`,' <comp-expression-object>)+ `)'
+        | `(' <comp-expression-object> `)'
+  *)
+  let comp_expression_object3 =
+    let constant_or_variable =
+      qualified_or_plain_identifier
+      |> span
+      $> (function
+         | (location, `Qualified identifier) ->
+           Comp.Expression_object.RawQualifiedIdentifier
+             { location
+             ; identifier
+             ; observation = false
+             ; quoted = false
+             }
+         | (location, `Plain identifier) ->
+           Comp.Expression_object.RawIdentifier
+             { location
+             ; identifier
+             ; quoted = false
+             }
+         )
+      |> labelled "Computational type constant or term variable"
+    and fn =
+      seq2
+        (token Token.KW_FN &> sep_by1 omittable_identifier (token Token.COMMA))
+        (token Token.THICK_ARROW &> Comp_parsers.comp_expression_object)
+      |> span
+      $> (fun (location, (parameters, body)) ->
+           Comp.Expression_object.RawFn { location; parameters; body }
+         )
+      |> labelled "Ordinary function abstraction"
+    and matching_fun =
+      let patterns =
+        sep_by1 Comp_parsers.comp_pattern_object (token Token.COMMA)
+      in
+      token Token.KW_FUN
+      &> maybe (token Token.PIPE)
+      &> sep_by1
+        (seq2
+          patterns
+          (token Token.THICK_ARROW &> Comp_parsers.comp_expression_object))
+        (token Token.PIPE)
+      |> span
+      $> (fun (location, branches) ->
+           Comp.Expression_object.RawFun { location; branches }
+         )
+      |> labelled "Pattern-matching function abstraction"
+    and mlam =
+      seq2
+        (token Token.KW_FN &> sep_by1 omittable_meta_object_identifier (token Token.COMMA))
+        (token Token.THICK_ARROW &> Comp_parsers.comp_expression_object)
+      |> span
+      $> (fun (location, (parameters, body)) ->
+           Comp.Expression_object.RawMlam { location; parameters; body }
+         )
+      |> labelled "Meta-level function abstraction"
+    and let_ =
+      seq3
+        (token Token.KW_LET &> Comp_parsers.comp_pattern_object)
+        (token Token.EQUALS &> Comp_parsers.comp_expression_object)
+        (token Token.KW_IN &> Comp_parsers.comp_expression_object)
+      |> span
+      $> (fun (location, (pattern, scrutinee, body)) ->
+           Comp.Expression_object.RawLet { location; pattern; scrutinee; body }
+         )
+      |> labelled "`let'-expressions"
+    and impossible =
+      token Token.KW_IMPOSSIBLE &> Comp_parsers.comp_expression_object
+      |> span
+      $> (fun (location, scrutinee) ->
+           Comp.Expression_object.RawImpossible { location; scrutinee }
+         )
+      |> labelled "Empty `impossible' case analysis"
+    and box =
+      Meta_parsers.boxed_meta_thing
+      |> span
+      $> (fun (location, boxed) ->
+           Comp.Expression_object.RawBox { location; boxed }
+         )
+      |> labelled "Boxed meta-object"
+    and case =
+      seq3
+        (token Token.KW_CASE &> Comp_parsers.comp_expression_object)
+        (token Token.KW_OF &> maybe (pragma "not"))
+        (maybe (token Token.PIPE)
+        &> sep_by1
+          (seq2
+            Comp_parsers.comp_pattern_object
+            (token Token.THICK_ARROW &> Comp_parsers.comp_expression_object))
+          (token Token.PIPE))
+      |> span
+      $> (fun (location, (scrutinee, check_coverage, branches)) ->
+           let check_coverage = Option.is_some check_coverage in
+           Comp.Expression_object.RawCase
+             { location
+             ; scrutinee
+             ; check_coverage
+             ; branches
+             }
+         )
+      |> labelled "Pattern-matching expression"
+    and hole =
+      hole
+      |> span
+      $> (function
+         | (location, `Unlabelled) ->
+           let label = Option.none in
+           Comp.Expression_object.RawHole { location; label }
+         | (location, `Labelled label) ->
+           let label = Option.some label in
+           Comp.Expression_object.RawHole { location; label }
+         )
+      |> labelled "Computational hole"
+    and box_hole =
+      token Token.UNDERSCORE
+      |> span
+      $> (fun (location, ()) -> Comp.Expression_object.RawBoxHole { location })
+      |> labelled "Box hole"
+    and parenthesized_or_tuple =
+      parens (sep_by1 Comp_parsers.comp_expression_object (token Token.COMMA))
+      |> span
+      $> (function
+         | (_, List1.T (Comp.Expression_object.RawIdentifier i, [])) ->
+          Comp.Expression_object.RawIdentifier { i with quoted = true }
+         | (_, List1.T (Comp.Expression_object.RawQualifiedIdentifier i, [])) ->
+          Comp.Expression_object.RawQualifiedIdentifier { i with quoted = true }
+         | (_, List1.T (pattern, [])) -> pattern
+         | (location, List1.T (p1, p2 :: ps)) ->
+           let elements = List2.from p1 p2 ps in
+           Comp.Expression_object.RawTuple { location; elements }
+         )
+      |> labelled "Computational tuple or parenthesized expression"
+    in
+    choice
+      [ constant_or_variable
+      ; fn
+      ; matching_fun
+      ; mlam
+      ; let_
+      ; impossible
+      ; box
+      ; case
+      ; hole
+      ; box_hole
+      ; parenthesized_or_tuple
+      ]
+
+  let comp_expression_object2 =
+    some comp_expression_object3
+    |> span
+    $> (function
+       | (_, List1.T (expression, [])) -> expression
+       | (location, List1.T (applicand, x :: xs)) ->
+         let arguments = List1.from x xs in
+         Comp.Expression_object.RawApplication { location; applicand; arguments }
+       )
+    |> labelled "Atomic computational expression or application"
+
+  let comp_expression_object1 =
+    let annotation =
+      token Token.COLON &> comp_sort_object
+    in
+    let trailing_annotations =
+      many (span annotation)
+    in
+    seq2 comp_expression_object2 trailing_annotations
+    $> (function
+       | (expression, []) -> expression
+       | (expression, annotations) ->
+         List.fold_left
+           (fun accumulator (sort_location, typ) ->
+             let location =
+               Location.join
+                 (Comp.location_of_expression_object accumulator)
+                 sort_location
+             in
+             Comp.Expression_object.RawAnnotated
+               { location
+               ; expression = accumulator
+               ; typ
+               }
+           )
+           expression
+           annotations
+       )
+    |> labelled "Possibly annotated computational expression"
+
+  let comp_expression_object = comp_expression_object1
+
+  (*=
+      <comp-context> ::=
+        | [`^']
+        | <identifier> `:' <comp-type> (`,' <identifier> `:' <comp-type>)*
+  *)
+  let comp_context =
+    let non_empty =
+      sep_by0
+        (seq2 (identifier <& token Token.COLON) Comp_parsers.comp_sort_object)
+        (token Token.COMMA)
+      |> span
+      $> fun (location, bindings) ->
+        { Comp.Context_object.location; bindings }
+    and empty =
+      maybe (token Token.HAT)
+      |> span
+      $> fun (location, _) ->
+        { Comp.Context_object.location; bindings = [] }
+    in
+    choice
+      [ non_empty
+      ; empty
+      ]
+end
+
+let comp_sort_object = Comp_parsers.comp_sort_object
+
+let comp_pattern_object = Comp_parsers.comp_pattern_object
+
+let comp_expression_object = Comp_parsers.comp_expression_object
+
+let comp_context = Comp_parsers.comp_context
+
+module rec Harpoon_parsers : sig
+  val harpoon_proof : Harpoon.Proof.t t
+  val interactive_harpoon_command : Harpoon.Repl.Command.t t
+  val interactive_harpoon_command_sequence : Harpoon.Repl.Command.t List.t t
+  val next_theorem : [> `next of Identifier.t | `quit ] t
+end = struct
+  let boxity =
+    let boxed =
+      keyword "boxed"
+      $> fun () -> `Boxed
+    and unboxed =
+      keyword "unboxed"
+      $> fun () -> `Unboxed
+    and strenghtened =
+      keyword "strengthened"
+      $> fun () -> `Strengthened
+    in
+    choice
+      [ boxed
+      ; unboxed
+      ; strenghtened
+      ]
+
+  let harpoon_command =
     let by =
       token Token.KW_BY &>
         seq3
-          (cmp_exp_syn <& token Token.KW_AS)
-          name
-          (maybe_default boxity ~default:`boxed)
+          (Comp_parsers.comp_expression_object <& token Token.KW_AS)
+          identifier
+          (maybe_default boxity ~default:`Boxed)
       |> span
       |> labelled "Harpoon command"
-      $> fun (loc, (i, x, b)) ->
-         match b with
-         | `boxed -> Comp.By (loc, i, x)
-         | `unboxed -> Comp.Unbox (loc, i, x, Option.none)
-         | `strengthened -> Comp.Unbox (loc, i, x, Option.some `strengthened)
-    in
-    let unbox =
+      $> function
+         | (location, (expression, assignee, `Boxed)) ->
+           Harpoon.Command.By { location; assignee; expression }
+         | (location, (expression, assignee, `Unboxed)) ->
+           Harpoon.Command.Unbox
+             { location
+             ; assignee
+             ; expression
+             ; modifier = Option.none
+             }
+         | (location, (expression, assignee, `Strengthened)) ->
+           Harpoon.Command.Unbox
+             { location
+             ; assignee
+             ; expression
+             ; modifier = Option.some `Strengthened
+             }
+    and unbox =
       keyword "unbox" &>
         seq2
-          ((span cmp_exp_syn) <& token Token.KW_AS)
-          name
-      $> fun ((loc, i), x) -> Comp.Unbox (loc, i, x, Option.none)
-    in
-    let strengthen =
+          ((span Comp_parsers.comp_expression_object) <& token Token.KW_AS)
+          identifier
+      $> fun ((location, expression), assignee) ->
+           Harpoon.Command.Unbox
+             { location
+             ; assignee
+             ; expression
+             ; modifier = Option.none
+             }
+    and strengthen =
       keyword "strengthend" &>
         seq2
-          (span cmp_exp_syn <& token Token.KW_AS)
-          name
-      $> fun ((loc, i), x) -> Comp.Unbox (loc, i, x, Option.some `strengthened)
+          (span Comp_parsers.comp_expression_object <& token Token.KW_AS)
+          identifier
+      $> fun ((location, expression), assignee) ->
+           Harpoon.Command.Unbox
+             { location
+             ; assignee
+             ; expression
+             ; modifier = Option.some `Strengthened
+             }
     in
-    choice [ by; unbox; strengthen ]
+    choice
+      [ by
+      ; unbox
+      ; strengthen
+      ]
 
-  let case_label : Comp.case_label parser =
+  let split_branch_label =
     let extension_case_label =
       trying (keyword "extended" &> token Token.KW_BY) &> integer
       |> span
       |> labelled "context extension case label"
-      $> fun (loc, n) -> Comp.(ContextCase (ExtendedBy (loc, n)))
-    in
-    let empty_case_label =
+      $> fun (location, schema_element) ->
+          Harpoon.Split_branch.Label.Extended_context
+            { location
+            ; schema_element
+            }
+    and empty_case_label =
       trying (keyword "empty" &> keyword "context")
       |> span
       |> labelled "empty context case label"
-      $> fun (loc, ()) -> Comp.(ContextCase (EmptyContext loc))
-    in
-    let named_case_label =
-      name
+      $> fun (location, ()) ->
+          Harpoon.Split_branch.Label.Empty_context { location }
+    and constant_case_label =
+      qualified_identifier
       |> span
       |> labelled "constructor case label"
-      $> fun (loc, name) -> Comp.NamedCase (loc, name)
-    in
-    let pvar_case_label =
+      $> fun (location, identifier) ->
+           Harpoon.Split_branch.Label.Constant { location; identifier }
+    and pvar_case_label =
       token Token.HASH &>
         seq2
           (maybe_default integer ~default:1)
           (maybe dot_integer)
       |> span
       |> labelled "parameter variable case label"
-      $> fun (loc, (n, k)) -> Comp.PVarCase (loc, n, k)
-    in
-    let bvar_case_label =
+      $> fun (location, (n, k)) ->
+          Harpoon.Split_branch.Label.Parameter_variable
+            { location
+            ; schema_element = n
+            ; projection = k
+            }
+    and bvar_case_label =
       trying (keyword "head" &> keyword "variable")
       |> span
-      $> fun (loc, ()) -> Comp.BVarCase loc
+      $> fun (location, ()) ->
+          Harpoon.Split_branch.Label.Bound_variable { location }
     in
     choice
       [ bvar_case_label
       ; extension_case_label
       ; empty_case_label
-      ; named_case_label
+      ; constant_case_label
       ; pvar_case_label
       ]
 
-  let harpoon_hypothetical : Comp.hypothetical parser =
-    let open Comp in
+  let harpoon_hypothetical =
     let hypotheses =
-      seq2
-        (mctx (clf_ctyp_decl_bare <& token Token.PIPE))
-        gctx
-      $> fun (cD, cG) -> { cD = (Obj.magic ()); cG }
+      seq3 Meta_parsers.meta_context (token Token.PIPE) Comp_parsers.comp_context
     in
     seq2
       (hypotheses <& token Token.SEMICOLON)
@@ -1921,75 +2784,89 @@ end = struct
     |> braces
     |> span
     |> labelled "Harpoon hypothetical"
-    $> fun (hypothetical_loc, (hypotheses, proof)) ->
-        { hypotheses; proof; hypothetical_loc }
+    $> fun (location, ((meta_context, (), comp_context), proof)) ->
+        { Harpoon.Hypothetical.location; meta_context; comp_context; proof }
 
-  let harpoon_split_branch : Comp.split_branch parser =
+  let harpoon_split_branch =
     token Token.KW_CASE &>
       seq2
-        (case_label <& token Token.COLON)
+        (split_branch_label <& token Token.COLON)
         harpoon_hypothetical
     |> span
     |> labelled "Harpoon split branch"
-    $> fun (split_branch_loc, (case_label, branch_body)) ->
-        let open Comp in
-        { case_label; branch_body; split_branch_loc }
+    $> fun (location, (label, body)) ->
+        { Harpoon.Split_branch.location; label; body }
 
-  let harpoon_directive : Comp.directive parser =
+  let harpoon_directive =
+    let intros =
+      keyword "intros" &> harpoon_hypothetical
+      |> span
+      $> fun (location, hypothetical) ->
+           Harpoon.Directive.Intros { location; hypothetical }
+    and solve =
+      keyword "solve" &> Comp_parsers.comp_expression_object
+      |> span
+      $> fun (location, solution) ->
+           Harpoon.Directive.Solve { location; solution }
+    and split =
+      keyword "split"
+      &> seq2
+        Comp_parsers.comp_expression_object
+        (token Token.KW_AS &> many harpoon_split_branch)
+      |> span
+      $> fun (location, (scrutinee, branches)) ->
+           Harpoon.Directive.Split { location; scrutinee; branches }
+    and impossible =
+      token Token.KW_IMPOSSIBLE &> Comp_parsers.comp_expression_object
+      |> span
+      $> fun (location, scrutinee) ->
+           Harpoon.Directive.Split { location; scrutinee; branches = [] }
+    and suffices =
+      let suffices_branch =
+        seq2 Comp_parsers.comp_sort_object (braces Harpoon_parsers.harpoon_proof)
+        |> span
+        $> fun (location, (goal, proof)) ->
+          { Harpoon.Suffices_branch.location; goal; proof }
+      in
+      tokens [ Token.KW_SUFFICES; Token.KW_BY ] &>
+        seq2
+          (Comp_parsers.comp_expression_object <& token Token.KW_TOSHOW)
+          (many suffices_branch)
+      |> span
+      $> fun (location, (scrutinee, branches)) ->
+           Harpoon.Directive.Suffices { location; scrutinee; branches }
+    in
     choice
-      [ keyword "intros"
-        &> harpoon_hypothetical
-        |> span
-        $> (fun (loc, h) -> Comp.Intros (loc, h))
-      ; keyword "solve"
-        &> cmp_exp_chk
-        |> span
-        $> (fun (loc, e) -> Comp.Solve (loc, e))
-      ; keyword "split"
-        &> seq2
-              (cmp_exp_syn <& token Token.KW_AS)
-              (many harpoon_split_branch)
-        |> span
-        $> (fun (loc, (i, bs)) -> Comp.Split (loc, i, bs))
-      ; token Token.KW_IMPOSSIBLE
-        &> cmp_exp_syn
-        |> span
-        $> (fun (loc, i) -> Comp.Split (loc, i, []))
-      ; let suffices_arg =
-          seq2 cmp_typ (Harpoon_parsers.harpoon_proof |> braces)
-          |> span
-          $> fun (loc, (tau, p)) -> (loc, tau, p)
-        in
-        tokens Token.[KW_SUFFICES; KW_BY] &>
-          seq2
-            (cmp_exp_syn <& token Token.KW_TOSHOW)
-            (many suffices_arg)
-        |> span
-        $> (fun (loc, (i, args)) -> Comp.Suffices (loc, i, args))
+      [ intros
+      ; solve
+      ; split
+      ; impossible
+      ; suffices
       ]
     |> shifted "Harpoon directive"
 
-  let harpoon_proof : Comp.proof parser =
+  let harpoon_proof =
     let incomplete_proof =
       hole
       |> span
       |> labelled "Harpoon incomplete proof `?'"
-      $> (function
-         | (loc, `Unlabelled) -> Comp.Incomplete (loc, Option.none)
-         | (loc, `Labelled label) -> Comp.Incomplete (loc, Option.some label)
-         )
-    in
-    let command_proof =
+      $> function
+         | (location, `Unlabelled) ->
+           Harpoon.Proof.Incomplete { location; label = Option.none }
+         | (location, `Labelled label) ->
+           Harpoon.Proof.Incomplete { location; label = Option.some label }
+    and command_proof =
       seq2
         (harpoon_command <& token Token.SEMICOLON)
         Harpoon_parsers.harpoon_proof
       |> span
-      $> fun (loc, (cmd, prf)) -> Comp.Command (loc, cmd, prf)
-    in
-    let directive_proof =
+      $> fun (location, (command, body)) ->
+           Harpoon.Proof.Command { location; command; body }
+    and directive_proof =
       harpoon_directive
       |> span
-      $> fun (loc, d) -> Comp.Directive (loc, d)
+      $> fun (location, directive) ->
+           Harpoon.Proof.Directive { location; directive }
     in
     choice
       [ incomplete_proof
@@ -1998,7 +2875,7 @@ end = struct
       ]
     |> labelled "Harpoon proof"
 
-  let interactive_harpoon_command : Harpoon.command t =
+  let interactive_harpoon_command =
     let intros =
       keyword "intros"
       &> maybe (some identifier')
@@ -2029,155 +2906,252 @@ end = struct
       &> cmp_exp_chk
       $> fun t -> Harpoon.Solve t
     in
-    let auto_invert_solve =
-      keyword "auto-invert-solve"
-      &> maybe integer
-      $> fun n -> H.AutoInvertSolve n
-    in
-    let inductive_auto_solve =
-      keyword "inductive-auto-solve"
-      &> maybe integer
-      $> fun n -> H.InductiveAutoSolve n
-    in
     let by =
       token Token.KW_BY &>
         seq3
-          cmp_exp_syn
-          (token Token.KW_AS &> name)
-          (maybe_default boxity ~default:`boxed)
-      $> fun (i, name, b) ->
-        match b with
-        | `strengthened -> Harpoon.Unbox (i, name, Option.some `strengthened)
-        | `unboxed -> Harpoon.Unbox (i, name, Option.none)
-        | `boxed -> Harpoon.By (i, name)
-    in
-    let compute_type =
+          Comp_parsers.comp_expression_object
+          (token Token.KW_AS &> identifier)
+          (maybe_default boxity ~default:`Boxed)
+      |> span
+      $> function
+          | (location, (expression, assignee, `Boxed)) ->
+            Harpoon.Repl.Command.By { location; assignee; expression }
+          | (location, (expression, assignee, `Unboxed)) ->
+            Harpoon.Repl.Command.Unbox
+              { location
+              ; assignee
+              ; expression
+              ; modifier = Option.none
+              }
+          | (location, (expression, assignee, `Strengthened)) ->
+            Harpoon.Repl.Command.Unbox
+              { location
+              ; assignee
+              ; expression
+              ; modifier = Option.some `Strengthened
+              }
+    and compute_type =
       token Token.KW_TYPE
-      &> cmp_exp_syn
-      $> fun i -> Harpoon.Type i
-    in
-    let suffices =
+      &> Comp_parsers.comp_expression_object
+      |> span
+      $> fun (location, scrutinee) ->
+        Harpoon.Repl.Command.Type { location; scrutinee }
+    and suffices =
       let tau_list_item =
         alt
-          (cmp_typ $> fun tau -> `exact tau)
+          (Comp_parsers.comp_sort_object $> fun tau -> `exact tau)
           (token Token.UNDERSCORE |> span $> fun (loc, ()) -> `infer loc)
       in
       seq2
-        (tokens [Token.KW_SUFFICES; Token.KW_BY]
-        &> cmp_exp_syn)
+        (tokens [ Token.KW_SUFFICES; Token.KW_BY ]
+        &> Comp_parsers.comp_expression_object)
         (token Token.KW_TOSHOW
         &> sep_by0 tau_list_item (token Token.COMMA))
-      $> fun (i, tau_list) ->
-        Harpoon.Suffices (i, tau_list)
-    in
-    let unbox =
+      |> span
+      $> fun (location, (implication, goal_premises)) ->
+        Harpoon.Repl.Command.Suffices { location; implication; goal_premises }
+    and unbox =
       keyword "unbox" &>
         seq2
-          cmp_exp_syn
-          (token Token.KW_AS &> name)
-      $> fun (i, name) -> Harpoon.Unbox (i, name, Option.none)
-    in
-    let strengthen =
+          Comp_parsers.comp_expression_object
+          (token Token.KW_AS &> identifier)
+      |> span
+      $> fun (location, (expression, assignee)) ->
+          Harpoon.Repl.Command.Unbox
+            { location
+            ; expression
+            ; assignee
+            ; modifier = Option.none
+            }
+    and strengthen =
       keyword "strengthen" &>
         seq2
-          cmp_exp_syn
-          (token Token.KW_AS &> name)
-      $> fun (i, name) -> Harpoon.Unbox (i, name, Option.some `strengthened)
-    in
-    let automation_kind =
-      choice
-        [ keyword "auto-intros" &> return `auto_intros
-        ; keyword "auto-solve-trivial" &> return `auto_solve_trivial
-        ]
-    in
-    let automation_change =
-      choice
-        [ keyword "on" &> return `on
-        ; keyword "off" &> return `off
-        ; keyword "toggle" &> return `toggle
-        ]
-    in
-    let toggle_automation =
-      keyword "toggle-automation"
-      &> seq2 automation_kind (maybe_default automation_change ~default:`toggle)
-      $> fun (t, c) -> Harpoon.ToggleAutomation (t, c)
-    in
-    let rename =
-      let level =
+          Comp_parsers.comp_expression_object
+          (token Token.KW_AS &> identifier)
+      |> span
+      $> fun (location, (expression, assignee)) ->
+          Harpoon.Repl.Command.Unbox
+            { location
+            ; expression
+            ; assignee
+            ; modifier = Option.some `Strengthened
+            }
+    and toggle_automation =
+      let automation_kind =
+        let auto_intros =
+          keyword "auto-intros"
+          $> fun () -> `auto_intros
+        and auto_solve_trivial =
+          keyword "auto-solve-trivial"
+          $> fun () -> `auto_solve_trivial
+        in
         choice
-          [ keyword "comp" &> return `comp
-          ; keyword "meta" &> return `meta
+          [ auto_intros
+          ; auto_solve_trivial
+          ]
+      and automation_change =
+        let on =
+          keyword "on"
+          $> fun () -> `on
+        and off =
+          keyword "off"
+          $> fun () -> `off
+        and toggle =
+          keyword "toggle"
+          $> fun () -> `toggle
+        in
+        choice
+          [ on
+          ; off
+          ; toggle
           ]
       in
-      keyword "rename"
-      &> seq3 level name name
-      $> fun (level, rename_from, rename_to) ->
-        Harpoon.Rename { rename_from; rename_to; level }
-    in
-    let basic_command =
-      choice
-        [ keyword "list" &> return `list
-        ; keyword "defer" &> return `defer
-        ]
-    in
-    let select_theorem =
-      keyword "select" &> name $> fun x -> Harpoon.SelectTheorem x
-    in
-    let create_command, serialize_command =
-      ( keyword "create" &> return `create
-      , keyword "serialize" &> return `serialize
-      )
-    in
-    let theorem_command =
-      let dump_proof =
+      keyword "toggle-automation"
+      &> seq2 automation_kind (maybe_default automation_change ~default:`toggle)
+      |> span
+      $> fun (location, (kind, change)) ->
+        Harpoon.Repl.Command.ToggleAutomation { location; kind; change }
+    and rename =
+      let level =
+        let comp_level =
+          keyword "comp"
+          $> fun () -> `comp
+        and meta_level =
+          keyword "meta"
+          $> fun () -> `meta
+        in
+        choice
+          [ comp_level
+          ; meta_level
+          ]
+      in
+      keyword "rename" &> seq3 level identifier identifier
+      |> span
+      $> fun (location, (level, rename_from, rename_to)) ->
+           Harpoon.Repl.Command.Rename
+             { location
+             ; rename_from
+             ; rename_to
+             ; level
+             }
+    and select_theorem =
+      keyword "select" &> qualified_identifier
+      |> span
+      $> fun (location, identifier) ->
+          Harpoon.Repl.Command.SelectTheorem { location; identifier }
+    and theorem_command =
+      let list_theorems =
+        keyword "list"
+        $> fun () -> `list
+      and defer_theorem =
+        keyword "defer"
+        $> fun () -> `defer
+      and dump_proof =
         keyword "dump-proof"
         &> string_literal
         $> fun s -> `dump_proof s
+      and show_ihs =
+        keyword "show-ihs"
+        $> fun () -> `show_ihs
+      and show_proof =
+        keyword "show-proof"
+        $> fun () -> `show_proof
       in
-      keyword "theorem" &>
-        choice
-          ( basic_command
-            :: dump_proof
-            :: List.map (fun (k, k') -> keyword k &> return k')
-                [ ("show-ihs", `show_ihs)
-                ; ("show-proof", `show_proof)
-                ]
-          )
-      $> fun cmd -> Harpoon.Theorem cmd
-    in
-    let session_command =
+      keyword "theorem"
+      &> choice
+          [ list_theorems
+          ; defer_theorem
+          ; dump_proof
+          ; show_ihs
+          ; show_proof
+          ]
+      |> span
+      $> fun (location, subcommand) ->
+        Harpoon.Repl.Command.Theorem { location; subcommand }
+    and session_command =
+      let list_sessions =
+        keyword "list"
+        $> fun () -> `list
+      and defer_session =
+        keyword "defer"
+        $> fun () -> `defer
+      and create_command =
+        keyword "create"
+        $> fun () -> `create
+      and serialize_command =
+        keyword "serialize"
+        $> fun () -> `serialize
+      in
       keyword "session"
-      &> choice [ basic_command; create_command; serialize_command ]
-      $> fun cmd -> Harpoon.Session cmd
-    in
-    let subgoal_command =
+      &> choice
+          [ list_sessions
+          ; defer_session
+          ; create_command
+          ; serialize_command
+          ]
+      |> span
+      $> fun (location, subcommand) ->
+        Harpoon.Repl.Command.Session { location; subcommand }
+    and subgoal_command =
+      let list_subgoals =
+        keyword "list"
+        $> fun () -> `list
+      and defer_subgoal =
+        keyword "defer"
+        $> fun () -> `defer
+      in
       keyword "subgoal"
-      &> basic_command
-      $> fun cmd -> Harpoon.Subgoal cmd
+      &> choice
+          [ list_subgoals
+          ; defer_subgoal
+          ]
+      |> span
+      $> fun (location, subcommand) ->
+        Harpoon.Repl.Command.Subgoal { location; subcommand }
+    and defer =
+      keyword "defer"
+      |> span
+      $> fun (location, ()) ->
+        Harpoon.Repl.Command.Subgoal { location; subcommand = `defer }
+    and info =
+      let theorem =
+        keyword "theorem"
+        $> fun () -> `prog
+      in
+      let info_kind =
+        choice [ theorem ]
+      in
+      keyword "info" &> seq2 info_kind qualified_identifier
+      |> span
+      $> fun (location, (kind, object_identifier)) ->
+          Harpoon.Repl.Command.Info { location; kind; object_identifier }
+    and translate =
+      keyword "translate" &> qualified_identifier
+      |> span
+      $> fun (location, theorem) ->
+        Harpoon.Repl.Command.Translate { location; theorem }
+    and undo =
+      keyword "undo"
+      |> span
+      $> fun (location, ()) -> Harpoon.Repl.Command.Undo { location }
+    and redo =
+      keyword "redo"
+      |> span
+      $> fun (location, ()) -> Harpoon.Repl.Command.Redo { location }
+    and history =
+      keyword "history"
+      |> span
+      $> fun (location, ()) -> Harpoon.Repl.Command.History { location }
+    and help =
+      keyword "help"
+      |> span
+      $> fun (location, ()) -> Harpoon.Repl.Command.Help { location }
+    and save =
+      keyword "save"
+      |> span
+      $> fun (location, ()) ->
+        Harpoon.Repl.Command.Session { location; subcommand = `serialize}
     in
-    let defer =
-      keyword "defer" &> return (Harpoon.Subgoal `defer)
-    in
-    let info_kind =
-      choice
-        [ keyword "theorem" &> return `prog
-        ]
-    in
-    let info =
-      keyword "info"
-      &> seq2 info_kind name
-      $> fun (k, name) -> Harpoon.Info (k, name)
-    in
-    let translate =
-      keyword "translate"
-      &> name
-      $> fun name -> Harpoon.Translate name
-    in
-    let undo = keyword "undo" &> return Harpoon.Undo in
-    let redo = keyword "redo" &> return Harpoon.Redo in
-    let history = keyword "history" &> return Harpoon.History in
-    let help = keyword "help" &> return Harpoon.Help in
-    let save = keyword "save" &> return (Harpoon.Session `serialize) in
     choice
       [ intros
       ; info
@@ -2212,9 +3186,17 @@ end = struct
     sep_by0 interactive_harpoon_command (token Token.SEMICOLON)
 
   let next_theorem =
-    alt
-      (token Token.COLON &> keyword "quit" &> return `quit)
-      (name $> fun name -> `next name)
+    let quit =
+      token Token.COLON &> keyword "quit"
+      $> fun () -> `quit
+    and next =
+      identifier
+      $> fun name -> `next name
+    in
+    choice
+      [ quit
+      ; next
+      ]
 end
 
 let harpoon_proof = Harpoon_parsers.harpoon_proof
@@ -2227,36 +3209,94 @@ let interactive_harpoon_command_sequence =
 let next_theorem = Harpoon_parsers.next_theorem
 
 module rec Signature_parsers : sig
-  val sgn_decl : Sgn.decl t
-  val sgn : Sgn.sgn t
-  val trust_order : Comp.total_dec t
-  val total_order : 'a Comp.generic_order t -> 'a Comp.generic_order t
-  val numeric_total_order : int Comp.generic_order t
-  val optional_numeric_total_order : int Comp.generic_order option t
+  val sgn : Sgn.t t
+
+  val sgn_decl : Sgn.Declaration.t t
+
+  val trust_totality_declaration : Comp.Totality.Declaration.t t
+
+  val named_totality_declaration : Comp.Totality.Declaration.t t
+
+  val numeric_totality_declaration : Comp.Totality.Declaration.t t
+
+  val totality_declaration : Comp.Totality.Declaration.t t
 end = struct
+  let nostrenghten_pragma =
+    pragma "nostrengthen"
+    |> span
+    $> fun (location, ()) ->
+      Sgn.Pragma.Global.No_strengthening { location }
+
+  let coverage_pragma =
+    pragma "coverage"
+    |> span
+    $> fun (location, ()) ->
+      Sgn.Pragma.Global.Coverage { location; variant = `Error }
+
+  let warncoverage_pragma =
+    pragma "warncoverage"
+    |> span
+    $> fun (location, ()) ->
+      Sgn.Pragma.Global.Coverage { location; variant = `Warn }
+
+  let sgn_global_prag =
+    let global_pragma_to_global_pragma_declaration pragma =
+      pragma
+      |> span
+      $> fun (location, pragma) ->
+        Sgn.Declaration.GlobalPragma { location; pragma }
+    in
+    let global_pragmas =
+      [ nostrenghten_pragma
+      ; coverage_pragma
+      ; warncoverage_pragma
+      ]
+    in
+    let global_pragma_declarations =
+      global_pragmas
+      |> List.map global_pragma_to_global_pragma_declaration
+    in
+    choice global_pragma_declarations
+    |> labelled "global pragma"
+
+  let name_pragma =
+    seq3
+      (pragma "name" &> qualified_identifier)
+      identifier
+      (maybe identifier <& token Token.DOT)
+    |> labelled "name pragma"
+    |> span
+    $> fun (location, (constant, meta_variable_base, computation_variable_base)) ->
+          Sgn.Pragma.Name
+            { location
+            ; constant
+            ; meta_variable_base
+            ; computation_variable_base
+            }
+
   let sgn_lf_const_decl =
     seq2
-      (name <& token Token.COLON)
+      (identifier <& token Token.COLON)
       LF_parsers.lf_object
     |> span
     $> (fun (location, (identifier, typ)) ->
-          Sgn.Const { location; identifier; typ })
-    |> labelled "LF constant declaration"
+          Sgn.Declaration.Const { location; identifier; typ })
+    |> labelled "LF term-level constant declaration"
 
-  let sgn_lf_typ_decl : Sgn.decl parser =
+  let sgn_lf_typ_decl =
     let lf_typ_decl_body =
       let typ_decl =
         seq2
-          (name <& token Token.COLON)
+          (identifier <& token Token.COLON)
           LF_parsers.lf_object
       in
       seq2
         (typ_decl <& token Token.EQUALS)
         (maybe (token Token.PIPE)
-        &> sep_by0 sgn_lf_const_decl (token (Token.PIPE)))
+        &> sep_by0 sgn_lf_const_decl (token Token.PIPE))
       |> span
       $> fun (location, ((identifier, kind), const_decls)) ->
-        Sgn.Typ { location; identifier; kind }, const_decls
+        Sgn.Declaration.Typ { location; identifier; kind }, const_decls
     in
     labelled "LF type declaration block"
       (token Token.KW_LF
@@ -2264,357 +3304,367 @@ end = struct
       <& token Token.SEMICOLON
       |> span
       $> fun (location, declarations) ->
-          Sgn.MRecTyp { location; declarations })
+          Sgn.Declaration.Mutually_recursive_datatypes { location; declarations })
 
-  let call_arg =
-    alt
-      (name $> Option.some)
-      (token Token.UNDERSCORE &> return Option.none)
-    |> labelled "call argument"
+  let named_totality_argument =
+    identifier
+    |> span
+    $> fun (location, argument) ->
+        Comp.Totality.Order.Argument { location; argument }
 
-  let named_total_arg : Comp.named_order t =
-    name $> fun x -> Comp.Arg x
+  let numeric_totality_argument =
+    integer
+    |> span
+    $> fun (location, argument) ->
+        Comp.Totality.Order.Argument { location; argument }
 
-  let numeric_total_arg : Comp.numeric_order t =
-    integer $> fun x -> Comp.Arg x
-
-  let total_order (arg : 'a Comp.generic_order t) : 'a Comp.generic_order t =
-    alt
-      arg
-      (braces (some arg) $> fun args -> Comp.Lex (List1.to_list args))
+  let total_order totality_argument =
+    let argument =
+      totality_argument
+    and lexical_ordering =
+      braces (some totality_argument)
+      |> span
+      $> fun (location, arguments) ->
+        Comp.Totality.Order.Lexical_ordering { location; arguments }
+    and simultaneous_ordering =
+      bracks (some totality_argument)
+      |> span
+      $> fun (location, arguments) ->
+        Comp.Totality.Order.Simultaneous_ordering { location; arguments }
+    in
+    choice
+      [ argument
+      ; lexical_ordering
+      ; simultaneous_ordering
+      ]
     |> labelled "totality ordering"
 
-  let trust_order : Comp.total_dec t =
+  let trust_totality_declaration =
     token Token.KW_TRUST
     |> span
+    $> (fun (location, ()) -> Comp.Totality.Declaration.Trust { location })
     |> labelled "trust totality"
-    $> fun (loc, ()) -> Comp.Trust loc
 
-  (** Parses a totality declaration whose arguments are parsed by `arg` *)
-  let total_decl : Comp.total_dec t =
+  let named_totality_declaration =
+    seq2
+      (trying (maybe (total_order named_totality_argument)))
+      (parens (seq2 identifier (many omittable_identifier)))
+    |> span
+    $> fun (location, (order, (program, argument_labels))) ->
+        Comp.Totality.Declaration.Named { location; order; program; argument_labels }
+
+  let numeric_totality_declaration =
+    maybe (total_order numeric_totality_argument)
+    |> span
+    $> fun (location, order) ->
+      Comp.Totality.Declaration.Numeric { location; order }
+
+  let totality_declaration =
     let total =
-      token Token.KW_TOTAL &>
-        alt
-          begin
-            seq2
-              (trying (maybe (total_order named_total_arg)))
-              (parens (seq2 name (many call_arg)))
-            |> span
-            $> fun (loc, (order, (r, args))) ->
-               Comp.NamedTotal (loc, order, r, args)
-          end
-          begin
-            maybe (total_order numeric_total_arg)
-            |> span
-            $> fun (loc, order) ->
-               Comp.NumericTotal (loc, order)
-          end
+      token Token.KW_TOTAL
+      &> alt named_totality_declaration numeric_totality_declaration
     in
-    alt trust_order total
+    alt trust_totality_declaration total
     |> labelled "totality declaration"
-
-  let numeric_total_order = total_order numeric_total_arg
-  let optional_numeric_total_order = maybe numeric_total_order
 
   (** Mutual block of computation type declarations. *)
   let sgn_cmp_typ_decl =
     labelled "Inductive or stratified computation type declaration"
       begin
         let cmp_typ_decl =
+          let inductive =
+            token Token.KW_INDUCTIVE
+            $> fun () -> `Inductive
+          and stratified =
+            token Token.KW_STRATIFIED
+            $> fun () -> `Stratified
+          in
           let flavour =
-            alt
-              (token Token.KW_INDUCTIVE &> return Sgn.InductiveDatatype)
-              (token Token.KW_STRATIFIED &> return Sgn.StratifiedDatatype)
+            choice
+              [ inductive
+              ; stratified
+              ]
           in
           let sgn_cmp_typ_decl_body =
             seq2
-              (name <& token (Token.COLON))
-              cmp_typ
+              (identifier <& token (Token.COLON))
+              Comp_parsers.comp_sort_object
             |> span
             $> fun (location, (identifier, typ)) ->
-               Sgn.CompConst { location; identifier; typ }
+               Sgn.Declaration.CompConst { location; identifier; typ }
           in
-          seq5
+          seq4
             flavour
-            (name <& token (Token.COLON))
-            (cmp_kind <& token (Token.EQUALS) <& maybe (token (Token.PIPE)))
+            (identifier <& token (Token.COLON))
+            (Comp_parsers.comp_sort_object <& token (Token.EQUALS) <& maybe (token (Token.PIPE)))
             (sep_by0 sgn_cmp_typ_decl_body (token Token.PIPE))
-            get_state
           |> span
-          >>= fun (location, (datatype_flavour, identifier, kind, decls, s)) ->
-            check_datatype_decl location identifier decls
-            $> fun () ->
-               Sgn.CompTyp { location; identifier; kind; datatype_flavour }, decls
+          $> fun (location, (datatype_flavour, identifier, kind, decls)) ->
+               Sgn.Declaration.CompTyp { location; identifier; kind; datatype_flavour }, decls
         in
         let cmp_cotyp_decl =
           let cmp_cotyp_body =
             seq2
-              (* There was this unused feature in the old parser that
-                 let a metacontext appear *before* the declaration of the observation.
-                 Since it introduces an ambiguity in the parser, I have removed it.
-                 In particular, since an optional pair of parens are
-                 allowed around the declaration of the observation,
-                 `( foo : ` looks like the beginning of a clf_ctyp_decl,
-                 namely the beginning of an implicit context
-                 abstraction. So `clf_ctyp_decl` will consume some
-                 input, and then fail after the colon, thus causing a
-                 fatal parse error.
-                 Rather than introduce backtracking to resolve this, I
-                 think it is preferable to simply remove this unused
-                 feature.
-                 -je
-               *)
-              (* (many clf_ctyp_decl $> List.fold_left (fun acc d -> LF.Dec (acc, d)) LF.Empty) *)
               (opt_parens
                  (seq2
-                    (name <& token Token.COLON)
-                    cmp_typ)
+                    (identifier <& token Token.COLON)
+                    Comp_parsers.comp_sort_object)
                <& token Token.DOUBLE_COLON)
-              cmp_typ
+              Comp_parsers.comp_sort_object
             |> span
-            $> fun (location, ((* cD, *) (identifier, tau0), tau1)) ->
-               Sgn.CompDest
+            $> fun (location, ((identifier, tau0), tau1)) ->
+               Sgn.Declaration.CompDest
                 { location
                 ; identifier
-                ; mctx = (Obj.magic ())(* CLF.Empty *)
                 ; observation_typ = tau0
                 ; return_typ = tau1
                 }
           in
-          seq4
-            (token Token.KW_COINDUCTIVE &> name <& token Token.COLON)
-            (cmp_kind <& token Token.EQUALS <& maybe (token Token.PIPE))
+          seq3
+            (token Token.KW_COINDUCTIVE &> identifier <& token Token.COLON)
+            (Comp_parsers.comp_sort_object <& token Token.EQUALS <& maybe (token Token.PIPE))
             (sep_by0 cmp_cotyp_body (token Token.PIPE))
-            get_state
           |> span
-          >>= fun (location, (identifier, kind, decls, s)) ->
-            check_codatatype_decl location identifier decls
-            $> fun () ->
-               Sgn.CompCotyp { location; identifier; kind }, decls
+          $> fun (location, (identifier, kind, decls)) ->
+               Sgn.Declaration.CompCotyp { location; identifier; kind }, decls
         in
-
         sep_by1 (alt cmp_typ_decl cmp_cotyp_decl) (token Token.KW_AND)
         <& token Token.SEMICOLON
         |> span
-        $> fun (location, declarations) -> Sgn.MRecTyp { location; declarations }
+        $> fun (location, declarations) -> Sgn.Declaration.Mutually_recursive_datatypes { location; declarations }
       end
 
-  let sgn_query_pragma =
+  let query_declaration =
+    let bound =
+      alt
+        (token Token.STAR $> fun () -> Option.none)
+        (integer $> Option.some)
+      |> labelled "search bound"
+    and meta_context =
+      many
+        (braces
+          (seq2
+            (meta_object_identifier <& token Token.COLON)
+            (maybe Meta_parsers.meta_thing)))
+    in
+    pragma "query"
+    &> seq4
+        (seq2 bound bound)
+        meta_context
+        (maybe (identifier <& token Token.COLON))
+        CLF_parsers.clf_object
+    <& token Token.DOT
+    |> span
+    |> labelled "logic programming engine query pragma"
+    $> fun (location, ((expected_solutions, maximum_tries), meta_context, name, typ)) ->
+       Sgn.Declaration.Query
+         { location
+         ; name
+         ; meta_context
+         ; typ
+         ; expected_solutions
+         ; maximum_tries
+         }
+
+  let sgn_mquery_pragma =
     let bound =
       alt
         (token Token.STAR &> return Option.none)
         (integer $> Option.some)
       |> labelled "search bound"
     in
-    pragma "query" &>
-      seq4
-        (seq2 bound bound)
-        (mctx ~sep: (return ()) (clf_ctyp_decl_bare |> braces))
-        (maybe (name <& token Token.COLON))
-        (Obj.magic ())(* CLF_parsers.clf_typ *)
+    pragma "mquery" &>
+      seq2
+        (seq3 bound bound bound)
+        (*      (mctx ~sep: (return ()) (clf_ctyp_decl_bare name' (fun x -> LF.No, x) |> braces)) *)
+        cmp_typ
     <& token Token.DOT
     |> span
-    |> labelled "logic programming engine query pragma"
-    $> fun (location, ((expected_solutions, maximum_tries), cD, name, typ)) ->
-       Sgn.Query { location; name; mctx = (Obj.magic ())(* cD *); typ; expected_solutions; maximum_tries }
+    |> labelled "meta-logic search engine mquery pragma"
+    $> fun (location, ((expected_solutions, search_tries, search_depth), typ)) ->
+       Sgn.MQuery { location; typ; expected_solutions; search_tries; search_depth }
+
 
   let sgn_oldstyle_lf_decl =
-    labelled
-      "old-style LF type or constant declaration"
-      begin
-        seq2
-          (name <& token Token.COLON)
-          (alt (LF_parsers.lf_object $> fun kind -> `Kind kind) (LF_parsers.lf_object $> fun typ -> `Typ typ) <& token Token.DOT) (* FIXME: Disambiguation is impossible at this point *)
-        |> span
-        $> fun (location, (identifier, k_or_a)) ->
-           match k_or_a with
-           | `Kind kind -> Sgn.Typ { location; identifier; kind }
-           | `Typ typ -> Sgn.Const { location; identifier; typ }
-      end
+    seq2 (identifier <& token Token.COLON) LF_parsers.lf_object <& token Token.DOT
+    |> span
+    $> (fun (location, (identifier, typ_or_const)) ->
+          Sgn.Declaration.Typ_or_const { location; identifier; typ_or_const })
+    |> labelled "old-style LF type or constant declaration"
 
-  let sgn_not_pragma : Sgn.decl parser =
+  let not_pragma =
     pragma "not"
     |> span
-    $> fun (location, ()) -> Sgn.Pragma { location; pragma=Sgn.NotPrag }
+    $> fun (location, ()) -> Sgn.Pragma.Not { location }
 
   let left_associativity =
-    labelled "associativity `left'" (keyword "left")
+    keyword "left"
     $> Fun.const Associativity.left_associative
+    |> labelled "associativity `left'"
 
   let right_associativity =
-    labelled "associativity `right'" (keyword "right")
+    keyword "right"
     $> Fun.const Associativity.right_associative
+    |> labelled "associativity `right'"
 
   let non_associativity =
-    labelled "associativity `none'" (keyword "none")
+    keyword "none"
     $> Fun.const Associativity.non_associative
+    |> labelled "associativity `none'"
 
   let associativity =
-    labelled "associativity"
-    @@ choice
-         [ left_associativity
-         ; right_associativity
-         ; non_associativity
-         ]
+    choice
+      [ left_associativity
+      ; right_associativity
+      ; non_associativity
+      ]
+    |> labelled "associativity"
 
-  let sgn_fixity_pragma =
-    let prefix_pragma =
-      pragma "prefix"
-      &> seq2 name integer
-      <& token Token.DOT
-      |> span
-      $> fun (location, (constant, precedence)) ->
-           let pragma =
-             Sgn.FixPrag
-               { constant
-               ; fixity = Fixity.prefix
-               ; precedence
-               ; associativity = Option.some Associativity.left_associative
-               }
-           in
-           Sgn.Pragma { location; pragma }
-    in
-    let infix_pragma =
-      pragma "infix"
-      &> seq3 name integer (maybe associativity)
-      <& token Token.DOT
-      |> span
-      $> fun (location, (constant, precedence, associativity)) ->
-           let pragma =
-             Sgn.FixPrag
-               { constant
-               ; fixity = Fixity.infix
-               ; precedence
-               ; associativity
-               }
-           in
-           Sgn.Pragma { location; pragma }
-    in
-    let postfix_pragma =
-      pragma "postfix"
-      &> seq2 name integer
-      <& token Token.DOT
-      |> span
-      $> fun (location, (constant, precedence)) ->
-           let pragma =
-             Sgn.FixPrag
-               { constant
-               ; fixity = Fixity.postfix
-               ; precedence
-               ; associativity = Option.some Associativity.right_associative
-               }
-           in
-           Sgn.Pragma { location; pragma }
-    in
+  let prefix_pragma =
+    (pragma "prefix" &> seq2 qualified_identifier integer) <& token Token.DOT
+    |> span
+    $> fun (location, (constant, precedence)) ->
+        Sgn.Pragma.Prefix_fixity
+          { location
+          ; constant
+          ; precedence
+          }
+
+  let infix_pragma =
+    (pragma "infix" &> seq3 qualified_identifier integer (maybe associativity)) <& token Token.DOT
+    |> span
+    $> fun (location, (constant, precedence, associativity)) ->
+          Sgn.Pragma.Infix_fixity
+            { location
+            ; constant
+            ; precedence
+            ; associativity
+            }
+
+  let postfix_pragma =
+    (pragma "postfix" &> seq2 qualified_identifier integer) <& token Token.DOT
+    |> span
+    $> fun (location, (constant, precedence)) ->
+          Sgn.Pragma.Postfix_fixity
+            { location
+            ; constant
+            ; precedence
+            }
+
+  let fixity_pragma =
     choice
       [ prefix_pragma
       ; infix_pragma
       ; postfix_pragma
       ]
 
-  let sgn_associativity_pragma : Sgn.decl parser =
-    pragma "assoc"
-    &> associativity
-    <& token Token.DOT
+  let default_associativity_pragma =
+    pragma "assoc" &> associativity <& token Token.DOT
     |> span
     $> fun (location, associativity) ->
-      let pragma = Sgn.DefaultAssocPrag { associativity } in
-      Sgn.Pragma { location; pragma }
+      Sgn.Pragma.Default_associativity { location; associativity }
 
-  let sgn_open_pragma : Sgn.decl parser =
-    pragma "open"
-    &> fqidentifier
+  let open_pragma =
+    pragma "open" &> qualified_identifier <& token Token.DOT
     |> span
-    |> labelled "open pragma"
-    <& token Token.DOT
-    $> fun (location, id) ->
-       Sgn.Pragma { location; pragma = Sgn.OpenPrag (List1.to_list id) }
+    $> (fun (location, module_identifier) ->
+         Sgn.Pragma.Open_module { location; module_identifier })
+    |> labelled "open module pragma"
 
-  let sgn_abbrev_pragma : Sgn.decl parser =
-    pragma "abbrev"
-    &> seq2 fqidentifier identifier'
-    <& token Token.DOT
+  let abbrev_pragma =
+    pragma "abbrev" &> seq2 qualified_identifier identifier <& token Token.DOT
     |> span
+    $> (fun (location, (module_identifier, abbreviation)) ->
+          Sgn.Pragma.Abbreviation { location; module_identifier; abbreviation }
+       )
     |> labelled "module abbreviation pragma"
-    $> fun (location, (fq, x)) ->
-       let fq = List1.to_list fq in
-       Sgn.Pragma { location; pragma = Sgn.AbbrevPrag (fq, x) }
 
-  let sgn_comment : Sgn.decl parser =
+  let sgn_comment =
     satisfy' `html_comment
       (function
        | Token.BLOCK_COMMENT s -> Option.some s
        | _ -> Option.none)
     |> span
     |> labelled "HTML comment"
-    $> fun (location, content) -> Sgn.Comment { location; content }
+    $> fun (location, content) -> Sgn.Declaration.Comment { location; content }
 
-  let sgn_typedef_decl : Sgn.decl parser =
+  let sgn_typedef_decl =
     seq3
-      (token Token.KW_TYPEDEF &> name)
-      (token Token.COLON &> cmp_kind)
-      (token Token.EQUALS &> cmp_typ <& token Token.SEMICOLON)
+      (token Token.KW_TYPEDEF &> identifier)
+      (token Token.COLON &> Comp_parsers.comp_sort_object)
+      (token Token.EQUALS &> Comp_parsers.comp_sort_object <& token Token.SEMICOLON)
     |> span
     |> labelled "type synonym declaration"
     $> fun (location, (identifier, kind, typ)) ->
-       Sgn.CompTypAbbrev { location; identifier; kind; typ }
+       Sgn.Declaration.CompTypAbbrev { location; identifier; kind; typ }
 
-  let sgn_schema_decl : Sgn.decl parser = Obj.magic ()
+  let sgn_schema_decl =
+    seq2
+      (token Token.KW_SCHEMA &> identifier <& token Token.EQUALS)
+      Meta_parsers.schema_object
+    <& token Token.SEMICOLON
+    |> span
+    $> (fun (location, (identifier, schema)) ->
+          Sgn.Declaration.Schema { location; identifier; schema }
+       )
+    |> labelled "Context schema declaration"
 
-  let sgn_let_decl : Sgn.decl parser =
+  let sgn_let_decl =
     seq2
       (token Token.KW_LET &>
          seq2
-           name
-           (maybe (token Token.COLON &> cmp_typ)))
-      (token Token.EQUALS &> cmp_exp_syn <& token Token.SEMICOLON)
+           identifier
+           (maybe (token Token.COLON &> Comp_parsers.comp_sort_object)))
+      (token Token.EQUALS &> Comp_parsers.comp_expression_object <& token Token.SEMICOLON)
     |> span
     |> labelled "value declaration"
     $> fun (location, ((identifier, typ), expression)) ->
-       Sgn.Val { location; identifier; typ; expression }
+       Sgn.Declaration.Val { location; identifier; typ; expression }
 
   let thm p =
     seq4
-      (name <& token Token.COLON)
-      (cmp_typ <& token Token.EQUALS)
-      (maybe (bracketed' (token Token.SLASH) total_decl))
+      (identifier <& token Token.COLON)
+      (Comp_parsers.comp_sort_object <& token Token.EQUALS)
+      (maybe (bracketed' (token Token.SLASH) totality_declaration))
       p
     |> span
     $> fun (location, (name, typ, order, body)) ->
-       Sgn.Theorem { location; name; typ; order; body }
+       { Sgn.Theorem.location; name; typ; order; body }
 
-  let proof_decl : Sgn.thm_decl parser =
+  let proof_decl =
     token Token.KW_PROOF
-    &> thm (harpoon_proof $> fun p -> Comp.Proof p)
+    &> thm (harpoon_proof $> fun p -> `Proof p)
 
-  let program_decl : Sgn.thm_decl parser =
+  let program_decl =
     token Token.KW_REC
-    &> thm (cmp_exp_chk $> fun e -> Comp.Program e)
+    &> thm (Comp_parsers.comp_expression_object $> fun e -> `Program e)
 
-  let sgn_thm_decl : Sgn.decl t =
+  let sgn_thm_decl =
     sep_by1
-      (choice [program_decl; proof_decl])
+      (choice [ program_decl; proof_decl ])
       (token Token.KW_AND)
     <& token Token.SEMICOLON
     |> span
     |> labelled "(mutual) recursive function declaration(s)"
-    $> fun (location, theorems) -> Sgn.Theorems { location; theorems }
+    $> fun (location, theorems) -> Sgn.Declaration.Theorems { location; theorems }
 
-  let sgn_module_decl : Sgn.decl t =
+  let sgn_module_decl =
     seq2
-      (token Token.KW_MODULE &> identifier')
-      (Token.(tokens [EQUALS; KW_STRUCT]) &> some Signature_parsers.sgn_decl)
-    <& Token.(tokens [KW_END; SEMICOLON])
+      (token Token.KW_MODULE &> identifier)
+      (tokens [ Token.EQUALS; Token.KW_STRUCT ] &> many Signature_parsers.sgn_decl)
+    <& token Token.KW_END
+    <& maybe (token Token.SEMICOLON)
     |> span
     |> labelled "module declaration"
     $> fun (location, (identifier, declarations)) ->
-        Sgn.Module { location; identifier; declarations = List1.to_list declarations }
+        Sgn.Declaration.Module { location; identifier; declarations }
 
   let sgn_decl : Sgn.decl t =
     choice
       (* pragmas *)
       [ sgn_name_pragma
       ; sgn_query_pragma
+      ; sgn_mquery_pragma
       ; sgn_not_pragma
       ; sgn_fixity_pragma
       ; sgn_associativity_pragma
@@ -2647,7 +3697,13 @@ end = struct
 end
 
 let sgn = Signature_parsers.sgn
-let trust_order = Signature_parsers.trust_order
-let total_order = Signature_parsers.total_order
-let numeric_total_order = Signature_parsers.numeric_total_order
-let optional_numeric_total_order = Signature_parsers.optional_numeric_total_order
+
+let sgn_decl = Signature_parsers.sgn_decl
+
+let trust_totality_declaration = Signature_parsers.trust_totality_declaration
+
+let named_totality_declaration = Signature_parsers.named_totality_declaration
+
+let numeric_totality_declaration = Signature_parsers.numeric_totality_declaration
+
+let totality_declaration = Signature_parsers.totality_declaration

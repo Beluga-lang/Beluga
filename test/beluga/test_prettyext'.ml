@@ -1,110 +1,10 @@
 open Support
 open Beluga
 
-module LF = struct
-  module rec Kind : sig
-    include module type of Synext'.LF.Kind
-
-    (** [equal x y] is [true] if and only if kinds [x] and [y] are
-        structurally equal, without regards for locations. *)
-    val equal : t -> t -> Bool.t
-  end = struct
-    include Synext'.LF.Kind
-
-    let equal x y =
-      match (x, y) with
-      | Typ _, Typ _ -> true
-      | ( Arrow { domain = d1; range = r1; _ }
-        , Arrow { domain = d2; range = r2; _ } ) ->
-        Typ.equal d1 d2 && Kind.equal r1 r2
-      | ( Pi { parameter_identifier = i1; parameter_type = t1; body = b1; _ }
-        , Pi { parameter_identifier = i2; parameter_type = t2; body = b2; _ }
-        ) ->
-        Option.equal Identifier.equal i1 i2
-        && Typ.equal t1 t2 && Kind.equal b1 b2
-      | _ -> false
-  end
-
-  and Typ : sig
-    include module type of Synext'.LF.Typ
-
-    (** [equal x y] is [true] if and only if types [x] and [y] are
-        structurally equal, without regards for locations. *)
-    val equal : t -> t -> Bool.t
-  end = struct
-    include Synext'.LF.Typ
-
-    let equal x y =
-      match (x, y) with
-      | ( Constant { identifier = i1; quoted = q1; _ }
-        , Constant { identifier = i2; quoted = q2; _ } ) ->
-        QualifiedIdentifier.equal i1 i2 && Bool.equal q1 q2
-      | ( Application { applicand = f1; arguments = as1; _ }
-        , Application { applicand = f2; arguments = as2; _ } ) ->
-        Typ.equal f1 f2 && List.equal Term.equal as1 as2
-      | ( Arrow { domain = d1; range = r1; orientation = o1; _ }
-        , Arrow { domain = d2; range = r2; orientation = o2; _ } ) ->
-        o1 = o2 && Typ.equal d1 d2 && Typ.equal r1 r2
-      | ( Pi { parameter_identifier = i1; parameter_type = t1; body = b1; _ }
-        , Pi { parameter_identifier = i2; parameter_type = t2; body = b2; _ }
-        ) ->
-        Option.equal Identifier.equal i1 i2
-        && Typ.equal t1 t2 && Typ.equal b1 b2
-      | _ -> false
-  end
-
-  and Term : sig
-    include module type of Synext'.LF.Term
-
-    (** [equal x y] is [true] if and only if terms [x] and [y] are
-        structurally equal, without regards for locations. *)
-    val equal : t -> t -> Bool.t
-  end = struct
-    include Synext'.LF.Term
-
-    let equal x y =
-      match (x, y) with
-      | Variable { identifier = i1; _ }, Variable { identifier = i2; _ } ->
-        Identifier.equal i1 i2
-      | ( Constant { identifier = i1; quoted = q1; _ }
-        , Constant { identifier = i2; quoted = q2; _ } ) ->
-        QualifiedIdentifier.equal i1 i2 && Bool.equal q1 q2
-      | ( Application { applicand = f1; arguments = as1; _ }
-        , Application { applicand = f2; arguments = as2; _ } ) ->
-        Term.equal f1 f2 && List.equal Term.equal as1 as2
-      | ( Abstraction
-            { parameter_identifier = i1; parameter_type = t1; body = b1; _ }
-        , Abstraction
-            { parameter_identifier = i2; parameter_type = t2; body = b2; _ }
-        ) ->
-        Option.equal Identifier.equal i1 i2
-        && Option.equal Typ.equal t1 t2
-        && Term.equal b1 b2
-      | Wildcard _, Wildcard _ -> true
-      | ( TypeAnnotated { term = u1; typ = t1; _ }
-        , TypeAnnotated { term = u2; typ = t2; _ } ) ->
-        Term.equal u1 u2 && Typ.equal t1 t2
-      | _ -> false
-  end
-end
-
-(** Abbreviated constructors for LF kinds, types and terms. These are
-    strictly used for testing. *)
-module LF_constructors = struct
-  let location = Location.ghost
-
-  let id n = Identifier.make ~location n
-
-  let qid ?m n =
-    QualifiedIdentifier.make ~location
-      ?modules:(Option.map (List.map id) m)
-      (id n)
-end
-
 let mock_state_1 = Synprs_to_synext'.Disambiguation_state.empty
 
 let mock_state_2 =
-  let open LF_constructors in
+  let open Synext'_constructors.LF in
   let open Synprs_to_synext'.Disambiguation_state in
   empty
   |> add_prefix_lf_type_constant ~arity:0 ~precedence:1 (qid "nat")
@@ -115,7 +15,7 @@ let mock_state_2 =
   |> add_prefix_lf_term_constant ~arity:1 ~precedence:1 (qid "sum/s")
 
 let mock_state_3 =
-  let open LF_constructors in
+  let open Synext'_constructors.LF in
   let open Synprs_to_synext'.Disambiguation_state in
   empty
   |> add_prefix_lf_type_constant ~arity:0 ~precedence:1
@@ -132,7 +32,7 @@ let mock_state_3 =
        (qid ~m:[ "Nat" ] "sum/s")
 
 let mock_state_4 =
-  let open LF_constructors in
+  let open Synext'_constructors.LF in
   let open Synprs_to_synext'.Disambiguation_state in
   empty
   |> add_prefix_lf_type_constant ~arity:0 ~precedence:1
@@ -149,7 +49,7 @@ let mock_state_4 =
        (qid ~m:[ "Util"; "Nat" ] "sum/s")
 
 let mock_state_5 =
-  let open LF_constructors in
+  let open Synext'_constructors.LF in
   let open Synprs_to_synext'.Disambiguation_state in
   empty
   |> add_prefix_lf_type_constant ~arity:0 ~precedence:1 (qid "tp")
@@ -162,7 +62,7 @@ let mock_state_5 =
        ~precedence:3 (qid "has_type")
 
 let mock_state_6 =
-  let open LF_constructors in
+  let open Synext'_constructors.LF in
   let open Synprs_to_synext'.Disambiguation_state in
   empty
   |> add_prefix_lf_type_constant ~arity:0 ~precedence:1 (qid "exp")
@@ -174,7 +74,7 @@ let mock_state_6 =
        ~precedence:1 (qid "eq")
 
 let mock_state_7 =
-  let open LF_constructors in
+  let open Synext'_constructors.LF in
   let open Synprs_to_synext'.Disambiguation_state in
   empty
   |> add_prefix_lf_type_constant ~arity:0 ~precedence:1
@@ -190,7 +90,7 @@ let mock_state_7 =
        (qid ~m:[ "Statics" ] "term")
 
 let mock_state_8 =
-  let open LF_constructors in
+  let open Synext'_constructors.LF in
   let open Synprs_to_synext'.Disambiguation_state in
   empty
   |> add_infix_lf_type_constant
@@ -200,14 +100,14 @@ let mock_state_8 =
   |> add_prefix_lf_type_constant ~arity:1 ~precedence:1 (qid "term")
 
 let mock_state_9 =
-  let open LF_constructors in
+  let open Synext'_constructors.LF in
   let open Synprs_to_synext'.Disambiguation_state in
   empty
   |> add_prefix_lf_type_constant ~arity:0 ~precedence:1 (qid "tp")
   |> add_prefix_lf_type_constant ~arity:1 ~precedence:1 (qid "target")
 
 let mock_state_10 =
-  let open LF_constructors in
+  let open Synext'_constructors.LF in
   let open Synprs_to_synext'.Disambiguation_state in
   empty
   |> add_prefix_lf_type_constant ~arity:0 ~precedence:1 (qid "a")
@@ -215,7 +115,7 @@ let mock_state_10 =
   |> add_prefix_lf_type_constant ~arity:0 ~precedence:1 (qid "c")
 
 let mock_state_11 =
-  let open LF_constructors in
+  let open Synext'_constructors.LF in
   let open Synprs_to_synext'.Disambiguation_state in
   empty
   |> add_prefix_lf_type_constant ~arity:0 ~precedence:1 (qid "T")
@@ -272,7 +172,7 @@ let test_pp_kind =
         Fun.(
           Synext'_json.LF.of_kind
           >> Format.stringify (Yojson.Safe.pretty_print ~std:true))
-      ~cmp:LF.Kind.equal kind kind'
+      ~cmp:Synext'_eq.LF.Kind.equal kind kind'
   in
   let test_cases =
     [ (mock_state_1, "type")
@@ -310,7 +210,7 @@ let test_pp_type =
         Fun.(
           Synext'_json.LF.of_typ
           >> Format.stringify (Yojson.Safe.pretty_print ~std:true))
-      ~cmp:LF.Typ.equal typ typ'
+      ~cmp:Synext'_eq.LF.Typ.equal typ typ'
   in
   let test_cases =
     [ (mock_state_2, "nat")
@@ -373,7 +273,7 @@ let test_pp_term =
         Fun.(
           Synext'_json.LF.of_term
           >> Format.stringify (Yojson.Safe.pretty_print ~std:true))
-      ~cmp:LF.Term.equal term term'
+      ~cmp:Synext'_eq.LF.Term.equal term term'
   in
   let test_cases =
     [ (mock_state_1, "M x y z")

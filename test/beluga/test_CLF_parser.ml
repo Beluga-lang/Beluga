@@ -1,9 +1,13 @@
 open Support
 open Beluga
 
+module Synprs_to_synext' = struct
+  module Disambiguation_state = Synprs_to_synext'.Disambiguation_state
+  module CLF = Synprs_to_synext'.CLF (Disambiguation_state)
+end
+
 let parse_clf_object input =
-  Runparser.parse_string Location.ghost input
-    (Parser.only Parser.clf_object)
+  Runparser.parse_string Location.ghost input (Parser.only Parser.clf_object)
   |> Parser.extract
 
 let assert_raises_illegal_hole_type f =

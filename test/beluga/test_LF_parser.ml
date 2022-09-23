@@ -1,9 +1,13 @@
 open Support
 open Beluga
 
+module Synprs_to_synext' = struct
+  module Disambiguation_state = Synprs_to_synext'.Disambiguation_state
+  module LF = Synprs_to_synext'.LF (Disambiguation_state)
+end
+
 let parse_lf_object input =
-  Runparser.parse_string Location.ghost input
-    (Parser.only Parser.lf_object)
+  Runparser.parse_string Location.ghost input (Parser.only Parser.lf_object)
   |> Parser.extract
 
 let assert_raises_illegal_identifier_kind f =

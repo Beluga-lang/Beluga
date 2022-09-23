@@ -78,7 +78,9 @@ end = struct
 
   and of_typ typ =
     match typ with
-    | LF.Typ.Constant { identifier; quoted; location; _ } ->
+    | LF.Typ.Constant { identifier; quoted; location; operator = _ }
+    (* Don't serialize [operator] since it is resolved from the signature. *)
+      ->
       `List
         [ `String "LF.Typ.Constant"
         ; `Assoc
@@ -130,7 +132,9 @@ end = struct
             ; ("location", of_location location)
             ]
         ]
-    | LF.Term.Constant { identifier; quoted; location; _ } ->
+    | LF.Term.Constant { identifier; quoted; location; operator = _ }
+    (* Don't serialize [operator] since it is resolved from the signature. *)
+      ->
       `List
         [ `String "LF.Term.Constant"
         ; `Assoc
@@ -194,7 +198,9 @@ module CLF : sig
 end = struct
   let rec of_typ typ =
     match typ with
-    | CLF.Typ.Constant { identifier; quoted; location; _ } ->
+    | CLF.Typ.Constant { identifier; quoted; location; operator = _ }
+    (* Don't serialize [operator] since it is resolved from the signature. *)
+      ->
       `List
         [ `String "CLF.Typ.Constant"
         ; `Assoc
@@ -281,7 +287,9 @@ end = struct
             ; ("location", of_location location)
             ]
         ]
-    | CLF.Term.Constant { identifier; quoted; location; _ } ->
+    | CLF.Term.Constant { identifier; quoted; location; operator = _ }
+    (* Don't serialize [operator] since it is resolved from the signature. *)
+      ->
       `List
         [ `String "CLF.Term.Constant"
         ; `Assoc
@@ -389,7 +397,10 @@ end = struct
             ; ("location", of_location location)
             ]
         ]
-    | CLF.Term.Pattern.Constant { identifier; quoted; location; _ } ->
+    | CLF.Term.Pattern.Constant
+        { identifier; quoted; location; operator = _ }
+    (* Don't serialize [operator] since it is resolved from the signature. *)
+      ->
       `List
         [ `String "CLF.Term.Pattern.Constant"
         ; `Assoc

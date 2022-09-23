@@ -1,226 +1,6 @@
 open Support
 open Beluga
 
-module CLF = struct
-  module rec Typ : sig
-    include module type of Synext'.CLF.Typ
-
-    (** [equal x y] is [true] if and only if types [x] and [y] are
-        structurally equal, without regards for locations. *)
-    val equal : t -> t -> Bool.t
-  end = struct
-    include Synext'.CLF.Typ
-
-    let equal x y =
-      match (x, y) with
-      | ( Constant { identifier = i1; quoted = q1; _ }
-        , Constant { identifier = i2; quoted = q2; _ } ) ->
-        QualifiedIdentifier.equal i1 i2 && Bool.equal q1 q2
-      | ( Application { applicand = f1; arguments = as1; _ }
-        , Application { applicand = f2; arguments = as2; _ } ) ->
-        Typ.equal f1 f2 && List.equal Term.equal as1 as2
-      | ( Arrow { domain = d1; range = r1; orientation = o1; _ }
-        , Arrow { domain = d2; range = r2; orientation = o2; _ } ) ->
-        o1 = o2 && Typ.equal d1 d2 && Typ.equal r1 r2
-      | ( Pi { parameter_identifier = i1; parameter_type = t1; body = b1; _ }
-        , Pi { parameter_identifier = i2; parameter_type = t2; body = b2; _ }
-        ) ->
-        Option.equal Identifier.equal i1 i2
-        && Typ.equal t1 t2 && Typ.equal b1 b2
-      | Block { elements = e1; _ }, Block { elements = e2; _ } -> (
-        match (e1, e2) with
-        | `Unnamed t1, `Unnamed t2 -> Typ.equal t1 t2
-        | `Record ts1, `Record ts2 ->
-          List1.equal (Pair.equal Identifier.equal Typ.equal) ts1 ts2
-        | _ -> false)
-      | _ -> false
-  end
-
-  and Term : sig
-    include module type of Synext'.CLF.Term
-
-    (** [equal x y] is [true] if and only if terms [x] and [y] are
-        structurally equal, without regards for locations. *)
-    val equal : t -> t -> Bool.t
-  end = struct
-    include Synext'.CLF.Term
-
-    let equal x y =
-      match (x, y) with
-      | Variable { identifier = i1; _ }, Variable { identifier = i2; _ } ->
-        Identifier.equal i1 i2
-      | ( Constant { identifier = i1; quoted = q1; _ }
-        , Constant { identifier = i2; quoted = q2; _ } ) ->
-        QualifiedIdentifier.equal i1 i2 && Bool.equal q1 q2
-      | ( Application { applicand = f1; arguments = as1; _ }
-        , Application { applicand = f2; arguments = as2; _ } ) ->
-        Term.equal f1 f2 && List.equal Term.equal as1 as2
-      | ( Substitution { term = t1; substitution = s1; _ }
-        , Substitution { term = t2; substitution = s2; _ } ) ->
-        Term.equal t1 t2 && Substitution.equal s1 s2
-      | ( Abstraction
-            { parameter_identifier = i1; parameter_type = t1; body = b1; _ }
-        , Abstraction
-            { parameter_identifier = i2; parameter_type = t2; body = b2; _ }
-        ) ->
-        Option.equal Identifier.equal i1 i2
-        && Option.equal Typ.equal t1 t2
-        && Term.equal b1 b2
-      | Hole { variant = v1; _ }, Hole { variant = v2; _ } -> (
-        match (v1, v2) with
-        | `Underscore, `Underscore | `Unlabelled, `Unlabelled -> true
-        | `Labelled l1, `Labelled l2 -> Identifier.equal l1 l2
-        | _ -> false)
-      | Tuple { terms = ts1; _ }, Tuple { terms = ts2; _ } ->
-        List1.equal Term.equal ts1 ts2
-      | ( Projection { term = t1; projection = p1; _ }
-        , Projection { term = t2; projection = p2; _ } ) -> (
-        Term.equal t1 t2
-        &&
-        match (p1, p2) with
-        | `By_identifier i1, `By_identifier i2 -> Identifier.equal i1 i2
-        | `By_position i1, `By_position i2 -> Int.equal i1 i2
-        | _ -> false)
-      | ( TypeAnnotated { term = u1; typ = t1; _ }
-        , TypeAnnotated { term = u2; typ = t2; _ } ) ->
-        Term.equal u1 u2 && Typ.equal t1 t2
-      | _ -> false
-  end
-
-  and Substitution : sig
-    include module type of Synext'.CLF.Substitution
-
-    (** [equal x y] is [true] if and only if terms [x] and [y] are
-        structurally equal, without regards for locations. *)
-    val equal : t -> t -> Bool.t
-  end = struct
-    include Synext'.CLF.Substitution
-
-    let rec head_equal x y =
-      match (x, y) with
-      | Substitution.Head.None, Substitution.Head.None
-      | Substitution.Head.Identity _, Substitution.Head.Identity _ -> true
-      | ( Substitution.Head.Substitution_variable
-            { identifier = i1; closure = o1; _ }
-        , Substitution.Head.Substitution_variable
-            { identifier = i2; closure = o2; _ } ) ->
-        Identifier.equal i1 i2 && Option.equal equal o1 o2
-      | _ -> false
-
-    and equal x y =
-      match (x, y) with
-      | ( { Substitution.head = h1; terms = ts1; _ }
-        , { Substitution.head = h2; terms = ts2; _ } ) ->
-        head_equal h1 h2 && List.equal Term.equal ts1 ts2
-  end
-end
-
-(** Abbreviated constructors for contextual LF types, terms, substitutions,
-    contexts and patterns. These are strictly used for testing. *)
-module CLF_constructors = struct
-  open Synext'.CLF
-
-  let location = Location.ghost
-
-  let id n = Identifier.make ~location n
-
-  let qid ?m n =
-    QualifiedIdentifier.make ~location
-      ?modules:(Option.map (List.map id) m)
-      (id n)
-
-  (* LF type constructors *)
-
-  let t_c ?(quoted = false) ?m identifier =
-    Typ.Constant
-      { location
-      ; identifier = qid ?m identifier
-      ; operator = Obj.magic ()
-      ; quoted
-      }
-
-  let t_app applicand arguments =
-    Typ.Application { location; applicand; arguments }
-
-  let ( => ) domain range =
-    Typ.Arrow { location; domain; range; orientation = `Forward }
-
-  let ( <= ) range domain =
-    Typ.Arrow { location; domain; range; orientation = `Backward }
-
-  let t_pi ?x ~t body =
-    Typ.Pi
-      { location
-      ; parameter_identifier = Option.map id x
-      ; parameter_type = t
-      ; body
-      }
-
-  let t_block_s t = Typ.Block { location; elements = `Unnamed t }
-
-  let t_block ts =
-    Typ.Block
-      { location; elements = `Record (List1.map (Pair.map_left id) ts) }
-
-  (* LF term constructors *)
-
-  let v identifier = Term.Variable { location; identifier = id identifier }
-
-  let c ?(quoted = false) ?m identifier =
-    Term.Constant
-      { location
-      ; identifier = qid ?m identifier
-      ; operator = Obj.magic ()
-      ; quoted
-      }
-
-  let app applicand arguments =
-    Term.Application { location; applicand; arguments }
-
-  let lam ?x ?t body =
-    Term.Abstraction
-      { location
-      ; parameter_identifier = Option.map id x
-      ; parameter_type = t
-      ; body
-      }
-
-  let hole = Term.Hole { location; variant = `Underscore }
-
-  let u_hole = Term.Hole { location; variant = `Unlabelled }
-
-  let l_hole l = Term.Hole { location; variant = `Labelled (id l) }
-
-  let ( &: ) term typ = Term.TypeAnnotated { location; term; typ }
-
-  let rec substitution sub =
-    let head, terms = sub in
-    let head' =
-      match head with
-      | `None -> Substitution.Head.None
-      | `Id -> Substitution.Head.Identity { location }
-      | `SVar i ->
-        Substitution.Head.Substitution_variable
-          { location; identifier = id i; closure = Option.none }
-      | `SClo (i, closure) ->
-        let closure' = substitution closure in
-        Substitution.Head.Substitution_variable
-          { location; identifier = id i; closure = Option.some closure' }
-    in
-    { Substitution.head = head'; terms; location }
-
-  let sub term sub =
-    Term.Substitution { location; term; substitution = substitution sub }
-
-  let tuple terms = Term.Tuple { location; terms }
-
-  let proj_i term i =
-    Term.Projection { location; term; projection = `By_position i }
-
-  let proj_x term x =
-    Term.Projection { location; term; projection = `By_identifier (id x) }
-end
-
 let parse_clf_object input =
   Runparser.parse_string Location.ghost input
     (Parser.only Parser.clf_object)
@@ -340,7 +120,7 @@ let assert_raises_arity_mismatch f =
 let mock_state_1 = Synprs_to_synext'.Disambiguation_state.empty
 
 let mock_state_2 =
-  let open CLF_constructors in
+  let open Synext'_constructors.CLF in
   let open Synprs_to_synext'.Disambiguation_state in
   empty
   |> add_prefix_lf_type_constant ~arity:0 ~precedence:1 (qid "nat")
@@ -351,7 +131,7 @@ let mock_state_2 =
   |> add_prefix_lf_term_constant ~arity:1 ~precedence:1 (qid "sum/s")
 
 let mock_state_3 =
-  let open CLF_constructors in
+  let open Synext'_constructors.CLF in
   let open Synprs_to_synext'.Disambiguation_state in
   empty
   |> add_prefix_lf_type_constant ~arity:0 ~precedence:1
@@ -368,7 +148,7 @@ let mock_state_3 =
        (qid ~m:[ "Nat" ] "sum/s")
 
 let mock_state_4 =
-  let open CLF_constructors in
+  let open Synext'_constructors.CLF in
   let open Synprs_to_synext'.Disambiguation_state in
   empty
   |> add_prefix_lf_type_constant ~arity:0 ~precedence:1
@@ -385,7 +165,7 @@ let mock_state_4 =
        (qid ~m:[ "Util"; "Nat" ] "sum/s")
 
 let mock_state_5 =
-  let open CLF_constructors in
+  let open Synext'_constructors.CLF in
   let open Synprs_to_synext'.Disambiguation_state in
   empty
   |> add_prefix_lf_type_constant ~arity:0 ~precedence:1 (qid "tp")
@@ -398,7 +178,7 @@ let mock_state_5 =
        ~precedence:3 (qid "has_type")
 
 let mock_state_6 =
-  let open CLF_constructors in
+  let open Synext'_constructors.CLF in
   let open Synprs_to_synext'.Disambiguation_state in
   empty
   |> add_prefix_lf_type_constant ~arity:0 ~precedence:1 (qid "exp")
@@ -410,7 +190,7 @@ let mock_state_6 =
        ~precedence:1 (qid "eq")
 
 let mock_state_7 =
-  let open CLF_constructors in
+  let open Synext'_constructors.CLF in
   let open Synprs_to_synext'.Disambiguation_state in
   empty
   |> add_prefix_lf_type_constant ~arity:0 ~precedence:1
@@ -426,7 +206,7 @@ let mock_state_7 =
        (qid ~m:[ "Statics" ] "term")
 
 let mock_state_8 =
-  let open CLF_constructors in
+  let open Synext'_constructors.CLF in
   let open Synprs_to_synext'.Disambiguation_state in
   empty
   |> add_infix_lf_type_constant
@@ -436,14 +216,14 @@ let mock_state_8 =
   |> add_prefix_lf_type_constant ~arity:1 ~precedence:1 (qid "term")
 
 let mock_state_9 =
-  let open CLF_constructors in
+  let open Synext'_constructors.CLF in
   let open Synprs_to_synext'.Disambiguation_state in
   empty
   |> add_prefix_lf_type_constant ~arity:0 ~precedence:1 (qid "tp")
   |> add_prefix_lf_type_constant ~arity:1 ~precedence:1 (qid "target")
 
 let mock_state_10 =
-  let open CLF_constructors in
+  let open Synext'_constructors.CLF in
   let open Synprs_to_synext'.Disambiguation_state in
   empty
   |> add_prefix_lf_type_constant ~arity:0 ~precedence:1 (qid "a")
@@ -457,7 +237,7 @@ let test_type =
         Fun.(
           Synext'_json.CLF.of_typ
           >> Format.stringify (Yojson.Safe.pretty_print ~std:true))
-      ~cmp:CLF.Typ.equal expected
+      ~cmp:Synext'_eq.CLF.Typ.equal expected
       (parse_clf_object input
       |> Synprs_to_synext'.CLF.disambiguate_as_typ elaboration_context)
   and test_failure elaboration_context input assert_exn _test_ctxt =
@@ -466,7 +246,7 @@ let test_type =
     |> Synprs_to_synext'.CLF.disambiguate_as_typ elaboration_context
   in
   let success_test_cases =
-    let open CLF_constructors in
+    let open Synext'_constructors.CLF in
     [ (mock_state_2, "nat -> nat", t_c "nat" => t_c "nat")
     ; ( mock_state_2
       , "nat -> nat -> nat"
@@ -669,7 +449,7 @@ let test_term =
         Fun.(
           Synext'_json.CLF.of_term
           >> Format.stringify (Yojson.Safe.pretty_print ~std:true))
-      ~cmp:CLF.Term.equal expected
+      ~cmp:Synext'_eq.CLF.Term.equal expected
       (parse_clf_object input
       |> Synprs_to_synext'.CLF.disambiguate_as_term elaboration_context)
   and test_failure elaboration_context input assert_exn _test_ctxt =
@@ -678,7 +458,7 @@ let test_term =
     |> Synprs_to_synext'.CLF.disambiguate_as_term elaboration_context
   in
   let success_test_cases =
-    let open CLF_constructors in
+    let open Synext'_constructors.CLF in
     [ (mock_state_1, "M x y z", app (v "M") [ v "x"; v "y"; v "z" ])
     ; (mock_state_1, "_ x y z", app hole [ v "x"; v "y"; v "z" ])
     ; (mock_state_1, "M _ y z", app (v "M") [ hole; v "y"; v "z" ])

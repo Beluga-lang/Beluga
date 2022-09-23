@@ -1,6 +1,8 @@
 open Support
 
-module Disambiguation_state : sig
+(** Module type for the type state used in disambiguating the parser syntax
+    to the external syntax. *)
+module type DISAMBIGUATION_STATE = sig
   type t
 
   type entry = private
@@ -58,12 +60,11 @@ module Disambiguation_state : sig
 
   val lookup_toplevel :
     Identifier.t -> t -> entry QualifiedIdentifier.Dictionary.value
+end
 
-  (** {1 Error-Reporting} *)
-
-  val pp_entry_sort :
-    Format.formatter -> entry QualifiedIdentifier.Dictionary.value -> Unit.t
-end = struct
+(** A minimal disambiguation state backed by a dictionary over qualified
+    identifiers. *)
+module Disambiguation_state : DISAMBIGUATION_STATE = struct
   type t = entry QualifiedIdentifier.Dictionary.t
 
   and entry =
@@ -129,28 +130,13 @@ end = struct
 
   let lookup_toplevel query state =
     QualifiedIdentifier.Dictionary.lookup_toplevel query state
-
-  let pp_entry_sort ppf entry =
-    match entry with
-    | QualifiedIdentifier.Dictionary.Entry LF_term_variable ->
-      Format.fprintf ppf "an LF term"
-    | QualifiedIdentifier.Dictionary.Entry (LF_type_constant _) ->
-      Format.fprintf ppf "an LF type-level constant"
-    | QualifiedIdentifier.Dictionary.Entry (LF_term_constant _) ->
-      Format.fprintf ppf "an LF term-level constant"
-    | QualifiedIdentifier.Dictionary.Entry Substitution_variable ->
-      Format.fprintf ppf "a substitution variable"
-    | QualifiedIdentifier.Dictionary.Entry Context_variable ->
-      Format.fprintf ppf "a context variable"
-    | QualifiedIdentifier.Dictionary.Module _ ->
-      Format.fprintf ppf "a module"
 end
 
 (** Elaboration of LF kinds, types and terms from the parser syntax to the
     external syntax.
 
     This elaboration does not perform normalization nor validation. *)
-module LF = struct
+module LF (Disambiguation_state : DISAMBIGUATION_STATE) = struct
   (** {1 Exceptions} *)
 
   (** {2 Exceptions for LF kind elaboration} *)
@@ -319,16 +305,120 @@ module LF = struct
     | Unbound_term_constant { location; identifier } ->
       Format.fprintf ppf "The LF term-level constant %a is unbound: %a@."
         QualifiedIdentifier.pp identifier Location.pp location
-    | Expected_term_constant { location; actual_binding } ->
+    | Expected_term_constant
+        { location
+        ; actual_binding =
+            QualifiedIdentifier.Dictionary.Entry
+              (Disambiguation_state.LF_type_constant _)
+        } ->
       Format.fprintf ppf
-        "Expected an LF term-level constant but found %a instead: %a@."
-        Disambiguation_state.pp_entry_sort actual_binding Location.pp
-        location
-    | Expected_type_constant { location; actual_binding } ->
+        "Expected an LF term-level constant but found an LF type constant \
+         instead: %a@."
+        Location.pp location
+    | Expected_term_constant
+        { location
+        ; actual_binding =
+            QualifiedIdentifier.Dictionary.Entry
+              Disambiguation_state.LF_term_variable
+        } ->
       Format.fprintf ppf
-        "Expected an LF type-level constant but found %a instead: %a@."
-        Disambiguation_state.pp_entry_sort actual_binding Location.pp
-        location
+        "Expected an LF term-level constant but found an LF term variable \
+         instead: %a@."
+        Location.pp location
+    | Expected_term_constant
+        { location
+        ; actual_binding =
+            QualifiedIdentifier.Dictionary.Entry
+              Disambiguation_state.Parameter_variable
+        } ->
+      Format.fprintf ppf
+        "Expected an LF term-level constant but found a parameter variable \
+         instead: %a@."
+        Location.pp location
+    | Expected_term_constant
+        { location
+        ; actual_binding =
+            QualifiedIdentifier.Dictionary.Entry
+              Disambiguation_state.Substitution_variable
+        } ->
+      Format.fprintf ppf
+        "Expected an LF term-level constant but found a substitution \
+         variable instead: %a@."
+        Location.pp location
+    | Expected_term_constant
+        { location
+        ; actual_binding =
+            QualifiedIdentifier.Dictionary.Entry
+              Disambiguation_state.Context_variable
+        } ->
+      Format.fprintf ppf
+        "Expected an LF term-level constant but found a context variable \
+         instead: %a@."
+        Location.pp location
+    | Expected_term_constant
+        { location
+        ; actual_binding = QualifiedIdentifier.Dictionary.Module _
+        } ->
+      Format.fprintf ppf
+        "Expected an LF term-level constant but found a module instead: %a@."
+        Location.pp location
+    | Expected_type_constant
+        { location
+        ; actual_binding =
+            QualifiedIdentifier.Dictionary.Entry
+              (Disambiguation_state.LF_term_constant _)
+        } ->
+      Format.fprintf ppf
+        "Expected an LF type-level constant but found an LF term constant \
+         instead: %a@."
+        Location.pp location
+    | Expected_type_constant
+        { location
+        ; actual_binding =
+            QualifiedIdentifier.Dictionary.Entry
+              Disambiguation_state.LF_term_variable
+        } ->
+      Format.fprintf ppf
+        "Expected an LF type-level constant but found an LF term variable \
+         instead: %a@."
+        Location.pp location
+    | Expected_type_constant
+        { location
+        ; actual_binding =
+            QualifiedIdentifier.Dictionary.Entry
+              Disambiguation_state.Parameter_variable
+        } ->
+      Format.fprintf ppf
+        "Expected an LF type-level constant but found a parameter variable \
+         instead: %a@."
+        Location.pp location
+    | Expected_type_constant
+        { location
+        ; actual_binding =
+            QualifiedIdentifier.Dictionary.Entry
+              Disambiguation_state.Substitution_variable
+        } ->
+      Format.fprintf ppf
+        "Expected an LF type-level constant but found a substitution \
+         variable instead: %a@."
+        Location.pp location
+    | Expected_type_constant
+        { location
+        ; actual_binding =
+            QualifiedIdentifier.Dictionary.Entry
+              Disambiguation_state.Context_variable
+        } ->
+      Format.fprintf ppf
+        "Expected an LF type-level constant but found a context variable \
+         instead: %a@."
+        Location.pp location
+    | Expected_type_constant
+        { location
+        ; actual_binding = QualifiedIdentifier.Dictionary.Module _
+        } ->
+      Format.fprintf ppf
+        "Expected an LF type-level constant but found a module instead: %a@."
+        Location.pp location
     | Expected_term location ->
       Format.fprintf ppf
         "Expected an LF term but found an LF type instead: %a@." Location.pp
@@ -1005,7 +1095,7 @@ end
     syntax to the external syntax.
 
     This elaboration does not perform normalization nor validation. *)
-module CLF = struct
+module CLF (Disambiguation_state : DISAMBIGUATION_STATE) = struct
   (** {1 Exceptions} *)
 
   (** {2 Exceptions for contextual LF type elaboration} *)
@@ -1204,16 +1294,120 @@ module CLF = struct
     | Unbound_term_constant { location; identifier } ->
       Format.fprintf ppf "The LF term-level constant %a is unbound: %a@."
         QualifiedIdentifier.pp identifier Location.pp location
-    | Expected_term_constant { location; actual_binding } ->
+    | Expected_term_constant
+        { location
+        ; actual_binding =
+            QualifiedIdentifier.Dictionary.Entry
+              (Disambiguation_state.LF_type_constant _)
+        } ->
       Format.fprintf ppf
-        "Expected an LF term-level constant but found %a instead: %a@."
-        Disambiguation_state.pp_entry_sort actual_binding Location.pp
-        location
-    | Expected_type_constant { location; actual_binding } ->
+        "Expected an LF term-level constant but found an LF type constant \
+         instead: %a@."
+        Location.pp location
+    | Expected_term_constant
+        { location
+        ; actual_binding =
+            QualifiedIdentifier.Dictionary.Entry
+              Disambiguation_state.LF_term_variable
+        } ->
       Format.fprintf ppf
-        "Expected an LF type-level constant but found %a instead: %a@."
-        Disambiguation_state.pp_entry_sort actual_binding Location.pp
-        location
+        "Expected an LF term-level constant but found an LF term variable \
+         instead: %a@."
+        Location.pp location
+    | Expected_term_constant
+        { location
+        ; actual_binding =
+            QualifiedIdentifier.Dictionary.Entry
+              Disambiguation_state.Parameter_variable
+        } ->
+      Format.fprintf ppf
+        "Expected an LF term-level constant but found a parameter variable \
+         instead: %a@."
+        Location.pp location
+    | Expected_term_constant
+        { location
+        ; actual_binding =
+            QualifiedIdentifier.Dictionary.Entry
+              Disambiguation_state.Substitution_variable
+        } ->
+      Format.fprintf ppf
+        "Expected an LF term-level constant but found a substitution \
+         variable instead: %a@."
+        Location.pp location
+    | Expected_term_constant
+        { location
+        ; actual_binding =
+            QualifiedIdentifier.Dictionary.Entry
+              Disambiguation_state.Context_variable
+        } ->
+      Format.fprintf ppf
+        "Expected an LF term-level constant but found a context variable \
+         instead: %a@."
+        Location.pp location
+    | Expected_term_constant
+        { location
+        ; actual_binding = QualifiedIdentifier.Dictionary.Module _
+        } ->
+      Format.fprintf ppf
+        "Expected an LF term-level constant but found a module instead: %a@."
+        Location.pp location
+    | Expected_type_constant
+        { location
+        ; actual_binding =
+            QualifiedIdentifier.Dictionary.Entry
+              (Disambiguation_state.LF_term_constant _)
+        } ->
+      Format.fprintf ppf
+        "Expected an LF type-level constant but found an LF term constant \
+         instead: %a@."
+        Location.pp location
+    | Expected_type_constant
+        { location
+        ; actual_binding =
+            QualifiedIdentifier.Dictionary.Entry
+              Disambiguation_state.LF_term_variable
+        } ->
+      Format.fprintf ppf
+        "Expected an LF type-level constant but found an LF term variable \
+         instead: %a@."
+        Location.pp location
+    | Expected_type_constant
+        { location
+        ; actual_binding =
+            QualifiedIdentifier.Dictionary.Entry
+              Disambiguation_state.Parameter_variable
+        } ->
+      Format.fprintf ppf
+        "Expected an LF type-level constant but found a parameter variable \
+         instead: %a@."
+        Location.pp location
+    | Expected_type_constant
+        { location
+        ; actual_binding =
+            QualifiedIdentifier.Dictionary.Entry
+              Disambiguation_state.Substitution_variable
+        } ->
+      Format.fprintf ppf
+        "Expected an LF type-level constant but found a substitution \
+         variable instead: %a@."
+        Location.pp location
+    | Expected_type_constant
+        { location
+        ; actual_binding =
+            QualifiedIdentifier.Dictionary.Entry
+              Disambiguation_state.Context_variable
+        } ->
+      Format.fprintf ppf
+        "Expected an LF type-level constant but found a context variable \
+         instead: %a@."
+        Location.pp location
+    | Expected_type_constant
+        { location
+        ; actual_binding = QualifiedIdentifier.Dictionary.Module _
+        } ->
+      Format.fprintf ppf
+        "Expected an LF type-level constant but found a module instead: %a@."
+        Location.pp location
     | Expected_term location ->
       Format.fprintf ppf
         "Expected a contextual LF term but found a contextual LF type \

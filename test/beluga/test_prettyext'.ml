@@ -1,6 +1,12 @@
 open Support
 open Beluga
 
+module Synprs_to_synext' = struct
+  module Disambiguation_state = Synprs_to_synext'.Disambiguation_state
+  module LF = Synprs_to_synext'.LF (Disambiguation_state)
+  module CLF = Synprs_to_synext'.CLF (Disambiguation_state)
+end
+
 let mock_state_1 = Synprs_to_synext'.Disambiguation_state.empty
 
 let mock_state_2 =
@@ -144,8 +150,7 @@ let mock_state_11 =
   |> add_postfix_lf_term_constant ~precedence:3 (qid "Q3")
 
 let parse_lf_object input =
-  Runparser.parse_string Location.ghost input
-    (Parser.only Parser.lf_object)
+  Runparser.parse_string Location.ghost input (Parser.only Parser.lf_object)
   |> Parser.extract
 
 let parse_lf_kind elaboration_context input =

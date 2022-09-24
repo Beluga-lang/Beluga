@@ -958,7 +958,6 @@ module Sgn = struct
   end
 
   module rec Declaration : sig
-    (** Parsed signature element *)
     type t =
       | Typ_or_const of
           { location : Location.t
@@ -969,67 +968,67 @@ module Sgn = struct
           { location : Location.t
           ; identifier : Identifier.t
           ; kind : LF.Object.t
-          }  (** LF type family declaration *)
+          }
       | Const of
           { location : Location.t
           ; identifier : Identifier.t
           ; typ : LF.Object.t
-          }  (** LF type constant declaration *)
+          }
       | CompTyp of
           { location : Location.t
           ; identifier : Identifier.t
           ; kind : Comp.Sort_object.t
           ; datatype_flavour : [ `Inductive | `Stratified ]
-          }  (** Computation-level data type constant declaration *)
+          }
       | CompCotyp of
           { location : Location.t
           ; identifier : Identifier.t
           ; kind : Comp.Sort_object.t
-          }  (** Computation-level codata type constant declaration *)
+          }
       | CompConst of
           { location : Location.t
           ; identifier : Identifier.t
           ; typ : Comp.Sort_object.t
-          }  (** Computation-level type constructor declaration *)
+          }
       | CompDest of
           { location : Location.t
           ; identifier : Identifier.t
           ; observation_typ : Comp.Sort_object.t
           ; return_typ : Comp.Sort_object.t
-          }  (** Computation-level type destructor declaration *)
+          }
       | CompTypAbbrev of
           { location : Location.t
           ; identifier : Identifier.t
           ; kind : Comp.Sort_object.t
           ; typ : Comp.Sort_object.t
-          }  (** Synonym declaration for computation-level type *)
+          }
       | Schema of
           { location : Location.t
           ; identifier : Identifier.t
           ; schema : Meta.Schema_object.t
-          }  (** Declaration of a specification for a set of contexts *)
+          }
       | Pragma of
           { location : Location.t
           ; pragma : Pragma.t
-          }  (** Compiler directive *)
+          }
       | GlobalPragma of
           { location : Location.t
           ; pragma : Pragma.Global.t
-          }  (** Global directive *)
+          }
       | Mutually_recursive_datatypes of
           { location : Location.t
           ; declarations : (Declaration.t * Declaration.t List.t) List1.t
-          }  (** Mutually-recursive datatypes declaration *)
+          }
       | Theorems of
           { location : Location.t
           ; theorems : Theorem.t List1.t
-          }  (** Mutually recursive theorem declaration(s) *)
+          }
       | Val of
           { location : Location.t
           ; identifier : Identifier.t
           ; typ : Comp.Sort_object.t Option.t
           ; expression : Comp.Expression_object.t
-          }  (** Computation-level value declaration *)
+          }
       | Query of
           { location : Location.t
           ; name : Identifier.t Option.t
@@ -1037,23 +1036,23 @@ module Sgn = struct
           ; typ : CLF.Object.t
           ; expected_solutions : Int.t Option.t
           ; maximum_tries : Int.t Option.t
-          }  (** Logic programming query on an LF type *)
+          }
       | MQuery of
           { location : Location.t
           ; typ : Comp.Sort_object.t
           ; expected_solutions : Int.t Option.t
           ; search_tries : Int.t Option.t
           ; search_depth : Int.t Option.t
-          }  (** Logic programming mquery on a computational type *)
+          }
       | Module of
           { location : Location.t
           ; identifier : Identifier.t
           ; declarations : Declaration.t List.t
-          }  (** Namespace declaration for other declarations *)
+          }
       | Comment of
           { location : Location.t
           ; content : String.t
-          }  (** Documentation comment *)
+          }
   end =
     Declaration
 

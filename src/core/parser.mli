@@ -10,7 +10,7 @@ val initial_state : input -> state
 
 type error
 
-exception Error of state * error
+exception Error of { state : state; cause : error }
 
 (***** Type of parse results. *****)
 
@@ -95,9 +95,9 @@ val comp_expression_object : Comp.Expression_object.t t
 
 val comp_context : Comp.Context_object.t t
 
-val sgn_decl : Sgn.Declaration.t t
+val sgn_decl : Signature.Declaration.t t
 
-val sgn : Sgn.t t
+val sgn : Signature.t t
 
 val trust_totality_declaration : Comp.Totality.Declaration.t t
 

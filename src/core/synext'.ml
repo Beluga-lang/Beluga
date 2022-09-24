@@ -1392,7 +1392,7 @@ module Harpoon = struct
             }
         | SelectTheorem of
             { location : Location.t
-            ; identifier : QualifiedIdentifier.t
+            ; theorem : QualifiedIdentifier.t
             }
         | Theorem of
             { location : Location.t
@@ -1531,7 +1531,7 @@ end
 
 (** {1 External Signature Syntax} *)
 
-module Sgn = struct
+module Signature = struct
   module Pragma = struct
     type t =
       | Name of
@@ -1623,8 +1623,8 @@ module Sgn = struct
       | CompDest of
           { location : Location.t
           ; identifier : Identifier.t
-          ; observation_typ : Comp.Typ.t
-          ; return_typ : Comp.Typ.t
+          ; observation_type : Comp.Typ.t
+          ; return_type : Comp.Typ.t
           }  (** Computation-level type destructor declaration *)
       | CompTypAbbrev of
           { location : Location.t
@@ -1664,7 +1664,7 @@ module Sgn = struct
           { location : Location.t
           ; name : Identifier.t Option.t
           ; meta_context : Meta.Context.t
-          ; typ : CLF.Typ.t
+          ; typ : LF.Typ.t
           ; expected_solutions : Int.t Option.t
           ; maximum_tries : Int.t Option.t
           }  (** Logic programming query on an LF type *)

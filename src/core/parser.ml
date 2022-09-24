@@ -87,7 +87,7 @@ module CLF = Syntax.Prs.CLF
 module Meta = Syntax.Prs.Meta
 module Comp = Syntax.Prs.Comp
 module Harpoon = Syntax.Prs.Harpoon
-module Sgn = Syntax.Prs.Sgn
+module Signature = Syntax.Prs.Signature
 
 (***** Parser state definition *****)
 
@@ -185,7 +185,7 @@ let print_content ppf : content -> unit =
        (format_option_with
           (fun ppf (ss, s) ->
             fprintf ppf "%a%s"
-              (pp_print_list ~pp_sep: (fun ppf () -> fprintf ppf ".")
+              (pp_print_list ~pp_sep: (fun ppf () -> fprintf ppf "::")
                  pp_print_string) ss
               s))
        i
@@ -207,26 +207,8 @@ let print_content ppf : content -> unit =
      fprintf ppf "end of input"
   | `html_comment -> fprintf ppf "HTML comment"
 
-type error' =
-  (* External errors: the user's fault. *)
-  | Unexpected of { expected : content; actual : content }
-
-  | NoMoreChoices of error list (* all alternatives failed *)
-
-  | Ambiguous_backward_arrow
-  | Ambiguous_forward_arrow
-
-  (* Internal errors: our fault; these should never go to the user. *)
-  (* Raised by `satisfy` when it fails.
-      This is an internal error because it is totally uninformative
-      and low-level. When a high-level parser is constructed using
-      `satisfy`, it should check for this error and rewrite it into a
-      nicer one for the user.
-   *)
-  | NotFollowedBy
-
-and error =
-  { error : error'
+type error =
+  { error : exn
   (* ^ The actual error. *)
   ; path : path
   (* ^ Sequence of parser labels that led to the parse error.
@@ -241,7 +223,26 @@ and error =
   ; loc : Location.t (* the location the error occurred at *)
   }
 
-exception Error of state * error
+(* External errors: the user's fault. *)
+
+exception Unexpected of { expected : content; actual : content }
+
+exception NoMoreChoices of error list (* all alternatives failed *)
+
+exception Ambiguous_backward_arrow
+
+exception Ambiguous_forward_arrow
+
+(* Internal errors: our fault; these should never go to the user. *)
+
+(** Raised by {!not_followed_by} when it fails.
+
+    This is an internal error because it is totally uninformative
+    and low-level. When a high-level parser is constructed using
+    {!not_followed_by}, it should check for this error and rewrite it into a
+    nicer one for the user.
+*)
+exception NotFollowedBy
 
 (** Pretty-print an error path. *)
 let print_path ppf (path : path) : unit =
@@ -267,8 +268,8 @@ let print_path ppf (path : path) : unit =
 let print_error ppf ({path; loc; _} as e : error) =
   let open Format in
   fprintf ppf "@[<v>Parse error.@,";
-  let (* rec *) g ppf {error = e; _} =
-    match e with
+  let g ppf { error; _} =
+    match error with
     | NoMoreChoices ss ->
        fprintf ppf "Expected:@,  @[<v>";
        pp_print_list ~pp_sep: (fun _ () -> ())
@@ -280,11 +281,10 @@ let print_error ppf ({path; loc; _} as e : error) =
          ppf
          ss;
        fprintf ppf "@]"
-    (* fprintf ppf "Next token: %a@." Token.(print `TOKEN) (next_token s) *)
-    | Unexpected { expected = t_exp; actual = t_act; _ } ->
+    | Unexpected { expected; actual; _ } ->
        fprintf ppf "Unexpected token in stream@,  @[<v>Expected %a@,Got %a@]@,"
-         print_content t_exp
-         print_content t_act
+         print_content expected
+         print_content actual
     | Ambiguous_forward_arrow ->
        fprintf ppf "Ambiguous placement of forward arrow operator"
     | Ambiguous_backward_arrow ->
@@ -294,14 +294,16 @@ let print_error ppf ({path; loc; _} as e : error) =
   if Debug.flag 11 then fprintf ppf "@,%a" print_path path;
   fprintf ppf "@]"
 
+exception Error of { state : state; cause : error }
+
 let () =
   Error.register_printer'
     begin
       function
-      | Error (s, e) ->
+      | Error { state; cause } ->
          Option.some
-           (Error.print_with_location e.loc
-              (fun ppf -> print_error ppf e))
+           (Error.print_with_location cause.loc
+              (fun ppf -> print_error ppf cause))
       | _ -> Option.none
     end
 
@@ -342,8 +344,8 @@ let to_either (r : 'a result) : (error, 'a) Either.t = r
     If the parse was unsuccessful, then this raises a parse error exception. *)
 let extract =
   function
-  | (s, Either.Left e) -> raise @@ Error (s, e)
-  | (_, Either.Right x) -> x
+  | (state, Either.Left cause) -> raise @@ Error { state; cause }
+  | (_, Either.Right result) -> result
 
 type 'a t = 'a parser
 
@@ -427,7 +429,8 @@ let prev_loc : Location.t parser =
 
 (** Runs `p` tracking the span of source material processed by it. *)
 let span p =
-  seq3 next_loc p prev_loc $> fun (l1, x, l2) -> (Location.join l1 l2, x)
+  seq3 next_loc p prev_loc
+  $> fun (l1, x, l2) -> (Location.join l1 l2, x)
 
 (** Runs the parser, and if it fails, runs the given function to
     transform the label stack.
@@ -492,12 +495,26 @@ let[@warning "-32"] not_followed_by (p : 'a parser) : unit parser =
 
 (***** Parsing lists. *****)
 
+(** Transforms each element of a list into a parser, and sequences the
+    parsers.
+*)
+let[@warning "-32"] rec traverse (f : 'a -> 'b parser) (xs : 'a list) : 'b list parser =
+  match xs with
+  | [] -> return []
+  | x :: xs ->
+     seq2 (f x) (traverse f xs)
+     $> fun (x, xs) -> x :: xs
+
 (** Like {!traverse} but for parsers without interesting outputs. *)
 let rec traverse_ (f : 'a -> unit parser) (xs : 'a list) : unit parser =
   match xs with
   | [] -> return ()
   | x :: xs ->
      f x &> traverse_ f xs
+
+(** Runs a sequence of parsers in order and collects their results. *)
+let[@warning "-32"] sequence (ps : 'a parser list) : 'a list parser =
+  traverse Fun.id ps
 
 (***** Prioritized choice *****)
 
@@ -547,9 +564,9 @@ let eoi : unit parser =
 
 (** Constructs a parser that accepts the current token if it satisfies
     the given predicate.
-    The predicate is _successful_ if it returns `Right`.
-    The `Left` output indicates failure and can be used to remember
-    the next token in the stream to construct better eroros in a
+    The predicate is _successful_ if it returns [Right].
+    The [Left] output indicates failure and can be used to remember
+    the next token in the stream to construct better errors in a
     downstream parser. If you don't care, use unit.
     The input stream advances only if the predicate succeeds.
  *)
@@ -2939,8 +2956,8 @@ end = struct
     and select_theorem =
       keyword "select" &> qualified_identifier
       |> span
-      $> fun (location, identifier) ->
-          Harpoon.Repl.Command.SelectTheorem { location; identifier }
+      $> fun (location, theorem) ->
+          Harpoon.Repl.Command.SelectTheorem { location; theorem }
     and theorem_command =
       let list_theorems =
         keyword "list"
@@ -3111,9 +3128,9 @@ let interactive_harpoon_command_sequence =
 let next_theorem = Harpoon_parsers.next_theorem
 
 module rec Signature_parsers : sig
-  val sgn : Sgn.t t
+  val sgn : Signature.t t
 
-  val sgn_decl : Sgn.Declaration.t t
+  val sgn_decl : Signature.Declaration.t t
 
   val trust_totality_declaration : Comp.Totality.Declaration.t t
 
@@ -3127,26 +3144,26 @@ end = struct
     pragma "nostrengthen"
     |> span
     $> fun (location, ()) ->
-      Sgn.Pragma.Global.No_strengthening { location }
+      Signature.Pragma.Global.No_strengthening { location }
 
   let coverage_pragma =
     pragma "coverage"
     |> span
     $> fun (location, ()) ->
-      Sgn.Pragma.Global.Coverage { location; variant = `Error }
+      Signature.Pragma.Global.Coverage { location; variant = `Error }
 
   let warncoverage_pragma =
     pragma "warncoverage"
     |> span
     $> fun (location, ()) ->
-      Sgn.Pragma.Global.Coverage { location; variant = `Warn }
+      Signature.Pragma.Global.Coverage { location; variant = `Warn }
 
   let sgn_global_prag =
     let global_pragma_to_global_pragma_declaration pragma =
       pragma
       |> span
       $> fun (location, pragma) ->
-        Sgn.Declaration.GlobalPragma { location; pragma }
+        Signature.Declaration.GlobalPragma { location; pragma }
     in
     let global_pragmas =
       [ nostrenghten_pragma
@@ -3169,7 +3186,7 @@ end = struct
     |> labelled "name pragma"
     |> span
     $> fun (location, (constant, meta_variable_base, computation_variable_base)) ->
-          Sgn.Pragma.Name
+          Signature.Pragma.Name
             { location
             ; constant
             ; meta_variable_base
@@ -3182,7 +3199,7 @@ end = struct
       LF_parsers.lf_object
     |> span
     $> (fun (location, (identifier, typ)) ->
-          Sgn.Declaration.Const { location; identifier; typ })
+          Signature.Declaration.Const { location; identifier; typ })
     |> labelled "LF term-level constant declaration"
 
   let sgn_lf_typ_decl =
@@ -3198,7 +3215,7 @@ end = struct
         &> sep_by0 sgn_lf_const_decl (token Token.PIPE))
       |> span
       $> fun (location, ((identifier, kind), const_decls)) ->
-        Sgn.Declaration.Typ { location; identifier; kind }, const_decls
+        Signature.Declaration.Typ { location; identifier; kind }, const_decls
     in
     labelled "LF type declaration block"
       (token Token.KW_LF
@@ -3206,7 +3223,7 @@ end = struct
       <& token Token.SEMICOLON
       |> span
       $> fun (location, declarations) ->
-          Sgn.Declaration.Mutually_recursive_datatypes { location; declarations })
+          Signature.Declaration.Mutually_recursive_datatypes { location; declarations })
 
   let named_totality_argument =
     identifier
@@ -3293,7 +3310,7 @@ end = struct
               Comp_parsers.comp_sort_object
             |> span
             $> fun (location, (identifier, typ)) ->
-               Sgn.Declaration.CompConst { location; identifier; typ }
+               Signature.Declaration.CompConst { location; identifier; typ }
           in
           seq4
             flavour
@@ -3302,7 +3319,7 @@ end = struct
             (sep_by0 sgn_cmp_typ_decl_body (token Token.PIPE))
           |> span
           $> fun (location, (datatype_flavour, identifier, kind, decls)) ->
-               Sgn.Declaration.CompTyp { location; identifier; kind; datatype_flavour }, decls
+               Signature.Declaration.CompTyp { location; identifier; kind; datatype_flavour }, decls
         in
         let cmp_cotyp_decl =
           let cmp_cotyp_body =
@@ -3314,12 +3331,12 @@ end = struct
                <& token Token.DOUBLE_COLON)
               Comp_parsers.comp_sort_object
             |> span
-            $> fun (location, ((identifier, tau0), tau1)) ->
-               Sgn.Declaration.CompDest
+            $> fun (location, ((identifier, observation_type), return_type)) ->
+               Signature.Declaration.CompDest
                 { location
                 ; identifier
-                ; observation_typ = tau0
-                ; return_typ = tau1
+                ; observation_type
+                ; return_type
                 }
           in
           seq3
@@ -3328,12 +3345,13 @@ end = struct
             (sep_by0 cmp_cotyp_body (token Token.PIPE))
           |> span
           $> fun (location, (identifier, kind, decls)) ->
-               Sgn.Declaration.CompCotyp { location; identifier; kind }, decls
+               Signature.Declaration.CompCotyp { location; identifier; kind }, decls
         in
         sep_by1 (alt cmp_typ_decl cmp_cotyp_decl) (token Token.KW_AND)
         <& token Token.SEMICOLON
         |> span
-        $> fun (location, declarations) -> Sgn.Declaration.Mutually_recursive_datatypes { location; declarations }
+        $> fun (location, declarations) ->
+          Signature.Declaration.Mutually_recursive_datatypes { location; declarations }
       end
 
   let query_declaration =
@@ -3357,12 +3375,12 @@ end = struct
         (seq2 bound bound)
         meta_context
         (maybe (identifier <& token Token.COLON))
-        CLF_parsers.clf_object
+        LF_parsers.lf_object
     <& token Token.DOT
     |> span
     |> labelled "logic programming engine query pragma"
     $> fun (location, ((expected_solutions, maximum_tries), meta_context, name, typ)) ->
-       Sgn.Declaration.Query
+       Signature.Declaration.Query
          { location
          ; name
          ; meta_context
@@ -3387,20 +3405,25 @@ end = struct
     |> span
     |> labelled "meta-logic search engine mquery pragma"
     $> fun (location, ((expected_solutions, search_tries, search_depth), typ)) ->
-       Sgn.MQuery { location; typ; expected_solutions; search_tries; search_depth }
-
+       Signature.Declaration.MQuery
+         { location
+         ; typ
+         ; expected_solutions
+         ; search_tries
+         ; search_depth
+         }
 
   let sgn_oldstyle_lf_decl =
     seq2 (identifier <& token Token.COLON) LF_parsers.lf_object <& token Token.DOT
     |> span
     $> (fun (location, (identifier, typ_or_const)) ->
-          Sgn.Declaration.Typ_or_const { location; identifier; typ_or_const })
+          Signature.Declaration.Typ_or_const { location; identifier; typ_or_const })
     |> labelled "old-style LF type or constant declaration"
 
   let not_pragma =
     pragma "not"
     |> span
-    $> fun (location, ()) -> Sgn.Pragma.Not { location }
+    $> fun (location, ()) -> Signature.Pragma.Not { location }
 
   let left_associativity =
     keyword "left"
@@ -3429,7 +3452,7 @@ end = struct
     (pragma "prefix" &> seq2 qualified_identifier integer) <& token Token.DOT
     |> span
     $> fun (location, (constant, precedence)) ->
-        Sgn.Pragma.Prefix_fixity
+        Signature.Pragma.Prefix_fixity
           { location
           ; constant
           ; precedence
@@ -3439,7 +3462,7 @@ end = struct
     (pragma "infix" &> seq3 qualified_identifier integer (maybe associativity)) <& token Token.DOT
     |> span
     $> fun (location, (constant, precedence, associativity)) ->
-          Sgn.Pragma.Infix_fixity
+          Signature.Pragma.Infix_fixity
             { location
             ; constant
             ; precedence
@@ -3450,7 +3473,7 @@ end = struct
     (pragma "postfix" &> seq2 qualified_identifier integer) <& token Token.DOT
     |> span
     $> fun (location, (constant, precedence)) ->
-          Sgn.Pragma.Postfix_fixity
+          Signature.Pragma.Postfix_fixity
             { location
             ; constant
             ; precedence
@@ -3467,20 +3490,20 @@ end = struct
     pragma "assoc" &> associativity <& token Token.DOT
     |> span
     $> fun (location, associativity) ->
-      Sgn.Pragma.Default_associativity { location; associativity }
+      Signature.Pragma.Default_associativity { location; associativity }
 
   let open_pragma =
     pragma "open" &> qualified_identifier <& token Token.DOT
     |> span
     $> (fun (location, module_identifier) ->
-         Sgn.Pragma.Open_module { location; module_identifier })
+         Signature.Pragma.Open_module { location; module_identifier })
     |> labelled "open module pragma"
 
   let abbrev_pragma =
     pragma "abbrev" &> seq2 qualified_identifier identifier <& token Token.DOT
     |> span
     $> (fun (location, (module_identifier, abbreviation)) ->
-          Sgn.Pragma.Abbreviation { location; module_identifier; abbreviation }
+          Signature.Pragma.Abbreviation { location; module_identifier; abbreviation }
        )
     |> labelled "module abbreviation pragma"
 
@@ -3491,7 +3514,7 @@ end = struct
        | _ -> Option.none)
     |> span
     |> labelled "HTML comment"
-    $> fun (location, content) -> Sgn.Declaration.Comment { location; content }
+    $> fun (location, content) -> Signature.Declaration.Comment { location; content }
 
   let sgn_typedef_decl =
     seq3
@@ -3501,7 +3524,7 @@ end = struct
     |> span
     |> labelled "type synonym declaration"
     $> fun (location, (identifier, kind, typ)) ->
-       Sgn.Declaration.CompTypAbbrev { location; identifier; kind; typ }
+       Signature.Declaration.CompTypAbbrev { location; identifier; kind; typ }
 
   let sgn_schema_decl =
     seq2
@@ -3510,7 +3533,7 @@ end = struct
     <& token Token.SEMICOLON
     |> span
     $> (fun (location, (identifier, schema)) ->
-          Sgn.Declaration.Schema { location; identifier; schema }
+          Signature.Declaration.Schema { location; identifier; schema }
        )
     |> labelled "Context schema declaration"
 
@@ -3524,7 +3547,7 @@ end = struct
     |> span
     |> labelled "value declaration"
     $> fun (location, ((identifier, typ), expression)) ->
-       Sgn.Declaration.Val { location; identifier; typ; expression }
+       Signature.Declaration.Val { location; identifier; typ; expression }
 
   let thm p =
     seq4
@@ -3534,7 +3557,7 @@ end = struct
       p
     |> span
     $> fun (location, (name, typ, order, body)) ->
-       { Sgn.Theorem.location; name; typ; order; body }
+       { Signature.Theorem.location; name; typ; order; body }
 
   let proof_decl =
     token Token.KW_PROOF
@@ -3551,7 +3574,7 @@ end = struct
     <& token Token.SEMICOLON
     |> span
     |> labelled "(mutual) recursive function declaration(s)"
-    $> fun (location, theorems) -> Sgn.Declaration.Theorems { location; theorems }
+    $> fun (location, theorems) -> Signature.Declaration.Theorems { location; theorems }
 
   let sgn_module_decl =
     seq2
@@ -3562,19 +3585,26 @@ end = struct
     |> span
     |> labelled "module declaration"
     $> fun (location, (identifier, declarations)) ->
-        Sgn.Declaration.Module { location; identifier; declarations }
+        Signature.Declaration.Module { location; identifier; declarations }
 
-  let sgn_decl : Sgn.decl t =
+  let sgn_decl =
+    let pragma =
+      choice
+        [ name_pragma
+        ; not_pragma
+        ; fixity_pragma
+        ; default_associativity_pragma
+        ; open_pragma
+        ; abbrev_pragma
+        ]
+      |> span
+      $> fun (location, pragma) -> Signature.Declaration.Pragma { location; pragma }
+    in
     choice
-      (* pragmas *)
-      [ sgn_name_pragma
-      ; sgn_query_pragma
-      ; sgn_mquery_pragma
-      ; sgn_not_pragma
-      ; sgn_fixity_pragma
-      ; sgn_associativity_pragma
-      ; sgn_open_pragma
-      ; sgn_abbrev_pragma
+      [ pragma
+
+      ; query_declaration
+      ; mquery_declaration
       ; sgn_comment
 
       (* misc declarations *)

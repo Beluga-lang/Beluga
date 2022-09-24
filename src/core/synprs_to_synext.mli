@@ -25,7 +25,7 @@ module Harpoon : sig
 end
 
 module Sgn : sig
-  val elaborate_sgn : Synprs.Sgn.t -> Synext.Sgn.sgn
+  val elaborate_sgn : Synprs.Signature.t -> Synext.Sgn.sgn
 end
 
 val name_of_identifier : Identifier.t -> Name.t

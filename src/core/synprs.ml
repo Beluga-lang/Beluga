@@ -752,7 +752,7 @@ module Harpoon = struct
             }
         | SelectTheorem of
             { location : Location.t
-            ; identifier : QualifiedIdentifier.t
+            ; theorem : QualifiedIdentifier.t
             }
         | Theorem of
             { location : Location.t
@@ -894,7 +894,7 @@ end
 
 (** The intermediate representation of Beluga signatures to delay the
     handling of data-dependent aspects of the grammar. *)
-module Sgn = struct
+module Signature = struct
   module Pragma = struct
     type t =
       | Name of
@@ -993,8 +993,8 @@ module Sgn = struct
       | CompDest of
           { location : Location.t
           ; identifier : Identifier.t
-          ; observation_typ : Comp.Sort_object.t
-          ; return_typ : Comp.Sort_object.t
+          ; observation_type : Comp.Sort_object.t
+          ; return_type : Comp.Sort_object.t
           }
       | CompTypAbbrev of
           { location : Location.t
@@ -1033,7 +1033,7 @@ module Sgn = struct
           { location : Location.t
           ; name : Identifier.t Option.t
           ; meta_context : Meta.Context_object.t
-          ; typ : CLF.Object.t
+          ; typ : LF.Object.t
           ; expected_solutions : Int.t Option.t
           ; maximum_tries : Int.t Option.t
           }

@@ -3132,13 +3132,13 @@ module rec Signature_parsers : sig
 
   val sgn_decl : Signature.Declaration.t t
 
-  val trust_totality_declaration : Comp.Totality.Declaration.t t
+  val trust_totality_declaration : Signature.Totality.Declaration.t t
 
-  val named_totality_declaration : Comp.Totality.Declaration.t t
+  val named_totality_declaration : Signature.Totality.Declaration.t t
 
-  val numeric_totality_declaration : Comp.Totality.Declaration.t t
+  val numeric_totality_declaration : Signature.Totality.Declaration.t t
 
-  val totality_declaration : Comp.Totality.Declaration.t t
+  val totality_declaration : Signature.Totality.Declaration.t t
 end = struct
   let nostrenghten_pragma =
     pragma "nostrengthen"
@@ -3229,13 +3229,13 @@ end = struct
     identifier
     |> span
     $> fun (location, argument) ->
-        Comp.Totality.Order.Argument { location; argument }
+        Signature.Totality.Order.Argument { location; argument }
 
   let numeric_totality_argument =
     integer
     |> span
     $> fun (location, argument) ->
-        Comp.Totality.Order.Argument { location; argument }
+        Signature.Totality.Order.Argument { location; argument }
 
   let total_order totality_argument =
     let argument =
@@ -3244,12 +3244,12 @@ end = struct
       braces (some totality_argument)
       |> span
       $> fun (location, arguments) ->
-        Comp.Totality.Order.Lexical_ordering { location; arguments }
+        Signature.Totality.Order.Lexical_ordering { location; arguments }
     and simultaneous_ordering =
       bracks (some totality_argument)
       |> span
       $> fun (location, arguments) ->
-        Comp.Totality.Order.Simultaneous_ordering { location; arguments }
+        Signature.Totality.Order.Simultaneous_ordering { location; arguments }
     in
     choice
       [ argument
@@ -3261,7 +3261,7 @@ end = struct
   let trust_totality_declaration =
     token Token.KW_TRUST
     |> span
-    $> (fun (location, ()) -> Comp.Totality.Declaration.Trust { location })
+    $> (fun (location, ()) -> Signature.Totality.Declaration.Trust { location })
     |> labelled "trust totality"
 
   let named_totality_declaration =
@@ -3270,13 +3270,13 @@ end = struct
       (parens (seq2 identifier (many omittable_identifier)))
     |> span
     $> fun (location, (order, (program, argument_labels))) ->
-        Comp.Totality.Declaration.Named { location; order; program; argument_labels }
+        Signature.Totality.Declaration.Named { location; order; program; argument_labels }
 
   let numeric_totality_declaration =
     maybe (total_order numeric_totality_argument)
     |> span
     $> fun (location, order) ->
-      Comp.Totality.Declaration.Numeric { location; order }
+      Signature.Totality.Declaration.Numeric { location; order }
 
   let totality_declaration =
     let total =

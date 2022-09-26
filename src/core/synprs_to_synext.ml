@@ -15,9 +15,6 @@ module Comp = struct
 
   let elaborate_pattern pattern =
     Error.not_implemented' "[Comp.elaborate_pattern]"
-
-  let elaborate_numeric_order order =
-    Error.not_implemented' "[Comp.elaborate_numeric_order]"
 end
 
 module Harpoon = struct
@@ -27,6 +24,9 @@ end
 
 module Sgn = struct
   let elaborate_sgn sgn = Error.not_implemented' "[Sgn.elaborate_sgn]"
+
+  let elaborate_numeric_order order =
+    Error.not_implemented' "[Sgn.elaborate_numeric_order]"
 end
 
 let name_of_identifier identifier =

@@ -177,7 +177,7 @@ let test_pp_kind =
         Fun.(
           Synext'_json.LF.of_kind
           >> Format.stringify (Yojson.Safe.pretty_print ~std:true))
-      ~cmp:Synext'_eq.LF.Kind.equal kind kind'
+      ~cmp:Synext'_eq.LF.kind_equal kind kind'
   in
   let test_cases =
     [ (mock_state_1, "type")
@@ -215,7 +215,7 @@ let test_pp_type =
         Fun.(
           Synext'_json.LF.of_typ
           >> Format.stringify (Yojson.Safe.pretty_print ~std:true))
-      ~cmp:Synext'_eq.LF.Typ.equal typ typ'
+      ~cmp:Synext'_eq.LF.typ_equal typ typ'
   in
   let test_cases =
     [ (mock_state_2, "nat")
@@ -278,7 +278,7 @@ let test_pp_term =
         Fun.(
           Synext'_json.LF.of_term
           >> Format.stringify (Yojson.Safe.pretty_print ~std:true))
-      ~cmp:Synext'_eq.LF.Term.equal term term'
+      ~cmp:Synext'_eq.LF.term_equal term term'
   in
   let test_cases =
     [ (mock_state_1, "M x y z")

@@ -14,9 +14,6 @@ module Comp : sig
   val elaborate_exp : Synprs.Comp.Expression_object.t -> Synext.Comp.exp
 
   val elaborate_pattern : Synprs.Comp.Pattern_object.t -> Synext.Comp.pattern
-
-  val elaborate_numeric_order :
-    Synprs.Comp.Totality.Declaration.t -> Synext.Comp.numeric_order
 end
 
 module Harpoon : sig
@@ -26,6 +23,9 @@ end
 
 module Sgn : sig
   val elaborate_sgn : Synprs.Signature.t -> Synext.Sgn.sgn
+
+  val elaborate_numeric_order :
+    Synprs.Signature.Totality.Declaration.t -> Synext.Comp.numeric_order
 end
 
 val name_of_identifier : Identifier.t -> Name.t

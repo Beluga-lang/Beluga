@@ -266,7 +266,7 @@ let configuration_wizard' io automation_state : Id.cid_mutual_group * Theorem.t 
              ]
            $> begin function
                 | `Numeric no ->
-                   let order = Reconstruct.numeric_order tau (Synprs_to_synext.Comp.elaborate_numeric_order no) in
+                   let order = Reconstruct.numeric_order tau (Synprs_to_synext.Sgn.elaborate_numeric_order no) in
                    dprintf begin fun p ->
                      p.fmt "[configuration_wizard] @[<v>elaborated numeric order\
                        @,  @[%a@]\

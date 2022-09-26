@@ -529,40 +529,6 @@ module Comp = struct
   end =
     Context_object
 
-  and Totality : sig
-    module rec Declaration : sig
-      type t =
-        | Trust of { location : Location.t }
-        | Numeric of
-            { location : Location.t
-            ; order : Int.t Order.t Option.t
-            }
-        | Named of
-            { location : Location.t
-            ; order : Identifier.t Order.t Option.t
-            ; program : Identifier.t
-            ; argument_labels : Identifier.t Option.t List.t
-            }
-    end
-
-    and Order : sig
-      type 'a t =
-        | Argument of
-            { location : Location.t
-            ; argument : 'a
-            }
-        | Lexical_ordering of
-            { location : Location.t
-            ; arguments : 'a Order.t List1.t
-            }
-        | Simultaneous_ordering of
-            { location : Location.t
-            ; arguments : 'a Order.t List1.t
-            }
-    end
-  end =
-    Totality
-
   let location_of_sort_object sort_object =
     match sort_object with
     | Sort_object.RawIdentifier { location; _ }
@@ -603,18 +569,6 @@ module Comp = struct
     | Pattern_object.RawAnnotated { location; _ }
     | Pattern_object.RawMetaAnnotated { location; _ }
     | Pattern_object.RawWildcard { location; _ } -> location
-
-  let location_of_totality_declaration totality_declaration =
-    match totality_declaration with
-    | Totality.Declaration.Trust { location; _ }
-    | Totality.Declaration.Numeric { location; _ }
-    | Totality.Declaration.Named { location; _ } -> location
-
-  let location_of_totality_order totality_order =
-    match totality_order with
-    | Totality.Order.Argument { location; _ }
-    | Totality.Order.Lexical_ordering { location; _ }
-    | Totality.Order.Simultaneous_ordering { location; _ } -> location
 end
 
 (** {1 Parser Harpoon Syntax} *)
@@ -944,18 +898,53 @@ module Signature = struct
     end
   end
 
-  module Theorem = struct
+  module rec Theorem : sig
     type t =
       { location : Location.t
       ; name : Identifier.t
       ; typ : Comp.Sort_object.t
-      ; order : Comp.Totality.Declaration.t Option.t
+      ; order : Totality.Declaration.t Option.t
       ; body :
           [ `Program of Comp.Expression_object.t
           | `Proof of Harpoon.Proof.t
           ]
       }
-  end
+  end =
+    Theorem
+
+  and Totality : sig
+    module rec Declaration : sig
+      type t =
+        | Trust of { location : Location.t }
+        | Numeric of
+            { location : Location.t
+            ; order : Int.t Order.t Option.t
+            }
+        | Named of
+            { location : Location.t
+            ; order : Identifier.t Order.t Option.t
+            ; program : Identifier.t
+            ; argument_labels : Identifier.t Option.t List.t
+            }
+    end
+
+    and Order : sig
+      type 'a t =
+        | Argument of
+            { location : Location.t
+            ; argument : 'a
+            }
+        | Lexical_ordering of
+            { location : Location.t
+            ; arguments : 'a Order.t List1.t
+            }
+        | Simultaneous_ordering of
+            { location : Location.t
+            ; arguments : 'a Order.t List1.t
+            }
+    end
+  end =
+    Totality
 
   module rec Declaration : sig
     type t =
@@ -1078,6 +1067,18 @@ module Signature = struct
   let location_of_theorem theorem =
     match theorem with
     | { Theorem.location; _ } -> location
+
+  let location_of_totality_declaration totality_declaration =
+    match totality_declaration with
+    | Totality.Declaration.Trust { location; _ }
+    | Totality.Declaration.Numeric { location; _ }
+    | Totality.Declaration.Named { location; _ } -> location
+
+  let location_of_totality_order totality_order =
+    match totality_order with
+    | Totality.Order.Argument { location; _ }
+    | Totality.Order.Lexical_ordering { location; _ }
+    | Totality.Order.Simultaneous_ordering { location; _ } -> location
 
   let location_of_declaration declaration =
     match declaration with

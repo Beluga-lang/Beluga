@@ -10,7 +10,11 @@ val initial_state : input -> state
 
 type error
 
-exception Error of { state : state; cause : error }
+exception
+  Error of
+    { state : state
+    ; cause : error
+    }
 
 (***** Type of parse results. *****)
 
@@ -83,7 +87,7 @@ val schema_object : Meta.Schema_object.t t
 
 val meta_thing : Meta.Thing.t t
 
-val boxed_meta_thing : (Meta.Thing.t * [`Plain | `Hash | `Dollar]) t
+val boxed_meta_thing : (Meta.Thing.t * [ `Plain | `Hash | `Dollar ]) t
 
 val meta_context : Meta.Context_object.t t
 
@@ -99,10 +103,10 @@ val sgn_decl : Signature.Declaration.t t
 
 val sgn : Signature.t t
 
-val trust_totality_declaration : Comp.Totality.Declaration.t t
+val trust_totality_declaration : Signature.Totality.Declaration.t t
 
-val named_totality_declaration : Comp.Totality.Declaration.t t
+val named_totality_declaration : Signature.Totality.Declaration.t t
 
-val numeric_totality_declaration : Comp.Totality.Declaration.t t
+val numeric_totality_declaration : Signature.Totality.Declaration.t t
 
-val totality_declaration : Comp.Totality.Declaration.t t
+val totality_declaration : Signature.Totality.Declaration.t t

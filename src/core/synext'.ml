@@ -211,14 +211,14 @@ end
     - [s] ranges over substitutions
     - [g] ranges over contexts
     - [id] ranges over identifiers
-    - [#] ranges over integers
+    - [n] ranges over integers
 
     {[
       Contextual LF types           A, B ::= a | Πx:A.B | A → B | A M1 M2 ... Mn
                                                | block (x1:A1, x2:A2, ..., xn:An)
       Contextual LF terms           M, N ::= c | x | #x | $x | λx:A.M | M N1 N2 ... Nn
                                                | M:A | M[σ]
-                                               | _ | ? | ?id | <M1; M2; ...; Mn> | M.# | M.id
+                                               | _ | ? | ?id | <M1; M2; ...; Mn> | M.n | M.id
       Contextual LF substitutions   σ    ::= ^ | … | σ, M | s[σ]
       Contextual LF contexts        Ψ    ::= ^ | g | Ψ, x:A
 
@@ -226,7 +226,7 @@ end
                                                     | Mp Np1 Np2 ... Npn
                                                     | Mp:A | Mp[σ] | _
                                                     | <Mp1; Mp2; ...; Mpn>
-                                                    | Mp.# | Mp.id
+                                                    | Mp.n | Mp.id
       Contextual LF substitution patterns   σp     ::= ^ | … | σp, Mp | s[σ]
       Contextual LF context patterns        Ψp     ::= ^ | g | Ψp, x:A
     ]} *)
@@ -649,7 +649,7 @@ end
 
     The metavariable:
 
-    - [X] ranges over meta-variables
+    - [X] ranges over meta-level variables
     - [g] ranges over context schemas
 
     {[
@@ -881,23 +881,24 @@ end
 
     The metavariable:
 
-    - [x] ranges over variables
+    - [x] ranges over computation-level variables
     - [c] ranges over computation-level constants
+    - [X] ranges over meta-level variables
 
     {[
-      Computational kinds         K    ::= ctype | Πx:T.K | Π#x:T.K | Π$x:T.K | T → K |
-      Computational types         T, S ::= Πx:T.S | Π#x:T.K | Π$x:T.K | T → S | T × S
+      Computational kinds         K    ::= ctype | ΠX:T.K | T → K |
+      Computational types         T, S ::= ΠX:T.S | T → S | T × S
                                                   | [U] | T [C1] [C2] ... [CN]
       Computational expressions   E    ::= x | c | let x = P in E | impossible E
                                              | (E1, E2, ..., En) | ? | ?id | _
                                              | E1 E2 ... En
                                              | (case E of P1 => E1 | P2 => E2 | ... | Pn => En)
                                              | fn x1, x2, ..., xn => E
-                                             | mlam x1, x2, ..., xn => E
+                                             | mlam X1, X2, ..., Xn => E
                                              | (fun P1 => E1 | P2 => E2 | ... | Pn => En)
       Computational patterns      P    ::= x | c | [Cp] | (P1, P2, ..., Pn) | P1 P2 ... Pn
-                                             | P : T | { x : U } P | _
-      Computational context       Ξ    ::= ^ | Ξ, x : T
+                                             | P : T | { X : U } P | _
+      Computational context       Γ    ::= ^ | Γ, x : T
     ]} *)
 module Comp = struct
   (** External computation-level kinds. *)
@@ -959,7 +960,7 @@ module Comp = struct
               [domain -> range]. *)
       | Cross of
           { location : Location.t
-          ; typs : Typ.t List2.t
+          ; types : Typ.t List2.t
           }
           (** [Cross { typs = \[t1; t2; ...; tn\]; _ }] is the type of tuple
               [t1 * t2 * ... * tn]. *)
@@ -1120,7 +1121,7 @@ module Comp = struct
           }
       | MetaObject of
           { location : Location.t
-          ; meta_object : Meta.Pattern.t
+          ; meta_pattern : Meta.Pattern.t
           }
       | Tuple of
           { location : Location.t
@@ -1164,40 +1165,6 @@ module Comp = struct
       }
   end =
     Context
-
-  and Totality : sig
-    module rec Declaration : sig
-      type t =
-        | Trust of { location : Location.t }
-        | Numeric of
-            { location : Location.t
-            ; order : Int.t Order.t Option.t
-            }
-        | Named of
-            { location : Location.t
-            ; order : Identifier.t Order.t Option.t
-            ; program : Identifier.t
-            ; argument_labels : Identifier.t Option.t List.t
-            }
-    end
-
-    and Order : sig
-      type 'a t =
-        | Argument of
-            { location : Location.t
-            ; argument : 'a
-            }
-        | Lexical_ordering of
-            { location : Location.t
-            ; arguments : 'a Order.t List1.t
-            }
-        | Simultaneous_ordering of
-            { location : Location.t
-            ; arguments : 'a Order.t List1.t
-            }
-    end
-  end =
-    Totality
 
   (** {2 Locations} *)
 
@@ -1245,18 +1212,6 @@ module Comp = struct
     | Pattern.TypeAnnotated { location; _ }
     | Pattern.MetaTypeAnnotated { location; _ }
     | Pattern.Wildcard { location; _ } -> location
-
-  let location_of_totality_declaration totality_declaration =
-    match totality_declaration with
-    | Totality.Declaration.Trust { location; _ }
-    | Totality.Declaration.Numeric { location; _ }
-    | Totality.Declaration.Named { location; _ } -> location
-
-  let location_of_totality_order totality_order =
-    match totality_order with
-    | Totality.Order.Argument { location; _ }
-    | Totality.Order.Lexical_ordering { location; _ }
-    | Totality.Order.Simultaneous_ordering { location; _ } -> location
 end
 
 (** {1 External Harpoon Syntax} *)
@@ -1581,15 +1536,50 @@ module Signature = struct
     end
   end
 
-  module Theorem = struct
+  module rec Theorem : sig
     type t =
       { location : Location.t
       ; name : Identifier.t
       ; typ : Comp.Typ.t
-      ; order : Comp.Totality.Declaration.t Option.t
+      ; order : Totality.Declaration.t Option.t
       ; body : [ `Program of Comp.Expression.t | `Proof of Harpoon.Proof.t ]
       }
-  end
+  end =
+    Theorem
+
+  and Totality : sig
+    module rec Declaration : sig
+      type t =
+        | Trust of { location : Location.t }
+        | Numeric of
+            { location : Location.t
+            ; order : Int.t Order.t Option.t
+            }
+        | Named of
+            { location : Location.t
+            ; order : Identifier.t Order.t Option.t
+            ; program : Identifier.t
+            ; argument_labels : Identifier.t Option.t List.t
+            }
+    end
+
+    and Order : sig
+      type 'a t =
+        | Argument of
+            { location : Location.t
+            ; argument : 'a
+            }
+        | Lexical_ordering of
+            { location : Location.t
+            ; arguments : 'a Order.t List1.t
+            }
+        | Simultaneous_ordering of
+            { location : Location.t
+            ; arguments : 'a Order.t List1.t
+            }
+    end
+  end =
+    Totality
 
   module rec Declaration : sig
     (** Parsed signature element *)
@@ -1710,6 +1700,18 @@ module Signature = struct
   let location_of_theorem theorem =
     match theorem with
     | { Theorem.location; _ } -> location
+
+  let location_of_totality_declaration totality_declaration =
+    match totality_declaration with
+    | Totality.Declaration.Trust { location; _ }
+    | Totality.Declaration.Numeric { location; _ }
+    | Totality.Declaration.Named { location; _ } -> location
+
+  let location_of_totality_order totality_order =
+    match totality_order with
+    | Totality.Order.Argument { location; _ }
+    | Totality.Order.Lexical_ordering { location; _ }
+    | Totality.Order.Simultaneous_ordering { location; _ } -> location
 
   let location_of_declaration declaration =
     match declaration with

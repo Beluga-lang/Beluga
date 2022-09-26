@@ -241,7 +241,7 @@ let test_type =
         Fun.(
           Synext'_json.CLF.of_typ
           >> Format.stringify (Yojson.Safe.pretty_print ~std:true))
-      ~cmp:Synext'_eq.CLF.Typ.equal expected
+      ~cmp:Synext'_eq.CLF.typ_equal expected
       (parse_clf_object input
       |> Synprs_to_synext'.CLF.disambiguate_as_typ elaboration_context)
   and test_failure elaboration_context input assert_exn _test_ctxt =
@@ -453,7 +453,7 @@ let test_term =
         Fun.(
           Synext'_json.CLF.of_term
           >> Format.stringify (Yojson.Safe.pretty_print ~std:true))
-      ~cmp:Synext'_eq.CLF.Term.equal expected
+      ~cmp:Synext'_eq.CLF.term_equal expected
       (parse_clf_object input
       |> Synprs_to_synext'.CLF.disambiguate_as_term elaboration_context)
   and test_failure elaboration_context input assert_exn _test_ctxt =

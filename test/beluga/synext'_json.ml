@@ -1,3 +1,8 @@
+(** JSON serialization for the external syntax.
+
+    This is used to display parsed external syntax objects when parser tests
+    fail. *)
+
 open Support
 open Beluga
 open Synext'
@@ -710,13 +715,6 @@ module Comp : sig
   val of_pattern : Pattern.t -> Yojson.Safe.t
 
   val of_context : Context.t -> Yojson.Safe.t
-
-  val of_totality_declaration : Totality.Declaration.t -> Yojson.Safe.t
-
-  val of_numeric_totality_order : Int.t Totality.Order.t -> Yojson.Safe.t
-
-  val of_named_totality_order :
-    Identifier.t Totality.Order.t -> Yojson.Safe.t
 end = struct
   let rec of_kind kind =
     match kind with
@@ -769,10 +767,10 @@ end = struct
           ; ("range", of_typ range)
           ; ("location", of_location location)
           ]
-    | Comp.Typ.Cross { typs; location } ->
+    | Comp.Typ.Cross { types; location } ->
       of_variant ~name:"Comp.Typ.Cross"
         ~data:
-          [ ("typs", of_list2 of_typ typs)
+          [ ("types", of_list2 of_typ types)
           ; ("location", of_location location)
           ]
     | Comp.Typ.Box { meta_type; location } ->
@@ -939,10 +937,10 @@ end = struct
           ; ("quoted", of_bool quoted)
           ; ("location", of_location location)
           ]
-    | Comp.Pattern.MetaObject { meta_object; location } ->
+    | Comp.Pattern.MetaObject { meta_pattern; location } ->
       of_variant ~name:"Comp.Pattern.MetaObject"
         ~data:
-          [ ("meta_object", Meta.of_pattern meta_object)
+          [ ("meta_pattern", Meta.of_pattern meta_pattern)
           ; ("location", of_location location)
           ]
     | Comp.Pattern.Tuple { elements; location } ->
@@ -998,69 +996,6 @@ end = struct
                     ; ("typ", of_typ typ)
                     ])
                 bindings )
-          ; ("location", of_location location)
-          ]
-
-  and of_totality_declaration totality_declaration =
-    match totality_declaration with
-    | Comp.Totality.Declaration.Trust { location } ->
-      of_variant ~name:"Comp.Totality.Declaration.Trust"
-        ~data:[ ("location", of_location location) ]
-    | Comp.Totality.Declaration.Numeric { order; location } ->
-      of_variant ~name:"Comp.Totality.Declaration.Numeric"
-        ~data:
-          [ ("order", of_option of_numeric_totality_order order)
-          ; ("location", of_location location)
-          ]
-    | Comp.Totality.Declaration.Named
-        { order; program; argument_labels; location } ->
-      of_variant ~name:"Comp.Totality.Declaration.Named"
-        ~data:
-          [ ("order", of_option of_named_totality_order order)
-          ; ("program", of_identifier program)
-          ; ("argument_labels", of_list of_identifier_opt argument_labels)
-          ; ("location", of_location location)
-          ]
-
-  and of_numeric_totality_order totality_order =
-    match totality_order with
-    | Comp.Totality.Order.Argument { argument; location } ->
-      of_variant ~name:"Comp.Order.Argument"
-        ~data:
-          [ ("argument", of_int argument)
-          ; ("location", of_location location)
-          ]
-    | Comp.Totality.Order.Lexical_ordering { arguments; location } ->
-      of_variant ~name:"Comp.Totality.Order.Lexical_ordering"
-        ~data:
-          [ ("arguments", of_list1 of_numeric_totality_order arguments)
-          ; ("location", of_location location)
-          ]
-    | Comp.Totality.Order.Simultaneous_ordering { arguments; location } ->
-      of_variant ~name:"Comp.Totality.Order.Simultaneous_ordering"
-        ~data:
-          [ ("arguments", of_list1 of_numeric_totality_order arguments)
-          ; ("location", of_location location)
-          ]
-
-  and of_named_totality_order totality_order =
-    match totality_order with
-    | Comp.Totality.Order.Argument { argument; location } ->
-      of_variant ~name:"Comp.Order.Argument"
-        ~data:
-          [ ("argument", of_identifier argument)
-          ; ("location", of_location location)
-          ]
-    | Comp.Totality.Order.Lexical_ordering { arguments; location } ->
-      of_variant ~name:"Comp.Totality.Order.Lexical_ordering"
-        ~data:
-          [ ("arguments", of_list1 of_named_totality_order arguments)
-          ; ("location", of_location location)
-          ]
-    | Comp.Totality.Order.Simultaneous_ordering { arguments; location } ->
-      of_variant ~name:"Comp.Totality.Order.Simultaneous_ordering"
-        ~data:
-          [ ("arguments", of_list1 of_named_totality_order arguments)
           ; ("location", of_location location)
           ]
 end
@@ -1397,6 +1332,13 @@ module Signature : sig
 
   val of_theorem : Theorem.t -> Yojson.Safe.t
 
+  val of_totality_declaration : Totality.Declaration.t -> Yojson.Safe.t
+
+  val of_numeric_totality_order : Int.t Totality.Order.t -> Yojson.Safe.t
+
+  val of_named_totality_order :
+    Identifier.t Totality.Order.t -> Yojson.Safe.t
+
   val of_declaration : Declaration.t -> Yojson.Safe.t
 
   val of_signature : Signature.t -> Yojson.Safe.t
@@ -1483,11 +1425,76 @@ end = struct
         ~data:
           [ ("name", of_identifier name)
           ; ("typ", Comp.of_typ typ)
-          ; ("order", of_option Comp.of_totality_declaration order)
+          ; ("order", of_option of_totality_declaration order)
           ; ( "body"
             , match body with
               | `Program program -> Comp.of_expression program
               | `Proof proof -> Harpoon.of_proof proof )
+          ; ("location", of_location location)
+          ]
+
+  and of_totality_declaration totality_declaration =
+    match totality_declaration with
+    | Signature.Totality.Declaration.Trust { location } ->
+      of_variant ~name:"Signature.Totality.Declaration.Trust"
+        ~data:[ ("location", of_location location) ]
+    | Signature.Totality.Declaration.Numeric { order; location } ->
+      of_variant ~name:"Signature.Totality.Declaration.Numeric"
+        ~data:
+          [ ("order", of_option of_numeric_totality_order order)
+          ; ("location", of_location location)
+          ]
+    | Signature.Totality.Declaration.Named
+        { order; program; argument_labels; location } ->
+      of_variant ~name:"Signature.Totality.Declaration.Named"
+        ~data:
+          [ ("order", of_option of_named_totality_order order)
+          ; ("program", of_identifier program)
+          ; ("argument_labels", of_list of_identifier_opt argument_labels)
+          ; ("location", of_location location)
+          ]
+
+  and of_numeric_totality_order totality_order =
+    match totality_order with
+    | Signature.Totality.Order.Argument { argument; location } ->
+      of_variant ~name:"Signature.Order.Argument"
+        ~data:
+          [ ("argument", of_int argument)
+          ; ("location", of_location location)
+          ]
+    | Signature.Totality.Order.Lexical_ordering { arguments; location } ->
+      of_variant ~name:"Signature.Totality.Order.Lexical_ordering"
+        ~data:
+          [ ("arguments", of_list1 of_numeric_totality_order arguments)
+          ; ("location", of_location location)
+          ]
+    | Signature.Totality.Order.Simultaneous_ordering { arguments; location }
+      ->
+      of_variant ~name:"Signature.Totality.Order.Simultaneous_ordering"
+        ~data:
+          [ ("arguments", of_list1 of_numeric_totality_order arguments)
+          ; ("location", of_location location)
+          ]
+
+  and of_named_totality_order totality_order =
+    match totality_order with
+    | Signature.Totality.Order.Argument { argument; location } ->
+      of_variant ~name:"Signature.Order.Argument"
+        ~data:
+          [ ("argument", of_identifier argument)
+          ; ("location", of_location location)
+          ]
+    | Signature.Totality.Order.Lexical_ordering { arguments; location } ->
+      of_variant ~name:"Signature.Totality.Order.Lexical_ordering"
+        ~data:
+          [ ("arguments", of_list1 of_named_totality_order arguments)
+          ; ("location", of_location location)
+          ]
+    | Signature.Totality.Order.Simultaneous_ordering { arguments; location }
+      ->
+      of_variant ~name:"Signature.Totality.Order.Simultaneous_ordering"
+        ~data:
+          [ ("arguments", of_list1 of_named_totality_order arguments)
           ; ("location", of_location location)
           ]
 

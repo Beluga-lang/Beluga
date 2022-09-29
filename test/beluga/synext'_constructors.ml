@@ -166,7 +166,7 @@ module CLF = struct
     let head, terms = sub in
     let head' =
       match head with
-      | `None -> Substitution.Head.None
+      | `None -> Substitution.Head.None { location }
       | `Id -> Substitution.Head.Identity { location }
       | `SVar i ->
         Substitution.Head.Substitution_variable

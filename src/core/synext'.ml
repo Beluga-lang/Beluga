@@ -507,7 +507,7 @@ module CLF = struct
 
     module Head : sig
       type t =
-        | None
+        | None of { location : Location.t }
         | Identity of { location : Location.t }
         | Substitution_variable of
             { location : Location.t
@@ -526,7 +526,7 @@ module CLF = struct
 
       module Head : sig
         type t =
-          | None
+          | None of { location : Location.t }
           | Identity of { location : Location.t }
           | Substitution_variable of
               { location : Location.t
@@ -540,30 +540,33 @@ module CLF = struct
 
   (** External contextual LF contexts. *)
   and Context : sig
-    (** [{ Context.head; typings; _ }] is the context
+    (** [{ Context.head; bindings; _ }] is the context
 
-        - [^] if [head = Head.None] and [typings = \[\]].
+        - [^] if [head = Head.None] and [bindings = \[\]].
         - [x1 : t1, x2 : t2, ..., xn : tn] if [head = Head.None] and
-          [typings = \[("x1", t1); ("x2", t2); ..., ("xn", tn)\]].
-        - [_] if [head = Head.Hole] and [typings = \[\]].
+          [bindings = \[("x1", t1); ("x2", t2); ..., ("xn", tn)\]].
+        - [_] if [head = Head.Hole] and [bindings = \[\]].
         - [_, x1 : t1, x2 : t2, ..., xn : tn] if [head = Head.Hole] and
-          [typings = \[("x1", t1); ("x2", t2); ..., ("xn", tn)\]].
+          [bindings = \[("x1", t1); ("x2", t2); ..., ("xn", tn)\]].
         - [g] if [head = Head.Context_variable { identifier = "g"; _ }] and
-          [typings = \[\]].
+          [bindings = \[\]].
         - [g, x1 : t1, x2 : t2, ..., xn : tn] if
           [head = Head.Context_variable { identifier = "g"; _ }] and
-          [typings = \[("x1", t1); ("x2", t2); ..., ("xn", tn)\]]. *)
+          [bindings = \[("x1", t1); ("x2", t2); ..., ("xn", tn)\]]. *)
     type t =
       { location : Location.t
       ; head : Context.Head.t
-      ; typings : (Identifier.t * Typ.t) List.t
+      ; bindings : (Identifier.t * Typ.t Option.t) List.t
       }
 
     module Head : sig
       type t =
-        | None
+        | None of { location : Location.t }
         | Hole of { location : Location.t }
-        | Context_variable of { identifier : Identifier.t }
+        | Context_variable of
+            { location : Location.t
+            ; identifier : Identifier.t
+            }
     end
 
     (** External contextual LF context patterns. *)
@@ -571,14 +574,17 @@ module CLF = struct
       type t =
         { location : Location.t
         ; head : Context.Pattern.Head.t
-        ; typings : (Identifier.t * Typ.t) List.t
+        ; bindings : (Identifier.t * Typ.t) List.t
         }
 
       module Head : sig
         type t =
-          | None
+          | None of { location : Location.t }
           | Hole of { location : Location.t }
-          | Context_variable of { identifier : Identifier.t }
+          | Context_variable of
+              { location : Location.t
+              ; identifier : Identifier.t
+              }
       end
     end
   end =
@@ -608,19 +614,19 @@ module CLF = struct
 
   let location_of_substitution substitution =
     match substitution with
-    | Substitution.{ location; _ } -> location
+    | { Substitution.location; _ } -> location
 
   let location_of_substitution_pattern substitution_pattern =
     match substitution_pattern with
-    | Substitution.Pattern.{ location; _ } -> location
+    | { Substitution.Pattern.location; _ } -> location
 
   let location_of_context context =
     match context with
-    | Context.{ location; _ } -> location
+    | { Context.location; _ } -> location
 
   let location_of_context_pattern context_pattern =
     match context_pattern with
-    | Context.Pattern.{ location; _ } -> location
+    | { Context.Pattern.location; _ } -> location
 
   let location_of_term_pattern term_pattern =
     match term_pattern with
@@ -653,13 +659,13 @@ end
     - [g] ranges over context schemas
 
     {[
-      Meta-types           U ::= g | Ψ ⊢ A | Ψ ⊢ Ψ | Ψ #⊢ Ψ
-      Meta-objects         C ::= Ψ | Ψ ⊢ M | Ψ ⊢ σ | Ψ #⊢ σ
+      Meta-types           U ::= g | Ψ ⊢ A | Ψ ⊢ Ψ | Ψ ⊢# Ψ
+      Meta-objects         C ::= Ψ | Ψ ⊢ M | Ψ ⊢ σ | Ψ ⊢# σ
       Meta-substitutions   θ ::= ^ | θ, C/X
       Meta-contexts        Δ ::= ^ | Δ, X:U
       Schemas              G ::= g | G + G | some [x1:A1, x2:A2, ..., xn:An] block (y1:B1, y2:B2, ..., ym:Bm)
 
-      Meta-object patterns   Cp ::= Ψp | Ψp ⊢ Mp | Ψp ⊢ σp | Ψp #⊢ σp
+      Meta-object patterns   Cp ::= Ψp | Ψp ⊢ Mp | Ψp ⊢ σp | Ψp ⊢# σp
     ]} *)
 module Meta = struct
   (** External meta-types. *)
@@ -691,7 +697,7 @@ module Meta = struct
           ; range : CLF.Context.t
           }
           (** [Renaming_substitution_typ { domain; range; _ }] is the type
-              for the renaming substitution [domain #|- range]. *)
+              for the renaming substitution [domain |-# range]. *)
   end =
     Typ
 
@@ -723,7 +729,7 @@ module Meta = struct
           ; range : CLF.Substitution.t
           }
           (** [Renaming_substitution { domain; range; _ }] is the renaming
-              substitution [domain #|- range]. *)
+              substitution [domain |-# range]. *)
   end =
     Object
 
@@ -855,11 +861,11 @@ module Meta = struct
 
   let location_of_substitution substitution =
     match substitution with
-    | Substitution.{ location; _ } -> location
+    | { Substitution.location; _ } -> location
 
   let location_of_context context =
     match context with
-    | Context.{ location; _ } -> location
+    | { Context.location; _ } -> location
 
   let location_of_schema schema =
     match schema with
@@ -955,6 +961,7 @@ module Comp = struct
           { location : Location.t
           ; domain : Typ.t
           ; range : Typ.t
+          ; orientation : [ `Forward | `Backward ]
           }
           (** [Arrow { domain; range; _ }] is the computational type
               [domain -> range]. *)

@@ -204,31 +204,24 @@ module CLF = struct
       | RawSubstitution of
           { location : Location.t
           ; object_ : Object.t
-          ; substitution : Substitution_object.t
+          ; substitution : Context_object.t
           }
   end =
     Object
 
-  and Substitution_object : sig
+  (** Contextual LF substitutions and contexts blurred together. *)
+  and Context_object : sig
     type t =
       { location : Location.t
-      ; head : Substitution_object.Head.t
-      ; objects : Object.t List.t
+      ; head : Context_object.Head.t
+      ; objects : (Identifier.t Option.t * Object.t) List.t
       }
 
     module Head : sig
       type t =
-        | None
+        | None of { location : Location.t }
         | Identity of { location : Location.t }
     end
-  end =
-    Substitution_object
-
-  and Context_object : sig
-    type t =
-      { location : Location.t
-      ; objects : (Identifier.t Option.t * Object.t) List.t
-      }
   end =
     Context_object
 
@@ -247,13 +240,9 @@ module CLF = struct
     | Object.RawProjection { location; _ }
     | Object.RawSubstitution { location; _ } -> location
 
-  let location_of_substitution_object substitution_object =
-    match substitution_object with
-    | Substitution_object.{ location; _ } -> location
-
   let location_of_context_object context_object =
     match context_object with
-    | Context_object.{ location; _ } -> location
+    | { Context_object.location; _ } -> location
 end
 
 (** {1 Parser Meta Syntax} *)
@@ -385,10 +374,6 @@ module Comp = struct
           { location : Location.t
           ; objects : Sort_object.t List2.t
           }
-      | RawTuple of
-          { location : Location.t
-          ; objects : Sort_object.t List2.t
-          }
   end =
     Sort_object
 
@@ -423,7 +408,7 @@ module Comp = struct
           }
       | RawBox of
           { location : Location.t
-          ; boxed : Meta.Thing.t * [ `Plain | `Hash | `Dollar ]
+          ; meta_object : Meta.Thing.t * [ `Plain | `Hash | `Dollar ]
           }
       | RawLet of
           { location : Location.t
@@ -538,8 +523,7 @@ module Comp = struct
     | Sort_object.RawArrow { location; _ }
     | Sort_object.RawCross { location; _ }
     | Sort_object.RawBox { location; _ }
-    | Sort_object.RawApplication { location; _ }
-    | Sort_object.RawTuple { location; _ } -> location
+    | Sort_object.RawApplication { location; _ } -> location
 
   let location_of_expression_object expression_object =
     match expression_object with

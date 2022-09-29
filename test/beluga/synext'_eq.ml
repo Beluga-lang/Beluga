@@ -163,7 +163,7 @@ module CLF = struct
 
   and substitution_head_equal x y =
     match (x, y) with
-    | Substitution.Head.None, Substitution.Head.None
+    | Substitution.Head.None _, Substitution.Head.None _
     | Substitution.Head.Identity _, Substitution.Head.Identity _ -> true
     | ( Substitution.Head.Substitution_variable x
       , Substitution.Head.Substitution_variable y ) ->
@@ -178,7 +178,7 @@ module CLF = struct
 
   and substitution_pattern_head_equal x y =
     match (x, y) with
-    | Substitution.Pattern.Head.None, Substitution.Pattern.Head.None
+    | Substitution.Pattern.Head.None _, Substitution.Pattern.Head.None _
     | ( Substitution.Pattern.Head.Identity _
       , Substitution.Pattern.Head.Identity _ ) -> true
     | ( Substitution.Pattern.Head.Substitution_variable
@@ -191,11 +191,13 @@ module CLF = struct
   and context_equal x y =
     let open Context in
     context_head_equal x.head y.head
-    && List.equal (Pair.equal Identifier.equal typ_equal) x.typings y.typings
+    && List.equal
+         (Pair.equal Identifier.equal (Option.equal typ_equal))
+         x.bindings y.bindings
 
   and context_head_equal x y =
     match (x, y) with
-    | Context.Head.None, Context.Head.None
+    | Context.Head.None _, Context.Head.None _
     | Context.Head.Hole _, Context.Head.Hole _ -> true
     | Context.Head.Context_variable x, Context.Head.Context_variable y ->
       Identifier.equal x.identifier y.identifier
@@ -204,11 +206,13 @@ module CLF = struct
   and context_pattern_equal x y =
     let open Context.Pattern in
     context_pattern_head_equal x.head y.head
-    && List.equal (Pair.equal Identifier.equal typ_equal) x.typings y.typings
+    && List.equal
+         (Pair.equal Identifier.equal typ_equal)
+         x.bindings y.bindings
 
   and context_pattern_head_equal x y =
     match (x, y) with
-    | Context.Pattern.Head.None, Context.Pattern.Head.None
+    | Context.Pattern.Head.None _, Context.Pattern.Head.None _
     | Context.Pattern.Head.Hole _, Context.Pattern.Head.Hole _ -> true
     | ( Context.Pattern.Head.Context_variable x
       , Context.Pattern.Head.Context_variable y ) ->

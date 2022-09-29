@@ -122,6 +122,15 @@ module Dictionary : sig
       modules in the derived [dictionary], which may shadow other bindings. *)
   val add_module : qualified_identifier -> 'a t -> 'a t -> 'a t
 
+  (** [merge dictionary1 dictionary2] is the dictionary derived from
+      [dictionary1] by adding all the bindings from [dictionary2].
+
+      - If an entry appears in both [dictionary1] and [dictionary2], then the
+        entry from [dictionary1] is replaced with the one from [dictionary2].
+      - If a module appears in both [dictionary1] and [dictionary2], then
+        their subdirectories are merged. *)
+  val merge : 'a t -> 'a t -> 'a t
+
   (** {2 Lookup} *)
 
   (** [Unbound_identifier qid] is the exception raised when the identifier

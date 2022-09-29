@@ -116,6 +116,14 @@ module Dictionary = struct
   let add_module qualified_identifier sub_dictionary dictionary =
     add_nested qualified_identifier (Module sub_dictionary) dictionary
 
+  let rec merge d1 d2 =
+    Identifier.Hamt.union_f
+      (fun _key e1 e2 ->
+        match (e1, e2) with
+        | Module m1, Module m2 -> Module (merge m1 m2)
+        | _ -> e2)
+      d1 d2
+
   exception Unbound_identifier of qualified_identifier
 
   exception Unbound_module of qualified_identifier

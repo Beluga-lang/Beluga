@@ -252,14 +252,14 @@ end = struct
           [ ( "elements"
             , match elements with
               | `Unnamed typ -> of_typ typ
-              | `Record typings ->
+              | `Record bindings ->
                 of_list1
                   (fun (identifier, typ) ->
                     of_association
                       [ ("identifier", of_identifier identifier)
                       ; ("typ", of_typ typ)
                       ])
-                  typings )
+                  bindings )
           ; ("location", of_location location)
           ]
 
@@ -442,16 +442,19 @@ end = struct
 
   and of_substitution_head head =
     match head with
-    | CLF.Substitution.Head.None ->
-      of_variant ~name:"CLF.Substitution.Head.None" ~data:[]
-    | CLF.Substitution.Head.Identity _ ->
-      of_variant ~name:"CLF.Substitution.Head.Identity" ~data:[]
-    | CLF.Substitution.Head.Substitution_variable { identifier; closure; _ }
-      ->
+    | CLF.Substitution.Head.None { location } ->
+      of_variant ~name:"CLF.Substitution.Head.None"
+        ~data:[ ("location", of_location location) ]
+    | CLF.Substitution.Head.Identity { location } ->
+      of_variant ~name:"CLF.Substitution.Head.Identity"
+        ~data:[ ("location", of_location location) ]
+    | CLF.Substitution.Head.Substitution_variable
+        { identifier; closure; location } ->
       of_variant ~name:"CLF.Substitution.Head.Substitution_variable"
         ~data:
           [ ("identifier", of_identifier identifier)
           ; ("closure", of_option of_substitution closure)
+          ; ("location", of_location location)
           ]
 
   and of_substitution_pattern substitution_pattern =
@@ -466,71 +469,84 @@ end = struct
 
   and of_substitution_pattern_head head =
     match head with
-    | CLF.Substitution.Pattern.Head.None ->
-      of_variant ~name:"CLF.Substitution.Pattern.Head.None" ~data:[]
-    | CLF.Substitution.Pattern.Head.Identity _ ->
-      of_variant ~name:"CLF.Substitution.Pattern.Head.Identity" ~data:[]
+    | CLF.Substitution.Pattern.Head.None { location } ->
+      of_variant ~name:"CLF.Substitution.Pattern.Head.None"
+        ~data:[ ("location", of_location location) ]
+    | CLF.Substitution.Pattern.Head.Identity { location } ->
+      of_variant ~name:"CLF.Substitution.Pattern.Head.Identity"
+        ~data:[ ("location", of_location location) ]
     | CLF.Substitution.Pattern.Head.Substitution_variable
-        { identifier; closure; _ } ->
+        { identifier; closure; location } ->
       of_variant ~name:"CLF.Substitution.Pattern.Head.Substitution_variable"
         ~data:
           [ ("identifier", of_identifier identifier)
           ; ("closure", of_option of_substitution closure)
+          ; ("location", of_location location)
           ]
 
   and of_context context =
     match context with
-    | { CLF.Context.head; typings; location } ->
+    | { CLF.Context.head; bindings; location } ->
       of_variant ~name:"CLF.Context"
         ~data:
           [ ("head", of_context_head head)
-          ; ( "typings"
+          ; ( "bindings"
             , of_list
                 (fun (identifier, typ) ->
                   of_association
                     [ ("identifier", of_identifier identifier)
-                    ; ("typ", of_typ typ)
+                    ; ("typ", of_option of_typ typ)
                     ])
-                typings )
+                bindings )
           ; ("location", of_location location)
           ]
 
   and of_context_head head =
     match head with
-    | CLF.Context.Head.None ->
-      of_variant ~name:"CLF.Context.Head.None" ~data:[]
-    | CLF.Context.Head.Hole _ ->
-      of_variant ~name:"CLF.Context.Head.Hole" ~data:[]
-    | CLF.Context.Head.Context_variable { identifier; _ } ->
+    | CLF.Context.Head.None { location } ->
+      of_variant ~name:"CLF.Context.Head.None"
+        ~data:[ ("location", of_location location) ]
+    | CLF.Context.Head.Hole { location } ->
+      of_variant ~name:"CLF.Context.Head.Hole"
+        ~data:[ ("location", of_location location) ]
+    | CLF.Context.Head.Context_variable { identifier; location } ->
       of_variant ~name:"CLF.Context.Head.Context_variable"
-        ~data:[ ("identifier", of_identifier identifier) ]
+        ~data:
+          [ ("identifier", of_identifier identifier)
+          ; ("location", of_location location)
+          ]
 
   and of_context_pattern context_pattern =
     match context_pattern with
-    | { CLF.Context.Pattern.head; typings; location } ->
+    | { CLF.Context.Pattern.head; bindings; location } ->
       of_variant ~name:"CLF.Context.Pattern"
         ~data:
           [ ("head", of_context_pattern_head head)
-          ; ( "typings"
+          ; ( "bindings"
             , of_list
                 (fun (identifier, typ) ->
                   of_association
                     [ ("identifier", of_identifier identifier)
                     ; ("typ", of_typ typ)
                     ])
-                typings )
+                bindings )
           ; ("location", of_location location)
           ]
 
   and of_context_pattern_head head =
     match head with
-    | CLF.Context.Pattern.Head.None ->
-      of_variant ~name:"CLF.Context.Head.Pattern.None" ~data:[]
-    | CLF.Context.Pattern.Head.Hole _ ->
-      of_variant ~name:"CLF.Context.Head.Pattern.Hole" ~data:[]
-    | CLF.Context.Pattern.Head.Context_variable { identifier; _ } ->
+    | CLF.Context.Pattern.Head.None { location } ->
+      of_variant ~name:"CLF.Context.Head.Pattern.None"
+        ~data:[ ("location", of_location location) ]
+    | CLF.Context.Pattern.Head.Hole { location } ->
+      of_variant ~name:"CLF.Context.Head.Pattern.Hole"
+        ~data:[ ("location", of_location location) ]
+    | CLF.Context.Pattern.Head.Context_variable { identifier; location } ->
       of_variant ~name:"CLF.Context.Pattern.Head.Context_variable"
-        ~data:[ ("identifier", of_identifier identifier) ]
+        ~data:
+          [ ("identifier", of_identifier identifier)
+          ; ("location", of_location location)
+          ]
 end
 
 module Meta : sig
@@ -691,14 +707,14 @@ end = struct
           ; ( "block"
             , match block with
               | `Unnamed typ -> CLF.of_typ typ
-              | `Record typings ->
+              | `Record bindings ->
                 of_list1
                   (fun (identifier, typ) ->
                     of_association
                       [ ("identifier", of_identifier identifier)
                       ; ("typ", CLF.of_typ typ)
                       ])
-                  typings )
+                  bindings )
           ; ("location", of_location location)
           ]
 end
@@ -760,11 +776,15 @@ end = struct
           ; ("body", of_typ body)
           ; ("location", of_location location)
           ]
-    | Comp.Typ.Arrow { domain; range; location } ->
+    | Comp.Typ.Arrow { domain; range; orientation; location } ->
       of_variant ~name:"Comp.Typ.Arrow"
         ~data:
           [ ("domain", of_typ domain)
           ; ("range", of_typ range)
+          ; ( "orientation"
+            , match orientation with
+              | `Forward -> of_string "forward"
+              | `Backward -> of_string "backward" )
           ; ("location", of_location location)
           ]
     | Comp.Typ.Cross { types; location } ->
@@ -786,14 +806,18 @@ end = struct
           ; ("arguments", of_list1 of_typ arguments)
           ; ("location", of_location location)
           ]
-    | Comp.Typ.Base { applicand; arguments; location; _ } ->
+    | Comp.Typ.Base { applicand; arguments; location; operator = _ } ->
+      (* Don't serialize [operator] since it is resolved from the
+         signature. *)
       of_variant ~name:"Comp.Typ.Base"
         ~data:
           [ ("applicand", of_qualified_identifier applicand)
           ; ("arguments", of_list Meta.of_object arguments)
           ; ("location", of_location location)
           ]
-    | Comp.Typ.Cobase { applicand; arguments; location; _ } ->
+    | Comp.Typ.Cobase { applicand; arguments; location; operator = _ } ->
+      (* Don't serialize [operator] since it is resolved from the
+         signature. *)
       of_variant ~name:"Comp.Typ.Cobase"
         ~data:
           [ ("applicand", of_qualified_identifier applicand)

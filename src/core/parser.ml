@@ -112,7 +112,7 @@ type state =
 let[@warning "-32"] peek_at (s : state) : Token.t locd option =
   Option.(LinkStream.observe s.input $> Pair.fst)
 
-(** Like `peek_at` but forgets the location. *)
+(** Like {!peek_at} but forgets the location. *)
 let[@warning "-32"] next_token s =
   Option.(peek_at s $> Pair.snd |> Option.value ~default:Token.EOI)
 
@@ -427,7 +427,7 @@ let prev_loc : Location.t parser =
   get_state
   $> fun s -> prev_loc_at s
 
-(** Runs `p` tracking the span of source material processed by it. *)
+(** Runs [p] tracking the span of source material processed by it. *)
 let span p =
   seq3 next_loc p prev_loc
   $> fun (l1, x, l2) -> (Location.join l1 l2, x)
@@ -603,22 +603,22 @@ let rec many' (p : 'a parser) : 'a list parser =
 and some' (p : 'a parser) : 'a List1.t parser =
   p >>= fun x -> many' p >>= fun xs -> return (List1.from x xs)
 
-(** `many p` repeats the parser `p` zero or more times and collects
+(** [many p] repeats the parser [p] zero or more times and collects
     the results in a list.
  *)
 let many (p : 'a parser) : 'a list parser =
   shifted "many" (many' p)
 
-(** `some p` repeats the parser `p` one or more times and collects the
+(** [some p] repeats the parser [p] one or more times and collects the
     results in a list.
  *)
 let some (p : 'a parser) : 'a List1.t parser =
   shifted "some" (some' p)
 
-(** `sep_by0 p sep` parses zero or more occurrences of `p` separated
-    by `sep` and collects the results in a list.
+(** [sep_by0 p sep] parses zero or more occurrences of [p] separated
+    by [sep] and collects the results in a list.
     Remark: the separator parser must not produce a result; to forget
-    the result of a parser, use `void`.
+    the result of a parser, use {!void}.
  *)
 let sep_by0 (p : 'a parser) (sep : unit parser) : 'a list parser =
   maybe p
@@ -629,10 +629,10 @@ let sep_by0 (p : 'a parser) (sep : unit parser) : 'a list parser =
         >>= fun xs -> return (x :: xs))
   |> shifted "many separated"
 
-(** `sep_by1 p sep` parses one or more occurrences of `p` separated by
-    `sep` and collects the results in a list.
+(** [sep_by1 p sep] parses one or more occurrences of [p] separated by
+    [sep] and collects the results in a list.
     Remark: the separator parser must not produce a result; to forget
-    the result of a parser, use `void`.
+    the result of a parser, use {!void}.
  *)
 let sep_by1 (p : 'a parser) (sep : unit parser) : 'a List1.t parser =
   seq2 p (many' (sep &> p))
@@ -914,7 +914,7 @@ end = struct
       Weak prefix operators (lambdas and Pis) may appear without parentheses
       as the rightmost operand of an operator.
 
-      <weak-prefix> ::=
+      <lf-weak-prefix> ::=
         | `{' <omittable-identifier> [`:' <lf-object>] `}' <lf-object>
         | `\' <omittable-identifier> [`:' <lf-object>] `.' <lf-object>
 
@@ -922,20 +922,20 @@ end = struct
         | <lf-object1>
 
       <lf-object1> ::=
-        | <weak-prefix>
+        | <lf-weak-prefix>
         | <lf-object2>
 
       <lf-object2> ::=
-        | <lf-object3> (`:' (<lf-object3> | <weak-prefix>))+
+        | <lf-object3> (`:' (<lf-object3> | <lf-weak-prefix>))+
         | <lf-object3>
 
       <lf-object3> ::=
-        | <lf-object4> (<forward-arrow> (<lf-object4> | <weak-prefix>))+
-        | <lf-object4> (<backward-arrow> (<lf-object4> | <weak-prefix>))+
+        | <lf-object4> (<forward-arrow> (<lf-object4> | <lf-weak-prefix>))+
+        | <lf-object4> (<backward-arrow> (<lf-object4> | <lf-weak-prefix>))+
         | <lf-object4>
 
       <lf-object4> ::=
-        | <lf-object5> (<lf-object5> | <weak-prefix>)+
+        | <lf-object5> (<lf-object5> | <lf-weak-prefix>)+
         | <lf-object5>
 
       <lf-object5> ::=
@@ -945,7 +945,7 @@ end = struct
         | `_'
         | `(' <lf-object> `)'
   *)
-  let weak_prefix =
+  let lf_weak_prefix =
     let lambda =
       seq2
         (token Token.LAMBDA
@@ -1014,7 +1014,7 @@ end = struct
       ]
 
   let lf_object4 =
-    some (alt lf_object5 weak_prefix)
+    some (alt lf_object5 lf_weak_prefix)
     |> span
     $> (function
        | (_, List1.T (object_, [])) -> object_
@@ -1031,7 +1031,7 @@ end = struct
        when parsed from right to left. *)
     let forward_arrow = token Token.ARROW $> fun () -> `Forward_arrow
     and backward_arrow = token Token.BACKARROW $> fun () -> `Backward_arrow
-    and right_operand = alt lf_object4 weak_prefix in
+    and right_operand = alt lf_object4 lf_weak_prefix in
     lf_object4 >>= fun object_ ->
     maybe (alt forward_arrow backward_arrow)
     >>= (function
@@ -1095,7 +1095,7 @@ end = struct
   let lf_object2 =
     (* Annotations are left-associative. *)
     let annotation =
-      token Token.COLON &> (alt lf_object3 weak_prefix)
+      token Token.COLON &> (alt lf_object3 lf_weak_prefix)
     in
     let trailing_annotations =
       many (span annotation)
@@ -1126,7 +1126,7 @@ end = struct
 
   let lf_object1 =
     choice
-      [ weak_prefix
+      [ lf_weak_prefix
       ; lf_object2
       ]
 
@@ -1140,21 +1140,15 @@ let lf_object = LF_parsers.lf_object
 module rec CLF_parsers : sig
   val clf_object : CLF.Object.t t
 
-  val clf_substitution_object : CLF.Substitution_object.t t
-
   val clf_context_object : CLF.Context_object.t t
 end = struct
   (*=
       Original grammar:
 
-      <substitution-object> ::=
+      <clf-context-object> ::=
         | [`^']
         | `..'
-        | `[`..' `,'] <clf-object> (`,' <clf-object>)*
-
-      <context-object> ::=
-        | [`^']
-        | [<identifier> `:'] <clf-object> (`,' [<identifier> `:'] <clf-object>)*
+        | [`..' `,'] [<identifier> `:'] <clf-object> (`,' [<identifier> `:'] <clf-object>)*
 
       <clf-object> ::=
         | `{' <omittable-identifier> `:' <clf-object> `}' <clf-object>
@@ -1167,7 +1161,7 @@ end = struct
         | `block' `(' <clf-object> `)'
         | `block' <clf-object>
         | <clf-object> <clf-object>
-        | <clf-object> `[' <substitution-object> `]'
+        | <clf-object> `[' <clf-context-object> `]'
         | <clf-object>`.'<identifier>
         | <clf-object>`.'<integer>
         | `_'
@@ -1183,16 +1177,12 @@ end = struct
       Weak prefix operators (lambdas and Pis) may appear without parentheses
       as the rightmost operand of an operator.
 
-      <substitution-object> ::=
+      <clf-context-object> ::=
         | [`^']
         | `..'
-        | [`..' `,'] <clf-object> (`,' <clf-object>)*
+        | [`..' `,'] [<identifier> `:'] <clf-object> (`,' [<identifier> `:'] <clf-object>)*
 
-      <context-object> ::=
-        | [`^']
-        | [<identifier> `:'] <clf-object> (`,' [<identifier> `:'] <clf-object>)*
-
-      <weak-prefix> ::=
+      <clf-weak-prefix> ::=
         | `{' <omittable-identifier> [`:' <lf-object>] `}' <lf-object>
         | `\' <omittable-identifier> [`:' <lf-object>] `.' <lf-object>
 
@@ -1200,16 +1190,16 @@ end = struct
         | <clf-object1>
 
       <clf-object1> ::=
-        | <weak-prefix>
+        | <clf-weak-prefix>
         | <clf-object2>
 
       <clf-object2> ::=
-        | <clf-object3> (`:' (<clf-object3> | <weak-prefix>))+
+        | <clf-object3> (`:' (<clf-object3> | <clf-weak-prefix>))+
         | <clf-object3>
 
       <clf-object3> ::=
-        | <clf-object4> (<forward-arrow> (<clf-object4> | <weak-prefix>))+
-        | <clf-object4> (<backward-arrow> (<clf-object4> | <weak-prefix>))+
+        | <clf-object4> (<forward-arrow> (<clf-object4> | <clf-weak-prefix>))+
+        | <clf-object4> (<backward-arrow> (<clf-object4> | <clf-weak-prefix>))+
         | <clf-object4>
 
       <clf-object4> ::=
@@ -1220,11 +1210,11 @@ end = struct
         | <clf-object5>
 
       <clf-object5> ::=
-        | <clf-object6> (<clf-object6> | <weak-prefix>)+
+        | <clf-object6> (<clf-object6> | <clf-weak-prefix>)+
         | <clf-object6>
 
       <clf-object6> ::=
-        | <clf-object7> (`[' <substitution-object> `]')+
+        | <clf-object7> (`[' <clf-context-object> `]')+
         | <clf-object7>
 
       <clf-object7> ::=
@@ -1239,7 +1229,7 @@ end = struct
         | `<' <clf-object> (`;' <clf-object>)* `>'
         | `(' <clf-object> `)'
   *)
-  let weak_prefix =
+  let clf_weak_prefix =
     let lambda =
       seq2
         (token Token.LAMBDA
@@ -1269,65 +1259,54 @@ end = struct
       ; pi
       ]
 
-  let clf_substitution_object =
-    let empty =
-      token Token.HAT
-    and identity_extension =
-      token Token.DOTS
-      &> (many (token Token.COMMA &> CLF_parsers.clf_object))
-    and plain =
-      sep_by1 CLF_parsers.clf_object (token Token.COMMA)
-    in
-    maybe
-      (choice
-        [ empty $> (fun () -> `Empty)
-        ; identity_extension $> (fun s -> `Identity_extension s)
-        ; plain $> (fun s -> `Plain s)
-        ]
-      )
-    |> span
-    $> (function
-       | (location, (Option.None | Option.Some `Empty)) ->
-         { CLF.Substitution_object.location
-         ; head = CLF.Substitution_object.Head.None
-         ; objects = []
-         }
-       | (location, Option.Some (`Identity_extension objects)) ->
-         { CLF.Substitution_object.location
-         ; head = CLF.Substitution_object.Head.Identity { location }
-         ; objects
-         }
-       | (location, Option.Some (`Plain objects)) ->
-         { CLF.Substitution_object.location
-         ; head = CLF.Substitution_object.Head.None
-         ; objects = List1.to_list objects
-         }
-       )
-    |> labelled "Contextual LF substitution"
-
   let clf_context_object =
     let empty =
-      token Token.HAT
+      maybe (token Token.HAT)
+      |> span
+      $> fun (location, _) ->
+        { CLF.Context_object.location
+        ; head = CLF.Context_object.Head.None { location }
+        ; objects = []
+        }
+    and identity =
+      token Token.DOTS
+      |> span
+      $> fun (location, ()) ->
+        { CLF.Context_object.location
+        ; head = CLF.Context_object.Head.Identity { location }
+        ; objects = []
+        }
     and non_empty =
-      sep_by1
-        (seq2 (maybe (identifier <& trying (token Token.COLON))) CLF_parsers.clf_object)
-        (token Token.COMMA)
+      let bindings =
+        sep_by1
+          (seq2
+            (maybe (identifier <& trying (token Token.COLON)))
+            CLF_parsers.clf_object
+          )
+          (token Token.COMMA)
+      in
+      seq2
+        (span (maybe (seq2 (span (token Token.DOTS)) (trying (token Token.COMMA)))))
+        bindings
+      |> span
+      $> function
+         | (location, ((_, Option.Some ((dots_location, ()), ())), objects)) ->
+            { CLF.Context_object.location
+            ; head = CLF.Context_object.Head.Identity { location = dots_location }
+            ; objects = List1.to_list objects
+            }
+         | (location, ((empty_head_location, Option.None), objects)) ->
+            { CLF.Context_object.location
+            ; head = CLF.Context_object.Head.None { location = empty_head_location }
+            ; objects = List1.to_list objects
+            }
     in
-    maybe
-      (choice
-        [ empty $> (fun () -> `Empty)
-        ; non_empty $> (fun ts -> `Non_empty ts)
-        ]
-      )
-    |> span
-    $> (function
-       | (location, (Option.None | Option.Some `Empty)) ->
-         { CLF.Context_object.location; objects = [] }
-       | (location, Option.Some (`Non_empty ts)) ->
-         let objects = List1.to_list ts in
-         { CLF.Context_object.location; objects }
-       )
-    |> labelled "Contextual LF context"
+    choice
+      [ non_empty
+      ; identity
+      ; empty
+      ]
+    |> labelled "Contextual LF substitution or context object"
 
   let clf_object8 =
     let constant_or_variable =
@@ -1445,7 +1424,7 @@ end = struct
 
   let clf_object6 =
     (* Substitutions are left-associative. *)
-    seq2 clf_object7 (many (bracks clf_substitution_object))
+    seq2 clf_object7 (many (bracks clf_context_object))
     $> (function
        | (object_, []) -> object_
        | (object_, substitutions) ->
@@ -1454,7 +1433,7 @@ end = struct
                let location =
                   Location.join
                     (CLF.location_of_object accumulator)
-                    (CLF.location_of_substitution_object substitution)
+                    (CLF.location_of_context_object substitution)
                in
                CLF.Object.RawSubstitution
                  { location
@@ -1470,7 +1449,7 @@ end = struct
           substitution term"
 
   let clf_object5 =
-    some (alt clf_object6 weak_prefix)
+    some (alt clf_object6 clf_weak_prefix)
     |> span
     $> (function
        | (_, List1.T (object_, [])) -> object_
@@ -1506,7 +1485,7 @@ end = struct
        when parsed from right to left. *)
     let forward_arrow = token Token.ARROW $> fun () -> `Forward_arrow
     and backward_arrow = token Token.BACKARROW $> fun () -> `Backward_arrow
-    and right_operand = alt clf_object4 weak_prefix in
+    and right_operand = alt clf_object4 clf_weak_prefix in
     clf_object4 >>= fun object_ ->
     maybe (alt forward_arrow backward_arrow)
     >>= (function
@@ -1569,7 +1548,7 @@ end = struct
 
   let clf_object2 =
     let annotation =
-      token Token.COLON &> (alt clf_object3 weak_prefix)
+      token Token.COLON &> (alt clf_object3 clf_weak_prefix)
     in
     let trailing_annotations =
       many (span annotation)
@@ -1600,7 +1579,7 @@ end = struct
 
   let clf_object1 =
     choice
-      [ weak_prefix
+      [ clf_weak_prefix
       ; clf_object2
       ]
 
@@ -1610,8 +1589,6 @@ end = struct
 end
 
 let clf_object = CLF_parsers.clf_object
-
-let clf_substitution_object = CLF_parsers.clf_substitution_object
 
 let clf_context_object = CLF_parsers.clf_context_object
 
@@ -1637,9 +1614,9 @@ end = struct
 
       <meta-thing> ::=
         | <schema-object>
-        | <context-object>
-        | <context-object> <turnstile> <context-object>
-        | <context-object> <turnstile-hash> <context-object>
+        | <clf-context-object>
+        | <clf-context-object> <turnstile> <clf-context-object>
+        | <clf-context-object> <turnstile-hash> <clf-context-object>
 
       Rewritten grammar, to eliminate left-recursions, and handle precedence
       using recursive descent.
@@ -1664,9 +1641,9 @@ end = struct
           `block' `(' [<identifier> `:'] <clf-object> (`,' [<identifier> `:'] <clf-object>)* `)' [`+' <schema-object>)]
         | [`some' `[' <identifier> `:' <clf-object> (`,' <identifier> `:' <clf-object>) `]']
           `block' [<identifier> `:'] <clf-object> (`,' [<identifier> `:'] <clf-object>)* [`+' <schema-object>]
-        | <context-object>
-        | <context-object> <turnstile> <context-object>
-        | <context-object> <turnstile-hash> <context-object>
+        | <clf-context-object>
+        | <clf-context-object> <turnstile> <clf-context-object>
+        | <clf-context-object> <turnstile-hash> <clf-context-object>
   *)
   let plus_operator = token Token.PLUS
 
@@ -1899,7 +1876,7 @@ end = struct
       Weak prefix operators (Pis) may appear without parentheses
       as the rightmost operand of an operator.
 
-      <weak-prefix> ::=
+      <comp-weak-prefix> ::=
         | `{' <omittable-meta-object-identifier> [`:' <boxed-meta-thing>] `}' <comp-sort-object>
         | `(' <omittable-meta-object-identifier> [`:' <boxed-meta-thing>] `)' <comp-sort-object>
 
@@ -1907,12 +1884,12 @@ end = struct
         | <comp-sort-object1>
 
       <comp-sort-object1> ::=
-        | <weak-prefix>
+        | <comp-weak-prefix>
         | <comp-sort-object2>
 
       <comp-sort-object2> ::=
-        | <comp-sort-object3> (<forward-arrow> (<comp-sort-object> | <weak-prefix>))+
-        | <comp-sort-object3> (<backward-arrow> (<comp-sort-object> | <weak-prefix>))+
+        | <comp-sort-object3> (<forward-arrow> (<comp-sort-object> | <comp-weak-prefix>))+
+        | <comp-sort-object3> (<backward-arrow> (<comp-sort-object> | <comp-weak-prefix>))+
         | <comp-sort-object3>
 
       <comp-sort-object3> ::=
@@ -1920,7 +1897,7 @@ end = struct
         | <comp-sort-object4>
 
       <comp-sort-object4> ::=
-        | <comp-sort-object5> (<comp-sort-object5> | <weak-prefix>)+
+        | <comp-sort-object5> (<comp-sort-object5> | <comp-weak-prefix>)+
         | <comp-sort-object5>
 
       <comp-sort-object5> ::=
@@ -1930,7 +1907,7 @@ end = struct
         | <boxed-meta-thing>
         | `(' <comp-sort-object> `)'
   *)
-  let weak_prefix =
+  let comp_weak_prefix =
     let declaration =
       seq2
         omittable_meta_object_identifier
@@ -2014,7 +1991,7 @@ end = struct
       ]
 
   let comp_sort_object4 =
-    some (alt comp_sort_object5 weak_prefix)
+    some (alt comp_sort_object5 comp_weak_prefix)
     |> span
     $> (function
        | (_, List1.T (object_, [])) -> object_
@@ -2030,10 +2007,10 @@ end = struct
     $> (function
        | (_, (object_, [])) -> object_
        | (location, (o1, o2 :: os)) ->
-         let objects = List2.from o1 o2 os in
-         Comp.Sort_object.RawTuple { location; objects })
+         let operands = List2.from o1 o2 os in
+         Comp.Sort_object.RawCross { location; operands })
     |> labelled
-         "Atomic computational kind or type, type application or tuple type"
+         "Atomic computational kind or type, type application or cross type"
 
   let comp_sort_object2 =
     (* Forward arrows are right-associative, and backward arrows are
@@ -2044,7 +2021,7 @@ end = struct
        when parsed from right to left. *)
     let forward_arrow = token Token.ARROW $> fun () -> `Forward_arrow
     and backward_arrow = token Token.BACKARROW $> fun () -> `Backward_arrow
-    and right_operand = alt comp_sort_object3 weak_prefix in
+    and right_operand = alt comp_sort_object3 comp_weak_prefix in
     comp_sort_object3 >>= fun object_ ->
     maybe (alt forward_arrow backward_arrow)
     >>= (function
@@ -2102,12 +2079,12 @@ end = struct
                  })
              x xs)
     |> labelled
-         "Atomic computational kind or type, type application, tuple type, \
+         "Atomic computational kind or type, type application, cross type, \
           forward or backward arrow"
 
   let comp_sort_object1 =
     choice
-      [ weak_prefix
+      [ comp_weak_prefix
       ; comp_sort_object2
       ]
 
@@ -2133,14 +2110,14 @@ end = struct
       Weak prefix operators (Pis) may appear without parentheses
       as the rightmost operand of an operator.
 
-      <weak-prefix> ::=
+      <comp-weak-prefix-pattern> ::=
         | `{' <omittable-meta-object-identifier> `:' <boxed-meta-thing> `}' <comp-pattern-object>
 
       <comp-pattern-object> ::=
         | <comp-pattern-object1>
 
       <comp-pattern-object1> ::=
-        | <weak-prefix>
+        | <comp-weak-prefix-pattern>
         | <comp-pattern-object2>
 
       <comp-pattern-object2> ::=
@@ -2148,7 +2125,7 @@ end = struct
         | <comp-pattern-object3>
 
       <comp-pattern-object3> ::=
-        | <comp-pattern-object4> (<comp-pattern-object4> | <weak-prefix>)
+        | <comp-pattern-object4> (<comp-pattern-object4> | <comp-weak-prefix-pattern>)
         | <comp-pattern-object4>
 
       <comp-pattern-object4> ::=
@@ -2160,7 +2137,7 @@ end = struct
         | `(' <comp-pattern-object> (`,' <comp-pattern-object>)+ `)'
         | `(' <comp-pattern-object> `)'
   *)
-  let weak_prefix =
+  let comp_weak_prefix_pattern =
     let pi =
       seq2
         (braces
@@ -2242,7 +2219,7 @@ end = struct
       ]
 
   let comp_pattern_object3 =
-    some (alt comp_pattern_object4 weak_prefix)
+    some (alt comp_pattern_object4 comp_weak_prefix_pattern)
     |> span
     $> (function
        | (_, List1.T (pattern, [])) -> pattern
@@ -2282,7 +2259,7 @@ end = struct
 
   let comp_pattern_object1 =
     choice
-      [ weak_prefix
+      [ comp_weak_prefix_pattern
       ; comp_pattern_object2
       ]
 
@@ -2418,8 +2395,8 @@ end = struct
     and box =
       Meta_parsers.boxed_meta_thing
       |> span
-      $> (fun (location, boxed) ->
-           Comp.Expression_object.RawBox { location; boxed }
+      $> (fun (location, meta_object) ->
+           Comp.Expression_object.RawBox { location; meta_object }
          )
       |> labelled "Boxed meta-object"
     and case =

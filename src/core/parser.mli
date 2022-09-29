@@ -79,8 +79,6 @@ val lf_object : LF.Object.t t
 
 val clf_object : CLF.Object.t t
 
-val clf_substitution_object : CLF.Substitution_object.t t
-
 val clf_context_object : CLF.Context_object.t t
 
 val schema_object : Meta.Schema_object.t t

@@ -85,8 +85,6 @@ val schema_object : Meta.Schema_object.t t
 
 val meta_thing : Meta.Thing.t t
 
-val boxed_meta_thing : (Meta.Thing.t * [ `Plain | `Hash | `Dollar ]) t
-
 val meta_context : Meta.Context_object.t t
 
 val comp_sort_object : Comp.Sort_object.t t

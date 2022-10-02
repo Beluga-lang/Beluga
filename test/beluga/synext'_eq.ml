@@ -229,6 +229,8 @@ module Meta = struct
       schema_equal x.schema y.schema
     | Typ.Contextual_typ x, Typ.Contextual_typ y ->
       CLF.context_equal x.context y.context && CLF.typ_equal x.typ y.typ
+    | Typ.Parameter_typ x, Typ.Parameter_typ y ->
+      CLF.context_equal x.context y.context && CLF.typ_equal x.typ y.typ
     | Typ.Plain_substitution_typ x, Typ.Plain_substitution_typ y ->
       CLF.context_equal x.domain y.domain
       && CLF.context_equal x.range y.range

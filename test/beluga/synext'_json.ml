@@ -579,6 +579,13 @@ end = struct
           ; ("typ", CLF.of_typ typ)
           ; ("location", of_location location)
           ]
+    | Meta.Typ.Parameter_typ { context; typ; location } ->
+      of_variant ~name:"Meta.Typ.Parameter_typ"
+        ~data:
+          [ ("context", CLF.of_context context)
+          ; ("typ", CLF.of_typ typ)
+          ; ("location", of_location location)
+          ]
     | Meta.Typ.Plain_substitution_typ { domain; range; location } ->
       of_variant ~name:"Meta.Typ.Plain_substitution_typ"
         ~data:

@@ -34,6 +34,18 @@ let join l1 l2 =
      ; ghost = false
      }
 
+let join_all init ls =
+  List.fold_left join init ls
+
+let join_all_contramap f init ls =
+  List.fold_left (fun acc l -> join acc (f l)) init ls
+
+let join_all1 ls =
+  List1.fold_left Fun.id join ls
+
+let join_all1_contramap f ls =
+  List1.fold_left f (fun acc l -> join acc (f l)) ls
+
 let is_ghost s = s.ghost
 
 let start_offset s = s.start.offset

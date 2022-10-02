@@ -3150,8 +3150,6 @@ end = struct
       ]
 end
 
-let harpoon_proof = Harpoon_parsers.harpoon_proof
-
 let interactive_harpoon_command = Harpoon_parsers.interactive_harpoon_command
 
 let interactive_harpoon_command_sequence =
@@ -3246,16 +3244,23 @@ end = struct
         (maybe (token Token.PIPE)
         &> sep_by0 sgn_lf_const_decl (token Token.PIPE))
       |> span
-      $> fun (location, ((identifier, kind), const_decls)) ->
-        Signature.Declaration.Typ { location; identifier; kind }, const_decls
+      $> fun (location, ((identifier, kind), constructor_declarations)) ->
+        let typ_declaration =
+          Signature.Declaration.Typ { location; identifier; kind }
+        in
+        List1.from typ_declaration constructor_declarations
     in
-    labelled "LF type declaration block"
-      (token Token.KW_LF
+    token Token.KW_LF
       &> (sep_by1 lf_typ_decl_body (token Token.KW_AND))
       <& token Token.SEMICOLON
-      |> span
-      $> fun (location, declarations) ->
-          Signature.Declaration.Mutually_recursive_datatypes { location; declarations })
+    |> span
+    $> (fun (location, declarations) ->
+        let declarations' = List1.flatten declarations in
+        Signature.Declaration.Recursive_declarations
+          { location
+          ; declarations = declarations'
+          })
+    |> labelled "LF type declaration block"
 
   let named_totality_argument =
     identifier
@@ -3320,71 +3325,78 @@ end = struct
 
   (** Mutual block of computation type declarations. *)
   let sgn_cmp_typ_decl =
-    labelled "Inductive or stratified computation type declaration"
-      begin
-        let cmp_typ_decl =
-          let inductive =
-            token Token.KW_INDUCTIVE
-            $> fun () -> `Inductive
-          and stratified =
-            token Token.KW_STRATIFIED
-            $> fun () -> `Stratified
-          in
-          let flavour =
-            choice
-              [ inductive
-              ; stratified
-              ]
-          in
-          let sgn_cmp_typ_decl_body =
-            seq2
-              (identifier <& token (Token.COLON))
-              Comp_parsers.comp_sort_object
-            |> span
-            $> fun (location, (identifier, typ)) ->
-               Signature.Declaration.CompConst { location; identifier; typ }
-          in
-          seq4
-            flavour
-            (identifier <& token (Token.COLON))
-            (Comp_parsers.comp_sort_object <& token (Token.EQUALS) <& maybe (token (Token.PIPE)))
-            (sep_by0 sgn_cmp_typ_decl_body (token Token.PIPE))
-          |> span
-          $> fun (location, (datatype_flavour, identifier, kind, decls)) ->
-               Signature.Declaration.CompTyp { location; identifier; kind; datatype_flavour }, decls
-        in
-        let cmp_cotyp_decl =
-          let cmp_cotyp_body =
-            seq2
-              (opt_parens
-                 (seq2
-                    (identifier <& token Token.COLON)
-                    Comp_parsers.comp_sort_object)
-               <& token Token.DOUBLE_COLON)
-              Comp_parsers.comp_sort_object
-            |> span
-            $> fun (location, ((identifier, observation_type), return_type)) ->
-               Signature.Declaration.CompDest
-                { location
-                ; identifier
-                ; observation_type
-                ; return_type
-                }
-          in
-          seq3
-            (token Token.KW_COINDUCTIVE &> identifier <& token Token.COLON)
-            (Comp_parsers.comp_sort_object <& token Token.EQUALS <& maybe (token Token.PIPE))
-            (sep_by0 cmp_cotyp_body (token Token.PIPE))
-          |> span
-          $> fun (location, (identifier, kind, decls)) ->
-               Signature.Declaration.CompCotyp { location; identifier; kind }, decls
-        in
-        sep_by1 (alt cmp_typ_decl cmp_cotyp_decl) (token Token.KW_AND)
-        <& token Token.SEMICOLON
+    let cmp_typ_decl =
+      let inductive =
+        token Token.KW_INDUCTIVE
+        $> fun () -> `Inductive
+      and stratified =
+        token Token.KW_STRATIFIED
+        $> fun () -> `Stratified
+      in
+      let flavour =
+        choice
+          [ inductive
+          ; stratified
+          ]
+      in
+      let sgn_cmp_typ_decl_body =
+        seq2
+          (identifier <& token (Token.COLON))
+          Comp_parsers.comp_sort_object
         |> span
-        $> fun (location, declarations) ->
-          Signature.Declaration.Mutually_recursive_datatypes { location; declarations }
-      end
+        $> fun (location, (identifier, typ)) ->
+            Signature.Declaration.CompConst { location; identifier; typ }
+      in
+      seq4
+        flavour
+        (identifier <& token (Token.COLON))
+        (Comp_parsers.comp_sort_object <& token (Token.EQUALS) <& maybe (token (Token.PIPE)))
+        (sep_by0 sgn_cmp_typ_decl_body (token Token.PIPE))
+      |> span
+      $> fun (location, (datatype_flavour, identifier, kind, constructor_declarations)) ->
+            let typ_declaration =
+              Signature.Declaration.CompTyp { location; identifier; kind; datatype_flavour }
+            in
+            List1.from typ_declaration constructor_declarations
+    in
+    let cmp_cotyp_decl =
+      let cmp_cotyp_body =
+        seq2
+          (opt_parens
+              (seq2
+                (identifier <& token Token.COLON)
+                Comp_parsers.comp_sort_object)
+            <& token Token.DOUBLE_COLON)
+          Comp_parsers.comp_sort_object
+        |> span
+        $> fun (location, ((identifier, observation_type), return_type)) ->
+            Signature.Declaration.CompDest
+            { location
+            ; identifier
+            ; observation_type
+            ; return_type
+            }
+      in
+      seq3
+        (token Token.KW_COINDUCTIVE &> identifier <& token Token.COLON)
+        (Comp_parsers.comp_sort_object <& token Token.EQUALS <& maybe (token Token.PIPE))
+        (sep_by0 cmp_cotyp_body (token Token.PIPE))
+      |> span
+      $> fun (location, (identifier, kind, destructor_declarations)) ->
+            let cotyp_declaration =
+              Signature.Declaration.CompCotyp { location; identifier; kind }
+            in List1.from cotyp_declaration destructor_declarations
+    in
+    sep_by1 (alt cmp_typ_decl cmp_cotyp_decl) (token Token.KW_AND)
+    <& token Token.SEMICOLON
+    |> span
+    $> (fun (location, declarations) ->
+      let declarations' = List1.flatten declarations in
+      Signature.Declaration.Recursive_declarations
+        { location
+        ; declarations = declarations'
+        })
+    |> labelled "Inductive or stratified computation type declaration"
 
   let query_declaration =
     let bound =
@@ -3581,32 +3593,37 @@ end = struct
     $> fun (location, ((identifier, typ), expression)) ->
        Signature.Declaration.Val { location; identifier; typ; expression }
 
-  let thm p =
+  let program_decl =
     seq4
       (identifier <& token Token.COLON)
       (Comp_parsers.comp_sort_object <& token Token.EQUALS)
       (maybe (bracketed' (token Token.SLASH) totality_declaration))
-      p
+      Comp_parsers.comp_expression_object
     |> span
     $> fun (location, (name, typ, order, body)) ->
-       { Signature.Theorem.location; name; typ; order; body }
+      Signature.Declaration.Theorem { location; name; typ; order; body }
 
   let proof_decl =
     token Token.KW_PROOF
-    &> thm (harpoon_proof $> fun p -> `Proof p)
-
-  let program_decl =
-    token Token.KW_REC
-    &> thm (Comp_parsers.comp_expression_object $> fun e -> `Program e)
+    &> seq4
+      (identifier <& token Token.COLON)
+      (Comp_parsers.comp_sort_object <& token Token.EQUALS)
+      (maybe (bracketed' (token Token.SLASH) totality_declaration))
+      Harpoon_parsers.harpoon_proof
+  |> span
+  $> fun (location, (name, typ, order, body)) ->
+    Signature.Declaration.Proof { location; name; typ; order; body }
 
   let sgn_thm_decl =
-    sep_by1
-      (choice [ program_decl; proof_decl ])
-      (token Token.KW_AND)
-    <& token Token.SEMICOLON
+    token Token.KW_REC
+      &> sep_by1
+          (choice [ program_decl; proof_decl ])
+          (token Token.KW_AND)
+      <& token Token.SEMICOLON
     |> span
     |> labelled "(mutual) recursive function declaration(s)"
-    $> fun (location, theorems) -> Signature.Declaration.Theorems { location; theorems }
+    $> fun (location, declarations) ->
+      Signature.Declaration.Recursive_declarations { location; declarations }
 
   let sgn_module_decl =
     seq2

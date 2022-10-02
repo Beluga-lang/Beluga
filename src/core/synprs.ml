@@ -245,7 +245,7 @@ module CLF = struct
     | { Context_object.location; _ } -> location
 end
 
-(** {1 Parser Meta Syntax} *)
+(** {1 Parser Meta-Level Syntax} *)
 
 (** The intermediate representation of meta-types, meta-objects and
     meta-patterns to delay the handling of data-dependent aspects of the
@@ -257,12 +257,13 @@ module Meta = struct
       | RawSchema of
           { location : Location.t
           ; schema : Schema_object.t
-          }
+          }  (** [RawSchema { schema; _ }] is the context schema [schema]. *)
       | RawContext of
           { location : Location.t
           ; context : CLF.Context_object.t
           }
-          (** [RawPlain { context; _ }] is a boxed contextual LF context. *)
+          (** [RawPlain { context; _ }] is the boxed contextual LF context
+              [\[context\]]. *)
       | RawTurnstile of
           { location : Location.t
           ; context : CLF.Context_object.t
@@ -331,7 +332,7 @@ module Meta = struct
     | { Context_object.location; _ } -> location
 end
 
-(** {1 Parser Computation Syntax} *)
+(** {1 Parser Computation-Level Syntax} *)
 
 (** The intermediate representation of computation-level kinds, types,
     expressions and patterns to delay the handling of data-dependent aspects
@@ -884,21 +885,7 @@ module Signature = struct
     end
   end
 
-  module rec Theorem : sig
-    type t =
-      { location : Location.t
-      ; name : Identifier.t
-      ; typ : Comp.Sort_object.t
-      ; order : Totality.Declaration.t Option.t
-      ; body :
-          [ `Program of Comp.Expression_object.t
-          | `Proof of Harpoon.Proof.t
-          ]
-      }
-  end =
-    Theorem
-
-  and Totality : sig
+  module rec Totality : sig
     module rec Declaration : sig
       type t =
         | Trust of { location : Location.t }
@@ -990,13 +977,23 @@ module Signature = struct
           { location : Location.t
           ; pragma : Pragma.Global.t
           }
-      | Mutually_recursive_datatypes of
+      | Theorem of
           { location : Location.t
-          ; declarations : (Declaration.t * Declaration.t List.t) List1.t
+          ; name : Identifier.t
+          ; typ : Comp.Sort_object.t
+          ; order : Totality.Declaration.t Option.t
+          ; body : Comp.Expression_object.t
           }
-      | Theorems of
+      | Proof of
           { location : Location.t
-          ; theorems : Theorem.t List1.t
+          ; name : Identifier.t
+          ; typ : Comp.Sort_object.t
+          ; order : Totality.Declaration.t Option.t
+          ; body : Harpoon.Proof.t
+          }
+      | Recursive_declarations of
+          { location : Location.t
+          ; declarations : Declaration.t List1.t
           }
       | Val of
           { location : Location.t
@@ -1050,10 +1047,6 @@ module Signature = struct
     | Pragma.Global.No_strengthening { location; _ }
     | Pragma.Global.Coverage { location; _ } -> location
 
-  let location_of_theorem theorem =
-    match theorem with
-    | { Theorem.location; _ } -> location
-
   let location_of_totality_declaration totality_declaration =
     match totality_declaration with
     | Totality.Declaration.Trust { location; _ }
@@ -1079,8 +1072,9 @@ module Signature = struct
     | Declaration.Schema { location; _ }
     | Declaration.Pragma { location; _ }
     | Declaration.GlobalPragma { location; _ }
-    | Declaration.Mutually_recursive_datatypes { location; _ }
-    | Declaration.Theorems { location; _ }
+    | Declaration.Theorem { location; _ }
+    | Declaration.Proof { location; _ }
+    | Declaration.Recursive_declarations { location; _ }
     | Declaration.Val { location; _ }
     | Declaration.Query { location; _ }
     | Declaration.MQuery { location; _ }

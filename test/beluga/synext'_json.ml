@@ -1361,8 +1361,6 @@ module Signature : sig
 
   val of_global_pragma : Pragma.Global.t -> Yojson.Safe.t
 
-  val of_theorem : Theorem.t -> Yojson.Safe.t
-
   val of_totality_declaration : Totality.Declaration.t -> Yojson.Safe.t
 
   val of_numeric_totality_order : Int.t Totality.Order.t -> Yojson.Safe.t
@@ -1446,21 +1444,6 @@ end = struct
             , match variant with
               | `Error -> of_string "error"
               | `Warn -> of_string "warn" )
-          ; ("location", of_location location)
-          ]
-
-  and of_theorem theorem =
-    match theorem with
-    | { Signature.Theorem.name; typ; order; body; location } ->
-      of_variant ~name:"Signature.Theorem"
-        ~data:
-          [ ("name", of_identifier name)
-          ; ("typ", Comp.of_typ typ)
-          ; ("order", of_option of_totality_declaration order)
-          ; ( "body"
-            , match body with
-              | `Program program -> Comp.of_expression program
-              | `Proof proof -> Harpoon.of_proof proof )
           ; ("location", of_location location)
           ]
 
@@ -1608,25 +1591,29 @@ end = struct
           [ ("pragma", of_global_pragma pragma)
           ; ("location", of_location location)
           ]
-    | Signature.Declaration.Mutually_recursive_datatypes
-        { declarations; location } ->
-      of_variant ~name:"Signature.Declaration.Mutually_recursive_datatypes"
+    | Signature.Declaration.Theorem { location; name; typ; order; body } ->
+      of_variant ~name:"Signature.Declaration.Theorem"
         ~data:
-          [ ( "declarations"
-            , of_list1
-                (fun (type_constant, term_constants) ->
-                  of_association
-                    [ ("type_constant", of_declaration type_constant)
-                    ; ( "term_constants"
-                      , of_list of_declaration term_constants )
-                    ])
-                declarations )
+          [ ("name", of_identifier name)
+          ; ("typ", Comp.of_typ typ)
+          ; ("order", of_option of_totality_declaration order)
+          ; ("body", Comp.of_expression body)
           ; ("location", of_location location)
           ]
-    | Signature.Declaration.Theorems { theorems; location } ->
-      of_variant ~name:"Signature.Declaration.Theorems"
+    | Signature.Declaration.Proof { location; name; typ; order; body } ->
+      of_variant ~name:"Signature.Declaration.Proof"
         ~data:
-          [ ("theorems", of_list1 of_theorem theorems)
+          [ ("name", of_identifier name)
+          ; ("typ", Comp.of_typ typ)
+          ; ("order", of_option of_totality_declaration order)
+          ; ("body", Harpoon.of_proof body)
+          ; ("location", of_location location)
+          ]
+    | Signature.Declaration.Recursive_declarations { declarations; location }
+      ->
+      of_variant ~name:"Signature.Declaration.Recursive_declarations"
+        ~data:
+          [ ("declarations", of_list1 of_declaration declarations)
           ; ("location", of_location location)
           ]
     | Signature.Declaration.Val { identifier; typ; expression; location } ->

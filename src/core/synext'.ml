@@ -1551,18 +1551,7 @@ module Signature = struct
     end
   end
 
-  module rec Theorem : sig
-    type t =
-      { location : Location.t
-      ; name : Identifier.t
-      ; typ : Comp.Typ.t
-      ; order : Totality.Declaration.t Option.t
-      ; body : [ `Program of Comp.Expression.t | `Proof of Harpoon.Proof.t ]
-      }
-  end =
-    Theorem
-
-  and Totality : sig
+  module rec Totality : sig
     module rec Declaration : sig
       type t =
         | Trust of { location : Location.t }
@@ -1651,14 +1640,24 @@ module Signature = struct
           { location : Location.t
           ; pragma : Pragma.Global.t
           }  (** Global directive *)
-      | Mutually_recursive_datatypes of
+      | Recursive_declarations of
           { location : Location.t
-          ; declarations : (Declaration.t * Declaration.t List.t) List1.t
-          }  (** Mutually-recursive datatypes declaration(s) *)
-      | Theorems of
+          ; declarations : Declaration.t List1.t
+          }  (** Recursive declaration(s) *)
+      | Theorem of
           { location : Location.t
-          ; theorems : Theorem.t List1.t
-          }  (** Mutually recursive theorem declaration(s) *)
+          ; name : Identifier.t
+          ; typ : Comp.Typ.t
+          ; order : Totality.Declaration.t Option.t
+          ; body : Comp.Expression.t
+          }
+      | Proof of
+          { location : Location.t
+          ; name : Identifier.t
+          ; typ : Comp.Typ.t
+          ; order : Totality.Declaration.t Option.t
+          ; body : Harpoon.Proof.t
+          }
       | Val of
           { location : Location.t
           ; identifier : Identifier.t
@@ -1712,10 +1711,6 @@ module Signature = struct
     | Pragma.Global.No_strengthening { location; _ }
     | Pragma.Global.Coverage { location; _ } -> location
 
-  let location_of_theorem theorem =
-    match theorem with
-    | { Theorem.location; _ } -> location
-
   let location_of_totality_declaration totality_declaration =
     match totality_declaration with
     | Totality.Declaration.Trust { location; _ }
@@ -1740,8 +1735,9 @@ module Signature = struct
     | Declaration.Schema { location; _ }
     | Declaration.Pragma { location; _ }
     | Declaration.GlobalPragma { location; _ }
-    | Declaration.Mutually_recursive_datatypes { location; _ }
-    | Declaration.Theorems { location; _ }
+    | Declaration.Theorem { location; _ }
+    | Declaration.Proof { location; _ }
+    | Declaration.Recursive_declarations { location; _ }
     | Declaration.Val { location; _ }
     | Declaration.Query { location; _ }
     | Declaration.MQuery { location; _ }

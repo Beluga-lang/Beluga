@@ -659,13 +659,13 @@ end
     - [g] ranges over context schemas
 
     {[
-      Meta-types           U ::= g | Ψ ⊢ A | Ψ ⊢ Ψ | Ψ ⊢# Ψ
-      Meta-objects         C ::= Ψ | Ψ ⊢ M | Ψ ⊢ σ | Ψ ⊢# σ
+      Meta-types           U ::= g | [Ψ ⊢ A] | #[Ψ ⊢ A] | $[Ψ ⊢ Ψ] | $[Ψ ⊢# Ψ]
+      Meta-objects         C ::= [Ψ] | [Ψ ⊢ M] | $[Ψ ⊢ σ] | $[Ψ ⊢# σ]
       Meta-substitutions   θ ::= ^ | θ, C/X
       Meta-contexts        Δ ::= ^ | Δ, X:U
       Schemas              G ::= g | G + G | some [x1:A1, x2:A2, ..., xn:An] block (y1:B1, y2:B2, ..., ym:Bm)
 
-      Meta-object patterns   Cp ::= Ψp | Ψp ⊢ Mp | Ψp ⊢ σp | Ψp ⊢# σp
+      Meta-object patterns   Cp ::= [Ψp] | [Ψp ⊢ Mp] | $[Ψp ⊢ σp] | $[Ψp ⊢# σp]
     ]} *)
 module Meta = struct
   (** External meta-types. *)
@@ -683,21 +683,28 @@ module Meta = struct
           ; typ : CLF.Typ.t
           }
           (** [Contextual_typ { context; typ; _ }] is the contextual type
-              [context |- typ]. *)
+              [(context |- typ)]. *)
+      | Parameter_typ of
+          { location : Location.t
+          ; context : CLF.Context.t
+          ; typ : CLF.Typ.t
+          }
+          (** [Parameter_typ { context; typ; _ }] is the parameter type
+              [#(context |- typ)]. *)
       | Plain_substitution_typ of
           { location : Location.t
           ; domain : CLF.Context.t
           ; range : CLF.Context.t
           }
           (** [Plain_substitution_typ { domain; range; _ }] is the type for
-              the plain substitution [domain |- range]. *)
+              the plain substitution [$(domain |- range)]. *)
       | Renaming_substitution_typ of
           { location : Location.t
           ; domain : CLF.Context.t
           ; range : CLF.Context.t
           }
           (** [Renaming_substitution_typ { domain; range; _ }] is the type
-              for the renaming substitution [domain |-# range]. *)
+              for the renaming substitution [$(domain |-# range)]. *)
   end =
     Typ
 
@@ -708,28 +715,29 @@ module Meta = struct
           { location : Location.t
           ; context : CLF.Context.t
           }
-          (** [Context { context; _ }] is the context meta-object [context]. *)
+          (** [Context { context; _ }] is the context meta-object
+              [\[context\]]. *)
       | Contextual_term of
           { location : Location.t
           ; context : CLF.Context.t
           ; term : CLF.Term.t
           }
           (** [Contextual_term { context; term; _ }] is the contextual term
-              [context |- term]. *)
+              [\[context |- term\]]. *)
       | Plain_substitution of
           { location : Location.t
           ; domain : CLF.Context.t
           ; range : CLF.Substitution.t
           }
           (** [Plain_substitution { domain; range; _ }] is the plain
-              substitution [domain |- range]. *)
+              substitution [$\[domain |- range\]]. *)
       | Renaming_substitution of
           { location : Location.t
           ; domain : CLF.Context.t
           ; range : CLF.Substitution.t
           }
           (** [Renaming_substitution { domain; range; _ }] is the renaming
-              substitution [domain |-# range]. *)
+              substitution [$\[domain |-# range\]]. *)
   end =
     Object
 
@@ -741,28 +749,28 @@ module Meta = struct
           ; context : CLF.Context.Pattern.t
           }
           (** [Context { context; _ }] is the context meta-object pattern
-              `context'. *)
+              `[context]'. *)
       | Contextual_term of
           { location : Location.t
           ; context : CLF.Context.Pattern.t
           ; term : CLF.Term.Pattern.t
           }
           (** [Contextual_term { context; term; _ }] is the contextual term
-              pattern [context |- term]. *)
+              pattern [\[context |- term\]]. *)
       | Plain_substitution of
           { location : Location.t
           ; domain : CLF.Context.Pattern.t
           ; range : CLF.Substitution.Pattern.t
           }
           (** [Plain_substitution { domain; range; _ }] is the plain
-              substitution pattern [domain |- range]. *)
+              substitution pattern [$\[domain |- range\]]. *)
       | Renaming_substitution of
           { location : Location.t
           ; domain : CLF.Context.Pattern.t
           ; range : CLF.Substitution.Pattern.t
           }
           (** [Renaming_substitution { domain; range; _ }] is the renaming
-              substitution pattern [domain #|- range]. *)
+              substitution pattern [$\[domain #|- range\]]. *)
   end =
     Pattern
 
@@ -894,7 +902,7 @@ end
     {[
       Computational kinds         K    ::= ctype | ΠX:T.K | T → K |
       Computational types         T, S ::= ΠX:T.S | T → S | T × S
-                                                  | [U] | T [C1] [C2] ... [CN]
+                                                  | U | T C1 C2 ... CN
       Computational expressions   E    ::= x | c | let x = P in E | impossible E
                                              | (E1, E2, ..., En) | ? | ?id | _
                                              | E1 E2 ... En
@@ -902,7 +910,7 @@ end
                                              | fn x1, x2, ..., xn => E
                                              | mlam X1, X2, ..., Xn => E
                                              | (fun P1 => E1 | P2 => E2 | ... | Pn => En)
-      Computational patterns      P    ::= x | c | [Cp] | (P1, P2, ..., Pn) | P1 P2 ... Pn
+      Computational patterns      P    ::= x | c | Cp | (P1, P2, ..., Pn) | P1 P2 ... Pn
                                              | P : T | { X : U } P | _
       Computational context       Γ    ::= ^ | Γ, x : T
     ]} *)

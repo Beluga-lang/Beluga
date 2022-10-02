@@ -258,24 +258,29 @@ module Meta = struct
           { location : Location.t
           ; schema : Schema_object.t
           }
-      | RawPlain of
+      | RawContext of
           { location : Location.t
-          ; object_ : CLF.Context_object.t
+          ; context : CLF.Context_object.t
           }
-          (** [RawPlain { object_; _ }] is a meta-thing without a turnstile.
-              This is not a meta-context.
-
-              [object_] may be a schema constant. *)
+          (** [RawPlain { context; _ }] is a boxed contextual LF context. *)
       | RawTurnstile of
           { location : Location.t
           ; context : CLF.Context_object.t
           ; object_ : CLF.Context_object.t
-          ; variant : [ `Plain | `Hash ]
+          ; variant : [ `Plain | `Hash | `Dollar | `Dollar_hash ]
           }
           (** - [RawTurnstile { context; variant = `Plain; object_; _ } ] is
-                the meta-thing [context |- object_].
+                the meta-thing [\[context |- object_\]] or
+                [(context |- object_)].
               - [RawTurnstile { context; variant = `Hash; object_; _ } ] is
-                the meta-thing [context |-# object_]. *)
+                the meta-thing [#\[context |- object_\]] or
+                [#(context |- object_)].
+              - [RawTurnstile { context; variant = `Dollar; object_; _ } ] is
+                the meta-thing [$\[context |- object_\]] or
+                [$(context |- object_)].
+              - [RawTurnstile { context; variant = `Dollar_hash; object_; _ } ]
+                is the meta-thing [$\[context |-# object_\]] or
+                [$(context |-# object_)]. *)
   end =
     Thing
 
@@ -303,8 +308,7 @@ module Meta = struct
     type t =
       { location : Location.t
       ; bindings :
-          ((Identifier.t * [ `Plain | `Hash | `Dollar ])
-          * (Thing.t * [ `Plain | `Hash | `Dollar ]) Option.t)
+          ((Identifier.t * [ `Plain | `Hash | `Dollar ]) * Thing.t Option.t)
           List.t
       }
   end =
@@ -313,7 +317,7 @@ module Meta = struct
   let location_of_meta_thing meta_thing =
     match meta_thing with
     | Thing.RawSchema { location; _ }
-    | Thing.RawPlain { location; _ }
+    | Thing.RawContext { location; _ }
     | Thing.RawTurnstile { location; _ } -> location
 
   let location_of_schema_object schema_object =
@@ -351,8 +355,7 @@ module Comp = struct
           { location : Location.t
           ; parameter_identifier :
               Identifier.t Option.t * [ `Plain | `Hash | `Dollar ]
-          ; parameter_sort :
-              (Meta.Thing.t * [ `Plain | `Hash | `Dollar ]) Option.t
+          ; parameter_sort : Meta.Thing.t Option.t
           ; plicity : Plicity.t
           ; body : Sort_object.t
           }
@@ -368,7 +371,7 @@ module Comp = struct
           }
       | RawBox of
           { location : Location.t
-          ; boxed : Meta.Thing.t * [ `Plain | `Hash | `Dollar ]
+          ; boxed : Meta.Thing.t
           }
       | RawApplication of
           { location : Location.t
@@ -408,7 +411,7 @@ module Comp = struct
           }
       | RawBox of
           { location : Location.t
-          ; meta_object : Meta.Thing.t * [ `Plain | `Hash | `Dollar ]
+          ; meta_object : Meta.Thing.t
           }
       | RawLet of
           { location : Location.t
@@ -470,7 +473,7 @@ module Comp = struct
           }
       | RawBox of
           { location : Location.t
-          ; pattern : Meta.Thing.t * [ `Plain | `Hash | `Dollar ]
+          ; pattern : Meta.Thing.t
           }
       | RawTuple of
           { location : Location.t
@@ -494,8 +497,7 @@ module Comp = struct
           { location : Location.t
           ; parameter_identifier :
               Identifier.t Option.t * [ `Plain | `Hash | `Dollar ]
-          ; parameter_typ :
-              (Meta.Thing.t * [ `Plain | `Hash | `Dollar ]) Option.t
+          ; parameter_typ : Meta.Thing.t Option.t
           ; pattern : Pattern_object.t
           }
           (** [RawMetaAnnotated { paramter_identifier = Option.Some "x"; modifier; parameter_typ = Option.Some t; pattern; _ }]

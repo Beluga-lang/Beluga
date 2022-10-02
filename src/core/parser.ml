@@ -595,6 +595,9 @@ let maybe (p : 'a parser) : 'a option parser =
 let maybe_default p ~default =
   maybe p $> Option.value ~default
 
+(** [void p] forgets the result of applying [p]. *)
+let void (p : 'a parser) : unit parser = p $> fun _ -> ()
+
 (** Internal implementation of {!many} that doesn't label. *)
 let rec many' (p : 'a parser) : 'a list parser =
   alt (some' p $> List1.to_list) (return [])
@@ -1597,8 +1600,6 @@ module rec Meta_parsers : sig
 
   val meta_thing : Meta.Thing.t t
 
-  val boxed_meta_thing : (Meta.Thing.t * [`Plain | `Hash | `Dollar]) t
-
   val meta_context : Meta.Context_object.t t
 end = struct
   (*=
@@ -1614,9 +1615,16 @@ end = struct
 
       <meta-thing> ::=
         | <schema-object>
-        | <clf-context-object>
-        | <clf-context-object> <turnstile> <clf-context-object>
-        | <clf-context-object> <turnstile-hash> <clf-context-object>
+        | `(' <clf-context-object> `)'
+        | `(' <clf-context-object> <turnstile> <clf-context-object> `)'
+        | `#(' <clf-context-object> <turnstile> <clf-context-object> `)'
+        | `$(' <clf-context-object> <turnstile> <clf-context-object> `)'
+        | `$(' <clf-context-object> <turnstile-hash> <clf-context-object> `)'
+        | `[' <clf-context-object> `]'
+        | `[' <clf-context-object> <turnstile> <clf-context-object> `]'
+        | `#[' <clf-context-object> <turnstile> <clf-context-object> `]'
+        | `$[' <clf-context-object> <turnstile> <clf-context-object> `]'
+        | `$[' <clf-context-object> <turnstile-hash> <clf-context-object> `]'
 
       Rewritten grammar, to eliminate left-recursions, and handle precedence
       using recursive descent.
@@ -1636,14 +1644,13 @@ end = struct
           `block' [<identifier> `:'] <clf-object> (`,' [<identifier> `:'] <clf-object>)*
 
       <meta-thing> ::=
-        | <qualified-identifier> `+' <schema-object>
-        | [`some' `[' <identifier> `:' <clf-object> (`,' <identifier> `:' <clf-object>) `]']
-          `block' `(' [<identifier> `:'] <clf-object> (`,' [<identifier> `:'] <clf-object>)* `)' [`+' <schema-object>)]
-        | [`some' `[' <identifier> `:' <clf-object> (`,' <identifier> `:' <clf-object>) `]']
-          `block' [<identifier> `:'] <clf-object> (`,' [<identifier> `:'] <clf-object>)* [`+' <schema-object>]
-        | <clf-context-object>
-        | <clf-context-object> <turnstile> <clf-context-object>
-        | <clf-context-object> <turnstile-hash> <clf-context-object>
+        | <schema-object>
+        | `(' <clf-context-object> [<turnstile> <clf-context-object>] `)'
+        | `#(' <clf-context-object> <turnstile> <clf-context-object> `)'
+        | `$(' <clf-context-object> (<turnstile> | <turnstile-hash>) <clf-context-object> `)'
+        | `[' <clf-context-object> [<turnstile> <clf-context-object>] `]'
+        | `#[' <clf-context-object> <turnstile> <clf-context-object> `]'
+        | `$[' <clf-context-object> (<turnstile> | <turnstile-hash>) <clf-context-object> `]'
   *)
   let plus_operator = token Token.PLUS
 
@@ -1701,118 +1708,94 @@ end = struct
   let schema_object = schema_object1
 
   let meta_thing =
-    let schema =
-      let try_alternation_starting_with_qualified_identifier =
-        seq2 qualified_identifier (trying plus_operator &> Meta_parsers.schema_object)
-        |> span
-        $> fun (location, (x, right_schema)) ->
-            let x_location = QualifiedIdentifier.location x in
-            let schema =
-              Meta.Schema_object.RawConstant
-                { location = x_location
-                ; identifier = x
-                }
-            in
-           match right_schema with
-           | Meta.Schema_object.RawAlternation { schemas; _ } ->
-             let schemas = List2.cons schema schemas in
-             Meta.Schema_object.RawAlternation { location; schemas }
-           | _ ->
-             let schemas = List2.pair schema right_schema in
-             Meta.Schema_object.RawAlternation { location; schemas }
-      and some_block =
-        seq3
-          (span (maybe schema_some_clause))
-          (span schema_block_clause)
-          (maybe (plus_operator &> Meta_parsers.schema_object))
-        |> span
-        $> fun (location, ((some_location, some_opt), (block_location, block), right_schema_opt)) ->
-             let open Option in
-             let schema_location =
-               some_opt
-               $> (fun _ -> Location.join some_location block_location)
-               |> Option.value ~default:block_location
-             in
-             let schema = Meta.Schema_object.RawElement { location = schema_location; some = some_opt; block } in
-             match right_schema_opt with
-             | Option.Some (Meta.Schema_object.RawAlternation { schemas; _ }) ->
-               let schemas = List2.cons schema schemas in
-               Meta.Schema_object.RawAlternation { location; schemas }
-             | Option.Some right_schema ->
-               let schemas = List2.pair schema right_schema in
-               Meta.Schema_object.RawAlternation { location; schemas }
-             | Option.None ->
-               schema
-      in
-      choice
-        [ try_alternation_starting_with_qualified_identifier
-        ; some_block
-        ]
-    in
     let schema_type =
-      schema
-      $> fun schema ->
-        let location = Meta.location_of_schema_object schema in
+      schema_object
+      |> span
+      $> fun (location, schema) ->
         Meta.Thing.RawSchema { location; schema }
     and meta_type_or_meta_object =
-      let turnstile =
-        token Token.TURNSTILE $> fun () -> `Plain
-      and turnstile_hash =
-        token Token.TURNSTILE_HASH $> fun () -> `Hash
+      let plain_inner_thing =
+        seq2
+          CLF_parsers.clf_context_object
+          (maybe (token Token.TURNSTILE &> CLF_parsers.clf_context_object))
+      and hash_inner_thing =
+        seq2
+          CLF_parsers.clf_context_object
+          (token Token.TURNSTILE &> CLF_parsers.clf_context_object)
+      and dollar_inner_thing =
+        let turnstile =
+          token Token.TURNSTILE $> fun () -> `Plain
+        and turnstile_hash =
+          token Token.TURNSTILE_HASH $> fun () -> `Hash
+        in
+        seq2
+          CLF_parsers.clf_context_object
+          (seq2 (alt turnstile turnstile_hash) CLF_parsers.clf_context_object)
       in
-      seq2
-        CLF_parsers.clf_context_object
-        (maybe (seq2 (alt turnstile turnstile_hash) CLF_parsers.clf_context_object))
-      |> span
-      $> function
-         | (location, (object_, Option.None)) ->
-           Meta.Thing.RawPlain { location; object_ }
-         | (location, (context, Option.Some (variant, object_))) ->
-           Meta.Thing.RawTurnstile { location; context; variant; object_ }
+      let plain_meta_type =
+        choice
+          [ parens plain_inner_thing
+          ; bracks plain_inner_thing
+          ]
+        |> span
+        $> (function
+           | (location, (context, Option.None)) ->
+             Synprs.Meta.Thing.RawContext { location; context }
+           | (location, (context, Option.Some object_)) ->
+             Synprs.Meta.Thing.RawTurnstile
+               { location
+               ; context
+               ; object_
+               ; variant = `Plain
+               }
+           )
+      and hash_meta_type =
+        choice
+          [ hash_parens hash_inner_thing
+          ; hash_bracks hash_inner_thing
+          ]
+        |> span
+        $> fun (location, (context, object_)) ->
+            Synprs.Meta.Thing.RawTurnstile
+              { location
+              ; context
+              ; object_
+              ; variant = `Hash
+              }
+      and dollar_meta_type =
+        choice
+          [ dollar_parens dollar_inner_thing
+          ; dollar_bracks dollar_inner_thing
+          ]
+        |> span
+        $> (function
+           | (location, (context, (`Turnstile, object_))) ->
+              Synprs.Meta.Thing.RawTurnstile
+                { location
+                ; context
+                ; object_
+                ; variant = `Dollar
+                }
+           | (location, (context, (`Turnstile_hash, object_))) ->
+              Synprs.Meta.Thing.RawTurnstile
+                { location
+                ; context
+                ; object_
+                ; variant = `Dollar_hash
+                }
+           )
+      in
+      choice
+        [ plain_meta_type
+        ; hash_meta_type
+        ; dollar_meta_type
+        ]
     in
     choice
       [ schema_type
       ; meta_type_or_meta_object
       ]
     |> labelled "Meta-type, meta-object, or meta-object pattern"
-
-  (*=
-      <boxed-meta-thing> ::=
-        | `(' <meta-thing> `)'
-        | `#(' <meta-thing> `)'
-        | `$(' <meta-thing> `)'
-        | `[' <meta-thing> `]'
-        | `#[' <meta-thing> `]'
-        | `$[' <meta-thing> `]'
-  *)
-  let boxed_meta_thing =
-    let parens =
-      parens Meta_parsers.meta_thing
-      $> fun t -> t, `Plain
-    and hash_parens =
-      hash_parens Meta_parsers.meta_thing
-      $> fun t -> t, `Hash
-    and dollar_parens =
-      dollar_parens Meta_parsers.meta_thing
-      $> fun t -> t, `Dollar
-    and bracks =
-      bracks Meta_parsers.meta_thing
-      $> fun t -> t, `Plain
-    and hash_bracks =
-      hash_bracks Meta_parsers.meta_thing
-      $> fun t -> t, `Hash
-    and dollar_bracks =
-      dollar_bracks Meta_parsers.meta_thing
-      $> fun t -> t, `Dollar
-    in
-    choice
-      [ parens
-      ; hash_parens
-      ; dollar_parens
-      ; bracks
-      ; hash_bracks
-      ; dollar_bracks
-      ]
 
   (*=
       <meta-context> ::=
@@ -1822,7 +1805,7 @@ end = struct
   let meta_context =
     let non_empty =
       sep_by0
-        (seq2 meta_object_identifier (maybe (token Token.COLON &> Meta_parsers.boxed_meta_thing)))
+        (seq2 meta_object_identifier (maybe (token Token.COLON &> Meta_parsers.meta_thing)))
         (token Token.COMMA)
       |> span
       $> fun (location, bindings) ->
@@ -1842,12 +1825,12 @@ let schema_object = Meta_parsers.schema_object
 
 let meta_thing = Meta_parsers.meta_thing
 
-let boxed_meta_thing = Meta_parsers.boxed_meta_thing
-
 let meta_context = Meta_parsers.meta_context
 
 module rec Comp_parsers : sig
   val comp_sort_object : Comp.Sort_object.t t
+
+  val comp_pattern_atomic_object : Comp.Pattern_object.t t
 
   val comp_pattern_object : Comp.Pattern_object.t t
 
@@ -1862,13 +1845,13 @@ end = struct
         | <identifier>
         | <qualified-identifier>
         | `ctype'
-        | `{' <omittable-meta-object-identifier> [`:' <boxed-meta-thing>] `}' <comp-sort-object>
-        | `(' <omittable-meta-object-identifier> [`:' <boxed-meta-thing>] `)' <comp-sort-object>
+        | `{' <omittable-meta-object-identifier> [`:' <meta-thing>] `}' <comp-sort-object>
+        | `(' <omittable-meta-object-identifier> [`:' <meta-thing>] `)' <comp-sort-object>
         | <comp-sort-object> <forward-arrow> <comp-sort-object>
         | <comp-sort-object> <backward-arrow> <comp-sort-object>
         | <comp-sort-object> `*' <comp-sort-object>
         | <comp-sort-object> <comp-sort-object>
-        | <boxed-meta-thing>
+        | <meta-thing>
         | `(' <comp-sort-object> `)'
 
       Rewritten grammar, to eliminate left-recursions, handle precedence
@@ -1877,8 +1860,8 @@ end = struct
       as the rightmost operand of an operator.
 
       <comp-weak-prefix> ::=
-        | `{' <omittable-meta-object-identifier> [`:' <boxed-meta-thing>] `}' <comp-sort-object>
-        | `(' <omittable-meta-object-identifier> [`:' <boxed-meta-thing>] `)' <comp-sort-object>
+        | `{' <omittable-meta-object-identifier> [`:' <meta-thing>] `}' <comp-sort-object>
+        | `(' <omittable-meta-object-identifier> [`:' <meta-thing>] `)' <comp-sort-object>
 
       <comp-sort-object> ::=
         | <comp-sort-object1>
@@ -1904,14 +1887,14 @@ end = struct
         | <identifier>
         | <qualified-identifier>
         | `ctype'
-        | <boxed-meta-thing>
+        | <meta-thing>
         | `(' <comp-sort-object> `)'
   *)
   let comp_weak_prefix =
     let declaration =
       seq2
         omittable_meta_object_identifier
-        (maybe (token Token.COLON &> Meta_parsers.boxed_meta_thing))
+        (maybe (token Token.COLON &> Meta_parsers.meta_thing))
     in
     let explicit_pi =
       seq2 (braces declaration) Comp_parsers.comp_sort_object
@@ -1968,7 +1951,7 @@ end = struct
       $> (fun (location, ()) -> Comp.Sort_object.RawCtype { location })
       |> labelled "Computational `ctype' kind"
     and boxed_meta_object_of_meta_type =
-      Meta_parsers.boxed_meta_thing
+      Meta_parsers.meta_thing
       |> span
       $> (fun (location, boxed) -> Comp.Sort_object.RawBox { location; boxed })
       |> labelled "Computational boxed meta-object or meta-type"
@@ -2093,15 +2076,24 @@ end = struct
   (*=
       Original grammar:
 
+      <comp-pattern-object-atomic> ::=
+        | <identifier>
+        | <qualified-identifier>
+        | <boxed-meta-object-thing>
+        | `(' <comp-pattern-object> (`,' <comp-pattern-object>)+ `)'
+        | <dot-qualified-identifier> <comp-pattern-object-atomic>*
+        | `_'
+        | `(' <comp-pattern-object> `)'
+
       <comp-pattern-object> ::=
         | <identifier>
         | <qualified-identifier>
-        | <boxed-meta-thing>
+        | <boxed-meta-object-thing>
         | `(' <comp-pattern-object> (`,' <comp-pattern-object>)+ `)'
         | <comp-pattern-object> <comp-pattern-object>
         | <dot-qualified-identifier> <comp-pattern-object>*
         | <comp-pattern-object> `:' <comp-type>
-        | `{' <omittable-meta-object-identifier> `:' <boxed-meta-thing> `}' <comp-pattern-object>
+        | `{' <omittable-meta-object-identifier> `:' <meta-thing> `}' <comp-pattern-object>
         | `_'
         | `(' <comp-pattern-object> `)'
 
@@ -2111,7 +2103,7 @@ end = struct
       as the rightmost operand of an operator.
 
       <comp-weak-prefix-pattern> ::=
-        | `{' <omittable-meta-object-identifier> `:' <boxed-meta-thing> `}' <comp-pattern-object>
+        | `{' <omittable-meta-object-identifier> `:' <meta-thing> `}' <comp-pattern-object>
 
       <comp-pattern-object> ::=
         | <comp-pattern-object1>
@@ -2131,19 +2123,80 @@ end = struct
       <comp-pattern-object4> ::=
         | <identifier>
         | <qualified-identifier>
-        | <boxed-meta-thing>
+        | <boxed-meta-object-thing>
         | <dot-qualified-identifier> <comp-pattern-object>*
         | `_'
         | `(' <comp-pattern-object> (`,' <comp-pattern-object>)+ `)'
         | `(' <comp-pattern-object> `)'
   *)
+  let comp_pattern_atomic_object =
+    let constant_or_variable =
+      qualified_or_plain_identifier
+      |> span
+      $> (function
+         | (location, `Qualified identifier) ->
+           Comp.Pattern_object.RawQualifiedIdentifier
+             { location
+             ; identifier
+             ; observation = false
+             ; quoted = false
+             }
+         | (location, `Plain identifier) ->
+           Comp.Pattern_object.RawIdentifier
+             { location
+             ; identifier
+             ; quoted = false
+             }
+         )
+      |> labelled "Computational type constant or term variable"
+    and box =
+      Meta_parsers.meta_thing
+      |> span
+      $> (fun (location, pattern) ->
+            Comp.Pattern_object.RawBox { location; pattern }
+         )
+      |> labelled "Meta-object pattern"
+    and observation =
+      seq2 dot_qualified_identifier (many Comp_parsers.comp_pattern_atomic_object)
+      |> span
+      $> (fun (location, (constant, arguments)) ->
+            Comp.Pattern_object.RawObservation { location; constant; arguments }
+         )
+    and wildcard =
+      token Token.UNDERSCORE
+      |> span
+      $> (fun (location, ()) -> Comp.Pattern_object.RawWildcard { location })
+      |> labelled "Computational wildcard pattern"
+    and parenthesized_or_tuple =
+      parens (sep_by1 Comp_parsers.comp_pattern_object (token Token.COMMA))
+      |> span
+      $> (function
+         | (_, List1.T (Comp.Pattern_object.RawIdentifier i, [])) ->
+          Comp.Pattern_object.RawIdentifier { i with quoted = true }
+         | (_, List1.T (Comp.Pattern_object.RawQualifiedIdentifier i, [])) ->
+          Comp.Pattern_object.RawQualifiedIdentifier { i with quoted = true }
+         | (_, List1.T (pattern, [])) -> pattern
+         | (location, List1.T (p1, p2 :: ps)) ->
+           let elements = List2.from p1 p2 ps in
+           Comp.Pattern_object.RawTuple { location; elements }
+         )
+      |> labelled "Computational tuple pattern or parenthesized pattern"
+    in
+    choice
+      [ constant_or_variable
+      ; box
+      ; observation
+      ; wildcard
+      ; parenthesized_or_tuple
+      ]
+
   let comp_weak_prefix_pattern =
     let pi =
       seq2
         (braces
           (seq2
             omittable_meta_object_identifier
-            (maybe (token Token.COLON &> Meta_parsers.boxed_meta_thing))))
+            (maybe (token Token.COLON &> Meta_parsers.meta_thing))))
         Comp_parsers.comp_pattern_object
       |> span
       $> (fun (location, ((parameter_identifier, parameter_typ), pattern)) ->
@@ -2178,7 +2231,7 @@ end = struct
          )
       |> labelled "Computational type constant or term variable"
     and box =
-      Meta_parsers.boxed_meta_thing
+      Meta_parsers.meta_thing
       |> span
       $> (fun (location, pattern) ->
             Comp.Pattern_object.RawBox { location; pattern }
@@ -2271,12 +2324,12 @@ end = struct
       <comp-expression-object> ::=
         | <identifier>
         | <qualified-identifier>
-        | `fn' <omittable-identifier> (`,' <omittable-identifier>)* <thick-forward-arrow> <comp-expression>
-        | `fun' [`|'] <comp-pattern-object> (`,' <comp-pattern-object>)* <thick-forward-arrow> <comp-expression-object>
-          (`|' <comp-pattern-object> (`,' <comp-pattern-object>)* <thick-forward-arrow> <comp-expression-object>)*
-        | `mlam' <omittable-meta-object-identifier> (`,' <omittable-meta-object-identifier>)* <thick-forward-arrow> <comp-expression-object>
+        | `fn' <omittable-identifier>+ <thick-forward-arrow> <comp-expression>
+        | `fun' [`|'] <comp-pattern-atomic-object>+ <thick-forward-arrow> <comp-expression-object>
+          (`|' <comp-pattern-atomic-object>+ <thick-forward-arrow> <comp-expression-object>)*
+        | `mlam' <omittable-meta-object-identifier>+ <thick-forward-arrow> <comp-expression-object>
         | `let' <comp-pattern-object> `=' <comp-expression-object> `in' <comp-expression-object>
-        | `[' <meta-object> `]'
+        | <boxed-meta-object-thing>
         | `impossible' <comp-expression-object>
         | `case' <comp-expression-object> [`--not'] `of'
           [`|'] <comp-pattern-object> <thick-forward-arrow> <comp-expression-object>
@@ -2306,12 +2359,12 @@ end = struct
       <comp-expression-object3> ::=
         | <identifier>
         | <qualified-identifier>
-        | `fn' <omittable-identifier> (`,' <omittable-identifier>)* <thick-forward-arrow> <comp-expression>
-        | `fun' [`|'] <comp-pattern-object> (`,' <comp-pattern-object>)* <thick-forward-arrow> <comp-expression-object>
-          (`|' <comp-pattern-object> (`,' <comp-pattern-object>)* <thick-forward-arrow> <comp-expression-object>)*
-        | `mlam' <omittable-meta-object-identifier> (`,' <omittable-meta-object-identifier>)* <thick-forward-arrow> <comp-expression-object>
+        | `fn' <omittable-identifier>+ <thick-forward-arrow> <comp-expression>
+        | `fun' [`|'] <comp-pattern-atomic-object>+ <thick-forward-arrow> <comp-expression-object>
+          (`|' <comp-pattern-atomic-object>+ <thick-forward-arrow> <comp-expression-object>)*
+        | `mlam' <omittable-meta-object-identifier>+ <thick-forward-arrow> <comp-expression-object>
         | `let' <comp-pattern-object> `=' <comp-expression-object> `in' <comp-expression-object>
-        | `[' <meta-object> `]'
+        | <boxed-meta-object-thing>
         | `impossible' <comp-expression-object>
         | `case' <comp-expression-object> [`--not'] `of'
           [`|'] <comp-pattern-object> <thick-forward-arrow> <comp-expression-object>
@@ -2322,6 +2375,11 @@ end = struct
         | `(' <comp-expression-object> `)'
   *)
   let comp_expression_object3 =
+    let comma_opt =
+      (* Optionally parse a comma, for backwards compatibility with
+         `fn x1, x2, ..., xn => e' and `mlam X1, X2, ..., Xn => e'. *)
+      void (maybe (token Token.COMMA))
+    in
     let constant_or_variable =
       qualified_or_plain_identifier
       |> span
@@ -2343,7 +2401,7 @@ end = struct
       |> labelled "Computational type constant or term variable"
     and fn =
       seq2
-        (token Token.KW_FN &> sep_by1 omittable_identifier (token Token.COMMA))
+        (token Token.KW_FN &> sep_by1 omittable_identifier comma_opt)
         (token Token.THICK_ARROW &> Comp_parsers.comp_expression_object)
       |> span
       $> (fun (location, (parameters, body)) ->
@@ -2351,14 +2409,11 @@ end = struct
          )
       |> labelled "Ordinary function abstraction"
     and matching_fun =
-      let patterns =
-        sep_by1 Comp_parsers.comp_pattern_object (token Token.COMMA)
-      in
       token Token.KW_FUN
       &> maybe (token Token.PIPE)
       &> sep_by1
         (seq2
-          patterns
+          (sep_by1 Comp_parsers.comp_pattern_atomic_object comma_opt)
           (token Token.THICK_ARROW &> Comp_parsers.comp_expression_object))
         (token Token.PIPE)
       |> span
@@ -2368,7 +2423,7 @@ end = struct
       |> labelled "Pattern-matching function abstraction"
     and mlam =
       seq2
-        (token Token.KW_FN &> sep_by1 omittable_meta_object_identifier (token Token.COMMA))
+        (token Token.KW_FN &> some omittable_meta_object_identifier)
         (token Token.THICK_ARROW &> Comp_parsers.comp_expression_object)
       |> span
       $> (fun (location, (parameters, body)) ->
@@ -2393,7 +2448,7 @@ end = struct
          )
       |> labelled "Empty `impossible' case analysis"
     and box =
-      Meta_parsers.boxed_meta_thing
+      Meta_parsers.meta_thing
       |> span
       $> (fun (location, meta_object) ->
            Comp.Expression_object.RawBox { location; meta_object }
@@ -3342,7 +3397,7 @@ end = struct
         (braces
           (seq2
             meta_object_identifier
-            (maybe (token Token.COLON &> Meta_parsers.boxed_meta_thing))))
+            (maybe (token Token.COLON &> Meta_parsers.meta_thing))))
       |> span
       $> fun (location, bindings) ->
         { Meta.Context_object.location; bindings }

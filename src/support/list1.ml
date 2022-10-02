@@ -70,6 +70,18 @@ let filter_map f (T (x, xs)) =
   | Option.Some y -> y :: List.filter_map f xs
   | Option.None -> List.filter_map f xs
 
+let append xs ys = fold_right (fun x -> cons x ys) cons xs
+
+let rec flatten (T (hd, tl)) =
+  match tl with
+  | [] -> hd
+  | x :: xs -> append x (flatten (T (x, xs)))
+
+let rec concat_map f (T (hd, tl)) =
+  match tl with
+  | [] -> f hd
+  | x :: xs -> append (f x) (concat_map f (T (x, xs)))
+
 let for_all p (T (x, xs)) = p x && List.for_all p xs
 
 let exists p (T (x, xs)) = p x || List.exists p xs

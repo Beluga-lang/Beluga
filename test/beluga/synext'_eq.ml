@@ -592,17 +592,6 @@ module Signature = struct
       x.variant = y.variant
     | _ -> false
 
-  and theorem_equal x y =
-    let open Theorem in
-    Identifier.equal x.name y.name
-    && Comp.typ_equal x.typ y.typ
-    && Option.equal totality_declaration_equal x.order y.order
-    &&
-    match (x.body, y.body) with
-    | `Program x, `Program y -> Comp.expression_equal x y
-    | `Proof x, `Proof y -> Harpoon.proof_equal x y
-    | _ -> false
-
   and totality_declaration_equal x y =
     match (x, y) with
     | Totality.Declaration.Trust _, Totality.Declaration.Trust _ -> true
@@ -666,14 +655,19 @@ module Signature = struct
       pragma_equal x.pragma y.pragma
     | Declaration.GlobalPragma x, Declaration.GlobalPragma y ->
       global_pragma_equal x.pragma y.pragma
-    | ( Declaration.Mutually_recursive_datatypes x
-      , Declaration.Mutually_recursive_datatypes y ) ->
-      List1.equal
-        (fun (k1, c1) (k2, c2) ->
-          declaration_equal k1 k2 && List.equal declaration_equal c1 c2)
-        x.declarations y.declarations
-    | Declaration.Theorems x, Declaration.Theorems y ->
-      List1.equal theorem_equal x.theorems y.theorems
+    | Declaration.Theorem x, Declaration.Theorem y ->
+      Identifier.equal x.name y.name
+      && Comp.typ_equal x.typ y.typ
+      && Option.equal totality_declaration_equal x.order y.order
+      && Comp.expression_equal x.body y.body
+    | Declaration.Proof x, Declaration.Proof y ->
+      Identifier.equal x.name y.name
+      && Comp.typ_equal x.typ y.typ
+      && Option.equal totality_declaration_equal x.order y.order
+      && Harpoon.proof_equal x.body y.body
+    | ( Declaration.Recursive_declarations x
+      , Declaration.Recursive_declarations y ) ->
+      List1.equal declaration_equal x.declarations y.declarations
     | Declaration.Val x, Declaration.Val y ->
       Identifier.equal x.identifier y.identifier
       && Option.equal Comp.typ_equal x.typ y.typ

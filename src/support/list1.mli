@@ -39,6 +39,12 @@ val last : 'a t -> 'a
 (** [length l] the number of elements in [l]. *)
 val length : 'a t -> int
 
+(** [append l1 l2] is the concatenation of [l1] and [l2]. *)
+val append : 'a t -> 'a t -> 'a t
+
+(** [flatten l] is the concatenation of the lists in [l]. *)
+val flatten : 'a t t -> 'a t
+
 (** {1 Comparison} *)
 
 (** [compare l1 l2] is equivalent to [compare (length l1) (length l2)],
@@ -75,7 +81,7 @@ val compare : ('a -> 'a -> int) -> 'a t -> 'a t -> int
     [begin f a1; f a2; ...; f an; () end]. *)
 val iter : ('a -> unit) -> 'a t -> unit
 
-(** Maps a function over the non-empty list. *)
+(** [map f (a1, \[a2; ...; an\])] is [(f a1, \[f a2; ...; f an\])]. *)
 val map : ('a -> 'b) -> 'a t -> 'b t
 
 (** [fold_right sing cons (a1, \[a2; ...; an\])] is
@@ -90,6 +96,9 @@ val fold_left : ('a -> 'b) -> ('b -> 'a -> 'b) -> 'a t -> 'b
     [Option.None] elements and returns the list of the arguments of the
     [Option.Some] elements. *)
 val filter_map : ('a -> 'b option) -> 'a t -> 'b list
+
+(** [concat_map f l] is [concat (map f l)]. *)
+val concat_map : ('a -> 'b t) -> 'a t -> 'b t
 
 (** Collapses a non-empty sequence to a single element, provided all elements
     are (structurally) equal. *)

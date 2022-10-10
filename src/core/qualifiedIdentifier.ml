@@ -83,6 +83,9 @@ module Dictionary = struct
   let add_toplevel_entry identifier entry dictionary =
     Identifier.Hamt.add identifier (Entry entry) dictionary
 
+  let add_toplevel_module identifier sub_dictionary dictionary =
+    Identifier.Hamt.add identifier (Module sub_dictionary) dictionary
+
   let add_nested qualified_identifier entry dictionary =
     let identifier = name qualified_identifier
     and modules = modules qualified_identifier in

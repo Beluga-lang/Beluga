@@ -101,6 +101,15 @@ module Dictionary : sig
       the derived dictionary. *)
   val add_toplevel_entry : Identifier.t -> 'a -> 'a t -> 'a t
 
+  (** [add_toplevel_module identifier sub_dictionary dictionary] is the
+      dictionary derived from [dictionary] with the added binding of module
+      [sub_dictionary] to [identifier].
+
+      If the binding already exists in [dictionary], then it is replaced in
+      the derived dictionary. Additionally, modules in [identifier] are
+      modules in the derived [dictionary], which may shadow other bindings. *)
+  val add_toplevel_module : Identifier.t -> 'a t -> 'a t -> 'a t
+
   (** [add_entry identifier value dictionary] is the dictionary derived from
       [dictionary] with the added binding of [value] to [identifier].
 

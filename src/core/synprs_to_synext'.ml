@@ -15,6 +15,12 @@ module type DISAMBIGUATION_STATE = sig
     | Context_variable
     | Schema_constant
     | Computation_variable
+    | Computation_type_constant of Operator.t
+    | Computation_term_constructor of Operator.t
+    | Computation_cotype_constant of Operator.t
+    | Computation_term_destructor
+    | Query
+    | MQuery
 
   (** {1 Constructors} *)
 
@@ -23,30 +29,30 @@ module type DISAMBIGUATION_STATE = sig
   val add_lf_term_variable : Identifier.t -> t -> t
 
   val add_prefix_lf_type_constant :
-    arity:Int.t -> precedence:Int.t -> QualifiedIdentifier.t -> t -> t
+    arity:Int.t -> precedence:Int.t -> Identifier.t -> t -> t
 
   val add_infix_lf_type_constant :
        associativity:Associativity.t
     -> precedence:Int.t
-    -> QualifiedIdentifier.t
+    -> Identifier.t
     -> t
     -> t
 
   val add_postfix_lf_type_constant :
-    precedence:Int.t -> QualifiedIdentifier.t -> t -> t
+    precedence:Int.t -> Identifier.t -> t -> t
 
   val add_prefix_lf_term_constant :
-    arity:Int.t -> precedence:Int.t -> QualifiedIdentifier.t -> t -> t
+    arity:Int.t -> precedence:Int.t -> Identifier.t -> t -> t
 
   val add_infix_lf_term_constant :
        associativity:Associativity.t
     -> precedence:Int.t
-    -> QualifiedIdentifier.t
+    -> Identifier.t
     -> t
     -> t
 
   val add_postfix_lf_term_constant :
-    precedence:Int.t -> QualifiedIdentifier.t -> t -> t
+    precedence:Int.t -> Identifier.t -> t -> t
 
   val add_meta_variable : Identifier.t -> t -> t
 
@@ -56,11 +62,56 @@ module type DISAMBIGUATION_STATE = sig
 
   val add_context_variable : Identifier.t -> t -> t
 
-  val add_schema_constant : QualifiedIdentifier.t -> t -> t
+  val add_schema_constant : Identifier.t -> t -> t
 
   val add_computation_variable : Identifier.t -> t -> t
 
-  val add_module : t -> QualifiedIdentifier.t -> t -> t
+  val add_prefix_computation_type_constant :
+    arity:Int.t -> precedence:Int.t -> Identifier.t -> t -> t
+
+  val add_infix_computation_type_constant :
+       associativity:Associativity.t
+    -> precedence:Int.t
+    -> Identifier.t
+    -> t
+    -> t
+
+  val add_postfix_computation_type_constant :
+    precedence:Int.t -> Identifier.t -> t -> t
+
+  val add_prefix_computation_term_constructor :
+    arity:Int.t -> precedence:Int.t -> Identifier.t -> t -> t
+
+  val add_infix_computation_term_constructor :
+       associativity:Associativity.t
+    -> precedence:Int.t
+    -> Identifier.t
+    -> t
+    -> t
+
+  val add_postfix_computation_term_constructor :
+    precedence:Int.t -> Identifier.t -> t -> t
+
+  val add_prefix_computation_cotype_constant :
+    arity:Int.t -> precedence:Int.t -> Identifier.t -> t -> t
+
+  val add_infix_computation_cotype_constant :
+       associativity:Associativity.t
+    -> precedence:Int.t
+    -> Identifier.t
+    -> t
+    -> t
+
+  val add_postfix_computation_cotype_constant :
+    precedence:Int.t -> Identifier.t -> t -> t
+
+  val add_computation_term_destructor : Identifier.t -> t -> t
+
+  val add_query : Identifier.t -> t -> t
+
+  val add_mquery : Identifier.t -> t -> t
+
+  val add_module : t -> Identifier.t -> t -> t
 
   (** {1 Lookup} *)
 
@@ -86,6 +137,12 @@ module Disambiguation_state : DISAMBIGUATION_STATE = struct
     | Context_variable
     | Schema_constant
     | Computation_variable
+    | Computation_type_constant of Operator.t
+    | Computation_term_constructor of Operator.t
+    | Computation_cotype_constant of Operator.t
+    | Computation_term_destructor
+    | Query
+    | MQuery
 
   let empty = QualifiedIdentifier.Dictionary.empty
 
@@ -95,32 +152,32 @@ module Disambiguation_state : DISAMBIGUATION_STATE = struct
 
   let add_prefix_lf_type_constant ~arity ~precedence identifier =
     let operator = Operator.make_prefix ~arity ~precedence in
-    QualifiedIdentifier.Dictionary.add_entry identifier
+    QualifiedIdentifier.Dictionary.add_toplevel_entry identifier
       (LF_type_constant operator)
 
   let add_infix_lf_type_constant ~associativity ~precedence identifier =
     let operator = Operator.make_infix ~associativity ~precedence in
-    QualifiedIdentifier.Dictionary.add_entry identifier
+    QualifiedIdentifier.Dictionary.add_toplevel_entry identifier
       (LF_type_constant operator)
 
   let add_postfix_lf_type_constant ~precedence identifier =
     let operator = Operator.make_postfix ~precedence in
-    QualifiedIdentifier.Dictionary.add_entry identifier
+    QualifiedIdentifier.Dictionary.add_toplevel_entry identifier
       (LF_type_constant operator)
 
   let add_prefix_lf_term_constant ~arity ~precedence identifier =
     let operator = Operator.make_prefix ~arity ~precedence in
-    QualifiedIdentifier.Dictionary.add_entry identifier
+    QualifiedIdentifier.Dictionary.add_toplevel_entry identifier
       (LF_term_constant operator)
 
   let add_infix_lf_term_constant ~associativity ~precedence identifier =
     let operator = Operator.make_infix ~associativity ~precedence in
-    QualifiedIdentifier.Dictionary.add_entry identifier
+    QualifiedIdentifier.Dictionary.add_toplevel_entry identifier
       (LF_term_constant operator)
 
   let add_postfix_lf_term_constant ~precedence identifier =
     let operator = Operator.make_postfix ~precedence in
-    QualifiedIdentifier.Dictionary.add_entry identifier
+    QualifiedIdentifier.Dictionary.add_toplevel_entry identifier
       (LF_term_constant operator)
 
   let add_meta_variable identifier =
@@ -140,14 +197,74 @@ module Disambiguation_state : DISAMBIGUATION_STATE = struct
       Context_variable
 
   let add_schema_constant identifier =
-    QualifiedIdentifier.Dictionary.add_entry identifier Schema_constant
+    QualifiedIdentifier.Dictionary.add_toplevel_entry identifier
+      Schema_constant
 
   let add_computation_variable identifier =
     QualifiedIdentifier.Dictionary.add_toplevel_entry identifier
       Computation_variable
 
+  let add_prefix_computation_type_constant ~arity ~precedence identifier =
+    let operator = Operator.make_prefix ~arity ~precedence in
+    QualifiedIdentifier.Dictionary.add_toplevel_entry identifier
+      (Computation_type_constant operator)
+
+  let add_infix_computation_type_constant ~associativity ~precedence
+      identifier =
+    let operator = Operator.make_infix ~associativity ~precedence in
+    QualifiedIdentifier.Dictionary.add_toplevel_entry identifier
+      (Computation_type_constant operator)
+
+  let add_postfix_computation_type_constant ~precedence identifier =
+    let operator = Operator.make_postfix ~precedence in
+    QualifiedIdentifier.Dictionary.add_toplevel_entry identifier
+      (Computation_type_constant operator)
+
+  let add_prefix_computation_term_constructor ~arity ~precedence identifier =
+    let operator = Operator.make_prefix ~arity ~precedence in
+    QualifiedIdentifier.Dictionary.add_toplevel_entry identifier
+      (Computation_term_constructor operator)
+
+  let add_infix_computation_term_constructor ~associativity ~precedence
+      identifier =
+    let operator = Operator.make_infix ~associativity ~precedence in
+    QualifiedIdentifier.Dictionary.add_toplevel_entry identifier
+      (Computation_term_constructor operator)
+
+  let add_postfix_computation_term_constructor ~precedence identifier =
+    let operator = Operator.make_postfix ~precedence in
+    QualifiedIdentifier.Dictionary.add_toplevel_entry identifier
+      (Computation_term_constructor operator)
+
+  let add_prefix_computation_cotype_constant ~arity ~precedence identifier =
+    let operator = Operator.make_prefix ~arity ~precedence in
+    QualifiedIdentifier.Dictionary.add_toplevel_entry identifier
+      (Computation_cotype_constant operator)
+
+  let add_infix_computation_cotype_constant ~associativity ~precedence
+      identifier =
+    let operator = Operator.make_infix ~associativity ~precedence in
+    QualifiedIdentifier.Dictionary.add_toplevel_entry identifier
+      (Computation_cotype_constant operator)
+
+  let add_postfix_computation_cotype_constant ~precedence identifier =
+    let operator = Operator.make_postfix ~precedence in
+    QualifiedIdentifier.Dictionary.add_toplevel_entry identifier
+      (Computation_cotype_constant operator)
+
+  let add_computation_term_destructor identifier =
+    QualifiedIdentifier.Dictionary.add_toplevel_entry identifier
+      Computation_term_destructor
+
+  let add_query identifier =
+    QualifiedIdentifier.Dictionary.add_toplevel_entry identifier Query
+
+  let add_mquery identifier =
+    QualifiedIdentifier.Dictionary.add_toplevel_entry identifier MQuery
+
   let add_module module_dictionary identifier =
-    QualifiedIdentifier.Dictionary.add_module identifier module_dictionary
+    QualifiedIdentifier.Dictionary.add_toplevel_module identifier
+      module_dictionary
 
   let lookup query state = QualifiedIdentifier.Dictionary.lookup query state
 
@@ -524,8 +641,66 @@ struct
               Disambiguation_state.Computation_variable
         } ->
       Format.fprintf ppf
-        "Expected an LF term-level constant but found a computation \
+        "Expected an LF term-level constant but found a computation-level \
          variable instead: %a@."
+        Location.pp location
+    | Expected_term_constant
+        { location
+        ; actual_binding =
+            QualifiedIdentifier.Dictionary.Entry
+              (Disambiguation_state.Computation_type_constant _)
+        } ->
+      Format.fprintf ppf
+        "Expected an LF term-level constant but found a computation-level \
+         type constant instead: %a@."
+        Location.pp location
+    | Expected_term_constant
+        { location
+        ; actual_binding =
+            QualifiedIdentifier.Dictionary.Entry
+              (Disambiguation_state.Computation_term_constructor _)
+        } ->
+      Format.fprintf ppf
+        "Expected an LF term-level constant but found a computation-level \
+         term constructor constant instead: %a@."
+        Location.pp location
+    | Expected_term_constant
+        { location
+        ; actual_binding =
+            QualifiedIdentifier.Dictionary.Entry
+              (Disambiguation_state.Computation_cotype_constant _)
+        } ->
+      Format.fprintf ppf
+        "Expected an LF term-level constant but found a computation-level \
+         cotype constant instead: %a@."
+        Location.pp location
+    | Expected_term_constant
+        { location
+        ; actual_binding =
+            QualifiedIdentifier.Dictionary.Entry
+              Disambiguation_state.Computation_term_destructor
+        } ->
+      Format.fprintf ppf
+        "Expected an LF term-level constant but found a computation-level \
+         type destructor constant instead: %a@."
+        Location.pp location
+    | Expected_term_constant
+        { location
+        ; actual_binding =
+            QualifiedIdentifier.Dictionary.Entry Disambiguation_state.Query
+        } ->
+      Format.fprintf ppf
+        "Expected an LF term-level constant but found a logic programming \
+         query identifier instead: %a@."
+        Location.pp location
+    | Expected_term_constant
+        { location
+        ; actual_binding =
+            QualifiedIdentifier.Dictionary.Entry Disambiguation_state.MQuery
+        } ->
+      Format.fprintf ppf
+        "Expected an LF term-level constant but found a logic programming \
+         meta-query identifier instead: %a@."
         Location.pp location
     | Expected_term_constant
         { location
@@ -601,8 +776,66 @@ struct
               Disambiguation_state.Computation_variable
         } ->
       Format.fprintf ppf
-        "Expected an LF type-level constant but found a computation \
+        "Expected an LF type-level constant but found a computation-level \
          variable instead: %a@."
+        Location.pp location
+    | Expected_type_constant
+        { location
+        ; actual_binding =
+            QualifiedIdentifier.Dictionary.Entry
+              (Disambiguation_state.Computation_type_constant _)
+        } ->
+      Format.fprintf ppf
+        "Expected an LF type-level constant but found a computation-level \
+         type constant instead: %a@."
+        Location.pp location
+    | Expected_type_constant
+        { location
+        ; actual_binding =
+            QualifiedIdentifier.Dictionary.Entry
+              (Disambiguation_state.Computation_term_constructor _)
+        } ->
+      Format.fprintf ppf
+        "Expected an LF type-level constant but found a computation-level \
+         term constructor instead: %a@."
+        Location.pp location
+    | Expected_type_constant
+        { location
+        ; actual_binding =
+            QualifiedIdentifier.Dictionary.Entry
+              (Disambiguation_state.Computation_cotype_constant _)
+        } ->
+      Format.fprintf ppf
+        "Expected an LF type-level constant but found a computation-level \
+         cotype constant instead: %a@."
+        Location.pp location
+    | Expected_type_constant
+        { location
+        ; actual_binding =
+            QualifiedIdentifier.Dictionary.Entry
+              Disambiguation_state.Computation_term_destructor
+        } ->
+      Format.fprintf ppf
+        "Expected an LF type-level constant but found a computation-level \
+         term destructor instead: %a@."
+        Location.pp location
+    | Expected_type_constant
+        { location
+        ; actual_binding =
+            QualifiedIdentifier.Dictionary.Entry Disambiguation_state.Query
+        } ->
+      Format.fprintf ppf
+        "Expected an LF type-level constant but found a logic programming \
+         query identifier instead: %a@."
+        Location.pp location
+    | Expected_type_constant
+        { location
+        ; actual_binding =
+            QualifiedIdentifier.Dictionary.Entry Disambiguation_state.MQuery
+        } ->
+      Format.fprintf ppf
+        "Expected an LF type-level constant but found a logic programming \
+         meta-query identifier instead: %a@."
         Location.pp location
     | Expected_type_constant
         { location
@@ -1785,8 +2018,66 @@ struct
               Disambiguation_state.Computation_variable
         } ->
       Format.fprintf ppf
-        "Expected an LF term-level constant but found a computation \
+        "Expected an LF term-level constant but found a computation-level \
          variable instead: %a@."
+        Location.pp location
+    | Expected_term_constant
+        { location
+        ; actual_binding =
+            QualifiedIdentifier.Dictionary.Entry
+              (Disambiguation_state.Computation_type_constant _)
+        } ->
+      Format.fprintf ppf
+        "Expected an LF term-level constant but found a computation-level \
+         type constant instead: %a@."
+        Location.pp location
+    | Expected_term_constant
+        { location
+        ; actual_binding =
+            QualifiedIdentifier.Dictionary.Entry
+              (Disambiguation_state.Computation_term_constructor _)
+        } ->
+      Format.fprintf ppf
+        "Expected an LF term-level constant but found a computation-level \
+         term constructor instead: %a@."
+        Location.pp location
+    | Expected_term_constant
+        { location
+        ; actual_binding =
+            QualifiedIdentifier.Dictionary.Entry
+              (Disambiguation_state.Computation_cotype_constant _)
+        } ->
+      Format.fprintf ppf
+        "Expected an LF term-level constant but found a computation-level \
+         cotype constant instead: %a@."
+        Location.pp location
+    | Expected_term_constant
+        { location
+        ; actual_binding =
+            QualifiedIdentifier.Dictionary.Entry
+              Disambiguation_state.Computation_term_destructor
+        } ->
+      Format.fprintf ppf
+        "Expected an LF term-level constant but found a computation-level \
+         term destructor instead: %a@."
+        Location.pp location
+    | Expected_term_constant
+        { location
+        ; actual_binding =
+            QualifiedIdentifier.Dictionary.Entry Disambiguation_state.Query
+        } ->
+      Format.fprintf ppf
+        "Expected an LF term-level constant but found a logic programming \
+         query identifier instead: %a@."
+        Location.pp location
+    | Expected_term_constant
+        { location
+        ; actual_binding =
+            QualifiedIdentifier.Dictionary.Entry Disambiguation_state.MQuery
+        } ->
+      Format.fprintf ppf
+        "Expected an LF term-level constant but found a logic programming \
+         meta-query identifier instead: %a@."
         Location.pp location
     | Expected_term_constant
         { location
@@ -1862,8 +2153,48 @@ struct
               Disambiguation_state.Computation_variable
         } ->
       Format.fprintf ppf
-        "Expected an LF type-level constant but found a computation \
+        "Expected an LF type-level constant but found a computation-level \
          variable instead: %a@."
+        Location.pp location
+    | Expected_type_constant
+        { location
+        ; actual_binding =
+            QualifiedIdentifier.Dictionary.Entry
+              (Disambiguation_state.Computation_type_constant _)
+        } ->
+      Format.fprintf ppf
+        "Expected an LF type-level constant but found a computation-level \
+         type constant instead: %a@."
+        Location.pp location
+    | Expected_type_constant
+        { location
+        ; actual_binding =
+            QualifiedIdentifier.Dictionary.Entry
+              (Disambiguation_state.Computation_term_constructor _)
+        } ->
+      Format.fprintf ppf
+        "Expected an LF type-level constant but found a computation-level \
+         term constructor instead: %a@."
+        Location.pp location
+    | Expected_type_constant
+        { location
+        ; actual_binding =
+            QualifiedIdentifier.Dictionary.Entry
+              (Disambiguation_state.Computation_cotype_constant _)
+        } ->
+      Format.fprintf ppf
+        "Expected an LF type-level constant but found a computation-level \
+         cotype constant instead: %a@."
+        Location.pp location
+    | Expected_type_constant
+        { location
+        ; actual_binding =
+            QualifiedIdentifier.Dictionary.Entry
+              Disambiguation_state.Computation_term_destructor
+        } ->
+      Format.fprintf ppf
+        "Expected an LF type-level constant but found a computation-level \
+         term destructor instead: %a@."
         Location.pp location
     | Expected_type_constant
         { location

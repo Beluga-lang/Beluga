@@ -26,6 +26,10 @@ module type DISAMBIGUATION_STATE = sig
 
   val empty : t
 
+  val set_default_associativity : Associativity.t -> t -> t
+
+  val get_default_associativity : t -> Associativity.t
+
   val add_lf_term_variable : Identifier.t -> t -> t
 
   val add_prefix_lf_type_constant :
@@ -111,7 +115,8 @@ module type DISAMBIGUATION_STATE = sig
 
   val add_mquery : Identifier.t -> t -> t
 
-  val add_module : t -> Identifier.t -> t -> t
+  val add_module :
+    entry QualifiedIdentifier.Dictionary.t -> Identifier.t -> t -> t
 
   (** {1 Lookup} *)
 
@@ -125,7 +130,10 @@ end
 (** A minimal disambiguation state backed by a dictionary over qualified
     identifiers. *)
 module Disambiguation_state : DISAMBIGUATION_STATE = struct
-  type t = entry QualifiedIdentifier.Dictionary.t
+  type t =
+    { bindings : entry QualifiedIdentifier.Dictionary.t
+    ; default_associativity : Associativity.t
+    }
 
   and entry =
     | LF_type_constant of Operator.t
@@ -144,132 +152,175 @@ module Disambiguation_state : DISAMBIGUATION_STATE = struct
     | Query
     | MQuery
 
-  let empty = QualifiedIdentifier.Dictionary.empty
+  let empty =
+    { bindings = QualifiedIdentifier.Dictionary.empty
+    ; default_associativity = Associativity.non_associative
+    }
+
+  let[@inline] set_default_associativity default_associativity state =
+    { state with default_associativity }
+
+  let[@inline] get_default_associativity { default_associativity; _ } =
+    default_associativity
+
+  let[@inline] set_bindings bindings state = { state with bindings }
+
+  let[@inline] get_bindings { bindings; _ } = bindings
+
+  let[@inline] modify_bindings f state =
+    { state with bindings = f state.bindings }
 
   let add_lf_term_variable identifier =
-    QualifiedIdentifier.Dictionary.add_toplevel_entry identifier
-      LF_term_variable
+    modify_bindings
+    @@ QualifiedIdentifier.Dictionary.add_toplevel_entry identifier
+         LF_term_variable
 
   let add_prefix_lf_type_constant ~arity ~precedence identifier =
     let operator = Operator.make_prefix ~arity ~precedence in
-    QualifiedIdentifier.Dictionary.add_toplevel_entry identifier
-      (LF_type_constant operator)
+    modify_bindings
+    @@ QualifiedIdentifier.Dictionary.add_toplevel_entry identifier
+         (LF_type_constant operator)
 
   let add_infix_lf_type_constant ~associativity ~precedence identifier =
     let operator = Operator.make_infix ~associativity ~precedence in
-    QualifiedIdentifier.Dictionary.add_toplevel_entry identifier
-      (LF_type_constant operator)
+    modify_bindings
+    @@ QualifiedIdentifier.Dictionary.add_toplevel_entry identifier
+         (LF_type_constant operator)
 
   let add_postfix_lf_type_constant ~precedence identifier =
     let operator = Operator.make_postfix ~precedence in
-    QualifiedIdentifier.Dictionary.add_toplevel_entry identifier
-      (LF_type_constant operator)
+    modify_bindings
+    @@ QualifiedIdentifier.Dictionary.add_toplevel_entry identifier
+         (LF_type_constant operator)
 
   let add_prefix_lf_term_constant ~arity ~precedence identifier =
     let operator = Operator.make_prefix ~arity ~precedence in
-    QualifiedIdentifier.Dictionary.add_toplevel_entry identifier
-      (LF_term_constant operator)
+    modify_bindings
+    @@ QualifiedIdentifier.Dictionary.add_toplevel_entry identifier
+         (LF_term_constant operator)
 
   let add_infix_lf_term_constant ~associativity ~precedence identifier =
     let operator = Operator.make_infix ~associativity ~precedence in
-    QualifiedIdentifier.Dictionary.add_toplevel_entry identifier
-      (LF_term_constant operator)
+    modify_bindings
+    @@ QualifiedIdentifier.Dictionary.add_toplevel_entry identifier
+         (LF_term_constant operator)
 
   let add_postfix_lf_term_constant ~precedence identifier =
     let operator = Operator.make_postfix ~precedence in
-    QualifiedIdentifier.Dictionary.add_toplevel_entry identifier
-      (LF_term_constant operator)
+    modify_bindings
+    @@ QualifiedIdentifier.Dictionary.add_toplevel_entry identifier
+         (LF_term_constant operator)
 
   let add_meta_variable identifier =
-    QualifiedIdentifier.Dictionary.add_toplevel_entry identifier
-      Meta_variable
+    modify_bindings
+    @@ QualifiedIdentifier.Dictionary.add_toplevel_entry identifier
+         Meta_variable
 
   let add_parameter_variable identifier =
-    QualifiedIdentifier.Dictionary.add_toplevel_entry identifier
-      Parameter_variable
+    modify_bindings
+    @@ QualifiedIdentifier.Dictionary.add_toplevel_entry identifier
+         Parameter_variable
 
   let add_substitution_variable identifier =
-    QualifiedIdentifier.Dictionary.add_toplevel_entry identifier
-      Substitution_variable
+    modify_bindings
+    @@ QualifiedIdentifier.Dictionary.add_toplevel_entry identifier
+         Substitution_variable
 
   let add_context_variable identifier =
-    QualifiedIdentifier.Dictionary.add_toplevel_entry identifier
-      Context_variable
+    modify_bindings
+    @@ QualifiedIdentifier.Dictionary.add_toplevel_entry identifier
+         Context_variable
 
   let add_schema_constant identifier =
-    QualifiedIdentifier.Dictionary.add_toplevel_entry identifier
-      Schema_constant
+    modify_bindings
+    @@ QualifiedIdentifier.Dictionary.add_toplevel_entry identifier
+         Schema_constant
 
   let add_computation_variable identifier =
-    QualifiedIdentifier.Dictionary.add_toplevel_entry identifier
-      Computation_variable
+    modify_bindings
+    @@ QualifiedIdentifier.Dictionary.add_toplevel_entry identifier
+         Computation_variable
 
   let add_prefix_computation_type_constant ~arity ~precedence identifier =
     let operator = Operator.make_prefix ~arity ~precedence in
-    QualifiedIdentifier.Dictionary.add_toplevel_entry identifier
-      (Computation_type_constant operator)
+    modify_bindings
+    @@ QualifiedIdentifier.Dictionary.add_toplevel_entry identifier
+         (Computation_type_constant operator)
 
   let add_infix_computation_type_constant ~associativity ~precedence
       identifier =
     let operator = Operator.make_infix ~associativity ~precedence in
-    QualifiedIdentifier.Dictionary.add_toplevel_entry identifier
-      (Computation_type_constant operator)
+    modify_bindings
+    @@ QualifiedIdentifier.Dictionary.add_toplevel_entry identifier
+         (Computation_type_constant operator)
 
   let add_postfix_computation_type_constant ~precedence identifier =
     let operator = Operator.make_postfix ~precedence in
-    QualifiedIdentifier.Dictionary.add_toplevel_entry identifier
-      (Computation_type_constant operator)
+    modify_bindings
+    @@ QualifiedIdentifier.Dictionary.add_toplevel_entry identifier
+         (Computation_type_constant operator)
 
   let add_prefix_computation_term_constructor ~arity ~precedence identifier =
     let operator = Operator.make_prefix ~arity ~precedence in
-    QualifiedIdentifier.Dictionary.add_toplevel_entry identifier
-      (Computation_term_constructor operator)
+    modify_bindings
+    @@ QualifiedIdentifier.Dictionary.add_toplevel_entry identifier
+         (Computation_term_constructor operator)
 
   let add_infix_computation_term_constructor ~associativity ~precedence
       identifier =
     let operator = Operator.make_infix ~associativity ~precedence in
-    QualifiedIdentifier.Dictionary.add_toplevel_entry identifier
-      (Computation_term_constructor operator)
+    modify_bindings
+    @@ QualifiedIdentifier.Dictionary.add_toplevel_entry identifier
+         (Computation_term_constructor operator)
 
   let add_postfix_computation_term_constructor ~precedence identifier =
     let operator = Operator.make_postfix ~precedence in
-    QualifiedIdentifier.Dictionary.add_toplevel_entry identifier
-      (Computation_term_constructor operator)
+    modify_bindings
+    @@ QualifiedIdentifier.Dictionary.add_toplevel_entry identifier
+         (Computation_term_constructor operator)
 
   let add_prefix_computation_cotype_constant ~arity ~precedence identifier =
     let operator = Operator.make_prefix ~arity ~precedence in
-    QualifiedIdentifier.Dictionary.add_toplevel_entry identifier
-      (Computation_cotype_constant operator)
+    modify_bindings
+    @@ QualifiedIdentifier.Dictionary.add_toplevel_entry identifier
+         (Computation_cotype_constant operator)
 
   let add_infix_computation_cotype_constant ~associativity ~precedence
       identifier =
     let operator = Operator.make_infix ~associativity ~precedence in
-    QualifiedIdentifier.Dictionary.add_toplevel_entry identifier
-      (Computation_cotype_constant operator)
+    modify_bindings
+    @@ QualifiedIdentifier.Dictionary.add_toplevel_entry identifier
+         (Computation_cotype_constant operator)
 
   let add_postfix_computation_cotype_constant ~precedence identifier =
     let operator = Operator.make_postfix ~precedence in
-    QualifiedIdentifier.Dictionary.add_toplevel_entry identifier
-      (Computation_cotype_constant operator)
+    modify_bindings
+    @@ QualifiedIdentifier.Dictionary.add_toplevel_entry identifier
+         (Computation_cotype_constant operator)
 
   let add_computation_term_destructor identifier =
-    QualifiedIdentifier.Dictionary.add_toplevel_entry identifier
-      Computation_term_destructor
+    modify_bindings
+    @@ QualifiedIdentifier.Dictionary.add_toplevel_entry identifier
+         Computation_term_destructor
 
   let add_query identifier =
-    QualifiedIdentifier.Dictionary.add_toplevel_entry identifier Query
+    modify_bindings
+    @@ QualifiedIdentifier.Dictionary.add_toplevel_entry identifier Query
 
   let add_mquery identifier =
-    QualifiedIdentifier.Dictionary.add_toplevel_entry identifier MQuery
+    modify_bindings
+    @@ QualifiedIdentifier.Dictionary.add_toplevel_entry identifier MQuery
 
   let add_module module_dictionary identifier =
-    QualifiedIdentifier.Dictionary.add_toplevel_module identifier
-      module_dictionary
+    modify_bindings
+    @@ QualifiedIdentifier.Dictionary.add_toplevel_module identifier
+         module_dictionary
 
-  let lookup query state = QualifiedIdentifier.Dictionary.lookup query state
+  let lookup query state =
+    QualifiedIdentifier.Dictionary.lookup query (get_bindings state)
 
   let lookup_toplevel query state =
-    QualifiedIdentifier.Dictionary.lookup_toplevel query state
+    QualifiedIdentifier.Dictionary.lookup_toplevel query (get_bindings state)
 end
 
 module type LF_DISAMBIGUATION = sig

@@ -162,8 +162,7 @@ module CLF = struct
 
   let ( &: ) term typ = Term.TypeAnnotated { location; term; typ }
 
-  let rec substitution sub =
-    let head, terms = sub in
+  let rec substitution (head, terms) =
     let head' =
       match head with
       | `None -> Substitution.Head.None { location }
@@ -188,4 +187,94 @@ module CLF = struct
 
   let proj_x term x =
     Term.Projection { location; term; projection = `By_identifier (id x) }
+
+  let ctx (head, bindings) =
+    let head' =
+      match head with
+      | `None -> Context.Head.None { location }
+      | `Hole -> Context.Head.Hole { location }
+      | `CVar identifier ->
+        Context.Head.Context_variable { location; identifier }
+    and bindings' =
+      List.map (fun (i, typ_opt) -> (id i, typ_opt)) bindings
+    in
+    { Context.head = head'; bindings = bindings'; location }
+end
+
+module Meta = struct
+  open Synext'.Meta
+
+  (** {1 Meta-Type Constructors} *)
+
+  let t_schema schema = Typ.Context_schema { location; schema }
+
+  let t_type context typ =
+    Typ.Contextual_typ { location; context = CLF.ctx context; typ }
+
+  let t_ptype context typ =
+    Typ.Parameter_typ { location; context = CLF.ctx context; typ }
+
+  let t_subst domain range =
+    Typ.Plain_substitution_typ
+      { location; domain = CLF.ctx domain; range = CLF.ctx range }
+
+  let t_rsubst domain range =
+    Typ.Renaming_substitution_typ
+      { location; domain = CLF.ctx domain; range = CLF.ctx range }
+
+  (** {1 Meta-Object Constructors} *)
+
+  let o_ctx context = Object.Context { location; context = CLF.ctx context }
+
+  let o_term context term =
+    Object.Contextual_term { location; context = CLF.ctx context; term }
+
+  let o_subst domain range =
+    Object.Plain_substitution
+      { location; domain = CLF.ctx domain; range = CLF.substitution range }
+
+  let o_rsubst domain range =
+    Object.Renaming_substitution
+      { location; domain = CLF.ctx domain; range = CLF.substitution range }
+
+  (** {1 Meta-Pattern Constructors} *)
+
+  let p_ctx context = Pattern.Context { location; context }
+
+  let p_term context term =
+    Pattern.Contextual_term { location; context; term }
+
+  let p_subst domain range =
+    Pattern.Plain_substitution { location; domain; range }
+
+  let p_rsubst domain range =
+    Pattern.Renaming_substitution { location; domain; range }
+
+  (** {1 Meta-Substitution Constructors} *)
+
+  let msub objects = { Substitution.location; objects }
+
+  (** {1 Meta-Context Constructors} *)
+
+  let mctx bindings = { Context.location; bindings }
+
+  (** {1 Context Schema Constructors} *)
+
+  let s_c identifier = Schema.Constant { location; identifier }
+
+  let s_alt schemas = Schema.Alternation { location; schemas }
+
+  let s_elem ?some block =
+    let some' =
+      Option.map
+        (fun some -> List1.map (fun (i, typ) -> (id i, typ)) some)
+        some
+    and block' =
+      match block with
+      | `Unnamed t -> `Unnamed t
+      | `Record bindings ->
+        let bindings' = List1.map (fun (i, typ) -> (id i, typ)) bindings in
+        `Record bindings'
+    in
+    Schema.Element { location; some = some'; block = block' }
 end

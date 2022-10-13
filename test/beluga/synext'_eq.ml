@@ -656,12 +656,12 @@ module Signature = struct
     | Declaration.GlobalPragma x, Declaration.GlobalPragma y ->
       global_pragma_equal x.pragma y.pragma
     | Declaration.Theorem x, Declaration.Theorem y ->
-      Identifier.equal x.name y.name
+      Identifier.equal x.identifier y.identifier
       && Comp.typ_equal x.typ y.typ
       && Option.equal totality_declaration_equal x.order y.order
       && Comp.expression_equal x.body y.body
     | Declaration.Proof x, Declaration.Proof y ->
-      Identifier.equal x.name y.name
+      Identifier.equal x.identifier y.identifier
       && Comp.typ_equal x.typ y.typ
       && Option.equal totality_declaration_equal x.order y.order
       && Harpoon.proof_equal x.body y.body
@@ -673,13 +673,14 @@ module Signature = struct
       && Option.equal Comp.typ_equal x.typ y.typ
       && Comp.expression_equal x.expression y.expression
     | Declaration.Query x, Declaration.Query y ->
-      Option.equal Identifier.equal x.name y.name
+      Option.equal Identifier.equal x.identifier y.identifier
       && Meta.context_equal x.meta_context y.meta_context
       && LF.typ_equal x.typ y.typ
       && Option.equal Int.equal x.expected_solutions y.expected_solutions
       && Option.equal Int.equal x.maximum_tries y.maximum_tries
     | Declaration.MQuery x, Declaration.MQuery y ->
-      Comp.typ_equal x.typ y.typ
+      Option.equal Identifier.equal x.identifier y.identifier
+      && Comp.typ_equal x.typ y.typ
       && Option.equal Int.equal x.expected_solutions y.expected_solutions
       && Option.equal Int.equal x.search_tries y.search_tries
       && Option.equal Int.equal x.search_depth y.search_depth

@@ -1591,19 +1591,21 @@ end = struct
           [ ("pragma", of_global_pragma pragma)
           ; ("location", of_location location)
           ]
-    | Signature.Declaration.Theorem { location; name; typ; order; body } ->
+    | Signature.Declaration.Theorem
+        { location; identifier; typ; order; body } ->
       of_variant ~name:"Signature.Declaration.Theorem"
         ~data:
-          [ ("name", of_identifier name)
+          [ ("identifier", of_identifier identifier)
           ; ("typ", Comp.of_typ typ)
           ; ("order", of_option of_totality_declaration order)
           ; ("body", Comp.of_expression body)
           ; ("location", of_location location)
           ]
-    | Signature.Declaration.Proof { location; name; typ; order; body } ->
+    | Signature.Declaration.Proof { location; identifier; typ; order; body }
+      ->
       of_variant ~name:"Signature.Declaration.Proof"
         ~data:
-          [ ("name", of_identifier name)
+          [ ("identifier", of_identifier identifier)
           ; ("typ", Comp.of_typ typ)
           ; ("order", of_option of_totality_declaration order)
           ; ("body", Harpoon.of_proof body)
@@ -1625,7 +1627,7 @@ end = struct
           ; ("location", of_location location)
           ]
     | Signature.Declaration.Query
-        { name
+        { identifier
         ; meta_context
         ; typ
         ; expected_solutions
@@ -1634,7 +1636,7 @@ end = struct
         } ->
       of_variant ~name:"Signature.Declaration.Query"
         ~data:
-          [ ("name", of_option of_identifier name)
+          [ ("identifier", of_option of_identifier identifier)
           ; ("meta_context", Meta.of_context meta_context)
           ; ("typ", LF.of_typ typ)
           ; ("expected_solutions", of_option of_int expected_solutions)
@@ -1642,10 +1644,17 @@ end = struct
           ; ("location", of_location location)
           ]
     | Signature.Declaration.MQuery
-        { typ; expected_solutions; search_tries; search_depth; location } ->
+        { identifier
+        ; typ
+        ; expected_solutions
+        ; search_tries
+        ; search_depth
+        ; location
+        } ->
       of_variant ~name:"Signature.Declaration.MQuery"
         ~data:
-          [ ("typ", Comp.of_typ typ)
+          [ ("identifier", of_option of_identifier identifier)
+          ; ("typ", Comp.of_typ typ)
           ; ("expected_solutions", of_option of_int expected_solutions)
           ; ("search_tries", of_option of_int search_tries)
           ; ("search_depth", of_option of_int search_depth)

@@ -2076,12 +2076,12 @@ end = struct
   (*=
       Original grammar:
 
-      <comp-pattern-object-atomic> ::=
+      <comp-pattern-atomic-object> ::=
         | <identifier>
         | <qualified-identifier>
         | <boxed-meta-object-thing>
         | `(' <comp-pattern-object> (`,' <comp-pattern-object>)+ `)'
-        | <dot-qualified-identifier> <comp-pattern-object-atomic>*
+        | <dot-qualified-identifier> <comp-pattern-atomic-object>*
         | `_'
         | `(' <comp-pattern-object> `)'
 
@@ -2124,7 +2124,7 @@ end = struct
         | <identifier>
         | <qualified-identifier>
         | <boxed-meta-object-thing>
-        | <dot-qualified-identifier> <comp-pattern-object>*
+        | <dot-qualified-identifier> <comp-pattern-atomic-object>*
         | `_'
         | `(' <comp-pattern-object> (`,' <comp-pattern-object>)+ `)'
         | `(' <comp-pattern-object> `)'
@@ -2238,7 +2238,7 @@ end = struct
          )
       |> labelled "Meta-object pattern"
     and observation =
-      seq2 dot_qualified_identifier (many Comp_parsers.comp_pattern_object)
+      seq2 dot_qualified_identifier (many Comp_parsers.comp_pattern_atomic_object)
       |> span
       $> (fun (location, (constant, arguments)) ->
             Comp.Pattern_object.RawObservation { location; constant; arguments }
@@ -2526,9 +2526,9 @@ end = struct
     |> span
     $> (function
        | (_, List1.T (expression, [])) -> expression
-       | (location, List1.T (applicand, x :: xs)) ->
-         let arguments = List1.from x xs in
-         Comp.Expression_object.RawApplication { location; applicand; arguments }
+       | (location, List1.T (x1, x2 :: xs)) ->
+         let expressions = List2.from x1 x2 xs in
+         Comp.Expression_object.RawApplication { location; expressions }
        )
     |> labelled "Atomic computational expression or application"
 
@@ -3423,10 +3423,10 @@ end = struct
     <& token Token.DOT
     |> span
     |> labelled "logic programming engine query pragma"
-    $> fun (location, ((expected_solutions, maximum_tries), meta_context, name, typ)) ->
+    $> fun (location, ((expected_solutions, maximum_tries), meta_context, identifier, typ)) ->
        Signature.Declaration.Query
          { location
-         ; name
+         ; identifier
          ; meta_context
          ; typ
          ; expected_solutions
@@ -3440,17 +3440,18 @@ end = struct
         (integer $> Option.some)
       |> labelled "search bound"
     in
-    pragma "mquery" &>
-      seq2
+    pragma "mquery"
+    &> seq3
         (seq3 bound bound bound)
-        (*      (mctx ~sep: (return ()) (clf_ctyp_decl_bare name' (fun x -> LF.No, x) |> braces)) *)
-        cmp_typ
+        (maybe (identifier <& token Token.COLON))
+        Comp_parsers.comp_sort_object
     <& token Token.DOT
     |> span
     |> labelled "meta-logic search engine mquery pragma"
-    $> fun (location, ((expected_solutions, search_tries, search_depth), typ)) ->
+    $> fun (location, ((expected_solutions, search_tries, search_depth), identifier, typ)) ->
        Signature.Declaration.MQuery
          { location
+         ; identifier
          ; typ
          ; expected_solutions
          ; search_tries
@@ -3600,8 +3601,8 @@ end = struct
       (maybe (bracketed' (token Token.SLASH) totality_declaration))
       Comp_parsers.comp_expression_object
     |> span
-    $> fun (location, (name, typ, order, body)) ->
-      Signature.Declaration.Theorem { location; name; typ; order; body }
+    $> fun (location, (identifier, typ, order, body)) ->
+      Signature.Declaration.Theorem { location; identifier; typ; order; body }
 
   let proof_decl =
     token Token.KW_PROOF
@@ -3611,8 +3612,8 @@ end = struct
       (maybe (bracketed' (token Token.SLASH) totality_declaration))
       Harpoon_parsers.harpoon_proof
   |> span
-  $> fun (location, (name, typ, order, body)) ->
-    Signature.Declaration.Proof { location; name; typ; order; body }
+  $> fun (location, (identifier, typ, order, body)) ->
+    Signature.Declaration.Proof { location; identifier; typ; order; body }
 
   let sgn_thm_decl =
     token Token.KW_REC

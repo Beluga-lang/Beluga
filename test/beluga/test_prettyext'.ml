@@ -13,87 +13,89 @@ let mock_state_2 =
   let open Synext'_constructors.LF in
   let open Synprs_to_synext'.Disambiguation_state in
   empty
-  |> add_prefix_lf_type_constant ~arity:0 ~precedence:1 (qid "nat")
-  |> add_prefix_lf_term_constant ~arity:0 ~precedence:1 (qid "z")
-  |> add_prefix_lf_term_constant ~arity:1 ~precedence:1 (qid "s")
-  |> add_prefix_lf_type_constant ~arity:3 ~precedence:1 (qid "sum")
-  |> add_prefix_lf_term_constant ~arity:0 ~precedence:1 (qid "sum/z")
-  |> add_prefix_lf_term_constant ~arity:1 ~precedence:1 (qid "sum/s")
+  |> add_prefix_lf_type_constant ~arity:0 ~precedence:1 (id "nat")
+  |> add_prefix_lf_term_constant ~arity:0 ~precedence:1 (id "z")
+  |> add_prefix_lf_term_constant ~arity:1 ~precedence:1 (id "s")
+  |> add_prefix_lf_type_constant ~arity:3 ~precedence:1 (id "sum")
+  |> add_prefix_lf_term_constant ~arity:0 ~precedence:1 (id "sum/z")
+  |> add_prefix_lf_term_constant ~arity:1 ~precedence:1 (id "sum/s")
 
 let mock_state_3 =
   let open Synext'_constructors.LF in
   let open Synprs_to_synext'.Disambiguation_state in
   empty
-  |> add_prefix_lf_type_constant ~arity:0 ~precedence:1
-       (qid ~m:[ "Nat" ] "nat")
-  |> add_prefix_lf_term_constant ~arity:0 ~precedence:1
-       (qid ~m:[ "Nat" ] "z")
-  |> add_prefix_lf_term_constant ~arity:1 ~precedence:1
-       (qid ~m:[ "Nat" ] "s")
-  |> add_prefix_lf_type_constant ~arity:3 ~precedence:1
-       (qid ~m:[ "Nat" ] "sum")
-  |> add_prefix_lf_term_constant ~arity:0 ~precedence:1
-       (qid ~m:[ "Nat" ] "sum/z")
-  |> add_prefix_lf_term_constant ~arity:1 ~precedence:1
-       (qid ~m:[ "Nat" ] "sum/s")
+  |> add_module
+       (empty
+       |> add_prefix_lf_type_constant ~arity:0 ~precedence:1 (id "nat")
+       |> add_prefix_lf_term_constant ~arity:0 ~precedence:1 (id "z")
+       |> add_prefix_lf_term_constant ~arity:1 ~precedence:1 (id "s")
+       |> add_prefix_lf_type_constant ~arity:3 ~precedence:1 (id "sum")
+       |> add_prefix_lf_term_constant ~arity:0 ~precedence:1 (id "sum/z")
+       |> add_prefix_lf_term_constant ~arity:1 ~precedence:1 (id "sum/s")
+       |> get_bindings)
+       (id "Nat")
 
 let mock_state_4 =
   let open Synext'_constructors.LF in
   let open Synprs_to_synext'.Disambiguation_state in
   empty
-  |> add_prefix_lf_type_constant ~arity:0 ~precedence:1
-       (qid ~m:[ "Util"; "Nat" ] "nat")
-  |> add_prefix_lf_term_constant ~arity:0 ~precedence:1
-       (qid ~m:[ "Util"; "Nat" ] "z")
-  |> add_prefix_lf_term_constant ~arity:1 ~precedence:1
-       (qid ~m:[ "Util"; "Nat" ] "s")
-  |> add_prefix_lf_type_constant ~arity:3 ~precedence:1
-       (qid ~m:[ "Util"; "Nat" ] "sum")
-  |> add_prefix_lf_term_constant ~arity:0 ~precedence:1
-       (qid ~m:[ "Util"; "Nat" ] "sum/z")
-  |> add_prefix_lf_term_constant ~arity:1 ~precedence:1
-       (qid ~m:[ "Util"; "Nat" ] "sum/s")
+  |> add_module
+       (empty
+       |> add_module
+            (empty
+            |> add_prefix_lf_type_constant ~arity:0 ~precedence:1 (id "nat")
+            |> add_prefix_lf_term_constant ~arity:0 ~precedence:1 (id "z")
+            |> add_prefix_lf_term_constant ~arity:1 ~precedence:1 (id "s")
+            |> add_prefix_lf_type_constant ~arity:3 ~precedence:1 (id "sum")
+            |> add_prefix_lf_term_constant ~arity:0 ~precedence:1
+                 (id "sum/z")
+            |> add_prefix_lf_term_constant ~arity:1 ~precedence:1
+                 (id "sum/s")
+            |> get_bindings)
+            (id "Nat")
+       |> get_bindings)
+       (id "Util")
 
 let mock_state_5 =
   let open Synext'_constructors.LF in
   let open Synprs_to_synext'.Disambiguation_state in
   empty
-  |> add_prefix_lf_type_constant ~arity:0 ~precedence:1 (qid "tp")
-  |> add_prefix_lf_term_constant ~arity:0 ~precedence:1 (qid "bool")
-  |> add_prefix_lf_term_constant ~arity:1 ~precedence:1 (qid "nat")
+  |> add_prefix_lf_type_constant ~arity:0 ~precedence:1 (id "tp")
+  |> add_prefix_lf_term_constant ~arity:0 ~precedence:1 (id "bool")
+  |> add_prefix_lf_term_constant ~arity:1 ~precedence:1 (id "nat")
   |> add_infix_lf_term_constant ~associativity:Associativity.left_associative
-       ~precedence:2 (qid "arrow")
-  |> add_prefix_lf_type_constant ~arity:1 ~precedence:1 (qid "term")
+       ~precedence:2 (id "arrow")
+  |> add_prefix_lf_type_constant ~arity:1 ~precedence:1 (id "term")
   |> add_infix_lf_term_constant ~associativity:Associativity.non_associative
-       ~precedence:3 (qid "has_type")
+       ~precedence:3 (id "has_type")
 
 let mock_state_6 =
   let open Synext'_constructors.LF in
   let open Synprs_to_synext'.Disambiguation_state in
   empty
-  |> add_prefix_lf_type_constant ~arity:0 ~precedence:1 (qid "exp")
+  |> add_prefix_lf_type_constant ~arity:0 ~precedence:1 (id "exp")
   |> add_infix_lf_term_constant
        ~associativity:Associativity.right_associative ~precedence:3
-       (qid "app")
-  |> add_prefix_lf_term_constant ~arity:1 ~precedence:1 (qid "lam")
+       (id "app")
+  |> add_prefix_lf_term_constant ~arity:1 ~precedence:1 (id "lam")
   |> add_infix_lf_type_constant ~associativity:Associativity.left_associative
-       ~precedence:1 (qid "eq")
+       ~precedence:1 (id "eq")
 
 let mock_state_7 =
   let open Synext'_constructors.LF in
   let open Synprs_to_synext'.Disambiguation_state in
   empty
-  |> add_prefix_lf_type_constant ~arity:0 ~precedence:1
-       (qid ~m:[ "Statics" ] "tp")
-  |> add_prefix_lf_term_constant ~arity:0 ~precedence:1
-       (qid ~m:[ "Statics" ] "bool")
-  |> add_prefix_lf_term_constant ~arity:1 ~precedence:1
-       (qid ~m:[ "Statics" ] "nat")
-  |> add_infix_lf_term_constant ~associativity:Associativity.left_associative
-       ~precedence:2
-       (qid ~m:[ "Statics" ] "arrow")
-  |> add_prefix_lf_type_constant ~arity:1 ~precedence:1
-       (qid ~m:[ "Statics" ] "term")
+  |> add_module
+       (empty
+       |> add_prefix_lf_type_constant ~arity:0 ~precedence:1 (id "tp")
+       |> add_prefix_lf_term_constant ~arity:0 ~precedence:1 (id "bool")
+       |> add_prefix_lf_term_constant ~arity:1 ~precedence:1 (id "nat")
+       |> add_infix_lf_term_constant
+            ~associativity:Associativity.left_associative ~precedence:2
+            (id "arrow")
+       |> add_prefix_lf_type_constant ~arity:1 ~precedence:1 (id "term")
+       |> get_bindings)
+       (id "Statics")
 
 let mock_state_8 =
   let open Synext'_constructors.LF in
@@ -101,53 +103,51 @@ let mock_state_8 =
   empty
   |> add_infix_lf_type_constant
        ~associativity:Associativity.right_associative ~precedence:1
-       (qid "msteps")
-  |> add_prefix_lf_term_constant ~arity:1 ~precedence:1 (qid "lam")
-  |> add_prefix_lf_type_constant ~arity:1 ~precedence:1 (qid "term")
+       (id "msteps")
+  |> add_prefix_lf_term_constant ~arity:1 ~precedence:1 (id "lam")
+  |> add_prefix_lf_type_constant ~arity:1 ~precedence:1 (id "term")
 
 let mock_state_9 =
   let open Synext'_constructors.LF in
   let open Synprs_to_synext'.Disambiguation_state in
   empty
-  |> add_prefix_lf_type_constant ~arity:0 ~precedence:1 (qid "tp")
-  |> add_prefix_lf_type_constant ~arity:1 ~precedence:1 (qid "target")
+  |> add_prefix_lf_type_constant ~arity:0 ~precedence:1 (id "tp")
+  |> add_prefix_lf_type_constant ~arity:1 ~precedence:1 (id "target")
 
 let mock_state_10 =
   let open Synext'_constructors.LF in
   let open Synprs_to_synext'.Disambiguation_state in
   empty
-  |> add_prefix_lf_type_constant ~arity:0 ~precedence:1 (qid "a")
-  |> add_prefix_lf_type_constant ~arity:0 ~precedence:1 (qid "b")
-  |> add_prefix_lf_type_constant ~arity:0 ~precedence:1 (qid "c")
+  |> add_prefix_lf_type_constant ~arity:0 ~precedence:1 (id "a")
+  |> add_prefix_lf_type_constant ~arity:0 ~precedence:1 (id "b")
+  |> add_prefix_lf_type_constant ~arity:0 ~precedence:1 (id "c")
 
 let mock_state_11 =
   let open Synext'_constructors.LF in
   let open Synprs_to_synext'.Disambiguation_state in
   empty
-  |> add_prefix_lf_type_constant ~arity:0 ~precedence:1 (qid "T")
+  |> add_prefix_lf_type_constant ~arity:0 ~precedence:1 (id "T")
   |> add_infix_lf_term_constant ~associativity:Associativity.left_associative
-       ~precedence:1 (qid "L1")
+       ~precedence:1 (id "L1")
   |> add_infix_lf_term_constant
-       ~associativity:Associativity.right_associative ~precedence:1
-       (qid "R1")
+       ~associativity:Associativity.right_associative ~precedence:1 (id "R1")
   |> add_infix_lf_term_constant ~associativity:Associativity.left_associative
-       ~precedence:2 (qid "L2")
+       ~precedence:2 (id "L2")
   |> add_infix_lf_term_constant
-       ~associativity:Associativity.right_associative ~precedence:2
-       (qid "R2")
+       ~associativity:Associativity.right_associative ~precedence:2 (id "R2")
   |> add_infix_lf_term_constant ~associativity:Associativity.non_associative
-       ~precedence:1 (qid "N1")
+       ~precedence:1 (id "N1")
   |> add_infix_lf_term_constant ~associativity:Associativity.non_associative
-       ~precedence:2 (qid "N2")
+       ~precedence:2 (id "N2")
   |> add_infix_lf_term_constant ~associativity:Associativity.non_associative
-       ~precedence:3 (qid "N3")
-  |> add_prefix_lf_term_constant ~arity:1 ~precedence:1 (qid "P11")
-  |> add_prefix_lf_term_constant ~arity:1 ~precedence:2 (qid "P12")
-  |> add_prefix_lf_term_constant ~arity:2 ~precedence:1 (qid "P21")
-  |> add_prefix_lf_term_constant ~arity:2 ~precedence:2 (qid "P22")
-  |> add_postfix_lf_term_constant ~precedence:1 (qid "Q1")
-  |> add_postfix_lf_term_constant ~precedence:2 (qid "Q2")
-  |> add_postfix_lf_term_constant ~precedence:3 (qid "Q3")
+       ~precedence:3 (id "N3")
+  |> add_prefix_lf_term_constant ~arity:1 ~precedence:1 (id "P11")
+  |> add_prefix_lf_term_constant ~arity:1 ~precedence:2 (id "P12")
+  |> add_prefix_lf_term_constant ~arity:2 ~precedence:1 (id "P21")
+  |> add_prefix_lf_term_constant ~arity:2 ~precedence:2 (id "P22")
+  |> add_postfix_lf_term_constant ~precedence:1 (id "Q1")
+  |> add_postfix_lf_term_constant ~precedence:2 (id "Q2")
+  |> add_postfix_lf_term_constant ~precedence:3 (id "Q3")
 
 let parse_lf_object input =
   Runparser.parse_string Location.ghost input (Parser.only Parser.lf_object)

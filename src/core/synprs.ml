@@ -441,16 +441,14 @@ module Comp = struct
       | RawBoxHole of { location : Location.t }
       | RawApplication of
           { location : Location.t
-          ; applicand : Expression_object.t
-          ; arguments : Expression_object.t List1.t
+          ; expressions : Expression_object.t List2.t
           }
-          (** [Application { applicand; arguments; _ }] is the computational
-              expression-level application pattern of [applicand] with
-              [arguments].
+          (** [Application { expressions; _ }] is the computational
+              expression-level juxtaposition of [expressions].
 
-              If [applicand = RawQualifiedIdentifier { identifier = "c"; _ }]
-              where ["c"] is a coinductive constant, then the application is
-              actually an observation. *)
+              If
+              [expressions = RawQualifiedIdentifier { observation = true; _ } :: xs],
+              then the application is actually an observation. *)
       | RawAnnotated of
           { location : Location.t
           ; expression : Expression_object.t
@@ -979,14 +977,14 @@ module Signature = struct
           }
       | Theorem of
           { location : Location.t
-          ; name : Identifier.t
+          ; identifier : Identifier.t
           ; typ : Comp.Sort_object.t
           ; order : Totality.Declaration.t Option.t
           ; body : Comp.Expression_object.t
           }
       | Proof of
           { location : Location.t
-          ; name : Identifier.t
+          ; identifier : Identifier.t
           ; typ : Comp.Sort_object.t
           ; order : Totality.Declaration.t Option.t
           ; body : Harpoon.Proof.t
@@ -1003,7 +1001,7 @@ module Signature = struct
           }
       | Query of
           { location : Location.t
-          ; name : Identifier.t Option.t
+          ; identifier : Identifier.t Option.t
           ; meta_context : Meta.Context_object.t
           ; typ : LF.Object.t
           ; expected_solutions : Int.t Option.t
@@ -1011,6 +1009,7 @@ module Signature = struct
           }
       | MQuery of
           { location : Location.t
+          ; identifier : Identifier.t Option.t
           ; typ : Comp.Sort_object.t
           ; expected_solutions : Int.t Option.t
           ; search_tries : Int.t Option.t

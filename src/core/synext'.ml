@@ -1620,13 +1620,6 @@ module Signature = struct
           ; observation_type : Comp.Typ.t
           ; return_type : Comp.Typ.t
           }  (** Computation-level type destructor declaration *)
-      | CompTypAbbrev of
-          { location : Location.t
-          ; identifier : Identifier.t
-          ; kind : Comp.Kind.t
-          ; typ : Comp.Typ.t
-          }
-          (** Synonym declaration for computation-level type constructor *)
       | Schema of
           { location : Location.t
           ; identifier : Identifier.t
@@ -1646,18 +1639,24 @@ module Signature = struct
           }  (** Recursive declaration(s) *)
       | Theorem of
           { location : Location.t
-          ; name : Identifier.t
+          ; identifier : Identifier.t
           ; typ : Comp.Typ.t
           ; order : Totality.Declaration.t Option.t
           ; body : Comp.Expression.t
           }
       | Proof of
           { location : Location.t
-          ; name : Identifier.t
+          ; identifier : Identifier.t
           ; typ : Comp.Typ.t
           ; order : Totality.Declaration.t Option.t
           ; body : Harpoon.Proof.t
           }
+      | CompTypAbbrev of
+          { location : Location.t
+          ; identifier : Identifier.t
+          ; kind : Comp.Kind.t
+          ; typ : Comp.Typ.t
+          }  (** Declaration for a computation-level type function. *)
       | Val of
           { location : Location.t
           ; identifier : Identifier.t
@@ -1666,7 +1665,7 @@ module Signature = struct
           }  (** Computation-level value declaration *)
       | Query of
           { location : Location.t
-          ; name : Identifier.t Option.t
+          ; identifier : Identifier.t Option.t
           ; meta_context : Meta.Context.t
           ; typ : LF.Typ.t
           ; expected_solutions : Int.t Option.t
@@ -1674,6 +1673,7 @@ module Signature = struct
           }  (** Logic programming query on an LF type *)
       | MQuery of
           { location : Location.t
+          ; identifier : Identifier.t Option.t
           ; typ : Comp.Typ.t
           ; expected_solutions : Int.t Option.t
           ; search_tries : Int.t Option.t

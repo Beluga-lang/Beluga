@@ -311,7 +311,7 @@ let test_kind =
     OUnit2.assert_equal
       ~printer:
         Fun.(
-          Synext'_json.LF.of_kind
+          Synext'_json.LF.of_kind >> Synext'_json.without_locations
           >> Format.stringify (Yojson.Safe.pretty_print ~std:true))
       ~cmp:Synext'_eq.LF.kind_equal expected
       (parse_lf_object input
@@ -382,14 +382,14 @@ let test_kind =
            input >:: test_failure elaboration_context input assert_exn)
   in
   let open OUnit2 in
-  [ "sucess" >::: success_tests ] @ [ "failure" >::: failure_tests ]
+  [ "success" >::: success_tests ] @ [ "failure" >::: failure_tests ]
 
 let test_type =
   let test_success elaboration_context input expected _test_ctxt =
     OUnit2.assert_equal
       ~printer:
         Fun.(
-          Synext'_json.LF.of_typ
+          Synext'_json.LF.of_typ >> Synext'_json.without_locations
           >> Format.stringify (Yojson.Safe.pretty_print ~std:true))
       ~cmp:Synext'_eq.LF.typ_equal expected
       (parse_lf_object input
@@ -579,14 +579,14 @@ let test_type =
            input >:: test_failure elaboration_context input assert_exn)
   in
   let open OUnit2 in
-  [ "sucess" >::: success_tests ] @ [ "failure" >::: failure_tests ]
+  [ "success" >::: success_tests ] @ [ "failure" >::: failure_tests ]
 
 let test_term =
   let test_success elaboration_context input expected _test_ctxt =
     OUnit2.assert_equal
       ~printer:
         Fun.(
-          Synext'_json.LF.of_term
+          Synext'_json.LF.of_term >> Synext'_json.without_locations
           >> Format.stringify (Yojson.Safe.pretty_print ~std:true))
       ~cmp:Synext'_eq.LF.term_equal expected
       (parse_lf_object input
@@ -670,7 +670,7 @@ let test_term =
            input >:: test_failure elaboration_context input assert_exn)
   in
   let open OUnit2 in
-  [ "sucess" >::: success_tests ] @ [ "failure" >::: failure_tests ]
+  [ "success" >::: success_tests ] @ [ "failure" >::: failure_tests ]
 
 let tests =
   let open OUnit2 in

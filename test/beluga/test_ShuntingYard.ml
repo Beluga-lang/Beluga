@@ -302,7 +302,7 @@ let test_shunting_yard =
             ShuntingYard.shunting_yard [ n' 1; n' 2 ]))
   in
   let open OUnit2 in
-  [ "sucess" >::: success_tests
+  [ "success" >::: success_tests
   ; "failure_empty_expression" >::: [ failure_empty_expression_test ]
   ; "failure_arity_mismatch" >::: failure_arity_mismatch_tests
   ; "failure_consecutive_non_associative_operators"

@@ -194,7 +194,8 @@ module CLF = struct
       | `None -> Context.Head.None { location }
       | `Hole -> Context.Head.Hole { location }
       | `CVar identifier ->
-        Context.Head.Context_variable { location; identifier }
+        Context.Head.Context_variable
+          { location; identifier = id identifier }
     and bindings' =
       List.map (fun (i, typ_opt) -> (id i, typ_opt)) bindings
     in

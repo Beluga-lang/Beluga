@@ -26,10 +26,6 @@ module type DISAMBIGUATION_STATE = sig
 
   val empty : t
 
-  val set_default_associativity : Associativity.t -> t -> t
-
-  val get_default_associativity : t -> Associativity.t
-
   val add_lf_term_variable : Identifier.t -> t -> t
 
   val add_prefix_lf_type_constant :
@@ -117,6 +113,34 @@ module type DISAMBIGUATION_STATE = sig
 
   val add_module :
     entry QualifiedIdentifier.Dictionary.t -> Identifier.t -> t -> t
+
+  (** Getters, setters and mutators *)
+
+  val set_default_associativity : Associativity.t -> t -> t
+
+  val get_default_associativity : t -> Associativity.t
+
+  val get_bindings : t -> entry QualifiedIdentifier.Dictionary.t
+
+  val modify_bindings :
+       (   entry QualifiedIdentifier.Dictionary.t
+        -> entry QualifiedIdentifier.Dictionary.t)
+    -> t
+    -> t
+
+  val modify_binding :
+       modify_entry:(entry -> entry)
+    -> modify_module:
+         (   entry QualifiedIdentifier.Dictionary.t
+          -> entry QualifiedIdentifier.Dictionary.t)
+    -> QualifiedIdentifier.t
+    -> t
+    -> t
+
+  exception Expected_operator of QualifiedIdentifier.t
+
+  val modify_operator :
+    (Operator.t -> Operator.t) -> QualifiedIdentifier.t -> t -> t
 
   (** {1 Lookup} *)
 
@@ -321,6 +345,45 @@ module Disambiguation_state : DISAMBIGUATION_STATE = struct
 
   let lookup_toplevel query state =
     QualifiedIdentifier.Dictionary.lookup_toplevel query (get_bindings state)
+
+  let modify_binding ~modify_entry ~modify_module identifier state =
+    match lookup identifier state with
+    | QualifiedIdentifier.Dictionary.Entry entry ->
+      (modify_bindings
+      @@ QualifiedIdentifier.Dictionary.add_entry identifier
+           (modify_entry entry))
+        state
+    | QualifiedIdentifier.Dictionary.Module module_ ->
+      (modify_bindings
+      @@ QualifiedIdentifier.Dictionary.add_module identifier
+           (modify_module module_))
+        state
+
+  exception Expected_operator of QualifiedIdentifier.t
+
+  let modify_operator f identifier state =
+    modify_binding
+      ~modify_entry:(function
+        | LF_type_constant operator -> LF_type_constant (f operator)
+        | LF_term_constant operator -> LF_term_constant (f operator)
+        | Computation_type_constant operator ->
+          Computation_type_constant (f operator)
+        | Computation_term_constructor operator ->
+          Computation_term_constructor (f operator)
+        | Computation_cotype_constant operator ->
+          Computation_cotype_constant (f operator)
+        | LF_term_variable
+        | Meta_variable
+        | Parameter_variable
+        | Substitution_variable
+        | Context_variable
+        | Schema_constant
+        | Computation_variable
+        | Computation_term_destructor
+        | Query
+        | MQuery -> raise @@ Expected_operator identifier)
+      ~modify_module:(fun _ -> raise @@ Expected_operator identifier)
+      identifier state
 end
 
 module type LF_DISAMBIGUATION = sig
@@ -1011,8 +1074,7 @@ struct
           | `Typ applicand | `Term applicand ->
             Synprs.LF.location_of_object applicand
         in
-        List.fold_left
-          (fun acc a -> Location.join acc (Synprs.LF.location_of_object a))
+        Location.join_all_contramap Synprs.LF.location_of_object
           applicand_location arguments
   end
 
@@ -1350,9 +1412,7 @@ struct
           Synprs.LF.location_of_object applicand
       in
       let application_location =
-        List.fold_left
-          (fun acc operand ->
-            Location.join acc (Synprs.LF.location_of_object operand))
+        Location.join_all_contramap Synprs.LF.location_of_object
           applicand_location arguments
       in
       match applicand with
@@ -1400,9 +1460,7 @@ struct
 
       let write operator arguments =
         let application_location =
-          List.fold_left
-            (fun acc operand ->
-              Location.join acc (LF_operand.location operand))
+          Location.join_all_contramap LF_operand.location
             (LF_operator.location operator)
             arguments
         in
@@ -1721,7 +1779,7 @@ module type CLF_DISAMBIGUATION = sig
   val disambiguate_as_context :
        disambiguation_state
     -> Synprs.CLF.Context_object.t
-    -> Synext'.CLF.Context.t
+    -> disambiguation_state * Synext'.CLF.Context.t
 
   val disambiguate_as_term_pattern :
     disambiguation_state -> Synprs.CLF.Object.t -> Synext'.CLF.Term.Pattern.t
@@ -2475,8 +2533,7 @@ struct
           | `Typ applicand | `Term applicand ->
             Synprs.CLF.location_of_object applicand
         in
-        List.fold_left
-          (fun acc a -> Location.join acc (Synprs.CLF.location_of_object a))
+        Location.join_all_contramap Synprs.CLF.location_of_object
           applicand_location arguments
   end
 
@@ -2846,12 +2903,22 @@ struct
       ; terms = terms'
       }
 
+  (** [disambiguate_context_bindings state bindings] is [(state', bindings')]
+      where [state'] is the disambiguation state derived from [state] with
+      the addition of the variables in the domain of [bindings], and
+      [bindings'] is the disambiguated context bindings.
+
+      Context variables cannot occur in [bindings]. A context variable in the
+      head position of a context is handled in {!disambiguate_as_context}. *)
   and disambiguate_context_bindings state bindings =
-    let _state', bindings_rev' =
+    (* Contextual LF contexts are dependent, meaning that bound variables on
+       the left of a declaration may appear in the type of a binding on the
+       right. Bindings may not recursively refer to themselves.*)
+    let state', bindings_rev' =
       List.fold_left
         (fun (state, bindings_rev') binding ->
           match binding with
-          | Option.Some identifier, typ ->
+          | Option.Some identifier, typ (* Typed binding *) ->
             let typ' = disambiguate_as_typ state typ in
             let state' =
               Disambiguation_state.add_lf_term_variable identifier state
@@ -2859,28 +2926,46 @@ struct
             (state', binding' :: bindings_rev')
           | ( Option.None
             , Synprs.CLF.Object.RawIdentifier
-                { identifier = identifier, `Plain; _ } ) ->
+                { identifier = identifier, `Plain; _ } )
+          (* Untyped contextual LF variable *) ->
             let state' =
               Disambiguation_state.add_lf_term_variable identifier state
             and binding' = (identifier, Option.none) in
             (state', binding' :: bindings_rev')
           | ( Option.None
             , Synprs.CLF.Object.RawIdentifier
-                { identifier = identifier, `Hash; _ } ) ->
+                { identifier = identifier, `Hash; _ } )
+          (* Parameter variables may only occur in meta-contexts *) ->
             let location = Identifier.location identifier in
             raise @@ Illegal_context_parameter_variable_binding location
           | ( Option.None
             , Synprs.CLF.Object.RawIdentifier
-                { identifier = identifier, `Dollar; _ } ) ->
+                { identifier = identifier, `Dollar; _ } )
+          (* Substitution variables may only occur in meta-contexts *) ->
             let location = Identifier.location identifier in
             raise @@ Illegal_context_substitution_variable_binding location
-          | Option.None, typ ->
+          | Option.None, typ (* Binding identifier missing *) ->
             let location = Synprs.CLF.location_of_object typ in
             raise @@ Illegal_context_missing_binding_identifier location)
         (state, []) bindings
     in
-    List.rev bindings_rev'
+    let bindings' = List.rev bindings_rev' in
+    (state', bindings')
 
+  (** [disambiguate_as_context state context] is [(state', context')] where
+      [state'] is the disambiguation state derived from [state] with the
+      addition of the variables in the domain of [context], and [context'] is
+      the disambiguated context.
+
+      - If [context] corresponds to [_, x1 : A1, x2 : A2, ..., xn : An], then
+        [_] is the omission of the context variable.
+      - If [context] corresponds to [g, x1 : A1, x2 : A2, ..., xn : An] where
+        [g] occurs in [state] as a context variable, then [g] is the context
+        variable for [context'].
+      - Bindings in a contextual LF context may omit the typings, meaning
+        that [g, x1, x2, ..., xn] is a valid context. However,
+        [g, A1, A2, ..., An] is invalid if [A1], [A2], ..., [An] are types
+        because their associated identifiers are missing. *)
   and disambiguate_as_context state context =
     let { Synprs.CLF.Context_object.location; head; objects } = context in
     match head with
@@ -2895,8 +2980,14 @@ struct
         :: xs ->
         let head' =
           Synext'.CLF.Context.Head.Hole { location = head_location }
-        and bindings' = disambiguate_context_bindings state xs in
-        { Synext'.CLF.Context.location; head = head'; bindings = bindings' }
+        and state', bindings' = disambiguate_context_bindings state xs in
+        let context' =
+          { Synext'.CLF.Context.location
+          ; head = head'
+          ; bindings = bindings'
+          }
+        in
+        (state', context')
       | ( Option.None
         , Synprs.CLF.Object.RawIdentifier
             { identifier = identifier, `Plain; _ } )
@@ -2908,25 +2999,42 @@ struct
           let head' =
             Synext'.CLF.Context.Head.Context_variable
               { identifier; location = Identifier.location identifier }
-          and bindings' = disambiguate_context_bindings state xs in
-          { Synext'.CLF.Context.location
-          ; head = head'
-          ; bindings = bindings'
-          }
+          and state', bindings' = disambiguate_context_bindings state xs in
+          let context' =
+            { Synext'.CLF.Context.location
+            ; head = head'
+            ; bindings = bindings'
+            }
+          in
+          (state', context')
         | _ | (exception QualifiedIdentifier.Dictionary.Unbound_identifier _)
           ->
           let head' =
             Synext'.CLF.Context.Head.None { location = head_location }
-          and bindings' = disambiguate_context_bindings state objects in
+          and state', bindings' =
+            disambiguate_context_bindings state objects
+          in
+          let context' =
+            { Synext'.CLF.Context.location
+            ; head = head'
+            ; bindings = bindings'
+            }
+          in
+          (state', context'))
+      | _ ->
+        (* Context is just a list of bindings without context variables *)
+        let head' =
+          Synext'.CLF.Context.Head.None { location = head_location }
+        and state', bindings' =
+          disambiguate_context_bindings state objects
+        in
+        let context' =
           { Synext'.CLF.Context.location
           ; head = head'
           ; bindings = bindings'
-          })
-      | _ ->
-        let head' =
-          Synext'.CLF.Context.Head.None { location = head_location }
-        and bindings' = disambiguate_context_bindings state objects in
-        { Synext'.CLF.Context.location; head = head'; bindings = bindings' })
+          }
+        in
+        (state', context'))
 
   (** [disambiguate_application state objects] disambiguates [objects] as
       either a type-level or term-level contextual LF application with
@@ -2953,9 +3061,7 @@ struct
           Synprs.CLF.location_of_object applicand
       in
       let application_location =
-        List.fold_left
-          (fun acc operand ->
-            Location.join acc (Synprs.CLF.location_of_object operand))
+        Location.join_all_contramap Synprs.CLF.location_of_object
           applicand_location arguments
       in
       match applicand with
@@ -3005,9 +3111,7 @@ struct
 
           let write operator arguments =
             let application_location =
-              List.fold_left
-                (fun acc operand ->
-                  Location.join acc (CLF_operand.location operand))
+              Location.join_all_contramap CLF_operand.location
                 (CLF_operator.location operator)
                 arguments
             in
@@ -3203,8 +3307,7 @@ struct
           | `Typ applicand | `Term_pattern applicand ->
             Synprs.CLF.location_of_object applicand
         in
-        List.fold_left
-          (fun acc a -> Location.join acc (Synprs.CLF.location_of_object a))
+        Location.join_all_contramap Synprs.CLF.location_of_object
           applicand_location arguments
   end
 
@@ -3471,7 +3574,8 @@ struct
             @@ Illegal_context_pattern_missing_binding_identifier location)
         (state, []) bindings
     in
-    List.rev bindings_rev'
+    let bindings' = List.rev bindings_rev' in
+    bindings'
 
   and disambiguate_as_context_pattern state context_pattern =
     let { Synprs.CLF.Context_object.location; head; objects } =
@@ -3558,9 +3662,7 @@ struct
           Synprs.CLF.location_of_object applicand
       in
       let application_location =
-        List.fold_left
-          (fun acc operand ->
-            Location.join acc (Synprs.CLF.location_of_object operand))
+        Location.join_all_contramap Synprs.CLF.location_of_object
           applicand_location arguments
       in
       match applicand with
@@ -3638,9 +3740,7 @@ struct
 
           let write operator arguments =
             let application_location =
-              List.fold_left
-                (fun acc operand ->
-                  Location.join acc (CLF_pattern_operand.location operand))
+              Location.join_all_contramap CLF_pattern_operand.location
                 (CLF_pattern_operator.location operator)
                 arguments
             in

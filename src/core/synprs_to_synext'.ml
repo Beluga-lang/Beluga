@@ -3917,3 +3917,186 @@ struct
              ; actual_argument_locations
              }
 end
+
+module type META_DISAMBIGUATION = sig
+  type disambiguation_state
+
+  type disambiguation_state_entry
+
+  (** {1 Disambiguation} *)
+
+  val disambiguate_as_meta_typ :
+    disambiguation_state -> Synprs.Meta.Thing.t -> Synext'.Meta.Typ.t
+
+  val disambiguate_as_meta_object :
+    disambiguation_state -> Synprs.Meta.Thing.t -> Synext'.Meta.Object.t
+
+  val disambiguate_as_meta_pattern :
+    disambiguation_state -> Synprs.Meta.Thing.t -> Synext'.Meta.Pattern.t
+
+  val disambiguate_as_schema :
+       disambiguation_state
+    -> Synprs.Meta.Schema_object.t
+    -> Synext'.Meta.Schema.t
+
+  val disambiguate_as_meta_context :
+       disambiguation_state
+    -> Synprs.Meta.Context_object.t
+    -> disambiguation_state * Synext'.Meta.Context.t
+end
+
+
+module type COMP_DISAMBIGUATION = sig
+  type disambiguation_state
+
+  type disambiguation_state_entry
+
+  (** {1 Disambiguation} *)
+
+  val disambiguate_as_kind :
+    disambiguation_state -> Synprs.Comp.Sort_object.t -> Synext'.Comp.Kind.t
+
+  val disambiguate_as_typ :
+    disambiguation_state -> Synprs.Comp.Sort_object.t -> Synext'.Comp.Typ.t
+
+  val disambiguate_as_expression :
+       disambiguation_state
+    -> Synprs.Comp.Expression_object.t
+    -> Synext'.Comp.Expression.t
+
+  val disambiguate_as_pattern :
+       disambiguation_state
+    -> Synprs.Comp.Pattern_object.t
+    -> Synext'.Comp.Pattern.t
+
+  val disambiguate_as_context :
+       disambiguation_state
+    -> Synprs.Comp.Context_object.t
+    -> disambiguation_state * Synext'.Comp.Context.t
+end
+
+module type HARPOON_DISAMBIGUATION = sig
+  type disambiguation_state
+
+  type disambiguation_state_entry
+
+  (** {1 Disambiguation} *)
+
+  val disambiguate_as_proof :
+    disambiguation_state -> Synprs.Harpoon.Proof.t -> Synext'.Harpoon.Proof.t
+
+  val disambiguate_as_command :
+       disambiguation_state
+    -> Synprs.Harpoon.Command.t
+    -> Synext'.Harpoon.Command.t
+
+  val disambiguate_as_directive :
+       disambiguation_state
+    -> Synprs.Harpoon.Directive.t
+    -> Synext'.Harpoon.Directive.t
+
+  val disambiguate_as_split_branch :
+       disambiguation_state
+    -> Synprs.Harpoon.Split_branch.t
+    -> Synext'.Harpoon.Split_branch.t
+
+  val disambiguate_as_suffices_branch :
+       disambiguation_state
+    -> Synprs.Harpoon.Suffices_branch.t
+    -> Synext'.Harpoon.Suffices_branch.t
+
+  val disambiguate_as_hypothetical :
+       disambiguation_state
+    -> Synprs.Harpoon.Hypothetical.t
+    -> Synext'.Harpoon.Hypothetical.t
+
+  val disambiguate_as_repl_command :
+       disambiguation_state
+    -> Synprs.Harpoon.Repl.Command.t
+    -> Synext'.Harpoon.Repl.Command.t
+end
+
+module type SIGNATURE_DISAMBIGUATION = sig
+  type disambiguation_state
+
+  type disambiguation_state_entry
+
+  (** {1 Exceptions} *)
+
+  (** {2 Exceptions for pragma applications} *)
+
+  exception
+    Invalid_infix_pragma of
+      { location : Location.t
+      ; actual_arity : Int.t
+      }
+
+  exception
+    Invalid_postfix_pragma of
+      { location : Location.t
+      ; actual_arity : Int.t
+      }
+
+  exception
+    Invalid_open_module of
+      { location : Location.t
+      ; actual_binding : disambiguation_state_entry
+      }
+
+  exception
+    Invalid_module_abbreviation of
+      { location : Location.t
+      ; actual_binding : disambiguation_state_entry
+      }
+
+  (** {2 Exceptions for declaration disambiguation} *)
+
+  exception
+    Old_style_lf_constant_declaration_error of
+      { as_type_constant : exn
+      ; as_term_constant : exn
+      }
+
+  (** {2 Exceptions for recursive declaration disambiguation} *)
+
+  exception
+    Identifiers_bound_several_times_in_recursive_declaration of
+      Location.t List2.t
+
+  (** {1 Disambiguation} *)
+
+  val disambiguate_as_pragma :
+       disambiguation_state
+    -> Synprs.Signature.Pragma.t
+    -> disambiguation_state * Synext'.Signature.Pragma.t
+
+  val disambiguate_as_global_pragma :
+       disambiguation_state
+    -> Synprs.Signature.Pragma.Global.t
+    -> disambiguation_state * Synext'.Signature.Pragma.Global.t
+
+  val disambiguate_as_totality_declaration :
+       disambiguation_state
+    -> Synprs.Signature.Totality.Declaration.t
+    -> Synext'.Signature.Totality.Declaration.t
+
+  val disambiguate_as_numeric_totality_order :
+       disambiguation_state
+    -> Int.t Synprs.Signature.Totality.Order.t
+    -> Int.t Synext'.Signature.Totality.Order.t
+
+  val disambiguate_as_named_totality_order :
+       disambiguation_state
+    -> Identifier.t Synprs.Signature.Totality.Order.t
+    -> Identifier.t Synext'.Signature.Totality.Order.t
+
+  val disambiguate_as_declaration :
+       disambiguation_state
+    -> Synprs.Signature.Declaration.t
+    -> disambiguation_state * Synext'.Signature.Declaration.t
+
+  val disambiguate_as_signature :
+       disambiguation_state
+    -> Synprs.Signature.t
+    -> disambiguation_state * Synext'.Signature.t
+end

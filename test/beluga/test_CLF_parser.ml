@@ -45,6 +45,17 @@ let assert_raises_unbound_type_constant f =
       "Expected exception [Unbound_type_constant _] to be raised"
   with Synprs_to_synext'.CLF.Unbound_type_constant _ -> ()
 
+let assert_raises_unbound_type_constant_or_illegal_projection_type f =
+  try
+    ignore @@ f ();
+    OUnit2.assert_failure
+      "Expected exception [Unbound_type_constant_or_illegal_projection_type \
+       _] to be raised"
+  with
+  | Synprs_to_synext'.CLF.Unbound_type_constant_or_illegal_projection_type _
+  ->
+    ()
+
 let assert_raises_illegal_pi_term f =
   try
     ignore @@ f ();
@@ -390,16 +401,16 @@ let test_type =
              ; app (c "lam") [ lam ~x:"x" (app (v "F") [ v "x" ]) ]
              ] )
     ; ( mock_state_7
-      , "(Statics::term T -> Statics::term T') -> Statics::term (T \
-         Statics::arrow T')"
+      , "(Statics.term T -> Statics.term T') -> Statics.term (T \
+         Statics.arrow T')"
       , t_app (t_c ~m:[ "Statics" ] "term") [ v "T" ]
         => t_app (t_c ~m:[ "Statics" ] "term") [ v "T'" ]
         => t_app
              (t_c ~m:[ "Statics" ] "term")
              [ app (c ~m:[ "Statics" ] "arrow") [ v "T"; v "T'" ] ] )
     ; ( mock_state_7
-      , "(Statics::term T -> Statics::term T') -> Statics::term \
-         ((Statics::arrow) T T')"
+      , "(Statics.term T -> Statics.term T') -> Statics.term \
+         ((Statics.arrow) T T')"
       , t_app (t_c ~m:[ "Statics" ] "term") [ v "T" ]
         => t_app (t_c ~m:[ "Statics" ] "term") [ v "T'" ]
         => t_app
@@ -431,7 +442,9 @@ let test_type =
     ; (mock_state_2, "nat : nat", assert_raises_illegal_annotated_type)
     ; (mock_state_6, "{ x } x eq x", assert_raises_illegal_untyped_pi_type)
     ; (mock_state_1, "z", assert_raises_unbound_type_constant)
-    ; (mock_state_3, "Nat::add", assert_raises_unbound_type_constant)
+    ; ( mock_state_3
+      , "Nat.add"
+      , assert_raises_unbound_type_constant_or_illegal_projection_type )
     ]
   in
   let success_tests =
@@ -528,6 +541,8 @@ let test_term =
     ; ( mock_state_2
       , "<x>.x.1.y"
       , proj_x (proj_i (proj_x (tuple (List1.from (v "x") [])) "x") 1) "y" )
+    ; (mock_state_2, "x.y.z", proj_x (proj_x (v "x") "y") "z")
+    ; (mock_state_3, "Nat.z.x", proj_x (c "z" ~m:[ "Nat" ]) "x")
     ; (mock_state_2, "x[]", sub (v "x") (`None, []))
     ; (mock_state_2, "x[z]", sub (v "x") (`None, [ c "z" ]))
     ; (mock_state_2, "x[\\z. z]", sub (v "x") (`None, [ lam ~x:"z" (v "z") ]))
@@ -572,7 +587,7 @@ let test_term =
     [ (mock_state_2, "{ x : nat } x", assert_raises_illegal_pi_term)
     ; (mock_state_1, "\\x. x -> x", assert_raises_illegal_forward_arrow_term)
     ; (mock_state_1, "x <- \\x. x", assert_raises_illegal_backward_arrow_term)
-    ; (mock_state_3, "Nat::one", assert_raises_unbound_term_constant)
+    ; (mock_state_3, "Nat.one", assert_raises_unbound_term_constant)
     ; ( mock_state_5
       , "has_type has_type"
       , assert_raises_consecutive_non_associative_operators )

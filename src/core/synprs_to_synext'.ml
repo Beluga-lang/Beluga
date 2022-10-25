@@ -1661,6 +1661,12 @@ module type CLF_DISAMBIGUATION = sig
       ; identifier : QualifiedIdentifier.t
       }
 
+  exception
+    Unbound_type_constant_or_illegal_projection_type of
+      { location : Location.t
+      ; identifier : QualifiedIdentifier.t
+      }
+
   (** {2 Exceptions for contextual LF term disambiguation} *)
 
   exception Illegal_pi_term of Location.t
@@ -1834,6 +1840,12 @@ struct
 
   exception
     Unbound_type_constant of
+      { location : Location.t
+      ; identifier : QualifiedIdentifier.t
+      }
+
+  exception
+    Unbound_type_constant_or_illegal_projection_type of
       { location : Location.t
       ; identifier : QualifiedIdentifier.t
       }
@@ -2017,6 +2029,12 @@ struct
         Location.pp location
     | Unbound_type_constant { location; identifier } ->
       Format.fprintf ppf "The LF type-level constant %a is unbound: %a@."
+        QualifiedIdentifier.pp identifier Location.pp location
+    | Unbound_type_constant_or_illegal_projection_type
+        { location; identifier } ->
+      Format.fprintf ppf
+        "Either the LF type-level constant %a is unbound, or a projection \
+         term may not appear as a contextual LF type: %a@."
         QualifiedIdentifier.pp identifier Location.pp location
     | Illegal_pi_term location ->
       Format.fprintf ppf
@@ -2651,10 +2669,11 @@ struct
     | Synprs.CLF.Object.RawQualifiedIdentifier
         { location; identifier; quoted } -> (
       (* Qualified identifiers without modules were parsed as plain
-         identifiers *)
+         identifiers. *)
       assert (List.length (QualifiedIdentifier.modules identifier) >= 1);
-      (* As an LF type, identifiers of the form [(<identifier> `::')+
-         <identifier>] are necessarily type-level constants. *)
+      (* As an LF type, identifiers of the form [<identifier>
+         <dot-identifier>+] are type-level constants, or illegal named
+         projections. *)
       match Disambiguation_state.lookup identifier state with
       | QualifiedIdentifier.Dictionary.Entry
           (Disambiguation_state.LF_type_constant operator) ->
@@ -2662,7 +2681,9 @@ struct
       | entry ->
         raise @@ Expected_type_constant { location; actual_binding = entry }
       | exception QualifiedIdentifier.Dictionary.Unbound_identifier _ ->
-        raise @@ Unbound_type_constant { location; identifier })
+        raise
+        @@ Unbound_type_constant_or_illegal_projection_type
+             { location; identifier })
     | Synprs.CLF.Object.RawArrow { location; domain; range; orientation } ->
       let domain' = disambiguate_as_typ state domain
       and range' = disambiguate_as_typ state range in
@@ -2792,19 +2813,147 @@ struct
         Synext'.CLF.Term.Variable { location; identifier })
     | Synprs.CLF.Object.RawQualifiedIdentifier
         { location; identifier; quoted } -> (
-      (* Qualified identifiers without modules were parsed as plain
-         identifiers *)
-      assert (List.length (QualifiedIdentifier.modules identifier) >= 1);
-      (* As an LF term, identifiers of the form [(<identifier> `::')+
-         <identifier>] are necessarily term-level constants. *)
-      match Disambiguation_state.lookup identifier state with
-      | QualifiedIdentifier.Dictionary.Entry
-          (Disambiguation_state.LF_term_constant operator) ->
-        Synext'.CLF.Term.Constant { location; identifier; operator; quoted }
-      | entry ->
-        raise @@ Expected_term_constant { location; actual_binding = entry }
-      | exception QualifiedIdentifier.Dictionary.Unbound_identifier _ ->
-        raise @@ Unbound_term_constant { location; identifier })
+      (* As an LF term, identifiers of the form [<identifier>
+         <dot-identifier>+] are either term-level constants, or named
+         projections. *)
+      let reduce_projections base projections =
+        List.fold_left
+          (fun term projection_identifier ->
+            let location =
+              Location.join
+                (Synext'.CLF.location_of_term term)
+                (Identifier.location projection_identifier)
+            in
+            Synext'.CLF.Term.Projection
+              { location
+              ; term
+              ; projection = `By_identifier projection_identifier
+              })
+          base projections
+      in
+      let reduce_projections' base projections last_projection =
+        let sub_term = reduce_projections base projections in
+        let location =
+          Location.join
+            (Synext'.CLF.location_of_term sub_term)
+            (Identifier.location last_projection)
+        in
+        Synext'.CLF.Term.Projection
+          { location
+          ; term = sub_term
+          ; projection = `By_identifier last_projection
+          }
+      in
+      let modules = QualifiedIdentifier.modules identifier
+      and name = QualifiedIdentifier.name identifier in
+      match modules with
+      | [] ->
+        (* Qualified identifiers without modules were parsed as plain
+           identifiers *)
+        Error.violation
+          "[disambiguate_as_term] encountered a qualified identifier \
+           without modules."
+      | m :: ms -> (
+        match Disambiguation_state.lookup_toplevel m state with
+        | QualifiedIdentifier.Dictionary.Module sub_state as entry ->
+          let rec helper state looked_up_identifiers next_identifier
+              remaining_identifiers =
+            match
+              QualifiedIdentifier.Dictionary.lookup_toplevel next_identifier
+                state
+            with
+            | QualifiedIdentifier.Dictionary.Module state' as entry -> (
+              match remaining_identifiers with
+              | [] ->
+                (* Lookups ended with a module. *)
+                raise
+                @@ Expected_term_constant
+                     { location; actual_binding = entry }
+              | next_identifier' :: remaining_identifiers' ->
+                let looked_up_identifiers' =
+                  next_identifier :: looked_up_identifiers
+                in
+                helper state' looked_up_identifiers' next_identifier'
+                  remaining_identifiers')
+            | QualifiedIdentifier.Dictionary.Entry
+                (Disambiguation_state.LF_term_constant operator) -> (
+              (* Lookups ended with an LF term constant. The remaining
+                 identifiers are named projections. *)
+              match remaining_identifiers with
+              | [] ->
+                (* The overall qualified identifier has no projections. In
+                   this case, it may be quoted. *)
+                Synext'.CLF.Term.Constant
+                  { location; identifier; operator; quoted }
+              | _ ->
+                (* The qualified identifier has projections. It cannot be
+                   quoted. *)
+                let identifier =
+                  QualifiedIdentifier.make
+                    ~modules:(List.rev looked_up_identifiers)
+                    next_identifier
+                in
+                let location = QualifiedIdentifier.location identifier in
+                let term =
+                  Synext'.CLF.Term.Constant
+                    { location; identifier; operator; quoted = false }
+                in
+                reduce_projections term remaining_identifiers)
+            | entry ->
+              (* Lookups ended with an entry that cannot be used in a
+                 contextual LF term projection. *)
+              let location =
+                Location.join_all1_contramap Identifier.location
+                  (List1.from next_identifier looked_up_identifiers)
+              in
+              raise
+              @@ Expected_term_constant { location; actual_binding = entry }
+            | exception QualifiedIdentifier.Dictionary.Unbound_identifier _
+              -> (
+              match remaining_identifiers with
+              | [] -> raise @@ Unbound_term_constant { location; identifier }
+              | _ ->
+                let module_identifier =
+                  QualifiedIdentifier.make
+                    ~modules:(List.rev looked_up_identifiers)
+                    next_identifier
+                in
+                raise
+                @@ QualifiedIdentifier.Dictionary.Unbound_module
+                     module_identifier)
+          in
+          helper
+            (Disambiguation_state.get_bindings state)
+            [] m (ms @ [ name ])
+        | QualifiedIdentifier.Dictionary.Entry
+            (Disambiguation_state.LF_term_constant operator) ->
+          (* Immediately looked up an LF term constant. The remaining
+             identifiers are named projections. *)
+          let location = Identifier.location m in
+          let identifier = QualifiedIdentifier.make_simple m in
+          let term =
+            Synext'.CLF.Term.Constant
+              { identifier; location; operator; quoted = false }
+          in
+          reduce_projections' term ms name
+        | QualifiedIdentifier.Dictionary.Entry
+            ( Disambiguation_state.LF_term_variable
+            | Disambiguation_state.Meta_variable ) ->
+          (* Immediately looked up an LF term variable or a meta-variable.
+             The remaining identifiers are named projections. *)
+          let location = Identifier.location m in
+          let term =
+            Synext'.CLF.Term.Variable { location; identifier = m }
+          in
+          reduce_projections' term ms name
+        | exception QualifiedIdentifier.Dictionary.Unbound_identifier _ ->
+          (* Immediately looked up a free variable. The remaining identifiers
+             are named projections. *)
+          let location = Identifier.location m in
+          let term =
+            Synext'.CLF.Term.Variable { location; identifier = m }
+          in
+          reduce_projections' term ms name))
     | Synprs.CLF.Object.RawApplication { objects; _ } -> (
       match disambiguate_application state objects with
       | `Typ typ ->
@@ -3419,20 +3568,147 @@ struct
       | _ -> Synext'.CLF.Term.Pattern.Variable { location; identifier })
     | Synprs.CLF.Object.RawQualifiedIdentifier
         { location; identifier; quoted } -> (
-      (* Qualified identifiers without modules were parsed as plain
-         identifiers *)
-      assert (List.length (QualifiedIdentifier.modules identifier) >= 1);
-      (* As an LF term pattern, identifiers of the form [(<identifier> `::')+
-         <identifier>] are necessarily term-level constants. *)
-      match Disambiguation_state.lookup identifier state with
-      | QualifiedIdentifier.Dictionary.Entry
-          (Disambiguation_state.LF_term_constant operator) ->
-        Synext'.CLF.Term.Pattern.Constant
-          { location; identifier; operator; quoted }
-      | entry ->
-        raise @@ Expected_term_constant { location; actual_binding = entry }
-      | exception QualifiedIdentifier.Dictionary.Unbound_identifier _ ->
-        raise @@ Unbound_term_constant { location; identifier })
+      (* As an LF term, identifiers of the form [<identifier>
+         <dot-identifier>+] are either term-level constants, or named
+         projections. *)
+      let reduce_projections base projections =
+        List.fold_left
+          (fun term projection_identifier ->
+            let location =
+              Location.join
+                (Synext'.CLF.location_of_term_pattern term)
+                (Identifier.location projection_identifier)
+            in
+            Synext'.CLF.Term.Pattern.Projection
+              { location
+              ; term
+              ; projection = `By_identifier projection_identifier
+              })
+          base projections
+      in
+      let reduce_projections' base projections last_projection =
+        let sub_term = reduce_projections base projections in
+        let location =
+          Location.join
+            (Synext'.CLF.location_of_term_pattern sub_term)
+            (Identifier.location last_projection)
+        in
+        Synext'.CLF.Term.Pattern.Projection
+          { location
+          ; term = sub_term
+          ; projection = `By_identifier last_projection
+          }
+      in
+      let modules = QualifiedIdentifier.modules identifier
+      and name = QualifiedIdentifier.name identifier in
+      match modules with
+      | [] ->
+        (* Qualified identifiers without modules were parsed as plain
+           identifiers *)
+        Error.violation
+          "[disambiguate_as_term] encountered a qualified identifier \
+           without modules."
+      | m :: ms -> (
+        match Disambiguation_state.lookup_toplevel m state with
+        | QualifiedIdentifier.Dictionary.Module sub_state as entry ->
+          let rec helper state looked_up_identifiers next_identifier
+              remaining_identifiers =
+            match
+              QualifiedIdentifier.Dictionary.lookup_toplevel next_identifier
+                state
+            with
+            | QualifiedIdentifier.Dictionary.Module state' as entry -> (
+              match remaining_identifiers with
+              | [] ->
+                (* Lookups ended with a module. *)
+                raise
+                @@ Expected_term_constant
+                     { location; actual_binding = entry }
+              | next_identifier' :: remaining_identifiers' ->
+                let looked_up_identifiers' =
+                  next_identifier :: looked_up_identifiers
+                in
+                helper state' looked_up_identifiers' next_identifier'
+                  remaining_identifiers')
+            | QualifiedIdentifier.Dictionary.Entry
+                (Disambiguation_state.LF_term_constant operator) -> (
+              (* Lookups ended with an LF term constant. The remaining
+                 identifiers are named projections. *)
+              match remaining_identifiers with
+              | [] ->
+                (* The overall qualified identifier has no projections. In
+                   this case, it may be quoted. *)
+                Synext'.CLF.Term.Pattern.Constant
+                  { location; identifier; operator; quoted }
+              | _ ->
+                (* The qualified identifier has projections. It cannot be
+                   quoted. *)
+                let identifier =
+                  QualifiedIdentifier.make
+                    ~modules:(List.rev looked_up_identifiers)
+                    next_identifier
+                in
+                let location = QualifiedIdentifier.location identifier in
+                let term =
+                  Synext'.CLF.Term.Pattern.Constant
+                    { location; identifier; operator; quoted = false }
+                in
+                reduce_projections term remaining_identifiers)
+            | entry ->
+              (* Lookups ended with an entry that cannot be used in a
+                 contextual LF term projection. *)
+              let location =
+                Location.join_all1_contramap Identifier.location
+                  (List1.from next_identifier looked_up_identifiers)
+              in
+              raise
+              @@ Expected_term_constant { location; actual_binding = entry }
+            | exception QualifiedIdentifier.Dictionary.Unbound_identifier _
+              -> (
+              match remaining_identifiers with
+              | [] -> raise @@ Unbound_term_constant { location; identifier }
+              | _ ->
+                let module_identifier =
+                  QualifiedIdentifier.make
+                    ~modules:(List.rev looked_up_identifiers)
+                    next_identifier
+                in
+                raise
+                @@ QualifiedIdentifier.Dictionary.Unbound_module
+                     module_identifier)
+          in
+          helper
+            (Disambiguation_state.get_bindings state)
+            [] m (ms @ [ name ])
+        | QualifiedIdentifier.Dictionary.Entry
+            (Disambiguation_state.LF_term_constant operator) ->
+          (* Immediately looked up an LF term constant. The remaining
+             identifiers are named projections. *)
+          let location = Identifier.location m in
+          let identifier = QualifiedIdentifier.make_simple m in
+          let term =
+            Synext'.CLF.Term.Pattern.Constant
+              { identifier; location; operator; quoted = false }
+          in
+          reduce_projections' term ms name
+        | QualifiedIdentifier.Dictionary.Entry
+            ( Disambiguation_state.LF_term_variable
+            | Disambiguation_state.Meta_variable ) ->
+          (* Immediately looked up an LF term variable or a meta-variable.
+             The remaining identifiers are named projections. *)
+          let location = Identifier.location m in
+          let term =
+            Synext'.CLF.Term.Pattern.Variable { location; identifier = m }
+          in
+          reduce_projections' term ms name
+        | exception QualifiedIdentifier.Dictionary.Unbound_identifier _ ->
+          (* Immediately looked up a free variable. The remaining identifiers
+             are named projections. *)
+          let location = Identifier.location m in
+          let term =
+            Synext'.CLF.Term.Pattern.Variable { location; identifier = m }
+          in
+          reduce_projections' term ms name))
     | Synprs.CLF.Object.RawApplication { objects; _ } -> (
       match disambiguate_application_pattern state objects with
       | `Typ typ ->

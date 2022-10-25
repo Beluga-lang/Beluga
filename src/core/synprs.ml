@@ -38,10 +38,10 @@ module LF = struct
           ; identifier : QualifiedIdentifier.t
           ; quoted : Bool.t
           }
-          (** - [RawQualifiedIdentifier { identifier = "M::x"; quoted = false; _ }]
-                is the constant ["M::x"].
-              - [RawQualifiedIdentifier { identifier = "M::x"; quoted = true; _ }]
-                is the quoted constant ["(M::x)"].
+          (** - [RawQualifiedIdentifier { identifier = "M.x"; quoted = false; _ }]
+                is the constant ["M.x"].
+              - [RawQualifiedIdentifier { identifier = "M.x"; quoted = true; _ }]
+                is the quoted constant ["(M.x)"].
 
               Since identifiers are ambiguous with qualified identifiers in
               the parser, the following may be assumed during disambiguation:
@@ -135,10 +135,10 @@ module CLF = struct
           ; identifier : QualifiedIdentifier.t
           ; quoted : Bool.t
           }
-          (** - [RawQualifiedIdentifier { identifier = "M::x"; quoted = false; _ }]
-                is the constant ["M::x"].
-              - [RawQualifiedIdentifier { identifier = "M::x"; quoted = true; _ }]
-                is the quoted constant ["(M::x)"].
+          (** - [RawQualifiedIdentifier { identifier = "M.x"; quoted = false; _ }]
+                is the constant ["M.x"].
+              - [RawQualifiedIdentifier { identifier = "M.x"; quoted = true; _ }]
+                is the quoted constant ["(M.x)"].
 
               Since identifiers are ambiguous with qualified identifiers in
               the parser, the following may be assumed during disambiguation:

@@ -333,10 +333,10 @@ let test_kind =
       , t_c "nat" ==> (t_c "nat" ==> (t_c "nat" ==> typ)) )
     ; (mock_state_2, "(nat -> nat) -> type", t_c "nat" => t_c "nat" ==> typ)
     ; ( mock_state_3
-      , "Nat::nat -> Nat::nat -> type"
+      , "Nat.nat -> Nat.nat -> type"
       , t_c ~m:[ "Nat" ] "nat" ==> (t_c ~m:[ "Nat" ] "nat" ==> typ) )
     ; ( mock_state_4
-      , "Util::Nat::nat -> Util::Nat::nat -> type"
+      , "Util.Nat.nat -> Util.Nat.nat -> type"
       , t_c ~m:[ "Util"; "Nat" ] "nat"
         ==> (t_c ~m:[ "Util"; "Nat" ] "nat" ==> typ) )
     ; ( mock_state_8
@@ -359,7 +359,7 @@ let test_kind =
     ]
   and failure_test_cases =
     [ (mock_state_1, "M", assert_raises_illegal_identifier_kind)
-    ; (mock_state_1, "Q::M", assert_raises_illegal_qualified_identifier_kind)
+    ; (mock_state_1, "Q.M", assert_raises_illegal_qualified_identifier_kind)
     ; (mock_state_2, "type <- nat", assert_raises_illegal_backward_arrow_kind)
     ; (mock_state_1, "_", assert_raises_illegal_hole_kind)
     ; (mock_state_1, "(\\x. _)", assert_raises_illegal_lambda_kind)
@@ -538,16 +538,16 @@ let test_type =
              ; app (c "lam") [ lam ~x:"x" (app (v "F") [ v "x" ]) ]
              ] )
     ; ( mock_state_7
-      , "(Statics::term T -> Statics::term T') -> Statics::term (T \
-         Statics::arrow T')"
+      , "(Statics.term T -> Statics.term T') -> Statics.term (T \
+         Statics.arrow T')"
       , t_app (t_c ~m:[ "Statics" ] "term") [ v "T" ]
         => t_app (t_c ~m:[ "Statics" ] "term") [ v "T'" ]
         => t_app
              (t_c ~m:[ "Statics" ] "term")
              [ app (c ~m:[ "Statics" ] "arrow") [ v "T"; v "T'" ] ] )
     ; ( mock_state_7
-      , "(Statics::term T -> Statics::term T') -> Statics::term \
-         ((Statics::arrow) T T')"
+      , "(Statics.term T -> Statics.term T') -> Statics.term \
+         ((Statics.arrow) T T')"
       , t_app (t_c ~m:[ "Statics" ] "term") [ v "T" ]
         => t_app (t_c ~m:[ "Statics" ] "term") [ v "T'" ]
         => t_app
@@ -564,7 +564,7 @@ let test_type =
     ; (mock_state_2, "nat : type", assert_raises_illegal_annotated_type)
     ; (mock_state_6, "{ x } x eq x", assert_raises_illegal_untyped_pi_type)
     ; (mock_state_1, "z", assert_raises_unbound_type_constant)
-    ; (mock_state_3, "Nat::add", assert_raises_unbound_type_constant)
+    ; (mock_state_3, "Nat.add", assert_raises_unbound_type_constant)
     ]
   in
   let success_tests =
@@ -648,7 +648,7 @@ let test_term =
     ; (mock_state_2, "{ x : nat } x", assert_raises_illegal_pi_term)
     ; (mock_state_1, "\\x. x -> x", assert_raises_illegal_forward_arrow_term)
     ; (mock_state_1, "x <- \\x. x", assert_raises_illegal_backward_arrow_term)
-    ; (mock_state_3, "Nat::one", assert_raises_unbound_term_constant)
+    ; (mock_state_3, "Nat.one", assert_raises_unbound_term_constant)
     ; ( mock_state_5
       , "has_type has_type"
       , assert_raises_consecutive_non_associative_operators )

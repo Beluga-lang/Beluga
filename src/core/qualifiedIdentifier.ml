@@ -61,12 +61,12 @@ include (
 
     let pp ppf n =
       match modules n with
-      | [] -> Format.fprintf ppf "%a" Identifier.pp (name n)
+      | [] -> Identifier.pp ppf (name n)
       | _ ->
-        Format.fprintf ppf "%a::%a"
+        Format.fprintf ppf "@[<2>%a@,.%a@]"
           (Format.pp_print_list
-             ~pp_sep:(fun ppf () -> Format.fprintf ppf "::")
-             (fun ppf x -> Format.fprintf ppf "%a" Identifier.pp x))
+             ~pp_sep:(fun ppf () -> Format.fprintf ppf "@,.")
+             Identifier.pp)
           (modules n) Identifier.pp (name n)
   end) :
     Show.SHOW with type t := t)

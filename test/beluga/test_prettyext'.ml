@@ -191,7 +191,7 @@ let test_pp_kind =
     ; (mock_state_2, "{ x : nat } nat -> nat -> type")
     ; (mock_state_2, "{ _ : nat } nat -> nat -> type")
     ; (mock_state_2, "({ x : nat } nat -> nat) -> type")
-    ; (mock_state_3, "({ x : Nat::nat } Nat::nat -> Nat::nat) -> type")
+    ; (mock_state_3, "({ x : Nat.nat } Nat.nat -> Nat.nat) -> type")
     ]
   in
   let tests =

@@ -818,37 +818,37 @@ let omittable_dollar_identifier =
     (dollar_identifier $> Option.some)
 
 (*=
-   <qualified-identifier> ::= (<identifier> `::')* <identifier>
+   <qualified-identifier> ::= <identifier> <dot-identifier>*
 *)
 let[@warning "-32"] qualified_identifier =
-  sep_by1 identifier (token Token.DOUBLE_COLON)
+  seq2 identifier (many dot_identifier)
+  |> span
+  $> fun (location, (head, tail)) ->
+       let (modules, identifier) = List1.unsnoc (List1.from head tail) in
+       QualifiedIdentifier.make ~location ~modules identifier
+
+(*=
+   <dot-qualified-identifier> ::= <dot-identifier>+
+*)
+let dot_qualified_identifier =
+  some dot_identifier
   |> span
   $> fun (location, identifiers) ->
        let (modules, identifier) = List1.unsnoc identifiers in
        QualifiedIdentifier.make ~location ~modules identifier
 
 (*=
-   <dot-qualified-identifier> ::= <dot-identifier> (`::' <identifier>)*
-*)
-let dot_qualified_identifier =
-  seq2 dot_identifier (many (token Token.DOUBLE_COLON &> identifier))
-  |> span
-  $> fun (location, (x, xs)) ->
-       let (modules, identifier) = List1.unsnoc (List1.from x xs) in
-       QualifiedIdentifier.make ~location ~modules identifier
-
-(*=
     <qualified-or-plain-identifier> ::=
       | <identifier>
-      | (<identifier> `::')+ <identifier>
+      | <identifier> <dot-identifier>*
 *)
 let qualified_or_plain_identifier =
-  sep_by1 identifier (token Token.DOUBLE_COLON)
+  seq2 identifier (many dot_identifier)
   |> span
   $> function
-     | (_, List1.T (head, [])) -> `Plain head
-     | (location, identifiers) ->
-       let (modules, identifier) = List1.unsnoc identifiers in
+     | (_, (head, [])) -> `Plain head
+     | (location, (head, tail)) ->
+       let (modules, identifier) = List1.unsnoc (List1.from head tail) in
        `Qualified (QualifiedIdentifier.make ~location ~modules identifier)
 
 let omittable_meta_object_identifier =
@@ -1403,6 +1403,8 @@ end = struct
       alt integer_projection identifier_projection
     in
     let trailing_projections = many (span projection) in
+    (* If a term only uses named projections, then those projections are
+       actually parsed as a qualfified identifier. *)
     seq2 clf_object8 trailing_projections
     $> (function
        | (object_, []) -> object_
@@ -1769,14 +1771,14 @@ end = struct
           ]
         |> span
         $> (function
-           | (location, (context, (`Turnstile, object_))) ->
+           | (location, (context, (`Plain, object_))) ->
               Synprs.Meta.Thing.RawTurnstile
                 { location
                 ; context
                 ; object_
                 ; variant = `Dollar
                 }
-           | (location, (context, (`Turnstile_hash, object_))) ->
+           | (location, (context, (`Hash, object_))) ->
               Synprs.Meta.Thing.RawTurnstile
                 { location
                 ; context

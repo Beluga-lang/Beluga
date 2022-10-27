@@ -568,14 +568,14 @@ module Signature = struct
       Associativity.equal x.associativity y.associativity
     | Pragma.Prefix_fixity x, Pragma.Prefix_fixity y ->
       QualifiedIdentifier.equal x.constant y.constant
-      && Int.equal x.precedence y.precedence
+      && Option.equal Int.equal x.precedence y.precedence
     | Pragma.Infix_fixity x, Pragma.Infix_fixity y ->
       QualifiedIdentifier.equal x.constant y.constant
-      && Int.equal x.precedence y.precedence
+      && Option.equal Int.equal x.precedence y.precedence
       && Option.equal Associativity.equal x.associativity y.associativity
     | Pragma.Postfix_fixity x, Pragma.Postfix_fixity y ->
       QualifiedIdentifier.equal x.constant y.constant
-      && Int.equal x.precedence y.precedence
+      && Option.equal Int.equal x.precedence y.precedence
     | Pragma.Not _, Pragma.Not _ -> true
     | Pragma.Open_module x, Pragma.Open_module y ->
       QualifiedIdentifier.equal x.module_identifier y.module_identifier

@@ -4886,7 +4886,7 @@ struct
   (** [add_inner_module_declaration_to_disambiguation_state declaration' state]
       is the disambiguation state derived from [state] with the addition of
       [declaration']. This is used to collect the inner declarations of a
-      module after it has been disambiguatedé *)
+      module after it has been disambiguated. *)
   let rec add_inner_module_declaration_to_disambiguation_state declaration'
       state =
     match declaration' with
@@ -4964,26 +4964,27 @@ struct
       (* Pragmas in a module only apply in the module. *) state
     | Synext'.Signature.Declaration.Comment _ -> state
 
-  (** [make_operator_prefix ~precedence operator_identifier state] is the
+  (** [make_operator_prefix ?precedence operator_identifier state] is the
       disambiguation state derived from [state] where the operator with
       identifier [operator_identifier] is set as a prefix operator with
       [precedence]. *)
-  let make_operator_prefix ~precedence operator_identifier state =
+  let make_operator_prefix ?(precedence = default_precedence)
+      operator_identifier state =
     Disambiguation_state.modify_operator
       (fun operator ->
         let arity = Operator.arity operator in
         Operator.make_prefix ~arity ~precedence)
       operator_identifier state
 
-  (** [make_operator_infix ~precedence ?associativity operator_identifier state]
+  (** [make_operator_infix ?precedence ?associativity operator_identifier state]
       is the disambiguation state derived from [state] where the operator
       with identifier [operator_identifier] is set as an infix operator with
       [precedence] and [associativity]. If [associativity = Option.None],
       then the default associativity as found [state] is used instead.
 
       Only operators with arity [2] may be converted to infix operators. *)
-  let make_operator_infix ~precedence ?associativity operator_identifier
-      state =
+  let make_operator_infix ?(precedence = default_precedence) ?associativity
+      operator_identifier state =
     let associativity =
       match associativity with
       | Option.Some associativity -> associativity
@@ -4998,13 +4999,14 @@ struct
           raise @@ Invalid_infix_pragma { location; actual_arity = arity })
       operator_identifier state
 
-  (** [make_operator_postfix ~precedence operator_identifier state] is the
+  (** [make_operator_postfix ?precedence operator_identifier state] is the
       disambiguation state derived from [state] where the operator with
       identifier [operator_identifier] is set as a postifx operator with
       [precedence].
 
       Only operators with arity [1] may be converted to postfix operators. *)
-  let make_operator_postfix ~precedence operator_identifier state =
+  let make_operator_postfix ?(precedence = default_precedence)
+      operator_identifier state =
     Disambiguation_state.modify_operator
       (fun operator ->
         let arity = Operator.arity operator in
@@ -5067,7 +5069,7 @@ struct
         let locations = List2.from l1 l2 ls in
         raise
         @@ Identifiers_bound_several_times_in_recursive_declaration locations
-      | _ -> assert false
+      | _ -> Error.violation "[ensure_unique_identifiers]"
       (* Impossible since [List.length additions <> Identifier.Set.cardinal
          additions_set], meaning that at least two identifiers in [additions]
          are equal. *)
@@ -5100,7 +5102,7 @@ struct
       (state', pragma')
     | Synprs.Signature.Pragma.Prefix_fixity
         { location; constant; precedence } ->
-      let state' = make_operator_prefix ~precedence constant state
+      let state' = make_operator_prefix ?precedence constant state
       and pragma' =
         Synext'.Signature.Pragma.Prefix_fixity
           { location; constant; precedence }
@@ -5109,7 +5111,7 @@ struct
     | Synprs.Signature.Pragma.Infix_fixity
         { location; constant; precedence; associativity } ->
       let state' =
-        make_operator_infix ~precedence ?associativity constant state
+        make_operator_infix ?precedence ?associativity constant state
       and pragma' =
         Synext'.Signature.Pragma.Infix_fixity
           { location; constant; precedence; associativity }
@@ -5117,7 +5119,7 @@ struct
       (state', pragma')
     | Synprs.Signature.Pragma.Postfix_fixity
         { location; constant; precedence } ->
-      let state' = make_operator_postfix ~precedence constant state
+      let state' = make_operator_postfix ?precedence constant state
       and pragma' =
         Synext'.Signature.Pragma.Postfix_fixity
           { location; constant; precedence }

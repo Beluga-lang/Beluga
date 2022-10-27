@@ -3496,7 +3496,7 @@ end = struct
     |> labelled "associativity"
 
   let prefix_pragma =
-    (pragma "prefix" &> seq2 qualified_identifier integer) <& token Token.DOT
+    (pragma "prefix" &> seq2 qualified_identifier (maybe integer)) <& token Token.DOT
     |> span
     $> fun (location, (constant, precedence)) ->
         Signature.Pragma.Prefix_fixity
@@ -3506,7 +3506,7 @@ end = struct
           }
 
   let infix_pragma =
-    (pragma "infix" &> seq3 qualified_identifier integer (maybe associativity)) <& token Token.DOT
+    (pragma "infix" &> seq3 qualified_identifier (maybe integer) (maybe associativity)) <& token Token.DOT
     |> span
     $> fun (location, (constant, precedence, associativity)) ->
           Signature.Pragma.Infix_fixity
@@ -3517,7 +3517,7 @@ end = struct
             }
 
   let postfix_pragma =
-    (pragma "postfix" &> seq2 qualified_identifier integer) <& token Token.DOT
+    (pragma "postfix" &> seq2 qualified_identifier (maybe integer)) <& token Token.DOT
     |> span
     $> fun (location, (constant, precedence)) ->
           Signature.Pragma.Postfix_fixity

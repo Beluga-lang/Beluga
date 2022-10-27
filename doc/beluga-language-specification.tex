@@ -1,0 +1,879 @@
+\documentclass[11pt]{article}
+
+\usepackage[utf8x]{inputenc}
+\usepackage[T1]{fontenc}
+
+\usepackage[margin=1in]{geometry}
+
+\usepackage{hyperref}
+
+\usepackage{enumitem}
+
+\usepackage{multicol}
+
+\usepackage{needspace}
+
+\usepackage{amssymb}
+\usepackage{amsmath}
+
+\usepackage{syntax}
+
+\usepackage{xspace}
+
+\newcommand{\Beluga}{\textsc{Beluga}\xspace}
+\newcommand{\Harpoon}{\textsc{Harpoon}\xspace}
+\newcommand{\LF}{\textsc{LF}\xspace}
+
+\title{%
+\Beluga Language Specification%
+\\\Large\textit{Release 1.0}
+}
+\author{The \Beluga Team}
+
+\begin{document}
+
+\maketitle
+
+\tableofcontents
+
+\section*{Overview}
+
+This document formally defines components of the \Beluga language for developers and maintainers of the project.
+
+\section{Syntax}\label{section:syntax}
+
+This section presents the syntax for \Beluga signatures using ambiguous grammars.
+It is intended to serve as a specification for validating the parser's implementation, as well as to assist in making changes to the parser.
+Rewriting of the grammar for optimization, left recursion elimination, and disambiguation purposes is outside the scope of this presentation.
+Section \ref{section:resolving-grammar-ambiguities} presents a context-free grammar for \Beluga that is suitable for parsing with a separate stage for disambiguation.
+
+The EBNF metasyntax used in the sections hereafter follows this notation:
+
+\begin{itemize}
+\item $ (a)* $ represents the repetition of $ a $ zero or more times
+\item $ (a)+ $ represents the repetition of $ a $ one or more times
+\item $ [a] $ represents optionally applying $ a $
+\item \texttt{(*} and \texttt{*)} delimit comments
+\end{itemize}
+
+\subsection{Comments}
+
+\begin{itemize}
+\item
+Line comments start with \texttt{\%} and end with a newline \texttt{\textbackslash n}.
+They are treated as blank characters, and as such may be interspersed anywhere in the grammar.
+\item
+Block comments are enclosed in \texttt{\%\{} and \texttt{\}\%}.
+They are treated as blank characters, and as such may be interspersed anywhere in the grammar.
+\item
+Documentation comments are enclosed in \texttt{\%\{\{} and \texttt{\}\}\%}.
+The contents of documentation comments are parsed as \textsc{Markdown} following the \href{https://spec.commonmark.org/0.29}{\textsc{Commonmark} standard version 0.29}.
+These are used in documentation generation to \textsc{HTML} or \LaTeX.
+Documentation comments may only appear before or after signature-level declarations.
+\end{itemize}
+
+\subsection{Keywords}
+
+The following identifiers are reserved as keywords, and cannot be used otherwise.
+
+\begin{multicols}{4}
+\begin{itemize}[label={}]
+\item \texttt{LF}
+\item \texttt{and}
+\item \texttt{impossible}
+\item \texttt{case}
+\item \texttt{rec}
+\item \texttt{fn}
+\item \texttt{fun}
+\item \texttt{mlam}
+\item \texttt{if}
+\item \texttt{then}
+\item \texttt{else}
+\item \texttt{of}
+\item \texttt{schema}
+\item \texttt{some}
+\item \texttt{block}
+\item \texttt{world}
+\item \texttt{module}
+\item \texttt{struct}
+\item \texttt{end}
+\item \texttt{trust}
+\item \texttt{total}
+\item \texttt{prop}
+\item \texttt{type}
+\item \texttt{ctype}
+\item \texttt{inductive}
+\item \texttt{coinductive}
+\item \texttt{stratified}
+\item \texttt{typedef}
+\item \texttt{proof}
+\item \texttt{by}
+\item \texttt{as}
+\item \texttt{suffices}
+\item \texttt{toshow}
+\end{itemize}
+\end{multicols}
+
+Additionally, the following characters are reserved and cannot be used anywhere in identifiers.
+
+{\setlength{\columnseprule}{0.4pt}
+\begin{multicols}{3}
+\begin{itemize}[label={}]
+\item \texttt{.} \hfill (period)
+\item \texttt{,} \hfill (comma)
+\item \texttt{:} \hfill (colon)
+\item \texttt{;} \hfill (semicolon)
+\item \texttt{\%} \hfill (percent sign)
+\item \texttt{|} \hfill (vertical bar)
+\item \texttt{"} \hfill (quotation mark)
+\item \texttt{\textbackslash} \hfill (backslash)
+\item \texttt{( )} \hfill (parentheses)
+\item \texttt{[ ]} \hfill (brackets)
+\item \texttt{\{ \}} \hfill (braces)
+\item \texttt{< >} \hfill (chevrons)
+\end{itemize}
+\end{multicols}
+}
+
+\subsection{Lexical Conventions}
+
+\Beluga programs must be encoded in \textsc{UTF-8}.
+The productions \texttt{ID\_Start} and \texttt{ID\_Continue} correspond to the Unicode properties of the same name as described in the Unicode Standard Version 14.0.0 Annex \#31, \href{https://www.unicode.org/reports/tr31/tr31-35.html}{\textit{Unicode Identifier and Pattern Syntax}}.
+
+\begin{grammar}
+<forward-arrow> ::=
+  `->'
+| `→' \texttt{(* U+2192 *)}
+
+<backward-arrow> ::=
+  `<-'
+| `←' \texttt{(* U+2190 *)}
+
+<thick-forward-arrow> ::=
+  `=>'
+| `⇒' \texttt{(* U+21D2 *)}
+
+<turnstile> ::=
+  `|-'
+| `⊢' \texttt{(* U+22A2 *)}
+
+<turnstile-hash> ::= <turnstile>`#'
+
+<dots> ::=
+  `..'
+| `…' \texttt{(* U+2026 *)}
+
+<non-zero-digit> ::= `1'..`9'
+
+<digit> ::=
+  `0'
+| <non-zero-digit>
+
+<integer> ::= `0' | <non-zero-digit> <digit>*
+
+<dot-integer> ::= `.'<integer>
+
+<identifier-tail> ::=
+  \texttt{ID_Continue}
+|  `\''
+| `-'
+| `*'
+| `+'
+| `@'
+| `='
+| `^'
+| `/'
+| `#'
+| `?'
+
+<identifier> ::= \texttt{ID_Start} <identifier-tail>* \hfill \texttt{(* Identifier definition *)}
+
+<hash-identifier> ::= `#'<identifier>
+
+<dollar-identifier> ::= `$'<identifier>
+
+<dot-identifier> ::= `.'<identifier>
+\end{grammar}
+
+\subsection{Utilities}
+
+\begin{grammar}
+<omittable-identifier> ::=
+  `_'
+| <identifier>
+
+<omittable-hash-identifier> ::=
+  `#_'
+| <hash-identifier>
+
+<omittable-dollar-identifier> ::=
+  `$_'
+| <dollar-identifier>
+
+<qualified-identifier> ::= <identifier> <dot-identifier>* \hfill \texttt{(* Identifier reference *)}
+
+<dot-qualified-identifier> ::= <dot-identifier>+
+
+<meta-object-identifier> ::= \hfill\\
+| <identifier>\\
+| <hash-identifier>\\
+| <dollar-identifier>
+
+<omittable-meta-object-identifier> ::= \hfill\\
+| <omittable-identifier>\\
+| <omittable-hash-identifier>\\
+| <omittable-dollar-identifier>
+
+<precedence> ::= <integer>
+
+<associativity> ::=
+  `left'
+| `right'
+| `none'
+\end{grammar}
+
+\subsection{\LF}\label{section:syntax-lf}
+
+The following is the grammar for the definition of \LF kinds, types and terms.
+These constructs form a weak representational function space without case analysis or recursion.
+
+\begin{grammar}
+<lf-kind> ::= \hfill\\
+| `{' <omittable-identifier> `:' <lf-type> `}' <lf-kind> \hfill \texttt{(* Pi kind *)}\\
+| <lf-type> <forward-arrow> <lf-kind> \hfill \texttt{(* Arrow kind *)}\\
+| `type' \hfill \texttt{(* Kind of LF types *)}\\
+| `(' <lf-kind> `)'
+
+<lf-type> ::= \hfill\\
+| <qualified-identifier> \hfill \texttt{(* Type constant *)}\\
+| `{' <omittable-identifier> `:' <lf-type> `}' <lf-type> \hfill \texttt{(* Pi type *)}\\
+| <lf-type> <forward-arrow> <lf-type> \hfill \texttt{(* Arrow type *)}\\
+| <lf-type> <backward-arrow> <lf-type>\\
+| <qualified-identifier> <lf-term>+ \hfill \texttt{(* Prefix application *)}\\
+| <lf-term> <qualified-identifier> <lf-term> \hfill \texttt{(* Infix application *)}\\
+| <lf-term> <qualified-identifier> \hfill \texttt{(* Postfix application *)}\\
+| `(' <lf-type> `)'
+
+<lf-term> ::= \hfill\\
+| <identifier> \hfill \texttt{(* Variable *)}\\
+| <qualified-identifier> \hfill \texttt{(* Term constant *)}\\
+| `\\' <omittable-identifier> [`:' <lf-type>] `.' <lf-term> \hfill \texttt{(* Lambda abstraction *)}\\
+| <lf-term> <lf-term> \hfill \texttt{(* Application *)}\\
+| <qualified-identifier> <lf-term>+ \hfill \texttt{(* Prefix term constant application *)}\\
+| <lf-term> <qualified-identifier> <lf-term> \hfill \texttt{(* Infix term constant application *)}\\
+| <lf-term> <qualified-identifier> \hfill \texttt{(* Postfix term constant application *)}\\
+| `_' \hfill \texttt{(* Wildcard *)}\\
+| <lf-term> `:' <lf-type> \hfill \texttt{(* Type-annotated *)}\\
+| `(' <lf-term> `)'
+\end{grammar}
+
+\subsection{Contextual LF}\label{section:syntax-contextual-lf}
+
+The following is the grammar for the extension of \LF with substitutions, contexts and pattern-matching.
+
+\begin{grammar}
+<clf-type> ::= \hfill\\
+| <qualified-identifier> \hfill \texttt{(* Type constant *)}\\
+| `{' <omittable-identifier> `:' <clf-type> `}' <clf-type> \hfill \texttt{(* Pi type *)}\\
+| <clf-type> <forward-arrow> <clf-type> \hfill \texttt{(* Arrow type *)}\\
+| <clf-type> <backward-arrow> <clf-type>\\
+| `block' `(' <identifier> `:' <clf-type> (`,' <identifier> `:' <clf-type>)+ `)' \hfill \texttt{(* Block type *)}\\
+| `block' <identifier> `:' <clf-type> (`,' <identifier> `:' <clf-type>)+\\
+| `block' `(' <clf-type> `)'\\
+| `block' <clf-type>\\
+| <qualified-identifier> <clf-term>+ \hfill \texttt{(* Prefix type constant application *)}\\
+| <clf-term> <qualified-identifier> <clf-term> \hfill \texttt{(* Infix type constant application *)}\\
+| <clf-term> <qualified-identifier> \hfill \texttt{(* Postfix type constant application *)}\\
+| `(' <clf-type> `)'
+
+<clf-term> ::= \hfill\\
+| <identifier> \hfill \texttt{(* Variable *)}\\
+| <hash-identifier> \hfill \texttt{(* Parameter variable *)}\\
+| <dollar-identifier> \hfill \texttt{(* Substitution variable *)}\\
+| <qualified-identifier> \hfill \texttt{(* Term constant *)}\\
+| <clf-term> <clf-substitution> \hfill \texttt{(* Substitution term *)}\\
+| `\\' <omittable-identifier> [`:' <clf-type>] `.' <clf-term> \hfill \texttt{(* Lambda abstraction *)}\\
+| <clf-term> <clf-term> \hfill \texttt{(* Application *)}\\
+| <qualified-identifier> <clf-term>+ \hfill \texttt{(* Prefix term constant application *)}\\
+| <clf-term> <qualified-identifier> <clf-term> \hfill \texttt{(* Infix term constant application *)}\\
+| <clf-term> <qualified-identifier> \hfill \texttt{(* Postfix term constant application *)}\\
+| `_' \hfill \texttt{(* Hole *)}\\
+| `?'[<identifier>]\\
+| `<' <clf-term> (`;' <clf-term>)* `>' \hfill \texttt{(* Tuple *)}\\
+| <clf-term> <dot-integer> \hfill \texttt{(* Projection *)}\\
+| <clf-term> <dot-identifier>\\
+| <clf-term> `:' <clf-type> \hfill \texttt{(* Type-annotated *)}\\
+| `(' <clf-term> `)'
+
+<clf-pattern> ::= \hfill\\
+| <identifier> \hfill \texttt{(* Variable *)}\\
+| <hash-identifier> \hfill \texttt{(* Parameter variable *)}\\
+| <dollar-identifier> \hfill \texttt{(* Substitution variable *)}\\
+| <qualified-identifier> \hfill \texttt{(* Constant *)}\\
+| `_' \hfill \texttt{(* Wildcard *)}\\
+| `<' <clf-pattern> (`;' <clf-pattern>)* `>' \hfill \texttt{(* Tuple *)}\\
+| <clf-pattern> <dot-integer> \hfill \texttt{(* Projection *)}\\
+| <clf-pattern> <dot-identifier>\\
+| `\\' <omittable-identifier> [`:' <clf-type>] `.' <clf-pattern> \hfill \texttt{(* Lambda abstraction *)}\\
+| <clf-pattern> `[' <clf-substitution> `]' \hfill \texttt{(* Substitution *)}\\
+| <clf-pattern> <clf-pattern> \hfill \texttt{(* Application *)}\\
+| <qualified-identifier> <clf-pattern>+ \hfill \texttt{(* Prefix term constant application *)}\\
+| <clf-pattern> <qualified-identifier> <clf-pattern> \hfill \texttt{(* Infix term constant application *)}\\
+| <clf-pattern> <qualified-identifier> \hfill \texttt{(* Postfix term constant application *)}\\
+| <clf-pattern> `:' <clf-type> \hfill \texttt{(* Annotated *)}\\
+| `(' <clf-pattern> `)'
+
+<clf-substitution> ::= \hfill\\
+| [`^'] \hfill \texttt{(* Empty substitution *)} \\
+| <dollar-identifier> (`,' <clf-term>)* \hfill \texttt{(* Substitution variable *)}\\
+| <dollar-identifier> `[' <clf-substitution> `]' (`,' <clf-term>)* \hfill \texttt{(* Substitution closure *)}\\
+| `..' (`,' <clf-term>)* \hfill \texttt{(* Identity substitution and extension *)}\\
+| <clf-term> (`,' <clf-term>)* \hfill \texttt{(* Plain substitution *)}
+
+<clf-substitution-pattern> ::= \hfill\\
+| [`^'] \hfill \texttt{(* Empty substitution *)} \\
+| <dollar-identifier> (`,' <clf-pattern>)* \hfill \texttt{(* Substitution variable *)}\\
+| <dollar-identifier> `[' <clf-substitution> `]'(`,' <clf-pattern>)* \hfill \texttt{(* Substitution closure *)}\\
+| `..' (`,' <clf-pattern>)* \hfill \texttt{(* Identity substitution and extension *)}\\
+| <clf-pattern> (`,' <clf-pattern>)* \hfill \texttt{(* Plain substitution *)}
+
+<clf-context> ::= \hfill\\
+| [`^'] \hfill \texttt{(* Empty context *)}\\
+| <omittable-identifier> (`,' <identifier> [`:' <clf-type>])* \hfill \texttt{(* Head context variable *)}\\
+| <identifier> [`:' <clf-type>] (`,' <identifier> [`:' <clf-type>])* \hfill \texttt{(* Plain context *)}
+
+<clf-context-pattern> ::= \hfill\\
+| [`^'] \hfill \texttt{(* Empty context *)}\\
+| <omittable-identifier> (`,' <identifier> `:' <clf-type>)* \hfill \texttt{(* Head context variable *)}\\
+| <identifier> `:' <clf-type> (`,' <identifier> `:' <clf-type>)* \hfill \texttt{(* Plain context *)}
+\end{grammar}
+
+\subsection{Meta-Level}\label{section:syntax-meta-level}
+
+The following is the grammar for meta-level types (meta-types) and objects (meta-objects).
+Meta-types classify meta-objects.
+Meta-objects are contextual \LF terms, substitutions and contexts.
+
+Meta-types and meta-objects may be embedded in the computation level by denoting them with boxes.
+Modifying the box annotation by prefixing it with \syntax{\#} or \syntax{\$} syntactically forces it to be a specific variant of meta-type or meta-object.
+Substitution types and objects are required to be annotated with a \syntax{\$}-box to disambiguate them from contextual types and terms respectively.
+When paired with an identifier in a declaration such as in a meta-context, the prefixes of the identifier and the boxed meta-type must match.
+
+Schema meta-types are not boxed.
+
+\begin{grammar}
+<schema> ::= \hfill\\
+| <qualified-identifier> \hfill \texttt{(* Constant *)}\\
+| <schema> `+' <schema> \hfill \texttt{(* Alternation *)}\\
+| [`some' `[' <identifier> `:' <clf-type> (`,' <identifier> `:' <clf-type>) `]']\\
+`block' `(' <identifier> `:' <clf-type> (`,' <identifier> `:' <clf-type>) `)' \hfill \texttt{(* Atom *)}\\
+| [`some' `[' <identifier> `:' <clf-type> (`,' <identifier> `:' <clf-type>) `]']\\
+`block' <identifier> `:' <clf-type> (`,' <identifier> `:' <clf-type>)\\
+| [`some' `[' <identifier> `:' <clf-type> (`,' <identifier> `:' <clf-type>) `]']\\
+`block' <clf-type>\\
+| [`some' `[' <identifier> `:' <clf-type> (`,' <identifier> `:' <clf-type>) `]']\\
+`block' <clf-type>
+
+<meta-type> ::= \hfill\\
+| <schema> \hfill \texttt{(* Context schema *)}\\
+| `(' <clf-context> <turnstile> <clf-type> `)' \hfill \texttt{(* Contextual type *)}\\
+| `#(' <clf-context> <turnstile> <clf-type> `)' \hfill \texttt{(* Parameter type *)}\\
+| `$(' <clf-context> <turnstile> <clf-context> `)' \hfill \texttt{(* Plain substitution type *)}\\
+| `$(' <clf-context> <turnstile-hash> <clf-context> `)' \hfill \texttt{(* Renaming substitution type *)}\\
+| `[' <clf-context> <turnstile> <clf-type> `]' \hfill \texttt{(* Contextual type *)}\\
+| `#[' <clf-context> <turnstile> <clf-type> `]' \hfill \texttt{(* Parameter type *)}\\
+| `$[' <clf-context> <turnstile> <clf-context> `]' \hfill \texttt{(* Plain substitution type *)}\\
+| `$[' <clf-context> <turnstile-hash> <clf-context> `]' \hfill \texttt{(* Renaming substitution type *)}
+
+<meta-object> ::= \hfill\\
+| `[' <clf-context> `]' \hfill \texttt{(* Context *)}\\
+| `[' <clf-context> <turnstile> <clf-term> `]' \hfill \texttt{(* Contextual term *)}\\
+| `$[' <clf-context> <turnstile> <clf-substitution> `]' \hfill \texttt{(* Plain substitution object *)}\\
+| `$[' <clf-context> <turnstile-hash> <clf-substitution> `]' \hfill \texttt{(* Renaming substitution object *)}
+
+<meta-pattern> ::= \hfill\\
+| `[' <clf-context-pattern> `]' \hfill \texttt{(* Context pattern *)}\\
+| `[' <clf-context-pattern> <turnstile> <clf-pattern> `]' \hfill \texttt{(* Contextual term pattern *)}\\
+| `$[' <clf-context-pattern> <turnstile> <clf-substitution-pattern> `]' \hfill \texttt{(* Plain substitution pattern *)}\\
+| `$[' <clf-context-pattern> <turnstile-hash> <clf-substitution-pattern> `]' \hfill \texttt{(* Renaming substitution pattern *)}
+
+<meta-context> ::= \hfill\\
+| [`^'] \hfill \texttt{(* Empty meta-context *)}\\
+| <meta-object-identifier> [`:' <meta-type>] (`,' <meta-object-identifier> [`:' <meta-type>])* \hfill \texttt{(* Meta-context *)}
+\end{grammar}
+
+\subsection{Computations}\label{section:syntax-computations}
+
+The following is the grammar for the computational-level types, expressions and patterns.
+Atomic patterns are computation-level patterns that may appear as whitespace-delimited lists in pattern-matching functions.
+
+\begin{grammar}
+<comp-kind> ::= \hfill\\
+| `{' <omittable-meta-object-identifier> : <meta-type> `}' <comp-kind> \hfill \texttt{(* Explicit Pi kind *)}\\
+| `(' <omittable-meta-object-identifier> : <meta-type> `)' <comp-kind> \hfill \texttt{(* Implicit Pi kind *)}\\
+| <comp-type> <forward-arrow> <comp-kind> \hfill \texttt{(* Arrow kind *)}\\
+| `ctype' \hfill \texttt{(* Kind of computation types *)}\\
+| `(' <comp-kind> `)'
+
+<comp-type> ::= \hfill\\
+| `{' <omittable-meta-object-identifier> `:' <meta-type> `}' <comp-type> \hfill \texttt{(* Explicit Pi type *)}\\
+| `(' <omittable-meta-object-identifier> `:' <meta-type> `)' <comp-type> \hfill \texttt{(* Implicit Pi type *)}\\
+| <comp-type> <forward-arrow> <comp-type> \hfill \texttt{(* Arrow type *)}\\
+| <comp-type> <backward-arrow> <comp-type>\\
+| <comp-type> (`*' <comp-type>)+ \hfill \texttt{(* Cross type *)}\\
+| <meta-type> \hfill \texttt{(* Meta-type *)}\\
+| <qualified-identifier> <meta-object>* \hfill \texttt{(* Prefix base type *)}\\
+| <meta-object> <qualified-identifier> <meta-object> \hfill \texttt{(* Infix base type *)}\\
+| <meta-object> <qualified-identifier> \hfill \texttt{(* Postfix base type *)}\\
+| <qualified-identifier> <meta-object>* \hfill \texttt{(* Prefix cobase type *)}\\
+| <meta-object> <qualified-identifier> <meta-object> \hfill \texttt{(* Infix cobase type *)}\\
+| <meta-object> <qualified-identifier> \hfill \texttt{(* Postfix cobase type *)}\\
+| `(' <comp-type> `)'
+
+<comp-expression> ::= \hfill\\
+| <identifier> \hfill \texttt{(* Variable *)}\\
+| <qualified-identifier> \hfill \texttt{(* Constant *)}\\
+| `fn' <omittable-identifier>+ <thick-forward-arrow> <comp-expression>\\
+| `fun' [`|'] <comp-pattern-atomic>+ <thick-forward-arrow> <comp-expression>\\
+  (`|' <comp-pattern-atomic>+ <thick-forward-arrow> <comp-expression>)*\\
+| `mlam' <omittable-meta-object-identifier>+ <thick-forward-arrow> <comp-expression>\\
+| `let' <comp-pattern> `=' <comp-expression> `in' <comp-expression> \hfill \texttt{(* Let *)}\\
+| <meta-object> \hfill \texttt{(* Meta-object *)}\\
+| `impossible' <comp-expression> \hfill \texttt{(* Impossible case analysis *)} \\
+| `case' <comp-expression> [`----not'] `of'\\{}
+  [`|'] <comp-pattern> <thick-forward-arrow> <comp-expression>\\
+  (`|' <comp-pattern> <thick-forward-arrow> <comp-expression>)* \hfill \texttt{(* Case analysis *)}\\
+| `(' <comp-expression> (`,' <comp-expression>)+ `)' \hfill \texttt{(* Tuple *)}\\
+| `?' [<identifier>] \hfill \texttt{(* Hole *)}\\
+| `_' \hfill \texttt{(* Box hole *)}\\
+| <comp-expression> <comp-expression> \hfill \texttt{(* Application *)}\\
+| <dot-qualified-identifier> <comp-expression>* \hfill \texttt{(* Observation *)}\\
+| <comp-expression> `:' <comp-type> \hfill \texttt{(* Annotated *)}\\
+| `(' <comp-expression> `)'
+
+<comp-pattern-atomic> ::= \hfill\\
+| <identifier> \hfill \texttt{(* Variable *)}\\
+| <qualified-identifier> \hfill \texttt{(* Constant *)}\\
+| <meta-pattern> \hfill \texttt{(* Meta-object *)} \\
+| `(' <comp-pattern> (`,' <comp-pattern>)+ `)' \hfill \texttt{(* Tuple *)}\\
+| <dot-qualified-identifier> <comp-pattern-atomic>* \hfill \texttt{(* Observation *)}\\
+| `_' \hfill \texttt{(* Wildcard *)}\\
+| `(' <comp-pattern> `)'
+
+<comp-pattern> ::= \hfill\\
+| <identifier> \hfill \texttt{(* Variable *)}\\
+| <qualified-identifier> \hfill \texttt{(* Constant *)}\\
+| <meta-pattern> \hfill \texttt{(* Meta-object *)} \\
+| `(' <comp-pattern> (`,' <comp-pattern>)+ `)' \hfill \texttt{(* Tuple *)}\\
+| <comp-pattern> <comp-pattern> \hfill \texttt{(* Application *)}\\
+| <dot-qualified-identifier> <comp-pattern-atomic>* \hfill \texttt{(* Observation *)}\\
+| <comp-pattern> `:' <comp-type> \hfill \texttt{(* Annotated *)}\\
+| `{' <meta-object-identifier> `:' <meta-type> `}' <comp-pattern> \hfill \texttt{(* Meta-annotated *)}\\
+| `_' \hfill \texttt{(* Wildcard *)}\\
+| `(' <comp-pattern> `)'
+
+<comp-context> ::= \hfill\\
+| [`^'] \hfill \texttt{(* Empty context *)}\\
+| <identifier> [`:' <comp-type>] (`,' <identifier> [`:' <comp-type>])* \hfill \texttt{(* Computational context *)}
+\end{grammar}
+
+\subsection{\Harpoon REPL}\label{section:syntax-harpoon-repl}
+
+The following is the grammar for the commands used in the \Harpoon read-eval-print loop (REPL).
+
+\begin{grammar}
+<harpoon-command> ::= \hfill\\
+| `intros' (<identifier>)*\\
+| `split' <comp-expression>\\
+| `invert' <comp-expression>\\
+| `impossible' <comp-expression>\\
+| `msplit' <identifier>\\
+| `solve' <comp-expression>\\
+| `by' <comp-expression> `as' <identifier> [<boxity>]\\
+| `type' <comp-expression>\\
+| `suffices' `by' <comp-expression> `toshow' [(`_' | <comp-type>) (`,' (`_' | <comp-type>))*]\\
+| `unbox' <comp-expression> `as' <identifier>\\
+| `strengthen' <comp-expression> `as' <identifier>\\
+| `toggle-automation' <automation-kind> [<automation-change>]\\
+| `rename' (`comp' | `meta') <identifier> <identifier>\\
+| `defer'\\
+| `select' <qualified-identifier>\\
+| `info' `theorem' <qualified-identifier>\\
+| `theorem' <theorem-subcommand>\\
+| `session' <session-subcommand>\\
+| `subgoal' <subgoal-subcommand>\\
+| `undo'\\
+| `redo'\\
+| `history'\\
+| `help'\\
+| `save'
+
+<boxity> ::=
+  `boxed'
+| `unboxed'
+| `strenghtened'
+
+<automation-kind> ::= `auto-intros' | `auto-solve-trivial'
+
+<automation-change> ::= `on' | `off' | `toggle'
+
+<theorem-subcommand> ::= \hfill\\
+| `list'\\
+| `defer'\\
+| `dump-proof' <file-path>\\
+| `show-ihs'\\
+| `show-proof'
+
+<session-subcommand> ::= \hfill\\
+| `list'\\
+| `defer'\\
+| `create'\\
+| `serialize'
+
+<subgoal-subcommand> ::= \hfill\\
+| `list'\\
+| `defer'
+\end{grammar}
+
+\subsection{\Harpoon Proof Scripts}\label{section:syntax-harpoon-proof-scripts}
+
+The following is the grammar for the serialized form of \Harpoon interactive sessions.
+
+\begin{grammar}
+<harpoon-proof> ::= \hfill\\
+| `?' [<identifier>] \hfill \texttt{(* Incomplete proof *)}\\
+| <harpoon-command> `;' <harpoon-proof>\\
+| <harpoon-directive>
+
+
+<harpoon-directive> ::= \hfill\\
+| `intros' <harpoon-hypothetical>\\
+| `solve' <comp-expression>\\
+| `split' <comp-expression> `as' <harpoon-case>*\\
+| `impossible' <comp-expression>\\
+| `suffices' `by' <comp-expression> `toshow' <comp-type> `{' <harpoon-proof> `}'
+
+<harpoon-case> ::= `case' <harpoon-case-label> `:' <harpoon-hypothetical>
+
+<harpoon-case-label> ::= \hfill\\
+| `extended' `by' <integer> \hfill \texttt{(* Context extension case *)}\\
+| `empty' `context' \hfill \texttt{(* Empty context case *)}\\
+| <qualified-identifier> \hfill \texttt{(* Constructor case *)}\\
+| `#' [<integer>] [`.'<integer>] \hfill \texttt{(* Parameter variable case *)}\\
+| `head' `variable' \hfill \texttt{(* Bound variable case *)}
+
+<harpoon-hypothetical> ::= <meta-context> `|' <comp-context> `;' <harpoon-proof>
+\end{grammar}
+
+\subsection{Pragmas}\label{section:syntax-pragmas}
+
+The following is the grammar for pragmas that adjust parameters for parsing, elaboration or printing.
+In particular, pragmas allow the user to choose a notation for operators.
+
+\begin{grammar}
+<pragma> ::= \hfill\\
+| `----prefix' <qualified-identifier> <precedence> `.'\\
+| `----infix' <qualified-identifier> <precedence> [<associativity>] `.'\\
+| `----postfix' <qualified-identifier> <precedence> `.'\\
+| `----name' <qualified-identifier> <identifier> [<identifier>] `.'\\
+| `----not'\\
+| `----assoc <associativity> `.'\\
+| `----open <qualified-identifier> `.'\\
+| `----abbrev <qualified-identifier> <identifier> `.'
+
+<global-pragma> ::= \hfill\\
+| `----nostrenghten'\\
+| `----coverage'\\
+| `----warncoverage'
+\end{grammar}
+
+\subsection{Signature}\label{section:syntax-signature}
+
+The following is the grammar for the toplevel compilation units in \Beluga.
+That is, type constants, term constants, programs and proofs are arranged as lists declarations, and may appear in modules.
+
+\begin{grammar}
+<signature> ::= <global-pragma>* <declaration>*
+
+<declaration> ::= \hfill\\
+| <module-declaration>\\
+| <lf-type-constants-declaration>\\
+| <lf-type-constant-plain-declaration>\\
+| <lf-term-constant-plain-declaration>\\
+| <comp-type-constants-declaration>\\
+| <mutually-recursive-programs-declaration>\\
+| <schema-declaration>\\
+| <typedef-declaration>\\
+| <let-declaration>\\
+| <query-declaration>\\
+| <mquery-declaration>\\
+| <documentation-comment-declaration>\\
+| <pragma>
+
+<module-declaration> ::= `module' <identifier> `=' `struct' <declaration>* `end' [`;']
+
+<lf-type-constants-declaration> ::= `LF' <lf-type-constant-declaration>\\
+(`and' <lf-type-constant-declaration>)* `;'
+
+<lf-type-constant-declaration> ::= <identifier> `:' <lf-kind> `='\\{}
+[`|'] [<lf-term-constant-declaration>] (`|' <lf-term-constant-declaration>)*
+
+<lf-term-constant-declaration> ::= <identifier> `:' <lf-type>
+
+<lf-type-constant-plain-declaration> ::= <identifier> `:' <lf-kind> `.'
+
+<lf-term-constant-plain-declaration> ::= <identifier> `:' <lf-type> `.'
+
+<comp-type-constants-declaration> ::= <comp-type-constant-declaration>\\
+(`and' <comp-type-constant-declaration>)* `;'
+
+<comp-type-constant-declaration> ::= \hfill\\
+| <inductive-type-constant-declaration>\\
+| <coinductive-type-constant-declaration>\\
+| <stratified-type-constant-declaration>
+
+<inductive-type-constant-declaration> ::= `inductive' <inductive-type-constant>
+
+<inductive-type-constant> ::= <identifier> `:' <comp-kind> `='\\{}
+ [`|'] [<inductive-type-constant>] (`|' <inductive-type-constant>)*
+
+<coinductive-type-constant-declaration> ::= `coinductive' <coinductive-type-constant>
+
+<coinductive-type-constant> ::= <identifier> `:' <comp-kind> `='\\{}
+ [`|'] [<coinductive-type-constant>] (`|' <coinductive-type-constant>)*
+
+<stratified-type-constant-declaration> ::= `stratified' <stratified-type-constant>
+
+<stratified-type-constant> ::= <identifier> `:' <comp-kind> `='\\{}
+ [`|'] [<stratified-type-constant>] (`|' <stratified-type-constant>)*
+
+<proof-declaration> ::= `proof' <identifier> `:' <comp-type> `=' [<totality-declaration>] <harpoon-proof>
+
+<program-declaration> ::= `rec' <identifier> `:' <comp-type> `=' [<totality-declaration>] <comp-expression>
+
+<mutually-recursive-programs-declaration> ::= (<proof-declaration> | <program-declaration>) \\
+(`and' (<proof-declaration> | <program-declaration>))* `;'
+
+<totality-declaration> ::= \hfill\\
+| `/' `total' [<totality-order>] `/'\\
+| `/' `trust' `/'
+
+<totality-order> ::= \hfill\\
+| <argument-totality-order>\\
+| <lexical-totality-order>\\
+| <simultaneous-totality-order>
+
+<argument-totality-order> ::= \hfill\\
+| <integer>\\
+| <identifier> `(' <identifier> <identifier>+ `)'
+
+<lexical-totality-order> ::= `{' <identifier>+ `}'
+
+<simultaneous-totality-order> ::= `[' <identifier>+ `]'
+
+<schema-declaration> ::= `schema' <identifier> `=' <schema> `;'
+
+<typedef-declaration> ::= `typedef' <identifier> `:' <comp-kind> `=' <comp-type> `;'
+
+<let-declaration> ::= `let' <identifier> `:' <comp-type> `=' <comp-expression> `;'
+
+<query-declaration> ::= `----query' (`*' | <integer>) (`*' | <integer>) (`{' <meta-object-identifier> `:' <meta-type> `}')* [<identifier> `:'] <lf-term> `.'
+
+<mquery-declaration> ::= `----mquery' (`*' | <integer>) (`*' | <integer>) (`*' | <integer>) [<identifier> `:'] <comp-type> `.'
+
+<documentation-comment-declaration> ::= `%{{' <any>* `}}%'
+\end{grammar}
+
+\section{Resolving Grammar Ambiguities}\label{section:resolving-grammar-ambiguities}
+
+This section highlights some ambiguities in the syntax for \Beluga as presented in section \ref{section:syntax}, and presents strategies for resolving them.
+Ambiguities in the syntax include:
+\begin{itemize}
+\item Qualified identifiers and projections use the same dot operator.
+\item \LF kinds, types and terms share syntactic constructs for arrows, $ \Pi $'s and applications.
+\item Contextual \LF types, terms and patterns share syntactic constructs for arrows and applications.
+\item Computation kinds and types share syntactic constructs for arrows, $ \Pi $'s and applications.
+\item Ambiguities associated with the usual operators in expression grammars with their associativities and precedences.
+\item Ambiguities associated with user-defined operators with their fixities, associativities and precedences.
+\end{itemize}
+
+Resolution for ambiguities in a grammar is either stateless using grammar rewriting, or stateful using semantic analysis data produced during or after parsing.
+
+Ambiguities for the built-in operators in the syntax may be resolved statelessly by rewriting the grammar to be suitable for recursive-descent parsing.
+
+The remainder of the ambiguities listed above must be resolved statefully since they require complete scope information to correctly resolve operator sorts and the parser settings defined by the user.
+Furthermore, given that declarations in a \Beluga signature may be mutually recursive, resolving these ambiguities is best done in a separate phase after parsing.
+Indeed, attempting to resolve these ambiguities in a top-down parser would require possibly unbounded lookaheads and more costly backtracking.
+As such, a \Beluga signature is first parsed into an abstract syntax tree with ambiguous nodes (AST), and separate disambigution phase elaborates that AST to the external syntax.
+By design, the grammar of section \ref{section:syntax} does not require type information for disambiguation.
+Hence, the symbol table only keeps track of identifiers in scope and their associated sort without types.
+
+The following sections present alternative production rules used in place of those in the grammar of section \ref{section:syntax} obtained by merging productions that lead to ambiguities.
+Rewriting the grammar for optimization, left recursion elimination, and stateless ambiguity resolution with recursive descent is outside the scope of this presentation.
+
+\subsection{\LF}
+
+The grammar for \LF kinds, types and terms from section \ref{section:syntax-lf} is data-dependent because \LF term variables, type constants and term constants are syntactically indistinguishable from one another, and likewise for $ \Pi $-kinds and $ \Pi $-types.
+This next grammar blurs together \LF kinds, types and terms with corresponding productions \synt{lf-kind}, \synt{lf-type} and \synt{lf-term} for context-free parsing.
+Occurrences of \synt{lf-kind}, \synt{lf-type} and \synt{lf-term} elsewhere in the grammar are replaced with \synt{lf-object}.
+Disambiguation of an \LF object as presented below requires:
+\begin{itemize}
+\item complete scope information to resolve constants
+\item a target sort for the elaboration (i.e. knowing beforehand whether the \LF object should be a kind, type or term)
+\end{itemize}
+
+\begin{grammar}
+<lf-object> ::= \hfill\\
+| <identifier>\\
+| <qualified-identifier>\\
+| `type'\\
+| `_'\\
+| `{' <omittable-identifier> [`:' <lf-object>] `}' <lf-object>\\
+| `\\' <omittable-identifier> [`:' <lf-object>] `.' <lf-object>\\
+| <lf-object> <forward-arrow> <lf-object>\\
+| <lf-object> <backward-arrow> <lf-object>\\
+| <lf-object> `:' <lf-object>\\
+| <lf-object> <lf-object>\\
+| `(' <lf-object> `)'
+\end{grammar}
+
+Additionally, the syntax is disambiguated in order of decreasing precedence as follows:
+
+\begin{enumerate}
+\item The juxtaposition of \LF objects (separated by whitespace to denote application) is left-associative.
+\item User-declared infix, prefix (right-associative) and postfix (left-associative) operators.
+\item Forward arrows are right-associative, and backward arrows are left-associative, with equal precedence, hence they may not both appear at the same precedence level.
+\item Type ascriptions are left-associative.
+\item Binders are weak prefix operators, meaning that the identifier they introduce is in scope for the entire \LF object on the right.
+\end{enumerate}
+
+\subsection{Contextual LF}
+
+The grammar for contextual \LF types, terms, patterns, substitutions, contexts and their patterns from section \ref{section:syntax-contextual-lf} is data-dependent because contextual \LF term variables, type constants and term constants are syntactically indistinguishable from one another.
+This next grammar blurs together contextual \LF types, terms and patterns with corresponding productions \synt{clf-type}, \synt{clf-term} and \synt{clf-pattern} for context-free parsing.
+Occurrences of \synt{clf-type}, \synt{clf-term} and \synt{clf-pattern} elsewhere in the grammar are replaced with \synt{clf-object}.
+Likewise, the productions \synt{clf-substitution}, \synt{clf-substitution-pattern}, \synt{clf-context} and \synt{clf-context-pattern} are blurred together as \synt{clf-context-object}.
+Disambiguation of a contextual \LF object as presented below requires:
+\begin{itemize}
+\item complete scope information to resolve constants
+\item a target sort for the elaboration (i.e. knowing beforehand whether the contextual \LF object should be a type, term or pattern)
+\end{itemize}
+
+\begin{grammar}
+<clf-object> ::= \hfill\\
+| <identifier>\\
+| <hash-identifier>\\
+| <dollar-identifier>\\
+| <qualified-identifier>\\
+| `{' <omittable-identifier> [`:' <clf-object>] `}' <clf-object>\\
+| <clf-object> <forward-arrow> <clf-object>\\
+| <clf-object> <backward-arrow> <clf-object>\\
+| `block' `(' [<identifier> `:'] <clf-object> (`,' [<identifier> `:'] <clf-object>)* `)'\\
+| `block' [<identifier> `:'] <clf-object> (`,' [<identifier> `:'] <clf-object>)*\\
+| <clf-object> `:' <clf-object>\\
+| <clf-object> <clf-object>\\
+| `_'\\
+| `?'[<identifier>]\\
+| <clf-object> `[' <clf-context-object> `]'\\
+| `\\' <omittable-identifier> [`:' <clf-object>] `.' <clf-object>\\
+| `<' <clf-object> (`;' <clf-object>)* `>'\\
+| <clf-object>`.'<integer>\\
+| <clf-object>`.'<identifier>\\
+| `(' <clf-object> `)'
+
+<clf-context-object> ::= \hfill\\
+| [`^']\\
+| `..'\\
+| [`..' `,'] [<identifier> `:'] <clf-object> (`,' [<identifier> `:'] <clf-object>)*
+\end{grammar}
+
+Additionally, the syntax is disambiguated in order of decreasing precedence as follows:
+
+\begin{enumerate}
+\item The juxtaposition of contextual \LF objects (separated by whitespace to denote application) is left-associative.
+\item User-declared infix, prefix and postfix operators.
+\item Projections are left-associative.
+\item Substitutions are left-associative.
+\item Forward arrows are right-associative, and backward arrows are left-associative, with equal precedence, hence they may not both appear at the same precedence level.
+\item Type ascriptions are left-associative.
+\item Binders are weak prefix operators, meaning that the identifier they introduce is in scope for the entire contextual \LF object on the right.
+\end{enumerate}
+
+\subsection{Meta-Level}
+
+The grammar for context schemas, meta-types, meta-objects, meta-patterns and meta-contexts from section \ref{section:syntax-meta-level} is ambiguous because the contextual \LF types and terms therein have ambiguous grammars.
+This next grammar blurs together meta-types, meta-objects and meta-patterns with corresponding productions \synt{meta-type}, \synt{meta-object} and \synt{meta-pattern} for context-free parsing.
+Occurrences of \synt{meta-type}, \synt{meta-object} and \synt{meta-pattern} elsewhere in the grammar are replaced with \synt{meta-thing}.
+Likewise, the productions \synt{schema} and \synt{meta-context} are replaced with \synt{schema-object} and \synt{meta-context-object} respectively.
+Disambiguation of a meta-thing as presented below requires:
+\begin{itemize}
+\item complete scope information to resolve constants
+\item a target sort for the elaboration (i.e. knowing beforehand whether the meta-thing should be a meta-type, meta-object or pattern)
+\end{itemize}
+
+\begin{grammar}
+<schema-object> ::= \hfill\\
+| <qualified-identifier>\\
+| <schema-object> `+' <schema-object>\\
+| [`some' `[' <identifier> `:' <clf-object> (`,' <identifier> `:' <clf-object>) `]']\\
+`block' `(' [<identifier> `:'] <clf-object> (`,' [<identifier> `:'] <clf-object>)* `)'\\
+| [`some' `[' <identifier> `:' <clf-object> (`,' <identifier> `:' <clf-object>) `]']\\
+`block' [<identifier> `:'] <clf-object> (`,' [<identifier> `:'] <clf-object>)*
+
+<meta-thing> ::= \hfill\\
+| <schema-object>\\
+| `(' <clf-context-object> `)'\\
+| `(' <clf-context-object> <turnstile> <clf-context-object> `)'\\
+| `#(' <clf-context-object> <turnstile> <clf-context-object> `)'\\
+| `$(' <clf-context-object> <turnstile> <clf-context-object> `)'\\
+| `$(' <clf-context-object> <turnstile-hash> <clf-context-object> `)'\\
+| `[' <clf-context-object> `]'\\
+| `[' <clf-context-object> <turnstile> <clf-context-object> `]'\\
+| `#[' <clf-context-object> <turnstile> <clf-context-object> `]'\\
+| `$[' <clf-context-object> <turnstile> <clf-context-object> `]'\\
+| `$[' <clf-context-object> <turnstile-hash> <clf-context-object> `]'
+
+<meta-context-object> ::= \hfill\\
+| [`^']\\
+| <meta-object-identifier> `:' <meta-thing> (`,' <meta-object-identifier> `:' <meta-thing>)*
+\end{grammar}
+
+Additionally, in a meta-thing, a qualified identifier referring to a context schema constant is ambiguous with a context variable.
+Such context schema constants are disambiguated from the parsed context object.
+
+\subsection{Computations}
+
+The grammar for computation-level kinds and types from section \ref{section:syntax-computations} is data-dependent because computational base and cobase type constants are syntactically indistinguishable from one another, and because the grammar relies on meta-level objects.
+This next grammar blurs together computational kinds and types with corresponding productions \synt{comp-kind} and \synt{comp-type} for context-free parsing.
+Occurrences of \synt{comp-kind} and \synt{comp-type} elsewhere in the grammar are replaced with \synt{comp-sort-object}.
+Disambiguation of a computational sort object as presented below requires:
+\begin{itemize}
+\item complete scope information to resolve constants
+\item a target sort for the elaboration (i.e. knowing beforehand whether the computation-level sort object should be a kind or a type)
+\end{itemize}
+
+\begin{grammar}
+<comp-sort-object> ::= \hfill\\
+| <identifier>\\
+| <qualified-identifier>\\
+| `ctype'\\
+| `{' <omittable-meta-object-identifier> [`:' <meta-thing>] `}' <comp-sort-object>\\
+| `(' <omittable-meta-object-identifier> [`:' <meta-thing>] `)' <comp-sort-object>\\
+| <comp-sort-object> <forward-arrow> <comp-sort-object>\\
+| <comp-sort-object> <backward-arrow> <comp-sort-object>\\
+| <comp-sort-object> `*' <comp-sort-object>\\
+| <comp-sort-object> <comp-sort-object>\\
+| <meta-thing>\\
+| `(' <comp-sort-object> `)'
+\end{grammar}
+
+Additionally, the syntax is disambiguated in order of decreasing precedence as follows:
+
+\begin{enumerate}
+\item The juxtaposition of computational sort objects (separated by whitespace to denote application) is left-associative.
+\item User-declared infix, prefix (right-associative) and postfix (left-associative) operators.
+\item Forward arrows are right-associative, and backward arrows are left-associative, with equal precedence, hence they may not both appear at the same precedence level.
+\item Binders are weak prefix operators, meaning that the identifier they introduce is in scope for the entire sort object on the right.
+\end{enumerate}
+
+\end{document}

@@ -4535,6 +4535,12 @@ module type SIGNATURE_DISAMBIGUATION = sig
   (** {2 Exceptions for pragma applications} *)
 
   exception
+    Invalid_prefix_pragma of
+      { location : Location.t
+      ; actual_arity : Int.t
+      }
+
+  exception
     Invalid_infix_pragma of
       { location : Location.t
       ; actual_arity : Int.t
@@ -4643,6 +4649,12 @@ struct
   (** {1 Exceptions} *)
 
   (** {2 Exceptions for pragma applications} *)
+
+  exception
+    Invalid_prefix_pragma of
+      { location : Location.t
+      ; actual_arity : Int.t
+      }
 
   exception
     Invalid_infix_pragma of
@@ -4968,12 +4980,17 @@ struct
       disambiguation state derived from [state] where the operator with
       identifier [operator_identifier] is set as a prefix operator with
       [precedence]. *)
-  let make_operator_prefix ?(precedence = default_precedence)
-      operator_identifier state =
+  let make_operator_prefix ?precedence operator_identifier state =
     Disambiguation_state.modify_operator
       (fun operator ->
-        let arity = Operator.arity operator in
-        Operator.make_prefix ~arity ~precedence)
+        let arity = Operator.arity operator
+        and precedence =
+          Option.value ~default:default_precedence precedence
+        in
+        if arity >= 0 then Operator.make_prefix ~arity ~precedence
+        else
+          let location = QualifiedIdentifier.location operator_identifier in
+          raise @@ Invalid_prefix_pragma { location; actual_arity = arity })
       operator_identifier state
 
   (** [make_operator_infix ?precedence ?associativity operator_identifier state]
@@ -4983,8 +5000,8 @@ struct
       then the default associativity as found [state] is used instead.
 
       Only operators with arity [2] may be converted to infix operators. *)
-  let make_operator_infix ?(precedence = default_precedence) ?associativity
-      operator_identifier state =
+  let make_operator_infix ?precedence ?associativity operator_identifier
+      state =
     let associativity =
       match associativity with
       | Option.Some associativity -> associativity
@@ -4992,7 +5009,10 @@ struct
     in
     Disambiguation_state.modify_operator
       (fun operator ->
-        let arity = Operator.arity operator in
+        let arity = Operator.arity operator
+        and precedence =
+          Option.value ~default:default_precedence precedence
+        in
         if arity = 2 then Operator.make_infix ~associativity ~precedence
         else
           let location = QualifiedIdentifier.location operator_identifier in
@@ -5005,11 +5025,13 @@ struct
       [precedence].
 
       Only operators with arity [1] may be converted to postfix operators. *)
-  let make_operator_postfix ?(precedence = default_precedence)
-      operator_identifier state =
+  let make_operator_postfix ?precedence operator_identifier state =
     Disambiguation_state.modify_operator
       (fun operator ->
-        let arity = Operator.arity operator in
+        let arity = Operator.arity operator
+        and precedence =
+          Option.value ~default:default_precedence precedence
+        in
         if arity = 1 then Operator.make_postfix ~precedence
         else
           let location = QualifiedIdentifier.location operator_identifier in

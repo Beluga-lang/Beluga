@@ -1395,7 +1395,7 @@ end = struct
       of_variant ~name:"Signature.Pragma.Prefix_fixity"
         ~data:
           [ ("constant", of_qualified_identifier constant)
-          ; ("precedence", of_int precedence)
+          ; ("precedence", of_option of_int precedence)
           ; ("location", of_location location)
           ]
     | Signature.Pragma.Infix_fixity
@@ -1404,14 +1404,14 @@ end = struct
         ~data:
           [ ("constant", of_qualified_identifier constant)
           ; ("associativity", of_option of_associativity associativity)
-          ; ("precedence", of_int precedence)
+          ; ("precedence", of_option of_int precedence)
           ; ("location", of_location location)
           ]
     | Signature.Pragma.Postfix_fixity { constant; precedence; location } ->
       of_variant ~name:"Signature.Pragma.Postfix_fixity"
         ~data:
           [ ("constant", of_qualified_identifier constant)
-          ; ("precedence", of_int precedence)
+          ; ("precedence", of_option of_int precedence)
           ; ("location", of_location location)
           ]
     | Signature.Pragma.Not { location } ->

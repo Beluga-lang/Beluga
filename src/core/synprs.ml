@@ -849,18 +849,18 @@ module Signature = struct
       | Prefix_fixity of
           { location : Location.t
           ; constant : QualifiedIdentifier.t
-          ; precedence : Int.t
+          ; precedence : Int.t Option.t
           }
       | Infix_fixity of
           { location : Location.t
           ; constant : QualifiedIdentifier.t
-          ; precedence : Int.t
+          ; precedence : Int.t Option.t
           ; associativity : Associativity.t Option.t
           }
       | Postfix_fixity of
           { location : Location.t
           ; constant : QualifiedIdentifier.t
-          ; precedence : Int.t
+          ; precedence : Int.t Option.t
           }
       | Not of { location : Location.t }
       | Open_module of

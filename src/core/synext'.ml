@@ -774,19 +774,6 @@ module Meta = struct
   end =
     Pattern
 
-  (** External meta-substitutions. *)
-  and Substitution : sig
-    (** [{ Substitution.objects; _ }] is the meta-context
-
-        - [^] if [objects = \[\]]
-        - [m1, m2, ..., mn] if [objects = \[m1; m2; ...; mn\]] *)
-    type t =
-      { location : Location.t
-      ; objects : Object.t List.t
-      }
-  end =
-    Substitution
-
   (** External meta-contexts. *)
   and Context : sig
     (** [{ Context.bindings; _ }] is the meta-context
@@ -866,10 +853,6 @@ module Meta = struct
     | Object.Contextual_term { location; _ }
     | Object.Plain_substitution { location; _ }
     | Object.Renaming_substitution { location; _ } -> location
-
-  let location_of_substitution substitution =
-    match substitution with
-    | { Substitution.location; _ } -> location
 
   let location_of_context context =
     match context with
@@ -1159,7 +1142,7 @@ module Comp = struct
           }
       | MetaTypeAnnotated of
           { location : Location.t
-          ; annotation_identifier : Identifier.t Option.t
+          ; annotation_identifier : Identifier.t
           ; annotation_type : Meta.Typ.t
           ; body : Pattern.t
           }

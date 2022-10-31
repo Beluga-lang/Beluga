@@ -181,11 +181,10 @@ module CLF = struct
     | Substitution.Pattern.Head.None _, Substitution.Pattern.Head.None _
     | ( Substitution.Pattern.Head.Identity _
       , Substitution.Pattern.Head.Identity _ ) -> true
-    | ( Substitution.Pattern.Head.Substitution_variable
-          { identifier = i1; closure = o1; _ }
-      , Substitution.Pattern.Head.Substitution_variable
-          { identifier = i2; closure = o2; _ } ) ->
-      Identifier.equal i1 i2 && Option.equal substitution_equal o1 o2
+    | ( Substitution.Pattern.Head.Substitution_variable x
+      , Substitution.Pattern.Head.Substitution_variable y ) ->
+      Identifier.equal x.identifier y.identifier
+      && Option.equal substitution_equal x.closure y.closure
     | _ -> false
 
   and context_equal x y =
@@ -267,10 +266,6 @@ module Meta = struct
       CLF.context_pattern_equal x.domain y.domain
       && CLF.substitution_pattern_equal x.range y.range
     | _ -> false
-
-  and substitution_equal x y =
-    let open Substitution in
-    List.equal object_equal x.objects y.objects
 
   and context_equal x y =
     let open Context in
@@ -410,8 +405,7 @@ module Comp = struct
     | Pattern.TypeAnnotated x, Pattern.TypeAnnotated y ->
       pattern_equal x.pattern y.pattern && typ_equal x.typ y.typ
     | Pattern.MetaTypeAnnotated x, Pattern.MetaTypeAnnotated y ->
-      Option.equal Identifier.equal x.annotation_identifier
-        y.annotation_identifier
+      Identifier.equal x.annotation_identifier y.annotation_identifier
       && Meta.typ_equal x.annotation_type y.annotation_type
       && pattern_equal x.body y.body
     | Pattern.Wildcard _, Pattern.Wildcard _ -> true

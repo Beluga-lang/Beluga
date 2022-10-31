@@ -558,8 +558,6 @@ module Meta : sig
 
   val of_pattern : Pattern.t -> Yojson.Safe.t
 
-  val of_substitution : Substitution.t -> Yojson.Safe.t
-
   val of_context : Context.t -> Yojson.Safe.t
 
   val of_schema : Schema.t -> Yojson.Safe.t
@@ -658,15 +656,6 @@ end = struct
         ~data:
           [ ("domain", CLF.of_context_pattern domain)
           ; ("range", CLF.of_substitution_pattern range)
-          ; ("location", of_location location)
-          ]
-
-  and of_substitution substitution =
-    match substitution with
-    | { Meta.Substitution.objects; location } ->
-      of_variant ~name:"Meta.Substitution"
-        ~data:
-          [ ("objects", of_list of_object objects)
           ; ("location", of_location location)
           ]
 
@@ -1005,7 +994,7 @@ end = struct
         { annotation_identifier; annotation_type; body; location } ->
       of_variant ~name:"Comp.Pattern.MetaTypeAnnotated"
         ~data:
-          [ ("annotation_identifier", of_identifier_opt annotation_identifier)
+          [ ("annotation_identifier", of_identifier annotation_identifier)
           ; ("annotation_type", Meta.of_typ annotation_type)
           ; ("body", of_pattern body)
           ; ("location", of_location location)

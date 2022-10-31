@@ -251,17 +251,14 @@ module Meta = struct
   let p_rsubst domain range =
     Pattern.Renaming_substitution { location; domain; range }
 
-  (** {1 Meta-Substitution Constructors} *)
-
-  let msub objects = { Substitution.location; objects }
-
   (** {1 Meta-Context Constructors} *)
 
   let mctx bindings = { Context.location; bindings }
 
   (** {1 Context Schema Constructors} *)
 
-  let s_c identifier = Schema.Constant { location; identifier }
+  let s_c ?m identifier =
+    Schema.Constant { location; identifier = qid ?m identifier }
 
   let s_alt schemas = Schema.Alternation { location; schemas }
 

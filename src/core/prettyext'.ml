@@ -148,11 +148,11 @@ module LF = struct
     match typ with
     | Typ.Constant { identifier; quoted = true; operator; _ }
       when Operator.is_nullary operator ->
-      Format.fprintf ppf "%a" QualifiedIdentifier.pp identifier
+      QualifiedIdentifier.pp ppf identifier
     | Typ.Constant { identifier; quoted = true; _ } ->
       Format.fprintf ppf "(%a)" QualifiedIdentifier.pp identifier
     | Typ.Constant { identifier; quoted = false; _ } ->
-      Format.fprintf ppf "%a" QualifiedIdentifier.pp identifier
+      QualifiedIdentifier.pp ppf identifier
     | Typ.Application { applicand; arguments = []; _ } ->
       Format.fprintf ppf "@[<2>%a@]" pp_typ applicand
     | Typ.Application
@@ -236,15 +236,14 @@ module LF = struct
   and pp_term ppf term =
     let parent_precedence = Precedence.of_term term in
     match term with
-    | Term.Variable { identifier; _ } ->
-      Format.fprintf ppf "%a" Identifier.pp identifier
+    | Term.Variable { identifier; _ } -> Identifier.pp ppf identifier
     | Term.Constant { identifier; quoted = true; operator; _ }
       when Operator.is_nullary operator ->
-      Format.fprintf ppf "%a" QualifiedIdentifier.pp identifier
+      QualifiedIdentifier.pp ppf identifier
     | Term.Constant { identifier; quoted = true; _ } ->
       Format.fprintf ppf "(%a)" QualifiedIdentifier.pp identifier
     | Term.Constant { identifier; quoted = false; _ } ->
-      Format.fprintf ppf "%a" QualifiedIdentifier.pp identifier
+      QualifiedIdentifier.pp ppf identifier
     | Term.Application { applicand; arguments = []; _ } ->
       Format.fprintf ppf "@[<2>%a@]" pp_term applicand
     | Term.Application
@@ -549,11 +548,11 @@ module CLF = struct
     match typ with
     | Typ.Constant { identifier; quoted = true; operator; _ }
       when Operator.is_nullary operator ->
-      Format.fprintf ppf "%a" QualifiedIdentifier.pp identifier
+      QualifiedIdentifier.pp ppf identifier
     | Typ.Constant { identifier; quoted = true; _ } ->
       Format.fprintf ppf "(%a)" QualifiedIdentifier.pp identifier
     | Typ.Constant { identifier; quoted = false; _ } ->
-      Format.fprintf ppf "%a" QualifiedIdentifier.pp identifier
+      QualifiedIdentifier.pp ppf identifier
     | Typ.Application { applicand; arguments = []; _ } ->
       Format.fprintf ppf "@[<2>%a@]" pp_typ applicand
     | Typ.Application
@@ -637,24 +636,21 @@ module CLF = struct
       Format.fprintf ppf "@[<2>block (%a)]" pp_typ typ
     | Typ.Block { elements = `Record nts; _ } ->
       Format.fprintf ppf "@[<2>block (%a)]"
-        (List1.pp
-           ~pp_sep:(fun ppf () -> Format.fprintf ppf ",@ ")
-           (fun ppf (i, t) ->
+        (List1.pp ~pp_sep:Format.comma (fun ppf (i, t) ->
              Format.fprintf ppf "%a@ :@ %a" Identifier.pp i pp_typ t))
         nts
 
   and pp_term ppf term =
     let parent_precedence = Precedence.of_term term in
     match term with
-    | Term.Variable { identifier; _ } ->
-      Format.fprintf ppf "%a" Identifier.pp identifier
+    | Term.Variable { identifier; _ } -> Identifier.pp ppf identifier
     | Term.Constant { identifier; quoted = true; operator; _ }
       when Operator.is_nullary operator ->
-      Format.fprintf ppf "%a" QualifiedIdentifier.pp identifier
+      QualifiedIdentifier.pp ppf identifier
     | Term.Constant { identifier; quoted = true; _ } ->
       Format.fprintf ppf "(%a)" QualifiedIdentifier.pp identifier
     | Term.Constant { identifier; quoted = false; _ } ->
-      Format.fprintf ppf "%a" QualifiedIdentifier.pp identifier
+      QualifiedIdentifier.pp ppf identifier
     | Term.Application { applicand; arguments = []; _ } ->
       Format.fprintf ppf "@[<2>%a@]" pp_term applicand
     | Term.Application
@@ -769,11 +765,11 @@ module CLF = struct
       Format.fprintf ppf ".."
     | { Substitution.head = Substitution.Head.None _; terms; _ } ->
       Format.fprintf ppf "@[<2>%a@]"
-        (List.pp ~pp_sep:(fun ppf () -> Format.fprintf ppf ",@ ") pp_term)
+        (List.pp ~pp_sep:Format.comma pp_term)
         terms
     | { Substitution.head = Substitution.Head.Identity _; terms; _ } ->
       Format.fprintf ppf "@[<2>..,@ %a@]"
-        (List.pp ~pp_sep:(fun ppf () -> Format.fprintf ppf ",@ ") pp_term)
+        (List.pp ~pp_sep:Format.comma pp_term)
         terms
     | { Substitution.head =
           Substitution.Head.Substitution_variable
@@ -796,7 +792,7 @@ module CLF = struct
       ; _
       } ->
       Format.fprintf ppf "@[<2>%a,@ %a@]" Identifier.pp identifier
-        (List.pp ~pp_sep:(fun ppf () -> Format.fprintf ppf ",@ ") pp_term)
+        (List.pp ~pp_sep:Format.comma pp_term)
         terms
     | { Substitution.head =
           Substitution.Head.Substitution_variable
@@ -806,14 +802,13 @@ module CLF = struct
       } ->
       Format.fprintf ppf "@[<2>%a[%a],@ %a@]" Identifier.pp identifier
         pp_substitution closure
-        (List.pp ~pp_sep:(fun ppf () -> Format.fprintf ppf ",@ ") pp_term)
+        (List.pp ~pp_sep:Format.comma pp_term)
         terms
 
   and pp_context ppf context =
     let pp_typing ppf typing =
       match typing with
-      | identifier, Option.None ->
-        Format.fprintf ppf "%a" Identifier.pp identifier
+      | identifier, Option.None -> Identifier.pp ppf identifier
       | identifier, Option.Some typ ->
         Format.fprintf ppf "%a@ :@ %a" Identifier.pp identifier pp_typ typ
     in
@@ -825,21 +820,21 @@ module CLF = struct
     | { Context.head = Context.Head.Context_variable { identifier; _ }
       ; bindings = []
       ; _
-      } -> Format.fprintf ppf "%a" Identifier.pp identifier
+      } -> Identifier.pp ppf identifier
     | { Context.head = Context.Head.None _; bindings; _ } ->
       Format.fprintf ppf "@[<2>%a@]"
-        (List.pp ~pp_sep:(fun ppf () -> Format.fprintf ppf ",@ ") pp_typing)
+        (List.pp ~pp_sep:Format.comma pp_typing)
         bindings
     | { Context.head = Context.Head.Hole _; bindings; _ } ->
       Format.fprintf ppf "@[<2>_,@ %a@]"
-        (List.pp ~pp_sep:(fun ppf () -> Format.fprintf ppf ",@ ") pp_typing)
+        (List.pp ~pp_sep:Format.comma pp_typing)
         bindings
     | { Context.head = Context.Head.Context_variable { identifier; _ }
       ; bindings
       ; _
       } ->
       Format.fprintf ppf "@[<2>%a,@ %a@]" Identifier.pp identifier
-        (List.pp ~pp_sep:(fun ppf () -> Format.fprintf ppf ",@ ") pp_typing)
+        (List.pp ~pp_sep:Format.comma pp_typing)
         bindings
 
   and pp_infix_operator_application ~parent_precedence operator_identifier
@@ -965,15 +960,14 @@ module CLF = struct
   let rec pp_term_pattern ppf term =
     let parent_precedence = Precedence.of_term_pattern term in
     match term with
-    | Term.Pattern.Variable { identifier; _ } ->
-      Format.fprintf ppf "%a" Identifier.pp identifier
+    | Term.Pattern.Variable { identifier; _ } -> Identifier.pp ppf identifier
     | Term.Pattern.Constant { identifier; quoted = true; operator; _ }
       when Operator.is_nullary operator ->
-      Format.fprintf ppf "%a" QualifiedIdentifier.pp identifier
+      QualifiedIdentifier.pp ppf identifier
     | Term.Pattern.Constant { identifier; quoted = true; _ } ->
       Format.fprintf ppf "(%a)" QualifiedIdentifier.pp identifier
     | Term.Pattern.Constant { identifier; quoted = false; _ } ->
-      Format.fprintf ppf "%a" QualifiedIdentifier.pp identifier
+      QualifiedIdentifier.pp ppf identifier
     | Term.Pattern.Application { applicand; arguments = []; _ } ->
       Format.fprintf ppf "@[<2>%a@]" pp_term_pattern applicand
     | Term.Pattern.Application
@@ -1221,18 +1215,14 @@ module CLF = struct
       ; _
       } ->
       Format.fprintf ppf "@[<2>%a@]"
-        (List.pp
-           ~pp_sep:(fun ppf () -> Format.fprintf ppf ",@ ")
-           pp_term_pattern)
+        (List.pp ~pp_sep:Format.comma pp_term_pattern)
         terms
     | { Substitution.Pattern.head = Substitution.Pattern.Head.Identity _
       ; terms
       ; _
       } ->
       Format.fprintf ppf "@[<2>..,@ %a@]"
-        (List.pp
-           ~pp_sep:(fun ppf () -> Format.fprintf ppf ",@ ")
-           pp_term_pattern)
+        (List.pp ~pp_sep:Format.comma pp_term_pattern)
         terms
     | { Substitution.Pattern.head =
           Substitution.Pattern.Head.Substitution_variable
@@ -1255,9 +1245,7 @@ module CLF = struct
       ; _
       } ->
       Format.fprintf ppf "@[<2>%a,@ %a@]" Identifier.pp identifier
-        (List.pp
-           ~pp_sep:(fun ppf () -> Format.fprintf ppf ",@ ")
-           pp_term_pattern)
+        (List.pp ~pp_sep:Format.comma pp_term_pattern)
         terms
     | { Substitution.Pattern.head =
           Substitution.Pattern.Head.Substitution_variable
@@ -1267,9 +1255,7 @@ module CLF = struct
       } ->
       Format.fprintf ppf "@[<2>%a[%a],@ %a@]" Identifier.pp identifier
         pp_substitution closure
-        (List.pp
-           ~pp_sep:(fun ppf () -> Format.fprintf ppf ",@ ")
-           pp_term_pattern)
+        (List.pp ~pp_sep:Format.comma pp_term_pattern)
         terms
 
   and pp_context_pattern ppf context_pattern =
@@ -1289,14 +1275,14 @@ module CLF = struct
           Context.Pattern.Head.Context_variable { identifier; _ }
       ; bindings = []
       ; _
-      } -> Format.fprintf ppf "%a" Identifier.pp identifier
+      } -> Identifier.pp ppf identifier
     | { Context.Pattern.head = Context.Pattern.Head.None _; bindings; _ } ->
       Format.fprintf ppf "@[<2>%a@]"
-        (List.pp ~pp_sep:(fun ppf () -> Format.fprintf ppf ",@ ") pp_typing)
+        (List.pp ~pp_sep:Format.comma pp_typing)
         bindings
     | { Context.Pattern.head = Context.Pattern.Head.Hole _; bindings; _ } ->
       Format.fprintf ppf "@[<2>_,@ %a@]"
-        (List.pp ~pp_sep:(fun ppf () -> Format.fprintf ppf ",@ ") pp_typing)
+        (List.pp ~pp_sep:Format.comma pp_typing)
         bindings
     | { Context.Pattern.head =
           Context.Pattern.Head.Context_variable { identifier; _ }
@@ -1304,6 +1290,118 @@ module CLF = struct
       ; _
       } ->
       Format.fprintf ppf "@[<2>%a,@ %a@]" Identifier.pp identifier
-        (List.pp ~pp_sep:(fun ppf () -> Format.fprintf ppf ",@ ") pp_typing)
+        (List.pp ~pp_sep:Format.comma pp_typing)
         bindings
+end
+
+(** {1 Printing Meta-Types, Meta-Objects, Meta-Patterns, Meta-Contexts} *)
+module Meta = struct
+  open Meta
+
+  module Precedence : sig
+    type t
+
+    val of_schema : Schema.t -> t
+
+    include Ord.ORD with type t := t
+  end = struct
+    type t = Int.t
+
+    let of_schema schema =
+      match schema with
+      | Schema.Alternation _ -> 1
+      | Schema.Constant _ | Schema.Element _ -> 2
+
+    include (
+      Ord.Make (struct
+        type nonrec t = t
+
+        let compare = Int.compare
+      end) :
+        Ord.ORD with type t := t)
+  end
+
+  include Make_parenthesizer (Precedence)
+
+  let rec pp_typ ppf typ =
+    match typ with
+    | Typ.Context_schema { schema; _ } -> pp_schema ppf schema
+    | Typ.Contextual_typ { context; typ; _ } ->
+      Format.fprintf ppf "@[<2>(%a@ ⊢@ %a)@]" CLF.pp_context context
+        CLF.pp_typ typ
+    | Typ.Parameter_typ { context; typ; _ } ->
+      Format.fprintf ppf "@[<2>#(%a@ ⊢@ %a)@]" CLF.pp_context context
+        CLF.pp_typ typ
+    | Typ.Plain_substitution_typ { domain; range; _ } ->
+      Format.fprintf ppf "@[<2>$(%a@ ⊢@ %a)@]" CLF.pp_context domain
+        CLF.pp_context range
+    | Typ.Renaming_substitution_typ { domain; range; _ } ->
+      Format.fprintf ppf "@[<2>$(%a@ ⊢#@ %a)@]" CLF.pp_context domain
+        CLF.pp_context range
+
+  and pp_object ppf object_ =
+    match object_ with
+    | Object.Context { context; _ } ->
+      Format.fprintf ppf "@[[%a]@]" CLF.pp_context context
+    | Object.Contextual_term { context; term; _ } ->
+      Format.fprintf ppf "@[<2>[%a@ ⊢@ %a]@]" CLF.pp_context context
+        CLF.pp_term term
+    | Object.Plain_substitution { domain; range; _ } ->
+      Format.fprintf ppf "@[<2>$[%a@ ⊢@ %a]@]" CLF.pp_context domain
+        CLF.pp_substitution range
+    | Object.Renaming_substitution { domain; range; _ } ->
+      Format.fprintf ppf "@[<2>$[%a@ ⊢#@ %a]@]" CLF.pp_context domain
+        CLF.pp_substitution range
+
+  and pp_pattern ppf pattern =
+    match pattern with
+    | Pattern.Context { context; _ } ->
+      Format.fprintf ppf "@[[%a]@]" CLF.pp_context_pattern context
+    | Pattern.Contextual_term { context; term; _ } ->
+      Format.fprintf ppf "@[<2>[%a@ ⊢@ %a]@]" CLF.pp_context_pattern context
+        CLF.pp_term_pattern term
+    | Pattern.Plain_substitution { domain; range; _ } ->
+      Format.fprintf ppf "@[<2>$[%a@ ⊢@ %a]@]" CLF.pp_context_pattern domain
+        CLF.pp_substitution_pattern range
+    | Pattern.Renaming_substitution { domain; range; _ } ->
+      Format.fprintf ppf "@[<2>$[%a@ ⊢#@ %a]@]" CLF.pp_context_pattern domain
+        CLF.pp_substitution_pattern range
+
+  and pp_context ppf context =
+    let { Context.bindings; _ } = context in
+    List.pp ~pp_sep:Format.comma
+      (fun ppf (i, t) ->
+        Format.fprintf ppf "@[%a@ :@ %a@]" Identifier.pp i pp_typ t)
+      ppf bindings
+
+  and pp_schema ppf schema =
+    let parent_precedence = Precedence.of_schema schema in
+    let pp_bindings =
+      List1.pp ~pp_sep:Format.comma (fun ppf (i, t) ->
+          Format.fprintf ppf "@[%a@ :@ %a@]" Identifier.pp i CLF.pp_typ t)
+    in
+    match schema with
+    | Schema.Constant { identifier; _ } ->
+      QualifiedIdentifier.pp ppf identifier
+    | Schema.Alternation { schemas; _ } ->
+      List2.pp
+        ~pp_sep:(fun ppf () -> Format.fprintf ppf "@ +@ ")
+        (parenthesize_argument_of_lesser_than_or_equal_precedence
+           Precedence.of_schema ~parent_precedence pp_schema)
+        ppf schemas
+    | Schema.Element { some = Option.None; block = `Unnamed t; _ } ->
+      Format.fprintf ppf "@[<2>block@ %a@]" CLF.pp_typ t
+    | Schema.Element { some = Option.None; block = `Record bindings; _ } ->
+      Format.fprintf ppf "@[<2>block@ (%a)@]" pp_bindings bindings
+    | Schema.Element
+        { some = Option.Some some_bindings; block = `Unnamed t; _ } ->
+      Format.fprintf ppf "@[<2>some@ [%a]@ block@ %a@]" pp_bindings
+        some_bindings CLF.pp_typ t
+    | Schema.Element
+        { some = Option.Some some_bindings
+        ; block = `Record block_bindings
+        ; _
+        } ->
+      Format.fprintf ppf "@[<2>some@ [%a]@ block@ (%a)@]" pp_bindings
+        some_bindings pp_bindings block_bindings
 end

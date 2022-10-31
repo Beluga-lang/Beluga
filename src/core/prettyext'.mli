@@ -32,3 +32,18 @@ module CLF : sig
 
   val pp_context_pattern : Format.formatter -> Context.Pattern.t -> Unit.t
 end
+
+(** Pretty-printing for meta-level syntax. *)
+module Meta : sig
+  open Meta
+
+  val pp_typ : Format.formatter -> Typ.t -> Unit.t
+
+  val pp_object : Format.formatter -> Object.t -> Unit.t
+
+  val pp_context : Format.formatter -> Context.t -> Unit.t
+
+  val pp_pattern : Format.formatter -> Pattern.t -> Unit.t
+
+  val pp_schema : Format.formatter -> Schema.t -> Unit.t
+end

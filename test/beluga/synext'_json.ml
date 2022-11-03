@@ -1100,7 +1100,13 @@ end = struct
       of_variant ~name:"Harpoon.Directive.Split"
         ~data:
           [ ("scrutinee", Comp.of_expression scrutinee)
-          ; ("branches", of_list of_split_branch branches)
+          ; ("branches", of_list1 of_split_branch branches)
+          ; ("location", of_location location)
+          ]
+    | Harpoon.Directive.Impossible { scrutinee; location } ->
+      of_variant ~name:"Harpoon.Directive.Impossible"
+        ~data:
+          [ ("scrutinee", Comp.of_expression scrutinee)
           ; ("location", of_location location)
           ]
     | Harpoon.Directive.Suffices { scrutinee; branches; location } ->

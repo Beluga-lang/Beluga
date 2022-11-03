@@ -2119,7 +2119,7 @@ end = struct
         | <comp-pattern-object3>
 
       <comp-pattern-object3> ::=
-        | <comp-pattern-object4> (<comp-pattern-object4> | <comp-weak-prefix-pattern>)
+        | <comp-pattern-object4> (<comp-pattern-object4> | <comp-weak-prefix-pattern>)+
         | <comp-pattern-object4>
 
       <comp-pattern-object4> ::=
@@ -2611,14 +2611,14 @@ end = struct
     and unboxed =
       keyword "unboxed"
       $> fun () -> `Unboxed
-    and strenghtened =
+    and strengthened =
       keyword "strengthened"
       $> fun () -> `Strengthened
     in
     choice
       [ boxed
       ; unboxed
-      ; strenghtened
+      ; strengthened
       ]
 
   let harpoon_command =
@@ -2660,7 +2660,7 @@ end = struct
              ; modifier = Option.none
              }
     and strengthen =
-      keyword "strengthend" &>
+      keyword "strengthen" &>
         seq2
           (span Comp_parsers.comp_expression_object <& token Token.KW_AS)
           identifier
@@ -2765,7 +2765,7 @@ end = struct
       keyword "split"
       &> seq2
         Comp_parsers.comp_expression_object
-        (token Token.KW_AS &> many harpoon_split_branch)
+        (token Token.KW_AS &> some harpoon_split_branch)
       |> span
       $> fun (location, (scrutinee, branches)) ->
            Harpoon.Directive.Split { location; scrutinee; branches }
@@ -2773,7 +2773,7 @@ end = struct
       token Token.KW_IMPOSSIBLE &> Comp_parsers.comp_expression_object
       |> span
       $> fun (location, scrutinee) ->
-           Harpoon.Directive.Split { location; scrutinee; branches = [] }
+           Harpoon.Directive.Impossible { location; scrutinee }
     and suffices =
       let suffices_branch =
         seq2 Comp_parsers.comp_sort_object (braces Harpoon_parsers.harpoon_proof)

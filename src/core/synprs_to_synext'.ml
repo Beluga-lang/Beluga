@@ -4312,8 +4312,6 @@ struct
 
   type disambiguation_state_entry = Disambiguation_state.entry
 
-  (** {1 Exceptions} *)
-
   (** {1 Disambiguation} *)
 
   let rec disambiguate_as_proof state proof =
@@ -4360,10 +4358,16 @@ struct
       let scrutinee' =
         Comp_disambiguation.disambiguate_as_expression state scrutinee
       and branches' =
-        List.map (disambiguate_as_split_branch state) branches
+        List1.map (disambiguate_as_split_branch state) branches
       in
       Synext'.Harpoon.Directive.Split
         { location; scrutinee = scrutinee'; branches = branches' }
+    | Synprs.Harpoon.Directive.Impossible { location; scrutinee } ->
+      let scrutinee' =
+        Comp_disambiguation.disambiguate_as_expression state scrutinee
+      in
+      Synext'.Harpoon.Directive.Impossible
+        { location; scrutinee = scrutinee' }
     | Synprs.Harpoon.Directive.Suffices { location; scrutinee; branches } ->
       let scrutinee' =
         Comp_disambiguation.disambiguate_as_expression state scrutinee

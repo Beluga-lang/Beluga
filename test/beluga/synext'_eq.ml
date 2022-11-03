@@ -450,7 +450,9 @@ module Harpoon = struct
       Comp.expression_equal x.solution y.solution
     | Directive.Split x, Directive.Split y ->
       Comp.expression_equal x.scrutinee y.scrutinee
-      && List.equal split_branch_equal x.branches y.branches
+      && List1.equal split_branch_equal x.branches y.branches
+    | Directive.Impossible x, Directive.Impossible y ->
+      Comp.expression_equal x.scrutinee y.scrutinee
     | Directive.Suffices x, Directive.Suffices y ->
       Comp.expression_equal x.scrutinee y.scrutinee
       && List.equal suffices_branch_equal x.branches y.branches

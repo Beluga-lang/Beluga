@@ -1262,7 +1262,11 @@ module Harpoon = struct
       | Split of
           { location : Location.t
           ; scrutinee : Comp.Expression.t
-          ; branches : Split_branch.t List.t
+          ; branches : Split_branch.t List1.t
+          }
+      | Impossible of
+          { location : Location.t
+          ; scrutinee : Comp.Expression.t
           }
       | Suffices of
           { location : Location.t

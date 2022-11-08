@@ -32,3 +32,24 @@ module Show : Support.Show.SHOW with type t = t =
   (val Support.Show.contramap (module String) name)
 
 include (Show : Support.Show.SHOW with type t := t)
+
+let inspect_duplicates identifiers =
+  let duplicates, set =
+    List.fold_left
+      (fun (duplicates, encountered_identifiers) addition ->
+        if Set.mem addition encountered_identifiers then
+          let duplicates' = addition :: duplicates in
+          (duplicates', encountered_identifiers)
+        else
+          let encountered_identifiers' =
+            Set.add addition encountered_identifiers
+          in
+          (duplicates, encountered_identifiers'))
+      ([], Set.empty) identifiers
+  in
+  match duplicates with
+  | e1 :: e2 :: es -> (Option.some (List2.from e1 e2 es), set)
+  | [] -> (Option.none, set)
+  | _ -> Error.violation "[Identifier.inspect_duplicates]"
+
+let find_duplicates = Fun.(inspect_duplicates >> Pair.fst)

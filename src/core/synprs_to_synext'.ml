@@ -2855,7 +2855,7 @@ struct
            without modules."
       | m :: ms -> (
         match Disambiguation_state.lookup_toplevel m state with
-        | QualifiedIdentifier.Dictionary.Module sub_state as entry ->
+        | QualifiedIdentifier.Dictionary.Module _ ->
           let rec helper state looked_up_identifiers next_identifier
               remaining_identifiers =
             match
@@ -3606,11 +3606,11 @@ struct
         (* Qualified identifiers without modules were parsed as plain
            identifiers *)
         Error.violation
-          "[disambiguate_as_term] encountered a qualified identifier \
-           without modules."
+          "[disambiguate_as_term_pattern] encountered a qualified \
+           identifier without modules."
       | m :: ms -> (
         match Disambiguation_state.lookup_toplevel m state with
-        | QualifiedIdentifier.Dictionary.Module sub_state as entry ->
+        | QualifiedIdentifier.Dictionary.Module _ ->
           let rec helper state looked_up_identifiers next_identifier
               remaining_identifiers =
             match
@@ -5043,7 +5043,7 @@ struct
       operator_identifier state
 
   (** [open_module module_identifier state] is the disambiguation state
-      derived from [state] with the addition ot the declarations in the
+      derived from [state] with the addition of the declarations in the
       module having identifier [module_identifier] currently in scope. *)
   let open_module module_identifier state =
     match Disambiguation_state.lookup module_identifier state with
@@ -5068,38 +5068,6 @@ struct
       let location = QualifiedIdentifier.location module_identifier in
       raise
       @@ Invalid_module_abbreviation { location; actual_binding = entry }
-
-  (* [ensure_unique_identifiers additions] raises an exception if at least
-     two identifiers in [additions] are equal. *)
-  let ensure_unique_identifiers additions =
-    let additions_set = Identifier.Set.of_list additions in
-    if List.length additions <> Identifier.Set.cardinal additions_set then
-      (* An identifier in [additions] has a duplicate *)
-      let duplicates, _ =
-        List.fold_left
-          (fun (duplicates, encountered_identifiers) addition ->
-            if Identifier.Set.mem addition encountered_identifiers then
-              let duplicates' = addition :: duplicates in
-              (duplicates', encountered_identifiers)
-            else
-              let encountered_identifiers' =
-                Identifier.Set.add addition encountered_identifiers
-              in
-              (duplicates, encountered_identifiers'))
-          ([], Identifier.Set.empty)
-          additions
-      in
-      let duplicates_locations = List.map Identifier.location duplicates in
-      match duplicates_locations with
-      | l1 :: l2 :: ls ->
-        let locations = List2.from l1 l2 ls in
-        raise
-        @@ Identifiers_bound_several_times_in_recursive_declaration locations
-      | _ -> Error.violation "[ensure_unique_identifiers]"
-      (* Impossible since [List.length additions <> Identifier.Set.cardinal
-         additions_set], meaning that at least two identifiers in [additions]
-         are equal. *)
-    else ()
 
   (** {1 Disambiguation} *)
 
@@ -5256,14 +5224,19 @@ struct
                state additions)
            (state, [])
     in
-    ensure_unique_identifiers additions;
-    let _states', declarations' =
-      declarations
-      |> List1.map (fun declaration ->
-             disambiguate_as_declaration state' declaration)
-      |> List1.split
-    in
-    (state', declarations')
+    match Identifier.find_duplicates additions with
+    | Option.Some duplicates ->
+      let locations = List2.map Identifier.location duplicates in
+      raise
+      @@ Identifiers_bound_several_times_in_recursive_declaration locations
+    | Option.None ->
+      let _states', declarations' =
+        declarations
+        |> List1.map (fun declaration ->
+               disambiguate_as_declaration state' declaration)
+        |> List1.split
+      in
+      (state', declarations')
 
   and disambiguate_as_declaration state declaration =
     match declaration with

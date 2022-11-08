@@ -41,12 +41,13 @@ let[@inline] modules { modules; _ } = modules
 
 let[@inline] name { name; _ } = name
 
-include (
+module Ord =
   (val Ord.sequence
          (module List.MakeOrd (Identifier))
          (module Identifier)
-         modules name) :
-    Ord.ORD with type t := t)
+         modules name)
+
+include (Ord : Support.Ord.ORD with type t := t)
 
 include (
   (val Eq.conjunction
@@ -70,6 +71,9 @@ include (
           (modules n) Identifier.pp (name n)
   end) :
     Show.SHOW with type t := t)
+
+module Map = Map.Make (Ord)
+module Set = Set.Make (Ord)
 
 module Dictionary = struct
   type 'a t = 'a value Identifier.Hamt.t

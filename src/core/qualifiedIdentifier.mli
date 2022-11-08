@@ -1,6 +1,6 @@
 (** Namespaced identifiers.
 
-    These are names for referring to bound variable names nested in modules. *)
+    These are names for referring to bound names nested in modules. *)
 
 open Support
 
@@ -49,10 +49,18 @@ include Ord.ORD with type t := t
 
 include Show.SHOW with type t := t
 
+include Hash.HASH with type t := t
+
 (** {1 Collections} *)
 
+module Map : Map.S with type key = t
+
+module Set : Set.S with type elt = t
+
 (** A dictionary is a hash array mapped trie (HAMT) where keys are qualified
-    identifiers and values are arranged in modules.
+    identifiers and values are arranged in modules. This datastructure is
+    used as a symbol table for disambiguation during the elaboration form the
+    parser syntax to the external syntax.
 
     Adding an entry to a dictionary shadows the previous binding of the same
     qualified identifier.
@@ -61,14 +69,14 @@ include Show.SHOW with type t := t
 
     {[
       EntryA -> A
-      Module::EntryB -> B
-      Module::EntryC -> C
+      Module.EntryB -> B
+      Module.EntryC -> C
     ]}
     - If [(EntryA, D)] is added, then the binding [(EntryA, A)] is discarded.
-    - If [(Module::EntryB, E)] is added, then the binding
-      [(Module::EntryB, B)] is discarded.
-    - If [(Module, F)] is added, then the bindings [(Module::EntryB, B)] and
-      [(Module::EntryC, C)] are discarded.
+    - If [(Module.EntryB, E)] is added, then the binding [(Module.EntryB, B)]
+      is discarded.
+    - If [(Module, F)] is added, then the bindings [(Module.EntryB, B)] and
+      [(Module.EntryC, C)] are discarded.
 
     This dictionary data structure is persistent, and suited for keeping
     track of currently bound identifiers and bound qualified identifiers in
@@ -146,7 +154,7 @@ module Dictionary : sig
       [qid] does not appear in a dictionary.
 
       This exception is raised, for instance, if [z] does not appear as a
-      top-level entry in a dictionary, or if [Nat::z] does not appear as a
+      top-level entry in a dictionary, or if [Nat.z] does not appear as a
       nested entry in a dictionary (while [Nat] is a bound module). *)
   exception Unbound_identifier of qualified_identifier
 
@@ -154,16 +162,16 @@ module Dictionary : sig
       module at [qid] does not appear in a dictionary.
 
       This exception is raised, for instance, if the module [Nat] is unbound
-      in a dictionary and [Nat::z] is looked up. *)
+      in a dictionary and [Nat.z] is looked up. *)
   exception Unbound_module of qualified_identifier
 
   (** [Expected_module qid] is the exception raised when an identifier's
       module at [qid] appears as an entry rather than a module in a
       dictionary.
 
-      This exception is raised, for instance, if [Nat::z] is an entry in a
-      dictionary, and [Nat::z::t] is looked up, since it was expected that
-      [Nat::z] would be a module rather than an entry. *)
+      This exception is raised, for instance, if [Nat.z] is an entry in a
+      dictionary, and [Nat.z.t] is looked up, since it was expected that
+      [Nat.z] would be a module rather than an entry. *)
   exception Expected_module of qualified_identifier
 
   (** [lookup identifier dictionary] looks up [identifier] in [dictionary].

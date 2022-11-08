@@ -795,13 +795,6 @@ end = struct
           [ ("meta_type", Meta.of_typ meta_type)
           ; ("location", of_location location)
           ]
-    | Comp.Typ.Application { applicand; arguments; location } ->
-      of_variant ~name:"Comp.Typ.Application"
-        ~data:
-          [ ("applicand", of_typ applicand)
-          ; ("arguments", of_list1 of_typ arguments)
-          ; ("location", of_location location)
-          ]
     | Comp.Typ.Base { applicand; arguments; location; operator = _ } ->
       (* Don't serialize [operator] since it is resolved from the
          signature. *)

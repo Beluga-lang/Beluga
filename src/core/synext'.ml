@@ -966,13 +966,6 @@ module Comp = struct
           { location : Location.t
           ; meta_type : Meta.Typ.t
           }  (** [Box { typ = u; _ }] is a boxed meta-type [\[u\]]. *)
-      | Application of
-          { location : Location.t
-          ; applicand : Typ.t
-          ; arguments : Typ.t List1.t
-          }
-          (** [Application { applicand; arguments; _ }] is the application of
-              [applicand] with [arguments]. *)
       | Base of
           { location : Location.t
           ; applicand : QualifiedIdentifier.t
@@ -1093,7 +1086,8 @@ module Comp = struct
           ; arguments : Expression.t List.t
           }
           (** [Observation { observation = "c"; arguments = \[e1; e2; ...; en\];  }]
-              is the observation [.c e1 e2 ... en]. *)
+              is the observation [.c e1 e2 ... en]. These are destructor
+              copatterns, and may only appear in [fun]-expressions. *)
       | TypeAnnotated of
           { location : Location.t
           ; expression : Expression.t

@@ -323,9 +323,6 @@ module Comp = struct
       typ_equal x.domain y.domain && typ_equal x.range y.range
     | Typ.Cross x, Typ.Cross y -> List2.equal typ_equal x.types y.types
     | Typ.Box x, Typ.Box y -> Meta.typ_equal x.meta_type y.meta_type
-    | Typ.Application x, Typ.Application y ->
-      typ_equal x.applicand y.applicand
-      && List1.equal typ_equal x.arguments y.arguments
     | Typ.Base x, Typ.Base y ->
       QualifiedIdentifier.equal x.applicand y.applicand
       && List.equal Meta.object_equal x.arguments y.arguments

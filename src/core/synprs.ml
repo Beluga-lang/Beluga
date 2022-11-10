@@ -785,6 +785,7 @@ module Harpoon = struct
     | Directive.Intros { location; _ }
     | Directive.Solve { location; _ }
     | Directive.Split { location; _ }
+    | Directive.Impossible { location; _ }
     | Directive.Suffices { location; _ } -> location
 
   let location_of_split_branch split_branch =

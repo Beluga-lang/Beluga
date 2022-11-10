@@ -1952,8 +1952,10 @@ end = struct
       |> span
       $> (fun (location, ()) -> Comp.Sort_object.RawCtype { location })
       |> labelled "Computational `ctype' kind"
-    and boxed_meta_object_of_meta_type =
-      Meta_parsers.meta_thing
+    and meta_object_of_meta_type =
+      (* Needs [trying] because meta-types can be parenthesized, and the
+         leading `(' is ambiguous with [parenthesized]. *)
+      trying Meta_parsers.meta_thing
       |> span
       $> (fun (location, boxed) -> Comp.Sort_object.RawBox { location; boxed })
       |> labelled "Computational boxed meta-object or meta-type"
@@ -1971,7 +1973,7 @@ end = struct
     choice
       [ constant_or_variable
       ; ctype
-      ; boxed_meta_object_of_meta_type
+      ; meta_object_of_meta_type
       ; parenthesized
       ]
 

@@ -934,7 +934,7 @@ module Comp = struct
           ; operator : Operator.t
           ; quoted : Bool.t
           }
-          (** [Constant { identifier = "c"; _ }] is the computation0level
+          (** [Constant { identifier = "c"; _ }] is the computation-level
               type constant ["c"]. *)
       | Pi of
           { location : Location.t
@@ -966,23 +966,13 @@ module Comp = struct
           { location : Location.t
           ; meta_type : Meta.Typ.t
           }  (** [Box { typ = u; _ }] is a boxed meta-type [\[u\]]. *)
-      | Base of
+      | Application of
           { location : Location.t
-          ; applicand : QualifiedIdentifier.t
-          ; operator : Operator.t
-          ; arguments : Meta.Object.t List.t
+          ; applicand : Typ.t
+          ; arguments : Meta.Object.t List1.t
           }
-          (** [Base { applicand = "c"; arguments; _ }] is the application of
-              the inductive or stratified type constructor ["c"] with
-              [arguments]. *)
-      | Cobase of
-          { location : Location.t
-          ; applicand : QualifiedIdentifier.t
-          ; operator : Operator.t
-          ; arguments : Meta.Object.t List.t
-          }
-          (** [Cobase { applicand = "c"; arguments; _ }] is the application
-              of the coinductive type constructor ["c"] with [arguments]. *)
+          (** [Application { applicand; arguments; _ }] is the application of
+              [applicand] with [arguments]. *)
   end =
     Typ
 
@@ -1172,8 +1162,7 @@ module Comp = struct
     | Typ.Arrow { location; _ }
     | Typ.Cross { location; _ }
     | Typ.Box { location; _ }
-    | Typ.Base { location; _ }
-    | Typ.Cobase { location; _ } -> location
+    | Typ.Application { location; _ } -> location
 
   let location_of_expression expression =
     match expression with

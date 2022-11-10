@@ -52,6 +52,10 @@ val flatten : 'a t t -> 'a t
     list. *)
 val compare_lengths : 'a t -> 'b t -> int
 
+(** [compare_length_with l n] is equivalent to [compare (length l) n],
+    except that the computation stops after at most [n] iterations on [l]. *)
+val compare_length_with : 'a t -> int -> int
+
 (** [equal eq (a1, \[a2; ...; an\]) (b1, \[b2; ...; bm\])] holds when the two
     input lists have the same length, and for each pair of elements [ai],
     [bi] at the same position we have [eq ai bi].

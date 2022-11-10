@@ -37,6 +37,10 @@ let to_list (T (hd, tl)) = hd :: tl
 
 let length (T (_, tl)) = 1 + List.length tl
 
+let compare_length_with (T (_, tl)) n =
+  if n >= 1 then List.compare_length_with tl (n - 1)
+  else (* The list has length greater than [n] *) 1
+
 let equal eq (T (h1, t1)) (T (h2, t2)) = eq h1 h2 && List.equal eq t1 t2
 
 let compare_lengths (T (_, t1)) (T (_, t2)) = List.compare_lengths t1 t2

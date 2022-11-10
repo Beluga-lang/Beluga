@@ -49,8 +49,6 @@ include Ord.ORD with type t := t
 
 include Show.SHOW with type t := t
 
-include Hash.HASH with type t := t
-
 (** {1 Collections} *)
 
 module Map : Map.S with type key = t
@@ -59,7 +57,7 @@ module Set : Set.S with type elt = t
 
 (** A dictionary is a hash array mapped trie (HAMT) where keys are qualified
     identifiers and values are arranged in modules. This datastructure is
-    used as a symbol table for disambiguation during the elaboration form the
+    used as a symbol table for disambiguation during the elaboration from the
     parser syntax to the external syntax.
 
     Adding an entry to a dictionary shadows the previous binding of the same

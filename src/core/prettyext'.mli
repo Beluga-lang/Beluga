@@ -62,3 +62,18 @@ module Comp : sig
 
   val pp_context : Format.formatter -> Context.t -> Unit.t
 end
+
+(** Pretty-printing for Harpoon syntax. *)
+module Harpoon : sig
+  open Harpoon
+
+  val pp_proof : Format.formatter -> Proof.t -> Unit.t
+
+  val pp_command : Format.formatter -> Command.t -> Unit.t
+
+  val pp_directive : Format.formatter -> Directive.t -> Unit.t
+
+  val pp_hypothetical : Format.formatter -> Hypothetical.t -> Unit.t
+
+  val pp_repl_command : Format.formatter -> Repl.Command.t -> Unit.t
+end

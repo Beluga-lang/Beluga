@@ -47,3 +47,18 @@ module Meta : sig
 
   val pp_schema : Format.formatter -> Schema.t -> Unit.t
 end
+
+(** Pretty-printing for computation-level syntax. *)
+module Comp : sig
+  open Comp
+
+  val pp_kind : Format.formatter -> Kind.t -> Unit.t
+
+  val pp_typ : Format.formatter -> Typ.t -> Unit.t
+
+  val pp_expression : Format.formatter -> Expression.t -> Unit.t
+
+  val pp_pattern : Format.formatter -> Pattern.t -> Unit.t
+
+  val pp_context : Format.formatter -> Context.t -> Unit.t
+end

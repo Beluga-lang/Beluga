@@ -1612,3 +1612,194 @@ module Comp = struct
       ~pp_sep:(fun ppf () -> Format.fprintf ppf ",@ ")
       pp_binding ppf bindings
 end
+
+(** Pretty-printing for Harpoon syntax. *)
+module Harpoon = struct
+  open Harpoon
+
+  let rec pp_proof ppf proof =
+    match proof with
+    | Proof.Incomplete { label; _ } -> (
+      match label with
+      | Option.None -> Format.pp_print_string ppf "?"
+      | Option.Some label -> Identifier.pp ppf label)
+    | Proof.Command { command; body; _ } ->
+      Format.fprintf ppf "@[%a@];@,%a" pp_command command pp_proof body
+    | Proof.Directive { directive; _ } -> pp_directive ppf directive
+
+  and pp_command ppf command =
+    match command with
+    | Command.By { expression; assignee; _ } ->
+      Format.fprintf ppf "@[<2>by@ %a@ as@ %a@]" Comp.pp_expression
+        expression Identifier.pp assignee
+    | Command.Unbox { expression; assignee; modifier = Option.None; _ } ->
+      Format.fprintf ppf "@[<2>unbox@ %a@ as@ %a@]" Comp.pp_expression
+        expression Identifier.pp assignee
+    | Command.Unbox
+        { expression; assignee; modifier = Option.Some `Strengthened; _ } ->
+      Format.fprintf ppf "@[<2>strengthen@ %a@ as@ %a@]" Comp.pp_expression
+        expression Identifier.pp assignee
+
+  and pp_directive ppf directive =
+    match directive with
+    | Directive.Intros { hypothetical; _ } ->
+      Format.fprintf ppf "@[<v>intros@,%a@]" pp_hypothetical hypothetical
+    | Directive.Solve { solution; _ } ->
+      Format.fprintf ppf "@[<hov 2>solve@ %a@]" Comp.pp_expression solution
+    | Directive.Split { scrutinee; branches; _ } ->
+      Format.fprintf ppf "@[split@ %a as@]@,@[<v>%a@]" Comp.pp_expression
+        scrutinee
+        (List1.pp ~pp_sep:Format.pp_print_cut pp_split_branch)
+        branches
+    | Directive.Impossible { scrutinee; _ } ->
+      Format.fprintf ppf "@[impossible@ @[%a@]@]" Comp.pp_expression
+        scrutinee
+    | Directive.Suffices { scrutinee; branches; _ } ->
+      Format.fprintf ppf "@[<v>@[<2>suffices by@ %a@] toshow@,@[<v>%a@]@]"
+        Comp.pp_expression scrutinee
+        (List.pp ~pp_sep:Format.pp_print_cut pp_suffices_branch)
+        branches
+
+  and pp_split_branch ppf branch =
+    let { Split_branch.label; body; _ } = branch in
+    Format.fprintf ppf "@[<v>case %a:@,%a@]" pp_split_branch_label label
+      pp_hypothetical body
+
+  and pp_split_branch_label ppf label =
+    match label with
+    | Split_branch.Label.Constant { identifier; _ } ->
+      QualifiedIdentifier.pp ppf identifier
+    | Split_branch.Label.Bound_variable _ ->
+      Format.pp_print_string ppf "head variable"
+    | Split_branch.Label.Empty_context _ ->
+      Format.pp_print_string ppf "empty context"
+    | Split_branch.Label.Extended_context { schema_element; _ } ->
+      Format.fprintf ppf "extended by %d" schema_element
+    | Split_branch.Label.Parameter_variable { schema_element; projection; _ }
+      -> (
+      match projection with
+      | Option.None -> Format.fprintf ppf "%d" schema_element
+      | Option.Some projection ->
+        Format.fprintf ppf "%d.%d" schema_element projection)
+
+  and pp_suffices_branch ppf branch =
+    let { Suffices_branch.goal; proof; _ } = branch in
+    Format.fprintf ppf "@[<v 2>@[%a@] {@,@[<v>%a@]@]@,}" Comp.pp_typ goal
+      pp_proof proof
+
+  and pp_hypothetical ppf hypothetical =
+    let { Hypothetical.meta_context =
+            { Synext'.Meta.Context.bindings = meta_context_bindings; _ }
+        ; comp_context =
+            { Synext'.Comp.Context.bindings = comp_context_bindings; _ }
+        ; proof
+        ; _
+        } =
+      hypothetical
+    in
+    Format.fprintf ppf "@[<v>{ @[<hv>%a@]@,| @[<hv>%a@]@,; @[<v>%a@]@,}@]"
+      (List.pp ~pp_sep:Format.comma (fun ppf (i, t) ->
+           Format.fprintf ppf "@[<2>%a :@ %a@]" Identifier.pp i Meta.pp_typ t))
+      meta_context_bindings
+      (List.pp ~pp_sep:Format.comma (fun ppf (i, t) ->
+           Format.fprintf ppf "@[<2>%a :@ %a@]" Identifier.pp i Comp.pp_typ t))
+      comp_context_bindings pp_proof proof
+
+  and pp_repl_command ppf repl_command =
+    match repl_command with
+    | Repl.Command.Rename { rename_from; rename_to; level = `comp; _ } ->
+      Format.fprintf ppf "@[<2>rename@ comp@ %a@ %a@]" Identifier.pp
+        rename_from Identifier.pp rename_to
+    | Repl.Command.Rename { rename_from; rename_to; level = `meta; _ } ->
+      Format.fprintf ppf "@[<2>rename@ meta@ %a@ %a@]" Identifier.pp
+        rename_from Identifier.pp rename_to
+    | Repl.Command.ToggleAutomation { kind; change; _ } ->
+      let pp_toggle_automation_kind ppf = function
+        | `auto_intros -> Format.pp_print_string ppf "auto-intros"
+        | `auto_solve_trivial ->
+          Format.pp_print_string ppf "auto-solve-trivial"
+      and pp_toggle_automation_change ppf = function
+        | `on -> Format.pp_print_string ppf "on"
+        | `off -> Format.pp_print_string ppf "off"
+        | `toggle -> Format.pp_print_string ppf "toggle"
+      in
+      Format.fprintf ppf "@[<2>toggle-automation@ %a@ %a@]"
+        pp_toggle_automation_kind kind pp_toggle_automation_change change
+    | Repl.Command.Type { scrutinee; _ } ->
+      Format.fprintf ppf "@[<2>type@ %a@]" Comp.pp_expression scrutinee
+    | Repl.Command.Info { kind; object_identifier; _ } ->
+      let pp_info_kind ppf = function
+        | `prog -> Format.pp_print_string ppf "theorem"
+      in
+      Format.fprintf ppf "@[<2>info@ %a@ %a@]" pp_info_kind kind
+        QualifiedIdentifier.pp object_identifier
+    | Repl.Command.SelectTheorem { theorem; _ } ->
+      Format.fprintf ppf "@[<2>select@ %a@]" QualifiedIdentifier.pp theorem
+    | Repl.Command.Theorem { subcommand; _ } ->
+      let pp_theorem_subcommand ppf = function
+        | `list -> Format.pp_print_string ppf "list"
+        | `defer -> Format.fprintf ppf "defer"
+        | `show_ihs -> Format.pp_print_string ppf "show-ihs"
+        | `show_proof -> Format.pp_print_string ppf "show-proof"
+        | `dump_proof path -> Format.fprintf ppf "dump-proof@ \"%s\"" path
+      in
+      Format.fprintf ppf "@[<2>theorem@ %a@]" pp_theorem_subcommand
+        subcommand
+    | Repl.Command.Session { subcommand; _ } ->
+      let pp_session_subcommand ppf = function
+        | `list -> Format.pp_print_string ppf "list"
+        | `defer -> Format.pp_print_string ppf "defer"
+        | `create -> Format.pp_print_string ppf "create"
+        | `serialize -> Format.pp_print_string ppf "serialize"
+      in
+      Format.fprintf ppf "@[<2>session@ %a@]" pp_session_subcommand
+        subcommand
+    | Repl.Command.Subgoal { subcommand; _ } ->
+      let pp_subgoal_subcommand ppf = function
+        | `list -> Format.pp_print_string ppf "list"
+        | `defer -> Format.pp_print_string ppf "defer"
+      in
+      Format.fprintf ppf "@[<2>subgoal@ %a@]" pp_subgoal_subcommand
+        subcommand
+    | Repl.Command.Undo _ -> Format.pp_print_string ppf "undo"
+    | Repl.Command.Redo _ -> Format.pp_print_string ppf "redo"
+    | Repl.Command.History _ -> Format.pp_print_string ppf "history"
+    | Repl.Command.Translate { theorem; _ } ->
+      Format.fprintf ppf "@[<2>translate@ %a@]" QualifiedIdentifier.pp
+        theorem
+    | Repl.Command.Intros { introduced_variables = Option.None; _ } ->
+      Format.pp_print_string ppf "intros"
+    | Repl.Command.Intros { introduced_variables = Option.Some variables; _ }
+      ->
+      Format.fprintf ppf "@[intros@ %a@]"
+        (List1.pp ~pp_sep:Format.pp_print_space Identifier.pp)
+        variables
+    | Repl.Command.Split { scrutinee; _ } ->
+      Format.fprintf ppf "@[<2>split@ %a@]" Comp.pp_expression scrutinee
+    | Repl.Command.Invert { scrutinee; _ } ->
+      Format.fprintf ppf "@[<2>invert@ %a@]" Comp.pp_expression scrutinee
+    | Repl.Command.Impossible { scrutinee; _ } ->
+      Format.fprintf ppf "@[<2>impossible@ %a@]" Comp.pp_expression scrutinee
+    | Repl.Command.MSplit { identifier; _ } ->
+      Format.fprintf ppf "@[<2>msplit@ %a@]" Identifier.pp identifier
+    | Repl.Command.Solve { solution; _ } ->
+      Format.fprintf ppf "@[<2>solve@ %a@]" Comp.pp_expression solution
+    | Repl.Command.Unbox { expression; assignee; modifier = None; _ } ->
+      Format.fprintf ppf "@[<2>unbox@ %a@ as@ %a@]" Comp.pp_expression
+        expression Identifier.pp assignee
+    | Repl.Command.Unbox
+        { expression; assignee; modifier = Option.Some `Strengthened; _ } ->
+      Format.fprintf ppf "@[<2>strengthen@ %a@ as@ %a@]" Comp.pp_expression
+        expression Identifier.pp assignee
+    | Repl.Command.By { expression; assignee; _ } ->
+      Format.fprintf ppf "@[<2>by@ %a@ as@ %a@]" Comp.pp_expression
+        expression Identifier.pp assignee
+    | Repl.Command.Suffices { implication; goal_premises; _ } ->
+      Format.fprintf ppf "@[suffices@ by@ %a@ toshow@ %a@]"
+        Comp.pp_expression implication
+        (List.pp ~pp_sep:Format.comma (fun ppf -> function
+           | `exact typ -> Comp.pp_typ ppf typ
+           | `infer _ -> Format.pp_print_string ppf "_"))
+        goal_premises
+    | Repl.Command.Help _ -> Format.pp_print_string ppf "help"
+end

@@ -40,11 +40,20 @@ let make_infix ~associativity ~precedence =
 
 let make_postfix ~precedence = Postfix { precedence }
 
-let is_prefix = Fun.(fixity >> Fixity.is_prefix)
+let is_prefix operator =
+  match operator with
+  | Prefix _ -> true
+  | _ -> false
 
-let is_infix = Fun.(fixity >> Fixity.is_infix)
+let is_infix operator =
+  match operator with
+  | Infix _ -> true
+  | _ -> false
 
-let is_postfix = Fun.(fixity >> Fixity.is_postfix)
+let is_postfix operator =
+  match operator with
+  | Postfix _ -> true
+  | _ -> false
 
 let is_nullary = Fun.(arity >> Int.( = ) 0)
 

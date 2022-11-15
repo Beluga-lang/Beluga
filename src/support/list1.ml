@@ -1,4 +1,4 @@
-type 'a t = T of 'a * 'a list [@unboxed]
+type +'a t = T of 'a * 'a list [@unboxed]
 
 let[@inline] from x l = T (x, l)
 
@@ -59,6 +59,13 @@ let map f (T (x, xs)) =
   let ys = List.map f xs in
   T (y, ys)
 
+let mapi f (T (x, xs)) =
+  let y = f 0 x in
+  let ys = List.mapi (fun i x -> f (i + 1) x) xs in
+  T (y, ys)
+
+let index l = mapi (fun i x -> (i, x)) l
+
 let fold_right f g l =
   let rec fold_right (T (h, l)) return =
     match l with
@@ -109,8 +116,6 @@ let of_list = function
 
 exception Empty
 
-(** Converts the list to a nonempty list. Raises the exception Empty if the
-    list was empty. *)
 let unsafe_of_list l = Option.get' Empty (of_list l)
 
 let find_opt p l = List.find_opt p (to_list l)

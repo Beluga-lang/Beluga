@@ -86,7 +86,8 @@ module Make_parenthesizer (Precedence : Ord.ORD) : sig
       ]}
 
       pretty-prints the application of [applicand] with [arguments] as a
-      juxtaposition of terms delimited by whitespaces.
+      juxtaposition of terms delimited by whitespaces, with minimal
+      parentheses.
 
       This pretty-printer supports applicands having a type different from
       that of its arguments. This allows for pretty-printing of LF type-level
@@ -368,6 +369,10 @@ end
 module LF = struct
   open LF
 
+  (** Precedence computations on LF kinds, types and terms.
+
+      The values used as precedence levels are defined based on the recursive
+      descent parsers in {!Parser}. *)
   module Precedence : sig
     type t
 
@@ -430,9 +435,9 @@ module LF = struct
           | Static x, Static y -> Int.compare x y
           | User_defined x, User_defined y -> Int.compare x y
           | User_defined _, Static y ->
-            if y >= application_precedence then -1 else 1
+            if application_precedence <= y then -1 else 1
           | Static x, User_defined _ ->
-            if x >= application_precedence then 1 else -1
+            if x < application_precedence then -1 else 1
       end) :
         Ord.ORD with type t := t)
   end
@@ -466,24 +471,21 @@ module LF = struct
       if quoted && Bool.not (Operator.is_nullary operator) then
         Format.fprintf ppf "(%a)" QualifiedIdentifier.pp identifier
       else QualifiedIdentifier.pp ppf identifier
-    | Typ.Application { applicand; arguments; _ } -> (
-      match List1.of_list arguments with
-      | Option.None -> Error.violation "[pp_typ] no arguments to application"
-      | Option.Some arguments ->
-        pp_application
-          ~guard_operator:(function
-            | Typ.Constant { operator; quoted = false; _ } ->
-              `Operator operator
-            | _ -> `Term)
-          ~guard_operator_application:(function
-            | Term.Application
-                { applicand = Term.Constant { operator; quoted = false; _ }
-                ; _
-                } -> `Operator_application operator
-            | _ -> `Term)
-          ~precedence_of_applicand:Precedence.of_typ
-          ~precedence_of_argument:Precedence.of_term ~pp_applicand:pp_typ
-          ~pp_argument:pp_term ~parent_precedence ppf (applicand, arguments))
+    | Typ.Application { applicand; arguments; _ } ->
+      pp_application
+        ~guard_operator:(function
+          | Typ.Constant { operator; quoted = false; _ } ->
+            `Operator operator
+          | _ -> `Term)
+        ~guard_operator_application:(function
+          | Term.Application
+              { applicand = Term.Constant { operator; quoted = false; _ }
+              ; _
+              } -> `Operator_application operator
+          | _ -> `Term)
+        ~precedence_of_applicand:Precedence.of_typ
+        ~precedence_of_argument:Precedence.of_term ~pp_applicand:pp_typ
+        ~pp_argument:pp_term ~parent_precedence ppf (applicand, arguments)
     | Typ.Arrow { domain; range; orientation = `Forward; _ } ->
       (* Forward arrows are right-associative and of equal precedence with
          backward arrows, so backward arrows have to be parenthesized *)
@@ -529,34 +531,28 @@ module LF = struct
     let parent_precedence = Precedence.of_term term in
     match term with
     | Term.Variable { identifier; _ } -> Identifier.pp ppf identifier
-    | Term.Constant { identifier; quoted = true; operator; _ }
-      when Operator.is_nullary operator ->
-      QualifiedIdentifier.pp ppf identifier
     | Term.Constant { identifier; quoted = true; _ } ->
       Format.fprintf ppf "(%a)" QualifiedIdentifier.pp identifier
     | Term.Constant { identifier; quoted = false; _ } ->
       QualifiedIdentifier.pp ppf identifier
-    | Term.Application { applicand; arguments; _ } -> (
-      match List1.of_list arguments with
-      | Option.None ->
-        Error.violation "[pp_term] no arguments to application"
-      | Option.Some arguments ->
-        pp_application
-          ~guard_operator:(function
-            | Term.Constant { operator; quoted = false; _ } ->
-              `Operator operator
-            | _ -> `Term)
-          ~guard_operator_application:(function
-            | Term.Application
-                { applicand = Term.Constant { operator; quoted = false; _ }
-                ; _
-                } -> `Operator_application operator
-            | _ -> `Term)
-          ~precedence_of_applicand:Precedence.of_term
-          ~precedence_of_argument:Precedence.of_term ~pp_applicand:pp_term
-          ~pp_argument:pp_term ~parent_precedence ppf (applicand, arguments))
+    | Term.Application { applicand; arguments; _ } ->
+      pp_application
+        ~guard_operator:(function
+          | Term.Constant { operator; quoted = false; _ } ->
+            `Operator operator
+          | _ -> `Term)
+        ~guard_operator_application:(function
+          | Term.Application
+              { applicand = Term.Constant { operator; quoted = false; _ }
+              ; _
+              } -> `Operator_application operator
+          | _ -> `Term)
+        ~precedence_of_applicand:Precedence.of_term
+        ~precedence_of_argument:Precedence.of_term ~pp_applicand:pp_term
+        ~pp_argument:pp_term ~parent_precedence ppf (applicand, arguments)
     | Term.Abstraction { parameter_identifier; parameter_type; body; _ } -> (
-      (* Lambdas are weak prefix operators *)
+      (* Lambdas are weak prefix operators, so the body of the lambda never
+         requires parentheses *)
       match (parameter_identifier, parameter_type) with
       | Option.None, Option.None ->
         Format.fprintf ppf "@[<2>\\_.@ %a@]" pp_term body
@@ -582,6 +578,10 @@ end
 module CLF = struct
   open CLF
 
+  (** Precedence computations on contextual LF types, terms and patterns.
+
+      The values used as precedence levels are defined based on the recursive
+      descent parsers in {!Parser}. *)
   module Precedence : sig
     type t
 
@@ -671,9 +671,9 @@ module CLF = struct
           | Static x, Static y -> Int.compare x y
           | User_defined x, User_defined y -> Int.compare x y
           | User_defined _, Static y ->
-            if y >= application_precedence then -1 else 1
+            if application_precedence <= y then -1 else 1
           | Static x, User_defined _ ->
-            if x >= application_precedence then 1 else -1
+            if x < application_precedence then -1 else 1
       end) :
         Ord.ORD with type t := t)
   end
@@ -687,24 +687,21 @@ module CLF = struct
       if quoted && Bool.not (Operator.is_nullary operator) then
         Format.fprintf ppf "(%a)" QualifiedIdentifier.pp identifier
       else QualifiedIdentifier.pp ppf identifier
-    | Typ.Application { applicand; arguments; _ } -> (
-      match List1.of_list arguments with
-      | Option.None -> Error.violation "[pp_typ] no arguments to application"
-      | Option.Some arguments ->
-        pp_application
-          ~guard_operator:(function
-            | Typ.Constant { operator; quoted = false; _ } ->
-              `Operator operator
-            | _ -> `Term)
-          ~guard_operator_application:(function
-            | Term.Application
-                { applicand = Term.Constant { operator; quoted = false; _ }
-                ; _
-                } -> `Operator_application operator
-            | _ -> `Term)
-          ~precedence_of_applicand:Precedence.of_typ
-          ~precedence_of_argument:Precedence.of_term ~pp_applicand:pp_typ
-          ~pp_argument:pp_term ~parent_precedence ppf (applicand, arguments))
+    | Typ.Application { applicand; arguments; _ } ->
+      pp_application
+        ~guard_operator:(function
+          | Typ.Constant { operator; quoted = false; _ } ->
+            `Operator operator
+          | _ -> `Term)
+        ~guard_operator_application:(function
+          | Term.Application
+              { applicand = Term.Constant { operator; quoted = false; _ }
+              ; _
+              } -> `Operator_application operator
+          | _ -> `Term)
+        ~precedence_of_applicand:Precedence.of_typ
+        ~precedence_of_argument:Precedence.of_term ~pp_applicand:pp_typ
+        ~pp_argument:pp_term ~parent_precedence ppf (applicand, arguments)
     | Typ.Arrow { domain; range; orientation = `Forward; _ } ->
       (* Forward arrows are right-associative and of equal precedence with
          backward arrows, so backward arrows have to be parenthesized *)
@@ -761,32 +758,25 @@ module CLF = struct
       Identifier.pp ppf identifier
     | Term.Substitution_variable { identifier; _ } ->
       Identifier.pp ppf identifier
-    | Term.Constant { identifier; quoted = true; operator; _ }
-      when Operator.is_nullary operator ->
-      QualifiedIdentifier.pp ppf identifier
     | Term.Constant { identifier; quoted = true; _ } ->
       Format.fprintf ppf "(%a)" QualifiedIdentifier.pp identifier
     | Term.Constant { identifier; quoted = false; _ } ->
       QualifiedIdentifier.pp ppf identifier
-    | Term.Application { applicand; arguments; _ } -> (
-      match List1.of_list arguments with
-      | Option.None ->
-        Error.violation "[pp_term] no arguments to application"
-      | Option.Some arguments ->
-        pp_application
-          ~guard_operator:(function
-            | Term.Constant { operator; quoted = false; _ } ->
-              `Operator operator
-            | _ -> `Term)
-          ~guard_operator_application:(function
-            | Term.Application
-                { applicand = Term.Constant { operator; quoted = false; _ }
-                ; _
-                } -> `Operator_application operator
-            | _ -> `Term)
-          ~precedence_of_applicand:Precedence.of_term
-          ~precedence_of_argument:Precedence.of_term ~pp_applicand:pp_term
-          ~pp_argument:pp_term ~parent_precedence ppf (applicand, arguments))
+    | Term.Application { applicand; arguments; _ } ->
+      pp_application
+        ~guard_operator:(function
+          | Term.Constant { operator; quoted = false; _ } ->
+            `Operator operator
+          | _ -> `Term)
+        ~guard_operator_application:(function
+          | Term.Application
+              { applicand = Term.Constant { operator; quoted = false; _ }
+              ; _
+              } -> `Operator_application operator
+          | _ -> `Term)
+        ~precedence_of_applicand:Precedence.of_term
+        ~precedence_of_argument:Precedence.of_term ~pp_applicand:pp_term
+        ~pp_argument:pp_term ~parent_precedence ppf (applicand, arguments)
     | Term.Abstraction { parameter_identifier; parameter_type; body; _ } -> (
       (* Lambdas are weak prefix operators, so the body of a lambda does not
          need to be parenthesized *)
@@ -923,69 +913,43 @@ module CLF = struct
       Identifier.pp ppf identifier
     | Term.Pattern.Substitution_variable { identifier; _ } ->
       Identifier.pp ppf identifier
-    | Term.Pattern.Constant { identifier; quoted = true; operator; _ }
-      when Operator.is_nullary operator ->
-      QualifiedIdentifier.pp ppf identifier
     | Term.Pattern.Constant { identifier; quoted = true; _ } ->
       Format.fprintf ppf "(%a)" QualifiedIdentifier.pp identifier
     | Term.Pattern.Constant { identifier; quoted = false; _ } ->
       QualifiedIdentifier.pp ppf identifier
-    | Term.Pattern.Application { applicand; arguments; _ } -> (
-      match List1.of_list arguments with
-      | Option.None ->
-        Error.violation "[pp_term_pattern] no arguments to application"
-      | Option.Some arguments ->
-        pp_application
-          ~guard_operator:(function
-            | Term.Pattern.Constant { operator; quoted = false; _ } ->
-              `Operator operator
-            | _ -> `Term)
-          ~guard_operator_application:(function
-            | Term.Pattern.Application
-                { applicand =
-                    Term.Pattern.Constant { operator; quoted = false; _ }
-                ; _
-                } -> `Operator_application operator
-            | _ -> `Term)
-          ~precedence_of_applicand:Precedence.of_term_pattern
-          ~precedence_of_argument:Precedence.of_term_pattern
-          ~pp_applicand:pp_term_pattern ~pp_argument:pp_term_pattern
-          ~parent_precedence ppf (applicand, arguments))
+    | Term.Pattern.Application { applicand; arguments; _ } ->
+      pp_application
+        ~guard_operator:(function
+          | Term.Pattern.Constant { operator; quoted = false; _ } ->
+            `Operator operator
+          | _ -> `Term)
+        ~guard_operator_application:(function
+          | Term.Pattern.Application
+              { applicand =
+                  Term.Pattern.Constant { operator; quoted = false; _ }
+              ; _
+              } -> `Operator_application operator
+          | _ -> `Term)
+        ~precedence_of_applicand:Precedence.of_term_pattern
+        ~precedence_of_argument:Precedence.of_term_pattern
+        ~pp_applicand:pp_term_pattern ~pp_argument:pp_term_pattern
+        ~parent_precedence ppf (applicand, arguments)
     | Term.Pattern.Abstraction
-        { parameter_identifier = Option.None
-        ; parameter_type = Option.None
-        ; body
-        ; _
-        } ->
-      (* Lambdas are weak prefix operators *)
-      Format.fprintf ppf "@[<2>\\_.@ %a@]" pp_term_pattern body
-    | Term.Pattern.Abstraction
-        { parameter_identifier = Option.None
-        ; parameter_type = Option.Some parameter_type
-        ; body
-        ; _
-        } ->
-      (* Lambdas are weak prefix operators *)
-      Format.fprintf ppf "@[<2>\\_:%a.@ %a@]" pp_typ parameter_type
-        pp_term_pattern body
-    | Term.Pattern.Abstraction
-        { parameter_identifier = Option.Some parameter_identifier
-        ; parameter_type = Option.None
-        ; body
-        ; _
-        } ->
-      (* Lambdas are weak prefix operators *)
-      Format.fprintf ppf "@[<2>\\%a.@ %a@]" Identifier.pp
-        parameter_identifier pp_term_pattern body
-    | Term.Pattern.Abstraction
-        { parameter_identifier = Option.Some parameter_identifier
-        ; parameter_type = Option.Some parameter_type
-        ; body
-        ; _
-        } ->
-      (* Lambdas are weak prefix operators *)
-      Format.fprintf ppf "@[<2>\\%a:%a.@ %a@]" Identifier.pp
-        parameter_identifier pp_typ parameter_type pp_term_pattern body
+        { parameter_identifier; parameter_type; body; _ } -> (
+      (* Lambdas are weak prefix operators, so the body of a lambda never
+         requires parentheses. *)
+      match (parameter_identifier, parameter_type) with
+      | Option.None, Option.None ->
+        Format.fprintf ppf "@[<2>\\_.@ %a@]" pp_term_pattern body
+      | Option.None, Option.Some parameter_type ->
+        Format.fprintf ppf "@[<2>\\_:%a.@ %a@]" pp_typ parameter_type
+          pp_term_pattern body
+      | Option.Some parameter_identifier, Option.None ->
+        Format.fprintf ppf "@[<2>\\%a.@ %a@]" Identifier.pp
+          parameter_identifier pp_term_pattern body
+      | Option.Some parameter_identifier, Option.Some parameter_type ->
+        Format.fprintf ppf "@[<2>\\%a:%a.@ %a@]" Identifier.pp
+          parameter_identifier pp_typ parameter_type pp_term_pattern body)
     | Term.Pattern.Wildcard _ -> Format.fprintf ppf "_"
     | Term.Pattern.Substitution { term; substitution; _ } ->
       Format.fprintf ppf "@[<2>%a[%a]@]"
@@ -1115,6 +1079,10 @@ end
 module Meta = struct
   open Meta
 
+  (** Precedence computations on context schemas.
+
+      The values used as precedence levels are defined based on the recursive
+      descent parsers in {!Parser}. *)
   module Precedence : sig
     type t
 
@@ -1227,10 +1195,13 @@ end
 module Comp = struct
   open Comp
 
+  (** Precedence computations on computation-level kinds, types, expressions
+      and patterns.
+
+      The values used as precedence levels are defined based on the recursive
+      descent parsers in {!Parser}. *)
   module Precedence : sig
     type t
-
-    val atomic : t
 
     val of_kind : Kind.t -> t
 
@@ -1242,11 +1213,14 @@ module Comp = struct
 
     include Ord.ORD with type t := t
   end = struct
-    type t = Static of Int.t [@unboxed]
-
-    let atomic = Static 1
+    type t =
+      | Static of Int.t
+      | User_defined_type of Int.t
+      | User_defined_expression of Int.t
 
     let type_application_precedence = 4
+
+    let expression_application_precedence = 2
 
     let of_kind kind =
       match kind with
@@ -1259,13 +1233,30 @@ module Comp = struct
       | Typ.Pi _ -> Static 1
       | Typ.Arrow _ -> Static 2
       | Typ.Cross _ -> Static 3
-      | Typ.Application _ -> Static type_application_precedence
+      | Typ.Application { applicand = Typ.Constant { operator; _ }; _ }
+        when Operator.is_prefix operator
+             (* Juxtapositions are of higher precedence than user-defined
+                operators *) -> Static type_application_precedence
+      | Typ.Application
+          { applicand = Typ.Constant { operator; quoted = false; _ }; _ }
+      (* User-defined operator application *) ->
+        User_defined_type (Operator.precedence operator)
       | Typ.Constant _ | Typ.Box _ -> Static 5
 
     let of_expression expression =
       match expression with
       | Expression.TypeAnnotated _ -> Static 1
-      | Expression.Application _ -> Static 2
+      | Expression.Application
+          { applicand = Expression.Constant { operator; _ }; _ }
+        when Operator.is_prefix operator
+             (* Juxtapositions are of higher precedence than user-defined
+                operators *) -> Static expression_application_precedence
+      | Expression.Application
+          { applicand = Expression.Constant { operator; quoted = false; _ }
+          ; _
+          }
+      (* User-defined operator application *) ->
+        User_defined_expression (Operator.precedence operator)
       | Expression.Let _
       | Expression.Box _
       | Expression.Impossible _
@@ -1295,12 +1286,41 @@ module Comp = struct
       Ord.Make (struct
         type nonrec t = t
 
-        let compare (Static x) (Static y) = Int.compare x y
+        let compare x y =
+          match (x, y) with
+          | Static x, Static y -> Int.compare x y
+          | User_defined_type x, User_defined_type y -> Int.compare x y
+          | User_defined_type _, Static y ->
+            if type_application_precedence <= y then -1 else 1
+          | Static x, User_defined_type _ ->
+            if x < type_application_precedence then -1 else 1
+          | User_defined_expression x, User_defined_expression y ->
+            Int.compare x y
+          | User_defined_expression _, Static y ->
+            if expression_application_precedence <= y then -1 else 1
+          | Static x, User_defined_expression _ ->
+            if x < expression_application_precedence then -1 else 1
+          | _ ->
+            Error.violation
+              "[Precedence.compare] cannot compare precedences for \
+               user-defined type and expression constants"
       end) :
         Ord.ORD with type t := t)
   end
 
   include Make_parenthesizer (Precedence)
+
+  (** [is_atomic_pattern pattern] is [true] if and only if [pattern] is an
+      atomic pattern as defined in {!Parser}, meaning that it never requires
+      additional enclosing parentheses during printing to avoid ambiguities. *)
+  let is_atomic_pattern pattern =
+    match pattern with
+    | Pattern.Variable _
+    | Pattern.Constant _
+    | Pattern.MetaObject _
+    | Pattern.Tuple _
+    | Pattern.Wildcard _ -> true
+    | _ -> false
 
   let rec pp_kind ppf kind =
     let parent_precedence = Precedence.of_kind kind in
@@ -1467,9 +1487,7 @@ module Comp = struct
         pp_expression body
     | Expression.Fun { branches; _ } ->
       let pp_branch_pattern ppf pattern =
-        let pattern_precedence = Precedence.of_pattern pattern in
-        if Precedence.equal pattern_precedence Precedence.atomic then
-          pp_pattern ppf pattern
+        if is_atomic_pattern pattern then pp_pattern ppf pattern
         else parenthesize pp_pattern ppf pattern
       in
       let pp_branch_patterns =
@@ -1608,9 +1626,7 @@ module Comp = struct
       Format.fprintf ppf "%a :@ %a" Identifier.pp identifier pp_typ typ
     in
     let { Context.bindings; _ } = context in
-    List.pp
-      ~pp_sep:(fun ppf () -> Format.fprintf ppf ",@ ")
-      pp_binding ppf bindings
+    List.pp ~pp_sep:Format.comma pp_binding ppf bindings
 end
 
 (** Pretty-printing for Harpoon syntax. *)

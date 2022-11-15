@@ -1,6 +1,17 @@
 (** Namespaced identifiers.
 
-    These are names for referring to bound names nested in modules. *)
+    These are names for referring to bound names nested in modules.
+
+    Qualified identifiers may be prefixed by the modules that need to be
+    opened in order to bring the referred constant in the current scope. The
+    parts of a qualified identifier are delimited by ['.'].
+
+    For instance, if [z] is an LF term-level constant, then the following are
+    qualified identifiers:
+
+    - [z]
+    - [Nat.z]
+    - [Util.Nat.z] *)
 
 open Support
 
@@ -11,9 +22,11 @@ type qualified_identifier = t
 (** {1 Constructors} *)
 
 (** [make ?location ?modules name] is the qualified identifier having
-    location [location], modules [modules] and name [name]. The modules in
-    [modules] are expcted to be in order of appeareance as in the external
-    syntax.
+    location [location], modules [modules] and name [name].
+
+    The modules in [modules] are expected to be in order of appeareance as in
+    the external syntax. That is, the qualified identifier [qid = Util.Nat.z]
+    has [modules qid = \["Util"; "Nat"\]].
 
     - If [location] is unspecified and [modules = \[\]], then the location is
       that of [name].
@@ -32,10 +45,18 @@ val prepend_module : Identifier.t -> t -> t
 
 (** {1 Destructors} *)
 
+(** [location qid] is the location of [qid]. *)
 val location : t -> Location.t
 
+(** [modules qid] is the module prefixes of [qid].
+
+    For instance, if [qid = Util.Nat.z], then
+    [modules qid = \["Util"; "Nat"\]]. *)
 val modules : t -> Identifier.t List.t
 
+(** [name qid] is the identifier in the tail end position of [qid].
+
+    For instance, if [qid = Util.Nat.z], then [name qid = "z"]. *)
 val name : t -> Identifier.t
 
 (** {1 Instances} *)

@@ -1,7 +1,20 @@
+(** Disambiguation of the parser syntax to the external syntax.
+
+    Elements of the syntax for Beluga requires the symbol table for
+    disambiguation. This module contains stateful functions for elaborating
+    the context-free parser syntax to the data-dependent external syntax. The
+    logic for the symbol lookups is repeated in the indexing phase to the
+    approximate syntax.
+
+    The "Beluga Language Specification" document contains additional details
+    as to which syntactic structures have ambiguities. *)
+
 open Support
 
-(** Module type for the type state used in disambiguating the parser syntax
-    to the external syntax. *)
+(** Module type for the type of state used in disambiguating the parser
+    syntax to the external syntax.
+
+    The underlying datastructure is assumed to be immutable. *)
 module type DISAMBIGUATION_STATE = sig
   type t
 
@@ -25,6 +38,8 @@ module type DISAMBIGUATION_STATE = sig
   (** {1 Constructors} *)
 
   val empty : t
+
+  (** {2 Binding additions} *)
 
   val add_lf_term_variable : Identifier.t -> t -> t
 
@@ -114,7 +129,7 @@ module type DISAMBIGUATION_STATE = sig
   val add_module :
     entry QualifiedIdentifier.Dictionary.t -> Identifier.t -> t -> t
 
-  (** Getters, setters and mutators *)
+  (** {2 Getters, setters and mutators} *)
 
   val set_default_associativity : Associativity.t -> t -> t
 
@@ -142,7 +157,7 @@ module type DISAMBIGUATION_STATE = sig
   val modify_operator :
     (Operator.t -> Operator.t) -> QualifiedIdentifier.t -> t -> t
 
-  (** {1 Lookup} *)
+  (** {1 Lookups} *)
 
   val lookup :
     QualifiedIdentifier.t -> t -> entry QualifiedIdentifier.Dictionary.value
@@ -155,8 +170,10 @@ end
     identifiers. *)
 module Disambiguation_state : DISAMBIGUATION_STATE = struct
   type t =
-    { bindings : entry QualifiedIdentifier.Dictionary.t
+    { bindings : entry QualifiedIdentifier.Dictionary.t  (** Symbol table. *)
     ; default_associativity : Associativity.t
+          (** Associativity to use if a pragma for an infix operator does not
+              specify an associativity. *)
     }
 
   and entry =
@@ -1418,7 +1435,11 @@ struct
       match applicand with
       | `Term applicand ->
         let applicand' = disambiguate_as_term state applicand in
-        let arguments' = List.map (disambiguate_as_term state) arguments in
+        let arguments' =
+          List1.map
+            (disambiguate_as_term state)
+            (List1.unsafe_of_list arguments)
+        in
         `Term
           (Synext'.LF.Term.Application
              { location = application_location
@@ -1427,7 +1448,11 @@ struct
              })
       | `Typ applicand ->
         let applicand' = disambiguate_as_typ state applicand in
-        let arguments' = List.map (disambiguate_as_term state) arguments in
+        let arguments' =
+          List1.map
+            (disambiguate_as_term state)
+            (List1.unsafe_of_list arguments)
+        in
         `Typ
           (Synext'.LF.Typ.Application
              { location = application_location
@@ -1456,7 +1481,7 @@ struct
             raise @@ Expected_term location)
 
       let disambiguate_arguments arguments =
-        List.map disambiguate_argument arguments
+        List1.map disambiguate_argument arguments
 
       let write operator arguments =
         let application_location =
@@ -1467,7 +1492,9 @@ struct
         match operator with
         | LF_operator.Type_constant { applicand; _ } ->
           let applicand' = disambiguate_as_typ state applicand in
-          let arguments' = disambiguate_arguments arguments in
+          let arguments' =
+            disambiguate_arguments (List1.unsafe_of_list arguments)
+          in
           LF_operand.External_typ
             (Synext'.LF.Typ.Application
                { location = application_location
@@ -1476,7 +1503,9 @@ struct
                })
         | LF_operator.Term_constant { applicand; _ } ->
           let applicand' = disambiguate_as_term state applicand in
-          let arguments' = disambiguate_arguments arguments in
+          let arguments' =
+            disambiguate_arguments (List1.unsafe_of_list arguments)
+          in
           LF_operand.External_term
             (Synext'.LF.Term.Application
                { location = application_location
@@ -3216,7 +3245,11 @@ struct
       match applicand with
       | `Term applicand ->
         let applicand' = disambiguate_as_term state applicand in
-        let arguments' = List.map (disambiguate_as_term state) arguments in
+        let arguments' =
+          List1.map
+            (disambiguate_as_term state)
+            (List1.unsafe_of_list arguments)
+        in
         `Term
           (Synext'.CLF.Term.Application
              { location = application_location
@@ -3225,7 +3258,11 @@ struct
              })
       | `Typ applicand ->
         let applicand' = disambiguate_as_typ state applicand in
-        let arguments' = List.map (disambiguate_as_term state) arguments in
+        let arguments' =
+          List1.map
+            (disambiguate_as_term state)
+            (List1.unsafe_of_list arguments)
+        in
         `Typ
           (Synext'.CLF.Typ.Application
              { location = application_location
@@ -3256,7 +3293,7 @@ struct
                 raise @@ Expected_term location)
 
           let disambiguate_arguments arguments =
-            List.map disambiguate_argument arguments
+            List1.map disambiguate_argument arguments
 
           let write operator arguments =
             let application_location =
@@ -3267,7 +3304,9 @@ struct
             match operator with
             | CLF_operator.Type_constant { applicand; _ } ->
               let applicand' = disambiguate_as_typ state applicand in
-              let arguments' = disambiguate_arguments arguments in
+              let arguments' =
+                disambiguate_arguments (List1.unsafe_of_list arguments)
+              in
               CLF_operand.External_typ
                 (Synext'.CLF.Typ.Application
                    { location = application_location
@@ -3276,7 +3315,9 @@ struct
                    })
             | CLF_operator.Term_constant { applicand; _ } ->
               let applicand' = disambiguate_as_term state applicand in
-              let arguments' = disambiguate_arguments arguments in
+              let arguments' =
+                disambiguate_arguments (List1.unsafe_of_list arguments)
+              in
               CLF_operand.External_term
                 (Synext'.CLF.Term.Application
                    { location = application_location
@@ -3945,7 +3986,9 @@ struct
       | `Term_pattern applicand ->
         let applicand' = disambiguate_as_term_pattern state applicand in
         let arguments' =
-          List.map (disambiguate_as_term_pattern state) arguments
+          List1.map
+            (disambiguate_as_term_pattern state)
+            (List1.unsafe_of_list arguments)
         in
         `Term_pattern
           (Synext'.CLF.Term.Pattern.Application
@@ -3955,7 +3998,11 @@ struct
              })
       | `Typ applicand ->
         let applicand' = disambiguate_as_typ state applicand in
-        let arguments' = List.map (disambiguate_as_term state) arguments in
+        let arguments' =
+          List1.map
+            (disambiguate_as_term state)
+            (List1.unsafe_of_list arguments)
+        in
         `Typ
           (Synext'.CLF.Typ.Application
              { location = application_location
@@ -4023,7 +4070,10 @@ struct
             match operator with
             | CLF_pattern_operator.Type_constant { applicand; _ } ->
               let applicand' = disambiguate_as_typ state applicand in
-              let arguments' = List.map disambiguate_argument arguments in
+              let arguments' =
+                List1.map disambiguate_argument
+                  (List1.unsafe_of_list arguments)
+              in
               CLF_pattern_operand.External_typ
                 (Synext'.CLF.Typ.Application
                    { location = application_location
@@ -4035,7 +4085,8 @@ struct
                 disambiguate_as_term_pattern state applicand
               in
               let arguments' =
-                List.map disambiguate_argument_pattern arguments
+                List1.map disambiguate_argument_pattern
+                  (List1.unsafe_of_list arguments)
               in
               CLF_pattern_operand.External_term_pattern
                 (Synext'.CLF.Term.Pattern.Application

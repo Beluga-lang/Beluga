@@ -1,5 +1,5 @@
 (** The type of lists of length at least [1]. *)
-type 'a t = private T of 'a * 'a list
+type +'a t = private T of 'a * 'a list
 
 (** {1 Constructors} *)
 
@@ -52,8 +52,8 @@ val flatten : 'a t t -> 'a t
     list. *)
 val compare_lengths : 'a t -> 'b t -> int
 
-(** [compare_length_with l n] is equivalent to [compare (length l) n],
-    except that the computation stops after at most [n] iterations on [l]. *)
+(** [compare_length_with l n] is equivalent to [compare (length l) n], except
+    that the computation stops after at most [n] iterations on [l]. *)
 val compare_length_with : 'a t -> int -> int
 
 (** [equal eq (a1, \[a2; ...; an\]) (b1, \[b2; ...; bm\])] holds when the two
@@ -87,6 +87,15 @@ val iter : ('a -> unit) -> 'a t -> unit
 
 (** [map f (a1, \[a2; ...; an\])] is [(f a1, \[f a2; ...; f an\])]. *)
 val map : ('a -> 'b) -> 'a t -> 'b t
+
+(** Same as List.map, but the function is applied to the index of the element
+    as first argument (counting from 0), and the element itself as second
+    argument. *)
+val mapi : (int -> 'a -> 'b) -> 'a t -> 'b t
+
+(** [index (x0, \[x1; x2; ...; xn\])] is
+    [((0, x0), \[(1, x1); (2, x2); ...; (n, xn)\])]. *)
+val index : 'a t -> (int * 'a) t
 
 (** [fold_right sing cons (a1, \[a2; ...; an\])] is
     [cons a1 (cons a2 (... (sing an) ...))]. *)
@@ -224,6 +233,10 @@ val show :
 
 (** Converts a list to a non-empty list. *)
 val of_list : 'a list -> 'a t option
+
+(** Converts the list to a nonempty list. Raises the exception [Empty] if the
+    list was empty. *)
+val unsafe_of_list : 'a list -> 'a t
 
 (** Converts a non-empty list to a list. *)
 val to_list : 'a t -> 'a list

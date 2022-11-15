@@ -28,7 +28,7 @@ module LF = struct
       && Bool.equal x.quoted y.quoted
     | Typ.Application x, Typ.Application y ->
       typ_equal x.applicand y.applicand
-      && List.equal term_equal x.arguments y.arguments
+      && List1.equal term_equal x.arguments y.arguments
     | Typ.Arrow x, Typ.Arrow y ->
       x.orientation = y.orientation
       && typ_equal x.domain y.domain
@@ -49,7 +49,7 @@ module LF = struct
       && Bool.equal x.quoted y.quoted
     | Term.Application x, Term.Application y ->
       term_equal x.applicand y.applicand
-      && List.equal term_equal x.arguments y.arguments
+      && List1.equal term_equal x.arguments y.arguments
     | Term.Abstraction x, Term.Abstraction y ->
       Option.equal Identifier.equal x.parameter_identifier
         y.parameter_identifier
@@ -71,7 +71,7 @@ module CLF = struct
       && Bool.equal x.quoted y.quoted
     | Typ.Application x, Typ.Application y ->
       typ_equal x.applicand y.applicand
-      && List.equal term_equal x.arguments y.arguments
+      && List1.equal term_equal x.arguments y.arguments
     | Typ.Arrow x, Typ.Arrow y ->
       x.orientation = y.orientation
       && typ_equal x.domain y.domain
@@ -97,7 +97,7 @@ module CLF = struct
       && Bool.equal x.quoted y.quoted
     | Term.Application x, Term.Application y ->
       term_equal x.applicand y.applicand
-      && List.equal term_equal x.arguments y.arguments
+      && List1.equal term_equal x.arguments y.arguments
     | Term.Substitution x, Term.Substitution y ->
       term_equal x.term y.term
       && substitution_equal x.substitution y.substitution
@@ -133,7 +133,7 @@ module CLF = struct
       && Bool.equal x.quoted y.quoted
     | Term.Pattern.Application x, Term.Pattern.Application y ->
       term_pattern_equal x.applicand y.applicand
-      && List.equal term_pattern_equal x.arguments y.arguments
+      && List1.equal term_pattern_equal x.arguments y.arguments
     | Term.Pattern.Substitution x, Term.Pattern.Substitution y ->
       term_pattern_equal x.term y.term
       && substitution_equal x.substitution y.substitution

@@ -1,4 +1,4 @@
-(** Descrption of user-defined oeprators. *)
+(** Description of user-defined oeprators. *)
 
 open Support
 

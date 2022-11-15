@@ -69,7 +69,7 @@ module LF = struct
       | Application of
           { location : Location.t
           ; applicand : Typ.t
-          ; arguments : Term.t List.t
+          ; arguments : Term.t List1.t
           }
           (** [Application { applicand; arguments; _ }] is the type-level
               application of [applicand] with [arguments].
@@ -127,7 +127,7 @@ module LF = struct
       | Application of
           { location : Location.t
           ; applicand : Term.t
-          ; arguments : Term.t List.t
+          ; arguments : Term.t List1.t
           }
           (** [Application { applicand; arguments; _ }] is the term-level
               application of [applicand] with [arguments].
@@ -245,7 +245,7 @@ module CLF = struct
       | Application of
           { location : Location.t
           ; applicand : Typ.t
-          ; arguments : Term.t List.t
+          ; arguments : Term.t List1.t
           }
           (** [Application { applicand; arguments; _ }] is the type-level
               application of [applicand] with [arguments].
@@ -336,7 +336,7 @@ module CLF = struct
       | Application of
           { location : Location.t
           ; applicand : Term.t
-          ; arguments : Term.t List.t
+          ; arguments : Term.t List1.t
           }
           (** [Application { applicand; arguments; _ }] is the term-level
               application of [applicand] with [arguments].
@@ -455,7 +455,7 @@ module CLF = struct
         | Application of
             { location : Location.t
             ; applicand : Term.Pattern.t
-            ; arguments : Term.Pattern.t List.t
+            ; arguments : Term.Pattern.t List1.t
             }
             (** [Application { applicand; arguments; _ }] is the term-level
                 application pattern of [applicand] with [arguments].
@@ -749,7 +749,7 @@ module Meta = struct
           ; context : CLF.Context.Pattern.t
           }
           (** [Context { context; _ }] is the context meta-object pattern
-              `[context]'. *)
+              [\[context\]]. *)
       | Contextual_term of
           { location : Location.t
           ; context : CLF.Context.Pattern.t
@@ -1472,6 +1472,9 @@ end
 (** {1 External Signature Syntax} *)
 
 module Signature = struct
+  (** Signature pragmas for setting compilation parameters
+
+      Plain pragmas may be interspersed between signature declarations. *)
   module Pragma = struct
     type t =
       | Name of
@@ -1480,63 +1483,149 @@ module Signature = struct
           ; meta_variable_base : Identifier.t
           ; computation_variable_base : Identifier.t Option.t
           }
+          (** [Name { constant = c; meta_variable_base = u; computation_variable_base = Option.Some x; _ }]
+              is the pragma [--name c u x.] for configuring the
+              name-generation settings for meta-variables and
+              computation-level variables generated for objects of type [c]. *)
       | Default_associativity of
           { location : Location.t
           ; associativity : Associativity.t
           }
+          (** [Default_associativity { associativity; _ }] is the pragma
+              [--assoc <associativity>.] where [<associativity>] is either
+              [left], [right] or [none]. This pragma assigns the default
+              associativity for infix constants declared afterwards. *)
       | Prefix_fixity of
           { location : Location.t
           ; constant : QualifiedIdentifier.t
           ; precedence : Int.t Option.t
           }
+          (** [Prefix_fixity { constant = c; precedence; _ }] is the pragma
+              [--prefix c precedence.] for configuring the constant [c] to be
+              parsed as a prefix operator with [precedence].
+
+              If a precedence is already assigned to [c], and
+              [precedence = Option.None], then the pre-existing precedence is
+              used. *)
       | Infix_fixity of
           { location : Location.t
           ; constant : QualifiedIdentifier.t
           ; precedence : Int.t Option.t
           ; associativity : Associativity.t Option.t
           }
+          (** [Infix_fixity { constant = c; precedence; associativity; _ }]
+              is the pragma [--infix c precedence associativity.] for
+              configuring the constant [c] to be parsed as an infix operator
+              with [precedence] and [associativity].
+
+              - If a precedence is already assigned to [c], and
+                [precedence = Option.None], then the pre-existing precedence
+                is used.
+              - If [associativity = Option.None], then the associativity
+                defaults to the associativity configured by the
+                [--default_associativity assoc.] pragma, or
+                [Associativity.Non_associative] if that pragma was never
+                used. *)
       | Postfix_fixity of
           { location : Location.t
           ; constant : QualifiedIdentifier.t
           ; precedence : Int.t Option.t
           }
+          (** [Postfix_fixity { constant = c; precedence; _ }] is the pragma
+              [--postfix c precedence.] for configuring the constant [c] to
+              be parsed as a postfix operator with [precedence].
+
+              If a precedence is already assigned to [c], and
+              [precedence = Option.None], then the pre-existing precedence is
+              used. *)
       | Not of { location : Location.t }
+          (** [Not _] is the pragma [--not] which asserts that the
+              declaration that follows it fails reconstruction. *)
       | Open_module of
           { location : Location.t
           ; module_identifier : QualifiedIdentifier.t
           }
+          (** [Open { module_identifier; _ }] is the pragma
+              [--open module_identifier.] for opening the module
+              [module_identifier], which adds its values to the current
+              scope. *)
       | Abbreviation of
           { location : Location.t
           ; module_identifier : QualifiedIdentifier.t
           ; abbreviation : Identifier.t
           }
+          (** [Abbreviation { module_identifier; abbreviation; _ }] is the
+              pragma [--abbrev module_identifier abbreviation.] for defining
+              the alias [abbreviation] for the module [module_identifier]. *)
 
+    (** Global signature pragmas for setting compilation parameters
+
+        Global pragmas must appear at the beginning of a signature. They act
+        like command-line interface flags. *)
     module Global = struct
       type t =
         | No_strengthening of { location : Location.t }
+            (** [No_strengthening _] is the pragma [--nostrengthen] for
+                globally disabling strengthening during LF reconstruction. *)
         | Coverage of
             { location : Location.t
             ; variant : [ `Error | `Warn ]
             }
+            (** - [Coverage { variant = `Error; _ }] is the pragma
+                  [--coverage] for enabling coverage checking and raising
+                  errors on coverage errors.
+                - [Coverage { variant = `Warn; _ }] is the pragma
+                  [--warncoverage] for enabling coverage checking and raising
+                  warnings on coverage errors. *)
     end
   end
 
+  (** Totality declarations and orderings for configuring the totality
+      checker for theorems and proofs.
+
+      For instance, the named totality declaration
+
+      {[
+        / total [x y z] (f x y z w) /
+      ]}
+
+      specifies that the function named [f] is checked for totality using the
+      lexical ordering [\[x y z\]] of its arguments. *)
   module rec Totality : sig
     module rec Declaration : sig
       type t =
         | Trust of { location : Location.t }
+            (** [Trust _] is the totality declaration [trust] which indicates
+                that the totality of the annotated function is not checked. *)
         | Numeric of
             { location : Location.t
             ; order : Int.t Order.t Option.t
             }
+            (** - [Numeric { order = Option.None; _ }] is the totality
+                  declaration [total] which indicates that the annotated
+                  function should be checked for totality without totality
+                  argument.
+                - [Numeric { order = Option.Some order; _ }] is the totality
+                  declaration [total order] which indicates that the
+                  annotated function should be checked for totality with
+                  [order]. *)
         | Named of
             { location : Location.t
             ; order : Identifier.t Order.t Option.t
             ; program : Identifier.t
             ; argument_labels : Identifier.t Option.t List.t
             }
+            (** - [Named { order = Option.None; program = "f"; argument_labels = \["x1"; "x2"; ...; "xn"\]; _ }]
+                  is the totality declaration [total (f x1 x2 ... xn)] which
+                  indicates that the annotated function should be checked for
+                  totality without totality argument.
+                - [Named { order = Option.Some order; program = "f"; argument_labels = \["x1"; "x2"; ...; "xn"\]; _ }]
+                  is the totality declaration [total x (f x1 x2 ... xn)]
+                  which indicates that the annotated function should be
+                  checked for totality with [order]. *)
     end
 
+    (** Totality argument orderings for totality-checking. *)
     and Order : sig
       type 'a t =
         | Argument of

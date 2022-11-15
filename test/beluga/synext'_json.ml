@@ -124,7 +124,7 @@ end = struct
       of_variant ~name:"LF.Typ.Application"
         ~data:
           [ ("applicand", of_typ applicand)
-          ; ("arguments", of_list of_term arguments)
+          ; ("arguments", of_list1 of_term arguments)
           ; ("location", of_location location)
           ]
     | LF.Typ.Arrow { domain; range; orientation; location } ->
@@ -168,7 +168,7 @@ end = struct
       of_variant ~name:"LF.Term.Application"
         ~data:
           [ ("applicand", of_term applicand)
-          ; ("arguments", of_list of_term arguments)
+          ; ("arguments", of_list1 of_term arguments)
           ; ("location", of_location location)
           ]
     | LF.Term.Abstraction
@@ -224,7 +224,7 @@ end = struct
       of_variant ~name:"CLF.Typ.Application"
         ~data:
           [ ("applicand", of_typ applicand)
-          ; ("arguments", of_list of_term arguments)
+          ; ("arguments", of_list1 of_term arguments)
           ; ("location", of_location location)
           ]
     | CLF.Typ.Arrow { domain; range; orientation; location } ->
@@ -296,7 +296,7 @@ end = struct
       of_variant ~name:"CLF.Term.Application"
         ~data:
           [ ("applicand", of_term applicand)
-          ; ("arguments", of_list of_term arguments)
+          ; ("arguments", of_list1 of_term arguments)
           ; ("location", of_location location)
           ]
     | CLF.Term.Abstraction
@@ -384,7 +384,7 @@ end = struct
       of_variant ~name:"CLF.Term.Pattern.Application"
         ~data:
           [ ("applicand", of_term_pattern applicand)
-          ; ("arguments", of_list of_term_pattern arguments)
+          ; ("arguments", of_list1 of_term_pattern arguments)
           ; ("location", of_location location)
           ]
     | CLF.Term.Pattern.Abstraction

@@ -44,7 +44,8 @@ module LF = struct
       }
 
   let t_app applicand arguments =
-    Typ.Application { location; applicand; arguments }
+    Typ.Application
+      { location; applicand; arguments = List1.unsafe_of_list arguments }
 
   let ( => ) domain range =
     Typ.Arrow { location; domain; range; orientation = `Forward }
@@ -73,7 +74,8 @@ module LF = struct
       }
 
   let app applicand arguments =
-    Term.Application { location; applicand; arguments }
+    Term.Application
+      { location; applicand; arguments = List1.unsafe_of_list arguments }
 
   let lam ?x ?t body =
     Term.Abstraction
@@ -109,7 +111,8 @@ module CLF = struct
       }
 
   let t_app applicand arguments =
-    Typ.Application { location; applicand; arguments }
+    Typ.Application
+      { location; applicand; arguments = List1.unsafe_of_list arguments }
 
   let ( => ) domain range =
     Typ.Arrow { location; domain; range; orientation = `Forward }
@@ -144,7 +147,8 @@ module CLF = struct
       }
 
   let app applicand arguments =
-    Term.Application { location; applicand; arguments }
+    Term.Application
+      { location; applicand; arguments = List1.unsafe_of_list arguments }
 
   let lam ?x ?t body =
     Term.Abstraction

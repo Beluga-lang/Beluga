@@ -45,7 +45,7 @@ This document formally defines components of the \Beluga language for developers
 This section presents the syntax for \Beluga signatures using ambiguous grammars.
 It is intended to serve as a specification for validating the parser's implementation, as well as to assist in making changes to the parser.
 Rewriting of the grammar for optimization, left recursion elimination, and disambiguation purposes is outside the scope of this presentation.
-Section \ref{section:resolving-grammar-ambiguities} presents a context-free grammar for \Beluga that is suitable for parsing with a separate stage for disambiguation.
+Section~\ref{section:resolving-grammar-ambiguities} presents a context-free grammar for \Beluga that is suitable for parsing with a separate stage for disambiguation.
 
 The EBNF metasyntax used in the sections hereafter follows this notation:
 
@@ -613,7 +613,7 @@ That is, type constants, term constants, programs and proofs are arranged as lis
 <module-declaration> ::= `module' <identifier> `=' `struct' <declaration>* `end' [`;']
 
 <lf-type-constants-declaration> ::= `LF' <lf-type-constant-declaration>\\
-(`and' <lf-type-constant-declaration>)* `;'
+(`and' [`LF'] <lf-type-constant-declaration>)* `;'
 
 <lf-type-constant-declaration> ::= <identifier> `:' <lf-kind> `='\\{}
 [`|'] [<lf-term-constant-declaration>] (`|' <lf-term-constant-declaration>)*
@@ -655,21 +655,32 @@ That is, type constants, term constants, programs and proofs are arranged as lis
 (`and' (<proof-declaration> | <program-declaration>))* `;'
 
 <totality-declaration> ::= \hfill\\
-| `/' `total' [<totality-order>] `/'\\
+| `/' `total' `/'\\
+| `/' `total' <named-totality-order> `(' <identifier> <omittable-identifier>+ `)' `/'\\
+| `/' `total' <numeric-totality-order> `/'\\
 | `/' `trust' `/'
 
-<totality-order> ::= \hfill\\
-| <argument-totality-order>\\
-| <lexical-totality-order>\\
-| <simultaneous-totality-order>
+<named-totality-order> ::= \hfill\\
+| <named-argument-totality-order>\\
+| <named-lexical-totality-order>\\
+| <named-simultaneous-totality-order>
 
-<argument-totality-order> ::= \hfill\\
-| <integer>\\
-| <identifier> `(' <identifier> <identifier>+ `)'
+<named-argument-totality-order> ::= <identifier>
 
-<lexical-totality-order> ::= `{' <identifier>+ `}'
+<named-lexical-totality-order> ::= `{' <named-totality-order>+ `}'
 
-<simultaneous-totality-order> ::= `[' <identifier>+ `]'
+<named-simultaneous-totality-order> ::= `[' <named-totality-order>+ `]'
+
+<numeric-totality-order> ::= \hfill\\
+| <numeric-argument-totality-order>\\
+| <numeric-lexical-totality-order>\\
+| <numeric-simultaneous-totality-order>
+
+<numeric-argument-totality-order> ::= <integer>
+
+<numeric-lexical-totality-order> ::= `{' <numeric-totality-order>+ `}'
+
+<numeric-simultaneous-totality-order> ::= `[' <numeric-totality-order>+ `]'
 
 <schema-declaration> ::= `schema' <identifier> `=' <schema> `;'
 
@@ -686,7 +697,7 @@ That is, type constants, term constants, programs and proofs are arranged as lis
 
 \section{Resolving Grammar Ambiguities}\label{section:resolving-grammar-ambiguities}
 
-This section highlights some ambiguities in the syntax for \Beluga as presented in section \ref{section:syntax}, and presents strategies for resolving them.
+This section highlights some ambiguities in the syntax for \Beluga as presented in section~\ref{section:syntax}, and presents strategies for resolving them.
 Ambiguities in the syntax include:
 \begin{itemize}
 \item Qualified identifiers and projections use the same dot operator.
@@ -705,15 +716,15 @@ The remainder of the ambiguities listed above must be resolved statefully since 
 Furthermore, given that declarations in a \Beluga signature may be mutually recursive, resolving these ambiguities is best done in a separate phase after parsing.
 Indeed, attempting to resolve these ambiguities in a top-down parser would require possibly unbounded lookaheads and more costly backtracking.
 As such, a \Beluga signature is first parsed into an abstract syntax tree with ambiguous nodes (AST), and separate disambigution phase elaborates that AST to the external syntax.
-By design, the grammar of section \ref{section:syntax} does not require type information for disambiguation.
+By design, the grammar of section~\ref{section:syntax} does not require type information for disambiguation.
 Hence, the symbol table only keeps track of identifiers in scope and their associated sort without types.
 
-The following sections present alternative production rules used in place of those in the grammar of section \ref{section:syntax} obtained by merging productions that lead to ambiguities.
+The following sections present alternative production rules used in place of those in the grammar of section~\ref{section:syntax} obtained by merging productions that lead to ambiguities.
 Rewriting the grammar for optimization, left recursion elimination, and stateless ambiguity resolution with recursive descent is outside the scope of this presentation.
 
 \subsection{\LF}
 
-The grammar for \LF kinds, types and terms from section \ref{section:syntax-lf} is data-dependent because \LF term variables, type constants and term constants are syntactically indistinguishable from one another, and likewise for $ \Pi $-kinds and $ \Pi $-types.
+The grammar for \LF kinds, types and terms from section~\ref{section:syntax-lf} is data-dependent because \LF term variables, type constants and term constants are syntactically indistinguishable from one another, and likewise for $ \Pi $-kinds and $ \Pi $-types.
 This next grammar blurs together \LF kinds, types and terms with corresponding productions \synt{lf-kind}, \synt{lf-type} and \synt{lf-term} for context-free parsing.
 Occurrences of \synt{lf-kind}, \synt{lf-type} and \synt{lf-term} elsewhere in the grammar are replaced with \synt{lf-object}.
 Disambiguation of an \LF object as presented below requires:
@@ -749,7 +760,7 @@ Additionally, the syntax is disambiguated in order of decreasing precedence as f
 
 \subsection{Contextual LF}
 
-The grammar for contextual \LF types, terms, patterns, substitutions, contexts and their patterns from section \ref{section:syntax-contextual-lf} is data-dependent because contextual \LF term variables, type constants and term constants are syntactically indistinguishable from one another.
+The grammar for contextual \LF types, terms, patterns, substitutions, contexts and their patterns from section~\ref{section:syntax-contextual-lf} is data-dependent because contextual \LF term variables, type constants and term constants are syntactically indistinguishable from one another.
 This next grammar blurs together contextual \LF types, terms and patterns with corresponding productions \synt{clf-type}, \synt{clf-term} and \synt{clf-pattern} for context-free parsing.
 Occurrences of \synt{clf-type}, \synt{clf-term} and \synt{clf-pattern} elsewhere in the grammar are replaced with \synt{clf-object}.
 Likewise, the productions \synt{clf-substitution}, \synt{clf-substitution-pattern}, \synt{clf-context} and \synt{clf-context-pattern} are blurred together as \synt{clf-context-object}.
@@ -801,7 +812,7 @@ Additionally, the syntax is disambiguated in order of decreasing precedence as f
 
 \subsection{Meta-Level}
 
-The grammar for context schemas, meta-types, meta-objects, meta-patterns and meta-contexts from section \ref{section:syntax-meta-level} is ambiguous because the contextual \LF types and terms therein have ambiguous grammars.
+The grammar for context schemas, meta-types, meta-objects, meta-patterns and meta-contexts from section~\ref{section:syntax-meta-level} is ambiguous because the contextual \LF types and terms therein have ambiguous grammars.
 This next grammar blurs together meta-types, meta-objects and meta-patterns with corresponding productions \synt{meta-type}, \synt{meta-object} and \synt{meta-pattern} for context-free parsing.
 Occurrences of \synt{meta-type}, \synt{meta-object} and \synt{meta-pattern} elsewhere in the grammar are replaced with \synt{meta-thing}.
 Likewise, the productions \synt{schema} and \synt{meta-context} are replaced with \synt{schema-object} and \synt{meta-context-object} respectively.
@@ -843,7 +854,7 @@ Such context schema constants are disambiguated from the parsed context object.
 
 \subsection{Computations}
 
-The grammar for computation-level kinds and types from section \ref{section:syntax-computations} is data-dependent because computational base and cobase type constants are syntactically indistinguishable from one another, and because the grammar relies on meta-level objects.
+The grammar for computation-level kinds and types from section~\ref{section:syntax-computations} is data-dependent because computational base and cobase type constants are syntactically indistinguishable from one another, and because the grammar relies on meta-level objects.
 This next grammar blurs together computational kinds and types with corresponding productions \synt{comp-kind} and \synt{comp-type} for context-free parsing.
 Occurrences of \synt{comp-kind} and \synt{comp-type} elsewhere in the grammar are replaced with \synt{comp-sort-object}.
 Disambiguation of a computational sort object as presented below requires:

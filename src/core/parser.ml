@@ -3255,7 +3255,7 @@ end = struct
         List1.from typ_declaration constructor_declarations
     in
     token Token.KW_LF
-      &> (sep_by1 lf_typ_decl_body (token Token.KW_AND))
+      &> (sep_by1 lf_typ_decl_body (token Token.KW_AND &> maybe (token Token.KW_LF) |> void))
       <& token Token.SEMICOLON
     |> span
     $> (fun (location, declarations) ->

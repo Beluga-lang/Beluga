@@ -44,6 +44,14 @@ end) : ORD with type t = T.t = struct
   let[@inline] max x y = if x >= y then x else y
 end
 
+let make (type t) (compare : t -> t -> int) =
+  (module Make (struct
+    type nonrec t = t
+
+    let compare = compare
+  end) : ORD
+    with type t = t)
+
 module Reverse (Ord : ORD) : ORD with type t = Ord.t = Make (struct
   type t = Ord.t
 

@@ -20,6 +20,14 @@ end) : EQ with type t = T.t = struct
   let[@inline] ( <> ) x y = Bool.not (x = y)
 end
 
+let make (type t) (equal : t -> t -> bool) =
+  (module Make (struct
+    type nonrec t = t
+
+    let equal = equal
+  end) : EQ
+    with type t = t)
+
 let contramap (type t s) (module Eq : EQ with type t = s) f =
   (module Make (struct
     type nonrec t = t

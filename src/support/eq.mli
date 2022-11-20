@@ -31,6 +31,10 @@ module Make (T : sig
   val equal : t -> t -> bool
 end) : EQ with type t = T.t
 
+(** [make equal] is equivalent to the functor [Make (T)] with
+    [T.equal = equal]. *)
+val make : ('t -> 't -> bool) -> (module EQ with type t = 't)
+
 (** If [val f : 't -> 's], then [contramap eq f] is an instance of {!EQ} for
     values of type ['t] by the {!EQ} instance [eq] for values of type ['s]. *)
 val contramap :

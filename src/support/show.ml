@@ -16,6 +16,13 @@ end) : SHOW with type t = T.t = struct
   let show = Format.stringify pp
 end
 
+let make (type t) (pp : Format.formatter -> t -> unit) =
+  (module Make (struct
+    type nonrec t = t
+
+    let pp = pp
+  end) : SHOW with type t = t)
+
 let contramap (type t t') (module Show : SHOW with type t = t') (f : t -> t')
     =
   (module Make (struct

@@ -18,6 +18,9 @@ module Make (T : sig
   val pp : Format.formatter -> t -> unit
 end) : SHOW with type t = T.t
 
+(** [make pp] is equivalent to the functor [Make (T)] with [T.pp = pp]. *)
+val make : (Format.formatter -> 't -> unit) -> (module SHOW with type t = 't)
+
 (** If [val f : 't -> 's], then [contramap show f] is an instance of {!SHOW}
     for values of type ['t] by the {!SHOW} insance [show] for values of type
     ['s]. *)

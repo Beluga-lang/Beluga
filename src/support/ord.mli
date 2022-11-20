@@ -52,6 +52,10 @@ end) : ORD with type t = T.t
     reverse of the given totally ordered type. *)
 module Reverse (Ord : ORD) : ORD with type t = Ord.t
 
+(** [make compare] is equivalent to the functor [Make (T)] with
+    [T.compare = compare]. *)
+val make : ('t -> 't -> int) -> (module ORD with type t = 't)
+
 (** If [val f : 't -> 's], then [contramap ord f] is an instance of {!ORD}
     for values of type ['t] by the {!ORD} instance [ord] for values of type
     ['s]. *)

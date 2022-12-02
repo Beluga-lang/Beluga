@@ -1148,60 +1148,6 @@ let recSgnDecls decls =
        ; maximum_tries=tries
        }
 
-
-    | Ext.Sgn.MQuery
-      { location=loc
-      ; typ=tau
-      ; expected_solutions=expected
-      ; search_tries=tries
-      ; search_depth=depth
-      } ->
-       (dprintf
-         (fun p ->
-           p.fmt "[RecSgn Checking] MQuery at %a"
-             Syntax.Loc.print_short loc);
-        let apx_tau = Index.comptyp tau in
-        let tau0 =
-         Monitor.timer
-           ( "MQuery: Type Elaboration"
-           , fun () -> Reconstruct.comptyp apx_tau
-           )
-        in
-        (dprintf
-         begin fun p ->
-         p.fmt "[mquery]  @[<v>ctau = @[%a@]@]"
-           (P.fmt_ppr_cmp_typ (Int.LF.Empty) P.l0) tau0
-         end;
-         Unify.forceGlobalCnstr ();
-         let (tau', i) =
-         Monitor.timer
-           ( "Constant Abstraction"
-           , fun () -> Abstract.comptyp tau0
-           )
-        in
-        (Reconstruct.reset_fvarCnstr ();
-        Unify.resetGlobalCnstrs ();
-        dprintf
-        begin fun p ->
-        p.fmt "Reconstruction (with abstraction) of mquery: %a with %s abstracted variables"
-          (P.fmt_ppr_cmp_typ (Int.LF.Empty) P.l0) tau'
-          (string_of_int i)
-        end;
-        Monitor.timer
-          ( "Constant Check"
-          , fun () ->
-           Check.Comp.checkTyp Int.LF.Empty tau'
-          );
-        Logic.storeMQuery (tau', i) expected tries depth)   ;
-        Int.Sgn.MQuery
-        { location=loc
-        ; typ=(tau', i)
-        ; expected_solutions=expected
-        ; search_tries=tries
-        ; search_depth=depth
-        }))
-
-
     | Ext.Sgn.Pragma
       { location=loc
       ; pragma=Ext.Sgn.NamePrag (typ_name, m_name, v_name)

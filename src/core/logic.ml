@@ -595,7 +595,6 @@ module Index = struct
   let compTTypes = Hashtbl.create 0     (* comp theorem Hashtbl.t      *)
 
   type inst = (Name.t *  LF.normal)    (* I ::= (x, Y[s]) where Y is an MVar        *)
-  type minst = (Name.t * LF.mfront)    (* I ::= (x, mf)   where mf is (Psihat.term) *)
                                         (* where mf contains an MMVar *)
   type sgnQuery =
     { query : query                   (* Query ::= (g, s)            *)
@@ -608,18 +607,7 @@ module Index = struct
     ; instMVars : inst list           (* MVar instantiations.        *)
     }
 
-  type sgnMQuery =
-    { mquery : mquery                 (* MQuery ::= (c_g, ms)        *)
-    ; skinnyCompTyp : Comp.typ        (* MQuery stripped of E-vars.  *)
-    ; mexpected : bound               (* Expected no. of solutions.  *)
-    ; mtries : bound                  (* No. of tries to find soln.  *)
-    ; depth : bound                   (* Depth of search tree.       *)
-    ; instMMVars : minst list         (* MMVar instantiations.       *)
-    }
-
-
   let queries = DynArray.create ()      (* sgnQuery DynArray.t         *)
-  let mqueries = DynArray.create ()     (* sgnMQuery DynArray.t        *)
 
   let querySub = ref S.id
 
@@ -663,20 +651,6 @@ module Index = struct
       ; expected = e
       ; tries = t
       ; instMVars = xs
-      }
-
-
-  (* addSgnMQuery (tau', ttau, xs, e, t)  = ()
-     Add a new sgnMQuery to the `mqueries' DynArray.
-   *)
-  let addSgnMQuery (tau', mq, xs, e, t, d) =
-    DynArray.add mqueries
-      { mquery = mq
-      ; skinnyCompTyp = tau'
-      ; mexpected = e
-      ; mtries = t
-      ; depth = d
-      ; instMMVars = xs
       }
 
   (* compile _ Clause c = (c, sCl)
@@ -778,26 +752,6 @@ module Index = struct
     querySub := s;
     addSgnQuery (p, tA, tA', q, cD, xs, e, t)
 
-
-  (* storeMQuery ((tau, i), e, t) = ()
-     Invariants:
-       i = # of abstracted EVars in tau
-       e = expected number of  solutions
-       t = expected number of tries to find soln.
-  *)
-  let storeMQuery ((tau, i), e, t, d) =
-    let rec get_minst xs =
-      match xs with
-      | [] -> []
-      | (a, (loc, b)) :: ys ->
-         let ys' = get_minst ys in
-         (a, b) :: ys'
-    in
-    let (mq, tau', ms, xs) = (Convert.comptypToMQuery (tau, i)) in
-    let xs' = get_minst xs in
-    addSgnMQuery (tau', mq, xs', e, t, d)
-
-
   (* robStore () = ()
      Store all type constants in the `types' table.
   *)
@@ -853,14 +807,11 @@ module Index = struct
   let iterQueries f =
     DynArray.iter (fun q -> f q) queries
 
-  let iterMQueries f =
-    DynArray.iter (fun q -> f q) mqueries
   (* clearIndex () = ()
      Empty the local storage.
   *)
   let clearIndex () =
     DynArray.clear queries;
-    DynArray.clear mqueries;
     Hashtbl.clear types;
     Hashtbl.clear compITypes;
     Hashtbl.clear compTTypes
@@ -1068,13 +1019,6 @@ module Printer = struct
       fmt_ppr_bound q.tries
       (fmt_ppr_typ LF.Empty LF.Null) (q.typ, S.id)
 
-  let fmt_ppr_sgn_mquery ppf mq =
-      fprintf ppf "--mquery %a %a %a %a"
-        fmt_ppr_bound mq.mexpected
-        fmt_ppr_bound mq.mtries
-        fmt_ppr_bound mq.depth
-        (fmt_ppr_cmp_typ LF.Empty) mq.skinnyCompTyp
-
   (* instToString xs = string
      Return string representation of existential variable
      instantiations in the query.
@@ -1094,10 +1038,6 @@ module Printer = struct
   let printQuery q =
     fprintf std_formatter "%a.@.@."
       fmt_ppr_sgn_query q
-
-  let printMQuery mq =
-    fprintf std_formatter "%a.@.@."
-      fmt_ppr_sgn_mquery mq
 
   (* Prints all LF signatures *)
   let printSignature () =
@@ -2810,75 +2750,6 @@ module Frontend = struct
     else if !Options.chatter >= 2
     then printf "Skipping query -- bound for tries = 0.\n"
 
-  (*
-     msolve (sgnMQ: {mquery        : mquery;
-                     skinnyCompTyp : Comp.typ;
-                     mexpected     : bound;
-                     mtries        : bound
-                     depth         : bound
-                     instMMVars    : minst list})=
-
-
-  *)
-
-  let msolve sgnMQuery =
-
-    (* Retrieve the total_dec list of the signature *)
-    let total_dec = [] in
-  (*  getTDecs () in *)
-
-    let solutions = ref 0 in
-      (* Type checking function. *)
-    let check cD cG (e : Comp.exp) ms =
-      Check.Comp.check None cD cG total_dec e (sgnMQuery.skinnyCompTyp, ms)
-    in
-
-    (* Success continuation function *)
-    let scInit e =
-      incr solutions;
-      (*
-      fprintf std_formatter "\n FINAL check e = \n %a \n"
-        (P.fmt_ppr_cmp_exp LF.Empty LF.Empty) e;  *)
-        (* Rebuild the substitution and type check the proof term. *)
-      if !Options.checkProofs
-      then
-        check LF.Empty LF.Empty e (Convert.solToMSub sgnMQuery.instMMVars);
-
-      if !Options.chatter >= 3
-      then
-        begin
-          fprintf std_formatter  "@[<v>---------- Solution %d ----------\n %a@,@,@]"
-            (*              "@[<hov 2>@[%a@] |-@ @[%a@]@]" *)
-            (!solutions)
-            (P.fmt_ppr_cmp_exp LF.Empty LF.Empty) e
-        end;
-
-      (* Stop when no. of solutions exceeds tries. *)
-      if exceeds (Some !solutions) sgnMQuery.mtries
-      then raise Done;
-
-      (* Temporary: Exiting as soon as we receive as many solutions as required *)
-      if exceeds (Some !solutions) sgnMQuery.mexpected
-      then raise Done;
-    in
-    if Bool.not (boundEq sgnMQuery.mtries (Some 0))
-    then
-      begin
-         if !Options.chatter >= 1
-           then P.printMQuery sgnMQuery;
-         try
-           CSolver.cgSolve LF.Empty LF.Empty sgnMQuery.mquery scInit sgnMQuery.depth;
-           (* Check solution bounds. *)
-           checkSolutions sgnMQuery.mexpected sgnMQuery.mtries !solutions
-           with
-           | Done -> printf "Done.\n"
-           | AbortQuery s -> printf "%s\n" s
-           (* | DepthReached d -> printf "Query complete -- depth = %a was reached\n" P.fmt_ppr_bound d *)
-           | _ -> ()
-       end
-     else if !Options.chatter >= 2
-    then printf "Skipping query -- bound for tries = 0.\n"
-
   (* Used when the auto-invert-solve and inductive-auto-solve tactics are
      called from Harpoon *)
   (* Will return the Beluga expression found by cgSolve for
@@ -3202,10 +3073,6 @@ end
 let storeQuery p (tA, i) cD e t =
   Index.storeQuery (p, (tA, i), cD, e, t)
 
-let storeMQuery  (tau, i) e t d =
-  Index.storeMQuery ((tau, i), e, t, d)
-
-
 (* runLogic () = ()
    If !enabledLogic, run the logic programming engine. Otherwise
    do nothing, i.e. return unit.
@@ -3221,7 +3088,6 @@ let runLogic () =
       then Printer.printAllSig ();
       (* Solve! *)
       Index.iterQueries Frontend.solve;
-      Index.iterMQueries Frontend.msolve;
       (* Clear the local storage.  *)
       Index.clearIndex ()
     end

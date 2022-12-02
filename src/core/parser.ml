@@ -2754,25 +2754,6 @@ end = struct
     $> fun (location, ((expected_solutions, maximum_tries), cD, name, typ)) ->
        Sgn.Query { location; name; mctx = cD; typ; expected_solutions; maximum_tries }
 
-  let sgn_mquery_pragma =
-    let bound =
-      alt
-        (token T.STAR &> return Option.none)
-        (integer $> Option.some)
-      |> labelled "search bound"
-    in
-    pragma "mquery" &>
-      seq2
-        (seq3 bound bound bound)
-        (*      (mctx ~sep: (return ()) (clf_ctyp_decl_bare name' (fun x -> LF.No, x) |> braces)) *)
-        cmp_typ
-    <& token T.DOT
-    |> span
-    |> labelled "meta-logic search engine mquery pragma"
-    $> fun (location, ((expected_solutions, search_tries, search_depth), typ)) ->
-       Sgn.MQuery { location; typ; expected_solutions; search_tries; search_depth }
-
-
   let sgn_oldstyle_lf_decl =
     labelled
       "old-style LF type or constant declaration"
@@ -2971,7 +2952,6 @@ end = struct
       (* pragmas *)
       [ sgn_name_pragma
       ; sgn_query_pragma
-      ; sgn_mquery_pragma
       ; sgn_not_pragma
       ; sgn_fixity_pragma
       ; sgn_associativity_pragma

@@ -319,6 +319,8 @@ module Harpoon = struct
     | By of Comp.exp * Name.t
     | Suffices of Comp.exp * Comp.suffices_typ list
     | Help
+    | AutoInvertSolve of int option
+    | InductiveAutoSolve of int option
 end
 
 

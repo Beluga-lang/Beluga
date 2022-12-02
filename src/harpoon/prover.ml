@@ -438,3 +438,54 @@ let process_command
        (Comp.solve e |> Tactic.solve) t g
      else
        HarpoonState.printf s "Solution contains uninstantiated metavariables."
+  | Command.AutoInvertSolve d ->
+     let { cD; cG; cIH } = g.context in
+     let (tau, ms) = g.goal in
+     let tau = Whnf.cnormCTyp (tau, ms) in
+     let (mquery, _, _, instMMVars) =
+       let (typ',k) = Abstract.comptyp tau in
+       Logic.Convert.comptypToMQuery (typ',k)
+     in
+     let (theorem, _) = Theorem.get_statement t in
+     let cid = Theorem.get_cid t in
+     let opt_witness = Logic.Frontend.msolve_tactic (cD, cG, cIH)
+                         (mquery, tau, instMMVars) d
+                         (theorem, cid, 1, (Lazy.force mfs))
+     in
+     begin
+     match opt_witness with
+     | None ->
+         HarpoonState.printf s "cgSolve cannot find a proof in cD = %a, cG = %a, skinny = %a, inst size = %d."
+         P.(fmt_ppr_lf_mctx l0) cD
+         P.(fmt_ppr_cmp_gctx cD l0) cG
+         P.(fmt_ppr_cmp_typ cD l0) tau
+         (List.length(instMMVars))
+     | Some e ->
+        (Comp.solve e |> Tactic.solve) t g
+     end
+
+  | Command.InductiveAutoSolve d ->
+     let { cD; cG; cIH } = g.context in
+     let (tau, ms) = g.goal in
+     let tau = Whnf.cnormCTyp (tau, ms) in
+     let (mquery, _, _, instMMVars) =
+       let (typ',k) = Abstract.comptyp tau in
+       Logic.Convert.comptypToMQuery (typ',k)
+     in
+     let (theorem, _) = Theorem.get_statement t in
+     let cid = Theorem.get_cid t in
+     let opt_witness = Logic.Frontend.msolve_tactic (cD, cG, cIH)
+                         (mquery, tau, instMMVars) d
+                         (theorem, cid, 2, (Lazy.force mfs))
+     in
+     begin
+     match opt_witness with
+     | None ->
+         HarpoonState.printf s "cgSolve cannot find a proof in cD = %a, cG = %a, skinny = %a, inst size = %d."
+         P.(fmt_ppr_lf_mctx l0) cD
+         P.(fmt_ppr_cmp_gctx cD l0) cG
+         P.(fmt_ppr_cmp_typ cD l0) tau
+         (List.length(instMMVars))
+     | Some e ->
+        (Comp.solve e |> Tactic.solve) t g
+     end

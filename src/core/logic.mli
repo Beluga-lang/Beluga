@@ -23,6 +23,8 @@ end
 
 module Frontend : sig
   exception Done
+  val msolve_tactic : (LF.mctx * Comp.gctx * Comp.ihctx) -> (mquery * Comp.typ * (Name.t * Comp.meta_obj) list) -> int option -> (Comp.typ * Id.cid_prog * int * Comp.total_dec list) ->
+                      (Comp.exp option)
 end
 
 module Solver : sig

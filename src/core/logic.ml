@@ -3,6 +3,7 @@ open Support.Equality
 (* author:
    Costin Badescu
    Jacob Thomas Errington
+   Johanna Schwartzentruber
  *)
 
 open Support
@@ -899,11 +900,11 @@ module Printer = struct
   let fmt_ppr_dctx cD ppf cPsi =
     P.fmt_ppr_lf_dctx cD P.l0 ppf cPsi
 
- (* let fmt_ppr_gctx cD ppf cG =
+  let fmt_ppr_gctx cD ppf cG =
     P.fmt_ppr_cmp_gctx cD P.l0 ppf cG
 
   let fmt_ppr_mctx ppf cD =
-    P.fmt_ppr_lf_mctx P.l0 ppf cD     *)
+    P.fmt_ppr_lf_mctx P.l0 ppf cD
 
   let fmt_ppr_typ cD cPsi ppf sA =
     P.fmt_ppr_lf_typ cD cPsi P.l0 ppf (Whnf.normTyp sA)
@@ -1611,6 +1612,126 @@ module CSolver = struct
        Full (shift_cPool cPool' k, (cc, k'+k, s))
     | _ -> cPool
 
+  (* Applies the msub to hd only if it is not an uninstantiated mvar/mmvar *)
+  let cnormHd (hd, ms) =
+    match hd with
+    | LF.MMVar ((mmvar, ms'), s)
+         when mmvar.LF.instantiation.contents == None ->
+       hd
+    | LF.MPVar ((mmvar, ms'), s)
+         when mmvar.LF.instantiation.contents == None ->
+       hd
+    | LF.MVar (LF.Inst mmvar, s)
+         when mmvar.LF.instantiation.contents == None ->
+       hd
+    | _ -> Whnf.cnormHead (hd, ms)
+
+  (* Applies msub to all heads excluding uninstantiated mvars/mmvars *)
+  let rec cnormSpine (spine, ms) =
+    match spine with
+    | LF.Nil -> LF.Nil
+    | LF.App (norm, spine') ->
+       LF.App (cnormNorm (norm, ms), cnormSpine (spine', ms))
+    | _ -> dprintf
+             begin fun p ->
+             p.fmt "[cnormSpine]"
+             end;
+           raise NotImplementedYet
+
+  (* Applies msub to all heads excluding uninstantiated mvars/mmvars *)
+  and cnormNorm (norm, ms) =
+    match norm with
+    | LF.Root (loc, hd, spine, pl) ->
+       (try
+         (let hd' = cnormHd (hd, ms) in
+       let spine' = cnormSpine (spine, ms) in
+       LF.Root (loc, hd', spine', pl))
+       with
+       | _ -> Whnf.cnorm (norm, ms))
+    | LF.Lam (loc, name, norm') ->
+       LF.Lam (loc, name, cnormNorm (norm', ms))
+    | _ -> dprintf
+             begin fun p ->
+             p.fmt "[cnormNorm]"
+             end;
+           raise NotImplementedYet
+
+  (* Applies msub to all heads excluding uninstantiated mvars/mmvars *)
+  let cnormTyp (tA, ms) =
+    match tA with
+    | LF.Atom (loc, cid, spine) ->
+       LF.Atom (loc, cid, cnormSpine (spine, ms))
+    | _ -> dprintf
+             begin fun p ->
+             p.fmt "[cnormTyp]"
+             end;
+           raise NotImplementedYet
+
+  (* Applies msub to all heads excluding uninstantiated mvars/mmvars *)
+  let cnormMetaObj ((loc, mf), ms) =
+    match mf with
+    | LF.ClObj (dctx_hat, clobj) ->
+       let clobj' =
+         match clobj with
+         | LF.MObj norm -> LF.MObj (cnormNorm (norm, ms))
+         | LF.PObj hd -> LF.PObj (cnormHd (hd, ms))
+         | _ -> dprintf
+             begin fun p ->
+             p.fmt "[cnormMetaObj]"
+             end;
+                raise NotImplementedYet
+       in
+       (loc, LF.ClObj (Whnf.cnorm_psihat dctx_hat ms, clobj'))
+    | LF.CObj dctx ->
+       (loc, LF.CObj (Whnf.cnormDCtx (dctx, ms)))
+    | _ -> (loc, mf)
+
+  let cnormMTyp (mtyp, ms) =
+    match mtyp with
+    | LF.ClTyp (LF.MTyp tA, cPsi) ->
+       let tA' = cnormTyp (tA, ms) in
+       LF.ClTyp (LF.MTyp tA', Whnf.normDCtx (Whnf.cnormDCtx (cPsi, ms)))
+    | LF.ClTyp (LF.PTyp tA, cPsi) ->
+       let tA' = cnormTyp (tA, ms) in
+       LF.ClTyp (LF.PTyp tA', Whnf.normDCtx (Whnf.cnormDCtx (cPsi, ms)))
+    | LF.CTyp sW -> LF.CTyp sW
+    | _ -> dprintf
+             begin fun p ->
+             p.fmt "[cnormMTyp]"
+             end;
+           raise NotImplementedYet
+
+  (* Applies msub to all heads excluding uninstantiated mvars/mmvars *)
+  let rec cnormMetaSpine (mS, ms) =
+    match mS with
+    | Comp.MetaNil -> Comp.MetaNil
+    | Comp.MetaApp (mO, mT, mS, plicity) ->
+       Comp.MetaApp
+         ( cnormMetaObj (mO, ms)
+         , cnormMTyp (mT, ms)
+         , cnormMetaSpine (mS, ms)
+         , plicity
+         )
+
+  (* Applies the msub to the ctyp (excluding the mmvars and mvars) *)
+  let rec cnormCTyp (tau, ms) =
+    match (tau, ms) with
+    | (Comp.TypBase (loc, a, mS), t) ->
+        let mS' = cnormMetaSpine (mS, t) in
+        Comp.TypBase (loc, a, mS')
+    | (Comp.TypBox (loc, cT), t) ->
+        Comp.TypBox (loc, cnormMTyp (cT, t))
+    | (Comp.TypArr (loc, tT1, tT2), t) ->
+        Comp.TypArr (loc, cnormCTyp (tT1, t), cnormCTyp (tT2, t))
+    | (Comp.TypPiBox (loc, cdecl, tau), t) ->
+        let cdecl' = Whnf.cnormCDecl (cdecl, t) in
+        Comp.TypPiBox (loc, cdecl', cnormCTyp (tau, Whnf.mvar_dot1 t))
+    | _ -> dprintf
+             begin fun p ->
+             p.fmt "[cnormCTyp]"
+             end;
+           raise NotImplementedYet
+
   (* Applies the msub to the comp goal. *)
   (* Invariant:
      if cD ; cG  |- cg
@@ -1665,6 +1786,28 @@ module CSolver = struct
        let cg' = normCompGoal (cg, ms) in
        Solve (normSubGoals (sg', ms) cD, cg')
 
+  (* Applies the msub to the ihctx (excluding the mmvars and mvars) *)
+  let cnormIHCtx' (ihctx, ms) =
+    let cnormIHArg (a, t) =
+      match a with
+      | Comp.M cM ->
+         Comp.M (cnormMetaObj (cM, t))
+      | Comp.DC ->
+         dprintf
+          begin fun p ->
+          p.fmt
+          "[cnormIHArg]"
+          end;
+         raise NotImplementedYet
+      | _ -> a
+    in
+    let cnormIHDecl (Comp.WfRec (name, ih_args, tau)) =
+      let ih_args' = List.map (fun a -> cnormIHArg (a, ms)) ih_args in
+      let tau' = cnormCTyp (tau, ms) in
+      Comp.WfRec (name, ih_args', tau')
+    in
+    Context.map (fun d -> cnormIHDecl d) ihctx
+
   let rec cnormCPool (cPool, ms) cD =
     match cPool with
     | Emp -> cPool
@@ -1715,6 +1858,296 @@ module CSolver = struct
       | LF.MDot (mf, ms') -> rev ms' (LF.MDot (mf, ms_ret))
     in
     rev ms (LF.MShift k)
+
+  (* Generates, from cIH, a new cIH where each entry is unique. *)
+  let unique_IH cIH cD =
+
+    let rec not_in ((Comp.WfRec (name, ih_arg_lst, tau)) as ih) cIH =
+      let different_type tau2 =
+        try
+          Solver.trail
+            (fun () ->
+          U.unifyCompTyp cD (tau, LF.MShift 0) (tau2, LF.MShift 0));
+          false
+        with
+        | _ -> true
+      in
+      let check (Comp.WfRec (name2, ih_arg_lst2, tau2)) =
+        (different_type tau2)
+      in
+      match cIH with
+      | LF.Empty -> true
+      | LF.Dec (cIH', ihdecl) ->
+         (check ihdecl) && (not_in ih cIH')
+    in
+
+    let rec unique cIH ret =
+      match cIH with
+      | LF.Empty -> ret
+      | LF.Dec (cIH', ihdecl) ->
+         if not_in ihdecl ret then unique cIH' (LF.Dec (ret, ihdecl))
+         else unique cIH' ret
+    in
+    unique cIH LF.Empty
+
+  let remove_mvar_subs cIH =
+    let remove_hd hd =
+      match hd with
+      | LF.MMVar ((mmvar, _), _) ->
+         LF.MMVar ((mmvar, LF.MShift 0), LF.Shift 0)
+      | LF.MPVar ((mmvar, _), _) ->
+         LF.MPVar ((mmvar, LF.MShift 0), LF.Shift 0)
+      | _ -> hd
+    in
+    let rec remove_norm norm =
+      match norm with
+      | LF.Root (loc, hd, sp, p) ->
+         LF.Root (loc, remove_hd hd, remove_sp sp, p)
+      | LF.Lam (loc, name, norm) ->
+         LF.Lam (loc, name, remove_norm norm)
+      | LF.Clo (norm, s) ->
+         LF.Clo (remove_norm norm, s)
+      | _ -> norm
+    and remove_sp sp =
+      match sp with
+      | LF.App (norm, sp') ->
+         LF.App (remove_norm norm, remove_sp sp')
+      | LF.SClo (sp', s) -> LF.SClo (remove_sp sp', s)
+      | _ -> sp
+    in
+    let remove_ctx_var cv =
+      match cv with
+      | LF.CInst (mm_var, _) -> LF.CInst (mm_var, LF.MShift 0)
+      | _ -> cv
+    in
+    let rec remove_dctx dctx =
+      match dctx with
+      | LF.CtxVar cv -> LF.CtxVar (remove_ctx_var cv)
+      | LF.DDec (dctx', td) -> LF.DDec (remove_dctx dctx', td)
+      | _ -> dctx
+    in
+    let remove_mf mf =
+      match mf with
+      | LF.ClObj (cPsi_hat, LF.MObj norm) ->
+         LF.ClObj (cPsi_hat, LF.MObj (remove_norm norm))
+      | LF.ClObj (cPsi_hat, LF.PObj hd) ->
+         LF.ClObj (cPsi_hat, LF.PObj (remove_hd hd))
+      | LF.CObj dctx -> LF.CObj (remove_dctx dctx)
+      | _ -> mf
+    in
+    let rec remove_typ tA =
+      match tA with
+      | LF.Atom (l, cid, sp) ->
+         LF.Atom (l, cid, remove_sp sp)
+      | LF.PiTyp ((td, dep), tA') ->
+         LF.PiTyp ((td, dep), remove_typ tA)
+      | LF.TClo (tA', s) ->
+         LF.TClo (remove_typ tA', s)
+    in
+    let remove_mT ctyp =
+      match ctyp with
+      | LF.ClTyp (LF.MTyp tA, cPsi) ->
+         LF.ClTyp (LF.MTyp (remove_typ tA), cPsi)
+      | LF.ClTyp (LF.PTyp tA, cPsi) ->
+         LF.ClTyp (LF.PTyp (remove_typ tA), cPsi)
+      | _ -> ctyp
+    in
+    let rec remove_mS mS =
+      match mS with
+      | Comp.MetaApp ((loc, mf), mT, mS', p) ->
+         let mf' = remove_mf mf in (* mfront *)
+         let mT' = remove_mT mT in (* ctyp *)
+         Comp.MetaApp ((loc, mf'), mT', remove_mS mS', p)
+      | _ -> mS
+    in
+    let rec remove_tau tau =
+      match tau with
+      | Comp.TypBase (l, cid, mS) ->
+         Comp.TypBase (l, cid, remove_mS mS)
+      | Comp.TypBox (l, mT) ->
+         (match mT with
+         | LF.ClTyp (LF.MTyp tA, cPsi) ->
+            Comp.TypBox (l, LF.ClTyp (LF.MTyp (remove_typ tA), cPsi))
+         | LF.ClTyp (LF.PTyp tA, cPsi) ->
+            Comp.TypBox (l, LF.ClTyp (LF.PTyp (remove_typ tA), cPsi))
+         | _ -> tau)
+      | Comp.TypArr (l, tau1, tau2) ->
+         Comp.TypArr (l, remove_tau tau1, remove_tau tau2)
+      | Comp.TypPiBox (l, cdec, tau') ->
+         Comp.TypPiBox (l, cdec, remove_tau tau')
+    in
+    let remove_arg arg =
+      match arg with
+      | Comp.M (loc, mf) -> Comp.M (loc, remove_mf mf)
+      | _ -> arg
+    in
+    Context.map (fun (Comp.WfRec (name, ih_arg_lst, tau)) ->
+        (Comp.WfRec (name, List.map remove_arg ih_arg_lst,
+                     remove_tau tau))) cIH
+
+  (* Replaces the DC argument of each I.H. with the correct mmvar.  *)
+  let fix_IH_args ihctx cD =
+    dprintf
+      begin fun p ->
+        p.fmt "[fix_IH_args] Fixing %d hypotheses"
+        (Context.length ihctx)
+      end;
+
+    (* Returns a list of the mvars and mmvars in tau
+       (unique elements only)                        *)
+    let get_list_of_mvars tau =
+
+      let rec list_of_mvars_norm normal =
+        match normal with
+        | LF.Root (_, LF.MVar (LF.Inst mmvar,_), spine, _) ->
+           if mmvar.LF.instantiation.contents == None
+           then
+             normal :: (list_of_mvars_spine spine)
+           else
+             list_of_mvars_spine spine
+        | LF.Root(_, LF.MMVar ((mmvar,_),_), spine, _) ->
+           if mmvar.LF.instantiation.contents == None
+           then
+             normal :: (list_of_mvars_spine spine)
+           else
+             list_of_mvars_spine spine
+        | LF.Root(_, LF.MPVar ((mmvar,_),_), spine, _) ->
+           if mmvar.LF.instantiation.contents == None
+           then
+             normal :: (list_of_mvars_spine spine)
+           else
+             list_of_mvars_spine spine
+        | LF.Root(_,_, spine, _) ->
+           list_of_mvars_spine spine
+        | LF.Lam (_, _, normal') -> list_of_mvars_norm normal'
+        | LF.Clo (normal', _) -> list_of_mvars_norm normal'
+        | _ -> dprintf
+             begin fun p ->
+             p.fmt "[list_of_mvars_norm]"
+             end;
+               raise NotImplementedYet
+
+      and list_of_mvars_spine spine =
+        match spine with
+        | LF.Nil -> []
+        | LF.App (normal, spine') ->
+          (list_of_mvars_norm normal) @ (list_of_mvars_spine spine')
+        | LF.SClo (spine', _) -> list_of_mvars_spine spine'
+      in
+
+      let rec list_of_mvars_mspine mS =
+        match mS with
+        | Comp.MetaNil -> []
+        | Comp.MetaApp (mO, mT, mS', _) ->
+           match mO with
+           | (_, LF.ClObj (_, LF.MObj norm)) ->
+              (list_of_mvars_norm norm) @ (list_of_mvars_mspine mS')
+           | (_, LF.ClObj (_, LF.PObj hd)) -> (* TODO:: correct?? *)
+              (list_of_mvars_norm (LF.head hd)) @ (list_of_mvars_mspine mS')
+           | _ -> []
+      in
+
+      let rec list_of_mmvars tau =
+        match tau with
+        | Comp.TypBox (_, LF.ClTyp(LF.MTyp (LF.Atom (_, _, spine)), _)) ->
+           list_of_mvars_spine spine
+        | Comp.TypBox (_, LF.ClTyp(LF.PTyp (LF.Atom (_, _, spine)), _)) ->
+           list_of_mvars_spine spine
+        | Comp.TypArr (_, tau1, tau2) ->
+           (list_of_mmvars tau1) @ (list_of_mmvars tau2)
+        | Comp.TypPiBox (_, _, tau) ->
+           list_of_mmvars tau
+        | Comp.TypBase (_, _, mS) ->
+           list_of_mvars_mspine mS
+        | _ -> dprintf
+             begin fun p ->
+             p.fmt "[list_of_mmvars]"
+             end;
+               raise NotImplementedYet
+      in
+
+      let is_in mm_var lst =
+        let cid =
+          match mm_var with
+          | LF.Root(_, LF.MMVar(((mmvar, _),_)), _, _) -> mmvar.LF.mmvar_id
+          | LF.Root(_, LF.MPVar(((mmvar, _),_)), _, _) -> mmvar.LF.mmvar_id
+          | LF.Root(_, LF.MVar(LF.Inst mmvar,_), _, _) -> mmvar.LF.mmvar_id
+          | _ -> dprintf
+             begin fun p ->
+             p.fmt "[is_in - cid]"
+             end;
+                 raise NotImplementedYet
+        in
+        let rec is_in_lst cid lst =
+          match lst with
+          | (LF.Root(_, LF.MMVar(((mmvar, _),_)), _, _)) :: xs
+               when mmvar.LF.mmvar_id == cid -> true
+          | (LF.Root(_, LF.MPVar(((mmvar, _),_)), _, _)) :: xs
+               when mmvar.LF.mmvar_id == cid -> true
+          | (LF.Root(_, LF.MVar(LF.Inst mmvar,_), _, _)) :: xs
+               when mmvar.LF.mmvar_id == cid -> true
+          | x :: xs -> is_in_lst cid xs
+          | [] -> false
+        in
+        is_in_lst cid lst
+
+      in
+      let rec get_unique_mvars lst unq_lst =
+        match lst with
+        | x :: xs ->
+           if is_in x unq_lst
+           then
+             get_unique_mvars xs unq_lst
+           else
+             get_unique_mvars xs (x::unq_lst)
+        | [] -> List.rev unq_lst
+      in
+      let mmvars = list_of_mmvars tau in
+      get_unique_mvars mmvars []
+
+    in
+
+    let fix_ihctx (Comp.WfRec (name, ih_args, tau)) =
+      let unq_mmvars = get_list_of_mvars tau in
+      let rec fix_args ih_args mvars =
+        match (ih_args, mvars) with
+        | (Comp.DC :: xs, x :: mvars') ->
+           (match x with
+           | LF.Root (_, ((LF.PVar (_)) as hd), _, _) ->
+              (Comp.M (noLoc, LF.ClObj ((None, 0), LF.PObj hd)))
+              :: (fix_args xs mvars')
+           | LF.Root (_, ((LF.MPVar ((mmvar,_), _)) as hd), _, _) ->
+              let dctx_hat = match mmvar.LF.typ with
+                | LF.ClTyp (_, dctx) -> Context.dctxToHat dctx
+                | _ -> raise NotImplementedYet
+              in
+              (Comp.M (noLoc, LF.ClObj (dctx_hat, LF.PObj hd)))
+              :: (fix_args xs mvars')
+           | LF.Root (_, LF.MMVar ((mmvar,_), _), _, _) ->
+              let dctx_hat = match mmvar.LF.typ with
+                | LF.ClTyp (_, dctx) -> Context.dctxToHat dctx
+                | _ -> raise NotImplementedYet
+              in
+              (Comp.M (noLoc, LF.ClObj (dctx_hat, LF.MObj x)))
+              :: (fix_args xs mvars')
+           | LF.Root (_, LF.MVar (LF.Inst mmvar, _), _, _) ->
+              let dctx_hat = match mmvar.LF.typ with
+                | LF.ClTyp (_, dctx) -> Context.dctxToHat dctx
+                | _ -> raise NotImplementedYet
+              in
+              (Comp.M (noLoc, LF.ClObj (dctx_hat, LF.MObj x)))
+              :: (fix_args xs mvars')
+           | _ -> dprintf begin fun p -> p.fmt "[fix_ihctx]" end;
+                  raise NotImplementedYet)
+        | (x :: xs, _) ->
+           x :: (fix_args xs mvars)
+        | ([], _) -> []
+      in
+      let args' = fix_args ih_args unq_mmvars in
+      Comp.WfRec (name, args', tau)
+
+    in
+    Context.map (fun d -> fix_ihctx d) ihctx
 
 
   let rec cgSolve' (cD: LF.mctx) (cG: Comp.gctx) (cPool: cPool)
@@ -2444,7 +2877,322 @@ module Frontend = struct
            | _ -> ()
        end
      else if !Options.chatter >= 2
-     then printf "Skipping query -- bound for tries = 0.\n";
+    then printf "Skipping query -- bound for tries = 0.\n"
+
+  (* Used when the auto-invert-solve and inductive-auto-solve tactics are
+     called from Harpoon *)
+  (* Will return the Beluga expression found by cgSolve for
+     the given mquery                                          *)
+  let msolve_tactic
+        (cD, cG, cIH) (mquery, tau, instMMVars) depth
+        (theorem, cid, invrt, mfs)  =
+
+    dprintf
+        begin fun p ->
+        p.fmt
+          "[msolve_tactic] BEGIN"
+        end;
+
+    (* Transform signature into clauses. *)
+    Index.robStore ();
+
+    (* This reference will hold the return of cgSolve
+       (i.e. the Beluga proof term with type tau)     *)
+    let exp = ref (Comp.Impossible
+                     (Syntax.Loc.ghost, Comp.Var
+                                          (Syntax.Loc.ghost, 0)))
+    in
+
+    (* Remove duplicates from cIH *)
+    let cIH' =
+      let cIH' = CSolver.remove_mvar_subs cIH in
+      let unique_cIH = CSolver.unique_IH cIH' cD in
+      CSolver.cnormIHCtx' (CSolver.fix_IH_args unique_cIH cD, LF.MShift 0) in
+
+    (* Put the mmVar list in correct format. *)
+    let mmVars =
+      let rec clean_instMMVars mmvars =
+        match mmvars with
+        | (n, (l, mf)) :: xs ->
+           (n, mf) :: (clean_instMMVars xs)
+        | [] -> []
+      in
+      clean_instMMVars instMMVars
+    in
+
+    (* Replaces any instantiated mmvars/mvars with their instantiations.  *)
+    (* Will fail during check otherwise...                                *)
+    let remove_hd_mvars hd =
+      dprintf
+        begin fun p ->
+        p.fmt
+          "[remove_hd_mvars]"
+        end;
+      match hd with
+      | LF.MMVar ((mmvar, ms), s) ->
+         let Some iterm = mmvar.LF.instantiation.contents in
+         (match iterm with
+         | LF.IHead hd -> hd
+         | _ -> raise NotImplementedYet)
+      | LF.MPVar ((mmvar, ms), s) ->
+         let Some iterm = mmvar.LF.instantiation.contents in
+         (match iterm with
+         | LF.IHead hd -> hd
+         | _ -> raise NotImplementedYet)
+      | LF.MVar (LF.Inst mmvar, s) ->
+         let Some iterm = mmvar.LF.instantiation.contents in
+         (match iterm with
+         | LF.IHead hd -> hd
+         | _ -> raise NotImplementedYet)
+      | _ -> hd
+
+    in
+    let rec remove_sub_mvars s =
+      dprintf
+        begin fun p ->
+        p.fmt
+          "[remove_sub_mvars]"
+        end;
+      match s with
+      | LF.Dot (LF.Head hd, s') ->
+         LF.Dot (LF.Head (remove_hd_mvars hd), remove_sub_mvars s')
+      | LF.Dot (LF.Obj norm, s') ->
+         LF.Dot (LF.Obj (remove_norm_mvars norm), remove_sub_mvars s')
+      | _ -> s
+
+    and remove_norm_mvars norm =
+      dprintf
+        begin fun p ->
+        p.fmt
+          "[remove_norm_mvars]"
+        end;
+      let remove_head_mvars hd =
+        match hd with
+        | LF.MMVar ((mmvar, ms), s) ->
+           let Some iterm = mmvar.LF.instantiation.contents in
+           iterm
+        | LF.MPVar ((mmvar, ms), s) ->
+           let Some iterm = mmvar.LF.instantiation.contents in
+           iterm
+        | LF.MVar (LF.Inst mmvar, s) ->
+           let Some iterm = mmvar.LF.instantiation.contents in
+           iterm
+        | _ -> LF.IHead hd
+      in
+      match norm with
+      | LF.Lam (l, n, norm') -> LF.Lam (l, n, remove_norm_mvars norm')
+      | LF.Root (l, hd, spine, p) ->
+         (match remove_head_mvars hd with
+         | LF.IHead hd -> LF.Root (l, hd, remove_spine_mvars spine, p)
+         | LF.INorm norm -> norm)
+      | LF.Clo (norm', s) ->
+         LF.Clo (remove_norm_mvars norm', remove_sub_mvars s)
+      | _ -> raise NotImplementedYet
+
+    and remove_spine_mvars spine =
+      dprintf
+        begin fun p ->
+        p.fmt
+          "[remove_spine_mvars]"
+        end;
+      match spine with
+      | LF.Nil -> spine
+      | LF.App (norm, spine') ->
+         LF.App (remove_norm_mvars norm, remove_spine_mvars spine')
+      | LF.SClo (spine', s) ->
+         LF.SClo (remove_spine_mvars spine', remove_sub_mvars s)
+    in
+
+    let rec remove_typ_mvars tA =
+      dprintf
+        begin fun p ->
+        p.fmt
+          "[remove_typ_mvars]"
+        end;
+      match tA with
+      | LF.Atom (l, cid, spine) ->
+         LF.Atom (l, cid, (remove_spine_mvars spine))
+      | LF.PiTyp ((td, d), tA') -> LF.PiTyp ((td, d), remove_typ_mvars tA')
+      | LF.Sigma (_) -> tA
+      | LF.TClo (tA', s) -> raise NotImplementedYet
+    in
+
+    let rec remove_dctx_mvars cpsi =
+      dprintf
+        begin fun p ->
+        p.fmt
+          "[remove_dctx_mvars]"
+        end;
+      match cpsi with
+      | LF.DDec (cpsi', LF.TypDecl (n, tA)) ->
+         LF.DDec (remove_dctx_mvars cpsi',
+                  LF.TypDecl (n, remove_typ_mvars tA))
+      | LF.DDec (cpsi', td) -> LF.DDec (remove_dctx_mvars cpsi', td)
+      | _ -> cpsi
+    in
+
+    let remove_clobj_mvars co =
+      dprintf
+        begin fun p ->
+        p.fmt
+          "[remove_clobj_mvars]"
+        end;
+      match co with
+      | LF.MObj norm -> LF.MObj (remove_norm_mvars norm)
+      | LF.PObj hd -> LF.PObj (remove_hd_mvars hd)
+      | LF.SObj s -> LF.SObj (remove_sub_mvars s)
+    in
+
+    let remove_mfront_mvars mf =
+      dprintf
+        begin fun p ->
+        p.fmt
+          "[remove_mfront_mvars]"
+        end;
+      match mf with
+      | LF.CObj cpsi -> LF.CObj (remove_dctx_mvars cpsi)
+      | LF.ClObj (dctx_hat, clobj) ->
+         LF.ClObj (dctx_hat, remove_clobj_mvars clobj)
+      | _ -> mf
+    in
+
+    let remove_ctyp_mvars ct =
+      dprintf
+        begin fun p ->
+        p.fmt
+          "[remove_ctyp_mvars]"
+        end;
+      match ct with
+      | LF.ClTyp (LF.MTyp tA, dctx) ->
+         LF.ClTyp (LF.MTyp  (remove_typ_mvars tA), remove_dctx_mvars dctx)
+      | LF.ClTyp (LF.PTyp tA, dctx) ->
+         LF.ClTyp (LF.PTyp  (remove_typ_mvars tA), remove_dctx_mvars dctx)
+      | LF.ClTyp (LF.STyp (sv, cpsi), dctx) ->
+         LF.ClTyp (LF.STyp (sv, remove_dctx_mvars cpsi),
+                   remove_dctx_mvars dctx)
+      | _ -> ct
+    in
+
+    let rec remove_msub_mvars ms =
+      dprintf
+        begin fun p ->
+        p.fmt
+          "[remove_msub_mvars]"
+        end;
+      match ms with
+      | LF.MDot (mf, ms') ->
+         LF.MDot (remove_mfront_mvars mf, remove_msub_mvars ms')
+      | _ -> ms
+    in
+
+    let rec remove_pspine_mvars pspine =
+      dprintf
+        begin fun p ->
+        p.fmt
+          "[remove_pspine_mvars]"
+        end;
+      match pspine with
+      | Comp.PatApp (l, pat, pspine') ->
+         Comp.PatApp (l, remove_pat_mvars pat, remove_pspine_mvars pspine')
+      | _ -> pspine
+
+    and remove_pat_mvars pat =
+      dprintf
+        begin fun p ->
+        p.fmt
+          "[remove_pat_mvars]"
+        end;
+      match pat with
+      | Comp.PatMetaObj (l, (l', mf)) ->
+         Comp.PatMetaObj (l, (l', remove_mfront_mvars mf))
+      | Comp.PatConst (l, cid, pspine) ->
+         Comp.PatConst (l, cid, remove_pspine_mvars pspine)
+      | Comp.PatVar (_) -> pat
+      | _ -> raise NotImplementedYet
+    in
+
+    let rec remove_exp_mvars e =
+      dprintf
+        begin fun p ->
+        p.fmt
+          "[remove_exp_mvars]"
+        end;
+      match e with
+      | Comp.Fn (l, n, e) -> Comp.Fn (l, n, remove_exp_mvars e)
+      | Comp.MLam (l, n, e, p) -> Comp.MLam (l, n, remove_exp_mvars e, p)
+      | Comp.Box (l, (l', mf), mt) ->
+         Comp.Box (l, (l', remove_mfront_mvars mf), remove_ctyp_mvars mt)
+      | Comp.Case (l, c, s, bl) ->
+         Comp.Case (l, c, remove_exp_mvars s, remove_branch_mvars bl)
+      | Comp.Var (_) | Comp.DataConst (_) | Comp.Const (_) -> e
+      | Comp.MApp (l, s, (l', mf), mt, p) ->
+         Comp.MApp (l, remove_exp_mvars s, (l', remove_mfront_mvars mf),
+                    remove_ctyp_mvars mt, p)
+      | Comp.Apply (l, s, e) ->
+         Comp.Apply (l, remove_exp_mvars s, remove_exp_mvars e)
+      | Comp.AnnBox (l, (l2, mf), mT) ->
+         Comp.AnnBox (l, (l2, remove_mfront_mvars mf), remove_ctyp_mvars mT)
+      | _ -> dprintf
+        begin fun p ->
+        p.fmt
+          "[remove_exp_mvars] NOT IMPLEMENTED YET"
+        end; raise NotImplementedYet
+
+    and remove_branch_mvars bl =
+      dprintf
+        begin fun p ->
+        p.fmt
+          "[remove_branch_mvars]"
+        end;
+      match bl with
+      | (Comp.Branch (l, cD, bc, pat, ms, e)) :: bl' ->
+         (Comp.Branch (l, cD, bc, remove_pat_mvars pat,
+                       remove_msub_mvars ms, remove_exp_mvars e)) :: bl'
+      | [] -> bl
+    in
+
+    (* Success continuation function *)
+    let scInit e =
+      let e = Whnf.cnormExp(e, LF.MShift 0) in
+      dprintf
+        begin fun p ->
+        p.fmt
+          "FINAL CHECK e = %a"
+          (Printer.fmt_ppr_cmp_exp cD cG) e
+        end;
+      try
+      Check.Comp.check None cD cG mfs ~cIH:cIH' e
+        (tau, (Convert.solToMSub mmVars));
+      exp := (remove_exp_mvars e);
+      raise Done
+      with
+      | Done -> raise Done
+      | _ -> raise NotImplementedYet
+
+    in
+
+    let (cgoal, ms) = mquery in
+    printf
+       "[msolve_tactic] \
+              Goal = %a \
+              cD = %a \
+              cG = %a \
+             theorem = %a \ "
+        (Printer.fmt_ppr_cmp_goal cD) (cgoal, LF.Shift 0)
+        (Printer.fmt_ppr_mctx) cD
+        (Printer.fmt_ppr_gctx cD) cG
+        (Printer.fmt_ppr_cmp_typ cD) theorem
+    ;
+    (try
+       CSolver.cgSolve cD cG mquery scInit depth;
+       raise NotImplementedYet
+    with
+    | Done ->
+       Index.clearIndex ();
+       Some (!exp)
+    | _ ->
+       Index.clearIndex ();
+       None)
 
 
 end

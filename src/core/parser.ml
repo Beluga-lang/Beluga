@@ -2365,6 +2365,16 @@ end = struct
       &> cmp_exp_chk
       $> fun t -> H.Solve t
     in
+    let auto_invert_solve =
+      keyword "auto-invert-solve"
+      &> maybe integer
+      $> fun n -> H.AutoInvertSolve n
+    in
+    let inductive_auto_solve =
+      keyword "inductive-auto-solve"
+      &> maybe integer
+      $> fun n -> H.InductiveAutoSolve n
+    in
     let by =
       token T.KW_BY &>
         seq3
@@ -2513,6 +2523,8 @@ end = struct
       ; invert
       ; impossible
       ; solve
+      ; auto_invert_solve
+      ; inductive_auto_solve
       ; by
       ; suffices
       ; unbox

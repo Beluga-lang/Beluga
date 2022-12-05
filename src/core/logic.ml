@@ -474,7 +474,163 @@ module Convert = struct
     | LF.Null -> (s, fS)
     | LF.CtxVar _ -> (s, fS)
 
-  let rec mctxToMSub cD (mV, ms) fS =
+  (* Convert mV to a meta-substitution *)
+  let mctxToMSub cD (mV, ms) fS =
+    let etaExpand' cD cPsi (tA, ms) name plic ind =
+      let cvar = Whnf.newMMVar (Some name) (cD, cPsi, tA) plic ind in
+       LF.Root (Syntax.Loc.ghost, LF.MMVar((cvar, ms), S.id), LF.Nil, plic)
+    in
+    let rec rev_ms ms ms_ret =
+      match ms with
+      | LF.MShift k -> ms_ret
+      | LF.MDot (mf, ms') -> rev_ms ms' (LF.MDot (mf, ms_ret))
+    in
+    let rec shift lst i =
+      match lst with
+      | [] -> lst
+      | (cPsi, k) :: lst' -> (cPsi, k+i) :: (shift lst' i)
+    in
+    let rmLst lst =
+      match lst with
+      | (cPsi, k) :: lst' -> (shift lst' (-1), cPsi)
+    in
+    let rec find_cPsi lst k =
+      match lst with
+      | (dctx, k') :: lst' when k == k' -> dctx
+      | x :: lst' -> find_cPsi lst' k
+      | _ -> raise NotImplementedYet
+    in
+    let rec find_ctxvar_offset dctx =
+      match dctx with
+      | LF.DDec (dctx', _) -> find_ctxvar_offset dctx'
+      | LF.CtxVar (LF.CtxOffset k) -> k
+      | LF.Null -> 0
+    in
+    let rec adjust_offset cPsi ctx_var =
+      match cPsi with
+      | LF.DDec (cPsi', td) -> LF.DDec (adjust_offset cPsi' ctx_var, td)
+      | LF.CtxVar (_) -> ctx_var
+      | _ -> invalid_arg
+         "Logic.Convert.mctxToMSub.adjust_offset"
+    in
+    let rev_mctx cD =
+      let rec rev cD cD_ret =
+      match cD with
+      | LF.Empty -> cD_ret
+      | LF.Dec(cD', cdecl) ->
+         rev cD' (LF.Dec(cD_ret, cdecl))
+      in
+      rev cD LF.Empty
+    in
+    let rec create_psiList mV psiLst =
+      match mV with
+      | LF.Empty -> shift psiLst (-1)
+      | LF.Dec (mV',
+                LF.Decl (name, LF.CTyp (Some cid), plic ,ind)) ->
+         let dctx = LF.CtxVar(Whnf.newCVar (Some name) cD (Some cid) plic ind) in
+         let psiLst' = (dctx, 1) :: (shift psiLst 1) in
+         create_psiList mV' psiLst'
+      | LF.Dec (mV', _) ->
+         create_psiList mV' (shift psiLst 1)
+    in
+    let rec mctxToMSub' cD (mV, ms) psiLst =
+      match mV with
+      | LF.Empty -> ms
+      | LF.Dec (mV',
+                LF.Decl (name, LF.CTyp (Some cid), plic, ind)) ->
+         let (psiLst', dctx) = rmLst psiLst in
+         let mfront = LF.CObj dctx in
+         let ms' = mctxToMSub' cD (mV', ms) psiLst' in
+         LF.MDot (mfront, ms')
+      | LF.Dec (mV',
+                LF.Decl (name, LF.ClTyp (LF.MTyp tA,
+                                         LF.CtxVar (LF.CtxOffset k)), plic, ind)) ->
+         let dctx = find_cPsi psiLst k in
+         let dctx_hat = Context.dctxToHat dctx in
+         let psiLst' = shift psiLst (-1) in
+         let ms' = mctxToMSub' cD (mV', ms) psiLst' in
+         let tA = Whnf.cnormTyp (tA, ms') in
+         let tM = etaExpand' cD dctx (tA, LF.MShift 0) name plic ind in
+         let mfront = LF.ClObj (dctx_hat, LF.MObj tM) in
+         LF.MDot (mfront, ms')
+      | LF.Dec (mV',
+                LF.Decl (name, LF.ClTyp (LF.PTyp tA,
+                                         LF.CtxVar (LF.CtxOffset k)), plic, ind)) ->
+         let dctx = find_cPsi psiLst k in
+         let dctx_hat = Context.dctxToHat dctx in
+         let psiLst' = shift psiLst (-1) in
+         let ms' = mctxToMSub' cD (mV', ms) psiLst' in
+         let tA = Whnf.cnormTyp (tA, ms') in
+         let cvar = Whnf.newMPVar (Some name) (cD, dctx, tA) plic ind in
+         let tM = LF.MPVar((cvar, ms), S.id) in
+         let mfront = LF.ClObj (dctx_hat, LF.PObj tM) in
+         LF.MDot (mfront, ms')
+      | LF.Dec (mV',
+                LF.Decl (name, LF.ClTyp (LF.MTyp tA, cPsi), plic, ind)) ->
+         let k = find_ctxvar_offset cPsi in
+         let dctx = match k with
+           | 0 -> cPsi
+           | _ -> adjust_offset cPsi (find_cPsi psiLst k)
+         in
+         let dctx_hat = Context.dctxToHat dctx in
+         let psiLst' = shift psiLst (-1) in
+         let ms' = mctxToMSub' cD (mV', ms) psiLst' in
+         let tA = Whnf.cnormTyp (tA, ms') in
+         let tM = etaExpand' cD dctx (tA, LF.MShift 0) name plic ind in
+         let mfront = LF.ClObj (dctx_hat, LF.MObj tM) in
+         LF.MDot (mfront, ms')
+      | LF.Dec (mV',
+                LF.Decl (name, LF.ClTyp (LF.PTyp tA, cPsi), plic, ind)) ->
+         let k = find_ctxvar_offset cPsi in
+         let dctx = match k with
+           | 0 -> cPsi
+           | _ -> adjust_offset cPsi (find_cPsi psiLst k)
+         in
+         let dctx_hat = Context.dctxToHat dctx in
+         let psiLst' = shift psiLst (-1) in
+         let ms' = mctxToMSub' cD (mV', ms) psiLst' in
+         let tA = Whnf.cnormTyp (tA, ms') in
+         let cvar = Whnf.newMPVar (Some name) (cD, dctx, tA) plic ind in
+         let tM = LF.MPVar((cvar, ms), S.id) in
+         let mfront = LF.ClObj (dctx_hat, LF.PObj tM) in
+         LF.MDot (mfront, ms')
+      | _ -> raise NotImplementedYet
+    in
+    let rec msToSpine ms fS =
+      let loc = Syntax.Loc.ghost in
+      match ms with
+      | LF.MShift k -> fS
+      | LF.MDot (LF.CObj ((LF.CtxVar(LF.CInst
+                                      ({ LF.name ; instantiation ; cD ; mmvar_id ;
+                                         typ ; constraints ; plicity ; inductivity }, _))) as dctx),
+                 ms') ->
+         let mfront = LF.CObj dctx in
+         msToSpine ms' (fun s ->
+             (Comp.MApp (loc, fS s, (loc, mfront), typ, plicity)))
+      | LF.MDot (LF.ClObj (dctx_hat, LF.MObj ((LF.Root (_,LF.MMVar (({ LF.name ; instantiation ; cD ; mmvar_id ; typ ; constraints ; plicity ; inductivity },_),_), _ ,_)) as tM)), ms') ->
+         let mfront = LF.ClObj (dctx_hat, LF.MObj tM) in
+         msToSpine ms' (fun s ->
+             (Comp.MApp (loc, fS s, (loc, mfront), typ, plicity)))
+      | LF.MDot (LF.ClObj (dctx_hat, LF.PObj (LF.MPVar (({ LF.name ; instantiation ; cD ; mmvar_id ; typ ; constraints ; plicity ; inductivity }, _), _) as tM)), ms') ->
+         let mfront = LF.ClObj (dctx_hat, LF.PObj tM) in
+         msToSpine ms' (fun s ->
+             (Comp.MApp (loc, fS s, (loc, mfront), typ, plicity)))
+      | _ -> raise NotImplementedYet
+    in
+    let rev_cD = rev_mctx mV in
+    let psiLst = create_psiList rev_cD [] in
+    let ms' = mctxToMSub' cD (mV, ms) psiLst in
+    let ms_rev = (rev_ms ms' (LF.MShift 0)) in
+    let fS = msToSpine ms_rev (fun s -> s) in
+    (ms_rev, fS)
+
+ (* let rec mctxToMSub cD (mV, ms) fS =
+    let get_plicity dep =
+      match dep with
+      | LF.No -> `explicit
+      | LF.Maybe -> `implicit
+      | LF.Inductive -> `explicit
+    in
     let etaExpand' cD cPsi (tA, ms) name =
       let cvar = Whnf.newMMVar (Some name) (cD, cPsi, tA) Plicity.implicit Inductivity.not_inductive in
        LF.Root (Syntax.Loc.ghost, LF.MMVar((cvar, ms), S.id), LF.Nil, Plicity.explicit)
@@ -511,7 +667,7 @@ module Convert = struct
        (LF.MDot (mfront, ms'),
         (fun s -> fS'
                     (Comp.MApp (noLoc, s, (noLoc, mfront), ctyp, plicity))))
-    | _ -> raise NotImplementedYet
+    | _ -> raise NotImplementedYet *)
 
 
   (** typToQuery (M, i)  = ((g, s), xs)
@@ -577,12 +733,20 @@ let comptypToMQuery (tau, i) =
       | Comp.TypBox (loc, LF.ClTyp (LF.STyp (_svar_c, _cPhi),  _cPsi)) ->
           raise NotImplementedYet
       | Comp.TypPiBox (loc, mdecl, tau')  when i > 0 ->
-          let LF.Decl(x, mtyp, plicity, inductivity) = mdecl in  (* where mtyp = (LF.MTyp tA, cPsi) *)
-          (* generate a meta-variable (instantiated by unification) of type (LF.MTyp tA, cPsi)
-             and make sure it is an mfront *)
-          let mmV = Whnf.newMMVar' (Some x) (LF.Empty, mtyp) plicity inductivity in
-          let mfront = Whnf.mmVarToMFront loc mmV mtyp in
-          comptypToMQuery' (tau', i - 1) (LF.MDot (mfront, ms)) ((x, (loc, mfront)) :: xs)
+         let LF.Decl(x, mtyp, plicity, inductivity) = mdecl in
+         (match mtyp with
+         | LF.ClTyp (LF.MTyp _, _) ->
+            let mmV = Whnf.newMMVar' (Some x) (LF.Empty, mtyp) plicity inductivity in
+            let mfront = Whnf.mmVarToMFront loc mmV mtyp in
+            comptypToMQuery' (tau', i-1) (LF.MDot (mfront, ms))
+              ((x, (loc, mfront)) :: xs)
+         | LF.ClTyp (LF.PTyp tA, cPsi) ->
+            let mmV = Whnf.newMPVar (Some x) (LF.Empty, cPsi, tA) plicity inductivity in
+            let mfront = Whnf.mmVarToMFront loc mmV mtyp in
+            comptypToMQuery' (tau', i-1) (LF.MDot (mfront, ms))
+              ((x, (loc, mfront)) :: xs)
+         | LF.CTyp cid_opt ->
+            comptypToMQuery' (tau', i-1) ms xs)
       | Comp.TypPiBox (_, _, tau') when i = 0 ->
          (((comptypToCompGoal tau), ms), tau, ms, xs)
       | Comp.TypArr (loc, tau1, tau2) ->
@@ -719,26 +883,25 @@ module Index = struct
     in
     revIter regSgnClause typConstr
 
-  (* storeCompConst c = ()
+  (* storeCompValue c = ()
      Add a new entry in `compTTypes' for comptype constant c and fill the
      DynArray with the clause corresponding to the comp. theorem
      associated  with c.
    *)
 
-  let storeCompConst (cidTyp, typEntry) =
-    (* TODO:: Typ or CompTyp?? *)
+  let storeCompValue (cidTyp, typEntry) =
     let typConst = addComp cidTyp in
     addSgnClause typConst (compileSgnCClause cidTyp)
 
 
-  (* storeCompTypConst c = ()
-     Add a new entry in `Comptypes' for comptype constant c and fill the
-     DynArray with the clauses corresponding to the comp. term constants
-     associated  with c.
+  (* storeCompConst c = ()
+     Add a new entry in `Comptypes' for computation level constructor c and fill the
+     DynArray with the clauses corresponding to the constructor
+     (defined by keywords `Stratified' and `Inductive') associated  with c.
    *)
 
 
-  let storeCompTypConst (cidCompTyp, compTypEntry) =
+  let storeCompConst (cidCompTyp, compTypEntry) =
     let ctypConstr = !(compTypEntry.Cid.CompTyp.Entry.constructors) in
     let ctypConst = addCompTyp cidCompTyp in
     let regSgnCClause cidCompTerm =
@@ -753,7 +916,6 @@ module Index = struct
     in
     revIter regSgnCClause ctypConstr
 
-
   (* storeQuery (p, (tA, i), cD, e, t) = ()
      Invariants:
        i = # of abstracted EVars in tA
@@ -763,39 +925,39 @@ module Index = struct
     querySub := s;
     addSgnQuery (p, tA, tA', q, cD, xs, e, t)
 
-  (* robStore () = ()
+  (* rob_LF_Store () = ()
      Store all type constants in the `types' table.
   *)
-  let robStore () =
+  let rob_LF_Store () =
     try
       List.iter storeTypConst (Cid.Typ.current_entries ())
     with
     | _ -> ()
 
-  (* robSecondStore () = ()
-     Store all comptype theorem constants in the `compTTypes' table.
+  (* rob_CompValue_Store () = ()
+     Store all computation level constant in the `compTTypes' table.
   *)
-  let robSecondStore () =
+  let rob_CompValue_Store () =
     try
-      List.iter storeCompConst (Cid.Comp.current_entries ())
+      List.iter storeCompValue (Cid.Comp.current_entries ())
     with
     | _ -> ()
 
-  (* robThirdStore () = ()
-     Store all  comptyp Inductive constants in the `compITypes' table.
+  (* rob_CompConst_Store () = ()
+     Store all computation level constructors from
+     inductive and stratified data types in the `compITypes' table.
   *)
-  let robThirdStore () =
+  let rob_CompConst_Store () =
     try
-      List.iter storeCompTypConst (Cid.CompTyp.current_entries ())
+      List.iter storeCompConst (Cid.CompTyp.current_entries ())
     with
     | _ -> ()
 
   (* Store all signature constants in their respective tables *)
-  let robAll () =
-    robStore ();
-    robSecondStore ();
-    robThirdStore ()
-
+  let robStore () =
+    rob_LF_Store ();
+    rob_CompValue_Store ();
+    rob_CompConst_Store ()
 
   (* iterSClauses f c = ()
      Iterate over all signature clauses associated with c.
@@ -832,7 +994,7 @@ module Index = struct
   let singleQuery (p, (tA, i), cD, e, t) f =
     let (q, tA', s, xs) = (Convert.typToQuery LF.Empty LF.Null (tA, i)) in
     querySub := s;
-    robAll ();
+    robStore ();
     let bchatter = !Options.chatter in
     Options.chatter := 0;
     let sgnQ =
@@ -3382,7 +3544,7 @@ let runLogic () =
   then
     begin
       (* Transform signature into clauses. *)
-      Index.robAll ();
+      Index.robStore ();
       (* Optional: Print signature clauses. *)
       if !Options.chatter >= 4
       then Printer.printAllSig ();
@@ -3398,7 +3560,7 @@ let runLogicOn n (tA, i) cD e t  =
 
 let prepare () =
   Index.clearIndex ();
-  Index.robAll ();
+  Index.robStore ();
 
 (*
 let runLogicOn n (cD, cPsi, tA, i) e t  =

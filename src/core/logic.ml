@@ -1472,6 +1472,10 @@ module CSolver = struct
                                                    postion of the
                                                    correspoding type
                                                    declaration in cG    *)
+  (* Whether or not to blur on this iteration *)
+  type blur_it =
+    | Blur
+    | No_Blur
 
   let noLoc = Syntax.Loc.ghost
 
@@ -2089,9 +2093,14 @@ module CSolver = struct
     in
     Context.map (fun d -> fix_ihctx d) ihctx
 
+  let rec mSpineToPSpine mS =
+    match mS with
+    | Comp.MetaNil -> Comp.PatNil
+    | Comp.MetaApp (mO, mT, mS', plicity) ->
+       Comp.PatApp (noLoc, (Comp.PatMetaObj (noLoc, mO)), mSpineToPSpine mS')
 
   let rec cgSolve' (cD: LF.mctx) (cG: Comp.gctx) (cPool: cPool)
-            (mq:mquery) (sc: Comp.exp -> unit) (currDepth: bound) (maxDepth: bound) =
+            (mq:mquery) (sc: Comp.exp -> unit) (currDepth: bound) (maxDepth: bound) (blur: blur_it) =
 
     (* fprintf std_formatter
           "No solution found: Maximum depth reached! -- \
@@ -2111,7 +2120,7 @@ module CSolver = struct
     else
     begin
       let ((cg:comp_goal), (ms:LF.msub)) = mq in
-      uniform_right cD cG cPool cg ms sc currDepth maxDepth
+      uniform_right cD cG cPool cg ms sc currDepth maxDepth blur
     end
 
   (* Stable phase : cD ; cG >> . ==> e : Q
@@ -2190,7 +2199,7 @@ module CSolver = struct
          (fun e ->
            solveSubGoals cD cG cPool (sg', k) ms mV
              (fun e' -> sc (Comp.Apply (noLoc, e', e))) fS currDepth maxDepth)
-         (succ currDepth) maxDepth
+         (succ currDepth) maxDepth No_Blur
 
 
   and solveCClauseSubGoals cD cG cPool cid sg ms mV sc fS currDepth maxDepth =
@@ -2210,7 +2219,7 @@ module CSolver = struct
          (fun e ->
            solveCClauseSubGoals cD cG cPool cid sg' ms mV
              (fun e' -> sc (Comp.Apply (noLoc, e', e))) fS currDepth maxDepth)
-             (succ currDepth) maxDepth
+             (succ currDepth) maxDepth No_Blur
 
   and solveTheoremSubGoals cD cG cPool cid sg ms mV sc fS currDepth maxDepth =
      (* fprintf std_formatter "CID = %a \n"
@@ -2229,7 +2238,7 @@ module CSolver = struct
          (fun e ->
            solveTheoremSubGoals cD cG cPool cid sg' ms mV
              (fun e' -> sc (Comp.Apply (noLoc, e', e))) fS currDepth maxDepth)
-            (succ currDepth) maxDepth
+            (succ currDepth) maxDepth No_Blur
 
   (* We focus on one of the computation-type theorems *)
   and focusT cD cG cPool cg ms sc currDepth maxDepth =
@@ -2322,68 +2331,6 @@ module CSolver = struct
          focusG cD cG cPool' cPool_all cg ms sc currDepth maxDepth
     | Full (cPool', cc) -> focusG cD cG cPool' cPool_all cg ms sc currDepth maxDepth
 
-      (*
-  (* creates the set-up to build the branch corresponding to the current
-     constructor/case.  *)
-  and solveBranch cD cG cPool cg (name, con) con_list b_list ms sc currD maxD =
- (*   let termEntry = Store.Cid.Term.get con in
-    let tA = termEntry.Store.Cid.Term.Entry.typ in *)
-    let hd = LF.Const con in
-    let norm = LF.Root (noLoc, hd, LF.Nil, Plicity.explicit) in
-    let pattern = Comp.PatMetaObj (noLoc,(noLoc,
-                    LF.ClObj ((None, 0),
-                      LF.MObj (norm)))) in
-    let makeBranch =
-      (fun e -> Comp.Branch
-                  (noLoc, LF.Empty, (cD, cG), pattern, LF.MShift 0, e))
-    in
-    cgSolve' cD cG cPool (cg, ms)
-      (fun e -> solveCases cD cG cPool cg (name, con_list) ms sc ((makeBranch e)::b_list) currD maxD) currD maxD
-
-
-  and instMV cg n cD cG cPool =
-    (cD, LF.MShift 0, cG, cPool, cg)
-
-  (* solve the top case of the split;
-     when done, tests the returned branch list  *)
-  and solveCases cD cG cPool cg (name, constructors) ms sc b_list currD maxD =
-    match constructors with
-    | [] -> sc b_list
-    | con :: con_list ->
-      (* let termEntry = Store.Cid.Term.get con in
-       let tA = termEntry.Store.Cid.Term.Entry.typ in *)
-       let hd = LF.Const con in
-       let norm = LF.Root (noLoc, hd, LF.Nil, Plicity.explicit) in
-       let (cD', ms', cG', cPool', cg') = instMV cg norm cD cG cPool in
-       solveBranch cD' cG' cPool' cg' (name, con) con_list b_list ms' sc currD maxD
-
-  (* finds the mvar with the least constructors and "splits" on it;
-     tries to solve with that split.
-     if fails, splits on next smallest, ect.  *)
-  and msplit mvars cD cG cPool cg ms sc currD maxD =
-    match mvars with
-    | LF.Empty -> ();
-    | LF.Dec (mvars', _mv) ->
-       try
-         (let (ctyp_d, constructors) = least_cases mvars in
-          let LF.Decl (name, ctyp, dep) = ctyp_d in
-          let LF.ClTyp (cltyp, cPsi) = ctyp in
-          let hd = LF.FVar name in
-          let norm = LF.Root (noLoc, hd, LF.Nil, Plicity.explicit) in
-          let mf = LF.ClObj (Context.dctxToHat cPsi, LF.MObj norm) in
-          let mo = (noLoc, mf) in
-          let var = Comp.AnnBox (mo, ctyp) in
-          let sc' =
-            (fun e ->
-              sc (Comp.Case (noLoc, Comp.PragmaCase, var, e)))
-          in
-          solveCases cD cG cPool cg (name, constructors) ms sc' [] currD maxD)
-       with
-       | Failure _ ->
-          msplit mvars' cD cG cPool cg ms sc currD maxD
-
-          *)
-
   and focus cD cG cPool cg ms sc currDepth maxDepth =
     (*printf "FOCUS \n";
     let cg' = normCompGoal (cg, ms) in
@@ -2434,7 +2381,69 @@ module CSolver = struct
        focusG cD cG cPool cPool cg ms sc currDepth maxDepth;
        focusT cD cG cPool cg ms sc currDepth maxDepth;
 
+  and solveGblur cD cG cPool (sg, k) ms sc fS cDepth mDepth =
+    match sg with
+    | Proved ->
+       let i = (Comp.Var (noLoc, k)) in
+       let i' = fS i in
+       let i'' = Whnf.cnormExp (i', LF.MShift 0) in
+       sc i''
+    | Solve (sg', cg') ->
+       try
+         focus cD cG cPool cg' ms
+           (fun e -> solveGblur cD cG cPool (sg', k) ms
+                     (fun i -> sc (Comp.Apply (noLoc, i, e)))
+                     fS cDepth mDepth)
+           (Some 0) (Some 0)
+       with
+       | AbortMQuery s -> printf "%s\n" s
 
+  and blurGamma cD cG cPool cPool_all cg ms sc cDepth mDepth =
+    match cPool with
+    | Emp -> uniform_left cD cG cPool Emp cg ms sc cDepth mDepth No_Blur
+    | Full (cPool',({cHead = hd;
+                     cMVars;
+                     cSubGoals = (Solve (_,_)) as sg}, k', Boxed))
+         when cMVars == LF.Empty ->
+       let fS = (fun s -> s) in
+       let n = Name.mk_name Name.NoName in
+       let name =
+         let names = Context.(names_of_mctx cD @ names_of_gctx cG) in
+         Name.gen_fresh_name names n
+       in
+       let pattern =
+         match hd with
+         | Comp.TypBox (_, meta_typ) ->
+            Comp.PatVar (noLoc, 1)
+         | Comp.TypBase (_, cid, mS) ->
+            (* TODO:: Not sure if this correct... *)
+            Comp.PatConst (noLoc, cid, mSpineToPSpine mS)
+       in
+       let cPool_all' = Full (shift_cPool cPool_all 1, ({cHead=hd;
+                                           cMVars=LF.Empty;
+                                           cSubGoals=Proved} , 1, Boxed)) in
+       let tdecl = Comp.CTypDecl(name, hd, true) in
+       let cG' = Whnf.extend_gctx cG (tdecl, LF.MShift 0) in
+       (try
+         solveGblur cD cG cPool_all (sg, k') ms
+           (fun i -> blurGamma cD cG' cPool' cPool_all' cg ms
+                       (fun e ->
+                         sc (Comp.Case (noLoc,
+                                        Comp.PragmaNotCase,
+                                        i,
+                                        [Comp.Branch (noLoc,
+                                                      LF.Empty,
+                                                      (cD, cG'),
+                                                      pattern,
+                                                      LF.MShift 0,
+                                                      e)])))
+                       cDepth mDepth)
+           fS (Some 0) (Some 0)
+       with
+       | AbortMQuery s -> printf "%s\n" s)
+
+    | Full (cPool', ({cHead = hd; cMVars; cSubGoals = sg}, k', _)) ->
+       blurGamma cD cG cPool' cPool_all cg ms sc cDepth mDepth
 
     (* uniform_left_ cD cG cG_ret cPool cPool_ret cg ms sc =
          (cD', cPool_ret, cG_ret, sc')
@@ -2491,7 +2500,7 @@ module CSolver = struct
      *)
 
 
-  and uniform_left cD cG cPool cPool_ret cg ms sc currDepth maxDepth =
+  and uniform_left cD cG cPool cPool_ret cg ms sc currDepth maxDepth blur =
  (*   printf "UNIFORM LEFT \n";
     let cg'= normCompGoal (cg, ms) in
     Printer.printState cD cG (cg') ms; *)
@@ -2501,7 +2510,13 @@ module CSolver = struct
     in
     match cPool with
     | Emp ->
-       focus cD cG cPool_ret cg ms sc currDepth maxDepth
+       (match blur with
+        (* We first see if any assumptions can be gained by burring *)
+        | Blur ->
+           blurGamma cD cG cPool_ret cPool_ret cg ms sc
+             currDepth maxDepth
+        | _ ->
+           focus cD cG cPool_ret cg ms sc currDepth maxDepth)
     | Full (cPool', ((({cHead = Comp.TypBox(m, r); cMVars = cmv;cSubGoals = Proved }, k', Boxed)) as cP)) ->
        (* In this case, we want to "unbox" the assumption and add it to
           the cD.
@@ -2541,11 +2556,11 @@ module CSolver = struct
        let cPool_ret' = prependToCPool (unbox cP) cPool_ret in
        let cPool_ret'' = cnormCPool (cPool_ret', LF.MShift 1) cD' in
        let cg' = normCompGoal (cg, (LF.MShift 1)) in
-       uniform_left cD' cG' cPool'' cPool_ret'' cg' ms' sc' currDepth maxDepth
+       uniform_left cD' cG' cPool'' cPool_ret'' cg' ms' sc' currDepth maxDepth blur
     | Full (cPool', x) ->
        (* Otherwise we leave the assumption in cG *)
        let cPool_ret' = prependToCPool x cPool_ret in
-       uniform_left cD cG cPool' cPool_ret' cg ms sc currDepth maxDepth
+       uniform_left cD cG cPool' cPool_ret' cg ms sc currDepth maxDepth blur
 
 
        (* uniform_right cD cG cPool cg ms sc =
@@ -2590,12 +2605,12 @@ module CSolver = struct
        *)
 
      (* First we break our goal down into an atomic one *)
-  and uniform_right cD cG cPool cg ms sc currDepth maxDepth =
+  and uniform_right cD cG cPool cg ms sc currDepth maxDepth blur =
     (*printf "UNIFORM RIGHT \n";
     Printer.printState cD cG cg ms;*)
     match cg with
     | Box (_) | Atomic (_) ->
-       uniform_left cD cG cPool Emp cg ms sc currDepth maxDepth
+       uniform_left cD cG cPool Emp cg ms sc currDepth maxDepth blur
     | Forall (tdecl, cg') ->
        (* In this case we gain an assumption in the meta-context *)
        let cD' = Whnf.extend_mctx cD (tdecl, ms) in
@@ -2605,7 +2620,7 @@ module CSolver = struct
        let sc' =
          (fun e ->
            sc (Comp.MLam (noLoc, name, e, Plicity.explicit))) in
-       uniform_right cD' cG' cPool' cg' (Whnf.mvar_dot1 ms) sc' currDepth maxDepth
+       uniform_right cD' cG' cPool' cg' (Whnf.mvar_dot1 ms) sc' currDepth maxDepth blur
     | Implies ((r, tdecl), cg') ->
        (* We gain an assumption for the computation context *)
        let cc = C.cResToCClause (r, ms) in
@@ -2615,11 +2630,11 @@ module CSolver = struct
        let sc' =
          (fun e ->
             sc (Comp.Fn (noLoc, name, e))) in
-       uniform_right cD cG' cPool' cg' ms sc' currDepth maxDepth
+       uniform_right cD cG' cPool' cg' ms sc' currDepth maxDepth blur
 
 
   let cgSolve cD cG mq sc maxDepth =
-    cgSolve' cD cG Emp mq sc None maxDepth
+    cgSolve' cD cG Emp mq sc None maxDepth Blur
 
 end
 

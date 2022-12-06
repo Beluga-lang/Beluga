@@ -34,7 +34,7 @@ module Solver : sig
 end
 
 module CSolver : sig
-  val cgSolve : LF.mctx -> Comp.gctx -> Comp.ihctx -> mquery -> (Comp.exp -> unit) -> bound -> (Comp.typ * Id.cid_prog option) -> unit
+  val cgSolve : LF.mctx -> Comp.gctx -> Comp.ihctx -> mquery -> (Comp.exp -> unit) -> (bound * bound * int) -> (Comp.typ * Id.cid_prog option * Comp.total_dec list) -> unit
 end
 val storeQuery : Name.t option -> LF.typ * Id.offset -> LF.mctx -> bound -> bound -> unit
 val runLogic : unit -> unit

@@ -27,14 +27,14 @@ module Frontend : sig
                       (Comp.exp option)
 end
 
+type bound = int option
+     
 module Solver : sig
-  val solve : LF.mctx -> LF.dctx -> query -> (LF.dctx * LF.normal -> unit) -> int option ->  unit
+  val solve : LF.mctx -> LF.dctx -> query -> (LF.dctx * LF.normal -> unit) -> bound -> unit
 end
 
-type bound = int option
-
 module CSolver : sig
-  val cgSolve : LF.mctx -> Comp.gctx -> mquery -> (Comp.exp -> unit) -> bound-> unit
+  val cgSolve : LF.mctx -> Comp.gctx -> Comp.ihctx -> mquery -> (Comp.exp -> unit) -> bound -> (Comp.typ * Id.cid_prog option) -> unit
 end
 val storeQuery : Name.t option -> LF.typ * Id.offset -> LF.mctx -> bound -> bound -> unit
 val runLogic : unit -> unit

@@ -186,7 +186,7 @@ let process_command
           Logic.Convert.comptypToMQuery (typ', k)
         in
         try
-          Logic.CSolver.cgSolve cDh cGh mquery
+          Logic.CSolver.cgSolve cDh cGh LF.Empty mquery
             begin
               fun e ->
                 HarpoonState.printf s "found solution: @[%a@]@,@?"
@@ -194,7 +194,7 @@ let process_command
               h.info.compSolution <- Some e;
               raise Logic.Frontend.Done
             end
-            (Some 999)
+            (Some 999) (skinnyCTyp, None)
         with
           | Logic.Frontend.Done ->
             HarpoonState.printf s "logic programming finished@,@?"

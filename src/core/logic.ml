@@ -1267,6 +1267,10 @@ module Solver = struct
   module C = Convert
   module I = Index
 
+  exception DepthReached of bound
+  exception End_Of_Search
+  exception NoSolution
+
   (* Dynamic Assumptions *)
   type dPool =                           (* dP ::=                  *)
     | Empty                              (*      | Empty            *)
@@ -1332,6 +1336,17 @@ module Solver = struct
        Psi, x1:_, x2:_, ... xk:_ |- ^k : Psi
   *)
   let shiftSub k = LF.Shift k
+
+  let succ x =
+    match x with
+    | None -> (Some 1)
+    | (Some i) -> (Some (i + 1))
+
+  let checkDepth x y =
+      match (x, y) with
+      | (Some i, Some j) -> i > j
+      | (Some i, None) -> false
+      | (None, _) -> false
 
   let uninstantiated hd =
       match hd with
@@ -1402,10 +1417,13 @@ module Solver = struct
        In the arguments to 'sc', 'u' refers to the universal
        context and 't' refers to a proof term.
   *)
-  let rec gSolve dPool cD (cPsi, k) (g, s) sc =
+  let rec gSolve dPool cD (cPsi, k) (g, s) sc (currDepth, maxDepth) =
+    if (checkDepth currDepth maxDepth)
+    then raise (DepthReached currDepth)
+    else
     match g with
     | Atom tA ->
-       matchAtom dPool cD (cPsi, k) (tA, s) sc
+       matchAtom dPool cD (cPsi, k) (tA, s) sc (currDepth, maxDepth)
 
     | Impl ((r, (LF.TypDecl (x, _) as tD)), g') ->
        (* extend the dynamic pool with the new assumption and prove the conclusion *)
@@ -1414,12 +1432,14 @@ module Solver = struct
        in
        gSolve dPool' cD (LF.DDec (cPsi, S.decSub tD s), k + 1) (g', S.dot1 s)
          (fun (u, tM) -> sc (u, LF.Lam (Syntax.Loc.ghost, x, tM)))
+         (currDepth, maxDepth)
 
     | All (LF.TypDecl (x, _) as tD, g') ->
        (* we *don't* get an assumption from a forall; it's just a parameter.
           So we just prove the conclusion in an extended context. *)
        gSolve dPool cD (LF.DDec (cPsi, S.decSub tD s), k + 1) (g', S.dot1 s)
          (fun (u, tM) -> sc (u, LF.Lam (Syntax.Loc.ghost, x, tM)))
+         (currDepth, maxDepth)
 
   (* Overall goal...
      cD ; cPsi         |- X <= u
@@ -1447,7 +1467,7 @@ module Solver = struct
     (* remove first curr_sub entries from cPhi *)
     let cPhi' = strengthen (cPhi, curr_sub) in
     match cD with
-    | LF.Empty -> raise NotImplementedYet
+    | LF.Empty -> raise NoSolution
     | LF.Dec (cD', LF.Decl (_, LF.CTyp (_), _, _)) ->
        solve_sub_delta (cD_all, cD', k+1, cPhi, dPool) (tA, s, curr_sub) (u, s_all) (goal, s_goal)
     | LF.Dec (cD', LF.Decl (_, LF.ClTyp (cltyp, cPsi), _, _)) ->
@@ -1511,7 +1531,7 @@ dprintf begin fun p ->
             end;
        if (* Check if all mvars have been instantiated *)
          check_sub (Whnf.normSub s_all) then s_all
-       else raise NotImplementedYet
+       else raise NoSolution
     | LF.Dot (LF.Head (((LF.MMVar ((mmvar, ms'), s)) as hd)), s')
          when (uninstantiated hd) ->
          let ctyp = mmvar.LF.typ in
@@ -1525,7 +1545,7 @@ dprintf begin fun p ->
             trivially_prove s' s_all' cD (goal, cPhi, s_goal) dPool u
               (curr_sub+1)
          with
-         | U.Failure _ | NotImplementedYet -> raise NotImplementedYet)
+         | U.Failure _ | NoSolution -> raise NoSolution)
 
     | LF.Dot (LF.Head (((LF.MPVar ((mmvar, ms'), s)) as hd)), s')
          when (uninstantiated hd) ->
@@ -1540,7 +1560,7 @@ dprintf begin fun p ->
             let s' = Whnf.normSub s' in
             trivially_prove s' s_all' cD (goal, cPhi, s_goal) dPool u (curr_sub+1)
          with
-         | U.Failure _ | NotImplementedYet -> raise NotImplementedYet)
+         | U.Failure _ | NoSolution -> raise NoSolution)
 
     | LF.Dot (LF.Head (((LF.MVar (LF.Inst mmvar, s)) as hd)), s')
          when (uninstantiated hd) ->
@@ -1555,7 +1575,7 @@ dprintf begin fun p ->
             let s' = Whnf.normSub s' in
             trivially_prove s' s_all' cD (goal, cPhi, s_goal) dPool u (curr_sub+1)
          with
-         | U.Failure _ | NotImplementedYet -> raise NotImplementedYet)
+         | U.Failure _ | NoSolution -> raise NoSolution)
     | LF.Dot (LF.Obj
                 (LF.Root
                    (loc, ((LF.MVar (LF.Inst mmvar, s)) as hd), sP, pl)), s')
@@ -1571,7 +1591,7 @@ dprintf begin fun p ->
             let s' = Whnf.normSub s' in
             trivially_prove s' s_all' cD (goal, cPhi, s_goal) dPool u (curr_sub+1)
          with
-         | U.Failure _ | NotImplementedYet -> raise NotImplementedYet)
+         | U.Failure _ | NoSolution -> raise NoSolution)
     | LF.Dot (LF.Obj
                 (LF.Root
                    (loc, ((LF.MMVar ((mmvar, ms'), s)) as hd), sP, pl)), s')
@@ -1587,7 +1607,7 @@ dprintf begin fun p ->
             let s' = Whnf.normSub s' in
             trivially_prove s' s_all' cD (goal, cPhi, s_goal) dPool u (curr_sub+1)
          with
-         | U.Failure _ | NotImplementedYet -> raise NotImplementedYet)
+         | U.Failure _ | NoSolution -> raise NoSolution)
     | LF.Dot (LF.Obj
                 (LF.Root
                    (loc, ((LF.MPVar ((mmvar, ms'), s)) as hd), sP, pl)), s')
@@ -1603,7 +1623,7 @@ dprintf begin fun p ->
             let s' = Whnf.normSub s' in
             trivially_prove s' s_all' cD (goal, cPhi, s_goal) dPool u (curr_sub+1)
          with
-         | U.Failure _ | NotImplementedYet -> raise NotImplementedYet)
+         | U.Failure _ | NoSolution -> raise NoSolution)
     | LF.Dot (_, s') ->
        trivially_prove s' s_all cD (goal, cPhi, s_goal) dPool u (curr_sub+1)
 
@@ -1619,7 +1639,7 @@ dprintf begin fun p ->
        Instatiation of MVars in s and dPool.
        Any effect (sc M) might have.
   *)
-  and matchAtom dPool cD (cPsi, k) (tA, s) sc =
+  and matchAtom dPool cD (cPsi, k) (tA, s) sc (currDepth, maxDepth) =
     (* some shorthands for creating syntax *)
     let root x = LF.Root (Syntax.Loc.ghost, x, LF.Nil, Plicity.explicit) in
     let pvar k = LF.PVar (k, LF.Shift 0) in
@@ -1656,15 +1676,17 @@ dprintf begin fun p ->
                      in
                      sc (u, tM)
                      end
+                   (currDepth, maxDepth)
                    end
                  end
              with
-             | U.Failure _ -> ()
+             | U.Failure _ | End_Of_Search | DepthReached _ -> ()
            end;
          matchDProg dPool')
 
       | Empty ->
-         matchSig (cidFromAtom tA)
+         matchSig (cidFromAtom tA);
+         raise End_Of_Search
 
     (* Decides whether the given Sigma type can solve the
      * goal type by trying all the projections.
@@ -1793,18 +1815,19 @@ dprintf begin fun p ->
                     then
                     let psi = get_ctx_var cPsi' in
                       sc (psi, LF.Clo (root (mvar k), s''))
-                    else raise NotImplementedYet
+                    else raise NoSolution
 
                  | LF.STyp _ ->
                     (* ignore substitution variables for now *)
                     ()
                  end
              with
-             | U.Failure s -> ()
+             | U.Failure _ | U.Error _ | NotImplementedYet | NoSolution
+               | DepthReached _ | End_Of_Search -> ()
            end;
-           loop cD' (k + 1)
-        | LF.Dec (cD', _dec) ->
-           loop cD' (k + 1)
+           loop cD'' (k + 1)
+        | LF.Dec (cD'', _dec) ->
+           loop cD'' (k + 1)
       in
       loop cD0 1
 
@@ -1842,9 +1865,10 @@ dprintf begin fun p ->
               in
               sc (u, tM)
               end
+              (currDepth, maxDepth)
             end
         with
-        | U.Failure _ -> ()
+        | U.Failure _ | End_Of_Search | DepthReached _ -> ()
       end
 
     in
@@ -1872,7 +1896,7 @@ dprintf begin fun p ->
        Instatiation of MVars in dPool and g[s].
        Any effect of (sc S).
    *)
-  and solveSubGoals dPool cD (cPsi, k) (cG, s) sc =
+  and solveSubGoals dPool cD (cPsi, k) (cG, s) sc (currDepth, maxDepth) =
     match cG with
     | True -> sc (cPsi, [])
     | Conjunct (cG', g) ->
@@ -1880,7 +1904,8 @@ dprintf begin fun p ->
          (fun (u, tM) ->
            solveSubGoals dPool cD (cPsi, k) (cG', s)
              (fun (v, tS) ->  sc (v, tM :: tS))
-         )
+             (currDepth, maxDepth))
+         (succ currDepth, maxDepth)
 
   (* solve (g, s) sc = ()
      Invariants:
@@ -1890,8 +1915,9 @@ dprintf begin fun p ->
      Effects:
        Same as gSolve.
   *)
-  let solve cD cPsi (g, s) sc =
+  let solve cD cPsi (g, s) sc d =
     gSolve Empty cD (cPsi, Context.dctxLength cPsi) (g, s) sc
+      (None, d)
 
 end
 
@@ -2207,40 +2233,6 @@ module CSolver = struct
        let hd' = Whnf.cnormCTyp (hd, ms) in
        let sg' = normSubGoals (sg, ms) cD in
        Full (cPool'', ({cHead = hd'; cMVars = mV; cSubGoals = sg'}, _k, _s))
-
-   (*
-  (* mctx -> ctyp_decl *)
-  let least_cases cD =
-    let consOfTyp cltyp =
-      let typ =
-        match cltyp with
-        | LF.MTyp tA | LF.PTyp tA -> tA
-      in
-      let cid = Solver.cidFromAtom typ in
-      let typEntry = Store.Cid.Typ.get cid in
-      let typConstructors = !(typEntry.Store.Cid.Typ.Entry.constructors) in
-      (List.length typConstructors, typConstructors)
-    in
-    let rec find_max cD cltyp_d k lst =
-      match cD with
-      | LF.Empty -> (cltyp_d, lst)
-      | LF.Dec (cD', ((LF.Decl (name, LF.ClTyp (cltyp', _cPsi), _)) as cltyp_d')) ->
-         let (k', lst') = consOfTyp cltyp' in
-         if k' < k then
-           find_max cD' cltyp_d' k' lst'
-         else
-           find_max cD' cltyp_d k lst
-    in
-    match cD with
-    | LF.Empty -> raise NotImplementedYet
-    | LF.Dec (cD', ((LF.Decl (name, LF.ClTyp (cltyp, _cPsi), _)) as cltyp_d)) ->
-       let (k, lst) = consOfTyp cltyp in
-       find_max cD' cltyp_d k lst
-    *)
-
-  (* rev_ms ms k =
-       reverses ms with first sub MShift k
- *)
 
   let rev_ms ms k =
     let rec rev ms ms_ret =
@@ -2801,7 +2793,7 @@ module CSolver = struct
            let meta_typ = LF.ClTyp (cltyp, cPsi') in
            sc (Comp.Box(noLoc, meta_obj, meta_typ)))
        in
-       Solver.solve cD cPsi (g', S.id) sc';
+       Solver.solve cD cPsi (g', S.id) sc' maxDepth;
        focusG cD cG cPool cPool cg ms sc currDepth maxDepth;
        focusT cD cG cPool cg ms sc currDepth maxDepth;
      (*  msplit cD cD cG cPool cg ms sc currDepth maxDepth; *)
@@ -2817,7 +2809,7 @@ module CSolver = struct
            let meta_typ = LF.ClTyp (cltyp, cPsi') in
            sc (Comp.Box(noLoc, meta_obj, meta_typ)))
        in
-       Solver.solve cD cPsi (g, S.id) sc';
+       Solver.solve cD cPsi (g, S.id) sc' maxDepth;
        focusG cD cG cPool cPool cg ms sc currDepth maxDepth;
        focusT cD cG cPool cg ms sc currDepth maxDepth;
     | Atomic (name, spine) ->
@@ -3201,7 +3193,7 @@ module Frontend = struct
         if !Options.chatter >= 1
         then P.printQuery sgnQuery;
         try
-          Solver.solve sgnQuery.cD LF.Null sgnQuery.query scInit;
+          Solver.solve sgnQuery.cD LF.Null sgnQuery.query scInit (Some 100);
           (* Check solution bounds. *)
           checkSolutions sgnQuery.expected sgnQuery.tries !solutions
         with

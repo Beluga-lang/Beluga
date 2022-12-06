@@ -295,6 +295,7 @@ let solvelfhole =
                      if !n = 10
                      then raise Logic.Frontend.Done
                    end
+                   (Some 100)
                with
                | Logic.Frontend.Done -> ()
                | e -> raise e

@@ -220,6 +220,7 @@ let process_command
            h.info.lfSolution <- Some (tM, LF.Shift 0);
            raise Logic.Frontend.Done
            end
+           (Some 100)
        with
        | Logic.Frontend.Done ->
           HarpoonState.printf s "logic programming finished@,@?"

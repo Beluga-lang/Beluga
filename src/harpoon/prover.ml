@@ -194,7 +194,7 @@ let process_command
               h.info.compSolution <- Some e;
               raise Logic.Frontend.Done
             end
-            (Some 999) (skinnyCTyp, None)
+            (Some 999, None, 2) (skinnyCTyp, None, Lazy.force mfs)
         with
           | Logic.Frontend.Done ->
             HarpoonState.printf s "logic programming finished@,@?"

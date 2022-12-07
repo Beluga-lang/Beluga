@@ -1193,26 +1193,6 @@ module Printer = struct
     printCompSignature ();
     printCompConstSignature ()
 
- (* Prints the current state of proof loop
-    (used for debugging) *)
-
-  (* let printState cD cG cg ms =
-    let fmt_ppr_gctx cD ppf cG =
-      P.fmt_ppr_cmp_gctx cD P.l0 ppf cG
-    in
-    let fmt_ppr_mctx ppf cD =
-      P.fmt_ppr_lf_mctx P.l0 ppf cD
-    in
-    fprintf std_formatter "Current State: \n
-                 cD = %a \n
-                 cG = %a \n
-                 goal = %a \n
-                 ms = %a \n"
-        (fmt_ppr_mctx) cD
-        (fmt_ppr_gctx cD) cG
-        (fmt_ppr_cmp_goal cD) (cg, S.id)
-        (Pretty.Int.DefaultPrinter.fmt_ppr_lf_msub cD Pretty.Int.DefaultPrinter.l0) ms *)
-
 end
 
 module Solver = struct
@@ -2239,6 +2219,59 @@ module CSolver = struct
     | LF.Dec (cG', Comp.CTypDecl (name, _, _)) when k == 1 -> name
     | LF.Dec (cG', Comp.CTypDecl (name, _, _)) ->
        get_name (k-1) cG'
+
+  let printCPool cD cG ppf cPool =
+    let rec full_cD cD' cD_ret =
+      match cD' with
+      | LF.Empty -> cD_ret
+      | LF.Dec (cD'', decl) -> full_cD cD'' (LF.Dec (cD_ret, decl))
+    in
+    let rec list_of_cPool =
+      function
+        | Emp -> []
+        | Full (cPool', (cc, k, Boxed)) ->
+           (get_name k cG, cc) :: list_of_cPool cPool'
+        | Full (cPool', (cc, _, Unboxed)) ->
+           list_of_cPool cPool'
+    in
+    fprintf ppf "@[<v>%a@]"
+      (pp_print_list ~pp_sep: pp_print_cut
+         (fun ppf (x, sCCl) ->
+           fprintf ppf " @[%a : %a %a@]@,%a@]"
+             Id.print x
+             (P.fmt_ppr_mctx) (sCCl.cMVars)
+             (P.fmt_ppr_csubgoals (full_cD (rev_mctx sCCl.cMVars) cD))
+             (sCCl.cSubGoals)
+             (P.fmt_ppr_cmp_typ (full_cD (rev_mctx sCCl.cMVars) cD))
+             (sCCl.cHead)))
+      (list_of_cPool (rev_cPool cPool))
+
+  (* Prints the current state of proof loop
+    (used for debugging) *)
+  let printState cD cG cPool cIH cg ppf ms =
+    let ms = Whnf.cnormMSub ms in
+    let cg' = normCompGoal (cg, ms) in
+    match cIH with
+    | LF.Empty ->
+       fprintf ppf
+         "Current State: @;
+          @[<h 0> %a@] @; @[<h 0> ;  %a@] @; @[<h 0> |-  %a@] @.
+          @[<h 2> ms = %a@]  @."
+         (P.fmt_ppr_mctx) cD
+         (printCPool cD cG) cPool
+         (P.fmt_ppr_cmp_goal cD) (cg', S.id)
+         (DP.fmt_ppr_lf_msub cD DP.l0) ms
+    | _ ->
+       fprintf ppf
+         "Current State WITH IH: \n
+          @[<h 0> %a@] @; @[<h 0> ;  %a@] @; @[<h 0> |-  %a@] @.
+          @[<h 2> cIH = %a@] @.
+          @[<h 2> ms = %a@] @."
+         (P.fmt_ppr_mctx) cD
+         (printCPool cD cG) cPool
+         (P.fmt_ppr_cmp_goal cD) (cg', S.id)
+         (P.fmt_ppr_cmp_ihctx cD cG) cIH
+         (DP.fmt_ppr_lf_msub cD DP.l0) ms
 
   (* reverses ms with head MShift k *)
   let rev_ms ms k =
@@ -3963,9 +3996,11 @@ module CSolver = struct
        let e = Whnf.cnormExp (e, LF.MShift 0) in
        sc e
     | Solve (sg', cg') ->
-        (*printf "solve gamma SG \n";
-        let cg = normCompGoal (cg', ms) in
-        Printer.printState cD cG cg ms;*)
+       dprintf
+         begin fun p ->
+         p.fmt "Solve Assumption's sub goals, %a"
+           (printState cD cG cPool cIH cg') ms
+         end;
        cgSolve' (cD, cD_a) (cG, cPool, cG_a) cIH (cg', ms)
          (fun e ->
            solveSubGoals (cD, cD_a) (cG, cPool, cG_a) cIH (sg', k) ms
@@ -3988,9 +4023,11 @@ module CSolver = struct
        let e = Whnf.cnormExp (e, LF.MShift 0) in
        sc e
     | Solve (sg', cg') ->
-       (*printf "solve sig SG \n";
-       let cg = normCompGoal (cg', ms) in
-       Printer.printState cD cG cg ms;*)
+       dprintf
+         begin fun p ->
+         p.fmt "Solve Constant's sub goals, %a"
+           (printState cD cG cPool cIH cg') ms
+         end;
        cgSolve' (cD, cD_a) (cG, cPool, cG_a) cIH (cg', ms)
          (fun e ->
            solveCClauseSubGoals (cD, cD_a) (cG, cPool, cG_a) cIH cid sg' ms
@@ -4685,7 +4722,7 @@ module CSolver = struct
        (try
           Solver.solve cD cPsi (g', S.id) sc' (Some 3);
         with
-        | Solver.End_Of_Search | Solver.DepthReached _ ->    
+        | Solver.End_Of_Search | Solver.DepthReached _ ->
            focusG (cD, cD_a) (cG, cPool, cPool, cG_a) cIH cg ms sc
              (currDepth, maxDepth, currSplitDepth, maxSplitDepth)
              (thm, td, thm_cid);
@@ -5762,8 +5799,8 @@ module Frontend = struct
       match invert with
       | 2 -> ind_index theorem 1
       | _ -> None
-    in  
-      
+    in
+
     (try
        CSolver.cgSolve cD cG cIH' mquery scInit (depth, get_ind_index theorem invrt, invrt) (theorem, Some cid, mfs);
        raise NotImplementedYet

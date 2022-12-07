@@ -28,7 +28,7 @@ module Frontend : sig
 end
 
 type bound = int option
-     
+
 module Solver : sig
   val solve : LF.mctx -> LF.dctx -> query -> (LF.dctx * LF.normal -> unit) -> bound -> unit
 end

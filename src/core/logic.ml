@@ -1356,7 +1356,14 @@ module Solver = struct
   *)
   let rec gSolve dPool cD (cPsi, k) (g, s) sc (currDepth, maxDepth) =
     if (checkDepth currDepth maxDepth)
-    then raise (DepthReached currDepth)
+    then
+      begin
+        dprintf
+          begin fun p ->
+          p.fmt "[logic] [gSolve] DEPTH REACHED"
+          end;
+        raise (DepthReached currDepth)
+      end
     else
     match g with
     | Atom tA ->
@@ -1596,7 +1603,7 @@ dprintf begin fun p ->
                C.dctxToSub cD cPsi (dCl.eVars, shiftSub (k - k'))
                  (fun tS -> tS) in
              (* Trail to undo MVar instantiations. *)
-             try
+             (try
                trail
                  begin fun () ->
                  unify cD cPsi (tA, s) (dCl.tHead, s')
@@ -1617,9 +1624,11 @@ dprintf begin fun p ->
                    end
                  end
              with
-             | U.Failure _ | End_Of_Search | DepthReached _ -> ()
-           end;
-         matchDProg dPool')
+             | U.Failure _ | End_Of_Search | DepthReached _ -> ());
+             matchDProg dPool'
+           end
+          else
+            matchDProg dPool')
 
       | Empty ->
          matchSig (cidFromAtom tA);
@@ -3906,11 +3915,6 @@ module CSolver = struct
             (currDepth, maxDepth, currSplitDepth, maxSplitDepth)
             (ind, thm, td, thm_cid) (blur: blur_it) =
 
-    (* fprintf std_formatter
-          "No solution found: Maximum depth reached! -- \
-          Current Depth %a , Maximum Depth allowed %a \n"
-          Printer.fmt_ppr_bound currDepth
-          Printer.fmt_ppr_bound maxDepth; *)
     if (checkDepth currDepth maxDepth)
     then
       (dprintf
@@ -3919,7 +3923,18 @@ module CSolver = struct
          end;
       raise (DepthReached currDepth))
     else
-      let ((cg:comp_goal), (ms:LF.msub)) = mq in
+      let (cg, ms) = mq in
+      let (d1, d2) = match (currDepth, maxDepth) with
+        | (Some k, None) -> (k, 0)
+        | (Some k1, Some k2) -> (k1, k2)
+      in
+      dprintf
+        begin fun p ->
+        p.fmt
+          "ENTERING LOOP- CURRENT D = %d, MAX = %d"
+           d1
+           d2
+         end;
       try
         uniform_right (cD, cD_a) (cG, cPool, cG_a) cIH cg ms sc
           (currDepth, maxDepth, currSplitDepth, maxSplitDepth)
@@ -4079,8 +4094,7 @@ module CSolver = struct
          p.fmt "Solve I.H.'s sub goals, %a"
            (printState cD cG cPool cIH cg') ms
          end;
-       try
-         cgSolve' (cD, cD_a) (cG, cPool, cG_a) cIH (cg', ms)
+       cgSolve' (cD, cD_a) (cG, cPool, cG_a) cIH (cg', ms)
          (fun e ->
            solveIhSubGoals (cD, cD_a) (cG, cPool, cG_a) cIH i sg' ms
              (fun e' -> sc (Comp.Apply (noLoc, e', e))) fS
@@ -4088,9 +4102,6 @@ module CSolver = struct
              (thm, td, thm_cid))
          (currDepth, maxDepth, currSplitDepth, maxSplitDepth)
          (None, thm, td, thm_cid) No_Blur
-       with
-       | DepthReached b -> raise (DepthReached b)
-       | End_Of_Search -> raise End_Of_Search
 
   (* We focus on one of the computation assumptions in the Induction Hypotheses  *)
   and focusIH (cD, cD_a) (cG, cPool, cG_a) (cIH, cIH_all) cg ms sc
@@ -4169,7 +4180,7 @@ module CSolver = struct
                      (thm, td, thm_cid))
               end
          with
-         | U.Failure _ -> ()))
+         | U.Failure _ | DepthReached _ | End_Of_Search -> ()))
       else
         ()
     in
@@ -4201,7 +4212,7 @@ module CSolver = struct
                    (thm, td, thm_cid))
             end
          with
-         | U.Failure _ -> ())
+         | U.Failure _ | DepthReached _ | End_Of_Search -> ())
     in
     I.iterISClauses (fun w -> matchSig w sc) cidTyp
 
@@ -4255,7 +4266,7 @@ module CSolver = struct
                    (thm, td, thm_cid))
              end
          with
-         | U.Failure _ -> ());
+         | U.Failure _ | DepthReached _ | End_Of_Search -> ());
          focusG (cD, cD_a) (cG, cPool', cPool_all, cG_a) cIH cg ms sc
            (currDepth, maxDepth, currSplitDepth, maxSplitDepth)
            (thm, td, thm_cid)
@@ -4331,18 +4342,14 @@ module CSolver = struct
               (None, thm, td, cid)
            with
            | DepthReached _ | End_Of_Search ->
-              try
-                (* We then carry on with our loop *)
-                dprintf
-                begin fun p ->
-                p.fmt "Carry on..."
-                end;
-                 cgSolve' (cD, cD_a) (cG, cPool, cG_a) cIH_b (cg, ms_b) sc
-                   (currDepth, maxDepth, currSplitDepth, maxSplitDepth)
-                   (None, thm, td, cid) Blur
-               with
-               | DepthReached b -> raise (DepthReached b)
-               | End_Of_Search -> raise End_Of_Search
+              (* We then carry on with our loop *)
+              dprintf
+              begin fun p ->
+              p.fmt "Carry on..."
+              end;
+              cgSolve' (cD, cD_a) (cG, cPool, cG_a) cIH_b (cg, ms_b) sc
+                 (currDepth, maxDepth, currSplitDepth, maxSplitDepth)
+                 (None, thm, td, cid) Blur
 
   (* Split on the given split variable in ind; if none, split on the (m)var
      that provides the least number of cases                                *)
@@ -4908,16 +4915,12 @@ module CSolver = struct
          p.fmt "Solve Assumption's sub goals --blur, %a"
            (printState cD cG cPool cIH cg') ms
          end;
-       try
-         focus (cD, cD_a) (cG, cPool, cG_a) cIH cg' ms
-           (fun e -> solveGblur (cD, cD_a) (cG, cPool, cG_a) cIH (sg', k) ms
-                     (fun i -> sc (Comp.Apply (noLoc, i, e)))
-                     fS (cDepth, mDepth, currSplitDepth, maxSplitDepth)
-                     (ind, thm, td, thm_cid))
-           (Some 0, Some 0, Some 0, Some 0) (None, thm, td, thm_cid)
-       with
-       | DepthReached b -> raise (DepthReached b)
-       | End_Of_Search -> raise End_Of_Search
+       focus (cD, cD_a) (cG, cPool, cG_a) cIH cg' ms
+         (fun e -> solveGblur (cD, cD_a) (cG, cPool, cG_a) cIH (sg', k) ms
+                   (fun i -> sc (Comp.Apply (noLoc, i, e)))
+                   fS (cDepth, mDepth, currSplitDepth, maxSplitDepth)
+                   (ind, thm, td, thm_cid))
+         (Some 0, Some 0, Some 0, Some 0) (None, thm, td, thm_cid)
 
   and blurIH (cD, cD_a) (cG, cPool, cG_a) (cIH, cIH_all) cg ms sc
                (cDepth, mDepth, currSplitDepth, maxSplitDepth)
@@ -5193,13 +5196,9 @@ module CSolver = struct
               declared. If so, we save time running through the loop and
               immediatley split. *)
             | None | Some 0 ->
-               (try
-                  focus (cD, cD_a) (cG, cPool_ret, cG_a) cIH cg ms sc
-                    (currDepth, maxDepth, currSplitDepth, maxSplitDepth)
-                    (ind, thm, td, thm_cid)
-                with
-                | End_Of_Search  -> raise End_Of_Search
-                | DepthReached b -> raise (DepthReached b))
+               focus (cD, cD_a) (cG, cPool_ret, cG_a) cIH cg ms sc
+                 (currDepth, maxDepth, currSplitDepth, maxSplitDepth)
+                 (ind, thm, td, thm_cid)
              | _ ->
                (try
                   split (cD, cD_a) (cG, cPool_ret, cG_a) cIH cg ms sc
@@ -5252,24 +5251,16 @@ module CSolver = struct
        let cPool_ret' = prependToCPool (unbox cP) cPool_ret in
        let cPool_ret'' = cnormCPool (cPool_ret', LF.MShift 1) in
        let cg' = normCompGoal (cg, (LF.MShift 1)) in
-       (try
-          uniform_left (cD', cD_a') (cG', cPool'', cPool_ret'', cG_a') cIH cg' ms'
-            sc' (currDepth, maxDepth, currSplitDepth, maxSplitDepth)
-            (ind, thm, td, thm_cid) blur
-        with
-        | End_Of_Search  -> raise End_Of_Search
-        | DepthReached b -> raise (DepthReached b))
+       uniform_left (cD', cD_a') (cG', cPool'', cPool_ret'', cG_a') cIH cg'
+         ms' sc' (currDepth, maxDepth, currSplitDepth, maxSplitDepth)
+         (ind, thm, td, thm_cid) blur
 
     | Full (cPool', x) ->
        (* Otherwise we leave the assumption in cG *)
        let cPool_ret' = prependToCPool x cPool_ret in
-       try
-         uniform_left (cD, cD_a) (cG, cPool', cPool_ret', cG_a) cIH cg ms sc
-           (currDepth, maxDepth, currSplitDepth, maxSplitDepth)
-           (ind, thm, td, thm_cid) blur
-       with
-       | End_Of_Search  -> raise End_Of_Search
-       | DepthReached b -> raise (DepthReached b)
+       uniform_left (cD, cD_a) (cG, cPool', cPool_ret', cG_a) cIH cg ms sc
+          (currDepth, maxDepth, currSplitDepth, maxSplitDepth)
+          (ind, thm, td, thm_cid) blur
 
        (* uniform_right cD cG cPool cg ms sc =
          (cD', cG', cPool', cg', sc')
@@ -5341,14 +5332,10 @@ module CSolver = struct
        let sc' =
          (fun e ->
            sc (Comp.MLam (noLoc, name, e, Plicity.explicit))) in
-       (try
-          uniform_right (cD', cD_a') (cG', cPool', cG_a') cIH' cg'
-            (Whnf.mvar_dot1 ms) sc'
-            (currDepth, maxDepth, currSplitDepth, maxSplitDepth) (k+1)
-            (ind, thm, td, thm_cid) blur
-        with
-        | End_Of_Search  -> raise End_Of_Search
-        | DepthReached b -> raise (DepthReached b))
+       uniform_right (cD', cD_a') (cG', cPool', cG_a') cIH' cg'
+         (Whnf.mvar_dot1 ms) sc'
+         (currDepth, maxDepth, currSplitDepth, maxSplitDepth) (k+1)
+         (ind, thm, td, thm_cid) blur
     | Implies ((r, tdecl), cg') ->
        (* We gain an assumption for the computation context *)
        let cG_a' =
@@ -5358,16 +5345,10 @@ module CSolver = struct
        let cPool' = Full (shift_cPool cPool 1, (cc, 1, Boxed)) in
        let cG' = Whnf.extend_gctx cG (tdecl, ms) in
        let Comp.CTypDecl (name, _, _) = tdecl in
-       let sc' =
-         (fun e ->
-            sc (Comp.Fn (noLoc, name, e))) in
-       (try
-          uniform_right (cD, cD_a) (cG', cPool', cG_a') cIH cg' ms sc'
-            (currDepth, maxDepth, currSplitDepth, maxSplitDepth) (k+1)
-            (ind, thm, td, thm_cid) blur
-        with
-        | End_Of_Search  -> raise End_Of_Search
-        | DepthReached b -> raise (DepthReached b))
+       let sc' = (fun e -> sc (Comp.Fn (noLoc, name, e))) in
+       uniform_right (cD, cD_a) (cG', cPool', cG_a') cIH cg' ms sc'
+         (currDepth, maxDepth, currSplitDepth, maxSplitDepth) (k+1)
+         (ind, thm, td, thm_cid) blur
 
   let cgSolve cD cG cIH mq sc (maxDepth, ind, sp) (thm, thm_cid, mfs) =
     (* Populate the cPool given the cG *)
@@ -5394,7 +5375,6 @@ module Frontend = struct
 
   exception Done                        (* Solved query successfully. *)
   exception AbortQuery of string        (* Abort solving the query.   *)
-  (* exception DepthReached of bound                (* Stops a query going beyond the specified depth *) *)
 
   (* exceeds B1 B2 = b
      True if B1 = * or B1 >= B2.
@@ -5428,7 +5408,9 @@ module Frontend = struct
   (* checkSolutions e t s = () *)
   let checkSolutions e t s =
     match (e, t) with
-    | (None, None) -> ()
+    | (None, None) ->
+       raise (AbortQuery "Query error: Wrong number of solutions -- \
+              expected infinite, but found finite.")
     | _ ->
        if Bool.not (boundEq (lowerBound e t) (Some s))
        then
@@ -5510,10 +5492,23 @@ module Frontend = struct
         with
         | Done -> printf "Done.\n"
         | AbortQuery s -> printf "%s\n" s
+        | Solver.End_Of_Search ->
+           (if (boundEq (lowerBound sgnQuery.expected sgnQuery.tries) (Some !solutions))
+            then
+              printf "Done.\n"
+            else
+              begin
+               printf
+               "Query error: Wrong number of solutions -- \
+                expected %a in %a tries, but found %d. @. \n"
+               P.fmt_ppr_bound sgnQuery.expected
+               P.fmt_ppr_bound sgnQuery.tries
+               !solutions
+              end)
         | _ -> ()
       end
     else if !Options.chatter >= 2
-    then printf "Skipping query -- bound for tries = 0.\n"
+    then printf "Skipping query -- bound for tries = 0. @."
 
   (* Used when the auto-invert-solve and inductive-auto-solve tactics are
      called from Harpoon *)

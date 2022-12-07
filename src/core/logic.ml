@@ -351,6 +351,7 @@ module Convert = struct
        CAnd (comptypToCompGoal tau1, comptypToCompRes tau2)
     | Comp.TypPiBox (_, typ_dec, tau') ->
        CExists (typ_dec, comptypToCompRes tau')
+    | Comp.TypInd tau' -> comptypToCompRes tau'
 
   let rec resToClause' eV cG (r, s) =
     match r with
@@ -1104,15 +1105,14 @@ module Printer = struct
              (fmt_ppr_goal cD cPsi) (g, s)))
       (list_of_conjunction cG)
 
-  (** Prints each comp. subgoal with a leading `<-`. *)
+  (** Prints each comp. subgoal with a trailing `->`. *)
   let fmt_ppr_csubgoals cD ppf subgoals =
     fprintf ppf "@[<v>%a@]"
       (pp_print_list ~pp_sep: pp_print_cut
          (fun ppf sg ->
-           fprintf ppf "<- %a"
+           fprintf ppf "%a ->"
              (fmt_ppr_cmp_goal cD) (sg, S.id)))
-         (list_of_subgoals subgoals)
-
+         (List.rev (list_of_subgoals subgoals))
 
   (* sgnClauseToString (c, sCl) = string
      String representation of signature clause.
@@ -2086,6 +2086,7 @@ module CSolver = struct
        (loc, LF.CObj (Whnf.cnormDCtx (dctx, ms)))
     | _ -> (loc, mf)
 
+  (* Applies msub to all heads excluding uninstantiated mvars/mmvars *)
   let cnormMTyp (mtyp, ms) =
     match mtyp with
     | LF.ClTyp (LF.MTyp tA, cPsi) ->
@@ -2158,8 +2159,9 @@ module CSolver = struct
       | End -> aS
       | Spine (aS', (mt, mf, pl)) ->
          let aS'' = normAtomicSpine ms aS' in
-         let mf' = Whnf.cnormMFt mf ms in
-         Spine (aS'', (mt, mf', pl))
+         let (_, mf') = cnormMetaObj ((noLoc, mf), ms) in
+         let mt' = cnormMTyp (mt, ms) in
+         Spine (aS'', (mt', mf',pl))
     in
     match cg with
     | Box (cPsi, Atom typ, _lfTyp) ->
@@ -2179,6 +2181,7 @@ module CSolver = struct
        let aS' = normAtomicSpine ms aS in
        Atomic (cid, aS')
 
+  (* Applies the msub to the sub goals (as above). *)
   let rec normSubGoals (sg, ms) =
     match sg with
     | Proved -> sg
@@ -3602,6 +3605,18 @@ module CSolver = struct
     | Comp.MetaApp (mO, mT, mS', plicity) ->
        Comp.PatApp (noLoc, (Comp.PatMetaObj (noLoc, mO)), mSpineToPSpine mS')
 
+  let rec lengthCPool cPool =
+    match cPool with
+    | Emp -> 0    | Full (cPool', cc) -> 1 + (lengthCPool cPool')
+
+  let rec gen_cPool cG cPool =
+    match cG with
+    | LF.Empty -> cPool
+    | LF.Dec (cG', Comp.CTypDecl (_, tau, _)) ->
+       let clause = {cHead = tau; cMVars = LF.Empty; cSubGoals = Proved} in
+       let cc = (clause, (lengthCPool cPool) + 1, Boxed) in
+       gen_cPool cG' (prependToCPool cc cPool)
+
   let fix_psi mtyp mf =
     let rec merge_names psi_names psi_types =
       dprintf
@@ -3636,18 +3651,6 @@ module CSolver = struct
     match mtyp with
     | LF.ClTyp (c, psi') -> LF.ClTyp (c, new_psi psi')
     | _ -> mtyp
-
-  let rec lengthCPool cPool =
-    match cPool with
-    | Emp -> 0    | Full (cPool', cc) -> 1 + (lengthCPool cPool')
-
-  let rec gen_cPool cG cPool =
-    match cG with
-    | LF.Empty -> cPool
-    | LF.Dec (cG', Comp.CTypDecl (_, tau, _)) ->
-       let clause = {cHead = tau; cMVars = LF.Empty; cSubGoals = Proved} in
-       let cc = (clause, (lengthCPool cPool) + 1, Boxed) in
-       gen_cPool cG' (prependToCPool cc cPool)
 
    (* Given the arguments of the IH, build the respective Beluga term. *)
   let create_IH_args (thm, args, tau) cD =
@@ -3910,6 +3913,26 @@ module CSolver = struct
                                                      e)]))) in
       find_all_occurances dec (cG', cPool', cG_a') sc' cD thm_cid thm lst'
 
+  (* cD' ; cG' |- tau
+     cD  |- ms : cD'       ms is a meta-substitution that provides existential
+                           variables (refs that will instantiated) for all
+                           the bound meta-variables in cD'
+
+     cD  ; cG (= [ms]cG') (cPool)  |- tau[ms] (= mq)
+
+     Mquery mq := N   (an mquery is a negative computation-level proposition)
+
+     Schema   W
+     Contextual
+      Type    U := (Psi |- tA) | (Psi |-# tBlock) | (Psi |- Phi)   | (Psi |-# Phi)     | W
+     Contextual
+      Object  C := (Psi |- tM) | Psi |-# PVar _   | (Psi |- sigma) | (Psi |-# SVar _ ) | Psi
+
+     Negative N := P -> N  | forall x:U. N | P
+     Positive P := box (U) | Atomic Q
+              Q := c C1 ... Cn     (where c is a constructor of an inductive/stratified data type)
+
+    *)    
   let rec cgSolve' (cD, cD_a) (cG, cPool, cG_a) cIH
             (mq:mquery) (sc: Comp.exp -> unit)
             (currDepth, maxDepth, currSplitDepth, maxSplitDepth)
@@ -3943,67 +3966,15 @@ module CSolver = struct
        | End_Of_Search  -> raise End_Of_Search
        | DepthReached b -> raise (DepthReached b)
 
-  (* Stable phase : cD ; cG >> . ==> e : Q
+  (* Independently solve each subgoal coming from an assumption in cG *)
+  (* |- cD'
+     cD' |- sg
+     cD |- ms' : cD'
+     |- cD
+     cD |- cG
 
-
-       cD ; cGamma  >> e : Q   (prove Q from the stable context cGamma and meta-context cD)
-
-
-       CHOICE:
-
-      1)   Q = Box(cPsi, A)      cD ; cG >> box(cPsihat.M) :Box(cPsi, A)
-
-             cD ; cPsi ==>  M: A     (this is solve!)
-            -----------------------------------------------------    [in Harpoon some msolve (args) ]
-               cD ; cG >> box(cPsihat.M) : Box(cPsi, A)                (assumes that cG is stable)
-
-
-      2) Q = Inductive(Atomic)
-
-         matchCompAtom (Signature) (a) = computation-level clauses c (for example Ev_z) that have a (for example Even) in its cHead
-         this will result in some subgoals (cgᵢ)
-
-         for all i.   cD ; cG ===>  eᵢ :  cgᵢ   (uniform right phase)
-         --------------------------------------------------------------------[in Harpoon some auto-solve]
-         cD ; cG >> c e₁ ...en  : Inductive(a, meta-spine)                       (assumes that cG is stable)
-
-
-      For example:
-
-      inductive Even: [ |- nat] -> ctype =
-      | Ev_z : Even [ |- z]
-      | Ev_ss: Pi N:[ |- nat]. Even [ |- N] -> Even [ |- suc (suc N)]
-
-
-    3) Q = Box(cPsi, A) or Inductive(a, meta-spine)  we solve it using some assumption from cG
-
-      cG might contain  f: tau₁ -> Q  , x:tau₁   ===> Q
-
-
-      focus left  (on some comp_goal cgᵢ in cG)
-
-        cD ; cGamma > f:cgᵢ ===> e : Q
-       --------------------------------- transition to focus left
-       cD ; cGamma  >> e : Q
-
-
-
-
-    cD ; cGamma > e e₁ : cg₂ ==>   Q     cD ; cGamma ===> e1 : cg₁
-    -----------------------------------------------------------------
-     cD ; cGamma > e : cg₁ -> cg₂ ==>   Q
-
-
-
-    cD ; cGamma > e C : [C/X]cg₂ ==>   Q
-    ----------------------------------------
-     cD ; cGamma > e : Pi X:U. cg₂ ==>   Q
-
-
-    ----------------------------------------
-    cD ; cGamma  > e : Q   ====> Q
-   *)
-
+     prove:
+     cD ; cG => sg[ms']                                                *)
   and solveSubGoals (cD, cD_a) (cG, cPool, cG_a) cIH (sg, k) ms sc fS
                       (currDepth, maxDepth, currSplitDepth, maxSplitDepth)
                         (thm, td, thm_cid) =
@@ -4028,12 +3999,18 @@ module CSolver = struct
          (currDepth, maxDepth, currSplitDepth, maxSplitDepth)
          (None, thm, td, thm_cid) No_Blur
 
+  (* Independently solve each sg coming from a comp. constant (as above) *)
+  (* |- cD'
+     cD' |- sg
+     cD |- ms' : cD'
+     |- cD
+     cD |- cG
 
+     prove:
+     cD ; cG => sg[ms']                                                *)
   and solveCClauseSubGoals (cD, cD_a) (cG, cPool, cG_a) cIH cid sg ms sc fS
                              (currDepth, maxDepth, currSplitDepth, maxSplitDepth)
                              (thm, td, thm_cid) =
-   (* fprintf std_formatter "CID = %a \n"
-      Name.pp (Index.compConstName cid); *)
     match sg with
     | Proved ->
        let e' = (Comp.DataConst (noLoc, cid)) in
@@ -4055,6 +4032,15 @@ module CSolver = struct
          (currDepth, maxDepth, currSplitDepth, maxSplitDepth)
          (None, thm, td, thm_cid) No_Blur
 
+  (* Independently solve each subgoal coming from a theorem (as above) *)
+  (* |- cD'
+     cD' |- sg
+     cD |- ms' : cD'
+     |- cD
+     cD |- cG
+
+     prove:
+     cD ; cG => sg[ms']                                                *)
   and solveTheoremSubGoals (cD, cD_a) (cG, cPool, cG_a) cIH cid sg ms sc fS
                              (currDepth, maxDepth, currSplitDepth, maxSplitDepth)
                              (thm, td, thm_cid) =
@@ -4153,6 +4139,21 @@ module CSolver = struct
            (currDepth, maxDepth, currSplitDepth, maxSplitDepth) (thm, td, thm_cid)
 
   (* We focus on one of the computation-type theorems *)
+  (* |- cD0
+     cD0 |- cG0
+     cD0 ; cG0 |- cg
+     cD |- ms : cD0
+     cD ; cG |- cg[ms]   where cG = [ms]cG0
+
+     cD ; cG > cc (={hd=tau; sg=sg; cD'=mV})  |- cg[ms]
+     cD' ; sg |- hd
+     cD |- ms' : cD'
+
+     1. [ms']hd ==unified== [ms]cg   where: ms' = [^|cD'|, (cdToMSub cD')]
+        --->  cD ; cG => sg[ms']
+
+     2. [ms']hd ==NOT unified== [ms]cg
+        --->  cD ; cG > cc'  |- cg[ms]                                      *) 
   and focusT (cD, cD_a) (cG, cPool, cG_a) cIH cg ms sc
                (currDepth, maxDepth, currSplitDepth, maxSplitDepth)
                (thm, td, thm_cid) =
@@ -4188,6 +4189,22 @@ module CSolver = struct
 
   (* Focus on the clause in the static Comp signature with head matching
      type constant c. *)
+  (* |- cD0
+     cD0 |- cG0
+     cD0 ; cG0 |- cg
+     cD |- ms : cD0
+     cD ; cG |- cg[ms]   where cG = [ms]cG0
+
+     cD ; cG > cc (={hd=tau; sg=sg; cD'=mV})  |- cg[ms]
+     cD' ; sg |- hd
+     cD |- ms' : cD'
+
+     1. [ms']hd ==unified== [ms]cg
+                      where: ms' = [^|cD'|, (cdToMSub cD')]
+        --->  cD ; cG => sg[ms']
+
+     2. [ms']hd ==NOT unified== [ms]cg
+        --->  cD ; cG > cc'  |- cg[ms]                         *)
   and focusS cidTyp (cD, cD_a) (cG, cPool, cG_a) cIH cg ms sc
                (currDepth, maxDepth, currSplitDepth, maxSplitDepth)
                  (thm, td, thm_cid) =
@@ -4216,20 +4233,22 @@ module CSolver = struct
     in
     I.iterISClauses (fun w -> matchSig w sc) cidTyp
 
+  (* We focus on one of the computation assumptions in cPool/Gamma          *)
+  (* |- cD0
+     cD0 |- cG0
+     cD0 ; cG0 |- cg
+     cD |- ms : cD0
+     cD ; cG |- cg[ms]   where cG = [ms]cG0
 
-(*      Focusing Gamma Phase:   cD ; cG  > tau ==> e: Q
+     cD ; cG > cc (={hd=tau; sg=sg; cD'=mV})  |- cg[ms]
+     cD, cD' ; cG, sg |- hd
+     cD |- ms' : cD, cD'
 
+     1. [ms']hd ==unified== [ms]cg   where: ms' = [^|cD'|, (cdToMSub cD')]
+        --->  cD ; cG => sg[ms']
 
-      if our cPool is empty,
-        we finish the loop.
-      otherwise, we investigate each clause in cPool, starting
-        with most recently added
-        if the head of the clause we are looking at
-          matches cg, we focus on that clause, and try to solve
-          the subgoals (if any)
-     *)
-
-  (* We focus on one of the computation assumptions in cPool/Gamma *)
+     2. [ms']hd ==NOT unified== [ms]cg
+        --->  cD ; cG > cc'  |- cg[ms]                                  *)
   and focusG (cD, cD_a) (cG, cPool, cPool_all, cG_a) cIH cg ms sc
                (currDepth, maxDepth, currSplitDepth, maxSplitDepth)
                  (thm, td, thm_cid) =
@@ -4714,6 +4733,18 @@ module CSolver = struct
       | DepthReached _ | End_Of_Search ->
          raise End_Of_Search
 
+  (* We either focus on the right (proof search in LF to solve a TypBox) or
+     focus our search on one of the available assumptions on the left     *)
+  (* |- cD0
+     cD0 |- cG0
+     cD0 ; cG0 |- cg
+     cD |- ms : cD0
+     cD ; cG |- cg[ms]   where cG = [ms]cG0
+
+     cD ; cG |- [cPsi |- tA][ms]
+     cD ; cPsi |- tA'   where tA' = [ms]tA
+
+     Else, focus on the left...                                           *)
   and focus (cD, cD_a) (cG, cPool, cG_a) cIH cg ms sc
               (currDepth, maxDepth, currSplitDepth, maxSplitDepth)
                 (ind, thm, td, thm_cid) =
@@ -4725,14 +4756,12 @@ module CSolver = struct
       end;
     match cg with
     | Box (cPsi, g, Some M) ->
-       (* If our goal is of box type, we first try to find the
-          proof term in the LF level, otherwise we focus on
-          an assumption in our computation context cG          *)
+       (* We apply the msub here in case there are FREE MVARS that
+          appear from unify   *)
+       let ms = Whnf.cnormMSub ms in
        let cg' = normCompGoal (cg, ms) in
-       let Box(_, g', _) = cg' in
+       let Box(cPsi',g',_) = cg' in
        let Atom tA = g' in
-       (* note, we take the goal's type because the main check
-          is checking the meta_obj against meta_typ of the goal *)
        let cltyp = LF.MTyp tA in
        let sc' =
          (fun (cPsi', tM) ->
@@ -4922,6 +4951,17 @@ module CSolver = struct
                    (ind, thm, td, thm_cid))
          (Some 0, Some 0, Some 0, Some 0) (None, thm, td, thm_cid)
 
+  (* Blurring/Focusing/Lemma application *)
+  (* Same as focusing on the left, except here, the head doesn't have to 
+     match
+     
+                          cD ; . >> cG, Q' ==> Q 
+                          -------------------- blur
+                           cD ; cG > Q' ==> Q 
+
+    We focus on an assumption, solving subgoals until we come across an 
+    atomic assumption (Q'). We then add it to our computation-level context
+    (cG) and proceed to the uniform left phase (to unbox if necessary)     *)
   and blurIH (cD, cD_a) (cG, cPool, cG_a) (cIH, cIH_all) cg ms sc
                (cDepth, mDepth, currSplitDepth, maxSplitDepth)
                  (ind, thm, td, thm_cid) =
@@ -5114,61 +5154,32 @@ module CSolver = struct
        blurGamma (cD, cD_a) (cG, cPool', cPool_all, cG_a) cIH cg ms sc
          (cDepth, mDepth, currSplitDepth, maxSplitDepth) (ind, thm, td, thm_cid)
 
-    (* uniform_left_ cD cG cG_ret cPool cPool_ret cg ms sc =
-         (cD', cPool_ret, cG_ret, sc')
-        (where the sc continuation builds skeleton term
-        ex. (fn e -> let box X = x in ..... in e ))
+  (* Unif. left phase, boxed assumptions in cG get unboxed into cD *)
+  (* Preconditions:
+                    |- cD0
+                cD0 |- cG0
+           cD0 ; cG |- cg
+           cD       |- ms : cD0
+            cD ; cG |- cg[ms]   where: cG = [ms]cG0
+            cD      |- cG ~ (cPool,cPool_ret)
 
-    Pre-conditions:
+          cD        |- cIH          (context containin IHs)
+          cD        |- thm          (original theorem)
+     where sVar denotes the Induction Variable in thm
+     ———————————————————————————————————-
 
-       cD : meta-context
-       cPool, cPool_ret : computation assumptions in clausal form
-       cPool  ~~ cG
-       cPool_ret ~~ cG_ret
-       k = |cPool|
-       cg : comp_goal
-       ms : msub
-       sc : exp_chk -> unit
-
-
-      if cD |- cPool   (list of comp_goals is well-formed in cD)
-      then
-         cD' |- cPool_ret  where
-
-      cD'       : meta-context and is an extension of cD
-      cPool_ret : cPool where each entry is a clause representing
-                  either an implication, a universal, or Atomic (Inductive)
-      cG_ret    : stable computation-context and is a reduction of cG
+     Uniform Left: unfolds eagerly positive propositions (box)
+                   until we have a stable context cG containing only
+                    Atomic Q and negative propositions (foral and impl).
 
 
+     1. cD ; cG1, [U], cG2 |- cg[ms]
+        cD, (U) |- ms' : cD0, (U)
+        cD' ; cG' |- cg'[ms']   where cD' = cD, (U)
+                                      cG' = [^1]cG1, (U), [^1]cG2
 
-      Uniform Phase on the left:   cD ; cG  ==> e : Q
-
-
-        cD ; (cG @ cG_ret) |- e : Q
-
-
-                cD, X:U; cG >> cG_ret => e : Q
-       ------------------------------------------------ box left
-        cD; cG, x:[U] >> cG_ret => let box X = x in e : Q
-
-
-       tau =/= [U]   D; cG >> x:tau, cG_ret => e : Q   (x:tau, cG_ret ~~ {cHead; MV; subG}, cPool_ret)
-       ------------------------------------------------------------------------------------ tau is left synchronous
-                             cD; cG, x:tau >> cG_ret => e : Q
-
-
-               cD ; cG_ret  >> e : Q           (prove Q from the stable context
-       ----------------------------------   cG and meta-context cD)
-            cD ; . >> cG_ret  => e  : Q
-
-
-
-     cG (gctx)  ~~ cPool (clausal comp assumptions)
-
-     *)
-
-
+     2. cD ; cG1, tau, cG2 |- cg[ms]   where tau =/= [U]
+        cD ; cG |- cg[ms]                                          *)
   and uniform_left (cD, cD_a) (cG, cPool, cPool_ret, cG_a) cIH cg ms sc
                      (currDepth, maxDepth, currSplitDepth, maxSplitDepth)
                        (ind, thm, td, thm_cid) blur =
@@ -5180,7 +5191,7 @@ module CSolver = struct
       end;
     let unbox cp =
       match cp with
-        | (_cc, _k, Boxed) -> (_cc, _k, Unboxed)
+      | (_cc, _k, Boxed) -> (_cc, _k, Unboxed)
     in
     match cPool with
     | Emp ->
@@ -5210,10 +5221,11 @@ module CSolver = struct
                     (currDepth, maxDepth, currSplitDepth, maxSplitDepth)
                     (ind, thm, td, thm_cid)
                 )))
-    | Full (cPool', ((({cHead = Comp.TypBox(m, r); cMVars = cmv;cSubGoals = Proved }, k', Boxed)) as cP)) ->
+    | Full (cPool', ((({cHead = Comp.TypBox(m, r);
+                        cMVars = cmv;
+                        cSubGoals = Proved }, k', Boxed)) as cP)) ->
        (* In this case, we want to "unbox" the assumption and add it to
-          the cD.
-          When an assumption gets unboxed, we no longer consider it in Gamma. *)
+          the cD, and will no longer consider it to be in cG. *)
        let n = get_name k' cG in
        let (cD_a', cG_a') = update_annotations (cD_a, cG_a) n in
        let name = Name.mk_name (Whnf.newMTypName r) in
@@ -5262,48 +5274,25 @@ module CSolver = struct
           (currDepth, maxDepth, currSplitDepth, maxSplitDepth)
           (ind, thm, td, thm_cid) blur
 
-       (* uniform_right cD cG cPool cg ms sc =
-         (cD', cG', cPool', cg', sc')
-        (where the sc continuation builds skeleton term
-        ex. (fn e -> let box X = x in ..... in e ))
+  (* Unif. Right phase, computational and meta-assumptions are collected *)
+  (*
+      Preconditions:
 
-    Pre-conditions:
+               |- cD0
+           cD0 |- cG0
+     cD0 ; cG0 |- cg           (where cg = computation-level goal)
+     cD        |- ms : cD0
+     cD ; cG   |- cg[ms]   where cG = [ms]cG0
 
-       cD : meta-context
-       cPool : computation assumptions in clausal form
-       cPool  ~~ cG
-       cg : comp_goal
-       ms : msub
-       sc : exp_chk -> unit
+     cD        |- cIH          (context containing IHs)
+     cD        |- thm          (original theorem)
+     where sVar denotes the Induction Variable in thm
+     ———————————————————————————————————-
 
-      if cD ; cG |- cg   (comp_goal is well-formed in cD and cG)
-      then
-         cD' ; cG' |- cg'  where
+     Uniform Right: unfolds eagerly negative propositions (forall, impl)
+                    until we encounter a positive proposition (i.e. box U or Atomic Q)
 
-      cD'       : meta-context holding meta assumption from cg
-      cPool'    : cPool where each entry is a clause representing
-                  a computation assumption
-      cG'       : computation-context holding computation assumptions from cg
-      cg'       : comp_goal is either a Box or an Atomic comp goal
-
-       Uniform Right Phase :
-
-       cD; cG >> .  => e : Q
-       ------------------------ (where Q is either Box or Atomic (Inductive) type)
-       cD; cG => e : Q
-
-
-        cD; cG, x:tau  => e : cg   (cG, x:tau ~~ cPool, {cHead; MV; subG})
-       ------------------------------------------------------------------ tau is left synchronous
-               cD;cG => fn x -> e  : (res , tau) -> cg
-
-         cD, X:U ; cG => e : cg
-       ------------------------------------------------------
-       cD ; cG  => mlam X -> e  : forall X:U. cg
-
-       *)
-
-     (* First we break our goal down into an atomic one *)
+   *)
   and uniform_right (cD, cD_a) (cG, cPool, cG_a) cIH cg ms sc
                       (currDepth, maxDepth, currSplitDepth, maxSplitDepth)
                         k (ind, thm, td, thm_cid) blur =
@@ -5314,11 +5303,17 @@ module CSolver = struct
         (printState cD cG cPool cIH cg) ms
       end;
     match cg with
+    (* Positive proposition - Synchronous *)
     | Box (_) | Atomic (_) ->
        uniform_left (cD, cD_a) (cG, cPool, Emp, cG_a) cIH cg ms sc
          (currDepth, maxDepth, currSplitDepth, maxSplitDepth)
          (ind, thm, td, thm_cid) blur
     | Forall (tdecl, cg') ->
+       (*
+        cD ; cG |- (forall X:U. cg')[ms]
+        cD, X:U |- ms' : cD0, X:U
+        cD' ; cG' |- cg'[ms']   where: cD' = cD, X:U; cG' = [^1]cG
+        *)
        (* In this case we gain an assumption in the meta-context *)
        let cD_a' =
          let var_in_theorem = Option.equal (=) (Some 0) currDepth in
@@ -5337,6 +5332,8 @@ module CSolver = struct
          (currDepth, maxDepth, currSplitDepth, maxSplitDepth) (k+1)
          (ind, thm, td, thm_cid) blur
     | Implies ((r, tdecl), cg') ->
+       (*  cD ; cG |- (r -> cg')[ms]
+        cD ; cG' |- cg'   where: cG' = cG, [ms]r            *)
        (* We gain an assumption for the computation context *)
        let cG_a' =
          let var_in_theorem = Option.equal (=) (Some 0) currDepth in
@@ -5350,6 +5347,31 @@ module CSolver = struct
          (currDepth, maxDepth, currSplitDepth, maxSplitDepth) (k+1)
          (ind, thm, td, thm_cid) blur
 
+  (* cgSolve(cD                   : mctx;
+             cG                   : gctx;
+             cIH                  : ihctx;
+             mq                   : mquery (cg, ms) where tau ~ cg;
+             sc                   : exp_chk -> () success continuation;
+             maxDepth             : int option   bound on iterative bounded 
+                                                 depth-first search;
+             ind                  : int option   the position of the user-
+                                                 supplied induction argument
+                                                 in the theorem
+                                                 the argument in tau';
+             sp                   : int          indicates what kind of 
+                                                 automated splitting to 
+                                                 perform (none, only 
+                                                 inversions, all splits);
+             thm                  : Comp.typ  = tau;
+             cid                  : cid option   cid of the theorem name;
+             mfs                  : total_dec list)
+
+
+     cD'  |- tau
+     cD   |- ms : cD'       ms is a meta-substitution that provides existential
+                           variables (refs that will instantiated) for all
+                           the bound meta-variables in cD'
+     cD  |- [ms]tau (= mq)                                       *)
   let cgSolve cD cG cIH mq sc (maxDepth, ind, sp) (thm, thm_cid, mfs) =
     (* Populate the cPool given the cG *)
     let cPool = gen_cPool cG Emp in
@@ -5363,7 +5385,8 @@ module CSolver = struct
     in
     try
       cgSolve' (cD, cD_a) (cG, cPool, cG_a) cIH mq sc
-        (Some 0, maxDepth, Some 0, maxSplitDepth) (ind, thm, mfs, thm_cid) Blur
+        (Some 0, maxDepth, Some 0, maxSplitDepth) (ind, thm, mfs, thm_cid)
+        Blur
     with
     | DepthReached _ -> raise End_Of_Search
 
@@ -5418,7 +5441,7 @@ module Frontend = struct
            begin fun ppf () ->
            fprintf ppf
              "Query error: Wrong number of solutions -- \
-              expected %a in %a tries, but found %d"
+              expected %a in %a tries, but found %d."
              P.fmt_ppr_bound e
              P.fmt_ppr_bound t
              s
@@ -5512,7 +5535,7 @@ module Frontend = struct
 
   (* Used when the auto-invert-solve and inductive-auto-solve tactics are
      called from Harpoon *)
-  (* Will return the Beluga expression found by cgSolv for
+  (* Will return the Beluga expression found by cgSolve for
      the given mquery                                          *)
   let msolve_tactic
         (cD, cG, cIH) (mquery, tau, instMMVars) depth

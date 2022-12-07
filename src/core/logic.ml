@@ -3932,7 +3932,7 @@ module CSolver = struct
      Positive P := box (U) | Atomic Q
               Q := c C1 ... Cn     (where c is a constructor of an inductive/stratified data type)
 
-    *)    
+    *)
   let rec cgSolve' (cD, cD_a) (cG, cPool, cG_a) cIH
             (mq:mquery) (sc: Comp.exp -> unit)
             (currDepth, maxDepth, currSplitDepth, maxSplitDepth)
@@ -4153,7 +4153,7 @@ module CSolver = struct
         --->  cD ; cG => sg[ms']
 
      2. [ms']hd ==NOT unified== [ms]cg
-        --->  cD ; cG > cc'  |- cg[ms]                                      *) 
+        --->  cD ; cG > cc'  |- cg[ms]                                      *)
   and focusT (cD, cD_a) (cG, cPool, cG_a) cIH cg ms sc
                (currDepth, maxDepth, currSplitDepth, maxSplitDepth)
                (thm, td, thm_cid) =
@@ -4952,14 +4952,14 @@ module CSolver = struct
          (Some 0, Some 0, Some 0, Some 0) (None, thm, td, thm_cid)
 
   (* Blurring/Focusing/Lemma application *)
-  (* Same as focusing on the left, except here, the head doesn't have to 
+  (* Same as focusing on the left, except here, the head doesn't have to
      match
-     
-                          cD ; . >> cG, Q' ==> Q 
-                          -------------------- blur
-                           cD ; cG > Q' ==> Q 
 
-    We focus on an assumption, solving subgoals until we come across an 
+                          cD ; . >> cG, Q' ==> Q
+                          -------------------- blur
+                           cD ; cG > Q' ==> Q
+
+    We focus on an assumption, solving subgoals until we come across an
     atomic assumption (Q'). We then add it to our computation-level context
     (cG) and proceed to the uniform left phase (to unbox if necessary)     *)
   and blurIH (cD, cD_a) (cG, cPool, cG_a) (cIH, cIH_all) cg ms sc
@@ -5352,15 +5352,15 @@ module CSolver = struct
              cIH                  : ihctx;
              mq                   : mquery (cg, ms) where tau ~ cg;
              sc                   : exp_chk -> () success continuation;
-             maxDepth             : int option   bound on iterative bounded 
+             maxDepth             : int option   bound on iterative bounded
                                                  depth-first search;
              ind                  : int option   the position of the user-
                                                  supplied induction argument
                                                  in the theorem
                                                  the argument in tau';
-             sp                   : int          indicates what kind of 
-                                                 automated splitting to 
-                                                 perform (none, only 
+             sp                   : int          indicates what kind of
+                                                 automated splitting to
+                                                 perform (none, only
                                                  inversions, all splits);
              thm                  : Comp.typ  = tau;
              cid                  : cid option   cid of the theorem name;

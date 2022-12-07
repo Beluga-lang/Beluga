@@ -639,17 +639,11 @@ module Comp = struct
     let (cD_b, cIH1) =
       if Total.is_inductive_split cD cG i && Total.struct_smaller pat
       then
-        begin
-          let cD1 = mvars_in_patt cD_b pat in
-          let cIH = Total.wf_rec_calls cD1 I.Empty total_decs in
-          dprnt "[prepare_branch_contexts] did it";
-          (cD1, cIH)
-        end
+        let cD1 = mvars_in_patt cD_b pat in
+        let cIH = Total.wf_rec_calls cD1 I.Empty total_decs in
+        (cD1, cIH)
       else
-        begin
-          dprnt "[prepare_branch_contexts] nope";
-          (cD_b, I.Empty)
-        end
+        (cD_b, I.Empty)
     in
     let cD_b = id_map_ind cD_b t cD in
     let cG_out_refined = Whnf.cnormGCtx (cG, t) in

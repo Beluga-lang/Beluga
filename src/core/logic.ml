@@ -4043,8 +4043,6 @@ module CSolver = struct
   and solveTheoremSubGoals (cD, cD_a) (cG, cPool, cG_a) cIH cid sg ms sc fS
                              (currDepth, maxDepth, currSplitDepth, maxSplitDepth)
                              (thm, td, thm_cid) =
-     (* fprintf std_formatter "CID = %a \n"
-       Name.pp (Index.compName cid); *)
     match sg with
     | Proved ->
        let e' = (Comp.Const (noLoc, cid)) in
@@ -4052,9 +4050,11 @@ module CSolver = struct
        let e = Whnf.cnormExp (e, LF.MShift 0) in
        sc e
     | Solve (sg', cg') ->
-       (*printf "solve thm SG \n";
-       let cg = normCompGoal (cg', ms) in
-       Printer.printState cD cG cg ms;*)
+       dprintf
+         begin fun p ->
+         p.fmt "Solve Theorem's sub goals, %a"
+           (printState cD cG cPool cIH cg') ms
+         end;
        cgSolve' (cD, cD_a) (cG, cPool, cG_a) cIH (cg', ms)
          (fun e ->
            solveTheoremSubGoals (cD, cD_a) (cG, cPool, cG_a) cIH cid sg' ms
@@ -4074,11 +4074,11 @@ module CSolver = struct
        let e = Whnf.cnormExp (e, LF.MShift 0) in
        sc e
     | Solve (sg', cg') ->
-      (* dprintf
+       dprintf
          begin fun p ->
          p.fmt "Solve I.H.'s sub goals, %a"
            (printState cD cG cPool cIH cg') ms
-         end;*)
+         end;
        try
          cgSolve' (cD, cD_a) (cG, cPool, cG_a) cIH (cg', ms)
          (fun e ->
@@ -4096,12 +4096,12 @@ module CSolver = struct
   and focusIH (cD, cD_a) (cG, cPool, cG_a) (cIH, cIH_all) cg ms sc
                 (currDepth, maxDepth, currSplitDepth, maxSplitDepth)
                   (thm, td, thm_cid) =
-   (* dprintf
+    dprintf
       begin fun p ->
       p.fmt
         "Foc. on some I.H., %a"
         (printState cD cG cPool cIH_all cg) ms
-      end; *)
+      end;
     match cIH with
     | LF.Empty -> ()
     | LF.Dec (cIH', ((Comp.WfRec (name, ih_arg_lst, tau)) as dec)) ->
@@ -4145,8 +4145,12 @@ module CSolver = struct
   and focusT (cD, cD_a) (cG, cPool, cG_a) cIH cg ms sc
                (currDepth, maxDepth, currSplitDepth, maxSplitDepth)
                (thm, td, thm_cid) =
-     (* printf "focus Theorem \n";
-     Printer.printState cD cG cg ms; *)
+    dprintf
+      begin fun p ->
+      p.fmt
+        "Foc. on Theorems, %a"
+        (printState cD cG cPool cIH cg) ms
+      end;
     let matchThm (cid, sCCl) =
       if (* Check to see if the comp goal is the head of the assumption *)
          matchHead sCCl.cHead cg;
@@ -4176,8 +4180,12 @@ module CSolver = struct
   and focusS cidTyp (cD, cD_a) (cG, cPool, cG_a) cIH cg ms sc
                (currDepth, maxDepth, currSplitDepth, maxSplitDepth)
                  (thm, td, thm_cid) =
-     (* printf "focus Sig \n";
-     Printer.printState cD cG cg ms; *)
+    dprintf
+      begin fun p ->
+      p.fmt
+        "Foc. on Sig., %a"
+        (printState cD cG cPool cIH cg) ms
+      end;
     let matchSig (cidTerm, sCCl) sc =
       let (ms', fS) = C.mctxToMSub cD (sCCl.cMVars, LF.MShift 0) (fun s -> s) in
       let ms'' = rev_ms ms' 0 in
@@ -4214,8 +4222,12 @@ module CSolver = struct
   and focusG (cD, cD_a) (cG, cPool, cPool_all, cG_a) cIH cg ms sc
                (currDepth, maxDepth, currSplitDepth, maxSplitDepth)
                  (thm, td, thm_cid) =
-    (* printf "focus Gamma \n";
-    Printer.printState cD cG cg ms;  *)
+    dprintf
+      begin fun p ->
+      p.fmt
+        "Foc. on Gamma, %a"
+        (printState cD cG cPool cIH cg) ms
+      end;
     match cPool with
     | Emp -> ()
     | Full (cPool', ({cHead = hd; cMVars; cSubGoals = sg}, k', Boxed)) ->
@@ -4276,7 +4288,7 @@ module CSolver = struct
     | [] -> sc []
     | (cD, cD_b, cD_a, cG, cG_p, cG_a, cIH_b, cPool, ms_b, pat, td_b, cid)
       :: b_list' ->
-      (* let d =
+       let d =
          match currDepth with
          | Some d -> d
          | _ -> 0 in
@@ -4289,7 +4301,7 @@ module CSolver = struct
            (P.fmt_ppr_cmp_goal cD_cg) (cg, S.id)
            d
            (printState cD cG cPool cIH_b cg) ms_b
-         end; *)
+         end;
 
        let sc = (fun e ->
            solve_branch (cD_cg, cg)
@@ -4354,12 +4366,12 @@ module CSolver = struct
   and split (cD, cD_ann) (cG, cPool, cG_ann) cIH cg ms sc
               (currDepth, maxDepth, currSplitDepth, maxSplitDepth)
                 (ind, thm, td, cid_prog) =
-   (* dprintf
+    dprintf
       begin fun p ->
       p.fmt
         "Split, %a"
         (printState cD cG cPool cIH cg) ms
-      end; *)
+      end;
 
     let checkDepth x y =
       match (x, y) with
@@ -4406,7 +4418,6 @@ module CSolver = struct
              if Total.is_inductive_split cD' cG' i
                 && Total.struct_smaller pat'
              then
-               (* let (mfs', cid) = add_curr_thm mfs thm ind in *)
                begin
                let cD1 = Check.Comp.mvars_in_patt cD_b pat' in
                let cIH = Total.wf_rec_calls cD1 (Total.mark_gctx cG_p) mfs in (* o.g. cG = Empty *)
@@ -4513,11 +4524,11 @@ module CSolver = struct
   and invert (cD, cD_a) (cG, cPool, cG_a) cIH cg ms sc
              (currDepth, maxDepth, currSplitDepth, maxSplitDepth)
              (ind, thm, td, cid_prog) =
-   (* dprintf
+    dprintf
       begin fun p ->
       p.fmt "Invert, %a"
         (printState cD cG cPool cIH cg) ms
-      end; *)
+      end;
     let gen_branch_list i tau ms mfs (cD', cD_a) (cG', cG_a, cPool, k) cIH'
           index cD_e =
 
@@ -4557,7 +4568,6 @@ module CSolver = struct
              if Total.is_inductive_split cD' cG' i
                 && Total.struct_smaller pat'
              then
-               (* let (mfs', cid) = add_curr_thm mfs thm ind in *)
                begin
                let cD1 = Check.Comp.mvars_in_patt cD_b pat' in
                let cIH = Total.wf_rec_calls cD1 (Total.mark_gctx cG_p) mfs in
@@ -4700,9 +4710,12 @@ module CSolver = struct
   and focus (cD, cD_a) (cG, cPool, cG_a) cIH cg ms sc
               (currDepth, maxDepth, currSplitDepth, maxSplitDepth)
                 (ind, thm, td, thm_cid) =
-    (*printf "FOCUS \n";
-    let cg' = normCompGoal (cg, ms) in
-    Printer.printState cD cG cg' ms;*)
+    dprintf
+      begin fun p ->
+      p.fmt
+        "Focus, %a"
+        (printState cD cG cPool cIH cg) ms
+      end;
     match cg with
     | Box (cPsi, g, Some M) ->
        (* If our goal is of box type, we first try to find the
@@ -4722,6 +4735,7 @@ module CSolver = struct
            let meta_typ = LF.ClTyp (cltyp, cPsi') in
            sc (Comp.Box(noLoc, meta_obj, meta_typ)))
        in
+       dprintf begin fun p -> p.fmt "ENTERING [logic] [gSolve]" end;
        (try
           Solver.solve cD cPsi (g', S.id) sc' (Some 3);
         with
@@ -4766,6 +4780,7 @@ module CSolver = struct
            let meta_typ = LF.ClTyp (cltyp, cPsi') in
            sc (Comp.Box(noLoc, meta_obj, meta_typ)))
        in
+       dprintf begin fun p -> p.fmt "ENTERING [logic] [gSolve]" end;
        (try
           Solver.gSolve Solver.Empty cD (cPsi, Context.dctxLength cPsi)
             (g, S.id) sc' (Some 0, Some 3)
@@ -4841,6 +4856,11 @@ module CSolver = struct
 
     | Solve (sg', cg') ->
        let ms' = LF.MShift 0 in
+       dprintf
+         begin fun p ->
+         p.fmt "Solve I.H's sub goals --blur, %a"
+           (printState cD cG cPool cIH cg') ms'
+         end;
        try
          (* NOTE:: this assumes the subgoal is an atomic type... *)
          focus (cD, cD_a) (cG, cPool, cG_a) cIH_all cg' ms'
@@ -4883,6 +4903,11 @@ module CSolver = struct
        let i'' = Whnf.cnormExp (i', LF.MShift 0) in
        sc i''
     | Solve (sg', cg') ->
+       dprintf
+         begin fun p ->
+         p.fmt "Solve Assumption's sub goals --blur, %a"
+           (printState cD cG cPool cIH cg') ms
+         end;
        try
          focus (cD, cD_a) (cG, cPool, cG_a) cIH cg' ms
            (fun e -> solveGblur (cD, cD_a) (cG, cPool, cG_a) cIH (sg', k) ms
@@ -4897,12 +4922,12 @@ module CSolver = struct
   and blurIH (cD, cD_a) (cG, cPool, cG_a) (cIH, cIH_all) cg ms sc
                (cDepth, mDepth, currSplitDepth, maxSplitDepth)
                  (ind, thm, td, thm_cid) =
-   (* dprintf
+    dprintf
       begin fun p ->
       p.fmt
         "Blur IH, %a"
         (printState cD cG cPool cIH_all cg) ms
-      end; *)
+      end;
     let is_arr tau =
       match tau with
       | Comp.TypArr (_) -> true
@@ -5025,7 +5050,13 @@ module CSolver = struct
 
   and blurGamma (cD, cD_a) (cG, cPool, cPool_all, cG_a) cIH cg ms sc
                   (cDepth, mDepth, currSplitDepth, maxSplitDepth)
-                    (ind, thm, td, thm_cid) =
+                  (ind, thm, td, thm_cid) =
+    dprintf
+      begin fun p ->
+      p.fmt
+        "Blur Gamma, %a"
+           (printState cD cG cPool cIH cg) ms
+      end;
     match cPool with
     | Emp -> blurIH (cD, cD_a) (cG, cPool_all, cG_a) (cIH, cIH) cg ms sc
                (cDepth, mDepth, currSplitDepth, maxSplitDepth)
@@ -5138,9 +5169,12 @@ module CSolver = struct
   and uniform_left (cD, cD_a) (cG, cPool, cPool_ret, cG_a) cIH cg ms sc
                      (currDepth, maxDepth, currSplitDepth, maxSplitDepth)
                        (ind, thm, td, thm_cid) blur =
- (*   printf "UNIFORM LEFT \n";
-    let cg'= normCompGoal (cg, ms) in
-    Printer.printState cD cG (cg') ms; *)
+    dprintf
+      begin fun p ->
+      p.fmt
+        "Unif. Left, %a"
+        (printState cD cG cPool cIH cg) ms
+      end;
     let unbox cp =
       match cp with
         | (_cc, _k, Boxed) -> (_cc, _k, Unboxed)
@@ -5282,8 +5316,12 @@ module CSolver = struct
   and uniform_right (cD, cD_a) (cG, cPool, cG_a) cIH cg ms sc
                       (currDepth, maxDepth, currSplitDepth, maxSplitDepth)
                         k (ind, thm, td, thm_cid) blur =
-    (*printf "UNIFORM RIGHT \n";
-    Printer.printState cD cG cg ms;*)
+    dprintf
+      begin fun p ->
+      p.fmt
+        "Unif. Right, %a"
+        (printState cD cG cPool cIH cg) ms
+      end;
     match cg with
     | Box (_) | Atomic (_) ->
        uniform_left (cD, cD_a) (cG, cPool, Emp, cG_a) cIH cg ms sc

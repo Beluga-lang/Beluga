@@ -984,6 +984,9 @@ module Printer = struct
   let fmt_ppr_mctx ppf cD =
     P.fmt_ppr_lf_mctx P.l0 ppf cD
 
+  let fmt_ppr_cmp_ihctx cD cG ppf cIH =
+    P.fmt_ppr_cmp_ihctx cD cG ppf cIH
+
   let fmt_ppr_typ cD cPsi ppf sA =
     P.fmt_ppr_lf_typ cD cPsi P.l0 ppf (Whnf.normTyp sA)
 
@@ -2238,7 +2241,7 @@ module CSolver = struct
       (pp_print_list ~pp_sep: pp_print_cut
          (fun ppf (x, sCCl) ->
            fprintf ppf " @[%a : %a %a@]@,%a@]"
-             Id.print x
+             Name.pp x
              (P.fmt_ppr_mctx) (sCCl.cMVars)
              (P.fmt_ppr_csubgoals (full_cD (rev_mctx sCCl.cMVars) cD))
              (sCCl.cSubGoals)

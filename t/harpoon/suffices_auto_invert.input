@@ -1,0 +1,9 @@
+t/harpoon/suffices.bel
+le-refl
+{N : [|- nat]} [|- le N N]
+1
+
+msplit N
+auto-invert-solve
+auto-invert-solve
+:quit

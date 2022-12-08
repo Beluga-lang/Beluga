@@ -1,0 +1,19 @@
+% Definition of types and expressions
+tp: type.  --name tp T.
+arr: tp -> tp -> tp.
+nat: tp.
+
+exp: type. --name exp E.
+% lam : tp -> (exp -> exp) -> exp.
+lam :  (exp -> exp) -> exp.
+app : exp -> exp -> exp.
+
+% Evaluation judgment
+eval: exp -> exp -> type.
+ev_app : eval E1 (lam E) -> eval E2 V2 -> eval (E V2) V
+	-> eval (app E1 E2) V.
+ev_lam: eval (lam E) (lam E).
+
+% Equality predicate
+eq: exp -> exp -> type.
+eq_ref: eq E E.

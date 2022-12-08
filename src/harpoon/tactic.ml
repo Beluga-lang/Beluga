@@ -315,7 +315,9 @@ let split (k : Command.split_kind) (i : Comp.exp) (tau : Comp.typ) mfs : t =
        in
        (* cD_b |- cG_b *)
        let cIH_b =
-         Whnf.cnormIHCtx (s.context.cIH, t')
+         let msub_cIH = Whnf.cnormIHCtx (s.context.cIH, t') in
+         let sub_cIH = Total.shiftIH (Context.length cG_p) msub_cIH in
+         sub_cIH
        in
 
        dprintf
@@ -352,7 +354,7 @@ let split (k : Command.split_kind) (i : Comp.exp) (tau : Comp.typ) mfs : t =
                P.(fmt_ppr_lf_mctx l0) cD1
              end;
            (* Compute the well-founded recursive calls *)
-           let cIH = Total.wf_rec_calls cD1 LF.Empty mfs in
+           let cIH = Total.wf_rec_calls cD1 (Total.mark_gctx cG_p) mfs in
            dprintf
              begin fun p ->
              p.fmt "[harpoon-split] @[<v>computed WF rec calls:@,@[<hov>%a@]@]"
@@ -391,8 +393,9 @@ let split (k : Command.split_kind) (i : Comp.exp) (tau : Comp.typ) mfs : t =
            (P.fmt_ppr_lf_mctx ~sep: pp_print_cut P.l0) s.context.cD
            (P.fmt_ppr_lf_mctx ~sep: pp_print_cut P.l0) cD
          end;
-       let cIH0 = Total.wf_rec_calls cD cG mfs in
-       let cIH = Context.(append cIH_b (append cIH0 cIH')) in
+       (* let cIH0 = Total.wf_rec_calls cD cG mfs in *)
+       (* (append cIH0 cIH') for cIH' *)
+       let cIH = Context.(append cIH_b cIH') in
        let context = { cD; cG; cIH } in
        let new_state label =
          { context

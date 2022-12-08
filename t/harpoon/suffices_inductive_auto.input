@@ -1,0 +1,7 @@
+t/harpoon/suffices.bel
+le-refl
+{N : [|- nat]} [|- le N N]
+1
+
+inductive-auto-solve
+:quit

@@ -1,0 +1,7 @@
+examples/mini-ml/vsound.bel
+vsound
+{E: [|- exp]} {V: [|- exp]} [|- eval E V] -> [|- value V]
+3
+
+inductive-auto-solve
+:quit

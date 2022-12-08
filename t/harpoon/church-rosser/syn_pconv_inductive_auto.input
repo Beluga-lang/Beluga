@@ -1,0 +1,7 @@
+t/harpoon/church-rosser/church-rosser.bel
+sym_pconv
+{M: [⊢ term]} {N: [⊢ term]} [ |- pred= M N]  ->  [ |- pred= N M]
+3
+
+inductive-auto-solve
+:quit

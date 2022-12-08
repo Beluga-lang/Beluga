@@ -1,0 +1,7 @@
+t/harpoon/command-sequence.bel
+command-sequence-test
+[|- tm] -> [|- tp]
+
+
+inductive-auto-solve
+:quit

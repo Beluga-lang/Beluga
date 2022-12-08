@@ -1,0 +1,7 @@
+t/harpoon/reduce_halts.bel
+rh
+{T: [|- tp]} {M: [|- tm T]} Reduce [|- T] [|- M] -> [|- halts M]
+
+
+inductive-auto-solve
+:quit

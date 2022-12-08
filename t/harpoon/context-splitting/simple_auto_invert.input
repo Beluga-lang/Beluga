@@ -1,0 +1,9 @@
+t/harpoon/context-splitting/simple.bel
+length
+{g : ctx} [|- nat]
+1
+
+msplit g
+auto-invert-solve
+auto-invert-solve
+:quit

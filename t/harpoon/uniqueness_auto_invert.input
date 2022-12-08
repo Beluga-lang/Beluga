@@ -1,0 +1,17 @@
+t/harpoon/uniqueness.bel
+unique
+{g : tctx} {M: [g |- term]} {T1: [|- tp]} {T2: [|- tp]}  [g ⊢ hastype M T1[]] → [g ⊢ hastype M T2[]] → [⊢ eq T1 T2]
+5
+
+split x
+
+auto-invert-solve
+
+invert x1
+by (unique [_] [_ |- _] [_ |- _] [_ |- _] [_,b:block x:term, u:hastype x _ |- X3[..,b.1,b.2]] [_,b |- X7[..,b.1,b.2]]) as ih0
+invert ih0 %% Doesn't invert this automatically in auto-invert-solve...
+auto-invert-solve
+
+invert x1
+solve [|- refl]
+:quit

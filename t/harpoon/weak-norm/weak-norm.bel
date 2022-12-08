@@ -1,0 +1,88 @@
+%{# Weak head normalization for simply-typed lambda calculus
+
+This example follows the proof presented in
+<a href="http://www.cs.mcgill.ca/~bpientka/papers/lfmtp13.pdf">
+Cave and Pientka[2013]</a>.
+
+First, let's define a simply typed &lambda;-calculus with one type:
+}%
+LF tp : type =
+| b :  tp
+| arr : tp -> tp -> tp
+;
+--name tp T.
+
+LF tm : tp -> type =
+| app : tm (arr T S) -> tm T -> tm S
+| lam : (tm T -> tm S) -> tm (arr T S)
+| c : tm b
+;
+--name tm E.
+
+%{ The type `tm` defines our family of simply-typed lambda terms
+indexed by their type as an LF signature. In typical higher-order
+abstract syntax (HOAS) fashion, lambda abstraction takes a function
+representing the abstraction of a term over a variable. There is no
+case for variables, as they are treated implicitly in HOAS.
+
+We now encode the step relation of the operational semantics. In
+particular, we create the `step` type indexed by two terms that
+represent each step of the computation.
+}%
+LF step : tm A → tm A → type =
+| beta : step (app (lam M) N) (M N)
+| stepapp : step M M' -> step (app M N) (app M' N)
+;
+
+%{Notice how the `beta` rule re-uses the LF notion of substitution by
+computing the application of `M` to `N`. <br/>
+
+Finally, we define:
+-  a multiple step reduction `mstep`.
+- values `val`
+- `halts` to encode that a term halts if it steps into a value.
+}%
+
+LF mstep : tm A -> tm A -> type =
+| refl : mstep M M
+| onestep : mstep M' M'' -> step M M' -> mstep M M''
+;
+--name mstep S.
+
+LF val : tm A -> type =
+| val/c : val c
+| val/lam : val (lam M)
+;
+--name val V.
+
+LF halts : tm A -> type =
+| halts/m : mstep M M' -> val M' -> halts M
+;
+--name halts H.
+
+%{
+
+## Reducibility
+
+Reducibility cannot be directly encoded at the LF layer, since it
+involves a strong, computational function space. Hence we move to the
+computation layer of Beluga, and employ an indexed recursive
+type. Contextual LF objects and contexts which are embedded into
+computation-level types and programs are written inside `[ ]`.
+}%
+
+stratified Reduce : {A:[⊢ tp]}{M:[ |- tm A]} ctype =
+| Rb : [ |- halts M] -> Reduce [ ⊢ b ] [ |- M]
+| Rarr :  [ |- halts M] ->
+    ({N:[ |- tm A]} Reduce [ ⊢ A ] [ |- N] -> Reduce [ ⊢ B ] [ |- app M N])
+  -> Reduce [ ⊢ arr A B ] [ |- M]
+;
+
+%{ First, we prove that halts is closed under expansion in the `halts_step` lemma.
+}%
+rec halts_step : [ |- step M M'] → [ |- halts M'] -> [ |- halts M] =
+fn s, h =>
+let [⊢ S] = s in
+let [ |- halts/m MS' V] = h in
+ [ |- halts/m (onestep MS' S) V]
+;

@@ -1,0 +1,7 @@
+t/harpoon/serialization/stub.bel
+foo
+[|- tm] -> [|- tp]
+
+
+inductive-auto-solve
+:quit

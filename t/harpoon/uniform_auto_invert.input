@@ -1,0 +1,27 @@
+t/harpoon/uniform.bel
+triv1
+{g:ctx} Solve [g ⊢ Dec Empty q] [g ⊢ q]
+
+
+auto-invert-solve
+triv2
+Solve [x:i ⊢ Dec Empty q] [x:i ⊢ q]
+
+
+auto-invert-solve
+triv3
+Solve [ ⊢ Dec Empty q] [⊢ q]
+
+
+auto-invert-solve
+size2
+{P1 : [x:i ⊢ o]} Solve [x:i ⊢ Dec (Dec Empty q) P1] [x:i ⊢ q]
+
+
+auto-invert-solve
+modes-ponens
+{P1: [⊢ o]} Solve [⊢ Dec (Dec Empty P1) (imp P1 q)] [⊢ P1] → Solve [⊢ Dec (Dec Empty P1) (imp P1 q)] [⊢ q]
+
+
+auto-invert-solve
+:quit

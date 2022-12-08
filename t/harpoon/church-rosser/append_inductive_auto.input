@@ -1,0 +1,7 @@
+t/harpoon/church-rosser/church-rosser.bel
+append
+{g:ctx} {M : [g ⊢ term]} {M' : [g ⊢ term]} {M'' : [g ⊢ term]} [g |- pred* M M']  ->  [g |- pred* M' M''] ->  [g |- pred* M M'']
+5
+
+inductive-auto-solve
+:quit

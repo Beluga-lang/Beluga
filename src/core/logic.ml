@@ -300,6 +300,9 @@ module Convert = struct
        Impl ((typToRes tA (cS, dS, dR), tdec), typToGoal tB (cS, dS, dR + 1))
     | LF.Atom _ ->
        Atom (Shift.shiftAtom tA (-cS, -dS, dR))
+    | LF.TClo (tA, s) ->
+       dprintf begin fun p -> p.fmt "[typToGoal] TClo" end;
+       raise NotImplementedYet
 
   and typToRes tM (cS, dS, dR) =
     match tM with
@@ -454,6 +457,7 @@ module Convert = struct
      and add them to the spine of a proof-term through fS.
   *)
   let rec dctxToSub cD cPsi (eV, s) fS =
+    dprintf begin fun p -> p.fmt "[dctxToSub]" end;
     match eV with
     | LF.DDec (eV', LF.TypDecl (_, tA)) ->
        let (s', fS') = dctxToSub cD cPsi (eV', s) fS in
@@ -730,7 +734,7 @@ module Index = struct
     { query : query                   (* Query ::= (g, s)            *)
     ; typ : LF.typ                    (* Query as LF.typ.            *)
     ; skinnyTyp : LF.typ              (* Query stripped of E-vars.   *)
-    ; optName : Name.t option        (* Opt. name of proof term.    *)
+    ; optName : Name.t option         (* Opt. name of proof term.    *)
     ; cD : LF.mctx                    (* Meta context.               *)
     ; expected : bound                (* Expected no. of solutions.  *)
     ; tries : bound                   (* No. of tries to find soln.  *)
@@ -1052,7 +1056,6 @@ module Printer = struct
          (fmt_ppr_cmp_res cD) (cr, s)
          (fmt_ppr_cmp_goal cD) (cg', s)
 
-
   (* resToString cPsi (r, s) = string
      Invariants:
        Psi |- s: Phi
@@ -1239,7 +1242,7 @@ module Solver = struct
        U.unwind ();
        raise e
 
- (* trail' f = ()
+  (* trail' f = ()
     Trail a function. If an exception is raised, unwind the trail and
     propagate the exception. Do not unwind if f () succesful. *)
 
@@ -1779,15 +1782,14 @@ dprintf begin fun p ->
 
     (* matchSig c = ()
        Try all the clauses in the static signature with head matching
-       type constant c.
-     *)
-     and matchSig cidTyp =
-       I.iterSClauses (fun w -> matchSgnClause w sc) cidTyp
+       type constant c.                                               *)
+    and matchSig cidTyp =
+      dprintf begin fun p -> p.fmt "[matchSig]" end;
+      I.iterSClauses (fun w -> matchSgnClause w sc) cidTyp
 
     (* matchSgnClause (c, sCl) sc = ()
        Try to unify the head of sCl with A[s]. If unification succeeds,
-       attempt to solve the subgoals of sCl.
-     *)
+       attempt to solve the subgoals of sCl.                            *)
     and matchSgnClause (cidTerm, sCl) sc =
       begin
         let (s', fS) =
@@ -1840,8 +1842,7 @@ dprintf begin fun p ->
 
      Effects:
        Instatiation of MVars in dPool and g[s].
-       Any effect of (sc S).
-   *)
+       Any effect of (sc S).                                  *)
   and solveSubGoals dPool cD (cPsi, k) (cG, s) sc (currDepth, maxDepth) =
     match cG with
     | True -> sc (cPsi, [])
@@ -1863,7 +1864,7 @@ dprintf begin fun p ->
   *)
   let solve cD cPsi (g, s) sc d =
     gSolve Empty cD (cPsi, Context.dctxLength cPsi) (g, s) sc
-      (Some 0, d)
+      (None, d)
 
 end
 
@@ -1904,7 +1905,7 @@ module CSolver = struct
   exception DepthReached of bound  (* Max depth of search tree reached      *)
   exception End_Of_Search          (* All branches of search tree attempted *)
 
-  (* unify (A, s) (B, s') sc = ()
+  (* unify (tau, ms) (tau', ms') sc = ()
      Invariants:
        sc : unit -> unit
 
@@ -1912,8 +1913,8 @@ module CSolver = struct
        Instatiation of MMVars in ms and ms'.
        Any effect of (sc ()).
     *)
-  let unify cD sA sB sc =
-    U.unifyCompTyp cD sA sB;
+  let unify cD ttau ttau' sc =
+    U.unifyCompTyp cD ttau ttau';
     sc ()
 
   let isBox cg =
@@ -1927,10 +1928,10 @@ module CSolver = struct
     | (Some i) -> (Some (i + 1))
 
   let checkDepth x y =
-      match (x, y) with
-      | (Some i, Some j) -> i > j
-      | (Some i, None) -> false
-      | (None, _) -> false
+    match (x, y) with
+    | (Some i, Some j) -> i > j
+    | (Some i, None) -> false
+    | (None, _) -> false
 
   (* If the first entry of cG is of box-type, checks if it's in rest of cG
      This is used to ensure the proofs we find are unique *)
@@ -2133,7 +2134,7 @@ module CSolver = struct
              end;
            raise NotImplementedYet
 
-  (* Applies the msub to the comp goal. *)
+  (* Applies the msub to the comp goal. excludes applying sub to mvars *)
   (* Invariant:
      if cD ; cG  |- cg
      cD'  |- ms <= cD
@@ -2164,10 +2165,10 @@ module CSolver = struct
          Spine (aS'', (mt', mf',pl))
     in
     match cg with
-    | Box (cPsi, Atom typ, _lfTyp) ->
-       let typ' = Whnf.cnormTyp (typ, ms) in
+    | Box (cPsi, Atom tA, _lfTyp) ->
+       let tA' = Whnf.cnormTyp (tA, ms) in
        let cPsi' = Whnf.cnormDCtx (cPsi, ms) in
-       Box (cPsi', Atom typ', _lfTyp)
+       Box (cPsi', Atom tA', _lfTyp)
     | Implies ((r, td), cg') ->
        let cg'' = normCompGoal (cg', ms) in
        let r' = normCompRes ms r in
@@ -2314,7 +2315,7 @@ module CSolver = struct
 
   (* Generates, from cIH, a new cIH where each entry is unique. *)
   let unique_IH cIH cD =
-
+    dprintf begin fun p -> p.fmt "[unique_IH]" end;
     let rec not_in ((Comp.WfRec (name, ih_arg_lst, tau)) as ih) cIH =
       let different_type tau2 =
         try
@@ -2376,6 +2377,7 @@ module CSolver = struct
     rev_cPool revP'
 
   let remove_mvar_subs cIH =
+    dprintf begin fun p -> p.fmt "[remove_mvar_subs]" end;
     let remove_hd hd =
       match hd with
       | LF.MMVar ((mmvar, _), _) ->
@@ -2705,7 +2707,7 @@ module CSolver = struct
            when mmvar.LF.instantiation.contents == None ->
          let LF.ClTyp (LF.MTyp tA, cPsi) = mmvar.LF.typ in
          let mmvar' =
-           Whnf.newMMVar None (mmvar.LF.cD, cPsi, tA) mmvar.LF.plicity
+           Whnf.newMMVar None (LF.Empty, cPsi, tA) mmvar.LF.plicity
              mmvar.LF.inductivity in
          let norm = LF.Root (noLoc, LF.MMVar
                                       ((mmvar', LF.MShift 0), LF.Shift 0),
@@ -2724,7 +2726,7 @@ module CSolver = struct
            when mmvar.LF.instantiation.contents == None ->
          let LF.ClTyp (LF.PTyp tA, cPsi) = mmvar.LF.typ in
          let mmvar' =
-           Whnf.newMPVar None (mmvar.LF.cD, cPsi, tA) mmvar.LF.plicity
+           Whnf.newMPVar None (LF.Empty, cPsi, tA) mmvar.LF.plicity
              mmvar.LF.inductivity in
          let hd = LF.MPVar ((mmvar', LF.MShift 0), LF.Shift 0) in
          let mf = LF.ClObj (dctx_hat, LF.PObj hd) in
@@ -3652,7 +3654,7 @@ module CSolver = struct
     | LF.ClTyp (c, psi') -> LF.ClTyp (c, new_psi psi')
     | _ -> mtyp
 
-   (* Given the arguments of the IH, build the respective Beluga term. *)
+  (* Given the arguments of the IH, build the respective Beluga term. *)
   let create_IH_args (thm, args, tau) cD =
 
     let rec create (thm, args) f k len ms =
@@ -3820,7 +3822,7 @@ module CSolver = struct
          get_ex cD' ret
       | LF.Empty -> ret
     in
-    get_ex cD LF.Empty
+    rev_mctx(get_ex cD LF.Empty)
 
   let rec find_assumption typ cD cD_all cG k lst =
     let rec k_in_lst k lst =
@@ -3844,8 +3846,7 @@ module CSolver = struct
          U.Failure _ -> find_assumption typ cD' cD_all cG (k + 1) lst)
     | LF.Empty -> (None, [])
 
-   (* Given an IH of box type with one uninstantiated mvar, find all occurances
-     of it *)
+  (* Given an IH of box type with one uninstantiated mvar, find all occurances of it *)
   let rec find_all_occurances ((Comp.WfRec (name, ih_arg_lst, tau)) as dec)
             (cG, cPool, cG_a) sc cD thm_cid thm lst =
     let (ih_args, tau) = generate_new_IH dec in
@@ -4164,10 +4165,19 @@ module CSolver = struct
         (printState cD cG cPool cIH cg) ms
       end;
     let matchThm (cid, sCCl) =
+      let check cid =
+        match thm_cid with
+        | Some cid' ->
+           not (Name.equal (Store.Cid.Comp.fixed_name_of cid)
+                (Store.Cid.Comp.fixed_name_of cid'))
+        | _ -> true
+      in
       if (* Check to see if the comp goal is the head of the assumption *)
-         matchHead sCCl.cHead cg;
+         check cid && matchHead sCCl.cHead cg;
       then
-        (let (ms', fS) = C.mctxToMSub cD (sCCl.cMVars, LF.MShift 0) (fun s -> s) in
+        (let (ms', fS) =
+           C.mctxToMSub cD (sCCl.cMVars, LF.MShift 0) (fun s -> s)
+         in
          let ms'' = rev_ms ms' 0 in
          let tau = if isBox cg then C.boxToTypBox cg else C.atomicToBase cg in
         (try
@@ -4285,10 +4295,10 @@ module CSolver = struct
                    (thm, td, thm_cid))
              end
          with
-         | U.Failure _ | DepthReached _ | End_Of_Search -> ());
+         | U.Failure _ | DepthReached _ | End_Of_Search ->
          focusG (cD, cD_a) (cG, cPool', cPool_all, cG_a) cIH cg ms sc
            (currDepth, maxDepth, currSplitDepth, maxSplitDepth)
-           (thm, td, thm_cid)
+           (thm, td, thm_cid))
 
        else (* Otherwise, try the remaining comp assumptions *)
          focusG (cD, cD_a) (cG, cPool', cPool_all, cG_a) cIH cg ms sc
@@ -4367,8 +4377,8 @@ module CSolver = struct
               p.fmt "Carry on..."
               end;
               cgSolve' (cD, cD_a) (cG, cPool, cG_a) cIH_b (cg, ms_b) sc
-                 (currDepth, maxDepth, currSplitDepth, maxSplitDepth)
-                 (None, thm, td, cid) Blur
+                (currDepth, maxDepth, currSplitDepth, maxSplitDepth)
+                (None, thm, td, cid) Blur
 
   (* Split on the given split variable in ind; if none, split on the (m)var
      that provides the least number of cases                                *)
@@ -4605,7 +4615,7 @@ module CSolver = struct
         in
         dprintf
       begin fun p ->
-      p.fmt "[split/invert cD analysis] cD = %a, cD' = %a, cD_gb = %a, cD_b = %a"
+      p.fmt "[invert cD analysis] cD = %a, cD' = %a, cD_gb = %a, cD_b = %a"
         (Printer.fmt_ppr_mctx) cD
         (Printer.fmt_ppr_mctx) cD'
         (Printer.fmt_ppr_mctx) cD_gb
@@ -4619,11 +4629,11 @@ module CSolver = struct
         let cPool_b = updateCPool cPool cG k t' cD in
         let cD_e' = gen_explicit_cD cD_e cD cD_gb cD' in
         dprintf
-      begin fun p ->
-      p.fmt "[split/invert cD analysis] cD new = %a, cD_e' = %a "
-        (Printer.fmt_ppr_mctx) cD
-      (Printer.fmt_ppr_mctx) cD_e'
-      end;
+        begin fun p ->
+        p.fmt "[invert cD analysis] cD new = %a, cD_e' = %a "
+          (Printer.fmt_ppr_mctx) cD
+          (Printer.fmt_ppr_mctx) cD_e'
+        end;
         let cG_a' = update_branch_cG_a (cG, cPool_b, cG_a) in
         (* TODO:: We *want* to use cD to update cD_a (as it contains all
            new meta-vars) but cD contains implicit meta-variables, and if
@@ -4773,7 +4783,8 @@ module CSolver = struct
        in
        dprintf begin fun p -> p.fmt "ENTERING [logic] [gSolve]" end;
        (try
-          Solver.solve cD cPsi (g', S.id) sc' (Some 3);
+          Solver.gSolve Solver.Empty cD (cPsi', Context.dctxLength cPsi')
+            (g', S.id) sc' (Some 0, Some 3);
         with
         | Solver.End_Of_Search | Solver.DepthReached _ ->
            focusG (cD, cD_a) (cG, cPool, cPool, cG_a) cIH cg ms sc
@@ -4786,21 +4797,21 @@ module CSolver = struct
              (currDepth, maxDepth, currSplitDepth, maxSplitDepth)
              (thm, td, thm_cid);
            if (* If no split bound given, the most we do is invert. *)
-         maxSplitDepth == None
-       then
-         (invert (cD, cD_a) (cG, cPool, cG_a) cIH cg ms sc
-              (currDepth, maxDepth, currSplitDepth, maxSplitDepth)
-              (ind, thm, td, thm_cid);
-         raise End_Of_Search)
-       else
-         if maxSplitDepth == Some 0
-         then (* No splitting if explicitly told not to. *)
-           raise End_Of_Search
-         else
-           split (cD, cD_a) (cG, cPool, cG_a) cIH cg ms sc
-             (currDepth, maxDepth, currSplitDepth, maxSplitDepth)
-             (ind, thm, td, thm_cid);
-           raise End_Of_Search)
+             maxSplitDepth == None
+           then
+             (invert (cD, cD_a) (cG, cPool, cG_a) cIH cg ms sc
+                (currDepth, maxDepth, currSplitDepth, maxSplitDepth)
+                (ind, thm, td, thm_cid);
+             raise End_Of_Search)
+           else
+             if maxSplitDepth == Some 0
+             then (* No splitting if explicitly told not to. *)
+               raise End_Of_Search
+             else
+               split (cD, cD_a) (cG, cPool, cG_a) cIH cg ms sc
+                 (currDepth, maxDepth, currSplitDepth, maxSplitDepth)
+                 (ind, thm, td, thm_cid);
+               raise End_Of_Search)
 
     | Box (cPsi, g, Some P) ->
        let cg' = normCompGoal (cg, ms) in
@@ -4964,7 +4975,7 @@ module CSolver = struct
     (cG) and proceed to the uniform left phase (to unbox if necessary)     *)
   and blurIH (cD, cD_a) (cG, cPool, cG_a) (cIH, cIH_all) cg ms sc
                (cDepth, mDepth, currSplitDepth, maxSplitDepth)
-                 (ind, thm, td, thm_cid) =
+               (ind, thm, td, thm_cid) =
     dprintf
       begin fun p ->
       p.fmt
@@ -5228,10 +5239,13 @@ module CSolver = struct
           the cD, and will no longer consider it to be in cG. *)
        let n = get_name k' cG in
        let (cD_a', cG_a') = update_annotations (cD_a, cG_a) n in
-       let name = Name.mk_name (Whnf.newMTypName r) in
+       let name' = Name.mk_name (Whnf.newMTypName r) in
+       let names = Context.(names_of_mctx cD @ names_of_gctx cG) in
+       let name = Name.gen_fresh_name names name' in
        let mctx_decl = LF.Decl (name, r, Plicity.explicit, Inductivity.not_inductive) in
-       let cD' = Whnf.extend_mctx cD (mctx_decl, ms) in
+       let cD' = Whnf.extend_mctx cD (mctx_decl, LF.MShift 0) in
        let cG' = Whnf.cnormGCtx (cG, LF.MShift 1) in
+       let cIH' = cnormIHCtx' (cIH, LF.MShift 1) in
        let box = Comp.Var (noLoc, k') in
        let pattern =
          Comp.PatMetaObj (noLoc,(noLoc,
@@ -5245,10 +5259,12 @@ module CSolver = struct
                  , Plicity.explicit
                  )
              in
-             LF.ClObj (Context.dctxToHat (Whnf.cnormDCtx (cPsi, LF.MShift 1)), LF.MObj tM)
+             LF.ClObj (Context.dctxToHat (Whnf.cnormDCtx (cPsi, LF.MShift 1)),
+                       LF.MObj tM)
           | LF.ClTyp (LF.PTyp _, cPsi) ->
              let hd = LF.PVar (1, S.id) in
-             LF.ClObj (Context.dctxToHat (Whnf.cnormDCtx (cPsi, LF.MShift 1)), LF.PObj hd)
+             LF.ClObj (Context.dctxToHat (Whnf.cnormDCtx (cPsi, LF.MShift 1)),
+                       LF.PObj hd)
           | LF.CTyp _ ->
              LF.CObj (LF.CtxVar (LF.CtxOffset 1))
                                 )
@@ -5257,13 +5273,15 @@ module CSolver = struct
        let sc' =
          (fun e ->
            sc (Comp.Case (noLoc, Comp.PragmaNotCase, box,
-                          [Comp.Branch (noLoc, LF.Empty, (cD', LF.Empty), pattern, LF.MShift 1, e)]))) in
+                          [Comp.Branch (noLoc, LF.Empty,
+                                        (cD', LF.Empty),
+                                        pattern, LF.MShift 1, e)]))) in
        let ms' = Whnf.mvar_dot1 ms in
        let cPool'' = cnormCPool (cPool', LF.MShift 1) in
        let cPool_ret' = prependToCPool (unbox cP) cPool_ret in
        let cPool_ret'' = cnormCPool (cPool_ret', LF.MShift 1) in
        let cg' = normCompGoal (cg, (LF.MShift 1)) in
-       uniform_left (cD', cD_a') (cG', cPool'', cPool_ret'', cG_a') cIH cg'
+       uniform_left (cD', cD_a') (cG', cPool'', cPool_ret'', cG_a') cIH' cg'
          ms' sc' (currDepth, maxDepth, currSplitDepth, maxSplitDepth)
          (ind, thm, td, thm_cid) blur
 
@@ -5322,11 +5340,9 @@ module CSolver = struct
        let cD' = Whnf.extend_mctx cD (tdecl, ms) in
        let name = LF.name_of_ctyp_decl tdecl in
        let cG' = Whnf.cnormGCtx (cG, LF.MShift 1) in
-       let cPool' = cnormCPool (cPool, LF.MShift 1) in
        let cIH' = cnormIHCtx' (cIH, LF.MShift 1) in
-       let sc' =
-         (fun e ->
-           sc (Comp.MLam (noLoc, name, e, Plicity.explicit))) in
+       let cPool' = cnormCPool (cPool, LF.MShift 1) in
+       let sc' = (fun e -> sc (Comp.MLam (noLoc, name, e, Plicity.explicit))) in
        uniform_right (cD', cD_a') (cG', cPool', cG_a') cIH' cg'
          (Whnf.mvar_dot1 ms) sc'
          (currDepth, maxDepth, currSplitDepth, maxSplitDepth) (k+1)

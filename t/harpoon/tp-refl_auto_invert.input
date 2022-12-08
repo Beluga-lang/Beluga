@@ -1,0 +1,9 @@
+t/harpoon/tp-refl.bel
+tp-refl
+{A : [|- tp]} [|- eq A A]
+1
+
+msplit A
+auto-invert-solve
+auto-invert-solve
+:quit

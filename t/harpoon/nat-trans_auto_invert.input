@@ -1,0 +1,10 @@
+t/harpoon/nat-trans.bel
+trans
+[⊢ leq N1 N2] → [⊢ leq N2 N3] → [⊢ leq N1 N3]
+1
+
+
+split x
+auto-invert-solve
+auto-invert-solve
+:quit

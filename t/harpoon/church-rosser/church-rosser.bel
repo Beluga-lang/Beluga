@@ -1,0 +1,82 @@
+%%% Untyped lambda-calculus
+%%% Author: Frank Pfenning
+
+LF term : type =
+  | lam : (term -> term) -> term
+  | app : term -> term -> term
+;
+
+%%% Ordinary reduction for the untyped lambda-calculus
+%%% Author: Frank Pfenning
+
+LF  step : term -> term -> type =
+  | beta1 : step (app (lam M1) M2) (M1 M2)
+  | lm1   : ({x:term} step (M x) (M' x)) -> step  (lam M) (lam M')
+  | apl1  : step M1 M1' -> step (app M1 M2) (app M1' M2)
+  | apr1  : step M2 M2' -> step (app M1 M2) (app M1 M2')
+;
+
+% Multi-step reduction
+
+LF step* : term -> term -> type =
+  | id1   : step* M  M
+  | step1 : step M M' -> step* M' M'' -> step* M M''
+;
+
+
+% Conversion
+
+LF conv : term -> term -> type =
+  | refl :     conv M M
+  | sym  : conv M' M ->     conv M M'
+  | trans: conv M' M'' -> conv M  M' ->     conv M  M''
+  | red  : step* M M' ->     conv M M'
+;
+
+
+%%% Parallel reduction in the untyped lambda calculus
+%%% Author: Frank Pfenning
+
+LF  pred : term -> term -> type =
+  | beta : ({x:term} pred x x -> pred (M1 x) (M1' x)) -> pred M2 M2' -> pred (app (lam M1) M2) (M1' M2')
+  | ap   : pred M1 M1' -> pred M2 M2' -> pred (app M1 M2) (app M1' M2')
+  | lm   : ({x:term} pred x x -> pred (M x)  (M' x)) -> pred (lam M) (lam M')
+;
+
+
+% Parallel, multi-step reduction
+
+LF  pred* : term -> term -> type =
+  | id*   :   pred* M  M
+  | next    :  pred M  M' -> pred* M' M'' ->  pred* M  M''
+;
+
+% Parallel conversion
+
+LF pred= : term -> term -> type =
+  | reduce :  pred*  M  M' -> pred= M  M'
+  | expand :  pred* M  M' -> pred= M'  M
+  | next=  :  pred= M  M' -> pred= M' M'' -> pred= M  M''
+;
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%           Lemmas              %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%% Lemmas concerning ordinary multi-step reduction
+%%% Author: Frank Pfenning
+%%% Adapted to Beluga: Brigitte Pientka
+
+% Terms can contain free variables without explicit
+% assumptions about them (for multi-step reduction)
+% From ord-lemmas.bel
+
+%% Note: These lemmas all work individually, but run together, something goes wrong... J.S.
+
+% block ltm : block {x:term}.
+schema tctx = term;
+
+% Every term reduces to itself (in parallel)
+schema ctx = block x:term, t:pred x x;
+

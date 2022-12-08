@@ -1,0 +1,7 @@
+t/harpoon/mini-ml/mini-ml-sans-fix.bel
+sound
+{E : [⊢ exp]} {V : [⊢ exp]} [ |- eval E V] -> [ |- value V]
+3
+
+inductive-auto-solve
+:quit

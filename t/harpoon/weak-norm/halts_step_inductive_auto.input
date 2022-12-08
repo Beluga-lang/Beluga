@@ -1,0 +1,7 @@
+t/harpoon/weak-norm/weak-norm-halts-step.bel
+halts_step
+{A : [⊢ tp]} {M : [⊢ tm A]} {M' : [⊢ tm A]} [ |- step M M'] -> [ |- halts M'] -> [ |- halts M]
+
+
+inductive-auto-solve
+:quit

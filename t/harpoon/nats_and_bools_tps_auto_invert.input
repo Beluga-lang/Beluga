@@ -1,0 +1,26 @@
+t/harpoon/nats_and_bools_tps.bel
+tps
+{M: [⊢ term]} {N: [⊢ term]} {A: [⊢ tp]} [|- step M N] -> [|- hastype M A] -> [|- hastype N A]
+4
+
+split x
+auto-invert-solve
+
+auto-invert-solve
+
+auto-invert-solve
+
+auto-invert-solve
+
+auto-invert-solve
+
+auto-invert-solve
+
+auto-invert-solve
+
+auto-invert-solve
+
+auto-invert-solve
+
+auto-invert-solve
+:quit

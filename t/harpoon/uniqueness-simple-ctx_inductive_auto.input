@@ -1,0 +1,7 @@
+t/harpoon/uniqueness-simple-ctx.bel
+unique
+{E : [⊢ exp]} {V : [⊢ exp]} {V' : [⊢ exp]} [ |- eval E V] -> [ |- eval E V'] ->  [ |- eq V V']
+4
+
+inductive-auto-solve
+:quit

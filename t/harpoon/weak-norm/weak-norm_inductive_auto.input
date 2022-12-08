@@ -1,0 +1,17 @@
+t/harpoon/weak-norm/weak-norm.bel
+bwd_closed
+{T : [⊢ tp]} {M : [⊢ tm T]} {M' : [⊢ tm T]} [ |- step M M'] → Reduce [|- T] [ |- M'] -> Reduce [|- T] [ |- M]
+1
+
+inductive-auto-solve 3
+reduce_halts1
+{T : [⊢ tp]} {M : [⊢ tm T]} Reduce [|- T] [ |- M] -> [ |- halts M]
+3
+
+inductive-auto-solve 2
+reduce_halts2
+{T : [⊢ tp]} {M : [⊢ tm T]} Reduce [|- T] [ |- M] -> [ |- halts M]
+1
+
+inductive-auto-solve 2
+:quit

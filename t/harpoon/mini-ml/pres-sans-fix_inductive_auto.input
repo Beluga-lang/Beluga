@@ -1,0 +1,7 @@
+t/harpoon/mini-ml/mini-ml-sans-fix.bel
+pres
+{E : [⊢ exp]} {V : [⊢ exp]} {T : [⊢ tp]} [ |- eval E V] -> [ |- oft E T] -> [ |- oft V T]
+4
+
+inductive-auto-solve
+:quit

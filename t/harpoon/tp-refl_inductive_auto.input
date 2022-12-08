@@ -1,0 +1,7 @@
+t/harpoon/tp-refl.bel
+tp-refl
+{A : [|- tp]} [|- eq A A]
+1
+
+inductive-auto-solve
+:quit

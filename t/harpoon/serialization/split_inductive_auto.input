@@ -1,0 +1,7 @@
+t/harpoon/serialization/split.bel
+test-split
+{X : [|- tm]} [|- tp]
+
+
+inductive-auto-solve
+:quit

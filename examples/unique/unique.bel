@@ -52,7 +52,7 @@ mlam T => case [ |- T] of
 % world tctx = l
 
 schema tctx = some [t:tp] block (x:exp, _t:type_of x t);
-%{
+
 rec unique : {g:tctx}   {E:[g |- exp]} [g |- type_of E T[]] -> [g |- type_of E T'[]] ->  [ |- eq T T'] =  / total e (unique _g _t _t' e) /
 mlam g => mlam E => fn d => fn f => case [g |- E ] of
  | [g |- app E1 E2] =>
@@ -145,5 +145,3 @@ fn d => fn f => case d of
 let v : [ |- equal (arr nat nat) (arr nat nat)] =
   unique3 [ |- t_lam \x.\u. u] [ |- t_lam \x.\u.u]
 ;
-
-}%

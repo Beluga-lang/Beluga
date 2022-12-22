@@ -54,6 +54,35 @@ module type APPLY = sig
     -> 'a5 t
     -> ('a1 * 'a2 * 'a3 * 'a4 * 'a5) t
 
+  (** [lift2 f ma1 ma2] sequentially executes actions [ma1], [ma2] and passes
+      their outputs to [f]. *)
+  val lift2 : ('a1 -> 'a2 -> 'r) -> 'a1 t -> 'a2 t -> 'r t
+
+  (** [lift3 f ma1 ma2 ma3] sequentially executes actions [ma1], [ma2], [ma3]
+      and passes their outputs to [f]. *)
+  val lift3 : ('a1 -> 'a2 -> 'a3 -> 'r) -> 'a1 t -> 'a2 t -> 'a3 t -> 'r t
+
+  (** [lift4 f ma1 ma2 ma3 ma4] sequentially executes actions [ma1], [ma2],
+      [ma3], [ma4] and passes their outputs to [f]. *)
+  val lift4 :
+       ('a1 -> 'a2 -> 'a3 -> 'a4 -> 'r)
+    -> 'a1 t
+    -> 'a2 t
+    -> 'a3 t
+    -> 'a4 t
+    -> 'r t
+
+  (** [lift5 f ma1 ma2 ma3 ma4 ma5] sequentially executes actions [ma1],
+      [ma2], [ma3], [ma4], [ma5] and passes their outputs to [f]. *)
+  val lift5 :
+       ('a1 -> 'a2 -> 'a3 -> 'a4 -> 'a5 -> 'r)
+    -> 'a1 t
+    -> 'a2 t
+    -> 'a3 t
+    -> 'a4 t
+    -> 'a5 t
+    -> 'r t
+
   (** [replicate n a] sequentially runs [n] times [a].
 
       @raise Invalid_argument If [n < 0]. *)

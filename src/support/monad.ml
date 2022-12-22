@@ -10,6 +10,10 @@ module type MONAD = sig
   val compose : ('b -> 'c t) -> ('a -> 'b t) -> 'a -> 'c t
 
   val ( >=> ) : ('a -> 'b t) -> ('b -> 'c t) -> 'a -> 'c t
+
+  val ( let* ) : 'a t -> ('a -> 'b t) -> 'b t
+
+  val ( and* ) : 'a t -> 'b t -> ('a * 'b) t
 end
 
 module Make (Monad : sig
@@ -27,4 +31,11 @@ struct
   let compose g f x = f x >>= g
 
   let ( >=> ) f g = compose g f
+
+  let ( let* ) ma f = bind f ma
+
+  let ( and* ) ma mb =
+    let* a = ma in
+    let* b = mb in
+    return (a, b)
 end

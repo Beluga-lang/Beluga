@@ -1,3 +1,7 @@
+let read_lines file =
+  let contents = In_channel.with_open_bin file In_channel.input_all in
+  String.split_on_char '\n' contents
+
 let go finalize body =
   try
     let x = body () in
@@ -5,20 +9,19 @@ let go finalize body =
     x
   with
   | e ->
-     finalize ();
-     raise e
+      finalize ();
+      raise e
 
-let with_temp_file temp_dir template f =
-  let (path, out) = Filename.open_temp_file ~temp_dir: temp_dir template "" in
+let with_temp_file temp_dir basename f =
+  let path, out = Filename.open_temp_file ~temp_dir basename "" in
   let finalize () =
-    List.iter (fun f -> Misc.noexcept f)
-      [ (fun _ -> close_out out)
-      ; (fun _ -> Sys.remove path)
-      ]
+    List.iter
+      (fun f -> Misc.noexcept f)
+      [ (fun () -> close_out out); (fun () -> Sys.remove path) ]
   in
-  go finalize (fun _ -> f path out)
+  go finalize (fun () -> f path out)
 
 let with_in_channel path f =
   let input = open_in path in
-  let finalize () = Misc.noexcept (fun _ -> close_in input) in
-  go finalize (fun _ -> f input)
+  let finalize () = Misc.noexcept (fun () -> close_in input) in
+  go finalize (fun () -> f input)

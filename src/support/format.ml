@@ -1,8 +1,7 @@
 include Stdlib.Format
 
 (** Polymorphic function that processes a format string. *)
-type fmt =
-  { fmt : 'a. ('a, formatter, unit) format -> 'a }
+type fmt = { fmt : 'a. ('a, formatter, unit) format -> 'a }
 
 (** Converts something to a string using a formatting function. *)
 let stringify p x = asprintf "%a" p x

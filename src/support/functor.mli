@@ -11,6 +11,15 @@ module type FUNCTOR = sig
 
   (** [( $> )] is an infix synonym for {!map}. *)
   val ( $> ) : 'a t -> ('a -> 'b) -> 'b t
+
+  (** [( let+ ) ma f] is [map f a]. This is a binding operator, and is used
+      as [let+ a = ma in f a] *)
+  val ( let+ ) : 'a t -> ('a -> 'b) -> 'b t
+
+  (** [( and+ ) ma mb] is [let+ a = ma in let+ b = mb in return (a, b)]. This
+      is a binding operator, and it is used as
+      [let+ a = ma and+ b = mb in ...]. *)
+  val ( and+ ) : 'a t -> 'b t -> ('a * 'b) t
 end
 
 (** Functor building an implementation of {!FUNCTOR} over a monad. *)

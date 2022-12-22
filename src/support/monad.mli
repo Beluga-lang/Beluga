@@ -1,6 +1,7 @@
 (** The abstract datatype of actions.
 
-    Instances of {!MONAD} should satisfy the following laws for {!MONAD.( >>= )}:
+    Instances of {!MONAD} should satisfy the following laws for {!MONAD.( >>=
+    )}:
 
     - {b Left identity}: [(return a >>= h) = (h a)],
     - {b Right identity}: [(m >>= return) = m],
@@ -31,6 +32,15 @@ module type MONAD = sig
 
   (** Operator alias of {!compose}. *)
   val ( >=> ) : ('a -> 'b t) -> ('b -> 'c t) -> 'a -> 'c t
+
+  (** [( let* ) ma f] is [bind f ma]. This is a binding operator, and it is
+      used as [let* a = ma in f a]. *)
+  val ( let* ) : 'a t -> ('a -> 'b t) -> 'b t
+
+  (** [( and* ) ma mb] is [let* a = ma in let* b = mb in return (a, b)]. This
+      is a binding operator, and it is used as
+      [let* a = ma and* b = mb in ...]. *)
+  val ( and* ) : 'a t -> 'b t -> ('a * 'b) t
 end
 
 (** Functor building the aliases for a minimal implementation for {!MONAD}. *)

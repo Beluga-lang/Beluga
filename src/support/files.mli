@@ -1,16 +1,16 @@
 (** Miscellaneous file handling utilities *)
 
+(** [read_lines filename] is the list of ['\n'] separated lines read from the
+    file at [filename]. *)
+val read_lines : string -> string list
 
-(** Opens a temporary file with the given name prefix in the given
-    directory and runs the given function with the path and output
-    channel to that file.
-    This function guarantees that even in case of exception, the
-    output channel is closed and the temporary file is unlinked.
- *)
+(** [with_temp_file temp_dir basename f] opens a temporary file [basename] in
+    directory [temp_dir] and runs [f] with the path and output channel to
+    that file. This function guarantees that even in case of exception, the
+    output channel is closed and the temporary file is unlinked. *)
 val with_temp_file : string -> string -> (string -> out_channel -> 'a) -> 'a
 
-(** Opens an input channel on the given path and runs the given
-    function with it.
-    Guarantees to close the channel, even in case of exceptional exit.
- *)
+(** [with_in_channel filename f] opens an input channel on [filename] and
+    runs [f] with it. Guarantees to close the channel, even in case of
+    exceptional exit. *)
 val with_in_channel : string -> (in_channel -> 'a) -> 'a

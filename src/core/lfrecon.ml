@@ -1655,7 +1655,7 @@ and elTerm' recT cD cPsi r sP =
        begin fun p ->
        p.fmt "[elTerm] @[<v>cPsi after elSub = %a@,\
               has length %d@,\
-              @[%a |- %a : %a@]
+              @[%a |- %a : %a@] \
               apx-mvar: expected type: @[%a@]@,\
               inferred type: @[%a@]@,@]"
          (P.fmt_ppr_lf_dctx cD P.l0) cPsi
@@ -1961,7 +1961,7 @@ and instanceOfSchElem loc cD cPsi (tA, s) (some_part, sB) =
     p.fmt "***@[<v>Unify.unifyTyp@,\
            cPsi = @[%a@]@,\
            dctx = @[%a@]@,\
-           @[%a@]@,
+           @[%a@]@,\
            dctxSub = @[%a@]@,\
            @[%a == %a@]@]"
       (P.fmt_ppr_lf_dctx cD P.l0) cPsi

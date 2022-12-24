@@ -1405,7 +1405,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
       "@[<v>%a\
        @,%a\
        @,%a\
-       @,%a
+       @,%a\
        @]"
       (fmt_ppr_cmp_subgoal_path cD cG) (label SubgoalPath.Here)
       fmt_ppr_cmp_hypotheses_listing ctx
@@ -1526,7 +1526,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
       "@[<v>Meta-context:\
        @,  @[<v>%a@]\
        @,Computational context:\
-       @,  @[<v>%a@]
+       @,  @[<v>%a@]\
        @]"
       (pp_print_list ~pp_sep: pp_print_cut
          (fun ppf (cD, d) ->

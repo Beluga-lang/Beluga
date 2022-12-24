@@ -113,8 +113,8 @@ let _ =
            pp_print_string
            "which is not closed, or which requires that some \
             metavariables are futher \
-            restricted, i.e. some variable dependencies cannot happen.
-            This error may indicate that some reconstructed implicit
+            restricted, i.e. some variable dependencies cannot happen.\
+            This error may indicate that some reconstructed implicit \
             arguments should be restricted."
            (P.fmt_ppr_lf_mctx P.l0) cD
            (P.fmt_ppr_cmp_gctx cD P.l0) cG
@@ -181,7 +181,7 @@ let _ =
          fprintf ppf
            "@[<v>Unbound constructor @[%a@].\
             @,@[A %a constructor is expected, due to the type of the scrutinee, namely@]\
-            @,  @[%a@]
+            @,  @[%a@]\
             @]"
            Name.pp name
            print_case_label_kind kind
@@ -192,7 +192,7 @@ let _ =
          fprintf ppf
            "@[<v>The 1-based index %d is invalid for the schema\
             @,  @[%a@]\
-            @,which consists of %d only elements.
+            @,which consists of %d only elements.\
             @]"
            n
            P.(fmt_ppr_lf_schema ~useName: false l0) schema
@@ -1846,7 +1846,7 @@ and recPatObj loc cD pat (cD_s, tau_s) =
   dprintf
     begin fun p ->
     p.fmt "[recPatObj] @[<v>scrutinee has type @[tau =@ @[%a@]@]@,\
-           scrutinee cD = @[%a@]@,
+           scrutinee cD = @[%a@]@,\
            pattern cD = @[%a@]@]"
       (P.fmt_ppr_cmp_typ cD_s P.l0) tau_s
       (P.fmt_ppr_lf_mctx P.l0) cD_s

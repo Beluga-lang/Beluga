@@ -46,16 +46,16 @@ let _ =
       match err with
       | TotalDeclError (f, f') ->
          fprintf ppf
-           "Expected totality declaration for %a@.@
-           Found totality declaration for %s@."
+           "Expected totality declaration for %a@.@\
+            Found totality declaration for %s@."
            Name.pp f
            (Name.string_of_name f')
       | MutualTotalDecl (haves, have_nots) ->
          fprintf ppf "@[<v>%a@,The functions@,  @[<hov>%a@]@,have totality declarations, \
                       but the functions@,  @[<hov>%a@]@,are missing totality declarations."
            pp_print_string
-           "This mutual definition block does not have
-            consistent totality declarations. Either all or none of
+           "This mutual definition block does not have \
+            consistent totality declarations. Either all or none of \
             functions must be declared total."
            (pp_print_list ~pp_sep: Format.comma Name.pp) haves
            (pp_print_list ~pp_sep: Format.comma Name.pp) have_nots

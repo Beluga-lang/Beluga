@@ -198,12 +198,12 @@ module Comp = struct
        let open Format in
        fprintf ppf
          "@[<v>%a@,@,\
-          Common causes are:@,
+          Common causes are:@,\
           @[<v>\
           - @[%a@]@,\
           - @[%a@]@,@]@,@,\
           The constraint@,  @[%a@]@,\
-          could not be solved.@,
+          could not be solved.@,\
           The program @[%a@] is considered ill-typed.@]"
          pp_print_string msg1
          pp_print_string msg2
@@ -283,9 +283,9 @@ module Comp = struct
        fprintf ppf
          "@[<v>Invalid hypotheses.\
           @,Expected hypotheses:\
-          @,  @[%a@]
+          @,  @[%a@]\
           @,Actual hypotheses:\
-          @,  @[%a@]
+          @,  @[%a@]\
           @]"
          P.fmt_ppr_cmp_hypotheses_listing exp
          P.fmt_ppr_cmp_hypotheses_listing act
@@ -299,7 +299,7 @@ module Comp = struct
           @,@[%a@]@]"
          P.(fmt_ppr_cmp_typ cD l0) tau
          pp_print_string
-         "Decomposition requires that the type consist of Pi-types
+         "Decomposition requires that the type consist of Pi-types \
           following by arrow-types with no further Pi-types."
 
     | SufficesLengthsMismatch (cD, tau, exp_k, act_k) ->
@@ -336,8 +336,8 @@ module Comp = struct
           @,The current goal type\
           @,  @[%a@]\
           @,is not compatible with the conclusion of\
-          @,  @[%a@]
-          @,`suffices' cannot be used in this case.
+          @,  @[%a@]\
+          @,`suffices' cannot be used in this case.\
           @]"
          P.(fmt_ppr_cmp_typ cD l0) tau_goal
          P.(fmt_ppr_cmp_typ cD l0) tau_i

@@ -976,8 +976,8 @@ let match_metaobj cD cD_p ((loc, mO), mt) ((loc', mO_p), mtp) mC sC =
           let mobj cD = P.fmt_ppr_cmp_meta_obj cD P.l0 in
           let mtyp cD = P.fmt_ppr_cmp_meta_typ cD in
           Format.asprintf "[coverage] @[<v>[match_metaobj] @,\
-                                 Found covgoal @[%a@ : %a@]@,
-                                 Pattern: @[%a@ : %a@]"
+                          \      Found covgoal @[%a@ : %a@]@,\
+                          \      Pattern: @[%a@ : %a@]"
             (mobj cD) (loc, mO)
             (mtyp cD) mt
             (mobj cD_p) (loc', mO_p)
@@ -2796,7 +2796,7 @@ let refine_mv ((cD, cG, candidates, patt) as cov_problem) =
         dprintf
           begin fun p ->
           p.fmt "[refine_mv] @[<v>generated coverage goals:@,\
-                 @[%a@]@,
+                 @[%a@]@,\
                  for pattern: @[%a@]@]"
             Prettycov.fmt_ppr_cov_goals (List.map (fun (TermCandidate cg) -> cg) cgoals)
             (P.fmt_ppr_cmp_pattern cD cG P.l0) patt

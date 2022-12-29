@@ -591,10 +591,10 @@ In particular, pragmas allow the user to choose a notation for operators.
 \subsection{Signature}\label{section:syntax-signature}
 
 The following is the grammar for the toplevel compilation units in \Beluga.
-That is, type constants, term constants, programs and proofs are arranged as lists declarations, and may appear in modules.
+That is, type constants, term constants, programs and proofs are arranged as lists of declarations, and may appear in modules.
 
 \begin{grammar}
-<signature> ::= <global-pragma>* <declaration>*
+<signature> ::= <global-pragma>* (<declaration> | <pragma>)*
 
 <declaration> ::= \hfill\\
 | <module-declaration>\\
@@ -611,7 +611,7 @@ That is, type constants, term constants, programs and proofs are arranged as lis
 | <documentation-comment-declaration>\\
 | <pragma>
 
-<module-declaration> ::= `module' <identifier> `=' `struct' <declaration>* `end' [`;']
+<module-declaration> ::= `module' <identifier> `=' `struct' (<declaration> | <pragma>)* `end' [`;']
 
 <lf-type-constants-declaration> ::= `LF' <lf-type-constant-declaration>\\
 (`and' [`LF'] <lf-type-constant-declaration>)* `;'
@@ -636,17 +636,23 @@ That is, type constants, term constants, programs and proofs are arranged as lis
 <inductive-type-constant-declaration> ::= `inductive' <inductive-type-constant>
 
 <inductive-type-constant> ::= <identifier> `:' <comp-kind> `='\\{}
- [`|'] [<inductive-type-constant>] (`|' <inductive-type-constant>)*
+ [`|'] [<inductive-expression-constant>] (`|' <inductive-expression-constant>)*
+
+<inductive-expression-constant> ::= <identifier> `:' <comp-type>
 
 <coinductive-type-constant-declaration> ::= `coinductive' <coinductive-type-constant>
 
 <coinductive-type-constant> ::= <identifier> `:' <comp-kind> `='\\{}
- [`|'] [<coinductive-type-constant>] (`|' <coinductive-type-constant>)*
+ [`|'] [<coinductive-expression-constant>] (`|' <coinductive-expression-constant>)*
+
+<coinductive-expression-constant> ::= <identifier> `:' <comp-type> `::' <comp-type>
 
 <stratified-type-constant-declaration> ::= `stratified' <stratified-type-constant>
 
 <stratified-type-constant> ::= <identifier> `:' <comp-kind> `='\\{}
- [`|'] [<stratified-type-constant>] (`|' <stratified-type-constant>)*
+ [`|'] [<stratified-expression-constant>] (`|' <stratified-expression-constant>)*
+
+<stratified-expression-constant> ::= <identifier> `:' <comp-type>
 
 <proof-declaration> ::= `proof' <identifier> `:' <comp-type> `=' [<totality-declaration>] <harpoon-proof>
 

@@ -2,6 +2,7 @@
    @author Brigitte Pientka
 *)
 
+open Beluga_syntax.Common
 open Syntax
 open Int
 open LF
@@ -11,7 +12,7 @@ type error =
 
 type t
 
-exception Error of Syntax.Loc.t * error
+exception Error of Location.t * error
 val fmt_ppr_conv_list : Format.formatter -> t -> unit
 
 (** Translates a bound variable index according to the sigma
@@ -27,11 +28,11 @@ val gen_tup_sub' : t -> sub
 
 (** Constructs a unification variable for the given tclo,
     strengthening its type. *)
-val etaExpandMMVstr : Loc.t -> mctx -> dctx -> tclo -> Plicity.t -> Name.t option -> Name.t list -> normal
+val etaExpandMMVstr : Location.t -> mctx -> dctx -> tclo -> Plicity.t -> Name.t option -> Name.t list -> normal
 
 (** Constructs a unification parameter variable for a given tclo,
     strengthening its type. *)
-val etaExpandMPVstr : Loc.t -> mctx -> dctx -> tclo -> Plicity.t -> Name.t option -> Name.t list -> normal
+val etaExpandMPVstr : Location.t -> mctx -> dctx -> tclo -> Plicity.t -> Name.t option -> Name.t list -> normal
 
 (** gen_flattening cD cPsi = (cPhi, lazy s_proj, lazy s_tup)
     Generates a flattened LF context cPhi in which all blocks present

@@ -1,4 +1,4 @@
-open Support
+open Beluga_syntax.Common
 open Syntax.Int
 
 (* Define two opaque types to be used as indices for `hole_info`. *)

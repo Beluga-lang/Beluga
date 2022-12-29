@@ -1,6 +1,4 @@
 open Support
-open Beluga
-open Syntax
 
 module Error = struct
   type t =
@@ -15,7 +13,7 @@ module Error = struct
        fprintf ppf "End of input."
 
   let _ =
-    Error.register_printing_function
+    Beluga_syntax.Error.register_printing_function
       (function E e -> Some e | _ -> None)
       fmt_ppr
 
@@ -44,23 +42,11 @@ let make prompt' ppf =
   in
   { prompt; ppf; prompt_number }
 
-let next_prompt_number io = incr io.prompt_number; !(io.prompt_number)
+let[@warning "-32"] next_prompt_number io = incr io.prompt_number; !(io.prompt_number)
 
 let default_prompt_source = "<prompt>"
 
-let rec parsed_prompt ?(source = default_prompt_source) io msg use_history (p : 'a Parser.t) : 'a =
+let[@warning "-39"] rec parsed_prompt ?(source = default_prompt_source) io msg use_history p =
   match io.prompt msg use_history () with
   | None -> Error.(throw EndOfInput)
-  | Some line ->
-     Runparser.parse_string
-       (Loc.(move_line (next_prompt_number io) (initial source)))
-       line
-       (Parser.only p)
-     |> Pair.snd
-     |> Parser.handle
-          begin fun err ->
-          printf io "@[%a@]@."
-            Parser.print_error err;
-          parsed_prompt io msg use_history p
-          end
-          Fun.id
+  | Some line -> Obj.magic () (* TODO: Parse only [p] on [line] *)

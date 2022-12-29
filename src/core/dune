@@ -1,9 +1,8 @@
 (library
  (name beluga)
+ (package beluga)
  (modules :standard)
- (libraries gen sedlex extlib support unix str)
- (preprocess
-  (pps sedlex.ppx))
+ (libraries gen sedlex extlib support unix str beluga_syntax)
  (instrumentation
   (backend bisect_ppx --bisect-silent yes)))
 

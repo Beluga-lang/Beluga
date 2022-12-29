@@ -2,7 +2,7 @@
    @author Brigitte Pientka
    modified: Joshua Dunfield
 *)
-open Support
+open Beluga_syntax.Common
 
 module LF : sig
 

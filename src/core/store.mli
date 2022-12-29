@@ -1,5 +1,6 @@
 open Support
 open Id
+open Beluga_syntax.Common
 open Syntax.Int
 
 module OpPragmas : sig
@@ -90,7 +91,7 @@ module Cid : sig
     val gen_mvar_name : LF.typ -> (unit -> string) option
     val get : cid_typ -> entry
     val index_of_name : Name.t -> cid_typ
-    val addConstructor : Syntax.Loc.t -> cid_typ -> cid_term -> LF.typ -> unit
+    val addConstructor : Location.t -> cid_typ -> cid_term -> LF.typ -> unit
     val clear : unit -> unit
     val args_of_name : Name.t -> int
     val args_of_name_opt : Name.t -> int option
@@ -318,7 +319,7 @@ module Cid : sig
     val index_of_name : Name.t -> cid_prog
     val index_of_name_opt : Name.t -> cid_prog option
 
-    (* val entry_list : ((Id.cid_prog * Loc.t) list ref) DynArray.t *)
+    (* val entry_list : ((Id.cid_prog * Location.t) list ref) DynArray.t *)
     val clear : unit -> unit
 
     (** Update the associated program of an existing entry.

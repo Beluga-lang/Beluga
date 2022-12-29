@@ -2,6 +2,7 @@ open Support.Equality
 (* Checking termination of a function *)
 
 open Support
+open Beluga_syntax.Common
 open Syntax
 open Int
 module Unify = Unify.StdTrail
@@ -22,7 +23,7 @@ type error =
   | NotImplemented of string
   | TooManyArg
 
-exception E of Syntax.Loc.t * error
+exception E of Location.t * error
 
 let throw loc e = raise (E (loc, e))
 
@@ -358,7 +359,7 @@ then
 let gen_meta_obj (k, wk) cdecl =
   match cdecl with
   | LF.CTyp (schema_cid) ->
-     (Syntax.Loc.ghost, LF.CObj (LF.CtxVar (LF.CtxOffset k)))
+     (Location.ghost, LF.CObj (LF.CtxVar (LF.CtxOffset k)))
   | LF.ClTyp (LF.MTyp tA, cPsi) ->
      let psihat' = Context.dctxToHat cPsi in
      (* let psihat' = Whnf.cnorm_psihat phat theta in *)
@@ -368,20 +369,20 @@ let gen_meta_obj (k, wk) cdecl =
 
       *)
      let mv = LF.MVar (LF.Offset k, wk) in
-     let tM = LF.Root (Syntax.Loc.ghost, mv, LF.Nil, Plicity.explicit) in
-     (Syntax.Loc.ghost, LF.ClObj (psihat', LF.MObj tM))
+     let tM = LF.Root (Location.ghost, mv, LF.Nil, Plicity.explicit) in
+     (Location.ghost, LF.ClObj (psihat', LF.MObj tM))
 
   | LF.ClTyp (LF.PTyp tA, cPsi) ->
      let psihat' = Context.dctxToHat cPsi in
      (* let psihat' = Whnf.cnorm_psihat phat theta in *)
      let pv = LF.PVar (k, wk) in
-     (Syntax.Loc.ghost, LF.ClObj (psihat', LF.PObj pv))
+     (Location.ghost, LF.ClObj (psihat', LF.PObj pv))
 
   | LF.ClTyp (LF.STyp (_, cPsi), cPhi) ->
      let sv = LF.SVar (k, 0, wk) in
      let psihat' = Context.dctxToHat cPsi in
      (* let psihat' = Whnf.cnorm_psihat phat theta in *)
-     (Syntax.Loc.ghost, LF.ClObj (psihat', LF.SObj sv))
+     (Location.ghost, LF.ClObj (psihat', LF.SObj sv))
 
 let uninstantiated_arg cM =
   match Whnf.cnormMetaObj (cM, Whnf.m_id) with
@@ -583,7 +584,7 @@ let rec rec_spine cD (k, cU) =
      raise Not_compatible
 
   | (n, (Comp.TypPiBox (_, cdecl, tau), theta)) ->
-     let ((cN, ft), cU0) = gen_var (Syntax.Loc.ghost) cD (Whnf.cnormCDecl (cdecl, theta))  in
+     let ((cN, ft), cU0) = gen_var Location.ghost cD (Whnf.cnormCDecl (cdecl, theta))  in
      (* cN is a meta-variable that will be instantiated when we encounter the
         the rec. argument; note that the rec. argument and it's type may depend on cN *)
      let (spine, tau_r) = rec_spine cD (k, cU) (n - 1, (tau, LF.MDot (ft, theta))) in
@@ -610,7 +611,7 @@ let rec rec_spine' cD (x, ttau0) =
        | _ -> raise Not_compatible
      end
   | (n, (Comp.TypPiBox (_, cdecl, tau), theta)) ->
-     let ((cN, ft) , cU0) = gen_var (Syntax.Loc.ghost) cD (Whnf.cnormCDecl (cdecl, theta) ) in
+     let ((cN, ft) , cU0) = gen_var Location.ghost cD (Whnf.cnormCDecl (cdecl, theta) ) in
      (* cN is a meta-variable that will be instantiated when we encounter the
         the rec. argument; note that the rec. argument and it's type may depend on cN *)
      let (spine, tau_r) = rec_spine' cD (x, ttau0) (n - 1, (tau, LF.MDot (ft, theta))) in
@@ -624,7 +625,7 @@ let rec gen_rec_calls cD cIH (cD', j) mfs =
   match cD' with
   | LF.Empty -> cIH
 
-  | LF.Dec (cD', LF.Decl (u, cU, _, Inductivity.NotInductive)) ->
+  | LF.Dec (cD', LF.Decl (u, cU, _, Inductivity.Not_inductive)) ->
      dprintf
        begin fun p ->
        p.fmt "[gen_rec_calls] @[<v>ignoring cD' entry %d, i.e.\
@@ -719,7 +720,7 @@ let rec get_return_type cD x =
   function
   | (Comp.TypArr (_, _, tau0), theta) -> get_return_type cD x (tau0, theta)
   | (Comp.TypPiBox (_, cdecl, tau0), theta) ->
-     let ((_, ft), _cU) = gen_var (Syntax.Loc.ghost) cD (Whnf.cnormCDecl (cdecl, theta)) in
+     let ((_, ft), _cU) = gen_var (Location.ghost) cD (Whnf.cnormCDecl (cdecl, theta)) in
      get_return_type cD x (tau0, LF.MDot (ft, theta))
   | ttau -> (x, ttau)
 
@@ -739,7 +740,7 @@ let rec gen_rec_calls' cD cG cIH (cG0, j) mfs =
          (P.fmt_ppr_cmp_typ cD P.l0) tau0
        end;
      let (_, ttau0') =
-       get_return_type cD (Comp.Var (Syntax.Loc.ghost, j)) (tau0, Whnf.m_id)
+       get_return_type cD (Comp.Var (Location.ghost, j)) (tau0, Whnf.m_id)
      in
      let mk_wfrec (f, x, ttau) =
        dprintf begin fun p ->
@@ -1281,11 +1282,9 @@ let annotate'
   let rec ann tau pos =
     match (tau, pos) with
     | (Comp.TypPiBox (loc, LF.Decl (x, cU, plicity, _), tau), 1) ->
-      Option.some
-      @@ Comp.TypPiBox (loc, LF.Decl (x, cU, plicity, Inductivity.inductive), tau)
+      Option.some (Comp.TypPiBox (loc, LF.Decl (x, cU, plicity, Inductivity.inductive), tau))
     | (Comp.TypArr (loc, tau1, tau2), 1) ->
-      Option.some
-      @@ Comp.TypArr (loc, Comp.TypInd tau1, tau2)
+      Option.some (Comp.TypArr (loc, Comp.TypInd tau1, tau2))
     | (Comp.TypArr (loc, tau1, tau2), n) ->
        ann tau2 (n - 1)
        $> fun tau2' ->
@@ -1551,7 +1550,7 @@ let stratify a tau n =
   let mSize = mS_size mS in
   if (mSize < n || n <= 0)
   then
-    throw Loc.ghost (WrongArgNum (a, n))
+    throw Location.ghost (WrongArgNum (a, n))
   else
     begin
       let mC = find_meta_obj mS n in

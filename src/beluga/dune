@@ -1,27 +1,6 @@
 (executable
-  (name main)
-  (public_name beluga)
-  (package beluga)
-  (libraries support beluga dune-build-info)
-  (modules main beli version))
-
-(executable
-  (name lex_check)
-  (public_name lex_check)
-  (package beluga)
-  (libraries support beluga sedlex gen extlib)
-  (modules lex_check))
-
-(executable
-  (name parse_check)
-  (public_name parse_check)
-  (package beluga)
-  (libraries support beluga)
-  (modules parse_check))
-
-(executable
-  (name lex_dump)
-  (public_name lex_dump)
-  (package beluga)
-  (libraries support beluga gen)
-  (modules lex_dump))
+ (name main)
+ (public_name beluga)
+ (package beluga)
+ (libraries support beluga beluga_syntax beluga_parser dune-build-info)
+ (modules :standard))

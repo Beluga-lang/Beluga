@@ -1,5 +1,6 @@
 open Support.Equality
 open Support
+open Beluga_syntax
 module P = Pretty.Int.DefaultPrinter
 
 let generate_annotations = ref false;
@@ -32,15 +33,15 @@ module Annot = struct
 
   let output_int pp i = output_string pp (string_of_int i)
 
-  let print_position (pp : out_channel) (pos : Location.pos) (name : string) : unit =
+  let print_position (pp : out_channel) (pos : Position.t) (name : string) : unit =
     output_string pp "\"";
     output_string pp (String.escaped name);
     output_string pp "\" ";
-    output_int pp (Location.position_line pos);
+    output_int pp (Position.line pos);
     output_char pp ' ';
-    output_int pp (Location.position_bol pos);
+    output_int pp (Position.beginning_of_line pos);
     output_char pp ' ';
-    output_int pp (Location.position_column pos)
+    output_int pp (Position.column pos)
 
   let print_location (pp : out_channel) (loc : Location.t) (name : string) : unit =
     let start_pos = Location.start_position loc in

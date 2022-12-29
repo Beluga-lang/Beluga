@@ -1,0 +1,303 @@
+{
+  "entries": [
+    {
+      "sort": "lf_type_constant",
+      "identifier": "nat",
+      "fixity": "prefix",
+      "arity": 0,
+      "precedence": 1
+    },
+    {
+      "sort": "lf_term_constant",
+      "identifier": "z",
+      "fixity": "prefix",
+      "arity": 0,
+      "precedence": 1
+    },
+    {
+      "sort": "lf_term_constant",
+      "identifier": "s",
+      "fixity": "prefix",
+      "arity": 1,
+      "precedence": 1
+    },
+    {
+      "sort": "lf_type_constant",
+      "identifier": "sum",
+      "fixity": "prefix",
+      "arity": 3,
+      "precedence": 1
+    },
+    {
+      "sort": "lf_term_constant",
+      "identifier": "sum/z",
+      "fixity": "prefix",
+      "arity": 0,
+      "precedence": 1
+    },
+    {
+      "sort": "lf_term_constant",
+      "identifier": "sum/s",
+      "fixity": "prefix",
+      "arity": 1,
+      "precedence": 1
+    },
+    {
+      "sort": "module",
+      "identifier": "Nat",
+      "entries": [
+        {
+          "sort": "lf_type_constant",
+          "identifier": "nat",
+          "fixity": "prefix",
+          "arity": 0,
+          "precedence": 1
+        },
+        {
+          "sort": "lf_term_constant",
+          "identifier": "z",
+          "fixity": "prefix",
+          "arity": 0,
+          "precedence": 1
+        },
+        {
+          "sort": "lf_term_constant",
+          "identifier": "s",
+          "fixity": "prefix",
+          "arity": 1,
+          "precedence": 1
+        },
+        {
+          "sort": "lf_type_constant",
+          "identifier": "sum",
+          "fixity": "prefix",
+          "arity": 3,
+          "precedence": 1
+        },
+        {
+          "sort": "lf_term_constant",
+          "identifier": "sum/z",
+          "fixity": "prefix",
+          "arity": 0,
+          "precedence": 1
+        },
+        {
+          "sort": "lf_term_constant",
+          "identifier": "sum/s",
+          "fixity": "prefix",
+          "arity": 1,
+          "precedence": 1
+        }
+      ]
+    },
+    {
+      "sort": "module",
+      "identifier": "Util",
+      "entries": [
+        {
+          "sort": "module",
+          "identifier": "Nat",
+          "entries": [
+            {
+              "sort": "lf_type_constant",
+              "identifier": "nat",
+              "fixity": "prefix",
+              "arity": 0,
+              "precedence": 1
+            },
+            {
+              "sort": "lf_term_constant",
+              "identifier": "z",
+              "fixity": "prefix",
+              "arity": 0,
+              "precedence": 1
+            },
+            {
+              "sort": "lf_term_constant",
+              "identifier": "s",
+              "fixity": "prefix",
+              "arity": 1,
+              "precedence": 1
+            },
+            {
+              "sort": "lf_type_constant",
+              "identifier": "sum",
+              "fixity": "prefix",
+              "arity": 3,
+              "precedence": 1
+            },
+            {
+              "sort": "lf_term_constant",
+              "identifier": "sum/z",
+              "fixity": "prefix",
+              "arity": 0,
+              "precedence": 1
+            },
+            {
+              "sort": "lf_term_constant",
+              "identifier": "sum/s",
+              "fixity": "prefix",
+              "arity": 1,
+              "precedence": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "sort": "lf_type_constant",
+      "identifier": "tp",
+      "fixity": "prefix",
+      "arity": 0,
+      "precedence": 1
+    },
+    {
+      "sort": "lf_term_constant",
+      "identifier": "bool",
+      "fixity": "prefix",
+      "arity": 0,
+      "precedence": 1
+    },
+    {
+      "sort": "lf_term_constant",
+      "identifier": "arrow",
+      "fixity": "infix",
+      "associativity": "right_associative",
+      "precedence": 2
+    },
+    {
+      "sort": "lf_type_constant",
+      "identifier": "term",
+      "fixity": "prefix",
+      "arity": 1,
+      "precedence": 1
+    },
+    {
+      "sort": "lf_type_constant",
+      "identifier": "target",
+      "fixity": "prefix",
+      "arity": 1,
+      "precedence": 1
+    },
+    {
+      "sort": "lf_term_constant",
+      "identifier": "has_type",
+      "fixity": "infix",
+      "associativity": "non_associative",
+      "precedence": 3
+    },
+    {
+      "sort": "lf_type_constant",
+      "identifier": "exp",
+      "fixity": "prefix",
+      "arity": 0,
+      "precedence": 1
+    },
+    {
+      "sort": "lf_term_constant",
+      "identifier": "app",
+      "fixity": "prefix",
+      "arity": 2,
+      "precedence": 3
+    },
+    {
+      "sort": "lf_term_constant",
+      "identifier": "lam",
+      "fixity": "prefix",
+      "arity": 1,
+      "precedence": 1
+    },
+    {
+      "sort": "lf_type_constant",
+      "identifier": "eq",
+      "fixity": "infix",
+      "associativity": "left_associative",
+      "precedence": 1
+    },
+    {
+      "sort": "lf_type_constant",
+      "identifier": "msteps",
+      "fixity": "infix",
+      "associativity": "right_associative",
+      "precedence": 1
+    },
+    {
+      "sort": "lf_type_constant",
+      "identifier": "a",
+      "fixity": "prefix",
+      "arity": 0,
+      "precedence": 1
+    },
+    {
+      "sort": "lf_type_constant",
+      "identifier": "b",
+      "fixity": "prefix",
+      "arity": 0,
+      "precedence": 1
+    },
+    {
+      "sort": "lf_type_constant",
+      "identifier": "c",
+      "fixity": "prefix",
+      "arity": 0,
+      "precedence": 1
+    },
+    {
+      "sort": "module",
+      "identifier": "Statics",
+      "entries": [
+        {
+          "sort": "lf_type_constant",
+          "identifier": "tp",
+          "fixity": "prefix",
+          "arity": 0,
+          "precedence": 1
+        },
+        {
+          "sort": "lf_term_constant",
+          "identifier": "bool",
+          "fixity": "prefix",
+          "arity": 0,
+          "precedence": 1
+        },
+        {
+          "sort": "lf_type_constant",
+          "identifier": "nat",
+          "fixity": "prefix",
+          "arity": 0,
+          "precedence": 1
+        },
+        {
+          "sort": "lf_term_constant",
+          "identifier": "arrow",
+          "fixity": "infix",
+          "associativity": "right_associative",
+          "precedence": 2
+        },
+        {
+          "sort": "lf_type_constant",
+          "identifier": "term",
+          "fixity": "prefix",
+          "arity": 1,
+          "precedence": 1
+        }
+      ]
+    },
+    {
+      "sort": "context_variable",
+      "identifier": "g"
+    },
+    {
+      "sort": "context_variable",
+      "identifier": "h"
+    },
+    {
+      "sort":"schema_constant",
+      "identifier": "ctx1"
+    },
+    {
+      "sort":"schema_constant",
+      "identifier": "ctx2"
+    }
+  ]
+}

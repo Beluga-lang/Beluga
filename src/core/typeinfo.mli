@@ -1,4 +1,5 @@
 open Support
+open Beluga_syntax
 
 val generate_annotations : bool ref
 val print_annot : string -> unit

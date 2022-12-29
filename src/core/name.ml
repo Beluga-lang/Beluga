@@ -1,4 +1,5 @@
 open Support
+open Beluga_syntax
 
 let dprintf, _, _ = Debug.(makeFunctions' (toFlags [ 11 ]))
 

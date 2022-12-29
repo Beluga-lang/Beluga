@@ -1,6 +1,7 @@
 (* External Syntax *)
 
 open Support
+open Beluga_syntax
 
 (** External LF Syntax *)
 module LF = struct

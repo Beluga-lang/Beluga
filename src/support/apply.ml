@@ -97,20 +97,20 @@ module Make (M : Monad.MONAD) : APPLY with type 'a t = 'a M.t = struct
   let[@inline] lift2 f m1 m2 =
     let* x1 = m1
     and* x2 = m2 in
-    return @@ f x1 x2
+    return (f x1 x2)
 
   let[@inline] lift3 f m1 m2 m3 =
     let* x1 = m1
     and* x2 = m2
     and* x3 = m3 in
-    return @@ f x1 x2 x3
+    return (f x1 x2 x3)
 
   let[@inline] lift4 f m1 m2 m3 m4 =
     let* x1 = m1
     and* x2 = m2
     and* x3 = m3
     and* x4 = m4 in
-    return @@ f x1 x2 x3 x4
+    return (f x1 x2 x3 x4)
 
   let[@inline] lift5 f m1 m2 m3 m4 m5 =
     let* x1 = m1
@@ -118,7 +118,7 @@ module Make (M : Monad.MONAD) : APPLY with type 'a t = 'a M.t = struct
     and* x3 = m3
     and* x4 = m4
     and* x5 = m5 in
-    return @@ f x1 x2 x3 x4 x5
+    return (f x1 x2 x3 x4 x5)
 
   let replicate =
     let rec replicate n a =
@@ -129,5 +129,5 @@ module Make (M : Monad.MONAD) : APPLY with type 'a t = 'a M.t = struct
         return (List.cons x xs)
     in
     fun n ->
-      if n < 0 then raise @@ Invalid_argument "replicate" else replicate n
+      if n < 0 then raise (Invalid_argument "replicate") else replicate n
 end

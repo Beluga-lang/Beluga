@@ -2,6 +2,7 @@
 
 (** Approximate LF Syntax *)
 open Support
+open Beluga_syntax
 open Id
 
 module Int = Synint

@@ -2,6 +2,7 @@
     Beluga syntax.
  *)
 open Support
+open Beluga_syntax
 
 (** General snoc-lists. *)
 module LF = struct

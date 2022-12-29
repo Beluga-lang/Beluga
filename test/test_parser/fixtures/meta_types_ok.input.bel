@@ -1,0 +1,59 @@
+% The following is a list of `;;`-terminated syntactically valid meta-level
+% types with respect to the disambiguation state `disambiguation_state.json`.
+% The file `meta_types_ok.output.json` of serialized ASTs corresponding to those
+% types is automatically generated during development, but not during
+% continuous integration.
+
+$[ ^ |- ^ ]
+;;
+
+$[ |- ]
+;;
+
+$[ ^ |-# ^ ]
+;;
+
+$[ |-# ]
+;;
+
+$[ x : nat |- y : nat ]
+;;
+
+$[ x : nat |-# y : nat ]
+;;
+
+[ ^ |- nat ]
+;;
+
+( ^ |- nat )
+;;
+
+[ |- nat ]
+;;
+
+( |- nat )
+;;
+
+[ x : nat |- nat ]
+;;
+
+( x : nat |- nat )
+;;
+
+block nat
+;;
+
+block (x : nat)
+;;
+
+block (x : nat, y : nat)
+;;
+
+some [x : nat] block nat
+;;
+
+some [x : nat, y : nat] block nat
+;;
+
+some [x : nat, y : nat] block (z : sum x y z)
+;;

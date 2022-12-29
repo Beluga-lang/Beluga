@@ -25,7 +25,9 @@ let unsnoc =
     match tl with
     | [] -> return ([], hd)
     | x :: xs ->
-      unsnoc (T (x, xs)) ~return:(fun (t', last) -> return (hd :: t', last))
+        unsnoc
+          (T (x, xs))
+          ~return:(fun (t', last) -> return (hd :: t', last))
   in
   fun l -> unsnoc l ~return:Fun.id
 
@@ -116,7 +118,10 @@ let of_list = function
 
 exception Empty
 
-let unsafe_of_list l = Option.get' Empty (of_list l)
+let unsafe_of_list l =
+  match l with
+  | [] -> raise Empty
+  | x :: xs -> T (x, xs)
 
 let find_opt p l = List.find_opt p (to_list l)
 

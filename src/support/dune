@@ -1,4 +1,10 @@
 (library
-  (name support)
-  (libraries gen extlib hamt)
-  (instrumentation (backend bisect_ppx --bisect-silent yes)))
+ (name support)
+ (package beluga)
+ (libraries
+  (re_export camlp-streams)
+  (re_export gen)
+  (re_export extlib)
+  hamt)
+ (instrumentation
+  (backend bisect_ppx --bisect-silent yes)))

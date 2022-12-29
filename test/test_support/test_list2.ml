@@ -2,10 +2,11 @@ open Support
 
 let assert_raises_invalid_argument f =
   try
-    ignore @@ f ();
+    ignore (f ());
     OUnit2.assert_failure
       "Expected exception [Invalid_argument _] to be raised"
-  with Invalid_argument _ -> ()
+  with
+  | Invalid_argument _ -> ()
 
 let pp_list ppv ppf =
   Format.fprintf ppf "[@[%a@]]"
@@ -56,7 +57,7 @@ let test_last =
   in
   test_cases
   |> List.map (fun (input, expected) ->
-         OUnit2.test_case @@ test input expected)
+         OUnit2.test_case (test input expected))
 
 let test_length =
   let test input expected _test_ctxt =
@@ -70,7 +71,7 @@ let test_length =
   in
   test_cases
   |> List.map (fun (input, expected) ->
-         OUnit2.test_case @@ test input expected)
+         OUnit2.test_case (test input expected))
 
 let test_iter =
   let test input _test_ctxt =
@@ -88,7 +89,7 @@ let test_iter =
     ; List2.from 1 2 [ 3; 4; 5 ]
     ]
   in
-  test_cases |> List.map (fun input -> OUnit2.test_case @@ test input)
+  test_cases |> List.map (fun input -> OUnit2.test_case (test input))
 
 let test_iter2 =
   let test_success l1 l2 _test_ctxt =
@@ -97,7 +98,7 @@ let test_iter2 =
       (fun x y -> call_reverse_order := (x, y) :: !call_reverse_order)
       l1 l2;
     assert_int_pair_list_equal
-      (List2.to_list @@ List2.combine l1 l2)
+      (List2.to_list (List2.combine l1 l2))
       (List.rev !call_reverse_order)
   and test_failure l1 l2 _test_ctxt =
     assert_raises_invalid_argument (fun () ->
@@ -141,7 +142,7 @@ let test_rev =
   in
   tests_cases
   |> List.map (fun (input, expected) ->
-         OUnit2.test_case @@ test input expected)
+         OUnit2.test_case (test input expected))
 
 let test_map =
   let test f input expected _test_ctxt =
@@ -154,7 +155,7 @@ let test_map =
   in
   test_cases
   |> List.map (fun (f, input, expected) ->
-         OUnit2.test_case @@ test f input expected)
+         OUnit2.test_case (test f input expected))
 
 let tests =
   let open OUnit2 in

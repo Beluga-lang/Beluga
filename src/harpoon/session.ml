@@ -236,7 +236,7 @@ let configuration_wizard' io automation_state : Id.cid_mutual_group * Theorem.t 
     match
       IO.parsed_prompt io "  Name of theorem (:quit or empty to finish): "
         None
-        Parser.(maybe next_theorem)
+        (Obj.magic ())
     with
     | None | Some `quit -> []
     | Some (`next name) ->
@@ -248,7 +248,7 @@ let configuration_wizard' io automation_state : Id.cid_mutual_group * Theorem.t 
          Store.FCVar.clear ();
          (* Now prompt for the statement, and disallow empty to signal we're done. *)
          IO.parsed_prompt io "  Statement of theorem: " None
-           Parser.(comp_sort_object $> Fun.(Synprs_to_synext.Comp.elaborate_typ >> Interactive.elaborate_typ LF.Empty))
+           (Obj.magic ())
        in
        dprintf begin fun p ->
          p.fmt "@[<v 2>[harpoon] [configuration_wizard] elaborated type\
@@ -257,35 +257,7 @@ let configuration_wizard' io automation_state : Id.cid_mutual_group * Theorem.t 
            P.(fmt_ppr_cmp_typ LF.Empty l0) tau
            k
          end;
-       let order =
-         let p =
-           let open Parser in
-           choice
-             [ (Parser.trust_totality_declaration $> fun d -> `Trust d)
-             ; (Parser.numeric_totality_declaration $> fun d -> `Numeric d)
-             ]
-           $> begin function
-                | `Numeric no ->
-                   let order = Reconstruct.numeric_order tau (Synprs_to_synext.Sgn.elaborate_numeric_order no) in
-                   dprintf begin fun p ->
-                     p.fmt "[configuration_wizard] @[<v>elaborated numeric order\
-                       @,  @[%a@]\
-                       @,considering %d implicit arguments.@]"
-                       P.(fmt_ppr_cmp_numeric_order) order
-                       k
-                     end;
-                   `Numeric order
-                | `Trust trust -> `Trust trust
-              (* TODO we should check that the order is legit
-                        here so that we can right away prompt the user
-                        for a correct one; currently this check only
-                        happens very late when the theorem set is
-                        configured. *)
-              end
-         in
-         IO.parsed_prompt io "  Induction order (empty for none): " None
-           (Parser.maybe p)
-       in
+       let order = Obj.magic () (* TODO: Parse an optional totality order *) in
        IO.printf io "@]";
        let total_dec_kind =
          match order with
@@ -295,7 +267,7 @@ let configuration_wizard' io automation_state : Id.cid_mutual_group * Theorem.t 
        in
        let conf =
          Theorem.Conf.make
-           (Synprs_to_synext.name_of_identifier name)
+           name
            total_dec_kind
            tau
            k
@@ -338,6 +310,6 @@ let fmt_ppr_theorem_list ppf c =
 
 let materialize_theorems c =
   if DynArray.length c.theorems > 0 then
-    Error.violation
+    Beluga_syntax.Error.violation
       "[materialize_theorems] not all theorems are complete";
   DynArray.iter F.(Theorem.materialize ++ Pair.fst) c.finished_theorems

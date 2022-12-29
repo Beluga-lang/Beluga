@@ -2,6 +2,7 @@
 
 open Format
 open Support
+open Beluga_syntax.Common
 
 module LF = struct
   open Syntax.Ext.LF

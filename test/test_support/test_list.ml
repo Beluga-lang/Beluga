@@ -2,10 +2,11 @@ open Support
 
 let assert_raises_invalid_argument f =
   try
-    ignore @@ f ();
+    ignore (f ());
     OUnit2.assert_failure
       "Expected exception [Invalid_argument _] to be raised"
-  with Invalid_argument _ -> ()
+  with
+  | Invalid_argument _ -> ()
 
 let pp_print_list ppv ppf =
   Format.fprintf ppf "[%a]"
@@ -21,7 +22,7 @@ let assert_int_list_equal =
 
 let assert_int_pair_list_equal =
   OUnit2.assert_equal
-    ~cmp:(List.equal @@ Pair.equal Int.equal Int.equal)
+    ~cmp:(List.equal (Pair.equal Int.equal Int.equal))
     ~printer:int_pair_list_printer
 
 let test_equal =
@@ -40,7 +41,7 @@ let test_equal =
   in
   test_cases
   |> List.map (fun ((eq, l1, l2), expected) ->
-         OUnit2.test_case @@ test eq l1 l2 expected)
+         OUnit2.test_case (test eq l1 l2 expected))
 
 let test_last =
   let test_success input expected _test_ctxt =
@@ -57,7 +58,7 @@ let test_last =
   let success_tests =
     success_test_cases
     |> List.map (fun (input, expected) ->
-           OUnit2.test_case @@ test_success input expected)
+           OUnit2.test_case (test_success input expected))
   and failure_tests =
     let test_failure_on_empty_list =
       let open OUnit2 in
@@ -82,7 +83,7 @@ let test_rev =
   in
   test_cases
   |> List.map (fun (input, expected) ->
-         OUnit2.test_case @@ test input expected)
+         OUnit2.test_case (test input expected))
 
 let test_pairs =
   let test input expected _test_ctxt =
@@ -98,7 +99,7 @@ let test_pairs =
   in
   test_cases
   |> List.map (fun (input, expected) ->
-         OUnit2.test_case @@ test input expected)
+         OUnit2.test_case (test input expected))
 
 let test_concat_map =
   let test f input expected _test_ctxt =
@@ -112,7 +113,7 @@ let test_concat_map =
   in
   test_cases
   |> List.map (fun ((f, input), expected) ->
-         OUnit2.test_case @@ test f input expected)
+         OUnit2.test_case (test f input expected))
 
 let test_concat_mapi =
   let test f input expected _test_ctxt =
@@ -127,7 +128,7 @@ let test_concat_mapi =
   in
   test_cases
   |> List.map (fun ((f, input), expected) ->
-         OUnit2.test_case @@ test f input expected)
+         OUnit2.test_case (test f input expected))
 
 let test_index_of =
   let test p input expected _test_ctxt =
@@ -143,12 +144,12 @@ let test_index_of =
   in
   test_cases
   |> List.map (fun ((p, input), expected) ->
-         OUnit2.test_case @@ test p input expected)
+         OUnit2.test_case (test p input expected))
 
 let test_index =
   let test input expected _test_ctxt =
     OUnit2.assert_equal
-      ~cmp:(List.equal @@ Pair.equal Int.equal Int.equal)
+      ~cmp:(List.equal (Pair.equal Int.equal Int.equal))
       expected (List.index input)
   in
   let test_cases =
@@ -159,7 +160,7 @@ let test_index =
   in
   test_cases
   |> List.map (fun (input, expected) ->
-         OUnit2.test_case @@ test input expected)
+         OUnit2.test_case (test input expected))
 
 let test_iter =
   let test input _test_ctxt =
@@ -168,7 +169,7 @@ let test_iter =
     assert_int_list_equal input (List.rev !call_reverse_order)
   in
   let test_cases = [ [ 1; 2; 3 ]; [ 1 ]; [] ] in
-  test_cases |> List.map (fun input -> OUnit2.test_case @@ test input)
+  test_cases |> List.map (fun input -> OUnit2.test_case (test input))
 
 let test_mapi2 =
   let test_success f l1 l2 expected _test_ctxt =
@@ -190,10 +191,10 @@ let test_mapi2 =
   let success_tests =
     success_test_cases
     |> List.map (fun ((f, l1, l2), expected) ->
-           OUnit2.test_case @@ test_success f l1 l2 expected)
+           OUnit2.test_case (test_success f l1 l2 expected))
   and failure_tests =
     failure_test_cases
-    |> List.map (fun (f, l1, l2) -> OUnit2.test_case @@ test_failure f l1 l2)
+    |> List.map (fun (f, l1, l2) -> OUnit2.test_case (test_failure f l1 l2))
   in
   success_tests @ failure_tests
 
@@ -208,7 +209,7 @@ let test_ap =
   in
   test_cases
   |> List.map (fun ((xs, fs), expected) ->
-         OUnit2.test_case @@ test xs fs expected)
+         OUnit2.test_case (test xs fs expected))
 
 let tests =
   let open OUnit2 in

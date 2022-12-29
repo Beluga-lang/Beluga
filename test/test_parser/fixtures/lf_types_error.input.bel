@@ -1,0 +1,30 @@
+% The following is a list of `;;`-terminated syntactically invalid LF types
+% with respect to the disambiguation state `disambiguation_state.json`.
+
+% The `type` keyword is not an LF type
+type
+;;
+
+% A hole is not an LF type
+_
+;;
+
+% A lambda is not an LF type
+\x. _
+;;
+
+% An annotated type is not an LF type
+nat : type
+;;
+
+% The parameter to a Pi-type must be type-annotated
+{ x } x eq x
+;;
+
+% LF term constants are not LF types
+z
+;;
+
+% LF type constants must be bound
+Nat.add
+;;

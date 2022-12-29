@@ -1,0 +1,34 @@
+% The following is a list of `;;`-terminated syntactically invalid contextual
+% LF terms with respect to the disambiguation state `disambiguation_state.json`.
+
+% The `type` keyword is not a contextual LF term
+type
+;;
+
+% LF terms cannot have Pi's
+{ x : nat } x
+;;
+
+% LF terms cannot have arrows
+\x. x -> x
+;;
+
+% LF terms cannot have arrows
+x <- \x. x
+;;
+
+% A constant as a contextual LF term must be bound
+Nat.one
+;;
+
+% Consecutive non-associative LF term constants cannot appear consecutively
+has_type has_type
+;;
+
+% Consecutive non-associative LF term constants cannot appear consecutively
+x has_type y has_type z
+;;
+
+% All arguments must be supplied to LF term constants
+x arrow
+;;

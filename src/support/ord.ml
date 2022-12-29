@@ -73,6 +73,27 @@ let sequence (type s1 s2 t) (module Ord1 : ORD with type t = s1)
 
     let compare x y =
       let cmp1 = Ord1.compare (f1 x) (f1 y) in
-      if cmp1 = 0 then Ord2.compare (f2 x) (f2 y) else cmp1
+      if cmp1 = 0 then
+        let cmp2 = Ord2.compare (f2 x) (f2 y) in
+        cmp2
+      else cmp1
+  end) : ORD
+    with type t = t)
+
+let sequence3 (type s1 s2 s3 t) (module Ord1 : ORD with type t = s1)
+    (module Ord2 : ORD with type t = s2) (module Ord3 : ORD with type t = s3)
+    f1 f2 f3 =
+  (module Make (struct
+    type nonrec t = t
+
+    let compare x y =
+      let cmp1 = Ord1.compare (f1 x) (f1 y) in
+      if cmp1 = 0 then
+        let cmp2 = Ord2.compare (f2 x) (f2 y) in
+        if cmp2 = 0 then
+          let cmp3 = Ord3.compare (f3 x) (f3 y) in
+          cmp3
+        else cmp2
+      else cmp1
   end) : ORD
     with type t = t)

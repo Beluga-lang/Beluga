@@ -1,0 +1,4 @@
+(test
+ (name test_centiparsec)
+ (libraries ounit2 centiparsec support)
+ (modules :standard))

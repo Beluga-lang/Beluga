@@ -1,5 +1,6 @@
 open Support.Equality
 open Support
+open Beluga_syntax.Common
 open Syntax
 
 module NameTable = Hashtbl.Make (Name)
@@ -7,7 +8,7 @@ module NameTable = Hashtbl.Make (Name)
 type error =
   | FrozenType of Id.cid_typ
 
-exception Error of Syntax.Loc.t * error
+exception Error of Location.t * error
 
 (* Register error printer at the end of this module. *)
 module OpPragmas = struct
@@ -392,7 +393,7 @@ module Cid = struct
 
     let args_of_name_opt n =
       try
-        Option.some @@ args_of_name n
+        Option.some (args_of_name n)
       with
       | Not_found -> Option.none
 
@@ -630,7 +631,7 @@ module Cid = struct
 
     let args_of_name_opt n =
       try
-        Option.some @@ args_of_name n
+        Option.some (args_of_name n)
       with
       | Not_found -> Option.none
 

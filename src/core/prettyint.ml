@@ -1,5 +1,6 @@
 open Support
 open Format
+open Beluga_syntax.Common
 open Syntax
 open Int
 

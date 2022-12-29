@@ -17,35 +17,18 @@ jobs:
           - 4.14.x
         os:
           - ubuntu-latest
-
-    runs-on: ${{ matrix.os }}
-    steps:
-      - uses: fkirc/skip-duplicate-actions@master
-
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Check whitespaces
-        run: ./LINT
-
-  build-and-test:
-    name: Build & Test
-
-    needs: lint
-
-    strategy:
-      fail-fast: true
-      matrix:
-        ocaml-compiler:
-          - 4.14.x
-        os:
-          - ubuntu-latest
           - macOS-latest
+          - windows-latest
 
     runs-on: ${{ matrix.os }}
     steps:
       # Cancel queued workflows from earlier commits in this branch
       - uses: fkirc/skip-duplicate-actions@master
+
+      - name: Set git to use LF line ending
+        run: |
+          git config --global core.autocrlf false
+          git config --global core.eol lf
 
       - name: Checkout code
         uses: actions/checkout@v3
@@ -65,7 +48,7 @@ jobs:
           ocaml-compiler: ${{ matrix.ocaml-compiler }}
 
       - name: Install dependencies
-        run: opam install --locked --deps-only --with-test --with-doc .
+        run: opam install --deps-only --with-test --with-doc .
 
       - name: Build
         run: opam exec -- make

@@ -5,7 +5,7 @@ build: # Build the public executables
 .PHONY: test
 test: build # Build and run the OUnit2 test suite and the integration tests
 	dune runtest --force
-	./TEST.sh
+# TODO: dune exec ./TEST.sh
 
 .PHONY: coverage
 coverage: # Build and run the OUnit2 test suite and generate code coverage reports
@@ -52,3 +52,4 @@ clean: # Clean the files built by dune
 .PHONY: doc
 doc: clean # Generate the HTML documentations
 	make -C doc html
+	dune build @doc

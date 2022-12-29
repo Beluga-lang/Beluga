@@ -37,4 +37,5 @@
   sedlex
   (yojson :with-test)
   (ounit2 :with-test)
-  (bisect_ppx :with-test)))
+  (bisect_ppx :with-test)
+  (odoc :with-doc)))

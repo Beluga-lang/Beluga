@@ -1,2 +1,3 @@
 (library
- (name hamt))
+ (name hamt)
+ (package beluga))

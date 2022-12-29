@@ -1,0 +1,38 @@
+% The following is a list of `;;`-terminated syntactically valid schemas
+% with respect to the disambiguation state `disambiguation_state.json`.
+% The file `schemas_ok.output.json` of serialized ASTs corresponding to
+% those schemas is automatically generated during development, but not during
+% continuous integration.
+
+block (x : nat)
+;;
+
+block (x : nat, y : nat)
+;;
+
+some [x : nat] block nat
+;;
+
+some [x : nat, y : nat] block nat
+;;
+
+some [x : nat, y : nat] block (z : sum x y z)
+;;
+
+some [x : nat, y : nat] block (w : nat, z : sum x y w)
+;;
+
+ctx1
+;;
+
+ctx2
+;;
+
+ctx1 + ctx2
+;;
+
+some [x : nat] block nat + ctx2
+;;
+
+ctx1 + some [x : nat, y : nat] block (z : sum x y z)
+;;

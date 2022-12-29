@@ -1,0 +1,38 @@
+% The following is a list of `;;`-terminated syntactically invalid LF kinds
+% with respect to the disambiguation state `disambiguation_state.json`.
+
+
+Free_meta_variable
+;;
+
+Unbound_outer_module.unbound_identifier
+;;
+
+% Backward arrows may not appear in LF kidns
+type <- nat
+;;
+
+% Backward arrows may not appear in LF kidns
+type <- nat -> type
+;;
+
+% Backward arrows may not appear in LF kidns
+type -> nat <- type
+;;
+
+% A hole is not an LF kind
+_
+;;
+
+% A lambda is not an LF kind
+\x. _
+;;
+
+type : _
+;;
+
+nat _
+;;
+
+{ x } target x -> type
+;;

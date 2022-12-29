@@ -1,0 +1,20 @@
+(library
+ (name beluga_parser)
+ (package beluga)
+ (modules :standard)
+ (libraries
+  gen
+  sedlex
+  extlib
+  support
+  unix
+  str
+  beluga_syntax
+  synprs
+  centiparsec)
+ (preprocess
+  (per_module
+   ((pps sedlex.ppx)
+    lexer)))
+ (instrumentation
+  (backend bisect_ppx --bisect-silent yes)))

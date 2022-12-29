@@ -1,0 +1,7 @@
+(library
+ (name synext)
+ (package beluga)
+ (modules :standard)
+ (libraries support common)
+ (instrumentation
+  (backend bisect_ppx --bisect-silent yes)))

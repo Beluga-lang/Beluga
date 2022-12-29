@@ -12,13 +12,13 @@ open Equality
    to other modules) are declared at the end of this file.
 *)
 open Store
+open Beluga_syntax.Common
 open Syntax.Int.LF
 open Syntax.Int
 open Trail
 
 module P = Pretty.Int.DefaultPrinter
 module R = Store.Cid.DefaultRenderer
-module Loc = Location
 
 let (dprintf, dprint, dprnt) = Debug.makeFunctions' (Debug.toFlags [15])
 open Debug.Fmt
@@ -74,7 +74,7 @@ module type UNIFY = sig
   val intersection : dctx_hat -> sub -> sub -> dctx -> (sub * dctx)
 
   exception Failure of string
-  exception GlobalCnstrFailure of Loc.t * string
+  exception GlobalCnstrFailure of Location.t * string
   exception NotInvertible
 
   (* All unify* functions return () on success and raise Failure on failure *)
@@ -115,7 +115,7 @@ module Make (T : TRAIL) : UNIFY = struct
   module P = Pretty.Int.DefaultPrinter
 
   exception Failure of string
-  exception GlobalCnstrFailure of Loc.t * string
+  exception GlobalCnstrFailure of Location.t * string
   exception NotInvertible
 
   let fail s = raise (Failure s)
@@ -1309,7 +1309,7 @@ let rec blockdeclInDctx =
     | (FSVar (n, ns), cPsi1) -> FSVar (n, pruneFVar cD cPsi ns ss rOccur)
 
     | (MSVar (n, ((i, mt), t)), cPsi1) ->
-       MSVar (n, pruneMMVarInst cD cPsi Syntax.Loc.ghost i (mt, t) ss rOccur)
+       MSVar (n, pruneMMVarInst cD cPsi Location.ghost i (mt, t) ss rOccur)
 
     | (Dot (ft, s'), DDec (cPsi', _)) ->
        Dot (pruneFront cD cPsi ft ss rOccur, pruneSubst cD cPsi (s', cPsi') ss rOccur)
@@ -1322,7 +1322,7 @@ let rec blockdeclInDctx =
   and pruneFront cD cPsi ft ss rOccur =
     match ft with
     | Obj tM -> Obj (prune cD cPsi (Context.dctxToHat cPsi) (tM, id) ss rOccur)
-    | Head h -> Head (pruneHead cD cPsi (Syntax.Loc.ghost, h) ss rOccur)
+    | Head h -> Head (pruneHead cD cPsi (Location.ghost, h) ss rOccur)
 
   (* pruneSub cD0 cPsi phat (s, cPsi1) ss rOccur = (s', cPsi1')
 
@@ -1723,7 +1723,7 @@ let rec blockdeclInDctx =
             cPsi |- tN . s <= cPsi', x:A
           *)
          let tN =
-           ConvSigma.etaExpandMMVstr Loc.ghost cD1 cPsi1 (tA, s) Plicity.implicit (Some n)
+           ConvSigma.etaExpandMMVstr Location.ghost cD1 cPsi1 (tA, s) Plicity.implicit (Some n)
              Context.(names_of_dctx cPsi @ names_of_mctx cD0)
          in
          let tS = genSpine cD1 cPsi1 (tB, LF.Dot (LF.Obj tN, s)) in
@@ -1767,7 +1767,7 @@ let rec blockdeclInDctx =
   and pruneITerm cD cPsi (hat, tm) ss rOccur =
     match tm with
     | (INorm n, _) -> INorm (prune cD cPsi hat (n, id) ss rOccur)
-    | (IHead h, _) -> IHead (pruneHead cD cPsi (Syntax.Loc.ghost, h) ss rOccur)
+    | (IHead h, _) -> IHead (pruneHead cD cPsi (Location.ghost, h) ss rOccur)
     | (ISub s, STyp (_, cPhi)) -> ISub (pruneSubst cD cPsi (s, cPhi) ss rOccur)
 
   and unifyMMVarTerm cD0 cPsi mmvar mt1 t1' sM2 =
@@ -1965,7 +1965,7 @@ let rec blockdeclInDctx =
             *)
            instantiateMVar
              ( mmvar1.instantiation
-             , Root (Syntax.Loc.ghost, MVar (w, s'), Nil, Plicity.explicit)
+             , Root (Location.ghost, MVar (w, s'), Nil, Plicity.explicit)
              , mmvar1.constraints.contents
              )
          end
@@ -2347,7 +2347,7 @@ let rec blockdeclInDctx =
        (* check s1' and s2' are pattern substitutions; possibly generate constraints;
            check intersection (s1', s2'); possibly prune *)
        if isPatMSub mt1 && isPatSub s1 && isPatMSub mt2 && isPatSub s2
-       then unifyMMVarMMVar cPsi Syntax.Loc.ghost i1 i2
+       then unifyMMVarMMVar cPsi Location.ghost i1 i2
        else
          begin
            let id = next_constraint_id () in
@@ -2469,7 +2469,7 @@ let rec blockdeclInDctx =
        then raise (Error "Substitutions not well-typed")
 
     | (FSVar (n1, (s1, sigma1)), FSVar (n2, (s2, sigma2))) ->
-       if Name.(s1 = s2) && Int.(n1 = n2)
+       if Name.(s1 = s2) && Support.Int.(n1 = n2)
        then unifySub mflag cD0 cPsi sigma1 sigma2
        else raise (Failure "FSVar mismatch")
 
@@ -2499,7 +2499,7 @@ let rec blockdeclInDctx =
               && isPatSub t1
               && isPatMSub mt2
               && isPatSub t2 ->
-       unifyMMVarMMVar cPsi Syntax.Loc.ghost q1 q2
+       unifyMMVarMMVar cPsi Location.ghost q1 q2
 
     | (MSVar (_, ((q, mt), s)), s2)
          when isPatSub s && isPatMSub mt ->
@@ -2580,7 +2580,7 @@ let rec blockdeclInDctx =
          mflag
          cD0
          cPsi
-         (Root (Syntax.Loc.ghost, head, Nil, Plicity.explicit), id)
+         (Root (Location.ghost, head, Nil, Plicity.explicit), id)
          (tN, id)
 
     | (Undef, Undef) -> ()
@@ -2740,7 +2740,7 @@ let rec blockdeclInDctx =
             should not happen and is not implemented for now"
 
     | (CtxVar (CtxName c1), CtxVar (CtxName c2)) when Name.(c1 = c2) -> ()
-    | (CtxVar (CtxOffset k1), CtxVar (CtxOffset k2)) when Int.(k1 = k2) -> ()
+    | (CtxVar (CtxOffset k1), CtxVar (CtxOffset k2)) when Support.Int.(k1 = k2) -> ()
     | (CtxVar _, CtxVar _) -> (* else, the variables are unequal *)
        dprintf
          begin fun p ->
@@ -3001,7 +3001,7 @@ let rec blockdeclInDctx =
                 P.fmt_ppr_lf_constraint c'
                 msg
             in
-            raise (GlobalCnstrFailure (Loc.ghost, cnstr_string))
+            raise (GlobalCnstrFailure (Location.ghost, cnstr_string))
        end;
        (* Unification could succeed by postponing the constraint
             we just tried to solve, so now we need to check that
@@ -3017,7 +3017,7 @@ let rec blockdeclInDctx =
         *)
        if solvedCnstrs (!globalCnstrs)
        then (resetGlobalCnstrs (); forceGlobalCnstr' cnstrs)
-       else raise (GlobalCnstrFailure (Loc.ghost, "[forceGlobalCnstr'] Constraints generated"))
+       else raise (GlobalCnstrFailure (Location.ghost, "[forceGlobalCnstr'] Constraints generated"))
 
   let unresolvedGlobalCnstrs () =
     try

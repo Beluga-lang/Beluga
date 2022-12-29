@@ -1,0 +1,30 @@
+% The following is a list of `;;`-terminated syntactically invalid contextla
+% LF types with respect to the disambiguation state `disambiguation_state.json`.
+
+% The `type` keyword is not a contextual LF type
+type
+;;
+
+% A hole is not a contextual LF type
+_
+;;
+
+% A lambda is not a contextual LF type
+\x. _
+;;
+
+% An annotated type is not a contextual LF type
+nat : type
+;;
+
+% The parameter to a Pi-type must be type-annotated
+{ x } x eq x
+;;
+
+% LF term constants are not contextual LF types
+z
+;;
+
+% LF type constants must be bound
+Nat.add
+;;

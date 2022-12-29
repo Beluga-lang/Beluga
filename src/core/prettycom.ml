@@ -1,3 +1,5 @@
+open Support
+open Beluga_syntax.Common
 open Syntax.Common
 open Format
 
@@ -36,13 +38,13 @@ let fmt_ppr_lf_depend_clean ppf _ = ()
 
 let fmt_ppr_lf_depend_inductive ppf =
   function
-  | Inductivity.NotInductive -> pp_print_string ppf ""
+  | Inductivity.Not_inductive -> pp_print_string ppf ""
   | Inductivity.Inductive -> pp_print_string ppf "*"
 
 let fmt_ppr_lf_depend ppf =
   function
-  | Plicity.Implicit, Inductivity.NotInductive -> pp_print_string ppf "^i"
-  | Plicity.Explicit, Inductivity.NotInductive -> pp_print_string ppf "^e"
+  | Plicity.Implicit, Inductivity.Not_inductive -> pp_print_string ppf "^i"
+  | Plicity.Explicit, Inductivity.Not_inductive -> pp_print_string ppf "^e"
   | Plicity.Implicit, Inductivity.Inductive -> pp_print_string ppf "*i"
   | Plicity.Explicit, Inductivity.Inductive -> pp_print_string ppf "*e"
 

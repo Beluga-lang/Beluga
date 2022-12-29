@@ -262,7 +262,7 @@ val rest_args : (string list -> unit) -> unit options_specification
            ]
       <! rest_args (function
            | [] -> ()
-           | rest -> raise @@ UnexpectedArguments rest)
+           | rest -> raise (UnexpectedArguments rest))
     ]} *)
 
 (** The [map] function of the ['a options_specification] functor.

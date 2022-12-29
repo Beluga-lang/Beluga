@@ -1,0 +1,62 @@
+% The following is a list of `;;`-terminated syntactically valid LF kinds
+% with respect to the disambiguation state `disambiguation_state.json`.
+% The file `lf_kinds_ok.output.json` of serialized ASTs corresponding to those
+% kinds is automatically generated during development, but not during
+% continuous integration.
+
+type
+;;
+
+nat -> nat -> type
+;;
+
+nat -> (nat -> type)
+;;
+
+nat -> nat -> nat -> nat -> type
+;;
+
+nat -> (nat -> nat) -> nat -> type
+;;
+
+(nat -> nat) -> type
+;;
+
+sum z z z -> type
+;;
+
+sum (s z) z (s z) -> type
+;;
+
+sum (s z) (s z) (s (s z)) -> type
+;;
+
+{ x : nat } { y : nat } sum x y z -> type
+;;
+
+{ x : nat } { y : nat } { z : nat } sum x y z -> type
+;;
+
+Nat.nat -> Nat.nat -> type
+;;
+
+Nat.nat -> Nat.nat -> Nat.nat -> type
+;;
+
+Nat.nat -> (Nat.nat -> Nat.nat) -> type
+;;
+
+Util.Nat.nat -> Util.Nat.nat -> type
+;;
+
+(Util.Nat.nat -> Util.Nat.nat) -> Util.Nat.nat -> type
+;;
+
+({ x : term } (M x) msteps (M' x)) -> (lam M) msteps (lam M') -> type
+;;
+
+{ x : tp } target x -> type
+;;
+
+{ x : tp } { _ : tp } target x -> type
+;;

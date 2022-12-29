@@ -1,0 +1,11 @@
+(library
+ (name util)
+ (libraries
+  support
+  beluga_syntax
+  (re_export yojson)
+  (re_export ounit2))
+ (preprocess
+  (per_module
+   ((pps sedlex.ppx)
+    files))))

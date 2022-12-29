@@ -1,0 +1,187 @@
+(library
+ (name test_beluga_parser_fixtures_lib)
+ (modules :standard \ generate_outputs)
+ (libraries support beluga_syntax beluga_parser util))
+
+(executable
+ (name generate_outputs)
+ (modules :standard \ disambiguation_state_deserialization)
+ (libraries
+  support
+  beluga_syntax
+  beluga_parser
+  util
+  test_beluga_parser_fixtures_lib))
+
+;; Generate test case outputs only if `$CI` is not `true`
+
+(rule
+ (target lf_kinds_ok.output.json)
+ (deps
+  (:generator generate_outputs.exe)
+  (:state disambiguation_state.json)
+  (:inputs lf_kinds_ok.input.bel))
+ (mode promote)
+ (enabled_if
+  (not
+   %{env:CI=false} ;; If `$CI` is undefined, then it defaults to `false`
+   ))
+ (action
+  (run
+   %{generator}
+   --state=%{state}
+   --inputs=%{inputs}
+   --output=%{target}
+   --variant=lf_kind)))
+
+(rule
+ (target lf_types_ok.output.json)
+ (deps
+  (:generator generate_outputs.exe)
+  (:state disambiguation_state.json)
+  (:inputs lf_types_ok.input.bel))
+ (mode promote)
+ (enabled_if
+  (not
+   %{env:CI=false} ;; If `$CI` is undefined, then it defaults to `false`
+   ))
+ (action
+  (run
+   %{generator}
+   --state=%{state}
+   --inputs=%{inputs}
+   --output=%{target}
+   --variant=lf_type)))
+
+(rule
+ (target lf_terms_ok.output.json)
+ (deps
+  (:generator generate_outputs.exe)
+  (:state disambiguation_state.json)
+  (:inputs lf_terms_ok.input.bel))
+ (mode promote)
+ (enabled_if
+  (not
+   %{env:CI=false} ;; If `$CI` is undefined, then it defaults to `false`
+   ))
+ (action
+  (run
+   %{generator}
+   --state=%{state}
+   --inputs=%{inputs}
+   --output=%{target}
+   --variant=lf_term)))
+
+(rule
+ (target clf_types_ok.output.json)
+ (deps
+  (:generator generate_outputs.exe)
+  (:state disambiguation_state.json)
+  (:inputs clf_types_ok.input.bel))
+ (mode promote)
+ (enabled_if
+  (not
+   %{env:CI=false} ;; If `$CI` is undefined, then it defaults to `false`
+   ))
+ (action
+  (run
+   %{generator}
+   --state=%{state}
+   --inputs=%{inputs}
+   --output=%{target}
+   --variant=clf_type)))
+
+(rule
+ (target clf_terms_ok.output.json)
+ (deps
+  (:generator generate_outputs.exe)
+  (:state disambiguation_state.json)
+  (:inputs clf_terms_ok.input.bel))
+ (mode promote)
+ (enabled_if
+  (not
+   %{env:CI=false} ;; If `$CI` is undefined, then it defaults to `false`
+   ))
+ (action
+  (run
+   %{generator}
+   --state=%{state}
+   --inputs=%{inputs}
+   --output=%{target}
+   --variant=clf_term)))
+
+;;(rule
+;; (target clf_term_patterns_ok.output.json)
+;; (deps
+;;  (:generator generate_outputs.exe)
+;;  (:state disambiguation_state.json)
+;;  (:inputs clf_term_patterns_ok.input.bel))
+;; (mode promote)
+;; (enabled_if
+;;  (not
+;;   %{env:CI=false} ;; If `$CI` is undefined, then it defaults to `false`
+;;   ))
+;; (action
+;;  (run
+;;   %{generator}
+;;   --state=%{state}
+;;   --inputs=%{inputs}
+;;   --output=%{target}
+;;   --variant=clf_term_pattern)))
+
+(rule
+ (target meta_types_ok.output.json)
+ (deps
+  (:generator generate_outputs.exe)
+  (:state disambiguation_state.json)
+  (:inputs meta_types_ok.input.bel))
+ (mode promote)
+ (enabled_if
+  (not
+   %{env:CI=false} ;; If `$CI` is undefined, then it defaults to `false`
+   ))
+ (action
+  (run
+   %{generator}
+   --state=%{state}
+   --inputs=%{inputs}
+   --output=%{target}
+   --variant=meta_type)))
+
+(rule
+ (target meta_objects_ok.output.json)
+ (deps
+  (:generator generate_outputs.exe)
+  (:state disambiguation_state.json)
+  (:inputs meta_objects_ok.input.bel))
+ (mode promote)
+ (enabled_if
+  (not
+   %{env:CI=false} ;; If `$CI` is undefined, then it defaults to `false`
+   ))
+ (action
+  (run
+   %{generator}
+   --state=%{state}
+   --inputs=%{inputs}
+   --output=%{target}
+   --variant=meta_object)))
+
+(rule
+ (target schemas_ok.output.json)
+ (deps
+  (:generator generate_outputs.exe)
+  (:state disambiguation_state.json)
+  (:inputs schemas_ok.input.bel))
+ (mode promote)
+ (enabled_if
+  (not
+   %{env:CI=false} ;; If `$CI` is undefined, then it defaults to `false`
+   ))
+ (action
+  (run
+   %{generator}
+   --state=%{state}
+   --inputs=%{inputs}
+   --output=%{target}
+   --variant=schema)))

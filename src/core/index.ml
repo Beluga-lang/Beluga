@@ -13,7 +13,7 @@
  *)
 
 open Support
-open Syntax
+open Beluga_syntax.Common
 module Ext = Syntax.Ext
 module Apx = Syntax.Apx
 
@@ -73,7 +73,7 @@ type 'a fvar_state = (fvars, 'a) state
     These are abstracted into computational Pi-box types.
  *)
 type name_disambiguator =
-  Store.CVar.t -> Store.BVar.t -> Syntax.Loc.t * Name.t -> Ext.LF.sub option -> Apx.LF.head fvar_state
+  Store.CVar.t -> Store.BVar.t -> Location.t * Name.t -> Ext.LF.sub option -> Apx.LF.head fvar_state
 
 type lf_indexing_context =
   { disambiguate_name : name_disambiguator
@@ -146,7 +146,7 @@ let index_cvar' cvars (u : Name.t) : (cvar_error_status, Id.offset) Either.t =
        p.fmt "[index_cvar'] indexed %a to offset %d at %a"
          Name.pp u
          k
-         Loc.print_short (Name.location u)
+         Location.print_short (Name.location u)
        end;
      Either.right k
 
@@ -202,7 +202,7 @@ type error =
   | SubstitutionNotAllowed of illegal_subst_term
   | NonemptyPatternSpineForVariable of Name.t
 
-exception Error of Syntax.Loc.t * error * hint option
+exception Error of Location.t * error * hint option
 
 let throw_hint' loc hint e = raise (Error (loc, e, hint))
 let throw loc e = throw_hint' loc None e
@@ -279,7 +279,7 @@ let require_no_sub loc (case : illegal_subst_term) =
     context.
  *)
 let disambiguate_name :
-      Syntax.Loc.t * Name.t -> Ext.LF.sub option ->
+      Location.t * Name.t -> Ext.LF.sub option ->
       Apx.LF.head index =
   fun p s c fvars ->
   c.disambiguate_name c.cvars c.bvars p s fvars
@@ -467,7 +467,7 @@ and shunting_yard (l : Ext.LF.normal list) : Ext.LF.normal =
   let rec parse : int
                   * Ext.LF.normal list
                   * (int * Ext.LF.normal) list
-                  * (int * Store.OpPragmas.fixPragma * Syntax.Loc.t) list ->
+                  * (int * Store.OpPragmas.fixPragma * Location.t) list ->
                   Ext.LF.normal =
     function
     | (i, Ext.LF.TList (_, nl) :: t, y, z) ->
@@ -560,7 +560,7 @@ and shunting_yard (l : Ext.LF.normal list) : Ext.LF.normal =
           before the operator.
       *)
   and reconstruct : (int * Ext.LF.normal) list
-                    * (int * Store.OpPragmas.fixPragma * Syntax.Loc.t) list
+                    * (int * Store.OpPragmas.fixPragma * Location.t) list
                     -> Ext.LF.normal =
     function
     | ([(_, e)], []) -> e
@@ -578,7 +578,7 @@ and shunting_yard (l : Ext.LF.normal list) : Ext.LF.normal =
        in
        let (ops, es) = List.take args_expected exps in
        let loc =
-         if Syntax.Loc.is_ghost loc_o
+         if Location.is_ghost loc_o
          then
            if args_expected > 0
            then
@@ -588,9 +588,9 @@ and shunting_yard (l : Ext.LF.normal list) : Ext.LF.normal =
              with
              | _ ->
                 throw
-                  Syntax.Loc.ghost
+                  Location.ghost
                   (MissingArguments (o.Store.OpPragmas.name, args_expected, List.length exps))
-           else Syntax.Loc.ghost
+           else Location.ghost
          else loc_o
        in
        if List.for_all (fun (x, _) -> x > i) ops
@@ -723,7 +723,7 @@ and index_head : Ext.LF.head -> Apx.LF.head index =
        (fun p ->
          p.fmt "[index_head] indexing name/variable %a at %a"
            Name.pp n
-           Loc.print_short loc);
+           Location.print_short loc);
      disambiguate_name (loc, n) o
 
   | Ext.LF.Proj (loc, h, k) ->
@@ -797,7 +797,7 @@ and disambiguate_name' f : name_disambiguator =
     p.fmt "[disambiguate_name] variable %a -> %s (at %a) %a"
       Name.pp name
       kind
-      Loc.print_short loc
+      Location.print_short loc
       (Option.print
          (fun ppf x -> Format.fprintf ppf "--> index %d" x))
       k
@@ -886,7 +886,7 @@ and disambiguate_to_fvars : name_disambiguator =
     begin fun _ (loc, name) sub_opt fvars ->
     dprintf (fun p -> p.fmt "[disambiguate_name] disambiguating %a to FVar" Name.pp name);
     require_no_sub loc `pure_lf sub_opt;
-    dprintf (fun p -> p.fmt "FVar %a at %a" Name.pp name Loc.print loc);
+    dprintf (fun p -> p.fmt "FVar %a at %a" Name.pp name Location.print loc);
     (fvars, Apx.LF.FVar name)
     end
     cvars bvars (loc, name) sub_opt fvars
@@ -1114,7 +1114,7 @@ let index_cdecl f cvars fvars =
        begin fun p ->
        p.fmt "[index_cdecl] %a at %a"
          Name.pp u
-         Loc.print_short loc
+         Location.print_short loc
        end;
      begin
        match index_cvar' cvars u with
@@ -1215,8 +1215,10 @@ let rec index_compkind cvars fcvars =
      Apx.Comp.PiKind (loc, cdecl', cK')
   | Ext.Comp.ArrKind (location, (loc', ctau, plicity), cK) ->
     let x = Name.mk_name ~location Name.NoName in
-    index_compkind cvars fcvars
-    @@ Ext.Comp.PiKind (location, Ext.LF.Decl (x, (loc', ctau), plicity), cK)
+    index_compkind
+      cvars
+      fcvars
+      (Ext.Comp.PiKind (location, Ext.LF.Decl (x, (loc', ctau), plicity), cK))
 
 let rec index_comptyp (tau : Ext.Comp.typ) cvars : Apx.Comp.typ fvar_state =
   fun fvars ->
@@ -1602,13 +1604,13 @@ and index_branch cvars vars fcvars =
      (* computing fcvars' is unnecessary? -bp *)
      let fcvars' =
        match get_ctxvar_mobj mO with
-       | Option.Some mobj -> extending_by mobj @@ empty_fvars `open_term
+       | Option.Some mobj -> extending_by mobj (empty_fvars `open_term)
        | Option.None -> empty_fvars `open_term
      in
      dprintf
        begin fun p ->
        p.fmt "[index_branch] indexing cD in branch at %a"
-         Loc.print_short loc
+         Location.print_short loc
        end;
      let (cD', cvars1, fcvars1) = index_mctx Store.CVar.empty fcvars' cD in
      let (mO', fcvars2) = index_meta_obj cvars1 fcvars1 mO in
@@ -1632,7 +1634,7 @@ and index_branch cvars vars fcvars =
      dprintf
        begin fun p ->
        p.fmt "[index_branch] general pattern at %a"
-         Loc.print_short loc
+         Location.print_short loc
        end;
      let (cD', cvars1, fcvars1) = index_mctx Store.CVar.empty empty_fcvars cD in
      let (pat', fcvars2, fvars2) = index_pattern cvars1 fcvars1 Store.Var.empty pat in

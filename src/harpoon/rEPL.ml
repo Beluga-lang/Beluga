@@ -50,7 +50,7 @@ let run_safe (f : unit -> 'a) : 'a e =
     - `error: an error occurred. Commands beyond the failed one were
       not executed.
  *)
-let process_command_sequence s (c, t, g) cmds =
+let[@warning "-32"] process_command_sequence s (c, t, g) cmds =
   let printf x = HarpoonState.printf s x in
   (* Idea:
      - count the commands to run
@@ -137,11 +137,7 @@ let rec loop (s : HarpoonState.t) : unit =
      *)
 
     (* Parse the input and run the command *)
-    match
-      HarpoonState.parsed_prompt s "> " None Parser.interactive_harpoon_command_sequence
-      |> List.map Synprs_to_synext.Harpoon.elaborate_repl_command
-      |> process_command_sequence s (c, t, g)
-    with
+    match Obj.magic () (* TODO: Parse, elaborate and process commands *) with
     | `ok | `error -> loop s
     | `stopped_short ->
        printf "@,Warning: theorem proven before all commands were processed.@,"

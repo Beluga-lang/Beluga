@@ -2,10 +2,11 @@ open Support
 
 let assert_raises_invalid_argument f =
   try
-    ignore @@ f ();
+    ignore (f ());
     OUnit2.assert_failure
       "Expected exception [Invalid_argument _] to be raised"
-  with Invalid_argument _ -> ()
+  with
+  | Invalid_argument _ -> ()
 
 let pp_print_list ppv ppf =
   Format.fprintf ppf "[%a]"
@@ -38,7 +39,7 @@ let test_uncons =
   in
   test_cases
   |> List.map (fun (input, expected) ->
-         OUnit2.test_case @@ test input expected)
+         OUnit2.test_case (test input expected))
 
 let test_length =
   let test input expected _test_ctxt =
@@ -52,7 +53,7 @@ let test_length =
   in
   test_cases
   |> List.map (fun (input, expected) ->
-         OUnit2.test_case @@ test input expected)
+         OUnit2.test_case (test input expected))
 
 let test_rev =
   let test input expected _test_ctxt =
@@ -66,7 +67,7 @@ let test_rev =
   in
   test_cases
   |> List.map (fun (input, expected) ->
-         OUnit2.test_case @@ test input expected)
+         OUnit2.test_case (test input expected))
 
 let test_iter =
   let test input _test_ctxt =
@@ -80,7 +81,7 @@ let test_iter =
   let test_cases =
     [ List1.from 1 []; List1.from 1 [ 2 ]; List1.from 1 [ 2; 3 ] ]
   in
-  test_cases |> List.map (fun input -> OUnit2.test_case @@ test input)
+  test_cases |> List.map (fun input -> OUnit2.test_case (test input))
 
 let test_map =
   let test f input expected _test_ctxt =
@@ -91,7 +92,7 @@ let test_map =
   in
   test_cases
   |> List.map (fun ((f, input), expected) ->
-         OUnit2.test_case @@ test f input expected)
+         OUnit2.test_case (test f input expected))
 
 let test_map2 =
   let test_success f l1 l2 expected _test_ctxt =
@@ -109,10 +110,10 @@ let test_map2 =
   let success_tests =
     success_test_cases
     |> List.map (fun ((f, l1, l2), expected) ->
-           OUnit2.test_case @@ test_success f l1 l2 expected)
+           OUnit2.test_case (test_success f l1 l2 expected))
   and failure_tests =
     failure_test_cases
-    |> List.map (fun (f, l1, l2) -> OUnit2.test_case @@ test_failure f l1 l2)
+    |> List.map (fun (f, l1, l2) -> OUnit2.test_case (test_failure f l1 l2))
   in
   success_tests @ failure_tests
 

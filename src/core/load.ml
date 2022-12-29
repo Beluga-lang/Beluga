@@ -1,6 +1,7 @@
 (* Loading files *)
 
 open Support
+open Beluga_syntax
 module F = Fun
 
 let (dprintf, _, _) = Debug.(makeFunctions' (toFlags [11]))
@@ -68,13 +69,12 @@ let forbid_leftover_vars path =
        (fun ppf -> Format.fprintf ppf "@[<v>## Leftover variables: %s  ##\
         @,  @[%a@]@]@."
        path
-       Recsgn.fmt_ppr_leftover_vars vars);
-     raise (Abstract.Error (Syntax.Loc.ghost, Abstract.LeftoverVars))
+       Recsgn.fmt_ppr_leftover_vars vars;
+     raise (Abstract.Error (Location.ghost, Abstract.LeftoverVars))
 
 let load_file ppf file_name =
   let sgn =
-    Parser.(Runparser.parse_file (Location.initial file_name) (only sgn) |> extract)
-    |> Synprs_to_synext.Sgn.elaborate_sgn
+    Obj.magic ()
     (* If the file starts with global pragmas then process them now. *)
     |> F.through
          begin fun sgn ->
@@ -110,7 +110,7 @@ let load_file ppf file_name =
      if !Coverage.warningOnly then
      Error.addInformation ("WARNING: Cases didn't cover: " ^ message)
      else
-     raise (Coverage.Error (Syntax.Loc.ghost, Coverage.NoCover message))
+     raise (Coverage.Error (Location.ghost, Coverage.NoCover message))
      end;
    *)
 

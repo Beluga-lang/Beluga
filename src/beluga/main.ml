@@ -1,5 +1,3 @@
-(* -*- coding: utf-8; indent-tabs-mode: nil; -*- *)
-
 (** Core / Frontend Driver
 
     @author Joshua Dunfield
@@ -7,7 +5,6 @@
 open Support
 open Beluga
 open Printf
-module P = Parser
 module F = Fun
 
 let bailout msg =
@@ -117,7 +114,7 @@ let main () =
      ()
   | _ -> bailout "Wrong number of command line arguments."
   end;
-  printf "%s" (Error.get_information ())
+  printf "%s" (Beluga_syntax.Error.get_information ())
 
 let _ =
   Format.set_margin 80;

@@ -1,0 +1,7 @@
+(library
+ (name synprs)
+ (package beluga)
+ (modules :standard)
+ (libraries support beluga_syntax)
+ (instrumentation
+  (backend bisect_ppx --bisect-silent yes)))

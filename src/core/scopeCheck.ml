@@ -1,18 +1,17 @@
 open Support
+open Beluga_syntax.Common
 open Store.Cid
-
-module Loc = Location
 
 type error =
   | FixedFixed
     of string (* e.g. "function foo" *)
-       * Loc.t (* definition location of that item *)
+       * Location.t (* definition location of that item *)
        * Id.cid_prog (* theorem from whose POV the item is out of scope *)
   | FloatingFloating
     of Id.cid_prog
        * Id.cid_prog
 
-exception Error of Loc.t * error
+exception Error of Location.t * error
 let throw loc e = raise (Error (loc, e))
 
 (** Perform late scopechecking for a theorem-theorem interaction.
@@ -77,9 +76,9 @@ let format_error ppf =
         @,@[%a@]\
         @,- @[<hov>%a@]@]"
        item_name
-       Loc.print item_loc
+       Location.pp item_loc
        Name.pp thm_name
-       Loc.print thm_loc
+       Location.pp thm_loc
        pp_print_text
        "Hint: If you are using Harpoon, you may want to save your \
         work, reorder some definitions, and try again."

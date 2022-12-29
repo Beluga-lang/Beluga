@@ -6,7 +6,7 @@ module P = B.Pretty.Int.DefaultPrinter
 module Command = B.Syntax.Ext.Harpoon
 module Comp = B.Syntax.Int.Comp
 module LF = B.Syntax.Int.LF
-module Loc = B.Syntax.Loc
+module Location = Beluga_syntax.Location
 module Context = B.Context
 module Whnf = B.Whnf
 module S = B.Substitution
@@ -93,32 +93,31 @@ let auto_solve_trivial : t =
       end;
     match m with
     | LF.Decl (_, mtyp, _, _) ->
-       Whnf.convCTyp g.goal (TypBox (Loc.ghost, mtyp), LF.MShift idx)
+       Whnf.convCTyp g.goal (TypBox (Location.ghost, mtyp), LF.MShift idx)
     | LF.DeclOpt _ ->
-       B.Error.violation "[auto_solve_trivial] Unexpected DeclOpt"
+      Beluga_syntax.Error.violation "[auto_solve_trivial] Unexpected DeclOpt"
   in
   let build_mwitness (m : LF.ctyp_decl * int) =
     match m with
     | (LF.Decl (_, (LF.ClTyp (_, _) as cU), _, _), idx) ->
        let open LF in
-       let open Loc in
        let t = LF.MShift idx in
        let LF.ClTyp (_, cPsi) as cU = Whnf.cnormMTyp (cU, t) in
        let head = MVar (Offset idx, S.LF.id) in
-       let clobj = MObj (Root (ghost, head, Nil, B.Plicity.explicit)) in
+       let clobj = MObj (Root (Location.ghost, head, Nil, Beluga_syntax.Plicity.explicit)) in
        let psi_hat = Context.dctxToHat cPsi in
        Box
-         ( ghost
-         , (ghost, ClObj (psi_hat, clobj))
+         ( Location.ghost
+         , (Location.ghost, ClObj (psi_hat, clobj))
          , cU
          )
     (* The following case is impossible because m_is_witness
        will never return true for a DeclOpt.
      *)
     | LF.DeclOpt _, _ ->
-       B.Error.violation "[auto_solve_trivial] DeclOpt impossible"
+      Beluga_syntax.Error.violation "[auto_solve_trivial] DeclOpt impossible"
     | _ ->
-       B.Error.violation "[auto_solve_trivial] impossible case"
+      Beluga_syntax.Error.violation "[auto_solve_trivial] impossible case"
   in
   let c_is_witness ((c, _) : ctyp_decl * int) =
     dprintf
@@ -130,9 +129,9 @@ let auto_solve_trivial : t =
     | CTypDecl (_, typ, _) ->
        Whnf.convCTyp g.goal (typ, Whnf.m_id)
     | CTypDeclOpt _ ->
-       B.Error.violation "[auto_solve_trivial] Unexpected CTypDeclOpt"
+      Beluga_syntax.Error.violation "[auto_solve_trivial] Unexpected CTypDeclOpt"
   in
-  let build_cwitness (_, idx) = Var (Loc.ghost, idx)
+  let build_cwitness (_, idx) = Var (Location.ghost, idx)
   in
   let open Option in
   let opt_mwitness =

@@ -1,7 +1,7 @@
 (** The abstract datatype of actions.
 
-    Instances of {!MONAD} should satisfy the following laws for {!MONAD.( >>=
-    )}:
+    Instances of {!MONAD} should satisfy the following laws for
+    {!MONAD.(>>=)}:
 
     - {b Left identity}: [(return a >>= h) = (h a)],
     - {b Right identity}: [(m >>= return) = m],

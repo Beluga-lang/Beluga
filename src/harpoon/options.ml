@@ -55,11 +55,11 @@ end
 (* Register error formatting. *)
 let _ =
   let open Error in
-  B.Error.register_printer'
+  Beluga_syntax.Error.register_printer'
     begin fun e ->
     match e with
     | E e ->
-       Some (B.Error.print (fun ppf -> format_error ppf e))
+       Some (Beluga_syntax.Error.print (fun ppf -> format_error ppf e))
     | _ -> None
     end
 
@@ -198,7 +198,7 @@ let parse_arguments args : parsed_t =
   Optparser.parse options_spec args
   |> Result.fold
     ~ok:Fun.id
-    ~error:(fun e -> Error.(throw @@ OptparserError e))
+    ~error:(fun e -> Error.(throw (OptparserError e)))
 
 (** Loads the specified signature and elaborates the theorem.
     Returns also the path of the last file loaded.

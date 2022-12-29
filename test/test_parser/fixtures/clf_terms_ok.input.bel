@@ -1,0 +1,164 @@
+% The following is a list of `;;`-terminated syntactically valid contextual
+% LF terms with respect to the disambiguation state `disambiguation_state.json`.
+% The file `clf_terms_ok.output.json` of serialized ASTs corresponding to those
+% terms is automatically generated during development, but not during
+% continuous integration.
+
+M x y z
+;;
+
+_ x y z
+;;
+
+M _ y z
+;;
+
+M x _ z
+;;
+
+M x y _
+;;
+
+M _ y _
+;;
+
+M _ _ _
+;;
+
+\x. x
+;;
+
+\x. M x
+;;
+
+\x. \y. \z. M x y z
+;;
+
+z
+;;
+
+z : nat
+;;
+
+\x. s x
+;;
+
+\x. \_. s x
+;;
+
+\s. \x. s x
+;;
+
+\x:nat. s x
+;;
+
+\x. s (x : nat)
+;;
+
+\x. s x : nat
+;;
+
+(x : nat) : nat
+;;
+
+x : nat : nat
+;;
+
+(\x. s x) : nat -> nat
+;;
+
+s z
+;;
+
+M (arrow) x arrow M' (arrow) y
+;;
+
+(arrow) (arrow)
+;;
+
+x : a : b : c
+;;
+
+_
+;;
+
+?
+;;
+
+?x
+;;
+
+s _
+;;
+
+s ?
+;;
+
+s ?x
+;;
+
+<x1; x2; x3>
+;;
+
+<?; ?; ?>
+;;
+
+<?x1; ?x2; ?x3>
+;;
+
+<x>.1
+;;
+
+<x>.x.1.y
+;;
+
+x.y.z
+;;
+
+Nat.z.x
+;;
+
+x[]
+;;
+
+x[z]
+;;
+
+x[\z. z]
+;;
+
+x[y1][y2][y3]
+;;
+
+x[.., z]
+;;
+
+x[y1, y2, y3]
+;;
+
+x[.., y1, y2, y3]
+;;
+
+x[y1[], y2[..], y3[z]]
+;;
+
+x[.., y1[], y2[..], y3[\z. z]]
+;;
+
+x[$S, y1, y2, y3]
+;;
+
+x[$S[], y1, y2, y3]
+;;
+
+x[$S[..], y1, y2, y3]
+;;
+
+x[$S[y1, y2, y3], y1, y2, y3]
+;;
+
+x[$S[y1[$Q], y2, y3], y1, y2, y3]
+;;
+
+x[$S[.., y1[$Q], y2, y3], y1, y2, y3]
+;;

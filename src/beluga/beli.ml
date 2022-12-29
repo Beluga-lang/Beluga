@@ -44,13 +44,9 @@ let rec loop ppf =
       | `Cmd cmd ->
          Command.do_command ppf cmd
       | `Input input when input <> "" ->
+         let _location = Beluga_syntax.Location.initial "<interactive>" in
          let (exp, tau) =
-           Runparser.parse_string
-             (Location.initial "<interactive>")
-             input
-             (Parser.only Parser.comp_expression_object)
-           |> Parser.extract
-           |> Synprs_to_synext.Comp.elaborate_exp
+           Obj.magic () (* TODO: Parse only a computation-level expression from [input] at [_location] *)
            |> Interactive.elaborate_exp' LF.Empty LF.Empty
            |> Pair.map_right Whnf.cnormCTyp
          in
@@ -78,17 +74,12 @@ let run args =
   if List.length files = 1 then
     try
       let arg = List.hd files in
-      let sgn =
-        Runparser.parse_file
-          (Location.initial arg)
-          (Parser.only Parser.sgn)
-        |> Parser.extract
-        |> Synprs_to_synext.Sgn.elaborate_sgn
-      in
+      let _location = Beluga_syntax.Location.initial arg in
+      let sgn = Obj.magic () (* TODO: Parse only a signature from the file [arg] *) in
       let sgn' = begin match Recsgn.recSgnDecls sgn with
     | sgn', None -> sgn'
     | _, Some _ ->
-      raise (Abstract.Error (Syntax.Loc.ghost, Abstract.LeftoverVars))
+      raise (Abstract.Error (Beluga_syntax.Location.ghost, Abstract.LeftoverVars))
       end
       in
       Chatter.print 1 (fun ppf -> Format.fprintf ppf "%a" P.fmt_ppr_sgn sgn');

@@ -25,7 +25,7 @@ let test_from_predicate =
   in
   test_cases
   |> List.map (fun (predicate, value, expected) ->
-         OUnit2.test_case @@ test predicate value expected)
+         OUnit2.test_case (test predicate value expected))
 
 let test_of_bool =
   let test_is_some_when_true _test_ctxt =
@@ -41,20 +41,20 @@ let test_lazy_alt =
     let o1 = lazy (Option.some 1)
     and o2 = lazy (Option.some 2) in
     let o = Option.lazy_alt o1 o2 in
-    OUnit2.assert_bool "result is forced" (Bool.not @@ Lazy.is_val o);
-    OUnit2.assert_bool "first argument is forced" (Bool.not @@ Lazy.is_val o1);
+    OUnit2.assert_bool "result is forced" (Bool.not (Lazy.is_val o));
+    OUnit2.assert_bool "first argument is forced" (Bool.not (Lazy.is_val o1));
     OUnit2.assert_bool "second argument is forced"
-      (Bool.not @@ Lazy.is_val o2)
+      (Bool.not (Lazy.is_val o2))
   and test_does_not_unnecessarily_force_second_argument _test_ctxt =
     let o1 = lazy (Option.some 1)
     and o2 = lazy (Option.some 2) in
-    ignore (Lazy.force @@ Option.lazy_alt o1 o2 : Int.t Option.t);
+    ignore (Lazy.force (Option.lazy_alt o1 o2) : Int.t Option.t);
     OUnit2.assert_bool "first argument is not forced" (Lazy.is_val o1);
     OUnit2.assert_bool "second argument is forced"
-      (Bool.not @@ Lazy.is_val o2)
+      (Bool.not (Lazy.is_val o2))
   and test o1 o2 expected _test_ctxt =
     assert_int_option_equal (Lazy.force expected)
-      (Lazy.force @@ Option.lazy_alt o1 o2)
+      (Lazy.force (Option.lazy_alt o1 o2))
   in
   let test_cases =
     [ (lazy (Option.some 1), lazy (Option.some 2), lazy (Option.some 1))
@@ -69,7 +69,7 @@ let test_lazy_alt =
   |> List.map OUnit2.test_case)
   @ (test_cases
     |> List.map (fun (o1, o2, expected) ->
-           OUnit2.test_case @@ test o1 o2 expected))
+           OUnit2.test_case (test o1 o2 expected)))
 
 let tests =
   let open OUnit2 in

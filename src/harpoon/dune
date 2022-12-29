@@ -3,13 +3,13 @@
  (public_name harpoon)
  (package beluga)
  (libraries
-  extlib
-  gen
   sedlex
   linenoise
   support
   optparser
   beluga
+  beluga_syntax
+  beluga_parser
   dune-build-info))
 
 (env

@@ -1,0 +1,7 @@
+(library
+ (name centiparsec)
+ (package beluga)
+ (modules :standard)
+ (libraries gen  extlib support unix str)
+ (instrumentation
+  (backend bisect_ppx --bisect-silent yes)))

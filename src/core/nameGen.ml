@@ -1,3 +1,4 @@
+open Beluga_syntax.Common
 module LF = Syntax.Int.LF
 module Comp = Syntax.Int.Comp
 
@@ -25,20 +26,17 @@ let pvar (tA : LF.typ) : Name.t =
 let bvar (tA : LF.typ) : Name.t =
   Name.(mk_name (SomeString (bvar_string tA)))
 
-let rec var_string =
-  function
-  | Comp.TypBox (_, mT) ->
-     begin match mT with
-     | LF.CTyp _ ->
-        Error.violation
-          "[NameGen.var] computational CTyp impossible"
-     | LF.ClTyp (cU, _) ->
-        match cU with
-        | LF.MTyp tA | LF.PTyp tA -> bvar_string tA
-        | LF.STyp _ -> "s"
-     end
-  | Comp.TypPiBox (_, _, tau) | Comp.TypArr (_, _, tau) | Comp.TypClo (tau, _) ->
-     var_string tau
+let rec var_string = function
+  | Comp.TypBox (_, mT) -> (
+    match mT with
+    | LF.CTyp _ ->
+      Error.violation "[NameGen.var] computational CTyp impossible"
+    | LF.ClTyp (cU, _) -> (
+      match cU with
+      | LF.MTyp tA | LF.PTyp tA -> bvar_string tA
+      | LF.STyp _ -> "s"))
+  | Comp.TypPiBox (_, _, tau) | Comp.TypArr (_, _, tau) | Comp.TypClo (tau, _)
+    -> var_string tau
   | _ -> "x"
 
 let var tau = Name.(mk_name (SomeString (var_string tau)))

@@ -3,7 +3,6 @@ open Beluga
 open Syntax.Int
 
 module F = Fun
-module Loc = Syntax.Loc
 module P = Pretty.Int.DefaultPrinter
 
 let dprintf, _, _ = Debug.(makeFunctions' (toFlags [15]))
@@ -13,9 +12,9 @@ open Debug.Fmt
  * TODO: Move this util into a dedicated module
  * TODO: Add more abstraction layers for system level operations
  *)
-let replace_locs (replacees : (Loc.t * (Format.formatter -> unit -> unit)) list) : unit =
+let replace_locs (replacees : (Beluga_syntax.Location.t * (Format.formatter -> unit -> unit)) list) : unit =
   replacees
-  |> Hashtbl.group_by F.(Loc.filename ++ Pair.fst)
+  |> Hashtbl.group_by F.(Beluga_syntax.Location.filename ++ Pair.fst)
   (* iterate over replacee groups
    (* open file stream *)
    (* sort items in the group *)
@@ -35,7 +34,7 @@ let replace_locs (replacees : (Loc.t * (Format.formatter -> unit -> unit)) list)
          let read_length = ref 0 in
          let indentation = ref 0 in
          let raise_edited_error () =
-           Error.violation "[harpoon] [serialize] original file is edited"
+           Beluga_syntax.Error.violation "[harpoon] [serialize] original file is edited"
          in
          let with_uchar n f =
            match Sedlexing.next in_lexbuf with
@@ -53,11 +52,11 @@ let replace_locs (replacees : (Loc.t * (Format.formatter -> unit -> unit)) list)
            dprintf (fun p -> p.fmt "[replace_locs] opened %s" temp_file_name);
            let outbuf = Buffer.create 4 in
            replacees
-           |> List.sort (Misc.on Pair.fst Loc.compare_start)
+           |> List.sort (Misc.on Pair.fst Beluga_syntax.Location.compare_start)
            |> List.iter
                 begin fun (loc, printer) ->
-                let start_offset = Loc.start_offset loc in
-                let stop_offset = Loc.stop_offset loc in
+                let start_offset = Beluga_syntax.Location.start_offset loc in
+                let stop_offset = Beluga_syntax.Location.stop_offset loc in
                 Fun.until
                   begin fun _ ->
                   if !read_length < start_offset

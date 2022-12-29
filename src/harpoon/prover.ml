@@ -3,7 +3,7 @@ open Support
 open Beluga
 open Syntax.Int
 
-module E = Error
+module E = Beluga_syntax.Error
 module Command = Syntax.Ext.Harpoon
 module S = Substitution
 module P = Pretty.Int.DefaultPrinter
@@ -33,7 +33,7 @@ module Error = struct
          Name.pp name
 
   let _ =
-    Error.register_printing_function
+    Beluga_syntax.Error.register_printing_function
       (function E e -> Some e | _ -> None)
       fmt_ppr
 end
@@ -110,7 +110,7 @@ module Elab = struct
             let cPsi = LF.(CtxVar (CtxOffset k)) in
             CObj cPsi
        in
-       let i = Comp.AnnBox (Location.ghost, (loc, mF), cT)
+       let i = Comp.AnnBox (Beluga_syntax.Location.ghost, (loc, mF), cT)
        and tau = Comp.TypBox (loc, cT) in
        (i, tau)
     | _ -> E.violation "[harpoon] [Elab] [mvar] cD decl has no type"

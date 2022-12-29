@@ -6,9 +6,15 @@ let eliminate left right = function
   | Left e -> left e
   | Right x -> right x
 
-let is_right e = eliminate (Fun.const false) (Fun.const true) e
+let is_right e =
+  match e with
+  | Right _ -> true
+  | Left _ -> false
 
-let is_left e = not @@ is_right e
+let is_left e =
+  match e with
+  | Right _ -> false
+  | Left _ -> true
 
 let right x = Right x
 
@@ -42,4 +48,6 @@ let ( >>= ) e k = bind k e
 
 let ( $> ) e f = map_right f e
 
-let trap f = try Right (f ()) with e -> Left e
+let trap f =
+  try Right (f ()) with
+  | e -> Left e

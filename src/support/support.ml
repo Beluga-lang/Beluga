@@ -1,33 +1,45 @@
-module Alternative = Alternative
-module Apply = Apply
-module Debug = Debug
-module DynArray = DynArrayExt
-module Either = Either
-module Eq = Eq
-module Equality = Equality
-module Files = Files
-module Format = Format
-module Fun = Fun
+(** Utility libraries. *)
+
+(** {1 Monads and Modular Type Classes} *)
+
+module Monad = Monad
 module Functor = Functor
+module Apply = Apply
+module Alternative = Alternative
+module State = State
+module Show = Show
+module Eq = Eq
+module Ord = Ord
+module Hash = Hash
+
+(** {1 Extensions to Imported Libraries} *)
+
+module DynArray = DynArrayExt
+module Format = Format
 module Gen = GenExt
 module Hamt = HamtExt
-module Hash = Hash
 module Hashtbl = Hashtbl
-module History = History
 module Int = Int
 module List = List
-module List1 = List1
-module List2 = List2
-module Location = Location
-module Misc = Misc
-module Monad = Monad
 module Option = Option
-module Ord = Ord
-module Pair = Pair
-module PureStack = PureStack
 module Result = Result
 module Seq = Seq
 module Stack = Stack
 module String = String
-module Show = Show
-module State = State
+
+(** {1 Additional Datastructures} *)
+
+module PureStack = PureStack
+module Either = Either
+module Pair = Pair
+module List1 = List1
+module List2 = List2
+module History = History
+
+(** {1 Utilities} *)
+
+module Equality = Equality
+module Misc = Misc
+module Debug = Debug
+module Fun = Fun
+module Files = Files

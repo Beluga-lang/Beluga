@@ -11,6 +11,7 @@ open Support.Equality
  *)
 
 open Support
+open Beluga_syntax.Common
 open Syntax.Int.LF
 open Syntax.Int
 open Substitution
@@ -140,14 +141,14 @@ let rec lowerMVar' cPsi sA' plicity inductivity =
          (tA', LF.dot1 s')
          plicity inductivity
      in
-     (u', Lam (Syntax.Loc.ghost, Name.mk_name Name.NoName, tM))
+     (u', Lam (Location.ghost, Name.mk_name Name.NoName, tM))
 
   | (TClo (tA, s), s') ->
      lowerMVar' cPsi (tA, LF.comp s s') plicity inductivity
 
   | (Atom (loc, a, tS), s') ->
      let u' = newMVar None (cPsi, Atom (loc, a, SClo (tS, s'))) plicity inductivity in
-     (u', Root (Syntax.Loc.ghost, MVar (u', LF.id), Nil, plicity)) (* cvar * normal *)
+     (u', Root (Location.ghost, MVar (u', LF.id), Nil, plicity)) (* cvar * normal *)
 
 (* lowerMVar1 (u, tA[s]), tA[s] in whnf, see lowerMVar *)
 and lowerMVar1 u sA =
@@ -197,14 +198,14 @@ and lowerMMVar' cD cPsi sA' dep =
   match sA' with
   | (PiTyp ((decl, _), tA'), s') ->
      let (u', tM) = lowerMMVar' cD (DDec (cPsi, LF.decSub decl s')) (tA', LF.dot1 s') dep in
-     (u', Lam (Syntax.Loc.ghost, Name.mk_name Name.NoName, tM))
+     (u', Lam (Location.ghost, Name.mk_name Name.NoName, tM))
 
   | (TClo (tA, s), s') ->
      lowerMMVar' cD cPsi (tA, LF.comp s s') dep
 
   | (Atom (loc, a, tS), s') ->
      let u' = newMMVar None (cD, cPsi, Atom (loc, a, SClo (tS, s'))) dep in
-     (u', Root (Syntax.Loc.ghost, MMVar ((u', MShift 0), LF.id), Nil)) (* cvar * normal *)
+     (u', Root (Location.ghost, MMVar ((u', MShift 0), LF.id), Nil)) (* cvar * normal *)
 
 
 (* lowerMMVar1 (u, tA[s]), tA[s] in whnf, see lowerMMVar *)
@@ -1302,7 +1303,7 @@ and convSub subst1 subst2 =
      && convSub sigma1 sigma2
 
   | FSVar (k1, (u1, s1)), FSVar (k2, (u2, s2)) ->
-     Int.(k1 = k2) && Name.(u1 = u2) && convSub s1 s2
+     Support.Int.(k1 = k2) && Name.(u1 = u2) && convSub s1 s2
 
   | (Dot (f, s), Dot (f', s')) ->
      convFront f f' && convSub s s'
@@ -1415,7 +1416,7 @@ and convTypRec sArec sBrec =
 and convCtxVar psi psi' =
   match (psi, psi') with
   | (CtxName n1, CtxName n2) -> Name.(n1 = n2)
-  | (CtxOffset k1, CtxOffset k2) -> Int.(k1 = k2)
+  | (CtxOffset k1, CtxOffset k2) -> Support.Int.(k1 = k2)
   | _ -> false
 
 (* convDCtx cPsi cPsi' = true iff

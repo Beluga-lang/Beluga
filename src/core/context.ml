@@ -5,6 +5,7 @@ open Support.Equality
 *)
 
 open Support
+open Beluga_syntax.Common
 open Syntax.Int.LF
 open Syntax.Int
 

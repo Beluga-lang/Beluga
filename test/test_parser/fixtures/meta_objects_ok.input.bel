@@ -1,0 +1,77 @@
+% The following is a list of `;;`-terminated syntactically valid meta-level
+% objects with respect to the disambiguation state `disambiguation_state.json`.
+% The file `meta_objects_ok.output.json` of serialized ASTs corresponding to
+% those objects is automatically generated during development, but not during
+% continuous integration.
+
+[ ^ ]
+;;
+
+[]
+;;
+
+[_]
+;;
+
+[g]
+;;
+
+[g, x : nat]
+;;
+
+[_, x : nat]
+;;
+
+[g, x, y, z]
+;;
+
+[g, x : nat, y : nat, z : sum x y z]
+;;
+
+[x : nat, y : nat, z : sum x y z]
+;;
+
+[_, x : nat, y : nat, z : sum x y z]
+;;
+
+[^ |- z]
+;;
+
+[z : nat |- z]
+;;
+
+[_, z : nat |- z]
+;;
+
+[g, z : nat |- z]
+;;
+
+[z |- z]
+;;
+
+$[ ^ |- ^ ]
+;;
+
+$[ g |- ^ ]
+;;
+
+$[ g |- z ]
+;;
+
+$[ g, x : nat |- z, x ]
+;;
+
+$[ ^ |-# ^ ]
+;;
+
+$[ g |-# ^ ]
+;;
+
+$[ g |-# z ]
+;;
+
+$[ g, x : nat |-# z, x ]
+;;
+
+$[ g, z : nat |-# z, x ]
+;;

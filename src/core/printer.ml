@@ -1,3 +1,4 @@
+open Beluga_syntax.Common
 open Format
 
 module CompS = Store.Cid.Comp

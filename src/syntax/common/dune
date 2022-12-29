@@ -1,0 +1,6 @@
+(library
+ (name common) ;; TODO: Rename to [syncom]
+ (package beluga)
+ (libraries support)
+ (instrumentation
+  (backend bisect_ppx --bisect-silent yes)))

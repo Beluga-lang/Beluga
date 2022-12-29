@@ -1,12 +1,14 @@
 include Stdlib.List
 
 let rec last = function
-  | [] -> raise @@ Invalid_argument "List.last"
+  | [] -> raise (Invalid_argument "List.last")
   | [ x ] -> x
   | _ :: xs -> last xs
 
 let rec pairs = function
-  | [] | [ _ ] -> []
+  | []
+  | [ _ ] ->
+      []
   | x1 :: x2 :: xs -> (x1, x2) :: pairs (x2 :: xs)
 
 let null = function
@@ -19,9 +21,9 @@ let rec traverse f xs =
   match xs with
   | [] -> Stdlib.Option.some []
   | x :: xs ->
-    Stdlib.Option.bind (f x) (fun y ->
-        Stdlib.Option.bind (traverse f xs) (fun ys ->
-            Stdlib.Option.some (y :: ys)))
+      Stdlib.Option.bind (f x) (fun y ->
+          Stdlib.Option.bind (traverse f xs) (fun ys ->
+              Stdlib.Option.some (y :: ys)))
 
 let rec traverse_ f xs =
   match xs with
@@ -32,7 +34,7 @@ let rec fold_left_opt f acc xs =
   match xs with
   | [] -> Stdlib.Option.some acc
   | x :: xs ->
-    Stdlib.Option.bind (f acc x) (fun acc' -> fold_left_opt f acc' xs)
+      Stdlib.Option.bind (f acc x) (fun acc' -> fold_left_opt f acc' xs)
 
 let filter_rev p l =
   let rec go acc = function
@@ -44,17 +46,17 @@ let filter_rev p l =
 let rec find_map f = function
   | [] -> None
   | x :: l -> (
-    match f x with
-    | Some _ as result -> result
-    | None -> find_map f l)
+      match f x with
+      | Some _ as result -> result
+      | None -> find_map f l)
 
 let rec find_apply fs a =
   match fs with
   | [] -> Stdlib.Option.none
   | f :: fs -> (
-    match f a with
-    | Stdlib.Option.Some _ as v -> v
-    | Stdlib.Option.None -> find_apply fs a)
+      match f a with
+      | Stdlib.Option.Some _ as v -> v
+      | Stdlib.Option.None -> find_apply fs a)
 
 let uncons = function
   | [] -> None
@@ -101,7 +103,7 @@ let rec fold_left4 f accu l1 l2 l3 l4 =
   match (l1, l2, l3, l4) with
   | [], [], [], [] -> accu
   | a1 :: l1, a2 :: l2, a3 :: l3, a4 :: l4 ->
-    fold_left4 f (f accu a1 a2 a3 a4) l1 l2 l3 l4
+      fold_left4 f (f accu a1 a2 a3 a4) l1 l2 l3 l4
   | _, _, _, _ -> invalid_arg "List.fold_left4"
 
 let mapi2 f l1 l2 =
@@ -109,7 +111,7 @@ let mapi2 f l1 l2 =
     match (l1, l2) with
     | [], [] -> return []
     | x :: xs, y :: ys ->
-      mapi2 (index + 1) xs ys (fun tl -> return (f index x y :: tl))
+        mapi2 (index + 1) xs ys (fun tl -> return (f index x y :: tl))
     | _ -> raise (Invalid_argument "List.mapi2")
   in
   mapi2 0 l1 l2 Fun.id
@@ -136,7 +138,7 @@ let combine l1 l2 =
     match (l1, l2) with
     | [], [] -> return []
     | a1 :: l1, a2 :: l2 ->
-      combine l1 l2 (fun rest -> return ((a1, a2) :: rest))
+        combine l1 l2 (fun rest -> return ((a1, a2) :: rest))
     | _ -> raise (Invalid_argument "List.combine")
   in
   combine l1 l2 Fun.id
@@ -158,7 +160,7 @@ let take_opt =
       | [] -> Stdlib.Option.none
   in
   fun k l ->
-    if k < 0 then raise @@ Invalid_argument "List.take_opt"
+    if k < 0 then raise (Invalid_argument "List.take_opt")
     else take_opt k l []
 
 let take_while p =
@@ -175,8 +177,8 @@ let rec compare cmp l1 l2 =
   | [], _ :: _ -> -1
   | _ :: _, [] -> 1
   | a1 :: l1, a2 :: l2 ->
-    let c = cmp a1 a2 in
-    if c <> 0 then c else compare cmp l1 l2
+      let c = cmp a1 a2 in
+      if c <> 0 then c else compare cmp l1 l2
 
 let pp = Format.pp_print_list
 

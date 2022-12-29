@@ -75,3 +75,19 @@ val sequence :
   -> ('t -> 's1)
   -> ('t -> 's2)
   -> (module ORD with type t = 't)
+
+(** If [val f1 : 't -> 's1], [val f2 : 't -> 's2] and [val f3 : 't -> 's3],
+    then [sequence ord1 ord2 ord3 f1 f2 f3] is an instance of {!ORD} for
+    values of type ['t] whose ordering is ordered in sequence by:
+
+    - contramapping by [ord1] and [f1],
+    - contramapping by [ord2] and [f2],
+    - contramapping by [ord3] and [f3]. *)
+val sequence3 :
+     (module ORD with type t = 's1)
+  -> (module ORD with type t = 's2)
+  -> (module ORD with type t = 's3)
+  -> ('t -> 's1)
+  -> ('t -> 's2)
+  -> ('t -> 's3)
+  -> (module ORD with type t = 't)

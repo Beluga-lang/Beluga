@@ -45,13 +45,13 @@ let recover_theorem ppf hooks (cid, gs) =
   let initial_state =
     let s =
       make_proof_state SubgoalPath.start
-        ( Total.annotate Location.ghost decl.Comp.order tau
+        ( Total.annotate Beluga_syntax.Location.ghost decl.Comp.order tau
         , Whnf.m_id )
     in
     let prf =
       match e.CompS.Entry.prog with
       | Some (ThmValue (_, Proof p, _, _)) -> p
-      | _ -> Error.violation "recovered theorem not a proof"
+      | _ -> Beluga_syntax.Error.violation "recovered theorem not a proof"
     in
     dprintf begin fun p ->
       p.fmt "[recover_theorem] @[<v>proof =@,@[%a@]@]"
@@ -188,7 +188,7 @@ let select_theorem s name =
             this should be guaranteed to succeed due to the
             lookup_theorem having succeeded in this case *)
      if Bool.not (Session.select_theorem c name) then
-       Error.violation
+      Beluga_syntax.Error.violation
          "[select_theorem] selected session does not contain the theorem";
      true
 
@@ -235,14 +235,14 @@ let keeping_focus s (c, t, g) f =
   let curr_sg_label = g.Comp.label in
   f ();
   if Bool.not (select_theorem s curr_thm_name) then
-    Error.violation
+    Beluga_syntax.Error.violation
       "[reset] reloaded signature does not contain the theorem \
        we were working on";
   let t =
     match next_triple s with
     | Either.Right (_, t, _) -> t
     | _ ->
-       Error.violation
+      Beluga_syntax.Error.violation
          "[reset] next_triple didn't give a triple."
   in
   match
@@ -252,7 +252,7 @@ let keeping_focus s (c, t, g) f =
       end
   with
   | None ->
-     Error.violation
+      Beluga_syntax.Error.violation
        "[reset] select_subgoal_satisfying returned None"
   | Some _ -> ()
 

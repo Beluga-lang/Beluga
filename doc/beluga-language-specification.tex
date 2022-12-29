@@ -434,8 +434,8 @@ Atomic patterns are computation-level patterns that may appear as whitespace-del
 | <identifier> \hfill \texttt{(* Variable *)}\\
 | <qualified-identifier> \hfill \texttt{(* Constant *)}\\
 | `fn' <omittable-identifier>+ <thick-forward-arrow> <comp-expression>\\
-| `fun' [`|'] <comp-pattern-atomic>+ <thick-forward-arrow> <comp-expression>\\
-  (`|' <comp-pattern-atomic>+ <thick-forward-arrow> <comp-expression>)*\\
+| `fun' [`|'] <comp-copattern>+ <thick-forward-arrow> <comp-expression>\\
+  (`|' <comp-copattern>+ <thick-forward-arrow> <comp-expression>)*\\
 | `mlam' <omittable-meta-object-identifier>+ <thick-forward-arrow> <comp-expression>\\
 | `let' <comp-pattern> `=' <comp-expression> `in' <comp-expression> \hfill \texttt{(* Let *)}\\
 | <meta-object> \hfill \texttt{(* Meta-object *)}\\
@@ -447,18 +447,8 @@ Atomic patterns are computation-level patterns that may appear as whitespace-del
 | `?' [<identifier>] \hfill \texttt{(* Hole *)}\\
 | `_' \hfill \texttt{(* Box hole *)}\\
 | <comp-expression> <comp-expression> \hfill \texttt{(* Application *)}\\
-| <dot-qualified-identifier> <comp-expression>* \hfill \texttt{(* Observation *)}\\
 | <comp-expression> `:' <comp-type> \hfill \texttt{(* Annotated *)}\\
 | `(' <comp-expression> `)'
-
-<comp-pattern-atomic> ::= \hfill\\
-| <identifier> \hfill \texttt{(* Variable *)}\\
-| <qualified-identifier> \hfill \texttt{(* Constant *)}\\
-| <meta-pattern> \hfill \texttt{(* Meta-object *)} \\
-| `(' <comp-pattern> (`,' <comp-pattern>)+ `)' \hfill \texttt{(* Tuple *)}\\
-| <dot-qualified-identifier> <comp-pattern-atomic>* \hfill \texttt{(* Observation *)}\\
-| `_' \hfill \texttt{(* Wildcard *)}\\
-| `(' <comp-pattern> `)'
 
 <comp-pattern> ::= \hfill\\
 | <identifier> \hfill \texttt{(* Variable *)}\\
@@ -466,11 +456,22 @@ Atomic patterns are computation-level patterns that may appear as whitespace-del
 | <meta-pattern> \hfill \texttt{(* Meta-object *)} \\
 | `(' <comp-pattern> (`,' <comp-pattern>)+ `)' \hfill \texttt{(* Tuple *)}\\
 | <comp-pattern> <comp-pattern> \hfill \texttt{(* Application *)}\\
-| <dot-qualified-identifier> <comp-pattern-atomic>* \hfill \texttt{(* Observation *)}\\
 | <comp-pattern> `:' <comp-type> \hfill \texttt{(* Annotated *)}\\
 | `{' <meta-object-identifier> `:' <meta-type> `}' <comp-pattern> \hfill \texttt{(* Meta-annotated *)}\\
 | `_' \hfill \texttt{(* Wildcard *)}\\
 | `(' <comp-pattern> `)'
+
+<comp-pattern-atomic> ::= \hfill\\
+| <identifier> \hfill \texttt{(* Variable *)}\\
+| <qualified-identifier> \hfill \texttt{(* Constant *)}\\
+| <meta-pattern> \hfill \texttt{(* Meta-object *)} \\
+| `(' <comp-pattern> (`,' <comp-pattern>)+ `)' \hfill \texttt{(* Tuple *)}\\
+| `_' \hfill \texttt{(* Wildcard *)}\\
+| `(' <comp-pattern> `)'
+
+<comp-copattern> ::= \hfill\\
+| <dot-qualified-identifier> <comp-pattern-atomic>* \hfill \texttt{(* Observation *)}\\
+| <comp-pattern-atomic>
 
 <comp-context> ::= \hfill\\
 | [`^'] \hfill \texttt{(* Empty context *)}\\

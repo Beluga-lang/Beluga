@@ -48,7 +48,7 @@ jobs:
           ocaml-compiler: ${{ matrix.ocaml-compiler }}
 
       - name: Install dependencies
-        run: opam install --deps-only --with-test --with-doc .
+        run: opam install --locked --deps-only --with-test --with-doc .
 
       - name: Build
         run: opam exec -- make

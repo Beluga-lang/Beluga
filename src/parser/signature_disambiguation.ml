@@ -24,35 +24,13 @@ module type SIGNATURE_DISAMBIGUATION = sig
 
   (** {2 Exceptions for pragma applications} *)
 
-  exception
-    Invalid_prefix_pragma of
-      { location : Location.t
-      ; actual_arity : Int.t
-      }
+  exception Invalid_prefix_pragma of { actual_arity : Int.t }
 
-  exception
-    Invalid_infix_pragma of
-      { location : Location.t
-      ; actual_arity : Int.t
-      }
+  exception Invalid_infix_pragma of { actual_arity : Int.t }
 
-  exception
-    Invalid_postfix_pragma of
-      { location : Location.t
-      ; actual_arity : Int.t
-      }
+  exception Invalid_postfix_pragma of { actual_arity : Int.t }
 
-  exception
-    Invalid_open_module of
-      { location : Location.t
-      ; actual_binding : disambiguation_state_entry
-      }
-
-  exception
-    Invalid_module_abbreviation of
-      { location : Location.t
-      ; actual_binding : disambiguation_state_entry
-      }
+  exception Expected_module of Qualified_identifier.t
 
   (** {2 Exceptions for declaration disambiguation} *)
 
@@ -64,9 +42,7 @@ module type SIGNATURE_DISAMBIGUATION = sig
 
   (** {2 Exceptions for recursive declaration disambiguation} *)
 
-  exception
-    Identifiers_bound_several_times_in_recursive_declaration of
-      Location.t List2.t
+  exception Identifiers_bound_several_times_in_recursive_declaration
 
   (** {1 Disambiguation} *)
 
@@ -140,35 +116,13 @@ struct
 
   (** {2 Exceptions for pragma applications} *)
 
-  exception
-    Invalid_prefix_pragma of
-      { location : Location.t
-      ; actual_arity : Int.t
-      }
+  exception Invalid_prefix_pragma of { actual_arity : Int.t }
 
-  exception
-    Invalid_infix_pragma of
-      { location : Location.t
-      ; actual_arity : Int.t
-      }
+  exception Invalid_infix_pragma of { actual_arity : Int.t }
 
-  exception
-    Invalid_postfix_pragma of
-      { location : Location.t
-      ; actual_arity : Int.t
-      }
+  exception Invalid_postfix_pragma of { actual_arity : Int.t }
 
-  exception
-    Invalid_open_module of
-      { location : Location.t
-      ; actual_binding : Disambiguation_state.entry
-      }
-
-  exception
-    Invalid_module_abbreviation of
-      { location : Location.t
-      ; actual_binding : Disambiguation_state.entry
-      }
+  exception Expected_module of Qualified_identifier.t
 
   (** {2 Exceptions for declaration disambiguation} *)
 
@@ -180,9 +134,7 @@ struct
 
   (** {2 Exceptions for recursive declaration disambiguation} *)
 
-  exception
-    Identifiers_bound_several_times_in_recursive_declaration of
-      Location.t List2.t
+  exception Identifiers_bound_several_times_in_recursive_declaration
 
   (** {1 Disambiguation Helpers} *)
 
@@ -493,7 +445,8 @@ struct
         if arity >= 0 then Operator.make_prefix ~arity ~precedence
         else
           let location = Qualified_identifier.location operator_identifier in
-          raise (Invalid_prefix_pragma { location; actual_arity = arity }))
+          Error.raise_at1 location
+            (Invalid_prefix_pragma { actual_arity = arity }))
       operator_identifier state
 
   (** [make_operator_infix ?precedence ?associativity operator_identifier state]
@@ -519,7 +472,8 @@ struct
         if arity = 2 then Operator.make_infix ~associativity ~precedence
         else
           let location = Qualified_identifier.location operator_identifier in
-          raise (Invalid_infix_pragma { location; actual_arity = arity }))
+          Error.raise_at1 location
+            (Invalid_infix_pragma { actual_arity = arity }))
       operator_identifier state
 
   (** [make_operator_postfix ?precedence operator_identifier state] is the
@@ -538,7 +492,8 @@ struct
         if arity = 1 then Operator.make_postfix ~precedence
         else
           let location = Qualified_identifier.location operator_identifier in
-          raise (Invalid_postfix_pragma { location; actual_arity = arity }))
+          Error.raise_at1 location
+            (Invalid_postfix_pragma { actual_arity = arity }))
       operator_identifier state
 
   (** [open_module module_identifier state] is the disambiguation state
@@ -554,9 +509,9 @@ struct
               bindings sub_state
           )
           state
-    | entry ->
+    | _entry ->
         let location = Qualified_identifier.location module_identifier in
-        raise (Invalid_open_module { location; actual_binding = entry })
+        Error.raise_at1 location (Expected_module module_identifier)
 
   (** [add_module_abbreviation module_identifier abbreviation state] is the
       disambiguation state derived from [state] with the addition of
@@ -566,10 +521,9 @@ struct
     match Disambiguation_state.lookup module_identifier state with
     | Disambiguation_state.Module { entries = sub_state } ->
         Disambiguation_state.add_module sub_state abbreviation state
-    | entry ->
+    | _entry ->
         let location = Qualified_identifier.location module_identifier in
-        raise
-          (Invalid_module_abbreviation { location; actual_binding = entry })
+        Error.raise_at1 location (Expected_module module_identifier)
 
   (** {1 Disambiguation} *)
 
@@ -729,8 +683,9 @@ struct
     match Identifier.find_duplicates additions with
     | Option.Some duplicates ->
         let locations = List2.map Identifier.location duplicates in
-        raise
-          (Identifiers_bound_several_times_in_recursive_declaration locations)
+        Error.raise_at
+          (List2.to_list1 locations)
+          Identifiers_bound_several_times_in_recursive_declaration
     | Option.None ->
         let _states', declarations' =
           declarations

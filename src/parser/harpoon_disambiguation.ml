@@ -187,8 +187,8 @@ struct
         { location; rename_from; rename_to; level } ->
         Synext.Harpoon.Repl.Command.Rename
           { location; rename_from; rename_to; level }
-    | Synprs.Harpoon.Repl.Command.Toggle_automation { location; kind; change }
-      ->
+    | Synprs.Harpoon.Repl.Command.Toggle_automation
+        { location; kind; change } ->
         Synext.Harpoon.Repl.Command.Toggle_automation
           { location; kind; change }
     | Synprs.Harpoon.Repl.Command.Type { location; scrutinee } ->

@@ -412,7 +412,7 @@ module Disambiguation_state : DISAMBIGUATION_STATE = struct
     | [] ->
         let name = Qualified_identifier.name query in
         lookup_entry name bindings
-    | _ -> (
+    | namespaces -> (
         let bindings', _looked_up_namespaces =
           List.fold_left
             (fun (bindings, looked_up_namespaces) namespace ->
@@ -438,7 +438,8 @@ module Disambiguation_state : DISAMBIGUATION_STATE = struct
         in
         let name = Qualified_identifier.name query in
         try lookup_entry name bindings' with
-        | Unbound_identifier _ -> raise (Unbound_qualified_identifier query))
+        | Unbound_identifier _identifier ->
+            raise (Unbound_qualified_identifier query))
 
   let lookup_toplevel query state =
     let bindings = get_bindings state in
@@ -486,7 +487,7 @@ module Disambiguation_state : DISAMBIGUATION_STATE = struct
         | MQuery
         | Module _ ->
             raise (Expected_operator identifier))
-      ~modify_module:(fun _ -> raise (Expected_operator identifier))
+      ~modify_module:(fun _entry -> raise (Expected_operator identifier))
       identifier state
 
   let pp_exception ppf = function

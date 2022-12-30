@@ -13,146 +13,144 @@ open Support
 open Beluga_syntax
 open Common_disambiguation
 
+(** {1 Exceptions} *)
+
+(** {2 Exceptions for contextual LF type disambiguation} *)
+
+exception Illegal_hole_type
+
+exception Illegal_lambda_type
+
+exception Illegal_annotated_type
+
+exception Illegal_untyped_pi_type
+
+exception Illegal_tuple_type
+
+exception Illegal_projection_type
+
+exception Illegal_substitution_type
+
+exception Illegal_unnamed_block_element_type
+
+exception Illegal_parameter_variable_type
+
+exception Illegal_substitution_variable_type
+
+exception Unbound_type_constant of Qualified_identifier.t
+
+exception
+  Unbound_type_constant_or_illegal_projection_type of Qualified_identifier.t
+
+(** {2 Exceptions for contextual LF term disambiguation} *)
+
+exception Illegal_pi_term
+
+exception Illegal_forward_arrow_term
+
+exception Illegal_backward_arrow_term
+
+exception Illegal_block_term
+
+exception Unbound_term_constant of Qualified_identifier.t
+
+(** {2 Exceptions for contextual LF substitution disambiguation} *)
+
+exception Illegal_subtitution_term_label
+
+(** {2 Exceptions for contextual LF context disambiguation} *)
+
+exception Illegal_context_parameter_variable_binding
+
+exception Illegal_context_substitution_variable_binding
+
+exception Illegal_context_missing_binding_identifier
+
+exception Illegal_context_identity
+
+(** {2 Exceptions for application rewriting} *)
+
+exception Expected_term_constant
+
+exception Expected_type_constant
+
+exception Expected_term
+
+exception Expected_type
+
+exception Expected_term_pattern
+
+exception Expected_type_pattern
+
+exception Misplaced_operator
+
+exception Ambiguous_operator_placement of Qualified_identifier.t
+
+exception
+  Consecutive_applications_of_non_associative_operators of
+    Qualified_identifier.t
+
+exception
+  Arity_mismatch of
+    { operator_identifier : Qualified_identifier.t
+    ; expected_arguments_count : Int.t
+    ; actual_arguments_count : Int.t
+    }
+
+(** {2 Exceptions for contextual LF type pattern disambiguation} *)
+
+exception Illegal_wildcard_type_pattern
+
+exception Illegal_labellable_hole_type_pattern
+
+exception Illegal_lambda_type_pattern
+
+exception Illegal_annotated_type_pattern
+
+exception Illegal_untyped_pi_type_pattern
+
+exception Illegal_tuple_type_pattern
+
+exception Illegal_projection_type_pattern
+
+exception Illegal_substitution_type_pattern
+
+exception Illegal_unnamed_block_element_type_pattern
+
+(** {2 Exceptions for contextual LF term pattern disambiguation} *)
+
+exception Illegal_pi_term_pattern
+
+exception Illegal_forward_arrow_term_pattern
+
+exception Illegal_backward_arrow_term_pattern
+
+exception Illegal_block_term_pattern
+
+exception Illegal_labellable_hole_term_pattern
+
+(** {2 Exceptions for contextual LF substitution pattern disambiguation} *)
+
+exception Illegal_subtitution_pattern_term_label
+
+(** {2 Exceptions for contextual LF context pattern disambiguation} *)
+
+exception Illegal_context_pattern_missing_binding_type
+
+exception Illegal_context_pattern_parameter_variable_binding
+
+exception Illegal_context_pattern_substitution_variable_binding
+
+exception Illegal_context_pattern_missing_binding_identifier
+
+exception Illegal_context_pattern_identity
+
+(** {1 Disambiguation} *)
+
 module type CLF_DISAMBIGUATION = sig
   type disambiguation_state
 
   type disambiguation_state_entry
-
-  (** {1 Exceptions} *)
-
-  (** {2 Exceptions for contextual LF type disambiguation} *)
-
-  exception Illegal_hole_type of Location.t
-
-  exception Illegal_lambda_type of Location.t
-
-  exception Illegal_annotated_type of Location.t
-
-  exception Illegal_untyped_pi_type of Location.t
-
-  exception Illegal_tuple_type of Location.t
-
-  exception Illegal_projection_type of Location.t
-
-  exception Illegal_substitution_type of Location.t
-
-  exception Illegal_unnamed_block_element_type of Location.t
-
-  exception Illegal_parameter_variable_type of Location.t
-
-  exception Illegal_substitution_variable_type of Location.t
-
-  exception
-    Unbound_type_constant of
-      { location : Location.t
-      ; identifier : Qualified_identifier.t
-      }
-
-  exception
-    Unbound_type_constant_or_illegal_projection_type of
-      { location : Location.t
-      ; identifier : Qualified_identifier.t
-      }
-
-  (** {2 Exceptions for contextual LF term disambiguation} *)
-
-  exception Illegal_pi_term of Location.t
-
-  exception Illegal_forward_arrow_term of Location.t
-
-  exception Illegal_backward_arrow_term of Location.t
-
-  exception Illegal_block_term of Location.t
-
-  exception
-    Unbound_term_constant of
-      { location : Location.t
-      ; identifier : Qualified_identifier.t
-      }
-
-  (** {2 Exceptions for application rewriting} *)
-
-  exception
-    Expected_term_constant of
-      { location : Location.t
-      ; actual_binding : disambiguation_state_entry
-      }
-
-  exception
-    Expected_type_constant of
-      { location : Location.t
-      ; actual_binding : disambiguation_state_entry
-      }
-
-  exception Expected_term of Location.t
-
-  exception Expected_type of Location.t
-
-  exception Expected_term_pattern of Location.t
-
-  exception Expected_type_pattern of Location.t
-
-  exception
-    Misplaced_operator of
-      { operator_location : Location.t
-      ; operand_locations : Location.t List.t
-      }
-
-  exception
-    Ambiguous_operator_placement of
-      { operator_identifier : Qualified_identifier.t
-      ; left_operator_location : Location.t
-      ; right_operator_location : Location.t
-      }
-
-  exception
-    Consecutive_non_associative_operators of
-      { operator_identifier : Qualified_identifier.t
-      ; left_operator_location : Location.t
-      ; right_operator_location : Location.t
-      }
-
-  exception
-    Arity_mismatch of
-      { operator_identifier : Qualified_identifier.t
-      ; operator_location : Location.t
-      ; operator_arity : Int.t
-      ; actual_argument_locations : Location.t List.t
-      }
-
-  exception Too_many_arguments of Location.t
-
-  (** {2 Exceptions for contextual LF type pattern disambiguation} *)
-
-  exception Illegal_wildcard_type_pattern of Location.t
-
-  exception Illegal_labellable_hole_type_pattern of Location.t
-
-  exception Illegal_lambda_type_pattern of Location.t
-
-  exception Illegal_annotated_type_pattern of Location.t
-
-  exception Illegal_untyped_pi_type_pattern of Location.t
-
-  exception Illegal_tuple_type_pattern of Location.t
-
-  exception Illegal_projection_type_pattern of Location.t
-
-  exception Illegal_substitution_type_pattern of Location.t
-
-  exception Illegal_unnamed_block_element_type_pattern of Location.t
-
-  (** {2 Exceptions for contextual LF term pattern disambiguation} *)
-
-  exception Illegal_pi_term_pattern of Location.t
-
-  exception Illegal_forward_arrow_term_pattern of Location.t
-
-  exception Illegal_backward_arrow_term_pattern of Location.t
-
-  exception Illegal_block_term_pattern of Location.t
-
-  exception Illegal_labellable_hole_term_pattern of Location.t
 
   (** {1 Disambiguation} *)
 
@@ -198,623 +196,6 @@ struct
   type disambiguation_state = Disambiguation_state.t
 
   type disambiguation_state_entry = Disambiguation_state.entry
-
-  (** {1 Exceptions} *)
-
-  (** {2 Exceptions for contextual LF type disambiguation} *)
-
-  exception Illegal_hole_type of Location.t
-
-  exception Illegal_lambda_type of Location.t
-
-  exception Illegal_annotated_type of Location.t
-
-  exception Illegal_untyped_pi_type of Location.t
-
-  exception Illegal_tuple_type of Location.t
-
-  exception Illegal_projection_type of Location.t
-
-  exception Illegal_substitution_type of Location.t
-
-  exception Illegal_unnamed_block_element_type of Location.t
-
-  exception Illegal_parameter_variable_type of Location.t
-
-  exception Illegal_substitution_variable_type of Location.t
-
-  exception
-    Unbound_type_constant of
-      { location : Location.t
-      ; identifier : Qualified_identifier.t
-      }
-
-  exception
-    Unbound_type_constant_or_illegal_projection_type of
-      { location : Location.t
-      ; identifier : Qualified_identifier.t
-      }
-
-  (** {2 Exceptions for contextual LF term disambiguation} *)
-
-  exception Illegal_pi_term of Location.t
-
-  exception Illegal_forward_arrow_term of Location.t
-
-  exception Illegal_backward_arrow_term of Location.t
-
-  exception Illegal_block_term of Location.t
-
-  exception
-    Unbound_term_constant of
-      { location : Location.t
-      ; identifier : Qualified_identifier.t
-      }
-
-  (** {2 Exceptions for contextual LF substitution disambiguation} *)
-
-  exception Illegal_subtitution_term_label of Location.t
-
-  (** {2 Exceptions for contextual LF context disambiguation} *)
-
-  exception Illegal_context_parameter_variable_binding of Location.t
-
-  exception Illegal_context_substitution_variable_binding of Location.t
-
-  exception Illegal_context_missing_binding_identifier of Location.t
-
-  exception Illegal_context_identity of Location.t
-
-  (** {2 Exceptions for application rewriting} *)
-
-  exception
-    Expected_term_constant of
-      { location : Location.t
-      ; actual_binding : disambiguation_state_entry
-      }
-
-  exception
-    Expected_type_constant of
-      { location : Location.t
-      ; actual_binding : disambiguation_state_entry
-      }
-
-  exception Expected_term of Location.t
-
-  exception Expected_type of Location.t
-
-  exception Expected_term_pattern of Location.t
-
-  exception Expected_type_pattern of Location.t
-
-  exception
-    Misplaced_operator of
-      { operator_location : Location.t
-      ; operand_locations : Location.t List.t
-      }
-
-  exception
-    Ambiguous_operator_placement of
-      { operator_identifier : Qualified_identifier.t
-      ; left_operator_location : Location.t
-      ; right_operator_location : Location.t
-      }
-
-  exception
-    Consecutive_non_associative_operators of
-      { operator_identifier : Qualified_identifier.t
-      ; left_operator_location : Location.t
-      ; right_operator_location : Location.t
-      }
-
-  exception
-    Arity_mismatch of
-      { operator_identifier : Qualified_identifier.t
-      ; operator_location : Location.t
-      ; operator_arity : Int.t
-      ; actual_argument_locations : Location.t List.t
-      }
-
-  exception Too_many_arguments of Location.t
-
-  (** {2 Exceptions for contextual LF type pattern disambiguation} *)
-
-  exception Illegal_wildcard_type_pattern of Location.t
-
-  exception Illegal_labellable_hole_type_pattern of Location.t
-
-  exception Illegal_lambda_type_pattern of Location.t
-
-  exception Illegal_annotated_type_pattern of Location.t
-
-  exception Illegal_untyped_pi_type_pattern of Location.t
-
-  exception Illegal_tuple_type_pattern of Location.t
-
-  exception Illegal_projection_type_pattern of Location.t
-
-  exception Illegal_substitution_type_pattern of Location.t
-
-  exception Illegal_unnamed_block_element_type_pattern of Location.t
-
-  (** {2 Exceptions for contextual LF term pattern disambiguation} *)
-
-  exception Illegal_pi_term_pattern of Location.t
-
-  exception Illegal_forward_arrow_term_pattern of Location.t
-
-  exception Illegal_backward_arrow_term_pattern of Location.t
-
-  exception Illegal_block_term_pattern of Location.t
-
-  exception Illegal_labellable_hole_term_pattern of Location.t
-
-  (** {2 Exceptions for contextual LF substitution pattern disambiguation} *)
-
-  exception Illegal_subtitution_pattern_term_label of Location.t
-
-  (** {2 Exceptions for contextual LF context pattern disambiguation} *)
-
-  exception Illegal_context_pattern_missing_binding_type of Location.t
-
-  exception Illegal_context_pattern_parameter_variable_binding of Location.t
-
-  exception
-    Illegal_context_pattern_substitution_variable_binding of Location.t
-
-  exception Illegal_context_pattern_missing_binding_identifier of Location.t
-
-  exception Illegal_context_pattern_identity of Location.t
-
-  (** {2 Exception Printing} *)
-
-  let pp_exception ppf = function
-    | Illegal_hole_type location ->
-        Format.fprintf ppf
-          "Holes may not appear as contextual LF types: %a@." Location.pp
-          location
-    | Illegal_lambda_type location ->
-        Format.fprintf ppf
-          "Lambdas may not appear as contextual LF types: %a@." Location.pp
-          location
-    | Illegal_annotated_type location ->
-        Format.fprintf ppf
-          "Type ascriptions to terms may not appear as contextual LF types: \
-           %a@."
-          Location.pp location
-    | Illegal_untyped_pi_type location ->
-        Format.fprintf ppf
-          "The contextual LF Pi type is missing its parameter type \
-           annotation: %a@."
-          Location.pp location
-    | Illegal_tuple_type location ->
-        Format.fprintf ppf
-          "Tuple terms may not appear as contextual LF types: %a@."
-          Location.pp location
-    | Illegal_projection_type location ->
-        Format.fprintf ppf
-          "Projection terms may not appear as contextual LF types: %a@."
-          Location.pp location
-    | Illegal_substitution_type location ->
-        Format.fprintf ppf
-          "Substitution terms may not appear as contextual LF types: %a@."
-          Location.pp location
-    | Illegal_unnamed_block_element_type location ->
-        Format.fprintf ppf
-          "Contextual LF block type element missing an identifier: %a@."
-          Location.pp location
-    | Illegal_parameter_variable_type location ->
-        Format.fprintf ppf
-          "Parameter variables may not appear as contextual LF types: %a@."
-          Location.pp location
-    | Illegal_substitution_variable_type location ->
-        Format.fprintf ppf
-          "Substitution variables may not appear as contextual LF types: \
-           %a@."
-          Location.pp location
-    | Unbound_type_constant { location; identifier } ->
-        Format.fprintf ppf "The LF type-level constant %a is unbound: %a@."
-          Qualified_identifier.pp identifier Location.pp location
-    | Unbound_type_constant_or_illegal_projection_type
-        { location; identifier } ->
-        Format.fprintf ppf
-          "Either the LF type-level constant %a is unbound, or a projection \
-           term may not appear as a contextual LF type: %a@."
-          Qualified_identifier.pp identifier Location.pp location
-    | Illegal_pi_term location ->
-        Format.fprintf ppf
-          "Pi kinds or types may not appear as contextual LF terms: %a@."
-          Location.pp location
-    | Illegal_forward_arrow_term location ->
-        Format.fprintf ppf
-          "Forward arrows may not appear as contextual LF terms: %a@."
-          Location.pp location
-    | Illegal_backward_arrow_term location ->
-        Format.fprintf ppf
-          "Backward arrows may not appear as contextual LF terms: %a@."
-          Location.pp location
-    | Illegal_block_term location ->
-        Format.fprintf ppf
-          "Block types may not appear as contextual LF terms: %a@."
-          Location.pp location
-    | Unbound_term_constant { location; identifier } ->
-        Format.fprintf ppf "The LF term-level constant %a is unbound: %a@."
-          Qualified_identifier.pp identifier Location.pp location
-    | Illegal_subtitution_term_label location ->
-        Format.fprintf ppf
-          "Terms in a substitution may not be labelled: %a@." Location.pp
-          location
-    | Illegal_context_parameter_variable_binding location ->
-        Format.fprintf ppf
-          "Parameter variable bindings may not occur in contextual LF \
-           contexts: %a@."
-          Location.pp location
-    | Illegal_context_substitution_variable_binding location ->
-        Format.fprintf ppf
-          "Substitution variable bindings may not occur in contextual LF \
-           contexts: %a@."
-          Location.pp location
-    | Illegal_context_missing_binding_identifier location ->
-        Format.fprintf ppf
-          "Identifier missing for the binding in the contextual LF context: \
-           %a@."
-          Location.pp location
-    | Illegal_context_identity location ->
-        Format.fprintf ppf
-          "Contextual LF contexts may not begin with the identity \
-           substitution: %a@."
-          Location.pp location
-    | Expected_term_constant
-        { location
-        ; actual_binding = Disambiguation_state.LF_type_constant _
-        } ->
-        Format.fprintf ppf
-          "Expected an LF term-level constant but found an LF type constant \
-           instead: %a@."
-          Location.pp location
-    | Expected_term_constant
-        { location; actual_binding = Disambiguation_state.LF_term_variable }
-      ->
-        Format.fprintf ppf
-          "Expected an LF term-level constant but found an LF term variable \
-           instead: %a@."
-          Location.pp location
-    | Expected_term_constant
-        { location; actual_binding = Disambiguation_state.Meta_variable } ->
-        Format.fprintf ppf
-          "Expected an LF term-level constant but found a meta-variable \
-           instead: %a@."
-          Location.pp location
-    | Expected_term_constant
-        { location
-        ; actual_binding = Disambiguation_state.Parameter_variable
-        } ->
-        Format.fprintf ppf
-          "Expected an LF term-level constant but found a parameter \
-           variable instead: %a@."
-          Location.pp location
-    | Expected_term_constant
-        { location
-        ; actual_binding = Disambiguation_state.Substitution_variable
-        } ->
-        Format.fprintf ppf
-          "Expected an LF term-level constant but found a substitution \
-           variable instead: %a@."
-          Location.pp location
-    | Expected_term_constant
-        { location; actual_binding = Disambiguation_state.Context_variable }
-      ->
-        Format.fprintf ppf
-          "Expected an LF term-level constant but found a context variable \
-           instead: %a@."
-          Location.pp location
-    | Expected_term_constant
-        { location
-        ; actual_binding = Disambiguation_state.Computation_variable
-        } ->
-        Format.fprintf ppf
-          "Expected an LF term-level constant but found a computation-level \
-           variable instead: %a@."
-          Location.pp location
-    | Expected_term_constant
-        { location
-        ; actual_binding = Disambiguation_state.Computation_type_constant _
-        } ->
-        Format.fprintf ppf
-          "Expected an LF term-level constant but found a computation-level \
-           type constant instead: %a@."
-          Location.pp location
-    | Expected_term_constant
-        { location
-        ; actual_binding =
-            Disambiguation_state.Computation_term_constructor _
-        } ->
-        Format.fprintf ppf
-          "Expected an LF term-level constant but found a computation-level \
-           term constructor instead: %a@."
-          Location.pp location
-    | Expected_term_constant
-        { location
-        ; actual_binding = Disambiguation_state.Computation_cotype_constant _
-        } ->
-        Format.fprintf ppf
-          "Expected an LF term-level constant but found a computation-level \
-           cotype constant instead: %a@."
-          Location.pp location
-    | Expected_term_constant
-        { location
-        ; actual_binding = Disambiguation_state.Computation_term_destructor
-        } ->
-        Format.fprintf ppf
-          "Expected an LF term-level constant but found a computation-level \
-           term destructor instead: %a@."
-          Location.pp location
-    | Expected_term_constant
-        { location; actual_binding = Disambiguation_state.Query } ->
-        Format.fprintf ppf
-          "Expected an LF term-level constant but found a logic programming \
-           query identifier instead: %a@."
-          Location.pp location
-    | Expected_term_constant
-        { location; actual_binding = Disambiguation_state.MQuery } ->
-        Format.fprintf ppf
-          "Expected an LF term-level constant but found a logic programming \
-           meta-query identifier instead: %a@."
-          Location.pp location
-    | Expected_term_constant
-        { location; actual_binding = Disambiguation_state.Module _ } ->
-        Format.fprintf ppf
-          "Expected an LF term-level constant but found a module instead: \
-           %a@."
-          Location.pp location
-    | Expected_type_constant
-        { location
-        ; actual_binding = Disambiguation_state.LF_term_constant _
-        } ->
-        Format.fprintf ppf
-          "Expected an LF type-level constant but found an LF term constant \
-           instead: %a@."
-          Location.pp location
-    | Expected_type_constant
-        { location; actual_binding = Disambiguation_state.LF_term_variable }
-      ->
-        Format.fprintf ppf
-          "Expected an LF type-level constant but found an LF term variable \
-           instead: %a@."
-          Location.pp location
-    | Expected_type_constant
-        { location; actual_binding = Disambiguation_state.Meta_variable } ->
-        Format.fprintf ppf
-          "Expected an LF type-level constant but found a meta-variable \
-           instead: %a@."
-          Location.pp location
-    | Expected_type_constant
-        { location
-        ; actual_binding = Disambiguation_state.Parameter_variable
-        } ->
-        Format.fprintf ppf
-          "Expected an LF type-level constant but found a parameter \
-           variable instead: %a@."
-          Location.pp location
-    | Expected_type_constant
-        { location
-        ; actual_binding = Disambiguation_state.Substitution_variable
-        } ->
-        Format.fprintf ppf
-          "Expected an LF type-level constant but found a substitution \
-           variable instead: %a@."
-          Location.pp location
-    | Expected_type_constant
-        { location; actual_binding = Disambiguation_state.Context_variable }
-      ->
-        Format.fprintf ppf
-          "Expected an LF type-level constant but found a context variable \
-           instead: %a@."
-          Location.pp location
-    | Expected_type_constant
-        { location
-        ; actual_binding = Disambiguation_state.Computation_variable
-        } ->
-        Format.fprintf ppf
-          "Expected an LF type-level constant but found a computation-level \
-           variable instead: %a@."
-          Location.pp location
-    | Expected_type_constant
-        { location
-        ; actual_binding = Disambiguation_state.Computation_type_constant _
-        } ->
-        Format.fprintf ppf
-          "Expected an LF type-level constant but found a computation-level \
-           type constant instead: %a@."
-          Location.pp location
-    | Expected_type_constant
-        { location
-        ; actual_binding =
-            Disambiguation_state.Computation_term_constructor _
-        } ->
-        Format.fprintf ppf
-          "Expected an LF type-level constant but found a computation-level \
-           term constructor instead: %a@."
-          Location.pp location
-    | Expected_type_constant
-        { location
-        ; actual_binding = Disambiguation_state.Computation_cotype_constant _
-        } ->
-        Format.fprintf ppf
-          "Expected an LF type-level constant but found a computation-level \
-           cotype constant instead: %a@."
-          Location.pp location
-    | Expected_type_constant
-        { location
-        ; actual_binding = Disambiguation_state.Computation_term_destructor
-        } ->
-        Format.fprintf ppf
-          "Expected an LF type-level constant but found a computation-level \
-           term destructor instead: %a@."
-          Location.pp location
-    | Expected_type_constant
-        { location; actual_binding = Disambiguation_state.Module _ } ->
-        Format.fprintf ppf
-          "Expected an LF type-level constant but found a module instead: \
-           %a@."
-          Location.pp location
-    | Expected_term location ->
-        Format.fprintf ppf
-          "Expected a contextual LF term but found a contextual LF type \
-           instead: %a@."
-          Location.pp location
-    | Expected_type location ->
-        Format.fprintf ppf
-          "Expected an LF type but found an LF term instead: %a@."
-          Location.pp location
-    | Ambiguous_operator_placement
-        { operator_identifier
-        ; left_operator_location
-        ; right_operator_location
-        } ->
-        Format.fprintf ppf
-          "Ambiguous occurrences of the LF term-level or type-level \
-           operator %a after rewriting: %a and %a@."
-          Qualified_identifier.pp operator_identifier Location.pp
-          left_operator_location Location.pp right_operator_location
-    | Misplaced_operator { operator_location; _ } ->
-        Format.fprintf ppf
-          "Misplaced contextual LF term-level or type-level operator: %a@."
-          Location.pp operator_location
-    | Consecutive_non_associative_operators
-        { operator_identifier
-        ; left_operator_location
-        ; right_operator_location
-        } ->
-        Format.fprintf ppf
-          "Consecutive occurrences of the contextual LF term-level or \
-           type-level operator %a after rewriting: %a and %a@."
-          Qualified_identifier.pp operator_identifier Location.pp
-          left_operator_location Location.pp right_operator_location
-    | Arity_mismatch
-        { operator_identifier
-        ; operator_location
-        ; operator_arity
-        ; actual_argument_locations
-        } ->
-        let expected_arguments_count = operator_arity
-        and actual_arguments_count = List.length actual_argument_locations in
-        Format.fprintf ppf
-          "Operator %a expected %d arguments but got %d: %a@."
-          Qualified_identifier.pp operator_identifier
-          expected_arguments_count actual_arguments_count Location.pp
-          operator_location
-    | Too_many_arguments location ->
-        Format.fprintf ppf
-          "Too many arguments are supplied to an operator: %a@." Location.pp
-          location
-    | Expected_term_pattern location ->
-        Format.fprintf ppf
-          "Expected a contextual LF term pattern but found a contextual LF \
-           type pattern instead: %a@."
-          Location.pp location
-    | Expected_type_pattern location ->
-        Format.fprintf ppf
-          "Expected a contextual LF type pattern but found a contextual LF \
-           term pattern instead: %a@."
-          Location.pp location
-    | Illegal_wildcard_type_pattern location ->
-        Format.fprintf ppf
-          "Wildcards may not appear as contextual LF type patterns: %a@."
-          Location.pp location
-    | Illegal_labellable_hole_type_pattern location ->
-        Format.fprintf ppf
-          "Labellable holes may not appear as contextual LF type patterns: \
-           %a@."
-          Location.pp location
-    | Illegal_lambda_type_pattern location ->
-        Format.fprintf ppf
-          "Lambdas may not appear as contextual LF type patterns: %a@."
-          Location.pp location
-    | Illegal_annotated_type_pattern location ->
-        Format.fprintf ppf
-          "Type ascriptions to terms may not appear as contextual LF type \
-           patterns: %a@."
-          Location.pp location
-    | Illegal_untyped_pi_type_pattern location ->
-        Format.fprintf ppf
-          "The contextual LF Pi type pattern is missing its parameter type \
-           annotation: %a@."
-          Location.pp location
-    | Illegal_tuple_type_pattern location ->
-        Format.fprintf ppf
-          "Tuple term patterns may not appear as contextual LF type \
-           patterns: %a@."
-          Location.pp location
-    | Illegal_projection_type_pattern location ->
-        Format.fprintf ppf
-          "Projection term patterns may not appear as contextual LF type \
-           patterns: %a@."
-          Location.pp location
-    | Illegal_substitution_type_pattern location ->
-        Format.fprintf ppf
-          "Substitution term patterns may not appear as contextual LF type \
-           patterns: %a@."
-          Location.pp location
-    | Illegal_unnamed_block_element_type_pattern location ->
-        Format.fprintf ppf
-          "Contextual LF block type pattern element missing an identifier: \
-           %a@."
-          Location.pp location
-    | Illegal_pi_term_pattern location ->
-        Format.fprintf ppf
-          "Pi kinds or types may not appear as contextual LF term patterns: \
-           %a@."
-          Location.pp location
-    | Illegal_forward_arrow_term_pattern location ->
-        Format.fprintf ppf
-          "Forward arrow types may not appear as contextual LF term \
-           patterns: %a@."
-          Location.pp location
-    | Illegal_backward_arrow_term_pattern location ->
-        Format.fprintf ppf
-          "Backward arrow types may not appear as contextual LF term \
-           patterns: %a@."
-          Location.pp location
-    | Illegal_block_term_pattern location ->
-        Format.fprintf ppf
-          "Block types may not appear as contextual LF term patterns: %a@."
-          Location.pp location
-    | Illegal_labellable_hole_term_pattern location ->
-        Format.fprintf ppf
-          "Labellable holes may not appear as contextual LF term patterns: \
-           %a@."
-          Location.pp location
-    | Illegal_subtitution_pattern_term_label location ->
-        Format.fprintf ppf
-          "Terms in a substitution pattern may not be labelled: %a@."
-          Location.pp location
-    | Illegal_context_pattern_parameter_variable_binding location ->
-        Format.fprintf ppf
-          "Parameter variable bindings may not occur in contextual LF \
-           context patterns: %a@."
-          Location.pp location
-    | Illegal_context_pattern_substitution_variable_binding location ->
-        Format.fprintf ppf
-          "Substitution variable bindings may not occur in contextual LF \
-           context patterns: %a@."
-          Location.pp location
-    | Illegal_context_pattern_missing_binding_identifier location ->
-        Format.fprintf ppf
-          "Identifier missing for the binding in the contextual LF context \
-           pattern: %a@."
-          Location.pp location
-    | Illegal_context_pattern_identity location ->
-        Format.fprintf ppf
-          "Contextual LF context patterns may not begin with the identity \
-           substitution: %a@."
-          Location.pp location
-    | _ -> raise (Invalid_argument "[pp_exception] unsupported exception")
-
-  let () =
-    Printexc.register_printer (fun exn ->
-        try Option.some (Format.stringify pp_exception exn) with
-        | Invalid_argument _ -> Option.none)
 
   (** {1 Disambiguation} *)
 
@@ -953,35 +334,30 @@ struct
 
       This function imposes syntactic restrictions on [object_], but does not
       perform normalization nor validation. To see the syntactic restrictions
-      from LF objects to LF types, see the Beluga language specification.
-
-      Examples of invalid types that may result from this disambiguation
-      include:
-
-      - [c (_ _) _] *)
+      from LF objects to LF types, see the Beluga language specification. *)
   let rec disambiguate_as_typ state object_ =
     match object_ with
     | Synprs.CLF.Object.Raw_hole { location; _ } ->
-        raise (Illegal_hole_type location)
+        Error.raise_at1 location Illegal_hole_type
     | Synprs.CLF.Object.Raw_lambda { location; _ } ->
-        raise (Illegal_lambda_type location)
+        Error.raise_at1 location Illegal_lambda_type
     | Synprs.CLF.Object.Raw_annotated { location; _ } ->
-        raise (Illegal_annotated_type location)
+        Error.raise_at1 location Illegal_annotated_type
     | Synprs.CLF.Object.Raw_pi { location; parameter_sort = Option.None; _ }
       ->
-        raise (Illegal_untyped_pi_type location)
+        Error.raise_at1 location Illegal_untyped_pi_type
     | Synprs.CLF.Object.Raw_tuple { location; _ } ->
-        raise (Illegal_tuple_type location)
+        Error.raise_at1 location Illegal_tuple_type
     | Synprs.CLF.Object.Raw_projection { location; _ } ->
-        raise (Illegal_projection_type location)
+        Error.raise_at1 location Illegal_projection_type
     | Synprs.CLF.Object.Raw_substitution { location; _ } ->
-        raise (Illegal_substitution_type location)
+        Error.raise_at1 location Illegal_substitution_type
     | Synprs.CLF.Object.Raw_identifier
         { location; identifier = _identifier, `Hash; _ } ->
-        raise (Illegal_parameter_variable_type location)
+        Error.raise_at1 location Illegal_parameter_variable_type
     | Synprs.CLF.Object.Raw_identifier
         { location; identifier = _identifier, `Dollar; _ } ->
-        raise (Illegal_substitution_variable_type location)
+        Error.raise_at1 location Illegal_substitution_variable_type
     | Synprs.CLF.Object.Raw_identifier
         { location; identifier = identifier, `Plain; quoted; _ } -> (
         (* As an LF type, plain identifiers are necessarily type-level
@@ -997,13 +373,10 @@ struct
               ; operator
               ; quoted
               }
-        | entry ->
-            raise
-              (Expected_type_constant { location; actual_binding = entry })
+        | _entry -> Error.raise_at1 location Expected_type_constant
         | exception Disambiguation_state.Unbound_identifier _ ->
-            raise
-              (Unbound_type_constant
-                 { location; identifier = qualified_identifier }))
+            Error.raise_at1 location
+              (Unbound_type_constant qualified_identifier))
     | Synprs.CLF.Object.Raw_qualified_identifier
         { location; identifier; quoted } -> (
         (* Qualified identifiers without modules were parsed as plain
@@ -1016,13 +389,10 @@ struct
         | Disambiguation_state.LF_type_constant { operator } ->
             Synext.CLF.Typ.Constant
               { location; identifier; operator; quoted }
-        | entry ->
-            raise
-              (Expected_type_constant { location; actual_binding = entry })
+        | _entry -> Error.raise_at1 location Expected_type_constant
         | exception Disambiguation_state.Unbound_qualified_identifier _ ->
-            raise
-              (Unbound_type_constant_or_illegal_projection_type
-                 { location; identifier }))
+            Error.raise_at1 location
+              (Unbound_type_constant_or_illegal_projection_type identifier))
     | Synprs.CLF.Object.Raw_arrow { location; domain; range; orientation } ->
         let domain' = disambiguate_as_typ state domain
         and range' = disambiguate_as_typ state range in
@@ -1059,7 +429,7 @@ struct
         match disambiguate_application state objects with
         | `Term term ->
             let location = Synext.location_of_clf_term term in
-            raise (Expected_type location)
+            Error.raise_at1 location Expected_type
         | `Typ typ -> typ)
     | Synprs.CLF.Object.Raw_block
         { location; elements = List1.T ((Option.None, t), []) } ->
@@ -1072,7 +442,7 @@ struct
               match element with
               | Option.None, typ ->
                   let location = Synprs.location_of_clf_object typ in
-                  raise (Illegal_unnamed_block_element_type location)
+                  Error.raise_at1 location Illegal_unnamed_block_element_type
               | Option.Some identifier, typ ->
                   let typ' = disambiguate_as_typ state typ in
                   let elements' = List1.singleton (identifier, typ')
@@ -1085,7 +455,7 @@ struct
               match element with
               | Option.None, typ ->
                   let location = Synprs.location_of_clf_object typ in
-                  raise (Illegal_unnamed_block_element_type location)
+                  Error.raise_at1 location Illegal_unnamed_block_element_type
               | Option.Some identifier, typ ->
                   let typ' = disambiguate_as_typ state' typ in
                   let elements'' = List1.cons (identifier, typ') elements'
@@ -1107,23 +477,17 @@ struct
 
       This function imposes syntactic restrictions on [object_], but does not
       perform normalization nor validation. To see the syntactic restrictions
-      from LF objects to LF terms, see the Beluga language specification.
-
-      Examples of invalid terms that may result from this disambiguation
-      include:
-
-      - [_ _]
-      - [\\_. _ _] *)
+      from LF objects to LF terms, see the Beluga language specification. *)
   and disambiguate_as_term state object_ =
     match object_ with
     | Synprs.CLF.Object.Raw_pi { location; _ } ->
-        raise (Illegal_pi_term location)
+        Error.raise_at1 location Illegal_pi_term
     | Synprs.CLF.Object.Raw_arrow { location; orientation = `Forward; _ } ->
-        raise (Illegal_forward_arrow_term location)
+        Error.raise_at1 location Illegal_forward_arrow_term
     | Synprs.CLF.Object.Raw_arrow { location; orientation = `Backward; _ } ->
-        raise (Illegal_backward_arrow_term location)
+        Error.raise_at1 location Illegal_backward_arrow_term
     | Synprs.CLF.Object.Raw_block { location; _ } ->
-        raise (Illegal_block_term location)
+        Error.raise_at1 location Illegal_block_term
     | Synprs.CLF.Object.Raw_identifier
         { location; identifier = identifier, `Hash; _ } ->
         Synext.CLF.Term.Parameter_variable { location; identifier }
@@ -1149,9 +513,7 @@ struct
         | Disambiguation_state.Meta_variable ->
             (* Bound variable *)
             Synext.CLF.Term.Variable { location; identifier }
-        | entry ->
-            raise
-              (Expected_term_constant { location; actual_binding = entry })
+        | _entry -> Error.raise_at1 location Expected_term_constant
         | exception Disambiguation_state.Unbound_identifier _ ->
             (* Free variable *)
             Synext.CLF.Term.Variable { location; identifier })
@@ -1204,14 +566,11 @@ struct
                     remaining_identifiers =
                   match Identifier.Hamt.find_opt next_identifier state with
                   | Option.Some
-                      (Disambiguation_state.Module { entries = state' } as
-                      entry) -> (
+                      (Disambiguation_state.Module { entries = state' }) -> (
                       match remaining_identifiers with
                       | [] ->
                           (* Lookups ended with a module. *)
-                          raise
-                            (Expected_term_constant
-                               { location; actual_binding = entry })
+                          Error.raise_at1 location Expected_term_constant
                       | next_identifier' :: remaining_identifiers' ->
                           let looked_up_identifiers' =
                             next_identifier :: looked_up_identifiers
@@ -1249,22 +608,20 @@ struct
                               }
                           in
                           reduce_projections term remaining_identifiers)
-                  | Option.Some entry ->
+                  | Option.Some _entry ->
                       (* Lookups ended with an entry that cannot be used in a
                          contextual LF term projection. *)
                       let location =
                         Location.join_all1_contramap Identifier.location
                           (List1.from next_identifier looked_up_identifiers)
                       in
-                      raise
-                        (Expected_term_constant
-                           { location; actual_binding = entry })
+                      Error.raise_at1 location Expected_term_constant
                       (* TODO: Misleading, modules are allowed as well *)
                   | Option.None -> (
                       match remaining_identifiers with
                       | [] ->
-                          raise
-                            (Unbound_term_constant { location; identifier })
+                          Error.raise_at1 location
+                            (Unbound_term_constant identifier)
                       | _ ->
                           let module_identifier =
                             Qualified_identifier.make
@@ -1298,13 +655,11 @@ struct
                   Synext.CLF.Term.Variable { location; identifier = m }
                 in
                 reduce_projections' term ms name
-            | entry ->
+            | _entry ->
                 (* First lookup ended with an entry that cannot be used in a
                    contextual LF term projection. *)
                 let location = Identifier.location m in
-                raise
-                  (Expected_term_constant
-                     { location; actual_binding = entry })
+                Error.raise_at1 location Expected_term_constant
                 (* TODO: Misleading, module, term variable, meta-variable are
                    allowed *)
             | exception Disambiguation_state.Unbound_identifier _ ->
@@ -1319,7 +674,7 @@ struct
         match disambiguate_application state objects with
         | `Typ typ ->
             let location = Synext.location_of_clf_typ typ in
-            raise (Expected_term location)
+            Error.raise_at1 location Expected_term
         | `Term term -> term)
     | Synprs.CLF.Object.Raw_lambda
         { location; parameter_identifier; parameter_sort; body } -> (
@@ -1377,7 +732,7 @@ struct
           | Option.None, object_ -> object_
           | Option.Some identifier, _ ->
               let location = Identifier.location identifier in
-              raise (Illegal_subtitution_term_label location))
+              Error.raise_at1 location Illegal_subtitution_term_label)
         objects
     in
     match head with
@@ -1452,16 +807,19 @@ struct
                 { identifier = identifier, `Hash; _ } )
           (* Parameter variables may only occur in meta-contexts *) ->
               let location = Identifier.location identifier in
-              raise (Illegal_context_parameter_variable_binding location)
+              Error.raise_at1 location
+                Illegal_context_parameter_variable_binding
           | ( Option.None
             , Synprs.CLF.Object.Raw_identifier
                 { identifier = identifier, `Dollar; _ } )
           (* Substitution variables may only occur in meta-contexts *) ->
               let location = Identifier.location identifier in
-              raise (Illegal_context_substitution_variable_binding location)
+              Error.raise_at1 location
+                Illegal_context_substitution_variable_binding
           | Option.None, typ (* Binding identifier missing *) ->
               let location = Synprs.location_of_clf_object typ in
-              raise (Illegal_context_missing_binding_identifier location))
+              Error.raise_at1 location
+                Illegal_context_missing_binding_identifier)
         (state, []) bindings
     in
     let bindings' = List.rev bindings_rev' in
@@ -1485,7 +843,7 @@ struct
     let { Synprs.CLF.Context_object.location; head; objects } = context in
     match head with
     | Synprs.CLF.Context_object.Head.Identity { location } ->
-        raise (Illegal_context_identity location)
+        Error.raise_at1 location Illegal_context_identity
     | Synprs.CLF.Context_object.Head.None { location = head_location } -> (
         match objects with
         | ( Option.None
@@ -1623,7 +981,7 @@ struct
             | CLF_operand.External_term term -> term
             | CLF_operand.External_typ typ ->
                 let location = Synext.location_of_clf_typ typ in
-                raise (Expected_term location)
+                Error.raise_at1 location Expected_term
             | CLF_operand.Parser_object object_ ->
                 disambiguate_as_term state object_
             | CLF_operand.Application { applicand; arguments } -> (
@@ -1631,7 +989,7 @@ struct
                 | `Term term -> term
                 | `Typ typ ->
                     let location = Synext.location_of_clf_typ typ in
-                    raise (Expected_term location))
+                    Error.raise_at1 location Expected_term)
 
           let disambiguate_arguments arguments =
             List1.map disambiguate_argument arguments
@@ -1770,7 +1128,9 @@ struct
       | Shunting_yard.Misplaced_operator { operator; operands } ->
           let operator_location = CLF_operator.location operator
           and operand_locations = List.map CLF_operand.location operands in
-          raise (Misplaced_operator { operator_location; operand_locations })
+          Error.raise_at
+            (List1.from operator_location operand_locations)
+            Misplaced_operator
       | Shunting_yard.Ambiguous_operator_placement
           { left_operator; right_operator } ->
           let operator_identifier = CLF_operator.identifier left_operator
@@ -1778,12 +1138,8 @@ struct
           and right_operator_location =
             CLF_operator.location right_operator
           in
-          raise
-            (Ambiguous_operator_placement
-               { operator_identifier
-               ; left_operator_location
-               ; right_operator_location
-               })
+          Error.raise_at2 left_operator_location right_operator_location
+            (Ambiguous_operator_placement operator_identifier)
       | Shunting_yard.Consecutive_non_associative_operators
           { left_operator; right_operator } ->
           let operator_identifier = CLF_operator.identifier left_operator
@@ -1791,25 +1147,22 @@ struct
           and right_operator_location =
             CLF_operator.location right_operator
           in
-          raise
-            (Consecutive_non_associative_operators
-               { operator_identifier
-               ; left_operator_location
-               ; right_operator_location
-               })
+          Error.raise_at2 left_operator_location right_operator_location
+            (Consecutive_applications_of_non_associative_operators
+               operator_identifier)
       | Shunting_yard.Arity_mismatch { operator; operator_arity; operands }
         ->
           let operator_identifier = CLF_operator.identifier operator
           and operator_location = CLF_operator.location operator
-          and actual_argument_locations =
-            List.map CLF_operand.location operands
-          in
-          raise
+          and expected_arguments_count = operator_arity
+          and operand_locations = List.map CLF_operand.location operands
+          and actual_arguments_count = List.length operands in
+          Error.raise_at
+            (List1.from operator_location operand_locations)
             (Arity_mismatch
                { operator_identifier
-               ; operator_location
-               ; operator_arity
-               ; actual_argument_locations
+               ; expected_arguments_count
+               ; actual_arguments_count
                })
 
   (** Contextual LF term-level or type-level pattern operands for rewriting
@@ -1920,25 +1273,20 @@ struct
 
       This function imposes syntactic restrictions on [object_], but does not
       perform normalization nor validation. To see the syntactic restrictions
-      from LF objects to LF terms, see the Beluga language specification.
-
-      Examples of invalid term patterns that may result from this
-      disambiguation include:
-
-      - [c x x], where [x] is a free pattern variable *)
+      from LF objects to LF terms, see the Beluga language specification. *)
   let rec disambiguate_as_term_pattern state object_ =
     match object_ with
     | Synprs.CLF.Object.Raw_pi { location; _ } ->
-        raise (Illegal_pi_term_pattern location)
+        Error.raise_at1 location Illegal_pi_term_pattern
     | Synprs.CLF.Object.Raw_arrow { location; orientation = `Forward; _ } ->
-        raise (Illegal_forward_arrow_term_pattern location)
+        Error.raise_at1 location Illegal_forward_arrow_term_pattern
     | Synprs.CLF.Object.Raw_arrow { location; orientation = `Backward; _ } ->
-        raise (Illegal_backward_arrow_term_pattern location)
+        Error.raise_at1 location Illegal_backward_arrow_term_pattern
     | Synprs.CLF.Object.Raw_block { location; _ } ->
-        raise (Illegal_block_term_pattern location)
+        Error.raise_at1 location Illegal_block_term_pattern
     | Synprs.CLF.Object.Raw_hole
         { location; variant = `Unlabelled | `Labelled _ } ->
-        raise (Illegal_labellable_hole_term_pattern location)
+        Error.raise_at1 location Illegal_labellable_hole_term_pattern
     | Synprs.CLF.Object.Raw_identifier
         { location; identifier = identifier, `Hash; _ } ->
         Synext.CLF.Term.Pattern.Parameter_variable { location; identifier }
@@ -2012,14 +1360,11 @@ struct
                     remaining_identifiers =
                   match Identifier.Hamt.find_opt next_identifier state with
                   | Option.Some
-                      (Disambiguation_state.Module { entries = state' } as
-                      entry) -> (
+                      (Disambiguation_state.Module { entries = state' }) -> (
                       match remaining_identifiers with
                       | [] ->
                           (* Lookups ended with a module. *)
-                          raise
-                            (Expected_term_constant
-                               { location; actual_binding = entry })
+                          Error.raise_at1 location Expected_term_constant
                       | next_identifier' :: remaining_identifiers' ->
                           let looked_up_identifiers' =
                             next_identifier :: looked_up_identifiers
@@ -2057,21 +1402,19 @@ struct
                               }
                           in
                           reduce_projections term remaining_identifiers)
-                  | Option.Some entry ->
+                  | Option.Some _entry ->
                       (* Lookups ended with an entry that cannot be used in a
                          contextual LF term projection. *)
                       let location =
                         Location.join_all1_contramap Identifier.location
                           (List1.from next_identifier looked_up_identifiers)
                       in
-                      raise
-                        (Expected_term_constant
-                           { location; actual_binding = entry })
+                      Error.raise_at1 location Expected_term_constant
                   | Option.None -> (
                       match remaining_identifiers with
                       | [] ->
-                          raise
-                            (Unbound_term_constant { location; identifier })
+                          Error.raise_at1 location
+                            (Unbound_term_constant identifier)
                       | _ ->
                           let module_identifier =
                             Qualified_identifier.make
@@ -2106,13 +1449,11 @@ struct
                     { location; identifier = m }
                 in
                 reduce_projections' term ms name
-            | entry ->
+            | _entry ->
                 (* First lookup ended with an entry that cannot be used in a
                    contextual LF term projection. *)
                 let location = Identifier.location m in
-                raise
-                  (Expected_term_constant
-                     { location; actual_binding = entry })
+                Error.raise_at1 location Expected_term_constant
                 (* TODO: Misleading, module, term variable, meta-variable are
                    allowed *)
             | exception Disambiguation_state.Unbound_identifier _ ->
@@ -2128,7 +1469,7 @@ struct
         match disambiguate_application_pattern state objects with
         | `Typ typ ->
             let location = Synext.location_of_clf_typ typ in
-            raise (Expected_term_pattern location)
+            Error.raise_at1 location Expected_term_pattern
         | `Term_pattern term_pattern -> term_pattern)
     | Synprs.CLF.Object.Raw_lambda
         { location; parameter_identifier; parameter_sort; body } -> (
@@ -2190,7 +1531,7 @@ struct
           | Option.None, object_ -> object_
           | Option.Some identifier, _ ->
               let location = Identifier.location identifier in
-              raise (Illegal_subtitution_pattern_term_label location))
+              Error.raise_at1 location Illegal_subtitution_pattern_term_label)
         objects
     in
     match head with
@@ -2254,24 +1595,24 @@ struct
             , Synprs.CLF.Object.Raw_identifier
                 { identifier = identifier, `Plain; _ } ) ->
               let location = Identifier.location identifier in
-              raise (Illegal_context_pattern_missing_binding_type location)
+              Error.raise_at1 location
+                Illegal_context_pattern_missing_binding_type
           | ( Option.None
             , Synprs.CLF.Object.Raw_identifier
                 { identifier = identifier, `Hash; _ } ) ->
               let location = Identifier.location identifier in
-              raise
-                (Illegal_context_pattern_parameter_variable_binding location)
+              Error.raise_at1 location
+                Illegal_context_pattern_parameter_variable_binding
           | ( Option.None
             , Synprs.CLF.Object.Raw_identifier
                 { identifier = identifier, `Dollar; _ } ) ->
               let location = Identifier.location identifier in
-              raise
-                (Illegal_context_pattern_substitution_variable_binding
-                   location)
+              Error.raise_at1 location
+                Illegal_context_pattern_substitution_variable_binding
           | Option.None, typ ->
               let location = Synprs.location_of_clf_object typ in
-              raise
-                (Illegal_context_pattern_missing_binding_identifier location))
+              Error.raise_at1 location
+                Illegal_context_pattern_missing_binding_identifier)
         (state, []) bindings
     in
     let bindings' = List.rev bindings_rev' in
@@ -2283,7 +1624,7 @@ struct
     in
     match head with
     | Synprs.CLF.Context_object.Head.Identity { location } ->
-        raise (Illegal_context_pattern_identity location)
+        Error.raise_at1 location Illegal_context_pattern_identity
     | Synprs.CLF.Context_object.Head.None { location = head_location } -> (
         match objects with
         | ( Option.None
@@ -2413,10 +1754,10 @@ struct
                 let location =
                   Synext.location_of_clf_term_pattern term_pattern
                 in
-                raise (Expected_term location)
+                Error.raise_at1 location Expected_term
             | CLF_pattern_operand.External_typ typ ->
                 let location = Synext.location_of_clf_typ typ in
-                raise (Expected_term_pattern location)
+                Error.raise_at1 location Expected_term_pattern
             | CLF_pattern_operand.Parser_object object_ ->
                 disambiguate_as_term state object_
             | CLF_pattern_operand.Application { applicand; arguments } -> (
@@ -2425,10 +1766,10 @@ struct
                     let location =
                       Synext.location_of_clf_term_pattern term_pattern
                     in
-                    raise (Expected_term location)
+                    Error.raise_at1 location Expected_term
                 | `Typ typ ->
                     let location = Synext.location_of_clf_typ typ in
-                    raise (Expected_term location))
+                    Error.raise_at1 location Expected_term)
 
           (** [disambiguate_argument_pattern argument] disambiguates
               [argument] to an LF term pattern.
@@ -2440,7 +1781,7 @@ struct
                 term_pattern
             | CLF_pattern_operand.External_typ typ ->
                 let location = Synext.location_of_clf_typ typ in
-                raise (Expected_term_pattern location)
+                Error.raise_at1 location Expected_term_pattern
             | CLF_pattern_operand.Parser_object object_ ->
                 disambiguate_as_term_pattern state object_
             | CLF_pattern_operand.Application { applicand; arguments } -> (
@@ -2448,7 +1789,7 @@ struct
                 | `Term_pattern term_pattern -> term_pattern
                 | `Typ typ ->
                     let location = Synext.location_of_clf_typ typ in
-                    raise (Expected_term_pattern location))
+                    Error.raise_at1 location Expected_term_pattern)
 
           let write operator arguments =
             let application_location =
@@ -2590,7 +1931,9 @@ struct
           and operand_locations =
             List.map CLF_pattern_operand.location operands
           in
-          raise (Misplaced_operator { operator_location; operand_locations })
+          Error.raise_at
+            (List1.from operator_location operand_locations)
+            Misplaced_operator
       | Shunting_yard.Ambiguous_operator_placement
           { left_operator; right_operator } ->
           let operator_identifier =
@@ -2600,12 +1943,8 @@ struct
           and right_operator_location =
             CLF_pattern_operator.location right_operator
           in
-          raise
-            (Ambiguous_operator_placement
-               { operator_identifier
-               ; left_operator_location
-               ; right_operator_location
-               })
+          Error.raise_at2 left_operator_location right_operator_location
+            (Ambiguous_operator_placement operator_identifier)
       | Shunting_yard.Consecutive_non_associative_operators
           { left_operator; right_operator } ->
           let operator_identifier =
@@ -2615,24 +1954,203 @@ struct
           and right_operator_location =
             CLF_pattern_operator.location right_operator
           in
-          raise
-            (Consecutive_non_associative_operators
-               { operator_identifier
-               ; left_operator_location
-               ; right_operator_location
-               })
+          Error.raise_at2 left_operator_location right_operator_location
+            (Consecutive_applications_of_non_associative_operators
+               operator_identifier)
       | Shunting_yard.Arity_mismatch { operator; operator_arity; operands }
         ->
           let operator_identifier = CLF_pattern_operator.identifier operator
           and operator_location = CLF_pattern_operator.location operator
-          and actual_argument_locations =
+          and expected_arguments_count = operator_arity
+          and operand_locations =
             List.map CLF_pattern_operand.location operands
-          in
-          raise
+          and actual_arguments_count = List.length operands in
+          Error.raise_at
+            (List1.from operator_location operand_locations)
             (Arity_mismatch
                { operator_identifier
-               ; operator_location
-               ; operator_arity
-               ; actual_argument_locations
+               ; expected_arguments_count
+               ; actual_arguments_count
                })
 end
+
+(** {2 Exception Printing} *)
+
+let pp_exception ppf = function
+  | Illegal_hole_type ->
+      Format.fprintf ppf "Holes may not appear as contextual LF types."
+  | Illegal_lambda_type ->
+      Format.fprintf ppf "Lambdas may not appear as contextual LF types."
+  | Illegal_annotated_type ->
+      Format.fprintf ppf
+        "Type ascriptions to terms may not appear as contextual LF types."
+  | Illegal_untyped_pi_type ->
+      Format.fprintf ppf
+        "The contextual LF Pi type is missing its parameter type annotation."
+  | Illegal_tuple_type ->
+      Format.fprintf ppf "Tuple terms may not appear as contextual LF types."
+  | Illegal_projection_type ->
+      Format.fprintf ppf
+        "Projection terms may not appear as contextual LF types."
+  | Illegal_substitution_type ->
+      Format.fprintf ppf
+        "Substitution terms may not appear as contextual LF types."
+  | Illegal_unnamed_block_element_type ->
+      Format.fprintf ppf
+        "Contextual LF block type element missing an identifier."
+  | Illegal_parameter_variable_type ->
+      Format.fprintf ppf
+        "Parameter variables may not appear as contextual LF types."
+  | Illegal_substitution_variable_type ->
+      Format.fprintf ppf
+        "Substitution variables may not appear as contextual LF types."
+  | Unbound_type_constant identifier ->
+      Format.fprintf ppf "The LF type-level constant %a is unbound."
+        Qualified_identifier.pp identifier
+  | Unbound_type_constant_or_illegal_projection_type identifier ->
+      Format.fprintf ppf
+        "Either the LF type-level constant %a is unbound, or a projection \
+         term may not appear as a contextual LF type."
+        Qualified_identifier.pp identifier
+  | Illegal_pi_term ->
+      Format.fprintf ppf
+        "Pi kinds or types may not appear as contextual LF terms."
+  | Illegal_forward_arrow_term ->
+      Format.fprintf ppf
+        "Forward arrows may not appear as contextual LF terms."
+  | Illegal_backward_arrow_term ->
+      Format.fprintf ppf
+        "Backward arrows may not appear as contextual LF terms."
+  | Illegal_block_term ->
+      Format.fprintf ppf "Block types may not appear as contextual LF terms."
+  | Unbound_term_constant identifier ->
+      Format.fprintf ppf "The LF term-level constant %a is unbound."
+        Qualified_identifier.pp identifier
+  | Illegal_subtitution_term_label ->
+      Format.fprintf ppf "Terms in a substitution may not be labelled."
+  | Illegal_context_parameter_variable_binding ->
+      Format.fprintf ppf
+        "Parameter variable bindings may not occur in contextual LF \
+         contexts."
+  | Illegal_context_substitution_variable_binding ->
+      Format.fprintf ppf
+        "Substitution variable bindings may not occur in contextual LF \
+         contexts."
+  | Illegal_context_missing_binding_identifier ->
+      Format.fprintf ppf
+        "Identifier missing for the binding in the contextual LF context."
+  | Illegal_context_identity ->
+      Format.fprintf ppf
+        "Contextual LF contexts may not begin with the identity \
+         substitution."
+  | Expected_term_constant ->
+      Format.fprintf ppf "Expected an LF term-level constant."
+  | Expected_type_constant ->
+      Format.fprintf ppf "Expected an LF type-level constant."
+  | Expected_term ->
+      Format.fprintf ppf
+        "Expected a contextual LF term but found a contextual LF type \
+         instead."
+  | Expected_type ->
+      Format.fprintf ppf "Expected an LF type but found an LF term instead."
+  | Ambiguous_operator_placement operator_identifier ->
+      Format.fprintf ppf
+        "Ambiguous occurrences of the LF term-level or type-level operator \
+         %a after rewriting."
+        Qualified_identifier.pp operator_identifier
+  | Misplaced_operator ->
+      Format.fprintf ppf
+        "Misplaced contextual LF term-level or type-level operator."
+  | Consecutive_applications_of_non_associative_operators operator_identifier
+    ->
+      Format.fprintf ppf
+        "Consecutive occurrences of the contextual LF term-level or \
+         type-level operator %a after rewriting."
+        Qualified_identifier.pp operator_identifier
+  | Arity_mismatch
+      { operator_identifier
+      ; expected_arguments_count
+      ; actual_arguments_count
+      } ->
+      Format.fprintf ppf "Operator %a expected %d arguments but got %d."
+        Qualified_identifier.pp operator_identifier expected_arguments_count
+        actual_arguments_count
+  | Expected_term_pattern ->
+      Format.fprintf ppf
+        "Expected a contextual LF term pattern but found a contextual LF \
+         type pattern instead."
+  | Expected_type_pattern ->
+      Format.fprintf ppf
+        "Expected a contextual LF type pattern but found a contextual LF \
+         term pattern instead."
+  | Illegal_wildcard_type_pattern ->
+      Format.fprintf ppf
+        "Wildcards may not appear as contextual LF type patterns."
+  | Illegal_labellable_hole_type_pattern ->
+      Format.fprintf ppf
+        "Labellable holes may not appear as contextual LF type patterns."
+  | Illegal_lambda_type_pattern ->
+      Format.fprintf ppf
+        "Lambdas may not appear as contextual LF type patterns."
+  | Illegal_annotated_type_pattern ->
+      Format.fprintf ppf
+        "Type ascriptions to terms may not appear as contextual LF type \
+         patterns."
+  | Illegal_untyped_pi_type_pattern ->
+      Format.fprintf ppf
+        "The contextual LF Pi type pattern is missing its parameter type \
+         annotation."
+  | Illegal_tuple_type_pattern ->
+      Format.fprintf ppf
+        "Tuple term patterns may not appear as contextual LF type patterns."
+  | Illegal_projection_type_pattern ->
+      Format.fprintf ppf
+        "Projection term patterns may not appear as contextual LF type \
+         patterns."
+  | Illegal_substitution_type_pattern ->
+      Format.fprintf ppf
+        "Substitution term patterns may not appear as contextual LF type \
+         patterns."
+  | Illegal_unnamed_block_element_type_pattern ->
+      Format.fprintf ppf
+        "Contextual LF block type pattern element missing an identifier."
+  | Illegal_pi_term_pattern ->
+      Format.fprintf ppf
+        "Pi kinds or types may not appear as contextual LF term patterns."
+  | Illegal_forward_arrow_term_pattern ->
+      Format.fprintf ppf
+        "Forward arrow types may not appear as contextual LF term patterns."
+  | Illegal_backward_arrow_term_pattern ->
+      Format.fprintf ppf
+        "Backward arrow types may not appear as contextual LF term patterns."
+  | Illegal_block_term_pattern ->
+      Format.fprintf ppf
+        "Block types may not appear as contextual LF term patterns."
+  | Illegal_labellable_hole_term_pattern ->
+      Format.fprintf ppf
+        "Labellable holes may not appear as contextual LF term patterns."
+  | Illegal_subtitution_pattern_term_label ->
+      Format.fprintf ppf
+        "Terms in a substitution pattern may not be labelled."
+  | Illegal_context_pattern_parameter_variable_binding ->
+      Format.fprintf ppf
+        "Parameter variable bindings may not occur in contextual LF context \
+         patterns."
+  | Illegal_context_pattern_substitution_variable_binding ->
+      Format.fprintf ppf
+        "Substitution variable bindings may not occur in contextual LF \
+         context patterns."
+  | Illegal_context_pattern_missing_binding_identifier ->
+      Format.fprintf ppf
+        "Identifier missing for the binding in the contextual LF context \
+         pattern."
+  | Illegal_context_pattern_identity ->
+      Format.fprintf ppf
+        "Contextual LF context patterns may not begin with the identity \
+         substitution."
+  | _ -> raise (Invalid_argument "[pp_exception] unsupported exception")
+
+let () =
+  Printexc.register_printer (fun exn ->
+      try Option.some (Format.stringify pp_exception exn) with
+      | Invalid_argument _ -> Option.none)

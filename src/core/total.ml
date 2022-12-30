@@ -332,110 +332,6 @@ let gen_var' loc cD (x, cU) =
 let gen_var loc cD (LF.Decl (x, cU, _, _)) =
   gen_var' loc cD (x, cU)
 
-(* Given i and tau, compute vector V
-   s.t. for all k < i
-
-   if k-th position in V = 0 then
-   type at i-th position in tau does NOT depend on it
-
-   k-th position in V = 1 then
-   type at i-th position in tau does depend on it
-
-
-   We then generate a spine of arguments using V; any position
-   marked with 0 in V, will generate DC; positions marked with 1
-   will generate a term M.
- *)
-
-let rec rec_spine cD (cM, cU) =
-  function
-  | (0, ttau) -> ([], Whnf.cnormCTyp ttau)
-  (*  | 0, n, (Comp.TypPiBox (_, tau), theta) ->
-      let (spine, tau_r) = rec_spine cD (cM, cU) (i, k - 1, (tau, theta)) in
-      (Comp.DC :: spine, tau_r)
-      | 0, n, (Comp.TypArr (_, tau), theta) ->
-      let (spine, tau_r) = rec_spine cD (cM, cU) (i, k - 1, (tau, theta)) in
-      (Comp.DC :: spine, tau_r)
-      else
-   *)
-  | (1, (Comp.TypPiBox (_, (LF.Decl (_, cU', _, _)), tau), theta)) ->
-     begin
-       try
-         (*print_string ("rec_spine: Unify " ^ P.cdeclToString cD cdecl ^
-           "  with " ^ P.cdeclToString cD (Whnf.cnormCDecl (cdecl, theta)) ^ "\n");*)
-         Unify.unifyMetaTyp cD (cU, Whnf.m_id) (cU', theta);
-         let (_, ft) = cM in
-         let (spine, tau_r) = rec_spine cD (cM, cU) (0, (tau, LF.MDot (ft, theta))) in
-         (Comp.M cM :: spine, tau_r)
-       with
-       | e ->
-          raise Not_compatible
-     end
-
-  | (1, (Comp.TypArr (_, Comp.TypBox (loc, LF.ClTyp (LF.MTyp tA, cPsi)), tau), theta)) ->
-     let cU' = LF.ClTyp (LF.MTyp tA, cPsi) in
-     begin
-       try
-         Unify.unifyMetaTyp cD (cU, Whnf.m_id) (cU', theta);
-         let (spine, tau_r) = rec_spine cD (cM, cU) (0, (tau, theta)) in
-         (Comp.M cM :: spine, tau_r)
-       with
-       | e ->
-          raise Not_compatible
-     end
-  | (1, ttau) ->
-     let tau = Whnf.cnormCTyp ttau in
-     dprintf
-       begin fun p ->
-       p.fmt "[rec_spine] @[<v>Incompatible IH: ran out of arguments;@,last type is: %a@]"
-         (P.fmt_ppr_cmp_typ cD P.l0) tau
-       end;
-     raise Not_compatible
-
-  | (n, (Comp.TypPiBox (_, cdecl, tau), theta)) ->
-     let (cN, ft) = gen_var (Syntax.Loc.ghost) cD (Whnf.cnormCDecl (cdecl, theta)) in
-     let (spine, tau_r) = rec_spine cD (cM, cU) (n - 1, (tau, LF.MDot (ft, theta))) in
-     (Comp.M cN :: spine, tau_r)
-
-  | (n, (Comp.TypArr (_, _, tau2), theta)) ->
-     let (spine, tau_r) = rec_spine cD (cM, cU) (n - 1, (tau2, theta)) in
-     (Comp.DC :: spine, tau_r)
-
-let rec rec_spine' cD (x, ttau0) =
-  function
-  | (0, ttau) -> ([], Whnf.cnormCTyp ttau)
-  (* i = 0, k =/= 0
-     | (n, (Comp.TypPiBox (_, tau), theta)) ->
-     let (spine, tau_r) = rec_spine' cD (x, tau) (i, k - 1, (tau, theta)) in
-     (Comp.DC :: spine, tau_r)
-     | (n, (Comp.TypArr (_, tau), theta)) ->
-     let (spine, tau_r) = rec_spine' cD (x, tau) (i, k - 1, (tau, theta)) in
-     (Comp.DC :: spine, tau_r)
-   *)
-  | (1, (Comp.TypPiBox _, _)) ->
-     raise Not_compatible (* Error *)
-
-  | (1, (Comp.TypArr (_, tau1, tau2), theta)) ->
-     begin
-       try
-         (* print_string ("Can generate IH for arg " ^
-            P.compTypToString cD tau0 ^
-            "\nExpected: " ^
-            P.compTypToString cD (Whnf.cnormCTyp (tau1, theta)) ^ "\n"); *)
-         Unify.unifyCompTyp cD ttau0 (tau1, theta);
-         let (spine, tau_r) = rec_spine' cD (x, ttau0) (0, (tau2, theta)) in
-         (Comp.V x :: spine, tau_r)
-       with
-       | _ -> raise Not_compatible
-     end
-  | (n, (Comp.TypPiBox (_, cdecl, tau), theta)) ->
-     let (cN, ft) = gen_var (Syntax.Loc.ghost) cD (Whnf.cnormCDecl (cdecl, theta)) in
-     let (spine, tau_r) = rec_spine' cD (x, ttau0) (n - 1, (tau, LF.MDot (ft, theta))) in
-     (Comp.M cN :: spine, tau_r)
-
-  | (n, (Comp.TypArr (_, _, tau2), theta)) ->
-     let (spine, tau_r) = rec_spine' cD (x, ttau0) (n - 1, (tau2, theta)) in
-     (Comp.DC :: spine, tau_r)
 
 
 let gen_meta_obj (cdecl, theta) k =
@@ -445,6 +341,11 @@ let gen_meta_obj (cdecl, theta) k =
   | LF.ClTyp (LF.MTyp tA, cPsi) ->
      let phat = Context.dctxToHat cPsi in
      let psihat' = Whnf.cnorm_psihat phat theta in
+     (* BP: Generate a substitution from cPsi to padded cPsi that 
+            matches the required schema
+            [cPsi |- tA]  (from pattern variables in cD)
+            
+      *) 
      let mv = LF.MVar (LF.Offset k, Substitution.LF.id) in
      let tM = LF.Root (Syntax.Loc.ghost, mv, LF.Nil, Plicity.explicit) in
      (Syntax.Loc.ghost, LF.ClObj (psihat', LF.MObj tM))
@@ -497,6 +398,119 @@ let valid_args args =
   | Comp.DC :: _ -> false
   | _ -> true
 
+
+       (* Given i and tau, compute vector V
+   s.t. for all k < i
+
+   if k-th position in V = 0 then
+   type at i-th position in tau does NOT depend on it
+
+   k-th position in V = 1 then
+   type at i-th position in tau does depend on it
+
+
+   We then generate a spine of arguments using V; any position
+   marked with 0 in V, will generate DC; positions marked with 1
+   will generate a term M.
+
+  Invariant: 
+
+  cD |- cU where cU is the type of the induct. argument which is in k-th position in cD
+ *)
+
+let rec rec_spine cD (k, cU) =
+  function
+  | (0, ttau) -> ([], Whnf.cnormCTyp ttau)
+  (*  | 0, n, (Comp.TypPiBox (_, tau), theta) ->
+      let (spine, tau_r) = rec_spine cD (cM, cU) (i, k - 1, (tau, theta)) in
+      (Comp.DC :: spine, tau_r)
+      | 0, n, (Comp.TypArr (_, tau), theta) ->
+      let (spine, tau_r) = rec_spine cD (cM, cU) (i, k - 1, (tau, theta)) in
+      (Comp.DC :: spine, tau_r)
+      else
+   *)
+  | (1, (Comp.TypPiBox (_, (LF.Decl (_, cU', _, _)), tau), theta)) ->
+     
+     begin
+       try
+         (*print_string ("rec_spine: Unify " ^ P.cdeclToString cD cdecl ^
+           "  with " ^ P.cdeclToString cD (Whnf.cnormCDecl (cdecl, theta)) ^ "\n");*)
+         Unify.unifyMetaTyp cD (cU, Whnf.m_id) (cU', theta);
+         let cM = gen_meta_obj (cU, LF.MShift 0)  k in
+         let (_, ft) = cM in
+         let (spine, tau_r) = rec_spine cD (k, cU) (0, (tau, LF.MDot (ft, theta))) in
+         (Comp.M cM :: spine, tau_r)
+       with
+       | e ->
+          raise Not_compatible
+     end
+
+  | (1, (Comp.TypArr (_, Comp.TypBox (loc, LF.ClTyp (LF.MTyp tA, cPsi)), tau), theta)) ->
+     let cU' = LF.ClTyp (LF.MTyp tA, cPsi) in
+     begin
+       try
+         Unify.unifyMetaTyp cD (cU, Whnf.m_id) (cU', theta);
+         let cM = gen_meta_obj (cU, LF.MShift 0)  k in 
+         let (spine, tau_r) = rec_spine cD (k, cU) (0, (tau, theta)) in
+         (Comp.M cM :: spine, tau_r)
+       with
+       | e ->
+          raise Not_compatible
+     end
+  | (1, ttau) ->
+     let tau = Whnf.cnormCTyp ttau in
+     dprintf
+       begin fun p ->
+       p.fmt "[rec_spine] @[<v>Incompatible IH: ran out of arguments;@,last type is: %a@]"
+         (P.fmt_ppr_cmp_typ cD P.l0) tau
+       end;
+     raise Not_compatible
+
+  | (n, (Comp.TypPiBox (_, cdecl, tau), theta)) ->
+     let (cN, ft) = gen_var (Syntax.Loc.ghost) cD (Whnf.cnormCDecl (cdecl, theta)) in
+     let (spine, tau_r) = rec_spine cD (k, cU) (n - 1, (tau, LF.MDot (ft, theta))) in
+     (Comp.M cN :: spine, tau_r)
+
+  | (n, (Comp.TypArr (_, _, tau2), theta)) ->
+     let (spine, tau_r) = rec_spine cD (k, cU) (n - 1, (tau2, theta)) in
+     (Comp.DC :: spine, tau_r)
+
+let rec rec_spine' cD (x, ttau0) =
+  function
+  | (0, ttau) -> ([], Whnf.cnormCTyp ttau)
+  (* i = 0, k =/= 0
+     | (n, (Comp.TypPiBox (_, tau), theta)) ->
+     let (spine, tau_r) = rec_spine' cD (x, tau) (i, k - 1, (tau, theta)) in
+     (Comp.DC :: spine, tau_r)
+     | (n, (Comp.TypArr (_, tau), theta)) ->
+     let (spine, tau_r) = rec_spine' cD (x, tau) (i, k - 1, (tau, theta)) in
+     (Comp.DC :: spine, tau_r)
+   *)
+  | (1, (Comp.TypPiBox _, _)) ->
+     raise Not_compatible (* Error *)
+
+  | (1, (Comp.TypArr (_, tau1, tau2), theta)) ->
+     begin
+       try
+         (* print_string ("Can generate IH for arg " ^
+            P.compTypToString cD tau0 ^
+            "\nExpected: " ^
+            P.compTypToString cD (Whnf.cnormCTyp (tau1, theta)) ^ "\n"); *)
+         Unify.unifyCompTyp cD ttau0 (tau1, theta);
+         let (spine, tau_r) = rec_spine' cD (x, ttau0) (0, (tau2, theta)) in
+         (Comp.V x :: spine, tau_r)
+       with
+       | _ -> raise Not_compatible
+     end
+  | (n, (Comp.TypPiBox (_, cdecl, tau), theta)) ->
+     let (cN, ft) = gen_var (Syntax.Loc.ghost) cD (Whnf.cnormCDecl (cdecl, theta)) in
+     let (spine, tau_r) = rec_spine' cD (x, ttau0) (n - 1, (tau, LF.MDot (ft, theta))) in
+     (Comp.M cN :: spine, tau_r)
+
+  | (n, (Comp.TypArr (_, _, tau2), theta)) ->
+     let (spine, tau_r) = rec_spine' cD (x, ttau0) (n - 1, (tau2, theta)) in
+     (Comp.DC :: spine, tau_r)
+
 let rec gen_rec_calls cD cIH (cD', j) mfs =
   match cD' with
   | LF.Empty -> cIH
@@ -515,7 +529,8 @@ let rec gen_rec_calls cD cIH (cD', j) mfs =
      gen_rec_calls cD cIH (cD', j + 1) mfs
 
   | LF.Dec (cD', LF.Decl (u, cU, plicity, inductivity)) ->
-     let cM = gen_meta_obj (cU, LF.MShift (j + 1)) (j + 1) in
+     (* let cM = gen_meta_obj (cU, LF.MShift (j + 1)) (j + 1) in *)
+     let k = j + 1 in 
      let cU' = Whnf.cnormMTyp (cU, LF.MShift (j + 1)) in
      let mf_list = get_order mfs in
      dprintf
@@ -535,7 +550,7 @@ let rec gen_rec_calls cD cIH (cD', j) mfs =
            x
            (P.fmt_ppr_cmp_typ cD P.l0) (Whnf.cnormCTyp ttau)
          end;
-       let (args, tau) = rec_spine cD (cM, cU') (x, ttau) in
+       let (args, tau) = rec_spine cD (k, cU') (x, ttau) in
        (* rec_spine may raise Not_compatible *)
        dprintf
          begin fun p ->

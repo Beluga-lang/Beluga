@@ -13,112 +13,83 @@ open Support
 open Beluga_syntax
 open Common_disambiguation
 
+(** {1 Exceptions} *)
+
+(** {2 Exceptions for LF kind disambiguation} *)
+
+exception Illegal_identifier_kind
+
+exception Illegal_qualified_identifier_kind
+
+exception Illegal_backward_arrow_kind
+
+exception Illegal_hole_kind
+
+exception Illegal_lambda_kind
+
+exception Illegal_annotated_kind
+
+exception Illegal_application_kind
+
+exception Illegal_untyped_pi_kind
+
+(** {2 Exceptions for LF type disambiguation} *)
+
+exception Illegal_type_kind_type
+
+exception Illegal_hole_type
+
+exception Illegal_lambda_type
+
+exception Illegal_annotated_type
+
+exception Illegal_untyped_pi_type
+
+exception Unbound_type_constant of Qualified_identifier.t
+
+(** {2 Exceptions for LF term disambiguation} *)
+
+exception Illegal_type_kind_term
+
+exception Illegal_pi_term
+
+exception Illegal_forward_arrow_term
+
+exception Illegal_backward_arrow_term
+
+exception Unbound_term_constant of Qualified_identifier.t
+
+(** {2 Exceptions for LF type-level and term-level application rewriting} *)
+
+exception Expected_term_constant
+
+exception Expected_type_constant
+
+exception Expected_term
+
+exception Expected_type
+
+exception Misplaced_operator
+
+exception Ambiguous_operator_placement of Qualified_identifier.t
+
+exception
+  Consecutive_applications_of_non_associative_operators of
+    Qualified_identifier.t
+
+exception
+  Arity_mismatch of
+    { operator_identifier : Qualified_identifier.t
+    ; expected_arguments_count : Int.t
+    ; actual_arguments_count : Int.t
+    }
+
+(** {1 Disambiguation} *)
+
 module type LF_DISAMBIGUATION = sig
   type disambiguation_state
 
   type disambiguation_state_entry
-
-  (** {1 Exceptions} *)
-
-  (** {2 Exceptions for LF kind disambiguation} *)
-
-  exception Illegal_identifier_kind of Location.t
-
-  exception Illegal_qualified_identifier_kind of Location.t
-
-  exception Illegal_backward_arrow_kind of Location.t
-
-  exception Illegal_hole_kind of Location.t
-
-  exception Illegal_lambda_kind of Location.t
-
-  exception Illegal_annotated_kind of Location.t
-
-  exception Illegal_application_kind of Location.t
-
-  exception Illegal_untyped_pi_kind of Location.t
-
-  (** {2 Exceptions for LF type disambiguation} *)
-
-  exception Illegal_type_kind_type of Location.t
-
-  exception Illegal_hole_type of Location.t
-
-  exception Illegal_lambda_type of Location.t
-
-  exception Illegal_annotated_type of Location.t
-
-  exception Illegal_untyped_pi_type of Location.t
-
-  exception
-    Unbound_type_constant of
-      { location : Location.t
-      ; identifier : Qualified_identifier.t
-      }
-
-  (** {2 Exceptions for LF term disambiguation} *)
-
-  exception Illegal_type_kind_term of Location.t
-
-  exception Illegal_pi_term of Location.t
-
-  exception Illegal_forward_arrow_term of Location.t
-
-  exception Illegal_backward_arrow_term of Location.t
-
-  exception
-    Unbound_term_constant of
-      { location : Location.t
-      ; identifier : Qualified_identifier.t
-      }
-
-  (** {2 Exceptions for application rewriting} *)
-
-  exception
-    Expected_term_constant of
-      { location : Location.t
-      ; actual_binding : disambiguation_state_entry
-      }
-
-  exception
-    Expected_type_constant of
-      { location : Location.t
-      ; actual_binding : disambiguation_state_entry
-      }
-
-  exception Expected_term of Location.t
-
-  exception Expected_type of Location.t
-
-  exception
-    Misplaced_operator of
-      { operator_location : Location.t
-      ; operand_locations : Location.t List.t
-      }
-
-  exception
-    Ambiguous_operator_placement of
-      { operator_identifier : Qualified_identifier.t
-      ; left_operator_location : Location.t
-      ; right_operator_location : Location.t
-      }
-
-  exception
-    Consecutive_non_associative_operators of
-      { operator_identifier : Qualified_identifier.t
-      ; left_operator_location : Location.t
-      ; right_operator_location : Location.t
-      }
-
-  exception
-    Arity_mismatch of
-      { operator_identifier : Qualified_identifier.t
-      ; operator_location : Location.t
-      ; operator_arity : Int.t
-      ; actual_argument_locations : Location.t List.t
-      }
-
-  exception Too_many_arguments of Location.t
 
   (** {1 Disambiguation} *)
 
@@ -144,441 +115,6 @@ struct
   type disambiguation_state = Disambiguation_state.t
 
   type disambiguation_state_entry = Disambiguation_state.entry
-
-  (** {1 Exceptions} *)
-
-  (** {2 Exceptions for LF kind disambiguation} *)
-
-  exception Illegal_identifier_kind of Location.t
-
-  exception Illegal_qualified_identifier_kind of Location.t
-
-  exception Illegal_backward_arrow_kind of Location.t
-
-  exception Illegal_hole_kind of Location.t
-
-  exception Illegal_lambda_kind of Location.t
-
-  exception Illegal_annotated_kind of Location.t
-
-  exception Illegal_application_kind of Location.t
-
-  exception Illegal_untyped_pi_kind of Location.t
-
-  (** {2 Exceptions for LF type disambiguation} *)
-
-  exception Illegal_type_kind_type of Location.t
-
-  exception Illegal_hole_type of Location.t
-
-  exception Illegal_lambda_type of Location.t
-
-  exception Illegal_annotated_type of Location.t
-
-  exception Illegal_untyped_pi_type of Location.t
-
-  exception
-    Unbound_type_constant of
-      { location : Location.t
-      ; identifier : Qualified_identifier.t
-      }
-
-  (** {2 Exceptions for LF term disambiguation} *)
-
-  exception Illegal_type_kind_term of Location.t
-
-  exception Illegal_pi_term of Location.t
-
-  exception Illegal_forward_arrow_term of Location.t
-
-  exception Illegal_backward_arrow_term of Location.t
-
-  exception
-    Unbound_term_constant of
-      { location : Location.t
-      ; identifier : Qualified_identifier.t
-      }
-
-  (** {2 Exceptions for application rewriting} *)
-
-  exception
-    Expected_term_constant of
-      { location : Location.t
-      ; actual_binding : disambiguation_state_entry
-      }
-
-  exception
-    Expected_type_constant of
-      { location : Location.t
-      ; actual_binding : disambiguation_state_entry
-      }
-
-  exception Expected_term of Location.t
-
-  exception Expected_type of Location.t
-
-  exception
-    Misplaced_operator of
-      { operator_location : Location.t
-      ; operand_locations : Location.t List.t
-      }
-
-  exception
-    Ambiguous_operator_placement of
-      { operator_identifier : Qualified_identifier.t
-      ; left_operator_location : Location.t
-      ; right_operator_location : Location.t
-      }
-
-  exception
-    Consecutive_non_associative_operators of
-      { operator_identifier : Qualified_identifier.t
-      ; left_operator_location : Location.t
-      ; right_operator_location : Location.t
-      }
-
-  exception
-    Arity_mismatch of
-      { operator_identifier : Qualified_identifier.t
-      ; operator_location : Location.t
-      ; operator_arity : Int.t
-      ; actual_argument_locations : Location.t List.t
-      }
-
-  exception Too_many_arguments of Location.t
-
-  (** {2 Exception Printing} *)
-
-  (* TODO: Extract exception printer definition to a functor (over
-     LF_DISAMBIGUATOR) with the side-effect of registering that printer. Use
-     located errors. *)
-
-  let pp_exception ppf = function
-    | Illegal_identifier_kind location ->
-        Format.fprintf ppf "Identifiers may not appear as LF kinds: %a@."
-          Location.pp location
-    | Illegal_qualified_identifier_kind location ->
-        Format.fprintf ppf
-          "Qualified identifiers may not appear as LF kinds: %a@."
-          Location.pp location
-    | Illegal_backward_arrow_kind location ->
-        Format.fprintf ppf "Backward arrows may not appear as LF kinds: %a@."
-          Location.pp location
-    | Illegal_hole_kind location ->
-        Format.fprintf ppf "Holes may not appear as LF kinds: %a@."
-          Location.pp location
-    | Illegal_lambda_kind location ->
-        Format.fprintf ppf "Lambdas may not appear as LF kinds: %a@."
-          Location.pp location
-    | Illegal_annotated_kind location ->
-        Format.fprintf ppf
-          "Type ascriptions to terms may not appear as LF kinds: %a@."
-          Location.pp location
-    | Illegal_application_kind location ->
-        Format.fprintf ppf
-          "Term applications may not appear as LF kinds: %a@." Location.pp
-          location
-    | Illegal_untyped_pi_kind location ->
-        Format.fprintf ppf
-          "The LF Pi kind is missing its parameter type annotation: %a@."
-          Location.pp location
-    | Illegal_type_kind_type location ->
-        Format.fprintf ppf "The kind `type' may not appear as LF types: %a@."
-          Location.pp location
-    | Illegal_hole_type location ->
-        Format.fprintf ppf "Holes may not appear as LF types: %a@."
-          Location.pp location
-    | Illegal_lambda_type location ->
-        Format.fprintf ppf "Lambdas may not appear as LF types: %a@."
-          Location.pp location
-    | Illegal_annotated_type location ->
-        Format.fprintf ppf
-          "Type ascriptions may not appear as LF types: %a@." Location.pp
-          location
-    | Illegal_untyped_pi_type location ->
-        Format.fprintf ppf
-          "The LF Pi type is missing its parameter type annotation: %a@."
-          Location.pp location
-    | Unbound_type_constant { location; identifier } ->
-        Format.fprintf ppf "The LF type-level constant %a is unbound: %a@."
-          Qualified_identifier.pp identifier Location.pp location
-    | Illegal_type_kind_term location ->
-        Format.fprintf ppf "The kind `type' may not appear as LF terms: %a@."
-          Location.pp location
-    | Illegal_pi_term location ->
-        Format.fprintf ppf
-          "Pi kinds or types may not appear as LF terms: %a@." Location.pp
-          location
-    | Illegal_forward_arrow_term location ->
-        Format.fprintf ppf "Forward arrows may not appear as LF terms: %a@."
-          Location.pp location
-    | Illegal_backward_arrow_term location ->
-        Format.fprintf ppf "Backward arrows may not appear as LF terms: %a@."
-          Location.pp location
-    | Unbound_term_constant { location; identifier } ->
-        Format.fprintf ppf "The LF term-level constant %a is unbound: %a@."
-          Qualified_identifier.pp identifier Location.pp location
-    | Expected_term_constant
-        { location
-        ; actual_binding = Disambiguation_state.LF_type_constant _
-        } ->
-        Format.fprintf ppf
-          "Expected an LF term-level constant but found an LF type constant \
-           instead: %a@."
-          Location.pp location
-    | Expected_term_constant
-        { location; actual_binding = Disambiguation_state.LF_term_variable }
-      ->
-        Format.fprintf ppf
-          "Expected an LF term-level constant but found an LF term variable \
-           instead: %a@."
-          Location.pp location
-    | Expected_term_constant
-        { location; actual_binding = Disambiguation_state.Meta_variable } ->
-        Format.fprintf ppf
-          "Expected an LF term-level constant but found a meta-variable \
-           instead: %a@."
-          Location.pp location
-    | Expected_term_constant
-        { location
-        ; actual_binding = Disambiguation_state.Parameter_variable
-        } ->
-        Format.fprintf ppf
-          "Expected an LF term-level constant but found a parameter \
-           variable instead: %a@."
-          Location.pp location
-    | Expected_term_constant
-        { location
-        ; actual_binding = Disambiguation_state.Substitution_variable
-        } ->
-        Format.fprintf ppf
-          "Expected an LF term-level constant but found a substitution \
-           variable instead: %a@."
-          Location.pp location
-    | Expected_term_constant
-        { location; actual_binding = Disambiguation_state.Context_variable }
-      ->
-        Format.fprintf ppf
-          "Expected an LF term-level constant but found a context variable \
-           instead: %a@."
-          Location.pp location
-    | Expected_term_constant
-        { location
-        ; actual_binding = Disambiguation_state.Computation_variable
-        } ->
-        Format.fprintf ppf
-          "Expected an LF term-level constant but found a computation-level \
-           variable instead: %a@."
-          Location.pp location
-    | Expected_term_constant
-        { location
-        ; actual_binding = Disambiguation_state.Computation_type_constant _
-        } ->
-        Format.fprintf ppf
-          "Expected an LF term-level constant but found a computation-level \
-           type constant instead: %a@."
-          Location.pp location
-    | Expected_term_constant
-        { location
-        ; actual_binding =
-            Disambiguation_state.Computation_term_constructor _
-        } ->
-        Format.fprintf ppf
-          "Expected an LF term-level constant but found a computation-level \
-           term constructor constant instead: %a@."
-          Location.pp location
-    | Expected_term_constant
-        { location
-        ; actual_binding = Disambiguation_state.Computation_cotype_constant _
-        } ->
-        Format.fprintf ppf
-          "Expected an LF term-level constant but found a computation-level \
-           cotype constant instead: %a@."
-          Location.pp location
-    | Expected_term_constant
-        { location
-        ; actual_binding = Disambiguation_state.Computation_term_destructor
-        } ->
-        Format.fprintf ppf
-          "Expected an LF term-level constant but found a computation-level \
-           type destructor constant instead: %a@."
-          Location.pp location
-    | Expected_term_constant
-        { location; actual_binding = Disambiguation_state.Query } ->
-        Format.fprintf ppf
-          "Expected an LF term-level constant but found a logic programming \
-           query identifier instead: %a@."
-          Location.pp location
-    | Expected_term_constant
-        { location; actual_binding = Disambiguation_state.MQuery } ->
-        Format.fprintf ppf
-          "Expected an LF term-level constant but found a logic programming \
-           meta-query identifier instead: %a@."
-          Location.pp location
-    | Expected_term_constant
-        { location; actual_binding = Disambiguation_state.Module _ } ->
-        Format.fprintf ppf
-          "Expected an LF term-level constant but found a module instead: \
-           %a@."
-          Location.pp location
-    | Expected_type_constant
-        { location
-        ; actual_binding = Disambiguation_state.LF_term_constant _
-        } ->
-        Format.fprintf ppf
-          "Expected an LF type-level constant but found an LF term constant \
-           instead: %a@."
-          Location.pp location
-    | Expected_type_constant
-        { location; actual_binding = Disambiguation_state.LF_term_variable }
-      ->
-        Format.fprintf ppf
-          "Expected an LF type-level constant but found an LF term variable \
-           instead: %a@."
-          Location.pp location
-    | Expected_type_constant
-        { location; actual_binding = Disambiguation_state.Meta_variable } ->
-        Format.fprintf ppf
-          "Expected an LF type-level constant but found a meta-variable \
-           instead: %a@."
-          Location.pp location
-    | Expected_type_constant
-        { location
-        ; actual_binding = Disambiguation_state.Parameter_variable
-        } ->
-        Format.fprintf ppf
-          "Expected an LF type-level constant but found a parameter \
-           variable instead: %a@."
-          Location.pp location
-    | Expected_type_constant
-        { location
-        ; actual_binding = Disambiguation_state.Substitution_variable
-        } ->
-        Format.fprintf ppf
-          "Expected an LF type-level constant but found a substitution \
-           variable instead: %a@."
-          Location.pp location
-    | Expected_type_constant
-        { location; actual_binding = Disambiguation_state.Context_variable }
-      ->
-        Format.fprintf ppf
-          "Expected an LF type-level constant but found a context variable \
-           instead: %a@."
-          Location.pp location
-    | Expected_type_constant
-        { location
-        ; actual_binding = Disambiguation_state.Computation_variable
-        } ->
-        Format.fprintf ppf
-          "Expected an LF type-level constant but found a computation-level \
-           variable instead: %a@."
-          Location.pp location
-    | Expected_type_constant
-        { location
-        ; actual_binding = Disambiguation_state.Computation_type_constant _
-        } ->
-        Format.fprintf ppf
-          "Expected an LF type-level constant but found a computation-level \
-           type constant instead: %a@."
-          Location.pp location
-    | Expected_type_constant
-        { location
-        ; actual_binding =
-            Disambiguation_state.Computation_term_constructor _
-        } ->
-        Format.fprintf ppf
-          "Expected an LF type-level constant but found a computation-level \
-           term constructor instead: %a@."
-          Location.pp location
-    | Expected_type_constant
-        { location
-        ; actual_binding = Disambiguation_state.Computation_cotype_constant _
-        } ->
-        Format.fprintf ppf
-          "Expected an LF type-level constant but found a computation-level \
-           cotype constant instead: %a@."
-          Location.pp location
-    | Expected_type_constant
-        { location
-        ; actual_binding = Disambiguation_state.Computation_term_destructor
-        } ->
-        Format.fprintf ppf
-          "Expected an LF type-level constant but found a computation-level \
-           term destructor instead: %a@."
-          Location.pp location
-    | Expected_type_constant
-        { location; actual_binding = Disambiguation_state.Query } ->
-        Format.fprintf ppf
-          "Expected an LF type-level constant but found a logic programming \
-           query identifier instead: %a@."
-          Location.pp location
-    | Expected_type_constant
-        { location; actual_binding = Disambiguation_state.MQuery } ->
-        Format.fprintf ppf
-          "Expected an LF type-level constant but found a logic programming \
-           meta-query identifier instead: %a@."
-          Location.pp location
-    | Expected_type_constant
-        { location; actual_binding = Disambiguation_state.Module _ } ->
-        Format.fprintf ppf
-          "Expected an LF type-level constant but found a module instead: \
-           %a@."
-          Location.pp location
-    | Expected_term location ->
-        Format.fprintf ppf
-          "Expected an LF term but found an LF type instead: %a@."
-          Location.pp location
-    | Expected_type location ->
-        Format.fprintf ppf
-          "Expected an LF type but found an LF term instead: %a@."
-          Location.pp location
-    | Misplaced_operator { operator_location; _ } ->
-        Format.fprintf ppf
-          "Misplaced LF term-level or type-level operator: %a@." Location.pp
-          operator_location
-    | Ambiguous_operator_placement
-        { operator_identifier
-        ; left_operator_location
-        ; right_operator_location
-        } ->
-        Format.fprintf ppf
-          "Ambiguous occurrences of the LF term-level or type-level \
-           operator %a after rewriting: %a and %a@."
-          Qualified_identifier.pp operator_identifier Location.pp
-          left_operator_location Location.pp right_operator_location
-    | Consecutive_non_associative_operators
-        { operator_identifier
-        ; left_operator_location
-        ; right_operator_location
-        } ->
-        Format.fprintf ppf
-          "Consecutive occurrences of the LF term-level or type-level \
-           operator %a after rewriting: %a and %a@."
-          Qualified_identifier.pp operator_identifier Location.pp
-          left_operator_location Location.pp right_operator_location
-    | Arity_mismatch
-        { operator_identifier
-        ; operator_location
-        ; operator_arity
-        ; actual_argument_locations
-        } ->
-        let expected_arguments_count = operator_arity
-        and actual_arguments_count = List.length actual_argument_locations in
-        Format.fprintf ppf
-          "Operator %a expected %d arguments but got %d: %a@."
-          Qualified_identifier.pp operator_identifier
-          expected_arguments_count actual_arguments_count Location.pp
-          operator_location
-    | Too_many_arguments location ->
-        Format.fprintf ppf
-          "Too many arguments are supplied to an operator: %a@." Location.pp
-          location
-    | _ -> raise (Invalid_argument "[pp_exception] unsupported exception")
-
-  let () =
-    Printexc.register_printer (fun exn ->
-        try Option.some (Format.stringify pp_exception exn) with
-        | Invalid_argument _ -> Option.none)
 
   (** {1 Disambiguation} *)
 
@@ -713,23 +249,23 @@ struct
   let rec disambiguate_as_kind state object_ =
     match object_ with
     | Synprs.LF.Object.Raw_identifier { location; _ } ->
-        raise (Illegal_identifier_kind location)
+        Error.raise_at1 location Illegal_identifier_kind
     | Synprs.LF.Object.Raw_qualified_identifier { location; _ } ->
-        raise (Illegal_qualified_identifier_kind location)
+        Error.raise_at1 location Illegal_qualified_identifier_kind
     | Synprs.LF.Object.Raw_hole { location; _ } ->
-        raise (Illegal_hole_kind location)
+        Error.raise_at1 location Illegal_hole_kind
     | Synprs.LF.Object.Raw_lambda { location; _ } ->
-        raise (Illegal_lambda_kind location)
+        Error.raise_at1 location Illegal_lambda_kind
     | Synprs.LF.Object.Raw_annotated { location; _ } ->
-        raise (Illegal_annotated_kind location)
+        Error.raise_at1 location Illegal_annotated_kind
     | Synprs.LF.Object.Raw_application { location; _ } ->
-        raise (Illegal_application_kind location)
+        Error.raise_at1 location Illegal_application_kind
     | Synprs.LF.Object.Raw_type { location } ->
         Synext.LF.Kind.Typ { location }
     | Synprs.LF.Object.Raw_arrow { location; domain; range; orientation }
       -> (
         match orientation with
-        | `Backward -> raise (Illegal_backward_arrow_kind location)
+        | `Backward -> Error.raise_at1 location Illegal_backward_arrow_kind
         | `Forward ->
             let domain' = disambiguate_as_typ state domain
             and range' = disambiguate_as_kind state range in
@@ -738,7 +274,7 @@ struct
     | Synprs.LF.Object.Raw_pi
         { location; parameter_identifier; parameter_sort; body } -> (
         match parameter_sort with
-        | Option.None -> raise (Illegal_untyped_pi_kind location)
+        | Option.None -> Error.raise_at1 location Illegal_untyped_pi_kind
         | Option.Some parameter_type ->
             let parameter_type' = disambiguate_as_typ state parameter_type in
             let body' =
@@ -770,16 +306,16 @@ struct
   and disambiguate_as_typ state object_ =
     match object_ with
     | Synprs.LF.Object.Raw_type { location; _ } ->
-        raise (Illegal_type_kind_type location)
+        Error.raise_at1 location Illegal_type_kind_type
     | Synprs.LF.Object.Raw_hole { location; _ } ->
-        raise (Illegal_hole_type location)
+        Error.raise_at1 location Illegal_hole_type
     | Synprs.LF.Object.Raw_lambda { location; _ } ->
-        raise (Illegal_lambda_type location)
+        Error.raise_at1 location Illegal_lambda_type
     | Synprs.LF.Object.Raw_annotated { location; _ } ->
-        raise (Illegal_annotated_type location)
+        Error.raise_at1 location Illegal_annotated_type
     | Synprs.LF.Object.Raw_pi { location; parameter_sort = Option.None; _ }
       ->
-        raise (Illegal_untyped_pi_type location)
+        Error.raise_at1 location Illegal_untyped_pi_type
     | Synprs.LF.Object.Raw_identifier { location; identifier; quoted } -> (
         (* As an LF type, plain identifiers are necessarily type-level
            constants. *)
@@ -794,13 +330,10 @@ struct
               ; operator
               ; quoted
               }
-        | entry ->
-            raise
-              (Expected_type_constant { location; actual_binding = entry })
+        | _entry -> Error.raise_at1 location Expected_type_constant
         | exception Disambiguation_state.Unbound_identifier _ ->
-            raise
-              (Unbound_type_constant
-                 { location; identifier = qualified_identifier }))
+            Error.raise_at1 location
+              (Unbound_type_constant qualified_identifier))
     | Synprs.LF.Object.Raw_qualified_identifier
         { location; identifier; quoted } -> (
         (* Qualified identifiers without modules were parsed as plain
@@ -811,11 +344,9 @@ struct
         match Disambiguation_state.lookup identifier state with
         | Disambiguation_state.LF_type_constant { operator } ->
             Synext.LF.Typ.Constant { location; identifier; operator; quoted }
-        | entry ->
-            raise
-              (Expected_type_constant { location; actual_binding = entry })
+        | _entry -> Error.raise_at1 location Expected_type_constant
         | exception Disambiguation_state.Unbound_qualified_identifier _ ->
-            raise (Unbound_type_constant { location; identifier }))
+            Error.raise_at1 location (Unbound_type_constant identifier))
     | Synprs.LF.Object.Raw_arrow { location; domain; range; orientation } ->
         let domain' = disambiguate_as_typ state domain
         and range' = disambiguate_as_typ state range in
@@ -852,7 +383,7 @@ struct
         match disambiguate_application state objects with
         | `Term term ->
             let location = Synext.location_of_lf_term term in
-            raise (Expected_type location)
+            Error.raise_at1 location Expected_type
         | `Typ typ -> typ)
 
   (** [disambiguate_as_term state object_] is [object_] rewritten as an LF
@@ -867,13 +398,13 @@ struct
   and disambiguate_as_term state object_ =
     match object_ with
     | Synprs.LF.Object.Raw_type { location; _ } ->
-        raise (Illegal_type_kind_term location)
+        Error.raise_at1 location Illegal_type_kind_term
     | Synprs.LF.Object.Raw_pi { location; _ } ->
-        raise (Illegal_pi_term location)
+        Error.raise_at1 location Illegal_pi_term
     | Synprs.LF.Object.Raw_arrow { location; orientation = `Forward; _ } ->
-        raise (Illegal_forward_arrow_term location)
+        Error.raise_at1 location Illegal_forward_arrow_term
     | Synprs.LF.Object.Raw_arrow { location; orientation = `Backward; _ } ->
-        raise (Illegal_backward_arrow_term location)
+        Error.raise_at1 location Illegal_backward_arrow_term
     | Synprs.LF.Object.Raw_identifier { location; identifier; quoted } -> (
         (* As an LF term, plain identifiers are either term-level constants
            or variables (bound or free). *)
@@ -891,9 +422,7 @@ struct
         | Disambiguation_state.LF_term_variable ->
             (* Bound variable *)
             Synext.LF.Term.Variable { location; identifier }
-        | entry ->
-            raise
-              (Expected_term_constant { location; actual_binding = entry })
+        | _entry -> Error.raise_at1 location Expected_term_constant
         | exception Disambiguation_state.Unbound_identifier _ ->
             (* Free variable *)
             Synext.LF.Term.Variable { location; identifier })
@@ -908,16 +437,14 @@ struct
         | Disambiguation_state.LF_term_constant { operator } ->
             Synext.LF.Term.Constant
               { location; identifier; operator; quoted }
-        | entry ->
-            raise
-              (Expected_term_constant { location; actual_binding = entry })
+        | _entry -> Error.raise_at1 location Expected_term_constant
         | exception Disambiguation_state.Unbound_qualified_identifier _ ->
-            raise (Unbound_term_constant { location; identifier }))
+            Error.raise_at1 location (Unbound_term_constant identifier))
     | Synprs.LF.Object.Raw_application { objects; _ } -> (
         match disambiguate_application state objects with
         | `Typ typ ->
             let location = Synext.location_of_lf_typ typ in
-            raise (Expected_term location)
+            Error.raise_at1 location Expected_term
         | `Term term -> term)
     | Synprs.LF.Object.Raw_lambda
         { location; parameter_identifier; parameter_sort; body } -> (
@@ -1020,7 +547,7 @@ struct
         | LF_operand.External_term term -> term
         | LF_operand.External_typ typ ->
             let location = Synext.location_of_lf_typ typ in
-            raise (Expected_term location)
+            Error.raise_at1 location Expected_term
         | LF_operand.Parser_object object_ ->
             disambiguate_as_term state object_
         | LF_operand.Application { applicand; arguments } -> (
@@ -1028,7 +555,7 @@ struct
             | `Term term -> term
             | `Typ typ ->
                 let location = Synext.location_of_lf_typ typ in
-                raise (Expected_term location))
+                Error.raise_at1 location Expected_term)
 
       let disambiguate_arguments arguments =
         List1.map disambiguate_argument arguments
@@ -1171,7 +698,9 @@ struct
       | Shunting_yard.Misplaced_operator { operator; operands } ->
           let operator_location = LF_operator.location operator
           and operand_locations = List.map LF_operand.location operands in
-          raise (Misplaced_operator { operator_location; operand_locations })
+          Error.raise_at
+            (List1.from operator_location operand_locations)
+            Misplaced_operator
       | Shunting_yard.Ambiguous_operator_placement
           { left_operator; right_operator } ->
           let operator_identifier = LF_operator.identifier left_operator
@@ -1179,12 +708,8 @@ struct
           and right_operator_location =
             LF_operator.location right_operator
           in
-          raise
-            (Ambiguous_operator_placement
-               { operator_identifier
-               ; left_operator_location
-               ; right_operator_location
-               })
+          Error.raise_at2 left_operator_location right_operator_location
+            (Ambiguous_operator_placement operator_identifier)
       | Shunting_yard.Consecutive_non_associative_operators
           { left_operator; right_operator } ->
           let operator_identifier = LF_operator.identifier left_operator
@@ -1192,27 +717,103 @@ struct
           and right_operator_location =
             LF_operator.location right_operator
           in
-          raise
-            (Consecutive_non_associative_operators
-               { operator_identifier
-               ; left_operator_location
-               ; right_operator_location
-               })
+          Error.raise_at2 left_operator_location right_operator_location
+            (Consecutive_applications_of_non_associative_operators
+               operator_identifier)
       | Shunting_yard.Arity_mismatch { operator; operator_arity; operands }
         ->
           let operator_identifier = LF_operator.identifier operator
           and operator_location = LF_operator.location operator
-          and actual_argument_locations =
-            List.map LF_operand.location operands
-          in
-          raise
+          and expected_arguments_count = operator_arity
+          and operand_locations = List.map LF_operand.location operands
+          and actual_arguments_count = List.length operands in
+          Error.raise_at
+            (List1.from operator_location operand_locations)
             (Arity_mismatch
                { operator_identifier
-               ; operator_location
-               ; operator_arity
-               ; actual_argument_locations
+               ; expected_arguments_count
+               ; actual_arguments_count
                })
 end
 
-module Register_exception_printer (Lf_disambiguation : LF_DISAMBIGUATION) =
-struct end
+(** {2 Exception Printing} *)
+
+let pp_exception ppf = function
+  | Illegal_identifier_kind ->
+      Format.fprintf ppf "Identifiers may not appear as LF kinds."
+  | Illegal_qualified_identifier_kind ->
+      Format.fprintf ppf "Qualified identifiers may not appear as LF kinds."
+  | Illegal_backward_arrow_kind ->
+      Format.fprintf ppf "Backward arrows may not appear as LF kinds."
+  | Illegal_hole_kind ->
+      Format.fprintf ppf "Holes may not appear as LF kinds."
+  | Illegal_lambda_kind ->
+      Format.fprintf ppf "Lambdas may not appear as LF kinds."
+  | Illegal_annotated_kind ->
+      Format.fprintf ppf
+        "Type ascriptions to terms may not appear as LF kinds."
+  | Illegal_application_kind ->
+      Format.fprintf ppf "Term applications may not appear as LF kinds."
+  | Illegal_untyped_pi_kind ->
+      Format.fprintf ppf
+        "The LF Pi-kind is missing its parameter type annotation."
+  | Illegal_type_kind_type ->
+      Format.fprintf ppf "The kind `type' may not appear as LF types."
+  | Illegal_hole_type ->
+      Format.fprintf ppf "Holes may not appear as LF types."
+  | Illegal_lambda_type ->
+      Format.fprintf ppf "Lambdas may not appear as LF types."
+  | Illegal_annotated_type ->
+      Format.fprintf ppf "Type ascriptions may not appear as LF types."
+  | Illegal_untyped_pi_type ->
+      Format.fprintf ppf
+        "The LF Pi-type is missing its parameter type annotation."
+  | Unbound_type_constant identifier ->
+      Format.fprintf ppf "The LF type-level constant %a is unbound."
+        Qualified_identifier.pp identifier
+  | Illegal_type_kind_term ->
+      Format.fprintf ppf "The kind `type' may not appear as LF terms."
+  | Illegal_pi_term ->
+      Format.fprintf ppf "Pi-kinds or types may not appear as LF terms."
+  | Illegal_forward_arrow_term ->
+      Format.fprintf ppf "Forward arrows may not appear as LF terms."
+  | Illegal_backward_arrow_term ->
+      Format.fprintf ppf "Backward arrows may not appear as LF terms."
+  | Unbound_term_constant identifier ->
+      Format.fprintf ppf "The LF term-level constant %a is unbound."
+        Qualified_identifier.pp identifier
+  | Expected_term_constant ->
+      Format.fprintf ppf "Expected an LF term-level constant."
+  | Expected_type_constant ->
+      Format.fprintf ppf "Expected an LF type-level constant."
+  | Expected_term ->
+      Format.fprintf ppf "Expected an LF term but got an LF type instead."
+  | Expected_type ->
+      Format.fprintf ppf "Expected an LF type but got an LF term instead."
+  | Misplaced_operator ->
+      Format.fprintf ppf "Misplaced LF term-level or type-level operator."
+  | Ambiguous_operator_placement operator_identifier ->
+      Format.fprintf ppf
+        "Ambiguous occurrences of the LF term-level or type-level operator \
+         %a."
+        Qualified_identifier.pp operator_identifier
+  | Consecutive_applications_of_non_associative_operators operator_identifier
+    ->
+      Format.fprintf ppf
+        "The consecutive application of the non-associative LF term-level \
+         or type-level %a is illegal."
+        Qualified_identifier.pp operator_identifier
+  | Arity_mismatch
+      { operator_identifier
+      ; expected_arguments_count
+      ; actual_arguments_count
+      } ->
+      Format.fprintf ppf "Operator %a expected %d arguments but got %d."
+        Qualified_identifier.pp operator_identifier expected_arguments_count
+        actual_arguments_count
+  | _ -> raise (Invalid_argument "[pp_exception] unsupported exception")
+
+let () =
+  Printexc.register_printer (fun exn ->
+      try Option.some (Format.stringify pp_exception exn) with
+      | Invalid_argument _ -> Option.none)

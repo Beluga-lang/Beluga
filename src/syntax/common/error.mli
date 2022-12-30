@@ -16,6 +16,27 @@ val not_implemented : Location.t -> string -> 'a
 (** Raises a NotImplemented exception with the given message. *)
 val not_implemented' : string -> 'a
 
+(** [Located_exception { cause; locations }] is an exception annotated with
+    source locations. *)
+exception
+  Located_exception of
+    { cause : exn  (** The actual exception being reported. *)
+    ; locations : Location.t List1.t
+          (** The locations to use for reporting the exception. *)
+    }
+
+(** [raise_at locations cause] raises the exception
+    [Located_exception { locations; cause }]. *)
+val raise_at : Location.t List1.t -> exn -> 'a
+
+(** [raise_at1 location cause] raises the exception
+    [Located_exception { locations = \[location\]; cause }]. *)
+val raise_at1 : Location.t -> exn -> 'a
+
+(** [raise_at2 location1 location2 cause] raises the exception
+    [Located_exception { locations = \[location1; location2\]; cause }]. *)
+val raise_at2 : Location.t -> Location.t -> exn -> 'a
+
 (** Abstract dummy datatype to enforce that printing be done using the
     printing functions provided by this module. *)
 type print_result

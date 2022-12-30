@@ -69,11 +69,12 @@ let sanitize_name n =
       (match n.hint_cnt with
       | None -> cnt
       | Some old_cnt -> (
-        match cnt with
-        | None -> n.hint_cnt
-        | Some name_cnt ->
-          Some
-            (int_of_string (string_of_int name_cnt ^ string_of_int old_cnt))))
+          match cnt with
+          | None -> n.hint_cnt
+          | Some name_cnt ->
+              Some
+                (int_of_string
+                   (string_of_int name_cnt ^ string_of_int old_cnt))))
   }
 
 let inc_hint_cnt : int option -> int option = function
@@ -99,16 +100,16 @@ let max_usage ctx s =
   let max' k name = max k name.hint_cnt in
   match List1.of_list (List.filter (same_head s) ctx) with
   | None ->
-    dprintf (fun p ->
-        p.fmt "[max_usage] @[<v 2>%s is unused in@,@[%a@]@]" s pp_list ctx);
-    `unused
+      dprintf (fun p ->
+          p.fmt "[max_usage] @[<v 2>%s is unused in@,@[%a@]@]" s pp_list ctx);
+      `unused
   | Some names ->
-    let k = List1.fold_left (fun x -> x.hint_cnt) max' names in
-    dprintf (fun p ->
-        p.fmt "[max_usage] @[<v 2>%s is USED, k = %a in@,@[%a@]@]" s
-          (Option.pp Format.pp_print_int)
-          k pp_list ctx);
-    `used k
+      let k = List1.fold_left (fun x -> x.hint_cnt) max' names in
+      dprintf (fun p ->
+          p.fmt "[max_usage] @[<v 2>%s is USED, k = %a in@,@[%a@]@]" s
+            (Option.pp Format.pp_print_int)
+            k pp_list ctx);
+      `used k
 
 type name_guide =
   | NoName
@@ -133,13 +134,24 @@ let mk_name ?(location = Location.ghost) ?(modules = []) : name_guide -> t =
   | MVarName (Some vGen)
   | SVarName (Some vGen)
   | PVarName (Some vGen)
-  | BVarName (Some vGen) -> mk_name_helper (vGen ())
-  | MVarName None | SVarName None ->
-    mk_name_helper (Gensym.MVarData.gensym ())
+  | BVarName (Some vGen) ->
+      mk_name_helper (vGen ())
+  | MVarName None
+  | SVarName None ->
+      mk_name_helper (Gensym.MVarData.gensym ())
   | PVarName None -> mk_name_helper ("#" ^ Gensym.VarData.gensym ())
-  | BVarName None | NoName -> mk_name_helper (Gensym.VarData.gensym ())
+  | BVarName None
+  | NoName ->
+      mk_name_helper (Gensym.VarData.gensym ())
   | SomeName x -> sanitize_name x
   | SomeString x -> mk_name_helper x
+
+let make_from_identifier identifier =
+  let identifier_as_string = Identifier.show identifier in
+  let hint_name, hint_cnt = split_name identifier_as_string in
+  let location = Identifier.location identifier in
+  let modules = [] in
+  { modules; hint_name; hint_cnt; location }
 
 let mk_blank = function
   | Some location -> mk_name ~location (SomeString "_")

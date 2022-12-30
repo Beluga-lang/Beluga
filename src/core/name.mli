@@ -48,6 +48,8 @@ type name_guide =
     [mk_name] generates a [t] with a guaranteed unique [string]. *)
 val mk_name : ?location:Location.t -> ?modules:string list -> name_guide -> t
 
+val make_from_identifier : Identifier.t -> t
+
 val string_of_name : t -> string
 
 (** Prints a list of space-separated names. This printer does not open a box! *)

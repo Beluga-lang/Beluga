@@ -15,6 +15,14 @@ let not_implemented loc msg = raise (NotImplemented (Option.some loc, msg))
 
 let not_implemented' msg = raise (NotImplemented (Option.none, msg))
 
+exception Located_exception = Location.Located_exception
+
+let raise_at = Location.raise_at
+
+let raise_at1 = Location.raise_at1
+
+let raise_at2 = Location.raise_at2
+
 type print_result = string
 
 let error_format_buffer = Buffer.create 1024

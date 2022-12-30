@@ -66,7 +66,7 @@ module LF = struct
           ; quoted : Bool.t
           }
           (** [Constant { identifier = "c"; _ }] is the type-level constant
-              with qualified identifier ["c"], which is necessarily bound. *)
+              with qualified identifier ["c"]. *)
       | Application of
           { location : Location.t
           ; applicand : Typ.t
@@ -124,7 +124,7 @@ module LF = struct
           ; quoted : Bool.t
           }
           (** [Constant { identifier = "c"; _ }] is the term-level constant
-              with qualified identifier ["c"], which is necessarily bound. *)
+              with qualified identifier ["c"]. *)
       | Application of
           { location : Location.t
           ; applicand : Term.t
@@ -218,7 +218,7 @@ module CLF = struct
           ; quoted : Bool.t
           }
           (** [Constant { identifier = "c"; _ }] is the type-level constant
-              with qualified identifier ["c"], which is necessarily bound. *)
+              with qualified identifier ["c"]. *)
       | Application of
           { location : Location.t
           ; applicand : Typ.t
@@ -302,7 +302,7 @@ module CLF = struct
           ; quoted : Bool.t
           }
           (** [Constant { identifier = "c"; _ }] is the term-level constant
-              with qualified identifier ["c"], which is necessarily bound. *)
+              with qualified identifier ["c"]. *)
       | Substitution of
           { location : Location.t
           ; term : Term.t
@@ -1040,9 +1040,9 @@ module Comp = struct
   and Context : sig
     (** [{ Context.bindings; _ }] is the computation-level context
 
-          - [^] if [bindings = \[\]]
-          - [x1 : a1, x2 : a2, ..., xn : an] if [bindings = \[("x1", a1); ("x2", a2); ...; ("xn", an)\]]
-      *)
+        - [^] if [bindings = \[\]]
+        - [x1 : a1, x2 : a2, ..., xn : an] if
+          [bindings = \[("x1", a1); ("x2", a2); ...; ("xn", an)\]] *)
     type t =
       { location : Location.t
       ; bindings : (Identifier.t * Typ.t) List.t

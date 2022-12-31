@@ -592,8 +592,16 @@ struct
     end in
     let module Shunting_yard =
       Centiparsec.Shunting_yard.Make (Associativity) (Fixity) (LF_operand)
-        (LF_operator)
-        (LF_application_writer)
+        (struct
+          type associativity = Associativity.t
+
+          type fixity = Fixity.t
+
+          type operand = LF_operand.t
+
+          include LF_operator
+          include LF_application_writer
+        end)
     in
     (* [prepare_objects objects] identifies operators in [objects] and
        rewrites juxtapositions to applications in prefix notation. The

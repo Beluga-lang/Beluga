@@ -73,6 +73,12 @@ module Operand = struct
 end
 
 module Operator = struct
+  type associativity = Associativity.t
+
+  type fixity = Fixity.t
+
+  type operand = Operand.t
+
   type t =
     | Addition
     | Subtraction
@@ -141,6 +147,25 @@ module Operator = struct
         Associativity.right_associative
     | Less_than -> Associativity.non_associative
 
+  let write operator operands =
+    match (operator, operands) with
+    | Addition, [ left_operand; right_operand ] ->
+        Operand.Addition { left_operand; right_operand }
+    | Subtraction, [ left_operand; right_operand ] ->
+        Operand.Subtraction { left_operand; right_operand }
+    | Multiplication, [ left_operand; right_operand ] ->
+        Operand.Multiplication { left_operand; right_operand }
+    | Division, [ left_operand; right_operand ] ->
+        Operand.Division { left_operand; right_operand }
+    | Factorial, [ operand ] -> Operand.Factorial { operand }
+    | Minus, [ operand ] -> Operand.Minus { operand }
+    | Exponent, [ base; power ] -> Operand.Exponentiation { base; power }
+    | Less_than, [ left_operand; right_operand ] ->
+        Operand.Less_than { left_operand; right_operand }
+    | Postfix2, [ left_operand; right_operand ] ->
+        Operand.Postfix2 { left_operand; right_operand }
+    | _ -> raise (Invalid_argument "Unexpected write failure")
+
   include (
     Eq.Make (struct
       type nonrec t = t
@@ -150,30 +175,8 @@ module Operator = struct
       Eq.EQ with type t := t)
 end
 
-module Writer = struct
-  let write operator operands =
-    match (operator, operands) with
-    | Operator.Addition, [ left_operand; right_operand ] ->
-        Operand.Addition { left_operand; right_operand }
-    | Operator.Subtraction, [ left_operand; right_operand ] ->
-        Operand.Subtraction { left_operand; right_operand }
-    | Operator.Multiplication, [ left_operand; right_operand ] ->
-        Operand.Multiplication { left_operand; right_operand }
-    | Operator.Division, [ left_operand; right_operand ] ->
-        Operand.Division { left_operand; right_operand }
-    | Operator.Factorial, [ operand ] -> Operand.Factorial { operand }
-    | Operator.Minus, [ operand ] -> Operand.Minus { operand }
-    | Operator.Exponent, [ base; power ] ->
-        Operand.Exponentiation { base; power }
-    | Operator.Less_than, [ left_operand; right_operand ] ->
-        Operand.Less_than { left_operand; right_operand }
-    | Operator.Postfix2, [ left_operand; right_operand ] ->
-        Operand.Postfix2 { left_operand; right_operand }
-    | _ -> raise (Invalid_argument "Unexpected write failure")
-end
-
 module Shunting_yard =
-  Shunting_yard.Make (Associativity) (Fixity) (Operand) (Operator) (Writer)
+  Shunting_yard.Make (Associativity) (Fixity) (Operand) (Operator)
 
 module Primitive_constructors = struct
   let n' i = Shunting_yard.operand (Operand.Number i)

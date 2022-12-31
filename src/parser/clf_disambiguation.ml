@@ -970,8 +970,15 @@ struct
     in
     let module Shunting_yard =
       Centiparsec.Shunting_yard.Make (Associativity) (Fixity) (CLF_operand)
-        (CLF_operator)
         (struct
+          type associativity = Associativity.t
+
+          type fixity = Fixity.t
+
+          type operand = CLF_operand.t
+
+          include CLF_operator
+
           (** [disambiguate_argument argument] disambiguates [argument] to an
               LF term.
 

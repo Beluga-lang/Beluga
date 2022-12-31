@@ -1,5 +1,89 @@
 open Support
 
+module type ASSOCIATIVITY = sig
+  type t = private
+    | Left_associative
+    | Right_associative
+    | Non_associative
+end
+
+module type FIXITY = sig
+  type t = private
+    | Prefix
+    | Infix
+    | Postfix
+end
+
+module type OPERAND = sig
+  type t
+end
+
+module type OPERATOR = sig
+  type associativity
+
+  type fixity
+
+  type operand
+
+  type t
+
+  val arity : t -> int
+
+  val precedence : t -> int
+
+  val fixity : t -> fixity
+
+  val associativity : t -> associativity
+
+  val write : t -> operand list -> operand
+
+  include Eq.EQ with type t := t
+end
+
+module type S = sig
+  type operand
+
+  type operator
+
+  type primitive
+
+  val operand : operand -> primitive
+
+  val operator : operator -> primitive
+
+  exception Empty_expression
+
+  exception
+    Misplaced_operator of
+      { operator : operator
+      ; operands : operand list
+      }
+
+  exception
+    Ambiguous_operator_placement of
+      { left_operator : operator
+      ; right_operator : operator
+      }
+
+  exception
+    Consecutive_non_associative_operators of
+      { left_operator : operator
+      ; right_operator : operator
+      }
+
+  exception
+    Arity_mismatch of
+      { operator : operator
+      ; operator_arity : int
+      ; operands : operand list
+      }
+
+  exception Leftover_expressions of operand List2.t
+
+  val shunting_yard : primitive list -> operand
+end
+
+(* Extension to the {!module:Stdlib.List} module. *)
 module List : sig
   include module type of List
 
@@ -28,42 +112,19 @@ end = struct
       else take_rev_opt k l []
 end
 
-module Make (Associativity : sig
-  type t = private
-    | Left_associative
-    | Right_associative
-    | Non_associative
+module Make
+    (Associativity : ASSOCIATIVITY)
+    (Fixity : FIXITY)
+    (Operand : OPERAND)
+    (Operator : OPERATOR
+                  with type associativity = Associativity.t
+                   and type fixity = Fixity.t
+                   and type operand = Operand.t) :
+  S with type operand = Operand.t and type operator = Operator.t = struct
+  type operand = Operand.t
 
-  val is_left_associative : t -> Bool.t
+  type operator = Operator.t
 
-  val is_right_associative : t -> Bool.t
-end) (Fixity : sig
-  type t = private
-    | Prefix
-    | Infix
-    | Postfix
-end) (Operand : sig
-  type t
-end) (Operator : sig
-  type t
-
-  (** {1 Destructors} *)
-
-  val arity : t -> Int.t
-
-  val precedence : t -> Int.t
-
-  val fixity : t -> Fixity.t
-
-  val associativity : t -> Associativity.t
-
-  (** {1 Instances} *)
-
-  include Eq.EQ with type t := t
-end) (Writer : sig
-  val write : Operator.t -> Operand.t List.t -> Operand.t
-end) =
-struct
   exception Empty_expression
 
   exception
@@ -97,9 +158,23 @@ struct
     | Operand of Operand.t
     | Operator of Operator.t
 
-  let operand a = Operand a
+  let[@inline] operand a = Operand a
 
-  let operator op = Operator op
+  let[@inline] operator op = Operator op
+
+  let[@inline] is_operator_right_associative operator =
+    match Operator.associativity operator with
+    | Associativity.Right_associative -> true
+    | Associativity.Left_associative
+    | Associativity.Non_associative ->
+        false
+
+  let[@inline] is_operator_left_associative operator =
+    match Operator.associativity operator with
+    | Associativity.Left_associative -> true
+    | Associativity.Right_associative
+    | Associativity.Non_associative ->
+        false
 
   (** [validate_argument_indices operator arguments] ensures that writing of
       operator [operator] with arguments [arguments] is valid based on their
@@ -115,7 +190,7 @@ struct
         left of it
 
       @raise Misplaced_operator *)
-  let validate_argument_indices (i, operator) arguments =
+  let[@inline] validate_argument_indices (i, operator) arguments =
     let raise_misplaced_operator_exception () =
       let operands = List.map Pair.snd arguments in
       raise (Misplaced_operator { operator; operands })
@@ -147,11 +222,42 @@ struct
     | Option.Some (arguments, output) ->
         validate_argument_indices (index, operator) arguments;
         let arguments = List.map Pair.snd arguments in
-        let result = Writer.write operator arguments in
+        let result = Operator.write operator arguments in
         (index, result) :: output
     | Option.None ->
         let operands = List.map Pair.snd output in
         raise (Arity_mismatch { operator; operator_arity; operands })
+
+  (** [validate_left_associative_operator_placement ~x ~px ~y ~py] ensures
+      that [x] and [y] are not operators of the same precedence [px] and [py]
+      respectively, with [x] being left-associative and [y] being
+      right-associative. Otherwise, [x] and [y] are ambiguous in the operator
+      stack. *)
+  let[@inline] validate_left_associative_operator_placement ~x ~px ~y ~py =
+    if Int.(px = py) && is_operator_right_associative x then
+      raise
+        (Ambiguous_operator_placement
+           { left_operator = x; right_operator = y })
+
+  (** [validate_right_associative_operator_placement ~x ~px ~y ~py] ensures
+      that [x] and [y] are not operators of the same precedence [px] and [py]
+      respectively, with [x] being right-associative and [y] being
+      left-associative. Otherwise, [x] and [y] are ambiguous in the operator
+      stack. *)
+  let[@inline] validate_right_associative_operator_placement ~x ~px ~y ~py =
+    if Int.(px = py) && is_operator_left_associative x then
+      raise
+        (Ambiguous_operator_placement
+           { left_operator = x; right_operator = y })
+
+  (** [validate_non_associative_operator_placement ~x ~y] ensures that [x]
+      and [y] are not equal non-associative operators. Otherwise, [x] and [y]
+      are invalid in the operator stack. *)
+  let[@inline] validate_non_associative_operator_placement ~x ~y =
+    if Operator.(x = y) then
+      raise
+        (Consecutive_non_associative_operators
+           { left_operator = x; right_operator = y })
 
   (** [pop x output stack] pops the operator stack [stack] as needed with
       respect to [x] and [output] to ensure that writing [x] respects the
@@ -159,49 +265,36 @@ struct
 
       @raise Consecutive_non_associative_operators
       @raise Ambiguous_operator_placement *)
-  let rec pop x output stack =
+  let[@inline] rec pop y output stack =
     match stack with
-    | (index, y) :: ys -> (
-        match Operator.associativity x with
+    | (index, x) :: xs -> (
+        (* In the original input list to {!shunting_yard}, [x] is an operator
+           on the left, and [y] is an operator on the right. *)
+        let[@inline] write_x_if cond =
+          if cond then
+            let output' = write (index, x) output in
+            pop y output' xs
+          else (output, stack)
+        in
+        let px = Operator.precedence x in
+        let py = Operator.precedence y in
+        match Operator.associativity y with
         | Associativity.Left_associative ->
-            let px = Operator.precedence x
-            and py = Operator.precedence y in
-            if
-              Int.(
-                Associativity.is_right_associative (Operator.associativity y)
-                && px = py)
-            then
-              raise
-                (Ambiguous_operator_placement
-                   { left_operator = y; right_operator = x });
-            if Int.(px <= py) then pop x (write (index, y) output) ys
-            else (output, stack)
+            validate_left_associative_operator_placement ~x ~px ~y ~py;
+            write_x_if Int.(px >= py)
         | Associativity.Right_associative ->
-            let px = Operator.precedence x
-            and py = Operator.precedence y in
-            if
-              Int.(
-                Associativity.is_left_associative (Operator.associativity y)
-                && px = py)
-            then
-              raise
-                (Ambiguous_operator_placement
-                   { left_operator = y; right_operator = x });
-            if Int.(px < py) then pop x (write (index, y) output) ys
-            else (output, stack)
+            validate_right_associative_operator_placement ~x ~px ~y ~py;
+            write_x_if Int.(px > py)
         | Associativity.Non_associative ->
-            if Operator.(x = y) then
-              raise
-                (Consecutive_non_associative_operators
-                   { left_operator = y; right_operator = x });
-            if Int.(Operator.precedence x <= Operator.precedence y) then
-              pop x (write (index, y) output) ys
-            else (output, stack))
+            validate_non_associative_operator_placement ~x ~y;
+            write_x_if Int.(px >= py))
     | [] -> (output, stack)
 
-  let rec pop_all output operators =
+  let[@inline] rec pop_all output operators =
     match operators with
-    | op :: ops -> pop_all (write op output) ops
+    | op :: ops ->
+        let output' = write op output in
+        pop_all output' ops
     | [] -> output
 
   (** [shunting_yard operands operators primitives] reduces [primitives] to a
@@ -242,7 +335,7 @@ struct
         | Fixity.Postfix ->
             (* Prepare [operator]'s left arguments. *)
             let output, operators' = pop operator operands operators in
-            (* Immediatly write the postfix operator. *)
+            (* Immediately write the postfix operator. *)
             let output' = write (index, operator) output in
             shunting_yard output' operators' ps)
     | [] -> (

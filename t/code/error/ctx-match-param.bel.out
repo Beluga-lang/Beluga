@@ -1,0 +1,3 @@
+./t/code/error/ctx-match-param.bel, line 20, column 31:
+Type-checking error.
+Recursive call not structurally smaller.

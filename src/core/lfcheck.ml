@@ -764,6 +764,27 @@ and projectCtxIntoDctx =
   | Empty -> Null
   | Dec (rest, last) -> DDec (projectCtxIntoDctx rest, last)
 
+
+(* Context Schema Checking. Checking an LF context against a schema
+ 
+       psi::W \in Delta
+ (1)  -----------------  
+       Delta |- psi <= W
+ 
+      Delta |- Psi <= W   Delta;Psi |- A >> W
+(2)  —————————————————————————————————————-
+       Delta |- Psi, x:A <= W 
+
+ Checking a type is "in" a schema :  Delta;Psi |- A >> W 
+  where W = elem_1 + .... + elem_n  and  elem_i = some cPhi'_i   block cPhi_i 
+   
+  Delta;Psi |- A >> W (checkTypeAgainstSchema) succeeds,
+  if there exists a substitution cD ; Psi  |- s  : cPhi'_i  s.t. 
+
+  Delta ; Psi |- A = block [s]cPhi_i 
+ 
+ *)
+                      
 (* checkTypeAgainstSchema loc cD cPsi tA sch (elements : sch_elem list)
  *   sch = full schema, for error messages
  *   elements = elements to be tried
@@ -901,15 +922,6 @@ and instanceOfSchElemProj cD cPsi (tA, s) (var, k) (SchElem (cPhi, trec)) =
   in
   (trec, subst)
 
-
-(* The rule for checking a context against a schema is
- *
- *  psi::W \in \Omega
- *  -----------------
- *   ... |- psi <= W
- *
- * so checking a context element against a context element is just equality.
- *)
 
 and checkElementAgainstElement _ elem1 elem2 =
   let result =

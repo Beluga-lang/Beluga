@@ -8,6 +8,7 @@ module Unify = Unify.StdTrail
 module P = Pretty.Int.DefaultPrinter
 module R = Store.Cid.DefaultRenderer
 module CompS = Store.Cid.Comp
+module Schema = Store.Cid.Schema             
 
 let (dprintf, dprint, dprnt) = Debug.makeFunctions' (Debug.toFlags [11])
 open Debug.Fmt
@@ -332,34 +333,54 @@ let gen_var' loc cD (x, cU) =
 let gen_var loc cD (LF.Decl (x, cU, _, _)) =
   gen_var' loc cD (x, cU)
 
+(*
+gen_meta_obj sW (k, cdecl) = cM
 
 
-let gen_meta_obj (cdecl, theta) k =
+If  cD |- cdecl   where cdecl = clTyp (cU) 
+    k-th position in cD is cdecl (modulo some shifts),
+
+then 
+
+   a) if cU is a schema , then we simply create a CtxVar with the offset k
+
+   b) if cU is a contextual type [cPsi |- _ ] 
+      then
+       cD ; cPsi' |- r : cPsi   where cPsi' is a generalization of th LF context cPsi
+       s.t. cPsi' has schema sW and r is a variable mapping
+
+       and 
+
+       cD ; cPsi' |- cM : cU
+
+ *)
+
+let gen_meta_obj (k, wk) cdecl =
   match cdecl with
   | LF.CTyp (schema_cid) ->
      (Syntax.Loc.ghost, LF.CObj (LF.CtxVar (LF.CtxOffset k)))
   | LF.ClTyp (LF.MTyp tA, cPsi) ->
-     let phat = Context.dctxToHat cPsi in
-     let psihat' = Whnf.cnorm_psihat phat theta in
+     let psihat' = Context.dctxToHat cPsi in
+     (* let psihat' = Whnf.cnorm_psihat phat theta in *)
      (* BP: Generate a substitution from cPsi to padded cPsi that 
             matches the required schema
             [cPsi |- tA]  (from pattern variables in cD)
             
       *) 
-     let mv = LF.MVar (LF.Offset k, Substitution.LF.id) in
+     let mv = LF.MVar (LF.Offset k, wk) in
      let tM = LF.Root (Syntax.Loc.ghost, mv, LF.Nil, Plicity.explicit) in
      (Syntax.Loc.ghost, LF.ClObj (psihat', LF.MObj tM))
 
   | LF.ClTyp (LF.PTyp tA, cPsi) ->
-     let phat = Context.dctxToHat cPsi in
-     let psihat' = Whnf.cnorm_psihat phat theta in
-     let pv = LF.PVar (k, Substitution.LF.id) in
+     let psihat' = Context.dctxToHat cPsi in
+     (* let psihat' = Whnf.cnorm_psihat phat theta in *)
+     let pv = LF.PVar (k, wk) in
      (Syntax.Loc.ghost, LF.ClObj (psihat', LF.PObj pv))
 
   | LF.ClTyp (LF.STyp (_, cPsi), cPhi) ->
-     let sv = LF.SVar (k, 0, Substitution.LF.id) in
-     let phat = Context.dctxToHat cPsi in
-     let psihat' = Whnf.cnorm_psihat phat theta in
+     let sv = LF.SVar (k, 0, wk) in
+     let psihat' = Context.dctxToHat cPsi in
+     (* let psihat' = Whnf.cnorm_psihat phat theta in *)
      (Syntax.Loc.ghost, LF.ClObj (psihat', LF.SObj sv))
 
 let uninstantiated_arg cM =
@@ -398,8 +419,82 @@ let valid_args args =
   | Comp.DC :: _ -> false
   | _ -> true
 
+(* gen_ctx cD ; cPsi sW = cPsi' 
 
-       (* Given i and tau, compute vector V
+If  cD  |- cPsi ctx 
+then 
+   cD |- cPsi' : sW 
+   cD ; cPsi' |- wk : cPsi  
+
+note that wk and cPsi' is not unique in the presence of alternating and overlapping blocks in schema sW 
+ *)
+        
+let gen_ctx cD cPsi sW  = (cPsi , Substitution.LF.id)
+
+       
+(*
+pre_match_gen  cD cPsi cPsi1 = (cPsi', wk)
+
+If 
+
+  cD |- cPsi ctx  and . |- cPsi1 containing references to contextual variables
+
+then 
+
+  cD ; cPsi' |- wk : cPsi (note: the generalization is not necessarily unique depending on the schema sW)
+
+in particular:
+
+
+if cPsi1 = g?, xn:An ... x0:A0 where g? is a reference to a context variable of schema sW then 
+   cPsi' = g, yk:Bk ... y(n+1):B(n+1), yn:Bn, .... y0:B0 s.t. g, yk:Bk ... y(n+1):B(n+1) have schema sW
+   cPsi  = g, yk:Ak, ...y(n+1):A(n+1)m yn:Bn, .... y:B0  
+then
+
+ *)       
+let rec pre_match_gen  cD cPsi cPsi0 = match (cPsi , cPsi0) with
+| (LF.DDec (cPsi, LF.TypDecl (x, tA)), LF.DDec (cPsi0, LF.TypDecl (_, _tA0))) ->
+   let cPsi' , wk = pre_match_gen cD cPsi cPsi0  in
+    (LF.DDec(cPsi' ,  LF.TypDecl (x, tA)), Substitution.LF.dot1 wk)
+| (LF.Null , LF.Null ) -> (LF.Null, Substitution.LF.id)
+| (cPsi , LF.CtxVar (LF.CInst (mmvar (* (n1, ({contents = None} as cvar_ref1), cD1, CTyp schema1, _, _) *), _mid)))
+     when not (LF.is_mmvar_instantiated mmvar)  ->
+   let LF.CTyp (Some sW) = LF.type_of_mmvar_instantiated mmvar   (* sW : cid_schema option *) in
+   let { Schema.Entry.name; schema; decl = _ } = Schema.get sW in
+   gen_ctx cD cPsi schema  (* cD |- cPsi ctx *)                       
+       
+(*
+gen_arg cD (k, cU) cU0 = cM 
+
+if cD |- cU  and k is a position in cD
+    . |- cU0  where cU0 may contain references to contextual variables
+              and cU0 is in normal form 
+then 
+   cD |- cM : cU0 
+       
+If cU / cU0 are contextual types and 
+  cU = [cPsi |- mT] and cU0 = [cPsi0 |- mT0]
+there also exists a variable substitution wk s.t. 
+  cPsi' |- wk : cPsi and a meta-substitution {theta} for all the 
+  references in cU0 s.t. 
+
+  [wk]mT = {theta}mT0 and cPsi' = {theta}cPsi0 
+
+ *)
+let gen_arg cD  (k, cU) cU0 =
+  match cU0 with
+  | LF.CTyp _schema ->
+      (Unify.unifyMetaTyp cD (cU, Whnf.m_id) (cU0, Whnf.m_id);
+       gen_meta_obj (k,Substitution.LF.id) cU)
+  | LF.ClTyp (mT1, cPsi1) ->
+      let LF.ClTyp (LF.MTyp tA, cPsi) = cU in
+      (* find a generalization of cPsi, i.e. cPsi' |- wk : cPsi s.t. cPsi1 unifies with cPsi' *) 
+      let (cPsi', wk) = pre_match_gen cD cPsi cPsi1  in
+      let cU_g =  LF.ClTyp (LF.MTyp(Whnf.normTyp (tA, wk)), cPsi') in           
+      (Unify.unifyMetaTyp cD (cU_g , Whnf.m_id) (cU0, Whnf.m_id);
+       gen_meta_obj (k, wk) cU  (* creates a meta-variable Delta ; cPsi' |- u[wk] : [wk]tA where u::[Psi |- tA] *))
+       
+ (* Given i and tau, compute vector V
    s.t. for all k < i
 
    if k-th position in V = 0 then
@@ -430,27 +525,26 @@ let rec rec_spine cD (k, cU) =
       else
    *)
   | (1, (Comp.TypPiBox (_, (LF.Decl (_, cU', _, _)), tau), theta)) ->
-     
+     let cU0 = Whnf.cnormMTyp (cU', theta) in
+         begin
+           try
+             dprintf (fun p -> p.fmt "Generate Rec. argument\n");
+             let (_, ft) as cM = gen_arg cD  (k, cU) cU0  in
+             dprintf (fun p -> p.fmt  "Generated rec. arg. %a@\n" (P.fmt_ppr_cmp_meta_obj cD P.l0) cM);
+             let (spine, tau_r) = rec_spine cD (k, cU) (0, (tau, LF.MDot (ft, theta))) in
+             (Comp.M cM :: spine, tau_r)
+           with
+           | e ->
+              raise Not_compatible
+         end
+         
+  | (1, (Comp.TypArr (_, Comp.TypBox (loc, LF.ClTyp (LF.MTyp tA', cPsi')), tau), theta)) ->
+     let cPsi0 = Whnf.cnormDCtx (cPsi', theta) in
+     let tA0   = Whnf.cnormTyp (tA', theta) in 
+     let cU' = LF.ClTyp (LF.MTyp tA0, cPsi0) in 
      begin
        try
-         (*print_string ("rec_spine: Unify " ^ P.cdeclToString cD cdecl ^
-           "  with " ^ P.cdeclToString cD (Whnf.cnormCDecl (cdecl, theta)) ^ "\n");*)
-         Unify.unifyMetaTyp cD (cU, Whnf.m_id) (cU', theta);
-         let cM = gen_meta_obj (cU, LF.MShift 0)  k in
-         let (_, ft) = cM in
-         let (spine, tau_r) = rec_spine cD (k, cU) (0, (tau, LF.MDot (ft, theta))) in
-         (Comp.M cM :: spine, tau_r)
-       with
-       | e ->
-          raise Not_compatible
-     end
-
-  | (1, (Comp.TypArr (_, Comp.TypBox (loc, LF.ClTyp (LF.MTyp tA, cPsi)), tau), theta)) ->
-     let cU' = LF.ClTyp (LF.MTyp tA, cPsi) in
-     begin
-       try
-         Unify.unifyMetaTyp cD (cU, Whnf.m_id) (cU', theta);
-         let cM = gen_meta_obj (cU, LF.MShift 0)  k in 
+         let cM = gen_arg cD (k, cU) cU' in
          let (spine, tau_r) = rec_spine cD (k, cU) (0, (tau, theta)) in
          (Comp.M cM :: spine, tau_r)
        with
@@ -529,7 +623,6 @@ let rec gen_rec_calls cD cIH (cD', j) mfs =
      gen_rec_calls cD cIH (cD', j + 1) mfs
 
   | LF.Dec (cD', LF.Decl (u, cU, plicity, inductivity)) ->
-     (* let cM = gen_meta_obj (cU, LF.MShift (j + 1)) (j + 1) in *)
      let k = j + 1 in 
      let cU' = Whnf.cnormMTyp (cU, LF.MShift (j + 1)) in
      let mf_list = get_order mfs in

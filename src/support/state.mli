@@ -11,9 +11,19 @@ module type STATE = sig
   (** Replace the state inside the monad. *)
   val put : state -> unit t
 
-  (** [run a ~init] runs [a] with initial state [~init], returning
-      [(final, v)] where [final] is the final state and [v] is the output. *)
-  val run : 'a t -> init:state -> state * 'a
+  (** Modify the state inside the monad. *)
+  val modify : (state -> state) -> unit t
+
+  (** [run a init] runs [a] with initial state [init], returning [(final, v)]
+      where [final] is the final state and [v] is the output. *)
+  val run : 'a t -> state -> state * 'a
+
+  (** [eval a init] is [run a init], but outputs only [v]. *)
+  val eval : 'a t -> state -> 'a
+
+  (** [locally f m a init] runs [a] with state [f init] and returns
+      [(init, v)] where [v] is the output from running [a]. *)
+  val locally : (state -> state) -> 'a t -> 'a t
 
   (** {1 Instances} *)
 

@@ -113,8 +113,8 @@ struct
   let parse_only parser disambiguator state =
     let only_parser = Common_parser.only parser in
     let state', parsed = parse state (Common_parser.run_exn only_parser) in
-    let _state'', disambiguated =
-      disambiguate' state' (fun state -> disambiguator state parsed)
+    let _state'', (_disambiguation_state', disambiguated) =
+      disambiguate' state' (disambiguator parsed)
     in
     disambiguated
 

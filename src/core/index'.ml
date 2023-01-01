@@ -19,10 +19,6 @@ end) =
 struct
   include State.Make (Indexing_state)
 
-  let locally f m s =
-    let s' = f s in
-    m s'
-
   let fresh_identifier = get $> Indexing_state.fresh_identifier
 
   let fresh_identifier_opt identifier_opt =

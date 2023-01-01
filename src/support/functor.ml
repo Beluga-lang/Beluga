@@ -17,7 +17,7 @@ module Make (M : Monad.MONAD) : FUNCTOR with type 'a t = 'a M.t = struct
 
   let[@inline] ( $> ) a f = map f a
 
-  let ( let+ ) a f = map f a
+  let[@inline] ( let+ ) a f = map f a
 
   let ( and+ ) = ( and* )
 end

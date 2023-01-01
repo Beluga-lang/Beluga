@@ -121,9 +121,9 @@ let rec drop n = function
   | [] -> []
   | _ :: xs (* n > 0 *) -> drop (n - 1) xs
 
-let ap xs = map2 (fun x f -> f x) xs
+let ap xs fs = map2 Fun.apply xs fs
 
-let ap_one x = map (fun f -> f x)
+let flap x fs = map (Fun.apply x) fs
 
 let split l =
   let rec split l return =

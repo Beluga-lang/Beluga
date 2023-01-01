@@ -206,8 +206,8 @@ val combine : 'a t -> 'b t -> ('a * 'b) t
       if the two lists are determined to have different lengths. *)
 val ap : 'a t -> ('a -> 'b) t -> 'b t
 
-(** [ap_one x (f1, \[f2; ...; fn\])] is [(f1 x, \[f2 x; ...; fn x\])]. *)
-val ap_one : 'a -> ('a -> 'b) t -> 'b t
+(** [flap x (f1, \[f2; ...; fn\])] is [(f1 x, \[f2 x; ...; fn x\])]. *)
+val flap : 'a -> ('a -> 'b) t -> 'b t
 
 (** {1 Printing} *)
 

@@ -47,38 +47,38 @@ module type SIGNATURE_DISAMBIGUATION = sig
   (** {1 Disambiguation} *)
 
   val disambiguate_as_pragma :
-       disambiguation_state
-    -> Synprs.signature_pragma
+       Synprs.signature_pragma
+    -> disambiguation_state
     -> disambiguation_state * Synext.signature_pragma
 
   val disambiguate_as_global_pragma :
-       disambiguation_state
-    -> Synprs.signature_global_pragma
+       Synprs.signature_global_pragma
+    -> disambiguation_state
     -> disambiguation_state * Synext.signature_global_pragma
 
   val disambiguate_as_totality_declaration :
-       disambiguation_state
-    -> Synprs.signature_totality_declaration
-    -> Synext.signature_totality_declaration
+       Synprs.signature_totality_declaration
+    -> disambiguation_state
+    -> disambiguation_state * Synext.signature_totality_declaration
 
   val disambiguate_as_numeric_totality_order :
-       disambiguation_state
-    -> Int.t Synprs.signature_totality_order
-    -> Int.t Synext.signature_totality_order
+       Int.t Synprs.signature_totality_order
+    -> disambiguation_state
+    -> disambiguation_state * Int.t Synext.signature_totality_order
 
   val disambiguate_as_named_totality_order :
-       disambiguation_state
-    -> Identifier.t Synprs.signature_totality_order
-    -> Identifier.t Synext.signature_totality_order
+       Identifier.t Synprs.signature_totality_order
+    -> disambiguation_state
+    -> disambiguation_state * Identifier.t Synext.signature_totality_order
 
   val disambiguate_as_declaration :
-       disambiguation_state
-    -> Synprs.signature_declaration
+       Synprs.signature_declaration
+    -> disambiguation_state
     -> disambiguation_state * Synext.signature_declaration
 
   val disambiguate_as_signature :
-       disambiguation_state
-    -> Synprs.signature
+       Synprs.signature
+    -> disambiguation_state
     -> disambiguation_state * Synext.signature
 end
 
@@ -111,6 +111,8 @@ struct
   type disambiguation_state = Disambiguation_state.t
 
   type disambiguation_state_entry = Disambiguation_state.entry
+
+  include State.Make (Disambiguation_state)
 
   (** {1 Exceptions} *)
 
@@ -527,141 +529,158 @@ struct
 
   (** {1 Disambiguation} *)
 
-  let rec disambiguate_as_pragma state pragma =
+  let rec disambiguate_as_pragma pragma =
     match pragma with
     | Synprs.Signature.Pragma.Name
         { location; constant; meta_variable_base; computation_variable_base }
       ->
-        let pragma' =
-          Synext.Signature.Pragma.Name
-            { location
-            ; constant
-            ; meta_variable_base
-            ; computation_variable_base
-            }
-        in
-        (state, pragma')
+        return
+          (Synext.Signature.Pragma.Name
+             { location
+             ; constant
+             ; meta_variable_base
+             ; computation_variable_base
+             })
     | Synprs.Signature.Pragma.Default_associativity
         { location; associativity } ->
-        let pragma' =
-          Synext.Signature.Pragma.Default_associativity
-            { location; associativity }
-        and state' =
-          Disambiguation_state.set_default_associativity associativity state
+        let* () =
+          modify
+            (Disambiguation_state.set_default_associativity associativity)
         in
-        (state', pragma')
+        return
+          (Synext.Signature.Pragma.Default_associativity
+             { location; associativity })
     | Synprs.Signature.Pragma.Prefix_fixity
         { location; constant; precedence } ->
-        let state' = make_operator_prefix ?precedence constant state
-        and pragma' =
-          Synext.Signature.Pragma.Prefix_fixity
-            { location; constant; precedence }
-        in
-        (state', pragma')
+        let* () = modify (make_operator_prefix ?precedence constant) in
+        return
+          (Synext.Signature.Pragma.Prefix_fixity
+             { location; constant; precedence })
     | Synprs.Signature.Pragma.Infix_fixity
         { location; constant; precedence; associativity } ->
-        let state' =
-          make_operator_infix ?precedence ?associativity constant state
-        and pragma' =
-          Synext.Signature.Pragma.Infix_fixity
-            { location; constant; precedence; associativity }
+        let* () =
+          modify (make_operator_infix ?precedence ?associativity constant)
         in
-        (state', pragma')
+        return
+          (Synext.Signature.Pragma.Infix_fixity
+             { location; constant; precedence; associativity })
     | Synprs.Signature.Pragma.Postfix_fixity
         { location; constant; precedence } ->
-        let state' = make_operator_postfix ?precedence constant state
-        and pragma' =
-          Synext.Signature.Pragma.Postfix_fixity
-            { location; constant; precedence }
-        in
-        (state', pragma')
+        let* () = modify (make_operator_postfix ?precedence constant) in
+        return
+          (Synext.Signature.Pragma.Postfix_fixity
+             { location; constant; precedence })
     | Synprs.Signature.Pragma.Not { location } ->
-        let pragma' = Synext.Signature.Pragma.Not { location } in
-        (state, pragma')
+        return (Synext.Signature.Pragma.Not { location })
     | Synprs.Signature.Pragma.Open_module { location; module_identifier } ->
-        let state' = open_module module_identifier state
-        and pragma' =
-          Synext.Signature.Pragma.Open_module { location; module_identifier }
-        in
-        (state', pragma')
+        let* () = modify (open_module module_identifier) in
+        return
+          (Synext.Signature.Pragma.Open_module
+             { location; module_identifier })
     | Synprs.Signature.Pragma.Abbreviation
         { location; module_identifier; abbreviation } ->
-        let state' =
-          add_module_abbreviation module_identifier abbreviation state
-        and pragma' =
-          Synext.Signature.Pragma.Abbreviation
-            { location; module_identifier; abbreviation }
+        let* () =
+          modify (add_module_abbreviation module_identifier abbreviation)
         in
-        (state', pragma')
+        return
+          (Synext.Signature.Pragma.Abbreviation
+             { location; module_identifier; abbreviation })
 
-  and disambiguate_as_global_pragma state global_pragma =
+  and disambiguate_as_global_pragma global_pragma =
     match global_pragma with
     | Synprs.Signature.Pragma.Global.No_strengthening { location } ->
-        let pragma' =
-          Synext.Signature.Pragma.Global.No_strengthening { location }
-        in
-        (state, pragma')
+        return (Synext.Signature.Pragma.Global.No_strengthening { location })
     | Synprs.Signature.Pragma.Global.Coverage { location; variant } ->
-        let pragma' =
-          Synext.Signature.Pragma.Global.Coverage { location; variant }
-        in
-        (state, pragma')
+        return
+          (Synext.Signature.Pragma.Global.Coverage { location; variant })
 
-  and disambiguate_as_totality_declaration state totality_declaration =
+  and disambiguate_as_totality_declaration totality_declaration =
     match totality_declaration with
     | Synprs.Signature.Totality.Declaration.Trust { location } ->
-        Synext.Signature.Totality.Declaration.Trust { location }
+        return (Synext.Signature.Totality.Declaration.Trust { location })
     | Synprs.Signature.Totality.Declaration.Numeric { location; order } ->
-        let order' =
-          Option.map (disambiguate_as_numeric_totality_order state) order
+        let* order' =
+          match order with
+          | Option.None -> return Option.none
+          | Option.Some order ->
+              let* order' = disambiguate_as_numeric_totality_order order in
+              return (Option.some order')
         in
-        Synext.Signature.Totality.Declaration.Numeric
-          { location; order = order' }
+        return
+          (Synext.Signature.Totality.Declaration.Numeric
+             { location; order = order' })
     | Synprs.Signature.Totality.Declaration.Named
         { location; order; program; argument_labels } ->
-        let order' =
-          Option.map (disambiguate_as_named_totality_order state) order
+        let* order' =
+          match order with
+          | Option.None -> return Option.none
+          | Option.Some order ->
+              let* order' = disambiguate_as_named_totality_order order in
+              return (Option.some order')
         in
-        Synext.Signature.Totality.Declaration.Named
-          { location; order = order'; program; argument_labels }
+        return
+          (Synext.Signature.Totality.Declaration.Named
+             { location; order = order'; program; argument_labels })
 
-  and disambiguate_as_numeric_totality_order state totality_order =
+  and disambiguate_as_numeric_totality_order totality_order =
     match totality_order with
     | Synprs.Signature.Totality.Order.Argument { location; argument } ->
-        Synext.Signature.Totality.Order.Argument { location; argument }
+        return
+          (Synext.Signature.Totality.Order.Argument { location; argument })
     | Synprs.Signature.Totality.Order.Lexical_ordering
         { location; arguments } ->
+        get >>= fun state ->
         let arguments' =
-          List1.map (disambiguate_as_numeric_totality_order state) arguments
+          List1.map
+            (fun argument ->
+              eval (disambiguate_as_numeric_totality_order argument) state)
+            arguments
         in
-        Synext.Signature.Totality.Order.Lexical_ordering
-          { location; arguments = arguments' }
+        return
+          (Synext.Signature.Totality.Order.Lexical_ordering
+             { location; arguments = arguments' })
     | Synprs.Signature.Totality.Order.Simultaneous_ordering
         { location; arguments } ->
+        get >>= fun state ->
         let arguments' =
-          List1.map (disambiguate_as_numeric_totality_order state) arguments
+          List1.map
+            (fun argument ->
+              eval (disambiguate_as_numeric_totality_order argument) state)
+            arguments
         in
-        Synext.Signature.Totality.Order.Simultaneous_ordering
-          { location; arguments = arguments' }
+        return
+          (Synext.Signature.Totality.Order.Simultaneous_ordering
+             { location; arguments = arguments' })
 
-  and disambiguate_as_named_totality_order state totality_order =
+  and disambiguate_as_named_totality_order totality_order =
     match totality_order with
     | Synprs.Signature.Totality.Order.Argument { location; argument } ->
-        Synext.Signature.Totality.Order.Argument { location; argument }
+        return
+          (Synext.Signature.Totality.Order.Argument { location; argument })
     | Synprs.Signature.Totality.Order.Lexical_ordering
         { location; arguments } ->
+        get >>= fun state ->
         let arguments' =
-          List1.map (disambiguate_as_named_totality_order state) arguments
+          List1.map
+            (fun argument ->
+              eval (disambiguate_as_named_totality_order argument) state)
+            arguments
         in
-        Synext.Signature.Totality.Order.Lexical_ordering
-          { location; arguments = arguments' }
+        return
+          (Synext.Signature.Totality.Order.Lexical_ordering
+             { location; arguments = arguments' })
     | Synprs.Signature.Totality.Order.Simultaneous_ordering
         { location; arguments } ->
+        get >>= fun state ->
         let arguments' =
-          List1.map (disambiguate_as_named_totality_order state) arguments
+          List1.map
+            (fun argument ->
+              eval (disambiguate_as_named_totality_order argument) state)
+            arguments
         in
-        Synext.Signature.Totality.Order.Simultaneous_ordering
-          { location; arguments = arguments' }
+        return
+          (Synext.Signature.Totality.Order.Simultaneous_ordering
+             { location; arguments = arguments' })
 
   (** [disambiguate_as_recursive_declarations declarations state] is
       [(state', declarations')] where [declarations'] is [declarations]
@@ -690,46 +709,44 @@ struct
         let _states', declarations' =
           declarations
           |> List1.map (fun declaration ->
-                 disambiguate_as_declaration state' declaration)
+                 disambiguate_as_declaration declaration state')
           |> List1.split
         in
         (state', declarations')
 
-  and disambiguate_as_declaration state declaration =
+  and disambiguate_as_declaration declaration =
     match declaration with
     | Synprs.Signature.Declaration.Raw_lf_typ_or_term_constant
         { location; identifier; typ_or_const }
     (* Old style LF type or term constant declaration *) -> (
         try
-          let kind' =
-            LF_disambiguation.disambiguate_as_kind state typ_or_const
-          in
+          let* kind' = LF_disambiguation.disambiguate_as_kind typ_or_const in
           let explicit_arguments = explicit_arguments_lf_kind' kind' in
-          let state' =
-            Disambiguation_state.add_prefix_lf_type_constant
-              ~arity:explicit_arguments ~precedence:default_precedence
-              identifier state
-          and declaration' =
-            Synext.Signature.Declaration.Typ
-              { location; identifier; kind = kind' }
+          let* () =
+            modify
+              (Disambiguation_state.add_prefix_lf_type_constant
+                 ~arity:explicit_arguments ~precedence:default_precedence
+                 identifier)
           in
-          (state', declaration')
+          return
+            (Synext.Signature.Declaration.Typ
+               { location; identifier; kind = kind' })
         with
         | typ_exn -> (
             try
-              let typ' =
-                LF_disambiguation.disambiguate_as_typ state typ_or_const
+              let* typ' =
+                LF_disambiguation.disambiguate_as_typ typ_or_const
               in
               let explicit_arguments = explicit_arguments_lf_typ' typ' in
-              let state' =
-                Disambiguation_state.add_prefix_lf_term_constant
-                  ~arity:explicit_arguments ~precedence:default_precedence
-                  identifier state
-              and declaration' =
-                Synext.Signature.Declaration.Const
-                  { location; identifier; typ = typ' }
+              let* () =
+                modify
+                  (Disambiguation_state.add_prefix_lf_term_constant
+                     ~arity:explicit_arguments ~precedence:default_precedence
+                     identifier)
               in
-              (state', declaration')
+              return
+                (Synext.Signature.Declaration.Const
+                   { location; identifier; typ = typ' })
             with
             | const_exn ->
                 if typ_exn <> const_exn then
@@ -746,192 +763,190 @@ struct
         )
     | Synprs.Signature.Declaration.Raw_lf_typ_constant
         { location; identifier; kind } ->
-        let kind' = LF_disambiguation.disambiguate_as_kind state kind in
+        let* kind' = LF_disambiguation.disambiguate_as_kind kind in
         let explicit_arguments = explicit_arguments_lf_kind' kind' in
-        let state' =
-          Disambiguation_state.add_prefix_lf_type_constant
-            ~arity:explicit_arguments ~precedence:default_precedence
-            identifier state
-        and declaration' =
-          Synext.Signature.Declaration.Typ
-            { location; identifier; kind = kind' }
+        let* () =
+          modify
+            (Disambiguation_state.add_prefix_lf_type_constant
+               ~arity:explicit_arguments ~precedence:default_precedence
+               identifier)
         in
-        (state', declaration')
+        return
+          (Synext.Signature.Declaration.Typ
+             { location; identifier; kind = kind' })
     | Synprs.Signature.Declaration.Raw_lf_term_constant
         { location; identifier; typ } ->
-        let typ' = LF_disambiguation.disambiguate_as_typ state typ in
+        let* typ' = LF_disambiguation.disambiguate_as_typ typ in
         let explicit_arguments = explicit_arguments_lf_typ' typ' in
-        let state' =
-          Disambiguation_state.add_prefix_lf_term_constant
-            ~arity:explicit_arguments ~precedence:default_precedence
-            identifier state
-        and declaration' =
-          Synext.Signature.Declaration.Const
-            { location; identifier; typ = typ' }
+        let* () =
+          modify
+            (Disambiguation_state.add_prefix_lf_term_constant
+               ~arity:explicit_arguments ~precedence:default_precedence
+               identifier)
         in
-        (state', declaration')
+        return
+          (Synext.Signature.Declaration.Const
+             { location; identifier; typ = typ' })
     | Synprs.Signature.Declaration.Raw_comp_typ_constant
         { location; identifier; kind; datatype_flavour } ->
-        let kind' = Comp_disambiguation.disambiguate_as_kind state kind in
+        let* kind' = Comp_disambiguation.disambiguate_as_kind kind in
         let explicit_arguments = explicit_arguments_comp_kind' kind' in
-        let state' =
-          Disambiguation_state.add_prefix_computation_type_constant
-            ~arity:explicit_arguments ~precedence:default_precedence
-            identifier state
-        and declaration' =
-          Synext.Signature.Declaration.CompTyp
-            { location; identifier; kind = kind'; datatype_flavour }
+        let* () =
+          modify
+            (Disambiguation_state.add_prefix_computation_type_constant
+               ~arity:explicit_arguments ~precedence:default_precedence
+               identifier)
         in
-        (state', declaration')
+        return
+          (Synext.Signature.Declaration.CompTyp
+             { location; identifier; kind = kind'; datatype_flavour })
     | Synprs.Signature.Declaration.Raw_comp_cotyp_constant
         { location; identifier; kind } ->
-        let kind' = Comp_disambiguation.disambiguate_as_kind state kind in
+        let* kind' = Comp_disambiguation.disambiguate_as_kind kind in
         let explicit_arguments = explicit_arguments_comp_kind' kind' in
-        let state' =
-          Disambiguation_state.add_prefix_computation_cotype_constant
-            ~arity:explicit_arguments ~precedence:default_precedence
-            identifier state
-        and declaration' =
-          Synext.Signature.Declaration.CompCotyp
-            { location; identifier; kind = kind' }
+        let* () =
+          modify
+            (Disambiguation_state.add_prefix_computation_cotype_constant
+               ~arity:explicit_arguments ~precedence:default_precedence
+               identifier)
         in
-        (state', declaration')
+        return
+          (Synext.Signature.Declaration.CompCotyp
+             { location; identifier; kind = kind' })
     | Synprs.Signature.Declaration.Raw_comp_expression_constructor
         { location; identifier; typ } ->
-        let typ' = Comp_disambiguation.disambiguate_as_typ state typ in
+        let* typ' = Comp_disambiguation.disambiguate_as_typ typ in
         let explicit_arguments = explicit_arguments_comp_typ' typ' in
-        let state' =
-          Disambiguation_state.add_prefix_computation_term_constructor
-            ~arity:explicit_arguments ~precedence:default_precedence
-            identifier state
-        and declaration' =
-          Synext.Signature.Declaration.CompConst
-            { location; identifier; typ = typ' }
+        let* () =
+          modify
+            (Disambiguation_state.add_prefix_computation_term_constructor
+               ~arity:explicit_arguments ~precedence:default_precedence
+               identifier)
         in
-        (state', declaration')
+        return
+          (Synext.Signature.Declaration.CompConst
+             { location; identifier; typ = typ' })
     | Synprs.Signature.Declaration.Raw_comp_expression_destructor
         { location; identifier; observation_type; return_type } ->
-        let observation_type' =
-          Comp_disambiguation.disambiguate_as_typ state observation_type
-        and return_type' =
-          Comp_disambiguation.disambiguate_as_typ state return_type
+        let* observation_type' =
+          Comp_disambiguation.disambiguate_as_typ observation_type
         in
-        let state' =
-          Disambiguation_state.add_computation_term_destructor identifier
-            state
-        and declaration' =
-          Synext.Signature.Declaration.CompDest
-            { location
-            ; identifier
-            ; observation_type = observation_type'
-            ; return_type = return_type'
-            }
+        let* return_type' =
+          Comp_disambiguation.disambiguate_as_typ return_type
         in
-        (state', declaration')
+        let* () =
+          modify
+            (Disambiguation_state.add_computation_term_destructor identifier)
+        in
+        return
+          (Synext.Signature.Declaration.CompDest
+             { location
+             ; identifier
+             ; observation_type = observation_type'
+             ; return_type = return_type'
+             })
     | Synprs.Signature.Declaration.Raw_comp_typ_abbreviation
         { location; identifier; kind; typ } ->
-        let kind' = Comp_disambiguation.disambiguate_as_kind state kind
-        and typ' = Comp_disambiguation.disambiguate_as_typ state typ in
+        let* kind' = Comp_disambiguation.disambiguate_as_kind kind in
+        let* typ' = Comp_disambiguation.disambiguate_as_typ typ in
         let explicit_arguments = explicit_arguments_comp_kind' kind' in
-        let state' =
-          Disambiguation_state.add_prefix_computation_type_constant
-            ~arity:explicit_arguments ~precedence:default_precedence
-            identifier state
-        and declaration' =
-          Synext.Signature.Declaration.CompTypAbbrev
-            { location; identifier; kind = kind'; typ = typ' }
+        let* () =
+          modify
+            (Disambiguation_state.add_prefix_computation_type_constant
+               ~arity:explicit_arguments ~precedence:default_precedence
+               identifier)
         in
-        (state', declaration')
+        return
+          (Synext.Signature.Declaration.CompTypAbbrev
+             { location; identifier; kind = kind'; typ = typ' })
     | Synprs.Signature.Declaration.Raw_schema
         { location; identifier; schema } ->
-        let schema' =
-          Meta_disambiguation.disambiguate_as_schema state schema
+        let* schema' = Meta_disambiguation.disambiguate_as_schema schema in
+        let* () =
+          modify (Disambiguation_state.add_schema_constant identifier)
         in
-        let state' =
-          Disambiguation_state.add_schema_constant identifier state
-        and declaration' =
-          Synext.Signature.Declaration.Schema
-            { location; identifier; schema = schema' }
-        in
-        (state', declaration')
+        return
+          (Synext.Signature.Declaration.Schema
+             { location; identifier; schema = schema' })
     | Synprs.Signature.Declaration.Raw_pragma { location; pragma } ->
-        let state', pragma' = disambiguate_as_pragma state pragma in
-        let declaration' =
-          Synext.Signature.Declaration.Pragma { location; pragma = pragma' }
-        in
-        (state', declaration')
+        let* pragma' = disambiguate_as_pragma pragma in
+        return
+          (Synext.Signature.Declaration.Pragma { location; pragma = pragma' })
     | Synprs.Signature.Declaration.Raw_global_pragma { location; pragma } ->
-        let state', pragma' = disambiguate_as_global_pragma state pragma in
-        let declaration' =
-          Synext.Signature.Declaration.GlobalPragma
-            { location; pragma = pragma' }
-        in
-        (state', declaration')
+        let* pragma' = disambiguate_as_global_pragma pragma in
+        return
+          (Synext.Signature.Declaration.GlobalPragma
+             { location; pragma = pragma' })
     | Synprs.Signature.Declaration.Raw_recursive_declarations
         { location; declarations } ->
-        let state', declarations' =
-          disambiguate_as_recursive_declarations declarations state
+        let* declarations' =
+          disambiguate_as_recursive_declarations declarations
         in
-        let declaration' =
-          Synext.Signature.Declaration.Recursive_declarations
-            { location; declarations = declarations' }
-        in
-        (state', declaration')
+        return
+          (Synext.Signature.Declaration.Recursive_declarations
+             { location; declarations = declarations' })
     | Synprs.Signature.Declaration.Raw_theorem
         { location; identifier; typ; order; body } ->
-        let typ' = Comp_disambiguation.disambiguate_as_typ state typ
-        and order' =
-          Option.map (disambiguate_as_totality_declaration state) order
-        and body' =
-          Comp_disambiguation.disambiguate_as_expression state body
+        let* typ' = Comp_disambiguation.disambiguate_as_typ typ in
+        let* order' =
+          match order with
+          | Option.None -> return Option.none
+          | Option.Some order ->
+              let* order' = disambiguate_as_totality_declaration order in
+              return (Option.some order')
         in
-        let state' =
-          Disambiguation_state.add_computation_variable identifier state
-        and declaration' =
-          Synext.Signature.Declaration.Theorem
-            { location
-            ; identifier
-            ; typ = typ'
-            ; order = order'
-            ; body = body'
-            }
+        let* body' = Comp_disambiguation.disambiguate_as_expression body in
+        let* () =
+          modify (Disambiguation_state.add_computation_variable identifier)
         in
-        (state', declaration')
+        return
+          (Synext.Signature.Declaration.Theorem
+             { location
+             ; identifier
+             ; typ = typ'
+             ; order = order'
+             ; body = body'
+             })
     | Synprs.Signature.Declaration.Raw_proof
         { location; identifier; typ; order; body } ->
-        let typ' = Comp_disambiguation.disambiguate_as_typ state typ
-        and order' =
-          Option.map (disambiguate_as_totality_declaration state) order
-        and body' =
-          Harpoon_disambiguation.disambiguate_as_proof state body
+        let* typ' = Comp_disambiguation.disambiguate_as_typ typ in
+        let* order' =
+          match order with
+          | Option.None -> return Option.none
+          | Option.Some order ->
+              let* order' = disambiguate_as_totality_declaration order in
+              return (Option.some order')
         in
-        let state' =
-          Disambiguation_state.add_computation_variable identifier state
-        and declaration' =
-          Synext.Signature.Declaration.Proof
-            { location
-            ; identifier
-            ; typ = typ'
-            ; order = order'
-            ; body = body'
-            }
+        let* body' = Harpoon_disambiguation.disambiguate_as_proof body in
+        let* () =
+          modify (Disambiguation_state.add_computation_variable identifier)
         in
-        (state', declaration')
+        return
+          (Synext.Signature.Declaration.Proof
+             { location
+             ; identifier
+             ; typ = typ'
+             ; order = order'
+             ; body = body'
+             })
     | Synprs.Signature.Declaration.Raw_val
         { location; identifier; typ; expression } ->
-        let typ' =
-          Option.map (Comp_disambiguation.disambiguate_as_typ state) typ
+        let* typ' =
+          match typ with
+          | Option.None -> return Option.none
+          | Option.Some typ ->
+              let* typ' = Comp_disambiguation.disambiguate_as_typ typ in
+              return (Option.some typ')
         in
-        let expression' =
-          Comp_disambiguation.disambiguate_as_expression state expression
+        let* expression' =
+          Comp_disambiguation.disambiguate_as_expression expression
         in
-        let state' =
-          Disambiguation_state.add_computation_variable identifier state
-        and declaration' =
-          Synext.Signature.Declaration.Val
-            { location; identifier; typ = typ'; expression = expression' }
+        let* () =
+          modify (Disambiguation_state.add_computation_variable identifier)
         in
-        (state', declaration')
+        return
+          (Synext.Signature.Declaration.Val
+             { location; identifier; typ = typ'; expression = expression' })
     | Synprs.Signature.Declaration.Raw_query
         { location
         ; identifier
@@ -940,26 +955,29 @@ struct
         ; expected_solutions
         ; maximum_tries
         } ->
-        let state', meta_context' =
-          Meta_disambiguation.disambiguate_as_meta_context state meta_context
+        get >>= fun state ->
+        let* meta_context' =
+          Meta_disambiguation.disambiguate_as_meta_context meta_context
         in
-        let typ' = LF_disambiguation.disambiguate_as_typ state' typ in
-        let state' =
+        let* typ' = LF_disambiguation.disambiguate_as_typ typ in
+        let* () =
+          put state (* Discard bindings introduced by [meta_context'] *)
+        in
+        let* () =
           match identifier with
           | Option.Some identifier ->
-              Disambiguation_state.add_query identifier state
-          | Option.None -> state
-        and declaration' =
-          Synext.Signature.Declaration.Query
-            { location
-            ; identifier
-            ; meta_context = meta_context'
-            ; typ = typ'
-            ; expected_solutions
-            ; maximum_tries
-            }
+              modify (Disambiguation_state.add_query identifier)
+          | Option.None -> return ()
         in
-        (state', declaration')
+        return
+          (Synext.Signature.Declaration.Query
+             { location
+             ; identifier
+             ; meta_context = meta_context'
+             ; typ = typ'
+             ; expected_solutions
+             ; maximum_tries
+             })
     | Synprs.Signature.Declaration.Raw_mquery
         { location
         ; typ
@@ -968,34 +986,27 @@ struct
         ; search_tries
         ; search_depth
         } ->
-        let typ' = Comp_disambiguation.disambiguate_as_typ state typ in
-        let state' =
+        let* typ' = Comp_disambiguation.disambiguate_as_typ typ in
+        let* () =
           match identifier with
           | Option.Some identifier ->
-              Disambiguation_state.add_mquery identifier state
-          | Option.None -> state
-        and declaration' =
-          Synext.Signature.Declaration.MQuery
-            { location
-            ; identifier
-            ; typ = typ'
-            ; expected_solutions
-            ; search_tries
-            ; search_depth
-            }
+              modify (Disambiguation_state.add_mquery identifier)
+          | Option.None -> return ()
         in
-        (state', declaration')
+        return
+          (Synext.Signature.Declaration.MQuery
+             { location
+             ; identifier
+             ; typ = typ'
+             ; expected_solutions
+             ; search_tries
+             ; search_depth
+             })
     | Synprs.Signature.Declaration.Raw_module
         { location; identifier; declarations } ->
         (* Disambiguate inner declarations as if they were outside the
            module. *)
-        let _state', declarations' =
-          disambiguate_as_signature state declarations
-        in
-        let declaration' =
-          Synext.Signature.Declaration.Module
-            { location; identifier; declarations = declarations' }
-        in
+        let* declarations' = disambiguate_as_signature declarations in
         (* Collect the disambiguated inner declarations. *)
         let sub_state =
           List.fold_left
@@ -1006,17 +1017,17 @@ struct
         in
         (* Add the disambiguated inner declarations as nested in the
            module. *)
-        let state' =
-          Disambiguation_state.add_module
-            (Disambiguation_state.get_bindings sub_state)
-            identifier state
+        let* () =
+          modify
+            (Disambiguation_state.add_module
+               (Disambiguation_state.get_bindings sub_state)
+               identifier)
         in
-        (state', declaration')
+        return
+          (Synext.Signature.Declaration.Module
+             { location; identifier; declarations = declarations' })
     | Synprs.Signature.Declaration.Raw_comment { location; content } ->
-        let declaration' =
-          Synext.Signature.Declaration.Comment { location; content }
-        in
-        (state, declaration')
+        return (Synext.Signature.Declaration.Comment { location; content })
 
   (** [disambiguate_as_signature state signature] is [state', signature'],
       where [signature'] is [signature] disambiguated with respect to
@@ -1033,12 +1044,12 @@ struct
 
       The very last [state'] after disambiguating an entire Beluga project
       may be discarded. *)
-  and disambiguate_as_signature state declarations =
+  and disambiguate_as_signature declarations state =
     let state', declarations_rev' =
       List.fold_left
         (fun (state, declarations_rev') declaration ->
           let state', declaration' =
-            disambiguate_as_declaration state declaration
+            disambiguate_as_declaration declaration state
           in
           (state', declaration' :: declarations_rev'))
         (state, []) declarations

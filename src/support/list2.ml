@@ -24,7 +24,9 @@ let to_list (T (x1, x2, xs)) = x1 :: x2 :: xs
 
 let of_list = function
   | x1 :: x2 :: xs -> Option.some (T (x1, x2, xs))
-  | _ :: _ | [] -> Option.none
+  | _ :: _
+  | [] ->
+      Option.none
 
 let to_list1 (T (x1, x2, xs)) = List1.from x1 (x2 :: xs)
 
@@ -60,9 +62,9 @@ let mapi =
     match l with
     | [] -> return []
     | x :: xs ->
-      mapi (i + 1) f xs (fun ys ->
-          let y = f i x in
-          return (y :: ys))
+        mapi (i + 1) f xs (fun ys ->
+            let y = f i x in
+            return (y :: ys))
   in
   fun f (T (x0, x1, xs)) ->
     let y0 = f 0 x0 in
@@ -78,9 +80,9 @@ let mapi2 =
     match (l1, l2) with
     | [], [] -> return []
     | x :: xs, y :: ys ->
-      mapi2 (index + 1) f xs ys (fun zs ->
-          let z = f index x y in
-          return (z :: zs))
+        mapi2 (index + 1) f xs ys (fun zs ->
+            let z = f index x y in
+            return (z :: zs))
     | _ -> raise (Invalid_argument "List2.mapi2")
   in
   fun f (T (x1, x2, xs)) (T (y1, y2, ys)) ->
@@ -138,9 +140,9 @@ let split (T ((x1, y1), (x2, y2), t)) =
 let combine (T (x1, x2, xs)) (T (y1, y2, ys)) =
   T ((x1, y1), (x2, y2), List.combine xs ys)
 
-let ap xs = map2 Fun.apply xs
+let ap xs fs = map2 Fun.apply xs fs
 
-let ap_one x = map (Fun.apply x)
+let flap x fs = map (Fun.apply x) fs
 
 let pp ?(pp_sep = Format.pp_print_cut) pp_v ppf (T (x1, x2, t)) =
   pp_v ppf x1;

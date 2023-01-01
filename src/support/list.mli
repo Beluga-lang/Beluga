@@ -108,8 +108,8 @@ val drop : int -> 'a list -> 'a list
       if the two lists are determined to have different lengths. *)
 val ap : 'a list -> ('a -> 'b) list -> 'b list
 
-(** [ap_one x \[f1; f2; ...; fn\]] is [\[f1 x; f2 x; ...; fn x\]]. *)
-val ap_one : 'a -> ('a -> 'b) list -> 'b list
+(** [flap x \[f1; f2; ...; fn\]] is [\[f1 x; f2 x; ...; fn x\]]. *)
+val flap : 'a -> ('a -> 'b) list -> 'b list
 
 (** Transform a list of pairs into a pair of lists:
     [split \[(a1, b1); ...; (an, bn)\]] is

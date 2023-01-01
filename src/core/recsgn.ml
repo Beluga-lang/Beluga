@@ -974,7 +974,7 @@ let recSgnDecls decls =
         *)
        let thm_cid_list =
           registers
-          |> List1.ap_one (Comp.add_mutual_group (List1.to_list total_decs))
+          |> List1.flap (Comp.add_mutual_group (List1.to_list total_decs))
        in
 
        let reconThm loc (f, cid, thm, tau) =

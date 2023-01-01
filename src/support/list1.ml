@@ -167,9 +167,9 @@ let split (T ((x, y), t)) =
 
 let combine (T (a, l1)) (T (b, l2)) = T ((a, b), List.combine l1 l2)
 
-let ap xs = map2 Fun.apply xs
+let ap xs fs = map2 Fun.apply xs fs
 
-let ap_one x = map (Fun.apply x)
+let flap x fs = map (Fun.apply x) fs
 
 let pp ?(pp_sep = Format.pp_print_cut) pp_v ppf (T (h, t)) =
   pp_v ppf h;

@@ -28,13 +28,13 @@ struct
 
   let[@inline] ( >>= ) a f = bind f a
 
-  let compose g f x = f x >>= g
+  let[@inline] compose g f x = f x >>= g
 
-  let ( >=> ) f g = compose g f
+  let[@inline] ( >=> ) f g = compose g f
 
-  let ( let* ) ma f = bind f ma
+  let[@inline] ( let* ) ma f = bind f ma
 
-  let ( and* ) ma mb =
+  let[@inline] ( and* ) ma mb =
     let* a = ma in
     let* b = mb in
     return (a, b)

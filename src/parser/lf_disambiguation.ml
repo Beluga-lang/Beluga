@@ -94,13 +94,19 @@ module type LF_DISAMBIGUATION = sig
   (** {1 Disambiguation} *)
 
   val disambiguate_as_kind :
-    disambiguation_state -> Synprs.lf_object -> Synext.lf_kind
+       Synprs.lf_object
+    -> disambiguation_state
+    -> disambiguation_state * Synext.lf_kind
 
   val disambiguate_as_typ :
-    disambiguation_state -> Synprs.lf_object -> Synext.lf_typ
+       Synprs.lf_object
+    -> disambiguation_state
+    -> disambiguation_state * Synext.lf_typ
 
   val disambiguate_as_term :
-    disambiguation_state -> Synprs.lf_object -> Synext.lf_term
+       Synprs.lf_object
+    -> disambiguation_state
+    -> disambiguation_state * Synext.lf_term
 end
 
 (** Disambiguation of LF kinds, types and terms from the parser syntax to the
@@ -115,6 +121,8 @@ struct
   type disambiguation_state = Disambiguation_state.t
 
   type disambiguation_state_entry = Disambiguation_state.entry
+
+  include State.Make (Disambiguation_state)
 
   (** {1 Disambiguation} *)
 
@@ -240,13 +248,13 @@ struct
         Eq.EQ with type t := t)
   end
 
-  (** [disambiguate_as_kind state object_] is [object_] rewritten as an LF
+  (** [disambiguate_as_kind object_ state] is [object_] rewritten as an LF
       kind with respect to the disambiguation context [state].
 
       This function imposes syntactic restrictions on [object_], but does not
       perform normalization nor validation. To see the syntactic restrictions
       from raw LF objects to LF kinds, see the Beluga language specification. *)
-  let rec disambiguate_as_kind state object_ =
+  let rec disambiguate_as_kind object_ =
     match object_ with
     | Synprs.LF.Object.Raw_identifier { location; _ } ->
         Error.raise_at1 location Illegal_identifier_kind
@@ -261,40 +269,41 @@ struct
     | Synprs.LF.Object.Raw_application { location; _ } ->
         Error.raise_at1 location Illegal_application_kind
     | Synprs.LF.Object.Raw_type { location } ->
-        Synext.LF.Kind.Typ { location }
+        return (Synext.LF.Kind.Typ { location })
     | Synprs.LF.Object.Raw_arrow { location; domain; range; orientation }
       -> (
         match orientation with
         | `Backward -> Error.raise_at1 location Illegal_backward_arrow_kind
         | `Forward ->
-            let domain' = disambiguate_as_typ state domain
-            and range' = disambiguate_as_kind state range in
-            Synext.LF.Kind.Arrow
-              { location; domain = domain'; range = range' })
+            let* domain' = disambiguate_as_typ domain in
+            let* range' = disambiguate_as_kind range in
+            return
+              (Synext.LF.Kind.Arrow
+                 { location; domain = domain'; range = range' }))
     | Synprs.LF.Object.Raw_pi
-        { location; parameter_identifier; parameter_sort; body } -> (
-        match parameter_sort with
-        | Option.None -> Error.raise_at1 location Illegal_untyped_pi_kind
-        | Option.Some parameter_type ->
-            let parameter_type' = disambiguate_as_typ state parameter_type in
-            let body' =
-              match parameter_identifier with
-              | Option.None -> disambiguate_as_kind state body
-              | Option.Some identifier ->
-                  let state' =
-                    Disambiguation_state.add_lf_term_variable identifier
-                      state
-                  in
-                  disambiguate_as_kind state' body
-            in
-            Synext.LF.Kind.Pi
-              { location
-              ; parameter_identifier
-              ; parameter_type = parameter_type'
-              ; body = body'
-              })
+        { location; parameter_identifier; parameter_sort; body } ->
+        let* parameter_type' =
+          match parameter_sort with
+          | Option.None -> Error.raise_at1 location Illegal_untyped_pi_kind
+          | Option.Some parameter_type -> disambiguate_as_typ parameter_type
+        in
+        let* body' =
+          match parameter_identifier with
+          | Option.None -> disambiguate_as_kind body
+          | Option.Some identifier ->
+              locally
+                (Disambiguation_state.add_lf_term_variable identifier)
+                (disambiguate_as_kind body)
+        in
+        return
+          (Synext.LF.Kind.Pi
+             { location
+             ; parameter_identifier
+             ; parameter_type = parameter_type'
+             ; body = body'
+             })
 
-  (** [disambiguate_as_typ state object_] is [object_] rewritten as an LF
+  (** [disambiguate_as_typ object_ state] is [object_] rewritten as an LF
       type with respect to the disambiguation context [state].
 
       Type applications are rewritten with {!disambiguate_application} using
@@ -303,7 +312,7 @@ struct
       This function imposes syntactic restrictions on [object_], but does not
       perform normalization nor validation. To see the syntactic restrictions
       from LF objects to LF types, see the Beluga language specification. *)
-  and disambiguate_as_typ state object_ =
+  and disambiguate_as_typ object_ =
     match object_ with
     | Synprs.LF.Object.Raw_type { location; _ } ->
         Error.raise_at1 location Illegal_type_kind_type
@@ -322,14 +331,16 @@ struct
         let qualified_identifier =
           Qualified_identifier.make_simple identifier
         in
+        get >>= fun state ->
         match Disambiguation_state.lookup_toplevel identifier state with
         | Disambiguation_state.LF_type_constant { operator } ->
-            Synext.LF.Typ.Constant
-              { location
-              ; identifier = qualified_identifier
-              ; operator
-              ; quoted
-              }
+            return
+              (Synext.LF.Typ.Constant
+                 { location
+                 ; identifier = qualified_identifier
+                 ; operator
+                 ; quoted
+                 })
         | _entry -> Error.raise_at1 location Expected_type_constant
         | exception Disambiguation_state.Unbound_identifier _ ->
             Error.raise_at1 location
@@ -341,52 +352,51 @@ struct
         assert (List.length (Qualified_identifier.modules identifier) >= 1);
         (* As an LF type, identifiers of the form [(<identifier> `::')+
            <identifier>] are necessarily type-level constants. *)
+        get >>= fun state ->
         match Disambiguation_state.lookup identifier state with
         | Disambiguation_state.LF_type_constant { operator } ->
-            Synext.LF.Typ.Constant { location; identifier; operator; quoted }
+            return
+              (Synext.LF.Typ.Constant
+                 { location; identifier; operator; quoted })
         | _entry -> Error.raise_at1 location Expected_type_constant
         | exception Disambiguation_state.Unbound_qualified_identifier _ ->
             Error.raise_at1 location (Unbound_type_constant identifier))
     | Synprs.LF.Object.Raw_arrow { location; domain; range; orientation } ->
-        let domain' = disambiguate_as_typ state domain
-        and range' = disambiguate_as_typ state range in
-        Synext.LF.Typ.Arrow
-          { location; domain = domain'; range = range'; orientation }
+        let* domain' = disambiguate_as_typ domain in
+        let* range' = disambiguate_as_typ range in
+        return
+          (Synext.LF.Typ.Arrow
+             { location; domain = domain'; range = range'; orientation })
     | Synprs.LF.Object.Raw_pi
         { location
         ; parameter_identifier
         ; parameter_sort = Option.Some parameter_type
         ; body
-        } -> (
-        let parameter_type' = disambiguate_as_typ state parameter_type in
-        match parameter_identifier with
-        | Option.None ->
-            let body' = disambiguate_as_typ state body in
-            Synext.LF.Typ.Pi
-              { location
-              ; parameter_identifier
-              ; parameter_type = parameter_type'
-              ; body = body'
-              }
-        | Option.Some parameter ->
-            let state' =
-              Disambiguation_state.add_lf_term_variable parameter state
-            in
-            let body' = disambiguate_as_typ state' body in
-            Synext.LF.Typ.Pi
-              { location
-              ; parameter_identifier
-              ; parameter_type = parameter_type'
-              ; body = body'
-              })
+        } ->
+        let* parameter_type' = disambiguate_as_typ parameter_type in
+        let* body' =
+          match parameter_identifier with
+          | Option.None -> disambiguate_as_typ body
+          | Option.Some parameter ->
+              locally
+                (Disambiguation_state.add_lf_term_variable parameter)
+                (disambiguate_as_typ body)
+        in
+        return
+          (Synext.LF.Typ.Pi
+             { location
+             ; parameter_identifier
+             ; parameter_type = parameter_type'
+             ; body = body'
+             })
     | Synprs.LF.Object.Raw_application { objects; _ } -> (
-        match disambiguate_application state objects with
+        disambiguate_application objects >>= function
         | `Term term ->
             let location = Synext.location_of_lf_term term in
             Error.raise_at1 location Expected_type
-        | `Typ typ -> typ)
+        | `Typ typ -> return typ)
 
-  (** [disambiguate_as_term state object_] is [object_] rewritten as an LF
+  (** [disambiguate_as_term object_ state] is [object_] rewritten as an LF
       term with respect to the disambiguation context [state].
 
       Term applications are rewritten with {!disambiguate_application} using
@@ -395,7 +405,7 @@ struct
       This function imposes syntactic restrictions on [object_], but does not
       perform normalization nor validation. To see the syntactic restrictions
       from LF objects to LF terms, see the Beluga language specification. *)
-  and disambiguate_as_term state object_ =
+  and disambiguate_as_term object_ =
     match object_ with
     | Synprs.LF.Object.Raw_type { location; _ } ->
         Error.raise_at1 location Illegal_type_kind_term
@@ -411,21 +421,29 @@ struct
         let qualified_identifier =
           Qualified_identifier.make_simple identifier
         in
+        get >>= fun state ->
+        (* Lookup the identifier in the current state *)
         match Disambiguation_state.lookup_toplevel identifier state with
         | Disambiguation_state.LF_term_constant { operator } ->
-            Synext.LF.Term.Constant
-              { location
-              ; identifier = qualified_identifier
-              ; operator
-              ; quoted
-              }
+            (* [identifier] appears as an LF term-level constant *)
+            return
+              (Synext.LF.Term.Constant
+                 { location
+                 ; identifier = qualified_identifier
+                 ; operator
+                 ; quoted
+                 })
         | Disambiguation_state.LF_term_variable ->
-            (* Bound variable *)
-            Synext.LF.Term.Variable { location; identifier }
-        | _entry -> Error.raise_at1 location Expected_term_constant
+            (* [identifier] appears as an LF bound variable *)
+            return (Synext.LF.Term.Variable { location; identifier })
+        | _entry ->
+            (* [identifier] appears as a bound entry that is not an LF
+               term-level constant or variable *)
+            Error.raise_at1 location Expected_term_constant
         | exception Disambiguation_state.Unbound_identifier _ ->
-            (* Free variable *)
-            Synext.LF.Term.Variable { location; identifier })
+            (* [identifier] does not appear in the state, so it is a free
+               variable *)
+            return (Synext.LF.Term.Variable { location; identifier }))
     | Synprs.LF.Object.Raw_qualified_identifier
         { location; identifier; quoted } -> (
         (* Qualified identifiers without modules were parsed as plain
@@ -433,54 +451,64 @@ struct
         assert (List.length (Qualified_identifier.modules identifier) >= 1);
         (* As an LF term, identifiers of the form [(<identifier> `::')+
            <identifier>] are necessarily term-level constants. *)
+        get >>= fun state ->
+        (* Lookup the identifier in the current state *)
         match Disambiguation_state.lookup identifier state with
         | Disambiguation_state.LF_term_constant { operator } ->
-            Synext.LF.Term.Constant
-              { location; identifier; operator; quoted }
-        | _entry -> Error.raise_at1 location Expected_term_constant
+            (* [identifier] appears as an LF term-level constant *)
+            return
+              (Synext.LF.Term.Constant
+                 { location; identifier; operator; quoted })
+        | _entry ->
+            (* [identifier] appears as a bound entry that is not an LF
+               term-level constant *)
+            Error.raise_at1 location Expected_term_constant
         | exception Disambiguation_state.Unbound_qualified_identifier _ ->
+            (* [identifier] does not appear in the state, and constants must
+               be bound *)
             Error.raise_at1 location (Unbound_term_constant identifier))
     | Synprs.LF.Object.Raw_application { objects; _ } -> (
-        match disambiguate_application state objects with
+        disambiguate_application objects >>= function
         | `Typ typ ->
             let location = Synext.location_of_lf_typ typ in
             Error.raise_at1 location Expected_term
-        | `Term term -> term)
+        | `Term term -> return term)
     | Synprs.LF.Object.Raw_lambda
-        { location; parameter_identifier; parameter_sort; body } -> (
-        let parameter_type' =
-          Option.map (disambiguate_as_typ state) parameter_sort
+        { location; parameter_identifier; parameter_sort; body } ->
+        let* parameter_type' =
+          match parameter_sort with
+          | Option.None -> return Option.none
+          | Option.Some parameter_sort ->
+              let* typ' = disambiguate_as_typ parameter_sort in
+              return (Option.some typ')
         in
-        match parameter_identifier with
-        | Option.None ->
-            let body' = disambiguate_as_term state body in
-            Synext.LF.Term.Abstraction
-              { location
-              ; parameter_identifier
-              ; parameter_type = parameter_type'
-              ; body = body'
-              }
-        | Option.Some name ->
-            let state' =
-              Disambiguation_state.add_lf_term_variable name state
-            in
-            let body' = disambiguate_as_term state' body in
-            Synext.LF.Term.Abstraction
-              { location
-              ; parameter_identifier
-              ; parameter_type = parameter_type'
-              ; body = body'
-              })
+        let* body' =
+          match parameter_identifier with
+          | Option.None -> disambiguate_as_term body
+          | Option.Some name ->
+              locally
+                (Disambiguation_state.add_lf_term_variable name)
+                (disambiguate_as_term body)
+        in
+        return
+          (Synext.LF.Term.Abstraction
+             { location
+             ; parameter_identifier
+             ; parameter_type = parameter_type'
+             ; body = body'
+             })
     | Synprs.LF.Object.Raw_hole { location } ->
-        Synext.LF.Term.Wildcard { location }
+        return (Synext.LF.Term.Wildcard { location })
     | Synprs.LF.Object.Raw_annotated { location; object_; sort } ->
-        let term' = disambiguate_as_term state object_
-        and typ' = disambiguate_as_typ state sort in
-        Synext.LF.Term.TypeAnnotated { location; term = term'; typ = typ' }
+        let* term' = disambiguate_as_term object_ in
+        let* typ' = disambiguate_as_typ sort in
+        return
+          (Synext.LF.Term.TypeAnnotated
+             { location; term = term'; typ = typ' })
 
   (* TODO: Abstract *)
 
-  (** [disambiguate_application state objects] disambiguates [objects] as
+  (** [disambiguate_application objects state] disambiguates [objects] as
       either a type-level or term-level LF application with respect to the
       disambiguation context [state].
 
@@ -497,7 +525,7 @@ struct
         prefix notation with the first operand being the application head.
       - Third, Dijkstra's shunting yard algorithm is used to rewrite the
         identified prefix, infix and postfix operators to applications. *)
-  and disambiguate_application state =
+  and disambiguate_application objects state =
     let disambiguate_juxtaposition applicand arguments =
       let applicand_location =
         match applicand with
@@ -511,10 +539,10 @@ struct
       in
       match applicand with
       | `Term applicand ->
-          let applicand' = disambiguate_as_term state applicand in
+          let applicand' = eval (disambiguate_as_term applicand) state in
           let arguments' =
             List1.map
-              (disambiguate_as_term state)
+              (fun object_ -> eval (disambiguate_as_term object_) state)
               (List1.unsafe_of_list arguments)
           in
           `Term
@@ -524,10 +552,10 @@ struct
                ; arguments = arguments'
                })
       | `Typ applicand ->
-          let applicand' = disambiguate_as_typ state applicand in
+          let applicand' = eval (disambiguate_as_typ applicand) state in
           let arguments' =
             List1.map
-              (disambiguate_as_term state)
+              (fun object_ -> eval (disambiguate_as_term object_) state)
               (List1.unsafe_of_list arguments)
           in
           `Typ
@@ -549,7 +577,7 @@ struct
             let location = Synext.location_of_lf_typ typ in
             Error.raise_at1 location Expected_term
         | LF_operand.Parser_object object_ ->
-            disambiguate_as_term state object_
+            eval (disambiguate_as_term object_) state
         | LF_operand.Application { applicand; arguments } -> (
             match disambiguate_juxtaposition applicand arguments with
             | `Term term -> term
@@ -568,7 +596,7 @@ struct
         in
         match operator with
         | LF_operator.Type_constant { applicand; _ } ->
-            let applicand' = disambiguate_as_typ state applicand in
+            let applicand' = eval (disambiguate_as_typ applicand) state in
             let arguments' =
               disambiguate_arguments (List1.unsafe_of_list arguments)
             in
@@ -579,7 +607,7 @@ struct
                  ; arguments = arguments'
                  })
         | LF_operator.Term_constant { applicand; _ } ->
-            let applicand' = disambiguate_as_term state applicand in
+            let applicand' = eval (disambiguate_as_term applicand) state in
             let arguments' =
               disambiguate_arguments (List1.unsafe_of_list arguments)
             in
@@ -609,7 +637,7 @@ struct
        This is only done in the shunting yard algorithm so that the leftmost
        syntax error gets reported. *)
     let prepare_objects objects =
-      (* Predicate for identified objects that may appear as juxtaposed
+      (* Predicate for identifying objects that may appear as juxtaposed
          arguments to an application in prefix notation. This predicate does
          not apply to the application head. *)
       let is_argument = function
@@ -683,65 +711,59 @@ struct
              (tag, term))
       |> reduce_juxtapositions_and_identify_operators
     in
-    fun objects ->
-      try
-        match Shunting_yard.shunting_yard (prepare_objects objects) with
-        | LF_operand.External_typ t -> `Typ t
-        | LF_operand.External_term t -> `Term t
-        | LF_operand.Application { applicand; arguments } ->
-            disambiguate_juxtaposition applicand arguments
-        | LF_operand.Parser_object _ ->
-            Error.violation
-              "[LF.disambiguate_application] unexpectedly did not \
-               disambiguate LF operands in rewriting"
-      with
-      | Shunting_yard.Empty_expression ->
+    try
+      match Shunting_yard.shunting_yard (prepare_objects objects) with
+      | LF_operand.External_typ t -> (state, `Typ t)
+      | LF_operand.External_term t -> (state, `Term t)
+      | LF_operand.Application { applicand; arguments } ->
+          (state, disambiguate_juxtaposition applicand arguments)
+      | LF_operand.Parser_object _ ->
           Error.violation
-            "[LF.disambiguate_application] unexpectedly ended with an empty \
-             expression"
-      | Shunting_yard.Leftover_expressions _ ->
-          Error.violation
-            "[LF.disambiguate_application] unexpectedly ended with leftover \
-             expressions"
-      | Shunting_yard.Misplaced_operator { operator; operands } ->
-          let operator_location = LF_operator.location operator
-          and operand_locations = List.map LF_operand.location operands in
-          Error.raise_at
-            (List1.from operator_location operand_locations)
-            Misplaced_operator
-      | Shunting_yard.Ambiguous_operator_placement
-          { left_operator; right_operator } ->
-          let operator_identifier = LF_operator.identifier left_operator
-          and left_operator_location = LF_operator.location left_operator
-          and right_operator_location =
-            LF_operator.location right_operator
-          in
-          Error.raise_at2 left_operator_location right_operator_location
-            (Ambiguous_operator_placement operator_identifier)
-      | Shunting_yard.Consecutive_non_associative_operators
-          { left_operator; right_operator } ->
-          let operator_identifier = LF_operator.identifier left_operator
-          and left_operator_location = LF_operator.location left_operator
-          and right_operator_location =
-            LF_operator.location right_operator
-          in
-          Error.raise_at2 left_operator_location right_operator_location
-            (Consecutive_applications_of_non_associative_operators
-               operator_identifier)
-      | Shunting_yard.Arity_mismatch { operator; operator_arity; operands }
-        ->
-          let operator_identifier = LF_operator.identifier operator
-          and operator_location = LF_operator.location operator
-          and expected_arguments_count = operator_arity
-          and operand_locations = List.map LF_operand.location operands
-          and actual_arguments_count = List.length operands in
-          Error.raise_at
-            (List1.from operator_location operand_locations)
-            (Arity_mismatch
-               { operator_identifier
-               ; expected_arguments_count
-               ; actual_arguments_count
-               })
+            "[LF.disambiguate_application] unexpectedly did not \
+             disambiguate LF operands in rewriting"
+    with
+    | Shunting_yard.Empty_expression ->
+        Error.violation
+          "[LF.disambiguate_application] unexpectedly ended with an empty \
+           expression"
+    | Shunting_yard.Leftover_expressions _ ->
+        Error.violation
+          "[LF.disambiguate_application] unexpectedly ended with leftover \
+           expressions"
+    | Shunting_yard.Misplaced_operator { operator; operands } ->
+        let operator_location = LF_operator.location operator
+        and operand_locations = List.map LF_operand.location operands in
+        Error.raise_at
+          (List1.from operator_location operand_locations)
+          Misplaced_operator
+    | Shunting_yard.Ambiguous_operator_placement
+        { left_operator; right_operator } ->
+        let operator_identifier = LF_operator.identifier left_operator
+        and left_operator_location = LF_operator.location left_operator
+        and right_operator_location = LF_operator.location right_operator in
+        Error.raise_at2 left_operator_location right_operator_location
+          (Ambiguous_operator_placement operator_identifier)
+    | Shunting_yard.Consecutive_non_associative_operators
+        { left_operator; right_operator } ->
+        let operator_identifier = LF_operator.identifier left_operator
+        and left_operator_location = LF_operator.location left_operator
+        and right_operator_location = LF_operator.location right_operator in
+        Error.raise_at2 left_operator_location right_operator_location
+          (Consecutive_applications_of_non_associative_operators
+             operator_identifier)
+    | Shunting_yard.Arity_mismatch { operator; operator_arity; operands } ->
+        let operator_identifier = LF_operator.identifier operator
+        and operator_location = LF_operator.location operator
+        and expected_arguments_count = operator_arity
+        and operand_locations = List.map LF_operand.location operands
+        and actual_arguments_count = List.length operands in
+        Error.raise_at
+          (List1.from operator_location operand_locations)
+          (Arity_mismatch
+             { operator_identifier
+             ; expected_arguments_count
+             ; actual_arguments_count
+             })
 end
 
 (** {2 Exception Printing} *)

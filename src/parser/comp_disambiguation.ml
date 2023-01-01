@@ -67,24 +67,28 @@ module type COMP_DISAMBIGUATION = sig
   (** {1 Disambiguation} *)
 
   val disambiguate_as_kind :
-    disambiguation_state -> Synprs.Comp.Sort_object.t -> Synext.Comp.Kind.t
+       Synprs.Comp.Sort_object.t
+    -> disambiguation_state
+    -> disambiguation_state * Synext.Comp.Kind.t
 
   val disambiguate_as_typ :
-    disambiguation_state -> Synprs.Comp.Sort_object.t -> Synext.Comp.Typ.t
+       Synprs.Comp.Sort_object.t
+    -> disambiguation_state
+    -> disambiguation_state * Synext.Comp.Typ.t
 
   val disambiguate_as_expression :
-       disambiguation_state
-    -> Synprs.Comp.Expression_object.t
-    -> Synext.Comp.Expression.t
+       Synprs.Comp.Expression_object.t
+    -> disambiguation_state
+    -> disambiguation_state * Synext.Comp.Expression.t
 
   val disambiguate_as_pattern :
-       disambiguation_state
-    -> Synprs.Comp.Pattern_object.t
-    -> Synext.Comp.Pattern.t
+       Synprs.Comp.Pattern_object.t
+    -> disambiguation_state
+    -> disambiguation_state * Synext.Comp.Pattern.t
 
   val disambiguate_as_context :
-       disambiguation_state
-    -> Synprs.Comp.Context_object.t
+       Synprs.Comp.Context_object.t
+    -> disambiguation_state
     -> disambiguation_state * Synext.Comp.Context.t
 end
 
@@ -102,6 +106,14 @@ struct
   type disambiguation_state = Disambiguation_state.t
 
   type disambiguation_state_entry = Disambiguation_state.entry
+
+  include State.Make (Disambiguation_state)
+
+  exception Plain_modifier_typ_mismatch
+
+  exception Hash_modifier_typ_mismatch
+
+  exception Dollar_modifier_typ_mismatch
 
   (** {1 Disambiguation State Helpers} *)
 
@@ -339,9 +351,66 @@ struct
           (List2.to_list1 locations)
           Illegal_variables_bound_several_times
 
+  let add_parameter_binding_opt identifier_opt modifier typ =
+    let[@inline] const f =
+      match identifier_opt with
+      | Option.Some identifier -> f identifier
+      | Option.None -> Fun.id
+    in
+    match (modifier, typ) with
+    | `Plain, Synext.Meta.Typ.Context_schema _ ->
+        const Disambiguation_state.add_context_variable
+    | `Plain, Synext.Meta.Typ.Contextual_typ _ ->
+        const Disambiguation_state.add_meta_variable
+    | `Hash, Synext.Meta.Typ.Parameter_typ _ ->
+        const Disambiguation_state.add_parameter_variable
+    | ( `Dollar
+      , ( Synext.Meta.Typ.Plain_substitution_typ _
+        | Synext.Meta.Typ.Renaming_substitution_typ _ ) ) ->
+        const Disambiguation_state.add_substitution_variable
+    | `Plain, typ ->
+        Error.raise_at1
+          (Synext.location_of_meta_type typ)
+          Plain_modifier_typ_mismatch
+    | `Hash, typ ->
+        Error.raise_at1
+          (Synext.location_of_meta_type typ)
+          Hash_modifier_typ_mismatch
+    | `Dollar, typ ->
+        Error.raise_at1
+          (Synext.location_of_meta_type typ)
+          Dollar_modifier_typ_mismatch
+
+  let add_parameter_binding identifier modifier typ =
+    add_parameter_binding_opt (Option.some identifier) modifier typ
+
+  let add_function_parameters parameters state =
+    List.fold_left
+      (fun state parameter ->
+        match parameter with
+        | Option.None -> state
+        | Option.Some identifier ->
+            Disambiguation_state.add_computation_variable identifier state)
+      state
+      (List1.to_list parameters)
+
+  let add_meta_function_parameters parameters state =
+    List.fold_left
+      (fun state parameter ->
+        match parameter with
+        | Option.Some identifier, `Plain ->
+            Disambiguation_state.add_meta_variable identifier state
+        | Option.Some identifier, `Hash ->
+            Disambiguation_state.add_parameter_variable identifier state
+        | Option.Some identifier, `Dollar ->
+            Disambiguation_state.add_substitution_variable identifier state
+        | Option.None, _ -> state)
+      state
+      (List1.to_list parameters)
+
   (** {1 Disambiguation} *)
 
-  let rec disambiguate_as_kind state sort_object =
+  let rec disambiguate_as_kind sort_object =
     match sort_object with
     | Synprs.Comp.Sort_object.Raw_identifier { location; _ } ->
         Error.raise_at1 location Illegal_identifier_kind
@@ -357,84 +426,49 @@ struct
     | Synprs.Comp.Sort_object.Raw_application { location; _ } ->
         Error.raise_at1 location Illegal_application_kind
     | Synprs.Comp.Sort_object.Raw_ctype { location } ->
-        Synext.Comp.Kind.Ctype { location }
+        return (Synext.Comp.Kind.Ctype { location })
     | Synprs.Comp.Sort_object.Raw_pi
         { location; parameter_sort = Option.None; _ } ->
         Error.raise_at1 location Illegal_untyped_pi_kind_parameter
     | Synprs.Comp.Sort_object.Raw_pi
         { location
-        ; parameter_identifier
+        ; parameter_identifier = parameter_identifier, modifier
         ; parameter_sort = Option.Some parameter_typ
         ; plicity
         ; body
-        } -> (
-        match parameter_identifier with
-        | Option.None, modifier ->
-            let parameter_type' =
-              Meta_disambiguation.disambiguate_as_meta_typ state
-                parameter_typ
-            in
-            (match (modifier, parameter_type') with
-            | `Plain, Synext.Meta.Typ.Context_schema _ -> ()
-            | `Plain, Synext.Meta.Typ.Contextual_typ _ -> ()
-            | `Hash, Synext.Meta.Typ.Parameter_typ _ -> ()
-            | ( `Dollar
-              , ( Synext.Meta.Typ.Plain_substitution_typ _
-                | Synext.Meta.Typ.Renaming_substitution_typ _ ) ) ->
-                ()
-            | _ ->
-                raise (Invalid_argument "")
-                (* TODO: Modifier mismatch with meta-type *));
-            let body' = disambiguate_as_kind state body in
-            Synext.Comp.Kind.Pi
-              { location
-              ; parameter_identifier = Option.none
-              ; parameter_type = parameter_type'
-              ; plicity
-              ; body = body'
-              }
-        | Option.Some parameter_identifier, modifier ->
-            let parameter_type' =
-              Meta_disambiguation.disambiguate_as_meta_typ state
-                parameter_typ
-            in
-            let state' =
-              match (modifier, parameter_type') with
-              | `Plain, Synext.Meta.Typ.Context_schema _ ->
-                  Disambiguation_state.add_context_variable
-                    parameter_identifier state
-              | `Plain, Synext.Meta.Typ.Contextual_typ _ ->
-                  Disambiguation_state.add_meta_variable parameter_identifier
-                    state
-              | `Hash, Synext.Meta.Typ.Parameter_typ _ ->
-                  Disambiguation_state.add_parameter_variable
-                    parameter_identifier state
-              | ( `Dollar
-                , ( Synext.Meta.Typ.Plain_substitution_typ _
-                  | Synext.Meta.Typ.Renaming_substitution_typ _ ) ) ->
-                  Disambiguation_state.add_substitution_variable
-                    parameter_identifier state
-              | _ -> raise (Invalid_argument "")
-              (* TODO: Modifier mismatch *)
-            in
-            let body' = disambiguate_as_kind state' body in
-            Synext.Comp.Kind.Pi
-              { location
-              ; parameter_identifier = Option.none
-              ; parameter_type = parameter_type'
-              ; plicity
-              ; body = body'
-              })
+        } ->
+        let* parameter_typ' =
+          Meta_disambiguation.disambiguate_as_meta_typ parameter_typ
+        in
+        let* body' =
+          locally
+            (add_parameter_binding_opt parameter_identifier modifier
+               parameter_typ')
+            (disambiguate_as_kind body)
+        in
+        return
+          (Synext.Comp.Kind.Pi
+             { location
+             ; parameter_identifier = Option.none
+             ; parameter_type = parameter_typ'
+             ; plicity
+             ; body = body'
+             })
     | Synprs.Comp.Sort_object.Raw_arrow
         { location; domain; range; orientation = `Forward } ->
-        let domain' = disambiguate_as_typ state domain
-        and range' = disambiguate_as_kind state range in
-        Synext.Comp.Kind.Arrow { location; domain = domain'; range = range' }
+        let* domain' = disambiguate_as_typ domain in
+        let* range' = disambiguate_as_kind range in
+        return
+          (Synext.Comp.Kind.Arrow
+             { location; domain = domain'; range = range' })
 
-  and disambiguate_as_typ state sort_object =
+  and disambiguate_as_typ sort_object =
     match sort_object with
     | Synprs.Comp.Sort_object.Raw_ctype { location } ->
         Error.raise_at1 location Illegal_ctype_type
+    | Synprs.Comp.Sort_object.Raw_pi
+        { parameter_sort = Option.None; location; _ } ->
+        Error.raise_at1 location Illegal_untyped_pi_type
     | Synprs.Comp.Sort_object.Raw_identifier { location; identifier; quoted }
       -> (
         (* As a computation-level type, plain identifiers are necessarily
@@ -442,14 +476,16 @@ struct
         let qualified_identifier =
           Qualified_identifier.make_simple identifier
         in
+        get >>= fun state ->
         match Disambiguation_state.lookup_toplevel identifier state with
         | Disambiguation_state.Computation_type_constant { operator } ->
-            Synext.Comp.Typ.Constant
-              { location
-              ; identifier = qualified_identifier
-              ; operator
-              ; quoted
-              }
+            return
+              (Synext.Comp.Typ.Constant
+                 { location
+                 ; identifier = qualified_identifier
+                 ; operator
+                 ; quoted
+                 })
         | _entry ->
             Error.raise_at1 location
               (Expected_computation_type_constant qualified_identifier)
@@ -464,10 +500,12 @@ struct
         (* As a computation-level type, identifiers of the form
            [(<identifier> `::')+ <identifier>] are necessarily type
            constants. *)
+        get >>= fun state ->
         match Disambiguation_state.lookup identifier state with
         | Disambiguation_state.Computation_type_constant { operator } ->
-            Synext.Comp.Typ.Constant
-              { location; identifier; operator; quoted }
+            return
+              (Synext.Comp.Typ.Constant
+                 { location; identifier; operator; quoted })
         | _entry ->
             Error.raise_at1 location
               (Expected_computation_type_constant identifier)
@@ -475,56 +513,53 @@ struct
             Error.raise_at1 location
               (Unbound_computation_type_constant identifier))
     | Synprs.Comp.Sort_object.Raw_pi
-        { location; parameter_identifier; parameter_sort; plicity; body } ->
-        let state', parameter_typ' =
-          match (parameter_identifier, parameter_sort) with
-          | (Option.Some identifier, _), Option.None ->
-              let location = Identifier.location identifier in
-              Error.raise_at1 location Illegal_untyped_pi_type
-          | (Option.None, _), Option.None ->
-              Error.raise_at1 location Illegal_untyped_pi_type
-          | (identifier, `Plain), Option.Some parameter_typ ->
-              let parameter_typ' =
-                Meta_disambiguation.disambiguate_as_meta_typ state
-                  parameter_typ
-              and state' =
-                match identifier with
-                | Option.None -> state
-                | Option.Some identifier ->
-                    (* TODO: Incorrect, check against [parameter_typ'] *)
-                    Disambiguation_state.add_context_variable identifier
-                      state
-              in
-              (state', parameter_typ')
-          | (identifier, `Hash), Option.Some parameter_typ -> Obj.magic ()
-          | (identifier, `Dollar), Option.Some parameter_typ -> Obj.magic ()
+        { location
+        ; parameter_identifier = parameter_identifier, modifier
+        ; parameter_sort = Option.Some parameter_typ
+        ; plicity
+        ; body
+        } ->
+        let* parameter_typ' =
+          Meta_disambiguation.disambiguate_as_meta_typ parameter_typ
         in
-        let body' = disambiguate_as_typ state' body in
-        Synext.Comp.Typ.Pi
-          { location
-          ; parameter_identifier = Pair.fst parameter_identifier
-          ; parameter_type = parameter_typ'
-          ; plicity
-          ; body = body'
-          }
+        let* body' =
+          locally
+            (add_parameter_binding_opt parameter_identifier modifier
+               parameter_typ')
+            (disambiguate_as_typ body)
+        in
+        return
+          (Synext.Comp.Typ.Pi
+             { location
+             ; parameter_identifier
+             ; parameter_type = parameter_typ'
+             ; plicity
+             ; body = body'
+             })
     | Synprs.Comp.Sort_object.Raw_arrow
         { location; domain; range; orientation } ->
-        let domain' = disambiguate_as_typ state domain
-        and range' = disambiguate_as_typ state range in
-        Synext.Comp.Typ.Arrow
-          { location; domain = domain'; range = range'; orientation }
+        let* domain' = disambiguate_as_typ domain in
+        let* range' = disambiguate_as_typ range in
+        return
+          (Synext.Comp.Typ.Arrow
+             { location; domain = domain'; range = range'; orientation })
     | Synprs.Comp.Sort_object.Raw_cross { location; operands } ->
-        let types' = List2.map (disambiguate_as_typ state) operands in
-        Synext.Comp.Typ.Cross { location; types = types' }
-    | Synprs.Comp.Sort_object.Raw_box { location; boxed } ->
-        let meta_type' =
-          Meta_disambiguation.disambiguate_as_meta_typ state boxed
+        get >>= fun state ->
+        let types' =
+          List2.map
+            (fun operand -> eval (disambiguate_as_typ operand) state)
+            operands
         in
-        Synext.Comp.Typ.Box { location; meta_type = meta_type' }
+        return (Synext.Comp.Typ.Cross { location; types = types' })
+    | Synprs.Comp.Sort_object.Raw_box { location; boxed } ->
+        let* meta_type' =
+          Meta_disambiguation.disambiguate_as_meta_typ boxed
+        in
+        return (Synext.Comp.Typ.Box { location; meta_type = meta_type' })
     | Synprs.Comp.Sort_object.Raw_application { location; objects } ->
         Obj.magic ()
 
-  and disambiguate_as_expression state expression_object =
+  and disambiguate_as_expression expression_object =
     match expression_object with
     | Synprs.Comp.Expression_object.Raw_identifier
         { location; identifier; quoted } ->
@@ -533,55 +568,41 @@ struct
         { location; identifier; quoted } ->
         Obj.magic ()
     | Synprs.Comp.Expression_object.Raw_fn { location; parameters; body } ->
-        let state' =
-          List.fold_left
-            (fun state parameter ->
-              match parameter with
-              | Option.None -> state
-              | Option.Some identifier ->
-                  Disambiguation_state.add_computation_variable identifier
-                    state)
-            state
-            (List1.to_list parameters)
+        let* body' =
+          locally
+            (add_function_parameters parameters)
+            (disambiguate_as_expression body)
         in
-        let body' = disambiguate_as_expression state' body in
-        Synext.Comp.Expression.Fn { location; parameters; body = body' }
+        return
+          (Synext.Comp.Expression.Fn { location; parameters; body = body' })
     | Synprs.Comp.Expression_object.Raw_mlam { location; parameters; body }
       ->
-        let state' =
-          List.fold_left
-            (fun state parameter ->
-              match parameter with
-              | Option.Some identifier, `Plain ->
-                  Disambiguation_state.add_meta_variable identifier state
-              | Option.Some identifier, `Hash ->
-                  Disambiguation_state.add_parameter_variable identifier
-                    state
-              | Option.Some identifier, `Dollar ->
-                  Disambiguation_state.add_substitution_variable identifier
-                    state
-              | Option.None, _ -> state)
-            state
-            (List1.to_list parameters)
+        let* body' =
+          locally
+            (add_meta_function_parameters parameters)
+            (disambiguate_as_expression body)
         in
-        let body' = disambiguate_as_expression state' body in
-        Synext.Comp.Expression.Mlam { location; parameters; body = body' }
+        return
+          (Synext.Comp.Expression.Mlam { location; parameters; body = body' })
     | Synprs.Comp.Expression_object.Raw_fun { location; branches } ->
+        get >>= fun state ->
         let branches' =
           List1.map
             (fun (patterns, body) ->
               let patterns_rev', state', additions =
                 List1.fold_left
                   (fun pattern ->
-                    let pattern' = disambiguate_as_copattern state pattern in
+                    let _state', pattern' =
+                      disambiguate_as_copattern pattern state
+                    in
                     let output_state', additions' =
                       add_comp_copattern_variables_to_state_aux pattern'
                         state Disambiguation_state.empty state []
                     and patterns' = List1.from pattern' [] in
                     (patterns', output_state', additions'))
                   (fun (patterns_rev', output_state, additions) pattern ->
-                    let pattern' =
-                      disambiguate_as_copattern output_state pattern
+                    let _state', pattern' =
+                      disambiguate_as_copattern pattern output_state
                     in
                     let output_state', additions' =
                       add_comp_copattern_variables_to_state_aux pattern'
@@ -594,7 +615,9 @@ struct
               match Identifier.find_duplicates additions with
               | Option.None ->
                   let patterns' = List1.rev patterns_rev' in
-                  let body' = disambiguate_as_expression state' body in
+                  let _state', body' =
+                    disambiguate_as_expression body state'
+                  in
                   (patterns', body')
               | Option.Some duplicates ->
                   let locations = List2.map Identifier.location duplicates in
@@ -603,68 +626,86 @@ struct
                     Illegal_variables_bound_several_times)
             branches
         in
-        Synext.Comp.Expression.Fun { location; branches = branches' }
+        return
+          (Synext.Comp.Expression.Fun { location; branches = branches' })
     | Synprs.Comp.Expression_object.Raw_box { location; meta_object } ->
-        let meta_object' =
-          Meta_disambiguation.disambiguate_as_meta_object state meta_object
+        let* meta_object' =
+          Meta_disambiguation.disambiguate_as_meta_object meta_object
         in
-        Synext.Comp.Expression.Box { location; meta_object = meta_object' }
+        return
+          (Synext.Comp.Expression.Box
+             { location; meta_object = meta_object' })
     | Synprs.Comp.Expression_object.Raw_let
         { location; pattern; scrutinee; body } ->
-        let pattern' = disambiguate_as_pattern state pattern in
-        let scrutinee' = disambiguate_as_expression state scrutinee in
-        let state' = add_comp_pattern_variables_to_state pattern' state in
-        let body' = disambiguate_as_expression state' body in
-        Synext.Comp.Expression.Let
-          { location
-          ; pattern = pattern'
-          ; scrutinee = scrutinee'
-          ; body = body'
-          }
+        let* pattern' = disambiguate_as_pattern pattern in
+        let* scrutinee' = disambiguate_as_expression scrutinee in
+        let* body' =
+          locally
+            (add_comp_pattern_variables_to_state pattern')
+            (disambiguate_as_expression body)
+        in
+        return
+          (Synext.Comp.Expression.Let
+             { location
+             ; pattern = pattern'
+             ; scrutinee = scrutinee'
+             ; body = body'
+             })
     | Synprs.Comp.Expression_object.Raw_impossible { location; scrutinee } ->
-        let scrutinee' = disambiguate_as_expression state scrutinee in
-        Synext.Comp.Expression.Impossible
-          { location; scrutinee = scrutinee' }
+        let* scrutinee' = disambiguate_as_expression scrutinee in
+        return
+          (Synext.Comp.Expression.Impossible
+             { location; scrutinee = scrutinee' })
     | Synprs.Comp.Expression_object.Raw_case
         { location; scrutinee; check_coverage; branches } ->
-        let scrutinee' = disambiguate_as_expression state scrutinee
-        and branches' =
+        let* scrutinee' = disambiguate_as_expression scrutinee in
+        get >>= fun state ->
+        let branches' =
           List1.map
             (fun (pattern, body) ->
-              let pattern' = disambiguate_as_pattern state pattern in
-              let state' =
-                add_comp_pattern_variables_to_state pattern' state
+              let pattern' = eval (disambiguate_as_pattern pattern) state in
+              let body' =
+                eval
+                  (locally
+                     (add_comp_pattern_variables_to_state pattern')
+                     (disambiguate_as_expression body))
+                  state
               in
-              let body' = disambiguate_as_expression state' body in
               (pattern', body'))
             branches
         in
-        Synext.Comp.Expression.Case
-          { location
-          ; scrutinee = scrutinee'
-          ; check_coverage
-          ; branches = branches'
-          }
+        return
+          (Synext.Comp.Expression.Case
+             { location
+             ; scrutinee = scrutinee'
+             ; check_coverage
+             ; branches = branches'
+             })
     | Synprs.Comp.Expression_object.Raw_tuple { location; elements } ->
+        get >>= fun state ->
         let elements' =
-          List2.map (disambiguate_as_expression state) elements
+          List2.map
+            (fun element -> eval (disambiguate_as_expression element) state)
+            elements
         in
-        Synext.Comp.Expression.Tuple { location; elements = elements' }
+        return
+          (Synext.Comp.Expression.Tuple { location; elements = elements' })
     | Synprs.Comp.Expression_object.Raw_hole { location; label } ->
-        Synext.Comp.Expression.Hole { location; label }
+        return (Synext.Comp.Expression.Hole { location; label })
     | Synprs.Comp.Expression_object.Raw_box_hole { location } ->
-        Synext.Comp.Expression.BoxHole { location }
+        return (Synext.Comp.Expression.BoxHole { location })
     | Synprs.Comp.Expression_object.Raw_application { location; expressions }
       ->
         Obj.magic ()
     | Synprs.Comp.Expression_object.Raw_annotated
         { location; expression; typ } ->
-        let expression' = disambiguate_as_expression state expression
-        and typ' = disambiguate_as_typ state typ in
-        Synext.Comp.Expression.TypeAnnotated
-          { location; expression = expression'; typ = typ' }
+        let* expression' = disambiguate_as_expression expression in
+        let* typ' = disambiguate_as_typ typ in
+        return
+          (Synext.Comp.Expression.TypeAnnotated
+             { location; expression = expression'; typ = typ' })
 
-  and disambiguate_as_pattern state pattern_object =
+  and disambiguate_as_pattern pattern_object =
     match pattern_object with
     | Synprs.Comp.Pattern_object.Raw_meta_annotated
         { location; parameter_identifier = Option.None, _; _ } ->
@@ -680,13 +721,20 @@ struct
         { location; identifier; quoted } ->
         Obj.magic ()
     | Synprs.Comp.Pattern_object.Raw_box { location; pattern } ->
-        let pattern' =
-          Meta_disambiguation.disambiguate_as_meta_pattern state pattern
+        let* pattern' =
+          Meta_disambiguation.disambiguate_as_meta_pattern pattern
         in
-        Synext.Comp.Pattern.MetaObject { location; meta_pattern = pattern' }
+        return
+          (Synext.Comp.Pattern.MetaObject
+             { location; meta_pattern = pattern' })
     | Synprs.Comp.Pattern_object.Raw_tuple { location; elements } ->
-        let elements' = List2.map (disambiguate_as_pattern state) elements in
-        Synext.Comp.Pattern.Tuple { location; elements = elements' }
+        get >>= fun state ->
+        let elements' =
+          List2.map
+            (fun element -> eval (disambiguate_as_pattern element) state)
+            elements
+        in
+        return (Synext.Comp.Pattern.Tuple { location; elements = elements' })
     | Synprs.Comp.Pattern_object.Raw_application { location; patterns } ->
         Obj.magic ()
     | Synprs.Comp.Pattern_object.Raw_observation
@@ -696,44 +744,35 @@ struct
         Obj.magic ()
     | Synprs.Comp.Pattern_object.Raw_meta_annotated
         { location
-        ; parameter_identifier = Option.Some identifier, identifier_modifier
+        ; parameter_identifier = Option.Some parameter_identifier, modifier
         ; parameter_typ = Option.Some parameter_typ
         ; pattern
         } ->
-        let parameter_typ' =
-          Meta_disambiguation.disambiguate_as_meta_typ state parameter_typ
+        let* parameter_typ' =
+          Meta_disambiguation.disambiguate_as_meta_typ parameter_typ
         in
-        let state' =
-          match (identifier_modifier, parameter_typ') with
-          | `Plain, Synext.Meta.Typ.Context_schema _ ->
-              Disambiguation_state.add_context_variable identifier state
-          | `Plain, Synext.Meta.Typ.Contextual_typ _ ->
-              Disambiguation_state.add_meta_variable identifier state
-          | `Hash, Synext.Meta.Typ.Parameter_typ _ ->
-              Disambiguation_state.add_parameter_variable identifier state
-          | ( `Dollar
-            , ( Synext.Meta.Typ.Plain_substitution_typ _
-              | Synext.Meta.Typ.Renaming_substitution_typ _ ) ) ->
-              Disambiguation_state.add_substitution_variable identifier state
-          | identifier_modifier, typ -> raise (Invalid_argument "")
-          (* TODO: Modifier mismatch *)
+        let* pattern' =
+          locally
+            (add_parameter_binding parameter_identifier modifier
+               parameter_typ')
+            (disambiguate_as_pattern pattern)
         in
-        let pattern' = disambiguate_as_pattern state' pattern in
-        Synext.Comp.Pattern.MetaTypeAnnotated
-          { location
-          ; annotation_identifier = identifier
-          ; annotation_type = parameter_typ'
-          ; body = pattern'
-          }
+        return
+          (Synext.Comp.Pattern.MetaTypeAnnotated
+             { location
+             ; annotation_identifier = parameter_identifier
+             ; annotation_type = parameter_typ'
+             ; body = pattern'
+             })
     | Synprs.Comp.Pattern_object.Raw_wildcard { location } ->
-        Synext.Comp.Pattern.Wildcard { location }
+        return (Synext.Comp.Pattern.Wildcard { location })
 
-  and disambiguate_as_copattern state pattern_object =
+  and disambiguate_as_copattern pattern_object state =
     match pattern_object with
     | Synprs.Comp.Pattern_object.Raw_observation _ -> Obj.magic ()
     | Synprs.Comp.Pattern_object.Raw_qualified_identifier _ -> Obj.magic ()
 
-  and disambiguate_as_context state context_object =
+  and disambiguate_as_context context_object state =
     let { Synprs.Comp.Context_object.location; bindings } = context_object in
     (* Computation contexts are dependent, meaning that bound variables on
        the left of a declaration may appear in the type of a binding on the
@@ -746,7 +785,7 @@ struct
               let location = Identifier.location identifier in
               Error.raise_at1 location Illegal_missing_context_binding_type
           | identifier, Option.Some typ ->
-              let typ' = disambiguate_as_typ state typ in
+              let typ' = eval (disambiguate_as_typ typ) state in
               let state' =
                 Disambiguation_state.add_computation_variable identifier
                   state

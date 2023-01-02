@@ -87,7 +87,7 @@ let rec json_of_lf_kind kind =
         ~data:
           [ ( "parameter_identifier"
             , json_of_identifier_opt parameter_identifier )
-          ; ("parameter_type", json_of_lf_typ parameter_type)
+          ; ("parameter_type", json_of_option json_of_lf_typ parameter_type)
           ; ("body", json_of_lf_kind body)
           ; ("location", json_of_location location)
           ]
@@ -125,7 +125,7 @@ and json_of_lf_typ typ =
         ~data:
           [ ( "parameter_identifier"
             , json_of_identifier_opt parameter_identifier )
-          ; ("parameter_type", json_of_lf_typ parameter_type)
+          ; ("parameter_type", json_of_option json_of_lf_typ parameter_type)
           ; ("body", json_of_lf_typ body)
           ; ("location", json_of_location location)
           ]

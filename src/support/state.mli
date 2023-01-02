@@ -25,6 +25,14 @@ module type STATE = sig
       [(init, v)] where [v] is the output from running [a]. *)
   val locally : (state -> state) -> 'a t -> 'a t
 
+  (** [scoped ~set ~unset m initial_state] executes [m] with state
+      [set initial_state] to [(intermediate_state, v)], then returns
+      [(unset intermediate_state, v)]. This allows for computations with
+      scoped mutations to the state. [set] and [unset] can be thought of
+      apply and undo operations for the mutation. This is less strict than
+      [locally] which ignores the output state. *)
+  val scoped : set:(state -> state) -> unset:(state -> state) -> 'a t -> 'a t
+
   (** {1 Instances} *)
 
   include Functor.FUNCTOR with type 'a t := 'a t

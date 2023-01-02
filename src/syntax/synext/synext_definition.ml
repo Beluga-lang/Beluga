@@ -44,7 +44,7 @@ module LF = struct
       | Pi of
           { location : Location.t
           ; parameter_identifier : Identifier.t Option.t
-          ; parameter_type : Typ.t
+          ; parameter_type : Typ.t Option.t
           ; body : Kind.t
           }
           (** - [Pi { parameter_identifier = Option.Some "x"; parameter_type = t; body; _ }]
@@ -94,7 +94,7 @@ module LF = struct
       | Pi of
           { location : Location.t
           ; parameter_identifier : Identifier.t Option.t
-          ; parameter_type : Typ.t
+          ; parameter_type : Typ.t Option.t
           ; body : Typ.t
           }
           (** - [Pi { parameter_identifier = Option.Some "x"; parameter_type = t; body; _ }]
@@ -889,7 +889,7 @@ module Comp = struct
               constant ["c"] referring to a value. *)
       | Fn of
           { location : Location.t
-          ; parameters : Identifier.t Option.t List1.t
+          ; parameters : Identifier.t Option.t List1.t (* TODO: Add optional types *)
           ; body : Expression.t
           }
           (** [Fn { parameters = \["x1"; "x2"; ...; "xn"\]; body; _ }] is the
@@ -897,7 +897,7 @@ module Comp = struct
       | Mlam of
           { location : Location.t
           ; parameters :
-              (Identifier.t Option.t * [ `Plain | `Hash | `Dollar ]) List1.t
+              (Identifier.t Option.t * [ `Plain | `Hash | `Dollar ]) List1.t (* TODO: Add optional types *)
           ; body : Expression.t
           }
           (** [Mlam { parameters = \["X1"; "X2"; ...; "Xn"\]; body; _ }] is

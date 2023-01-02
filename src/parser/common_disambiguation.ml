@@ -1,6 +1,6 @@
 (** Disambiguation of the parser syntax to the external syntax.
 
-    Elements of the syntax for Beluga requires the symbol table for
+    Elements of the syntax for Beluga require the symbol table for
     disambiguation. This module contains stateful functions for elaborating
     the context-free parser syntax to the data-dependent external syntax. The
     logic for the symbol lookups is repeated in the indexing phase to the
@@ -13,9 +13,7 @@ open Support
 open Beluga_syntax
 
 (** Module type for the type of state used in disambiguating the parser
-    syntax to the external syntax.
-
-    The underlying datastructure is assumed to be immutable. *)
+    syntax to the external syntax. *)
 module type DISAMBIGUATION_STATE = sig
   type t
 
@@ -35,7 +33,7 @@ module type DISAMBIGUATION_STATE = sig
     | Computation_term_destructor
     | Query
     | MQuery
-    | Module of { entries : entry Identifier.Hamt.t }
+    | Module of { entries : entry List1.t Identifier.Hamt.t }
 
   (** {1 Constructors} *)
 
@@ -128,7 +126,7 @@ module type DISAMBIGUATION_STATE = sig
 
   val add_mquery : Identifier.t -> t -> t
 
-  val add_module : entry Identifier.Hamt.t -> Identifier.t -> t -> t
+  val add_module : entry List1.t Identifier.Hamt.t -> Identifier.t -> t -> t
 
   (** {2 Getters, setters and mutators} *)
 
@@ -136,17 +134,22 @@ module type DISAMBIGUATION_STATE = sig
 
   val get_default_associativity : t -> Associativity.t
 
-  val get_bindings : t -> entry Identifier.Hamt.t
+  val get_bindings : t -> entry List1.t Identifier.Hamt.t
 
   val modify_bindings :
-    (entry Identifier.Hamt.t -> entry Identifier.Hamt.t) -> t -> t
+       (entry List1.t Identifier.Hamt.t -> entry List1.t Identifier.Hamt.t)
+    -> t
+    -> t
 
   val modify_binding :
        modify_entry:(entry -> entry)
-    -> modify_module:(entry Identifier.Hamt.t -> entry Identifier.Hamt.t)
+    -> modify_module:
+         (entry List1.t Identifier.Hamt.t -> entry List1.t Identifier.Hamt.t)
     -> Qualified_identifier.t
     -> t
     -> t
+
+  val pop_binding : Identifier.t -> t -> t
 
   exception Expected_operator of Qualified_identifier.t
 
@@ -174,7 +177,7 @@ end
     plain identifier keys. *)
 module Disambiguation_state : DISAMBIGUATION_STATE = struct
   type t =
-    { bindings : entry Identifier.Hamt.t  (** Symbol table. *)
+    { bindings : entry List1.t Identifier.Hamt.t  (** Symbol table. *)
     ; default_associativity : Associativity.t
           (** Associativity to use if a pragma for an infix operator does not
               specify an associativity. *)
@@ -196,7 +199,7 @@ module Disambiguation_state : DISAMBIGUATION_STATE = struct
     | Computation_term_destructor
     | Query
     | MQuery
-    | Module of { entries : entry Identifier.Hamt.t }
+    | Module of { entries : entry List1.t Identifier.Hamt.t }
 
   let empty =
     { bindings = Identifier.Hamt.empty
@@ -216,12 +219,19 @@ module Disambiguation_state : DISAMBIGUATION_STATE = struct
     let bindings' = f state.bindings in
     set_bindings bindings' state
 
+  let[@inline] push_binding identifier entry bindings =
+    match Identifier.Hamt.find_opt identifier bindings with
+    | Option.None ->
+        Identifier.Hamt.add identifier (List1.singleton entry) bindings
+    | Option.Some stack ->
+        Identifier.Hamt.add identifier (List1.cons entry stack) bindings
+
   let[@inline] add_binding identifier entry =
-    modify_bindings (Identifier.Hamt.add identifier entry)
+    modify_bindings (push_binding identifier entry)
 
   let add_lf_term_variable identifier =
     let entry = LF_term_variable in
-    modify_bindings (Identifier.Hamt.add identifier entry)
+    add_binding identifier entry
 
   let add_prefix_lf_type_constant ~arity ~precedence identifier =
     let operator = Operator.make_prefix ~arity ~precedence in
@@ -345,28 +355,41 @@ module Disambiguation_state : DISAMBIGUATION_STATE = struct
     let identifier = Qualified_identifier.name qualified_identifier
     and modules = Qualified_identifier.modules qualified_identifier in
     match modules with
-    | [] (* Toplevel declaration *) ->
-        Identifier.Hamt.add identifier entry bindings
+    | [] (* Toplevel declaration *) -> push_binding identifier entry bindings
     | m :: ms (* Nested declaration *) ->
         let rec add_lookup module_to_lookup next_modules bindings =
-          let nested_bindings =
+          let stack' =
             match Identifier.Hamt.find_opt module_to_lookup bindings with
-            | Option.Some (Module { entries })
+            | Option.Some (List1.T (Module { entries }, stack))
             (* Addition to existing module *) ->
-                entries
-            | Option.Some _ (* Entry shadowing *)
+                let entries' =
+                  match next_modules with
+                  | [] (* Finished lookups *) ->
+                      push_binding identifier entry entries
+                  | m :: ms (* Recursively lookup next module *) ->
+                      add_lookup m ms entries
+                in
+                List1.from (Module { entries = entries' }) stack
+            | Option.Some stack (* Entry shadowing *) ->
+                let entries =
+                  match next_modules with
+                  | [] (* Finished lookups *) ->
+                      push_binding identifier entry Identifier.Hamt.empty
+                  | m :: ms (* Recursively lookup next module *) ->
+                      add_lookup m ms Identifier.Hamt.empty
+                in
+                List1.cons (Module { entries }) stack
             | Option.None (* Module introduction *) ->
-                Identifier.Hamt.empty
+                let entries =
+                  match next_modules with
+                  | [] (* Finished lookups *) ->
+                      push_binding identifier entry Identifier.Hamt.empty
+                  | m :: ms (* Recursively lookup next module *) ->
+                      add_lookup m ms Identifier.Hamt.empty
+                in
+                List1.singleton (Module { entries })
           in
-          let nested_bindings' =
-            match next_modules with
-            | [] (* Finished lookups *) ->
-                Identifier.Hamt.add identifier entry nested_bindings
-            | m :: ms (* Recursively lookup next module *) ->
-                add_lookup m ms nested_bindings
-          in
-          let module_entry = Module { entries = nested_bindings' } in
-          Identifier.Hamt.add module_to_lookup module_entry bindings
+          Identifier.Hamt.add module_to_lookup stack' bindings
         in
         add_lookup m ms bindings
 
@@ -382,7 +405,7 @@ module Disambiguation_state : DISAMBIGUATION_STATE = struct
 
   let lookup_entry query bindings =
     match Identifier.Hamt.find_opt query bindings with
-    | Option.Some entry -> entry
+    | Option.Some entry -> List1.head entry
     | Option.None -> raise (Unbound_identifier query)
 
   let lookup_namespace query bindings =
@@ -444,6 +467,17 @@ module Disambiguation_state : DISAMBIGUATION_STATE = struct
   let lookup_toplevel query state =
     let bindings = get_bindings state in
     lookup_entry query bindings
+
+  let[@inline] pop_binding identifier =
+    modify_bindings (fun bindings ->
+        match Identifier.Hamt.find_opt identifier bindings with
+        | Option.None -> raise (Unbound_identifier identifier)
+        | Option.Some (List1.T (_head_to_discard, new_head :: stack)) ->
+            Identifier.Hamt.add identifier
+              (List1.from new_head stack)
+              bindings
+        | Option.Some (List1.T (_head_to_discard, [])) ->
+            Identifier.Hamt.remove identifier bindings)
 
   let modify_binding ~modify_entry ~modify_module identifier state =
     match lookup identifier state with

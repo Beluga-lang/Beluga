@@ -8,6 +8,8 @@ module Make (Indexing_state : sig
 
   val bind_lf_variable : Identifier.t -> t -> t
 
+  val pop_binding : Identifier.t -> t -> t
+
   val fresh_identifier : t -> Identifier.t
 
   val index_of_lf_typ_constant : Qualified_identifier.t -> t -> Id.cid_typ
@@ -26,7 +28,10 @@ struct
     | Option.Some identifier -> return identifier
     | Option.None -> fresh_identifier
 
-  let bind_lf_variable = Indexing_state.bind_lf_variable
+  let with_bound_lf_variable identifier =
+    scoped
+      ~set:(Indexing_state.bind_lf_variable identifier)
+      ~unset:(Indexing_state.pop_binding identifier)
 
   let index_of_lf_typ_constant qualified_identifier =
     get $> Indexing_state.index_of_lf_typ_constant qualified_identifier
@@ -43,6 +48,10 @@ struct
 
   exception Unsupported_lf_annotated_term_abstraction
 
+  exception Unsupported_lf_untyped_pi_kind_parameter
+
+  exception Unsupported_lf_untyped_pi_typ_parameter
+
   let rec append_lf_spines spine1 spine2 =
     match spine1 with
     | Synapx.LF.Nil -> spine2
@@ -51,9 +60,9 @@ struct
         Synapx.LF.App (x, spine')
 
   let rec index_lf_kind kind =
-    let index_as_lf_pi_kind ~x ~domain ~range =
-      let* domain' = index_lf_typ domain in
-      let* range' = locally (bind_lf_variable x) (index_lf_kind range) in
+    let index_as_lf_pi_kind ~x ~parameter_type ~body =
+      let* domain' = index_lf_typ parameter_type in
+      let* range' = (with_bound_lf_variable x) (index_lf_kind body) in
       let x' = Name.make_from_identifier x in
       return
         (Synapx.LF.PiKind
@@ -63,10 +72,15 @@ struct
     | Synext.LF.Kind.Typ _ -> return Synapx.LF.Typ
     | Synext.LF.Kind.Arrow { domain; range; _ } ->
         let* x = fresh_identifier in
-        index_as_lf_pi_kind ~x ~domain ~range
-    | Synext.LF.Kind.Pi { parameter_identifier; parameter_type; body; _ } ->
-        let* x = fresh_identifier_opt parameter_identifier in
-        index_as_lf_pi_kind ~x ~domain:parameter_type ~range:body
+        index_as_lf_pi_kind ~x ~parameter_type:domain ~body:range
+    | Synext.LF.Kind.Pi
+        { parameter_identifier; parameter_type; body; location } -> (
+        match parameter_type with
+        | Option.None ->
+            Error.raise_at1 location Unsupported_lf_untyped_pi_kind_parameter
+        | Option.Some parameter_type ->
+            let* x = fresh_identifier_opt parameter_identifier in
+            index_as_lf_pi_kind ~x ~parameter_type ~body)
 
   and index_lf_typ typ =
     match typ with
@@ -96,19 +110,25 @@ struct
     | Synext.LF.Typ.Arrow { domain; range; _ } ->
         let* x = fresh_identifier in
         let* domain' = index_lf_typ domain in
-        let* range' = locally (bind_lf_variable x) (index_lf_typ range) in
+        let* range' = (with_bound_lf_variable x) (index_lf_typ range) in
         let x' = Name.make_from_identifier x in
         return
           (Synapx.LF.PiTyp
              ((Synapx.LF.TypDecl (x', domain'), Plicity.explicit), range'))
-    | Synext.LF.Typ.Pi { parameter_identifier; parameter_type; body; _ } ->
-        let* x = fresh_identifier_opt parameter_identifier in
-        let* domain' = index_lf_typ parameter_type in
-        let* range' = locally (bind_lf_variable x) (index_lf_typ body) in
-        let x' = Name.make_from_identifier x in
-        return
-          (Synapx.LF.PiTyp
-             ((Synapx.LF.TypDecl (x', domain'), Plicity.explicit), range'))
+    | Synext.LF.Typ.Pi
+        { parameter_identifier; parameter_type; body; location } -> (
+        match parameter_type with
+        | Option.None ->
+            Error.raise_at1 location Unsupported_lf_untyped_pi_typ_parameter
+        | Option.Some parameter_type ->
+            let* x = fresh_identifier_opt parameter_identifier in
+            let* domain' = index_lf_typ parameter_type in
+            let* range' = (with_bound_lf_variable x) (index_lf_typ body) in
+            let x' = Name.make_from_identifier x in
+            return
+              (Synapx.LF.PiTyp
+                 ((Synapx.LF.TypDecl (x', domain'), Plicity.explicit), range'))
+        )
 
   and index_lf_term term =
     match term with
@@ -148,7 +168,7 @@ struct
         match parameter_type with
         | Option.None ->
             let* x = fresh_identifier_opt parameter_identifier in
-            let* body' = locally (bind_lf_variable x) (index_lf_term body) in
+            let* body' = (with_bound_lf_variable x) (index_lf_term body) in
             let x' = Name.make_from_identifier x in
             return (Synapx.LF.Lam (location, x', body'))
         | Option.Some _typ ->

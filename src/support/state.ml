@@ -15,6 +15,8 @@ module type STATE = sig
 
   val locally : (state -> state) -> 'a t -> 'a t
 
+  val scoped : set:(state -> state) -> unset:(state -> state) -> 'a t -> 'a t
+
   include Functor.FUNCTOR with type 'a t := 'a t
 
   include Apply.APPLY with type 'a t := 'a t
@@ -35,6 +37,12 @@ end) : STATE with type state = S.t = struct
     let[@inline] locally f m s =
       let a = eval m (f s) in
       (s, a)
+
+    let[@inline] scoped ~set ~unset m s =
+      let s' = set s in
+      let s'', a = run m s' in
+      let s''' = unset s'' in
+      (s''', a)
 
     include Monad.Make (struct
       (** The type of state transformers. *)

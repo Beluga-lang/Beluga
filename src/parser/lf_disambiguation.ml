@@ -31,8 +31,6 @@ exception Illegal_annotated_kind
 
 exception Illegal_application_kind
 
-exception Illegal_untyped_pi_kind
-
 (** {2 Exceptions for LF type disambiguation} *)
 
 exception Illegal_type_kind_type
@@ -42,8 +40,6 @@ exception Illegal_hole_type
 exception Illegal_lambda_type
 
 exception Illegal_annotated_type
-
-exception Illegal_untyped_pi_type
 
 exception Unbound_type_constant of Qualified_identifier.t
 
@@ -156,6 +152,14 @@ struct
     | Synprs.LF.Object.Raw_qualified_identifier { identifier; quoted; _ } ->
         resolve_lf_operator state ~quoted identifier
     | _ -> `Not_an_operator
+
+  let with_lf_term_variable_opt identifier_opt =
+    match identifier_opt with
+    | Option.None -> Fun.id
+    | Option.Some identifier ->
+        scoped
+          ~set:(Disambiguation_state.add_lf_term_variable identifier)
+          ~unset:(Disambiguation_state.pop_binding identifier)
 
   (** LF term-level or type-level operands for rewriting of prefix, infix and
       postfix operators using {!Shunting_yard}. *)
@@ -282,18 +286,10 @@ struct
                  { location; domain = domain'; range = range' }))
     | Synprs.LF.Object.Raw_pi
         { location; parameter_identifier; parameter_sort; body } ->
-        let* parameter_type' =
-          match parameter_sort with
-          | Option.None -> Error.raise_at1 location Illegal_untyped_pi_kind
-          | Option.Some parameter_type -> disambiguate_as_typ parameter_type
-        in
+        let* parameter_type' = disambiguate_as_typ_opt parameter_sort in
         let* body' =
-          match parameter_identifier with
-          | Option.None -> disambiguate_as_kind body
-          | Option.Some identifier ->
-              locally
-                (Disambiguation_state.add_lf_term_variable identifier)
-                (disambiguate_as_kind body)
+          with_lf_term_variable_opt parameter_identifier
+            (disambiguate_as_kind body)
         in
         return
           (Synext.LF.Kind.Pi
@@ -322,9 +318,6 @@ struct
         Error.raise_at1 location Illegal_lambda_type
     | Synprs.LF.Object.Raw_annotated { location; _ } ->
         Error.raise_at1 location Illegal_annotated_type
-    | Synprs.LF.Object.Raw_pi { location; parameter_sort = Option.None; _ }
-      ->
-        Error.raise_at1 location Illegal_untyped_pi_type
     | Synprs.LF.Object.Raw_identifier { location; identifier; quoted } -> (
         (* As an LF type, plain identifiers are necessarily type-level
            constants. *)
@@ -368,19 +361,11 @@ struct
           (Synext.LF.Typ.Arrow
              { location; domain = domain'; range = range'; orientation })
     | Synprs.LF.Object.Raw_pi
-        { location
-        ; parameter_identifier
-        ; parameter_sort = Option.Some parameter_type
-        ; body
-        } ->
-        let* parameter_type' = disambiguate_as_typ parameter_type in
+        { location; parameter_identifier; parameter_sort; body } ->
+        let* parameter_type' = disambiguate_as_typ_opt parameter_sort in
         let* body' =
-          match parameter_identifier with
-          | Option.None -> disambiguate_as_typ body
-          | Option.Some parameter ->
-              locally
-                (Disambiguation_state.add_lf_term_variable parameter)
-                (disambiguate_as_typ body)
+          with_lf_term_variable_opt parameter_identifier
+            (disambiguate_as_typ body)
         in
         return
           (Synext.LF.Typ.Pi
@@ -395,6 +380,13 @@ struct
             let location = Synext.location_of_lf_term term in
             Error.raise_at1 location Expected_type
         | `Typ typ -> return typ)
+
+  and disambiguate_as_typ_opt object_opt =
+    match object_opt with
+    | Option.None -> return Option.none
+    | Option.Some object_ ->
+        let* typ' = disambiguate_as_typ object_ in
+        return (Option.some typ')
 
   (** [disambiguate_as_term object_ state] is [object_] rewritten as an LF
       term with respect to the disambiguation context [state].
@@ -475,20 +467,10 @@ struct
         | `Term term -> return term)
     | Synprs.LF.Object.Raw_lambda
         { location; parameter_identifier; parameter_sort; body } ->
-        let* parameter_type' =
-          match parameter_sort with
-          | Option.None -> return Option.none
-          | Option.Some parameter_sort ->
-              let* typ' = disambiguate_as_typ parameter_sort in
-              return (Option.some typ')
-        in
+        let* parameter_type' = disambiguate_as_typ_opt parameter_sort in
         let* body' =
-          match parameter_identifier with
-          | Option.None -> disambiguate_as_term body
-          | Option.Some name ->
-              locally
-                (Disambiguation_state.add_lf_term_variable name)
-                (disambiguate_as_term body)
+          with_lf_term_variable_opt parameter_identifier
+            (disambiguate_as_term body)
         in
         return
           (Synext.LF.Term.Abstraction
@@ -784,9 +766,6 @@ let pp_exception ppf = function
         "Type ascriptions to terms may not appear as LF kinds."
   | Illegal_application_kind ->
       Format.fprintf ppf "Term applications may not appear as LF kinds."
-  | Illegal_untyped_pi_kind ->
-      Format.fprintf ppf
-        "The LF Pi-kind is missing its parameter type annotation."
   | Illegal_type_kind_type ->
       Format.fprintf ppf "The kind `type' may not appear as LF types."
   | Illegal_hole_type ->
@@ -795,9 +774,6 @@ let pp_exception ppf = function
       Format.fprintf ppf "Lambdas may not appear as LF types."
   | Illegal_annotated_type ->
       Format.fprintf ppf "Type ascriptions may not appear as LF types."
-  | Illegal_untyped_pi_type ->
-      Format.fprintf ppf
-        "The LF Pi-type is missing its parameter type annotation."
   | Unbound_type_constant identifier ->
       Format.fprintf ppf "The LF type-level constant %a is unbound."
         Qualified_identifier.pp identifier

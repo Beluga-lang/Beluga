@@ -107,13 +107,18 @@ module LF = struct
           domain pp_kind range
     | Kind.Pi { parameter_identifier; parameter_type; body; _ } -> (
         (* Pi-operators are weak prefix operators *)
-        match parameter_identifier with
-        | Option.None ->
+        match (parameter_identifier, parameter_type) with
+        | Option.Some parameter_identifier, Option.Some parameter_type ->
+            Format.fprintf ppf "@[<2>{@ %a :@ %a@ }@ %a@]" Identifier.pp
+              parameter_identifier pp_typ parameter_type pp_kind body
+        | Option.Some parameter_identifier, Option.None ->
+            Format.fprintf ppf "@[<2>{@ %a@ }@ %a@]" Identifier.pp
+              parameter_identifier pp_kind body
+        | Option.None, Option.Some parameter_type ->
             Format.fprintf ppf "@[<2>{@ _ :@ %a@ }@ %a@]" pp_typ
               parameter_type pp_kind body
-        | Option.Some parameter_identifier ->
-            Format.fprintf ppf "@[<2>{@ %a :@ %a@ }@ %a@]" Identifier.pp
-              parameter_identifier pp_typ parameter_type pp_kind body)
+        | Option.None, Option.None ->
+            Format.fprintf ppf "@[<2>{@ _@ }@ %a@]" pp_kind body)
 
   and pp_typ ppf typ =
     let parent_precedence = Precedence.of_typ typ in
@@ -170,14 +175,20 @@ module LF = struct
               parenthesize_right_argument_left_associative_operator
                 Precedence.of_typ ~parent_precedence pp_typ)
           domain
-    | Typ.Pi { parameter_identifier; parameter_type; body; _ } ->
+    | Typ.Pi { parameter_identifier; parameter_type; body; _ } -> (
         (* Pi-operators are weak prefix operators *)
-        Format.fprintf ppf "@[<2>{@ %a :@ %a@ }@ %a@]"
-          (fun ppf -> function
-            | Option.Some parameter_identifier ->
-                Identifier.pp ppf parameter_identifier
-            | Option.None -> Format.fprintf ppf "_")
-          parameter_identifier pp_typ parameter_type pp_typ body
+        match (parameter_identifier, parameter_type) with
+        | Option.Some parameter_identifier, Option.Some parameter_type ->
+            Format.fprintf ppf "@[<2>{@ %a :@ %a@ }@ %a@]" Identifier.pp
+              parameter_identifier pp_typ parameter_type pp_typ body
+        | Option.Some parameter_identifier, Option.None ->
+            Format.fprintf ppf "@[<2>{@ %a@ }@ %a@]" Identifier.pp
+              parameter_identifier pp_typ body
+        | Option.None, Option.Some parameter_type ->
+            Format.fprintf ppf "@[<2>{@ _ :@ %a@ }@ %a@]" pp_typ
+              parameter_type pp_typ body
+        | Option.None, Option.None ->
+            Format.fprintf ppf "@[<2>{@ _@ }@ %a@]" pp_typ body)
 
   and pp_term ppf term =
     let parent_precedence = Precedence.of_term term in
@@ -1457,7 +1468,8 @@ module Harpoon = struct
         Format.fprintf ppf "@[<2>info@ %a@ %a@]" pp_info_kind kind
           Qualified_identifier.pp object_identifier
     | Repl.Command.Select_theorem { theorem; _ } ->
-        Format.fprintf ppf "@[<2>select@ %a@]" Qualified_identifier.pp theorem
+        Format.fprintf ppf "@[<2>select@ %a@]" Qualified_identifier.pp
+          theorem
     | Repl.Command.Theorem { subcommand; _ } ->
         let pp_theorem_subcommand ppf = function
           | `list -> Format.pp_print_string ppf "list"
@@ -1579,8 +1591,8 @@ module Signature = struct
     | Pragma.Postfix_fixity { constant; precedence; _ } -> (
         match precedence with
         | Option.None ->
-            Format.fprintf ppf "@[<2>--postfix@ %a.@]" Qualified_identifier.pp
-              constant
+            Format.fprintf ppf "@[<2>--postfix@ %a.@]"
+              Qualified_identifier.pp constant
         | Option.Some precedence ->
             Format.fprintf ppf "@[<2>--postfix@ %a@ %i.@]"
               Qualified_identifier.pp constant precedence)

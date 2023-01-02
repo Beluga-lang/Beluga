@@ -588,7 +588,9 @@ struct
                     remaining_identifiers =
                   match Identifier.Hamt.find_opt next_identifier state with
                   | Option.Some
-                      (Disambiguation_state.Module { entries = state' }) -> (
+                      (List1.T
+                        ( Disambiguation_state.Module { entries = state' }
+                        , _rest )) -> (
                       match remaining_identifiers with
                       | [] ->
                           (* Lookups ended with a module. *)
@@ -600,8 +602,9 @@ struct
                           helper state' looked_up_identifiers'
                             next_identifier' remaining_identifiers')
                   | Option.Some
-                      (Disambiguation_state.LF_term_constant { operator })
-                    -> (
+                      (List1.T
+                        ( Disambiguation_state.LF_term_constant { operator }
+                        , _rest )) -> (
                       (* Lookups ended with an LF term constant. The
                          remaining identifiers are named projections. *)
                       match remaining_identifiers with
@@ -1436,7 +1439,9 @@ struct
                     remaining_identifiers =
                   match Identifier.Hamt.find_opt next_identifier state with
                   | Option.Some
-                      (Disambiguation_state.Module { entries = state' }) -> (
+                      (List1.T
+                        ( Disambiguation_state.Module { entries = state' }
+                        , _rest )) -> (
                       match remaining_identifiers with
                       | [] ->
                           (* Lookups ended with a module. *)
@@ -1448,8 +1453,9 @@ struct
                           helper state' looked_up_identifiers'
                             next_identifier' remaining_identifiers')
                   | Option.Some
-                      (Disambiguation_state.LF_term_constant { operator })
-                    -> (
+                      (List1.T
+                        ( Disambiguation_state.LF_term_constant { operator }
+                        , _rest )) -> (
                       (* Lookups ended with an LF term constant. The
                          remaining identifiers are named projections. *)
                       match remaining_identifiers with

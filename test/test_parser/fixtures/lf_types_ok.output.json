@@ -843,9 +843,9 @@
             "location": {
               "filename": "lf_types_ok.input.bel",
               "start_line": 22,
-              "start_column": 6,
+              "start_column": 5,
               "stop_line": 22,
-              "stop_column": 9
+              "stop_column": 10
             }
           }
         ],
@@ -978,9 +978,9 @@
                   "location": {
                     "filename": "lf_types_ok.input.bel",
                     "start_line": 22,
-                    "start_column": 15,
+                    "start_column": 14,
                     "stop_line": 22,
-                    "stop_column": 18
+                    "stop_column": 19
                   }
                 }
               ]
@@ -988,9 +988,9 @@
             "location": {
               "filename": "lf_types_ok.input.bel",
               "start_line": 22,
-              "start_column": 12,
+              "start_column": 11,
               "stop_line": 22,
-              "stop_column": 19
+              "stop_column": 20
             }
           }
         ],
@@ -1166,9 +1166,9 @@
                         "location": {
                           "filename": "lf_types_ok.input.bel",
                           "start_line": 22,
-                          "start_column": 28,
+                          "start_column": 27,
                           "stop_line": 22,
-                          "stop_column": 31
+                          "stop_column": 32
                         }
                       }
                     ]
@@ -1176,9 +1176,9 @@
                   "location": {
                     "filename": "lf_types_ok.input.bel",
                     "start_line": 22,
-                    "start_column": 25,
+                    "start_column": 24,
                     "stop_line": 22,
-                    "stop_column": 32
+                    "stop_column": 33
                   }
                 }
               ]
@@ -1186,9 +1186,9 @@
             "location": {
               "filename": "lf_types_ok.input.bel",
               "start_line": 22,
-              "start_column": 22,
+              "start_column": 21,
               "stop_line": 22,
-              "stop_column": 33
+              "stop_column": 34
             }
           }
         ]
@@ -3850,9 +3850,9 @@
                 "location": {
                   "filename": "lf_types_ok.input.bel",
                   "start_line": 67,
-                  "start_column": 32,
+                  "start_column": 29,
                   "stop_line": 67,
-                  "stop_column": 40
+                  "stop_column": 41
                 }
               }
             ]
@@ -4013,9 +4013,9 @@
                 "location": {
                   "filename": "lf_types_ok.input.bel",
                   "start_line": 70,
-                  "start_column": 9,
+                  "start_column": 6,
                   "stop_line": 70,
-                  "stop_column": 17
+                  "stop_column": 18
                 }
               }
             ]
@@ -4502,9 +4502,9 @@
                 "location": {
                   "filename": "lf_types_ok.input.bel",
                   "start_line": 73,
-                  "start_column": 30,
+                  "start_column": 29,
                   "stop_line": 73,
-                  "stop_column": 42
+                  "stop_column": 43
                 }
               }
             ]
@@ -4828,9 +4828,9 @@
                 "location": {
                   "filename": "lf_types_ok.input.bel",
                   "start_line": 76,
-                  "start_column": 30,
+                  "start_column": 29,
                   "stop_line": 76,
-                  "stop_column": 44
+                  "stop_column": 45
                 }
               }
             ]
@@ -5154,9 +5154,9 @@
                 "location": {
                   "filename": "lf_types_ok.input.bel",
                   "start_line": 79,
-                  "start_column": 30,
+                  "start_column": 29,
                   "stop_line": 79,
-                  "stop_column": 46
+                  "stop_column": 47
                 }
               }
             ]
@@ -5451,9 +5451,9 @@
                 "location": {
                   "filename": "lf_types_ok.input.bel",
                   "start_line": 85,
-                  "start_column": 7,
+                  "start_column": 6,
                   "stop_line": 85,
-                  "stop_column": 19
+                  "stop_column": 20
                 }
               }
             ]
@@ -5734,7 +5734,7 @@
           "location": {
             "filename": "lf_types_ok.input.bel",
             "start_line": 88,
-            "start_column": 4,
+            "start_column": 1,
             "stop_line": 88,
             "stop_column": 9
           }
@@ -5834,7 +5834,7 @@
               "location": {
                 "filename": "lf_types_ok.input.bel",
                 "start_line": 88,
-                "start_column": 16,
+                "start_column": 13,
                 "stop_line": 88,
                 "stop_column": 21
               }
@@ -5974,9 +5974,9 @@
                     "location": {
                       "filename": "lf_types_ok.input.bel",
                       "start_line": 88,
-                      "start_column": 26,
+                      "start_column": 25,
                       "stop_line": 88,
-                      "stop_column": 35
+                      "stop_column": 36
                     }
                   }
                 ],
@@ -6071,9 +6071,9 @@
                     "location": {
                       "filename": "lf_types_ok.input.bel",
                       "start_line": 88,
-                      "start_column": 41,
+                      "start_column": 40,
                       "stop_line": 88,
-                      "stop_column": 50
+                      "stop_column": 51
                     }
                   }
                 ]
@@ -6081,7 +6081,7 @@
               "location": {
                 "filename": "lf_types_ok.input.bel",
                 "start_line": 88,
-                "start_column": 37,
+                "start_column": 25,
                 "stop_line": 88,
                 "stop_column": 51
               }
@@ -6441,9 +6441,9 @@
                     "location": {
                       "filename": "lf_types_ok.input.bel",
                       "start_line": 91,
-                      "start_column": 35,
+                      "start_column": 34,
                       "stop_line": 91,
-                      "stop_column": 46
+                      "stop_column": 47
                     }
                   }
                 ],
@@ -6538,9 +6538,9 @@
                     "location": {
                       "filename": "lf_types_ok.input.bel",
                       "start_line": 91,
-                      "start_column": 49,
+                      "start_column": 48,
                       "stop_line": 91,
-                      "stop_column": 60
+                      "stop_column": 61
                     }
                   }
                 ]
@@ -6688,7 +6688,7 @@
           "location": {
             "filename": "lf_types_ok.input.bel",
             "start_line": 94,
-            "start_column": 15,
+            "start_column": 13,
             "stop_line": 94,
             "stop_column": 19
           }
@@ -6852,7 +6852,7 @@
                   "location": {
                     "filename": "lf_types_ok.input.bel",
                     "start_line": 97,
-                    "start_column": 14,
+                    "start_column": 12,
                     "stop_line": 97,
                     "stop_column": 18
                   }
@@ -6953,9 +6953,9 @@
                         "location": {
                           "filename": "lf_types_ok.input.bel",
                           "start_line": 97,
-                          "start_column": 23,
+                          "start_column": 22,
                           "stop_line": 97,
-                          "stop_column": 26
+                          "stop_column": 27
                         }
                       }
                     ],
@@ -7011,9 +7011,9 @@
                         "location": {
                           "filename": "lf_types_ok.input.bel",
                           "start_line": 97,
-                          "start_column": 32,
+                          "start_column": 31,
                           "stop_line": 97,
-                          "stop_column": 35
+                          "stop_column": 36
                         }
                       }
                     ]
@@ -7021,7 +7021,7 @@
                   "location": {
                     "filename": "lf_types_ok.input.bel",
                     "start_line": 97,
-                    "start_column": 28,
+                    "start_column": 22,
                     "stop_line": 97,
                     "stop_column": 36
                   }
@@ -7217,9 +7217,9 @@
                 "location": {
                   "filename": "lf_types_ok.input.bel",
                   "start_line": 98,
-                  "start_column": 6,
+                  "start_column": 5,
                   "stop_line": 98,
-                  "stop_column": 19
+                  "stop_column": 20
                 }
               }
             ],
@@ -7351,9 +7351,9 @@
                 "location": {
                   "filename": "lf_types_ok.input.bel",
                   "start_line": 98,
-                  "start_column": 25,
+                  "start_column": 24,
                   "stop_line": 98,
-                  "stop_column": 38
+                  "stop_column": 39
                 }
               }
             ]
@@ -7361,7 +7361,7 @@
           "location": {
             "filename": "lf_types_ok.input.bel",
             "start_line": 98,
-            "start_column": 21,
+            "start_column": 5,
             "stop_line": 98,
             "stop_column": 39
           }
@@ -7627,9 +7627,9 @@
                         "location": {
                           "filename": "lf_types_ok.input.bel",
                           "start_line": 101,
-                          "start_column": 30,
+                          "start_column": 29,
                           "stop_line": 101,
-                          "stop_column": 33
+                          "stop_column": 34
                         }
                       }
                     ],
@@ -7685,9 +7685,9 @@
                         "location": {
                           "filename": "lf_types_ok.input.bel",
                           "start_line": 101,
-                          "start_column": 36,
+                          "start_column": 35,
                           "stop_line": 101,
-                          "stop_column": 39
+                          "stop_column": 40
                         }
                       }
                     ]
@@ -7891,9 +7891,9 @@
                 "location": {
                   "filename": "lf_types_ok.input.bel",
                   "start_line": 102,
-                  "start_column": 11,
+                  "start_column": 10,
                   "stop_line": 102,
-                  "stop_column": 24
+                  "stop_column": 25
                 }
               }
             ],
@@ -8025,9 +8025,9 @@
                 "location": {
                   "filename": "lf_types_ok.input.bel",
                   "start_line": 102,
-                  "start_column": 27,
+                  "start_column": 26,
                   "stop_line": 102,
-                  "stop_column": 40
+                  "stop_column": 41
                 }
               }
             ]
@@ -8301,9 +8301,9 @@
                         "location": {
                           "filename": "lf_types_ok.input.bel",
                           "start_line": 105,
-                          "start_column": 30,
+                          "start_column": 29,
                           "stop_line": 105,
-                          "stop_column": 33
+                          "stop_column": 34
                         }
                       }
                     ],
@@ -8359,9 +8359,9 @@
                         "location": {
                           "filename": "lf_types_ok.input.bel",
                           "start_line": 105,
-                          "start_column": 36,
+                          "start_column": 35,
                           "stop_line": 105,
-                          "stop_column": 39
+                          "stop_column": 40
                         }
                       }
                     ]
@@ -8565,9 +8565,9 @@
                 "location": {
                   "filename": "lf_types_ok.input.bel",
                   "start_line": 106,
-                  "start_column": 11,
+                  "start_column": 10,
                   "stop_line": 106,
-                  "stop_column": 26
+                  "stop_column": 27
                 }
               }
             ],
@@ -8699,9 +8699,9 @@
                 "location": {
                   "filename": "lf_types_ok.input.bel",
                   "start_line": 106,
-                  "start_column": 29,
+                  "start_column": 28,
                   "stop_line": 106,
-                  "stop_column": 44
+                  "stop_column": 45
                 }
               }
             ]
@@ -9069,9 +9069,9 @@
                 "location": {
                   "filename": "lf_types_ok.input.bel",
                   "start_line": 109,
-                  "start_column": 56,
+                  "start_column": 53,
                   "stop_line": 109,
-                  "stop_column": 72
+                  "stop_column": 73
                 }
               }
             ]
@@ -9439,9 +9439,9 @@
                 "location": {
                   "filename": "lf_types_ok.input.bel",
                   "start_line": 112,
-                  "start_column": 54,
+                  "start_column": 53,
                   "stop_line": 112,
-                  "stop_column": 74
+                  "stop_column": 75
                 }
               }
             ]

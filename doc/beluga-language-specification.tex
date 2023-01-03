@@ -53,6 +53,7 @@ The EBNF metasyntax used in the sections hereafter follows this notation:
 \item $ (a)* $ represents the repetition of $ a $ zero or more times
 \item $ (a)+ $ represents the repetition of $ a $ one or more times
 \item $ [a] $ represents optionally applying $ a $
+\item $ a - b $ represents the application of $ a $ that cannot be the application of $ b $ if $ a $ and $ b $ are single-character length productions
 \item \texttt{(*} and \texttt{*)} delimit comments
 \end{itemize}
 
@@ -138,7 +139,8 @@ Additionally, the following characters are reserved and cannot be used anywhere 
 \subsection{Lexical Conventions}
 
 \Beluga programs must be encoded in \textsc{UTF-8}.
-The productions \texttt{ID\_Start} and \texttt{ID\_Continue} correspond to the Unicode properties of the same name as described in the Unicode Standard Version 14.0.0 Annex \#31, \href{https://www.unicode.org/reports/tr31/tr31-35.html}{\textit{Unicode Identifier and Pattern Syntax}}.
+The production \synt{white-space} correspond to the Unicode property \texttt{White\_Space} as described in the Unicode Standard Version 15.0.0 Annex \#44, \href{https://www.unicode.org/reports/tr44/tr44-30.html#White_Space}{\textit{Unicode Character Database}}.
+The production \synt{any} stands for any unicode character.
 
 \begin{grammar}
 <forward-arrow> ::=
@@ -173,20 +175,15 @@ The productions \texttt{ID\_Start} and \texttt{ID\_Continue} correspond to the U
 
 <dot-integer> ::= `.'<integer>
 
-<identifier-tail> ::=
-  \texttt{ID_Continue}
-|  `\''
-| `-'
-| `*'
-| `+'
-| `@'
-| `='
-| `^'
-| `/'
-| `#'
-| `?'
+<ascii-control> ::= `\\000' .. `\\031' | `\\127'
 
-<identifier> ::= \texttt{ID_Start} <identifier-tail>* \hfill \texttt{(* Identifier definition *)}
+<reserved-character> ::= `.' | `,' | `:' | `;' | `\%' | `|' | `"' | `\\' | `(' | `)' | `[' | `]' | `{' | `}' | `<' | `>'
+
+<identifier-continue> ::= <any> - (<ascii-control> | <white-space> | <reserved-character>)
+
+<identifier-start> ::= <identifier-continue> - <digit>
+
+<identifier> ::= <identifier-start> <identifier-continue>* \hfill \texttt{(* Identifier definition *)}
 
 <hash-identifier> ::= `#'<identifier>
 

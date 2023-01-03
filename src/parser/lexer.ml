@@ -1,28 +1,9 @@
 open Support
 open Beluga_syntax
 
-(* TODO: Use separate exceptions *)
-type error =
-  | UnlexableCharacter of string
-  | MismatchedBlockComment
+exception Unlexable_character of string
 
-exception Error of Location.t * error
-
-let throw loc e = raise (Error (loc, e))
-
-let _ =
-  Error.register_printer' (function
-    | Error (loc, e) ->
-        let open Format in
-        Error.print_with_location loc (fun ppf ->
-            fprintf ppf "lexical error: ";
-            match e with
-            | UnlexableCharacter c ->
-                fprintf ppf "unrecognizable character(s) %s" c
-            | MismatchedBlockComment ->
-                fprintf ppf "unexpected end of block comment")
-        |> Option.some
-    | _ -> Option.none)
+exception Mismatched_block_comment
 
 (** [get_location lexbuf] is the location of the currently lexed token in
     [lexbuf]. *)
@@ -38,13 +19,22 @@ let set_location location lexbuf =
   Sedlexing.set_filename lexbuf filename;
   Sedlexing.set_position lexbuf position
 
-let sym_head = [%sedlex.regexp? id_start | '_']
-
-let sym_tail = [%sedlex.regexp? id_continue | Chars "\'-*+@=^/#?"]
-
-let ident = [%sedlex.regexp? sym_head, Star sym_tail]
+let ascii_control_character = [%sedlex.regexp? '\000' .. '\031' | '\127']
 
 let digit = [%sedlex.regexp? '0' .. '9']
+
+let reserved_character =
+  [%sedlex.regexp?
+    ( '.' | ',' | ':' | ';' | '%' | '|' | '"' | '\\' | '(' | ')' | '[' | ']'
+    | '{' | '}' | '<' | '>' )]
+
+let ident_continue =
+  [%sedlex.regexp?
+    Sub (any, (ascii_control_character | white_space | reserved_character))]
+
+let ident_start = [%sedlex.regexp? Sub (ident_continue, digit)]
+
+let ident = [%sedlex.regexp? ident_start, Star ident_continue]
 
 let number = [%sedlex.regexp? Plus digit]
 
@@ -98,11 +88,8 @@ let block_comment_end = [%sedlex.regexp? "}%"]
 
 let block_comment_char = [%sedlex.regexp? Compl '%' | Compl '}']
 
-let string_delimiter = [%sedlex.regexp? '"']
-
-(* XXX This is stupid and doesn't allow any escape characters. *)
 let string_literal =
-  [%sedlex.regexp? string_delimiter, Star (Compl '"'), string_delimiter]
+  [%sedlex.regexp? '"', Star ('\\', any | Sub (any, ('"' | '\\'))), '"']
 
 (** Skips the _body_ of a block comment. Calls itself recursively upon
     encountering a nested block comment. Consumes the block_comment_end
@@ -127,7 +114,8 @@ let rec tokenize lexbuf =
   | block_comment_begin ->
       skip_nested_block_comment lexbuf;
       tokenize lexbuf
-  | block_comment_end -> throw (get_location lexbuf) MismatchedBlockComment
+  | block_comment_end ->
+      Error.raise_at1 (get_location lexbuf) Mismatched_block_comment
   | line_comment -> tokenize lexbuf
   (* STRING LITERALS *)
   | string_literal ->
@@ -212,9 +200,6 @@ let rec tokenize lexbuf =
       in
       const (Token.HOLE s)
   | "_" -> const Token.UNDERSCORE
-  | ident ->
-      let s = Sedlexing.Utf8.lexeme lexbuf in
-      const (Token.IDENT s)
   | dot_number ->
       let s =
         Sedlexing.Utf8.sub_lexeme lexbuf 1
@@ -243,10 +228,12 @@ let rec tokenize lexbuf =
   | number ->
       let n = int_of_string (Sedlexing.Utf8.lexeme lexbuf) in
       const (Token.INTLIT n)
+  | ident ->
+      let s = Sedlexing.Utf8.lexeme lexbuf in
+      const (Token.IDENT s)
   | _ ->
       let s = Sedlexing.Utf8.lexeme lexbuf in
-      throw (get_location lexbuf) (UnlexableCharacter s)
-(* TODO: Revise to support [|--] *)
+      Error.raise_at1 (get_location lexbuf) (Unlexable_character s)
 
 let make_token_sequence ~initial_location lexer_buffer =
   set_location initial_location lexer_buffer;
@@ -264,3 +251,15 @@ let lex_file ~filename =
 
 let lex_input_channel ~initial_location input =
   lex_gen ~initial_location (Gen.of_in_channel input)
+
+let pp_exception ppf = function
+  | Unlexable_character s ->
+      Format.fprintf ppf "Unlexable character(s) \"%s\"." s
+  | Mismatched_block_comment ->
+      Format.fprintf ppf "Unexpected end of block comment."
+  | _ -> raise (Invalid_argument "[pp_exception] unsupported exception")
+
+let () =
+  Printexc.register_printer (fun exn ->
+      try Option.some (Format.stringify pp_exception exn) with
+      | Invalid_argument _ -> Option.none)

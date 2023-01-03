@@ -20,14 +20,14 @@ type test_case_token =
 let rec tokenize lexer_buffer =
   match%sedlex lexer_buffer with
   | eof -> Option.none
-  | '%', Star (Intersect (Compl '\n', Compl eof)), ('\n' | eof)
+  | '%', Star (Sub (any, ('\n' | eof))), ('\n' | eof)
   | white_space ->
       tokenize lexer_buffer
   | ";;" ->
       let token = Terminator in
       Option.some token
-  | ( Plus (Intersect (Compl '%', Compl ';'))
-    , Star (';', (eof | Plus (Intersect (Compl '%', Compl ';')))) ) ->
+  | ( Plus (Sub (any, ('%' | ';')))
+    , Star (';', (eof | Plus (Sub (any, ('%' | ';'))))) ) ->
       let input = Sedlexing.Utf8.lexeme lexer_buffer in
       let token = Input input in
       Option.some token

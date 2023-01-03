@@ -1113,9 +1113,9 @@
                 "location": {
                   "filename": "lf_kinds_ok.input.bel",
                   "start_line": 28,
-                  "start_column": 6,
+                  "start_column": 5,
                   "stop_line": 28,
-                  "stop_column": 9
+                  "stop_column": 10
                 }
               }
             ],
@@ -1244,9 +1244,9 @@
                 "location": {
                   "filename": "lf_kinds_ok.input.bel",
                   "start_line": 28,
-                  "start_column": 14,
+                  "start_column": 13,
                   "stop_line": 28,
-                  "stop_column": 17
+                  "stop_column": 18
                 }
               }
             ]
@@ -1413,9 +1413,9 @@
                 "location": {
                   "filename": "lf_kinds_ok.input.bel",
                   "start_line": 31,
-                  "start_column": 6,
+                  "start_column": 5,
                   "stop_line": 31,
-                  "stop_column": 9
+                  "stop_column": 10
                 }
               }
             ],
@@ -1505,9 +1505,9 @@
                 "location": {
                   "filename": "lf_kinds_ok.input.bel",
                   "start_line": 31,
-                  "start_column": 12,
+                  "start_column": 11,
                   "stop_line": 31,
-                  "stop_column": 15
+                  "stop_column": 16
                 }
               }
             ],
@@ -1640,9 +1640,9 @@
                       "location": {
                         "filename": "lf_kinds_ok.input.bel",
                         "start_line": 31,
-                        "start_column": 21,
+                        "start_column": 20,
                         "stop_line": 31,
-                        "stop_column": 24
+                        "stop_column": 25
                       }
                     }
                   ]
@@ -1650,9 +1650,9 @@
                 "location": {
                   "filename": "lf_kinds_ok.input.bel",
                   "start_line": 31,
-                  "start_column": 18,
+                  "start_column": 17,
                   "stop_line": 31,
-                  "stop_column": 25
+                  "stop_column": 26
                 }
               }
             ]
@@ -3363,9 +3363,9 @@
                     "location": {
                       "filename": "lf_kinds_ok.input.bel",
                       "start_line": 55,
-                      "start_column": 16,
+                      "start_column": 15,
                       "stop_line": 55,
-                      "stop_column": 19
+                      "stop_column": 20
                     }
                   }
                 ],
@@ -3421,9 +3421,9 @@
                     "location": {
                       "filename": "lf_kinds_ok.input.bel",
                       "start_line": 55,
-                      "start_column": 29,
+                      "start_column": 28,
                       "stop_line": 55,
-                      "stop_column": 33
+                      "stop_column": 34
                     }
                   }
                 ]
@@ -3431,7 +3431,7 @@
               "location": {
                 "filename": "lf_kinds_ok.input.bel",
                 "start_line": 55,
-                "start_column": 21,
+                "start_column": 15,
                 "stop_line": 55,
                 "stop_column": 34
               }
@@ -3561,9 +3561,9 @@
                     "location": {
                       "filename": "lf_kinds_ok.input.bel",
                       "start_line": 55,
-                      "start_column": 40,
+                      "start_column": 39,
                       "stop_line": 55,
-                      "stop_column": 45
+                      "stop_column": 46
                     }
                   }
                 ],
@@ -3636,9 +3636,9 @@
                     "location": {
                       "filename": "lf_kinds_ok.input.bel",
                       "start_line": 55,
-                      "start_column": 55,
+                      "start_column": 54,
                       "stop_line": 55,
-                      "stop_column": 61
+                      "stop_column": 62
                     }
                   }
                 ]
@@ -3646,7 +3646,7 @@
               "location": {
                 "filename": "lf_kinds_ok.input.bel",
                 "start_line": 55,
-                "start_column": 47,
+                "start_column": 39,
                 "stop_line": 55,
                 "stop_column": 62
               }

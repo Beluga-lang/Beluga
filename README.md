@@ -13,14 +13,19 @@ Optionally, [`rlwrap`](https://github.com/hanslub42/rlwrap) may be installed to 
 
 ### Installation from the opam repository
 
+Stable releases of Beluga are published on the opam repository, but they may not have the most recent features and bugfixes.
+
 Beluga may be installed in the current opam switch using:
 
 ```bash
+# Install `beluga` and `harpoon` in `$OPAM_SWITCH_PREFIX/bin`
 opam install beluga
+
+# Add `$OPAM_SWITCH_PREFIX/bin` to the `PATH` environment variable in the current shell
 eval $(opam env)
 ```
 
-Alternatively, an opam switch may be created specifically for Beluga using:
+Alternatively, to avoid dependency conflicts, an opam switch may be created specifically for Beluga using:
 
 ```bash
 mkdir Beluga
@@ -38,6 +43,9 @@ beluga path/to/program.bel
 
 ### Installation from the source
 
+The latest version of Beluga may be built and installed as follows, without the test dependencies.
+With this configuration, the unit and integration tests cannot be run with `make test`.
+
 To build Beluga from the source code and install it in its own opam switch:
 
 ```bash
@@ -45,32 +53,37 @@ git clone https://github.com/Beluga-lang/Beluga.git Beluga
 cd Beluga
 opam switch create . --empty
 opam install .
+eval $(opam env)
 ```
 
 The `beluga` executable is then accessible from the newly created opam switch.
 
 ### Development
 
+The latest version of Beluga may be built and installed as follows, with the test dependencies.
+With this configuration, the unit and integration tests can be run with `make test`.
+If you already have an opam switch without the test dependencies installed as above, then you can install them with `opam install . --deps-only --with-test`.
+
 To start working on Beluga, clone the repository and create an opam switch with the dependencies installed:
 
 ```bash
 git clone https://github.com/Beluga-lang/Beluga.git Beluga
 cd Beluga
-opam switch create . --deps-only --with-test --yes
+opam switch create . --deps-only --with-test
 eval $(opam env)
 ```
 
 Use `make` to compile, `make test` to compile and run the tests, and `make clean` to clean the directory of compilation results.
 Use `./LINT` to find code style errors.
 
-To use any of the compiled executables as if they were installed from opam, use `dune exec [executable]`.
-For instance, you can run Beluga programs using the compiled development version of `beluga` with:
+To build and use any of the compiled executables as if they were installed from opam, use `dune exec [executable]`.
+For instance, you can build and run the development version of `beluga` with:
 
 ```bash
 dune exec beluga path/to/program.bel
 ```
 
-You can run a Harpoon session using the compiled development version of `harpoon` with:
+Likewise, you can build and run the development version of `harpoon` with:
 
 ```bash
 dune exec harpoon -- --sig path/to/program.bel

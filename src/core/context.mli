@@ -27,6 +27,7 @@ val decs : 'a list -> 'a ctx -> 'a ctx
 val dctxToHat : dctx -> dctx_hat
 val addToHat : dctx_hat -> dctx_hat (* Lengthen by one declaration *)
 val hatToDCtx : dctx_hat -> dctx
+val extend_hatctx : int -> dctx_hat -> dctx_hat   
 (* Declaration Contexts *)
 val ctxDec : dctx -> int -> typ_decl
 val ctxSigmaDec : dctx -> int -> typ_decl

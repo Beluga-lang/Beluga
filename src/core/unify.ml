@@ -1811,42 +1811,59 @@ module Make (T : TRAIL) : UNIFY = struct
   and unifyMMVarTermProj cD0 cPsi mmvar mt1 t1' tM2 =
     let ClTyp (_, cPsi1) = mmvar.typ in
     let mtt1 = Whnf.m_invert (Whnf.cnormMSub mt1) in
-    (* cD |- mtt1 : cD0 *)
+    (* cD |- mtt1 : cD0 and  cD ; cPsi |- t1' : cPsi1 *)
     let (flat_cPsi, conv_list) = ConvSigma.flattenDCtx cD0 cPsi in
+    let s_tup = ConvSigma.gen_tup_sub conv_list in (* flat_cPsi |- s_tup : cPsi *)  
+    let s_proj = ConvSigma.gen_proj_sub conv_list in (* cPsi |- s_proj : flat_cPsi *)  
     dprintf
       begin fun p ->
       p.fmt "[unifyMMVarTermProj] \
              @[<v>cPsi = @[%a@]\
              @,sM2 = @[%a@]\
              @,flat_cPsi = @[%a@]\
-             @,conv_list = @[%a@]@]"
+             @,conv_list = @[%a@]@]\
+             @, Type of MMVar = @[ %a @]"
         (P.fmt_ppr_lf_dctx cD0 P.l0) cPsi
         (P.fmt_ppr_lf_normal cD0 cPsi P.l0) tM2
         (P.fmt_ppr_lf_dctx cD0 P.l0) flat_cPsi
         ConvSigma.fmt_ppr_conv_list conv_list
+        (P.fmt_ppr_lf_mtyp cD0 ) mmvar.typ 
       end;
     let phat = Context.dctxToHat flat_cPsi in
     let t_flat = ConvSigma.strans_sub cD0 cPsi t1' conv_list in
-    (* flat_cPsi |- t_flat : cPsi *)
-    (* flat_cPsi |- t_flat : cPsi1 ** new *)
+    (* flat_cPsi |- t_flat : cPsi1  *)
     dprintf
       begin fun p ->
       p.fmt "[unifyMMVarTermProj] t_flat = %a"
         (P.fmt_ppr_lf_sub cD0 flat_cPsi P.l0) t_flat
       end;
-    let tM2' = ConvSigma.strans_norm cD0 cPsi (tM2, id) conv_list in
-    dprintf
+    (* let tM2' = ConvSigma.strans_norm cD0 cPsi (tM2, id) conv_list in *)
+     (* flat_cPsi |- tM2'  *) 
+    (* this seems to produce an incorrect term -bp *)
+     dprintf
       begin fun p ->
-      p.fmt "[unifyMMVarTermProj] sM2' = %a"
-        (P.fmt_ppr_lf_normal cD0 flat_cPsi P.l0) tM2'
+      p.fmt "[unifyMMVarTermProj] sM2 = %a \n s_tup = %a \n s_proj = %a " 
+        (P.fmt_ppr_lf_normal cD0 cPsi P.l0) tM2
+        (P.fmt_ppr_lf_sub cD0 flat_cPsi P.l0) s_tup
+        (P.fmt_ppr_lf_sub cD0 cPsi P.l0) s_proj    
       end;
-    (* flat_cPsi |- tM2' *)
+     dprintf
+      begin fun p ->
+      p.fmt "[unifyMMVarTermProj] comp s_tup s_proj = %a "
+        (P.fmt_ppr_lf_sub cD0 cPsi P.l0) (Substitution.LF.comp s_proj s_tup)
+      end ;
     let ss = invert t_flat in
     (* cPsi1  |- ss : flat_cPsi
        Inversion of t_flat will only succeed if t_flat is a variable substitution;
        it can happen that it contains projections as complete flattening was impossible
        because not enough typing information was available in cPsi (i.e. cPsi was obtained by hattoDctx)
      *)
+    let tM2' = Whnf.norm (tM2, s_tup )  (* flat_cPsi |- tM2'  *)  in 
+    dprintf
+      begin fun p ->
+      p.fmt "[unifyMMVarTermProj] sM2' = %a"
+        (P.fmt_ppr_lf_normal cD0 flat_cPsi P.l0) tM2'
+      end;
     let sM2' =
       trail
         begin fun () ->

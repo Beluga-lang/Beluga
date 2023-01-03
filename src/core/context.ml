@@ -51,7 +51,10 @@ let rec hatToDCtx =
        ( hatToDCtx (ctx_v, k-1)
        , LF.TypDeclOpt Name.(mk_name (SomeString ("x" ^ string_of_int k))))
 
+let extend_hatctx j  (ctx_v, k)  = (ctx_v, j+k) 
 
+
+  
 (* Declaration Contexts *)
 (*
 let rec sigmaShift typrec k = match typrec with
@@ -439,7 +442,7 @@ and lookupCtxVar cD cvar =
   in
   lookup cD 0
 
-and lookupCtxVarSchema cO phi = Pair.snd (lookupCtxVar cO phi)
+and lookupCtxVarSchema cD phi : Id.cid_schema  = Pair.snd (lookupCtxVar cD phi)
 
 let rec rename src dst get_name rename_decl =
   function

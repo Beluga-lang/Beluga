@@ -227,21 +227,25 @@ let rec flattenDCtx' cD =
      , 1 :: conv_list
      )
 
-(* flattenDCtx cPsi = (cPsi', L)
+(* flattenDCtx cD cPsi = (cPsi', L)
 
-   if   O ; D |- cPsi
-        and cPsi contains Sigma-types
-
+   if    cD |- cPsi and cPsi contains possibly Sigma-types 
+         cPsi = ., bn:tBn, ... b0:tB0  and tBi = Sigma yik:Aik(i)...yi0:Ai0 or simply tBi = Ai0
+         and k(i) is the #elements in tBi. 
    then
-        O ; D |- cPsi'  where all Sigma-types in cPsi have been flattened.
-        L is a vector i.e. pos(i, L) = n  where n denotes the length of the type tA
-        for element i
+         cD |- cPsi'  where all Sigma-types in cPsi have been flattened, i.e. 
+ 
+         cD |- . , ynk:Ank(n) .... yn0:An0, .... y0k:A0k(0), ... y00:A00        
 
 
-   Example:  cPsi  =  .,  Sigma x:A.B,  y:A,  Sigma w1:A  w2:A. A
+         and L is a vector [k(0) ; .... ; k(n)] 
+
+
+   Example:  cPsi  =  .,  bx:Sigma x:A.B,  y:A,  bw: Sigma w1:A  w2:A. A
        then flattenDCtx cPsi = (cPsi', L)
        where  cPsi' = ., x:A, x':B, y:A, w1:A, w2:A, w3:A
                 L   =    [3,1,2]    (note reverse order since contexts are built in reverse order)
+       and #elements (bx) = 2 ,#elements (y) = 1, #elements (bw) = 3
 *)
 let flattenDCtx cD cPsi =
   flattenDCtx' cD (Whnf.cnormDCtx (cPsi, Whnf.m_id))
@@ -249,19 +253,20 @@ let flattenDCtx cD cPsi =
 
 
 
-(* genConvSub conv_list = s
+(* gen_proj_sub conv_list =  s
+   gen_tup_sub convlist = ss 
 
-   If cO ; cD |- cPsi   and    cO ; cD |- cPhi
-      where conv_list relates cPsi to cPhi
+   If cD |- cPsi   and    cD |- flat_cPsi
+      where conv_list relates cPsi to flat_cPsi, i.e. | conv_list | = |cPsi|
 
-   then
-
-      cO ; cD ; cPsi |- s : cPhi
-
+   the
+      cD ; cPsi      |- s : flat_cPsi 
+      cD ; flat_cPsi |- ss : cPsi
+            and s is a projection substitution
 
    Example:
             cPsi:        g, b:block x:exp. nat
-            cPhi:        g, x:exp, y:nat
+            flat_cPsi         g, x:exp, y:nat
             conv_list    [2]
 
    genConvSub generates:
@@ -270,10 +275,62 @@ let flattenDCtx cD cPsi =
 
    AND
 
-   genConvSub' generates :
          cPhi |-   s'  : ^2, <x,y>  : cPsi
 
-*)
+ *)
+(* NEW VERSIONS *)
+let gen_proj_sub' conv_list =
+  let rec gen_projs s k index =
+    if k = index
+    then LF.Dot (LF.Head (LF.Proj (LF.BVar 1, index)), s)
+    else
+      gen_projs
+        (LF.Dot (LF.Head (LF.Proj (LF.BVar 1, index)), s))
+        k (index + 1)
+  in
+  let rec gen_sub conv_list  =
+    match conv_list with
+    | [] -> LF.Shift 0  (* . |- . : .  and flat_cPsi = . = cPsi *)
+    | 1 :: clist ->
+       let s = gen_sub clist in  (* cPsi |- s : flat_cPsi *) 
+       Substitution.LF.dot1 s
+       (* cPsi, x:tA |- s¹, x : flat_cPsi, x:tA *) 
+    | k :: clist ->
+       let s = gen_sub clist in  (* cPsi |- s : flat_cPsi *)
+       (* cPsi, b: tB |- s¹ : flat_cPsi *) 
+       gen_projs (Substitution.LF.comp s Substitution.LF.shift) k 1
+  in
+  gen_sub conv_list
+
+let gen_tup_sub' conv_list =
+  let rec gen_tup k  =
+    if k = 1
+    then
+      (* only correct if pos stands for a variable of atomic type *)
+      LF.Last (LF.Root (Syntax.Loc.ghost, LF.BVar k, LF.Nil, Plicity.explicit))
+    else
+      begin
+        let tM = LF.Root (Syntax.Loc.ghost, LF.BVar k, LF.Nil, Plicity.explicit) in
+        let tTup = gen_tup (k - 1) in
+        LF.Cons (tM, tTup)
+      end
+  in
+  let rec shift s n = if n = 0 then s else
+                    shift (Substitution.LF.comp s Substitution.LF.shift) (n-1) in
+  let rec gen_sub' conv_list  =
+    match conv_list with
+    | [] -> LF.Shift 0  (* . |- . : .  and flat_cPsi = . = cPsi *)
+    | 1 :: clist ->
+       let s = gen_sub' clist in  (* flat_cPsi |- s : cPsi *) 
+       Substitution.LF.dot1 s
+    | k :: clist ->
+       let s = gen_sub' clist in (* flat_cPsi |- s : cPsi *) 
+       let tM = gen_tup k  in  (* flat_cPsi, xk:Ak, ... x0:A0 |- <xn, ..., x0>  *)
+       LF.Dot (LF.Obj (LF.Tuple (Syntax.Loc.ghost, tM)), shift s k)
+  in
+  gen_sub' conv_list 
+
+
 let gen_proj_sub conv_list =
   let l = List.length conv_list in (* length of cPsi *)
   let rec gen_projs s pos (k, index) =
@@ -324,7 +381,6 @@ let gen_tup_sub conv_list =
        LF.Dot (LF.Obj (LF.Tuple (Syntax.Loc.ghost, tM)), s)
   in
   gen_sub' conv_list 1
-
 
 
   (*

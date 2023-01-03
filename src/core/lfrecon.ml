@@ -820,6 +820,12 @@ let rec synHead cD loc cPsi =
      let sQ = Int.LF.getType h' (typRec, S.LF.id) j in
      Int.LF.TypDecl (x, Int.LF.TClo sQ), Int.LF.Proj (h', j)
 
+
+ (* 
+synDom cD cPsi s = cPhi 
+
+
+ *)
 let rec synDom cD loc cPsi =
   function
   | Apx.LF.Id ->
@@ -1337,8 +1343,12 @@ and elTerm' recT cD cPsi r sP =
              (*The depend paramater here affects both mlam vars and case vars*)
              Int.LF.Root (loc, Int.LF.FMVar (u, s''), Int.LF.Nil, Plicity.explicit)
           | _ when isProjPatSub s ->
-             dprint (fun () -> "Synthesize domain for meta-variable " ^ Name.string_of_name u);
-             dprint (fun () -> "isProjPatSub ... ");
+             dprint (fun () -> "isProjPatSub ....Synthesize domain for meta-variable " ^ Name.string_of_name u);
+             dprintf
+               begin fun p ->
+               p.fmt "[elTerm'] @[<v>Current LF context cPsi %a@@]"
+                 (P.fmt_ppr_lf_dctx cD P.l0) cPsi
+               end;
              let (flat_cPsi, conv_list) = ConvSigma.flattenDCtx cD cPsi in
              dprintf
                begin fun p ->
@@ -1346,28 +1356,50 @@ and elTerm' recT cD cPsi r sP =
                  (P.fmt_ppr_lf_dctx cD P.l0) flat_cPsi
                  ConvSigma.fmt_ppr_conv_list conv_list
                end;
-             let flat_s = flattenProjPat loc cD s conv_list cPsi in
-             dprint (fun () -> "flattenProjPat done ");
-
-             let (cPhi, s'') = synDomOpt cD loc flat_cPsi flat_s in
-             (*
-                cD ; cPsi |- sP
-                cD ; cPsi |- s : cPsi'   and   cD ; cPsi' |- P
-
-                flat_cPsi |-  s'' : cPhi
-                cPhi      |-  ss  : flat_cPsi
-
-              *)
-             let ss = S.LF.invert s'' in
-
+             let flat_s = flattenProjPat loc cD s conv_list cPsi in (* returns an approx. subst. *)
+             let (cPhi, s'') = synDomOpt cD loc flat_cPsi flat_s in (* flat_cPsi |- s'' : cPhi *)
+             (* cPhi is going to be the LF context of the FMV  and s'' is the associated substitution *)
              dprintf
-               begin fun p ->
-               p.fmt "[synDom] (after flattening) cPhi = %a"
+               begin fun p -> 
+               p.fmt "Reconstructed a flattened substitution s'' based on the original subst. s  \n %a |- %a : %a"
+                 (P.fmt_ppr_lf_dctx cD P.l0) flat_cPsi
+                 (P.fmt_ppr_lf_sub cD flat_cPsi P.l0)  s''
                  (P.fmt_ppr_lf_dctx cD P.l0) cPhi
                end;
+             (*
+                cD ; cPsi |- sP where cD ; cPsi |- s : cPsi'   and   cD ; cPsi' |- P
+                flat_cPsi |-  s'' : cPhi   and    cPhi      |-  ss  : flat_cPsi
+              *)
+             let ss = S.LF.invert s'' in
+             dprintf
+               begin fun p -> 
+               p.fmt "flattenProjPat  ss = %a " (P.fmt_ppr_lf_sub cD cPhi P.l0)  ss 
+             end;
              let s_tup = ConvSigma.gen_tup_sub conv_list in
-             let (tP, s_p) = sP in
-             let tP' = Whnf.normTyp (tP, S.LF.comp s_p s_tup) in
+             (* cD ; flat_cPsi |- s_tup : cPsi *)  
+             dprintf
+               begin fun p ->
+               let s_tup_new =   ConvSigma.gen_tup_sub' conv_list in
+               let s_proj_new = ConvSigma.gen_proj_sub' conv_list in
+               p.fmt "[synDom] Conversion substitution s_tup = %a \n New Conversion substitution s_tup_new = %a  \n New Dual Proj Subs = %a "
+                 (P.fmt_ppr_lf_sub cD flat_cPsi P.l0) s_tup
+                 (P.fmt_ppr_lf_sub cD flat_cPsi P.l0) s_tup_new
+                 (P.fmt_ppr_lf_sub cD cPsi P.l0) s_proj_new 
+               end ;
+             let (tP, s_p) = sP in  (* cD ; cPsi |- sP *)
+             dprintf
+               begin fun p -> 
+               p.fmt "[synDom] Type of meta-variable sP = %a \n comp s_pₚs_tup = %a "
+                 (P.fmt_ppr_lf_typ cD cPsi P.l0) (Whnf.normTyp sP)
+                 (P.fmt_ppr_lf_sub cD flat_cPsi P.l0) (S.LF.comp s_p s_tup)
+               end ;
+             dprintf
+               begin fun p -> 
+               p.fmt "[synDom] Converted Type of meta-variable sP  = %a"
+               (P.fmt_ppr_lf_typ cD flat_cPsi P.l0) (Whnf.normTyp (Whnf.normTyp sP, s_tup)) 
+               end ;
+             (* !!!!! let tP' = Whnf.normTyp (tP, S.LF.comp s_p s_tup) in !!! This optimization is not working. -bp *)
+             let tP' = Whnf.normTyp (Whnf.normTyp sP, s_tup) in
              (* let tP' = ConvSigma.strans_typ cD cPsi sP conv_list in *)
              dprintf
                begin fun p ->

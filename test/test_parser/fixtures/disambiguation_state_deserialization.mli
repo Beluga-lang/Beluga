@@ -1,8 +1,9 @@
+open Beluga_parser
+
 exception Unsupported_sort of string
 
 exception Unsupported_fixity of string
 
 exception Unsupported_associativity of string
 
-val read_disambiguation_state :
-  string -> Beluga_parser.Simple_disambiguation_state.t
+val read_disambiguation_state : string -> Simple_disambiguation_state.state

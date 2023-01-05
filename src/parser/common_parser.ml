@@ -48,6 +48,34 @@ let string_literal =
     | _location, Token.STRING s -> Result.ok s
     | _location, _token -> Result.error Expected_string_literal)
 
+exception Expected_dot
+
+let dot =
+  satisfy (fun (_location, token) ->
+      if Token.equal Token.DOT token then Result.ok ()
+      else Result.error Expected_dot)
+
+exception Expected_comma
+
+let comma =
+  satisfy (fun (_location, token) ->
+      if Token.equal Token.COMMA token then Result.ok ()
+      else Result.error Expected_comma)
+
+exception Expected_colon
+
+let colon =
+  satisfy (fun (_location, token) ->
+      if Token.equal Token.COLON token then Result.ok ()
+      else Result.error Expected_colon)
+
+exception Expected_semicolon
+
+let semicolon =
+  satisfy (fun (_location, token) ->
+      if Token.equal Token.SEMICOLON token then Result.ok ()
+      else Result.error Expected_semicolon)
+
 (** [bracketed start stop p] is the parser that runs [p] between [start] and
     [stop] whose results are ignored. *)
 let bracketed start stop p = start &> p <& stop

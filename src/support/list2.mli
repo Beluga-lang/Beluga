@@ -21,6 +21,15 @@ val rev : 'a t -> 'a t
 
 (** {1 Destructors} *)
 
+(** [first (x1, x2, xs)] is [x1]. *)
+val first : 'a t -> 'a
+
+(** [second (x1, x2, xs)] is [x2]. *)
+val second : 'a t -> 'a
+
+(** [tail (x1, x2, xs)] is [xs]. *)
+val tail : 'a t -> 'a list
+
 (** [last l] is the last element in [l]. *)
 val last : 'a t -> 'a
 

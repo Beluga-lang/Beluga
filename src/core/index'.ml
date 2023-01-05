@@ -4,24 +4,22 @@ open Beluga_syntax
 [@@@warning "+A-4-44"]
 
 module Make (Indexing_state : sig
-  type t
+  include State.STATE
 
-  val bind_lf_variable : Identifier.t -> t -> t
+  val bind_lf_variable : Identifier.t -> Unit.t t
 
-  val pop_binding : Identifier.t -> t -> t
+  val pop_binding : Identifier.t -> Unit.t t
 
-  val fresh_identifier : t -> Identifier.t
+  val fresh_identifier : Identifier.t t
 
-  val index_of_lf_typ_constant : Qualified_identifier.t -> t -> Id.cid_typ
+  val index_of_lf_typ_constant : Qualified_identifier.t -> Id.cid_typ t
 
-  val index_of_lf_term_constant : Qualified_identifier.t -> t -> Id.cid_term
+  val index_of_lf_term_constant : Qualified_identifier.t -> Id.cid_term t
 
-  val index_of_lf_variable : Identifier.t -> t -> Id.offset
+  val index_of_lf_variable : Identifier.t -> Id.offset t
 end) =
 struct
-  include State.Make (Indexing_state)
-
-  let fresh_identifier = get $> Indexing_state.fresh_identifier
+  include Indexing_state
 
   let fresh_identifier_opt identifier_opt =
     match identifier_opt with
@@ -32,15 +30,6 @@ struct
     scoped
       ~set:(Indexing_state.bind_lf_variable identifier)
       ~unset:(Indexing_state.pop_binding identifier)
-
-  let index_of_lf_typ_constant qualified_identifier =
-    get $> Indexing_state.index_of_lf_typ_constant qualified_identifier
-
-  let index_of_lf_term_constant qualified_identifier =
-    get $> Indexing_state.index_of_lf_term_constant qualified_identifier
-
-  let index_of_lf_variable identifier =
-    get $> Indexing_state.index_of_lf_variable identifier
 
   exception Unsupported_lf_typ_applicand
 
@@ -94,7 +83,7 @@ struct
             let* applicand' = index_lf_typ applicand in
             match applicand' with
             | Synapx.LF.Atom (_applicand_location, id, spine1') ->
-                let* spine2' = index_spine arguments in
+                let* spine2' = index_lf_spine arguments in
                 let spine' = append_lf_spines spine1' spine2' in
                 return (Synapx.LF.Atom (location, id, spine'))
             | Synapx.LF.PiTyp _
@@ -148,7 +137,7 @@ struct
             let* applicand' = index_lf_term applicand in
             match applicand' with
             | Synapx.LF.Root (_applicand_location, id, spine1') ->
-                let* spine2' = index_spine arguments in
+                let* spine2' = index_lf_spine arguments in
                 let spine' = append_lf_spines spine1' spine2' in
                 return (Synapx.LF.Root (location, id, spine'))
             | Synapx.LF.Lam _
@@ -186,7 +175,7 @@ struct
         let* typ' = index_lf_typ typ in
         return (Synapx.LF.Ann (location, term', typ'))
 
-  and index_spine arguments =
+  and index_lf_spine arguments =
     List1.fold_right
       (fun argument ->
         let* argument' = index_lf_term argument in

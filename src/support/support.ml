@@ -22,7 +22,6 @@ module Hashtbl = Hashtbl
 module Int = Int
 module List = List
 module Option = Option
-module Result = Result
 module Seq = Seq
 module Stack = Stack
 module String = String

@@ -1,13 +1,13 @@
 open Support
 
 module type APPLICATION_DISAMBIGUATION_STATE = sig
-  type t
+  include State.STATE
 
   type operator
 
   type expression
 
-  val guard_operator : expression -> t -> operator Option.t
+  val guard_operator : expression -> operator Option.t t
 end
 
 module type OPERAND = sig
@@ -37,6 +37,7 @@ module Make
                               with type operator = Operator.t
                                and type expression = Operand.expression) =
 struct
+  include Disambiguation_state
   module Shunting_yard =
     Centiparsec.Shunting_yard.Make (Associativity) (Fixity) (Operand)
       (Operator)
@@ -52,26 +53,15 @@ struct
 
   exception Arity_mismatch = Shunting_yard.Arity_mismatch
 
-  include State.Make (Disambiguation_state)
-
   let make_atom expression = Operand.Atom expression
 
   let make_application applicand arguments =
     Operand.Application { applicand; arguments }
 
   let identify expression =
-    get >>= fun state ->
-    match Disambiguation_state.guard_operator expression state with
+    Disambiguation_state.guard_operator expression >>= function
     | Option.None -> return (`Operand expression)
     | Option.Some operator -> return (`Operator operator)
-
-  let rec identify_list expressions =
-    match expressions with
-    | [] -> return []
-    | x :: xs ->
-        let* y = identify x in
-        let* ys = identify_list xs in
-        return (y :: ys)
 
   let rec take_while_operand expressions =
     match expressions with
@@ -114,7 +104,7 @@ struct
 
   let disambiguate_application expressions =
     let expressions_list = List2.to_list expressions in
-    let* identified_expressions = identify_list expressions_list in
+    let* identified_expressions = traverse_list identify expressions_list in
     let translated_expressions =
       reduce_juxtapositions identified_expressions
     in

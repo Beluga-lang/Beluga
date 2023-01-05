@@ -257,7 +257,7 @@ let pp_exception ppf = function
       Format.fprintf ppf "Unlexable character(s) \"%s\"." s
   | Mismatched_block_comment ->
       Format.fprintf ppf "Unexpected end of block comment."
-  | _ -> raise (Invalid_argument "[pp_exception] unsupported exception")
+  | _ -> Error.raise (Invalid_argument "[pp_exception] unsupported exception")
 
 let () =
   Printexc.register_printer (fun exn ->

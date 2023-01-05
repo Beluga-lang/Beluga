@@ -17,177 +17,135 @@ open Common_disambiguation
 
 (** {2 Exceptions for contextual LF type disambiguation} *)
 
-exception Illegal_hole_type
+exception Illegal_hole_clf_type
 
-exception Illegal_lambda_type
+exception Illegal_lambda_clf_type
 
-exception Illegal_annotated_type
+exception Illegal_annotated_clf_type
 
-exception Illegal_untyped_pi_type
+exception Illegal_untyped_pi_clf_type
 
-exception Illegal_tuple_type
+exception Illegal_tuple_clf_type
 
-exception Illegal_projection_type
+exception Illegal_projection_clf_type
 
-exception Illegal_substitution_type
+exception Illegal_substitution_clf_type
 
-exception Illegal_unnamed_block_element_type
+exception Illegal_unnamed_block_element_clf_type
 
-exception Illegal_parameter_variable_type
+exception Illegal_parameter_variable_clf_type
 
-exception Illegal_substitution_variable_type
+exception Illegal_substitution_variable_clf_type
 
-exception Unbound_type_constant of Qualified_identifier.t
+exception Unbound_clf_type_constant of Qualified_identifier.t
 
 exception
-  Unbound_type_constant_or_illegal_projection_type of Qualified_identifier.t
+  Unbound_type_constant_or_illegal_projection_clf_type of
+    Qualified_identifier.t
 
 (** {2 Exceptions for contextual LF term disambiguation} *)
 
-exception Illegal_pi_term
+exception Illegal_pi_clf_term
 
-exception Illegal_forward_arrow_term
+exception Illegal_forward_arrow_clf_term
 
-exception Illegal_backward_arrow_term
+exception Illegal_backward_arrow_clf_term
 
-exception Illegal_block_term
+exception Illegal_block_clf_term
 
-exception Unbound_term_constant of Qualified_identifier.t
+exception Unbound_clf_term_constant of Qualified_identifier.t
+
+exception Expected_term_projection_compatible
 
 (** {2 Exceptions for contextual LF substitution disambiguation} *)
 
-exception Illegal_subtitution_term_label
+exception Illegal_clf_subtitution_term_label
 
 (** {2 Exceptions for contextual LF context disambiguation} *)
 
-exception Illegal_context_parameter_variable_binding
+exception Illegal_clf_context_parameter_variable_binding
 
-exception Illegal_context_substitution_variable_binding
+exception Illegal_clf_context_substitution_variable_binding
 
-exception Illegal_context_missing_binding_identifier
+exception Illegal_clf_context_missing_binding_identifier
 
-exception Illegal_context_identity
+exception Illegal_clf_context_identity
 
 (** {2 Exceptions for application rewriting} *)
 
-exception Expected_term_constant
+exception Expected_clf_term_constant
 
-exception Expected_type_constant
+exception Expected_clf_type_constant
 
-exception Expected_term
+exception Misplaced_clf_operator
 
-exception Expected_type
-
-exception Expected_term_pattern
-
-exception Expected_type_pattern
-
-exception Misplaced_operator
-
-exception Ambiguous_operator_placement of Qualified_identifier.t
+exception Ambiguous_clf_operator_placement of Qualified_identifier.t
 
 exception
-  Consecutive_applications_of_non_associative_operators of
+  Consecutive_applications_of_non_associative_clf_operators of
     Qualified_identifier.t
 
 exception
-  Arity_mismatch of
+  Clf_arity_mismatch of
     { operator_identifier : Qualified_identifier.t
     ; expected_arguments_count : Int.t
     ; actual_arguments_count : Int.t
     }
 
-(** {2 Exceptions for contextual LF type pattern disambiguation} *)
-
-exception Illegal_wildcard_type_pattern
-
-exception Illegal_labellable_hole_type_pattern
-
-exception Illegal_lambda_type_pattern
-
-exception Illegal_annotated_type_pattern
-
-exception Illegal_untyped_pi_type_pattern
-
-exception Illegal_tuple_type_pattern
-
-exception Illegal_projection_type_pattern
-
-exception Illegal_substitution_type_pattern
-
-exception Illegal_unnamed_block_element_type_pattern
-
 (** {2 Exceptions for contextual LF term pattern disambiguation} *)
 
-exception Illegal_pi_term_pattern
+exception Illegal_pi_clf_term_pattern
 
-exception Illegal_forward_arrow_term_pattern
+exception Illegal_forward_arrow_clf_term_pattern
 
-exception Illegal_backward_arrow_term_pattern
+exception Illegal_backward_arrow_clf_term_pattern
 
-exception Illegal_block_term_pattern
+exception Illegal_block_clf_term_pattern
 
 exception Illegal_labellable_hole_term_pattern
 
 (** {2 Exceptions for contextual LF substitution pattern disambiguation} *)
 
-exception Illegal_subtitution_pattern_term_label
+exception Illegal_subtitution_clf_pattern_term_label
 
 (** {2 Exceptions for contextual LF context pattern disambiguation} *)
 
-exception Illegal_context_pattern_missing_binding_type
+exception Illegal_clf_context_pattern_missing_binding_type
 
-exception Illegal_context_pattern_parameter_variable_binding
+exception Illegal_clf_context_pattern_parameter_variable_binding
 
-exception Illegal_context_pattern_substitution_variable_binding
+exception Illegal_clf_context_pattern_substitution_variable_binding
 
-exception Illegal_context_pattern_missing_binding_identifier
+exception Illegal_clf_context_pattern_missing_binding_identifier
 
-exception Illegal_context_pattern_identity
+exception Illegal_clf_context_pattern_identity
 
 (** {1 Disambiguation} *)
 
+(** {2 Exception Printing} *)
 module type CLF_DISAMBIGUATION = sig
-  type disambiguation_state
-
-  type disambiguation_state_entry
+  include State.STATE
 
   (** {1 Disambiguation} *)
 
-  val disambiguate_as_typ :
-       Synprs.clf_object
-    -> disambiguation_state
-    -> disambiguation_state * Synext.clf_typ
+  val disambiguate_clf_typ : Synprs.clf_object -> Synext.clf_typ t
 
-  val disambiguate_as_term :
-       Synprs.clf_object
-    -> disambiguation_state
-    -> disambiguation_state * Synext.clf_term
+  val disambiguate_clf_term : Synprs.clf_object -> Synext.clf_term t
 
-  val disambiguate_as_substitution :
-       Synprs.clf_context_object
-    -> disambiguation_state
-    -> disambiguation_state * Synext.clf_substitution
+  val disambiguate_clf_substitution :
+    Synprs.clf_context_object -> Synext.clf_substitution t
 
-  val disambiguate_as_context :
-       Synprs.clf_context_object
-    -> disambiguation_state
-    -> disambiguation_state * Synext.clf_context
+  val disambiguate_clf_context :
+    Synprs.clf_context_object -> Synext.clf_context t
 
-  val disambiguate_as_term_pattern :
-       Synprs.clf_object
-    -> disambiguation_state
-    -> disambiguation_state * Synext.clf_term_pattern
+  val disambiguate_clf_term_pattern :
+    Synprs.clf_object -> Synext.clf_term_pattern t
 
-  val disambiguate_as_substitution_pattern :
-       Synprs.clf_context_object
-    -> disambiguation_state
-    -> disambiguation_state * Synext.clf_substitution_pattern
+  val disambiguate_clf_substitution_pattern :
+    Synprs.clf_context_object -> Synext.clf_substitution_pattern t
 
-  val disambiguate_as_context_pattern :
-       Synprs.clf_context_object
-    -> disambiguation_state
-    -> disambiguation_state * Synext.clf_context_pattern
+  val disambiguate_clf_context_pattern :
+    Synprs.clf_context_object -> Synext.clf_context_pattern t
 end
 
 (** Disambiguation of contextual LF types, terms and patterns from the parser
@@ -195,124 +153,53 @@ end
 
     This disambiguation does not perform normalization nor validation. *)
 module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
-  CLF_DISAMBIGUATION
-    with type disambiguation_state = Disambiguation_state.t
-     and type disambiguation_state_entry = Disambiguation_state.entry =
-struct
-  type disambiguation_state = Disambiguation_state.t
-
-  type disambiguation_state_entry = Disambiguation_state.entry
-
-  include State.Make (Disambiguation_state)
+  CLF_DISAMBIGUATION with type state = Disambiguation_state.state = struct
+  include Disambiguation_state
 
   (** {1 Disambiguation} *)
 
-  (** [resolve_lf_operator state ~quoted identifier] determines whether
-      [identifier] is an LF type-level or term-level operator in [state], and
-      whether it is quoted. *)
-  let resolve_lf_operator state ~quoted identifier =
-    match Disambiguation_state.lookup identifier state with
-    | Disambiguation_state.LF_type_constant { operator } ->
-        if quoted then `Quoted_type_operator
-        else `Type_operator (identifier, operator)
-    | Disambiguation_state.LF_term_constant { operator } ->
-        if quoted then `Quoted_term_operator
-        else `Term_operator (identifier, operator)
-    | _
-    | (exception Disambiguation_state.Unbound_identifier _) ->
-        `Not_an_operator
+  module Clf_operand = struct
+    type expression = Synprs.clf_object
 
-  (** [identifier_lf_operator state term] identifies whether [term] is an LF
-      type-level or term-level operator in [state] while accounting for
-      operator quoting. If a bound operator appears in parentheses, then it
-      is quoted, meaning that the operator appears either in prefix notation
-      or as an argument to another application. *)
-  let identify_lf_operator state term =
-    match term with
-    | Synprs.CLF.Object.Raw_identifier
-        { identifier = identifier, _modifier; quoted; _ } ->
-        let qualified_identifier =
-          Qualified_identifier.make_simple identifier
-        in
-        resolve_lf_operator state ~quoted qualified_identifier
-    | Synprs.CLF.Object.Raw_qualified_identifier { identifier; quoted; _ } ->
-        resolve_lf_operator state ~quoted identifier
-    | _ -> `Not_an_operator
-
-  (** Contextual LF term-level or type-level operands for rewriting of
-      prefix, infix and postfix operators using {!Shunting_yard}. *)
-  module CLF_operand = struct
-    (** The type of operands that may appear during rewriting of prefix,
-        infix and postfix operators. *)
     type t =
-      | External_typ of Synext.clf_typ
-          (** A disambiguated contextual LF type. *)
-      | External_term of Synext.CLF.Term.t
-          (** A disambiguated contextual LF term. *)
-      | Parser_object of Synprs.clf_object
-          (** A contextual LF object that has yet to be disambiguated. *)
+      | Atom of expression
       | Application of
-          { applicand :
-              [ `Typ of Synprs.clf_object | `Term of Synprs.clf_object ]
-          ; arguments : Synprs.clf_object List.t
-          }  (** A contextual LF type-level or term-level application. *)
+          { applicand : expression
+          ; arguments : t List1.t
+          }
 
-    (** {1 Destructors} *)
-
-    let location = function
-      | External_typ t -> Synext.location_of_clf_typ t
-      | External_term t -> Synext.location_of_clf_term t
-      | Parser_object t -> Synprs.location_of_clf_object t
+    let rec location operand =
+      match operand with
+      | Atom object_ -> Synprs.location_of_clf_object object_
       | Application { applicand; arguments } ->
-          let applicand_location =
-            match applicand with
-            | `Typ applicand
-            | `Term applicand ->
-                Synprs.location_of_clf_object applicand
+          let applicand_location = Synprs.location_of_clf_object applicand in
+          let arguments_location =
+            Location.join_all1_contramap location arguments
           in
-          Location.join_all_contramap Synprs.location_of_clf_object
-            applicand_location arguments
+          Location.join applicand_location arguments_location
   end
 
-  (** Contextual LF term-level or type-level operators for rewriting of
-      prefix, infix and postfix operators using {!Shunting_yard}. *)
-  module CLF_operator = struct
-    (** The type of operators that may appear during rewriting of prefix,
-        infix and postfix operators. *)
+  module Clf_operator = struct
+    type associativity = Associativity.t
+
+    type fixity = Fixity.t
+
+    type operand = Clf_operand.t
+
     type t =
-      | Type_constant of
-          { identifier : Qualified_identifier.t
-          ; operator : Operator.t
-          ; applicand : Synprs.clf_object
-          }
-          (** A contextual LF type-level constant with its operator
-              definition in the disambiguation context, and its corresponding
-              AST. *)
-      | Term_constant of
-          { identifier : Qualified_identifier.t
-          ; operator : Operator.t
-          ; applicand : Synprs.clf_object
-          }
-          (** A contextual LF term-level constant with its operator
-              definition in the disambiguation context, and its corresponding
-              AST. *)
+      { identifier : Qualified_identifier.t
+      ; operator : Operator.t
+      ; applicand : Synprs.clf_object
+      }
 
-    (** {1 Destructors} *)
+    let[@inline] make ~identifier ~operator ~applicand =
+      { identifier; operator; applicand }
 
-    let[@inline] operator = function
-      | Type_constant { operator; _ }
-      | Term_constant { operator; _ } ->
-          operator
+    let[@inline] operator o = o.operator
 
-    let[@inline] applicand = function
-      | Type_constant { applicand; _ }
-      | Term_constant { applicand; _ } ->
-          applicand
+    let[@inline] applicand o = o.applicand
 
-    let[@inline] identifier = function
-      | Type_constant { identifier; _ }
-      | Term_constant { identifier; _ } ->
-          identifier
+    let[@inline] identifier o = o.identifier
 
     let arity = Fun.(operator >> Operator.arity)
 
@@ -322,19 +209,84 @@ struct
 
     let associativity = Fun.(operator >> Operator.associativity)
 
-    let location = Fun.(applicand >> Synprs.location_of_clf_object)
+    let location = Fun.(identifier >> Qualified_identifier.location)
 
-    (** {1 Instances} *)
+    let write operator arguments =
+      let applicand = applicand operator in
+      let arguments = List1.unsafe_of_list arguments in
+      Clf_operand.Application { applicand; arguments }
 
-    (** Equality instance on type-level and term-level constants. Since
-        operator identifiers share the same namespace, operators having the
-        same name are equal in a rewriting of an application. *)
     include (
       (val Eq.contramap (module Qualified_identifier) identifier) :
         Eq.EQ with type t := t)
   end
 
-  (** [disambiguate_as_typ object_ state] is [object_] rewritten as a
+  module Application_disambiguation_state = struct
+    include Disambiguation_state
+
+    type operator = Clf_operator.t
+
+    type expression = Synprs.clf_object
+
+    let guard_identifier_operator identifier expression =
+      lookup identifier >>= function
+      | Result.Ok (LF_type_constant { operator })
+      | Result.Ok (LF_term_constant { operator }) ->
+          if Operator.is_nullary operator then return Option.none
+          else
+            return
+              (Option.some
+                 (Clf_operator.make ~identifier ~operator
+                    ~applicand:expression))
+      | Result.Ok _
+      | Result.Error (Unbound_identifier _) ->
+          return Option.none
+      | Result.Error cause ->
+          Error.raise_at1 (Qualified_identifier.location identifier) cause
+
+    let guard_operator expression =
+      match expression with
+      | Synprs.CLF.Object.Raw_identifier { quoted; _ }
+      | Synprs.CLF.Object.Raw_qualified_identifier { quoted; _ }
+        when quoted ->
+          return Option.none
+      | Synprs.CLF.Object.Raw_identifier
+          { identifier = identifier, `Plain; _ } ->
+          let identifier = Qualified_identifier.make_simple identifier in
+          guard_identifier_operator identifier expression
+      | Synprs.CLF.Object.Raw_qualified_identifier { identifier; _ } ->
+          guard_identifier_operator identifier expression
+      | Synprs.CLF.Object.Raw_identifier
+          { identifier = _, (`Dollar | `Hash); _ }
+      | Synprs.CLF.Object.Raw_hole _
+      | Synprs.CLF.Object.Raw_pi _
+      | Synprs.CLF.Object.Raw_lambda _
+      | Synprs.CLF.Object.Raw_arrow _
+      | Synprs.CLF.Object.Raw_annotated _
+      | Synprs.CLF.Object.Raw_application _
+      | Synprs.CLF.Object.Raw_block _
+      | Synprs.CLF.Object.Raw_tuple _
+      | Synprs.CLF.Object.Raw_projection _
+      | Synprs.CLF.Object.Raw_substitution _ ->
+          return Option.none
+  end
+
+  module Clf_application_disambiguation =
+    Application_disambiguation.Make (Associativity) (Fixity) (Clf_operand)
+      (Clf_operator)
+      (Application_disambiguation_state)
+
+  let with_lf_term_variable identifier =
+    scoped
+      ~set:(add_lf_term_variable identifier)
+      ~unset:(pop_binding identifier)
+
+  let with_lf_term_variable_opt identifier_opt =
+    match identifier_opt with
+    | Option.None -> Fun.id
+    | Option.Some identifier -> with_lf_term_variable identifier
+
+  (** [disambiguate_clf_typ object_ state] is [object_] rewritten as a
       contextual LF type with respect to the disambiguation context [state].
 
       Type applications are rewritten with {!disambiguate_application} using
@@ -343,29 +295,29 @@ struct
       This function imposes syntactic restrictions on [object_], but does not
       perform normalization nor validation. To see the syntactic restrictions
       from LF objects to LF types, see the Beluga language specification. *)
-  let rec disambiguate_as_typ object_ =
+  let rec disambiguate_clf_typ object_ =
     match object_ with
     | Synprs.CLF.Object.Raw_hole { location; _ } ->
-        Error.raise_at1 location Illegal_hole_type
+        Error.raise_at1 location Illegal_hole_clf_type
     | Synprs.CLF.Object.Raw_lambda { location; _ } ->
-        Error.raise_at1 location Illegal_lambda_type
+        Error.raise_at1 location Illegal_lambda_clf_type
     | Synprs.CLF.Object.Raw_annotated { location; _ } ->
-        Error.raise_at1 location Illegal_annotated_type
+        Error.raise_at1 location Illegal_annotated_clf_type
     | Synprs.CLF.Object.Raw_pi { location; parameter_sort = Option.None; _ }
       ->
-        Error.raise_at1 location Illegal_untyped_pi_type
+        Error.raise_at1 location Illegal_untyped_pi_clf_type
     | Synprs.CLF.Object.Raw_tuple { location; _ } ->
-        Error.raise_at1 location Illegal_tuple_type
+        Error.raise_at1 location Illegal_tuple_clf_type
     | Synprs.CLF.Object.Raw_projection { location; _ } ->
-        Error.raise_at1 location Illegal_projection_type
+        Error.raise_at1 location Illegal_projection_clf_type
     | Synprs.CLF.Object.Raw_substitution { location; _ } ->
-        Error.raise_at1 location Illegal_substitution_type
+        Error.raise_at1 location Illegal_substitution_clf_type
     | Synprs.CLF.Object.Raw_identifier
         { location; identifier = _identifier, `Hash; _ } ->
-        Error.raise_at1 location Illegal_parameter_variable_type
+        Error.raise_at1 location Illegal_parameter_variable_clf_type
     | Synprs.CLF.Object.Raw_identifier
         { location; identifier = _identifier, `Dollar; _ } ->
-        Error.raise_at1 location Illegal_substitution_variable_type
+        Error.raise_at1 location Illegal_substitution_variable_clf_type
     | Synprs.CLF.Object.Raw_identifier
         { location; identifier = identifier, `Plain; quoted; _ } -> (
         (* As an LF type, plain identifiers are necessarily type-level
@@ -373,9 +325,8 @@ struct
         let qualified_identifier =
           Qualified_identifier.make_simple identifier
         in
-        get >>= fun state ->
-        match Disambiguation_state.lookup_toplevel identifier state with
-        | Disambiguation_state.LF_type_constant { operator } ->
+        lookup_toplevel identifier >>= function
+        | Result.Ok (LF_type_constant { operator }) ->
             return
               (Synext.CLF.Typ.Constant
                  { location
@@ -383,10 +334,12 @@ struct
                  ; operator
                  ; quoted
                  })
-        | _entry -> Error.raise_at1 location Expected_type_constant
-        | exception Disambiguation_state.Unbound_identifier _ ->
+        | Result.Ok _entry ->
+            Error.raise_at1 location Expected_clf_type_constant
+        | Result.Error (Unbound_identifier _) ->
             Error.raise_at1 location
-              (Unbound_type_constant qualified_identifier))
+              (Unbound_clf_type_constant qualified_identifier)
+        | Result.Error cause -> Error.raise_at1 location cause)
     | Synprs.CLF.Object.Raw_qualified_identifier
         { location; identifier; quoted } -> (
         (* Qualified identifiers without modules were parsed as plain
@@ -395,19 +348,21 @@ struct
         (* As an LF type, identifiers of the form [<identifier>
            <dot-identifier>+] are type-level constants, or illegal named
            projections. *)
-        get >>= fun state ->
-        match Disambiguation_state.lookup identifier state with
-        | Disambiguation_state.LF_type_constant { operator } ->
+        lookup identifier >>= function
+        | Result.Ok (LF_type_constant { operator }) ->
             return
               (Synext.CLF.Typ.Constant
                  { location; identifier; operator; quoted })
-        | _entry -> Error.raise_at1 location Expected_type_constant
-        | exception Disambiguation_state.Unbound_qualified_identifier _ ->
+        | Result.Ok _entry ->
+            Error.raise_at1 location Expected_clf_type_constant
+        | Result.Error (Unbound_qualified_identifier _) ->
             Error.raise_at1 location
-              (Unbound_type_constant_or_illegal_projection_type identifier))
+              (Unbound_type_constant_or_illegal_projection_clf_type
+                 identifier)
+        | Result.Error cause -> Error.raise_at1 location cause)
     | Synprs.CLF.Object.Raw_arrow { location; domain; range; orientation } ->
-        let* domain' = disambiguate_as_typ domain in
-        let* range' = disambiguate_as_typ range in
+        let* domain' = disambiguate_clf_typ domain in
+        let* range' = disambiguate_clf_typ range in
         return
           (Synext.CLF.Typ.Arrow
              { location; domain = domain'; range = range'; orientation })
@@ -416,78 +371,64 @@ struct
         ; parameter_identifier
         ; parameter_sort = Option.Some parameter_type
         ; body
-        } -> (
-        let* parameter_type' = disambiguate_as_typ parameter_type in
-        match parameter_identifier with
-        | Option.None ->
-            let* body' = disambiguate_as_typ body in
-            return
-              (Synext.CLF.Typ.Pi
-                 { location
-                 ; parameter_identifier
-                 ; parameter_type = parameter_type'
-                 ; body = body'
-                 })
-        | Option.Some parameter ->
-            let* body' =
-              locally
-                (Disambiguation_state.add_lf_term_variable parameter)
-                (disambiguate_as_typ body)
-            in
-            return
-              (Synext.CLF.Typ.Pi
-                 { location
-                 ; parameter_identifier
-                 ; parameter_type = parameter_type'
-                 ; body = body'
-                 }))
-    | Synprs.CLF.Object.Raw_application { objects; _ } -> (
-        disambiguate_application objects >>= function
-        | `Term term ->
-            let location = Synext.location_of_clf_term term in
-            Error.raise_at1 location Expected_type
-        | `Typ typ -> return typ)
+        } ->
+        let* parameter_type' = disambiguate_clf_typ parameter_type in
+        let* body' =
+          with_lf_term_variable_opt parameter_identifier
+            (disambiguate_clf_typ body)
+        in
+        return
+          (Synext.CLF.Typ.Pi
+             { location
+             ; parameter_identifier
+             ; parameter_type = parameter_type'
+             ; body = body'
+             })
+    | Synprs.CLF.Object.Raw_application { objects; location } ->
+        let* applicand, arguments = disambiguate_clf_application objects in
+        let* applicand' = disambiguate_clf_typ applicand in
+        let* arguments' = traverse_list1 elaborate_lf_operand arguments in
+        return
+          (Synext.CLF.Typ.Application
+             { applicand = applicand'; arguments = arguments'; location })
     | Synprs.CLF.Object.Raw_block
-        { location; elements = List1.T ((Option.None, t), []) } ->
-        let* t' = disambiguate_as_typ t in
-        return (Synext.CLF.Typ.Block { location; elements = `Unnamed t' })
+        { location; elements = List1.T ((Option.None, typ), []) } ->
+        let* typ' = disambiguate_clf_typ typ in
+        return (Synext.CLF.Typ.Block { location; elements = `Unnamed typ' })
     | Synprs.CLF.Object.Raw_block { location; elements } ->
-        get >>= fun state ->
-        let _state', elements_rev' =
-          List1.fold_left
-            (fun element ->
-              match element with
+        let bindings =
+          List1.map
+            (function
               | Option.None, typ ->
-                  let location = Synprs.location_of_clf_object typ in
-                  Error.raise_at1 location Illegal_unnamed_block_element_type
-              | Option.Some identifier, typ ->
-                  let _state', typ' = disambiguate_as_typ typ state in
-                  let elements' = List1.singleton (identifier, typ')
-                  and state'' =
-                    Disambiguation_state.add_lf_term_variable identifier
-                      state
-                  in
-                  (state'', elements'))
-            (fun (state', elements') element ->
-              match element with
-              | Option.None, typ ->
-                  let location = Synprs.location_of_clf_object typ in
-                  Error.raise_at1 location Illegal_unnamed_block_element_type
-              | Option.Some identifier, typ ->
-                  let _state'', typ' = disambiguate_as_typ typ state' in
-                  let elements'' = List1.cons (identifier, typ') elements'
-                  and state''' =
-                    Disambiguation_state.add_lf_term_variable identifier
-                      state'
-                  in
-                  (state''', elements''))
+                  Error.raise_at1
+                    (Synprs.location_of_clf_object typ)
+                    Illegal_unnamed_block_element_clf_type
+              | Option.Some identifier, typ -> (identifier, typ))
             elements
         in
-        let elements' = List1.rev elements_rev' in
+        let* elements' =
+          disambiguate_binding_list1_as_clf_dependent_types bindings
+        in
         return
           (Synext.CLF.Typ.Block { location; elements = `Record elements' })
 
-  (** [disambiguate_as_term object_ state] is [object_] rewritten as a
+  and disambiguate_binding_list_as_clf_dependent_types bindings =
+    match bindings with
+    | [] -> return []
+    | (identifier, typ) :: xs ->
+        let* typ' = disambiguate_clf_typ typ in
+        let* () = add_lf_term_variable identifier in
+        let* ys = disambiguate_binding_list_as_clf_dependent_types xs in
+        return ((identifier, typ') :: ys)
+
+  and disambiguate_binding_list1_as_clf_dependent_types bindings =
+    let (List1.T ((identifier, typ), xs)) = bindings in
+    let* typ' = disambiguate_clf_typ typ in
+    let* () = add_lf_term_variable identifier in
+    let* ys = disambiguate_binding_list_as_clf_dependent_types xs in
+    return (List1.from (identifier, typ') ys)
+
+  (** [disambiguate_clf_term object_ state] is [object_] rewritten as a
       contextual LF term with respect to the disambiguation context [state].
 
       Term applications are rewritten with {!disambiguate_application} using
@@ -496,16 +437,16 @@ struct
       This function imposes syntactic restrictions on [object_], but does not
       perform normalization nor validation. To see the syntactic restrictions
       from LF objects to LF terms, see the Beluga language specification. *)
-  and disambiguate_as_term object_ =
+  and disambiguate_clf_term object_ =
     match object_ with
     | Synprs.CLF.Object.Raw_pi { location; _ } ->
-        Error.raise_at1 location Illegal_pi_term
+        Error.raise_at1 location Illegal_pi_clf_term
     | Synprs.CLF.Object.Raw_arrow { location; orientation = `Forward; _ } ->
-        Error.raise_at1 location Illegal_forward_arrow_term
+        Error.raise_at1 location Illegal_forward_arrow_clf_term
     | Synprs.CLF.Object.Raw_arrow { location; orientation = `Backward; _ } ->
-        Error.raise_at1 location Illegal_backward_arrow_term
+        Error.raise_at1 location Illegal_backward_arrow_clf_term
     | Synprs.CLF.Object.Raw_block { location; _ } ->
-        Error.raise_at1 location Illegal_block_term
+        Error.raise_at1 location Illegal_block_clf_term
     | Synprs.CLF.Object.Raw_identifier
         { location; identifier = identifier, `Hash; _ } ->
         return (Synext.CLF.Term.Parameter_variable { location; identifier })
@@ -520,9 +461,8 @@ struct
         let qualified_identifier =
           Qualified_identifier.make_simple identifier
         in
-        get >>= fun state ->
-        match Disambiguation_state.lookup_toplevel identifier state with
-        | Disambiguation_state.LF_term_constant { operator } ->
+        lookup_toplevel identifier >>= function
+        | Result.Ok (LF_term_constant { operator }) ->
             return
               (Synext.CLF.Term.Constant
                  { location
@@ -530,14 +470,16 @@ struct
                  ; operator
                  ; quoted
                  })
-        | Disambiguation_state.LF_term_variable
-        | Disambiguation_state.Meta_variable ->
+        | Result.Ok LF_term_variable
+        | Result.Ok Meta_variable ->
             (* Bound variable *)
             return (Synext.CLF.Term.Variable { location; identifier })
-        | _entry -> Error.raise_at1 location Expected_term_constant
-        | exception Disambiguation_state.Unbound_identifier _ ->
+        | Result.Ok _entry ->
+            Error.raise_at1 location Expected_clf_term_constant
+        | Result.Error (Unbound_identifier _) ->
             (* Free variable *)
-            return (Synext.CLF.Term.Variable { location; identifier }))
+            return (Synext.CLF.Term.Variable { location; identifier })
+        | Result.Error cause -> Error.raise_at1 location cause)
     | Synprs.CLF.Object.Raw_qualified_identifier
         { location; identifier; quoted } -> (
         (* As an LF term, identifiers of the form [<identifier>
@@ -573,28 +515,27 @@ struct
         in
         let modules = Qualified_identifier.modules identifier
         and name = Qualified_identifier.name identifier in
-        get >>= fun state ->
         match modules with
         | [] ->
             (* Qualified identifiers without modules were parsed as plain
                identifiers *)
             Error.violation
-              "[disambiguate_as_term] encountered a qualified identifier \
+              "[disambiguate_clf_term] encountered a qualified identifier \
                without modules."
         | m :: ms -> (
-            match Disambiguation_state.lookup_toplevel m state with
-            | Disambiguation_state.Module _ ->
-                let rec helper state looked_up_identifiers next_identifier
+            lookup_toplevel m >>= function
+            | Result.Ok (Module _) ->
+                let rec helper bindings looked_up_identifiers next_identifier
                     remaining_identifiers =
-                  match Identifier.Hamt.find_opt next_identifier state with
+                  match
+                    Identifier.Hamt.find_opt next_identifier bindings
+                  with
                   | Option.Some
-                      (List1.T
-                        ( Disambiguation_state.Module { entries = state' }
-                        , _rest )) -> (
+                      (List1.T (Module { entries = state' }, _rest)) -> (
                       match remaining_identifiers with
                       | [] ->
                           (* Lookups ended with a module. *)
-                          Error.raise_at1 location Expected_term_constant
+                          Error.raise_at1 location Expected_clf_term_constant
                       | next_identifier' :: remaining_identifiers' ->
                           let looked_up_identifiers' =
                             next_identifier :: looked_up_identifiers
@@ -602,9 +543,7 @@ struct
                           helper state' looked_up_identifiers'
                             next_identifier' remaining_identifiers')
                   | Option.Some
-                      (List1.T
-                        ( Disambiguation_state.LF_term_constant { operator }
-                        , _rest )) -> (
+                      (List1.T (LF_term_constant { operator }, _rest)) -> (
                       (* Lookups ended with an LF term constant. The
                          remaining identifiers are named projections. *)
                       match remaining_identifiers with
@@ -640,28 +579,24 @@ struct
                         Location.join_all1_contramap Identifier.location
                           (List1.from next_identifier looked_up_identifiers)
                       in
-                      Error.raise_at1 location Expected_term_constant
-                      (* TODO: Misleading, modules are allowed as well *)
+                      Error.raise_at1 location
+                        Expected_term_projection_compatible
                   | Option.None -> (
                       match remaining_identifiers with
                       | [] ->
                           Error.raise_at1 location
-                            (Unbound_term_constant identifier)
+                            (Unbound_clf_term_constant identifier)
                       | _ ->
                           let module_identifier =
                             Qualified_identifier.make
                               ~modules:(List.rev looked_up_identifiers)
                               next_identifier
                           in
-                          raise
-                            (Disambiguation_state.Unbound_namespace
-                               module_identifier))
+                          raise (Unbound_namespace module_identifier))
                 in
-                return
-                  (helper
-                     (Disambiguation_state.get_bindings state)
-                     [] m (ms @ [ name ]))
-            | Disambiguation_state.LF_term_constant { operator } ->
+                let* bindings = get_bindings in
+                return (helper bindings [] m (ms @ [ name ]))
+            | Result.Ok (LF_term_constant { operator }) ->
                 (* Immediately looked up an LF term constant. The remaining
                    identifiers are named projections. *)
                 let location = Identifier.location m in
@@ -671,8 +606,8 @@ struct
                     { identifier; location; operator; quoted = false }
                 in
                 return (reduce_projections' term ms name)
-            | Disambiguation_state.LF_term_variable
-            | Disambiguation_state.Meta_variable ->
+            | Result.Ok LF_term_variable
+            | Result.Ok Meta_variable ->
                 (* Immediately looked up an LF term variable or a
                    meta-variable. The remaining identifiers are named
                    projections. *)
@@ -681,90 +616,67 @@ struct
                   Synext.CLF.Term.Variable { location; identifier = m }
                 in
                 return (reduce_projections' term ms name)
-            | _entry ->
+            | Result.Ok _entry ->
                 (* First lookup ended with an entry that cannot be used in a
                    contextual LF term projection. *)
                 let location = Identifier.location m in
-                Error.raise_at1 location Expected_term_constant
-                (* TODO: Misleading, module, term variable, meta-variable are
-                   allowed *)
-            | exception Disambiguation_state.Unbound_identifier _ ->
+                Error.raise_at1 location Expected_term_projection_compatible
+            | Result.Error (Unbound_identifier _) ->
                 (* Immediately looked up a free variable. The remaining
                    identifiers are named projections. *)
                 let location = Identifier.location m in
                 let term =
                   Synext.CLF.Term.Variable { location; identifier = m }
                 in
-                return (reduce_projections' term ms name)))
-    | Synprs.CLF.Object.Raw_application { objects; _ } -> (
-        disambiguate_application objects >>= function
-        | `Typ typ ->
-            let location = Synext.location_of_clf_typ typ in
-            Error.raise_at1 location Expected_term
-        | `Term term -> return term)
+                return (reduce_projections' term ms name)
+            | Result.Error cause -> Error.raise_at1 location cause))
+    | Synprs.CLF.Object.Raw_application { objects; location } ->
+        let* applicand, arguments = disambiguate_clf_application objects in
+        let* applicand' = disambiguate_clf_term applicand in
+        let* arguments' = traverse_list1 elaborate_lf_operand arguments in
+        return
+          (Synext.CLF.Term.Application
+             { applicand = applicand'; arguments = arguments'; location })
     | Synprs.CLF.Object.Raw_lambda
-        { location; parameter_identifier; parameter_sort; body } -> (
+        { location; parameter_identifier; parameter_sort; body } ->
         let* parameter_type' =
-          match parameter_sort with
-          | Option.None -> return Option.none
-          | Option.Some parameter_sort ->
-              let* parameter_typ' = disambiguate_as_typ parameter_sort in
-              return (Option.some parameter_typ')
+          traverse_option disambiguate_clf_typ parameter_sort
         in
-        match parameter_identifier with
-        | Option.None ->
-            let* body' = disambiguate_as_term body in
-            return
-              (Synext.CLF.Term.Abstraction
-                 { location
-                 ; parameter_identifier
-                 ; parameter_type = parameter_type'
-                 ; body = body'
-                 })
-        | Option.Some name ->
-            let* body' =
-              locally
-                (Disambiguation_state.add_lf_term_variable name)
-                (disambiguate_as_term body)
-            in
-            return
-              (Synext.CLF.Term.Abstraction
-                 { location
-                 ; parameter_identifier
-                 ; parameter_type = parameter_type'
-                 ; body = body'
-                 }))
+        let* body' =
+          with_lf_term_variable_opt parameter_identifier
+            (disambiguate_clf_term body)
+        in
+        return
+          (Synext.CLF.Term.Abstraction
+             { location
+             ; parameter_identifier
+             ; parameter_type = parameter_type'
+             ; body = body'
+             })
     | Synprs.CLF.Object.Raw_hole { location; variant } ->
         return (Synext.CLF.Term.Hole { location; variant })
     | Synprs.CLF.Object.Raw_tuple { location; elements } ->
-        get >>= fun state ->
-        let elements' =
-          List1.map
-            (fun element ->
-              let _state', element' = disambiguate_as_term element state in
-              element')
-            elements
-        in
-        return (Synext.CLF.Term.Tuple { location; terms = elements' })
+        let* terms' = traverse_list1 disambiguate_clf_term elements in
+        return (Synext.CLF.Term.Tuple { location; terms = terms' })
     | Synprs.CLF.Object.Raw_projection { location; object_; projection } ->
-        let* term' = disambiguate_as_term object_ in
+        let* term' = disambiguate_clf_term object_ in
         return
           (Synext.CLF.Term.Projection { location; term = term'; projection })
     | Synprs.CLF.Object.Raw_substitution { location; object_; substitution }
       ->
-        let* term' = disambiguate_as_term object_ in
-        let* substitution' = disambiguate_as_substitution substitution in
+        let* term' = disambiguate_clf_term object_ in
+        let* substitution' = disambiguate_clf_substitution substitution in
         return
           (Synext.CLF.Term.Substitution
              { location; term = term'; substitution = substitution' })
     | Synprs.CLF.Object.Raw_annotated { location; object_; sort } ->
-        let* term' = disambiguate_as_term object_ in
-        let* typ' = disambiguate_as_typ sort in
+        let* term' = disambiguate_clf_term object_ in
+        let* typ' = disambiguate_clf_typ sort in
         return
           (Synext.CLF.Term.TypeAnnotated
              { location; term = term'; typ = typ' })
 
-  and disambiguate_as_substitution substitution state =
+  and disambiguate_clf_substitution substitution =
     let { Synprs.CLF.Context_object.location; head; objects } =
       substitution
     in
@@ -772,14 +684,15 @@ struct
       List.map
         (function
           | Option.None, object_ -> object_
-          | Option.Some identifier, _ ->
-              let location = Identifier.location identifier in
-              Error.raise_at1 location Illegal_subtitution_term_label)
+          | Option.Some identifier, _object ->
+              Error.raise_at1
+                (Identifier.location identifier)
+                Illegal_clf_subtitution_term_label)
         objects
     in
     match head with
     | Synprs.CLF.Context_object.Head.None { location = head_location } ->
-        let head', objects'' =
+        let* head', objects'' =
           match objects' with
           | Synprs.CLF.Object.Raw_substitution
               { object_ =
@@ -789,14 +702,12 @@ struct
               ; _
               } (* A substitution closure *)
             :: xs ->
-              let closure' =
-                eval (disambiguate_as_substitution closure) state
-              in
+              let* closure' = disambiguate_clf_substitution closure in
               let head' =
                 Synext.CLF.Substitution.Head.Substitution_variable
                   { location; identifier; closure = Option.some closure' }
               in
-              (head', xs)
+              return (head', xs)
           | Synprs.CLF.Object.Raw_identifier
               { location; identifier = identifier, `Dollar; _ }
               (* A substitution variable *)
@@ -805,36 +716,24 @@ struct
                 Synext.CLF.Substitution.Head.Substitution_variable
                   { location; identifier; closure = Option.none }
               in
-              (head', xs)
-          | _ ->
+              return (head', xs)
+          | objects' ->
               let head' =
                 Synext.CLF.Substitution.Head.None
                   { location = head_location }
               in
-              (head', objects')
+              return (head', objects')
         in
-        let terms' =
-          List.map
-            (fun object_ -> eval (disambiguate_as_term object_) state)
-            objects''
-        in
-        let substitution' =
+        let* terms' = traverse_list disambiguate_clf_term objects'' in
+        return
           { Synext.CLF.Substitution.location; head = head'; terms = terms' }
-        in
-        (state, substitution')
     | Synprs.CLF.Context_object.Head.Identity { location = head_location } ->
-        let terms' =
-          List.map
-            (fun object_ -> eval (disambiguate_as_term object_) state)
-            objects'
-        in
+        let* terms' = traverse_list disambiguate_clf_term objects' in
         let head' =
           Synext.CLF.Substitution.Head.Identity { location = head_location }
         in
-        let substitution' =
+        return
           { Synext.CLF.Substitution.location; head = head'; terms = terms' }
-        in
-        (state, substitution')
 
   (** [disambiguate_context_bindings bindings state] is [(state', bindings')]
       where [state'] is the disambiguation state derived from [state] with
@@ -842,53 +741,50 @@ struct
       [bindings'] is the disambiguated context bindings.
 
       Context variables cannot occur in [bindings]. A context variable in the
-      head position of a context is handled in {!disambiguate_as_context}. *)
-  and disambiguate_context_bindings bindings state =
+      head position of a context is handled in {!disambiguate_clf_context}. *)
+  and disambiguate_context_bindings bindings =
     (* Contextual LF contexts are dependent, meaning that bound variables on
        the left of a declaration may appear in the type of a binding on the
        right. Bindings may not recursively refer to themselves.*)
-    let state', bindings_rev' =
-      List.fold_left
-        (fun (state, bindings_rev') binding ->
-          match binding with
-          | Option.Some identifier, typ (* Typed binding *) ->
-              let typ' = eval (disambiguate_as_typ typ) state in
-              let state' =
-                Disambiguation_state.add_lf_term_variable identifier state
-              and binding' = (identifier, Option.some typ') in
-              (state', binding' :: bindings_rev')
-          | ( Option.None
-            , Synprs.CLF.Object.Raw_identifier
-                { identifier = identifier, `Plain; _ } )
-          (* Untyped contextual LF variable *) ->
-              let state' =
-                Disambiguation_state.add_lf_term_variable identifier state
-              and binding' = (identifier, Option.none) in
-              (state', binding' :: bindings_rev')
-          | ( Option.None
-            , Synprs.CLF.Object.Raw_identifier
-                { identifier = identifier, `Hash; _ } )
-          (* Parameter variables may only occur in meta-contexts *) ->
-              let location = Identifier.location identifier in
-              Error.raise_at1 location
-                Illegal_context_parameter_variable_binding
-          | ( Option.None
-            , Synprs.CLF.Object.Raw_identifier
-                { identifier = identifier, `Dollar; _ } )
-          (* Substitution variables may only occur in meta-contexts *) ->
-              let location = Identifier.location identifier in
-              Error.raise_at1 location
-                Illegal_context_substitution_variable_binding
-          | Option.None, typ (* Binding identifier missing *) ->
-              let location = Synprs.location_of_clf_object typ in
-              Error.raise_at1 location
-                Illegal_context_missing_binding_identifier)
-        (state, []) bindings
-    in
-    let bindings' = List.rev bindings_rev' in
-    (state', bindings')
+    match bindings with
+    | [] -> return []
+    | (Option.Some identifier, typ) (* Typed binding *) :: xs ->
+        let* typ' = disambiguate_clf_typ typ in
+        let* () = add_lf_term_variable identifier in
+        let y = (identifier, Option.some typ') in
+        let* ys = disambiguate_context_bindings xs in
+        return (y :: ys)
+    | ( Option.None
+      , Synprs.CLF.Object.Raw_identifier
+          { identifier = identifier, `Plain; _ } )
+        (* Untyped contextual LF variable *)
+      :: xs ->
+        let* () = add_lf_term_variable identifier in
+        let y = (identifier, Option.none) in
+        let* ys = disambiguate_context_bindings xs in
+        return (y :: ys)
+    | ( Option.None
+      , Synprs.CLF.Object.Raw_identifier
+          { identifier = identifier, `Hash; _ } )
+        (* Parameter variables may only occur in meta-contexts *)
+      :: _xs ->
+        Error.raise_at1
+          (Identifier.location identifier)
+          Illegal_clf_context_parameter_variable_binding
+    | ( Option.None
+      , Synprs.CLF.Object.Raw_identifier
+          { identifier = identifier, `Dollar; _ } )
+        (* Substitution variables may only occur in meta-contexts *)
+      :: _xs ->
+        Error.raise_at1
+          (Identifier.location identifier)
+          Illegal_clf_context_substitution_variable_binding
+    | (Option.None, typ) (* Binding identifier missing *) :: _xs ->
+        Error.raise_at1
+          (Synprs.location_of_clf_object typ)
+          Illegal_clf_context_missing_binding_identifier
 
-  (** [disambiguate_as_context context state] is [(state', context')] where
+  (** [disambiguate_clf_context context state] is [(state', context')] where
       [state'] is the disambiguation state derived from [state] with the
       addition of the variables in the domain of [context], and [context'] is
       the disambiguated context.
@@ -902,11 +798,11 @@ struct
         that [g, x1, x2, ..., xn] is a valid context. However,
         [g, A1, A2, ..., An] is invalid if [A1], [A2], ..., [An] are types
         because their associated identifiers are missing. *)
-  and disambiguate_as_context context state =
+  and disambiguate_clf_context context =
     let { Synprs.CLF.Context_object.location; head; objects } = context in
     match head with
     | Synprs.CLF.Context_object.Head.Identity { location } ->
-        Error.raise_at1 location Illegal_context_identity
+        Error.raise_at1 location Illegal_clf_context_identity
     | Synprs.CLF.Context_object.Head.None { location = head_location } -> (
         match objects with
         | ( Option.None
@@ -917,424 +813,115 @@ struct
             let head' =
               Synext.CLF.Context.Head.Hole { location = head_location }
             in
-            let state', bindings' = disambiguate_context_bindings xs state in
-            let context' =
+            let* bindings' = disambiguate_context_bindings xs in
+            return
               { Synext.CLF.Context.location
               ; head = head'
               ; bindings = bindings'
               }
-            in
-            (state', context')
         | ( Option.None
           , Synprs.CLF.Object.Raw_identifier
               { identifier = identifier, `Plain; _ } )
             (* Possibly a context variable as context head *)
           :: xs -> (
-            match Disambiguation_state.lookup_toplevel identifier state with
-            | Disambiguation_state.Context_variable ->
+            lookup_toplevel identifier >>= function
+            | Result.Ok Context_variable ->
                 let head' =
                   Synext.CLF.Context.Head.Context_variable
                     { identifier; location = Identifier.location identifier }
-                and state', bindings' =
-                  disambiguate_context_bindings xs state
                 in
-                let context' =
+                let* bindings' = disambiguate_context_bindings xs in
+                return
                   { Synext.CLF.Context.location
                   ; head = head'
                   ; bindings = bindings'
                   }
-                in
-                (state', context')
-            | _
-            | (exception Disambiguation_state.Unbound_identifier _) ->
+            | Result.Ok _
+            | Result.Error (Unbound_identifier _) ->
                 let head' =
                   Synext.CLF.Context.Head.None { location = head_location }
                 in
-                let state', bindings' =
-                  disambiguate_context_bindings objects state
-                in
-                let context' =
+                let* bindings' = disambiguate_context_bindings objects in
+                return
                   { Synext.CLF.Context.location
                   ; head = head'
                   ; bindings = bindings'
                   }
-                in
-                (state', context'))
-        | _ ->
+            | Result.Error cause -> Error.raise_at1 head_location cause)
+        | objects ->
             (* Context is just a list of bindings without context
                variables *)
             let head' =
               Synext.CLF.Context.Head.None { location = head_location }
             in
-            let state', bindings' =
-              disambiguate_context_bindings objects state
-            in
-            let context' =
+            let* bindings' = disambiguate_context_bindings objects in
+            return
               { Synext.CLF.Context.location
               ; head = head'
               ; bindings = bindings'
-              }
-            in
-            (state', context'))
+              })
 
-  (** [disambiguate_application objects state] disambiguates [objects] as
-      either a type-level or term-level contextual LF application with
-      respect to the disambiguation context [state].
-
-      In both type-level and term-level contextual LF applications, arguments
-      are contextual LF terms.
-
-      This disambiguation is in three steps:
-
-      - First, LF type-level and term-level constants are identified as
-        operators (with or without quoting) using [state], and the rest are
-        identified as operands.
-      - Second, consecutive operands are combined as an application
-        (juxtaposition) that has yet to be disambiguated, and written in
-        prefix notation with the first operand being the application head.
-      - Third, Dijkstra's shunting yard algorithm is used to rewrite the
-        identified prefix, infix and postfix operators to applications. *)
-  and disambiguate_application objects state =
-    let disambiguate_juxtaposition applicand arguments =
-      let applicand_location =
-        match applicand with
-        | `Term applicand
-        | `Typ applicand ->
-            Synprs.location_of_clf_object applicand
-      in
-      let application_location =
-        Location.join_all_contramap Synprs.location_of_clf_object
-          applicand_location arguments
-      in
-      match applicand with
-      | `Term applicand ->
-          let applicand' = eval (disambiguate_as_term applicand) state in
-          let arguments' =
-            List1.map
-              (fun object_ -> eval (disambiguate_as_term object_) state)
-              (List1.unsafe_of_list arguments)
-          in
-          `Term
-            (Synext.CLF.Term.Application
-               { location = application_location
-               ; applicand = applicand'
-               ; arguments = arguments'
-               })
-      | `Typ applicand ->
-          let applicand' = eval (disambiguate_as_typ applicand) state in
-          let arguments' =
-            List1.map
-              (fun object_ -> eval (disambiguate_as_term object_) state)
-              (List1.unsafe_of_list arguments)
-          in
-          `Typ
-            (Synext.CLF.Typ.Application
-               { location = application_location
-               ; applicand = applicand'
-               ; arguments = arguments'
-               })
-    in
-    let module Shunting_yard =
-      Centiparsec.Shunting_yard.Make (Associativity) (Fixity) (CLF_operand)
-        (struct
-          type associativity = Associativity.t
-
-          type fixity = Fixity.t
-
-          type operand = CLF_operand.t
-
-          include CLF_operator
-
-          (** [disambiguate_argument argument] disambiguates [argument] to an
-              LF term.
-
-              @raise Expected_term *)
-          let disambiguate_argument argument =
-            match argument with
-            | CLF_operand.External_term term -> term
-            | CLF_operand.External_typ typ ->
-                let location = Synext.location_of_clf_typ typ in
-                Error.raise_at1 location Expected_term
-            | CLF_operand.Parser_object object_ ->
-                eval (disambiguate_as_term object_) state
-            | CLF_operand.Application { applicand; arguments } -> (
-                match disambiguate_juxtaposition applicand arguments with
-                | `Term term -> term
-                | `Typ typ ->
-                    let location = Synext.location_of_clf_typ typ in
-                    Error.raise_at1 location Expected_term)
-
-          let disambiguate_arguments arguments =
-            List1.map disambiguate_argument arguments
-
-          let write operator arguments =
-            let application_location =
-              Location.join_all_contramap CLF_operand.location
-                (CLF_operator.location operator)
-                arguments
-            in
-            match operator with
-            | CLF_operator.Type_constant { applicand; _ } ->
-                let applicand' =
-                  eval (disambiguate_as_typ applicand) state
-                in
-                let arguments' =
-                  disambiguate_arguments (List1.unsafe_of_list arguments)
-                in
-                CLF_operand.External_typ
-                  (Synext.CLF.Typ.Application
-                     { location = application_location
-                     ; applicand = applicand'
-                     ; arguments = arguments'
-                     })
-            | CLF_operator.Term_constant { applicand; _ } ->
-                let applicand' =
-                  eval (disambiguate_as_term applicand) state
-                in
-                let arguments' =
-                  disambiguate_arguments (List1.unsafe_of_list arguments)
-                in
-                CLF_operand.External_term
-                  (Synext.CLF.Term.Application
-                     { location = application_location
-                     ; applicand = applicand'
-                     ; arguments = arguments'
-                     })
-        end)
-    in
-    (* [prepare_objects objects] identifies operators in [objects] and
-       rewrites juxtapositions to applications in prefix notation. The
-       objects themselves are not disambiguated to LF types or terms yet.
-       This is only done in the shunting yard algorithm so that the leftmost
-       syntax error gets reported. *)
-    let prepare_objects objects =
-      (* Predicate for identifying objects that may appear as juxtaposed
-         arguments to an application in prefix notation. This predicate does
-         not apply to the application head. *)
-      let is_argument = function
-        | `Not_an_operator, _
-        | `Quoted_type_operator, _
-        | `Quoted_term_operator, _ ->
-            true
-        | `Type_operator (_, operator), _
-        | `Term_operator (_, operator), _ ->
-            Operator.is_nullary operator
-      in
-      let rec reduce_juxtapositions_and_identify_operators objects =
-        match objects with
-        | (`Not_an_operator, t) :: ts -> (
-            match List.take_while is_argument ts with
-            | [], rest (* [t] is an operand not in juxtaposition *) ->
-                Shunting_yard.operand (CLF_operand.Parser_object t)
-                :: reduce_juxtapositions_and_identify_operators rest
-            | arguments, rest
-            (* [t] is an applicand in juxtaposition with [arguments] *) ->
-                let arguments' = List.map Pair.snd arguments in
-                Shunting_yard.operand
-                  (CLF_operand.Application
-                     { applicand = `Term t; arguments = arguments' })
-                :: reduce_juxtapositions_and_identify_operators rest)
-        | (`Quoted_type_operator, t) :: ts ->
-            let arguments, rest = List.take_while is_argument ts in
-            let arguments' = List.map Pair.snd arguments in
-            Shunting_yard.operand
-              (CLF_operand.Application
-                 { applicand = `Typ t; arguments = arguments' })
-            :: reduce_juxtapositions_and_identify_operators rest
-        | (`Quoted_term_operator, t) :: ts ->
-            let arguments, rest = List.take_while is_argument ts in
-            let arguments' = List.map Pair.snd arguments in
-            Shunting_yard.operand
-              (CLF_operand.Application
-                 { applicand = `Term t; arguments = arguments' })
-            :: reduce_juxtapositions_and_identify_operators rest
-        | (`Type_operator (identifier, operator), t) :: ts ->
-            if Operator.is_prefix operator then
-              let arguments, rest = List.take_while is_argument ts in
-              let arguments' = List.map Pair.snd arguments in
-              Shunting_yard.operand
-                (CLF_operand.Application
-                   { applicand = `Typ t; arguments = arguments' })
-              :: reduce_juxtapositions_and_identify_operators rest
-            else
-              Shunting_yard.operator
-                (CLF_operator.Type_constant
-                   { identifier; operator; applicand = t })
-              :: reduce_juxtapositions_and_identify_operators ts
-        | (`Term_operator (identifier, operator), t) :: ts ->
-            if Operator.is_prefix operator then
-              let arguments, rest = List.take_while is_argument ts in
-              let arguments' = List.map Pair.snd arguments in
-              Shunting_yard.operand
-                (CLF_operand.Application
-                   { applicand = `Term t; arguments = arguments' })
-              :: reduce_juxtapositions_and_identify_operators rest
-            else
-              Shunting_yard.operator
-                (CLF_operator.Term_constant
-                   { identifier; operator; applicand = t })
-              :: reduce_juxtapositions_and_identify_operators ts
-        | [] -> []
-      in
-      objects |> List2.to_list
-      |> List.map (fun term ->
-             let tag = identify_lf_operator state term in
-             (tag, term))
-      |> reduce_juxtapositions_and_identify_operators
-    in
-    try
-      match Shunting_yard.shunting_yard (prepare_objects objects) with
-      | CLF_operand.External_typ t -> (state, `Typ t)
-      | CLF_operand.External_term t -> (state, `Term t)
-      | CLF_operand.Application { applicand; arguments } ->
-          (state, disambiguate_juxtaposition applicand arguments)
-      | CLF_operand.Parser_object _ ->
-          Error.violation
-            "[CLF.disambiguate_application] unexpectedly did not \
-             disambiguate LF operands in rewriting"
-    with
-    | Shunting_yard.Empty_expression ->
-        Error.violation
-          "[CLF.disambiguate_application] unexpectedly ended with an empty \
-           expression"
-    | Shunting_yard.Leftover_expressions _ ->
-        Error.violation
-          "[CLF.disambiguate_application] unexpectedly ended with leftover \
-           expressions"
-    | Shunting_yard.Misplaced_operator { operator; operands } ->
-        let operator_location = CLF_operator.location operator
-        and operand_locations = List.map CLF_operand.location operands in
+  and disambiguate_clf_application objects =
+    Clf_application_disambiguation.disambiguate_application objects
+    >>= function
+    | Result.Ok (applicand, arguments) -> return (applicand, arguments)
+    | Result.Error
+        (Clf_application_disambiguation.Ambiguous_operator_placement
+          { left_operator; right_operator }) ->
+        let left_operator_location = Clf_operator.location left_operator in
+        let right_operator_location = Clf_operator.location right_operator in
+        let identifier = Clf_operator.identifier left_operator in
+        Error.raise_at2 left_operator_location right_operator_location
+          (Ambiguous_clf_operator_placement identifier)
+    | Result.Error
+        (Clf_application_disambiguation.Arity_mismatch
+          { operator; operator_arity; operands }) ->
+        let operator_identifier = Clf_operator.identifier operator in
+        let operator_location = Clf_operator.location operator in
+        let expected_arguments_count = operator_arity in
+        let operand_locations = List.map Clf_operand.location operands in
+        let actual_arguments_count = List.length operands in
         Error.raise_at
           (List1.from operator_location operand_locations)
-          Misplaced_operator
-    | Shunting_yard.Ambiguous_operator_placement
-        { left_operator; right_operator } ->
-        let operator_identifier = CLF_operator.identifier left_operator
-        and left_operator_location = CLF_operator.location left_operator
-        and right_operator_location = CLF_operator.location right_operator in
-        Error.raise_at2 left_operator_location right_operator_location
-          (Ambiguous_operator_placement operator_identifier)
-    | Shunting_yard.Consecutive_non_associative_operators
-        { left_operator; right_operator } ->
-        let operator_identifier = CLF_operator.identifier left_operator
-        and left_operator_location = CLF_operator.location left_operator
-        and right_operator_location = CLF_operator.location right_operator in
-        Error.raise_at2 left_operator_location right_operator_location
-          (Consecutive_applications_of_non_associative_operators
-             operator_identifier)
-    | Shunting_yard.Arity_mismatch { operator; operator_arity; operands } ->
-        let operator_identifier = CLF_operator.identifier operator
-        and operator_location = CLF_operator.location operator
-        and expected_arguments_count = operator_arity
-        and operand_locations = List.map CLF_operand.location operands
-        and actual_arguments_count = List.length operands in
-        Error.raise_at
-          (List1.from operator_location operand_locations)
-          (Arity_mismatch
+          (Clf_arity_mismatch
              { operator_identifier
              ; expected_arguments_count
              ; actual_arguments_count
              })
+    | Result.Error
+        (Clf_application_disambiguation.Consecutive_non_associative_operators
+          { left_operator; right_operator }) ->
+        let operator_identifier = Clf_operator.identifier left_operator in
+        let left_operator_location = Clf_operator.location left_operator in
+        let right_operator_location = Clf_operator.location right_operator in
+        Error.raise_at2 left_operator_location right_operator_location
+          (Consecutive_applications_of_non_associative_clf_operators
+             operator_identifier)
+    | Result.Error
+        (Clf_application_disambiguation.Misplaced_operator
+          { operator; operands }) ->
+        let operator_location = Clf_operator.location operator
+        and operand_locations = List.map Clf_operand.location operands in
+        Error.raise_at
+          (List1.from operator_location operand_locations)
+          Misplaced_clf_operator
+    | Result.Error cause -> Error.raise cause
 
-  (** Contextual LF term-level or type-level pattern operands for rewriting
-      of prefix, infix and postfix operators using {!Shunting_yard}. *)
-  module CLF_pattern_operand = struct
-    (** The type of operands that may appear during rewriting of prefix,
-        infix and postfix operators. *)
-    type t =
-      | External_typ of Synext.clf_typ
-          (** A disambiguated contextual LF type. *)
-      | External_term_pattern of Synext.clf_term_pattern
-          (** A disambiguated contextual LF term pattern. *)
-      | Parser_object of Synprs.clf_object
-          (** A contextual LF object that has yet to be disambiguated. *)
-      | Application of
-          { applicand :
-              [ `Typ of Synprs.clf_object
-              | `Term_pattern of Synprs.clf_object
-              ]
-          ; arguments : Synprs.clf_object List.t
-          }
-          (** A contextual LF type-level or term-level application pattern. *)
+  and elaborate_lf_operand operand =
+    match operand with
+    | Clf_operand.Atom object_ -> disambiguate_clf_term object_
+    | Clf_operand.Application { applicand; arguments } ->
+        let* applicand' = disambiguate_clf_term applicand in
+        let* arguments' = traverse_list1 elaborate_lf_operand arguments in
+        let location =
+          Location.join_all1_contramap Synext.location_of_clf_term
+            (List1.cons applicand' arguments')
+        in
+        return
+          (Synext.CLF.Term.Application
+             { applicand = applicand'; arguments = arguments'; location })
 
-    (** {1 Destructors} *)
-
-    let location = function
-      | External_typ t -> Synext.location_of_clf_typ t
-      | External_term_pattern t -> Synext.location_of_clf_term_pattern t
-      | Parser_object t -> Synprs.location_of_clf_object t
-      | Application { applicand; arguments } ->
-          let applicand_location =
-            match applicand with
-            | `Typ applicand
-            | `Term_pattern applicand ->
-                Synprs.location_of_clf_object applicand
-          in
-          Location.join_all_contramap Synprs.location_of_clf_object
-            applicand_location arguments
-  end
-
-  (** Contextual LF term-level or type-level pattern operators for rewriting
-      of prefix, infix and postfix operators using {!Shunting_yard}. *)
-  module CLF_pattern_operator = struct
-    (** The type of operators that may appear during rewriting of prefix,
-        infix and postfix operators. *)
-    type t =
-      | Type_constant of
-          { identifier : Qualified_identifier.t
-          ; operator : Operator.t
-          ; applicand : Synprs.clf_object
-          }
-          (** A contextual LF type-level constant with its operator
-              definition in the disambiguation context, and its corresponding
-              AST. *)
-      | Term_constant of
-          { identifier : Qualified_identifier.t
-          ; operator : Operator.t
-          ; applicand : Synprs.clf_object
-          }
-          (** A contextual LF term-level constant with its operator
-              definition in the disambiguation context, and its corresponding
-              AST. *)
-
-    (** {1 Destructors} *)
-
-    let[@inline] operator = function
-      | Type_constant { operator; _ }
-      | Term_constant { operator; _ } ->
-          operator
-
-    let[@inline] applicand = function
-      | Type_constant { applicand; _ }
-      | Term_constant { applicand; _ } ->
-          applicand
-
-    let[@inline] identifier = function
-      | Type_constant { identifier; _ }
-      | Term_constant { identifier; _ } ->
-          identifier
-
-    let arity = Fun.(operator >> Operator.arity)
-
-    let precedence = Fun.(operator >> Operator.precedence)
-
-    let fixity = Fun.(operator >> Operator.fixity)
-
-    let associativity = Fun.(operator >> Operator.associativity)
-
-    let location = Fun.(applicand >> Synprs.location_of_clf_object)
-
-    (** {1 Instances} *)
-
-    (** Equality instance on type-level and term-level constants. Since
-        operator identifiers share the same namespace, operators having the
-        same name are equal in a rewriting of an application. *)
-    include (
-      (val Eq.contramap (module Qualified_identifier) identifier) :
-        Eq.EQ with type t := t)
-  end
-
-  (** [disambiguate_as_term_pattern object_ state] is [object_] rewritten as
+  (** [disambiguate_clf_term_pattern object_ state] is [object_] rewritten as
       a contextual LF term pattern with respect to the disambiguation context
       [state].
 
@@ -1344,17 +931,18 @@ struct
 
       This function imposes syntactic restrictions on [object_], but does not
       perform normalization nor validation. To see the syntactic restrictions
-      from LF objects to LF terms, see the Beluga language specification. *)
-  let rec disambiguate_as_term_pattern object_ =
+      from contextual LF objects to contextual LF term patterns, see the
+      Beluga language specification. *)
+  let rec disambiguate_clf_term_pattern object_ =
     match object_ with
     | Synprs.CLF.Object.Raw_pi { location; _ } ->
-        Error.raise_at1 location Illegal_pi_term_pattern
+        Error.raise_at1 location Illegal_pi_clf_term_pattern
     | Synprs.CLF.Object.Raw_arrow { location; orientation = `Forward; _ } ->
-        Error.raise_at1 location Illegal_forward_arrow_term_pattern
+        Error.raise_at1 location Illegal_forward_arrow_clf_term_pattern
     | Synprs.CLF.Object.Raw_arrow { location; orientation = `Backward; _ } ->
-        Error.raise_at1 location Illegal_backward_arrow_term_pattern
+        Error.raise_at1 location Illegal_backward_arrow_clf_term_pattern
     | Synprs.CLF.Object.Raw_block { location; _ } ->
-        Error.raise_at1 location Illegal_block_term_pattern
+        Error.raise_at1 location Illegal_block_clf_term_pattern
     | Synprs.CLF.Object.Raw_hole
         { location; variant = `Unlabelled | `Labelled _ } ->
         Error.raise_at1 location Illegal_labellable_hole_term_pattern
@@ -1369,16 +957,15 @@ struct
           (Synext.CLF.Term.Pattern.Substitution_variable
              { location; identifier })
     | Synprs.CLF.Object.Raw_identifier
-        { location; identifier = identifier, _modifier; quoted; _ } -> (
+        { location; identifier = identifier, `Plain; quoted; _ } -> (
         (* As an LF term pattern, plain identifiers are either term-level
            constants, variables already present in the pattern, or new
            pattern variables. *)
         let qualified_identifier =
           Qualified_identifier.make_simple identifier
         in
-        get >>= fun state ->
-        match Disambiguation_state.lookup qualified_identifier state with
-        | Disambiguation_state.LF_term_constant { operator } ->
+        lookup_toplevel identifier >>= function
+        | Result.Ok (LF_term_constant { operator }) ->
             return
               (Synext.CLF.Term.Pattern.Constant
                  { location
@@ -1386,9 +973,11 @@ struct
                  ; operator
                  ; quoted
                  })
-        | _ ->
+        | Result.Ok _
+        | Result.Error (Unbound_identifier _) ->
             return
-              (Synext.CLF.Term.Pattern.Variable { location; identifier }))
+              (Synext.CLF.Term.Pattern.Variable { location; identifier })
+        | Result.Error cause -> Error.raise_at1 location cause)
     | Synprs.CLF.Object.Raw_qualified_identifier
         { location; identifier; quoted } -> (
         (* As an LF term, identifiers of the form [<identifier>
@@ -1424,28 +1013,27 @@ struct
         in
         let modules = Qualified_identifier.modules identifier
         and name = Qualified_identifier.name identifier in
-        get >>= fun state ->
         match modules with
         | [] ->
             (* Qualified identifiers without modules were parsed as plain
                identifiers *)
             Error.violation
-              "[disambiguate_as_term_pattern] encountered a qualified \
+              "[disambiguate_clf_term_pattern] encountered a qualified \
                identifier without modules."
         | m :: ms -> (
-            match Disambiguation_state.lookup_toplevel m state with
-            | Disambiguation_state.Module _ ->
-                let rec helper state looked_up_identifiers next_identifier
+            lookup_toplevel m >>= function
+            | Result.Ok (Module _) ->
+                let rec helper bindings looked_up_identifiers next_identifier
                     remaining_identifiers =
-                  match Identifier.Hamt.find_opt next_identifier state with
+                  match
+                    Identifier.Hamt.find_opt next_identifier bindings
+                  with
                   | Option.Some
-                      (List1.T
-                        ( Disambiguation_state.Module { entries = state' }
-                        , _rest )) -> (
+                      (List1.T (Module { entries = state' }, _rest)) -> (
                       match remaining_identifiers with
                       | [] ->
                           (* Lookups ended with a module. *)
-                          Error.raise_at1 location Expected_term_constant
+                          Error.raise_at1 location Expected_clf_term_constant
                       | next_identifier' :: remaining_identifiers' ->
                           let looked_up_identifiers' =
                             next_identifier :: looked_up_identifiers
@@ -1453,9 +1041,7 @@ struct
                           helper state' looked_up_identifiers'
                             next_identifier' remaining_identifiers')
                   | Option.Some
-                      (List1.T
-                        ( Disambiguation_state.LF_term_constant { operator }
-                        , _rest )) -> (
+                      (List1.T (LF_term_constant { operator }, _rest)) -> (
                       (* Lookups ended with an LF term constant. The
                          remaining identifiers are named projections. *)
                       match remaining_identifiers with
@@ -1491,27 +1077,24 @@ struct
                         Location.join_all1_contramap Identifier.location
                           (List1.from next_identifier looked_up_identifiers)
                       in
-                      Error.raise_at1 location Expected_term_constant
+                      Error.raise_at1 location
+                        Expected_term_projection_compatible
                   | Option.None -> (
                       match remaining_identifiers with
                       | [] ->
                           Error.raise_at1 location
-                            (Unbound_term_constant identifier)
+                            (Unbound_clf_term_constant identifier)
                       | _ ->
                           let module_identifier =
                             Qualified_identifier.make
                               ~modules:(List.rev looked_up_identifiers)
                               next_identifier
                           in
-                          raise
-                            (Disambiguation_state.Unbound_namespace
-                               module_identifier))
+                          raise (Unbound_namespace module_identifier))
                 in
-                return
-                  (helper
-                     (Disambiguation_state.get_bindings state)
-                     [] m (ms @ [ name ]))
-            | Disambiguation_state.LF_term_constant { operator } ->
+                let* bindings = get_bindings in
+                return (helper bindings [] m (ms @ [ name ]))
+            | Result.Ok (LF_term_constant { operator }) ->
                 (* Immediately looked up an LF term constant. The remaining
                    identifiers are named projections. *)
                 let location = Identifier.location m in
@@ -1521,8 +1104,8 @@ struct
                     { identifier; location; operator; quoted = false }
                 in
                 return (reduce_projections' term ms name)
-            | Disambiguation_state.LF_term_variable
-            | Disambiguation_state.Meta_variable ->
+            | Result.Ok LF_term_variable
+            | Result.Ok Meta_variable ->
                 (* Immediately looked up an LF term variable or a
                    meta-variable. The remaining identifiers are named
                    projections. *)
@@ -1532,14 +1115,12 @@ struct
                     { location; identifier = m }
                 in
                 return (reduce_projections' term ms name)
-            | _entry ->
+            | Result.Ok _entry ->
                 (* First lookup ended with an entry that cannot be used in a
                    contextual LF term projection. *)
                 let location = Identifier.location m in
-                Error.raise_at1 location Expected_term_constant
-                (* TODO: Misleading, module, term variable, meta-variable are
-                   allowed *)
-            | exception Disambiguation_state.Unbound_identifier _ ->
+                Error.raise_at1 location Expected_term_projection_compatible
+            | Result.Error (Unbound_identifier _) ->
                 (* Immediately looked up a free variable. The remaining
                    identifiers are named projections. *)
                 let location = Identifier.location m in
@@ -1547,29 +1128,25 @@ struct
                   Synext.CLF.Term.Pattern.Variable
                     { location; identifier = m }
                 in
-                return (reduce_projections' term ms name)))
-    | Synprs.CLF.Object.Raw_application { objects; _ } -> (
-        disambiguate_application_pattern objects >>= function
-        | `Typ typ ->
-            let location = Synext.location_of_clf_typ typ in
-            Error.raise_at1 location Expected_term_pattern
-        | `Term_pattern term_pattern -> return term_pattern)
+                return (reduce_projections' term ms name)
+            | Result.Error cause -> Error.raise_at1 location cause))
+    | Synprs.CLF.Object.Raw_application { objects; location } ->
+        let* applicand, arguments = disambiguate_clf_application objects in
+        let* applicand' = disambiguate_clf_term_pattern applicand in
+        let* arguments' =
+          traverse_list1 elaborate_clf_pattern_operand arguments
+        in
+        return
+          (Synext.CLF.Term.Pattern.Application
+             { applicand = applicand'; arguments = arguments'; location })
     | Synprs.CLF.Object.Raw_lambda
         { location; parameter_identifier; parameter_sort; body } ->
         let* parameter_type' =
-          match parameter_sort with
-          | Option.Some parameter_sort ->
-              let* parameter_typ' = disambiguate_as_typ parameter_sort in
-              return (Option.some parameter_typ')
-          | Option.None -> return Option.none
+          traverse_option disambiguate_clf_typ parameter_sort
         in
         let* body' =
-          match parameter_identifier with
-          | Option.None -> disambiguate_as_term_pattern body
-          | Option.Some name ->
-              locally
-                (Disambiguation_state.add_lf_term_variable name)
-                (disambiguate_as_term_pattern body)
+          (with_lf_term_variable_opt parameter_identifier)
+            (disambiguate_clf_term_pattern body)
         in
         return
           (Synext.CLF.Term.Pattern.Abstraction
@@ -1581,35 +1158,46 @@ struct
     | Synprs.CLF.Object.Raw_hole { location; variant = `Underscore } ->
         return (Synext.CLF.Term.Pattern.Wildcard { location })
     | Synprs.CLF.Object.Raw_tuple { location; elements } ->
-        get >>= fun state ->
-        let elements' =
-          List1.map
-            (fun element ->
-              eval (disambiguate_as_term_pattern element) state)
-            elements
+        let* terms' =
+          traverse_list1 disambiguate_clf_term_pattern elements
         in
-        return
-          (Synext.CLF.Term.Pattern.Tuple { location; terms = elements' })
+        return (Synext.CLF.Term.Pattern.Tuple { location; terms = terms' })
     | Synprs.CLF.Object.Raw_projection { location; object_; projection } ->
-        let* term' = disambiguate_as_term_pattern object_ in
+        let* term' = disambiguate_clf_term_pattern object_ in
         return
           (Synext.CLF.Term.Pattern.Projection
              { location; term = term'; projection })
     | Synprs.CLF.Object.Raw_substitution { location; object_; substitution }
       ->
-        let* term' = disambiguate_as_term_pattern object_ in
-        let* substitution' = disambiguate_as_substitution substitution in
+        let* term' = disambiguate_clf_term_pattern object_ in
+        let* substitution' = disambiguate_clf_substitution substitution in
         return
           (Synext.CLF.Term.Pattern.Substitution
              { location; term = term'; substitution = substitution' })
     | Synprs.CLF.Object.Raw_annotated { location; object_; sort } ->
-        let* term' = disambiguate_as_term_pattern object_ in
-        let* typ' = disambiguate_as_typ sort in
+        let* term' = disambiguate_clf_term_pattern object_ in
+        let* typ' = disambiguate_clf_typ sort in
         return
           (Synext.CLF.Term.Pattern.TypeAnnotated
              { location; term = term'; typ = typ' })
 
-  and disambiguate_as_substitution_pattern substitution_pattern state =
+  and elaborate_clf_pattern_operand operand =
+    match operand with
+    | Clf_operand.Atom object_ -> disambiguate_clf_term_pattern object_
+    | Clf_operand.Application { applicand; arguments } ->
+        let* applicand' = disambiguate_clf_term_pattern applicand in
+        let* arguments' =
+          traverse_list1 elaborate_clf_pattern_operand arguments
+        in
+        let location =
+          Location.join_all1_contramap Synext.location_of_clf_term_pattern
+            (List1.cons applicand' arguments')
+        in
+        return
+          (Synext.CLF.Term.Pattern.Application
+             { applicand = applicand'; arguments = arguments'; location })
+
+  and disambiguate_clf_substitution_pattern substitution_pattern =
     let { Synprs.CLF.Context_object.location; head; objects } =
       substitution_pattern
     in
@@ -1618,13 +1206,14 @@ struct
         (function
           | Option.None, object_ -> object_
           | Option.Some identifier, _ ->
-              let location = Identifier.location identifier in
-              Error.raise_at1 location Illegal_subtitution_pattern_term_label)
+              Error.raise_at1
+                (Identifier.location identifier)
+                Illegal_subtitution_clf_pattern_term_label)
         objects
     in
     match head with
     | Synprs.CLF.Context_object.Head.None { location = head_location } ->
-        let head', objects'' =
+        let* head', objects'' =
           match objects' with
           | Synprs.CLF.Object.Raw_substitution
               { object_ =
@@ -1634,14 +1223,12 @@ struct
               ; _
               } (* A substitution closure *)
             :: xs ->
-              let closure' =
-                eval (disambiguate_as_substitution closure) state
-              in
+              let* closure' = disambiguate_clf_substitution closure in
               let head' =
                 Synext.CLF.Substitution.Pattern.Head.Substitution_variable
                   { location; identifier; closure = Option.some closure' }
               in
-              (head', xs)
+              return (head', xs)
           | Synprs.CLF.Object.Raw_identifier
               { location; identifier = identifier, `Dollar; _ }
               (* A substitution variable *)
@@ -1650,91 +1237,76 @@ struct
                 Synext.CLF.Substitution.Pattern.Head.Substitution_variable
                   { location; identifier; closure = Option.none }
               in
-              (head', xs)
+              return (head', xs)
           | _ ->
               let head' =
                 Synext.CLF.Substitution.Pattern.Head.None
                   { location = head_location }
               in
-              (head', objects')
+              return (head', objects')
         in
-        let terms' =
-          List.map
-            (fun object_ ->
-              eval (disambiguate_as_term_pattern object_) state)
-            objects''
+        let* terms' =
+          traverse_list disambiguate_clf_term_pattern objects''
         in
-        let substitution_pattern' =
+        return
           { Synext.CLF.Substitution.Pattern.location
           ; head = head'
           ; terms = terms'
           }
-        in
-        (state, substitution_pattern')
     | Synprs.CLF.Context_object.Head.Identity { location = head_location } ->
-        let terms' =
-          List.map
-            (fun object_ ->
-              eval (disambiguate_as_term_pattern object_) state)
-            objects'
-        in
+        let* terms' = traverse_list disambiguate_clf_term_pattern objects' in
         let head' =
           Synext.CLF.Substitution.Pattern.Head.Identity
             { location = head_location }
         in
-        let substitution_pattern' =
+        return
           { Synext.CLF.Substitution.Pattern.location
           ; head = head'
           ; terms = terms'
           }
-        in
-        (state, substitution_pattern')
 
-  and disambiguate_context_pattern_bindings bindings state =
-    let _state', bindings_rev' =
-      List.fold_left
-        (fun (state, bindings_rev') binding ->
-          match binding with
-          | Option.Some identifier, typ ->
-              let typ' = eval (disambiguate_as_typ typ) state in
-              let state' =
-                Disambiguation_state.add_lf_term_variable identifier state
-              and binding' = (identifier, typ') in
-              (state', binding' :: bindings_rev')
-          | ( Option.None
-            , Synprs.CLF.Object.Raw_identifier
-                { identifier = identifier, `Plain; _ } ) ->
-              let location = Identifier.location identifier in
-              Error.raise_at1 location
-                Illegal_context_pattern_missing_binding_type
-          | ( Option.None
-            , Synprs.CLF.Object.Raw_identifier
-                { identifier = identifier, `Hash; _ } ) ->
-              let location = Identifier.location identifier in
-              Error.raise_at1 location
-                Illegal_context_pattern_parameter_variable_binding
-          | ( Option.None
-            , Synprs.CLF.Object.Raw_identifier
-                { identifier = identifier, `Dollar; _ } ) ->
-              let location = Identifier.location identifier in
-              Error.raise_at1 location
-                Illegal_context_pattern_substitution_variable_binding
-          | Option.None, typ ->
-              let location = Synprs.location_of_clf_object typ in
-              Error.raise_at1 location
-                Illegal_context_pattern_missing_binding_identifier)
-        (state, []) bindings
-    in
-    let bindings' = List.rev bindings_rev' in
-    bindings'
+  and disambiguate_context_pattern_bindings bindings =
+    match bindings with
+    | [] -> return []
+    | (Option.Some identifier, typ) :: xs ->
+        let* typ' = disambiguate_clf_typ typ in
+        let* () = add_lf_term_variable identifier in
+        let y = (identifier, typ') in
+        let* ys = disambiguate_context_pattern_bindings xs in
+        return (y :: ys)
+    | ( Option.None
+      , Synprs.CLF.Object.Raw_identifier
+          { identifier = identifier, `Plain; _ } )
+      :: _xs ->
+        Error.raise_at1
+          (Identifier.location identifier)
+          Illegal_clf_context_pattern_missing_binding_type
+    | ( Option.None
+      , Synprs.CLF.Object.Raw_identifier
+          { identifier = identifier, `Hash; _ } )
+      :: _xs ->
+        Error.raise_at1
+          (Identifier.location identifier)
+          Illegal_clf_context_pattern_parameter_variable_binding
+    | ( Option.None
+      , Synprs.CLF.Object.Raw_identifier
+          { identifier = identifier, `Dollar; _ } )
+      :: _xs ->
+        Error.raise_at1
+          (Identifier.location identifier)
+          Illegal_clf_context_pattern_substitution_variable_binding
+    | (Option.None, typ) :: _xs ->
+        Error.raise_at1
+          (Synprs.location_of_clf_object typ)
+          Illegal_clf_context_pattern_missing_binding_identifier
 
-  and disambiguate_as_context_pattern context_pattern state =
+  and disambiguate_clf_context_pattern context_pattern =
     let { Synprs.CLF.Context_object.location; head; objects } =
       context_pattern
     in
     match head with
     | Synprs.CLF.Context_object.Head.Identity { location } ->
-        Error.raise_at1 location Illegal_context_pattern_identity
+        Error.raise_at1 location Illegal_clf_context_pattern_identity
     | Synprs.CLF.Context_object.Head.None { location = head_location } -> (
         match objects with
         | ( Option.None
@@ -1745,462 +1317,149 @@ struct
             let head' =
               Synext.CLF.Context.Pattern.Head.Hole
                 { location = head_location }
-            and bindings' = disambiguate_context_pattern_bindings xs state in
-            let context' =
+            in
+            let* bindings' = disambiguate_context_pattern_bindings xs in
+            return
               { Synext.CLF.Context.Pattern.location
               ; head = head'
               ; bindings = bindings'
               }
-            in
-            (state, context')
         | ( Option.None
           , Synprs.CLF.Object.Raw_identifier
               { identifier = identifier, `Plain; _ } )
             (* Possibly a context variable as context head *)
           :: xs -> (
-            match Disambiguation_state.lookup_toplevel identifier state with
-            | Disambiguation_state.Context_variable ->
+            lookup_toplevel identifier >>= function
+            | Result.Ok Context_variable ->
                 let head' =
                   Synext.CLF.Context.Pattern.Head.Context_variable
                     { identifier; location = Identifier.location identifier }
-                and bindings' =
-                  disambiguate_context_pattern_bindings xs state
                 in
-                let context' =
+                let* bindings' = disambiguate_context_pattern_bindings xs in
+                return
                   { Synext.CLF.Context.Pattern.location
                   ; head = head'
                   ; bindings = bindings'
                   }
-                in
-                (state, context')
-            | _
-            | (exception Disambiguation_state.Unbound_identifier _) ->
+            | Result.Ok _
+            | Result.Error (Unbound_identifier _) ->
                 let head' =
                   Synext.CLF.Context.Pattern.Head.None
                     { location = head_location }
-                and bindings' =
-                  disambiguate_context_pattern_bindings objects state
                 in
-                let context' =
+                let* bindings' =
+                  disambiguate_context_pattern_bindings objects
+                in
+                return
                   { Synext.CLF.Context.Pattern.location
                   ; head = head'
                   ; bindings = bindings'
                   }
-                in
-                (state, context'))
+            | Result.Error cause ->
+                Error.raise_at1 (Identifier.location identifier) cause)
         | _ ->
             let head' =
               Synext.CLF.Context.Pattern.Head.None
                 { location = head_location }
-            and bindings' =
-              disambiguate_context_pattern_bindings objects state
             in
-            let context' =
+            let* bindings' = disambiguate_context_pattern_bindings objects in
+            return
               { Synext.CLF.Context.Pattern.location
               ; head = head'
               ; bindings = bindings'
-              }
-            in
-            (state, context'))
-
-  (** [disambiguate_application_pattern state objects] disambiguates
-      [objects] as either a type-level or term-level LF application with
-      respect to the disambiguation context [state].
-
-      In both type-level and term-level LF applications, arguments are LF
-      terms.
-
-      This disambiguation is in three steps:
-
-      - First, LF type-level and term-level constants are identified as
-        operators (with or without quoting) using [state], and the rest are
-        identified as operands.
-      - Second, consecutive operands are combined as an application
-        (juxtaposition) that has yet to be disambiguated, and written in
-        prefix notation with the first operand being the application head.
-      - Third, Dijkstra's shunting yard algorithm is used to rewrite the
-        identified prefix, infix and postfix operators to applications. *)
-  and disambiguate_application_pattern objects state =
-    let disambiguate_juxtaposition applicand arguments =
-      let applicand_location =
-        match applicand with
-        | `Term_pattern applicand
-        | `Typ applicand ->
-            Synprs.location_of_clf_object applicand
-      in
-      let application_location =
-        Location.join_all_contramap Synprs.location_of_clf_object
-          applicand_location arguments
-      in
-      match applicand with
-      | `Term_pattern applicand ->
-          let applicand' =
-            eval (disambiguate_as_term_pattern applicand) state
-          in
-          let arguments' =
-            List1.map
-              (fun argument ->
-                eval (disambiguate_as_term_pattern argument) state)
-              (List1.unsafe_of_list arguments)
-          in
-          `Term_pattern
-            (Synext.CLF.Term.Pattern.Application
-               { location = application_location
-               ; applicand = applicand'
-               ; arguments = arguments'
-               })
-      | `Typ applicand ->
-          let applicand' = eval (disambiguate_as_typ applicand) state in
-          let arguments' =
-            List1.map
-              (fun argument -> eval (disambiguate_as_term argument) state)
-              (List1.unsafe_of_list arguments)
-          in
-          `Typ
-            (Synext.CLF.Typ.Application
-               { location = application_location
-               ; applicand = applicand'
-               ; arguments = arguments'
-               })
-    in
-    let module Shunting_yard =
-      Centiparsec.Shunting_yard.Make (Associativity) (Fixity)
-        (CLF_pattern_operand)
-        (struct
-          type associativity = Associativity.t
-
-          type fixity = Fixity.t
-
-          type operand = CLF_pattern_operand.t
-
-          include CLF_pattern_operator
-
-          (** [disambiguate_argument argument] disambiguates [argument] to a
-              contextual LF term or term pattern.
-
-              @raise Expected_term_pattern
-              @raise Expected_term *)
-          let disambiguate_argument argument =
-            match argument with
-            | CLF_pattern_operand.External_term_pattern term_pattern ->
-                let location =
-                  Synext.location_of_clf_term_pattern term_pattern
-                in
-                Error.raise_at1 location Expected_term
-            | CLF_pattern_operand.External_typ typ ->
-                let location = Synext.location_of_clf_typ typ in
-                Error.raise_at1 location Expected_term_pattern
-            | CLF_pattern_operand.Parser_object object_ ->
-                eval (disambiguate_as_term object_) state
-            | CLF_pattern_operand.Application { applicand; arguments } -> (
-                match disambiguate_juxtaposition applicand arguments with
-                | `Term_pattern term_pattern ->
-                    let location =
-                      Synext.location_of_clf_term_pattern term_pattern
-                    in
-                    Error.raise_at1 location Expected_term
-                | `Typ typ ->
-                    let location = Synext.location_of_clf_typ typ in
-                    Error.raise_at1 location Expected_term)
-
-          (** [disambiguate_argument_pattern argument] disambiguates
-              [argument] to an LF term pattern.
-
-              @raise Expected_term_pattern *)
-          let disambiguate_argument_pattern argument =
-            match argument with
-            | CLF_pattern_operand.External_term_pattern term_pattern ->
-                term_pattern
-            | CLF_pattern_operand.External_typ typ ->
-                let location = Synext.location_of_clf_typ typ in
-                Error.raise_at1 location Expected_term_pattern
-            | CLF_pattern_operand.Parser_object object_ ->
-                eval (disambiguate_as_term_pattern object_) state
-            | CLF_pattern_operand.Application { applicand; arguments } -> (
-                match disambiguate_juxtaposition applicand arguments with
-                | `Term_pattern term_pattern -> term_pattern
-                | `Typ typ ->
-                    let location = Synext.location_of_clf_typ typ in
-                    Error.raise_at1 location Expected_term_pattern)
-
-          let write operator arguments =
-            let application_location =
-              Location.join_all_contramap CLF_pattern_operand.location
-                (CLF_pattern_operator.location operator)
-                arguments
-            in
-            match operator with
-            | CLF_pattern_operator.Type_constant { applicand; _ } ->
-                let applicand' =
-                  eval (disambiguate_as_typ applicand) state
-                in
-                let arguments' =
-                  List1.map disambiguate_argument
-                    (List1.unsafe_of_list arguments)
-                in
-                CLF_pattern_operand.External_typ
-                  (Synext.CLF.Typ.Application
-                     { location = application_location
-                     ; applicand = applicand'
-                     ; arguments = arguments'
-                     })
-            | CLF_pattern_operator.Term_constant { applicand; _ } ->
-                let applicand' =
-                  eval (disambiguate_as_term_pattern applicand) state
-                in
-                let arguments' =
-                  List1.map disambiguate_argument_pattern
-                    (List1.unsafe_of_list arguments)
-                in
-                CLF_pattern_operand.External_term_pattern
-                  (Synext.CLF.Term.Pattern.Application
-                     { location = application_location
-                     ; applicand = applicand'
-                     ; arguments = arguments'
-                     })
-        end)
-    in
-    (* [prepare_objects objects] identifies operators in [objects] and
-       rewrites juxtapositions to applications in prefix notation. The
-       objects themselves are not disambiguated to LF types or terms yet.
-       This is only done in the shunting yard algorithm so that the leftmost
-       syntax error gets reported. *)
-    let prepare_objects objects =
-      (* Predicate for identified objects that may appear as juxtaposed
-         arguments to an application in prefix notation. This predicate does
-         not apply to the application head. *)
-      let is_argument = function
-        | `Not_an_operator, _
-        | `Quoted_type_operator, _
-        | `Quoted_term_operator, _ ->
-            true
-        | `Type_operator (_, operator), _
-        | `Term_operator (_, operator), _ ->
-            Operator.is_nullary operator
-      in
-      let rec reduce_juxtapositions_and_identify_operators objects =
-        match objects with
-        | (`Not_an_operator, t) :: ts -> (
-            match List.take_while is_argument ts with
-            | [], rest (* [t] is an operand not in juxtaposition *) ->
-                Shunting_yard.operand (CLF_pattern_operand.Parser_object t)
-                :: reduce_juxtapositions_and_identify_operators rest
-            | arguments, rest
-            (* [t] is an applicand in juxtaposition with [arguments] *) ->
-                let arguments' = List.map Pair.snd arguments in
-                Shunting_yard.operand
-                  (CLF_pattern_operand.Application
-                     { applicand = `Term_pattern t; arguments = arguments' })
-                :: reduce_juxtapositions_and_identify_operators rest)
-        | (`Quoted_type_operator, t) :: ts ->
-            let arguments, rest = List.take_while is_argument ts in
-            let arguments' = List.map Pair.snd arguments in
-            Shunting_yard.operand
-              (CLF_pattern_operand.Application
-                 { applicand = `Typ t; arguments = arguments' })
-            :: reduce_juxtapositions_and_identify_operators rest
-        | (`Quoted_term_operator, t) :: ts ->
-            let arguments, rest = List.take_while is_argument ts in
-            let arguments' = List.map Pair.snd arguments in
-            Shunting_yard.operand
-              (CLF_pattern_operand.Application
-                 { applicand = `Term_pattern t; arguments = arguments' })
-            :: reduce_juxtapositions_and_identify_operators rest
-        | (`Type_operator (identifier, operator), t) :: ts ->
-            if Operator.is_prefix operator then
-              let arguments, rest = List.take_while is_argument ts in
-              let arguments' = List.map Pair.snd arguments in
-              Shunting_yard.operand
-                (CLF_pattern_operand.Application
-                   { applicand = `Typ t; arguments = arguments' })
-              :: reduce_juxtapositions_and_identify_operators rest
-            else
-              Shunting_yard.operator
-                (CLF_pattern_operator.Type_constant
-                   { identifier; operator; applicand = t })
-              :: reduce_juxtapositions_and_identify_operators ts
-        | (`Term_operator (identifier, operator), t) :: ts ->
-            if Operator.is_prefix operator then
-              let arguments, rest = List.take_while is_argument ts in
-              let arguments' = List.map Pair.snd arguments in
-              Shunting_yard.operand
-                (CLF_pattern_operand.Application
-                   { applicand = `Term_pattern t; arguments = arguments' })
-              :: reduce_juxtapositions_and_identify_operators rest
-            else
-              Shunting_yard.operator
-                (CLF_pattern_operator.Term_constant
-                   { identifier; operator; applicand = t })
-              :: reduce_juxtapositions_and_identify_operators ts
-        | [] -> []
-      in
-      objects |> List2.to_list
-      |> List.map (fun term ->
-             let tag = identify_lf_operator state term in
-             (tag, term))
-      |> reduce_juxtapositions_and_identify_operators
-    in
-    try
-      match Shunting_yard.shunting_yard (prepare_objects objects) with
-      | CLF_pattern_operand.External_typ t -> (state, `Typ t)
-      | CLF_pattern_operand.External_term_pattern t ->
-          (state, `Term_pattern t)
-      | CLF_pattern_operand.Application { applicand; arguments } ->
-          (state, disambiguate_juxtaposition applicand arguments)
-      | CLF_pattern_operand.Parser_object _ ->
-          Error.violation
-            "[CLF.disambiguate_application_pattern] unexpectedly did not \
-             disambiguate LF operands in rewriting"
-    with
-    | Shunting_yard.Empty_expression ->
-        Error.violation
-          "[CLF.disambiguate_application_pattern] unexpectedly ended with \
-           an empty expression"
-    | Shunting_yard.Leftover_expressions _ ->
-        Error.violation
-          "[CLF.disambiguate_application_pattern] unexpectedly ended with \
-           leftover expressions"
-    | Shunting_yard.Misplaced_operator { operator; operands } ->
-        let operator_location = CLF_pattern_operator.location operator
-        and operand_locations =
-          List.map CLF_pattern_operand.location operands
-        in
-        Error.raise_at
-          (List1.from operator_location operand_locations)
-          Misplaced_operator
-    | Shunting_yard.Ambiguous_operator_placement
-        { left_operator; right_operator } ->
-        let operator_identifier =
-          CLF_pattern_operator.identifier left_operator
-        and left_operator_location =
-          CLF_pattern_operator.location left_operator
-        and right_operator_location =
-          CLF_pattern_operator.location right_operator
-        in
-        Error.raise_at2 left_operator_location right_operator_location
-          (Ambiguous_operator_placement operator_identifier)
-    | Shunting_yard.Consecutive_non_associative_operators
-        { left_operator; right_operator } ->
-        let operator_identifier =
-          CLF_pattern_operator.identifier left_operator
-        and left_operator_location =
-          CLF_pattern_operator.location left_operator
-        and right_operator_location =
-          CLF_pattern_operator.location right_operator
-        in
-        Error.raise_at2 left_operator_location right_operator_location
-          (Consecutive_applications_of_non_associative_operators
-             operator_identifier)
-    | Shunting_yard.Arity_mismatch { operator; operator_arity; operands } ->
-        let operator_identifier = CLF_pattern_operator.identifier operator
-        and operator_location = CLF_pattern_operator.location operator
-        and expected_arguments_count = operator_arity
-        and operand_locations =
-          List.map CLF_pattern_operand.location operands
-        and actual_arguments_count = List.length operands in
-        Error.raise_at
-          (List1.from operator_location operand_locations)
-          (Arity_mismatch
-             { operator_identifier
-             ; expected_arguments_count
-             ; actual_arguments_count
-             })
+              })
 end
 
-(** {2 Exception Printing} *)
-
 let pp_exception ppf = function
-  | Illegal_hole_type ->
+  | Illegal_hole_clf_type ->
       Format.fprintf ppf "Holes may not appear as contextual LF types."
-  | Illegal_lambda_type ->
+  | Illegal_lambda_clf_type ->
       Format.fprintf ppf "Lambdas may not appear as contextual LF types."
-  | Illegal_annotated_type ->
+  | Illegal_annotated_clf_type ->
       Format.fprintf ppf
         "Type ascriptions to terms may not appear as contextual LF types."
-  | Illegal_untyped_pi_type ->
+  | Illegal_untyped_pi_clf_type ->
       Format.fprintf ppf
         "The contextual LF Pi type is missing its parameter type annotation."
-  | Illegal_tuple_type ->
+  | Illegal_tuple_clf_type ->
       Format.fprintf ppf "Tuple terms may not appear as contextual LF types."
-  | Illegal_projection_type ->
+  | Illegal_projection_clf_type ->
       Format.fprintf ppf
         "Projection terms may not appear as contextual LF types."
-  | Illegal_substitution_type ->
+  | Illegal_substitution_clf_type ->
       Format.fprintf ppf
         "Substitution terms may not appear as contextual LF types."
-  | Illegal_unnamed_block_element_type ->
+  | Illegal_unnamed_block_element_clf_type ->
       Format.fprintf ppf
         "Contextual LF block type element missing an identifier."
-  | Illegal_parameter_variable_type ->
+  | Illegal_parameter_variable_clf_type ->
       Format.fprintf ppf
         "Parameter variables may not appear as contextual LF types."
-  | Illegal_substitution_variable_type ->
+  | Illegal_substitution_variable_clf_type ->
       Format.fprintf ppf
         "Substitution variables may not appear as contextual LF types."
-  | Unbound_type_constant identifier ->
+  | Unbound_clf_type_constant identifier ->
       Format.fprintf ppf "The LF type-level constant %a is unbound."
         Qualified_identifier.pp identifier
-  | Unbound_type_constant_or_illegal_projection_type identifier ->
+  | Unbound_type_constant_or_illegal_projection_clf_type identifier ->
       Format.fprintf ppf
         "Either the LF type-level constant %a is unbound, or a projection \
          term may not appear as a contextual LF type."
         Qualified_identifier.pp identifier
-  | Illegal_pi_term ->
+  | Illegal_pi_clf_term ->
       Format.fprintf ppf
         "Pi kinds or types may not appear as contextual LF terms."
-  | Illegal_forward_arrow_term ->
+  | Illegal_forward_arrow_clf_term ->
       Format.fprintf ppf
         "Forward arrows may not appear as contextual LF terms."
-  | Illegal_backward_arrow_term ->
+  | Illegal_backward_arrow_clf_term ->
       Format.fprintf ppf
         "Backward arrows may not appear as contextual LF terms."
-  | Illegal_block_term ->
+  | Illegal_block_clf_term ->
       Format.fprintf ppf "Block types may not appear as contextual LF terms."
-  | Unbound_term_constant identifier ->
+  | Unbound_clf_term_constant identifier ->
       Format.fprintf ppf "The LF term-level constant %a is unbound."
         Qualified_identifier.pp identifier
-  | Illegal_subtitution_term_label ->
+  | Expected_term_projection_compatible ->
+      Format.fprintf ppf
+        "Expected a module, an LF term constant, an LF term variable or a \
+         free variable."
+  | Illegal_clf_subtitution_term_label ->
       Format.fprintf ppf "Terms in a substitution may not be labelled."
-  | Illegal_context_parameter_variable_binding ->
+  | Illegal_clf_context_parameter_variable_binding ->
       Format.fprintf ppf
         "Parameter variable bindings may not occur in contextual LF \
          contexts."
-  | Illegal_context_substitution_variable_binding ->
+  | Illegal_clf_context_substitution_variable_binding ->
       Format.fprintf ppf
         "Substitution variable bindings may not occur in contextual LF \
          contexts."
-  | Illegal_context_missing_binding_identifier ->
+  | Illegal_clf_context_missing_binding_identifier ->
       Format.fprintf ppf
         "Identifier missing for the binding in the contextual LF context."
-  | Illegal_context_identity ->
+  | Illegal_clf_context_identity ->
       Format.fprintf ppf
         "Contextual LF contexts may not begin with the identity \
          substitution."
-  | Expected_term_constant ->
+  | Expected_clf_term_constant ->
       Format.fprintf ppf "Expected an LF term-level constant."
-  | Expected_type_constant ->
+  | Expected_clf_type_constant ->
       Format.fprintf ppf "Expected an LF type-level constant."
-  | Expected_term ->
-      Format.fprintf ppf
-        "Expected a contextual LF term but found a contextual LF type \
-         instead."
-  | Expected_type ->
-      Format.fprintf ppf "Expected an LF type but found an LF term instead."
-  | Ambiguous_operator_placement operator_identifier ->
+  | Ambiguous_clf_operator_placement operator_identifier ->
       Format.fprintf ppf
         "Ambiguous occurrences of the LF term-level or type-level operator \
          %a after rewriting."
         Qualified_identifier.pp operator_identifier
-  | Misplaced_operator ->
+  | Misplaced_clf_operator ->
       Format.fprintf ppf
         "Misplaced contextual LF term-level or type-level operator."
-  | Consecutive_applications_of_non_associative_operators operator_identifier
-    ->
+  | Consecutive_applications_of_non_associative_clf_operators
+      operator_identifier ->
       Format.fprintf ppf
         "Consecutive occurrences of the contextual LF term-level or \
          type-level operator %a after rewriting."
         Qualified_identifier.pp operator_identifier
-  | Arity_mismatch
+  | Clf_arity_mismatch
       { operator_identifier
       ; expected_arguments_count
       ; actual_arguments_count
@@ -2208,76 +1467,40 @@ let pp_exception ppf = function
       Format.fprintf ppf "Operator %a expected %d arguments but got %d."
         Qualified_identifier.pp operator_identifier expected_arguments_count
         actual_arguments_count
-  | Expected_term_pattern ->
-      Format.fprintf ppf
-        "Expected a contextual LF term pattern but found a contextual LF \
-         type pattern instead."
-  | Expected_type_pattern ->
-      Format.fprintf ppf
-        "Expected a contextual LF type pattern but found a contextual LF \
-         term pattern instead."
-  | Illegal_wildcard_type_pattern ->
-      Format.fprintf ppf
-        "Wildcards may not appear as contextual LF type patterns."
-  | Illegal_labellable_hole_type_pattern ->
-      Format.fprintf ppf
-        "Labellable holes may not appear as contextual LF type patterns."
-  | Illegal_lambda_type_pattern ->
-      Format.fprintf ppf
-        "Lambdas may not appear as contextual LF type patterns."
-  | Illegal_annotated_type_pattern ->
-      Format.fprintf ppf
-        "Type ascriptions to terms may not appear as contextual LF type \
-         patterns."
-  | Illegal_untyped_pi_type_pattern ->
-      Format.fprintf ppf
-        "The contextual LF Pi type pattern is missing its parameter type \
-         annotation."
-  | Illegal_tuple_type_pattern ->
-      Format.fprintf ppf
-        "Tuple term patterns may not appear as contextual LF type patterns."
-  | Illegal_projection_type_pattern ->
-      Format.fprintf ppf
-        "Projection term patterns may not appear as contextual LF type \
-         patterns."
-  | Illegal_substitution_type_pattern ->
-      Format.fprintf ppf
-        "Substitution term patterns may not appear as contextual LF type \
-         patterns."
-  | Illegal_unnamed_block_element_type_pattern ->
-      Format.fprintf ppf
-        "Contextual LF block type pattern element missing an identifier."
-  | Illegal_pi_term_pattern ->
+  | Illegal_pi_clf_term_pattern ->
       Format.fprintf ppf
         "Pi kinds or types may not appear as contextual LF term patterns."
-  | Illegal_forward_arrow_term_pattern ->
+  | Illegal_forward_arrow_clf_term_pattern ->
       Format.fprintf ppf
         "Forward arrow types may not appear as contextual LF term patterns."
-  | Illegal_backward_arrow_term_pattern ->
+  | Illegal_backward_arrow_clf_term_pattern ->
       Format.fprintf ppf
         "Backward arrow types may not appear as contextual LF term patterns."
-  | Illegal_block_term_pattern ->
+  | Illegal_block_clf_term_pattern ->
       Format.fprintf ppf
         "Block types may not appear as contextual LF term patterns."
   | Illegal_labellable_hole_term_pattern ->
       Format.fprintf ppf
         "Labellable holes may not appear as contextual LF term patterns."
-  | Illegal_subtitution_pattern_term_label ->
+  | Illegal_subtitution_clf_pattern_term_label ->
       Format.fprintf ppf
         "Terms in a substitution pattern may not be labelled."
-  | Illegal_context_pattern_parameter_variable_binding ->
+  | Illegal_clf_context_pattern_missing_binding_type ->
+      Format.fprintf ppf
+        "Contextual LF context pattern bindings require type annotations."
+  | Illegal_clf_context_pattern_parameter_variable_binding ->
       Format.fprintf ppf
         "Parameter variable bindings may not occur in contextual LF context \
          patterns."
-  | Illegal_context_pattern_substitution_variable_binding ->
+  | Illegal_clf_context_pattern_substitution_variable_binding ->
       Format.fprintf ppf
         "Substitution variable bindings may not occur in contextual LF \
          context patterns."
-  | Illegal_context_pattern_missing_binding_identifier ->
+  | Illegal_clf_context_pattern_missing_binding_identifier ->
       Format.fprintf ppf
         "Identifier missing for the binding in the contextual LF context \
          pattern."
-  | Illegal_context_pattern_identity ->
+  | Illegal_clf_context_pattern_identity ->
       Format.fprintf ppf
         "Contextual LF context patterns may not begin with the identity \
          substitution."

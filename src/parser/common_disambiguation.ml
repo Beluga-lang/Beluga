@@ -173,6 +173,14 @@ module type DISAMBIGUATION_STATE = sig
   exception No_bindings_checkpoint
 
   val rollback_bindings : Unit.t t
+
+  (** {1 Tracking} *)
+
+  val track_variable : (Identifier.t -> Unit.t t) -> Identifier.t -> Unit.t t
+
+  val clear_tracked_variables : Unit.t t
+
+  val get_tracked_variables : Identifier.t List.t t
 end
 
 (** A minimal disambiguation state backed by nested HAMT datastructures with
@@ -202,6 +210,7 @@ module Disambiguation_state : DISAMBIGUATION_STATE = struct
     ; default_associativity : Associativity.t
           (** Associativity to use if a pragma for an infix operator does not
               specify an associativity. *)
+    ; tracked_variables : Identifier.t List.t
     }
 
   include (
@@ -213,6 +222,7 @@ module Disambiguation_state : DISAMBIGUATION_STATE = struct
   let empty =
     { bindings = List1.singleton Identifier.Hamt.empty
     ; default_associativity = Associativity.non_associative
+    ; tracked_variables = []
     }
 
   let[@inline] set_default_associativity default_associativity =
@@ -488,15 +498,17 @@ module Disambiguation_state : DISAMBIGUATION_STATE = struct
                       ~modules:(List.rev looked_up_namespaces)
                       namespace
                   in
-                  raise (Unbound_namespace namespace_qualified_identifier)
+                  Error.raise
+                    (Unbound_namespace namespace_qualified_identifier)
               | Result.Error (Expected_toplevel_namespace _) ->
                   let namespace_qualified_identifier =
                     Qualified_identifier.make
                       ~modules:(List.rev looked_up_namespaces)
                       namespace
                   in
-                  raise (Expected_namespace namespace_qualified_identifier)
-              | Result.Error cause -> raise cause)
+                  Error.raise
+                    (Expected_namespace namespace_qualified_identifier)
+              | Result.Error cause -> Error.raise cause)
             (bindings, []) namespaces
         in
         let name = Qualified_identifier.name query in
@@ -566,6 +578,22 @@ module Disambiguation_state : DISAMBIGUATION_STATE = struct
             raise (Expected_operator identifier))
       ~modify_module:(fun _entry -> raise (Expected_operator identifier))
       identifier
+
+  let clear_tracked_variables =
+    let* state = get in
+    put { state with tracked_variables = [] }
+
+  let get_tracked_variables =
+    let* state = get in
+    return state.tracked_variables
+
+  let track_variable add identifier =
+    let* () = add identifier in
+    let* state = get in
+    put
+      { state with
+        tracked_variables = identifier :: state.tracked_variables
+      }
 
   let pp_exception ppf = function
     | Expected_operator qualified_identifier ->

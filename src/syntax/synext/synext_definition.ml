@@ -889,7 +889,7 @@ module Comp = struct
               constant ["c"] referring to a value. *)
       | Fn of
           { location : Location.t
-          ; parameters : Identifier.t Option.t List1.t (* TODO: Add optional types *)
+          ; parameters : Identifier.t Option.t List1.t
           ; body : Expression.t
           }
           (** [Fn { parameters = \["x1"; "x2"; ...; "xn"\]; body; _ }] is the
@@ -897,7 +897,7 @@ module Comp = struct
       | Mlam of
           { location : Location.t
           ; parameters :
-              (Identifier.t Option.t * [ `Plain | `Hash | `Dollar ]) List1.t (* TODO: Add optional types *)
+              (Identifier.t Option.t * [ `Plain | `Hash | `Dollar ]) List1.t
           ; body : Expression.t
           }
           (** [Mlam { parameters = \["X1"; "X2"; ...; "Xn"\]; body; _ }] is

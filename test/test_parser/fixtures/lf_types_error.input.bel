@@ -28,3 +28,6 @@ z
 % LF type constants must be bound
 Nat.add
 ;;
+
+\sum. (M : sum z z z)
+;;

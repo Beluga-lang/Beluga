@@ -15,7 +15,7 @@ open Beluga_syntax
 (** Module type for the type of state used in disambiguating the parser
     syntax to the external syntax. *)
 module type DISAMBIGUATION_STATE = sig
-  type t
+  include State.STATE
 
   type entry = private
     | LF_type_constant of { operator : Operator.t }
@@ -37,124 +37,118 @@ module type DISAMBIGUATION_STATE = sig
 
   (** {1 Constructors} *)
 
-  val empty : t
+  val empty : state
 
   (** {2 Binding additions} *)
 
-  val add_lf_term_variable : Identifier.t -> t -> t
+  val add_lf_term_variable : Identifier.t -> Unit.t t
 
   val add_prefix_lf_type_constant :
-    arity:Int.t -> precedence:Int.t -> Identifier.t -> t -> t
+    arity:Int.t -> precedence:Int.t -> Identifier.t -> Unit.t t
 
   val add_infix_lf_type_constant :
        associativity:Associativity.t
     -> precedence:Int.t
     -> Identifier.t
-    -> t
-    -> t
+    -> Unit.t t
 
   val add_postfix_lf_type_constant :
-    precedence:Int.t -> Identifier.t -> t -> t
+    precedence:Int.t -> Identifier.t -> Unit.t t
 
   val add_prefix_lf_term_constant :
-    arity:Int.t -> precedence:Int.t -> Identifier.t -> t -> t
+    arity:Int.t -> precedence:Int.t -> Identifier.t -> Unit.t t
 
   val add_infix_lf_term_constant :
        associativity:Associativity.t
     -> precedence:Int.t
     -> Identifier.t
-    -> t
-    -> t
+    -> Unit.t t
 
   val add_postfix_lf_term_constant :
-    precedence:Int.t -> Identifier.t -> t -> t
+    precedence:Int.t -> Identifier.t -> Unit.t t
 
-  val add_meta_variable : Identifier.t -> t -> t
+  val add_meta_variable : Identifier.t -> Unit.t t
 
-  val add_parameter_variable : Identifier.t -> t -> t
+  val add_parameter_variable : Identifier.t -> Unit.t t
 
-  val add_substitution_variable : Identifier.t -> t -> t
+  val add_substitution_variable : Identifier.t -> Unit.t t
 
-  val add_context_variable : Identifier.t -> t -> t
+  val add_context_variable : Identifier.t -> Unit.t t
 
-  val add_schema_constant : Identifier.t -> t -> t
+  val add_schema_constant : Identifier.t -> Unit.t t
 
-  val add_computation_variable : Identifier.t -> t -> t
+  val add_computation_variable : Identifier.t -> Unit.t t
 
   val add_prefix_computation_type_constant :
-    arity:Int.t -> precedence:Int.t -> Identifier.t -> t -> t
+    arity:Int.t -> precedence:Int.t -> Identifier.t -> Unit.t t
 
   val add_infix_computation_type_constant :
        associativity:Associativity.t
     -> precedence:Int.t
     -> Identifier.t
-    -> t
-    -> t
+    -> Unit.t t
 
   val add_postfix_computation_type_constant :
-    precedence:Int.t -> Identifier.t -> t -> t
+    precedence:Int.t -> Identifier.t -> Unit.t t
 
   val add_prefix_computation_term_constructor :
-    arity:Int.t -> precedence:Int.t -> Identifier.t -> t -> t
+    arity:Int.t -> precedence:Int.t -> Identifier.t -> Unit.t t
 
   val add_infix_computation_term_constructor :
        associativity:Associativity.t
     -> precedence:Int.t
     -> Identifier.t
-    -> t
-    -> t
+    -> Unit.t t
 
   val add_postfix_computation_term_constructor :
-    precedence:Int.t -> Identifier.t -> t -> t
+    precedence:Int.t -> Identifier.t -> Unit.t t
 
   val add_prefix_computation_cotype_constant :
-    arity:Int.t -> precedence:Int.t -> Identifier.t -> t -> t
+    arity:Int.t -> precedence:Int.t -> Identifier.t -> Unit.t t
 
   val add_infix_computation_cotype_constant :
        associativity:Associativity.t
     -> precedence:Int.t
     -> Identifier.t
-    -> t
-    -> t
+    -> Unit.t t
 
   val add_postfix_computation_cotype_constant :
-    precedence:Int.t -> Identifier.t -> t -> t
+    precedence:Int.t -> Identifier.t -> Unit.t t
 
-  val add_computation_term_destructor : Identifier.t -> t -> t
+  val add_computation_term_destructor : Identifier.t -> Unit.t t
 
-  val add_query : Identifier.t -> t -> t
+  val add_query : Identifier.t -> Unit.t t
 
-  val add_mquery : Identifier.t -> t -> t
+  val add_mquery : Identifier.t -> Unit.t t
 
-  val add_module : entry List1.t Identifier.Hamt.t -> Identifier.t -> t -> t
+  val add_module :
+    entry List1.t Identifier.Hamt.t -> Identifier.t -> Unit.t t
 
   (** {2 Getters, setters and mutators} *)
 
-  val set_default_associativity : Associativity.t -> t -> t
+  val set_default_associativity : Associativity.t -> Unit.t t
 
-  val get_default_associativity : t -> Associativity.t
+  val get_default_associativity : Associativity.t t
 
-  val get_bindings : t -> entry List1.t Identifier.Hamt.t
+  val get_bindings : entry List1.t Identifier.Hamt.t t
 
   val modify_bindings :
        (entry List1.t Identifier.Hamt.t -> entry List1.t Identifier.Hamt.t)
-    -> t
-    -> t
+    -> Unit.t t
 
   val modify_binding :
        modify_entry:(entry -> entry)
     -> modify_module:
          (entry List1.t Identifier.Hamt.t -> entry List1.t Identifier.Hamt.t)
     -> Qualified_identifier.t
-    -> t
-    -> t
+    -> Unit.t t
 
-  val pop_binding : Identifier.t -> t -> t
+  val pop_binding : Identifier.t -> Unit.t t
 
   exception Expected_operator of Qualified_identifier.t
 
   val modify_operator :
-    (Operator.t -> Operator.t) -> Qualified_identifier.t -> t -> t
+    (Operator.t -> Operator.t) -> Qualified_identifier.t -> Unit.t t
 
   (** {1 Lookups} *)
 
@@ -168,22 +162,23 @@ module type DISAMBIGUATION_STATE = sig
 
   exception Expected_namespace of Qualified_identifier.t
 
-  val lookup : Qualified_identifier.t -> t -> entry
+  val lookup : Qualified_identifier.t -> (entry, exn) Result.t t
 
-  val lookup_toplevel : Identifier.t -> t -> entry
+  val lookup_toplevel : Identifier.t -> (entry, exn) Result.t t
+
+  (** {1 Checkpoints} *)
+
+  val mark_bindings : Unit.t t
+
+  exception No_bindings_checkpoint
+
+  val rollback_bindings : Unit.t t
 end
 
 (** A minimal disambiguation state backed by nested HAMT datastructures with
     plain identifier keys. *)
 module Disambiguation_state : DISAMBIGUATION_STATE = struct
-  type t =
-    { bindings : entry List1.t Identifier.Hamt.t  (** Symbol table. *)
-    ; default_associativity : Associativity.t
-          (** Associativity to use if a pragma for an infix operator does not
-              specify an associativity. *)
-    }
-
-  and entry =
+  type entry =
     | LF_type_constant of { operator : Operator.t }
     | LF_term_constant of { operator : Operator.t }
     | LF_term_variable
@@ -201,23 +196,67 @@ module Disambiguation_state : DISAMBIGUATION_STATE = struct
     | MQuery
     | Module of { entries : entry List1.t Identifier.Hamt.t }
 
+  type state =
+    { bindings : entry List1.t Identifier.Hamt.t List1.t
+          (** Symbol table with checkpoints. *)
+    ; default_associativity : Associativity.t
+          (** Associativity to use if a pragma for an infix operator does not
+              specify an associativity. *)
+    }
+
+  include (
+    State.Make (struct
+      type t = state
+    end) :
+      State.STATE with type state := state)
+
   let empty =
-    { bindings = Identifier.Hamt.empty
+    { bindings = List1.singleton Identifier.Hamt.empty
     ; default_associativity = Associativity.non_associative
     }
 
-  let[@inline] set_default_associativity default_associativity state =
-    { state with default_associativity }
+  let[@inline] set_default_associativity default_associativity =
+    let* state = get in
+    put { state with default_associativity }
 
-  let[@inline] get_default_associativity state = state.default_associativity
+  let get_default_associativity =
+    let* state = get in
+    return state.default_associativity
 
-  let[@inline] set_bindings bindings state = { state with bindings }
+  let get_bindings =
+    let* state = get in
+    return (List1.head state.bindings)
 
-  let[@inline] get_bindings state = state.bindings
+  let get_checkpoints =
+    let* state = get in
+    return (List1.tail state.bindings)
 
-  let[@inline] modify_bindings f state =
-    let bindings' = f state.bindings in
-    set_bindings bindings' state
+  let[@inline] set_bindings bindings =
+    let* checkpoints = get_checkpoints in
+    let* state = get in
+    put { state with bindings = List1.from bindings checkpoints }
+
+  let mark_bindings =
+    let* bindings = get_bindings in
+    let* state = get in
+    put { state with bindings = List1.cons bindings state.bindings }
+
+  exception No_bindings_checkpoint
+
+  let rollback_bindings =
+    get_checkpoints >>= function
+    | latest_checkpoint :: later_checkpoints ->
+        let* state = get in
+        put
+          { state with
+            bindings = List1.from latest_checkpoint later_checkpoints
+          }
+    | [] -> Error.raise No_bindings_checkpoint
+
+  let[@inline] modify_bindings f =
+    let* bindings = get_bindings in
+    let bindings' = f bindings in
+    set_bindings bindings'
 
   let[@inline] push_binding identifier entry bindings =
     match Identifier.Hamt.find_opt identifier bindings with
@@ -405,68 +444,71 @@ module Disambiguation_state : DISAMBIGUATION_STATE = struct
 
   let lookup_entry query bindings =
     match Identifier.Hamt.find_opt query bindings with
-    | Option.Some entry -> List1.head entry
-    | Option.None -> raise (Unbound_identifier query)
+    | Option.Some entry -> Result.ok (List1.head entry)
+    | Option.None -> Result.error (Unbound_identifier query)
 
   let lookup_namespace query bindings =
     match lookup_entry query bindings with
-    | Module { entries } -> entries
-    | LF_type_constant _
-    | LF_term_constant _
-    | LF_term_variable
-    | Meta_variable
-    | Parameter_variable
-    | Substitution_variable
-    | Context_variable
-    | Schema_constant
-    | Computation_variable
-    | Computation_type_constant _
-    | Computation_term_constructor _
-    | Computation_cotype_constant _
-    | Computation_term_destructor
-    | Query
-    | MQuery ->
-        raise (Expected_toplevel_namespace query)
+    | Result.Ok (Module { entries }) -> Result.ok entries
+    | Result.Ok (LF_type_constant _)
+    | Result.Ok (LF_term_constant _)
+    | Result.Ok LF_term_variable
+    | Result.Ok Meta_variable
+    | Result.Ok Parameter_variable
+    | Result.Ok Substitution_variable
+    | Result.Ok Context_variable
+    | Result.Ok Schema_constant
+    | Result.Ok Computation_variable
+    | Result.Ok (Computation_type_constant _)
+    | Result.Ok (Computation_term_constructor _)
+    | Result.Ok (Computation_cotype_constant _)
+    | Result.Ok Computation_term_destructor
+    | Result.Ok Query
+    | Result.Ok MQuery ->
+        Result.error (Expected_toplevel_namespace query)
+    | Result.Error _ as e -> e
 
-  let lookup query state =
-    let bindings = get_bindings state in
+  let lookup query =
+    let* bindings = get_bindings in
     let namespaces = Qualified_identifier.modules query in
     match namespaces with
     | [] ->
         let name = Qualified_identifier.name query in
-        lookup_entry name bindings
+        return (lookup_entry name bindings)
     | namespaces -> (
         let bindings', _looked_up_namespaces =
           List.fold_left
             (fun (bindings, looked_up_namespaces) namespace ->
-              try
-                let bindings' = lookup_namespace namespace bindings in
-                (bindings', namespace :: looked_up_namespaces)
-              with
-              | Unbound_identifier _ ->
+              match lookup_namespace namespace bindings with
+              | Result.Ok bindings' ->
+                  (bindings', namespace :: looked_up_namespaces)
+              | Result.Error (Unbound_identifier _) ->
                   let namespace_qualified_identifier =
                     Qualified_identifier.make
                       ~modules:(List.rev looked_up_namespaces)
                       namespace
                   in
                   raise (Unbound_namespace namespace_qualified_identifier)
-              | Expected_toplevel_namespace _ ->
+              | Result.Error (Expected_toplevel_namespace _) ->
                   let namespace_qualified_identifier =
                     Qualified_identifier.make
                       ~modules:(List.rev looked_up_namespaces)
                       namespace
                   in
-                  raise (Expected_namespace namespace_qualified_identifier))
+                  raise (Expected_namespace namespace_qualified_identifier)
+              | Result.Error cause -> raise cause)
             (bindings, []) namespaces
         in
         let name = Qualified_identifier.name query in
-        try lookup_entry name bindings' with
-        | Unbound_identifier _identifier ->
-            raise (Unbound_qualified_identifier query))
+        match lookup_entry name bindings' with
+        | Result.Ok entry -> return (Result.ok entry)
+        | Result.Error (Unbound_identifier _identifier) ->
+            return (Result.error (Unbound_qualified_identifier query))
+        | Result.Error cause -> Error.raise cause)
 
-  let lookup_toplevel query state =
-    let bindings = get_bindings state in
-    lookup_entry query bindings
+  let lookup_toplevel query =
+    let* bindings = get_bindings in
+    return (lookup_entry query bindings)
 
   let[@inline] pop_binding identifier =
     modify_bindings (fun bindings ->
@@ -479,19 +521,20 @@ module Disambiguation_state : DISAMBIGUATION_STATE = struct
         | Option.Some (List1.T (_head_to_discard, [])) ->
             Identifier.Hamt.remove identifier bindings)
 
-  let modify_binding ~modify_entry ~modify_module identifier state =
-    match lookup identifier state with
-    | Module { entries } ->
+  let modify_binding ~modify_entry ~modify_module identifier =
+    lookup identifier >>= function
+    | Result.Ok (Module { entries }) ->
         let entries' = modify_module entries in
         let entry' = Module { entries = entries' } in
-        (modify_bindings (add_nested identifier entry')) state
-    | entry ->
+        modify_bindings (add_nested identifier entry')
+    | Result.Ok entry ->
         let entry' = modify_entry entry in
-        (modify_bindings (add_nested identifier entry')) state
+        modify_bindings (add_nested identifier entry')
+    | Result.Error cause -> raise cause
 
   exception Expected_operator of Qualified_identifier.t
 
-  let modify_operator f identifier state =
+  let modify_operator f identifier =
     modify_binding
       ~modify_entry:(function
         | LF_type_constant { operator } ->
@@ -522,7 +565,7 @@ module Disambiguation_state : DISAMBIGUATION_STATE = struct
         | Module _ ->
             raise (Expected_operator identifier))
       ~modify_module:(fun _entry -> raise (Expected_operator identifier))
-      identifier state
+      identifier
 
   let pp_exception ppf = function
     | Expected_operator qualified_identifier ->

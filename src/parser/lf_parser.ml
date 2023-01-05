@@ -66,9 +66,8 @@ end = struct
     let lambda =
       seq2
         (token Token.LAMBDA
-        &> seq2 omittable_identifier
-             (maybe (token Token.COLON &> LF_parsers.lf_object))
-        <& token Token.DOT)
+        &> seq2 omittable_identifier (maybe (colon &> LF_parsers.lf_object))
+        <& dot)
         LF_parsers.lf_object
       |> span
       $> (fun (location, ((parameter_identifier, parameter_sort), body)) ->
@@ -79,7 +78,7 @@ end = struct
       seq2
         (braces
            (seq2 omittable_identifier
-              (maybe (token Token.COLON &> LF_parsers.lf_object))))
+              (maybe (colon &> LF_parsers.lf_object))))
         LF_parsers.lf_object
       |> span
       $> (fun (location, ((parameter_identifier, parameter_sort), body)) ->
@@ -213,7 +212,7 @@ end = struct
 
   let lf_object2 =
     (* Annotations are left-associative. *)
-    let annotation = token Token.COLON &> alt lf_object3 lf_weak_prefix in
+    let annotation = colon &> alt lf_object3 lf_weak_prefix in
     let trailing_annotations = many (span annotation) in
     seq2 lf_object3 trailing_annotations
     $> (function

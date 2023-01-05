@@ -78,3 +78,6 @@ M (arrow) x arrow M' (arrow) y
 
 x : a : b : c
 ;;
+
+\sum. (sum M N O)
+;;

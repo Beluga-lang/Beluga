@@ -24,11 +24,13 @@ let associativity_of_json json =
   | associativity -> raise (Unsupported_associativity associativity)
 
 let rec disambiguation_state_of_json json =
+  let open Disambiguation_state in
   let open Yojson.Safe.Util in
   let entries = json |> member "entries" |> to_list in
-  List.fold_right add_json_entry entries Disambiguation_state.empty
+  traverse_list_void add_json_entry entries
 
-and add_json_entry json disambiguation_state =
+and add_json_entry json =
+  let open Disambiguation_state in
   let open Yojson.Safe.Util in
   let sort = json |> member "sort" |> to_string in
   match sort with
@@ -39,20 +41,20 @@ and add_json_entry json disambiguation_state =
       match fixity with
       | Fixity.Prefix ->
           let arity = json |> member "arity" |> to_int in
-          Disambiguation_state.add_prefix_lf_type_constant
+          add_prefix_lf_type_constant
             (Identifier.make identifier)
-            ~arity ~precedence disambiguation_state
+            ~arity ~precedence
       | Fixity.Infix ->
           let associativity =
             json |> member "associativity" |> associativity_of_json
           in
-          Disambiguation_state.add_infix_lf_type_constant
+          add_infix_lf_type_constant
             (Identifier.make identifier)
-            ~associativity ~precedence disambiguation_state
+            ~associativity ~precedence
       | Fixity.Postfix ->
-          Disambiguation_state.add_postfix_lf_type_constant
+          add_postfix_lf_type_constant
             (Identifier.make identifier)
-            ~precedence disambiguation_state)
+            ~precedence)
   | "lf_term_constant" -> (
       let identifier = json |> member "identifier" |> to_string in
       let fixity = json |> member "fixity" |> fixity_of_json in
@@ -60,39 +62,35 @@ and add_json_entry json disambiguation_state =
       match fixity with
       | Fixity.Prefix ->
           let arity = json |> member "arity" |> to_int in
-          Disambiguation_state.add_prefix_lf_term_constant
+          add_prefix_lf_term_constant
             (Identifier.make identifier)
-            ~arity ~precedence disambiguation_state
+            ~arity ~precedence
       | Fixity.Infix ->
           let associativity =
             json |> member "associativity" |> associativity_of_json
           in
-          Disambiguation_state.add_infix_lf_term_constant
+          add_infix_lf_term_constant
             (Identifier.make identifier)
-            ~associativity ~precedence disambiguation_state
+            ~associativity ~precedence
       | Fixity.Postfix ->
-          Disambiguation_state.add_postfix_lf_term_constant
+          add_postfix_lf_term_constant
             (Identifier.make identifier)
-            ~precedence disambiguation_state)
+            ~precedence)
   | "module" ->
       let identifier = json |> member "identifier" |> to_string in
-      let entries = disambiguation_state_of_json json in
-      Disambiguation_state.add_module
-        (Disambiguation_state.get_bindings entries)
+      let module_state = exec (disambiguation_state_of_json json) empty in
+      add_module
+        (eval get_bindings module_state)
         (Identifier.make identifier)
-        disambiguation_state
   | "context_variable" ->
       let identifier = json |> member "identifier" |> to_string in
-      Disambiguation_state.add_context_variable
-        (Identifier.make identifier)
-        disambiguation_state
+      add_context_variable (Identifier.make identifier)
   | "schema_constant" ->
       let identifier = json |> member "identifier" |> to_string in
-      Disambiguation_state.add_schema_constant
-        (Identifier.make identifier)
-        disambiguation_state
+      add_schema_constant (Identifier.make identifier)
   | sort -> raise (Unsupported_sort sort)
 
 let read_disambiguation_state filename =
+  let open Disambiguation_state in
   let json = Yojson.Safe.from_file filename in
-  disambiguation_state_of_json json
+  exec (disambiguation_state_of_json json) empty

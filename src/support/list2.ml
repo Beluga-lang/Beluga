@@ -8,6 +8,12 @@ let[@inline] pair x1 x2 = from x1 x2 []
 
 let[@inline] cons element (T (x1, x2, xs)) = T (element, x1, x2 :: xs)
 
+let[@inline] first (T (x1, _x2, _xs)) = x1
+
+let[@inline] second (T (_x1, x2, _xs)) = x2
+
+let[@inline] tail (T (_x1, _x2, xs)) = xs
+
 let rev =
   let rec rev l (T (x1, x2, xs) as acc) =
     match l with

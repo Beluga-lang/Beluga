@@ -18,20 +18,50 @@ module type STATE = sig
       where [final] is the final state and [v] is the output. *)
   val run : 'a t -> state -> state * 'a
 
-  (** [eval a init] is [run a init], but outputs only [v]. *)
+  (** [eval a init] is [run a init = (final, v)], but outputs only [v]. *)
   val eval : 'a t -> state -> 'a
+
+  (** [exec a init] is [run a init = (final, v)], but outputs only [final]. *)
+  val exec : 'a t -> state -> state
 
   (** [locally f m a init] runs [a] with state [f init] and returns
       [(init, v)] where [v] is the output from running [a]. *)
   val locally : (state -> state) -> 'a t -> 'a t
 
-  (** [scoped ~set ~unset m initial_state] executes [m] with state
-      [set initial_state] to [(intermediate_state, v)], then returns
-      [(unset intermediate_state, v)]. This allows for computations with
-      scoped mutations to the state. [set] and [unset] can be thought of
+  (** [scoped ~set ~unset m initial_state] executes [set], then [m], then
+      [unset] and returns the value from [m]. This allows for computations
+      with scoped mutations to the state. [set] and [unset] can be thought of
       apply and undo operations for the mutation. This is less strict than
       [locally] which ignores the output state. *)
-  val scoped : set:(state -> state) -> unset:(state -> state) -> 'a t -> 'a t
+  val scoped : set:Unit.t t -> unset:Unit.t t -> 'a t -> 'a t
+
+  val traverse_list : ('a -> 'b t) -> 'a List.t -> 'b List.t t
+
+  val traverse_list1 : ('a -> 'b t) -> 'a List1.t -> 'b List1.t t
+
+  val traverse_list2 : ('a -> 'b t) -> 'a List2.t -> 'b List2.t t
+
+  val traverse_list_void : ('a -> _ t) -> 'a List.t -> Unit.t t
+
+  val traverse_list1_void : ('a -> _ t) -> 'a List1.t -> Unit.t t
+
+  val traverse_list2_void : ('a -> _ t) -> 'a List2.t -> Unit.t t
+
+  val traverse_reverse_list : ('a -> 'b t) -> 'a List.t -> 'b List.t t
+
+  val traverse_reverse_list1 : ('a -> 'b t) -> 'a List1.t -> 'b List1.t t
+
+  val traverse_reverse_list2 : ('a -> 'b t) -> 'a List2.t -> 'b List2.t t
+
+  val traverse_reverse_list_void : ('a -> _ t) -> 'a List.t -> Unit.t t
+
+  val traverse_reverse_list1_void : ('a -> _ t) -> 'a List1.t -> Unit.t t
+
+  val traverse_reverse_list2_void : ('a -> _ t) -> 'a List2.t -> Unit.t t
+
+  val traverse_option : ('a -> 'b t) -> 'a Option.t -> 'b Option.t t
+
+  val traverse_option_void : ('a -> _ t) -> 'a Option.t -> Unit.t t
 
   (** {1 Instances} *)
 

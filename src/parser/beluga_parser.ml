@@ -1,4 +1,3 @@
-open Support
 open Beluga_syntax
 module Simple_disambiguation_state =
   Common_disambiguation.Disambiguation_state
@@ -21,7 +20,7 @@ struct
       (Comp_disambiguation)
       (Harpoon_disambiguation)
 
-  type disambiguation_state = Disambiguation_state.t
+  type disambiguation_state = Disambiguation_state.state
 
   type parser_state = Common_parser.state
 
@@ -119,59 +118,59 @@ struct
     disambiguated
 
   let parse_only_lf_kind =
-    parse_only Lf_parser.lf_object Lf_disambiguation.disambiguate_as_kind
+    parse_only Lf_parser.lf_object Lf_disambiguation.disambiguate_lf_kind
 
   let parse_only_lf_typ =
-    parse_only Lf_parser.lf_object Lf_disambiguation.disambiguate_as_typ
+    parse_only Lf_parser.lf_object Lf_disambiguation.disambiguate_lf_typ
 
   let parse_only_lf_term =
-    parse_only Lf_parser.lf_object Lf_disambiguation.disambiguate_as_term
+    parse_only Lf_parser.lf_object Lf_disambiguation.disambiguate_lf_term
 
   let parse_only_clf_typ =
-    parse_only Clf_parser.clf_object Clf_disambiguation.disambiguate_as_typ
+    parse_only Clf_parser.clf_object Clf_disambiguation.disambiguate_clf_typ
 
   let parse_only_clf_term =
-    parse_only Clf_parser.clf_object Clf_disambiguation.disambiguate_as_term
+    parse_only Clf_parser.clf_object Clf_disambiguation.disambiguate_clf_term
 
   let parse_only_clf_term_pattern =
     parse_only Clf_parser.clf_object
-      Clf_disambiguation.disambiguate_as_term_pattern
+      Clf_disambiguation.disambiguate_clf_term_pattern
 
   let parse_only_clf_substitution =
     parse_only Clf_parser.clf_context_object
-      Clf_disambiguation.disambiguate_as_substitution
+      Clf_disambiguation.disambiguate_clf_substitution
 
   let parse_only_clf_substitution_pattern =
     parse_only Clf_parser.clf_context_object
-      Clf_disambiguation.disambiguate_as_substitution_pattern
+      Clf_disambiguation.disambiguate_clf_substitution_pattern
 
   let parse_only_clf_context =
     parse_only Clf_parser.clf_context_object
-      Clf_disambiguation.disambiguate_as_context
+      Clf_disambiguation.disambiguate_clf_context
 
   let parse_only_clf_context_pattern =
     parse_only Clf_parser.clf_context_object
-      Clf_disambiguation.disambiguate_as_context_pattern
+      Clf_disambiguation.disambiguate_clf_context_pattern
 
   let parse_only_meta_typ =
     parse_only Meta_parser.meta_thing
-      Meta_disambiguation.disambiguate_as_meta_typ
+      Meta_disambiguation.disambiguate_meta_typ
 
   let parse_only_meta_object =
     parse_only Meta_parser.meta_thing
-      Meta_disambiguation.disambiguate_as_meta_object
+      Meta_disambiguation.disambiguate_meta_object
 
   let parse_only_meta_pattern =
     parse_only Meta_parser.meta_thing
-      Meta_disambiguation.disambiguate_as_meta_pattern
+      Meta_disambiguation.disambiguate_meta_pattern
 
   let parse_only_meta_context =
     parse_only Meta_parser.meta_context
-      Meta_disambiguation.disambiguate_as_meta_context
+      Meta_disambiguation.disambiguate_meta_context
 
   let parse_only_schema =
     parse_only Meta_parser.schema_object
-      Meta_disambiguation.disambiguate_as_schema
+      Meta_disambiguation.disambiguate_schema
 end
 
 module Simple = Make (Simple_disambiguation_state)

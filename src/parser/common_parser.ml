@@ -316,3 +316,38 @@ let block_comment =
   satisfy (function
     | location, Token.BLOCK_COMMENT content -> Result.ok (location, content)
     | _location, _token -> Result.error Expected_block_comment)
+
+(** {1 Exceptions Printing} *)
+
+let pp_exception ppf = function
+  | Unexpected_token { expected; actual } ->
+      Format.fprintf ppf "Expected the token `%a', but got the token `%a'."
+        Token.pp expected Token.pp actual
+  | Expected_keyword kw -> Format.fprintf ppf "Expected the keyword `%s'." kw
+  | Expected_integer_literal ->
+      Format.fprintf ppf "Expected an integer literal."
+  | Expected_dot_number ->
+      Format.fprintf ppf "Expected a number prefixed by a dot."
+  | Expected_pragma p -> Format.fprintf ppf "Expected pragma `--%s'." p
+  | Expected_string_literal ->
+      Format.fprintf ppf "Expected a string literal."
+  | Expected_identifier -> Format.fprintf ppf "Expected an identifier."
+  | Expected_dot_identifier ->
+      Format.fprintf ppf "Expected an identifier prefixed by a dot `.'."
+  | Expected_hash_identifier ->
+      Format.fprintf ppf
+        "Expected an identifier prefixed by a hash sign `#'."
+  | Expected_dollar_identifier ->
+      Format.fprintf ppf
+        "Expected an identifier prefixed by a dollar sign `$'."
+  | Expected_hole ->
+      Format.fprintf ppf
+        "Expected an unnamed hole `?' or a labelled hole `?id'."
+  | Expected_block_comment -> Format.fprintf ppf "Expected a block comment."
+  | _ ->
+      Error.raise (Invalid_argument "[pp_exception] unsupported exception")
+
+let () =
+  Printexc.register_printer (fun exn ->
+      try Option.some (Format.stringify pp_exception exn) with
+      | Invalid_argument _ -> Option.none)

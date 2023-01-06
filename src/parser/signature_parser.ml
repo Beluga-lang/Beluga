@@ -16,8 +16,6 @@ module rec Signature_parsers : sig
 
   val totality_declaration : Synprs.Signature.Totality.Declaration.t t
 end = struct
-  exception Expected_block_comment
-
   let nostrenghten_pragma =
     pragma "nostrengthen" |> span $> fun (location, ()) ->
     Synprs.Signature.Pragma.Global.No_strengthening { location }
@@ -47,7 +45,7 @@ end = struct
     seq3
       (pragma "name" &> qualified_identifier)
       identifier
-      (maybe identifier <& token Token.DOT)
+      (maybe identifier <& dot)
     |> labelled "name pragma" |> span
     $> fun ( location
            , (constant, meta_variable_base, computation_variable_base) ) ->
@@ -55,7 +53,7 @@ end = struct
       { location; constant; meta_variable_base; computation_variable_base }
 
   let sgn_lf_const_decl =
-    seq2 (identifier <& token Token.COLON) Lf_parser.lf_object
+    seq2 (identifier <& colon) Lf_parser.lf_object
     |> span
     $> (fun (location, (identifier, typ)) ->
          Synprs.Signature.Declaration.Raw_lf_term_constant
@@ -64,13 +62,8 @@ end = struct
 
   let sgn_lf_typ_decl =
     let lf_typ_decl_body =
-      let typ_decl =
-        seq2 (identifier <& token Token.COLON) Lf_parser.lf_object
-      in
-      seq2
-        (typ_decl <& token Token.EQUALS)
-        (maybe (token Token.PIPE)
-        &> sep_by0 sgn_lf_const_decl (token Token.PIPE))
+      let typ_decl = seq2 (identifier <& colon) Lf_parser.lf_object in
+      seq2 (typ_decl <& equals) (maybe pipe &> sep_by0 sgn_lf_const_decl pipe)
       |> span
       $> fun (location, ((identifier, kind), constructor_declarations)) ->
       let typ_declaration =
@@ -79,10 +72,10 @@ end = struct
       in
       List1.from typ_declaration constructor_declarations
     in
-    token Token.KW_LF
+    keyword "LF"
     &> sep_by1 lf_typ_decl_body
-         (token Token.KW_AND &> maybe (token Token.KW_LF) |> void)
-    <& token Token.SEMICOLON |> span
+         (keyword "and" &> maybe (keyword "LF") |> void)
+    <& semicolon |> span
     $> (fun (location, declarations) ->
          let declarations' = List1.flatten declarations in
          Synprs.Signature.Declaration.Raw_recursive_declarations
@@ -112,7 +105,7 @@ end = struct
     |> labelled "totality ordering"
 
   let trust_totality_declaration =
-    token Token.KW_TRUST |> span
+    keyword "trust" |> span
     $> (fun (location, ()) ->
          Synprs.Signature.Totality.Declaration.Trust { location })
     |> labelled "trust totality"
@@ -133,7 +126,7 @@ end = struct
 
   let totality_declaration =
     let total =
-      token Token.KW_TOTAL
+      keyword "total"
       &> alt named_totality_declaration numeric_totality_declaration
     in
     alt trust_totality_declaration total |> labelled "totality declaration"
@@ -141,21 +134,18 @@ end = struct
   (** Mutual block of computation type declarations. *)
   let sgn_cmp_typ_decl =
     let cmp_typ_decl =
-      let inductive = token Token.KW_INDUCTIVE $> fun () -> `Inductive
-      and stratified = token Token.KW_STRATIFIED $> fun () -> `Stratified in
+      let inductive = keyword "inductive" $> fun () -> `Inductive
+      and stratified = keyword "stratified" $> fun () -> `Stratified in
       let flavour = choice [ inductive; stratified ] in
       let sgn_cmp_typ_decl_body =
-        seq2 (identifier <& token Token.COLON) Comp_parser.comp_sort_object
-        |> span
+        seq2 (identifier <& colon) Comp_parser.comp_sort_object |> span
         $> fun (location, (identifier, typ)) ->
         Synprs.Signature.Declaration.Raw_comp_expression_constructor
           { location; identifier; typ }
       in
-      seq4 flavour
-        (identifier <& token Token.COLON)
-        (Comp_parser.comp_sort_object <& token Token.EQUALS
-        <& maybe (token Token.PIPE))
-        (sep_by0 sgn_cmp_typ_decl_body (token Token.PIPE))
+      seq4 flavour (identifier <& colon)
+        (Comp_parser.comp_sort_object <& equals <& maybe pipe)
+        (sep_by0 sgn_cmp_typ_decl_body pipe)
       |> span
       $> fun ( location
              , (datatype_flavour, identifier, kind, constructor_declarations)
@@ -170,10 +160,8 @@ end = struct
       let cmp_cotyp_body =
         seq2
           (opt_parens
-             (seq2
-                (identifier <& token Token.COLON)
-                Comp_parser.comp_sort_object)
-          <& token Token.DOUBLE_COLON)
+             (seq2 (identifier <& colon) Comp_parser.comp_sort_object)
+          <& double_colon)
           Comp_parser.comp_sort_object
         |> span
         $> fun (location, ((identifier, observation_type), return_type)) ->
@@ -181,10 +169,9 @@ end = struct
           { location; identifier; observation_type; return_type }
       in
       seq3
-        (token Token.KW_COINDUCTIVE &> identifier <& token Token.COLON)
-        (Comp_parser.comp_sort_object <& token Token.EQUALS
-        <& maybe (token Token.PIPE))
-        (sep_by0 cmp_cotyp_body (token Token.PIPE))
+        (keyword "coinductive" &> identifier <& colon)
+        (Comp_parser.comp_sort_object <& equals <& maybe pipe)
+        (sep_by0 cmp_cotyp_body pipe)
       |> span
       $> fun (location, (identifier, kind, destructor_declarations)) ->
       let cotyp_declaration =
@@ -193,8 +180,8 @@ end = struct
       in
       List1.from cotyp_declaration destructor_declarations
     in
-    sep_by1 (alt cmp_typ_decl cmp_cotyp_decl) (token Token.KW_AND)
-    <& token Token.SEMICOLON |> span
+    sep_by1 (alt cmp_typ_decl cmp_cotyp_decl) (keyword "and")
+    <& semicolon |> span
     $> (fun (location, declarations) ->
          let declarations' = List1.flatten declarations in
          Synprs.Signature.Declaration.Raw_recursive_declarations
@@ -203,22 +190,22 @@ end = struct
 
   let query_declaration =
     let bound =
-      alt (token Token.STAR $> fun () -> Option.none) (integer $> Option.some)
+      alt (star $> fun () -> Option.none) (integer $> Option.some)
       |> labelled "search bound"
     and meta_context =
       many
         (braces
            (seq2 meta_object_identifier
-              (maybe (token Token.COLON &> Meta_parser.meta_thing))))
+              (maybe (colon &> Meta_parser.meta_thing))))
       |> span
       $> fun (location, bindings) ->
       { Synprs.Meta.Context_object.location; bindings }
     in
     pragma "query"
     &> seq4 (seq2 bound bound) meta_context
-         (maybe (identifier <& token Token.COLON))
+         (maybe (identifier <& colon))
          Lf_parser.lf_object
-    <& token Token.DOT |> span
+    <& dot |> span
     |> labelled "logic programming engine query pragma"
     $> fun ( location
            , ( (expected_solutions, maximum_tries)
@@ -236,14 +223,14 @@ end = struct
 
   let mquery_declaration =
     let bound =
-      alt (token Token.STAR $> fun () -> Option.none) (integer $> Option.some)
+      alt (star $> fun () -> Option.none) (integer $> Option.some)
       |> labelled "search bound"
     in
     pragma "mquery"
     &> seq3 (seq3 bound bound bound)
-         (maybe (identifier <& token Token.COLON))
+         (maybe (identifier <& colon))
          Comp_parser.comp_sort_object
-    <& token Token.DOT |> span
+    <& dot |> span
     |> labelled "meta-logic search engine mquery pragma"
     $> fun ( location
            , ( (expected_solutions, search_tries, search_depth)
@@ -259,8 +246,8 @@ end = struct
       }
 
   let sgn_oldstyle_lf_decl =
-    seq2 (identifier <& token Token.COLON) Lf_parser.lf_object
-    <& token Token.DOT |> span
+    seq2 (identifier <& colon) Lf_parser.lf_object
+    <& dot |> span
     $> (fun (location, (identifier, typ_or_const)) ->
          Synprs.Signature.Declaration.Raw_lf_typ_or_term_constant
            { location; identifier; typ_or_const })
@@ -292,14 +279,14 @@ end = struct
   let prefix_pragma =
     pragma "prefix"
     &> seq2 qualified_identifier (maybe integer)
-    <& token Token.DOT |> span
+    <& dot |> span
     $> fun (location, (constant, precedence)) ->
     Synprs.Signature.Pragma.Prefix_fixity { location; constant; precedence }
 
   let infix_pragma =
     pragma "infix"
     &> seq3 qualified_identifier (maybe integer) (maybe associativity)
-    <& token Token.DOT |> span
+    <& dot |> span
     $> fun (location, (constant, precedence, associativity)) ->
     Synprs.Signature.Pragma.Infix_fixity
       { location; constant; precedence; associativity }
@@ -307,19 +294,19 @@ end = struct
   let postfix_pragma =
     pragma "postfix"
     &> seq2 qualified_identifier (maybe integer)
-    <& token Token.DOT |> span
+    <& dot |> span
     $> fun (location, (constant, precedence)) ->
     Synprs.Signature.Pragma.Postfix_fixity { location; constant; precedence }
 
   let fixity_pragma = choice [ prefix_pragma; infix_pragma; postfix_pragma ]
 
   let default_associativity_pragma =
-    pragma "assoc" &> associativity <& token Token.DOT |> span
+    pragma "assoc" &> associativity <& dot |> span
     $> fun (location, associativity) ->
     Synprs.Signature.Pragma.Default_associativity { location; associativity }
 
   let open_pragma =
-    pragma "open" &> qualified_identifier <& token Token.DOT |> span
+    pragma "open" &> qualified_identifier <& dot |> span
     $> (fun (location, module_identifier) ->
          Synprs.Signature.Pragma.Open_module { location; module_identifier })
     |> labelled "open module pragma"
@@ -327,28 +314,23 @@ end = struct
   let abbrev_pragma =
     pragma "abbrev"
     &> seq2 qualified_identifier identifier
-    <& token Token.DOT |> span
+    <& dot |> span
     $> (fun (location, (module_identifier, abbreviation)) ->
          Synprs.Signature.Pragma.Abbreviation
            { location; module_identifier; abbreviation })
     |> labelled "module abbreviation pragma"
 
   let sgn_comment =
-    satisfy (function
-      | location, Token.BLOCK_COMMENT content ->
-          let declaration =
-            Synprs.Signature.Declaration.Raw_comment { location; content }
-          in
-          Result.ok declaration
-      | _location, _token -> Result.error Expected_block_comment)
+    block_comment
+    $> (fun (location, content) ->
+         Synprs.Signature.Declaration.Raw_comment { location; content })
     |> labelled "HTML comment"
 
   let sgn_typedef_decl =
     seq3
-      (token Token.KW_TYPEDEF &> identifier)
-      (token Token.COLON &> Comp_parser.comp_sort_object)
-      (token Token.EQUALS &> Comp_parser.comp_sort_object
-     <& token Token.SEMICOLON)
+      (keyword "typedef" &> identifier)
+      (colon &> Comp_parser.comp_sort_object)
+      (equals &> Comp_parser.comp_sort_object <& semicolon)
     |> span
     |> labelled "type synonym declaration"
     $> fun (location, (identifier, kind, typ)) ->
@@ -356,10 +338,8 @@ end = struct
       { location; identifier; kind; typ }
 
   let sgn_schema_decl =
-    seq2
-      (token Token.KW_SCHEMA &> identifier <& token Token.EQUALS)
-      Meta_parser.schema_object
-    <& token Token.SEMICOLON |> span
+    seq2 (keyword "schema" &> identifier <& equals) Meta_parser.schema_object
+    <& semicolon |> span
     $> (fun (location, (identifier, schema)) ->
          Synprs.Signature.Declaration.Raw_schema
            { location; identifier; schema })
@@ -367,11 +347,9 @@ end = struct
 
   let sgn_let_decl =
     seq2
-      (token Token.KW_LET
-      &> seq2 identifier
-           (maybe (token Token.COLON &> Comp_parser.comp_sort_object)))
-      (token Token.EQUALS &> Comp_parser.comp_expression_object
-     <& token Token.SEMICOLON)
+      (keyword "let"
+      &> seq2 identifier (maybe (colon &> Comp_parser.comp_sort_object)))
+      (equals &> Comp_parser.comp_expression_object <& semicolon)
     |> span
     |> labelled "value declaration"
     $> fun (location, ((identifier, typ), expression)) ->
@@ -379,10 +357,9 @@ end = struct
       { location; identifier; typ; expression }
 
   let program_decl =
-    seq4
-      (identifier <& token Token.COLON)
-      (Comp_parser.comp_sort_object <& token Token.EQUALS)
-      (maybe (bracketed' (token Token.SLASH) totality_declaration))
+    seq4 (identifier <& colon)
+      (Comp_parser.comp_sort_object <& equals)
+      (maybe (slash &> totality_declaration <& slash))
       Comp_parser.comp_expression_object
     |> span
     $> fun (location, (identifier, typ, order, body)) ->
@@ -390,11 +367,10 @@ end = struct
       { location; identifier; typ; order; body }
 
   let proof_decl =
-    token Token.KW_PROOF
-    &> seq4
-         (identifier <& token Token.COLON)
-         (Comp_parser.comp_sort_object <& token Token.EQUALS)
-         (maybe (bracketed' (token Token.SLASH) totality_declaration))
+    keyword "proof"
+    &> seq4 (identifier <& colon)
+         (Comp_parser.comp_sort_object <& equals)
+         (maybe (slash &> totality_declaration <& slash))
          Harpoon_parser.harpoon_proof
     |> span
     $> fun (location, (identifier, typ, order, body)) ->
@@ -402,9 +378,9 @@ end = struct
       { location; identifier; typ; order; body }
 
   let sgn_thm_decl =
-    token Token.KW_REC
-    &> sep_by1 (choice [ program_decl; proof_decl ]) (token Token.KW_AND)
-    <& token Token.SEMICOLON |> span
+    keyword "rec"
+    &> sep_by1 (choice [ program_decl; proof_decl ]) (keyword "and")
+    <& semicolon |> span
     |> labelled "(mutual) recursive function declaration(s)"
     $> fun (location, declarations) ->
     Synprs.Signature.Declaration.Raw_recursive_declarations
@@ -412,12 +388,9 @@ end = struct
 
   let sgn_module_decl =
     seq2
-      (token Token.KW_MODULE &> identifier)
-      (tokens [ Token.EQUALS; Token.KW_STRUCT ]
-      &> many Signature_parsers.sgn_decl)
-    <& token Token.KW_END
-    <& maybe (token Token.SEMICOLON)
-    |> span
+      (keyword "module" &> identifier)
+      (equals &> keyword "struct" &> many Signature_parsers.sgn_decl)
+    <& keyword "end" <& maybe semicolon |> span
     |> labelled "module declaration"
     $> fun (location, (identifier, declarations)) ->
     Synprs.Signature.Declaration.Raw_module

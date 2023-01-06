@@ -20,10 +20,7 @@ let raise_at1 location cause = raise_at (List1.singleton location) cause
 let raise_at2 location1 location2 cause =
   raise_at (List1.from location1 [ location2 ]) cause
 
-(** Joins two locations, keeping the starting position of the former, and the
-    stopping position of the latter. The ghost location is a unit of this
-    operation. *)
-let join l1 l2 =
+let between ~start:l1 ~stop:l2 =
   if l1.ghost then l2
   else if l2.ghost then l1
   else (
@@ -33,6 +30,15 @@ let join l1 l2 =
     ; stop = l2.stop
     ; ghost = false
     })
+
+let join l1 l2 =
+  if l1.ghost then l2
+  else if l2.ghost then l1
+  else (
+    assert (String.equal l1.filename l2.filename);
+    let start = Position.min l1.start l2.start in
+    let stop = Position.max l1.stop l2.stop in
+    { filename = l1.filename; start; stop; ghost = false })
 
 let join_all initial_location locations =
   List.fold_left join initial_location locations

@@ -72,7 +72,7 @@ end = struct
   let comp_weak_prefix =
     let declaration =
       seq2 omittable_meta_object_identifier
-        (maybe (token Token.COLON &> Meta_parser.meta_thing))
+        (maybe (colon &> Meta_parser.meta_thing))
     in
     let explicit_pi =
       seq2 (braces declaration) Comp_parsers.comp_sort_object
@@ -113,7 +113,7 @@ end = struct
                  { location; identifier; quoted = false })
       |> labelled "Computational type constant or term variable"
     and ctype =
-      token Token.KW_CTYPE |> span
+      keyword "ctype" |> span
       $> (fun (location, ()) ->
            Synprs.Comp.Sort_object.Raw_ctype { location })
       |> labelled "Computational `ctype' kind"
@@ -157,7 +157,7 @@ end = struct
     |> labelled "Atomic computational kind or type, or type application"
 
   let comp_sort_object3 =
-    seq2 comp_sort_object4 (many (token Token.STAR &> comp_sort_object4))
+    seq2 comp_sort_object4 (many (star &> comp_sort_object4))
     |> span
     $> (function
          | _, (object_, []) -> object_
@@ -174,20 +174,20 @@ end = struct
        level is ambiguous. That is, [a -> b <- c] could be parsed as [a -> (b
        <- c)] when parsed from left to right, or as [(a -> b) <- c] when
        parsed from right to left. *)
-    let forward_arrow = token Token.ARROW $> fun () -> `Forward_arrow
-    and backward_arrow = token Token.BACKARROW $> fun () -> `Backward_arrow
+    let forward_arrow_operator = forward_arrow $> fun () -> `Forward_arrow
+    and backward_arrow_operator = backward_arrow $> fun () -> `Backward_arrow
     and right_operand = alt comp_sort_object3 comp_weak_prefix in
     comp_sort_object3 >>= fun object_ ->
-    maybe (alt forward_arrow backward_arrow)
+    maybe (alt forward_arrow_operator backward_arrow_operator)
     >>= (function
           | Option.None -> return (`Singleton object_)
           | Option.Some `Forward_arrow ->
               (* A forward arrow was parsed. Subsequent backward arrows are
                  ambiguous. *)
               let backward_arrow =
-                token Token.BACKARROW >>= fun () ->
+                backward_arrow >>= fun () ->
                 fail Ambiguous_comp_backward_arrow
-              and forward_arrow = token Token.ARROW in
+              and forward_arrow = forward_arrow_operator in
               let operator = alt backward_arrow forward_arrow in
               seq2 right_operand (many (operator &> right_operand))
               $> fun (x, xs) ->
@@ -195,12 +195,13 @@ end = struct
           | Option.Some `Backward_arrow ->
               (* A backward arrow was parsed. Subsequent forward arrows are
                  ambiguous. *)
-              let backward_arrow = token Token.BACKARROW
-              and forward_arrow =
-                token Token.ARROW >>= fun () ->
-                fail Ambiguous_comp_forward_arrow
+              let backward_arrow_operator = backward_arrow
+              and forward_arrow_operator =
+                forward_arrow >>= fun () -> fail Ambiguous_comp_forward_arrow
               in
-              let operator = alt forward_arrow backward_arrow in
+              let operator =
+                alt forward_arrow_operator backward_arrow_operator
+              in
               seq2 right_operand (many (operator &> right_operand))
               $> fun (x, xs) ->
               `Backward_arrows (List1.from object_ (x :: xs)))
@@ -308,7 +309,7 @@ end = struct
       seq2
         (braces
            (seq2 omittable_meta_object_identifier
-              (maybe (token Token.COLON &> Meta_parser.meta_thing))))
+              (maybe (colon &> Meta_parser.meta_thing))))
         Comp_parsers.comp_pattern_object
       |> span
       $> (fun (location, ((parameter_identifier, parameter_typ), pattern)) ->
@@ -342,12 +343,12 @@ end = struct
       Synprs.Comp.Pattern_object.Raw_observation
         { location; constant; arguments }
     and wildcard =
-      token Token.UNDERSCORE |> span
+      underscore |> span
       $> (fun (location, ()) ->
            Synprs.Comp.Pattern_object.Raw_wildcard { location })
       |> labelled "Computational wildcard pattern"
     and parenthesized_or_tuple =
-      parens (sep_by1 Comp_parsers.comp_pattern_object (token Token.COMMA))
+      parens (sep_by1 Comp_parsers.comp_pattern_object comma)
       |> span
       $> (function
            | ( location
@@ -356,8 +357,8 @@ end = struct
                  { i with quoted = true; location }
            | ( location
              , List1.T
-                 (Synprs.Comp.Pattern_object.Raw_qualified_identifier i, []) )
-             ->
+                 (Synprs.Comp.Pattern_object.Raw_qualified_identifier i, [])
+             ) ->
                Synprs.Comp.Pattern_object.Raw_qualified_identifier
                  { i with quoted = true; location }
            | location, List1.T (pattern, []) ->
@@ -382,11 +383,12 @@ end = struct
          | _, List1.T (pattern, []) -> pattern
          | location, List1.T (p1, p2 :: ps) ->
              let patterns = List2.from p1 p2 ps in
-             Synprs.Comp.Pattern_object.Raw_application { location; patterns })
+             Synprs.Comp.Pattern_object.Raw_application
+               { location; patterns })
     |> labelled "Computational atomic or application pattern"
 
   let comp_pattern_object2 =
-    let annotation = token Token.COLON &> comp_sort_object in
+    let annotation = colon &> comp_sort_object in
     let trailing_annotations = many (span annotation) in
     seq2 comp_pattern_object3 trailing_annotations
     $> (function
@@ -471,7 +473,7 @@ end = struct
     let comma_opt =
       (* Optionally parse a comma, for backwards compatibility with `fn x1,
          x2, ..., xn => e' and `mlam X1, X2, ..., Xn => e'. *)
-      void (maybe (token Token.COMMA))
+      void (maybe comma)
     in
     let constant_or_variable =
       qualified_or_plain_identifier |> span
@@ -485,28 +487,28 @@ end = struct
       |> labelled "Computational type constant or term variable"
     and fn =
       seq2
-        (token Token.KW_FN &> sep_by1 omittable_identifier comma_opt)
-        (token Token.THICK_ARROW &> Comp_parsers.comp_expression_object)
+        (keyword "fn" &> sep_by1 omittable_identifier comma_opt)
+        (thick_forward_arrow &> Comp_parsers.comp_expression_object)
       |> span
       $> (fun (location, (parameters, body)) ->
-           Synprs.Comp.Expression_object.Raw_fn { location; parameters; body })
+           Synprs.Comp.Expression_object.Raw_fn
+             { location; parameters; body })
       |> labelled "Ordinary function abstraction"
     and matching_fun =
-      token Token.KW_FUN
-      &> maybe (token Token.PIPE)
+      keyword "fun" &> maybe pipe
       &> sep_by1
            (seq2
               (sep_by1 Comp_parsers.comp_pattern_atomic_object comma_opt)
-              (token Token.THICK_ARROW &> Comp_parsers.comp_expression_object))
-           (token Token.PIPE)
+              (thick_forward_arrow &> Comp_parsers.comp_expression_object))
+           pipe
       |> span
       $> (fun (location, branches) ->
            Synprs.Comp.Expression_object.Raw_fun { location; branches })
       |> labelled "Pattern-matching function abstraction"
     and mlam =
       seq2
-        (token Token.KW_FN &> some omittable_meta_object_identifier)
-        (token Token.THICK_ARROW &> Comp_parsers.comp_expression_object)
+        (keyword "mlam" &> some omittable_meta_object_identifier)
+        (thick_forward_arrow &> Comp_parsers.comp_expression_object)
       |> span
       $> (fun (location, (parameters, body)) ->
            Synprs.Comp.Expression_object.Raw_mlam
@@ -514,17 +516,16 @@ end = struct
       |> labelled "Meta-level function abstraction"
     and let_ =
       seq3
-        (token Token.KW_LET &> Comp_parsers.comp_pattern_object)
-        (token Token.EQUALS &> Comp_parsers.comp_expression_object)
-        (token Token.KW_IN &> Comp_parsers.comp_expression_object)
+        (keyword "let" &> Comp_parsers.comp_pattern_object)
+        (equals &> Comp_parsers.comp_expression_object)
+        (keyword "in" &> Comp_parsers.comp_expression_object)
       |> span
       $> (fun (location, (pattern, scrutinee, body)) ->
            Synprs.Comp.Expression_object.Raw_let
              { location; pattern; scrutinee; body })
       |> labelled "`let'-expressions"
     and impossible =
-      token Token.KW_IMPOSSIBLE &> Comp_parsers.comp_expression_object
-      |> span
+      keyword "impossible" &> Comp_parsers.comp_expression_object |> span
       $> (fun (location, scrutinee) ->
            Synprs.Comp.Expression_object.Raw_impossible
              { location; scrutinee })
@@ -536,14 +537,13 @@ end = struct
       |> labelled "Boxed meta-object"
     and case =
       seq3
-        (token Token.KW_CASE &> Comp_parsers.comp_expression_object)
-        (token Token.KW_OF &> maybe (pragma "not"))
-        (maybe (token Token.PIPE)
+        (keyword "case" &> Comp_parsers.comp_expression_object)
+        (keyword "of" &> maybe (pragma "not"))
+        (maybe pipe
         &> sep_by1
              (seq2 Comp_parsers.comp_pattern_object
-                (token Token.THICK_ARROW
-               &> Comp_parsers.comp_expression_object))
-             (token Token.PIPE))
+                (thick_forward_arrow &> Comp_parsers.comp_expression_object))
+             pipe)
       |> span
       $> (fun (location, (scrutinee, check_coverage, branches)) ->
            let check_coverage = Option.is_some check_coverage in
@@ -561,13 +561,12 @@ end = struct
                Synprs.Comp.Expression_object.Raw_hole { location; label })
       |> labelled "Computational hole"
     and box_hole =
-      token Token.UNDERSCORE |> span
+      underscore |> span
       $> (fun (location, ()) ->
            Synprs.Comp.Expression_object.Raw_box_hole { location })
       |> labelled "Box hole"
     and parenthesized_or_tuple =
-      parens
-        (sep_by1 Comp_parsers.comp_expression_object (token Token.COMMA))
+      parens (sep_by1 Comp_parsers.comp_expression_object comma)
       |> span
       $> (function
            | ( location
@@ -577,8 +576,8 @@ end = struct
                  { i with quoted = true; location }
            | ( location
              , List1.T
-                 (Synprs.Comp.Expression_object.Raw_qualified_identifier i, [])
-             ) ->
+                 ( Synprs.Comp.Expression_object.Raw_qualified_identifier i
+                 , [] ) ) ->
                Synprs.Comp.Expression_object.Raw_qualified_identifier
                  { i with quoted = true; location }
            | location, List1.T (expression, []) ->
@@ -615,7 +614,7 @@ end = struct
     |> labelled "Atomic computational expression or application"
 
   let comp_expression_object1 =
-    let annotation = token Token.COLON &> comp_sort_object in
+    let annotation = colon &> comp_sort_object in
     let trailing_annotations = many (span annotation) in
     seq2 comp_expression_object2 trailing_annotations
     $> (function
@@ -643,14 +642,13 @@ end = struct
   let comp_context =
     let non_empty =
       sep_by0
-        (seq2 identifier
-           (maybe (token Token.COLON &> Comp_parsers.comp_sort_object)))
-        (token Token.COMMA)
+        (seq2 identifier (maybe (colon &> Comp_parsers.comp_sort_object)))
+        comma
       |> span
       $> fun (location, bindings) ->
       { Synprs.Comp.Context_object.location; bindings }
     and empty =
-      maybe (token Token.HAT) |> span $> fun (location, _) ->
+      maybe hat |> span $> fun (location, _) ->
       { Synprs.Comp.Context_object.location; bindings = [] }
     in
     choice [ non_empty; empty ]

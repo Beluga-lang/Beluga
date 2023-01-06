@@ -3647,9 +3647,9 @@
             "location": {
               "filename": "clf_terms_ok.input.bel",
               "start_line": 118,
-              "start_column": 4,
+              "start_column": 1,
               "stop_line": 118,
-              "stop_column": 4
+              "stop_column": 6
             }
           },
           "quoted": false,
@@ -3662,9 +3662,9 @@
           "location": {
             "filename": "clf_terms_ok.input.bel",
             "start_line": 118,
-            "start_column": 4,
+            "start_column": 1,
             "stop_line": 118,
-            "stop_column": 4
+            "stop_column": 6
           }
         }
       ],
@@ -3681,7 +3681,7 @@
       "location": {
         "filename": "clf_terms_ok.input.bel",
         "start_line": 118,
-        "start_column": 4,
+        "start_column": 1,
         "stop_line": 118,
         "stop_column": 8
       }
@@ -3742,7 +3742,7 @@
         "start_line": 121,
         "start_column": 1,
         "stop_line": 121,
-        "stop_column": 3
+        "stop_column": 4
       }
     }
   ],
@@ -3841,7 +3841,7 @@
         "start_line": 124,
         "start_column": 1,
         "stop_line": 124,
-        "stop_column": 4
+        "stop_column": 5
       }
     }
   ],
@@ -3946,7 +3946,7 @@
         "start_line": 127,
         "start_column": 1,
         "stop_line": 127,
-        "stop_column": 8
+        "stop_column": 9
       }
     }
   ],
@@ -4034,7 +4034,7 @@
                 "start_line": 130,
                 "start_column": 1,
                 "stop_line": 130,
-                "stop_column": 5
+                "stop_column": 6
               }
             }
           ],
@@ -4091,7 +4091,7 @@
             "start_line": 130,
             "start_column": 1,
             "stop_line": 130,
-            "stop_column": 9
+            "stop_column": 10
           }
         }
       ],
@@ -4148,7 +4148,7 @@
         "start_line": 130,
         "start_column": 1,
         "stop_line": 130,
-        "stop_column": 13
+        "stop_column": 14
       }
     }
   ],
@@ -4247,7 +4247,7 @@
         "start_line": 133,
         "start_column": 1,
         "stop_line": 133,
-        "stop_column": 8
+        "stop_column": 9
       }
     }
   ],
@@ -4373,7 +4373,7 @@
         "start_line": 136,
         "start_column": 1,
         "stop_line": 136,
-        "stop_column": 13
+        "stop_column": 14
       }
     }
   ],
@@ -4499,7 +4499,7 @@
         "start_line": 139,
         "start_column": 1,
         "stop_line": 139,
-        "stop_column": 17
+        "stop_column": 18
       }
     }
   ],
@@ -4599,7 +4599,7 @@
                   "start_line": 142,
                   "start_column": 3,
                   "stop_line": 142,
-                  "stop_column": 6
+                  "stop_column": 7
                 }
               }
             ],
@@ -4658,7 +4658,7 @@
                   "start_line": 142,
                   "start_column": 9,
                   "stop_line": 142,
-                  "stop_column": 14
+                  "stop_column": 15
                 }
               }
             ],
@@ -4757,7 +4757,7 @@
                   "start_line": 142,
                   "start_column": 17,
                   "stop_line": 142,
-                  "stop_column": 21
+                  "stop_column": 22
                 }
               }
             ]
@@ -4776,7 +4776,7 @@
         "start_line": 142,
         "start_column": 1,
         "stop_line": 142,
-        "stop_column": 22
+        "stop_column": 23
       }
     }
   ],
@@ -4876,7 +4876,7 @@
                   "start_line": 145,
                   "start_column": 7,
                   "stop_line": 145,
-                  "stop_column": 10
+                  "stop_column": 11
                 }
               }
             ],
@@ -4935,7 +4935,7 @@
                   "start_line": 145,
                   "start_column": 13,
                   "stop_line": 145,
-                  "stop_column": 18
+                  "stop_column": 19
                 }
               }
             ],
@@ -5040,7 +5040,7 @@
                   "start_line": 145,
                   "start_column": 21,
                   "stop_line": 145,
-                  "stop_column": 29
+                  "stop_column": 30
                 }
               }
             ]
@@ -5059,7 +5059,7 @@
         "start_line": 145,
         "start_column": 1,
         "stop_line": 145,
-        "stop_column": 30
+        "stop_column": 31
       }
     }
   ],
@@ -5196,7 +5196,7 @@
         "start_line": 148,
         "start_column": 1,
         "stop_line": 148,
-        "stop_column": 17
+        "stop_column": 18
       }
     }
   ],
@@ -5357,7 +5357,7 @@
         "start_line": 151,
         "start_column": 1,
         "stop_line": 151,
-        "stop_column": 19
+        "stop_column": 20
       }
     }
   ],
@@ -5518,7 +5518,7 @@
         "start_line": 154,
         "start_column": 1,
         "stop_line": 154,
-        "stop_column": 21
+        "stop_column": 22
       }
     }
   ],
@@ -5746,7 +5746,7 @@
         "start_line": 157,
         "start_column": 1,
         "stop_line": 157,
-        "stop_column": 29
+        "stop_column": 30
       }
     }
   ],
@@ -5873,7 +5873,7 @@
                           "start_line": 160,
                           "start_column": 6,
                           "stop_line": 160,
-                          "stop_column": 11
+                          "stop_column": 12
                         }
                       }
                     ],
@@ -6022,7 +6022,7 @@
         "start_line": 160,
         "start_column": 1,
         "stop_line": 160,
-        "stop_column": 33
+        "stop_column": 34
       }
     }
   ],
@@ -6149,7 +6149,7 @@
                           "start_line": 163,
                           "start_column": 10,
                           "stop_line": 163,
-                          "stop_column": 15
+                          "stop_column": 16
                         }
                       }
                     ],
@@ -6298,7 +6298,7 @@
         "start_line": 163,
         "start_column": 1,
         "stop_line": 163,
-        "stop_column": 37
+        "stop_column": 38
       }
     }
   ]

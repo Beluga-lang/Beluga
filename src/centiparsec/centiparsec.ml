@@ -368,9 +368,9 @@ end
 module Make_parser_with_locations (Location : sig
   type t
 
-  val join : t -> t -> t
+  val between : start:t -> stop:t -> t
 
-  val[@warning "-32"] raise_at : t List1.t -> exn -> 'a
+  val raise_at : t List1.t -> exn -> 'a [@@warning "-32"]
 end) (Token : sig
   type t
 end) (State : sig
@@ -550,7 +550,7 @@ end = struct
     match (l1_opt, l2_opt) with
     | Option.None, Option.Some l2 -> return (l2, x)
     | Option.Some l1, Option.Some l2 ->
-        let l = Location.join l1 l2 in
+        let l = Location.between ~start:l1 ~stop:l2 in
         return (l, x)
     | _ ->
         assert
@@ -583,7 +583,7 @@ end
 module Make (Location : sig
   type t
 
-  val join : t -> t -> t
+  val between : start:t -> stop:t -> t
 
   val raise_at : t List1.t -> exn -> 'a
 end) (Token : sig

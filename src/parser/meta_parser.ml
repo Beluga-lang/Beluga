@@ -59,26 +59,20 @@ end = struct
         | `#[' <clf-context-object> <turnstile> <clf-context-object> `]'
         | `$[' <clf-context-object> (<turnstile> | <turnstile-hash>) <clf-context-object> `]'
   *)
-  let plus_operator = token Token.PLUS
-
   let schema_some_clause =
-    let declaration =
-      seq2 identifier (token Token.COLON &> Clf_parser.clf_object)
-    in
-    token Token.KW_SOME
-    &> bracks (sep_by1 declaration (token Token.COMMA))
+    let declaration = seq2 identifier (colon &> Clf_parser.clf_object) in
+    keyword "some"
+    &> bracks (sep_by1 declaration comma)
     |> labelled "Context schema `some' clause"
 
   let schema_block_clause =
     let block_contents =
       sep_by1
-        (seq2
-           (maybe (identifier <& trying (token Token.COLON)))
-           Clf_parser.clf_object)
-        (token Token.COMMA)
+        (seq2 (maybe (identifier <& trying colon)) Clf_parser.clf_object)
+        comma
       |> labelled "Context schema element"
     in
-    token Token.KW_BLOCK &> opt_parens block_contents
+    keyword "block" &> opt_parens block_contents
     |> labelled "Context schema `block' clause"
 
   let schema_object2 =
@@ -97,7 +91,7 @@ end = struct
     choice [ constant; element ]
 
   let schema_object1 =
-    sep_by1 schema_object2 plus_operator
+    sep_by1 schema_object2 plus
     |> span
     $> (function
          | _, List1.T (schema_object, []) -> schema_object
@@ -115,13 +109,13 @@ end = struct
     and meta_type_or_meta_object =
       let plain_inner_thing =
         seq2 Clf_parser.clf_context_object
-          (maybe (token Token.TURNSTILE &> Clf_parser.clf_context_object))
+          (maybe (turnstile &> Clf_parser.clf_context_object))
       and hash_inner_thing =
         seq2 Clf_parser.clf_context_object
-          (token Token.TURNSTILE &> Clf_parser.clf_context_object)
+          (turnstile &> Clf_parser.clf_context_object)
       and dollar_inner_thing =
-        let turnstile = token Token.TURNSTILE $> fun () -> `Plain
-        and turnstile_hash = token Token.TURNSTILE_HASH $> fun () -> `Hash in
+        let turnstile = turnstile $> fun () -> `Plain
+        and turnstile_hash = turnstile_hash $> fun () -> `Hash in
         seq2 Clf_parser.clf_context_object
           (seq2 (alt turnstile turnstile_hash) Clf_parser.clf_context_object)
       in
@@ -167,13 +161,13 @@ end = struct
     let non_empty =
       sep_by0
         (seq2 meta_object_identifier
-           (maybe (token Token.COLON &> Meta_parsers.meta_thing)))
-        (token Token.COMMA)
+           (maybe (colon &> Meta_parsers.meta_thing)))
+        comma
       |> span
       $> fun (location, bindings) ->
       { Synprs.Meta.Context_object.location; bindings }
     and empty =
-      maybe (token Token.HAT) |> span $> fun (location, _) ->
+      maybe hat |> span $> fun (location, _) ->
       { Synprs.Meta.Context_object.location; bindings = [] }
     in
     choice [ non_empty; empty ]

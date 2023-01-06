@@ -101,10 +101,10 @@ end = struct
   let clf_weak_prefix =
     let lambda =
       seq2
-        (token Token.LAMBDA
+        (lambda
         &> seq2 omittable_identifier
-             (maybe (token Token.COLON &> CLF_parsers.clf_object))
-        <& token Token.DOT)
+             (maybe (colon &> CLF_parsers.clf_object))
+        <& dot)
         CLF_parsers.clf_object
       |> span
       $> (fun (location, ((parameter_identifier, parameter_sort), body)) ->
@@ -115,7 +115,7 @@ end = struct
       seq2
         (braces
            (seq2 omittable_identifier
-              (maybe (token Token.COLON &> CLF_parsers.clf_object))))
+              (maybe (colon &> CLF_parsers.clf_object))))
         CLF_parsers.clf_object
       |> span
       $> (fun (location, ((parameter_identifier, parameter_sort), body)) ->
@@ -127,13 +127,13 @@ end = struct
 
   let clf_context_object =
     let empty =
-      maybe (token Token.HAT) |> span $> fun (location, _) ->
+      maybe hat |> span $> fun (location, _) ->
       { Synprs.CLF.Context_object.location
       ; head = Synprs.CLF.Context_object.Head.None { location }
       ; objects = []
       }
     and identity =
-      token Token.DOTS |> span $> fun (location, ()) ->
+      dots |> span $> fun (location, ()) ->
       { Synprs.CLF.Context_object.location
       ; head = Synprs.CLF.Context_object.Head.Identity { location }
       ; objects = []
@@ -141,30 +141,23 @@ end = struct
     and non_empty =
       let bindings =
         sep_by1
-          (seq2
-             (maybe (identifier <& trying (token Token.COLON)))
-             CLF_parsers.clf_object)
-          (token Token.COMMA)
+          (seq2 (maybe (identifier <& trying colon)) CLF_parsers.clf_object)
+          comma
       in
-      seq2
-        (span
-           (maybe
-              (seq2 (span (token Token.DOTS)) (trying (token Token.COMMA)))))
-        bindings
-      |> span
+      seq2 (maybe (seq2 (span dots) (trying comma))) bindings |> span
       $> function
-      | location, ((_, Option.Some ((dots_location, ()), ())), objects) ->
+      | location, (Option.Some ((dots_location, ()), ()), objects) ->
           { Synprs.CLF.Context_object.location
           ; head =
               Synprs.CLF.Context_object.Head.Identity
                 { location = dots_location }
           ; objects = List1.to_list objects
           }
-      | location, ((empty_head_location, Option.None), objects) ->
+      | location, (Option.None, objects) ->
           { Synprs.CLF.Context_object.location
           ; head =
               Synprs.CLF.Context_object.Head.None
-                { location = empty_head_location }
+                { location = Location.start_position_as_location location }
           ; objects = List1.to_list objects
           }
     in
@@ -196,7 +189,7 @@ end = struct
       Synprs.CLF.Object.Raw_identifier
         { location; identifier = (identifier, `Dollar); quoted = false }
     and underscore_hole =
-      token Token.UNDERSCORE |> span
+      underscore |> span
       $> (fun (location, ()) ->
            Synprs.CLF.Object.Raw_hole { location; variant = `Underscore })
       |> labelled "Contextual LF hole"
@@ -206,7 +199,7 @@ end = struct
            Synprs.CLF.Object.Raw_hole { location; variant })
       |> labelled "Possibly labelled contextual LF hole"
     and tuple =
-      angles (sep_by1 CLF_parsers.clf_object (token Token.SEMICOLON))
+      angles (sep_by1 CLF_parsers.clf_object semicolon)
       |> span
       $> (fun (location, elements) ->
            Synprs.CLF.Object.Raw_tuple { location; elements })
@@ -262,16 +255,16 @@ end = struct
 
   let clf_object6 =
     (* Substitutions are left-associative. *)
-    seq2 clf_object7 (many (bracks clf_context_object))
+    seq2 clf_object7 (many (span (bracks clf_context_object)))
     $> (function
          | object_, [] -> object_
          | object_, substitutions ->
              List.fold_left
-               (fun accumulator substitution ->
+               (fun accumulator (substitution_location, substitution) ->
                  let location =
                    Location.join
                      (Synprs.location_of_clf_object accumulator)
-                     (Synprs.location_of_clf_context_object substitution)
+                     substitution_location
                  in
                  Synprs.CLF.Object.Raw_substitution
                    { location; object_ = accumulator; substitution })
@@ -294,13 +287,11 @@ end = struct
   let clf_object4 =
     let block_contents =
       sep_by1
-        (seq2
-           (maybe (identifier <& trying (token Token.COLON)))
-           CLF_parsers.clf_object)
-        (token Token.COMMA)
+        (seq2 (maybe (identifier <& trying colon)) CLF_parsers.clf_object)
+        comma
     in
     let block =
-      token Token.KW_BLOCK &> opt_parens block_contents |> span
+      keyword "block" &> opt_parens block_contents |> span
       $> (fun (location, elements) ->
            Synprs.CLF.Object.Raw_block { location; elements })
       |> labelled "Contextual LF block type"
@@ -314,20 +305,20 @@ end = struct
        level is ambiguous. That is, [a -> b <- c] could be parsed as [a -> (b
        <- c)] when parsed from left to right, or as [(a -> b) <- c] when
        parsed from right to left. *)
-    let forward_arrow = token Token.ARROW $> fun () -> `Forward_arrow
-    and backward_arrow = token Token.BACKARROW $> fun () -> `Backward_arrow
+    let forward_arrow_operator = forward_arrow $> fun () -> `Forward_arrow
+    and backward_arrow_operator = backward_arrow $> fun () -> `Backward_arrow
     and right_operand = alt clf_object4 clf_weak_prefix in
     clf_object4 >>= fun object_ ->
-    maybe (alt forward_arrow backward_arrow)
+    maybe (alt forward_arrow_operator backward_arrow_operator)
     >>= (function
           | Option.None -> return (`Singleton object_)
           | Option.Some `Forward_arrow ->
               (* A forward arrow was parsed. Subsequent backward arrows are
                  ambiguous. *)
               let backward_arrow =
-                token Token.BACKARROW >>= fun () ->
+                backward_arrow >>= fun () ->
                 fail Ambiguous_clf_backward_arrow
-              and forward_arrow = token Token.ARROW in
+              and forward_arrow = forward_arrow_operator in
               let operator = alt backward_arrow forward_arrow in
               seq2 right_operand (many (operator &> right_operand))
               $> fun (x, xs) ->
@@ -335,12 +326,13 @@ end = struct
           | Option.Some `Backward_arrow ->
               (* A backward arrow was parsed. Subsequent forward arrows are
                  ambiguous. *)
-              let backward_arrow = token Token.BACKARROW
-              and forward_arrow =
-                token Token.ARROW >>= fun () ->
-                fail Ambiguous_clf_forward_arrow
+              let backward_arrow_operator = backward_arrow
+              and forward_arrow_operator =
+                forward_arrow >>= fun () -> fail Ambiguous_clf_forward_arrow
               in
-              let operator = alt forward_arrow backward_arrow in
+              let operator =
+                alt forward_arrow_operator backward_arrow_operator
+              in
               seq2 right_operand (many (operator &> right_operand))
               $> fun (x, xs) ->
               `Backward_arrows (List1.from object_ (x :: xs)))
@@ -381,7 +373,7 @@ end = struct
           arrow or backward arrow"
 
   let clf_object2 =
-    let annotation = token Token.COLON &> alt clf_object3 clf_weak_prefix in
+    let annotation = colon &> alt clf_object3 clf_weak_prefix in
     let trailing_annotations = many (span annotation) in
     seq2 clf_object3 trailing_annotations
     $> (function

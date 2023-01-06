@@ -3,7 +3,7 @@ open Support
 module Make (Location : sig
   type t
 
-  val join : t -> t -> t
+  val between : start:t -> stop:t -> t
 
   val raise_at : t List1.t -> exn -> 'a
 end) (Token : sig

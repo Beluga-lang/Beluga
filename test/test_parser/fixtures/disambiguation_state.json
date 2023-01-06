@@ -292,12 +292,47 @@
       "identifier": "h"
     },
     {
-      "sort":"schema_constant",
+      "sort": "schema_constant",
       "identifier": "ctx1"
     },
     {
-      "sort":"schema_constant",
+      "sort": "schema_constant",
       "identifier": "ctx2"
+    },
+    {
+      "sort": "lf_term_constant",
+      "identifier": "⊃",
+      "fixity": "infix",
+      "associativity": "right_associative",
+      "precedence": 3
+    },
+    {
+      "sort": "lf_term_constant",
+      "identifier": "⊤",
+      "fixity": "prefix",
+      "arity": 0,
+      "precedence": 1
+    },
+    {
+      "sort": "lf_term_constant",
+      "identifier": "∧",
+      "fixity": "infix",
+      "associativity": "right_associative",
+      "precedence": 5
+    },
+    {
+      "sort": "lf_term_constant",
+      "identifier": "∨",
+      "fixity": "infix",
+      "associativity": "right_associative",
+      "precedence": 4
+    },
+    {
+      "sort": "lf_term_constant",
+      "identifier": "¬",
+      "fixity": "prefix",
+      "arity": 1,
+      "precedence": 10
     }
   ]
 }

@@ -16,14 +16,52 @@ exception
     ; actual : Token.t
     }
 
-let token t =
-  satisfy (fun (_location, token) ->
-      if Token.equal t token then Result.ok ()
-      else Result.error (Unexpected_token { expected = t; actual = token }))
+let token expected =
+  satisfy (fun (_location, actual) ->
+      if Token.equal expected actual then Result.ok ()
+      else Result.error (Unexpected_token { expected; actual }))
 
-let tokens ts = traverse_void token ts
+exception Expected_keyword of string
 
-let keyword kw = token (Token.IDENT kw)
+let keyword = function
+  | "and" -> token Token.KW_AND
+  | "block" -> token Token.KW_BLOCK
+  | "case" -> token Token.KW_CASE
+  | "if" -> token Token.KW_IF
+  | "then" -> token Token.KW_THEN
+  | "else" -> token Token.KW_ELSE
+  | "impossible" -> token Token.KW_IMPOSSIBLE
+  | "let" -> token Token.KW_LET
+  | "in" -> token Token.KW_IN
+  | "of" -> token Token.KW_OF
+  | "rec" -> token Token.KW_REC
+  | "schema" -> token Token.KW_SCHEMA
+  | "some" -> token Token.KW_SOME
+  | "fn" -> token Token.KW_FN
+  | "mlam" -> token Token.KW_MLAM
+  | "module" -> token Token.KW_MODULE
+  | "struct" -> token Token.KW_STRUCT
+  | "end" -> token Token.KW_END
+  | "total" -> token Token.KW_TOTAL
+  | "trust" -> token Token.KW_TRUST
+  | "type" -> token Token.KW_TYPE
+  | "ctype" -> token Token.KW_CTYPE
+  | "prop" -> token Token.KW_PROP
+  | "inductive" -> token Token.KW_INDUCTIVE
+  | "coinductive" -> token Token.KW_COINDUCTIVE
+  | "stratified" -> token Token.KW_STRATIFIED
+  | "LF" -> token Token.KW_LF
+  | "fun" -> token Token.KW_FUN
+  | "typedef" -> token Token.KW_TYPEDEF
+  | "proof" -> token Token.KW_PROOF
+  | "as" -> token Token.KW_AS
+  | "by" -> token Token.KW_BY
+  | "suffices" -> token Token.KW_SUFFICES
+  | "toshow" -> token Token.KW_TOSHOW
+  | kw ->
+      satisfy (function
+        | _location, Token.IDENT kw' when String.equal kw kw' -> Result.ok ()
+        | _location, _token -> Result.error (Expected_keyword kw))
 
 exception Expected_integer_literal
 
@@ -39,7 +77,12 @@ let dot_integer =
     | _location, Token.DOT_NUMBER k -> Result.ok k
     | _location, _token -> Result.error Expected_dot_number)
 
-let pragma s = token (Token.PRAGMA s)
+exception Expected_pragma of string
+
+let pragma s =
+  satisfy (function
+    | _location, Token.PRAGMA s' when String.equal s s' -> Result.ok ()
+    | _location, _token -> Result.error (Expected_pragma s))
 
 exception Expected_string_literal
 
@@ -48,97 +91,65 @@ let string_literal =
     | _location, Token.STRING s -> Result.ok s
     | _location, _token -> Result.error Expected_string_literal)
 
-exception Expected_dot
+(** {1 Tokens} *)
 
-let dot =
-  satisfy (fun (_location, token) ->
-      if Token.equal Token.DOT token then Result.ok ()
-      else Result.error Expected_dot)
+let dot = token Token.DOT
 
-exception Expected_comma
+let dots = token Token.DOTS
 
-let comma =
-  satisfy (fun (_location, token) ->
-      if Token.equal Token.COMMA token then Result.ok ()
-      else Result.error Expected_comma)
+let comma = token Token.COMMA
 
-exception Expected_colon
+let colon = token Token.COLON
 
-let colon =
-  satisfy (fun (_location, token) ->
-      if Token.equal Token.COLON token then Result.ok ()
-      else Result.error Expected_colon)
+let semicolon = token Token.SEMICOLON
 
-exception Expected_semicolon
+let slash = token Token.SLASH
 
-let semicolon =
-  satisfy (fun (_location, token) ->
-      if Token.equal Token.SEMICOLON token then Result.ok ()
-      else Result.error Expected_semicolon)
+let equals = token Token.EQUALS
 
-(** [bracketed start stop p] is the parser that runs [p] between [start] and
-    [stop] whose results are ignored. *)
-let bracketed start stop p = start &> p <& stop
+let lambda = token Token.LAMBDA
 
-(** [bracketed' b p] is the parser that runs [p] between the two instances of
-    the same parser [b] whose results are ignored. *)
-let bracketed' b p = bracketed b b p
+let hat = token Token.HAT
 
-exception Expected_left_parenthesis
+let underscore = token Token.UNDERSCORE
 
-let left_parenthesis =
-  satisfy (function
-    | _location, Token.LPAREN -> Result.ok ()
-    | _location, _token -> Result.error Expected_left_parenthesis)
+let pipe = token Token.PIPE
 
-exception Expected_right_parenthesis
+let forward_arrow = token Token.ARROW
 
-let right_parenthesis =
-  satisfy (function
-    | _location, Token.RPAREN -> Result.ok ()
-    | _location, _token -> Result.error Expected_right_parenthesis)
+let backward_arrow = token Token.BACKARROW
 
-exception Expected_left_brace
+let thick_forward_arrow = token Token.THICK_ARROW
 
-let left_brace =
-  satisfy (function
-    | _location, Token.LBRACE -> Result.ok ()
-    | _location, _token -> Result.error Expected_left_brace)
+let plus = token Token.PLUS
 
-exception Expected_right_brace
+let star = token Token.STAR
 
-let right_brace =
-  satisfy (function
-    | _location, Token.RBRACE -> Result.ok ()
-    | _location, _token -> Result.error Expected_right_brace)
+let hash = token Token.HASH
 
-exception Expected_left_brack
+let double_colon = token Token.DOUBLE_COLON
 
-let left_brack =
-  satisfy (function
-    | _location, Token.LBRACK -> Result.ok ()
-    | _location, _token -> Result.error Expected_left_brack)
+let turnstile = token Token.TURNSTILE
 
-exception Expected_right_brack
+let turnstile_hash = token Token.TURNSTILE_HASH
 
-let right_brack =
-  satisfy (function
-    | _location, Token.RBRACK -> Result.ok ()
-    | _location, _token -> Result.error Expected_right_brack)
+(** {1 Parentheses} *)
 
-exception Expected_left_angle
+let left_parenthesis = token Token.LPAREN
 
-let left_angle =
-  satisfy (function
-    | _location, Token.LANGLE -> Result.ok ()
-    | _location, _token -> Result.error Expected_left_angle)
+let right_parenthesis = token Token.RPAREN
 
-exception Expected_right_angle
+let left_brace = token Token.LBRACE
 
-let right_angle =
-  satisfy (function
-    | _location, Token.RANGLE -> Result.ok ()
-    | _location, _token -> Result.error Expected_right_angle)
+let right_brace = token Token.RBRACE
+
+let left_brack = token Token.LBRACK
+
+let right_brack = token Token.RBRACK
+
+let left_angle = token Token.LANGLE
+
+let right_angle = token Token.RANGLE
 
 (** [parens p] parses [`(' p `)']. *)
 let parens p = left_parenthesis &> p <& right_parenthesis
@@ -164,25 +175,31 @@ let opt_bracks p = alt (bracks p) p
 (** [opt_angles p] parses [`<' p `>' | p]. *)
 let opt_angles p = alt (angles p) p
 
+let hash_left_parenthesis = token Token.HASH_LPAREN
+
 (** [hash_parens p] parses [`#(' p `)']. *)
-let hash_parens p = token Token.HASH_LPAREN &> p <& right_parenthesis
+let hash_parens p = hash_left_parenthesis &> p <& right_parenthesis
+
+let dollar_left_parenthesis = token Token.DOLLAR_LPAREN
 
 (** [dollar_parens p] parses [`$(' p `)']. *)
-let dollar_parens p = token Token.DOLLAR_LPAREN &> p <& right_parenthesis
+let dollar_parens p = dollar_left_parenthesis &> p <& right_parenthesis
+
+let hash_left_brack = token Token.HASH_LBRACK
 
 (** [hash_bracks p] parses [`#\[' p `\]']. *)
-let hash_bracks p = token Token.HASH_LBRACK &> p <& right_brack
+let hash_bracks p = hash_left_brack &> p <& right_brack
+
+let dollar_left_brack = token Token.DOLLAR_LBRACK
 
 (** [dollar_bracks p] parses [`$\[' p `\]']. *)
-let dollar_bracks p = token Token.DOLLAR_LBRACK &> p <& right_brack
+let dollar_bracks p = dollar_left_brack &> p <& right_brack
 
-(** [only p] is the parser that runs [p] and requires that the input stream
-    be finished afterwards. *)
-let only p = p <& eoi
+(** {1 Identifiers} *)
 
 exception Expected_identifier
 
-let identifier : Identifier.t t =
+let identifier =
   satisfy (function
     | location, Token.IDENT identifier ->
         Result.ok (Identifier.make ~location identifier)
@@ -190,7 +207,7 @@ let identifier : Identifier.t t =
 
 exception Expected_dot_identifier
 
-let dot_identifier : Identifier.t t =
+let dot_identifier =
   satisfy (function
     | location, Token.DOT_IDENT identifier ->
         Result.ok (Identifier.make ~location identifier)
@@ -198,7 +215,7 @@ let dot_identifier : Identifier.t t =
 
 exception Expected_hash_identifier
 
-let hash_identifier : Identifier.t t =
+let hash_identifier =
   satisfy (function
     | location, Token.HASH_IDENT identifier ->
         Result.ok (Identifier.make ~location identifier)
@@ -206,7 +223,7 @@ let hash_identifier : Identifier.t t =
 
 exception Expected_dollar_identifier
 
-let dollar_identifier : Identifier.t t =
+let dollar_identifier =
   satisfy (function
     | location, Token.DOLLAR_IDENT s ->
         Result.ok (Identifier.make ~location s)
@@ -217,7 +234,7 @@ let dollar_identifier : Identifier.t t =
       | `_'
       | <identifier>
 *)
-let omittable_identifier : Identifier.t option t =
+let omittable_identifier =
   alt
     (token Token.UNDERSCORE $> fun () -> Option.none)
     (identifier $> Option.some)
@@ -227,7 +244,7 @@ let omittable_identifier : Identifier.t option t =
       | `#_'
       | <hash-identifier>
 *)
-let omittable_hash_identifier : Identifier.t option t =
+let omittable_hash_identifier =
   alt
     (token Token.HASH_BLANK $> fun () -> Option.none)
     (hash_identifier $> Option.some)
@@ -237,7 +254,7 @@ let omittable_hash_identifier : Identifier.t option t =
       | `$_'
       | <dollar-identifier>
 *)
-let omittable_dollar_identifier : Identifier.t option t =
+let omittable_dollar_identifier =
   alt
     (token Token.DOLLAR_BLANK $> fun () -> Option.none)
     (dollar_identifier $> Option.some)
@@ -245,7 +262,7 @@ let omittable_dollar_identifier : Identifier.t option t =
 (*=
    <qualified-identifier> ::= <identifier> <dot-identifier>*
 *)
-let[@warning "-32"] qualified_identifier : Qualified_identifier.t t =
+let[@warning "-32"] qualified_identifier =
   seq2 identifier (many dot_identifier) |> span
   $> fun (location, (head, tail)) ->
   let modules, identifier = List1.unsnoc (List1.from head tail) in
@@ -254,7 +271,7 @@ let[@warning "-32"] qualified_identifier : Qualified_identifier.t t =
 (*=
    <dot-qualified-identifier> ::= <dot-identifier>+
 *)
-let dot_qualified_identifier : Qualified_identifier.t t =
+let dot_qualified_identifier =
   some dot_identifier |> span $> fun (location, identifiers) ->
   let modules, identifier = List1.unsnoc identifiers in
   Qualified_identifier.make ~location ~modules identifier
@@ -264,8 +281,7 @@ let dot_qualified_identifier : Qualified_identifier.t t =
       | <identifier>
       | <identifier> <dot-identifier>*
 *)
-let qualified_or_plain_identifier :
-    [ `Plain of Identifier.t | `Qualified of Qualified_identifier.t ] t =
+let qualified_or_plain_identifier =
   seq2 identifier (many dot_identifier) |> span $> function
   | _, (head, []) -> `Plain head
   | location, (head, tail) ->
@@ -293,3 +309,10 @@ let hole =
         Result.ok (`Labelled (Identifier.make ~location label))
     | _location, _token -> Result.error Expected_hole)
   |> labelled "hole"
+
+exception Expected_block_comment
+
+let block_comment =
+  satisfy (function
+    | location, Token.BLOCK_COMMENT content -> Result.ok (location, content)
+    | _location, _token -> Result.error Expected_block_comment)

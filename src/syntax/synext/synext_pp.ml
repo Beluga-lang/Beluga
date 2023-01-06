@@ -3,121 +3,43 @@
 open Support
 open Common
 open Synext_definition
+open Synext_precedence
 open Parenthesizer
 
-(** {1 Printing LF Kinds, Types and Terms} *)
+(** {1 Pretty-Printing LF Syntax} *)
+
 module LF = struct
   open LF
 
-  (** Precedence computations on LF kinds, types and terms.
+  open Make_parenthesizer (Lf_precedence)
 
-      The values used as precedence levels are defined based on the recursive
-      descent parsers in {!Parser}. *)
-  module Precedence : sig
-    type t
-
-    val of_kind : Kind.t -> t
-
-    val of_typ : Typ.t -> t
-
-    val of_term : Term.t -> t
-
-    include Ord.ORD with type t := t
-  end = struct
-    type t =
-      | Static of Int.t
-      | User_defined of Int.t
-
-    let application_precedence = 4
-
-    let of_kind kind =
-      match kind with
-      | Kind.Pi _ -> Static 1
-      | Kind.Arrow _ -> Static 3
-      | Kind.Typ _ -> Static 5
-
-    let of_typ typ =
-      match typ with
-      | Typ.Pi _ -> Static 1
-      | Typ.Arrow _ -> Static 3
-      | Typ.Application
-          { applicand = Typ.Constant { operator; quoted; _ }; _ }
-        when quoted || Operator.is_prefix operator
-             (* Juxtapositions are of higher precedence than user-defined
-                operators *) ->
-          Static application_precedence
-      | Typ.Application
-          { applicand = Typ.Constant { operator; quoted = false; _ }; _ }
-      (* User-defined operator application *) ->
-          User_defined (Operator.precedence operator)
-      | Typ.Application _ -> Static application_precedence
-      | Typ.Constant _ -> Static 5
-
-    let of_term term =
-      match term with
-      | Term.Abstraction _ -> Static 1
-      | Term.TypeAnnotated _ -> Static 2
-      | Term.Application
-          { applicand = Term.Constant { operator; quoted; _ }; _ }
-        when quoted || Operator.is_prefix operator
-             (* Juxtapositions are of higher precedence than user-defined
-                operators *) ->
-          Static application_precedence
-      | Term.Application
-          { applicand = Term.Constant { operator; quoted = false; _ }; _ }
-      (* User-defined operator application *) ->
-          User_defined (Operator.precedence operator)
-      | Term.Application _ -> Static application_precedence
-      | Term.Wildcard _
-      | Term.Variable _
-      | Term.Constant _ ->
-          Static 6
-
-    include (
-      Ord.Make (struct
-        type nonrec t = t
-
-        let compare x y =
-          match (x, y) with
-          | Static x, Static y -> Int.compare x y
-          | User_defined x, User_defined y -> Int.compare x y
-          | User_defined _, Static y ->
-              if application_precedence <= y then -1 else 1
-          | Static x, User_defined _ ->
-              if x < application_precedence then -1 else 1
-      end) :
-        Ord.ORD with type t := t)
-  end
-
-  include Make_parenthesizer (Precedence)
-
-  let rec pp_kind ppf kind =
-    let parent_precedence = Precedence.of_kind kind in
+  let rec pp_lf_kind ppf kind =
+    let parent_precedence = precedence_of_lf_kind kind in
     match kind with
     | Kind.Typ _ -> Format.fprintf ppf "type"
     | Kind.Arrow { domain; range; _ } ->
         (* Right arrows are right-associative *)
         Format.fprintf ppf "@[<2>%a →@ %a@]"
           (parenthesize_left_argument_right_associative_operator
-             Precedence.of_typ ~parent_precedence pp_typ)
-          domain pp_kind range
+             precedence_of_lf_typ ~parent_precedence pp_lf_typ)
+          domain pp_lf_kind range
     | Kind.Pi { parameter_identifier; parameter_type; body; _ } -> (
         (* Pi-operators are weak prefix operators *)
         match (parameter_identifier, parameter_type) with
         | Option.Some parameter_identifier, Option.Some parameter_type ->
             Format.fprintf ppf "@[<2>{@ %a :@ %a@ }@ %a@]" Identifier.pp
-              parameter_identifier pp_typ parameter_type pp_kind body
+              parameter_identifier pp_lf_typ parameter_type pp_lf_kind body
         | Option.Some parameter_identifier, Option.None ->
             Format.fprintf ppf "@[<2>{@ %a@ }@ %a@]" Identifier.pp
-              parameter_identifier pp_kind body
+              parameter_identifier pp_lf_kind body
         | Option.None, Option.Some parameter_type ->
-            Format.fprintf ppf "@[<2>{@ _ :@ %a@ }@ %a@]" pp_typ
-              parameter_type pp_kind body
+            Format.fprintf ppf "@[<2>{@ _ :@ %a@ }@ %a@]" pp_lf_typ
+              parameter_type pp_lf_kind body
         | Option.None, Option.None ->
-            Format.fprintf ppf "@[<2>{@ _@ }@ %a@]" pp_kind body)
+            Format.fprintf ppf "@[<2>{@ _@ }@ %a@]" pp_lf_kind body)
 
-  and pp_typ ppf typ =
-    let parent_precedence = Precedence.of_typ typ in
+  and pp_lf_typ ppf typ =
+    let parent_precedence = precedence_of_lf_typ typ in
     match typ with
     | Typ.Constant { identifier; quoted; operator; _ } ->
         if quoted && Bool.not (Operator.is_nullary operator) then
@@ -136,58 +58,61 @@ module LF = struct
                 } ->
                 `Operator_application operator
             | _ -> `Term)
-          ~precedence_of_applicand:Precedence.of_typ
-          ~precedence_of_argument:Precedence.of_term ~pp_applicand:pp_typ
-          ~pp_argument:pp_term ~parent_precedence ppf (applicand, arguments)
+          ~precedence_of_applicand:precedence_of_lf_typ
+          ~precedence_of_argument:precedence_of_lf_term
+          ~pp_applicand:pp_lf_typ ~pp_argument:pp_lf_term ~parent_precedence
+          ppf (applicand, arguments)
     | Typ.Arrow { domain; range; orientation = `Forward; _ } ->
         (* Forward arrows are right-associative and of equal precedence with
            backward arrows, so backward arrows have to be parenthesized *)
         Format.fprintf ppf "@[<2>%a →@ %a@]"
           (match domain with
-          | Typ.Arrow { orientation = `Backward; _ } -> parenthesize pp_typ
+          | Typ.Arrow { orientation = `Backward; _ } ->
+              parenthesize pp_lf_typ
           | _ ->
               parenthesize_left_argument_right_associative_operator
-                Precedence.of_typ ~parent_precedence pp_typ)
+                precedence_of_lf_typ ~parent_precedence pp_lf_typ)
           domain
           (match range with
-          | Typ.Arrow { orientation = `Backward; _ } -> parenthesize pp_typ
+          | Typ.Arrow { orientation = `Backward; _ } ->
+              parenthesize pp_lf_typ
           | _ ->
               parenthesize_right_argument_right_associative_operator
-                Precedence.of_typ ~parent_precedence pp_typ)
+                precedence_of_lf_typ ~parent_precedence pp_lf_typ)
           range
     | Typ.Arrow { range; domain; orientation = `Backward; _ } ->
         (* Backward arrows are left-associative and of equal precedence with
            forward arrows, so forward arrows have to be parenthesized *)
         Format.fprintf ppf "@[<2>%a@ ← %a@]"
           (match range with
-          | Typ.Arrow { orientation = `Forward; _ } -> parenthesize pp_typ
+          | Typ.Arrow { orientation = `Forward; _ } -> parenthesize pp_lf_typ
           | _ ->
               parenthesize_left_argument_left_associative_operator
-                Precedence.of_typ ~parent_precedence pp_typ)
+                precedence_of_lf_typ ~parent_precedence pp_lf_typ)
           range
           (match domain with
-          | Typ.Arrow { orientation = `Forward; _ } -> parenthesize pp_typ
+          | Typ.Arrow { orientation = `Forward; _ } -> parenthesize pp_lf_typ
           | _ ->
               parenthesize_right_argument_left_associative_operator
-                Precedence.of_typ ~parent_precedence pp_typ)
+                precedence_of_lf_typ ~parent_precedence pp_lf_typ)
           domain
     | Typ.Pi { parameter_identifier; parameter_type; body; _ } -> (
         (* Pi-operators are weak prefix operators *)
         match (parameter_identifier, parameter_type) with
         | Option.Some parameter_identifier, Option.Some parameter_type ->
             Format.fprintf ppf "@[<2>{@ %a :@ %a@ }@ %a@]" Identifier.pp
-              parameter_identifier pp_typ parameter_type pp_typ body
+              parameter_identifier pp_lf_typ parameter_type pp_lf_typ body
         | Option.Some parameter_identifier, Option.None ->
             Format.fprintf ppf "@[<2>{@ %a@ }@ %a@]" Identifier.pp
-              parameter_identifier pp_typ body
+              parameter_identifier pp_lf_typ body
         | Option.None, Option.Some parameter_type ->
-            Format.fprintf ppf "@[<2>{@ _ :@ %a@ }@ %a@]" pp_typ
-              parameter_type pp_typ body
+            Format.fprintf ppf "@[<2>{@ _ :@ %a@ }@ %a@]" pp_lf_typ
+              parameter_type pp_lf_typ body
         | Option.None, Option.None ->
-            Format.fprintf ppf "@[<2>{@ _@ }@ %a@]" pp_typ body)
+            Format.fprintf ppf "@[<2>{@ _@ }@ %a@]" pp_lf_typ body)
 
-  and pp_term ppf term =
-    let parent_precedence = Precedence.of_term term in
+  and pp_lf_term ppf term =
+    let parent_precedence = precedence_of_lf_term term in
     match term with
     | Term.Variable { identifier; _ } -> Identifier.pp ppf identifier
     | Term.Constant { identifier; quoted = true; _ } ->
@@ -207,148 +132,43 @@ module LF = struct
                 } ->
                 `Operator_application operator
             | _ -> `Term)
-          ~precedence_of_applicand:Precedence.of_term
-          ~precedence_of_argument:Precedence.of_term ~pp_applicand:pp_term
-          ~pp_argument:pp_term ~parent_precedence ppf (applicand, arguments)
+          ~precedence_of_applicand:precedence_of_lf_term
+          ~precedence_of_argument:precedence_of_lf_term
+          ~pp_applicand:pp_lf_term ~pp_argument:pp_lf_term ~parent_precedence
+          ppf (applicand, arguments)
     | Term.Abstraction { parameter_identifier; parameter_type; body; _ } -> (
         (* Lambdas are weak prefix operators, so the body of the lambda never
            requires parentheses *)
         match (parameter_identifier, parameter_type) with
         | Option.None, Option.None ->
-            Format.fprintf ppf "@[<2>\\_.@ %a@]" pp_term body
+            Format.fprintf ppf "@[<2>\\_.@ %a@]" pp_lf_term body
         | Option.None, Option.Some parameter_type ->
-            Format.fprintf ppf "@[<2>\\_:%a.@ %a@]" pp_typ parameter_type
-              pp_term body
+            Format.fprintf ppf "@[<2>\\_:%a.@ %a@]" pp_lf_typ parameter_type
+              pp_lf_term body
         | Option.Some parameter_identifier, Option.None ->
             Format.fprintf ppf "@[<2>\\%a.@ %a@]" Identifier.pp
-              parameter_identifier pp_term body
+              parameter_identifier pp_lf_term body
         | Option.Some parameter_identifier, Option.Some parameter_type ->
             Format.fprintf ppf "@[<2>\\%a:%a.@ %a@]" Identifier.pp
-              parameter_identifier pp_typ parameter_type pp_term body)
+              parameter_identifier pp_lf_typ parameter_type pp_lf_term body)
     | Term.Wildcard _ -> Format.fprintf ppf "_"
     | Term.TypeAnnotated { term; typ; _ } ->
         (* Type ascriptions are left-associative *)
         Format.fprintf ppf "@[<2>%a :@ %a@]"
           (parenthesize_left_argument_left_associative_operator
-             Precedence.of_term ~parent_precedence pp_term)
-          term pp_typ typ
+             precedence_of_lf_term ~parent_precedence pp_lf_term)
+          term pp_lf_typ typ
 end
 
-(** {1 Printing Contextual LF Types, Terms, Type Patterns and Term Patterns} *)
+(** {1 Pretty-Printing Contextual LF Syntax} *)
+
 module CLF = struct
   open CLF
 
-  (** Precedence computations on contextual LF types, terms and patterns.
+  open Make_parenthesizer (Clf_precedence)
 
-      The values used as precedence levels are defined based on the recursive
-      descent parsers in {!Parser}. *)
-  module Precedence : sig
-    type t
-
-    val of_typ : Typ.t -> t
-
-    val of_term : Term.t -> t
-
-    val of_term_pattern : Term.Pattern.t -> t
-
-    include Ord.ORD with type t := t
-  end = struct
-    type t =
-      | Static of Int.t
-      | User_defined of Int.t
-
-    let application_precedence = 5
-
-    let of_typ typ =
-      match typ with
-      | Typ.Pi _ -> Static 1
-      | Typ.Arrow _ -> Static 3
-      | Typ.Block _ -> Static 4
-      | Typ.Application
-          { applicand = Typ.Constant { operator; quoted; _ }; _ }
-        when quoted || Operator.is_prefix operator
-             (* Juxtapositions are of higher precedence than user-defined
-                operators *) ->
-          Static application_precedence
-      | Typ.Application
-          { applicand = Typ.Constant { operator; quoted = false; _ }; _ }
-      (* User-defined operator application *) ->
-          User_defined (Operator.precedence operator)
-      | Typ.Application _ -> Static application_precedence
-      | Typ.Constant _ -> Static 8
-
-    let of_term term =
-      match term with
-      | Term.Abstraction _ -> Static 1
-      | Term.TypeAnnotated _ -> Static 2
-      | Term.Application
-          { applicand = Term.Constant { operator; quoted; _ }; _ }
-        when quoted || Operator.is_prefix operator
-             (* Juxtapositions are of higher precedence than user-defined
-                operators *) ->
-          Static application_precedence
-      | Term.Application
-          { applicand = Term.Constant { operator; quoted = false; _ }; _ }
-      (* User-defined operator application *) ->
-          User_defined (Operator.precedence operator)
-      | Term.Application _ -> Static application_precedence
-      | Term.Substitution _ -> Static 6
-      | Term.Projection _ -> Static 7
-      | Term.Variable _
-      | Term.Parameter_variable _
-      | Term.Substitution_variable _
-      | Term.Constant _
-      | Term.Hole _
-      | Term.Tuple _ ->
-          Static 8
-
-    let of_term_pattern term =
-      match term with
-      | Term.Pattern.Abstraction _ -> Static 1
-      | Term.Pattern.TypeAnnotated _ -> Static 2
-      | Term.Pattern.Application
-          { applicand = Term.Pattern.Constant { operator; quoted; _ }; _ }
-        when quoted || Operator.is_prefix operator
-             (* Juxtapositions are of higher precedence than user-defined
-                operators *) ->
-          Static application_precedence
-      | Term.Pattern.Application
-          { applicand = Term.Pattern.Constant { operator; quoted = false; _ }
-          ; _
-          }
-      (* User-defined operator application *) ->
-          User_defined (Operator.precedence operator)
-      | Term.Pattern.Application _ -> Static application_precedence
-      | Term.Pattern.Substitution _ -> Static 6
-      | Term.Pattern.Projection _ -> Static 7
-      | Term.Pattern.Wildcard _
-      | Term.Pattern.Variable _
-      | Term.Pattern.Parameter_variable _
-      | Term.Pattern.Substitution_variable _
-      | Term.Pattern.Constant _
-      | Term.Pattern.Tuple _ ->
-          Static 8
-
-    include (
-      Ord.Make (struct
-        type nonrec t = t
-
-        let compare x y =
-          match (x, y) with
-          | Static x, Static y -> Int.compare x y
-          | User_defined x, User_defined y -> Int.compare x y
-          | User_defined _, Static y ->
-              if application_precedence <= y then -1 else 1
-          | Static x, User_defined _ ->
-              if x < application_precedence then -1 else 1
-      end) :
-        Ord.ORD with type t := t)
-  end
-
-  include Make_parenthesizer (Precedence)
-
-  let rec pp_typ ppf typ =
-    let parent_precedence = Precedence.of_typ typ in
+  let rec pp_clf_typ ppf typ =
+    let parent_precedence = precedence_of_clf_typ typ in
     match typ with
     | Typ.Constant { identifier; quoted; operator; _ } ->
         if quoted && Bool.not (Operator.is_nullary operator) then
@@ -367,40 +187,45 @@ module CLF = struct
                 } ->
                 `Operator_application operator
             | _ -> `Term)
-          ~precedence_of_applicand:Precedence.of_typ
-          ~precedence_of_argument:Precedence.of_term ~pp_applicand:pp_typ
-          ~pp_argument:pp_term ~parent_precedence ppf (applicand, arguments)
+          ~precedence_of_applicand:precedence_of_clf_typ
+          ~precedence_of_argument:precedence_of_clf_term
+          ~pp_applicand:pp_clf_typ ~pp_argument:pp_clf_term
+          ~parent_precedence ppf (applicand, arguments)
     | Typ.Arrow { domain; range; orientation = `Forward; _ } ->
         (* Forward arrows are right-associative and of equal precedence with
            backward arrows, so backward arrows have to be parenthesized *)
         Format.fprintf ppf "@[<2>%a →@ %a@]"
           (match domain with
-          | Typ.Arrow { orientation = `Backward; _ } -> parenthesize pp_typ
+          | Typ.Arrow { orientation = `Backward; _ } ->
+              parenthesize pp_clf_typ
           | _ ->
               parenthesize_left_argument_right_associative_operator
-                Precedence.of_typ ~parent_precedence pp_typ)
+                precedence_of_clf_typ ~parent_precedence pp_clf_typ)
           domain
           (match range with
-          | Typ.Arrow { orientation = `Backward; _ } -> parenthesize pp_typ
+          | Typ.Arrow { orientation = `Backward; _ } ->
+              parenthesize pp_clf_typ
           | _ ->
               parenthesize_right_argument_right_associative_operator
-                Precedence.of_typ ~parent_precedence pp_typ)
+                precedence_of_clf_typ ~parent_precedence pp_clf_typ)
           range
     | Typ.Arrow { range; domain; orientation = `Backward; _ } ->
         (* Backward arrows are left-associative and of equal precedence with
            forward arrows, so forward arrows have to be parenthesized *)
         Format.fprintf ppf "@[<2>%a@ ← %a@]"
           (match range with
-          | Typ.Arrow { orientation = `Forward; _ } -> parenthesize pp_typ
+          | Typ.Arrow { orientation = `Forward; _ } ->
+              parenthesize pp_clf_typ
           | _ ->
               parenthesize_left_argument_left_associative_operator
-                Precedence.of_typ ~parent_precedence pp_typ)
+                precedence_of_clf_typ ~parent_precedence pp_clf_typ)
           range
           (match domain with
-          | Typ.Arrow { orientation = `Forward; _ } -> parenthesize pp_typ
+          | Typ.Arrow { orientation = `Forward; _ } ->
+              parenthesize pp_clf_typ
           | _ ->
               parenthesize_right_argument_left_associative_operator
-                Precedence.of_typ ~parent_precedence pp_typ)
+                precedence_of_clf_typ ~parent_precedence pp_clf_typ)
           domain
     | Typ.Pi { parameter_identifier; parameter_type; body; _ } ->
         (* Pi-operators are weak prefix operators *)
@@ -409,17 +234,17 @@ module CLF = struct
             | Option.Some parameter_identifier ->
                 Identifier.pp ppf parameter_identifier
             | Option.None -> Format.fprintf ppf "_")
-          parameter_identifier pp_typ parameter_type pp_typ body
+          parameter_identifier pp_clf_typ parameter_type pp_clf_typ body
     | Typ.Block { elements = `Unnamed typ; _ } ->
-        Format.fprintf ppf "@[<2>block (%a)]" pp_typ typ
+        Format.fprintf ppf "@[<2>block (%a)]" pp_clf_typ typ
     | Typ.Block { elements = `Record nts; _ } ->
         Format.fprintf ppf "@[<2>block (%a)]"
           (List1.pp ~pp_sep:Format.comma (fun ppf (i, t) ->
-               Format.fprintf ppf "%a :@ %a" Identifier.pp i pp_typ t))
+               Format.fprintf ppf "%a :@ %a" Identifier.pp i pp_clf_typ t))
           nts
 
-  and pp_term ppf term =
-    let parent_precedence = Precedence.of_term term in
+  and pp_clf_term ppf term =
+    let parent_precedence = precedence_of_clf_term term in
     match term with
     | Term.Variable { identifier; _ } -> Identifier.pp ppf identifier
     | Term.Parameter_variable { identifier; _ } ->
@@ -443,24 +268,26 @@ module CLF = struct
                 } ->
                 `Operator_application operator
             | _ -> `Term)
-          ~precedence_of_applicand:Precedence.of_term
-          ~precedence_of_argument:Precedence.of_term ~pp_applicand:pp_term
-          ~pp_argument:pp_term ~parent_precedence ppf (applicand, arguments)
+          ~precedence_of_applicand:precedence_of_clf_term
+          ~precedence_of_argument:precedence_of_clf_term
+          ~pp_applicand:pp_clf_term ~pp_argument:pp_clf_term
+          ~parent_precedence ppf (applicand, arguments)
     | Term.Abstraction { parameter_identifier; parameter_type; body; _ } -> (
         (* Lambdas are weak prefix operators, so the body of a lambda does
            not need to be parenthesized *)
         match (parameter_identifier, parameter_type) with
         | Option.None, Option.None ->
-            Format.fprintf ppf "@[<2>\\_.@ %a@]" pp_term body
+            Format.fprintf ppf "@[<2>\\_.@ %a@]" pp_clf_term body
         | Option.None, Option.Some parameter_type ->
-            Format.fprintf ppf "@[<2>\\_:%a.@ %a@]" pp_typ parameter_type
-              pp_term body
+            Format.fprintf ppf "@[<2>\\_:%a.@ %a@]" pp_clf_typ parameter_type
+              pp_clf_term body
         | Option.Some parameter_identifier, Option.None ->
             Format.fprintf ppf "@[<2>\\%a.@ %a@]" Identifier.pp
-              parameter_identifier pp_term body
+              parameter_identifier pp_clf_term body
         | Option.Some parameter_identifier, Option.Some parameter_type ->
             Format.fprintf ppf "@[<2>\\%a:%a.@ %a@]" Identifier.pp
-              parameter_identifier pp_typ parameter_type pp_term body)
+              parameter_identifier pp_clf_typ parameter_type pp_clf_term body
+        )
     | Term.Hole { variant = `Underscore; _ } -> Format.fprintf ppf "_"
     | Term.Hole { variant = `Unlabelled; _ } -> Format.fprintf ppf "?"
     | Term.Hole { variant = `Labelled label; _ } ->
@@ -469,32 +296,34 @@ module CLF = struct
         (* Substitutions are left-associative *)
         Format.fprintf ppf "@[<2>%a[%a]@]"
           (parenthesize_left_argument_left_associative_operator
-             Precedence.of_term ~parent_precedence pp_term)
-          term pp_substitution substitution
+             precedence_of_clf_term ~parent_precedence pp_clf_term)
+          term pp_clf_substitution substitution
     | Term.Tuple { terms; _ } ->
         Format.fprintf ppf "@[<2><%a>@]"
-          (List1.pp ~pp_sep:(fun ppf () -> Format.fprintf ppf ";@,") pp_term)
+          (List1.pp
+             ~pp_sep:(fun ppf () -> Format.fprintf ppf ";@,")
+             pp_clf_term)
           terms
     | Term.Projection { term; projection = `By_position i; _ } ->
         (* Projections are left-associative *)
         Format.fprintf ppf "@[<2>%a.%d@]"
           (parenthesize_left_argument_left_associative_operator
-             Precedence.of_term ~parent_precedence pp_term)
+             precedence_of_clf_term ~parent_precedence pp_clf_term)
           term i
     | Term.Projection { term; projection = `By_identifier i; _ } ->
         (* Projections are left-associative *)
         Format.fprintf ppf "@[<2>%a.%a@]"
           (parenthesize_left_argument_left_associative_operator
-             Precedence.of_term ~parent_precedence pp_term)
+             precedence_of_clf_term ~parent_precedence pp_clf_term)
           term Identifier.pp i
     | Term.TypeAnnotated { term; typ; _ } ->
         (* Type ascriptions are left-associative *)
         Format.fprintf ppf "@[<2>%a :@ %a@]"
           (parenthesize_left_argument_left_associative_operator
-             Precedence.of_term ~parent_precedence pp_term)
-          term pp_typ typ
+             precedence_of_clf_term ~parent_precedence pp_clf_term)
+          term pp_clf_typ typ
 
-  and pp_substitution ppf substitution =
+  and pp_clf_substitution ppf substitution =
     match substitution with
     | { Substitution.head = Substitution.Head.None _; terms = []; _ } ->
         Format.fprintf ppf "^"
@@ -502,11 +331,11 @@ module CLF = struct
         Format.fprintf ppf ".."
     | { Substitution.head = Substitution.Head.None _; terms; _ } ->
         Format.fprintf ppf "@[<2>%a@]"
-          (List.pp ~pp_sep:Format.comma pp_term)
+          (List.pp ~pp_sep:Format.comma pp_clf_term)
           terms
     | { Substitution.head = Substitution.Head.Identity _; terms; _ } ->
         Format.fprintf ppf "@[<2>..,@ %a@]"
-          (List.pp ~pp_sep:Format.comma pp_term)
+          (List.pp ~pp_sep:Format.comma pp_clf_term)
           terms
     | { Substitution.head =
           Substitution.Head.Substitution_variable
@@ -522,7 +351,7 @@ module CLF = struct
       ; _
       } ->
         Format.fprintf ppf "@[<2>%a[%a]@]" Identifier.pp identifier
-          pp_substitution closure
+          pp_clf_substitution closure
     | { Substitution.head =
           Substitution.Head.Substitution_variable
             { identifier; closure = Option.None; _ }
@@ -530,7 +359,7 @@ module CLF = struct
       ; _
       } ->
         Format.fprintf ppf "@[<2>%a,@ %a@]" Identifier.pp identifier
-          (List.pp ~pp_sep:Format.comma pp_term)
+          (List.pp ~pp_sep:Format.comma pp_clf_term)
           terms
     | { Substitution.head =
           Substitution.Head.Substitution_variable
@@ -539,16 +368,17 @@ module CLF = struct
       ; _
       } ->
         Format.fprintf ppf "@[<2>%a[%a],@ %a@]" Identifier.pp identifier
-          pp_substitution closure
-          (List.pp ~pp_sep:Format.comma pp_term)
+          pp_clf_substitution closure
+          (List.pp ~pp_sep:Format.comma pp_clf_term)
           terms
 
-  and pp_context ppf context =
+  and pp_clf_context ppf context =
     let pp_typing ppf typing =
       match typing with
       | identifier, Option.None -> Identifier.pp ppf identifier
       | identifier, Option.Some typ ->
-          Format.fprintf ppf "%a :@ %a" Identifier.pp identifier pp_typ typ
+          Format.fprintf ppf "%a :@ %a" Identifier.pp identifier pp_clf_typ
+            typ
     in
     match context with
     | { Context.head = Context.Head.None _; bindings = []; _ } ->
@@ -576,8 +406,8 @@ module CLF = struct
           (List.pp ~pp_sep:Format.comma pp_typing)
           bindings
 
-  let rec pp_term_pattern ppf term =
-    let parent_precedence = Precedence.of_term_pattern term in
+  let rec pp_clf_term_pattern ppf term =
+    let parent_precedence = precedence_of_clf_term_pattern term in
     match term with
     | Term.Pattern.Variable { identifier; _ } -> Identifier.pp ppf identifier
     | Term.Pattern.Parameter_variable { identifier; _ } ->
@@ -602,9 +432,9 @@ module CLF = struct
                 } ->
                 `Operator_application operator
             | _ -> `Term)
-          ~precedence_of_applicand:Precedence.of_term_pattern
-          ~precedence_of_argument:Precedence.of_term_pattern
-          ~pp_applicand:pp_term_pattern ~pp_argument:pp_term_pattern
+          ~precedence_of_applicand:precedence_of_clf_term_pattern
+          ~precedence_of_argument:precedence_of_clf_term_pattern
+          ~pp_applicand:pp_clf_term_pattern ~pp_argument:pp_clf_term_pattern
           ~parent_precedence ppf (applicand, arguments)
     | Term.Pattern.Abstraction
         { parameter_identifier; parameter_type; body; _ } -> (
@@ -612,49 +442,53 @@ module CLF = struct
            requires parentheses. *)
         match (parameter_identifier, parameter_type) with
         | Option.None, Option.None ->
-            Format.fprintf ppf "@[<2>\\_.@ %a@]" pp_term_pattern body
+            Format.fprintf ppf "@[<2>\\_.@ %a@]" pp_clf_term_pattern body
         | Option.None, Option.Some parameter_type ->
-            Format.fprintf ppf "@[<2>\\_:%a.@ %a@]" pp_typ parameter_type
-              pp_term_pattern body
+            Format.fprintf ppf "@[<2>\\_:%a.@ %a@]" pp_clf_typ parameter_type
+              pp_clf_term_pattern body
         | Option.Some parameter_identifier, Option.None ->
             Format.fprintf ppf "@[<2>\\%a.@ %a@]" Identifier.pp
-              parameter_identifier pp_term_pattern body
+              parameter_identifier pp_clf_term_pattern body
         | Option.Some parameter_identifier, Option.Some parameter_type ->
             Format.fprintf ppf "@[<2>\\%a:%a.@ %a@]" Identifier.pp
-              parameter_identifier pp_typ parameter_type pp_term_pattern body
-        )
+              parameter_identifier pp_clf_typ parameter_type
+              pp_clf_term_pattern body)
     | Term.Pattern.Wildcard _ -> Format.fprintf ppf "_"
     | Term.Pattern.Substitution { term; substitution; _ } ->
         Format.fprintf ppf "@[<2>%a[%a]@]"
           (parenthesize_left_argument_left_associative_operator
-             Precedence.of_term_pattern ~parent_precedence pp_term_pattern)
-          term pp_substitution substitution
+             precedence_of_clf_term_pattern ~parent_precedence
+             pp_clf_term_pattern)
+          term pp_clf_substitution substitution
     | Term.Pattern.Tuple { terms; _ } ->
         Format.fprintf ppf "@[<2><%a>@]"
           (List1.pp
              ~pp_sep:(fun ppf () -> Format.fprintf ppf ";@,")
-             pp_term_pattern)
+             pp_clf_term_pattern)
           terms
     | Term.Pattern.Projection { term; projection = `By_position i; _ } ->
         (* Projections are left-associative *)
         Format.fprintf ppf "@[<2>%a.%d@]"
           (parenthesize_left_argument_left_associative_operator
-             Precedence.of_term_pattern ~parent_precedence pp_term_pattern)
+             precedence_of_clf_term_pattern ~parent_precedence
+             pp_clf_term_pattern)
           term i
     | Term.Pattern.Projection { term; projection = `By_identifier i; _ } ->
         (* Projections are left-associative *)
         Format.fprintf ppf "@[<2>%a.%a@]"
           (parenthesize_left_argument_left_associative_operator
-             Precedence.of_term_pattern ~parent_precedence pp_term_pattern)
+             precedence_of_clf_term_pattern ~parent_precedence
+             pp_clf_term_pattern)
           term Identifier.pp i
     | Term.Pattern.TypeAnnotated { term; typ; _ } ->
         (* Type ascriptions are left-associative *)
         Format.fprintf ppf "@[<2>%a :@ %a@]"
           (parenthesize_left_argument_left_associative_operator
-             Precedence.of_term_pattern ~parent_precedence pp_term_pattern)
-          term pp_typ typ
+             precedence_of_clf_term_pattern ~parent_precedence
+             pp_clf_term_pattern)
+          term pp_clf_typ typ
 
-  and pp_substitution_pattern ppf substitution_pattern =
+  and pp_clf_substitution_pattern ppf substitution_pattern =
     match substitution_pattern with
     | { Substitution.Pattern.head = Substitution.Pattern.Head.None _
       ; terms = []
@@ -671,14 +505,14 @@ module CLF = struct
       ; _
       } ->
         Format.fprintf ppf "@[<2>%a@]"
-          (List.pp ~pp_sep:Format.comma pp_term_pattern)
+          (List.pp ~pp_sep:Format.comma pp_clf_term_pattern)
           terms
     | { Substitution.Pattern.head = Substitution.Pattern.Head.Identity _
       ; terms
       ; _
       } ->
         Format.fprintf ppf "@[<2>..,@ %a@]"
-          (List.pp ~pp_sep:Format.comma pp_term_pattern)
+          (List.pp ~pp_sep:Format.comma pp_clf_term_pattern)
           terms
     | { Substitution.Pattern.head =
           Substitution.Pattern.Head.Substitution_variable
@@ -694,7 +528,7 @@ module CLF = struct
       ; _
       } ->
         Format.fprintf ppf "@[<2>%a[%a]@]" Identifier.pp identifier
-          pp_substitution closure
+          pp_clf_substitution closure
     | { Substitution.Pattern.head =
           Substitution.Pattern.Head.Substitution_variable
             { identifier; closure = Option.None; _ }
@@ -702,7 +536,7 @@ module CLF = struct
       ; _
       } ->
         Format.fprintf ppf "@[<2>%a,@ %a@]" Identifier.pp identifier
-          (List.pp ~pp_sep:Format.comma pp_term_pattern)
+          (List.pp ~pp_sep:Format.comma pp_clf_term_pattern)
           terms
     | { Substitution.Pattern.head =
           Substitution.Pattern.Head.Substitution_variable
@@ -711,13 +545,13 @@ module CLF = struct
       ; _
       } ->
         Format.fprintf ppf "@[<2>%a[%a],@ %a@]" Identifier.pp identifier
-          pp_substitution closure
-          (List.pp ~pp_sep:Format.comma pp_term_pattern)
+          pp_clf_substitution closure
+          (List.pp ~pp_sep:Format.comma pp_clf_term_pattern)
           terms
 
-  and pp_context_pattern ppf context_pattern =
+  and pp_clf_context_pattern ppf context_pattern =
     let pp_typing ppf (i, t) =
-      Format.fprintf ppf "%a :@ %a" Identifier.pp i pp_typ t
+      Format.fprintf ppf "%a :@ %a" Identifier.pp i pp_clf_typ t
     in
     match context_pattern with
     | { Context.Pattern.head = Context.Pattern.Head.None _
@@ -754,97 +588,68 @@ module CLF = struct
           bindings
 end
 
-(** {1 Printing Meta-Types, Meta-Objects, Meta-Patterns, Meta-Contexts} *)
+(** {1 Pretty-Printing Meta-Level Syntax} *)
 module Meta = struct
   open Meta
 
-  (** Precedence computations on context schemas.
+  open Make_parenthesizer (Meta_precedence)
 
-      The values used as precedence levels are defined based on the recursive
-      descent parsers in {!Parser}. *)
-  module Precedence : sig
-    type t
-
-    val of_schema : Schema.t -> t
-
-    include Ord.ORD with type t := t
-  end = struct
-    type t = Static of Int.t [@unboxed]
-
-    let of_schema schema =
-      match schema with
-      | Schema.Alternation _ -> Static 1
-      | Schema.Constant _
-      | Schema.Element _ ->
-          Static 2
-
-    include (
-      Ord.Make (struct
-        type nonrec t = t
-
-        let compare (Static x) (Static y) = Int.compare x y
-      end) :
-        Ord.ORD with type t := t)
-  end
-
-  include Make_parenthesizer (Precedence)
-
-  let rec pp_typ ppf typ =
+  let rec pp_meta_typ ppf typ =
     match typ with
     | Typ.Context_schema { schema; _ } -> pp_schema ppf schema
     | Typ.Contextual_typ { context; typ; _ } ->
-        Format.fprintf ppf "@[<2>(%a@ ⊢@ %a)@]" CLF.pp_context context
-          CLF.pp_typ typ
+        Format.fprintf ppf "@[<2>(%a@ ⊢@ %a)@]" CLF.pp_clf_context context
+          CLF.pp_clf_typ typ
     | Typ.Parameter_typ { context; typ; _ } ->
-        Format.fprintf ppf "@[<2>#(%a@ ⊢@ %a)@]" CLF.pp_context context
-          CLF.pp_typ typ
+        Format.fprintf ppf "@[<2>#(%a@ ⊢@ %a)@]" CLF.pp_clf_context context
+          CLF.pp_clf_typ typ
     | Typ.Plain_substitution_typ { domain; range; _ } ->
-        Format.fprintf ppf "@[<2>$(%a@ ⊢@ %a)@]" CLF.pp_context domain
-          CLF.pp_context range
+        Format.fprintf ppf "@[<2>$(%a@ ⊢@ %a)@]" CLF.pp_clf_context domain
+          CLF.pp_clf_context range
     | Typ.Renaming_substitution_typ { domain; range; _ } ->
-        Format.fprintf ppf "@[<2>$(%a@ ⊢#@ %a)@]" CLF.pp_context domain
-          CLF.pp_context range
+        Format.fprintf ppf "@[<2>$(%a@ ⊢#@ %a)@]" CLF.pp_clf_context domain
+          CLF.pp_clf_context range
 
-  and pp_object ppf object_ =
+  and pp_meta_object ppf object_ =
     match object_ with
     | Object.Context { context; _ } ->
-        Format.fprintf ppf "@[[%a]@]" CLF.pp_context context
+        Format.fprintf ppf "@[[%a]@]" CLF.pp_clf_context context
     | Object.Contextual_term { context; term; _ } ->
-        Format.fprintf ppf "@[<2>[%a@ ⊢@ %a]@]" CLF.pp_context context
-          CLF.pp_term term
+        Format.fprintf ppf "@[<2>[%a@ ⊢@ %a]@]" CLF.pp_clf_context context
+          CLF.pp_clf_term term
     | Object.Plain_substitution { domain; range; _ } ->
-        Format.fprintf ppf "@[<2>$[%a@ ⊢@ %a]@]" CLF.pp_context domain
-          CLF.pp_substitution range
+        Format.fprintf ppf "@[<2>$[%a@ ⊢@ %a]@]" CLF.pp_clf_context domain
+          CLF.pp_clf_substitution range
     | Object.Renaming_substitution { domain; range; _ } ->
-        Format.fprintf ppf "@[<2>$[%a@ ⊢#@ %a]@]" CLF.pp_context domain
-          CLF.pp_substitution range
+        Format.fprintf ppf "@[<2>$[%a@ ⊢#@ %a]@]" CLF.pp_clf_context domain
+          CLF.pp_clf_substitution range
 
-  and pp_pattern ppf pattern =
+  and pp_meta_pattern ppf pattern =
     match pattern with
     | Pattern.Context { context; _ } ->
-        Format.fprintf ppf "@[[%a]@]" CLF.pp_context_pattern context
+        Format.fprintf ppf "@[[%a]@]" CLF.pp_clf_context_pattern context
     | Pattern.Contextual_term { context; term; _ } ->
-        Format.fprintf ppf "@[<2>[%a@ ⊢@ %a]@]" CLF.pp_context_pattern
-          context CLF.pp_term_pattern term
+        Format.fprintf ppf "@[<2>[%a@ ⊢@ %a]@]" CLF.pp_clf_context_pattern
+          context CLF.pp_clf_term_pattern term
     | Pattern.Plain_substitution { domain; range; _ } ->
-        Format.fprintf ppf "@[<2>$[%a@ ⊢@ %a]@]" CLF.pp_context_pattern
-          domain CLF.pp_substitution_pattern range
+        Format.fprintf ppf "@[<2>$[%a@ ⊢@ %a]@]" CLF.pp_clf_context_pattern
+          domain CLF.pp_clf_substitution_pattern range
     | Pattern.Renaming_substitution { domain; range; _ } ->
-        Format.fprintf ppf "@[<2>$[%a@ ⊢#@ %a]@]" CLF.pp_context_pattern
-          domain CLF.pp_substitution_pattern range
+        Format.fprintf ppf "@[<2>$[%a@ ⊢#@ %a]@]" CLF.pp_clf_context_pattern
+          domain CLF.pp_clf_substitution_pattern range
 
-  and pp_context ppf context =
+  and pp_meta_context ppf context =
     let { Context.bindings; _ } = context in
     List.pp ~pp_sep:Format.comma
       (fun ppf (i, t) ->
-        Format.fprintf ppf "@[%a :@ %a@]" Identifier.pp i pp_typ t)
+        Format.fprintf ppf "@[%a :@ %a@]" Identifier.pp i pp_meta_typ t)
       ppf bindings
 
   and pp_schema ppf schema =
-    let parent_precedence = Precedence.of_schema schema in
+    let parent_precedence = precedence_of_schema schema in
     let pp_bindings =
       List1.pp ~pp_sep:Format.comma (fun ppf (i, t) ->
-          Format.fprintf ppf "@[%a :@ %a@]" Identifier.pp i CLF.pp_typ t)
+          Format.fprintf ppf "@[%a :@ %a@]" Identifier.pp i CLF.pp_clf_typ t)
     in
     match schema with
     | Schema.Constant { identifier; _ } ->
@@ -853,16 +658,16 @@ module Meta = struct
         List2.pp
           ~pp_sep:(fun ppf () -> Format.fprintf ppf "@ +@ ")
           (parenthesize_term_of_lesser_than_or_equal_precedence
-             Precedence.of_schema ~parent_precedence pp_schema)
+             precedence_of_schema ~parent_precedence pp_schema)
           ppf schemas
     | Schema.Element { some = Option.None; block = `Unnamed t; _ } ->
-        Format.fprintf ppf "@[<2>block@ %a@]" CLF.pp_typ t
+        Format.fprintf ppf "@[<2>block@ %a@]" CLF.pp_clf_typ t
     | Schema.Element { some = Option.None; block = `Record bindings; _ } ->
         Format.fprintf ppf "@[<2>block@ (%a)@]" pp_bindings bindings
     | Schema.Element
         { some = Option.Some some_bindings; block = `Unnamed t; _ } ->
         Format.fprintf ppf "@[<2>some@ [%a]@ block@ %a@]" pp_bindings
-          some_bindings CLF.pp_typ t
+          some_bindings CLF.pp_clf_typ t
     | Schema.Element
         { some = Option.Some some_bindings
         ; block = `Record block_bindings
@@ -872,157 +677,12 @@ module Meta = struct
           some_bindings pp_bindings block_bindings
 end
 
-(** Pretty-printing for computation-level syntax. *)
+(** {1 Pretty-Printing Computation-Level Syntax} *)
+
 module Comp = struct
   open Comp
 
-  (** Precedence computations on computation-level kinds, types, expressions
-      and patterns.
-
-      The values used as precedence levels are defined based on the recursive
-      descent parsers in {!Parser}. *)
-  module Precedence : sig
-    type t
-
-    val of_kind : Kind.t -> t
-
-    val of_typ : Typ.t -> t
-
-    val of_expression : Expression.t -> t
-
-    val of_pattern : Pattern.t -> t
-
-    val of_copattern : Copattern.t -> t
-
-    include Ord.ORD with type t := t
-  end = struct
-    type t =
-      | Static of Int.t
-      | User_defined_type of Int.t
-      | User_defined_expression of Int.t
-      | User_defined_pattern of Int.t
-
-    let type_application_precedence = 4
-
-    let expression_application_precedence = 2
-
-    let pattern_application_precedence = 3
-
-    let of_kind kind =
-      match kind with
-      | Kind.Pi _ -> Static 1
-      | Kind.Arrow _ -> Static 2
-      | Kind.Ctype _ -> Static 5
-
-    let of_typ typ =
-      match typ with
-      | Typ.Pi _ -> Static 1
-      | Typ.Arrow _ -> Static 2
-      | Typ.Cross _ -> Static 3
-      | Typ.Application
-          { applicand = Typ.Constant { operator; quoted; _ }; _ }
-        when quoted || Operator.is_prefix operator
-             (* Juxtapositions are of higher precedence than user-defined
-                operators *) ->
-          Static type_application_precedence
-      | Typ.Application
-          { applicand = Typ.Constant { operator; quoted = false; _ }; _ }
-      (* User-defined operator application *) ->
-          User_defined_type (Operator.precedence operator)
-      | Typ.Application _ -> Static type_application_precedence
-      | Typ.Constant _
-      | Typ.Box _ ->
-          Static 5
-
-    let of_expression expression =
-      match expression with
-      | Expression.TypeAnnotated _ -> Static 1
-      | Expression.Application
-          { applicand = Expression.Constant { operator; quoted; _ }; _ }
-        when quoted || Operator.is_prefix operator
-             (* Juxtapositions are of higher precedence than user-defined
-                operators *) ->
-          Static expression_application_precedence
-      | Expression.Application
-          { applicand = Expression.Constant { operator; quoted = false; _ }
-          ; _
-          }
-      (* User-defined operator application *) ->
-          User_defined_expression (Operator.precedence operator)
-      | Expression.Application _ -> Static expression_application_precedence
-      | Expression.Let _
-      | Expression.Box _
-      | Expression.Impossible _
-      | Expression.Case _
-      | Expression.Tuple _
-      | Expression.Hole _
-      | Expression.BoxHole _
-      | Expression.Observation _
-      | Expression.Variable _
-      | Expression.Constant _
-      | Expression.Fn _
-      | Expression.Mlam _
-      | Expression.Fun _ ->
-          Static 3
-
-    let of_pattern pattern =
-      match pattern with
-      | Pattern.MetaTypeAnnotated _ -> Static 1
-      | Pattern.TypeAnnotated _ -> Static 2
-      | Pattern.Application
-          { applicand = Pattern.Constant { operator; quoted; _ }; _ }
-        when quoted || Operator.is_prefix operator
-             (* Juxtapositions are of higher precedence than user-defined
-                operators *) ->
-          Static pattern_application_precedence
-      | Pattern.Application
-          { applicand = Pattern.Constant { operator; quoted = false; _ }; _ }
-      (* User-defined operator application *) ->
-          User_defined_pattern (Operator.precedence operator)
-      | Pattern.Application _ -> Static pattern_application_precedence
-      | Pattern.Variable _
-      | Pattern.Constant _
-      | Pattern.MetaObject _
-      | Pattern.Tuple _
-      | Pattern.Wildcard _ ->
-          Static 4
-
-    let of_copattern copattern =
-      match copattern with
-      | Copattern.Observation _ -> Static 3
-      | Copattern.Pattern pattern -> of_pattern pattern
-
-    include (
-      Ord.Make (struct
-        type nonrec t = t
-
-        let compare x y =
-          match (x, y) with
-          | Static x, Static y -> Int.compare x y
-          | User_defined_type x, User_defined_type y -> Int.compare x y
-          | User_defined_type _, Static y ->
-              if type_application_precedence <= y then -1 else 1
-          | Static x, User_defined_type _ ->
-              if x < type_application_precedence then -1 else 1
-          | User_defined_expression x, User_defined_expression y ->
-              Int.compare x y
-          | User_defined_expression _, Static y ->
-              if expression_application_precedence <= y then -1 else 1
-          | Static x, User_defined_expression _ ->
-              if x < expression_application_precedence then -1 else 1
-          | User_defined_pattern _, Static y ->
-              if pattern_application_precedence <= y then -1 else 1
-          | Static x, User_defined_pattern _ ->
-              if x < pattern_application_precedence then -1 else 1
-          | _ ->
-              Error.violation
-                "[Precedence.compare] cannot compare precedences for \
-                 user-defined type, expression and pattern constants"
-      end) :
-        Ord.ORD with type t := t)
-  end
-
-  include Make_parenthesizer (Precedence)
+  open Make_parenthesizer (Comp_precedence)
 
   (** [is_atomic_pattern pattern] is [true] if and only if [pattern] is an
       atomic pattern as defined in {!Parser}, meaning that it never requires
@@ -1043,27 +703,28 @@ module Comp = struct
     | Copattern.Pattern pattern -> is_atomic_pattern pattern
 
   let rec pp_kind ppf kind =
-    let parent_precedence = Precedence.of_kind kind in
+    let parent_precedence = precedence_of_comp_kind kind in
     match kind with
     | Kind.Ctype _ -> Format.pp_print_string ppf "ctype"
     | Kind.Arrow { domain; range; _ } ->
         (* Right arrows are right-associative *)
         Format.fprintf ppf "@[<2>%a@ →@ %a@]"
           (parenthesize_left_argument_right_associative_operator
-             Precedence.of_typ ~parent_precedence pp_typ)
+             precedence_of_comp_typ ~parent_precedence pp_typ)
           domain pp_kind range
     | Kind.Pi { parameter_identifier; parameter_type; body; _ } -> (
         (* Pi-operators are weak prefix operators *)
         match parameter_identifier with
         | Option.None ->
-            Format.fprintf ppf "@[<2>{@ _ :@ %a@ }@ %a@]" Meta.pp_typ
+            Format.fprintf ppf "@[<2>{@ _ :@ %a@ }@ %a@]" Meta.pp_meta_typ
               parameter_type pp_kind body
         | Option.Some parameter_identifier ->
             Format.fprintf ppf "@[<2>{@ %a :@ %a@ }@ %a@]" Identifier.pp
-              parameter_identifier Meta.pp_typ parameter_type pp_kind body)
+              parameter_identifier Meta.pp_meta_typ parameter_type pp_kind
+              body)
 
   and pp_typ ppf typ =
-    let parent_precedence = Precedence.of_typ typ in
+    let parent_precedence = precedence_of_comp_typ typ in
     match typ with
     | Typ.Constant { identifier; quoted; operator; _ } ->
         if quoted && Bool.not (Operator.is_nullary operator) then
@@ -1090,11 +751,13 @@ module Comp = struct
         | Plicity.Implicit ->
             Format.fprintf ppf "@[<2>(@ %a :@ %a@ )@ %a@]"
               (pp_parameter_identifier parameter_type)
-              parameter_identifier Meta.pp_typ parameter_type pp_typ body
+              parameter_identifier Meta.pp_meta_typ parameter_type pp_typ
+              body
         | Plicity.Explicit ->
             Format.fprintf ppf "@[<2>{@ %a :@ %a@ }@ %a@]"
               (pp_parameter_identifier parameter_type)
-              parameter_identifier Meta.pp_typ parameter_type pp_typ body)
+              parameter_identifier Meta.pp_meta_typ parameter_type pp_typ
+              body)
     | Typ.Arrow { domain; range; orientation = `Forward; _ } ->
         (* Forward arrows are right-associative and of equal precedence with
            backward arrows *)
@@ -1103,13 +766,13 @@ module Comp = struct
           | Typ.Arrow { orientation = `Backward; _ } -> parenthesize pp_typ
           | _ ->
               parenthesize_left_argument_right_associative_operator
-                Precedence.of_typ ~parent_precedence pp_typ)
+                precedence_of_comp_typ ~parent_precedence pp_typ)
           domain
           (match range with
           | Typ.Arrow { orientation = `Backward; _ } -> parenthesize pp_typ
           | _ ->
               parenthesize_right_argument_right_associative_operator
-                Precedence.of_typ ~parent_precedence pp_typ)
+                precedence_of_comp_typ ~parent_precedence pp_typ)
           range
     | Typ.Arrow { range; domain; orientation = `Backward; _ } ->
         (* Backward arrows are left-associative and of equal precedence with
@@ -1119,21 +782,21 @@ module Comp = struct
           | Typ.Arrow { orientation = `Forward; _ } -> parenthesize pp_typ
           | _ ->
               parenthesize_left_argument_left_associative_operator
-                Precedence.of_typ ~parent_precedence pp_typ)
+                precedence_of_comp_typ ~parent_precedence pp_typ)
           range
           (match domain with
           | Typ.Arrow { orientation = `Forward; _ } -> parenthesize pp_typ
           | _ ->
               parenthesize_right_argument_left_associative_operator
-                Precedence.of_typ ~parent_precedence pp_typ)
+                precedence_of_comp_typ ~parent_precedence pp_typ)
           domain
     | Typ.Cross { types; _ } ->
         List2.pp
           ~pp_sep:(fun ppf () -> Format.fprintf ppf "@ * ")
           (parenthesize_term_of_lesser_than_or_equal_precedence
-             Precedence.of_typ ~parent_precedence pp_typ)
+             precedence_of_comp_typ ~parent_precedence pp_typ)
           ppf types
-    | Typ.Box { meta_type; _ } -> Meta.pp_typ ppf meta_type
+    | Typ.Box { meta_type; _ } -> Meta.pp_meta_typ ppf meta_type
     | Typ.Application { applicand; arguments; _ } -> (
         match applicand with
         | Typ.Application
@@ -1145,7 +808,7 @@ module Comp = struct
             | Fixity.Prefix ->
                 Format.fprintf ppf "@[<2>%a@ %a@]" Qualified_identifier.pp
                   identifier
-                  (List1.pp ~pp_sep:Format.pp_print_space Meta.pp_object)
+                  (List1.pp ~pp_sep:Format.pp_print_space Meta.pp_meta_object)
                   arguments
             | Fixity.Infix ->
                 assert (
@@ -1157,9 +820,9 @@ module Comp = struct
                                      (left_argument, [ right_argument ])) =
                   arguments
                 in
-                Format.fprintf ppf "@[<2>%a@ %a@ %a@]" Meta.pp_object
+                Format.fprintf ppf "@[<2>%a@ %a@ %a@]" Meta.pp_meta_object
                   left_argument Qualified_identifier.pp identifier
-                  Meta.pp_object right_argument
+                  Meta.pp_meta_object right_argument
             | Fixity.Postfix ->
                 assert (
                   List1.compare_length_with arguments 1
@@ -1167,18 +830,18 @@ module Comp = struct
                     (* Postfix operators must be applied with exactly one
                        argument. *));
                 let[@warning "-8"] (List1.T (argument, [])) = arguments in
-                Format.fprintf ppf "@[<2>%a@ %a@]" Meta.pp_object argument
-                  Qualified_identifier.pp identifier)
+                Format.fprintf ppf "@[<2>%a@ %a@]" Meta.pp_meta_object
+                  argument Qualified_identifier.pp identifier)
         | _ ->
             Format.fprintf ppf "@[<2>%a@ %a@]"
               (parenthesize_term_of_lesser_than_or_equal_precedence
-                 Precedence.of_typ ~parent_precedence pp_typ)
+                 precedence_of_comp_typ ~parent_precedence pp_typ)
               applicand
-              (List1.pp ~pp_sep:Format.pp_print_space Meta.pp_object)
+              (List1.pp ~pp_sep:Format.pp_print_space Meta.pp_meta_object)
               arguments)
 
   and pp_expression ppf expression =
-    let parent_precedence = Precedence.of_expression expression in
+    let parent_precedence = precedence_of_comp_expression expression in
     match expression with
     | Expression.Variable { identifier; _ } -> Identifier.pp ppf identifier
     | Expression.Constant { identifier; quoted; operator; _ } ->
@@ -1197,7 +860,9 @@ module Comp = struct
     | Expression.Mlam { parameters; body; _ } ->
         let pp_parameter ppf (parameter, modifier) =
           match (parameter, modifier) with
-          | Option.Some parameter, _ -> Identifier.pp ppf parameter
+          | Option.Some parameter, (`Plain | `Hash | `Dollar) ->
+              (* The hash or dollar prefix is part of [parameter] *)
+              Identifier.pp ppf parameter
           | Option.None, `Plain -> Format.pp_print_string ppf "_"
           | Option.None, `Hash -> Format.pp_print_string ppf "#_"
           | Option.None, `Dollar -> Format.pp_print_string ppf "$_"
@@ -1224,12 +889,13 @@ module Comp = struct
     | Expression.Let { pattern; scrutinee; body; _ } ->
         Format.fprintf ppf "@[<hov 2>let@ %a =@ %a@ in@ %a@]" pp_pattern
           pattern pp_expression scrutinee pp_expression body
-    | Expression.Box { meta_object; _ } -> Meta.pp_object ppf meta_object
+    | Expression.Box { meta_object; _ } ->
+        Meta.pp_meta_object ppf meta_object
     | Expression.Impossible { scrutinee; _ } ->
         (* [impossible (impossible (...))] is right-associative *)
         Format.fprintf ppf "@[<2>impossible@ %a@]"
           (parenthesize_right_argument_right_associative_operator
-             Precedence.of_expression ~parent_precedence pp_expression)
+             precedence_of_comp_expression ~parent_precedence pp_expression)
           scrutinee
     | Expression.Case { scrutinee; check_coverage; branches; _ } ->
         let pp_branch ppf (pattern, expression) =
@@ -1260,16 +926,17 @@ module Comp = struct
             Format.fprintf ppf ".%a@ %a" Qualified_identifier.pp observation
               (List1.pp ~pp_sep:Format.pp_print_space
                  (parenthesize_argument_prefix_operator
-                    Precedence.of_expression ~parent_precedence pp_expression))
+                    precedence_of_comp_expression ~parent_precedence
+                    pp_expression))
               arguments)
     | Expression.TypeAnnotated { expression; typ; _ } ->
         (* Type ascriptions are left-associative *)
         Format.fprintf ppf "@[<2>%a :@ %a@]"
           (parenthesize_left_argument_left_associative_operator
-             Precedence.of_expression ~parent_precedence pp_expression)
+             precedence_of_comp_expression ~parent_precedence pp_expression)
           expression
           (parenthesize_right_argument_left_associative_operator
-             Precedence.of_typ ~parent_precedence pp_typ)
+             precedence_of_comp_typ ~parent_precedence pp_typ)
           typ
     | Expression.Application { applicand; arguments; _ } ->
         pp_application
@@ -1285,13 +952,13 @@ module Comp = struct
                 } ->
                 `Operator_application operator
             | _ -> `Term)
-          ~precedence_of_applicand:Precedence.of_expression
-          ~precedence_of_argument:Precedence.of_expression
+          ~precedence_of_applicand:precedence_of_comp_expression
+          ~precedence_of_argument:precedence_of_comp_expression
           ~pp_applicand:pp_expression ~pp_argument:pp_expression
           ~parent_precedence ppf (applicand, arguments)
 
   and pp_pattern ppf pattern =
-    let parent_precedence = Precedence.of_pattern pattern in
+    let parent_precedence = precedence_of_comp_pattern pattern in
     match pattern with
     | Pattern.Variable { identifier; _ } -> Identifier.pp ppf identifier
     | Pattern.Constant { identifier; quoted; operator; _ } ->
@@ -1299,7 +966,7 @@ module Comp = struct
           Format.fprintf ppf "(%a)" Qualified_identifier.pp identifier
         else Qualified_identifier.pp ppf identifier
     | Pattern.MetaObject { meta_pattern; _ } ->
-        Meta.pp_pattern ppf meta_pattern
+        Meta.pp_meta_pattern ppf meta_pattern
     | Pattern.Tuple { elements; _ } ->
         Format.fprintf ppf "@[<2>(%a)@]"
           (List2.pp ~pp_sep:Format.comma pp_pattern)
@@ -1308,15 +975,16 @@ module Comp = struct
         (* The type annotation operator is left-associative *)
         Format.fprintf ppf "@[<2>%a :@ %a@]"
           (parenthesize_left_argument_left_associative_operator
-             Precedence.of_pattern ~parent_precedence pp_pattern)
+             precedence_of_comp_pattern ~parent_precedence pp_pattern)
           pattern
           (parenthesize_right_argument_left_associative_operator
-             Precedence.of_typ ~parent_precedence pp_typ)
+             precedence_of_comp_typ ~parent_precedence pp_typ)
           typ
     | Pattern.MetaTypeAnnotated
         { annotation_identifier; annotation_type; body; _ } ->
         Format.fprintf ppf "@[<2>{@ %a :@ %a@ }@ %a@]" Identifier.pp
-          annotation_identifier Meta.pp_typ annotation_type pp_pattern body
+          annotation_identifier Meta.pp_meta_typ annotation_type pp_pattern
+          body
     | Pattern.Wildcard _ -> Format.pp_print_string ppf "_"
     | Pattern.Application { applicand; arguments; _ } ->
         pp_application
@@ -1332,13 +1000,13 @@ module Comp = struct
                 } ->
                 `Operator_application operator
             | _ -> `Term)
-          ~precedence_of_applicand:Precedence.of_pattern
-          ~precedence_of_argument:Precedence.of_pattern
+          ~precedence_of_applicand:precedence_of_comp_pattern
+          ~precedence_of_argument:precedence_of_comp_pattern
           ~pp_applicand:pp_pattern ~pp_argument:pp_pattern ~parent_precedence
           ppf (applicand, arguments)
 
   and pp_copattern ppf copattern =
-    let[@warning "-26"] parent_precedence = Precedence.of_copattern in
+    let[@warning "-26"] parent_precedence = precedence_of_comp_copattern in
     match copattern with
     | Copattern.Observation { observation; arguments; _ } -> (
         match List1.of_list arguments with
@@ -1360,7 +1028,8 @@ module Comp = struct
     List.pp ~pp_sep:Format.comma pp_binding ppf bindings
 end
 
-(** Pretty-printing for Harpoon syntax. *)
+(** {1 Pretty-Printing Harpoon Syntax} *)
+
 module Harpoon = struct
   open Harpoon
 
@@ -1450,7 +1119,8 @@ module Harpoon = struct
     in
     Format.fprintf ppf "@[<v>{ @[<hv>%a@]@,| @[<hv>%a@]@,; @[<v>%a@]@,}@]"
       (List.pp ~pp_sep:Format.comma (fun ppf (i, t) ->
-           Format.fprintf ppf "@[<2>%a :@ %a@]" Identifier.pp i Meta.pp_typ t))
+           Format.fprintf ppf "@[<2>%a :@ %a@]" Identifier.pp i
+             Meta.pp_meta_typ t))
       meta_context_bindings
       (List.pp ~pp_sep:Format.comma (fun ppf (i, t) ->
            Format.fprintf ppf "@[<2>%a :@ %a@]" Identifier.pp i Comp.pp_typ t))
@@ -1557,7 +1227,8 @@ module Harpoon = struct
     | Repl.Command.Help _ -> Format.pp_print_string ppf "help"
 end
 
-(** Pretty-printing for Beluga signature syntax. *)
+(** {1 Pretty-Printing Signature Syntax} *)
+
 module Signature = struct
   open Signature
 
@@ -1679,10 +1350,10 @@ module Signature = struct
     match declaration with
     | Declaration.Typ { identifier; kind; _ } ->
         Format.fprintf ppf "@[<2>%a :@ %a.@]" Identifier.pp identifier
-          LF.pp_kind kind
+          LF.pp_lf_kind kind
     | Declaration.Const { identifier; typ; _ } ->
         Format.fprintf ppf "@[<2>%a :@ %a.@]" Identifier.pp identifier
-          LF.pp_typ typ
+          LF.pp_lf_typ typ
     | Declaration.CompTyp _ ->
         Error.violation
           "[pp_declaration] CompTyp declarations must occur in a recursive \
@@ -1698,14 +1369,6 @@ module Signature = struct
     | Declaration.CompDest _ ->
         Error.violation
           "[pp_declaration] CompDest declarations must occur in a recursive \
-           declarations group"
-    | Declaration.Theorem _ ->
-        Error.violation
-          "[pp_declaration] Theorem declarations must occur in a recursive \
-           declarations group"
-    | Declaration.Proof _ ->
-        Error.violation
-          "[pp_declaration] Proof declarations must occur in a recursive \
            declarations group"
     | Declaration.Theorem { identifier; typ; order; body; _ } -> (
         match order with
@@ -1756,7 +1419,7 @@ module Signature = struct
           List.pp ~pp_sep:Format.pp_print_space
             (fun ppf (i, t) ->
               Format.fprintf ppf "@[{@ %a :@ %a@ }@]" Identifier.pp i
-                Meta.pp_typ t)
+                Meta.pp_meta_typ t)
             ppf bindings
         in
         let pp_query_argument ppf = function
@@ -1767,12 +1430,12 @@ module Signature = struct
         | Option.None ->
             Format.fprintf ppf "@[<2>query@ %a@ %a@ %a@ %a@]"
               pp_query_argument expected_solutions pp_query_argument
-              maximum_tries pp_meta_context meta_context LF.pp_typ typ
+              maximum_tries pp_meta_context meta_context LF.pp_lf_typ typ
         | Option.Some identifier ->
             Format.fprintf ppf "@[<2>query@ %a@ %a@ %a@ %a :@ %a@]"
               pp_query_argument expected_solutions pp_query_argument
               maximum_tries pp_meta_context meta_context Identifier.pp
-              identifier LF.pp_typ typ)
+              identifier LF.pp_lf_typ typ)
     | Declaration.MQuery
         { identifier
         ; typ
@@ -1806,140 +1469,51 @@ module Signature = struct
         Format.fprintf ppf "%s%s%s" left_delimiter content right_delimiter
 
   (* TODO: Re-parse declarations to group them *)
-  and pp_recursive_declarations ppf declarations =
+  and pp_recursive_declarations _ppf _declarations =
     (* TODO: Handle different syntaxes for mutually recursive datatypes and
        proofs and programs *)
     Obj.magic ()
 
-  and group_recursive_declarations declarations =
-    match declarations with
-    | List1.T ((Declaration.Theorem _ | Declaration.Proof _), _)
-    (* Mutually recursive Beluga theorem and Harpoon proof declarations *) ->
-        List1.map
-          (function
-            | Declaration.Theorem { identifier; typ; order; body; _ } ->
-                `Theorem (identifier, typ, order, body)
-            | Declaration.Proof { identifier; typ; order; body; _ } ->
-                `Proof (identifier, typ, order, body)
-            | _ ->
-                Error.violation
-                  "[group_recursive_declarations] Malformed AST: \
-                   unsupported declaration in mutually recursive Beluga \
-                   theorem and Harpoon proof declarations")
-          declarations
-    | List1.T (Declaration.Typ _, _)
-    (* Mutually recursive LF type and term constant declarations *) ->
-        declarations
-        |> List1.fold_left
-             (function
-               | Declaration.Typ { identifier; kind; _ } ->
-                   List1.singleton (`Typ (identifier, kind, []))
-               | _ -> assert false)
-             (fun grouped_declarations_rev declaration ->
-               match (grouped_declarations_rev, declaration) with
-               | ( List1.T
-                     (`Typ (typ_identifier, typ_kind, constants_rev), rest)
-                 , Declaration.Typ { identifier; kind; _ } ) ->
-                   let constants = List.rev constants_rev in
-                   List1.from
-                     (`Typ (identifier, kind, []))
-                     (`Typ (typ_identifier, typ_kind, constants) :: rest)
-               | ( List1.T
-                     (`Typ (typ_identifier, typ_kind, constants_rev), rest)
-                 , Declaration.Const { identifier; typ; _ } ) ->
-                   let constants_rev' = (identifier, typ) :: constants_rev in
-                   List1.from
-                     (`Typ (typ_identifier, typ_kind, constants_rev'))
-                     rest
-               | _ -> Error.violation "TODO:")
-        |> List1.rev
-    | List1.T ((Declaration.CompTyp _ | Declaration.CompCotyp _), _)
-    (* Mutually recursive computation-level type, cotype, constructor and
-       destructor declarations *) ->
-        declarations
-        |> List1.fold_left
-             (function
-               | Declaration.CompTyp
-                   { identifier; kind; datatype_flavour; _ } ->
-                   List1.singleton
-                     (`CompTyp (identifier, kind, datatype_flavour, []))
-               | Declaration.CompCotyp { identifier; kind; _ } ->
-                   List1.singleton (`CompCotyp (identifier, kind, []))
-               | _ -> assert false)
-             (fun grouped_declarations_rev declaration ->
-               match (grouped_declarations_rev, declaration) with
-               | ( List1.T
-                     ( `CompTyp
-                         ( typ_identifier
-                         , typ_kind
-                         , datatype_flavour
-                         , constructors_rev )
-                     , rest )
-                 , Declaration.Typ (* FIXME: Wrong, use takewhile *)
-                     { identifier; kind; _ } ) ->
-                   let constructors = List.rev constructors_rev in
-                   List1.from
-                     (`Typ (identifier, kind, []))
-                     (`CompTyp
-                        ( typ_identifier
-                        , typ_kind
-                        , datatype_flavour
-                        , constructors )
-                     :: rest)
-                   (* TODO: Missing cases*)
-               | ( List1.T
-                     (`Typ (typ_identifier, typ_kind, constants_rev), rest)
-                 , Declaration.Const { identifier; typ; _ } )
-               (* TODO: *) ->
-                   let constants_rev' = (identifier, typ) :: constants_rev in
-                   List1.from
-                     (`Typ (typ_identifier, typ_kind, constants_rev'))
-                     rest
-               | _ -> Error.violation "TODO:")
-        |> List1.rev
-    | _ ->
-        Error.violation
-          "[group_recursive_declarations] Malformed AST: unsupported \
-           mutually recursive declarations"
+  and _group_recursive_declarations _declarations = Obj.magic ()
 
-  and pp_signature ppf signature = Obj.magic ()
+  and pp_signature _ppf _signature = Obj.magic ()
 end
 
 (** {1 Aliases} *)
 
 (** {2 LF} *)
 
-let pp_lf_kind = LF.pp_kind
+let pp_lf_kind = LF.pp_lf_kind
 
-let pp_lf_typ = LF.pp_typ
+let pp_lf_typ = LF.pp_lf_typ
 
-let pp_lf_term = LF.pp_term
+let pp_lf_term = LF.pp_lf_term
 
 (** {2 Contextual LF} *)
 
-let pp_clf_typ = CLF.pp_typ
+let pp_clf_typ = CLF.pp_clf_typ
 
-let pp_clf_term = CLF.pp_term
+let pp_clf_term = CLF.pp_clf_term
 
-let pp_clf_term_pattern = CLF.pp_term_pattern
+let pp_clf_term_pattern = CLF.pp_clf_term_pattern
 
-let pp_clf_substitution = CLF.pp_substitution
+let pp_clf_substitution = CLF.pp_clf_substitution
 
-let pp_clf_substitution_pattern = CLF.pp_substitution_pattern
+let pp_clf_substitution_pattern = CLF.pp_clf_substitution_pattern
 
-let pp_clf_context = CLF.pp_context
+let pp_clf_context = CLF.pp_clf_context
 
-let pp_clf_context_pattern = CLF.pp_context_pattern
+let pp_clf_context_pattern = CLF.pp_clf_context_pattern
 
 (** {2 Meta-Level} *)
 
-let pp_meta_typ = Meta.pp_typ
+let pp_meta_typ = Meta.pp_meta_typ
 
-let pp_meta_object = Meta.pp_object
+let pp_meta_object = Meta.pp_meta_object
 
-let pp_meta_context = Meta.pp_context
+let pp_meta_context = Meta.pp_meta_context
 
-let pp_meta_pattern = Meta.pp_pattern
+let pp_meta_pattern = Meta.pp_meta_pattern
 
 let pp_schema = Meta.pp_schema
 

@@ -65,7 +65,7 @@ end = struct
   let lf_weak_prefix =
     let lambda =
       seq2
-        (token Token.LAMBDA
+        (lambda
         &> seq2 omittable_identifier (maybe (colon &> LF_parsers.lf_object))
         <& dot)
         LF_parsers.lf_object
@@ -100,11 +100,11 @@ end = struct
                  { location; identifier; quoted = false })
       |> labelled "LF constant or variable"
     and type_ =
-      token Token.KW_TYPE |> span
+      keyword "type" |> span
       $> (fun (location, ()) -> Synprs.LF.Object.Raw_type { location })
       |> labelled "LF `type' kind"
     and hole =
-      token Token.UNDERSCORE |> span
+      underscore |> span
       $> (fun (location, ()) -> Synprs.LF.Object.Raw_hole { location })
       |> labelled "LF hole object"
     and parenthesized_or_quoted_constant_or_variable =
@@ -144,20 +144,19 @@ end = struct
        level is ambiguous. That is, [a -> b <- c] could be parsed as [a -> (b
        <- c)] when parsed from left to right, or as [(a -> b) <- c] when
        parsed from right to left. *)
-    let forward_arrow = token Token.ARROW $> fun () -> `Forward_arrow
-    and backward_arrow = token Token.BACKARROW $> fun () -> `Backward_arrow
+    let forward_arrow_operator = forward_arrow $> fun () -> `Forward_arrow
+    and backward_arrow_operator = backward_arrow $> fun () -> `Backward_arrow
     and right_operand = alt lf_object4 lf_weak_prefix in
     lf_object4 >>= fun object_ ->
-    maybe (alt forward_arrow backward_arrow)
+    maybe (alt forward_arrow_operator backward_arrow_operator)
     >>= (function
           | Option.None -> return (`Singleton object_)
           | Option.Some `Forward_arrow ->
               (* A forward arrow was parsed. Subsequent backward arrows are
                  ambiguous. *)
               let backward_arrow =
-                token Token.BACKARROW >>= fun () ->
-                fail Ambiguous_lf_backward_arrow
-              and forward_arrow = token Token.ARROW in
+                backward_arrow >>= fun () -> fail Ambiguous_lf_backward_arrow
+              and forward_arrow = forward_arrow_operator in
               let operator = alt backward_arrow forward_arrow in
               seq2 right_operand (many (operator &> right_operand))
               $> fun (x, xs) ->
@@ -165,12 +164,13 @@ end = struct
           | Option.Some `Backward_arrow ->
               (* A backward arrow was parsed. Subsequent forward arrows are
                  ambiguous. *)
-              let backward_arrow = token Token.BACKARROW
-              and forward_arrow =
-                token Token.ARROW >>= fun () ->
-                fail Ambiguous_lf_forward_arrow
+              let backward_arrow_operator = backward_arrow
+              and forward_arrow_operator =
+                forward_arrow >>= fun () -> fail Ambiguous_lf_forward_arrow
               in
-              let operator = alt forward_arrow backward_arrow in
+              let operator =
+                alt forward_arrow_operator backward_arrow_operator
+              in
               seq2 right_operand (many (operator &> right_operand))
               $> fun (x, xs) ->
               `Backward_arrows (List1.from object_ (x :: xs)))

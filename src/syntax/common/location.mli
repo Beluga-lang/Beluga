@@ -51,19 +51,33 @@ val make :
   -> stop_position:Position.t
   -> t
 
-(** [join l1 l2] is the union of the locations [l1] and [l2].
+(** [between ~start ~stop] is the location starting at [start_position start]
+    and stopping at [stop_position stop].
+
+    It is assumed that [filename start = filename stop].
+
+    Ghost locations are left and right identities of [between], meaning that:
+
+    - If [is_ghost start], then [between ~start ~stop = stop].
+    - If [is_ghost stop], then [between ~start ~stop = start]. *)
+val between : start:t -> stop:t -> t
+
+(** [join l1 l2] is the smallest location that contains [l1] and [l2].
 
     It is assumed that [filename l1 = filename l2].
 
-    - If [l1 = ghost], then [join l1 l2 = l2].
-    - If [l2 = ghost], then [join l1 l2 = l1]. *)
+    Ghost locations are left and right identities of [join], meaning that:.
+
+    - If [is_ghost l1], then [join l1 l2 = l2].
+    - If [is_ghost l2], then [join l1 l2 = l1]. *)
 val join : t -> t -> t
 
-(** [join_all init ls] is the union of the locations in [ls] with [init]. *)
+(** [join_all init ls] is each location in [ls] joined together, additionally
+    with [init]. *)
 val join_all : t -> t List.t -> t
 
-(** [join_all_contramap f init xs] is the union of the locations [init] and
-    those contramapped by [f] from [xs].
+(** [join_all_contramap f init xs] is each location contramapped by [f] from
+    [xs]. joined together, additionally with [init].
 
     If [xs = \[x1; x2; ...; xn\]], then
     [join_all_contramap f init xs = join_all init \[f x1; f x2; ...; f xn\]]. *)

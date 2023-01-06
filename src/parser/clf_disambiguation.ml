@@ -209,7 +209,7 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
 
     let associativity = Fun.(operator >> Operator.associativity)
 
-    let location = Fun.(identifier >> Qualified_identifier.location)
+    let location = Fun.(applicand >> Synprs.location_of_clf_object)
 
     let write operator arguments =
       let applicand = applicand operator in

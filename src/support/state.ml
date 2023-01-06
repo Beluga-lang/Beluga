@@ -55,47 +55,45 @@ end
 module Make (S : sig
   type t
 end) : STATE with type state = S.t = struct
-  module State = struct
-    type state = S.t
+  type state = S.t
 
-    let[@inline] run m init = m init
+  let[@inline] run m init = m init
 
-    let[@inline] eval m init =
-      let _final, n = run m init in
-      n
+  module M = Monad.Make (struct
+    (** The type of state transformers. *)
+    type 'a t = state -> state * 'a
 
-    let[@inline] exec m init =
-      let final, _n = run m init in
-      final
+    let[@inline] return a state = (state, a)
 
-    let[@inline] locally f m s =
-      let a = eval m (f s) in
-      (s, a)
+    let[@inline] bind f v state =
+      let state', a = run v state in
+      f a state'
+  end)
 
-    include Monad.Make (struct
-      (** The type of state transformers. *)
-      type 'a t = state -> state * 'a
+  include M
+  include Functor.Make (M)
+  include Apply.Make (M)
 
-      let[@inline] return a state = (state, a)
+  let[@inline] get state = (state, state)
 
-      let[@inline] bind f v state =
-        let state', a = run v state in
-        f a state'
-    end)
+  let[@inline] put state' _m = (state', ())
 
-    let[@inline] get state = (state, state)
+  let[@inline] modify f =
+    let* s = get in
+    let s' = f s in
+    put s'
 
-    let[@inline] put state' _m = (state', ())
+  let[@inline] eval m init =
+    let _final, n = run m init in
+    n
 
-    let[@inline] modify f =
-      let* s = get in
-      let s' = f s in
-      put s'
-  end
+  let[@inline] exec m init =
+    let final, _n = run m init in
+    final
 
-  include State
-  include Functor.Make (State)
-  include Apply.Make (State)
+  let[@inline] locally f m s =
+    let a = eval m (f s) in
+    (s, a)
 
   let[@inline] scoped ~set ~unset m =
     let* () = set in

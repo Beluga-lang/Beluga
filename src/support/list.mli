@@ -144,6 +144,12 @@ val take_opt : int -> 'a list -> ('a list * 'a list) option
     ..., [x(k-1)] all satisfy [p], and [xk] does not satisfy [p]. *)
 val take_while : ('a -> bool) -> 'a list -> 'a list * 'a list
 
+(** [take_while_map p \[x1; x2; ...; xn\]] is
+    [(\[y1; y2; ...; y(k-1)\], \[xk; x(k+1); ...; xn\])], where [y1], [y2],
+    ..., [y(k-1)] are such that [p xi = Option.Some yi], and [xk] is the
+    first element such that [p xk = Option.None]. *)
+val take_while_map : ('a -> 'b option) -> 'a list -> 'b list * 'a list
+
 (** [compare cmp \[a1; ...; an\] \[b1; ...; bm\]] performs a lexicographic
     comparison of the two input lists, using the same ['a -> 'a -> int]
     interface as {!Stdlib.compare}:

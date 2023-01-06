@@ -5,7 +5,9 @@ open Beluga_syntax
     outputs printed it. *)
 val with_pp_to_file : string -> (Format.formatter -> unit) -> unit
 
-(** [read_test_case_inputs ~filename] reads test cases terminated by [;;]
-    from the file at [filename]. Lines in the file comprised only of
-    whitespaces or starting with [%] are ignored. *)
+(** [read_test_case_inputs ~filename] reads test case inputs from the file at
+    [filename].
+
+    A test case is optionally preceeded by comments prefixed by [%], and must
+    be terminated with [;;]. *)
 val read_test_case_inputs : filename:string -> (Location.t * string) list

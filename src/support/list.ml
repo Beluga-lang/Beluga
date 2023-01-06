@@ -171,6 +171,18 @@ let take_while p =
   in
   fun l -> take_while l []
 
+let take_while_map p =
+  let rec take_while_map_tl l acc =
+    match l with
+    | x :: xs -> (
+        match p x with
+        | Some y -> take_while_map_tl xs (y :: acc)
+        | None -> (rev acc, xs))
+    | [] -> (rev acc, [])
+  in
+
+  fun l -> take_while_map_tl l []
+
 let rec compare cmp l1 l2 =
   match (l1, l2) with
   | [], [] -> 0

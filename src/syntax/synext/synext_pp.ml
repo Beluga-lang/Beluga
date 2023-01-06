@@ -1232,6 +1232,10 @@ end
 module Signature = struct
   open Signature
 
+  exception Unsupported_non_recursive_declaration
+
+  exception Unsupported_recursive_declaration
+
   let pp_associativity ppf = function
     | Associativity.Left_associative -> Format.pp_print_string ppf "left"
     | Associativity.Right_associative -> Format.pp_print_string ppf "right"
@@ -1348,46 +1352,21 @@ module Signature = struct
 
   and pp_declaration ppf declaration =
     match declaration with
+    | Declaration.CompTyp _
+    | Declaration.CompCotyp _
+    | Declaration.CompConst _
+    | Declaration.CompDest _
+    | Declaration.Theorem _
+    | Declaration.Proof _ ->
+        Error.raise_at1
+          (Synext_location.location_of_signature_declaration declaration)
+          Unsupported_non_recursive_declaration
     | Declaration.Typ { identifier; kind; _ } ->
         Format.fprintf ppf "@[<2>%a :@ %a.@]" Identifier.pp identifier
           LF.pp_lf_kind kind
     | Declaration.Const { identifier; typ; _ } ->
         Format.fprintf ppf "@[<2>%a :@ %a.@]" Identifier.pp identifier
           LF.pp_lf_typ typ
-    | Declaration.CompTyp _ ->
-        Error.violation
-          "[pp_declaration] CompTyp declarations must occur in a recursive \
-           declarations group"
-    | Declaration.CompCotyp _ ->
-        Error.violation
-          "[pp_declaration] CompCotyp declarations must occur in a \
-           recursive declarations group"
-    | Declaration.CompConst _ ->
-        Error.violation
-          "[pp_declaration] CompConst declarations must occur in a \
-           recursive declarations group"
-    | Declaration.CompDest _ ->
-        Error.violation
-          "[pp_declaration] CompDest declarations must occur in a recursive \
-           declarations group"
-    | Declaration.Theorem { identifier; typ; order; body; _ } -> (
-        match order with
-        | Option.None ->
-            Format.fprintf ppf "rec %a :@ %a =@ @[<v 2>%a;@]" Identifier.pp
-              identifier Comp.pp_typ typ Comp.pp_expression body
-        | Option.Some order ->
-            Format.fprintf ppf "rec %a :@ %a =@.%a@.@[<v 2>%a;@]"
-              Identifier.pp identifier Comp.pp_typ typ
-              pp_totality_declaration order Comp.pp_expression body)
-    | Declaration.Proof { identifier; typ; order; body; _ } -> (
-        match order with
-        | Option.None ->
-            Format.fprintf ppf "proof %a :@ %a =@ @[<v 2>%a;@]" Identifier.pp
-              identifier Comp.pp_typ typ Harpoon.pp_proof body
-        | Option.Some order ->
-            Format.fprintf ppf "proof %a :@ %a =@.%a@.@[<v 2>%a;@]"
-              Identifier.pp identifier Comp.pp_typ typ
-              pp_totality_declaration order Harpoon.pp_proof body)
     | Declaration.Schema { identifier; schema; _ } ->
         Format.fprintf ppf "@[<2>schema %a =@ %a;@]" Identifier.pp identifier
           Meta.pp_schema schema
@@ -1395,7 +1374,9 @@ module Signature = struct
     | Declaration.GlobalPragma { pragma; _ } -> pp_global_pragma ppf pragma
     | Declaration.Recursive_declarations { declarations; _ } ->
         pp_recursive_declarations ppf declarations
-    | Declaration.CompTypAbbrev _ -> Obj.magic ()
+    | Declaration.CompTypAbbrev { identifier; kind; typ; _ } ->
+        Format.fprintf ppf "@[<2>typedef %a :@ %a =@ %a;@]" Identifier.pp
+          identifier Comp.pp_kind kind Comp.pp_typ typ
     | Declaration.Val { identifier; typ; expression; _ } -> (
         match typ with
         | Option.None ->
@@ -1468,15 +1449,231 @@ module Signature = struct
         and right_delimiter = "}}%" in
         Format.fprintf ppf "%s%s%s" left_delimiter content right_delimiter
 
-  (* TODO: Re-parse declarations to group them *)
-  and pp_recursive_declarations _ppf _declarations =
-    (* TODO: Handle different syntaxes for mutually recursive datatypes and
-       proofs and programs *)
-    Obj.magic ()
+  and pp_recursive_declarations ppf declarations =
+    Format.fprintf ppf "@[<v 0>%a@];"
+      (List1.pp
+         ~pp_sep:(fun ppf () -> Format.fprintf ppf "@.@.and ")
+         pp_grouped_declaration)
+      (group_recursive_declarations declarations)
 
-  and _group_recursive_declarations _declarations = Obj.magic ()
+  and pp_grouped_declaration ppf declaration =
+    match declaration with
+    | `Lf_typ (identifier, kind, constants) ->
+        let pp_constant ppf (identifier, typ) =
+          Format.fprintf ppf "@[<h>| %a :@ %a@]@" Identifier.pp identifier
+            LF.pp_lf_typ typ
+        in
+        Format.fprintf ppf "@[<v 0>LF %a :@ %a =@,%a@]" Identifier.pp
+          identifier LF.pp_lf_kind kind
+          (List.pp
+             ~pp_sep:(fun ppf () -> Format.fprintf ppf "@.")
+             pp_constant)
+          constants
+    | `Inductive_comp_typ (identifier, kind, constants) ->
+        let pp_constant ppf (identifier, typ) =
+          Format.fprintf ppf "@[<h>| %a :@ %a@]@" Identifier.pp identifier
+            Comp.pp_typ typ
+        in
+        Format.fprintf ppf "@[<v 0>inductive %a :@ %a =@,%a@]" Identifier.pp
+          identifier Comp.pp_kind kind
+          (List.pp
+             ~pp_sep:(fun ppf () -> Format.fprintf ppf "@.")
+             pp_constant)
+          constants
+    | `Stratified_comp_typ (identifier, kind, constants) ->
+        let pp_constant ppf (identifier, typ) =
+          Format.fprintf ppf "@[<h>| %a :@ %a@]@" Identifier.pp identifier
+            Comp.pp_typ typ
+        in
+        Format.fprintf ppf "@[<v 0>stratified %a :@ %a =@,%a@]" Identifier.pp
+          identifier Comp.pp_kind kind
+          (List.pp
+             ~pp_sep:(fun ppf () -> Format.fprintf ppf "@.")
+             pp_constant)
+          constants
+    | `Coinductive_comp_typ (identifier, kind, constants) ->
+        let pp_constant ppf (identifier, observation_typ, return_typ) =
+          Format.fprintf ppf "@[<h>| %a :@ %a ::@ %a@]@" Identifier.pp
+            identifier Comp.pp_typ observation_typ Comp.pp_typ return_typ
+        in
+        Format.fprintf ppf "@[<v 0>coinductive %a :@ %a =@,%a@]"
+          Identifier.pp identifier Comp.pp_kind kind
+          (List.pp
+             ~pp_sep:(fun ppf () -> Format.fprintf ppf "@.")
+             pp_constant)
+          constants
+    | `Theorem (identifier, typ, order, body) -> (
+        match order with
+        | Option.None ->
+            Format.fprintf ppf "@[<v 0>rec %a :@ %a =@ @[<v 2>%a@]@]"
+              Identifier.pp identifier Comp.pp_typ typ Comp.pp_expression
+              body
+        | Option.Some order ->
+            Format.fprintf ppf "@[<v 0>rec %a :@ %a =@.%a@.@[<v 2>%a@]@]"
+              Identifier.pp identifier Comp.pp_typ typ
+              pp_totality_declaration order Comp.pp_expression body)
+    | `Proof (identifier, typ, order, body) -> (
+        match order with
+        | Option.None ->
+            Format.fprintf ppf "@[<v 0>proof %a :@ %a =@ @[<v 2>%a@]@]"
+              Identifier.pp identifier Comp.pp_typ typ Harpoon.pp_proof body
+        | Option.Some order ->
+            Format.fprintf ppf "@[<v 0>proof %a :@ %a =@.%a@.@[<v 2>%a@]@]"
+              Identifier.pp identifier Comp.pp_typ typ
+              pp_totality_declaration order Harpoon.pp_proof body)
 
-  and pp_signature _ppf _signature = Obj.magic ()
+  and group_recursive_declarations declarations =
+    let (List1.T (first_declaration, declarations')) = declarations in
+    match first_declaration with
+    | Declaration.Typ _ ->
+        group_recursive_lf_typ_declarations first_declaration declarations'
+    | Declaration.Theorem _
+    | Declaration.Proof _ ->
+        group_recursive_theorem_declarations first_declaration declarations'
+    | Declaration.CompTyp _
+    | Declaration.CompCotyp _ ->
+        group_recursive_comp_typ_declarations first_declaration declarations'
+    | _ ->
+        Error.raise_at1
+          (Synext_location.location_of_signature_declaration
+             first_declaration)
+          Unsupported_recursive_declaration
+
+  and group_recursive_lf_typ_declarations first_declaration declarations =
+    match first_declaration with
+    | Declaration.Typ { identifier; kind; _ } -> (
+        let lf_term_constant_declarations, declarations' =
+          List.take_while_map
+            (function
+              | Declaration.Const { identifier; typ; _ } ->
+                  Option.some (identifier, typ)
+              | _ -> Option.none)
+            declarations
+        in
+        let lf_typ_declaration =
+          `Lf_typ (identifier, kind, lf_term_constant_declarations)
+        in
+        match declarations' with
+        | [] -> List1.singleton lf_typ_declaration
+        | first_declaration' :: declarations'' ->
+            let lf_typ_declarations =
+              group_recursive_lf_typ_declarations first_declaration'
+                declarations''
+            in
+            List1.cons lf_typ_declaration lf_typ_declarations)
+    | _ ->
+        Error.raise_at1
+          (Synext_location.location_of_signature_declaration
+             first_declaration)
+          Unsupported_recursive_declaration
+
+  and group_recursive_theorem_declarations first_declaration declarations =
+    match first_declaration with
+    | Declaration.Theorem { identifier; typ; order; body; _ } -> (
+        let theorem_declaration = `Theorem (identifier, typ, order, body) in
+        match declarations with
+        | [] -> List1.singleton theorem_declaration
+        | first_declaration' :: declarations'' ->
+            let theorem_declarations =
+              group_recursive_theorem_declarations first_declaration'
+                declarations''
+            in
+            List1.cons theorem_declaration theorem_declarations)
+    | Declaration.Proof { identifier; typ; order; body; _ } -> (
+        let proof_declaration = `Proof (identifier, typ, order, body) in
+        match declarations with
+        | [] -> List1.singleton proof_declaration
+        | first_declaration' :: declarations'' ->
+            let theorem_declarations =
+              group_recursive_theorem_declarations first_declaration'
+                declarations''
+            in
+            List1.cons proof_declaration theorem_declarations)
+    | _ ->
+        Error.raise_at1
+          (Synext_location.location_of_signature_declaration
+             first_declaration)
+          Unsupported_recursive_declaration
+
+  and group_recursive_comp_typ_declarations first_declaration declarations =
+    match first_declaration with
+    | Declaration.CompTyp { identifier; kind; datatype_flavour; _ } -> (
+        let comp_constructor_declarations, declarations' =
+          List.take_while_map
+            (function
+              | Declaration.CompConst { identifier; typ; _ } ->
+                  Option.some (identifier, typ)
+              | _ -> Option.none)
+            declarations
+        in
+        let comp_typ_declaration =
+          match datatype_flavour with
+          | `Inductive ->
+              `Inductive_comp_typ
+                (identifier, kind, comp_constructor_declarations)
+          | `Stratified ->
+              `Stratified_comp_typ
+                (identifier, kind, comp_constructor_declarations)
+        in
+        match declarations' with
+        | [] -> List1.singleton comp_typ_declaration
+        | first_declaration' :: declarations'' ->
+            let comp_typ_declarations =
+              group_recursive_comp_typ_declarations first_declaration'
+                declarations''
+            in
+            List1.cons comp_typ_declaration comp_typ_declarations)
+    | Declaration.CompCotyp { identifier; kind; _ } -> (
+        let comp_destructor_declarations, declarations' =
+          List.take_while_map
+            (function
+              | Declaration.CompDest
+                  { identifier; observation_type; return_type; _ } ->
+                  Option.some (identifier, observation_type, return_type)
+              | _ -> Option.none)
+            declarations
+        in
+        let comp_cotyp_declaration =
+          `Coinductive_comp_typ
+            (identifier, kind, comp_destructor_declarations)
+        in
+        match declarations' with
+        | [] -> List1.singleton comp_cotyp_declaration
+        | first_declaration' :: declarations'' ->
+            let comp_typ_declarations =
+              group_recursive_comp_typ_declarations first_declaration'
+                declarations''
+            in
+            List1.cons comp_cotyp_declaration comp_typ_declarations)
+    | _ ->
+        Error.raise_at1
+          (Synext_location.location_of_signature_declaration
+             first_declaration)
+          Unsupported_recursive_declaration
+
+  and pp_signature ppf signature =
+    Format.fprintf ppf "@[<v 0>%a@]@."
+      (List.pp
+         ~pp_sep:(fun ppf () -> Format.fprintf ppf "@.@.")
+         pp_declaration)
+      signature
+
+  let pp_exception ppf = function
+    | Unsupported_non_recursive_declaration ->
+        Format.fprintf ppf
+          "Unsupported pretty-printing for this declaration outside of a \
+           recursive group of declarations."
+    | Unsupported_recursive_declaration ->
+        Format.fprintf ppf
+          "Unsupported pretty-printing for this declaration in a recursive \
+           group of declarations."
+    | _ ->
+        Error.raise (Invalid_argument "[pp_exception] unsupported exception")
+
+  let () =
+    Printexc.register_printer (fun exn ->
+        try Option.some (Format.stringify pp_exception exn) with
+        | Invalid_argument _ -> Option.none)
 end
 
 (** {1 Aliases} *)

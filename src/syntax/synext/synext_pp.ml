@@ -3,13 +3,7 @@
 open Support
 open Common
 open Synext_definition
-
-[@@@warning "-A"]
-(*= TODO:
-[@@@warning "+A-4-44"]
-*)
-
-include Parenthesizer
+open Parenthesizer
 
 (** {1 Printing LF Kinds, Types and Terms} *)
 module LF = struct
@@ -46,8 +40,9 @@ module LF = struct
       match typ with
       | Typ.Pi _ -> Static 1
       | Typ.Arrow _ -> Static 3
-      | Typ.Application { applicand = Typ.Constant { operator; _ }; _ }
-        when Operator.is_prefix operator
+      | Typ.Application
+          { applicand = Typ.Constant { operator; quoted; _ }; _ }
+        when quoted || Operator.is_prefix operator
              (* Juxtapositions are of higher precedence than user-defined
                 operators *) ->
           Static application_precedence
@@ -62,8 +57,9 @@ module LF = struct
       match term with
       | Term.Abstraction _ -> Static 1
       | Term.TypeAnnotated _ -> Static 2
-      | Term.Application { applicand = Term.Constant { operator; _ }; _ }
-        when Operator.is_prefix operator
+      | Term.Application
+          { applicand = Term.Constant { operator; quoted; _ }; _ }
+        when quoted || Operator.is_prefix operator
              (* Juxtapositions are of higher precedence than user-defined
                 operators *) ->
           Static application_precedence
@@ -268,8 +264,9 @@ module CLF = struct
       | Typ.Pi _ -> Static 1
       | Typ.Arrow _ -> Static 3
       | Typ.Block _ -> Static 4
-      | Typ.Application { applicand = Typ.Constant { operator; _ }; _ }
-        when Operator.is_prefix operator
+      | Typ.Application
+          { applicand = Typ.Constant { operator; quoted; _ }; _ }
+        when quoted || Operator.is_prefix operator
              (* Juxtapositions are of higher precedence than user-defined
                 operators *) ->
           Static application_precedence
@@ -284,8 +281,9 @@ module CLF = struct
       match term with
       | Term.Abstraction _ -> Static 1
       | Term.TypeAnnotated _ -> Static 2
-      | Term.Application { applicand = Term.Constant { operator; _ }; _ }
-        when Operator.is_prefix operator
+      | Term.Application
+          { applicand = Term.Constant { operator; quoted; _ }; _ }
+        when quoted || Operator.is_prefix operator
              (* Juxtapositions are of higher precedence than user-defined
                 operators *) ->
           Static application_precedence
@@ -309,8 +307,8 @@ module CLF = struct
       | Term.Pattern.Abstraction _ -> Static 1
       | Term.Pattern.TypeAnnotated _ -> Static 2
       | Term.Pattern.Application
-          { applicand = Term.Pattern.Constant { operator; _ }; _ }
-        when Operator.is_prefix operator
+          { applicand = Term.Pattern.Constant { operator; quoted; _ }; _ }
+        when quoted || Operator.is_prefix operator
              (* Juxtapositions are of higher precedence than user-defined
                 operators *) ->
           Static application_precedence
@@ -902,10 +900,13 @@ module Comp = struct
       | Static of Int.t
       | User_defined_type of Int.t
       | User_defined_expression of Int.t
+      | User_defined_pattern of Int.t
 
     let type_application_precedence = 4
 
     let expression_application_precedence = 2
+
+    let pattern_application_precedence = 3
 
     let of_kind kind =
       match kind with
@@ -928,6 +929,7 @@ module Comp = struct
           { applicand = Typ.Constant { operator; quoted = false; _ }; _ }
       (* User-defined operator application *) ->
           User_defined_type (Operator.precedence operator)
+      | Typ.Application _ -> Static type_application_precedence
       | Typ.Constant _
       | Typ.Box _ ->
           Static 5
@@ -936,8 +938,8 @@ module Comp = struct
       match expression with
       | Expression.TypeAnnotated _ -> Static 1
       | Expression.Application
-          { applicand = Expression.Constant { operator; _ }; _ }
-        when Operator.is_prefix operator
+          { applicand = Expression.Constant { operator; quoted; _ }; _ }
+        when quoted || Operator.is_prefix operator
              (* Juxtapositions are of higher precedence than user-defined
                 operators *) ->
           Static expression_application_precedence
@@ -947,6 +949,7 @@ module Comp = struct
           }
       (* User-defined operator application *) ->
           User_defined_expression (Operator.precedence operator)
+      | Expression.Application _ -> Static expression_application_precedence
       | Expression.Let _
       | Expression.Box _
       | Expression.Impossible _
@@ -966,7 +969,17 @@ module Comp = struct
       match pattern with
       | Pattern.MetaTypeAnnotated _ -> Static 1
       | Pattern.TypeAnnotated _ -> Static 2
-      | Pattern.Application _ -> Static 3
+      | Pattern.Application
+          { applicand = Pattern.Constant { operator; quoted; _ }; _ }
+        when quoted || Operator.is_prefix operator
+             (* Juxtapositions are of higher precedence than user-defined
+                operators *) ->
+          Static pattern_application_precedence
+      | Pattern.Application
+          { applicand = Pattern.Constant { operator; quoted = false; _ }; _ }
+      (* User-defined operator application *) ->
+          User_defined_pattern (Operator.precedence operator)
+      | Pattern.Application _ -> Static pattern_application_precedence
       | Pattern.Variable _
       | Pattern.Constant _
       | Pattern.MetaObject _
@@ -997,10 +1010,14 @@ module Comp = struct
               if expression_application_precedence <= y then -1 else 1
           | Static x, User_defined_expression _ ->
               if x < expression_application_precedence then -1 else 1
+          | User_defined_pattern _, Static y ->
+              if pattern_application_precedence <= y then -1 else 1
+          | Static x, User_defined_pattern _ ->
+              if x < pattern_application_precedence then -1 else 1
           | _ ->
               Error.violation
                 "[Precedence.compare] cannot compare precedences for \
-                 user-defined type and expression constants"
+                 user-defined type, expression and pattern constants"
       end) :
         Ord.ORD with type t := t)
   end
@@ -1321,7 +1338,7 @@ module Comp = struct
           ppf (applicand, arguments)
 
   and pp_copattern ppf copattern =
-    let[@warning "-32"] parent_precedence = Precedence.of_copattern in
+    let[@warning "-26"] parent_precedence = Precedence.of_copattern in
     match copattern with
     | Copattern.Observation { observation; arguments; _ } -> (
         match List1.of_list arguments with

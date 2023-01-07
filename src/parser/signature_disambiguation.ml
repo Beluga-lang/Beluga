@@ -93,6 +93,9 @@ struct
 
   let default_precedence = 0
 
+  let make_default_prefix_operator ~arity =
+    Operator.make_prefix ~arity ~precedence:default_precedence
+
   let rec explicit_arguments_lf_kind kind =
     match kind with
     | Synprs.LF.Object.Raw_arrow { range; _ } ->
@@ -209,41 +212,55 @@ struct
     | Synprs.Signature.Declaration.Raw_lf_typ_constant
         { identifier; kind; _ } ->
         let explicit_arguments = explicit_arguments_lf_kind kind in
-        let* () =
-          add_prefix_lf_type_constant ~arity:explicit_arguments
-            ~precedence:default_precedence identifier
+        let operator =
+          make_default_prefix_operator ~arity:explicit_arguments
         in
+        let* () = add_lf_type_constant operator identifier in
         return (identifier :: additions)
     | Synprs.Signature.Declaration.Raw_lf_term_constant
         { identifier; typ; _ } ->
         let explicit_arguments = explicit_arguments_lf_typ typ in
+        let operator =
+          make_default_prefix_operator ~arity:explicit_arguments
+        in
+        let* () = add_lf_term_constant operator identifier in
+        return (identifier :: additions)
+    | Synprs.Signature.Declaration.Raw_comp_typ_constant
+        { identifier; kind; datatype_flavour = `Inductive } ->
+        let explicit_arguments = explicit_arguments_comp_kind kind in
+        let operator =
+          make_default_prefix_operator ~arity:explicit_arguments
+        in
         let* () =
-          add_prefix_lf_term_constant ~arity:explicit_arguments
-            ~precedence:default_precedence identifier
+          add_inductive_computation_type_constant operator identifier
         in
         return (identifier :: additions)
     | Synprs.Signature.Declaration.Raw_comp_typ_constant
-        { identifier; kind; _ } ->
+        { identifier; kind; datatype_flavour = `Stratified } ->
         let explicit_arguments = explicit_arguments_comp_kind kind in
+        let operator =
+          make_default_prefix_operator ~arity:explicit_arguments
+        in
         let* () =
-          add_prefix_computation_type_constant ~arity:explicit_arguments
-            ~precedence:default_precedence identifier
+          add_stratified_computation_type_constant operator identifier
         in
         return (identifier :: additions)
     | Synprs.Signature.Declaration.Raw_comp_expression_constructor
         { identifier; typ; _ } ->
         let explicit_arguments = explicit_arguments_comp_typ typ in
-        let* () =
-          add_prefix_computation_term_constructor ~arity:explicit_arguments
-            ~precedence:default_precedence identifier
+        let operator =
+          make_default_prefix_operator ~arity:explicit_arguments
         in
+        let* () = add_computation_term_constructor operator identifier in
         return (identifier :: additions)
     | Synprs.Signature.Declaration.Raw_comp_cotyp_constant
         { identifier; kind; _ } ->
         let explicit_arguments = explicit_arguments_comp_kind kind in
+        let operator =
+          make_default_prefix_operator ~arity:explicit_arguments
+        in
         let* () =
-          add_prefix_computation_cotype_constant ~arity:explicit_arguments
-            ~precedence:default_precedence identifier
+          add_coinductive_computation_type_constant operator identifier
         in
         return (identifier :: additions)
     | Synprs.Signature.Declaration.Raw_comp_expression_destructor
@@ -262,9 +279,11 @@ struct
     | Synprs.Signature.Declaration.Raw_comp_typ_abbreviation
         { identifier; kind; _ } ->
         let explicit_arguments = explicit_arguments_comp_kind kind in
+        let operator =
+          make_default_prefix_operator ~arity:explicit_arguments
+        in
         let* () =
-          add_prefix_computation_type_constant ~arity:explicit_arguments
-            ~precedence:default_precedence identifier
+          add_abbreviation_computation_type_constant operator identifier
         in
         return (identifier :: additions)
     | Synprs.Signature.Declaration.Raw_val { identifier; _ } ->
@@ -292,24 +311,42 @@ struct
     match declaration' with
     | Synext.Signature.Declaration.Typ { identifier; kind; _ } ->
         let explicit_arguments = explicit_arguments_lf_kind' kind in
-        add_prefix_lf_type_constant ~arity:explicit_arguments
-          ~precedence:default_precedence identifier
+        let operator =
+          make_default_prefix_operator ~arity:explicit_arguments
+        in
+        add_lf_type_constant operator identifier
     | Synext.Signature.Declaration.Const { identifier; typ; _ } ->
         let explicit_arguments = explicit_arguments_lf_typ' typ in
-        add_prefix_lf_term_constant ~arity:explicit_arguments
-          ~precedence:default_precedence identifier
-    | Synext.Signature.Declaration.CompTyp { identifier; kind; _ } ->
+        let operator =
+          make_default_prefix_operator ~arity:explicit_arguments
+        in
+        add_lf_term_constant operator identifier
+    | Synext.Signature.Declaration.CompTyp
+        { identifier; kind; datatype_flavour = `Inductive } ->
         let explicit_arguments = explicit_arguments_comp_kind' kind in
-        add_prefix_computation_type_constant ~arity:explicit_arguments
-          ~precedence:default_precedence identifier
+        let operator =
+          make_default_prefix_operator ~arity:explicit_arguments
+        in
+        add_inductive_computation_type_constant operator identifier
+    | Synext.Signature.Declaration.CompTyp
+        { identifier; kind; datatype_flavour = `Stratified } ->
+        let explicit_arguments = explicit_arguments_comp_kind' kind in
+        let operator =
+          make_default_prefix_operator ~arity:explicit_arguments
+        in
+        add_stratified_computation_type_constant operator identifier
     | Synext.Signature.Declaration.CompCotyp { identifier; kind; _ } ->
         let explicit_arguments = explicit_arguments_comp_kind' kind in
-        add_prefix_computation_cotype_constant ~arity:explicit_arguments
-          ~precedence:default_precedence identifier
+        let operator =
+          make_default_prefix_operator ~arity:explicit_arguments
+        in
+        add_coinductive_computation_type_constant operator identifier
     | Synext.Signature.Declaration.CompConst { identifier; typ; _ } ->
         let explicit_arguments = explicit_arguments_comp_typ' typ in
-        add_prefix_computation_term_constructor ~arity:explicit_arguments
-          ~precedence:default_precedence identifier
+        let operator =
+          make_default_prefix_operator ~arity:explicit_arguments
+        in
+        add_computation_term_constructor operator identifier
     | Synext.Signature.Declaration.CompDest { identifier; _ } ->
         add_computation_term_destructor identifier
     | Synext.Signature.Declaration.Schema { identifier; _ } ->
@@ -324,8 +361,10 @@ struct
         add_computation_variable identifier
     | Synext.Signature.Declaration.CompTypAbbrev { identifier; kind; _ } ->
         let explicit_arguments = explicit_arguments_comp_kind' kind in
-        add_prefix_computation_type_constant ~arity:explicit_arguments
-          ~precedence:default_precedence identifier
+        let operator =
+          make_default_prefix_operator ~arity:explicit_arguments
+        in
+        add_abbreviation_computation_type_constant operator identifier
     | Synext.Signature.Declaration.Val { identifier; _ } ->
         add_computation_variable identifier
     | Synext.Signature.Declaration.Query { identifier; _ } -> (
@@ -628,10 +667,10 @@ struct
         try
           let* kind' = disambiguate_lf_kind typ_or_const in
           let explicit_arguments = explicit_arguments_lf_kind' kind' in
-          let* () =
-            add_prefix_lf_type_constant ~arity:explicit_arguments
-              ~precedence:default_precedence identifier
+          let operator =
+            make_default_prefix_operator ~arity:explicit_arguments
           in
+          let* () = add_lf_type_constant operator identifier in
           return
             (Synext.Signature.Declaration.Typ
                { location; identifier; kind = kind' })
@@ -640,10 +679,10 @@ struct
             try
               let* typ' = disambiguate_lf_typ typ_or_const in
               let explicit_arguments = explicit_arguments_lf_typ' typ' in
-              let* () =
-                add_prefix_lf_term_constant ~arity:explicit_arguments
-                  ~precedence:default_precedence identifier
+              let operator =
+                make_default_prefix_operator ~arity:explicit_arguments
               in
+              let* () = add_lf_term_constant operator identifier in
               return
                 (Synext.Signature.Declaration.Const
                    { location; identifier; typ = typ' })
@@ -665,10 +704,10 @@ struct
         { location; identifier; kind } ->
         let* kind' = disambiguate_lf_kind kind in
         let explicit_arguments = explicit_arguments_lf_kind' kind' in
-        let* () =
-          add_prefix_lf_type_constant ~arity:explicit_arguments
-            ~precedence:default_precedence identifier
+        let operator =
+          make_default_prefix_operator ~arity:explicit_arguments
         in
+        let* () = add_lf_type_constant operator identifier in
         return
           (Synext.Signature.Declaration.Typ
              { location; identifier; kind = kind' })
@@ -676,31 +715,56 @@ struct
         { location; identifier; typ } ->
         let* typ' = disambiguate_lf_typ typ in
         let explicit_arguments = explicit_arguments_lf_typ' typ' in
-        let* () =
-          add_prefix_lf_term_constant ~arity:explicit_arguments
-            ~precedence:default_precedence identifier
+        let operator =
+          make_default_prefix_operator ~arity:explicit_arguments
         in
+        let* () = add_lf_term_constant operator identifier in
         return
           (Synext.Signature.Declaration.Const
              { location; identifier; typ = typ' })
     | Synprs.Signature.Declaration.Raw_comp_typ_constant
-        { location; identifier; kind; datatype_flavour } ->
+        { location; identifier; kind; datatype_flavour = `Inductive } ->
         let* kind' = disambiguate_comp_kind kind in
         let explicit_arguments = explicit_arguments_comp_kind' kind' in
+        let operator =
+          make_default_prefix_operator ~arity:explicit_arguments
+        in
         let* () =
-          add_prefix_computation_type_constant ~arity:explicit_arguments
-            ~precedence:default_precedence identifier
+          add_inductive_computation_type_constant operator identifier
         in
         return
           (Synext.Signature.Declaration.CompTyp
-             { location; identifier; kind = kind'; datatype_flavour })
+             { location
+             ; identifier
+             ; kind = kind'
+             ; datatype_flavour = `Inductive
+             })
+    | Synprs.Signature.Declaration.Raw_comp_typ_constant
+        { location; identifier; kind; datatype_flavour = `Stratified } ->
+        let* kind' = disambiguate_comp_kind kind in
+        let explicit_arguments = explicit_arguments_comp_kind' kind' in
+        let operator =
+          make_default_prefix_operator ~arity:explicit_arguments
+        in
+        let* () =
+          add_inductive_computation_type_constant operator identifier
+        in
+        return
+          (Synext.Signature.Declaration.CompTyp
+             { location
+             ; identifier
+             ; kind = kind'
+             ; datatype_flavour = `Stratified
+             })
     | Synprs.Signature.Declaration.Raw_comp_cotyp_constant
         { location; identifier; kind } ->
         let* kind' = disambiguate_comp_kind kind in
         let explicit_arguments = explicit_arguments_comp_kind' kind' in
+        let operator =
+          make_default_prefix_operator ~arity:explicit_arguments
+        in
         let* () =
-          add_prefix_computation_cotype_constant ~arity:explicit_arguments
-            ~precedence:default_precedence identifier
+          add_coinductive_computation_type_constant operator identifier
         in
         return
           (Synext.Signature.Declaration.CompCotyp
@@ -709,10 +773,10 @@ struct
         { location; identifier; typ } ->
         let* typ' = disambiguate_comp_typ typ in
         let explicit_arguments = explicit_arguments_comp_typ' typ' in
-        let* () =
-          add_prefix_computation_term_constructor ~arity:explicit_arguments
-            ~precedence:default_precedence identifier
+        let operator =
+          make_default_prefix_operator ~arity:explicit_arguments
         in
+        let* () = add_computation_term_constructor operator identifier in
         return
           (Synext.Signature.Declaration.CompConst
              { location; identifier; typ = typ' })
@@ -733,9 +797,11 @@ struct
         let* kind' = disambiguate_comp_kind kind in
         let* typ' = disambiguate_comp_typ typ in
         let explicit_arguments = explicit_arguments_comp_kind' kind' in
+        let operator =
+          make_default_prefix_operator ~arity:explicit_arguments
+        in
         let* () =
-          add_prefix_computation_type_constant ~arity:explicit_arguments
-            ~precedence:default_precedence identifier
+          add_abbreviation_computation_type_constant operator identifier
         in
         return
           (Synext.Signature.Declaration.CompTypAbbrev

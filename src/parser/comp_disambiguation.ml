@@ -13,7 +13,7 @@ open Support
 open Beluga_syntax
 open Common_disambiguation
 
-[@@@warning "-A"]
+[@@@warning "-A-4-44"]
 
 (** {1 Exceptions} *)
 
@@ -273,13 +273,41 @@ module Make
           Qualified_identifier.make_simple identifier
         in
         lookup_toplevel identifier >>= function
-        | Result.Ok (Computation_type_constant { operator }) ->
+        | Result.Ok (Computation_inductive_type_constant { operator }) ->
             return
               (Synext.Comp.Typ.Constant
                  { location
                  ; identifier = qualified_identifier
                  ; operator
                  ; quoted
+                 ; variant = `Inductive
+                 })
+        | Result.Ok (Computation_stratified_type_constant { operator }) ->
+            return
+              (Synext.Comp.Typ.Constant
+                 { location
+                 ; identifier = qualified_identifier
+                 ; operator
+                 ; quoted
+                 ; variant = `Stratified
+                 })
+        | Result.Ok (Computation_abbreviation_type_constant { operator }) ->
+            return
+              (Synext.Comp.Typ.Constant
+                 { location
+                 ; identifier = qualified_identifier
+                 ; operator
+                 ; quoted
+                 ; variant = `Abbreviation
+                 })
+        | Result.Ok (Computation_coinductive_type_constant { operator }) ->
+            return
+              (Synext.Comp.Typ.Constant
+                 { location
+                 ; identifier = qualified_identifier
+                 ; operator
+                 ; quoted
+                 ; variant = `Coinductive
                  })
         | Result.Ok _entry ->
             Error.raise_at1 location
@@ -297,10 +325,42 @@ module Make
            [(<identifier> `::')+ <identifier>] are necessarily type
            constants. *)
         lookup identifier >>= function
-        | Result.Ok (Computation_type_constant { operator }) ->
+        | Result.Ok (Computation_inductive_type_constant { operator }) ->
             return
               (Synext.Comp.Typ.Constant
-                 { location; identifier; operator; quoted })
+                 { location
+                 ; identifier
+                 ; operator
+                 ; quoted
+                 ; variant = `Inductive
+                 })
+        | Result.Ok (Computation_stratified_type_constant { operator }) ->
+            return
+              (Synext.Comp.Typ.Constant
+                 { location
+                 ; identifier
+                 ; operator
+                 ; quoted
+                 ; variant = `Stratified
+                 })
+        | Result.Ok (Computation_abbreviation_type_constant { operator }) ->
+            return
+              (Synext.Comp.Typ.Constant
+                 { location
+                 ; identifier
+                 ; operator
+                 ; quoted
+                 ; variant = `Abbreviation
+                 })
+        | Result.Ok (Computation_coinductive_type_constant { operator }) ->
+            return
+              (Synext.Comp.Typ.Constant
+                 { location
+                 ; identifier
+                 ; operator
+                 ; quoted
+                 ; variant = `Coinductive
+                 })
         | Result.Ok _entry ->
             Error.raise_at1 location (Expected_comp_type_constant identifier)
         | Result.Error (Unbound_qualified_identifier _) ->

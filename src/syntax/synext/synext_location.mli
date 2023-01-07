@@ -44,7 +44,7 @@ val location_of_comp_kind : comp_kind -> Location.t
 
 val location_of_comp_typ : comp_typ -> Location.t
 
-val location_of_comp_expression : comp_expresion -> Location.t
+val location_of_comp_expression : comp_expression -> Location.t
 
 val location_of_comp_pattern : comp_pattern -> Location.t
 

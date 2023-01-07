@@ -45,7 +45,7 @@ val pp_comp_kind : Format.formatter -> comp_kind -> unit
 
 val pp_comp_typ : Format.formatter -> comp_typ -> unit
 
-val pp_comp_expression : Format.formatter -> comp_expresion -> unit
+val pp_comp_expression : Format.formatter -> comp_expression -> unit
 
 val pp_comp_pattern : Format.formatter -> comp_pattern -> unit
 

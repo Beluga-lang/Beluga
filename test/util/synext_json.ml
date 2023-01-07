@@ -698,12 +698,18 @@ let rec json_of_comp_kind kind =
 
 and json_of_comp_typ typ =
   match typ with
-  | Comp.Typ.Constant { identifier; quoted; location; operator } ->
+  | Comp.Typ.Constant { identifier; quoted; location; operator; variant } ->
       json_of_variant ~name:"Comp.Typ.Constant"
         ~data:
           [ ("identifier", json_of_qualified_identifier identifier)
           ; ("quoted", json_of_bool quoted)
           ; ("operator", json_of_operator operator)
+          ; ( "variant"
+            , match variant with
+              | `Inductive -> json_of_string "inductive"
+              | `Stratified -> json_of_string "Stratified"
+              | `Abbreviation -> json_of_string "abbreviation"
+              | `Coinductive -> json_of_string "coinductive" )
           ; ("location", json_of_location location)
           ]
   | Comp.Typ.Pi

@@ -35,7 +35,7 @@ val precedence_of_comp_kind : comp_kind -> Comp_precedence.t
 
 val precedence_of_comp_typ : comp_typ -> Comp_precedence.t
 
-val precedence_of_comp_expression : comp_expresion -> Comp_precedence.t
+val precedence_of_comp_expression : comp_expression -> Comp_precedence.t
 
 val precedence_of_comp_pattern : comp_pattern -> Comp_precedence.t
 

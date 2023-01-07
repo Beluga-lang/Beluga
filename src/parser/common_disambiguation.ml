@@ -27,9 +27,11 @@ module type DISAMBIGUATION_STATE = sig
     | Context_variable
     | Schema_constant
     | Computation_variable
-    | Computation_type_constant of { operator : Operator.t }
+    | Computation_inductive_type_constant of { operator : Operator.t }
+    | Computation_stratified_type_constant of { operator : Operator.t }
+    | Computation_coinductive_type_constant of { operator : Operator.t }
+    | Computation_abbreviation_type_constant of { operator : Operator.t }
     | Computation_term_constructor of { operator : Operator.t }
-    | Computation_cotype_constant of { operator : Operator.t }
     | Computation_term_destructor
     | Query
     | MQuery
@@ -43,29 +45,9 @@ module type DISAMBIGUATION_STATE = sig
 
   val add_lf_term_variable : Identifier.t -> Unit.t t
 
-  val add_prefix_lf_type_constant :
-    arity:Int.t -> precedence:Int.t -> Identifier.t -> Unit.t t
+  val add_lf_type_constant : Operator.t -> Identifier.t -> Unit.t t
 
-  val add_infix_lf_type_constant :
-       associativity:Associativity.t
-    -> precedence:Int.t
-    -> Identifier.t
-    -> Unit.t t
-
-  val add_postfix_lf_type_constant :
-    precedence:Int.t -> Identifier.t -> Unit.t t
-
-  val add_prefix_lf_term_constant :
-    arity:Int.t -> precedence:Int.t -> Identifier.t -> Unit.t t
-
-  val add_infix_lf_term_constant :
-       associativity:Associativity.t
-    -> precedence:Int.t
-    -> Identifier.t
-    -> Unit.t t
-
-  val add_postfix_lf_term_constant :
-    precedence:Int.t -> Identifier.t -> Unit.t t
+  val add_lf_term_constant : Operator.t -> Identifier.t -> Unit.t t
 
   val add_meta_variable : Identifier.t -> Unit.t t
 
@@ -79,41 +61,20 @@ module type DISAMBIGUATION_STATE = sig
 
   val add_computation_variable : Identifier.t -> Unit.t t
 
-  val add_prefix_computation_type_constant :
-    arity:Int.t -> precedence:Int.t -> Identifier.t -> Unit.t t
+  val add_inductive_computation_type_constant :
+    Operator.t -> Identifier.t -> Unit.t t
 
-  val add_infix_computation_type_constant :
-       associativity:Associativity.t
-    -> precedence:Int.t
-    -> Identifier.t
-    -> Unit.t t
+  val add_stratified_computation_type_constant :
+    Operator.t -> Identifier.t -> Unit.t t
 
-  val add_postfix_computation_type_constant :
-    precedence:Int.t -> Identifier.t -> Unit.t t
+  val add_coinductive_computation_type_constant :
+    Operator.t -> Identifier.t -> Unit.t t
 
-  val add_prefix_computation_term_constructor :
-    arity:Int.t -> precedence:Int.t -> Identifier.t -> Unit.t t
+  val add_abbreviation_computation_type_constant :
+    Operator.t -> Identifier.t -> Unit.t t
 
-  val add_infix_computation_term_constructor :
-       associativity:Associativity.t
-    -> precedence:Int.t
-    -> Identifier.t
-    -> Unit.t t
-
-  val add_postfix_computation_term_constructor :
-    precedence:Int.t -> Identifier.t -> Unit.t t
-
-  val add_prefix_computation_cotype_constant :
-    arity:Int.t -> precedence:Int.t -> Identifier.t -> Unit.t t
-
-  val add_infix_computation_cotype_constant :
-       associativity:Associativity.t
-    -> precedence:Int.t
-    -> Identifier.t
-    -> Unit.t t
-
-  val add_postfix_computation_cotype_constant :
-    precedence:Int.t -> Identifier.t -> Unit.t t
+  val add_computation_term_constructor :
+    Operator.t -> Identifier.t -> Unit.t t
 
   val add_computation_term_destructor : Identifier.t -> Unit.t t
 
@@ -196,9 +157,11 @@ module Disambiguation_state : DISAMBIGUATION_STATE = struct
     | Context_variable
     | Schema_constant
     | Computation_variable
-    | Computation_type_constant of { operator : Operator.t }
+    | Computation_inductive_type_constant of { operator : Operator.t }
+    | Computation_stratified_type_constant of { operator : Operator.t }
+    | Computation_coinductive_type_constant of { operator : Operator.t }
+    | Computation_abbreviation_type_constant of { operator : Operator.t }
     | Computation_term_constructor of { operator : Operator.t }
-    | Computation_cotype_constant of { operator : Operator.t }
     | Computation_term_destructor
     | Query
     | MQuery
@@ -282,33 +245,11 @@ module Disambiguation_state : DISAMBIGUATION_STATE = struct
     let entry = LF_term_variable in
     add_binding identifier entry
 
-  let add_prefix_lf_type_constant ~arity ~precedence identifier =
-    let operator = Operator.make_prefix ~arity ~precedence in
+  let add_lf_type_constant operator identifier =
     let entry = LF_type_constant { operator } in
     add_binding identifier entry
 
-  let add_infix_lf_type_constant ~associativity ~precedence identifier =
-    let operator = Operator.make_infix ~associativity ~precedence in
-    let entry = LF_type_constant { operator } in
-    add_binding identifier entry
-
-  let add_postfix_lf_type_constant ~precedence identifier =
-    let operator = Operator.make_postfix ~precedence in
-    let entry = LF_type_constant { operator } in
-    add_binding identifier entry
-
-  let add_prefix_lf_term_constant ~arity ~precedence identifier =
-    let operator = Operator.make_prefix ~arity ~precedence in
-    let entry = LF_term_constant { operator } in
-    add_binding identifier entry
-
-  let add_infix_lf_term_constant ~associativity ~precedence identifier =
-    let operator = Operator.make_infix ~associativity ~precedence in
-    let entry = LF_term_constant { operator } in
-    add_binding identifier entry
-
-  let add_postfix_lf_term_constant ~precedence identifier =
-    let operator = Operator.make_postfix ~precedence in
+  let add_lf_term_constant operator identifier =
     let entry = LF_term_constant { operator } in
     add_binding identifier entry
 
@@ -336,52 +277,24 @@ module Disambiguation_state : DISAMBIGUATION_STATE = struct
     let entry = Computation_variable in
     add_binding identifier entry
 
-  let add_prefix_computation_type_constant ~arity ~precedence identifier =
-    let operator = Operator.make_prefix ~arity ~precedence in
-    let entry = Computation_type_constant { operator } in
+  let add_inductive_computation_type_constant operator identifier =
+    let entry = Computation_inductive_type_constant { operator } in
     add_binding identifier entry
 
-  let add_infix_computation_type_constant ~associativity ~precedence
-      identifier =
-    let operator = Operator.make_infix ~associativity ~precedence in
-    let entry = Computation_type_constant { operator } in
+  let add_stratified_computation_type_constant operator identifier =
+    let entry = Computation_stratified_type_constant { operator } in
     add_binding identifier entry
 
-  let add_postfix_computation_type_constant ~precedence identifier =
-    let operator = Operator.make_postfix ~precedence in
-    let entry = Computation_type_constant { operator } in
+  let add_coinductive_computation_type_constant operator identifier =
+    let entry = Computation_coinductive_type_constant { operator } in
     add_binding identifier entry
 
-  let add_prefix_computation_term_constructor ~arity ~precedence identifier =
-    let operator = Operator.make_prefix ~arity ~precedence in
+  let add_abbreviation_computation_type_constant operator identifier =
+    let entry = Computation_abbreviation_type_constant { operator } in
+    add_binding identifier entry
+
+  let add_computation_term_constructor operator identifier =
     let entry = Computation_term_constructor { operator } in
-    add_binding identifier entry
-
-  let add_infix_computation_term_constructor ~associativity ~precedence
-      identifier =
-    let operator = Operator.make_infix ~associativity ~precedence in
-    let entry = Computation_term_constructor { operator } in
-    add_binding identifier entry
-
-  let add_postfix_computation_term_constructor ~precedence identifier =
-    let operator = Operator.make_postfix ~precedence in
-    let entry = Computation_term_constructor { operator } in
-    add_binding identifier entry
-
-  let add_prefix_computation_cotype_constant ~arity ~precedence identifier =
-    let operator = Operator.make_prefix ~arity ~precedence in
-    let entry = Computation_cotype_constant { operator } in
-    add_binding identifier entry
-
-  let add_infix_computation_cotype_constant ~associativity ~precedence
-      identifier =
-    let operator = Operator.make_infix ~associativity ~precedence in
-    let entry = Computation_cotype_constant { operator } in
-    add_binding identifier entry
-
-  let add_postfix_computation_cotype_constant ~precedence identifier =
-    let operator = Operator.make_postfix ~precedence in
-    let entry = Computation_cotype_constant { operator } in
     add_binding identifier entry
 
   let add_computation_term_destructor identifier =
@@ -469,9 +382,11 @@ module Disambiguation_state : DISAMBIGUATION_STATE = struct
     | Result.Ok Context_variable
     | Result.Ok Schema_constant
     | Result.Ok Computation_variable
-    | Result.Ok (Computation_type_constant _)
+    | Result.Ok (Computation_inductive_type_constant _)
+    | Result.Ok (Computation_stratified_type_constant _)
+    | Result.Ok (Computation_abbreviation_type_constant _)
+    | Result.Ok (Computation_coinductive_type_constant _)
     | Result.Ok (Computation_term_constructor _)
-    | Result.Ok (Computation_cotype_constant _)
     | Result.Ok Computation_term_destructor
     | Result.Ok Query
     | Result.Ok MQuery ->
@@ -555,15 +470,21 @@ module Disambiguation_state : DISAMBIGUATION_STATE = struct
         | LF_term_constant { operator } ->
             let operator' = f operator in
             LF_term_constant { operator = operator' }
-        | Computation_type_constant { operator } ->
+        | Computation_inductive_type_constant { operator } ->
             let operator' = f operator in
-            Computation_type_constant { operator = operator' }
+            Computation_inductive_type_constant { operator = operator' }
+        | Computation_stratified_type_constant { operator } ->
+            let operator' = f operator in
+            Computation_stratified_type_constant { operator = operator' }
+        | Computation_abbreviation_type_constant { operator } ->
+            let operator' = f operator in
+            Computation_abbreviation_type_constant { operator = operator' }
+        | Computation_coinductive_type_constant { operator } ->
+            let operator' = f operator in
+            Computation_coinductive_type_constant { operator = operator' }
         | Computation_term_constructor { operator } ->
             let operator' = f operator in
             Computation_term_constructor { operator = operator' }
-        | Computation_cotype_constant { operator } ->
-            let operator' = f operator in
-            Computation_cotype_constant { operator = operator' }
         | LF_term_variable
         | Meta_variable
         | Parameter_variable

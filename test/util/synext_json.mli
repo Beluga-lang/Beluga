@@ -76,7 +76,7 @@ val json_of_comp_kind : comp_kind -> Yojson.Safe.t
 
 val json_of_comp_typ : comp_typ -> Yojson.Safe.t
 
-val json_of_comp_expression : comp_expresion -> Yojson.Safe.t
+val json_of_comp_expression : comp_expression -> Yojson.Safe.t
 
 val json_of_comp_pattern : comp_pattern -> Yojson.Safe.t
 

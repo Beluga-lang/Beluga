@@ -827,9 +827,20 @@ module Comp = struct
           ; identifier : Qualified_identifier.t
           ; operator : Operator.t
           ; quoted : Bool.t
+          ; variant :
+              [ `Inductive | `Stratified | `Coinductive | `Abbreviation ]
           }
-          (** [Constant { identifier = "c"; _ }] is the computation-level
-              type constant ["c"]. *)
+          (** [Constant { identifier = "c"; }] is the computation-level type
+              constant ["c"].
+
+              - If [variant = `Inductive], then this constant was defined in
+                an inductive type declaration.
+              - If [variant = `Stratified], then this constant was defined in
+                a stratified type declaration.
+              - If [variant = `Coinductive], then this constant was defined
+                in a coinductive type declaration.
+              - If [variant = `Abbreviation], then this constant was defined
+                in a computation type abbreviation declaration. *)
       | Pi of
           { location : Location.t
           ; parameter_identifier : Identifier.t Option.t
@@ -1592,7 +1603,7 @@ type comp_kind = Comp.Kind.t
 
 type comp_typ = Comp.Typ.t
 
-type comp_expresion = Comp.Expression.t
+type comp_expression = Comp.Expression.t
 
 type comp_pattern = Comp.Pattern.t
 

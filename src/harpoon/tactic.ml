@@ -578,6 +578,9 @@ let solve_with_new_comp_decl action_name decl f t g =
   match check_computational_variable_uniqueness cD cG decl t with
   | `duplicate -> ()
   | `unique ->
+     (* bp: needs to update and mshift 1 the proof script part,
+        intros <- split [g |- E]   needs to still make sense in the extended cD 
+      *)                
      Theorem.apply_subgoal_replacement t
        action_name
        (extending_comp_context decl g)
@@ -593,7 +596,7 @@ let solve_by_unbox (m : Comp.exp) (mk_cmd : Comp.meta_typ -> Comp.command) (tau 
   let {cD; cG; cIH} = g.context in
      match tau with
      | TypBox (_, cT) ->
-        let cT', _ =
+        let cT', _  =
           B.Check.Comp.apply_unbox_modifier_opt cD modifier cT
         in
         solve_by_unbox' (prepend_commands [mk_cmd cT]) cT' name t g

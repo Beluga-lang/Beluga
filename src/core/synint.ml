@@ -407,7 +407,7 @@ module Comp = struct
     | `infer loc -> loc
 
   type ih_arg =
-    | M of meta_obj
+    | M of meta_obj * meta_typ
     | V of offset
     | E (* what is E? -je *)
     | DC

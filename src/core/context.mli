@@ -31,6 +31,7 @@ val extend_hatctx : int -> dctx_hat -> dctx_hat
 (* Declaration Contexts *)
 val ctxDec : dctx -> int -> typ_decl
 val ctxSigmaDec : dctx -> int -> typ_decl
+val containsSigma : dctx -> bool
 val ctxVar : dctx -> ctx_var option
 val hasCtxVar : dctx -> bool (* true if ctxVar dctx = Some _ *)
 

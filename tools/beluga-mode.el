@@ -110,6 +110,11 @@ in unicode using Font Lock mode."
  ("\\conj" ["∧"])
  ("\\disj" ["∨"])
  ("\\imp"  ["⊃"])
+ ("\\top"  ["⊤"])
+ ("\\bot"  ["⊥"])
+
+ ("\\equiv"  ["≣"])
+  
  ;; Arrows
  ("->" ["→"])
  ("<-" ["←"])

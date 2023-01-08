@@ -1287,37 +1287,7 @@ and elTerm' recT cD cPsi r sP =
                  (P.fmt_ppr_lf_dctx cD P.l0) cPsi
                end;
              let (cPhi, s'') = synDomOpt cD loc cPsi s in
-
-             (*
-              dprintf
-                (fun p ->
-                  p.fmt
-                    "[elTerm] it's %a at %a "
-                    (P.fmt_ppr_lf_dctx cD P.l0) cPhi
-                    Loc.print_short loc);
-
-              begin
-                match Context.ctxVar cPhi with
-                | None ->
-                   dprint (fun _ -> "[elTerm] it's not a context variable")
-                | Some v ->
-                   match v with
-                   | Int.LF.CInst c ->
-                      dprint (fun _ -> "[elTerm] it's a ctxvar instantiation");
-                   | Int.LF.CtxName name ->
-                      dprint (fun _ -> "[elTerm] it's a ctxvar name " ^ Id.string_of_name name)
-                   | Int.LF.CtxOffset off ->
-                      dprint (fun _ -> "[elTerm] it's a ctxvar offset (into Delta)")
-              end;
-
-              dprint
-                (fun _ ->
-                  "[elTerm] and btw it's " ^
-                    (if not (Context.hasCtxVar cPhi) then "not" else "")
-                    ^ " a context variable");
-              *)
-
-             (*
+            (*
               dprint
                 (fun _ ->
                   " with substitution  " ^ P.subToString cD cPhi s''
@@ -1363,7 +1333,7 @@ and elTerm' recT cD cPsi r sP =
                begin fun p -> 
                p.fmt "Reconstructed a flattened substitution s'' based on the original subst. s  \n %a |- %a : %a"
                  (P.fmt_ppr_lf_dctx cD P.l0) flat_cPsi
-                 (P.fmt_ppr_lf_sub cD flat_cPsi P.l0)  s''
+                 (P.fmt_ppr_lf_sub cD flat_cPsi P.l0)  (Whnf.normSub s'')
                  (P.fmt_ppr_lf_dctx cD P.l0) cPhi
                end;
              (*

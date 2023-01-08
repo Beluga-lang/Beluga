@@ -143,7 +143,7 @@ module LF = struct
     | Head (MVar (u, s')) -> Head (MVar (u, comp s' s))
     | Head (PVar (u, s')) -> Head (PVar (u, comp s' s))
 
-    | Head (Proj (BVar n, k)) ->
+    | Head (Proj (BVar n, k)) -> 
        begin match bvarSub n s with
        | Head (BVar x) ->
           Head (Proj (BVar x, k))
@@ -175,7 +175,8 @@ module LF = struct
        | Obj (Clo ((Root (_, (BVar _ ), Nil, _)), _ )) -> failwith "Found Clo - BVar "
        | Obj (Clo ((Root (_ , h, Nil, _ )), _ )) -> failwith "Found Clo with root that is not a var - should not happen"
        | Obj (Clo ((Root (_ , h, _, _ )), _ )) -> failwith "Found Clo with root that has a non-empty spine - should not happen"
-       | Obj (Clo (_ , _ ) ) -> failwith "Found Clo which is not a tuple – cannot take proj"
+       | Obj (Clo (_ , _ ) ) -> failwith ("BVar n = " ^ string_of_int n ^ " stands for Clo which is not a tuple – cannot take proj " ^ string_of_int k )
+                              
        | Obj (Root (_, (PVar _ as h), Nil, _)) -> Head (Proj (h, k))
        | Obj (Root (_, (BVar _ as h), Nil, _)) -> Head (Proj (h, k))
        | Obj (LFHole (_, _ , _ )) -> failwith "Found Obj which LFHole – cannot take a proj."

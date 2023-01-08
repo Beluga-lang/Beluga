@@ -135,6 +135,12 @@ let ctxSigmaDec cPsi k =
   ctxDec' (cPsi, k)
 
 
+let rec containsSigma cPsi = match cPsi with
+  | DDec (_, TypDecl (x, Sigma tArec)) -> true
+  | DDec (cPsi', _ ) -> containsSigma cPsi'
+  | _ -> false
+  
+
 (* ctxVar (Psi) = psi opt
  *
  * Invariant:

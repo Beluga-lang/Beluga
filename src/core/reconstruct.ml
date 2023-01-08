@@ -485,7 +485,7 @@ let rec elMCtx recT =
 
 let mgAtomicTyp cD cPsi a kK =
   let (flat_cPsi, conv_list) = flattenDCtx cD cPsi in
-  let s_proj = gen_proj_sub conv_list in
+  let s_proj = gen_proj_sub conv_list in  (* cPsi |- s_proj : flat_cPsi *)  
   dprintf
     begin fun p ->
     p.fmt "[mgAtomicTyp] @[<v>flat cPsi = @[%a@]\
@@ -497,7 +497,7 @@ let mgAtomicTyp cD cPsi a kK =
     lazy
       begin
         let (ss', cPhi') = Subord.thin' cD a flat_cPsi in
-        (* cPhi |- ss' : cPhi' *)
+        (* flat_cPsi |- ss' : cPhi' *)
         dprintf begin fun p ->
           p.fmt "[mgAtomicTyp] @[<v>thinning constructed weakening\
                  @,@[%a@]\
@@ -506,9 +506,11 @@ let mgAtomicTyp cD cPsi a kK =
             (P.fmt_ppr_lf_typ Int.LF.Empty Int.LF.Null P.l0) Int.LF.(Atom (Loc.ghost, a, Nil))
           end;
         let ssi' = LF.invert ss' in
-        (* cPhi' |- ssi : cPhi *)
+        (* cPhi' |- ssi' : flat_cPsi 
+          flat_cPsi |- ss' : cPhi' 
+          cPsi |- s_proj : flat_cPsi    *)  
         (* cPhi' |- [ssi]tQ    *)
-        let ss_proj = LF.comp ss' s_proj in
+        let ss_proj = LF.comp ss' s_proj in  (* cPsi |- comp ss' s_proj : cPhi' where cPhi' = strength. flat_cPsi   *)
         (cPhi', ssi', ss_proj)
       end
   in
@@ -520,10 +522,13 @@ let mgAtomicTyp cD cPsi a kK =
 
     | (Int.LF.(PiKind ((TypDecl (u, tA1), plicity), kK), s)) ->
        let tA1' = strans_typ cD cPsi (tA1, s) conv_list in
+       (*  flat_cPsi  |- tA1 *) 
        let tR =
          if !strengthen
          then
            let lazy (cPhi', ssi', ss_proj) = thinned in
+           (* cPhi' |- ssi' : flat_cPsi 
+              cPsi |- ss_proj : cPhi'   *)  
            dprintf
              begin fun p ->
              p.fmt "[mgAtomicTyp] @[<v>PiKind ssi' = @[%a@]\
@@ -685,6 +690,11 @@ and elMetaObj cD (loc, cM) cTt =
       p.fmt "[elMetaObj] @[<v>type = %a@,term = %a@]"
         (P.fmt_ppr_cmp_meta_typ cD) ctyp
         (P.fmt_ppr_cmp_meta_obj cD P.l0) (loc, r)
+      end;
+     dprintf
+      begin fun p ->
+      p.fmt "[elMetaObj] @[<v>(renorm.) type = %a@]"
+        (P.fmt_ppr_cmp_meta_typ cD) ( Whnf.cnormMTyp (ctyp, Whnf.m_id)) 
       end;
     (loc, r)
   with
@@ -1858,6 +1868,9 @@ and recPatObj loc cD pat (cD_s, tau_s) =
  *)
   dprint (fun () -> "[recPatObj] Abstract over pattern and its type");
   let tau' = Whnf.cnormCTyp ttau' in
+  dprintf begin
+      fun p ->  p.fmt "[recPatObj] Pattern type tau' = %a"  (P.fmt_ppr_cmp_typ cD P.l0 ) tau'
+    end;
   let (cD1, cG1, pat1, tau1) =
     Abstract.patobj loc cD (Whnf.cnormGCtx (cG', Whnf.m_id))
       pat'

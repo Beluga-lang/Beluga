@@ -56,12 +56,28 @@ let rec map conv_list k =
   | (d :: conv_list', 1) -> d
   | (d :: conv_list', _) -> d + map conv_list' (k - 1)
 
+(*
+  strans_norm cD cPsi sM conv_list = tM'
+
+   If   cD |- cPsi   and cD ; cPsi |- sM   
+   and  cD |- flat_cPsi
+        where conv_list relates cPsi to flat_cPsi, i.e. | conv_list | = |cPsi|
+       s.t. if cPsi = xn:tBn, .... x1:tB1   and conv_list(i) = |tBi| 
+      (for example: cPsi = x2: block (y22:tA22, y21:tA21), x1:block (y13:tA13, y12:tA12, y11:tA11) 
+                    then conv_list = [2 ; 3]
+   then 
+      cD ; flat_cPsi |- tM'
+
+  NOTE: in principle the same thing should be achieved by simply [s_tup]sM where 
+     cD;  flat_cPsi |- s_tup : cPsi   and   cD ; cPsi |- sM
+
+ *)
 let rec strans_norm cD cPsi sM conv_list =
   strans_normW cD cPsi (Whnf.whnf sM) conv_list
 and strans_normW cD cPsi (tM, s) conv_list =
   match tM with
   | LF.Lam (loc, x, tN) ->
-     let tN' = strans_norm cD cPsi (tN, S.LF.dot1 s) (1 :: conv_list) in
+     let tN' = strans_norm cD (LF.DDec (cPsi, LF.TypDeclOpt x)) (tN, S.LF.dot1 s) (1 :: conv_list) in
      LF.Lam (loc, x, tN')
   | LF.Root (loc, h, tS, plicity) ->
      let h' = strans_head loc cD cPsi h conv_list in
@@ -112,7 +128,7 @@ and strans_head loc cD cPsi h conv_list =
          ignore (Context.ctxDec cPsi x);
          (* check that there exists a typ declaration for x
             – if there is none, then it is mapped to itself. *)
-         let x' = map conv_list x - j + 1 in
+         let x' = (map conv_list x) - j + 1 in
          LF.BVar x'
        with
        | _ -> LF.Proj (LF.BVar x, j)

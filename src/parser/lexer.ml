@@ -5,6 +5,8 @@ exception Unlexable_character of string
 
 exception Mismatched_block_comment
 
+exception String_literal_unescape_failure of string
+
 (** [get_location lexbuf] is the location of the currently lexed token in
     [lexbuf]. *)
 let get_location lexbuf =
@@ -123,7 +125,13 @@ let rec tokenize lexbuf =
         Sedlexing.Utf8.sub_lexeme lexbuf 1
           (Sedlexing.lexeme_length lexbuf - 2)
       in
-      const (Token.STRING s)
+      let s' =
+        try Scanf.unescaped s with
+        | Scanf.Scan_failure s ->
+            Error.raise_at1 (get_location lexbuf)
+              (String_literal_unescape_failure s)
+      in
+      const (Token.STRING s')
   (* KEYWORDS *)
   | "and" -> const Token.KW_AND
   | "block" -> const Token.KW_BLOCK
@@ -257,7 +265,11 @@ let pp_exception ppf = function
       Format.fprintf ppf "Unlexable character(s) \"%s\"." s
   | Mismatched_block_comment ->
       Format.fprintf ppf "Unexpected end of block comment."
-  | _ -> Error.raise (Invalid_argument "[pp_exception] unsupported exception")
+  | String_literal_unescape_failure s ->
+      Format.fprintf ppf
+        "The string literal \"%s\" contains invalid escape sequences." s
+  | _ ->
+      Error.raise (Invalid_argument "[pp_exception] unsupported exception")
 
 let () =
   Printexc.register_printer (fun exn ->

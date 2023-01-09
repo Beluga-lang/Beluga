@@ -1338,18 +1338,16 @@ let rec json_of_signature_pragma pragma =
 
 and json_of_signature_global_pragma global_pragma =
   match global_pragma with
-  | Signature.Pragma.Global.No_strengthening { location } ->
-      json_of_variant ~name:"Signature.Pragma.Global.No_strengthening"
+  | Signature.Global_pragma.No_strengthening { location } ->
+      json_of_variant ~name:"Signature.Global_pragma.No_strengthening"
         ~data:[ ("location", json_of_location location) ]
-  | Signature.Pragma.Global.Coverage { variant; location } ->
-      json_of_variant ~name:"Signature.Pragma.Global.Coverage"
-        ~data:
-          [ ( "variant"
-            , match variant with
-              | `Error -> json_of_string "error"
-              | `Warn -> json_of_string "warn" )
-          ; ("location", json_of_location location)
-          ]
+  | Signature.Global_pragma.Warn_on_coverage_error { location } ->
+      json_of_variant ~name:"Signature.Global_pragma.Warn_on_coverage_error"
+        ~data:[ ("location", json_of_location location) ]
+  | Signature.Global_pragma.Raise_error_on_coverage_error { location } ->
+      json_of_variant
+        ~name:"Signature.Global_pragma.Raise_error_on_coverage_error"
+        ~data:[ ("location", json_of_location location) ]
 
 and json_of_signature_totality_declaration totality_declaration =
   match totality_declaration with
@@ -1493,18 +1491,6 @@ and json_of_signature_declaration declaration =
           ; ("schema", json_of_schema schema)
           ; ("location", json_of_location location)
           ]
-  | Signature.Declaration.Pragma { pragma; location } ->
-      json_of_variant ~name:"Signature.Declaration.Pragma"
-        ~data:
-          [ ("pragma", json_of_signature_pragma pragma)
-          ; ("location", json_of_location location)
-          ]
-  | Signature.Declaration.GlobalPragma { pragma; location } ->
-      json_of_variant ~name:"Signature.Declaration.GlobalPragma"
-        ~data:
-          [ ("pragma", json_of_signature_global_pragma pragma)
-          ; ("location", json_of_location location)
-          ]
   | Signature.Declaration.Theorem { location; identifier; typ; order; body }
     ->
       json_of_variant ~name:"Signature.Declaration.Theorem"
@@ -1578,12 +1564,11 @@ and json_of_signature_declaration declaration =
           ; ("search_depth", json_of_option json_of_int search_depth)
           ; ("location", json_of_location location)
           ]
-  | Signature.Declaration.Module { identifier; declarations; location } ->
+  | Signature.Declaration.Module { identifier; entries; location } ->
       json_of_variant ~name:"Signature.Declaration.Module"
         ~data:
           [ ("identifier", json_of_identifier identifier)
-          ; ( "declarations"
-            , json_of_list json_of_signature_declaration declarations )
+          ; ("entries", json_of_list json_of_signature_entry entries)
           ; ("location", json_of_location location)
           ]
   | Signature.Declaration.Comment { content; location } ->
@@ -1592,6 +1577,14 @@ and json_of_signature_declaration declaration =
           [ ("content", json_of_string content)
           ; ("location", json_of_location location)
           ]
+
+and json_of_signature_entry = function
+  | Signature.Entry.Pragma pragma ->
+      json_of_variant ~name:"Signature.Entry.Pragma"
+        ~data:[ ("pragma", json_of_signature_pragma pragma) ]
+  | Signature.Entry.Declaration declaration ->
+      json_of_variant ~name:"Signature.Entry.Declaration"
+        ~data:[ ("pragma", json_of_signature_declaration declaration) ]
 
 and json_of_signature signature =
   json_of_variant ~name:"Signature"

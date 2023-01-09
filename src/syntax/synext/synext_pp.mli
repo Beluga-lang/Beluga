@@ -80,4 +80,6 @@ val pp_signature_totality_declaration :
 val pp_signature_declaration :
   Format.formatter -> signature_declaration -> unit
 
-val pp_signature_signature : Format.formatter -> signature -> unit
+val pp_signature_entry : Format.formatter -> signature_entry -> unit
+
+val pp_signature : Format.formatter -> signature -> unit

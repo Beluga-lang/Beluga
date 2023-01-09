@@ -1298,12 +1298,12 @@ module Signature = struct
 
   and pp_global_pragma ppf global_pragma =
     match global_pragma with
-    | Pragma.Global.No_strengthening _ ->
+    | Global_pragma.No_strengthening _ ->
         Format.pp_print_string ppf "--nostrengthen"
-    | Pragma.Global.Coverage { variant = `Error; _ } ->
-        Format.pp_print_string ppf "--coverage"
-    | Pragma.Global.Coverage { variant = `Warn; _ } ->
+    | Global_pragma.Warn_on_coverage_error _ ->
         Format.pp_print_string ppf "--warncoverage"
+    | Global_pragma.Raise_error_on_coverage_error _ ->
+        Format.pp_print_string ppf "--coverage"
 
   and pp_totality_declaration ppf totality_declaration =
     match totality_declaration with
@@ -1370,8 +1370,6 @@ module Signature = struct
     | Declaration.Schema { identifier; schema; _ } ->
         Format.fprintf ppf "@[<2>schema %a =@ %a;@]" Identifier.pp identifier
           Meta.pp_schema schema
-    | Declaration.Pragma { pragma; _ } -> pp_pragma ppf pragma
-    | Declaration.GlobalPragma { pragma; _ } -> pp_global_pragma ppf pragma
     | Declaration.Recursive_declarations { declarations; _ } ->
         pp_recursive_declarations ppf declarations
     | Declaration.CompTypAbbrev { identifier; kind; typ; _ } ->
@@ -1439,9 +1437,13 @@ module Signature = struct
               pp_mquery_argument expected_solutions pp_mquery_argument
               search_tries pp_mquery_argument search_depth Identifier.pp
               identifier Comp.pp_typ typ)
-    | Declaration.Module { identifier; declarations; _ } ->
+    | Declaration.Module { identifier; entries; _ } ->
         Format.fprintf ppf "module %a = struct@;<1 2>@[<v 0>%a@]@.end"
-          Identifier.pp identifier pp_signature declarations
+          Identifier.pp identifier
+          (List.pp
+             ~pp_sep:(fun ppf () -> Format.fprintf ppf "@.@.")
+             pp_signature_entry)
+          entries
     | Declaration.Comment { content; _ } ->
         (* Workaround format string errors when inputing the documentation
            comment delimiters *)
@@ -1651,12 +1653,30 @@ module Signature = struct
              first_declaration)
           Unsupported_recursive_declaration
 
+  and pp_signature_entry ppf entry =
+    match entry with
+    | Entry.Declaration declaration -> pp_declaration ppf declaration
+    | Entry.Pragma pragma -> pp_pragma ppf pragma
+
   and pp_signature ppf signature =
-    Format.fprintf ppf "@[<v 0>%a@]@."
-      (List.pp
-         ~pp_sep:(fun ppf () -> Format.fprintf ppf "@.@.")
-         pp_declaration)
-      signature
+    let { Signature.global_pragmas; entries } = signature in
+    match global_pragmas with
+    | [] ->
+        Format.fprintf ppf "@[<v 0>%a@]@."
+          (List.pp
+             ~pp_sep:(fun ppf () -> Format.fprintf ppf "@.@.")
+             pp_signature_entry)
+          entries
+    | global_pragmas ->
+        Format.fprintf ppf "@[<v 0>%a@.@.%a@]@."
+          (List.pp
+             ~pp_sep:(fun ppf () -> Format.fprintf ppf "@.@.")
+             pp_global_pragma)
+          global_pragmas
+          (List.pp
+             ~pp_sep:(fun ppf () -> Format.fprintf ppf "@.@.")
+             pp_signature_entry)
+          entries
 
   let pp_exception ppf = function
     | Unsupported_non_recursive_declaration ->
@@ -1750,4 +1770,6 @@ let pp_signature_totality_declaration = Signature.pp_totality_declaration
 
 let pp_signature_declaration = Signature.pp_declaration
 
-let pp_signature_signature = Signature.pp_signature
+let pp_signature_entry = Signature.pp_signature_entry
+
+let pp_signature = Signature.pp_signature

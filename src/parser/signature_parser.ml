@@ -5,7 +5,9 @@ open Common_parser
 module rec Signature_parsers : sig
   val sgn : Synprs.Signature.t t
 
-  val sgn_decl : Synprs.Signature.Declaration.t t
+  val sgn_entry : Synprs.Signature.Entry.t t
+
+  val sgn_declaration : Synprs.Signature.Declaration.t t
 
   val trust_totality_declaration : Synprs.Signature.Totality.Declaration.t t
 
@@ -18,28 +20,19 @@ module rec Signature_parsers : sig
 end = struct
   let nostrenghten_pragma =
     pragma "nostrengthen" |> span $> fun (location, ()) ->
-    Synprs.Signature.Pragma.Global.No_strengthening { location }
+    Synprs.Signature.Global_pragma.No_strengthening { location }
 
   let coverage_pragma =
     pragma "coverage" |> span $> fun (location, ()) ->
-    Synprs.Signature.Pragma.Global.Coverage { location; variant = `Error }
+    Synprs.Signature.Global_pragma.Raise_error_on_coverage_error { location }
 
   let warncoverage_pragma =
     pragma "warncoverage" |> span $> fun (location, ()) ->
-    Synprs.Signature.Pragma.Global.Coverage { location; variant = `Warn }
+    Synprs.Signature.Global_pragma.Warn_on_coverage_error { location }
 
   let sgn_global_prag =
-    let global_pragma_to_global_pragma_declaration pragma =
-      pragma |> span $> fun (location, pragma) ->
-      Synprs.Signature.Declaration.Raw_global_pragma { location; pragma }
-    in
-    let global_pragmas =
-      [ nostrenghten_pragma; coverage_pragma; warncoverage_pragma ]
-    in
-    let global_pragma_declarations =
-      global_pragmas |> List.map global_pragma_to_global_pragma_declaration
-    in
-    choice global_pragma_declarations |> labelled "global pragma"
+    choice [ nostrenghten_pragma; coverage_pragma; warncoverage_pragma ]
+    |> labelled "global pragma"
 
   let name_pragma =
     seq3
@@ -151,8 +144,13 @@ end = struct
              , (datatype_flavour, identifier, kind, constructor_declarations)
              ) ->
       let typ_declaration =
-        Synprs.Signature.Declaration.Raw_comp_typ_constant
-          { location; identifier; kind; datatype_flavour }
+        match datatype_flavour with
+        | `Inductive ->
+            Synprs.Signature.Declaration.Raw_inductive_comp_typ_constant
+              { location; identifier; kind }
+        | `Stratified ->
+            Synprs.Signature.Declaration.Raw_stratified_comp_typ_constant
+              { location; identifier; kind }
       in
       List1.from typ_declaration constructor_declarations
     in
@@ -389,53 +387,62 @@ end = struct
   let sgn_module_decl =
     seq2
       (keyword "module" &> identifier)
-      (equals &> keyword "struct" &> many Signature_parsers.sgn_decl)
+      (equals &> keyword "struct" &> many Signature_parsers.sgn_entry)
     <& keyword "end" <& maybe semicolon |> span
     |> labelled "module declaration"
     $> fun (location, (identifier, declarations)) ->
     Synprs.Signature.Declaration.Raw_module
       { location; identifier; declarations }
 
-  let sgn_decl =
-    let pragma =
-      choice
-        [ name_pragma
-        ; not_pragma
-        ; fixity_pragma
-        ; default_associativity_pragma
-        ; open_pragma
-        ; abbrev_pragma
-        ]
-      |> span
-      $> fun (location, pragma) ->
-      Synprs.Signature.Declaration.Raw_pragma { location; pragma }
-    in
+  let sgn_declaration =
     choice
-      [ pragma
-      ; query_declaration
-      ; mquery_declaration
-      ; sgn_comment (* misc declarations *)
-      ; sgn_module_decl
-      ; sgn_typedef_decl (* type declarations *)
-      ; sgn_lf_typ_decl
-      ; sgn_cmp_typ_decl
+      [ sgn_lf_typ_decl
       ; sgn_oldstyle_lf_decl
-      ; sgn_schema_decl (* term declarations *)
+      ; sgn_cmp_typ_decl
+      ; sgn_schema_decl
+      ; sgn_module_decl
+      ; sgn_typedef_decl
       ; sgn_let_decl
       ; sgn_thm_decl
+      ; query_declaration
+      ; mquery_declaration
+      ; sgn_comment
       ]
     |> labelled "top-level declaration"
+
+  let sgn_pragma =
+    choice
+      [ name_pragma
+      ; not_pragma
+      ; fixity_pragma
+      ; default_associativity_pragma
+      ; open_pragma
+      ; abbrev_pragma
+      ]
+    |> labelled "pragma"
+
+  let sgn_entry =
+    let declaration =
+      sgn_declaration $> fun declaration ->
+      Synprs.Signature.Entry.Raw_declaration declaration
+    and pragma =
+      sgn_pragma $> fun pragma -> Synprs.Signature.Entry.Raw_pragma pragma
+    in
+    choice [ declaration; pragma ]
 
   let sgn =
     seq2
       (many sgn_global_prag |> renamed "zero or more global pragmas")
-      (many sgn_decl |> renamed "zero or more top-level declarations")
-    $> fun (prags, decls) -> prags @ decls
+      (many sgn_entry |> renamed "zero or more top-level declarations")
+    $> fun (prags, decls) ->
+    { Synprs.Signature.global_pragmas = prags; entries = decls }
 end
 
 let sgn = Signature_parsers.sgn
 
-let sgn_decl = Signature_parsers.sgn_decl
+let sgn_entry = Signature_parsers.sgn_entry
+
+let sgn_declaration = Signature_parsers.sgn_declaration
 
 let trust_totality_declaration = Signature_parsers.trust_totality_declaration
 

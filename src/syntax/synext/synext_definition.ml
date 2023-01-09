@@ -1361,27 +1361,25 @@ module Signature = struct
           (** [Abbreviation { module_identifier; abbreviation; _ }] is the
               pragma [--abbrev module_identifier abbreviation.] for defining
               the alias [abbreviation] for the module [module_identifier]. *)
+  end
 
-    (** Global signature pragmas for setting compilation parameters
+  (** Global signature pragmas for setting compilation parameters
 
-        Global pragmas must appear at the beginning of a signature. They act
-        like command-line interface flags. *)
-    module Global = struct
-      type t =
-        | No_strengthening of { location : Location.t }
-            (** [No_strengthening _] is the pragma [--nostrengthen] for
-                globally disabling strengthening during LF reconstruction. *)
-        | Coverage of
-            { location : Location.t
-            ; variant : [ `Error | `Warn ]
-            }
-            (** - [Coverage { variant = `Error; _ }] is the pragma
-                  [--coverage] for enabling coverage checking and raising
-                  errors on coverage errors.
-                - [Coverage { variant = `Warn; _ }] is the pragma
-                  [--warncoverage] for enabling coverage checking and raising
-                  warnings on coverage errors. *)
-    end
+      Global pragmas must appear at the beginning of a signature. They act
+      like command-line interface flags. *)
+  module Global_pragma = struct
+    type t =
+      | No_strengthening of { location : Location.t }
+          (** [No_strengthening _] is the pragma [--nostrengthen] for
+              globally disabling strengthening during LF reconstruction. *)
+      | Warn_on_coverage_error of { location : Location.t }
+          (** [Warn_on_coverage_error _] is the pragma [--warncoverage] for
+              enabling coverage checking and raising warnings on coverage
+              errors. *)
+      | Raise_error_on_coverage_error of { location : Location.t }
+          (** [Raise_error_on_coverage_error _] is the pragma [--coverage]
+              for enabling coverage checking and raising errors on coverage
+              errors. *)
   end
 
   (** Totality declarations and orderings for configuring the totality
@@ -1488,14 +1486,6 @@ module Signature = struct
           ; identifier : Identifier.t
           ; schema : Meta.Schema.t
           }  (** Declaration of a specification for a set of contexts *)
-      | Pragma of
-          { location : Location.t
-          ; pragma : Pragma.t
-          }  (** Compiler directive *)
-      | GlobalPragma of
-          { location : Location.t
-          ; pragma : Pragma.Global.t
-          }  (** Global directive *)
       | Recursive_declarations of
           { location : Location.t
           ; declarations : Declaration.t List1.t
@@ -1545,7 +1535,7 @@ module Signature = struct
       | Module of
           { location : Location.t
           ; identifier : Identifier.t
-          ; declarations : Declaration.t List.t (* TODO: Use [Signature.t] *)
+          ; entries : Entry.t List.t
           }  (** Namespace declaration for other declarations *)
       | Comment of
           { location : Location.t
@@ -1554,9 +1544,17 @@ module Signature = struct
   end =
     Declaration
 
-  (* TODO: Add [Entry] as the union of declarations and pragmas, and use
-     [Entry] for [Signature] *)
-  type t = Declaration.t List.t
+  and Entry : sig
+    type t =
+      | Pragma of Pragma.t
+      | Declaration of Declaration.t
+  end =
+    Entry
+
+  type t =
+    { global_pragmas : Global_pragma.t List.t
+    ; entries : Entry.t List.t
+    }
 end
 
 (** {1 Type Aliases} *)
@@ -1633,7 +1631,7 @@ type harpoon_suffices_branch = Harpoon.Suffices_branch.t
 
 type signature_pragma = Signature.Pragma.t
 
-type signature_global_pragma = Signature.Pragma.Global.t
+type signature_global_pragma = Signature.Global_pragma.t
 
 type signature_totality_declaration = Signature.Totality.Declaration.t
 
@@ -1641,5 +1639,7 @@ type 'argument signature_totality_order =
   'argument Signature.Totality.Order.t
 
 type signature_declaration = Signature.Declaration.t
+
+type signature_entry = Signature.Entry.t
 
 type signature = Signature.t

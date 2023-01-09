@@ -476,62 +476,14 @@ then
    cD |- cPsi' : sW 
    cD ; cPsi' |- wk : cPsi  
 
-note that wk and cPsi' is not unique in the presence of alternating and overlapping blocks in schema sW 
+note that we always generate the identity here
+but when checking the actual recursive call arg against the generated one
+we will check for weakenings, etc. 
  *)
         
 let gen_ctx cD cPsi ((schema_id : Id.cid_schema), schema)  =  (cPsi , Substitution.LF.id) 
-(*  dprintf
-    begin fun p ->
-    p.fmt "[generalize LF context] @[<v>%a@,against@, schema %a@]"
-      (P.fmt_ppr_lf_dctx cD P.l0) cPsi
-      (P.fmt_ppr_lf_schema P.l0) schema
-    end;
-  match cPsi with
-  | LF.Null -> (cPsi , Substitution.LF.id)
-  | LF.CtxVar (LF.CtxOffset _ as _phi) -> (* if Context.lookupCtxVarSchema cD phi = schema_id then *)
-     (cPsi , Substitution.LF.id) (* else raise Not_compatible *)
-  | LF.DDec (cPsi, decl) ->
-     let cPsi' , wk = gen_ctx  cD cPsi (schema_id, schema) in
-     match decl with
-     | LF.TypDecl (x, tA) ->
-        match genTypeAgainstSchema cD cPsi (LF.BVar 0) tA  schema with 
-        (*  If tH = b.j then cD ; cPsi', b:block [t](x1:A1, ... xk:Ak)) |- b.j : [wk]tA 
-            If tH = x   then cD ; cPsi', x:tA |- x : [wk]tA  (no generalization of tA) 
-         *)
-        | Some (tH, tA_g ) -> (LF.DDec(cPsi' , LF.TypDecl(x, tA_g)) ,  LF.Dot (LF.Head tH, Substitution.LF.comp wk Substitution.LF.shift))
-        | None -> raise Not_compatible
- *)
-(*
-pre_match_gen  cD cPsi cPsi1 = (cPsi', wk)
 
-If 
-
-  cD |- cPsi ctx  and . |- cPsi1 containing references to contextual variables
-
-then 
-
-  cD ; cPsi' |- wk : cPsi (note: the generalization is not necessarily unique depending on the schema sW)
-
-in particular:
-
-
-if cPsi0 = g?, xn:An ... x0:A0 where g? is a reference to a context variable of schema sW then 
-   cPsi' = g, yk:Bk ... y(n+1):B(n+1), yn:Bn, .... y0:B0 s.t. g, yk:Bk ... y(n+1):B(n+1) have schema sW
-   cPsi  = g, yk:Ak, ...y(n+1):A(n+1)m yn:Bn, .... y0:B0  
-then
-   cD ; cPsi' |- id, yk.j, ....y(n+1).j', yn, ... y0  : cPsi  (i.e. with approbriate projections)
- *)       
-let rec pre_match_gen  cD cPsi cPsi0 = match (cPsi , cPsi0) with
-| (LF.DDec (cPsi, LF.TypDecl (x, tA)), LF.DDec (cPsi0, LF.TypDecl (_, _tA0))) ->
-   let cPsi' , wk = pre_match_gen cD cPsi cPsi0  in
-    (LF.DDec(cPsi' ,  LF.TypDecl (x, tA)), Substitution.LF.dot1 wk)
-| (LF.Null , LF.Null ) -> (LF.Null, Substitution.LF.id)
-| (cPsi , LF.CtxVar (LF.CInst (mmvar (* (n1, ({contents = None} as cvar_ref1), cD1, CTyp schema1, _, _) *), _mid)))
-     when not (LF.is_mmvar_instantiated mmvar)  ->
-   let LF.CTyp (Some schema_id ) = LF.type_of_mmvar_instantiated mmvar   (* sW : cid_schema option *) in
-   let { Schema.Entry.name; schema; decl = _ } = Schema.get schema_id  in
-   gen_ctx cD cPsi (schema_id , schema)  (* cD |- cPsi ctx *)                       
-       
+     
 (*
 gen_arg cD (k, cU) cU0 = cM 
 
@@ -557,9 +509,6 @@ let gen_arg cD  (k, cU) cU0 =
        gen_meta_obj (k,Substitution.LF.id) cU)
   | LF.ClTyp (mT1, cPsi1) ->
       let LF.ClTyp (LF.MTyp tA, cPsi) = cU in
-(*      (* find a generalization of cPsi, i.e. cPsi' |- wk : cPsi s.t. cPsi1 unifies with cPsi' *) 
-      let (cPsi', wk) = pre_match_gen cD cPsi cPsi1  in
-      let cU_g =  LF.ClTyp (LF.MTyp(Whnf.normTyp (tA, wk)), cPsi') in           *)
       (Unify.unifyMetaTyp cD (cU , Whnf.m_id) (cU0, Whnf.m_id);
        gen_meta_obj (k, Substitution.LF.id) cU)
 (* creates a meta-variable Delta ; cPsi' |- u[wk] : [wk]tA where u::[Psi |- tA] *)
@@ -596,14 +545,6 @@ let gen_arg cD  (k, cU) cU0 =
 let rec rec_spine cD (k, cU) =
   function
   | (0, ttau) -> ([], Whnf.cnormCTyp ttau)
-  (*  | 0, n, (Comp.TypPiBox (_, tau), theta) ->
-      let (spine, tau_r) = rec_spine cD (cM, cU) (i, k - 1, (tau, theta)) in
-      (Comp.DC :: spine, tau_r)
-      | 0, n, (Comp.TypArr (_, tau), theta) ->
-      let (spine, tau_r) = rec_spine cD (cM, cU) (i, k - 1, (tau, theta)) in
-      (Comp.DC :: spine, tau_r)
-      else
-   *)
   | (1, (Comp.TypPiBox (_, (LF.Decl (_, cU', _, _)), tau), theta)) ->
      let cU0 = Whnf.cnormMTyp (cU', theta) in
          begin
@@ -655,24 +596,13 @@ let rec rec_spine cD (k, cU) =
 let rec rec_spine' cD (x, ttau0) =
   function
   | (0, ttau) -> ([], Whnf.cnormCTyp ttau)
-  (* i = 0, k =/= 0
-     | (n, (Comp.TypPiBox (_, tau), theta)) ->
-     let (spine, tau_r) = rec_spine' cD (x, tau) (i, k - 1, (tau, theta)) in
-     (Comp.DC :: spine, tau_r)
-     | (n, (Comp.TypArr (_, tau), theta)) ->
-     let (spine, tau_r) = rec_spine' cD (x, tau) (i, k - 1, (tau, theta)) in
-     (Comp.DC :: spine, tau_r)
-   *)
+
   | (1, (Comp.TypPiBox _, _)) ->
      raise Not_compatible (* Error *)
 
   | (1, (Comp.TypArr (_, tau1, tau2), theta)) ->
      begin
        try
-         (* print_string ("Can generate IH for arg " ^
-            P.compTypToString cD tau0 ^
-            "\nExpected: " ^
-            P.compTypToString cD (Whnf.cnormCTyp (tau1, theta)) ^ "\n"); *)
          Unify.unifyCompTyp cD ttau0 (tau1, theta);
          let (spine, tau_r) = rec_spine' cD (x, ttau0) (0, (tau2, theta)) in
          (Comp.V x :: spine, tau_r)
@@ -946,8 +876,6 @@ let rec weakSub cD cPsi cPsi' =
     match cPsi' with
     | LF.DDec (cPsi', LF.TypDecl (x, tA)) ->
        let s = weakSub cD cPsi cPsi' in (* cPsi |- s : cPsi' *)
-       (* let _ = print_string ("Is " ^ P.typToString cD cPsi' (tA, Substitution.LF.id)
-           ^ "\n in " ^ P.dctxToString cD cPsi ^ " ? \n") in*)
        begin match pos cPsi (Whnf.normTyp (tA, s)) 1 with
        | Some k ->
           (* print_string (" Found at " ^ string_of_int k ^ "\n"); *)
@@ -996,10 +924,6 @@ let convDCtxMod cD cPhi (* found *) cPsi (* expected *) =
   | _ ->
      begin
        try
-         (* let _ = (print_string "[convDCtxMod] compute possible weakening substitution which allows for permutations : \n";
-             print_string (" cPhi = " ^ P.dctxToString cD cPhi ^ "\n");
-             print_string (" cPsi' = " ^ P.dctxToString cD cPsi' ^ "\n")) in
-          *)
          let wk_sub = weakSub cD cPsi' cPhi in
          Some (Substitution.LF.comp wk_sub s_proj)
        with
@@ -1187,41 +1111,7 @@ let shiftMetaObj cD (cM, cU) (cPsi', s_proj, cPsi) =
             (l, LF.ClObj (Context.extend_hatctx k phat0, LF.MObj (Whnf.norm (tM, dot_k s_proj k))))  , LF.ClTyp (Whnf.normClTyp (tA , dot_k s_proj k), padctx cPsi' k)
             end 
      end
-(*
 
-    begin match
-       prefix_hat
-         (Whnf.cnorm_psihat phat Whnf.m_id)
-         (Whnf.cnorm_psihat phat' Whnf.m_id) (* phat' is larger than cPsi, i.e. rec cal is done on cPsi', but tM is defined in a larger context phat' *)
-       , prefixDCtx cD cPsi cPsi0 
-     with
-     | None , None -> cM , cU (* (l, LF.ClObj (phat0, LF.MObj (Whnf.norm (tM, s_proj)))) , LF.ClTyp (Whnf.normClTyp (tA , s_proj), cPsi') *)
-     | None , Some _ -> (print_string "prefixDctx Some =/= prefix_hat None \n" ; cM , cU) (* (l, LF.ClObj (phat0, LF.MObj (Whnf.norm (tM, s_proj)))) , LF.ClTyp (Whnf.normClTyp (tA , s_proj), cPsi') *)
-     | Some k , r->
-        begin
-          let rec padctx cPsi' k =
-             if k = 0 then cPsi' else padctx (LF.DDec (cPsi',  LF.TypDeclOpt Name.(mk_name (SomeString ("bb" ^ string_of_int k))))) (k-1) in 
-          (match r with
-          | Some j -> if j = k then () else print_string  ("prefixDctx some = prefix_hat Some Do not AGREE j = " ^ string_of_int j ^ " k = " ^ string_of_int k ^ "\n")
-          | None -> print_string "prefixHat = Some PrefixDctx = None!!!\n" );
-          dprintf
-          begin
-           let rec padctx cPsi' k =
-             if k = 0 then cPsi' else padctx (LF.DDec (cPsi',  LF.TypDeclOpt Name.(mk_name (SomeString ("bb" ^ string_of_int k))))) (k-1)
-          in 
-           fun p ->
-           p.fmt "[Total – ConvDCtxGen generated substitution - adjusted] : %a \n[Total - original term ] : %a |-  %a"
-            P.(fmt_ppr_lf_sub cD (Context.hatToDCtx (Context.extend_hatctx k phat0))  P.l0) (dot_k s_proj k)
-            P.(fmt_ppr_lf_dctx cD P.l0) (padctx cPsi k)
-            P.(fmt_ppr_lf_normal cD (Context.hatToDCtx phat0)  P.l0) tM
-            (* P.(fmt_ppr_lf_normal cD (padctx cPsi' k)  P.l0) (Whnf.norm (tM, dot_k s_proj k)) *)
-          end ;        
-        (* extend phat0 with k *)
-         (l, LF.ClObj (Context.extend_hatctx k phat0, LF.MObj (Whnf.norm (tM, dot_k s_proj k))))  , LF.ClTyp (Whnf.normClTyp (tA , dot_k s_proj k), padctx cPsi' k)
-        end
-    end
- *)
- 
   (* phat' >= phat, i.e. phat is a prefix of phat' possibly *)
   (* if Whnf.conv_hat_ctx phat phat' then
           Comp.MetaObj (l, phat0, Whnf.norm (tM, s_proj))

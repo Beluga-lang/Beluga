@@ -1295,7 +1295,8 @@ and elTerm' recT cD cPsi r sP =
               *)
 
              let ss = S.LF.invert s'' in
-             let tP = pruningTyp loc cD cPsi (Context.dctxToHat cPsi) sP (Int.LF.MShift 0, ss) in
+             let tP_orig = Whnf.normTyp sP in  
+             let tP = pruningTyp loc cD cPsi (Context.dctxToHat cPsi) (tP_orig,Substitution.LF.id)  (Int.LF.MShift 0, ss) in
              (* let tP = Int.LF.TClo (Int.LF.TClo sP, S.LF.invert s'') in *)
              (* For type reconstruction to succeed, we must have
               * . ; cPhi |- tP <= type  and . ; cPsi |- s <= cPhi

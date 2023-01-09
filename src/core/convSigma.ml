@@ -56,6 +56,7 @@ let rec map conv_list k =
   | (d :: conv_list', 1) -> d
   | (d :: conv_list', _) -> d + map conv_list' (k - 1)
 
+
 (*
   strans_norm cD cPsi sM conv_list = tM'
 
@@ -209,6 +210,8 @@ and strans_typW cD cPsi (tA, s) conv_list =
 let rec flattenSigmaTyp cD cPsi strec conv_list =
   match strec with
   | (LF.SigmaLast (n, tA), s) ->
+     (* bp: this could be replaced by generating a substitution s_tup / s_proj and then
+        applying this substitution to tA – this would remove calls to strans entirely *)
      let tA' = strans_typ cD cPsi (tA, s) conv_list in
      (LF.DDec (cPsi, LF.TypDecl (Name.mk_name Name.NoName, tA')), 1)
 
@@ -243,6 +246,7 @@ let rec flattenDCtx' cD =
      , 1 :: conv_list
      )
 
+                          
 (* flattenDCtx cD cPsi = (cPsi', L)
 
    if    cD |- cPsi and cPsi contains possibly Sigma-types 

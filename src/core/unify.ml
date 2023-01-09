@@ -1836,13 +1836,12 @@ let rec blockdeclInDctx =
     let t_flat = Whnf.normSub (Substitution.LF.comp t1' s_tup) in
     dprintf
       begin fun p ->
-      p.fmt "[unifyMMVarTermProj] t_flat = %a \n t_flat (convSigma trans) = %a "
+      p.fmt "[unifyMMVarTermProj] t_flat = %a "
         (P.fmt_ppr_lf_sub cD0 flat_cPsi P.l0) t_flat
-        (P.fmt_ppr_lf_sub cD0 flat_cPsi P.l0) (ConvSigma.strans_sub cD0 cPsi t1' conv_list)
       end;
      dprintf
       begin fun p ->
-      p.fmt "[unifyMMVarTermProj] sM2 = %a \n s_tup = %a \n s_proj = %a  \n comp s_tup shift = %a \n" 
+      p.fmt "[unifyMMVarTermProj] sM2 = %a \n s_tup = %a \n s_proj = %a  " 
         (P.fmt_ppr_lf_normal cD0 cPsi P.l0) tM2
         (P.fmt_ppr_lf_sub cD0 flat_cPsi P.l0) s_tup  (* flat_cPsi |- s_tup : cPsi *)  
         (P.fmt_ppr_lf_sub cD0 cPsi P.l0) s_proj      (*  cPsi      |- s_proj : flat_cPsi *)
@@ -1853,9 +1852,9 @@ let rec blockdeclInDctx =
                   composition gives us:
 
                   b:block x:tA, y:tB   |- <b.x, b.y> :b:block x:tA, y:tB
-         *)
-        (P.fmt_ppr_lf_sub cD0 (LF.DDec (cPsi, LF.TypDeclOpt (Name.mk_name Name.NoName )))  P.l0) (Substitution.LF.dot1 s_proj )     (*  cPsi , x:_     |- s_proj : flat_cPsi, x:_ *)
-      
+
+                 Only the opposite composition: comp s_proj s_tup = id  
+         *)     
       end;
     let ss = invert t_flat in
     (* cPsi1  |- ss : flat_cPsi
@@ -1865,13 +1864,11 @@ let rec blockdeclInDctx =
      *)
     (* flat_cPsi |- tM2'  *) 
     (* this seems to produce an incorrect term -bp *)
-    (* let tM2' = ConvSigma.strans_norm cD0 cPsi (tM2, id) conv_list in  *)
      let tM2' = Whnf.norm (tM2, s_tup )  (* flat_cPsi |- tM2'  *) in   
     dprintf
       begin fun p ->
-      p.fmt "[unifyMMVarTermProj] sM2' = %a \n sM2' (convSigma trans) = %a"
+      p.fmt "[unifyMMVarTermProj] tM2'(normal form) = %a  "
         (P.fmt_ppr_lf_normal cD0 flat_cPsi P.l0) tM2'
-        (P.fmt_ppr_lf_normal cD0 flat_cPsi P.l0) (ConvSigma.strans_norm cD0 cPsi (tM2, id) conv_list )      
       end;
     let sM2' =
       trail
@@ -1881,7 +1878,7 @@ let rec blockdeclInDctx =
     in
     dprintf
       begin fun p ->
-      p.fmt "[unifyMMVarTermProj] - done: %a"
+      p.fmt "[unifyMMVarTermProj]: tM2 (after pruning) = %a"
         (P.fmt_ppr_lf_normal cD0 flat_cPsi P.l0) tM2'
       end;
     instantiateMMVar (mmvar.instantiation, sM2', mmvar.constraints.contents)

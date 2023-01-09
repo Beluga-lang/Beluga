@@ -48,10 +48,8 @@ let etaContract =
      let rec etaUnroll k =
        function
        | Lam (_, _, tN) ->
-          dprintf (fun p -> p.fmt "etaUnroll k = %d@." k);
           etaUnroll (k + 1) tN
        | _ ->
-          dprintf (fun p -> p.fmt "etaUnroll k = %d@." k);
           (k, tM)
      in
      let rec etaSpine k tS =
@@ -63,14 +61,9 @@ let etaContract =
           else false
        | _ ->
           false
-          (* previously
-             dprint (fun () -> "[etaSpine] _ ");
-             raise (Error.Violation "etaSpine undefined\n")
-           *)
      in
      begin match etaUnroll 0 tM with
      | (k, Root (_, BVar x, tS, _)) ->
-        dprintf (fun p -> p.fmt "check etaSpine k = %d@." k);
         if etaSpine k tS && x > k
         then Head (BVar (x - k))
         else Obj tM

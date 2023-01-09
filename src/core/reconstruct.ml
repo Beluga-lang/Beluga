@@ -484,8 +484,9 @@ let rec elMCtx recT =
 
 
 let mgAtomicTyp cD cPsi a kK =
-  let (flat_cPsi, conv_list) = flattenDCtx cD cPsi in
-  let s_proj = gen_proj_sub conv_list in  (* cPsi |- s_proj : flat_cPsi *)  
+  let (flat_cPsi, lazy s_proj, lazy s_tup) = gen_flattening cD cPsi in
+  (* cPsi |- s_proj : flat_cPsi *)
+  (* flat_cPsi |- s_tup : cPsi *)  
   dprintf
     begin fun p ->
     p.fmt "[mgAtomicTyp] @[<v>flat cPsi = @[%a@]\
@@ -521,7 +522,9 @@ let mgAtomicTyp cD cPsi a kK =
        Int.LF.Nil
 
     | (Int.LF.(PiKind ((TypDecl (u, tA1), plicity), kK), s)) ->
-       let tA1' = strans_typ cD cPsi (tA1, s) conv_list in
+       let tA1_norm = Whnf.normTyp (tA1, s) in
+       let tA1' = Whnf.normTyp (tA1_norm,  s_tup) in 
+       (*       let tA1' = strans_typ cD cPsi (tA1, s) conv_list in *)
        (*  flat_cPsi  |- tA1 *) 
        let tR =
          if !strengthen

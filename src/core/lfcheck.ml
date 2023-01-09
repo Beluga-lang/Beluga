@@ -766,25 +766,25 @@ and projectCtxIntoDctx =
 
 
 (* Context Schema Checking. Checking an LF context against a schema
- 
+
        psi::W \in Delta
- (1)  -----------------  
+ (1)  -----------------
        Delta |- psi <= W
- 
+
       Delta |- Psi <= W   Delta;Psi |- A >> W
 (2)  —————————————————————————————————————-
-       Delta |- Psi, x:A <= W 
+       Delta |- Psi, x:A <= W
 
- Checking a type is "in" a schema :  Delta;Psi |- A >> W 
-  where W = elem_1 + .... + elem_n  and  elem_i = some cPhi'_i   block cPhi_i 
-   
+ Checking a type is "in" a schema :  Delta;Psi |- A >> W
+  where W = elem_1 + .... + elem_n  and  elem_i = some cPhi'_i   block cPhi_i
+
   Delta;Psi |- A >> W (checkTypeAgainstSchema) succeeds,
-  if there exists a substitution cD ; Psi  |- s  : cPhi'_i  s.t. 
+  if there exists a substitution cD ; Psi  |- s  : cPhi'_i  s.t.
 
-  Delta ; Psi |- A = block [s]cPhi_i 
- 
+  Delta ; Psi |- A = block [s]cPhi_i
+
  *)
-                      
+
 (* checkTypeAgainstSchema loc cD cPsi tA sch (elements : sch_elem list)
  *   sch = full schema, for error messages
  *   elements = elements to be tried

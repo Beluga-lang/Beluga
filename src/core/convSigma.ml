@@ -60,16 +60,16 @@ let rec map conv_list k =
 (*
   strans_norm cD cPsi sM conv_list = tM'
 
-   If   cD |- cPsi   and cD ; cPsi |- sM   
+   If   cD |- cPsi   and cD ; cPsi |- sM
    and  cD |- flat_cPsi
         where conv_list relates cPsi to flat_cPsi, i.e. | conv_list | = |cPsi|
-       s.t. if cPsi = xn:tBn, .... x1:tB1   and conv_list(i) = |tBi| 
-      (for example: cPsi = x2: block (y22:tA22, y21:tA21), x1:block (y13:tA13, y12:tA12, y11:tA11) 
+       s.t. if cPsi = xn:tBn, .... x1:tB1   and conv_list(i) = |tBi|
+      (for example: cPsi = x2: block (y22:tA22, y21:tA21), x1:block (y13:tA13, y12:tA12, y11:tA11)
                     then conv_list = [2 ; 3]
-   then 
+   then
       cD ; flat_cPsi |- tM'
 
-  NOTE: in principle the same thing should be achieved by simply [s_tup]sM where 
+  NOTE: in principle the same thing should be achieved by simply [s_tup]sM where
      cD;  flat_cPsi |- s_tup : cPsi   and   cD ; cPsi |- sM
 
  *)
@@ -246,19 +246,19 @@ let rec flattenDCtx' cD =
      , 1 :: conv_list
      )
 
-                          
+
 (* flattenDCtx cD cPsi = (cPsi', L)
 
-   if    cD |- cPsi and cPsi contains possibly Sigma-types 
+   if    cD |- cPsi and cPsi contains possibly Sigma-types
          cPsi = ., bn:tBn, ... b0:tB0  and tBi = Sigma yik:Aik(i)...yi0:Ai0 or simply tBi = Ai0
-         and k(i) is the #elements in tBi. 
+         and k(i) is the #elements in tBi.
    then
-         cD |- cPsi'  where all Sigma-types in cPsi have been flattened, i.e. 
- 
-         cD |- . , ynk:Ank(n) .... yn0:An0, .... y0k:A0k(0), ... y00:A00        
+         cD |- cPsi'  where all Sigma-types in cPsi have been flattened, i.e.
+
+         cD |- . , ynk:Ank(n) .... yn0:An0, .... y0k:A0k(0), ... y00:A00
 
 
-         and L is a vector [k(0) ; .... ; k(n)] 
+         and L is a vector [k(0) ; .... ; k(n)]
 
 
    Example:  cPsi  =  .,  bx:Sigma x:A.B,  y:A,  bw: Sigma w1:A  w2:A. A
@@ -274,13 +274,13 @@ let flattenDCtx cD cPsi =
 
 
 (* gen_proj_sub conv_list =  s
-   gen_tup_sub convlist = ss 
+   gen_tup_sub convlist = ss
 
    If cD |- cPsi   and    cD |- flat_cPsi
       where conv_list relates cPsi to flat_cPsi, i.e. | conv_list | = |cPsi|
 
    the
-      cD ; cPsi      |- s : flat_cPsi 
+      cD ; cPsi      |- s : flat_cPsi
       cD ; flat_cPsi |- ss : cPsi
             and s is a projection substitution
 
@@ -312,12 +312,12 @@ let gen_proj_sub' conv_list =
     match conv_list with
     | [] -> LF.Shift 0  (* . |- . : .  and flat_cPsi = . = cPsi *)
     | 1 :: clist ->
-       let s = gen_sub clist in  (* cPsi |- s : flat_cPsi *) 
+       let s = gen_sub clist in  (* cPsi |- s : flat_cPsi *)
        Substitution.LF.dot1 s
-       (* cPsi, x:tA |- s¹, x : flat_cPsi, x:tA *) 
+       (* cPsi, x:tA |- s¹, x : flat_cPsi, x:tA *)
     | k :: clist ->
        let s = gen_sub clist in  (* cPsi |- s : flat_cPsi *)
-       (* cPsi, b: tB |- s¹ : flat_cPsi *) 
+       (* cPsi, b: tB |- s¹ : flat_cPsi *)
        gen_projs (Substitution.LF.comp s Substitution.LF.shift) k 1
   in
   gen_sub conv_list
@@ -341,14 +341,14 @@ let gen_tup_sub' conv_list =
     match conv_list with
     | [] -> LF.Shift 0  (* . |- . : .  and flat_cPsi = . = cPsi *)
     | 1 :: clist ->
-       let s = gen_sub' clist in  (* flat_cPsi |- s : cPsi *) 
+       let s = gen_sub' clist in  (* flat_cPsi |- s : cPsi *)
        Substitution.LF.dot1 s
     | k :: clist ->
-       let s = gen_sub' clist in (* flat_cPsi |- s : cPsi *) 
+       let s = gen_sub' clist in (* flat_cPsi |- s : cPsi *)
        let tM = gen_tup k  in  (* flat_cPsi, xk:Ak, ... x0:A0 |- <xn, ..., x0>  *)
        LF.Dot (LF.Obj (LF.Tuple (Syntax.Loc.ghost, tM)), shift s k)
   in
-  gen_sub' conv_list 
+  gen_sub' conv_list
 
 
 let gen_proj_sub conv_list =

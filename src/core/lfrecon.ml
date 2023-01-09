@@ -821,8 +821,8 @@ let rec synHead cD loc cPsi =
      Int.LF.TypDecl (x, Int.LF.TClo sQ), Int.LF.Proj (h', j)
 
 
- (* 
-synDom cD cPsi s = cPhi 
+ (*
+synDom cD cPsi s = cPhi
 
 
  *)
@@ -1295,7 +1295,7 @@ and elTerm' recT cD cPsi r sP =
               *)
 
              let ss = S.LF.invert s'' in
-             let tP_orig = Whnf.normTyp sP in  
+             let tP_orig = Whnf.normTyp sP in
              let tP = pruningTyp loc cD cPsi (Context.dctxToHat cPsi) (tP_orig,Substitution.LF.id)  (Int.LF.MShift 0, ss) in
              (* let tP = Int.LF.TClo (Int.LF.TClo sP, S.LF.invert s'') in *)
              (* For type reconstruction to succeed, we must have
@@ -1331,7 +1331,7 @@ and elTerm' recT cD cPsi r sP =
              let (cPhi, s'') = synDomOpt cD loc flat_cPsi flat_s in (* flat_cPsi |- s'' : cPhi *)
              (* cPhi is going to be the LF context of the FMV  and s'' is the associated substitution *)
              dprintf
-               begin fun p -> 
+               begin fun p ->
                p.fmt "Reconstructed a flattened substitution s'' based on the original subst. s  \n %a |- %a : %a"
                  (P.fmt_ppr_lf_dctx cD P.l0) flat_cPsi
                  (P.fmt_ppr_lf_sub cD flat_cPsi P.l0)  (Whnf.normSub s'')
@@ -1343,11 +1343,11 @@ and elTerm' recT cD cPsi r sP =
               *)
              let ss = S.LF.invert s'' in
              dprintf
-               begin fun p -> 
-               p.fmt "flattenProjPat  ss = %a " (P.fmt_ppr_lf_sub cD cPhi P.l0)  ss 
+               begin fun p ->
+               p.fmt "flattenProjPat  ss = %a " (P.fmt_ppr_lf_sub cD cPhi P.l0)  ss
              end;
              let s_tup = ConvSigma.gen_tup_sub conv_list in
-             (* cD ; flat_cPsi |- s_tup : cPsi *)  
+             (* cD ; flat_cPsi |- s_tup : cPsi *)
              dprintf
                begin fun p ->
                let s_tup_new =   ConvSigma.gen_tup_sub' conv_list in
@@ -1355,19 +1355,19 @@ and elTerm' recT cD cPsi r sP =
                p.fmt "[synDom] Conversion substitution s_tup = %a \n New Conversion substitution s_tup_new = %a  \n New Dual Proj Subs = %a "
                  (P.fmt_ppr_lf_sub cD flat_cPsi P.l0) s_tup
                  (P.fmt_ppr_lf_sub cD flat_cPsi P.l0) s_tup_new
-                 (P.fmt_ppr_lf_sub cD cPsi P.l0) s_proj_new 
+                 (P.fmt_ppr_lf_sub cD cPsi P.l0) s_proj_new
                end ;
              let (tP, s_p) = sP in  (* cD ; cPsi |- sP *)
              dprintf
-               begin fun p -> 
+               begin fun p ->
                p.fmt "[synDom] Type of meta-variable sP = %a \n comp s_pₚs_tup = %a "
                  (P.fmt_ppr_lf_typ cD cPsi P.l0) (Whnf.normTyp sP)
                  (P.fmt_ppr_lf_sub cD flat_cPsi P.l0) (S.LF.comp s_p s_tup)
                end ;
              dprintf
-               begin fun p -> 
+               begin fun p ->
                p.fmt "[synDom] Converted Type of meta-variable sP  = %a"
-               (P.fmt_ppr_lf_typ cD flat_cPsi P.l0) (Whnf.normTyp (Whnf.normTyp sP, s_tup)) 
+               (P.fmt_ppr_lf_typ cD flat_cPsi P.l0) (Whnf.normTyp (Whnf.normTyp sP, s_tup))
                end ;
              (* !!!!! let tP' = Whnf.normTyp (tP, S.LF.comp s_p s_tup) in !!! This optimization is not working. -bp *)
              let tP' = Whnf.normTyp (Whnf.normTyp sP, s_tup) in

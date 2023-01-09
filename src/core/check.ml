@@ -401,13 +401,13 @@ module Comp = struct
           assert false
        | Int.LF.(ClTyp (mT, cPsi)) -> (* when Context.containsSigma cPsi -> *)
           begin match mT with
-          | Int.LF.(MTyp (Atom (_, a, _) as tA)) ->           
+          | Int.LF.(MTyp (Atom (_, a, _) as tA)) ->
              let (flat_cPsi, lazy s_proj, lazy s_tup) = ConvSigma.gen_flattening cD cPsi in
              (* flat_cPsi |- s_tup : cPsi and cPsi |- s_proj : flat_cPsi *)
              dprintf begin fun p ->
-             p.fmt "[apply unbox modifier] cPsi = %a \n s_tup = %a \n s_proj = %a" 
+             p.fmt "[apply unbox modifier] cPsi = %a \n s_tup = %a \n s_proj = %a"
                P.(fmt_ppr_lf_dctx cD P.l0) cPsi
-               P.(fmt_ppr_lf_sub cD flat_cPsi P.l0) s_tup  (* flat_cPsi |- s_tup : cPsi *)  
+               P.(fmt_ppr_lf_sub cD flat_cPsi P.l0) s_tup  (* flat_cPsi |- s_tup : cPsi *)
                P.(fmt_ppr_lf_sub cD cPsi P.l0) s_proj      (*  cPsi      |- s_proj : flat_cPsi *)
                end;
              let tA' = Whnf.normTyp (tA, s_tup) in
@@ -419,7 +419,7 @@ module Comp = struct
              (* flat_cPsi |- ss' : flat_cPsi' *)
              let ssi' = S.LF.invert ss' in
              (* flat_cPsi' |- ssi' : flat_cPsi *)
-             let cU' = Int.LF.ClTyp (Int.LF.MTyp (Whnf.normTyp (tA', ssi')), flat_cPsi') in 
+             let cU' = Int.LF.ClTyp (Int.LF.MTyp (Whnf.normTyp (tA', ssi')), flat_cPsi') in
              dprintf
                begin fun p ->
                 p.fmt "Apply strengthening - flattening for new MVar cU = %a "
@@ -434,7 +434,7 @@ module Comp = struct
           end
    (*    | Int.LF.(ClTyp (mT, cPhi)) ->
           begin match mT with
-          | Int.LF.(MTyp (Atom (_, a, _) as tA)) ->           
+          | Int.LF.(MTyp (Atom (_, a, _) as tA)) ->
              let (ss', cPhi') =
                Subord.thin' cD a cPhi
                |> Pair.map_right Whnf.normDCtx

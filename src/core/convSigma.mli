@@ -21,9 +21,9 @@ val map : t -> Id.offset -> Id.offset
 val flattenDCtx : mctx -> dctx -> dctx * t
 val gen_proj_sub: t -> sub
 val gen_tup_sub : t -> sub
-  
+
 val gen_proj_sub': t -> sub
-val gen_tup_sub' : t -> sub  
+val gen_tup_sub' : t -> sub
 
 (** Constructs a unification variable for the given tclo,
     strengthening its type. *)

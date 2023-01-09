@@ -51,10 +51,10 @@ let rec hatToDCtx =
        ( hatToDCtx (ctx_v, k-1)
        , LF.TypDeclOpt Name.(mk_name (SomeString ("x" ^ string_of_int k))))
 
-let extend_hatctx j  (ctx_v, k)  = (ctx_v, j+k) 
+let extend_hatctx j  (ctx_v, k)  = (ctx_v, j+k)
 
 
-  
+
 (* Declaration Contexts *)
 (*
 let rec sigmaShift typrec k = match typrec with
@@ -139,7 +139,7 @@ let rec containsSigma cPsi = match cPsi with
   | DDec (_, TypDecl (x, Sigma tArec)) -> true
   | DDec (cPsi', _ ) -> containsSigma cPsi'
   | _ -> false
-  
+
 
 (* ctxVar (Psi) = psi opt
  *

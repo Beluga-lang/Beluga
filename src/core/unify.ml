@@ -1813,8 +1813,8 @@ let rec blockdeclInDctx =
     let mtt1 = Whnf.m_invert (Whnf.cnormMSub mt1) in
     (* cD |- mtt1 : cD0 and  cD ; cPsi |- t1' : cPsi1 *)
     let (flat_cPsi, conv_list) = ConvSigma.flattenDCtx cD0 cPsi in
-    let s_tup = ConvSigma.gen_tup_sub conv_list in (* flat_cPsi |- s_tup : cPsi *)  
-    let s_proj = ConvSigma.gen_proj_sub conv_list in (* cPsi |- s_proj : flat_cPsi *)  
+    let s_tup = ConvSigma.gen_tup_sub conv_list in (* flat_cPsi |- s_tup : cPsi *)
+    let s_proj = ConvSigma.gen_proj_sub conv_list in (* cPsi |- s_proj : flat_cPsi *)
     dprintf
       begin fun p ->
       p.fmt "[unifyMMVarTermProj] \
@@ -1827,7 +1827,7 @@ let rec blockdeclInDctx =
         (P.fmt_ppr_lf_normal cD0 cPsi P.l0) tM2
         (P.fmt_ppr_lf_dctx cD0 P.l0) flat_cPsi
         ConvSigma.fmt_ppr_conv_list conv_list
-        (P.fmt_ppr_lf_mtyp cD0 ) mmvar.typ 
+        (P.fmt_ppr_lf_mtyp cD0 ) mmvar.typ
       end;
     let phat = Context.dctxToHat flat_cPsi in
     (*  cD0 ; cPsi |- t1' : cPsi 1   and cD ; flat_cPsi |- s_tup : cPsi1  *)
@@ -1841,20 +1841,20 @@ let rec blockdeclInDctx =
       end;
      dprintf
       begin fun p ->
-      p.fmt "[unifyMMVarTermProj] sM2 = %a \n s_tup = %a \n s_proj = %a  " 
+      p.fmt "[unifyMMVarTermProj] sM2 = %a \n s_tup = %a \n s_proj = %a  "
         (P.fmt_ppr_lf_normal cD0 cPsi P.l0) tM2
-        (P.fmt_ppr_lf_sub cD0 flat_cPsi P.l0) s_tup  (* flat_cPsi |- s_tup : cPsi *)  
+        (P.fmt_ppr_lf_sub cD0 flat_cPsi P.l0) s_tup  (* flat_cPsi |- s_tup : cPsi *)
         (P.fmt_ppr_lf_sub cD0 cPsi P.l0) s_proj      (*  cPsi      |- s_proj : flat_cPsi *)
-        (* note :  comp s_tup s_proj does not produce the identity, since we don't have eta-contraction for tuples 
-             For example:   x:tA, y:tB |-  <x,y> : b:block x:tA, y:tB 
+        (* note :  comp s_tup s_proj does not produce the identity, since we don't have eta-contraction for tuples
+             For example:   x:tA, y:tB |-  <x,y> : b:block x:tA, y:tB
                   b:block x:tA, y:tB   |- b.x, b.y :  x:tA, y:tB
 
                   composition gives us:
 
                   b:block x:tA, y:tB   |- <b.x, b.y> :b:block x:tA, y:tB
 
-                 Only the opposite composition: comp s_proj s_tup = id  
-         *)     
+                 Only the opposite composition: comp s_proj s_tup = id
+         *)
       end;
     let ss = invert t_flat in
     (* cPsi1  |- ss : flat_cPsi
@@ -1862,9 +1862,9 @@ let rec blockdeclInDctx =
        it can happen that it contains projections as complete flattening was impossible
        because not enough typing information was available in cPsi (i.e. cPsi was obtained by hattoDctx)
      *)
-    (* flat_cPsi |- tM2'  *) 
+    (* flat_cPsi |- tM2'  *)
     (* this seems to produce an incorrect term -bp *)
-     let tM2' = Whnf.norm (tM2, s_tup )  (* flat_cPsi |- tM2'  *) in   
+     let tM2' = Whnf.norm (tM2, s_tup )  (* flat_cPsi |- tM2'  *) in
     dprintf
       begin fun p ->
       p.fmt "[unifyMMVarTermProj] tM2'(normal form) = %a  "
@@ -1882,7 +1882,7 @@ let rec blockdeclInDctx =
         (P.fmt_ppr_lf_normal cD0 flat_cPsi P.l0) tM2'
       end;
     instantiateMMVar (mmvar.instantiation, sM2', mmvar.constraints.contents)
- 
+
   and unifyMMVarMMVar cPsi loc ((mmvar1, mt1), t1') ((mmvar2, mt2), t2') =
     let ClTyp (tp1, cPsi1) = mmvar1.typ in
     let (s', cPsi') = intersection (Context.dctxToHat cPsi) (Whnf.normSub t1') (Whnf.normSub t2') cPsi1 in
@@ -3073,7 +3073,7 @@ let rec blockdeclInDctx =
           in
           unify' Unification cD0 flat_cPsi
             (Whnf.norm (Whnf.norm sM, s_tup), Substitution.LF.id)
-            (Whnf.norm (Whnf.norm sN, s_tup), Substitution.LF.id) 
+            (Whnf.norm (Whnf.norm sN, s_tup), Substitution.LF.id)
         end
       else *)
         unify' Unification cD0 cPsi sM sN
@@ -3189,7 +3189,7 @@ let rec blockdeclInDctx =
         | (MObj tM1, MObj tM2) ->  unify Empty cPsi (tM1, id) (tM2,id)
         | (PObj h, PObj h') -> unifyHead Unification Empty cPsi h h'
 
-                                
+
   let unifyMFront m1 m2 =
     match (m1, m2) with
     | (CObj cPsi, CObj cPhi) ->
@@ -3227,7 +3227,7 @@ let rec blockdeclInDctx =
     (*if Context.containsSigma cPsi then
       begin
         let (flat_cPsi, lazy s_proj, lazy s_tup) = ConvSigma.gen_flattening cD0 cPsi in
-        (* flat_cPsi |- s_tup : cPsi   and   cPsi |- s_proj : flat_cPsi *) 
+        (* flat_cPsi |- s_tup : cPsi   and   cPsi |- s_proj : flat_cPsi *)
         dprintf
           begin fun p ->
           p.fmt "[unifyTyp] @[<v>unifying LF types:@,\
@@ -3241,7 +3241,7 @@ let rec blockdeclInDctx =
             P.(fmt_ppr_lf_dctx cD0 l0) cPsi
           end ;
         dprintf
-          begin fun p -> 
+          begin fun p ->
           p.fmt "[unifyTyp] @[<v>Flattening cPsi :@,\
                  flat_cPsi = @[%a]@,\\
                  s_proj = @[%a@]@,\\
@@ -3251,7 +3251,7 @@ let rec blockdeclInDctx =
             P.(fmt_ppr_lf_sub cD0 cPsi l0) s_proj
           end;
         dprintf
-          begin fun p -> 
+          begin fun p ->
           p.fmt "[unifyTyp] @[<v>unifying flattened LF types:@,\
                  sA (in flat_cPsi) =  @[%a@]@,\\
                  sB (in flat_cPsi) = @[%a@] @]"
@@ -3262,11 +3262,11 @@ let rec blockdeclInDctx =
           (Whnf.normTyp ((Whnf.normTyp sA), s_tup), Substitution.LF.id)
           (Whnf.normTyp ((Whnf.normTyp sB), s_tup) , Substitution.LF.id);
         dprintf (fun p -> p.fmt "[unifyTyp] in flattened context done");()
-      end 
-        else 
+      end
+        else
      *)
       unifyTyp' Unification cD0 cPsi sA sB
-    
+
   let unifyDCtx cD0 cPsi1 cPsi2 =
     let cPsi1' = Whnf.cnormDCtx (cPsi1, Whnf.m_id) in
     let cPsi2' = Whnf.cnormDCtx (cPsi2, Whnf.m_id) in

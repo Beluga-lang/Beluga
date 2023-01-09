@@ -486,7 +486,7 @@ let rec elMCtx recT =
 let mgAtomicTyp cD cPsi a kK =
   let (flat_cPsi, lazy s_proj, lazy s_tup) = gen_flattening cD cPsi in
   (* cPsi |- s_proj : flat_cPsi *)
-  (* flat_cPsi |- s_tup : cPsi *)  
+  (* flat_cPsi |- s_tup : cPsi *)
   dprintf
     begin fun p ->
     p.fmt "[mgAtomicTyp] @[<v>flat cPsi = @[%a@]\
@@ -507,9 +507,9 @@ let mgAtomicTyp cD cPsi a kK =
             (P.fmt_ppr_lf_typ Int.LF.Empty Int.LF.Null P.l0) Int.LF.(Atom (Loc.ghost, a, Nil))
           end;
         let ssi' = LF.invert ss' in
-        (* cPhi' |- ssi' : flat_cPsi 
-          flat_cPsi |- ss' : cPhi' 
-          cPsi |- s_proj : flat_cPsi    *)  
+        (* cPhi' |- ssi' : flat_cPsi
+          flat_cPsi |- ss' : cPhi'
+          cPsi |- s_proj : flat_cPsi    *)
         (* cPhi' |- [ssi]tQ    *)
         let ss_proj = LF.comp ss' s_proj in  (* cPsi |- comp ss' s_proj : cPhi' where cPhi' = strength. flat_cPsi   *)
         (cPhi', ssi', ss_proj)
@@ -523,15 +523,15 @@ let mgAtomicTyp cD cPsi a kK =
 
     | (Int.LF.(PiKind ((TypDecl (u, tA1), plicity), kK), s)) ->
        let tA1_norm = Whnf.normTyp (tA1, s) in
-       let tA1' = Whnf.normTyp (tA1_norm,  s_tup) in 
+       let tA1' = Whnf.normTyp (tA1_norm,  s_tup) in
        (*       let tA1' = strans_typ cD cPsi (tA1, s) conv_list in *)
-       (*  flat_cPsi  |- tA1 *) 
+       (*  flat_cPsi  |- tA1 *)
        let tR =
          if !strengthen
          then
            let lazy (cPhi', ssi', ss_proj) = thinned in
-           (* cPhi' |- ssi' : flat_cPsi 
-              cPsi |- ss_proj : cPhi'   *)  
+           (* cPhi' |- ssi' : flat_cPsi
+              cPsi |- ss_proj : cPhi'   *)
            dprintf
              begin fun p ->
              p.fmt "[mgAtomicTyp] @[<v>PiKind ssi' = @[%a@]\
@@ -697,7 +697,7 @@ and elMetaObj cD (loc, cM) cTt =
      dprintf
       begin fun p ->
       p.fmt "[elMetaObj] @[<v>(renorm.) type = %a@]"
-        (P.fmt_ppr_cmp_meta_typ cD) ( Whnf.cnormMTyp (ctyp, Whnf.m_id)) 
+        (P.fmt_ppr_cmp_meta_typ cD) ( Whnf.cnormMTyp (ctyp, Whnf.m_id))
       end;
     (loc, r)
   with
@@ -1837,7 +1837,7 @@ and recPatObj' cD pat (cD_s, tau_s) =
        p.fmt "[inferPatTyp] tau_p = @[%a@]"
          (P.fmt_ppr_cmp_typ cD P.l0) tau_p
        end;
-      let ttau' = (tau_p, Whnf.m_id) in 
+      let ttau' = (tau_p, Whnf.m_id) in
      let (cG', pat') = elPatChk cD Int.LF.Empty pat ttau' in
      (cG', pat', ttau')
 
@@ -1878,7 +1878,7 @@ and recPatObj loc cD pat (cD_s, tau_s) =
     Abstract.patobj loc cD (Whnf.cnormGCtx (cG', Whnf.m_id))
       pat'
       (Context.names_of_mctx cD_s)
-      tau' 
+      tau'
   in
   begin
     try

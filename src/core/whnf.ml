@@ -383,7 +383,7 @@ and norm (tM, sigma) =
   | LFHole _ -> tM
   | Root (loc, h, tS, plicity) ->
      begin
-     let sigma = normSub sigma in 
+     let sigma = normSub sigma in
        match normHead (h, sigma) with
      | Head h' -> Root (loc, h', normSpine (tS, sigma), plicity)
      | Obj tM -> reduce (tM, LF.id) (normSpine (tS, sigma))
@@ -425,7 +425,7 @@ and normHead (h, sigma) =
      | ResMM (mm', _) -> Head (MVar (Inst mm', normSub' (s, sigma)))
      | Result (INorm n) -> Obj (norm (norm (n, s), sigma))
      end
-  
+
 
 and normMMVar (mmvar, t) =
   match mmvar.instantiation.contents with

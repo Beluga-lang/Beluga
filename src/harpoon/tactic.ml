@@ -579,8 +579,8 @@ let solve_with_new_comp_decl action_name decl f t g =
   | `duplicate -> ()
   | `unique ->
      (* bp: needs to update and mshift 1 the proof script part,
-        intros <- split [g |- E]   needs to still make sense in the extended cD 
-      *)                
+        intros <- split [g |- E]   needs to still make sense in the extended cD
+      *)
      Theorem.apply_subgoal_replacement t
        action_name
        (extending_comp_context decl g)

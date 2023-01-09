@@ -41,20 +41,17 @@ and add_json_entry json =
       match fixity with
       | Fixity.Prefix ->
           let arity = json |> member "arity" |> to_int in
-          add_prefix_lf_type_constant
-            (Identifier.make identifier)
-            ~arity ~precedence
+          let operator = Operator.make_prefix ~arity ~precedence in
+          add_lf_type_constant operator (Identifier.make identifier)
       | Fixity.Infix ->
           let associativity =
             json |> member "associativity" |> associativity_of_json
           in
-          add_infix_lf_type_constant
-            (Identifier.make identifier)
-            ~associativity ~precedence
+          let operator = Operator.make_infix ~associativity ~precedence in
+          add_lf_type_constant operator (Identifier.make identifier)
       | Fixity.Postfix ->
-          add_postfix_lf_type_constant
-            (Identifier.make identifier)
-            ~precedence)
+          let operator = Operator.make_postfix ~precedence in
+          add_lf_type_constant operator (Identifier.make identifier))
   | "lf_term_constant" -> (
       let identifier = json |> member "identifier" |> to_string in
       let fixity = json |> member "fixity" |> fixity_of_json in
@@ -62,20 +59,17 @@ and add_json_entry json =
       match fixity with
       | Fixity.Prefix ->
           let arity = json |> member "arity" |> to_int in
-          add_prefix_lf_term_constant
-            (Identifier.make identifier)
-            ~arity ~precedence
+          let operator = Operator.make_prefix ~arity ~precedence in
+          add_lf_term_constant operator (Identifier.make identifier)
       | Fixity.Infix ->
           let associativity =
             json |> member "associativity" |> associativity_of_json
           in
-          add_infix_lf_term_constant
-            (Identifier.make identifier)
-            ~associativity ~precedence
+          let operator = Operator.make_infix ~associativity ~precedence in
+          add_lf_term_constant operator (Identifier.make identifier)
       | Fixity.Postfix ->
-          add_postfix_lf_term_constant
-            (Identifier.make identifier)
-            ~precedence)
+          let operator = Operator.make_postfix ~precedence in
+          add_lf_term_constant operator (Identifier.make identifier))
   | "module" ->
       let identifier = json |> member "identifier" |> to_string in
       let module_state = exec (disambiguation_state_of_json json) empty in

@@ -20,7 +20,8 @@ let[@warning "-23"] set_location_of_lf_object location object_ =
   let open LF.Object in
   match object_ with
   | Raw_identifier o -> Raw_identifier { o with location }
-  | Raw_qualified_identifier o -> Raw_qualified_identifier { o with location }
+  | Raw_qualified_identifier o ->
+      Raw_qualified_identifier { o with location }
   | Raw_type o -> Raw_type { o with location }
   | Raw_hole o -> Raw_hole { o with location }
   | Raw_pi o -> Raw_pi { o with location }
@@ -53,7 +54,8 @@ let[@warning "-23"] set_location_of_clf_object location
   let open CLF.Object in
   match object_ with
   | Raw_identifier o -> Raw_identifier { o with location }
-  | Raw_qualified_identifier o -> Raw_qualified_identifier { o with location }
+  | Raw_qualified_identifier o ->
+      Raw_qualified_identifier { o with location }
   | Raw_hole o -> Raw_hole { o with location }
   | Raw_pi o -> Raw_pi { o with location }
   | Raw_lambda o -> Raw_lambda { o with location }
@@ -112,7 +114,8 @@ let[@warning "-23"] set_location_of_comp_sort_object location sort_object =
   let open Comp.Sort_object in
   match sort_object with
   | Raw_identifier o -> Raw_identifier { o with location }
-  | Raw_qualified_identifier o -> Raw_qualified_identifier { o with location }
+  | Raw_qualified_identifier o ->
+      Raw_qualified_identifier { o with location }
   | Raw_ctype o -> Raw_ctype { o with location }
   | Raw_pi o -> Raw_pi { o with location }
   | Raw_arrow o -> Raw_arrow { o with location }
@@ -144,7 +147,8 @@ let[@warning "-23"] set_location_of_comp_expression_object location
   let open Comp.Expression_object in
   match expression_object with
   | Raw_identifier o -> Raw_identifier { o with location }
-  | Raw_qualified_identifier o -> Raw_qualified_identifier { o with location }
+  | Raw_qualified_identifier o ->
+      Raw_qualified_identifier { o with location }
   | Raw_fn o -> Raw_fn { o with location }
   | Raw_mlam o -> Raw_mlam { o with location }
   | Raw_fun o -> Raw_fun { o with location }
@@ -177,7 +181,8 @@ let[@warning "-23"] set_location_of_comp_pattern_object location
   let open Comp.Pattern_object in
   match pattern_object with
   | Raw_identifier o -> Raw_identifier { o with location }
-  | Raw_qualified_identifier o -> Raw_qualified_identifier { o with location }
+  | Raw_qualified_identifier o ->
+      Raw_qualified_identifier { o with location }
   | Raw_box o -> Raw_box { o with location }
   | Raw_tuple o -> Raw_tuple { o with location }
   | Raw_application o -> Raw_application { o with location }
@@ -286,10 +291,11 @@ let location_of_signature_pragma pragma =
       location
 
 let location_of_signature_global_pragma global_pragma =
-  let open Signature.Pragma.Global in
+  let open Signature.Global_pragma in
   match global_pragma with
   | No_strengthening { location; _ }
-  | Coverage { location; _ } ->
+  | Warn_on_coverage_error { location; _ }
+  | Raise_error_on_coverage_error { location; _ } ->
       location
 
 let location_of_signature_totality_declaration totality_declaration =
@@ -314,14 +320,13 @@ let location_of_signature_declaration declaration =
   | Raw_lf_typ_or_term_constant { location; _ }
   | Raw_lf_typ_constant { location; _ }
   | Raw_lf_term_constant { location; _ }
-  | Raw_comp_typ_constant { location; _ }
+  | Raw_inductive_comp_typ_constant { location; _ }
+  | Raw_stratified_comp_typ_constant { location; _ }
   | Raw_comp_cotyp_constant { location; _ }
   | Raw_comp_expression_constructor { location; _ }
   | Raw_comp_expression_destructor { location; _ }
   | Raw_comp_typ_abbreviation { location; _ }
   | Raw_schema { location; _ }
-  | Raw_pragma { location; _ }
-  | Raw_global_pragma { location; _ }
   | Raw_theorem { location; _ }
   | Raw_proof { location; _ }
   | Raw_recursive_declarations { location; _ }

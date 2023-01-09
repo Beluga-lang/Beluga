@@ -719,16 +719,15 @@ module Signature = struct
           ; module_identifier : Qualified_identifier.t
           ; abbreviation : Identifier.t
           }
-
-    module Global = struct
-      type t =
-        | No_strengthening of { location : Location.t }
-        | Coverage of
-            { location : Location.t
-            ; variant : [ `Error | `Warn ]
-            }
-    end
   end
+
+  module rec Global_pragma : sig
+    type t =
+      | No_strengthening of { location : Location.t }
+      | Warn_on_coverage_error of { location : Location.t }
+      | Raise_error_on_coverage_error of { location : Location.t }
+  end =
+    Global_pragma
 
   module rec Totality : sig
     module rec Declaration : sig
@@ -781,11 +780,15 @@ module Signature = struct
           ; identifier : Identifier.t
           ; typ : LF.Object.t
           }
-      | Raw_comp_typ_constant of
+      | Raw_inductive_comp_typ_constant of
           { location : Location.t
           ; identifier : Identifier.t
           ; kind : Comp.Sort_object.t
-          ; datatype_flavour : [ `Inductive | `Stratified ]
+          }
+      | Raw_stratified_comp_typ_constant of
+          { location : Location.t
+          ; identifier : Identifier.t
+          ; kind : Comp.Sort_object.t
           }
       | Raw_comp_cotyp_constant of
           { location : Location.t
@@ -813,14 +816,6 @@ module Signature = struct
           { location : Location.t
           ; identifier : Identifier.t
           ; schema : Meta.Schema_object.t
-          }
-      | Raw_pragma of
-          { location : Location.t
-          ; pragma : Pragma.t
-          }
-      | Raw_global_pragma of
-          { location : Location.t
-          ; pragma : Pragma.Global.t
           }
       | Raw_theorem of
           { location : Location.t
@@ -865,7 +860,7 @@ module Signature = struct
       | Raw_module of
           { location : Location.t
           ; identifier : Identifier.t
-          ; declarations : Declaration.t List.t
+          ; declarations : Entry.t List.t
           }
       | Raw_comment of
           { location : Location.t
@@ -878,12 +873,14 @@ module Signature = struct
     type t =
       | Raw_declaration of Declaration.t
       | Raw_pragma of Pragma.t
-      | Raw_global_pragma of Pragma.Global.t
   end =
     Entry
 
   (** Parsed Beluga project *)
-  type t = Declaration.t List.t (* TODO: Use [Entry]*)
+  type t =
+    { global_pragmas : Global_pragma.t List.t
+    ; entries : Entry.t List.t
+    }
 end
 
 (** {1 Type Aliases} *)
@@ -938,7 +935,7 @@ type harpoon_repl_command = Harpoon.Repl.Command.t
 
 type signature_pragma = Signature.Pragma.t
 
-type signature_global_pragma = Signature.Pragma.Global.t
+type signature_global_pragma = Signature.Global_pragma.t
 
 type signature_totality_declaration = Signature.Totality.Declaration.t
 
@@ -946,5 +943,7 @@ type 'argument signature_totality_order =
   'argument Signature.Totality.Order.t
 
 type signature_declaration = Signature.Declaration.t
+
+type signature_entry = Signature.Entry.t
 
 type signature = Signature.t

@@ -90,6 +90,7 @@ module Make
                              with type state = Disambiguation_state.state) :
   COMP_DISAMBIGUATION with type state = Disambiguation_state.state = struct
   include Disambiguation_state
+  include Meta_disambiguation
 
   exception Plain_modifier_typ_mismatch
 
@@ -235,9 +236,7 @@ module Make
         ; plicity
         ; body
         } ->
-        let* parameter_typ' =
-          Meta_disambiguation.disambiguate_meta_typ parameter_typ
-        in
+        let* parameter_typ' = disambiguate_meta_typ parameter_typ in
         let* body' =
           (with_parameter_binding_opt parameter_identifier modifier
              parameter_typ')
@@ -373,9 +372,7 @@ module Make
         ; plicity
         ; body
         } ->
-        let* parameter_typ' =
-          Meta_disambiguation.disambiguate_meta_typ parameter_typ
-        in
+        let* parameter_typ' = disambiguate_meta_typ parameter_typ in
         let* body' =
           (with_parameter_binding_opt parameter_identifier modifier
              parameter_typ')
@@ -400,7 +397,7 @@ module Make
         let* types' = traverse_list2 disambiguate_comp_typ operands in
         return (Synext.Comp.Typ.Cross { location; types = types' })
     | Synprs.Comp.Sort_object.Raw_box { location; boxed } ->
-        let* meta_type' = Meta_disambiguation.disambiguate_meta_typ boxed in
+        let* meta_type' = disambiguate_meta_typ boxed in
         return (Synext.Comp.Typ.Box { location; meta_type = meta_type' })
     | Synprs.Comp.Sort_object.Raw_application { location; objects } ->
         Obj.magic ()
@@ -434,9 +431,7 @@ module Make
         return
           (Synext.Comp.Expression.Fun { location; branches = branches' })
     | Synprs.Comp.Expression_object.Raw_box { location; meta_object } ->
-        let* meta_object' =
-          Meta_disambiguation.disambiguate_meta_object meta_object
-        in
+        let* meta_object' = disambiguate_meta_object meta_object in
         return
           (Synext.Comp.Expression.Box
              { location; meta_object = meta_object' })
@@ -521,9 +516,7 @@ module Make
         { location; identifier; quoted } ->
         Obj.magic ()
     | Synprs.Comp.Pattern_object.Raw_box { location; pattern } ->
-        let* pattern' =
-          Meta_disambiguation.disambiguate_meta_pattern pattern
-        in
+        let* pattern' = disambiguate_meta_pattern pattern in
         return
           (Synext.Comp.Pattern.MetaObject
              { location; meta_pattern = pattern' })
@@ -547,9 +540,7 @@ module Make
         ; parameter_typ = Option.Some parameter_typ
         ; pattern
         } ->
-        let* parameter_typ' =
-          Meta_disambiguation.disambiguate_meta_typ parameter_typ
-        in
+        let* parameter_typ' = disambiguate_meta_typ parameter_typ in
         let* pattern' =
           (with_parameter_binding parameter_identifier modifier
              parameter_typ')

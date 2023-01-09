@@ -292,10 +292,11 @@ let location_of_signature_pragma pragma =
       location
 
 let location_of_signature_global_pragma global_pragma =
-  let open Signature.Pragma.Global in
+  let open Signature.Global_pragma in
   match global_pragma with
   | No_strengthening { location; _ }
-  | Coverage { location; _ } ->
+  | Warn_on_coverage_error { location; _ }
+  | Raise_error_on_coverage_error { location; _ } ->
       location
 
 let location_of_signature_totality_declaration totality_declaration =
@@ -325,8 +326,6 @@ let location_of_signature_declaration declaration =
   | CompDest { location; _ }
   | CompTypAbbrev { location; _ }
   | Schema { location; _ }
-  | Pragma { location; _ }
-  | GlobalPragma { location; _ }
   | Theorem { location; _ }
   | Proof { location; _ }
   | Recursive_declarations { location; _ }

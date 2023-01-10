@@ -746,7 +746,8 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
             (* Possibly a context variable as context head *)
           :: xs -> (
             lookup_toplevel identifier >>= function
-            | Result.Ok (Context_variable _) ->
+            | Result.Ok (Context_variable _)
+            | Result.Error (Unbound_identifier _) ->
                 let head' =
                   Synext.CLF.Context.Head.Context_variable
                     { identifier; location = Identifier.location identifier }
@@ -757,8 +758,7 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
                   ; head = head'
                   ; bindings = bindings'
                   }
-            | Result.Ok _
-            | Result.Error (Unbound_identifier _) ->
+            | Result.Ok _ ->
                 let head' =
                   Synext.CLF.Context.Head.None { location = head_location }
                 in
@@ -899,8 +899,8 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
             return
               (Synext.CLF.Term.Pattern.Variable { location; identifier })
         | Result.Error cause -> Error.raise_at1 location cause)
-    | Synprs.CLF.Object.Raw_qualified_identifier { location; identifier; quoted } ->
-      (
+    | Synprs.CLF.Object.Raw_qualified_identifier
+        { location; identifier; quoted } -> (
         (* Qualified identifiers without modules were parsed as plain
            identifiers *)
         assert (List.length (Qualified_identifier.modules identifier) >= 1);
@@ -1161,7 +1161,8 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
             (* Possibly a context variable as context head *)
           :: xs -> (
             lookup_toplevel identifier >>= function
-            | Result.Ok (Context_variable _) ->
+            | Result.Ok (Context_variable _)
+            | Result.Error (Unbound_identifier _) ->
                 let head' =
                   Synext.CLF.Context.Pattern.Head.Context_variable
                     { identifier; location = Identifier.location identifier }
@@ -1172,8 +1173,7 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
                   ; head = head'
                   ; bindings = bindings'
                   }
-            | Result.Ok _
-            | Result.Error (Unbound_identifier _) ->
+            | Result.Ok _ ->
                 let head' =
                   Synext.CLF.Context.Pattern.Head.None
                     { location = head_location }

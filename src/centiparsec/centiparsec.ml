@@ -369,8 +369,6 @@ module Make_parser_with_locations (Location : sig
   type t
 
   val between : start:t -> stop:t -> t
-
-  val raise_at : t List1.t -> exn -> 'a [@@warning "-32"]
 end) (Token : sig
   type t
 end) (State : sig
@@ -584,8 +582,6 @@ module Make (Location : sig
   type t
 
   val between : start:t -> stop:t -> t
-
-  val raise_at : t List1.t -> exn -> 'a
 end) (Token : sig
   type t
 

@@ -308,9 +308,11 @@ module Make
                  ; quoted
                  ; variant = `Coinductive
                  })
-        | Result.Ok _entry ->
+        | Result.Ok entry ->
             Error.raise_at1 location
-              (Expected_comp_type_constant qualified_identifier)
+              (Error.composite2
+                 (Expected_comp_type_constant qualified_identifier)
+                 (actual_binding_exn qualified_identifier entry))
         | Result.Error (Unbound_identifier _) ->
             Error.raise_at1 location
               (Unbound_comp_type_constant qualified_identifier)
@@ -360,8 +362,10 @@ module Make
                  ; quoted
                  ; variant = `Coinductive
                  })
-        | Result.Ok _entry ->
-            Error.raise_at1 location (Expected_comp_type_constant identifier)
+        | Result.Ok entry ->
+            Error.raise_at1 location
+              (Error.composite2 (Expected_comp_type_constant identifier)
+                 (actual_binding_exn identifier entry))
         | Result.Error (Unbound_qualified_identifier _) ->
             Error.raise_at1 location (Unbound_comp_type_constant identifier)
         | Result.Error cause -> Error.raise_at1 location cause)
@@ -560,17 +564,17 @@ module Make
     | Synprs.Comp.Pattern_object.Raw_observation
         { location; constant; arguments } -> (
         lookup constant >>= function
-        | Result.Ok Computation_term_destructor ->
+        | Result.Ok (Computation_term_destructor _) ->
             let* arguments' =
               traverse_list disambiguate_comp_pattern arguments
             in
             return
               (Synext.Comp.Copattern.Observation
                  { location; observation = constant; arguments = arguments' })
-        | Result.Ok _entry ->
-            Error.raise_at1
-              (Qualified_identifier.location constant)
-              Expected_comp_term_destructor_constant
+        | Result.Ok entry ->
+            Error.raise_at1 location
+              (Error.composite2 Expected_comp_term_destructor_constant
+                 (actual_binding_exn constant entry))
         | Result.Error cause ->
             Error.raise_at1 (Qualified_identifier.location constant) cause)
     | ( Synprs.Comp.Pattern_object.Raw_qualified_identifier _

@@ -16,14 +16,18 @@ val not_implemented : Location.t -> string -> 'a
 (** Raises a NotImplemented exception with the given message. *)
 val not_implemented' : string -> 'a
 
-(** [Located_exception { cause; locations }] is an exception annotated with
-    source locations. *)
-exception
-  Located_exception of
-    { cause : exn  (** The actual exception being reported. *)
-    ; locations : Location.t List1.t
-          (** The locations to use for reporting the exception. *)
-    }
+(** [location_exception locations cause] is a decorated exception having
+    [cause] and [locations] for source file error-reporting. *)
+val located_exception : Location.t List1.t -> exn -> exn
+
+(** [location_exception1 location cause] is a decorated exception having
+    [cause] and locations [\[location\]] for source file error-reporting. *)
+val located_exception1 : Location.t -> exn -> exn
+
+(** [location_exception2 location1 location2 cause] is a decorated exception
+    having [cause] and locations [\[location1; location2\]] for source file
+    error-reporting. *)
+val located_exception2 : Location.t -> Location.t -> exn -> exn
 
 (** [raise_at locations cause] raises the exception
     [Located_exception { locations; cause }]. *)
@@ -36,6 +40,13 @@ val raise_at1 : Location.t -> exn -> 'a
 (** [raise_at2 location1 location2 cause] raises the exception
     [Located_exception { locations = \[location1; location2\]; cause }]. *)
 val raise_at2 : Location.t -> Location.t -> exn -> 'a
+
+(** [composite causes] is the composite error having many [causes]. *)
+val composite : exn List2.t -> exn
+
+(** [composite2 cause1 cause2] is the composite error having causes
+    [\[cause1; cause2\]]. *)
+val composite2 : exn -> exn -> exn
 
 (** Abstract dummy datatype to enforce that printing be done using the
     printing functions provided by this module. *)

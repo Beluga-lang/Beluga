@@ -466,16 +466,8 @@ struct
       derived from [state] with the addition of the declarations in the
       module having identifier [module_identifier] currently in scope. *)
   let open_module module_identifier =
-    lookup module_identifier >>= function
-    | Result.Ok (Module { entries = sub_state }) ->
-        modify_bindings (fun bindings ->
-            Identifier.Hamt.union
-              (fun _key _original_binding new_binding -> new_binding)
-              bindings sub_state)
-    | Result.Ok _entry ->
-        Error.raise_at1
-          (Qualified_identifier.location module_identifier)
-          (Expected_module module_identifier)
+    open_namespace module_identifier >>= function
+    | Result.Ok () -> return ()
     | Result.Error cause ->
         Error.raise_at1
           (Qualified_identifier.location module_identifier)
@@ -487,12 +479,14 @@ struct
       [module_identifier] currently in scope. *)
   let add_module_abbreviation module_identifier abbreviation =
     lookup module_identifier >>= function
-    | Result.Ok (Module { entries = sub_state }) ->
-        add_module sub_state abbreviation
-    | Result.Ok _entry ->
+    | Result.Ok (Module { state; _ }) ->
+        let location = Qualified_identifier.location module_identifier in
+        add_module ~location state abbreviation
+    | Result.Ok entry ->
         Error.raise_at1
           (Qualified_identifier.location module_identifier)
-          (Expected_module module_identifier)
+          (Error.composite2 (Expected_module module_identifier)
+             (actual_binding_exn module_identifier entry))
     | Result.Error cause ->
         Error.raise_at1
           (Qualified_identifier.location module_identifier)

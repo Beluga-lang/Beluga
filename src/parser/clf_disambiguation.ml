@@ -55,7 +55,7 @@ exception Illegal_block_clf_term
 
 exception Unbound_clf_term_constant of Qualified_identifier.t
 
-exception Expected_term_projection_compatible
+exception Illegal_clf_term_projection
 
 (** {2 Exceptions for contextual LF substitution disambiguation} *)
 
@@ -230,8 +230,8 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
 
     let guard_identifier_operator identifier expression =
       lookup identifier >>= function
-      | Result.Ok (LF_type_constant { operator })
-      | Result.Ok (LF_term_constant { operator }) ->
+      | Result.Ok (Lf_type_constant { operator; _ })
+      | Result.Ok (Lf_term_constant { operator; _ }) ->
           if Operator.is_nullary operator then return Option.none
           else
             return
@@ -275,6 +275,9 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
     Application_disambiguation.Make (Associativity) (Fixity) (Clf_operand)
       (Clf_operator)
       (Application_disambiguation_state)
+
+  let[@warning "-32"] add_lf_pattern_variable identifier =
+    track_variable add_lf_term_variable identifier
 
   let with_lf_term_variable identifier =
     scoped
@@ -326,7 +329,7 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
           Qualified_identifier.make_simple identifier
         in
         lookup_toplevel identifier >>= function
-        | Result.Ok (LF_type_constant { operator }) ->
+        | Result.Ok (Lf_type_constant { operator; _ }) ->
             return
               (Synext.CLF.Typ.Constant
                  { location
@@ -334,8 +337,10 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
                  ; operator
                  ; quoted
                  })
-        | Result.Ok _entry ->
-            Error.raise_at1 location Expected_clf_type_constant
+        | Result.Ok entry ->
+            Error.raise_at1 location
+              (Error.composite2 Expected_clf_type_constant
+                 (actual_binding_exn qualified_identifier entry))
         | Result.Error (Unbound_identifier _) ->
             Error.raise_at1 location
               (Unbound_clf_type_constant qualified_identifier)
@@ -349,12 +354,14 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
            <dot-identifier>+] are type-level constants, or illegal named
            projections. *)
         lookup identifier >>= function
-        | Result.Ok (LF_type_constant { operator }) ->
+        | Result.Ok (Lf_type_constant { operator; _ }) ->
             return
               (Synext.CLF.Typ.Constant
                  { location; identifier; operator; quoted })
-        | Result.Ok _entry ->
-            Error.raise_at1 location Expected_clf_type_constant
+        | Result.Ok entry ->
+            Error.raise_at1 location
+              (Error.composite2 Expected_clf_type_constant
+                 (actual_binding_exn identifier entry))
         | Result.Error (Unbound_qualified_identifier _) ->
             Error.raise_at1 location
               (Unbound_type_constant_or_illegal_projection_clf_type
@@ -462,7 +469,7 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
           Qualified_identifier.make_simple identifier
         in
         lookup_toplevel identifier >>= function
-        | Result.Ok (LF_term_constant { operator }) ->
+        | Result.Ok (Lf_term_constant { operator; _ }) ->
             return
               (Synext.CLF.Term.Constant
                  { location
@@ -470,18 +477,23 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
                  ; operator
                  ; quoted
                  })
-        | Result.Ok LF_term_variable
-        | Result.Ok Meta_variable ->
+        | Result.Ok (Lf_term_variable _)
+        | Result.Ok (Meta_variable _) ->
             (* Bound variable *)
             return (Synext.CLF.Term.Variable { location; identifier })
-        | Result.Ok _entry ->
-            Error.raise_at1 location Expected_clf_term_constant
+        | Result.Ok entry ->
+            Error.raise_at1 location
+              (Error.composite2 Expected_clf_term_constant
+                 (actual_binding_exn qualified_identifier entry))
         | Result.Error (Unbound_identifier _) ->
             (* Free variable *)
             return (Synext.CLF.Term.Variable { location; identifier })
         | Result.Error cause -> Error.raise_at1 location cause)
     | Synprs.CLF.Object.Raw_qualified_identifier
         { location; identifier; quoted } -> (
+        (* Qualified identifiers without modules were parsed as plain
+           identifiers *)
+        assert (List.length (Qualified_identifier.modules identifier) >= 1);
         (* As an LF term, identifiers of the form [<identifier>
            <dot-identifier>+] are either term-level constants, or named
            projections. *)
@@ -500,136 +512,45 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
                 })
             base projections
         in
-        let reduce_projections' base projections last_projection =
-          let sub_term = reduce_projections base projections in
-          let location =
-            Location.join
-              (Synext.location_of_clf_term sub_term)
-              (Identifier.location last_projection)
-          in
-          Synext.CLF.Term.Projection
-            { location
-            ; term = sub_term
-            ; projection = `By_identifier last_projection
-            }
-        in
-        let modules = Qualified_identifier.modules identifier
-        and name = Qualified_identifier.name identifier in
-        match modules with
-        | [] ->
-            (* Qualified identifiers without modules were parsed as plain
-               identifiers *)
-            Error.violation
-              "[disambiguate_clf_term] encountered a qualified identifier \
-               without modules."
-        | m :: ms -> (
-            lookup_toplevel m >>= function
-            | Result.Ok (Module _) ->
-                let rec helper bindings looked_up_identifiers next_identifier
-                    remaining_identifiers =
-                  match
-                    Identifier.Hamt.find_opt next_identifier bindings
-                  with
-                  | Option.Some
-                      (List1.T (Module { entries = state' }, _rest)) -> (
-                      match remaining_identifiers with
-                      | [] ->
-                          (* Lookups ended with a module. *)
-                          Error.raise_at1 location Expected_clf_term_constant
-                      | next_identifier' :: remaining_identifiers' ->
-                          let looked_up_identifiers' =
-                            next_identifier :: looked_up_identifiers
-                          in
-                          helper state' looked_up_identifiers'
-                            next_identifier' remaining_identifiers')
-                  | Option.Some
-                      (List1.T (LF_term_constant { operator }, _rest)) -> (
-                      (* Lookups ended with an LF term constant. The
-                         remaining identifiers are named projections. *)
-                      match remaining_identifiers with
-                      | [] ->
-                          (* The overall qualified identifier has no
-                             projections. In this case, it may be quoted. *)
-                          Synext.CLF.Term.Constant
-                            { location; identifier; operator; quoted }
-                      | _ ->
-                          (* The qualified identifier has projections. It
-                             cannot be quoted. *)
-                          let identifier =
-                            Qualified_identifier.make
-                              ~modules:(List.rev looked_up_identifiers)
-                              next_identifier
-                          in
-                          let location =
-                            Qualified_identifier.location identifier
-                          in
-                          let term =
-                            Synext.CLF.Term.Constant
-                              { location
-                              ; identifier
-                              ; operator
-                              ; quoted = false
-                              }
-                          in
-                          reduce_projections term remaining_identifiers)
-                  | Option.Some _entry ->
-                      (* Lookups ended with an entry that cannot be used in a
-                         contextual LF term projection. *)
-                      let location =
-                        Location.join_all1_contramap Identifier.location
-                          (List1.from next_identifier looked_up_identifiers)
-                      in
-                      Error.raise_at1 location
-                        Expected_term_projection_compatible
-                  | Option.None -> (
-                      match remaining_identifiers with
-                      | [] ->
-                          Error.raise_at1 location
-                            (Unbound_clf_term_constant identifier)
-                      | _ ->
-                          let module_identifier =
-                            Qualified_identifier.make
-                              ~modules:(List.rev looked_up_identifiers)
-                              next_identifier
-                          in
-                          raise (Unbound_namespace module_identifier))
-                in
-                let* bindings = get_bindings in
-                return (helper bindings [] m (ms @ [ name ]))
-            | Result.Ok (LF_term_constant { operator }) ->
-                (* Immediately looked up an LF term constant. The remaining
-                   identifiers are named projections. *)
-                let location = Identifier.location m in
-                let identifier = Qualified_identifier.make_simple m in
-                let term =
-                  Synext.CLF.Term.Constant
-                    { identifier; location; operator; quoted = false }
-                in
-                return (reduce_projections' term ms name)
-            | Result.Ok LF_term_variable
-            | Result.Ok Meta_variable ->
-                (* Immediately looked up an LF term variable or a
-                   meta-variable. The remaining identifiers are named
-                   projections. *)
-                let location = Identifier.location m in
-                let term =
-                  Synext.CLF.Term.Variable { location; identifier = m }
-                in
-                return (reduce_projections' term ms name)
-            | Result.Ok _entry ->
-                (* First lookup ended with an entry that cannot be used in a
-                   contextual LF term projection. *)
-                let location = Identifier.location m in
-                Error.raise_at1 location Expected_term_projection_compatible
-            | Result.Error (Unbound_identifier _) ->
-                (* Immediately looked up a free variable. The remaining
-                   identifiers are named projections. *)
-                let location = Identifier.location m in
-                let term =
-                  Synext.CLF.Term.Variable { location; identifier = m }
-                in
-                return (reduce_projections' term ms name)
-            | Result.Error cause -> Error.raise_at1 location cause))
+        partial_lookup identifier >>= function
+        | `Totally_unbound (List1.T (free_variable, projections))
+        (* Projections of a free variable *) ->
+            let location = Identifier.location free_variable in
+            let term =
+              Synext.CLF.Term.Variable
+                { location; identifier = free_variable }
+            in
+            return (reduce_projections term projections)
+        | `Partially_bound
+            ( List1.T
+                ( ( variable_identifier
+                  , (Lf_term_variable _ | Meta_variable _) )
+                , [] )
+            , unbound_segments )
+        (* Projections of a bound variable *) ->
+            let location = Identifier.location variable_identifier in
+            let term =
+              Synext.CLF.Term.Variable
+                { location; identifier = variable_identifier }
+            in
+            return (reduce_projections term (List1.to_list unbound_segments))
+        | `Partially_bound (List1.T (_, []), unbound_segments)
+        | `Partially_bound (_, unbound_segments)
+        (* Projections of a bound constant *) ->
+            Error.raise_at1
+              (Location.join_all1_contramap Identifier.location
+                 unbound_segments)
+              Illegal_clf_term_projection
+        | `Totally_bound bound_segments (* A constant *) -> (
+            match List1.last bound_segments with
+            | _identifier, Lf_term_constant { operator; _ } ->
+                return
+                  (Synext.CLF.Term.Constant
+                     { identifier; location; operator; quoted })
+            | _identifier, entry ->
+                Error.raise_at1 location
+                  (Error.composite2 Expected_clf_term_constant
+                     (actual_binding_exn identifier entry))))
     | Synprs.CLF.Object.Raw_application { objects; location } ->
         let* applicand, arguments = disambiguate_clf_application objects in
         let* applicand' = disambiguate_clf_term applicand in
@@ -825,7 +746,7 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
             (* Possibly a context variable as context head *)
           :: xs -> (
             lookup_toplevel identifier >>= function
-            | Result.Ok Context_variable ->
+            | Result.Ok (Context_variable _) ->
                 let head' =
                   Synext.CLF.Context.Head.Context_variable
                     { identifier; location = Identifier.location identifier }
@@ -965,7 +886,7 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
           Qualified_identifier.make_simple identifier
         in
         lookup_toplevel identifier >>= function
-        | Result.Ok (LF_term_constant { operator }) ->
+        | Result.Ok (Lf_term_constant { operator; _ }) ->
             return
               (Synext.CLF.Term.Pattern.Constant
                  { location
@@ -978,8 +899,11 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
             return
               (Synext.CLF.Term.Pattern.Variable { location; identifier })
         | Result.Error cause -> Error.raise_at1 location cause)
-    | Synprs.CLF.Object.Raw_qualified_identifier
-        { location; identifier; quoted } -> (
+    | Synprs.CLF.Object.Raw_qualified_identifier { location; identifier; quoted } ->
+      (
+        (* Qualified identifiers without modules were parsed as plain
+           identifiers *)
+        assert (List.length (Qualified_identifier.modules identifier) >= 1);
         (* As an LF term, identifiers of the form [<identifier>
            <dot-identifier>+] are either term-level constants, or named
            projections. *)
@@ -998,138 +922,45 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
                 })
             base projections
         in
-        let reduce_projections' base projections last_projection =
-          let sub_term = reduce_projections base projections in
-          let location =
-            Location.join
-              (Synext.location_of_clf_term_pattern sub_term)
-              (Identifier.location last_projection)
-          in
-          Synext.CLF.Term.Pattern.Projection
-            { location
-            ; term = sub_term
-            ; projection = `By_identifier last_projection
-            }
-        in
-        let modules = Qualified_identifier.modules identifier
-        and name = Qualified_identifier.name identifier in
-        match modules with
-        | [] ->
-            (* Qualified identifiers without modules were parsed as plain
-               identifiers *)
-            Error.violation
-              "[disambiguate_clf_term_pattern] encountered a qualified \
-               identifier without modules."
-        | m :: ms -> (
-            lookup_toplevel m >>= function
-            | Result.Ok (Module _) ->
-                let rec helper bindings looked_up_identifiers next_identifier
-                    remaining_identifiers =
-                  match
-                    Identifier.Hamt.find_opt next_identifier bindings
-                  with
-                  | Option.Some
-                      (List1.T (Module { entries = state' }, _rest)) -> (
-                      match remaining_identifiers with
-                      | [] ->
-                          (* Lookups ended with a module. *)
-                          Error.raise_at1 location Expected_clf_term_constant
-                      | next_identifier' :: remaining_identifiers' ->
-                          let looked_up_identifiers' =
-                            next_identifier :: looked_up_identifiers
-                          in
-                          helper state' looked_up_identifiers'
-                            next_identifier' remaining_identifiers')
-                  | Option.Some
-                      (List1.T (LF_term_constant { operator }, _rest)) -> (
-                      (* Lookups ended with an LF term constant. The
-                         remaining identifiers are named projections. *)
-                      match remaining_identifiers with
-                      | [] ->
-                          (* The overall qualified identifier has no
-                             projections. In this case, it may be quoted. *)
-                          Synext.CLF.Term.Pattern.Constant
-                            { location; identifier; operator; quoted }
-                      | _ ->
-                          (* The qualified identifier has projections. It
-                             cannot be quoted. *)
-                          let identifier =
-                            Qualified_identifier.make
-                              ~modules:(List.rev looked_up_identifiers)
-                              next_identifier
-                          in
-                          let location =
-                            Qualified_identifier.location identifier
-                          in
-                          let term =
-                            Synext.CLF.Term.Pattern.Constant
-                              { location
-                              ; identifier
-                              ; operator
-                              ; quoted = false
-                              }
-                          in
-                          reduce_projections term remaining_identifiers)
-                  | Option.Some _entry ->
-                      (* Lookups ended with an entry that cannot be used in a
-                         contextual LF term projection. *)
-                      let location =
-                        Location.join_all1_contramap Identifier.location
-                          (List1.from next_identifier looked_up_identifiers)
-                      in
-                      Error.raise_at1 location
-                        Expected_term_projection_compatible
-                  | Option.None -> (
-                      match remaining_identifiers with
-                      | [] ->
-                          Error.raise_at1 location
-                            (Unbound_clf_term_constant identifier)
-                      | _ ->
-                          let module_identifier =
-                            Qualified_identifier.make
-                              ~modules:(List.rev looked_up_identifiers)
-                              next_identifier
-                          in
-                          raise (Unbound_namespace module_identifier))
-                in
-                let* bindings = get_bindings in
-                return (helper bindings [] m (ms @ [ name ]))
-            | Result.Ok (LF_term_constant { operator }) ->
-                (* Immediately looked up an LF term constant. The remaining
-                   identifiers are named projections. *)
-                let location = Identifier.location m in
-                let identifier = Qualified_identifier.make_simple m in
-                let term =
-                  Synext.CLF.Term.Pattern.Constant
-                    { identifier; location; operator; quoted = false }
-                in
-                return (reduce_projections' term ms name)
-            | Result.Ok LF_term_variable
-            | Result.Ok Meta_variable ->
-                (* Immediately looked up an LF term variable or a
-                   meta-variable. The remaining identifiers are named
-                   projections. *)
-                let location = Identifier.location m in
-                let term =
-                  Synext.CLF.Term.Pattern.Variable
-                    { location; identifier = m }
-                in
-                return (reduce_projections' term ms name)
-            | Result.Ok _entry ->
-                (* First lookup ended with an entry that cannot be used in a
-                   contextual LF term projection. *)
-                let location = Identifier.location m in
-                Error.raise_at1 location Expected_term_projection_compatible
-            | Result.Error (Unbound_identifier _) ->
-                (* Immediately looked up a free variable. The remaining
-                   identifiers are named projections. *)
-                let location = Identifier.location m in
-                let term =
-                  Synext.CLF.Term.Pattern.Variable
-                    { location; identifier = m }
-                in
-                return (reduce_projections' term ms name)
-            | Result.Error cause -> Error.raise_at1 location cause))
+        partial_lookup identifier >>= function
+        | `Totally_unbound (List1.T (free_variable, projections))
+        (* Projections of a free variable *) ->
+            let location = Identifier.location free_variable in
+            let term =
+              Synext.CLF.Term.Pattern.Variable
+                { location; identifier = free_variable }
+            in
+            return (reduce_projections term projections)
+        | `Partially_bound
+            ( List1.T
+                ( ( variable_identifier
+                  , (Lf_term_variable _ | Meta_variable _) )
+                , [] )
+            , unbound_segments )
+        (* Projections of a bound variable *) ->
+            let location = Identifier.location variable_identifier in
+            let term =
+              Synext.CLF.Term.Pattern.Variable
+                { location; identifier = variable_identifier }
+            in
+            return (reduce_projections term (List1.to_list unbound_segments))
+        | `Partially_bound (List1.T (_, []), unbound_segments)
+        | `Partially_bound (_, unbound_segments)
+        (* Projections of a bound constant *) ->
+            Error.raise_at1
+              (Location.join_all1_contramap Identifier.location
+                 unbound_segments)
+              Illegal_clf_term_projection
+        | `Totally_bound bound_segments (* A constant *) -> (
+            match List1.last bound_segments with
+            | _identifier, Lf_term_constant { operator; _ } ->
+                return
+                  (Synext.CLF.Term.Pattern.Constant
+                     { identifier; location; operator; quoted })
+            | _identifier, entry ->
+                Error.raise_at1 location
+                  (Error.composite2 Expected_clf_term_constant
+                     (actual_binding_exn identifier entry))))
     | Synprs.CLF.Object.Raw_application { objects; location } ->
         let* applicand, arguments = disambiguate_clf_application objects in
         let* applicand' = disambiguate_clf_term_pattern applicand in
@@ -1330,7 +1161,7 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
             (* Possibly a context variable as context head *)
           :: xs -> (
             lookup_toplevel identifier >>= function
-            | Result.Ok Context_variable ->
+            | Result.Ok (Context_variable _) ->
                 let head' =
                   Synext.CLF.Context.Pattern.Head.Context_variable
                     { identifier; location = Identifier.location identifier }
@@ -1420,10 +1251,8 @@ let pp_exception ppf = function
   | Unbound_clf_term_constant identifier ->
       Format.fprintf ppf "The LF term-level constant %a is unbound."
         Qualified_identifier.pp identifier
-  | Expected_term_projection_compatible ->
-      Format.fprintf ppf
-        "Expected a module, an LF term constant, an LF term variable or a \
-         free variable."
+  | Illegal_clf_term_projection ->
+      Format.fprintf ppf "Illegal contextual LF projection(s)."
   | Illegal_clf_subtitution_term_label ->
       Format.fprintf ppf "Terms in a substitution may not be labelled."
   | Illegal_clf_context_parameter_variable_binding ->

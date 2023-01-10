@@ -4,8 +4,6 @@ module Make (Location : sig
   type t
 
   val between : start:t -> stop:t -> t
-
-  val raise_at : t List1.t -> exn -> 'a
 end) (Token : sig
   type t
 

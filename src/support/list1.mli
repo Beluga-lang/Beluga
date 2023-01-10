@@ -42,6 +42,9 @@ val length : 'a t -> int
 (** [append l1 l2] is the concatenation of [l1] and [l2]. *)
 val append : 'a t -> 'a t -> 'a t
 
+(** [append_list l1 l2] is the concatenation of [l1] and [l2]. *)
+val append_list : 'a list -> 'a t -> 'a t
+
 (** [flatten l] is the concatenation of the lists in [l]. *)
 val flatten : 'a t t -> 'a t
 

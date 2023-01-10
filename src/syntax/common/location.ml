@@ -7,19 +7,6 @@ type t =
   ; ghost : bool
   }
 
-exception
-  Located_exception of
-    { cause : exn
-    ; locations : t List1.t
-    }
-
-let raise_at locations cause = raise (Located_exception { cause; locations })
-
-let raise_at1 location cause = raise_at (List1.singleton location) cause
-
-let raise_at2 location1 location2 cause =
-  raise_at (List1.from location1 [ location2 ]) cause
-
 let between ~start:l1 ~stop:l2 =
   if l1.ghost then l2
   else if l2.ghost then l1

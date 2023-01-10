@@ -8,29 +8,6 @@ open Support
 (** The type of range over character positions in a source file. *)
 type t
 
-(** {1 Exceptions} *)
-
-(** [Located_exception { cause; locations }] is an exception annotated with
-    source locations. *)
-exception
-  Located_exception of
-    { cause : exn  (** The actual exception being reported. *)
-    ; locations : t List1.t
-          (** The locations to use for reporting the exception. *)
-    }
-
-(** [raise_at locations cause] raises the exception
-    [Located_exception { locations; cause }]. *)
-val raise_at : t List1.t -> exn -> 'a
-
-(** [raise_at1 location cause] raises the exception
-    [Located_exception { locations = \[location\]; cause }]. *)
-val raise_at1 : t -> exn -> 'a
-
-(** [raise_at2 location1 location2 cause] raises the exception
-    [Located_exception { locations = \[location1; location2\]; cause }]. *)
-val raise_at2 : t -> t -> exn -> 'a
-
 (** {1 Constructors} *)
 
 (** [ghost] is the null location used for AST nodes having no correspondence

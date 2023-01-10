@@ -19,6 +19,8 @@ module type STATE = sig
 
   val scoped : set:Unit.t t -> unset:Unit.t t -> 'a t -> 'a t
 
+  val try_catch : 'a t -> on_exn:(exn -> 'a t) -> 'a t
+
   val traverse_list : ('a -> 'b t) -> 'a List.t -> 'b List.t t
 
   val traverse_list1 : ('a -> 'b t) -> 'a List1.t -> 'b List1.t t
@@ -100,6 +102,10 @@ end) : STATE with type state = S.t = struct
     let* a = m in
     let* () = unset in
     return a
+
+  let[@inline] try_catch m ~on_exn state =
+    try run m state with
+    | exn -> run (on_exn exn) state
 
   let rec traverse_list f l =
     match l with

@@ -85,6 +85,8 @@ let filter_map f (T (x, xs)) =
 
 let append xs ys = fold_right (fun x -> cons x ys) cons xs
 
+let append_list l1 l2 = List.fold_right cons l1 l2
+
 let rec flatten (T (hd, tl)) =
   match tl with
   | [] -> hd

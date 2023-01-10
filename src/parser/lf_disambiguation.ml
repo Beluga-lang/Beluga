@@ -172,8 +172,8 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
 
     let guard_identifier_operator identifier expression =
       lookup identifier >>= function
-      | Result.Ok (LF_type_constant { operator })
-      | Result.Ok (LF_term_constant { operator }) ->
+      | Result.Ok (Lf_type_constant { operator; _ })
+      | Result.Ok (Lf_term_constant { operator; _ }) ->
           if Operator.is_nullary operator then return Option.none
           else
             return
@@ -298,7 +298,7 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
           Qualified_identifier.make_simple identifier
         in
         lookup_toplevel identifier >>= function
-        | Result.Ok (LF_type_constant { operator }) ->
+        | Result.Ok (Lf_type_constant { operator; _ }) ->
             return
               (Synext.LF.Typ.Constant
                  { location
@@ -306,8 +306,10 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
                  ; operator
                  ; quoted
                  })
-        | Result.Ok _entry ->
-            Error.raise_at1 location Expected_lf_type_constant
+        | Result.Ok entry ->
+            Error.raise_at1 location
+              (Error.composite2 Expected_lf_type_constant
+                 (actual_binding_exn qualified_identifier entry))
         | Result.Error (Unbound_identifier _) ->
             Error.raise_at1 location
               (Unbound_lf_type_constant qualified_identifier)
@@ -320,12 +322,14 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
         (* As an LF type, identifiers of the form [(<identifier> `::')+
            <identifier>] are necessarily type-level constants. *)
         lookup identifier >>= function
-        | Result.Ok (LF_type_constant { operator }) ->
+        | Result.Ok (Lf_type_constant { operator; _ }) ->
             return
               (Synext.LF.Typ.Constant
                  { location; identifier; operator; quoted })
-        | Result.Ok _entry ->
-            Error.raise_at1 location Expected_lf_type_constant
+        | Result.Ok entry ->
+            Error.raise_at1 location
+              (Error.composite2 Expected_lf_type_constant
+                 (actual_binding_exn identifier entry))
         | Result.Error (Unbound_qualified_identifier _) ->
             Error.raise_at1 location (Unbound_lf_type_constant identifier)
         | Result.Error cause -> Error.raise_at1 location cause)
@@ -386,7 +390,7 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
         in
         (* Lookup the identifier in the current state *)
         lookup_toplevel identifier >>= function
-        | Result.Ok (LF_term_constant { operator }) ->
+        | Result.Ok (Lf_term_constant { operator; _ }) ->
             (* [identifier] appears as an LF term-level constant *)
             return
               (Synext.LF.Term.Constant
@@ -395,13 +399,15 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
                  ; operator
                  ; quoted
                  })
-        | Result.Ok LF_term_variable ->
+        | Result.Ok (Lf_term_variable _) ->
             (* [identifier] appears as an LF bound variable *)
             return (Synext.LF.Term.Variable { location; identifier })
-        | Result.Ok _entry ->
+        | Result.Ok entry ->
             (* [identifier] appears as a bound entry that is not an LF
                term-level constant or variable *)
-            Error.raise_at1 location Expected_lf_term_constant
+            Error.raise_at1 location
+              (Error.composite2 Expected_lf_term_constant
+                 (actual_binding_exn qualified_identifier entry))
         | Result.Error (Unbound_identifier _) ->
             (* [identifier] does not appear in the state, so it is a free
                variable *)
@@ -416,15 +422,17 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
            <identifier>] are necessarily term-level constants. *)
         (* Lookup the identifier in the current state *)
         lookup identifier >>= function
-        | Result.Ok (LF_term_constant { operator }) ->
+        | Result.Ok (Lf_term_constant { operator; _ }) ->
             (* [identifier] appears as an LF term-level constant *)
             return
               (Synext.LF.Term.Constant
                  { location; identifier; operator; quoted })
-        | Result.Ok _entry ->
+        | Result.Ok entry ->
             (* [identifier] appears as a bound entry that is not an LF
                term-level constant *)
-            Error.raise_at1 location Expected_lf_term_constant
+            Error.raise_at1 location
+              (Error.composite2 Expected_lf_term_constant
+                 (actual_binding_exn identifier entry))
         | Result.Error (Unbound_qualified_identifier _) ->
             (* [identifier] does not appear in the state, and constants must
                be bound *)

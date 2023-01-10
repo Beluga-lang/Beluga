@@ -73,9 +73,7 @@ and add_json_entry json =
   | "module" ->
       let identifier = json |> member "identifier" |> to_string in
       let module_state = exec (disambiguation_state_of_json json) empty in
-      add_module
-        (eval get_bindings module_state)
-        (Identifier.make identifier)
+      add_module module_state (Identifier.make identifier)
   | "context_variable" ->
       let identifier = json |> member "identifier" |> to_string in
       add_context_variable (Identifier.make identifier)

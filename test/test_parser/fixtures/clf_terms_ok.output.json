@@ -3619,45 +3619,61 @@
     "CLF.Term.Projection",
     {
       "term": [
-        "CLF.Term.Constant",
+        "CLF.Term.Projection",
         {
-          "identifier": {
-            "name": {
-              "name": "z",
-              "location": {
-                "filename": "clf_terms_ok.input.bel",
-                "start_line": 118,
-                "start_column": 4,
-                "stop_line": 118,
-                "stop_column": 6
-              }
-            },
-            "modules": [
-              {
-                "name": "Nat",
+          "term": [
+            "CLF.Term.Projection",
+            {
+              "term": [
+                "CLF.Term.Variable",
+                {
+                  "identifier": {
+                    "name": "w",
+                    "location": {
+                      "filename": "clf_terms_ok.input.bel",
+                      "start_line": 118,
+                      "start_column": 1,
+                      "stop_line": 118,
+                      "stop_column": 2
+                    }
+                  },
+                  "location": {
+                    "filename": "clf_terms_ok.input.bel",
+                    "start_line": 118,
+                    "start_column": 1,
+                    "stop_line": 118,
+                    "stop_column": 2
+                  }
+                }
+              ],
+              "projection": {
+                "name": "x",
                 "location": {
                   "filename": "clf_terms_ok.input.bel",
                   "start_line": 118,
-                  "start_column": 1,
+                  "start_column": 2,
                   "stop_line": 118,
                   "stop_column": 4
                 }
+              },
+              "location": {
+                "filename": "clf_terms_ok.input.bel",
+                "start_line": 118,
+                "start_column": 1,
+                "stop_line": 118,
+                "stop_column": 4
               }
-            ],
+            }
+          ],
+          "projection": {
+            "name": "y",
             "location": {
               "filename": "clf_terms_ok.input.bel",
               "start_line": 118,
-              "start_column": 1,
+              "start_column": 4,
               "stop_line": 118,
               "stop_column": 6
             }
-          },
-          "quoted": false,
-          "operator": {
-            "fixity": "prefix",
-            "associativity": "right-associative",
-            "arity": 0,
-            "precedence": 1
           },
           "location": {
             "filename": "clf_terms_ok.input.bel",
@@ -3669,7 +3685,7 @@
         }
       ],
       "projection": {
-        "name": "x",
+        "name": "z",
         "location": {
           "filename": "clf_terms_ok.input.bel",
           "start_line": 118,
@@ -3688,61 +3704,52 @@
     }
   ],
   [
-    "CLF.Term.Substitution",
+    "CLF.Term.Constant",
     {
-      "term": [
-        "CLF.Term.Variable",
-        {
-          "identifier": {
-            "name": "x",
+      "identifier": {
+        "name": {
+          "name": "z",
+          "location": {
+            "filename": "clf_terms_ok.input.bel",
+            "start_line": 121,
+            "start_column": 4,
+            "stop_line": 121,
+            "stop_column": 6
+          }
+        },
+        "modules": [
+          {
+            "name": "Nat",
             "location": {
               "filename": "clf_terms_ok.input.bel",
               "start_line": 121,
               "start_column": 1,
               "stop_line": 121,
-              "stop_column": 2
+              "stop_column": 4
             }
-          },
-          "location": {
-            "filename": "clf_terms_ok.input.bel",
-            "start_line": 121,
-            "start_column": 1,
-            "stop_line": 121,
-            "stop_column": 2
           }
+        ],
+        "location": {
+          "filename": "clf_terms_ok.input.bel",
+          "start_line": 121,
+          "start_column": 1,
+          "stop_line": 121,
+          "stop_column": 6
         }
-      ],
-      "substitution": [
-        "CLF.Substitution",
-        {
-          "head": [
-            "CLF.Substitution.Head.None",
-            {
-              "location": {
-                "filename": "clf_terms_ok.input.bel",
-                "start_line": 121,
-                "start_column": 3,
-                "stop_line": 121,
-                "stop_column": 3
-              }
-            }
-          ],
-          "terms": [],
-          "location": {
-            "filename": "clf_terms_ok.input.bel",
-            "start_line": 121,
-            "start_column": 3,
-            "stop_line": 121,
-            "stop_column": 3
-          }
-        }
-      ],
+      },
+      "quoted": false,
+      "operator": {
+        "fixity": "prefix",
+        "associativity": "right-associative",
+        "arity": 0,
+        "precedence": 1
+      },
       "location": {
         "filename": "clf_terms_ok.input.bel",
         "start_line": 121,
         "start_column": 1,
         "stop_line": 121,
-        "stop_column": 4
+        "stop_column": 6
       }
     }
   ],
@@ -3786,53 +3793,13 @@
               }
             }
           ],
-          "terms": [
-            [
-              "CLF.Term.Constant",
-              {
-                "identifier": {
-                  "name": {
-                    "name": "z",
-                    "location": {
-                      "filename": "clf_terms_ok.input.bel",
-                      "start_line": 124,
-                      "start_column": 3,
-                      "stop_line": 124,
-                      "stop_column": 4
-                    }
-                  },
-                  "modules": [],
-                  "location": {
-                    "filename": "clf_terms_ok.input.bel",
-                    "start_line": 124,
-                    "start_column": 3,
-                    "stop_line": 124,
-                    "stop_column": 4
-                  }
-                },
-                "quoted": false,
-                "operator": {
-                  "fixity": "prefix",
-                  "associativity": "right-associative",
-                  "arity": 0,
-                  "precedence": 1
-                },
-                "location": {
-                  "filename": "clf_terms_ok.input.bel",
-                  "start_line": 124,
-                  "start_column": 3,
-                  "stop_line": 124,
-                  "stop_column": 4
-                }
-              }
-            ]
-          ],
+          "terms": [],
           "location": {
             "filename": "clf_terms_ok.input.bel",
             "start_line": 124,
             "start_column": 3,
             "stop_line": 124,
-            "stop_column": 4
+            "stop_column": 3
           }
         }
       ],
@@ -3841,7 +3808,7 @@
         "start_line": 124,
         "start_column": 1,
         "stop_line": 124,
-        "stop_column": 5
+        "stop_column": 4
       }
     }
   ],
@@ -3887,15 +3854,114 @@
           ],
           "terms": [
             [
+              "CLF.Term.Constant",
+              {
+                "identifier": {
+                  "name": {
+                    "name": "z",
+                    "location": {
+                      "filename": "clf_terms_ok.input.bel",
+                      "start_line": 127,
+                      "start_column": 3,
+                      "stop_line": 127,
+                      "stop_column": 4
+                    }
+                  },
+                  "modules": [],
+                  "location": {
+                    "filename": "clf_terms_ok.input.bel",
+                    "start_line": 127,
+                    "start_column": 3,
+                    "stop_line": 127,
+                    "stop_column": 4
+                  }
+                },
+                "quoted": false,
+                "operator": {
+                  "fixity": "prefix",
+                  "associativity": "right-associative",
+                  "arity": 0,
+                  "precedence": 1
+                },
+                "location": {
+                  "filename": "clf_terms_ok.input.bel",
+                  "start_line": 127,
+                  "start_column": 3,
+                  "stop_line": 127,
+                  "stop_column": 4
+                }
+              }
+            ]
+          ],
+          "location": {
+            "filename": "clf_terms_ok.input.bel",
+            "start_line": 127,
+            "start_column": 3,
+            "stop_line": 127,
+            "stop_column": 4
+          }
+        }
+      ],
+      "location": {
+        "filename": "clf_terms_ok.input.bel",
+        "start_line": 127,
+        "start_column": 1,
+        "stop_line": 127,
+        "stop_column": 5
+      }
+    }
+  ],
+  [
+    "CLF.Term.Substitution",
+    {
+      "term": [
+        "CLF.Term.Variable",
+        {
+          "identifier": {
+            "name": "x",
+            "location": {
+              "filename": "clf_terms_ok.input.bel",
+              "start_line": 130,
+              "start_column": 1,
+              "stop_line": 130,
+              "stop_column": 2
+            }
+          },
+          "location": {
+            "filename": "clf_terms_ok.input.bel",
+            "start_line": 130,
+            "start_column": 1,
+            "stop_line": 130,
+            "stop_column": 2
+          }
+        }
+      ],
+      "substitution": [
+        "CLF.Substitution",
+        {
+          "head": [
+            "CLF.Substitution.Head.None",
+            {
+              "location": {
+                "filename": "clf_terms_ok.input.bel",
+                "start_line": 130,
+                "start_column": 3,
+                "stop_line": 130,
+                "stop_column": 3
+              }
+            }
+          ],
+          "terms": [
+            [
               "CLF.Term.Abstraction",
               {
                 "parameter_identifier": {
                   "name": "z",
                   "location": {
                     "filename": "clf_terms_ok.input.bel",
-                    "start_line": 127,
+                    "start_line": 130,
                     "start_column": 4,
-                    "stop_line": 127,
+                    "stop_line": 130,
                     "stop_column": 5
                   }
                 },
@@ -3907,26 +3973,26 @@
                       "name": "z",
                       "location": {
                         "filename": "clf_terms_ok.input.bel",
-                        "start_line": 127,
+                        "start_line": 130,
                         "start_column": 7,
-                        "stop_line": 127,
+                        "stop_line": 130,
                         "stop_column": 8
                       }
                     },
                     "location": {
                       "filename": "clf_terms_ok.input.bel",
-                      "start_line": 127,
+                      "start_line": 130,
                       "start_column": 7,
-                      "stop_line": 127,
+                      "stop_line": 130,
                       "stop_column": 8
                     }
                   }
                 ],
                 "location": {
                   "filename": "clf_terms_ok.input.bel",
-                  "start_line": 127,
+                  "start_line": 130,
                   "start_column": 3,
-                  "stop_line": 127,
+                  "stop_line": 130,
                   "stop_column": 8
                 }
               }
@@ -3934,18 +4000,18 @@
           ],
           "location": {
             "filename": "clf_terms_ok.input.bel",
-            "start_line": 127,
+            "start_line": 130,
             "start_column": 3,
-            "stop_line": 127,
+            "stop_line": 130,
             "stop_column": 8
           }
         }
       ],
       "location": {
         "filename": "clf_terms_ok.input.bel",
-        "start_line": 127,
+        "start_line": 130,
         "start_column": 1,
-        "stop_line": 127,
+        "stop_line": 130,
         "stop_column": 9
       }
     }
@@ -3966,17 +4032,17 @@
                     "name": "x",
                     "location": {
                       "filename": "clf_terms_ok.input.bel",
-                      "start_line": 130,
+                      "start_line": 133,
                       "start_column": 1,
-                      "stop_line": 130,
+                      "stop_line": 133,
                       "stop_column": 2
                     }
                   },
                   "location": {
                     "filename": "clf_terms_ok.input.bel",
-                    "start_line": 130,
+                    "start_line": 133,
                     "start_column": 1,
-                    "stop_line": 130,
+                    "stop_line": 133,
                     "stop_column": 2
                   }
                 }
@@ -3989,9 +4055,9 @@
                     {
                       "location": {
                         "filename": "clf_terms_ok.input.bel",
-                        "start_line": 130,
+                        "start_line": 133,
                         "start_column": 3,
-                        "stop_line": 130,
+                        "stop_line": 133,
                         "stop_column": 3
                       }
                     }
@@ -4004,17 +4070,17 @@
                           "name": "y1",
                           "location": {
                             "filename": "clf_terms_ok.input.bel",
-                            "start_line": 130,
+                            "start_line": 133,
                             "start_column": 3,
-                            "stop_line": 130,
+                            "stop_line": 133,
                             "stop_column": 5
                           }
                         },
                         "location": {
                           "filename": "clf_terms_ok.input.bel",
-                          "start_line": 130,
+                          "start_line": 133,
                           "start_column": 3,
-                          "stop_line": 130,
+                          "stop_line": 133,
                           "stop_column": 5
                         }
                       }
@@ -4022,18 +4088,18 @@
                   ],
                   "location": {
                     "filename": "clf_terms_ok.input.bel",
-                    "start_line": 130,
+                    "start_line": 133,
                     "start_column": 3,
-                    "stop_line": 130,
+                    "stop_line": 133,
                     "stop_column": 5
                   }
                 }
               ],
               "location": {
                 "filename": "clf_terms_ok.input.bel",
-                "start_line": 130,
+                "start_line": 133,
                 "start_column": 1,
-                "stop_line": 130,
+                "stop_line": 133,
                 "stop_column": 6
               }
             }
@@ -4046,9 +4112,9 @@
                 {
                   "location": {
                     "filename": "clf_terms_ok.input.bel",
-                    "start_line": 130,
+                    "start_line": 133,
                     "start_column": 7,
-                    "stop_line": 130,
+                    "stop_line": 133,
                     "stop_column": 7
                   }
                 }
@@ -4061,17 +4127,17 @@
                       "name": "y2",
                       "location": {
                         "filename": "clf_terms_ok.input.bel",
-                        "start_line": 130,
+                        "start_line": 133,
                         "start_column": 7,
-                        "stop_line": 130,
+                        "stop_line": 133,
                         "stop_column": 9
                       }
                     },
                     "location": {
                       "filename": "clf_terms_ok.input.bel",
-                      "start_line": 130,
+                      "start_line": 133,
                       "start_column": 7,
-                      "stop_line": 130,
+                      "stop_line": 133,
                       "stop_column": 9
                     }
                   }
@@ -4079,18 +4145,18 @@
               ],
               "location": {
                 "filename": "clf_terms_ok.input.bel",
-                "start_line": 130,
+                "start_line": 133,
                 "start_column": 7,
-                "stop_line": 130,
+                "stop_line": 133,
                 "stop_column": 9
               }
             }
           ],
           "location": {
             "filename": "clf_terms_ok.input.bel",
-            "start_line": 130,
+            "start_line": 133,
             "start_column": 1,
-            "stop_line": 130,
+            "stop_line": 133,
             "stop_column": 10
           }
         }
@@ -4103,9 +4169,9 @@
             {
               "location": {
                 "filename": "clf_terms_ok.input.bel",
-                "start_line": 130,
+                "start_line": 133,
                 "start_column": 11,
-                "stop_line": 130,
+                "stop_line": 133,
                 "stop_column": 11
               }
             }
@@ -4118,17 +4184,17 @@
                   "name": "y3",
                   "location": {
                     "filename": "clf_terms_ok.input.bel",
-                    "start_line": 130,
+                    "start_line": 133,
                     "start_column": 11,
-                    "stop_line": 130,
+                    "stop_line": 133,
                     "stop_column": 13
                   }
                 },
                 "location": {
                   "filename": "clf_terms_ok.input.bel",
-                  "start_line": 130,
+                  "start_line": 133,
                   "start_column": 11,
-                  "stop_line": 130,
+                  "stop_line": 133,
                   "stop_column": 13
                 }
               }
@@ -4136,109 +4202,10 @@
           ],
           "location": {
             "filename": "clf_terms_ok.input.bel",
-            "start_line": 130,
+            "start_line": 133,
             "start_column": 11,
-            "stop_line": 130,
+            "stop_line": 133,
             "stop_column": 13
-          }
-        }
-      ],
-      "location": {
-        "filename": "clf_terms_ok.input.bel",
-        "start_line": 130,
-        "start_column": 1,
-        "stop_line": 130,
-        "stop_column": 14
-      }
-    }
-  ],
-  [
-    "CLF.Term.Substitution",
-    {
-      "term": [
-        "CLF.Term.Variable",
-        {
-          "identifier": {
-            "name": "x",
-            "location": {
-              "filename": "clf_terms_ok.input.bel",
-              "start_line": 133,
-              "start_column": 1,
-              "stop_line": 133,
-              "stop_column": 2
-            }
-          },
-          "location": {
-            "filename": "clf_terms_ok.input.bel",
-            "start_line": 133,
-            "start_column": 1,
-            "stop_line": 133,
-            "stop_column": 2
-          }
-        }
-      ],
-      "substitution": [
-        "CLF.Substitution",
-        {
-          "head": [
-            "CLF.Substitution.Head.Identity",
-            {
-              "location": {
-                "filename": "clf_terms_ok.input.bel",
-                "start_line": 133,
-                "start_column": 3,
-                "stop_line": 133,
-                "stop_column": 5
-              }
-            }
-          ],
-          "terms": [
-            [
-              "CLF.Term.Constant",
-              {
-                "identifier": {
-                  "name": {
-                    "name": "z",
-                    "location": {
-                      "filename": "clf_terms_ok.input.bel",
-                      "start_line": 133,
-                      "start_column": 7,
-                      "stop_line": 133,
-                      "stop_column": 8
-                    }
-                  },
-                  "modules": [],
-                  "location": {
-                    "filename": "clf_terms_ok.input.bel",
-                    "start_line": 133,
-                    "start_column": 7,
-                    "stop_line": 133,
-                    "stop_column": 8
-                  }
-                },
-                "quoted": false,
-                "operator": {
-                  "fixity": "prefix",
-                  "associativity": "right-associative",
-                  "arity": 0,
-                  "precedence": 1
-                },
-                "location": {
-                  "filename": "clf_terms_ok.input.bel",
-                  "start_line": 133,
-                  "start_column": 7,
-                  "stop_line": 133,
-                  "stop_column": 8
-                }
-              }
-            ]
-          ],
-          "location": {
-            "filename": "clf_terms_ok.input.bel",
-            "start_line": 133,
-            "start_column": 3,
-            "stop_line": 133,
-            "stop_column": 8
           }
         }
       ],
@@ -4247,7 +4214,7 @@
         "start_line": 133,
         "start_column": 1,
         "stop_line": 133,
-        "stop_column": 9
+        "stop_column": 14
       }
     }
   ],
@@ -4280,81 +4247,54 @@
         "CLF.Substitution",
         {
           "head": [
-            "CLF.Substitution.Head.None",
+            "CLF.Substitution.Head.Identity",
             {
               "location": {
                 "filename": "clf_terms_ok.input.bel",
                 "start_line": 136,
                 "start_column": 3,
                 "stop_line": 136,
-                "stop_column": 3
+                "stop_column": 5
               }
             }
           ],
           "terms": [
             [
-              "CLF.Term.Variable",
+              "CLF.Term.Constant",
               {
                 "identifier": {
-                  "name": "y1",
-                  "location": {
-                    "filename": "clf_terms_ok.input.bel",
-                    "start_line": 136,
-                    "start_column": 3,
-                    "stop_line": 136,
-                    "stop_column": 5
-                  }
-                },
-                "location": {
-                  "filename": "clf_terms_ok.input.bel",
-                  "start_line": 136,
-                  "start_column": 3,
-                  "stop_line": 136,
-                  "stop_column": 5
-                }
-              }
-            ],
-            [
-              "CLF.Term.Variable",
-              {
-                "identifier": {
-                  "name": "y2",
+                  "name": {
+                    "name": "z",
+                    "location": {
+                      "filename": "clf_terms_ok.input.bel",
+                      "start_line": 136,
+                      "start_column": 7,
+                      "stop_line": 136,
+                      "stop_column": 8
+                    }
+                  },
+                  "modules": [],
                   "location": {
                     "filename": "clf_terms_ok.input.bel",
                     "start_line": 136,
                     "start_column": 7,
                     "stop_line": 136,
-                    "stop_column": 9
+                    "stop_column": 8
                   }
+                },
+                "quoted": false,
+                "operator": {
+                  "fixity": "prefix",
+                  "associativity": "right-associative",
+                  "arity": 0,
+                  "precedence": 1
                 },
                 "location": {
                   "filename": "clf_terms_ok.input.bel",
                   "start_line": 136,
                   "start_column": 7,
                   "stop_line": 136,
-                  "stop_column": 9
-                }
-              }
-            ],
-            [
-              "CLF.Term.Variable",
-              {
-                "identifier": {
-                  "name": "y3",
-                  "location": {
-                    "filename": "clf_terms_ok.input.bel",
-                    "start_line": 136,
-                    "start_column": 11,
-                    "stop_line": 136,
-                    "stop_column": 13
-                  }
-                },
-                "location": {
-                  "filename": "clf_terms_ok.input.bel",
-                  "start_line": 136,
-                  "start_column": 11,
-                  "stop_line": 136,
-                  "stop_column": 13
+                  "stop_column": 8
                 }
               }
             ]
@@ -4364,7 +4304,7 @@
             "start_line": 136,
             "start_column": 3,
             "stop_line": 136,
-            "stop_column": 13
+            "stop_column": 8
           }
         }
       ],
@@ -4373,7 +4313,7 @@
         "start_line": 136,
         "start_column": 1,
         "stop_line": 136,
-        "stop_column": 14
+        "stop_column": 9
       }
     }
   ],
@@ -4406,14 +4346,14 @@
         "CLF.Substitution",
         {
           "head": [
-            "CLF.Substitution.Head.Identity",
+            "CLF.Substitution.Head.None",
             {
               "location": {
                 "filename": "clf_terms_ok.input.bel",
                 "start_line": 139,
                 "start_column": 3,
                 "stop_line": 139,
-                "stop_column": 5
+                "stop_column": 3
               }
             }
           ],
@@ -4423,6 +4363,28 @@
               {
                 "identifier": {
                   "name": "y1",
+                  "location": {
+                    "filename": "clf_terms_ok.input.bel",
+                    "start_line": 139,
+                    "start_column": 3,
+                    "stop_line": 139,
+                    "stop_column": 5
+                  }
+                },
+                "location": {
+                  "filename": "clf_terms_ok.input.bel",
+                  "start_line": 139,
+                  "start_column": 3,
+                  "stop_line": 139,
+                  "stop_column": 5
+                }
+              }
+            ],
+            [
+              "CLF.Term.Variable",
+              {
+                "identifier": {
+                  "name": "y2",
                   "location": {
                     "filename": "clf_terms_ok.input.bel",
                     "start_line": 139,
@@ -4444,7 +4406,7 @@
               "CLF.Term.Variable",
               {
                 "identifier": {
-                  "name": "y2",
+                  "name": "y3",
                   "location": {
                     "filename": "clf_terms_ok.input.bel",
                     "start_line": 139,
@@ -4461,28 +4423,6 @@
                   "stop_column": 13
                 }
               }
-            ],
-            [
-              "CLF.Term.Variable",
-              {
-                "identifier": {
-                  "name": "y3",
-                  "location": {
-                    "filename": "clf_terms_ok.input.bel",
-                    "start_line": 139,
-                    "start_column": 15,
-                    "stop_line": 139,
-                    "stop_column": 17
-                  }
-                },
-                "location": {
-                  "filename": "clf_terms_ok.input.bel",
-                  "start_line": 139,
-                  "start_column": 15,
-                  "stop_line": 139,
-                  "stop_column": 17
-                }
-              }
             ]
           ],
           "location": {
@@ -4490,7 +4430,7 @@
             "start_line": 139,
             "start_column": 3,
             "stop_line": 139,
-            "stop_column": 17
+            "stop_column": 13
           }
         }
       ],
@@ -4499,7 +4439,7 @@
         "start_line": 139,
         "start_column": 1,
         "stop_line": 139,
-        "stop_column": 18
+        "stop_column": 14
       }
     }
   ],
@@ -4532,232 +4472,81 @@
         "CLF.Substitution",
         {
           "head": [
-            "CLF.Substitution.Head.None",
+            "CLF.Substitution.Head.Identity",
             {
               "location": {
                 "filename": "clf_terms_ok.input.bel",
                 "start_line": 142,
                 "start_column": 3,
                 "stop_line": 142,
-                "stop_column": 3
+                "stop_column": 5
               }
             }
           ],
           "terms": [
             [
-              "CLF.Term.Substitution",
+              "CLF.Term.Variable",
               {
-                "term": [
-                  "CLF.Term.Variable",
-                  {
-                    "identifier": {
-                      "name": "y1",
-                      "location": {
-                        "filename": "clf_terms_ok.input.bel",
-                        "start_line": 142,
-                        "start_column": 3,
-                        "stop_line": 142,
-                        "stop_column": 5
-                      }
-                    },
-                    "location": {
-                      "filename": "clf_terms_ok.input.bel",
-                      "start_line": 142,
-                      "start_column": 3,
-                      "stop_line": 142,
-                      "stop_column": 5
-                    }
+                "identifier": {
+                  "name": "y1",
+                  "location": {
+                    "filename": "clf_terms_ok.input.bel",
+                    "start_line": 142,
+                    "start_column": 7,
+                    "stop_line": 142,
+                    "stop_column": 9
                   }
-                ],
-                "substitution": [
-                  "CLF.Substitution",
-                  {
-                    "head": [
-                      "CLF.Substitution.Head.None",
-                      {
-                        "location": {
-                          "filename": "clf_terms_ok.input.bel",
-                          "start_line": 142,
-                          "start_column": 6,
-                          "stop_line": 142,
-                          "stop_column": 6
-                        }
-                      }
-                    ],
-                    "terms": [],
-                    "location": {
-                      "filename": "clf_terms_ok.input.bel",
-                      "start_line": 142,
-                      "start_column": 6,
-                      "stop_line": 142,
-                      "stop_column": 6
-                    }
-                  }
-                ],
+                },
                 "location": {
                   "filename": "clf_terms_ok.input.bel",
                   "start_line": 142,
-                  "start_column": 3,
+                  "start_column": 7,
                   "stop_line": 142,
-                  "stop_column": 7
+                  "stop_column": 9
                 }
               }
             ],
             [
-              "CLF.Term.Substitution",
+              "CLF.Term.Variable",
               {
-                "term": [
-                  "CLF.Term.Variable",
-                  {
-                    "identifier": {
-                      "name": "y2",
-                      "location": {
-                        "filename": "clf_terms_ok.input.bel",
-                        "start_line": 142,
-                        "start_column": 9,
-                        "stop_line": 142,
-                        "stop_column": 11
-                      }
-                    },
-                    "location": {
-                      "filename": "clf_terms_ok.input.bel",
-                      "start_line": 142,
-                      "start_column": 9,
-                      "stop_line": 142,
-                      "stop_column": 11
-                    }
+                "identifier": {
+                  "name": "y2",
+                  "location": {
+                    "filename": "clf_terms_ok.input.bel",
+                    "start_line": 142,
+                    "start_column": 11,
+                    "stop_line": 142,
+                    "stop_column": 13
                   }
-                ],
-                "substitution": [
-                  "CLF.Substitution",
-                  {
-                    "head": [
-                      "CLF.Substitution.Head.Identity",
-                      {
-                        "location": {
-                          "filename": "clf_terms_ok.input.bel",
-                          "start_line": 142,
-                          "start_column": 12,
-                          "stop_line": 142,
-                          "stop_column": 14
-                        }
-                      }
-                    ],
-                    "terms": [],
-                    "location": {
-                      "filename": "clf_terms_ok.input.bel",
-                      "start_line": 142,
-                      "start_column": 12,
-                      "stop_line": 142,
-                      "stop_column": 14
-                    }
-                  }
-                ],
+                },
                 "location": {
                   "filename": "clf_terms_ok.input.bel",
                   "start_line": 142,
-                  "start_column": 9,
+                  "start_column": 11,
                   "stop_line": 142,
-                  "stop_column": 15
+                  "stop_column": 13
                 }
               }
             ],
             [
-              "CLF.Term.Substitution",
+              "CLF.Term.Variable",
               {
-                "term": [
-                  "CLF.Term.Variable",
-                  {
-                    "identifier": {
-                      "name": "y3",
-                      "location": {
-                        "filename": "clf_terms_ok.input.bel",
-                        "start_line": 142,
-                        "start_column": 17,
-                        "stop_line": 142,
-                        "stop_column": 19
-                      }
-                    },
-                    "location": {
-                      "filename": "clf_terms_ok.input.bel",
-                      "start_line": 142,
-                      "start_column": 17,
-                      "stop_line": 142,
-                      "stop_column": 19
-                    }
+                "identifier": {
+                  "name": "y3",
+                  "location": {
+                    "filename": "clf_terms_ok.input.bel",
+                    "start_line": 142,
+                    "start_column": 15,
+                    "stop_line": 142,
+                    "stop_column": 17
                   }
-                ],
-                "substitution": [
-                  "CLF.Substitution",
-                  {
-                    "head": [
-                      "CLF.Substitution.Head.None",
-                      {
-                        "location": {
-                          "filename": "clf_terms_ok.input.bel",
-                          "start_line": 142,
-                          "start_column": 20,
-                          "stop_line": 142,
-                          "stop_column": 20
-                        }
-                      }
-                    ],
-                    "terms": [
-                      [
-                        "CLF.Term.Constant",
-                        {
-                          "identifier": {
-                            "name": {
-                              "name": "z",
-                              "location": {
-                                "filename": "clf_terms_ok.input.bel",
-                                "start_line": 142,
-                                "start_column": 20,
-                                "stop_line": 142,
-                                "stop_column": 21
-                              }
-                            },
-                            "modules": [],
-                            "location": {
-                              "filename": "clf_terms_ok.input.bel",
-                              "start_line": 142,
-                              "start_column": 20,
-                              "stop_line": 142,
-                              "stop_column": 21
-                            }
-                          },
-                          "quoted": false,
-                          "operator": {
-                            "fixity": "prefix",
-                            "associativity": "right-associative",
-                            "arity": 0,
-                            "precedence": 1
-                          },
-                          "location": {
-                            "filename": "clf_terms_ok.input.bel",
-                            "start_line": 142,
-                            "start_column": 20,
-                            "stop_line": 142,
-                            "stop_column": 21
-                          }
-                        }
-                      ]
-                    ],
-                    "location": {
-                      "filename": "clf_terms_ok.input.bel",
-                      "start_line": 142,
-                      "start_column": 20,
-                      "stop_line": 142,
-                      "stop_column": 21
-                    }
-                  }
-                ],
+                },
                 "location": {
                   "filename": "clf_terms_ok.input.bel",
                   "start_line": 142,
-                  "start_column": 17,
+                  "start_column": 15,
                   "stop_line": 142,
-                  "stop_column": 22
+                  "stop_column": 17
                 }
               }
             ]
@@ -4767,7 +4556,7 @@
             "start_line": 142,
             "start_column": 3,
             "stop_line": 142,
-            "stop_column": 22
+            "stop_column": 17
           }
         }
       ],
@@ -4776,7 +4565,7 @@
         "start_line": 142,
         "start_column": 1,
         "stop_line": 142,
-        "stop_column": 23
+        "stop_column": 18
       }
     }
   ],
@@ -4809,14 +4598,14 @@
         "CLF.Substitution",
         {
           "head": [
-            "CLF.Substitution.Head.Identity",
+            "CLF.Substitution.Head.None",
             {
               "location": {
                 "filename": "clf_terms_ok.input.bel",
                 "start_line": 145,
                 "start_column": 3,
                 "stop_line": 145,
-                "stop_column": 5
+                "stop_column": 3
               }
             }
           ],
@@ -4832,17 +4621,17 @@
                       "location": {
                         "filename": "clf_terms_ok.input.bel",
                         "start_line": 145,
-                        "start_column": 7,
+                        "start_column": 3,
                         "stop_line": 145,
-                        "stop_column": 9
+                        "stop_column": 5
                       }
                     },
                     "location": {
                       "filename": "clf_terms_ok.input.bel",
                       "start_line": 145,
-                      "start_column": 7,
+                      "start_column": 3,
                       "stop_line": 145,
-                      "stop_column": 9
+                      "stop_column": 5
                     }
                   }
                 ],
@@ -4855,9 +4644,9 @@
                         "location": {
                           "filename": "clf_terms_ok.input.bel",
                           "start_line": 145,
-                          "start_column": 10,
+                          "start_column": 6,
                           "stop_line": 145,
-                          "stop_column": 10
+                          "stop_column": 6
                         }
                       }
                     ],
@@ -4865,18 +4654,18 @@
                     "location": {
                       "filename": "clf_terms_ok.input.bel",
                       "start_line": 145,
-                      "start_column": 10,
+                      "start_column": 6,
                       "stop_line": 145,
-                      "stop_column": 10
+                      "stop_column": 6
                     }
                   }
                 ],
                 "location": {
                   "filename": "clf_terms_ok.input.bel",
                   "start_line": 145,
-                  "start_column": 7,
+                  "start_column": 3,
                   "stop_line": 145,
-                  "stop_column": 11
+                  "stop_column": 7
                 }
               }
             ],
@@ -4891,17 +4680,17 @@
                       "location": {
                         "filename": "clf_terms_ok.input.bel",
                         "start_line": 145,
-                        "start_column": 13,
+                        "start_column": 9,
                         "stop_line": 145,
-                        "stop_column": 15
+                        "stop_column": 11
                       }
                     },
                     "location": {
                       "filename": "clf_terms_ok.input.bel",
                       "start_line": 145,
-                      "start_column": 13,
+                      "start_column": 9,
                       "stop_line": 145,
-                      "stop_column": 15
+                      "stop_column": 11
                     }
                   }
                 ],
@@ -4914,9 +4703,9 @@
                         "location": {
                           "filename": "clf_terms_ok.input.bel",
                           "start_line": 145,
-                          "start_column": 16,
+                          "start_column": 12,
                           "stop_line": 145,
-                          "stop_column": 18
+                          "stop_column": 14
                         }
                       }
                     ],
@@ -4924,18 +4713,18 @@
                     "location": {
                       "filename": "clf_terms_ok.input.bel",
                       "start_line": 145,
-                      "start_column": 16,
+                      "start_column": 12,
                       "stop_line": 145,
-                      "stop_column": 18
+                      "stop_column": 14
                     }
                   }
                 ],
                 "location": {
                   "filename": "clf_terms_ok.input.bel",
                   "start_line": 145,
-                  "start_column": 13,
+                  "start_column": 9,
                   "stop_line": 145,
-                  "stop_column": 19
+                  "stop_column": 15
                 }
               }
             ],
@@ -4950,17 +4739,17 @@
                       "location": {
                         "filename": "clf_terms_ok.input.bel",
                         "start_line": 145,
-                        "start_column": 21,
+                        "start_column": 17,
                         "stop_line": 145,
-                        "stop_column": 23
+                        "stop_column": 19
                       }
                     },
                     "location": {
                       "filename": "clf_terms_ok.input.bel",
                       "start_line": 145,
-                      "start_column": 21,
+                      "start_column": 17,
                       "stop_line": 145,
-                      "stop_column": 23
+                      "stop_column": 19
                     }
                   }
                 ],
@@ -4973,55 +4762,49 @@
                         "location": {
                           "filename": "clf_terms_ok.input.bel",
                           "start_line": 145,
-                          "start_column": 24,
+                          "start_column": 20,
                           "stop_line": 145,
-                          "stop_column": 24
+                          "stop_column": 20
                         }
                       }
                     ],
                     "terms": [
                       [
-                        "CLF.Term.Abstraction",
+                        "CLF.Term.Constant",
                         {
-                          "parameter_identifier": {
-                            "name": "z",
-                            "location": {
-                              "filename": "clf_terms_ok.input.bel",
-                              "start_line": 145,
-                              "start_column": 25,
-                              "stop_line": 145,
-                              "stop_column": 26
-                            }
-                          },
-                          "parameter_type": null,
-                          "body": [
-                            "CLF.Term.Variable",
-                            {
-                              "identifier": {
-                                "name": "z",
-                                "location": {
-                                  "filename": "clf_terms_ok.input.bel",
-                                  "start_line": 145,
-                                  "start_column": 28,
-                                  "stop_line": 145,
-                                  "stop_column": 29
-                                }
-                              },
+                          "identifier": {
+                            "name": {
+                              "name": "z",
                               "location": {
                                 "filename": "clf_terms_ok.input.bel",
                                 "start_line": 145,
-                                "start_column": 28,
+                                "start_column": 20,
                                 "stop_line": 145,
-                                "stop_column": 29
+                                "stop_column": 21
                               }
+                            },
+                            "modules": [],
+                            "location": {
+                              "filename": "clf_terms_ok.input.bel",
+                              "start_line": 145,
+                              "start_column": 20,
+                              "stop_line": 145,
+                              "stop_column": 21
                             }
-                          ],
+                          },
+                          "quoted": false,
+                          "operator": {
+                            "fixity": "prefix",
+                            "associativity": "right-associative",
+                            "arity": 0,
+                            "precedence": 1
+                          },
                           "location": {
                             "filename": "clf_terms_ok.input.bel",
                             "start_line": 145,
-                            "start_column": 24,
+                            "start_column": 20,
                             "stop_line": 145,
-                            "stop_column": 29
+                            "stop_column": 21
                           }
                         }
                       ]
@@ -5029,18 +4812,18 @@
                     "location": {
                       "filename": "clf_terms_ok.input.bel",
                       "start_line": 145,
-                      "start_column": 24,
+                      "start_column": 20,
                       "stop_line": 145,
-                      "stop_column": 29
+                      "stop_column": 21
                     }
                   }
                 ],
                 "location": {
                   "filename": "clf_terms_ok.input.bel",
                   "start_line": 145,
-                  "start_column": 21,
+                  "start_column": 17,
                   "stop_line": 145,
-                  "stop_column": 30
+                  "stop_column": 22
                 }
               }
             ]
@@ -5050,7 +4833,7 @@
             "start_line": 145,
             "start_column": 3,
             "stop_line": 145,
-            "stop_column": 30
+            "stop_column": 22
           }
         }
       ],
@@ -5059,7 +4842,7 @@
         "start_line": 145,
         "start_column": 1,
         "stop_line": 145,
-        "stop_column": 31
+        "stop_column": 23
       }
     }
   ],
@@ -5092,19 +4875,8 @@
         "CLF.Substitution",
         {
           "head": [
-            "CLF.Substitution.Head.Substitution_variable",
+            "CLF.Substitution.Head.Identity",
             {
-              "identifier": {
-                "name": "$S",
-                "location": {
-                  "filename": "clf_terms_ok.input.bel",
-                  "start_line": 148,
-                  "start_column": 3,
-                  "stop_line": 148,
-                  "stop_column": 5
-                }
-              },
-              "closure": null,
               "location": {
                 "filename": "clf_terms_ok.input.bel",
                 "start_line": 148,
@@ -5116,68 +4888,225 @@
           ],
           "terms": [
             [
-              "CLF.Term.Variable",
+              "CLF.Term.Substitution",
               {
-                "identifier": {
-                  "name": "y1",
-                  "location": {
-                    "filename": "clf_terms_ok.input.bel",
-                    "start_line": 148,
-                    "start_column": 7,
-                    "stop_line": 148,
-                    "stop_column": 9
+                "term": [
+                  "CLF.Term.Variable",
+                  {
+                    "identifier": {
+                      "name": "y1",
+                      "location": {
+                        "filename": "clf_terms_ok.input.bel",
+                        "start_line": 148,
+                        "start_column": 7,
+                        "stop_line": 148,
+                        "stop_column": 9
+                      }
+                    },
+                    "location": {
+                      "filename": "clf_terms_ok.input.bel",
+                      "start_line": 148,
+                      "start_column": 7,
+                      "stop_line": 148,
+                      "stop_column": 9
+                    }
                   }
-                },
+                ],
+                "substitution": [
+                  "CLF.Substitution",
+                  {
+                    "head": [
+                      "CLF.Substitution.Head.None",
+                      {
+                        "location": {
+                          "filename": "clf_terms_ok.input.bel",
+                          "start_line": 148,
+                          "start_column": 10,
+                          "stop_line": 148,
+                          "stop_column": 10
+                        }
+                      }
+                    ],
+                    "terms": [],
+                    "location": {
+                      "filename": "clf_terms_ok.input.bel",
+                      "start_line": 148,
+                      "start_column": 10,
+                      "stop_line": 148,
+                      "stop_column": 10
+                    }
+                  }
+                ],
                 "location": {
                   "filename": "clf_terms_ok.input.bel",
                   "start_line": 148,
                   "start_column": 7,
                   "stop_line": 148,
-                  "stop_column": 9
+                  "stop_column": 11
                 }
               }
             ],
             [
-              "CLF.Term.Variable",
+              "CLF.Term.Substitution",
               {
-                "identifier": {
-                  "name": "y2",
-                  "location": {
-                    "filename": "clf_terms_ok.input.bel",
-                    "start_line": 148,
-                    "start_column": 11,
-                    "stop_line": 148,
-                    "stop_column": 13
+                "term": [
+                  "CLF.Term.Variable",
+                  {
+                    "identifier": {
+                      "name": "y2",
+                      "location": {
+                        "filename": "clf_terms_ok.input.bel",
+                        "start_line": 148,
+                        "start_column": 13,
+                        "stop_line": 148,
+                        "stop_column": 15
+                      }
+                    },
+                    "location": {
+                      "filename": "clf_terms_ok.input.bel",
+                      "start_line": 148,
+                      "start_column": 13,
+                      "stop_line": 148,
+                      "stop_column": 15
+                    }
                   }
-                },
+                ],
+                "substitution": [
+                  "CLF.Substitution",
+                  {
+                    "head": [
+                      "CLF.Substitution.Head.Identity",
+                      {
+                        "location": {
+                          "filename": "clf_terms_ok.input.bel",
+                          "start_line": 148,
+                          "start_column": 16,
+                          "stop_line": 148,
+                          "stop_column": 18
+                        }
+                      }
+                    ],
+                    "terms": [],
+                    "location": {
+                      "filename": "clf_terms_ok.input.bel",
+                      "start_line": 148,
+                      "start_column": 16,
+                      "stop_line": 148,
+                      "stop_column": 18
+                    }
+                  }
+                ],
                 "location": {
                   "filename": "clf_terms_ok.input.bel",
                   "start_line": 148,
-                  "start_column": 11,
+                  "start_column": 13,
                   "stop_line": 148,
-                  "stop_column": 13
+                  "stop_column": 19
                 }
               }
             ],
             [
-              "CLF.Term.Variable",
+              "CLF.Term.Substitution",
               {
-                "identifier": {
-                  "name": "y3",
-                  "location": {
-                    "filename": "clf_terms_ok.input.bel",
-                    "start_line": 148,
-                    "start_column": 15,
-                    "stop_line": 148,
-                    "stop_column": 17
+                "term": [
+                  "CLF.Term.Variable",
+                  {
+                    "identifier": {
+                      "name": "y3",
+                      "location": {
+                        "filename": "clf_terms_ok.input.bel",
+                        "start_line": 148,
+                        "start_column": 21,
+                        "stop_line": 148,
+                        "stop_column": 23
+                      }
+                    },
+                    "location": {
+                      "filename": "clf_terms_ok.input.bel",
+                      "start_line": 148,
+                      "start_column": 21,
+                      "stop_line": 148,
+                      "stop_column": 23
+                    }
                   }
-                },
+                ],
+                "substitution": [
+                  "CLF.Substitution",
+                  {
+                    "head": [
+                      "CLF.Substitution.Head.None",
+                      {
+                        "location": {
+                          "filename": "clf_terms_ok.input.bel",
+                          "start_line": 148,
+                          "start_column": 24,
+                          "stop_line": 148,
+                          "stop_column": 24
+                        }
+                      }
+                    ],
+                    "terms": [
+                      [
+                        "CLF.Term.Abstraction",
+                        {
+                          "parameter_identifier": {
+                            "name": "z",
+                            "location": {
+                              "filename": "clf_terms_ok.input.bel",
+                              "start_line": 148,
+                              "start_column": 25,
+                              "stop_line": 148,
+                              "stop_column": 26
+                            }
+                          },
+                          "parameter_type": null,
+                          "body": [
+                            "CLF.Term.Variable",
+                            {
+                              "identifier": {
+                                "name": "z",
+                                "location": {
+                                  "filename": "clf_terms_ok.input.bel",
+                                  "start_line": 148,
+                                  "start_column": 28,
+                                  "stop_line": 148,
+                                  "stop_column": 29
+                                }
+                              },
+                              "location": {
+                                "filename": "clf_terms_ok.input.bel",
+                                "start_line": 148,
+                                "start_column": 28,
+                                "stop_line": 148,
+                                "stop_column": 29
+                              }
+                            }
+                          ],
+                          "location": {
+                            "filename": "clf_terms_ok.input.bel",
+                            "start_line": 148,
+                            "start_column": 24,
+                            "stop_line": 148,
+                            "stop_column": 29
+                          }
+                        }
+                      ]
+                    ],
+                    "location": {
+                      "filename": "clf_terms_ok.input.bel",
+                      "start_line": 148,
+                      "start_column": 24,
+                      "stop_line": 148,
+                      "stop_column": 29
+                    }
+                  }
+                ],
                 "location": {
                   "filename": "clf_terms_ok.input.bel",
                   "start_line": 148,
-                  "start_column": 15,
+                  "start_column": 21,
                   "stop_line": 148,
-                  "stop_column": 17
+                  "stop_column": 30
                 }
               }
             ]
@@ -5187,7 +5116,7 @@
             "start_line": 148,
             "start_column": 3,
             "stop_line": 148,
-            "stop_column": 17
+            "stop_column": 30
           }
         }
       ],
@@ -5196,7 +5125,7 @@
         "start_line": 148,
         "start_column": 1,
         "stop_line": 148,
-        "stop_column": 18
+        "stop_column": 31
       }
     }
   ],
@@ -5241,31 +5170,7 @@
                   "stop_column": 5
                 }
               },
-              "closure": [
-                "CLF.Substitution",
-                {
-                  "head": [
-                    "CLF.Substitution.Head.None",
-                    {
-                      "location": {
-                        "filename": "clf_terms_ok.input.bel",
-                        "start_line": 151,
-                        "start_column": 6,
-                        "stop_line": 151,
-                        "stop_column": 6
-                      }
-                    }
-                  ],
-                  "terms": [],
-                  "location": {
-                    "filename": "clf_terms_ok.input.bel",
-                    "start_line": 151,
-                    "start_column": 6,
-                    "stop_line": 151,
-                    "stop_column": 6
-                  }
-                }
-              ],
+              "closure": null,
               "location": {
                 "filename": "clf_terms_ok.input.bel",
                 "start_line": 151,
@@ -5284,17 +5189,17 @@
                   "location": {
                     "filename": "clf_terms_ok.input.bel",
                     "start_line": 151,
-                    "start_column": 9,
+                    "start_column": 7,
                     "stop_line": 151,
-                    "stop_column": 11
+                    "stop_column": 9
                   }
                 },
                 "location": {
                   "filename": "clf_terms_ok.input.bel",
                   "start_line": 151,
-                  "start_column": 9,
+                  "start_column": 7,
                   "stop_line": 151,
-                  "stop_column": 11
+                  "stop_column": 9
                 }
               }
             ],
@@ -5306,17 +5211,17 @@
                   "location": {
                     "filename": "clf_terms_ok.input.bel",
                     "start_line": 151,
-                    "start_column": 13,
+                    "start_column": 11,
                     "stop_line": 151,
-                    "stop_column": 15
+                    "stop_column": 13
                   }
                 },
                 "location": {
                   "filename": "clf_terms_ok.input.bel",
                   "start_line": 151,
-                  "start_column": 13,
+                  "start_column": 11,
                   "stop_line": 151,
-                  "stop_column": 15
+                  "stop_column": 13
                 }
               }
             ],
@@ -5328,17 +5233,17 @@
                   "location": {
                     "filename": "clf_terms_ok.input.bel",
                     "start_line": 151,
-                    "start_column": 17,
+                    "start_column": 15,
                     "stop_line": 151,
-                    "stop_column": 19
+                    "stop_column": 17
                   }
                 },
                 "location": {
                   "filename": "clf_terms_ok.input.bel",
                   "start_line": 151,
-                  "start_column": 17,
+                  "start_column": 15,
                   "stop_line": 151,
-                  "stop_column": 19
+                  "stop_column": 17
                 }
               }
             ]
@@ -5348,7 +5253,7 @@
             "start_line": 151,
             "start_column": 3,
             "stop_line": 151,
-            "stop_column": 19
+            "stop_column": 17
           }
         }
       ],
@@ -5357,7 +5262,7 @@
         "start_line": 151,
         "start_column": 1,
         "stop_line": 151,
-        "stop_column": 20
+        "stop_column": 18
       }
     }
   ],
@@ -5406,14 +5311,14 @@
                 "CLF.Substitution",
                 {
                   "head": [
-                    "CLF.Substitution.Head.Identity",
+                    "CLF.Substitution.Head.None",
                     {
                       "location": {
                         "filename": "clf_terms_ok.input.bel",
                         "start_line": 154,
                         "start_column": 6,
                         "stop_line": 154,
-                        "stop_column": 8
+                        "stop_column": 6
                       }
                     }
                   ],
@@ -5423,7 +5328,7 @@
                     "start_line": 154,
                     "start_column": 6,
                     "stop_line": 154,
-                    "stop_column": 8
+                    "stop_column": 6
                   }
                 }
               ],
@@ -5445,17 +5350,17 @@
                   "location": {
                     "filename": "clf_terms_ok.input.bel",
                     "start_line": 154,
-                    "start_column": 11,
+                    "start_column": 9,
                     "stop_line": 154,
-                    "stop_column": 13
+                    "stop_column": 11
                   }
                 },
                 "location": {
                   "filename": "clf_terms_ok.input.bel",
                   "start_line": 154,
-                  "start_column": 11,
+                  "start_column": 9,
                   "stop_line": 154,
-                  "stop_column": 13
+                  "stop_column": 11
                 }
               }
             ],
@@ -5467,17 +5372,17 @@
                   "location": {
                     "filename": "clf_terms_ok.input.bel",
                     "start_line": 154,
-                    "start_column": 15,
+                    "start_column": 13,
                     "stop_line": 154,
-                    "stop_column": 17
+                    "stop_column": 15
                   }
                 },
                 "location": {
                   "filename": "clf_terms_ok.input.bel",
                   "start_line": 154,
-                  "start_column": 15,
+                  "start_column": 13,
                   "stop_line": 154,
-                  "stop_column": 17
+                  "stop_column": 15
                 }
               }
             ],
@@ -5489,17 +5394,17 @@
                   "location": {
                     "filename": "clf_terms_ok.input.bel",
                     "start_line": 154,
-                    "start_column": 19,
+                    "start_column": 17,
                     "stop_line": 154,
-                    "stop_column": 21
+                    "stop_column": 19
                   }
                 },
                 "location": {
                   "filename": "clf_terms_ok.input.bel",
                   "start_line": 154,
-                  "start_column": 19,
+                  "start_column": 17,
                   "stop_line": 154,
-                  "stop_column": 21
+                  "stop_column": 19
                 }
               }
             ]
@@ -5509,7 +5414,7 @@
             "start_line": 154,
             "start_column": 3,
             "stop_line": 154,
-            "stop_column": 21
+            "stop_column": 19
           }
         }
       ],
@@ -5518,7 +5423,7 @@
         "start_line": 154,
         "start_column": 1,
         "stop_line": 154,
-        "stop_column": 22
+        "stop_column": 20
       }
     }
   ],
@@ -5567,91 +5472,24 @@
                 "CLF.Substitution",
                 {
                   "head": [
-                    "CLF.Substitution.Head.None",
+                    "CLF.Substitution.Head.Identity",
                     {
                       "location": {
                         "filename": "clf_terms_ok.input.bel",
                         "start_line": 157,
                         "start_column": 6,
                         "stop_line": 157,
-                        "stop_column": 6
+                        "stop_column": 8
                       }
                     }
                   ],
-                  "terms": [
-                    [
-                      "CLF.Term.Variable",
-                      {
-                        "identifier": {
-                          "name": "y1",
-                          "location": {
-                            "filename": "clf_terms_ok.input.bel",
-                            "start_line": 157,
-                            "start_column": 6,
-                            "stop_line": 157,
-                            "stop_column": 8
-                          }
-                        },
-                        "location": {
-                          "filename": "clf_terms_ok.input.bel",
-                          "start_line": 157,
-                          "start_column": 6,
-                          "stop_line": 157,
-                          "stop_column": 8
-                        }
-                      }
-                    ],
-                    [
-                      "CLF.Term.Variable",
-                      {
-                        "identifier": {
-                          "name": "y2",
-                          "location": {
-                            "filename": "clf_terms_ok.input.bel",
-                            "start_line": 157,
-                            "start_column": 10,
-                            "stop_line": 157,
-                            "stop_column": 12
-                          }
-                        },
-                        "location": {
-                          "filename": "clf_terms_ok.input.bel",
-                          "start_line": 157,
-                          "start_column": 10,
-                          "stop_line": 157,
-                          "stop_column": 12
-                        }
-                      }
-                    ],
-                    [
-                      "CLF.Term.Variable",
-                      {
-                        "identifier": {
-                          "name": "y3",
-                          "location": {
-                            "filename": "clf_terms_ok.input.bel",
-                            "start_line": 157,
-                            "start_column": 14,
-                            "stop_line": 157,
-                            "stop_column": 16
-                          }
-                        },
-                        "location": {
-                          "filename": "clf_terms_ok.input.bel",
-                          "start_line": 157,
-                          "start_column": 14,
-                          "stop_line": 157,
-                          "stop_column": 16
-                        }
-                      }
-                    ]
-                  ],
+                  "terms": [],
                   "location": {
                     "filename": "clf_terms_ok.input.bel",
                     "start_line": 157,
                     "start_column": 6,
                     "stop_line": 157,
-                    "stop_column": 16
+                    "stop_column": 8
                   }
                 }
               ],
@@ -5673,6 +5511,50 @@
                   "location": {
                     "filename": "clf_terms_ok.input.bel",
                     "start_line": 157,
+                    "start_column": 11,
+                    "stop_line": 157,
+                    "stop_column": 13
+                  }
+                },
+                "location": {
+                  "filename": "clf_terms_ok.input.bel",
+                  "start_line": 157,
+                  "start_column": 11,
+                  "stop_line": 157,
+                  "stop_column": 13
+                }
+              }
+            ],
+            [
+              "CLF.Term.Variable",
+              {
+                "identifier": {
+                  "name": "y2",
+                  "location": {
+                    "filename": "clf_terms_ok.input.bel",
+                    "start_line": 157,
+                    "start_column": 15,
+                    "stop_line": 157,
+                    "stop_column": 17
+                  }
+                },
+                "location": {
+                  "filename": "clf_terms_ok.input.bel",
+                  "start_line": 157,
+                  "start_column": 15,
+                  "stop_line": 157,
+                  "stop_column": 17
+                }
+              }
+            ],
+            [
+              "CLF.Term.Variable",
+              {
+                "identifier": {
+                  "name": "y3",
+                  "location": {
+                    "filename": "clf_terms_ok.input.bel",
+                    "start_line": 157,
                     "start_column": 19,
                     "stop_line": 157,
                     "stop_column": 21
@@ -5686,50 +5568,6 @@
                   "stop_column": 21
                 }
               }
-            ],
-            [
-              "CLF.Term.Variable",
-              {
-                "identifier": {
-                  "name": "y2",
-                  "location": {
-                    "filename": "clf_terms_ok.input.bel",
-                    "start_line": 157,
-                    "start_column": 23,
-                    "stop_line": 157,
-                    "stop_column": 25
-                  }
-                },
-                "location": {
-                  "filename": "clf_terms_ok.input.bel",
-                  "start_line": 157,
-                  "start_column": 23,
-                  "stop_line": 157,
-                  "stop_column": 25
-                }
-              }
-            ],
-            [
-              "CLF.Term.Variable",
-              {
-                "identifier": {
-                  "name": "y3",
-                  "location": {
-                    "filename": "clf_terms_ok.input.bel",
-                    "start_line": 157,
-                    "start_column": 27,
-                    "stop_line": 157,
-                    "stop_column": 29
-                  }
-                },
-                "location": {
-                  "filename": "clf_terms_ok.input.bel",
-                  "start_line": 157,
-                  "start_column": 27,
-                  "stop_line": 157,
-                  "stop_column": 29
-                }
-              }
             ]
           ],
           "location": {
@@ -5737,7 +5575,7 @@
             "start_line": 157,
             "start_column": 3,
             "stop_line": 157,
-            "stop_column": 29
+            "stop_column": 21
           }
         }
       ],
@@ -5746,7 +5584,7 @@
         "start_line": 157,
         "start_column": 1,
         "stop_line": 157,
-        "stop_column": 30
+        "stop_column": 22
       }
     }
   ],
@@ -5808,70 +5646,44 @@
                   ],
                   "terms": [
                     [
-                      "CLF.Term.Substitution",
+                      "CLF.Term.Variable",
                       {
-                        "term": [
-                          "CLF.Term.Variable",
-                          {
-                            "identifier": {
-                              "name": "y1",
-                              "location": {
-                                "filename": "clf_terms_ok.input.bel",
-                                "start_line": 160,
-                                "start_column": 6,
-                                "stop_line": 160,
-                                "stop_column": 8
-                              }
-                            },
-                            "location": {
-                              "filename": "clf_terms_ok.input.bel",
-                              "start_line": 160,
-                              "start_column": 6,
-                              "stop_line": 160,
-                              "stop_column": 8
-                            }
+                        "identifier": {
+                          "name": "y1",
+                          "location": {
+                            "filename": "clf_terms_ok.input.bel",
+                            "start_line": 160,
+                            "start_column": 6,
+                            "stop_line": 160,
+                            "stop_column": 8
                           }
-                        ],
-                        "substitution": [
-                          "CLF.Substitution",
-                          {
-                            "head": [
-                              "CLF.Substitution.Head.Substitution_variable",
-                              {
-                                "identifier": {
-                                  "name": "$Q",
-                                  "location": {
-                                    "filename": "clf_terms_ok.input.bel",
-                                    "start_line": 160,
-                                    "start_column": 9,
-                                    "stop_line": 160,
-                                    "stop_column": 11
-                                  }
-                                },
-                                "closure": null,
-                                "location": {
-                                  "filename": "clf_terms_ok.input.bel",
-                                  "start_line": 160,
-                                  "start_column": 9,
-                                  "stop_line": 160,
-                                  "stop_column": 11
-                                }
-                              }
-                            ],
-                            "terms": [],
-                            "location": {
-                              "filename": "clf_terms_ok.input.bel",
-                              "start_line": 160,
-                              "start_column": 9,
-                              "stop_line": 160,
-                              "stop_column": 11
-                            }
-                          }
-                        ],
+                        },
                         "location": {
                           "filename": "clf_terms_ok.input.bel",
                           "start_line": 160,
                           "start_column": 6,
+                          "stop_line": 160,
+                          "stop_column": 8
+                        }
+                      }
+                    ],
+                    [
+                      "CLF.Term.Variable",
+                      {
+                        "identifier": {
+                          "name": "y2",
+                          "location": {
+                            "filename": "clf_terms_ok.input.bel",
+                            "start_line": 160,
+                            "start_column": 10,
+                            "stop_line": 160,
+                            "stop_column": 12
+                          }
+                        },
+                        "location": {
+                          "filename": "clf_terms_ok.input.bel",
+                          "start_line": 160,
+                          "start_column": 10,
                           "stop_line": 160,
                           "stop_column": 12
                         }
@@ -5881,7 +5693,7 @@
                       "CLF.Term.Variable",
                       {
                         "identifier": {
-                          "name": "y2",
+                          "name": "y3",
                           "location": {
                             "filename": "clf_terms_ok.input.bel",
                             "start_line": 160,
@@ -5898,28 +5710,6 @@
                           "stop_column": 16
                         }
                       }
-                    ],
-                    [
-                      "CLF.Term.Variable",
-                      {
-                        "identifier": {
-                          "name": "y3",
-                          "location": {
-                            "filename": "clf_terms_ok.input.bel",
-                            "start_line": 160,
-                            "start_column": 18,
-                            "stop_line": 160,
-                            "stop_column": 20
-                          }
-                        },
-                        "location": {
-                          "filename": "clf_terms_ok.input.bel",
-                          "start_line": 160,
-                          "start_column": 18,
-                          "stop_line": 160,
-                          "stop_column": 20
-                        }
-                      }
                     ]
                   ],
                   "location": {
@@ -5927,7 +5717,7 @@
                     "start_line": 160,
                     "start_column": 6,
                     "stop_line": 160,
-                    "stop_column": 20
+                    "stop_column": 16
                   }
                 }
               ],
@@ -5949,6 +5739,28 @@
                   "location": {
                     "filename": "clf_terms_ok.input.bel",
                     "start_line": 160,
+                    "start_column": 19,
+                    "stop_line": 160,
+                    "stop_column": 21
+                  }
+                },
+                "location": {
+                  "filename": "clf_terms_ok.input.bel",
+                  "start_line": 160,
+                  "start_column": 19,
+                  "stop_line": 160,
+                  "stop_column": 21
+                }
+              }
+            ],
+            [
+              "CLF.Term.Variable",
+              {
+                "identifier": {
+                  "name": "y2",
+                  "location": {
+                    "filename": "clf_terms_ok.input.bel",
+                    "start_line": 160,
                     "start_column": 23,
                     "stop_line": 160,
                     "stop_column": 25
@@ -5967,7 +5779,7 @@
               "CLF.Term.Variable",
               {
                 "identifier": {
-                  "name": "y2",
+                  "name": "y3",
                   "location": {
                     "filename": "clf_terms_ok.input.bel",
                     "start_line": 160,
@@ -5984,28 +5796,6 @@
                   "stop_column": 29
                 }
               }
-            ],
-            [
-              "CLF.Term.Variable",
-              {
-                "identifier": {
-                  "name": "y3",
-                  "location": {
-                    "filename": "clf_terms_ok.input.bel",
-                    "start_line": 160,
-                    "start_column": 31,
-                    "stop_line": 160,
-                    "stop_column": 33
-                  }
-                },
-                "location": {
-                  "filename": "clf_terms_ok.input.bel",
-                  "start_line": 160,
-                  "start_column": 31,
-                  "stop_line": 160,
-                  "stop_column": 33
-                }
-              }
             ]
           ],
           "location": {
@@ -6013,7 +5803,7 @@
             "start_line": 160,
             "start_column": 3,
             "stop_line": 160,
-            "stop_column": 33
+            "stop_column": 29
           }
         }
       ],
@@ -6022,7 +5812,7 @@
         "start_line": 160,
         "start_column": 1,
         "stop_line": 160,
-        "stop_column": 34
+        "stop_column": 30
       }
     }
   ],
@@ -6071,14 +5861,14 @@
                 "CLF.Substitution",
                 {
                   "head": [
-                    "CLF.Substitution.Head.Identity",
+                    "CLF.Substitution.Head.None",
                     {
                       "location": {
                         "filename": "clf_terms_ok.input.bel",
                         "start_line": 163,
                         "start_column": 6,
                         "stop_line": 163,
-                        "stop_column": 8
+                        "stop_column": 6
                       }
                     }
                   ],
@@ -6094,17 +5884,17 @@
                               "location": {
                                 "filename": "clf_terms_ok.input.bel",
                                 "start_line": 163,
-                                "start_column": 10,
+                                "start_column": 6,
                                 "stop_line": 163,
-                                "stop_column": 12
+                                "stop_column": 8
                               }
                             },
                             "location": {
                               "filename": "clf_terms_ok.input.bel",
                               "start_line": 163,
-                              "start_column": 10,
+                              "start_column": 6,
                               "stop_line": 163,
-                              "stop_column": 12
+                              "stop_column": 8
                             }
                           }
                         ],
@@ -6119,18 +5909,18 @@
                                   "location": {
                                     "filename": "clf_terms_ok.input.bel",
                                     "start_line": 163,
-                                    "start_column": 13,
+                                    "start_column": 9,
                                     "stop_line": 163,
-                                    "stop_column": 15
+                                    "stop_column": 11
                                   }
                                 },
                                 "closure": null,
                                 "location": {
                                   "filename": "clf_terms_ok.input.bel",
                                   "start_line": 163,
-                                  "start_column": 13,
+                                  "start_column": 9,
                                   "stop_line": 163,
-                                  "stop_column": 15
+                                  "stop_column": 11
                                 }
                               }
                             ],
@@ -6138,16 +5928,38 @@
                             "location": {
                               "filename": "clf_terms_ok.input.bel",
                               "start_line": 163,
-                              "start_column": 13,
+                              "start_column": 9,
                               "stop_line": 163,
-                              "stop_column": 15
+                              "stop_column": 11
                             }
                           }
                         ],
                         "location": {
                           "filename": "clf_terms_ok.input.bel",
                           "start_line": 163,
-                          "start_column": 10,
+                          "start_column": 6,
+                          "stop_line": 163,
+                          "stop_column": 12
+                        }
+                      }
+                    ],
+                    [
+                      "CLF.Term.Variable",
+                      {
+                        "identifier": {
+                          "name": "y2",
+                          "location": {
+                            "filename": "clf_terms_ok.input.bel",
+                            "start_line": 163,
+                            "start_column": 14,
+                            "stop_line": 163,
+                            "stop_column": 16
+                          }
+                        },
+                        "location": {
+                          "filename": "clf_terms_ok.input.bel",
+                          "start_line": 163,
+                          "start_column": 14,
                           "stop_line": 163,
                           "stop_column": 16
                         }
@@ -6157,7 +5969,7 @@
                       "CLF.Term.Variable",
                       {
                         "identifier": {
-                          "name": "y2",
+                          "name": "y3",
                           "location": {
                             "filename": "clf_terms_ok.input.bel",
                             "start_line": 163,
@@ -6174,28 +5986,6 @@
                           "stop_column": 20
                         }
                       }
-                    ],
-                    [
-                      "CLF.Term.Variable",
-                      {
-                        "identifier": {
-                          "name": "y3",
-                          "location": {
-                            "filename": "clf_terms_ok.input.bel",
-                            "start_line": 163,
-                            "start_column": 22,
-                            "stop_line": 163,
-                            "stop_column": 24
-                          }
-                        },
-                        "location": {
-                          "filename": "clf_terms_ok.input.bel",
-                          "start_line": 163,
-                          "start_column": 22,
-                          "stop_line": 163,
-                          "stop_column": 24
-                        }
-                      }
                     ]
                   ],
                   "location": {
@@ -6203,7 +5993,7 @@
                     "start_line": 163,
                     "start_column": 6,
                     "stop_line": 163,
-                    "stop_column": 24
+                    "stop_column": 20
                   }
                 }
               ],
@@ -6225,6 +6015,28 @@
                   "location": {
                     "filename": "clf_terms_ok.input.bel",
                     "start_line": 163,
+                    "start_column": 23,
+                    "stop_line": 163,
+                    "stop_column": 25
+                  }
+                },
+                "location": {
+                  "filename": "clf_terms_ok.input.bel",
+                  "start_line": 163,
+                  "start_column": 23,
+                  "stop_line": 163,
+                  "stop_column": 25
+                }
+              }
+            ],
+            [
+              "CLF.Term.Variable",
+              {
+                "identifier": {
+                  "name": "y2",
+                  "location": {
+                    "filename": "clf_terms_ok.input.bel",
+                    "start_line": 163,
                     "start_column": 27,
                     "stop_line": 163,
                     "stop_column": 29
@@ -6243,7 +6055,7 @@
               "CLF.Term.Variable",
               {
                 "identifier": {
-                  "name": "y2",
+                  "name": "y3",
                   "location": {
                     "filename": "clf_terms_ok.input.bel",
                     "start_line": 163,
@@ -6260,28 +6072,6 @@
                   "stop_column": 33
                 }
               }
-            ],
-            [
-              "CLF.Term.Variable",
-              {
-                "identifier": {
-                  "name": "y3",
-                  "location": {
-                    "filename": "clf_terms_ok.input.bel",
-                    "start_line": 163,
-                    "start_column": 35,
-                    "stop_line": 163,
-                    "stop_column": 37
-                  }
-                },
-                "location": {
-                  "filename": "clf_terms_ok.input.bel",
-                  "start_line": 163,
-                  "start_column": 35,
-                  "stop_line": 163,
-                  "stop_column": 37
-                }
-              }
             ]
           ],
           "location": {
@@ -6289,7 +6079,7 @@
             "start_line": 163,
             "start_column": 3,
             "stop_line": 163,
-            "stop_column": 37
+            "stop_column": 33
           }
         }
       ],
@@ -6298,6 +6088,282 @@
         "start_line": 163,
         "start_column": 1,
         "stop_line": 163,
+        "stop_column": 34
+      }
+    }
+  ],
+  [
+    "CLF.Term.Substitution",
+    {
+      "term": [
+        "CLF.Term.Variable",
+        {
+          "identifier": {
+            "name": "x",
+            "location": {
+              "filename": "clf_terms_ok.input.bel",
+              "start_line": 166,
+              "start_column": 1,
+              "stop_line": 166,
+              "stop_column": 2
+            }
+          },
+          "location": {
+            "filename": "clf_terms_ok.input.bel",
+            "start_line": 166,
+            "start_column": 1,
+            "stop_line": 166,
+            "stop_column": 2
+          }
+        }
+      ],
+      "substitution": [
+        "CLF.Substitution",
+        {
+          "head": [
+            "CLF.Substitution.Head.Substitution_variable",
+            {
+              "identifier": {
+                "name": "$S",
+                "location": {
+                  "filename": "clf_terms_ok.input.bel",
+                  "start_line": 166,
+                  "start_column": 3,
+                  "stop_line": 166,
+                  "stop_column": 5
+                }
+              },
+              "closure": [
+                "CLF.Substitution",
+                {
+                  "head": [
+                    "CLF.Substitution.Head.Identity",
+                    {
+                      "location": {
+                        "filename": "clf_terms_ok.input.bel",
+                        "start_line": 166,
+                        "start_column": 6,
+                        "stop_line": 166,
+                        "stop_column": 8
+                      }
+                    }
+                  ],
+                  "terms": [
+                    [
+                      "CLF.Term.Substitution",
+                      {
+                        "term": [
+                          "CLF.Term.Variable",
+                          {
+                            "identifier": {
+                              "name": "y1",
+                              "location": {
+                                "filename": "clf_terms_ok.input.bel",
+                                "start_line": 166,
+                                "start_column": 10,
+                                "stop_line": 166,
+                                "stop_column": 12
+                              }
+                            },
+                            "location": {
+                              "filename": "clf_terms_ok.input.bel",
+                              "start_line": 166,
+                              "start_column": 10,
+                              "stop_line": 166,
+                              "stop_column": 12
+                            }
+                          }
+                        ],
+                        "substitution": [
+                          "CLF.Substitution",
+                          {
+                            "head": [
+                              "CLF.Substitution.Head.Substitution_variable",
+                              {
+                                "identifier": {
+                                  "name": "$Q",
+                                  "location": {
+                                    "filename": "clf_terms_ok.input.bel",
+                                    "start_line": 166,
+                                    "start_column": 13,
+                                    "stop_line": 166,
+                                    "stop_column": 15
+                                  }
+                                },
+                                "closure": null,
+                                "location": {
+                                  "filename": "clf_terms_ok.input.bel",
+                                  "start_line": 166,
+                                  "start_column": 13,
+                                  "stop_line": 166,
+                                  "stop_column": 15
+                                }
+                              }
+                            ],
+                            "terms": [],
+                            "location": {
+                              "filename": "clf_terms_ok.input.bel",
+                              "start_line": 166,
+                              "start_column": 13,
+                              "stop_line": 166,
+                              "stop_column": 15
+                            }
+                          }
+                        ],
+                        "location": {
+                          "filename": "clf_terms_ok.input.bel",
+                          "start_line": 166,
+                          "start_column": 10,
+                          "stop_line": 166,
+                          "stop_column": 16
+                        }
+                      }
+                    ],
+                    [
+                      "CLF.Term.Variable",
+                      {
+                        "identifier": {
+                          "name": "y2",
+                          "location": {
+                            "filename": "clf_terms_ok.input.bel",
+                            "start_line": 166,
+                            "start_column": 18,
+                            "stop_line": 166,
+                            "stop_column": 20
+                          }
+                        },
+                        "location": {
+                          "filename": "clf_terms_ok.input.bel",
+                          "start_line": 166,
+                          "start_column": 18,
+                          "stop_line": 166,
+                          "stop_column": 20
+                        }
+                      }
+                    ],
+                    [
+                      "CLF.Term.Variable",
+                      {
+                        "identifier": {
+                          "name": "y3",
+                          "location": {
+                            "filename": "clf_terms_ok.input.bel",
+                            "start_line": 166,
+                            "start_column": 22,
+                            "stop_line": 166,
+                            "stop_column": 24
+                          }
+                        },
+                        "location": {
+                          "filename": "clf_terms_ok.input.bel",
+                          "start_line": 166,
+                          "start_column": 22,
+                          "stop_line": 166,
+                          "stop_column": 24
+                        }
+                      }
+                    ]
+                  ],
+                  "location": {
+                    "filename": "clf_terms_ok.input.bel",
+                    "start_line": 166,
+                    "start_column": 6,
+                    "stop_line": 166,
+                    "stop_column": 24
+                  }
+                }
+              ],
+              "location": {
+                "filename": "clf_terms_ok.input.bel",
+                "start_line": 166,
+                "start_column": 3,
+                "stop_line": 166,
+                "stop_column": 5
+              }
+            }
+          ],
+          "terms": [
+            [
+              "CLF.Term.Variable",
+              {
+                "identifier": {
+                  "name": "y1",
+                  "location": {
+                    "filename": "clf_terms_ok.input.bel",
+                    "start_line": 166,
+                    "start_column": 27,
+                    "stop_line": 166,
+                    "stop_column": 29
+                  }
+                },
+                "location": {
+                  "filename": "clf_terms_ok.input.bel",
+                  "start_line": 166,
+                  "start_column": 27,
+                  "stop_line": 166,
+                  "stop_column": 29
+                }
+              }
+            ],
+            [
+              "CLF.Term.Variable",
+              {
+                "identifier": {
+                  "name": "y2",
+                  "location": {
+                    "filename": "clf_terms_ok.input.bel",
+                    "start_line": 166,
+                    "start_column": 31,
+                    "stop_line": 166,
+                    "stop_column": 33
+                  }
+                },
+                "location": {
+                  "filename": "clf_terms_ok.input.bel",
+                  "start_line": 166,
+                  "start_column": 31,
+                  "stop_line": 166,
+                  "stop_column": 33
+                }
+              }
+            ],
+            [
+              "CLF.Term.Variable",
+              {
+                "identifier": {
+                  "name": "y3",
+                  "location": {
+                    "filename": "clf_terms_ok.input.bel",
+                    "start_line": 166,
+                    "start_column": 35,
+                    "stop_line": 166,
+                    "stop_column": 37
+                  }
+                },
+                "location": {
+                  "filename": "clf_terms_ok.input.bel",
+                  "start_line": 166,
+                  "start_column": 35,
+                  "stop_line": 166,
+                  "stop_column": 37
+                }
+              }
+            ]
+          ],
+          "location": {
+            "filename": "clf_terms_ok.input.bel",
+            "start_line": 166,
+            "start_column": 3,
+            "stop_line": 166,
+            "stop_column": 37
+          }
+        }
+      ],
+      "location": {
+        "filename": "clf_terms_ok.input.bel",
+        "start_line": 166,
+        "start_column": 1,
+        "stop_line": 166,
         "stop_column": 38
       }
     }

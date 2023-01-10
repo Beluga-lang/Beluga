@@ -15,13 +15,35 @@ let not_implemented loc msg = raise (NotImplemented (Option.some loc, msg))
 
 let not_implemented' msg = raise (NotImplemented (Option.none, msg))
 
-exception Located_exception = Location.Located_exception
+exception
+  Located_exception of
+    { cause : exn
+    ; locations : Location.t List1.t
+    }
 
-let raise_at = Location.raise_at
+let[@inline] located_exception locations cause =
+  Located_exception { cause; locations }
 
-let raise_at1 = Location.raise_at1
+let[@inline] located_exception1 location cause =
+  located_exception (List1.singleton location) cause
 
-let raise_at2 = Location.raise_at2
+let[@inline] located_exception2 location1 location2 cause =
+  located_exception (List1.from location1 [ location2 ]) cause
+
+let[@inline] raise_at locations cause =
+  raise (located_exception locations cause)
+
+let[@inline] raise_at1 location cause =
+  raise (located_exception1 location cause)
+
+let[@inline] raise_at2 location1 location2 cause =
+  raise (located_exception2 location1 location2 cause)
+
+exception Composite_exception of { causes : exn List2.t }
+
+let composite causes = Composite_exception { causes }
+
+let composite2 cause1 cause2 = composite (List2.from cause1 cause2 [])
 
 type print_result = string
 

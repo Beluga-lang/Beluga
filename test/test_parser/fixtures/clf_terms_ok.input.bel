@@ -115,7 +115,10 @@ s ?x
 x.y.z
 ;;
 
-Nat.z.x
+w.x.y.z
+;;
+
+Nat.z
 ;;
 
 x[]

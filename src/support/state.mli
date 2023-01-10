@@ -35,6 +35,12 @@ module type STATE = sig
       [locally] which ignores the output state. *)
   val scoped : set:Unit.t t -> unset:Unit.t t -> 'a t -> 'a t
 
+  (** [try_catch m ~on_exn state] is [on_exn cause] if [run m state] raises
+      [cause], and [run m state] otherwise.
+
+      Not tail-recursive. *)
+  val try_catch : 'a t -> on_exn:(exn -> 'a t) -> 'a t
+
   val traverse_list : ('a -> 'b t) -> 'a List.t -> 'b List.t t
 
   val traverse_list1 : ('a -> 'b t) -> 'a List1.t -> 'b List1.t t

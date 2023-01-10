@@ -548,9 +548,14 @@ module Disambiguation_state : DISAMBIGUATION_STATE = struct
                        (List1.singleton (x1, namespace_entry), xs')))
              x1)
           ~on_exn:(function
-            | Unbound_namespace _
-            | Unbound_identifier _ ->
-                return (`Totally_unbound identifiers)
+            | Unbound_namespace _ -> (
+                lookup_toplevel x1 >>= function
+                | Result.Ok entry ->
+                    return
+                      (`Partially_bound
+                        (List1.singleton (x1, entry), List1.from x2 xs))
+                | Result.Error cause -> Error.raise cause)
+            | Unbound_identifier _ -> return (`Totally_unbound identifiers)
             | cause -> Error.raise cause)
 
   let partial_lookup query =

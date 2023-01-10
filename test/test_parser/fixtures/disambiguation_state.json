@@ -333,6 +333,10 @@
       "fixity": "prefix",
       "arity": 1,
       "precedence": 10
+    },
+    {
+      "sort": "parameter_variable",
+      "identifier": "#p"
     }
   ]
 }

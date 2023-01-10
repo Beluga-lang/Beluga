@@ -49,6 +49,10 @@ watch: # Build default targets and trigger new builds on file system events
 clean: # Clean the files built by dune
 	dune clean
 
+.PHONY: fmt
+fmt: # Format the codebase with ocamlformat
+	dune build @fmt --auto-promote
+
 .PHONY: doc
 doc: clean # Generate the HTML documentations
 	make -C doc html

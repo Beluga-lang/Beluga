@@ -1,0 +1,6 @@
+_opam/**
+src/core/**
+src/beluga/**
+src/replay/**
+src/harpoon/**
+sasybel/**

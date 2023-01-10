@@ -33,11 +33,9 @@ val etaExpandMMVstr : Loc.t -> mctx -> dctx -> tclo -> Plicity.t -> Name.t optio
     strengthening its type. *)
 val etaExpandMPVstr : Loc.t -> mctx -> dctx -> tclo -> Plicity.t -> Name.t option -> Name.t list -> normal
 
-(** gen_flattening cD cPsi = (cPhi, lazy s_proj, lazy s_tup)
+(** gen_flattening cD cPsi = (cPhi, s_proj, s_tup)
     Generates a flattened LF context cPhi in which all blocks present
     in cPsi have been decomposed.
-    Packing and unpacking substitutions s_proj and s_tup are lazily
-    computed to mediate between the contexts.
     Specifically:
       if cD |- cPsi ctx
       then cD |- cPhi ctx such that
@@ -48,4 +46,4 @@ val etaExpandMPVstr : Loc.t -> mctx -> dctx -> tclo -> Plicity.t -> Name.t optio
     these substitutions *contain*; e.g. s_proj contains projections,
     so it takes us from the block context to the flat context.
  *)
-val gen_flattening : mctx -> dctx -> dctx * sub Lazy.t * sub Lazy.t
+val gen_flattening : mctx -> dctx -> dctx * sub * sub

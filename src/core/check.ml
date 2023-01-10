@@ -402,7 +402,7 @@ module Comp = struct
        | Int.LF.(ClTyp (mT, cPsi)) -> (* when Context.containsSigma cPsi -> *)
           begin match mT with
           | Int.LF.(MTyp (Atom (_, a, _) as tA)) ->
-             let (flat_cPsi, lazy s_proj, lazy s_tup) = ConvSigma.gen_flattening cD cPsi in
+             let (flat_cPsi, s_proj, s_tup) = ConvSigma.gen_flattening cD cPsi in
              (* flat_cPsi |- s_tup : cPsi and cPsi |- s_proj : flat_cPsi *)
              dprintf begin fun p ->
              p.fmt "[apply unbox modifier] cPsi = %a \n s_tup = %a \n s_proj = %a"

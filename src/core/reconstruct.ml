@@ -484,7 +484,7 @@ let rec elMCtx recT =
 
 
 let mgAtomicTyp cD cPsi a kK =
-  let (flat_cPsi, lazy s_proj, lazy s_tup) = gen_flattening cD cPsi in
+  let (flat_cPsi, s_proj, s_tup) = gen_flattening cD cPsi in
   (* cPsi |- s_proj : flat_cPsi *)
   (* flat_cPsi |- s_tup : cPsi *)
   dprintf

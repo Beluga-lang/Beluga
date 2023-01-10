@@ -169,7 +169,7 @@ let rec blockdeclInDctx =
         (P.fmt_ppr_lf_typ cD cPsi P.l0) (Whnf.normTyp (tP, s))
         (P.fmt_ppr_lf_dctx cD P.l0) cPsi
       end;
-    let (cPhi, lazy s_proj, lazy s_tup) = ConvSigma.gen_flattening cD cPsi in
+    let (cPhi, s_proj, s_tup) = ConvSigma.gen_flattening cD cPsi in
     (* let tQ = ConvSigma.strans_typ cD cPsi (tP, s) conv_list in*)
     let tQ = Whnf.normTyp (tP, Substitution.LF.comp s s_tup) in
     (*  cPsi |- s_proj : cPhi

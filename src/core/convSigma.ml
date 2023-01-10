@@ -480,6 +480,6 @@ let etaExpandMPVstr =
 
 let gen_flattening cD cPsi =
   let (cPhi, conv_list) = flattenDCtx cD cPsi in
-  let s_proj = lazy (gen_proj_sub conv_list) in
-  let s_tup = lazy (gen_tup_sub conv_list) in
+  let s_proj = gen_proj_sub conv_list in
+  let s_tup = gen_tup_sub conv_list in
   (cPhi, s_proj, s_tup)

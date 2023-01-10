@@ -1162,9 +1162,7 @@ and elTerm' recT cD cPsi r sP =
          | Pibox ->
             begin match tA with
             | Int.LF.Atom (_, a, _) ->
-               let (cPhi, lazy s_proj, lazy s_tup) =
-                 ConvSigma.gen_flattening cD cPsi
-               in
+               let (cPhi, s_proj, s_tup) = ConvSigma.gen_flattening cD cPsi in
                let tA' = Whnf.normTyp (tA, s_tup) in
                (*  cPsi |- s_proj : cPhi
                    cPhi |- s_tup : cPsi

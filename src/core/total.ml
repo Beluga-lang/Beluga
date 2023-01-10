@@ -907,7 +907,7 @@ bp: Generalization to support
  *)
 
 let convDCtxMod cD cPhi (* found *) cPsi (* expected *) =
-  let (cPsi', lazy s_proj, _) = ConvSigma.gen_flattening cD cPsi in
+  let (cPsi', s_proj, _s_tup) = ConvSigma.gen_flattening cD cPsi in
   dprintf
     begin fun p ->
     p.fmt "[convDCtxGenMod] - @[<v> (expected) cPsi = %a \n (expected) flat_cPsi = %a \n (found) cPhi = %a@]"

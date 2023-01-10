@@ -174,7 +174,7 @@ type refinement_cands =
       - cPhi' |- tQ' <= type
  *)
 let gen_str cD cPsi (LF.Atom (_, a, _) as tP) =
-  let (cPhi, lazy s_proj, lazy s_tup) = ConvSigma.gen_flattening cD cPsi in
+  let (cPhi, s_proj, s_tup) = ConvSigma.gen_flattening cD cPsi in
   (* cPsi |- s_proj          : cPhi
      cPhi |- s_tup           : cPsi
      cPhi |- tQ                       where cPsi |- tP !! tQ = [s_tup]tP !! *)

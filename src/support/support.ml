@@ -26,7 +26,7 @@ module Seq = Seq
 module Stack = Stack
 module String = String
 
-(** {1 Additional Datastructures} *)
+(** {1 Additional Data Structures} *)
 
 module PureStack = PureStack
 module Either = Either

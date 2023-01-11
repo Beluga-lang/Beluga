@@ -9,6 +9,7 @@ tactics for elaborating proofs.
  *)
 open Support
 module B = Beluga
+open Harpoon
 
 let realMain () =
   Debug.init (Some "debug.out");

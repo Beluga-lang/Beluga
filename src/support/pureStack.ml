@@ -18,7 +18,7 @@ let pop s =
   | [] -> Option.none
   | x :: xs -> Option.some (x, { get = xs; len = s.len - 1 })
 
-let cut n s =
+let cut =
   let rec go n s acc =
     if n <= 0 then Some (acc, s)
     else
@@ -26,4 +26,4 @@ let cut n s =
       | None -> None
       | Some (x, s') -> go (n - 1) s' (x :: acc)
   in
-  go n s []
+  fun n s -> go n s []

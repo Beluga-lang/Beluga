@@ -1,5 +1,6 @@
 (** A module for functions to give information for an option. For example,
     these include functions that configure
+
     - the name of an option
     - the help message of an option
     - the fallback value of an optional option
@@ -33,7 +34,6 @@ module Unchecked = struct
     ; optional = None
     }
 
-
   let long_name ln spec = { spec with long_name = Some ln }
 
   let short_name sn spec = { spec with short_name = Some sn }
@@ -66,18 +66,17 @@ end
 type check_error = [ `No_name ]
 
 let check spec =
-  ( match (spec.Unchecked.long_name, spec.Unchecked.short_name) with
-  | None, None ->
-      Error `No_name
-  | Some ln, None ->
-      Ok { OptName.canonical = "--" ^ ln; aliases = [] }
-  | None, Some sn ->
-      Ok { OptName.canonical = "-" ^ String.make 1 sn; aliases = [] }
-  | Some ln, Some sn ->
-      Ok
+  (match (spec.Unchecked.long_name, spec.Unchecked.short_name) with
+  | Option.None, Option.None -> Result.error `No_name
+  | Option.Some ln, Option.None ->
+      Result.ok { OptName.canonical = "--" ^ ln; aliases = [] }
+  | Option.None, Option.Some sn ->
+      Result.ok { OptName.canonical = "-" ^ String.make 1 sn; aliases = [] }
+  | Option.Some ln, Option.Some sn ->
+      Result.ok
         { OptName.canonical = "--" ^ ln
         ; aliases = [ "-" ^ String.make 1 sn ]
-        } )
+        })
   |> Result.map (fun name ->
          { Checked.name
          ; meta_variables =
@@ -85,4 +84,4 @@ let check spec =
          ; help_message = spec.Unchecked.help_message
          ; default_argument = spec.Unchecked.default_argument
          ; optional = spec.Unchecked.optional
-         } )
+         })

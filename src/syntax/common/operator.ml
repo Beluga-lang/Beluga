@@ -19,7 +19,8 @@ let[@inline] arity = function
 let[@inline] precedence = function
   | Prefix { precedence; _ }
   | Infix { precedence; _ }
-  | Postfix { precedence; _ } -> precedence
+  | Postfix { precedence; _ } ->
+      precedence
 
 let[@inline] fixity = function
   | Prefix _ -> Fixity.prefix

@@ -44,13 +44,13 @@ let inspect_duplicates identifiers =
       (fun (duplicates, encountered_identifiers) addition ->
         match Set.find_opt addition encountered_identifiers with
         | Option.Some hit ->
-          let duplicates' = addition :: hit :: duplicates in
-          (duplicates', encountered_identifiers)
+            let duplicates' = addition :: hit :: duplicates in
+            (duplicates', encountered_identifiers)
         | Option.None ->
-          let encountered_identifiers' =
-            Set.add addition encountered_identifiers
-          in
-          (duplicates, encountered_identifiers'))
+            let encountered_identifiers' =
+              Set.add addition encountered_identifiers
+            in
+            (duplicates, encountered_identifiers'))
       ([], Set.empty) identifiers
   in
   match duplicates with

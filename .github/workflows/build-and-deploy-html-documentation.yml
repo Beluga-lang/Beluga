@@ -41,7 +41,7 @@ jobs:
         run: opam install --locked --deps-only --with-test --with-doc .
 
       - name: Build HTML documentation
-        run: make doc
+        run: opam exec -- dune build @doc
 
       - name: Deploy HTML documentation
         uses: JamesIves/github-pages-deploy-action@v4

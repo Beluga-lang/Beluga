@@ -6,5 +6,7 @@ type fmt =
 val stringify : (formatter -> 'a -> unit) -> 'a -> string
 
 val punctuation : string -> formatter -> unit -> unit
+
 val semicolon : formatter -> unit -> unit
+
 val comma : formatter -> unit -> unit

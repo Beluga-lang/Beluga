@@ -1,10 +1,13 @@
-(** Essentially a list, but that tracks its length as items are added and removed. *)
+(** Persistent stack data structure. *)
+
+(** Essentially a list, but it additioanlly tracks its length as items are
+    added and removed. *)
 type 'a t
 
 (** Constructs an empty stack. *)
 val empty : 'a t
 
-(** Gets the length of the stack in O(1). *)
+(** Gets the length of the stack in {m O(1)}. *)
 val length : 'a t -> int
 
 (** Converts the stack to a list. *)
@@ -19,7 +22,7 @@ val push : 'a -> 'a t -> 'a t
 (** Pops an item from the stack. *)
 val pop : 'a t -> ('a * 'a t) option
 
-(** Tries to pop `n` items from a stack, yielding them in a list.
-The elements are collected in _reverse order_, so the old top of the
-stack is the last element of the returned list. *)
+(** Tries to pop [n] items from a stack, yielding them in a list. The
+    elements are collected in _reverse order_, so the old top of the stack is
+    the last element of the returned list. *)
 val cut : int -> 'a t -> ('a list * 'a t) option

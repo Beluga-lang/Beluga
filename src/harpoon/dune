@@ -1,12 +1,30 @@
+(library
+ (name harpoon)
+ (package beluga)
+ (modules :standard \ main)
+ (libraries
+  sedlex
+  linenoise
+  support
+  optparser
+  beluga
+  beluga_syntax
+  beluga_parser
+  dune-build-info)
+ (instrumentation
+  (backend bisect_ppx --bisect-silent yes)))
+
 (executable
  (name main)
  (public_name harpoon)
+ (modules main)
  (package beluga)
  (libraries
   sedlex
   linenoise
   support
   optparser
+  harpoon
   beluga
   beluga_syntax
   beluga_parser

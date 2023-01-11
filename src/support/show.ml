@@ -21,7 +21,8 @@ let make (type t) (pp : Format.formatter -> t -> unit) =
     type nonrec t = t
 
     let pp = pp
-  end) : SHOW with type t = t)
+  end) : SHOW
+    with type t = t)
 
 let contramap (type t t') (module Show : SHOW with type t = t') (f : t -> t')
     =

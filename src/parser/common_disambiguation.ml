@@ -216,7 +216,7 @@ module type DISAMBIGUATION_STATE = sig
   val get_tracked_variables : Identifier.t List.t t
 end
 
-(** A minimal disambiguation state backed by nested HAMT datastructures with
+(** A minimal disambiguation state backed by nested HAMT data structures with
     plain identifier keys. *)
 module Disambiguation_state : DISAMBIGUATION_STATE = struct
   type entry =

@@ -71,7 +71,8 @@ val ( $> ) : ('e, 'a) t -> ('a -> 'b) -> ('e, 'b) t
     {[
       eliminate
         (fun ex ->
-          try raise ex with Whatever -> do_something_to_handle_Whatever)
+          try raise ex with
+          | Whatever -> do_something_to_handle_Whatever)
         (fun x -> success x)
     ]}
 

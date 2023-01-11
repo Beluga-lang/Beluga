@@ -1,5 +1,6 @@
 (** A module for the functions that operate on an option and a set of
     options. For example, these include:
+
     - functions that lift option info into an option
     - functions that merge option sets
     - etc.
@@ -82,8 +83,8 @@ let make infos opt_arity build_arg_parser =
   in
   let meta_names =
     match opt_arity with
-    | Some arity -> List.take_circularly arity info.meta_variables
-    | None -> [ "[" ^ List.hd info.meta_variables ^ "]" ]
+    | Option.Some arity -> List.take_circularly arity info.meta_variables
+    | Option.None -> [ "[" ^ List.hd info.meta_variables ^ "]" ]
   in
   let help_entry =
     [ { HelpEntry.option_name = info.name
@@ -93,14 +94,14 @@ let make infos opt_arity build_arg_parser =
     ]
   in
   match info.optional with
-  | Some _ ->
-    { opt with
-      optional_help_entries = opt.optional_help_entries @ help_entry
-    }
-  | None ->
-    { opt with
-      mandatory_help_entries = opt.mandatory_help_entries @ help_entry
-    }
+  | Option.Some _ ->
+      { opt with
+        optional_help_entries = opt.optional_help_entries @ help_entry
+      }
+  | Option.None ->
+      { opt with
+        mandatory_help_entries = opt.mandatory_help_entries @ help_entry
+      }
 
 let find_opt t name = Hashtbl.find_opt t.opt_tbl name
 
@@ -115,14 +116,14 @@ let opt0 (a : 'a) (infos : 'a OptInfo.Unchecked.transform list) : 'a t =
   let build_arg_parser info res_ref _ = function
     | [] -> res_ref := Ok a
     | args ->
-      res_ref :=
-        Error
-          (`Invalid_arguments_length
-            { Error.Argument.option_name =
-                OptName.to_string info.OptInfo.Checked.name
-            ; expected_argument_count = arity
-            ; actual_argument_count = List.length args
-            })
+        res_ref :=
+          Error
+            (`Invalid_arguments_length
+              { Error.Argument.option_name =
+                  OptName.to_string info.OptInfo.Checked.name
+              ; expected_argument_count = arity
+              ; actual_argument_count = List.length args
+              })
   in
   make infos (Some arity) build_arg_parser
 
@@ -133,32 +134,32 @@ let opt1 (read_arg : string -> 'a option)
     let opt_name = OptName.to_string info.OptInfo.Checked.name in
     function
     | [] -> (
-      match info.OptInfo.Checked.default_argument with
-      | None ->
+        match info.OptInfo.Checked.default_argument with
+        | Option.None ->
+            res_ref :=
+              Result.Error
+                (`Invalid_arguments_length
+                  { Error.Argument.option_name = opt_name
+                  ; expected_argument_count = arity
+                  ; actual_argument_count = 0
+                  })
+        | Some defArgVal -> res_ref := Ok defArgVal)
+    | [ arg ] -> (
+        match read_arg arg with
+        | Option.None ->
+            res_ref :=
+              Result.Error
+                (`Argument_reader_failure
+                  { Error.Option.option_name = opt_name })
+        | Option.Some x -> res_ref := Ok x)
+    | args ->
         res_ref :=
-          Error
+          Result.Error
             (`Invalid_arguments_length
               { Error.Argument.option_name = opt_name
               ; expected_argument_count = arity
-              ; actual_argument_count = 0
+              ; actual_argument_count = List.length args
               })
-      | Some defArgVal -> res_ref := Ok defArgVal)
-    | [ arg ] -> (
-      match read_arg arg with
-      | None ->
-        res_ref :=
-          Error
-            (`Argument_reader_failure
-              { Error.Option.option_name = opt_name })
-      | Some x -> res_ref := Ok x)
-    | args ->
-      res_ref :=
-        Error
-          (`Invalid_arguments_length
-            { Error.Argument.option_name = opt_name
-            ; expected_argument_count = arity
-            ; actual_argument_count = List.length args
-            })
   in
   make infos (Some arity) build_arg_parser
 
@@ -182,9 +183,9 @@ let takes_all_opt (infos : string list OptInfo.Unchecked.transform list) :
     string list t =
   let build_arg_parser info res_ref _ = function
     | [] -> (
-      match info.OptInfo.Checked.default_argument with
-      | None -> res_ref := Ok []
-      | Some defArgVal -> res_ref := Ok defArgVal)
+        match info.OptInfo.Checked.default_argument with
+        | Option.None -> res_ref := Result.ok []
+        | Option.Some defArgVal -> res_ref := Result.ok defArgVal)
     | args -> res_ref := Ok args
   in
   make infos None build_arg_parser
@@ -197,32 +198,32 @@ let impure_opt0 (impure_fn : unit -> 'a)
     function
     | [] -> res_ref := Ok (impure_fn ())
     | args ->
-      res_ref :=
-        Error
-          (`Invalid_arguments_length
-            { Error.Argument.option_name = opt_name
-            ; expected_argument_count = arity
-            ; actual_argument_count = List.length args
-            })
+        res_ref :=
+          Result.error
+            (`Invalid_arguments_length
+              { Error.Argument.option_name = opt_name
+              ; expected_argument_count = arity
+              ; actual_argument_count = List.length args
+              })
   in
-  make infos (Some arity) build_arg_parser
+  make infos (Option.some arity) build_arg_parser
 
 let help_opt0 (print_fn : (string -> Format.formatter -> unit -> unit) -> 'a)
     (infos : 'a OptInfo.Unchecked.transform list) : 'a t =
   let arity = 0 in
   let arg_parser info res_ref build_help_string = function
-    | [] -> res_ref := Ok (print_fn build_help_string)
+    | [] -> res_ref := Result.ok (print_fn build_help_string)
     | args ->
-      res_ref :=
-        Error
-          (`Invalid_arguments_length
-            { Error.Argument.option_name =
-                OptName.to_string info.OptInfo.Checked.name
-            ; expected_argument_count = arity
-            ; actual_argument_count = List.length args
-            })
+        res_ref :=
+          Result.error
+            (`Invalid_arguments_length
+              { Error.Argument.option_name =
+                  OptName.to_string info.OptInfo.Checked.name
+              ; expected_argument_count = arity
+              ; actual_argument_count = List.length args
+              })
   in
-  make infos (Some arity) arg_parser
+  make infos (Option.some arity) arg_parser
 
 let rest_args (impure_fn : string list -> 'a) : 'a t =
   { opt_tbl = Hashtbl.create 0

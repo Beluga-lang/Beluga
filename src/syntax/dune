@@ -2,7 +2,10 @@
  (name beluga_syntax)
  (package beluga)
  (modules :standard)
- (libraries support (re_export common) (re_export synext))
+ (libraries
+  support
+  (re_export common)
+  (re_export synext))
  (preprocess
   (pps sedlex.ppx))
  (instrumentation

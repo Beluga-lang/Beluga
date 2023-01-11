@@ -62,8 +62,7 @@ module type META_DISAMBIGUATION = sig
 
   val disambiguate_meta_object : Synprs.meta_thing -> Synext.meta_object t
 
-  val disambiguate_meta_pattern :
-    Synprs.meta_thing -> Synext.meta_pattern t
+  val disambiguate_meta_pattern : Synprs.meta_thing -> Synext.meta_pattern t
 
   val disambiguate_schema : Synprs.schema_object -> Synext.schema t
 

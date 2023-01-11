@@ -7,7 +7,6 @@ let assert_exn f =
   with
   | _ -> ()
 
-
 let show_json = Format.stringify (Yojson.Safe.pretty_print ~std:true)
 
 let assert_json_equal ~expected ~actual =
@@ -18,4 +17,3 @@ let assert_equal_as_json to_json ~expected ~actual =
   let expected_json = to_json expected in
   let actual_json = to_json actual in
   assert_json_equal ~expected:expected_json ~actual:actual_json
-

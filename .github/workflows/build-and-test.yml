@@ -17,6 +17,47 @@ jobs:
           - 4.14.x
         os:
           - ubuntu-latest
+
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: fkirc/skip-duplicate-actions@master
+
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Check whitespaces
+        run: ./LINT
+
+      - name: Retrieve opam cache
+        uses: actions/cache@v3
+        id: cache-opam
+        with:
+          path: ~/.opam
+          key: v1-${{ runner.os }}-opam-${{ matrix.ocaml-compiler }}-${{ hashFiles('*.opam') }}
+          restore-keys: |
+            v1-${{ runner.os }}-opam-${{ matrix.ocaml-compiler }}-
+
+      - name: Use OCaml ${{ matrix.ocaml-compiler }}
+        uses: ocaml/setup-ocaml@v2
+        with:
+          ocaml-compiler: ${{ matrix.ocaml-compiler }}
+
+      - name: Install dependencies
+        run: opam install --locked --deps-only --with-test --with-doc .
+
+      - name: Check format
+        run: opam exec -- dune fmt
+
+  build-and-test:
+    name: Build & Test
+
+    strategy:
+      fail-fast: true
+      matrix:
+        ocaml-compiler:
+          - 4.14.x
+        os:
+          - ubuntu-latest
           - macOS-latest
           # - windows-latest
 

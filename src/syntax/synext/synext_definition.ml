@@ -3,32 +3,50 @@
 open Support
 open Common
 
+(** ASTs constructed with the constructors in this module are not necessarily
+    in normal form.
+
+    These types are suited for pretty-printing and elaboration to the
+    internal syntax. Note that this is a named representation. *)
+
 (** {1 External LF Syntax} *)
 
 (** The representation of LF kinds, types, and terms after parsing and
     data-dependent disambiguation.
 
-    ASTs constructed with the constructors in this module are not necessarily
-    in normal form.
-
     These types are only intended to be used in the definition of LF
     type-level or term-level constants. This is a weak, representational
     function space without case analysis or recursion.
 
-    These types are suited for pretty-printing and elaboration to the
-    internal syntax. Note that this is a named representation.
-
     The metavariable:
 
-    - [x] ranges over variables
-    - [c] ranges over term-level constants
-    - [a] ranges over type-level constants
+    - {m x} ranges over variables
+    - {m c} ranges over term-level constants
+    - {m a} ranges over type-level constants
 
-    {[
-      LF kinds   K    ::= type | Πx:A.K | A → K
-      LF types   A, B ::= a | Πx:A.B | A → B | A M1 M2 ... Mn
-      LF terms   M, N ::= c | x | λx:A.M | M N1 N2 ... Nn | M:A | _
-    ]} *)
+    {math
+      \begin{aligned}
+      &\text{LF kinds} &K &\Coloneqq
+      \mathsf{type}
+      \mid \Pi x {:} A. K
+      \mid A \to K\\
+
+      &\text{LF types} &A, B &\Coloneqq
+      a
+      \mid \Pi x {:} A. B
+      \mid A \to B
+      \mid A \; M_1 \; M_2 \; \dots \; M_n\\
+
+      &\text{LF terms} &M, N &\Coloneqq
+      c
+      \mid x
+      \mid \_
+      \mid \lambda x {:} A. M
+      \mid M \; N_1 \; N_2 \; \dots \; N_n
+      \mid M : A
+      \end{aligned}
+    } *)
+
 module LF = struct
   (** External LF kinds. *)
   module rec Kind : sig
@@ -169,44 +187,84 @@ end
 (** The representation of contextual LF types, terms, and patterns after
     parsing and data-dependent disambiguation.
 
-    ASTs constructed with the constructors in this module are not necessarily
-    in normal form.
-
     The distinction between contextual LF objects and plain LF objects is
     that contextual LF objects may have substitutions, and may appear in
     patterns. Plain LF objects are only used in the definition of type-level
     or term-level LF constants.
 
-    These types are suited for pretty-printing and elaboration to the
-    internal syntax. Note that this is a named representation.
-
     The metavariable:
 
-    - [x] ranges over variables
-    - [c] ranges over term-level constants
-    - [a] ranges over type-level constants
-    - [s] ranges over substitutions
-    - [g] ranges over contexts
-    - [id] ranges over identifiers
-    - [n] ranges over integers
+    - {m x} ranges over variables
+    - {m c} ranges over term-level constants
+    - {m a} ranges over type-level constants
+    - {m s} ranges over substitutions
+    - {m g} ranges over contexts
+    - {m \mathsf{id}} ranges over identifiers
+    - {m n} ranges over integers
 
-    {[
-      Contextual LF types           A, B ::= a | Πx:A.B | A → B | A M1 M2 ... Mn
-                                               | block (x1:A1, x2:A2, ..., xn:An)
-      Contextual LF terms           M, N ::= c | x | #x | $x | λx:A.M | M N1 N2 ... Nn
-                                               | M:A | M[σ]
-                                               | _ | ? | ?id | <M1; M2; ...; Mn> | M.n | M.id
-      Contextual LF substitutions   σ    ::= ^ | … | σ, M | s[σ]
-      Contextual LF contexts        Ψ    ::= ^ | g | Ψ, x:A
+    {math
+      \begin{aligned}
+      &\text{Contextual LF types} &A, B &\Coloneqq
+      a
+      \mid \Pi x {:} A. B
+      \mid A \to B
+      \mid A \; M_1 \; M_2 \; \dots \; M_n \\&&&
+      \mid \mathsf{block} (x_1 : A_1, x_2 : A_2, \dots, x_n : A_n)\\
 
-      Contextual LF patterns                Mp, Np ::= c | x | #x | $x | λx:A.Mp
-                                                    | Mp Np1 Np2 ... Npn
-                                                    | Mp:A | Mp[σ] | _
-                                                    | <Mp1; Mp2; ...; Mpn>
-                                                    | Mp.n | Mp.id
-      Contextual LF substitution patterns   σp     ::= ^ | … | σp, Mp | s[σ]
-      Contextual LF context patterns        Ψp     ::= ^ | g | Ψp, x:A
-    ]} *)
+      &\text{Contextual LF terms} &M, N &\Coloneqq
+      c
+      \mid x
+      \mid \#x
+      \mid \$x
+      \mid \_
+      \mid \lambda x {:} A. M
+      \mid M \; N_1 \; N_2 \; \dots \; N_n \\&&&
+      \mid M : A
+      \mid M[\sigma]
+      \mid \;?
+      \mid \;?\mathsf{id}
+      \mid \langle M_1; M_2; \dots; M_n \rangle
+      \mid M.n
+      \mid M.\mathsf{id}\\
+
+      &\text{Contextual LF substitutions} &\sigma &\Coloneqq
+      \char`\^
+      \mid \dots
+      \mid \sigma, M
+      \mid s[\sigma]\\
+
+      &\text{Contextual LF contexts} &\Psi &\Coloneqq
+      \char`\^
+      \mid g
+      \mid \Psi, x : A\\
+
+      &\text{Contextual LF patterns} &M_p, N_p &\Coloneqq
+      c
+      \mid x
+      \mid \#x
+      \mid \$x
+      \mid \_
+      \mid \lambda x {:} A. M_p
+      \mid M_p \; N_{p,1} \; N_{p,2} \; \dots \; N_{p_n} \\&&&
+      \mid M_p : A
+      \mid M_p[\sigma]
+      \mid \langle M_{p,1}; M_{p,2}; \dots; M_{p,n} \rangle
+      \mid M.n
+      \mid M.\mathsf{id}\\
+
+      &\text{Contextual LF substitution patterns} &\sigma_p &\Coloneqq
+      \char`\^
+      \mid \dots
+      \mid \sigma_p, M_p
+      \mid s[\sigma]\\
+
+      &\text{Contextual LF context patterns} &\Psi_p &\Coloneqq
+      \char`\^
+      \mid g
+      \mid \Psi_p, x : A
+      \end{aligned}
+    } *)
+
 module CLF = struct
   (** External contextual LF types. *)
   module rec Typ : sig
@@ -574,26 +632,49 @@ end
     meta-substitutions and meta-contexts after parsing and data-dependent
     disambiguation.
 
-    ASTs constructed with the constructors in this module are not necessarily
-    in normal form.
-
-    These types are suited for pretty-printing and elaboration to the
-    internal syntax. Note that this is a named representation.
-
     The metavariable:
 
-    - [X] ranges over meta-level variables
-    - [g] ranges over context schemas
+    - {m X} ranges over meta-level variables
+    - {m g} ranges over context schemas
 
-    {[
-      Meta-types           U ::= g | [Ψ ⊢ A] | #[Ψ ⊢ A] | $[Ψ ⊢ Ψ] | $[Ψ ⊢# Ψ]
-      Meta-objects         C ::= [Ψ] | [Ψ ⊢ M] | $[Ψ ⊢ σ] | $[Ψ ⊢# σ]
-      Meta-substitutions   θ ::= ^ | θ, C/X
-      Meta-contexts        Δ ::= ^ | Δ, X:U
-      Schemas              G ::= g | G + G | some [x1:A1, x2:A2, ..., xn:An] block (y1:B1, y2:B2, ..., ym:Bm)
+    {math
+      \begin{aligned}
+      &\text{Meta-types} &U &\Coloneqq
+      g
+      \mid [\Psi \vdash A]
+      \mid \#[\Psi \vdash A]
+      \mid \$[\Psi ⊢ \Psi]
+      \mid \$[\Psi \vdash\!\!\#\; \Psi]\\
 
-      Meta-object patterns   Cp ::= [Ψp] | [Ψp ⊢ Mp] | $[Ψp ⊢ σp] | $[Ψp ⊢# σp]
-    ]} *)
+      &\text{Meta-objects} &C &\Coloneqq
+      [\Psi]
+      \mid [\Psi \vdash M]
+      \mid \$[\Psi \vdash \sigma]
+      \mid \$[\Psi \vdash\!\!\#\; \sigma]\\
+
+      &\text{Meta-substitutions} &\theta &\Coloneqq
+      \char`\^
+      \mid \theta, C / X\\
+
+      &\text{Meta-contexts} &\Delta &\Coloneqq
+      \char`\^
+      \mid g
+      \mid \Delta, X : U\\
+
+      &\text{Schemas} &G &\Coloneqq
+      g
+      \mid G + G
+      \mid \mathsf{some} [x_1 : A_1, x_2 : A_2, \dots, x_n : A_n] \;
+      \mathsf{block} (y_1 : B_1, y_2 : B_2, \dots, y_m : B_m)\\
+
+      &\text{Meta-object patterns} &C_p &\Coloneqq
+      [\Psi_p]
+      \mid [\Psi_p \vdash M_p]
+      \mid \$[\Psi_p \vdash \sigma_p]
+      \mid \$[\Psi_p \vdash\!\!\#\; \sigma_p]
+      \end{aligned}
+    } *)
+
 module Meta = struct
   (** External meta-types. *)
   module rec Typ : sig
@@ -764,33 +845,54 @@ end
 (** The representation of computation-level kinds, types, expressions and
     patterns after parsing and data-dependent disambiguation.
 
-    ASTs constructed with the constructors in this module are not necessarily
-    in normal form.
-
-    These types are suited for pretty-printing and elaboration to the
-    internal syntax. Note that this is a named representation.
-
     The metavariable:
 
-    - [x] ranges over computation-level variables
-    - [c] ranges over computation-level constants
-    - [X] ranges over meta-level variables
+    - {m x} ranges over computation-level variables
+    - {m c} ranges over computation-level constants
+    - {m X} ranges over meta-level variables
 
-    {[
-      Computational kinds         K    ::= ctype | ΠX:T.K | T → K |
-      Computational types         T, S ::= ΠX:T.S | T → S | T × S
-                                                  | U | T C1 C2 ... CN
-      Computational expressions   E    ::= x | c | let x = P in E | impossible E
-                                             | (E1, E2, ..., En) | ? | ?id | _
-                                             | E1 E2 ... En
-                                             | (case E of P1 => E1 | P2 => E2 | ... | Pn => En)
-                                             | fn x1, x2, ..., xn => E
-                                             | mlam X1, X2, ..., Xn => E
-                                             | (fun P1 => E1 | P2 => E2 | ... | Pn => En)
-      Computational patterns      P    ::= x | c | Cp | (P1, P2, ..., Pn) | P1 P2 ... Pn
-                                             | P : T | { X : U } P | _
-      Computational context       Γ    ::= ^ | Γ, x : T
-    ]} *)
+    {math
+      \begin{aligned}
+      &\text{Computational kinds} &K &\Coloneqq
+      \mathsf{ctype}
+      \mid \Pi X {:} T. K
+      \mid T \to K\\
+
+      &\text{Computational types} &T, S &\Coloneqq
+      \Pi X {:} T. S
+      \mid T \to S
+      \mid T_1 \times T_2 \times \dots \times T_n
+      \mid U \\&&&
+      \mid T \; C_1 \; C_2 \; \dots \; C_n\\
+
+      &\text{Computational expressions} &E &\Coloneqq
+      x
+      \mid c
+      \mid \mathsf{let} \; x = P \; \mathsf{in} \; E
+      \mid \mathsf{impossible} \; E \\&&&
+      \mid (E_1, E_2, \dots, E_n)
+      \mid \;?
+      \mid \;?\mathsf{id}
+      \mid \_
+      \mid E \; E_1 \; E_2 \; \dots \; E_n \\&&&
+      \mid \mathsf{case} \; E \; \mathsf{of} \; P_1 \Rightarrow E_1 | P_2 \Rightarrow E_2 | \dots | P_n \Rightarrow E_n \\&&&
+      \mid \mathsf{fn} \; x_1 \; x_2 \; \dots \; x_n \Rightarrow E
+      \mid \mathsf{mlam} \; X_1 \; X_2 \; \dots \; X_n \Rightarrow E \\&&&
+      \mid \mathsf{fun} \; P_1 \Rightarrow E_1 | P_2 \Rightarrow E_2 | \dots | P_n \Rightarrow E_n\\
+
+      &\text{Computational patterns} &P &\Coloneqq
+      x
+      \mid c
+      \mid C_p
+      \mid (P_1, P_2, \dots, P_n)
+      \mid P \; P_1 \; P_2 \; \dots \; P_n\\
+
+      &\text{Computational context} &\Gamma &\Coloneqq
+      \char`\^
+      \mid \Gamma, x : T
+      \end{aligned}
+    } *)
+
 module Comp = struct
   (** External computation-level kinds. *)
   module rec Kind : sig

@@ -20,14 +20,21 @@ val flip : ('a -> 'b -> 'c) -> 'b -> 'a -> 'c
 val until : (unit -> bool) -> unit
 
 (** [through f x] applies the effectful function [f] on [x] and returns [x].
-    @example [... |> through (fun x -> print_string x) |> ...]
-*)
+    For instance:
+
+    {[
+      ... |> through (fun x -> print_string x) |> ...
+    ]} *)
 val through : ('a -> unit) -> 'a -> 'a
 
-(** [after f x] calls the effectful function [f] and returns [x].
-    This effectively calls [f] after executing a function pipeline.
-    @example [... |> through (fun x -> print_string "Success") |> ...]
-*)
+(** [after f x] calls the effectful function [f] and returns [x]. This
+    effectively calls [f] after executing a function pipeline.
+
+    For instance:
+
+    {[
+      ... |> through (fun x -> print_string "Success") |> ...
+    ]} *)
 val after : (unit -> unit) -> 'a -> 'a
 
 (** Converts an uncurried function to a curried function. *)

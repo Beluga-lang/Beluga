@@ -3,7 +3,10 @@ name: Build and deploy internal HTML documentation
 permissions:
   contents: write
 
-on: [push]
+on:
+  push:
+    branches:
+      - master
 
 jobs:
   html-documentation:

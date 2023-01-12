@@ -680,7 +680,7 @@ let rec json_of_comp_kind kind =
   | Comp.Kind.Arrow { domain; range; location } ->
       json_of_variant ~name:"Comp.Kind.Arrow"
         ~data:
-          [ ("domain", json_of_comp_typ domain)
+          [ ("domain", json_of_meta_typ domain)
           ; ("range", json_of_comp_kind range)
           ; ("location", json_of_location location)
           ]

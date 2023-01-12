@@ -702,15 +702,13 @@ let is_atomic_copattern copattern =
   | Comp.Copattern.Pattern pattern -> is_atomic_pattern pattern
 
 let rec pp_comp_kind ppf kind =
-  let parent_precedence = precedence_of_comp_kind kind in
+  let[@warning "-26"] parent_precedence = precedence_of_comp_kind kind in
   match kind with
   | Comp.Kind.Ctype _ -> Format.pp_print_string ppf "ctype"
   | Comp.Kind.Arrow { domain; range; _ } ->
       (* Right arrows are right-associative *)
-      Format.fprintf ppf "@[<2>%a@ →@ %a@]"
-        (parenthesize_left_argument_right_associative_operator
-           precedence_of_comp_typ ~parent_precedence pp_comp_typ)
-        domain pp_comp_kind range
+      Format.fprintf ppf "@[<2>%a@ →@ %a@]" pp_meta_typ domain pp_comp_kind
+        range
   | Comp.Kind.Pi { parameter_identifier; parameter_type; body; _ } -> (
       (* Pi-operators are weak prefix operators *)
       match parameter_identifier with

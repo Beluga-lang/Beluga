@@ -33,6 +33,8 @@ exception Illegal_application_comp_kind
 
 exception Illegal_untyped_comp_pi_kind_parameter
 
+exception Illegal_comp_typ_domain_pi_comp_kind
+
 (** {2 Exceptions for computation-level type disambiguation} *)
 
 exception Illegal_ctype_comp_type
@@ -251,12 +253,22 @@ module Make
              ; body = body'
              })
     | Synprs.Comp.Sort_object.Raw_arrow
-        { location; domain; range; orientation = `Forward } ->
+        { location; domain; range; orientation = `Forward } -> (
         let* domain' = disambiguate_comp_typ domain in
         let* range' = disambiguate_comp_kind range in
-        return
-          (Synext.Comp.Kind.Arrow
-             { location; domain = domain'; range = range' })
+        match domain' with
+        | Synext.Comp.Typ.Box { meta_type; _ } ->
+            return
+              (Synext.Comp.Kind.Arrow
+                 { location; domain = meta_type; range = range' })
+        | Synext.Comp.Typ.Constant _
+        | Synext.Comp.Typ.Pi _
+        | Synext.Comp.Typ.Arrow _
+        | Synext.Comp.Typ.Cross _
+        | Synext.Comp.Typ.Application _ ->
+            Error.raise_at1
+              (Synext.location_of_comp_typ domain')
+              Illegal_comp_typ_domain_pi_comp_kind)
 
   and disambiguate_comp_typ = function
     | Synprs.Comp.Sort_object.Raw_ctype { location } ->

@@ -901,7 +901,7 @@ module Comp = struct
           (** [Ctype { _ }] is the kind of computational types [ctype]. *)
       | Arrow of
           { location : Location.t
-          ; domain : Typ.t
+          ; domain : Meta.Typ.t
           ; range : Kind.t
           }
           (** [Arrow { domain; range; _ }] is the computational kind

@@ -16,6 +16,10 @@ val cons : 'a -> 'a t -> 'a t
 (** [rev l] is [l] in reverse order. *)
 val rev : 'a t -> 'a t
 
+(** [replace_first f (a1, \[a2; a3; ...; an\])] is
+    [(f a1, \[a2; a3; ...; an\])]. *)
+val replace_first : ('a -> 'a) -> 'a t -> 'a t
+
 (** {1 Destructors} *)
 
 (** [uncons l] is [(head l, tail l)]. *)

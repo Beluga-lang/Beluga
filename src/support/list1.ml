@@ -20,6 +20,8 @@ let rev =
   in
   fun (T (hd, tl)) -> rev tl (T (hd, []))
 
+let replace_first f (T (x, xs)) = T (f x, xs)
+
 let unsnoc =
   let rec unsnoc (T (hd, tl)) ~return =
     match tl with

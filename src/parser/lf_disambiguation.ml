@@ -79,6 +79,7 @@ exception
 (** {1 Disambiguation} *)
 
 module type LF_DISAMBIGUATION = sig
+  (** @closed *)
   include State.STATE
 
   (** {1 Disambiguation} *)
@@ -100,6 +101,8 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
 
   (** {1 Disambiguation} *)
 
+  (** LF operands for application rewriting with
+      {!module:Application_disambiguation.Make}. *)
   module Lf_operand = struct
     type expression = Synprs.lf_object
 
@@ -121,6 +124,8 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
           Location.join applicand_location arguments_location
   end
 
+  (** LF operators for application rewriting with
+      {!module:Application_disambiguation.Make}. *)
   module Lf_operator = struct
     type associativity = Associativity.t
 
@@ -130,8 +135,12 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
 
     type t =
       { identifier : Qualified_identifier.t
+            (** The operator's constant identifier. *)
       ; operator : Operator.t
+            (** The operator's description for user-defined operator
+                disambiguation. *)
       ; applicand : Synprs.lf_object
+            (** The actual AST node corresponding to the operator. *)
       }
 
     let[@inline] make ~identifier ~operator ~applicand =
@@ -153,17 +162,31 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
 
     let location = Fun.(applicand >> Synprs.location_of_lf_object)
 
+    (** [write operator arguments] constructs the application of [operator]
+        with [arguments] for the shunting yard algorith. Since nullary
+        operators are treated as arguments, it is always the case that
+        [List.length arguments > 0]. *)
     let write operator arguments =
       let applicand = applicand operator in
-      let arguments = List1.unsafe_of_list arguments in
+      let arguments =
+        List1.unsafe_of_list arguments (* [List.length arguments > 0] *)
+      in
       Lf_operand.Application { applicand; arguments }
 
+    (** Instance of equality by operator identifier.
+
+        Since applications do not introduce bound variables, occurrences of
+        operators are equal by their identifier. That is, in an application
+        like [a o1 a o2 a], the operators [o1] and [o2] are equal if and only
+        if they are textually equal. *)
     include (
       (val Eq.contramap (module Qualified_identifier) identifier) :
         Eq.EQ with type t := t)
   end
 
-  module Application_disambiguation_state = struct
+  (** Disambiguation state for LF application rewriting with
+      {!module:Application_disambiguation.Make}. *)
+  module Lf_application_disambiguation_state = struct
     include Disambiguation_state
 
     type operator = Lf_operator.t
@@ -210,17 +233,7 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
   module Lf_application_disambiguation =
     Application_disambiguation.Make (Associativity) (Fixity) (Lf_operand)
       (Lf_operator)
-      (Application_disambiguation_state)
-
-  let with_lf_term_variable identifier =
-    scoped
-      ~set:(add_lf_term_variable identifier)
-      ~unset:(pop_binding identifier)
-
-  let with_lf_term_variable_opt identifier_opt =
-    match identifier_opt with
-    | Option.None -> Fun.id
-    | Option.Some identifier -> with_lf_term_variable identifier
+      (Lf_application_disambiguation_state)
 
   (** [disambiguate_lf_kind object_ state] is [object_] rewritten as an LF
       kind with respect to the disambiguation context [state].

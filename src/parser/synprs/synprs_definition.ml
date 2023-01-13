@@ -892,63 +892,88 @@ end
 
 (** {2 LF} *)
 
+(** @canonical Synprs.lf_object *)
 type lf_object = LF.Object.t
 
 (** {2 Contextual LF} *)
 
+(** @canonical Synprs.clf_object *)
 type clf_object = CLF.Object.t
 
+(** @canonical Synprs.clf_context_object *)
 type clf_context_object = CLF.Context_object.t
 
 (** {2 Meta-Level} *)
 
+(** @canonical Synprs.meta_thing *)
 type meta_thing = Meta.Thing.t
 
+(** @canonical Synprs.meta_context_object *)
 type meta_context_object = Meta.Context_object.t
 
+(** @canonical Synprs.schema_object *)
 type schema_object = Meta.Schema_object.t
 
 (** {2 Computation-Level} *)
 
+(** @canonical Synprs.comp_sort_object *)
 type comp_sort_object = Comp.Sort_object.t
 
+(** @canonical Synprs.comp_expression_object *)
 type comp_expression_object = Comp.Expression_object.t
 
+(** @canonical Synprs.comp_pattern_object *)
 type comp_pattern_object = Comp.Pattern_object.t
 
+(** @canonical Synprs.comp_context_object *)
 type comp_context_object = Comp.Context_object.t
 
 (** {2 Harpoon} *)
 
+(** @canonical Synprs.harpoon_proof *)
 type harpoon_proof = Harpoon.Proof.t
 
+(** @canonical Synprs.harpoon_command *)
 type harpoon_command = Harpoon.Command.t
 
+(** @canonical Synprs.harpoon_directive *)
 type harpoon_directive = Harpoon.Directive.t
 
+(** @canonical Synprs.harpoon_split_branch *)
 type harpoon_split_branch = Harpoon.Split_branch.t
 
+(** @canonical Synprs.harpoon_split_branch_label *)
 type harpoon_split_branch_label = Harpoon.Split_branch.Label.t
 
+(** @canonical Synprs.harpoon_suffices_branch *)
 type harpoon_suffices_branch = Harpoon.Suffices_branch.t
 
+(** @canonical Synprs.harpoon_hypothetical *)
 type harpoon_hypothetical = Harpoon.Hypothetical.t
 
+(** @canonical Synprs.harpoon_repl_command *)
 type harpoon_repl_command = Harpoon.Repl.Command.t
 
 (** {2 Signature} *)
 
+(** @canonical Synprs.signature_pragma *)
 type signature_pragma = Signature.Pragma.t
 
+(** @canonical Synprs.signature_global_pragma *)
 type signature_global_pragma = Signature.Global_pragma.t
 
+(** @canonical Synprs.signature_totality_declaration *)
 type signature_totality_declaration = Signature.Totality.Declaration.t
 
+(** @canonical Synprs.'argument *)
 type 'argument signature_totality_order =
   'argument Signature.Totality.Order.t
 
+(** @canonical Synprs.signature_declaration *)
 type signature_declaration = Signature.Declaration.t
 
+(** @canonical Synprs.signature_entry *)
 type signature_entry = Signature.Entry.t
 
+(** @canonical Synprs.signature *)
 type signature = Signature.t

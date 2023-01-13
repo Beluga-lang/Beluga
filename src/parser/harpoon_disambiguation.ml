@@ -3,6 +3,7 @@ open Beluga_syntax
 open Common_disambiguation
 
 module type HARPOON_DISAMBIGUATION = sig
+  (** @closed *)
   include State.STATE
 
   (** {1 Disambiguation} *)

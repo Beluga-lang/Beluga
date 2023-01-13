@@ -5,16 +5,35 @@ module Simple_disambiguation_state =
 module Make
     (Disambiguation_state : Common_disambiguation.DISAMBIGUATION_STATE) =
 struct
-  module Lf_disambiguation = Lf_disambiguation.Make (Disambiguation_state)
-  module Clf_disambiguation = Clf_disambiguation.Make (Disambiguation_state)
-  module Meta_disambiguation =
+  module Lf_disambiguation :
+    Lf_disambiguation.LF_DISAMBIGUATION
+      with type state = Disambiguation_state.state =
+    Lf_disambiguation.Make (Disambiguation_state)
+
+  module Clf_disambiguation :
+    Clf_disambiguation.CLF_DISAMBIGUATION
+      with type state = Disambiguation_state.state =
+    Clf_disambiguation.Make (Disambiguation_state)
+
+  module Meta_disambiguation :
+    Meta_disambiguation.META_DISAMBIGUATION
+      with type state = Disambiguation_state.state =
     Meta_disambiguation.Make (Disambiguation_state) (Clf_disambiguation)
-  module Comp_disambiguation =
+
+  module Comp_disambiguation :
+    Comp_disambiguation.COMP_DISAMBIGUATION
+      with type state = Disambiguation_state.state =
     Comp_disambiguation.Make (Disambiguation_state) (Meta_disambiguation)
-  module Harpoon_disambiguation =
+
+  module Harpoon_disambiguation :
+    Harpoon_disambiguation.HARPOON_DISAMBIGUATION
+      with type state = Disambiguation_state.state =
     Harpoon_disambiguation.Make (Disambiguation_state) (Meta_disambiguation)
       (Comp_disambiguation)
-  module Signature_disambiguation =
+
+  module Signature_disambiguation :
+    Signature_disambiguation.SIGNATURE_DISAMBIGUATION
+      with type state = Disambiguation_state.state =
     Signature_disambiguation.Make (Disambiguation_state) (Lf_disambiguation)
       (Meta_disambiguation)
       (Comp_disambiguation)

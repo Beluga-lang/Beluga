@@ -327,13 +327,13 @@ and pp_clf_substitution ppf substitution =
     ; terms = []
     ; _
     } ->
-      Format.fprintf ppf ".."
+      Format.fprintf ppf "…"
   | { CLF.Substitution.head = CLF.Substitution.Head.None _; terms; _ } ->
       Format.fprintf ppf "@[<2>%a@]"
         (List.pp ~pp_sep:Format.comma pp_clf_term)
         terms
   | { CLF.Substitution.head = CLF.Substitution.Head.Identity _; terms; _ } ->
-      Format.fprintf ppf "@[<2>..,@ %a@]"
+      Format.fprintf ppf "@[<2>…,@ %a@]"
         (List.pp ~pp_sep:Format.comma pp_clf_term)
         terms
   | { CLF.Substitution.head =
@@ -499,7 +499,7 @@ and pp_clf_substitution_pattern ppf substitution_pattern =
     ; terms = []
     ; _
     } ->
-      Format.fprintf ppf ".."
+      Format.fprintf ppf "…"
   | { CLF.Substitution.Pattern.head = CLF.Substitution.Pattern.Head.None _
     ; terms
     ; _
@@ -512,7 +512,7 @@ and pp_clf_substitution_pattern ppf substitution_pattern =
     ; terms
     ; _
     } ->
-      Format.fprintf ppf "@[<2>..,@ %a@]"
+      Format.fprintf ppf "@[<2>…,@ %a@]"
         (List.pp ~pp_sep:Format.comma pp_clf_term_pattern)
         terms
   | { CLF.Substitution.Pattern.head =
@@ -854,7 +854,7 @@ and pp_comp_expression ppf expression =
         | Option.None -> Format.pp_print_string ppf "_"
         | Option.Some parameter -> Identifier.pp ppf parameter
       in
-      Format.fprintf ppf "@[<2>fn@ %a =>@ %a@]"
+      Format.fprintf ppf "@[<2>fn@ %a ⇒@ %a@]"
         (List1.pp ~pp_sep:Format.pp_print_space pp_parameter)
         parameters pp_comp_expression body
   | Comp.Expression.Mlam { parameters; body; _ } ->
@@ -870,7 +870,7 @@ and pp_comp_expression ppf expression =
       let pp_parameters =
         List1.pp ~pp_sep:Format.pp_print_space pp_parameter
       in
-      Format.fprintf ppf "@[<2>mlam@ %a =>@ %a@]" pp_parameters parameters
+      Format.fprintf ppf "@[<2>mlam@ %a ⇒@ %a@]" pp_parameters parameters
         pp_comp_expression body
   | Comp.Expression.Fun { branches; _ } ->
       let pp_branch_pattern ppf copattern =
@@ -881,7 +881,7 @@ and pp_comp_expression ppf expression =
         List1.pp ~pp_sep:Format.pp_print_space pp_branch_pattern
       in
       let pp_branch ppf (patterns, expression) =
-        Format.fprintf ppf "@[<hov 2>|@ %a =>@ %a@]" pp_branch_patterns
+        Format.fprintf ppf "@[<hov 2>|@ %a ⇒@ %a@]" pp_branch_patterns
           patterns pp_comp_expression expression
       in
       let pp_branches = List1.pp ~pp_sep:Format.pp_print_cut pp_branch in
@@ -899,7 +899,7 @@ and pp_comp_expression ppf expression =
         scrutinee
   | Comp.Expression.Case { scrutinee; check_coverage; branches; _ } ->
       let pp_branch ppf (pattern, expression) =
-        Format.fprintf ppf "@[<hov 2>|@ %a =>@ %a@]" pp_comp_pattern pattern
+        Format.fprintf ppf "@[<hov 2>|@ %a ⇒@ %a@]" pp_comp_pattern pattern
           pp_comp_expression expression
       in
       let pp_branches = List1.pp ~pp_sep:Format.pp_print_cut pp_branch in

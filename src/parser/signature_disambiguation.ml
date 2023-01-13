@@ -13,7 +13,7 @@ open Support
 open Beluga_syntax
 open Common_disambiguation
 
-[@@@warning "-A"]
+[@@@warning "-A-4-44"]
 
 (** {1 Exceptions} *)
 
@@ -366,10 +366,10 @@ struct
     | Synext.Signature.Declaration.Const { identifier; typ; _ } ->
         add_default_lf_term_constant' identifier typ
     | Synext.Signature.Declaration.CompTyp
-        { identifier; kind; datatype_flavour = `Inductive } ->
+        { identifier; kind; datatype_flavour = `Inductive; _ } ->
         add_default_inductive_comp_typ_constant' identifier kind
     | Synext.Signature.Declaration.CompTyp
-        { identifier; kind; datatype_flavour = `Stratified } ->
+        { identifier; kind; datatype_flavour = `Stratified; _ } ->
         add_default_stratified_comp_typ_constant' identifier kind
     | Synext.Signature.Declaration.CompCotyp { identifier; kind; _ } ->
         add_default_coinductive_comp_typ_constant' identifier kind
@@ -397,7 +397,6 @@ struct
         add_mquery_opt identifier
     | Synext.Signature.Declaration.Module { identifier; entries; _ } ->
         Obj.magic ()
-    | Synext.Signature.Declaration.Comment _ -> return ()
 
   (** [make_operator_prefix ?precedence operator_identifier state] is the
       disambiguation state derived from [state] where the operator with
@@ -830,16 +829,18 @@ struct
     | Synprs.Signature.Declaration.Raw_module
         { location; identifier; declarations } ->
         Obj.magic ()
-    | Synprs.Signature.Declaration.Raw_comment { location; content } ->
-        return (Synext.Signature.Declaration.Comment { location; content })
 
   and disambiguate_entry = function
-    | Synprs.Signature.Entry.Raw_pragma pragma ->
+    | Synprs.Signature.Entry.Raw_pragma { pragma; location } ->
         let* pragma' = disambiguate_pragma pragma in
-        return (Synext.Signature.Entry.Pragma pragma')
-    | Synprs.Signature.Entry.Raw_declaration declaration ->
+        return (Synext.Signature.Entry.Pragma { pragma = pragma'; location })
+    | Synprs.Signature.Entry.Raw_declaration { declaration; location } ->
         let* declaration' = disambiguate_declaration declaration in
-        return (Synext.Signature.Entry.Declaration declaration')
+        return
+          (Synext.Signature.Entry.Declaration
+             { declaration = declaration'; location })
+    | Synprs.Signature.Entry.Raw_comment { location; content } ->
+        return (Synext.Signature.Entry.Comment { location; content })
 
   (** [disambiguate_signature state signature] is [state', signature'], where
       [signature'] is [signature] disambiguated with respect to [state], and

@@ -1422,12 +1422,6 @@ and pp_signature_declaration ppf declaration =
            ~pp_sep:(fun ppf () -> Format.fprintf ppf "@.@.")
            pp_signature_entry)
         entries
-  | Signature.Declaration.Comment { content; _ } ->
-      (* Workaround format string errors when inputing the documentation
-         comment delimiters *)
-      let left_delimiter = "%{{"
-      and right_delimiter = "}}%" in
-      Format.fprintf ppf "%s%s%s" left_delimiter content right_delimiter
 
 and pp_recursive_declarations ppf declarations =
   Format.fprintf ppf "@[<v 0>%a@];"
@@ -1620,9 +1614,15 @@ and group_recursive_comp_typ_declarations first_declaration declarations =
 
 and pp_signature_entry ppf entry =
   match entry with
-  | Signature.Entry.Declaration declaration ->
+  | Signature.Entry.Declaration { declaration; _ } ->
       pp_signature_declaration ppf declaration
-  | Signature.Entry.Pragma pragma -> pp_signature_pragma ppf pragma
+  | Signature.Entry.Pragma { pragma; _ } -> pp_signature_pragma ppf pragma
+  | Signature.Entry.Comment { content; _ } ->
+      (* Workaround format string errors when inputing the documentation
+         comment delimiters *)
+      let left_delimiter = "%{{"
+      and right_delimiter = "}}%" in
+      Format.fprintf ppf "%s%s%s" left_delimiter content right_delimiter
 
 and pp_signature ppf signature =
   let { Signature.global_pragmas; entries } = signature in

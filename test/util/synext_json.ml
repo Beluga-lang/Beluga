@@ -1571,20 +1571,26 @@ and json_of_signature_declaration declaration =
           ; ("entries", json_of_list json_of_signature_entry entries)
           ; ("location", json_of_location location)
           ]
-  | Signature.Declaration.Comment { content; location } ->
+
+and json_of_signature_entry = function
+  | Signature.Entry.Pragma { pragma; location } ->
+      json_of_variant ~name:"Signature.Entry.Pragma"
+        ~data:
+          [ ("pragma", json_of_signature_pragma pragma)
+          ; ("location", json_of_location location)
+          ]
+  | Signature.Entry.Declaration { declaration; location } ->
+      json_of_variant ~name:"Signature.Entry.Declaration"
+        ~data:
+          [ ("declaration", json_of_signature_declaration declaration)
+          ; ("location", json_of_location location)
+          ]
+  | Signature.Entry.Comment { content; location } ->
       json_of_variant ~name:"Signature.Declaration.Comment"
         ~data:
           [ ("content", json_of_string content)
           ; ("location", json_of_location location)
           ]
-
-and json_of_signature_entry = function
-  | Signature.Entry.Pragma pragma ->
-      json_of_variant ~name:"Signature.Entry.Pragma"
-        ~data:[ ("pragma", json_of_signature_pragma pragma) ]
-  | Signature.Entry.Declaration declaration ->
-      json_of_variant ~name:"Signature.Entry.Declaration"
-        ~data:[ ("pragma", json_of_signature_declaration declaration) ]
 
 and json_of_signature signature =
   json_of_variant ~name:"Signature"

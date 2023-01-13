@@ -592,7 +592,7 @@ The following is the grammar for the toplevel compilation units in \Beluga.
 That is, type constants, term constants, programs and proofs are arranged as lists of declarations, and may appear in modules.
 
 \begin{grammar}
-<signature> ::= <global-pragma>* (<declaration> | <pragma>)*
+<signature> ::= <global-pragma>* (<declaration> | <pragma> | <documentation-comment>)*
 
 <declaration> ::= \hfill\\
 | <module-declaration>\\
@@ -606,7 +606,6 @@ That is, type constants, term constants, programs and proofs are arranged as lis
 | <let-declaration>\\
 | <query-declaration>\\
 | <mquery-declaration>\\
-| <documentation-comment-declaration>\\
 | <pragma>
 
 <module-declaration> ::= `module' <identifier> `=' `struct' (<declaration> | <pragma>)* `end' [`;']
@@ -697,7 +696,7 @@ That is, type constants, term constants, programs and proofs are arranged as lis
 
 <mquery-declaration> ::= `----mquery' (`*' | <integer>) (`*' | <integer>) (`*' | <integer>) [<identifier> `:'] <comp-type> `.'
 
-<documentation-comment-declaration> ::= `%{{' <any>* `}}%'
+<documentation-comment> ::= `%{{' <any>* `}}%'
 \end{grammar}
 
 \section{Resolving Grammar Ambiguities}\label{section:resolving-grammar-ambiguities}

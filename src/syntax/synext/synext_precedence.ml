@@ -244,19 +244,20 @@ module Comp_precedence = struct
     | Comp.Expression.Application _ ->
         Static expression_application_precedence
     | Comp.Expression.Let _
-    | Comp.Expression.Box _
     | Comp.Expression.Impossible _
     | Comp.Expression.Case _
-    | Comp.Expression.Tuple _
-    | Comp.Expression.Hole _
-    | Comp.Expression.BoxHole _
-    | Comp.Expression.Observation _
-    | Comp.Expression.Variable _
-    | Comp.Expression.Constant _
     | Comp.Expression.Fn _
     | Comp.Expression.Mlam _
     | Comp.Expression.Fun _ ->
         Static 3
+    | Comp.Expression.Observation _ -> Static 4
+    | Comp.Expression.Hole _
+    | Comp.Expression.Box _
+    | Comp.Expression.BoxHole _
+    | Comp.Expression.Tuple _
+    | Comp.Expression.Variable _
+    | Comp.Expression.Constant _ ->
+        Static 5
 
   let precedence_of_comp_pattern pattern =
     match pattern with

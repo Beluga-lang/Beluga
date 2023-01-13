@@ -79,12 +79,12 @@ fun (Inv_pq a b) => Inv_qp b a
 
 rec simBisim : (g:ctx) SimInv [g |- P] [g |- Q] -> SimInv [g |- Q] [g |- P]
 	       -> BisimInv [g |- P] [g |- Q] =
-fun s1 s2 .BInvLf  t => SInvf  s1 t
-  | s1 s2 .BInvLDn t => SInvDn s1 t
-  | s1 s2 .BInvLUp t => SInvUp s1 t
-  | s1 s2 .BInvRf  t => SInvf  s2 t
-  | s1 s2 .BInvRDn t => SInvDn s2 t
-  | s1 s2 .BInvRUp t => SInvUp s2 t
+fun s1 s2 .BInvLf  t => s1 .SInvf  t
+  | s1 s2 .BInvLDn t => s1 .SInvDn t
+  | s1 s2 .BInvLUp t => s1 .SInvUp t
+  | s1 s2 .BInvRf  t => s2 .SInvf  t
+  | s1 s2 .BInvRDn t => s2 .SInvDn t
+  | s1 s2 .BInvRUp t => s2 .SInvUp t
 ;
 
 % rec invSim : (g:ctx) Inv [g |- P] [g |- Q] -> SimInv [g |- P] [g |- Q] =

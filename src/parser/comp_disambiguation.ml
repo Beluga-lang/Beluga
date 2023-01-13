@@ -284,7 +284,7 @@ module Make
           Qualified_identifier.make_simple identifier
         in
         lookup_toplevel identifier >>= function
-        | Result.Ok (Computation_inductive_type_constant { operator }) ->
+        | Result.Ok (Computation_inductive_type_constant { operator; _ }) ->
             return
               (Synext.Comp.Typ.Constant
                  { location
@@ -293,7 +293,7 @@ module Make
                  ; quoted
                  ; variant = `Inductive
                  })
-        | Result.Ok (Computation_stratified_type_constant { operator }) ->
+        | Result.Ok (Computation_stratified_type_constant { operator; _ }) ->
             return
               (Synext.Comp.Typ.Constant
                  { location
@@ -302,7 +302,8 @@ module Make
                  ; quoted
                  ; variant = `Stratified
                  })
-        | Result.Ok (Computation_abbreviation_type_constant { operator }) ->
+        | Result.Ok (Computation_abbreviation_type_constant { operator; _ })
+          ->
             return
               (Synext.Comp.Typ.Constant
                  { location
@@ -311,7 +312,8 @@ module Make
                  ; quoted
                  ; variant = `Abbreviation
                  })
-        | Result.Ok (Computation_coinductive_type_constant { operator }) ->
+        | Result.Ok (Computation_coinductive_type_constant { operator; _ })
+          ->
             return
               (Synext.Comp.Typ.Constant
                  { location
@@ -338,7 +340,7 @@ module Make
            [(<identifier> `::')+ <identifier>] are necessarily type
            constants. *)
         lookup identifier >>= function
-        | Result.Ok (Computation_inductive_type_constant { operator }) ->
+        | Result.Ok (Computation_inductive_type_constant { operator; _ }) ->
             return
               (Synext.Comp.Typ.Constant
                  { location
@@ -347,7 +349,7 @@ module Make
                  ; quoted
                  ; variant = `Inductive
                  })
-        | Result.Ok (Computation_stratified_type_constant { operator }) ->
+        | Result.Ok (Computation_stratified_type_constant { operator; _ }) ->
             return
               (Synext.Comp.Typ.Constant
                  { location
@@ -356,7 +358,8 @@ module Make
                  ; quoted
                  ; variant = `Stratified
                  })
-        | Result.Ok (Computation_abbreviation_type_constant { operator }) ->
+        | Result.Ok (Computation_abbreviation_type_constant { operator; _ })
+          ->
             return
               (Synext.Comp.Typ.Constant
                  { location
@@ -365,7 +368,8 @@ module Make
                  ; quoted
                  ; variant = `Abbreviation
                  })
-        | Result.Ok (Computation_coinductive_type_constant { operator }) ->
+        | Result.Ok (Computation_coinductive_type_constant { operator; _ })
+          ->
             return
               (Synext.Comp.Typ.Constant
                  { location
@@ -424,6 +428,7 @@ module Make
         Obj.magic ()
     | Synprs.Comp.Expression_object.Raw_qualified_identifier
         { location; identifier; quoted } ->
+        (* TODO: Can be the observation(s) of a variable *)
         Obj.magic ()
     | Synprs.Comp.Expression_object.Raw_fn { location; parameters; body } ->
         let* body' =
@@ -503,6 +508,10 @@ module Make
         return
           (Synext.Comp.Expression.TypeAnnotated
              { location; expression = expression'; typ = typ' })
+    | Synprs.Comp.Expression_object.Raw_observation
+        { location; scrutinee; destructor } ->
+        (* TODO: Can be observation(s) *)
+        Obj.magic ()
 
   and disambiguate_case_branch (pattern_object, body_object) =
     with_bindings_checkpoint
@@ -573,6 +582,9 @@ module Make
         return (Synext.Comp.Pattern.Wildcard { location })
 
   and disambiguate_as_copattern = function
+    | Synprs.Comp.Pattern_object.Raw_qualified_identifier _ ->
+        (* TODO: Can be a variable pattern together with an observation *)
+        Obj.magic ()
     | Synprs.Comp.Pattern_object.Raw_observation
         { location; constant; arguments } -> (
         lookup constant >>= function
@@ -589,8 +601,7 @@ module Make
                  (actual_binding_exn constant entry))
         | Result.Error cause ->
             Error.raise_at1 (Qualified_identifier.location constant) cause)
-    | ( Synprs.Comp.Pattern_object.Raw_qualified_identifier _
-      | Synprs.Comp.Pattern_object.Raw_identifier _
+    | ( Synprs.Comp.Pattern_object.Raw_identifier _
       | Synprs.Comp.Pattern_object.Raw_box _
       | Synprs.Comp.Pattern_object.Raw_tuple _
       | Synprs.Comp.Pattern_object.Raw_application _

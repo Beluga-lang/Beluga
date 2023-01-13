@@ -22,9 +22,9 @@ fun (Lnil) f => f
 ;
 
 rec zipWith : ([ |- nat] -> [ |- nat] -> [ |- nat]) -> NuColist -> NuColist -> NuColist =
-fun f xs ys .Out => (case Out xs of
+fun f xs ys .Out => (case xs .Out of
 | Nil => Nil
-| Cons x xs' => (case Out ys of
+| Cons x xs' => (case ys .Out of
                 | Nil => Nil
                 | Cons y ys' => Cons (f x y) (zipWith f xs' ys')
                ))

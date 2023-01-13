@@ -858,11 +858,11 @@ and json_of_comp_expression expression =
           ; ("arguments", json_of_list1 json_of_comp_expression arguments)
           ; ("location", json_of_location location)
           ]
-  | Comp.Expression.Observation { observation; arguments; location } ->
+  | Comp.Expression.Observation { location; scrutinee; destructor } ->
       json_of_variant ~name:"Comp.Expression.Observation"
         ~data:
-          [ ("observation", json_of_qualified_identifier observation)
-          ; ("arguments", json_of_list json_of_comp_expression arguments)
+          [ ("scrutinee", json_of_comp_expression scrutinee)
+          ; ("destructor", json_of_qualified_identifier destructor)
           ; ("location", json_of_location location)
           ]
   | Comp.Expression.TypeAnnotated { expression; typ; location } ->

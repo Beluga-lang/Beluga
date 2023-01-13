@@ -433,6 +433,7 @@ end = struct
         | `?' [<identifier>]
         | `_'
         | <comp-expression-object> <comp-expression-object>
+        | <comp-expression-object> <dot-qualified-identifier>
         | <qualified-identifier> <comp-expression-object>*
         | <comp-expression-object> `:' <comp-type>
         | `(' <comp-expression-object> `)'
@@ -452,29 +453,31 @@ end = struct
         | <comp-expression-object3>
 
       <comp-expression-object3> ::=
-        | <identifier>
-        | <qualified-identifier>
         | `fn' <omittable-identifier>+ <thick-forward-arrow> <comp-expression>
         | `fun' [`|'] <comp-pattern-atomic-object>+ <thick-forward-arrow> <comp-expression-object>
           (`|' <comp-pattern-atomic-object>+ <thick-forward-arrow> <comp-expression-object>)*
         | `mlam' <omittable-meta-object-identifier>+ <thick-forward-arrow> <comp-expression-object>
         | `let' <comp-pattern-object> `=' <comp-expression-object> `in' <comp-expression-object>
-        | <boxed-meta-object-thing>
         | `impossible' <comp-expression-object>
         | `case' <comp-expression-object> [`--not'] `of'
           [`|'] <comp-pattern-object> <thick-forward-arrow> <comp-expression-object>
           (`|' <comp-pattern-object> <thick-forward-arrow> <comp-expression-object>)*
+        | <comp-expresion-object4>
+
+      <comp-expresion-object4> ::=
+        | <comp-expresion-object5> <dot-qualified-identifier>+
+        | <comp-expresion-object5>
+
+      <comp-expresion-object5> ::=
+        | <identifier>
+        | <qualified-identifier>
+        | <boxed-meta-object-thing>
         | `?' [<identifier>]
         | `_'
         | `(' <comp-expression-object> (`,' <comp-expression-object>)+ `)'
         | `(' <comp-expression-object> `)'
   *)
-  let comp_expression_object3 =
-    let comma_opt =
-      (* Optionally parse a comma, for backwards compatibility with `fn x1,
-         x2, ..., xn => e' and `mlam X1, X2, ..., Xn => e'. *)
-      void (maybe comma)
-    in
+  let comp_expression_object5 =
     let constant_or_variable =
       qualified_or_plain_identifier |> span
       $> (function
@@ -485,7 +488,73 @@ end = struct
                Synprs.Comp.Expression_object.Raw_identifier
                  { location; identifier; quoted = false })
       |> labelled "Computational type constant or term variable"
-    and fn =
+    and box =
+      Meta_parser.meta_thing |> span
+      $> (fun (location, meta_object) ->
+           Synprs.Comp.Expression_object.Raw_box { location; meta_object })
+      |> labelled "Boxed meta-object"
+    and hole =
+      hole |> span
+      $> (function
+           | location, `Unlabelled ->
+               let label = Option.none in
+               Synprs.Comp.Expression_object.Raw_hole { location; label }
+           | location, `Labelled label ->
+               let label = Option.some label in
+               Synprs.Comp.Expression_object.Raw_hole { location; label })
+      |> labelled "Computational hole"
+    and box_hole =
+      underscore |> span
+      $> (fun (location, ()) ->
+           Synprs.Comp.Expression_object.Raw_box_hole { location })
+      |> labelled "Box hole"
+    and parenthesized_or_tuple =
+      parens (sep_by1 Comp_parsers.comp_expression_object comma)
+      |> span
+      $> (function
+           | ( location
+             , List1.T (Synprs.Comp.Expression_object.Raw_identifier i, []) )
+             ->
+               Synprs.Comp.Expression_object.Raw_identifier
+                 { i with quoted = true; location }
+           | ( location
+             , List1.T
+                 ( Synprs.Comp.Expression_object.Raw_qualified_identifier i
+                 , [] ) ) ->
+               Synprs.Comp.Expression_object.Raw_qualified_identifier
+                 { i with quoted = true; location }
+           | location, List1.T (expression, []) ->
+               Synprs.set_location_of_comp_expression_object location
+                 expression
+           | location, List1.T (e1, e2 :: es) ->
+               let elements = List2.from e1 e2 es in
+               Synprs.Comp.Expression_object.Raw_tuple { location; elements })
+      |> labelled "Computational tuple or parenthesized expression"
+    in
+    choice
+      [ constant_or_variable; box; hole; box_hole; parenthesized_or_tuple ]
+
+  let comp_expression_object4 =
+    seq2 comp_expression_object5
+      (maybe
+         dot_qualified_identifier
+         (* Repeated dot qualified identifiers are ambiguous with just one
+            dot qualified identifier, so parse only one. *))
+    |> span
+    $> (function
+         | _location, (expression, Option.None) -> expression
+         | location, (scrutinee, Option.Some destructor) ->
+             Synprs.Comp.Expression_object.Raw_observation
+               { location; scrutinee; destructor })
+    |> labelled "Computational atomic or observation expression"
+
+  let comp_expression_object3 =
+    let comma_opt =
+      (*= Optionally parse a comma, for backwards compatibility with
+          `fn x1, x2, ..., xn => e' and `mlam X1, X2, ..., Xn => e'. *)
+      void (maybe comma)
+    in
+    let fn =
       seq2
         (keyword "fn" &> sep_by1 omittable_identifier comma_opt)
         (thick_forward_arrow &> Comp_parsers.comp_expression_object)
@@ -530,11 +599,6 @@ end = struct
            Synprs.Comp.Expression_object.Raw_impossible
              { location; scrutinee })
       |> labelled "Empty `impossible' case analysis"
-    and box =
-      Meta_parser.meta_thing |> span
-      $> (fun (location, meta_object) ->
-           Synprs.Comp.Expression_object.Raw_box { location; meta_object })
-      |> labelled "Boxed meta-object"
     and case =
       seq3
         (keyword "case" &> Comp_parsers.comp_expression_object)
@@ -550,56 +614,15 @@ end = struct
            Synprs.Comp.Expression_object.Raw_case
              { location; scrutinee; check_coverage; branches })
       |> labelled "Pattern-matching expression"
-    and hole =
-      hole |> span
-      $> (function
-           | location, `Unlabelled ->
-               let label = Option.none in
-               Synprs.Comp.Expression_object.Raw_hole { location; label }
-           | location, `Labelled label ->
-               let label = Option.some label in
-               Synprs.Comp.Expression_object.Raw_hole { location; label })
-      |> labelled "Computational hole"
-    and box_hole =
-      underscore |> span
-      $> (fun (location, ()) ->
-           Synprs.Comp.Expression_object.Raw_box_hole { location })
-      |> labelled "Box hole"
-    and parenthesized_or_tuple =
-      parens (sep_by1 Comp_parsers.comp_expression_object comma)
-      |> span
-      $> (function
-           | ( location
-             , List1.T (Synprs.Comp.Expression_object.Raw_identifier i, []) )
-             ->
-               Synprs.Comp.Expression_object.Raw_identifier
-                 { i with quoted = true; location }
-           | ( location
-             , List1.T
-                 ( Synprs.Comp.Expression_object.Raw_qualified_identifier i
-                 , [] ) ) ->
-               Synprs.Comp.Expression_object.Raw_qualified_identifier
-                 { i with quoted = true; location }
-           | location, List1.T (expression, []) ->
-               Synprs.set_location_of_comp_expression_object location
-                 expression
-           | location, List1.T (e1, e2 :: es) ->
-               let elements = List2.from e1 e2 es in
-               Synprs.Comp.Expression_object.Raw_tuple { location; elements })
-      |> labelled "Computational tuple or parenthesized expression"
     in
     choice
-      [ constant_or_variable
-      ; fn
+      [ fn
       ; matching_fun
       ; mlam
       ; let_
       ; impossible
-      ; box
       ; case
-      ; hole
-      ; box_hole
-      ; parenthesized_or_tuple
+      ; comp_expression_object4
       ]
 
   let comp_expression_object2 =

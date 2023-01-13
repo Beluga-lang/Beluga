@@ -37,16 +37,14 @@ inductive Eval : [ |- term T] -> [ |- term T] -> ctype =
                -> Eval [ |- lcase M M1 (\h.\t.M2)] [ |- V]
 ;
 
-% ICFP'16 uses postfix syntax. Current Beluga syntax uses prefix syntax.
-% Maybe we will want to change that to match postfix style
 coinductive Sim : {T:[|- tp]} [|- term T] -> [|- term T] -> ctype =
-| (Sim_unit : Sim [|- top] [|- M] [|- N]) ::
+| Sim_unit : Sim [|- top] [|- M] [|- N] ::
               Eval [ |- M] [ |- unit] -> Eval [ |- N] [ |- unit]
-| (Sim_nil : Sim [|- list T] [|- M] [|- N]) ::
+| Sim_nil : Sim [|- list T] [|- M] [|- N] ::
              Eval [ |- M] [ |- nil] -> Eval [ |- N] [|- nil]
-| (Sim_cons : Sim [|- list T] [|- M] [|- N]) ::
+| Sim_cons : Sim [|- list T] [|- M] [|- N] ::
               Eval [ |- M] [ |- cons H L] -> Ex_sim_cons [|- H] [|- L] [|- N]
-| (Sim_lam : Sim [|- arr S T] [|- M] [|- N]) ::
+| Sim_lam : Sim [|- arr S T] [|- M] [|- N] ::
              Eval [ |- M] [ |- lam \x.M'] -> Ex_sim_lam [x:term S |- M'] [|- N]
 
 and inductive Ex_sim_cons : [|- term T] -> [|- term (list T)] -> [|- term (list T)] -> ctype =
@@ -72,15 +70,15 @@ fun .Sim_unit d => d
 rec sim_trans : Sim [|- T] [|- M] [|- N] -> Sim [|- T] [|- N] [|- R]
                 -> Sim [|- T] [|- M] [|- R] =
 / trust /
-fun s1 s2 .Sim_unit d => Sim_unit s2 (Sim_unit s1 d)
-  | s1 s2 .Sim_nil d => Sim_nil s2 (Sim_nil s1 d)
+fun s1 s2 .Sim_unit d => s2 .Sim_unit (s1 .Sim_unit d)
+  | s1 s2 .Sim_nil d => s2 .Sim_nil (s1 .Sim_nil d)
   | s1 s2 .Sim_cons d =>
-    let ESim_cons d1 s1' s1'' = Sim_cons s1 d in
-    let ESim_cons d2 s2' s2'' = Sim_cons s2 d1 in
+    let ESim_cons d1 s1' s1'' = s1 .Sim_cons d in
+    let ESim_cons d2 s2' s2'' = s2 .Sim_cons d1 in
     ESim_cons d2 (sim_trans s1' s2') (sim_trans s1'' s2'')
   | s1 s2 .Sim_lam d =>
-    let ESim_lam d1 s1' = Sim_lam s1 d in
-    let ESim_lam d2 s2' = Sim_lam s2 d1 in
+    let ESim_lam d1 s1' = s1 .Sim_lam d in
+    let ESim_lam d2 s2' = s2 .Sim_lam d1 in
     ESim_lam d2 (mlam P => sim_trans (s1' [|- P]) (s2' [|- P]))
 ;
 
@@ -294,7 +292,7 @@ rec howe_ev_abs : Howe [ |- arr S T] [|- lam \x.M'] [|- N]
                   -> Howe_abs [x:term S |- M'] [|- N] =
 / total h (howe_ev_abs s t m n h) /
 fun (Howe_lam h' (OSimC [ _ ] s)) =>
-    let ESim_lam d f = Sim_lam (s [|- ^]) (Ev_val Val_lam) in
+    let ESim_lam d f = (s [|- ^]) .Sim_lam (Ev_val Val_lam) in
     Howe_absC d (mlam R => let a = sim_osim (f [|- R]) in
                                let h'' = howe_subst h' (HCons HNil (howe_refl [|- R])) in
                                 howe_osim_trans h'' a)
@@ -302,12 +300,12 @@ fun (Howe_lam h' (OSimC [ _ ] s)) =>
 
 rec howe_ev_unit : Howe [ |- top] [ |- unit] [ |- N] -> Eval [ |- N]  [ |- unit] =
 / total h (howe_ev_unit n h) /
-fun (Howe_unit (OSimC [_ ]f)) => Sim_unit (f [|- ^]) (Ev_val Val_unit)
+fun (Howe_unit (OSimC [_ ]f)) => (f [|- ^]) .Sim_unit (Ev_val Val_unit)
 ;
 
 rec howe_ev_nil :  Howe [ |- list T] [ |- nil] [ |- N] -> Eval [ |- N] [|- nil] =
 / total h (howe_ev_nil t n h) /
-fun (Howe_nil (OSimC [ _ ] f)) => Sim_nil (f [|- ^]) (Ev_val Val_nil)
+fun (Howe_nil (OSimC [ _ ] f)) => (f [|- ^]) .Sim_nil (Ev_val Val_nil)
 ;
 
 
@@ -320,7 +318,7 @@ inductive Howe_cons : [|- term T] -> [|- term (list T)] -> [|- term (list T)] ->
 rec howe_ev_cons : Howe [ |- list T] [ |- cons H L] [ |- N] -> Howe_cons [|- H] [|- L] [|- N] =
 / total h (howe_ev_cons t a l n h) /
 fun (Howe_cons h1 h2 (OSimC [ _ ] s)) =>
-    let ESim_cons d s1 s2 = Sim_cons (s [|- ^]) (Ev_val Val_cons) in
+    let ESim_cons d s1 s2 = (s [|- ^]) .Sim_cons (Ev_val Val_cons) in
     Howe_consC d (howe_osim_trans h1 (sim_osim s1)) (howe_osim_trans h2 (sim_osim s2))
 ;
 
@@ -406,7 +404,7 @@ fun d d' =>
 rec ev_sim' : Eval [|- N] [|- lam \x.R] -> Sim [|- arr S T] [|- M] [|- N]
               -> Sim [|- arr S T] [|- M] [|- lam \x.R] =
 / total e (ev_sim' s t n r e) /
-fun d s .Sim_lam e => let ESim_lam d' s' = Sim_lam s e in
+fun d s .Sim_lam e => let ESim_lam d' s' = s .Sim_lam e in
                            let Refl = ev_det d d'  in
                            ESim_lam (Ev_val Val_lam) s'
 ;
@@ -414,7 +412,7 @@ fun d s .Sim_lam e => let ESim_lam d' s' = Sim_lam s e in
 
 rec ev_sim : Eval [|- N] [|- N'] -> Sim [|- T] [|- M] [|- N'] -> Sim [|- T] [|- M] [|- N] =
 / total e (ev_sim t n n' m e) /
-fun d s .Sim_lam e => let ESim_lam d' s' = Sim_lam s e in
+fun d s .Sim_lam e => let ESim_lam d' s' = s .Sim_lam e in
                       let Refl = ev_val d d'  in
                         ESim_lam d s'
   | d s .Sim_unit e => let d' = Sim_unit s e in
@@ -423,7 +421,7 @@ fun d s .Sim_lam e => let ESim_lam d' s' = Sim_lam s e in
   | d s .Sim_nil e => let d' = Sim_nil s e in
                       let Refl = ev_val d d' in
                         d
-  | d s .Sim_cons e => let ESim_cons d' s1 s2 = Sim_cons s e in
+  | d s .Sim_cons e => let ESim_cons d' s1 s2 = s .Sim_cons e in
                        let Refl = ev_val d d' in
                          ESim_cons d s1 s2
 ;
@@ -476,7 +474,7 @@ fn e => fn h => case e of
     let (Howe_app h1 (h2:Howe [ |- _] [ |- E2] [ |- E2']) (OSimC [ _ ] s)) = h in
     let Howe_lam h' (OSimC [ _ ] s') = down_closed d1 h1 in
     let ESim_lam (d1': Eval [ |- _ ]  [ |- lam \x.M]) s'' =
-        Sim_lam (s' [|- ^]) (Ev_val Val_lam) in
+        (s' [|- ^]) .Sim_lam (Ev_val Val_lam) in
     let ha = howe_osim_trans (howe_subst h' (HCons HNil h2)) (sim_osim (s'' [|- E2'])) in
     let ha1 = down_closed d2 ha in
     let Howe_lam ha' (OSimC [ _ ] sa) = ha1 in

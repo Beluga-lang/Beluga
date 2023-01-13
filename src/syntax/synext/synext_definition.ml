@@ -878,7 +878,8 @@ end
       \mid \mathsf{case} \; E \; \mathsf{of} \; P_1 \Rightarrow E_1 | P_2 \Rightarrow E_2 | \dots | P_n \Rightarrow E_n \\&&&
       \mid \mathsf{fn} \; x_1 \; x_2 \; \dots \; x_n \Rightarrow E
       \mid \mathsf{mlam} \; X_1 \; X_2 \; \dots \; X_n \Rightarrow E \\&&&
-      \mid \mathsf{fun} \; P_1 \Rightarrow E_1 | P_2 \Rightarrow E_2 | \dots | P_n \Rightarrow E_n\\
+      \mid \mathsf{fun} \; P_1 \Rightarrow E_1 | P_2 \Rightarrow E_2 | \dots | P_n \Rightarrow E_n\\&&&
+      \mid e .c\\
 
       &\text{Computational patterns} &P &\Coloneqq
       x
@@ -1068,7 +1069,7 @@ module Comp = struct
           ; label : Identifier.t Option.t
           }
           (** [Hole { label = Option.Some "x"; _ }] is the hole [?x] ranging
-              over expressions. *)
+              over computatiion-level expressions. *)
       | BoxHole of { location : Location.t }
           (** [BoxHole _] is the hole [_] ranging over meta-objects. *)
       | Application of
@@ -1080,12 +1081,11 @@ module Comp = struct
               [applicand] with [arguments]. *)
       | Observation of
           { location : Location.t
-          ; observation : Qualified_identifier.t
-          ; arguments : Expression.t List.t
+          ; scrutinee : Expression.t
+          ; destructor : Qualified_identifier.t
           }
-          (** [Observation { observation = "c"; arguments = \[e1; e2; ...; en\];  }]
-              is the observation [.c e1 e2 ... en]. These are destructor
-              copatterns, and may only appear in [fun]-expressions. *)
+          (** [Observation { scrutinee = e; destructor = "c"; _ }] is the
+              observation [e.c]. *)
       | TypeAnnotated of
           { location : Location.t
           ; expression : Expression.t

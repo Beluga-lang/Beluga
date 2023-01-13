@@ -401,6 +401,11 @@ module Comp = struct
           ; expression : Expression_object.t
           ; typ : Sort_object.t
           }
+      | Raw_observation of
+          { location : Location.t
+          ; scrutinee : Expression_object.t
+          ; destructor : Qualified_identifier.t
+          }
   end =
     Expression_object
 

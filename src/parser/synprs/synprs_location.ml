@@ -139,7 +139,8 @@ let location_of_comp_expression_object expression_object =
   | Raw_hole { location; _ }
   | Raw_box_hole { location; _ }
   | Raw_application { location; _ }
-  | Raw_annotated { location; _ } ->
+  | Raw_annotated { location; _ }
+  | Raw_observation { location; _ } ->
       location
 
 let[@warning "-23"] set_location_of_comp_expression_object location
@@ -161,6 +162,7 @@ let[@warning "-23"] set_location_of_comp_expression_object location
   | Raw_box_hole o -> Raw_box_hole { o with location }
   | Raw_application o -> Raw_application { o with location }
   | Raw_annotated o -> Raw_annotated { o with location }
+  | Raw_observation o -> Raw_observation { o with location }
 
 let location_of_comp_pattern_object pattern_object =
   let open Comp.Pattern_object in

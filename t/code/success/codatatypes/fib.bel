@@ -15,20 +15,20 @@ fn e => fn f => case e of
 ;
 
 rec zipwith : Stream -> Stream -> Stream =
-fun e f .Hd => plus (Hd e) (Hd f)
-  | e f .Tl => zipwith (Tl e) (Tl f)
+fun e f .Hd => plus (e .Hd) (f .Hd)
+  | e f .Tl => zipwith (e .Tl) (f .Tl)
 ;
 
 rec fib : Stream =
 fun .Hd => [ |- z]
   | .Tl .Hd => [ |- s z]
-  | .Tl .Tl => zipwith fib (Tl fib)
+  | .Tl .Tl => zipwith fib (fib .Tl)
 ;
 
 
-let a = Hd fib;
-let b = Tl fib;
-let c = Tl b;
-let d = Hd b;
-let e = Tl c;
-let f = Hd e;
+let a = fib .Hd;
+let b = fib .Tl;
+let c = b .Tl;
+let d = b .Hd;
+let e = c .Tl;
+let f = e .Hd;

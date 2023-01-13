@@ -918,17 +918,13 @@ and pp_comp_expression ppf expression =
       | Option.None -> Format.pp_print_string ppf "?"
       | Option.Some label -> Format.fprintf ppf "?%a" Identifier.pp label)
   | Comp.Expression.BoxHole _ -> Format.pp_print_string ppf "_"
-  | Comp.Expression.Observation { observation; arguments; _ } -> (
-      match List1.of_list arguments with
-      | Option.None ->
-          Format.fprintf ppf ".%a" Qualified_identifier.pp observation
-      | Option.Some arguments ->
-          Format.fprintf ppf ".%a@ %a" Qualified_identifier.pp observation
-            (List1.pp ~pp_sep:Format.pp_print_space
-               (parenthesize_argument_prefix_operator
-                  precedence_of_comp_expression ~parent_precedence
-                  pp_comp_expression))
-            arguments)
+  | Comp.Expression.Observation { scrutinee; destructor; _ } ->
+      (* Observations are left-associative *)
+      Format.fprintf ppf "@[<2>%a@ .%a@]"
+        (parenthesize_left_argument_left_associative_operator
+           precedence_of_comp_expression ~parent_precedence
+           pp_comp_expression)
+        scrutinee Qualified_identifier.pp destructor
   | Comp.Expression.TypeAnnotated { expression; typ; _ } ->
       (* Type ascriptions are left-associative *)
       Format.fprintf ppf "@[<2>%a :@ %a@]"

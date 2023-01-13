@@ -318,12 +318,6 @@ end = struct
            { location; module_identifier; abbreviation })
     |> labelled "module abbreviation pragma"
 
-  let sgn_comment =
-    block_comment
-    $> (fun (location, content) ->
-         Synprs.Signature.Declaration.Raw_comment { location; content })
-    |> labelled "HTML comment"
-
   let sgn_typedef_decl =
     seq3
       (keyword "typedef" &> identifier)
@@ -406,7 +400,6 @@ end = struct
       ; sgn_thm_decl
       ; query_declaration
       ; mquery_declaration
-      ; sgn_comment
       ]
     |> labelled "top-level declaration"
 
@@ -423,12 +416,18 @@ end = struct
 
   let sgn_entry =
     let declaration =
-      sgn_declaration $> fun declaration ->
-      Synprs.Signature.Entry.Raw_declaration declaration
+      sgn_declaration |> span $> fun (location, declaration) ->
+      Synprs.Signature.Entry.Raw_declaration { location; declaration }
     and pragma =
-      sgn_pragma $> fun pragma -> Synprs.Signature.Entry.Raw_pragma pragma
+      sgn_pragma |> span $> fun (location, pragma) ->
+      Synprs.Signature.Entry.Raw_pragma { location; pragma }
+    and comment =
+      block_comment
+      $> (fun (location, content) ->
+           Synprs.Signature.Entry.Raw_comment { location; content })
+      |> labelled "HTML comment"
     in
-    choice [ declaration; pragma ]
+    choice [ declaration; pragma; comment ]
 
   let sgn =
     seq2

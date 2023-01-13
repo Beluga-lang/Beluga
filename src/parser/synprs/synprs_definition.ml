@@ -867,17 +867,23 @@ module Signature = struct
           ; identifier : Identifier.t
           ; declarations : Entry.t List.t
           }
-      | Raw_comment of
-          { location : Location.t
-          ; content : String.t
-          }
   end =
     Declaration
 
   and Entry : sig
     type t =
-      | Raw_declaration of Declaration.t
-      | Raw_pragma of Pragma.t
+      | Raw_declaration of
+          { location : Location.t
+          ; declaration : Declaration.t
+          }
+      | Raw_pragma of
+          { location : Location.t
+          ; pragma : Pragma.t
+          }
+      | Raw_comment of
+          { location : Location.t
+          ; content : String.t
+          }
   end =
     Entry
 

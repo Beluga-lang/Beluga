@@ -13,7 +13,7 @@ let fixity_of_json json =
   | "prefix" -> Fixity.prefix
   | "infix" -> Fixity.infix
   | "postfix" -> Fixity.postfix
-  | fixity -> raise (Unsupported_fixity fixity)
+  | fixity -> Error.raise (Unsupported_fixity fixity)
 
 let associativity_of_json json =
   let open Yojson.Safe.Util in
@@ -21,7 +21,7 @@ let associativity_of_json json =
   | "left_associative" -> Associativity.left_associative
   | "right_associative" -> Associativity.right_associative
   | "non_associative" -> Associativity.non_associative
-  | associativity -> raise (Unsupported_associativity associativity)
+  | associativity -> Error.raise (Unsupported_associativity associativity)
 
 let rec disambiguation_state_of_json json =
   let open Disambiguation_state in
@@ -83,7 +83,7 @@ and add_json_entry json =
   | "schema_constant" ->
       let identifier = json |> member "identifier" |> to_string in
       add_schema_constant (Identifier.make identifier)
-  | sort -> raise (Unsupported_sort sort)
+  | sort -> Error.raise (Unsupported_sort sort)
 
 let read_disambiguation_state filename =
   let open Disambiguation_state in

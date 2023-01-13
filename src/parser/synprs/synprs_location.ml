@@ -316,6 +316,14 @@ let location_of_signature_totality_order totality_order =
   | Simultaneous_ordering { location; _ } ->
       location
 
+let location_of_signature_entry entry =
+  let open Signature.Entry in
+  match entry with
+  | Raw_declaration { location; _ }
+  | Raw_pragma { location; _ }
+  | Raw_comment { location; _ } ->
+      location
+
 let location_of_signature_declaration declaration =
   let open Signature.Declaration in
   match declaration with
@@ -335,6 +343,5 @@ let location_of_signature_declaration declaration =
   | Raw_val { location; _ }
   | Raw_query { location; _ }
   | Raw_mquery { location; _ }
-  | Raw_module { location; _ }
-  | Raw_comment { location; _ } ->
+  | Raw_module { location; _ } ->
       location

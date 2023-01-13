@@ -83,4 +83,6 @@ val location_of_signature_totality_declaration :
 val location_of_signature_totality_order :
   'a signature_totality_order -> Location.t
 
+val location_of_signature_entry : signature_entry -> Location.t
+
 val location_of_signature_declaration : signature_declaration -> Location.t

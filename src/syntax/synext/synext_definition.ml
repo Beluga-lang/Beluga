@@ -1639,17 +1639,23 @@ module Signature = struct
           ; identifier : Identifier.t
           ; entries : Entry.t List.t
           }  (** Namespace declaration for other declarations *)
-      | Comment of
-          { location : Location.t
-          ; content : String.t
-          }  (** Documentation comment *)
   end =
     Declaration
 
   and Entry : sig
     type t =
-      | Pragma of Pragma.t
-      | Declaration of Declaration.t
+      | Pragma of
+          { location : Location.t
+          ; pragma : Pragma.t
+          }
+      | Declaration of
+          { location : Location.t
+          ; declaration : Declaration.t
+          }
+      | Comment of
+          { location : Location.t
+          ; content : String.t
+          }  (** Documentation comment *)
   end =
     Entry
 

@@ -40,6 +40,7 @@ exception
 exception Identifiers_bound_several_times_in_recursive_declaration
 
 module type SIGNATURE_DISAMBIGUATION = sig
+  (** @closed *)
   include State.STATE
 
   (** {1 Disambiguation} *)

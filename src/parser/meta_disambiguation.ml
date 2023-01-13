@@ -54,6 +54,7 @@ exception Illegal_missing_meta_type_annotation
 (** {1 Disambiguation} *)
 
 module type META_DISAMBIGUATION = sig
+  (** @closed *)
   include State.STATE
 
   (** {1 Disambiguation} *)

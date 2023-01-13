@@ -207,13 +207,15 @@ module type DISAMBIGUATION_STATE = sig
 
   include SIGNATURE_STATE with type state := state
 
-  (** {1 Tracking} *)
+  (** [with_lf_term_variable identifier a] runs [a] in a state where there is
+      a bound LF term variable [identifier]. After having run [a], the added
+      variable [identifier] is removed. *)
+  val with_lf_term_variable : Identifier.t -> 'a t -> 'a t
 
-  val track_variable : (Identifier.t -> Unit.t t) -> Identifier.t -> Unit.t t
+  val with_lf_term_variable_opt : Identifier.t Option.t -> 'a t -> 'a t
 
-  val clear_tracked_variables : Unit.t t
-
-  val get_tracked_variables : Identifier.t List.t t
+  val with_pattern_variables_checkpoint :
+    pattern:'a t -> expression:'b t -> ('a * 'b) t
 end
 
 (** A minimal disambiguation state backed by nested HAMT data structures with
@@ -269,7 +271,6 @@ module Disambiguation_state : DISAMBIGUATION_STATE = struct
     ; default_associativity : Associativity.t
           (** Associativity to use if a pragma for an infix operator does not
               specify an associativity. *)
-    ; tracked_variables : Identifier.t List.t
     }
 
   include (
@@ -281,7 +282,6 @@ module Disambiguation_state : DISAMBIGUATION_STATE = struct
   let empty =
     { bindings = List1.singleton Identifier.Hamt.empty
     ; default_associativity = Associativity.non_associative
-    ; tracked_variables = []
     }
 
   let[@inline] set_default_associativity default_associativity =
@@ -696,19 +696,17 @@ module Disambiguation_state : DISAMBIGUATION_STATE = struct
         return (Result.ok ())
     | Result.Error cause -> return (Result.error cause)
 
-  let clear_tracked_variables =
-    modify (fun state -> { state with tracked_variables = [] })
+  let with_lf_term_variable identifier =
+    scoped
+      ~set:(add_lf_term_variable identifier)
+      ~unset:(pop_binding identifier)
 
-  let get_tracked_variables =
-    let* state = get in
-    return state.tracked_variables
+  let with_lf_term_variable_opt identifier_opt =
+    match identifier_opt with
+    | Option.None -> Fun.id
+    | Option.Some identifier -> with_lf_term_variable identifier
 
-  let track_variable add identifier =
-    let* () = add identifier in
-    modify (fun state ->
-        { state with
-          tracked_variables = identifier :: state.tracked_variables
-        })
+  let with_pattern_variables_checkpoint = Obj.magic ()
 end
 
 let pp_exception ppf = function

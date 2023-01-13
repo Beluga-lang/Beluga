@@ -855,11 +855,11 @@ end
       \begin{aligned}
       &\text{Computational kinds} &K &\Coloneqq
       \mathsf{ctype}
-      \mid \Pi X {:} T. K
-      \mid T \to K\\
+      \mid \Pi X {:} U. K
+      \mid U \to K\\
 
       &\text{Computational types} &T, S &\Coloneqq
-      \Pi X {:} T. S
+      \Pi X {:} U. S
       \mid T \to S
       \mid T_1 \times T_2 \times \dots \times T_n
       \mid U \\&&&
@@ -1663,85 +1663,121 @@ end
 
 (** {2 LF} *)
 
+(** @canonical Synext.lf_kind *)
 type lf_kind = LF.Kind.t
 
+(** @canonical Synext.lf_typ *)
 type lf_typ = LF.Typ.t
 
+(** @canonical Synext.lf_term *)
 type lf_term = LF.Term.t
 
 (** {2 Contextual LF} *)
 
+(** @canonical Synext.clf_typ *)
 type clf_typ = CLF.Typ.t
 
+(** @canonical Synext.clf_term *)
 type clf_term = CLF.Term.t
 
+(** @canonical Synext.clf_term_pattern *)
 type clf_term_pattern = CLF.Term.Pattern.t
 
+(** @canonical Synext.clf_substitution *)
 type clf_substitution = CLF.Substitution.t
 
+(** @canonical Synext.clf_substitution_pattern *)
 type clf_substitution_pattern = CLF.Substitution.Pattern.t
 
+(** @canonical Synext.clf_context *)
 type clf_context = CLF.Context.t
 
+(** @canonical Synext.clf_context_pattern *)
 type clf_context_pattern = CLF.Context.Pattern.t
 
 (** {2 Meta-level} *)
 
+(** @canonical Synext.meta_typ *)
 type meta_typ = Meta.Typ.t
 
+(** @canonical Synext.meta_object *)
 type meta_object = Meta.Object.t
 
+(** @canonical Synext.meta_pattern *)
 type meta_pattern = Meta.Pattern.t
 
+(** @canonical Synext.schema *)
 type schema = Meta.Schema.t
 
+(** @canonical Synext.meta_context *)
 type meta_context = Meta.Context.t
 
 (** {2 Computation-level} *)
 
+(** @canonical Synext.comp_kind *)
 type comp_kind = Comp.Kind.t
 
+(** @canonical Synext.comp_typ *)
 type comp_typ = Comp.Typ.t
 
+(** @canonical Synext.comp_expression *)
 type comp_expression = Comp.Expression.t
 
+(** @canonical Synext.comp_pattern *)
 type comp_pattern = Comp.Pattern.t
 
+(** @canonical Synext.comp_copattern *)
 type comp_copattern = Comp.Copattern.t
 
+(** @canonical Synext.comp_context *)
 type comp_context = Comp.Context.t
 
 (** {2 Harpoon} *)
 
+(** @canonical Synext.harpoon_command *)
 type harpoon_command = Harpoon.Command.t
 
+(** @canonical Synext.harpoon_directive *)
 type harpoon_directive = Harpoon.Directive.t
 
+(** @canonical Synext.harpoon_proof *)
 type harpoon_proof = Harpoon.Proof.t
 
+(** @canonical Synext.harpoon_hypothetical *)
 type harpoon_hypothetical = Harpoon.Hypothetical.t
 
+(** @canonical Synext.harpoon_repl_command *)
 type harpoon_repl_command = Harpoon.Repl.Command.t
 
+(** @canonical Synext.harpoon_split_branch *)
 type harpoon_split_branch = Harpoon.Split_branch.t
 
+(** @canonical Synext.harpoon_split_branch_label *)
 type harpoon_split_branch_label = Harpoon.Split_branch.Label.t
 
+(** @canonical Synext.harpoon_suffices_branch *)
 type harpoon_suffices_branch = Harpoon.Suffices_branch.t
 
 (** {2 Signature} *)
 
+(** @canonical Synext.signature_pragma *)
 type signature_pragma = Signature.Pragma.t
 
+(** @canonical Synext.signature_global_pragma *)
 type signature_global_pragma = Signature.Global_pragma.t
 
+(** @canonical Synext.signature_totality_declaration *)
 type signature_totality_declaration = Signature.Totality.Declaration.t
 
+(** @canonical Synext.'argument *)
 type 'argument signature_totality_order =
   'argument Signature.Totality.Order.t
 
+(** @canonical Synext.signature_declaration *)
 type signature_declaration = Signature.Declaration.t
 
+(** @canonical Synext.signature_entry *)
 type signature_entry = Signature.Entry.t
 
+(** @canonical Synext.signature *)
 type signature = Signature.t

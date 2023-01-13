@@ -66,6 +66,7 @@ exception Expected_comp_term_destructor_constant
 (** {1 Disambiguation} *)
 
 module type COMP_DISAMBIGUATION = sig
+  (** @closed *)
   include State.STATE
 
   (** {1 Disambiguation} *)

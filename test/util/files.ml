@@ -1,32 +1,20 @@
 open Support
 open Beluga_syntax
 
-let with_pp_to_file filename f =
-  let out_channel = Out_channel.open_bin filename in
-  try
-    let ppf = Format.formatter_of_out_channel out_channel in
-    f ppf;
-    Format.pp_print_newline ppf ();
-    Out_channel.close out_channel
-  with
-  | cause ->
-      Out_channel.close_noerr out_channel;
-      raise cause
-
 type test_case_token =
   | Input of string
   | Terminator
 
-let rec tokenize lexer_buffer =
+let rec tokenize_test_cases lexer_buffer =
   match%sedlex lexer_buffer with
   | eof -> Option.none
   | '%', Star (Compl '\n')
   | white_space ->
-      tokenize lexer_buffer
+      tokenize_test_cases lexer_buffer
   | ";;" -> Option.some Terminator
-  | _ -> tokenize' lexer_buffer
+  | _ -> tokenize_test_case lexer_buffer
 
-and tokenize' lexer_buffer =
+and tokenize_test_case lexer_buffer =
   match%sedlex lexer_buffer with
   | any, Star (Compl ';'), Star (';', Plus (Compl ';')) ->
       let input = Sedlexing.Utf8.lexeme lexer_buffer in
@@ -52,12 +40,6 @@ let parse_test_cases =
   in
   fun tokens -> parse_test_cases_tl tokens []
 
-let with_open_bin filename f =
-  let in_channel = In_channel.open_bin filename in
-  let r = f in_channel in
-  In_channel.close in_channel;
-  r
-
 let convert_token_location filename = function
   | Option.None, _start_position, _stop_position -> Option.none
   | Option.Some token, start_position, stop_position ->
@@ -69,10 +51,10 @@ let convert_token_location filename = function
 
 let read_test_case_inputs ~filename =
   let tokens =
-    with_open_bin filename (fun in_channel ->
+    Support.Files.with_open_bin filename (fun in_channel ->
         let lexer_buffer = Sedlexing.Utf8.from_channel in_channel in
         let generate_token =
-          Sedlexing.with_tokenizer tokenize lexer_buffer
+          Sedlexing.with_tokenizer tokenize_test_cases lexer_buffer
         in
         let tokens_seq =
           Seq.of_gen (fun () ->

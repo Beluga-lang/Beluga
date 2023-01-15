@@ -1,6 +1,10 @@
 (library
  (name common) ;; TODO: Rename to [syncom]
  (package beluga)
- (libraries support)
+ (libraries support sedlex)
  (instrumentation
-  (backend bisect_ppx --bisect-silent yes)))
+  (backend bisect_ppx --bisect-silent yes))
+ (preprocess
+  (per_module
+   ((pps sedlex.ppx)
+    error))))

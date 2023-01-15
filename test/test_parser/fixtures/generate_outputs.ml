@@ -100,7 +100,7 @@ let generate_outputs ~state_filename ~input_filename ~output_filename
            parse_test_case state)
          test_cases)
   in
-  Util.Files.with_pp_to_file output_filename (fun ppf ->
+  Support.Files.with_pp_to_file output_filename (fun ppf ->
       Yojson.Safe.pretty_print ~std:true ppf outputs)
 
 let () =

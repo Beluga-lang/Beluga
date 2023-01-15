@@ -25,3 +25,21 @@ let with_in_channel path f =
   let input = open_in path in
   let finalize () = Misc.noexcept (fun () -> close_in input) in
   go finalize (fun () -> f input)
+
+let with_pp_to_file filename f =
+  let out_channel = Out_channel.open_bin filename in
+  try
+    let ppf = Format.formatter_of_out_channel out_channel in
+    f ppf;
+    Format.pp_print_newline ppf ();
+    Out_channel.close out_channel
+  with
+  | cause ->
+      Out_channel.close_noerr out_channel;
+      raise cause
+
+let with_open_bin filename f =
+  let in_channel = In_channel.open_bin filename in
+  let r = f in_channel in
+  In_channel.close in_channel;
+  r

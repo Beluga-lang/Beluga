@@ -136,72 +136,208 @@ let () =
           Format.fprintf ppf "@[<v>Not implemented.@,@[%a@]@]"
             Format.pp_print_string msg))
 
-(* TODO: Use Sedlexing to read a file up to a given offset *)
-(*=
+(** {1 Printing Located Exceptions} *)
 
-type input_line =
-  { text : string
-  ; start_pos : int
-  }
+(** [tokenize_line lexer_buffer] tokenizes from [lexer_buffer] a line ending
+    in the character ['\n'], without including it in the line. The newline
+    character is skipped for subsequent tokenizations. The length of the line
+    as determined by the lexer is included to properly handle UTF-8-encoded
+    lines in error-reporting.
 
-let lines_around ~(start_pos : Location.pos) ~(end_pos : Location.pos)
-    ~(seek : int -> unit) ~(read_char : unit -> char option) :
-    input_line list =
-  seek (Location.position_bol start_pos);
-  let lines = ref [] in
-  let bol = ref (Location.position_bol start_pos) in
-  let cur = ref (Location.position_bol start_pos) in
-  let b = Buffer.create 80 in
-  let add_line () =
-    if !bol < !cur then (
-      let text = Buffer.contents b in
-      Buffer.clear b;
-      lines := { text; start_pos = !bol } :: !lines;
-      bol := !cur)
+    For instance, if the buffer contains ["This is a line.\n"], then the
+    tokenized line is ["This is a line."] with length [15]. *)
+let tokenize_line lexer_buffer =
+  match%sedlex lexer_buffer with
+  | eof -> Option.none
+  | Star (Compl '\n') ->
+      let line = Sedlexing.Utf8.lexeme lexer_buffer in
+      let length = Sedlexing.lexeme_length lexer_buffer in
+      (* Skip the next newline character, if any. *)
+      ignore (Sedlexing.next lexer_buffer : Uchar.t Option.t);
+      Option.some (length, line)
+  | _ -> assert false
+
+exception Failed_to_read_line of Int.t
+
+(** [read_lines line_numbers lexer_buffer] reads from [lexer_buffer] the
+    lines having corresponding lines [line_numbers]. It is assumed that
+    [line_numbers] is sorted in ascending order, without duplicates so that
+    lines can be read sequentially. *)
+let rec read_lines line_numbers lexer_buffer =
+  match line_numbers with
+  | [] -> []
+  | line_number :: line_numbers' ->
+      let rec read_line line_number =
+        match tokenize_line lexer_buffer with
+        | Option.None -> raise (Failed_to_read_line line_number)
+        | Option.Some line_string ->
+            let start, _stop = Sedlexing.lexing_positions lexer_buffer in
+            if start.Lexing.pos_lnum = line_number then line_string
+            else read_line line_number
+      in
+      let line = read_line line_number in
+      let lines = read_lines line_numbers' lexer_buffer in
+      line :: lines
+
+(** [location_line_numbers location] is the set of line numbers of characters
+    in the range of [location]. *)
+let location_line_numbers location =
+  let start_line = Location.start_line location in
+  let stop_line = Location.stop_line location in
+  let rec build_line_number_set current_line acc =
+    if current_line <= stop_line then
+      build_line_number_set (current_line + 1) (Int.Set.add current_line acc)
+    else acc
   in
-  let rec loop () =
-    if !bol >= Location.position_offset end_pos then ()
-    else
-      match read_char () with
-      | None ->
-        (* end of input *)
-        add_line ()
-      | Some c -> (
-        incr cur;
-        match c with
-        | '\r' -> loop ()
-        | '\n' ->
-          add_line ();
-          loop ()
-        | _ ->
-          Buffer.add_char b c;
-          loop ())
+  build_line_number_set start_line Int.Set.empty
+
+(** [group_locations_by_filename locations] is the map from filenames to
+    locations in [locations]. Ghost locations in [locations] are ignored. *)
+let group_locations_by_filename =
+  let rec group_locations_by_filename locations acc =
+    match locations with
+    | [] -> acc
+    | location :: locations' -> (
+        if Location.is_ghost location then
+          (* Skip ghost locations as they do not have filenames *)
+          group_locations_by_filename locations' acc
+        else
+          let filename = Location.filename location in
+          match String.Map.find_opt filename acc with
+          | Option.None ->
+              group_locations_by_filename locations'
+                (String.Map.add filename [ location ] acc)
+          | Option.Some locations ->
+              group_locations_by_filename locations'
+                (String.Map.add filename (location :: locations) acc))
   in
-  loop ();
-  List.rev !lines
+  fun locations -> group_locations_by_filename locations String.Map.empty
 
-(* Get lines from a file *)
-let lines_around_from_file ~(start_pos : Location.pos) ~(end_pos : Location.pos)
-    (filename : string) : input_line list =
-  try
-    let cin = open_in_bin filename in
-    let read_char () =
-      try Some (input_char cin) with End_of_file -> None
-    in
-    let lines =
-      lines_around ~start_pos ~end_pos ~seek:(seek_in cin) ~read_char
-    in
-    close_in cin;
-    lines
-  with Sys_error _ -> []
-*)
+let collect_location_line_numbers_by_filename locations_by_filename =
+  String.Map.map
+    (fun locations ->
+      List.fold_left
+        (fun acc location ->
+          Int.Set.union acc (location_line_numbers location))
+        Int.Set.empty locations)
+    locations_by_filename
 
-(*=
-File "src/core/synprs_to_synext'.ml", line 4788, characters 37-47:
-4788 |         { location; identifier; typ; expression } -> Obj.magic ()
-                                            ^^^^^^^^^^
-Error (warning 27 [unused-var-strict]): unused variable expression.
+let read_file_lines line_numbers_by_filename =
+  String.Map.mapi
+    (fun filename line_numbers_set ->
+      let line_numbers_list = Int.Set.elements line_numbers_set in
+      Files.with_open_bin filename (fun in_channel ->
+          let lexer_buffer = Sedlexing.Utf8.from_channel in_channel in
+          let lines = read_lines line_numbers_list lexer_buffer in
+          List.combine line_numbers_list lines))
+    line_numbers_by_filename
 
-       { location; identifier; typ; expression } -> Obj.magic ()
+(** [make_caret_line start_column stop_column length] makes a string of
+    spaces and carets of codepoint length [length], with carets in code point
+    range [start_column] inclusively to [stop_column] exclusively.
 
-*)
+    Be wary that columns start at [1], whereas string indexes start at [0].
+
+    For instance, [make_caret_line 12 16 17] produces ["           ^^^^^ "],
+    which is suitable for underlining ["error"] in ["This is an error."]. *)
+let make_caret_line ~start_column ~stop_column length =
+  let caret_start_index = start_column - 1 in
+  let caret_stop_index = stop_column - 1 in
+  String.init length (fun i ->
+      if caret_start_index <= i && i < caret_stop_index then '^' else ' ')
+
+(** [make_location_snippet location lines_by_number] makes a string snippet
+    of the character ranges in [location] with carets underlining them. That
+    is, with [location] ranging from some start to some stop line, and
+    prefetched lines [lines_by_number], this function selects the lines that
+    include [location], and interleaves lines of caret underlining codepoints
+    in [location].
+
+    The [Buffer] module is used for optimization. *)
+let make_location_snippet location lines_by_number =
+  let start_line = Location.start_line location in
+  let start_column = Location.start_column location in
+  let stop_line = Location.stop_line location in
+  let stop_column = Location.stop_column location in
+  match
+    List.filter_map
+      (fun (line_number, line) ->
+        if start_line <= line_number && line_number <= stop_line then
+          Option.some line
+        else Option.none)
+      lines_by_number
+  with
+  | [] -> assert false
+  | [ (length, x) ] ->
+      let buffer = Buffer.create 16 in
+      Buffer.add_string buffer x;
+      Buffer.add_char buffer '\n';
+      Buffer.add_string buffer
+        (make_caret_line ~start_column ~stop_column length);
+      Buffer.contents buffer
+  | (length1, x1) :: xs ->
+      let buffer = Buffer.create 16 in
+      Buffer.add_string buffer x1;
+      Buffer.add_char buffer '\n';
+      Buffer.add_string buffer
+        (make_caret_line ~start_column ~stop_column:(length1 + 1) length1);
+      Buffer.add_char buffer '\n';
+      let rec add_rest xs =
+        match xs with
+        | [] -> assert false
+        | [ (length_last, x_last) ] ->
+            Buffer.add_string buffer x_last;
+            Buffer.add_char buffer '\n';
+            Buffer.add_string buffer
+              (make_caret_line ~start_column:1 ~stop_column length_last)
+        | (length, x) :: xs ->
+            Buffer.add_string buffer x;
+            Buffer.add_char buffer '\n';
+            Buffer.add_string buffer
+              (make_caret_line ~start_column:1 ~stop_column:(length + 1)
+                 length);
+            Buffer.add_char buffer '\n';
+            add_rest xs
+      in
+      add_rest xs;
+      Buffer.contents buffer
+
+let make_location_snippets locations =
+  (* Group locations by filename *)
+  let grouped = group_locations_by_filename locations in
+  (* For each file, order the locations by the start position *)
+  let sorted_groups =
+    String.Map.map (List.sort Location.compare_start) grouped
+  in
+  (* Read the lines corresponding to the locations in [sorted_groups], mapped
+     by filename *)
+  let grouped_lines =
+    read_file_lines (collect_location_line_numbers_by_filename sorted_groups)
+  in
+  (* For each file, for each location, construct the corresponding location
+     snippet using the read lines [grouped_lines] *)
+  sorted_groups |> String.Map.to_seq
+  |> Seq.flat_map (fun (filename, locations) ->
+         let lines = String.Map.find filename grouped_lines in
+         locations |> List.to_seq
+         |> Seq.map (fun location ->
+                let snippet = make_location_snippet location lines in
+                (location, snippet)))
+  |> Seq.to_list
+
+let located_exception_to_string cause locations =
+  let snippets = make_location_snippets locations in
+  Format.asprintf "@[<v 0>%a@,%s@]"
+    (List.pp
+       ~pp_sep:(fun ppf () -> Format.fprintf ppf "@,")
+       (fun ppf (location, snippet) ->
+         Format.fprintf ppf "%a@,%s" Location.pp location snippet))
+    snippets
+    (Printexc.to_string cause)
+
+let () =
+  Printexc.register_printer (function
+    | Located_exception { cause; locations } ->
+        Option.some
+          (located_exception_to_string cause (List1.to_list locations))
+    | _ -> Option.none)

@@ -240,26 +240,28 @@ let read_file_lines line_numbers_by_filename =
 
     For instance, [make_caret_line 12 16 17] produces ["           ^^^^^ "],
     which is suitable for underlining ["error"] in ["This is an error."]. *)
-let make_caret_line ~start_column ~stop_column length =
+let[@inline] make_caret_line ~start_column ~stop_column length =
   let caret_start_index = start_column - 1 in
   let caret_stop_index = stop_column - 1 in
   String.init length (fun i ->
       if caret_start_index <= i && i < caret_stop_index then '^' else ' ')
 
-(** [make_location_snippet location lines_by_number] makes a string snippet
-    of the character ranges in [location] with carets underlining them. That
-    is, with [location] ranging from some start to some stop line, and
-    prefetched lines [lines_by_number], this function selects the lines that
-    include [location], and interleaves lines of caret underlining codepoints
-    in [location].
+(** [make_location_snippet location lines_by_number] is a list of pairs of
+    strings [(l1, u1); (l2, u2); ...; (ln, un)] where [li] is an input source
+    line in [lines_by_number] and [ui] is a line of carets ['^'] underlining
+    codepoints in [location].
 
-    The [Buffer] module is used for optimization. *)
+    That is, with [location] spanning from some start line to some stop line,
+    and prefetched lines [lines_by_number] indexed by their line number, this
+    function selects the lines that include [location], and generates lines
+    of caret underlining codepoints in [location]. *)
 let make_location_snippet location lines_by_number =
   let start_line = Location.start_line location in
   let start_column = Location.start_column location in
   let stop_line = Location.stop_line location in
   let stop_column = Location.stop_column location in
   match
+    (* Get the lines spanned by [location] in [lines_by_number]. *)
     List.filter_map
       (fun (line_number, line) ->
         if start_line <= line_number && line_number <= stop_line then
@@ -267,40 +269,39 @@ let make_location_snippet location lines_by_number =
         else Option.none)
       lines_by_number
   with
-  | [] -> assert false
+  | [] ->
+      assert false
+      (* [lines_by_number] is assumed to contain at least a line spanned by
+         [location]. *)
   | [ (length, x) ] ->
-      let buffer = Buffer.create 16 in
-      Buffer.add_string buffer x;
-      Buffer.add_char buffer '\n';
-      Buffer.add_string buffer
-        (make_caret_line ~start_column ~stop_column length);
-      Buffer.contents buffer
-  | (length1, x1) :: xs ->
-      let buffer = Buffer.create 16 in
-      Buffer.add_string buffer x1;
-      Buffer.add_char buffer '\n';
-      Buffer.add_string buffer
-        (make_caret_line ~start_column ~stop_column:(length1 + 1) length1);
-      Buffer.add_char buffer '\n';
-      let rec add_rest xs =
-        match xs with
-        | [] -> assert false
-        | [ (length_last, x_last) ] ->
-            Buffer.add_string buffer x_last;
-            Buffer.add_char buffer '\n';
-            Buffer.add_string buffer
-              (make_caret_line ~start_column:1 ~stop_column length_last)
-        | (length, x) :: xs ->
-            Buffer.add_string buffer x;
-            Buffer.add_char buffer '\n';
-            Buffer.add_string buffer
-              (make_caret_line ~start_column:1 ~stop_column:(length + 1)
-                 length);
-            Buffer.add_char buffer '\n';
-            add_rest xs
+      (* The location spans one line, so the caret start and stop columns
+         occur in the same line. *)
+      let underline = make_caret_line ~start_column ~stop_column length in
+      [ (x, underline) ]
+  | (length_first, x_first) :: xs ->
+      (* The location spans at least two lines. In the first line, the caret
+         start column is [start_column], and in the last line, the caret stop
+         column is [stop_column]. All other lines are fully underlined. *)
+      let underline_first =
+        make_caret_line ~start_column ~stop_column:(length_first + 1)
+          length_first
       in
-      add_rest xs;
-      Buffer.contents buffer
+      let rec make_rest = function
+        | [] ->
+            assert false (* [add_rest] is never called with an empty list. *)
+        | [ (length_last, x_last) ] ->
+            let underline_last =
+              make_caret_line ~start_column:1 ~stop_column length_last
+            in
+            [ (x_last, underline_last) ]
+        | (length_intermediate, x_intermediate) :: xs ->
+            let underline_intermediate =
+              make_caret_line ~start_column:1
+                ~stop_column:(length_intermediate + 1) length_intermediate
+            in
+            (x_intermediate, underline_intermediate) :: make_rest xs
+      in
+      (x_first, underline_first) :: make_rest xs
 
 let make_location_snippets locations =
   (* Group locations by filename *)
@@ -326,14 +327,30 @@ let make_location_snippets locations =
   |> Seq.to_list
 
 let located_exception_to_string cause locations =
-  let snippets = make_location_snippets locations in
-  Format.asprintf "@[<v 0>%a@,%s@]"
-    (List.pp
-       ~pp_sep:(fun ppf () -> Format.fprintf ppf "@,")
-       (fun ppf (location, snippet) ->
-         Format.fprintf ppf "%a@,%s" Location.pp location snippet))
-    snippets
-    (Printexc.to_string cause)
+  try
+    let snippets = make_location_snippets locations in
+    (* See ANSI escape sequences for the meaning of ["\x1b[1m"],
+       ["\x1b[31m"], ["\x1b[1;31m"] and ["\x1b[0m"] for changing the font
+       style and color of terminal outputs. *)
+    let pp_snippet ppf (location, lines) =
+      Format.fprintf ppf "@[<v 0>\x1b[1m%a:\x1b[0m@,%a@]" Location.pp
+        location
+        (List.pp ~pp_sep:Format.pp_print_cut (fun ppf (line, carets) ->
+             Format.fprintf ppf "%s@,\x1b[31m%s\x1b[0m" line carets))
+        lines
+    in
+    Format.asprintf "@[<v 0>%a@,\x1b[1;31mError:\x1b[0m %s@]"
+      (List.pp ~pp_sep:Format.pp_print_cut pp_snippet)
+      snippets
+      (Printexc.to_string cause)
+  with
+  | _ ->
+      (* An exception occurred while trying to read the snippets. Report the
+         exception without the snippets. *)
+      Format.asprintf "@[<v 0>%a@,%s@]"
+        (List.pp ~pp_sep:Format.pp_print_cut Location.pp)
+        locations
+        (Printexc.to_string cause)
 
 let () =
   Printexc.register_printer (function

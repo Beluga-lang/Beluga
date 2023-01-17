@@ -15,13 +15,13 @@ license: "GPL-3.0-only"
 homepage: "http://complogic.cs.mcgill.ca/beluga/"
 bug-reports: "https://github.com/Beluga-lang/Beluga/issues"
 depends: [
-  "dune" {>= "3.2"}
+  "dune" {>= "3.6"}
   "dune-build-info"
   "extlib"
   "gen"
   "camlp-streams"
   "linenoise"
-  "ocaml" {>= "4.08"}
+  "ocaml" {>= "4.14"}
   "sedlex"
   "ounit2" {with-test}
   "bisect_ppx" {with-test}

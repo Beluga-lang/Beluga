@@ -1,4 +1,4 @@
-(lang dune 3.2)
+(lang dune 3.6)
 
 (name beluga)
 
@@ -34,7 +34,7 @@
   camlp-streams
   linenoise
   (ocaml
-   (>= 4.08))
+   (>= 4.14))
   sedlex
   (ounit2 :with-test)
   (bisect_ppx :with-test)))

@@ -1,0 +1,74 @@
+opam-version: "2.0"
+name: "beluga"
+version: "1.0"
+synopsis:
+  "Implementation of contextual modal logic for reasoning with higher-order abstract syntax"
+maintainer: "marc-antoine.ouimet@mail.mcgill.ca"
+authors: [
+  "Brigitte Pientka"
+  "Joshua Dunfield"
+  "Andrew Cave"
+  "Jacob Thomas Errington"
+  "Junyoung Clare Jang"
+  "Marc-Antoine Ouimet"
+]
+license: "GPL-3.0-only"
+homepage: "http://complogic.cs.mcgill.ca/beluga/"
+bug-reports: "https://github.com/Beluga-lang/Beluga/issues"
+depends: [
+  "astring" {= "0.8.5" & with-doc}
+  "base-bigarray" {= "base"}
+  "base-bytes" {= "base"}
+  "base-threads" {= "base"}
+  "base-unix" {= "base"}
+  "bisect_ppx" {= "2.8.1" & with-test}
+  "camlp-streams" {= "5.0.1"}
+  "cmdliner" {= "1.1.1" & with-test}
+  "cppo" {= "1.6.9"}
+  "csexp" {= "1.5.1"}
+  "dune" {= "3.6.1"}
+  "dune-build-info" {= "3.6.1"}
+  "dune-configurator" {= "3.6.1"}
+  "extlib" {= "1.7.9"}
+  "fmt" {= "0.9.0" & with-doc}
+  "fpath" {= "0.7.3" & with-doc}
+  "gen" {= "1.0"}
+  "linenoise" {= "1.4.0"}
+  "ocaml" {= "4.14.1"}
+  "ocaml-base-compiler" {= "4.14.1"}
+  "ocaml-compiler-libs" {= "v0.12.4"}
+  "ocaml-config" {= "2"}
+  "ocaml-options-vanilla" {= "1"}
+  "ocamlbuild" {= "0.14.2"}
+  "ocamlfind" {= "1.9.5"}
+  "odoc" {= "2.2.0" & with-doc}
+  "odoc-parser" {= "2.0.0" & with-doc}
+  "ounit2" {= "2.2.6" & with-test}
+  "ppx_derivers" {= "1.2.1"}
+  "ppxlib" {= "0.25.1"}
+  "re" {= "1.10.4" & with-doc}
+  "result" {= "1.5"}
+  "sedlex" {= "2.5"}
+  "seq" {= "base"}
+  "sexplib0" {= "v0.15.1"}
+  "stdlib-shims" {= "0.3.0"}
+  "topkg" {= "1.0.6" & with-doc}
+  "tyxml" {= "4.5.0" & with-doc}
+  "uchar" {= "0.0.2"}
+  "uutf" {= "1.0.3" & with-doc}
+]
+build: [
+  ["dune" "subst"] {dev}
+  [
+    "dune"
+    "build"
+    "-p"
+    name
+    "-j"
+    jobs
+    "@install"
+    "@runtest" {with-test}
+    "@doc" {with-doc}
+  ]
+]
+dev-repo: "git+https://github.com/Beluga-lang/Beluga.git"

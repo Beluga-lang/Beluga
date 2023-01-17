@@ -59,6 +59,12 @@ module type STATE = sig
 
   val traverse_option_void : ('a -> _ t) -> 'a Option.t -> Unit.t t
 
+  val seq_list : 'a t List.t -> 'a List.t t
+
+  val seq_list1 : 'a t List1.t -> 'a List1.t t
+
+  val seq_list_void : unit t list -> unit t
+
   include Functor.FUNCTOR with type 'a t := 'a t
 
   include Apply.APPLY with type 'a t := 'a t
@@ -214,4 +220,24 @@ end) : STATE with type state = S.t = struct
         let* _ = f x in
         return ()
     | Option.None -> return ()
+
+  let rec seq_list l =
+    match l with
+    | [] -> return []
+    | x :: xs ->
+        let* y = x in
+        let* ys = seq_list xs in
+        return (y :: ys)
+
+  let seq_list1 l =
+    let* y = List1.head l in
+    let* ys = seq_list (List1.tail l) in
+    return (List1.from y ys)
+
+  let rec seq_list_void xs =
+    match xs with
+    | [] -> return ()
+    | x :: xs ->
+        let* () = x in
+        seq_list_void xs
 end

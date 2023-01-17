@@ -87,9 +87,6 @@ module type APPLY = sig
 
       @raise Invalid_argument If [n < 0]. *)
   val replicate : int -> 'a t -> 'a list t
-
-  (** [seq_void \[x1; x2; ...; xn\]] performs [x1], [x2], ..., [xn] in order. *)
-  val seq_void : unit t list -> unit t
 end
 
 (** Functor building an implementation of {!APPLY} over a monad. *)

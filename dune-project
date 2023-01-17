@@ -13,9 +13,10 @@
  "Joshua Dunfield"
  "Andrew Cave"
  "Jacob Thomas Errington"
- "Junyoung Clare Jang")
+ "Junyoung Clare Jang"
+ "Marc-Antoine Ouimet")
 
-(maintainers "jacob.errington@mail.mcgill.ca")
+(maintainers "marc-antoine.ouimet@mail.mcgill.ca")
 
 (homepage "http://complogic.cs.mcgill.ca/beluga/")
 

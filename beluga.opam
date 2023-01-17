@@ -2,13 +2,14 @@
 opam-version: "2.0"
 synopsis:
   "Implementation of contextual modal logic for reasoning with higher-order abstract syntax"
-maintainer: ["jacob.errington@mail.mcgill.ca"]
+maintainer: ["marc-antoine.ouimet@mail.mcgill.ca"]
 authors: [
   "Brigitte Pientka"
   "Joshua Dunfield"
   "Andrew Cave"
   "Jacob Thomas Errington"
   "Junyoung Clare Jang"
+  "Marc-Antoine Ouimet"
 ]
 license: "GPL-3.0-only"
 homepage: "http://complogic.cs.mcgill.ca/beluga/"

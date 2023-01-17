@@ -485,7 +485,7 @@ struct
     | Result.Ok entry ->
         Error.raise_at1
           (Qualified_identifier.location module_identifier)
-          (Error.composite2 (Expected_module module_identifier)
+          (Error.composite_exception2 (Expected_module module_identifier)
              (actual_binding_exn module_identifier entry))
     | Result.Error cause ->
         Error.raise_at1

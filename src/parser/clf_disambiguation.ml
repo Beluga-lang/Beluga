@@ -345,7 +345,7 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
                  })
         | Result.Ok entry ->
             Error.raise_at1 location
-              (Error.composite2 Expected_clf_type_constant
+              (Error.composite_exception2 Expected_clf_type_constant
                  (actual_binding_exn qualified_identifier entry))
         | Result.Error (Unbound_identifier _) ->
             Error.raise_at1 location
@@ -366,7 +366,7 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
                  { location; identifier; operator; quoted })
         | Result.Ok entry ->
             Error.raise_at1 location
-              (Error.composite2 Expected_clf_type_constant
+              (Error.composite_exception2 Expected_clf_type_constant
                  (actual_binding_exn identifier entry))
         | Result.Error (Unbound_qualified_identifier _) ->
             Error.raise_at1 location
@@ -493,7 +493,7 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
             return (Synext.CLF.Term.Variable { location; identifier })
         | Result.Ok entry ->
             Error.raise_at1 location
-              (Error.composite2 Expected_clf_term_constant
+              (Error.composite_exception2 Expected_clf_term_constant
                  (actual_binding_exn qualified_identifier entry))
         | Result.Error (Unbound_identifier _) ->
             (* Free variable *)
@@ -559,7 +559,7 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
                      { identifier; location; operator; quoted })
             | _identifier, entry ->
                 Error.raise_at1 location
-                  (Error.composite2 Expected_clf_term_constant
+                  (Error.composite_exception2 Expected_clf_term_constant
                      (actual_binding_exn identifier entry))))
     | Synprs.CLF.Object.Raw_application { objects; location } ->
         let* applicand, arguments = disambiguate_clf_application objects in
@@ -969,7 +969,7 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
                      { identifier; location; operator; quoted })
             | _identifier, entry ->
                 Error.raise_at1 location
-                  (Error.composite2 Expected_clf_term_constant
+                  (Error.composite_exception2 Expected_clf_term_constant
                      (actual_binding_exn identifier entry))))
     | Synprs.CLF.Object.Raw_application { objects; location } ->
         let* applicand, arguments = disambiguate_clf_application objects in

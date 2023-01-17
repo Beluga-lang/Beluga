@@ -321,7 +321,7 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
                  })
         | Result.Ok entry ->
             Error.raise_at1 location
-              (Error.composite2 Expected_lf_type_constant
+              (Error.composite_exception2 Expected_lf_type_constant
                  (actual_binding_exn qualified_identifier entry))
         | Result.Error (Unbound_identifier _) ->
             Error.raise_at1 location
@@ -341,7 +341,7 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
                  { location; identifier; operator; quoted })
         | Result.Ok entry ->
             Error.raise_at1 location
-              (Error.composite2 Expected_lf_type_constant
+              (Error.composite_exception2 Expected_lf_type_constant
                  (actual_binding_exn identifier entry))
         | Result.Error (Unbound_qualified_identifier _) ->
             Error.raise_at1 location (Unbound_lf_type_constant identifier)
@@ -419,7 +419,7 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
             (* [identifier] appears as a bound entry that is not an LF
                term-level constant or variable *)
             Error.raise_at1 location
-              (Error.composite2 Expected_lf_term_constant
+              (Error.composite_exception2 Expected_lf_term_constant
                  (actual_binding_exn qualified_identifier entry))
         | Result.Error (Unbound_identifier _) ->
             (* [identifier] does not appear in the state, so it is a free
@@ -444,7 +444,7 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
             (* [identifier] appears as a bound entry that is not an LF
                term-level constant *)
             Error.raise_at1 location
-              (Error.composite2 Expected_lf_term_constant
+              (Error.composite_exception2 Expected_lf_term_constant
                  (actual_binding_exn identifier entry))
         | Result.Error (Unbound_qualified_identifier _) ->
             (* [identifier] does not appear in the state, and constants must

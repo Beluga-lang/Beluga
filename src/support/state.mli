@@ -81,6 +81,14 @@ module type STATE = sig
 
   val traverse_option_void : ('a -> _ t) -> 'a Option.t -> Unit.t t
 
+  val seq_list : 'a t List.t -> 'a List.t t
+
+  val seq_list1 : 'a t List1.t -> 'a List1.t t
+
+  (** [seq_list_void \[x1; x2; ...; xn\]] performs [x1], [x2], ..., [xn] in
+      order. *)
+  val seq_list_void : unit t list -> unit t
+
   (** {1 Instances} *)
 
   include Functor.FUNCTOR with type 'a t := 'a t

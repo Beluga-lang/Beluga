@@ -1,28 +1,9 @@
-(** An ad hoc disjoint union of two types. *)
-type (+'e, +'a) t = private
-  | Left of 'e
-  | Right of 'a
+(** Ad hoc disjoint unions of two types. *)
+
+include module type of Stdlib.Either
 
 (** Eliminator for disjoint unions. *)
 val eliminate : ('e -> 'c) -> ('a -> 'c) -> ('e, 'a) t -> 'c
-
-(** Checks whether the union holds the right-hand type. *)
-val is_right : ('e, 'a) t -> bool
-
-(** Checks whether the union holds the left-hand type. *)
-val is_left : ('e, 'a) t -> bool
-
-(** Right injection into the union. *)
-val right : 'a -> ('e, 'a) t
-
-(** Left injection into the union. *)
-val left : 'e -> ('e, 'a) t
-
-(** Transforms the right-hand type in the union, if any. *)
-val map_right : ('a -> 'b) -> ('e, 'a) t -> ('e, 'b) t
-
-(** Transforms the left-hand type in the union, if any. *)
-val map_left : ('e1 -> 'e2) -> ('e1, 'a) t -> ('e2, 'a) t
 
 (** Transforms both sides of the union. *)
 val bimap : ('e1 -> 'e2) -> ('a -> 'b) -> ('e1, 'a) t -> ('e2, 'b) t

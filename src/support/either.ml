@@ -1,28 +1,8 @@
-type ('e, 'a) t =
-  | Left of 'e
-  | Right of 'a
+include Stdlib.Either
 
 let eliminate left right = function
   | Left e -> left e
   | Right x -> right x
-
-let is_right e =
-  match e with
-  | Right _ -> true
-  | Left _ -> false
-
-let is_left e =
-  match e with
-  | Right _ -> false
-  | Left _ -> true
-
-let right x = Right x
-
-let left x = Left x
-
-let map_right f e = eliminate left (fun x -> Right (f x)) e
-
-let map_left f e = eliminate (fun e -> Left (f e)) right e
 
 let bimap f g e = eliminate (fun e -> Left (f e)) (fun x -> Right (g x)) e
 

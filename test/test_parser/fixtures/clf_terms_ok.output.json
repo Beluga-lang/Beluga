@@ -1037,7 +1037,7 @@
     }
   ],
   [
-    "CLF.Term.TypeAnnotated",
+    "CLF.Term.Type_annotated",
     {
       "term": [
         "CLF.Term.Constant",
@@ -1634,7 +1634,7 @@
           ],
           "arguments": [
             [
-              "CLF.Term.TypeAnnotated",
+              "CLF.Term.Type_annotated",
               {
                 "term": [
                   "CLF.Term.Variable",
@@ -1740,7 +1740,7 @@
       },
       "parameter_type": null,
       "body": [
-        "CLF.Term.TypeAnnotated",
+        "CLF.Term.Type_annotated",
         {
           "term": [
             "CLF.Term.Application",
@@ -1875,10 +1875,10 @@
     }
   ],
   [
-    "CLF.Term.TypeAnnotated",
+    "CLF.Term.Type_annotated",
     {
       "term": [
-        "CLF.Term.TypeAnnotated",
+        "CLF.Term.Type_annotated",
         {
           "term": [
             "CLF.Term.Variable",
@@ -1999,10 +1999,10 @@
     }
   ],
   [
-    "CLF.Term.TypeAnnotated",
+    "CLF.Term.Type_annotated",
     {
       "term": [
-        "CLF.Term.TypeAnnotated",
+        "CLF.Term.Type_annotated",
         {
           "term": [
             "CLF.Term.Variable",
@@ -2123,7 +2123,7 @@
     }
   ],
   [
-    "CLF.Term.TypeAnnotated",
+    "CLF.Term.Type_annotated",
     {
       "term": [
         "CLF.Term.Abstraction",
@@ -2755,13 +2755,13 @@
     }
   ],
   [
-    "CLF.Term.TypeAnnotated",
+    "CLF.Term.Type_annotated",
     {
       "term": [
-        "CLF.Term.TypeAnnotated",
+        "CLF.Term.Type_annotated",
         {
           "term": [
-            "CLF.Term.TypeAnnotated",
+            "CLF.Term.Type_annotated",
             {
               "term": [
                 "CLF.Term.Variable",

@@ -473,7 +473,7 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
         let* term' = disambiguate_lf_term object_ in
         let* typ' = disambiguate_lf_typ sort in
         return
-          (Synext.LF.Term.TypeAnnotated
+          (Synext.LF.Term.Type_annotated
              { location; term = term'; typ = typ' })
     | Synprs.LF.Object.Raw_application { objects; location } ->
         let* applicand, arguments = disambiguate_lf_application objects in

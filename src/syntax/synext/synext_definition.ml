@@ -172,12 +172,12 @@ module LF = struct
       | Wildcard of { location : Location.t }
           (** [Wildcard { _ }] is the omission [_] of a fresh term-level
               variable. *)
-      | TypeAnnotated of
+      | Type_annotated of
           { location : Location.t
           ; term : Term.t
           ; typ : Typ.t
           }
-          (** [TypeAnnotated { term = u; typ = t; _ }] is the term [u : t]. *)
+          (** [Type_annotated { term = u; typ = t; _ }] is the term [u : t]. *)
   end =
     Term
 end
@@ -418,12 +418,12 @@ module CLF = struct
           ; projection :
               [ `By_identifier of Identifier.t | `By_position of Int.t ]
           }
-      | TypeAnnotated of
+      | Type_annotated of
           { location : Location.t
           ; term : Term.t
           ; typ : Typ.t
           }
-          (** [TypeAnnotated { term = u; typ = t; _ }] is the term [u : t]. *)
+          (** [Type_annotated { term = u; typ = t; _ }] is the term [u : t]. *)
 
     (** External contextual LF term patterns. *)
     module rec Pattern : sig
@@ -501,12 +501,12 @@ module CLF = struct
                 - If [applicand = Term.Constant { operator; _ }] and
                   [Operator.is_postfix operator], then
                   [List.length arguments = 1]. *)
-        | TypeAnnotated of
+        | Type_annotated of
             { location : Location.t
             ; term : Term.Pattern.t
             ; typ : Typ.t
             }
-            (** [TypeAnnotated { term = x; typ = t; _ }] is the pattern
+            (** [Type_annotated { term = x; typ = t; _ }] is the pattern
                 [x : t]. *)
     end
   end =
@@ -1086,12 +1086,12 @@ module Comp = struct
           }
           (** [Observation { scrutinee = e; destructor = "c"; _ }] is the
               observation [e.c]. *)
-      | TypeAnnotated of
+      | Type_annotated of
           { location : Location.t
           ; expression : Expression.t
           ; typ : Typ.t
           }
-          (** [TypeAnnotated { expression = e; typ = t; _ }] is the
+          (** [Type_annotated { expression = e; typ = t; _ }] is the
               type-annotated computation-level expression [e : t]. *)
   end =
     Expression
@@ -1122,7 +1122,7 @@ module Comp = struct
           ; applicand : Pattern.t
           ; arguments : Pattern.t List1.t
           }
-      | TypeAnnotated of
+      | Type_annotated of
           { location : Location.t
           ; pattern : Pattern.t
           ; typ : Typ.t

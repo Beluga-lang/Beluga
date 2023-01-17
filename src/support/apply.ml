@@ -49,6 +49,8 @@ module type APPLY = sig
     -> 'r t
 
   val replicate : int -> 'a t -> 'a list t
+
+  val seq_void : unit t list -> unit t
 end
 
 module Make (M : Monad.MONAD) : APPLY with type 'a t = 'a M.t = struct
@@ -130,4 +132,11 @@ module Make (M : Monad.MONAD) : APPLY with type 'a t = 'a M.t = struct
     in
     fun n ->
       if n < 0 then raise (Invalid_argument "replicate") else replicate n
+
+  let rec seq_void xs =
+    match xs with
+    | [] -> return ()
+    | x :: xs ->
+        let* () = x in
+        seq_void xs
 end

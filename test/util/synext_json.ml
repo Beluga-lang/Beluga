@@ -166,8 +166,8 @@ and json_of_lf_term term =
   | LF.Term.Wildcard { location } ->
       json_of_variant ~name:"LF.Term.Wildcard"
         ~data:[ ("location", json_of_location location) ]
-  | LF.Term.TypeAnnotated { term; typ; location } ->
-      json_of_variant ~name:"LF.Term.TypeAnnotated"
+  | LF.Term.Type_annotated { term; typ; location } ->
+      json_of_variant ~name:"LF.Term.Type_annotated"
         ~data:
           [ ("term", json_of_lf_term term)
           ; ("typ", json_of_lf_typ typ)
@@ -275,8 +275,8 @@ and json_of_clf_term term =
           ; ("body", json_of_clf_term body)
           ; ("location", json_of_location location)
           ]
-  | CLF.Term.TypeAnnotated { term; typ; location } ->
-      json_of_variant ~name:"CLF.Term.TypeAnnotated"
+  | CLF.Term.Type_annotated { term; typ; location } ->
+      json_of_variant ~name:"CLF.Term.Type_annotated"
         ~data:
           [ ("term", json_of_clf_term term)
           ; ("typ", json_of_clf_typ typ)
@@ -363,8 +363,8 @@ and json_of_clf_term_pattern term_pattern =
           ; ("body", json_of_clf_term_pattern body)
           ; ("location", json_of_location location)
           ]
-  | CLF.Term.Pattern.TypeAnnotated { term; typ; location } ->
-      json_of_variant ~name:"CLF.Term.Pattern.TypeAnnotated"
+  | CLF.Term.Pattern.Type_annotated { term; typ; location } ->
+      json_of_variant ~name:"CLF.Term.Pattern.Type_annotated"
         ~data:
           [ ("term", json_of_clf_term_pattern term)
           ; ("typ", json_of_clf_typ typ)
@@ -865,8 +865,8 @@ and json_of_comp_expression expression =
           ; ("destructor", json_of_qualified_identifier destructor)
           ; ("location", json_of_location location)
           ]
-  | Comp.Expression.TypeAnnotated { expression; typ; location } ->
-      json_of_variant ~name:"Comp.Expression.TypeAnnotated"
+  | Comp.Expression.Type_annotated { expression; typ; location } ->
+      json_of_variant ~name:"Comp.Expression.Type_annotated"
         ~data:
           [ ("expression", json_of_comp_expression expression)
           ; ("typ", json_of_comp_typ typ)
@@ -908,8 +908,8 @@ and json_of_comp_pattern pattern =
           ; ("arguments", json_of_list1 json_of_comp_pattern arguments)
           ; ("location", json_of_location location)
           ]
-  | Comp.Pattern.TypeAnnotated { pattern; typ; location } ->
-      json_of_variant ~name:"Comp.Pattern.TypeAnnotated"
+  | Comp.Pattern.Type_annotated { pattern; typ; location } ->
+      json_of_variant ~name:"Comp.Pattern.Type_annotated"
         ~data:
           [ ("pattern", json_of_comp_pattern pattern)
           ; ("typ", json_of_comp_typ typ)

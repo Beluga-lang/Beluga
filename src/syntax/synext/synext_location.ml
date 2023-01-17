@@ -27,7 +27,7 @@ let location_of_lf_term term =
   | Application { location; _ }
   | Abstraction { location; _ }
   | Wildcard { location; _ }
-  | TypeAnnotated { location; _ } ->
+  | Type_annotated { location; _ } ->
       location
 
 (** {1 Contextual LF} *)
@@ -55,7 +55,7 @@ let location_of_clf_term term =
   | Substitution { location; _ }
   | Tuple { location; _ }
   | Projection { location; _ }
-  | TypeAnnotated { location; _ } ->
+  | Type_annotated { location; _ } ->
       location
 
 let location_of_clf_substitution substitution =
@@ -91,7 +91,7 @@ let location_of_clf_term_pattern term_pattern =
   | Abstraction { location; _ }
   | Substitution { location; _ }
   | Application { location; _ }
-  | TypeAnnotated { location; _ } ->
+  | Type_annotated { location; _ } ->
       location
 
 (** {1 Meta-Level} *)
@@ -175,7 +175,7 @@ let location_of_comp_expression expression =
   | Constant { location; _ }
   | Application { location; _ }
   | Observation { location; _ }
-  | TypeAnnotated { location; _ } ->
+  | Type_annotated { location; _ } ->
       location
 
 let location_of_comp_pattern pattern =
@@ -186,7 +186,7 @@ let location_of_comp_pattern pattern =
   | MetaObject { location; _ }
   | Tuple { location; _ }
   | Application { location; _ }
-  | TypeAnnotated { location; _ }
+  | Type_annotated { location; _ }
   | MetaTypeAnnotated { location; _ }
   | Wildcard { location; _ } ->
       location

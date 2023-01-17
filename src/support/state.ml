@@ -21,6 +21,16 @@ module type STATE = sig
 
   val try_catch : 'a t -> on_exn:(exn -> 'a t) -> 'a t
 
+  val traverse_tuple2 :
+    ('a1 -> 'b1 t) -> ('a2 -> 'b2 t) -> 'a1 * 'a2 -> ('b1 * 'b2) t
+
+  val traverse_tuple3 :
+       ('a1 -> 'b1 t)
+    -> ('a2 -> 'b2 t)
+    -> ('a3 -> 'b3 t)
+    -> 'a1 * 'a2 * 'a3
+    -> ('b1 * 'b2 * 'b3) t
+
   val traverse_list : ('a -> 'b t) -> 'a List.t -> 'b List.t t
 
   val traverse_list1 : ('a -> 'b t) -> 'a List1.t -> 'b List1.t t
@@ -106,6 +116,17 @@ end) : STATE with type state = S.t = struct
   let[@inline] try_catch m ~on_exn state =
     try run m state with
     | exn -> run (on_exn exn) state
+
+  let traverse_tuple2 f1 f2 (a1, a2) =
+    let* b1 = f1 a1 in
+    let* b2 = f2 a2 in
+    return (b1, b2)
+
+  let traverse_tuple3 f1 f2 f3 (a1, a2, a3) =
+    let* b1 = f1 a1 in
+    let* b2 = f2 a2 in
+    let* b3 = f3 a3 in
+    return (b1, b2, b3)
 
   let rec traverse_list f l =
     match l with

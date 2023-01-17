@@ -95,7 +95,3 @@ type t =
 include Eq.EQ with type t := t
 
 include Show.SHOW with type t := t
-
-module Class : sig
-  include Show.SHOW with type t := t
-end

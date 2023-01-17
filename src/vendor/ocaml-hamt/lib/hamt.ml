@@ -5,18 +5,22 @@ module BitUtils : sig
   (* Given a bitmap and a subhash, returns the index into the list *)
   val from_bitmap : int -> int -> int
 
+  (** Given a bitmap and an integer, returns the boolean corresponding to the
+      n-th bit (0 is the weakest) of the bitmap *)
   val nth_bit_set : int -> int -> bool
-  (** Given a bitmap and an integer, returns the boolean corresponding to
-  the n-th bit (0 is the weakest) of the bitmap *)
 
+  (** Given a list of indices, returns the bitmap with one-bits at these
+      indices *)
   val indices_to_bitmap : int list -> int
-  (** Given a list of indices, returns the bitmap with one-bits at these indices *)
 
-  (* Given a bitmap, returns the list of indices where a one-bit is present *)
+  (* Given a bitmap, returns the list of indices where a one-bit is
+     present *)
   val bitmap_to_indices : int -> int list
 end = struct
   let sk5 = 0x55555555
+
   let sk3 = 0x33333333
+
   let skf0 = 0xf0f0f0f
 
   let[@inline always] ctpop map =
@@ -60,56 +64,97 @@ end
 
 module StdConfig : CONFIG = struct
   let shift_step = 5
+
   let bmnode_max = 16
+
   let arrnode_min = 8
 end
 
 module StdConfig32 : CONFIG = struct
   let shift_step = 4
+
   let bmnode_max = 8
+
   let arrnode_min = 4
 end
 
 module type S = sig
   type key
+
   type 'a t
 
   val empty : 'a t
+
   val is_empty : 'a t -> bool
+
   val singleton : key -> 'a -> 'a t
+
   val cardinal : 'a t -> int
+
   val length : 'a t -> int
+
   val update : key -> ('a option -> 'a option) -> 'a t -> 'a t
+
   val add : key -> 'a -> 'a t -> 'a t
+
   val add_carry : key -> 'a -> 'a t -> 'a t * 'a option
+
   val remove : key -> 'a t -> 'a t
+
   val extract : key -> 'a t -> 'a * 'a t
+
   val alter : key -> ('a -> 'a option) -> 'a t -> 'a t
+
   val modify : key -> ('a -> 'a) -> 'a t -> 'a t
+
   val modify_def : 'a -> key -> ('a -> 'a) -> 'a t -> 'a t
+
   val find : key -> 'a t -> 'a
+
   val find_opt : key -> 'a t -> 'a option
+
   val mem : key -> 'a t -> bool
+
   val choose : 'a t -> key * 'a
+
   val choose_opt : 'a t -> (key * 'a) option
+
   val pop : 'a t -> (key * 'a) * 'a t
+
   val keys : 'a t -> key list
+
   val values : 'a t -> 'a list
+
   val bindings : 'a t -> (key * 'a) list
+
   val to_seq : 'a t -> (key * 'a) Seq.t
+
   val of_seq : (key * 'a) Seq.t -> 'a t
+
   val iter : (key -> 'a -> unit) -> 'a t -> unit
+
   val map : ('a -> 'b) -> 'a t -> 'b t
+
   val mapi : (key -> 'a -> 'b) -> 'a t -> 'b t
+
   val filterv : ('a -> bool) -> 'a t -> 'a t
+
   val filter : (key -> 'a -> bool) -> 'a t -> 'a t
+
   val filter_map : (key -> 'a -> 'b option) -> 'a t -> 'b t
+
   val foldv : ('a -> 'b -> 'b) -> 'a t -> 'b -> 'b
+
   val fold : (key -> 'a -> 'b -> 'b) -> 'a t -> 'b -> 'b
+
   val for_all : (key -> 'a -> bool) -> 'a t -> bool
+
   val exists : (key -> 'a -> bool) -> 'a t -> bool
+
   val partition : (key -> 'a -> bool) -> 'a t -> 'a t * 'a t
+
   val intersecti : (key -> 'a -> 'b -> 'c) -> 'a t -> 'b t -> 'c t
+
   val intersect : ('a -> 'b -> 'c) -> 'a t -> 'b t -> 'c t
 
   val merge :
@@ -120,6 +165,7 @@ module type S = sig
   module Import : sig
     module type FOLDABLE = sig
       type key
+
       type 'a t
 
       val fold : (key -> 'a -> 'b -> 'b) -> 'a t -> 'b -> 'b
@@ -127,20 +173,26 @@ module type S = sig
 
     module Make (M : FOLDABLE with type key = key) : sig
       val add_from : 'a M.t -> 'a t -> 'a t
+
       val from : 'a M.t -> 'a t
     end
 
     module AssocList : sig
       val add_from : (key * 'a) list -> 'a t -> 'a t
+
       val from : (key * 'a) list -> 'a t
     end
   end
 
   module ExceptionLess : sig
     val extract : key -> 'a t -> 'a option * 'a t
+
     val alter : key -> ('a -> 'a option) -> 'a t -> 'a t
+
     val modify : key -> ('a -> 'a) -> 'a t -> 'a t
+
     val find : key -> 'a t -> 'a option
+
     val choose : 'a t -> (key * 'a) option
   end
 end
@@ -167,9 +219,14 @@ module Make (Config : CONFIG) (Key : Hashtbl.HashedType) :
     | ArrayNode of int * 'a t array
 
   let empty = Empty
+
   let[@inline always] leaf h k v = Leaf (h, k, v)
+
   let[@inline always] singleton k v = Leaf (hash k, k, v)
-  let[@inline always] is_empty = function Empty -> true | _ -> false
+
+  let[@inline always] is_empty = function
+    | Empty -> true
+    | _ -> false
 
   let rec cardinal = function
     | Empty -> 0
@@ -183,7 +240,10 @@ module Make (Config : CONFIG) (Key : Hashtbl.HashedType) :
   let length = cardinal
 
   let[@inline always] is_tip_node = function
-    | Empty | Leaf (_, _, _) | HashCollision (_, _) -> true
+    | Empty
+    | Leaf (_, _, _)
+    | HashCollision (_, _) ->
+        true
     | _ -> false
 
   let[@inline always] hash_fragment shift h = (h asr shift) land mask
@@ -210,8 +270,8 @@ module Make (Config : CONFIG) (Key : Hashtbl.HashedType) :
     match (node1, node2) with
     | Leaf (h1, k1, v1), Leaf (h2, k2, v2) when Int.equal h1 h2 ->
         HashCollision (h1, [ (k1, v1); (k2, v2) ])
-    | Leaf (h1, _, _), Leaf (h2, _, _) | Leaf (h1, _, _), HashCollision (h2, _)
-      ->
+    | Leaf (h1, _, _), Leaf (h2, _, _)
+    | Leaf (h1, _, _), HashCollision (h2, _) ->
         let sub_h1 = hash_fragment shift h1 in
         let sub_h2 = hash_fragment shift h2 in
         let nodeA, nodeB =
@@ -219,18 +279,23 @@ module Make (Config : CONFIG) (Key : Hashtbl.HashedType) :
         in
         let bitmap = (1 lsl sub_h1) lor (1 lsl sub_h2) in
         BitmapIndexedNode
-          ( bitmap,
-            if Int.equal sub_h1 sub_h2 then
+          ( bitmap
+          , if Int.equal sub_h1 sub_h2 then
               [| combine_tip (shift + shift_step) node1 node2 |]
             else [| nodeA; nodeB |] )
     | HashCollision (_, _), Leaf (_, _, _) -> combine_tip shift node2 node1
     | _ -> failwith "combine_tip"
 
   let rec update_list update k = function
-    | [] -> ( match update None with None -> [] | Some v -> [ (k, v) ])
+    | [] -> (
+        match update None with
+        | None -> []
+        | Some v -> [ (k, v) ])
     | ((kx, vx) as x) :: xs ->
         if Key.equal kx k then
-          match update (Some vx) with None -> xs | Some v -> (k, v) :: xs
+          match update (Some vx) with
+          | None -> xs
+          | Some v -> (k, v) :: xs
         else x :: update_list update k xs
 
   let expand_bitmap_node =
@@ -255,7 +320,8 @@ module Make (Config : CONFIG) (Key : Hashtbl.HashedType) :
         loop children to_remove base (succ ix) jx bitmap
       else (
         base.(jx) <- children.(ix);
-        loop children to_remove base (succ ix) (succ jx) (bitmap lor (1 lsl ix)))
+        loop children to_remove base (succ ix) (succ jx)
+          (bitmap lor (1 lsl ix)))
     in
     fun to_remove nb_children children ->
       let base = Array.make nb_children Empty in
@@ -269,8 +335,8 @@ module Make (Config : CONFIG) (Key : Hashtbl.HashedType) :
     | HashCollision (h, li) -> HashCollision (h, li)
     | BitmapIndexedNode (bitmap, base) ->
         if Int.equal (Array.length base) 0 then Empty
-        else if Int.equal (Array.length base) 1 && is_tip_node base.(0)
-        then base.(0)
+        else if Int.equal (Array.length base) 1 && is_tip_node base.(0) then
+          base.(0)
         else if Array.length base > bmnode_max then failwith "reify_node"
         else BitmapIndexedNode (bitmap, base)
     | ArrayNode (nb_children, children) ->
@@ -279,7 +345,8 @@ module Make (Config : CONFIG) (Key : Hashtbl.HashedType) :
         else ArrayNode (nb_children, children)
 
   let bitmap_to_array bitmap base =
-    let children = Array.make chunk Empty and n = ref 0 in
+    let children = Array.make chunk Empty
+    and n = ref 0 in
     for i = 0 to mask do
       if nth_bit_set bitmap i then (
         children.(i) <- base.(!n);
@@ -287,7 +354,11 @@ module Make (Config : CONFIG) (Key : Hashtbl.HashedType) :
     done;
     children
 
-  type change = Nil | Added | Modified | Removed
+  type change =
+    | Nil
+    | Added
+    | Modified
+    | Removed
 
   let[@inline always] change old_is_empty new_is_empty =
     if old_is_empty then if new_is_empty then Nil else Added
@@ -296,10 +367,14 @@ module Make (Config : CONFIG) (Key : Hashtbl.HashedType) :
 
   let rec alter_node ?(mute = false) shift hash key update = function
     | Empty -> (
-        match update None with None -> Empty | Some s -> leaf hash key s)
+        match update None with
+        | None -> Empty
+        | Some s -> leaf hash key s)
     | Leaf (h, k, v) as leaf1 -> (
         if Key.equal k key then
-          match update (Some v) with None -> Empty | Some s -> leaf h k s
+          match update (Some v) with
+          | None -> Empty
+          | Some s -> leaf h k s
         else
           match update None with
           | None -> leaf1
@@ -335,8 +410,7 @@ module Make (Config : CONFIG) (Key : Hashtbl.HashedType) :
             let bitmap = bitmap land lnot bit in
             if Int.equal bitmap 0 then Empty
             else if
-              Int.equal (Array.length base) 2
-              && is_tip_node base.(ix lxor 1)
+              Int.equal (Array.length base) 2 && is_tip_node base.(ix lxor 1)
             then base.(ix lxor 1)
             else BitmapIndexedNode (bitmap, remove base ix)
         | Added ->
@@ -355,7 +429,8 @@ module Make (Config : CONFIG) (Key : Hashtbl.HashedType) :
             if mute then (
               children.(sub_hash) <- child';
               ArrayNode (succ nb_children, children))
-            else ArrayNode (succ nb_children, set_tab children sub_hash child')
+            else
+              ArrayNode (succ nb_children, set_tab children sub_hash child')
         | Modified ->
             if mute then (
               children.(sub_hash) <- child';
@@ -367,17 +442,22 @@ module Make (Config : CONFIG) (Key : Hashtbl.HashedType) :
             else if mute then (
               children.(sub_hash) <- Empty;
               ArrayNode (pred nb_children, children))
-            else ArrayNode (pred nb_children, set_tab children sub_hash Empty))
+            else ArrayNode (pred nb_children, set_tab children sub_hash Empty)
+        )
 
   let rec copy hamt =
     match hamt with
-    | Empty | Leaf (_, _, _) | HashCollision (_, _) -> hamt
+    | Empty
+    | Leaf (_, _, _)
+    | HashCollision (_, _) ->
+        hamt
     | BitmapIndexedNode (bitmap, base) ->
         BitmapIndexedNode (bitmap, Array.map copy base)
     | ArrayNode (nb_children, children) ->
         ArrayNode (nb_children, Array.map copy children)
 
   let update key update hamt = alter_node 0 (hash key) key update hamt
+
   let add k v hamt = update k (fun _ -> Some v) hamt
 
   let add_mute k v hamt =
@@ -410,13 +490,25 @@ module Make (Config : CONFIG) (Key : Hashtbl.HashedType) :
     (!value, r)
 
   let alter k f hamt =
-    update k (function None -> raise Not_found | Some v -> f v) hamt
+    update k
+      (function
+        | None -> raise Not_found
+        | Some v -> f v)
+      hamt
 
   let modify k f hamt =
-    update k (function None -> raise Not_found | Some v -> Some (f v)) hamt
+    update k
+      (function
+        | None -> raise Not_found
+        | Some v -> Some (f v))
+      hamt
 
   let modify_def v0 k f hamt =
-    update k (function None -> Some (f v0) | Some v -> Some (f v)) hamt
+    update k
+      (function
+        | None -> Some (f v0)
+        | Some v -> Some (f v))
+      hamt
 
   let rec alter_hc f = function
     | [] -> []
@@ -440,7 +532,9 @@ module Make (Config : CONFIG) (Key : Hashtbl.HashedType) :
   and alter_all f = function
     | Empty -> Empty
     | Leaf (h, k, v) -> (
-        match f k v with None -> Empty | Some x -> leaf h k x)
+        match f k v with
+        | None -> Empty
+        | Some x -> leaf h k x)
     | HashCollision (h, pairs) -> (
         match alter_hc f pairs with
         | [] -> Empty
@@ -451,7 +545,8 @@ module Make (Config : CONFIG) (Key : Hashtbl.HashedType) :
         | _, [] -> Empty
         | _, [ x ] when is_tip_node x -> x
         | indices, base ->
-            BitmapIndexedNode (indices_to_bitmap indices, Array.of_list base))
+            BitmapIndexedNode (indices_to_bitmap indices, Array.of_list base)
+        )
     | ArrayNode (_nb_children, children) ->
         let children = Array.map (alter_all f) children in
         let nb_children =
@@ -464,9 +559,15 @@ module Make (Config : CONFIG) (Key : Hashtbl.HashedType) :
         else ArrayNode (nb_children, children)
 
   let map f hamt = alter_all (fun _k v -> Some (f v)) hamt
-  let filter f hamt = alter_all (fun k v -> if f k v then Some v else None) hamt
-  let filterv f hamt = alter_all (fun _k v -> if f v then Some v else None) hamt
+
+  let filter f hamt =
+    alter_all (fun k v -> if f k v then Some v else None) hamt
+
+  let filterv f hamt =
+    alter_all (fun _k v -> if f v then Some v else None) hamt
+
   let filter_map f hamt = alter_all f hamt
+
   let mapi f hamt = alter_all (fun k v -> Some (f k v)) hamt
 
   let rec iter f = function
@@ -517,10 +618,14 @@ module Make (Config : CONFIG) (Key : Hashtbl.HashedType) :
     | exception Not_found -> raise Not_found
 
   let find_opt key t =
-    match Notrace.find key t with e -> Some e | exception Not_found -> None
+    match Notrace.find key t with
+    | e -> Some e
+    | exception Not_found -> None
 
   let mem key hamt =
-    match Notrace.find key hamt with _ -> true | exception Not_found -> false
+    match Notrace.find key hamt with
+    | _ -> true
+    | exception Not_found -> false
 
   let rec fold f hamt v0 =
     match hamt with
@@ -532,17 +637,19 @@ module Make (Config : CONFIG) (Key : Hashtbl.HashedType) :
     | ArrayNode (_, children) -> Array.fold_right (fold f) children v0
 
   let foldv f hamt v0 = fold (fun _k v acc -> f v acc) hamt v0
+
   let bindings hamt = fold (fun k v acc -> (k, v) :: acc) hamt []
 
   let to_seq =
-    (* We need to (re)define append and flat_map as long as we support
-       OCaml < 4.11. As of writing this we don't use sequences
-       anywhere else so it seems localised enough to be acceptable. *)
+    (* We need to (re)define append and flat_map as long as we support OCaml
+       < 4.11. As of writing this we don't use sequences anywhere else so it
+       seems localised enough to be acceptable. *)
     let rec to_seq = function
       | Empty -> Seq.empty
       | Leaf (_, k, v) -> fun () -> Seq.Cons ((k, v), Seq.empty)
       | HashCollision (_, list) -> List.to_seq list
-      | ArrayNode (_, arr) | BitmapIndexedNode (_, arr) ->
+      | ArrayNode (_, arr)
+      | BitmapIndexedNode (_, arr) ->
           Seq.flat_map to_seq (Array.to_seq arr)
     in
     to_seq
@@ -558,6 +665,7 @@ module Make (Config : CONFIG) (Key : Hashtbl.HashedType) :
     fun seq -> loop seq empty
 
   let keys hamt = fold (fun k _v acc -> k :: acc) hamt []
+
   let values hamt = fold (fun _k v acc -> v :: acc) hamt []
 
   let for_all f hamt =
@@ -590,7 +698,9 @@ module Make (Config : CONFIG) (Key : Hashtbl.HashedType) :
     choose
 
   let choose_opt t =
-    match choose t with exception Not_found -> None | x -> Some x
+    match choose t with
+    | exception Not_found -> None
+    | x -> Some x
 
   let pop hamt =
     let k, v = choose hamt in
@@ -598,9 +708,14 @@ module Make (Config : CONFIG) (Key : Hashtbl.HashedType) :
 
   let rec intersect_array :
             'a 'b.
-            int -> (key -> 'a -> 'b -> 'c) -> 'a t array -> 'b t array -> 'c t =
+               int
+            -> (key -> 'a -> 'b -> 'c)
+            -> 'a t array
+            -> 'b t array
+            -> 'c t =
    fun shift f children1 children2 ->
-    let children = Array.make chunk Empty and nb_children = ref 0 in
+    let children = Array.make chunk Empty
+    and nb_children = ref 0 in
     for i = 0 to mask do
       let child = intersect_node shift f children1.(i) children2.(i) in
       if child <> Empty then (
@@ -623,8 +738,8 @@ module Make (Config : CONFIG) (Key : Hashtbl.HashedType) :
         else
           reify_node
             (HashCollision
-               ( h1,
-                 List.fold_left
+               ( h1
+               , List.fold_left
                    (fun acc (k, v) ->
                      match assoc_notrace k li2 with
                      | exception Not_found -> acc
@@ -643,7 +758,8 @@ module Make (Config : CONFIG) (Key : Hashtbl.HashedType) :
           intersect_node (shift + shift_step) f t1 children.(fragment)
         in
         reify_node (BitmapIndexedNode (1 lsl fragment, [| child |]))
-    | BitmapIndexedNode (bitmap1, base1), BitmapIndexedNode (bitmap2, base2) ->
+    | BitmapIndexedNode (bitmap1, base1), BitmapIndexedNode (bitmap2, base2)
+      ->
         let bitmap = bitmap1 land bitmap2 in
         if Int.equal bitmap 0 then Empty
         else
@@ -659,17 +775,19 @@ module Make (Config : CONFIG) (Key : Hashtbl.HashedType) :
     | _, _ -> intersect_node shift (fun k x y -> f k y x) t2 t1
 
   let intersecti f t1 t2 = intersect_node 0 f t1 t2
+
   let intersect f t1 t2 = intersecti (fun _ v -> f v) t1 t2
 
   let rec merge_array :
             'a 'b.
-            int ->
-            (key -> 'a option -> 'b option -> 'c option) ->
-            'a t array ->
-            'b t array ->
-            'c t =
+               int
+            -> (key -> 'a option -> 'b option -> 'c option)
+            -> 'a t array
+            -> 'b t array
+            -> 'c t =
    fun shift f children1 children2 ->
-    let nb_children = ref 0 and children = Array.make chunk Empty in
+    let nb_children = ref 0
+    and children = Array.make chunk Empty in
     for i = 0 to mask do
       let node = merge_node shift f children1.(i) children2.(i) in
       if node <> Empty then incr nb_children;
@@ -679,11 +797,11 @@ module Make (Config : CONFIG) (Key : Hashtbl.HashedType) :
 
   and merge_node :
         'a 'b.
-        int ->
-        (key -> 'a option -> 'b option -> 'c option) ->
-        'a t ->
-        'b t ->
-        'c t =
+           int
+        -> (key -> 'a option -> 'b option -> 'c option)
+        -> 'a t
+        -> 'b t
+        -> 'c t =
    fun shift f t1 t2 ->
     match (t1, t2) with
     | Empty, _ -> alter_all (fun k v -> f k None (Some v)) t2
@@ -716,7 +834,8 @@ module Make (Config : CONFIG) (Key : Hashtbl.HashedType) :
           (fun acc (k, v) ->
             alter_node shift (hash k) k (fun _ -> f k (Some v) None) acc)
           t2 !absents
-    | BitmapIndexedNode (bitmap1, base1), BitmapIndexedNode (bitmap2, base2) ->
+    | BitmapIndexedNode (bitmap1, base1), BitmapIndexedNode (bitmap2, base2)
+      ->
         merge_array shift f
           (bitmap_to_array bitmap1 base1)
           (bitmap_to_array bitmap2 base2)
@@ -740,6 +859,7 @@ module Make (Config : CONFIG) (Key : Hashtbl.HashedType) :
   module Import = struct
     module type FOLDABLE = sig
       type key
+
       type 'v t
 
       val fold : (key -> 'v -> 'a -> 'a) -> 'v t -> 'a -> 'a
@@ -747,6 +867,7 @@ module Make (Config : CONFIG) (Key : Hashtbl.HashedType) :
 
     module Make (M : FOLDABLE with type key = key) = struct
       let add_from x hamt = M.fold add_mute x (copy hamt)
+
       let from x = add_from x Empty
     end
 
@@ -764,10 +885,19 @@ module Make (Config : CONFIG) (Key : Hashtbl.HashedType) :
       | v, r -> (Some v, r)
       | exception Not_found -> (None, hamt)
 
-    let alter k f hamt = try alter k f hamt with Not_found -> hamt
-    let modify k f hamt = try modify k f hamt with Not_found -> hamt
+    let alter k f hamt =
+      try alter k f hamt with
+      | Not_found -> hamt
+
+    let modify k f hamt =
+      try modify k f hamt with
+      | Not_found -> hamt
+
     let find k hamt = find_opt k hamt
-    let choose hamt = try Some (choose hamt) with Not_found -> None
+
+    let choose hamt =
+      try Some (choose hamt) with
+      | Not_found -> None
   end
 end
 

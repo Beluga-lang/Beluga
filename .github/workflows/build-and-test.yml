@@ -7,8 +7,31 @@ on:
       - master
 
 jobs:
+  lint:
+    name: Linting
+
+    strategy:
+      fail-fast: true
+      matrix:
+        ocaml-compiler:
+          - 4.14.x
+        os:
+          - ubuntu-latest
+
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: fkirc/skip-duplicate-actions@master
+
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Check whitespaces
+        run: ./LINT
+
   build-and-test:
     name: Build & Test
+
+    needs: lint
 
     strategy:
       fail-fast: true
@@ -49,6 +72,3 @@ jobs:
 
       - name: Test
         run: opam exec -- make all-test
-
-      - name: Check whitespaces
-        run: opam exec -- ./LINT

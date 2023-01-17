@@ -35,11 +35,14 @@ opam install beluga
 eval $(opam env)
 ```
 
-You can now run Beluga programs using the `beluga` executable:
+You can now run Beluga programs using the `beluga` or `harpoon` executables:
 
 ```bash
 beluga path/to/program.bel
+harpoon --sig path/to/program.bel
 ```
+
+Use `make uninstall` to uninstall the executables.
 
 ### Installation from the source
 
@@ -51,29 +54,37 @@ To build Beluga from the source code and install it in its own opam switch:
 ```bash
 git clone https://github.com/Beluga-lang/Beluga.git Beluga
 cd Beluga
-opam switch create . --empty
-opam install .
-eval $(opam env)
+make setup-install
+make instal
 ```
 
-The `beluga` executable is then accessible from the newly created opam switch.
+You can now run Beluga programs using the `beluga` or `harpoon` executables from the newly created opam switch environment in the `Beluga` directory.
+Make sure your shell has the correct opam switch environment variables using `eval $(opam env --switch=. --set-switch)` in the `Beluga` directory.
+
+```bash
+beluga path/to/program.bel
+harpoon --sig path/to/program.bel
+```
+
+Use `make uninstall` to uninstall the executables.
 
 ### Development
 
 The latest version of Beluga may be built and installed as follows, with the test dependencies.
 With this configuration, the unit and integration tests can be run with `make test`.
-If you already have an opam switch without the test dependencies installed as above, then you can install them with `opam install . --deps-only --with-test`.
+If you already have an opam switch for Beluga without the test dependencies installed as above, then you can install them with `opam install . --locked --deps-only --with-test --with-doc`.
+Alternatively, you can remove the existing opam switch with `opam switch remove .`.
 
-To start working on Beluga, clone the repository and create an opam switch with the dependencies installed:
+To start working on Beluga, clone the repository and run the `make setup-development` command to create an opam switch for Beluga with the necessary dependencies:
 
 ```bash
 git clone https://github.com/Beluga-lang/Beluga.git Beluga
 cd Beluga
-opam switch create . --deps-only --with-test
+make setup-development
 eval $(opam env)
 ```
 
-Use `make` to compile, `make test` to compile and run the tests, and `make clean` to clean the directory of compilation results.
+Use `make` to compile the production version of Beluga, `make test` to compile and run the tests, and `make clean` to clean the directory of compilation results.
 Use `./LINT` to find code style errors.
 
 To build and use any of the compiled executables as if they were installed from opam, use `dune exec [executable]`.

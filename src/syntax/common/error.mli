@@ -16,37 +16,63 @@ val not_implemented : Location.t -> string -> 'a
 (** Raises a NotImplemented exception with the given message. *)
 val not_implemented' : string -> 'a
 
-(** [location_exception locations cause] is a decorated exception having
-    [cause] and [locations] for source file error-reporting. *)
+(** [located_exception locations cause] is a decorated exception having
+    [cause] and [locations] for source file error-reporting. This exception
+    is not exported from this module, so it may never be caught elsewhere.
+
+    This sort of exception is used to signal to the user which part of their
+    source code is problematic. *)
 val located_exception : Location.t List1.t -> exn -> exn
 
-(** [location_exception1 location cause] is a decorated exception having
+(** [located_exception1 location cause] is a decorated exception having
     [cause] and locations [\[location\]] for source file error-reporting. *)
 val located_exception1 : Location.t -> exn -> exn
 
-(** [location_exception2 location1 location2 cause] is a decorated exception
+(** [located_exception2 location1 location2 cause] is a decorated exception
     having [cause] and locations [\[location1; location2\]] for source file
     error-reporting. *)
 val located_exception2 : Location.t -> Location.t -> exn -> exn
 
-(** [raise_at locations cause] raises the exception
-    [Located_exception { locations; cause }]. *)
+(** [raise_at locations cause] raises [located_exception locations cause]. *)
 val raise_at : Location.t List1.t -> exn -> 'a
 
-(** [raise_at1 location cause] raises the exception
-    [Located_exception { locations = \[location\]; cause }]. *)
+(** [raise_at1 location cause] raises [located_exception1 location cause]. *)
 val raise_at1 : Location.t -> exn -> 'a
 
-(** [raise_at2 location1 location2 cause] raises the exception
-    [Located_exception { locations = \[location1; location2\]; cause }]. *)
+(** [raise_at2 location1 location2 cause] raises
+    [located_exception2 location1 location2 cause]. *)
 val raise_at2 : Location.t -> Location.t -> exn -> 'a
 
-(** [composite causes] is the composite error having many [causes]. *)
-val composite : exn List2.t -> exn
+(** [composite_exception causes] is the composite exception having many
+    related [causes]. This exception is not exported from this module, so it
+    may never be caught elsewhere.
 
-(** [composite2 cause1 cause2] is the composite error having causes
-    [\[cause1; cause2\]]. *)
-val composite2 : exn -> exn -> exn
+    This sort of exception is used to report multiple exception causes for
+    the same problem. For instance, during disambiguation, we may have
+    encountered a bound variable that is of the wrong type. This exception
+    can be represented as the composite for an exception for the variable
+    being bound and of an unexpected sort, and another exception for
+    reporting the sort of bound variable it is. *)
+val composite_exception : exn List2.t -> exn
+
+(** [composite_exception2 cause1 cause2] is the composite exception having
+    causes [\[cause1; cause2\]]. *)
+val composite_exception2 : exn -> exn -> exn
+
+(** [aggregate_exception exceptions] is the composite exception having many
+    unrelated [exceptions]. This exception is not exported from this module,
+    so it may never be caught elsewhere.
+
+    This sort of exception is used to report multiple different exceptions.
+    For instance, during the indexing of a signature, unrelated exceptions
+    may arise in different compilation units. These unrelated exceptions can
+    be raised as an aggregate exception. *)
+val aggregate_exception : exn List2.t -> exn
+
+(** [aggregate_exception2 exception1 exception2] is the aggregate exception
+    having causes [\[exception1; exception2\]]. This exception is not
+    exported from this module, so it may never be caught elsewhere. *)
+val aggregate_exception2 : exn -> exn -> exn
 
 (** Abstract dummy datatype to enforce that printing be done using the
     printing functions provided by this module. *)

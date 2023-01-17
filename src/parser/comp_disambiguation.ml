@@ -325,7 +325,7 @@ module Make
                  })
         | Result.Ok entry ->
             Error.raise_at1 location
-              (Error.composite2
+              (Error.composite_exception2
                  (Expected_comp_type_constant qualified_identifier)
                  (actual_binding_exn qualified_identifier entry))
         | Result.Error (Unbound_identifier _) ->
@@ -381,7 +381,8 @@ module Make
                  })
         | Result.Ok entry ->
             Error.raise_at1 location
-              (Error.composite2 (Expected_comp_type_constant identifier)
+              (Error.composite_exception2
+                 (Expected_comp_type_constant identifier)
                  (actual_binding_exn identifier entry))
         | Result.Error (Unbound_qualified_identifier _) ->
             Error.raise_at1 location (Unbound_comp_type_constant identifier)
@@ -598,7 +599,8 @@ module Make
                  { location; observation = constant; arguments = arguments' })
         | Result.Ok entry ->
             Error.raise_at1 location
-              (Error.composite2 Expected_comp_term_destructor_constant
+              (Error.composite_exception2
+                 Expected_comp_term_destructor_constant
                  (actual_binding_exn constant entry))
         | Result.Error cause ->
             Error.raise_at1 (Qualified_identifier.location constant) cause)

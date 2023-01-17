@@ -41,9 +41,18 @@ let[@inline] raise_at2 location1 location2 cause =
 
 exception Composite_exception of { causes : exn List2.t }
 
-let composite causes = Composite_exception { causes }
+let[@inline] composite_exception causes = Composite_exception { causes }
 
-let composite2 cause1 cause2 = composite (List2.from cause1 cause2 [])
+let[@inline] composite_exception2 cause1 cause2 =
+  composite_exception (List2.from cause1 cause2 [])
+
+exception Aggregate_exception of { exceptions : exn List2.t }
+
+let[@inline] aggregate_exception exceptions =
+  Aggregate_exception { exceptions }
+
+let[@inline] aggregate_exception2 exception1 exception2 =
+  aggregate_exception (List2.pair exception1 exception2)
 
 type print_result = string
 

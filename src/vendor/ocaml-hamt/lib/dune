@@ -1,4 +1,2 @@
 (library
- (name hamt)
- (public_name hamt)
- (libraries seq stdlib-shims))
+ (name hamt))

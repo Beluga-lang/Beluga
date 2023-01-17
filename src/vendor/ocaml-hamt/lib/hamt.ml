@@ -1,59 +1,3 @@
-module Shims = struct
-  (* Each function in this module should be documented with the OCaml
-     version that introduced it, so we can clean this when we drop
-     support for older versions.
-  *)
-
-  module Int_shims = struct
-    let equal (x : int) (y : int) =
-      (* 4.08 *)
-      x = y
-  end
-
-  module Seq_shims = struct
-    open! Seq
-
-    let rec append seq1 seq2 () =
-      (* 4.11 *)
-      match seq1 () with
-      | Nil -> seq2 ()
-      | Cons (x, next) -> Cons (x, append next seq2)
-
-    let rec flat_map f seq () =
-      (* 4.13 *)
-      match seq () with
-      | Seq.Nil -> Seq.Nil
-      | Cons (x, next) -> append (f x) (flat_map f next) ()
-  end
-
-  module List_shims = struct
-    open! List
-
-    let to_seq list =
-      (* 4.07 *)
-      let rec aux l () =
-        match l with [] -> Seq.Nil | x :: tail -> Seq.Cons (x, aux tail)
-      in
-      aux list
-  end
-
-  module Array_shims = struct
-    open! Array
-
-    let to_seq a =
-      (* 4.07 *)
-      let rec aux i () =
-        if i < Array.length a then
-          let x = Array.unsafe_get a i in
-          Seq.Cons (x, aux (i + 1))
-        else Seq.Nil
-      in
-      aux 0
-  end
-end
-
-open Shims
-
 module BitUtils : sig
   (* Given a bitmap, counts the number of one-bits *)
   val ctpop : int -> int
@@ -264,7 +208,7 @@ module Make (Config : CONFIG) (Key : Hashtbl.HashedType) :
 
   let rec combine_tip shift node1 node2 =
     match (node1, node2) with
-    | Leaf (h1, k1, v1), Leaf (h2, k2, v2) when Int_shims.equal h1 h2 ->
+    | Leaf (h1, k1, v1), Leaf (h2, k2, v2) when Int.equal h1 h2 ->
         HashCollision (h1, [ (k1, v1); (k2, v2) ])
     | Leaf (h1, _, _), Leaf (h2, _, _) | Leaf (h1, _, _), HashCollision (h2, _)
       ->
@@ -276,7 +220,7 @@ module Make (Config : CONFIG) (Key : Hashtbl.HashedType) :
         let bitmap = (1 lsl sub_h1) lor (1 lsl sub_h2) in
         BitmapIndexedNode
           ( bitmap,
-            if Int_shims.equal sub_h1 sub_h2 then
+            if Int.equal sub_h1 sub_h2 then
               [| combine_tip (shift + shift_step) node1 node2 |]
             else [| nodeA; nodeB |] )
     | HashCollision (_, _), Leaf (_, _, _) -> combine_tip shift node2 node1
@@ -291,8 +235,8 @@ module Make (Config : CONFIG) (Key : Hashtbl.HashedType) :
 
   let expand_bitmap_node =
     let rec fill tab sub_nodes ix jx bitmap =
-      if Int_shims.equal ix chunk then jx
-      else if Int_shims.equal (bitmap land 1) 0 then
+      if Int.equal ix chunk then jx
+      else if Int.equal (bitmap land 1) 0 then
         fill tab sub_nodes (succ ix) jx (bitmap asr 1)
       else (
         tab.(ix) <- sub_nodes.(jx);
@@ -306,7 +250,7 @@ module Make (Config : CONFIG) (Key : Hashtbl.HashedType) :
 
   let pack_array_node =
     let rec loop children to_remove base ix jx bitmap =
-      if Int_shims.equal ix chunk then BitmapIndexedNode (bitmap, base)
+      if Int.equal ix chunk then BitmapIndexedNode (bitmap, base)
       else if is_empty children.(ix) || to_remove ix then
         loop children to_remove base (succ ix) jx bitmap
       else (
@@ -324,8 +268,8 @@ module Make (Config : CONFIG) (Key : Hashtbl.HashedType) :
     | HashCollision (h, [ (k, v) ]) -> Leaf (h, k, v)
     | HashCollision (h, li) -> HashCollision (h, li)
     | BitmapIndexedNode (bitmap, base) ->
-        if Int_shims.equal (Array.length base) 0 then Empty
-        else if Int_shims.equal (Array.length base) 1 && is_tip_node base.(0)
+        if Int.equal (Array.length base) 0 then Empty
+        else if Int.equal (Array.length base) 1 && is_tip_node base.(0)
         then base.(0)
         else if Array.length base > bmnode_max then failwith "reify_node"
         else BitmapIndexedNode (bitmap, base)
@@ -361,7 +305,7 @@ module Make (Config : CONFIG) (Key : Hashtbl.HashedType) :
           | None -> leaf1
           | Some x -> combine_tip shift leaf1 (Leaf (hash, key, x)))
     | HashCollision (h, pairs) as hash_collision -> (
-        if Int_shims.equal hash h then
+        if Int.equal hash h then
           let pairs = update_list update key pairs in
           match pairs with
           | [] -> failwith "alter_node" (* Should never happen *)
@@ -375,7 +319,7 @@ module Make (Config : CONFIG) (Key : Hashtbl.HashedType) :
         let sub_hash = hash_fragment shift hash in
         let ix = from_bitmap bitmap sub_hash in
         let bit = 1 lsl sub_hash in
-        let not_exists = Int_shims.equal (bitmap land bit) 0 in
+        let not_exists = Int.equal (bitmap land bit) 0 in
         let child = if not_exists then Empty else base.(ix) in
         let child =
           alter_node ~mute (shift + shift_step) hash key update child
@@ -389,14 +333,14 @@ module Make (Config : CONFIG) (Key : Hashtbl.HashedType) :
             else BitmapIndexedNode (bitmap, set_tab base ix child)
         | Removed ->
             let bitmap = bitmap land lnot bit in
-            if Int_shims.equal bitmap 0 then Empty
+            if Int.equal bitmap 0 then Empty
             else if
-              Int_shims.equal (Array.length base) 2
+              Int.equal (Array.length base) 2
               && is_tip_node base.(ix lxor 1)
             then base.(ix lxor 1)
             else BitmapIndexedNode (bitmap, remove base ix)
         | Added ->
-            if Int_shims.equal (Array.length base) bmnode_max then
+            if Int.equal (Array.length base) bmnode_max then
               expand_bitmap_node sub_hash child bitmap base
             else BitmapIndexedNode (bitmap lor bit, add_tab base ix child))
     | ArrayNode (nb_children, children) as arr_node -> (
@@ -418,8 +362,8 @@ module Make (Config : CONFIG) (Key : Hashtbl.HashedType) :
               arr_node)
             else ArrayNode (nb_children, set_tab children sub_hash child')
         | Removed ->
-            if Int_shims.equal nb_children arrnode_min then
-              pack_array_node (Int_shims.equal sub_hash) nb_children children
+            if Int.equal nb_children arrnode_min then
+              pack_array_node (Int.equal sub_hash) nb_children children
             else if mute then (
               children.(sub_hash) <- Empty;
               ArrayNode (pred nb_children, children))
@@ -552,7 +496,7 @@ module Make (Config : CONFIG) (Key : Hashtbl.HashedType) :
               let sub_hash = hash land mask in
               1 lsl sub_hash
             in
-            if Int_shims.equal (bitmap land bit) 0 then raise_notrace Not_found
+            if Int.equal (bitmap land bit) 0 then raise_notrace Not_found
             else
               let node =
                 let idx = ctpop (bitmap land pred bit) in
@@ -597,9 +541,9 @@ module Make (Config : CONFIG) (Key : Hashtbl.HashedType) :
     let rec to_seq = function
       | Empty -> Seq.empty
       | Leaf (_, k, v) -> fun () -> Seq.Cons ((k, v), Seq.empty)
-      | HashCollision (_, list) -> List_shims.to_seq list
+      | HashCollision (_, list) -> List.to_seq list
       | ArrayNode (_, arr) | BitmapIndexedNode (_, arr) ->
-          Seq_shims.flat_map to_seq (Array_shims.to_seq arr)
+          Seq.flat_map to_seq (Array.to_seq arr)
     in
     to_seq
 
@@ -688,7 +632,7 @@ module Make (Config : CONFIG) (Key : Hashtbl.HashedType) :
                    [] li1 ))
     | HashCollision (h, _li), BitmapIndexedNode (bitmap, base) ->
         let bit = 1 lsl hash_fragment shift h in
-        if Int_shims.equal (bitmap land bit) 0 then Empty
+        if Int.equal (bitmap land bit) 0 then Empty
         else
           let n = ctpop (bitmap land pred bit) in
           let node = intersect_node (shift + shift_step) f t1 base.(n) in
@@ -701,7 +645,7 @@ module Make (Config : CONFIG) (Key : Hashtbl.HashedType) :
         reify_node (BitmapIndexedNode (1 lsl fragment, [| child |]))
     | BitmapIndexedNode (bitmap1, base1), BitmapIndexedNode (bitmap2, base2) ->
         let bitmap = bitmap1 land bitmap2 in
-        if Int_shims.equal bitmap 0 then Empty
+        if Int.equal bitmap 0 then Empty
         else
           intersect_array (shift + shift_step) f
             (bitmap_to_array bitmap1 base1)
@@ -828,16 +772,3 @@ module Make (Config : CONFIG) (Key : Hashtbl.HashedType) :
 end
 
 module Make' = Make (StdConfig)
-
-module String = Make' (struct
-  include String
-
-  let hash = Hashtbl.hash
-end)
-
-module Int = Make' (struct
-  type t = int
-
-  let equal = Int_shims.equal
-  let hash = Hashtbl.hash
-end)

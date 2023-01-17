@@ -507,7 +507,7 @@ module Make
         let* expression' = disambiguate_comp_expression expression in
         let* typ' = disambiguate_comp_typ typ in
         return
-          (Synext.Comp.Expression.TypeAnnotated
+          (Synext.Comp.Expression.Type_annotated
              { location; expression = expression'; typ = typ' })
     | Synprs.Comp.Expression_object.Raw_observation
         { location; scrutinee; destructor } ->
@@ -558,7 +558,7 @@ module Make
         let* typ' = disambiguate_comp_typ typ in
         let* pattern' = disambiguate_comp_pattern pattern in
         return
-          (Synext.Comp.Pattern.TypeAnnotated
+          (Synext.Comp.Pattern.Type_annotated
              { location; pattern = pattern'; typ = typ' })
     | Synprs.Comp.Pattern_object.Raw_meta_annotated
         { location

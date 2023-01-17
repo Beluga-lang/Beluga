@@ -604,7 +604,7 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
         let* term' = disambiguate_clf_term object_ in
         let* typ' = disambiguate_clf_typ sort in
         return
-          (Synext.CLF.Term.TypeAnnotated
+          (Synext.CLF.Term.Type_annotated
              { location; term = term'; typ = typ' })
 
   and disambiguate_clf_substitution substitution =
@@ -1019,7 +1019,7 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
         let* term' = disambiguate_clf_term_pattern object_ in
         let* typ' = disambiguate_clf_typ sort in
         return
-          (Synext.CLF.Term.Pattern.TypeAnnotated
+          (Synext.CLF.Term.Pattern.Type_annotated
              { location; term = term'; typ = typ' })
 
   and elaborate_clf_pattern_operand operand =

@@ -1,7 +1,43 @@
 (** Precedences of AST nodes for pretty-printing.
 
     The values used as precedence levels are defined based on the recursive
-    descent parsers in the parser. *)
+    descent parsers in the parser. Specifically, the precedence values
+    correspond to the number suffixes to the productions in the documented
+    grammar, like in the following grammar for LF objects where type
+    ascriptions have precedence [2] and arrows have precedence [3].
+
+    {[
+      <lf-weak-prefix> ::=
+        | `{' <omittable-identifier> [`:' <lf-object>] `}' <lf-object>
+        | `\' <omittable-identifier> [`:' <lf-object>] `.' <lf-object>
+
+      <lf-object> ::=
+        | <lf-object1>
+
+      <lf-object1> ::=
+        | <lf-weak-prefix>
+        | <lf-object2>
+
+      <lf-object2> ::=
+        | <lf-object3> (`:' (<lf-object3> | <lf-weak-prefix>))+
+        | <lf-object3>
+
+      <lf-object3> ::=
+        | <lf-object4> (<forward-arrow> (<lf-object4> | <lf-weak-prefix>))+
+        | <lf-object4> (<backward-arrow> (<lf-object4> | <lf-weak-prefix>))+
+        | <lf-object4>
+
+      <lf-object4> ::=
+        | <lf-object5> (<lf-object5> | <lf-weak-prefix>)+
+        | <lf-object5>
+
+      <lf-object5> ::=
+        | <identifier>
+        | <qualified-identifier>
+        | `type'
+        | `_'
+        | `(' <lf-object> `)'
+    ]} *)
 
 open Support
 open Common
@@ -40,7 +76,7 @@ module Lf_precedence = struct
   let precedence_of_lf_term term =
     match term with
     | LF.Term.Abstraction _ -> Static 1
-    | LF.Term.TypeAnnotated _ -> Static 2
+    | LF.Term.Type_annotated _ -> Static 2
     | LF.Term.Application
         { applicand = LF.Term.Constant { operator; quoted; _ }; _ }
       when quoted || Operator.is_prefix operator
@@ -101,7 +137,7 @@ module Clf_precedence = struct
   let precedence_of_clf_term term =
     match term with
     | CLF.Term.Abstraction _ -> Static 1
-    | CLF.Term.TypeAnnotated _ -> Static 2
+    | CLF.Term.Type_annotated _ -> Static 2
     | CLF.Term.Application
         { applicand = CLF.Term.Constant { operator; quoted; _ }; _ }
       when quoted || Operator.is_prefix operator
@@ -126,7 +162,7 @@ module Clf_precedence = struct
   let precedence_of_clf_term_pattern term =
     match term with
     | CLF.Term.Pattern.Abstraction _ -> Static 1
-    | CLF.Term.Pattern.TypeAnnotated _ -> Static 2
+    | CLF.Term.Pattern.Type_annotated _ -> Static 2
     | CLF.Term.Pattern.Application
         { applicand = CLF.Term.Pattern.Constant { operator; quoted; _ }; _ }
       when quoted || Operator.is_prefix operator
@@ -227,7 +263,7 @@ module Comp_precedence = struct
 
   let precedence_of_comp_expression expression =
     match expression with
-    | Comp.Expression.TypeAnnotated _ -> Static 1
+    | Comp.Expression.Type_annotated _ -> Static 1
     | Comp.Expression.Application
         { applicand = Comp.Expression.Constant { operator; quoted; _ }; _ }
       when quoted || Operator.is_prefix operator
@@ -262,7 +298,7 @@ module Comp_precedence = struct
   let precedence_of_comp_pattern pattern =
     match pattern with
     | Comp.Pattern.MetaTypeAnnotated _ -> Static 1
-    | Comp.Pattern.TypeAnnotated _ -> Static 2
+    | Comp.Pattern.Type_annotated _ -> Static 2
     | Comp.Pattern.Application
         { applicand = Comp.Pattern.Constant { operator; quoted; _ }; _ }
       when quoted || Operator.is_prefix operator

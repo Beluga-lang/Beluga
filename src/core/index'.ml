@@ -149,7 +149,7 @@ struct
                 assert false
             (* Supported LF term-level applicands are always translated to LF
                roots *))
-        | Synext.LF.Term.TypeAnnotated _
+        | Synext.LF.Term.Type_annotated _
         | Synext.LF.Term.Abstraction _ ->
             Error.raise_at1
               (Synext.location_of_lf_term applicand)
@@ -171,7 +171,7 @@ struct
         let substitution = Option.none in
         let head = Synapx.LF.FMVar (x', substitution) in
         return (Synapx.LF.Root (location, head, Synapx.LF.Nil))
-    | Synext.LF.Term.TypeAnnotated { location; term; typ } ->
+    | Synext.LF.Term.Type_annotated { location; term; typ } ->
         let* term' = index_lf_term term in
         let* typ' = index_lf_typ typ in
         return (Synapx.LF.Ann (location, term', typ'))
@@ -292,7 +292,7 @@ struct
             (* Supported contextual LF term-level applicands are always
                translated to LF roots *))
         | Synext.CLF.Term.Hole { variant = `Labelled _ | `Unlabelled; _ }
-        | Synext.CLF.Term.TypeAnnotated _
+        | Synext.CLF.Term.Type_annotated _
         | Synext.CLF.Term.Abstraction _
         | Synext.CLF.Term.Substitution_variable _
         | Synext.CLF.Term.Tuple _ ->
@@ -321,7 +321,7 @@ struct
         | `Labelled label ->
             let label = Option.some (Identifier.name label) in
             return (Synapx.LF.LFHole (location, label)))
-    | Synext.CLF.Term.TypeAnnotated { location; term; typ } ->
+    | Synext.CLF.Term.Type_annotated { location; term; typ } ->
         let* term' = index_clf_term term in
         let* typ' = index_clf_typ typ in
         return (Synapx.LF.Ann (location, term', typ'))

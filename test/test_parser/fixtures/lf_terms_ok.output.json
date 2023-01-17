@@ -1028,7 +1028,7 @@
     }
   ],
   [
-    "LF.Term.TypeAnnotated",
+    "LF.Term.Type_annotated",
     {
       "term": [
         "LF.Term.Constant",
@@ -1625,7 +1625,7 @@
           ],
           "arguments": [
             [
-              "LF.Term.TypeAnnotated",
+              "LF.Term.Type_annotated",
               {
                 "term": [
                   "LF.Term.Variable",
@@ -1731,7 +1731,7 @@
       },
       "parameter_type": null,
       "body": [
-        "LF.Term.TypeAnnotated",
+        "LF.Term.Type_annotated",
         {
           "term": [
             "LF.Term.Application",
@@ -1866,10 +1866,10 @@
     }
   ],
   [
-    "LF.Term.TypeAnnotated",
+    "LF.Term.Type_annotated",
     {
       "term": [
-        "LF.Term.TypeAnnotated",
+        "LF.Term.Type_annotated",
         {
           "term": [
             "LF.Term.Variable",
@@ -1990,10 +1990,10 @@
     }
   ],
   [
-    "LF.Term.TypeAnnotated",
+    "LF.Term.Type_annotated",
     {
       "term": [
-        "LF.Term.TypeAnnotated",
+        "LF.Term.Type_annotated",
         {
           "term": [
             "LF.Term.Variable",
@@ -2114,7 +2114,7 @@
     }
   ],
   [
-    "LF.Term.TypeAnnotated",
+    "LF.Term.Type_annotated",
     {
       "term": [
         "LF.Term.Abstraction",
@@ -2746,13 +2746,13 @@
     }
   ],
   [
-    "LF.Term.TypeAnnotated",
+    "LF.Term.Type_annotated",
     {
       "term": [
-        "LF.Term.TypeAnnotated",
+        "LF.Term.Type_annotated",
         {
           "term": [
-            "LF.Term.TypeAnnotated",
+            "LF.Term.Type_annotated",
             {
               "term": [
                 "LF.Term.Variable",

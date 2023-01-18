@@ -1,5 +1,5 @@
 open Support
-open Centiparsec
+open Beluga_parser
 
 module Associativity = struct
   type t =
@@ -374,4 +374,4 @@ let test_shunting_yard =
 
 let tests =
   let open OUnit2 in
-  "Shunting_yard" >::: [ "shunting_yard" >::: test_shunting_yard ]
+  [ "shunting_yard" >::: test_shunting_yard ]

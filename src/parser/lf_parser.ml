@@ -73,7 +73,7 @@ end = struct
       $> (fun (location, ((parameter_identifier, parameter_sort), body)) ->
            Synprs.LF.Object.Raw_lambda
              { location; parameter_identifier; parameter_sort; body })
-      |> labelled "LF lambda"
+      |> labelled "LF lambda term"
     and pi =
       seq2
         (braces
@@ -84,7 +84,7 @@ end = struct
       $> (fun (location, ((parameter_identifier, parameter_sort), body)) ->
            Synprs.LF.Object.Raw_pi
              { location; parameter_identifier; parameter_sort; body })
-      |> labelled "LF Pi type or Pi kind"
+      |> labelled "LF dependent product type or kind"
     in
     choice [ lambda; pi ]
 
@@ -98,7 +98,8 @@ end = struct
            | location, `Plain identifier ->
                Synprs.LF.Object.Raw_identifier
                  { location; identifier; quoted = false })
-      |> labelled "LF constant or variable"
+      |> labelled
+           "LF term-level constant, type-level constant, or term variable"
     and type_ =
       keyword "type" |> span
       $> (fun (location, ()) -> Synprs.LF.Object.Raw_type { location })
@@ -106,7 +107,7 @@ end = struct
     and hole =
       underscore |> span
       $> (fun (location, ()) -> Synprs.LF.Object.Raw_hole { location })
-      |> labelled "LF hole object"
+      |> labelled "LF wildcard"
     and parenthesized_or_quoted_constant_or_variable =
       parens LF_parsers.lf_object
       |> span
@@ -118,7 +119,7 @@ end = struct
                Synprs.LF.Object.Raw_qualified_identifier
                  { i with quoted = true; location }
            | location, o -> Synprs.set_location_of_lf_object location o)
-      |> labelled "LF parenthesized kind, type or term"
+      |> labelled "LF parenthesized kind, type or term, or a quoted constant"
     in
     choice
       [ constant_or_variable
@@ -128,14 +129,12 @@ end = struct
       ]
 
   let lf_object4 =
-    some (alt lf_object5 lf_weak_prefix)
-    |> span
-    $> (function
-         | _, List1.T (object_, []) -> object_
-         | location, List1.T (o1, o2 :: os) ->
-             Synprs.LF.Object.Raw_application
-               { location; objects = List2.from o1 o2 os })
-    |> labelled "LF atomic object or application"
+    seq2 lf_object5 (many (alt lf_object5 lf_weak_prefix)) |> span
+    $> function
+    | _, (object_, []) -> object_
+    | location, (o1, o2 :: os) ->
+        Synprs.LF.Object.Raw_application
+          { location; objects = List2.from o1 o2 os }
 
   let lf_object3 =
     (* Forward arrows are right-associative, and backward arrows are
@@ -148,93 +147,81 @@ end = struct
     and backward_arrow_operator = backward_arrow $> fun () -> `Backward_arrow
     and right_operand = alt lf_object4 lf_weak_prefix in
     lf_object4 >>= fun object_ ->
-    maybe (alt forward_arrow_operator backward_arrow_operator)
-    >>= (function
-          | Option.None -> return (`Singleton object_)
-          | Option.Some `Forward_arrow ->
-              (* A forward arrow was parsed. Subsequent backward arrows are
-                 ambiguous. *)
-              let backward_arrow =
-                backward_arrow >>= fun () -> fail Ambiguous_lf_backward_arrow
-              and forward_arrow = forward_arrow_operator in
-              let operator = alt backward_arrow forward_arrow in
-              seq2 right_operand (many (operator &> right_operand))
-              $> fun (x, xs) ->
-              `Forward_arrows (List1.from object_ (x :: xs))
-          | Option.Some `Backward_arrow ->
-              (* A backward arrow was parsed. Subsequent forward arrows are
-                 ambiguous. *)
-              let backward_arrow_operator = backward_arrow
-              and forward_arrow_operator =
-                forward_arrow >>= fun () -> fail Ambiguous_lf_forward_arrow
-              in
-              let operator =
-                alt forward_arrow_operator backward_arrow_operator
-              in
-              seq2 right_operand (many (operator &> right_operand))
-              $> fun (x, xs) ->
-              `Backward_arrows (List1.from object_ (x :: xs)))
-    $> (function
-         | `Singleton x -> x
-         | `Forward_arrows xs ->
-             List1.fold_right Fun.id
-               (fun operand accumulator ->
-                 let location =
-                   Location.join
-                     (Synprs.location_of_lf_object operand)
-                     (Synprs.location_of_lf_object accumulator)
-                 in
-                 Synprs.LF.Object.Raw_arrow
-                   { location
-                   ; domain = operand
-                   ; range = accumulator
-                   ; orientation = `Forward
-                   })
-               xs
-         | `Backward_arrows (List1.T (x, xs)) ->
-             List.fold_left
-               (fun accumulator operand ->
-                 let location =
-                   Location.join
-                     (Synprs.location_of_lf_object accumulator)
-                     (Synprs.location_of_lf_object operand)
-                 in
-                 Synprs.LF.Object.Raw_arrow
-                   { location
-                   ; domain = operand
-                   ; range = accumulator
-                   ; orientation = `Backward
-                   })
-               x xs)
-    |> labelled
-         "LF atomic object, application, annotated term, forward arrow or \
-          backward arrow"
+    (maybe (alt forward_arrow_operator backward_arrow_operator) >>= function
+     | Option.None -> return (`Singleton object_)
+     | Option.Some `Forward_arrow ->
+         (* A forward arrow was parsed. Subsequent backward arrows are
+            ambiguous. *)
+         let backward_arrow =
+           backward_arrow >>= fun () -> fail Ambiguous_lf_backward_arrow
+         and forward_arrow = forward_arrow_operator in
+         let operator = alt backward_arrow forward_arrow in
+         seq2 right_operand (many (operator &> right_operand))
+         $> fun (x, xs) -> `Forward_arrows (List1.from object_ (x :: xs))
+     | Option.Some `Backward_arrow ->
+         (* A backward arrow was parsed. Subsequent forward arrows are
+            ambiguous. *)
+         let backward_arrow_operator = backward_arrow
+         and forward_arrow_operator =
+           forward_arrow >>= fun () -> fail Ambiguous_lf_forward_arrow
+         in
+         let operator = alt forward_arrow_operator backward_arrow_operator in
+         seq2 right_operand (many (operator &> right_operand))
+         $> fun (x, xs) -> `Backward_arrows (List1.from object_ (x :: xs)))
+    $> function
+    | `Singleton x -> x
+    | `Forward_arrows xs ->
+        List1.fold_right Fun.id
+          (fun operand accumulator ->
+            let location =
+              Location.join
+                (Synprs.location_of_lf_object operand)
+                (Synprs.location_of_lf_object accumulator)
+            in
+            Synprs.LF.Object.Raw_arrow
+              { location
+              ; domain = operand
+              ; range = accumulator
+              ; orientation = `Forward
+              })
+          xs
+    | `Backward_arrows (List1.T (x, xs)) ->
+        List.fold_left
+          (fun accumulator operand ->
+            let location =
+              Location.join
+                (Synprs.location_of_lf_object accumulator)
+                (Synprs.location_of_lf_object operand)
+            in
+            Synprs.LF.Object.Raw_arrow
+              { location
+              ; domain = operand
+              ; range = accumulator
+              ; orientation = `Backward
+              })
+          x xs
 
   let lf_object2 =
     (* Annotations are left-associative. *)
     let annotation = colon &> alt lf_object3 lf_weak_prefix in
     let trailing_annotations = many (span annotation) in
-    seq2 lf_object3 trailing_annotations
-    $> (function
-         | object_, [] -> object_
-         | object_, annotations ->
-             List.fold_left
-               (fun accumulator (sort_location, sort) ->
-                 let location =
-                   Location.join
-                     (Synprs.location_of_lf_object accumulator)
-                     sort_location
-                 in
-                 Synprs.LF.Object.Raw_annotated
-                   { location; object_ = accumulator; sort })
-               object_ annotations)
-    |> labelled
-         "LF atomic object, application, annotated term, forward arrow or \
-          backward arrow"
+    seq2 lf_object3 trailing_annotations $> function
+    | object_, [] -> object_
+    | object_, annotations ->
+        List.fold_left
+          (fun accumulator (sort_location, sort) ->
+            let location =
+              Location.join
+                (Synprs.location_of_lf_object accumulator)
+                sort_location
+            in
+            Synprs.LF.Object.Raw_annotated
+              { location; object_ = accumulator; sort })
+          object_ annotations
 
   let lf_object1 = choice [ lf_weak_prefix; lf_object2 ]
 
-  let lf_object = lf_object1 |> labelled "LF object"
+  let lf_object = lf_object1 |> labelled "LF kind, type or term"
 end
 
 let lf_object = LF_parsers.lf_object

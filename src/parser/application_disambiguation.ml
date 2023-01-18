@@ -36,11 +36,11 @@ module type OPERAND = sig
 end
 
 module Make
-    (Associativity : Centiparsec.Shunting_yard.ASSOCIATIVITY)
-    (Fixity : Centiparsec.Shunting_yard.FIXITY)
+    (Associativity : Shunting_yard.ASSOCIATIVITY)
+    (Fixity : Shunting_yard.FIXITY)
     (Operand : OPERAND) (Operator : sig
       include
-        Centiparsec.Shunting_yard.OPERATOR
+        Shunting_yard.OPERATOR
           with type associativity = Associativity.t
            and type fixity = Fixity.t
            and type operand = Operand.t
@@ -122,9 +122,7 @@ module Make
     expression List2.t -> (expression * operand List1.t, exn) result t
 end = struct
   include Disambiguation_state
-  include
-    Centiparsec.Shunting_yard.Make (Associativity) (Fixity) (Operand)
-      (Operator)
+  include Shunting_yard.Make (Associativity) (Fixity) (Operand) (Operator)
 
   let make_atom expression = Operand.Atom expression
 

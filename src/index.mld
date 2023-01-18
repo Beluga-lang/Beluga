@@ -8,5 +8,4 @@
 - {!module:Beluga_html}
 - {!module:Harpoon}
 - {!module:Support}
-- {!module:Centiparsec}
 - {!module:Optparser}

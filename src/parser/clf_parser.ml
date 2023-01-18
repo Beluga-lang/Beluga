@@ -273,11 +273,11 @@ end = struct
          "Contextual LF atomic object, projection term orsubstitution term"
 
   let clf_object5 =
-    some (alt clf_object6 clf_weak_prefix)
+    seq2 clf_object6 (many (alt clf_object6 clf_weak_prefix))
     |> span
     $> (function
-         | _, List1.T (object_, []) -> object_
-         | location, List1.T (o1, o2 :: os) ->
+         | _, (object_, []) -> object_
+         | location, (o1, o2 :: os) ->
              Synprs.CLF.Object.Raw_application
                { location; objects = List2.from o1 o2 os })
     |> labelled

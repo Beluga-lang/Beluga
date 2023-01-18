@@ -1,4 +1,5 @@
 open Beluga_syntax
+module Shunting_yard = Shunting_yard
 module Simple_disambiguation_state =
   Common_disambiguation.Disambiguation_state
 

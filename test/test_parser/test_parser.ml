@@ -2,4 +2,7 @@ open OUnit2
 
 let () =
   run_test_tt_main
-    ("Parser" >::: [ "Sub-parsers" >::: Test_sub_parsers.tests ])
+    ("Parser"
+    >::: [ "Shunting-yard" >::: Test_shunting_yard.tests
+         ; "Sub-parsers" >::: Test_sub_parsers.tests
+         ])

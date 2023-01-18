@@ -31,3 +31,9 @@ Nat.add
 
 \sum. (M : sum z z z)
 ;;
+
+x -> x <- x
+;;
+
+x <- x -> x
+;;

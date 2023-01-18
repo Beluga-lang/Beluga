@@ -366,4 +366,16 @@ let () =
     | Located_exception { cause; locations } ->
         Option.some
           (located_exception_to_string cause (List1.to_list locations))
+    | Composite_exception { causes } ->
+        Option.some
+          (Format.asprintf "@[<v 0>%a@]"
+             (List2.pp ~pp_sep:Format.pp_print_cut String.pp)
+             (List2.map Printexc.to_string causes))
+    | Aggregate_exception { exceptions } ->
+        Option.some
+          (Format.asprintf "@[<v 0>%a@]"
+             (List2.pp
+                ~pp_sep:(fun ppf () -> Format.fprintf ppf "@,@,")
+                String.pp)
+             (List2.map Printexc.to_string exceptions))
     | _ -> Option.none)

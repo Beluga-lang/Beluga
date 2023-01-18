@@ -2,16 +2,7 @@
  (name beluga_parser)
  (package beluga)
  (modules :standard)
- (libraries
-  gen
-  sedlex
-  extlib
-  support
-  unix
-  str
-  beluga_syntax
-  synprs
-  centiparsec)
+ (libraries gen sedlex extlib support unix str beluga_syntax synprs)
  (preprocess
   (per_module
    ((pps sedlex.ppx)

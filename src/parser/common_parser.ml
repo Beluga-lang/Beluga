@@ -1,14 +1,11 @@
 open Support
 open Beluga_syntax
 
-include
-  Centiparsec.Make
-    (Location)
-    (struct
-      type t = Location.t * Token.t
+include Parser_combinator.Make (struct
+  type t = Location.t * Token.t
 
-      let location = Pair.fst
-    end)
+  let location = Pair.fst
+end)
 
 exception
   Unexpected_token of
@@ -319,7 +316,44 @@ let block_comment =
 
 (** {1 Exceptions Printing} *)
 
+let rec flatten_choice_exceptions exceptions_rev acc =
+  match exceptions_rev with
+  | [] -> List.rev acc
+  | No_more_choices e :: es ->
+      flatten_choice_exceptions es (flatten_choice_exceptions e acc)
+  | e :: es -> flatten_choice_exceptions es (e :: acc)
+
+let pp_exception' ppf = function
+  | Labelled_exception { label; cause } ->
+      Format.fprintf ppf "@[<v 0>%s:@,%s@]" label (Printexc.to_string cause)
+  | No_more_choices exceptions_rev ->
+      let exceptions = flatten_choice_exceptions exceptions_rev [] in
+      let exceptions_strings =
+        List.map
+          (fun exn -> String.split_on_char '\n' (Printexc.to_string exn))
+          exceptions
+      in
+      Format.fprintf ppf "@[<v 2>Exhausted alternatives in parsing:@,%a@]"
+        (List.pp ~pp_sep:Format.pp_print_cut (fun ppf exception_lines ->
+             Format.fprintf ppf "- @[<v 0>%a@]"
+               (List.pp ~pp_sep:Format.pp_print_cut Format.pp_print_string)
+               exception_lines))
+        exceptions_strings
+  | _ ->
+      Error.raise (Invalid_argument "[pp_exception'] unsupported exception")
+
 let pp_exception ppf = function
+  | Parser_error (Labelled_exception { label; cause }) ->
+      Format.fprintf ppf "@[<v 0>Parse error for %s.@,%s@]" label
+        (Printexc.to_string cause)
+  | Parser_error cause ->
+      Format.fprintf ppf "@[<v 0>Parse error.@,%s@]"
+        (Printexc.to_string cause)
+  | Expected_end_of_input ->
+      Format.fprintf ppf "Expected the parser input to end."
+  | Unexpected_end_of_input ->
+      Format.fprintf ppf
+        "Unexpectedly reached the end of input during parsing."
   | Unexpected_token { expected; actual } ->
       Format.fprintf ppf "Expected the token `%a', but got the token `%a'."
         Token.pp expected Token.pp actual
@@ -344,8 +378,7 @@ let pp_exception ppf = function
       Format.fprintf ppf
         "Expected an unnamed hole `?' or a labelled hole `?id'."
   | Expected_block_comment -> Format.fprintf ppf "Expected a block comment."
-  | _ ->
-      Error.raise (Invalid_argument "[pp_exception] unsupported exception")
+  | cause -> pp_exception' ppf cause
 
 let () =
   Printexc.register_printer (fun exn ->

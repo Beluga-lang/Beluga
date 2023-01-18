@@ -3,7 +3,6 @@
  (modules :standard)
  (libraries
   ounit2
-  centiparsec
   beluga_syntax
   beluga_parser
   support

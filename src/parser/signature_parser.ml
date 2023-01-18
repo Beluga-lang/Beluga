@@ -416,25 +416,27 @@ end = struct
 
   let sgn_entry =
     let declaration =
-      sgn_declaration |> span $> fun (location, declaration) ->
-      Synprs.Signature.Entry.Raw_declaration { location; declaration }
+      sgn_declaration |> span
+      $> (fun (location, declaration) ->
+           Synprs.Signature.Entry.Raw_declaration { location; declaration })
+      |> labelled "Declaration"
     and pragma =
-      sgn_pragma |> span $> fun (location, pragma) ->
-      Synprs.Signature.Entry.Raw_pragma { location; pragma }
+      sgn_pragma |> span
+      $> (fun (location, pragma) ->
+           Synprs.Signature.Entry.Raw_pragma { location; pragma })
+      |> labelled "Pragma"
     and comment =
       block_comment
       $> (fun (location, content) ->
            Synprs.Signature.Entry.Raw_comment { location; content })
-      |> labelled "HTML comment"
+      |> labelled "Block comment"
     in
     choice [ declaration; pragma; comment ]
 
   let sgn =
-    seq2
-      (many sgn_global_prag |> renamed "zero or more global pragmas")
-      (many sgn_entry |> renamed "zero or more top-level declarations")
-    $> fun (prags, decls) ->
-    { Synprs.Signature.global_pragmas = prags; entries = decls }
+    let* global_pragmas = many sgn_global_prag in
+    let* entries = many sgn_entry in
+    return { Synprs.Signature.global_pragmas; entries }
 end
 
 let sgn = Signature_parsers.sgn

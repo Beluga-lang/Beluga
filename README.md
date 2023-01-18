@@ -55,7 +55,7 @@ To build Beluga from the source code and install it in its own opam switch:
 git clone https://github.com/Beluga-lang/Beluga.git Beluga
 cd Beluga
 make setup-install
-make instal
+make install
 ```
 
 You can now run Beluga programs using the `beluga` or `harpoon` executables from the newly created opam switch environment in the `Beluga` directory.

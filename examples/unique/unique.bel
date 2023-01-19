@@ -147,5 +147,3 @@ fn d => fn f => case d of
 let v : [ |- equal (arr nat nat) (arr nat nat)] =
   unique3 [ |- t_lam \x.\u. u] [ |- t_lam \x.\u.u]
 ;
-
-}%

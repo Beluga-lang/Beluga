@@ -35,7 +35,7 @@ essential for implementing a function such as ``double : [|- nat] -> [|- nat]``:
 sees a subgoal prompt.
 
 --------------------------------------------------------------------------------
-The following actions make use of the proof search loop cgSolve in logic.ml
+The following actions make use of the proof search loop ``cgSolve`` in ``src/core/logic.ml``
 Therefore as it's capabilites improve, so should the documentation on these
 actions capabilities.
 
@@ -58,57 +58,57 @@ you want your search tree to reach. Depth is incremented when we attempt to
 solve a subgoal.
 
 For example, if we want to solve ``Ev [|- S (S (S (S z)))]`` this would require
-a depth bound of at least 2:
+a depth bound of at least 2:::
 
-inductive Ev : [⊢ nat] → ctype =
-  | ZEv : Ev [⊢ z]
-  | SEv : Ev [⊢ N] → Ev [⊢ S (S N)]
+   inductive Ev : [⊢ nat] → ctype =
+   | ZEv : Ev [⊢ z]
+   | SEv : Ev [⊢ N] → Ev [⊢ S (S N)]
 
- depth = 0
- solve for Ev [|- S (S (S (S z)))] -> focus on SEv --->
+   depth = 0
+   solve for Ev [|- S (S (S (S z)))] -> focus on SEv --->
 
- depth = 1
- solve for Ev [|- S (S z)] -> focus on SEv --->
+   depth = 1
+   solve for Ev [|- S (S z)] -> focus on SEv --->
 
- depth = 2
- solve for Ev [|- z] -> focus on zEv
+   depth = 2
+   solve for Ev [|- z] -> focus on zEv
 
- Note: If a goal has more than one subgoal, depth only increments by 1.
+   Note: If a goal has more than one subgoal, depth only increments by 1.
 
- For example, if we want to solve ``Less_Than [|- S z] [|- S (S (S z))]`` this
- would require depth bound of 3:
+   For example, if we want to solve ``Less_Than [|- S z] [|- S (S (S z))]`` this
+   would require depth bound of 3:
 
- inductive Less_Than : [⊢ nat] → [⊢ nat] → ctype =
-  | ZLT : Less_Than [⊢ z] [⊢ S N]
-  | LT : Less_Than [⊢ N] [⊢ M] → Less_Than [⊢ S N] [⊢ S M]
-  | Trans_LT : Less_Than [⊢ N] [⊢ M]
-               → Less_Than [⊢ M] [⊢ K] → Less_Than [⊢ N] [⊢ K]
+   inductive Less_Than : [⊢ nat] → [⊢ nat] → ctype =
+   | ZLT : Less_Than [⊢ z] [⊢ S N]
+   | LT : Less_Than [⊢ N] [⊢ M] → Less_Than [⊢ S N] [⊢ S M]
+   | Trans_LT : Less_Than [⊢ N] [⊢ M]
+                  → Less_Than [⊢ M] [⊢ K] → Less_Than [⊢ N] [⊢ K]
 
- depth = 0
- solve for Less_Than [|- S z] [|- S (S (S z))] -> focus on Trans_LT --->
+   depth = 0
+   solve for Less_Than [|- S z] [|- S (S (S z))] -> focus on Trans_LT --->
 
-    depth = 1
-    solve for Less_Than [|- M] [|- S (S (S z))] -> focus on LT --->
+      depth = 1
+      solve for Less_Than [|- M] [|- S (S (S z))] -> focus on LT --->
 
-       depth = 2
-       solve for Less_Than [|- M'] [|- S (S z)] -> focus on LT --->
- 
-          depth = 3
-          solve for Less_Than [|- M''] [|- S z] -> focus on ZLT
+         depth = 2
+         solve for Less_Than [|- M'] [|- S (S z)] -> focus on LT --->
+   
+            depth = 3
+            solve for Less_Than [|- M''] [|- S z] -> focus on ZLT
 
-    ---> found LT LT ZLT : Less_Than [|- S (S z)] [|- S (S (S z))]
+      ---> found LT LT ZLT : Less_Than [|- S (S z)] [|- S (S (S z))]
 
-    depth = 1
-    solve for Less_Than [|- S z] [|- S (S z)] -> focus on LT --->
+      depth = 1
+      solve for Less_Than [|- S z] [|- S (S z)] -> focus on LT --->
 
-       depth = 2
-       solve for Less_Than [|- z] [|- S z] -> focus on ZLT
+         depth = 2
+         solve for Less_Than [|- z] [|- S z] -> focus on ZLT
 
-    ---> found LT ZLT : Less_Than [|- S z] [|- S (S z)]
+      ---> found LT ZLT : Less_Than [|- S z] [|- S (S z)]
 
- -> found Trans_LT (LT ZLT) (LT LT ZLT) : Less_Than [|- S z] [|- S (S (S z))]
+   -> found Trans_LT (LT ZLT) (LT LT ZLT) : Less_Than [|- S z] [|- S (S (S z))]
 
- .. _inductive auto solve:
+.. _inductive auto solve:
 
 ``inductive-auto-solve``
 ------------------------

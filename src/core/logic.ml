@@ -2221,8 +2221,8 @@ module CSolver = struct
   let cnormIHCtx' (ihctx, ms) =
     let cnormIHArg (a, t) =
       match a with
-      | Comp.M cM ->
-         Comp.M (cnormMetaObj (cM, t))
+      | Comp.M (cM, cT) ->
+         Comp.M (cnormMetaObj (cM, t), cnormMTyp (cT, t))
       | Comp.DC ->
          dprintf
           begin fun p ->
@@ -2510,7 +2510,7 @@ module CSolver = struct
     in
     let remove_arg arg =
       match arg with
-      | Comp.M (loc, mf) -> Comp.M (loc, remove_mf mf)
+      | Comp.M ((loc, mf), mt) -> Comp.M ((loc, remove_mf mf), remove_mT mt)
       | _ -> arg
     in
     Context.map (fun (Comp.WfRec (name, ih_arg_lst, tau)) ->
@@ -2645,29 +2645,27 @@ module CSolver = struct
         match (ih_args, mvars) with
         | (Comp.DC :: xs, x :: mvars') ->
            (match x with
-           | LF.Root (_, ((LF.PVar (_)) as hd), _, _) ->
-              (Comp.M (noLoc, LF.ClObj ((None, 0), LF.PObj hd)))
-              :: (fix_args xs mvars')
            | LF.Root (_, ((LF.MPVar ((mmvar,_), _)) as hd), _, _) ->
               let dctx_hat = match mmvar.LF.typ with
                 | LF.ClTyp (_, dctx) -> Context.dctxToHat dctx
                 | _ -> raise NotImplementedYet
               in
-              (Comp.M (noLoc, LF.ClObj (dctx_hat, LF.PObj hd)))
+              (Comp.M ((noLoc, LF.ClObj (dctx_hat, LF.PObj hd)),
+                       mmvar.LF.typ))
               :: (fix_args xs mvars')
            | LF.Root (_, LF.MMVar ((mmvar,_), _), _, _) ->
               let dctx_hat = match mmvar.LF.typ with
                 | LF.ClTyp (_, dctx) -> Context.dctxToHat dctx
                 | _ -> raise NotImplementedYet
               in
-              (Comp.M (noLoc, LF.ClObj (dctx_hat, LF.MObj x)))
+              (Comp.M ((noLoc, LF.ClObj (dctx_hat, LF.MObj x)), mmvar.LF.typ))
               :: (fix_args xs mvars')
            | LF.Root (_, LF.MVar (LF.Inst mmvar, _), _, _) ->
               let dctx_hat = match mmvar.LF.typ with
                 | LF.ClTyp (_, dctx) -> Context.dctxToHat dctx
                 | _ -> raise NotImplementedYet
               in
-              (Comp.M (noLoc, LF.ClObj (dctx_hat, LF.MObj x)))
+              (Comp.M ((noLoc, LF.ClObj (dctx_hat, LF.MObj x)), mmvar.LF.typ))
               :: (fix_args xs mvars')
            | _ -> dprintf begin fun p -> p.fmt "[fix_ihctx]" end;
                   raise NotImplementedYet)
@@ -2689,30 +2687,30 @@ module CSolver = struct
     (* Returns list of mvars in ih_arg_lst *)
     let rec get_mvars ih_arg_lst =
       match ih_arg_lst with
-      | Comp.M (
+      | Comp.M ((
           _, LF.ClObj
                (dctx_hat, LF.MObj
                             (((LF.Root
                                (_, LF.MVar
                                      (LF.Inst mmvar,_), _, _)))
-                             as norm))) :: lst'
+                             as norm))), _) :: lst'
            when mmvar.LF.instantiation.contents == None ->
          let xs = get_mvars lst' in
          norm :: xs
-      | Comp.M (
+      | Comp.M ((
           _, LF.ClObj
                (dctx_hat, LF.MObj
                             (((LF.Root
                                  (_, LF.MMVar ((mmvar,_),_), _, _))
-                              as norm)))) :: lst'
+                              as norm)))), _) :: lst'
            when mmvar.LF.instantiation.contents == None ->
          let xs = get_mvars lst' in
          norm :: xs
-      | Comp.M (
+      | Comp.M ((
           _, LF.ClObj
                (dctx_hat, LF.PObj
                             (((LF.MPVar ((mmvar,_),_))
-                              as hd)))) :: lst'
+                              as hd)))), _) :: lst'
            when mmvar.LF.instantiation.contents == None ->
          let xs = get_mvars lst' in
          (LF.head hd) :: xs
@@ -2723,12 +2721,13 @@ module CSolver = struct
        substitution                                              *)
     let rec gen_new_ih_args ih_args mvar_lst =
       match (ih_args, mvar_lst) with
-      | (Comp.M (
+      | (Comp.M ((
           _, LF.ClObj
                (dctx_hat, LF.MObj
                             (LF.Root
                                (_, LF.MVar
-                                     (LF.Inst mmvar,_), _, plicity)))) :: lst'
+                                     (LF.Inst mmvar,_), _, plicity)))), mT)
+         :: lst'
         , y :: ys) when mmvar.LF.instantiation.contents == None ->
          let LF.ClTyp (LF.MTyp tA, cPsi) = mmvar.LF.typ in
          let mmvar' =
@@ -2738,16 +2737,17 @@ module CSolver = struct
                              LF.MMVar ((mmvar', LF.MShift 0), LF.Shift 0),
                              LF.Nil, plicity) in
          let mf = LF.ClObj (dctx_hat, LF.MObj norm) in
-         let x = Comp.M (noLoc, mf) in
+         let x = Comp.M ((noLoc, mf), mT) in
          let (xs, sub) = gen_new_ih_args lst' ys in
          (x :: xs, (mmvar.LF.mmvar_id, norm) :: sub)
 
-      | (Comp.M (
+      | (Comp.M ((
           _, LF.ClObj
                (dctx_hat, LF.MObj
                             (LF.Root
                                (_, LF.MMVar
-                                     ((mmvar, _),_), _, plicity)))) :: lst'
+                                     ((mmvar, _),_), _, plicity)))), mT)
+         :: lst'
         , y :: ys)
            when mmvar.LF.instantiation.contents == None ->
          let LF.ClTyp (LF.MTyp tA, cPsi) = mmvar.LF.typ in
@@ -2758,15 +2758,15 @@ module CSolver = struct
                                       ((mmvar', LF.MShift 0), LF.Shift 0),
                              LF.Nil, plicity) in
          let mf = LF.ClObj (dctx_hat, LF.MObj norm) in
-         let x = Comp.M (noLoc, mf) in
+         let x = Comp.M ((noLoc, mf), mT) in
          let (xs, sub) = gen_new_ih_args lst' ys in
          (x :: xs, (mmvar.LF.mmvar_id, norm) :: sub)
 
-      | (Comp.M (
+      | (Comp.M ((
           _, LF.ClObj
                (dctx_hat, LF.PObj
                             (LF.MPVar
-                                     ((mmvar, _),_)))) :: lst'
+                                     ((mmvar, _),_)))), mT) :: lst'
         , y :: ys)
            when mmvar.LF.instantiation.contents == None ->
          let LF.ClTyp (LF.PTyp tA, cPsi) = mmvar.LF.typ in
@@ -2775,7 +2775,7 @@ module CSolver = struct
              mmvar.LF.inductivity in
          let hd = LF.MPVar ((mmvar', LF.MShift 0), LF.Shift 0) in
          let mf = LF.ClObj (dctx_hat, LF.PObj hd) in
-         let x = Comp.M (noLoc, mf) in
+         let x = Comp.M ((noLoc, mf), mT) in
          let (xs, sub) = gen_new_ih_args lst' ys in
          (x :: xs, (mmvar.LF.mmvar_id, LF.head hd) :: sub)
 
@@ -3705,7 +3705,7 @@ module CSolver = struct
              p.fmt "[create]"
              end;
       match (args, thm) with
-      | ((Comp.M (loc, mf)) :: xs,
+      | (Comp.M ((loc, mf), _) :: xs,
          Comp.TypPiBox (noLoc, LF.Decl (_, ctyp, plic, ind), tau)) ->
          let ctyp' = (* a bit sketchy... this is done bc during the check
                           the ctyp is only used for the dctx.             *)
@@ -3714,14 +3714,14 @@ module CSolver = struct
          create (tau, xs) (fun s ->
              Comp.MApp (noLoc, f s, (noLoc, mf), ctyp', plic))
            k (len-1) ms'
-      | ((Comp.M (loc, mf)) :: xs,
+      | (Comp.M ((loc, mf), _) :: xs,
          Comp.TypArr(_, Comp.TypBox (l, mt), tau)) ->
          let mt' = fix_psi (cnormMTyp (mt,ms)) mf in
          let ms' = LF.MDot (mf, ms) in
          let syn = Comp.AnnBox (noLoc, (noLoc, mf), mt') in
          create (tau, xs) (fun s ->
              Comp.Apply (noLoc, f s, syn)) k (len-1) ms'
-      | ((Comp.M (loc, mf)) :: xs,
+      | (Comp.M ((loc, mf), _) :: xs,
          Comp.TypArr(_, Comp.TypInd (Comp.TypBox (l, mt)), tau)) ->
          let mt' = fix_psi (cnormMTyp (mt,ms)) mf in
          let ms' = LF.MDot (mf, ms) in
@@ -4073,9 +4073,9 @@ module CSolver = struct
     in
     let rec grab ih_args =
       match ih_args with
-      | (Comp.M (_, LF.ClObj (_, ((LF.PObj hd) as mobj)))) :: xs ->
+      | (Comp.M ((_, LF.ClObj (_, ((LF.PObj hd) as mobj))), _)) :: xs ->
          if Solver.uninstantiated hd then mobj else grab xs
-      | (Comp.M (_, LF.ClObj (_, ((LF.MObj (LF.Root (_,hd,_,_))) as mobj))))
+      | (Comp.M ((_, LF.ClObj (_, ((LF.MObj (LF.Root (_,hd,_,_))) as mobj))), _))
         :: xs->
          if Solver.uninstantiated hd then mobj else grab xs
       | _ :: xs -> grab xs
@@ -5221,8 +5221,8 @@ module CSolver = struct
     (* Returns true if an argument of the IH is an uninstantiated mvar *)
     let rec mvars ih_args =
       match ih_args with
-      | (Comp.M (_, LF.ClObj (_, LF.PObj hd))) :: xs
-        | (Comp.M (_, LF.ClObj (_, LF.MObj (LF.Root (_,hd,_,_))))) :: xs->
+      | (Comp.M ((_, LF.ClObj (_, LF.PObj hd)), _)) :: xs
+        | (Comp.M ((_, LF.ClObj (_, LF.MObj (LF.Root (_,hd,_,_)))), _)) :: xs->
          if Solver.uninstantiated hd then true else mvars xs
       | _ :: xs -> mvars xs
       | [] -> false

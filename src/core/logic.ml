@@ -1332,6 +1332,30 @@ module Solver = struct
     | LF.Dot (_, s') ->
        check_sub s'
 
+  (* Correct the plicity tags on the mmvars in the sub *)
+  let rec fix_sub s cD =
+    let rec get_plicity cD k =
+      match cD with
+      | LF.Dec (_, LF.Decl (_, _, plic, _)) when k == 1 -> plic
+      | LF.Dec (cD', _) -> get_plicity cD' (k-1)
+    in
+    match s with
+    | LF.Dot (LF.Obj (LF.Root (loc,
+                               ((LF.MVar (LF.Inst mmvar, s)) as hd), sP, _1))
+            , s') ->
+       let plicity =
+         match mmvar.LF.instantiation.contents with
+         | Some (LF.INorm (LF.Root (_, LF.MVar (LF.Offset k, _), _, _))) ->
+            get_plicity cD k
+         | Some (LF.IHead (LF.MVar (LF.Offset k, _))) -> get_plicity cD k
+         | _ -> _1
+       in
+       LF.Dot (LF.Obj (LF.Root (loc, hd, sP, plicity)), fix_sub s' cD)
+    | LF.Dot (_1, s') ->
+       dprintf begin fun p -> p.fmt "[fix_sub] skipping fixing sub" end;
+       LF.Dot (_1, fix_sub s' cD)
+    | _ -> s
+
   (* Instantiate the nth position of sub s with the front ft. *)
   let rec instantiate_sub (n, s) ft curr =
     match s with
@@ -1417,7 +1441,7 @@ module Solver = struct
     | LF.Empty -> raise NoSolution
     | LF.Dec (cD', LF.Decl (_, LF.CTyp (_), _, _)) ->
        solve_sub_delta (cD_all, cD', k+1, cPhi, dPool) (tA, s, curr_sub) (u, s_all) (goal, s_goal)
-    | LF.Dec (cD', LF.Decl (_, LF.ClTyp (cltyp, cPsi), _, _)) ->
+    | LF.Dec (cD', LF.Decl (_, LF.ClTyp (cltyp, cPsi), plicity, _)) ->
        let tA' = match cltyp with
          | LF.MTyp tau -> tau
          | LF.PTyp tau -> tau
@@ -1444,7 +1468,7 @@ module Solver = struct
            U.unifyTyp cD_all cPhi (goal, s_goal) (u, s_all);
 
            (* Instantiate the correct sub in s_all with the front *)
-           instantiate_sub (curr_sub, s_all) (LF.Head(LF.MVar(LF.Offset k, LF.Shift 0))) 1
+           instantiate_sub (curr_sub, s_all) (LF.Obj (LF.Root (Syntax.Loc.ghost, LF.MVar(LF.Offset k, LF.Shift 0), LF.Nil, plicity))) 1
 
            with
            | U.Failure _ ->
@@ -1453,7 +1477,7 @@ module Solver = struct
                   (Whnf.cnormTyp(tA', LF.MShift k), LF.Shift 0);
                 U.unifyTyp cD_all cPhi (goal, s_goal) (LF.TClo(u, s_all), LF.Shift 0);
                 (* Instantiate the correct sub in s_all with the front *)
-           instantiate_sub (curr_sub, s_all) (LF.Head(LF.MVar(LF.Offset k, LF.Shift 0))) 1
+           instantiate_sub (curr_sub, s_all) (LF.Obj (LF.Root (Syntax.Loc.ghost, LF.MVar(LF.Offset k, LF.Shift 0), LF.Nil, plicity))) 1
            end
        with
        | U.Failure _ ->
@@ -1477,7 +1501,9 @@ dprintf begin fun p ->
               (P.fmt_ppr_lf_sub cD cPhi P.l0) s_all
             end;
        if (* Check if all mvars have been instantiated *)
-         check_sub (Whnf.normSub s_all) then s_all
+         check_sub (Whnf.normSub s_all)
+       then (* Correct plicity tags on mvars *)
+         fix_sub s_all cD
        else raise NoSolution
     | LF.Dot (LF.Head (((LF.MMVar ((mmvar, ms'), s)) as hd)), s')
          when (uninstantiated hd) ->
@@ -2166,7 +2192,7 @@ module CSolver = struct
     in
     match cg with
     | Box (cPsi, Atom tA, _lfTyp) ->
-       let tA' = Whnf.cnormTyp (tA, ms) in
+       let tA' = cnormTyp (tA, ms) in
        let cPsi' = Whnf.cnormDCtx (cPsi, ms) in
        Box (cPsi', Atom tA', _lfTyp)
     | Implies ((r, td), cg') ->
@@ -2181,6 +2207,7 @@ module CSolver = struct
     | Atomic (cid, aS) ->
        let aS' = normAtomicSpine ms aS in
        Atomic (cid, aS')
+    | _ -> raise NotImplementedYet
 
   (* Applies the msub to the sub goals (as above). *)
   let rec normSubGoals (sg, ms) =
@@ -2312,6 +2339,24 @@ module CSolver = struct
     | Comp.CTypDecl (_, tau, _) ->
        let cc = {cHead = tau; cMVars = LF.Empty; cSubGoals = Proved} in
        (cc, k, Boxed)
+
+  (* Removes those I.H. which refer to the computation context (i.e. have a
+     Comp.V argument in their args. This is because those I.H. have been found
+     to cause issues. In particular, it is possible to make calls to such
+     schemas which aren't smaller. Since we currently have no way of checking
+     the validity of the terms we build, it is best to omit those. *)
+  let rec remove_IH cIH =
+    let rec refers_to_cG args =
+      match args with
+      | Comp.V _ :: xs -> true
+      | _ :: xs -> refers_to_cG xs
+      | [] -> false
+    in
+    match cIH with
+    | LF.Empty -> cIH
+    | LF.Dec (cIH', ((Comp.WfRec (name, args, tau)) as dec)) ->
+       if refers_to_cG args then remove_IH cIH'
+       else LF.Dec (remove_IH cIH', dec)
 
   (* Generates, from cIH, a new cIH where each entry is unique. *)
   let unique_IH cIH cD =
@@ -2707,7 +2752,7 @@ module CSolver = struct
            when mmvar.LF.instantiation.contents == None ->
          let LF.ClTyp (LF.MTyp tA, cPsi) = mmvar.LF.typ in
          let mmvar' =
-           Whnf.newMMVar None (LF.Empty, cPsi, tA) mmvar.LF.plicity
+           Whnf.newMMVar None (mmvar.LF.cD, cPsi, tA) mmvar.LF.plicity
              mmvar.LF.inductivity in
          let norm = LF.Root (noLoc, LF.MMVar
                                       ((mmvar', LF.MShift 0), LF.Shift 0),
@@ -2726,7 +2771,7 @@ module CSolver = struct
            when mmvar.LF.instantiation.contents == None ->
          let LF.ClTyp (LF.PTyp tA, cPsi) = mmvar.LF.typ in
          let mmvar' =
-           Whnf.newMPVar None (LF.Empty, cPsi, tA) mmvar.LF.plicity
+           Whnf.newMPVar None (mmvar.LF.cD, cPsi, tA) mmvar.LF.plicity
              mmvar.LF.inductivity in
          let hd = LF.MPVar ((mmvar', LF.MShift 0), LF.Shift 0) in
          let mf = LF.ClObj (dctx_hat, LF.PObj hd) in
@@ -2752,13 +2797,12 @@ module CSolver = struct
         | (id', norm) :: _ when id' == id -> norm
         | _ :: xs -> find_sub id xs
         | _ ->
-         dprintf
+           dprintf
              begin fun p ->
              p.fmt "[find_sub]"
              end;
-         raise NotImplementedYet
+           raise NotImplementedYet
       in
-
       let rec sub_norm norm sub =
         match norm with
         | LF.Root (_, LF.MVar (LF.Inst mmvar,_), spine, _)
@@ -3027,9 +3071,9 @@ module CSolver = struct
   (* Updates the cD_a for the branch case. *)
   let update_branch_cD_a (cD, cD_a) =
     dprintf
-             begin fun p ->
-             p.fmt "[update_branch_cD_a] UPDATING"
-             end;
+      begin fun p ->
+      p.fmt "[update_branch_cD_a]"
+      end;
     let rec is_in n l =
       match l with
       | [] -> false
@@ -3045,22 +3089,11 @@ module CSolver = struct
       | _ :: cD_a' -> retrieve n cD_a'
     in
     let rec update cD ret =
-      dprintf
-             begin fun p ->
-             p.fmt "[update_branch_cD_a update] UPDATING"
-             end;
       match cD with
       | LF.Dec (cD', ((LF.Decl (name, ((LF.ClTyp (cltyp, cPsi)) as ctyp),
-                                plic, ind)) as tdecl))
-           when is_in name cD_a ->
-
-         dprintf
-             begin fun p ->
-             p.fmt "[update_branch_cD_a update] ADDING %a"
-             (DP.fmt_ppr_lf_ctyp_decl cD') tdecl
-             end;
-
-         let (LF.Decl (_, tau2, plic, induc), _, con, pos, thm, bool) =
+                                plicity, ind)) as tdecl))
+           when is_in name cD_a && plicity == Plicity.explicit ->
+         let (LF.Decl (_, tau2, _, induc), _, con, pos, thm, bool) =
            retrieve name cD_a in
          let (con', bool') =
            if bool then
@@ -3072,7 +3105,7 @@ module CSolver = struct
          let clobj = match cltyp with
            | LF.MTyp tA ->
               LF.MObj (LF.Root (noLoc, LF.MVar (LF.Offset 1, S.id),
-                                LF.Nil, plic))
+                                LF.Nil, plicity))
            | LF.PTyp tA ->
               LF.PObj (LF.PVar (1, S.id))
          in
@@ -3086,13 +3119,8 @@ module CSolver = struct
          let ret' = shift_cD_a ret in
          update cD' (x :: ret')
       | LF.Dec (cD', ((LF.Decl (name, ((LF.ClTyp (cltyp, cPsi)) as ctyp),
-                                plic, induc)) as tdecl)) ->
-
-         dprintf
-             begin fun p ->
-             p.fmt "[update_branch_cD_a update] ADDING %a"
-             (DP.fmt_ppr_lf_ctyp_decl cD') tdecl
-             end;
+                                plicity, induc)) as tdecl))
+           when plicity == Plicity.explicit->
          let (con', bool') =
             try
               (consOfLFTyp cltyp, true)
@@ -3101,7 +3129,7 @@ module CSolver = struct
          let clobj = match cltyp with
            | LF.MTyp tA ->
               LF.MObj (LF.Root (noLoc, LF.MVar (LF.Offset 1, S.id),
-                                LF.Nil, plic))
+                                LF.Nil, plicity))
            | LF.PTyp tA ->
               LF.PObj (LF.PVar (1, S.id))
          in
@@ -3114,8 +3142,22 @@ module CSolver = struct
          let x = (tdecl', Some i, con', 1, None, bool') in
          let ret' = shift_cD_a ret in
          update cD' (x :: ret')
-      | LF.Dec(cD', (LF.Decl (name, (LF.CTyp cid_schema), _, _))) ->
-         update cD' ret
+      | LF.Dec (cD', ((LF.Decl (name, LF.ClTyp (cltyp, cPsi),
+                                plicity, induc)) as tdecl))
+           when plicity == Plicity.implicit ->
+         (* Do not split on implict vars *)
+         let (con, bool) = (0, false) in
+         let tdecl' = Whnf.cnormCDecl (tdecl, LF.MShift 1) in
+         let x = (tdecl', None, con, 1, None, bool) in
+         let ret' = shift_cD_a ret in
+         update cD' (x :: ret')
+      | LF.Dec(cD', ((LF.Decl (name, (LF.CTyp cid_schema), _, _)) as tdecl)) ->
+         (* Do not currently split on context schemas *)
+         let (con, bool) = (0, false) in
+         let tdecl' = Whnf.cnormCDecl (tdecl, LF.MShift 1) in
+         let x = (tdecl', None, con, 1, None, bool) in
+         let ret' = shift_cD_a ret in
+         update cD' (x :: ret')
       | LF.Empty -> ret
     in
     update (rev_mctx cD) []
@@ -3698,7 +3740,7 @@ module CSolver = struct
             from Delta to be the argument. *)
          dprintf
              begin fun p ->
-             p.fmt "[create_IH_args] Invalid I.H. - unused mvar"
+             p.fmt "[create_IH_args] Invalid I.H. Unused mvar"
              end;
          raise NotImplementedYet
       | (Comp.DC :: xs,
@@ -3768,62 +3810,210 @@ module CSolver = struct
       let cG_a' = update_var_case_count cG_a in
       (cD_a', cG_a')
 
-  (* Returns the explict meta variables. (used with the invert function) *)
-  let gen_explicit_cD cD_e cD cD_gb cD' =
-    let rec get_name cD lst =
+  (* Returns the plicity of the mvar from the cD at position k *)
+  let rec get_plicity cD k =
+    match cD with
+    | LF.Dec (_, LF.Decl (_, _, plicity, _))
+      | LF.Dec (_, LF.DeclOpt (_, plicity))
+         when k == 1 -> plicity
+    | LF.Dec (cD', _) -> get_plicity cD' (k-1)
+    | _ ->
+       dprintf begin fun p -> p.fmt "[get_plicity] INDEX OUT OF BOUNDS" end;
+       raise NotImplementedYet
+
+  (* Given a Beluga expression and corresponding cD, correct the plicities
+     of the mvar references (LF.MVar (LF.Offset ...))                         *)
+  let rec fix_plicities e cD =
+    match e with
+    | Comp.Fn (_1, _2, e') ->
+       Comp.Fn (_1, _2, fix_plicities e' cD)
+    | Comp.MLam (_1, name, e', _3) ->
+       Comp.MLam (_1, name,
+                  fix_plicities e' (LF.Dec(cD, LF.DeclOpt (name, Plicity.explicit))),
+                  _3)
+    | Comp.Box (_1, (_2, mft), _3) ->
+       Comp.Box (_1, (_2, fix_plicities_mf mft cD), _3)
+    | Comp.Case (_1, _2, e', lst) ->
+       Comp.Case (_1, _2, fix_plicities e' cD, fix_branches lst)
+    | Comp.Apply (_1, e1, e2) ->
+       Comp.Apply (_1, fix_plicities e1 cD, fix_plicities e2 cD)
+    | Comp.MApp (_1, e', (_2, mft), _3, _4) ->
+       Comp.MApp (_1, fix_plicities e' cD,
+                  (_2, fix_plicities_mf mft cD), _3, _4)
+    | Comp.AnnBox (_1, (_2, mft), _3) ->
+       Comp.AnnBox (_1, (_2, fix_plicities_mf mft cD), _3)
+    | _ -> e
+
+  and fix_branches lst =
+    match lst with
+    | (Comp.Branch (_1, _2, (cD, _3), _4, _5, e)) :: lst' ->
+       (Comp.Branch (_1, _2, (cD, _3), _4, _5, fix_plicities e cD))
+       :: (fix_branches lst')
+    | [] -> []
+
+  and fix_plicities_mf mft cD =
+    match mft with
+    | LF.ClObj (_1, LF.MObj (LF.Root (_2, LF.MVar (LF.Offset k, _3),
+                                      spine, _4))) ->
+       LF.ClObj (_1, LF.MObj (LF.Root (_2, LF.MVar (LF.Offset k, _3),
+                                       spine, get_plicity cD k)))
+    | LF.ClObj (_1, LF.MObj (LF.Root (_2, LF.MMVar ((mmvar, _3), _4),
+                                      spine, _5))) ->
+       let plicity =
+       match mmvar.LF.instantiation.contents with
+       | Some (LF.INorm (LF.Root (_2, LF.MVar (LF.Offset k, _3),
+                                  spine, _4))) ->
+          get_plicity cD k
+       | Some (LF.IHead (LF.MVar (LF.Offset k, _1))) -> get_plicity cD k
+       | _ -> _5
+       in
+       LF.ClObj (_1, LF.MObj (LF.Root (_2, LF.MMVar ((mmvar, _3), _4),
+                                       spine, plicity)))
+    | LF.ClObj (_1, LF.MObj norm) ->
+       LF.ClObj (_1, LF.MObj (fix_plicities_norm norm cD))
+    | _ -> mft
+
+  and fix_plicities_norm norm cD =
+    match norm with
+    | LF.Lam (_1, _2, norm') ->
+       LF.Lam (_1, _2, fix_plicities_norm norm' cD)
+    | LF.Root (_1, hd, LF.Nil, _2) ->
+       let plicity = match hd with
+         | LF.MVar (LF.Offset k, _) -> get_plicity cD k
+         | _ -> _2
+       in
+       LF.Root (_1, hd, LF.Nil, plicity)
+    | LF.Root (_1, hd, spine, _2) ->
+       LF.Root (_1, hd, fix_plicities_spine spine cD, _2)
+    | _ -> norm
+
+  and fix_plicities_spine spine cD =
+    match spine with
+    | LF.App (norm, spine') ->
+       LF.App (fix_plicities_norm norm cD,
+               fix_plicities_spine spine' cD)
+    | _ -> spine
+
+  (* Used for splitting operations. Beluga doesn't correctly give the plicity
+     of the mvars after a split so this fixes it. Given the original cD
+     (cD_old) and pattern, and newly generated cD (cD_fix) for the branch, fix the
+     plicities of its declarations *)
+  let gen_explicit_cD cD_old pat cD_fix =
+    dprintf begin fun p ->
+      p.fmt "[gen_explicit] cD_old = %a, cD_fix = %a, pat = %a"
+        (P.fmt_ppr_mctx) cD_old
+        (P.fmt_ppr_mctx) cD_fix
+        (DP.fmt_ppr_cmp_pattern cD_fix LF.Empty DP.l0) pat
+      end;
+    let rec find_name cD k =
       match cD with
-      | LF.Dec (cD', LF.Decl (name, _, _, _)) -> get_name cD' (name :: lst)
-      | LF.Empty -> lst
-      | _ -> raise NotImplementedYet
+      | LF.Dec (_, LF.Decl (name, _, _, _)) when k == 1 -> name
+      | LF.Dec (cD', _) -> find_name cD' (k-1)
     in
-    let rec is_in name l =
-      match l with
-      | n :: l' when name == n -> true
-      | _ :: l' -> is_in name l'
+    let collect_explicit_mvars =
+      let rec collect_from_cD cD =
+        match cD with
+        | LF.Dec (cD', LF.Decl (name, _, plicity, _))
+             when plicity == Plicity.explicit ->
+           name :: (collect_from_cD cD')
+        | LF.Dec (cD', LF.DeclOpt (name, plicity))
+             when plicity == Plicity.explicit ->
+           name :: (collect_from_cD cD')
+        | LF.Dec (cD', _) ->
+           collect_from_cD cD'
+        | LF.Empty -> []
+      in
+      let rec collect_from_norm norm =
+        match norm with
+        | LF.Lam (_, _, norm') | LF.Clo (norm', _) ->
+           collect_from_norm norm'
+        | LF.Root (_, LF.Const cid, spine, plicity)
+             when plicity == Plicity.explicit ->
+           let tau = (Store.Cid.Term.get cid).Store.Cid.Term.Entry.typ in
+           find_explicit tau spine
+        | LF.Root (_, hd, LF.Nil, plicity) when plicity == Plicity.explicit ->
+           collect_from_hd hd
+        | LF.Root (_1, hd, LF.SClo (spine, _), plicity)
+             when plicity == Plicity.explicit ->
+           collect_from_norm (LF.Root (_1, hd, spine, plicity))
+        | LF.Root (_1, hd, LF.App (norm', spine), plicity)
+             when plicity == Plicity.explicit ->
+           List.append
+             (collect_from_norm norm')
+             (collect_from_norm (LF.Root (_1, hd, spine, Plicity.explicit)))
+        | _ -> []
+
+      and collect_from_hd hd =
+        match hd with
+        | LF.MMVar ((mm_var, _), _)
+          | LF.MPVar ((mm_var, _), _)
+          | LF.MVar (LF.Inst mm_var, _) ->
+           [mm_var.LF.name]
+        | LF.MVar (LF.Offset k, _) ->
+           [find_name cD_fix k]
+        | _ -> []
+
+      and find_explicit tau spine =
+        match (tau, spine) with
+        | (LF.PiTyp ((LF.TypDecl (name, _), plicity), tau'),
+           LF.App (norm, spine')) when plicity == Plicity.explicit ->
+           List.append (collect_from_norm norm) (find_explicit tau' spine')
+        | (LF.PiTyp ((LF.TypDeclOpt name, plicity), tau'),
+           LF.App (norm, spine')) when plicity == Plicity.explicit ->
+           List.append (collect_from_norm norm) (find_explicit tau' spine')
+        | (LF.PiTyp ((_, _), tau'), LF.App (_, spine')) ->
+           find_explicit tau' spine'
+        | _ -> []
+
+      and collect_from_pat pat =
+        match pat with
+        | Comp.PatMetaObj (_, (_, LF.ClObj (_, LF.MObj norm))) ->
+           collect_from_norm norm
+        | Comp.PatMetaObj (_, (_, LF.ClObj (_, LF.PObj hd))) ->
+           collect_from_hd hd
+        | Comp.PatMetaObj (_, (_, LF.CObj (LF.CtxVar (LF.CtxOffset k)))) ->
+           [find_name cD_fix k]
+        | Comp.PatMetaObj (_,
+                           (_, LF.CObj (LF.CtxVar (LF.CInst (mm_var, _))))) ->
+          [mm_var.LF.name]
+        | Comp.PatMetaObj (_1, (_2, LF.CObj (LF.DDec (dctx', _)))) ->
+           collect_from_pat (Comp.PatMetaObj (_1, (_2, LF.CObj (dctx'))))
+        | Comp.PatMetaObj (_, (_, LF.MV k)) ->
+           [find_name cD_fix k]
+        | Comp.PatConst (_1, _2, Comp.PatApp (_, pat', pat_spine)) ->
+           List.append
+             (collect_from_pat pat')
+             (collect_from_pat (Comp.PatConst (_1, _2, pat_spine)))
+        | Comp.PatConst (_1, _2, Comp.PatObs (_, _, _, pat_spine)) ->
+           collect_from_pat (Comp.PatConst (_1, _2, pat_spine))
+        | _ -> []
+      in
+      List.append (collect_from_cD cD_old) (collect_from_pat pat)
+    in
+    let explicit_mvars = collect_explicit_mvars in
+    let rec is_explicit name ex_lst =
+      match ex_lst with
+      | n :: _ when Name.equal name n -> true
+      | _ :: xs -> is_explicit name xs
       | [] -> false
     in
-    let union l1 l2 =
-      let rec union l ret =
-        match l with
-        | n :: l' when is_in n ret -> union l' ret
-        | n :: l' -> union l' (n :: ret)
-        | [] -> ret
-      in
-      union l1 l2
-    in
-    let intersect l1 l2 =
-      let rec inter l ret =
-        match l with
-        | n :: l' when is_in n l2 -> inter l' (n :: ret)
-        | _ :: l' -> inter l' ret
-        | [] -> ret
-      in
-      inter l1 []
-    in
-    (* l1/l2 *)
-    let disjoint l1 l2 =
-      let rec disjoint l ret =
-        match l with
-        | n :: l' when is_in n l2 -> disjoint l' ret
-        | n :: l' -> disjoint l' (n :: ret)
-        | [] -> ret
-      in
-      disjoint l1 []
-    in
-    let names =
-      union (disjoint (get_name cD_gb []) (get_name cD' []))
-        (intersect (get_name cD_e []) (get_name cD [])) in
-    let rec get_ex cD ret =
+    let rec fix cD =
       match cD with
-      | LF.Dec (cD', ((LF.Decl (name, _, _, _)) as cdecl))
-           when is_in name names ->
-         get_ex cD' (LF.Dec (ret, cdecl))
-      | LF.Dec (cD', _) ->
-         get_ex cD' ret
-      | LF.Empty -> ret
+      | LF.Empty -> cD
+      | LF.Dec (cD', LF.Decl (name, _1, _, _2))
+           when is_explicit name explicit_mvars ->
+         LF.Dec (fix cD', LF.Decl (name, _1, Plicity.explicit, _2))
+      | LF.Dec (cD', LF.Decl (_1, _2, _, _3)) ->
+         LF.Dec (fix cD', LF.Decl (_1, _2, Plicity.implicit, _3))
+      | LF.Dec (cD', LF.DeclOpt (name, _))
+           when is_explicit name explicit_mvars ->
+         LF.Dec (fix cD', LF.DeclOpt (name, Plicity.explicit))
+      | LF.Dec (cD', LF.DeclOpt (_1, _)) ->
+         LF.Dec (fix cD', LF.DeclOpt (_1, Plicity.implicit))
     in
-    rev_mctx(get_ex cD LF.Empty)
+    fix cD_fix
 
+  (* Find all the indices of mvars in cD whsoe type unifies with typ *)
   let rec find_assumption typ cD cD_all cG k lst =
     let rec k_in_lst k lst =
       match lst with
@@ -3832,23 +4022,30 @@ module CSolver = struct
       | [] -> false
     in
     match cD with
-    | LF.Dec (cD', LF.Decl (_, ctyp, _, _)) ->
+    | LF.Dec (cD', LF.Decl (_, ctyp, plicity, _))
+         when plicity == Plicity.explicit ->
+       (* We do not want to instantiate with implict mvars,
+          this can cause issues when we reconstruct the type *)
        (
        try
          Solver.trail
            begin fun () ->
-           U.unifyMetaTyp cD (ctyp, LF.MShift k) (typ, LF.MShift 0)
+           U.unifyMetaTyp cD_all (ctyp, LF.MShift k) (typ, LF.MShift 0)
            end;
          if k_in_lst k lst
          then find_assumption typ cD' cD_all cG (k + 1) lst
          else (Some k, k :: lst)
        with
-         U.Failure _ -> find_assumption typ cD' cD_all cG (k + 1) lst)
+       | U.Failure _ ->
+          find_assumption typ cD' cD_all cG (k + 1) lst)
+    | LF.Dec (cD', _) ->
+       find_assumption typ cD' cD_all cG (k + 1) lst
     | LF.Empty -> (None, [])
 
-  (* Given an IH of box type with one uninstantiated mvar, find all occurances of it *)
+  (* Given an IH of box type with one uninstantiated mvar,
+     find all occurances of it *)
   let rec find_all_occurances ((Comp.WfRec (name, ih_arg_lst, tau)) as dec)
-            (cG, cPool, cG_a) sc cD thm_cid thm lst =
+            (cG, cPool, cG_a) sc cD thm_cid thm lst cIH cIH_all =
     let (ih_args, tau) = generate_new_IH dec in
     let {cHead=hd; cMVars; cSubGoals=sg} = C.comptypToCClause tau in
     let fS = create_IH_args (thm, ih_args, tau) cD in
@@ -3890,7 +4087,7 @@ module CSolver = struct
       | LF.PObj LF.MPVar ((mmvar, _), _)
       | LF.PObj LF.MMVar ((mmvar, _), _) -> mmvar.LF.typ in
     let (k, lst') = find_assumption typ cD cD cG 1 lst in
-    if k == None then (cG, cG_a, cPool, sc)
+    if k == None then (cG, cG_a, cPool, sc, cIH, cIH_all)
     else
       let Some k = k in
       inst mobj k;
@@ -3901,6 +4098,8 @@ module CSolver = struct
       let tdecl = Comp.CTypDecl(name, hd, true) in
       let cG' = Whnf.extend_gctx cG (tdecl, LF.MShift 0) in
       let cG_a' = add_split 0 tdecl cG_a false in
+      let cIH_all' = Total.shift cIH_all in
+      let cIH' = Total.shift cIH in
       let Some cid = thm_cid in
       let i = Comp.Const(noLoc, cid) in
       let sc' = (fun e -> sc (Comp.Case (noLoc,
@@ -3912,7 +4111,7 @@ module CSolver = struct
                                                      pattern,
                                                      LF.MShift 0,
                                                      e)]))) in
-      find_all_occurances dec (cG', cPool', cG_a') sc' cD thm_cid thm lst'
+      find_all_occurances dec (cG', cPool', cG_a') sc' cD thm_cid thm lst' cIH' cIH_all'
 
   (* cD' ; cG' |- tau
      cD  |- ms : cD'       ms is a meta-substitution that provides existential
@@ -4335,9 +4534,9 @@ module CSolver = struct
        dprintf
          begin fun p ->
          p.fmt
-           "Solve Branch pattern %a for type %a, with depth = %d \
+           "Solve Branch pattern %a of type %a, with depth = %d \
             %a"
-           (DP.fmt_ppr_cmp_pattern cD_b cG_p DP.l0) pat
+           (DP.fmt_ppr_cmp_pattern cD cG DP.l0) pat
            (P.fmt_ppr_cmp_goal cD_cg) (cg, S.id)
            d
            (printState cD cG cPool cIH_b cg) ms_b
@@ -4349,7 +4548,7 @@ module CSolver = struct
                (thm, td_b)
                  (fun bl ->
                    sc (Comp.Branch(noLoc, LF.Empty,
-                     (cD_b, cG_p), pat, ms_b, e) :: bl)))
+                     (cD, cG), pat, ms_b, e) :: bl)))
        in
 
        try
@@ -4416,6 +4615,12 @@ module CSolver = struct
       | (None, _) -> false
     in
 
+    let rec find_comp_assumption cG k =
+      match cG with
+      | LF.Dec (_, Comp.CTypDecl (_, tau, _)) when k == 1 -> tau
+      | LF.Dec (cG', _) -> find_comp_assumption cG' (k-1)
+    in
+
     let gen_branch_list i tau ms mfs (cD', cD_a) (cG', cG_a, k) cIH' index =
 
       let tau =
@@ -4439,7 +4644,13 @@ module CSolver = struct
             (cD', cD_gb) t (tau, tau_p) in
         let pat' = Whnf.cnormPattern (pat, t1') in
         let cG_p = Whnf.cnormGCtx (cG_gb, t1') in
-        let cG_b = Context.append (Whnf.cnormGCtx (cG', t')) cG_p in
+        let cG_b = Context.append (Whnf.cnormGCtx (cG', t'))
+                     begin
+                       if Total.struct_smaller pat
+                       then Total.mark_gctx cG_p
+                       else cG_p
+                     end
+        in
         let cIH_b =
           let msub_cIH = cnormIHCtx' (cIH', t') in
           let sub_cIH = Total.shiftIH (Context.length cG_p) msub_cIH in
@@ -4456,7 +4667,7 @@ module CSolver = struct
              then
                begin
                let cD1 = Check.Comp.mvars_in_patt cD_b pat' in
-               let cIH = Total.wf_rec_calls cD1 (Total.mark_gctx cG_p) mfs in (* o.g. cG = Empty *)
+               let cIH = Total.wf_rec_calls cD1 LF.Empty mfs in
                let cIH = fix_IH_args cIH cD1 in (* TODO:: correct cD? *)
                (cD1, cIH, mfs, cid_prog)
                end
@@ -4464,20 +4675,35 @@ module CSolver = struct
                (cD_b, LF.Empty, mfs, cid_prog)
         in
         let cD = Check.Comp.id_map_ind cD_b t' cD' in
-        let cIH_b = fix_IH_args cIH_b cD_gb in (* TODO:: correct cD? *)
-        let cG = Total.mark_gctx cG_b in
-        (* let cIH0 = Total.wf_rec_calls cD cG mfs in *)
-        let cIH = Context.(append cIH_b cIH'') in
+        (* Fixing cD make sure the plicity of each mvar is correct *)
+        let cD = gen_explicit_cD cD' pat' cD in
+        let cIH_b = fix_IH_args cIH_b cD in (* TODO:: correct cD? *)
+        let cG = cG_b in
         let cPool_b = updateCPool cPool cG k t' cD in
+        let cIH0 = fix_IH_args (Total.wf_rec_calls cD cG_b mfs) cD in
+        let cIH = unique_IH(Context.(append cIH_b (append cIH0 cIH''))) cD in
         let cG_a' = update_branch_cG_a (cG, cPool_b, cG_a) in
         let cD_a' = update_branch_cD_a (cD, cD_a) in
         dprintf
-      begin fun p ->
-      p.fmt "[split] new cD_a with %d mvars, new cG_a with %d possible split vars"
-        (List.length cD_a)
-      (List.length cG_a)
-      end;
-        (cD, cD_b, cD_a', cG, cG_p, cG_a', cIH, cPool_b, t', pat', mfs', cid)
+        begin fun p ->
+           p.fmt "[split] new cD_a with %d mvars, new cG_a with %d possible split vars"
+             (List.length cD_a)
+             (List.length cG_a)
+        end;
+        let pat'' = match pat' with
+         | Comp.PatAnn _ -> pat'
+         | _ ->
+            match i with
+            | Comp.Var (_, k) ->
+               let tau = find_comp_assumption (Whnf.cnormGCtx (cG', t')) k in
+               let tau = match tau with
+                 | Comp.TypInd tau' -> tau'
+                 | _ -> tau
+               in
+               Comp.PatAnn (noLoc, pat, tau, Plicity.explicit)
+            | _ -> pat'
+         in
+        (cD, cD_b, cD_a', cG, cG_p, cG_a', cIH, cPool_b, t', pat'', mfs', cid)
       in
       (* Compute the coverage goals for the type to split on. *)
       let cgs = generate_pattern_coverage_goals tau cD' cG' in
@@ -4566,7 +4792,7 @@ module CSolver = struct
         (printState cD cG cPool cIH cg) ms
       end;
     let gen_branch_list i tau ms mfs (cD', cD_a) (cG', cG_a, cPool, k) cIH'
-          index cD_e =
+          index =
 
       let tau =
         match i, tau with
@@ -4589,7 +4815,13 @@ module CSolver = struct
             (cD', cD_gb) t (tau, tau_p) in
         let pat' = Whnf.cnormPattern (pat, t1') in
         let cG_p = Whnf.cnormGCtx (cG_gb, t1') in
-        let cG_b = Context.append (Whnf.cnormGCtx (cG', t')) cG_p in
+        let cG_b = Context.append (Whnf.cnormGCtx (cG', t'))
+                     begin
+                       if Total.struct_smaller pat
+                       then Total.mark_gctx cG_p
+                       else cG_p
+                     end
+        in
         let cIH_b =
           let msub_cIH = cnormIHCtx' (cIH', t') in
           let sub_cIH = Total.shiftIH (Context.length cG_p) msub_cIH in
@@ -4606,7 +4838,7 @@ module CSolver = struct
              then
                begin
                let cD1 = Check.Comp.mvars_in_patt cD_b pat' in
-               let cIH = Total.wf_rec_calls cD1 (Total.mark_gctx cG_p) mfs in
+               let cIH = Total.wf_rec_calls cD1 LF.Empty mfs in
                let cIH = fix_IH_args cIH cD1 in (* TODO:: correct cD? *)
                (cD1, cIH, mfs, cid_prog)
                end
@@ -4622,28 +4854,15 @@ module CSolver = struct
       (Printer.fmt_ppr_mctx) cD_b
       end;
         let cD = Check.Comp.id_map_ind cD_b t' cD' in
-        let cIH_b = fix_IH_args cIH_b cD_gb in (* TODO:: correct cD? *)
-        let cG = Total.mark_gctx cG_b in
-        (* let cIH0 = Total.wf_rec_calls cD cG mfs in *)
-        let cIH = Context.(append cIH_b cIH'') in
+        (* Fixing cD make sure the plicity of each mvar is correct *)
+        let cD = gen_explicit_cD cD' pat' cD in
+        let cIH_b = fix_IH_args cIH_b cD in (* TODO:: correct cD? *)
+        let cG = cG_b in
         let cPool_b = updateCPool cPool cG k t' cD in
-        let cD_e' = gen_explicit_cD cD_e cD cD_gb cD' in
-        dprintf
-        begin fun p ->
-        p.fmt "[invert cD analysis] cD new = %a, cD_e' = %a "
-          (Printer.fmt_ppr_mctx) cD
-          (Printer.fmt_ppr_mctx) cD_e'
-        end;
+        let cIH = unique_IH(Context.(append cIH_b cIH'')) cD in
         let cG_a' = update_branch_cG_a (cG, cPool_b, cG_a) in
-        (* TODO:: We *want* to use cD to update cD_a (as it contains all
-           new meta-vars) but cD contains implicit meta-variables, and if
-           we split/invert on them it will case type check errors in the final
-           program.
-           For now, we leave as cD_e' but should be fixed...
-            as a result- t/harpoon/nats_and_bools_auto_invert.input fails *)
-        let cD_a' = update_branch_cD_a (cD_e', cD_a) in
-        (cD, cD_b, cD_a', cG, cG_p, cG_a', cIH, cPool_b, t', pat', mfs', cid,
-         cD_e')
+        let cD_a' = update_branch_cD_a (cD, cD_a) in
+        (cD, cD_b, cD_a', cG, cG_p, cG_a', cIH, cPool_b, t', pat', mfs', cid)
       in
       (* Compute the coverage goals for the type to split on. *)
       let cgs = generate_pattern_coverage_goals tau cD' cG' in
@@ -4655,9 +4874,15 @@ module CSolver = struct
       List.map get_branch cgs
     in
 
-    let rec invert_all (cD, cD_a, cD_e) (cG, cPool, cG_a) cIH cg ms sc
+    let rec invert_all (cD, cD_a) (cG, cPool, cG_a) cIH cg ms sc
              (currDepth, maxDepth, currSplitDepth, maxSplitDepth)
              (ind, thm, td, cid_prog) =
+      dprintf
+      begin fun p ->
+      p.fmt "Invert_all, %a"
+        (printState cD cG cPool cIH cg) ms
+      end;
+
       (* Check that there is a variable left to split on *)
       if vars_left (cD_a, cG_a)
       then
@@ -4682,7 +4907,7 @@ module CSolver = struct
             (DP.fmt_ppr_cmp_exp cD cG DP.l0) i
            end;
           (* Returns the branch list for the given split *)
-          gen_branch_list i tau ms td (cD, cD_a'') (cG, cG_a'', cPool, k) cIH index cD_e
+          gen_branch_list i tau ms td (cD, cD_a'') (cG, cG_a'', cPool, k) cIH index
         in
         dprintf
         begin fun p ->
@@ -4692,12 +4917,13 @@ module CSolver = struct
         (if List.length blist = 1
         then
           let [(cD, cD_b, cD_a, cG, cG_p, cG_a, cIH_b, cPool,
-                ms_b, pat, td_b, cid, cD_e)] = blist in
-          invert_all (cD, cD_a, cD_e) (cG, cPool, cG_a) cIH_b
+                ms_b, pat, td_b, cid)] = blist in
+
+          invert_all (cD, cD_a) (cG, cPool, cG_a) cIH_b
             (normCompGoal (cg, ms)) ms_b
             (fun e ->
               sc (Comp.Case (noLoc, Comp.PragmaCase, i,
-                             [Comp.Branch(noLoc, LF.Empty, (cD_b, cG_p), pat,
+                             [Comp.Branch(noLoc, LF.Empty, (cD, cG), pat,
                                           ms_b, e)])))
             (currDepth, maxDepth, currSplitDepth, maxSplitDepth)
             (ind, thm, td, cid)
@@ -4731,7 +4957,7 @@ module CSolver = struct
            (currDepth, maxDepth, currSplitDepth, maxSplitDepth),
            (ind, thm, td, cid_prog))
       =
-        invert_all (cD, cD_a, cD) (cG, cPool, cG_a) cIH cg ms sc
+        invert_all (cD, cD_a) (cG, cPool, cG_a) cIH cg ms sc
            (currDepth, maxDepth, currSplitDepth, maxSplitDepth)
            (ind, thm, td, cid_prog)
       in
@@ -4897,7 +5123,7 @@ module CSolver = struct
        let i' = fS i in
        let i'' = Whnf.cnormExp (i', LF.MShift 0) in
        let sc = sc i'' in
-       blurIH (cD, cD_a) (cG', cPool', cG_a') (cIH, cIH_all)
+       blurIH (cD, cD_a) (cG', cPool', cG_a') (cIH', cIH_all)
          cg ms sc (cDepth, mDepth, currSplitDepth, maxSplitDepth)
          (ind, thm, td, thm_cid)
 
@@ -5029,6 +5255,8 @@ module CSolver = struct
        let cG' = Whnf.extend_gctx cG (tdecl, LF.MShift 0) in
        let cG_a' = add_split 0 tdecl cG_a false in
        let Some cid = thm_cid in
+       let cIH_all' = Total.shift cIH_all in
+       let cIH'' = Total.shift cIH' in
        let i = Comp.Const(noLoc, cid) in
        (try
          solveIHblur (cD, cD_a) (cG, cPool, cG_a) cIH i sg ms
@@ -5044,7 +5272,7 @@ module CSolver = struct
                                                       LF.MShift 0,
                                                       e)])))
            fS (cDepth, mDepth, currSplitDepth, maxSplitDepth)
-           (ind, thm, td, thm_cid) (cG', cPool', cG_a') (cIH', cIH_all) cg
+           (ind, thm, td, thm_cid) (cG', cPool', cG_a') (cIH'', cIH_all') cg
        with
        | End_Of_Search | DepthReached _ ->
           blurIH (cD, cD_a) (cG, cPool, cG_a) (cIH', cIH_all) cg ms sc
@@ -5075,9 +5303,18 @@ module CSolver = struct
        let cG_a' = add_split 0 tdecl cG_a false in
        let Some cid = thm_cid in
        let i = Comp.Const(noLoc, cid) in
+       let cIH'' = Total.shift cIH' in
+       let cIH_all' = Total.shift cIH_all in
+       let exp = Whnf.cnormExp (fS i, LF.MShift 0) in
+       dprintf
+        begin fun p ->
+        p.fmt
+          "ADDING TO cG exp = %a"
+          (Printer.fmt_ppr_cmp_exp cD cG') exp
+        end;
        let sc' = (fun e -> sc (Comp.Case (noLoc,
                                         Comp.PragmaNotCase,
-                                        Whnf.cnormExp (fS i, LF.MShift 0),
+                                        exp,
                                         [Comp.Branch (noLoc,
                                                       LF.Empty,
                                                       (cD, cG'),
@@ -5085,15 +5322,15 @@ module CSolver = struct
                                                       LF.MShift 0,
                                                       e)])))
        in
-       blurIH (cD, cD_a) (cG', cPool', cG_a') (cIH', cIH_all) cg ms sc'
+       blurIH (cD, cD_a) (cG', cPool', cG_a') (cIH'', cIH_all') cg ms sc'
          (cDepth, mDepth, currSplitDepth, maxSplitDepth)
          (ind, thm, td, thm_cid)
 
     | LF.Dec(cIH', ((Comp.WfRec (name, ih_arg_lst, tau)) as dec))
          when (is_box tau) ->
-       let (cG', cG_a', cPool', sc') =
-         find_all_occurances dec (cG, cPool, cG_a) sc cD thm_cid thm [] in
-       blurIH (cD, cD_a) (cG', cPool', cG_a') (cIH', cIH_all) cg ms sc'
+       let (cG', cG_a', cPool', sc', cIH'', cIH_all') =
+         find_all_occurances dec (cG, cPool, cG_a) sc cD thm_cid thm [] cIH' cIH_all in
+       blurIH (cD, cD_a) (cG', cPool', cG_a') (cIH'', cIH_all') cg ms sc'
          (cDepth, mDepth, currSplitDepth, maxSplitDepth)
          (ind, thm, td, thm_cid)
 
@@ -5139,9 +5376,10 @@ module CSolver = struct
        let tdecl = Comp.CTypDecl(name, hd, true) in
        let cG' = Whnf.extend_gctx cG (tdecl, LF.MShift 0) in
        let cG_a' = add_split 0 tdecl cG_a false in
+       let cIH' = Total.shift cIH in
        (try
          solveGblur (cD, cD_a) (cG, cPool_all, cG_a) cIH (sg, k') ms
-           (fun i -> blurGamma (cD, cD_a) (cG', cPool', cPool_all', cG_a') cIH cg ms
+           (fun i -> blurGamma (cD, cD_a) (cG', cPool', cPool_all', cG_a') cIH' cg ms
                        (fun e ->
                          sc (Comp.Case (noLoc,
                                         Comp.PragmaNotCase,
@@ -5359,7 +5597,8 @@ module CSolver = struct
        let cG' = Whnf.extend_gctx cG (tdecl, ms) in
        let Comp.CTypDecl (name, _, _) = tdecl in
        let sc' = (fun e -> sc (Comp.Fn (noLoc, name, e))) in
-       uniform_right (cD, cD_a) (cG', cPool', cG_a') cIH cg' ms sc'
+       let cIH' = Total.shift cIH in
+       uniform_right (cD, cD_a) (cG', cPool', cG_a') cIH' cg' ms sc'
          (currDepth, maxDepth, currSplitDepth, maxSplitDepth) (k+1)
          (ind, thm, td, thm_cid) blur
 
@@ -5577,7 +5816,9 @@ module Frontend = struct
     let cIH' =
       let cIH' = CSolver.remove_mvar_subs cIH in
       let unique_cIH = CSolver.unique_IH cIH' cD in
-      CSolver.cnormIHCtx' (CSolver.fix_IH_args unique_cIH cD, LF.MShift 0) in
+      let v_free_cIH = CSolver.remove_IH unique_cIH in
+      CSolver.cnormIHCtx' (CSolver.fix_IH_args v_free_cIH cD, LF.MShift 0)
+    in
 
     (* Put the mmVar list in correct format. *)
     let mmVars =
@@ -5778,6 +6019,8 @@ module Frontend = struct
       | Comp.PatConst (l, cid, pspine) ->
          Comp.PatConst (l, cid, remove_pspine_mvars pspine)
       | Comp.PatVar (_) -> pat
+      | Comp.PatAnn (l, pat', tau, plicity) ->
+         Comp.PatAnn (l, remove_pat_mvars pat', tau, plicity)
       | _ -> raise NotImplementedYet
     in
 
@@ -5827,6 +6070,13 @@ module Frontend = struct
       dprintf
         begin fun p ->
         p.fmt
+          "FINAL CHECK before fix e = %a"
+          (Printer.fmt_ppr_cmp_exp cD cG) e
+        end;
+      let e = CSolver.fix_plicities e cD in
+      dprintf
+        begin fun p ->
+        p.fmt
           "FINAL CHECK e = %a"
           (Printer.fmt_ppr_cmp_exp cD cG) e
         end;
@@ -5837,7 +6087,12 @@ module Frontend = struct
       raise Done
       with
       | Done -> raise Done
-      | _ -> raise NotImplementedYet
+      | _ ->
+         begin
+           fprintf std_formatter "Proof Search failed. Term found does not type check : %a"
+                 (Printer.fmt_ppr_cmp_exp cD cG) e
+         end;
+         raise NotImplementedYet
 
     in
 

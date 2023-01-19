@@ -51,6 +51,9 @@ let rec hatToDCtx =
        ( hatToDCtx (ctx_v, k-1)
        , LF.TypDeclOpt Name.(mk_name (SomeString ("x" ^ string_of_int k))))
 
+let extend_hatctx j  (ctx_v, k)  = (ctx_v, j+k)
+
+
 
 (* Declaration Contexts *)
 (*
@@ -130,6 +133,12 @@ let ctxSigmaDec cPsi k =
     (* (Null, k') and (CtxVar _, k') should not occur by invariant *)
   in
   ctxDec' (cPsi, k)
+
+
+let rec containsSigma cPsi = match cPsi with
+  | DDec (_, TypDecl (x, Sigma tArec)) -> true
+  | DDec (cPsi', _ ) -> containsSigma cPsi'
+  | _ -> false
 
 
 (* ctxVar (Psi) = psi opt
@@ -439,7 +448,7 @@ and lookupCtxVar cD cvar =
   in
   lookup cD 0
 
-and lookupCtxVarSchema cO phi = Pair.snd (lookupCtxVar cO phi)
+and lookupCtxVarSchema cD phi : Id.cid_schema  = Pair.snd (lookupCtxVar cD phi)
 
 let rec rename src dst get_name rename_decl =
   function

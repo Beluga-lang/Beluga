@@ -133,7 +133,7 @@ module Make (T : TRAIL) : UNIFY = struct
   let eq_cvarRef (MMVarRef r) (MMVarRef r') = r == r'
 
 (* Printing of constraints *)
-  let rec blockdeclInDctx =
+let rec blockdeclInDctx =
     function
     | Null -> false
     | CtxVar psi -> false
@@ -1811,42 +1811,65 @@ module Make (T : TRAIL) : UNIFY = struct
   and unifyMMVarTermProj cD0 cPsi mmvar mt1 t1' tM2 =
     let ClTyp (_, cPsi1) = mmvar.typ in
     let mtt1 = Whnf.m_invert (Whnf.cnormMSub mt1) in
-    (* cD |- mtt1 : cD0 *)
+    (* cD |- mtt1 : cD0 and  cD ; cPsi |- t1' : cPsi1 *)
     let (flat_cPsi, conv_list) = ConvSigma.flattenDCtx cD0 cPsi in
+    let s_tup = ConvSigma.gen_tup_sub conv_list in (* flat_cPsi |- s_tup : cPsi *)
+    let s_proj = ConvSigma.gen_proj_sub conv_list in (* cPsi |- s_proj : flat_cPsi *)
     dprintf
       begin fun p ->
       p.fmt "[unifyMMVarTermProj] \
              @[<v>cPsi = @[%a@]\
-             @,sM2 = @[%a@]\
+             @,tM2 = @[%a@]\
              @,flat_cPsi = @[%a@]\
-             @,conv_list = @[%a@]@]"
+             @,conv_list = @[[%a]@]@]\
+             @, Type of MMVar = @[ %a @]"
         (P.fmt_ppr_lf_dctx cD0 P.l0) cPsi
         (P.fmt_ppr_lf_normal cD0 cPsi P.l0) tM2
         (P.fmt_ppr_lf_dctx cD0 P.l0) flat_cPsi
         ConvSigma.fmt_ppr_conv_list conv_list
+        (P.fmt_ppr_lf_mtyp cD0 ) mmvar.typ
       end;
     let phat = Context.dctxToHat flat_cPsi in
-    let t_flat = ConvSigma.strans_sub cD0 cPsi t1' conv_list in
-    (* flat_cPsi |- t_flat : cPsi *)
-    (* flat_cPsi |- t_flat : cPsi1 ** new *)
+    (*  cD0 ; cPsi |- t1' : cPsi 1   and cD ; flat_cPsi |- s_tup : cPsi1  *)
+    (* flat_cPsi |- t_flat : cPsi1  where t_flat = [s_tup]t1'             *)
+    (* let t_flat = ConvSigma.strans_sub cD0 cPsi t1' conv_list in *)
+    let t_flat = Whnf.normSub (Substitution.LF.comp t1' s_tup) in
     dprintf
       begin fun p ->
-      p.fmt "[unifyMMVarTermProj] t_flat = %a"
+      p.fmt "[unifyMMVarTermProj] t_flat = %a "
         (P.fmt_ppr_lf_sub cD0 flat_cPsi P.l0) t_flat
       end;
-    let tM2' = ConvSigma.strans_norm cD0 cPsi (tM2, id) conv_list in
-    dprintf
+     dprintf
       begin fun p ->
-      p.fmt "[unifyMMVarTermProj] sM2' = %a"
-        (P.fmt_ppr_lf_normal cD0 flat_cPsi P.l0) tM2'
+      p.fmt "[unifyMMVarTermProj] sM2 = %a \n s_tup = %a \n s_proj = %a  "
+        (P.fmt_ppr_lf_normal cD0 cPsi P.l0) tM2
+        (P.fmt_ppr_lf_sub cD0 flat_cPsi P.l0) s_tup  (* flat_cPsi |- s_tup : cPsi *)
+        (P.fmt_ppr_lf_sub cD0 cPsi P.l0) s_proj      (*  cPsi      |- s_proj : flat_cPsi *)
+        (* note :  comp s_tup s_proj does not produce the identity, since we don't have eta-contraction for tuples
+             For example:   x:tA, y:tB |-  <x,y> : b:block x:tA, y:tB
+                  b:block x:tA, y:tB   |- b.x, b.y :  x:tA, y:tB
+
+                  composition gives us:
+
+                  b:block x:tA, y:tB   |- <b.x, b.y> :b:block x:tA, y:tB
+
+                 Only the opposite composition: comp s_proj s_tup = id
+         *)
       end;
-    (* flat_cPsi |- tM2' *)
     let ss = invert t_flat in
     (* cPsi1  |- ss : flat_cPsi
        Inversion of t_flat will only succeed if t_flat is a variable substitution;
        it can happen that it contains projections as complete flattening was impossible
        because not enough typing information was available in cPsi (i.e. cPsi was obtained by hattoDctx)
      *)
+    (* flat_cPsi |- tM2'  *)
+    (* this seems to produce an incorrect term -bp *)
+     let tM2' = Whnf.norm (tM2, s_tup )  (* flat_cPsi |- tM2'  *) in
+    dprintf
+      begin fun p ->
+      p.fmt "[unifyMMVarTermProj] tM2'(normal form) = %a  "
+        (P.fmt_ppr_lf_normal cD0 flat_cPsi P.l0) tM2'
+      end;
     let sM2' =
       trail
         begin fun () ->
@@ -1855,7 +1878,7 @@ module Make (T : TRAIL) : UNIFY = struct
     in
     dprintf
       begin fun p ->
-      p.fmt "[unifyMMVarTermProj] - done: %a"
+      p.fmt "[unifyMMVarTermProj]: tM2 (after pruning) = %a"
         (P.fmt_ppr_lf_normal cD0 flat_cPsi P.l0) tM2'
       end;
     instantiateMMVar (mmvar.instantiation, sM2', mmvar.constraints.contents)
@@ -3043,7 +3066,18 @@ module Make (T : TRAIL) : UNIFY = struct
         f sM
         f sN
       end;
-    unify' Unification cD0 cPsi sM sN;
+    begin
+(*      if Context.containsSigma cPsi then
+        begin
+          let (flat_cPsi, lazy s_proj, lazy s_tup) = ConvSigma.gen_flattening cD0 cPsi
+          in
+          unify' Unification cD0 flat_cPsi
+            (Whnf.norm (Whnf.norm sM, s_tup), Substitution.LF.id)
+            (Whnf.norm (Whnf.norm sN, s_tup), Substitution.LF.id)
+        end
+      else *)
+        unify' Unification cD0 cPsi sM sN
+    end;
     dprintf
       begin fun p ->
       p.fmt "[unify] @[<v>DONE:@,%a == %a@]"
@@ -3151,9 +3185,10 @@ module Make (T : TRAIL) : UNIFY = struct
    (* **************************************************************** *)
 
   let unifyClObj cPsi m1 m2 =
-    match (m1, m2) with
-    | (MObj tM1, MObj tM2) -> unify Empty cPsi (tM1, id) (tM2, id)
-    | (PObj h, PObj h') -> unifyHead Unification Empty cPsi h h'
+        match (m1, m2) with
+        | (MObj tM1, MObj tM2) ->  unify Empty cPsi (tM1, id) (tM2,id)
+        | (PObj h, PObj h') -> unifyHead Unification Empty cPsi h h'
+
 
   let unifyMFront m1 m2 =
     match (m1, m2) with
@@ -3187,20 +3222,50 @@ module Make (T : TRAIL) : UNIFY = struct
   let unifyTypRec cD0 cPsi sArec sBrec =
     unifyTypRec' Unification cD0 cPsi sArec sBrec
 
-  let unifyTyp cD0 cPsi sA sB =
-    dprintf
-      begin fun p ->
-      p.fmt "[unifyTyp] @[<v>unifying LF types:@,\
-             s_1[A] = @[%a@]@,\
-             s_2[B] = @[%a@]@,\
-             in cD = @[%a@]@,\
-             and cPsi = @[%a@]@]"
-        P.(fmt_ppr_lf_typ cD0 cPsi l0) (Whnf.normTyp sA)
-        P.(fmt_ppr_lf_typ cD0 cPsi l0) (Whnf.normTyp sB)
-        P.(fmt_ppr_lf_mctx l0) cD0
-        P.(fmt_ppr_lf_dctx cD0 l0) cPsi
-      end;
-    unifyTyp' Unification cD0 cPsi sA sB
+  let unifyTyp cD0 cPsi ((tA,sa) as sA) ((tB, sb) as sB) =
+    (* If we call unification with flattened cPsi, then we would need to do it consistently *)
+    (*if Context.containsSigma cPsi then
+      begin
+        let (flat_cPsi, lazy s_proj, lazy s_tup) = ConvSigma.gen_flattening cD0 cPsi in
+        (* flat_cPsi |- s_tup : cPsi   and   cPsi |- s_proj : flat_cPsi *)
+        dprintf
+          begin fun p ->
+          p.fmt "[unifyTyp] @[<v>unifying LF types:@,\
+                 s_1[A] = @[%a@]@,\
+                 s_2[B] = @[%a@]@,\
+                 in cD = @[%a@]@,\
+                 and cPsi = @[%a@]@ @]"
+            P.(fmt_ppr_lf_typ cD0 cPsi l0) (Whnf.normTyp sA)
+            P.(fmt_ppr_lf_typ cD0 cPsi l0) (Whnf.normTyp sB)
+            P.(fmt_ppr_lf_mctx l0) cD0
+            P.(fmt_ppr_lf_dctx cD0 l0) cPsi
+          end ;
+        dprintf
+          begin fun p ->
+          p.fmt "[unifyTyp] @[<v>Flattening cPsi :@,\
+                 flat_cPsi = @[%a]@,\\
+                 s_proj = @[%a@]@,\\
+                 s_tup =  @[%a@]@ @]"
+            P.(fmt_ppr_lf_dctx cD0 l0) flat_cPsi
+            P.(fmt_ppr_lf_sub cD0 flat_cPsi l0) s_tup
+            P.(fmt_ppr_lf_sub cD0 cPsi l0) s_proj
+          end;
+        dprintf
+          begin fun p ->
+          p.fmt "[unifyTyp] @[<v>unifying flattened LF types:@,\
+                 sA (in flat_cPsi) =  @[%a@]@,\\
+                 sB (in flat_cPsi) = @[%a@] @]"
+            P.(fmt_ppr_lf_typ cD0 flat_cPsi l0) (Whnf.normTyp ((Whnf.normTyp sA), s_tup))
+            P.(fmt_ppr_lf_typ cD0 flat_cPsi l0) (Whnf.normTyp ((Whnf.normTyp sB), s_tup)       )
+          end;
+        unifyTyp' Unification cD0 flat_cPsi
+          (Whnf.normTyp ((Whnf.normTyp sA), s_tup), Substitution.LF.id)
+          (Whnf.normTyp ((Whnf.normTyp sB), s_tup) , Substitution.LF.id);
+        dprintf (fun p -> p.fmt "[unifyTyp] in flattened context done");()
+      end
+        else
+     *)
+      unifyTyp' Unification cD0 cPsi sA sB
 
   let unifyDCtx cD0 cPsi1 cPsi2 =
     let cPsi1' = Whnf.cnormDCtx (cPsi1, Whnf.m_id) in

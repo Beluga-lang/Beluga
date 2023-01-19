@@ -484,8 +484,9 @@ let rec elMCtx recT =
 
 
 let mgAtomicTyp cD cPsi a kK =
-  let (flat_cPsi, conv_list) = flattenDCtx cD cPsi in
-  let s_proj = gen_proj_sub conv_list in
+  let (flat_cPsi, lazy s_proj, lazy s_tup) = gen_flattening cD cPsi in
+  (* cPsi |- s_proj : flat_cPsi *)
+  (* flat_cPsi |- s_tup : cPsi *)
   dprintf
     begin fun p ->
     p.fmt "[mgAtomicTyp] @[<v>flat cPsi = @[%a@]\
@@ -497,7 +498,7 @@ let mgAtomicTyp cD cPsi a kK =
     lazy
       begin
         let (ss', cPhi') = Subord.thin' cD a flat_cPsi in
-        (* cPhi |- ss' : cPhi' *)
+        (* flat_cPsi |- ss' : cPhi' *)
         dprintf begin fun p ->
           p.fmt "[mgAtomicTyp] @[<v>thinning constructed weakening\
                  @,@[%a@]\
@@ -506,9 +507,11 @@ let mgAtomicTyp cD cPsi a kK =
             (P.fmt_ppr_lf_typ Int.LF.Empty Int.LF.Null P.l0) Int.LF.(Atom (Loc.ghost, a, Nil))
           end;
         let ssi' = LF.invert ss' in
-        (* cPhi' |- ssi : cPhi *)
+        (* cPhi' |- ssi' : flat_cPsi
+          flat_cPsi |- ss' : cPhi'
+          cPsi |- s_proj : flat_cPsi    *)
         (* cPhi' |- [ssi]tQ    *)
-        let ss_proj = LF.comp ss' s_proj in
+        let ss_proj = LF.comp ss' s_proj in  (* cPsi |- comp ss' s_proj : cPhi' where cPhi' = strength. flat_cPsi   *)
         (cPhi', ssi', ss_proj)
       end
   in
@@ -519,11 +522,16 @@ let mgAtomicTyp cD cPsi a kK =
        Int.LF.Nil
 
     | (Int.LF.(PiKind ((TypDecl (u, tA1), plicity), kK), s)) ->
-       let tA1' = strans_typ cD cPsi (tA1, s) conv_list in
+       let tA1_norm = Whnf.normTyp (tA1, s) in
+       let tA1' = Whnf.normTyp (tA1_norm,  s_tup) in
+       (*       let tA1' = strans_typ cD cPsi (tA1, s) conv_list in *)
+       (*  flat_cPsi  |- tA1 *)
        let tR =
          if !strengthen
          then
            let lazy (cPhi', ssi', ss_proj) = thinned in
+           (* cPhi' |- ssi' : flat_cPsi
+              cPsi |- ss_proj : cPhi'   *)
            dprintf
              begin fun p ->
              p.fmt "[mgAtomicTyp] @[<v>PiKind ssi' = @[%a@]\
@@ -603,7 +611,7 @@ let elClObj cD loc cPsi' clobj mtyp =
     ) ->
      dprintf
        (fun p ->
-         p.fmt "[elClObj] disambiguating substitution to term at %a"
+         p.fmt "[elClObj] Elaborating LF Term (disambiguating substitution to term) at %a"
            Loc.print loc);
      let r = Int.LF.MObj (Lfrecon.elTerm Lfrecon.Pibox cD cPsi' tM (tA, LF.id)) in
      dprint (fun () -> "[ElClObj] ELABORATION MObj DONE");
@@ -685,6 +693,11 @@ and elMetaObj cD (loc, cM) cTt =
       p.fmt "[elMetaObj] @[<v>type = %a@,term = %a@]"
         (P.fmt_ppr_cmp_meta_typ cD) ctyp
         (P.fmt_ppr_cmp_meta_obj cD P.l0) (loc, r)
+      end;
+     dprintf
+      begin fun p ->
+      p.fmt "[elMetaObj] @[<v>(renorm.) type = %a@]"
+        (P.fmt_ppr_cmp_meta_typ cD) ( Whnf.cnormMTyp (ctyp, Whnf.m_id))
       end;
     (loc, r)
   with
@@ -1762,6 +1775,11 @@ and recPatObj' cD pat (cD_s, tau_s) =
         this is useful, if the context psi contains Sigma-types,
         as existential variables can be generated in a flattened context.
       *)
+     dprintf
+       begin fun p ->
+       p.fmt "[recPatObj'] PatMetaObj @[<v>-~~> inferPatTyp@,tau_s = @[%a@]@]"
+         (P.fmt_ppr_cmp_typ cD_s P.l0) tau_s
+       end;
      let (loc', clTyp) =
        (* infer the cltyp *)
        match tau_s with
@@ -1791,7 +1809,17 @@ and recPatObj' cD pat (cD_s, tau_s) =
           (* inferClTyp cD psi (cD_s, tau_s) *)
      in
      let tau_p = Int.Comp.TypBox (loc', clTyp) in
+     dprintf
+       begin fun p ->
+       p.fmt "[recPatObj'] @[<v>-~~> inferred Patttern Type@,tau_p = @[%a@]@]"
+         (P.fmt_ppr_cmp_typ cD P.l0) tau_p
+       end;
      let ttau' = (tau_p, Whnf.m_id) in
+     dprintf
+       begin fun p ->
+       p.fmt "[recPatObj'] @[<v>-~~> inferred Patttern Type (cnorm) @,tau_p = @[%a@]@]"
+         (P.fmt_ppr_cmp_typ cD P.l0) (Whnf.cnormCTyp ttau')
+       end;
      let (cG', pat') = elPatChk cD Int.LF.Empty pat ttau' in
      (* here the annotation is implicit because it did not appear in
         the user-supplied syntax; we just reconstructed it. *)
@@ -1809,7 +1837,7 @@ and recPatObj' cD pat (cD_s, tau_s) =
        p.fmt "[inferPatTyp] tau_p = @[%a@]"
          (P.fmt_ppr_cmp_typ cD P.l0) tau_p
        end;
-     let ttau' = (tau_p, Whnf.m_id) in
+      let ttau' = (tau_p, Whnf.m_id) in
      let (cG', pat') = elPatChk cD Int.LF.Empty pat ttau' in
      (cG', pat', ttau')
 
@@ -1832,7 +1860,7 @@ and recPatObj loc cD pat (cD_s, tau_s) =
    *)
   dprintf (fun p -> p.fmt "[recPatObj] solving constraints %a" Loc.print_short loc);
   Lfrecon.solve_constraints cD;
-  dprintf
+(*  dprintf
     begin fun p ->
     p.fmt "[recPatObj] @[<v>pat (before abstraction) =@,\
            @[<hv 2>@[%a@] |-@ @[%a@] <=@ @[%a@]@]@]"
@@ -1840,12 +1868,17 @@ and recPatObj loc cD pat (cD_s, tau_s) =
       (P.fmt_ppr_cmp_pattern cD cG' P.l0) pat'
       (P.fmt_ppr_cmp_typ cD P.l0) (Whnf.cnormCTyp ttau')
     end;
+ *)
   dprint (fun () -> "[recPatObj] Abstract over pattern and its type");
+  let tau' = Whnf.cnormCTyp ttau' in
+  dprintf begin
+      fun p ->  p.fmt "[recPatObj] Pattern type tau' = %a"  (P.fmt_ppr_cmp_typ cD P.l0 ) tau'
+    end;
   let (cD1, cG1, pat1, tau1) =
     Abstract.patobj loc cD (Whnf.cnormGCtx (cG', Whnf.m_id))
       pat'
       (Context.names_of_mctx cD_s)
-      (Whnf.cnormCTyp ttau')
+      tau'
   in
   begin
     try

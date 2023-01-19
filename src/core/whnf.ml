@@ -48,10 +48,8 @@ let etaContract =
      let rec etaUnroll k =
        function
        | Lam (_, _, tN) ->
-          dprintf (fun p -> p.fmt "etaUnroll k = %d@." k);
           etaUnroll (k + 1) tN
        | _ ->
-          dprintf (fun p -> p.fmt "etaUnroll k = %d@." k);
           (k, tM)
      in
      let rec etaSpine k tS =
@@ -63,14 +61,9 @@ let etaContract =
           else false
        | _ ->
           false
-          (* previously
-             dprint (fun () -> "[etaSpine] _ ");
-             raise (Error.Violation "etaSpine undefined\n")
-           *)
      in
      begin match etaUnroll 0 tM with
      | (k, Root (_, BVar x, tS, _)) ->
-        dprintf (fun p -> p.fmt "check etaSpine k = %d@." k);
         if etaSpine k tS && x > k
         then Head (BVar (x - k))
         else Obj tM
@@ -389,7 +382,9 @@ and norm (tM, sigma) =
      norm (tN, LF.comp s sigma)
   | LFHole _ -> tM
   | Root (loc, h, tS, plicity) ->
-     begin match normHead (h, sigma) with
+     begin
+     let sigma = normSub sigma in
+       match normHead (h, sigma) with
      | Head h' -> Root (loc, h', normSpine (tS, sigma), plicity)
      | Obj tM -> reduce (tM, LF.id) (normSpine (tS, sigma))
      end
@@ -401,7 +396,8 @@ and normHead (h, sigma) =
   | Const c -> Head (Const c)
   | PVar (p, s) -> Head (PVar (p, normSub' (s, sigma)))
   | AnnH (h, t) -> normHead (h, sigma)
-  | Proj (h, i) -> reduceTupleFt (normHead (h, sigma), i)
+  | Proj (h, i) ->
+     reduceTupleFt (normHead (h, sigma), i)
   | FVar n -> Head (FVar n)
   | FMVar (n, s) -> Head (FMVar (n, normSub' (s, sigma)))
   | FPVar (n, s) -> Head (FPVar (n, normSub' (s, sigma)))
@@ -429,6 +425,7 @@ and normHead (h, sigma) =
      | ResMM (mm', _) -> Head (MVar (Inst mm', normSub' (s, sigma)))
      | Result (INorm n) -> Obj (norm (norm (n, s), sigma))
      end
+
 
 and normMMVar (mmvar, t) =
   match mmvar.instantiation.contents with
@@ -472,7 +469,7 @@ and normMObj (tM, s) =
   | SObj r -> SObj (normSub' (r, s))
 
 and reduceTupleFt (ft, i) =
-  match ft with
+  match normFt' (ft, LF.id) with
   | Head h -> Head (Proj (h, i))
   | Obj (Tuple (_, tM)) -> Obj (reduceTuple (tM, i))
   | Obj _ -> Error.violation "[reduceTupleFt] not a tuple"
@@ -1918,7 +1915,8 @@ let cnormCTypDecl (d, t) =
 
 let normIHArg =
   function
-  | Comp.M cM -> Comp.M (normMetaObj (cnormMetaObj (cM, m_id)))
+  | Comp.M (cM , cU)-> Comp.M (normMetaObj (cnormMetaObj (cM, m_id)),
+                               normITyp  (cnormMTyp (cU, m_id)))
   | m -> m
 
 let normIHDecl =
@@ -1935,7 +1933,7 @@ let normCTypDecl =
 
 let cnormIHArg (a, t) =
   match a with
-  | Comp.M cM -> Comp.M (cnormMetaObj (cM, t))
+  | Comp.M (cM, cU)-> Comp.M (cnormMetaObj (cM, t), cnormMTyp (cU, t))
   | _ -> a
 
 let cnormIHDecl (d, t) =

@@ -35,12 +35,14 @@ schema ctx = value T ;
 
 
  rec var : {g:ctx}{#p:[g |- value (S[])]}  [ |- exp' S] =
-/ total p (var g s p) /
-mlam g => mlam #p => case [g |- #p] of
+/ total g (var g) /
+mlam g => mlam #p => case [g] of
+| [] => impossible [ |- #p]
+| [g,x:value S] => (case [g,x:value S |- #p] of
 | [g,x:value S |- x] =>  [ |- one]
 | [g,x:value S |- #q[..]] =>
   let [ |- Db] = var [g] [g |- #q] in
-  [ |- shift Db]
+  [ |- shift Db])
 ;
 
 

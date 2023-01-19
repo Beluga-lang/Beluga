@@ -1,4 +1,4 @@
-(lang dune 3.2)
+(lang dune 3.6)
 
 (name beluga)
 
@@ -13,9 +13,10 @@
  "Joshua Dunfield"
  "Andrew Cave"
  "Jacob Thomas Errington"
- "Junyoung Clare Jang")
+ "Junyoung Clare Jang"
+ "Marc-Antoine Ouimet")
 
-(maintainers "jacob.errington@mail.mcgill.ca")
+(maintainers "marc-antoine.ouimet@mail.mcgill.ca")
 
 (homepage "http://complogic.cs.mcgill.ca/beluga/")
 
@@ -33,8 +34,7 @@
   camlp-streams
   linenoise
   (ocaml
-   (>= 4.08))
+   (>= 4.14))
   sedlex
-  hamt
   (ounit2 :with-test)
   (bisect_ppx :with-test)))

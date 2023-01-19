@@ -14,10 +14,6 @@ type t
 exception Error of Syntax.Loc.t * error
 val fmt_ppr_conv_list : Format.formatter -> t -> unit
 
-val strans_typ : mctx -> dctx -> tclo -> t -> typ
-val strans_norm : mctx -> dctx -> nclo -> t -> normal
-val strans_sub : mctx -> dctx -> sub -> t -> sub
-
 (** Translates a bound variable index according to the sigma
     conversion. *)
 val map : t -> Id.offset -> Id.offset
@@ -25,6 +21,9 @@ val map : t -> Id.offset -> Id.offset
 val flattenDCtx : mctx -> dctx -> dctx * t
 val gen_proj_sub: t -> sub
 val gen_tup_sub : t -> sub
+
+val gen_proj_sub': t -> sub
+val gen_tup_sub' : t -> sub
 
 (** Constructs a unification variable for the given tclo,
     strengthening its type. *)

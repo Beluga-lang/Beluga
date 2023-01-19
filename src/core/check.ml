@@ -399,11 +399,42 @@ module Comp = struct
        | Int.LF.CTyp _ ->
           (* TODO proper error; cannot strengthen a schema *)
           assert false
-       | Int.LF.(ClTyp (mT, cPsi)) ->
+       | Int.LF.(ClTyp (mT, cPsi)) -> (* when Context.containsSigma cPsi -> *)
           begin match mT with
           | Int.LF.(MTyp (Atom (_, a, _) as tA)) ->
-             let (cPhi, lazy s_proj, lazy s_tup) = ConvSigma.gen_flattening cD cPsi in
-             (* cPhi |- s_tup : cPsi *)
+             let (flat_cPsi, lazy s_proj, lazy s_tup) = ConvSigma.gen_flattening cD cPsi in
+             (* flat_cPsi |- s_tup : cPsi and cPsi |- s_proj : flat_cPsi *)
+             dprintf begin fun p ->
+             p.fmt "[apply unbox modifier] cPsi = %a \n s_tup = %a \n s_proj = %a"
+               P.(fmt_ppr_lf_dctx cD P.l0) cPsi
+               P.(fmt_ppr_lf_sub cD flat_cPsi P.l0) s_tup  (* flat_cPsi |- s_tup : cPsi *)
+               P.(fmt_ppr_lf_sub cD cPsi P.l0) s_proj      (*  cPsi      |- s_proj : flat_cPsi *)
+               end;
+             let tA' = Whnf.normTyp (tA, s_tup) in
+             (* flat_cPsi |- tA' *)
+             let (ss', flat_cPsi') =
+               Subord.thin' cD a flat_cPsi
+               |> Pair.map_right Whnf.normDCtx
+             in
+             (* flat_cPsi |- ss' : flat_cPsi' *)
+             let ssi' = S.LF.invert ss' in
+             (* flat_cPsi' |- ssi' : flat_cPsi *)
+             let cU' = Int.LF.ClTyp (Int.LF.MTyp (Whnf.normTyp (tA', ssi')), flat_cPsi') in
+             dprintf
+               begin fun p ->
+                p.fmt "Apply strengthening - flattening for new MVar cU = %a "
+                  (P.fmt_ppr_lf_mtyp cD) cU'
+               end ;
+             let ss_proj = S.LF.comp ss' s_proj in
+             (cU' , ss_proj)
+
+          | _ ->
+             (* TODO proper error; cannot strengthen non-atomic types. *)
+             assert false
+          end
+   (*    | Int.LF.(ClTyp (mT, cPhi)) ->
+          begin match mT with
+          | Int.LF.(MTyp (Atom (_, a, _) as tA)) ->
              let (ss', cPhi') =
                Subord.thin' cD a cPhi
                |> Pair.map_right Whnf.normDCtx
@@ -417,13 +448,12 @@ module Comp = struct
              (* cPhi |- ss' : cPhi' *)
              let ssi' = S.LF.invert ss' in
              (* cPhi' |- ssi' : cPhi *)
-             let ss_tup = S.LF.comp s_tup ssi' in
-             let ss_proj = S.LF.comp ss' s_proj in
-             (Int.LF.(ClTyp (MTyp (Whnf.normTyp (tA, ss_tup)), cPhi')), ss_proj)
+             (Int.LF.(ClTyp (MTyp (Whnf.normTyp (tA, ssi')), cPhi')), ss')
           | _ ->
              (* TODO proper error; cannot strengthen non-atomic types. *)
              assert false
           end
+    *)
        end
 
   let apply_unbox_modifier_opt cD modifier_opt =
@@ -873,7 +903,7 @@ module Comp = struct
          | I.Empty -> raise (Error (loc, InvalidRecCall))
          | cIH ->
             begin match e2 with
-            | Box (_, cM, _) | AnnBox (_, cM, _) ->
+            | Box (_, cM, cU) | AnnBox (_, cM, cU) ->
                dprintf
                  begin fun p ->
                  p.fmt "[useIH] @[<v>check whether compatible IH exists@,\
@@ -882,7 +912,7 @@ module Comp = struct
                    P.(fmt_ppr_cmp_ihctx cD cG) cIH
                    P.(fmt_ppr_cmp_meta_obj cD l0) cM
                  end;
-               Total.filter cD cG cIH (loc, M cM)
+               Total.filter cD cG cIH (loc, M (cM, cU))
             | (Var _ | DataConst _ | Obs _ | Const _ | Apply _ | MApp _) as  i ->
                begin match extract_var i with
                | Option.Some x -> Total.filter cD cG cIH (loc, V x)

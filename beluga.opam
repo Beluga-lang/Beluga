@@ -2,27 +2,27 @@
 opam-version: "2.0"
 synopsis:
   "Implementation of contextual modal logic for reasoning with higher-order abstract syntax"
-maintainer: ["jacob.errington@mail.mcgill.ca"]
+maintainer: ["marc-antoine.ouimet@mail.mcgill.ca"]
 authors: [
   "Brigitte Pientka"
   "Joshua Dunfield"
   "Andrew Cave"
   "Jacob Thomas Errington"
   "Junyoung Clare Jang"
+  "Marc-Antoine Ouimet"
 ]
 license: "GPL-3.0-only"
 homepage: "http://complogic.cs.mcgill.ca/beluga/"
 bug-reports: "https://github.com/Beluga-lang/Beluga/issues"
 depends: [
-  "dune" {>= "3.2"}
+  "dune" {>= "3.6"}
   "dune-build-info"
   "extlib"
   "gen"
   "camlp-streams"
   "linenoise"
-  "ocaml" {>= "4.08"}
+  "ocaml" {>= "4.14"}
   "sedlex"
-  "hamt"
   "ounit2" {with-test}
   "bisect_ppx" {with-test}
   "odoc" {with-doc}

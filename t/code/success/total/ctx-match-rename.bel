@@ -1,0 +1,21 @@
+--coverage
+
+term: type.
+lam:(term -> term) -> term.
+
+inductive Nat: ctype =
+| Z: Nat
+| S: Nat -> Nat;
+
+schema ctx = term;
+
+rec pos :{g:ctx}{#p:[g |- term]} Nat =
+/ total g (pos g) /
+mlam g,#p => case [g] of
+| [ ] => impossible [|- #p]
+| [h,y:term] =>
+  (case [h,y:term |- #p[..] ] of   % This passes and associates #p with Shift 0 == Shift 1, y/y
+                                 % This should not happen. It should have Shift 1 associated with it
+  | [k, y:term |- y ] => (S Z)
+  | [k,y:term |- #p[..]] => S (pos [k] [k |- #p[..]]))
+;

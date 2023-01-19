@@ -14,6 +14,20 @@ inductive Nat : ctype =
 schema ctx = term;
 
 rec pos_v : {g:ctx}{#p:[g |- term]} [|- nat] =
+/ total g (pos_v g) /
+mlam g, #p => case [g] of
+| [] => impossible [ |- #p]
+| [g, y:term] => (case [g,y:term |- #p[..,y]] of
+		  | [g,y:term |- y] => [|- z]
+		  | [g,y:term |- #p[..]] =>
+		    let [|- N] = pos_v [g] [g |- #p[..]] in
+		    [|- s N])
+;
+
+
+
+%{ BP: This must be rewritten to make the recursion on g explicite 
+rec pos_v : {g:ctx}{#p:[g |- term]} [|- nat] =
 / total v (pos_v g v) /
 mlam g, #p => case [g |- #p[..]] of
 | [g,y:term |- y] => [|- z]
@@ -21,7 +35,7 @@ mlam g, #p => case [g |- #p[..]] of
   let [|- N] = pos_v [g] [g |- #p[..]] in
     [|- s N]
 ;
-
+}%
 %{
 rec pos :(g:ctx)[g |- term] -> [ |- nat] =
 / total m (pos _ m) /

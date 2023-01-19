@@ -30,9 +30,9 @@ let json_of_identifier identifier =
 let json_of_qualified_identifier identifier =
   json_of_association
     [ ("name", json_of_identifier (Qualified_identifier.name identifier))
-    ; ( "modules"
+    ; ( "namespaces"
       , json_of_list json_of_identifier
-          (Qualified_identifier.modules identifier) )
+          (Qualified_identifier.namespaces identifier) )
     ; ( "location"
       , json_of_location (Qualified_identifier.location identifier) )
     ]

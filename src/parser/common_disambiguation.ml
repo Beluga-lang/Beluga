@@ -504,7 +504,7 @@ module Disambiguation_state : DISAMBIGUATION_STATE = struct
 
   let set qualified_identifier entry =
     let identifier = Qualified_identifier.name qualified_identifier
-    and namespaces = Qualified_identifier.modules qualified_identifier in
+    and namespaces = Qualified_identifier.namespaces qualified_identifier in
     set_nested ~namespaces ~identifier entry
 
   let rec lookup_nested ~namespaces ~identifier =
@@ -519,7 +519,7 @@ module Disambiguation_state : DISAMBIGUATION_STATE = struct
 
   let lookup query entry =
     let identifier = Qualified_identifier.name query
-    and namespaces = Qualified_identifier.modules query in
+    and namespaces = Qualified_identifier.namespaces query in
     lookup_nested ~namespaces ~identifier entry
 
   let rec partial_lookup_nested = function
@@ -560,7 +560,7 @@ module Disambiguation_state : DISAMBIGUATION_STATE = struct
 
   let partial_lookup query =
     let identifier = Qualified_identifier.name query
-    and namespaces = Qualified_identifier.modules query in
+    and namespaces = Qualified_identifier.namespaces query in
     partial_lookup_nested
       (List1.append_list namespaces (List1.singleton identifier))
 

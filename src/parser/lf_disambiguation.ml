@@ -329,9 +329,9 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
         | Result.Error cause -> Error.raise_at1 location cause)
     | Synprs.LF.Object.Raw_qualified_identifier
         { location; identifier; quoted } -> (
-        (* Qualified identifiers without modules were parsed as plain
+        (* Qualified identifiers without namespaces were parsed as plain
            identifiers *)
-        assert (List.length (Qualified_identifier.modules identifier) >= 1);
+        assert (List.length (Qualified_identifier.namespaces identifier) >= 1);
         (* As an LF type, identifiers of the form [(<identifier> `::')+
            <identifier>] are necessarily type-level constants. *)
         lookup identifier >>= function
@@ -428,9 +428,9 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
         | Result.Error cause -> Error.raise_at1 location cause)
     | Synprs.LF.Object.Raw_qualified_identifier
         { location; identifier; quoted } -> (
-        (* Qualified identifiers without modules were parsed as plain
+        (* Qualified identifiers without namespaces were parsed as plain
            identifiers *)
-        assert (List.length (Qualified_identifier.modules identifier) >= 1);
+        assert (List.length (Qualified_identifier.namespaces identifier) >= 1);
         (* As an LF term, identifiers of the form [(<identifier> `::')+
            <identifier>] are necessarily term-level constants. *)
         (* Lookup the identifier in the current state *)

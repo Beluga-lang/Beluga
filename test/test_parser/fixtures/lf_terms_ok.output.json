@@ -83,7 +83,7 @@
                   "stop_column": 8
                 }
               },
-              "modules": [],
+              "namespaces": [],
               "location": {
                 "filename": "lf_terms_ok.input.bel",
                 "start_line": 7,
@@ -192,7 +192,7 @@
                   "stop_column": 8
                 }
               },
-              "modules": [],
+              "namespaces": [],
               "location": {
                 "filename": "lf_terms_ok.input.bel",
                 "start_line": 10,
@@ -301,7 +301,7 @@
                   "stop_column": 8
                 }
               },
-              "modules": [],
+              "namespaces": [],
               "location": {
                 "filename": "lf_terms_ok.input.bel",
                 "start_line": 13,
@@ -410,7 +410,7 @@
                   "stop_column": 8
                 }
               },
-              "modules": [],
+              "namespaces": [],
               "location": {
                 "filename": "lf_terms_ok.input.bel",
                 "start_line": 16,
@@ -1002,7 +1002,7 @@
             "stop_column": 2
           }
         },
-        "modules": [],
+        "namespaces": [],
         "location": {
           "filename": "lf_terms_ok.input.bel",
           "start_line": 37,
@@ -1044,7 +1044,7 @@
                 "stop_column": 2
               }
             },
-            "modules": [],
+            "namespaces": [],
             "location": {
               "filename": "lf_terms_ok.input.bel",
               "start_line": 40,
@@ -1083,7 +1083,7 @@
                 "stop_column": 8
               }
             },
-            "modules": [],
+            "namespaces": [],
             "location": {
               "filename": "lf_terms_ok.input.bel",
               "start_line": 40,
@@ -1148,7 +1148,7 @@
                     "stop_column": 6
                   }
                 },
-                "modules": [],
+                "namespaces": [],
                 "location": {
                   "filename": "lf_terms_ok.input.bel",
                   "start_line": 43,
@@ -1251,7 +1251,7 @@
                         "stop_column": 10
                       }
                     },
-                    "modules": [],
+                    "namespaces": [],
                     "location": {
                       "filename": "lf_terms_ok.input.bel",
                       "start_line": 46,
@@ -1458,7 +1458,7 @@
                 "stop_column": 7
               }
             },
-            "modules": [],
+            "namespaces": [],
             "location": {
               "filename": "lf_terms_ok.input.bel",
               "start_line": 52,
@@ -1500,7 +1500,7 @@
                     "stop_column": 10
                   }
                 },
-                "modules": [],
+                "namespaces": [],
                 "location": {
                   "filename": "lf_terms_ok.input.bel",
                   "start_line": 52,
@@ -1598,7 +1598,7 @@
                     "stop_column": 6
                   }
                 },
-                "modules": [],
+                "namespaces": [],
                 "location": {
                   "filename": "lf_terms_ok.input.bel",
                   "start_line": 55,
@@ -1663,7 +1663,7 @@
                           "stop_column": 15
                         }
                       },
-                      "modules": [],
+                      "namespaces": [],
                       "location": {
                         "filename": "lf_terms_ok.input.bel",
                         "start_line": 55,
@@ -1750,7 +1750,7 @@
                         "stop_column": 6
                       }
                     },
-                    "modules": [],
+                    "namespaces": [],
                     "location": {
                       "filename": "lf_terms_ok.input.bel",
                       "start_line": 58,
@@ -1822,7 +1822,7 @@
                     "stop_column": 14
                   }
                 },
-                "modules": [],
+                "namespaces": [],
                 "location": {
                   "filename": "lf_terms_ok.input.bel",
                   "start_line": 58,
@@ -1907,7 +1907,7 @@
                     "stop_column": 9
                   }
                 },
-                "modules": [],
+                "namespaces": [],
                 "location": {
                   "filename": "lf_terms_ok.input.bel",
                   "start_line": 61,
@@ -1955,7 +1955,7 @@
                 "stop_column": 16
               }
             },
-            "modules": [],
+            "namespaces": [],
             "location": {
               "filename": "lf_terms_ok.input.bel",
               "start_line": 61,
@@ -2031,7 +2031,7 @@
                     "stop_column": 8
                   }
                 },
-                "modules": [],
+                "namespaces": [],
                 "location": {
                   "filename": "lf_terms_ok.input.bel",
                   "start_line": 64,
@@ -2079,7 +2079,7 @@
                 "stop_column": 14
               }
             },
-            "modules": [],
+            "namespaces": [],
             "location": {
               "filename": "lf_terms_ok.input.bel",
               "start_line": 64,
@@ -2147,7 +2147,7 @@
                         "stop_column": 7
                       }
                     },
-                    "modules": [],
+                    "namespaces": [],
                     "location": {
                       "filename": "lf_terms_ok.input.bel",
                       "start_line": 67,
@@ -2231,7 +2231,7 @@
                     "stop_column": 16
                   }
                 },
-                "modules": [],
+                "namespaces": [],
                 "location": {
                   "filename": "lf_terms_ok.input.bel",
                   "start_line": 67,
@@ -2270,7 +2270,7 @@
                     "stop_column": 23
                   }
                 },
-                "modules": [],
+                "namespaces": [],
                 "location": {
                   "filename": "lf_terms_ok.input.bel",
                   "start_line": 67,
@@ -2331,7 +2331,7 @@
                 "stop_column": 2
               }
             },
-            "modules": [],
+            "namespaces": [],
             "location": {
               "filename": "lf_terms_ok.input.bel",
               "start_line": 70,
@@ -2371,7 +2371,7 @@
                   "stop_column": 4
                 }
               },
-              "modules": [],
+              "namespaces": [],
               "location": {
                 "filename": "lf_terms_ok.input.bel",
                 "start_line": 70,
@@ -2423,7 +2423,7 @@
                 "stop_column": 18
               }
             },
-            "modules": [],
+            "namespaces": [],
             "location": {
               "filename": "lf_terms_ok.input.bel",
               "start_line": 73,
@@ -2489,7 +2489,7 @@
                         "stop_column": 9
                       }
                     },
-                    "modules": [],
+                    "namespaces": [],
                     "location": {
                       "filename": "lf_terms_ok.input.bel",
                       "start_line": 73,
@@ -2586,7 +2586,7 @@
                         "stop_column": 28
                       }
                     },
-                    "modules": [],
+                    "namespaces": [],
                     "location": {
                       "filename": "lf_terms_ok.input.bel",
                       "start_line": 73,
@@ -2670,7 +2670,7 @@
                 "stop_column": 7
               }
             },
-            "modules": [],
+            "namespaces": [],
             "location": {
               "filename": "lf_terms_ok.input.bel",
               "start_line": 76,
@@ -2710,7 +2710,7 @@
                   "stop_column": 15
                 }
               },
-              "modules": [],
+              "namespaces": [],
               "location": {
                 "filename": "lf_terms_ok.input.bel",
                 "start_line": 76,
@@ -2790,7 +2790,7 @@
                         "stop_column": 6
                       }
                     },
-                    "modules": [],
+                    "namespaces": [],
                     "location": {
                       "filename": "lf_terms_ok.input.bel",
                       "start_line": 79,
@@ -2838,7 +2838,7 @@
                     "stop_column": 10
                   }
                 },
-                "modules": [],
+                "namespaces": [],
                 "location": {
                   "filename": "lf_terms_ok.input.bel",
                   "start_line": 79,
@@ -2886,7 +2886,7 @@
                 "stop_column": 14
               }
             },
-            "modules": [],
+            "namespaces": [],
             "location": {
               "filename": "lf_terms_ok.input.bel",
               "start_line": 79,
@@ -3062,7 +3062,7 @@
                 "stop_column": 14
               }
             },
-            "modules": [],
+            "namespaces": [],
             "location": {
               "filename": "lf_terms_ok.input.bel",
               "start_line": 85,
@@ -3105,7 +3105,7 @@
                       "stop_column": 4
                     }
                   },
-                  "modules": [],
+                  "namespaces": [],
                   "location": {
                     "filename": "lf_terms_ok.input.bel",
                     "start_line": 85,
@@ -3145,7 +3145,7 @@
                         "stop_column": 2
                       }
                     },
-                    "modules": [],
+                    "namespaces": [],
                     "location": {
                       "filename": "lf_terms_ok.input.bel",
                       "start_line": 85,
@@ -3187,7 +3187,7 @@
                             "stop_column": 8
                           }
                         },
-                        "modules": [],
+                        "namespaces": [],
                         "location": {
                           "filename": "lf_terms_ok.input.bel",
                           "start_line": 85,
@@ -3252,7 +3252,7 @@
                                   "stop_column": 10
                                 }
                               },
-                              "modules": [],
+                              "namespaces": [],
                               "location": {
                                 "filename": "lf_terms_ok.input.bel",
                                 "start_line": 85,
@@ -3347,7 +3347,7 @@
                       "stop_column": 16
                     }
                   },
-                  "modules": [],
+                  "namespaces": [],
                   "location": {
                     "filename": "lf_terms_ok.input.bel",
                     "start_line": 85,
@@ -3432,7 +3432,7 @@
                 "stop_column": 2
               }
             },
-            "modules": [],
+            "namespaces": [],
             "location": {
               "filename": "lf_terms_ok.input.bel",
               "start_line": 88,
@@ -3475,7 +3475,7 @@
                       "stop_column": 4
                     }
                   },
-                  "modules": [],
+                  "namespaces": [],
                   "location": {
                     "filename": "lf_terms_ok.input.bel",
                     "start_line": 88,
@@ -3518,7 +3518,7 @@
                             "stop_column": 6
                           }
                         },
-                        "modules": [],
+                        "namespaces": [],
                         "location": {
                           "filename": "lf_terms_ok.input.bel",
                           "start_line": 88,

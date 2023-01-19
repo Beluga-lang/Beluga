@@ -211,7 +211,7 @@
                         "stop_column": 12
                       }
                     },
-                    "modules": [],
+                    "namespaces": [],
                     "location": {
                       "filename": "meta_objects_ok.input.bel",
                       "start_line": 19,
@@ -300,7 +300,7 @@
                         "stop_column": 12
                       }
                     },
-                    "modules": [],
+                    "namespaces": [],
                     "location": {
                       "filename": "meta_objects_ok.input.bel",
                       "start_line": 22,
@@ -486,7 +486,7 @@
                         "stop_column": 12
                       }
                     },
-                    "modules": [],
+                    "namespaces": [],
                     "location": {
                       "filename": "meta_objects_ok.input.bel",
                       "start_line": 28,
@@ -537,7 +537,7 @@
                         "stop_column": 21
                       }
                     },
-                    "modules": [],
+                    "namespaces": [],
                     "location": {
                       "filename": "meta_objects_ok.input.bel",
                       "start_line": 28,
@@ -591,7 +591,7 @@
                             "stop_column": 30
                           }
                         },
-                        "modules": [],
+                        "namespaces": [],
                         "location": {
                           "filename": "meta_objects_ok.input.bel",
                           "start_line": 28,
@@ -675,7 +675,7 @@
                               "stop_column": 36
                             }
                           },
-                          "modules": [],
+                          "namespaces": [],
                           "location": {
                             "filename": "meta_objects_ok.input.bel",
                             "start_line": 28,
@@ -774,7 +774,7 @@
                         "stop_column": 9
                       }
                     },
-                    "modules": [],
+                    "namespaces": [],
                     "location": {
                       "filename": "meta_objects_ok.input.bel",
                       "start_line": 31,
@@ -825,7 +825,7 @@
                         "stop_column": 18
                       }
                     },
-                    "modules": [],
+                    "namespaces": [],
                     "location": {
                       "filename": "meta_objects_ok.input.bel",
                       "start_line": 31,
@@ -879,7 +879,7 @@
                             "stop_column": 27
                           }
                         },
-                        "modules": [],
+                        "namespaces": [],
                         "location": {
                           "filename": "meta_objects_ok.input.bel",
                           "start_line": 31,
@@ -963,7 +963,7 @@
                               "stop_column": 33
                             }
                           },
-                          "modules": [],
+                          "namespaces": [],
                           "location": {
                             "filename": "meta_objects_ok.input.bel",
                             "start_line": 31,
@@ -1062,7 +1062,7 @@
                         "stop_column": 12
                       }
                     },
-                    "modules": [],
+                    "namespaces": [],
                     "location": {
                       "filename": "meta_objects_ok.input.bel",
                       "start_line": 34,
@@ -1113,7 +1113,7 @@
                         "stop_column": 21
                       }
                     },
-                    "modules": [],
+                    "namespaces": [],
                     "location": {
                       "filename": "meta_objects_ok.input.bel",
                       "start_line": 34,
@@ -1167,7 +1167,7 @@
                             "stop_column": 30
                           }
                         },
-                        "modules": [],
+                        "namespaces": [],
                         "location": {
                           "filename": "meta_objects_ok.input.bel",
                           "start_line": 34,
@@ -1251,7 +1251,7 @@
                               "stop_column": 36
                             }
                           },
-                          "modules": [],
+                          "namespaces": [],
                           "location": {
                             "filename": "meta_objects_ok.input.bel",
                             "start_line": 34,
@@ -1348,7 +1348,7 @@
                 "stop_column": 8
               }
             },
-            "modules": [],
+            "namespaces": [],
             "location": {
               "filename": "meta_objects_ok.input.bel",
               "start_line": 37,
@@ -1426,7 +1426,7 @@
                         "stop_column": 9
                       }
                     },
-                    "modules": [],
+                    "namespaces": [],
                     "location": {
                       "filename": "meta_objects_ok.input.bel",
                       "start_line": 40,
@@ -1537,7 +1537,7 @@
                         "stop_column": 12
                       }
                     },
-                    "modules": [],
+                    "namespaces": [],
                     "location": {
                       "filename": "meta_objects_ok.input.bel",
                       "start_line": 43,
@@ -1658,7 +1658,7 @@
                         "stop_column": 12
                       }
                     },
-                    "modules": [],
+                    "namespaces": [],
                     "location": {
                       "filename": "meta_objects_ok.input.bel",
                       "start_line": 46,
@@ -2000,7 +2000,7 @@
                       "stop_column": 10
                     }
                   },
-                  "modules": [],
+                  "namespaces": [],
                   "location": {
                     "filename": "meta_objects_ok.input.bel",
                     "start_line": 58,
@@ -2098,7 +2098,7 @@
                         "stop_column": 14
                       }
                     },
-                    "modules": [],
+                    "namespaces": [],
                     "location": {
                       "filename": "meta_objects_ok.input.bel",
                       "start_line": 61,
@@ -2164,7 +2164,7 @@
                       "stop_column": 19
                     }
                   },
-                  "modules": [],
+                  "namespaces": [],
                   "location": {
                     "filename": "meta_objects_ok.input.bel",
                     "start_line": 61,
@@ -2432,7 +2432,7 @@
                       "stop_column": 11
                     }
                   },
-                  "modules": [],
+                  "namespaces": [],
                   "location": {
                     "filename": "meta_objects_ok.input.bel",
                     "start_line": 70,
@@ -2530,7 +2530,7 @@
                         "stop_column": 14
                       }
                     },
-                    "modules": [],
+                    "namespaces": [],
                     "location": {
                       "filename": "meta_objects_ok.input.bel",
                       "start_line": 73,
@@ -2596,7 +2596,7 @@
                       "stop_column": 20
                     }
                   },
-                  "modules": [],
+                  "namespaces": [],
                   "location": {
                     "filename": "meta_objects_ok.input.bel",
                     "start_line": 73,
@@ -2716,7 +2716,7 @@
                         "stop_column": 14
                       }
                     },
-                    "modules": [],
+                    "namespaces": [],
                     "location": {
                       "filename": "meta_objects_ok.input.bel",
                       "start_line": 76,

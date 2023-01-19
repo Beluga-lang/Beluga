@@ -16,7 +16,7 @@
                 "stop_column": 4
               }
             },
-            "modules": [],
+            "namespaces": [],
             "location": {
               "filename": "clf_types_ok.input.bel",
               "start_line": 7,
@@ -55,7 +55,7 @@
                 "stop_column": 11
               }
             },
-            "modules": [],
+            "namespaces": [],
             "location": {
               "filename": "clf_types_ok.input.bel",
               "start_line": 7,
@@ -107,7 +107,7 @@
                 "stop_column": 4
               }
             },
-            "modules": [],
+            "namespaces": [],
             "location": {
               "filename": "clf_types_ok.input.bel",
               "start_line": 10,
@@ -149,7 +149,7 @@
                     "stop_column": 11
                   }
                 },
-                "modules": [],
+                "namespaces": [],
                 "location": {
                   "filename": "clf_types_ok.input.bel",
                   "start_line": 10,
@@ -188,7 +188,7 @@
                     "stop_column": 18
                   }
                 },
-                "modules": [],
+                "namespaces": [],
                 "location": {
                   "filename": "clf_types_ok.input.bel",
                   "start_line": 10,
@@ -253,7 +253,7 @@
                     "stop_column": 5
                   }
                 },
-                "modules": [],
+                "namespaces": [],
                 "location": {
                   "filename": "clf_types_ok.input.bel",
                   "start_line": 13,
@@ -292,7 +292,7 @@
                     "stop_column": 12
                   }
                 },
-                "modules": [],
+                "namespaces": [],
                 "location": {
                   "filename": "clf_types_ok.input.bel",
                   "start_line": 13,
@@ -341,7 +341,7 @@
                 "stop_column": 20
               }
             },
-            "modules": [],
+            "namespaces": [],
             "location": {
               "filename": "clf_types_ok.input.bel",
               "start_line": 13,
@@ -393,7 +393,7 @@
                 "stop_column": 18
               }
             },
-            "modules": [],
+            "namespaces": [],
             "location": {
               "filename": "clf_types_ok.input.bel",
               "start_line": 16,
@@ -435,7 +435,7 @@
                     "stop_column": 11
                   }
                 },
-                "modules": [],
+                "namespaces": [],
                 "location": {
                   "filename": "clf_types_ok.input.bel",
                   "start_line": 16,
@@ -474,7 +474,7 @@
                     "stop_column": 4
                   }
                 },
-                "modules": [],
+                "namespaces": [],
                 "location": {
                   "filename": "clf_types_ok.input.bel",
                   "start_line": 16,
@@ -536,7 +536,7 @@
                 "stop_column": 25
               }
             },
-            "modules": [],
+            "namespaces": [],
             "location": {
               "filename": "clf_types_ok.input.bel",
               "start_line": 19,
@@ -578,7 +578,7 @@
                     "stop_column": 18
                   }
                 },
-                "modules": [],
+                "namespaces": [],
                 "location": {
                   "filename": "clf_types_ok.input.bel",
                   "start_line": 19,
@@ -620,7 +620,7 @@
                         "stop_column": 11
                       }
                     },
-                    "modules": [],
+                    "namespaces": [],
                     "location": {
                       "filename": "clf_types_ok.input.bel",
                       "start_line": 19,
@@ -659,7 +659,7 @@
                         "stop_column": 4
                       }
                     },
-                    "modules": [],
+                    "namespaces": [],
                     "location": {
                       "filename": "clf_types_ok.input.bel",
                       "start_line": 19,
@@ -731,7 +731,7 @@
                 "stop_column": 4
               }
             },
-            "modules": [],
+            "namespaces": [],
             "location": {
               "filename": "clf_types_ok.input.bel",
               "start_line": 22,
@@ -774,7 +774,7 @@
                       "stop_column": 7
                     }
                   },
-                  "modules": [],
+                  "namespaces": [],
                   "location": {
                     "filename": "clf_types_ok.input.bel",
                     "start_line": 22,
@@ -814,7 +814,7 @@
                         "stop_column": 9
                       }
                     },
-                    "modules": [],
+                    "namespaces": [],
                     "location": {
                       "filename": "clf_types_ok.input.bel",
                       "start_line": 22,
@@ -866,7 +866,7 @@
                       "stop_column": 13
                     }
                   },
-                  "modules": [],
+                  "namespaces": [],
                   "location": {
                     "filename": "clf_types_ok.input.bel",
                     "start_line": 22,
@@ -909,7 +909,7 @@
                             "stop_column": 16
                           }
                         },
-                        "modules": [],
+                        "namespaces": [],
                         "location": {
                           "filename": "clf_types_ok.input.bel",
                           "start_line": 22,
@@ -949,7 +949,7 @@
                               "stop_column": 18
                             }
                           },
-                          "modules": [],
+                          "namespaces": [],
                           "location": {
                             "filename": "clf_types_ok.input.bel",
                             "start_line": 22,
@@ -1011,7 +1011,7 @@
                       "stop_column": 23
                     }
                   },
-                  "modules": [],
+                  "namespaces": [],
                   "location": {
                     "filename": "clf_types_ok.input.bel",
                     "start_line": 22,
@@ -1054,7 +1054,7 @@
                             "stop_column": 26
                           }
                         },
-                        "modules": [],
+                        "namespaces": [],
                         "location": {
                           "filename": "clf_types_ok.input.bel",
                           "start_line": 22,
@@ -1097,7 +1097,7 @@
                                   "stop_column": 29
                                 }
                               },
-                              "modules": [],
+                              "namespaces": [],
                               "location": {
                                 "filename": "clf_types_ok.input.bel",
                                 "start_line": 22,
@@ -1137,7 +1137,7 @@
                                     "stop_column": 31
                                   }
                                 },
-                                "modules": [],
+                                "namespaces": [],
                                 "location": {
                                   "filename": "clf_types_ok.input.bel",
                                   "start_line": 22,
@@ -1219,7 +1219,7 @@
                 "stop_column": 2
               }
             },
-            "modules": [],
+            "namespaces": [],
             "location": {
               "filename": "clf_types_ok.input.bel",
               "start_line": 25,
@@ -1261,7 +1261,7 @@
                     "stop_column": 7
                   }
                 },
-                "modules": [],
+                "namespaces": [],
                 "location": {
                   "filename": "clf_types_ok.input.bel",
                   "start_line": 25,
@@ -1300,7 +1300,7 @@
                     "stop_column": 12
                   }
                 },
-                "modules": [],
+                "namespaces": [],
                 "location": {
                   "filename": "clf_types_ok.input.bel",
                   "start_line": 25,
@@ -1365,7 +1365,7 @@
                     "stop_column": 3
                   }
                 },
-                "modules": [],
+                "namespaces": [],
                 "location": {
                   "filename": "clf_types_ok.input.bel",
                   "start_line": 28,
@@ -1404,7 +1404,7 @@
                     "stop_column": 8
                   }
                 },
-                "modules": [],
+                "namespaces": [],
                 "location": {
                   "filename": "clf_types_ok.input.bel",
                   "start_line": 28,
@@ -1453,7 +1453,7 @@
                 "stop_column": 14
               }
             },
-            "modules": [],
+            "namespaces": [],
             "location": {
               "filename": "clf_types_ok.input.bel",
               "start_line": 28,
@@ -1505,7 +1505,7 @@
                 "stop_column": 12
               }
             },
-            "modules": [],
+            "namespaces": [],
             "location": {
               "filename": "clf_types_ok.input.bel",
               "start_line": 31,
@@ -1547,7 +1547,7 @@
                     "stop_column": 7
                   }
                 },
-                "modules": [],
+                "namespaces": [],
                 "location": {
                   "filename": "clf_types_ok.input.bel",
                   "start_line": 31,
@@ -1586,7 +1586,7 @@
                     "stop_column": 2
                   }
                 },
-                "modules": [],
+                "namespaces": [],
                 "location": {
                   "filename": "clf_types_ok.input.bel",
                   "start_line": 31,
@@ -1651,7 +1651,7 @@
                     "stop_column": 13
                   }
                 },
-                "modules": [],
+                "namespaces": [],
                 "location": {
                   "filename": "clf_types_ok.input.bel",
                   "start_line": 34,
@@ -1690,7 +1690,7 @@
                     "stop_column": 8
                   }
                 },
-                "modules": [],
+                "namespaces": [],
                 "location": {
                   "filename": "clf_types_ok.input.bel",
                   "start_line": 34,
@@ -1739,7 +1739,7 @@
                 "stop_column": 2
               }
             },
-            "modules": [],
+            "namespaces": [],
             "location": {
               "filename": "clf_types_ok.input.bel",
               "start_line": 34,
@@ -1794,7 +1794,7 @@
                     "stop_column": 8
                   }
                 },
-                "modules": [],
+                "namespaces": [],
                 "location": {
                   "filename": "clf_types_ok.input.bel",
                   "start_line": 37,
@@ -1833,7 +1833,7 @@
                     "stop_column": 3
                   }
                 },
-                "modules": [],
+                "namespaces": [],
                 "location": {
                   "filename": "clf_types_ok.input.bel",
                   "start_line": 37,
@@ -1882,7 +1882,7 @@
                 "stop_column": 14
               }
             },
-            "modules": [],
+            "namespaces": [],
             "location": {
               "filename": "clf_types_ok.input.bel",
               "start_line": 37,
@@ -1937,7 +1937,7 @@
                     "stop_column": 8
                   }
                 },
-                "modules": [],
+                "namespaces": [],
                 "location": {
                   "filename": "clf_types_ok.input.bel",
                   "start_line": 40,
@@ -1976,7 +1976,7 @@
                     "stop_column": 13
                   }
                 },
-                "modules": [],
+                "namespaces": [],
                 "location": {
                   "filename": "clf_types_ok.input.bel",
                   "start_line": 40,
@@ -2025,7 +2025,7 @@
                 "stop_column": 2
               }
             },
-            "modules": [],
+            "namespaces": [],
             "location": {
               "filename": "clf_types_ok.input.bel",
               "start_line": 40,
@@ -2077,7 +2077,7 @@
                 "stop_column": 2
               }
             },
-            "modules": [],
+            "namespaces": [],
             "location": {
               "filename": "clf_types_ok.input.bel",
               "start_line": 43,
@@ -2119,7 +2119,7 @@
                     "stop_column": 13
                   }
                 },
-                "modules": [],
+                "namespaces": [],
                 "location": {
                   "filename": "clf_types_ok.input.bel",
                   "start_line": 43,
@@ -2158,7 +2158,7 @@
                     "stop_column": 8
                   }
                 },
-                "modules": [],
+                "namespaces": [],
                 "location": {
                   "filename": "clf_types_ok.input.bel",
                   "start_line": 43,
@@ -2223,7 +2223,7 @@
                     "stop_column": 8
                   }
                 },
-                "modules": [],
+                "namespaces": [],
                 "location": {
                   "filename": "clf_types_ok.input.bel",
                   "start_line": 46,
@@ -2262,7 +2262,7 @@
                     "stop_column": 13
                   }
                 },
-                "modules": [],
+                "namespaces": [],
                 "location": {
                   "filename": "clf_types_ok.input.bel",
                   "start_line": 46,
@@ -2311,7 +2311,7 @@
                 "stop_column": 2
               }
             },
-            "modules": [],
+            "namespaces": [],
             "location": {
               "filename": "clf_types_ok.input.bel",
               "start_line": 46,
@@ -2366,7 +2366,7 @@
                     "stop_column": 12
                   }
                 },
-                "modules": [],
+                "namespaces": [],
                 "location": {
                   "filename": "clf_types_ok.input.bel",
                   "start_line": 49,
@@ -2405,7 +2405,7 @@
                     "stop_column": 19
                   }
                 },
-                "modules": [],
+                "namespaces": [],
                 "location": {
                   "filename": "clf_types_ok.input.bel",
                   "start_line": 49,
@@ -2454,7 +2454,7 @@
                 "stop_column": 4
               }
             },
-            "modules": [],
+            "namespaces": [],
             "location": {
               "filename": "clf_types_ok.input.bel",
               "start_line": 49,
@@ -2509,7 +2509,7 @@
                     "stop_column": 19
                   }
                 },
-                "modules": [],
+                "namespaces": [],
                 "location": {
                   "filename": "clf_types_ok.input.bel",
                   "start_line": 52,
@@ -2548,7 +2548,7 @@
                     "stop_column": 12
                   }
                 },
-                "modules": [],
+                "namespaces": [],
                 "location": {
                   "filename": "clf_types_ok.input.bel",
                   "start_line": 52,
@@ -2597,7 +2597,7 @@
                 "stop_column": 4
               }
             },
-            "modules": [],
+            "namespaces": [],
             "location": {
               "filename": "clf_types_ok.input.bel",
               "start_line": 52,
@@ -2649,7 +2649,7 @@
                 "stop_column": 4
               }
             },
-            "modules": [],
+            "namespaces": [],
             "location": {
               "filename": "clf_types_ok.input.bel",
               "start_line": 55,
@@ -2694,7 +2694,7 @@
                         "stop_column": 19
                       }
                     },
-                    "modules": [],
+                    "namespaces": [],
                     "location": {
                       "filename": "clf_types_ok.input.bel",
                       "start_line": 55,
@@ -2733,7 +2733,7 @@
                         "stop_column": 12
                       }
                     },
-                    "modules": [],
+                    "namespaces": [],
                     "location": {
                       "filename": "clf_types_ok.input.bel",
                       "start_line": 55,
@@ -2782,7 +2782,7 @@
                     "stop_column": 27
                   }
                 },
-                "modules": [],
+                "namespaces": [],
                 "location": {
                   "filename": "clf_types_ok.input.bel",
                   "start_line": 55,
@@ -2854,7 +2854,7 @@
                 "stop_column": 10
               }
             },
-            "modules": [],
+            "namespaces": [],
             "location": {
               "filename": "clf_types_ok.input.bel",
               "start_line": 58,
@@ -2896,7 +2896,7 @@
                     "stop_column": 16
                   }
                 },
-                "modules": [],
+                "namespaces": [],
                 "location": {
                   "filename": "clf_types_ok.input.bel",
                   "start_line": 58,
@@ -3034,7 +3034,7 @@
                 "stop_column": 10
               }
             },
-            "modules": [],
+            "namespaces": [],
             "location": {
               "filename": "clf_types_ok.input.bel",
               "start_line": 61,
@@ -3086,7 +3086,7 @@
                     "stop_column": 22
                   }
                 },
-                "modules": [],
+                "namespaces": [],
                 "location": {
                   "filename": "clf_types_ok.input.bel",
                   "start_line": 61,
@@ -3128,7 +3128,7 @@
                         "stop_column": 28
                       }
                     },
-                    "modules": [],
+                    "namespaces": [],
                     "location": {
                       "filename": "clf_types_ok.input.bel",
                       "start_line": 61,
@@ -3275,7 +3275,7 @@
                 "stop_column": 10
               }
             },
-            "modules": [],
+            "namespaces": [],
             "location": {
               "filename": "clf_types_ok.input.bel",
               "start_line": 64,
@@ -3327,7 +3327,7 @@
                     "stop_column": 22
                   }
                 },
-                "modules": [],
+                "namespaces": [],
                 "location": {
                   "filename": "clf_types_ok.input.bel",
                   "start_line": 64,
@@ -3379,7 +3379,7 @@
                         "stop_column": 34
                       }
                     },
-                    "modules": [],
+                    "namespaces": [],
                     "location": {
                       "filename": "clf_types_ok.input.bel",
                       "start_line": 64,
@@ -3421,7 +3421,7 @@
                             "stop_column": 40
                           }
                         },
-                        "modules": [],
+                        "namespaces": [],
                         "location": {
                           "filename": "clf_types_ok.input.bel",
                           "start_line": 64,
@@ -3573,7 +3573,7 @@
                         "stop_column": 6
                       }
                     },
-                    "modules": [],
+                    "namespaces": [],
                     "location": {
                       "filename": "clf_types_ok.input.bel",
                       "start_line": 67,
@@ -3648,7 +3648,7 @@
                         "stop_column": 16
                       }
                     },
-                    "modules": [],
+                    "namespaces": [],
                     "location": {
                       "filename": "clf_types_ok.input.bel",
                       "start_line": 67,
@@ -3733,7 +3733,7 @@
                     "stop_column": 28
                   }
                 },
-                "modules": [],
+                "namespaces": [],
                 "location": {
                   "filename": "clf_types_ok.input.bel",
                   "start_line": 67,
@@ -3776,7 +3776,7 @@
                           "stop_column": 37
                         }
                       },
-                      "modules": [],
+                      "namespaces": [],
                       "location": {
                         "filename": "clf_types_ok.input.bel",
                         "start_line": 67,
@@ -3896,7 +3896,7 @@
                     "stop_column": 5
                   }
                 },
-                "modules": [],
+                "namespaces": [],
                 "location": {
                   "filename": "clf_types_ok.input.bel",
                   "start_line": 70,
@@ -3939,7 +3939,7 @@
                           "stop_column": 14
                         }
                       },
-                      "modules": [],
+                      "namespaces": [],
                       "location": {
                         "filename": "clf_types_ok.input.bel",
                         "start_line": 70,
@@ -4049,7 +4049,7 @@
                         "stop_column": 26
                       }
                     },
-                    "modules": [],
+                    "namespaces": [],
                     "location": {
                       "filename": "clf_types_ok.input.bel",
                       "start_line": 70,
@@ -4124,7 +4124,7 @@
                         "stop_column": 36
                       }
                     },
-                    "modules": [],
+                    "namespaces": [],
                     "location": {
                       "filename": "clf_types_ok.input.bel",
                       "start_line": 70,
@@ -4225,7 +4225,7 @@
                         "stop_column": 6
                       }
                     },
-                    "modules": [],
+                    "namespaces": [],
                     "location": {
                       "filename": "clf_types_ok.input.bel",
                       "start_line": 73,
@@ -4300,7 +4300,7 @@
                         "stop_column": 16
                       }
                     },
-                    "modules": [],
+                    "namespaces": [],
                     "location": {
                       "filename": "clf_types_ok.input.bel",
                       "start_line": 73,
@@ -4385,7 +4385,7 @@
                     "stop_column": 28
                   }
                 },
-                "modules": [],
+                "namespaces": [],
                 "location": {
                   "filename": "clf_types_ok.input.bel",
                   "start_line": 73,
@@ -4428,7 +4428,7 @@
                           "stop_column": 36
                         }
                       },
-                      "modules": [],
+                      "namespaces": [],
                       "location": {
                         "filename": "clf_types_ok.input.bel",
                         "start_line": 73,
@@ -4551,7 +4551,7 @@
                         "stop_column": 6
                       }
                     },
-                    "modules": [],
+                    "namespaces": [],
                     "location": {
                       "filename": "clf_types_ok.input.bel",
                       "start_line": 76,
@@ -4626,7 +4626,7 @@
                         "stop_column": 16
                       }
                     },
-                    "modules": [],
+                    "namespaces": [],
                     "location": {
                       "filename": "clf_types_ok.input.bel",
                       "start_line": 76,
@@ -4711,7 +4711,7 @@
                     "stop_column": 28
                   }
                 },
-                "modules": [],
+                "namespaces": [],
                 "location": {
                   "filename": "clf_types_ok.input.bel",
                   "start_line": 76,
@@ -4754,7 +4754,7 @@
                           "stop_column": 37
                         }
                       },
-                      "modules": [],
+                      "namespaces": [],
                       "location": {
                         "filename": "clf_types_ok.input.bel",
                         "start_line": 76,
@@ -4877,7 +4877,7 @@
                         "stop_column": 6
                       }
                     },
-                    "modules": [],
+                    "namespaces": [],
                     "location": {
                       "filename": "clf_types_ok.input.bel",
                       "start_line": 79,
@@ -4952,7 +4952,7 @@
                         "stop_column": 16
                       }
                     },
-                    "modules": [],
+                    "namespaces": [],
                     "location": {
                       "filename": "clf_types_ok.input.bel",
                       "start_line": 79,
@@ -5037,7 +5037,7 @@
                     "stop_column": 28
                   }
                 },
-                "modules": [],
+                "namespaces": [],
                 "location": {
                   "filename": "clf_types_ok.input.bel",
                   "start_line": 79,
@@ -5080,7 +5080,7 @@
                           "stop_column": 38
                         }
                       },
-                      "modules": [],
+                      "namespaces": [],
                       "location": {
                         "filename": "clf_types_ok.input.bel",
                         "start_line": 79,
@@ -5197,7 +5197,7 @@
                 "stop_column": 5
               }
             },
-            "modules": [],
+            "namespaces": [],
             "location": {
               "filename": "clf_types_ok.input.bel",
               "start_line": 82,
@@ -5334,7 +5334,7 @@
                     "stop_column": 5
                   }
                 },
-                "modules": [],
+                "namespaces": [],
                 "location": {
                   "filename": "clf_types_ok.input.bel",
                   "start_line": 85,
@@ -5377,7 +5377,7 @@
                           "stop_column": 13
                         }
                       },
-                      "modules": [],
+                      "namespaces": [],
                       "location": {
                         "filename": "clf_types_ok.input.bel",
                         "start_line": 85,
@@ -5487,7 +5487,7 @@
                         "stop_column": 28
                       }
                     },
-                    "modules": [],
+                    "namespaces": [],
                     "location": {
                       "filename": "clf_types_ok.input.bel",
                       "start_line": 85,
@@ -5562,7 +5562,7 @@
                         "stop_column": 38
                       }
                     },
-                    "modules": [],
+                    "namespaces": [],
                     "location": {
                       "filename": "clf_types_ok.input.bel",
                       "start_line": 85,
@@ -5660,7 +5660,7 @@
                     "stop_column": 6
                   }
                 },
-                "modules": [],
+                "namespaces": [],
                 "location": {
                   "filename": "clf_types_ok.input.bel",
                   "start_line": 88,
@@ -5760,7 +5760,7 @@
                         "stop_column": 18
                       }
                     },
-                    "modules": [],
+                    "namespaces": [],
                     "location": {
                       "filename": "clf_types_ok.input.bel",
                       "start_line": 88,
@@ -5857,7 +5857,7 @@
                         "stop_column": 39
                       }
                     },
-                    "modules": [],
+                    "namespaces": [],
                     "location": {
                       "filename": "clf_types_ok.input.bel",
                       "start_line": 88,
@@ -5900,7 +5900,7 @@
                               "stop_column": 29
                             }
                           },
-                          "modules": [],
+                          "namespaces": [],
                           "location": {
                             "filename": "clf_types_ok.input.bel",
                             "start_line": 88,
@@ -5997,7 +5997,7 @@
                               "stop_column": 44
                             }
                           },
-                          "modules": [],
+                          "namespaces": [],
                           "location": {
                             "filename": "clf_types_ok.input.bel",
                             "start_line": 88,
@@ -6127,7 +6127,7 @@
                     "stop_column": 4
                   }
                 },
-                "modules": [],
+                "namespaces": [],
                 "location": {
                   "filename": "clf_types_ok.input.bel",
                   "start_line": 91,
@@ -6227,7 +6227,7 @@
                         "stop_column": 18
                       }
                     },
-                    "modules": [],
+                    "namespaces": [],
                     "location": {
                       "filename": "clf_types_ok.input.bel",
                       "start_line": 91,
@@ -6324,7 +6324,7 @@
                         "stop_column": 32
                       }
                     },
-                    "modules": [],
+                    "namespaces": [],
                     "location": {
                       "filename": "clf_types_ok.input.bel",
                       "start_line": 91,
@@ -6367,7 +6367,7 @@
                               "stop_column": 39
                             }
                           },
-                          "modules": [],
+                          "namespaces": [],
                           "location": {
                             "filename": "clf_types_ok.input.bel",
                             "start_line": 91,
@@ -6464,7 +6464,7 @@
                               "stop_column": 53
                             }
                           },
-                          "modules": [],
+                          "namespaces": [],
                           "location": {
                             "filename": "clf_types_ok.input.bel",
                             "start_line": 91,
@@ -6592,7 +6592,7 @@
                 "stop_column": 10
               }
             },
-            "modules": [],
+            "namespaces": [],
             "location": {
               "filename": "clf_types_ok.input.bel",
               "start_line": 94,
@@ -6634,7 +6634,7 @@
                     "stop_column": 17
                   }
                 },
-                "modules": [],
+                "namespaces": [],
                 "location": {
                   "filename": "clf_types_ok.input.bel",
                   "start_line": 94,
@@ -6735,7 +6735,7 @@
                     "stop_column": 10
                   }
                 },
-                "modules": [],
+                "namespaces": [],
                 "location": {
                   "filename": "clf_types_ok.input.bel",
                   "start_line": 97,
@@ -6780,7 +6780,7 @@
                             "stop_column": 16
                           }
                         },
-                        "modules": [],
+                        "namespaces": [],
                         "location": {
                           "filename": "clf_types_ok.input.bel",
                           "start_line": 97,
@@ -6877,7 +6877,7 @@
                             "stop_column": 30
                           }
                         },
-                        "modules": [],
+                        "namespaces": [],
                         "location": {
                           "filename": "clf_types_ok.input.bel",
                           "start_line": 97,
@@ -7065,7 +7065,7 @@
                     "stop_column": 23
                   }
                 },
-                "modules": [],
+                "namespaces": [],
                 "location": {
                   "filename": "clf_types_ok.input.bel",
                   "start_line": 98,
@@ -7108,7 +7108,7 @@
                           "stop_column": 9
                         }
                       },
-                      "modules": [],
+                      "namespaces": [],
                       "location": {
                         "filename": "clf_types_ok.input.bel",
                         "start_line": 98,
@@ -7242,7 +7242,7 @@
                           "stop_column": 28
                         }
                       },
-                      "modules": [],
+                      "namespaces": [],
                       "location": {
                         "filename": "clf_types_ok.input.bel",
                         "start_line": 98,
@@ -7409,7 +7409,7 @@
                     "stop_column": 10
                   }
                 },
-                "modules": [],
+                "namespaces": [],
                 "location": {
                   "filename": "clf_types_ok.input.bel",
                   "start_line": 101,
@@ -7454,7 +7454,7 @@
                             "stop_column": 15
                           }
                         },
-                        "modules": [],
+                        "namespaces": [],
                         "location": {
                           "filename": "clf_types_ok.input.bel",
                           "start_line": 101,
@@ -7551,7 +7551,7 @@
                             "stop_column": 27
                           }
                         },
-                        "modules": [],
+                        "namespaces": [],
                         "location": {
                           "filename": "clf_types_ok.input.bel",
                           "start_line": 101,
@@ -7739,7 +7739,7 @@
                     "stop_column": 8
                   }
                 },
-                "modules": [],
+                "namespaces": [],
                 "location": {
                   "filename": "clf_types_ok.input.bel",
                   "start_line": 102,
@@ -7782,7 +7782,7 @@
                           "stop_column": 14
                         }
                       },
-                      "modules": [],
+                      "namespaces": [],
                       "location": {
                         "filename": "clf_types_ok.input.bel",
                         "start_line": 102,
@@ -7916,7 +7916,7 @@
                           "stop_column": 30
                         }
                       },
-                      "modules": [],
+                      "namespaces": [],
                       "location": {
                         "filename": "clf_types_ok.input.bel",
                         "start_line": 102,
@@ -8083,7 +8083,7 @@
                     "stop_column": 10
                   }
                 },
-                "modules": [],
+                "namespaces": [],
                 "location": {
                   "filename": "clf_types_ok.input.bel",
                   "start_line": 105,
@@ -8128,7 +8128,7 @@
                             "stop_column": 15
                           }
                         },
-                        "modules": [],
+                        "namespaces": [],
                         "location": {
                           "filename": "clf_types_ok.input.bel",
                           "start_line": 105,
@@ -8225,7 +8225,7 @@
                             "stop_column": 27
                           }
                         },
-                        "modules": [],
+                        "namespaces": [],
                         "location": {
                           "filename": "clf_types_ok.input.bel",
                           "start_line": 105,
@@ -8413,7 +8413,7 @@
                     "stop_column": 8
                   }
                 },
-                "modules": [],
+                "namespaces": [],
                 "location": {
                   "filename": "clf_types_ok.input.bel",
                   "start_line": 106,
@@ -8456,7 +8456,7 @@
                           "stop_column": 14
                         }
                       },
-                      "modules": [],
+                      "namespaces": [],
                       "location": {
                         "filename": "clf_types_ok.input.bel",
                         "start_line": 106,
@@ -8590,7 +8590,7 @@
                           "stop_column": 32
                         }
                       },
-                      "modules": [],
+                      "namespaces": [],
                       "location": {
                         "filename": "clf_types_ok.input.bel",
                         "start_line": 106,
@@ -8750,7 +8750,7 @@
                         "stop_column": 14
                       }
                     },
-                    "modules": [
+                    "namespaces": [
                       {
                         "name": "Statics",
                         "location": {
@@ -8836,7 +8836,7 @@
                         "stop_column": 32
                       }
                     },
-                    "modules": [
+                    "namespaces": [
                       {
                         "name": "Statics",
                         "location": {
@@ -8932,7 +8932,7 @@
                     "stop_column": 52
                   }
                 },
-                "modules": [
+                "namespaces": [
                   {
                     "name": "Statics",
                     "location": {
@@ -8986,7 +8986,7 @@
                           "stop_column": 69
                         }
                       },
-                      "modules": [
+                      "namespaces": [
                         {
                           "name": "Statics",
                           "location": {
@@ -9120,7 +9120,7 @@
                         "stop_column": 14
                       }
                     },
-                    "modules": [
+                    "namespaces": [
                       {
                         "name": "Statics",
                         "location": {
@@ -9206,7 +9206,7 @@
                         "stop_column": 32
                       }
                     },
-                    "modules": [
+                    "namespaces": [
                       {
                         "name": "Statics",
                         "location": {
@@ -9302,7 +9302,7 @@
                     "stop_column": 52
                   }
                 },
-                "modules": [
+                "namespaces": [
                   {
                     "name": "Statics",
                     "location": {
@@ -9356,7 +9356,7 @@
                           "stop_column": 68
                         }
                       },
-                      "modules": [
+                      "namespaces": [
                         {
                           "name": "Statics",
                           "location": {
@@ -9484,7 +9484,7 @@
                 "stop_column": 10
               }
             },
-            "modules": [],
+            "namespaces": [],
             "location": {
               "filename": "clf_types_ok.input.bel",
               "start_line": 115,
@@ -9547,7 +9547,7 @@
                     "stop_column": 14
                   }
                 },
-                "modules": [],
+                "namespaces": [],
                 "location": {
                   "filename": "clf_types_ok.input.bel",
                   "start_line": 118,
@@ -9612,7 +9612,7 @@
                     "stop_column": 15
                   }
                 },
-                "modules": [],
+                "namespaces": [],
                 "location": {
                   "filename": "clf_types_ok.input.bel",
                   "start_line": 121,
@@ -9666,7 +9666,7 @@
                         "stop_column": 24
                       }
                     },
-                    "modules": [],
+                    "namespaces": [],
                     "location": {
                       "filename": "clf_types_ok.input.bel",
                       "start_line": 121,
@@ -9728,7 +9728,7 @@
                           "stop_column": 28
                         }
                       },
-                      "modules": [],
+                      "namespaces": [],
                       "location": {
                         "filename": "clf_types_ok.input.bel",
                         "start_line": 121,

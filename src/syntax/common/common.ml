@@ -17,6 +17,7 @@ module Parenthesizer = Parenthesizer
 
 module Identifier = Identifier
 module Qualified_identifier = Qualified_identifier
+module Binding_tree = Binding_tree
 
 (** {1 Utilities} *)
 

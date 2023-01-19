@@ -222,6 +222,13 @@ let split (k : Command.split_kind) (i : Comp.exp) (tau : Comp.typ) mfs : t =
        p.fmt "[harpoon-split] generated %d cases"
          (List.length cgs)
        end;
+     let rec unmark_inductive_var cG k =
+       match cG with
+       | LF.Dec (cG', Comp.CTypDecl (n, tA, _)) when k == 1 ->
+          LF.Dec (cG', Comp.CTypDecl (n, tA, false))
+       | LF.Dec (cG', decl) ->
+          LF.Dec (unmark_inductive_var cG' (k-1), decl)
+     in
      (* We will map get_branch over the coverage goals that were generated.
         get_branch_by f computes the subgoal for the given coverage goal,
         invokes the add_subgoal callback on the computed subgoal (to register it),
@@ -384,7 +391,20 @@ let split (k : Command.split_kind) (i : Comp.exp) (tau : Comp.typ) mfs : t =
            (P.fmt_ppr_lf_msub cD_b P.l0) t'
          end;
        let cD = Check.Comp.id_map_ind cD_b t' s.context.cD in
-       let cG = Total.mark_gctx cG_b in
+       let cG = (* We want to unmark the computation assumption we just
+                   performed induction on as it is not smaller *)
+         let cG = Total.mark_gctx cG_b in
+         match i with
+         | Comp.Var(_, pos) ->
+            dprintf
+            begin fun p ->
+              p.fmt "[harpoon-split] SPLIT, agr in pos %d is not smaller!"
+              (pos + (Context.length cG_p))
+            end;
+            unmark_inductive_var cG (pos + (Context.length cG_p))
+         | _ ->
+            cG
+       in
        dprintf
          begin fun p ->
          let open Format in
@@ -393,9 +413,8 @@ let split (k : Command.split_kind) (i : Comp.exp) (tau : Comp.typ) mfs : t =
            (P.fmt_ppr_lf_mctx ~sep: pp_print_cut P.l0) s.context.cD
            (P.fmt_ppr_lf_mctx ~sep: pp_print_cut P.l0) cD
          end;
-       (* let cIH0 = Total.wf_rec_calls cD cG mfs in *)
-       (* (append cIH0 cIH') for cIH' *)
-       let cIH = Context.(append cIH_b cIH') in
+       let cIH0 = Total.wf_rec_calls cD cG mfs in
+       let cIH = Context.(append cIH_b (append cIH0 cIH')) in
        let context = { cD; cG; cIH } in
        let new_state label =
          { context

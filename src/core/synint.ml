@@ -441,8 +441,8 @@ module Comp = struct
     | MLam       of Location.t * Name.t * exp * Plicity.t                                (* | Pi X.e'                                         *)
     | Tuple      of Location.t * exp List2.t                                             (* | (e1, e2, ..., en)                               *)
     | LetTuple   of Location.t * exp * (Name.t List2.t * exp)                            (* | let (x1=i.1, x2=i.2, ..., xn=i.n) = i in e      *)
-    | Let        of Location.t * exp * (Name.t * exp)                                    (* | let x = n in e                                  *)
-    | Box        of Location.t * meta_obj * meta_typ (* for printing *)                  (* | Box ([cPsihat |- tM]) : [cPsi |- tA]            *)
+    | Let        of Location.t * exp * (Name.t * exp)                                    (* | let x = e' in e''                               *)
+    | Box        of Location.t * meta_obj * meta_typ (* for printing *)                  (* | Box (C) : [U]            *)
     | Case       of Location.t * case_pragma * exp * branch list                         (* | case e of branches                              *)
     | Impossible of Location.t * exp                                                     (* | impossible e                                    *)
     | Hole       of Location.t * HoleId.t * HoleId.name                                  (* | _                                               *)
@@ -451,7 +451,7 @@ module Comp = struct
     | Obs        of Location.t * exp * LF.msub * cid_comp_dest                           (* | observation (e, ms, destructor={typ, ret_typ}   *)
     | Const      of Location.t * cid_prog                                                (* | theorem cp                                      *)
     | Apply      of Location.t * exp * exp                                               (* | (n:tau_1 -> tau_2) (e:tau_1)                    *)
-    | MApp       of Location.t * exp * meta_obj * meta_typ (* for printing *) * Plicity.t (* | (Pi X:U. n': tau) ([cPsihat |- tM] : [U'])      *)
+    | MApp       of Location.t * exp * meta_obj * meta_typ (* for printing *) * Plicity.t (* | (Pi X:U. e': tau) (C : U)      *)
     | AnnBox     of Location.t * meta_obj * meta_typ                                      (* | [cPsihat |- tM] : [cPsi |- tA]                  *)
 
   and pattern =

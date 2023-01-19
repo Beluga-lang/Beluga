@@ -53,7 +53,9 @@ mlam T => case [ |- T] of
 
 schema tctx = some [t:tp] block (x:exp, _t:type_of x t);
 
-rec unique : {g:tctx}   {E:[g |- exp]} [g |- type_of E T[]] -> [g |- type_of E T'[]] ->  [ |- eq T T'] =  / total e (unique _g _t _t' e) /
+%{
+rec unique : {g:tctx}   {E:[g |- exp]} [g |- type_of E T[]] -> [g |- type_of E T'[]]
+             ->  [ |- eq T T'] =  / total e (unique _g _t _t' e) /
 mlam g => mlam E => fn d => fn f => case [g |- E ] of
  | [g |- app E1 E2] =>
   let [g |- t_app D1 D2] = d in
@@ -86,13 +88,13 @@ mlam g => mlam E => fn d => fn f => case [g |- E ] of
 
     refl _
 ;
-
+}%
 
 
 % Equality predicate
 equal: tp -> tp -> type.
 e_ref: equal T T.
-
+%{ Working
 rec unique2 : {g:tctx}{E:[g |- exp]} [g |- type_of E T[]] -> [g |- type_of E T'[]]
              ->  [ |- equal T T'] = / total e (unique2 _ _ _ e) /
 mlam g => mlam E => fn d => fn f => case [g |- E ] of
@@ -115,14 +117,14 @@ mlam g => mlam E => fn d => fn f => case [g |- E ] of
     [ |- e_ref]
 
 ;
-
+}%
 % Equality predicate
 equal: tp -> tp -> type.
 e_ref: equal T T.
 
 rec unique3 : (g:tctx)[g |- type_of E T[]] -> [g |- type_of E T'[]]
              ->  [ |- equal T T'] =
-/ total d (unique3 _ _ _ _ d) /
+/ total d (unique3 g e t t' d) /
 fn d => fn f => case d of
 | [g |- t_app D1 D2] =>
   let [g |- t_app F1 F2] = f in

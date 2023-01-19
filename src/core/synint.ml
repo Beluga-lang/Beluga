@@ -207,7 +207,7 @@ module LF = struct
   let mm_var_inst (u : mm_var) (t : msub) (s : sub): mm_var_inst = (u, t), s
 
   let is_mmvar_instantiated mmvar = Option.is_some (mmvar.instantiation.contents)
-
+  let type_of_mmvar_instantiated mmvar =  (mmvar.typ)
   let rename_ctyp_decl f =
     function
     | Decl (x, tA, plicity, inductivity) -> Decl (f x, tA, plicity, inductivity)
@@ -407,7 +407,7 @@ module Comp = struct
     | `infer loc -> loc
 
   type ih_arg =
-    | M of meta_obj
+    | M of meta_obj * meta_typ
     | V of offset
     | E (* what is E? -je *)
     | DC

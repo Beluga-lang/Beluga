@@ -48,11 +48,21 @@ let set_location location lexbuf =
        ; pos_cnum = Location.start_offset location
        })
 
-let sym_head = [%sedlex.regexp? id_start | '_']
-let sym_tail = [%sedlex.regexp? id_continue | Chars "\'-*+@=^/#?" ]
+let ascii_control_character = [%sedlex.regexp? '\000' .. '\031' | '\127']
 
-let ident = [%sedlex.regexp? sym_head, Star sym_tail]
-let digit = [%sedlex.regexp? '0'..'9']
+let digit = [%sedlex.regexp? '0' .. '9']
+
+let reserved_character =
+  [%sedlex.regexp?
+    ( '.' | ',' | ':' | ';' | '%' | '|' | '"' | '\\' | '(' | ')' | '[' | ']'
+    | '{' | '}' | '<' | '>' )]
+
+let ident_continue =
+  [%sedlex.regexp?
+    Sub (any, (ascii_control_character | white_space | reserved_character))]
+let ident_start = [%sedlex.regexp? Sub (ident_continue, digit)]
+
+let ident = [%sedlex.regexp? ident_start, Star ident_continue]
 let number = [%sedlex.regexp? Plus digit]
 let hole = [%sedlex.regexp? '?', Opt ident]
 let pragma = [%sedlex.regexp? "--", Plus alphabetic]
@@ -188,7 +198,6 @@ let rec tokenize lexbuf =
 
   | hole -> T.HOLE (String.drop 1 (get_lexeme lexbuf))
   | "_" -> const T.UNDERSCORE
-  | ident -> T.IDENT (get_lexeme lexbuf)
 
   | dot_number -> T.DOT_NUMBER (int_of_string (String.drop 1 (get_lexeme lexbuf)))
   | dots -> const T.DOTS
@@ -203,6 +212,7 @@ let rec tokenize lexbuf =
   | eof -> const T.EOI
 
   | number -> T.INTLIT (get_lexeme lexbuf |> int_of_string)
+  | ident -> T.IDENT (get_lexeme lexbuf)
   | _ -> throw (get_location lexbuf) (UnlexableCharacter (get_lexeme lexbuf))
 
 (** From a given generator for UTF-8, constructs a generator for tokens.

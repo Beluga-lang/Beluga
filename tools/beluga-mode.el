@@ -106,7 +106,15 @@ in unicode using Font Lock mode."
  ("\\omega" ["ω"])
  ("\\Omega" ["Ω"])
 
+ ;; Common logical symbol
+ ("\\conj" ["∧"])
+ ("\\disj" ["∨"])
+ ("\\imp"  ["⊃"])
+ ("\\top"  ["⊤"])
+ ("\\bot"  ["⊥"])
 
+ ("\\equiv"  ["≣"])
+  
  ;; Arrows
  ("->" ["→"])
  ("<-" ["←"])

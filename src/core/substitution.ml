@@ -154,29 +154,34 @@ module LF = struct
        | Obj (Tuple (_, tuple)) ->
           let rec nth s =
             function
-            | (Last u, 1) -> (u, s)
-            | (Cons (u, _), 1) -> (u, s)
+            | (Last u, 1) -> u
+            | (Cons (u, _), 1) -> u
             | (Cons (u, tuple), n) -> nth (Dot (Obj u, s)) (tuple, n - 1)
           in
           (*              Obj (Clo (nth s (tuple, k))) *)
-          Obj (Pair.fst (nth s (tuple, k)))
+          Obj (nth s (tuple, k))
        | Obj (Lam _ ) -> failwith "Found Lam - should be tuple"
        | Obj (Clo (Tuple (_, tuple), s')) ->
           let rec nth s =
             function
-            | (Last u, 1) -> (u, s)
-            | (Cons (u, _), 1) -> (u, s)
+            | (Last u, 1) -> u
+            | (Cons (u, _), 1) -> u
             | (Cons (u, tuple), n) -> nth (Dot (Obj u, s)) (tuple, n - 1)
           in
           (*              Obj (Clo (nth s (tuple, k))) *)
-          Obj (Clo (Pair.fst (nth s (tuple, k)), s'))
+          Obj (Clo (nth s (tuple, k), s'))
 
        | Obj (Clo ((Root (_, (PVar _ ), Nil, _)), _ )) -> failwith "Found Clo - PVar "
        | Obj (Clo ((Root (_, (BVar _ ), Nil, _)), _ )) -> failwith "Found Clo - BVar "
-       | Obj (Clo _ ) -> failwith "Found Clo - should not happen"
+       | Obj (Clo ((Root (_ , h, Nil, _ )), _ )) -> failwith "Found Clo with root that is not a var - should not happen"
+       | Obj (Clo ((Root (_ , h, _, _ )), _ )) -> failwith "Found Clo with root that has a non-empty spine - should not happen"
+       | Obj (Clo (_ , _ ) ) -> failwith ("BVar n = " ^ string_of_int n ^ " stands for Clo which is not a tuple – cannot take proj " ^ string_of_int k )
+
        | Obj (Root (_, (PVar _ as h), Nil, _)) -> Head (Proj (h, k))
        | Obj (Root (_, (BVar _ as h), Nil, _)) -> Head (Proj (h, k))
-       | Obj _ -> failwith "Found Obj which is compatible with taking a proj."
+       | Obj (LFHole (_, _ , _ )) -> failwith "Found Obj which LFHole – cannot take a proj."
+       | Obj (Root (_,Proj (h, _ ), _, _ ))  -> failwith "Found Obj which is Proj ? – but we cannot take the projection of a projection; incompatible with taking a proj."
+       | Obj (Root ( _, _, _ , _ )) -> failwith "Root Obj incompatible with projections"
        | Head (HClo (_, _, _) as h) -> Head (Proj (h, k))
        | Head (HMClo (_, _) as h) -> Head (Proj (h, k))
        | Head (Proj (h, _ )) -> failwith "Found head that is a Proj?? - nested Proj not allowed"

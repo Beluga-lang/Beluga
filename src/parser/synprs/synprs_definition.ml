@@ -3,7 +3,7 @@
 (** The syntax for Beluga signatures after context-free parsing.
 
     OCaml constructor names prefixed with "Raw" require data-dependent
-    disambiguation or reduction during the elaboration to the external
+    disambiguation or reduction during the disambiguation to the external
     syntax. *)
 
 open Support
@@ -46,7 +46,7 @@ module LF = struct
 
               Since identifiers are ambiguous with qualified identifiers in
               the parser, the following may be assumed during disambiguation:
-              [List.length (Qualified_identifier.modules identifier) >= 1].
+              [List.length (Qualified_identifier.namespaces identifier) >= 1].
 
               A quoted constant may appear as an argument, or as applicand in
               prefix notation irrespective of its pre-defined fixity and
@@ -87,7 +87,7 @@ module LF = struct
           (** [Raw_application { objects; _ }] is the juxtaposition of
               [objects] delimited by whitespaces. [objects] may contain
               prefix, infix or postfix operators, along with operands. These
-              are rewritten during the elaboration to the external syntax. *)
+              are rewritten during the disambiguation to the external syntax. *)
   end =
     Object
 end
@@ -131,7 +131,9 @@ module CLF = struct
 
               Since identifiers are ambiguous with qualified identifiers in
               the parser, the following may be assumed during disambiguation:
-              [List.length (Qualified_identifier.modules identifier) >= 1].
+              [List.length (Qualified_identifier.namespaces identifier) >= 1].
+
+              Qualified identifiers are ambiguous with named projections.
 
               A quoted constant may appear as an argument, or as applicand in
               prefix notation irrespective of its pre-defined fixity and
@@ -175,7 +177,7 @@ module CLF = struct
           (** [Raw_application { objects; _ }] is the juxtaposition of
               [objects] delimited by whitespaces. [objects] may contain
               prefix, infix or postfix operators, along with operands. These
-              are rewritten during the elaboration to the external syntax. *)
+              are rewritten during the disambiguation to the external syntax. *)
       | Raw_block of
           { location : Location.t
           ; elements : (Identifier.t Option.t * Object.t) List1.t
@@ -347,6 +349,20 @@ module Comp = struct
           ; identifier : Qualified_identifier.t
           ; quoted : Bool.t
           }
+          (** - [Raw_qualified_identifier { identifier = "M.x"; quoted = false; _ }]
+                is the constant ["M.x"].
+              - [Raw_qualified_identifier { identifier = "M.x"; quoted = true; _ }]
+                is the quoted constant ["(M.x)"].
+
+              Since identifiers are ambiguous with qualified identifiers in
+              the parser, the following may be assumed during disambiguation:
+              [List.length (Qualified_identifier.namespaces identifier) >= 1].
+
+              Qualified identifiers are ambiguous with observations.
+
+              A quoted constant may appear as an argument, or as applicand in
+              prefix notation irrespective of its pre-defined fixity and
+              associativity. *)
       | Raw_fn of
           { location : Location.t
           ; parameters : Identifier.t Option.t List1.t

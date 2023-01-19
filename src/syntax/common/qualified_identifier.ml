@@ -2,40 +2,40 @@ open Support
 
 type t =
   { location : Location.t
-  ; modules : Identifier.t List.t
-        (** The qualified identifier's modules in order of appeareance as in
-            the external syntax. *)
+  ; namespaces : Identifier.t List.t
+        (** The qualified identifier's namespaces in order of appeareance as
+            in the external syntax. *)
   ; name : Identifier.t
   }
 
-let make ?location ?(modules = []) name =
-  match (location, modules) with
-  | Option.Some location, modules -> { location; modules; name }
+let make ?location ?(namespaces = []) name =
+  match (location, namespaces) with
+  | Option.Some location, namespaces -> { location; namespaces; name }
   | Option.None, [] ->
       let location = Identifier.location name in
-      { location; name; modules }
-  | Option.None, modules ->
+      { location; name; namespaces }
+  | Option.None, namespaces ->
       (* Join all locations *)
       let location =
         List.fold_left
           (fun acc i -> Location.join acc (Identifier.location i))
           (Identifier.location name)
-          modules
+          namespaces
       in
-      { location; modules; name }
+      { location; namespaces; name }
 
 let make_simple name =
   let location = Identifier.location name in
-  { location; modules = []; name }
+  { location; namespaces = []; name }
 
-let prepend_module module_name { location; modules; name } =
+let prepend_module module_name { location; namespaces; name } =
   let location = Location.join (Identifier.location module_name) location
-  and modules = module_name :: modules in
-  { location; modules; name }
+  and namespaces = module_name :: namespaces in
+  { location; namespaces; name }
 
 let[@inline] location { location; _ } = location
 
-let[@inline] modules { modules; _ } = modules
+let[@inline] namespaces { namespaces; _ } = namespaces
 
 let[@inline] name { name; _ } = name
 
@@ -45,7 +45,7 @@ module Ord =
   (val Ord.sequence
          (module List.MakeOrd (Identifier))
          (module Identifier)
-         modules name)
+         namespaces name)
 
 include (Ord : ORD with type t := t)
 
@@ -53,7 +53,7 @@ include (
   (val Eq.conjunction
          (module Identifier)
          (module List.MakeEq (Identifier))
-         name modules) :
+         name namespaces) :
     Eq.EQ with type t := t)
 
 include (
@@ -61,14 +61,14 @@ include (
     type nonrec t = t
 
     let pp ppf n =
-      match modules n with
+      match namespaces n with
       | [] -> Identifier.pp ppf (name n)
       | _ ->
           Format.fprintf ppf "@[<2>%a@,.%a@]"
             (Format.pp_print_list
                ~pp_sep:(fun ppf () -> Format.fprintf ppf "@,.")
                Identifier.pp)
-            (modules n) Identifier.pp (name n)
+            (namespaces n) Identifier.pp (name n)
   end) :
     Show.SHOW with type t := t)
 

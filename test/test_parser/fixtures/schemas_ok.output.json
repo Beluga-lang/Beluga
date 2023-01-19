@@ -29,7 +29,7 @@
                     "stop_column": 15
                   }
                 },
-                "modules": [],
+                "namespaces": [],
                 "location": {
                   "filename": "schemas_ok.input.bel",
                   "start_line": 7,
@@ -95,7 +95,7 @@
                     "stop_column": 15
                   }
                 },
-                "modules": [],
+                "namespaces": [],
                 "location": {
                   "filename": "schemas_ok.input.bel",
                   "start_line": 10,
@@ -146,7 +146,7 @@
                     "stop_column": 24
                   }
                 },
-                "modules": [],
+                "namespaces": [],
                 "location": {
                   "filename": "schemas_ok.input.bel",
                   "start_line": 10,
@@ -211,7 +211,7 @@
                     "stop_column": 14
                   }
                 },
-                "modules": [],
+                "namespaces": [],
                 "location": {
                   "filename": "schemas_ok.input.bel",
                   "start_line": 13,
@@ -252,7 +252,7 @@
                 "stop_column": 25
               }
             },
-            "modules": [],
+            "namespaces": [],
             "location": {
               "filename": "schemas_ok.input.bel",
               "start_line": 13,
@@ -315,7 +315,7 @@
                     "stop_column": 14
                   }
                 },
-                "modules": [],
+                "namespaces": [],
                 "location": {
                   "filename": "schemas_ok.input.bel",
                   "start_line": 16,
@@ -366,7 +366,7 @@
                     "stop_column": 23
                   }
                 },
-                "modules": [],
+                "namespaces": [],
                 "location": {
                   "filename": "schemas_ok.input.bel",
                   "start_line": 16,
@@ -407,7 +407,7 @@
                 "stop_column": 34
               }
             },
-            "modules": [],
+            "namespaces": [],
             "location": {
               "filename": "schemas_ok.input.bel",
               "start_line": 16,
@@ -470,7 +470,7 @@
                     "stop_column": 14
                   }
                 },
-                "modules": [],
+                "namespaces": [],
                 "location": {
                   "filename": "schemas_ok.input.bel",
                   "start_line": 19,
@@ -521,7 +521,7 @@
                     "stop_column": 23
                   }
                 },
-                "modules": [],
+                "namespaces": [],
                 "location": {
                   "filename": "schemas_ok.input.bel",
                   "start_line": 19,
@@ -577,7 +577,7 @@
                         "stop_column": 39
                       }
                     },
-                    "modules": [],
+                    "namespaces": [],
                     "location": {
                       "filename": "schemas_ok.input.bel",
                       "start_line": 19,
@@ -661,7 +661,7 @@
                           "stop_column": 45
                         }
                       },
-                      "modules": [],
+                      "namespaces": [],
                       "location": {
                         "filename": "schemas_ok.input.bel",
                         "start_line": 19,
@@ -736,7 +736,7 @@
                     "stop_column": 14
                   }
                 },
-                "modules": [],
+                "namespaces": [],
                 "location": {
                   "filename": "schemas_ok.input.bel",
                   "start_line": 22,
@@ -787,7 +787,7 @@
                     "stop_column": 23
                   }
                 },
-                "modules": [],
+                "namespaces": [],
                 "location": {
                   "filename": "schemas_ok.input.bel",
                   "start_line": 22,
@@ -840,7 +840,7 @@
                     "stop_column": 39
                   }
                 },
-                "modules": [],
+                "namespaces": [],
                 "location": {
                   "filename": "schemas_ok.input.bel",
                   "start_line": 22,
@@ -894,7 +894,7 @@
                         "stop_column": 48
                       }
                     },
-                    "modules": [],
+                    "namespaces": [],
                     "location": {
                       "filename": "schemas_ok.input.bel",
                       "start_line": 22,
@@ -1021,7 +1021,7 @@
             "stop_column": 5
           }
         },
-        "modules": [],
+        "namespaces": [],
         "location": {
           "filename": "schemas_ok.input.bel",
           "start_line": 25,
@@ -1053,7 +1053,7 @@
             "stop_column": 5
           }
         },
-        "modules": [],
+        "namespaces": [],
         "location": {
           "filename": "schemas_ok.input.bel",
           "start_line": 28,
@@ -1089,7 +1089,7 @@
                   "stop_column": 5
                 }
               },
-              "modules": [],
+              "namespaces": [],
               "location": {
                 "filename": "schemas_ok.input.bel",
                 "start_line": 31,
@@ -1121,7 +1121,7 @@
                   "stop_column": 12
                 }
               },
-              "modules": [],
+              "namespaces": [],
               "location": {
                 "filename": "schemas_ok.input.bel",
                 "start_line": 31,
@@ -1182,7 +1182,7 @@
                           "stop_column": 14
                         }
                       },
-                      "modules": [],
+                      "namespaces": [],
                       "location": {
                         "filename": "schemas_ok.input.bel",
                         "start_line": 34,
@@ -1223,7 +1223,7 @@
                       "stop_column": 25
                     }
                   },
-                  "modules": [],
+                  "namespaces": [],
                   "location": {
                     "filename": "schemas_ok.input.bel",
                     "start_line": 34,
@@ -1271,7 +1271,7 @@
                   "stop_column": 32
                 }
               },
-              "modules": [],
+              "namespaces": [],
               "location": {
                 "filename": "schemas_ok.input.bel",
                 "start_line": 34,
@@ -1317,7 +1317,7 @@
                   "stop_column": 5
                 }
               },
-              "modules": [],
+              "namespaces": [],
               "location": {
                 "filename": "schemas_ok.input.bel",
                 "start_line": 37,
@@ -1364,7 +1364,7 @@
                           "stop_column": 21
                         }
                       },
-                      "modules": [],
+                      "namespaces": [],
                       "location": {
                         "filename": "schemas_ok.input.bel",
                         "start_line": 37,
@@ -1415,7 +1415,7 @@
                           "stop_column": 30
                         }
                       },
-                      "modules": [],
+                      "namespaces": [],
                       "location": {
                         "filename": "schemas_ok.input.bel",
                         "start_line": 37,
@@ -1471,7 +1471,7 @@
                               "stop_column": 46
                             }
                           },
-                          "modules": [],
+                          "namespaces": [],
                           "location": {
                             "filename": "schemas_ok.input.bel",
                             "start_line": 37,
@@ -1555,7 +1555,7 @@
                                 "stop_column": 52
                               }
                             },
-                            "modules": [],
+                            "namespaces": [],
                             "location": {
                               "filename": "schemas_ok.input.bel",
                               "start_line": 37,

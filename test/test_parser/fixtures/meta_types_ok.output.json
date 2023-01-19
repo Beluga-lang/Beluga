@@ -291,7 +291,7 @@
                         "stop_column": 11
                       }
                     },
-                    "modules": [],
+                    "namespaces": [],
                     "location": {
                       "filename": "meta_types_ok.input.bel",
                       "start_line": 19,
@@ -368,7 +368,7 @@
                         "stop_column": 22
                       }
                     },
-                    "modules": [],
+                    "namespaces": [],
                     "location": {
                       "filename": "meta_types_ok.input.bel",
                       "start_line": 19,
@@ -457,7 +457,7 @@
                         "stop_column": 11
                       }
                     },
-                    "modules": [],
+                    "namespaces": [],
                     "location": {
                       "filename": "meta_types_ok.input.bel",
                       "start_line": 22,
@@ -534,7 +534,7 @@
                         "stop_column": 23
                       }
                     },
-                    "modules": [],
+                    "namespaces": [],
                     "location": {
                       "filename": "meta_types_ok.input.bel",
                       "start_line": 22,
@@ -621,7 +621,7 @@
                 "stop_column": 11
               }
             },
-            "modules": [],
+            "namespaces": [],
             "location": {
               "filename": "meta_types_ok.input.bel",
               "start_line": 25,
@@ -697,7 +697,7 @@
                 "stop_column": 11
               }
             },
-            "modules": [],
+            "namespaces": [],
             "location": {
               "filename": "meta_types_ok.input.bel",
               "start_line": 28,
@@ -773,7 +773,7 @@
                 "stop_column": 9
               }
             },
-            "modules": [],
+            "namespaces": [],
             "location": {
               "filename": "meta_types_ok.input.bel",
               "start_line": 31,
@@ -849,7 +849,7 @@
                 "stop_column": 9
               }
             },
-            "modules": [],
+            "namespaces": [],
             "location": {
               "filename": "meta_types_ok.input.bel",
               "start_line": 34,
@@ -927,7 +927,7 @@
                         "stop_column": 10
                       }
                     },
-                    "modules": [],
+                    "namespaces": [],
                     "location": {
                       "filename": "meta_types_ok.input.bel",
                       "start_line": 37,
@@ -977,7 +977,7 @@
                 "stop_column": 17
               }
             },
-            "modules": [],
+            "namespaces": [],
             "location": {
               "filename": "meta_types_ok.input.bel",
               "start_line": 37,
@@ -1055,7 +1055,7 @@
                         "stop_column": 10
                       }
                     },
-                    "modules": [],
+                    "namespaces": [],
                     "location": {
                       "filename": "meta_types_ok.input.bel",
                       "start_line": 40,
@@ -1105,7 +1105,7 @@
                 "stop_column": 17
               }
             },
-            "modules": [],
+            "namespaces": [],
             "location": {
               "filename": "meta_types_ok.input.bel",
               "start_line": 40,
@@ -1160,7 +1160,7 @@
                     "stop_column": 10
                   }
                 },
-                "modules": [],
+                "namespaces": [],
                 "location": {
                   "filename": "meta_types_ok.input.bel",
                   "start_line": 43,
@@ -1236,7 +1236,7 @@
                         "stop_column": 15
                       }
                     },
-                    "modules": [],
+                    "namespaces": [],
                     "location": {
                       "filename": "meta_types_ok.input.bel",
                       "start_line": 46,
@@ -1314,7 +1314,7 @@
                         "stop_column": 15
                       }
                     },
-                    "modules": [],
+                    "namespaces": [],
                     "location": {
                       "filename": "meta_types_ok.input.bel",
                       "start_line": 49,
@@ -1365,7 +1365,7 @@
                         "stop_column": 24
                       }
                     },
-                    "modules": [],
+                    "namespaces": [],
                     "location": {
                       "filename": "meta_types_ok.input.bel",
                       "start_line": 49,
@@ -1442,7 +1442,7 @@
                         "stop_column": 14
                       }
                     },
-                    "modules": [],
+                    "namespaces": [],
                     "location": {
                       "filename": "meta_types_ok.input.bel",
                       "start_line": 52,
@@ -1483,7 +1483,7 @@
                     "stop_column": 25
                   }
                 },
-                "modules": [],
+                "namespaces": [],
                 "location": {
                   "filename": "meta_types_ok.input.bel",
                   "start_line": 52,
@@ -1558,7 +1558,7 @@
                         "stop_column": 14
                       }
                     },
-                    "modules": [],
+                    "namespaces": [],
                     "location": {
                       "filename": "meta_types_ok.input.bel",
                       "start_line": 55,
@@ -1609,7 +1609,7 @@
                         "stop_column": 23
                       }
                     },
-                    "modules": [],
+                    "namespaces": [],
                     "location": {
                       "filename": "meta_types_ok.input.bel",
                       "start_line": 55,
@@ -1650,7 +1650,7 @@
                     "stop_column": 34
                   }
                 },
-                "modules": [],
+                "namespaces": [],
                 "location": {
                   "filename": "meta_types_ok.input.bel",
                   "start_line": 55,
@@ -1725,7 +1725,7 @@
                         "stop_column": 14
                       }
                     },
-                    "modules": [],
+                    "namespaces": [],
                     "location": {
                       "filename": "meta_types_ok.input.bel",
                       "start_line": 58,
@@ -1776,7 +1776,7 @@
                         "stop_column": 23
                       }
                     },
-                    "modules": [],
+                    "namespaces": [],
                     "location": {
                       "filename": "meta_types_ok.input.bel",
                       "start_line": 58,
@@ -1832,7 +1832,7 @@
                             "stop_column": 39
                           }
                         },
-                        "modules": [],
+                        "namespaces": [],
                         "location": {
                           "filename": "meta_types_ok.input.bel",
                           "start_line": 58,
@@ -1916,7 +1916,7 @@
                               "stop_column": 45
                             }
                           },
-                          "modules": [],
+                          "namespaces": [],
                           "location": {
                             "filename": "meta_types_ok.input.bel",
                             "start_line": 58,

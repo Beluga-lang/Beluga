@@ -262,16 +262,16 @@ let omittable_dollar_identifier =
 let[@warning "-32"] qualified_identifier =
   seq2 identifier (many dot_identifier) |> span
   $> fun (location, (head, tail)) ->
-  let modules, identifier = List1.unsnoc (List1.from head tail) in
-  Qualified_identifier.make ~location ~modules identifier
+  let namespaces, identifier = List1.unsnoc (List1.from head tail) in
+  Qualified_identifier.make ~location ~namespaces identifier
 
 (*=
    <dot-qualified-identifier> ::= <dot-identifier>+
 *)
 let dot_qualified_identifier =
   some dot_identifier |> span $> fun (location, identifiers) ->
-  let modules, identifier = List1.unsnoc identifiers in
-  Qualified_identifier.make ~location ~modules identifier
+  let namespaces, identifier = List1.unsnoc identifiers in
+  Qualified_identifier.make ~location ~namespaces identifier
 
 (*=
     <qualified-or-plain-identifier> ::=
@@ -282,8 +282,8 @@ let qualified_or_plain_identifier =
   seq2 identifier (many dot_identifier) |> span $> function
   | _, (head, []) -> `Plain head
   | location, (head, tail) ->
-      let modules, identifier = List1.unsnoc (List1.from head tail) in
-      `Qualified (Qualified_identifier.make ~location ~modules identifier)
+      let namespaces, identifier = List1.unsnoc (List1.from head tail) in
+      `Qualified (Qualified_identifier.make ~location ~namespaces identifier)
 
 let omittable_meta_object_identifier =
   let plain = omittable_identifier $> fun i -> (i, `Plain)

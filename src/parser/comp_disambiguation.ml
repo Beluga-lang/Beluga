@@ -47,7 +47,7 @@ exception Illegal_untyped_comp_pi_type
 
 (** {2 Exceptions for computation-level expression disambiguation} *)
 
-exception Illegal_variables_bound_several_times
+exception Illegal_duplicate_pattern_variables
 
 (** {2 Exceptions for computation-level context disambiguation} *)
 
@@ -80,11 +80,8 @@ module type COMP_DISAMBIGUATION = sig
   val disambiguate_comp_expression :
     Synprs.Comp.Expression_object.t -> Synext.Comp.Expression.t t
 
-  val disambiguate_comp_pattern :
-    Synprs.Comp.Pattern_object.t -> Synext.Comp.Pattern.t t
-
-  val disambiguate_comp_context :
-    Synprs.Comp.Context_object.t -> Synext.Comp.Context.t t
+  val with_disambiguated_comp_context :
+    Synprs.Comp.Context_object.t -> (Synext.Comp.Context.t -> 'a t) -> 'a t
 end
 
 module Make
@@ -210,6 +207,23 @@ module Make
 
   let with_bindings_checkpoint m =
     scoped ~set:mark_bindings ~unset:rollback_bindings m
+
+  let push_binding identifier bindings =
+    match Identifier.Hamt.find_opt identifier bindings with
+    | Option.None ->
+        Identifier.Hamt.add identifier (List1.singleton identifier) bindings
+    | Option.Some binding_stack ->
+        Identifier.Hamt.add identifier
+          (List1.cons identifier binding_stack)
+          bindings
+
+  let pop_binding identifier bindings =
+    match Identifier.Hamt.find_opt identifier bindings with
+    | Option.None -> Error.violation "[pop_binding]"
+    | Option.Some (List1.T (_head, [])) ->
+        Identifier.Hamt.remove identifier bindings
+    | Option.Some (List1.T (_head, x :: xs)) ->
+        Identifier.Hamt.add identifier (List1.from x xs) bindings
 
   (** {1 Disambiguation} *)
 
@@ -461,12 +475,7 @@ module Make
     | Synprs.Comp.Expression_object.Raw_let
         { location; pattern; scrutinee; body } ->
         let* scrutinee' = disambiguate_comp_expression scrutinee in
-        let* pattern', body' =
-          with_bindings_checkpoint
-            (seq2
-               (disambiguate_comp_pattern pattern)
-               (disambiguate_comp_expression body))
-        in
+        let* pattern', body' = disambiguate_case_branch (pattern, body) in
         return
           (Synext.Comp.Expression.Let
              { location
@@ -516,18 +525,56 @@ module Make
         Obj.magic ()
 
   and disambiguate_case_branch (pattern_object, body_object) =
-    with_bindings_checkpoint
-      (seq2
-         (disambiguate_comp_pattern pattern_object)
-         (disambiguate_comp_expression body_object))
+    with_disambiguated_comp_pattern pattern_object Identifier.Hamt.empty []
+      (fun pattern' _inner_bindings' pattern_variables' ->
+        match Identifier.find_duplicates pattern_variables' with
+        | Option.None ->
+            let* body' = disambiguate_comp_expression body_object in
+            return (pattern', body')
+        | Option.Some duplicate_pattern_variables ->
+            Error.raise_at
+              (List2.to_list1
+                 (List2.map Identifier.location duplicate_pattern_variables))
+              Illegal_duplicate_pattern_variables)
 
   and disambiguate_cofunction_branch (copattern_objects, body_object) =
-    with_bindings_checkpoint
-      (seq2
-         (traverse_list1 disambiguate_as_copattern copattern_objects)
-         (disambiguate_comp_expression body_object))
+    with_disambiguated_comp_copatterns_list1 copattern_objects
+      Identifier.Hamt.empty []
+      (fun copattern' _inner_bindings' pattern_variables' ->
+        match Identifier.find_duplicates pattern_variables' with
+        | Option.None ->
+            let* body' = disambiguate_comp_expression body_object in
+            return (copattern', body')
+        | Option.Some duplicate_pattern_variables ->
+            Error.raise_at
+              (List2.to_list1
+                 (List2.map Identifier.location duplicate_pattern_variables))
+              Illegal_duplicate_pattern_variables)
 
-  and disambiguate_comp_pattern = function
+  and with_disambiguated_comp_patterns_list objects inner_bindings
+      pattern_variables f =
+    match objects with
+    | [] -> f [] inner_bindings pattern_variables
+    | x :: xs ->
+        with_disambiguated_comp_pattern x inner_bindings pattern_variables
+          (fun y inner_bindings' pattern_variables' ->
+            with_disambiguated_comp_patterns_list xs inner_bindings'
+              pattern_variables'
+              (fun ys inner_bindings'' pattern_variables'' ->
+                f (y :: ys) inner_bindings'' pattern_variables''))
+
+  and with_disambiguated_comp_pattern :
+      type a.
+         Synprs.comp_pattern_object
+      -> Identifier.t List1.t Identifier.Hamt.t
+      -> Identifier.t list
+      -> (   Synext.comp_pattern
+          -> Identifier.t List1.t Identifier.Hamt.t
+          -> Identifier.t list
+          -> a t)
+      -> a t =
+   fun object_ inner_bindings pattern_variables f ->
+    match object_ with
     | Synprs.Comp.Pattern_object.Raw_meta_annotated
         { location; parameter_identifier = Option.None, _; _ } ->
         Error.raise_at1 location
@@ -543,24 +590,33 @@ module Make
         { location; identifier; quoted } ->
         Obj.magic ()
     | Synprs.Comp.Pattern_object.Raw_box { location; pattern } ->
-        let* pattern' = disambiguate_meta_pattern pattern in
-        return
-          (Synext.Comp.Pattern.MetaObject
-             { location; meta_pattern = pattern' })
+        with_disambiguated_meta_pattern pattern inner_bindings
+          pattern_variables
+          (fun pattern' inner_bindings' pattern_variables' ->
+            f
+              (Synext.Comp.Pattern.MetaObject
+                 { location; meta_pattern = pattern' })
+              inner_bindings' pattern_variables')
     | Synprs.Comp.Pattern_object.Raw_tuple { location; elements } ->
-        let* elements' = traverse_list2 disambiguate_comp_pattern elements in
-        return (Synext.Comp.Pattern.Tuple { location; elements = elements' })
+        (* TODO: Use the same [inner_bindings] for each argument and
+           applicand, but carry the pattern variables *)
+        Obj.magic ()
     | Synprs.Comp.Pattern_object.Raw_application { location; patterns } ->
+        (* TODO: Use the same [inner_bindings] for each argument and
+           applicand, but carry the pattern variables *)
         Obj.magic ()
     | Synprs.Comp.Pattern_object.Raw_observation
         { location; constant; arguments } ->
         Obj.magic ()
     | Synprs.Comp.Pattern_object.Raw_annotated { location; pattern; typ } ->
         let* typ' = disambiguate_comp_typ typ in
-        let* pattern' = disambiguate_comp_pattern pattern in
-        return
-          (Synext.Comp.Pattern.Type_annotated
-             { location; pattern = pattern'; typ = typ' })
+        with_disambiguated_comp_pattern pattern inner_bindings
+          pattern_variables
+          (fun pattern' inner_bindings' pattern_variables' ->
+            f
+              (Synext.Comp.Pattern.Type_annotated
+                 { location; pattern = pattern'; typ = typ' })
+              inner_bindings' pattern_variables')
     | Synprs.Comp.Pattern_object.Raw_meta_annotated
         { location
         ; parameter_identifier = Option.Some parameter_identifier, modifier
@@ -568,22 +624,49 @@ module Make
         ; pattern
         } ->
         let* parameter_typ' = disambiguate_meta_typ parameter_typ in
-        let* pattern' =
-          (with_parameter_binding parameter_identifier modifier
-             parameter_typ')
-            (disambiguate_comp_pattern pattern)
-        in
-        return
-          (Synext.Comp.Pattern.MetaTypeAnnotated
-             { location
-             ; annotation_identifier = parameter_identifier
-             ; annotation_type = parameter_typ'
-             ; body = pattern'
-             })
+        (with_parameter_binding parameter_identifier modifier parameter_typ')
+          (with_disambiguated_comp_pattern pattern
+             (push_binding parameter_identifier inner_bindings)
+             pattern_variables
+             (fun pattern' inner_bindings' pattern_variables' ->
+               f
+                 (Synext.Comp.Pattern.MetaTypeAnnotated
+                    { location
+                    ; annotation_identifier = parameter_identifier
+                    ; annotation_type = parameter_typ'
+                    ; body = pattern'
+                    })
+                 (pop_binding parameter_identifier inner_bindings')
+                 pattern_variables'))
     | Synprs.Comp.Pattern_object.Raw_wildcard { location } ->
-        return (Synext.Comp.Pattern.Wildcard { location })
+        f
+          (Synext.Comp.Pattern.Wildcard { location })
+          inner_bindings pattern_variables
 
-  and disambiguate_as_copattern = function
+  and with_disambiguated_comp_copatterns_list objects inner_bindings
+      pattern_variables f =
+    match objects with
+    | [] -> f [] inner_bindings pattern_variables
+    | x :: xs ->
+        with_disambiguated_comp_copattern x inner_bindings pattern_variables
+          (fun y inner_bindings' pattern_variables' ->
+            with_disambiguated_comp_copatterns_list xs inner_bindings'
+              pattern_variables'
+              (fun ys inner_bindings'' pattern_variables'' ->
+                f (y :: ys) inner_bindings'' pattern_variables''))
+
+  and with_disambiguated_comp_copatterns_list1 objects inner_bindings
+      pattern_variables f =
+    let (List1.T (x, xs)) = objects in
+    with_disambiguated_comp_copattern x inner_bindings pattern_variables
+      (fun y inner_bindings' pattern_variables' ->
+        with_disambiguated_comp_copatterns_list xs inner_bindings'
+          pattern_variables' (fun ys inner_bindings'' pattern_variables'' ->
+            f (List1.from y ys) inner_bindings'' pattern_variables''))
+
+  and with_disambiguated_comp_copattern object_ inner_bindings
+      pattern_variables f =
+    match object_ with
     | Synprs.Comp.Pattern_object.Raw_qualified_identifier _ ->
         (* TODO: Can be a variable pattern together with an observation *)
         Obj.magic ()
@@ -591,12 +674,16 @@ module Make
         { location; constant; arguments } -> (
         lookup constant >>= function
         | Result.Ok (Computation_term_destructor _) ->
-            let* arguments' =
-              traverse_list disambiguate_comp_pattern arguments
-            in
-            return
-              (Synext.Comp.Copattern.Observation
-                 { location; observation = constant; arguments = arguments' })
+            with_disambiguated_comp_patterns_list arguments inner_bindings
+              pattern_variables
+              (fun arguments' inner_bindings' pattern_variables' ->
+                f
+                  (Synext.Comp.Copattern.Observation
+                     { location
+                     ; observation = constant
+                     ; arguments = arguments'
+                     })
+                  inner_bindings' pattern_variables')
         | Result.Ok entry ->
             Error.raise_at1 location
               (Error.composite_exception2
@@ -611,24 +698,35 @@ module Make
       | Synprs.Comp.Pattern_object.Raw_annotated _
       | Synprs.Comp.Pattern_object.Raw_meta_annotated _
       | Synprs.Comp.Pattern_object.Raw_wildcard _ ) as pattern_object ->
-        let* pattern' = disambiguate_comp_pattern pattern_object in
-        return (Synext.Comp.Copattern.Pattern pattern')
+        with_disambiguated_comp_pattern pattern_object inner_bindings
+          pattern_variables
+          (fun pattern' inner_bindings' pattern_variables' ->
+            f (Synext.Comp.Copattern.Pattern pattern') inner_bindings'
+              pattern_variables')
 
-  and disambiguate_comp_context context_object =
+  and with_disambiguated_comp_context context_object f =
     let { Synprs.Comp.Context_object.location; bindings } = context_object in
     (* Computation contexts are dependent, meaning that bound variables on
        the left of a declaration may appear in the type of a binding on the
        right. Bindings may not recursively refer to themselves. *)
-    let* bindings' = traverse_list disambiguate_context_binding bindings in
-    return { Synext.Comp.Context.location; bindings = bindings' }
+    with_disambiguated_context_bindings_list bindings (fun bindings' ->
+        f { Synext.Comp.Context.location; bindings = bindings' })
 
-  and disambiguate_context_binding = function
+  and with_disambiguated_context_binding binding f =
+    match binding with
     | identifier, Option.None ->
         Error.raise_at1
           (Identifier.location identifier)
           Illegal_missing_comp_context_binding_type
     | identifier, Option.Some typ ->
         let* typ' = disambiguate_comp_typ typ in
-        let* () = add_computation_variable identifier in
-        return (identifier, typ')
+        with_comp_variable identifier (f (identifier, typ'))
+
+  and with_disambiguated_context_bindings_list bindings f =
+    match bindings with
+    | [] -> f []
+    | x :: xs ->
+        with_disambiguated_context_binding x (fun y ->
+            with_disambiguated_context_bindings_list xs (fun ys ->
+                f (y :: ys)))
 end

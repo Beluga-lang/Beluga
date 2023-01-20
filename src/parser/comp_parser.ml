@@ -538,8 +538,8 @@ end = struct
     seq2 comp_expression_object5
       (maybe
          dot_qualified_identifier
-         (* Repeated dot qualified identifiers are ambiguous with just one
-            dot qualified identifier, so parse only one. *))
+         (* Repeated dot qualified identifiers are impossible by the lexical
+            convention. *))
     |> span
     $> (function
          | _location, (expression, Option.None) -> expression

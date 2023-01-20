@@ -152,21 +152,9 @@ struct
   let parse_only_clf_term =
     parse_only Clf_parser.clf_object Clf_disambiguation.disambiguate_clf_term
 
-  let parse_only_clf_term_pattern =
-    parse_only Clf_parser.clf_object
-      Clf_disambiguation.disambiguate_clf_term_pattern
-
   let parse_only_clf_substitution =
     parse_only Clf_parser.clf_context_object
       Clf_disambiguation.disambiguate_clf_substitution
-
-  let parse_only_clf_substitution_pattern =
-    parse_only Clf_parser.clf_context_object
-      Clf_disambiguation.disambiguate_clf_substitution_pattern
-
-  let parse_only_clf_context_pattern =
-    parse_only Clf_parser.clf_context_object
-      Clf_disambiguation.disambiguate_clf_context_pattern
 
   let parse_only_meta_typ =
     parse_only Meta_parser.meta_thing
@@ -175,14 +163,6 @@ struct
   let parse_only_meta_object =
     parse_only Meta_parser.meta_thing
       Meta_disambiguation.disambiguate_meta_object
-
-  let parse_only_meta_pattern =
-    parse_only Meta_parser.meta_thing
-      Meta_disambiguation.disambiguate_meta_pattern
-
-  let parse_only_meta_context =
-    parse_only Meta_parser.meta_context
-      Meta_disambiguation.disambiguate_meta_context
 
   let parse_only_schema =
     parse_only Meta_parser.schema_object

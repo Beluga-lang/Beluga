@@ -164,7 +164,7 @@ module type BINDINGS_STATE = sig
   val open_namespace : Qualified_identifier.t -> (Unit.t, exn) Result.t t
 
   val modify_operator :
-    (Operator.t -> Operator.t) -> Qualified_identifier.t -> Unit.t t
+    Qualified_identifier.t -> (Operator.t -> Operator.t) -> Unit.t t
 
   val lookup : Qualified_identifier.t -> (entry, exn) Result.t t
 
@@ -213,6 +213,16 @@ module type DISAMBIGUATION_STATE = sig
   val with_lf_term_variable : Identifier.t -> 'a t -> 'a t
 
   val with_lf_term_variable_opt : Identifier.t Option.t -> 'a t -> 'a t
+
+  val with_meta_variable : Identifier.t -> 'a t -> 'a t
+
+  val with_parameter_variable : Identifier.t -> 'a t -> 'a t
+
+  val with_context_variable : Identifier.t -> 'a t -> 'a t
+
+  val with_substitution_variable : Identifier.t -> 'a t -> 'a t
+
+  val with_comp_variable : Identifier.t -> 'a t -> 'a t
 
   val with_pattern_variables_checkpoint :
     pattern:'a t -> expression:'b t -> ('a * 'b) t
@@ -575,7 +585,7 @@ module Disambiguation_state : DISAMBIGUATION_STATE = struct
         | Option.Some (List1.T (_head_to_discard, [])) ->
             Identifier.Hamt.remove identifier bindings)
 
-  let modify_operator f identifier =
+  let modify_operator identifier f =
     lookup identifier >>= function
     | Result.Ok (Lf_type_constant entry) ->
         set identifier
@@ -705,6 +715,31 @@ module Disambiguation_state : DISAMBIGUATION_STATE = struct
     match identifier_opt with
     | Option.None -> Fun.id
     | Option.Some identifier -> with_lf_term_variable identifier
+
+  let with_meta_variable identifier =
+    scoped
+      ~set:(add_meta_variable identifier)
+      ~unset:(pop_binding identifier)
+
+  let with_parameter_variable identifier =
+    scoped
+      ~set:(add_parameter_variable identifier)
+      ~unset:(pop_binding identifier)
+
+  let with_context_variable identifier =
+    scoped
+      ~set:(add_context_variable identifier)
+      ~unset:(pop_binding identifier)
+
+  let with_substitution_variable identifier =
+    scoped
+      ~set:(add_substitution_variable identifier)
+      ~unset:(pop_binding identifier)
+
+  let with_comp_variable identifier =
+    scoped
+      ~set:(add_computation_variable identifier)
+      ~unset:(pop_binding identifier)
 
   let with_pattern_variables_checkpoint = Obj.magic ()
 end

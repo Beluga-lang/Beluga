@@ -139,14 +139,35 @@ module type CLF_DISAMBIGUATION = sig
   val with_disambiguated_clf_context :
     Synprs.clf_context_object -> (Synext.clf_context -> 'a t) -> 'a t
 
-  val disambiguate_clf_term_pattern :
-    Synprs.clf_object -> Synext.clf_term_pattern t
+  val with_disambiguated_clf_term_pattern :
+       Synprs.clf_object
+    -> Identifier.t List1.t Identifier.Hamt.t
+    -> Identifier.t list
+    -> (   Synext.clf_term_pattern
+        -> Identifier.t List1.t Identifier.Hamt.t
+        -> Identifier.t list
+        -> 'a t)
+    -> 'a t
 
-  val disambiguate_clf_substitution_pattern :
-    Synprs.clf_context_object -> Synext.clf_substitution_pattern t
+  val with_disambiguated_clf_substitution_pattern :
+       Synprs.clf_context_object
+    -> Identifier.t List1.t Identifier.Hamt.t
+    -> Identifier.t list
+    -> (   Synext.clf_substitution_pattern
+        -> Identifier.t List1.t Identifier.Hamt.t
+        -> Identifier.t list
+        -> 'a t)
+    -> 'a t
 
-  val disambiguate_clf_context_pattern :
-    Synprs.clf_context_object -> Synext.clf_context_pattern t
+  val with_disambiguated_clf_context_pattern :
+       Synprs.clf_context_object
+    -> Identifier.t List1.t Identifier.Hamt.t
+    -> Identifier.t list
+    -> (   Synext.clf_context_pattern
+        -> Identifier.t List1.t Identifier.Hamt.t
+        -> Identifier.t list
+        -> 'a t)
+    -> 'a t
 end
 
 (** Disambiguation of contextual LF types, terms and patterns from the parser
@@ -673,42 +694,49 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
       Context variables cannot occur in [bindings]. A context variable in the
       head position of a context is handled in
       {!with_disambiguated_clf_context}. *)
-  and with_disambiguated_context_bindings bindings f =
+  and with_disambiguated_context_bindings_list bindings f =
     (* Contextual LF contexts are dependent, meaning that bound variables on
        the left of a declaration may appear in the type of a binding on the
        right. Bindings may not recursively refer to themselves.*)
     match bindings with
     | [] -> f []
-    | (Option.Some identifier, typ) (* Typed binding *) :: xs ->
+    | x :: xs ->
+        with_disambiguated_context_binding x (fun y ->
+            with_disambiguated_context_bindings_list xs (fun ys ->
+                f (y :: ys)))
+
+  and with_disambiguated_context_binding binding f =
+    (* Contextual LF contexts are dependent, meaning that bound variables on
+       the left of a declaration may appear in the type of a binding on the
+       right. Bindings may not recursively refer to themselves.*)
+    match binding with
+    | Option.Some identifier, typ (* Typed binding *) ->
         let* typ' = disambiguate_clf_typ typ in
         with_lf_term_variable identifier
           (let y = (identifier, Option.some typ') in
-           with_disambiguated_context_bindings xs (fun ys -> f (y :: ys)))
+           f y)
     | ( Option.None
       , Synprs.CLF.Object.Raw_identifier
           { identifier = identifier, `Plain; _ } )
-        (* Untyped contextual LF variable *)
-      :: xs ->
+    (* Untyped contextual LF variable *) ->
         with_lf_term_variable identifier
           (let y = (identifier, Option.none) in
-           with_disambiguated_context_bindings xs (fun ys -> f (y :: ys)))
+           f y)
     | ( Option.None
       , Synprs.CLF.Object.Raw_identifier
           { identifier = identifier, `Hash; _ } )
-        (* Parameter variables may only occur in meta-contexts *)
-      :: _xs ->
+    (* Parameter variables may only occur in meta-contexts *) ->
         Error.raise_at1
           (Identifier.location identifier)
           Illegal_clf_context_parameter_variable_binding
     | ( Option.None
       , Synprs.CLF.Object.Raw_identifier
           { identifier = identifier, `Dollar; _ } )
-        (* Substitution variables may only occur in meta-contexts *)
-      :: _xs ->
+    (* Substitution variables may only occur in meta-contexts *) ->
         Error.raise_at1
           (Identifier.location identifier)
           Illegal_clf_context_substitution_variable_binding
-    | (Option.None, typ) (* Binding identifier missing *) :: _xs ->
+    | Option.None, typ (* Binding identifier missing *) ->
         Error.raise_at1
           (Synprs.location_of_clf_object typ)
           Illegal_clf_context_missing_binding_identifier
@@ -728,7 +756,7 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
             let head' =
               Synext.CLF.Context.Head.Hole { location = head_location }
             in
-            with_disambiguated_context_bindings xs (fun bindings' ->
+            with_disambiguated_context_bindings_list xs (fun bindings' ->
                 f
                   { Synext.CLF.Context.location
                   ; head = head'
@@ -740,23 +768,36 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
             (* Possibly a context variable as context head *)
           :: xs -> (
             lookup_toplevel identifier >>= function
-            | Result.Ok (Context_variable _)
-            | Result.Error (Unbound_identifier _) ->
+            | Result.Ok (Context_variable _) ->
                 let head' =
                   Synext.CLF.Context.Head.Context_variable
                     { identifier; location = Identifier.location identifier }
                 in
-                with_disambiguated_context_bindings xs (fun bindings' ->
+                with_disambiguated_context_bindings_list xs (fun bindings' ->
                     f
                       { Synext.CLF.Context.location
                       ; head = head'
                       ; bindings = bindings'
                       })
+            | Result.Error (Unbound_identifier _) ->
+                let head' =
+                  Synext.CLF.Context.Head.Context_variable
+                    { identifier; location = Identifier.location identifier }
+                in
+                with_context_variable identifier
+                  (with_disambiguated_context_bindings_list xs
+                     (fun bindings' ->
+                       f
+                         { Synext.CLF.Context.location
+                         ; head = head'
+                         ; bindings = bindings'
+                         }))
             | Result.Ok _ ->
                 let head' =
                   Synext.CLF.Context.Head.None { location = head_location }
                 in
-                with_disambiguated_context_bindings objects (fun bindings' ->
+                with_disambiguated_context_bindings_list objects
+                  (fun bindings' ->
                     f
                       { Synext.CLF.Context.location
                       ; head = head'
@@ -769,7 +810,8 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
             let head' =
               Synext.CLF.Context.Head.None { location = head_location }
             in
-            with_disambiguated_context_bindings objects (fun bindings' ->
+            with_disambiguated_context_bindings_list objects
+              (fun bindings' ->
                 f
                   { Synext.CLF.Context.location
                   ; head = head'
@@ -836,19 +878,75 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
           (Synext.CLF.Term.Application
              { applicand = applicand'; arguments = arguments'; location })
 
-  (** [disambiguate_clf_term_pattern object_ state] is [object_] rewritten as
-      a contextual LF term pattern with respect to the disambiguation context
-      [state].
+  let push_binding identifier bindings =
+    match Identifier.Hamt.find_opt identifier bindings with
+    | Option.None ->
+        Identifier.Hamt.add identifier (List1.singleton identifier) bindings
+    | Option.Some binding_stack ->
+        Identifier.Hamt.add identifier
+          (List1.cons identifier binding_stack)
+          bindings
 
-      Term applications are rewritten with
-      {!disambiguate_application_pattern} using Dijkstra's shunting yard
-      algorithm.
+  let pop_binding identifier bindings =
+    match Identifier.Hamt.find_opt identifier bindings with
+    | Option.None -> Error.violation "[pop_binding]"
+    | Option.Some (List1.T (_head, [])) ->
+        Identifier.Hamt.remove identifier bindings
+    | Option.Some (List1.T (_head, x :: xs)) ->
+        Identifier.Hamt.add identifier (List1.from x xs) bindings
 
-      This function imposes syntactic restrictions on [object_], but does not
-      perform normalization nor validation. To see the syntactic restrictions
-      from contextual LF objects to contextual LF term patterns, see the
-      Beluga language specification. *)
-  let rec disambiguate_clf_term_pattern object_ =
+  let rec with_disambiguated_clf_term_patterns_list :
+      type a.
+         Synprs.clf_object list
+      -> Identifier.t List1.t Identifier.Hamt.t
+      -> Identifier.t list
+      -> (   Synext.clf_term_pattern list
+          -> Identifier.t List1.t Identifier.Hamt.t
+          -> Identifier.t list
+          -> a t)
+      -> a t =
+   fun objects inner_bound_variables pattern_variables f ->
+    match objects with
+    | [] -> f [] inner_bound_variables pattern_variables
+    | x :: xs ->
+        with_disambiguated_clf_term_pattern x inner_bound_variables
+          pattern_variables
+          (fun y inner_bound_variables' pattern_variables' ->
+            with_disambiguated_clf_term_patterns_list xs
+              inner_bound_variables' pattern_variables'
+              (fun ys inner_bound_variables'' pattern_variables'' ->
+                f (y :: ys) inner_bound_variables'' pattern_variables''))
+
+  and with_disambiguated_clf_term_patterns_list1 :
+      type a.
+         Synprs.clf_object List1.t
+      -> Identifier.t List1.t Identifier.Hamt.t
+      -> Identifier.t list
+      -> (   Synext.clf_term_pattern List1.t
+          -> Identifier.t List1.t Identifier.Hamt.t
+          -> Identifier.t list
+          -> a t)
+      -> a t =
+   fun objects inner_bound_variables pattern_variables f ->
+    let (List1.T (x, xs)) = objects in
+    with_disambiguated_clf_term_pattern x inner_bound_variables
+      pattern_variables (fun y inner_bound_variables' pattern_variables' ->
+        with_disambiguated_clf_term_patterns_list xs inner_bound_variables'
+          pattern_variables'
+          (fun ys inner_bound_variables'' pattern_variables'' ->
+            f (List1.from y ys) inner_bound_variables'' pattern_variables''))
+
+  and with_disambiguated_clf_term_pattern :
+      type a.
+         Synprs.clf_object
+      -> Identifier.t List1.t Identifier.Hamt.t
+      -> Identifier.t list
+      -> (   Synext.clf_term_pattern
+          -> Identifier.t List1.t Identifier.Hamt.t
+          -> Identifier.t list
+          -> a t)
+      -> a t =
+   fun object_ inner_bound_variables pattern_variables f ->
     match object_ with
     | Synprs.CLF.Object.Raw_pi { location; _ } ->
         Error.raise_at1 location Illegal_pi_clf_term_pattern
@@ -863,35 +961,65 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
         Error.raise_at1 location Illegal_labellable_hole_term_pattern
     | Synprs.CLF.Object.Raw_identifier
         { location; identifier = identifier, `Hash; _ } ->
-        return
-          (Synext.CLF.Term.Pattern.Parameter_variable
-             { location; identifier })
+        let pattern' =
+          Synext.CLF.Term.Pattern.Parameter_variable { location; identifier }
+        in
+        if Identifier.Hamt.mem identifier inner_bound_variables then
+          f pattern' inner_bound_variables pattern_variables
+        else
+          with_parameter_variable identifier
+            (f pattern' inner_bound_variables
+               (identifier :: pattern_variables))
     | Synprs.CLF.Object.Raw_identifier
         { location; identifier = identifier, `Dollar; _ } ->
-        return
-          (Synext.CLF.Term.Pattern.Substitution_variable
-             { location; identifier })
+        let pattern' =
+          Synext.CLF.Term.Pattern.Substitution_variable
+            { location; identifier }
+        in
+        if Identifier.Hamt.mem identifier inner_bound_variables then
+          f pattern' inner_bound_variables pattern_variables
+        else
+          with_substitution_variable identifier
+            (f pattern' inner_bound_variables
+               (identifier :: pattern_variables))
     | Synprs.CLF.Object.Raw_identifier
         { location; identifier = identifier, `Plain; quoted; _ } -> (
         (* As an LF term pattern, plain identifiers are either term-level
-           constants, variables already present in the pattern, or new
-           pattern variables. *)
+           constants, variables bound in the pattern, or new pattern
+           variables. *)
         let qualified_identifier =
           Qualified_identifier.make_simple identifier
         in
         lookup_toplevel identifier >>= function
         | Result.Ok (Lf_term_constant { operator; _ }) ->
-            return
-              (Synext.CLF.Term.Pattern.Constant
-                 { location
-                 ; identifier = qualified_identifier
-                 ; operator
-                 ; quoted
-                 })
+            let pattern' =
+              Synext.CLF.Term.Pattern.Constant
+                { location
+                ; identifier = qualified_identifier
+                ; operator
+                ; quoted
+                }
+            in
+            f pattern' inner_bound_variables pattern_variables
+        | Result.Ok (Lf_term_variable _)
+        | Result.Ok (Meta_variable _) ->
+            let pattern' =
+              Synext.CLF.Term.Pattern.Variable { location; identifier }
+            in
+            if Identifier.Hamt.mem identifier inner_bound_variables then
+              f pattern' inner_bound_variables pattern_variables
+            else
+              with_lf_term_variable identifier
+                (f pattern' inner_bound_variables
+                   (identifier :: pattern_variables))
         | Result.Ok _
         | Result.Error (Unbound_identifier _) ->
-            return
-              (Synext.CLF.Term.Pattern.Variable { location; identifier })
+            let pattern' =
+              Synext.CLF.Term.Pattern.Variable { location; identifier }
+            in
+            with_lf_term_variable identifier
+              (f pattern' inner_bound_variables
+                 (identifier :: pattern_variables))
         | Result.Error cause -> Error.raise_at1 location cause)
     | Synprs.CLF.Object.Raw_qualified_identifier
         { location; identifier; quoted } -> (
@@ -924,7 +1052,11 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
               Synext.CLF.Term.Pattern.Variable
                 { location; identifier = free_variable }
             in
-            return (reduce_projections term projections)
+            with_lf_term_variable free_variable
+              (f
+                 (reduce_projections term projections)
+                 inner_bound_variables
+                 (free_variable :: pattern_variables))
         | `Partially_bound
             ( List1.T
                 ( ( variable_identifier
@@ -937,7 +1069,19 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
               Synext.CLF.Term.Pattern.Variable
                 { location; identifier = variable_identifier }
             in
-            return (reduce_projections term (List1.to_list unbound_segments))
+            if Identifier.Hamt.mem variable_identifier inner_bound_variables
+            then
+              (* The variable's binder is within the pattern, so this is not
+                 a pattern variable. *)
+              f term inner_bound_variables pattern_variables
+            else
+              (* The variable's binder is outside the pattern, so this is a
+                 pattern variable. *)
+              with_lf_term_variable variable_identifier
+                (f
+                   (reduce_projections term (List1.to_list unbound_segments))
+                   inner_bound_variables
+                   (variable_identifier :: pattern_variables))
         | `Partially_bound (List1.T (_, []), unbound_segments)
         | `Partially_bound (_, unbound_segments)
         (* Projections of a bound constant *) ->
@@ -948,81 +1092,182 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
         | `Totally_bound bound_segments (* A constant *) -> (
             match List1.last bound_segments with
             | _identifier, Lf_term_constant { operator; _ } ->
-                return
+                f
                   (Synext.CLF.Term.Pattern.Constant
                      { identifier; location; operator; quoted })
+                  inner_bound_variables pattern_variables
             | _identifier, entry ->
                 Error.raise_at1 location
                   (Error.composite_exception2 Expected_clf_term_constant
                      (actual_binding_exn identifier entry))))
     | Synprs.CLF.Object.Raw_application { objects; location } ->
         let* applicand, arguments = disambiguate_clf_application objects in
-        let* applicand' = disambiguate_clf_term_pattern applicand in
-        let* arguments' =
-          traverse_list1 elaborate_clf_pattern_operand arguments
-        in
-        return
-          (Synext.CLF.Term.Pattern.Application
-             { applicand = applicand'; arguments = arguments'; location })
+        with_disambiguated_clf_term_pattern applicand inner_bound_variables
+          pattern_variables
+          (fun applicand' inner_bound_variables' pattern_variables' ->
+            with_elaborated_clf_pattern_operands_list1 arguments
+              inner_bound_variables' pattern_variables'
+              (fun arguments' inner_bound_variables'' pattern_variables'' ->
+                f
+                  (Synext.CLF.Term.Pattern.Application
+                     { applicand = applicand'
+                     ; arguments = arguments'
+                     ; location
+                     })
+                  inner_bound_variables'' pattern_variables''))
     | Synprs.CLF.Object.Raw_lambda
-        { location; parameter_identifier; parameter_sort; body } ->
+        { location; parameter_identifier; parameter_sort; body } -> (
         let* parameter_type' =
           traverse_option disambiguate_clf_typ parameter_sort
         in
-        let* body' =
-          (with_lf_term_variable_opt parameter_identifier)
-            (disambiguate_clf_term_pattern body)
-        in
-        return
-          (Synext.CLF.Term.Pattern.Abstraction
-             { location
-             ; parameter_identifier
-             ; parameter_type = parameter_type'
-             ; body = body'
-             })
+        match parameter_identifier with
+        | Option.None ->
+            with_disambiguated_clf_term_pattern body inner_bound_variables
+              pattern_variables
+              (fun body' inner_bound_variables' pattern_variables' ->
+                f
+                  (Synext.CLF.Term.Pattern.Abstraction
+                     { location
+                     ; parameter_identifier
+                     ; parameter_type = parameter_type'
+                     ; body = body'
+                     })
+                  inner_bound_variables' pattern_variables')
+        | Option.Some parameter_identifier' ->
+            (with_lf_term_variable parameter_identifier')
+              (with_disambiguated_clf_term_pattern body
+                 (push_binding parameter_identifier' inner_bound_variables)
+                 pattern_variables
+                 (fun body' inner_bound_variables' pattern_variables' ->
+                   f
+                     (Synext.CLF.Term.Pattern.Abstraction
+                        { location
+                        ; parameter_identifier
+                        ; parameter_type = parameter_type'
+                        ; body = body'
+                        })
+                     (pop_binding parameter_identifier'
+                        inner_bound_variables')
+                     pattern_variables')))
     | Synprs.CLF.Object.Raw_hole { location; variant = `Underscore } ->
-        return (Synext.CLF.Term.Pattern.Wildcard { location })
+        f
+          (Synext.CLF.Term.Pattern.Wildcard { location })
+          inner_bound_variables pattern_variables
     | Synprs.CLF.Object.Raw_tuple { location; elements } ->
-        let* terms' =
-          traverse_list1 disambiguate_clf_term_pattern elements
-        in
-        return (Synext.CLF.Term.Pattern.Tuple { location; terms = terms' })
+        with_disambiguated_clf_term_patterns_list1 elements
+          inner_bound_variables pattern_variables
+          (fun terms' inner_bound_variables' pattern_variables' ->
+            f
+              (Synext.CLF.Term.Pattern.Tuple { location; terms = terms' })
+              inner_bound_variables' pattern_variables')
     | Synprs.CLF.Object.Raw_projection { location; object_; projection } ->
-        let* term' = disambiguate_clf_term_pattern object_ in
-        return
-          (Synext.CLF.Term.Pattern.Projection
-             { location; term = term'; projection })
+        with_disambiguated_clf_term_pattern object_ inner_bound_variables
+          pattern_variables
+          (fun term' inner_bound_variables' pattern_variables' ->
+            f
+              (Synext.CLF.Term.Pattern.Projection
+                 { location; term = term'; projection })
+              inner_bound_variables' pattern_variables')
     | Synprs.CLF.Object.Raw_substitution { location; object_; substitution }
       ->
-        let* term' = disambiguate_clf_term_pattern object_ in
-        let* substitution' = disambiguate_clf_substitution substitution in
-        return
-          (Synext.CLF.Term.Pattern.Substitution
-             { location; term = term'; substitution = substitution' })
+        with_disambiguated_clf_term_pattern object_ inner_bound_variables
+          pattern_variables
+          (fun term' inner_bound_variables' pattern_variables' ->
+            let* substitution' =
+              disambiguate_clf_substitution substitution
+            in
+            f
+              (Synext.CLF.Term.Pattern.Substitution
+                 { location; term = term'; substitution = substitution' })
+              inner_bound_variables' pattern_variables')
     | Synprs.CLF.Object.Raw_annotated { location; object_; sort } ->
-        let* term' = disambiguate_clf_term_pattern object_ in
         let* typ' = disambiguate_clf_typ sort in
-        return
-          (Synext.CLF.Term.Pattern.Type_annotated
-             { location; term = term'; typ = typ' })
+        with_disambiguated_clf_term_pattern object_ inner_bound_variables
+          pattern_variables
+          (fun term' inner_bound_variables' pattern_variables' ->
+            f
+              (Synext.CLF.Term.Pattern.Type_annotated
+                 { location; term = term'; typ = typ' })
+              inner_bound_variables' pattern_variables')
 
-  and elaborate_clf_pattern_operand operand =
+  and with_elaborated_clf_pattern_operands_list :
+      type a.
+         Clf_operand.t list
+      -> Identifier.t List1.t Identifier.Hamt.t
+      -> Identifier.t list
+      -> (   Synext.clf_term_pattern list
+          -> Identifier.t List1.t Identifier.Hamt.t
+          -> Identifier.t list
+          -> a t)
+      -> a t =
+   fun operands inner_bound_variables pattern_variables f ->
+    match operands with
+    | [] -> f [] inner_bound_variables pattern_variables
+    | x :: xs ->
+        with_elaborated_clf_pattern_operand x inner_bound_variables
+          pattern_variables
+          (fun y inner_bound_variables' pattern_variables' ->
+            with_elaborated_clf_pattern_operands_list xs
+              inner_bound_variables' pattern_variables'
+              (fun ys inner_bound_variables'' pattern_variables'' ->
+                f (y :: ys) inner_bound_variables'' pattern_variables''))
+
+  and with_elaborated_clf_pattern_operands_list1 :
+      type a.
+         Clf_operand.t List1.t
+      -> Identifier.t List1.t Identifier.Hamt.t
+      -> Identifier.t list
+      -> (   Synext.clf_term_pattern List1.t
+          -> Identifier.t List1.t Identifier.Hamt.t
+          -> Identifier.t list
+          -> a t)
+      -> a t =
+   fun operands inner_bound_variables pattern_variables f ->
+    let (List1.T (x, xs)) = operands in
+    with_elaborated_clf_pattern_operand x inner_bound_variables
+      pattern_variables (fun y inner_bound_variables' pattern_variables' ->
+        with_elaborated_clf_pattern_operands_list xs inner_bound_variables'
+          pattern_variables'
+          (fun ys inner_bound_variables'' pattern_variables'' ->
+            f (List1.from y ys) inner_bound_variables'' pattern_variables''))
+
+  and with_elaborated_clf_pattern_operand :
+      type a.
+         Clf_operand.t
+      -> Identifier.t List1.t Identifier.Hamt.t
+      -> Identifier.t list
+      -> (   Synext.clf_term_pattern
+          -> Identifier.t List1.t Identifier.Hamt.t
+          -> Identifier.t list
+          -> a t)
+      -> a t =
+   fun operand inner_bound_variables pattern_variables f ->
     match operand with
-    | Clf_operand.Atom object_ -> disambiguate_clf_term_pattern object_
+    | Clf_operand.Atom object_ ->
+        with_disambiguated_clf_term_pattern object_ inner_bound_variables
+          pattern_variables f
     | Clf_operand.Application { applicand; arguments } ->
-        let* applicand' = disambiguate_clf_term_pattern applicand in
-        let* arguments' =
-          traverse_list1 elaborate_clf_pattern_operand arguments
-        in
-        let location =
-          Location.join_all1_contramap Synext.location_of_clf_term_pattern
-            (List1.cons applicand' arguments')
-        in
-        return
-          (Synext.CLF.Term.Pattern.Application
-             { applicand = applicand'; arguments = arguments'; location })
+        with_disambiguated_clf_term_pattern applicand inner_bound_variables
+          pattern_variables
+          (fun applicand' inner_bound_variables' pattern_variables' ->
+            with_elaborated_clf_pattern_operands_list1 arguments
+              inner_bound_variables' pattern_variables'
+              (fun arguments' inner_bound_variables'' pattern_variables'' ->
+                let location =
+                  Location.join_all1_contramap
+                    Synext.location_of_clf_term_pattern
+                    (List1.cons applicand' arguments')
+                in
+                f
+                  (Synext.CLF.Term.Pattern.Application
+                     { applicand = applicand'
+                     ; arguments = arguments'
+                     ; location
+                     })
+                  inner_bound_variables'' pattern_variables''))
 
-  and disambiguate_clf_substitution_pattern substitution_pattern =
+  and with_disambiguated_clf_substitution_pattern substitution_pattern
+      inner_bound_variables pattern_variables f =
     let { Synprs.CLF.Context_object.location; head; objects } =
       substitution_pattern
     in
@@ -1037,95 +1282,161 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
         objects
     in
     match head with
-    | Synprs.CLF.Context_object.Head.None { location = head_location } ->
-        let* head', objects'' =
-          match objects' with
-          | Synprs.CLF.Object.Raw_substitution
-              { object_ =
-                  Synprs.CLF.Object.Raw_identifier
-                    { location; identifier = identifier, `Dollar; _ }
-              ; substitution = closure
-              ; _
-              } (* A substitution closure *)
-            :: xs ->
-              let* closure' = disambiguate_clf_substitution closure in
-              let head' =
-                Synext.CLF.Substitution.Pattern.Head.Substitution_variable
-                  { location; identifier; closure = Option.some closure' }
-              in
-              return (head', xs)
-          | Synprs.CLF.Object.Raw_identifier
-              { location; identifier = identifier, `Dollar; _ }
-              (* A substitution variable *)
-            :: xs ->
-              let head' =
-                Synext.CLF.Substitution.Pattern.Head.Substitution_variable
-                  { location; identifier; closure = Option.none }
-              in
-              return (head', xs)
-          | _ ->
-              let head' =
-                Synext.CLF.Substitution.Pattern.Head.None
-                  { location = head_location }
-              in
-              return (head', objects')
-        in
-        let* terms' =
-          traverse_list disambiguate_clf_term_pattern objects''
-        in
-        return
-          { Synext.CLF.Substitution.Pattern.location
-          ; head = head'
-          ; terms = terms'
-          }
+    | Synprs.CLF.Context_object.Head.None { location = head_location } -> (
+        match objects' with
+        | Synprs.CLF.Object.Raw_substitution
+            { object_ =
+                Synprs.CLF.Object.Raw_identifier
+                  { location; identifier = identifier, `Dollar; _ }
+            ; substitution = closure
+            ; _
+            } (* A substitution closure *)
+          :: xs ->
+            let* closure' = disambiguate_clf_substitution closure in
+            let head' =
+              Synext.CLF.Substitution.Pattern.Head.Substitution_variable
+                { location; identifier; closure = Option.some closure' }
+            in
+            let pattern_variables' =
+              if Identifier.Hamt.mem identifier inner_bound_variables then
+                pattern_variables
+              else identifier :: pattern_variables
+            in
+            with_disambiguated_clf_term_patterns_list xs
+              inner_bound_variables pattern_variables'
+              (fun terms' inner_bound_variables' pattern_variables'' ->
+                f
+                  { Synext.CLF.Substitution.Pattern.location
+                  ; head = head'
+                  ; terms = terms'
+                  }
+                  inner_bound_variables' pattern_variables'')
+        | Synprs.CLF.Object.Raw_identifier
+            { location; identifier = identifier, `Dollar; _ }
+            (* A substitution variable *)
+          :: xs ->
+            let head' =
+              Synext.CLF.Substitution.Pattern.Head.Substitution_variable
+                { location; identifier; closure = Option.none }
+            in
+            let pattern_variables' =
+              if Identifier.Hamt.mem identifier inner_bound_variables then
+                pattern_variables
+              else identifier :: pattern_variables
+            in
+            with_disambiguated_clf_term_patterns_list xs
+              inner_bound_variables pattern_variables'
+              (fun terms' inner_bound_variables' pattern_variables'' ->
+                f
+                  { Synext.CLF.Substitution.Pattern.location
+                  ; head = head'
+                  ; terms = terms'
+                  }
+                  inner_bound_variables' pattern_variables'')
+        | _ ->
+            let head' =
+              Synext.CLF.Substitution.Pattern.Head.None
+                { location = head_location }
+            in
+            with_disambiguated_clf_term_patterns_list objects'
+              inner_bound_variables pattern_variables
+              (fun terms' inner_bound_variables' pattern_variables' ->
+                f
+                  { Synext.CLF.Substitution.Pattern.location
+                  ; head = head'
+                  ; terms = terms'
+                  }
+                  inner_bound_variables' pattern_variables'))
     | Synprs.CLF.Context_object.Head.Identity { location = head_location } ->
-        let* terms' = traverse_list disambiguate_clf_term_pattern objects' in
         let head' =
           Synext.CLF.Substitution.Pattern.Head.Identity
             { location = head_location }
         in
-        return
-          { Synext.CLF.Substitution.Pattern.location
-          ; head = head'
-          ; terms = terms'
-          }
+        with_disambiguated_clf_term_patterns_list objects'
+          inner_bound_variables pattern_variables
+          (fun terms' inner_bound_variables' pattern_variables' ->
+            f
+              { Synext.CLF.Substitution.Pattern.location
+              ; head = head'
+              ; terms = terms'
+              }
+              inner_bound_variables' pattern_variables')
 
-  and disambiguate_context_pattern_bindings bindings =
-    match bindings with
-    | [] -> return []
-    | (Option.Some identifier, typ) :: xs ->
+  and with_disambiguated_context_pattern_binding :
+      type a.
+         Identifier.t option * Synprs.clf_object
+      -> Identifier.t List1.t Identifier.Hamt.t
+      -> Identifier.t list
+      -> (   Identifier.t * Synext.clf_typ
+          -> Identifier.t List1.t Identifier.Hamt.t
+          -> Identifier.t list
+          -> a t)
+      -> a t =
+   fun binding inner_bound_variables pattern_variables f ->
+    match binding with
+    | Option.Some identifier, typ ->
         let* typ' = disambiguate_clf_typ typ in
-        let* () = add_lf_term_variable identifier in
-        let y = (identifier, typ') in
-        let* ys = disambiguate_context_pattern_bindings xs in
-        return (y :: ys)
+        with_lf_term_variable identifier
+          (let y = (identifier, typ') in
+           f y
+             (push_binding identifier inner_bound_variables)
+             (identifier :: pattern_variables))
     | ( Option.None
       , Synprs.CLF.Object.Raw_identifier
-          { identifier = identifier, `Plain; _ } )
-      :: _xs ->
+          { identifier = identifier, `Plain; _ } ) ->
         Error.raise_at1
           (Identifier.location identifier)
           Illegal_clf_context_pattern_missing_binding_type
     | ( Option.None
       , Synprs.CLF.Object.Raw_identifier
-          { identifier = identifier, `Hash; _ } )
-      :: _xs ->
+          { identifier = identifier, `Hash; _ } ) ->
         Error.raise_at1
           (Identifier.location identifier)
           Illegal_clf_context_pattern_parameter_variable_binding
     | ( Option.None
       , Synprs.CLF.Object.Raw_identifier
-          { identifier = identifier, `Dollar; _ } )
-      :: _xs ->
+          { identifier = identifier, `Dollar; _ } ) ->
         Error.raise_at1
           (Identifier.location identifier)
           Illegal_clf_context_pattern_substitution_variable_binding
-    | (Option.None, typ) :: _xs ->
+    | Option.None, typ ->
         Error.raise_at1
           (Synprs.location_of_clf_object typ)
           Illegal_clf_context_pattern_missing_binding_identifier
 
-  and disambiguate_clf_context_pattern context_pattern =
+  and with_disambiguated_context_pattern_bindings_list :
+      type a.
+         (Identifier.t option * Synprs.clf_object) list
+      -> Identifier.t List1.t Identifier.Hamt.t
+      -> Identifier.t list
+      -> (   (Identifier.t * Synext.clf_typ) list
+          -> Identifier.t List1.t Identifier.Hamt.t
+          -> Identifier.t list
+          -> a t)
+      -> a t =
+   fun bindings inner_bound_variables pattern_variables f ->
+    match bindings with
+    | [] -> f [] inner_bound_variables pattern_variables
+    | x :: xs ->
+        with_disambiguated_context_pattern_binding x inner_bound_variables
+          pattern_variables
+          (fun y inner_bound_variables' pattern_variables' ->
+            with_disambiguated_context_pattern_bindings_list xs
+              inner_bound_variables' pattern_variables'
+              (fun ys inner_bound_variables'' pattern_variables'' ->
+                f (y :: ys) inner_bound_variables'' pattern_variables''))
+
+  and with_disambiguated_clf_context_pattern :
+      type a.
+         Synprs.clf_context_object
+      -> Identifier.t List1.t Identifier.Hamt.t
+      -> Identifier.t list
+      -> (   Synext.clf_context_pattern
+          -> Identifier.t List1.t Identifier.Hamt.t
+          -> Identifier.t list
+          -> a t)
+      -> a t =
+   fun context_pattern inner_bound_variables pattern_variables f ->
     let { Synprs.CLF.Context_object.location; head; objects } =
       context_pattern
     in
@@ -1138,48 +1449,88 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
           , Synprs.CLF.Object.Raw_hole
               { variant = `Underscore; location = head_location } )
             (* Hole as context head *)
-          :: xs ->
+          :: bindings ->
             let head' =
               Synext.CLF.Context.Pattern.Head.Hole
                 { location = head_location }
             in
-            let* bindings' = disambiguate_context_pattern_bindings xs in
-            return
-              { Synext.CLF.Context.Pattern.location
-              ; head = head'
-              ; bindings = bindings'
-              }
+            with_disambiguated_context_pattern_bindings_list bindings
+              inner_bound_variables pattern_variables
+              (fun bindings' inner_bound_variables' pattern_variables' ->
+                f
+                  { Synext.CLF.Context.Pattern.location
+                  ; head = head'
+                  ; bindings = bindings'
+                  }
+                  inner_bound_variables' pattern_variables')
         | ( Option.None
           , Synprs.CLF.Object.Raw_identifier
               { identifier = identifier, `Plain; _ } )
             (* Possibly a context variable as context head *)
-          :: xs -> (
+          :: bindings -> (
             lookup_toplevel identifier >>= function
-            | Result.Ok (Context_variable _)
+            | Result.Ok (Context_variable _) ->
+                let head' =
+                  Synext.CLF.Context.Pattern.Head.Context_variable
+                    { identifier; location = Identifier.location identifier }
+                in
+                if Identifier.Hamt.mem identifier inner_bound_variables then
+                  with_disambiguated_context_pattern_bindings_list bindings
+                    inner_bound_variables pattern_variables
+                    (fun bindings' inner_bound_variables' pattern_variables''
+                    ->
+                      f
+                        { Synext.CLF.Context.Pattern.location
+                        ; head = head'
+                        ; bindings = bindings'
+                        }
+                        inner_bound_variables' pattern_variables'')
+                else
+                  with_context_variable identifier
+                    (with_disambiguated_context_pattern_bindings_list
+                       bindings inner_bound_variables
+                       (identifier :: pattern_variables)
+                       (fun
+                         bindings'
+                         inner_bound_variables'
+                         pattern_variables''
+                       ->
+                         f
+                           { Synext.CLF.Context.Pattern.location
+                           ; head = head'
+                           ; bindings = bindings'
+                           }
+                           inner_bound_variables' pattern_variables''))
             | Result.Error (Unbound_identifier _) ->
                 let head' =
                   Synext.CLF.Context.Pattern.Head.Context_variable
                     { identifier; location = Identifier.location identifier }
                 in
-                let* bindings' = disambiguate_context_pattern_bindings xs in
-                return
-                  { Synext.CLF.Context.Pattern.location
-                  ; head = head'
-                  ; bindings = bindings'
-                  }
+                with_context_variable identifier
+                  (with_disambiguated_context_pattern_bindings_list bindings
+                     inner_bound_variables (identifier :: pattern_variables)
+                     (fun bindings' inner_bound_variables' pattern_variables'
+                     ->
+                       f
+                         { Synext.CLF.Context.Pattern.location
+                         ; head = head'
+                         ; bindings = bindings'
+                         }
+                         inner_bound_variables' pattern_variables'))
             | Result.Ok _ ->
                 let head' =
                   Synext.CLF.Context.Pattern.Head.None
                     { location = head_location }
                 in
-                let* bindings' =
-                  disambiguate_context_pattern_bindings objects
-                in
-                return
-                  { Synext.CLF.Context.Pattern.location
-                  ; head = head'
-                  ; bindings = bindings'
-                  }
+                with_disambiguated_context_pattern_bindings_list bindings
+                  inner_bound_variables pattern_variables
+                  (fun bindings' inner_bound_variables' pattern_variables' ->
+                    f
+                      { Synext.CLF.Context.Pattern.location
+                      ; head = head'
+                      ; bindings = bindings'
+                      }
+                      inner_bound_variables' pattern_variables')
             | Result.Error cause ->
                 Error.raise_at1 (Identifier.location identifier) cause)
         | _ ->
@@ -1187,12 +1538,15 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
               Synext.CLF.Context.Pattern.Head.None
                 { location = head_location }
             in
-            let* bindings' = disambiguate_context_pattern_bindings objects in
-            return
-              { Synext.CLF.Context.Pattern.location
-              ; head = head'
-              ; bindings = bindings'
-              })
+            with_disambiguated_context_pattern_bindings_list objects
+              inner_bound_variables pattern_variables
+              (fun bindings' inner_bound_variables' pattern_variables' ->
+                f
+                  { Synext.CLF.Context.Pattern.location
+                  ; head = head'
+                  ; bindings = bindings'
+                  }
+                  inner_bound_variables' pattern_variables'))
 end
 
 let pp_exception ppf = function

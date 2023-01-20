@@ -43,10 +43,6 @@ let parse_clf_term_to_json state =
   let term = Beluga_parser.Simple.parse_only_clf_term state in
   Util.Synext_json.json_of_clf_term term
 
-let parse_clf_term_pattern_to_json state =
-  let term = Beluga_parser.Simple.parse_only_clf_term_pattern state in
-  Util.Synext_json.json_of_clf_term_pattern term
-
 let parse_meta_type_to_json state =
   let typ = Beluga_parser.Simple.parse_only_meta_typ state in
   Util.Synext_json.json_of_meta_typ typ
@@ -68,7 +64,6 @@ let lookup_parser variant =
   | "lf_term" -> parse_lf_term_to_json
   | "clf_type" -> parse_clf_typ_to_json
   | "clf_term" -> parse_clf_term_to_json
-  | "clf_term_pattern" -> parse_clf_term_pattern_to_json
   | "meta_type" -> parse_meta_type_to_json
   | "meta_object" -> parse_meta_object_to_json
   | "schema" -> parse_schema_to_json

@@ -155,15 +155,15 @@ struct
         } =
       hypothetical
     in
-    let* meta_context' = disambiguate_meta_context meta_context in
-    let* comp_context' = disambiguate_comp_context comp_context in
-    let* proof' = disambiguate_harpoon_proof proof in
-    return
-      { Synext.Harpoon.Hypothetical.location
-      ; meta_context = meta_context'
-      ; comp_context = comp_context'
-      ; proof = proof'
-      }
+    with_disambiguated_meta_context meta_context (fun meta_context' ->
+        with_disambiguated_comp_context comp_context (fun comp_context' ->
+            let* proof' = disambiguate_harpoon_proof proof in
+            return
+              { Synext.Harpoon.Hypothetical.location
+              ; meta_context = meta_context'
+              ; comp_context = comp_context'
+              ; proof = proof'
+              }))
 
   and disambiguate_harpoon_repl_command repl_command =
     match repl_command with

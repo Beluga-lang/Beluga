@@ -377,7 +377,14 @@ let pp_exception ppf = function
   | Expected_hole ->
       Format.fprintf ppf
         "Expected an unnamed hole `?' or a labelled hole `?id'."
-  | Expected_block_comment -> Format.fprintf ppf "Expected a block comment."
+  | Expected_block_comment ->
+      (* Workaround format string errors when inputing the documentation
+         comment delimiters *)
+      let left_delimiter = "%{{"
+      and right_delimiter = "}}%" in
+      Format.fprintf ppf
+        "Expected a block comment delimited by `%s' and `%s'." left_delimiter
+        right_delimiter
   | cause -> pp_exception' ppf cause
 
 let () =

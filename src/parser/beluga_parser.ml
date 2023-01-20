@@ -164,10 +164,6 @@ struct
     parse_only Clf_parser.clf_context_object
       Clf_disambiguation.disambiguate_clf_substitution_pattern
 
-  let parse_only_clf_context =
-    parse_only Clf_parser.clf_context_object
-      Clf_disambiguation.disambiguate_clf_context
-
   let parse_only_clf_context_pattern =
     parse_only Clf_parser.clf_context_object
       Clf_disambiguation.disambiguate_clf_context_pattern

@@ -136,8 +136,8 @@ module type CLF_DISAMBIGUATION = sig
   val disambiguate_clf_substitution :
     Synprs.clf_context_object -> Synext.clf_substitution t
 
-  val disambiguate_clf_context :
-    Synprs.clf_context_object -> Synext.clf_context t
+  val with_disambiguated_clf_context :
+    Synprs.clf_context_object -> (Synext.clf_context -> 'a t) -> 'a t
 
   val disambiguate_clf_term_pattern :
     Synprs.clf_object -> Synext.clf_term_pattern t
@@ -454,8 +454,7 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
       This function imposes syntactic restrictions on [object_], but does not
       perform normalization nor validation. To see the syntactic restrictions
       from LF objects to LF terms, see the Beluga language specification. *)
-  and disambiguate_clf_term object_ =
-    match object_ with
+  and disambiguate_clf_term = function
     | Synprs.CLF.Object.Raw_pi { location; _ } ->
         Error.raise_at1 location Illegal_pi_clf_term
     | Synprs.CLF.Object.Raw_arrow { location; orientation = `Forward; _ } ->
@@ -666,34 +665,33 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
         return
           { Synext.CLF.Substitution.location; head = head'; terms = terms' }
 
-  (** [disambiguate_context_bindings bindings state] is [(state', bindings')]
-      where [state'] is the disambiguation state derived from [state] with
-      the addition of the variables in the domain of [bindings], and
-      [bindings'] is the disambiguated context bindings.
+  (** [with_disambiguated_context_bindings bindings f state] is
+      [f bindings' state'] where [state'] is the disambiguation state derived
+      from [state] with the addition of the variables in the domain of
+      [bindings], and [bindings'] is the disambiguated context bindings.
 
       Context variables cannot occur in [bindings]. A context variable in the
-      head position of a context is handled in {!disambiguate_clf_context}. *)
-  and disambiguate_context_bindings bindings =
+      head position of a context is handled in
+      {!with_disambiguated_clf_context}. *)
+  and with_disambiguated_context_bindings bindings f =
     (* Contextual LF contexts are dependent, meaning that bound variables on
        the left of a declaration may appear in the type of a binding on the
        right. Bindings may not recursively refer to themselves.*)
     match bindings with
-    | [] -> return []
+    | [] -> f []
     | (Option.Some identifier, typ) (* Typed binding *) :: xs ->
         let* typ' = disambiguate_clf_typ typ in
-        let* () = add_lf_term_variable identifier in
-        let y = (identifier, Option.some typ') in
-        let* ys = disambiguate_context_bindings xs in
-        return (y :: ys)
+        with_lf_term_variable identifier
+          (let y = (identifier, Option.some typ') in
+           with_disambiguated_context_bindings xs (fun ys -> f (y :: ys)))
     | ( Option.None
       , Synprs.CLF.Object.Raw_identifier
           { identifier = identifier, `Plain; _ } )
         (* Untyped contextual LF variable *)
       :: xs ->
-        let* () = add_lf_term_variable identifier in
-        let y = (identifier, Option.none) in
-        let* ys = disambiguate_context_bindings xs in
-        return (y :: ys)
+        with_lf_term_variable identifier
+          (let y = (identifier, Option.none) in
+           with_disambiguated_context_bindings xs (fun ys -> f (y :: ys)))
     | ( Option.None
       , Synprs.CLF.Object.Raw_identifier
           { identifier = identifier, `Hash; _ } )
@@ -715,21 +713,7 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
           (Synprs.location_of_clf_object typ)
           Illegal_clf_context_missing_binding_identifier
 
-  (** [disambiguate_clf_context context state] is [(state', context')] where
-      [state'] is the disambiguation state derived from [state] with the
-      addition of the variables in the domain of [context], and [context'] is
-      the disambiguated context.
-
-      - If [context] corresponds to [_, x1 : A1, x2 : A2, ..., xn : An], then
-        [_] is the omission of the context variable.
-      - If [context] corresponds to [g, x1 : A1, x2 : A2, ..., xn : An] where
-        [g] occurs in [state] as a context variable, then [g] is the context
-        variable for [context'].
-      - Bindings in a contextual LF context may omit the typings, meaning
-        that [g, x1, x2, ..., xn] is a valid context. However,
-        [g, A1, A2, ..., An] is invalid if [A1], [A2], ..., [An] are types
-        because their associated identifiers are missing. *)
-  and disambiguate_clf_context context =
+  and with_disambiguated_clf_context context f =
     let { Synprs.CLF.Context_object.location; head; objects } = context in
     match head with
     | Synprs.CLF.Context_object.Head.Identity { location } ->
@@ -744,12 +728,12 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
             let head' =
               Synext.CLF.Context.Head.Hole { location = head_location }
             in
-            let* bindings' = disambiguate_context_bindings xs in
-            return
-              { Synext.CLF.Context.location
-              ; head = head'
-              ; bindings = bindings'
-              }
+            with_disambiguated_context_bindings xs (fun bindings' ->
+                f
+                  { Synext.CLF.Context.location
+                  ; head = head'
+                  ; bindings = bindings'
+                  })
         | ( Option.None
           , Synprs.CLF.Object.Raw_identifier
               { identifier = identifier, `Plain; _ } )
@@ -762,22 +746,22 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
                   Synext.CLF.Context.Head.Context_variable
                     { identifier; location = Identifier.location identifier }
                 in
-                let* bindings' = disambiguate_context_bindings xs in
-                return
-                  { Synext.CLF.Context.location
-                  ; head = head'
-                  ; bindings = bindings'
-                  }
+                with_disambiguated_context_bindings xs (fun bindings' ->
+                    f
+                      { Synext.CLF.Context.location
+                      ; head = head'
+                      ; bindings = bindings'
+                      })
             | Result.Ok _ ->
                 let head' =
                   Synext.CLF.Context.Head.None { location = head_location }
                 in
-                let* bindings' = disambiguate_context_bindings objects in
-                return
-                  { Synext.CLF.Context.location
-                  ; head = head'
-                  ; bindings = bindings'
-                  }
+                with_disambiguated_context_bindings objects (fun bindings' ->
+                    f
+                      { Synext.CLF.Context.location
+                      ; head = head'
+                      ; bindings = bindings'
+                      })
             | Result.Error cause -> Error.raise_at1 head_location cause)
         | objects ->
             (* Context is just a list of bindings without context
@@ -785,12 +769,12 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
             let head' =
               Synext.CLF.Context.Head.None { location = head_location }
             in
-            let* bindings' = disambiguate_context_bindings objects in
-            return
-              { Synext.CLF.Context.location
-              ; head = head'
-              ; bindings = bindings'
-              })
+            with_disambiguated_context_bindings objects (fun bindings' ->
+                f
+                  { Synext.CLF.Context.location
+                  ; head = head'
+                  ; bindings = bindings'
+                  }))
 
   and disambiguate_clf_application objects =
     Clf_application_disambiguation.disambiguate_application objects

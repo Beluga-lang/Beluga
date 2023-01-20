@@ -89,9 +89,6 @@ struct
 
   (** {1 Disambiguation Helpers} *)
 
-  let with_bindings_checkpoint m =
-    scoped ~set:mark_bindings ~unset:rollback_bindings m
-
   let add_query_opt = function
     | Option.None -> return ()
     | Option.Some identifier -> add_query identifier
@@ -403,8 +400,7 @@ struct
       identifier [operator_identifier] is set as a prefix operator with
       [precedence]. *)
   let make_operator_prefix ?precedence operator_identifier =
-    modify_operator
-      (fun operator ->
+    modify_operator operator_identifier (fun operator ->
         let arity = Operator.arity operator
         and precedence =
           Option.value ~default:default_precedence precedence
@@ -414,7 +410,10 @@ struct
           Error.raise_at1
             (Qualified_identifier.location operator_identifier)
             (Invalid_prefix_pragma { actual_arity = arity }))
-      operator_identifier
+
+  let get_default_associativity_opt = function
+    | Option.Some associativity -> return associativity
+    | Option.None -> get_default_associativity
 
   (** [make_operator_infix ?precedence ?associativity operator_identifier state]
       is the disambiguation state derived from [state] where the operator
@@ -424,13 +423,8 @@ struct
 
       Only operators with arity [2] may be converted to infix operators. *)
   let make_operator_infix ?precedence ?associativity operator_identifier =
-    let* associativity =
-      match associativity with
-      | Option.Some associativity -> return associativity
-      | Option.None -> get_default_associativity
-    in
-    modify_operator
-      (fun operator ->
+    let* associativity = get_default_associativity_opt associativity in
+    modify_operator operator_identifier (fun operator ->
         let arity = Operator.arity operator
         and precedence =
           Option.value ~default:default_precedence precedence
@@ -440,7 +434,6 @@ struct
           Error.raise_at1
             (Qualified_identifier.location operator_identifier)
             (Invalid_infix_pragma { actual_arity = arity }))
-      operator_identifier
 
   (** [make_operator_postfix ?precedence operator_identifier state] is the
       disambiguation state derived from [state] where the operator with
@@ -449,8 +442,7 @@ struct
 
       Only operators with arity [1] may be converted to postfix operators. *)
   let make_operator_postfix ?precedence operator_identifier =
-    modify_operator
-      (fun operator ->
+    modify_operator operator_identifier (fun operator ->
         let arity = Operator.arity operator
         and precedence =
           Option.value ~default:default_precedence precedence
@@ -460,7 +452,6 @@ struct
           Error.raise_at1
             (Qualified_identifier.location operator_identifier)
             (Invalid_postfix_pragma { actual_arity = arity }))
-      operator_identifier
 
   (** [open_module module_identifier state] is the disambiguation state
       derived from [state] with the addition of the declarations in the
@@ -621,27 +612,27 @@ struct
   and disambiguate_declaration = function
     | Synprs.Signature.Declaration.Raw_lf_typ_or_term_constant
         { location; identifier; typ_or_const }
-    (* Old style LF type or term constant declaration *) -> (
-        try
+    (* Old style LF type or term constant declaration *) ->
+        let disambiguate_as_lf_typ_declaration =
           let* kind' = disambiguate_lf_kind typ_or_const in
           let* () = add_default_lf_type_constant' identifier kind' in
           return
             (Synext.Signature.Declaration.Typ
                { location; identifier; kind = kind' })
-        with
-        | typ_exn -> (
-            try
-              let* typ' = disambiguate_lf_typ typ_or_const in
-              let* () = add_default_lf_term_constant' identifier typ' in
-              return
-                (Synext.Signature.Declaration.Const
-                   { location; identifier; typ = typ' })
-            with
-            | const_exn ->
+        and disambiguate_as_lf_const_declaration =
+          let* typ' = disambiguate_lf_typ typ_or_const in
+          let* () = add_default_lf_term_constant' identifier typ' in
+          return
+            (Synext.Signature.Declaration.Const
+               { location; identifier; typ = typ' })
+        in
+        try_catch disambiguate_as_lf_typ_declaration ~on_exn:(fun typ_exn ->
+            try_catch disambiguate_as_lf_const_declaration
+              ~on_exn:(fun const_exn ->
                 if typ_exn <> const_exn then
                   (* Disambiguation as an LF type or term constant
                      declaration failed for different reasons *)
-                  Error.raise
+                  Error.raise_at1 location
                     (Old_style_lf_constant_declaration_error
                        { as_type_constant = typ_exn
                        ; as_term_constant = const_exn
@@ -649,7 +640,7 @@ struct
                 else
                   (* Disambiguation as an LF type or term constant
                      declaration failed for the same reason *)
-                  Error.raise typ_exn))
+                  Error.raise_at1 location typ_exn))
     | Synprs.Signature.Declaration.Raw_lf_typ_constant
         { location; identifier; kind } ->
         let* kind' = disambiguate_lf_kind kind in
@@ -792,10 +783,9 @@ struct
         ; maximum_tries
         } ->
         let* meta_context', typ' =
-          with_bindings_checkpoint
-            (seq2
-               (disambiguate_meta_context meta_context)
-               (disambiguate_lf_typ typ))
+          with_disambiguated_meta_context meta_context (fun meta_context' ->
+              let* typ' = disambiguate_lf_typ typ in
+              return (meta_context', typ'))
         in
         let* () = add_query_opt identifier in
         return
@@ -856,15 +846,14 @@ struct
 
       The very last [state'] after disambiguating an entire Beluga project
       may be discarded. *)
-  and disambiguate_signature : Synprs.signature -> Synext.signature t =
-   fun signature ->
-    let { Synprs.Signature.global_pragmas; entries } = signature in
-    let* global_pragmas' =
-      traverse_list disambiguate_global_pragma global_pragmas
-    in
-    let* entries' = traverse_list disambiguate_entry entries in
-    return
-      { Synext.Signature.global_pragmas = global_pragmas'
-      ; entries = entries'
-      }
+  and disambiguate_signature = function
+    | { Synprs.Signature.global_pragmas; entries } ->
+        let* global_pragmas' =
+          traverse_list disambiguate_global_pragma global_pragmas
+        in
+        let* entries' = traverse_list disambiguate_entry entries in
+        return
+          { Synext.Signature.global_pragmas = global_pragmas'
+          ; entries = entries'
+          }
 end

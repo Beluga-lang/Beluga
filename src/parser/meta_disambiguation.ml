@@ -69,6 +69,9 @@ module type META_DISAMBIGUATION = sig
 
   val disambiguate_meta_context :
     Synprs.meta_context_object -> Synext.meta_context t
+
+  val with_disambiguated_meta_context :
+    Synprs.meta_context_object -> (Synext.meta_context -> 'a t) -> 'a t
 end
 
 module Make
@@ -78,11 +81,6 @@ module Make
   META_DISAMBIGUATION with type state = Disambiguation_state.state = struct
   include Disambiguation_state
   include Clf_disambiguation
-
-  (** {1 Disambiguation State Helpers} *)
-
-  let with_bindings_checkpoint m =
-    scoped ~set:mark_bindings ~unset:rollback_bindings m
 
   (** {1 Disambiguation} *)
 
@@ -96,52 +94,52 @@ module Make
           (Synext.Meta.Typ.Context_schema { location; schema = schema' })
     | Synprs.Meta.Thing.RawTurnstile
         { location; context; object_; variant = `Plain }
-    (* Contextual type *) -> (
-        let* context' = disambiguate_clf_context context in
-        match object_ with
-        | { Synprs.CLF.Context_object.objects = [ (Option.None, typ) ]
-          ; head = Synprs.CLF.Context_object.Head.None _
-          ; _
-          } ->
-            let* typ' = disambiguate_clf_typ typ in
-            return
-              (Synext.Meta.Typ.Contextual_typ
-                 { location; context = context'; typ = typ' })
-        | { Synprs.CLF.Context_object.location; _ } ->
-            Error.raise_at1 location
-              Illegal_substitution_or_context_contextual_type)
+    (* Contextual type *) ->
+        with_disambiguated_clf_context context (fun context' ->
+            match object_ with
+            | { Synprs.CLF.Context_object.objects = [ (Option.None, typ) ]
+              ; head = Synprs.CLF.Context_object.Head.None _
+              ; _
+              } ->
+                let* typ' = disambiguate_clf_typ typ in
+                return
+                  (Synext.Meta.Typ.Contextual_typ
+                     { location; context = context'; typ = typ' })
+            | { Synprs.CLF.Context_object.location; _ } ->
+                Error.raise_at1 location
+                  Illegal_substitution_or_context_contextual_type)
     | Synprs.Meta.Thing.RawTurnstile
         { location; context; object_; variant = `Hash }
-    (* Parameter type *) -> (
-        let* context' = disambiguate_clf_context context in
-        match object_ with
-        | { Synprs.CLF.Context_object.objects = [ (Option.None, typ) ]
-          ; head = Synprs.CLF.Context_object.Head.None _
-          ; _
-          } ->
-            let* typ' = disambiguate_clf_typ typ in
-            return
-              (Synext.Meta.Typ.Parameter_typ
-                 { location; context = context'; typ = typ' })
-        | { Synprs.CLF.Context_object.location; _ } ->
-            Error.raise_at1 location
-              Illegal_substitution_or_context_contextual_type)
+    (* Parameter type *) ->
+        with_disambiguated_clf_context context (fun context' ->
+            match object_ with
+            | { Synprs.CLF.Context_object.objects = [ (Option.None, typ) ]
+              ; head = Synprs.CLF.Context_object.Head.None _
+              ; _
+              } ->
+                let* typ' = disambiguate_clf_typ typ in
+                return
+                  (Synext.Meta.Typ.Parameter_typ
+                     { location; context = context'; typ = typ' })
+            | { Synprs.CLF.Context_object.location; _ } ->
+                Error.raise_at1 location
+                  Illegal_substitution_or_context_contextual_type)
     | Synprs.Meta.Thing.RawTurnstile
         { location; context; object_; variant = `Dollar }
     (* Plain substitution type *) ->
-        let* domain' = disambiguate_clf_context context in
-        let* range' = disambiguate_clf_context object_ in
-        return
-          (Synext.Meta.Typ.Plain_substitution_typ
-             { location; domain = domain'; range = range' })
+        with_disambiguated_clf_context context (fun domain' ->
+            with_disambiguated_clf_context object_ (fun range' ->
+                return
+                  (Synext.Meta.Typ.Plain_substitution_typ
+                     { location; domain = domain'; range = range' })))
     | Synprs.Meta.Thing.RawTurnstile
         { location; context; object_; variant = `Dollar_hash }
     (* Renaming substitution type *) ->
-        let* domain' = disambiguate_clf_context context in
-        let* range' = disambiguate_clf_context object_ in
-        return
-          (Synext.Meta.Typ.Renaming_substitution_typ
-             { location; domain = domain'; range = range' })
+        with_disambiguated_clf_context context (fun domain' ->
+            with_disambiguated_clf_context object_ (fun range' ->
+                return
+                  (Synext.Meta.Typ.Renaming_substitution_typ
+                     { location; domain = domain'; range = range' })))
 
   and disambiguate_meta_object meta_thing =
     match meta_thing with
@@ -150,38 +148,40 @@ module Make
     | Synprs.Meta.Thing.RawTurnstile { location; variant = `Hash; _ } ->
         Error.raise_at1 location Illegal_hash_modifier_meta_object
     | Synprs.Meta.Thing.RawContext { location; context } (* Context *) ->
-        let* context' = disambiguate_clf_context context in
-        return (Synext.Meta.Object.Context { location; context = context' })
+        with_disambiguated_clf_context context (fun context' ->
+            return
+              (Synext.Meta.Object.Context { location; context = context' }))
     | Synprs.Meta.Thing.RawTurnstile
         { location; context; object_; variant = `Plain }
-    (* Contextual term *) -> (
-        let* context' = disambiguate_clf_context context in
-        let { Synprs.CLF.Context_object.head; objects; _ } = object_ in
-        match (head, objects) with
-        | Synprs.CLF.Context_object.Head.None _, [ (Option.None, term) ] ->
-            let* term' = disambiguate_clf_term term in
-            return
-              (Synext.Meta.Object.Contextual_term
-                 { location; context = context'; term = term' })
-        | _ ->
-            Error.raise_at1 location
-              Illegal_missing_dollar_modifier_meta_object)
+    (* Contextual term *) ->
+        with_disambiguated_clf_context context (fun context' ->
+            let { Synprs.CLF.Context_object.head; objects; _ } = object_ in
+            match (head, objects) with
+            | Synprs.CLF.Context_object.Head.None _, [ (Option.None, term) ]
+              ->
+                let* term' = disambiguate_clf_term term in
+                return
+                  (Synext.Meta.Object.Contextual_term
+                     { location; context = context'; term = term' })
+            | _ ->
+                Error.raise_at1 location
+                  Illegal_missing_dollar_modifier_meta_object)
     | Synprs.Meta.Thing.RawTurnstile
         { location; context; object_; variant = `Dollar }
     (* Plain substitution *) ->
-        let* domain' = disambiguate_clf_context context in
-        let* range' = disambiguate_clf_substitution object_ in
-        return
-          (Synext.Meta.Object.Plain_substitution
-             { location; domain = domain'; range = range' })
+        with_disambiguated_clf_context context (fun domain' ->
+            let* range' = disambiguate_clf_substitution object_ in
+            return
+              (Synext.Meta.Object.Plain_substitution
+                 { location; domain = domain'; range = range' }))
     | Synprs.Meta.Thing.RawTurnstile
         { location; context; object_; variant = `Dollar_hash }
     (* Renaming substitution *) ->
-        let* domain' = disambiguate_clf_context context in
-        let* range' = disambiguate_clf_substitution object_ in
-        return
-          (Synext.Meta.Object.Renaming_substitution
-             { location; domain = domain'; range = range' })
+        with_disambiguated_clf_context context (fun domain' ->
+            let* range' = disambiguate_clf_substitution object_ in
+            return
+              (Synext.Meta.Object.Renaming_substitution
+                 { location; domain = domain'; range = range' }))
 
   and disambiguate_meta_pattern meta_thing =
     match meta_thing with
@@ -223,29 +223,39 @@ module Make
           (Synext.Meta.Pattern.Renaming_substitution
              { location; domain = domain'; range = range' })
 
-  and disambiguate_binding_list_as_clf_dependent_types bindings =
+  and with_disambiguated_clf_bindings_list :
+      type a.
+         (Identifier.t * Synprs.clf_object) list
+      -> ((Identifier.t * Synext.clf_typ) list -> a t)
+      -> a t =
+   fun bindings f ->
     match bindings with
-    | [] -> return []
+    | [] -> f []
     | (identifier, typ) :: xs ->
         let* typ' = disambiguate_clf_typ typ in
-        let* () = add_lf_term_variable identifier in
-        let* ys = disambiguate_binding_list_as_clf_dependent_types xs in
-        return ((identifier, typ') :: ys)
+        with_lf_term_variable identifier
+          (with_disambiguated_clf_bindings_list xs (fun ys ->
+               f ((identifier, typ') :: ys)))
 
-  and disambiguate_binding_list1_as_clf_dependent_types bindings =
+  and with_disambiguated_clf_bindings_list1 :
+      type a.
+         (Identifier.t * Synprs.clf_object) List1.t
+      -> ((Identifier.t * Synext.clf_typ) List1.t -> a t)
+      -> a t =
+   fun bindings f ->
     let (List1.T ((identifier, typ), xs)) = bindings in
     let* typ' = disambiguate_clf_typ typ in
-    let* () = add_lf_term_variable identifier in
-    let* ys = disambiguate_binding_list_as_clf_dependent_types xs in
-    return (List1.from (identifier, typ') ys)
+    with_lf_term_variable identifier
+      (with_disambiguated_clf_bindings_list xs (fun ys ->
+           f (List1.from (identifier, typ') ys)))
 
-  and disambiguate_schema_some_clause some =
-    (* Schema some-clauses are dependent, meaning that bound variables on the
-       left of a declaration may appear in the type of a binding on the
-       right. Bindings may not recursively refer to themselves.*)
-    disambiguate_binding_list1_as_clf_dependent_types some
-
-  and disambiguate_schema_block_clause block =
+  and (disambiguate_schema_block_clause :
+           (Identifier.t option * Synprs.clf_object) List1.t
+        -> [ `Record of (Identifier.t * Synext.clf_typ) List1.t
+           | `Unnamed of Synext.clf_typ
+           ]
+           t) =
+   fun block ->
     (* Schema block-clauses are dependent, meaning that bound variables on
        the left of a declaration may appear in the type of a binding on the
        right. Bindings may not recursively refer to themselves.*)
@@ -264,11 +274,8 @@ module Make
               | Option.Some identifier, typ -> (identifier, typ))
             block
         in
-        let* bindings' =
-          with_bindings_checkpoint
-            (disambiguate_binding_list1_as_clf_dependent_types bindings)
-        in
-        return (`Record bindings')
+        with_disambiguated_clf_bindings_list1 bindings (fun bindings' ->
+            return (`Record bindings'))
 
   and disambiguate_schema schema_object =
     match schema_object with
@@ -286,72 +293,87 @@ module Make
               (Synext.Meta.Schema.Element
                  { location; some = Option.none; block = block' })
         | Option.Some some ->
-            let* some', block' =
-              with_bindings_checkpoint
-                (seq2
-                   (disambiguate_schema_some_clause some)
-                   (disambiguate_schema_block_clause block))
-            in
-            return
-              (Synext.Meta.Schema.Element
-                 { location; some = Option.some some'; block = block' }))
+            with_disambiguated_clf_bindings_list1 some (fun some' ->
+                let* block' = disambiguate_schema_block_clause block in
+                return
+                  (Synext.Meta.Schema.Element
+                     { location; some = Option.some some'; block = block' }))
+        )
 
-  and disambiguate_meta_context context_object =
-    let { Synprs.Meta.Context_object.location; bindings } = context_object in
-    (* Meta-contexts are dependent, meaning that bound variables on the left
-       of a declaration may appear in the type of a binding on the right.
-       Bindings may not recursively refer to themselves. *)
-    let* bindings' =
-      traverse_list disambiguate_meta_context_binding bindings
-    in
-    return { Synext.Meta.Context.location; bindings = bindings' }
-
-  and disambiguate_meta_context_binding = function
+  and with_disambiguated_meta_context_binding :
+      type a.
+         (Identifier.t * [ `Dollar | `Hash | `Plain ])
+         * Synprs.meta_thing option
+      -> (Identifier.t * Synext.meta_typ -> a t)
+      -> a t =
+   fun binding f ->
+    match binding with
     | (identifier, `Plain), Option.Some meta_type
-    (* Plain meta-variable binding *) ->
+    (* Plain meta-variable binding *) -> (
         let* meta_type' = disambiguate_meta_typ meta_type in
-        let* () =
-          match meta_type' with
-          | Synext.Meta.Typ.Context_schema _ ->
-              Disambiguation_state.add_context_variable identifier
-          | Synext.Meta.Typ.Contextual_typ _ ->
-              Disambiguation_state.add_meta_variable identifier
-          | _ ->
-              Error.raise_at1
-                (Synext.location_of_meta_type meta_type')
-                Expected_contextual_type_or_schema
-        in
-        return (identifier, meta_type')
+        match meta_type' with
+        | Synext.Meta.Typ.Context_schema _ ->
+            with_context_variable identifier (f (identifier, meta_type'))
+        | Synext.Meta.Typ.Contextual_typ _ ->
+            with_meta_variable identifier (f (identifier, meta_type'))
+        | _ ->
+            Error.raise_at1
+              (Synext.location_of_meta_type meta_type')
+              Expected_contextual_type_or_schema)
     | (identifier, `Hash), Option.Some meta_type
-    (* Parameter variable binding *) ->
+    (* Parameter variable binding *) -> (
         let* meta_type' = disambiguate_meta_typ meta_type in
-        let* () =
-          match meta_type' with
-          | Synext.Meta.Typ.Contextual_typ _ ->
-              Disambiguation_state.add_parameter_variable identifier
-          | _ ->
-              Error.raise_at1
-                (Synext.location_of_meta_type meta_type')
-                Expected_contextual_type
-        in
-        return (identifier, meta_type')
+        match meta_type' with
+        | Synext.Meta.Typ.Contextual_typ _ ->
+            with_parameter_variable identifier (f (identifier, meta_type'))
+        | _ ->
+            Error.raise_at1
+              (Synext.location_of_meta_type meta_type')
+              Expected_contextual_type)
     | (identifier, `Dollar), Option.Some meta_type
-    (* Plain substitution or renaming substitution variable binding *) ->
+    (* Plain substitution or renaming substitution variable binding *) -> (
         let* meta_type' = disambiguate_meta_typ meta_type in
-        let* () =
-          match meta_type' with
-          | Synext.Meta.Typ.Plain_substitution_typ _
-          | Synext.Meta.Typ.Renaming_substitution_typ _ ->
-              Disambiguation_state.add_substitution_variable identifier
-          | _ ->
-              Error.raise_at1
-                (Synext.location_of_meta_type meta_type')
-                Expected_plain_or_renaming_substitution_type
-        in
-        return (identifier, meta_type')
+        match meta_type' with
+        | Synext.Meta.Typ.Plain_substitution_typ _
+        | Synext.Meta.Typ.Renaming_substitution_typ _ ->
+            with_substitution_variable identifier
+              (f (identifier, meta_type'))
+        | _ ->
+            Error.raise_at1
+              (Synext.location_of_meta_type meta_type')
+              Expected_plain_or_renaming_substitution_type)
     | (identifier, _identifier_modifier), Option.None (* Missing meta-type *)
       ->
         Error.raise_at1
           (Identifier.location identifier)
           Illegal_missing_meta_type_annotation
+
+  and with_disambiguated_meta_context_bindings_list :
+      type a.
+         ((Identifier.t * [ `Dollar | `Hash | `Plain ])
+         * Synprs.meta_thing option)
+         list
+      -> ((Identifier.t * Synext.meta_typ) list -> a t)
+      -> a t =
+   fun bindings f ->
+    match bindings with
+    | [] -> f []
+    | binding :: bindings ->
+        with_disambiguated_meta_context_binding binding (fun binding' ->
+            with_disambiguated_meta_context_bindings_list bindings
+              (fun bindings' -> f (binding' :: bindings')))
+
+  and with_disambiguated_meta_context :
+      type a.
+      Synprs.meta_context_object -> (Synext.meta_context -> a t) -> a t =
+   fun context_object f ->
+    let { Synprs.Meta.Context_object.location; bindings } = context_object in
+    (* Meta-contexts are dependent, meaning that bound variables on the left
+       of a declaration may appear in the type of a binding on the right.
+       Bindings may not recursively refer to themselves. *)
+    with_disambiguated_meta_context_bindings_list bindings (fun bindings' ->
+        f { Synext.Meta.Context.location; bindings = bindings' })
+
+  and disambiguate_meta_context context_object =
+    with_disambiguated_meta_context context_object return
 end

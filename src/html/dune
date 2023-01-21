@@ -2,7 +2,7 @@
  (name beluga_html)
  (package beluga)
  (modules :standard)
- (libraries tyxml omd support beluga_syntax)
+ (libraries uri tyxml omd support beluga_syntax)
  (preprocess
   (pps tyxml-ppx))
  (instrumentation

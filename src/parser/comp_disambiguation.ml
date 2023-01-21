@@ -119,113 +119,106 @@ module Make
 
   (** {1 Disambiguation State Helpers} *)
 
-  let add_parameter_binding identifier modifier typ =
-    match (modifier, typ) with
-    | `Plain, Synext.Meta.Typ.Context_schema _ ->
-        add_context_variable identifier
-    | `Plain, Synext.Meta.Typ.Contextual_typ _ ->
-        add_meta_variable identifier
-    | `Hash, Synext.Meta.Typ.Parameter_typ _ ->
-        add_parameter_variable identifier
-    | ( `Dollar
-      , ( Synext.Meta.Typ.Plain_substitution_typ _
-        | Synext.Meta.Typ.Renaming_substitution_typ _ ) ) ->
-        add_substitution_variable identifier
-    | `Plain, typ ->
-        Error.raise_at1
-          (Synext.location_of_meta_type typ)
-          Plain_modifier_typ_mismatch
-    | `Hash, typ ->
-        Error.raise_at1
-          (Synext.location_of_meta_type typ)
-          Hash_modifier_typ_mismatch
-    | `Dollar, typ ->
-        Error.raise_at1
-          (Synext.location_of_meta_type typ)
-          Dollar_modifier_typ_mismatch
-
-  let add_context_variable_opt = function
-    | Option.Some identifier -> add_context_variable identifier
-    | Option.None -> return ()
-
-  let add_meta_variable_opt = function
-    | Option.Some identifier -> add_meta_variable identifier
-    | Option.None -> return ()
-
-  let add_parameter_variable_opt = function
-    | Option.Some identifier -> add_parameter_variable identifier
-    | Option.None -> return ()
-
-  let add_substitution_variable_opt = function
-    | Option.Some identifier -> add_substitution_variable identifier
-    | Option.None -> return ()
-
-  let add_parameter_binding_opt identifier_opt modifier typ =
-    match (modifier, typ) with
-    | `Plain, Synext.Meta.Typ.Context_schema _ ->
-        add_context_variable_opt identifier_opt
-    | `Plain, Synext.Meta.Typ.Contextual_typ _ ->
-        add_meta_variable_opt identifier_opt
-    | `Hash, Synext.Meta.Typ.Parameter_typ _ ->
-        add_parameter_variable_opt identifier_opt
-    | ( `Dollar
-      , ( Synext.Meta.Typ.Plain_substitution_typ _
-        | Synext.Meta.Typ.Renaming_substitution_typ _ ) ) ->
-        add_substitution_variable_opt identifier_opt
-    | `Plain, typ ->
-        Error.raise_at1
-          (Synext.location_of_meta_type typ)
-          Plain_modifier_typ_mismatch
-    | `Hash, typ ->
-        Error.raise_at1
-          (Synext.location_of_meta_type typ)
-          Hash_modifier_typ_mismatch
-    | `Dollar, typ ->
-        Error.raise_at1
-          (Synext.location_of_meta_type typ)
-          Dollar_modifier_typ_mismatch
-
-  let pop_binding_opt = function
-    | Option.Some identifier -> pop_binding identifier
-    | Option.None -> return ()
-
   let with_parameter_binding identifier modifier typ =
-    scoped
-      ~set:(add_parameter_binding identifier modifier typ)
-      ~unset:(pop_binding identifier)
+    match (modifier, typ) with
+    | `Plain, Synext.Meta.Typ.Context_schema _ ->
+        with_context_variable identifier
+    | `Plain, Synext.Meta.Typ.Contextual_typ _ ->
+        with_meta_variable identifier
+    | `Hash, Synext.Meta.Typ.Parameter_typ _ ->
+        with_parameter_variable identifier
+    | ( `Dollar
+      , ( Synext.Meta.Typ.Plain_substitution_typ _
+        | Synext.Meta.Typ.Renaming_substitution_typ _ ) ) ->
+        with_substitution_variable identifier
+    | `Plain, typ ->
+        Error.raise_at1
+          (Synext.location_of_meta_type typ)
+          Plain_modifier_typ_mismatch
+    | `Hash, typ ->
+        Error.raise_at1
+          (Synext.location_of_meta_type typ)
+          Hash_modifier_typ_mismatch
+    | `Dollar, typ ->
+        Error.raise_at1
+          (Synext.location_of_meta_type typ)
+          Dollar_modifier_typ_mismatch
+
+  let with_context_variable_opt = function
+    | Option.Some identifier -> with_context_variable identifier
+    | Option.None -> Fun.id
+
+  let with_meta_variable_opt = function
+    | Option.Some identifier -> with_meta_variable identifier
+    | Option.None -> Fun.id
+
+  let with_parameter_variable_opt = function
+    | Option.Some identifier -> with_parameter_variable identifier
+    | Option.None -> Fun.id
+
+  let with_substitution_variable_opt = function
+    | Option.Some identifier -> with_substitution_variable identifier
+    | Option.None -> Fun.id
 
   let with_parameter_binding_opt identifier_opt modifier typ =
-    scoped
-      ~set:(add_parameter_binding_opt identifier_opt modifier typ)
-      ~unset:(pop_binding_opt identifier_opt)
+    match (modifier, typ) with
+    | `Plain, Synext.Meta.Typ.Context_schema _ ->
+        with_context_variable_opt identifier_opt
+    | `Plain, Synext.Meta.Typ.Contextual_typ _ ->
+        with_meta_variable_opt identifier_opt
+    | `Hash, Synext.Meta.Typ.Parameter_typ _ ->
+        with_parameter_variable_opt identifier_opt
+    | ( `Dollar
+      , ( Synext.Meta.Typ.Plain_substitution_typ _
+        | Synext.Meta.Typ.Renaming_substitution_typ _ ) ) ->
+        with_substitution_variable_opt identifier_opt
+    | `Plain, typ ->
+        Error.raise_at1
+          (Synext.location_of_meta_type typ)
+          Plain_modifier_typ_mismatch
+    | `Hash, typ ->
+        Error.raise_at1
+          (Synext.location_of_meta_type typ)
+          Hash_modifier_typ_mismatch
+    | `Dollar, typ ->
+        Error.raise_at1
+          (Synext.location_of_meta_type typ)
+          Dollar_modifier_typ_mismatch
 
-  let add_computation_variable_opt = function
-    | Option.Some identifier -> add_computation_variable identifier
-    | Option.None -> return ()
+  let with_computation_variable_opt = function
+    | Option.Some identifier -> with_comp_variable identifier
+    | Option.None -> Fun.id
 
-  let with_function_parameters parameters =
-    scoped
-      ~set:(traverse_list1_void add_computation_variable_opt parameters)
-      ~unset:(traverse_reverse_list1_void pop_binding_opt parameters)
+  let rec with_function_parameters_list parameters f =
+    match parameters with
+    | [] -> f
+    | x :: xs ->
+        with_computation_variable_opt x (with_function_parameters_list xs f)
 
-  let add_meta_parameter = function
-    | Option.Some identifier, `Plain -> add_meta_variable identifier
-    | Option.Some identifier, `Hash -> add_parameter_variable identifier
-    | Option.Some identifier, `Dollar -> add_substitution_variable identifier
-    | Option.None, _ -> return ()
+  let with_function_parameters_list1 parameters f =
+    let (List1.T (x, xs)) = parameters in
+    with_computation_variable_opt x (with_function_parameters_list xs f)
 
-  let pop_meta_parameter_binding = function
-    | Option.Some identifier, _ -> pop_binding identifier
-    | Option.None, _ -> return ()
+  let with_function_parameters = with_function_parameters_list1
 
-  let with_meta_function_parameters parameters =
-    scoped
-      ~set:(traverse_list1_void add_meta_parameter parameters)
-      ~unset:
-        (traverse_reverse_list1_void pop_meta_parameter_binding parameters)
+  let with_meta_parameter = function
+    | Option.Some identifier, `Plain -> with_meta_variable identifier
+    | Option.Some identifier, `Hash -> with_parameter_variable identifier
+    | Option.Some identifier, `Dollar ->
+        with_substitution_variable identifier
+    | Option.None, _ -> Fun.id
 
-  let with_bindings_checkpoint m =
-    scoped ~set:mark_bindings ~unset:rollback_bindings m
+  let rec with_meta_function_parameters_list parameters f =
+    match parameters with
+    | [] -> f
+    | x :: xs ->
+        with_meta_parameter x (with_meta_function_parameters_list xs f)
+
+  let rec with_meta_function_parameters_list1 parameters f =
+    let (List1.T (x, xs)) = parameters in
+    with_meta_parameter x (with_meta_function_parameters_list xs f)
+
+  let with_meta_function_parameters = with_meta_function_parameters_list1
 
   let push_binding identifier bindings =
     match Identifier.Hamt.find_opt identifier bindings with

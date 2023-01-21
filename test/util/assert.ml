@@ -1,10 +1,14 @@
 open Support
 
+exception Did_not_raise
+
 let assert_exn f =
   try
     ignore (f ());
-    OUnit2.assert_failure "Expected an exception to be raised"
+    raise Did_not_raise
   with
+  | Did_not_raise ->
+      OUnit2.assert_failure "Expected an exception to be raised"
   | _ -> ()
 
 let show_json = Format.stringify (Yojson.Safe.pretty_print ~std:true)

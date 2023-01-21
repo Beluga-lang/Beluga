@@ -167,6 +167,14 @@ struct
   let parse_only_schema =
     parse_only Meta_parser.schema_object
       Meta_disambiguation.disambiguate_schema
+
+  let parse_only_comp_kind =
+    parse_only Comp_parser.comp_sort_object
+      Comp_disambiguation.disambiguate_comp_kind
+
+  let parse_only_comp_typ =
+    parse_only Comp_parser.comp_sort_object
+      Comp_disambiguation.disambiguate_comp_typ
 end
 
 module Simple = Make (Simple_disambiguation_state)

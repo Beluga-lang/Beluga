@@ -154,6 +154,22 @@ let test_schema =
     ~error_inputs_basename:"schemas_error.input.bel" Parser.parse_only_schema
     Util.Synext_json.json_of_schema
 
+let test_comp_kind =
+  test_parser ~fixtures_directory:"fixtures"
+    ~disambiguation_state_configuration_basename:"disambiguation_state.json"
+    ~ok_inputs_basename:"comp_kinds_ok.input.bel"
+    ~ok_outputs_basename:"comp_kinds_ok.output.json"
+    ~error_inputs_basename:"comp_kinds_error.input.bel"
+    Parser.parse_only_comp_kind Util.Synext_json.json_of_comp_kind
+
+let test_comp_typ =
+  test_parser ~fixtures_directory:"fixtures"
+    ~disambiguation_state_configuration_basename:"disambiguation_state.json"
+    ~ok_inputs_basename:"comp_types_ok.input.bel"
+    ~ok_outputs_basename:"comp_types_ok.output.json"
+    ~error_inputs_basename:"comp_types_error.input.bel"
+    Parser.parse_only_comp_typ Util.Synext_json.json_of_comp_typ
+
 let tests =
   let open OUnit2 in
   [ "LF Parsers"
@@ -170,5 +186,9 @@ let tests =
     >::: [ "Meta-type" >::: test_meta_typ
          ; "Meta-object" >::: test_meta_object
          ; "Schema" >::: test_schema
+         ]
+  ; "Computation-Level Parsers"
+    >::: [ "Computation Kind" >::: test_comp_kind
+         ; "Computation Type" >::: test_comp_typ
          ]
   ]

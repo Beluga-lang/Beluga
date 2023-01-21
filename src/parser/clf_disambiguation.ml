@@ -238,7 +238,7 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
     let location = Fun.(applicand >> Synprs.location_of_clf_object)
 
     (** [write operator arguments] constructs the application of [operator]
-        with [arguments] for the shunting yard algorith. Since nullary
+        with [arguments] for the shunting yard algorithm. Since nullary
         operators are treated as arguments, it is always the case that
         [List.length arguments > 0]. *)
     let write operator arguments =

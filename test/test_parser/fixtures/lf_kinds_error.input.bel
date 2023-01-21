@@ -1,7 +1,6 @@
 % The following is a list of `;;`-terminated syntactically invalid LF kinds
 % with respect to the disambiguation state `disambiguation_state.json`.
 
-
 Free_meta_variable
 ;;
 
@@ -32,7 +31,4 @@ type : _
 ;;
 
 nat _
-;;
-
-{ x } target x -> type
 ;;

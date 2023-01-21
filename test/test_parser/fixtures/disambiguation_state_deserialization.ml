@@ -83,6 +83,27 @@ and add_json_entry json =
   | "schema_constant" ->
       let identifier = json |> member "identifier" |> to_string in
       add_schema_constant (Identifier.make identifier)
+  | "comp_inductive_type_constant" -> (
+      let identifier = json |> member "identifier" |> to_string in
+      let fixity = json |> member "fixity" |> fixity_of_json in
+      let precedence = json |> member "precedence" |> to_int in
+      match fixity with
+      | Fixity.Prefix ->
+          let arity = json |> member "arity" |> to_int in
+          let operator = Operator.make_prefix ~arity ~precedence in
+          add_inductive_computation_type_constant operator
+            (Identifier.make identifier)
+      | Fixity.Infix ->
+          let associativity =
+            json |> member "associativity" |> associativity_of_json
+          in
+          let operator = Operator.make_infix ~associativity ~precedence in
+          add_inductive_computation_type_constant operator
+            (Identifier.make identifier)
+      | Fixity.Postfix ->
+          let operator = Operator.make_postfix ~precedence in
+          add_inductive_computation_type_constant operator
+            (Identifier.make identifier))
   | sort -> Error.raise (Unsupported_sort sort)
 
 let read_disambiguation_state filename =

@@ -185,3 +185,41 @@
    --inputs=%{inputs}
    --output=%{target}
    --variant=schema)))
+
+(rule
+ (target comp_kinds_ok.output.json)
+ (deps
+  (:generator generate_outputs.exe)
+  (:state disambiguation_state.json)
+  (:inputs comp_kinds_ok.input.bel))
+ (mode promote)
+ (enabled_if
+  (not
+   %{env:CI=false} ;; If `$CI` is undefined, then it defaults to `false`
+   ))
+ (action
+  (run
+   %{generator}
+   --state=%{state}
+   --inputs=%{inputs}
+   --output=%{target}
+   --variant=comp_kind)))
+
+(rule
+ (target comp_types_ok.output.json)
+ (deps
+  (:generator generate_outputs.exe)
+  (:state disambiguation_state.json)
+  (:inputs comp_types_ok.input.bel))
+ (mode promote)
+ (enabled_if
+  (not
+   %{env:CI=false} ;; If `$CI` is undefined, then it defaults to `false`
+   ))
+ (action
+  (run
+   %{generator}
+   --state=%{state}
+   --inputs=%{inputs}
+   --output=%{target}
+   --variant=comp_typ)))

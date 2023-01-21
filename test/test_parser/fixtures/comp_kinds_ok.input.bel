@@ -1,0 +1,17 @@
+% The following is a list of `;;`-terminated syntactically valid
+% computation-level kinds with respect to the disambiguation state
+% `disambiguation_state.json`. The file `meta_types_ok.output.json` of
+% serialized ASTs corresponding to those types is automatically generated
+% during development, but not during continuous integration.
+
+ctype
+;;
+
+{g : ctx} ctype
+;;
+
+{M : [⊢ nat]} {N : [⊢ nat]} ctype
+;;
+
+(g : ctx) [g, x : nat |- nat] → [g |- nat] → [ |- nat] → ctype
+;;

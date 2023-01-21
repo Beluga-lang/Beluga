@@ -34,15 +34,23 @@
   ;; fixtures/clf_term_patterns_ok.input.bel
   ;; fixtures/clf_term_patterns_ok.output.json ;; auto-generated
   ;; fixtures/clf_term_patterns_error.input.bel
-  ;; Meta type test fixtures
+  ;; Meta-type test fixtures
   fixtures/meta_types_ok.input.bel
   fixtures/meta_types_ok.output.json ;; auto-generated
   fixtures/meta_types_error.input.bel
-  ;; Meta object test fixtures
+  ;; Meta-object test fixtures
   fixtures/meta_objects_ok.input.bel
   fixtures/meta_objects_ok.output.json ;; auto-generated
   fixtures/meta_objects_error.input.bel
   ;; Schema test fixtures
   fixtures/schemas_ok.input.bel
   fixtures/schemas_ok.output.json ;; auto-generated
-  fixtures/schemas_error.input.bel))
+  fixtures/schemas_error.input.bel
+  ;; Computation-level kind test fixtures
+  fixtures/comp_kinds_ok.input.bel
+  fixtures/comp_kinds_ok.output.json ;; auto-generated
+  fixtures/comp_kinds_error.input.bel
+  ;; Computation-level type test fixtures
+  fixtures/comp_types_ok.input.bel
+  fixtures/comp_types_ok.output.json ;; auto-generated
+  fixtures/comp_types_error.input.bel))

@@ -17,10 +17,6 @@ _
 nat : type
 ;;
 
-% The parameter to a Pi-type must be type-annotated
-{ x } x eq x
-;;
-
 % LF term constants are not LF types
 z
 ;;

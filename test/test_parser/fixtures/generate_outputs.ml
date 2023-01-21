@@ -55,6 +55,14 @@ let parse_schema_to_json state =
   let schema = Beluga_parser.Simple.parse_only_schema state in
   Util.Synext_json.json_of_schema schema
 
+let parse_comp_kind_to_json state =
+  let kind = Beluga_parser.Simple.parse_only_comp_kind state in
+  Util.Synext_json.json_of_comp_kind kind
+
+let parse_comp_typ_to_json state =
+  let typ = Beluga_parser.Simple.parse_only_comp_typ state in
+  Util.Synext_json.json_of_comp_typ typ
+
 exception Unsupported_variant of string
 
 let lookup_parser variant =
@@ -67,6 +75,8 @@ let lookup_parser variant =
   | "meta_type" -> parse_meta_type_to_json
   | "meta_object" -> parse_meta_object_to_json
   | "schema" -> parse_schema_to_json
+  | "comp_kind" -> parse_comp_kind_to_json
+  | "comp_typ" -> parse_comp_typ_to_json
   | variant -> raise (Unsupported_variant variant)
 
 let generate_outputs ~state_filename ~input_filename ~output_filename

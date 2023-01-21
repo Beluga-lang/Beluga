@@ -1,0 +1,19 @@
+% The following is a list of `;;`-terminated syntactically invalid
+% computation-level kinds with respect to the disambiguation state
+% `disambiguation_state.json`.
+
+% Missing `ctype'
+(g : ctx) [g, x : nat |- nat] → [g |- nat] → [ |- nat]
+;;
+
+% Missing the type annotation for `g'
+(g) [g, x : nat |- nat] → [g |- nat] → [ |- nat]
+;;
+
+% `N' is not a valid meta-type
+N -> ctype
+;;
+
+% `N' and `M' are not valid meta-types
+N Leq M -> ctype
+;;

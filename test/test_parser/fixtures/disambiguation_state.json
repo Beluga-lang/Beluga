@@ -337,6 +337,13 @@
     {
       "sort": "parameter_variable",
       "identifier": "#p"
+    },
+    {
+      "sort": "comp_inductive_type_constant",
+      "identifier": "Leq",
+      "fixity": "infix",
+      "associativity": "non_associative",
+      "precedence": 3
     }
   ]
 }

@@ -180,14 +180,6 @@ module type BINDINGS_STATE = sig
        t
 end
 
-module type TRAILING_BINDINGS_STATE = sig
-  include State.STATE
-
-  val mark_bindings : Unit.t t
-
-  val rollback_bindings : Unit.t t
-end
-
 module type SIGNATURE_STATE = sig
   include State.STATE
 
@@ -202,8 +194,6 @@ module type DISAMBIGUATION_STATE = sig
   include State.STATE
 
   include BINDINGS_STATE with type state := state
-
-  include TRAILING_BINDINGS_STATE with type state := state
 
   include SIGNATURE_STATE with type state := state
 
@@ -223,9 +213,6 @@ module type DISAMBIGUATION_STATE = sig
   val with_substitution_variable : Identifier.t -> 'a t -> 'a t
 
   val with_comp_variable : Identifier.t -> 'a t -> 'a t
-
-  val with_pattern_variables_checkpoint :
-    pattern:'a t -> expression:'b t -> ('a * 'b) t
 end
 
 (** A minimal disambiguation state backed by nested HAMT data structures with
@@ -276,7 +263,7 @@ module Disambiguation_state : DISAMBIGUATION_STATE = struct
         }
 
   and state =
-    { bindings : entry List1.t Identifier.Hamt.t List1.t
+    { bindings : entry List1.t Identifier.Hamt.t
           (** Symbol table with checkpoints. *)
     ; default_associativity : Associativity.t
           (** Associativity to use if a pragma for an infix operator does not
@@ -290,7 +277,7 @@ module Disambiguation_state : DISAMBIGUATION_STATE = struct
       State.STATE with type state := state)
 
   let empty =
-    { bindings = List1.singleton Identifier.Hamt.empty
+    { bindings = Identifier.Hamt.empty
     ; default_associativity = Associativity.non_associative
     }
 
@@ -301,33 +288,12 @@ module Disambiguation_state : DISAMBIGUATION_STATE = struct
     let* state = get in
     return state.default_associativity
 
-  let get_checkpoints =
-    let* state = get in
-    return (List1.tail state.bindings)
-
   let get_bindings =
     let* state = get in
-    return (List1.head state.bindings)
+    return state.bindings
 
   let[@inline] set_bindings bindings =
-    let* checkpoints = get_checkpoints in
-    modify (fun state ->
-        { state with bindings = List1.from bindings checkpoints })
-
-  let mark_bindings =
-    let* bindings = get_bindings in
-    modify (fun state ->
-        { state with bindings = List1.cons bindings state.bindings })
-
-  let rollback_bindings =
-    get_checkpoints >>= function
-    | latest_checkpoint :: later_checkpoints ->
-        modify (fun state ->
-            { state with
-              bindings = List1.from latest_checkpoint later_checkpoints
-            })
-    | [] ->
-        Error.violation "[rollback_bindings] no checkpoint to rollback to"
+    modify (fun state -> { state with bindings })
 
   let[@inline] modify_bindings f =
     let* bindings = get_bindings in
@@ -700,7 +666,9 @@ module Disambiguation_state : DISAMBIGUATION_STATE = struct
         let* () =
           modify_bindings (fun bindings ->
               Identifier.Hamt.union
-                (fun _key _original_binding new_binding -> new_binding)
+                (fun _key original_binding_stack new_binding_stack ->
+                  let new_binding = List1.head new_binding_stack in
+                  List1.cons new_binding original_binding_stack)
                 bindings bindings')
         in
         return (Result.ok ())
@@ -740,8 +708,6 @@ module Disambiguation_state : DISAMBIGUATION_STATE = struct
     scoped
       ~set:(add_computation_variable identifier)
       ~unset:(pop_binding identifier)
-
-  let with_pattern_variables_checkpoint = Obj.magic ()
 end
 
 let pp_exception ppf = function

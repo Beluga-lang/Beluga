@@ -592,7 +592,9 @@ The following is the grammar for the toplevel compilation units in \Beluga.
 That is, type constants, term constants, programs and proofs are arranged as lists of declarations, and may appear in modules.
 
 \begin{grammar}
-<signature> ::= <global-pragma>* (<declaration> | <pragma> | <documentation-comment>)*
+<signature> ::= <global-pragma>* <entry>*
+
+<entry> ::= <declaration> | <pragma> | <documentation-comment>
 
 <declaration> ::= \hfill\\
 | <module-declaration>\\
@@ -605,10 +607,9 @@ That is, type constants, term constants, programs and proofs are arranged as lis
 | <typedef-declaration>\\
 | <let-declaration>\\
 | <query-declaration>\\
-| <mquery-declaration>\\
-| <pragma>
+| <mquery-declaration>
 
-<module-declaration> ::= `module' <identifier> `=' `struct' (<declaration> | <pragma>)* `end' [`;']
+<module-declaration> ::= `module' <identifier> `=' `struct' <entry>* `end' [`;']
 
 <lf-type-constants-declaration> ::= `LF' <lf-type-constant-declaration>\\
 (`and' [`LF'] <lf-type-constant-declaration>)* `;'

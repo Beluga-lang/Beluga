@@ -16,7 +16,7 @@ let rec pp_lf_kind ppf kind =
   | LF.Kind.Typ _ -> Format.fprintf ppf "type"
   | LF.Kind.Arrow { domain; range; _ } ->
       (* Right arrows are right-associative *)
-      Format.fprintf ppf "@[<2>%a →@ %a@]"
+      Format.fprintf ppf "@[<hov 2>%a →@ %a@]"
         (parenthesize_left_argument_right_associative_operator
            precedence_of_lf_typ ~parent_precedence pp_lf_typ)
         domain
@@ -27,16 +27,16 @@ let rec pp_lf_kind ppf kind =
       (* Pi-operators are weak prefix operators *)
       match (parameter_identifier, parameter_type) with
       | Option.Some parameter_identifier, Option.Some parameter_type ->
-          Format.fprintf ppf "@[<2>{%a :@ %a}@ %a@]" Identifier.pp
+          Format.fprintf ppf "@[<hov 2>{%a :@ %a}@ %a@]" Identifier.pp
             parameter_identifier pp_lf_typ parameter_type pp_lf_kind body
       | Option.Some parameter_identifier, Option.None ->
-          Format.fprintf ppf "@[<2>{%a}@ %a@]" Identifier.pp
+          Format.fprintf ppf "@[<hov 2>{%a}@ %a@]" Identifier.pp
             parameter_identifier pp_lf_kind body
       | Option.None, Option.Some parameter_type ->
-          Format.fprintf ppf "@[<2>{_ :@ %a}@ %a@]" pp_lf_typ parameter_type
-            pp_lf_kind body
+          Format.fprintf ppf "@[<hov 2>{_ :@ %a}@ %a@]" pp_lf_typ
+            parameter_type pp_lf_kind body
       | Option.None, Option.None ->
-          Format.fprintf ppf "@[<2>{_}@ %a@]" pp_lf_kind body)
+          Format.fprintf ppf "@[<hov 2>{_}@ %a@]" pp_lf_kind body)
 
 and pp_lf_typ ppf typ =
   let parent_precedence = precedence_of_lf_typ typ in
@@ -64,7 +64,7 @@ and pp_lf_typ ppf typ =
   | LF.Typ.Arrow { domain; range; orientation = `Forward; _ } ->
       (* Forward arrows are right-associative and of equal precedence with
          backward arrows, so backward arrows have to be parenthesized *)
-      Format.fprintf ppf "@[<2>%a →@ %a@]"
+      Format.fprintf ppf "@[<hov 2>%a →@ %a@]"
         (match domain with
         | LF.Typ.Arrow { orientation = `Backward; _ } ->
             parenthesize pp_lf_typ
@@ -82,7 +82,7 @@ and pp_lf_typ ppf typ =
   | LF.Typ.Arrow { range; domain; orientation = `Backward; _ } ->
       (* Backward arrows are left-associative and of equal precedence with
          forward arrows, so forward arrows have to be parenthesized *)
-      Format.fprintf ppf "@[<2>%a@ ← %a@]"
+      Format.fprintf ppf "@[<hov 2>%a@ ← %a@]"
         (match range with
         | LF.Typ.Arrow { orientation = `Forward; _ } ->
             parenthesize pp_lf_typ
@@ -101,16 +101,16 @@ and pp_lf_typ ppf typ =
       (* Pi-operators are weak prefix operators *)
       match (parameter_identifier, parameter_type) with
       | Option.Some parameter_identifier, Option.Some parameter_type ->
-          Format.fprintf ppf "@[<2>{%a :@ %a}@ %a@]" Identifier.pp
+          Format.fprintf ppf "@[<hov 2>{%a :@ %a}@ %a@]" Identifier.pp
             parameter_identifier pp_lf_typ parameter_type pp_lf_typ body
       | Option.Some parameter_identifier, Option.None ->
-          Format.fprintf ppf "@[<2>{%a}@ %a@]" Identifier.pp
+          Format.fprintf ppf "@[<hov 2>{%a}@ %a@]" Identifier.pp
             parameter_identifier pp_lf_typ body
       | Option.None, Option.Some parameter_type ->
-          Format.fprintf ppf "@[<2>{_ :@ %a}@ %a@]" pp_lf_typ parameter_type
-            pp_lf_typ body
+          Format.fprintf ppf "@[<hov 2>{_ :@ %a}@ %a@]" pp_lf_typ
+            parameter_type pp_lf_typ body
       | Option.None, Option.None ->
-          Format.fprintf ppf "@[<2>{_}@ %a@]" pp_lf_typ body)
+          Format.fprintf ppf "@[<hov 2>{_}@ %a@]" pp_lf_typ body)
 
 and pp_lf_term ppf term =
   let parent_precedence = precedence_of_lf_term term in
@@ -143,20 +143,20 @@ and pp_lf_term ppf term =
          requires parentheses *)
       match (parameter_identifier, parameter_type) with
       | Option.None, Option.None ->
-          Format.fprintf ppf "@[<2>\\_.@ %a@]" pp_lf_term body
+          Format.fprintf ppf "@[<hov 2>\\_.@ %a@]" pp_lf_term body
       | Option.None, Option.Some parameter_type ->
-          Format.fprintf ppf "@[<2>\\_:%a.@ %a@]" pp_lf_typ parameter_type
-            pp_lf_term body
+          Format.fprintf ppf "@[<hov 2>\\_:%a.@ %a@]" pp_lf_typ
+            parameter_type pp_lf_term body
       | Option.Some parameter_identifier, Option.None ->
-          Format.fprintf ppf "@[<2>\\%a.@ %a@]" Identifier.pp
+          Format.fprintf ppf "@[<hov 2>\\%a.@ %a@]" Identifier.pp
             parameter_identifier pp_lf_term body
       | Option.Some parameter_identifier, Option.Some parameter_type ->
-          Format.fprintf ppf "@[<2>\\%a:%a.@ %a@]" Identifier.pp
+          Format.fprintf ppf "@[<hov 2>\\%a:%a.@ %a@]" Identifier.pp
             parameter_identifier pp_lf_typ parameter_type pp_lf_term body)
   | LF.Term.Wildcard _ -> Format.fprintf ppf "_"
   | LF.Term.Type_annotated { term; typ; _ } ->
       (* Type ascriptions are left-associative *)
-      Format.fprintf ppf "@[<2>%a :@ %a@]"
+      Format.fprintf ppf "@[<hov 2>%a :@ %a@]"
         (parenthesize_left_argument_left_associative_operator
            precedence_of_lf_term ~parent_precedence pp_lf_term)
         term pp_lf_typ typ
@@ -192,7 +192,7 @@ let rec pp_clf_typ ppf typ =
   | CLF.Typ.Arrow { domain; range; orientation = `Forward; _ } ->
       (* Forward arrows are right-associative and of equal precedence with
          backward arrows, so backward arrows have to be parenthesized *)
-      Format.fprintf ppf "@[<2>%a →@ %a@]"
+      Format.fprintf ppf "@[<hov 2>%a →@ %a@]"
         (match domain with
         | CLF.Typ.Arrow { orientation = `Backward; _ } ->
             parenthesize pp_clf_typ
@@ -210,7 +210,7 @@ let rec pp_clf_typ ppf typ =
   | CLF.Typ.Arrow { range; domain; orientation = `Backward; _ } ->
       (* Backward arrows are left-associative and of equal precedence with
          forward arrows, so forward arrows have to be parenthesized *)
-      Format.fprintf ppf "@[<2>%a@ ← %a@]"
+      Format.fprintf ppf "@[<hov 2>%a@ ← %a@]"
         (match range with
         | CLF.Typ.Arrow { orientation = `Forward; _ } ->
             parenthesize pp_clf_typ
@@ -227,16 +227,16 @@ let rec pp_clf_typ ppf typ =
         domain
   | CLF.Typ.Pi { parameter_identifier; parameter_type; body; _ } ->
       (* Pi-operators are weak prefix operators *)
-      Format.fprintf ppf "@[<2>{%a :@ %a}@ %a@]"
+      Format.fprintf ppf "@[<hov 2>{%a :@ %a}@ %a@]"
         (fun ppf -> function
           | Option.Some parameter_identifier ->
               Identifier.pp ppf parameter_identifier
           | Option.None -> Format.fprintf ppf "_")
         parameter_identifier pp_clf_typ parameter_type pp_clf_typ body
   | CLF.Typ.Block { elements = `Unnamed typ; _ } ->
-      Format.fprintf ppf "@[<2>block (%a)]" pp_clf_typ typ
+      Format.fprintf ppf "@[<hov 2>block (%a)]" pp_clf_typ typ
   | CLF.Typ.Block { elements = `Record nts; _ } ->
-      Format.fprintf ppf "@[<2>block (%a)]"
+      Format.fprintf ppf "@[<hov 2>block (%a)]"
         (List1.pp ~pp_sep:Format.comma (fun ppf (i, t) ->
              Format.fprintf ppf "%a :@ %a" Identifier.pp i pp_clf_typ t))
         nts
@@ -276,15 +276,15 @@ and pp_clf_term ppf term =
          need to be parenthesized *)
       match (parameter_identifier, parameter_type) with
       | Option.None, Option.None ->
-          Format.fprintf ppf "@[<2>\\_.@ %a@]" pp_clf_term body
+          Format.fprintf ppf "@[<hov 2>\\_.@ %a@]" pp_clf_term body
       | Option.None, Option.Some parameter_type ->
-          Format.fprintf ppf "@[<2>\\_:%a.@ %a@]" pp_clf_typ parameter_type
-            pp_clf_term body
+          Format.fprintf ppf "@[<hov 2>\\_:%a.@ %a@]" pp_clf_typ
+            parameter_type pp_clf_term body
       | Option.Some parameter_identifier, Option.None ->
-          Format.fprintf ppf "@[<2>\\%a.@ %a@]" Identifier.pp
+          Format.fprintf ppf "@[<hov 2>\\%a.@ %a@]" Identifier.pp
             parameter_identifier pp_clf_term body
       | Option.Some parameter_identifier, Option.Some parameter_type ->
-          Format.fprintf ppf "@[<2>\\%a:%a.@ %a@]" Identifier.pp
+          Format.fprintf ppf "@[<hov 2>\\%a:%a.@ %a@]" Identifier.pp
             parameter_identifier pp_clf_typ parameter_type pp_clf_term body)
   | CLF.Term.Hole { variant = `Underscore; _ } -> Format.fprintf ppf "_"
   | CLF.Term.Hole { variant = `Unlabelled; _ } -> Format.fprintf ppf "?"
@@ -292,31 +292,31 @@ and pp_clf_term ppf term =
       Format.fprintf ppf "?%a" Identifier.pp label
   | CLF.Term.Substitution { term; substitution; _ } ->
       (* Substitutions are left-associative *)
-      Format.fprintf ppf "@[<2>%a[%a]@]"
+      Format.fprintf ppf "@[<hov 2>%a[%a]@]"
         (parenthesize_left_argument_left_associative_operator
            precedence_of_clf_term ~parent_precedence pp_clf_term)
         term pp_clf_substitution substitution
   | CLF.Term.Tuple { terms; _ } ->
-      Format.fprintf ppf "@[<2><%a>@]"
+      Format.fprintf ppf "@[<hov 2><%a>@]"
         (List1.pp
            ~pp_sep:(fun ppf () -> Format.fprintf ppf ";@,")
            pp_clf_term)
         terms
   | CLF.Term.Projection { term; projection = `By_position i; _ } ->
       (* Projections are left-associative *)
-      Format.fprintf ppf "@[<2>%a.%d@]"
+      Format.fprintf ppf "@[<hov 2>%a.%d@]"
         (parenthesize_left_argument_left_associative_operator
            precedence_of_clf_term ~parent_precedence pp_clf_term)
         term i
   | CLF.Term.Projection { term; projection = `By_identifier i; _ } ->
       (* Projections are left-associative *)
-      Format.fprintf ppf "@[<2>%a.%a@]"
+      Format.fprintf ppf "@[<hov 2>%a.%a@]"
         (parenthesize_left_argument_left_associative_operator
            precedence_of_clf_term ~parent_precedence pp_clf_term)
         term Identifier.pp i
   | CLF.Term.Type_annotated { term; typ; _ } ->
       (* Type ascriptions are left-associative *)
-      Format.fprintf ppf "@[<2>%a :@ %a@]"
+      Format.fprintf ppf "@[<hov 2>%a :@ %a@]"
         (parenthesize_left_argument_left_associative_operator
            precedence_of_clf_term ~parent_precedence pp_clf_term)
         term pp_clf_typ typ
@@ -332,11 +332,11 @@ and pp_clf_substitution ppf substitution =
     } ->
       Format.fprintf ppf "…"
   | { CLF.Substitution.head = CLF.Substitution.Head.None _; terms; _ } ->
-      Format.fprintf ppf "@[<2>%a@]"
+      Format.fprintf ppf "@[<hov 2>%a@]"
         (List.pp ~pp_sep:Format.comma pp_clf_term)
         terms
   | { CLF.Substitution.head = CLF.Substitution.Head.Identity _; terms; _ } ->
-      Format.fprintf ppf "@[<2>…,@ %a@]"
+      Format.fprintf ppf "@[<hov 2>…,@ %a@]"
         (List.pp ~pp_sep:Format.comma pp_clf_term)
         terms
   | { CLF.Substitution.head =
@@ -345,14 +345,14 @@ and pp_clf_substitution ppf substitution =
     ; terms = []
     ; _
     } ->
-      Format.fprintf ppf "@[<2>%a@]" Identifier.pp identifier
+      Format.fprintf ppf "@[<hov 2>%a@]" Identifier.pp identifier
   | { CLF.Substitution.head =
         CLF.Substitution.Head.Substitution_variable
           { identifier; closure = Option.Some closure; _ }
     ; terms = []
     ; _
     } ->
-      Format.fprintf ppf "@[<2>%a[%a]@]" Identifier.pp identifier
+      Format.fprintf ppf "@[<hov 2>%a[%a]@]" Identifier.pp identifier
         pp_clf_substitution closure
   | { CLF.Substitution.head =
         CLF.Substitution.Head.Substitution_variable
@@ -360,7 +360,7 @@ and pp_clf_substitution ppf substitution =
     ; terms
     ; _
     } ->
-      Format.fprintf ppf "@[<2>%a,@ %a@]" Identifier.pp identifier
+      Format.fprintf ppf "@[<hov 2>%a,@ %a@]" Identifier.pp identifier
         (List.pp ~pp_sep:Format.comma pp_clf_term)
         terms
   | { CLF.Substitution.head =
@@ -369,7 +369,7 @@ and pp_clf_substitution ppf substitution =
     ; terms
     ; _
     } ->
-      Format.fprintf ppf "@[<2>%a[%a],@ %a@]" Identifier.pp identifier
+      Format.fprintf ppf "@[<hov 2>%a[%a],@ %a@]" Identifier.pp identifier
         pp_clf_substitution closure
         (List.pp ~pp_sep:Format.comma pp_clf_term)
         terms
@@ -392,18 +392,18 @@ and pp_clf_context ppf context =
     } ->
       Identifier.pp ppf identifier
   | { CLF.Context.head = CLF.Context.Head.None _; bindings; _ } ->
-      Format.fprintf ppf "@[<2>%a@]"
+      Format.fprintf ppf "@[<hov 2>%a@]"
         (List.pp ~pp_sep:Format.comma pp_typing)
         bindings
   | { CLF.Context.head = CLF.Context.Head.Hole _; bindings; _ } ->
-      Format.fprintf ppf "@[<2>_,@ %a@]"
+      Format.fprintf ppf "@[<hov 2>_,@ %a@]"
         (List.pp ~pp_sep:Format.comma pp_typing)
         bindings
   | { CLF.Context.head = CLF.Context.Head.Context_variable { identifier; _ }
     ; bindings
     ; _
     } ->
-      Format.fprintf ppf "@[<2>%a,@ %a@]" Identifier.pp identifier
+      Format.fprintf ppf "@[<hov 2>%a,@ %a@]" Identifier.pp identifier
         (List.pp ~pp_sep:Format.comma pp_typing)
         bindings
 
@@ -444,47 +444,47 @@ let rec pp_clf_term_pattern ppf term =
          requires parentheses. *)
       match (parameter_identifier, parameter_type) with
       | Option.None, Option.None ->
-          Format.fprintf ppf "@[<2>\\_.@ %a@]" pp_clf_term_pattern body
+          Format.fprintf ppf "@[<hov 2>\\_.@ %a@]" pp_clf_term_pattern body
       | Option.None, Option.Some parameter_type ->
-          Format.fprintf ppf "@[<2>\\_:%a.@ %a@]" pp_clf_typ parameter_type
-            pp_clf_term_pattern body
+          Format.fprintf ppf "@[<hov 2>\\_:%a.@ %a@]" pp_clf_typ
+            parameter_type pp_clf_term_pattern body
       | Option.Some parameter_identifier, Option.None ->
-          Format.fprintf ppf "@[<2>\\%a.@ %a@]" Identifier.pp
+          Format.fprintf ppf "@[<hov 2>\\%a.@ %a@]" Identifier.pp
             parameter_identifier pp_clf_term_pattern body
       | Option.Some parameter_identifier, Option.Some parameter_type ->
-          Format.fprintf ppf "@[<2>\\%a:%a.@ %a@]" Identifier.pp
+          Format.fprintf ppf "@[<hov 2>\\%a:%a.@ %a@]" Identifier.pp
             parameter_identifier pp_clf_typ parameter_type
             pp_clf_term_pattern body)
   | CLF.Term.Pattern.Wildcard _ -> Format.fprintf ppf "_"
   | CLF.Term.Pattern.Substitution { term; substitution; _ } ->
-      Format.fprintf ppf "@[<2>%a[%a]@]"
+      Format.fprintf ppf "@[<hov 2>%a[%a]@]"
         (parenthesize_left_argument_left_associative_operator
            precedence_of_clf_term_pattern ~parent_precedence
            pp_clf_term_pattern)
         term pp_clf_substitution substitution
   | CLF.Term.Pattern.Tuple { terms; _ } ->
-      Format.fprintf ppf "@[<2><%a>@]"
+      Format.fprintf ppf "@[<hov 2><%a>@]"
         (List1.pp
            ~pp_sep:(fun ppf () -> Format.fprintf ppf ";@,")
            pp_clf_term_pattern)
         terms
   | CLF.Term.Pattern.Projection { term; projection = `By_position i; _ } ->
       (* Projections are left-associative *)
-      Format.fprintf ppf "@[<2>%a.%d@]"
+      Format.fprintf ppf "@[<hov 2>%a.%d@]"
         (parenthesize_left_argument_left_associative_operator
            precedence_of_clf_term_pattern ~parent_precedence
            pp_clf_term_pattern)
         term i
   | CLF.Term.Pattern.Projection { term; projection = `By_identifier i; _ } ->
       (* Projections are left-associative *)
-      Format.fprintf ppf "@[<2>%a.%a@]"
+      Format.fprintf ppf "@[<hov 2>%a.%a@]"
         (parenthesize_left_argument_left_associative_operator
            precedence_of_clf_term_pattern ~parent_precedence
            pp_clf_term_pattern)
         term Identifier.pp i
   | CLF.Term.Pattern.Type_annotated { term; typ; _ } ->
       (* Type ascriptions are left-associative *)
-      Format.fprintf ppf "@[<2>%a :@ %a@]"
+      Format.fprintf ppf "@[<hov 2>%a :@ %a@]"
         (parenthesize_left_argument_left_associative_operator
            precedence_of_clf_term_pattern ~parent_precedence
            pp_clf_term_pattern)
@@ -507,7 +507,7 @@ and pp_clf_substitution_pattern ppf substitution_pattern =
     ; terms
     ; _
     } ->
-      Format.fprintf ppf "@[<2>%a@]"
+      Format.fprintf ppf "@[<hov 2>%a@]"
         (List.pp ~pp_sep:Format.comma pp_clf_term_pattern)
         terms
   | { CLF.Substitution.Pattern.head =
@@ -515,7 +515,7 @@ and pp_clf_substitution_pattern ppf substitution_pattern =
     ; terms
     ; _
     } ->
-      Format.fprintf ppf "@[<2>…,@ %a@]"
+      Format.fprintf ppf "@[<hov 2>…,@ %a@]"
         (List.pp ~pp_sep:Format.comma pp_clf_term_pattern)
         terms
   | { CLF.Substitution.Pattern.head =
@@ -524,14 +524,14 @@ and pp_clf_substitution_pattern ppf substitution_pattern =
     ; terms = []
     ; _
     } ->
-      Format.fprintf ppf "@[<2>%a@]" Identifier.pp identifier
+      Format.fprintf ppf "@[<hov 2>%a@]" Identifier.pp identifier
   | { CLF.Substitution.Pattern.head =
         CLF.Substitution.Pattern.Head.Substitution_variable
           { identifier; closure = Option.Some closure; _ }
     ; terms = []
     ; _
     } ->
-      Format.fprintf ppf "@[<2>%a[%a]@]" Identifier.pp identifier
+      Format.fprintf ppf "@[<hov 2>%a[%a]@]" Identifier.pp identifier
         pp_clf_substitution closure
   | { CLF.Substitution.Pattern.head =
         CLF.Substitution.Pattern.Head.Substitution_variable
@@ -539,7 +539,7 @@ and pp_clf_substitution_pattern ppf substitution_pattern =
     ; terms
     ; _
     } ->
-      Format.fprintf ppf "@[<2>%a,@ %a@]" Identifier.pp identifier
+      Format.fprintf ppf "@[<hov 2>%a,@ %a@]" Identifier.pp identifier
         (List.pp ~pp_sep:Format.comma pp_clf_term_pattern)
         terms
   | { CLF.Substitution.Pattern.head =
@@ -548,7 +548,7 @@ and pp_clf_substitution_pattern ppf substitution_pattern =
     ; terms
     ; _
     } ->
-      Format.fprintf ppf "@[<2>%a[%a],@ %a@]" Identifier.pp identifier
+      Format.fprintf ppf "@[<hov 2>%a[%a],@ %a@]" Identifier.pp identifier
         pp_clf_substitution closure
         (List.pp ~pp_sep:Format.comma pp_clf_term_pattern)
         terms
@@ -578,14 +578,14 @@ and pp_clf_context_pattern ppf context_pattern =
     ; bindings
     ; _
     } ->
-      Format.fprintf ppf "@[<2>%a@]"
+      Format.fprintf ppf "@[<hov 2>%a@]"
         (List.pp ~pp_sep:Format.comma pp_typing)
         bindings
   | { CLF.Context.Pattern.head = CLF.Context.Pattern.Head.Hole _
     ; bindings
     ; _
     } ->
-      Format.fprintf ppf "@[<2>_,@ %a@]"
+      Format.fprintf ppf "@[<hov 2>_,@ %a@]"
         (List.pp ~pp_sep:Format.comma pp_typing)
         bindings
   | { CLF.Context.Pattern.head =
@@ -593,7 +593,7 @@ and pp_clf_context_pattern ppf context_pattern =
     ; bindings
     ; _
     } ->
-      Format.fprintf ppf "@[<2>%a,@ %a@]" Identifier.pp identifier
+      Format.fprintf ppf "@[<hov 2>%a,@ %a@]" Identifier.pp identifier
         (List.pp ~pp_sep:Format.comma pp_typing)
         bindings
 
@@ -605,16 +605,16 @@ let rec pp_meta_typ ppf typ =
   match typ with
   | Meta.Typ.Context_schema { schema; _ } -> pp_schema ppf schema
   | Meta.Typ.Contextual_typ { context; typ; _ } ->
-      Format.fprintf ppf "@[<2>(%a ⊢@ %a)@]" pp_clf_context context
+      Format.fprintf ppf "@[<hov 2>(%a ⊢@ %a)@]" pp_clf_context context
         pp_clf_typ typ
   | Meta.Typ.Parameter_typ { context; typ; _ } ->
-      Format.fprintf ppf "@[<2>#(%a ⊢@ %a)@]" pp_clf_context context
+      Format.fprintf ppf "@[<hov 2>#(%a ⊢@ %a)@]" pp_clf_context context
         pp_clf_typ typ
   | Meta.Typ.Plain_substitution_typ { domain; range; _ } ->
-      Format.fprintf ppf "@[<2>$(%a ⊢@ %a)@]" pp_clf_context domain
+      Format.fprintf ppf "@[<hov 2>$(%a ⊢@ %a)@]" pp_clf_context domain
         pp_clf_context range
   | Meta.Typ.Renaming_substitution_typ { domain; range; _ } ->
-      Format.fprintf ppf "@[<2>$(%a ⊢#@ %a)@]" pp_clf_context domain
+      Format.fprintf ppf "@[<hov 2>$(%a ⊢#@ %a)@]" pp_clf_context domain
         pp_clf_context range
 
 and pp_meta_object ppf object_ =
@@ -622,13 +622,13 @@ and pp_meta_object ppf object_ =
   | Meta.Object.Context { context; _ } ->
       Format.fprintf ppf "@[[%a]@]" pp_clf_context context
   | Meta.Object.Contextual_term { context; term; _ } ->
-      Format.fprintf ppf "@[<2>[%a ⊢@ %a]@]" pp_clf_context context
+      Format.fprintf ppf "@[<hov 2>[%a ⊢@ %a]@]" pp_clf_context context
         pp_clf_term term
   | Meta.Object.Plain_substitution { domain; range; _ } ->
-      Format.fprintf ppf "@[<2>$[%a ⊢@ %a]@]" pp_clf_context domain
+      Format.fprintf ppf "@[<hov 2>$[%a ⊢@ %a]@]" pp_clf_context domain
         pp_clf_substitution range
   | Meta.Object.Renaming_substitution { domain; range; _ } ->
-      Format.fprintf ppf "@[<2>$[%a ⊢#@ %a]@]" pp_clf_context domain
+      Format.fprintf ppf "@[<hov 2>$[%a ⊢#@ %a]@]" pp_clf_context domain
         pp_clf_substitution range
 
 and pp_meta_pattern ppf pattern =
@@ -636,14 +636,14 @@ and pp_meta_pattern ppf pattern =
   | Meta.Pattern.Context { context; _ } ->
       Format.fprintf ppf "@[[%a]@]" pp_clf_context_pattern context
   | Meta.Pattern.Contextual_term { context; term; _ } ->
-      Format.fprintf ppf "@[<2>[%a ⊢@ %a]@]" pp_clf_context_pattern context
-        pp_clf_term_pattern term
+      Format.fprintf ppf "@[<hov 2>[%a ⊢@ %a]@]" pp_clf_context_pattern
+        context pp_clf_term_pattern term
   | Meta.Pattern.Plain_substitution { domain; range; _ } ->
-      Format.fprintf ppf "@[<2>$[%a ⊢@ %a]@]" pp_clf_context_pattern domain
-        pp_clf_substitution_pattern range
+      Format.fprintf ppf "@[<hov 2>$[%a ⊢@ %a]@]" pp_clf_context_pattern
+        domain pp_clf_substitution_pattern range
   | Meta.Pattern.Renaming_substitution { domain; range; _ } ->
-      Format.fprintf ppf "@[<2>$[%a ⊢#@ %a]@]" pp_clf_context_pattern domain
-        pp_clf_substitution_pattern range
+      Format.fprintf ppf "@[<hov 2>$[%a ⊢#@ %a]@]" pp_clf_context_pattern
+        domain pp_clf_substitution_pattern range
 
 and pp_meta_context ppf context =
   let { Meta.Context.bindings; _ } = context in
@@ -668,18 +668,18 @@ and pp_schema ppf schema =
            precedence_of_schema ~parent_precedence pp_schema)
         ppf schemas
   | Meta.Schema.Element { some = Option.None; block = `Unnamed t; _ } ->
-      Format.fprintf ppf "@[<2>block %a@]" pp_clf_typ t
+      Format.fprintf ppf "@[<hov 2>block %a@]" pp_clf_typ t
   | Meta.Schema.Element { some = Option.None; block = `Record bindings; _ }
     ->
-      Format.fprintf ppf "@[<2>block (%a)@]" pp_bindings bindings
+      Format.fprintf ppf "@[<hov 2>block (%a)@]" pp_bindings bindings
   | Meta.Schema.Element
       { some = Option.Some some_bindings; block = `Unnamed t; _ } ->
-      Format.fprintf ppf "@[<2>some [%a]@ block %a@]" pp_bindings
+      Format.fprintf ppf "@[<hov 2>some [%a]@ block %a@]" pp_bindings
         some_bindings pp_clf_typ t
   | Meta.Schema.Element
       { some = Option.Some some_bindings; block = `Record block_bindings; _ }
     ->
-      Format.fprintf ppf "@[<2>some [%a]@ block (%a)@]" pp_bindings
+      Format.fprintf ppf "@[<hov 2>some [%a]@ block (%a)@]" pp_bindings
         some_bindings pp_bindings block_bindings
 
 (** {1 Pretty-Printing Computation-Level Syntax} *)
@@ -710,16 +710,16 @@ let rec pp_comp_kind ppf kind =
   | Comp.Kind.Ctype _ -> Format.pp_print_string ppf "ctype"
   | Comp.Kind.Arrow { domain; range; _ } ->
       (* Right arrows are right-associative *)
-      Format.fprintf ppf "@[<2>%a →@ %a@]" pp_meta_typ domain pp_comp_kind
-        range
+      Format.fprintf ppf "@[<hov 2>%a →@ %a@]" pp_meta_typ domain
+        pp_comp_kind range
   | Comp.Kind.Pi { parameter_identifier; parameter_type; body; _ } -> (
       (* Pi-operators are weak prefix operators *)
       match parameter_identifier with
       | Option.None ->
-          Format.fprintf ppf "@[<2>{_ :@ %a}@ %a@]" pp_meta_typ
+          Format.fprintf ppf "@[<hov 2>{_ :@ %a}@ %a@]" pp_meta_typ
             parameter_type pp_comp_kind body
       | Option.Some parameter_identifier ->
-          Format.fprintf ppf "@[<2>{%a :@ %a}@ %a@]" Identifier.pp
+          Format.fprintf ppf "@[<hov 2>{%a :@ %a}@ %a@]" Identifier.pp
             parameter_identifier pp_meta_typ parameter_type pp_comp_kind body
       )
 
@@ -749,17 +749,17 @@ and pp_comp_typ ppf typ =
       in
       match plicity with
       | Plicity.Implicit ->
-          Format.fprintf ppf "@[<2>(%a :@ %a)@ %a@]"
+          Format.fprintf ppf "@[<hov 2>(%a :@ %a)@ %a@]"
             (pp_parameter_identifier parameter_type)
             parameter_identifier pp_meta_typ parameter_type pp_comp_typ body
       | Plicity.Explicit ->
-          Format.fprintf ppf "@[<2>{%a :@ %a}@ %a@]"
+          Format.fprintf ppf "@[<hov 2>{%a :@ %a}@ %a@]"
             (pp_parameter_identifier parameter_type)
             parameter_identifier pp_meta_typ parameter_type pp_comp_typ body)
   | Comp.Typ.Arrow { domain; range; orientation = `Forward; _ } ->
       (* Forward arrows are right-associative and of equal precedence with
          backward arrows *)
-      Format.fprintf ppf "@[<2>%a →@ %a@]"
+      Format.fprintf ppf "@[<hov 2>%a →@ %a@]"
         (match domain with
         | Comp.Typ.Arrow { orientation = `Backward; _ } ->
             parenthesize pp_comp_typ
@@ -777,7 +777,7 @@ and pp_comp_typ ppf typ =
   | Comp.Typ.Arrow { range; domain; orientation = `Backward; _ } ->
       (* Backward arrows are left-associative and of equal precedence with
          forward arrows *)
-      Format.fprintf ppf "@[<2>%a@ ← %a@]"
+      Format.fprintf ppf "@[<hov 2>%a@ ← %a@]"
         (match range with
         | Comp.Typ.Arrow { orientation = `Forward; _ } ->
             parenthesize pp_comp_typ
@@ -810,7 +810,7 @@ and pp_comp_typ ppf typ =
           } -> (
           match Operator.fixity operator with
           | Fixity.Prefix ->
-              Format.fprintf ppf "@[<2>%a@ %a@]" Qualified_identifier.pp
+              Format.fprintf ppf "@[<hov 2>%a@ %a@]" Qualified_identifier.pp
                 identifier
                 (List1.pp ~pp_sep:Format.pp_print_space pp_meta_object)
                 arguments
@@ -824,7 +824,7 @@ and pp_comp_typ ppf typ =
                                    (left_argument, [ right_argument ])) =
                 arguments
               in
-              Format.fprintf ppf "@[<2>%a@ %a@ %a@]" pp_meta_object
+              Format.fprintf ppf "@[<hov 2>%a@ %a@ %a@]" pp_meta_object
                 left_argument Qualified_identifier.pp identifier
                 pp_meta_object right_argument
           | Fixity.Postfix ->
@@ -834,10 +834,10 @@ and pp_comp_typ ppf typ =
                   (* Postfix operators must be applied with exactly one
                      argument. *));
               let[@warning "-8"] (List1.T (argument, [])) = arguments in
-              Format.fprintf ppf "@[<2>%a@ %a@]" pp_meta_object argument
+              Format.fprintf ppf "@[<hov 2>%a@ %a@]" pp_meta_object argument
                 Qualified_identifier.pp identifier)
       | _ ->
-          Format.fprintf ppf "@[<2>%a@ %a@]"
+          Format.fprintf ppf "@[<hov 2>%a@ %a@]"
             (parenthesize_term_of_lesser_than_or_equal_precedence
                precedence_of_comp_typ ~parent_precedence pp_comp_typ)
             applicand
@@ -859,7 +859,7 @@ and pp_comp_expression ppf expression =
         | Option.None -> Format.pp_print_string ppf "_"
         | Option.Some parameter -> Identifier.pp ppf parameter
       in
-      Format.fprintf ppf "@[<2>fn %a ⇒@ %a@]"
+      Format.fprintf ppf "@[<hov 2>fn %a ⇒@ %a@]"
         (List1.pp ~pp_sep:Format.pp_print_space pp_parameter)
         parameters pp_comp_expression body
   | Comp.Expression.Mlam { parameters; body; _ } ->
@@ -875,7 +875,7 @@ and pp_comp_expression ppf expression =
       let pp_parameters =
         List1.pp ~pp_sep:Format.pp_print_space pp_parameter
       in
-      Format.fprintf ppf "@[<2>mlam %a ⇒@ %a@]" pp_parameters parameters
+      Format.fprintf ppf "@[<hov 2>mlam %a ⇒@ %a@]" pp_parameters parameters
         pp_comp_expression body
   | Comp.Expression.Fun { branches; _ } ->
       let pp_branch_pattern ppf copattern =
@@ -890,14 +890,14 @@ and pp_comp_expression ppf expression =
           patterns pp_comp_expression expression
       in
       let pp_branches = List1.pp ~pp_sep:Format.pp_print_cut pp_branch in
-      Format.fprintf ppf "@[<v 0>fun@;%a@]" pp_branches branches
+      Format.fprintf ppf "@[<v 0>fun@ %a@]" pp_branches branches
   | Comp.Expression.Let { pattern; scrutinee; body; _ } ->
       Format.fprintf ppf "@[<hov 2>let %a =@ %a@ in@ %a@]" pp_comp_pattern
         pattern pp_comp_expression scrutinee pp_comp_expression body
   | Comp.Expression.Box { meta_object; _ } -> pp_meta_object ppf meta_object
   | Comp.Expression.Impossible { scrutinee; _ } ->
       (* [impossible (impossible (...))] is right-associative *)
-      Format.fprintf ppf "@[<2>impossible@ %a@]"
+      Format.fprintf ppf "@[<hov 2>impossible@ %a@]"
         (parenthesize_right_argument_right_associative_operator
            precedence_of_comp_expression ~parent_precedence
            pp_comp_expression)
@@ -909,13 +909,13 @@ and pp_comp_expression ppf expression =
       in
       let pp_branches = List1.pp ~pp_sep:Format.pp_print_cut pp_branch in
       if check_coverage then
-        Format.fprintf ppf "@[<v 0>@[<2>case@ %a@ --not@ of@]@,%a@]"
+        Format.fprintf ppf "@[<v 0>@[<hov 2>case@ %a@ --not@ of@]@,%a@]"
           pp_comp_expression scrutinee pp_branches branches
       else
-        Format.fprintf ppf "@[<v 0>@[<2>case@ %a@ of@]@,%a@]"
+        Format.fprintf ppf "@[<v 0>@[<hov 2>case@ %a@ of@]@,%a@]"
           pp_comp_expression scrutinee pp_branches branches
   | Comp.Expression.Tuple { elements; _ } ->
-      Format.fprintf ppf "@[<2>(%a)@]"
+      Format.fprintf ppf "@[<hov 2>(%a)@]"
         (List2.pp ~pp_sep:Format.comma pp_comp_expression)
         elements
   | Comp.Expression.Hole { label; _ } -> (
@@ -925,14 +925,14 @@ and pp_comp_expression ppf expression =
   | Comp.Expression.BoxHole _ -> Format.pp_print_string ppf "_"
   | Comp.Expression.Observation { scrutinee; destructor; _ } ->
       (* Observations are left-associative *)
-      Format.fprintf ppf "@[<2>%a@ .%a@]"
+      Format.fprintf ppf "@[<hov 2>%a@ .%a@]"
         (parenthesize_left_argument_left_associative_operator
            precedence_of_comp_expression ~parent_precedence
            pp_comp_expression)
         scrutinee Qualified_identifier.pp destructor
   | Comp.Expression.Type_annotated { expression; typ; _ } ->
       (* Type ascriptions are left-associative *)
-      Format.fprintf ppf "@[<2>%a :@ %a@]"
+      Format.fprintf ppf "@[<hov 2>%a :@ %a@]"
         (parenthesize_left_argument_left_associative_operator
            precedence_of_comp_expression ~parent_precedence
            pp_comp_expression)
@@ -970,12 +970,12 @@ and pp_comp_pattern ppf pattern =
   | Comp.Pattern.MetaObject { meta_pattern; _ } ->
       pp_meta_pattern ppf meta_pattern
   | Comp.Pattern.Tuple { elements; _ } ->
-      Format.fprintf ppf "@[<2>(%a)@]"
+      Format.fprintf ppf "@[<hov 2>(%a)@]"
         (List2.pp ~pp_sep:Format.comma pp_comp_pattern)
         elements
   | Comp.Pattern.Type_annotated { pattern; typ; _ } ->
       (* The type annotation operator is left-associative *)
-      Format.fprintf ppf "@[<2>%a :@ %a@]"
+      Format.fprintf ppf "@[<hov 2>%a :@ %a@]"
         (parenthesize_left_argument_left_associative_operator
            precedence_of_comp_pattern ~parent_precedence pp_comp_pattern)
         pattern
@@ -984,7 +984,7 @@ and pp_comp_pattern ppf pattern =
         typ
   | Comp.Pattern.MetaTypeAnnotated
       { annotation_identifier; annotation_type; body; _ } ->
-      Format.fprintf ppf "@[<2>{%a :@ %a}@ %a@]" Identifier.pp
+      Format.fprintf ppf "@[<hov 2>{%a :@ %a}@ %a@]" Identifier.pp
         annotation_identifier pp_meta_typ annotation_type pp_comp_pattern
         body
   | Comp.Pattern.Wildcard _ -> Format.pp_print_string ppf "_"
@@ -1013,9 +1013,10 @@ and pp_comp_copattern ppf copattern =
   | Comp.Copattern.Observation { observation; arguments; _ } -> (
       match List1.of_list arguments with
       | Option.None ->
-          Format.fprintf ppf "@[<2>.%a@]" Qualified_identifier.pp observation
+          Format.fprintf ppf "@[<hov 2>.%a@]" Qualified_identifier.pp
+            observation
       | Option.Some arguments ->
-          Format.fprintf ppf "@[<2>.%a@ %a@]" Qualified_identifier.pp
+          Format.fprintf ppf "@[<hov 2>.%a@ %a@]" Qualified_identifier.pp
             observation
             (List1.pp ~pp_sep:Format.pp_print_space pp_comp_pattern)
             arguments)
@@ -1045,15 +1046,15 @@ let rec pp_harpoon_proof ppf proof =
 and pp_harpoon_command ppf command =
   match command with
   | Harpoon.Command.By { expression; assignee; _ } ->
-      Format.fprintf ppf "@[<2>by %a@ as %a@]" pp_comp_expression expression
-        Identifier.pp assignee
+      Format.fprintf ppf "@[<hov 2>by %a@ as %a@]" pp_comp_expression
+        expression Identifier.pp assignee
   | Harpoon.Command.Unbox { expression; assignee; modifier = Option.None; _ }
     ->
-      Format.fprintf ppf "@[<2>unbox %a@ as %a@]" pp_comp_expression
+      Format.fprintf ppf "@[<hov 2>unbox %a@ as %a@]" pp_comp_expression
         expression Identifier.pp assignee
   | Harpoon.Command.Unbox
       { expression; assignee; modifier = Option.Some `Strengthened; _ } ->
-      Format.fprintf ppf "@[<2>strengthen %a@ as %a@]" pp_comp_expression
+      Format.fprintf ppf "@[<hov 2>strengthen %a@ as %a@]" pp_comp_expression
         expression Identifier.pp assignee
 
 and pp_harpoon_directive ppf directive =
@@ -1073,7 +1074,7 @@ and pp_harpoon_directive ppf directive =
         scrutinee
   | Harpoon.Directive.Suffices { scrutinee; branches; _ } ->
       Format.fprintf ppf
-        "@[<v 0>@[<2>suffices by@ %a@] toshow@,@[<v 0>%a@]@]"
+        "@[<v 0>@[<hov 2>suffices by@ %a@] toshow@,@[<v 0>%a@]@]"
         pp_comp_expression scrutinee
         (List.pp ~pp_sep:Format.pp_print_cut pp_harpoon_suffices_branch)
         branches
@@ -1116,21 +1117,23 @@ and pp_harpoon_hypothetical ppf hypothetical =
   in
   Format.fprintf ppf "@[<v 0>{ @[<hv>%a@]@,| @[<hv>%a@]@,; @[<v 0>%a@]@,}@]"
     (List.pp ~pp_sep:Format.comma (fun ppf (i, t) ->
-         Format.fprintf ppf "@[<2>%a :@ %a@]" Identifier.pp i pp_meta_typ t))
+         Format.fprintf ppf "@[<hov 2>%a :@ %a@]" Identifier.pp i pp_meta_typ
+           t))
     meta_context_bindings
     (List.pp ~pp_sep:Format.comma (fun ppf (i, t) ->
-         Format.fprintf ppf "@[<2>%a :@ %a@]" Identifier.pp i pp_comp_typ t))
+         Format.fprintf ppf "@[<hov 2>%a :@ %a@]" Identifier.pp i pp_comp_typ
+           t))
     comp_context_bindings pp_harpoon_proof proof
 
 and pp_harpoon_repl_command ppf repl_command =
   match repl_command with
   | Harpoon.Repl.Command.Rename { rename_from; rename_to; level = `comp; _ }
     ->
-      Format.fprintf ppf "@[<2>rename comp@ %a@ %a@]" Identifier.pp
+      Format.fprintf ppf "@[<hov 2>rename comp@ %a@ %a@]" Identifier.pp
         rename_from Identifier.pp rename_to
   | Harpoon.Repl.Command.Rename { rename_from; rename_to; level = `meta; _ }
     ->
-      Format.fprintf ppf "@[<2>rename meta@ %a@ %a@]" Identifier.pp
+      Format.fprintf ppf "@[<hov 2>rename meta@ %a@ %a@]" Identifier.pp
         rename_from Identifier.pp rename_to
   | Harpoon.Repl.Command.Toggle_automation { kind; change; _ } ->
       let pp_toggle_automation_kind ppf = function
@@ -1142,18 +1145,19 @@ and pp_harpoon_repl_command ppf repl_command =
         | `off -> Format.pp_print_string ppf "off"
         | `toggle -> Format.pp_print_string ppf "toggle"
       in
-      Format.fprintf ppf "@[<2>toggle-automation@ %a@ %a@]"
+      Format.fprintf ppf "@[<hov 2>toggle-automation@ %a@ %a@]"
         pp_toggle_automation_kind kind pp_toggle_automation_change change
   | Harpoon.Repl.Command.Type { scrutinee; _ } ->
-      Format.fprintf ppf "@[<2>type@ %a@]" pp_comp_expression scrutinee
+      Format.fprintf ppf "@[<hov 2>type@ %a@]" pp_comp_expression scrutinee
   | Harpoon.Repl.Command.Info { kind; object_identifier; _ } ->
       let pp_info_kind ppf = function
         | `prog -> Format.pp_print_string ppf "theorem"
       in
-      Format.fprintf ppf "@[<2>info@ %a@ %a@]" pp_info_kind kind
+      Format.fprintf ppf "@[<hov 2>info@ %a@ %a@]" pp_info_kind kind
         Qualified_identifier.pp object_identifier
   | Harpoon.Repl.Command.Select_theorem { theorem; _ } ->
-      Format.fprintf ppf "@[<2>select@ %a@]" Qualified_identifier.pp theorem
+      Format.fprintf ppf "@[<hov 2>select@ %a@]" Qualified_identifier.pp
+        theorem
   | Harpoon.Repl.Command.Theorem { subcommand; _ } ->
       let pp_theorem_subcommand ppf = function
         | `list -> Format.pp_print_string ppf "list"
@@ -1162,7 +1166,7 @@ and pp_harpoon_repl_command ppf repl_command =
         | `show_proof -> Format.pp_print_string ppf "show-proof"
         | `dump_proof path -> Format.fprintf ppf "dump-proof@ \"%s\"" path
       in
-      Format.fprintf ppf "@[<2>theorem@ %a@]" pp_theorem_subcommand
+      Format.fprintf ppf "@[<hov 2>theorem@ %a@]" pp_theorem_subcommand
         subcommand
   | Harpoon.Repl.Command.Session { subcommand; _ } ->
       let pp_session_subcommand ppf = function
@@ -1171,20 +1175,20 @@ and pp_harpoon_repl_command ppf repl_command =
         | `create -> Format.pp_print_string ppf "create"
         | `serialize -> Format.pp_print_string ppf "serialize"
       in
-      Format.fprintf ppf "@[<2>session@ %a@]" pp_session_subcommand
+      Format.fprintf ppf "@[<hov 2>session@ %a@]" pp_session_subcommand
         subcommand
   | Harpoon.Repl.Command.Subgoal { subcommand; _ } ->
       let pp_subgoal_subcommand ppf = function
         | `list -> Format.pp_print_string ppf "list"
         | `defer -> Format.pp_print_string ppf "defer"
       in
-      Format.fprintf ppf "@[<2>subgoal@ %a@]" pp_subgoal_subcommand
+      Format.fprintf ppf "@[<hov 2>subgoal@ %a@]" pp_subgoal_subcommand
         subcommand
   | Harpoon.Repl.Command.Undo _ -> Format.pp_print_string ppf "undo"
   | Harpoon.Repl.Command.Redo _ -> Format.pp_print_string ppf "redo"
   | Harpoon.Repl.Command.History _ -> Format.pp_print_string ppf "history"
   | Harpoon.Repl.Command.Translate { theorem; _ } ->
-      Format.fprintf ppf "@[<2>translate@ %a@]" Qualified_identifier.pp
+      Format.fprintf ppf "@[<hov 2>translate@ %a@]" Qualified_identifier.pp
         theorem
   | Harpoon.Repl.Command.Intros { introduced_variables = Option.None; _ } ->
       Format.pp_print_string ppf "intros"
@@ -1194,25 +1198,26 @@ and pp_harpoon_repl_command ppf repl_command =
         (List1.pp ~pp_sep:Format.pp_print_space Identifier.pp)
         variables
   | Harpoon.Repl.Command.Split { scrutinee; _ } ->
-      Format.fprintf ppf "@[<2>split@ %a@]" pp_comp_expression scrutinee
+      Format.fprintf ppf "@[<hov 2>split@ %a@]" pp_comp_expression scrutinee
   | Harpoon.Repl.Command.Invert { scrutinee; _ } ->
-      Format.fprintf ppf "@[<2>invert@ %a@]" pp_comp_expression scrutinee
+      Format.fprintf ppf "@[<hov 2>invert@ %a@]" pp_comp_expression scrutinee
   | Harpoon.Repl.Command.Impossible { scrutinee; _ } ->
-      Format.fprintf ppf "@[<2>impossible@ %a@]" pp_comp_expression scrutinee
+      Format.fprintf ppf "@[<hov 2>impossible@ %a@]" pp_comp_expression
+        scrutinee
   | Harpoon.Repl.Command.Msplit { identifier; _ } ->
-      Format.fprintf ppf "@[<2>msplit@ %a@]" Identifier.pp identifier
+      Format.fprintf ppf "@[<hov 2>msplit@ %a@]" Identifier.pp identifier
   | Harpoon.Repl.Command.Solve { solution; _ } ->
-      Format.fprintf ppf "@[<2>solve@ %a@]" pp_comp_expression solution
+      Format.fprintf ppf "@[<hov 2>solve@ %a@]" pp_comp_expression solution
   | Harpoon.Repl.Command.Unbox { expression; assignee; modifier = None; _ }
     ->
-      Format.fprintf ppf "@[<2>unbox@ %a@ as@ %a@]" pp_comp_expression
+      Format.fprintf ppf "@[<hov 2>unbox@ %a@ as@ %a@]" pp_comp_expression
         expression Identifier.pp assignee
   | Harpoon.Repl.Command.Unbox
       { expression; assignee; modifier = Option.Some `Strengthened; _ } ->
-      Format.fprintf ppf "@[<2>strengthen@ %a@ as@ %a@]" pp_comp_expression
-        expression Identifier.pp assignee
+      Format.fprintf ppf "@[<hov 2>strengthen@ %a@ as@ %a@]"
+        pp_comp_expression expression Identifier.pp assignee
   | Harpoon.Repl.Command.By { expression; assignee; _ } ->
-      Format.fprintf ppf "@[<2>by@ %a@ as@ %a@]" pp_comp_expression
+      Format.fprintf ppf "@[<hov 2>by@ %a@ as@ %a@]" pp_comp_expression
         expression Identifier.pp assignee
   | Harpoon.Repl.Command.Suffices { implication; goal_premises; _ } ->
       Format.fprintf ppf "@[suffices@ by@ %a@ toshow@ %a@]"
@@ -1240,53 +1245,54 @@ let rec pp_signature_pragma ppf pragma =
       { constant; meta_variable_base; computation_variable_base; _ } -> (
       match computation_variable_base with
       | Option.None ->
-          Format.fprintf ppf "@[<2>--name@ %a@ %a.@]" Qualified_identifier.pp
-            constant Identifier.pp meta_variable_base
+          Format.fprintf ppf "@[<hov 2>--name@ %a@ %a.@]"
+            Qualified_identifier.pp constant Identifier.pp meta_variable_base
       | Option.Some computation_variable_base ->
-          Format.fprintf ppf "@[<2>--name@ %a@ %a@ %a.@]"
+          Format.fprintf ppf "@[<hov 2>--name@ %a@ %a@ %a.@]"
             Qualified_identifier.pp constant Identifier.pp meta_variable_base
             Identifier.pp computation_variable_base)
   | Signature.Pragma.Default_associativity { associativity; _ } ->
-      Format.fprintf ppf "@[<2>--assoc@ %a.@]" pp_associativity associativity
+      Format.fprintf ppf "@[<hov 2>--assoc@ %a.@]" pp_associativity
+        associativity
   | Signature.Pragma.Prefix_fixity { constant; precedence; _ } -> (
       match precedence with
       | Option.None ->
-          Format.fprintf ppf "@[<2>--prefix@ %a.@]" Qualified_identifier.pp
-            constant
+          Format.fprintf ppf "@[<hov 2>--prefix@ %a.@]"
+            Qualified_identifier.pp constant
       | Option.Some precedence ->
-          Format.fprintf ppf "@[<2>--prefix@ %a@ %i.@]"
+          Format.fprintf ppf "@[<hov 2>--prefix@ %a@ %i.@]"
             Qualified_identifier.pp constant precedence)
   | Signature.Pragma.Infix_fixity { constant; precedence; associativity; _ }
     -> (
       match (precedence, associativity) with
       | Option.Some precedence, Option.Some associativity ->
-          Format.fprintf ppf "@[<2>--infix@ %a@ %i@ %a.@]"
+          Format.fprintf ppf "@[<hov 2>--infix@ %a@ %i@ %a.@]"
             Qualified_identifier.pp constant precedence pp_associativity
             associativity
       | Option.Some precedence, Option.None ->
-          Format.fprintf ppf "@[<2>--infix@ %a@ %i.@]"
+          Format.fprintf ppf "@[<hov 2>--infix@ %a@ %i.@]"
             Qualified_identifier.pp constant precedence
       | Option.None, Option.Some associativity ->
-          Format.fprintf ppf "@[<2>--infix@ %a@ %a.@]"
+          Format.fprintf ppf "@[<hov 2>--infix@ %a@ %a.@]"
             Qualified_identifier.pp constant pp_associativity associativity
       | Option.None, Option.None ->
-          Format.fprintf ppf "@[<2>--infix@ %a.@]" Qualified_identifier.pp
-            constant)
+          Format.fprintf ppf "@[<hov 2>--infix@ %a.@]"
+            Qualified_identifier.pp constant)
   | Signature.Pragma.Postfix_fixity { constant; precedence; _ } -> (
       match precedence with
       | Option.None ->
-          Format.fprintf ppf "@[<2>--postfix@ %a.@]" Qualified_identifier.pp
-            constant
+          Format.fprintf ppf "@[<hov 2>--postfix@ %a.@]"
+            Qualified_identifier.pp constant
       | Option.Some precedence ->
-          Format.fprintf ppf "@[<2>--postfix@ %a@ %i.@]"
+          Format.fprintf ppf "@[<hov 2>--postfix@ %a@ %i.@]"
             Qualified_identifier.pp constant precedence)
   | Signature.Pragma.Not _ -> Format.pp_print_string ppf "--not"
   | Signature.Pragma.Open_module { module_identifier; _ } ->
-      Format.fprintf ppf "@[<2>--open@ %a.@]" Qualified_identifier.pp
+      Format.fprintf ppf "@[<hov 2>--open@ %a.@]" Qualified_identifier.pp
         module_identifier
   | Signature.Pragma.Abbreviation { module_identifier; abbreviation; _ } ->
-      Format.fprintf ppf "@[<2>--abbrev@ %a@ %a.@]" Qualified_identifier.pp
-        module_identifier Identifier.pp abbreviation
+      Format.fprintf ppf "@[<hov 2>--abbrev@ %a@ %a.@]"
+        Qualified_identifier.pp module_identifier Identifier.pp abbreviation
 
 and pp_signature_global_pragma ppf global_pragma =
   match global_pragma with
@@ -1309,11 +1315,11 @@ and pp_signature_totality_declaration ppf totality_declaration =
       in
       match order with
       | Option.None ->
-          Format.fprintf ppf "@[<2>total@ (%a)@]"
+          Format.fprintf ppf "@[<hov 2>total@ (%a)@]"
             (List.pp ~pp_sep:Format.pp_print_space pp_identifier_option)
             (Option.some program :: argument_labels)
       | Option.Some order ->
-          Format.fprintf ppf "@[<2>total@ %a@ (%a)@]"
+          Format.fprintf ppf "@[<hov 2>total@ %a@ (%a)@]"
             (pp_signature_totality_order Identifier.pp)
             order
             (List.pp ~pp_sep:Format.pp_print_space pp_identifier_option)
@@ -1336,12 +1342,12 @@ and pp_signature_totality_order :
   match totality_order with
   | Signature.Totality.Order.Argument { argument; _ } -> ppv ppf argument
   | Signature.Totality.Order.Lexical_ordering { arguments; _ } ->
-      Format.fprintf ppf "@[<2>{%a}@]"
+      Format.fprintf ppf "@[<hov 2>{%a}@]"
         (List1.pp ~pp_sep:Format.pp_print_space
            (pp_signature_totality_order ppv))
         arguments
   | Signature.Totality.Order.Simultaneous_ordering { arguments; _ } ->
-      Format.fprintf ppf "@[<2>[%a]@]"
+      Format.fprintf ppf "@[<hov 2>[%a]@]"
         (List1.pp ~pp_sep:Format.pp_print_space
            (pp_signature_totality_order ppv))
         arguments
@@ -1358,26 +1364,26 @@ and pp_signature_declaration ppf declaration =
         (Synext_location.location_of_signature_declaration declaration)
         Unsupported_non_recursive_declaration
   | Signature.Declaration.Typ { identifier; kind; _ } ->
-      Format.fprintf ppf "@[<2>%a :@ %a.@]" Identifier.pp identifier
+      Format.fprintf ppf "@[<hov 2>%a :@ %a.@]" Identifier.pp identifier
         pp_lf_kind kind
   | Signature.Declaration.Const { identifier; typ; _ } ->
-      Format.fprintf ppf "@[<2>%a :@ %a.@]" Identifier.pp identifier
+      Format.fprintf ppf "@[<hov 2>%a :@ %a.@]" Identifier.pp identifier
         pp_lf_typ typ
   | Signature.Declaration.Schema { identifier; schema; _ } ->
-      Format.fprintf ppf "@[<2>schema %a =@ %a;@]" Identifier.pp identifier
-        pp_schema schema
+      Format.fprintf ppf "@[<hov 2>schema %a =@ %a;@]" Identifier.pp
+        identifier pp_schema schema
   | Signature.Declaration.Recursive_declarations { declarations; _ } ->
       pp_recursive_declarations ppf declarations
   | Signature.Declaration.CompTypAbbrev { identifier; kind; typ; _ } ->
-      Format.fprintf ppf "@[<2>typedef %a :@ %a =@ %a;@]" Identifier.pp
+      Format.fprintf ppf "@[<hov 2>typedef %a :@ %a =@ %a;@]" Identifier.pp
         identifier pp_comp_kind kind pp_comp_typ typ
   | Signature.Declaration.Val { identifier; typ; expression; _ } -> (
       match typ with
       | Option.None ->
-          Format.fprintf ppf "@[<2>let@ %a =@ %a@]" Identifier.pp identifier
-            pp_comp_expression expression
+          Format.fprintf ppf "@[<hov 2>let@ %a =@ %a@]" Identifier.pp
+            identifier pp_comp_expression expression
       | Option.Some typ ->
-          Format.fprintf ppf "@[<2>let@ %a :@ %a =@ %a@]" Identifier.pp
+          Format.fprintf ppf "@[<hov 2>let@ %a :@ %a =@ %a@]" Identifier.pp
             identifier pp_comp_typ typ pp_comp_expression expression)
   | Signature.Declaration.Query
       { identifier; meta_context; typ; expected_solutions; maximum_tries; _ }
@@ -1395,11 +1401,11 @@ and pp_signature_declaration ppf declaration =
       in
       match identifier with
       | Option.None ->
-          Format.fprintf ppf "@[<2>query@ %a@ %a@ %a@ %a@]" pp_query_argument
-            expected_solutions pp_query_argument maximum_tries
-            pp_meta_context meta_context pp_lf_typ typ
+          Format.fprintf ppf "@[<hov 2>query@ %a@ %a@ %a@ %a@]"
+            pp_query_argument expected_solutions pp_query_argument
+            maximum_tries pp_meta_context meta_context pp_lf_typ typ
       | Option.Some identifier ->
-          Format.fprintf ppf "@[<2>query@ %a@ %a@ %a@ %a :@ %a@]"
+          Format.fprintf ppf "@[<hov 2>query@ %a@ %a@ %a@ %a :@ %a@]"
             pp_query_argument expected_solutions pp_query_argument
             maximum_tries pp_meta_context meta_context Identifier.pp
             identifier pp_lf_typ typ)
@@ -1412,16 +1418,16 @@ and pp_signature_declaration ppf declaration =
       in
       match identifier with
       | Option.None ->
-          Format.fprintf ppf "@[<2>mquery@ %a@ %a@ %a@ %a@]"
+          Format.fprintf ppf "@[<hov 2>mquery@ %a@ %a@ %a@ %a@]"
             pp_mquery_argument expected_solutions pp_mquery_argument
             search_tries pp_mquery_argument search_depth pp_comp_typ typ
       | Option.Some identifier ->
-          Format.fprintf ppf "@[<2>mquery@ %a@ %a@ %a@ %a :@ %a@]"
+          Format.fprintf ppf "@[<hov 2>mquery@ %a@ %a@ %a@ %a :@ %a@]"
             pp_mquery_argument expected_solutions pp_mquery_argument
             search_tries pp_mquery_argument search_depth Identifier.pp
             identifier pp_comp_typ typ)
   | Signature.Declaration.Module { identifier; entries; _ } ->
-      Format.fprintf ppf "module %a = struct@;<1 2>@[<v 0>%a@]@;<1 0>end"
+      Format.fprintf ppf "module %a = struct@;<1 2>@[<v 0>%a@]@ end"
         Identifier.pp identifier
         (List.pp
            ~pp_sep:(fun ppf () -> Format.fprintf ppf "@,@,")

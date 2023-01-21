@@ -325,8 +325,8 @@ module CLF = struct
 
               - [Block { elements = `Record \[("x1", t1); ("x2", t2); ...; ("xn", tn)\]; _ }]
                 is the block type [block (x1 : t1, x2 : t2, ..., xn : tn)].
-                This is a dependent sum type, with [tj] being able to refer
-                to ["xi"] when [i < j]. *)
+                This is a dependent sum type, or telescope, with [tj] being
+                able to refer to ["xi"] when [i < j]. *)
   end =
     Typ
 

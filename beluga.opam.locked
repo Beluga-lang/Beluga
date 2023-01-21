@@ -16,15 +16,18 @@ license: "GPL-3.0-only"
 homepage: "http://complogic.cs.mcgill.ca/beluga/"
 bug-reports: "https://github.com/Beluga-lang/Beluga/issues"
 depends: [
+  "angstrom" {= "0.15.0"}
   "astring" {= "0.8.5" & with-test}
   "base" {= "v0.15.1" & with-test}
   "base-bigarray" {= "base"}
   "base-bytes" {= "base"}
   "base-threads" {= "base"}
   "base-unix" {= "base"}
+  "bigstringaf" {= "0.9.0"}
   "bisect_ppx" {= "2.8.1" & with-test}
   "camlp-streams" {= "5.0.1" & with-test}
   "cmdliner" {= "1.1.1"}
+  "conf-pkg-config" {= "2"}
   "cppo" {= "1.6.9"}
   "csexp" {= "1.5.1"}
   "dune" {= "3.7.0"}
@@ -46,6 +49,7 @@ depends: [
   "ocaml-compiler-libs" {= "v0.12.4"}
   "ocaml-config" {= "2"}
   "ocaml-options-vanilla" {= "1"}
+  "ocaml-syntax-shims" {= "1.0.0"}
   "ocaml-version" {= "3.6.1" & with-test}
   "ocamlbuild" {= "0.14.2"}
   "ocamlfind" {= "1.9.5"}
@@ -65,11 +69,13 @@ depends: [
   "sexplib0" {= "v0.15.1"}
   "stdio" {= "v0.15.0" & with-test}
   "stdlib-shims" {= "0.3.0"}
+  "stringext" {= "1.6.0"}
   "topkg" {= "1.0.7"}
   "tyxml" {= "4.5.0"}
   "tyxml-ppx" {= "4.5.0"}
   "tyxml-syntax" {= "4.5.0"}
   "uchar" {= "0.0.2"}
+  "uri" {= "4.2.0"}
   "uucp" {= "15.0.0" & with-test}
   "uuseg" {= "15.0.0" & with-test}
   "uutf" {= "1.0.3"}

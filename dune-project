@@ -38,6 +38,7 @@
   tyxml
   tyxml-ppx
   omd
+  uri
   (ocamlformat :with-test)
   (yojson :with-test)
   (ounit2 :with-test)

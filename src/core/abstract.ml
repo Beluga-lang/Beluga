@@ -838,7 +838,7 @@ and abstractHead cQ (offset : int) =
   | I.Const _ as tH -> tH
   | I.FVar n -> I.BVar (index_of cQ (FV n) + offset)
   | I.AnnH _ ->
-     Error.not_implemented' "[abstractHead] AnnH case"
+     Error.raise_not_implemented "[abstractHead] AnnH case"
   (* other cases impossible for object level *)
 
 and subToSpine cQ offset (s, cPsi) tS =
@@ -852,7 +852,7 @@ and subToSpine cQ offset (s, cPsi) tS =
      subToSpine cQ offset (s, cPsi') (I.App (tN, tS))
 
   | (I.Dot (I.Head (I.MVar _), _), I.DDec _) ->
-     Error.not_implemented' "[subToSpine] found MVar as head"
+     Error.raise_not_implemented "[subToSpine] found MVar as head"
     (* subToSpine cQ offset s (I.App (I.Root (I.BVar k, I.Nil), tS)) *)
 
   | (I.Dot (I.Obj tM, s), I.DDec (cPsi', _)) ->
@@ -1020,7 +1020,7 @@ and abstractMVarHead cQ loff =
   | I.PVar os -> I.PVar (abstractOffsetSub cQ loff os)
 
   | I.AnnH _ ->
-     Error.not_implemented' "[abstractMVarHead] AnnH case"
+     Error.raise_not_implemented "[abstractMVarHead] AnnH case"
 
   | I.Proj (head, k) ->
      I.Proj (abstractMVarHead cQ loff head, k)

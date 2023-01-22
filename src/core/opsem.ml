@@ -395,7 +395,7 @@ and match_pattern  (v, eta) (pat, mt) =
        eta := Comp.Cons (v, !eta)
 
     | _ ->
-       Error.not_implemented' "[opsem] [match_pattern] other cases not implemented"
+       Error.raise_not_implemented "[opsem] [match_pattern] other cases not implemented"
   in
   loop v pat;
   !eta

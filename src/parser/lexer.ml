@@ -268,10 +268,6 @@ let pp_exception ppf = function
   | String_literal_unescape_failure s ->
       Format.fprintf ppf
         "The string literal \"%s\" contains invalid escape sequences." s
-  | _ ->
-      Error.raise (Invalid_argument "[pp_exception] unsupported exception")
+  | exn -> Error.raise_unsupported_exception_printing exn
 
-let () =
-  Printexc.register_printer (fun exn ->
-      try Option.some (Format.stringify pp_exception exn) with
-      | Invalid_argument _ -> Option.none)
+let () = Error.register_exception_printer pp_exception

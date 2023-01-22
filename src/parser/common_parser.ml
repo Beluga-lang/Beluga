@@ -339,8 +339,7 @@ let pp_exception' ppf = function
                (List.pp ~pp_sep:Format.pp_print_cut Format.pp_print_string)
                exception_lines))
         exceptions_strings
-  | _ ->
-      Error.raise (Invalid_argument "[pp_exception'] unsupported exception")
+  | exn -> Error.raise_unsupported_exception_printing exn
 
 let pp_exception ppf = function
   | Parser_error (Labelled_exception { label; cause }) ->
@@ -387,7 +386,4 @@ let pp_exception ppf = function
         right_delimiter
   | cause -> pp_exception' ppf cause
 
-let () =
-  Printexc.register_printer (fun exn ->
-      try Option.some (Format.stringify pp_exception exn) with
-      | Invalid_argument _ -> Option.none)
+let () = Error.register_exception_printer pp_exception

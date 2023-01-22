@@ -111,9 +111,6 @@ let pp_exception ppf = function
   | Unbound_namespace qualified_identifier ->
       Format.fprintf ppf "Unbound namespace %a." Qualified_identifier.pp
         qualified_identifier
-  | _ -> raise (Invalid_argument "[pp_exception] unsupported exception")
+  | exn -> Error.raise_unsupported_exception_printing exn
 
-let () =
-  Printexc.register_printer (fun exn ->
-      try Option.some (Format.stringify pp_exception exn) with
-      | Invalid_argument _ -> Option.none)
+let () = Error.register_exception_printer pp_exception

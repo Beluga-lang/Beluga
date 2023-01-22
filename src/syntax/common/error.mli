@@ -74,6 +74,28 @@ val aggregate_exception : exn List2.t -> exn
     exported from this module, so it may never be caught elsewhere. *)
 val aggregate_exception2 : exn -> exn -> exn
 
+(** [raise_unsupported_exception_printing exn] raises an exception signalling
+    that a pretty-printer function for exceptions encountered an unsupported
+    exception variant [exn]. This is used together with
+    {!val:register_exception_printer}. *)
+val raise_unsupported_exception_printing : exn -> 'a
+
+(** [register_exception_printer pp_exn] registers the pretty-printing
+    function [pp_exn] for printing some exceptions. If [pp_exn] does not
+    support an exception variant [exn], then it should call
+    [raise_unsupported_exception_printing exn].
+
+    Example usage:
+
+    {[
+      let pp_exception ppf = function
+        | My_exception _ -> Format.fprintf ppf _
+        | exn -> Error.raise_unsupported_exception_printing exn
+
+      let () = Error.register_exception_printer pp_exception
+    ]} *)
+val register_exception_printer : (Format.formatter -> exn -> unit) -> unit
+
 (** Abstract dummy datatype to enforce that printing be done using the
     printing functions provided by this module. *)
 type print_result

@@ -361,6 +361,21 @@ let located_exception_to_string cause locations =
         locations
         (Printexc.to_string cause)
 
+(** The exception raised when a pretty-printing function for exceptions
+    encounters an unsupported exception variant. This exception variant must
+    not be made public, and should only be used in
+    {!raise_unsupported_exception_printing} and
+    {!register_exception_printer}. *)
+exception Unsupported_exception_printing of exn
+
+let raise_unsupported_exception_printing exn =
+  raise (Unsupported_exception_printing exn)
+
+let register_exception_printer ppf =
+  Printexc.register_printer (fun exn ->
+      try Option.some (Format.stringify ppf exn) with
+      | Unsupported_exception_printing _ -> Option.none)
+
 let () =
   Printexc.register_printer (function
     | Located_exception { cause; locations } ->

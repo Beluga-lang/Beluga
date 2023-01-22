@@ -274,8 +274,11 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
           traverse_option disambiguate_lf_typ parameter_sort
         in
         let* body' =
-          with_lf_term_variable_opt parameter_identifier
-            (disambiguate_lf_kind body)
+          match parameter_identifier with
+          | Option.None -> disambiguate_lf_kind body
+          | Option.Some parameter_identifier ->
+              with_lf_term_variable parameter_identifier
+                (disambiguate_lf_kind body)
         in
         return
           (Synext.LF.Kind.Pi
@@ -358,8 +361,11 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
           traverse_option disambiguate_lf_typ parameter_sort
         in
         let* body' =
-          with_lf_term_variable_opt parameter_identifier
-            (disambiguate_lf_typ body)
+          match parameter_identifier with
+          | Option.None -> disambiguate_lf_typ body
+          | Option.Some parameter_identifier ->
+              with_lf_term_variable parameter_identifier
+                (disambiguate_lf_typ body)
         in
         return
           (Synext.LF.Typ.Pi
@@ -457,8 +463,11 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
           traverse_option disambiguate_lf_typ parameter_sort
         in
         let* body' =
-          with_lf_term_variable_opt parameter_identifier
-            (disambiguate_lf_term body)
+          match parameter_identifier with
+          | Option.None -> disambiguate_lf_term body
+          | Option.Some parameter_identifier ->
+              with_lf_term_variable parameter_identifier
+                (disambiguate_lf_term body)
         in
         return
           (Synext.LF.Term.Abstraction

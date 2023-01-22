@@ -408,8 +408,11 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
         } ->
         let* parameter_type' = disambiguate_clf_typ parameter_type in
         let* body' =
-          with_lf_term_variable_opt parameter_identifier
-            (disambiguate_clf_typ body)
+          match parameter_identifier with
+          | Option.None -> disambiguate_clf_typ body
+          | Option.Some parameter_identifier ->
+              with_lf_term_variable parameter_identifier
+                (disambiguate_clf_typ body)
         in
         return
           (Synext.CLF.Typ.Pi
@@ -594,8 +597,11 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
           traverse_option disambiguate_clf_typ parameter_sort
         in
         let* body' =
-          with_lf_term_variable_opt parameter_identifier
-            (disambiguate_clf_term body)
+          match parameter_identifier with
+          | Option.None -> disambiguate_clf_term body
+          | Option.Some parameter_identifier ->
+              with_lf_term_variable parameter_identifier
+                (disambiguate_clf_term body)
         in
         return
           (Synext.CLF.Term.Abstraction

@@ -323,7 +323,7 @@ let unify_phat cD psihat =
             true
           end
         else
-          Error.not_implemented' "[unify_phat] ctx_var with a full context"
+          Error.raise_not_implemented "[unify_phat] ctx_var with a full context"
      | (None, d') ->
         let open Int.LF in
         if d = d'
@@ -333,7 +333,7 @@ let unify_phat cD psihat =
             true
           end
         else
-          Error.not_implemented' "[unify_phat] ctx_var with a full context"
+          Error.raise_not_implemented "[unify_phat] ctx_var with a full context"
      end
 
   | phihat -> Stdlib.(=) psihat phihat

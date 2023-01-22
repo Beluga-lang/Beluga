@@ -156,7 +156,7 @@ let rec ctxToSub_mclosed cD psi =
 
   | DDec (_, TypDecl _) ->
      (* For the moment, assume tA atomic. *)
-     Error.not_implemented' "[ctxToSub_mclosed] non-atomic cPsi entry not supported"
+     Error.raise_not_implemented "[ctxToSub_mclosed] non-atomic cPsi entry not supported"
 
 (* ctxToSub' cD cPhi cPsi = s
 

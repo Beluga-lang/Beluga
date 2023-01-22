@@ -9,12 +9,8 @@ let violation msg =
   Debug.printf (fun p -> p.fmt "[violation] %s" msg);
   raise (Violation msg)
 
-exception NotImplemented of Location.t option * string
-
-let not_implemented loc msg = raise (NotImplemented (Option.some loc, msg))
-
-let not_implemented' msg = raise (NotImplemented (Option.none, msg))
-
+(** The exception variant for exceptions annotated with source code locations
+    for reporting. This exception variant must not be made public. *)
 exception
   Located_exception of
     { cause : exn
@@ -39,6 +35,8 @@ let[@inline] raise_at1 location cause =
 let[@inline] raise_at2 location1 location2 cause =
   raise (located_exception2 location1 location2 cause)
 
+(** The exception variant for the composition of multiple related exceptions.
+    This exception variant must not be made public. *)
 exception Composite_exception of { causes : exn List2.t }
 
 let[@inline] composite_exception causes = Composite_exception { causes }
@@ -46,6 +44,8 @@ let[@inline] composite_exception causes = Composite_exception { causes }
 let[@inline] composite_exception2 cause1 cause2 =
   composite_exception (List2.from cause1 cause2 [])
 
+(** The exception variant for the aggregation of multiple unrelated
+    exceptions. This exception variant must not be made public. *)
 exception Aggregate_exception of { exceptions : exn List2.t }
 
 let[@inline] aggregate_exception exceptions =
@@ -53,6 +53,16 @@ let[@inline] aggregate_exception exceptions =
 
 let[@inline] aggregate_exception2 exception1 exception2 =
   aggregate_exception (List2.pair exception1 exception2)
+
+(** The exception variant used in {!raise_not_implemented} to signal that a
+    case in the code is currently not implemented, but should be implemented
+    someday. This exception variant must not be made public. *)
+exception Not_implemented of string
+
+let raise_not_implemented ?location msg =
+  match location with
+  | Option.None -> raise (Not_implemented msg)
+  | Option.Some location -> raise_at1 location (Not_implemented msg)
 
 type print_result = string
 
@@ -137,12 +147,6 @@ let () =
       print (fun ppf ->
           Format.fprintf ppf
             "@[<v>Internal error (please report as a bug):@,@[%a@]@]"
-            Format.pp_print_string msg));
-
-  register_printer (fun [@warning "-8"] (NotImplemented (loc, msg)) ->
-      print (fun ppf ->
-          Option.when_some loc print_location;
-          Format.fprintf ppf "@[<v>Not implemented.@,@[%a@]@]"
             Format.pp_print_string msg))
 
 (** {1 Printing Located Exceptions} *)
@@ -394,3 +398,9 @@ let () =
                 String.pp)
              (List2.map Printexc.to_string exceptions))
     | _ -> Option.none)
+
+let () =
+  register_exception_printer (fun ppf -> function
+    | Not_implemented msg ->
+        Format.fprintf ppf "@[<v 0>Not implemented.@,%s@]" msg
+    | exn -> raise_unsupported_exception_printing exn)

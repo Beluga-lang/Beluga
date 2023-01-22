@@ -2425,10 +2425,10 @@ and elSplit loc cD cG pb i tau_i bs ttau =
        in
        I.SplitBranch (l', (Int.LF.Empty, pat), t', hyp')
 
-    | A.BVarCase loc ->
+    | A.BVarCase location ->
        if Context.dctxLength cPsi <> 1
        then
-         Error.not_implemented loc
+         Error.raise_not_implemented ~location
            "Parameter variable matching is supported only if the LF \
             context has exactly 1 binder.";
        let Int.LF.MTyp tA = cU in

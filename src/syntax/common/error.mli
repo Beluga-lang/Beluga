@@ -7,15 +7,6 @@ exception Violation of string
 (** Raises a Violation exception with the given message. *)
 val violation : string -> 'a
 
-exception NotImplemented of Location.t option * string
-
-(** Raises a NotImplemented exception at the given location, with the given
-    message. *)
-val not_implemented : Location.t -> string -> 'a
-
-(** Raises a NotImplemented exception with the given message. *)
-val not_implemented' : string -> 'a
-
 (** [located_exception locations cause] is a decorated exception having
     [cause] and [locations] for source file error-reporting. This exception
     is not exported from this module, so it may never be caught elsewhere.
@@ -73,6 +64,12 @@ val aggregate_exception : exn List2.t -> exn
     having causes [\[exception1; exception2\]]. This exception is not
     exported from this module, so it may never be caught elsewhere. *)
 val aggregate_exception2 : exn -> exn -> exn
+
+(** [raise_not_implemented ?location message] raises an exception signalling
+    that we've reached a segment of code that is not yet implemented. The
+    optional [location] is used to additionally report to the user the part
+    of their work that triggered this exception. *)
+val raise_not_implemented : ?location:Location.t -> string -> 'a
 
 (** [raise_unsupported_exception_printing exn] raises an exception signalling
     that a pretty-printer function for exceptions encountered an unsupported

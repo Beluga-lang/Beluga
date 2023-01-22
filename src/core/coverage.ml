@@ -1452,7 +1452,7 @@ let rec genBCovGoals ((cD, cPsi, tA) as cov_problem) =
   | LF.Atom _ ->
      genPVar cov_problem @ genBVars cov_problem
   | LF.Sigma trec ->
-     Error.not_implemented' "[genBCovGoals] not implemented for Sigma types"
+     Error.raise_not_implemented "[genBCovGoals] not implemented for Sigma types"
      (* I *think* Atom and Sigma can be treated identically here, since
         they're both the base types, essentially. -je
       *)

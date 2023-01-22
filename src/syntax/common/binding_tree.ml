@@ -53,6 +53,11 @@ let add qualified_identifier entry ?(subtree = empty) tree =
 let add_all t1 t2 =
   Identifier.Hamt.union (fun _identifier _e1 e2 -> e2) t1 t2
 
+let remove identifier tree =
+  match Identifier.Hamt.find_opt identifier tree with
+  | Option.None -> Error.raise (Unbound_identifier identifier)
+  | Option.Some _ -> Identifier.Hamt.remove identifier tree
+
 let lookup_toplevel identifier tree =
   match Identifier.Hamt.find_opt identifier tree with
   | Option.None -> Error.raise (Unbound_identifier identifier)

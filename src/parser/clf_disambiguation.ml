@@ -270,8 +270,9 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
 
     let guard_identifier_operator identifier expression =
       lookup identifier >>= function
-      | Result.Ok (Lf_type_constant { operator; _ })
-      | Result.Ok (Lf_term_constant { operator; _ }) ->
+      | Result.Ok (Lf_type_constant, { operator = Option.Some operator; _ })
+      | Result.Ok (Lf_term_constant, { operator = Option.Some operator; _ })
+        ->
           if Operator.is_nullary operator then return Option.none
           else
             return
@@ -356,7 +357,8 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
           Qualified_identifier.make_simple identifier
         in
         lookup_toplevel identifier >>= function
-        | Result.Ok (Lf_type_constant { operator; _ }) ->
+        | Result.Ok (Lf_type_constant, { operator = Option.Some operator; _ })
+          ->
             return
               (Synext.CLF.Typ.Constant
                  { location
@@ -381,7 +383,8 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
            <dot-identifier>+] are type-level constants, or illegal named
            projections. *)
         lookup identifier >>= function
-        | Result.Ok (Lf_type_constant { operator; _ }) ->
+        | Result.Ok (Lf_type_constant, { operator = Option.Some operator; _ })
+          ->
             return
               (Synext.CLF.Typ.Constant
                  { location; identifier; operator; quoted })
@@ -502,7 +505,8 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
           Qualified_identifier.make_simple identifier
         in
         lookup_toplevel identifier >>= function
-        | Result.Ok (Lf_term_constant { operator; _ }) ->
+        | Result.Ok (Lf_term_constant, { operator = Option.Some operator; _ })
+          ->
             return
               (Synext.CLF.Term.Constant
                  { location
@@ -510,8 +514,8 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
                  ; operator
                  ; quoted
                  })
-        | Result.Ok (Lf_term_variable _)
-        | Result.Ok (Meta_variable _) ->
+        | Result.Ok (Lf_term_variable, _)
+        | Result.Ok (Meta_variable, _) ->
             (* Bound variable *)
             return (Synext.CLF.Term.Variable { location; identifier })
         | Result.Ok entry ->
@@ -557,7 +561,7 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
         | `Partially_bound
             ( List1.T
                 ( ( variable_identifier
-                  , (Lf_term_variable _ | Meta_variable _) )
+                  , (Lf_term_variable, _ | Meta_variable, _) )
                 , [] )
             , unbound_segments )
         (* Projections of a bound variable *) ->
@@ -576,7 +580,9 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
               Illegal_clf_term_projection
         | `Totally_bound bound_segments (* A constant *) -> (
             match List1.last bound_segments with
-            | _identifier, Lf_term_constant { operator; _ } ->
+            | ( _identifier
+              , (Lf_term_constant, { operator = Option.Some operator; _ }) )
+              ->
                 return
                   (Synext.CLF.Term.Constant
                      { identifier; location; operator; quoted })
@@ -774,7 +780,7 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
             (* Possibly a context variable as context head *)
           :: xs -> (
             lookup_toplevel identifier >>= function
-            | Result.Ok (Context_variable _) ->
+            | Result.Ok (Context_variable, _) ->
                 let head' =
                   Synext.CLF.Context.Head.Context_variable
                     { identifier; location = Identifier.location identifier }
@@ -997,7 +1003,8 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
           Qualified_identifier.make_simple identifier
         in
         lookup_toplevel identifier >>= function
-        | Result.Ok (Lf_term_constant { operator; _ }) ->
+        | Result.Ok (Lf_term_constant, { operator = Option.Some operator; _ })
+          ->
             let pattern' =
               Synext.CLF.Term.Pattern.Constant
                 { location
@@ -1007,8 +1014,8 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
                 }
             in
             f pattern' inner_bound_variables pattern_variables
-        | Result.Ok (Lf_term_variable _)
-        | Result.Ok (Meta_variable _) ->
+        | Result.Ok (Lf_term_variable, _)
+        | Result.Ok (Meta_variable, _) ->
             let pattern' =
               Synext.CLF.Term.Pattern.Variable { location; identifier }
             in
@@ -1066,7 +1073,7 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
         | `Partially_bound
             ( List1.T
                 ( ( variable_identifier
-                  , (Lf_term_variable _ | Meta_variable _) )
+                  , (Lf_term_variable, _ | Meta_variable, _) )
                 , [] )
             , unbound_segments )
         (* Projections of a bound variable *) ->
@@ -1097,7 +1104,9 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
               Illegal_clf_term_projection
         | `Totally_bound bound_segments (* A constant *) -> (
             match List1.last bound_segments with
-            | _identifier, Lf_term_constant { operator; _ } ->
+            | ( _identifier
+              , (Lf_term_constant, { operator = Option.Some operator; _ }) )
+              ->
                 f
                   (Synext.CLF.Term.Pattern.Constant
                      { identifier; location; operator; quoted })
@@ -1475,7 +1484,7 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
             (* Possibly a context variable as context head *)
           :: bindings -> (
             lookup_toplevel identifier >>= function
-            | Result.Ok (Context_variable _) ->
+            | Result.Ok (Context_variable, _) ->
                 let head' =
                   Synext.CLF.Context.Pattern.Head.Context_variable
                     { identifier; location = Identifier.location identifier }

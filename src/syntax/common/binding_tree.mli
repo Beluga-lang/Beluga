@@ -27,6 +27,12 @@ val add : Qualified_identifier.t -> 'a -> ?subtree:'a t -> 'a t -> 'a t
     bindings from [t2]. *)
 val add_all : 'a t -> 'a t -> 'a t
 
+(** [remove identifier tree] is the tree derived from [tree] where the
+    binding for [identifier] is removed.
+
+    @raise Unbound_identifier *)
+val remove : Identifier.t -> 'a t -> 'a t
+
 (** [lookup_toplevel identifier tree] is [(value, subtree)] where [value] and
     [subtree] are as added with {!add}.
 

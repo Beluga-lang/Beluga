@@ -195,8 +195,9 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
 
     let guard_identifier_operator identifier expression =
       lookup identifier >>= function
-      | Result.Ok (Lf_type_constant { operator; _ })
-      | Result.Ok (Lf_term_constant { operator; _ }) ->
+      | Result.Ok (Lf_type_constant, { operator = Option.Some operator; _ })
+      | Result.Ok (Lf_term_constant, { operator = Option.Some operator; _ })
+        ->
           if Operator.is_nullary operator then return Option.none
           else
             return
@@ -314,7 +315,8 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
           Qualified_identifier.make_simple identifier
         in
         lookup_toplevel identifier >>= function
-        | Result.Ok (Lf_type_constant { operator; _ }) ->
+        | Result.Ok (Lf_type_constant, { operator = Option.Some operator; _ })
+          ->
             return
               (Synext.LF.Typ.Constant
                  { location
@@ -338,7 +340,8 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
         (* As an LF type, identifiers of the form [(<identifier> `::')+
            <identifier>] are necessarily type-level constants. *)
         lookup identifier >>= function
-        | Result.Ok (Lf_type_constant { operator; _ }) ->
+        | Result.Ok (Lf_type_constant, { operator = Option.Some operator; _ })
+          ->
             return
               (Synext.LF.Typ.Constant
                  { location; identifier; operator; quoted })
@@ -409,7 +412,8 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
         in
         (* Lookup the identifier in the current state *)
         lookup_toplevel identifier >>= function
-        | Result.Ok (Lf_term_constant { operator; _ }) ->
+        | Result.Ok (Lf_term_constant, { operator = Option.Some operator; _ })
+          ->
             (* [identifier] appears as an LF term-level constant *)
             return
               (Synext.LF.Term.Constant
@@ -418,7 +422,7 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
                  ; operator
                  ; quoted
                  })
-        | Result.Ok (Lf_term_variable _) ->
+        | Result.Ok (Lf_term_variable, _) ->
             (* [identifier] appears as an LF bound variable *)
             return (Synext.LF.Term.Variable { location; identifier })
         | Result.Ok entry ->
@@ -441,7 +445,8 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
            <identifier>] are necessarily term-level constants. *)
         (* Lookup the identifier in the current state *)
         lookup identifier >>= function
-        | Result.Ok (Lf_term_constant { operator; _ }) ->
+        | Result.Ok (Lf_term_constant, { operator = Option.Some operator; _ })
+          ->
             (* [identifier] appears as an LF term-level constant *)
             return
               (Synext.LF.Term.Constant

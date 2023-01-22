@@ -325,10 +325,18 @@ module Make
 
     let guard_identifier_operator identifier expression =
       lookup identifier >>= function
-      | Result.Ok (Computation_inductive_type_constant { operator; _ })
-      | Result.Ok (Computation_stratified_type_constant { operator; _ })
-      | Result.Ok (Computation_abbreviation_type_constant { operator; _ })
-      | Result.Ok (Computation_coinductive_type_constant { operator; _ }) ->
+      | Result.Ok
+          ( Computation_inductive_type_constant
+          , { operator = Option.Some operator; _ } )
+      | Result.Ok
+          ( Computation_stratified_type_constant
+          , { operator = Option.Some operator; _ } )
+      | Result.Ok
+          ( Computation_abbreviation_type_constant
+          , { operator = Option.Some operator; _ } )
+      | Result.Ok
+          ( Computation_coinductive_type_constant
+          , { operator = Option.Some operator; _ } ) ->
           if Operator.is_nullary operator then return Option.none
           else
             return
@@ -439,7 +447,9 @@ module Make
           Qualified_identifier.make_simple identifier
         in
         lookup_toplevel identifier >>= function
-        | Result.Ok (Computation_inductive_type_constant { operator; _ }) ->
+        | Result.Ok
+            ( Computation_inductive_type_constant
+            , { operator = Option.Some operator; _ } ) ->
             return
               (Synext.Comp.Typ.Constant
                  { location
@@ -448,7 +458,9 @@ module Make
                  ; quoted
                  ; variant = `Inductive
                  })
-        | Result.Ok (Computation_stratified_type_constant { operator; _ }) ->
+        | Result.Ok
+            ( Computation_stratified_type_constant
+            , { operator = Option.Some operator; _ } ) ->
             return
               (Synext.Comp.Typ.Constant
                  { location
@@ -457,8 +469,9 @@ module Make
                  ; quoted
                  ; variant = `Stratified
                  })
-        | Result.Ok (Computation_abbreviation_type_constant { operator; _ })
-          ->
+        | Result.Ok
+            ( Computation_abbreviation_type_constant
+            , { operator = Option.Some operator; _ } ) ->
             return
               (Synext.Comp.Typ.Constant
                  { location
@@ -467,8 +480,9 @@ module Make
                  ; quoted
                  ; variant = `Abbreviation
                  })
-        | Result.Ok (Computation_coinductive_type_constant { operator; _ })
-          ->
+        | Result.Ok
+            ( Computation_coinductive_type_constant
+            , { operator = Option.Some operator; _ } ) ->
             return
               (Synext.Comp.Typ.Constant
                  { location
@@ -495,7 +509,9 @@ module Make
            [(<identifier> `::')+ <identifier>] are necessarily type
            constants. *)
         lookup identifier >>= function
-        | Result.Ok (Computation_inductive_type_constant { operator; _ }) ->
+        | Result.Ok
+            ( Computation_inductive_type_constant
+            , { operator = Option.Some operator; _ } ) ->
             return
               (Synext.Comp.Typ.Constant
                  { location
@@ -504,7 +520,9 @@ module Make
                  ; quoted
                  ; variant = `Inductive
                  })
-        | Result.Ok (Computation_stratified_type_constant { operator; _ }) ->
+        | Result.Ok
+            ( Computation_stratified_type_constant
+            , { operator = Option.Some operator; _ } ) ->
             return
               (Synext.Comp.Typ.Constant
                  { location
@@ -513,8 +531,9 @@ module Make
                  ; quoted
                  ; variant = `Stratified
                  })
-        | Result.Ok (Computation_abbreviation_type_constant { operator; _ })
-          ->
+        | Result.Ok
+            ( Computation_abbreviation_type_constant
+            , { operator = Option.Some operator; _ } ) ->
             return
               (Synext.Comp.Typ.Constant
                  { location
@@ -523,8 +542,9 @@ module Make
                  ; quoted
                  ; variant = `Abbreviation
                  })
-        | Result.Ok (Computation_coinductive_type_constant { operator; _ })
-          ->
+        | Result.Ok
+            ( Computation_coinductive_type_constant
+            , { operator = Option.Some operator; _ } ) ->
             return
               (Synext.Comp.Typ.Constant
                  { location
@@ -900,7 +920,7 @@ module Make
     | Synprs.Comp.Pattern_object.Raw_observation
         { location; constant; arguments } -> (
         lookup constant >>= function
-        | Result.Ok (Computation_term_destructor _) ->
+        | Result.Ok (Computation_term_destructor, _) ->
             with_disambiguated_comp_patterns_list arguments inner_bindings
               pattern_variables
               (fun arguments' inner_bindings' pattern_variables' ->

@@ -470,9 +470,7 @@ struct
       [module_identifier] currently in scope. *)
   let add_module_abbreviation module_identifier abbreviation =
     lookup module_identifier >>= function
-    | Result.Ok (Module { state; _ }) ->
-        let location = Qualified_identifier.location module_identifier in
-        add_module ~location state abbreviation
+    | Result.Ok (Module, _) -> Obj.magic ()
     | Result.Ok entry ->
         Error.raise_at1
           (Qualified_identifier.location module_identifier)

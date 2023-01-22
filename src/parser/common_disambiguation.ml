@@ -159,8 +159,6 @@ module type BINDINGS_STATE = sig
 
   val actual_binding_exn : Qualified_identifier.t -> entry -> exn
 
-  val pop_binding : Identifier.t -> Unit.t t
-
   val open_namespace : Qualified_identifier.t -> (Unit.t, exn) Result.t t
 
   val modify_operator :
@@ -178,6 +176,24 @@ module type BINDINGS_STATE = sig
        | `Totally_unbound of Identifier.t List1.t
        ]
        t
+
+  val with_lf_term_variable :
+    ?location:Location.t -> Identifier.t -> 'a t -> 'a t
+
+  val with_meta_variable :
+    ?location:Location.t -> Identifier.t -> 'a t -> 'a t
+
+  val with_parameter_variable :
+    ?location:Location.t -> Identifier.t -> 'a t -> 'a t
+
+  val with_context_variable :
+    ?location:Location.t -> Identifier.t -> 'a t -> 'a t
+
+  val with_substitution_variable :
+    ?location:Location.t -> Identifier.t -> 'a t -> 'a t
+
+  val with_comp_variable :
+    ?location:Location.t -> Identifier.t -> 'a t -> 'a t
 end
 
 module type SIGNATURE_STATE = sig
@@ -196,23 +212,6 @@ module type DISAMBIGUATION_STATE = sig
   include BINDINGS_STATE with type state := state
 
   include SIGNATURE_STATE with type state := state
-
-  (** [with_lf_term_variable identifier a] runs [a] in a state where there is
-      a bound LF term variable [identifier]. After having run [a], the added
-      variable [identifier] is removed. *)
-  val with_lf_term_variable : Identifier.t -> 'a t -> 'a t
-
-  val with_lf_term_variable_opt : Identifier.t Option.t -> 'a t -> 'a t
-
-  val with_meta_variable : Identifier.t -> 'a t -> 'a t
-
-  val with_parameter_variable : Identifier.t -> 'a t -> 'a t
-
-  val with_context_variable : Identifier.t -> 'a t -> 'a t
-
-  val with_substitution_variable : Identifier.t -> 'a t -> 'a t
-
-  val with_comp_variable : Identifier.t -> 'a t -> 'a t
 end
 
 (** A minimal disambiguation state backed by nested HAMT data structures with
@@ -674,39 +673,34 @@ module Disambiguation_state : DISAMBIGUATION_STATE = struct
         return (Result.ok ())
     | Result.Error cause -> return (Result.error cause)
 
-  let with_lf_term_variable identifier =
+  let with_lf_term_variable ?location identifier =
     scoped
-      ~set:(add_lf_term_variable identifier)
+      ~set:(add_lf_term_variable ?location identifier)
       ~unset:(pop_binding identifier)
 
-  let with_lf_term_variable_opt identifier_opt =
-    match identifier_opt with
-    | Option.None -> Fun.id
-    | Option.Some identifier -> with_lf_term_variable identifier
-
-  let with_meta_variable identifier =
+  let with_meta_variable ?location identifier =
     scoped
-      ~set:(add_meta_variable identifier)
+      ~set:(add_meta_variable ?location identifier)
       ~unset:(pop_binding identifier)
 
-  let with_parameter_variable identifier =
+  let with_parameter_variable ?location identifier =
     scoped
-      ~set:(add_parameter_variable identifier)
+      ~set:(add_parameter_variable ?location identifier)
       ~unset:(pop_binding identifier)
 
-  let with_context_variable identifier =
+  let with_context_variable ?location identifier =
     scoped
-      ~set:(add_context_variable identifier)
+      ~set:(add_context_variable ?location identifier)
       ~unset:(pop_binding identifier)
 
-  let with_substitution_variable identifier =
+  let with_substitution_variable ?location identifier =
     scoped
-      ~set:(add_substitution_variable identifier)
+      ~set:(add_substitution_variable ?location identifier)
       ~unset:(pop_binding identifier)
 
-  let with_comp_variable identifier =
+  let with_comp_variable ?location identifier =
     scoped
-      ~set:(add_computation_variable identifier)
+      ~set:(add_computation_variable ?location identifier)
       ~unset:(pop_binding identifier)
 end
 

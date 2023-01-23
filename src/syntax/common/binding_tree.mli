@@ -59,3 +59,9 @@ val open_namespace : Qualified_identifier.t -> 'a t -> 'a t
 (** [is_identifier_bound identifier tree] is [true] if and only if there is a
     binding for [identifier] in [tree]. *)
 val is_identifier_bound : Identifier.t -> 'a t -> bool
+
+(** [replace identifier f tree] is the tree derived from [tree] where the
+    value bound at [identifier] is [f entry subtree], with [(entry, subtree)]
+    being the result of [lookup identifier tree]. *)
+val replace :
+  Qualified_identifier.t -> ('a -> 'a t -> 'a * 'a t) -> 'a t -> 'a t

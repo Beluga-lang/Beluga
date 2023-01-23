@@ -80,11 +80,11 @@ module type META_DISAMBIGUATION = sig
 end
 
 module Make
-    (Disambiguation_state : DISAMBIGUATION_STATE)
+    (Bindings_state : BINDINGS_STATE)
     (Clf_disambiguation : Clf_disambiguation.CLF_DISAMBIGUATION
-                            with type state = Disambiguation_state.state) :
-  META_DISAMBIGUATION with type state = Disambiguation_state.state = struct
-  include Disambiguation_state
+                            with type state = Bindings_state.state) :
+  META_DISAMBIGUATION with type state = Bindings_state.state = struct
+  include Bindings_state
   include Clf_disambiguation
 
   (** {1 Disambiguation} *)

@@ -453,24 +453,13 @@ struct
             (Qualified_identifier.location operator_identifier)
             (Invalid_postfix_pragma { actual_arity = arity }))
 
-  (** [open_module module_identifier state] is the disambiguation state
-      derived from [state] with the addition of the declarations in the
-      module having identifier [module_identifier] currently in scope. *)
-  let open_module module_identifier =
-    open_namespace module_identifier >>= function
-    | Result.Ok () -> return ()
-    | Result.Error cause ->
-        Error.raise_at1
-          (Qualified_identifier.location module_identifier)
-          cause
-
   (** [add_module_abbreviation module_identifier abbreviation state] is the
       disambiguation state derived from [state] with the addition of
       [abbreviation] as a synonym for the module with identifier
       [module_identifier] currently in scope. *)
   let add_module_abbreviation module_identifier abbreviation =
     lookup module_identifier >>= function
-    | Result.Ok (Module, _) -> Obj.magic ()
+    | Result.Ok (Module, _) -> add_synonym module_identifier abbreviation
     | Result.Ok entry ->
         Error.raise_at1
           (Qualified_identifier.location module_identifier)

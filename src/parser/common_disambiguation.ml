@@ -12,6 +12,8 @@
 open Support
 open Beluga_syntax
 
+exception Expected_module of Qualified_identifier.t
+
 exception Expected_namespace of Qualified_identifier.t
 
 exception Expected_operator of Qualified_identifier.t
@@ -147,11 +149,19 @@ module type BINDINGS_STATE = sig
     -> Identifier.t
     -> Unit.t t
 
+  val add_synonym :
+       ?location:Location.t
+    -> Qualified_identifier.t
+    -> Identifier.t
+    -> Unit.t t
+
   val add_program_constant : ?location:Location.t -> Identifier.t -> Unit.t t
 
   val actual_binding_exn : Qualified_identifier.t -> entry * data -> exn
 
-  val open_namespace : Qualified_identifier.t -> (Unit.t, exn) Result.t t
+  val open_namespace : Qualified_identifier.t -> Unit.t t
+
+  val open_module : Qualified_identifier.t -> Unit.t t
 
   val modify_operator :
     Qualified_identifier.t -> (Operator.t -> Operator.t) -> Unit.t t
@@ -236,8 +246,7 @@ module Disambiguation_state : DISAMBIGUATION_STATE = struct
     | Program_constant
 
   and state =
-    { bindings : (entry * data) List1.t Binding_tree.t
-          (** Symbol table with checkpoints. *)
+    { bindings : (entry * data) List1.t Binding_tree.t  (** Symbol table. *)
     ; default_associativity : Associativity.t
           (** Associativity to use if a pragma for an infix operator does not
               specify an associativity. *)
@@ -417,28 +426,32 @@ module Disambiguation_state : DISAMBIGUATION_STATE = struct
 
   let lookup_toplevel query =
     let* bindings = get_bindings in
-    try
-      let binding_stack, _subtree =
-        Binding_tree.lookup_toplevel query bindings
-      in
-      return (Result.ok (List1.head binding_stack))
-    with
-    | Binding_tree.Unbound_identifier _identifier ->
-        return (Result.error (Unbound_identifier query))
+    try return (Binding_tree.lookup_toplevel query bindings) with
+    | Binding_tree.Unbound_identifier identifier ->
+        Error.raise (Unbound_identifier identifier)
+
+  let lookup_toplevel query =
+    try_catch
+      (let* binding_stack, _subtree = lookup_toplevel query in
+       return (Result.ok (List1.head binding_stack)))
+      ~on_exn:(fun cause -> return (Result.error cause))
+
+  let lookup' query =
+    let* bindings = get_bindings in
+    try return (Binding_tree.lookup query bindings) with
+    | Binding_tree.Unbound_identifier identifier ->
+        Error.raise (Unbound_identifier identifier)
+    | Binding_tree.Unbound_namespace identifier ->
+        Error.raise (Unbound_namespace identifier)
+    | Binding_tree.Unbound_qualified_identifier identifier ->
+        Error.raise (Unbound_qualified_identifier identifier)
+    | cause -> Error.raise cause
 
   let lookup query =
-    let* bindings = get_bindings in
-    try
-      let binding_stack, _subtree = Binding_tree.lookup query bindings in
-      return (Result.ok (List1.head binding_stack))
-    with
-    | Binding_tree.Unbound_identifier identifier ->
-        return (Result.error (Unbound_identifier identifier))
-    | Binding_tree.Unbound_namespace identifier ->
-        return (Result.error (Unbound_namespace identifier))
-    | Binding_tree.Unbound_qualified_identifier identifier ->
-        return (Result.error (Unbound_qualified_identifier identifier))
-    | cause -> return (Result.error cause)
+    try_catch
+      (let* binding_stack, _subtree = lookup' query in
+       return (Result.ok (List1.head binding_stack)))
+      ~on_exn:(fun cause -> return (Result.error cause))
 
   let rec partial_lookup_nested namespaces identifier tree =
     match namespaces with
@@ -473,104 +486,84 @@ module Disambiguation_state : DISAMBIGUATION_STATE = struct
     let* bindings = get_bindings in
     return (partial_lookup_nested namespaces identifier bindings)
 
-  let modify_operator identifier _f =
-    lookup identifier >>= function
-    | Result.Ok (Lf_type_constant, _entry) -> Obj.magic ()
-    | Result.Ok (Lf_term_constant, _entry) -> Obj.magic ()
-    | Result.Ok (Computation_inductive_type_constant, _entry) -> Obj.magic ()
-    | Result.Ok (Computation_stratified_type_constant, _entry) ->
-        Obj.magic ()
-    | Result.Ok (Computation_abbreviation_type_constant, _entry) ->
-        Obj.magic ()
-    | Result.Ok (Computation_coinductive_type_constant, _entry) ->
-        Obj.magic ()
-    | Result.Ok (Computation_term_constructor, _entry) -> Obj.magic ()
-    | Result.Ok (Lf_term_variable, _)
-    | Result.Ok (Meta_variable, _)
-    | Result.Ok (Parameter_variable, _)
-    | Result.Ok (Substitution_variable, _)
-    | Result.Ok (Context_variable, _)
-    | Result.Ok (Schema_constant, _)
-    | Result.Ok (Computation_variable, _)
-    | Result.Ok (Computation_term_destructor, _)
-    | Result.Ok (Query, _)
-    | Result.Ok (MQuery, _)
-    | Result.Ok (Module, _)
-    | Result.Ok (Program_constant, _) ->
-        Error.raise (Expected_operator identifier)
-    | Result.Error cause -> Error.raise cause
+  let replace identifier f =
+    modify_bindings (fun bindings ->
+        try Binding_tree.replace identifier f bindings with
+        | Binding_tree.Unbound_identifier identifier ->
+            Error.raise (Unbound_identifier identifier)
+        | Binding_tree.Unbound_namespace identifier ->
+            Error.raise (Unbound_namespace identifier)
+        | Binding_tree.Unbound_qualified_identifier identifier ->
+            Error.raise (Unbound_qualified_identifier identifier)
+        | cause -> Error.raise cause)
+
+  let modify_operator identifier f =
+    replace identifier (fun binding_stack subtree ->
+        let binding_stack' =
+          List1.replace_first
+            (fun (entry, data) ->
+              match data.operator with
+              | Option.None ->
+                  Error.raise_at1
+                    (Qualified_identifier.location identifier)
+                    (Expected_operator identifier)
+              | Option.Some operator ->
+                  let operator' = Option.some (f operator) in
+                  (entry, { data with operator = operator' }))
+            binding_stack
+        in
+        (binding_stack', subtree))
+
+  let add_synonym ?location qualified_identifier synonym =
+    let* binding_stack, subtree = lookup' qualified_identifier in
+    let entry, data = List1.head binding_stack in
+    let location' = Option.value ~default:data.location location in
+    let data' = { data with location = location' } in
+    add_namespace_binding synonym (entry, data') subtree
 
   let actual_binding_exn identifier (sort, data) =
+    let exn =
+      match sort with
+      | Lf_type_constant -> Bound_lf_type_constant identifier
+      | Lf_term_constant -> Bound_lf_term_constant identifier
+      | Lf_term_variable -> Bound_lf_term_variable identifier
+      | Meta_variable -> Bound_meta_variable identifier
+      | Parameter_variable -> Bound_parameter_variable identifier
+      | Substitution_variable -> Bound_substitution_variable identifier
+      | Context_variable -> Bound_context_variable identifier
+      | Schema_constant -> Bound_schema_constant identifier
+      | Computation_variable -> Bound_computation_variable identifier
+      | Computation_inductive_type_constant ->
+          Bound_computation_inductive_type_constant identifier
+      | Computation_stratified_type_constant ->
+          Bound_computation_stratified_type_constant identifier
+      | Computation_coinductive_type_constant ->
+          Bound_computation_coinductive_type_constant identifier
+      | Computation_abbreviation_type_constant ->
+          Bound_computation_abbreviation_type_constant identifier
+      | Computation_term_constructor ->
+          Bound_computation_term_constructor identifier
+      | Computation_term_destructor ->
+          Bound_computation_term_destructor identifier
+      | Query -> Bound_query identifier
+      | MQuery -> Bound_mquery identifier
+      | Module -> Bound_module identifier
+      | Program_constant -> Bound_program_constant identifier
+    in
     let { location; _ } = data in
-    match sort with
-    | Lf_type_constant ->
-        Error.located_exception1 location (Bound_lf_type_constant identifier)
-    | Lf_term_constant ->
-        Error.located_exception1 location (Bound_lf_term_constant identifier)
-    | Lf_term_variable ->
-        Error.located_exception1 location (Bound_lf_term_variable identifier)
-    | Meta_variable ->
-        Error.located_exception1 location (Bound_meta_variable identifier)
-    | Parameter_variable ->
-        Error.located_exception1 location
-          (Bound_parameter_variable identifier)
-    | Substitution_variable ->
-        Error.located_exception1 location
-          (Bound_substitution_variable identifier)
-    | Context_variable ->
-        Error.located_exception1 location (Bound_context_variable identifier)
-    | Schema_constant ->
-        Error.located_exception1 location (Bound_schema_constant identifier)
-    | Computation_variable ->
-        Error.located_exception1 location
-          (Bound_computation_variable identifier)
-    | Computation_inductive_type_constant ->
-        Error.located_exception1 location
-          (Bound_computation_inductive_type_constant identifier)
-    | Computation_stratified_type_constant ->
-        Error.located_exception1 location
-          (Bound_computation_stratified_type_constant identifier)
-    | Computation_coinductive_type_constant ->
-        Error.located_exception1 location
-          (Bound_computation_coinductive_type_constant identifier)
-    | Computation_abbreviation_type_constant ->
-        Error.located_exception1 location
-          (Bound_computation_abbreviation_type_constant identifier)
-    | Computation_term_constructor ->
-        Error.located_exception1 location
-          (Bound_computation_term_constructor identifier)
-    | Computation_term_destructor ->
-        Error.located_exception1 location
-          (Bound_computation_term_destructor identifier)
-    | Query -> Error.located_exception1 location (Bound_query identifier)
-    | MQuery -> Error.located_exception1 location (Bound_mquery identifier)
-    | Module -> Error.located_exception1 location (Bound_module identifier)
-    | Program_constant ->
-        Error.located_exception1 location (Bound_program_constant identifier)
+    Error.located_exception1 location exn
 
   let open_namespace identifier =
+    modify_bindings (Binding_tree.open_namespace identifier)
+
+  let open_module identifier =
     lookup identifier >>= function
-    | Result.Ok (Lf_type_constant, _)
-    | Result.Ok (Lf_term_constant, _)
-    | Result.Ok (Lf_term_variable, _)
-    | Result.Ok (Meta_variable, _)
-    | Result.Ok (Parameter_variable, _)
-    | Result.Ok (Substitution_variable, _)
-    | Result.Ok (Context_variable, _)
-    | Result.Ok (Schema_constant, _)
-    | Result.Ok (Computation_variable, _)
-    | Result.Ok (Computation_inductive_type_constant, _)
-    | Result.Ok (Computation_stratified_type_constant, _)
-    | Result.Ok (Computation_coinductive_type_constant, _)
-    | Result.Ok (Computation_abbreviation_type_constant, _)
-    | Result.Ok (Computation_term_constructor, _)
-    | Result.Ok (Computation_term_destructor, _)
-    | Result.Ok (Query, _)
-    | Result.Ok (MQuery, _)
-    | Result.Ok (Program_constant, _) ->
-        return (Result.error (Expected_namespace identifier))
-    | Result.Ok (Module, _) -> Obj.magic ()
-    | Result.Error cause -> return (Result.error cause)
+    | Result.Ok (Module, _) -> open_namespace identifier
+    | Result.Ok _ ->
+        Error.raise_at1
+          (Qualified_identifier.location identifier)
+          (Expected_module identifier)
+    | Result.Error cause -> Error.raise cause
 
   let with_lf_term_variable ?location identifier =
     scoped
@@ -616,8 +609,11 @@ let pp_exception ppf = function
       Format.fprintf ppf "Unbound namespace %a." Qualified_identifier.pp
         qualified_identifier
   | Expected_namespace qualified_identifier ->
-      Format.fprintf ppf "Expected a namespace %a." Qualified_identifier.pp
-        qualified_identifier
+      Format.fprintf ppf "Expected %a to be a namespace."
+        Qualified_identifier.pp qualified_identifier
+  | Expected_module qualified_identifier ->
+      Format.fprintf ppf "Expected %a to be a module."
+        Qualified_identifier.pp qualified_identifier
   | Bound_lf_type_constant qualified_identifier ->
       Format.fprintf ppf "%a is a bound LF type constant."
         Qualified_identifier.pp qualified_identifier

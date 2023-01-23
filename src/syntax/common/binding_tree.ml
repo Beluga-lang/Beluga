@@ -102,6 +102,45 @@ let is_identifier_bound identifier tree =
   | Option.None -> false
   | Option.Some _node -> true
 
+let rec replace_nested namespaces identifier f tree =
+  match namespaces with
+  | [] -> (
+      match Identifier.Hamt.find_opt identifier tree with
+      | Option.None -> Error.raise (Unbound_identifier identifier)
+      | Option.Some { entry; subtree } ->
+          let entry', subtree' = f entry subtree in
+          Identifier.Hamt.add identifier
+            { entry = entry'; subtree = subtree' }
+            tree)
+  | n :: ns -> (
+      match Identifier.Hamt.find_opt n tree with
+      | Option.None ->
+          Error.raise
+            (Unbound_namespace (Qualified_identifier.make_simple n))
+      | Option.Some ({ subtree; _ } as node) -> (
+          try
+            let subtree' = replace_nested ns identifier f subtree in
+            Identifier.Hamt.add n { node with subtree = subtree' } tree
+          with
+          | Unbound_identifier identifier ->
+              Error.raise
+                (Unbound_qualified_identifier
+                   (Qualified_identifier.prepend_module n
+                      (Qualified_identifier.make_simple identifier)))
+          | Unbound_qualified_identifier identifier ->
+              Error.raise
+                (Unbound_qualified_identifier
+                   (Qualified_identifier.prepend_module n identifier))
+          | Unbound_namespace ns ->
+              Error.raise
+                (Unbound_namespace (Qualified_identifier.prepend_module n ns))
+          ))
+
+let replace qualified_identifier f tree =
+  with_namespaces_and_identifier qualified_identifier
+    (fun namespaces identifier ->
+      replace_nested namespaces identifier f tree)
+
 let pp_exception ppf = function
   | Unbound_identifier identifier ->
       Format.fprintf ppf "Identifier %a is unbound." Identifier.pp identifier

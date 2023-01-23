@@ -5,6 +5,7 @@
     has higher precedence than the application of user-defined operators. *)
 
 open Support
+open Beluga_syntax
 
 module type APPLICATION_DISAMBIGUATION_STATE = sig
   include State.STATE
@@ -35,29 +36,11 @@ module type OPERAND = sig
         }
 end
 
-module Make
-    (Associativity : Shunting_yard.ASSOCIATIVITY)
-    (Fixity : Shunting_yard.FIXITY)
-    (Operand : OPERAND) (Operator : sig
-      include
-        Shunting_yard.OPERATOR
-          with type associativity = Associativity.t
-           and type fixity = Fixity.t
-           and type operand = Operand.t
-
-      val applicand : t -> Operand.expression
-    end)
-    (Disambiguation_state : APPLICATION_DISAMBIGUATION_STATE
-                              with type operator = Operator.t
-                               and type expression = Operand.expression) : sig
+module type APPLICATION_DISAMBIGUATOR = sig
   (** @closed *)
-  include
-    APPLICATION_DISAMBIGUATION_STATE
-      with type state = Disambiguation_state.state
-       and type operator = Operator.t
-       and type expression = Operand.expression
+  include APPLICATION_DISAMBIGUATION_STATE
 
-  type operand = Operand.t
+  type operand
 
   (** [Misplaced_operator { operator; operands }] is raised from
       [shunting_yard primitives] if [operator] appears in an illegal position
@@ -118,11 +101,71 @@ module Make
       ; operands : operand list
       }
 
+  (** [disambiguate_application expressions] is
+      [Result.Ok (applicand, arguments)] where [applicand] and [arguments]
+      are the applicand and arguments to use for the application of
+      [expressions]. The user-defined operators, and the expression
+      juxtapositions therein are correctly disambiguated.
+
+      @raise Misplaced_operator
+      @raise Ambiguous_operator_placement
+      @raise Consecutive_non_associative_operators
+      @raise Arity_mismatch *)
   val disambiguate_application :
     expression List2.t -> (expression * operand List1.t, exn) result t
-end = struct
+end
+
+module Make
+    (Associativity : Shunting_yard.ASSOCIATIVITY)
+    (Fixity : Shunting_yard.FIXITY)
+    (Operand : OPERAND) (Operator : sig
+      include
+        Shunting_yard.OPERATOR
+          with type associativity = Associativity.t
+           and type fixity = Fixity.t
+           and type operand = Operand.t
+
+      val applicand : t -> Operand.expression
+    end)
+    (Disambiguation_state : APPLICATION_DISAMBIGUATION_STATE
+                              with type operator = Operator.t
+                               and type expression = Operand.expression) :
+  APPLICATION_DISAMBIGUATOR
+    with type state = Disambiguation_state.state
+     and type operator = Operator.t
+     and type expression = Operand.expression
+     and type operand = Operand.t = struct
   include Disambiguation_state
-  include Shunting_yard.Make (Associativity) (Fixity) (Operand) (Operator)
+
+  type operand = Operand.t
+
+  module Shunting_yard =
+    Shunting_yard.Make (Associativity) (Fixity) (Operand) (Operator)
+
+  exception
+    Misplaced_operator of
+      { operator : operator
+      ; operands : operand list
+      }
+
+  exception
+    Ambiguous_operator_placement of
+      { left_operator : operator
+      ; right_operator : operator
+      }
+
+  exception
+    Consecutive_non_associative_operators of
+      { left_operator : operator
+      ; right_operator : operator
+      }
+
+  exception
+    Arity_mismatch of
+      { operator : operator
+      ; operator_arity : int
+      ; operands : operand list
+      }
 
   let make_atom expression = Operand.Atom expression
 
@@ -148,29 +191,29 @@ end = struct
         | [], rest ->
             let expression' = make_atom expression in
             let rest' = reduce_juxtapositions rest in
-            operand expression' :: rest'
+            Shunting_yard.operand expression' :: rest'
         | x :: xs, rest ->
             let arguments' = List1.map make_atom (List1.from x xs) in
             let expression' = make_application expression arguments' in
             let rest' = reduce_juxtapositions rest in
-            operand expression' :: rest')
+            Shunting_yard.operand expression' :: rest')
     | `Operator op :: rest -> (
         match Operator.fixity op with
         | Fixity.Prefix -> (
             match take_while_operand rest with
             | [], rest' ->
                 let rest'' = reduce_juxtapositions rest' in
-                operator op :: rest''
+                Shunting_yard.operator op :: rest''
             | x :: xs, rest' ->
                 let expression = Operator.applicand op in
                 let arguments' = List1.map make_atom (List1.from x xs) in
                 let expression' = make_application expression arguments' in
                 let rest'' = reduce_juxtapositions rest' in
-                operand expression' :: rest'')
+                Shunting_yard.operand expression' :: rest'')
         | Fixity.Infix
         | Fixity.Postfix ->
             let rest' = reduce_juxtapositions rest in
-            operator op :: rest')
+            Shunting_yard.operator op :: rest')
     | [] -> []
 
   let disambiguate_application expressions =
@@ -179,12 +222,33 @@ end = struct
     let translated_expressions =
       reduce_juxtapositions identified_expressions
     in
-    match shunting_yard translated_expressions with
+    match Shunting_yard.shunting_yard translated_expressions with
     | Operand.Atom _
     (* [expressions] is a list of expressions. This was necessarily
        elaborated to an [Application]. *) ->
         assert false
     | Operand.Application { applicand; arguments } ->
         return (Result.ok (applicand, arguments))
-    | exception cause -> return (Result.error cause)
+    | exception Shunting_yard.Misplaced_operator { operator; operands } ->
+        return (Result.error (Misplaced_operator { operator; operands }))
+    | exception
+        Shunting_yard.Ambiguous_operator_placement
+          { left_operator; right_operator } ->
+        return
+          (Result.error
+             (Ambiguous_operator_placement { left_operator; right_operator }))
+    | exception
+        Shunting_yard.Consecutive_non_associative_operators
+          { left_operator; right_operator } ->
+        return
+          (Result.error
+             (Consecutive_non_associative_operators
+                { left_operator; right_operator }))
+    | exception
+        Shunting_yard.Arity_mismatch { operator; operator_arity; operands }
+      ->
+        return
+          (Result.error
+             (Arity_mismatch { operator; operator_arity; operands }))
+    | exception cause -> Error.raise cause
 end

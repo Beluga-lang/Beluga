@@ -122,6 +122,141 @@ exception Illegal_clf_context_pattern_identity
 
 (** {1 Disambiguation} *)
 
+(** Contextual LF operands for application rewriting with
+    {!module:Application_disambiguation.Make}. *)
+module Clf_operand = struct
+  type expression = Synprs.clf_object
+
+  type t =
+    | Atom of expression
+    | Application of
+        { applicand : expression
+        ; arguments : t List1.t
+        }
+
+  let rec location operand =
+    match operand with
+    | Atom object_ -> Synprs.location_of_clf_object object_
+    | Application { applicand; arguments } ->
+        let applicand_location = Synprs.location_of_clf_object applicand in
+        let arguments_location =
+          Location.join_all1_contramap location arguments
+        in
+        Location.join applicand_location arguments_location
+end
+
+(** Contextual LF operators for application rewriting with
+    {!module:Application_disambiguation.Make}. *)
+module Clf_operator = struct
+  type associativity = Associativity.t
+
+  type fixity = Fixity.t
+
+  type operand = Clf_operand.t
+
+  type t =
+    { identifier : Qualified_identifier.t
+    ; operator : Operator.t
+    ; applicand : Synprs.clf_object
+    }
+
+  let[@inline] make ~identifier ~operator ~applicand =
+    { identifier; operator; applicand }
+
+  let[@inline] operator o = o.operator
+
+  let[@inline] applicand o = o.applicand
+
+  let[@inline] identifier o = o.identifier
+
+  let arity = Fun.(operator >> Operator.arity)
+
+  let precedence = Fun.(operator >> Operator.precedence)
+
+  let fixity = Fun.(operator >> Operator.fixity)
+
+  let associativity = Fun.(operator >> Operator.associativity)
+
+  let location = Fun.(applicand >> Synprs.location_of_clf_object)
+
+  (** [write operator arguments] constructs the application of [operator]
+      with [arguments] for the shunting yard algorithm. Since nullary
+      operators are treated as arguments, it is always the case that
+      [List.length arguments > 0]. *)
+  let write operator arguments =
+    let applicand = applicand operator in
+    let arguments =
+      List1.unsafe_of_list arguments (* [List.length arguments > 0] *)
+    in
+    Clf_operand.Application { applicand; arguments }
+
+  (** Instance of equality by operator identifier.
+
+      Since applications do not introduce bound variables, occurrences of
+      operators are equal by their identifier. That is, in an application
+      like [a o1 a o2 a], the operators [o1] and [o2] are equal if and only
+      if they are textually equal. *)
+  include (
+    (val Eq.contramap (module Qualified_identifier) identifier) :
+      Eq.EQ with type t := t)
+end
+
+(** Disambiguation state for contextual LF application rewriting with
+    {!module:Application_disambiguation.Make}. *)
+module Make_clf_application_disambiguation_state
+    (Bindings_state : BINDINGS_STATE) :
+  Application_disambiguation.APPLICATION_DISAMBIGUATION_STATE
+    with type state = Bindings_state.state
+     and type operator = Clf_operator.t
+     and type expression = Synprs.clf_object = struct
+  include Bindings_state
+
+  type operator = Clf_operator.t
+
+  type expression = Synprs.clf_object
+
+  let guard_identifier_operator identifier expression =
+    lookup identifier >>= function
+    | Result.Ok (Lf_type_constant, { operator = Option.Some operator; _ })
+    | Result.Ok (Lf_term_constant, { operator = Option.Some operator; _ }) ->
+        if Operator.is_nullary operator then return Option.none
+        else
+          return
+            (Option.some
+               (Clf_operator.make ~identifier ~operator ~applicand:expression))
+    | Result.Ok _
+    | Result.Error (Unbound_identifier _) ->
+        return Option.none
+    | Result.Error cause ->
+        Error.raise_at1 (Qualified_identifier.location identifier) cause
+
+  let guard_operator expression =
+    match expression with
+    | Synprs.CLF.Object.Raw_identifier { quoted; _ }
+    | Synprs.CLF.Object.Raw_qualified_identifier { quoted; _ }
+      when quoted ->
+        return Option.none
+    | Synprs.CLF.Object.Raw_identifier { identifier = identifier, `Plain; _ }
+      ->
+        let identifier = Qualified_identifier.make_simple identifier in
+        guard_identifier_operator identifier expression
+    | Synprs.CLF.Object.Raw_qualified_identifier { identifier; _ } ->
+        guard_identifier_operator identifier expression
+    | Synprs.CLF.Object.Raw_identifier
+        { identifier = _, (`Dollar | `Hash); _ }
+    | Synprs.CLF.Object.Raw_hole _
+    | Synprs.CLF.Object.Raw_pi _
+    | Synprs.CLF.Object.Raw_lambda _
+    | Synprs.CLF.Object.Raw_arrow _
+    | Synprs.CLF.Object.Raw_annotated _
+    | Synprs.CLF.Object.Raw_application _
+    | Synprs.CLF.Object.Raw_block _
+    | Synprs.CLF.Object.Raw_tuple _
+    | Synprs.CLF.Object.Raw_projection _
+    | Synprs.CLF.Object.Raw_substitution _ ->
+        return Option.none
+end
+
 (** {2 Exception Printing} *)
 module type CLF_DISAMBIGUATION = sig
   (** @closed *)
@@ -174,148 +309,11 @@ end
     syntax to the external syntax.
 
     This disambiguation does not perform normalization nor validation. *)
-module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
-  CLF_DISAMBIGUATION with type state = Disambiguation_state.state = struct
-  include Disambiguation_state
+module Make (Bindings_state : BINDINGS_STATE) :
+  CLF_DISAMBIGUATION with type state = Bindings_state.state = struct
+  include Bindings_state
 
   (** {1 Disambiguation} *)
-
-  (** Contextual LF operands for application rewriting with
-      {!module:Application_disambiguation.Make}. *)
-  module Clf_operand = struct
-    type expression = Synprs.clf_object
-
-    type t =
-      | Atom of expression
-      | Application of
-          { applicand : expression
-          ; arguments : t List1.t
-          }
-
-    let rec location operand =
-      match operand with
-      | Atom object_ -> Synprs.location_of_clf_object object_
-      | Application { applicand; arguments } ->
-          let applicand_location = Synprs.location_of_clf_object applicand in
-          let arguments_location =
-            Location.join_all1_contramap location arguments
-          in
-          Location.join applicand_location arguments_location
-  end
-
-  (** Contextual LF operators for application rewriting with
-      {!module:Application_disambiguation.Make}. *)
-  module Clf_operator = struct
-    type associativity = Associativity.t
-
-    type fixity = Fixity.t
-
-    type operand = Clf_operand.t
-
-    type t =
-      { identifier : Qualified_identifier.t
-      ; operator : Operator.t
-      ; applicand : Synprs.clf_object
-      }
-
-    let[@inline] make ~identifier ~operator ~applicand =
-      { identifier; operator; applicand }
-
-    let[@inline] operator o = o.operator
-
-    let[@inline] applicand o = o.applicand
-
-    let[@inline] identifier o = o.identifier
-
-    let arity = Fun.(operator >> Operator.arity)
-
-    let precedence = Fun.(operator >> Operator.precedence)
-
-    let fixity = Fun.(operator >> Operator.fixity)
-
-    let associativity = Fun.(operator >> Operator.associativity)
-
-    let location = Fun.(applicand >> Synprs.location_of_clf_object)
-
-    (** [write operator arguments] constructs the application of [operator]
-        with [arguments] for the shunting yard algorithm. Since nullary
-        operators are treated as arguments, it is always the case that
-        [List.length arguments > 0]. *)
-    let write operator arguments =
-      let applicand = applicand operator in
-      let arguments =
-        List1.unsafe_of_list arguments (* [List.length arguments > 0] *)
-      in
-      Clf_operand.Application { applicand; arguments }
-
-    (** Instance of equality by operator identifier.
-
-        Since applications do not introduce bound variables, occurrences of
-        operators are equal by their identifier. That is, in an application
-        like [a o1 a o2 a], the operators [o1] and [o2] are equal if and only
-        if they are textually equal. *)
-    include (
-      (val Eq.contramap (module Qualified_identifier) identifier) :
-        Eq.EQ with type t := t)
-  end
-
-  (** Disambiguation state for contextual LF application rewriting with
-      {!module:Application_disambiguation.Make}. *)
-  module Clf_application_disambiguation_state = struct
-    include Disambiguation_state
-
-    type operator = Clf_operator.t
-
-    type expression = Synprs.clf_object
-
-    let guard_identifier_operator identifier expression =
-      lookup identifier >>= function
-      | Result.Ok (Lf_type_constant, { operator = Option.Some operator; _ })
-      | Result.Ok (Lf_term_constant, { operator = Option.Some operator; _ })
-        ->
-          if Operator.is_nullary operator then return Option.none
-          else
-            return
-              (Option.some
-                 (Clf_operator.make ~identifier ~operator
-                    ~applicand:expression))
-      | Result.Ok _
-      | Result.Error (Unbound_identifier _) ->
-          return Option.none
-      | Result.Error cause ->
-          Error.raise_at1 (Qualified_identifier.location identifier) cause
-
-    let guard_operator expression =
-      match expression with
-      | Synprs.CLF.Object.Raw_identifier { quoted; _ }
-      | Synprs.CLF.Object.Raw_qualified_identifier { quoted; _ }
-        when quoted ->
-          return Option.none
-      | Synprs.CLF.Object.Raw_identifier
-          { identifier = identifier, `Plain; _ } ->
-          let identifier = Qualified_identifier.make_simple identifier in
-          guard_identifier_operator identifier expression
-      | Synprs.CLF.Object.Raw_qualified_identifier { identifier; _ } ->
-          guard_identifier_operator identifier expression
-      | Synprs.CLF.Object.Raw_identifier
-          { identifier = _, (`Dollar | `Hash); _ }
-      | Synprs.CLF.Object.Raw_hole _
-      | Synprs.CLF.Object.Raw_pi _
-      | Synprs.CLF.Object.Raw_lambda _
-      | Synprs.CLF.Object.Raw_arrow _
-      | Synprs.CLF.Object.Raw_annotated _
-      | Synprs.CLF.Object.Raw_application _
-      | Synprs.CLF.Object.Raw_block _
-      | Synprs.CLF.Object.Raw_tuple _
-      | Synprs.CLF.Object.Raw_projection _
-      | Synprs.CLF.Object.Raw_substitution _ ->
-          return Option.none
-  end
-
-  module Clf_application_disambiguation =
-    Application_disambiguation.Make (Associativity) (Fixity) (Clf_operand)
-      (Clf_operator)
-      (Clf_application_disambiguation_state)
 
   (** [disambiguate_clf_typ object_ state] is [object_] rewritten as a
       contextual LF type with respect to the disambiguation context [state].
@@ -830,51 +828,55 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
                   ; bindings = bindings'
                   }))
 
-  and disambiguate_clf_application objects =
-    Clf_application_disambiguation.disambiguate_application objects
-    >>= function
-    | Result.Ok (applicand, arguments) -> return (applicand, arguments)
-    | Result.Error
-        (Clf_application_disambiguation.Ambiguous_operator_placement
-          { left_operator; right_operator }) ->
-        let left_operator_location = Clf_operator.location left_operator in
-        let right_operator_location = Clf_operator.location right_operator in
-        let identifier = Clf_operator.identifier left_operator in
-        Error.raise_at2 left_operator_location right_operator_location
-          (Ambiguous_clf_operator_placement identifier)
-    | Result.Error
-        (Clf_application_disambiguation.Arity_mismatch
-          { operator; operator_arity; operands }) ->
-        let operator_identifier = Clf_operator.identifier operator in
-        let operator_location = Clf_operator.location operator in
-        let expected_arguments_count = operator_arity in
-        let operand_locations = List.map Clf_operand.location operands in
-        let actual_arguments_count = List.length operands in
-        Error.raise_at
-          (List1.from operator_location operand_locations)
-          (Clf_arity_mismatch
-             { operator_identifier
-             ; expected_arguments_count
-             ; actual_arguments_count
-             })
-    | Result.Error
-        (Clf_application_disambiguation.Consecutive_non_associative_operators
-          { left_operator; right_operator }) ->
-        let operator_identifier = Clf_operator.identifier left_operator in
-        let left_operator_location = Clf_operator.location left_operator in
-        let right_operator_location = Clf_operator.location right_operator in
-        Error.raise_at2 left_operator_location right_operator_location
-          (Consecutive_applications_of_non_associative_clf_operators
-             operator_identifier)
-    | Result.Error
-        (Clf_application_disambiguation.Misplaced_operator
-          { operator; operands }) ->
-        let operator_location = Clf_operator.location operator
-        and operand_locations = List.map Clf_operand.location operands in
-        Error.raise_at
-          (List1.from operator_location operand_locations)
-          Misplaced_clf_operator
-    | Result.Error cause -> Error.raise cause
+  and disambiguate_clf_application =
+    let open
+      Application_disambiguation.Make (Associativity) (Fixity) (Clf_operand)
+        (Clf_operator)
+        (Make_clf_application_disambiguation_state (Bindings_state)) in
+    fun objects ->
+      disambiguate_application objects >>= function
+      | Result.Ok (applicand, arguments) -> return (applicand, arguments)
+      | Result.Error
+          (Ambiguous_operator_placement { left_operator; right_operator }) ->
+          let left_operator_location = Clf_operator.location left_operator in
+          let right_operator_location =
+            Clf_operator.location right_operator
+          in
+          let identifier = Clf_operator.identifier left_operator in
+          Error.raise_at2 left_operator_location right_operator_location
+            (Ambiguous_clf_operator_placement identifier)
+      | Result.Error (Arity_mismatch { operator; operator_arity; operands })
+        ->
+          let operator_identifier = Clf_operator.identifier operator in
+          let operator_location = Clf_operator.location operator in
+          let expected_arguments_count = operator_arity in
+          let operand_locations = List.map Clf_operand.location operands in
+          let actual_arguments_count = List.length operands in
+          Error.raise_at
+            (List1.from operator_location operand_locations)
+            (Clf_arity_mismatch
+               { operator_identifier
+               ; expected_arguments_count
+               ; actual_arguments_count
+               })
+      | Result.Error
+          (Consecutive_non_associative_operators
+            { left_operator; right_operator }) ->
+          let operator_identifier = Clf_operator.identifier left_operator in
+          let left_operator_location = Clf_operator.location left_operator in
+          let right_operator_location =
+            Clf_operator.location right_operator
+          in
+          Error.raise_at2 left_operator_location right_operator_location
+            (Consecutive_applications_of_non_associative_clf_operators
+               operator_identifier)
+      | Result.Error (Misplaced_operator { operator; operands }) ->
+          let operator_location = Clf_operator.location operator
+          and operand_locations = List.map Clf_operand.location operands in
+          Error.raise_at
+            (List1.from operator_location operand_locations)
+            Misplaced_clf_operator
+      | Result.Error cause -> Error.raise cause
 
   and elaborate_lf_operand operand =
     match operand with

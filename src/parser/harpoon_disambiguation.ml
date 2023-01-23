@@ -31,14 +31,13 @@ module type HARPOON_DISAMBIGUATION = sig
 end
 
 module Make
-    (Disambiguation_state : DISAMBIGUATION_STATE)
+    (Bindings_state : BINDINGS_STATE)
     (Meta_disambiguation : Meta_disambiguation.META_DISAMBIGUATION
-                             with type state = Disambiguation_state.state)
+                             with type state = Bindings_state.state)
     (Comp_disambiguation : Comp_disambiguation.COMP_DISAMBIGUATION
-                             with type state = Disambiguation_state.state) :
-  HARPOON_DISAMBIGUATION with type state = Disambiguation_state.state =
-struct
-  include Disambiguation_state
+                             with type state = Bindings_state.state) :
+  HARPOON_DISAMBIGUATION with type state = Bindings_state.state = struct
+  include Bindings_state
   include Meta_disambiguation
   include Comp_disambiguation
 

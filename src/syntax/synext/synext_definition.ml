@@ -133,21 +133,12 @@ module LF = struct
   (** External LF terms. *)
   and Term : sig
     type t =
-      | Bound_variable of
+      | Variable of
           { location : Location.t
           ; identifier : Identifier.t
           }
-          (** [Bound_variable { identifier = "x"; _ }] is the term-level
-              variable with name ["x"]. This variable is bound, meaning that
-              it has a corresponding binder. *)
-      | Free_variable of
-          { location : Location.t
-          ; identifier : Identifier.t
-          }
-          (** [Free_variable { identifier = "x"; _ }] is the term-level
-              variable with name ["x"]. This variable is free, meaning that
-              it is implicitly bound elsewhere. Its implicit binder is
-              introduced during the abstraction phase of term reconstruction. *)
+          (** [Variable { identifier = "x"; _ }] is the term-level variable
+              with name ["x"]. It may be free or bound. *)
       | Constant of
           { location : Location.t
           ; identifier : Qualified_identifier.t
@@ -351,42 +342,25 @@ module CLF = struct
   (** External contextual LF terms. *)
   and Term : sig
     type t =
-      | Bound_variable of
+      | Variable of
           { location : Location.t
           ; identifier : Identifier.t
           }
-          (** [Bound_variable { identifier = "x"; _ }] is the term-level
-              variable with name ["x"]. *)
-      | Free_variable of
+          (** [Variable { identifier = "x"; _ }] is the term-level variable
+              with name ["x"]. It may be free or bound. *)
+      | Parameter_variable of
           { location : Location.t
           ; identifier : Identifier.t
           }
-          (** [Free_variable { identifier = "x"; _ }] is the term-level
-              variable with name ["x"]. *)
-      | Bound_parameter_variable of
+          (** [Parameter_variable { identifier = "#x"; _ }] is the term-level
+              parameter variable with name ["#x"]. It may be free or bound. *)
+      | Substitution_variable of
           { location : Location.t
           ; identifier : Identifier.t
           }
-          (** [Bound_parameter_variable { identifier = "#x"; _ }] is the
-              term-level parameter variable with name ["#x"]. *)
-      | Free_parameter_variable of
-          { location : Location.t
-          ; identifier : Identifier.t
-          }
-          (** [Free_parameter_variable { identifier = "#x"; _ }] is the
-              term-level parameter variable with name ["#x"]. *)
-      | Bound_substitution_variable of
-          { location : Location.t
-          ; identifier : Identifier.t
-          }
-          (** [Bound_substitution_variable { identifier = "$x"; _ }] is the
-              term-level substitution variable with name ["$x"]. *)
-      | Free_substitution_variable of
-          { location : Location.t
-          ; identifier : Identifier.t
-          }
-          (** [Free_substitution_variable { identifier = "$x"; _ }] is the
-              term-level substitution variable with name ["$x"]. *)
+          (** [Substitution_variable { identifier = "$x"; _ }] is the
+              term-level substitution variable with name ["$x"]. It may be
+              free or bound. *)
       | Constant of
           { location : Location.t
           ; identifier : Qualified_identifier.t
@@ -1066,7 +1040,7 @@ module Comp = struct
               [mlam X1, X2, ..., Xn => body]. *)
       | Fun of
           { location : Location.t
-          ; branches : (Copattern.t List1.t * Expression.t) List1.t
+          ; branches : Cofunction_branch.t List1.t
           }
           (** [Fun { branches = \[(p1s, e1); (p2, e2); ...; (pn, en)\]; _ }]
               is the pattern-matching computation-level abstraction
@@ -1097,13 +1071,13 @@ module Comp = struct
           { location : Location.t
           ; scrutinee : Expression.t
           ; check_coverage : Bool.t
-          ; branches : (Pattern.t * Expression.t) List1.t
+          ; branches : Case_branch.t List1.t
           }
           (** [Case { scrutinee = e; branches = \[(p1, e1); (p2, e2); ...; (pn, en)\]; check_coverage; _ }]
               is the pattern-matching expression
               [case e of p1 => e1 | p2 => e2 | ... | pn => en].
 
-              If [check_coverage = false], then coverage-checking is disable
+              If [check_coverage = false], then coverage-checking is disabled
               for this case-expression. *)
       | Tuple of
           { location : Location.t
@@ -1142,6 +1116,24 @@ module Comp = struct
               type-annotated computation-level expression [e : t]. *)
   end =
     Expression
+
+  and Case_branch : sig
+    type t =
+      { location : Location.t
+      ; pattern : Pattern.t
+      ; body : Expression.t
+      }
+  end =
+    Case_branch
+
+  and Cofunction_branch : sig
+    type t =
+      { location : Location.t
+      ; copatterns : Copattern.t List1.t
+      ; body : Expression.t
+      }
+  end =
+    Cofunction_branch
 
   (** External computation-level patterns. *)
   and Pattern : sig

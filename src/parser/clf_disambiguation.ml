@@ -59,12 +59,6 @@ exception Unbound_clf_term_constant of Qualified_identifier.t
 
 exception Illegal_clf_term_projection
 
-exception Illegal_free_variable_clf_term
-
-exception Illegal_free_parameter_variable_clf_term
-
-exception Illegal_free_substitution_variable_clf_term
-
 exception Expected_clf_term_constant
 
 exception Expected_parameter_variable
@@ -311,11 +305,8 @@ end
     syntax to the external syntax.
 
     This disambiguation does not perform normalization nor validation. *)
-module Make (Bindings_state : sig
-  include BINDINGS_STATE
-
-  val are_free_variables_allowed : Bool.t t
-end) : CLF_DISAMBIGUATION with type state = Bindings_state.state = struct
+module Make (Bindings_state : BINDINGS_STATE) :
+  CLF_DISAMBIGUATION with type state = Bindings_state.state = struct
   include Bindings_state
 
   (** {1 Disambiguation} *)
@@ -504,22 +495,15 @@ end) : CLF_DISAMBIGUATION with type state = Bindings_state.state = struct
         lookup_toplevel identifier >>= function
         | Result.Ok (Parameter_variable, _) ->
             return
-              (Synext.CLF.Term.Bound_parameter_variable
-                 { location; identifier })
+              (Synext.CLF.Term.Parameter_variable { location; identifier })
         | Result.Ok entry ->
             Error.raise_at1 location
               (Error.composite_exception2 Expected_parameter_variable
                  (actual_binding_exn qualified_identifier entry))
-        | Result.Error (Unbound_identifier _) -> (
+        | Result.Error (Unbound_identifier _) ->
             (* Free variable. *)
-            are_free_variables_allowed >>= function
-            | true ->
-                return
-                  (Synext.CLF.Term.Free_parameter_variable
-                     { location; identifier })
-            | false ->
-                Error.raise_at1 location
-                  Illegal_free_parameter_variable_clf_term)
+            return
+              (Synext.CLF.Term.Parameter_variable { location; identifier })
         | Result.Error cause -> Error.raise_at1 location cause)
     | Synprs.CLF.Object.Raw_identifier
         { location; identifier = identifier, `Dollar; _ } -> (
@@ -530,22 +514,15 @@ end) : CLF_DISAMBIGUATION with type state = Bindings_state.state = struct
         lookup_toplevel identifier >>= function
         | Result.Ok (Substitution_variable, _) ->
             return
-              (Synext.CLF.Term.Bound_substitution_variable
-                 { location; identifier })
+              (Synext.CLF.Term.Substitution_variable { location; identifier })
         | Result.Ok entry ->
             Error.raise_at1 location
               (Error.composite_exception2 Expected_substitution_variable
                  (actual_binding_exn qualified_identifier entry))
-        | Result.Error (Unbound_identifier _) -> (
+        | Result.Error (Unbound_identifier _) ->
             (* Free variable. *)
-            are_free_variables_allowed >>= function
-            | true ->
-                return
-                  (Synext.CLF.Term.Free_substitution_variable
-                     { location; identifier })
-            | false ->
-                Error.raise_at1 location
-                  Illegal_free_substitution_variable_clf_term)
+            return
+              (Synext.CLF.Term.Substitution_variable { location; identifier })
         | Result.Error cause -> Error.raise_at1 location cause)
     | Synprs.CLF.Object.Raw_identifier
         { location; identifier = identifier, `Plain; quoted; _ } -> (
@@ -567,19 +544,14 @@ end) : CLF_DISAMBIGUATION with type state = Bindings_state.state = struct
         | Result.Ok (Lf_term_variable, _)
         | Result.Ok (Meta_variable, _) ->
             (* Bound variable *)
-            return (Synext.CLF.Term.Bound_variable { location; identifier })
+            return (Synext.CLF.Term.Variable { location; identifier })
         | Result.Ok entry ->
             Error.raise_at1 location
               (Error.composite_exception2 Expected_clf_term_constant
                  (actual_binding_exn qualified_identifier entry))
-        | Result.Error (Unbound_identifier _) -> (
+        | Result.Error (Unbound_identifier _) ->
             (* Free variable. *)
-            are_free_variables_allowed >>= function
-            | true ->
-                return
-                  (Synext.CLF.Term.Free_variable { location; identifier })
-            | false ->
-                Error.raise_at1 location Illegal_free_variable_clf_term)
+            return (Synext.CLF.Term.Variable { location; identifier })
         | Result.Error cause -> Error.raise_at1 location cause)
     | Synprs.CLF.Object.Raw_qualified_identifier
         { location; identifier; quoted } -> (
@@ -605,18 +577,14 @@ end) : CLF_DISAMBIGUATION with type state = Bindings_state.state = struct
             base projections
         in
         partial_lookup identifier >>= function
-        | `Totally_unbound (List1.T (free_variable, projections)) -> (
+        | `Totally_unbound (List1.T (free_variable, projections)) ->
             (* Projections of a free variable. *)
             let location = Identifier.location free_variable in
-            are_free_variables_allowed >>= function
-            | true ->
-                let term =
-                  Synext.CLF.Term.Free_variable
-                    { location; identifier = free_variable }
-                in
-                return (reduce_projections term projections)
-            | false ->
-                Error.raise_at1 location Illegal_free_variable_clf_term)
+            let term =
+              Synext.CLF.Term.Variable
+                { location; identifier = free_variable }
+            in
+            return (reduce_projections term projections)
         | `Partially_bound
             ( List1.T
                 ( ( variable_identifier
@@ -626,7 +594,7 @@ end) : CLF_DISAMBIGUATION with type state = Bindings_state.state = struct
         (* Projections of a bound variable *) ->
             let location = Identifier.location variable_identifier in
             let term =
-              Synext.CLF.Term.Bound_variable
+              Synext.CLF.Term.Variable
                 { location; identifier = variable_identifier }
             in
             return (reduce_projections term (List1.to_list unbound_segments))
@@ -1166,8 +1134,7 @@ struct
         lookup_toplevel identifier >>= function
         | Result.Ok (Parameter_variable, _) ->
             return
-              (Synext.CLF.Term.Bound_parameter_variable
-                 { location; identifier })
+              (Synext.CLF.Term.Parameter_variable { location; identifier })
         | Result.Ok entry ->
             Error.raise_at1 location
               (Error.composite_exception2 Expected_parameter_variable
@@ -1178,8 +1145,7 @@ struct
                abstraction phase of term reconstruction. It is added as an
                inner binding to simulate that binder. *)
             let term' =
-              Synext.CLF.Term.Free_parameter_variable
-                { location; identifier }
+              Synext.CLF.Term.Parameter_variable { location; identifier }
             in
             is_inner_bound identifier >>= function
             | true ->
@@ -1200,8 +1166,7 @@ struct
         lookup_toplevel identifier >>= function
         | Result.Ok (Substitution_variable, _) ->
             return
-              (Synext.CLF.Term.Bound_substitution_variable
-                 { location; identifier })
+              (Synext.CLF.Term.Substitution_variable { location; identifier })
         | Result.Ok entry ->
             Error.raise_at1 location
               (Error.composite_exception2 Expected_substitution_variable
@@ -1212,8 +1177,7 @@ struct
                abstraction phase of term reconstruction. It is added as an
                inner binding to simulate that binder. *)
             let term' =
-              Synext.CLF.Term.Free_substitution_variable
-                { location; identifier }
+              Synext.CLF.Term.Substitution_variable { location; identifier }
             in
             is_inner_bound identifier >>= function
             | true ->
@@ -1245,7 +1209,7 @@ struct
         | Result.Ok (Lf_term_variable, _)
         | Result.Ok (Meta_variable, _) ->
             (* Bound variable *)
-            return (Synext.CLF.Term.Bound_variable { location; identifier })
+            return (Synext.CLF.Term.Variable { location; identifier })
         | Result.Ok entry ->
             Error.raise_at1 location
               (Error.composite_exception2 Expected_clf_term_constant
@@ -1255,9 +1219,7 @@ struct
                annotation binder will be introduced during the abstraction
                phase of term reconstruction. It is added as an inner binding
                to simulate that binder. *)
-            let term' =
-              Synext.CLF.Term.Free_variable { location; identifier }
-            in
+            let term' = Synext.CLF.Term.Variable { location; identifier } in
             is_inner_bound identifier >>= function
             | true ->
                 (* A separate free occurrence of the variable has already
@@ -1299,7 +1261,7 @@ struct
                added as an inner binding to simulate that binder. *)
             let location = Identifier.location free_variable in
             let term =
-              Synext.CLF.Term.Free_variable
+              Synext.CLF.Term.Variable
                 { location; identifier = free_variable }
             in
             let term' = reduce_projections term projections in
@@ -1321,7 +1283,7 @@ struct
         (* Projections of a bound variable *) ->
             let location = Identifier.location variable_identifier in
             let term =
-              Synext.CLF.Term.Bound_variable
+              Synext.CLF.Term.Variable
                 { location; identifier = variable_identifier }
             in
             return (reduce_projections term (List1.to_list unbound_segments))
@@ -2064,12 +2026,6 @@ let pp_exception ppf = function
         Qualified_identifier.pp identifier
   | Illegal_clf_term_projection ->
       Format.fprintf ppf "Illegal contextual LF projection(s)."
-  | Illegal_free_variable_clf_term ->
-      Format.fprintf ppf "Illegal free contextual LF variable."
-  | Illegal_free_parameter_variable_clf_term ->
-      Format.fprintf ppf "Illegal free parameter variable."
-  | Illegal_free_substitution_variable_clf_term ->
-      Format.fprintf ppf "Illegal free substitution variable."
   | Expected_parameter_variable ->
       Format.fprintf ppf "Expected a parameter variable."
   | Expected_substitution_variable ->

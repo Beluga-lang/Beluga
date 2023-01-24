@@ -1840,7 +1840,7 @@
                   ],
                   "arguments": [
                     [
-                      "LF.Term.Bound_variable",
+                      "LF.Term.Variable",
                       {
                         "identifier": {
                           "name": "x",
@@ -1862,7 +1862,7 @@
                       }
                     ],
                     [
-                      "LF.Term.Bound_variable",
+                      "LF.Term.Variable",
                       {
                         "identifier": {
                           "name": "y",
@@ -2177,7 +2177,7 @@
                       ],
                       "arguments": [
                         [
-                          "LF.Term.Bound_variable",
+                          "LF.Term.Variable",
                           {
                             "identifier": {
                               "name": "x",
@@ -2199,7 +2199,7 @@
                           }
                         ],
                         [
-                          "LF.Term.Bound_variable",
+                          "LF.Term.Variable",
                           {
                             "identifier": {
                               "name": "y",
@@ -2221,7 +2221,7 @@
                           }
                         ],
                         [
-                          "LF.Term.Bound_variable",
+                          "LF.Term.Variable",
                           {
                             "identifier": {
                               "name": "z",
@@ -3321,7 +3321,7 @@
                   "LF.Term.Application",
                   {
                     "applicand": [
-                      "LF.Term.Free_variable",
+                      "LF.Term.Variable",
                       {
                         "identifier": {
                           "name": "M",
@@ -3344,7 +3344,7 @@
                     ],
                     "arguments": [
                       [
-                        "LF.Term.Bound_variable",
+                        "LF.Term.Variable",
                         {
                           "identifier": {
                             "name": "x",
@@ -3379,7 +3379,7 @@
                   "LF.Term.Application",
                   {
                     "applicand": [
-                      "LF.Term.Free_variable",
+                      "LF.Term.Variable",
                       {
                         "identifier": {
                           "name": "M'",
@@ -3402,7 +3402,7 @@
                     ],
                     "arguments": [
                       [
-                        "LF.Term.Bound_variable",
+                        "LF.Term.Variable",
                         {
                           "identifier": {
                             "name": "x",
@@ -3542,7 +3542,7 @@
                     ],
                     "arguments": [
                       [
-                        "LF.Term.Free_variable",
+                        "LF.Term.Variable",
                         {
                           "identifier": {
                             "name": "M",
@@ -3617,7 +3617,7 @@
                     ],
                     "arguments": [
                       [
-                        "LF.Term.Free_variable",
+                        "LF.Term.Variable",
                         {
                           "identifier": {
                             "name": "M'",
@@ -3788,7 +3788,7 @@
               ],
               "arguments": [
                 [
-                  "LF.Term.Bound_variable",
+                  "LF.Term.Variable",
                   {
                     "identifier": {
                       "name": "x",
@@ -3993,7 +3993,7 @@
                   ],
                   "arguments": [
                     [
-                      "LF.Term.Bound_variable",
+                      "LF.Term.Variable",
                       {
                         "identifier": {
                           "name": "x",

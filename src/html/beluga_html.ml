@@ -427,9 +427,7 @@ end) : BELUGA_HTML with type state = Html_state.state = struct
   and pp_lf_term state ppf term =
     let parent_precedence = precedence_of_lf_term term in
     match term with
-    | LF.Term.Bound_variable { identifier; _ } ->
-        (pp_lf_variable state) ppf identifier
-    | LF.Term.Free_variable { identifier; _ } ->
+    | LF.Term.Variable { identifier; _ } ->
         (pp_lf_variable state) ppf identifier
     | LF.Term.Constant { identifier; quoted = true; _ } ->
         Format.fprintf ppf "(%a)"
@@ -568,17 +566,11 @@ end) : BELUGA_HTML with type state = Html_state.state = struct
   and pp_clf_term state ppf term =
     let parent_precedence = precedence_of_clf_term term in
     match term with
-    | CLF.Term.Bound_variable { identifier; _ } ->
+    | CLF.Term.Variable { identifier; _ } ->
         (pp_lf_variable state) ppf identifier
-    | CLF.Term.Free_variable { identifier; _ } ->
-        (pp_lf_variable state) ppf identifier
-    | CLF.Term.Bound_parameter_variable { identifier; _ } ->
+    | CLF.Term.Parameter_variable { identifier; _ } ->
         (pp_parameter_variable state) ppf identifier
-    | CLF.Term.Free_parameter_variable { identifier; _ } ->
-        (pp_parameter_variable state) ppf identifier
-    | CLF.Term.Bound_substitution_variable { identifier; _ } ->
-        (pp_substitution_variable state) ppf identifier
-    | CLF.Term.Free_substitution_variable { identifier; _ } ->
+    | CLF.Term.Substitution_variable { identifier; _ } ->
         (pp_substitution_variable state) ppf identifier
     | CLF.Term.Constant { identifier; quoted = true; _ } ->
         Format.fprintf ppf "(%a)"
@@ -1312,19 +1304,20 @@ end) : BELUGA_HTML with type state = Html_state.state = struct
           (pp_comp_expression state)
           body
     | Comp.Expression.Fun { branches; _ } ->
-        let pp_branch_pattern ppf copattern =
+        let pp_branch_copattern ppf copattern =
           if is_atomic_copattern copattern then
             (pp_comp_copattern state) ppf copattern
           else parenthesize (pp_comp_copattern state) ppf copattern
         in
-        let pp_branch_patterns =
-          List1.pp ~pp_sep:Format.pp_print_space pp_branch_pattern
+        let pp_branch_copatterns =
+          List1.pp ~pp_sep:Format.pp_print_space pp_branch_copattern
         in
-        let pp_branch ppf (patterns, expression) =
-          Format.fprintf ppf "@[<hov 2>|@ %a ⇒@ %a@]" pp_branch_patterns
-            patterns
+        let pp_branch ppf branch =
+          let { Comp.Cofunction_branch.copatterns; body; _ } = branch in
+          Format.fprintf ppf "@[<hov 2>|@ %a ⇒@ %a@]" pp_branch_copatterns
+            copatterns
             (pp_comp_expression state)
-            expression
+            body
         in
         let pp_branches = List1.pp ~pp_sep:Format.pp_print_cut pp_branch in
         Format.fprintf ppf "@[<v 0>%a@;%a@]" pp_keyword "fun" pp_branches
@@ -1346,11 +1339,12 @@ end) : BELUGA_HTML with type state = Html_state.state = struct
              (pp_comp_expression state))
           scrutinee
     | Comp.Expression.Case { scrutinee; check_coverage; branches; _ } ->
-        let pp_branch ppf (pattern, expression) =
+        let pp_branch ppf branch =
+          let { Comp.Case_branch.pattern; body; _ } = branch in
           Format.fprintf ppf "@[<hov 2>|@ %a ⇒@ %a@]" (pp_comp_pattern state)
             pattern
             (pp_comp_expression state)
-            expression
+            body
         in
         let pp_branches = List1.pp ~pp_sep:Format.pp_print_cut pp_branch in
         if check_coverage then

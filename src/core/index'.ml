@@ -165,23 +165,23 @@ struct
         )
 
   and index_lf_term = function
-    | Synext.LF.Term.Bound_variable { location; identifier } ->
+    | Synext.LF.Term.Variable { location; identifier } ->
+        (* TODO: Check whether the variable is bound *)
         let* offset = index_of_lf_variable identifier in
         return
           (Synapx.LF.Root (location, Synapx.LF.BVar offset, Synapx.LF.Nil))
-    | Synext.LF.Term.Free_variable { location; identifier } ->
+    (*= | Synext.LF.Term.Free_variable { location; identifier } ->
         let name = Name.make_from_identifier identifier in
         let closure = Option.none in
         return
           (Synapx.LF.Root
-             (location, Synapx.LF.FMVar (name, closure), Synapx.LF.Nil))
+             (location, Synapx.LF.FMVar (name, closure), Synapx.LF.Nil)) *)
     | Synext.LF.Term.Constant { location; identifier; _ } ->
         let* id = index_of_lf_term_constant identifier in
         return (Synapx.LF.Root (location, Synapx.LF.Const id, Synapx.LF.Nil))
     | Synext.LF.Term.Application { location; applicand; arguments } -> (
         match applicand with
-        | Synext.LF.Term.Bound_variable _
-        | Synext.LF.Term.Free_variable _
+        | Synext.LF.Term.Variable _
         | Synext.LF.Term.Constant _
         | Synext.LF.Term.Application _
         | Synext.LF.Term.Wildcard _ -> (
@@ -311,7 +311,8 @@ struct
         return (Synapx.LF.SigmaElem (name, typ', bindings'))
 
   and index_clf_term = function
-    | Synext.CLF.Term.Bound_variable { location; identifier } ->
+    | Synext.CLF.Term.Variable { location; identifier } ->
+        (* TODO: Check whether the variable is bound *)
         let* offset = index_of_lf_variable identifier in
         return
           (Synapx.LF.Root (location, Synapx.LF.BVar offset, Synapx.LF.Nil))
@@ -320,10 +321,8 @@ struct
         return (Synapx.LF.Root (location, Synapx.LF.Const id, Synapx.LF.Nil))
     | Synext.CLF.Term.Application { location; applicand; arguments } -> (
         match applicand with
-        | Synext.CLF.Term.Bound_variable _
-        | Synext.CLF.Term.Free_variable _
-        | Synext.CLF.Term.Bound_parameter_variable _
-        | Synext.CLF.Term.Free_parameter_variable _
+        | Synext.CLF.Term.Variable _
+        | Synext.CLF.Term.Parameter_variable _
         | Synext.CLF.Term.Constant _
         | Synext.CLF.Term.Substitution _
         | Synext.CLF.Term.Projection _
@@ -345,8 +344,7 @@ struct
         | Synext.CLF.Term.Hole { variant = `Labelled _ | `Unlabelled; _ }
         | Synext.CLF.Term.Type_annotated _
         | Synext.CLF.Term.Abstraction _
-        | Synext.CLF.Term.Bound_substitution_variable _
-        | Synext.CLF.Term.Free_substitution_variable _
+        | Synext.CLF.Term.Substitution_variable _
         | Synext.CLF.Term.Tuple _ ->
             Error.raise_at1
               (Synext.location_of_clf_term applicand)
@@ -377,15 +375,13 @@ struct
         let* term' = index_clf_term term in
         let* typ' = index_clf_typ typ in
         return (Synapx.LF.Ann (location, term', typ'))
-    | Synext.CLF.Term.Bound_parameter_variable { identifier; location } ->
+    | Synext.CLF.Term.Parameter_variable { identifier; location } ->
+        (* TODO: Check whether the variable is bound *)
         let* offset = index_of_parameter_variable identifier in
         let closure = Option.none in
         let head = Synapx.LF.PVar (Synapx.LF.Offset offset, closure) in
         return (Synapx.LF.Root (location, head, Synapx.LF.Nil))
-    | Synext.CLF.Term.Bound_substitution_variable { location; _ } ->
-        Error.raise_at1 location
-          Illegal_clf_substitution_variable_outside_substitution
-    | Synext.CLF.Term.Free_substitution_variable { location; _ } ->
+    | Synext.CLF.Term.Substitution_variable { location; _ } ->
         Error.raise_at1 location
           Illegal_clf_substitution_variable_outside_substitution
     | Synext.CLF.Term.Substitution { location; term; substitution } -> (
@@ -482,8 +478,7 @@ struct
       | tM -> Synapx.LF.Obj tM
     in
     let index_clf_term = function
-      | Synext.CLF.Term.Bound_substitution_variable { location; _ }
-      | Synext.CLF.Term.Free_substitution_variable { location; _ } ->
+      | Synext.CLF.Term.Substitution_variable { location; _ } ->
           Error.raise_at1 location
             Unsupported_clf_substitution_variable_not_at_start_of_substitution
       | x -> index_clf_term x

@@ -1,6 +1,6 @@
 (** Disambiguation of the parser syntax to the external syntax.
 
-    Elements of the syntax for Beluga requires the symbol table for
+    Elements of the syntax for Beluga require the symbol table for
     disambiguation. This module contains stateful functions for elaborating
     the context-free parser syntax to the data-dependent external syntax. The
     logic for the symbol lookups is repeated in the indexing phase to the
@@ -237,11 +237,20 @@ end
 
 module Make
     (Bindings_state : BINDINGS_STATE)
-    (Meta_disambiguation : Meta_disambiguation.META_DISAMBIGUATION
-                             with type state = Bindings_state.state) :
+    (Pattern_disambiguation_state : PATTERN_DISAMBGUATION_STATE)
+    (Meta_disambiguator : Meta_disambiguation.META_DISAMBIGUATION
+                            with type state = Bindings_state.state)
+    (Meta_pattern_disambiguator : Meta_disambiguation
+                                  .META_PATTERN_DISAMBIGUATION
+                                    with type state =
+                                      Pattern_disambiguation_state.state) :
   COMP_DISAMBIGUATION with type state = Bindings_state.state = struct
   include Bindings_state
-  include Meta_disambiguation
+  include Meta_disambiguator
+
+  module Patterns = struct
+    include Meta_pattern_disambiguator
+  end
 
   exception Plain_modifier_typ_mismatch
 
@@ -441,7 +450,7 @@ module Make
     | Synprs.Comp.Sort_object.Raw_identifier { location; identifier; quoted }
       -> (
         (* As a computation-level type, plain identifiers are necessarily
-           type constants *)
+           computation-level type constants *)
         let qualified_identifier =
           Qualified_identifier.make_simple identifier
         in
@@ -500,8 +509,8 @@ module Make
         (* Qualified identifiers without namespaces were parsed as plain
            identifiers *)
         assert (List.length (Qualified_identifier.namespaces identifier) >= 1);
-        (* As a computation-level type, identifiers of the form
-           [(<identifier> `::')+ <identifier>] are necessarily type
+        (* As a computation-level type, identifiers of the form [<identifier>
+           <dot-identifier>+] are necessarily computation-level type
            constants. *)
         lookup identifier >>= function
         | Result.Ok
@@ -745,18 +754,7 @@ module Make
         (* TODO: Can be observation(s) *)
         Obj.magic ()
 
-  and disambiguate_case_branch (pattern_object, body_object) =
-    with_disambiguated_comp_pattern pattern_object Identifier.Hamt.empty []
-      (fun pattern' _inner_bindings' pattern_variables' ->
-        match Identifier.find_duplicates pattern_variables' with
-        | Option.None ->
-            let* body' = disambiguate_comp_expression body_object in
-            return (pattern', body')
-        | Option.Some duplicate_pattern_variables ->
-            Error.raise_at
-              (List2.to_list1
-                 (List2.map Identifier.location duplicate_pattern_variables))
-              Illegal_duplicate_pattern_variables)
+  and disambiguate_case_branch (pattern_object, body_object) = Obj.magic ()
 
   and disambiguate_cofunction_branch (copattern_objects, body_object) =
     with_disambiguated_comp_copatterns_list1 copattern_objects

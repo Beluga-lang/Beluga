@@ -1,6 +1,6 @@
 (** Disambiguation of the parser syntax to the external syntax.
 
-    Elements of the syntax for Beluga requires the symbol table for
+    Elements of the syntax for Beluga require the symbol table for
     disambiguation. This module contains stateful functions for elaborating
     the context-free parser syntax to the data-dependent external syntax. The
     logic for the symbol lookups is repeated in the indexing phase to the

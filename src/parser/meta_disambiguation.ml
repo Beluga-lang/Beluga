@@ -1,6 +1,6 @@
 (** Disambiguation of the parser syntax to the external syntax.
 
-    Elements of the syntax for Beluga requires the symbol table for
+    Elements of the syntax for Beluga require the symbol table for
     disambiguation. This module contains stateful functions for elaborating
     the context-free parser syntax to the data-dependent external syntax. The
     logic for the symbol lookups is repeated in the indexing phase to the
@@ -67,6 +67,16 @@ module type META_DISAMBIGUATION = sig
 
   val with_disambiguated_meta_context :
     Synprs.meta_context_object -> (Synext.meta_context -> 'a t) -> 'a t
+end
+
+module type META_PATTERN_DISAMBIGUATION = sig
+  (** @closed *)
+  include State.STATE
+
+  (** {1 Disambiguation} *)
+
+  val disambiguate_meta_pattern :
+    Synprs.meta_thing -> Synext.Meta.Pattern.t t
 end
 
 module Make
@@ -330,16 +340,18 @@ module Make
         f { Synext.Meta.Context.location; bindings = bindings' })
 end
 
-module Make_patterns (Bindings_state : sig
-  include BINDINGS_STATE
-
-  val are_free_variables_allowed : Bool.t t
-end)
-(C : Clf_disambiguation.CLF_DISAMBIGUATION
-       with type state = Bindings_state.state) =
+module Make_pattern_disambiguator
+    (Bindings_state : BINDINGS_STATE)
+    (Disambiguation_state : PATTERN_DISAMBGUATION_STATE
+                              with module S = Bindings_state)
+    (Clf_pattern_disambiguator : Clf_disambiguation
+                                 .CLF_PATTERN_DISAMBIGUATION
+                                   with type state =
+                                     Disambiguation_state.state) :
+  META_PATTERN_DISAMBIGUATION with type state = Disambiguation_state.state =
 struct
-  include Make (Bindings_state) (C)
-  include Clf_disambiguation.Make_patterns (Bindings_state)
+  include Disambiguation_state
+  include Clf_pattern_disambiguator
 
   let disambiguate_meta_pattern meta_thing =
     match meta_thing with

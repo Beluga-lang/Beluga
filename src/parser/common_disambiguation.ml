@@ -598,12 +598,18 @@ module Disambiguation_state : DISAMBIGUATION_STATE = struct
       ~unset:(pop_binding identifier)
 end
 
-module Make_persistent_pattern_disambiguation_state (S : BINDINGS_STATE) : sig
+module type PATTERN_DISAMBGUATION_STATE = sig
+  module S : State.STATE
+
   include State.STATE
 
   type pattern_variable_adder = { run : 'a. 'a S.t -> 'a S.t }
 
   val initial : S.state -> state
+
+  val push_inner_binding : Identifier.t -> Unit.t t
+
+  val pop_inner_binding : Identifier.t -> Unit.t t
 
   val with_inner_binding : Identifier.t -> 'a t -> 'a t
 
@@ -626,7 +632,12 @@ module Make_persistent_pattern_disambiguation_state (S : BINDINGS_STATE) : sig
 
   val with_context_variable :
     ?location:Location.t -> Identifier.t -> 'a t -> 'a t
-end = struct
+end
+
+module Make_persistent_pattern_disambiguation_state (S : BINDINGS_STATE) :
+  PATTERN_DISAMBGUATION_STATE with module S = S = struct
+  module S = S
+
   type pattern_variable_adder = { run : 'a. 'a S.t -> 'a S.t }
 
   type state =

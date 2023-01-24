@@ -1,6 +1,6 @@
 (** Disambiguation of the parser syntax to the external syntax.
 
-    Elements of the syntax for Beluga requires the symbol table for
+    Elements of the syntax for Beluga require the symbol table for
     disambiguation. This module contains stateful functions for elaborating
     the context-free parser syntax to the data-dependent external syntax. The
     logic for the symbol lookups is repeated in the indexing phase to the
@@ -336,8 +336,9 @@ end) : LF_DISAMBIGUATION with type state = Bindings_state.state = struct
         (* Qualified identifiers without namespaces were parsed as plain
            identifiers *)
         assert (List.length (Qualified_identifier.namespaces identifier) >= 1);
-        (* As an LF type, identifiers of the form [(<identifier>`.')+
-           <identifier>] are necessarily bound LF type-level constants. *)
+        (* As an LF type, identifiers of the form [<identifier>
+           <dot-identifier>+] are necessarily bound LF type-level
+           constants. *)
         lookup identifier >>= function
         | Result.Ok (Lf_type_constant, { operator = Option.Some operator; _ })
           ->
@@ -445,9 +446,9 @@ end) : LF_DISAMBIGUATION with type state = Bindings_state.state = struct
         (* Qualified identifiers without namespaces were parsed as plain
            identifiers *)
         assert (List.length (Qualified_identifier.namespaces identifier) >= 1);
-        (* As an LF term, identifiers of the form [(<identifier>`.')+
-           <identifier>] are necessarily LF term-level constants. Plain LF
-           terms do not support projections, so there is no additional
+        (* As an LF term, identifiers of the form [<identifier>
+           <dot-identifier>+] are necessarily LF term-level constants. Plain
+           LF terms do not support projections, so there is no additional
            ambiguity. *)
         (* Lookup the identifier in the current state *)
         lookup identifier >>= function

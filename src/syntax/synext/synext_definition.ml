@@ -18,7 +18,11 @@ open Common
     type-level or term-level constants. This is a weak, representational
     function space without case analysis or recursion.
 
-    The metavariable:
+    LF terms as defined below may contain free variables. During the
+    abstraction phase of term reconstruction, implicit binders are introduced
+    for those free variables.
+
+    The grammar metavariable:
 
     - {m x} ranges over variables
     - {m c} ranges over term-level constants
@@ -63,6 +67,7 @@ module LF = struct
           { location : Location.t
           ; parameter_identifier : Identifier.t Option.t
           ; parameter_type : Typ.t Option.t
+          ; plicity : Plicity.t
           ; body : Kind.t
           }
           (** - [Pi { parameter_identifier = Option.Some "x"; parameter_type = t; body; _ }]
@@ -113,6 +118,7 @@ module LF = struct
           { location : Location.t
           ; parameter_identifier : Identifier.t Option.t
           ; parameter_type : Typ.t Option.t
+          ; plicity : Plicity.t
           ; body : Typ.t
           }
           (** - [Pi { parameter_identifier = Option.Some "x"; parameter_type = t; body; _ }]
@@ -127,14 +133,21 @@ module LF = struct
   (** External LF terms. *)
   and Term : sig
     type t =
-      | Variable of
+      | Bound_variable of
           { location : Location.t
           ; identifier : Identifier.t
           }
-          (** [Variable { identifier = "x"; _ }] is the term-level variable
-              with name ["x"], which is either a bound variable having a
-              lambda binder, or a free variable having no such corresponding
-              binder. *)
+          (** [Bound_variable { identifier = "x"; _ }] is the term-level
+              variable with name ["x"]. This variable is bound, meaning that
+              it has a corresponding binder. *)
+      | Free_variable of
+          { location : Location.t
+          ; identifier : Identifier.t
+          }
+          (** [Free_variable { identifier = "x"; _ }] is the term-level
+              variable with name ["x"]. This variable is free, meaning that
+              it is implicitly bound elsewhere. Its implicit binder is
+              introduced during the abstraction phase of term reconstruction. *)
       | Constant of
           { location : Location.t
           ; identifier : Qualified_identifier.t
@@ -192,7 +205,11 @@ end
     patterns. Plain LF objects are only used in the definition of type-level
     or term-level LF constants.
 
-    The metavariable:
+    Contextual LF terms as defined below may contain free variables. During
+    the abstraction phase of term reconstruction, implicit binders are
+    introduced for those free variables.
+
+    The grammar metavariable:
 
     - {m x} ranges over variables
     - {m c} ranges over term-level constants
@@ -305,6 +322,7 @@ module CLF = struct
           { location : Location.t
           ; parameter_identifier : Identifier.t Option.t
           ; parameter_type : Typ.t
+          ; plicity : Plicity.t
           ; body : Typ.t
           }
           (** - [Pi { parameter_identifier = Option.Some "x"; parameter_type = t; body; _ }]
@@ -333,25 +351,41 @@ module CLF = struct
   (** External contextual LF terms. *)
   and Term : sig
     type t =
-      | Variable of
+      | Bound_variable of
           { location : Location.t
           ; identifier : Identifier.t
           }
-          (** [Variable { identifier = "x"; _ }] is the term-level variable
-              with name ["x"], which is either a bound variable having a
-              lambda binder, or a free variable having no such corresponding
-              binder. *)
-      | Parameter_variable of
+          (** [Bound_variable { identifier = "x"; _ }] is the term-level
+              variable with name ["x"]. *)
+      | Free_variable of
           { location : Location.t
           ; identifier : Identifier.t
           }
-          (** [Parameter_variable { identifier = "#x"; _ }] is the term-level
-              parameter variable with name ["#x"]. *)
-      | Substitution_variable of
+          (** [Free_variable { identifier = "x"; _ }] is the term-level
+              variable with name ["x"]. *)
+      | Bound_parameter_variable of
           { location : Location.t
           ; identifier : Identifier.t
           }
-          (** [Substitution_variable { identifier = "$x"; _ }] is the
+          (** [Bound_parameter_variable { identifier = "#x"; _ }] is the
+              term-level parameter variable with name ["#x"]. *)
+      | Free_parameter_variable of
+          { location : Location.t
+          ; identifier : Identifier.t
+          }
+          (** [Free_parameter_variable { identifier = "#x"; _ }] is the
+              term-level parameter variable with name ["#x"]. *)
+      | Bound_substitution_variable of
+          { location : Location.t
+          ; identifier : Identifier.t
+          }
+          (** [Bound_substitution_variable { identifier = "$x"; _ }] is the
+              term-level substitution variable with name ["$x"]. *)
+      | Free_substitution_variable of
+          { location : Location.t
+          ; identifier : Identifier.t
+          }
+          (** [Free_substitution_variable { identifier = "$x"; _ }] is the
               term-level substitution variable with name ["$x"]. *)
       | Constant of
           { location : Location.t
@@ -632,7 +666,7 @@ end
     meta-substitutions and meta-contexts after parsing and data-dependent
     disambiguation.
 
-    The metavariable:
+    The grammar metavariable:
 
     - {m X} ranges over meta-level variables
     - {m g} ranges over context schemas
@@ -845,7 +879,7 @@ end
 (** The representation of computation-level kinds, types, expressions and
     patterns after parsing and data-dependent disambiguation.
 
-    The metavariable:
+    The grammar metavariable:
 
     - {m x} ranges over computation-level variables
     - {m c} ranges over computation-level constants
@@ -925,25 +959,38 @@ module Comp = struct
   (** External computation-level types. *)
   and Typ : sig
     type t =
-      | Constant of
+      | Inductive_typ_constant of
           { location : Location.t
           ; identifier : Qualified_identifier.t
           ; operator : Operator.t
           ; quoted : Bool.t
-          ; variant :
-              [ `Inductive | `Stratified | `Coinductive | `Abbreviation ]
           }
-          (** [Constant { identifier = "c"; }] is the computation-level type
-              constant ["c"].
-
-              - If [variant = `Inductive], then this constant was defined in
-                an inductive type declaration.
-              - If [variant = `Stratified], then this constant was defined in
-                a stratified type declaration.
-              - If [variant = `Coinductive], then this constant was defined
-                in a coinductive type declaration.
-              - If [variant = `Abbreviation], then this constant was defined
-                in a computation type abbreviation declaration. *)
+          (** [Inductive_typ_constant { identifier = "c"; }] is the
+              computation-level inductive type constant ["c"]. *)
+      | Stratified_typ_constant of
+          { location : Location.t
+          ; identifier : Qualified_identifier.t
+          ; operator : Operator.t
+          ; quoted : Bool.t
+          }
+          (** [Stratified_typ_constant { identifier = "c"; }] is the
+              computation-level stratified type constant ["c"]. *)
+      | Coinductive_typ_constant of
+          { location : Location.t
+          ; identifier : Qualified_identifier.t
+          ; operator : Operator.t
+          ; quoted : Bool.t
+          }
+          (** [Coinductive_typ_constant { identifier = "c"; }] is the
+              computation-level coinductive type constant ["c"]. *)
+      | Abbreviation_typ_constant of
+          { location : Location.t
+          ; identifier : Qualified_identifier.t
+          ; operator : Operator.t
+          ; quoted : Bool.t
+          }
+          (** [Abbreviation_typ_constant { identifier = "c"; }] is the
+              computation-level abbreviated type constant ["c"]. *)
       | Pi of
           { location : Location.t
           ; parameter_identifier : Identifier.t Option.t
@@ -1070,8 +1117,8 @@ module Comp = struct
           }
           (** [Hole { label = Option.Some "x"; _ }] is the hole [?x] ranging
               over computatiion-level expressions. *)
-      | BoxHole of { location : Location.t }
-          (** [BoxHole _] is the hole [_] ranging over meta-objects. *)
+      | Box_hole of { location : Location.t }
+          (** [Box_hole _] is the hole [_] ranging over meta-objects. *)
       | Application of
           { location : Location.t
           ; applicand : Expression.t
@@ -1109,7 +1156,7 @@ module Comp = struct
           ; operator : Operator.t
           ; quoted : Bool.t
           }
-      | MetaObject of
+      | Meta_object of
           { location : Location.t
           ; meta_pattern : Meta.Pattern.t
           }
@@ -1127,7 +1174,7 @@ module Comp = struct
           ; pattern : Pattern.t
           ; typ : Typ.t
           }
-      | MetaTypeAnnotated of
+      | Meta_type_annotated of
           { location : Location.t
           ; annotation_identifier : Identifier.t
           ; annotation_type : Meta.Typ.t

@@ -14,6 +14,11 @@ module Make (Indexing_state : sig
 
   val pop_binding : Identifier.t -> Unit.t t
 
+  (** [fresh_identifier state] is [(state', identifier)] where [identifier]
+      is an identifier that is not bound in [state]. This is used in the
+      indexing of arrow types to Pi-types, and to generate parameter
+      identifiers for lambda abstractions. In order to avoid potential
+      captures, [identifier] is not a valid identifier for the parser. *)
   val fresh_identifier : Identifier.t t
 
   val fresh_identifier_opt : Identifier.t Option.t -> Identifier.t t
@@ -160,16 +165,23 @@ struct
         )
 
   and index_lf_term = function
-    | Synext.LF.Term.Variable { location; identifier } ->
+    | Synext.LF.Term.Bound_variable { location; identifier } ->
         let* offset = index_of_lf_variable identifier in
         return
           (Synapx.LF.Root (location, Synapx.LF.BVar offset, Synapx.LF.Nil))
+    | Synext.LF.Term.Free_variable { location; identifier } ->
+        let name = Name.make_from_identifier identifier in
+        let closure = Option.none in
+        return
+          (Synapx.LF.Root
+             (location, Synapx.LF.FMVar (name, closure), Synapx.LF.Nil))
     | Synext.LF.Term.Constant { location; identifier; _ } ->
         let* id = index_of_lf_term_constant identifier in
         return (Synapx.LF.Root (location, Synapx.LF.Const id, Synapx.LF.Nil))
     | Synext.LF.Term.Application { location; applicand; arguments } -> (
         match applicand with
-        | Synext.LF.Term.Variable _
+        | Synext.LF.Term.Bound_variable _
+        | Synext.LF.Term.Free_variable _
         | Synext.LF.Term.Constant _
         | Synext.LF.Term.Application _
         | Synext.LF.Term.Wildcard _ -> (
@@ -299,7 +311,7 @@ struct
         return (Synapx.LF.SigmaElem (name, typ', bindings'))
 
   and index_clf_term = function
-    | Synext.CLF.Term.Variable { location; identifier } ->
+    | Synext.CLF.Term.Bound_variable { location; identifier } ->
         let* offset = index_of_lf_variable identifier in
         return
           (Synapx.LF.Root (location, Synapx.LF.BVar offset, Synapx.LF.Nil))
@@ -308,8 +320,10 @@ struct
         return (Synapx.LF.Root (location, Synapx.LF.Const id, Synapx.LF.Nil))
     | Synext.CLF.Term.Application { location; applicand; arguments } -> (
         match applicand with
-        | Synext.CLF.Term.Variable _
-        | Synext.CLF.Term.Parameter_variable _
+        | Synext.CLF.Term.Bound_variable _
+        | Synext.CLF.Term.Free_variable _
+        | Synext.CLF.Term.Bound_parameter_variable _
+        | Synext.CLF.Term.Free_parameter_variable _
         | Synext.CLF.Term.Constant _
         | Synext.CLF.Term.Substitution _
         | Synext.CLF.Term.Projection _
@@ -331,7 +345,8 @@ struct
         | Synext.CLF.Term.Hole { variant = `Labelled _ | `Unlabelled; _ }
         | Synext.CLF.Term.Type_annotated _
         | Synext.CLF.Term.Abstraction _
-        | Synext.CLF.Term.Substitution_variable _
+        | Synext.CLF.Term.Bound_substitution_variable _
+        | Synext.CLF.Term.Free_substitution_variable _
         | Synext.CLF.Term.Tuple _ ->
             Error.raise_at1
               (Synext.location_of_clf_term applicand)
@@ -362,12 +377,15 @@ struct
         let* term' = index_clf_term term in
         let* typ' = index_clf_typ typ in
         return (Synapx.LF.Ann (location, term', typ'))
-    | Synext.CLF.Term.Parameter_variable { identifier; location } ->
+    | Synext.CLF.Term.Bound_parameter_variable { identifier; location } ->
         let* offset = index_of_parameter_variable identifier in
         let closure = Option.none in
         let head = Synapx.LF.PVar (Synapx.LF.Offset offset, closure) in
         return (Synapx.LF.Root (location, head, Synapx.LF.Nil))
-    | Synext.CLF.Term.Substitution_variable { location; _ } ->
+    | Synext.CLF.Term.Bound_substitution_variable { location; _ } ->
+        Error.raise_at1 location
+          Illegal_clf_substitution_variable_outside_substitution
+    | Synext.CLF.Term.Free_substitution_variable { location; _ } ->
         Error.raise_at1 location
           Illegal_clf_substitution_variable_outside_substitution
     | Synext.CLF.Term.Substitution { location; term; substitution } -> (
@@ -464,7 +482,8 @@ struct
       | tM -> Synapx.LF.Obj tM
     in
     let index_clf_term = function
-      | Synext.CLF.Term.Substitution_variable { location; _ } ->
+      | Synext.CLF.Term.Bound_substitution_variable { location; _ }
+      | Synext.CLF.Term.Free_substitution_variable { location; _ } ->
           Error.raise_at1 location
             Unsupported_clf_substitution_variable_not_at_start_of_substitution
       | x -> index_clf_term x
@@ -625,24 +644,19 @@ struct
              (location, Synapx.LF.Decl (x', parameter_type', plicity), body'))
 
   and index_comp_typ = function
-    | Synext.Comp.Typ.Constant { location; identifier; variant; _ } -> (
-        match variant with
-        | `Inductive ->
-            let* index = index_of_inductive_comp_constant identifier in
-            return
-              (Synapx.Comp.TypBase (location, index, Synapx.Comp.MetaNil))
-        | `Stratified ->
-            let* index = index_of_stratified_comp_constant identifier in
-            return
-              (Synapx.Comp.TypBase (location, index, Synapx.Comp.MetaNil))
-        | `Coinductive ->
-            let* index = index_of_coinductive_comp_constant identifier in
-            return
-              (Synapx.Comp.TypCobase (location, index, Synapx.Comp.MetaNil))
-        | `Abbreviation ->
-            let* index = index_of_abbreviation_comp_constant identifier in
-            return
-              (Synapx.Comp.TypDef (location, index, Synapx.Comp.MetaNil)))
+    | Synext.Comp.Typ.Inductive_typ_constant { location; identifier; _ } ->
+        let* index = index_of_inductive_comp_constant identifier in
+        return (Synapx.Comp.TypBase (location, index, Synapx.Comp.MetaNil))
+    | Synext.Comp.Typ.Stratified_typ_constant { location; identifier; _ } ->
+        let* index = index_of_stratified_comp_constant identifier in
+        return (Synapx.Comp.TypBase (location, index, Synapx.Comp.MetaNil))
+    | Synext.Comp.Typ.Coinductive_typ_constant { location; identifier; _ } ->
+        let* index = index_of_coinductive_comp_constant identifier in
+        return (Synapx.Comp.TypCobase (location, index, Synapx.Comp.MetaNil))
+    | Synext.Comp.Typ.Abbreviation_typ_constant { location; identifier; _ }
+      ->
+        let* index = index_of_abbreviation_comp_constant identifier in
+        return (Synapx.Comp.TypDef (location, index, Synapx.Comp.MetaNil))
     | Synext.Comp.Typ.Pi
         { location; parameter_identifier; plicity; parameter_type; body } ->
         let* x = fresh_identifier_opt parameter_identifier in
@@ -737,7 +751,7 @@ struct
     | Synext.Comp.Expression.Hole { location; label } ->
         let name = Option.map Identifier.name label in
         return (Synapx.Comp.Hole (location, name))
-    | Synext.Comp.Expression.BoxHole { location } ->
+    | Synext.Comp.Expression.Box_hole { location } ->
         return (Synapx.Comp.BoxHole location)
     | Synext.Comp.Expression.Application { applicand; arguments; _ } ->
         let* applicand' = index_comp_expression applicand in
@@ -780,7 +794,7 @@ struct
     | Synext.Comp.Pattern.Variable { location; identifier } -> Obj.magic ()
     | Synext.Comp.Pattern.Constant { location; identifier; _ } ->
         Obj.magic ()
-    | Synext.Comp.Pattern.MetaObject { location; meta_pattern } ->
+    | Synext.Comp.Pattern.Meta_object { location; meta_pattern } ->
         let* meta_pattern' = index_meta_pattern meta_pattern in
         return (Synapx.Comp.PatMetaObj (location, meta_pattern'))
     | Synext.Comp.Pattern.Tuple { location; elements } ->
@@ -792,13 +806,13 @@ struct
         let* typ' = index_comp_typ typ in
         let* pattern' = index_comp_pattern pattern in
         return (Synapx.Comp.PatAnn (location, pattern', typ'))
-    | Synext.Comp.Pattern.MetaTypeAnnotated { location; _ } ->
+    | Synext.Comp.Pattern.Meta_type_annotated { location; _ } ->
         Error.raise_at1 location Unsupported_meta_type_annotated_comp_pattern
     | Synext.Comp.Pattern.Wildcard { location } ->
         Error.raise_at1 location Unsupported_wildcard_comp_pattern
 
   and index_comp_pattern_with_meta_type_annotations = function
-    | Synext.Comp.Pattern.MetaTypeAnnotated { location; _ } ->
+    | Synext.Comp.Pattern.Meta_type_annotated { location; _ } ->
         (* TODO: Collect meta-type annotations, and index to [LF.ctyp_decl
            LF.ctx] together with head/body pattern *)
         Obj.magic ()
@@ -813,7 +827,7 @@ struct
         (Synext.location_of_comp_expression body)
     in
     match pattern with
-    | Synext.Comp.Pattern.MetaTypeAnnotated _ ->
+    | Synext.Comp.Pattern.Meta_type_annotated _ ->
         (* TODO: Collect meta-type annotations, and index to [LF.ctyp_decl
            LF.ctx] together with head/body pattern *)
         Obj.magic ()

@@ -57,12 +57,15 @@ module LF = struct
           { location : Location.t
           ; parameter_identifier : Identifier.t Option.t
           ; parameter_sort : Object.t Option.t
+          ; plicity : Plicity.t
           ; body : Object.t
           }
           (** [Raw_pi { parameter_identifier = Option.Some "x"; parameter_sort = Option.Some t; body; _ }]
               is the Pi kind or type [{ x : t } body].
 
-              It is a syntax error to omit the parameter sort. *)
+              It is a syntax error to omit the parameter sort. Implicit Pis
+              currently do not have a corresponding syntax, but it may be
+              added in the future. *)
       | Raw_lambda of
           { location : Location.t
           ; parameter_identifier : Identifier.t Option.t
@@ -147,12 +150,15 @@ module CLF = struct
           { location : Location.t
           ; parameter_identifier : Identifier.t Option.t
           ; parameter_sort : Object.t Option.t
+          ; plicity : Plicity.t
           ; body : Object.t
           }
           (** [Raw_pi { parameter_identifier = Option.Some "x"; parameter_sort = Option.Some t; body; _ }]
               is the Pi kind or type [{ x : t } body].
 
-              It is a syntax error to omit the parameter sort. *)
+              It is a syntax error to omit the parameter sort. Implicit Pis
+              currently do not have a corresponding syntax, but it may be
+              added in the future. *)
       | Raw_lambda of
           { location : Location.t
           ; parameter_identifier : Identifier.t Option.t

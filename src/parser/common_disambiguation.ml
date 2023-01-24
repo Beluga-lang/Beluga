@@ -179,6 +179,8 @@ module type BINDINGS_STATE = sig
        ]
        t
 
+  val pop_binding : Identifier.t -> Unit.t t
+
   val with_lf_term_variable :
     ?location:Location.t -> Identifier.t -> 'a t -> 'a t
 
@@ -594,6 +596,213 @@ module Disambiguation_state : DISAMBIGUATION_STATE = struct
     scoped
       ~set:(add_computation_variable ?location identifier)
       ~unset:(pop_binding identifier)
+end
+
+module Make_persistent_pattern_disambiguation_state (S : BINDINGS_STATE) : sig
+  include State.STATE
+
+  type pattern_variable_adder = { run : 'a. 'a S.t -> 'a S.t }
+
+  val initial : S.state -> state
+
+  val with_inner_binding : Identifier.t -> 'a t -> 'a t
+
+  val is_inner_bound : Identifier.t -> Bool.t t
+
+  val add_pattern_variable :
+    Identifier.t -> pattern_variable_adder -> Unit.t t
+
+  exception Duplicate_pattern_variables of Identifier.t List2.t
+
+  val with_pattern_variables :
+       pattern:'pattern t
+    -> expression:'expression S.t
+    -> ('pattern * 'expression) S.t
+
+  val with_wrapped_state : 'a S.t -> 'a t
+
+  val with_lf_term_variable :
+    ?location:Location.t -> Identifier.t -> 'a t -> 'a t
+
+  val with_context_variable :
+    ?location:Location.t -> Identifier.t -> 'a t -> 'a t
+end = struct
+  type pattern_variable_adder = { run : 'a. 'a S.t -> 'a S.t }
+
+  type state =
+    { inner_bindings : Identifier.t List1.t Identifier.Hamt.t
+    ; pattern_variables_rev : Identifier.t List.t
+    ; pattern_variable_adders_rev : pattern_variable_adder List.t
+    ; wrapped_state : S.state
+    }
+
+  include (
+    State.Make (struct
+      type t = state
+    end) :
+      State.STATE with type state := state)
+
+  let initial wrapped_state =
+    { inner_bindings = Identifier.Hamt.empty
+    ; pattern_variables_rev = []
+    ; pattern_variable_adders_rev = []
+    ; wrapped_state
+    }
+
+  let push_binding identifier bindings =
+    match Identifier.Hamt.find_opt identifier bindings with
+    | Option.None ->
+        Identifier.Hamt.add identifier (List1.singleton identifier) bindings
+    | Option.Some binding_stack ->
+        Identifier.Hamt.add identifier
+          (List1.cons identifier binding_stack)
+          bindings
+
+  let pop_binding identifier bindings =
+    match Identifier.Hamt.find_opt identifier bindings with
+    | Option.None -> Error.violation "[pop_binding]"
+    | Option.Some (List1.T (_head, [])) ->
+        Identifier.Hamt.remove identifier bindings
+    | Option.Some (List1.T (_head, x :: xs)) ->
+        Identifier.Hamt.add identifier (List1.from x xs) bindings
+
+  let[@inline] modify_inner_bindings f =
+    modify (fun state ->
+        { state with inner_bindings = f state.inner_bindings })
+
+  let get_inner_bindings =
+    let* state = get in
+    return state.inner_bindings
+
+  let push_inner_binding identifier =
+    modify_inner_bindings (push_binding identifier)
+
+  let pop_inner_binding identifier =
+    modify_inner_bindings (pop_binding identifier)
+
+  let with_inner_binding identifier =
+    scoped
+      ~set:(push_inner_binding identifier)
+      ~unset:(pop_inner_binding identifier)
+
+  let is_inner_bound identifier =
+    let* inner_bindings = get_inner_bindings in
+    return (Identifier.Hamt.mem identifier inner_bindings)
+
+  let add_pattern_variable identifier f =
+    modify (fun state ->
+        { state with
+          pattern_variables_rev = identifier :: state.pattern_variables_rev
+        ; pattern_variable_adders_rev =
+            f :: state.pattern_variable_adders_rev
+        })
+
+  let get_wrapped_state =
+    let* state = get in
+    return state.wrapped_state
+
+  let[@inline] modify_wrapped_state f =
+    modify (fun state ->
+        { state with wrapped_state = f state.wrapped_state })
+
+  let[@inline] set_wrapped_state wrapped_state =
+    modify_wrapped_state (Fun.const wrapped_state)
+
+  let with_wrapped_state f =
+    let* wrapped_state = get_wrapped_state in
+    let wrapped_state', result = S.run f wrapped_state in
+    let* () = set_wrapped_state wrapped_state' in
+    return result
+
+  let get_pattern_variables =
+    let* state = get in
+    return (List.rev state.pattern_variables_rev)
+
+  let get_pattern_variable_adders =
+    let* state = get in
+    return (List.rev state.pattern_variable_adders_rev)
+
+  exception Duplicate_pattern_variables of Identifier.t List2.t
+
+  let with_pattern_variables ~pattern ~expression state =
+    let state', pattern' = run pattern (initial state) in
+    match Identifier.find_duplicates (eval get_pattern_variables state') with
+    | Option.Some duplicates ->
+        Error.raise (Duplicate_pattern_variables duplicates)
+    | Option.None ->
+        let pattern_variable_adders =
+          eval get_pattern_variable_adders state'
+        in
+        let expression_with_pattern_variables =
+          List.fold_left
+            (fun accumulator adder -> adder.run accumulator)
+            expression pattern_variable_adders
+        in
+        S.run
+          (S.map
+             (fun expression' -> (pattern', expression'))
+             expression_with_pattern_variables)
+          state'.wrapped_state
+
+  let with_lf_term_variable ?location identifier =
+    scoped
+      ~set:(with_wrapped_state (S.add_lf_term_variable ?location identifier))
+      ~unset:(with_wrapped_state (S.pop_binding identifier))
+
+  let with_context_variable ?location identifier =
+    scoped
+      ~set:(with_wrapped_state (S.add_context_variable ?location identifier))
+      ~unset:(with_wrapped_state (S.pop_binding identifier))
+end
+
+module Make_persistent_signature_state (S : State.STATE) : sig
+  include SIGNATURE_STATE
+
+  val initial : S.state -> state
+
+  val with_wrapped_state : 'a S.t -> 'a t
+end = struct
+  type state =
+    { default_associativity : Associativity.t
+    ; wrapped_state : S.state
+    }
+
+  include (
+    State.Make (struct
+      type t = state
+    end) :
+      State.STATE with type state := state)
+
+  let initial wrapped_state =
+    { default_associativity = Associativity.non_associative; wrapped_state }
+
+  let get_default_associativity =
+    let* state = get in
+    return state.default_associativity
+
+  let[@inline] modify_default_associativity f =
+    modify (fun state ->
+        { state with default_associativity = f state.default_associativity })
+
+  let[@inline] set_default_associativity default_associativity =
+    modify_default_associativity (Fun.const default_associativity)
+
+  let get_wrapped_state =
+    let* state = get in
+    return state.wrapped_state
+
+  let[@inline] modify_wrapped_state f =
+    modify (fun state ->
+        { state with wrapped_state = f state.wrapped_state })
+
+  let[@inline] set_wrapped_state wrapped_state =
+    modify_wrapped_state (Fun.const wrapped_state)
+
+  let with_wrapped_state f =
+    let* wrapped_state = get_wrapped_state in
+    let wrapped_state', result = S.run f wrapped_state in
+    let* () = set_wrapped_state wrapped_state' in
+    return result
 end
 
 let pp_exception ppf = function

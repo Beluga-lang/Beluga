@@ -9,12 +9,20 @@ struct
   module Lf_disambiguation :
     Lf_disambiguation.LF_DISAMBIGUATION
       with type state = Disambiguation_state.state =
-    Lf_disambiguation.Make (Disambiguation_state)
+  Lf_disambiguation.Make (struct
+    include Disambiguation_state
+
+    let are_free_variables_allowed = return true (* TODO: Temporary *)
+  end)
 
   module Clf_disambiguation :
     Clf_disambiguation.CLF_DISAMBIGUATION
       with type state = Disambiguation_state.state =
-    Clf_disambiguation.Make (Disambiguation_state)
+  Clf_disambiguation.Make (struct
+    include Disambiguation_state
+
+    let are_free_variables_allowed = return true (* TODO: Temporary *)
+  end)
 
   module Meta_disambiguation :
     Meta_disambiguation.META_DISAMBIGUATION

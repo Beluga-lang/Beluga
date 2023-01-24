@@ -22,7 +22,8 @@ let location_of_lf_typ typ =
 let location_of_lf_term term =
   let open LF.Term in
   match term with
-  | Variable { location; _ }
+  | Bound_variable { location; _ }
+  | Free_variable { location; _ }
   | Constant { location; _ }
   | Application { location; _ }
   | Abstraction { location; _ }
@@ -45,9 +46,12 @@ let location_of_clf_typ typ =
 let location_of_clf_term term =
   let open CLF.Term in
   match term with
-  | Variable { location; _ }
-  | Parameter_variable { location; _ }
-  | Substitution_variable { location; _ }
+  | Bound_variable { location; _ }
+  | Free_variable { location; _ }
+  | Bound_parameter_variable { location; _ }
+  | Free_parameter_variable { location; _ }
+  | Bound_substitution_variable { location; _ }
+  | Free_substitution_variable { location; _ }
   | Constant { location; _ }
   | Application { location; _ }
   | Abstraction { location; _ }
@@ -150,7 +154,10 @@ let location_of_comp_kind kind =
 let location_of_comp_typ typ =
   let open Comp.Typ in
   match typ with
-  | Constant { location; _ }
+  | Inductive_typ_constant { location; _ }
+  | Stratified_typ_constant { location; _ }
+  | Coinductive_typ_constant { location; _ }
+  | Abbreviation_typ_constant { location; _ }
   | Pi { location; _ }
   | Arrow { location; _ }
   | Cross { location; _ }
@@ -170,7 +177,7 @@ let location_of_comp_expression expression =
   | Case { location; _ }
   | Tuple { location; _ }
   | Hole { location; _ }
-  | BoxHole { location; _ }
+  | Box_hole { location; _ }
   | Variable { location; _ }
   | Constant { location; _ }
   | Application { location; _ }
@@ -183,11 +190,11 @@ let location_of_comp_pattern pattern =
   match pattern with
   | Variable { location; _ }
   | Constant { location; _ }
-  | MetaObject { location; _ }
+  | Meta_object { location; _ }
   | Tuple { location; _ }
   | Application { location; _ }
   | Type_annotated { location; _ }
-  | MetaTypeAnnotated { location; _ }
+  | Meta_type_annotated { location; _ }
   | Wildcard { location; _ } ->
       location
 

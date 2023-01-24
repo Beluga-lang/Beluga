@@ -89,8 +89,7 @@ module Lf_precedence = struct
         User_defined (Operator.precedence operator)
     | LF.Term.Application _ -> Static lf_application_precedence
     | LF.Term.Wildcard _
-    | LF.Term.Bound_variable _
-    | LF.Term.Free_variable _
+    | LF.Term.Variable _
     | LF.Term.Constant _ ->
         Static 6
 
@@ -152,12 +151,9 @@ module Clf_precedence = struct
     | CLF.Term.Application _ -> Static clf_application_precedence
     | CLF.Term.Substitution _ -> Static 6
     | CLF.Term.Projection _ -> Static 7
-    | CLF.Term.Bound_variable _
-    | CLF.Term.Free_variable _
-    | CLF.Term.Bound_parameter_variable _
-    | CLF.Term.Free_parameter_variable _
-    | CLF.Term.Bound_substitution_variable _
-    | CLF.Term.Free_substitution_variable _
+    | CLF.Term.Variable _
+    | CLF.Term.Parameter_variable _
+    | CLF.Term.Substitution_variable _
     | CLF.Term.Constant _
     | CLF.Term.Hole _
     | CLF.Term.Tuple _ ->

@@ -1859,7 +1859,7 @@
                   ],
                   "arguments": [
                     [
-                      "CLF.Term.Bound_variable",
+                      "CLF.Term.Variable",
                       {
                         "identifier": {
                           "name": "x",
@@ -1881,7 +1881,7 @@
                       }
                     ],
                     [
-                      "CLF.Term.Bound_variable",
+                      "CLF.Term.Variable",
                       {
                         "identifier": {
                           "name": "y",

@@ -604,7 +604,7 @@
               ],
               "arguments": [
                 [
-                  "CLF.Term.Bound_variable",
+                  "CLF.Term.Variable",
                   {
                     "identifier": {
                       "name": "x",
@@ -626,7 +626,7 @@
                   }
                 ],
                 [
-                  "CLF.Term.Bound_variable",
+                  "CLF.Term.Variable",
                   {
                     "identifier": {
                       "name": "y",
@@ -921,7 +921,7 @@
               ],
               "arguments": [
                 [
-                  "CLF.Term.Bound_variable",
+                  "CLF.Term.Variable",
                   {
                     "identifier": {
                       "name": "x",
@@ -943,7 +943,7 @@
                   }
                 ],
                 [
-                  "CLF.Term.Bound_variable",
+                  "CLF.Term.Variable",
                   {
                     "identifier": {
                       "name": "y",
@@ -965,7 +965,7 @@
                   }
                 ],
                 [
-                  "CLF.Term.Bound_variable",
+                  "CLF.Term.Variable",
                   {
                     "identifier": {
                       "name": "w",
@@ -1498,7 +1498,7 @@
                     ],
                     "arguments": [
                       [
-                        "CLF.Term.Bound_variable",
+                        "CLF.Term.Variable",
                         {
                           "identifier": {
                             "name": "x",
@@ -1520,7 +1520,7 @@
                         }
                       ],
                       [
-                        "CLF.Term.Bound_variable",
+                        "CLF.Term.Variable",
                         {
                           "identifier": {
                             "name": "y",

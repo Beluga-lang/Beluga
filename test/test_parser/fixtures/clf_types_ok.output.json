@@ -2924,7 +2924,7 @@
           ],
           "arguments": [
             [
-              "CLF.Term.Bound_variable",
+              "CLF.Term.Variable",
               {
                 "identifier": {
                   "name": "x",
@@ -2946,7 +2946,7 @@
               }
             ],
             [
-              "CLF.Term.Bound_variable",
+              "CLF.Term.Variable",
               {
                 "identifier": {
                   "name": "x",
@@ -2968,7 +2968,7 @@
               }
             ],
             [
-              "CLF.Term.Bound_variable",
+              "CLF.Term.Variable",
               {
                 "identifier": {
                   "name": "x",
@@ -3158,7 +3158,7 @@
               ],
               "arguments": [
                 [
-                  "CLF.Term.Bound_variable",
+                  "CLF.Term.Variable",
                   {
                     "identifier": {
                       "name": "x",
@@ -3180,7 +3180,7 @@
                   }
                 ],
                 [
-                  "CLF.Term.Bound_variable",
+                  "CLF.Term.Variable",
                   {
                     "identifier": {
                       "name": "y",
@@ -3202,7 +3202,7 @@
                   }
                 ],
                 [
-                  "CLF.Term.Bound_variable",
+                  "CLF.Term.Variable",
                   {
                     "identifier": {
                       "name": "y",
@@ -3454,7 +3454,7 @@
                   ],
                   "arguments": [
                     [
-                      "CLF.Term.Bound_variable",
+                      "CLF.Term.Variable",
                       {
                         "identifier": {
                           "name": "x",
@@ -3476,7 +3476,7 @@
                       }
                     ],
                     [
-                      "CLF.Term.Bound_variable",
+                      "CLF.Term.Variable",
                       {
                         "identifier": {
                           "name": "y",
@@ -3498,7 +3498,7 @@
                       }
                     ],
                     [
-                      "CLF.Term.Bound_variable",
+                      "CLF.Term.Variable",
                       {
                         "identifier": {
                           "name": "z",
@@ -3606,7 +3606,7 @@
               ],
               "arguments": [
                 [
-                  "CLF.Term.Free_variable",
+                  "CLF.Term.Variable",
                   {
                     "identifier": {
                       "name": "T",
@@ -3681,7 +3681,7 @@
               ],
               "arguments": [
                 [
-                  "CLF.Term.Free_variable",
+                  "CLF.Term.Variable",
                   {
                     "identifier": {
                       "name": "T'",
@@ -3809,7 +3809,7 @@
                 ],
                 "arguments": [
                   [
-                    "CLF.Term.Free_variable",
+                    "CLF.Term.Variable",
                     {
                       "identifier": {
                         "name": "T",
@@ -3831,7 +3831,7 @@
                     }
                   ],
                   [
-                    "CLF.Term.Free_variable",
+                    "CLF.Term.Variable",
                     {
                       "identifier": {
                         "name": "T'",
@@ -3972,7 +3972,7 @@
                 ],
                 "arguments": [
                   [
-                    "CLF.Term.Free_variable",
+                    "CLF.Term.Variable",
                     {
                       "identifier": {
                         "name": "T",
@@ -3994,7 +3994,7 @@
                     }
                   ],
                   [
-                    "CLF.Term.Free_variable",
+                    "CLF.Term.Variable",
                     {
                       "identifier": {
                         "name": "T'",
@@ -4082,7 +4082,7 @@
               ],
               "arguments": [
                 [
-                  "CLF.Term.Free_variable",
+                  "CLF.Term.Variable",
                   {
                     "identifier": {
                       "name": "T",
@@ -4157,7 +4157,7 @@
               ],
               "arguments": [
                 [
-                  "CLF.Term.Free_variable",
+                  "CLF.Term.Variable",
                   {
                     "identifier": {
                       "name": "T'",
@@ -4258,7 +4258,7 @@
               ],
               "arguments": [
                 [
-                  "CLF.Term.Free_variable",
+                  "CLF.Term.Variable",
                   {
                     "identifier": {
                       "name": "T",
@@ -4333,7 +4333,7 @@
               ],
               "arguments": [
                 [
-                  "CLF.Term.Free_variable",
+                  "CLF.Term.Variable",
                   {
                     "identifier": {
                       "name": "T'",
@@ -4461,7 +4461,7 @@
                 ],
                 "arguments": [
                   [
-                    "CLF.Term.Free_variable",
+                    "CLF.Term.Variable",
                     {
                       "identifier": {
                         "name": "T",
@@ -4483,7 +4483,7 @@
                     }
                   ],
                   [
-                    "CLF.Term.Free_variable",
+                    "CLF.Term.Variable",
                     {
                       "identifier": {
                         "name": "T'",
@@ -4584,7 +4584,7 @@
               ],
               "arguments": [
                 [
-                  "CLF.Term.Free_variable",
+                  "CLF.Term.Variable",
                   {
                     "identifier": {
                       "name": "T",
@@ -4659,7 +4659,7 @@
               ],
               "arguments": [
                 [
-                  "CLF.Term.Free_variable",
+                  "CLF.Term.Variable",
                   {
                     "identifier": {
                       "name": "T'",
@@ -4787,7 +4787,7 @@
                 ],
                 "arguments": [
                   [
-                    "CLF.Term.Free_variable",
+                    "CLF.Term.Variable",
                     {
                       "identifier": {
                         "name": "T",
@@ -4809,7 +4809,7 @@
                     }
                   ],
                   [
-                    "CLF.Term.Free_variable",
+                    "CLF.Term.Variable",
                     {
                       "identifier": {
                         "name": "T'",
@@ -4910,7 +4910,7 @@
               ],
               "arguments": [
                 [
-                  "CLF.Term.Free_variable",
+                  "CLF.Term.Variable",
                   {
                     "identifier": {
                       "name": "T",
@@ -4985,7 +4985,7 @@
               ],
               "arguments": [
                 [
-                  "CLF.Term.Free_variable",
+                  "CLF.Term.Variable",
                   {
                     "identifier": {
                       "name": "T'",
@@ -5113,7 +5113,7 @@
                 ],
                 "arguments": [
                   [
-                    "CLF.Term.Free_variable",
+                    "CLF.Term.Variable",
                     {
                       "identifier": {
                         "name": "T",
@@ -5135,7 +5135,7 @@
                     }
                   ],
                   [
-                    "CLF.Term.Free_variable",
+                    "CLF.Term.Variable",
                     {
                       "identifier": {
                         "name": "T'",
@@ -5247,7 +5247,7 @@
               "CLF.Term.Application",
               {
                 "applicand": [
-                  "CLF.Term.Free_variable",
+                  "CLF.Term.Variable",
                   {
                     "identifier": {
                       "name": "T",
@@ -5270,7 +5270,7 @@
                 ],
                 "arguments": [
                   [
-                    "CLF.Term.Bound_variable",
+                    "CLF.Term.Variable",
                     {
                       "identifier": {
                         "name": "x",
@@ -5410,7 +5410,7 @@
                 ],
                 "arguments": [
                   [
-                    "CLF.Term.Free_variable",
+                    "CLF.Term.Variable",
                     {
                       "identifier": {
                         "name": "T",
@@ -5432,7 +5432,7 @@
                     }
                   ],
                   [
-                    "CLF.Term.Free_variable",
+                    "CLF.Term.Variable",
                     {
                       "identifier": {
                         "name": "T'",
@@ -5520,7 +5520,7 @@
               ],
               "arguments": [
                 [
-                  "CLF.Term.Free_variable",
+                  "CLF.Term.Variable",
                   {
                     "identifier": {
                       "name": "T",
@@ -5595,7 +5595,7 @@
               ],
               "arguments": [
                 [
-                  "CLF.Term.Free_variable",
+                  "CLF.Term.Variable",
                   {
                     "identifier": {
                       "name": "T'",
@@ -5693,7 +5693,7 @@
           ],
           "arguments": [
             [
-              "CLF.Term.Free_variable",
+              "CLF.Term.Variable",
               {
                 "identifier": {
                   "name": "E1",
@@ -5715,7 +5715,7 @@
               }
             ],
             [
-              "CLF.Term.Free_variable",
+              "CLF.Term.Variable",
               {
                 "identifier": {
                   "name": "F1",
@@ -5793,7 +5793,7 @@
               ],
               "arguments": [
                 [
-                  "CLF.Term.Free_variable",
+                  "CLF.Term.Variable",
                   {
                     "identifier": {
                       "name": "E2",
@@ -5815,7 +5815,7 @@
                   }
                 ],
                 [
-                  "CLF.Term.Free_variable",
+                  "CLF.Term.Variable",
                   {
                     "identifier": {
                       "name": "F2",
@@ -5933,7 +5933,7 @@
                     ],
                     "arguments": [
                       [
-                        "CLF.Term.Free_variable",
+                        "CLF.Term.Variable",
                         {
                           "identifier": {
                             "name": "E1",
@@ -5955,7 +5955,7 @@
                         }
                       ],
                       [
-                        "CLF.Term.Free_variable",
+                        "CLF.Term.Variable",
                         {
                           "identifier": {
                             "name": "E2",
@@ -6030,7 +6030,7 @@
                     ],
                     "arguments": [
                       [
-                        "CLF.Term.Free_variable",
+                        "CLF.Term.Variable",
                         {
                           "identifier": {
                             "name": "F1",
@@ -6052,7 +6052,7 @@
                         }
                       ],
                       [
-                        "CLF.Term.Free_variable",
+                        "CLF.Term.Variable",
                         {
                           "identifier": {
                             "name": "F2",
@@ -6160,7 +6160,7 @@
           ],
           "arguments": [
             [
-              "CLF.Term.Free_variable",
+              "CLF.Term.Variable",
               {
                 "identifier": {
                   "name": "E1",
@@ -6182,7 +6182,7 @@
               }
             ],
             [
-              "CLF.Term.Free_variable",
+              "CLF.Term.Variable",
               {
                 "identifier": {
                   "name": "F1",
@@ -6260,7 +6260,7 @@
               ],
               "arguments": [
                 [
-                  "CLF.Term.Free_variable",
+                  "CLF.Term.Variable",
                   {
                     "identifier": {
                       "name": "E2",
@@ -6282,7 +6282,7 @@
                   }
                 ],
                 [
-                  "CLF.Term.Free_variable",
+                  "CLF.Term.Variable",
                   {
                     "identifier": {
                       "name": "F2",
@@ -6400,7 +6400,7 @@
                     ],
                     "arguments": [
                       [
-                        "CLF.Term.Free_variable",
+                        "CLF.Term.Variable",
                         {
                           "identifier": {
                             "name": "E1",
@@ -6422,7 +6422,7 @@
                         }
                       ],
                       [
-                        "CLF.Term.Free_variable",
+                        "CLF.Term.Variable",
                         {
                           "identifier": {
                             "name": "E2",
@@ -6497,7 +6497,7 @@
                     ],
                     "arguments": [
                       [
-                        "CLF.Term.Free_variable",
+                        "CLF.Term.Variable",
                         {
                           "identifier": {
                             "name": "F1",
@@ -6519,7 +6519,7 @@
                         }
                       ],
                       [
-                        "CLF.Term.Free_variable",
+                        "CLF.Term.Variable",
                         {
                           "identifier": {
                             "name": "F2",
@@ -6815,7 +6815,7 @@
                   ],
                   "arguments": [
                     [
-                      "CLF.Term.Bound_variable",
+                      "CLF.Term.Variable",
                       {
                         "identifier": {
                           "name": "x",
@@ -6837,7 +6837,7 @@
                       }
                     ],
                     [
-                      "CLF.Term.Bound_variable",
+                      "CLF.Term.Variable",
                       {
                         "identifier": {
                           "name": "x",
@@ -6915,7 +6915,7 @@
                       "CLF.Term.Application",
                       {
                         "applicand": [
-                          "CLF.Term.Free_variable",
+                          "CLF.Term.Variable",
                           {
                             "identifier": {
                               "name": "E",
@@ -6938,7 +6938,7 @@
                         ],
                         "arguments": [
                           [
-                            "CLF.Term.Bound_variable",
+                            "CLF.Term.Variable",
                             {
                               "identifier": {
                                 "name": "x",
@@ -6973,7 +6973,7 @@
                       "CLF.Term.Application",
                       {
                         "applicand": [
-                          "CLF.Term.Free_variable",
+                          "CLF.Term.Variable",
                           {
                             "identifier": {
                               "name": "F",
@@ -6996,7 +6996,7 @@
                         ],
                         "arguments": [
                           [
-                            "CLF.Term.Bound_variable",
+                            "CLF.Term.Variable",
                             {
                               "identifier": {
                                 "name": "x",
@@ -7160,7 +7160,7 @@
                         "CLF.Term.Application",
                         {
                           "applicand": [
-                            "CLF.Term.Free_variable",
+                            "CLF.Term.Variable",
                             {
                               "identifier": {
                                 "name": "E",
@@ -7183,7 +7183,7 @@
                           ],
                           "arguments": [
                             [
-                              "CLF.Term.Bound_variable",
+                              "CLF.Term.Variable",
                               {
                                 "identifier": {
                                   "name": "x",
@@ -7294,7 +7294,7 @@
                         "CLF.Term.Application",
                         {
                           "applicand": [
-                            "CLF.Term.Free_variable",
+                            "CLF.Term.Variable",
                             {
                               "identifier": {
                                 "name": "F",
@@ -7317,7 +7317,7 @@
                           ],
                           "arguments": [
                             [
-                              "CLF.Term.Bound_variable",
+                              "CLF.Term.Variable",
                               {
                                 "identifier": {
                                   "name": "x",
@@ -7490,7 +7490,7 @@
                   ],
                   "arguments": [
                     [
-                      "CLF.Term.Bound_variable",
+                      "CLF.Term.Variable",
                       {
                         "identifier": {
                           "name": "x",
@@ -7512,7 +7512,7 @@
                       }
                     ],
                     [
-                      "CLF.Term.Bound_variable",
+                      "CLF.Term.Variable",
                       {
                         "identifier": {
                           "name": "x",
@@ -7590,7 +7590,7 @@
                       "CLF.Term.Application",
                       {
                         "applicand": [
-                          "CLF.Term.Free_variable",
+                          "CLF.Term.Variable",
                           {
                             "identifier": {
                               "name": "E",
@@ -7613,7 +7613,7 @@
                         ],
                         "arguments": [
                           [
-                            "CLF.Term.Bound_variable",
+                            "CLF.Term.Variable",
                             {
                               "identifier": {
                                 "name": "x",
@@ -7648,7 +7648,7 @@
                       "CLF.Term.Application",
                       {
                         "applicand": [
-                          "CLF.Term.Free_variable",
+                          "CLF.Term.Variable",
                           {
                             "identifier": {
                               "name": "F",
@@ -7671,7 +7671,7 @@
                         ],
                         "arguments": [
                           [
-                            "CLF.Term.Bound_variable",
+                            "CLF.Term.Variable",
                             {
                               "identifier": {
                                 "name": "x",
@@ -7835,7 +7835,7 @@
                         "CLF.Term.Application",
                         {
                           "applicand": [
-                            "CLF.Term.Free_variable",
+                            "CLF.Term.Variable",
                             {
                               "identifier": {
                                 "name": "E",
@@ -7858,7 +7858,7 @@
                           ],
                           "arguments": [
                             [
-                              "CLF.Term.Bound_variable",
+                              "CLF.Term.Variable",
                               {
                                 "identifier": {
                                   "name": "x",
@@ -7969,7 +7969,7 @@
                         "CLF.Term.Application",
                         {
                           "applicand": [
-                            "CLF.Term.Free_variable",
+                            "CLF.Term.Variable",
                             {
                               "identifier": {
                                 "name": "F",
@@ -7992,7 +7992,7 @@
                           ],
                           "arguments": [
                             [
-                              "CLF.Term.Bound_variable",
+                              "CLF.Term.Variable",
                               {
                                 "identifier": {
                                   "name": "x",
@@ -8165,7 +8165,7 @@
                   ],
                   "arguments": [
                     [
-                      "CLF.Term.Bound_variable",
+                      "CLF.Term.Variable",
                       {
                         "identifier": {
                           "name": "x",
@@ -8187,7 +8187,7 @@
                       }
                     ],
                     [
-                      "CLF.Term.Bound_variable",
+                      "CLF.Term.Variable",
                       {
                         "identifier": {
                           "name": "x",
@@ -8265,7 +8265,7 @@
                       "CLF.Term.Application",
                       {
                         "applicand": [
-                          "CLF.Term.Free_variable",
+                          "CLF.Term.Variable",
                           {
                             "identifier": {
                               "name": "E",
@@ -8288,7 +8288,7 @@
                         ],
                         "arguments": [
                           [
-                            "CLF.Term.Bound_variable",
+                            "CLF.Term.Variable",
                             {
                               "identifier": {
                                 "name": "x",
@@ -8323,7 +8323,7 @@
                       "CLF.Term.Application",
                       {
                         "applicand": [
-                          "CLF.Term.Free_variable",
+                          "CLF.Term.Variable",
                           {
                             "identifier": {
                               "name": "F",
@@ -8346,7 +8346,7 @@
                         ],
                         "arguments": [
                           [
-                            "CLF.Term.Bound_variable",
+                            "CLF.Term.Variable",
                             {
                               "identifier": {
                                 "name": "x",
@@ -8510,7 +8510,7 @@
                         "CLF.Term.Application",
                         {
                           "applicand": [
-                            "CLF.Term.Free_variable",
+                            "CLF.Term.Variable",
                             {
                               "identifier": {
                                 "name": "E",
@@ -8533,7 +8533,7 @@
                           ],
                           "arguments": [
                             [
-                              "CLF.Term.Bound_variable",
+                              "CLF.Term.Variable",
                               {
                                 "identifier": {
                                   "name": "x",
@@ -8644,7 +8644,7 @@
                         "CLF.Term.Application",
                         {
                           "applicand": [
-                            "CLF.Term.Free_variable",
+                            "CLF.Term.Variable",
                             {
                               "identifier": {
                                 "name": "F",
@@ -8667,7 +8667,7 @@
                           ],
                           "arguments": [
                             [
-                              "CLF.Term.Bound_variable",
+                              "CLF.Term.Variable",
                               {
                                 "identifier": {
                                   "name": "x",
@@ -8798,7 +8798,7 @@
               ],
               "arguments": [
                 [
-                  "CLF.Term.Free_variable",
+                  "CLF.Term.Variable",
                   {
                     "identifier": {
                       "name": "T",
@@ -8884,7 +8884,7 @@
               ],
               "arguments": [
                 [
-                  "CLF.Term.Free_variable",
+                  "CLF.Term.Variable",
                   {
                     "identifier": {
                       "name": "T'",
@@ -9034,7 +9034,7 @@
                 ],
                 "arguments": [
                   [
-                    "CLF.Term.Free_variable",
+                    "CLF.Term.Variable",
                     {
                       "identifier": {
                         "name": "T",
@@ -9056,7 +9056,7 @@
                     }
                   ],
                   [
-                    "CLF.Term.Free_variable",
+                    "CLF.Term.Variable",
                     {
                       "identifier": {
                         "name": "T'",
@@ -9168,7 +9168,7 @@
               ],
               "arguments": [
                 [
-                  "CLF.Term.Free_variable",
+                  "CLF.Term.Variable",
                   {
                     "identifier": {
                       "name": "T",
@@ -9254,7 +9254,7 @@
               ],
               "arguments": [
                 [
-                  "CLF.Term.Free_variable",
+                  "CLF.Term.Variable",
                   {
                     "identifier": {
                       "name": "T'",
@@ -9404,7 +9404,7 @@
                 ],
                 "arguments": [
                   [
-                    "CLF.Term.Free_variable",
+                    "CLF.Term.Variable",
                     {
                       "identifier": {
                         "name": "T",
@@ -9426,7 +9426,7 @@
                     }
                   ],
                   [
-                    "CLF.Term.Free_variable",
+                    "CLF.Term.Variable",
                     {
                       "identifier": {
                         "name": "T'",
@@ -9703,7 +9703,7 @@
               ],
               "arguments": [
                 [
-                  "CLF.Term.Bound_variable",
+                  "CLF.Term.Variable",
                   {
                     "identifier": {
                       "name": "x",
@@ -9764,7 +9764,7 @@
                   }
                 ],
                 [
-                  "CLF.Term.Free_variable",
+                  "CLF.Term.Variable",
                   {
                     "identifier": {
                       "name": "y",

@@ -136,14 +136,8 @@ and json_of_lf_typ typ =
 
 and json_of_lf_term term =
   match term with
-  | LF.Term.Bound_variable { identifier; location } ->
-      json_of_variant ~name:"LF.Term.Bound_variable"
-        ~data:
-          [ ("identifier", json_of_identifier identifier)
-          ; ("location", json_of_location location)
-          ]
-  | LF.Term.Free_variable { identifier; location } ->
-      json_of_variant ~name:"LF.Term.Free_variable"
+  | LF.Term.Variable { identifier; location } ->
+      json_of_variant ~name:"LF.Term.Variable"
         ~data:
           [ ("identifier", json_of_identifier identifier)
           ; ("location", json_of_location location)
@@ -244,38 +238,20 @@ let rec json_of_clf_typ typ =
 
 and json_of_clf_term term =
   match term with
-  | CLF.Term.Bound_variable { identifier; location } ->
-      json_of_variant ~name:"CLF.Term.Bound_variable"
+  | CLF.Term.Variable { identifier; location } ->
+      json_of_variant ~name:"CLF.Term.Variable"
         ~data:
           [ ("identifier", json_of_identifier identifier)
           ; ("location", json_of_location location)
           ]
-  | CLF.Term.Free_variable { identifier; location } ->
-      json_of_variant ~name:"CLF.Term.Free_variable"
+  | CLF.Term.Parameter_variable { identifier; location } ->
+      json_of_variant ~name:"CLF.Term.Parameter_variable"
         ~data:
           [ ("identifier", json_of_identifier identifier)
           ; ("location", json_of_location location)
           ]
-  | CLF.Term.Bound_parameter_variable { identifier; location } ->
-      json_of_variant ~name:"CLF.Term.Bound_parameter_variable"
-        ~data:
-          [ ("identifier", json_of_identifier identifier)
-          ; ("location", json_of_location location)
-          ]
-  | CLF.Term.Free_parameter_variable { identifier; location } ->
-      json_of_variant ~name:"CLF.Term.Free_parameter_variable"
-        ~data:
-          [ ("identifier", json_of_identifier identifier)
-          ; ("location", json_of_location location)
-          ]
-  | CLF.Term.Bound_substitution_variable { identifier; location } ->
-      json_of_variant ~name:"CLF.Term.Bound_substitution_variable"
-        ~data:
-          [ ("identifier", json_of_identifier identifier)
-          ; ("location", json_of_location location)
-          ]
-  | CLF.Term.Free_substitution_variable { identifier; location } ->
-      json_of_variant ~name:"CLF.Term.Free_substitution_variable"
+  | CLF.Term.Substitution_variable { identifier; location } ->
+      json_of_variant ~name:"CLF.Term.Substitution_variable"
         ~data:
           [ ("identifier", json_of_identifier identifier)
           ; ("location", json_of_location location)
@@ -843,14 +819,7 @@ and json_of_comp_expression expression =
       json_of_variant ~name:"Comp.Expression.Fun"
         ~data:
           [ ( "branches"
-            , json_of_list1
-                (fun (copatterns, body) ->
-                  json_of_association
-                    [ ( "patterns"
-                      , json_of_list1 json_of_comp_copattern copatterns )
-                    ; ("body", json_of_comp_expression body)
-                    ])
-                branches )
+            , json_of_list1 json_of_comp_cofunction_branch branches )
           ; ("location", json_of_location location)
           ]
   | Comp.Expression.Let { pattern; scrutinee; body; location } ->
@@ -878,14 +847,7 @@ and json_of_comp_expression expression =
         ~data:
           [ ("scrutinee", json_of_comp_expression scrutinee)
           ; ("check_coverage", json_of_bool check_coverage)
-          ; ( "branches"
-            , json_of_list1
-                (fun (pattern, body) ->
-                  json_of_association
-                    [ ("pattern", json_of_comp_pattern pattern)
-                    ; ("body", json_of_comp_expression body)
-                    ])
-                branches )
+          ; ("branches", json_of_list1 json_of_comp_case_branch branches)
           ; ("location", json_of_location location)
           ]
   | Comp.Expression.Tuple { elements; location } ->
@@ -924,6 +886,22 @@ and json_of_comp_expression expression =
           ; ("typ", json_of_comp_typ typ)
           ; ("location", json_of_location location)
           ]
+
+and json_of_comp_case_branch branch =
+  let { Comp.Case_branch.location; pattern; body } = branch in
+  json_of_association
+    [ ("location", json_of_location location)
+    ; ("pattern", json_of_comp_pattern pattern)
+    ; ("body", json_of_comp_expression body)
+    ]
+
+and json_of_comp_cofunction_branch branch =
+  let { Comp.Cofunction_branch.location; copatterns; body } = branch in
+  json_of_association
+    [ ("location", json_of_location location)
+    ; ("copatterns", json_of_list1 json_of_comp_copattern copatterns)
+    ; ("body", json_of_comp_expression body)
+    ]
 
 and json_of_comp_pattern pattern =
   match pattern with

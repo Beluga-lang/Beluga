@@ -705,7 +705,7 @@ module Make
     | Synprs.Comp.Expression_object.Raw_let
         { location; pattern; scrutinee; body } ->
         let* scrutinee' = disambiguate_comp_expression scrutinee in
-        let* pattern', body' = disambiguate_case_branch (pattern, body) in
+        let* pattern', body' = disambiguate_let_pattern pattern body in
         return
           (Synext.Comp.Expression.Let
              { location
@@ -754,33 +754,11 @@ module Make
         (* TODO: Can be observation(s) *)
         Obj.magic ()
 
-  and disambiguate_case_branch (pattern_object, body_object) = Obj.magic ()
+  and disambiguate_let_pattern _ = Obj.magic ()
 
-  and disambiguate_cofunction_branch (copattern_objects, body_object) =
-    with_disambiguated_comp_copatterns_list1 copattern_objects
-      Identifier.Hamt.empty []
-      (fun copattern' _inner_bindings' pattern_variables' ->
-        match Identifier.find_duplicates pattern_variables' with
-        | Option.None ->
-            let* body' = disambiguate_comp_expression body_object in
-            return (copattern', body')
-        | Option.Some duplicate_pattern_variables ->
-            Error.raise_at
-              (List2.to_list1
-                 (List2.map Identifier.location duplicate_pattern_variables))
-              Illegal_duplicate_pattern_variables)
+  and disambiguate_case_branch _ = Obj.magic ()
 
-  and with_disambiguated_comp_patterns_list objects inner_bindings
-      pattern_variables f =
-    match objects with
-    | [] -> f [] inner_bindings pattern_variables
-    | x :: xs ->
-        with_disambiguated_comp_pattern x inner_bindings pattern_variables
-          (fun y inner_bindings' pattern_variables' ->
-            with_disambiguated_comp_patterns_list xs inner_bindings'
-              pattern_variables'
-              (fun ys inner_bindings'' pattern_variables'' ->
-                f (y :: ys) inner_bindings'' pattern_variables''))
+  and disambiguate_cofunction_branch _ = Obj.magic ()
 
   and with_disambiguated_comp_pattern :
       type a.
@@ -822,6 +800,7 @@ module Make
         { location; constant; arguments } ->
         Obj.magic ()
     | Synprs.Comp.Pattern_object.Raw_annotated { location; pattern; typ } ->
+        (* FIXME: The type can be open and introduce pattern variables *)
         let* typ' = disambiguate_comp_typ typ in
         with_disambiguated_comp_pattern pattern inner_bindings
           pattern_variables
@@ -887,17 +866,7 @@ module Make
     | Synprs.Comp.Pattern_object.Raw_observation
         { location; constant; arguments } -> (
         lookup constant >>= function
-        | Result.Ok (Computation_term_destructor, _) ->
-            with_disambiguated_comp_patterns_list arguments inner_bindings
-              pattern_variables
-              (fun arguments' inner_bindings' pattern_variables' ->
-                f
-                  (Synext.Comp.Copattern.Observation
-                     { location
-                     ; observation = constant
-                     ; arguments = arguments'
-                     })
-                  inner_bindings' pattern_variables')
+        | Result.Ok (Computation_term_destructor, _) -> Obj.magic ()
         | Result.Ok entry ->
             Error.raise_at1 location
               (Error.composite_exception2

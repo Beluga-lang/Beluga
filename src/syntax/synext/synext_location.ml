@@ -22,8 +22,7 @@ let location_of_lf_typ typ =
 let location_of_lf_term term =
   let open LF.Term in
   match term with
-  | Bound_variable { location; _ }
-  | Free_variable { location; _ }
+  | Variable { location; _ }
   | Constant { location; _ }
   | Application { location; _ }
   | Abstraction { location; _ }
@@ -46,12 +45,9 @@ let location_of_clf_typ typ =
 let location_of_clf_term term =
   let open CLF.Term in
   match term with
-  | Bound_variable { location; _ }
-  | Free_variable { location; _ }
-  | Bound_parameter_variable { location; _ }
-  | Free_parameter_variable { location; _ }
-  | Bound_substitution_variable { location; _ }
-  | Free_substitution_variable { location; _ }
+  | Variable { location; _ }
+  | Parameter_variable { location; _ }
+  | Substitution_variable { location; _ }
   | Constant { location; _ }
   | Application { location; _ }
   | Abstraction { location; _ }

@@ -254,7 +254,7 @@
                           }
                         ],
                         "term": [
-                          "CLF.Term.Bound_variable",
+                          "CLF.Term.Variable",
                           {
                             "identifier": {
                               "name": "N1",
@@ -313,7 +313,7 @@
                           }
                         ],
                         "term": [
-                          "CLF.Term.Bound_variable",
+                          "CLF.Term.Variable",
                           {
                             "identifier": {
                               "name": "N2",
@@ -425,7 +425,7 @@
                           }
                         ],
                         "term": [
-                          "CLF.Term.Bound_variable",
+                          "CLF.Term.Variable",
                           {
                             "identifier": {
                               "name": "N1",
@@ -527,7 +527,7 @@
                             ],
                             "arguments": [
                               [
-                                "CLF.Term.Bound_variable",
+                                "CLF.Term.Variable",
                                 {
                                   "identifier": {
                                     "name": "N2",

@@ -20,20 +20,12 @@ struct
   module Lf_disambiguator :
     Lf_disambiguation.LF_DISAMBIGUATION
       with type state = Disambiguation_state.state =
-  Lf_disambiguation.Make (struct
-    include Disambiguation_state
-
-    let are_free_variables_allowed = return true (* TODO: Temporary *)
-  end)
+    Lf_disambiguation.Make (Disambiguation_state)
 
   module Clf_disambiguator :
     Clf_disambiguation.CLF_DISAMBIGUATION
       with type state = Disambiguation_state.state =
-  Clf_disambiguation.Make (struct
-    include Disambiguation_state
-
-    let are_free_variables_allowed = return true (* TODO: Temporary *)
-  end)
+    Clf_disambiguation.Make (Disambiguation_state)
 
   module Clf_pattern_disambiguator =
     Clf_disambiguation.Make_pattern_disambiguator

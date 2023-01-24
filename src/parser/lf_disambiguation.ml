@@ -53,8 +53,6 @@ exception Illegal_forward_arrow_lf_term
 
 exception Illegal_backward_arrow_lf_term
 
-exception Illegal_free_variable_lf_term
-
 exception Unbound_lf_term_constant of Qualified_identifier.t
 
 (** {2 Exceptions for LF type-level and term-level application rewriting} *)
@@ -228,11 +226,8 @@ end
     external syntax.
 
     This disambiguation does not perform normalization nor validation. *)
-module Make (Bindings_state : sig
-  include BINDINGS_STATE
-
-  val are_free_variables_allowed : Bool.t t
-end) : LF_DISAMBIGUATION with type state = Bindings_state.state = struct
+module Make (Bindings_state : BINDINGS_STATE) :
+  LF_DISAMBIGUATION with type state = Bindings_state.state = struct
   include Bindings_state
 
   (** {1 Disambiguation} *)
@@ -423,23 +418,17 @@ end) : LF_DISAMBIGUATION with type state = Bindings_state.state = struct
                  })
         | Result.Ok (Lf_term_variable, _) ->
             (* [identifier] appears as an LF bound variable *)
-            return (Synext.LF.Term.Bound_variable { location; identifier })
+            return (Synext.LF.Term.Variable { location; identifier })
         | Result.Ok entry ->
             (* [identifier] appears as a bound entry that is not an LF
                term-level constant or variable *)
             Error.raise_at1 location
               (Error.composite_exception2 Expected_lf_term_constant
                  (actual_binding_exn qualified_identifier entry))
-        | Result.Error (Unbound_identifier _) -> (
+        | Result.Error (Unbound_identifier _) ->
             (* [identifier] does not appear in the state, so it is a free
                variable. *)
-            are_free_variables_allowed
-            >>= function
-            | true ->
-                return
-                  (Synext.LF.Term.Free_variable { location; identifier })
-            | false -> Error.raise_at1 location Illegal_free_variable_lf_term
-            )
+            return (Synext.LF.Term.Variable { location; identifier })
         | Result.Error cause -> Error.raise_at1 location cause)
     | Synprs.LF.Object.Raw_qualified_identifier
         { location; identifier; quoted } -> (
@@ -600,8 +589,6 @@ let pp_exception ppf = function
       Format.fprintf ppf "Forward arrows may not appear as LF terms."
   | Illegal_backward_arrow_lf_term ->
       Format.fprintf ppf "Backward arrows may not appear as LF terms."
-  | Illegal_free_variable_lf_term ->
-      Format.fprintf ppf "Illegal free LF variable."
   | Unbound_lf_term_constant identifier ->
       Format.fprintf ppf "The LF term-level constant %a is unbound."
         Qualified_identifier.pp identifier

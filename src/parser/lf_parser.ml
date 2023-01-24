@@ -74,7 +74,7 @@ end = struct
            Synprs.LF.Object.Raw_lambda
              { location; parameter_identifier; parameter_sort; body })
       |> labelled "LF lambda term"
-    and pi =
+    and explicit_pi =
       seq2
         (braces
            (seq2 omittable_identifier
@@ -83,10 +83,16 @@ end = struct
       |> span
       $> (fun (location, ((parameter_identifier, parameter_sort), body)) ->
            Synprs.LF.Object.Raw_pi
-             { location; parameter_identifier; parameter_sort; body })
+             { location
+             ; parameter_identifier
+             ; parameter_sort
+             ; plicity = Plicity.explicit
+             ; body
+             })
       |> labelled "LF dependent product type or kind"
     in
-    choice [ lambda; pi ]
+    (* There is no syntax for implict Pis *)
+    choice [ lambda; explicit_pi ]
 
   let lf_object5 =
     let constant_or_variable =

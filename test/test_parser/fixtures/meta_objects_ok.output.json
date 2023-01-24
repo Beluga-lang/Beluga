@@ -618,7 +618,7 @@
                   ],
                   "arguments": [
                     [
-                      "CLF.Term.Variable",
+                      "CLF.Term.Bound_variable",
                       {
                         "identifier": {
                           "name": "x",
@@ -640,7 +640,7 @@
                       }
                     ],
                     [
-                      "CLF.Term.Variable",
+                      "CLF.Term.Bound_variable",
                       {
                         "identifier": {
                           "name": "y",
@@ -906,7 +906,7 @@
                   ],
                   "arguments": [
                     [
-                      "CLF.Term.Variable",
+                      "CLF.Term.Bound_variable",
                       {
                         "identifier": {
                           "name": "x",
@@ -928,7 +928,7 @@
                       }
                     ],
                     [
-                      "CLF.Term.Variable",
+                      "CLF.Term.Bound_variable",
                       {
                         "identifier": {
                           "name": "y",
@@ -1194,7 +1194,7 @@
                   ],
                   "arguments": [
                     [
-                      "CLF.Term.Variable",
+                      "CLF.Term.Bound_variable",
                       {
                         "identifier": {
                           "name": "x",
@@ -1216,7 +1216,7 @@
                       }
                     ],
                     [
-                      "CLF.Term.Variable",
+                      "CLF.Term.Bound_variable",
                       {
                         "identifier": {
                           "name": "y",
@@ -1463,7 +1463,7 @@
         }
       ],
       "term": [
-        "CLF.Term.Variable",
+        "CLF.Term.Bound_variable",
         {
           "identifier": {
             "name": "z",
@@ -1574,7 +1574,7 @@
         }
       ],
       "term": [
-        "CLF.Term.Variable",
+        "CLF.Term.Bound_variable",
         {
           "identifier": {
             "name": "z",
@@ -1695,7 +1695,7 @@
         }
       ],
       "term": [
-        "CLF.Term.Variable",
+        "CLF.Term.Bound_variable",
         {
           "identifier": {
             "name": "z",
@@ -1768,7 +1768,7 @@
         }
       ],
       "term": [
-        "CLF.Term.Variable",
+        "CLF.Term.Bound_variable",
         {
           "identifier": {
             "name": "z",
@@ -2190,7 +2190,7 @@
               }
             ],
             [
-              "CLF.Term.Variable",
+              "CLF.Term.Bound_variable",
               {
                 "identifier": {
                   "name": "x",
@@ -2622,7 +2622,7 @@
               }
             ],
             [
-              "CLF.Term.Variable",
+              "CLF.Term.Bound_variable",
               {
                 "identifier": {
                   "name": "x",
@@ -2769,7 +2769,7 @@
           ],
           "terms": [
             [
-              "CLF.Term.Variable",
+              "CLF.Term.Bound_variable",
               {
                 "identifier": {
                   "name": "z",
@@ -2791,7 +2791,7 @@
               }
             ],
             [
-              "CLF.Term.Variable",
+              "CLF.Term.Free_variable",
               {
                 "identifier": {
                   "name": "x",

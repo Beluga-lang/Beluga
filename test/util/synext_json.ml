@@ -82,12 +82,14 @@ let rec json_of_lf_kind kind =
           ; ("range", json_of_lf_kind range)
           ; ("location", json_of_location location)
           ]
-  | LF.Kind.Pi { parameter_identifier; parameter_type; body; location } ->
+  | LF.Kind.Pi
+      { parameter_identifier; parameter_type; plicity; body; location } ->
       json_of_variant ~name:"LF.Kind.Pi"
         ~data:
           [ ( "parameter_identifier"
             , json_of_identifier_opt parameter_identifier )
           ; ("parameter_type", json_of_option json_of_lf_typ parameter_type)
+          ; ("plicity", json_of_plicity plicity)
           ; ("body", json_of_lf_kind body)
           ; ("location", json_of_location location)
           ]
@@ -120,20 +122,28 @@ and json_of_lf_typ typ =
               | `Backward -> json_of_string "backward" )
           ; ("location", json_of_location location)
           ]
-  | LF.Typ.Pi { parameter_identifier; parameter_type; body; location } ->
+  | LF.Typ.Pi
+      { parameter_identifier; parameter_type; plicity; body; location } ->
       json_of_variant ~name:"LF.Typ.Pi"
         ~data:
           [ ( "parameter_identifier"
             , json_of_identifier_opt parameter_identifier )
           ; ("parameter_type", json_of_option json_of_lf_typ parameter_type)
+          ; ("plicity", json_of_plicity plicity)
           ; ("body", json_of_lf_typ body)
           ; ("location", json_of_location location)
           ]
 
 and json_of_lf_term term =
   match term with
-  | LF.Term.Variable { identifier; location } ->
-      json_of_variant ~name:"LF.Term.Variable"
+  | LF.Term.Bound_variable { identifier; location } ->
+      json_of_variant ~name:"LF.Term.Bound_variable"
+        ~data:
+          [ ("identifier", json_of_identifier identifier)
+          ; ("location", json_of_location location)
+          ]
+  | LF.Term.Free_variable { identifier; location } ->
+      json_of_variant ~name:"LF.Term.Free_variable"
         ~data:
           [ ("identifier", json_of_identifier identifier)
           ; ("location", json_of_location location)
@@ -204,12 +214,14 @@ let rec json_of_clf_typ typ =
               | `Backward -> json_of_string "backward" )
           ; ("location", json_of_location location)
           ]
-  | CLF.Typ.Pi { parameter_identifier; parameter_type; body; location } ->
+  | CLF.Typ.Pi
+      { parameter_identifier; parameter_type; plicity; body; location } ->
       json_of_variant ~name:"CLF.Typ.Pi"
         ~data:
           [ ( "parameter_identifier"
             , json_of_identifier_opt parameter_identifier )
           ; ("parameter_type", json_of_clf_typ parameter_type)
+          ; ("plicity", json_of_plicity plicity)
           ; ("body", json_of_clf_typ body)
           ; ("location", json_of_location location)
           ]
@@ -232,20 +244,38 @@ let rec json_of_clf_typ typ =
 
 and json_of_clf_term term =
   match term with
-  | CLF.Term.Variable { identifier; location } ->
-      json_of_variant ~name:"CLF.Term.Variable"
+  | CLF.Term.Bound_variable { identifier; location } ->
+      json_of_variant ~name:"CLF.Term.Bound_variable"
         ~data:
           [ ("identifier", json_of_identifier identifier)
           ; ("location", json_of_location location)
           ]
-  | CLF.Term.Parameter_variable { identifier; location } ->
-      json_of_variant ~name:"CLF.Term.Parameter_variable"
+  | CLF.Term.Free_variable { identifier; location } ->
+      json_of_variant ~name:"CLF.Term.Free_variable"
         ~data:
           [ ("identifier", json_of_identifier identifier)
           ; ("location", json_of_location location)
           ]
-  | CLF.Term.Substitution_variable { identifier; location } ->
-      json_of_variant ~name:"CLF.Term.Substitution_variable"
+  | CLF.Term.Bound_parameter_variable { identifier; location } ->
+      json_of_variant ~name:"CLF.Term.Bound_parameter_variable"
+        ~data:
+          [ ("identifier", json_of_identifier identifier)
+          ; ("location", json_of_location location)
+          ]
+  | CLF.Term.Free_parameter_variable { identifier; location } ->
+      json_of_variant ~name:"CLF.Term.Free_parameter_variable"
+        ~data:
+          [ ("identifier", json_of_identifier identifier)
+          ; ("location", json_of_location location)
+          ]
+  | CLF.Term.Bound_substitution_variable { identifier; location } ->
+      json_of_variant ~name:"CLF.Term.Bound_substitution_variable"
+        ~data:
+          [ ("identifier", json_of_identifier identifier)
+          ; ("location", json_of_location location)
+          ]
+  | CLF.Term.Free_substitution_variable { identifier; location } ->
+      json_of_variant ~name:"CLF.Term.Free_substitution_variable"
         ~data:
           [ ("identifier", json_of_identifier identifier)
           ; ("location", json_of_location location)
@@ -698,18 +728,40 @@ let rec json_of_comp_kind kind =
 
 and json_of_comp_typ typ =
   match typ with
-  | Comp.Typ.Constant { identifier; quoted; location; operator; variant } ->
-      json_of_variant ~name:"Comp.Typ.Constant"
+  | Comp.Typ.Inductive_typ_constant
+      { identifier; quoted; location; operator } ->
+      json_of_variant ~name:"Comp.Typ.Inductive_typ_constant"
         ~data:
           [ ("identifier", json_of_qualified_identifier identifier)
           ; ("quoted", json_of_bool quoted)
           ; ("operator", json_of_operator operator)
-          ; ( "variant"
-            , match variant with
-              | `Inductive -> json_of_string "inductive"
-              | `Stratified -> json_of_string "Stratified"
-              | `Abbreviation -> json_of_string "abbreviation"
-              | `Coinductive -> json_of_string "coinductive" )
+          ; ("location", json_of_location location)
+          ]
+  | Comp.Typ.Stratified_typ_constant
+      { identifier; quoted; location; operator } ->
+      json_of_variant ~name:"Comp.Typ.Stratified_typ_constant"
+        ~data:
+          [ ("identifier", json_of_qualified_identifier identifier)
+          ; ("quoted", json_of_bool quoted)
+          ; ("operator", json_of_operator operator)
+          ; ("location", json_of_location location)
+          ]
+  | Comp.Typ.Coinductive_typ_constant
+      { identifier; quoted; location; operator } ->
+      json_of_variant ~name:"Comp.Typ.Coinductive_typ_constant"
+        ~data:
+          [ ("identifier", json_of_qualified_identifier identifier)
+          ; ("quoted", json_of_bool quoted)
+          ; ("operator", json_of_operator operator)
+          ; ("location", json_of_location location)
+          ]
+  | Comp.Typ.Abbreviation_typ_constant
+      { identifier; quoted; location; operator } ->
+      json_of_variant ~name:"Comp.Typ.Abbreviation_typ_constant"
+        ~data:
+          [ ("identifier", json_of_qualified_identifier identifier)
+          ; ("quoted", json_of_bool quoted)
+          ; ("operator", json_of_operator operator)
           ; ("location", json_of_location location)
           ]
   | Comp.Typ.Pi
@@ -848,8 +900,8 @@ and json_of_comp_expression expression =
           [ ("label", json_of_identifier_opt label)
           ; ("location", json_of_location location)
           ]
-  | Comp.Expression.BoxHole { location } ->
-      json_of_variant ~name:"Comp.Expression.BoxHole"
+  | Comp.Expression.Box_hole { location } ->
+      json_of_variant ~name:"Comp.Expression.Box_hole"
         ~data:[ ("location", json_of_location location) ]
   | Comp.Expression.Application { applicand; arguments; location } ->
       json_of_variant ~name:"Comp.Expression.Application"
@@ -889,8 +941,8 @@ and json_of_comp_pattern pattern =
           ; ("operator", json_of_operator operator)
           ; ("location", json_of_location location)
           ]
-  | Comp.Pattern.MetaObject { meta_pattern; location } ->
-      json_of_variant ~name:"Comp.Pattern.MetaObject"
+  | Comp.Pattern.Meta_object { meta_pattern; location } ->
+      json_of_variant ~name:"Comp.Pattern.Meta_object"
         ~data:
           [ ("meta_pattern", json_of_meta_pattern meta_pattern)
           ; ("location", json_of_location location)
@@ -915,9 +967,9 @@ and json_of_comp_pattern pattern =
           ; ("typ", json_of_comp_typ typ)
           ; ("location", json_of_location location)
           ]
-  | Comp.Pattern.MetaTypeAnnotated
+  | Comp.Pattern.Meta_type_annotated
       { annotation_identifier; annotation_type; body; location } ->
-      json_of_variant ~name:"Comp.Pattern.MetaTypeAnnotated"
+      json_of_variant ~name:"Comp.Pattern.Meta_type_annotated"
         ~data:
           [ ( "annotation_identifier"
             , json_of_identifier annotation_identifier )

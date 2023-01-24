@@ -53,6 +53,8 @@ exception Illegal_forward_arrow_lf_term
 
 exception Illegal_backward_arrow_lf_term
 
+exception Illegal_free_variable_lf_term
+
 exception Unbound_lf_term_constant of Qualified_identifier.t
 
 (** {2 Exceptions for LF type-level and term-level application rewriting} *)
@@ -226,8 +228,11 @@ end
     external syntax.
 
     This disambiguation does not perform normalization nor validation. *)
-module Make (Bindings_state : BINDINGS_STATE) :
-  LF_DISAMBIGUATION with type state = Bindings_state.state = struct
+module Make (Bindings_state : sig
+  include BINDINGS_STATE
+
+  val are_free_variables_allowed : Bool.t t
+end) : LF_DISAMBIGUATION with type state = Bindings_state.state = struct
   include Bindings_state
 
   (** {1 Disambiguation} *)
@@ -266,7 +271,7 @@ module Make (Bindings_state : BINDINGS_STATE) :
               (Synext.LF.Kind.Arrow
                  { location; domain = domain'; range = range' }))
     | Synprs.LF.Object.Raw_pi
-        { location; parameter_identifier; parameter_sort; body } ->
+        { location; parameter_identifier; parameter_sort; plicity; body } ->
         let* parameter_type' =
           traverse_option disambiguate_lf_typ parameter_sort
         in
@@ -282,14 +287,12 @@ module Make (Bindings_state : BINDINGS_STATE) :
              { location
              ; parameter_identifier
              ; parameter_type = parameter_type'
+             ; plicity
              ; body = body'
              })
 
   (** [disambiguate_lf_typ object_ state] is [object_] rewritten as an LF
       type with respect to the disambiguation context [state].
-
-      Type applications are rewritten with {!disambiguate_lf_application}
-      using Dijkstra's shunting yard algorithm.
 
       This function imposes syntactic restrictions on [object_], but does not
       perform normalization nor validation. To see the syntactic restrictions
@@ -305,8 +308,8 @@ module Make (Bindings_state : BINDINGS_STATE) :
     | Synprs.LF.Object.Raw_annotated { location; _ } ->
         Error.raise_at1 location Illegal_annotated_lf_type
     | Synprs.LF.Object.Raw_identifier { location; identifier; quoted } -> (
-        (* As an LF type, plain identifiers are necessarily type-level
-           constants. *)
+        (* As an LF type, plain identifiers are necessarily bound LF
+           type-level constants. *)
         let qualified_identifier =
           Qualified_identifier.make_simple identifier
         in
@@ -333,8 +336,8 @@ module Make (Bindings_state : BINDINGS_STATE) :
         (* Qualified identifiers without namespaces were parsed as plain
            identifiers *)
         assert (List.length (Qualified_identifier.namespaces identifier) >= 1);
-        (* As an LF type, identifiers of the form [(<identifier> `::')+
-           <identifier>] are necessarily type-level constants. *)
+        (* As an LF type, identifiers of the form [(<identifier>`.')+
+           <identifier>] are necessarily bound LF type-level constants. *)
         lookup identifier >>= function
         | Result.Ok (Lf_type_constant, { operator = Option.Some operator; _ })
           ->
@@ -349,13 +352,14 @@ module Make (Bindings_state : BINDINGS_STATE) :
             Error.raise_at1 location (Unbound_lf_type_constant identifier)
         | Result.Error cause -> Error.raise_at1 location cause)
     | Synprs.LF.Object.Raw_arrow { location; domain; range; orientation } ->
+        (* Forward and backward arrows are allowed. *)
         let* domain' = disambiguate_lf_typ domain in
         let* range' = disambiguate_lf_typ range in
         return
           (Synext.LF.Typ.Arrow
              { location; domain = domain'; range = range'; orientation })
     | Synprs.LF.Object.Raw_pi
-        { location; parameter_identifier; parameter_sort; body } ->
+        { location; parameter_identifier; parameter_sort; plicity; body } ->
         let* parameter_type' =
           traverse_option disambiguate_lf_typ parameter_sort
         in
@@ -371,6 +375,7 @@ module Make (Bindings_state : BINDINGS_STATE) :
              { location
              ; parameter_identifier
              ; parameter_type = parameter_type'
+             ; plicity
              ; body = body'
              })
     | Synprs.LF.Object.Raw_application { objects; location } ->
@@ -383,9 +388,6 @@ module Make (Bindings_state : BINDINGS_STATE) :
 
   (** [disambiguate_lf_term object_ state] is [object_] rewritten as an LF
       term with respect to the disambiguation context [state].
-
-      Term applications are rewritten with {!disambiguate_lf_application}
-      using Dijkstra's shunting yard algorithm.
 
       This function imposes syntactic restrictions on [object_], but does not
       perform normalization nor validation. To see the syntactic restrictions
@@ -420,25 +422,33 @@ module Make (Bindings_state : BINDINGS_STATE) :
                  })
         | Result.Ok (Lf_term_variable, _) ->
             (* [identifier] appears as an LF bound variable *)
-            return (Synext.LF.Term.Variable { location; identifier })
+            return (Synext.LF.Term.Bound_variable { location; identifier })
         | Result.Ok entry ->
             (* [identifier] appears as a bound entry that is not an LF
                term-level constant or variable *)
             Error.raise_at1 location
               (Error.composite_exception2 Expected_lf_term_constant
                  (actual_binding_exn qualified_identifier entry))
-        | Result.Error (Unbound_identifier _) ->
+        | Result.Error (Unbound_identifier _) -> (
             (* [identifier] does not appear in the state, so it is a free
-               variable *)
-            return (Synext.LF.Term.Variable { location; identifier })
+               variable. *)
+            are_free_variables_allowed
+            >>= function
+            | true ->
+                return
+                  (Synext.LF.Term.Free_variable { location; identifier })
+            | false -> Error.raise_at1 location Illegal_free_variable_lf_term
+            )
         | Result.Error cause -> Error.raise_at1 location cause)
     | Synprs.LF.Object.Raw_qualified_identifier
         { location; identifier; quoted } -> (
         (* Qualified identifiers without namespaces were parsed as plain
            identifiers *)
         assert (List.length (Qualified_identifier.namespaces identifier) >= 1);
-        (* As an LF term, identifiers of the form [(<identifier> `::')+
-           <identifier>] are necessarily term-level constants. *)
+        (* As an LF term, identifiers of the form [(<identifier>`.')+
+           <identifier>] are necessarily LF term-level constants. Plain LF
+           terms do not support projections, so there is no additional
+           ambiguity. *)
         (* Lookup the identifier in the current state *)
         lookup identifier >>= function
         | Result.Ok (Lf_term_constant, { operator = Option.Some operator; _ })
@@ -498,50 +508,44 @@ module Make (Bindings_state : BINDINGS_STATE) :
       Application_disambiguation.Make (Associativity) (Fixity) (Lf_operand)
         (Lf_operator)
         (Make_lf_application_disambiguation_state (Bindings_state)) in
-    fun objects ->
-      disambiguate_application objects >>= function
-      | Result.Ok (applicand, arguments) -> return (applicand, arguments)
-      | Result.Error
-          (Ambiguous_operator_placement { left_operator; right_operator }) ->
-          let left_operator_location = Lf_operator.location left_operator in
-          let right_operator_location =
-            Lf_operator.location right_operator
-          in
-          let identifier = Lf_operator.identifier left_operator in
-          Error.raise_at2 left_operator_location right_operator_location
-            (Ambiguous_lf_operator_placement identifier)
-      | Result.Error (Arity_mismatch { operator; operator_arity; operands })
-        ->
-          let operator_identifier = Lf_operator.identifier operator in
-          let operator_location = Lf_operator.location operator in
-          let expected_arguments_count = operator_arity in
-          let operand_locations = List.map Lf_operand.location operands in
-          let actual_arguments_count = List.length operands in
-          Error.raise_at
-            (List1.from operator_location operand_locations)
-            (Lf_operator_arity_mismatch
-               { operator_identifier
-               ; expected_arguments_count
-               ; actual_arguments_count
-               })
-      | Result.Error
-          (Consecutive_non_associative_operators
-            { left_operator; right_operator }) ->
-          let operator_identifier = Lf_operator.identifier left_operator in
-          let left_operator_location = Lf_operator.location left_operator in
-          let right_operator_location =
-            Lf_operator.location right_operator
-          in
-          Error.raise_at2 left_operator_location right_operator_location
-            (Consecutive_applications_of_non_associative_lf_operators
-               operator_identifier)
-      | Result.Error (Misplaced_operator { operator; operands }) ->
-          let operator_location = Lf_operator.location operator
-          and operand_locations = List.map Lf_operand.location operands in
-          Error.raise_at
-            (List1.from operator_location operand_locations)
-            Misplaced_lf_operator
-      | Result.Error cause -> Error.raise cause
+    disambiguate_application >=> function
+    | Result.Ok (applicand, arguments) -> return (applicand, arguments)
+    | Result.Error
+        (Ambiguous_operator_placement { left_operator; right_operator }) ->
+        let left_operator_location = Lf_operator.location left_operator in
+        let right_operator_location = Lf_operator.location right_operator in
+        let identifier = Lf_operator.identifier left_operator in
+        Error.raise_at2 left_operator_location right_operator_location
+          (Ambiguous_lf_operator_placement identifier)
+    | Result.Error (Arity_mismatch { operator; operator_arity; operands }) ->
+        let operator_identifier = Lf_operator.identifier operator in
+        let operator_location = Lf_operator.location operator in
+        let expected_arguments_count = operator_arity in
+        let operand_locations = List.map Lf_operand.location operands in
+        let actual_arguments_count = List.length operands in
+        Error.raise_at
+          (List1.from operator_location operand_locations)
+          (Lf_operator_arity_mismatch
+             { operator_identifier
+             ; expected_arguments_count
+             ; actual_arguments_count
+             })
+    | Result.Error
+        (Consecutive_non_associative_operators
+          { left_operator; right_operator }) ->
+        let operator_identifier = Lf_operator.identifier left_operator in
+        let left_operator_location = Lf_operator.location left_operator in
+        let right_operator_location = Lf_operator.location right_operator in
+        Error.raise_at2 left_operator_location right_operator_location
+          (Consecutive_applications_of_non_associative_lf_operators
+             operator_identifier)
+    | Result.Error (Misplaced_operator { operator; operands }) ->
+        let operator_location = Lf_operator.location operator
+        and operand_locations = List.map Lf_operand.location operands in
+        Error.raise_at
+          (List1.from operator_location operand_locations)
+          Misplaced_lf_operator
+    | Result.Error cause -> Error.raise cause
 
   and elaborate_lf_operand operand =
     match operand with
@@ -595,6 +599,8 @@ let pp_exception ppf = function
       Format.fprintf ppf "Forward arrows may not appear as LF terms."
   | Illegal_backward_arrow_lf_term ->
       Format.fprintf ppf "Backward arrows may not appear as LF terms."
+  | Illegal_free_variable_lf_term ->
+      Format.fprintf ppf "Illegal free LF variable."
   | Unbound_lf_term_constant identifier ->
       Format.fprintf ppf "The LF term-level constant %a is unbound."
         Qualified_identifier.pp identifier

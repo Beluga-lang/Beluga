@@ -186,7 +186,7 @@
                 "Comp.Typ.Application",
                 {
                   "applicand": [
-                    "Comp.Typ.Constant",
+                    "Comp.Typ.Inductive_typ_constant",
                     {
                       "identifier": {
                         "name": {
@@ -215,7 +215,6 @@
                         "arity": 2,
                         "precedence": 3
                       },
-                      "variant": "inductive",
                       "location": {
                         "filename": "comp_types_ok.input.bel",
                         "start_line": 7,
@@ -255,7 +254,7 @@
                           }
                         ],
                         "term": [
-                          "CLF.Term.Variable",
+                          "CLF.Term.Bound_variable",
                           {
                             "identifier": {
                               "name": "N1",
@@ -314,7 +313,7 @@
                           }
                         ],
                         "term": [
-                          "CLF.Term.Variable",
+                          "CLF.Term.Bound_variable",
                           {
                             "identifier": {
                               "name": "N2",
@@ -358,7 +357,7 @@
                 "Comp.Typ.Application",
                 {
                   "applicand": [
-                    "Comp.Typ.Constant",
+                    "Comp.Typ.Inductive_typ_constant",
                     {
                       "identifier": {
                         "name": {
@@ -387,7 +386,6 @@
                         "arity": 2,
                         "precedence": 3
                       },
-                      "variant": "inductive",
                       "location": {
                         "filename": "comp_types_ok.input.bel",
                         "start_line": 7,
@@ -427,7 +425,7 @@
                           }
                         ],
                         "term": [
-                          "CLF.Term.Variable",
+                          "CLF.Term.Bound_variable",
                           {
                             "identifier": {
                               "name": "N1",
@@ -529,7 +527,7 @@
                             ],
                             "arguments": [
                               [
-                                "CLF.Term.Variable",
+                                "CLF.Term.Bound_variable",
                                 {
                                   "identifier": {
                                     "name": "N2",

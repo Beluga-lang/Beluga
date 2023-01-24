@@ -420,7 +420,10 @@ module Make
             return
               (Synext.Comp.Kind.Arrow
                  { location; domain = meta_type; range = range' })
-        | Synext.Comp.Typ.Constant _
+        | Synext.Comp.Typ.Inductive_typ_constant _
+        | Synext.Comp.Typ.Stratified_typ_constant _
+        | Synext.Comp.Typ.Coinductive_typ_constant _
+        | Synext.Comp.Typ.Abbreviation_typ_constant _
         | Synext.Comp.Typ.Pi _
         | Synext.Comp.Typ.Arrow _
         | Synext.Comp.Typ.Cross _
@@ -447,45 +450,41 @@ module Make
             ( Computation_inductive_type_constant
             , { operator = Option.Some operator; _ } ) ->
             return
-              (Synext.Comp.Typ.Constant
+              (Synext.Comp.Typ.Inductive_typ_constant
                  { location
                  ; identifier = qualified_identifier
                  ; operator
                  ; quoted
-                 ; variant = `Inductive
                  })
         | Result.Ok
             ( Computation_stratified_type_constant
             , { operator = Option.Some operator; _ } ) ->
             return
-              (Synext.Comp.Typ.Constant
+              (Synext.Comp.Typ.Stratified_typ_constant
                  { location
                  ; identifier = qualified_identifier
                  ; operator
                  ; quoted
-                 ; variant = `Stratified
                  })
         | Result.Ok
             ( Computation_abbreviation_type_constant
             , { operator = Option.Some operator; _ } ) ->
             return
-              (Synext.Comp.Typ.Constant
+              (Synext.Comp.Typ.Abbreviation_typ_constant
                  { location
                  ; identifier = qualified_identifier
                  ; operator
                  ; quoted
-                 ; variant = `Abbreviation
                  })
         | Result.Ok
             ( Computation_coinductive_type_constant
             , { operator = Option.Some operator; _ } ) ->
             return
-              (Synext.Comp.Typ.Constant
+              (Synext.Comp.Typ.Coinductive_typ_constant
                  { location
                  ; identifier = qualified_identifier
                  ; operator
                  ; quoted
-                 ; variant = `Coinductive
                  })
         | Result.Ok entry ->
             Error.raise_at1 location
@@ -509,46 +508,26 @@ module Make
             ( Computation_inductive_type_constant
             , { operator = Option.Some operator; _ } ) ->
             return
-              (Synext.Comp.Typ.Constant
-                 { location
-                 ; identifier
-                 ; operator
-                 ; quoted
-                 ; variant = `Inductive
-                 })
+              (Synext.Comp.Typ.Inductive_typ_constant
+                 { location; identifier; operator; quoted })
         | Result.Ok
             ( Computation_stratified_type_constant
             , { operator = Option.Some operator; _ } ) ->
             return
-              (Synext.Comp.Typ.Constant
-                 { location
-                 ; identifier
-                 ; operator
-                 ; quoted
-                 ; variant = `Stratified
-                 })
+              (Synext.Comp.Typ.Stratified_typ_constant
+                 { location; identifier; operator; quoted })
         | Result.Ok
             ( Computation_abbreviation_type_constant
             , { operator = Option.Some operator; _ } ) ->
             return
-              (Synext.Comp.Typ.Constant
-                 { location
-                 ; identifier
-                 ; operator
-                 ; quoted
-                 ; variant = `Abbreviation
-                 })
+              (Synext.Comp.Typ.Abbreviation_typ_constant
+                 { location; identifier; operator; quoted })
         | Result.Ok
             ( Computation_coinductive_type_constant
             , { operator = Option.Some operator; _ } ) ->
             return
-              (Synext.Comp.Typ.Constant
-                 { location
-                 ; identifier
-                 ; operator
-                 ; quoted
-                 ; variant = `Coinductive
-                 })
+              (Synext.Comp.Typ.Coinductive_typ_constant
+                 { location; identifier; operator; quoted })
         | Result.Ok entry ->
             Error.raise_at1 location
               (Error.composite_exception2
@@ -627,60 +606,58 @@ module Make
         (Comp_typ_operand)
         (Comp_typ_operator)
         (Make_comp_typ_application_disambiguation_state (Bindings_state)) in
-    fun objects ->
-      disambiguate_application objects >>= function
-      | Result.Ok (applicand, arguments) -> return (applicand, arguments)
-      | Result.Error
-          (Ambiguous_operator_placement { left_operator; right_operator }) ->
-          let left_operator_location =
-            Comp_typ_operator.location left_operator
-          in
-          let right_operator_location =
-            Comp_typ_operator.location right_operator
-          in
-          let identifier = Comp_typ_operator.identifier left_operator in
-          Error.raise_at2 left_operator_location right_operator_location
-            (Ambiguous_comp_typ_operator_placement identifier)
-      | Result.Error (Arity_mismatch { operator; operator_arity; operands })
-        ->
-          let operator_identifier = Comp_typ_operator.identifier operator in
-          let operator_location = Comp_typ_operator.location operator in
-          let expected_arguments_count = operator_arity in
-          let operand_locations =
-            List.map Comp_typ_operand.location operands
-          in
-          let actual_arguments_count = List.length operands in
-          Error.raise_at
-            (List1.from operator_location operand_locations)
-            (Comp_typ_arity_mismatch
-               { operator_identifier
-               ; expected_arguments_count
-               ; actual_arguments_count
-               })
-      | Result.Error
-          (Consecutive_non_associative_operators
-            { left_operator; right_operator }) ->
-          let operator_identifier =
-            Comp_typ_operator.identifier left_operator
-          in
-          let left_operator_location =
-            Comp_typ_operator.location left_operator
-          in
-          let right_operator_location =
-            Comp_typ_operator.location right_operator
-          in
-          Error.raise_at2 left_operator_location right_operator_location
-            (Consecutive_applications_of_non_associative_comp_typ_operators
-               operator_identifier)
-      | Result.Error (Misplaced_operator { operator; operands }) ->
-          let operator_location = Comp_typ_operator.location operator
-          and operand_locations =
-            List.map Comp_typ_operand.location operands
-          in
-          Error.raise_at
-            (List1.from operator_location operand_locations)
-            Misplaced_comp_typ_operator
-      | Result.Error cause -> Error.raise cause
+    disambiguate_application >=> function
+    | Result.Ok (applicand, arguments) -> return (applicand, arguments)
+    | Result.Error
+        (Ambiguous_operator_placement { left_operator; right_operator }) ->
+        let left_operator_location =
+          Comp_typ_operator.location left_operator
+        in
+        let right_operator_location =
+          Comp_typ_operator.location right_operator
+        in
+        let identifier = Comp_typ_operator.identifier left_operator in
+        Error.raise_at2 left_operator_location right_operator_location
+          (Ambiguous_comp_typ_operator_placement identifier)
+    | Result.Error (Arity_mismatch { operator; operator_arity; operands }) ->
+        let operator_identifier = Comp_typ_operator.identifier operator in
+        let operator_location = Comp_typ_operator.location operator in
+        let expected_arguments_count = operator_arity in
+        let operand_locations =
+          List.map Comp_typ_operand.location operands
+        in
+        let actual_arguments_count = List.length operands in
+        Error.raise_at
+          (List1.from operator_location operand_locations)
+          (Comp_typ_arity_mismatch
+             { operator_identifier
+             ; expected_arguments_count
+             ; actual_arguments_count
+             })
+    | Result.Error
+        (Consecutive_non_associative_operators
+          { left_operator; right_operator }) ->
+        let operator_identifier =
+          Comp_typ_operator.identifier left_operator
+        in
+        let left_operator_location =
+          Comp_typ_operator.location left_operator
+        in
+        let right_operator_location =
+          Comp_typ_operator.location right_operator
+        in
+        Error.raise_at2 left_operator_location right_operator_location
+          (Consecutive_applications_of_non_associative_comp_typ_operators
+             operator_identifier)
+    | Result.Error (Misplaced_operator { operator; operands }) ->
+        let operator_location = Comp_typ_operator.location operator
+        and operand_locations =
+          List.map Comp_typ_operand.location operands
+        in
+        Error.raise_at
+          (List1.from operator_location operand_locations)
+          Misplaced_comp_typ_operator
+    | Result.Error cause -> Error.raise cause
 
   and disambiguate_comp_expression = function
     | Synprs.Comp.Expression_object.Raw_identifier
@@ -752,7 +729,7 @@ module Make
     | Synprs.Comp.Expression_object.Raw_hole { location; label } ->
         return (Synext.Comp.Expression.Hole { location; label })
     | Synprs.Comp.Expression_object.Raw_box_hole { location } ->
-        return (Synext.Comp.Expression.BoxHole { location })
+        return (Synext.Comp.Expression.Box_hole { location })
     | Synprs.Comp.Expression_object.Raw_application { location; expressions }
       ->
         Obj.magic ()
@@ -834,13 +811,7 @@ module Make
         { location; identifier; quoted } ->
         Obj.magic ()
     | Synprs.Comp.Pattern_object.Raw_box { location; pattern } ->
-        with_disambiguated_meta_pattern pattern inner_bindings
-          pattern_variables
-          (fun pattern' inner_bindings' pattern_variables' ->
-            f
-              (Synext.Comp.Pattern.MetaObject
-                 { location; meta_pattern = pattern' })
-              inner_bindings' pattern_variables')
+        Obj.magic ()
     | Synprs.Comp.Pattern_object.Raw_tuple { location; elements } ->
         (* TODO: Use the same [inner_bindings] for each argument and
            applicand, but carry the pattern variables *)
@@ -874,7 +845,7 @@ module Make
              pattern_variables
              (fun pattern' inner_bindings' pattern_variables' ->
                f
-                 (Synext.Comp.Pattern.MetaTypeAnnotated
+                 (Synext.Comp.Pattern.Meta_type_annotated
                     { location
                     ; annotation_identifier = parameter_identifier
                     ; annotation_type = parameter_typ'

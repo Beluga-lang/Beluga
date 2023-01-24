@@ -116,8 +116,10 @@ module Make
       match label with
       | Synprs.Harpoon.Split_branch.Label.Constant { location; identifier }
         ->
+          (* TODO: Resolve the contant *)
           Synext.Harpoon.Split_branch.Label.Constant { location; identifier }
       | Synprs.Harpoon.Split_branch.Label.Bound_variable { location } ->
+          (* TODO: Resolve the variable *)
           Synext.Harpoon.Split_branch.Label.Bound_variable { location }
       | Synprs.Harpoon.Split_branch.Label.Empty_context { location } ->
           Synext.Harpoon.Split_branch.Label.Empty_context { location }

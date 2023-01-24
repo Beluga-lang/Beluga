@@ -115,7 +115,8 @@ and pp_lf_typ ppf typ =
 and pp_lf_term ppf term =
   let parent_precedence = precedence_of_lf_term term in
   match term with
-  | LF.Term.Variable { identifier; _ } -> Identifier.pp ppf identifier
+  | LF.Term.Bound_variable { identifier; _ } -> Identifier.pp ppf identifier
+  | LF.Term.Free_variable { identifier; _ } -> Identifier.pp ppf identifier
   | LF.Term.Constant { identifier; quoted = true; _ } ->
       Format.fprintf ppf "(%a)" Qualified_identifier.pp identifier
   | LF.Term.Constant { identifier; quoted = false; _ } ->
@@ -244,10 +245,15 @@ let rec pp_clf_typ ppf typ =
 and pp_clf_term ppf term =
   let parent_precedence = precedence_of_clf_term term in
   match term with
-  | CLF.Term.Variable { identifier; _ } -> Identifier.pp ppf identifier
-  | CLF.Term.Parameter_variable { identifier; _ } ->
+  | CLF.Term.Bound_variable { identifier; _ } -> Identifier.pp ppf identifier
+  | CLF.Term.Free_variable { identifier; _ } -> Identifier.pp ppf identifier
+  | CLF.Term.Bound_parameter_variable { identifier; _ } ->
       Identifier.pp ppf identifier
-  | CLF.Term.Substitution_variable { identifier; _ } ->
+  | CLF.Term.Free_parameter_variable { identifier; _ } ->
+      Identifier.pp ppf identifier
+  | CLF.Term.Bound_substitution_variable { identifier; _ } ->
+      Identifier.pp ppf identifier
+  | CLF.Term.Free_substitution_variable { identifier; _ } ->
       Identifier.pp ppf identifier
   | CLF.Term.Constant { identifier; quoted = true; _ } ->
       Format.fprintf ppf "(%a)" Qualified_identifier.pp identifier
@@ -693,7 +699,7 @@ let is_atomic_pattern pattern =
   match pattern with
   | Comp.Pattern.Variable _
   | Comp.Pattern.Constant _
-  | Comp.Pattern.MetaObject _
+  | Comp.Pattern.Meta_object _
   | Comp.Pattern.Tuple _
   | Comp.Pattern.Wildcard _ ->
       true
@@ -726,7 +732,19 @@ let rec pp_comp_kind ppf kind =
 and pp_comp_typ ppf typ =
   let parent_precedence = precedence_of_comp_typ typ in
   match typ with
-  | Comp.Typ.Constant { identifier; quoted; operator; _ } ->
+  | Comp.Typ.Inductive_typ_constant { identifier; quoted; operator; _ } ->
+      if quoted && Bool.not (Operator.is_nullary operator) then
+        Format.fprintf ppf "(%a)" Qualified_identifier.pp identifier
+      else Qualified_identifier.pp ppf identifier
+  | Comp.Typ.Stratified_typ_constant { identifier; quoted; operator; _ } ->
+      if quoted && Bool.not (Operator.is_nullary operator) then
+        Format.fprintf ppf "(%a)" Qualified_identifier.pp identifier
+      else Qualified_identifier.pp ppf identifier
+  | Comp.Typ.Coinductive_typ_constant { identifier; quoted; operator; _ } ->
+      if quoted && Bool.not (Operator.is_nullary operator) then
+        Format.fprintf ppf "(%a)" Qualified_identifier.pp identifier
+      else Qualified_identifier.pp ppf identifier
+  | Comp.Typ.Abbreviation_typ_constant { identifier; quoted; operator; _ } ->
       if quoted && Bool.not (Operator.is_nullary operator) then
         Format.fprintf ppf "(%a)" Qualified_identifier.pp identifier
       else Qualified_identifier.pp ppf identifier
@@ -805,7 +823,14 @@ and pp_comp_typ ppf typ =
       match applicand with
       | Comp.Typ.Application
           { applicand =
-              Comp.Typ.Constant { identifier; operator; quoted = false; _ }
+              ( Comp.Typ.Inductive_typ_constant
+                  { identifier; operator; quoted = false; _ }
+              | Comp.Typ.Stratified_typ_constant
+                  { identifier; operator; quoted = false; _ }
+              | Comp.Typ.Coinductive_typ_constant
+                  { identifier; operator; quoted = false; _ }
+              | Comp.Typ.Abbreviation_typ_constant
+                  { identifier; operator; quoted = false; _ } )
           ; _
           } -> (
           match Operator.fixity operator with
@@ -922,7 +947,7 @@ and pp_comp_expression ppf expression =
       match label with
       | Option.None -> Format.pp_print_string ppf "?"
       | Option.Some label -> Format.fprintf ppf "?%a" Identifier.pp label)
-  | Comp.Expression.BoxHole _ -> Format.pp_print_string ppf "_"
+  | Comp.Expression.Box_hole _ -> Format.pp_print_string ppf "_"
   | Comp.Expression.Observation { scrutinee; destructor; _ } ->
       (* Observations are left-associative *)
       Format.fprintf ppf "@[<hov 2>%a@ .%a@]"
@@ -967,7 +992,7 @@ and pp_comp_pattern ppf pattern =
       if quoted && Bool.not (Operator.is_nullary operator) then
         Format.fprintf ppf "(%a)" Qualified_identifier.pp identifier
       else Qualified_identifier.pp ppf identifier
-  | Comp.Pattern.MetaObject { meta_pattern; _ } ->
+  | Comp.Pattern.Meta_object { meta_pattern; _ } ->
       pp_meta_pattern ppf meta_pattern
   | Comp.Pattern.Tuple { elements; _ } ->
       Format.fprintf ppf "@[<hov 2>(%a)@]"
@@ -982,7 +1007,7 @@ and pp_comp_pattern ppf pattern =
         (parenthesize_right_argument_left_associative_operator
            precedence_of_comp_typ ~parent_precedence pp_comp_typ)
         typ
-  | Comp.Pattern.MetaTypeAnnotated
+  | Comp.Pattern.Meta_type_annotated
       { annotation_identifier; annotation_type; body; _ } ->
       Format.fprintf ppf "@[<hov 2>{%a :@ %a}@ %a@]" Identifier.pp
         annotation_identifier pp_meta_typ annotation_type pp_comp_pattern

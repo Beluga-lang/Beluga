@@ -8,7 +8,5 @@ bwd_closed
 {T : (|- tp)} {M : (|- tm T)} {M' : (|- tm T)} [|- step M M'] -> Reduce [|- T] [|- M'] -> Reduce [|- T] [|- M]
 1
 
-msplit T
-auto-invert-solve 3 %% inductive-auto-solve fails 3 here because of the differing bounds. The first case gets solved fine but the second case takes too long.
-auto-invert-solve 1 
+inductive-auto-solve 3
 :quit

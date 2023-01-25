@@ -109,7 +109,7 @@ let print_error ppf =
         \nPlease provide the type of the substitution variable."
   | SpineLengthMisMatch ->
      fprintf ppf
-       "Too few or to many arguments supplied to a type family."
+       "Too few or too many arguments supplied to a type family."
   | CtxVarSchema psi ->
      fprintf ppf
        "Reconstruction cannot infer the schema for context %a."

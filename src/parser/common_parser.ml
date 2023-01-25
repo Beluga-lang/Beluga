@@ -305,7 +305,6 @@ let hole =
     | location, Token.HOLE label ->
         Result.ok (`Labelled (Identifier.make ~location label))
     | _location, _token -> Result.error Expected_hole)
-  |> labelled "hole"
 
 exception Expected_block_comment
 
@@ -319,9 +318,16 @@ let block_comment =
 let rec flatten_choice_exceptions exceptions_rev acc =
   match exceptions_rev with
   | [] -> List.rev acc
-  | No_more_choices e :: es ->
-      flatten_choice_exceptions es (flatten_choice_exceptions e acc)
-  | e :: es -> flatten_choice_exceptions es (e :: acc)
+  | e :: es -> (
+      match Error.discard_locations e with
+      | Labelled_exception { label; cause } ->
+          flatten_choice_exceptions es
+            (Labelled_exception
+               { label; cause = Error.discard_locations cause }
+            :: acc)
+      | No_more_choices e ->
+          flatten_choice_exceptions es (flatten_choice_exceptions e acc)
+      | e -> flatten_choice_exceptions es (e :: acc))
 
 let pp_exception' ppf = function
   | Labelled_exception { label; cause } ->
@@ -342,14 +348,24 @@ let pp_exception' ppf = function
   | exn -> Error.raise_unsupported_exception_printing exn
 
 let pp_exception ppf = function
-  | Parser_error (Labelled_exception { label; cause }) ->
-      Format.fprintf ppf "@[<v 0>Parse error for %s.@,%s@]" label
-        (Printexc.to_string cause)
+  | Parser_error (Labelled_exception { label; cause }) -> (
+      let locations = Error.locations cause in
+      match locations with
+      | Option.None ->
+          Format.fprintf ppf "@[<v 0>Parse error for %s.@,%s@]" label
+            (Printexc.to_string cause)
+      | Option.Some locations ->
+          Format.pp_print_string ppf
+            (Printexc.to_string
+               (Error.located_exception locations
+                  (Parser_error
+                     (Labelled_exception
+                        { label; cause = Error.discard_locations cause })))))
   | Parser_error cause ->
       Format.fprintf ppf "@[<v 0>Parse error.@,%s@]"
         (Printexc.to_string cause)
   | Expected_end_of_input ->
-      Format.fprintf ppf "Expected the parser input to end."
+      Format.fprintf ppf "Expected the parser input to end here."
   | Unexpected_end_of_input ->
       Format.fprintf ppf
         "Unexpectedly reached the end of input during parsing."

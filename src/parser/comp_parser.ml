@@ -147,25 +147,21 @@ end = struct
       ]
 
   let comp_sort_object4 =
-    some (alt comp_sort_object5 comp_weak_prefix)
+    seq2 comp_sort_object5 (many (alt comp_sort_object5 comp_weak_prefix))
     |> span
-    $> (function
-         | _, List1.T (object_, []) -> object_
-         | location, List1.T (o1, o2 :: os) ->
-             let objects = List2.from o1 o2 os in
-             Synprs.Comp.Sort_object.Raw_application { location; objects })
-    |> labelled "Atomic computational kind or type, or type application"
+    $> function
+    | _, (object_, []) -> object_
+    | location, (o1, o2 :: os) ->
+        let objects = List2.from o1 o2 os in
+        Synprs.Comp.Sort_object.Raw_application { location; objects }
 
   let comp_sort_object3 =
-    seq2 comp_sort_object4 (many (star &> comp_sort_object4))
-    |> span
-    $> (function
-         | _, (object_, []) -> object_
-         | location, (o1, o2 :: os) ->
-             let operands = List2.from o1 o2 os in
-             Synprs.Comp.Sort_object.Raw_cross { location; operands })
-    |> labelled
-         "Atomic computational kind or type, type application or cross type"
+    seq2 comp_sort_object4 (many (star &> comp_sort_object4)) |> span
+    $> function
+    | _, (object_, []) -> object_
+    | location, (o1, o2 :: os) ->
+        let operands = List2.from o1 o2 os in
+        Synprs.Comp.Sort_object.Raw_cross { location; operands }
 
   let comp_sort_object2 =
     (* Forward arrows are right-associative, and backward arrows are
@@ -178,72 +174,66 @@ end = struct
     and backward_arrow_operator = backward_arrow $> fun () -> `Backward_arrow
     and right_operand = alt comp_sort_object3 comp_weak_prefix in
     comp_sort_object3 >>= fun object_ ->
-    maybe (alt forward_arrow_operator backward_arrow_operator)
-    >>= (function
-          | Option.None -> return (`Singleton object_)
-          | Option.Some `Forward_arrow ->
-              (* A forward arrow was parsed. Subsequent backward arrows are
-                 ambiguous. *)
-              let backward_arrow =
-                backward_arrow >>= fun () ->
-                fail Ambiguous_comp_backward_arrow
-              and forward_arrow = forward_arrow_operator in
-              let operator = alt backward_arrow forward_arrow in
-              seq2 right_operand (many (operator &> right_operand))
-              $> fun (x, xs) ->
-              `Forward_arrows (List1.from object_ (x :: xs))
-          | Option.Some `Backward_arrow ->
-              (* A backward arrow was parsed. Subsequent forward arrows are
-                 ambiguous. *)
-              let backward_arrow_operator = backward_arrow
-              and forward_arrow_operator =
-                forward_arrow >>= fun () -> fail Ambiguous_comp_forward_arrow
-              in
-              let operator =
-                alt forward_arrow_operator backward_arrow_operator
-              in
-              seq2 right_operand (many (operator &> right_operand))
-              $> fun (x, xs) ->
-              `Backward_arrows (List1.from object_ (x :: xs)))
-    $> (function
-         | `Singleton x -> x
-         | `Forward_arrows xs ->
-             List1.fold_right Fun.id
-               (fun operand accumulator ->
-                 let location =
-                   Location.join
-                     (Synprs.location_of_comp_sort_object operand)
-                     (Synprs.location_of_comp_sort_object accumulator)
-                 in
-                 Synprs.Comp.Sort_object.Raw_arrow
-                   { location
-                   ; domain = operand
-                   ; range = accumulator
-                   ; orientation = `Forward
-                   })
-               xs
-         | `Backward_arrows (List1.T (x, xs)) ->
-             List.fold_left
-               (fun accumulator operand ->
-                 let location =
-                   Location.join
-                     (Synprs.location_of_comp_sort_object accumulator)
-                     (Synprs.location_of_comp_sort_object operand)
-                 in
-                 Synprs.Comp.Sort_object.Raw_arrow
-                   { location
-                   ; domain = operand
-                   ; range = accumulator
-                   ; orientation = `Backward
-                   })
-               x xs)
-    |> labelled
-         "Atomic computational kind or type, type application, cross type, \
-          forward or backward arrow"
+    (maybe (alt forward_arrow_operator backward_arrow_operator) >>= function
+     | Option.None -> return (`Singleton object_)
+     | Option.Some `Forward_arrow ->
+         (* A forward arrow was parsed. Subsequent backward arrows are
+            ambiguous. *)
+         let backward_arrow =
+           backward_arrow >>= fun () ->
+           fail_at_previous_location Ambiguous_comp_backward_arrow
+         and forward_arrow = forward_arrow_operator in
+         let operator = alt backward_arrow forward_arrow in
+         seq2 right_operand (many (operator &> right_operand))
+         $> fun (x, xs) -> `Forward_arrows (List1.from object_ (x :: xs))
+     | Option.Some `Backward_arrow ->
+         (* A backward arrow was parsed. Subsequent forward arrows are
+            ambiguous. *)
+         let backward_arrow_operator = backward_arrow
+         and forward_arrow_operator =
+           forward_arrow >>= fun () ->
+           fail_at_previous_location Ambiguous_comp_forward_arrow
+         in
+         let operator = alt forward_arrow_operator backward_arrow_operator in
+         seq2 right_operand (many (operator &> right_operand))
+         $> fun (x, xs) -> `Backward_arrows (List1.from object_ (x :: xs)))
+    $> function
+    | `Singleton x -> x
+    | `Forward_arrows xs ->
+        List1.fold_right Fun.id
+          (fun operand accumulator ->
+            let location =
+              Location.join
+                (Synprs.location_of_comp_sort_object operand)
+                (Synprs.location_of_comp_sort_object accumulator)
+            in
+            Synprs.Comp.Sort_object.Raw_arrow
+              { location
+              ; domain = operand
+              ; range = accumulator
+              ; orientation = `Forward
+              })
+          xs
+    | `Backward_arrows (List1.T (x, xs)) ->
+        List.fold_left
+          (fun accumulator operand ->
+            let location =
+              Location.join
+                (Synprs.location_of_comp_sort_object accumulator)
+                (Synprs.location_of_comp_sort_object operand)
+            in
+            Synprs.Comp.Sort_object.Raw_arrow
+              { location
+              ; domain = operand
+              ; range = accumulator
+              ; orientation = `Backward
+              })
+          x xs
 
   let comp_sort_object1 = choice [ comp_weak_prefix; comp_sort_object2 ]
 
-  let comp_sort_object = comp_sort_object1
+  let comp_sort_object =
+    comp_sort_object1 |> labelled "Computation-level type or kind"
 
   (*=
       Original grammar:
@@ -377,41 +367,40 @@ end = struct
       ]
 
   let comp_pattern_object3 =
-    some (alt comp_pattern_object4 comp_weak_prefix_pattern)
+    seq2 comp_pattern_object4
+      (many (alt comp_pattern_object4 comp_weak_prefix_pattern))
     |> span
-    $> (function
-         | _, List1.T (pattern, []) -> pattern
-         | location, List1.T (p1, p2 :: ps) ->
-             let patterns = List2.from p1 p2 ps in
-             Synprs.Comp.Pattern_object.Raw_application
-               { location; patterns })
-    |> labelled "Computational atomic or application pattern"
+    $> function
+    | _, (pattern, []) -> pattern
+    | location, (p1, p2 :: ps) ->
+        let patterns = List2.from p1 p2 ps in
+        Synprs.Comp.Pattern_object.Raw_application { location; patterns }
 
   let comp_pattern_object2 =
     let annotation = colon &> comp_sort_object in
     let trailing_annotations = many (span annotation) in
-    seq2 comp_pattern_object3 trailing_annotations
-    $> (function
-         | pattern, [] -> pattern
-         | pattern, annotations ->
-             List.fold_left
-               (fun accumulator (sort_location, typ) ->
-                 let location =
-                   Location.join
-                     (Synprs.location_of_comp_pattern_object accumulator)
-                     sort_location
-                 in
-                 Synprs.Comp.Pattern_object.Raw_annotated
-                   { location; pattern = accumulator; typ })
-               pattern annotations)
-    |> labelled "Computational annotated, atomic, application or pattern"
+    seq2 comp_pattern_object3 trailing_annotations $> function
+    | pattern, [] -> pattern
+    | pattern, annotations ->
+        List.fold_left
+          (fun accumulator (sort_location, typ) ->
+            let location =
+              Location.join
+                (Synprs.location_of_comp_pattern_object accumulator)
+                sort_location
+            in
+            Synprs.Comp.Pattern_object.Raw_annotated
+              { location; pattern = accumulator; typ })
+          pattern annotations
 
   let comp_pattern_object1 =
     choice [ comp_weak_prefix_pattern; comp_pattern_object2 ]
 
-  let comp_pattern_object = comp_pattern_object1
+  let comp_pattern_object =
+    comp_pattern_object1 |> labelled "Computation-level pattern"
 
-  let comp_pattern_atomic_object = comp_pattern_object4
+  let comp_pattern_atomic_object =
+    comp_pattern_object4 |> labelled "Computation-level atomic pattern"
 
   (*=
       Original grammar:
@@ -626,36 +615,32 @@ end = struct
       ]
 
   let comp_expression_object2 =
-    some comp_expression_object3
-    |> span
-    $> (function
-         | _, List1.T (expression, []) -> expression
-         | location, List1.T (x1, x2 :: xs) ->
-             let expressions = List2.from x1 x2 xs in
-             Synprs.Comp.Expression_object.Raw_application
-               { location; expressions })
-    |> labelled "Atomic computational expression or application"
+    some comp_expression_object3 |> span $> function
+    | _, List1.T (expression, []) -> expression
+    | location, List1.T (x1, x2 :: xs) ->
+        let expressions = List2.from x1 x2 xs in
+        Synprs.Comp.Expression_object.Raw_application
+          { location; expressions }
 
   let comp_expression_object1 =
     let annotation = colon &> comp_sort_object in
     let trailing_annotations = many (span annotation) in
-    seq2 comp_expression_object2 trailing_annotations
-    $> (function
-         | expression, [] -> expression
-         | expression, annotations ->
-             List.fold_left
-               (fun accumulator (sort_location, typ) ->
-                 let location =
-                   Location.join
-                     (Synprs.location_of_comp_expression_object accumulator)
-                     sort_location
-                 in
-                 Synprs.Comp.Expression_object.Raw_annotated
-                   { location; expression = accumulator; typ })
-               expression annotations)
-    |> labelled "Possibly annotated computational expression"
+    seq2 comp_expression_object2 trailing_annotations $> function
+    | expression, [] -> expression
+    | expression, annotations ->
+        List.fold_left
+          (fun accumulator (sort_location, typ) ->
+            let location =
+              Location.join
+                (Synprs.location_of_comp_expression_object accumulator)
+                sort_location
+            in
+            Synprs.Comp.Expression_object.Raw_annotated
+              { location; expression = accumulator; typ })
+          expression annotations
 
-  let comp_expression_object = comp_expression_object1
+  let comp_expression_object =
+    comp_expression_object1 |> labelled "Computation-level expression"
 
   (*=
       <comp-context> ::=
@@ -684,3 +669,14 @@ let comp_pattern_object = Comp_parsers.comp_pattern_object
 let comp_expression_object = Comp_parsers.comp_expression_object
 
 let comp_context = Comp_parsers.comp_context
+
+let pp_exception ppf = function
+  | Ambiguous_comp_forward_arrow ->
+      Format.fprintf ppf
+        "This computation-level forward arrow operator is ambiguous."
+  | Ambiguous_comp_backward_arrow ->
+      Format.fprintf ppf
+        "This computation-level backward arrow operator is ambiguous."
+  | cause -> pp_exception' ppf cause
+
+let () = Error.register_exception_printer pp_exception

@@ -159,7 +159,8 @@ end = struct
          (* A forward arrow was parsed. Subsequent backward arrows are
             ambiguous. *)
          let backward_arrow =
-           backward_arrow >>= fun () -> fail Ambiguous_lf_backward_arrow
+           backward_arrow >>= fun () ->
+           fail_at_previous_location Ambiguous_lf_backward_arrow
          and forward_arrow = forward_arrow_operator in
          let operator = alt backward_arrow forward_arrow in
          seq2 right_operand (many (operator &> right_operand))
@@ -169,7 +170,8 @@ end = struct
             ambiguous. *)
          let backward_arrow_operator = backward_arrow
          and forward_arrow_operator =
-           forward_arrow >>= fun () -> fail Ambiguous_lf_forward_arrow
+           forward_arrow >>= fun () ->
+           fail_at_previous_location Ambiguous_lf_forward_arrow
          in
          let operator = alt forward_arrow_operator backward_arrow_operator in
          seq2 right_operand (many (operator &> right_operand))
@@ -231,3 +233,12 @@ end = struct
 end
 
 let lf_object = LF_parsers.lf_object
+
+let pp_exception ppf = function
+  | Ambiguous_lf_forward_arrow ->
+      Format.fprintf ppf "This LF forward arrow operator is ambiguous."
+  | Ambiguous_lf_backward_arrow ->
+      Format.fprintf ppf "This LF backward arrow operator is ambiguous."
+  | cause -> pp_exception' ppf cause
+
+let () = Error.register_exception_printer pp_exception

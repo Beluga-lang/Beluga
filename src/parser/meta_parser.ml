@@ -77,80 +77,93 @@ end = struct
 
   let schema_object2 =
     let constant =
-      qualified_identifier $> fun identifier ->
-      let location = Qualified_identifier.location identifier in
-      Synprs.Meta.Schema_object.Raw_constant { location; identifier }
+      qualified_identifier
+      $> (fun identifier ->
+           let location = Qualified_identifier.location identifier in
+           Synprs.Meta.Schema_object.Raw_constant { location; identifier })
+      |> labelled "Schema constant"
+    and element_with_some =
+      seq2 schema_some_clause schema_block_clause |> span
+      $> fun (location, (some_clause, block_clause)) ->
+      Synprs.Meta.Schema_object.Raw_element
+        { location; some = Option.some some_clause; block = block_clause }
     and element =
-      seq2 (maybe schema_some_clause) schema_block_clause
-      |> span
-      $> (fun (location, (some_clause, block_clause)) ->
-           Synprs.Meta.Schema_object.Raw_element
-             { location; some = some_clause; block = block_clause })
-      |> labelled "Context schema atom"
+      schema_block_clause |> span $> fun (location, block_clause) ->
+      Synprs.Meta.Schema_object.Raw_element
+        { location; some = Option.none; block = block_clause }
     in
-    choice [ constant; element ]
+    choice [ constant; element_with_some; element ]
 
   let schema_object1 =
-    sep_by1 schema_object2 plus
-    |> span
-    $> (function
-         | _, List1.T (schema_object, []) -> schema_object
-         | location, List1.T (c1, c2 :: cs) ->
-             let schemas = List2.from c1 c2 cs in
-             Synprs.Meta.Schema_object.Raw_alternation { location; schemas })
-    |> labelled "Context schema constant, atom or alternation"
+    sep_by1 schema_object2 plus |> span $> function
+    | _, List1.T (schema_object, []) -> schema_object
+    | location, List1.T (c1, c2 :: cs) ->
+        let schemas = List2.from c1 c2 cs in
+        Synprs.Meta.Schema_object.Raw_alternation { location; schemas }
 
-  let schema_object = schema_object1
+  let schema_object = schema_object1 |> labelled "Context schema"
 
   let meta_thing =
     let schema_type =
-      schema_object |> span $> fun (location, schema) ->
-      Synprs.Meta.Thing.RawSchema { location; schema }
-    and meta_type_or_meta_object =
-      let plain_inner_thing =
-        seq2 Clf_parser.clf_context_object
-          (maybe (turnstile &> Clf_parser.clf_context_object))
-      and hash_inner_thing =
-        seq2 Clf_parser.clf_context_object
-          (turnstile &> Clf_parser.clf_context_object)
-      and dollar_inner_thing =
-        let turnstile = turnstile $> fun () -> `Plain
-        and turnstile_hash = turnstile_hash $> fun () -> `Hash in
-        seq2 Clf_parser.clf_context_object
-          (seq2 (alt turnstile turnstile_hash) Clf_parser.clf_context_object)
-      in
-      let plain_meta_type =
-        choice [ parens plain_inner_thing; bracks plain_inner_thing ] |> span
-        $> function
-        | location, (context, Option.None) ->
-            Synprs.Meta.Thing.RawContext { location; context }
-        | location, (context, Option.Some object_) ->
-            Synprs.Meta.Thing.RawTurnstile
-              { location; context; object_; variant = `Plain }
-      and hash_meta_type =
-        choice [ hash_parens hash_inner_thing; hash_bracks hash_inner_thing ]
-        |> span
-        $> fun (location, (context, object_)) ->
-        Synprs.Meta.Thing.RawTurnstile
-          { location; context; object_; variant = `Hash }
-      and dollar_meta_type =
-        choice
-          [ dollar_parens dollar_inner_thing
-          ; dollar_bracks dollar_inner_thing
-          ]
-        |> span
-        $> function
-        | location, (context, (`Plain, object_)) ->
-            Synprs.Meta.Thing.RawTurnstile
-              { location; context; object_; variant = `Dollar }
-        | location, (context, (`Hash, object_)) ->
-            Synprs.Meta.Thing.RawTurnstile
-              { location; context; object_; variant = `Dollar_hash }
-      in
-      choice [ plain_meta_type; hash_meta_type; dollar_meta_type ]
+      schema_object |> span
+      $> (fun (location, schema) ->
+           Synprs.Meta.Thing.RawSchema { location; schema })
+      |> labelled "Schema meta-type"
+    and plain_inner_thing =
+      seq2 Clf_parser.clf_context_object
+        (maybe (turnstile &> Clf_parser.clf_context_object))
+    and hash_inner_thing =
+      seq2 Clf_parser.clf_context_object
+        (turnstile &> Clf_parser.clf_context_object)
+    and dollar_inner_thing =
+      let turnstile = turnstile $> fun () -> `Plain
+      and turnstile_hash = turnstile_hash $> fun () -> `Hash in
+      seq2 Clf_parser.clf_context_object
+        (seq2 (alt turnstile turnstile_hash) Clf_parser.clf_context_object)
     in
-    choice [ schema_type; meta_type_or_meta_object ]
-    |> labelled "Meta-type, meta-object, or meta-object pattern"
+    let plain_meta_type =
+      choice
+        [ parens plain_inner_thing
+          |> labelled "Plain meta-type or object in parentheses"
+        ; bracks plain_inner_thing
+          |> labelled "Plain meta-type or object in brackets"
+        ]
+      |> span
+      $> function
+      | location, (context, Option.None) ->
+          Synprs.Meta.Thing.RawContext { location; context }
+      | location, (context, Option.Some object_) ->
+          Synprs.Meta.Thing.RawTurnstile
+            { location; context; object_; variant = `Plain }
+    and hash_meta_type =
+      choice
+        [ hash_parens hash_inner_thing
+          |> labelled "Parameter type or term in parentheses"
+        ; hash_bracks hash_inner_thing
+          |> labelled "Parameter type or term in brackets"
+        ]
+      |> span
+      $> fun (location, (context, object_)) ->
+      Synprs.Meta.Thing.RawTurnstile
+        { location; context; object_; variant = `Hash }
+    and dollar_meta_type =
+      choice
+        [ dollar_parens dollar_inner_thing
+          |> labelled "Substitution type or object in parentheses"
+        ; dollar_bracks dollar_inner_thing
+          |> labelled "Substitution type or object in brackets"
+        ]
+      |> span
+      $> function
+      | location, (context, (`Plain, object_)) ->
+          Synprs.Meta.Thing.RawTurnstile
+            { location; context; object_; variant = `Dollar }
+      | location, (context, (`Hash, object_)) ->
+          Synprs.Meta.Thing.RawTurnstile
+            { location; context; object_; variant = `Dollar_hash }
+    in
+    choice [ schema_type; plain_meta_type; hash_meta_type; dollar_meta_type ]
+    |> labelled "Meta-type or object"
 
   (*=
       <meta-context> ::=

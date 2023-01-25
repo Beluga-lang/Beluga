@@ -164,22 +164,21 @@ end = struct
 
   let initial ?last_location inner_state = { inner_state; last_location }
 
-  let[@inline] enable_backtracking s =
-    let inner_state = State.enable_backtracking s.inner_state in
-    { s with inner_state }
+  let[@inline] modify_inner_state f state =
+    { state with inner_state = f state.inner_state }
 
-  let[@inline] disable_backtracking s =
-    let inner_state = State.disable_backtracking s.inner_state in
-    { s with inner_state }
+  let enable_backtracking = modify_inner_state State.enable_backtracking
+
+  let disable_backtracking = modify_inner_state State.disable_backtracking
 
   let[@inline] observe s =
     let open Option in
-    State.observe s.inner_state >>= fun (t, inner_state') ->
+    State.observe s.inner_state $> fun (t, inner_state') ->
     let location = Token.location t in
     let s' =
       { inner_state = inner_state'; last_location = Option.some location }
     in
-    Option.some (t, s')
+    (t, s')
 
   let can_backtrack ~from ~to_ =
     State.can_backtrack ~from:from.inner_state ~to_:to_.inner_state
@@ -206,6 +205,10 @@ end) : sig
        and type input = Token.t Seq.t
 
   val span : 'a t -> (Location.t * 'a) t
+
+  val fail_at_next_location : exn -> 'a t
+
+  val fail_at_previous_location : exn -> 'a t
 end = struct
   type token = Token.t
 
@@ -236,17 +239,39 @@ end = struct
   let[@inline] run_exn p s =
     match run p s with
     | s', Result.Ok e -> (s', e)
-    | s', Result.Error cause -> (
-        match State.next_location s' with
-        | Option.None -> Error.raise cause
-        | Option.Some next_location ->
-            Error.raise_at1 next_location (Parser_error cause))
+    | _s', Result.Error cause -> Error.raise (Parser_error cause)
 
   let catch p handler s = run p s |> handler
 
   let fail e s = (s, Result.error e)
 
-  let fail_at s e = fail e s
+  let fail_at_previous_location e s =
+    match State.previous_location s with
+    | Option.None -> (
+        match State.next_location s with
+        | Option.None -> fail e s
+        | Option.Some next_location ->
+            fail
+              (Error.located_exception1
+                 (Location.start_position_as_location next_location)
+                 e)
+              s)
+    | Option.Some previous_location ->
+        fail (Error.located_exception1 previous_location e) s
+
+  let fail_at_next_location e s =
+    match State.next_location s with
+    | Option.None -> (
+        match State.previous_location s with
+        | Option.None -> fail e s
+        | Option.Some previous_location ->
+            fail
+              (Error.located_exception1
+                 (Location.stop_position_as_location previous_location)
+                 e)
+              s)
+    | Option.Some next_location ->
+        fail (Error.located_exception1 next_location e) s
 
   let return_at s x = (s, Result.ok x)
 
@@ -292,7 +317,8 @@ end = struct
 
   let label p label =
     catch p (function
-      | s, (Result.Error (Labelled_exception _) as e) -> (s, e)
+      | s, Result.Error (Labelled_exception { cause; _ }) ->
+          (s, Result.error (Labelled_exception { cause; label }))
       | s, Result.Error cause ->
           (s, Result.error (Labelled_exception { cause; label }))
       | x -> x)
@@ -301,7 +327,7 @@ end = struct
 
   let choice ps s =
     let rec go es = function
-      | [] -> fail (No_more_choices es)
+      | [] -> fail_at_next_location (No_more_choices es)
       | p :: ps' ->
           catch p (function
             | s', Result.Error e when State.can_backtrack ~from:s' ~to_:s ->
@@ -357,13 +383,14 @@ end = struct
   let eoi s =
     match State.observe s with
     | Option.None -> return_at s ()
-    | Option.Some (_token, _s') -> fail_at s Expected_end_of_input
+    | Option.Some (_token, s') ->
+        fail_at_previous_location Expected_end_of_input s'
 
   let only p = p <& eoi
 
   let satisfy f s =
     match State.observe s with
-    | Option.None -> fail_at s Unexpected_end_of_input
+    | Option.None -> fail_at_next_location Unexpected_end_of_input s
     | Option.Some (token, s') -> (
         match f token with
         | Result.Ok _ as r -> (s' (* Next state *), r)
@@ -380,6 +407,10 @@ end) : sig
   val span : 'a t -> (Location.t * 'a) t
 
   val initial_state : ?last_location:Location.t -> input -> state
+
+  val fail_at_next_location : exn -> 'a t
+
+  val fail_at_previous_location : exn -> 'a t
 end = struct
   module Simple_state = Make_simple_state (Token)
   module State_with_locations = Make_location_state (Token) (Simple_state)

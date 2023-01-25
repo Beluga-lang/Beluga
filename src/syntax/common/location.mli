@@ -98,6 +98,10 @@ val start_column : t -> int
 
 val stop_column : t -> int
 
+(** [spanned_offsets location] is
+    [stop_offset location - start_offset location]. *)
+val spanned_offsets : t -> int
+
 (** {1 Predicates and Comparisons} *)
 
 val is_ghost : t -> bool

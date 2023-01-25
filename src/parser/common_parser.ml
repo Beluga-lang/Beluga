@@ -7,6 +7,8 @@ include Parser_combinator.Make (struct
   let location = Pair.fst
 end)
 
+exception Unexpected_end_of_input of { expected : Token.t }
+
 exception
   Unexpected_token of
     { expected : Token.t
@@ -14,11 +16,18 @@ exception
     }
 
 let token expected =
-  satisfy (fun (_location, actual) ->
+  satisfy
+    ~on_token:(fun (_location, actual) ->
       if Token.equal expected actual then Result.ok ()
       else Result.error (Unexpected_token { expected; actual }))
+    ~on_end_of_input:(fun () ->
+      fail_at_next_location (Unexpected_end_of_input { expected }))
 
-exception Expected_keyword of string
+exception
+  Expected_keyword of
+    { expected_keyword : string
+    ; actual : Token.t Option.t
+    }
 
 let keyword = function
   | "and" -> token Token.KW_AND
@@ -56,37 +65,72 @@ let keyword = function
   | "suffices" -> token Token.KW_SUFFICES
   | "toshow" -> token Token.KW_TOSHOW
   | kw ->
-      satisfy (function
-        | _location, Token.IDENT kw' when String.equal kw kw' -> Result.ok ()
-        | _location, _token -> Result.error (Expected_keyword kw))
+      satisfy
+        ~on_token:(function
+          | _location, Token.IDENT kw' when String.equal kw kw' ->
+              Result.ok ()
+          | _location, token ->
+              Result.error
+                (Expected_keyword
+                   { expected_keyword = kw; actual = Option.some token }))
+        ~on_end_of_input:(fun () ->
+          fail_at_next_location
+            (Expected_keyword { expected_keyword = kw; actual = Option.none }))
 
-exception Expected_integer_literal
+exception Expected_integer_literal of { actual : Token.t Option.t }
 
 let integer =
-  satisfy (function
-    | _location, Token.INTLIT k -> Result.ok k
-    | _location, _token -> Result.error Expected_integer_literal)
+  satisfy
+    ~on_token:(function
+      | _location, Token.INTLIT k -> Result.ok k
+      | _location, token ->
+          Result.error
+            (Expected_integer_literal { actual = Option.some token }))
+    ~on_end_of_input:(fun () ->
+      fail_at_next_location
+        (Expected_integer_literal { actual = Option.none }))
 
-exception Expected_dot_number
+exception Expected_dot_number of { actual : Token.t Option.t }
 
 let dot_integer =
-  satisfy (function
-    | _location, Token.DOT_NUMBER k -> Result.ok k
-    | _location, _token -> Result.error Expected_dot_number)
+  satisfy
+    ~on_token:(function
+      | _location, Token.DOT_NUMBER k -> Result.ok k
+      | _location, token ->
+          Result.error (Expected_dot_number { actual = Option.some token }))
+    ~on_end_of_input:(fun () ->
+      fail_at_next_location (Expected_dot_number { actual = Option.none }))
 
-exception Expected_pragma of string
+exception
+  Expected_pragma of
+    { expected_pragma : string
+    ; actual : Token.t Option.t
+    }
 
 let pragma s =
-  satisfy (function
-    | _location, Token.PRAGMA s' when String.equal s s' -> Result.ok ()
-    | _location, _token -> Result.error (Expected_pragma s))
+  satisfy
+    ~on_token:(function
+      | _location, Token.PRAGMA s' when String.equal s s' -> Result.ok ()
+      | _location, token ->
+          Result.error
+            (Expected_pragma
+               { expected_pragma = s; actual = Option.some token }))
+    ~on_end_of_input:(fun () ->
+      fail_at_next_location
+        (Expected_pragma { expected_pragma = s; actual = Option.none }))
 
-exception Expected_string_literal
+exception Expected_string_literal of { actual : Token.t Option.t }
 
 let string_literal =
-  satisfy (function
-    | _location, Token.STRING s -> Result.ok s
-    | _location, _token -> Result.error Expected_string_literal)
+  satisfy
+    ~on_token:(function
+      | _location, Token.STRING s -> Result.ok s
+      | _location, token ->
+          Result.error
+            (Expected_string_literal { actual = Option.some token }))
+    ~on_end_of_input:(fun () ->
+      fail_at_next_location
+        (Expected_string_literal { actual = Option.none }))
 
 (** {1 Tokens} *)
 
@@ -194,37 +238,63 @@ let dollar_bracks p = dollar_left_brack &> p <& right_brack
 
 (** {1 Identifiers} *)
 
-exception Expected_identifier
+exception Expected_identifier of { actual : Token.t Option.t }
 
 let identifier =
-  satisfy (function
-    | location, Token.IDENT identifier ->
-        Result.ok (Identifier.make ~location identifier)
-    | _location, _token -> Result.error Expected_identifier)
+  satisfy
+    ~on_token:(function
+      | location, Token.IDENT identifier ->
+          Result.ok (Identifier.make ~location identifier)
+      | _location, token ->
+          Result.error (Expected_identifier { actual = Option.some token }))
+    ~on_end_of_input:(fun () ->
+      fail_at_next_location (Expected_identifier { actual = Option.none }))
+  |> labelled "Identifier"
 
-exception Expected_dot_identifier
+exception Expected_dot_identifier of { actual : Token.t Option.t }
 
 let dot_identifier =
-  satisfy (function
-    | location, Token.DOT_IDENT identifier ->
-        Result.ok (Identifier.make ~location identifier)
-    | _location, _token -> Result.error Expected_dot_identifier)
+  satisfy
+    ~on_token:(function
+      | location, Token.DOT_IDENT identifier ->
+          Result.ok (Identifier.make ~location identifier)
+      | _location, token ->
+          Result.error
+            (Expected_dot_identifier { actual = Option.some token }))
+    ~on_end_of_input:(fun () ->
+      fail_at_next_location
+        (Expected_dot_identifier { actual = Option.none }))
+  |> labelled "Identifier prefixed by a dot symbol"
 
-exception Expected_hash_identifier
+exception Expected_hash_identifier of { actual : Token.t Option.t }
 
 let hash_identifier =
-  satisfy (function
-    | location, Token.HASH_IDENT identifier ->
-        Result.ok (Identifier.make ~location identifier)
-    | _location, _token -> Result.error Expected_hash_identifier)
+  satisfy
+    ~on_token:(function
+      | location, Token.HASH_IDENT identifier ->
+          Result.ok (Identifier.make ~location identifier)
+      | _location, token ->
+          Result.error
+            (Expected_hash_identifier { actual = Option.some token }))
+    ~on_end_of_input:(fun () ->
+      fail_at_next_location
+        (Expected_hash_identifier { actual = Option.none }))
+  |> labelled "Identifier prefixed by a hash symbol"
 
-exception Expected_dollar_identifier
+exception Expected_dollar_identifier of { actual : Token.t Option.t }
 
 let dollar_identifier =
-  satisfy (function
-    | location, Token.DOLLAR_IDENT s ->
-        Result.ok (Identifier.make ~location s)
-    | _location, _token -> Result.error Expected_dollar_identifier)
+  satisfy
+    ~on_token:(function
+      | location, Token.DOLLAR_IDENT s ->
+          Result.ok (Identifier.make ~location s)
+      | _location, token ->
+          Result.error
+            (Expected_dollar_identifier { actual = Option.some token }))
+    ~on_end_of_input:(fun () ->
+      fail_at_next_location
+        (Expected_dollar_identifier { actual = Option.none }))
+  |> labelled "Identifier prefixed by a dollar symbol"
 
 (*=
     <omittable-identifier> ::=
@@ -232,9 +302,10 @@ let dollar_identifier =
       | <identifier>
 *)
 let omittable_identifier =
-  alt
-    (token Token.UNDERSCORE $> fun () -> Option.none)
-    (identifier $> Option.some)
+  let underscore =
+    underscore $> (fun () -> Option.none) |> labelled "Omitted identifier"
+  and identifier = identifier $> Option.some in
+  alt underscore identifier
 
 (*=
     <omittable-hash-identifier> ::=
@@ -242,9 +313,12 @@ let omittable_identifier =
       | <hash-identifier>
 *)
 let omittable_hash_identifier =
-  alt
-    (token Token.HASH_BLANK $> fun () -> Option.none)
-    (hash_identifier $> Option.some)
+  let hash_underscore =
+    token Token.HASH_BLANK
+    $> (fun () -> Option.none)
+    |> labelled "Omitted hash identifier"
+  and hash_identifier = hash_identifier $> Option.some in
+  alt hash_underscore hash_identifier
 
 (*=
     <omittable-dollar-identifier> ::=
@@ -297,21 +371,30 @@ let meta_object_identifier =
   and dollar = dollar_identifier $> fun i -> (i, `Dollar) in
   choice [ plain; hash; dollar ]
 
-exception Expected_hole
+exception Expected_hole of { actual : Token.t Option.t }
 
 let hole =
-  satisfy (function
-    | _location, Token.HOLE "" -> Result.ok `Unlabelled
-    | location, Token.HOLE label ->
-        Result.ok (`Labelled (Identifier.make ~location label))
-    | _location, _token -> Result.error Expected_hole)
+  satisfy
+    ~on_token:(function
+      | _location, Token.HOLE "" -> Result.ok `Unlabelled
+      | location, Token.HOLE label ->
+          Result.ok (`Labelled (Identifier.make ~location label))
+      | _location, token ->
+          Result.error (Expected_hole { actual = Option.some token }))
+    ~on_end_of_input:(fun () ->
+      fail_at_next_location (Expected_hole { actual = Option.none }))
 
-exception Expected_block_comment
+exception Expected_block_comment of { actual : Token.t Option.t }
 
 let block_comment =
-  satisfy (function
-    | location, Token.BLOCK_COMMENT content -> Result.ok (location, content)
-    | _location, _token -> Result.error Expected_block_comment)
+  satisfy
+    ~on_token:(function
+      | location, Token.BLOCK_COMMENT content -> Result.ok (location, content)
+      | _location, token ->
+          Result.error
+            (Expected_block_comment { actual = Option.some token }))
+    ~on_end_of_input:(fun () ->
+      fail_at_next_location (Expected_block_comment { actual = Option.none }))
 
 (** {1 Exceptions Printing} *)
 
@@ -366,40 +449,129 @@ let pp_exception ppf = function
         (Printexc.to_string cause)
   | Expected_end_of_input ->
       Format.fprintf ppf "Expected the parser input to end here."
-  | Unexpected_end_of_input ->
+  | Unexpected_end_of_input { expected } ->
       Format.fprintf ppf
-        "Unexpectedly reached the end of input during parsing."
+        "Expected the token `%a', but reached the end of input." Token.pp
+        expected
   | Unexpected_token { expected; actual } ->
       Format.fprintf ppf "Expected the token `%a', but got the token `%a'."
         Token.pp expected Token.pp actual
-  | Expected_keyword kw -> Format.fprintf ppf "Expected the keyword `%s'." kw
-  | Expected_integer_literal ->
-      Format.fprintf ppf "Expected an integer literal."
-  | Expected_dot_number ->
-      Format.fprintf ppf "Expected a number prefixed by a dot."
-  | Expected_pragma p -> Format.fprintf ppf "Expected pragma `--%s'." p
-  | Expected_string_literal ->
-      Format.fprintf ppf "Expected a string literal."
-  | Expected_identifier -> Format.fprintf ppf "Expected an identifier."
-  | Expected_dot_identifier ->
-      Format.fprintf ppf "Expected an identifier prefixed by a dot `.'."
-  | Expected_hash_identifier ->
-      Format.fprintf ppf
-        "Expected an identifier prefixed by a hash sign `#'."
-  | Expected_dollar_identifier ->
-      Format.fprintf ppf
-        "Expected an identifier prefixed by a dollar sign `$'."
-  | Expected_hole ->
-      Format.fprintf ppf
-        "Expected an unnamed hole `?' or a labelled hole `?id'."
-  | Expected_block_comment ->
-      (* Workaround format string errors when inputing the documentation
+  | Expected_keyword { expected_keyword; actual } -> (
+      match actual with
+      | Option.Some actual ->
+          Format.fprintf ppf
+            "Expected the keyword `%s', but got the token `%a'."
+            expected_keyword Token.pp actual
+      | Option.None ->
+          Format.fprintf ppf
+            "Expected the keyword `%s', but reached the end of input."
+            expected_keyword)
+  | Expected_integer_literal { actual } -> (
+      match actual with
+      | Option.Some actual ->
+          Format.fprintf ppf
+            "Expected an integer literal, but got the token `%a'." Token.pp
+            actual
+      | Option.None ->
+          Format.fprintf ppf
+            "Expected an integer literal, but reached the end of input.")
+  | Expected_dot_number { actual } -> (
+      match actual with
+      | Option.Some actual ->
+          Format.fprintf ppf
+            "Expected a number prefixed by a dot, but got the token `%a'."
+            Token.pp actual
+      | Option.None ->
+          Format.fprintf ppf
+            "Expected a number prefixed by a dot, but reached the end of \
+             input.")
+  | Expected_pragma { expected_pragma; actual } -> (
+      match actual with
+      | Option.Some actual ->
+          Format.fprintf ppf
+            "Expected a `--%s' pragma, but got the token `%a'."
+            expected_pragma Token.pp actual
+      | Option.None ->
+          Format.fprintf ppf
+            "Expected a `--%s' pragma, but reached the end of input."
+            expected_pragma)
+  | Expected_string_literal { actual } -> (
+      match actual with
+      | Option.Some actual ->
+          Format.fprintf ppf
+            "Expected a string literal, but got the token `%a'." Token.pp
+            actual
+      | Option.None ->
+          Format.fprintf ppf
+            "Expected a string literal, but reached the end of input.")
+  | Expected_identifier { actual } -> (
+      match actual with
+      | Option.Some actual ->
+          Format.fprintf ppf
+            "Expected an identifier, but got the token `%a'." Token.pp actual
+      | Option.None ->
+          Format.fprintf ppf
+            "Expected an identifier, but reached the end of input.")
+  | Expected_dot_identifier { actual } -> (
+      match actual with
+      | Option.Some actual ->
+          Format.fprintf ppf
+            "Expected an identifier prefixed by a dot `.', but got the \
+             token `%a'."
+            Token.pp actual
+      | Option.None ->
+          Format.fprintf ppf
+            "Expected an identifier prefixed by a dot `.', but reached the \
+             end of input.")
+  | Expected_hash_identifier { actual } -> (
+      match actual with
+      | Option.Some actual ->
+          Format.fprintf ppf
+            "Expected an identifier prefixed by a hash sign `#id', but got \
+             the token `%a'."
+            Token.pp actual
+      | Option.None ->
+          Format.fprintf ppf
+            "Expected an identifier prefixed by a hash sign `#id', but \
+             reached the end of input.")
+  | Expected_dollar_identifier { actual } -> (
+      match actual with
+      | Option.Some actual ->
+          Format.fprintf ppf
+            "Expected an identifier prefixed by a dollar sign `$id', but \
+             got the token `%a'."
+            Token.pp actual
+      | Option.None ->
+          Format.fprintf ppf
+            "Expected an identifier prefixed by a dollar sign `$id', but \
+             reached the end of input.")
+  | Expected_hole { actual } -> (
+      match actual with
+      | Option.Some actual ->
+          Format.fprintf ppf
+            "Expected an unnamed hole `?' or a labelled hole `?id', but got \
+             the token `%a'."
+            Token.pp actual
+      | Option.None ->
+          Format.fprintf ppf
+            "Expected an unnamed hole `?' or a labelled hole `?id', but \
+             reached the end of input.")
+  | Expected_block_comment { actual } -> (
+      (* Workaround format string errors when inputting the documentation
          comment delimiters *)
       let left_delimiter = "%{{"
       and right_delimiter = "}}%" in
-      Format.fprintf ppf
-        "Expected a block comment delimited by `%s' and `%s'." left_delimiter
-        right_delimiter
+      match actual with
+      | Option.Some actual ->
+          Format.fprintf ppf
+            "Expected a block comment delimited by `%s' and `%s', but got \
+             the token `%a'."
+            left_delimiter right_delimiter Token.pp actual
+      | Option.None ->
+          Format.fprintf ppf
+            "Expected a block comment delimited by `%s' and `%s', but \
+             reached the end of input."
+            left_delimiter right_delimiter)
   | cause -> pp_exception' ppf cause
 
 let () = Error.register_exception_printer pp_exception

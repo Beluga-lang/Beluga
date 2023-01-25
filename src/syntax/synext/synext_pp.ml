@@ -1650,7 +1650,7 @@ and pp_signature_entry ppf entry =
       pp_signature_declaration ppf declaration
   | Signature.Entry.Pragma { pragma; _ } -> pp_signature_pragma ppf pragma
   | Signature.Entry.Comment { content; _ } ->
-      (* Workaround format string errors when inputing the documentation
+      (* Workaround format string errors when inputting the documentation
          comment delimiters *)
       let left_delimiter = "%{{"
       and right_delimiter = "}}%" in

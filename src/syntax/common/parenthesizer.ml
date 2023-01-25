@@ -1,6 +1,6 @@
 open Support
 
-let parenthesize pp ppf = Format.fprintf ppf "@[<2>(%a)@]" pp
+let parenthesize pp ppf = Format.fprintf ppf "@[<hov 2>(%a)@]" pp
 
 type ('precedence, 'term) parenthesizing_formatter =
      ('term -> 'precedence)
@@ -51,7 +51,7 @@ module Make_parenthesizer (Precedence : Ord.ORD) = struct
     | `Term ->
         (* The applicand is not an unquoted operator, so the application is
            in prefix notation. *)
-        Format.fprintf ppf "@[<2>%a@ %a@]"
+        Format.fprintf ppf "@[<hov 2>%a@ %a@]"
           (parenthesize_term_of_lesser_than_or_equal_precedence
              precedence_of_applicand ~parent_precedence pp_applicand)
           applicand
@@ -95,7 +95,7 @@ module Make_parenthesizer (Precedence : Ord.ORD) = struct
 
   and pp_prefix_operator_application ~precedence_of_argument ~pp_applicand
       ~pp_argument ~parent_precedence applicand arguments ppf =
-    Format.fprintf ppf "@[<2>%a@ %a@]" pp_applicand applicand
+    Format.fprintf ppf "@[<hov 2>%a@ %a@]" pp_applicand applicand
       (List1.pp ~pp_sep:Format.pp_print_space
          (parenthesize_argument_prefix_operator precedence_of_argument
             ~parent_precedence pp_argument))
@@ -104,7 +104,7 @@ module Make_parenthesizer (Precedence : Ord.ORD) = struct
   and pp_postfix_operator_application ~guard_operator_application
       ~precedence_of_argument ~pp_applicand ~pp_argument ~parent_precedence
       applicand argument ppf =
-    Format.fprintf ppf "@[<2>%a@ %a@]"
+    Format.fprintf ppf "@[<hov 2>%a@ %a@]"
       (pp_postfix_operator_argument ~guard_operator_application
          ~precedence_of_argument ~pp_argument ~parent_precedence)
       argument pp_applicand applicand
@@ -114,7 +114,7 @@ module Make_parenthesizer (Precedence : Ord.ORD) = struct
       applicand operator ~left_argument ~right_argument ppf =
     match Operator.associativity operator with
     | Associativity.Left_associative ->
-        Format.fprintf ppf "@[<2>%a@ %a@ %a@]"
+        Format.fprintf ppf "@[<hov 2>%a@ %a@ %a@]"
           (pp_infix_left_associative_operator_left_argument
              ~guard_operator_application ~precedence_of_argument ~pp_argument
              ~parent_precedence operator)
@@ -124,7 +124,7 @@ module Make_parenthesizer (Precedence : Ord.ORD) = struct
              ~parent_precedence operator)
           right_argument
     | Associativity.Right_associative ->
-        Format.fprintf ppf "@[<2>%a@ %a@ %a@]"
+        Format.fprintf ppf "@[<hov 2>%a@ %a@ %a@]"
           (pp_infix_right_associative_operator_left_argument
              ~guard_operator_application ~precedence_of_argument ~pp_argument
              ~parent_precedence operator)
@@ -134,7 +134,7 @@ module Make_parenthesizer (Precedence : Ord.ORD) = struct
              ~parent_precedence operator)
           right_argument
     | Associativity.Non_associative ->
-        Format.fprintf ppf "@[<2>%a@ %a@ %a@]"
+        Format.fprintf ppf "@[<hov 2>%a@ %a@ %a@]"
           (pp_infix_non_associative_operator_left_argument
              ~precedence_of_argument ~pp_argument ~parent_precedence)
           left_argument pp_applicand applicand

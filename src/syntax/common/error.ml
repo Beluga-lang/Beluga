@@ -255,6 +255,26 @@ let read_file_lines line_numbers_by_filename =
           List.combine line_numbers_list lines))
     line_numbers_by_filename
 
+(** [split_utf8_line s pos] is [(left, right)] where [left] is the substring
+    of [s] from the codepoint [0] to the codepoint [pos] exclusively, and
+    [right] is the substring of [s] from the codepoint [pos] to the end of
+    [s] inclusively.
+
+    Note that [s] is a UTF-8-encoded string, so {!String.length} cannot be
+    used to compute the distance between codepoints in [s]. *)
+let split_utf8_line s pos =
+  let lexer_buffer = Sedlexing.Utf8.from_string s in
+  match%sedlex lexer_buffer with
+  | Star any ->
+      let length = Sedlexing.lexeme_length lexer_buffer in
+      if pos <= 0 then ("", Sedlexing.Utf8.lexeme lexer_buffer)
+      else if pos >= length then (Sedlexing.Utf8.lexeme lexer_buffer, "")
+      else
+        let left = Sedlexing.Utf8.sub_lexeme lexer_buffer 0 pos in
+        let right = Sedlexing.Utf8.sub_lexeme lexer_buffer pos length in
+        (left, right)
+  | _ -> assert false
+
 (** [make_caret_line start_column stop_column length] makes a string of
     spaces and carets of codepoint length [length], with carets in code point
     range [start_column] inclusively to [stop_column] exclusively.
@@ -299,8 +319,21 @@ let make_location_snippet location lines_by_number =
   | [ (length, x) ] ->
       (* The location spans one line, so the caret start and stop columns
          occur in the same line. *)
-      let underline = make_caret_line ~start_column ~stop_column length in
-      [ (x, underline) ]
+      if Location.spanned_offsets location <> 0 then
+        (* Carets can be added directly under the line. *)
+        let underline = make_caret_line ~start_column ~stop_column length in
+        [ (x, underline) ]
+      else
+        (* The location points to the space between two characters, i.e.
+           [start_column = stop_column]. A space needs to be spliced in the
+           input string so that it can be pointed to with a caret. *)
+        let left, right = split_utf8_line x start_column in
+        let underline =
+          make_caret_line ~start_column ~stop_column:(stop_column + 1)
+            (length + 1)
+        in
+        let spliced_line = Format.asprintf "%s %s" left right in
+        [ (spliced_line, underline) ]
   | (length_first, x_first) :: xs ->
       (* The location spans at least two lines. In the first line, the caret
          start column is [start_column], and in the last line, the caret stop

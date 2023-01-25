@@ -761,15 +761,15 @@ module Make
   and disambiguate_cofunction_branch _ = Obj.magic ()
 
   and with_disambiguated_comp_pattern :
-      type a.
-         Synprs.comp_pattern_object
-      -> Identifier.t List1.t Identifier.Hamt.t
-      -> Identifier.t list
-      -> (   Synext.comp_pattern
-          -> Identifier.t List1.t Identifier.Hamt.t
-          -> Identifier.t list
-          -> a t)
-      -> a t =
+        'a.
+           Synprs.comp_pattern_object
+        -> Identifier.t List1.t Identifier.Hamt.t
+        -> Identifier.t list
+        -> (   Synext.comp_pattern
+            -> Identifier.t List1.t Identifier.Hamt.t
+            -> Identifier.t list
+            -> 'a t)
+        -> 'a t =
    fun object_ inner_bindings pattern_variables f ->
     match object_ with
     | Synprs.Comp.Pattern_object.Raw_meta_annotated

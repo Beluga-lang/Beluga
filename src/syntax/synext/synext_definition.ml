@@ -1117,6 +1117,7 @@ module Comp = struct
   end =
     Expression
 
+  (** External case analysis branches. *)
   and Case_branch : sig
     type t =
       { location : Location.t
@@ -1126,6 +1127,7 @@ module Comp = struct
   end =
     Case_branch
 
+  (** External cofunction branches. *)
   and Cofunction_branch : sig
     type t =
       { location : Location.t

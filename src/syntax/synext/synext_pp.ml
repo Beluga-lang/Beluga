@@ -1354,11 +1354,11 @@ and pp_signature_totality_declaration ppf totality_declaration =
             order)
 
 and pp_signature_totality_order :
-    type a.
-       (Format.formatter -> a -> Unit.t)
-    -> Format.formatter
-    -> a Signature.Totality.Order.t
-    -> Unit.t =
+      'a.
+         (Format.formatter -> 'a -> Unit.t)
+      -> Format.formatter
+      -> 'a Signature.Totality.Order.t
+      -> Unit.t =
  fun ppv ppf totality_order ->
   match totality_order with
   | Signature.Totality.Order.Argument { argument; _ } -> ppv ppf argument

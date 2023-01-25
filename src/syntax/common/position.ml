@@ -37,10 +37,4 @@ let to_lexing_position ?(filename = "") position =
   and pos_cnum = offset position in
   { Lexing.pos_fname; pos_lnum; pos_bol; pos_cnum }
 
-include (
-  Ord.Make (struct
-    type nonrec t = t
-
-    let compare p1 p2 = Int.compare p1.offset p2.offset
-  end) :
-    Ord.ORD with type t := t)
+include ((val Ord.contramap (module Int) offset) : Ord.ORD with type t := t)

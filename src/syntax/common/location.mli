@@ -43,7 +43,7 @@ val between : start:t -> stop:t -> t
 
     It is assumed that [filename l1 = filename l2].
 
-    Ghost locations are left and right identities of [join], meaning that:.
+    Ghost locations are left and right identities of [join], meaning that:
 
     - If [is_ghost l1], then [join l1 l2 = l2].
     - If [is_ghost l2], then [join l1 l2 = l1]. *)

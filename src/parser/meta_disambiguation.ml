@@ -189,10 +189,10 @@ module Make
                  { location; domain = domain'; range = range' }))
 
   and with_disambiguated_clf_bindings_list :
-      type a.
-         (Identifier.t * Synprs.clf_object) list
-      -> ((Identifier.t * Synext.clf_typ) list -> a t)
-      -> a t =
+        'a.
+           (Identifier.t * Synprs.clf_object) list
+        -> ((Identifier.t * Synext.clf_typ) list -> 'a t)
+        -> 'a t =
    fun bindings f ->
     match bindings with
     | [] -> f []
@@ -203,10 +203,10 @@ module Make
                f ((identifier, typ') :: ys)))
 
   and with_disambiguated_clf_bindings_list1 :
-      type a.
-         (Identifier.t * Synprs.clf_object) List1.t
-      -> ((Identifier.t * Synext.clf_typ) List1.t -> a t)
-      -> a t =
+        'a.
+           (Identifier.t * Synprs.clf_object) List1.t
+        -> ((Identifier.t * Synext.clf_typ) List1.t -> 'a t)
+        -> 'a t =
    fun bindings f ->
     let (List1.T ((identifier, typ), xs)) = bindings in
     let* typ' = disambiguate_clf_typ typ in
@@ -266,11 +266,11 @@ module Make
         )
 
   and with_disambiguated_meta_context_binding :
-      type a.
-         (Identifier.t * [ `Dollar | `Hash | `Plain ])
-         * Synprs.meta_thing option
-      -> (Identifier.t * Synext.meta_typ -> a t)
-      -> a t =
+        'a.
+           (Identifier.t * [ `Dollar | `Hash | `Plain ])
+           * Synprs.meta_thing option
+        -> (Identifier.t * Synext.meta_typ -> 'a t)
+        -> 'a t =
    fun binding f ->
     match binding with
     | (identifier, `Plain), Option.Some meta_type
@@ -314,12 +314,12 @@ module Make
           Illegal_missing_meta_type_annotation
 
   and with_disambiguated_meta_context_bindings_list :
-      type a.
-         ((Identifier.t * [ `Dollar | `Hash | `Plain ])
-         * Synprs.meta_thing option)
-         list
-      -> ((Identifier.t * Synext.meta_typ) list -> a t)
-      -> a t =
+        'a.
+           ((Identifier.t * [ `Dollar | `Hash | `Plain ])
+           * Synprs.meta_thing option)
+           list
+        -> ((Identifier.t * Synext.meta_typ) list -> 'a t)
+        -> 'a t =
    fun bindings f ->
     match bindings with
     | [] -> f []
@@ -329,8 +329,8 @@ module Make
               (fun bindings' -> f (binding' :: bindings')))
 
   and with_disambiguated_meta_context :
-      type a.
-      Synprs.meta_context_object -> (Synext.meta_context -> a t) -> a t =
+        'a.
+        Synprs.meta_context_object -> (Synext.meta_context -> 'a t) -> 'a t =
    fun context_object f ->
     let { Synprs.Meta.Context_object.location; bindings } = context_object in
     (* Meta-contexts are dependent, meaning that bound variables on the left

@@ -1743,12 +1743,12 @@ end) : BELUGA_HTML with type state = Html_state.state = struct
               order)
 
   and pp_signature_totality_order :
-      type a.
-         state
-      -> (Format.formatter -> a -> Unit.t)
-      -> Format.formatter
-      -> a Signature.Totality.Order.t
-      -> Unit.t =
+        'a.
+           state
+        -> (Format.formatter -> 'a -> Unit.t)
+        -> Format.formatter
+        -> 'a Signature.Totality.Order.t
+        -> Unit.t =
    fun state ppv ppf totality_order ->
     match totality_order with
     | Signature.Totality.Order.Argument { argument; _ } -> ppv ppf argument

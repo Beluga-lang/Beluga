@@ -373,7 +373,7 @@ module Make (P : ParserInfo) = struct
         (* see where we are after running it *)
         let n' = s.count in
         match e with
-        | Left e ->
+        | Either.Left e ->
            (* If the first parser fails without consuming input, or if
               it fails with backtracking enabled *and* there're enough
               tokens on the stack, then we try the next parser.
@@ -388,7 +388,7 @@ module Make (P : ParserInfo) = struct
                p2.run (rewind d s)
            else
              (s, Either.left e)
-        | Right x -> (s, Either.right x)
+        | Either.Right x -> (s, Either.right x)
     }
 
   let throw (msg : string) : 'a t =
@@ -408,9 +408,9 @@ module Make (P : ParserInfo) = struct
   let car (s : state) : 'c Token.t option * state =
     let open HeadStrict in
     match s.input with
-    | lazy (Left _) ->
+    | lazy (Either.Left _) ->
        ( None, s )
-    | lazy (Right { head; tail })  ->
+    | lazy (Either.Right { head; tail })  ->
          ( Some head,
            { s with
              stk =

@@ -142,38 +142,26 @@ module Make
   module Shunting_yard =
     Shunting_yard.Make (Associativity) (Fixity) (Operand) (Operator)
 
-  exception
-    Misplaced_operator of
-      { operator : operator
-      ; operands : operand list
-      }
+  exception Misplaced_operator = Shunting_yard.Misplaced_operator
 
   exception
-    Ambiguous_operator_placement of
-      { left_operator : operator
-      ; right_operator : operator
-      }
+    Ambiguous_operator_placement = Shunting_yard.Ambiguous_operator_placement
 
   exception
-    Consecutive_non_associative_operators of
-      { left_operator : operator
-      ; right_operator : operator
-      }
+    Consecutive_non_associative_operators = Shunting_yard
+                                            .Consecutive_non_associative_operators
 
-  exception
-    Arity_mismatch of
-      { operator : operator
-      ; operator_arity : int
-      ; operands : operand list
-      }
+  exception Arity_mismatch = Shunting_yard.Arity_mismatch
 
   let make_atom expression = Operand.Atom expression
 
   let make_application applicand arguments =
     Operand.Application { applicand; arguments }
 
+  (** [identify expression] determines whether [expression] should be
+      considered as an operand or an operator, based on {!guard_operator}. *)
   let identify expression =
-    Disambiguation_state.guard_operator expression >>= function
+    guard_operator expression >>= function
     | Option.None -> return (`Operand expression)
     | Option.Some operator -> return (`Operator operator)
 
@@ -189,10 +177,15 @@ module Make
     | `Operand expression :: rest -> (
         match take_while_operand rest with
         | [], rest ->
+            (* [expression] is not in juxtaposition, so leave [expression] as
+               an atom. *)
             let expression' = make_atom expression in
             let rest' = reduce_juxtapositions rest in
             Shunting_yard.operand expression' :: rest'
         | x :: xs, rest ->
+            (* The expressions [expression], [x] and those in [xs] are in
+               juxtaposition, so they are reduced to an application with
+               applicand [expression]. *)
             let arguments' = List1.map make_atom (List1.from x xs) in
             let expression' = make_application expression arguments' in
             let rest' = reduce_juxtapositions rest in
@@ -202,9 +195,16 @@ module Make
         | Fixity.Prefix -> (
             match take_while_operand rest with
             | [], rest' ->
+                (* [op] is a prefix operator not followed by operands, so
+                   leave [op] as an operator. *)
                 let rest'' = reduce_juxtapositions rest' in
                 Shunting_yard.operator op :: rest''
             | x :: xs, rest' ->
+                (* [op] is a prefix operator followed by operands, so [op],
+                   [x] and [xs] are reduced to an application. This
+                   effectively disregards [op]'s precedence, but
+                   juxtapositions have to be of higher precedence than
+                   user-defined operators. *)
                 let expression = Operator.applicand op in
                 let arguments' = List1.map make_atom (List1.from x xs) in
                 let expression' = make_application expression arguments' in

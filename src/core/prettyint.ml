@@ -52,7 +52,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
       The given printing function receives the subcontext (to the left
       of the entry) plus the entry itself.
    *)
-  let fmt_ppr_ctx_filter : type a. ?sep:(formatter -> unit -> unit) -> (a LF.ctx * a -> bool) -> (formatter -> a LF.ctx * a -> unit) -> formatter -> a LF.ctx -> unit =
+  let fmt_ppr_ctx_filter : 'a. ?sep:(formatter -> unit -> unit) -> ('a LF.ctx * 'a -> bool) -> (formatter -> 'a LF.ctx * 'a -> unit) -> formatter -> 'a LF.ctx -> unit =
     (* the type has to be written in this horrible way to keep OCaml
        from unnecessarily monomorphizing it. *)
     fun ?(sep = pp_print_space) p f ppf ctx ->

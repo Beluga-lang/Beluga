@@ -44,27 +44,30 @@ let join_all1_contramap get_location located_elements =
       join accumulated_location (get_location located_element))
     located_elements
 
-let is_ghost location = location.ghost
+let[@inline] is_ghost location = location.ghost
 
-let start_offset location = Position.offset location.start
+let[@inline] start_offset location = Position.offset location.start
 
-let stop_offset location = Position.offset location.stop
+let[@inline] stop_offset location = Position.offset location.stop
 
-let start_bol location = Position.beginning_of_line location.start
+let[@inline] spanned_offsets location =
+  stop_offset location - start_offset location
 
-let stop_bol location = Position.beginning_of_line location.stop
+let[@inline] start_bol location = Position.beginning_of_line location.start
 
-let start_line location = Position.line location.start
+let[@inline] stop_bol location = Position.beginning_of_line location.stop
 
-let stop_line location = Position.line location.stop
+let[@inline] start_line location = Position.line location.start
 
-let filename location = location.filename
+let[@inline] stop_line location = Position.line location.stop
 
-let start_column location = Position.column location.start
+let[@inline] filename location = location.filename
 
-let stop_column location = Position.column location.stop
+let[@inline] start_column location = Position.column location.start
 
-let initial filename =
+let[@inline] stop_column location = Position.column location.stop
+
+let[@inline] initial filename =
   { start = Position.initial
   ; stop = Position.initial
   ; ghost = false

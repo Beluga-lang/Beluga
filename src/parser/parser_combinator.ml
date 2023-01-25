@@ -1,6 +1,34 @@
 open Support
 open Beluga_syntax
 
+module type PARSER_STATE = sig
+  type t
+
+  type token
+
+  val observe : t -> (token * t) option
+end
+
+module type PARSER_BACKTRACKING_STATE = sig
+  type t
+
+  val enable_backtracking : t -> t
+
+  val disable_backtracking : t -> t
+
+  val can_backtrack : from:t -> to_:t -> bool
+end
+
+module type PARSER_LOCATION_STATE = sig
+  type t
+
+  type location
+
+  val next_location : t -> location option
+
+  val previous_location : t -> location option
+end
+
 module type PARSER = sig
   type token
 
@@ -23,8 +51,6 @@ module type PARSER = sig
   exception No_more_choices of exn list
 
   exception Expected_end_of_input
-
-  exception Unexpected_end_of_input
 
   include Monad.MONAD with type 'a t := 'a t
 
@@ -55,8 +81,6 @@ module type PARSER = sig
 
   val void : 'a t -> unit t
 
-  val sequence : 'a t list -> 'a list t
-
   val many : 'a t -> 'a list t
 
   val some : 'a t -> 'a List1.t t
@@ -65,9 +89,11 @@ module type PARSER = sig
 
   val sep_by1 : 'a t -> unit t -> 'a List1.t t
 
-  val traverse : ('a -> 'b t) -> 'a list -> 'b list t
+  val traverse_list : ('a -> 'b t) -> 'a list -> 'b list t
 
-  val traverse_void : ('a -> unit t) -> 'a list -> unit t
+  val traverse_list_void : ('a -> unit t) -> 'a list -> unit t
+
+  val seq_list : 'a t list -> 'a list t
 
   val trying : 'a t -> 'a t
 
@@ -75,29 +101,32 @@ module type PARSER = sig
 
   val choice : 'a t List.t -> 'a t
 
-  val satisfy : (token -> ('a, exn) result) -> 'a t
+  val satisfy :
+       on_token:(token -> ('a, exn) result)
+    -> on_end_of_input:(unit -> 'a t)
+    -> 'a t
 
   val eoi : unit t
 end
 
-module type SIMPLE_STATE = sig
-  type token
+module type PARSER_WITH_LOCATIONS = sig
+  include PARSER
 
-  type t
+  type location
 
-  val enable_backtracking : t -> t
+  val span : 'a t -> (location * 'a) t
 
-  val disable_backtracking : t -> t
+  val fail_at_next_location : exn -> 'a t
 
-  val observe : t -> (token * t) option
-
-  val can_backtrack : from:t -> to_:t -> bool
+  val fail_at_previous_location : exn -> 'a t
 end
 
-module Make_simple_state (Token : sig
+module Make_persistent_bracktracking_state (Token : sig
   type t
 end) : sig
-  include SIMPLE_STATE with type token = Token.t
+  include PARSER_STATE with type token = Token.t
+
+  include PARSER_BACKTRACKING_STATE with type t := t
 
   val initial : token Seq.t -> t
 end = struct
@@ -124,32 +153,26 @@ end = struct
         let s' = { s with input = xs; position = s.position + 1 } in
         Option.some (x, s')
 
-  let[@inline] has_consumed_input ~from ~to_ = position from = position to_
+  let[@inline] has_not_consumed_input ~from ~to_ =
+    position from = position to_
 
   let can_backtrack ~from ~to_ =
-    if from.can_backtrack then true else has_consumed_input ~from ~to_
-end
-
-module type STATE_WITH_LOCATION = sig
-  include SIMPLE_STATE
-
-  type location
-
-  val next_location : t -> location option
-
-  val previous_location : t -> location option
+    if from.can_backtrack then true else has_not_consumed_input ~from ~to_
 end
 
 module Make_location_state (Token : sig
   type t
 
   val location : t -> Location.t
-end)
-(State : SIMPLE_STATE with type token = Token.t) : sig
+end) (State : sig
+  include PARSER_STATE with type token = Token.t
+
+  include PARSER_BACKTRACKING_STATE with type t := t
+end) : sig
+  include module type of State
+
   include
-    STATE_WITH_LOCATION
-      with type token = Token.t
-       and type location = Location.t
+    PARSER_LOCATION_STATE with type t := t and type location = Location.t
 
   val initial : ?last_location:Location.t -> State.t -> t
 end = struct
@@ -193,24 +216,21 @@ end
 module Make_parser_with_locations (Token : sig
   type t
 end) (State : sig
+  include PARSER_STATE with type token = Token.t
+
+  include PARSER_BACKTRACKING_STATE with type t := t
+
   include
-    STATE_WITH_LOCATION
-      with type token = Token.t
-       and type location = Location.t
-end) : sig
-  include
-    PARSER
-      with type token = Token.t
-       and type state = State.t
-       and type input = Token.t Seq.t
-
-  val span : 'a t -> (Location.t * 'a) t
-
-  val fail_at_next_location : exn -> 'a t
-
-  val fail_at_previous_location : exn -> 'a t
-end = struct
+    PARSER_LOCATION_STATE with type t := t and type location = Location.t
+end) :
+  PARSER_WITH_LOCATIONS
+    with type state = State.t
+     and type token = Token.t
+     and type input = Token.t Seq.t
+     and type location = Location.t = struct
   type token = Token.t
+
+  type location = Location.t
 
   type input = Token.t Seq.t
 
@@ -231,8 +251,6 @@ end = struct
   exception No_more_choices of exn list
 
   exception Expected_end_of_input
-
-  exception Unexpected_end_of_input
 
   let[@inline] run p s = p s
 
@@ -296,17 +314,28 @@ end = struct
 
   include (Apply.Make (M) : Apply.APPLY with type 'a t := 'a t)
 
-  let rec traverse f xs =
+  let rec traverse_list f xs =
     match xs with
     | [] -> return []
-    | x :: xs -> seq2 (f x) (traverse f xs) $> fun (x, xs) -> x :: xs
+    | x :: xs ->
+        let* y = f x in
+        let* ys = traverse_list f xs in
+        return (y :: ys)
 
-  let rec traverse_void f xs =
+  let rec traverse_list_void f xs =
     match xs with
     | [] -> return ()
-    | x :: xs -> f x &> traverse_void f xs
+    | x :: xs ->
+        let* _ = f x in
+        traverse_list_void f xs
 
-  let sequence ps = traverse Fun.id ps
+  let rec seq_list xs =
+    match xs with
+    | [] -> return []
+    | x :: xs ->
+        let* y = x in
+        let* ys = seq_list xs in
+        return (y :: ys)
 
   let trying p s =
     match run p s with
@@ -323,7 +352,7 @@ end = struct
           (s, Result.error (Labelled_exception { cause; label }))
       | x -> x)
 
-  let labelled s p = label p s
+  let labelled l p = label p l
 
   let choice ps s =
     let rec go es = function
@@ -336,7 +365,7 @@ end = struct
     in
     run (go [] ps) s
 
-  let alt p1 p2 = choice [ p1; p2 ]
+  let[@inline] alt p1 p2 = choice [ p1; p2 ]
 
   let maybe p = alt (p $> Option.some) (return Option.none)
 
@@ -376,7 +405,7 @@ end = struct
     | Option.Some l1, Option.Some l2 ->
         let l = Location.between ~start:l1 ~stop:l2 in
         return (l, x)
-    | _ ->
+    | _, Option.None ->
         assert
           false (* The parser [p] succeeded, so [l2_opt <> Option.none]. *)
 
@@ -388,13 +417,13 @@ end = struct
 
   let only p = p <& eoi
 
-  let satisfy f s =
+  let satisfy ~on_token ~on_end_of_input s =
     match State.observe s with
-    | Option.None -> fail_at_next_location Unexpected_end_of_input s
+    | Option.None -> on_end_of_input () s
     | Option.Some (token, s') -> (
-        match f token with
-        | Result.Ok _ as r -> (s' (* Next state *), r)
-        | Result.Error _ as r -> (s (* Previous state *), r))
+        match on_token token with
+        | Result.Ok r -> return_at s' r
+        | Result.Error cause -> fail_at_next_location cause s)
 end
 
 module Make (Token : sig
@@ -402,20 +431,17 @@ module Make (Token : sig
 
   val location : t -> Location.t
 end) : sig
-  include PARSER with type token = Token.t and type input = Token.t Seq.t
+  include
+    PARSER_WITH_LOCATIONS
+      with type token = Token.t
+       and type input = Token.t Seq.t
+       and type location = Location.t
 
-  val span : 'a t -> (Location.t * 'a) t
-
-  val initial_state : ?last_location:Location.t -> input -> state
-
-  val fail_at_next_location : exn -> 'a t
-
-  val fail_at_previous_location : exn -> 'a t
+  val initial_state : ?last_location:location -> input -> state
 end = struct
-  module Simple_state = Make_simple_state (Token)
+  module Simple_state = Make_persistent_bracktracking_state (Token)
   module State_with_locations = Make_location_state (Token) (Simple_state)
-  module State = State_with_locations
-  include Make_parser_with_locations (Token) (State)
+  include Make_parser_with_locations (Token) (State_with_locations)
 
   let initial_state ?last_location input =
     State_with_locations.initial ?last_location (Simple_state.initial input)

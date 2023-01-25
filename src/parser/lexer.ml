@@ -121,9 +121,10 @@ let rec tokenize lexbuf =
   | line_comment -> tokenize lexbuf
   (* STRING LITERALS *)
   | string_literal ->
+      let delimiter_length = String.length "\"" in
       let s =
-        Sedlexing.Utf8.sub_lexeme lexbuf 1
-          (Sedlexing.lexeme_length lexbuf - 2)
+        Sedlexing.Utf8.sub_lexeme lexbuf delimiter_length
+          (Sedlexing.lexeme_length lexbuf - (2 * delimiter_length))
       in
       let s' =
         try Scanf.unescaped s with
@@ -169,9 +170,10 @@ let rec tokenize lexbuf =
   | "toshow" -> const Token.KW_TOSHOW
   (* SYMBOLS *)
   | pragma ->
+      let prefix_length = String.length "--" in
       let s =
-        Sedlexing.Utf8.sub_lexeme lexbuf 2
-          (Sedlexing.lexeme_length lexbuf - 2)
+        Sedlexing.Utf8.sub_lexeme lexbuf prefix_length
+          (Sedlexing.lexeme_length lexbuf - prefix_length)
       in
       const (Token.PRAGMA s)
   | backarrow -> const Token.BACKARROW
@@ -202,22 +204,25 @@ let rec tokenize lexbuf =
   | "/" -> const Token.SLASH
   | "+" -> const Token.PLUS
   | hole ->
+      let prefix_length = String.length "?" in
       let s =
-        Sedlexing.Utf8.sub_lexeme lexbuf 1
-          (Sedlexing.lexeme_length lexbuf - 1)
+        Sedlexing.Utf8.sub_lexeme lexbuf prefix_length
+          (Sedlexing.lexeme_length lexbuf - prefix_length)
       in
       const (Token.HOLE s)
   | "_" -> const Token.UNDERSCORE
   | dot_number ->
+      let prefix_length = String.length "." in
       let s =
-        Sedlexing.Utf8.sub_lexeme lexbuf 1
-          (Sedlexing.lexeme_length lexbuf - 1)
+        Sedlexing.Utf8.sub_lexeme lexbuf prefix_length
+          (Sedlexing.lexeme_length lexbuf - prefix_length)
       in
       const (Token.DOT_NUMBER (int_of_string s))
   | dot_ident ->
+      let prefix_length = String.length "." in
       let s =
-        Sedlexing.Utf8.sub_lexeme lexbuf 1
-          (Sedlexing.lexeme_length lexbuf - 1)
+        Sedlexing.Utf8.sub_lexeme lexbuf prefix_length
+          (Sedlexing.lexeme_length lexbuf - prefix_length)
       in
       const (Token.DOT_IDENT s)
   | dots -> const Token.DOTS

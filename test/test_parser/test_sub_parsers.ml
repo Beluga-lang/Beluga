@@ -52,7 +52,7 @@ let parser_failure_tests ~disambiguation_state ~error_inputs_filename parse =
 
 let test_parser ~fixtures_directory
     ~disambiguation_state_configuration_basename ~ok_inputs_basename
-    ~ok_outputs_basename ~error_inputs_basename parse json_of_parse =
+    ~ok_outputs_basename ~error_inputs_basename parse json_of_parse () =
   let disambiguation_state_configuration_filename =
     Filename.concat fixtures_directory
       disambiguation_state_configuration_basename
@@ -119,17 +119,6 @@ let test_clf_term =
     ~error_inputs_basename:"clf_terms_error.input.bel"
     Parser.parse_only_clf_term Util.Synext_json.json_of_clf_term
 
-(*=
-let test_clf_term_pattern =
-  test_parser ~fixtures_directory:"fixtures"
-    ~disambiguation_state_configuration_basename:"disambiguation_state.json"
-    ~ok_inputs_basename:"clf_term_patterns_ok.input.bel"
-    ~ok_outputs_basename:"clf_term_patterns_ok.output.json"
-    ~error_inputs_basename:"clf_term_patterns_error.input.bel"
-    Parser.parse_only_clf_term_pattern
-    Util.Synext_json.json_of_clf_term_pattern
-*)
-
 let test_meta_typ =
   test_parser ~fixtures_directory:"fixtures"
     ~disambiguation_state_configuration_basename:"disambiguation_state.json"
@@ -171,24 +160,26 @@ let test_comp_typ =
     Parser.parse_only_comp_typ Util.Synext_json.json_of_comp_typ
 
 let tests =
+  (* Set the current working directory to the directory containing this
+     executable file *)
+  Sys.chdir (Filename.concat (Sys.getcwd ()) (Filename.dirname Sys.argv.(0)));
   let open OUnit2 in
   [ "LF Parsers"
-    >::: [ "LF kind" >::: test_lf_kind
-         ; "LF type" >::: test_lf_typ
-         ; "LF term" >::: test_lf_term
+    >::: [ "LF kind" >::: test_lf_kind ()
+         ; "LF type" >::: test_lf_typ ()
+         ; "LF term" >::: test_lf_term ()
          ]
   ; "Contextual LF Parsers"
-    >::: [ "Contextual LF type" >::: test_clf_typ
-         ; "Contextual LF term" >::: test_clf_term
-           (*=; "Contextual LF term pattern" >::: test_clf_term_pattern *)
+    >::: [ "Contextual LF type" >::: test_clf_typ ()
+         ; "Contextual LF term" >::: test_clf_term ()
          ]
   ; "Meta-Level Parsers"
-    >::: [ "Meta-type" >::: test_meta_typ
-         ; "Meta-object" >::: test_meta_object
-         ; "Schema" >::: test_schema
+    >::: [ "Meta-type" >::: test_meta_typ ()
+         ; "Meta-object" >::: test_meta_object ()
+         ; "Schema" >::: test_schema ()
          ]
   ; "Computation-Level Parsers"
-    >::: [ "Computation Kind" >::: test_comp_kind
-         ; "Computation Type" >::: test_comp_typ
+    >::: [ "Computation Kind" >::: test_comp_kind ()
+         ; "Computation Type" >::: test_comp_typ ()
          ]
   ]

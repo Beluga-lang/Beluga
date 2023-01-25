@@ -34,6 +34,14 @@ val raise_at1 : Location.t -> exn -> 'a
     [located_exception2 location1 location2 cause]. *)
 val raise_at2 : Location.t -> Location.t -> exn -> 'a
 
+(** [discard_locations exn] is the cause of [exn] in the case where [exn] was
+    produced by {!located_exception}. *)
+val discard_locations : exn -> exn
+
+(** [locations exn] are the locations of [exn] in the case where [exn] was
+    produced by {!located_exception}. *)
+val locations : exn -> Location.t List1.t Option.t
+
 (** [composite_exception causes] is the composite exception having many
     related [causes]. This exception is not exported from this module, so it
     may never be caught elsewhere.

@@ -9,7 +9,6 @@ auto-invert-solve
 
 invert x1
 by (unique [_] [_ |- _] [_ |- _] [_ |- _] [_,b:block x:term, u:hastype x _ |- X3[..,b.1,b.2]] [_,b |- X7[..,b.1,b.2]]) as ih0
-invert ih0 %% Doesn't invert this automatically in auto-invert-solve...
 auto-invert-solve
 
 invert x1

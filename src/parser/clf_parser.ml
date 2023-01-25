@@ -185,15 +185,19 @@ end = struct
                  })
       |> labelled "Contextual LF constant or variable"
     and parameter_variable =
-      hash_identifier $> fun identifier ->
-      let location = Identifier.location identifier in
-      Synprs.CLF.Object.Raw_identifier
-        { location; identifier = (identifier, `Hash); quoted = false }
+      hash_identifier
+      $> (fun identifier ->
+           let location = Identifier.location identifier in
+           Synprs.CLF.Object.Raw_identifier
+             { location; identifier = (identifier, `Hash); quoted = false })
+      |> labelled "Parameter variable"
     and substitution_variable =
-      dollar_identifier $> fun identifier ->
-      let location = Identifier.location identifier in
-      Synprs.CLF.Object.Raw_identifier
-        { location; identifier = (identifier, `Dollar); quoted = false }
+      dollar_identifier
+      $> (fun identifier ->
+           let location = Identifier.location identifier in
+           Synprs.CLF.Object.Raw_identifier
+             { location; identifier = (identifier, `Dollar); quoted = false })
+      |> labelled "Substitution variable"
     and underscore_hole =
       underscore |> span
       $> (fun (location, ()) ->
@@ -243,52 +247,43 @@ end = struct
     let trailing_projections = many (span projection) in
     (* If a term only uses named projections, then those projections are
        actually parsed as a qualfified identifier. *)
-    seq2 clf_object8 trailing_projections
-    $> (function
-         | object_, [] -> object_
-         | object_, projections ->
-             List.fold_left
-               (fun accumulator (projection_location, projection) ->
-                 let location =
-                   Location.join
-                     (Synprs.location_of_clf_object accumulator)
-                     projection_location
-                 in
-                 Synprs.CLF.Object.Raw_projection
-                   { location; object_ = accumulator; projection })
-               object_ projections)
-    |> labelled "Contextual LF atomic object or projection term"
+    seq2 clf_object8 trailing_projections $> function
+    | object_, [] -> object_
+    | object_, projections ->
+        List.fold_left
+          (fun accumulator (projection_location, projection) ->
+            let location =
+              Location.join
+                (Synprs.location_of_clf_object accumulator)
+                projection_location
+            in
+            Synprs.CLF.Object.Raw_projection
+              { location; object_ = accumulator; projection })
+          object_ projections
 
   let clf_object6 =
     (* Substitutions are left-associative. *)
-    seq2 clf_object7 (many (span (bracks clf_context_object)))
-    $> (function
-         | object_, [] -> object_
-         | object_, substitutions ->
-             List.fold_left
-               (fun accumulator (substitution_location, substitution) ->
-                 let location =
-                   Location.join
-                     (Synprs.location_of_clf_object accumulator)
-                     substitution_location
-                 in
-                 Synprs.CLF.Object.Raw_substitution
-                   { location; object_ = accumulator; substitution })
-               object_ substitutions)
-    |> labelled
-         "Contextual LF atomic object, projection term orsubstitution term"
+    seq2 clf_object7 (many (span (bracks clf_context_object))) $> function
+    | object_, [] -> object_
+    | object_, substitutions ->
+        List.fold_left
+          (fun accumulator (substitution_location, substitution) ->
+            let location =
+              Location.join
+                (Synprs.location_of_clf_object accumulator)
+                substitution_location
+            in
+            Synprs.CLF.Object.Raw_substitution
+              { location; object_ = accumulator; substitution })
+          object_ substitutions
 
   let clf_object5 =
-    seq2 clf_object6 (many (alt clf_object6 clf_weak_prefix))
-    |> span
-    $> (function
-         | _, (object_, []) -> object_
-         | location, (o1, o2 :: os) ->
-             Synprs.CLF.Object.Raw_application
-               { location; objects = List2.from o1 o2 os })
-    |> labelled
-         "Contextual LF atomic object, projection term, substitution term \
-          or application"
+    seq2 clf_object6 (many (alt clf_object6 clf_weak_prefix)) |> span
+    $> function
+    | _, (object_, []) -> object_
+    | location, (o1, o2 :: os) ->
+        Synprs.CLF.Object.Raw_application
+          { location; objects = List2.from o1 o2 os }
 
   let clf_object4 =
     let block_contents =
@@ -315,89 +310,78 @@ end = struct
     and backward_arrow_operator = backward_arrow $> fun () -> `Backward_arrow
     and right_operand = alt clf_object4 clf_weak_prefix in
     clf_object4 >>= fun object_ ->
-    maybe (alt forward_arrow_operator backward_arrow_operator)
-    >>= (function
-          | Option.None -> return (`Singleton object_)
-          | Option.Some `Forward_arrow ->
-              (* A forward arrow was parsed. Subsequent backward arrows are
-                 ambiguous. *)
-              let backward_arrow =
-                backward_arrow >>= fun () ->
-                fail Ambiguous_clf_backward_arrow
-              and forward_arrow = forward_arrow_operator in
-              let operator = alt backward_arrow forward_arrow in
-              seq2 right_operand (many (operator &> right_operand))
-              $> fun (x, xs) ->
-              `Forward_arrows (List1.from object_ (x :: xs))
-          | Option.Some `Backward_arrow ->
-              (* A backward arrow was parsed. Subsequent forward arrows are
-                 ambiguous. *)
-              let backward_arrow_operator = backward_arrow
-              and forward_arrow_operator =
-                forward_arrow >>= fun () -> fail Ambiguous_clf_forward_arrow
-              in
-              let operator =
-                alt forward_arrow_operator backward_arrow_operator
-              in
-              seq2 right_operand (many (operator &> right_operand))
-              $> fun (x, xs) ->
-              `Backward_arrows (List1.from object_ (x :: xs)))
-    $> (function
-         | `Singleton x -> x
-         | `Forward_arrows xs ->
-             List1.fold_right Fun.id
-               (fun operand accumulator ->
-                 let location =
-                   Location.join
-                     (Synprs.location_of_clf_object operand)
-                     (Synprs.location_of_clf_object accumulator)
-                 in
-                 Synprs.CLF.Object.Raw_arrow
-                   { location
-                   ; domain = operand
-                   ; range = accumulator
-                   ; orientation = `Forward
-                   })
-               xs
-         | `Backward_arrows (List1.T (x, xs)) ->
-             List.fold_left
-               (fun accumulator operand ->
-                 let location =
-                   Location.join
-                     (Synprs.location_of_clf_object accumulator)
-                     (Synprs.location_of_clf_object operand)
-                 in
-                 Synprs.CLF.Object.Raw_arrow
-                   { location
-                   ; domain = operand
-                   ; range = accumulator
-                   ; orientation = `Backward
-                   })
-               x xs)
-    |> labelled
-         "Contextual LF atomic object, application, annotated term, forward \
-          arrow or backward arrow"
+    (maybe (alt forward_arrow_operator backward_arrow_operator) >>= function
+     | Option.None -> return (`Singleton object_)
+     | Option.Some `Forward_arrow ->
+         (* A forward arrow was parsed. Subsequent backward arrows are
+            ambiguous. *)
+         let backward_arrow =
+           backward_arrow >>= fun () ->
+           fail_at_previous_location Ambiguous_clf_backward_arrow
+         and forward_arrow = forward_arrow_operator in
+         let operator = alt backward_arrow forward_arrow in
+         seq2 right_operand (many (operator &> right_operand))
+         $> fun (x, xs) -> `Forward_arrows (List1.from object_ (x :: xs))
+     | Option.Some `Backward_arrow ->
+         (* A backward arrow was parsed. Subsequent forward arrows are
+            ambiguous. *)
+         let backward_arrow_operator = backward_arrow
+         and forward_arrow_operator =
+           forward_arrow >>= fun () ->
+           fail_at_previous_location Ambiguous_clf_forward_arrow
+         in
+         let operator = alt forward_arrow_operator backward_arrow_operator in
+         seq2 right_operand (many (operator &> right_operand))
+         $> fun (x, xs) -> `Backward_arrows (List1.from object_ (x :: xs)))
+    $> function
+    | `Singleton x -> x
+    | `Forward_arrows xs ->
+        List1.fold_right Fun.id
+          (fun operand accumulator ->
+            let location =
+              Location.join
+                (Synprs.location_of_clf_object operand)
+                (Synprs.location_of_clf_object accumulator)
+            in
+            Synprs.CLF.Object.Raw_arrow
+              { location
+              ; domain = operand
+              ; range = accumulator
+              ; orientation = `Forward
+              })
+          xs
+    | `Backward_arrows (List1.T (x, xs)) ->
+        List.fold_left
+          (fun accumulator operand ->
+            let location =
+              Location.join
+                (Synprs.location_of_clf_object accumulator)
+                (Synprs.location_of_clf_object operand)
+            in
+            Synprs.CLF.Object.Raw_arrow
+              { location
+              ; domain = operand
+              ; range = accumulator
+              ; orientation = `Backward
+              })
+          x xs
 
   let clf_object2 =
     let annotation = colon &> alt clf_object3 clf_weak_prefix in
     let trailing_annotations = many (span annotation) in
-    seq2 clf_object3 trailing_annotations
-    $> (function
-         | object_, [] -> object_
-         | object_, annotations ->
-             List.fold_left
-               (fun accumulator (sort_location, sort) ->
-                 let location =
-                   Location.join
-                     (Synprs.location_of_clf_object accumulator)
-                     sort_location
-                 in
-                 Synprs.CLF.Object.Raw_annotated
-                   { location; object_ = accumulator; sort })
-               object_ annotations)
-    |> labelled
-         "Contextual LF atomic object, application, annotatedterm, \
-          forwardarrow or backward arrow object"
+    seq2 clf_object3 trailing_annotations $> function
+    | object_, [] -> object_
+    | object_, annotations ->
+        List.fold_left
+          (fun accumulator (sort_location, sort) ->
+            let location =
+              Location.join
+                (Synprs.location_of_clf_object accumulator)
+                sort_location
+            in
+            Synprs.CLF.Object.Raw_annotated
+              { location; object_ = accumulator; sort })
+          object_ annotations
 
   let clf_object1 = choice [ clf_weak_prefix; clf_object2 ]
 
@@ -407,3 +391,14 @@ end
 let clf_object = CLF_parsers.clf_object
 
 let clf_context_object = CLF_parsers.clf_context_object
+
+let pp_exception ppf = function
+  | Ambiguous_clf_forward_arrow ->
+      Format.fprintf ppf
+        "This contextual LF forward arrow operator is ambiguous."
+  | Ambiguous_clf_backward_arrow ->
+      Format.fprintf ppf
+        "This contextual LF backward arrow operator is ambiguous."
+  | cause -> pp_exception' ppf cause
+
+let () = Error.register_exception_printer pp_exception

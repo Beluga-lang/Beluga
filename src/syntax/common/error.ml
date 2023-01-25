@@ -35,6 +35,16 @@ let[@inline] raise_at1 location cause =
 let[@inline] raise_at2 location1 location2 cause =
   raise (located_exception2 location1 location2 cause)
 
+let[@inline] discard_locations exn =
+  match exn with
+  | Located_exception { cause; _ } -> cause
+  | exn -> exn
+
+let[@inline] locations exn =
+  match exn with
+  | Located_exception { locations; _ } -> Option.some locations
+  | _ -> Option.none
+
 (** The exception variant for the composition of multiple related exceptions.
     This exception variant must not be made public. *)
 exception Composite_exception of { causes : exn List2.t }

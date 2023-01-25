@@ -10,8 +10,7 @@ let take_circularly n ls =
     raise (Invalid_argument "[ls] should have more than one element")
   else go n ls
 
-let maximum_element : type a. (a -> a -> a) -> a -> a list -> a =
- fun maximum default -> fold_left maximum default
+let maximum_element maximum default = fold_left maximum default
 
 let split =
   let rec split n list return =

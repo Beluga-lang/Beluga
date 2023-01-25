@@ -641,9 +641,6 @@ module Make (Config : CONFIG) (Key : Hashtbl.HashedType) :
   let bindings hamt = fold (fun k v acc -> (k, v) :: acc) hamt []
 
   let to_seq =
-    (* We need to (re)define append and flat_map as long as we support OCaml
-       < 4.11. As of writing this we don't use sequences anywhere else so it
-       seems localised enough to be acceptable. *)
     let rec to_seq = function
       | Empty -> Seq.empty
       | Leaf (_, k, v) -> fun () -> Seq.Cons ((k, v), Seq.empty)
@@ -658,7 +655,7 @@ module Make (Config : CONFIG) (Key : Hashtbl.HashedType) :
     let rec loop seq acc =
       match seq () with
       | Seq.Nil -> acc
-      | Cons ((k, v), seq) ->
+      | Seq.Cons ((k, v), seq) ->
           let acc = add_mute k v acc in
           loop seq acc
     in

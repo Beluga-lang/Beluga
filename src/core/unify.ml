@@ -2933,56 +2933,6 @@ let rec blockdeclInDctx =
     | (IHead tH1, IHead tH2) -> unifyHead Unification cD cPsi tH1 tH2
     | (ISub s1, ISub s2) -> unifySub Unification cD cPsi s1 s2
 
-  let trail' f =
-    mark ();
-    try
-      f ();
-      unwind ();
-    with
-    | Failure msg ->
-       unwind ();
-       raise (Failure msg)
-
-  (* Find which index in the cD we want to sub for the tM *)
-  let rec find_index cD cPsi tM ms index : int =
-    match ms with
-    | LF.MDot (LF.ClObj (_, LF.MObj norm), ms') ->
-       begin
-         try
-           trail'
-             begin fun () ->
-             unifyTerm Unification cD cPsi (norm, Shift 0) (tM, Shift 0)
-             end;
-           index
-         with
-         | Failure _ -> find_index cD cPsi tM ms' (index + 1)
-       end
-    | LF.MDot (_, ms') -> find_index cD cPsi tM ms' (index + 1)
-    | LF.MShift _ -> raise (Error "No trivial solution found")
-
-  (* If our Eqn looks like: ?M[^k, [|- N1], [|- N2], .. , [|- Nn]]
-                            = Ni (i in 1, .. , n)
-     then we can instantiate ?M with MV (n - i + 1) *)
-  let solve_trivial_constraint cD cPsi itM1 itM2 =
-    dprintf begin fun p -> p.fmt "[solve_trivial_constraint]" end;
-    let tM2 = match itM2 with
-      | LF.INorm norm -> norm
-      | LF.IHead hd -> head hd
-      | _ -> raise (Error "Not implemented Yet")
-    in
-    match itM1 with
-    | LF.IHead (LF.MMVar ((mmvar, ms), _))
-      | LF.INorm (LF.Root (_, LF.MMVar ((mmvar, ms), _), _, _))
-         when mmvar.instantiation.contents == None ->
-       begin
-         try
-           let k = find_index cD cPsi tM2 ms 1 in
-           mmvar.instantiation := Some (LF.INorm (head (LF.MVar (LF.Offset k, LF.Shift 0))))
-         with
-         | Error msg -> ()
-       end
-    | _ -> ()
-
   (* NOTE: We sometimes flip the position when we generate constraints;
        if matching requires that the first argument is fixed then this may
        become problematic if we are outside the pattern fragment -bp *)
@@ -3042,7 +2992,6 @@ let rec blockdeclInDctx =
          end;
        begin
          try
-           solve_trivial_constraint cD cPsi itM1 itM2;
            unifyITerm cD cPsi itM1 itM2;
            forceCnstr Unification (nextCnstr ())
          with

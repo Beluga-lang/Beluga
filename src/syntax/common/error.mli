@@ -5,7 +5,7 @@ val raise : exn -> 'a
 exception Violation of string
 
 (** Raises a Violation exception with the given message. *)
-val violation : string -> 'a
+val violation : ?location:Location.t -> string -> 'a
 
 (** [located_exception locations cause] is a decorated exception having
     [cause] and [locations] for source file error-reporting. This exception
@@ -34,14 +34,6 @@ val raise_at1 : Location.t -> exn -> 'a
     [located_exception2 location1 location2 cause]. *)
 val raise_at2 : Location.t -> Location.t -> exn -> 'a
 
-(** [discard_locations exn] is the cause of [exn] in the case where [exn] was
-    produced by {!located_exception}. *)
-val discard_locations : exn -> exn
-
-(** [locations exn] are the locations of [exn] in the case where [exn] was
-    produced by {!located_exception}. *)
-val locations : exn -> Location.t List1.t Option.t
-
 (** [composite_exception causes] is the composite exception having many
     related [causes]. This exception is not exported from this module, so it
     may never be caught elsewhere.
@@ -58,6 +50,10 @@ val composite_exception : exn List2.t -> exn
     causes [\[cause1; cause2\]]. *)
 val composite_exception2 : exn -> exn -> exn
 
+val raise_composite_exception : exn List2.t -> 'a
+
+val raise_composite_exception2 : exn -> exn -> 'a
+
 (** [aggregate_exception exceptions] is the composite exception having many
     unrelated [exceptions]. This exception is not exported from this module,
     so it may never be caught elsewhere.
@@ -72,6 +68,10 @@ val aggregate_exception : exn List2.t -> exn
     having causes [\[exception1; exception2\]]. This exception is not
     exported from this module, so it may never be caught elsewhere. *)
 val aggregate_exception2 : exn -> exn -> exn
+
+val raise_aggregate_exception : exn List2.t -> 'a
+
+val raise_aggregate_exception2 : exn -> exn -> 'a
 
 (** [raise_not_implemented ?location message] raises an exception signalling
     that we've reached a segment of code that is not yet implemented. The
@@ -93,13 +93,22 @@ val raise_unsupported_exception_printing : exn -> 'a
     Example usage:
 
     {[
-      let pp_exception ppf = function
-        | My_exception _ -> Format.fprintf ppf _
-        | exn -> Error.raise_unsupported_exception_printing exn
-
-      let () = Error.register_exception_printer pp_exception
+      let () =
+        Error.register_exception_printer (function
+          | My_exception (message : string) ->
+              Format.dprintf "@[<v 0>My exception was raised:@ %s@]" message
+          | exn -> Error.raise_unsupported_exception_printing exn)
     ]} *)
-val register_exception_printer : (Format.formatter -> exn -> unit) -> unit
+val register_exception_printer : (exn -> Format.formatter -> unit) -> unit
+
+(** [find_printer exn] is the exception printer registered with
+    {!register_exception_printer} that handles [exn]. If there is no such
+    printer, then [raise_unsupported_exception_printing exn] is evaluated.
+
+    [find_printer] is used when registering exception printers for exceptions
+    that contain sub-exceptions, like located, aggregate or composite
+    exceptions. *)
+val find_printer : exn -> Format.formatter -> unit
 
 (** Abstract dummy datatype to enforce that printing be done using the
     printing functions provided by this module. *)

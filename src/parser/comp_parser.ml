@@ -670,13 +670,12 @@ let comp_expression_object = Comp_parsers.comp_expression_object
 
 let comp_context = Comp_parsers.comp_context
 
-let pp_exception ppf = function
-  | Ambiguous_comp_forward_arrow ->
-      Format.fprintf ppf
-        "This computation-level forward arrow operator is ambiguous."
-  | Ambiguous_comp_backward_arrow ->
-      Format.fprintf ppf
-        "This computation-level backward arrow operator is ambiguous."
-  | cause -> pp_exception' ppf cause
-
-let () = Error.register_exception_printer pp_exception
+let () =
+  Error.register_exception_printer (function
+    | Ambiguous_comp_forward_arrow ->
+        Format.dprintf
+          "This computation-level forward arrow operator is ambiguous."
+    | Ambiguous_comp_backward_arrow ->
+        Format.dprintf
+          "This computation-level backward arrow operator is ambiguous."
+    | cause -> Error.raise_unsupported_exception_printing cause)

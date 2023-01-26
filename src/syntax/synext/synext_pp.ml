@@ -1676,15 +1676,14 @@ and pp_signature ppf signature =
            pp_signature_entry)
         entries
 
-let pp_exception ppf = function
-  | Unsupported_non_recursive_declaration ->
-      Format.fprintf ppf
-        "Unsupported pretty-printing for this declaration outside of a \
-         recursive group of declarations."
-  | Unsupported_recursive_declaration ->
-      Format.fprintf ppf
-        "Unsupported pretty-printing for this declaration in a recursive \
-         group of declarations."
-  | exn -> Error.raise_unsupported_exception_printing exn
-
-let () = Error.register_exception_printer pp_exception
+let () =
+  Error.register_exception_printer (function
+    | Unsupported_non_recursive_declaration ->
+        Format.dprintf
+          "Unsupported pretty-printing for this declaration outside of a \
+           recursive group of declarations."
+    | Unsupported_recursive_declaration ->
+        Format.dprintf
+          "Unsupported pretty-printing for this declaration in a recursive \
+           group of declarations."
+    | exn -> Error.raise_unsupported_exception_printing exn)

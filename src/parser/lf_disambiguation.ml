@@ -554,69 +554,68 @@ end
 
 (** {2 Exception Printing} *)
 
-let pp_exception ppf = function
-  | Illegal_identifier_lf_kind ->
-      Format.fprintf ppf "Identifiers may not appear as LF kinds."
-  | Illegal_qualified_identifier_lf_kind ->
-      Format.fprintf ppf "Qualified identifiers may not appear as LF kinds."
-  | Illegal_backward_arrow_lf_kind ->
-      Format.fprintf ppf "Backward arrows may not appear as LF kinds."
-  | Illegal_hole_lf_kind ->
-      Format.fprintf ppf "Holes may not appear as LF kinds."
-  | Illegal_lambda_lf_kind ->
-      Format.fprintf ppf "Lambdas may not appear as LF kinds."
-  | Illegal_annotated_lf_kind ->
-      Format.fprintf ppf
-        "Type ascriptions to terms may not appear as LF kinds."
-  | Illegal_application_lf_kind ->
-      Format.fprintf ppf "Term applications may not appear as LF kinds."
-  | Illegal_type_kind_lf_type ->
-      Format.fprintf ppf "The kind `type' may not appear as LF types."
-  | Illegal_hole_lf_type ->
-      Format.fprintf ppf "Holes may not appear as LF types."
-  | Illegal_lambda_lf_type ->
-      Format.fprintf ppf "Lambdas may not appear as LF types."
-  | Illegal_annotated_lf_type ->
-      Format.fprintf ppf "Type ascriptions may not appear as LF types."
-  | Unbound_lf_type_constant identifier ->
-      Format.fprintf ppf "The LF type-level constant %a is unbound."
-        Qualified_identifier.pp identifier
-  | Illegal_type_kind_lf_term ->
-      Format.fprintf ppf "The kind `type' may not appear as LF terms."
-  | Illegal_pi_lf_term ->
-      Format.fprintf ppf "Pi-kinds or types may not appear as LF terms."
-  | Illegal_forward_arrow_lf_term ->
-      Format.fprintf ppf "Forward arrows may not appear as LF terms."
-  | Illegal_backward_arrow_lf_term ->
-      Format.fprintf ppf "Backward arrows may not appear as LF terms."
-  | Unbound_lf_term_constant identifier ->
-      Format.fprintf ppf "The LF term-level constant %a is unbound."
-        Qualified_identifier.pp identifier
-  | Expected_lf_term_constant ->
-      Format.fprintf ppf "Expected an LF term-level constant."
-  | Expected_lf_type_constant ->
-      Format.fprintf ppf "Expected an LF type-level constant."
-  | Misplaced_lf_operator ->
-      Format.fprintf ppf "Misplaced LF term-level or type-level operator."
-  | Ambiguous_lf_operator_placement operator_identifier ->
-      Format.fprintf ppf
-        "Ambiguous occurrences of the LF term-level or type-level operator \
-         %a."
-        Qualified_identifier.pp operator_identifier
-  | Consecutive_applications_of_non_associative_lf_operators
-      operator_identifier ->
-      Format.fprintf ppf
-        "The consecutive application of the non-associative LF term-level \
-         or type-level %a is illegal."
-        Qualified_identifier.pp operator_identifier
-  | Lf_operator_arity_mismatch
-      { operator_identifier
-      ; expected_arguments_count
-      ; actual_arguments_count
-      } ->
-      Format.fprintf ppf "Operator %a expected %d arguments but got %d."
-        Qualified_identifier.pp operator_identifier expected_arguments_count
-        actual_arguments_count
-  | exn -> Error.raise_unsupported_exception_printing exn
-
-let () = Error.register_exception_printer pp_exception
+let () =
+  Error.register_exception_printer (function
+    | Illegal_identifier_lf_kind ->
+        Format.dprintf "Identifiers may not appear as LF kinds."
+    | Illegal_qualified_identifier_lf_kind ->
+        Format.dprintf "Qualified identifiers may not appear as LF kinds."
+    | Illegal_backward_arrow_lf_kind ->
+        Format.dprintf "Backward arrows may not appear as LF kinds."
+    | Illegal_hole_lf_kind ->
+        Format.dprintf "Holes may not appear as LF kinds."
+    | Illegal_lambda_lf_kind ->
+        Format.dprintf "Lambdas may not appear as LF kinds."
+    | Illegal_annotated_lf_kind ->
+        Format.dprintf
+          "Type ascriptions to terms may not appear as LF kinds."
+    | Illegal_application_lf_kind ->
+        Format.dprintf "Term applications may not appear as LF kinds."
+    | Illegal_type_kind_lf_type ->
+        Format.dprintf "The kind `type' may not appear as LF types."
+    | Illegal_hole_lf_type ->
+        Format.dprintf "Holes may not appear as LF types."
+    | Illegal_lambda_lf_type ->
+        Format.dprintf "Lambdas may not appear as LF types."
+    | Illegal_annotated_lf_type ->
+        Format.dprintf "Type ascriptions may not appear as LF types."
+    | Unbound_lf_type_constant identifier ->
+        Format.dprintf "The LF type-level constant %a is unbound."
+          Qualified_identifier.pp identifier
+    | Illegal_type_kind_lf_term ->
+        Format.dprintf "The kind `type' may not appear as LF terms."
+    | Illegal_pi_lf_term ->
+        Format.dprintf "Pi-kinds or types may not appear as LF terms."
+    | Illegal_forward_arrow_lf_term ->
+        Format.dprintf "Forward arrows may not appear as LF terms."
+    | Illegal_backward_arrow_lf_term ->
+        Format.dprintf "Backward arrows may not appear as LF terms."
+    | Unbound_lf_term_constant identifier ->
+        Format.dprintf "The LF term-level constant %a is unbound."
+          Qualified_identifier.pp identifier
+    | Expected_lf_term_constant ->
+        Format.dprintf "Expected an LF term-level constant."
+    | Expected_lf_type_constant ->
+        Format.dprintf "Expected an LF type-level constant."
+    | Misplaced_lf_operator ->
+        Format.dprintf "Misplaced LF term-level or type-level operator."
+    | Ambiguous_lf_operator_placement operator_identifier ->
+        Format.dprintf
+          "Ambiguous occurrences of the LF term-level or type-level \
+           operator %a."
+          Qualified_identifier.pp operator_identifier
+    | Consecutive_applications_of_non_associative_lf_operators
+        operator_identifier ->
+        Format.dprintf
+          "The consecutive application of the non-associative LF term-level \
+           or type-level %a is illegal."
+          Qualified_identifier.pp operator_identifier
+    | Lf_operator_arity_mismatch
+        { operator_identifier
+        ; expected_arguments_count
+        ; actual_arguments_count
+        } ->
+        Format.dprintf "Operator %a expected %d arguments but got %d."
+          Qualified_identifier.pp operator_identifier
+          expected_arguments_count actual_arguments_count
+    | exn -> Error.raise_unsupported_exception_printing exn)

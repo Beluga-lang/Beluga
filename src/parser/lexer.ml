@@ -265,14 +265,13 @@ let lex_file ~filename =
 let lex_input_channel ~initial_location input =
   lex_gen ~initial_location (Gen.of_in_channel input)
 
-let pp_exception ppf = function
-  | Unlexable_character s ->
-      Format.fprintf ppf "Unlexable character(s) \"%s\"." s
-  | Mismatched_block_comment ->
-      Format.fprintf ppf "Unexpected end of block comment."
-  | String_literal_unescape_failure s ->
-      Format.fprintf ppf
-        "The string literal \"%s\" contains invalid escape sequences." s
-  | exn -> Error.raise_unsupported_exception_printing exn
-
-let () = Error.register_exception_printer pp_exception
+let () =
+  Error.register_exception_printer (function
+    | Unlexable_character s ->
+        Format.dprintf "Unlexable character(s) \"%s\"." s
+    | Mismatched_block_comment ->
+        Format.dprintf "Unexpected end of block comment."
+    | String_literal_unescape_failure s ->
+        Format.dprintf
+          "The string literal \"%s\" contains invalid escape sequences." s
+    | exn -> Error.raise_unsupported_exception_printing exn)

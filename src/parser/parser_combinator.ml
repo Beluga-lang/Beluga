@@ -114,6 +114,12 @@ module type PARSER_WITH_LOCATIONS = sig
 
   type location
 
+  exception
+    Parser_located_exception of
+      { cause : exn
+      ; locations : location List1.t
+      }
+
   val span : 'a t -> (location * 'a) t
 
   val fail_at_next_location : exn -> 'a t
@@ -252,16 +258,60 @@ end) :
 
   exception Expected_end_of_input
 
+  exception
+    Parser_located_exception of
+      { cause : exn
+      ; locations : location List1.t
+      }
+
+  let remove_exception_location = function
+    | Parser_located_exception { cause; _ } -> cause
+    | exn -> exn
+
+  let rec flatten_exhausted_choices_exception exceptions_rev acc =
+    match exceptions_rev with
+    | [] -> acc
+    | e :: es -> (
+        match remove_exception_location e with
+        | Labelled_exception { label; cause } ->
+            let cause' = remove_exception_location cause in
+            flatten_exhausted_choices_exception es
+              (Labelled_exception { label; cause = cause' } :: acc)
+        | No_more_choices e ->
+            flatten_exhausted_choices_exception es
+              (flatten_exhausted_choices_exception e acc)
+        | e -> flatten_exhausted_choices_exception es (e :: acc))
+
+  and sanitize_parser_exception = function
+    | No_more_choices causes_rev ->
+        let causes' = flatten_exhausted_choices_exception causes_rev [] in
+        No_more_choices causes'
+    | Labelled_exception { label; cause } ->
+        let cause' = sanitize_parser_exception cause in
+        Labelled_exception { label; cause = cause' }
+    | Parser_located_exception { cause; locations } ->
+        let cause' = sanitize_parser_exception cause in
+        Error.located_exception locations cause'
+    | exn -> exn
+
   let[@inline] run p s = p s
 
   let[@inline] run_exn p s =
     match run p s with
     | s', Result.Ok e -> (s', e)
-    | _s', Result.Error cause -> Error.raise (Parser_error cause)
+    | _s', Result.Error cause ->
+        let cause' = sanitize_parser_exception cause in
+        Error.raise (Parser_error cause')
 
   let catch p handler s = run p s |> handler
 
   let fail e s = (s, Result.error e)
+
+  let located_exception locations cause =
+    Parser_located_exception { locations; cause }
+
+  let located_exception1 location cause =
+    located_exception (List1.singleton location) cause
 
   let fail_at_previous_location e s =
     match State.previous_location s with
@@ -270,12 +320,12 @@ end) :
         | Option.None -> fail e s
         | Option.Some next_location ->
             fail
-              (Error.located_exception1
+              (located_exception1
                  (Location.start_position_as_location next_location)
                  e)
               s)
     | Option.Some previous_location ->
-        fail (Error.located_exception1 previous_location e) s
+        fail (located_exception1 previous_location e) s
 
   let fail_at_next_location e s =
     match State.next_location s with
@@ -284,12 +334,12 @@ end) :
         | Option.None -> fail e s
         | Option.Some previous_location ->
             fail
-              (Error.located_exception1
+              (located_exception1
                  (Location.stop_position_as_location previous_location)
                  e)
               s)
     | Option.Some next_location ->
-        fail (Error.located_exception1 next_location e) s
+        fail (located_exception1 next_location e) s
 
   let return_at s x = (s, Result.ok x)
 

@@ -398,180 +398,145 @@ let block_comment =
 
 (** {1 Exceptions Printing} *)
 
-let rec flatten_choice_exceptions exceptions_rev acc =
-  match exceptions_rev with
-  | [] -> List.rev acc
-  | e :: es -> (
-      match Error.discard_locations e with
-      | Labelled_exception { label; cause } ->
-          flatten_choice_exceptions es
-            (Labelled_exception
-               { label; cause = Error.discard_locations cause }
-            :: acc)
-      | No_more_choices e ->
-          flatten_choice_exceptions es (flatten_choice_exceptions e acc)
-      | e -> flatten_choice_exceptions es (e :: acc))
-
-let pp_exception' ppf = function
-  | Labelled_exception { label; cause } ->
-      Format.fprintf ppf "@[<v 0>%s:@,%s@]" label (Printexc.to_string cause)
-  | No_more_choices exceptions_rev ->
-      let exceptions = flatten_choice_exceptions exceptions_rev [] in
-      let exceptions_strings =
-        List.map
-          (fun exn -> String.split_on_char '\n' (Printexc.to_string exn))
-          exceptions
-      in
-      Format.fprintf ppf "@[<v 2>Exhausted alternatives in parsing:@,%a@]"
-        (List.pp ~pp_sep:Format.pp_print_cut (fun ppf exception_lines ->
-             Format.fprintf ppf "- @[<v 0>%a@]"
-               (List.pp ~pp_sep:Format.pp_print_cut Format.pp_print_string)
-               exception_lines))
-        exceptions_strings
-  | exn -> Error.raise_unsupported_exception_printing exn
-
-let pp_exception ppf = function
-  | Parser_error (Labelled_exception { label; cause }) -> (
-      let locations = Error.locations cause in
-      match locations with
-      | Option.None ->
-          Format.fprintf ppf "@[<v 0>Parse error for %s.@,%s@]" label
-            (Printexc.to_string cause)
-      | Option.Some locations ->
-          Format.pp_print_string ppf
-            (Printexc.to_string
-               (Error.located_exception locations
-                  (Parser_error
-                     (Labelled_exception
-                        { label; cause = Error.discard_locations cause })))))
-  | Parser_error cause ->
-      Format.fprintf ppf "@[<v 0>Parse error.@,%s@]"
-        (Printexc.to_string cause)
-  | Expected_end_of_input ->
-      Format.fprintf ppf "Expected the parser input to end here."
-  | Unexpected_end_of_input { expected } ->
-      Format.fprintf ppf
-        "Expected the token `%a', but reached the end of input." Token.pp
-        expected
-  | Unexpected_token { expected; actual } ->
-      Format.fprintf ppf "Expected the token `%a', but got the token `%a'."
-        Token.pp expected Token.pp actual
-  | Expected_keyword { expected_keyword; actual } -> (
-      match actual with
-      | Option.Some actual ->
-          Format.fprintf ppf
-            "Expected the keyword `%s', but got the token `%a'."
-            expected_keyword Token.pp actual
-      | Option.None ->
-          Format.fprintf ppf
-            "Expected the keyword `%s', but reached the end of input."
-            expected_keyword)
-  | Expected_integer_literal { actual } -> (
-      match actual with
-      | Option.Some actual ->
-          Format.fprintf ppf
-            "Expected an integer literal, but got the token `%a'." Token.pp
-            actual
-      | Option.None ->
-          Format.fprintf ppf
-            "Expected an integer literal, but reached the end of input.")
-  | Expected_dot_number { actual } -> (
-      match actual with
-      | Option.Some actual ->
-          Format.fprintf ppf
-            "Expected a number prefixed by a dot, but got the token `%a'."
-            Token.pp actual
-      | Option.None ->
-          Format.fprintf ppf
-            "Expected a number prefixed by a dot, but reached the end of \
-             input.")
-  | Expected_pragma { expected_pragma; actual } -> (
-      match actual with
-      | Option.Some actual ->
-          Format.fprintf ppf
-            "Expected a `--%s' pragma, but got the token `%a'."
-            expected_pragma Token.pp actual
-      | Option.None ->
-          Format.fprintf ppf
-            "Expected a `--%s' pragma, but reached the end of input."
-            expected_pragma)
-  | Expected_string_literal { actual } -> (
-      match actual with
-      | Option.Some actual ->
-          Format.fprintf ppf
-            "Expected a string literal, but got the token `%a'." Token.pp
-            actual
-      | Option.None ->
-          Format.fprintf ppf
-            "Expected a string literal, but reached the end of input.")
-  | Expected_identifier { actual } -> (
-      match actual with
-      | Option.Some actual ->
-          Format.fprintf ppf
-            "Expected an identifier, but got the token `%a'." Token.pp actual
-      | Option.None ->
-          Format.fprintf ppf
-            "Expected an identifier, but reached the end of input.")
-  | Expected_dot_identifier { actual } -> (
-      match actual with
-      | Option.Some actual ->
-          Format.fprintf ppf
-            "Expected an identifier prefixed by a dot `.', but got the \
-             token `%a'."
-            Token.pp actual
-      | Option.None ->
-          Format.fprintf ppf
-            "Expected an identifier prefixed by a dot `.', but reached the \
-             end of input.")
-  | Expected_hash_identifier { actual } -> (
-      match actual with
-      | Option.Some actual ->
-          Format.fprintf ppf
-            "Expected an identifier prefixed by a hash sign `#id', but got \
-             the token `%a'."
-            Token.pp actual
-      | Option.None ->
-          Format.fprintf ppf
-            "Expected an identifier prefixed by a hash sign `#id', but \
-             reached the end of input.")
-  | Expected_dollar_identifier { actual } -> (
-      match actual with
-      | Option.Some actual ->
-          Format.fprintf ppf
-            "Expected an identifier prefixed by a dollar sign `$id', but \
-             got the token `%a'."
-            Token.pp actual
-      | Option.None ->
-          Format.fprintf ppf
-            "Expected an identifier prefixed by a dollar sign `$id', but \
-             reached the end of input.")
-  | Expected_hole { actual } -> (
-      match actual with
-      | Option.Some actual ->
-          Format.fprintf ppf
-            "Expected an unnamed hole `?' or a labelled hole `?id', but got \
-             the token `%a'."
-            Token.pp actual
-      | Option.None ->
-          Format.fprintf ppf
-            "Expected an unnamed hole `?' or a labelled hole `?id', but \
-             reached the end of input.")
-  | Expected_block_comment { actual } -> (
-      (* Workaround format string errors when inputting the documentation
-         comment delimiters *)
-      let left_delimiter = "%{{"
-      and right_delimiter = "}}%" in
-      match actual with
-      | Option.Some actual ->
-          Format.fprintf ppf
-            "Expected a block comment delimited by `%s' and `%s', but got \
-             the token `%a'."
-            left_delimiter right_delimiter Token.pp actual
-      | Option.None ->
-          Format.fprintf ppf
-            "Expected a block comment delimited by `%s' and `%s', but \
-             reached the end of input."
-            left_delimiter right_delimiter)
-  | cause -> pp_exception' ppf cause
-
-let () = Error.register_exception_printer pp_exception
+let () =
+  Error.register_exception_printer (function
+    | Parser_error cause ->
+        let cause_printer = Error.find_printer cause in
+        Format.dprintf "@[<v 0>Parse error.@,%t@]" cause_printer
+    | Labelled_exception { label; cause } ->
+        let cause_printer = Error.find_printer cause in
+        Format.dprintf "@[<v 0>%s:@,%t@]" label cause_printer
+    | No_more_choices exceptions_rev ->
+        let exception_printers =
+          List.map Error.find_printer exceptions_rev
+        in
+        Format.dprintf "@[<v 2>Exhausted alternatives in parsing:@,%a@]"
+          (List.pp ~pp_sep:Format.pp_print_cut (fun ppf exception_printer ->
+               Format.fprintf ppf "- @[<hov 0>%t@]" exception_printer))
+          exception_printers
+    | Expected_end_of_input ->
+        Format.dprintf "Expected the parser input to end here."
+    | Unexpected_end_of_input { expected } ->
+        Format.dprintf
+          "Expected the token `%a', but reached the end of input." Token.pp
+          expected
+    | Unexpected_token { expected; actual } ->
+        Format.dprintf "Expected the token `%a', but got the token `%a'."
+          Token.pp expected Token.pp actual
+    | Expected_keyword { expected_keyword; actual } -> (
+        match actual with
+        | Option.Some actual ->
+            Format.dprintf
+              "Expected the keyword `%s', but got the token `%a'."
+              expected_keyword Token.pp actual
+        | Option.None ->
+            Format.dprintf
+              "Expected the keyword `%s', but reached the end of input."
+              expected_keyword)
+    | Expected_integer_literal { actual } -> (
+        match actual with
+        | Option.Some actual ->
+            Format.dprintf
+              "Expected an integer literal, but got the token `%a'." Token.pp
+              actual
+        | Option.None ->
+            Format.dprintf
+              "Expected an integer literal, but reached the end of input.")
+    | Expected_dot_number { actual } -> (
+        match actual with
+        | Option.Some actual ->
+            Format.dprintf
+              "Expected a number prefixed by a dot, but got the token `%a'."
+              Token.pp actual
+        | Option.None ->
+            Format.dprintf
+              "Expected a number prefixed by a dot, but reached the end of \
+               input.")
+    | Expected_pragma { expected_pragma; actual } -> (
+        match actual with
+        | Option.Some actual ->
+            Format.dprintf
+              "Expected a `--%s' pragma, but got the token `%a'."
+              expected_pragma Token.pp actual
+        | Option.None ->
+            Format.dprintf
+              "Expected a `--%s' pragma, but reached the end of input."
+              expected_pragma)
+    | Expected_string_literal { actual } -> (
+        match actual with
+        | Option.Some actual ->
+            Format.dprintf
+              "Expected a string literal, but got the token `%a'." Token.pp
+              actual
+        | Option.None ->
+            Format.dprintf
+              "Expected a string literal, but reached the end of input.")
+    | Expected_identifier { actual } -> (
+        match actual with
+        | Option.Some actual ->
+            Format.dprintf "Expected an identifier, but got the token `%a'."
+              Token.pp actual
+        | Option.None ->
+            Format.dprintf
+              "Expected an identifier, but reached the end of input.")
+    | Expected_dot_identifier { actual } -> (
+        match actual with
+        | Option.Some actual ->
+            Format.dprintf
+              "Expected an identifier prefixed by a dot `.', but got the \
+               token `%a'."
+              Token.pp actual
+        | Option.None ->
+            Format.dprintf
+              "Expected an identifier prefixed by a dot `.', but reached \
+               the end of input.")
+    | Expected_hash_identifier { actual } -> (
+        match actual with
+        | Option.Some actual ->
+            Format.dprintf
+              "Expected an identifier prefixed by a hash sign `#id', but \
+               got the token `%a'."
+              Token.pp actual
+        | Option.None ->
+            Format.dprintf
+              "Expected an identifier prefixed by a hash sign `#id', but \
+               reached the end of input.")
+    | Expected_dollar_identifier { actual } -> (
+        match actual with
+        | Option.Some actual ->
+            Format.dprintf
+              "Expected an identifier prefixed by a dollar sign `$id', but \
+               got the token `%a'."
+              Token.pp actual
+        | Option.None ->
+            Format.dprintf
+              "Expected an identifier prefixed by a dollar sign `$id', but \
+               reached the end of input.")
+    | Expected_hole { actual } -> (
+        match actual with
+        | Option.Some actual ->
+            Format.dprintf
+              "Expected an unnamed hole `?' or a labelled hole `?id', but \
+               got the token `%a'."
+              Token.pp actual
+        | Option.None ->
+            Format.dprintf
+              "Expected an unnamed hole `?' or a labelled hole `?id', but \
+               reached the end of input.")
+    | Expected_block_comment { actual } -> (
+        (* Workaround format string errors when inputting the documentation
+           comment delimiters *)
+        let left_delimiter = "%{{"
+        and right_delimiter = "}}%" in
+        match actual with
+        | Option.Some actual ->
+            Format.dprintf
+              "Expected a block comment delimited by `%s' and `%s', but got \
+               the token `%a'."
+              left_delimiter right_delimiter Token.pp actual
+        | Option.None ->
+            Format.dprintf
+              "Expected a block comment delimited by `%s' and `%s', but \
+               reached the end of input."
+              left_delimiter right_delimiter)
+    | cause -> Error.raise_unsupported_exception_printing cause)

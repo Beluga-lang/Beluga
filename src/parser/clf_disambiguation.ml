@@ -1980,142 +1980,143 @@ end
 
 (** {2 Exception Printing} *)
 
-let pp_exception ppf = function
-  | Illegal_hole_clf_type ->
-      Format.fprintf ppf "Holes may not appear as contextual LF types."
-  | Illegal_lambda_clf_type ->
-      Format.fprintf ppf "Lambdas may not appear as contextual LF types."
-  | Illegal_annotated_clf_type ->
-      Format.fprintf ppf
-        "Type ascriptions to terms may not appear as contextual LF types."
-  | Illegal_untyped_pi_clf_type ->
-      Format.fprintf ppf
-        "The contextual LF Pi type is missing its parameter type annotation."
-  | Illegal_tuple_clf_type ->
-      Format.fprintf ppf "Tuple terms may not appear as contextual LF types."
-  | Illegal_projection_clf_type ->
-      Format.fprintf ppf
-        "Projection terms may not appear as contextual LF types."
-  | Illegal_substitution_clf_type ->
-      Format.fprintf ppf
-        "Substitution terms may not appear as contextual LF types."
-  | Illegal_unnamed_block_element_clf_type ->
-      Format.fprintf ppf
-        "Contextual LF block type element missing an identifier."
-  | Illegal_parameter_variable_clf_type ->
-      Format.fprintf ppf
-        "Parameter variables may not appear as contextual LF types."
-  | Illegal_substitution_variable_clf_type ->
-      Format.fprintf ppf
-        "Substitution variables may not appear as contextual LF types."
-  | Unbound_clf_type_constant identifier ->
-      Format.fprintf ppf "The LF type-level constant %a is unbound."
-        Qualified_identifier.pp identifier
-  | Expected_clf_type_constant ->
-      Format.fprintf ppf "Expected a contextual LF type-level constant."
-  | Unbound_type_constant_or_illegal_projection_clf_type identifier ->
-      Format.fprintf ppf
-        "Either the LF type-level constant %a is unbound, or a projection \
-         term may not appear as a contextual LF type."
-        Qualified_identifier.pp identifier
-  | Illegal_pi_clf_term ->
-      Format.fprintf ppf
-        "Pi kinds or types may not appear as contextual LF terms."
-  | Illegal_forward_arrow_clf_term ->
-      Format.fprintf ppf
-        "Forward arrows may not appear as contextual LF terms."
-  | Illegal_backward_arrow_clf_term ->
-      Format.fprintf ppf
-        "Backward arrows may not appear as contextual LF terms."
-  | Illegal_block_clf_term ->
-      Format.fprintf ppf "Block types may not appear as contextual LF terms."
-  | Unbound_clf_term_constant identifier ->
-      Format.fprintf ppf "The LF term-level constant %a is unbound."
-        Qualified_identifier.pp identifier
-  | Illegal_clf_term_projection ->
-      Format.fprintf ppf "Illegal contextual LF projection(s)."
-  | Expected_parameter_variable ->
-      Format.fprintf ppf "Expected a parameter variable."
-  | Expected_substitution_variable ->
-      Format.fprintf ppf "Expected a substitution variable."
-  | Illegal_clf_subtitution_term_label ->
-      Format.fprintf ppf "Terms in a substitution may not be labelled."
-  | Illegal_clf_context_parameter_variable_binding ->
-      Format.fprintf ppf
-        "Parameter variable bindings may not occur in contextual LF \
-         contexts."
-  | Illegal_clf_context_substitution_variable_binding ->
-      Format.fprintf ppf
-        "Substitution variable bindings may not occur in contextual LF \
-         contexts."
-  | Illegal_clf_context_missing_binding_identifier ->
-      Format.fprintf ppf
-        "Identifier missing for the binding in the contextual LF context."
-  | Illegal_clf_context_identity ->
-      Format.fprintf ppf
-        "Contextual LF contexts may not begin with the identity \
-         substitution."
-  | Expected_clf_term_constant ->
-      Format.fprintf ppf "Expected an LF term-level constant."
-  | Ambiguous_clf_operator_placement operator_identifier ->
-      Format.fprintf ppf
-        "Ambiguous occurrences of the LF term-level or type-level operator \
-         %a after rewriting."
-        Qualified_identifier.pp operator_identifier
-  | Misplaced_clf_operator ->
-      Format.fprintf ppf
-        "Misplaced contextual LF term-level or type-level operator."
-  | Consecutive_applications_of_non_associative_clf_operators
-      operator_identifier ->
-      Format.fprintf ppf
-        "Consecutive occurrences of the contextual LF term-level or \
-         type-level operator %a after rewriting."
-        Qualified_identifier.pp operator_identifier
-  | Clf_arity_mismatch
-      { operator_identifier
-      ; expected_arguments_count
-      ; actual_arguments_count
-      } ->
-      Format.fprintf ppf "Operator %a expected %d arguments but got %d."
-        Qualified_identifier.pp operator_identifier expected_arguments_count
-        actual_arguments_count
-  | Illegal_pi_clf_term_pattern ->
-      Format.fprintf ppf
-        "Pi kinds or types may not appear as contextual LF term patterns."
-  | Illegal_forward_arrow_clf_term_pattern ->
-      Format.fprintf ppf
-        "Forward arrow types may not appear as contextual LF term patterns."
-  | Illegal_backward_arrow_clf_term_pattern ->
-      Format.fprintf ppf
-        "Backward arrow types may not appear as contextual LF term patterns."
-  | Illegal_block_clf_term_pattern ->
-      Format.fprintf ppf
-        "Block types may not appear as contextual LF term patterns."
-  | Illegal_labellable_hole_term_pattern ->
-      Format.fprintf ppf
-        "Labellable holes may not appear as contextual LF term patterns."
-  | Illegal_subtitution_clf_pattern_term_label ->
-      Format.fprintf ppf
-        "Terms in a substitution pattern may not be labelled."
-  | Illegal_clf_context_pattern_missing_binding_type ->
-      Format.fprintf ppf
-        "Contextual LF context pattern bindings require type annotations."
-  | Illegal_clf_context_pattern_parameter_variable_binding ->
-      Format.fprintf ppf
-        "Parameter variable bindings may not occur in contextual LF context \
-         patterns."
-  | Illegal_clf_context_pattern_substitution_variable_binding ->
-      Format.fprintf ppf
-        "Substitution variable bindings may not occur in contextual LF \
-         context patterns."
-  | Illegal_clf_context_pattern_missing_binding_identifier ->
-      Format.fprintf ppf
-        "Identifier missing for the binding in the contextual LF context \
-         pattern."
-  | Illegal_clf_context_pattern_identity ->
-      Format.fprintf ppf
-        "Contextual LF context patterns may not begin with the identity \
-         substitution."
-  | exn -> Error.raise_unsupported_exception_printing exn
-
-let () = Error.register_exception_printer pp_exception
+let () =
+  Error.register_exception_printer (function
+    | Illegal_hole_clf_type ->
+        Format.dprintf "Holes may not appear as contextual LF types."
+    | Illegal_lambda_clf_type ->
+        Format.dprintf "Lambdas may not appear as contextual LF types."
+    | Illegal_annotated_clf_type ->
+        Format.dprintf
+          "Type ascriptions to terms may not appear as contextual LF types."
+    | Illegal_untyped_pi_clf_type ->
+        Format.dprintf
+          "The contextual LF Pi type is missing its parameter type \
+           annotation."
+    | Illegal_tuple_clf_type ->
+        Format.dprintf "Tuple terms may not appear as contextual LF types."
+    | Illegal_projection_clf_type ->
+        Format.dprintf
+          "Projection terms may not appear as contextual LF types."
+    | Illegal_substitution_clf_type ->
+        Format.dprintf
+          "Substitution terms may not appear as contextual LF types."
+    | Illegal_unnamed_block_element_clf_type ->
+        Format.dprintf
+          "Contextual LF block type element missing an identifier."
+    | Illegal_parameter_variable_clf_type ->
+        Format.dprintf
+          "Parameter variables may not appear as contextual LF types."
+    | Illegal_substitution_variable_clf_type ->
+        Format.dprintf
+          "Substitution variables may not appear as contextual LF types."
+    | Unbound_clf_type_constant identifier ->
+        Format.dprintf "The LF type-level constant %a is unbound."
+          Qualified_identifier.pp identifier
+    | Expected_clf_type_constant ->
+        Format.dprintf "Expected a contextual LF type-level constant."
+    | Unbound_type_constant_or_illegal_projection_clf_type identifier ->
+        Format.dprintf
+          "Either the LF type-level constant %a is unbound, or a projection \
+           term may not appear as a contextual LF type."
+          Qualified_identifier.pp identifier
+    | Illegal_pi_clf_term ->
+        Format.dprintf
+          "Pi kinds or types may not appear as contextual LF terms."
+    | Illegal_forward_arrow_clf_term ->
+        Format.dprintf
+          "Forward arrows may not appear as contextual LF terms."
+    | Illegal_backward_arrow_clf_term ->
+        Format.dprintf
+          "Backward arrows may not appear as contextual LF terms."
+    | Illegal_block_clf_term ->
+        Format.dprintf "Block types may not appear as contextual LF terms."
+    | Unbound_clf_term_constant identifier ->
+        Format.dprintf "The LF term-level constant %a is unbound."
+          Qualified_identifier.pp identifier
+    | Illegal_clf_term_projection ->
+        Format.dprintf "Illegal contextual LF projection(s)."
+    | Expected_parameter_variable ->
+        Format.dprintf "Expected a parameter variable."
+    | Expected_substitution_variable ->
+        Format.dprintf "Expected a substitution variable."
+    | Illegal_clf_subtitution_term_label ->
+        Format.dprintf "Terms in a substitution may not be labelled."
+    | Illegal_clf_context_parameter_variable_binding ->
+        Format.dprintf
+          "Parameter variable bindings may not occur in contextual LF \
+           contexts."
+    | Illegal_clf_context_substitution_variable_binding ->
+        Format.dprintf
+          "Substitution variable bindings may not occur in contextual LF \
+           contexts."
+    | Illegal_clf_context_missing_binding_identifier ->
+        Format.dprintf
+          "Identifier missing for the binding in the contextual LF context."
+    | Illegal_clf_context_identity ->
+        Format.dprintf
+          "Contextual LF contexts may not begin with the identity \
+           substitution."
+    | Expected_clf_term_constant ->
+        Format.dprintf "Expected an LF term-level constant."
+    | Ambiguous_clf_operator_placement operator_identifier ->
+        Format.dprintf
+          "Ambiguous occurrences of the LF term-level or type-level \
+           operator %a after rewriting."
+          Qualified_identifier.pp operator_identifier
+    | Misplaced_clf_operator ->
+        Format.dprintf
+          "Misplaced contextual LF term-level or type-level operator."
+    | Consecutive_applications_of_non_associative_clf_operators
+        operator_identifier ->
+        Format.dprintf
+          "Consecutive occurrences of the contextual LF term-level or \
+           type-level operator %a after rewriting."
+          Qualified_identifier.pp operator_identifier
+    | Clf_arity_mismatch
+        { operator_identifier
+        ; expected_arguments_count
+        ; actual_arguments_count
+        } ->
+        Format.dprintf "Operator %a expected %d arguments but got %d."
+          Qualified_identifier.pp operator_identifier
+          expected_arguments_count actual_arguments_count
+    | Illegal_pi_clf_term_pattern ->
+        Format.dprintf
+          "Pi kinds or types may not appear as contextual LF term patterns."
+    | Illegal_forward_arrow_clf_term_pattern ->
+        Format.dprintf
+          "Forward arrow types may not appear as contextual LF term \
+           patterns."
+    | Illegal_backward_arrow_clf_term_pattern ->
+        Format.dprintf
+          "Backward arrow types may not appear as contextual LF term \
+           patterns."
+    | Illegal_block_clf_term_pattern ->
+        Format.dprintf
+          "Block types may not appear as contextual LF term patterns."
+    | Illegal_labellable_hole_term_pattern ->
+        Format.dprintf
+          "Labellable holes may not appear as contextual LF term patterns."
+    | Illegal_subtitution_clf_pattern_term_label ->
+        Format.dprintf "Terms in a substitution pattern may not be labelled."
+    | Illegal_clf_context_pattern_missing_binding_type ->
+        Format.dprintf
+          "Contextual LF context pattern bindings require type annotations."
+    | Illegal_clf_context_pattern_parameter_variable_binding ->
+        Format.dprintf
+          "Parameter variable bindings may not occur in contextual LF \
+           context patterns."
+    | Illegal_clf_context_pattern_substitution_variable_binding ->
+        Format.dprintf
+          "Substitution variable bindings may not occur in contextual LF \
+           context patterns."
+    | Illegal_clf_context_pattern_missing_binding_identifier ->
+        Format.dprintf
+          "Identifier missing for the binding in the contextual LF context \
+           pattern."
+    | Illegal_clf_context_pattern_identity ->
+        Format.dprintf
+          "Contextual LF context patterns may not begin with the identity \
+           substitution."
+    | exn -> Error.raise_unsupported_exception_printing exn)

@@ -2339,17 +2339,16 @@ end) : BELUGA_HTML with type state = Html_state.state = struct
     with_html_tags ppf (fun ppf -> pp_signature empty ppf signature)
 end
 
-let pp_exception ppf = function
-  | Markdown_rendering_error ->
-      Format.fprintf ppf "Failed to render Markdown documentation comment."
-  | Unsupported_non_recursive_declaration ->
-      Format.fprintf ppf
-        "Unsupported pretty-printing for this declaration outside of a \
-         recursive group of declarations."
-  | Unsupported_recursive_declaration ->
-      Format.fprintf ppf
-        "Unsupported pretty-printing for this declaration in a recursive \
-         group of declarations."
-  | exn -> Error.raise_unsupported_exception_printing exn
-
-let () = Error.register_exception_printer pp_exception
+let () =
+  Error.register_exception_printer (function
+    | Markdown_rendering_error ->
+        Format.dprintf "Failed to render Markdown documentation comment."
+    | Unsupported_non_recursive_declaration ->
+        Format.dprintf
+          "Unsupported pretty-printing for this declaration outside of a \
+           recursive group of declarations."
+    | Unsupported_recursive_declaration ->
+        Format.dprintf
+          "Unsupported pretty-printing for this declaration in a recursive \
+           group of declarations."
+    | exn -> Error.raise_unsupported_exception_printing exn)

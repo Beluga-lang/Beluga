@@ -392,13 +392,12 @@ let clf_object = CLF_parsers.clf_object
 
 let clf_context_object = CLF_parsers.clf_context_object
 
-let pp_exception ppf = function
-  | Ambiguous_clf_forward_arrow ->
-      Format.fprintf ppf
-        "This contextual LF forward arrow operator is ambiguous."
-  | Ambiguous_clf_backward_arrow ->
-      Format.fprintf ppf
-        "This contextual LF backward arrow operator is ambiguous."
-  | cause -> pp_exception' ppf cause
-
-let () = Error.register_exception_printer pp_exception
+let () =
+  Error.register_exception_printer (function
+    | Ambiguous_clf_forward_arrow ->
+        Format.dprintf
+          "This contextual LF forward arrow operator is ambiguous."
+    | Ambiguous_clf_backward_arrow ->
+        Format.dprintf
+          "This contextual LF backward arrow operator is ambiguous."
+    | cause -> Error.raise_unsupported_exception_printing cause)

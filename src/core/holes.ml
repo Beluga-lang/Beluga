@@ -82,27 +82,28 @@ exception Error of Location.t * error
 
 let throw loc e = raise (Error (loc, e))
 
-let format_error ppf : error -> unit =
-  let open Format in
-  function
+let error_printer = function
   | InvalidHoleIdentifier s ->
-     fprintf ppf "Invalid hole identifier: %s" s
+      Format.dprintf "Invalid hole identifier: %s." s
   | NoSuchHole s ->
-     fprintf ppf "No such hole %a" print_lookup_strategy s
-  | NameShadowing (s, loc) ->
-     fprintf ppf "Hole with name %s already defined at %a"
-       s
-       Location.print loc
+      Format.dprintf "No such hole %a." print_lookup_strategy s
+  | NameShadowing (s, location2) ->
+      Format.dprintf "Hole with name %s already defined." s
   | UnsolvedHole (name, id) ->
-     fprintf ppf "Hole %s is unsolved"
-       (HoleId.string_of_name_or_id (name, id))
+      Format.dprintf "Hole %s is unsolved"
+            (HoleId.string_of_name_or_id (name, id))
 
-let _ =
-  Error.register_printer'
-    (function
-     | Error (loc, e) ->
-        Some (Error.print_with_location loc (fun ppf -> format_error ppf e))
-     | _ -> None)
+let () =
+  Error.register_exception_printer (function
+    | Error (location1, (NameShadowing (s, location2) as error)) ->
+        Error.located_exception_printer
+          (error_printer error)
+          (List1.from location1 [ location2 ])
+    | Error (location, error) ->
+        Error.located_exception_printer
+          (error_printer error)
+          (List1.singleton location)
+    | exn -> Error.raise_unsupported_exception_printing exn)
 
 let hole_is_named (h : some_hole) : bool =
   let Exists (_, h) = h in

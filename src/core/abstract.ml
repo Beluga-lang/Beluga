@@ -41,26 +41,28 @@ let string_of_varvariant =
   | FV _ -> "free variables"
   | MMV _ -> "meta^2-variables and free variables"
 
-let _ =
-  Error.register_printer
-    begin fun (Error (loc, err)) ->
-    Error.print_with_location loc
-      begin fun ppf ->
-      match err with
-      | UnknownMTyp psi ->
-         Format.fprintf ppf "Unable to infer type for variable %a"
-           Name.pp psi
-      | LeftoverVars ->
-         Format.fprintf ppf "Leftover meta-variables in computation-level expression; provide a type annotation"
-      | LeftoverConstraints ->
-         Format.fprintf ppf "Leftover constraints during abstraction."
-      | CyclicDependency variant ->
-         Format.fprintf ppf "Cyclic dependencies among %s"
-           (string_of_varvariant variant)
-      | UnknownIdentifier ->
-         Format.fprintf ppf "Unknown identifier in program."
-      end
-    end
+let error_printer = function
+  | UnknownMTyp psi ->
+      Format.dprintf "Unable to infer type for variable %a." Name.pp psi
+  | LeftoverVars ->
+      Format.dprintf
+            "Leftover meta-variables in computation-level expression; \
+            provide a type annotation."
+  | LeftoverConstraints ->
+      Format.dprintf "Leftover constraints during abstraction."
+  | CyclicDependency variant ->
+      Format.dprintf "Cyclic dependencies among %s."
+            (string_of_varvariant variant)
+  | UnknownIdentifier ->
+      Format.dprintf "Unknown identifier in program."
+
+let () =
+  Error.register_exception_printer (function
+    | Error (location, error) ->
+        Error.located_exception_printer
+          (error_printer error)
+          (List1.singleton location)
+    | exn -> Error.raise_unsupported_exception_printing exn)
 
 (* ******************************************************************* *)
 (* Abstraction:

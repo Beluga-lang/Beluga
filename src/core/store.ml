@@ -1153,11 +1153,12 @@ let clear () =
   Cid.Comp.clear ();
   OpPragmas.clear ()
 
-let _ = Error.register_printer
-  (fun (Error (loc, err)) ->
-    Error.print_with_location loc (fun ppf ->
-      match err with
-        | FrozenType n ->
-            Format.fprintf ppf
-              "Type %s is frozen. A new constructor cannot be defined."
-              (Cid.DefaultRenderer.render_cid_typ n)))
+let () =
+  Error.register_exception_printer (function
+      | Error (location, FrozenType n) ->
+      Error.located_exception_printer
+        (Format.dprintf
+           "Type %s is frozen. A new constructor cannot be defined."
+           (Cid.DefaultRenderer.render_cid_typ n))
+        (List1.singleton location)
+      | exn -> Error.raise_unsupported_exception_printing exn)

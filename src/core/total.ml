@@ -27,51 +27,51 @@ exception E of Location.t * error
 
 let throw loc e = raise (E (loc, e))
 
-let _ =
-  Error.register_printer
-    begin fun (E (loc, err)) ->
-    Error.print_with_location loc
-      begin fun ppf ->
-      match err with
-      | TooManyArg ->
-         Format.fprintf ppf "Totality declaration for has too many arguments.@."
-      | RecCallIncompatible (cD, x, Comp.WfRec (f, args, _)) ->
-         begin match (x, args) with
-         | (_, []) ->
-            Format.fprintf ppf "Recursive call is incompatible with valid automatically generated recursive calls. \n Report as a bug."
-         | (Comp.M (cM, _ ), (Comp.M (cM', _ ) :: _)) ->
-            Format.fprintf ppf "Recursive call is incompatible with valid automatically generated recursive calls. \nBeluga cannot establish that the given recursive call is a size-preserving variant of it.\nArgument found: %a@\nArgument expected: %a@"
-              (P.fmt_ppr_cmp_meta_obj cD P.l0) cM
-              (P.fmt_ppr_cmp_meta_obj cD P.l0) cM'
+let error_printer = function
+  | TooManyArg ->
+      Format.dprintf "Totality declaration for has too many arguments.@."
+  | RecCallIncompatible (cD, x, Comp.WfRec (f, args, _)) ->
+      begin match (x, args) with
+      | (_, []) ->
+        Format.dprintf "Recursive call is incompatible with valid automatically generated recursive calls. \n Report as a bug."
+      | (Comp.M (cM, _ ), (Comp.M (cM', _ ) :: _)) ->
+        Format.dprintf "Recursive call is incompatible with valid automatically generated recursive calls. \nBeluga cannot establish that the given recursive call is a size-preserving variant of it.\nArgument found: %a@\nArgument expected: %a@"
+          (P.fmt_ppr_cmp_meta_obj cD P.l0) cM
+          (P.fmt_ppr_cmp_meta_obj cD P.l0) cM'
 
-         | (Comp.M (cM, _ ), (Comp.V _ :: _)) ->
-            Format.fprintf ppf "Recursive call is incompatible with valid automatically generated recursive calls. \n\nArgument found: %a@\nExpected computation-level variable.\n\nCheck specified totality declaration. "
-              (P.fmt_ppr_cmp_meta_obj cD P.l0) cM
+      | (Comp.M (cM, _ ), (Comp.V _ :: _)) ->
+        Format.dprintf "Recursive call is incompatible with valid automatically generated recursive calls. \n\nArgument found: %a@\nExpected computation-level variable.\n\nCheck specified totality declaration. "
+          (P.fmt_ppr_cmp_meta_obj cD P.l0) cM
 
-         | (Comp.V _, _) ->
-            Format.fprintf ppf "Recursive call is incompatible with valid automatically generated recursive calls. \n\n Found computation-level variable while generated recursive call expected a meta-object.\n\nCheck specified totality declaration."
-         end
-      | NoPositiveCheck n ->
-         Format.fprintf ppf "Datatype %s has not been checked for positivity or stratification."
-           n
-           (* (Name.render_name n) *)
-      | NoStratifyCheck n ->
-         Format.fprintf ppf "Datatype %s has not been checked for stratification."
-           n
-           (* (Name.render_name n) *)
-      | NoStratifyOrPositiveCheck n ->
-         Format.fprintf ppf "Datatype %s has not been checked for stratification or positivity."
-           n
-           (* (Name.render_name n) *)
-      | WrongArgNum (n, num) ->
-         Format.fprintf ppf "Stratification declaration for %s uses the argument number %d which is out of bounds."
-           (R.render_cid_comp_typ n)
-           num
-      | NotImplemented n ->
-         Format.fprintf ppf "The case %s is not implemented yet."
-           n
+      | (Comp.V _, _) ->
+        Format.dprintf "Recursive call is incompatible with valid automatically generated recursive calls. \n\n Found computation-level variable while generated recursive call expected a meta-object.\n\nCheck specified totality declaration."
       end
-    end
+  | NoPositiveCheck n ->
+      Format.dprintf "Datatype %s has not been checked for positivity or stratification."
+        n
+        (* (Name.render_name n) *)
+  | NoStratifyCheck n ->
+      Format.dprintf "Datatype %s has not been checked for stratification."
+        n
+        (* (Name.render_name n) *)
+  | NoStratifyOrPositiveCheck n ->
+      Format.dprintf "Datatype %s has not been checked for stratification or positivity."
+        n
+        (* (Name.render_name n) *)
+  | WrongArgNum (n, num) ->
+      Format.dprintf "Stratification declaration for %s uses the argument number %d which is out of bounds."
+        (R.render_cid_comp_typ n)
+        num
+  | NotImplemented n ->
+      Format.dprintf "The case %s is not implemented yet."
+        n
+
+let () =
+  Error.register_exception_printer (function
+    | E (location, error) ->
+        Error.located_exception_printer (error_printer error)
+          (List1.singleton location)
+    | exn -> Error.raise_unsupported_exception_printing exn)
 
 let print_str f = dprint f
 (* let dprint f = print_string ("\n" ^ f ())*)

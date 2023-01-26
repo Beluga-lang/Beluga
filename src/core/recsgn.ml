@@ -38,74 +38,73 @@ exception Error of Location.t * error
 
 let throw loc e = raise (Error (loc, e))
 
-let _ =
-  let open Format in
-  Error.register_printer
-    begin fun (Error (loc, err)) ->
-    Error.print_with_location loc
-      begin fun ppf ->
-      match err with
-      | TotalDeclError (f, f') ->
-         fprintf ppf
-           "Expected totality declaration for %a@.@\
-            Found totality declaration for %s@."
-           Name.pp f
-           (Name.string_of_name f')
-      | MutualTotalDecl (haves, have_nots) ->
-         fprintf ppf "@[<v>%a@,The functions@,  @[<hov>%a@]@,have totality declarations, \
-                      but the functions@,  @[<hov>%a@]@,are missing totality declarations."
-           pp_print_string
-           "This mutual definition block does not have \
-            consistent totality declarations. Either all or none of \
-            functions must be declared total."
-           (pp_print_list ~pp_sep: Format.comma Name.pp) haves
-           (pp_print_list ~pp_sep: Format.comma Name.pp) have_nots
-      | NoPositive n ->
-         fprintf ppf "Positivity checking of constructor %s fails.@." n
-      | NoStratify n ->
-         fprintf ppf "Stratification checking of constructor %s fails.@." n
+let error_printer = function
+| TotalDeclError (f, f') ->
+    Format.dprintf
+      "Expected totality declaration for %a@.@\
+      Found totality declaration for %s@."
+      Name.pp f
+      (Name.string_of_name f')
+| MutualTotalDecl (haves, have_nots) ->
+    Format.dprintf "@[<v>%a@,The functions@,  @[<hov>%a@]@,have totality declarations, \
+                but the functions@,  @[<hov>%a@]@,are missing totality declarations."
+      Format.pp_print_text
+      "This mutual definition block does not have \
+      consistent totality declarations. Either all or none of \
+      functions must be declared total."
+      (Format.pp_print_list ~pp_sep: Format.comma Name.pp) haves
+      (Format.pp_print_list ~pp_sep: Format.comma Name.pp) have_nots
+| NoPositive n ->
+    Format.dprintf "Positivity checking of constructor %s fails.@." n
+| NoStratify n ->
+    Format.dprintf "Stratification checking of constructor %s fails.@." n
 
-      | NoStratifyOrPositive n ->
-         fprintf ppf "Stratification or positivity checking of datatype %s fails.@." n
-      | TotalArgsError f ->
-         fprintf ppf "Totality declaration for %a takes too many arguments.@."
-         Name.pp f
+| NoStratifyOrPositive n ->
+    Format.dprintf "Stratification or positivity checking of datatype %s fails.@." n
+| TotalArgsError f ->
+    Format.dprintf "Totality declaration for %a takes too many arguments.@."
+    Name.pp f
 
-      | UnexpectedSucess ->
-         fprintf ppf "Unexpected success: expected failure of type reconstruction for --not'ed declaration."
-      | IllegalOptsPrag s ->
-         fprintf ppf "\"%s\" pragma must appear before any declarations." s
-      | IllegalOperatorPrag(n, f, actual) ->
-         let (fix, expected) =
-           match f with
-           | Fixity.Infix -> ("infix", 2)
-           | Fixity.Postfix -> ("postfix", 1)
-         in
-         fprintf ppf
-           "Illegal %s operator %a. Operator declared with %d arguments, but only operators with %d args permitted"
-           fix
-           Name.pp n
-           actual
-           expected
-      | InvalidOpenPrag s ->
-         fprintf ppf "Invalid module in pragma '--open %s'" s
-      | InvalidAbbrev (l, s) ->
-         fprintf ppf "Invalid module in pragma '--abbrev %s %s'"
-           (String.concat "." l) s
-      | UnboundArg (a, args) ->
-         fprintf ppf "Argument %a does not appear in argument list @[<h>%a@]."
-           Name.pp a
-           (pp_print_list
-              ~pp_sep: Format.comma
-              (fun ppf ->
-                (Option.eliminate
-                   (fun _ -> fprintf ppf "_")
-                   (Name.pp ppf))))
-           args
-      | UnboundNamePragma typ_name ->
-         fprintf ppf "Name pragma refers to unbound type %a." Name.pp typ_name
-      end
-    end
+| UnexpectedSucess ->
+    Format.dprintf "Unexpected success: expected failure of type reconstruction for --not'ed declaration."
+| IllegalOptsPrag s ->
+    Format.dprintf "\"%s\" pragma must appear before any declarations." s
+| IllegalOperatorPrag(n, f, actual) ->
+    let (fix, expected) =
+      match f with
+      | Fixity.Infix -> ("infix", 2)
+      | Fixity.Postfix -> ("postfix", 1)
+    in
+    Format.dprintf
+      "Illegal %s operator %a. Operator declared with %d arguments, but only operators with %d args permitted"
+      fix
+      Name.pp n
+      actual
+      expected
+| InvalidOpenPrag s ->
+    Format.dprintf "Invalid module in pragma '--open %s'" s
+| InvalidAbbrev (l, s) ->
+    Format.dprintf "Invalid module in pragma '--abbrev %s %s'"
+      (String.concat "." l) s
+| UnboundArg (a, args) ->
+    Format.dprintf "Argument %a does not appear in argument list @[<h>%a@]."
+      Name.pp a
+      (Format.pp_print_list
+        ~pp_sep: Format.comma
+        (fun ppf ->
+          (Option.eliminate
+              (fun () -> Format.fprintf ppf "_")
+              (Name.pp ppf))))
+      args
+| UnboundNamePragma typ_name ->
+    Format.dprintf "Name pragma refers to unbound type %a." Name.pp typ_name
+
+let () =
+  Error.register_exception_printer (function
+    | Error (location, error) ->
+        Error.located_exception_printer (error_printer error)
+          (List1.singleton location)
+    | exn -> Error.raise_unsupported_exception_printing exn)
 
 let fmt_ppr_leftover_vars ppf : leftover_vars -> unit =
   let open Format in

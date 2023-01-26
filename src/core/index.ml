@@ -208,37 +208,36 @@ let throw_hint' loc hint e = raise (Error (loc, e, hint))
 let throw loc e = throw_hint' loc None e
 let throw_hint loc hint e = throw_hint' loc (Some hint) e
 
-let print_error ppf =
-  let open Format in
-  function
+let error_printer = function
   | NameOvershadowing n ->
-     fprintf ppf ("The declaration %a is overshadowing an earlier one.") Name.pp n
+      Format.dprintf "The declaration %a is overshadowing an earlier one."
+        Name.pp n
   | MisplacedOperator n ->
-     fprintf ppf ("Illegal use of operator %a.") Name.pp n
+      Format.dprintf "Illegal use of operator %a." Name.pp n
   | MissingArguments (n, expected, found) ->
-     fprintf ppf ("Operator %a expected %d arguments, found %d.") Name.pp n expected found
-
+      Format.dprintf "Operator %a expected %d arguments, found %d." Name.pp n
+        expected found
   | UnboundName n ->
-     fprintf ppf
-       "Unbound data-level variable (ordinary or meta-variable) or constructor: %a."
-       Name.pp n
+      Format.dprintf
+        "Unbound data-level variable (ordinary or meta-variable) or \
+         constructor: %a."
+        Name.pp n
   | UnboundCtxSchemaName n ->
-     fprintf ppf "Unbound context schema: %a." Name.pp n
+      Format.dprintf "Unbound context schema: %a." Name.pp n
   | UnboundCompName n ->
-     fprintf ppf "Unbound computation-level identifier: %a." Name.pp n
+      Format.dprintf "Unbound computation-level identifier: %a." Name.pp n
   | UnboundObs n ->
-     fprintf ppf "Unbound computation-level observation: %a." Name.pp n
-  | PatVarNotUnique ->
-     fprintf ppf "Pattern variable not linear."
-  | IllFormedCompTyp ->
-     fprintf ppf "Ill-formed computation-level type."
+      Format.dprintf "Unbound computation-level observation: %a." Name.pp n
+  | PatVarNotUnique -> Format.dprintf "Pattern variable not linear."
+  | IllFormedCompTyp -> Format.dprintf "Ill-formed computation-level type."
   | ParseError ->
-     fprintf ppf "Unable to parse operators into valid structure"
+      Format.dprintf "Unable to parse operators into valid structure"
   | SubstitutionNotAllowed s ->
-     fprintf ppf "Substitution is not allowed in %a" print_illegal_subst_term s
+      Format.dprintf "Substitution is not allowed in %a"
+        print_illegal_subst_term s
   | NonemptyPatternSpineForVariable x ->
-     fprintf ppf "Variable patterns may not be applied; is %a misspelled?"
-       Name.pp x
+      Format.dprintf
+        "Variable patterns may not be applied; is %a misspelled?" Name.pp x
 
 let print_hint ppf : hint -> unit =
   let open Format in
@@ -252,22 +251,17 @@ let print_hint ppf : hint -> unit =
        "This variable is an implicit parameter. It cannot be \
         accessed directly."
 
-let _ =
-  let open Format in
-  Error.register_printer
-    begin fun (Error (loc, err, hint)) ->
-    Error.print_with_location loc
-      begin fun ppf ->
-      fprintf ppf "@[<v>%a%a@]"
-        print_error err
-        (Option.print
-           begin fun ppf h ->
-           fprintf ppf "@,- @[<hov>%a@]"
-             print_hint h
-           end)
-        hint
-      end
-    end
+let () =
+  Error.register_exception_printer (function
+    | Error (location, error, Option.None) ->
+        Error.located_exception_printer (Format.dprintf "@[<v>%t@]" (error_printer error))
+          (List1.singleton location)
+    | Error (location, error, Option.Some hint) ->
+        Error.located_exception_printer
+          (Format.dprintf "@[@<v>%t@,- @[<hov>%a@]]" (error_printer error)
+             print_hint hint)
+          (List1.singleton location)
+    | exn -> Error.raise_unsupported_exception_printing exn)
 
 (** Require that a substitution be None in the given situation `case'. *)
 let require_no_sub loc (case : illegal_subst_term) =

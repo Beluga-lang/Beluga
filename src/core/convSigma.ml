@@ -4,6 +4,7 @@
 *)
 
 open Support.Equality
+open Support
 
 open Beluga_syntax.Common
 open Syntax
@@ -34,22 +35,20 @@ type t = Id.offset list
 
 exception Error of Location.t * error
 
-let _ =
-  Error.register_printer
-    begin fun (Error (loc, err)) ->
-    Error.print_with_location loc
-      begin fun ppf ->
-      match err with
-      | BlockInDctx (cD, h, tA, cPsi) ->
-         Format.fprintf ppf
-           "Encountered contextual object [%a.%a] of type [%a.%a].@.\
-            Unification cannot prune it because its context contains blocks.@."
+let () =
+  Error.register_exception_printer (function
+      | Error (location, BlockInDctx (cD, h, tA, cPsi)) ->
+      Error.located_exception_printer
+        (Format.dprintf
+           "Encountered contextual object [%a.%a] of type [%a.%a].@ \
+            Unification cannot prune it because its context contains \
+            blocks."
            (P.fmt_ppr_lf_dctx cD P.l0) cPsi
            (P.fmt_ppr_lf_head cD cPsi P.l0) h
            (P.fmt_ppr_lf_dctx cD P.l0) cPsi
-           (P.fmt_ppr_lf_typ cD cPsi P.l0) tA
-      end
-    end
+           (P.fmt_ppr_lf_typ cD cPsi P.l0) tA)
+        (List1.singleton location)
+      | exn -> Error.raise_unsupported_exception_printing exn)
 
 (* ************************************************************************ *)
 let rec map conv_list k =

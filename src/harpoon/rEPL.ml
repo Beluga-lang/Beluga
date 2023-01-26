@@ -21,14 +21,14 @@ let run_safe (f : unit -> 'a) : 'a e =
   | IO.Error.E e ->
      Either.left
        begin fun ppf () ->
-       Format.fprintf ppf "@[<v>%a@]@."
-         IO.Error.fmt_ppr e
+       Format.fprintf ppf "@[<v>%t@]@."
+         (IO.Error.error_printer e)
        end
   | Prover.Error.E e ->
      Either.left
        begin fun ppf () ->
-       Format.fprintf ppf "@[<v>%a@]@."
-         Prover.Error.fmt_ppr e
+       Format.fprintf ppf "@[<v>%t@]@."
+         (Prover.Error.error_printer e)
        end
   | e ->
      let s = Printexc.to_string e in

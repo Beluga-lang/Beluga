@@ -82,150 +82,149 @@ let string_of_proj =
   | Apx.LF.ByPos k -> string_of_int k
   | Apx.LF.ByName n -> Name.show n
 
-let print_error ppf =
-  let open Format in
-  function
+let error_printer = function
   | ProjBVarImpossible (cD, cPsi, x, proj) ->
-     fprintf ppf
+     Format.dprintf
        "%a.%s is illegal; there is no block declaration in %a."
        (P.fmt_ppr_lf_head cD cPsi P.l0) (Int.LF.BVar x)
        (string_of_proj proj)
        (P.fmt_ppr_lf_dctx cD P.l0) (Whnf.normDCtx cPsi)
   | BVarTypMissing (cD, cPsi, _h) ->
-     fprintf ppf
+     Format.dprintf
        "Missing type information for bound variable. Provide a fully annotated context."
   (*              (P.fmt_ppr_lf_head cD cPsi P.l0) h *)
   | SubstTyp ->
-     fprintf ppf
+     Format.dprintf
        "We currently only support substitution variables which either map a context\
         \n variable to another context variable or to an empty context."
   | MissingInformationCtx (_cD, _cPsi) ->
-     fprintf ppf
+     Format.dprintf
        "The domain of the substitution cannot be inferred; please provide\
         \n it explicitly.\n"
   | NotPatSub ->
-     fprintf ppf
+     Format.dprintf
        "Substitution associated with substitution variable is not a pattern substitution;\
         \nPlease provide the type of the substitution variable."
   | SpineLengthMisMatch ->
-     fprintf ppf
+     Format.dprintf
        "Too few or too many arguments supplied to a type family."
   | CtxVarSchema psi ->
-     fprintf ppf
+     Format.dprintf
        "Reconstruction cannot infer the schema for context %a."
        Name.pp psi
   | SigmaTypImpos (cD, cPsi, sA) ->
-     fprintf ppf
+     Format.dprintf
        "Ill-typed expression. @ @ The head of a spine has type %a. "
        (P.fmt_ppr_lf_typ cD cPsi P.l0) (Whnf.normTyp sA)
   | ParamFun ->
-     fprintf ppf "Projection on a parameter variable has a functional type which type reconstruction cannot infer - please specify the type of the parameter variable"
+     Format.dprintf "Projection on a parameter variable has a functional type which type reconstruction cannot infer - please specify the type of the parameter variable"
   | HolesFunction ->
-     fprintf ppf
+     Format.dprintf
        "Underscores occurring inside LF objects must be of atomic type."
 
   | ProjNotValid (cD, cPsi, k, sA) ->
-     fprintf ppf
+     Format.dprintf
        "Cannot get the %s. projection from type %a."
        (string_of_int k)
        (P.fmt_ppr_lf_typ cD cPsi P.l0) (Whnf.normTyp sA)
 
   | ProjNotFound (cD, cPsi, k, sA) ->
-     fprintf ppf
+     Format.dprintf
        "There is no projection named %s in type %a."
        (Name.string_of_name k)
        (P.fmt_ppr_lf_typ cD cPsi P.l0) (Whnf.normTyp sA)
 
   | TypMismatchElab (cD, cPsi, sA1, sA2) ->
-     Error.report_mismatch ppf
+     Error.mismatch_reporter
        "Ill-typed expression."
        "Expected type" (P.fmt_ppr_lf_typ cD cPsi P.l0) (Whnf.normTyp sA1)
        "Actual type" (P.fmt_ppr_lf_typ cD cPsi P.l0) (Whnf.normTyp sA2)
 
   | IllTypedElab (cD, cPsi, sA, variant) ->
-     Error.report_mismatch ppf
+     Error.mismatch_reporter
        "Ill-typed expression."
        "Expected type" (P.fmt_ppr_lf_typ cD cPsi P.l0) (Whnf.normTyp sA)
-       "Actual type" (pp_print_string) (string_of_typeVariant variant)
+       "Actual type" (Format.pp_print_string) (string_of_typeVariant variant)
 
   | IllTypedSub (cD, cPsi, s, cPsi') ->
-     fprintf ppf "Ill-typed substitution.@.";
-     fprintf ppf "    Does not take context: %a@."
-       (P.fmt_ppr_lf_dctx cD P.l0) (Whnf.normDCtx cPsi');
-     fprintf ppf "    to context: %a@."
-       (P.fmt_ppr_lf_dctx cD P.l0) (Whnf.normDCtx cPsi)
-
+      Format.dprintf
+        "Ill-typed substitution.@,\
+        \    Does not take context: %a@,\
+        \    to context: %a"
+        (P.fmt_ppr_lf_dctx cD P.l0) (Whnf.normDCtx cPsi')
+        (P.fmt_ppr_lf_dctx cD P.l0) (Whnf.normDCtx cPsi)
   | IllTypedSubVar (cD, cPsi, cPsi') ->
-     fprintf ppf "Ill-typed substitution variable.@.";
-     fprintf ppf "    Does not take context: %a@."
-       (P.fmt_ppr_lf_dctx cD P.l0) (Whnf.normDCtx cPsi');
-     fprintf ppf "    to context: %a@."
-       (P.fmt_ppr_lf_dctx cD P.l0) (Whnf.normDCtx cPsi)
+      Format.dprintf
+        "Ill-typed substitution variable.@,\
+        \    Does not take context: %a@,\
+        \    to context: %a"
+        (P.fmt_ppr_lf_dctx cD P.l0) (Whnf.normDCtx cPsi')
+        (P.fmt_ppr_lf_dctx cD P.l0) (Whnf.normDCtx cPsi)
 
   | LeftoverConstraints x ->
-     fprintf ppf
+     Format.dprintf
        "Cannot reconstruct a type for free variable %a (leftover constraints)."
        Name.pp x
 
   | IdCtxsub ->
-     fprintf ppf
+     Format.dprintf
        "@[<v>The identity substitution [..] must be associated with a context variable.@,\
         Perhaps you mean to use the empty substitution [] to weaken a closed object?@]"
   | PruningFailed ->
-     fprintf ppf
+     Format.dprintf
        "Pruning a type failed.@ This can happen when you have some free@ \
         meta-variables whose type cannot be inferred."
 
   | CompTypAnn ->
-     fprintf ppf "Type synthesis of term failed."
+     Format.dprintf "Type synthesis of term failed."
 
   | SynthesizableLFHole name ->
-     fprintf ppf "This LF hole%a is appearing in a synthesizable position, but LF holes must appear in checkable positions."
+     Format.dprintf "This LF hole%a is appearing in a synthesizable position, but LF holes must appear in checkable positions."
        (Option.print
-          (fun ppf x -> fprintf ppf ", ?%s," x))
+          (fun ppf x -> Format.fprintf ppf ", ?%s," x))
        name
 
   | CompTypAnnSub ->
-     fprintf ppf "Synthesizing the type meta-variable associated with a substitution variable failed (use typing annotation)."
+     Format.dprintf "Synthesizing the type meta-variable associated with a substitution variable failed (use typing annotation)."
 
   | NotPatternSpine ->
-     fprintf ppf "Non-pattern spine -- cannot reconstruct the type of a variable or hole." (* TODO *)
+     Format.dprintf "Non-pattern spine -- cannot reconstruct the type of a variable or hole." (* TODO *)
 
   | InvalidProjection (cD, cPsi, tA, proj) ->
-     fprintf ppf
+     Format.dprintf
        "@[<v>The projection `.%s' is not valid for the type@,  @[%a@]@,\
         Only sigma-types (blocks) can be projected.@]"
        (string_of_proj proj)
        (P.fmt_ppr_lf_typ cD cPsi P.l0) tA
 
   | MissingSchemaForCtxVar psi ->
-     fprintf ppf
+     Format.dprintf
        "Missing schema for context variable %a."
        Name.pp psi
   | IncompatibleSchemaForCtxVar (_cD, _psi, w, w') ->
      (* (Pretty.fmt_ppr_lf_dctx cD 0) (Int.LF.CtxVar psi) *)
-     Error.report_mismatch ppf
+     Error.mismatch_reporter
        "Ill-typed context variable"
-       "Expected schema for context variable" (pp_print_string) (RR.render_cid_schema w)
-       "Actual type" (pp_print_string) (RR.render_cid_schema w')
+       "Expected schema for context variable" (Format.pp_print_string) (RR.render_cid_schema w)
+       "Actual type" (Format.pp_print_string) (RR.render_cid_schema w')
   | TermWhenVar _ ->
-     fprintf ppf "A term was found when expecting a variable.@.";
+     Format.dprintf "A term was found when expecting a variable.@.";
 
   | SubWhenRen _ ->
-     fprintf ppf "A substitution was found when expecting a renaming.@."
+     Format.dprintf "A substitution was found when expecting a renaming.@."
   | HOMVarNotSupported ->
-     fprintf ppf "Higher-order meta-variables not (currently) supported"
+     Format.dprintf "Higher-order meta-variables not (currently) supported"
   | SubstVarConflict x ->
-     fprintf ppf
+     Format.dprintf
        "The variable %a was expected to be a substitution variable.@.@.\
        Please note that $%a and %a both denote the same variable and so the use of both concurrently to denote different things is disallowed."
        Name.pp x
        Name.pp x
        Name.pp x
   | UnboundName name ->
-     fprintf ppf "Unbound identifier %a." Name.pp name
+     Format.dprintf "Unbound identifier %a." Name.pp name
   | UnboundIdSub ->
-     fprintf ppf "Identity substitution used without context variable."
+     Format.dprintf "Identity substitution used without context variable."
 
 let print_hint ppf : hint -> unit =
   let open Format in
@@ -237,19 +236,21 @@ let print_hint ppf : hint -> unit =
      fprintf ppf "Maybe you want to eta-expand %a?"
        Name.pp x
 
-let _ =
-  let open Format in
-  Error.register_printer
-    begin fun (Error (loc, err, hints)) ->
-    Error.print_with_location loc
-      begin fun ppf ->
-      fprintf ppf "@[<v>%a%a@]"
-        print_error err
-        (pp_print_list ~pp_sep: (fun _ _ -> ())
-           (fun ppf x -> fprintf ppf "@,  - %a" print_hint x))
-        hints
-      end
-    end
+
+let () =
+  Error.register_exception_printer (function
+    | Error (location, error, []) ->
+        Error.located_exception_printer (error_printer error)
+          (List1.singleton location)
+    | Error (location, error, hints) ->
+        Error.located_exception_printer
+          (Format.dprintf "@[<v 0>%t%a@]" (error_printer error)
+             (Format.pp_print_list
+                ~pp_sep:(fun _ _ -> ())
+                (fun ppf x -> Format.fprintf ppf "@,  - %a" print_hint x))
+             hints)
+          (List1.singleton location)
+    | exn -> Error.raise_unsupported_exception_printing exn)
 
 let rec what_head =
   function

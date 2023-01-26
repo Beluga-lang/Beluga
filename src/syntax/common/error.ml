@@ -113,58 +113,9 @@ let violation ?location msg =
   | Option.None -> raise (Violation msg)
   | Option.Some location -> raise_at1 location (Violation msg)
 
-type print_result = string
-
-let error_format_buffer = Buffer.create 1024
-
-let error_format = Format.formatter_of_buffer error_format_buffer
-
-let register_printer f =
-  Printexc.register_printer (fun e ->
-      try Option.some (f e) with
-      | Match_failure _ -> Option.none)
-
-let register_printer' f = Printexc.register_printer f
-
-let print f =
-  (* Print to stderr any uncaught exception resulting from applying f to
-     error_format. Such an exception would be thrown when in the middle of
-     printing an exception! *)
-  Printexc.print f error_format;
-  Format.pp_print_newline error_format ();
-  Format.pp_print_flush error_format ();
-  let str = Buffer.contents error_format_buffer in
-  Buffer.reset error_format_buffer;
-  str
-
-let register_printing_function (extract : exn -> 'a option)
-    (fmt_ppr : Format.formatter -> 'a -> unit) : unit =
-  let open Fun in
-  register_printer'
-    (Option.map (fun e -> print (fun ppf -> fmt_ppr ppf e)) ++ extract)
-
-let register_located_printing_function
-    (extract : exn -> (Location.t * 'a) option)
-    (fmt_ppr : Format.formatter -> 'a -> unit) : unit =
-  let f (loc, e) =
-    print (fun ppf ->
-        Format.fprintf ppf "@[<v>%a:@,%a@]" Location.print loc fmt_ppr e)
-  in
-  let open Fun in
-  register_printer' (Option.map f ++ extract)
-
-let print_location loc =
-  Format.fprintf error_format "%a:@," Location.print loc
-
-let print_with_location loc f =
-  print_location loc;
-  print f
-
-let report_mismatch ppf title title_obj1 pp_obj1 obj1 title_obj2 pp_obj2 obj2
-    =
-  Format.fprintf ppf "@[<v>%s@," title;
-  Format.fprintf ppf "    @[<v>%s:@,  %a@,%s:@,  %a@]@,@]" title_obj1 pp_obj1
-    obj1 title_obj2 pp_obj2 obj2
+let mismatch_reporter title title_obj1 pp_obj1 obj1 title_obj2 pp_obj2 obj2 =
+  Format.dprintf "@[<v>%s@,    @[<v>%s:@,  %a@,%s:@,  %a@]@,@]" title
+    title_obj1 pp_obj1 obj1 title_obj2 pp_obj2 obj2
 
 (* The following is for coverage. Probably needs to be phased out. *)
 let information = ref []
@@ -462,7 +413,7 @@ let with_ansi_stags =
     ~print_open_stag:(fun _ppf -> ())
     ~print_close_stag:(fun _ppf -> ())
 
-let pp_located_exception cause_printer locations =
+let located_exception_printer cause_printer locations =
   try
     let snippets = make_location_snippets (List1.to_list locations) in
     if List.length snippets > 0 then
@@ -497,7 +448,7 @@ let () =
   register_exception_printer (function
     | Located_exception { cause; locations } ->
         let cause_printer = find_printer cause in
-        pp_located_exception cause_printer locations
+        located_exception_printer cause_printer locations
     | Composite_exception { causes } ->
         Format.dprintf "@[<v 0>%a@]%!"
           (List2.pp ~pp_sep:Format.pp_print_cut Fun.apply)

@@ -15,53 +15,43 @@ module Error = struct
   exception E of t
   let throw e = raise (E e)
 
-  open Format
-  let format_error ppf = function
+  let error_printer = function
     | OptparserError e ->
         ( match e with
         | `Missing_mandatory_option { Optparser.Error.Option.option_name; _ } ->
-            fprintf ppf "Mandatory option %s is missing.@." option_name
+            Format.dprintf "Mandatory option %s is missing." option_name
         | `Invalid_arguments_length
             { Optparser.Error.Argument.option_name
             ; expected_argument_count = exp
             ; actual_argument_count = act
             } ->
-            fprintf
-              ppf
-              "Option %s requires %d arguments. Got %d.@."
+            Format.dprintf
+              "Option %s requires %d arguments. Got %d."
               option_name
             exp
             act
         | `Argument_reader_failure { Optparser.Error.Option.option_name; _ } ->
-            fprintf ppf "%s" option_name
+            Format.dprintf "%s" option_name
         | `Not_an_option { Optparser.Error.Option.option_name; _ } ->
-            fprintf ppf "%s is not an option" option_name )
+            Format.dprintf "%s is not an option" option_name )
     | InvalidIncomplete ->
-       fprintf ppf "--incomplete can be specified only after --test@."
+       Format.dprintf "--incomplete can be specified only after --test"
     | InvalidStop ->
-        fprintf
-          ppf
-          "%a@."
-          pp_print_string
+        Format.dprintf
           "--stop can only be specified with --test and without --incomplete"
     | DanglingArguments args ->
-        fprintf
-          ppf
+        Format.dprintf
           "Unexpected remaining command-line arguments:@,  @[%a@]@."
-          (pp_print_list ~pp_sep:Format.comma (fun ppf -> fprintf ppf "%s"))
+          (Format.pp_print_list ~pp_sep:Format.comma Format.pp_print_string)
          args
 end
 
 (* Register error formatting. *)
-let _ =
-  let open Error in
-  Beluga_syntax.Error.register_printer'
-    begin fun e ->
-    match e with
-    | E e ->
-       Some (Beluga_syntax.Error.print (fun ppf -> format_error ppf e))
-    | _ -> None
-    end
+let () =
+  Beluga_syntax.Error.register_exception_printer (function
+  | Error.E e -> Error.error_printer e
+  | exn -> Beluga_syntax.Error.raise_unsupported_exception_printing exn
+  )
 
 (** The `stop and `go_on flag control what happens in the presence of errors.
     In particular, the `stop flag will cause Harpoon to exit as soon

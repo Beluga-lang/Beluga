@@ -20,16 +20,13 @@ type error =
 
 exception Error of Location.t * error
 
-let _ =
-  Error.register_printer
-    begin fun (Error (loc, err)) ->
-    Error.print_with_location loc
-      begin fun ppf ->
-      match err with
-      | MissingBranch ->
-         Format.fprintf ppf "Missing branch -- non-exhaustive pattern match."
-      end
-    end
+let () =
+  Error.register_exception_printer (function
+      | Error (location, MissingBranch) ->
+      Error.located_exception_printer
+        (Format.dprintf "Missing branch -- non-exhaustive pattern match.")
+        (List1.singleton location)
+      | exn -> Error.raise_unsupported_exception_printing exn)
 
 exception BranchMismatch
 

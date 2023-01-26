@@ -30,24 +30,28 @@ type error =
 
 exception Error of Location.t * error
 
-let _ =
-  Error.register_printer
-    begin fun (Error (loc, e)) ->
-    Error.print_with_location loc
-      begin fun ppf ->
-      match e with
-      | NoCover s ->
-         Format.fprintf ppf "\n######   COVERAGE FAILURE: Case expression doesn't cover: ######\n##       %s\n##"
-           s
-      | MatchError s ->
-         Format.fprintf ppf "\n######   COVERAGE FAILURE: Case expression doesn't cover: ######\n##       Matching fails due to %s."
-           s
-      | NothingToRefine ->
-         Format.pp_print_string ppf "Nothing to refine"
-      | NoCoverageGoalsGenerated ->
-         Format.pp_print_string ppf "No coverage goals generated"
-      end
-    end
+let () =
+  Error.register_exception_printer (function
+    | Error (location, NoCover s) ->
+        Error.located_exception_printer
+          (Format.dprintf
+             "\n######   COVERAGE FAILURE: Case expression doesn't cover: ######\n##       %s\n##"
+             s)
+          (List1.singleton location)
+    | Error (location, MatchError s) ->
+        Error.located_exception_printer
+          (Format.dprintf
+             "\n######   COVERAGE FAILURE: Case expression doesn't cover: ######\n##       Matching fails due to %s." s)
+          (List1.singleton location)
+    | Error (location, NothingToRefine) ->
+        Error.located_exception_printer
+          (Format.dprintf "Nothing to refine")
+          (List1.singleton location)
+    | Error (location, NoCoverageGoalsGenerated) ->
+        Error.located_exception_printer
+          (Format.dprintf "No coverage goals generated")
+          (List1.singleton location)
+    | exn -> Error.raise_unsupported_exception_printing exn)
 
 type gen_pat_var_strategy = Name.t -> int -> Comp.pattern
 

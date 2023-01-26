@@ -5,7 +5,7 @@ module Error : sig
 
   exception E of t
 
-  val fmt_ppr : Format.formatter -> t -> unit
+  val error_printer : t -> Format.formatter -> unit
 end
 
 (** Executes a single Harpoon interactive command on the given state. May

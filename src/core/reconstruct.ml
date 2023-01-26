@@ -60,155 +60,153 @@ type error =
 exception Error of Location.t * error
 let throw loc e = raise (Error (loc, e))
 
-let _ =
-  Error.register_printer
-    begin fun (Error (loc, err)) ->
-    Error.print_with_location loc
-      begin fun ppf ->
-      let open Format in
-      fprintf ppf "Type reconstruction error.@.";
-      match err with
-      | NotImplemented f ->
-         fprintf ppf "@[<v 2>Not implemented:@,@[%a@]@]"
-           f ()
-      | MCtxIllformed cD ->
-         fprintf ppf "Unable to abstract over the free meta-variables due to dependency on the specified meta-variables. The following meta-context was reconstructed, but is ill-formed: %a"
-           (P.fmt_ppr_lf_mctx P.l0) cD
-      | UnsupportedTypeAnnotation ->
-         fprintf ppf
-           "Type annotations on context variables and parameter variables not supported at this point."
-      | PatternMobj ->
-         fprintf ppf
-           "Expected a meta-object; Found a computation-level pattern"
-      | TypeAbbrev a ->
-         fprintf ppf
-           "Type definition %a cannot contain any free meta-variables in its type."
-           Name.pp a
+let error_printer = function
+  | NotImplemented f ->
+      Format.dprintf "@[<v 2>Not implemented:@,@[%a@]@]"
+        f ()
+  | MCtxIllformed cD ->
+      Format.dprintf "Unable to abstract over the free meta-variables due to dependency on the specified meta-variables. The following meta-context was reconstructed, but is ill-formed: %a"
+        (P.fmt_ppr_lf_mctx P.l0) cD
+  | UnsupportedTypeAnnotation ->
+      Format.dprintf
+        "Type annotations on context variables and parameter variables not supported at this point."
+  | PatternMobj ->
+      Format.dprintf
+        "Expected a meta-object; Found a computation-level pattern"
+  | TypeAbbrev a ->
+      Format.dprintf
+        "Type definition %a cannot contain any free meta-variables in its type."
+        Name.pp a
 
-      | IllegalCase (cD, cG, i, tau) ->
-         fprintf ppf
-           "@[<v>Illegal case analysis.\
-            @,Cannot pattern-match on expression\
-            @,  @[%a@]\
-            @,of type\
-            @,  @[%a@]\
-            @]"
-           (P.fmt_ppr_cmp_exp cD cG P.l0) i
-           (P.fmt_ppr_cmp_typ cD P.l0) tau
+  | IllegalCase (cD, cG, i, tau) ->
+      Format.dprintf
+        "@[<v>Illegal case analysis.\
+        @,Cannot pattern-match on expression\
+        @,  @[%a@]\
+        @,of type\
+        @,  @[%a@]\
+        @]"
+        (P.fmt_ppr_cmp_exp cD cG P.l0) i
+        (P.fmt_ppr_cmp_typ cD P.l0) tau
 
-      | ClosedTermRequired (cD, cG, i, tau) ->
-         fprintf ppf
-           "Expression is not closed.\
-            @,The expression\
-            @,  @[%a@]\
-            @,has type\
-            @,  @[%a@]\
-            @,@[%a@]\
-            @,Meta-context:\
-            @,  @[%a@]\
-            @,Computation context:\
-            @,  @[%a@]\
-            @]"
-           (P.fmt_ppr_cmp_exp cD cG P.l0) i
-           (P.fmt_ppr_cmp_typ cD P.l0) tau
-           pp_print_string
-           "which is not closed, or which requires that some \
-            metavariables are futher \
-            restricted, i.e. some variable dependencies cannot happen.\
-            This error may indicate that some reconstructed implicit \
-            arguments should be restricted."
-           (P.fmt_ppr_lf_mctx P.l0) cD
-           (P.fmt_ppr_cmp_gctx cD P.l0) cG
+  | ClosedTermRequired (cD, cG, i, tau) ->
+      Format.dprintf
+        "Expression is not closed.\
+        @,The expression\
+        @,  @[%a@]\
+        @,has type\
+        @,  @[%a@]\
+        @,@[%a@]\
+        @,Meta-context:\
+        @,  @[%a@]\
+        @,Computation context:\
+        @,  @[%a@]\
+        @]"
+        (P.fmt_ppr_cmp_exp cD cG P.l0) i
+        (P.fmt_ppr_cmp_typ cD P.l0) tau
+        Format.pp_print_text
+        "which is not closed, or which requires that some \
+        metavariables are futher \
+        restricted, i.e. some variable dependencies cannot happen.\
+        This error may indicate that some reconstructed implicit \
+        arguments should be restricted."
+        (P.fmt_ppr_lf_mctx P.l0) cD
+        (P.fmt_ppr_cmp_gctx cD P.l0) cG
 
-      | MetaObjContextClash (cD, cPsi, cPhi) ->
-         Error.report_mismatch ppf
-           "Context of meta-object does not match expected context."
-           "Expected context" (P.fmt_ppr_lf_dctx cD P.l0) cPsi
-           "Encountered context" (P.fmt_ppr_lf_dctx cD P.l0) cPhi;
+  | MetaObjContextClash (cD, cPsi, cPhi) ->
+      Error.mismatch_reporter
+        "Context of meta-object does not match expected context."
+        "Expected context" (P.fmt_ppr_lf_dctx cD P.l0) cPsi
+        "Encountered context" (P.fmt_ppr_lf_dctx cD P.l0) cPhi;
 
-      | PatternContextClash (cD, cPsi, cD', cPsi') ->
-         Error.report_mismatch ppf
-           "Context clash in pattern."
-           "Pattern's context" (P.fmt_ppr_lf_dctx cD P.l0) cPsi
-           "Scrutinee's context" (P.fmt_ppr_lf_dctx cD' P.l0) cPsi';
-         fprintf ppf
-           "Note that we do not allow the context in the pattern@ \
-            to be more general than the context in the scrutinee."
+  | PatternContextClash (cD, cPsi, cD', cPsi') ->
+      Format.dprintf
+        "%t@,Note that we do not allow the context in the pattern@ \
+        to be more general than the context in the scrutinee."
+      (Error.mismatch_reporter
+        "Context clash in pattern."
+        "Pattern's context" (P.fmt_ppr_lf_dctx cD P.l0) cPsi
+        "Scrutinee's context" (P.fmt_ppr_lf_dctx cD' P.l0) cPsi')
 
-      | MetaObjectClash (cD, mC) ->
-         fprintf ppf
-           "Meta-object type clash.@ \
-            Expected meta-object of type: %a"
-           (P.fmt_ppr_cmp_meta_typ cD) mC;
+  | MetaObjectClash (cD, mC) ->
+      Format.dprintf
+        "Meta-object type clash.@ \
+        Expected meta-object of type: %a"
+        (P.fmt_ppr_cmp_meta_typ cD) mC;
 
-      | MissingMetaObj ->
-         fprintf ppf
-           "Too few meta-objects supplied to data-constructor"
+  | MissingMetaObj ->
+      Format.dprintf
+        "Too few meta-objects supplied to data-constructor"
 
-      | TooManyMetaObj ->
-         fprintf ppf
-           "Too many meta-objects supplied to data-constructor"
+  | TooManyMetaObj ->
+      Format.dprintf
+        "Too many meta-objects supplied to data-constructor"
 
-      | TypMismatch (cD, (tau1, theta1), (tau2, theta2)) ->
-         Error.report_mismatch ppf
-           "Type of destructor did not match the type it was expected to have."
-           "Type of destructor" (P.fmt_ppr_cmp_typ cD P.l0)
-           (Whnf.cnormCTyp (tau1, theta1))
-           "Expected type" (P.fmt_ppr_cmp_typ cD P.l0)
-           (Whnf.cnormCTyp (tau2, theta2))
+  | TypMismatch (cD, (tau1, theta1), (tau2, theta2)) ->
+      Error.mismatch_reporter
+        "Type of destructor did not match the type it was expected to have."
+        "Type of destructor" (P.fmt_ppr_cmp_typ cD P.l0)
+        (Whnf.cnormCTyp (tau1, theta1))
+        "Expected type" (P.fmt_ppr_cmp_typ cD P.l0)
+        (Whnf.cnormCTyp (tau2, theta2))
 
-      | CaseLabelMismatch (expected, actual) ->
-         let print_case_label_kind ppf =
-           function
-           | `named -> fprintf ppf "named"
-           | `context -> fprintf ppf "context"
-           | `pvar -> fprintf ppf "parameter variable"
-           | `bvar -> fprintf ppf "head bound variable"
-         in
-         fprintf ppf
-           "@[<v>Case label mismatch.\
-            @,Expected case label type: %a\
-            @,Actual case label type: %a\
-            @,@]"
-           print_case_label_kind expected
-           print_case_label_kind actual
+  | CaseLabelMismatch (expected, actual) ->
+      let print_case_label_kind ppf =
+        function
+        | `named -> Format.fprintf ppf "named"
+        | `context -> Format.fprintf ppf "context"
+        | `pvar -> Format.fprintf ppf "parameter variable"
+        | `bvar -> Format.fprintf ppf "head bound variable"
+      in
+      Format.dprintf
+        "@[<v>Case label mismatch.\
+        @,Expected case label type: %a\
+        @,Actual case label type: %a\
+        @,@]"
+        print_case_label_kind expected
+        print_case_label_kind actual
 
-      | UnboundCaseLabel (kind, name, cD, tau) ->
-         let print_case_label_kind ppf =
-           function
-           | `meta -> fprintf ppf "LF"
-           | `comp -> fprintf ppf "computational"
-         in
-         fprintf ppf
-           "@[<v>Unbound constructor @[%a@].\
-            @,@[A %a constructor is expected, due to the type of the scrutinee, namely@]\
-            @,  @[%a@]\
-            @]"
-           Name.pp name
-           print_case_label_kind kind
-           P.(fmt_ppr_cmp_typ cD l0) tau
+  | UnboundCaseLabel (kind, name, cD, tau) ->
+      let print_case_label_kind ppf =
+        function
+        | `meta -> Format.fprintf ppf "LF"
+        | `comp -> Format.fprintf ppf "computational"
+      in
+      Format.dprintf
+        "@[<v>Unbound constructor @[%a@].\
+        @,@[A %a constructor is expected, due to the type of the scrutinee, namely@]\
+        @,  @[%a@]\
+        @]"
+        Name.pp name
+        print_case_label_kind kind
+        P.(fmt_ppr_cmp_typ cD l0) tau
 
-      | InvalidSchemaElementIndex (n, w) ->
-         let Int.LF.Schema elems as schema = Store.Cid.Schema.get_schema w in
-         fprintf ppf
-           "@[<v>The 1-based index %d is invalid for the schema\
-            @,  @[%a@]\
-            @,which consists of %d only elements.\
-            @]"
-           n
-           P.(fmt_ppr_lf_schema ~useName: false l0) schema
-           (List.length elems)
-      | ImpossiblePattern (cD, mC_p, mC) ->
-         fprintf ppf
-           "@[<v>The pattern \
-            @,  @[%a@]\
-            @,is impossible for this case-expression's scrutinee, namely\
-            @,  @[%a@]\
-            @]"
-           P.(fmt_ppr_cmp_meta_obj cD l0) mC_p
-           P.(fmt_ppr_cmp_meta_obj cD l0) mC
-      end
-    end
+  | InvalidSchemaElementIndex (n, w) ->
+      let Int.LF.Schema elems as schema = Store.Cid.Schema.get_schema w in
+      Format.dprintf
+        "@[<v>The 1-based index %d is invalid for the schema\
+        @,  @[%a@]\
+        @,which consists of %d only elements.\
+        @]"
+        n
+        P.(fmt_ppr_lf_schema ~useName: false l0) schema
+        (List.length elems)
+  | ImpossiblePattern (cD, mC_p, mC) ->
+      Format.dprintf
+        "@[<v>The pattern \
+        @,  @[%a@]\
+        @,is impossible for this case-expression's scrutinee, namely\
+        @,  @[%a@]\
+        @]"
+        P.(fmt_ppr_cmp_meta_obj cD l0) mC_p
+        P.(fmt_ppr_cmp_meta_obj cD l0) mC
+
+let () =
+  Error.register_exception_printer (function
+    | Error (location, error) ->
+        Error.located_exception_printer (error_printer error)
+          (List1.singleton location)
+    | exn -> Error.raise_unsupported_exception_printing exn)
 
 (** Constructs a contextual object used as the the desugaring of the
     computational underscore according to the given index type. *)

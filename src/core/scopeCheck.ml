@@ -58,62 +58,47 @@ let other_thm loc name d1 loc' = function
           FixedFixed (name, loc', cid)
           |> throw loc
 
-
-let format_error ppf =
-  let open Format in
-  function
-  | FixedFixed (item_name, item_loc, thm_cid) ->
-     let e = Comp.get thm_cid in
-     let thm_name = e.Comp.Entry.name in
-     let thm_loc = Name.location thm_name in
-     fprintf ppf
-       "@[<v>Ill-scoped reference.\
-        @,The %s defined at\
-        @,@[%a@]\
-        @,cannot be referred to from theorem\
-        @,  @[%a@]\
-        @,defined at\
-        @,@[%a@]\
-        @,- @[<hov>%a@]@]"
-       item_name
-       Location.pp item_loc
-       Name.pp thm_name
-       Location.pp thm_loc
-       pp_print_text
-       "Hint: If you are using Harpoon, you may want to save your \
-        work, reorder some definitions, and try again."
-
-  | FloatingFloating (cid1, cid2) ->
-     let (name1, name2) = Pair.both Comp.name (cid1, cid2) in
-     fprintf ppf
-       "@[<v>Ill-scoped reference.\
-        @,Theorems\
-        @,  @[%a@]\
-        @,and\
-        @,  @[%a@]\
-        @,cannot refer to each other.\
-        @,- @[<hov>%a@]\
-        @,- @[<hov>%a@]\
-        @,- @[<hov>%a@]@]"
-       Name.pp name1
-       Name.pp name2
-       pp_print_text
-       "The theorems have not been materialized in the signature, so \
-        their relative scoping cannot be established."
-       pp_print_text
-       "Hint: If you are using Harpoon, saving your work will \
-        materialize the theorems, ordering them. If necessary, use a \
-        text editor to adjust the order appropriately."
-       pp_print_text
-       "Hint: For theorems to be proven mutually, they must be \
-        defined together in the same mutual group. In Harpoon, that \
-        means configuring both of them within the same interactive \
-        prompt. This can be fixed post hoc in a text editor by using \
-        `and` between the theorems."
-
-let _ =
-  Error.register_printer
-    begin fun (Error (loc, err)) ->
-    Error.print_with_location loc
-      (fun ppf -> format_error ppf err)
-    end
+let () =
+  Error.register_exception_printer (function
+    | Error (location, FixedFixed (item_name, item_loc, thm_cid)) ->
+        let e = Comp.get thm_cid in
+        let thm_name = e.Comp.Entry.name in
+        let thm_loc = Name.location thm_name in
+        Error.located_exception_printer
+          (Format.dprintf
+             "@[<v 0>Ill-scoped reference.@,\
+              The %s cannot be referred to from theorem %a.@,\
+              - @[<hov>%a@]@]" item_name Name.pp thm_name
+             Format.pp_print_text
+             "Hint: If you are using Harpoon, you may want to save your \
+              work, reorder some definitions, and try again.")
+          (List1.from location [ item_loc; thm_loc ])
+    | Error (location, FloatingFloating (cid1, cid2)) ->
+        let name1 = Comp.name cid1 in
+        let name2 = Comp.name cid2 in
+        Error.located_exception_printer
+          (Format.dprintf
+             "@[<v>Ill-scoped reference.@,\
+              Theorems@,\
+             \  @[%a@]@,\
+              and@,\
+             \  @[%a@]@,\
+              cannot refer to each other.@,\
+              - @[<hov>%a@]@,\
+              - @[<hov>%a@]@,\
+              - @[<hov>%a@]@]" Name.pp name1 Name.pp name2
+             Format.pp_print_text
+             "The theorems have not been materialized in the signature, so \
+              their relative scoping cannot be established."
+             Format.pp_print_text
+             "Hint: If you are using Harpoon, saving your work will \
+              materialize the theorems, ordering them. If necessary, use a \
+              text editor to adjust the order appropriately."
+             Format.pp_print_text
+             "Hint: For theorems to be proven mutually, they must be \
+              defined together in the same mutual group. In Harpoon, that \
+              means configuring both of them within the same interactive \
+              prompt. This can be fixed post hoc in a text editor by using \
+              `and` between the theorems.")
+          (List1.singleton location)
+    | exn -> Error.raise_unsupported_exception_printing exn)

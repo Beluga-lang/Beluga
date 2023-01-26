@@ -6,16 +6,14 @@ module Error = struct
 
   exception E of t
 
-  open Format
-
-  let fmt_ppr ppf = function
+  let error_printer = function
     | EndOfInput ->
-       fprintf ppf "End of input."
+       Format.dprintf "End of input."
 
-  let _ =
-    Beluga_syntax.Error.register_printing_function
-      (function E e -> Some e | _ -> None)
-      fmt_ppr
+  let () =
+    Beluga_syntax.Error.register_exception_printer (function
+      | E e -> error_printer e
+      | exn -> Beluga_syntax.Error.raise_unsupported_exception_printing exn)
 
   let throw e = raise (E e)
 end

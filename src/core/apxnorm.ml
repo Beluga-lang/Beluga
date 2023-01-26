@@ -20,20 +20,19 @@ type error =
 
 exception Error of Location.t * error
 
-let _ =
-  Error.register_printer
-    begin fun (Error (loc, err)) ->
-    Error.print_with_location loc
-      begin fun ppf ->
-      let open Format in
-      match err with
-      | CtxOverGeneral ->
-         fprintf ppf "context in the body appears to be more general than the context supplied\n"
-      | IndexInvariantFailed f ->
-         fprintf ppf "Indexing invariant failed: %a@."
-           f ()
-      end
-    end
+let () =
+  Error.register_exception_printer (function
+    | Error (location, CtxOverGeneral) ->
+        Error.located_exception_printer
+          (Format.dprintf
+             "Context in the body appears to be more general than the \
+              context supplied.")
+          (List1.singleton location)
+    | Error (location, IndexInvariantFailed f) ->
+        Error.located_exception_printer
+          (Format.dprintf "Indexing invariant failed:@ %a" f ())
+          (List1.singleton location)
+    | exn -> Error.raise_unsupported_exception_printing exn)
 
 let throw loc e = raise (Error (loc, e))
 
@@ -802,7 +801,7 @@ let rec fmvApxDCtx loc fMVs cD ((l_cd1, l_delta, k) as d_param) =
             throw loc
               (IndexInvariantFailed
                  (fun ppf () ->
-                   Format.fprintf ppf "unbound context %a" Name.pp x))
+                   Format.fprintf ppf "unbound context %a." Name.pp x))
        end
 
   | Apx.LF.DDec (psi, t_decl) ->
@@ -829,7 +828,7 @@ let fmvApxHat loc fMVs cD (l_cd1, l_delta, k) phat =
             throw loc
               (IndexInvariantFailed
                  (fun ppf () ->
-                   Format.fprintf ppf "unbound context variable %a" Name.pp psi))
+                   Format.fprintf ppf "unbound context variable %a." Name.pp psi))
        end
   | _ -> phat
 

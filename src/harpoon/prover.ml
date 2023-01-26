@@ -20,22 +20,20 @@ module Error = struct
 
   let throw e = raise (E e)
 
-  let fmt_ppr ppf =
-    let open Format in
-    function
+  let error_printer = function
     | NoSuchVariable (name, level) ->
        let format_variable_kind ppf = function
-         | `meta -> fprintf ppf "metavariable"
-         | `comp -> fprintf ppf "computational variable"
+         | `meta -> Format.fprintf ppf "metavariable"
+         | `comp -> Format.fprintf ppf "computational variable"
        in
-       fprintf ppf "No such %a %a."
+       Format.dprintf "No such %a %a."
          format_variable_kind level
          Name.pp name
 
-  let _ =
-    Beluga_syntax.Error.register_printing_function
-      (function E e -> Some e | _ -> None)
-      fmt_ppr
+  let () =
+    Beluga_syntax.Error.register_exception_printer (function
+      | E e -> error_printer e
+      | exn -> Beluga_syntax.Error.raise_unsupported_exception_printing exn)
 end
 
 (** High-level elaboration from external to internal syntax. *)

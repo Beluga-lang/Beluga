@@ -5,7 +5,7 @@ module Error : sig
     | EndOfInput (** Any prompt is subject to raising this. *)
 
   (** Formats an error. *)
-  val fmt_ppr : Format.formatter -> t -> unit
+  val error_printer : t -> Format.formatter -> unit
 
   exception E of t
 end

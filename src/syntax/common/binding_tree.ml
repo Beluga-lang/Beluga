@@ -141,15 +141,14 @@ let replace qualified_identifier f tree =
     (fun namespaces identifier ->
       replace_nested namespaces identifier f tree)
 
-let pp_exception ppf = function
-  | Unbound_identifier identifier ->
-      Format.fprintf ppf "Identifier %a is unbound." Identifier.pp identifier
-  | Unbound_qualified_identifier qualified_identifier ->
-      Format.fprintf ppf "Identifier %a is unbound." Qualified_identifier.pp
-        qualified_identifier
-  | Unbound_namespace qualified_identifier ->
-      Format.fprintf ppf "Unbound namespace %a." Qualified_identifier.pp
-        qualified_identifier
-  | exn -> Error.raise_unsupported_exception_printing exn
-
-let () = Error.register_exception_printer pp_exception
+let () =
+  Error.register_exception_printer (function
+    | Unbound_identifier identifier ->
+        Format.dprintf "Identifier %a is unbound." Identifier.pp identifier
+    | Unbound_qualified_identifier qualified_identifier ->
+        Format.dprintf "Identifier %a is unbound." Qualified_identifier.pp
+          qualified_identifier
+    | Unbound_namespace qualified_identifier ->
+        Format.dprintf "Unbound namespace %a." Qualified_identifier.pp
+          qualified_identifier
+    | exn -> Error.raise_unsupported_exception_printing exn)

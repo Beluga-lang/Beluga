@@ -816,85 +816,84 @@ end = struct
     return result
 end
 
-let pp_exception ppf = function
-  | Expected_operator qualified_identifier ->
-      Format.fprintf ppf "Expected an operator bound at %a."
-        Qualified_identifier.pp qualified_identifier
-  | Unbound_identifier identifier ->
-      Format.fprintf ppf "Identifier %a is unbound." Identifier.pp identifier
-  | Unbound_qualified_identifier qualified_identifier ->
-      Format.fprintf ppf "Identifier %a is unbound." Qualified_identifier.pp
-        qualified_identifier
-  | Unbound_namespace qualified_identifier ->
-      Format.fprintf ppf "Unbound namespace %a." Qualified_identifier.pp
-        qualified_identifier
-  | Expected_namespace qualified_identifier ->
-      Format.fprintf ppf "Expected %a to be a namespace."
-        Qualified_identifier.pp qualified_identifier
-  | Expected_module qualified_identifier ->
-      Format.fprintf ppf "Expected %a to be a module."
-        Qualified_identifier.pp qualified_identifier
-  | Bound_lf_type_constant qualified_identifier ->
-      Format.fprintf ppf "%a is a bound LF type constant."
-        Qualified_identifier.pp qualified_identifier
-  | Bound_lf_term_constant qualified_identifier ->
-      Format.fprintf ppf "%a is a bound LF term constant."
-        Qualified_identifier.pp qualified_identifier
-  | Bound_lf_term_variable qualified_identifier ->
-      Format.fprintf ppf "%a is a bound LF term variable."
-        Qualified_identifier.pp qualified_identifier
-  | Bound_meta_variable qualified_identifier ->
-      Format.fprintf ppf "%a is a bound meta-variable."
-        Qualified_identifier.pp qualified_identifier
-  | Bound_parameter_variable qualified_identifier ->
-      Format.fprintf ppf "%a is a bound parameter variable."
-        Qualified_identifier.pp qualified_identifier
-  | Bound_substitution_variable qualified_identifier ->
-      Format.fprintf ppf "%a is a bound substitution variable."
-        Qualified_identifier.pp qualified_identifier
-  | Bound_context_variable qualified_identifier ->
-      Format.fprintf ppf "%a is a bound context variable."
-        Qualified_identifier.pp qualified_identifier
-  | Bound_schema_constant qualified_identifier ->
-      Format.fprintf ppf "%a is a bound schema constant."
-        Qualified_identifier.pp qualified_identifier
-  | Bound_computation_variable qualified_identifier ->
-      Format.fprintf ppf "%a is a bound computation variable."
-        Qualified_identifier.pp qualified_identifier
-  | Bound_computation_inductive_type_constant qualified_identifier ->
-      Format.fprintf ppf
-        "%a is a bound computation-level inductive type constant."
-        Qualified_identifier.pp qualified_identifier
-  | Bound_computation_stratified_type_constant qualified_identifier ->
-      Format.fprintf ppf
-        "%a is a bound computation-level stratified type constant."
-        Qualified_identifier.pp qualified_identifier
-  | Bound_computation_coinductive_type_constant qualified_identifier ->
-      Format.fprintf ppf
-        "%a is a bound computation-level coinductive type constant."
-        Qualified_identifier.pp qualified_identifier
-  | Bound_computation_abbreviation_type_constant qualified_identifier ->
-      Format.fprintf ppf
-        "%a is a bound computation-level abbreviation type constant."
-        Qualified_identifier.pp qualified_identifier
-  | Bound_computation_term_constructor qualified_identifier ->
-      Format.fprintf ppf "%a is a bound computation-level term constructor."
-        Qualified_identifier.pp qualified_identifier
-  | Bound_computation_term_destructor qualified_identifier ->
-      Format.fprintf ppf "%a is a bound computation-level term destructor."
-        Qualified_identifier.pp qualified_identifier
-  | Bound_query qualified_identifier ->
-      Format.fprintf ppf "%a is a bound query." Qualified_identifier.pp
-        qualified_identifier
-  | Bound_mquery qualified_identifier ->
-      Format.fprintf ppf "%a is a bound mquery." Qualified_identifier.pp
-        qualified_identifier
-  | Bound_module qualified_identifier ->
-      Format.fprintf ppf "%a is a bound module." Qualified_identifier.pp
-        qualified_identifier
-  | Bound_program_constant qualified_identifier ->
-      Format.fprintf ppf "%a is a bound program." Qualified_identifier.pp
-        qualified_identifier
-  | exn -> Error.raise_unsupported_exception_printing exn
-
-let () = Error.register_exception_printer pp_exception
+let () =
+  Error.register_exception_printer (function
+    | Expected_operator qualified_identifier ->
+        Format.dprintf "Expected an operator bound at %a."
+          Qualified_identifier.pp qualified_identifier
+    | Unbound_identifier identifier ->
+        Format.dprintf "Identifier %a is unbound." Identifier.pp identifier
+    | Unbound_qualified_identifier qualified_identifier ->
+        Format.dprintf "Identifier %a is unbound." Qualified_identifier.pp
+          qualified_identifier
+    | Unbound_namespace qualified_identifier ->
+        Format.dprintf "Unbound namespace %a." Qualified_identifier.pp
+          qualified_identifier
+    | Expected_namespace qualified_identifier ->
+        Format.dprintf "Expected %a to be a namespace."
+          Qualified_identifier.pp qualified_identifier
+    | Expected_module qualified_identifier ->
+        Format.dprintf "Expected %a to be a module." Qualified_identifier.pp
+          qualified_identifier
+    | Bound_lf_type_constant qualified_identifier ->
+        Format.dprintf "%a is a bound LF type constant."
+          Qualified_identifier.pp qualified_identifier
+    | Bound_lf_term_constant qualified_identifier ->
+        Format.dprintf "%a is a bound LF term constant."
+          Qualified_identifier.pp qualified_identifier
+    | Bound_lf_term_variable qualified_identifier ->
+        Format.dprintf "%a is a bound LF term variable."
+          Qualified_identifier.pp qualified_identifier
+    | Bound_meta_variable qualified_identifier ->
+        Format.dprintf "%a is a bound meta-variable." Qualified_identifier.pp
+          qualified_identifier
+    | Bound_parameter_variable qualified_identifier ->
+        Format.dprintf "%a is a bound parameter variable."
+          Qualified_identifier.pp qualified_identifier
+    | Bound_substitution_variable qualified_identifier ->
+        Format.dprintf "%a is a bound substitution variable."
+          Qualified_identifier.pp qualified_identifier
+    | Bound_context_variable qualified_identifier ->
+        Format.dprintf "%a is a bound context variable."
+          Qualified_identifier.pp qualified_identifier
+    | Bound_schema_constant qualified_identifier ->
+        Format.dprintf "%a is a bound schema constant."
+          Qualified_identifier.pp qualified_identifier
+    | Bound_computation_variable qualified_identifier ->
+        Format.dprintf "%a is a bound computation variable."
+          Qualified_identifier.pp qualified_identifier
+    | Bound_computation_inductive_type_constant qualified_identifier ->
+        Format.dprintf
+          "%a is a bound computation-level inductive type constant."
+          Qualified_identifier.pp qualified_identifier
+    | Bound_computation_stratified_type_constant qualified_identifier ->
+        Format.dprintf
+          "%a is a bound computation-level stratified type constant."
+          Qualified_identifier.pp qualified_identifier
+    | Bound_computation_coinductive_type_constant qualified_identifier ->
+        Format.dprintf
+          "%a is a bound computation-level coinductive type constant."
+          Qualified_identifier.pp qualified_identifier
+    | Bound_computation_abbreviation_type_constant qualified_identifier ->
+        Format.dprintf
+          "%a is a bound computation-level abbreviation type constant."
+          Qualified_identifier.pp qualified_identifier
+    | Bound_computation_term_constructor qualified_identifier ->
+        Format.dprintf "%a is a bound computation-level term constructor."
+          Qualified_identifier.pp qualified_identifier
+    | Bound_computation_term_destructor qualified_identifier ->
+        Format.dprintf "%a is a bound computation-level term destructor."
+          Qualified_identifier.pp qualified_identifier
+    | Bound_query qualified_identifier ->
+        Format.dprintf "%a is a bound query." Qualified_identifier.pp
+          qualified_identifier
+    | Bound_mquery qualified_identifier ->
+        Format.dprintf "%a is a bound mquery." Qualified_identifier.pp
+          qualified_identifier
+    | Bound_module qualified_identifier ->
+        Format.dprintf "%a is a bound module." Qualified_identifier.pp
+          qualified_identifier
+    | Bound_program_constant qualified_identifier ->
+        Format.dprintf "%a is a bound program." Qualified_identifier.pp
+          qualified_identifier
+    | exn -> Error.raise_unsupported_exception_printing exn)

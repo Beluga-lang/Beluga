@@ -3,11 +3,40 @@ open Debug.Fmt
 
 let raise = raise
 
-exception Violation of string
+let printers : (exn -> Format.formatter -> unit) list Atomic.t =
+  Atomic.make []
 
-let violation msg =
-  Debug.printf (fun p -> p.fmt "[violation] %s" msg);
-  raise (Violation msg)
+let rec register_exception_printer printer =
+  (* This implementation is adapted from {!Printexc.register_printer}. *)
+  let old_printers = Atomic.get printers in
+  let new_printers = printer :: old_printers in
+  let success = Atomic.compare_and_set printers old_printers new_printers in
+  if Bool.not success then
+    (* A concurrent write occurred on {!printers}. Retry registering the
+       exception printer. *) register_exception_printer printer
+
+(** The exception raised when a pretty-printing function for exceptions
+    encounters an unsupported exception variant. This exception variant must
+    not be made public, and should only be used in
+    {!raise_unsupported_exception_printing} and
+    {!register_exception_printer}. *)
+exception Unsupported_exception_printing of exn
+
+let raise_unsupported_exception_printing exn =
+  raise (Unsupported_exception_printing exn)
+
+let find_printer_opt exn =
+  let printers = Atomic.get printers in
+  List.find_map
+    (fun printer ->
+      try Option.some (printer exn) with
+      | Unsupported_exception_printing _ -> Option.none)
+    printers
+
+let find_printer exn =
+  match find_printer_opt exn with
+  | Option.Some printer -> printer
+  | Option.None -> raise_unsupported_exception_printing exn
 
 (** The exception variant for exceptions annotated with source code locations
     for reporting. This exception variant must not be made public. *)
@@ -35,16 +64,6 @@ let[@inline] raise_at1 location cause =
 let[@inline] raise_at2 location1 location2 cause =
   raise (located_exception2 location1 location2 cause)
 
-let[@inline] discard_locations exn =
-  match exn with
-  | Located_exception { cause; _ } -> cause
-  | exn -> exn
-
-let[@inline] locations exn =
-  match exn with
-  | Located_exception { locations; _ } -> Option.some locations
-  | _ -> Option.none
-
 (** The exception variant for the composition of multiple related exceptions.
     This exception variant must not be made public. *)
 exception Composite_exception of { causes : exn List2.t }
@@ -53,6 +72,12 @@ let[@inline] composite_exception causes = Composite_exception { causes }
 
 let[@inline] composite_exception2 cause1 cause2 =
   composite_exception (List2.from cause1 cause2 [])
+
+let[@inline] raise_composite_exception causes =
+  raise (composite_exception causes)
+
+let[@inline] raise_composite_exception2 cause1 cause2 =
+  raise (composite_exception2 cause1 cause2)
 
 (** The exception variant for the aggregation of multiple unrelated
     exceptions. This exception variant must not be made public. *)
@@ -64,6 +89,12 @@ let[@inline] aggregate_exception exceptions =
 let[@inline] aggregate_exception2 exception1 exception2 =
   aggregate_exception (List2.pair exception1 exception2)
 
+let[@inline] raise_aggregate_exception exceptions =
+  raise (aggregate_exception exceptions)
+
+let[@inline] raise_aggregate_exception2 exception1 exception2 =
+  raise (aggregate_exception2 exception1 exception2)
+
 (** The exception variant used in {!raise_not_implemented} to signal that a
     case in the code is currently not implemented, but should be implemented
     someday. This exception variant must not be made public. *)
@@ -73,6 +104,14 @@ let raise_not_implemented ?location msg =
   match location with
   | Option.None -> raise (Not_implemented msg)
   | Option.Some location -> raise_at1 location (Not_implemented msg)
+
+exception Violation of string
+
+let violation ?location msg =
+  Debug.printf (fun p -> p.fmt "[violation] %s" msg);
+  match location with
+  | Option.None -> raise (Violation msg)
+  | Option.Some location -> raise_at1 location (Violation msg)
 
 type print_result = string
 
@@ -121,15 +160,6 @@ let print_with_location loc f =
   print_location loc;
   print f
 
-(* Since this printer is registered first, it will be executed only if all
-   other printers fail. *)
-let () =
-  Printexc.register_printer (fun cause ->
-      Option.some
-        (Format.asprintf
-           "Uncaught exception.@ Please report this as a bug.@.%s"
-           (Printexc.to_string_default cause)))
-
 let report_mismatch ppf title title_obj1 pp_obj1 obj1 title_obj2 pp_obj2 obj2
     =
   Format.fprintf ppf "@[<v>%s@," title;
@@ -147,17 +177,6 @@ let get_information () =
     (List.rev !information)
 
 let add_information message = information := message :: !information
-
-(** Register some basic printers. *)
-let () =
-  register_printer (fun [@warning "-8"] (Sys_error msg) ->
-      print (fun ppf -> Format.fprintf ppf "System error: %s" msg));
-
-  register_printer (fun [@warning "-8"] (Violation msg) ->
-      print (fun ppf ->
-          Format.fprintf ppf
-            "@[<v>Internal error (please report as a bug):@,@[%a@]@]"
-            Format.pp_print_string msg))
 
 (** {1 Printing Located Exceptions} *)
 
@@ -289,26 +308,50 @@ let[@inline] make_caret_line ~start_column ~stop_column length =
   String.init length (fun i ->
       if caret_start_index <= i && i < caret_stop_index then '^' else ' ')
 
+(** [line_number_prefix line_number max_line_count_length] is a prefix like
+    [123 |] for [line_number = 123] for displaying source file numbers in
+    error-reporting for located exceptions. [max_line_count_length] is the
+    character length of the maximum line number that will be printed in the
+    location snippet. This is used to add a left margin to the number to
+    show. *)
+let line_number_prefix line_number max_line_count_length =
+  let line_number_string = Int.show line_number in
+  let left_margin =
+    max_line_count_length - String.length line_number_string
+  in
+  String.init left_margin (Fun.const ' ') ^ line_number_string ^ " |"
+
+let add_line_number_prefix line_number max_line_count_length line carets =
+  let prefix = line_number_prefix line_number max_line_count_length in
+  let line' = prefix ^ line in
+  let carets_left_margin =
+    String.init (String.length prefix) (Fun.const ' ')
+  in
+  let carets' = carets_left_margin ^ carets in
+  (line', carets')
+
 (** [make_location_snippet location lines_by_number] is a list of pairs of
     strings [(l1, u1); (l2, u2); ...; (ln, un)] where [li] is an input source
     line in [lines_by_number] and [ui] is a line of carets ['^'] underlining
     codepoints in [location].
 
     That is, with [location] spanning from some start line to some stop line,
-    and prefetched lines [lines_by_number] indexed by their line number, this
-    function selects the lines that include [location], and generates lines
-    of caret underlining codepoints in [location]. *)
+    and prefetched lines [lines_by_number] indexed by their line number and
+    line length in codepoints, this function selects the lines that include
+    [location], and generates lines of caret underlining codepoints in
+    [location]. *)
 let make_location_snippet location lines_by_number =
   let start_line = Location.start_line location in
   let start_column = Location.start_column location in
   let stop_line = Location.stop_line location in
   let stop_column = Location.stop_column location in
+  let stop_line_count_length = String.length (Int.show stop_line) in
   match
     (* Get the lines spanned by [location] in [lines_by_number]. *)
     List.filter_map
       (fun (line_number, line) ->
         if start_line <= line_number && line_number <= stop_line then
-          Option.some line
+          Option.some (line_number, line)
         else Option.none)
       lines_by_number
   with
@@ -316,13 +359,13 @@ let make_location_snippet location lines_by_number =
       assert false
       (* [lines_by_number] is assumed to contain at least a line spanned by
          [location]. *)
-  | [ (length, x) ] ->
+  | [ (n, (length, x)) ] ->
       (* The location spans one line, so the caret start and stop columns
          occur in the same line. *)
       if Location.spanned_offsets location <> 0 then
         (* Carets can be added directly under the line. *)
         let underline = make_caret_line ~start_column ~stop_column length in
-        [ (x, underline) ]
+        [ add_line_number_prefix n stop_line_count_length x underline ]
       else
         (* The location points to the space between two characters, i.e.
            [start_column = stop_column]. A space needs to be spliced in the
@@ -333,8 +376,10 @@ let make_location_snippet location lines_by_number =
             (length + 1)
         in
         let spliced_line = Format.asprintf "%s %s" left right in
-        [ (spliced_line, underline) ]
-  | (length_first, x_first) :: xs ->
+        [ add_line_number_prefix n stop_line_count_length spliced_line
+            underline
+        ]
+  | (n_first, (length_first, x_first)) :: xs ->
       (* The location spans at least two lines. In the first line, the caret
          start column is [start_column], and in the last line, the caret stop
          column is [stop_column]. All other lines are fully underlined. *)
@@ -345,19 +390,25 @@ let make_location_snippet location lines_by_number =
       let rec make_rest = function
         | [] ->
             assert false (* [add_rest] is never called with an empty list. *)
-        | [ (length_last, x_last) ] ->
+        | [ (n_last, (length_last, x_last)) ] ->
             let underline_last =
               make_caret_line ~start_column:1 ~stop_column length_last
             in
-            [ (x_last, underline_last) ]
-        | (length_intermediate, x_intermediate) :: xs ->
+            [ add_line_number_prefix n_last stop_line_count_length x_last
+                underline_last
+            ]
+        | (n_intermediate, (length_intermediate, x_intermediate)) :: xs ->
             let underline_intermediate =
               make_caret_line ~start_column:1
                 ~stop_column:(length_intermediate + 1) length_intermediate
             in
-            (x_intermediate, underline_intermediate) :: make_rest xs
+            add_line_number_prefix n_intermediate stop_line_count_length
+              x_intermediate underline_intermediate
+            :: make_rest xs
       in
-      (x_first, underline_first) :: make_rest xs
+      add_line_number_prefix n_first stop_line_count_length x_first
+        underline_first
+      :: make_rest xs
 
 let make_location_snippets locations =
   (* Group locations by filename *)
@@ -382,68 +433,118 @@ let make_location_snippets locations =
                 (location, snippet)))
   |> Seq.to_list
 
-let located_exception_to_string cause locations =
+type stag = Format.stag = ..
+
+type stag += Ansi_bold | Ansi_bold_red | Ansi_bold_red_bg | Ansi_red
+
+exception Unsupported_stag of stag
+
+(* See ANSI escape sequences:
+   https://gist.github.com/fnky/458719343aabd01cfb17a3a4f7296797 *)
+let mark_open_ansi_stags = function
+  | Ansi_bold -> "\027[1m"
+  | Ansi_bold_red -> "\027[1;31m"
+  | Ansi_bold_red_bg -> "\027[1;41m"
+  | Ansi_red -> "\027[31m"
+  | stag -> raise (Unsupported_stag stag)
+
+let mark_close_ansi_stags = function
+  | Ansi_bold
+  | Ansi_bold_red
+  | Ansi_bold_red_bg
+  | Ansi_red ->
+      "\027[0m"
+  | stag -> raise (Unsupported_stag stag)
+
+let with_ansi_stags =
+  Format.with_stags ~mark_open_stag:mark_open_ansi_stags
+    ~mark_close_stag:mark_close_ansi_stags
+    ~print_open_stag:(fun _ppf -> ())
+    ~print_close_stag:(fun _ppf -> ())
+
+let pp_located_exception cause_printer locations =
   try
-    let snippets = make_location_snippets locations in
-    (* See ANSI escape sequences for the meaning of ["\x1b[1m"],
-       ["\x1b[31m"], ["\x1b[1;31m"] and ["\x1b[0m"] for changing the font
-       style and color of terminal outputs. *)
-    let pp_snippet ppf (location, lines) =
-      Format.fprintf ppf "@[<v 0>\x1b[1m%a:\x1b[0m@,%a@]" Location.pp
-        location
-        (List.pp ~pp_sep:Format.pp_print_cut (fun ppf (line, carets) ->
-             Format.fprintf ppf "%s@,\x1b[31m%s\x1b[0m" line carets))
-        lines
-    in
-    Format.asprintf "@[<v 0>%a@,\x1b[1;31mError:\x1b[0m %s@]"
-      (List.pp ~pp_sep:Format.pp_print_cut pp_snippet)
-      snippets
-      (Printexc.to_string cause)
+    let snippets = make_location_snippets (List1.to_list locations) in
+    if List.length snippets > 0 then
+      let pp_snippet ppf (location, lines) =
+        Format.fprintf ppf "@[<v 0>%t:@,%a@]"
+          (Format.in_stag Ansi_bold
+             (Format.dprintf "%a" Location.pp location))
+          (List.pp ~pp_sep:Format.pp_print_cut (fun ppf (line, carets) ->
+               Format.fprintf ppf "%s@,%t" line
+                 (Format.in_stag Ansi_red (Format.dprintf "%s" carets))))
+          lines
+      in
+      Format.dprintf "@[<v 0>%a@,%t %t@]"
+        (List.pp ~pp_sep:Format.pp_print_cut pp_snippet)
+        snippets
+        (Format.in_stag Ansi_bold_red (Format.dprintf "Error:"))
+        cause_printer
+    else
+      (* All locations in [locations] are ghost locations. *)
+      Format.dprintf "@[<v 0>%t %t@]"
+        (Format.in_stag Ansi_bold_red (Format.dprintf "Error:"))
+        cause_printer
   with
   | _ ->
       (* An exception occurred while trying to read the snippets. Report the
          exception without the snippets. *)
-      Format.asprintf "@[<v 0>%a@,%s@]"
-        (List.pp ~pp_sep:Format.pp_print_cut Location.pp)
-        locations
-        (Printexc.to_string cause)
-
-(** The exception raised when a pretty-printing function for exceptions
-    encounters an unsupported exception variant. This exception variant must
-    not be made public, and should only be used in
-    {!raise_unsupported_exception_printing} and
-    {!register_exception_printer}. *)
-exception Unsupported_exception_printing of exn
-
-let raise_unsupported_exception_printing exn =
-  raise (Unsupported_exception_printing exn)
-
-let register_exception_printer ppf =
-  Printexc.register_printer (fun exn ->
-      try Option.some (Format.stringify ppf exn) with
-      | Unsupported_exception_printing _ -> Option.none)
+      Format.dprintf "@[<v 0>%a@,%t@]"
+        (List1.pp ~pp_sep:Format.pp_print_cut Location.pp)
+        locations cause_printer
 
 let () =
-  Printexc.register_printer (function
+  register_exception_printer (function
     | Located_exception { cause; locations } ->
-        Option.some
-          (located_exception_to_string cause (List1.to_list locations))
+        let cause_printer = find_printer cause in
+        pp_located_exception cause_printer locations
     | Composite_exception { causes } ->
-        Option.some
-          (Format.asprintf "@[<v 0>%a@]"
-             (List2.pp ~pp_sep:Format.pp_print_cut String.pp)
-             (List2.map Printexc.to_string causes))
+        Format.dprintf "@[<v 0>%a@]%!"
+          (List2.pp ~pp_sep:Format.pp_print_cut Fun.apply)
+          (List2.map find_printer causes)
     | Aggregate_exception { exceptions } ->
-        Option.some
-          (Format.asprintf "@[<v 0>%a@]"
-             (List2.pp
-                ~pp_sep:(fun ppf () -> Format.fprintf ppf "@,@,")
-                String.pp)
-             (List2.map Printexc.to_string exceptions))
-    | _ -> Option.none)
+        Format.dprintf "@[<v 0>%a@]%!"
+          (List2.pp
+             ~pp_sep:(fun ppf () -> Format.fprintf ppf "@,@,")
+             Fun.apply)
+          (List2.map find_printer exceptions)
+    | Not_implemented msg ->
+        Format.dprintf "@[<hov 0>%t@ Please report this as a bug.@ %s@]%!"
+          (Format.in_stag Ansi_bold_red_bg
+             (Format.dprintf "Not implemented."))
+          msg
+    | Sys_error msg ->
+        Format.dprintf "@[<v 0>%t@ %s@]%!"
+          (Format.in_stag Ansi_bold_red (Format.dprintf "System error:"))
+          msg
+    | Violation msg ->
+        Format.dprintf "@[<hov 0>%t@ Please report this as a bug.@ %s@]%!"
+          (Format.in_stag Ansi_bold_red_bg
+             (Format.dprintf "Internal error."))
+          msg
+    | cause -> raise_unsupported_exception_printing cause)
 
 let () =
-  register_exception_printer (fun ppf -> function
-    | Not_implemented msg ->
-        Format.fprintf ppf "@[<v 0>Not implemented.@,%s@]" msg
-    | exn -> raise_unsupported_exception_printing exn)
+  Printexc.set_uncaught_exception_handler (fun exn backtrace ->
+      let exn_printer =
+        match find_printer_opt exn with
+        | Option.Some printer -> Format.dprintf "@[<v 0>%t@]@." printer
+        | Option.None ->
+            if Printexc.backtrace_status () then
+              (* [backtrace] is non-empty. *)
+              Format.dprintf
+                "@[<hov 0>%t@ Please report this as a bug.@ %s@ %s@]@."
+                (Format.in_stag Ansi_bold_red_bg
+                   (Format.dprintf "Uncaught exception:"))
+                (Printexc.to_string_default exn)
+                (Printexc.raw_backtrace_to_string backtrace)
+            else
+              (* [backtrace] is empty since bracktrace recording was not
+                 enabled. *)
+              Format.dprintf
+                "@[<hov 0>%t@ Please report this as a bug.@ %s@]@."
+                (Format.in_stag Ansi_bold_red_bg
+                   (Format.dprintf "Uncaught exception:"))
+                (Printexc.to_string_default exn)
+      in
+      with_ansi_stags exn_printer Format.err_formatter)

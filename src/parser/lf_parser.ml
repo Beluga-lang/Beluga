@@ -234,11 +234,11 @@ end
 
 let lf_object = LF_parsers.lf_object
 
-let pp_exception ppf = function
+let exception_printer = function
   | Ambiguous_lf_forward_arrow ->
-      Format.fprintf ppf "This LF forward arrow operator is ambiguous."
+      Format.dprintf "This LF forward arrow operator is ambiguous."
   | Ambiguous_lf_backward_arrow ->
-      Format.fprintf ppf "This LF backward arrow operator is ambiguous."
-  | cause -> pp_exception' ppf cause
+      Format.dprintf "This LF backward arrow operator is ambiguous."
+  | cause -> Error.raise_unsupported_exception_printing cause
 
-let () = Error.register_exception_printer pp_exception
+let () = Error.register_exception_printer exception_printer

@@ -61,13 +61,13 @@ module Lf_precedence = struct
     | LF.Typ.Pi _ -> Static 1
     | LF.Typ.Arrow _ -> Static 3
     | LF.Typ.Application
-        { applicand = LF.Typ.Constant { operator; quoted; _ }; _ }
-      when quoted || Operator.is_prefix operator
+        { applicand = LF.Typ.Constant { operator; prefixed; _ }; _ }
+      when prefixed || Operator.is_prefix operator
            (* Juxtapositions are of higher precedence than user-defined
               operators *) ->
         Static lf_application_precedence
     | LF.Typ.Application
-        { applicand = LF.Typ.Constant { operator; quoted = false; _ }; _ }
+        { applicand = LF.Typ.Constant { operator; prefixed = false; _ }; _ }
     (* User-defined operator application *) ->
         User_defined (Operator.precedence operator)
     | LF.Typ.Application _ -> Static lf_application_precedence
@@ -78,13 +78,13 @@ module Lf_precedence = struct
     | LF.Term.Abstraction _ -> Static 1
     | LF.Term.Type_annotated _ -> Static 2
     | LF.Term.Application
-        { applicand = LF.Term.Constant { operator; quoted; _ }; _ }
-      when quoted || Operator.is_prefix operator
+        { applicand = LF.Term.Constant { operator; prefixed; _ }; _ }
+      when prefixed || Operator.is_prefix operator
            (* Juxtapositions are of higher precedence than user-defined
               operators *) ->
         Static lf_application_precedence
     | LF.Term.Application
-        { applicand = LF.Term.Constant { operator; quoted = false; _ }; _ }
+        { applicand = LF.Term.Constant { operator; prefixed = false; _ }; _ }
     (* User-defined operator application *) ->
         User_defined (Operator.precedence operator)
     | LF.Term.Application _ -> Static lf_application_precedence
@@ -122,13 +122,13 @@ module Clf_precedence = struct
     | CLF.Typ.Arrow _ -> Static 3
     | CLF.Typ.Block _ -> Static 4
     | CLF.Typ.Application
-        { applicand = CLF.Typ.Constant { operator; quoted; _ }; _ }
-      when quoted || Operator.is_prefix operator
+        { applicand = CLF.Typ.Constant { operator; prefixed; _ }; _ }
+      when prefixed || Operator.is_prefix operator
            (* Juxtapositions are of higher precedence than user-defined
               operators *) ->
         Static clf_application_precedence
     | CLF.Typ.Application
-        { applicand = CLF.Typ.Constant { operator; quoted = false; _ }; _ }
+        { applicand = CLF.Typ.Constant { operator; prefixed = false; _ }; _ }
     (* User-defined operator application *) ->
         User_defined (Operator.precedence operator)
     | CLF.Typ.Application _ -> Static clf_application_precedence
@@ -139,13 +139,15 @@ module Clf_precedence = struct
     | CLF.Term.Abstraction _ -> Static 1
     | CLF.Term.Type_annotated _ -> Static 2
     | CLF.Term.Application
-        { applicand = CLF.Term.Constant { operator; quoted; _ }; _ }
-      when quoted || Operator.is_prefix operator
+        { applicand = CLF.Term.Constant { operator; prefixed; _ }; _ }
+      when prefixed || Operator.is_prefix operator
            (* Juxtapositions are of higher precedence than user-defined
               operators *) ->
         Static clf_application_precedence
     | CLF.Term.Application
-        { applicand = CLF.Term.Constant { operator; quoted = false; _ }; _ }
+        { applicand = CLF.Term.Constant { operator; prefixed = false; _ }
+        ; _
+        }
     (* User-defined operator application *) ->
         User_defined (Operator.precedence operator)
     | CLF.Term.Application _ -> Static clf_application_precedence
@@ -164,14 +166,16 @@ module Clf_precedence = struct
     | CLF.Term.Pattern.Abstraction _ -> Static 1
     | CLF.Term.Pattern.Type_annotated _ -> Static 2
     | CLF.Term.Pattern.Application
-        { applicand = CLF.Term.Pattern.Constant { operator; quoted; _ }; _ }
-      when quoted || Operator.is_prefix operator
+        { applicand = CLF.Term.Pattern.Constant { operator; prefixed; _ }
+        ; _
+        }
+      when prefixed || Operator.is_prefix operator
            (* Juxtapositions are of higher precedence than user-defined
               operators *) ->
         Static clf_application_precedence
     | CLF.Term.Pattern.Application
         { applicand =
-            CLF.Term.Pattern.Constant { operator; quoted = false; _ }
+            CLF.Term.Pattern.Constant { operator; prefixed = false; _ }
         ; _
         }
     (* User-defined operator application *) ->
@@ -248,25 +252,26 @@ module Comp_precedence = struct
     | Comp.Typ.Cross _ -> Static 3
     | Comp.Typ.Application
         { applicand =
-            ( Comp.Typ.Inductive_typ_constant { operator; quoted; _ }
-            | Comp.Typ.Stratified_typ_constant { operator; quoted; _ }
-            | Comp.Typ.Coinductive_typ_constant { operator; quoted; _ }
-            | Comp.Typ.Abbreviation_typ_constant { operator; quoted; _ } )
+            ( Comp.Typ.Inductive_typ_constant { operator; prefixed; _ }
+            | Comp.Typ.Stratified_typ_constant { operator; prefixed; _ }
+            | Comp.Typ.Coinductive_typ_constant { operator; prefixed; _ }
+            | Comp.Typ.Abbreviation_typ_constant { operator; prefixed; _ } )
         ; _
         }
-      when quoted || Operator.is_prefix operator
+      when prefixed || Operator.is_prefix operator
            (* Juxtapositions are of higher precedence than user-defined
               operators *) ->
         Static type_application_precedence
     | Comp.Typ.Application
         { applicand =
-            ( Comp.Typ.Inductive_typ_constant { operator; quoted = false; _ }
+            ( Comp.Typ.Inductive_typ_constant
+                { operator; prefixed = false; _ }
             | Comp.Typ.Stratified_typ_constant
-                { operator; quoted = false; _ }
+                { operator; prefixed = false; _ }
             | Comp.Typ.Coinductive_typ_constant
-                { operator; quoted = false; _ }
+                { operator; prefixed = false; _ }
             | Comp.Typ.Abbreviation_typ_constant
-                { operator; quoted = false; _ } )
+                { operator; prefixed = false; _ } )
         ; _
         }
     (* User-defined operator application *) ->
@@ -283,14 +288,14 @@ module Comp_precedence = struct
     match expression with
     | Comp.Expression.Type_annotated _ -> Static 1
     | Comp.Expression.Application
-        { applicand = Comp.Expression.Constant { operator; quoted; _ }; _ }
-      when quoted || Operator.is_prefix operator
+        { applicand = Comp.Expression.Constant { operator; prefixed; _ }; _ }
+      when prefixed || Operator.is_prefix operator
            (* Juxtapositions are of higher precedence than user-defined
               operators *) ->
         Static expression_application_precedence
     | Comp.Expression.Application
         { applicand =
-            Comp.Expression.Constant { operator; quoted = false; _ }
+            Comp.Expression.Constant { operator; prefixed = false; _ }
         ; _
         }
     (* User-defined operator application *) ->
@@ -318,13 +323,13 @@ module Comp_precedence = struct
     | Comp.Pattern.Meta_type_annotated _ -> Static 1
     | Comp.Pattern.Type_annotated _ -> Static 2
     | Comp.Pattern.Application
-        { applicand = Comp.Pattern.Constant { operator; quoted; _ }; _ }
-      when quoted || Operator.is_prefix operator
+        { applicand = Comp.Pattern.Constant { operator; prefixed; _ }; _ }
+      when prefixed || Operator.is_prefix operator
            (* Juxtapositions are of higher precedence than user-defined
               operators *) ->
         Static pattern_application_precedence
     | Comp.Pattern.Application
-        { applicand = Comp.Pattern.Constant { operator; quoted = false; _ }
+        { applicand = Comp.Pattern.Constant { operator; prefixed = false; _ }
         ; _
         }
     (* User-defined operator application *) ->

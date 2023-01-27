@@ -348,8 +348,8 @@ end) : BELUGA_HTML with type state = Html_state.state = struct
   and pp_lf_typ state ppf typ =
     let parent_precedence = precedence_of_lf_typ typ in
     match typ with
-    | LF.Typ.Constant { identifier; quoted; operator; _ } ->
-        if quoted && Bool.not (Operator.is_nullary operator) then
+    | LF.Typ.Constant { identifier; prefixed; operator; _ } ->
+        if prefixed && Bool.not (Operator.is_nullary operator) then
           Format.fprintf ppf "(%a)"
             (pp_lf_type_constant_invoke state)
             identifier
@@ -357,13 +357,13 @@ end) : BELUGA_HTML with type state = Html_state.state = struct
     | LF.Typ.Application { applicand; arguments; _ } ->
         pp_application
           ~guard_operator:(function
-            | LF.Typ.Constant { operator; quoted = false; _ } ->
+            | LF.Typ.Constant { operator; prefixed = false; _ } ->
                 `Operator operator
             | _ -> `Term)
           ~guard_operator_application:(function
             | LF.Term.Application
                 { applicand =
-                    LF.Term.Constant { operator; quoted = false; _ }
+                    LF.Term.Constant { operator; prefixed = false; _ }
                 ; _
                 } ->
                 `Operator_application operator
@@ -429,22 +429,22 @@ end) : BELUGA_HTML with type state = Html_state.state = struct
     match term with
     | LF.Term.Variable { identifier; _ } ->
         (pp_lf_variable state) ppf identifier
-    | LF.Term.Constant { identifier; quoted = true; _ } ->
+    | LF.Term.Constant { identifier; prefixed = true; _ } ->
         Format.fprintf ppf "(%a)"
           (pp_lf_term_constant_invoke state)
           identifier
-    | LF.Term.Constant { identifier; quoted = false; _ } ->
+    | LF.Term.Constant { identifier; prefixed = false; _ } ->
         (pp_lf_term_constant_invoke state) ppf identifier
     | LF.Term.Application { applicand; arguments; _ } ->
         pp_application
           ~guard_operator:(function
-            | LF.Term.Constant { operator; quoted = false; _ } ->
+            | LF.Term.Constant { operator; prefixed = false; _ } ->
                 `Operator operator
             | _ -> `Term)
           ~guard_operator_application:(function
             | LF.Term.Application
                 { applicand =
-                    LF.Term.Constant { operator; quoted = false; _ }
+                    LF.Term.Constant { operator; prefixed = false; _ }
                 ; _
                 } ->
                 `Operator_application operator
@@ -485,8 +485,8 @@ end) : BELUGA_HTML with type state = Html_state.state = struct
   let rec pp_clf_typ state ppf typ =
     let parent_precedence = precedence_of_clf_typ typ in
     match typ with
-    | CLF.Typ.Constant { identifier; quoted; operator; _ } ->
-        if quoted && Bool.not (Operator.is_nullary operator) then
+    | CLF.Typ.Constant { identifier; prefixed; operator; _ } ->
+        if prefixed && Bool.not (Operator.is_nullary operator) then
           Format.fprintf ppf "(%a)"
             (pp_lf_type_constant_invoke state)
             identifier
@@ -494,13 +494,13 @@ end) : BELUGA_HTML with type state = Html_state.state = struct
     | CLF.Typ.Application { applicand; arguments; _ } ->
         pp_application
           ~guard_operator:(function
-            | CLF.Typ.Constant { operator; quoted = false; _ } ->
+            | CLF.Typ.Constant { operator; prefixed = false; _ } ->
                 `Operator operator
             | _ -> `Term)
           ~guard_operator_application:(function
             | CLF.Term.Application
                 { applicand =
-                    CLF.Term.Constant { operator; quoted = false; _ }
+                    CLF.Term.Constant { operator; prefixed = false; _ }
                 ; _
                 } ->
                 `Operator_application operator
@@ -572,22 +572,22 @@ end) : BELUGA_HTML with type state = Html_state.state = struct
         (pp_parameter_variable state) ppf identifier
     | CLF.Term.Substitution_variable { identifier; _ } ->
         (pp_substitution_variable state) ppf identifier
-    | CLF.Term.Constant { identifier; quoted = true; _ } ->
+    | CLF.Term.Constant { identifier; prefixed = true; _ } ->
         Format.fprintf ppf "(%a)"
           (pp_lf_term_constant_invoke state)
           identifier
-    | CLF.Term.Constant { identifier; quoted = false; _ } ->
+    | CLF.Term.Constant { identifier; prefixed = false; _ } ->
         (pp_lf_term_constant_invoke state) ppf identifier
     | CLF.Term.Application { applicand; arguments; _ } ->
         pp_application
           ~guard_operator:(function
-            | CLF.Term.Constant { operator; quoted = false; _ } ->
+            | CLF.Term.Constant { operator; prefixed = false; _ } ->
                 `Operator operator
             | _ -> `Term)
           ~guard_operator_application:(function
             | CLF.Term.Application
                 { applicand =
-                    CLF.Term.Constant { operator; quoted = false; _ }
+                    CLF.Term.Constant { operator; prefixed = false; _ }
                 ; _
                 } ->
                 `Operator_application operator
@@ -761,22 +761,23 @@ end) : BELUGA_HTML with type state = Html_state.state = struct
         (pp_parameter_variable state) ppf identifier
     | CLF.Term.Pattern.Substitution_variable { identifier; _ } ->
         (pp_substitution_variable state) ppf identifier
-    | CLF.Term.Pattern.Constant { identifier; quoted = true; _ } ->
+    | CLF.Term.Pattern.Constant { identifier; prefixed = true; _ } ->
         Format.fprintf ppf "(%a)"
           (pp_lf_term_constant_invoke state)
           identifier
-    | CLF.Term.Pattern.Constant { identifier; quoted = false; _ } ->
+    | CLF.Term.Pattern.Constant { identifier; prefixed = false; _ } ->
         (pp_lf_term_constant_invoke state) ppf identifier
     | CLF.Term.Pattern.Application { applicand; arguments; _ } ->
         pp_application
           ~guard_operator:(function
-            | CLF.Term.Pattern.Constant { operator; quoted = false; _ } ->
+            | CLF.Term.Pattern.Constant { operator; prefixed = false; _ } ->
                 `Operator operator
             | _ -> `Term)
           ~guard_operator_application:(function
             | CLF.Term.Pattern.Application
                 { applicand =
-                    CLF.Term.Pattern.Constant { operator; quoted = false; _ }
+                    CLF.Term.Pattern.Constant
+                      { operator; prefixed = false; _ }
                 ; _
                 } ->
                 `Operator_application operator
@@ -1110,29 +1111,31 @@ end) : BELUGA_HTML with type state = Html_state.state = struct
   and pp_comp_typ state ppf typ =
     let parent_precedence = precedence_of_comp_typ typ in
     match typ with
-    | Comp.Typ.Inductive_typ_constant { identifier; operator; quoted; _ } ->
-        if quoted && Bool.not (Operator.is_nullary operator) then
+    | Comp.Typ.Inductive_typ_constant { identifier; operator; prefixed; _ }
+      ->
+        if prefixed && Bool.not (Operator.is_nullary operator) then
           Format.fprintf ppf "(%a)"
             (pp_computation_inductive_constant_invoke state)
             identifier
         else (pp_computation_inductive_constant_invoke state) ppf identifier
-    | Comp.Typ.Stratified_typ_constant { identifier; operator; quoted; _ } ->
-        if quoted && Bool.not (Operator.is_nullary operator) then
+    | Comp.Typ.Stratified_typ_constant { identifier; operator; prefixed; _ }
+      ->
+        if prefixed && Bool.not (Operator.is_nullary operator) then
           Format.fprintf ppf "(%a)"
             (pp_computation_stratified_constant_invoke state)
             identifier
         else (pp_computation_stratified_constant_invoke state) ppf identifier
-    | Comp.Typ.Coinductive_typ_constant { identifier; operator; quoted; _ }
+    | Comp.Typ.Coinductive_typ_constant { identifier; operator; prefixed; _ }
       ->
-        if quoted && Bool.not (Operator.is_nullary operator) then
+        if prefixed && Bool.not (Operator.is_nullary operator) then
           Format.fprintf ppf "(%a)"
             (pp_computation_coinductive_constant_invoke state)
             identifier
         else
           (pp_computation_coinductive_constant_invoke state) ppf identifier
-    | Comp.Typ.Abbreviation_typ_constant { identifier; operator; quoted; _ }
-      ->
-        if quoted && Bool.not (Operator.is_nullary operator) then
+    | Comp.Typ.Abbreviation_typ_constant
+        { identifier; operator; prefixed; _ } ->
+        if prefixed && Bool.not (Operator.is_nullary operator) then
           Format.fprintf ppf "(%a)"
             (pp_computation_abbreviation_constant_invoke state)
             identifier
@@ -1216,13 +1219,13 @@ end) : BELUGA_HTML with type state = Html_state.state = struct
         | Comp.Typ.Application
             { applicand =
                 ( Comp.Typ.Inductive_typ_constant
-                    { operator; quoted = false; _ }
+                    { operator; prefixed = false; _ }
                 | Comp.Typ.Stratified_typ_constant
-                    { operator; quoted = false; _ }
+                    { operator; prefixed = false; _ }
                 | Comp.Typ.Coinductive_typ_constant
-                    { operator; quoted = false; _ }
+                    { operator; prefixed = false; _ }
                 | Comp.Typ.Abbreviation_typ_constant
-                    { operator; quoted = false; _ } ) as applicand
+                    { operator; prefixed = false; _ } ) as applicand
             ; _
             } -> (
             match Operator.fixity operator with
@@ -1268,8 +1271,8 @@ end) : BELUGA_HTML with type state = Html_state.state = struct
     match expression with
     | Comp.Expression.Variable { identifier; _ } ->
         (pp_computation_variable state) ppf identifier
-    | Comp.Expression.Constant { identifier; quoted; operator; _ } ->
-        if quoted && Bool.not (Operator.is_nullary operator) then
+    | Comp.Expression.Constant { identifier; prefixed; operator; _ } ->
+        if prefixed && Bool.not (Operator.is_nullary operator) then
           Format.fprintf ppf "(%a)"
             (pp_computation_constructor_invoke state)
             identifier
@@ -1390,13 +1393,14 @@ end) : BELUGA_HTML with type state = Html_state.state = struct
     | Comp.Expression.Application { applicand; arguments; _ } ->
         pp_application
           ~guard_operator:(function
-            | Comp.Expression.Constant { operator; quoted = false; _ } ->
+            | Comp.Expression.Constant { operator; prefixed = false; _ } ->
                 `Operator operator
             | _ -> `Term)
           ~guard_operator_application:(function
             | Comp.Expression.Application
                 { applicand =
-                    Comp.Expression.Constant { operator; quoted = false; _ }
+                    Comp.Expression.Constant
+                      { operator; prefixed = false; _ }
                 ; _
                 } ->
                 `Operator_application operator
@@ -1411,8 +1415,8 @@ end) : BELUGA_HTML with type state = Html_state.state = struct
     let parent_precedence = precedence_of_comp_pattern pattern in
     match pattern with
     | Comp.Pattern.Variable { identifier; _ } -> Identifier.pp ppf identifier
-    | Comp.Pattern.Constant { identifier; quoted; operator; _ } ->
-        if quoted && Bool.not (Operator.is_nullary operator) then
+    | Comp.Pattern.Constant { identifier; prefixed; operator; _ } ->
+        if prefixed && Bool.not (Operator.is_nullary operator) then
           Format.fprintf ppf "(%a)" Qualified_identifier.pp identifier
         else Qualified_identifier.pp ppf identifier
     | Comp.Pattern.Meta_object { meta_pattern; _ } ->
@@ -1440,13 +1444,13 @@ end) : BELUGA_HTML with type state = Html_state.state = struct
     | Comp.Pattern.Application { applicand; arguments; _ } ->
         pp_application
           ~guard_operator:(function
-            | Comp.Pattern.Constant { operator; quoted = false; _ } ->
+            | Comp.Pattern.Constant { operator; prefixed = false; _ } ->
                 `Operator operator
             | _ -> `Term)
           ~guard_operator_application:(function
             | Comp.Pattern.Application
                 { applicand =
-                    Comp.Pattern.Constant { operator; quoted = false; _ }
+                    Comp.Pattern.Constant { operator; prefixed = false; _ }
                 ; _
                 } ->
                 `Operator_application operator

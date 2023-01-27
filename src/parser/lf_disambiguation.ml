@@ -190,9 +190,9 @@ module Make_lf_application_disambiguation_state
 
   let guard_operator expression =
     match expression with
-    | Synprs.LF.Object.Raw_identifier { quoted; _ }
-    | Synprs.LF.Object.Raw_qualified_identifier { quoted; _ }
-      when quoted ->
+    | Synprs.LF.Object.Raw_identifier { prefixed; _ }
+    | Synprs.LF.Object.Raw_qualified_identifier { prefixed; _ }
+      when prefixed ->
         return Option.none
     | Synprs.LF.Object.Raw_identifier { identifier; _ } ->
         let identifier = Qualified_identifier.make_simple identifier in
@@ -302,7 +302,7 @@ module Make (Bindings_state : BINDINGS_STATE) :
         Error.raise_at1 location Illegal_lambda_lf_type
     | Synprs.LF.Object.Raw_annotated { location; _ } ->
         Error.raise_at1 location Illegal_annotated_lf_type
-    | Synprs.LF.Object.Raw_identifier { location; identifier; quoted } -> (
+    | Synprs.LF.Object.Raw_identifier { location; identifier; prefixed } -> (
         (* As an LF type, plain identifiers are necessarily bound LF
            type-level constants. *)
         let qualified_identifier =
@@ -316,7 +316,7 @@ module Make (Bindings_state : BINDINGS_STATE) :
                  { location
                  ; identifier = qualified_identifier
                  ; operator
-                 ; quoted
+                 ; prefixed
                  })
         | Result.Ok entry ->
             Error.raise_at1 location
@@ -327,7 +327,7 @@ module Make (Bindings_state : BINDINGS_STATE) :
               (Unbound_lf_type_constant qualified_identifier)
         | Result.Error cause -> Error.raise_at1 location cause)
     | Synprs.LF.Object.Raw_qualified_identifier
-        { location; identifier; quoted } -> (
+        { location; identifier; prefixed } -> (
         (* Qualified identifiers without namespaces were parsed as plain
            identifiers *)
         assert (List.length (Qualified_identifier.namespaces identifier) >= 1);
@@ -339,7 +339,7 @@ module Make (Bindings_state : BINDINGS_STATE) :
           ->
             return
               (Synext.LF.Typ.Constant
-                 { location; identifier; operator; quoted })
+                 { location; identifier; operator; prefixed })
         | Result.Ok entry ->
             Error.raise_at1 location
               (Error.composite_exception2 Expected_lf_type_constant
@@ -398,7 +398,7 @@ module Make (Bindings_state : BINDINGS_STATE) :
         Error.raise_at1 location Illegal_forward_arrow_lf_term
     | Synprs.LF.Object.Raw_arrow { location; orientation = `Backward; _ } ->
         Error.raise_at1 location Illegal_backward_arrow_lf_term
-    | Synprs.LF.Object.Raw_identifier { location; identifier; quoted } -> (
+    | Synprs.LF.Object.Raw_identifier { location; identifier; prefixed } -> (
         (* As an LF term, plain identifiers are either term-level constants
            or variables (bound or free). *)
         let qualified_identifier =
@@ -414,7 +414,7 @@ module Make (Bindings_state : BINDINGS_STATE) :
                  { location
                  ; identifier = qualified_identifier
                  ; operator
-                 ; quoted
+                 ; prefixed
                  })
         | Result.Ok (Lf_term_variable, _) ->
             (* [identifier] appears as an LF bound variable *)
@@ -431,7 +431,7 @@ module Make (Bindings_state : BINDINGS_STATE) :
             return (Synext.LF.Term.Variable { location; identifier })
         | Result.Error cause -> Error.raise_at1 location cause)
     | Synprs.LF.Object.Raw_qualified_identifier
-        { location; identifier; quoted } -> (
+        { location; identifier; prefixed } -> (
         (* Qualified identifiers without namespaces were parsed as plain
            identifiers *)
         assert (List.length (Qualified_identifier.namespaces identifier) >= 1);
@@ -446,7 +446,7 @@ module Make (Bindings_state : BINDINGS_STATE) :
             (* [identifier] appears as an LF term-level constant *)
             return
               (Synext.LF.Term.Constant
-                 { location; identifier; operator; quoted })
+                 { location; identifier; operator; prefixed })
         | Result.Ok entry ->
             (* [identifier] appears as a bound entry that is not an LF
                term-level constant *)

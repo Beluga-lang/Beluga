@@ -96,10 +96,10 @@ module Make_parenthesizer (Precedence : Ord.ORD) : sig
       arguments.
 
       - [~guard_operator applicand] is [`Operator operator] if [applicand] is
-        an unquoted operator, and [`Term] otherwise.
+        a prefixed operator, and [`Term] otherwise.
       - [~guard_operator_application argument] is
         [`Operator_application operator] if [argument] is the application of
-        an unquoted operator, and [`Term] otherwise.
+        a prefixed operator, and [`Term] otherwise.
       - [~precedence_of_applicand applicand] is the precedence of
         [applicand].
       - [~precedence_of_argument argument] is the precedence of [argument].

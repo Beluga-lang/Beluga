@@ -176,12 +176,12 @@ end = struct
       $> (function
            | location, `Qualified identifier ->
                Synprs.CLF.Object.Raw_qualified_identifier
-                 { location; identifier; quoted = false }
+                 { location; identifier; prefixed = false }
            | location, `Plain identifier ->
                Synprs.CLF.Object.Raw_identifier
                  { location
                  ; identifier = (identifier, `Plain)
-                 ; quoted = false
+                 ; prefixed = false
                  })
       |> labelled "Contextual LF constant or variable"
     and parameter_variable =
@@ -189,14 +189,17 @@ end = struct
       $> (fun identifier ->
            let location = Identifier.location identifier in
            Synprs.CLF.Object.Raw_identifier
-             { location; identifier = (identifier, `Hash); quoted = false })
+             { location; identifier = (identifier, `Hash); prefixed = false })
       |> labelled "Parameter variable"
     and substitution_variable =
       dollar_identifier
       $> (fun identifier ->
            let location = Identifier.location identifier in
            Synprs.CLF.Object.Raw_identifier
-             { location; identifier = (identifier, `Dollar); quoted = false })
+             { location
+             ; identifier = (identifier, `Dollar)
+             ; prefixed = false
+             })
       |> labelled "Substitution variable"
     and underscore_hole =
       underscore |> span
@@ -214,16 +217,16 @@ end = struct
       $> (fun (location, elements) ->
            Synprs.CLF.Object.Raw_tuple { location; elements })
       |> labelled "Contextual LF tuple term"
-    and parenthesized_or_quoted_constant_or_variable =
+    and parenthesized_or_prefixed_constant_or_variable =
       parens CLF_parsers.clf_object
       |> span
       $> (function
            | location, Synprs.CLF.Object.Raw_identifier i ->
                Synprs.CLF.Object.Raw_identifier
-                 { i with quoted = true; location }
+                 { i with prefixed = true; location }
            | location, Synprs.CLF.Object.Raw_qualified_identifier i ->
                Synprs.CLF.Object.Raw_qualified_identifier
-                 { i with quoted = true; location }
+                 { i with prefixed = true; location }
            | location, o -> Synprs.set_location_of_clf_object location o)
       |> labelled "Contextual LF parenthesized kind, type or term"
     in
@@ -234,7 +237,7 @@ end = struct
       ; underscore_hole
       ; possibly_labelled_hole
       ; tuple
-      ; parenthesized_or_quoted_constant_or_variable
+      ; parenthesized_or_prefixed_constant_or_variable
       ]
 
   let clf_object7 =

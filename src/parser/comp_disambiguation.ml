@@ -198,9 +198,9 @@ struct
 
   let guard_operator expression =
     match expression with
-    | Synprs.Comp.Sort_object.Raw_identifier { quoted; _ }
-    | Synprs.Comp.Sort_object.Raw_qualified_identifier { quoted; _ }
-      when quoted ->
+    | Synprs.Comp.Sort_object.Raw_identifier { prefixed; _ }
+    | Synprs.Comp.Sort_object.Raw_qualified_identifier { prefixed; _ }
+      when prefixed ->
         return Option.none
     | Synprs.Comp.Sort_object.Raw_identifier { identifier; _ } ->
         let identifier = Qualified_identifier.make_simple identifier in
@@ -447,8 +447,8 @@ module Make
     | Synprs.Comp.Sort_object.Raw_pi
         { parameter_sort = Option.None; location; _ } ->
         Error.raise_at1 location Illegal_untyped_comp_pi_type
-    | Synprs.Comp.Sort_object.Raw_identifier { location; identifier; quoted }
-      -> (
+    | Synprs.Comp.Sort_object.Raw_identifier
+        { location; identifier; prefixed } -> (
         (* As a computation-level type, plain identifiers are necessarily
            computation-level type constants *)
         let qualified_identifier =
@@ -463,7 +463,7 @@ module Make
                  { location
                  ; identifier = qualified_identifier
                  ; operator
-                 ; quoted
+                 ; prefixed
                  })
         | Result.Ok
             ( Computation_stratified_type_constant
@@ -473,7 +473,7 @@ module Make
                  { location
                  ; identifier = qualified_identifier
                  ; operator
-                 ; quoted
+                 ; prefixed
                  })
         | Result.Ok
             ( Computation_abbreviation_type_constant
@@ -483,7 +483,7 @@ module Make
                  { location
                  ; identifier = qualified_identifier
                  ; operator
-                 ; quoted
+                 ; prefixed
                  })
         | Result.Ok
             ( Computation_coinductive_type_constant
@@ -493,7 +493,7 @@ module Make
                  { location
                  ; identifier = qualified_identifier
                  ; operator
-                 ; quoted
+                 ; prefixed
                  })
         | Result.Ok entry ->
             Error.raise_at1 location
@@ -505,7 +505,7 @@ module Make
               (Unbound_comp_type_constant qualified_identifier)
         | Result.Error cause -> Error.raise_at1 location cause)
     | Synprs.Comp.Sort_object.Raw_qualified_identifier
-        { location; identifier; quoted } -> (
+        { location; identifier; prefixed } -> (
         (* Qualified identifiers without namespaces were parsed as plain
            identifiers *)
         assert (List.length (Qualified_identifier.namespaces identifier) >= 1);
@@ -518,25 +518,25 @@ module Make
             , { operator = Option.Some operator; _ } ) ->
             return
               (Synext.Comp.Typ.Inductive_typ_constant
-                 { location; identifier; operator; quoted })
+                 { location; identifier; operator; prefixed })
         | Result.Ok
             ( Computation_stratified_type_constant
             , { operator = Option.Some operator; _ } ) ->
             return
               (Synext.Comp.Typ.Stratified_typ_constant
-                 { location; identifier; operator; quoted })
+                 { location; identifier; operator; prefixed })
         | Result.Ok
             ( Computation_abbreviation_type_constant
             , { operator = Option.Some operator; _ } ) ->
             return
               (Synext.Comp.Typ.Abbreviation_typ_constant
-                 { location; identifier; operator; quoted })
+                 { location; identifier; operator; prefixed })
         | Result.Ok
             ( Computation_coinductive_type_constant
             , { operator = Option.Some operator; _ } ) ->
             return
               (Synext.Comp.Typ.Coinductive_typ_constant
-                 { location; identifier; operator; quoted })
+                 { location; identifier; operator; prefixed })
         | Result.Ok entry ->
             Error.raise_at1 location
               (Error.composite_exception2
@@ -670,10 +670,10 @@ module Make
 
   and disambiguate_comp_expression = function
     | Synprs.Comp.Expression_object.Raw_identifier
-        { location; identifier; quoted } ->
+        { location; identifier; prefixed } ->
         Obj.magic ()
     | Synprs.Comp.Expression_object.Raw_qualified_identifier
-        { location; identifier; quoted } ->
+        { location; identifier; prefixed } ->
         (* TODO: Can be the observation(s) of a variable *)
         Obj.magic ()
     | Synprs.Comp.Expression_object.Raw_fn { location; parameters; body } ->
@@ -781,10 +781,10 @@ module Make
         Error.raise_at1 location
           Illegal_meta_annotated_comp_pattern_missing_type
     | Synprs.Comp.Pattern_object.Raw_identifier
-        { location; identifier; quoted } ->
+        { location; identifier; prefixed } ->
         Obj.magic ()
     | Synprs.Comp.Pattern_object.Raw_qualified_identifier
-        { location; identifier; quoted } ->
+        { location; identifier; prefixed } ->
         Obj.magic ()
     | Synprs.Comp.Pattern_object.Raw_box { location; pattern } ->
         Obj.magic ()

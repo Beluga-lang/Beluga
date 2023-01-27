@@ -38,7 +38,7 @@
                   "stop_column": 15
                 }
               },
-              "quoted": false,
+              "prefixed": false,
               "operator": {
                 "fixity": "prefix",
                 "associativity": "right-associative",
@@ -104,7 +104,7 @@
                   "stop_column": 15
                 }
               },
-              "quoted": false,
+              "prefixed": false,
               "operator": {
                 "fixity": "prefix",
                 "associativity": "right-associative",
@@ -155,7 +155,7 @@
                   "stop_column": 24
                 }
               },
-              "quoted": false,
+              "prefixed": false,
               "operator": {
                 "fixity": "prefix",
                 "associativity": "right-associative",
@@ -220,7 +220,7 @@
                   "stop_column": 14
                 }
               },
-              "quoted": false,
+              "prefixed": false,
               "operator": {
                 "fixity": "prefix",
                 "associativity": "right-associative",
@@ -261,7 +261,7 @@
               "stop_column": 25
             }
           },
-          "quoted": false,
+          "prefixed": false,
           "operator": {
             "fixity": "prefix",
             "associativity": "right-associative",
@@ -324,7 +324,7 @@
                   "stop_column": 14
                 }
               },
-              "quoted": false,
+              "prefixed": false,
               "operator": {
                 "fixity": "prefix",
                 "associativity": "right-associative",
@@ -375,7 +375,7 @@
                   "stop_column": 23
                 }
               },
-              "quoted": false,
+              "prefixed": false,
               "operator": {
                 "fixity": "prefix",
                 "associativity": "right-associative",
@@ -416,7 +416,7 @@
               "stop_column": 34
             }
           },
-          "quoted": false,
+          "prefixed": false,
           "operator": {
             "fixity": "prefix",
             "associativity": "right-associative",
@@ -479,7 +479,7 @@
                   "stop_column": 14
                 }
               },
-              "quoted": false,
+              "prefixed": false,
               "operator": {
                 "fixity": "prefix",
                 "associativity": "right-associative",
@@ -530,7 +530,7 @@
                   "stop_column": 23
                 }
               },
-              "quoted": false,
+              "prefixed": false,
               "operator": {
                 "fixity": "prefix",
                 "associativity": "right-associative",
@@ -586,7 +586,7 @@
                       "stop_column": 39
                     }
                   },
-                  "quoted": false,
+                  "prefixed": false,
                   "operator": {
                     "fixity": "prefix",
                     "associativity": "right-associative",
@@ -670,7 +670,7 @@
                         "stop_column": 45
                       }
                     },
-                    "quoted": false,
+                    "prefixed": false,
                     "operator": {
                       "fixity": "prefix",
                       "associativity": "right-associative",
@@ -745,7 +745,7 @@
                   "stop_column": 14
                 }
               },
-              "quoted": false,
+              "prefixed": false,
               "operator": {
                 "fixity": "prefix",
                 "associativity": "right-associative",
@@ -796,7 +796,7 @@
                   "stop_column": 23
                 }
               },
-              "quoted": false,
+              "prefixed": false,
               "operator": {
                 "fixity": "prefix",
                 "associativity": "right-associative",
@@ -849,7 +849,7 @@
                   "stop_column": 39
                 }
               },
-              "quoted": false,
+              "prefixed": false,
               "operator": {
                 "fixity": "prefix",
                 "associativity": "right-associative",
@@ -903,7 +903,7 @@
                       "stop_column": 48
                     }
                   },
-                  "quoted": false,
+                  "prefixed": false,
                   "operator": {
                     "fixity": "prefix",
                     "associativity": "right-associative",
@@ -1191,7 +1191,7 @@
                         "stop_column": 14
                       }
                     },
-                    "quoted": false,
+                    "prefixed": false,
                     "operator": {
                       "fixity": "prefix",
                       "associativity": "right-associative",
@@ -1232,7 +1232,7 @@
                     "stop_column": 25
                   }
                 },
-                "quoted": false,
+                "prefixed": false,
                 "operator": {
                   "fixity": "prefix",
                   "associativity": "right-associative",
@@ -1373,7 +1373,7 @@
                         "stop_column": 21
                       }
                     },
-                    "quoted": false,
+                    "prefixed": false,
                     "operator": {
                       "fixity": "prefix",
                       "associativity": "right-associative",
@@ -1424,7 +1424,7 @@
                         "stop_column": 30
                       }
                     },
-                    "quoted": false,
+                    "prefixed": false,
                     "operator": {
                       "fixity": "prefix",
                       "associativity": "right-associative",
@@ -1480,7 +1480,7 @@
                             "stop_column": 46
                           }
                         },
-                        "quoted": false,
+                        "prefixed": false,
                         "operator": {
                           "fixity": "prefix",
                           "associativity": "right-associative",
@@ -1564,7 +1564,7 @@
                               "stop_column": 52
                             }
                           },
-                          "quoted": false,
+                          "prefixed": false,
                           "operator": {
                             "fixity": "prefix",
                             "associativity": "right-associative",

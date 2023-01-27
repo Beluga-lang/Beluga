@@ -100,10 +100,10 @@ end = struct
       $> (function
            | location, `Qualified identifier ->
                Synprs.LF.Object.Raw_qualified_identifier
-                 { location; identifier; quoted = false }
+                 { location; identifier; prefixed = false }
            | location, `Plain identifier ->
                Synprs.LF.Object.Raw_identifier
-                 { location; identifier; quoted = false })
+                 { location; identifier; prefixed = false })
       |> labelled
            "LF term-level constant, type-level constant, or term variable"
     and type_ =
@@ -114,24 +114,25 @@ end = struct
       underscore |> span
       $> (fun (location, ()) -> Synprs.LF.Object.Raw_hole { location })
       |> labelled "LF wildcard"
-    and parenthesized_or_quoted_constant_or_variable =
+    and parenthesized_or_prefixed_constant_or_variable =
       parens LF_parsers.lf_object
       |> span
       $> (function
            | location, Synprs.LF.Object.Raw_identifier i ->
                Synprs.LF.Object.Raw_identifier
-                 { i with quoted = true; location }
+                 { i with prefixed = true; location }
            | location, Synprs.LF.Object.Raw_qualified_identifier i ->
                Synprs.LF.Object.Raw_qualified_identifier
-                 { i with quoted = true; location }
+                 { i with prefixed = true; location }
            | location, o -> Synprs.set_location_of_lf_object location o)
-      |> labelled "LF parenthesized kind, type or term, or a quoted constant"
+      |> labelled
+           "LF parenthesized kind, type or term, or a prefixed constant"
     in
     choice
       [ constant_or_variable
       ; type_
       ; hole
-      ; parenthesized_or_quoted_constant_or_variable
+      ; parenthesized_or_prefixed_constant_or_variable
       ]
 
   let lf_object4 =

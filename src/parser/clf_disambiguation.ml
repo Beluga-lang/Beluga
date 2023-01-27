@@ -236,9 +236,9 @@ module Make_clf_application_disambiguation_state
 
   let guard_operator expression =
     match expression with
-    | Synprs.CLF.Object.Raw_identifier { quoted; _ }
-    | Synprs.CLF.Object.Raw_qualified_identifier { quoted; _ }
-      when quoted ->
+    | Synprs.CLF.Object.Raw_identifier { prefixed; _ }
+    | Synprs.CLF.Object.Raw_qualified_identifier { prefixed; _ }
+      when prefixed ->
         return Option.none
     | Synprs.CLF.Object.Raw_identifier { identifier = identifier, `Plain; _ }
       ->
@@ -340,7 +340,7 @@ module Make (Bindings_state : BINDINGS_STATE) :
         { location; identifier = _identifier, `Dollar; _ } ->
         Error.raise_at1 location Illegal_substitution_variable_clf_type
     | Synprs.CLF.Object.Raw_identifier
-        { location; identifier = identifier, `Plain; quoted; _ } -> (
+        { location; identifier = identifier, `Plain; prefixed; _ } -> (
         (* As an LF type, plain identifiers are necessarily type-level
            constants. *)
         let qualified_identifier =
@@ -354,7 +354,7 @@ module Make (Bindings_state : BINDINGS_STATE) :
                  { location
                  ; identifier = qualified_identifier
                  ; operator
-                 ; quoted
+                 ; prefixed
                  })
         | Result.Ok entry ->
             Error.raise_at1 location
@@ -365,7 +365,7 @@ module Make (Bindings_state : BINDINGS_STATE) :
               (Unbound_clf_type_constant qualified_identifier)
         | Result.Error cause -> Error.raise_at1 location cause)
     | Synprs.CLF.Object.Raw_qualified_identifier
-        { location; identifier; quoted } -> (
+        { location; identifier; prefixed } -> (
         (* Qualified identifiers without namespaces were parsed as plain
            identifiers. *)
         assert (List.length (Qualified_identifier.namespaces identifier) >= 1);
@@ -377,7 +377,7 @@ module Make (Bindings_state : BINDINGS_STATE) :
           ->
             return
               (Synext.CLF.Typ.Constant
-                 { location; identifier; operator; quoted })
+                 { location; identifier; operator; prefixed })
         | Result.Ok entry ->
             Error.raise_at1 location
               (Error.composite_exception2 Expected_clf_type_constant
@@ -521,7 +521,7 @@ module Make (Bindings_state : BINDINGS_STATE) :
               (Synext.CLF.Term.Substitution_variable { location; identifier })
         | Result.Error cause -> Error.raise_at1 location cause)
     | Synprs.CLF.Object.Raw_identifier
-        { location; identifier = identifier, `Plain; quoted; _ } -> (
+        { location; identifier = identifier, `Plain; prefixed; _ } -> (
         (* As an LF term, plain identifiers are either term-level constants
            or variables (bound or free). *)
         let qualified_identifier =
@@ -535,7 +535,7 @@ module Make (Bindings_state : BINDINGS_STATE) :
                  { location
                  ; identifier = qualified_identifier
                  ; operator
-                 ; quoted
+                 ; prefixed
                  })
         | Result.Ok (Lf_term_variable, _)
         | Result.Ok (Meta_variable, _) ->
@@ -550,7 +550,7 @@ module Make (Bindings_state : BINDINGS_STATE) :
             return (Synext.CLF.Term.Variable { location; identifier })
         | Result.Error cause -> Error.raise_at1 location cause)
     | Synprs.CLF.Object.Raw_qualified_identifier
-        { location; identifier; quoted } -> (
+        { location; identifier; prefixed } -> (
         (* Qualified identifiers without namespaces were parsed as plain
            identifiers *)
         assert (List.length (Qualified_identifier.namespaces identifier) >= 1);
@@ -608,7 +608,7 @@ module Make (Bindings_state : BINDINGS_STATE) :
               ->
                 return
                   (Synext.CLF.Term.Constant
-                     { identifier; location; operator; quoted })
+                     { identifier; location; operator; prefixed })
             | _identifier, entry ->
                 Error.raise_at1 location
                   (Error.composite_exception2 Expected_clf_term_constant
@@ -986,7 +986,7 @@ struct
         { location; identifier = _identifier, `Dollar; _ } ->
         Error.raise_at1 location Illegal_substitution_variable_clf_type
     | Synprs.CLF.Object.Raw_identifier
-        { location; identifier = identifier, `Plain; quoted; _ } -> (
+        { location; identifier = identifier, `Plain; prefixed; _ } -> (
         (* As a contextual LF type occuring in a pattern, plain identifiers
            are necessarily bound type-level constants. *)
         let qualified_identifier =
@@ -1000,7 +1000,7 @@ struct
                  { location
                  ; identifier = qualified_identifier
                  ; operator
-                 ; quoted
+                 ; prefixed
                  })
         | Result.Ok entry ->
             Error.raise_at1 location
@@ -1011,7 +1011,7 @@ struct
               (Unbound_clf_type_constant qualified_identifier)
         | Result.Error cause -> Error.raise_at1 location cause)
     | Synprs.CLF.Object.Raw_qualified_identifier
-        { location; identifier; quoted } -> (
+        { location; identifier; prefixed } -> (
         (* Qualified identifiers without namespaces were parsed as plain
            identifiers. *)
         assert (List.length (Qualified_identifier.namespaces identifier) >= 1);
@@ -1023,7 +1023,7 @@ struct
           ->
             return
               (Synext.CLF.Typ.Constant
-                 { location; identifier; operator; quoted })
+                 { location; identifier; operator; prefixed })
         | Result.Ok entry ->
             Error.raise_at1 location
               (Error.composite_exception2 Expected_clf_type_constant
@@ -1187,7 +1187,7 @@ struct
                 return term')
         | Result.Error cause -> Error.raise_at1 location cause)
     | Synprs.CLF.Object.Raw_identifier
-        { location; identifier = identifier, `Plain; quoted; _ } -> (
+        { location; identifier = identifier, `Plain; prefixed; _ } -> (
         (* As an LF term, plain identifiers are either term-level constants
            or variables (bound or free). *)
         let qualified_identifier =
@@ -1201,7 +1201,7 @@ struct
                  { location
                  ; identifier = qualified_identifier
                  ; operator
-                 ; quoted
+                 ; prefixed
                  })
         | Result.Ok (Lf_term_variable, _)
         | Result.Ok (Meta_variable, _) ->
@@ -1228,7 +1228,7 @@ struct
                 return term')
         | Result.Error cause -> Error.raise_at1 location cause)
     | Synprs.CLF.Object.Raw_qualified_identifier
-        { location; identifier; quoted } -> (
+        { location; identifier; prefixed } -> (
         (* Qualified identifiers without namespaces were parsed as plain
            identifiers *)
         assert (List.length (Qualified_identifier.namespaces identifier) >= 1);
@@ -1298,7 +1298,7 @@ struct
               ->
                 return
                   (Synext.CLF.Term.Constant
-                     { identifier; location; operator; quoted })
+                     { identifier; location; operator; prefixed })
             | _identifier, entry ->
                 Error.raise_at1 location
                   (Error.composite_exception2 Expected_clf_term_constant
@@ -1508,7 +1508,7 @@ struct
             let* () = push_inner_binding identifier in
             return pattern')
     | Synprs.CLF.Object.Raw_identifier
-        { location; identifier = identifier, `Plain; quoted; _ } -> (
+        { location; identifier = identifier, `Plain; prefixed; _ } -> (
         (* As an LF term pattern, plain identifiers are either term-level
            constants, variables bound in the pattern, or new pattern
            variables. *)
@@ -1523,7 +1523,7 @@ struct
                  { location
                  ; identifier = qualified_identifier
                  ; operator
-                 ; quoted
+                 ; prefixed
                  })
         | Result.Ok (Lf_term_variable, _)
         | Result.Ok (Meta_variable, _) -> (
@@ -1549,7 +1549,7 @@ struct
                 return pattern')
         | Result.Error cause -> Error.raise_at1 location cause)
     | Synprs.CLF.Object.Raw_qualified_identifier
-        { location; identifier; quoted } -> (
+        { location; identifier; prefixed } -> (
         (* Qualified identifiers without namespaces were parsed as plain
            identifiers *)
         assert (List.length (Qualified_identifier.namespaces identifier) >= 1);
@@ -1621,7 +1621,7 @@ struct
               ->
                 return
                   (Synext.CLF.Term.Pattern.Constant
-                     { identifier; location; operator; quoted })
+                     { identifier; location; operator; prefixed })
             | _identifier, entry ->
                 Error.raise_at1 location
                   (Error.composite_exception2 Expected_clf_term_constant

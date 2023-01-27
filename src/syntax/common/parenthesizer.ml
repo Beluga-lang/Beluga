@@ -49,8 +49,8 @@ module Make_parenthesizer (Precedence : Ord.ORD) = struct
       ~pp_argument ~parent_precedence ppf (applicand, arguments) =
     match guard_operator applicand with
     | `Term ->
-        (* The applicand is not an unquoted operator, so the application is
-           in prefix notation. *)
+        (* The applicand is not a prefixed operator, so the application is in
+           prefix notation. *)
         Format.fprintf ppf "@[<hov 2>%a@ %a@]"
           (parenthesize_term_of_lesser_than_or_equal_precedence
              precedence_of_applicand ~parent_precedence pp_applicand)
@@ -60,7 +60,7 @@ module Make_parenthesizer (Precedence : Ord.ORD) = struct
                 precedence_of_argument ~parent_precedence pp_argument))
           arguments
     | `Operator operator ->
-        (* The applicand is an unquoted operator, so pretty-printing must
+        (* The applicand is a prefixed operator, so pretty-printing must
            handle the operator fixity, associativity and precedence. *)
         pp_operator_application ~guard_operator_application
           ~precedence_of_argument ~pp_applicand ~pp_argument

@@ -24,32 +24,32 @@ module LF = struct
       | Raw_identifier of
           { location : Location.t
           ; identifier : Identifier.t
-          ; quoted : Bool.t
+          ; prefixed : Bool.t
           }
-          (** - [Raw_identifier { identifier = "x"; quoted = false; _ }] is
+          (** - [Raw_identifier { identifier = "x"; prefixed = false; _ }] is
                 the variable or constant ["x"].
-              - [Raw_identifier { identifier = "x"; quoted = true; _ }] is
-                the quoted variable or constant ["(x)"].
+              - [Raw_identifier { identifier = "x"; prefixed = true; _ }] is
+                the prefixed variable or constant ["(x)"].
 
-              A quoted constant may appear as an argument, or as applicand in
-              prefix notation irrespective of its pre-defined fixity and
+              A prefixed constant may appear as an argument, or as applicand
+              in prefix notation irrespective of its pre-defined fixity and
               associativity. *)
       | Raw_qualified_identifier of
           { location : Location.t
           ; identifier : Qualified_identifier.t
-          ; quoted : Bool.t
+          ; prefixed : Bool.t
           }
-          (** - [Raw_qualified_identifier { identifier = "M.x"; quoted = false; _ }]
+          (** - [Raw_qualified_identifier { identifier = "M.x"; prefixed = false; _ }]
                 is the constant ["M.x"].
-              - [Raw_qualified_identifier { identifier = "M.x"; quoted = true; _ }]
-                is the quoted constant ["(M.x)"].
+              - [Raw_qualified_identifier { identifier = "M.x"; prefixed = true; _ }]
+                is the prefixed constant ["(M.x)"].
 
               Since identifiers are ambiguous with qualified identifiers in
               the parser, the following may be assumed during disambiguation:
               [List.length (Qualified_identifier.namespaces identifier) >= 1].
 
-              A quoted constant may appear as an argument, or as applicand in
-              prefix notation irrespective of its pre-defined fixity and
+              A prefixed constant may appear as an argument, or as applicand
+              in prefix notation irrespective of its pre-defined fixity and
               associativity. *)
       | Raw_type of { location : Location.t }
       | Raw_hole of { location : Location.t }
@@ -108,29 +108,29 @@ module CLF = struct
       | Raw_identifier of
           { location : Location.t
           ; identifier : Identifier.t * [ `Plain | `Hash | `Dollar ]
-          ; quoted : Bool.t
+          ; prefixed : Bool.t
           }
           (** - [Raw_identifier { identifier = "$x"; modifier = `Dollar; _ }]
                 is the substitution variable ["$x"].
               - [Raw_identifier { identifier = "#x"; modifier = `Hash; _ }]
                 is the parameter variable ["#x"].
-              - [Raw_identifier { identifier = "x"; quoted = false; _ }] is
+              - [Raw_identifier { identifier = "x"; prefixed = false; _ }] is
                 the variable or constant ["x"].
-              - [Raw_identifier { identifier = "x"; quoted = true; _ }] is
-                the quoted variable or constant ["(x)"].
+              - [Raw_identifier { identifier = "x"; prefixed = true; _ }] is
+                the prefixed variable or constant ["(x)"].
 
-              A quoted constant may appear as an argument, or as applicand in
-              prefix notation irrespective of its pre-defined fixity and
+              A prefixed constant may appear as an argument, or as applicand
+              in prefix notation irrespective of its pre-defined fixity and
               associativity. *)
       | Raw_qualified_identifier of
           { location : Location.t
           ; identifier : Qualified_identifier.t
-          ; quoted : Bool.t
+          ; prefixed : Bool.t
           }
-          (** - [Raw_qualified_identifier { identifier = "M.x"; quoted = false; _ }]
+          (** - [Raw_qualified_identifier { identifier = "M.x"; prefixed = false; _ }]
                 is the constant ["M.x"].
-              - [Raw_qualified_identifier { identifier = "M.x"; quoted = true; _ }]
-                is the quoted constant ["(M.x)"].
+              - [Raw_qualified_identifier { identifier = "M.x"; prefixed = true; _ }]
+                is the prefixed constant ["(M.x)"].
 
               Since identifiers are ambiguous with qualified identifiers in
               the parser, the following may be assumed during disambiguation:
@@ -138,8 +138,8 @@ module CLF = struct
 
               Qualified identifiers are ambiguous with named projections.
 
-              A quoted constant may appear as an argument, or as applicand in
-              prefix notation irrespective of its pre-defined fixity and
+              A prefixed constant may appear as an argument, or as applicand
+              in prefix notation irrespective of its pre-defined fixity and
               associativity. *)
       | Raw_hole of
           { location : Location.t
@@ -306,12 +306,12 @@ module Comp = struct
       | Raw_identifier of
           { location : Location.t
           ; identifier : Identifier.t
-          ; quoted : Bool.t
+          ; prefixed : Bool.t
           }
       | Raw_qualified_identifier of
           { location : Location.t
           ; identifier : Qualified_identifier.t
-          ; quoted : Bool.t
+          ; prefixed : Bool.t
           }
       | Raw_ctype of { location : Location.t }
       | Raw_pi of
@@ -348,17 +348,17 @@ module Comp = struct
       | Raw_identifier of
           { location : Location.t
           ; identifier : Identifier.t
-          ; quoted : Bool.t
+          ; prefixed : Bool.t
           }
       | Raw_qualified_identifier of
           { location : Location.t
           ; identifier : Qualified_identifier.t
-          ; quoted : Bool.t
+          ; prefixed : Bool.t
           }
-          (** - [Raw_qualified_identifier { identifier = "M.x"; quoted = false; _ }]
+          (** - [Raw_qualified_identifier { identifier = "M.x"; prefixed = false; _ }]
                 is the constant ["M.x"].
-              - [Raw_qualified_identifier { identifier = "M.x"; quoted = true; _ }]
-                is the quoted constant ["(M.x)"].
+              - [Raw_qualified_identifier { identifier = "M.x"; prefixed = true; _ }]
+                is the prefixed constant ["(M.x)"].
 
               Since identifiers are ambiguous with qualified identifiers in
               the parser, the following may be assumed during disambiguation:
@@ -366,8 +366,8 @@ module Comp = struct
 
               Qualified identifiers are ambiguous with observations.
 
-              A quoted constant may appear as an argument, or as applicand in
-              prefix notation irrespective of its pre-defined fixity and
+              A prefixed constant may appear as an argument, or as applicand
+              in prefix notation irrespective of its pre-defined fixity and
               associativity. *)
       | Raw_fn of
           { location : Location.t
@@ -436,12 +436,12 @@ module Comp = struct
       | Raw_identifier of
           { location : Location.t
           ; identifier : Identifier.t
-          ; quoted : Bool.t
+          ; prefixed : Bool.t
           }
       | Raw_qualified_identifier of
           { location : Location.t
           ; identifier : Qualified_identifier.t
-          ; quoted : Bool.t
+          ; prefixed : Bool.t
           }
       | Raw_box of
           { location : Location.t

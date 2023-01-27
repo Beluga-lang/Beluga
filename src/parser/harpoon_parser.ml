@@ -23,17 +23,17 @@ end = struct
       keyword "by"
       &> seq3
            (Comp_parser.comp_expression_object <& keyword "as")
-           identifier
-           (maybe_default boxity ~default:`Boxed)
+           identifier (maybe boxity)
       |> span
       |> labelled "Harpoon command"
       $> function
-      | location, (expression, assignee, `Boxed) ->
+      | location, (expression, assignee, (Option.None | Option.Some `Boxed))
+        ->
           Harpoon.Command.By { location; assignee; expression }
-      | location, (expression, assignee, `Unboxed) ->
+      | location, (expression, assignee, Option.Some `Unboxed) ->
           Harpoon.Command.Unbox
             { location; assignee; expression; modifier = Option.none }
-      | location, (expression, assignee, `Strengthened) ->
+      | location, (expression, assignee, Option.Some `Strengthened) ->
           Harpoon.Command.Unbox
             { location
             ; assignee
@@ -83,12 +83,15 @@ end = struct
       Harpoon.Split_branch.Label.Constant { location; identifier }
     and pvar_case_label =
       hash
-      &> seq2 (maybe_default integer ~default:1) (maybe dot_integer)
+      &> seq2 (maybe integer) (maybe dot_integer)
       |> span
       |> labelled "parameter variable case label"
       $> fun (location, (n, k)) ->
       Harpoon.Split_branch.Label.Parameter_variable
-        { location; schema_element = n; projection = k }
+        { location
+        ; schema_element = Option.value ~default:1 n
+        ; projection = k
+        }
     and bvar_case_label =
       trying (keyword "head" &> keyword "variable") |> span
       $> fun (location, ()) ->
@@ -207,15 +210,16 @@ end = struct
       keyword "by"
       &> seq3 Comp_parser.comp_expression_object
            (keyword "as" &> identifier)
-           (maybe_default boxity ~default:`Boxed)
+           (maybe boxity)
       |> span
       $> function
-      | location, (expression, assignee, `Boxed) ->
+      | location, (expression, assignee, (Option.None | Option.Some `Boxed))
+        ->
           Harpoon.Repl.Command.By { location; assignee; expression }
-      | location, (expression, assignee, `Unboxed) ->
+      | location, (expression, assignee, Option.Some `Unboxed) ->
           Harpoon.Repl.Command.Unbox
             { location; assignee; expression; modifier = Option.none }
-      | location, (expression, assignee, `Strengthened) ->
+      | location, (expression, assignee, Option.Some `Strengthened) ->
           Harpoon.Repl.Command.Unbox
             { location
             ; assignee
@@ -235,7 +239,7 @@ end = struct
       seq2
         (keyword "suffices" &> keyword "by"
        &> Comp_parser.comp_expression_object)
-        (keyword "toshow" &> sep_by0 tau_list_item comma)
+        (keyword "toshow" &> sep_by0 ~sep:comma tau_list_item)
       |> span
       $> fun (location, (implication, goal_premises)) ->
       Harpoon.Repl.Command.Suffices { location; implication; goal_premises }
@@ -271,11 +275,11 @@ end = struct
         choice [ on; off; toggle ]
       in
       keyword "toggle-automation"
-      &> seq2 automation_kind
-           (maybe_default automation_change ~default:`toggle)
+      &> seq2 automation_kind (maybe automation_change)
       |> span
       $> fun (location, (kind, change)) ->
-      Harpoon.Repl.Command.Toggle_automation { location; kind; change }
+      Harpoon.Repl.Command.Toggle_automation
+        { location; kind; change = Option.value ~default:`toggle change }
     and rename =
       let level =
         let comp_level = keyword "comp" $> fun () -> `comp
@@ -381,7 +385,7 @@ end = struct
       ]
 
   let interactive_harpoon_command_sequence =
-    sep_by0 interactive_harpoon_command semicolon
+    sep_by0 ~sep:semicolon interactive_harpoon_command
 
   let next_theorem =
     let quit = colon &> keyword "quit" $> fun () -> `quit

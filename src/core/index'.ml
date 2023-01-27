@@ -697,7 +697,7 @@ struct
     | Synext.Comp.Expression.Variable { location; identifier } ->
         Obj.magic ()
     | Synext.Comp.Expression.Constant
-        { location; identifier; operator; quoted } ->
+        { location; identifier; operator; prefixed } ->
         Obj.magic ()
     | Synext.Comp.Expression.Fn { location; parameters; body } ->
         Obj.magic ()

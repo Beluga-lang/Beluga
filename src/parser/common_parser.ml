@@ -402,10 +402,10 @@ let () =
   Error.register_exception_printer (function
     | Parser_error cause ->
         let cause_printer = Error.find_printer cause in
-        Format.dprintf "@[<v 0>Parse error.@,%t@]" cause_printer
+        Format.dprintf "@[<hov 0>Failed to parse %t@]" cause_printer
     | Labelled_exception { label; cause } ->
         let cause_printer = Error.find_printer cause in
-        Format.dprintf "@[<v 0>%s:@,%t@]" label cause_printer
+        Format.dprintf "%s:@\n%t" label cause_printer
     | No_more_choices exceptions_rev ->
         let exception_printers =
           List.map Error.find_printer exceptions_rev

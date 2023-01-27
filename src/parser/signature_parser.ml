@@ -56,7 +56,8 @@ end = struct
   let sgn_lf_typ_decl =
     let lf_typ_decl_body =
       let typ_decl = seq2 (identifier <& colon) Lf_parser.lf_object in
-      seq2 (typ_decl <& equals) (maybe pipe &> sep_by0 sgn_lf_const_decl pipe)
+      seq2 (typ_decl <& equals)
+        (maybe pipe &> sep_by0 ~sep:pipe sgn_lf_const_decl)
       |> span
       $> fun (location, ((identifier, kind), constructor_declarations)) ->
       let typ_declaration =
@@ -66,8 +67,9 @@ end = struct
       List1.from typ_declaration constructor_declarations
     in
     keyword "LF"
-    &> sep_by1 lf_typ_decl_body
-         (keyword "and" &> maybe (keyword "LF") |> void)
+    &> sep_by1
+         ~sep:(keyword "and" &> maybe (keyword "LF") |> void)
+         lf_typ_decl_body
     <& semicolon |> span
     $> (fun (location, declarations) ->
          let declarations' = List1.flatten declarations in
@@ -138,7 +140,7 @@ end = struct
       in
       seq4 flavour (identifier <& colon)
         (Comp_parser.comp_sort_object <& equals <& maybe pipe)
-        (sep_by0 sgn_cmp_typ_decl_body pipe)
+        (sep_by0 ~sep:pipe sgn_cmp_typ_decl_body)
       |> span
       $> fun ( location
              , (datatype_flavour, identifier, kind, constructor_declarations)
@@ -169,7 +171,7 @@ end = struct
       seq3
         (keyword "coinductive" &> identifier <& colon)
         (Comp_parser.comp_sort_object <& equals <& maybe pipe)
-        (sep_by0 cmp_cotyp_body pipe)
+        (sep_by0 ~sep:pipe cmp_cotyp_body)
       |> span
       $> fun (location, (identifier, kind, destructor_declarations)) ->
       let cotyp_declaration =
@@ -178,7 +180,7 @@ end = struct
       in
       List1.from cotyp_declaration destructor_declarations
     in
-    sep_by1 (alt cmp_typ_decl cmp_cotyp_decl) (keyword "and")
+    sep_by1 ~sep:(keyword "and") (alt cmp_typ_decl cmp_cotyp_decl)
     <& semicolon |> span
     $> (fun (location, declarations) ->
          let declarations' = List1.flatten declarations in
@@ -371,7 +373,7 @@ end = struct
 
   let sgn_thm_decl =
     keyword "rec"
-    &> sep_by1 (choice [ program_decl; proof_decl ]) (keyword "and")
+    &> sep_by1 ~sep:(keyword "and") (choice [ program_decl; proof_decl ])
     <& semicolon |> span
     |> labelled "(mutual) recursive function declaration(s)"
     $> fun (location, declarations) ->

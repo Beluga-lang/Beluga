@@ -338,7 +338,7 @@ end = struct
            Synprs.Comp.Pattern_object.Raw_wildcard { location })
       |> labelled "Computational wildcard pattern"
     and parenthesized_or_tuple =
-      parens (sep_by1 Comp_parsers.comp_pattern_object comma)
+      parens (sep_by1 ~sep:comma Comp_parsers.comp_pattern_object)
       |> span
       $> (function
            | ( location
@@ -498,7 +498,7 @@ end = struct
            Synprs.Comp.Expression_object.Raw_box_hole { location })
       |> labelled "Box hole"
     and parenthesized_or_tuple =
-      parens (sep_by1 Comp_parsers.comp_expression_object comma)
+      parens (sep_by1 ~sep:comma Comp_parsers.comp_expression_object)
       |> span
       $> (function
            | ( location
@@ -545,7 +545,7 @@ end = struct
     in
     let fn =
       seq2
-        (keyword "fn" &> sep_by1 omittable_identifier comma_opt)
+        (keyword "fn" &> sep_by1 ~sep:comma_opt omittable_identifier)
         (thick_forward_arrow &> Comp_parsers.comp_expression_object)
       |> span
       $> (fun (location, (parameters, body)) ->
@@ -554,11 +554,10 @@ end = struct
       |> labelled "Ordinary function abstraction"
     and matching_fun =
       keyword "fun" &> maybe pipe
-      &> sep_by1
+      &> sep_by1 ~sep:pipe
            (seq2
-              (sep_by1 Comp_parsers.comp_pattern_atomic_object comma_opt)
+              (sep_by1 ~sep:comma_opt Comp_parsers.comp_pattern_atomic_object)
               (thick_forward_arrow &> Comp_parsers.comp_expression_object))
-           pipe
       |> span
       $> (fun (location, branches) ->
            Synprs.Comp.Expression_object.Raw_fun { location; branches })
@@ -593,10 +592,10 @@ end = struct
         (keyword "case" &> Comp_parsers.comp_expression_object)
         (keyword "of" &> maybe (pragma "not"))
         (maybe pipe
-        &> sep_by1
+        &> sep_by1 ~sep:pipe
              (seq2 Comp_parsers.comp_pattern_object
                 (thick_forward_arrow &> Comp_parsers.comp_expression_object))
-             pipe)
+        )
       |> span
       $> (fun (location, (scrutinee, check_coverage, branches)) ->
            let check_coverage = Option.is_some check_coverage in
@@ -649,9 +648,8 @@ end = struct
   *)
   let comp_context =
     let non_empty =
-      sep_by0
+      sep_by0 ~sep:comma
         (seq2 identifier (maybe (colon &> Comp_parsers.comp_sort_object)))
-        comma
       |> span
       $> fun (location, bindings) ->
       { Synprs.Comp.Context_object.location; bindings }

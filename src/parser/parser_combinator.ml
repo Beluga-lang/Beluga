@@ -16,6 +16,8 @@ module type PARSER_BACKTRACKING_STATE = sig
 
   val disable_backtracking : t -> t
 
+  val is_backtracking_enabled : t -> bool
+
   val can_backtrack : from:t -> to_:t -> bool
 end
 
@@ -77,27 +79,21 @@ module type PARSER = sig
 
   val maybe : 'a t -> 'a option t
 
-  val maybe_default : 'a t -> default:'a -> 'a t
-
   val void : 'a t -> unit t
 
   val many : 'a t -> 'a list t
 
   val some : 'a t -> 'a List1.t t
 
-  val sep_by0 : 'a t -> unit t -> 'a list t
+  val sep_by0 : sep:unit t -> 'a t -> 'a list t
 
-  val sep_by1 : 'a t -> unit t -> 'a List1.t t
-
-  val traverse_list : ('a -> 'b t) -> 'a list -> 'b list t
-
-  val traverse_list_void : ('a -> unit t) -> 'a list -> unit t
-
-  val seq_list : 'a t list -> 'a list t
+  val sep_by1 : sep:unit t -> 'a t -> 'a List1.t t
 
   val trying : 'a t -> 'a t
 
   val alt : 'a t -> 'a t -> 'a t
+
+  val ( <|> ) : 'a t -> 'a t -> 'a t
 
   val choice : 'a t List.t -> 'a t
 
@@ -152,6 +148,8 @@ end = struct
 
   let[@inline] disable_backtracking s = { s with can_backtrack = false }
 
+  let[@inline] is_backtracking_enabled s = s.can_backtrack
+
   let observe s =
     match s.input () with
     | Seq.Nil -> Option.none
@@ -163,7 +161,8 @@ end = struct
     position from = position to_
 
   let can_backtrack ~from ~to_ =
-    if from.can_backtrack then true else has_not_consumed_input ~from ~to_
+    if is_backtracking_enabled from then true
+    else has_not_consumed_input ~from ~to_
 end
 
 module Make_location_state (Token : sig
@@ -199,6 +198,8 @@ end = struct
   let enable_backtracking = modify_inner_state State.enable_backtracking
 
   let disable_backtracking = modify_inner_state State.disable_backtracking
+
+  let is_backtracking_enabled s = State.is_backtracking_enabled s.inner_state
 
   let[@inline] observe s =
     let open Option in
@@ -258,41 +259,133 @@ end) :
 
   exception Expected_end_of_input
 
+  (** [Parser_located_exception { cause; locations }] is the exception
+      [cause] annotated with source file [locations].
+
+      This exception is analogous to the [Located_exception] variant from the
+      {!Error} module, but we need to rearrange the exceptions with
+      {!restructure_parser_exception} since we're manually handling errors in
+      the parser combinators. *)
   exception
     Parser_located_exception of
       { cause : exn
       ; locations : location List1.t
       }
 
-  let remove_exception_location = function
-    | Parser_located_exception { cause; _ } -> cause
-    | exn -> exn
-
-  let rec flatten_exhausted_choices_exception exceptions_rev acc =
+  (** [flatten_exhausted_choices_exception_aux exceptions_rev acc] simplifies
+      the structure of the list of exceptions [exceptions_rev] retrieved from
+      a {!No_more_choices} exception by discarding their locations and
+      transforming the tree of exceptions to a list. *)
+  let rec flatten_exhausted_choices_exception_aux exceptions_rev acc =
     match exceptions_rev with
     | [] -> acc
     | e :: es -> (
-        match remove_exception_location e with
+        match discard_exception_locations e with
         | Labelled_exception { label; cause } ->
-            let cause' = remove_exception_location cause in
-            flatten_exhausted_choices_exception es
+            let cause' = discard_exception_locations cause in
+            flatten_exhausted_choices_exception_aux es
               (Labelled_exception { label; cause = cause' } :: acc)
         | No_more_choices e ->
-            flatten_exhausted_choices_exception es
-              (flatten_exhausted_choices_exception e acc)
-        | e -> flatten_exhausted_choices_exception es (e :: acc))
+            flatten_exhausted_choices_exception_aux es
+              (flatten_exhausted_choices_exception_aux e acc)
+        | e -> flatten_exhausted_choices_exception_aux es (e :: acc))
 
-  and sanitize_parser_exception = function
+  and flatten_exhausted_choices_exception = function
     | No_more_choices causes_rev ->
-        let causes' = flatten_exhausted_choices_exception causes_rev [] in
+        let causes' =
+          flatten_exhausted_choices_exception_aux causes_rev []
+        in
         No_more_choices causes'
-    | Labelled_exception { label; cause } ->
-        let cause' = sanitize_parser_exception cause in
-        Labelled_exception { label; cause = cause' }
     | Parser_located_exception { cause; locations } ->
-        let cause' = sanitize_parser_exception cause in
-        Error.located_exception locations cause'
+        let cause' = flatten_exhausted_choices_exception cause in
+        Parser_located_exception { cause = cause'; locations }
+    | Labelled_exception { label; cause } ->
+        let cause' = flatten_exhausted_choices_exception cause in
+        Labelled_exception { label; cause = cause' }
+    | Parser_error cause ->
+        let cause' = flatten_exhausted_choices_exception cause in
+        Parser_error cause'
     | exn -> exn
+
+  (** [discard_exception_locations exn] traverses the parser exception [exn]
+      and removes those constructed with {!Parser_located_exception}. *)
+  and discard_exception_locations = function
+    | Parser_located_exception { cause; _ } ->
+        discard_exception_locations cause
+    | Labelled_exception { label; cause } ->
+        let cause' = discard_exception_locations cause in
+        Labelled_exception { label; cause = cause' }
+    | No_more_choices causes ->
+        let causes' = List.map discard_exception_locations causes in
+        No_more_choices causes'
+    | Parser_error cause ->
+        let cause' = discard_exception_locations cause in
+        Parser_error cause'
+    | exn -> exn
+
+  (** [bubble_up_exception_locations exn] transforms the parser exception
+      [exn] structure by bringing sub-exceptions constructed with
+      {!Parser_located_exception} to the top of the tree or choice branch.
+      This ensures that no {!Parser_located_exception} is wrapped in a
+      {!Labelled_exception}, which would happen since labels are added as we
+      exit the parser call stack. *)
+  and bubble_up_exception_locations = function
+    | Parser_located_exception { cause; locations } ->
+        let cause' = bubble_up_exception_locations cause in
+        Parser_located_exception { cause = cause'; locations }
+    | Labelled_exception
+        { label; cause = Parser_located_exception { cause; locations } } ->
+        let cause' = bubble_up_exception_locations cause in
+        Parser_located_exception
+          { cause =
+              bubble_up_exception_locations
+                (Labelled_exception { label; cause = cause' })
+          ; locations
+          }
+    | Parser_error (Parser_located_exception { cause; locations }) ->
+        let cause' = bubble_up_exception_locations cause in
+        Parser_located_exception
+          { cause = bubble_up_exception_locations (Parser_error cause')
+          ; locations
+          }
+    | No_more_choices causes ->
+        let causes' = List.map bubble_up_exception_locations causes in
+        No_more_choices causes'
+    | exn -> exn
+
+  (** [annotate_parser_error exn] adds an annotation on the topmost exception
+      produced by the parser to specify that the exception is a parser
+      exception. *)
+  and annotate_parser_error = function
+    | Parser_located_exception { cause; locations } ->
+        let cause' = annotate_parser_error cause in
+        Parser_located_exception { cause = cause'; locations }
+    | exn -> Parser_error exn
+
+  (** [convert_located_exceptions exn] converts {!Parser_located_exception}
+      in [exn] to located exceptions in the {!Error} module for
+      error-reporting. *)
+  and convert_located_exceptions = function
+    | Parser_located_exception { cause; locations } ->
+        let cause' = convert_located_exceptions cause in
+        Error.located_exception locations cause'
+    | Labelled_exception { label; cause } ->
+        let cause' = convert_located_exceptions cause in
+        Labelled_exception { label; cause = cause' }
+    | No_more_choices causes ->
+        let causes' = List.map convert_located_exceptions causes in
+        No_more_choices causes'
+    | Parser_error cause ->
+        let cause' = convert_located_exceptions cause in
+        Parser_error cause'
+    | exn -> exn
+
+  (** [restructure_parser_exception exn] restructures the parser exception
+      [exn] to simplify it for error-reporting. *)
+  let restructure_parser_exception =
+    Fun.(
+      bubble_up_exception_locations >> flatten_exhausted_choices_exception
+      >> annotate_parser_error >> convert_located_exceptions)
 
   let[@inline] run p s = p s
 
@@ -300,8 +393,8 @@ end) :
     match run p s with
     | s', Result.Ok e -> (s', e)
     | _s', Result.Error cause ->
-        let cause' = sanitize_parser_exception cause in
-        Error.raise (Parser_error cause')
+        let cause' = restructure_parser_exception cause in
+        Error.raise cause'
 
   let catch p handler s = run p s |> handler
 
@@ -315,31 +408,31 @@ end) :
 
   let fail_at_previous_location e s =
     match State.previous_location s with
+    | Option.Some previous_location ->
+        fail (located_exception1 previous_location e) s
     | Option.None -> (
         match State.next_location s with
-        | Option.None -> fail e s
         | Option.Some next_location ->
             fail
               (located_exception1
                  (Location.start_position_as_location next_location)
                  e)
-              s)
-    | Option.Some previous_location ->
-        fail (located_exception1 previous_location e) s
+              s
+        | Option.None -> fail e s)
 
   let fail_at_next_location e s =
     match State.next_location s with
+    | Option.Some next_location ->
+        fail (located_exception1 next_location e) s
     | Option.None -> (
         match State.previous_location s with
-        | Option.None -> fail e s
         | Option.Some previous_location ->
             fail
               (located_exception1
                  (Location.stop_position_as_location previous_location)
                  e)
-              s)
-    | Option.Some next_location ->
-        fail (located_exception1 next_location e) s
+              s
+        | Option.None -> fail e s)
 
   let return_at s x = (s, Result.ok x)
 
@@ -363,29 +456,6 @@ end) :
   include (Functor.Make (M) : Functor.FUNCTOR with type 'a t := 'a t)
 
   include (Apply.Make (M) : Apply.APPLY with type 'a t := 'a t)
-
-  let rec traverse_list f xs =
-    match xs with
-    | [] -> return []
-    | x :: xs ->
-        let* y = f x in
-        let* ys = traverse_list f xs in
-        return (y :: ys)
-
-  let rec traverse_list_void f xs =
-    match xs with
-    | [] -> return ()
-    | x :: xs ->
-        let* _ = f x in
-        traverse_list_void f xs
-
-  let rec seq_list xs =
-    match xs with
-    | [] -> return []
-    | x :: xs ->
-        let* y = x in
-        let* ys = seq_list xs in
-        return (y :: ys)
 
   let trying p s =
     match run p s with
@@ -417,27 +487,27 @@ end) :
 
   let[@inline] alt p1 p2 = choice [ p1; p2 ]
 
-  let maybe p = alt (p $> Option.some) (return Option.none)
+  let[@inline] ( <|> ) p1 p2 = alt p1 p2
 
-  let maybe_default p ~default = maybe p $> Option.value ~default
+  let maybe p = p $> Option.some <|> return Option.none
 
   let void p = p $> fun _x -> ()
 
-  let rec many p = alt (some p $> List1.to_list) (return [])
+  let rec many p = some p $> List1.to_list <|> return []
 
   and some p =
     let* x = p in
     let* xs = many p in
     return (List1.from x xs)
 
-  let sep_by0 p sep =
+  let sep_by0 ~sep p =
     maybe p >>= function
     | Option.None -> return []
     | Option.Some x ->
         let* xs = many (sep &> p) in
         return (x :: xs)
 
-  let sep_by1 p sep =
+  let sep_by1 ~sep p =
     let* x = p in
     let* xs = many (sep &> p) in
     return (List1.from x xs)

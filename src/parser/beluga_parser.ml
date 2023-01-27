@@ -1,4 +1,16 @@
 open Beluga_syntax
+
+(** {1 Parsing} *)
+
+module Lf_parser = Lf_parser
+module Clf_parser = Clf_parser
+module Meta_parser = Meta_parser
+module Comp_parser = Comp_parser
+module Harpoon_parser = Harpoon_parser
+module Signature_parser = Signature_parser
+
+(** {1 Disambiguation} *)
+
 module Shunting_yard = Shunting_yard
 module Application_disambiguation = Application_disambiguation
 module Lf_disambiguation = Lf_disambiguation
@@ -13,6 +25,21 @@ module Simple_disambiguation_state =
 module Make
     (Disambiguation_state : Common_disambiguation.DISAMBIGUATION_STATE) =
 struct
+  module Lf_parser = Lf_parser.Make (Common_parser.Simple_common_parser)
+  module Clf_parser = Clf_parser.Make (Common_parser.Simple_common_parser)
+  module Meta_parser =
+    Meta_parser.Make (Common_parser.Simple_common_parser) (Clf_parser)
+  module Comp_parser =
+    Comp_parser.Make (Common_parser.Simple_common_parser) (Meta_parser)
+  module Harpoon_parser =
+    Harpoon_parser.Make (Common_parser.Simple_common_parser) (Meta_parser)
+      (Comp_parser)
+  module Signature_parser =
+    Signature_parser.Make (Common_parser.Simple_common_parser) (Lf_parser)
+      (Meta_parser)
+      (Comp_parser)
+      (Harpoon_parser)
+
   module Persistent_pattern_disambiguation_state =
     Common_disambiguation.Make_persistent_pattern_disambiguation_state
       (Disambiguation_state)
@@ -68,7 +95,7 @@ struct
 
   type disambiguation_state = Disambiguation_state.state
 
-  type parser_state = Common_parser.state
+  type parser_state = Common_parser.Simple_common_parser.state
 
   module State = struct
     type t =
@@ -95,18 +122,18 @@ struct
   let make_initial_parser_state_from_file ~filename =
     let initial_location = Location.initial filename in
     let token_sequence = Lexer.lex_file ~filename in
-    Common_parser.initial_state ~last_location:initial_location
-      token_sequence
+    Common_parser.Simple_common_parser.initial_state
+      ~last_location:initial_location token_sequence
 
   let make_initial_parser_state_from_channel ~initial_location input =
     let token_sequence = Lexer.lex_input_channel ~initial_location input in
-    Common_parser.initial_state ~last_location:initial_location
-      token_sequence
+    Common_parser.Simple_common_parser.initial_state
+      ~last_location:initial_location token_sequence
 
   let make_initial_parser_state_from_string ~initial_location input =
     let token_sequence = Lexer.lex_string ~initial_location input in
-    Common_parser.initial_state ~last_location:initial_location
-      token_sequence
+    Common_parser.Simple_common_parser.initial_state
+      ~last_location:initial_location token_sequence
 
   let make_initial_state_from_file ~disambiguation_state ~filename =
     let parser_state = make_initial_parser_state_from_file ~filename in
@@ -156,8 +183,10 @@ struct
     (state, disambiguated)
 
   let parse_only parser disambiguator state =
-    let only_parser = Common_parser.only parser in
-    let state', parsed = parse state (Common_parser.run_exn only_parser) in
+    let only_parser = Common_parser.Simple_common_parser.only parser in
+    let state', parsed =
+      parse state (Common_parser.Simple_common_parser.run_exn only_parser)
+    in
     let _state'', (_disambiguation_state', disambiguated) =
       disambiguate' state' (disambiguator parsed)
     in

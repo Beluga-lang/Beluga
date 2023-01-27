@@ -31,6 +31,12 @@ module type PARSER_LOCATION_STATE = sig
   val previous_location : t -> location option
 end
 
+module type LOCATED_TOKEN = sig
+  type t
+
+  val location : t -> Location.t
+end
+
 module type PARSER = sig
   type token
 
@@ -546,23 +552,37 @@ end) :
         | Result.Error cause -> fail_at_next_location cause s)
 end
 
-module Make (Token : sig
-  type t
+module Make_persistent_parser_state (Token : LOCATED_TOKEN) : sig
+  include PARSER_STATE with type token = Token.t
 
-  val location : t -> Location.t
-end) : sig
+  include PARSER_BACKTRACKING_STATE with type t := t
+
   include
-    PARSER_WITH_LOCATIONS
-      with type token = Token.t
-       and type input = Token.t Seq.t
-       and type location = Location.t
+    PARSER_LOCATION_STATE with type t := t and type location = Location.t
 
-  val initial_state : ?last_location:location -> input -> state
+  val initial_state : ?last_location:location -> Token.t Seq.t -> t
 end = struct
   module Simple_state = Make_persistent_bracktracking_state (Token)
   module State_with_locations = Make_location_state (Token) (Simple_state)
-  include Make_parser_with_locations (Token) (State_with_locations)
+  include State_with_locations
 
   let initial_state ?last_location input =
     State_with_locations.initial ?last_location (Simple_state.initial input)
 end
+
+module Make (Token : sig
+  type t
+end) (State : sig
+  include PARSER_STATE with type token = Token.t
+
+  include PARSER_BACKTRACKING_STATE with type t := t
+
+  include
+    PARSER_LOCATION_STATE with type t := t and type location = Location.t
+end) :
+  PARSER_WITH_LOCATIONS
+    with type state = State.t
+     and type token = Token.t
+     and type input = Token.t Seq.t
+     and type location = Location.t =
+  Make_parser_with_locations (Token) (State)

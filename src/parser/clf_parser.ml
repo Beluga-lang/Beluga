@@ -146,9 +146,8 @@ end = struct
       }
     and non_empty =
       let bindings =
-        sep_by1
+        sep_by1 ~sep:comma
           (seq2 (maybe (identifier <& trying colon)) CLF_parsers.clf_object)
-          comma
       in
       seq2 (maybe (seq2 (span dots) (trying comma))) bindings |> span
       $> function
@@ -212,7 +211,7 @@ end = struct
            Synprs.CLF.Object.Raw_hole { location; variant })
       |> labelled "Possibly labelled contextual LF hole"
     and tuple =
-      angles (sep_by1 CLF_parsers.clf_object semicolon)
+      angles (sep_by1 ~sep:semicolon CLF_parsers.clf_object)
       |> span
       $> (fun (location, elements) ->
            Synprs.CLF.Object.Raw_tuple { location; elements })
@@ -290,9 +289,8 @@ end = struct
 
   let clf_object4 =
     let block_contents =
-      sep_by1
+      sep_by1 ~sep:comma
         (seq2 (maybe (identifier <& trying colon)) CLF_parsers.clf_object)
-        comma
     in
     let block =
       keyword "block" &> opt_parens block_contents |> span

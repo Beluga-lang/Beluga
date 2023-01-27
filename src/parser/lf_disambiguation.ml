@@ -615,7 +615,7 @@ let () =
         ; expected_arguments_count
         ; actual_arguments_count
         } ->
-        Format.dprintf "Operator %a expected %d arguments but got %d."
+        Format.dprintf "Operator %a expected %d argument(s) but got %d."
           Qualified_identifier.pp operator_identifier
           expected_arguments_count actual_arguments_count
     | exn -> Error.raise_unsupported_exception_printing exn)

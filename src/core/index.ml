@@ -215,7 +215,7 @@ let error_printer = function
   | MisplacedOperator n ->
       Format.dprintf "Illegal use of operator %a." Name.pp n
   | MissingArguments (n, expected, found) ->
-      Format.dprintf "Operator %a expected %d arguments, found %d." Name.pp n
+      Format.dprintf "Operator %a expected %d argument(s), found %d." Name.pp n
         expected found
   | UnboundName n ->
       Format.dprintf

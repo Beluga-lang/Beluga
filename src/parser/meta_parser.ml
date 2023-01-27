@@ -62,14 +62,13 @@ end = struct
   let schema_some_clause =
     let declaration = seq2 identifier (colon &> Clf_parser.clf_object) in
     keyword "some"
-    &> bracks (sep_by1 declaration comma)
+    &> bracks (sep_by1 ~sep:comma declaration)
     |> labelled "Context schema `some' clause"
 
   let schema_block_clause =
     let block_contents =
-      sep_by1
+      sep_by1 ~sep:comma
         (seq2 (maybe (identifier <& trying colon)) Clf_parser.clf_object)
-        comma
       |> labelled "Context schema element"
     in
     keyword "block" &> opt_parens block_contents
@@ -95,7 +94,7 @@ end = struct
     choice [ constant; element_with_some; element ]
 
   let schema_object1 =
-    sep_by1 schema_object2 plus |> span $> function
+    sep_by1 ~sep:plus schema_object2 |> span $> function
     | _, List1.T (schema_object, []) -> schema_object
     | location, List1.T (c1, c2 :: cs) ->
         let schemas = List2.from c1 c2 cs in
@@ -172,10 +171,9 @@ end = struct
   *)
   let meta_context =
     let non_empty =
-      sep_by0
+      sep_by0 ~sep:comma
         (seq2 meta_object_identifier
            (maybe (colon &> Meta_parsers.meta_thing)))
-        comma
       |> span
       $> fun (location, bindings) ->
       { Synprs.Meta.Context_object.location; bindings }

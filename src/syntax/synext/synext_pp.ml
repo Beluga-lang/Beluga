@@ -41,19 +41,20 @@ let rec pp_lf_kind ppf kind =
 and pp_lf_typ ppf typ =
   let parent_precedence = precedence_of_lf_typ typ in
   match typ with
-  | LF.Typ.Constant { identifier; quoted; operator; _ } ->
-      if quoted && Bool.not (Operator.is_nullary operator) then
+  | LF.Typ.Constant { identifier; prefixed; operator; _ } ->
+      if prefixed && Bool.not (Operator.is_nullary operator) then
         Format.fprintf ppf "(%a)" Qualified_identifier.pp identifier
       else Qualified_identifier.pp ppf identifier
   | LF.Typ.Application { applicand; arguments; _ } ->
       pp_application
         ~guard_operator:(function
-          | LF.Typ.Constant { operator; quoted = false; _ } ->
+          | LF.Typ.Constant { operator; prefixed = false; _ } ->
               `Operator operator
           | _ -> `Term)
         ~guard_operator_application:(function
           | LF.Term.Application
-              { applicand = LF.Term.Constant { operator; quoted = false; _ }
+              { applicand =
+                  LF.Term.Constant { operator; prefixed = false; _ }
               ; _
               } ->
               `Operator_application operator
@@ -116,19 +117,20 @@ and pp_lf_term ppf term =
   let parent_precedence = precedence_of_lf_term term in
   match term with
   | LF.Term.Variable { identifier; _ } -> Identifier.pp ppf identifier
-  | LF.Term.Constant { identifier; quoted = true; _ } ->
+  | LF.Term.Constant { identifier; prefixed = true; _ } ->
       Format.fprintf ppf "(%a)" Qualified_identifier.pp identifier
-  | LF.Term.Constant { identifier; quoted = false; _ } ->
+  | LF.Term.Constant { identifier; prefixed = false; _ } ->
       Qualified_identifier.pp ppf identifier
   | LF.Term.Application { applicand; arguments; _ } ->
       pp_application
         ~guard_operator:(function
-          | LF.Term.Constant { operator; quoted = false; _ } ->
+          | LF.Term.Constant { operator; prefixed = false; _ } ->
               `Operator operator
           | _ -> `Term)
         ~guard_operator_application:(function
           | LF.Term.Application
-              { applicand = LF.Term.Constant { operator; quoted = false; _ }
+              { applicand =
+                  LF.Term.Constant { operator; prefixed = false; _ }
               ; _
               } ->
               `Operator_application operator
@@ -168,19 +170,20 @@ open Make_parenthesizer (Clf_precedence)
 let rec pp_clf_typ ppf typ =
   let parent_precedence = precedence_of_clf_typ typ in
   match typ with
-  | CLF.Typ.Constant { identifier; quoted; operator; _ } ->
-      if quoted && Bool.not (Operator.is_nullary operator) then
+  | CLF.Typ.Constant { identifier; prefixed; operator; _ } ->
+      if prefixed && Bool.not (Operator.is_nullary operator) then
         Format.fprintf ppf "(%a)" Qualified_identifier.pp identifier
       else Qualified_identifier.pp ppf identifier
   | CLF.Typ.Application { applicand; arguments; _ } ->
       pp_application
         ~guard_operator:(function
-          | CLF.Typ.Constant { operator; quoted = false; _ } ->
+          | CLF.Typ.Constant { operator; prefixed = false; _ } ->
               `Operator operator
           | _ -> `Term)
         ~guard_operator_application:(function
           | CLF.Term.Application
-              { applicand = CLF.Term.Constant { operator; quoted = false; _ }
+              { applicand =
+                  CLF.Term.Constant { operator; prefixed = false; _ }
               ; _
               } ->
               `Operator_application operator
@@ -249,19 +252,20 @@ and pp_clf_term ppf term =
       Identifier.pp ppf identifier
   | CLF.Term.Substitution_variable { identifier; _ } ->
       Identifier.pp ppf identifier
-  | CLF.Term.Constant { identifier; quoted = true; _ } ->
+  | CLF.Term.Constant { identifier; prefixed = true; _ } ->
       Format.fprintf ppf "(%a)" Qualified_identifier.pp identifier
-  | CLF.Term.Constant { identifier; quoted = false; _ } ->
+  | CLF.Term.Constant { identifier; prefixed = false; _ } ->
       Qualified_identifier.pp ppf identifier
   | CLF.Term.Application { applicand; arguments; _ } ->
       pp_application
         ~guard_operator:(function
-          | CLF.Term.Constant { operator; quoted = false; _ } ->
+          | CLF.Term.Constant { operator; prefixed = false; _ } ->
               `Operator operator
           | _ -> `Term)
         ~guard_operator_application:(function
           | CLF.Term.Application
-              { applicand = CLF.Term.Constant { operator; quoted = false; _ }
+              { applicand =
+                  CLF.Term.Constant { operator; prefixed = false; _ }
               ; _
               } ->
               `Operator_application operator
@@ -416,20 +420,20 @@ let rec pp_clf_term_pattern ppf term =
       Identifier.pp ppf identifier
   | CLF.Term.Pattern.Substitution_variable { identifier; _ } ->
       Identifier.pp ppf identifier
-  | CLF.Term.Pattern.Constant { identifier; quoted = true; _ } ->
+  | CLF.Term.Pattern.Constant { identifier; prefixed = true; _ } ->
       Format.fprintf ppf "(%a)" Qualified_identifier.pp identifier
-  | CLF.Term.Pattern.Constant { identifier; quoted = false; _ } ->
+  | CLF.Term.Pattern.Constant { identifier; prefixed = false; _ } ->
       Qualified_identifier.pp ppf identifier
   | CLF.Term.Pattern.Application { applicand; arguments; _ } ->
       pp_application
         ~guard_operator:(function
-          | CLF.Term.Pattern.Constant { operator; quoted = false; _ } ->
+          | CLF.Term.Pattern.Constant { operator; prefixed = false; _ } ->
               `Operator operator
           | _ -> `Term)
         ~guard_operator_application:(function
           | CLF.Term.Pattern.Application
               { applicand =
-                  CLF.Term.Pattern.Constant { operator; quoted = false; _ }
+                  CLF.Term.Pattern.Constant { operator; prefixed = false; _ }
               ; _
               } ->
               `Operator_application operator
@@ -726,20 +730,22 @@ let rec pp_comp_kind ppf kind =
 and pp_comp_typ ppf typ =
   let parent_precedence = precedence_of_comp_typ typ in
   match typ with
-  | Comp.Typ.Inductive_typ_constant { identifier; quoted; operator; _ } ->
-      if quoted && Bool.not (Operator.is_nullary operator) then
+  | Comp.Typ.Inductive_typ_constant { identifier; prefixed; operator; _ } ->
+      if prefixed && Bool.not (Operator.is_nullary operator) then
         Format.fprintf ppf "(%a)" Qualified_identifier.pp identifier
       else Qualified_identifier.pp ppf identifier
-  | Comp.Typ.Stratified_typ_constant { identifier; quoted; operator; _ } ->
-      if quoted && Bool.not (Operator.is_nullary operator) then
+  | Comp.Typ.Stratified_typ_constant { identifier; prefixed; operator; _ } ->
+      if prefixed && Bool.not (Operator.is_nullary operator) then
         Format.fprintf ppf "(%a)" Qualified_identifier.pp identifier
       else Qualified_identifier.pp ppf identifier
-  | Comp.Typ.Coinductive_typ_constant { identifier; quoted; operator; _ } ->
-      if quoted && Bool.not (Operator.is_nullary operator) then
+  | Comp.Typ.Coinductive_typ_constant { identifier; prefixed; operator; _ }
+    ->
+      if prefixed && Bool.not (Operator.is_nullary operator) then
         Format.fprintf ppf "(%a)" Qualified_identifier.pp identifier
       else Qualified_identifier.pp ppf identifier
-  | Comp.Typ.Abbreviation_typ_constant { identifier; quoted; operator; _ } ->
-      if quoted && Bool.not (Operator.is_nullary operator) then
+  | Comp.Typ.Abbreviation_typ_constant { identifier; prefixed; operator; _ }
+    ->
+      if prefixed && Bool.not (Operator.is_nullary operator) then
         Format.fprintf ppf "(%a)" Qualified_identifier.pp identifier
       else Qualified_identifier.pp ppf identifier
   | Comp.Typ.Pi { parameter_identifier; plicity; parameter_type; body; _ }
@@ -818,13 +824,13 @@ and pp_comp_typ ppf typ =
       | Comp.Typ.Application
           { applicand =
               ( Comp.Typ.Inductive_typ_constant
-                  { identifier; operator; quoted = false; _ }
+                  { identifier; operator; prefixed = false; _ }
               | Comp.Typ.Stratified_typ_constant
-                  { identifier; operator; quoted = false; _ }
+                  { identifier; operator; prefixed = false; _ }
               | Comp.Typ.Coinductive_typ_constant
-                  { identifier; operator; quoted = false; _ }
+                  { identifier; operator; prefixed = false; _ }
               | Comp.Typ.Abbreviation_typ_constant
-                  { identifier; operator; quoted = false; _ } )
+                  { identifier; operator; prefixed = false; _ } )
           ; _
           } -> (
           match Operator.fixity operator with
@@ -868,8 +874,8 @@ and pp_comp_expression ppf expression =
   match expression with
   | Comp.Expression.Variable { identifier; _ } ->
       Identifier.pp ppf identifier
-  | Comp.Expression.Constant { identifier; quoted; operator; _ } ->
-      if quoted && Bool.not (Operator.is_nullary operator) then
+  | Comp.Expression.Constant { identifier; prefixed; operator; _ } ->
+      if prefixed && Bool.not (Operator.is_nullary operator) then
         Format.fprintf ppf "(%a)" Qualified_identifier.pp identifier
       else Qualified_identifier.pp ppf identifier
   | Comp.Expression.Fn { parameters; body; _ } ->
@@ -964,13 +970,13 @@ and pp_comp_expression ppf expression =
   | Comp.Expression.Application { applicand; arguments; _ } ->
       pp_application
         ~guard_operator:(function
-          | Comp.Expression.Constant { operator; quoted = false; _ } ->
+          | Comp.Expression.Constant { operator; prefixed = false; _ } ->
               `Operator operator
           | _ -> `Term)
         ~guard_operator_application:(function
           | Comp.Expression.Application
               { applicand =
-                  Comp.Expression.Constant { operator; quoted = false; _ }
+                  Comp.Expression.Constant { operator; prefixed = false; _ }
               ; _
               } ->
               `Operator_application operator
@@ -984,8 +990,8 @@ and pp_comp_pattern ppf pattern =
   let parent_precedence = precedence_of_comp_pattern pattern in
   match pattern with
   | Comp.Pattern.Variable { identifier; _ } -> Identifier.pp ppf identifier
-  | Comp.Pattern.Constant { identifier; quoted; operator; _ } ->
-      if quoted && Bool.not (Operator.is_nullary operator) then
+  | Comp.Pattern.Constant { identifier; prefixed; operator; _ } ->
+      if prefixed && Bool.not (Operator.is_nullary operator) then
         Format.fprintf ppf "(%a)" Qualified_identifier.pp identifier
       else Qualified_identifier.pp ppf identifier
   | Comp.Pattern.Meta_object { meta_pattern; _ } ->
@@ -1012,13 +1018,13 @@ and pp_comp_pattern ppf pattern =
   | Comp.Pattern.Application { applicand; arguments; _ } ->
       pp_application
         ~guard_operator:(function
-          | Comp.Pattern.Constant { operator; quoted = false; _ } ->
+          | Comp.Pattern.Constant { operator; prefixed = false; _ } ->
               `Operator operator
           | _ -> `Term)
         ~guard_operator_application:(function
           | Comp.Pattern.Application
               { applicand =
-                  Comp.Pattern.Constant { operator; quoted = false; _ }
+                  Comp.Pattern.Constant { operator; prefixed = false; _ }
               ; _
               } ->
               `Operator_application operator

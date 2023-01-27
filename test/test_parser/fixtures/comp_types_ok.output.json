@@ -64,7 +64,7 @@
                   "stop_column": 13
                 }
               },
-              "quoted": false,
+              "prefixed": false,
               "operator": {
                 "fixity": "prefix",
                 "associativity": "right-associative",
@@ -154,7 +154,7 @@
                       "stop_column": 28
                     }
                   },
-                  "quoted": false,
+                  "prefixed": false,
                   "operator": {
                     "fixity": "prefix",
                     "associativity": "right-associative",
@@ -208,7 +208,7 @@
                           "stop_column": 41
                         }
                       },
-                      "quoted": false,
+                      "prefixed": false,
                       "operator": {
                         "fixity": "infix",
                         "associativity": "non-associative",
@@ -379,7 +379,7 @@
                           "stop_column": 61
                         }
                       },
-                      "quoted": false,
+                      "prefixed": false,
                       "operator": {
                         "fixity": "infix",
                         "associativity": "non-associative",
@@ -509,7 +509,7 @@
                                     "stop_column": 66
                                   }
                                 },
-                                "quoted": false,
+                                "prefixed": false,
                                 "operator": {
                                   "fixity": "prefix",
                                   "associativity": "right-associative",

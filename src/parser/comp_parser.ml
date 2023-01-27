@@ -107,10 +107,10 @@ end = struct
       $> (function
            | location, `Qualified identifier ->
                Synprs.Comp.Sort_object.Raw_qualified_identifier
-                 { location; identifier; quoted = false }
+                 { location; identifier; prefixed = false }
            | location, `Plain identifier ->
                Synprs.Comp.Sort_object.Raw_identifier
-                 { location; identifier; quoted = false })
+                 { location; identifier; prefixed = false })
       |> labelled "Computational type constant or term variable"
     and ctype =
       keyword "ctype" |> span
@@ -131,10 +131,10 @@ end = struct
       $> (function
            | location, Synprs.Comp.Sort_object.Raw_identifier i ->
                Synprs.Comp.Sort_object.Raw_identifier
-                 { i with quoted = true; location }
+                 { i with prefixed = true; location }
            | location, Synprs.Comp.Sort_object.Raw_qualified_identifier i ->
                Synprs.Comp.Sort_object.Raw_qualified_identifier
-                 { i with quoted = true; location }
+                 { i with prefixed = true; location }
            | location, sort ->
                Synprs.set_location_of_comp_sort_object location sort)
       |> labelled "Parenthesized computational kind or type"
@@ -315,10 +315,10 @@ end = struct
       $> (function
            | location, `Qualified identifier ->
                Synprs.Comp.Pattern_object.Raw_qualified_identifier
-                 { location; identifier; quoted = false }
+                 { location; identifier; prefixed = false }
            | location, `Plain identifier ->
                Synprs.Comp.Pattern_object.Raw_identifier
-                 { location; identifier; quoted = false })
+                 { location; identifier; prefixed = false })
       |> labelled "Computational type constant or term variable"
     and box =
       Meta_parser.meta_thing |> span
@@ -344,13 +344,13 @@ end = struct
            | ( location
              , List1.T (Synprs.Comp.Pattern_object.Raw_identifier i, []) ) ->
                Synprs.Comp.Pattern_object.Raw_identifier
-                 { i with quoted = true; location }
+                 { i with prefixed = true; location }
            | ( location
              , List1.T
                  (Synprs.Comp.Pattern_object.Raw_qualified_identifier i, [])
              ) ->
                Synprs.Comp.Pattern_object.Raw_qualified_identifier
-                 { i with quoted = true; location }
+                 { i with prefixed = true; location }
            | location, List1.T (pattern, []) ->
                Synprs.set_location_of_comp_pattern_object location pattern
            | location, List1.T (p1, p2 :: ps) ->
@@ -472,10 +472,10 @@ end = struct
       $> (function
            | location, `Qualified identifier ->
                Synprs.Comp.Expression_object.Raw_qualified_identifier
-                 { location; identifier; quoted = false }
+                 { location; identifier; prefixed = false }
            | location, `Plain identifier ->
                Synprs.Comp.Expression_object.Raw_identifier
-                 { location; identifier; quoted = false })
+                 { location; identifier; prefixed = false })
       |> labelled "Computational type constant or term variable"
     and box =
       Meta_parser.meta_thing |> span
@@ -505,13 +505,13 @@ end = struct
              , List1.T (Synprs.Comp.Expression_object.Raw_identifier i, []) )
              ->
                Synprs.Comp.Expression_object.Raw_identifier
-                 { i with quoted = true; location }
+                 { i with prefixed = true; location }
            | ( location
              , List1.T
                  ( Synprs.Comp.Expression_object.Raw_qualified_identifier i
                  , [] ) ) ->
                Synprs.Comp.Expression_object.Raw_qualified_identifier
-                 { i with quoted = true; location }
+                 { i with prefixed = true; location }
            | location, List1.T (expression, []) ->
                Synprs.set_location_of_comp_expression_object location
                  expression

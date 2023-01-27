@@ -86,7 +86,7 @@ module LF = struct
           { location : Location.t
           ; identifier : Qualified_identifier.t
           ; operator : Operator.t
-          ; quoted : Bool.t
+          ; prefixed : Bool.t
           }
           (** [Constant { identifier = "c"; _ }] is the type-level constant
               with qualified identifier ["c"]. *)
@@ -143,7 +143,7 @@ module LF = struct
           { location : Location.t
           ; identifier : Qualified_identifier.t
           ; operator : Operator.t
-          ; quoted : Bool.t
+          ; prefixed : Bool.t
           }
           (** [Constant { identifier = "c"; _ }] is the term-level constant
               with qualified identifier ["c"]. *)
@@ -281,7 +281,7 @@ module CLF = struct
           { location : Location.t
           ; identifier : Qualified_identifier.t
           ; operator : Operator.t
-          ; quoted : Bool.t
+          ; prefixed : Bool.t
           }
           (** [Constant { identifier = "c"; _ }] is the type-level constant
               with qualified identifier ["c"]. *)
@@ -365,7 +365,7 @@ module CLF = struct
           { location : Location.t
           ; identifier : Qualified_identifier.t
           ; operator : Operator.t
-          ; quoted : Bool.t
+          ; prefixed : Bool.t
           }
           (** [Constant { identifier = "c"; _ }] is the term-level constant
               with qualified identifier ["c"]. *)
@@ -458,7 +458,7 @@ module CLF = struct
             { location : Location.t
             ; identifier : Qualified_identifier.t
             ; operator : Operator.t
-            ; quoted : Bool.t
+            ; prefixed : Bool.t
             }
             (** [Constant { identifier = "c"; _ }] is the term-level constant
                 pattern ["c"]. *)
@@ -937,7 +937,7 @@ module Comp = struct
           { location : Location.t
           ; identifier : Qualified_identifier.t
           ; operator : Operator.t
-          ; quoted : Bool.t
+          ; prefixed : Bool.t
           }
           (** [Inductive_typ_constant { identifier = "c"; }] is the
               computation-level inductive type constant ["c"]. *)
@@ -945,7 +945,7 @@ module Comp = struct
           { location : Location.t
           ; identifier : Qualified_identifier.t
           ; operator : Operator.t
-          ; quoted : Bool.t
+          ; prefixed : Bool.t
           }
           (** [Stratified_typ_constant { identifier = "c"; }] is the
               computation-level stratified type constant ["c"]. *)
@@ -953,7 +953,7 @@ module Comp = struct
           { location : Location.t
           ; identifier : Qualified_identifier.t
           ; operator : Operator.t
-          ; quoted : Bool.t
+          ; prefixed : Bool.t
           }
           (** [Coinductive_typ_constant { identifier = "c"; }] is the
               computation-level coinductive type constant ["c"]. *)
@@ -961,7 +961,7 @@ module Comp = struct
           { location : Location.t
           ; identifier : Qualified_identifier.t
           ; operator : Operator.t
-          ; quoted : Bool.t
+          ; prefixed : Bool.t
           }
           (** [Abbreviation_typ_constant { identifier = "c"; }] is the
               computation-level abbreviated type constant ["c"]. *)
@@ -1018,7 +1018,7 @@ module Comp = struct
           { location : Location.t
           ; identifier : Qualified_identifier.t
           ; operator : Operator.t
-          ; quoted : Bool.t
+          ; prefixed : Bool.t
           }
           (** [Constant { identifier = "c"; _ }] is the computation-level
               constant ["c"] referring to a value. *)
@@ -1148,7 +1148,7 @@ module Comp = struct
           { location : Location.t
           ; identifier : Qualified_identifier.t
           ; operator : Operator.t
-          ; quoted : Bool.t
+          ; prefixed : Bool.t
           }
       | Meta_object of
           { location : Location.t

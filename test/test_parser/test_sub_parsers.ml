@@ -159,6 +159,15 @@ let test_comp_typ =
     ~error_inputs_basename:"comp_types_error.input.bel"
     Parser.parse_only_comp_typ Util.Synext_json.json_of_comp_typ
 
+let test_comp_expression =
+  test_parser ~fixtures_directory:"fixtures"
+    ~disambiguation_state_configuration_basename:"disambiguation_state.json"
+    ~ok_inputs_basename:"comp_expressions_ok.input.bel"
+    ~ok_outputs_basename:"comp_expressions_ok.output.json"
+    ~error_inputs_basename:"comp_expressions_error.input.bel"
+    Parser.parse_only_comp_expression
+    Util.Synext_json.json_of_comp_expression
+
 let tests =
   (* Set the current working directory to the directory containing this
      executable file *)
@@ -181,5 +190,6 @@ let tests =
   ; "Computation-Level Parsers"
     >::: [ "Computation Kind" >::: test_comp_kind ()
          ; "Computation Type" >::: test_comp_typ ()
+         ; "Computation Expression" >::: test_comp_expression ()
          ]
   ]

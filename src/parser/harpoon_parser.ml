@@ -58,9 +58,7 @@ module Make
     let harpoon_command =
       let by =
         keyword "by"
-        &> seq3
-             (comp_expression_object <& keyword "as")
-             identifier (maybe boxity)
+        &> seq3 (comp_expression <& keyword "as") identifier (maybe boxity)
         |> span
         |> labelled "Harpoon command"
         $> function
@@ -79,13 +77,13 @@ module Make
               }
       and unbox =
         keyword "unbox"
-        &> seq2 (span comp_expression_object <& keyword "as") identifier
+        &> seq2 (span comp_expression <& keyword "as") identifier
         $> fun ((location, expression), assignee) ->
         Synprs.Harpoon.Command.Unbox
           { location; assignee; expression; modifier = Option.none }
       and strengthen =
         keyword "strengthen"
-        &> seq2 (span comp_expression_object <& keyword "as") identifier
+        &> seq2 (span comp_expression <& keyword "as") identifier
         $> fun ((location, expression), assignee) ->
         Synprs.Harpoon.Command.Unbox
           { location
@@ -164,31 +162,27 @@ module Make
         $> fun (location, hypothetical) ->
         Synprs.Harpoon.Directive.Intros { location; hypothetical }
       and solve =
-        keyword "solve" &> comp_expression_object |> span
+        keyword "solve" &> comp_expression |> span
         $> fun (location, solution) ->
         Synprs.Harpoon.Directive.Solve { location; solution }
       and split =
         keyword "split"
-        &> seq2 comp_expression_object
-             (keyword "as" &> some harpoon_split_branch)
+        &> seq2 comp_expression (keyword "as" &> some harpoon_split_branch)
         |> span
         $> fun (location, (scrutinee, branches)) ->
         Synprs.Harpoon.Directive.Split { location; scrutinee; branches }
       and impossible =
-        keyword "impossible" &> comp_expression_object |> span
+        keyword "impossible" &> comp_expression |> span
         $> fun (location, scrutinee) ->
         Synprs.Harpoon.Directive.Impossible { location; scrutinee }
       and suffices =
         let suffices_branch =
-          seq2 comp_sort_object (braces Harpoon_parsers.harpoon_proof)
-          |> span
+          seq2 comp_typ (braces Harpoon_parsers.harpoon_proof) |> span
           $> fun (location, (goal, proof)) ->
           { Synprs.Harpoon.Suffices_branch.location; goal; proof }
         in
         keyword "suffices" &> keyword "by"
-        &> seq2
-             (comp_expression_object <& keyword "toshow")
-             (many suffices_branch)
+        &> seq2 (comp_expression <& keyword "toshow") (many suffices_branch)
         |> span
         $> fun (location, (scrutinee, branches)) ->
         Synprs.Harpoon.Directive.Suffices { location; scrutinee; branches }
@@ -222,7 +216,7 @@ module Make
         $> fun (location, introduced_variables) ->
         Synprs.Harpoon.Repl.Command.Intros { location; introduced_variables }
       and split =
-        keyword "split" &> comp_expression_object |> span
+        keyword "split" &> comp_expression |> span
         $> fun (location, scrutinee) ->
         Synprs.Harpoon.Repl.Command.Split { location; scrutinee }
       and msplit =
@@ -230,22 +224,20 @@ module Make
         $> fun (location, identifier) ->
         Synprs.Harpoon.Repl.Command.Msplit { location; identifier }
       and invert =
-        keyword "invert" &> comp_expression_object |> span
+        keyword "invert" &> comp_expression |> span
         $> fun (location, scrutinee) ->
         Synprs.Harpoon.Repl.Command.Invert { location; scrutinee }
       and impossible =
-        keyword "impossible" &> comp_expression_object |> span
+        keyword "impossible" &> comp_expression |> span
         $> fun (location, scrutinee) ->
         Synprs.Harpoon.Repl.Command.Impossible { location; scrutinee }
       and solve =
-        keyword "solve" &> comp_expression_object |> span
+        keyword "solve" &> comp_expression |> span
         $> fun (location, solution) ->
         Synprs.Harpoon.Repl.Command.Solve { location; solution }
       and by =
         keyword "by"
-        &> seq3 comp_expression_object
-             (keyword "as" &> identifier)
-             (maybe boxity)
+        &> seq3 comp_expression (keyword "as" &> identifier) (maybe boxity)
         |> span
         $> function
         | location, (expression, assignee, (Option.None | Option.Some `Boxed))
@@ -262,17 +254,17 @@ module Make
               ; modifier = Option.some `Strengthened
               }
       and compute_type =
-        keyword "type" &> comp_expression_object |> span
+        keyword "type" &> comp_expression |> span
         $> fun (location, scrutinee) ->
         Synprs.Harpoon.Repl.Command.Type { location; scrutinee }
       and suffices =
         let tau_list_item =
           alt
-            (comp_sort_object $> fun tau -> `exact tau)
+            (comp_typ $> fun tau -> `exact tau)
             (underscore |> span $> fun (loc, ()) -> `infer loc)
         in
         seq2
-          (keyword "suffices" &> keyword "by" &> comp_expression_object)
+          (keyword "suffices" &> keyword "by" &> comp_expression)
           (keyword "toshow" &> sep_by0 ~sep:comma tau_list_item)
         |> span
         $> fun (location, (implication, goal_premises)) ->
@@ -280,14 +272,14 @@ module Make
           { location; implication; goal_premises }
       and unbox =
         keyword "unbox"
-        &> seq2 comp_expression_object (keyword "as" &> identifier)
+        &> seq2 comp_expression (keyword "as" &> identifier)
         |> span
         $> fun (location, (expression, assignee)) ->
         Synprs.Harpoon.Repl.Command.Unbox
           { location; expression; assignee; modifier = Option.none }
       and strengthen =
         keyword "strengthen"
-        &> seq2 comp_expression_object (keyword "as" &> identifier)
+        &> seq2 comp_expression (keyword "as" &> identifier)
         |> span
         $> fun (location, (expression, assignee)) ->
         Synprs.Harpoon.Repl.Command.Unbox

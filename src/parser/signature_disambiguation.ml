@@ -234,6 +234,14 @@ struct
     let explicit_arguments = explicit_arguments_comp_typ' comp_typ' in
     make_default_prefix_operator ~arity:explicit_arguments
 
+  let make_default_program_constant_operator comp_typ =
+    let explicit_arguments = explicit_arguments_comp_typ comp_typ in
+    make_default_prefix_operator ~arity:explicit_arguments
+
+  let make_default_program_constant_operator' comp_typ' =
+    let explicit_arguments = explicit_arguments_comp_typ' comp_typ' in
+    make_default_prefix_operator ~arity:explicit_arguments
+
   let make_default_comp_destructor_operator =
     make_default_comp_constructor_operator
 
@@ -296,6 +304,20 @@ struct
     let operator = make_default_comp_constructor_operator' typ' in
     add_computation_term_constructor operator identifier
 
+  let add_default_program_constant ?typ identifier =
+    match typ with
+    | Option.Some typ ->
+        let operator = make_default_program_constant_operator typ in
+        add_program_constant ~operator identifier
+    | Option.None -> add_program_constant identifier
+
+  let add_default_program_constant' ?typ' identifier =
+    match typ' with
+    | Option.Some typ' ->
+        let operator = make_default_program_constant_operator' typ' in
+        add_program_constant ~operator identifier
+    | Option.None -> add_program_constant identifier
+
   let rec add_recursive_declaration_to_disambiguation_state declaration =
     match declaration with
     | Synprs.Signature.Declaration.Raw_lf_typ_or_term_constant _
@@ -339,15 +361,15 @@ struct
         add_computation_term_destructor identifier
     | Synprs.Signature.Declaration.Raw_schema { identifier; _ } ->
         add_schema_constant identifier
-    | Synprs.Signature.Declaration.Raw_theorem { identifier; _ } ->
-        add_computation_variable identifier
-    | Synprs.Signature.Declaration.Raw_proof { identifier; _ } ->
-        add_computation_variable identifier
+    | Synprs.Signature.Declaration.Raw_theorem { identifier; typ; _ } ->
+        add_default_program_constant identifier ~typ
+    | Synprs.Signature.Declaration.Raw_proof { identifier; typ; _ } ->
+        add_default_program_constant identifier ~typ
     | Synprs.Signature.Declaration.Raw_comp_typ_abbreviation
         { identifier; kind; _ } ->
         add_default_abbreviation_comp_typ_constant identifier kind
-    | Synprs.Signature.Declaration.Raw_val { identifier; _ } ->
-        add_computation_variable identifier
+    | Synprs.Signature.Declaration.Raw_val { identifier; typ; _ } ->
+        add_default_program_constant ?typ identifier
     | Synprs.Signature.Declaration.Raw_query { identifier; _ } ->
         add_query_opt identifier
     | Synprs.Signature.Declaration.Raw_mquery { identifier; _ } ->
@@ -381,13 +403,13 @@ struct
         traverse_list1_void
           add_inner_module_declaration_to_disambiguation_state declarations
     | Synext.Signature.Declaration.Theorem { identifier; _ } ->
-        add_computation_variable identifier
+        add_program_constant identifier
     | Synext.Signature.Declaration.Proof { identifier; _ } ->
-        add_computation_variable identifier
+        add_program_constant identifier
     | Synext.Signature.Declaration.CompTypAbbrev { identifier; kind; _ } ->
         add_default_abbreviation_comp_typ_constant' identifier kind
     | Synext.Signature.Declaration.Val { identifier; _ } ->
-        add_computation_variable identifier
+        add_program_constant identifier
     | Synext.Signature.Declaration.Query { identifier; _ } ->
         add_query_opt identifier
     | Synext.Signature.Declaration.MQuery { identifier; _ } ->
@@ -727,7 +749,7 @@ struct
         let* order' =
           traverse_option disambiguate_totality_declaration order
         in
-        let* () = add_computation_variable identifier in
+        let* () = add_program_constant identifier in
         let* body' = disambiguate_comp_expression body in
         return
           (Synext.Signature.Declaration.Theorem
@@ -743,7 +765,7 @@ struct
         let* order' =
           traverse_option disambiguate_totality_declaration order
         in
-        let* () = add_computation_variable identifier in
+        let* () = add_program_constant identifier in
         let* body' = disambiguate_harpoon_proof body in
         return
           (Synext.Signature.Declaration.Proof
@@ -757,7 +779,7 @@ struct
         { location; identifier; typ; expression } ->
         let* typ' = traverse_option disambiguate_comp_typ typ in
         let* expression' = disambiguate_comp_expression expression in
-        let* () = add_computation_variable identifier in
+        let* () = add_program_constant identifier in
         return
           (Synext.Signature.Declaration.Val
              { location; identifier; typ = typ'; expression = expression' })

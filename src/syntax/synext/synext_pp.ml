@@ -874,10 +874,16 @@ and pp_comp_expression ppf expression =
   match expression with
   | Comp.Expression.Variable { identifier; _ } ->
       Identifier.pp ppf identifier
-  | Comp.Expression.Constant { identifier; prefixed; operator; _ } ->
-      if prefixed && Bool.not (Operator.is_nullary operator) then
-        Format.fprintf ppf "(%a)" Qualified_identifier.pp identifier
-      else Qualified_identifier.pp ppf identifier
+  | Comp.Expression.Constant { identifier; prefixed; operator; _ } -> (
+      match operator with
+      | Option.Some operator ->
+          if prefixed && Bool.not (Operator.is_nullary operator) then
+            Format.fprintf ppf "(%a)" Qualified_identifier.pp identifier
+          else Qualified_identifier.pp ppf identifier
+      | Option.None ->
+          if prefixed then
+            Format.fprintf ppf "(%a)" Qualified_identifier.pp identifier
+          else Qualified_identifier.pp ppf identifier)
   | Comp.Expression.Fn { parameters; body; _ } ->
       let pp_parameter ppf parameter =
         match parameter with
@@ -970,13 +976,15 @@ and pp_comp_expression ppf expression =
   | Comp.Expression.Application { applicand; arguments; _ } ->
       pp_application
         ~guard_operator:(function
-          | Comp.Expression.Constant { operator; prefixed = false; _ } ->
+          | Comp.Expression.Constant
+              { operator = Option.Some operator; prefixed = false; _ } ->
               `Operator operator
           | _ -> `Term)
         ~guard_operator_application:(function
           | Comp.Expression.Application
               { applicand =
-                  Comp.Expression.Constant { operator; prefixed = false; _ }
+                  Comp.Expression.Constant
+                    { operator = Option.Some operator; prefixed = false; _ }
               ; _
               } ->
               `Operator_application operator

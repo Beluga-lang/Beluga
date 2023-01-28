@@ -6,9 +6,15 @@ module type CLF_PARSER = sig
   (** @closed *)
   include COMMON_PARSER
 
-  val clf_object : Synprs.clf_object t
+  val clf_typ : Synprs.clf_object t
 
-  val clf_context_object : Synprs.clf_context_object t
+  val clf_term : Synprs.clf_object t
+
+  val clf_term_pattern : Synprs.clf_object t
+
+  val clf_context : Synprs.clf_context_object t
+
+  val clf_substitution : Synprs.clf_context_object t
 end
 
 module Make
@@ -424,6 +430,16 @@ module Make
   let clf_object = CLF_parsers.clf_object
 
   let clf_context_object = CLF_parsers.clf_context_object
+
+  let clf_typ = clf_object
+
+  let clf_term = clf_object
+
+  let clf_term_pattern = clf_object
+
+  let clf_context = clf_context_object
+
+  let clf_substitution = clf_context_object
 
   let () =
     Error.register_exception_printer (function

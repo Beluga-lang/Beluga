@@ -6,7 +6,11 @@ module type LF_PARSER = sig
   (** @closed *)
   include COMMON_PARSER
 
-  val lf_object : Synprs.lf_object t
+  val lf_kind : Synprs.lf_object t
+
+  val lf_typ : Synprs.lf_object t
+
+  val lf_term : Synprs.lf_object t
 end
 
 module Make
@@ -260,6 +264,12 @@ module Make
   end
 
   let lf_object = LF_parsers.lf_object
+
+  let lf_kind = lf_object
+
+  let lf_typ = lf_object
+
+  let lf_term = lf_object
 
   let exception_printer = function
     | Ambiguous_lf_forward_arrow ->

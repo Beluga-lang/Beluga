@@ -1017,7 +1017,7 @@ module Comp = struct
       | Constant of
           { location : Location.t
           ; identifier : Qualified_identifier.t
-          ; operator : Operator.t
+          ; operator : Operator.t Option.t
           ; prefixed : Bool.t
           }
           (** [Constant { identifier = "c"; _ }] is the computation-level

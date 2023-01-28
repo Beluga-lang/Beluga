@@ -6,11 +6,13 @@ module type COMP_PARSER = sig
   (** @closed *)
   include COMMON_PARSER
 
-  val comp_sort_object : Synprs.comp_sort_object t
+  val comp_kind : Synprs.comp_sort_object t
 
-  val comp_pattern_object : Synprs.comp_pattern_object t
+  val comp_typ : Synprs.comp_sort_object t
 
-  val comp_expression_object : Synprs.comp_expression_object t
+  val comp_pattern : Synprs.comp_pattern_object t
+
+  val comp_expression : Synprs.comp_expression_object t
 
   val comp_context : Synprs.comp_context_object t
 end
@@ -104,7 +106,7 @@ module Make
   *)
     let comp_weak_prefix =
       let declaration =
-        seq2 omittable_meta_object_identifier (maybe (colon &> meta_thing))
+        seq2 omittable_meta_object_identifier (maybe (colon &> meta_type))
       in
       let explicit_pi =
         seq2 (braces declaration) Comp_parsers.comp_sort_object
@@ -149,10 +151,11 @@ module Make
         $> (fun (location, ()) ->
              Synprs.Comp.Sort_object.Raw_ctype { location })
         |> labelled "Computational `ctype' kind"
-      and meta_object_of_meta_type =
+      and meta_object_or_meta_type =
         (* Needs [trying] because meta-types can be parenthesized, and the
            leading `(' is ambiguous with [parenthesized]. *)
-        trying meta_thing |> span
+        trying (alt meta_object meta_type)
+        |> span
         $> (fun (location, boxed) ->
              Synprs.Comp.Sort_object.Raw_box { location; boxed })
         |> labelled "Computational boxed meta-object or meta-type"
@@ -174,7 +177,7 @@ module Make
       choice
         [ constant_or_variable
         ; ctype
-        ; meta_object_of_meta_type
+        ; meta_object_or_meta_type
         ; parenthesized
         ]
 
@@ -335,7 +338,7 @@ module Make
         seq2
           (braces
              (seq2 omittable_meta_object_identifier
-                (maybe (colon &> meta_thing))))
+                (maybe (colon &> meta_type))))
           Comp_parsers.comp_pattern_object
         |> span
         $> (fun (location, ((parameter_identifier, parameter_typ), pattern)) ->
@@ -357,7 +360,7 @@ module Make
                    { location; identifier; prefixed = false })
         |> labelled "Computational type constant or term variable"
       and box =
-        meta_thing |> span
+        meta_pattern |> span
         $> (fun (location, pattern) ->
              Synprs.Comp.Pattern_object.Raw_box { location; pattern })
         |> labelled "Meta-object pattern"
@@ -515,7 +518,7 @@ module Make
                    { location; identifier; prefixed = false })
         |> labelled "Computational type constant or term variable"
       and box =
-        meta_thing |> span
+        meta_object |> span
         $> (fun (location, meta_object) ->
              Synprs.Comp.Expression_object.Raw_box { location; meta_object })
         |> labelled "Boxed meta-object"
@@ -701,11 +704,15 @@ module Make
 
   let comp_sort_object = Comp_parsers.comp_sort_object
 
-  let comp_pattern_object = Comp_parsers.comp_pattern_object
+  let comp_pattern = Comp_parsers.comp_pattern_object
 
-  let comp_expression_object = Comp_parsers.comp_expression_object
+  let comp_expression = Comp_parsers.comp_expression_object
 
   let comp_context = Comp_parsers.comp_context
+
+  let comp_kind = comp_sort_object
+
+  let comp_typ = comp_sort_object
 
   let () =
     Error.register_exception_printer (function

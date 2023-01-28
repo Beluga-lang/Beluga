@@ -795,7 +795,7 @@ and json_of_comp_expression expression =
         ~data:
           [ ("identifier", json_of_qualified_identifier identifier)
           ; ("prefixed", json_of_bool prefixed)
-          ; ("operator", json_of_operator operator)
+          ; ("operator", json_of_option json_of_operator operator)
           ; ("location", json_of_location location)
           ]
   | Comp.Expression.Fn { parameters; body; location } ->

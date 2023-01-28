@@ -66,11 +66,13 @@ exception
 
 (** {2 Exceptions for computation-level expression disambiguation} *)
 
+exception Expected_program_constant of Qualified_identifier.t
+
 exception Illegal_duplicate_pattern_variables
 
 (** {2 Exceptions for computation-level context disambiguation} *)
 
-exception Illegal_missing_comp_context_binding_type
+exception Illegal_missing_comp_context_binding_type of Identifier.t
 
 (** {2 Exceptions for computation-level pattern disambiguation} *)
 
@@ -670,8 +672,35 @@ module Make
 
   and disambiguate_comp_expression = function
     | Synprs.Comp.Expression_object.Raw_identifier
-        { location; identifier; prefixed } ->
-        Obj.magic ()
+        { location; identifier; prefixed } -> (
+        let qualified_identifier =
+          Qualified_identifier.make_simple identifier
+        in
+        lookup_toplevel identifier >>= function
+        | Result.Ok (Program_constant _, { operator; _ }) ->
+            (* [identifier] appears as a bound computation-level program *)
+            return
+              (Synext.Comp.Expression.Constant
+                 { location
+                 ; identifier = qualified_identifier
+                 ; prefixed
+                 ; operator
+                 })
+        | Result.Ok (Computation_variable _, _) ->
+            (* [identifier] appears as a bound computation-level variable *)
+            return (Synext.Comp.Expression.Variable { location; identifier })
+        | Result.Ok entry ->
+            (* [identifier] appears as a bound entry that is not a
+               computation-level variable or program constant *)
+            Error.raise_at1 location
+              (Error.composite_exception2
+                 (Expected_program_constant qualified_identifier)
+                 (actual_binding_exn qualified_identifier entry))
+        | Result.Error (Unbound_identifier _) ->
+            (* [identifier] does not appear in the state, so it is a free
+               variable. *)
+            return (Synext.Comp.Expression.Variable { location; identifier })
+        )
     | Synprs.Comp.Expression_object.Raw_qualified_identifier
         { location; identifier; prefixed } ->
         (* TODO: Can be the observation(s) of a variable *)
@@ -741,6 +770,7 @@ module Make
         return (Synext.Comp.Expression.Box_hole { location })
     | Synprs.Comp.Expression_object.Raw_application { location; expressions }
       ->
+        (* TODO: Application rewriting with program constants *)
         Obj.magic ()
     | Synprs.Comp.Expression_object.Raw_annotated
         { location; expression; typ } ->
@@ -751,7 +781,8 @@ module Make
              { location; expression = expression'; typ = typ' })
     | Synprs.Comp.Expression_object.Raw_observation
         { location; scrutinee; destructor } ->
-        (* TODO: Can be observation(s) *)
+        (* TODO: [destructor] may be multiple observations `(nats 2) .tl
+           .tl' *)
         Obj.magic ()
 
   and disambiguate_let_pattern _ = Obj.magic ()
@@ -900,7 +931,7 @@ module Make
     | identifier, Option.None ->
         Error.raise_at1
           (Identifier.location identifier)
-          Illegal_missing_comp_context_binding_type
+          (Illegal_missing_comp_context_binding_type identifier)
     | identifier, Option.Some typ ->
         let* typ' = disambiguate_comp_typ typ in
         with_comp_variable identifier (f (identifier, typ'))
@@ -913,3 +944,95 @@ module Make
             with_disambiguated_context_bindings_list xs (fun ys ->
                 f (y :: ys)))
 end
+
+(** {2 Exception Printing} *)
+
+let () =
+  Error.register_exception_printer (function
+    | Illegal_identifier_comp_kind ->
+        Format.dprintf "%a" Format.pp_print_text
+          "An identifier may not appear as a computation-level kind."
+    | Illegal_qualified_identifier_comp_kind ->
+        Format.dprintf "%a" Format.pp_print_text
+          "A qualified identifier may not appear as a computation-level \
+           kind."
+    | Illegal_backward_arrow_comp_kind ->
+        Format.dprintf "%a" Format.pp_print_text
+          "Backward arrows may not appear as computation-level kinds."
+    | Illegal_cross_comp_kind ->
+        Format.dprintf "%a" Format.pp_print_text
+          "Cross operators may not appear as computation-level kinds."
+    | Illegal_box_comp_kind ->
+        Format.dprintf "%a" Format.pp_print_text
+          "Boxed types or objects may not appear as computation-level kinds."
+    | Illegal_application_comp_kind ->
+        Format.dprintf "%a" Format.pp_print_text
+          "Applications may not appear as computation-level kinds."
+    | Illegal_untyped_comp_pi_kind_parameter ->
+        Format.dprintf "%a" Format.pp_print_text
+          "Computation-level Pi kind parameters must be annotated with a \
+           meta-type."
+    | Illegal_comp_typ_domain_pi_comp_kind ->
+        Format.dprintf "%a" Format.pp_print_text
+          "Computation-level Pi kind parameters may only be annotated with \
+           a meta-type, not a computation-level type."
+    | Illegal_ctype_comp_type ->
+        Format.dprintf "%a" Format.pp_print_text
+          "The computation-level kind `ctype' may not appear as a \
+           computation-level type."
+    | Expected_comp_type_constant qualified_identifier ->
+        Format.dprintf "Expected %a to be a computation-level type constant."
+          Qualified_identifier.pp qualified_identifier
+    | Unbound_comp_type_constant qualified_identifier ->
+        Format.dprintf "The computation-level constant %a is unbound."
+          Qualified_identifier.pp qualified_identifier
+    | Illegal_untyped_comp_pi_type ->
+        Format.dprintf "%a" Format.pp_print_text
+          "Computation-level Pi type parameters must be annotated with a \
+           meta-type."
+    | Expected_meta_object ->
+        Format.dprintf "%a" Format.pp_print_text "Expected a meta-object."
+    | Ambiguous_comp_typ_operator_placement operator_identifier ->
+        Format.dprintf
+          "Ambiguous occurrences of the computation-level type operator %a \
+           after rewriting."
+          Qualified_identifier.pp operator_identifier
+    | Misplaced_comp_typ_operator ->
+        Format.dprintf "%a" Format.pp_print_text
+          "Misplaced contextual computation-level type operator."
+    | Consecutive_applications_of_non_associative_comp_typ_operators
+        operator_identifier ->
+        Format.dprintf
+          "Consecutive occurrences of the computation-level type operator \
+           %a after rewriting."
+          Qualified_identifier.pp operator_identifier
+    | Comp_typ_arity_mismatch
+        { operator_identifier
+        ; expected_arguments_count
+        ; actual_arguments_count
+        } ->
+        Format.dprintf
+          "Computation-level type operator %a expected %d argument(s) but \
+           got %d."
+          Qualified_identifier.pp operator_identifier
+          expected_arguments_count actual_arguments_count
+    | Expected_program_constant qualified_identifier ->
+        Format.dprintf "Expected %a to be a program constant."
+          Qualified_identifier.pp qualified_identifier
+    | Illegal_duplicate_pattern_variables ->
+        Format.dprintf "%a" Format.pp_print_text
+          "Illegal duplicate pattern variables."
+    | Illegal_missing_comp_context_binding_type identifier ->
+        Format.dprintf
+          "Missing computation-level context type for binding for %a."
+          Identifier.pp identifier
+    | Illegal_meta_annotated_comp_pattern_missing_identifier ->
+        Format.dprintf "%a" Format.pp_print_text
+          "This meta-annotated pattern is missing its identifier."
+    | Illegal_meta_annotated_comp_pattern_missing_type ->
+        Format.dprintf "%a" Format.pp_print_text
+          "This meta-annotated pattern is missing its meta-type."
+    | Expected_comp_term_destructor_constant ->
+        Format.dprintf "%a" Format.pp_print_text
+          "Expected a computation-level term destructor constant."
+    | exn -> Error.raise_unsupported_exception_printing exn)

@@ -110,25 +110,6 @@
    --output=%{target}
    --variant=clf_term)))
 
-;;(rule
-;; (target clf_term_patterns_ok.output.json)
-;; (deps
-;;  (:generator generate_outputs.exe)
-;;  (:state disambiguation_state.json)
-;;  (:inputs clf_term_patterns_ok.input.bel))
-;; (mode promote)
-;; (enabled_if
-;;  (not
-;;   %{env:CI=false} ;; If `$CI` is undefined, then it defaults to `false`
-;;   ))
-;; (action
-;;  (run
-;;   %{generator}
-;;   --state=%{state}
-;;   --inputs=%{inputs}
-;;   --output=%{target}
-;;   --variant=clf_term_pattern)))
-
 (rule
  (target meta_types_ok.output.json)
  (deps
@@ -223,3 +204,22 @@
    --inputs=%{inputs}
    --output=%{target}
    --variant=comp_typ)))
+
+(rule
+ (target comp_expressions_ok.output.json)
+ (deps
+  (:generator generate_outputs.exe)
+  (:state disambiguation_state.json)
+  (:inputs comp_expressions_ok.input.bel))
+ (mode promote)
+ (enabled_if
+  (not
+   %{env:CI=false} ;; If `$CI` is undefined, then it defaults to `false`
+   ))
+ (action
+  (run
+   %{generator}
+   --state=%{state}
+   --inputs=%{inputs}
+   --output=%{target}
+   --variant=comp_expression)))

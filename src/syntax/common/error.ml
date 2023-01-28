@@ -460,16 +460,16 @@ let () =
              Fun.apply)
           (List2.map find_printer exceptions)
     | Not_implemented msg ->
-        Format.dprintf "@[<hov 0>%t@ Please report this as a bug.@ %s@]%!"
+        Format.dprintf "@[<hov 0>%t Please report this as a bug.@ %s@]%!"
           (Format.in_stag Ansi_bold_red_bg
              (Format.dprintf "Not implemented."))
           msg
     | Sys_error msg ->
-        Format.dprintf "@[<v 0>%t@ %s@]%!"
+        Format.dprintf "@[<v 0>%t %s@]%!"
           (Format.in_stag Ansi_bold_red (Format.dprintf "System error:"))
           msg
     | Violation msg ->
-        Format.dprintf "@[<hov 0>%t@ Please report this as a bug.@ %s@]%!"
+        Format.dprintf "@[<hov 0>%t Please report this as a bug.@ %s@]%!"
           (Format.in_stag Ansi_bold_red_bg
              (Format.dprintf "Internal error."))
           msg

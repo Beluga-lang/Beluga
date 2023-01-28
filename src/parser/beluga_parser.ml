@@ -193,43 +193,44 @@ struct
     disambiguated
 
   let parse_only_lf_kind =
-    parse_only Lf_parser.lf_object Lf_disambiguator.disambiguate_lf_kind
+    parse_only Lf_parser.lf_kind Lf_disambiguator.disambiguate_lf_kind
 
   let parse_only_lf_typ =
-    parse_only Lf_parser.lf_object Lf_disambiguator.disambiguate_lf_typ
+    parse_only Lf_parser.lf_typ Lf_disambiguator.disambiguate_lf_typ
 
   let parse_only_lf_term =
-    parse_only Lf_parser.lf_object Lf_disambiguator.disambiguate_lf_term
+    parse_only Lf_parser.lf_term Lf_disambiguator.disambiguate_lf_term
 
   let parse_only_clf_typ =
-    parse_only Clf_parser.clf_object Clf_disambiguator.disambiguate_clf_typ
+    parse_only Clf_parser.clf_typ Clf_disambiguator.disambiguate_clf_typ
 
   let parse_only_clf_term =
-    parse_only Clf_parser.clf_object Clf_disambiguator.disambiguate_clf_term
+    parse_only Clf_parser.clf_term Clf_disambiguator.disambiguate_clf_term
 
   let parse_only_clf_substitution =
-    parse_only Clf_parser.clf_context_object
+    parse_only Clf_parser.clf_substitution
       Clf_disambiguator.disambiguate_clf_substitution
 
   let parse_only_meta_typ =
-    parse_only Meta_parser.meta_thing
-      Meta_disambiguator.disambiguate_meta_typ
+    parse_only Meta_parser.meta_type Meta_disambiguator.disambiguate_meta_typ
 
   let parse_only_meta_object =
-    parse_only Meta_parser.meta_thing
+    parse_only Meta_parser.meta_object
       Meta_disambiguator.disambiguate_meta_object
 
   let parse_only_schema =
-    parse_only Meta_parser.schema_object
-      Meta_disambiguator.disambiguate_schema
+    parse_only Meta_parser.schema Meta_disambiguator.disambiguate_schema
 
   let parse_only_comp_kind =
-    parse_only Comp_parser.comp_sort_object
+    parse_only Comp_parser.comp_kind
       Comp_disambiguator.disambiguate_comp_kind
 
   let parse_only_comp_typ =
-    parse_only Comp_parser.comp_sort_object
-      Comp_disambiguator.disambiguate_comp_typ
+    parse_only Comp_parser.comp_typ Comp_disambiguator.disambiguate_comp_typ
+
+  let parse_only_comp_expression =
+    parse_only Comp_parser.comp_expression
+      Comp_disambiguator.disambiguate_comp_expression
 end
 
 module Simple = Make (Simple_disambiguation_state)

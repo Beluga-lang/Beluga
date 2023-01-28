@@ -1271,12 +1271,20 @@ end) : BELUGA_HTML with type state = Html_state.state = struct
     match expression with
     | Comp.Expression.Variable { identifier; _ } ->
         (pp_computation_variable state) ppf identifier
-    | Comp.Expression.Constant { identifier; prefixed; operator; _ } ->
-        if prefixed && Bool.not (Operator.is_nullary operator) then
-          Format.fprintf ppf "(%a)"
-            (pp_computation_constructor_invoke state)
-            identifier
-        else (pp_computation_constructor_invoke state) ppf identifier
+    | Comp.Expression.Constant { identifier; prefixed; operator; _ } -> (
+        match operator with
+        | Option.Some operator ->
+            if prefixed && Bool.not (Operator.is_nullary operator) then
+              Format.fprintf ppf "(%a)"
+                (pp_computation_constructor_invoke state)
+                identifier
+            else (pp_computation_constructor_invoke state) ppf identifier
+        | Option.None ->
+            if prefixed then
+              Format.fprintf ppf "(%a)"
+                (pp_computation_constructor_invoke state)
+                identifier
+            else (pp_computation_constructor_invoke state) ppf identifier)
     | Comp.Expression.Fn { parameters; body; _ } ->
         let pp_parameter ppf parameter =
           match parameter with
@@ -1393,14 +1401,18 @@ end) : BELUGA_HTML with type state = Html_state.state = struct
     | Comp.Expression.Application { applicand; arguments; _ } ->
         pp_application
           ~guard_operator:(function
-            | Comp.Expression.Constant { operator; prefixed = false; _ } ->
+            | Comp.Expression.Constant
+                { operator = Option.Some operator; prefixed = false; _ } ->
                 `Operator operator
             | _ -> `Term)
           ~guard_operator_application:(function
             | Comp.Expression.Application
                 { applicand =
                     Comp.Expression.Constant
-                      { operator; prefixed = false; _ }
+                      { operator = Option.Some operator
+                      ; prefixed = false
+                      ; _
+                      }
                 ; _
                 } ->
                 `Operator_application operator

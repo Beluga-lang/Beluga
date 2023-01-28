@@ -155,7 +155,8 @@ module type BINDINGS_STATE = sig
     -> Identifier.t
     -> Unit.t t
 
-  val add_program_constant : ?location:Location.t -> Identifier.t -> Unit.t t
+  val add_program_constant :
+    ?location:Location.t -> ?operator:Operator.t -> Identifier.t -> Unit.t t
 
   val actual_binding_exn : Qualified_identifier.t -> entry * data -> exn
 
@@ -421,8 +422,8 @@ module Disambiguation_state : DISAMBIGUATION_STATE = struct
     let entry = (Module, data) in
     add_namespace_binding identifier entry subtree
 
-  let add_program_constant ?location identifier =
-    let data = make_entry_data ?location identifier in
+  let add_program_constant ?location ?operator identifier =
+    let data = make_entry_data ?location ?operator identifier in
     let entry = (Program_constant, data) in
     add_binding identifier entry
 

@@ -104,7 +104,7 @@ module Make
         { location; constant; meta_variable_base; computation_variable_base }
 
     let sgn_lf_const_decl =
-      seq2 (identifier <& colon) lf_object
+      seq2 (identifier <& colon) lf_typ
       |> span
       $> (fun (location, (identifier, typ)) ->
            Synprs.Signature.Declaration.Raw_lf_term_constant
@@ -113,7 +113,7 @@ module Make
 
     let sgn_lf_typ_decl =
       let lf_typ_decl_body =
-        let typ_decl = seq2 (identifier <& colon) lf_object in
+        let typ_decl = seq2 (identifier <& colon) lf_kind in
         seq2 (typ_decl <& equals)
           (maybe pipe &> sep_by0 ~sep:pipe sgn_lf_const_decl)
         |> span
@@ -193,13 +193,13 @@ module Make
         and stratified = keyword "stratified" $> fun () -> `Stratified in
         let flavour = choice [ inductive; stratified ] in
         let sgn_cmp_typ_decl_body =
-          seq2 (identifier <& colon) comp_sort_object |> span
+          seq2 (identifier <& colon) comp_typ |> span
           $> fun (location, (identifier, typ)) ->
           Synprs.Signature.Declaration.Raw_comp_expression_constructor
             { location; identifier; typ }
         in
         seq4 flavour (identifier <& colon)
-          (comp_sort_object <& equals <& maybe pipe)
+          (comp_kind <& equals <& maybe pipe)
           (sep_by0 ~sep:pipe sgn_cmp_typ_decl_body)
         |> span
         $> fun ( location
@@ -221,9 +221,8 @@ module Make
       let cmp_cotyp_decl =
         let cmp_cotyp_body =
           seq2
-            (opt_parens (seq2 (identifier <& colon) comp_sort_object)
-            <& double_colon)
-            comp_sort_object
+            (opt_parens (seq2 (identifier <& colon) comp_typ) <& double_colon)
+            comp_typ
           |> span
           $> fun (location, ((identifier, observation_type), return_type)) ->
           Synprs.Signature.Declaration.Raw_comp_expression_destructor
@@ -231,7 +230,7 @@ module Make
         in
         seq3
           (keyword "coinductive" &> identifier <& colon)
-          (comp_sort_object <& equals <& maybe pipe)
+          (comp_kind <& equals <& maybe pipe)
           (sep_by0 ~sep:pipe cmp_cotyp_body)
         |> span
         $> fun (location, (identifier, kind, destructor_declarations)) ->
@@ -255,8 +254,7 @@ module Make
         |> labelled "search bound"
       and meta_context =
         many
-          (braces
-             (seq2 meta_object_identifier (maybe (colon &> meta_thing))))
+          (braces (seq2 meta_object_identifier (maybe (colon &> meta_type))))
         |> span
         $> fun (location, bindings) ->
         { Synprs.Meta.Context_object.location; bindings }
@@ -264,7 +262,7 @@ module Make
       pragma "query"
       &> seq4 (seq2 bound bound) meta_context
            (maybe (identifier <& colon))
-           lf_object
+           lf_typ
       <& dot |> span
       |> labelled "logic programming engine query pragma"
       $> fun ( location
@@ -287,9 +285,7 @@ module Make
         |> labelled "search bound"
       in
       pragma "mquery"
-      &> seq3 (seq3 bound bound bound)
-           (maybe (identifier <& colon))
-           comp_sort_object
+      &> seq3 (seq3 bound bound bound) (maybe (identifier <& colon)) comp_typ
       <& dot |> span
       |> labelled "meta-logic search engine mquery pragma"
       $> fun ( location
@@ -306,7 +302,7 @@ module Make
         }
 
     let sgn_oldstyle_lf_decl =
-      seq2 (identifier <& colon) lf_object
+      seq2 (identifier <& colon) (alt lf_kind lf_typ)
       <& dot |> span
       $> (fun (location, (identifier, typ_or_const)) ->
            Synprs.Signature.Declaration.Raw_lf_typ_or_term_constant
@@ -388,8 +384,8 @@ module Make
     let sgn_typedef_decl =
       seq3
         (keyword "typedef" &> identifier)
-        (colon &> comp_sort_object)
-        (equals &> comp_sort_object <& semicolon)
+        (colon &> comp_kind)
+        (equals &> comp_typ <& semicolon)
       |> span
       |> labelled "type synonym declaration"
       $> fun (location, (identifier, kind, typ)) ->
@@ -397,7 +393,7 @@ module Make
         { location; identifier; kind; typ }
 
     let sgn_schema_decl =
-      seq2 (keyword "schema" &> identifier <& equals) schema_object
+      seq2 (keyword "schema" &> identifier <& equals) schema
       <& semicolon |> span
       $> (fun (location, (identifier, schema)) ->
            Synprs.Signature.Declaration.Raw_schema
@@ -406,8 +402,8 @@ module Make
 
     let sgn_let_decl =
       seq2
-        (keyword "let" &> seq2 identifier (maybe (colon &> comp_sort_object)))
-        (equals &> comp_expression_object <& semicolon)
+        (keyword "let" &> seq2 identifier (maybe (colon &> comp_typ)))
+        (equals &> comp_expression <& semicolon)
       |> span
       |> labelled "value declaration"
       $> fun (location, ((identifier, typ), expression)) ->
@@ -415,10 +411,9 @@ module Make
         { location; identifier; typ; expression }
 
     let program_decl =
-      seq4 (identifier <& colon)
-        (comp_sort_object <& equals)
+      seq4 (identifier <& colon) (comp_typ <& equals)
         (maybe (slash &> totality_declaration <& slash))
-        comp_expression_object
+        comp_expression
       |> span
       $> fun (location, (identifier, typ, order, body)) ->
       Synprs.Signature.Declaration.Raw_theorem
@@ -426,8 +421,7 @@ module Make
 
     let proof_decl =
       keyword "proof"
-      &> seq4 (identifier <& colon)
-           (comp_sort_object <& equals)
+      &> seq4 (identifier <& colon) (comp_typ <& equals)
            (maybe (slash &> totality_declaration <& slash))
            harpoon_proof
       |> span

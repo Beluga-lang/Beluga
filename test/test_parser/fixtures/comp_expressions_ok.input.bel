@@ -1,0 +1,23 @@
+% The following is a list of `;;`-terminated syntactically valid
+% computation-level expressions with respect to the disambiguation state
+% `disambiguation_state.json`. The file `comp_expressions_ok.output.json` of
+% serialized ASTs corresponding to those types is automatically generated
+% during development, but not during continuous integration.
+
+x
+;;
+
+fn x => x
+;;
+
+fn x1, x2, x3 => x1
+;;
+
+fn x1 x2 x3 => x1
+;;
+
+(x1, x2, x3)
+;;
+
+impossible x
+;;

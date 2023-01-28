@@ -30,10 +30,6 @@
   fixtures/clf_terms_ok.input.bel
   fixtures/clf_terms_ok.output.json ;; auto-generated
   fixtures/clf_terms_error.input.bel
-  ;; Contextual LF term pattern test fixtures
-  ;; fixtures/clf_term_patterns_ok.input.bel
-  ;; fixtures/clf_term_patterns_ok.output.json ;; auto-generated
-  ;; fixtures/clf_term_patterns_error.input.bel
   ;; Meta-type test fixtures
   fixtures/meta_types_ok.input.bel
   fixtures/meta_types_ok.output.json ;; auto-generated
@@ -53,4 +49,8 @@
   ;; Computation-level type test fixtures
   fixtures/comp_types_ok.input.bel
   fixtures/comp_types_ok.output.json ;; auto-generated
-  fixtures/comp_types_error.input.bel))
+  fixtures/comp_types_error.input.bel
+  ;; Computation-level expression test fixtures
+  fixtures/comp_expressions_ok.input.bel
+  fixtures/comp_expressions_ok.output.json ;; auto-generated
+  fixtures/comp_expressions_error.input.bel))

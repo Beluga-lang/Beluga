@@ -6,9 +6,13 @@ module type META_PARSER = sig
   (** @closed *)
   include COMMON_PARSER
 
-  val schema_object : Synprs.schema_object t
+  val schema : Synprs.schema_object t
 
-  val meta_thing : Synprs.meta_thing t
+  val meta_type : Synprs.meta_thing t
+
+  val meta_object : Synprs.meta_thing t
+
+  val meta_pattern : Synprs.meta_thing t
 
   val meta_context : Synprs.meta_context_object t
 end
@@ -28,6 +32,7 @@ module Make
      and type state = Parser.state
      and type location = Parser.location = struct
   include Parser
+  include Clf_parser
 
   (* This recursive module is defined as a convenient alternative to
      eta-expansion or using the fixpoint combinator for defining mutually
@@ -35,7 +40,9 @@ module Make
   module rec Meta_parsers : sig
     val schema_object : Synprs.schema_object t
 
-    val meta_thing : Synprs.meta_thing t
+    val meta_type : Synprs.meta_thing t
+
+    val meta_object : Synprs.meta_thing t
 
     val meta_context : Synprs.meta_context_object t
   end = struct
@@ -90,7 +97,7 @@ module Make
         | `$[' <clf-context-object> (<turnstile> | <turnstile-hash>) <clf-context-object> `]'
   *)
     let schema_some_clause =
-      let declaration = seq2 identifier (colon &> Clf_parser.clf_object) in
+      let declaration = seq2 identifier (colon &> clf_typ) in
       keyword "some"
       &> bracks (sep_by1 ~sep:comma declaration)
       |> labelled "Context schema `some' clause"
@@ -98,7 +105,7 @@ module Make
     let schema_block_clause =
       let block_contents =
         sep_by1 ~sep:comma
-          (seq2 (maybe (identifier <& trying colon)) Clf_parser.clf_object)
+          (seq2 (maybe (identifier <& trying colon)) clf_typ)
         |> labelled "Context schema element"
       in
       keyword "block" &> opt_parens block_contents
@@ -132,23 +139,19 @@ module Make
 
     let schema_object = schema_object1 |> labelled "Context schema"
 
-    let meta_thing =
+    let meta_type =
       let schema_type =
         schema_object |> span
         $> (fun (location, schema) ->
              Synprs.Meta.Thing.RawSchema { location; schema })
         |> labelled "Schema meta-type"
-      and plain_inner_thing =
-        seq2 Clf_parser.clf_context_object
-          (maybe (turnstile &> Clf_parser.clf_context_object))
-      and hash_inner_thing =
-        seq2 Clf_parser.clf_context_object
-          (turnstile &> Clf_parser.clf_context_object)
+      and plain_inner_thing = seq2 clf_context (maybe (turnstile &> clf_typ))
+      and hash_inner_thing = seq2 clf_context (turnstile &> clf_context)
       and dollar_inner_thing =
         let turnstile = turnstile $> fun () -> `Plain
         and turnstile_hash = turnstile_hash $> fun () -> `Hash in
-        seq2 Clf_parser.clf_context_object
-          (seq2 (alt turnstile turnstile_hash) Clf_parser.clf_context_object)
+        seq2 clf_context
+          (seq2 (alt turnstile turnstile_hash) clf_substitution)
       in
       let plain_meta_type =
         choice
@@ -162,8 +165,22 @@ module Make
         | location, (context, Option.None) ->
             Synprs.Meta.Thing.RawContext { location; context }
         | location, (context, Option.Some object_) ->
+            let object_location = Synprs.location_of_clf_object object_ in
             Synprs.Meta.Thing.RawTurnstile
-              { location; context; object_; variant = `Plain }
+              { location
+              ; context
+              ; object_ =
+                  { Synprs.CLF.Context_object.location = object_location
+                  ; head =
+                      Synprs.CLF.Context_object.Head.None
+                        { location =
+                            Location.start_position_as_location
+                              object_location
+                        }
+                  ; objects = [ (Option.none, object_) ]
+                  }
+              ; variant = `Plain
+              }
       and hash_meta_type =
         choice
           [ hash_parens hash_inner_thing
@@ -193,7 +210,45 @@ module Make
       in
       choice
         [ schema_type; plain_meta_type; hash_meta_type; dollar_meta_type ]
-      |> labelled "Meta-type or object"
+      |> labelled "Meta-type"
+
+    let meta_object =
+      let plain_inner_thing =
+        seq2 clf_context (maybe (turnstile &> clf_context))
+      and hash_inner_thing = seq2 clf_context (turnstile &> clf_context)
+      and dollar_inner_thing =
+        let turnstile = turnstile $> fun () -> `Plain
+        and turnstile_hash = turnstile_hash $> fun () -> `Hash in
+        seq2 clf_context
+          (seq2 (alt turnstile turnstile_hash) clf_substitution)
+      in
+      let plain_meta_object =
+        bracks plain_inner_thing |> labelled "Plain meta-object" |> span
+        $> function
+        | location, (context, Option.None) ->
+            Synprs.Meta.Thing.RawContext { location; context }
+        | location, (context, Option.Some object_) ->
+            Synprs.Meta.Thing.RawTurnstile
+              { location; context; object_; variant = `Plain }
+      and hash_meta_object =
+        hash_bracks hash_inner_thing |> labelled "Parameter term" |> span
+        $> fun (location, (context, object_)) ->
+        Synprs.Meta.Thing.RawTurnstile
+          { location; context; object_; variant = `Hash }
+      and dollar_meta_object =
+        dollar_bracks dollar_inner_thing
+        |> labelled "Substitution object"
+        |> span
+        $> function
+        | location, (context, (`Plain, object_)) ->
+            Synprs.Meta.Thing.RawTurnstile
+              { location; context; object_; variant = `Dollar }
+        | location, (context, (`Hash, object_)) ->
+            Synprs.Meta.Thing.RawTurnstile
+              { location; context; object_; variant = `Dollar_hash }
+      in
+      choice [ plain_meta_object; hash_meta_object; dollar_meta_object ]
+      |> labelled "Meta-object"
 
     (*=
       <meta-context> ::=
@@ -204,7 +259,7 @@ module Make
       let non_empty =
         sep_by0 ~sep:comma
           (seq2 meta_object_identifier
-             (maybe (colon &> Meta_parsers.meta_thing)))
+             (maybe (colon &> Meta_parsers.meta_type)))
         |> span
         $> fun (location, bindings) ->
         { Synprs.Meta.Context_object.location; bindings }
@@ -215,9 +270,13 @@ module Make
       choice [ non_empty; empty ]
   end
 
-  let schema_object = Meta_parsers.schema_object
+  let schema = Meta_parsers.schema_object
 
-  let meta_thing = Meta_parsers.meta_thing
+  let meta_type = Meta_parsers.meta_type
+
+  let meta_object = Meta_parsers.meta_object
+
+  let meta_pattern = Meta_parsers.meta_object
 
   let meta_context = Meta_parsers.meta_context
 end

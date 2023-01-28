@@ -288,14 +288,19 @@ module Comp_precedence = struct
     match expression with
     | Comp.Expression.Type_annotated _ -> Static 1
     | Comp.Expression.Application
-        { applicand = Comp.Expression.Constant { operator; prefixed; _ }; _ }
+        { applicand =
+            Comp.Expression.Constant
+              { operator = Option.Some operator; prefixed; _ }
+        ; _
+        }
       when prefixed || Operator.is_prefix operator
            (* Juxtapositions are of higher precedence than user-defined
               operators *) ->
         Static expression_application_precedence
     | Comp.Expression.Application
         { applicand =
-            Comp.Expression.Constant { operator; prefixed = false; _ }
+            Comp.Expression.Constant
+              { operator = Option.Some operator; prefixed = false; _ }
         ; _
         }
     (* User-defined operator application *) ->

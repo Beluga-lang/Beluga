@@ -10,11 +10,24 @@ exception NoTypAvailable
 
 (** Function form of the LF.Dec constructor with the arguments reversed.
     Useful for extending contexts multiple times without the need for
-    parentheses. cD |> Context.dec ... |> Context.dec ... *)
+    parentheses.
+
+    {[
+      cD |> Context.dec ... |> Context.dec ...
+    ]} *)
 val dec : 'a -> 'a ctx -> 'a ctx
 
-(** Extends a context with multiple entries from left to right. That is, ctx
-    |> decs [d1;d2;d3] is equivalent to ctx |> dec d1 |> dec d2 |> dec d3 *)
+(** Extends a context with multiple entries from left to right. That is,
+
+    {[
+      ctx |> decs [ d1; d2; d3 ]
+    ]}
+
+    is equivalent to
+
+    {[
+      ctx |> dec d1 |> dec d2 |> dec d3
+    ]} *)
 val decs : 'a list -> 'a ctx -> 'a ctx
 
 val dctxToHat : dctx -> dctx_hat
@@ -22,12 +35,16 @@ val dctxToHat : dctx -> dctx_hat
 val addToHat : dctx_hat -> dctx_hat (* Lengthen by one declaration *)
 
 val hatToDCtx : dctx_hat -> dctx
+
 val extend_hatctx : int -> dctx_hat -> dctx_hat
+
 (* Declaration Contexts *)
 val ctxDec : dctx -> int -> typ_decl
 
 val ctxSigmaDec : dctx -> int -> typ_decl
+
 val containsSigma : dctx -> bool
+
 val ctxVar : dctx -> ctx_var option
 
 val hasCtxVar : dctx -> bool (* true if ctxVar dctx = Some _ *)
@@ -117,10 +134,10 @@ val lookup' : 'a LF.ctx -> int -> 'a option
 (** Looks up an index in a meta-context, giving the type and `inductivity`
     field.
 
-    - Warning: This function does not MShift the type it returns; typically
+    - Warning: This function does not [MShift] the type it returns; typically
       you should do this so the type makes sense in the whole context Delta.
-    - Warning: returns None if the index is out of bounds OR if the context
-      declaration does not assign a type (i.e. it's a DeclOpt). If you need
+    - Warning: returns [None] if the index is out of bounds OR if the context
+      declaration does not assign a type (i.e. it's a [DeclOpt]). If you need
       to distinguish these cases, then you should use {!lookup'} and match on
       the [ctyp_decl] yourself. *)
 val lookup_inductivity : LF.mctx -> int -> (LF.ctyp * Inductivity.t) option

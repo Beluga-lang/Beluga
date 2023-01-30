@@ -55,8 +55,6 @@ exception Illegal_backward_arrow_clf_term
 
 exception Illegal_block_clf_term
 
-exception Unbound_clf_term_constant of Qualified_identifier.t
-
 exception Illegal_clf_term_projection
 
 exception Expected_clf_term_constant
@@ -2036,9 +2034,6 @@ let () =
     | Illegal_block_clf_term ->
         Format.dprintf "%a" Format.pp_print_text
           "Block types may not appear as contextual LF terms."
-    | Unbound_clf_term_constant identifier ->
-        Format.dprintf "The LF term-level constant %a is unbound."
-          Qualified_identifier.pp identifier
     | Illegal_clf_term_projection ->
         Format.dprintf "%a" Format.pp_print_text
           "Illegal contextual LF projection(s)."

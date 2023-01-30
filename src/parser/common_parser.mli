@@ -1,3 +1,8 @@
+(** Common parser definitions for parsing Beluga signatures.
+
+    @author Jacob Thomas Errington
+    @author Marc-Antoine Ouimet *)
+
 open Beluga_syntax
 
 module type PARSER_STATE = sig

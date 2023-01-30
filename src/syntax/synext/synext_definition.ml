@@ -7,7 +7,8 @@ open Common
     in normal form.
 
     These types are suited for pretty-printing and elaboration to the
-    internal syntax. Note that this is a named representation. *)
+    internal syntax. Note that this is a named representation without
+    ambiguities. *)
 
 (** {1 External LF Syntax} *)
 
@@ -426,6 +427,10 @@ module CLF = struct
           ; projection :
               [ `By_identifier of Identifier.t | `By_position of Int.t ]
           }
+          (** - [Projection { term = u; projection = `By_identifier x; _ }]
+                is the term [u.x].
+              - [Projection { term = u; projection = `By_position n; _ }] is
+                the term [u.n]. *)
       | Type_annotated of
           { location : Location.t
           ; term : Term.t

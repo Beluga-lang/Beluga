@@ -2,6 +2,9 @@ open Beluga_syntax
 
 (** {1 Parsing} *)
 
+module Parser_combinator = Parser_combinator
+module Token = Token
+module Common_parser = Common_parser
 module Lf_parser = Lf_parser
 module Clf_parser = Clf_parser
 module Meta_parser = Meta_parser
@@ -19,6 +22,9 @@ module Meta_disambiguation = Meta_disambiguation
 module Comp_disambiguation = Comp_disambiguation
 module Harpoon_disambiguation = Harpoon_disambiguation
 module Signature_disambiguation = Signature_disambiguation
+
+(** {1 Constructors} *)
+
 module Simple_disambiguation_state =
   Common_disambiguation.Disambiguation_state
 

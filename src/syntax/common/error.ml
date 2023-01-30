@@ -117,18 +117,6 @@ let mismatch_reporter title title_obj1 pp_obj1 obj1 title_obj2 pp_obj2 obj2 =
   Format.dprintf "@[<v>%s@,    @[<v>%s:@,  %a@,%s:@,  %a@]@,@]" title
     title_obj1 pp_obj1 obj1 title_obj2 pp_obj2 obj2
 
-(* The following is for coverage. Probably needs to be phased out. *)
-let information = ref []
-
-let reset_information () = information := []
-
-let get_information () =
-  Format.stringify
-    (List.pp ~pp_sep:Format.pp_print_newline Format.pp_print_string)
-    (List.rev !information)
-
-let add_information message = information := message :: !information
-
 (** {1 Printing Located Exceptions} *)
 
 (** [tokenize_line lexer_buffer] tokenizes from [lexer_buffer] a line ending

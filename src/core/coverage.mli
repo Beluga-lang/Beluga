@@ -180,3 +180,12 @@ val addToMCtx : LF.mctx -> (LF.ctyp_decl list * LF.msub) -> LF.mctx * LF.msub
 
 (** Decide whether a given computational type is impossible. *)
 val is_impossible : LF.mctx -> Comp.typ -> bool
+
+(** Error-reporting *)
+
+val reset_information : unit -> unit
+
+val get_information : unit -> string
+
+val add_information : string -> unit
+

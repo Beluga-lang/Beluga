@@ -114,7 +114,7 @@ let main () =
      ()
   | _ -> bailout "Wrong number of command line arguments."
   end;
-  printf "%s" (Beluga_syntax.Error.get_information ())
+  printf "%s" (Beluga.Coverage.get_information ())
 
 let _ =
   Format.set_margin 80;

@@ -426,7 +426,7 @@ let located_exception_printer cause_printer locations =
                  (Format.in_stag Ansi_red (Format.dprintf "%s" carets))))
           lines
       in
-      Format.dprintf "@[<v 0>%a@,%t %t@]"
+      Format.dprintf "@[<v 0>%a@,@[<hov 0>%t %t@]@]"
         (List.pp ~pp_sep:Format.pp_print_cut pp_snippet)
         snippets
         (Format.in_stag Ansi_bold_red (Format.dprintf "Error:"))
@@ -451,13 +451,14 @@ let () =
         located_exception_printer cause_printer locations
     | Composite_exception { causes } ->
         Format.dprintf "@[<v 0>%a@]%!"
-          (List2.pp ~pp_sep:Format.pp_print_cut Fun.apply)
+          (List2.pp ~pp_sep:Format.pp_print_cut (fun ppf printer ->
+               Format.fprintf ppf "@[%t@]" printer))
           (List2.map find_printer causes)
     | Aggregate_exception { exceptions } ->
         Format.dprintf "@[<v 0>%a@]%!"
           (List2.pp
              ~pp_sep:(fun ppf () -> Format.fprintf ppf "@,@,")
-             Fun.apply)
+             (fun ppf printer -> Format.fprintf ppf "@[%t@]" printer))
           (List2.map find_printer exceptions)
     | Not_implemented msg ->
         Format.dprintf "@[<hov 0>%t Please report this as a bug.@ %s@]%!"

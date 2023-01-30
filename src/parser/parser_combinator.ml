@@ -2,43 +2,193 @@ open Support
 open Beluga_syntax
 
 module type PARSER_STATE = sig
-  type t
+  include State.STATE
 
   type token
 
-  val observe : t -> (token * t) option
-end
+  val peek : token option t
 
-module type PARSER_BACKTRACKING_STATE = sig
-  type t
-
-  val enable_backtracking : t -> t
-
-  val disable_backtracking : t -> t
-
-  val is_backtracking_enabled : t -> bool
-
-  val can_backtrack : from:t -> to_:t -> bool
+  val observe : token option t
 end
 
 module type PARSER_LOCATION_STATE = sig
+  include State.STATE
+
+  type location
+
+  val next_location : location option t
+
+  val previous_location : location option t
+end
+
+module type TOGGLEABLE_BACKTRACKING_STATE = sig
+  include State.STATE
+
+  val with_unlimited_backtracking : 'a t -> 'a t
+end
+
+module type BACKTRACKING_STATE = sig
+  include State.STATE
+
+  exception No_checkpoints
+
+  val with_checkpoint :
+       ('a, 'e) result t
+    -> ('a, [> `Backtracked of 'e | `Did_not_backtrack of 'e ]) result t
+end
+
+module type LOCATED = sig
   type t
 
   type location
 
-  val next_location : t -> location option
-
-  val previous_location : t -> location option
+  val location : t -> location
 end
 
-module type LOCATED_TOKEN = sig
-  type t
+module Make_state (Token : LOCATED) : sig
+  include PARSER_STATE with type token = Token.t
 
-  val location : t -> Location.t
+  include
+    PARSER_LOCATION_STATE
+      with type state := state
+       and type location = Token.location
+
+  include BACKTRACKING_STATE with type state := state
+
+  include TOGGLEABLE_BACKTRACKING_STATE with type state := state
+
+  val initial : ?initial_location:location -> token Seq.t -> state
+end = struct
+  type token = Token.t
+
+  type location = Token.location
+
+  type state =
+    { input : token Seq.t
+    ; position : int
+    ; can_backtrack : bool
+    ; checkpoints : state list
+    ; last_location : location option
+    }
+
+  include (
+    State.Make (struct
+      type t = state
+    end) :
+      State.STATE with type state := state)
+
+  let initial ?initial_location input =
+    { input
+    ; position = 0
+    ; can_backtrack = false
+    ; checkpoints = []
+    ; last_location = initial_location
+    }
+
+  let enable_backtracking =
+    modify (fun state -> { state with can_backtrack = true })
+
+  let disable_backtracking =
+    modify (fun state -> { state with can_backtrack = false })
+
+  let peek =
+    let* state = get in
+    match state.input () with
+    | Seq.Nil -> return Option.none
+    | Seq.Cons (x, _xs) -> return (Option.some x)
+
+  let observe =
+    let* state = get in
+    match state.input () with
+    | Seq.Nil -> return Option.none
+    | Seq.Cons (x, xs) ->
+        let* () =
+          put
+            { state with
+              input = xs
+            ; position = state.position + 1
+            ; last_location = Option.some (Token.location x)
+            }
+        in
+        return (Option.some x)
+
+  let with_unlimited_backtracking m =
+    let* state = get in
+    if state.can_backtrack then m
+    else scoped ~set:enable_backtracking ~unset:disable_backtracking m
+
+  exception No_checkpoints
+
+  let[@inline] modify_checkpoints f =
+    modify (fun state -> { state with checkpoints = f state.checkpoints })
+
+  let[@inline] push_checkpoint checkpoint =
+    modify_checkpoints (List.cons checkpoint)
+
+  let pop_checkpoint =
+    let* state = get in
+    match state.checkpoints with
+    | [] -> Error.raise No_checkpoints
+    | checkpoint :: checkpoints ->
+        let* () = put { state with checkpoints } in
+        return checkpoint
+
+  let discard_checkpoint =
+    let* _checkpoint = pop_checkpoint in
+    return ()
+
+  let mark =
+    let* state = get in
+    push_checkpoint state
+
+  let can_backtrack to_state =
+    let* from_state = get in
+    return
+      (from_state.can_backtrack
+      || from_state.position = to_state.position
+      || from_state.position
+         = to_state.position
+           + 1 (* [from_state] is the erroneous result of a guess. *))
+
+  let backtrack checkpoint =
+    let* state = get in
+    put
+      { state with
+        input = checkpoint.input
+      ; position = checkpoint.position
+      ; can_backtrack = checkpoint.can_backtrack
+      ; last_location = checkpoint.last_location
+      }
+
+  let with_checkpoint p =
+    let* () = mark in
+    p >>= function
+    | Result.Ok _ as r ->
+        let* () = discard_checkpoint in
+        return r
+    | Result.Error e -> (
+        let* checkpoint = pop_checkpoint in
+        can_backtrack checkpoint >>= function
+        | true ->
+            let* () = backtrack checkpoint in
+            return (Result.error (`Backtracked e))
+        | false -> return (Result.error (`Did_not_backtrack e)))
+
+  let next_location =
+    let* token_opt = peek in
+    match token_opt with
+    | Option.None -> return Option.none
+    | Option.Some token -> return (Option.some (Token.location token))
+
+  let previous_location =
+    let* state = get in
+    return state.last_location
 end
 
 module type PARSER = sig
   type token
+
+  type location
 
   type input
 
@@ -66,10 +216,6 @@ module type PARSER = sig
 
   include Apply.APPLY with type 'a t := 'a t
 
-  val get_state : state t
-
-  val put_state : state -> unit t
-
   val run : 'a t -> state -> state * ('a, exn) result
 
   val run_exn : 'a t -> state -> state * 'a
@@ -78,6 +224,12 @@ module type PARSER = sig
     'a t -> (state * ('a, exn) result -> state * ('b, exn) result) -> 'b t
 
   val fail : exn -> 'a t
+
+  val span : 'a t -> (location * 'a) t
+
+  val fail_at_next_location : exn -> 'a t
+
+  val fail_at_previous_location : exn -> 'a t
 
   val labelled : string -> 'a t -> 'a t
 
@@ -111,145 +263,34 @@ module type PARSER = sig
   val eoi : unit t
 end
 
-module type PARSER_WITH_LOCATIONS = sig
-  include PARSER
-
-  type location
-
-  exception
-    Parser_located_exception of
-      { cause : exn
-      ; locations : location List1.t
-      }
-
-  val span : 'a t -> (location * 'a) t
-
-  val fail_at_next_location : exn -> 'a t
-
-  val fail_at_previous_location : exn -> 'a t
-end
-
-module Make_persistent_bracktracking_state (Token : sig
-  type t
-end) : sig
-  include PARSER_STATE with type token = Token.t
-
-  include PARSER_BACKTRACKING_STATE with type t := t
-
-  val initial : token Seq.t -> t
-end = struct
-  type token = Token.t
-
-  type t =
-    { input : token Seq.t
-    ; position : int
-    ; can_backtrack : bool
-    }
-
-  let initial input = { input; position = 0; can_backtrack = false }
-
-  let[@inline] position s = s.position
-
-  let[@inline] enable_backtracking s = { s with can_backtrack = true }
-
-  let[@inline] disable_backtracking s = { s with can_backtrack = false }
-
-  let[@inline] is_backtracking_enabled s = s.can_backtrack
-
-  let observe s =
-    match s.input () with
-    | Seq.Nil -> Option.none
-    | Seq.Cons (x, xs) ->
-        let s' = { s with input = xs; position = s.position + 1 } in
-        Option.some (x, s')
-
-  let[@inline] has_not_consumed_input ~from ~to_ =
-    position from = position to_
-
-  let can_backtrack ~from ~to_ =
-    if is_backtracking_enabled from then true
-    else has_not_consumed_input ~from ~to_
-end
-
-module Make_location_state (Token : sig
-  type t
-
-  val location : t -> Location.t
-end) (State : sig
-  include PARSER_STATE with type token = Token.t
-
-  include PARSER_BACKTRACKING_STATE with type t := t
-end) : sig
-  include module type of State
-
-  include
-    PARSER_LOCATION_STATE with type t := t and type location = Location.t
-
-  val initial : ?last_location:Location.t -> State.t -> t
-end = struct
+module Make (State : sig
   type location = Location.t
 
-  type token = Token.t
+  include PARSER_STATE
 
-  type t =
-    { inner_state : State.t
-    ; last_location : Location.t option
-    }
+  include BACKTRACKING_STATE with type state := state
 
-  let initial ?last_location inner_state = { inner_state; last_location }
-
-  let[@inline] modify_inner_state f state =
-    { state with inner_state = f state.inner_state }
-
-  let enable_backtracking = modify_inner_state State.enable_backtracking
-
-  let disable_backtracking = modify_inner_state State.disable_backtracking
-
-  let is_backtracking_enabled s = State.is_backtracking_enabled s.inner_state
-
-  let[@inline] observe s =
-    let open Option in
-    State.observe s.inner_state $> fun (t, inner_state') ->
-    let location = Token.location t in
-    let s' =
-      { inner_state = inner_state'; last_location = Option.some location }
-    in
-    (t, s')
-
-  let can_backtrack ~from ~to_ =
-    State.can_backtrack ~from:from.inner_state ~to_:to_.inner_state
-
-  let next_location s =
-    let open Option in
-    observe s $> fun (token, _s') -> Token.location token
-
-  let previous_location s = s.last_location
-end
-
-module Make_parser_with_locations (Token : sig
-  type t
-end) (State : sig
-  include PARSER_STATE with type token = Token.t
-
-  include PARSER_BACKTRACKING_STATE with type t := t
+  include TOGGLEABLE_BACKTRACKING_STATE with type state := state
 
   include
-    PARSER_LOCATION_STATE with type t := t and type location = Location.t
+    PARSER_LOCATION_STATE
+      with type state := state
+       and type location := location
 end) :
-  PARSER_WITH_LOCATIONS
-    with type state = State.t
-     and type token = Token.t
-     and type input = Token.t Seq.t
-     and type location = Location.t = struct
-  type token = Token.t
+  PARSER
+    with type state = State.state
+     and type token = State.token
+     and type input = State.token Seq.t
+     and type location = State.location = struct
+  type token = State.token
 
-  type location = Location.t
+  type location = State.location
 
-  type input = Token.t Seq.t
+  type input = State.token Seq.t
 
-  type state = State.t
+  type state = State.state
 
-  type +'a t = State.t -> State.t * ('a, exn) result
+  type +'a t = State.state -> State.state * ('a, exn) result
 
   type 'a parser = 'a t
 
@@ -412,39 +453,34 @@ end) :
   let located_exception1 location cause =
     located_exception (List1.singleton location) cause
 
-  let fail_at_previous_location e s =
-    match State.previous_location s with
+  let fail_at_previous_location e =
+    let open State in
+    previous_location >>= function
     | Option.Some previous_location ->
-        fail (located_exception1 previous_location e) s
+        fail (located_exception1 previous_location e)
     | Option.None -> (
-        match State.next_location s with
+        next_location >>= function
         | Option.Some next_location ->
-            fail
-              (located_exception1
-                 (Location.start_position_as_location next_location)
-                 e)
-              s
-        | Option.None -> fail e s)
+            let location =
+              Location.start_position_as_location next_location
+            in
+            fail (located_exception1 location e)
+        | Option.None -> fail e)
 
-  let fail_at_next_location e s =
-    match State.next_location s with
-    | Option.Some next_location ->
-        fail (located_exception1 next_location e) s
+  let fail_at_next_location e =
+    let open State in
+    next_location >>= function
+    | Option.Some next_location -> fail (located_exception1 next_location e)
     | Option.None -> (
-        match State.previous_location s with
+        previous_location >>= function
         | Option.Some previous_location ->
-            fail
-              (located_exception1
-                 (Location.stop_position_as_location previous_location)
-                 e)
-              s
-        | Option.None -> fail e s)
+            let location =
+              Location.stop_position_as_location previous_location
+            in
+            fail (located_exception1 location e)
+        | Option.None -> fail e)
 
   let return_at s x = (s, Result.ok x)
-
-  let get_state s = return_at s s
-
-  let put_state s _s = return_at s ()
 
   module M = Monad.Make (struct
     type nonrec 'a t = 'a t
@@ -463,12 +499,12 @@ end) :
 
   include (Apply.Make (M) : Apply.APPLY with type 'a t := 'a t)
 
-  let trying p s =
-    match run p s with
-    | s, (Result.Error _ as e) ->
-        let s' = State.enable_backtracking s in
-        (s', e)
-    | x -> x
+  let trying p =
+    let open State in
+    with_checkpoint (with_unlimited_backtracking p) >>= function
+    | Result.Ok _ as r -> return r
+    | Result.Error (`Backtracked e | `Did_not_backtrack e) ->
+        return (Result.error e)
 
   let label p label =
     catch p (function
@@ -480,16 +516,18 @@ end) :
 
   let labelled l p = label p l
 
-  let choice ps s =
-    let rec go es = function
-      | [] -> fail_at_next_location (No_more_choices es)
-      | p :: ps' ->
-          catch p (function
-            | s', Result.Error e when State.can_backtrack ~from:s' ~to_:s ->
-                run (go (e :: es) ps') s
-            | x -> x)
+  let choice =
+    let open State in
+    let rec choice_aux ps errors =
+      match ps with
+      | [] -> fail_at_next_location (No_more_choices errors)
+      | p :: ps' -> (
+          with_checkpoint p >>= function
+          | Result.Ok _ as r -> return r
+          | Result.Error (`Backtracked e) -> choice_aux ps' (e :: errors)
+          | Result.Error (`Did_not_backtrack e) -> return (Result.error e))
     in
-    run (go [] ps) s
+    fun ps -> choice_aux ps []
 
   let[@inline] alt p1 p2 = choice [ p1; p2 ]
 
@@ -518,9 +556,13 @@ end) :
     let* xs = many (sep &> p) in
     return (List1.from x xs)
 
-  let next_location = get_state $> State.next_location
+  let next_location =
+    let open State in
+    next_location $> Result.ok
 
-  let previous_location = get_state $> State.previous_location
+  let previous_location =
+    let open State in
+    previous_location $> Result.ok
 
   let span p =
     let* l1_opt = next_location
@@ -535,54 +577,20 @@ end) :
         assert
           false (* The parser [p] succeeded, so [l2_opt <> Option.none]. *)
 
-  let eoi s =
-    match State.observe s with
-    | Option.None -> return_at s ()
-    | Option.Some (_token, s') ->
-        fail_at_previous_location Expected_end_of_input s'
+  let eoi =
+    let open State in
+    observe >>= function
+    | Option.None -> return (Result.ok ())
+    | Option.Some _token -> fail_at_previous_location Expected_end_of_input
 
   let only p = p <& eoi
 
-  let satisfy ~on_token ~on_end_of_input s =
-    match State.observe s with
-    | Option.None -> on_end_of_input () s
-    | Option.Some (token, s') -> (
+  let satisfy ~on_token ~on_end_of_input =
+    let open State in
+    observe >>= function
+    | Option.None -> on_end_of_input ()
+    | Option.Some token -> (
         match on_token token with
-        | Result.Ok r -> return_at s' r
-        | Result.Error cause -> fail_at_next_location cause s)
+        | Result.Ok _ as r -> return r
+        | Result.Error cause -> fail_at_previous_location cause)
 end
-
-module Make_persistent_parser_state (Token : LOCATED_TOKEN) : sig
-  include PARSER_STATE with type token = Token.t
-
-  include PARSER_BACKTRACKING_STATE with type t := t
-
-  include
-    PARSER_LOCATION_STATE with type t := t and type location = Location.t
-
-  val initial_state : ?last_location:location -> Token.t Seq.t -> t
-end = struct
-  module Simple_state = Make_persistent_bracktracking_state (Token)
-  module State_with_locations = Make_location_state (Token) (Simple_state)
-  include State_with_locations
-
-  let initial_state ?last_location input =
-    State_with_locations.initial ?last_location (Simple_state.initial input)
-end
-
-module Make (Token : sig
-  type t
-end) (State : sig
-  include PARSER_STATE with type token = Token.t
-
-  include PARSER_BACKTRACKING_STATE with type t := t
-
-  include
-    PARSER_LOCATION_STATE with type t := t and type location = Location.t
-end) :
-  PARSER_WITH_LOCATIONS
-    with type state = State.t
-     and type token = Token.t
-     and type input = Token.t Seq.t
-     and type location = Location.t =
-  Make_parser_with_locations (Token) (State)

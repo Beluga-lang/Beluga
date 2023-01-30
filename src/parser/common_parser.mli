@@ -25,7 +25,7 @@ module type PARSER_STATE = sig
 end
 
 module type COMMON_PARSER = sig
-  include Parser_combinator.PARSER_WITH_LOCATIONS
+  include Parser_combinator.PARSER
 
   val keyword : string -> unit t
 
@@ -150,7 +150,7 @@ module type COMMON_PARSER = sig
 end
 
 module Make
-    (Parser : Parser_combinator.PARSER_WITH_LOCATIONS
+    (Parser : Parser_combinator.PARSER
                 with type token = Location.t * Token.t
                  and type location = Location.t) :
   COMMON_PARSER
@@ -166,5 +166,5 @@ module Simple_common_parser : sig
        and type location = Location.t
 
   val initial_state :
-    ?last_location:Location.t -> (Location.t * Token.t) Seq.t -> state
+    ?initial_location:Location.t -> (Location.t * Token.t) Seq.t -> state
 end

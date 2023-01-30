@@ -395,3 +395,47 @@ struct
               (Synext.Meta.Pattern.Renaming_substitution
                  { location; domain = domain'; range = range' }))
 end
+
+(** {2 Exception Printing} *)
+
+let () =
+  Error.register_exception_printer (function
+    | Illegal_context_meta_type ->
+        Format.dprintf "%a" Format.pp_print_text
+          "Context meta-objects may not appears as meta-types."
+    | Illegal_substitution_or_context_contextual_type ->
+        Format.dprintf "%a" Format.pp_print_text
+          "Expected only one contextual LF type for this meta-type."
+    | Illegal_missing_dollar_modifier_meta_object ->
+        Format.dprintf "%a" Format.pp_print_text
+          "Dollar prefix is missing for this substitution."
+    | Illegal_hash_modifier_meta_object ->
+        Format.dprintf "%a" Format.pp_print_text
+          "Illegal hash prefix for a meta-object."
+    | Expected_meta_object ->
+        Format.dprintf "%a" Format.pp_print_text "Expected a meta-object."
+    | Illegal_missing_dollar_modifier_meta_pattern ->
+        Format.dprintf "%a" Format.pp_print_text
+          "Dollar prefix is missing for this substitution pattern."
+    | Illegal_hash_modifier_meta_pattern ->
+        Format.dprintf "%a" Format.pp_print_text
+          "Illegal hash prefix for a meta-object pattern."
+    | Expected_meta_pattern ->
+        Format.dprintf "%a" Format.pp_print_text
+          "Expected a meta-object pattern."
+    | Illegal_unnamed_block_element_type ->
+        Format.dprintf "%a" Format.pp_print_text
+          "Schema block clause binding is missing its identifier."
+    | Expected_contextual_type ->
+        Format.dprintf "%a" Format.pp_print_text
+          "Expected a parameter contextual type meta-type."
+    | Expected_plain_or_renaming_substitution_type ->
+        Format.dprintf "%a" Format.pp_print_text
+          "Expected a plain or renaming substitution meta-type."
+    | Expected_contextual_type_or_schema ->
+        Format.dprintf "%a" Format.pp_print_text
+          "Expected a contextual type or schema meta-type."
+    | Illegal_missing_meta_type_annotation ->
+        Format.dprintf "%a" Format.pp_print_text
+          "This meta-context binding is missing its meta-type annotation."
+    | exn -> Error.raise_unsupported_exception_printing exn)

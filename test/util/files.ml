@@ -68,3 +68,14 @@ let read_test_case_inputs ~filename =
             raise cause)
   in
   parse_test_cases tokens
+
+(** {2 Exception Printing} *)
+
+let () =
+  Error.register_exception_printer (function
+    | Extraneous_test_case_terminator ->
+        Format.dprintf "%a" Format.pp_print_text
+          "Extraneous test case terminator."
+    | Unterminated_test_case ->
+        Format.dprintf "%a" Format.pp_print_text "Unterminated test case."
+    | exn -> Error.raise_unsupported_exception_printing exn)

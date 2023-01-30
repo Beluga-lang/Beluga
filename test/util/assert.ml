@@ -1,4 +1,5 @@
 open Support
+open Beluga_syntax
 
 exception Did_not_raise
 
@@ -9,7 +10,13 @@ let assert_exn f =
   with
   | Did_not_raise ->
       OUnit2.assert_failure "Expected an exception to be raised"
-  | _ -> ()
+  | exn -> (
+      try
+        (* For coverage analysis, find a printer for the uncaught
+           exception *)
+        ignore (Error.find_printer exn : Format.formatter -> unit)
+      with
+      | _ -> ())
 
 let show_json = Format.stringify (Yojson.Safe.pretty_print ~std:true)
 

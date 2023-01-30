@@ -1,2 +1,30 @@
 % The following is a list of `;;`-terminated syntactically invalid meta-level
 % types with respect to the disambiguation state `disambiguation_state.json`.
+
+% Missing dollar prefix
+[g |- h]
+;;
+
+% Missing dollar prefix
+[^ |- ^]
+;;
+
+% Expected a contextual LF type, not a contextual LF term `\x. x'
+[ |- \x. x]
+;;
+
+% Expected a contextual LF type, not `x, y'
+[ |- x, y]
+;;
+
+% Expected a contextual LF type, not `x, y'
+#[ |- x, y]
+;;
+
+% Contexts are not meta-types
+[x : nat, y : nat]
+;;
+
+% Missing `y' in `x : nat, y : nat'
+block (x : nat, nat)
+;;

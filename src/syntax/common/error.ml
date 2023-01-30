@@ -433,15 +433,16 @@ let located_exception_printer cause_printer locations =
         cause_printer
     else
       (* All locations in [locations] are ghost locations. *)
-      Format.dprintf "@[<v 0>%t %t@]"
+      Format.dprintf "@[<v 0>%t @[%t@]@]"
         (Format.in_stag Ansi_bold_red (Format.dprintf "Error:"))
         cause_printer
   with
   | _ ->
       (* An exception occurred while trying to read the snippets. Report the
          exception without the snippets. *)
-      Format.dprintf "@[<v 0>%a@,%t@]"
-        (List1.pp ~pp_sep:Format.pp_print_cut Location.pp)
+      Format.dprintf "@[<v 0>%a@,@[%t@]@]"
+        (List1.pp ~pp_sep:Format.pp_print_cut (fun ppf location ->
+             Format.fprintf ppf "@[%a@]" Location.pp location))
         locations cause_printer
 
 let () =

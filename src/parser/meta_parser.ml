@@ -152,7 +152,8 @@ module Make
         $> (fun (location, schema) ->
              Synprs.Meta.Thing.RawSchema { location; schema })
         |> labelled "Schema meta-type"
-      and plain_inner_thing = seq2 clf_context (maybe (turnstile &> clf_typ))
+      and plain_inner_thing =
+        seq2 clf_context (maybe (turnstile &> clf_context))
       and hash_inner_thing = seq2 clf_context (turnstile &> clf_context)
       and dollar_inner_thing =
         let turnstile = turnstile $> fun () -> `Plain
@@ -172,22 +173,8 @@ module Make
         | location, (context, Option.None) ->
             Synprs.Meta.Thing.RawContext { location; context }
         | location, (context, Option.Some object_) ->
-            let object_location = Synprs.location_of_clf_object object_ in
             Synprs.Meta.Thing.RawTurnstile
-              { location
-              ; context
-              ; object_ =
-                  { Synprs.CLF.Context_object.location = object_location
-                  ; head =
-                      Synprs.CLF.Context_object.Head.None
-                        { location =
-                            Location.start_position_as_location
-                              object_location
-                        }
-                  ; objects = [ (Option.none, object_) ]
-                  }
-              ; variant = `Plain
-              }
+              { location; context; object_; variant = `Plain }
       and hash_meta_type =
         choice
           [ hash_parens hash_inner_thing

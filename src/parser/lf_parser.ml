@@ -271,12 +271,11 @@ module Make
 
   let lf_term = lf_object
 
-  let exception_printer = function
-    | Ambiguous_lf_forward_arrow ->
-        Format.dprintf "This LF forward arrow operator is ambiguous."
-    | Ambiguous_lf_backward_arrow ->
-        Format.dprintf "This LF backward arrow operator is ambiguous."
-    | cause -> Error.raise_unsupported_exception_printing cause
-
-  let () = Error.register_exception_printer exception_printer
+  let () =
+    Error.register_exception_printer (function
+      | Ambiguous_lf_forward_arrow ->
+          Format.dprintf "This LF forward arrow operator is ambiguous."
+      | Ambiguous_lf_backward_arrow ->
+          Format.dprintf "This LF backward arrow operator is ambiguous."
+      | exn -> Error.raise_unsupported_exception_printing exn)
 end

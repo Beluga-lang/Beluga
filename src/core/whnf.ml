@@ -189,7 +189,7 @@ and lowerMVar =
   | _ ->
      (* It is not clear if it can happen that cnstr =/= nil *)
      (* 2011/01/14: Changed this to a violation for now, to avoid a cyclic dependency on Reconstruct. -mb *)
-     raise (Error.Violation "Constraints left")
+     Error.raise_violation "Constraints left"
 
 (*
 
@@ -248,7 +248,7 @@ and lowerMMVar cD =
   | _ ->
      (* It is not clear if it can happen that cnstr =/= nil *)
      (* 2011/01/14: Changed this to a violation for now, to avoid a cyclic dependency on Reconstruct. -mb *)
-     raise (Error.Violation "Constraints left")
+     Error.raise_violation "Constraints left"
 
 *)
 
@@ -473,7 +473,7 @@ and reduceTupleFt (ft, i) =
   match normFt' (ft, LF.id) with
   | Head h -> Head (Proj (h, i))
   | Obj (Tuple (_, tM)) -> Obj (reduceTuple (tM, i))
-  | Obj _ -> Error.violation "[reduceTupleFt] not a tuple"
+  | Obj _ -> Error.raise_violation "[reduceTupleFt] not a tuple"
 
 and reduceTuple =
   function
@@ -639,7 +639,7 @@ and cnorm_psihat (phat : dctx_hat) t =
         end
      | MV offset' -> (Some (CtxOffset offset'), k)
      | ClObj _ ->
-        Error.violation
+        Error.raise_violation
           (Format.asprintf "[cnorm_psihat] ClObj impossible; offset %d" offset)
      end
   | _ -> phat
@@ -757,7 +757,7 @@ and cnormSub (s, t) =
      | ClObj (_, SObj r) ->
         LF.comp (LF.comp (Shift n) r) (cnormSub (s', t))
      | ClObj _ ->
-        Error.violation "[cnormSub] t @ offset must give an MV or ClObj SObj"
+        Error.raise_violation "[cnormSub] t @ offset must give an MV or ClObj SObj"
      end
 
   | FSVar (n, (s_name, s')) ->
@@ -948,7 +948,7 @@ and whnf  =
      | Head head ->
         whnf (Root (loc, head, SClo (tS, sigma), plicity), LF.id)
 
-     | Undef -> Error.violation "[whnf] Undef impossible"
+     | Undef -> Error.raise_violation "[whnf] Undef impossible"
      end
 
   (* Meta^2-variable *)
@@ -967,7 +967,7 @@ and whnf  =
            | Head (BVar k) -> (Root (loc, BVar k, SClo (tS, sigma), plicity), LF.id)
            | Head h -> whnf (Root (loc, h, SClo (tS, sigma), plicity), LF.id)
            | Undef ->
-              Error.violation (Format.asprintf "[whnf] Undef looked up at %d" i)
+              Error.raise_violation (Format.asprintf "[whnf] Undef looked up at %d" i)
            end
         | PVar (p, s) ->
            let h' = PVar (p, LF.comp (LF.comp s r) sigma) in
@@ -1010,7 +1010,7 @@ and whnf  =
             *)
            (* let _ = lowerMMVar cD u in
               whnf (tM, sigma) *)
-           Error.violation "Meta^2-variable needs to be of atomic type"
+           Error.raise_violation "Meta^2-variable needs to be of atomic type"
         end
      end
 
@@ -1108,7 +1108,7 @@ and whnf  =
               , LF.id
               )
            | Undef ->
-              Error.violation ("[whnf] Undef looked up at " ^ string_of_int i)
+              Error.raise_violation ("[whnf] Undef looked up at " ^ string_of_int i)
            end
         | PVar (p, s) ->
            let h' = Proj (PVar (p, LF.comp (LF.comp s r) sigma), k) in
@@ -1131,7 +1131,7 @@ and whnf  =
      end
 
   | (LFHole _, _) as sM -> sM
-  | _ -> Error.violation "oops 4"
+  | _ -> Error.raise_violation "oops 4"
 
 (* whnfRedex ((tM, s1), (tS, s2)) = (R, s')
  *
@@ -1528,7 +1528,7 @@ let prefixSchElem (SchElem (cSome1, typRec1)) (SchElem (cSome2, typRec2)) =
 let mctxLookupDep cD k =
   Context.lookup' cD k
   |> Option.get'
-       (Error.Violation
+       (Error.raise_violation
           (Format.asprintf
             "Meta-variable out of bounds -- looking for %d in context of length %d"
             k
@@ -1539,7 +1539,7 @@ let mctxLookupDep cD k =
     | Decl (u, mtyp, plicity, inductivity) ->
        (u, cnormMTyp (mtyp, MShift k), plicity, inductivity)
     | DeclOpt _ ->
-       raise (Error.Violation "Expected declaration to have a type")
+       Error.raise_violation "Expected declaration to have a type"
 
 let mctxLookup cD k =
   let (u, tp, _, _) = mctxLookupDep cD k in
@@ -1553,23 +1553,23 @@ let mctxLookup cD k =
 let mctxMDec cD' k =
   match mctxLookup cD' k with
   | (u, ClTyp (MTyp tA, cPsi)) -> (u, tA, cPsi)
-  | _ -> raise (Error.Violation "Expected ordinary meta-variable")
+  | _ -> Error.raise_violation "Expected ordinary meta-variable"
 
 let mctxPDec cD k =
   match mctxLookup cD k with
   | (u, ClTyp (PTyp tA, cPsi)) -> (u, tA, cPsi)
-  | _ -> raise (Error.Violation ("Expected parameter variable"))
+  | _ -> Error.raise_violation ("Expected parameter variable")
 
 let mctxSDec cD' k =
   match mctxLookup cD' k with
   | (u, ClTyp (STyp (cl, cPhi), cPsi)) -> (u, cPhi, cl, cPsi)
   (* u : [cPsi |- cPhi] *)
-  | _ -> raise (Error.Violation "Expected substitution variable")
+  | _ -> Error.raise_violation "Expected substitution variable"
 
 let mctxCDec cD k =
   match mctxLookup cD k with
   | (u, CTyp (Some sW)) -> (u, sW)
-  | _ -> raise (Error.Violation ("Expected context variable"))
+  | _ -> Error.raise_violation ("Expected context variable")
 
 let mctxMVarPos cD u =
   let rec lookup cD k =
@@ -2249,7 +2249,7 @@ let closedDecl =
   function
   | Decl (_, cU, _, _) -> closedMetaTyp cU
   | DeclOpt _ ->
-     Error.violation "[closedDecl] DeclOpt outside printing"
+     Error.raise_violation "[closedDecl] DeclOpt outside printing"
 
 let rec closedCTyp =
   function
@@ -2276,7 +2276,7 @@ let closedCTypDecl =
   function
   | Comp.CTypDecl (_, tau, _) -> closedCTyp tau
   | Comp.CTypDeclOpt _ ->
-     Error.violation
+     Error.raise_violation
        "[closedCTypDecl] CTypDeclOpt outside printing"
 
 let closedGCtx = closedCtx closedCTypDecl
@@ -2343,7 +2343,7 @@ and closedPattern =
   | Comp.PatMetaObj (_, cM) -> closedMetaObj cM
   | Comp.PatConst (_, _, patS) -> closedPatSpine patS
   | Comp.PatFVar _ ->
-     Error.violation "[closedPattern] PatFVar outside coverage"
+     Error.raise_violation "[closedPattern] PatFVar outside coverage"
   | Comp.PatVar _ -> true
   | Comp.PatTuple (_, pats) -> List2.for_all (fun pat -> closedPattern pat) pats
   | Comp.PatAnn (_, pat, tau, _) ->

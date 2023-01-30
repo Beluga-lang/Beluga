@@ -34,7 +34,7 @@ let replace_locs (replacees : (Beluga_syntax.Location.t * (Format.formatter -> u
          let read_length = ref 0 in
          let indentation = ref 0 in
          let raise_edited_error () =
-           Beluga_syntax.Error.violation "[harpoon] [serialize] original file is edited"
+           Beluga_syntax.Error.raise_violation "[harpoon] [serialize] original file is edited"
          in
          let with_uchar n f =
            match Sedlexing.next in_lexbuf with

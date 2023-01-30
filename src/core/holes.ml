@@ -192,9 +192,9 @@ let get_snapshot () : snapshot =
 (** Gets all the holes that were added since the given snapshot. *)
 let holes_since (past : snapshot) : (HoleId.t * some_hole) list =
   let f k =
-    Hashtbl.find_opt holes k
-    |> Option.get' (Error.Violation "membership of hole is guaranteed by snapshot")
-    |> Pair.left k
+    match Hashtbl.find_opt holes k with
+    | Option.None -> Error.raise_violation "membership of hole is guaranteed by snapshot"
+    | Option.Some x -> (k, x)
   in
   let present = get_snapshot () in
   Snapshot.diff present past
@@ -255,7 +255,7 @@ let allocate () = ID.next ()
 let assign id h =
   match Hashtbl.find_opt holes id with
   | Some _ ->
-     Error.violation "duplicate hole assignment"
+     Error.raise_violation "duplicate hole assignment"
   | None ->
      check_hole_uniqueness h;
      Hashtbl.add holes id h

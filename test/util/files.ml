@@ -33,7 +33,7 @@ let parse_test_cases =
     | (location, Terminator) :: _ ->
         Error.raise_at1 location Extraneous_test_case_terminator
     | (_, Input _) :: (_, Input _) :: _ ->
-        Error.violation "Unexpectedly split a test case in two"
+        Error.raise_violation "Unexpectedly split a test case in two"
     | (location, Input _) :: [] ->
         Error.raise_at1 location Unterminated_test_case
     | [] -> List.rev acc

@@ -896,7 +896,7 @@ module Cid = struct
       with
       | Some d -> d
       | None ->
-         Error.violation "theorem does not belong to its mutual group"
+         Error.raise_violation "theorem does not belong to its mutual group"
 
     let mutual_group cid = (get cid).mutual_group
 
@@ -1133,7 +1133,7 @@ module CVar = struct
         let plicity' = f (plicity, inductivity) in
         mk_entry u plicity' |> extend v
       | DeclOpt _ ->
-         Error.violation "[of_mctx] DeclOpt impossible"
+         Error.raise_violation "[of_mctx] DeclOpt impossible"
     in
     List.fold_right f (Context.to_list_rev cD) empty
 

@@ -107,7 +107,7 @@ let raise_not_implemented ?location msg =
 
 exception Violation of string
 
-let violation ?location msg =
+let raise_violation ?location msg =
   Debug.printf (fun p -> p.fmt "[violation] %s" msg);
   match location with
   | Option.None -> raise (Violation msg)

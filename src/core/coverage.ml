@@ -762,7 +762,7 @@ and pre_match_sub cD cD_p covGoal patt matchCands splitCands =
   | ((LF.Shift k, _), (LF.Shift n, _)) ->
      if n = k
      then (matchCands, splitCands)
-     else Error.violation "[coverage] [pre_match_sub] substitution mismatch"
+     else Error.raise_violation "[coverage] [pre_match_sub] substitution mismatch"
   (*
           raise (Error (Location.ghost,
                     MatchError ("Substitution mismatch " ^ P.subToString cD cPsi0 s0 ^ " =/= " ^ P.subToString cD_p cPsi0 s1 ^ "\n")))
@@ -998,7 +998,7 @@ let match_metaobj cD cD_p ((loc, mO), mt) ((loc', mO_p), mtp) mC sC =
             (mobj cD_p) (loc', mO_p)
             (mtyp cD_p) mtp
         in
-        Error.violation s
+        Error.raise_violation s
 (*
      raise (Error (Location.ghost, MatchError ("Meta Obj Mismatch \n" ^ "Found CovGoal: " ^ P.metaObjToString cD (loc, mO) ^ " : " ^ P.metaTypToString cD mt ^ "\nPattern: " ^ P.metaObjToString cD_p (loc', mO_p) ^ " : " ^ P.metaTypToString cD_p mtp ^ "\n")))
  *)
@@ -1760,9 +1760,9 @@ let cnormEqn eqn ms =
      let cov = CovSub (cPhi, s, mT) in
      Eqn (cov, patt)
   | Eqn (CovPatt _, _) ->
-     Error.violation "[cnormEqn] CovPatt"
+     Error.raise_violation "[cnormEqn] CovPatt"
   | Eqn (CovCtx _, _) ->
-     Error.violation "[cnormEqn] CovCtx"
+     Error.raise_violation "[cnormEqn] CovCtx"
 
 (** Contextual normalization for a list of equations. *)
 let cnormEqns matchL ms =

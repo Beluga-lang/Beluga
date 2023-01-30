@@ -672,7 +672,7 @@ module Make_persistent_pattern_disambiguation_state (S : BINDINGS_STATE) :
 
   let pop_binding identifier bindings =
     match Identifier.Hamt.find_opt identifier bindings with
-    | Option.None -> Error.violation "[pop_binding]"
+    | Option.None -> Error.raise_violation "[pop_binding]"
     | Option.Some (List1.T (_head, [])) ->
         Identifier.Hamt.remove identifier bindings
     | Option.Some (List1.T (_head, x :: xs)) ->

@@ -281,7 +281,7 @@ let elNumericOrder (tau : I.typ) (order : Ext.Comp.numeric_order)
     match tau, n with
     | _, 0 -> 0
     | I.TypPiBox (_, Int.LF.Decl (u, cU, _, Inductivity.Inductive), tau), n ->
-      Error.violation "[elNumericOrder] impossible LF.Inductive"
+      Error.raise_violation "[elNumericOrder] impossible LF.Inductive"
     | I.TypPiBox (_, Int.LF.Decl (u, cU, Plicity.Implicit, _), tau), n ->
       1 + skip tau n (* implicits are free *)
     | I.TypPiBox (_, Int.LF.Decl (u, cU, Plicity.Explicit, _), tau), n ->
@@ -890,7 +890,7 @@ let rec inferPatTyp' cD' (cD_s, tau_s) =
 
   | _ ->
      let s = Support.Format.stringify (P.fmt_ppr_cmp_typ cD_s P.l0) tau_s in
-     Error.violation ("uninferrable pattern type for: " ^ s)
+     Error.raise_violation ("uninferrable pattern type for: " ^ s)
 
 let inferPatTyp cD' (cD_s, tau_s) =
   inferPatTyp' cD' (cD_s, Whnf.cnormCTyp (tau_s, Whnf.m_id))
@@ -1789,7 +1789,7 @@ and recPatObj' cD pat (cD_s, tau_s) =
              let tP' = mgTyp cD cPsi' tA in
              (loc', Int.LF.ClTyp (Int.LF.MTyp tP', cPsi'))
           | Int.LF.(MTyp (PiTyp _)) ->
-             Error.violation "[recPatObj'] scrutinee PiTyp is forbidden"
+             Error.raise_violation "[recPatObj'] scrutinee PiTyp is forbidden"
           | Int.LF.STyp (sv_class, cPhi) ->
              let cPsi' = mgCtx cD (cD_s, cPsi) in
              let cPhi' = mgCtx cD (cD_s, cPhi) in
@@ -1799,7 +1799,7 @@ and recPatObj' cD pat (cD_s, tau_s) =
                 PTyp is given to the scrutinee type only by
                 fixParamTyp in check.ml, and it is only used for
                 coverage checking. *)
-             Error.violation "[recPatObj'] scrutinee PTyp should be impossible"
+             Error.raise_violation "[recPatObj'] scrutinee PTyp should be impossible"
           end
        | Int.Comp.TypBox (loc', mT) ->
           raise (Error (loc, MetaObjectClash (cD, mT)))
@@ -2434,7 +2434,7 @@ and elSplit loc cD cG pb i tau_i bs ttau =
          match Coverage.genBVar (cD, cPsi, tA) 1 with
          | [x] -> x
          | _ ->
-            Error.violation "[make_meta_branch] genBVar did not generate 1 case"
+            Error.raise_violation "[make_meta_branch] genBVar did not generate 1 case"
        in
        let pat =
          I.PatMetaObj

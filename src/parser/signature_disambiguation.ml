@@ -335,7 +335,7 @@ struct
     | Synprs.Signature.Declaration.Raw_recursive_declarations _
     (* The parser does not support nested recursive groups in mutually
        recursive declarations. *) ->
-        Error.violation
+        Error.raise_violation
           "[Signature.add_recursive_declaration_to_disambiguation_state] \
            unsupported declaration in mutually recursive declarations group"
     | Synprs.Signature.Declaration.Raw_lf_typ_constant

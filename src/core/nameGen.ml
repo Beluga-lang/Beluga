@@ -30,7 +30,7 @@ let rec var_string = function
   | Comp.TypBox (_, mT) -> (
     match mT with
     | LF.CTyp _ ->
-      Error.violation "[NameGen.var] computational CTyp impossible"
+      Error.raise_violation "[NameGen.var] computational CTyp impossible"
     | LF.ClTyp (cU, _) -> (
       match cU with
       | LF.MTyp tA | LF.PTyp tA -> bvar_string tA

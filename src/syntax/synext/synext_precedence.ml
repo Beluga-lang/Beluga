@@ -375,7 +375,7 @@ module Comp_precedence = struct
         | Static x, User_defined_pattern _ ->
             if x < pattern_application_precedence then -1 else 1
         | _ ->
-            Error.violation
+            Error.raise_violation
               "[Precedence.compare] cannot compare precedences for \
                user-defined type, expression and pattern constants"
     end) :

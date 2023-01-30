@@ -461,11 +461,11 @@ module Comp = struct
          I.Dec (cD, I.Decl (u, cdec, Plicity.explicit, Inductivity.inductive))
 
       | (I.Dec (_, I.DeclOpt (u, _)), 1) ->
-         raise (Error.Violation "Expected declaration to have type")
+         Error.raise_violation "Expected declaration to have type"
 
       | (I.Dec (cD, dec), k') -> I.Dec (lookup cD (k' - 1), dec)
       | (I.Empty, _) ->
-         raise (Error.Violation (Format.asprintf "Meta-variable out of bounds -- looking for %d in context" k))
+         Error.raise_violation (Format.asprintf "Meta-variable out of bounds -- looking for %d in context" k)
     in
     lookup cD k
 
@@ -564,9 +564,9 @@ module Comp = struct
     | (I.MShift k, I.Empty) -> cD1'
     | (I.MShift k, cD)
          when k < 0 ->
-       raise (Error.Violation "Contextual substitution ill-formed")
+       Error.raise_violation "Contextual substitution ill-formed"
     | (I.MDot _, I.Empty) ->
-       Error.violation "Contextual substitution ill-formed"
+       Error.raise_violation "Contextual substitution ill-formed"
 
     | (I.MShift k, cD) -> (* k >= 0 *)
        id_map_ind cD1' (I.MDot (I.MV (k + 1), I.MShift (k + 1))) cD
@@ -779,7 +779,7 @@ module Comp = struct
     | (MetaNil, (Ctype _, _)) -> ()
     | (MetaApp (mO, mT, mS, plicity_app), (PiKind (_, I.Decl (_, ctyp, plicity_pi, inductivity), cK), t)) ->
        if Plicity.(plicity_app <> plicity_pi)
-       then Error.violation "[checkMetaSpine] plicity mismatch";
+       then Error.raise_violation "[checkMetaSpine] plicity mismatch";
        let loc = getLoc mO in
        LF.checkMetaObj cD mO (ctyp, t);
        begin
@@ -789,7 +789,7 @@ module Comp = struct
            Unify.unifyMetaTyp cD (ctyp, t) (mT, C.m_id)
          with
          | Unify.Failure _ ->
-            Error.violation
+            Error.raise_violation
               (Format.asprintf
                 "[syn] type annotation not unifiable with PiBox type %a"
                  Location.print_short loc
@@ -814,7 +814,7 @@ module Comp = struct
          try
            ignore (Schema.get_schema schema_cid)
          with
-         | _ -> raise (Error.Violation "Schema undefined")
+         | _ -> Error.raise_violation "Schema undefined"
        end
     | I.CTyp None -> ()
     | I.ClTyp (tp, cPsi) ->
@@ -950,7 +950,7 @@ module Comp = struct
         (Format.asprintf "Box %a" (P.fmt_ppr_cmp_meta_obj cD P.l0) cM)
     with
     | Whnf.FreeMVar (I.FMVar (u, _)) ->
-       Error.violation (Format.asprintf "Free meta-variable %a" Name.pp u)
+       Error.raise_violation (Format.asprintf "Free meta-variable %a" Name.pp u)
 
   let rec checkW mcid cD (cG, (cIH : ihctx)) total_decs e ttau =
     (** If cD; cG; cIH |- i ==> tau_sc then
@@ -1013,7 +1013,7 @@ module Comp = struct
               (List2.to_list ns) (List2.to_list taus)
           in
           check mcid cD (cG', (Total.shift (Total.shift cIH))) total_decs e (tau, t)
-       | _ -> raise (Error.Violation "Case scrutinee not of product type")
+       | _ -> Error.raise_violation "Case scrutinee not of product type"
        end
 
     | (Box (loc, cM, cU), (TypBox (l, cU'), t)) ->
@@ -1022,7 +1022,7 @@ module Comp = struct
            Unify.unifyMetaTyp cD (cU, C.m_id) (cU', t)
          with
          | Unify.Failure _ ->
-            Error.violation "[check] box's type annotation does not unify with target type"
+            Error.raise_violation "[check] box's type annotation does not unify with target type"
        end;
        checkMetaObj cD cM cU' t
 
@@ -1077,11 +1077,11 @@ module Comp = struct
           Holes.assign id h
        | Some (_, (Exists (w, h))) ->
           begin match w with
-          | LFInfo -> Error.violation "wrong hole kind"
+          | LFInfo -> Error.raise_violation "wrong hole kind"
           | CompInfo ->
              let { compSolution; compGoal; _ } = h.info in
              if not (Whnf.convCTyp compGoal (tau, t))
-             then Error.violation "mismatched hole type";
+             then Error.raise_violation "mismatched hole type";
              begin match compSolution with
              | None -> ()
              | Some e -> checkW mcid cD (cG, cIH) total_decs e (tau, t)
@@ -1098,7 +1098,7 @@ module Comp = struct
            P.(fmt_ppr_cmp_exp cD cG l0) e
            P.(fmt_ppr_cmp_typ cD l0) (Whnf.cnormCTyp ttau)
          end;
-       Error.violation "[checkW] fallthrough"
+       Error.raise_violation "[checkW] fallthrough"
 
   and check mcid cD (cG, cIH) total_decs e (tau, t) =
     dprintf
@@ -1248,7 +1248,7 @@ module Comp = struct
               Unify.unifyMetaTyp cD (ctyp, t) (cU, C.m_id)
             with
             | Unify.Failure _ ->
-               Error.violation
+               Error.raise_violation
                  (Format.asprintf
                     "[syn] type annotation not unifiable with PiBox type %a"
                     Location.print_short loc
@@ -1344,7 +1344,7 @@ module Comp = struct
          p.fmt "[synPattern] PatFVar %a impossible"
            Name.pp x
          end;
-       Error.violation "[synPattern] PatFVar impossible"
+       Error.raise_violation "[synPattern] PatFVar impossible"
     | pat ->
        dprintf
          begin fun p ->
@@ -1352,7 +1352,7 @@ module Comp = struct
                 @,pat = @[%a@]@]"
            P.(fmt_ppr_cmp_pattern cD cG l0) pat
          end;
-       Error.violation "[synPattern] fallthrough"
+       Error.raise_violation "[synPattern] fallthrough"
 
   and synPatSpine cD cG pat_spine (tau, theta) =
     match pat_spine with
@@ -1604,7 +1604,7 @@ module Comp = struct
        | None ->
           begin match mcid with
           | None ->
-             Error.violation "[check] [proof] no cid to register subgoal with"
+             Error.raise_violation "[check] [proof] no cid to register subgoal with"
           | Some cid ->
              let g =
                { g with

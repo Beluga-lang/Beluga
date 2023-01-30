@@ -56,6 +56,6 @@ let inspect_duplicates identifiers =
   match duplicates with
   | e1 :: e2 :: es -> (Option.some (List2.from e1 e2 es), set)
   | [] -> (Option.none, set)
-  | _ -> Error.violation "[Identifier.inspect_duplicates]"
+  | _ -> Error.raise_violation "[Identifier.inspect_duplicates]"
 
 let find_duplicates = Fun.(inspect_duplicates >> Pair.fst)

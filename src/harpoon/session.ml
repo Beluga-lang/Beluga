@@ -310,6 +310,6 @@ let fmt_ppr_theorem_list ppf c =
 
 let materialize_theorems c =
   if DynArray.length c.theorems > 0 then
-    Beluga_syntax.Error.violation
+    Beluga_syntax.Error.raise_violation
       "[materialize_theorems] not all theorems are complete";
   DynArray.iter F.(Theorem.materialize ++ Pair.fst) c.finished_theorems

@@ -31,7 +31,7 @@ let thm_thm loc cid1 =
         FixedFixed (Format.asprintf "theorem %a" Name.pp name, loc', cid2)
         |> throw loc
      | None, Some _ ->
-        Error.violation
+        Error.raise_violation
           "[thm_thm] floating-fixed interaction is impossible"
      | None, None ->
         FloatingFloating (cid1, cid2)

@@ -75,7 +75,7 @@ let remove_subgoal t g =
     try DynArray.index_of p t.remaining_subgoals
     with
     | Not_found ->
-        Beluga_syntax.Error.violation "[remove_subgoal] no such subgoal"
+        Beluga_syntax.Error.raise_violation "[remove_subgoal] no such subgoal"
   in
   DynArray.delete t.remaining_subgoals i
 

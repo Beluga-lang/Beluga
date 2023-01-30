@@ -1078,7 +1078,7 @@ let rec blockdeclInDctx =
        | ft -> ft
        end
     | ClObj (phat, MObj tM) -> ClObj (phat, MObj (invNorm cD0 (phat, (tM, id), (ms, id), rOccur)))
-    | CObj cPsi -> raise (Error.Violation "Not implemented")
+    | CObj cPsi -> Error.raise_violation "Not implemented"
     | ClObj (phat, PObj h) -> ClObj (phat, PObj (invHead cD0 (phat, h, (ms, id), rOccur)))
   (* | SObj (phat, sigma) -> SObj (phat, invSub cD0 phat (sigma, *)
 
@@ -1316,7 +1316,7 @@ let rec blockdeclInDctx =
 
     | (Dot _, _)
       | (EmptySub, _)
-      -> raise (Error.Violation "Badly typed substitution")
+      -> Error.raise_violation "Badly typed substitution"
 
 
   and pruneFront cD cPsi ft ss rOccur =
@@ -1678,7 +1678,7 @@ let rec blockdeclInDctx =
         | NotInvertible ->
            (* This might actually need to add a constraint, in which case
            "NotInvertible" seems the wrong kind of exception... *)
-           raise (Error.Violation "Unification violation")
+           Error.raise_violation "Unification violation"
       end
 
   and craftMVTerm cD0 cPsi mmvar sM2 =
@@ -1792,7 +1792,7 @@ let rec blockdeclInDctx =
             end
         in
         instantiateMMVar' (mmvar.instantiation, tM2', mmvar.constraints.contents);
-        (* with | NotInvertible -> raise (Error.Violation "Unification violation") *)
+        (* with | NotInvertible -> Error.raise_violation "Unification violation" *)
         (* This might actually need to add a constraint, in which case "NotInvertible" seems
            the wrong kind of exception... *)
       end
@@ -2689,13 +2689,13 @@ let rec blockdeclInDctx =
                  end
              end
            else
-             Error.violation
+             Error.raise_violation
                "Case where we need to unify the same context \
                 variables which are associated with different \
                 meta-stitutions which are non-patterns is not \
                 handled"
          else
-           Error.violation "Schema mismatch"
+           Error.raise_violation "Schema mismatch"
        else if isPatMSub theta1 && isPatMSub theta2
        then
          begin
@@ -2706,7 +2706,7 @@ let rec blockdeclInDctx =
              )
          end
        else
-         Error.violation
+         Error.raise_violation
            "Case where both meta-substitutions associated with \
             context variables are not pattern substitutions \
             should not happen and is not implemented for now"
@@ -2734,7 +2734,7 @@ let rec blockdeclInDctx =
            | _ -> ()
          end
        else
-         Error.violation
+         Error.raise_violation
            "Case where both meta-substitutions associated with \
             context variables are not pattern substitutions \
             should not happen and is not implemented for now"
@@ -3127,7 +3127,7 @@ let rec blockdeclInDctx =
                 instantiateCtxVar (mmvar1.instantiation, cPsi)
               end
             else
-              Error.violation
+              Error.raise_violation
                 "Case where we need to unify the same context \
                  variables which are associated with different \
                  meta-stitutions which are non-patterns is not \
@@ -3148,7 +3148,7 @@ let rec blockdeclInDctx =
               mmvar1.instantiation := Some (ICtx (CtxVar i))
             end
           else
-            Error.violation
+            Error.raise_violation
                "Case where we need to unify the context variables \
                 which are associated with different meta-stitutions \
                 which are non-patterns is not handled"

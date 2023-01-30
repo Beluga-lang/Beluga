@@ -227,7 +227,7 @@ let fmt_ppr_result ppf =
 let entry { CompS.Entry.prog; typ = tau; name; _ } =
   let prog =
     Option.get'
-      (Beluga_syntax.Error.Violation
+      (Beluga_syntax.Error.raise_violation
          (Format.asprintf
            "The body of theorem %a is unknown." Name.pp name))
       prog
@@ -239,7 +239,7 @@ let entry { CompS.Entry.prog; typ = tau; name; _ } =
        assert (match t with LF.MShift 0 -> true | _ -> false);
        thm
     | _ ->
-      Beluga_syntax.Error.violation
+      Beluga_syntax.Error.raise_violation
          "Looked up theorem is not a theorem value."
   in
   trap (fun _ -> theorem thm tau)

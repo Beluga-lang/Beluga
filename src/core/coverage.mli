@@ -188,4 +188,3 @@ val reset_information : unit -> unit
 val get_information : unit -> string
 
 val add_information : string -> unit
-

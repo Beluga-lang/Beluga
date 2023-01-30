@@ -14,7 +14,8 @@ let assert_exn f =
       try
         (* For coverage analysis, find a printer for the uncaught
            exception *)
-        ignore (Error.find_printer exn : Format.formatter -> unit)
+        let printer = Error.find_printer exn in
+        Format.fprintf Format.null_formatter "%t@." printer
       with
       | _ -> ())
 

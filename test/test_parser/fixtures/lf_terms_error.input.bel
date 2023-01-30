@@ -32,3 +32,11 @@ x has_type y has_type z
 % All arguments must be supplied to LF term constants
 x arrow
 ;;
+
+% Forward and backward arrows at the same precedence level are ambiguous
+x -> x <- x
+;;
+
+% Forward and backward arrows at the same precedence level are ambiguous
+x <- x -> x
+;;

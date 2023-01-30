@@ -9,6 +9,8 @@ module type PARSER_STATE = sig
   val peek : token option t
 
   val observe : token option t
+
+  val accept : unit t
 end
 
 module type PARSER_LOCATION_STATE = sig
@@ -24,7 +26,7 @@ end
 module type TOGGLEABLE_BACKTRACKING_STATE = sig
   include State.STATE
 
-  val with_unlimited_backtracking : 'a t -> 'a t
+  val with_unlimited_backtracking : ('a, 'e) result t -> ('a, 'e) result t
 end
 
 module type BACKTRACKING_STATE = sig

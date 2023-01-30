@@ -23,16 +23,16 @@ module type PARSER_LOCATION_STATE = sig
   val previous_location : location option t
 end
 
-module type TOGGLEABLE_BACKTRACKING_STATE = sig
-  include State.STATE
-
-  val with_unlimited_backtracking : ('a, 'e) result t -> ('a, 'e) result t
-end
-
 module type BACKTRACKING_STATE = sig
   include State.STATE
 
-  exception No_checkpoints
+  val enable_backtracking : unit t
+
+  val disable_backtracking : unit t
+
+  val can_backtrack : bool t
+
+  val allow_backtracking_on_error : ('a, 'e) result t -> ('a, 'e) result t
 
   val with_checkpoint :
        ('a, 'e) result t
@@ -57,20 +57,32 @@ module Make_state (Token : LOCATED) : sig
 
   include BACKTRACKING_STATE with type state := state
 
-  include TOGGLEABLE_BACKTRACKING_STATE with type state := state
-
   val initial : ?initial_location:location -> token Seq.t -> state
 end = struct
   type token = Token.t
 
   type location = Token.location
 
+  (** The type of parser states. *)
   type state =
-    { input : token Seq.t
+    { input : token Seq.t  (** The input stream of tokens. *)
     ; position : int
+          (** The 1-based index of the state's position in the input stream.
+              It is initially [0]. *)
     ; can_backtrack : bool
+          (** The flag signalling whether unrestricted backtracking is
+              enabled.
+
+              This is only [true] when a parser fails with the [trying]
+              combinator. *)
     ; checkpoints : state list
+          (** The stack of checkpoints to backtrack to when alternating
+              between parsers.
+
+              This grows linearly with the number of nested uses of the
+              [choice] combinator. *)
     ; last_location : location option
+          (** The location of the last consumed token. *)
     }
 
   include (
@@ -91,13 +103,16 @@ end = struct
     let* state = get in
     match state.input () with
     | Seq.Nil -> return Option.none
-    | Seq.Cons (x, _xs) -> return (Option.some x)
+    | Seq.Cons (x, _xs) ->
+        (* Do not advance the parser state *)
+        return (Option.some x)
 
   let observe =
     let* state = get in
     match state.input () with
     | Seq.Nil -> return Option.none
     | Seq.Cons (x, xs) ->
+        (* Advance the parser state to consume the token *)
         let* () =
           put
             { state with
@@ -108,7 +123,9 @@ end = struct
         in
         return (Option.some x)
 
-  let accept = observe >>= fun _ -> return ()
+  let accept =
+    (* Advance the parser state and ignore the result *)
+    observe >>= fun _ -> return ()
 
   let enable_backtracking =
     modify (fun state -> { state with can_backtrack = true })
@@ -116,14 +133,12 @@ end = struct
   let disable_backtracking =
     modify (fun state -> { state with can_backtrack = false })
 
-  let with_unlimited_backtracking m =
+  let allow_backtracking_on_error m =
     m >>= function
     | Result.Ok _ as r -> return r
     | Result.Error _ as r ->
         let* () = enable_backtracking in
         return r
-
-  exception No_checkpoints
 
   let[@inline] modify_checkpoints f =
     modify (fun state -> { state with checkpoints = f state.checkpoints })
@@ -134,7 +149,9 @@ end = struct
   let pop_checkpoint =
     let* state = get in
     match state.checkpoints with
-    | [] -> Error.raise No_checkpoints
+    | [] ->
+        Error.raise_violation
+          "[pop_checkpoint] no checkpoint to backtrack to"
     | checkpoint :: checkpoints ->
         let* () = put { state with checkpoints } in
         return checkpoint
@@ -147,11 +164,22 @@ end = struct
     let* state = get in
     push_checkpoint state
 
-  let can_backtrack to_state =
+  let can_backtrack =
+    let* state = get in
+    return state.can_backtrack
+
+  let can_recover to_state =
     let* from_state = get in
     return
-      (from_state.can_backtrack || from_state.position = to_state.position)
+      (from_state.can_backtrack (* Unrestricted backtracking is enabled *)
+      || from_state.position = to_state.position (* No input was consumed *)
+      )
 
+  (** [backtrack checkpoint state] is [(state', ())] where [state'] is the
+      result of backtracking from [state] to [checkpoint].
+
+      Some fields from [state] may be kept in [state'], such as statistics
+      for counting the number of backtrackings that occur during parsing. *)
   let backtrack checkpoint =
     let* state = get in
     put
@@ -170,7 +198,7 @@ end = struct
         return r
     | Result.Error e -> (
         let* checkpoint = pop_checkpoint in
-        can_backtrack checkpoint >>= function
+        can_recover checkpoint >>= function
         | true ->
             let* () = backtrack checkpoint in
             let* () = disable_backtracking in
@@ -228,13 +256,13 @@ module type PARSER = sig
 
   val fail : exn -> 'a t
 
-  val span : 'a t -> (location * 'a) t
-
   val fail_at_next_location : exn -> 'a t
 
   val fail_at_previous_location : exn -> 'a t
 
   val labelled : string -> 'a t -> 'a t
+
+  val span : 'a t -> (location * 'a) t
 
   val only : 'a t -> 'a t
 
@@ -252,11 +280,9 @@ module type PARSER = sig
 
   val trying : 'a t -> 'a t
 
-  val alt : 'a t -> 'a t -> 'a t
-
-  val ( <|> ) : 'a t -> 'a t -> 'a t
-
   val choice : 'a t List.t -> 'a t
+
+  val alt : 'a t -> 'a t -> 'a t
 
   val satisfy :
        on_token:(token -> ('a, exn) result)
@@ -272,8 +298,6 @@ module Make (State : sig
   include PARSER_STATE
 
   include BACKTRACKING_STATE with type state := state
-
-  include TOGGLEABLE_BACKTRACKING_STATE with type state := state
 
   include
     PARSER_LOCATION_STATE
@@ -504,7 +528,7 @@ end) :
 
   let trying p =
     let open State in
-    with_unlimited_backtracking p
+    allow_backtracking_on_error p
 
   let label p label =
     catch p (function
@@ -531,13 +555,11 @@ end) :
 
   let[@inline] alt p1 p2 = choice [ p1; p2 ]
 
-  let[@inline] ( <|> ) p1 p2 = alt p1 p2
-
-  let maybe p = p $> Option.some <|> return Option.none
+  let maybe p = alt (p $> Option.some) (return Option.none)
 
   let void p = p $> fun _x -> ()
 
-  let rec many p = some p $> List1.to_list <|> return []
+  let rec many p = alt (some p $> List1.to_list) (return [])
 
   and some p =
     let* x = p in

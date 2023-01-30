@@ -2,7 +2,9 @@
     expression operators using reverse Polish notation.
 
     This is used for parsing terms having operators with user-defined
-    precedences, fixities, and associativities. *)
+    precedences, fixities, and associativities.
+
+    @author Marc-Antoine Ouimet *)
 
 open Support
 

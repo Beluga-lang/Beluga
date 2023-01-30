@@ -122,18 +122,18 @@ struct
   let make_initial_parser_state_from_file ~filename =
     let initial_location = Location.initial filename in
     let token_sequence = Lexer.lex_file ~filename in
-    Common_parser.Simple_common_parser.initial_state
-      ~last_location:initial_location token_sequence
+    Common_parser.Simple_common_parser.initial_state ~initial_location
+      token_sequence
 
   let make_initial_parser_state_from_channel ~initial_location input =
     let token_sequence = Lexer.lex_input_channel ~initial_location input in
-    Common_parser.Simple_common_parser.initial_state
-      ~last_location:initial_location token_sequence
+    Common_parser.Simple_common_parser.initial_state ~initial_location
+      token_sequence
 
   let make_initial_parser_state_from_string ~initial_location input =
     let token_sequence = Lexer.lex_string ~initial_location input in
-    Common_parser.Simple_common_parser.initial_state
-      ~last_location:initial_location token_sequence
+    Common_parser.Simple_common_parser.initial_state ~initial_location
+      token_sequence
 
   let make_initial_state_from_file ~disambiguation_state ~filename =
     let parser_state = make_initial_parser_state_from_file ~filename in

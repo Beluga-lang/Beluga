@@ -119,14 +119,21 @@ module Make
              Synprs.Meta.Schema_object.Raw_constant { location; identifier })
         |> labelled "Schema constant"
       and element_with_some =
-        seq2 schema_some_clause schema_block_clause |> span
-        $> fun (location, (some_clause, block_clause)) ->
-        Synprs.Meta.Schema_object.Raw_element
-          { location; some = Option.some some_clause; block = block_clause }
+        seq2 schema_some_clause schema_block_clause
+        |> span
+        $> (fun (location, (some_clause, block_clause)) ->
+             Synprs.Meta.Schema_object.Raw_element
+               { location
+               ; some = Option.some some_clause
+               ; block = block_clause
+               })
+        |> labelled "`some'-`block' schema"
       and element =
-        schema_block_clause |> span $> fun (location, block_clause) ->
-        Synprs.Meta.Schema_object.Raw_element
-          { location; some = Option.none; block = block_clause }
+        schema_block_clause |> span
+        $> (fun (location, block_clause) ->
+             Synprs.Meta.Schema_object.Raw_element
+               { location; some = Option.none; block = block_clause })
+        |> labelled "`block' schema"
       in
       choice [ constant; element_with_some; element ]
 
@@ -215,7 +222,6 @@ module Make
     let meta_object =
       let plain_inner_thing =
         seq2 clf_context (maybe (turnstile &> clf_context))
-      and hash_inner_thing = seq2 clf_context (turnstile &> clf_context)
       and dollar_inner_thing =
         let turnstile = turnstile $> fun () -> `Plain
         and turnstile_hash = turnstile_hash $> fun () -> `Hash in
@@ -223,18 +229,15 @@ module Make
           (seq2 (alt turnstile turnstile_hash) clf_substitution)
       in
       let plain_meta_object =
-        bracks plain_inner_thing |> labelled "Plain meta-object" |> span
+        bracks plain_inner_thing
+        |> labelled "Contextual term or context"
+        |> span
         $> function
         | location, (context, Option.None) ->
             Synprs.Meta.Thing.RawContext { location; context }
         | location, (context, Option.Some object_) ->
             Synprs.Meta.Thing.RawTurnstile
               { location; context; object_; variant = `Plain }
-      and hash_meta_object =
-        hash_bracks hash_inner_thing |> labelled "Parameter term" |> span
-        $> fun (location, (context, object_)) ->
-        Synprs.Meta.Thing.RawTurnstile
-          { location; context; object_; variant = `Hash }
       and dollar_meta_object =
         dollar_bracks dollar_inner_thing
         |> labelled "Substitution object"
@@ -247,7 +250,7 @@ module Make
             Synprs.Meta.Thing.RawTurnstile
               { location; context; object_; variant = `Dollar_hash }
       in
-      choice [ plain_meta_object; hash_meta_object; dollar_meta_object ]
+      choice [ plain_meta_object; dollar_meta_object ]
       |> labelled "Meta-object"
 
     (*=

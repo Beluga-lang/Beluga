@@ -120,7 +120,7 @@ let print_span_short ppf l =
     (stop_line l) (stop_column l)
 
 let print ppf location =
-  Format.fprintf ppf "File \"%s\", line %d, column %d" (filename location)
+  Format.fprintf ppf "File \"%s\",@ line %d,@ column %d" (filename location)
     (start_line location) (start_column location)
 
 let pp = print

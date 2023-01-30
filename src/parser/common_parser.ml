@@ -26,7 +26,7 @@ module type PARSER_STATE = sig
 end
 
 module type COMMON_PARSER = sig
-  include Parser_combinator.PARSER_WITH_LOCATIONS
+  include Parser_combinator.PARSER
 
   val keyword : string -> unit t
 
@@ -151,7 +151,7 @@ module type COMMON_PARSER = sig
 end
 
 module Make
-    (Parser : Parser_combinator.PARSER_WITH_LOCATIONS
+    (Parser : Parser_combinator.PARSER
                 with type token = Location.t * Token.t
                  and type location = Location.t) :
   COMMON_PARSER
@@ -560,10 +560,10 @@ module Make
     Error.register_exception_printer (function
       | Parser_error cause ->
           let cause_printer = Error.find_printer cause in
-          Format.dprintf "@[<hov 0>Failed to parse %t@]" cause_printer
+          Format.dprintf "@[Failed to parse %t@]" cause_printer
       | Labelled_exception { label; cause } ->
           let cause_printer = Error.find_printer cause in
-          Format.dprintf "%s:@\n%t" label cause_printer
+          Format.dprintf "%s:@,@[%t@]" label cause_printer
       | No_more_choices exceptions_rev ->
           let exception_printers =
             List.map Error.find_printer exceptions_rev
@@ -571,10 +571,11 @@ module Make
           Format.dprintf "@[<v 2>Exhausted alternatives in parsing:@,%a@]"
             (List.pp ~pp_sep:Format.pp_print_cut
                (fun ppf exception_printer ->
-                 Format.fprintf ppf "- @[<hov 0>%t@]" exception_printer))
+                 Format.fprintf ppf "- @[%t@]" exception_printer))
             exception_printers
       | Expected_end_of_input ->
-          Format.dprintf "Expected the parser input to end here."
+          Format.dprintf "%a" Format.pp_print_text
+            "Expected the parser input to end here."
       | Unexpected_end_of_input { expected } ->
           Format.dprintf
             "Expected the token `%a', but reached the end of input." Token.pp
@@ -599,7 +600,7 @@ module Make
                 "Expected an integer literal, but got the token `%a'."
                 Token.pp actual
           | Option.None ->
-              Format.dprintf
+              Format.dprintf "%a" Format.pp_print_text
                 "Expected an integer literal, but reached the end of input.")
       | Expected_dot_number { actual } -> (
           match actual with
@@ -609,7 +610,7 @@ module Make
                  `%a'."
                 Token.pp actual
           | Option.None ->
-              Format.dprintf
+              Format.dprintf "%a" Format.pp_print_text
                 "Expected a number prefixed by a dot, but reached the end \
                  of input.")
       | Expected_pragma { expected_pragma; actual } -> (
@@ -629,7 +630,7 @@ module Make
                 "Expected a string literal, but got the token `%a'." Token.pp
                 actual
           | Option.None ->
-              Format.dprintf
+              Format.dprintf "%a" Format.pp_print_text
                 "Expected a string literal, but reached the end of input.")
       | Expected_identifier { actual } -> (
           match actual with
@@ -648,7 +649,7 @@ module Make
                  token `%a'."
                 Token.pp actual
           | Option.None ->
-              Format.dprintf
+              Format.dprintf "%a" Format.pp_print_text
                 "Expected an identifier prefixed by a dot `.', but reached \
                  the end of input.")
       | Expected_hash_identifier { actual } -> (
@@ -659,7 +660,7 @@ module Make
                  got the token `%a'."
                 Token.pp actual
           | Option.None ->
-              Format.dprintf
+              Format.dprintf "%a" Format.pp_print_text
                 "Expected an identifier prefixed by a hash sign `#id', but \
                  reached the end of input.")
       | Expected_dollar_identifier { actual } -> (
@@ -670,7 +671,7 @@ module Make
                  but got the token `%a'."
                 Token.pp actual
           | Option.None ->
-              Format.dprintf
+              Format.dprintf "%a" Format.pp_print_text
                 "Expected an identifier prefixed by a dollar sign `$id', \
                  but reached the end of input.")
       | Expected_hole { actual } -> (
@@ -681,7 +682,7 @@ module Make
                  got the token `%a'."
                 Token.pp actual
           | Option.None ->
-              Format.dprintf
+              Format.dprintf "%a" Format.pp_print_text
                 "Expected an unnamed hole `?' or a labelled hole `?id', but \
                  reached the end of input.")
       | Expected_block_comment { actual } -> (
@@ -710,20 +711,17 @@ module Simple_common_parser : sig
        and type location = Location.t
 
   val initial_state :
-    ?last_location:Location.t -> (Location.t * Token.t) Seq.t -> state
+    ?initial_location:Location.t -> (Location.t * Token.t) Seq.t -> state
 end = struct
-  module Located_token :
-    Parser_combinator.LOCATED_TOKEN with type t = Location.t * Token.t =
-  struct
+  module Parser_state = Parser_combinator.Make_state (struct
     type t = Location.t * Token.t
 
+    type location = Location.t
+
     let location = Pair.fst
-  end
+  end)
 
-  module Parser_state =
-    Parser_combinator.Make_persistent_parser_state (Located_token)
+  let initial_state = Parser_state.initial
 
-  let initial_state = Parser_state.initial_state
-
-  include Make (Parser_combinator.Make (Located_token) (Parser_state))
+  include Make (Parser_combinator.Make (Parser_state))
 end

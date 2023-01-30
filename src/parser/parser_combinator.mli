@@ -2,54 +2,68 @@ open Support
 open Beluga_syntax
 
 module type PARSER_STATE = sig
-  type t
+  include State.STATE
 
   type token
 
-  val observe : t -> (token * t) option
-end
+  val peek : token option t
 
-module type PARSER_BACKTRACKING_STATE = sig
-  type t
-
-  val enable_backtracking : t -> t
-
-  val disable_backtracking : t -> t
-
-  val is_backtracking_enabled : t -> bool
-
-  val can_backtrack : from:t -> to_:t -> bool
+  val observe : token option t
 end
 
 module type PARSER_LOCATION_STATE = sig
+  include State.STATE
+
+  type location
+
+  val next_location : location option t
+
+  val previous_location : location option t
+end
+
+module type TOGGLEABLE_BACKTRACKING_STATE = sig
+  include State.STATE
+
+  val with_unlimited_backtracking : 'a t -> 'a t
+end
+
+module type BACKTRACKING_STATE = sig
+  include State.STATE
+
+  exception No_checkpoints
+
+  val with_checkpoint :
+       ('a, 'e) result t
+    -> ('a, [> `Backtracked of 'e | `Did_not_backtrack of 'e ]) result t
+end
+
+module type LOCATED = sig
   type t
 
   type location
 
-  val next_location : t -> location option
-
-  val previous_location : t -> location option
+  val location : t -> location
 end
 
-module type LOCATED_TOKEN = sig
-  type t
-
-  val location : t -> Location.t
-end
-
-module Make_persistent_parser_state (Token : LOCATED_TOKEN) : sig
+module Make_state (Token : LOCATED) : sig
   include PARSER_STATE with type token = Token.t
 
-  include PARSER_BACKTRACKING_STATE with type t := t
-
   include
-    PARSER_LOCATION_STATE with type t := t and type location = Location.t
+    PARSER_LOCATION_STATE
+      with type state := state
+       and type location = Token.location
 
-  val initial_state : ?last_location:Location.t -> Token.t Seq.t -> t
+  include BACKTRACKING_STATE with type state := state
+
+  include TOGGLEABLE_BACKTRACKING_STATE with type state := state
+
+  val initial : ?initial_location:location -> token Seq.t -> state
 end
 
 module type PARSER = sig
   type token
+
+  type location
 
   type input
 
@@ -77,10 +91,6 @@ module type PARSER = sig
 
   include Apply.APPLY with type 'a t := 'a t
 
-  val get_state : state t
-
-  val put_state : state -> unit t
-
   val run : 'a t -> state -> state * ('a, exn) result
 
   val run_exn : 'a t -> state -> state * 'a
@@ -89,6 +99,12 @@ module type PARSER = sig
     'a t -> (state * ('a, exn) result -> state * ('b, exn) result) -> 'b t
 
   val fail : exn -> 'a t
+
+  val span : 'a t -> (location * 'a) t
+
+  val fail_at_next_location : exn -> 'a t
+
+  val fail_at_previous_location : exn -> 'a t
 
   val labelled : string -> 'a t -> 'a t
 
@@ -122,36 +138,22 @@ module type PARSER = sig
   val eoi : unit t
 end
 
-module type PARSER_WITH_LOCATIONS = sig
-  include PARSER
+module Make (State : sig
+  type location = Location.t
 
-  type location
+  include PARSER_STATE
 
-  exception
-    Parser_located_exception of
-      { cause : exn
-      ; locations : location List1.t
-      }
+  include BACKTRACKING_STATE with type state := state
 
-  val span : 'a t -> (location * 'a) t
-
-  val fail_at_next_location : exn -> 'a t
-
-  val fail_at_previous_location : exn -> 'a t
-end
-
-module Make (Token : sig
-  type t
-end) (State : sig
-  include PARSER_STATE with type token = Token.t
-
-  include PARSER_BACKTRACKING_STATE with type t := t
+  include TOGGLEABLE_BACKTRACKING_STATE with type state := state
 
   include
-    PARSER_LOCATION_STATE with type t := t and type location = Location.t
+    PARSER_LOCATION_STATE
+      with type state := state
+       and type location := location
 end) :
-  PARSER_WITH_LOCATIONS
-    with type state = State.t
-     and type token = Token.t
-     and type input = Token.t Seq.t
-     and type location = Location.t
+  PARSER
+    with type state = State.state
+     and type token = State.token
+     and type input = State.token Seq.t
+     and type location = State.location

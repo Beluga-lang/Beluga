@@ -1,28 +1,15 @@
 open Support
 open Beluga_syntax
+open Parser_combinator
 
 module type PARSER_STATE = sig
-  type t
+  include PARSER_STATE
 
-  type token
+  include PARSER_LOCATION_STATE with type state := state
 
-  type location
+  include BACKTRACKING_STATE with type state := state
 
-  val observe : t -> (token * t) option
-
-  val enable_backtracking : t -> t
-
-  val disable_backtracking : t -> t
-
-  val is_backtracking_enabled : t -> bool
-
-  val can_backtrack : from:t -> to_:t -> bool
-
-  val next_location : t -> location option
-
-  val previous_location : t -> location option
-
-  val initial_state : ?last_location:location -> token Seq.t -> t
+  val initial : ?initial_location:location -> token Seq.t -> state
 end
 
 module type COMMON_PARSER = sig
@@ -702,26 +689,4 @@ module Make
                  reached the end of input."
                 left_delimiter right_delimiter)
       | cause -> Error.raise_unsupported_exception_printing cause)
-end
-
-module Simple_common_parser : sig
-  include
-    COMMON_PARSER
-      with type token = Location.t * Token.t
-       and type location = Location.t
-
-  val initial_state :
-    ?initial_location:Location.t -> (Location.t * Token.t) Seq.t -> state
-end = struct
-  module Parser_state = Parser_combinator.Make_state (struct
-    type t = Location.t * Token.t
-
-    type location = Location.t
-
-    let location = Pair.fst
-  end)
-
-  let initial_state = Parser_state.initial
-
-  include Make (Parser_combinator.Make (Parser_state))
 end

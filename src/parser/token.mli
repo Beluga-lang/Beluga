@@ -71,19 +71,22 @@ type t =
   | KW_AS
   | KW_SUFFICES
   | KW_TOSHOW
-  | STRING of string  (** A string literal *)
-  | IDENT of string  (** Can mean identifier, operator, etc. *)
-  | PRAGMA of string  (** Two dashes followed by an identifier *)
-  | DOT_NUMBER of int  (** [DOT_NUMBER n] is [.n] *)
-  | DOT_IDENT of string  (** [DOT_IDENT x] is [.x] *)
+  | STRING of string
+      (** [STRING s] is a string literal ["\"" ^ String.escaped s ^ "\""]. *)
+  | IDENT of string
+      (** [IDENT x] is an identifier [x] that may represent an operator, a
+          variable, etc.. *)
+  | PRAGMA of string  (** [PRAGMA p] is [--p]. *)
+  | DOT_NUMBER of int  (** [DOT_NUMBER n] is [.n]. *)
+  | DOT_IDENT of string  (** [DOT_IDENT x] is [.x]. *)
   | HASH_IDENT of string
-      (** [HASH_IDENT x] is [x] where [x] starts with [#] *)
+      (** [HASH_IDENT x] is [x] where [x] starts with [#]. *)
   | DOLLAR_IDENT of string
       (** [DOLLAR_IDENT x] is [x] where [x] starts with [$]. *)
   | HASH_BLANK  (** [#_] *)
   | DOLLAR_BLANK  (** [$_] *)
-  | HOLE of string  (** A question mark followed by an identifier *)
-  | INTLIT of int  (** An integer literal. *)
+  | HOLE of string  (** [HOLE x] is [?x]. *)
+  | INTLIT of int  (** [INTLIT i] is the integer literal [i]. *)
   | BLOCK_COMMENT of string  (** A block comment of the form [%{{ ... }}%] *)
 
 (** {1 Instances} *)

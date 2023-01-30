@@ -39,7 +39,7 @@ let rec lookupValue x env =
   match (x, env) with
   | (1, Comp.Cons (v, env'))  -> v
   | (n, Comp.Cons (_, env')) -> lookupValue (n - 1) env'
-  | _ -> raise (Error.Violation "lookupValue: bad offset.")
+  | _ -> Error.raise_violation "lookupValue: bad offset."
 
 (** The Data spine must necessarily be in reverse order, to allow
     constant time applications. The pattern spine, however, is in the
@@ -57,7 +57,7 @@ let convolve_spines f spine pat_spine =
        match loop spine' with
        | Comp.PatApp (_, pat', pat_spine') ->
           f v pat'; pat_spine'
-       | _ -> raise (Error.Violation "convolve_spines: spines not the same length.")
+       | _ -> Error.raise_violation "convolve_spines: spines not the same length."
   in
   ignore (loop spine)
 
@@ -192,7 +192,7 @@ let rec eval_exp i (theta, eta) =
      | Comp.FunValue fbr ->
         eval_fun_branches w2 fbr
 
-     | _ -> raise (Error.Violation "Expected FunValue")
+     | _ -> Error.raise_violation "Expected FunValue"
      end
 
   | Comp.MApp (_, i', (l, LF.ClObj(phat, LF.MObj tM)), _, _) ->
@@ -205,7 +205,7 @@ let rec eval_exp i (theta, eta) =
         Comp.DataValue (cid, Comp.DataApp (Comp.BoxValue (l, LF.ClObj (phat, LF.MObj tM')), spine))
      | Comp.FunValue fbr ->
         eval_fun_branches (Comp.BoxValue (l, LF.ClObj(phat, LF.MObj tM'))) fbr
-     | _ -> raise (Error.Violation "Expected MLamValue ")
+     | _ -> Error.raise_violation "Expected MLamValue "
      end
 
   | Comp.MApp (_, i', (l, LF.ClObj (phat, LF.PObj h)), _, _) ->
@@ -218,7 +218,7 @@ let rec eval_exp i (theta, eta) =
         Comp.DataValue (cid, Comp.DataApp (Comp.BoxValue (l, LF.ClObj (phat, LF.PObj h')), spine))
      | Comp.FunValue fbr ->
         eval_fun_branches (Comp.BoxValue (l, LF.ClObj (phat, LF.PObj h'))) fbr
-     | _ -> raise (Error.Violation "Expected MLamValue")
+     | _ -> Error.raise_violation "Expected MLamValue"
      end
 
   | Comp.MApp (loc, i', (l, LF.CObj cPsi), _, _) ->
@@ -245,7 +245,7 @@ let rec eval_exp i (theta, eta) =
      | _ ->
         Format.fprintf Format.std_formatter "@[<v%a@,@]"
           Location.print loc;
-        raise (Error.Violation "Expected CtxValue")
+        Error.raise_violation "Expected CtxValue"
      end
 
   | Comp.AnnBox (_, cM, _tau) ->
@@ -287,7 +287,7 @@ let rec eval_exp i (theta, eta) =
      eval_branches loc vscrut branches (theta, eta)
 
   | Comp.Hole (_) ->
-     raise (Error.Violation "Source contains holes")
+     Error.raise_violation "Source contains holes"
 
 and eval_branches loc vscrut branches (theta, eta) =
   match branches with
@@ -361,13 +361,13 @@ and match_pattern  (v, eta) (pat, mt) =
      *    Unify.unify_phat phat phat';
      *    Unify.unifyH LF.Empty phat h h'
      * | _, Comp.PatMetaObj (_, (_, LF.ClObj (_, LF.PObj _))) ->
-     *    raise (Error.Violation "Expected param value.") *)
+     *    Error.raise_violation "Expected param value." *)
     | (Comp.BoxValue (_, LF.CObj cPsi), Comp.PatMetaObj (_, (_, LF.CObj cPsi'))) ->
        let cPsi' = Whnf.cnormDCtx (cPsi', mt) in
        dprint (fun () -> "[match_pattern] call unifyDCtx ");
        Unify.unifyDCtx LF.Empty cPsi cPsi'
     | (_, Comp.PatMetaObj (_, (_, LF.CObj cPsi'))) ->
-       raise (Error.Violation "Expected context.")
+       Error.raise_violation "Expected context."
 
     | (_, Comp.PatAnn (_, pat', _, _)) ->
        loop v pat'
@@ -377,16 +377,16 @@ and match_pattern  (v, eta) (pat, mt) =
          raise BranchMismatch;
        convolve_spines loop spine pat_spine
     | (_, Comp.PatConst _) ->
-       raise (Error.Violation "Expected data value.")
+       Error.raise_violation "Expected data value."
 
     | (Comp.TupleValue vs, Comp.PatTuple (_, pats)) ->
        dprint (fun () -> "[evBranch] matching a tuple.");
        List2.iter2 loop vs pats
     | (_, Comp.PatTuple _) ->
-       raise (Error.Violation "Expected tuple value.")
+       Error.raise_violation "Expected tuple value."
 
     | (_, Comp.PatFVar _) ->
-       raise (Error.Violation "Found PatFVar in opsem.")
+       Error.raise_violation "Found PatFVar in opsem."
 
     | (v, Comp.PatVar _) ->
        eta := Comp.Cons (v, !eta)

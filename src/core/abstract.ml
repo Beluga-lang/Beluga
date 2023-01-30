@@ -294,7 +294,7 @@ let rec constraints_solved =
 let rec index_of cQ n =
   match cQ with
   | I.Empty ->
-     raise (Error.Violation "index_of for a free variable (FV, FMV, FPV, MV) does not exist.")
+     Error.raise_violation "index_of for a free variable (FV, FMV, FPV, MV) does not exist."
 
   | I.Dec (cQ', FDecl (_, Impure)) ->
      index_of cQ' n
@@ -324,7 +324,7 @@ let rec ctxToCtx =
      | (None, tA') ->
         let x = Name.mk_name (Name.MVarName (Typ.gen_mvar_name tA')) in
         I.Dec (ctxToCtx cQ', I.TypDecl (x, tA'))
-     | (Some _, _) -> raise (Error.Violation "ctxToDctx generates LF-dctx with context variable.")
+     | (Some _, _) -> Error.raise_violation "ctxToDctx generates LF-dctx with context variable."
      end
   | I.Dec (cQ', FDecl (FV x, Pure (LFTyp tA))) ->
      (* let x = Name.mk_name (Id.BVarName (Typ.gen_var_name tA)) in *)
@@ -347,7 +347,7 @@ let rec ctxToMCtx f =
 
   (* this case should not happen -bp *)
   | I.Dec (cQ', FDecl (FV _, Pure (LFTyp tA)))->
-     raise (Error.Violation "Free variables in computation-level reconstruction.")
+     Error.raise_violation "Free variables in computation-level reconstruction."
   | I.Dec (cQ', FDecl (_, Impure)) ->
      ctxToMCtx f cQ'
 
@@ -507,7 +507,7 @@ and collectMMVar loc p cQ (v : I.mm_var) =
           ( cQ'
           , I.{ v with typ; plicity; inductivity }
           )
-       | Some _ -> raise (Error.Violation "Expected whnf")
+       | Some _ -> Error.raise_violation "Expected whnf"
      else
        raise (Error (loc, LeftoverConstraints))
   | I.Dec _ ->
@@ -591,7 +591,7 @@ and collectMObj p cQ1 =
      let phat = Context.dctxToHat cPsi in
      let (cQ2, cPsi') = collectDctx Location.ghost p cQ1 phat cPsi in
      (cQ2, I.CObj cPsi')
-  | I.MUndef -> raise (Error.Violation "Unexpected undef")
+  | I.MUndef -> Error.raise_violation "Unexpected undef"
   | I.MV k -> (cQ1, I.MV k)
 
 (* collectMSub p cQ theta = cQ' *)
@@ -1268,7 +1268,7 @@ let rec collectCompTyp p cQ =
      (cQ'', Comp.TypPiBox (l, cdecl', tau'))
 
   | Comp.TypClo _ ->
-     Error.violation "[collectCTyp] TypClo case impossible";
+     Error.raise_violation "[collectCTyp] TypClo case impossible"
 
   | Comp.TypInd tau ->
      let (cQ', tau') = collectCompTyp p cQ tau in

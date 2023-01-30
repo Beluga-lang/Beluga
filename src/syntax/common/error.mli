@@ -1,11 +1,17 @@
 open Support
 
+(** [raise exn] raises [exn]. *)
 val raise : exn -> 'a
 
+(** [Violation message] is the exception signalling a programmer error, like
+    an unmet pre-condition. This exception variant should not be exported,
+    but it is incorrectly being used for backtracking with exceptions in the
+    core library. *)
 exception Violation of string
 
-(** Raises a Violation exception with the given message. *)
-val violation : ?location:Location.t -> string -> 'a
+(** [raise_violation ?location message] raises a violation exception with the
+    given [message] and [location]. *)
+val raise_violation : ?location:Location.t -> string -> 'a
 
 (** [located_exception locations cause] is a decorated exception having
     [cause] and [locations] for source file error-reporting. This exception

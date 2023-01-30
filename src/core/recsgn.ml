@@ -124,7 +124,7 @@ let rec get_target_cid_comptyp tau =
   | Int.Comp.TypArr (_, _, tau) -> get_target_cid_comptyp tau
   | Int.Comp.TypPiBox (_, _, tau) -> get_target_cid_comptyp tau
   | _ ->
-     Error.violation
+     Error.raise_violation
        "[get_target_cid_comptyp] no target comp typ"
 
 let rec get_target_cid_compcotyp tau =
@@ -136,7 +136,7 @@ let rec get_target_cid_compcotyp tau =
         Perhaps for codatatypes this should be "source" ? -je *)
   | Int.Comp.TypPiBox (_, _, tau) -> get_target_cid_compcotyp tau
   | _ ->
-     Error.violation
+     Error.raise_violation
        "[get_target_cid_compcotyp] no target comp cotyp"
 
 let freeze_from_name tau =
@@ -892,7 +892,7 @@ let recSgnDecls decls =
               (fun (_, order) -> Option.is_some order) prelim_total_decs
          with
          | [], [] ->
-            Error.violation "[recSgn] empty mutual block is impossible"
+            Error.raise_violation "[recSgn] empty mutual block is impossible"
          | haves, [] ->
             haves
             |> List.map Fun.(Option.get ++ Pair.snd)

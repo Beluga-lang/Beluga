@@ -138,7 +138,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
          Name.pp name
          (fmt_ppr_lf_normal cD cPsi 2) m
     | _ ->
-       Error.violation
+       Error.raise_violation
          "[fmt_ppr_lf_prefix_operator] spine length <> 1"
 
   and fmt_ppr_lf_postfix_operator cD cPsi ppf =
@@ -148,7 +148,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
          (fmt_ppr_lf_normal cD cPsi 2) m
          Name.pp name
     | _ ->
-       Error.violation
+       Error.raise_violation
          "[fmt_ppr_lf_postfix_operator] spine length <> 1"
 
   and fmt_ppr_lf_infix_operator cD cPsi ppf =
@@ -159,7 +159,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
          Name.pp name
          (fmt_ppr_lf_normal cD cPsi 2) m2
     | _ ->
-       Error.violation
+       Error.raise_violation
          "[fmt_ppr_lf_infix_operator] spine length <> 2"
 
   and fmt_ppr_lf_normal cD cPsi lvl ppf =
@@ -191,7 +191,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
        | None -> fprintf ppf "?%s" name
        | Some (_, Exists (w, h)) ->
           begin match w with
-          | CompInfo -> Error.violation "expected LFHole; got comp hole"
+          | CompInfo -> Error.raise_violation "expected LFHole; got comp hole"
           | LFInfo ->
              let { lfSolution; cPsi; _ } = h.info in
              begin match lfSolution with
@@ -858,7 +858,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
        fprintf ppf "@[%a@]"
          (fmt_ppr_lf_ctyp_decl cD) d
     | LF.DeclOpt _ ->
-       Error.violation "[fmt_ppr_lf_ctyp_decl_harpoon] DeclOpt impossible"
+       Error.raise_violation "[fmt_ppr_lf_ctyp_decl_harpoon] DeclOpt impossible"
 
   and isImplicitDecl =
     function

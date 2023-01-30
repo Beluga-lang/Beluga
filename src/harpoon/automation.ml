@@ -95,7 +95,7 @@ let auto_solve_trivial : t =
     | LF.Decl (_, mtyp, _, _) ->
        Whnf.convCTyp g.goal (TypBox (Location.ghost, mtyp), LF.MShift idx)
     | LF.DeclOpt _ ->
-      Beluga_syntax.Error.violation "[auto_solve_trivial] Unexpected DeclOpt"
+      Beluga_syntax.Error.raise_violation "[auto_solve_trivial] Unexpected DeclOpt"
   in
   let build_mwitness (m : LF.ctyp_decl * int) =
     match m with
@@ -115,9 +115,9 @@ let auto_solve_trivial : t =
        will never return true for a DeclOpt.
      *)
     | LF.DeclOpt _, _ ->
-      Beluga_syntax.Error.violation "[auto_solve_trivial] DeclOpt impossible"
+      Beluga_syntax.Error.raise_violation "[auto_solve_trivial] DeclOpt impossible"
     | _ ->
-      Beluga_syntax.Error.violation "[auto_solve_trivial] impossible case"
+      Beluga_syntax.Error.raise_violation "[auto_solve_trivial] impossible case"
   in
   let c_is_witness ((c, _) : ctyp_decl * int) =
     dprintf
@@ -129,7 +129,7 @@ let auto_solve_trivial : t =
     | CTypDecl (_, typ, _) ->
        Whnf.convCTyp g.goal (typ, Whnf.m_id)
     | CTypDeclOpt _ ->
-      Beluga_syntax.Error.violation "[auto_solve_trivial] Unexpected CTypDeclOpt"
+      Beluga_syntax.Error.raise_violation "[auto_solve_trivial] Unexpected CTypDeclOpt"
   in
   let build_cwitness (_, idx) = Var (Location.ghost, idx)
   in

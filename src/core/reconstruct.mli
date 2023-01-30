@@ -22,7 +22,7 @@ type case_type
     the implementation of dependent pattern matching.)
     If you know that the synthesizable expression is definitely not a
     box, then you can pass
-    lazy (Error.violation "appropriate message")
+    lazy (Error.raise_violation "appropriate message")
     as the pattern.
  *)
 val case_type : Int.Comp.pattern Lazy.t -> Int.Comp.exp -> case_type

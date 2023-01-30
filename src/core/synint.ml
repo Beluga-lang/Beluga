@@ -235,7 +235,7 @@ module LF = struct
     function
     | Decl (u, cU, plicity, inductivity) -> (u, cU, plicity, inductivity)
     | DeclOpt _ ->
-       Error.violation "[require_decl] DeclOpt is forbidden"
+       Error.raise_violation "[require_decl] DeclOpt is forbidden"
 
   (* Hatted version of LF.Null *)
   let null_hat : dctx_hat = (None, 0)

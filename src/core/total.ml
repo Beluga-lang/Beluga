@@ -1411,7 +1411,7 @@ let rec less_meta_obj cD mC1 mC2 =
                || leq_some tS'
             | LF.Nil -> false
             | LF.SClo _ ->
-               Error.violation "[less_meta_obj] SClo"
+               Error.raise_violation "[less_meta_obj] SClo"
           in
           leq_some tS
        | _ -> false
@@ -1430,7 +1430,7 @@ let rec less_meta_obj cD mC1 mC2 =
   (* is the first rule still applied in this case? *)
 
   | ((loc1, LF.ClObj (_, LF.SObj _)), (_, LF.ClObj (_, LF.SObj _))) ->
-     Error.violation "[less_meta_obj] SObj"
+     Error.raise_violation "[less_meta_obj] SObj"
 
   | _ -> false
 

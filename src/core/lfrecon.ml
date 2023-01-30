@@ -357,7 +357,7 @@ let getSchema cD ctxvar loc =
 
   | Some Int.LF.(CInst ({ typ = CTyp (Some s_cid); _ }, _)) ->
      Schema.get_schema s_cid
-  | None -> raise (Error.Violation "No context variable for which we could retrieve a schema")
+  | None -> Error.raise_violation "No context variable for which we could retrieve a schema"
 
 (* ******************************************************************* *)
 (* Eta-expansion                                                       *)
@@ -860,7 +860,7 @@ let rec synDom cD loc cPsi =
         )
      end
 
-  | _ -> raise (Error.Violation "Encountered non-pattern substitution")
+  | _ -> Error.raise_violation "Encountered non-pattern substitution"
 
 let synDomOpt cD loc cPsi =
   function
@@ -1031,7 +1031,7 @@ and elTuple recT cD cPsi tuple (typRec, s) =
      let tuple' = elTuple recT cD cPsi restOfTuple (restOfTypRec, extended_s) in
      Int.LF.Cons (tM, tuple')
 
-  | _ -> raise (Error.Violation "elTuple arity mismatch")
+  | _ -> Error.raise_violation "elTuple arity mismatch"
 
 
 and elTerm' recT cD cPsi r sP =
@@ -1274,7 +1274,7 @@ and elTerm' recT cD cPsi r sP =
          end
        with
        | Error.Violation msg ->
-          dprintf (fun p -> p.fmt "[elClosedTerm] Violation: %s" msg);
+          dprintf (fun p -> p.fmt "[elClosedTerm] Error.Violation: %s" msg);
           throw loc CompTypAnn
        | Not_found ->
           match () with
@@ -1521,7 +1521,7 @@ and elTerm' recT cD cPsi r sP =
              throw loc (NotPatternSpine)
           end
        | Error.Violation msg ->
-          dprint (fun () -> "[elClosedTerm] Violation: " ^ msg);
+          dprint (fun () -> "[elClosedTerm] Error.Violation: " ^ msg);
           throw loc CompTypAnn
      end
 
@@ -1613,7 +1613,7 @@ and elTerm' recT cD cPsi r sP =
                       (P.fmt_ppr_lf_typ cD cPhi P.l0) tP
                       (P.fmt_ppr_lf_schema P.l0) schema
                   in
-                  raise (Error.Violation s)
+                  Error.raise_violation s
                | (Some (typrec, subst), index) -> (typrec, subst, index)
              in
              let tB = Whnf.collapse_sigma typRec in
@@ -1754,7 +1754,7 @@ and elTerm' recT cD cPsi r sP =
          end
        with
        | Error.Violation msg ->
-          dprintf (fun p -> p.fmt "[elTerm] Violation: %s" msg);
+          dprintf (fun p -> p.fmt "[elTerm] Error.Violation: %s" msg);
           throw loc CompTypAnn
      end
 
@@ -1886,7 +1886,7 @@ and elTerm' recT cD cPsi r sP =
                   (P.fmt_ppr_lf_head cD cPhi P.l0) h
                   (P.fmt_ppr_lf_typ cD cPhi P.l0) tA
                 end;
-              raise (Error.Violation "Type of Parameter variable not a Sigma-Type, yet used with Projection; ill-typed")
+              Error.raise_violation "Type of Parameter variable not a Sigma-Type, yet used with Projection; ill-typed"
          in
          let s'' = elSub loc recT cD cPsi s' Int.LF.Subst cPhi in
          let k = getProjIndex loc cD cPsi recA proj in
@@ -1926,13 +1926,13 @@ and elTerm' recT cD cPsi r sP =
      end
 
   | Apx.LF.Root (loc, Apx.LF.Proj (Apx.LF.PVar (Apx.LF.MInst _, _), _), _) ->
-     raise (Error.Violation "[elTerm'] Proj (PVar (MInst _, _) _, _)")
+     Error.raise_violation "[elTerm'] Proj (PVar (MInst _, _) _, _)"
 
   | Apx.LF.Root (loc, Apx.LF.Proj (Apx.LF.FMVar _, _), _) ->
-     raise (Error.Violation "[elTerm'] Proj (FMVar _, _)")
+     Error.raise_violation "[elTerm'] Proj (FMVar _, _)"
 
   | Apx.LF.Root (loc, Apx.LF.PVar _, _) ->
-     raise (Error.Violation "[elTerm'] PVar _")
+     Error.raise_violation "[elTerm'] PVar _"
 
   | Apx.LF.Root (loc, Apx.LF.FMVar (x, _), _) ->
      throw_hint loc HOMVarNotSupported [`accidental_free_variable x; `maybe_eta_expand x]
@@ -2360,9 +2360,9 @@ and elSub loc recT cD cPsi s cl cPhi =
             (* if Check.LF.subsumes cD phi psi (* psi |- wk_sub : phi *)then *)
             Int.LF.Shift d
             (* else
-               raise (Error.Violation ("elSub: not identity substitution between ctxvar: "
+               Error.raise_violation ("elSub: not identity substitution between ctxvar: "
                ^ "`" ^ P.dctxToString cD cPhi ^ "' does not match `" ^
-               P.dctxToString cD cPsi ^ "'"))*)
+               P.dctxToString cD cPsi ^ "'")*)
           | _ ->
             throw loc (IdCtxsub)
         end
@@ -2563,7 +2563,7 @@ and elHead loc recT cD cPsi head cl =
     | (Apx.LF.FMVar _, Int.LF.Ren) ->
      throw loc (TermWhenVar (cD, cPsi, (Apx.LF.Root (loc, head, Apx.LF.Nil))))
 
-  | (h, _) -> raise (Error.Violation ("thisone" ^ what_head h))
+  | (h, _) -> Error.raise_violation ("thisone" ^ what_head h)
 
 (* elSpineI  recT cD cPsi spine i sA = (S : sP)
  * elSpineIW recT cD cPsi spine i sA = (S : sP)

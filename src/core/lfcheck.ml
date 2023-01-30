@@ -268,7 +268,7 @@ let rec checkW cD cPsi sM sA =
         (* this hole ID belongs to a computation hole;
            this is supposed to be impossible
          *)
-        Error.violation "hole kind mismatch"
+        Error.raise_violation "hole kind mismatch"
      | Some (id, Exists (LFInfo, { name; info = {lfSolution; _ }; _})) ->
         begin match lfSolution with
         | None -> () (* raise (Error (loc, UnsolvedHole (name, id))) *)
@@ -560,7 +560,7 @@ and checkSub loc cD cPsi1 ?(tM_opt = None) s1 cl cPsi1' =
     | (Null, Shift 0, Null) -> ()
 
     | (_, MSVar (offset, mmvar_inst), _) ->
-       Error.violation "[checkSub] encountered MSVar (checking non-whnf substitution)"
+       Error.raise_violation "[checkSub] encountered MSVar (checking non-whnf substitution)"
 
     | (cPhi, SVar (offset, k, s'), cPsi) ->
        (*  cD ; cPhi |- SVar (offset, shift, s') : cPsi
@@ -984,7 +984,7 @@ and checkSchema loc cD cPsi schema_name (Schema elements as schema) =
         ignore (checkTypeAgainstSchema loc cD cPsi' tA schema_name elements);
         ()
      | TypDeclOpt _ ->
-        Error.violation "[checkSchema] TypDeclOpt is forbidden"
+        Error.raise_violation "[checkSchema] TypDeclOpt is forbidden"
 
 (* If subsumes psi phi succeeds then there exists  wk_sub
     such that  psi |-  wk_sub : phi
@@ -1100,7 +1100,7 @@ and checkMetaObj cD (loc, cM) cTt =
      let mtyp1 = Whnf.cnormMTyp (mtyp1, t) in
      let (_, mtyp2) = Whnf.mctxLookup cD u in
      if Bool.not (Whnf.convMTyp mtyp1 mtyp2)
-     then raise (Error.Violation ("Contextual substitution ill-typed"))
+     then Error.raise_violation ("Contextual substitution ill-typed")
 
 
   (* checkMSub loc cD ms cD'  = ()
@@ -1112,12 +1112,12 @@ and checkMSub loc cD ms cD' =
   match (ms, cD') with
   | (MShift k, Empty) ->
      if (Context.length cD) <> k
-     then raise (Error.Violation ("Contextual substitution ill-typed - 1"))
+     then Error.raise_violation ("Contextual substitution ill-typed - 1")
 
   | (MShift k, cD') ->
      if k >= 0
      then checkMSub loc cD (MDot (MV (k + 1), MShift (k + 1))) cD'
-     else raise (Error.Violation ("Contextual substitution ill-formed"))
+     else Error.raise_violation ("Contextual substitution ill-formed")
 
   | (MDot (mft, ms), Dec (cD1, Decl (_, mtyp, _, _))) ->
      checkMetaObj cD (loc, mft) (mtyp, ms);
@@ -1131,4 +1131,4 @@ and checkMSub loc cD ms cD' =
          (P.fmt_ppr_lf_msub cD P.l0) ms
          (P.fmt_ppr_lf_mctx P.l0) cD'
      in
-     raise (Error.Violation s)
+     Error.raise_violation s

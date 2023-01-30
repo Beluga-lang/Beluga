@@ -435,7 +435,7 @@ let rec lookupSchema cD psi_offset =
 and lookupCtxVar cD cvar =
   let rec lookup cD offset =
     match cD with
-    | Empty -> raise (Error.Violation "Context variable not found")
+    | Empty -> Error.raise_violation "Context variable not found"
     | Dec (cD, Decl (psi, CTyp (Some schemaName), _, _)) ->
        begin match cvar with
        | CtxName phi when Name.(psi = phi) -> (psi, schemaName)
@@ -498,11 +498,11 @@ let rec steal_mctx_names cD cD' =
   | (Dec (cD, Decl (_, cU, plicity, inductivity)), Dec (cD', Decl (u', _, _, _))) ->
      Dec (steal_mctx_names cD cD', Decl (u', cU, plicity, inductivity))
   | (Empty, Empty) -> Empty
-  | _ -> Error.violation "[steal_mctx_names] inputs weren't convertible"
+  | _ -> Error.raise_violation "[steal_mctx_names] inputs weren't convertible"
 
 let rec steal_gctx_names cG cG' =
   match (cG, cG') with
   | (Dec (cG, Comp.CTypDecl (_, tau, wf)), Dec (cG', Comp.CTypDecl (x', _, _))) ->
      Dec (steal_gctx_names cG cG', Comp.CTypDecl (x', tau, wf))
   | (Empty, Empty) -> Empty
-  | _ -> Error.violation "[steal_gctx_names] inputs weren't convertible"
+  | _ -> Error.raise_violation "[steal_gctx_names] inputs weren't convertible"

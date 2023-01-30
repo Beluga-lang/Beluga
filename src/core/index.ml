@@ -1100,7 +1100,7 @@ let index_cltyp loc cvars fvars =
 let index_cdecl f cvars fvars =
   function
   | Ext.LF.DeclOpt _ ->
-     Error.violation
+     Error.raise_violation
        "[index_cdecl] DeclOpt not allowed in external syntax"
   | Ext.LF.Decl (u, (loc, cl), plicity) ->
      let (fvars, cl) = index_cltyp loc cvars fvars cl in

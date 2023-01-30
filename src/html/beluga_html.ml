@@ -2296,7 +2296,7 @@ end) : BELUGA_HTML with type state = Html_state.state = struct
         Format.asprintf
           {|<span class="constant comp-destructor-constant"><a href="#%s">|}
           id
-    | _ -> Error.violation "Unsupported HTML stag"
+    | _ -> Error.raise_violation "Unsupported HTML stag"
 
   let html_mark_close_stag = function
     | Toplevel_documentation_comment
@@ -2331,7 +2331,7 @@ end) : BELUGA_HTML with type state = Html_state.state = struct
     | Computation_constructor_invoke _
     | Computation_destructor_invoke _ ->
         {|</a></span>|}
-    | _ -> Error.violation "Unsupported HTML stag"
+    | _ -> Error.raise_violation "Unsupported HTML stag"
 
   let with_html_tags ppf f =
     (* Get the old stag-marking state *)

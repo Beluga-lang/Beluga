@@ -111,7 +111,7 @@ module Elab = struct
        let i = Comp.AnnBox (Beluga_syntax.Location.ghost, (loc, mF), cT)
        and tau = Comp.TypBox (loc, cT) in
        (i, tau)
-    | _ -> E.violation "[harpoon] [Elab] [mvar] cD decl has no type"
+    | _ -> E.raise_violation "[harpoon] [Elab] [mvar] cD decl has no type"
 
 end
 

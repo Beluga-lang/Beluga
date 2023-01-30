@@ -53,6 +53,17 @@ let () =
           (List1.singleton location)
     | exn -> Error.raise_unsupported_exception_printing exn)
 
+let information = ref []
+
+let reset_information () = information := []
+
+let get_information () =
+  Format.stringify
+    (List.pp ~pp_sep:Format.pp_print_newline Format.pp_print_string)
+    (List.rev !information)
+
+let add_information message = information := message :: !information
+
 type gen_pat_var_strategy = Name.t -> int -> Comp.pattern
 
 let withPatVar name k = Comp.PatVar (Location.ghost, k)
@@ -3526,7 +3537,7 @@ let process problem projObj =
      then
        begin
          print_string "WARNING: CASES DID NOT COVER\n";
-         Error.add_information ("WARNING: Cases didn't cover: " ^ message)
+         add_information ("WARNING: Cases didn't cover: " ^ message)
        end
      else
        raise (Error (problem.loc, NoCover message))

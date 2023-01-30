@@ -406,7 +406,7 @@ let located_exception_printer cause_printer locations =
     let snippets = make_location_snippets (List1.to_list locations) in
     if List.length snippets > 0 then
       let pp_snippet ppf (location, lines) =
-        Format.fprintf ppf "@[<v 0>%t:@,%a@]"
+        Format.fprintf ppf "@[<v 0>@[%t@]:@,%a@]"
           (Format.in_stag Ansi_bold
              (Format.dprintf "%a" Location.pp location))
           (List.pp ~pp_sep:Format.pp_print_cut (fun ppf (line, carets) ->

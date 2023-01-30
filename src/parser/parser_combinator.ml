@@ -9,6 +9,8 @@ module type PARSER_STATE = sig
   val peek : token option t
 
   val observe : token option t
+
+  val accept : unit t
 end
 
 module type PARSER_LOCATION_STATE = sig
@@ -24,7 +26,7 @@ end
 module type TOGGLEABLE_BACKTRACKING_STATE = sig
   include State.STATE
 
-  val with_unlimited_backtracking : 'a t -> 'a t
+  val with_unlimited_backtracking : ('a, 'e) result t -> ('a, 'e) result t
 end
 
 module type BACKTRACKING_STATE = sig
@@ -85,12 +87,6 @@ end = struct
     ; last_location = initial_location
     }
 
-  let enable_backtracking =
-    modify (fun state -> { state with can_backtrack = true })
-
-  let disable_backtracking =
-    modify (fun state -> { state with can_backtrack = false })
-
   let peek =
     let* state = get in
     match state.input () with
@@ -112,10 +108,20 @@ end = struct
         in
         return (Option.some x)
 
+  let accept = observe >>= fun _ -> return ()
+
+  let enable_backtracking =
+    modify (fun state -> { state with can_backtrack = true })
+
+  let disable_backtracking =
+    modify (fun state -> { state with can_backtrack = false })
+
   let with_unlimited_backtracking m =
-    let* state = get in
-    if state.can_backtrack then m
-    else scoped ~set:enable_backtracking ~unset:disable_backtracking m
+    m >>= function
+    | Result.Ok _ as r -> return r
+    | Result.Error _ as r ->
+        let* () = enable_backtracking in
+        return r
 
   exception No_checkpoints
 
@@ -144,11 +150,7 @@ end = struct
   let can_backtrack to_state =
     let* from_state = get in
     return
-      (from_state.can_backtrack
-      || from_state.position = to_state.position
-      || from_state.position
-         = to_state.position
-           + 1 (* [from_state] is the erroneous result of a guess. *))
+      (from_state.can_backtrack || from_state.position = to_state.position)
 
   let backtrack checkpoint =
     let* state = get in
@@ -171,6 +173,7 @@ end = struct
         can_backtrack checkpoint >>= function
         | true ->
             let* () = backtrack checkpoint in
+            let* () = disable_backtracking in
             return (Result.error (`Backtracked e))
         | false -> return (Result.error (`Did_not_backtrack e)))
 
@@ -501,10 +504,7 @@ end) :
 
   let trying p =
     let open State in
-    with_checkpoint (with_unlimited_backtracking p) >>= function
-    | Result.Ok _ as r -> return r
-    | Result.Error (`Backtracked e | `Did_not_backtrack e) ->
-        return (Result.error e)
+    with_unlimited_backtracking p
 
   let label p label =
     catch p (function
@@ -579,18 +579,20 @@ end) :
 
   let eoi =
     let open State in
-    observe >>= function
+    peek >>= function
     | Option.None -> return (Result.ok ())
-    | Option.Some _token -> fail_at_previous_location Expected_end_of_input
+    | Option.Some _token -> fail_at_next_location Expected_end_of_input
 
   let only p = p <& eoi
 
   let satisfy ~on_token ~on_end_of_input =
     let open State in
-    observe >>= function
+    peek >>= function
     | Option.None -> on_end_of_input ()
     | Option.Some token -> (
         match on_token token with
-        | Result.Ok _ as r -> return r
-        | Result.Error cause -> fail_at_previous_location cause)
+        | Result.Ok _ as r ->
+            let* () = accept in
+            return r
+        | Result.Error cause -> fail_at_next_location cause)
 end

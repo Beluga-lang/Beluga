@@ -131,7 +131,7 @@ module Make
                  Synprs.LF.Object.Raw_identifier
                    { location; identifier; prefixed = false })
         |> labelled
-             "LF term-level constant, type-level constant, or term variable"
+             "LF term-level constant, type-level constant, or variable"
       and type_ =
         keyword "type" |> span
         $> (fun (location, ()) -> Synprs.LF.Object.Raw_type { location })

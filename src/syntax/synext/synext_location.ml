@@ -235,7 +235,8 @@ let location_of_harpoon_split_branch split_branch =
 let location_of_harpoon_split_branch_label split_branch_label =
   let open Harpoon.Split_branch.Label in
   match split_branch_label with
-  | Constant { location; _ }
+  | Lf_constant { location; _ }
+  | Comp_constant { location; _ }
   | Bound_variable { location; _ }
   | Empty_context { location; _ }
   | Extended_context { location; _ }

@@ -1079,8 +1079,14 @@ and json_of_harpoon_split_branch split_branch =
 
 and json_of_harpoon_split_branch_label split_branch_label =
   match split_branch_label with
-  | Harpoon.Split_branch.Label.Constant { identifier; location } ->
-      json_of_variant ~name:"Harpoon.Split_branch.Label.Constant"
+  | Harpoon.Split_branch.Label.Lf_constant { identifier; location } ->
+      json_of_variant ~name:"Harpoon.Split_branch.Label.Lf_constant"
+        ~data:
+          [ ("identifier", json_of_qualified_identifier identifier)
+          ; ("location", json_of_location location)
+          ]
+  | Harpoon.Split_branch.Label.Comp_constant { identifier; location } ->
+      json_of_variant ~name:"Harpoon.Split_branch.Label.Comp_constant"
         ~data:
           [ ("identifier", json_of_qualified_identifier identifier)
           ; ("location", json_of_location location)

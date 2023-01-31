@@ -2,6 +2,8 @@ open Support
 open Beluga_syntax
 open Common_disambiguation
 
+exception Expected_constructor_constant
+
 module type HARPOON_DISAMBIGUATION = sig
   (** @closed *)
   include State.STATE
@@ -112,25 +114,40 @@ module Make
     let { Synprs.Harpoon.Split_branch.location; label; body } =
       split_branch
     in
-    let label' =
+    let* label' =
       match label with
       | Synprs.Harpoon.Split_branch.Label.Constant { location; identifier }
-        ->
-          (* TODO: Resolve the contant *)
-          Synext.Harpoon.Split_branch.Label.Constant { location; identifier }
+        -> (
+          lookup identifier >>= function
+          | Result.Ok (Lf_term_constant, _) ->
+              return
+                (Synext.Harpoon.Split_branch.Label.Lf_constant
+                   { location; identifier })
+          | Result.Ok (Computation_term_constructor, _) ->
+              return
+                (Synext.Harpoon.Split_branch.Label.Comp_constant
+                   { location; identifier })
+          | Result.Ok entry ->
+              Error.raise_at1 location
+                (Error.composite_exception2 Expected_constructor_constant
+                   (actual_binding_exn identifier entry))
+          | Result.Error cause -> Error.raise_at1 location cause)
       | Synprs.Harpoon.Split_branch.Label.Bound_variable { location } ->
-          (* TODO: Resolve the variable *)
-          Synext.Harpoon.Split_branch.Label.Bound_variable { location }
+          return
+            (Synext.Harpoon.Split_branch.Label.Bound_variable { location })
       | Synprs.Harpoon.Split_branch.Label.Empty_context { location } ->
-          Synext.Harpoon.Split_branch.Label.Empty_context { location }
+          return
+            (Synext.Harpoon.Split_branch.Label.Empty_context { location })
       | Synprs.Harpoon.Split_branch.Label.Extended_context
           { location; schema_element } ->
-          Synext.Harpoon.Split_branch.Label.Extended_context
-            { location; schema_element }
+          return
+            (Synext.Harpoon.Split_branch.Label.Extended_context
+               { location; schema_element })
       | Synprs.Harpoon.Split_branch.Label.Parameter_variable
           { location; schema_element; projection } ->
-          Synext.Harpoon.Split_branch.Label.Parameter_variable
-            { location; schema_element; projection }
+          return
+            (Synext.Harpoon.Split_branch.Label.Parameter_variable
+               { location; schema_element; projection })
     in
     let* body' = disambiguate_harpoon_hypothetical body in
     return
@@ -265,3 +282,12 @@ module Make
         return (`exact typ')
     | `infer location -> return (`infer location)
 end
+
+(** {2 Exception Printing} *)
+
+let () =
+  Error.register_exception_printer (function
+    | Expected_constructor_constant ->
+        Format.dprintf "%a" Format.pp_print_text
+          "Expected an LF-level of a computation-level constructor constant."
+    | exn -> Error.raise_unsupported_exception_printing exn)

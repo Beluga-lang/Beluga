@@ -1560,7 +1560,9 @@ end) : BELUGA_HTML with type state = Html_state.state = struct
 
   and pp_harpoon_split_branch_label _state ppf label =
     match label with
-    | Harpoon.Split_branch.Label.Constant { identifier; _ } ->
+    | Harpoon.Split_branch.Label.Lf_constant { identifier; _ } ->
+        Qualified_identifier.pp ppf identifier
+    | Harpoon.Split_branch.Label.Comp_constant { identifier; _ } ->
         Qualified_identifier.pp ppf identifier
     | Harpoon.Split_branch.Label.Bound_variable _ ->
         Format.fprintf ppf "%a %a" pp_keyword "head" pp_keyword "variable"

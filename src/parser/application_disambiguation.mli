@@ -136,4 +136,3 @@ module Make
      and type operator = Operator.t
      and type expression = Operand.expression
      and type operand = Operand.t
-[@@warning "-67"]

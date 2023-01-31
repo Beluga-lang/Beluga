@@ -428,6 +428,12 @@ module Comp = struct
           ; scrutinee : Expression_object.t
           ; destructor : Qualified_identifier.t
           }
+          (** [Raw_observation { scrutinee = e; destructor = ".tl"; _ }] is
+              the observation [e .tl].
+
+              Because of the lexical convention, [destructor] may be multiple
+              consecutive destructors. For instance, [(x) .tl .tl] has
+              [destructor = ".tl.tl"]. *)
   end =
     Expression_object
 

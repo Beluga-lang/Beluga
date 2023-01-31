@@ -49,55 +49,39 @@ struct
     Common_disambiguation.Make_persistent_pattern_disambiguation_state
       (Disambiguation_state)
 
-  module Lf_disambiguator :
-    Lf_disambiguation.LF_DISAMBIGUATION
-      with type state = Disambiguation_state.state =
-    Lf_disambiguation.Make (Disambiguation_state)
-
-  module Clf_disambiguator :
-    Clf_disambiguation.CLF_DISAMBIGUATION
-      with type state = Disambiguation_state.state =
-    Clf_disambiguation.Make (Disambiguation_state)
-
+  module Lf_disambiguator = Lf_disambiguation.Make (Disambiguation_state)
+  module Clf_disambiguator = Clf_disambiguation.Make (Disambiguation_state)
   module Clf_pattern_disambiguator =
     Clf_disambiguation.Make_pattern_disambiguator
       (Disambiguation_state)
       (Persistent_pattern_disambiguation_state)
-
-  module Meta_disambiguator :
-    Meta_disambiguation.META_DISAMBIGUATION
-      with type state = Disambiguation_state.state =
+  module Meta_disambiguator =
     Meta_disambiguation.Make (Disambiguation_state) (Clf_disambiguator)
-
   module Meta_pattern_disambiguator =
     Meta_disambiguation.Make_pattern_disambiguator
       (Disambiguation_state)
       (Persistent_pattern_disambiguation_state)
       (Clf_pattern_disambiguator)
-
-  module Comp_disambiguator :
-    Comp_disambiguation.COMP_DISAMBIGUATION
-      with type state = Disambiguation_state.state =
-    Comp_disambiguation.Make
+  module Comp_pattern_disambiguator =
+    Comp_disambiguation.Make_pattern_disambiguator
       (Disambiguation_state)
       (Persistent_pattern_disambiguation_state)
       (Meta_disambiguator)
       (Meta_pattern_disambiguator)
-
-  module Harpoon_disambiguator :
-    Harpoon_disambiguation.HARPOON_DISAMBIGUATION
-      with type state = Disambiguation_state.state =
+  module Comp_disambiguator =
+    Comp_disambiguation.Make
+      (Disambiguation_state)
+      (Persistent_pattern_disambiguation_state)
+      (Meta_disambiguator)
+      (Comp_pattern_disambiguator)
+  module Harpoon_disambiguator =
     Harpoon_disambiguation.Make (Disambiguation_state) (Meta_disambiguator)
       (Comp_disambiguator)
-
-  module Signature_disambiguator :
-    Signature_disambiguation.SIGNATURE_DISAMBIGUATION
-      with type state = Disambiguation_state.state =
+  module Signature_disambiguator =
     Signature_disambiguation.Make (Disambiguation_state) (Lf_disambiguator)
       (Meta_disambiguator)
       (Comp_disambiguator)
       (Harpoon_disambiguator)
-
   include Parser_combinator
   include Common_parser
   include Lf_parser
@@ -148,14 +132,14 @@ struct
 
     let parse parser =
       let* parser_state = get_parser_state in
-      let parser_state', parsed = parser parser_state in
+      let parser_state', parsed = Parser_state.run parser parser_state in
       let* () = put_parser_state parser_state' in
       return parsed
 
     let disambiguate disambiguator =
       let* disambiguation_state = get_disambiguation_state in
       let disambiguation_state', disambiguated =
-        disambiguator disambiguation_state
+        Disambiguation_state.run disambiguator disambiguation_state
       in
       let* () = put_disambiguation_state disambiguation_state' in
       return disambiguated

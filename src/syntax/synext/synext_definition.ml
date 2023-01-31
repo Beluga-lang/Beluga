@@ -1026,7 +1026,7 @@ module Comp = struct
           ; prefixed : Bool.t
           }
           (** [Constant { identifier = "c"; _ }] is the computation-level
-              constant ["c"] referring to a value. *)
+              constant ["c"] referring to a value or constructor. *)
       | Fn of
           { location : Location.t
           ; parameters : Identifier.t Option.t List1.t

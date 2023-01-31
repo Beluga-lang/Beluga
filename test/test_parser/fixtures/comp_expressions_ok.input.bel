@@ -30,3 +30,16 @@ fn x1 =>
   | [g |- z] => x1
   | [g |- s x1] => [g |- s x1]
 ;;
+
+case x1 of
+| [g, z : nat |- z] => [ |- z]
+;;
+
+case l of
+| x1 cons x2 cons xs => ?
+| x cons xs => ?
+| nil => ?
+;;
+
+case x of --not x => x
+;;

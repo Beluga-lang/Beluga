@@ -72,7 +72,7 @@ exception
 
 (** {2 Exceptions for computation-level expression disambiguation} *)
 
-exception Expected_program_constant of Qualified_identifier.t
+exception Expected_program_or_constructor_constant of Qualified_identifier.t
 
 exception Illegal_duplicate_pattern_variables
 
@@ -94,11 +94,30 @@ exception
     ; actual_arguments_count : Int.t
     }
 
+(** {2 Exceptions for pattern-level application rewriting} *)
+
+exception Misplaced_comp_pattern_operator
+
+exception Ambiguous_comp_pattern_operator_placement of Qualified_identifier.t
+
+exception
+  Consecutive_applications_of_non_associative_comp_pattern_operators of
+    Qualified_identifier.t
+
+exception
+  Comp_pattern_arity_mismatch of
+    { operator_identifier : Qualified_identifier.t
+    ; expected_arguments_count : Int.t
+    ; actual_arguments_count : Int.t
+    }
+
 (** {2 Exceptions for computation-level context disambiguation} *)
 
 exception Illegal_missing_comp_context_binding_type of Identifier.t
 
 (** {2 Exceptions for computation-level pattern disambiguation} *)
+
+exception Expected_constructor_constant of Qualified_identifier.t
 
 exception Illegal_meta_annotated_comp_pattern_missing_identifier
 
@@ -357,8 +376,6 @@ struct
     | Synprs.Comp.Expression_object.Raw_qualified_identifier
         { identifier; _ } ->
         guard_identifier_operator identifier expression
-    | Synprs.Comp.Expression_object.Raw_identifier _
-    | Synprs.Comp.Expression_object.Raw_qualified_identifier _
     | Synprs.Comp.Expression_object.Raw_fn _
     | Synprs.Comp.Expression_object.Raw_mlam _
     | Synprs.Comp.Expression_object.Raw_fun _
@@ -372,6 +389,131 @@ struct
     | Synprs.Comp.Expression_object.Raw_application _
     | Synprs.Comp.Expression_object.Raw_annotated _
     | Synprs.Comp.Expression_object.Raw_observation _ ->
+        return Option.none
+end
+
+module Comp_pattern_operand = struct
+  type expression = Synprs.comp_pattern_object
+
+  type t =
+    | Atom of expression
+    | Application of
+        { applicand : expression
+        ; arguments : t List1.t
+        }
+
+  let rec location operand =
+    match operand with
+    | Atom object_ -> Synprs.location_of_comp_pattern_object object_
+    | Application { applicand; arguments } ->
+        let applicand_location =
+          Synprs.location_of_comp_pattern_object applicand
+        in
+        let arguments_location =
+          Location.join_all1_contramap location arguments
+        in
+        Location.join applicand_location arguments_location
+end
+
+module Comp_pattern_operator = struct
+  type associativity = Associativity.t
+
+  type fixity = Fixity.t
+
+  type operand = Comp_pattern_operand.t
+
+  type t =
+    { identifier : Qualified_identifier.t
+    ; operator : Operator.t
+    ; applicand : Synprs.comp_pattern_object
+    }
+
+  let[@inline] make ~identifier ~operator ~applicand =
+    { identifier; operator; applicand }
+
+  let[@inline] operator o = o.operator
+
+  let[@inline] applicand o = o.applicand
+
+  let[@inline] identifier o = o.identifier
+
+  let arity = Fun.(operator >> Operator.arity)
+
+  let precedence = Fun.(operator >> Operator.precedence)
+
+  let fixity = Fun.(operator >> Operator.fixity)
+
+  let associativity = Fun.(operator >> Operator.associativity)
+
+  let location = Fun.(applicand >> Synprs.location_of_comp_pattern_object)
+
+  (** [write operator arguments] constructs the application of [operator]
+      with [arguments] for the shunting yard algorithm. Since nullary
+      operators are treated as arguments, it is always the case that
+      [List.length arguments > 0]. *)
+  let write operator arguments =
+    let applicand = applicand operator in
+    let arguments =
+      List1.unsafe_of_list arguments (* [List.length arguments > 0] *)
+    in
+    Comp_pattern_operand.Application { applicand; arguments }
+
+  (** Instance of equality by operator identifier.
+
+      Since applications do not introduce bound variables, occurrences of
+      operators are equal by their identifier. That is, in an application
+      like [a o1 a o2 a], the operators [o1] and [o2] are equal if and only
+      if they are textually equal. *)
+  include (
+    (val Eq.contramap (module Qualified_identifier) identifier) :
+      Eq.EQ with type t := t)
+end
+
+module Make_comp_pattern_application_disambiguation_state
+    (Bindings_state : BINDINGS_STATE) =
+struct
+  include Bindings_state
+
+  type operator = Comp_pattern_operator.t
+
+  type expression = Comp_pattern_operand.expression
+
+  let guard_identifier_operator identifier pattern =
+    lookup identifier >>= function
+    | Result.Ok
+        (Computation_term_constructor, { operator = Option.Some operator; _ })
+    | Result.Ok (Program_constant, { operator = Option.Some operator; _ }) ->
+        if Operator.is_nullary operator then return Option.none
+        else
+          return
+            (Option.some
+               (Comp_pattern_operator.make ~identifier ~operator
+                  ~applicand:pattern))
+    | Result.Ok _
+    | Result.Error (Unbound_identifier _) ->
+        return Option.none
+    | Result.Error cause ->
+        Error.raise_at1 (Qualified_identifier.location identifier) cause
+
+  let guard_operator pattern =
+    match pattern with
+    | Synprs.Comp.Pattern_object.Raw_identifier { prefixed; _ }
+    | Synprs.Comp.Pattern_object.Raw_qualified_identifier { prefixed; _ }
+      when prefixed ->
+        return Option.none
+    | Synprs.Comp.Pattern_object.Raw_identifier { identifier; _ } ->
+        let identifier = Qualified_identifier.make_simple identifier in
+        guard_identifier_operator identifier pattern
+    | Synprs.Comp.Pattern_object.Raw_qualified_identifier { identifier; _ }
+      ->
+        guard_identifier_operator identifier pattern
+    | Synprs.Comp.Pattern_object.Raw_box _
+    | Synprs.Comp.Pattern_object.Raw_tuple _
+    | Synprs.Comp.Pattern_object.Raw_application _
+    | Synprs.Comp.Pattern_object.Raw_annotated _
+    | Synprs.Comp.Pattern_object.Raw_observation _
+    | Synprs.Comp.Pattern_object.Raw_meta_annotated _
+    | Synprs.Comp.Pattern_object.Raw_wildcard _ ->
         return Option.none
 end
 
@@ -515,7 +657,7 @@ module Make
     | x :: xs ->
         with_meta_parameter x (with_meta_function_parameters_list xs f)
 
-  let rec with_meta_function_parameters_list1 parameters f =
+  let with_meta_function_parameters_list1 parameters f =
     let (List1.T (x, xs)) = parameters in
     with_meta_parameter x (with_meta_function_parameters_list xs f)
 
@@ -835,7 +977,19 @@ module Make
           Qualified_identifier.make_simple identifier
         in
         lookup_toplevel identifier >>= function
-        | Result.Ok (Program_constant _, { operator; _ }) ->
+        | Result.Ok
+            ( Computation_term_constructor
+            , { operator = Option.Some operator; _ } ) ->
+            (* [identifier] appears as a bound computation-level
+               constructor *)
+            return
+              (Synext.Comp.Expression.Constant
+                 { location
+                 ; identifier = qualified_identifier
+                 ; prefixed
+                 ; operator = Option.some operator
+                 })
+        | Result.Ok (Program_constant, { operator; _ }) ->
             (* [identifier] appears as a bound computation-level program *)
             return
               (Synext.Comp.Expression.Constant
@@ -849,16 +1003,17 @@ module Make
             return (Synext.Comp.Expression.Variable { location; identifier })
         | Result.Ok entry ->
             (* [identifier] appears as a bound entry that is not a
-               computation-level variable or program constant *)
+               computation-level variable, constructor or program constant *)
             Error.raise_at1 location
               (Error.composite_exception2
-                 (Expected_program_constant qualified_identifier)
+                 (Expected_program_or_constructor_constant
+                    qualified_identifier)
                  (actual_binding_exn qualified_identifier entry))
         | Result.Error (Unbound_identifier _) ->
             (* [identifier] does not appear in the state, so it is a free
                variable. *)
             return (Synext.Comp.Expression.Variable { location; identifier })
-        )
+        | Result.Error cause -> Error.raise_at1 location cause)
     | Synprs.Comp.Expression_object.Raw_qualified_identifier
         { location; identifier; prefixed } ->
         (* TODO: Can be the observation(s) of a variable *)
@@ -1129,6 +1284,12 @@ module Make_pattern_disambiguator
 
   let lookup identifier =
     with_wrapped_state (Bindings_state.lookup identifier)
+
+  let comp_variable_adder identifier =
+    { run = (fun m -> Bindings_state.with_comp_variable identifier m) }
+
+  let add_pattern_comp_variable identifier =
+    add_pattern_variable identifier (comp_variable_adder identifier)
 
   let with_context_variable_opt = function
     | Option.Some identifier -> with_context_variable identifier
@@ -1427,8 +1588,35 @@ module Make_pattern_disambiguator
 
   and disambiguate_comp_pattern = function
     | Synprs.Comp.Pattern_object.Raw_identifier
-        { location; identifier; prefixed } ->
-        Obj.magic () (* TODO: *)
+        { location; identifier; prefixed } -> (
+        let qualified_identifier =
+          Qualified_identifier.make_simple identifier
+        in
+        lookup_toplevel identifier >>= function
+        | Result.Ok
+            ( Computation_term_constructor
+            , { operator = Option.Some operator; _ } ) ->
+            (* [identifier] appears as a bound computation-level program *)
+            return
+              (Synext.Comp.Pattern.Constant
+                 { location
+                 ; identifier = qualified_identifier
+                 ; prefixed
+                 ; operator
+                 })
+        | Result.Ok entry ->
+            (* [identifier] appears as a bound entry that is not a
+               computation-level constructor *)
+            (* There are no computation-level patterns under
+               [fn]-abstractions, so no need to check that [identifier] is
+               not inner-bound. *)
+            let* () = add_pattern_comp_variable identifier in
+            return (Synext.Comp.Pattern.Variable { location; identifier })
+        | Result.Error (Unbound_identifier _) ->
+            (* [identifier] does not appear in the state, so it is a free
+               variable. *)
+            return (Synext.Comp.Pattern.Variable { location; identifier })
+        | Result.Error cause -> Error.raise_at1 location cause)
     | Synprs.Comp.Pattern_object.Raw_qualified_identifier
         { location; identifier; prefixed } ->
         Obj.magic () (* TODO: *)
@@ -1441,7 +1629,22 @@ module Make_pattern_disambiguator
         let* elements' = traverse_list2 disambiguate_comp_pattern elements in
         return (Synext.Comp.Pattern.Tuple { location; elements = elements' })
     | Synprs.Comp.Pattern_object.Raw_application { location; patterns } ->
-        Obj.magic () (* TODO: *)
+        (* We don't have to disambiguate the qualified identifiers in
+           [objects] before we disambiguate applications. It is always the
+           case that actual projections and actual observations that were
+           parsed as qualified identifiers are not totally bound in the
+           disambiguation state, so the application disambiguation identifies
+           them as operands. *)
+        let* applicand, arguments =
+          with_wrapped_state (disambiguate_comp_pattern_application patterns)
+        in
+        let* applicand' = disambiguate_comp_pattern applicand in
+        let* arguments' =
+          traverse_list1 elaborate_comp_pattern_operand arguments
+        in
+        return
+          (Synext.Comp.Pattern.Application
+             { applicand = applicand'; arguments = arguments'; location })
     | Synprs.Comp.Pattern_object.Raw_observation
         { location; constant; arguments } ->
         Obj.magic () (* TODO: *)
@@ -1504,6 +1707,83 @@ module Make_pattern_disambiguator
       | Synprs.Comp.Pattern_object.Raw_wildcard _ ) as pattern ->
         let* pattern' = disambiguate_comp_pattern pattern in
         return (Synext.Comp.Copattern.Pattern pattern')
+
+  and elaborate_comp_pattern_operand operand =
+    match operand with
+    | Comp_pattern_operand.Atom object_ -> disambiguate_comp_pattern object_
+    | Comp_pattern_operand.Application { applicand; arguments } ->
+        let* applicand' = disambiguate_comp_pattern applicand in
+        let* arguments' =
+          traverse_list1 elaborate_comp_pattern_operand arguments
+        in
+        let location =
+          Location.join_all1_contramap Synext.location_of_comp_pattern
+            (List1.cons applicand' arguments')
+        in
+        return
+          (Synext.Comp.Pattern.Application
+             { applicand = applicand'; arguments = arguments'; location })
+
+  and disambiguate_comp_pattern_application =
+    let open
+      Application_disambiguation.Make (Associativity) (Fixity)
+        (Comp_pattern_operand)
+        (Comp_pattern_operator)
+        (Make_comp_pattern_application_disambiguation_state (Bindings_state)) in
+    disambiguate_application >=> function
+    | Result.Ok (applicand, arguments) -> return (applicand, arguments)
+    | Result.Error
+        (Ambiguous_operator_placement { left_operator; right_operator }) ->
+        let left_operator_location =
+          Comp_pattern_operator.location left_operator
+        in
+        let right_operator_location =
+          Comp_pattern_operator.location right_operator
+        in
+        let identifier = Comp_pattern_operator.identifier left_operator in
+        Error.raise_at2 left_operator_location right_operator_location
+          (Ambiguous_comp_pattern_operator_placement identifier)
+    | Result.Error (Arity_mismatch { operator; operator_arity; operands }) ->
+        let operator_identifier =
+          Comp_pattern_operator.identifier operator
+        in
+        let operator_location = Comp_pattern_operator.location operator in
+        let expected_arguments_count = operator_arity in
+        let operand_locations =
+          List.map Comp_pattern_operand.location operands
+        in
+        let actual_arguments_count = List.length operands in
+        Error.raise_at
+          (List1.from operator_location operand_locations)
+          (Comp_pattern_arity_mismatch
+             { operator_identifier
+             ; expected_arguments_count
+             ; actual_arguments_count
+             })
+    | Result.Error
+        (Consecutive_non_associative_operators
+          { left_operator; right_operator }) ->
+        let operator_identifier =
+          Comp_pattern_operator.identifier left_operator
+        in
+        let left_operator_location =
+          Comp_pattern_operator.location left_operator
+        in
+        let right_operator_location =
+          Comp_pattern_operator.location right_operator
+        in
+        Error.raise_at2 left_operator_location right_operator_location
+          (Consecutive_applications_of_non_associative_comp_pattern_operators
+             operator_identifier)
+    | Result.Error (Misplaced_operator { operator; operands }) ->
+        let operator_location = Comp_pattern_operator.location operator
+        and operand_locations =
+          List.map Comp_pattern_operand.location operands
+        in
+        Error.raise_at
+          (List1.from operator_location operand_locations)
+          Misplaced_comp_pattern_operator
+    | Result.Error cause -> Error.raise cause
 end
 
 (** {2 Exception Printing} *)
@@ -1577,8 +1857,10 @@ let () =
            got %d."
           Qualified_identifier.pp operator_identifier
           expected_arguments_count actual_arguments_count
-    | Expected_program_constant qualified_identifier ->
-        Format.dprintf "Expected %a to be a program constant."
+    | Expected_program_or_constructor_constant qualified_identifier ->
+        Format.dprintf
+          "Expected %a to be a program constant or computation-level \
+           constructor."
           Qualified_identifier.pp qualified_identifier
     | Illegal_duplicate_pattern_variables ->
         Format.dprintf "%a" Format.pp_print_text
@@ -1607,10 +1889,37 @@ let () =
            but got %d."
           Qualified_identifier.pp operator_identifier
           expected_arguments_count actual_arguments_count
+    | Ambiguous_comp_pattern_operator_placement operator_identifier ->
+        Format.dprintf
+          "Ambiguous occurrences of the computation-level pattern operator \
+           %a after rewriting."
+          Qualified_identifier.pp operator_identifier
+    | Misplaced_comp_pattern_operator ->
+        Format.dprintf "%a" Format.pp_print_text
+          "Misplaced contextual computation-level pattern operator."
+    | Consecutive_applications_of_non_associative_comp_pattern_operators
+        operator_identifier ->
+        Format.dprintf
+          "Consecutive occurrences of the computation-level patternn \
+           operator %a after rewriting."
+          Qualified_identifier.pp operator_identifier
+    | Comp_pattern_arity_mismatch
+        { operator_identifier
+        ; expected_arguments_count
+        ; actual_arguments_count
+        } ->
+        Format.dprintf
+          "Computation-level pattern operator %a expected %d argument(s) \
+           but got %d."
+          Qualified_identifier.pp operator_identifier
+          expected_arguments_count actual_arguments_count
     | Illegal_missing_comp_context_binding_type identifier ->
         Format.dprintf
           "Missing computation-level context type for binding for %a."
           Identifier.pp identifier
+    | Expected_constructor_constant qualified_identifier ->
+        Format.dprintf "Expected %a to be a computation-level constructor."
+          Qualified_identifier.pp qualified_identifier
     | Illegal_meta_annotated_comp_pattern_missing_identifier ->
         Format.dprintf "%a" Format.pp_print_text
           "This meta-annotated pattern is missing its identifier."

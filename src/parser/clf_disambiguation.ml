@@ -1457,12 +1457,15 @@ struct
     match binding with
     | Option.Some identifier, typ (* Typed binding *) ->
         let* typ' = disambiguate_clf_typ typ in
-        with_lf_term_variable identifier (f (identifier, Option.some typ'))
+        with_inner_binding identifier
+          (with_lf_term_variable identifier
+             (f (identifier, Option.some typ')))
     | ( Option.None
       , Synprs.CLF.Object.Raw_identifier
           { identifier = identifier, `Plain; _ } )
     (* Untyped contextual LF variable *) ->
-        with_lf_term_variable identifier (f (identifier, Option.none))
+        with_inner_binding identifier
+          (with_lf_term_variable identifier (f (identifier, Option.none)))
     | ( Option.None
       , Synprs.CLF.Object.Raw_identifier
           { identifier = identifier, `Hash; _ } )
@@ -1969,7 +1972,8 @@ struct
     | Option.Some identifier, typ ->
         let* typ' = disambiguate_clf_typ typ in
         let y = (identifier, typ') in
-        with_lf_term_variable identifier (f y)
+        with_inner_binding identifier
+          (with_lf_term_variable identifier (f y))
     | ( Option.None
       , Synprs.CLF.Object.Raw_identifier
           { identifier = identifier, `Plain; _ } ) ->

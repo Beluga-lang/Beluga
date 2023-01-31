@@ -640,7 +640,7 @@ module Make
           )
         |> span
         $> (fun (location, (scrutinee, check_coverage, branches)) ->
-             let check_coverage = Option.is_some check_coverage in
+             let check_coverage = Option.is_none check_coverage in
              Synprs.Comp.Expression_object.Raw_case
                { location; scrutinee; check_coverage; branches })
         |> labelled "Pattern-matching expression"

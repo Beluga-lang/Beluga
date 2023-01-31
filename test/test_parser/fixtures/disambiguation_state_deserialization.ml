@@ -34,42 +34,40 @@ and add_json_entry json =
   let open Yojson.Safe.Util in
   let sort = json |> member "sort" |> to_string in
   match sort with
-  | "lf_type_constant" -> (
+  | "lf_type_constant" ->
       let identifier = json |> member "identifier" |> to_string in
       let fixity = json |> member "fixity" |> fixity_of_json in
       let precedence = json |> member "precedence" |> to_int in
-      match fixity with
-      | Fixity.Prefix ->
-          let arity = json |> member "arity" |> to_int in
-          let operator = Operator.make_prefix ~arity ~precedence in
-          add_lf_type_constant operator (Identifier.make identifier)
-      | Fixity.Infix ->
-          let associativity =
-            json |> member "associativity" |> associativity_of_json
-          in
-          let operator = Operator.make_infix ~associativity ~precedence in
-          add_lf_type_constant operator (Identifier.make identifier)
-      | Fixity.Postfix ->
-          let operator = Operator.make_postfix ~precedence in
-          add_lf_type_constant operator (Identifier.make identifier))
-  | "lf_term_constant" -> (
+      let operator =
+        match fixity with
+        | Fixity.Prefix ->
+            let arity = json |> member "arity" |> to_int in
+            Operator.make_prefix ~arity ~precedence
+        | Fixity.Infix ->
+            let associativity =
+              json |> member "associativity" |> associativity_of_json
+            in
+            Operator.make_infix ~associativity ~precedence
+        | Fixity.Postfix -> Operator.make_postfix ~precedence
+      in
+      add_lf_type_constant operator (Identifier.make identifier)
+  | "lf_term_constant" ->
       let identifier = json |> member "identifier" |> to_string in
       let fixity = json |> member "fixity" |> fixity_of_json in
       let precedence = json |> member "precedence" |> to_int in
-      match fixity with
-      | Fixity.Prefix ->
-          let arity = json |> member "arity" |> to_int in
-          let operator = Operator.make_prefix ~arity ~precedence in
-          add_lf_term_constant operator (Identifier.make identifier)
-      | Fixity.Infix ->
-          let associativity =
-            json |> member "associativity" |> associativity_of_json
-          in
-          let operator = Operator.make_infix ~associativity ~precedence in
-          add_lf_term_constant operator (Identifier.make identifier)
-      | Fixity.Postfix ->
-          let operator = Operator.make_postfix ~precedence in
-          add_lf_term_constant operator (Identifier.make identifier))
+      let operator =
+        match fixity with
+        | Fixity.Prefix ->
+            let arity = json |> member "arity" |> to_int in
+            Operator.make_prefix ~arity ~precedence
+        | Fixity.Infix ->
+            let associativity =
+              json |> member "associativity" |> associativity_of_json
+            in
+            Operator.make_infix ~associativity ~precedence
+        | Fixity.Postfix -> Operator.make_postfix ~precedence
+      in
+      add_lf_term_constant operator (Identifier.make identifier)
   | "module" ->
       let identifier = json |> member "identifier" |> to_string in
       let module_state = exec (disambiguation_state_of_json json) empty in
@@ -84,27 +82,41 @@ and add_json_entry json =
   | "schema_constant" ->
       let identifier = json |> member "identifier" |> to_string in
       add_schema_constant (Identifier.make identifier)
-  | "comp_inductive_type_constant" -> (
+  | "comp_inductive_type_constant" ->
       let identifier = json |> member "identifier" |> to_string in
       let fixity = json |> member "fixity" |> fixity_of_json in
       let precedence = json |> member "precedence" |> to_int in
-      match fixity with
-      | Fixity.Prefix ->
-          let arity = json |> member "arity" |> to_int in
-          let operator = Operator.make_prefix ~arity ~precedence in
-          add_inductive_computation_type_constant operator
-            (Identifier.make identifier)
-      | Fixity.Infix ->
-          let associativity =
-            json |> member "associativity" |> associativity_of_json
-          in
-          let operator = Operator.make_infix ~associativity ~precedence in
-          add_inductive_computation_type_constant operator
-            (Identifier.make identifier)
-      | Fixity.Postfix ->
-          let operator = Operator.make_postfix ~precedence in
-          add_inductive_computation_type_constant operator
-            (Identifier.make identifier))
+      let operator =
+        match fixity with
+        | Fixity.Prefix ->
+            let arity = json |> member "arity" |> to_int in
+            Operator.make_prefix ~arity ~precedence
+        | Fixity.Infix ->
+            let associativity =
+              json |> member "associativity" |> associativity_of_json
+            in
+            Operator.make_infix ~associativity ~precedence
+        | Fixity.Postfix -> Operator.make_postfix ~precedence
+      in
+      add_inductive_computation_type_constant operator
+        (Identifier.make identifier)
+  | "comp_constructor" ->
+      let identifier = json |> member "identifier" |> to_string in
+      let fixity = json |> member "fixity" |> fixity_of_json in
+      let precedence = json |> member "precedence" |> to_int in
+      let operator =
+        match fixity with
+        | Fixity.Prefix ->
+            let arity = json |> member "arity" |> to_int in
+            Operator.make_prefix ~arity ~precedence
+        | Fixity.Infix ->
+            let associativity =
+              json |> member "associativity" |> associativity_of_json
+            in
+            Operator.make_infix ~associativity ~precedence
+        | Fixity.Postfix -> Operator.make_postfix ~precedence
+      in
+      add_computation_term_constructor operator (Identifier.make identifier)
   | sort -> Error.raise (Unsupported_sort sort)
 
 let read_disambiguation_state filename =

@@ -344,6 +344,20 @@
       "fixity": "infix",
       "associativity": "non_associative",
       "precedence": 3
+    },
+    {
+      "sort": "comp_constructor",
+      "identifier": "nil",
+      "fixity": "prefix",
+      "arity": 0,
+      "precedence": 3
+    },
+    {
+      "sort": "comp_constructor",
+      "identifier": "cons",
+      "fixity": "infix",
+      "associativity": "right_associative",
+      "precedence": 3
     }
   ]
 }

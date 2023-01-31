@@ -282,6 +282,16 @@ module type CLF_PATTERN_DISAMBIGUATION = sig
 
   (** {1 Disambiguation} *)
 
+  val disambiguate_clf_typ : Synprs.clf_object -> Synext.clf_typ t
+
+  val disambiguate_clf_term : Synprs.clf_object -> Synext.clf_term t
+
+  val disambiguate_clf_substitution :
+    Synprs.clf_context_object -> Synext.clf_substitution t
+
+  val with_disambiguated_clf_context :
+    Synprs.clf_context_object -> (Synext.clf_context -> 'a t) -> 'a t
+
   val disambiguate_clf_term_pattern :
     Synprs.clf_object -> Synext.clf_term_pattern t
 
@@ -1420,6 +1430,134 @@ struct
         in
         return
           { Synext.CLF.Substitution.location; head = head'; terms = terms' }
+
+  (** [with_disambiguated_context_bindings bindings f state] is
+      [f bindings' state'] where [state'] is the disambiguation state derived
+      from [state] with the addition of the variables in the domain of
+      [bindings], and [bindings'] is the disambiguated context bindings.
+
+      Context variables cannot occur in [bindings]. A context variable in the
+      head position of a context is handled in
+      {!with_disambiguated_clf_context}. *)
+  and with_disambiguated_context_bindings_list bindings f =
+    (* Contextual LF contexts are dependent, meaning that bound variables on
+       the left of a declaration may appear in the type of a binding on the
+       right. Bindings may not recursively refer to themselves.*)
+    match bindings with
+    | [] -> f []
+    | x :: xs ->
+        with_disambiguated_context_binding x (fun y ->
+            with_disambiguated_context_bindings_list xs (fun ys ->
+                f (y :: ys)))
+
+  and with_disambiguated_context_binding binding f =
+    (* Contextual LF contexts are dependent, meaning that bound variables on
+       the left of a declaration may appear in the type of a binding on the
+       right. Bindings may not recursively refer to themselves.*)
+    match binding with
+    | Option.Some identifier, typ (* Typed binding *) ->
+        let* typ' = disambiguate_clf_typ typ in
+        with_lf_term_variable identifier (f (identifier, Option.some typ'))
+    | ( Option.None
+      , Synprs.CLF.Object.Raw_identifier
+          { identifier = identifier, `Plain; _ } )
+    (* Untyped contextual LF variable *) ->
+        with_lf_term_variable identifier (f (identifier, Option.none))
+    | ( Option.None
+      , Synprs.CLF.Object.Raw_identifier
+          { identifier = identifier, `Hash; _ } )
+    (* Parameter variables may only occur in meta-contexts *) ->
+        Error.raise_at1
+          (Identifier.location identifier)
+          Illegal_clf_context_parameter_variable_binding
+    | ( Option.None
+      , Synprs.CLF.Object.Raw_identifier
+          { identifier = identifier, `Dollar; _ } )
+    (* Substitution variables may only occur in meta-contexts *) ->
+        Error.raise_at1
+          (Identifier.location identifier)
+          Illegal_clf_context_substitution_variable_binding
+    | Option.None, typ (* Binding identifier missing *) ->
+        Error.raise_at1
+          (Synprs.location_of_clf_object typ)
+          Illegal_clf_context_missing_binding_identifier
+
+  and with_disambiguated_clf_context context f =
+    let { Synprs.CLF.Context_object.location; head; objects } = context in
+    match head with
+    | Synprs.CLF.Context_object.Head.Identity { location } ->
+        Error.raise_at1 location Illegal_clf_context_identity
+    | Synprs.CLF.Context_object.Head.None { location = head_location } -> (
+        match objects with
+        | ( Option.None
+          , Synprs.CLF.Object.Raw_hole
+              { variant = `Underscore; location = head_location } )
+            (* Hole as context head *)
+          :: xs ->
+            let head' =
+              Synext.CLF.Context.Head.Hole { location = head_location }
+            in
+            with_disambiguated_context_bindings_list xs (fun bindings' ->
+                f
+                  { Synext.CLF.Context.location
+                  ; head = head'
+                  ; bindings = bindings'
+                  })
+        | ( Option.None
+          , Synprs.CLF.Object.Raw_identifier
+              { identifier = identifier, `Plain; _ } )
+            (* Possibly a context variable as context head *)
+          :: xs -> (
+            lookup_toplevel identifier >>= function
+            | Result.Ok (Context_variable, _) ->
+                let head' =
+                  Synext.CLF.Context.Head.Context_variable
+                    { identifier; location = Identifier.location identifier }
+                in
+                with_disambiguated_context_bindings_list xs (fun bindings' ->
+                    f
+                      { Synext.CLF.Context.location
+                      ; head = head'
+                      ; bindings = bindings'
+                      })
+            | Result.Error (Unbound_identifier _) ->
+                let head' =
+                  Synext.CLF.Context.Head.Context_variable
+                    { identifier; location = Identifier.location identifier }
+                in
+                with_context_variable identifier
+                  (with_disambiguated_context_bindings_list xs
+                     (fun bindings' ->
+                       f
+                         { Synext.CLF.Context.location
+                         ; head = head'
+                         ; bindings = bindings'
+                         }))
+            | Result.Ok _ ->
+                let head' =
+                  Synext.CLF.Context.Head.None { location = head_location }
+                in
+                with_disambiguated_context_bindings_list objects
+                  (fun bindings' ->
+                    f
+                      { Synext.CLF.Context.location
+                      ; head = head'
+                      ; bindings = bindings'
+                      })
+            | Result.Error cause -> Error.raise_at1 head_location cause)
+        | objects ->
+            (* Context is just a list of bindings without context
+               variables *)
+            let head' =
+              Synext.CLF.Context.Head.None { location = head_location }
+            in
+            with_disambiguated_context_bindings_list objects
+              (fun bindings' ->
+                f
+                  { Synext.CLF.Context.location
+                  ; head = head'
+                  ; bindings = bindings'
+                  }))
 
   and disambiguate_clf_application =
     let open

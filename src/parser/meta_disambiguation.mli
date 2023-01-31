@@ -31,6 +31,10 @@ module type META_PATTERN_DISAMBIGUATION = sig
 
   (** {1 Disambiguation} *)
 
+  val disambiguate_meta_typ : Synprs.meta_thing -> Synext.meta_typ t
+
+  val disambiguate_meta_object : Synprs.meta_thing -> Synext.meta_object t
+
   val disambiguate_meta_pattern :
     Synprs.meta_thing -> Synext.Meta.Pattern.t t
 end

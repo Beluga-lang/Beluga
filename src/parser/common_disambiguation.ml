@@ -633,6 +633,15 @@ module type PATTERN_DISAMBGUATION_STATE = sig
 
   val with_context_variable :
     ?location:Location.t -> Identifier.t -> 'a t -> 'a t
+
+  val with_meta_variable :
+    ?location:Location.t -> Identifier.t -> 'a t -> 'a t
+
+  val with_parameter_variable :
+    ?location:Location.t -> Identifier.t -> 'a t -> 'a t
+
+  val with_substitution_variable :
+    ?location:Location.t -> Identifier.t -> 'a t -> 'a t
 end
 
 module Make_persistent_pattern_disambiguation_state (S : BINDINGS_STATE) :
@@ -764,6 +773,24 @@ module Make_persistent_pattern_disambiguation_state (S : BINDINGS_STATE) :
   let with_context_variable ?location identifier =
     scoped
       ~set:(with_wrapped_state (S.add_context_variable ?location identifier))
+      ~unset:(with_wrapped_state (S.pop_binding identifier))
+
+  let with_meta_variable ?location identifier =
+    scoped
+      ~set:(with_wrapped_state (S.add_meta_variable ?location identifier))
+      ~unset:(with_wrapped_state (S.pop_binding identifier))
+
+  let with_parameter_variable ?location identifier =
+    scoped
+      ~set:
+        (with_wrapped_state (S.add_parameter_variable ?location identifier))
+      ~unset:(with_wrapped_state (S.pop_binding identifier))
+
+  let with_substitution_variable ?location identifier =
+    scoped
+      ~set:
+        (with_wrapped_state
+           (S.add_substitution_variable ?location identifier))
       ~unset:(with_wrapped_state (S.pop_binding identifier))
 end
 

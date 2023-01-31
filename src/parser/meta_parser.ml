@@ -95,7 +95,7 @@ module Make
         | `[' <clf-context-object> [<turnstile> <clf-context-object>] `]'
         | `#[' <clf-context-object> <turnstile> <clf-context-object> `]'
         | `$[' <clf-context-object> (<turnstile> | <turnstile-hash>) <clf-context-object> `]'
-  *)
+    *)
     let schema_some_clause =
       let declaration = seq2 identifier (colon &> clf_typ) in
       keyword "some"
@@ -244,7 +244,7 @@ module Make
       <meta-context> ::=
         | [`^']
         | <meta-object-identifier> [`:' <boxed-meta-type>] (`,' <meta-object-identifier> [`:' <boxed-meta-type>])*
-  *)
+    *)
     let meta_context =
       let non_empty =
         sep_by0 ~sep:comma

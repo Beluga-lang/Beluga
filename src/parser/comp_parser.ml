@@ -103,7 +103,7 @@ module Make
         | `ctype'
         | <meta-thing>
         | `(' <comp-sort-object> `)'
-  *)
+    *)
     let comp_weak_prefix =
       let declaration =
         seq2 omittable_meta_object_identifier (maybe (colon &> meta_type))
@@ -332,7 +332,7 @@ module Make
 
       <comp-pattern-atomic-object> ::=
         | <comp-pattern-object4>
-  *)
+      *)
     let comp_weak_prefix_pattern =
       let pi =
         seq2
@@ -505,7 +505,7 @@ module Make
         | `_'
         | `(' <comp-expression-object> (`,' <comp-expression-object>)+ `)'
         | `(' <comp-expression-object> `)'
-  *)
+      *)
     let comp_expression_object5 =
       let constant_or_variable =
         qualified_or_plain_identifier |> span
@@ -687,7 +687,7 @@ module Make
       <comp-context> ::=
         | [`^']
         | <identifier> [`:' <comp-type>] (`,' <identifier> [`:' <comp-type>])*
-  *)
+      *)
     let comp_context =
       let non_empty =
         sep_by0 ~sep:comma

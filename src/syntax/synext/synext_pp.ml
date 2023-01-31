@@ -1121,7 +1121,9 @@ and pp_harpoon_split_branch ppf branch =
 
 and pp_harpoon_split_branch_label ppf label =
   match label with
-  | Harpoon.Split_branch.Label.Constant { identifier; _ } ->
+  | Harpoon.Split_branch.Label.Lf_constant { identifier; _ } ->
+      Qualified_identifier.pp ppf identifier
+  | Harpoon.Split_branch.Label.Comp_constant { identifier; _ } ->
       Qualified_identifier.pp ppf identifier
   | Harpoon.Split_branch.Label.Bound_variable _ ->
       Format.pp_print_string ppf "head variable"

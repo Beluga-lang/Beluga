@@ -1283,7 +1283,11 @@ module Harpoon = struct
 
     module Label : sig
       type t =
-        | Constant of
+        | Lf_constant of
+            { location : Location.t
+            ; identifier : Qualified_identifier.t
+            }
+        | Comp_constant of
             { location : Location.t
             ; identifier : Qualified_identifier.t
             }

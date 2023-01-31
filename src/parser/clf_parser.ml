@@ -126,7 +126,7 @@ module Make
         | `?'[<identifier>]
         | `<' <clf-object> (`;' <clf-object>)* `>'
         | `(' <clf-object> `)'
-  *)
+    *)
     let clf_weak_prefix =
       let lambda =
         seq2

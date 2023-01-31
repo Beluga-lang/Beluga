@@ -415,6 +415,11 @@ module Make (Bindings_state : BINDINGS_STATE) :
              ; body = body'
              })
     | Synprs.CLF.Object.Raw_application { objects; location } ->
+        (* We don't have to disambiguate the qualified identifiers in
+           [objects] before we disambiguate applications. It is always the
+           case that actual projections that were parsed as qualified
+           identifiers are not totally bound in the disambiguation state, so
+           the application disambiguation identifies them as operands. *)
         let* applicand, arguments = disambiguate_clf_application objects in
         let* applicand' = disambiguate_clf_typ applicand in
         let* arguments' = traverse_list1 elaborate_lf_operand arguments in
@@ -612,6 +617,11 @@ module Make (Bindings_state : BINDINGS_STATE) :
                   (Error.composite_exception2 Expected_clf_term_constant
                      (actual_binding_exn identifier entry))))
     | Synprs.CLF.Object.Raw_application { objects; location } ->
+        (* We don't have to disambiguate the qualified identifiers in
+           [objects] before we disambiguate applications. It is always the
+           case that actual projections that were parsed as qualified
+           identifiers are not totally bound in the disambiguation state, so
+           the application disambiguation identifies them as operands. *)
         let* applicand, arguments = disambiguate_clf_application objects in
         let* applicand' = disambiguate_clf_term applicand in
         let* arguments' = traverse_list1 elaborate_lf_operand arguments in

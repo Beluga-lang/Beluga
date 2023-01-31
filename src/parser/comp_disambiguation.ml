@@ -70,6 +70,24 @@ exception Expected_program_constant of Qualified_identifier.t
 
 exception Illegal_duplicate_pattern_variables
 
+(** {2 Exceptions for expression-level application rewriting} *)
+
+exception Misplaced_comp_expression_operator
+
+exception
+  Ambiguous_comp_expression_operator_placement of Qualified_identifier.t
+
+exception
+  Consecutive_applications_of_non_associative_comp_expression_operators of
+    Qualified_identifier.t
+
+exception
+  Comp_expression_arity_mismatch of
+    { operator_identifier : Qualified_identifier.t
+    ; expected_arguments_count : Int.t
+    ; actual_arguments_count : Int.t
+    }
+
 (** {2 Exceptions for computation-level context disambiguation} *)
 
 exception Illegal_missing_comp_context_binding_type of Identifier.t
@@ -215,6 +233,137 @@ struct
     | Synprs.Comp.Sort_object.Raw_cross _
     | Synprs.Comp.Sort_object.Raw_box _
     | Synprs.Comp.Sort_object.Raw_application _ ->
+        return Option.none
+end
+
+module Comp_expression_operand = struct
+  type expression = Synprs.comp_expression_object
+
+  type t =
+    | Atom of expression
+    | Application of
+        { applicand : expression
+        ; arguments : t List1.t
+        }
+
+  let rec location operand =
+    match operand with
+    | Atom object_ -> Synprs.location_of_comp_expression_object object_
+    | Application { applicand; arguments } ->
+        let applicand_location =
+          Synprs.location_of_comp_expression_object applicand
+        in
+        let arguments_location =
+          Location.join_all1_contramap location arguments
+        in
+        Location.join applicand_location arguments_location
+end
+
+module Comp_expression_operator = struct
+  type associativity = Associativity.t
+
+  type fixity = Fixity.t
+
+  type operand = Comp_expression_operand.t
+
+  type t =
+    { identifier : Qualified_identifier.t
+    ; operator : Operator.t
+    ; applicand : Synprs.comp_expression_object
+    }
+
+  let[@inline] make ~identifier ~operator ~applicand =
+    { identifier; operator; applicand }
+
+  let[@inline] operator o = o.operator
+
+  let[@inline] applicand o = o.applicand
+
+  let[@inline] identifier o = o.identifier
+
+  let arity = Fun.(operator >> Operator.arity)
+
+  let precedence = Fun.(operator >> Operator.precedence)
+
+  let fixity = Fun.(operator >> Operator.fixity)
+
+  let associativity = Fun.(operator >> Operator.associativity)
+
+  let location = Fun.(applicand >> Synprs.location_of_comp_expression_object)
+
+  (** [write operator arguments] constructs the application of [operator]
+      with [arguments] for the shunting yard algorithm. Since nullary
+      operators are treated as arguments, it is always the case that
+      [List.length arguments > 0]. *)
+  let write operator arguments =
+    let applicand = applicand operator in
+    let arguments =
+      List1.unsafe_of_list arguments (* [List.length arguments > 0] *)
+    in
+    Comp_expression_operand.Application { applicand; arguments }
+
+  (** Instance of equality by operator identifier.
+
+      Since applications do not introduce bound variables, occurrences of
+      operators are equal by their identifier. That is, in an application
+      like [a o1 a o2 a], the operators [o1] and [o2] are equal if and only
+      if they are textually equal. *)
+  include (
+    (val Eq.contramap (module Qualified_identifier) identifier) :
+      Eq.EQ with type t := t)
+end
+
+module Make_comp_expression_application_disambiguation_state
+    (Bindings_state : BINDINGS_STATE) =
+struct
+  include Bindings_state
+
+  type operator = Comp_expression_operator.t
+
+  type expression = Comp_expression_operand.expression
+
+  let guard_identifier_operator identifier expression =
+    lookup identifier >>= function
+    | Result.Ok (Program_constant, { operator = Option.Some operator; _ }) ->
+        if Operator.is_nullary operator then return Option.none
+        else
+          return
+            (Option.some
+               (Comp_expression_operator.make ~identifier ~operator
+                  ~applicand:expression))
+    | Result.Ok _
+    | Result.Error (Unbound_identifier _) ->
+        return Option.none
+    | Result.Error cause ->
+        Error.raise_at1 (Qualified_identifier.location identifier) cause
+
+  let guard_operator expression =
+    match expression with
+    | Synprs.Comp.Expression_object.Raw_identifier { prefixed; _ }
+    | Synprs.Comp.Expression_object.Raw_qualified_identifier { prefixed; _ }
+      when prefixed ->
+        return Option.none
+    | Synprs.Comp.Expression_object.Raw_identifier { identifier; _ } ->
+        let identifier = Qualified_identifier.make_simple identifier in
+        guard_identifier_operator identifier expression
+    | Synprs.Comp.Expression_object.Raw_qualified_identifier
+        { identifier; _ } ->
+        guard_identifier_operator identifier expression
+    | Synprs.Comp.Expression_object.Raw_identifier _
+    | Synprs.Comp.Expression_object.Raw_qualified_identifier _
+    | Synprs.Comp.Expression_object.Raw_fn _
+    | Synprs.Comp.Expression_object.Raw_mlam _
+    | Synprs.Comp.Expression_object.Raw_fun _
+    | Synprs.Comp.Expression_object.Raw_box _
+    | Synprs.Comp.Expression_object.Raw_let _
+    | Synprs.Comp.Expression_object.Raw_impossible _
+    | Synprs.Comp.Expression_object.Raw_case _
+    | Synprs.Comp.Expression_object.Raw_tuple _
+    | Synprs.Comp.Expression_object.Raw_hole _
+    | Synprs.Comp.Expression_object.Raw_box_hole _
+    | Synprs.Comp.Expression_object.Raw_application _
+    | Synprs.Comp.Expression_object.Raw_annotated _
+    | Synprs.Comp.Expression_object.Raw_observation _ ->
         return Option.none
 end
 
@@ -770,8 +919,22 @@ module Make
         return (Synext.Comp.Expression.Box_hole { location })
     | Synprs.Comp.Expression_object.Raw_application { location; expressions }
       ->
-        (* TODO: Application rewriting with program constants *)
-        Obj.magic ()
+        (* We don't have to disambiguate the qualified identifiers in
+           [objects] before we disambiguate applications. It is always the
+           case that actual projections and actual observations that were
+           parsed as qualified identifiers are not totally bound in the
+           disambiguation state, so the application disambiguation identifies
+           them as operands. *)
+        let* applicand, arguments =
+          disambiguate_comp_expression_application expressions
+        in
+        let* applicand' = disambiguate_comp_expression applicand in
+        let* arguments' =
+          traverse_list1 elaborate_comp_expression_operand arguments
+        in
+        return
+          (Synext.Comp.Expression.Application
+             { applicand = applicand'; arguments = arguments'; location })
     | Synprs.Comp.Expression_object.Raw_annotated
         { location; expression; typ } ->
         let* expression' = disambiguate_comp_expression expression in
@@ -784,6 +947,85 @@ module Make
         (* TODO: [destructor] may be multiple observations `(nats 2) .tl
            .tl' *)
         Obj.magic ()
+
+  and elaborate_comp_expression_operand operand =
+    match operand with
+    | Comp_expression_operand.Atom object_ ->
+        disambiguate_comp_expression object_
+    | Comp_expression_operand.Application { applicand; arguments } ->
+        let* applicand' = disambiguate_comp_expression applicand in
+        let* arguments' =
+          traverse_list1 elaborate_comp_expression_operand arguments
+        in
+        let location =
+          Location.join_all1_contramap Synext.location_of_comp_expression
+            (List1.cons applicand' arguments')
+        in
+        return
+          (Synext.Comp.Expression.Application
+             { applicand = applicand'; arguments = arguments'; location })
+
+  and disambiguate_comp_expression_application =
+    let open
+      Application_disambiguation.Make (Associativity) (Fixity)
+        (Comp_expression_operand)
+        (Comp_expression_operator)
+        (Make_comp_expression_application_disambiguation_state
+           (Bindings_state)) in
+    disambiguate_application >=> function
+    | Result.Ok (applicand, arguments) -> return (applicand, arguments)
+    | Result.Error
+        (Ambiguous_operator_placement { left_operator; right_operator }) ->
+        let left_operator_location =
+          Comp_expression_operator.location left_operator
+        in
+        let right_operator_location =
+          Comp_expression_operator.location right_operator
+        in
+        let identifier = Comp_expression_operator.identifier left_operator in
+        Error.raise_at2 left_operator_location right_operator_location
+          (Ambiguous_comp_expression_operator_placement identifier)
+    | Result.Error (Arity_mismatch { operator; operator_arity; operands }) ->
+        let operator_identifier =
+          Comp_expression_operator.identifier operator
+        in
+        let operator_location = Comp_expression_operator.location operator in
+        let expected_arguments_count = operator_arity in
+        let operand_locations =
+          List.map Comp_expression_operand.location operands
+        in
+        let actual_arguments_count = List.length operands in
+        Error.raise_at
+          (List1.from operator_location operand_locations)
+          (Comp_expression_arity_mismatch
+             { operator_identifier
+             ; expected_arguments_count
+             ; actual_arguments_count
+             })
+    | Result.Error
+        (Consecutive_non_associative_operators
+          { left_operator; right_operator }) ->
+        let operator_identifier =
+          Comp_expression_operator.identifier left_operator
+        in
+        let left_operator_location =
+          Comp_expression_operator.location left_operator
+        in
+        let right_operator_location =
+          Comp_expression_operator.location right_operator
+        in
+        Error.raise_at2 left_operator_location right_operator_location
+          (Consecutive_applications_of_non_associative_comp_expression_operators
+             operator_identifier)
+    | Result.Error (Misplaced_operator { operator; operands }) ->
+        let operator_location = Comp_expression_operator.location operator
+        and operand_locations =
+          List.map Comp_expression_operand.location operands
+        in
+        Error.raise_at
+          (List1.from operator_location operand_locations)
+          Misplaced_comp_expression_operator
+    | Result.Error cause -> Error.raise cause
 
   and disambiguate_let_pattern _ = Obj.magic ()
 
@@ -1022,6 +1264,30 @@ let () =
     | Illegal_duplicate_pattern_variables ->
         Format.dprintf "%a" Format.pp_print_text
           "Illegal duplicate pattern variables."
+    | Ambiguous_comp_expression_operator_placement operator_identifier ->
+        Format.dprintf
+          "Ambiguous occurrences of the computation-level expression \
+           operator %a after rewriting."
+          Qualified_identifier.pp operator_identifier
+    | Misplaced_comp_expression_operator ->
+        Format.dprintf "%a" Format.pp_print_text
+          "Misplaced contextual computation-level expression operator."
+    | Consecutive_applications_of_non_associative_comp_expression_operators
+        operator_identifier ->
+        Format.dprintf
+          "Consecutive occurrences of the computation-level expressionn \
+           operator %a after rewriting."
+          Qualified_identifier.pp operator_identifier
+    | Comp_expression_arity_mismatch
+        { operator_identifier
+        ; expected_arguments_count
+        ; actual_arguments_count
+        } ->
+        Format.dprintf
+          "Computation-level expression operator %a expected %d argument(s) \
+           but got %d."
+          Qualified_identifier.pp operator_identifier
+          expected_arguments_count actual_arguments_count
     | Illegal_missing_comp_context_binding_type identifier ->
         Format.dprintf
           "Missing computation-level context type for binding for %a."

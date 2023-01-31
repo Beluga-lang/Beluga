@@ -86,7 +86,7 @@ module Make
         | `type'
         | `_'
         | `(' <lf-object> `)'
-  *)
+    *)
     let lf_weak_prefix =
       let lambda =
         seq2

@@ -312,5 +312,151 @@
         "stop_column": 13
       }
     }
+  ],
+  [
+    "Comp.Expression.Application",
+    {
+      "applicand": [
+        "Comp.Expression.Fn",
+        {
+          "parameters": [
+            {
+              "name": "x1",
+              "location": {
+                "filename": "comp_expressions_ok.input.bel",
+                "start_line": 25,
+                "start_column": 5,
+                "stop_line": 25,
+                "stop_column": 7
+              }
+            },
+            {
+              "name": "x2",
+              "location": {
+                "filename": "comp_expressions_ok.input.bel",
+                "start_line": 25,
+                "start_column": 8,
+                "stop_line": 25,
+                "stop_column": 10
+              }
+            },
+            {
+              "name": "x3",
+              "location": {
+                "filename": "comp_expressions_ok.input.bel",
+                "start_line": 25,
+                "start_column": 11,
+                "stop_line": 25,
+                "stop_column": 13
+              }
+            }
+          ],
+          "body": [
+            "Comp.Expression.Variable",
+            {
+              "identifier": {
+                "name": "x1",
+                "location": {
+                  "filename": "comp_expressions_ok.input.bel",
+                  "start_line": 25,
+                  "start_column": 17,
+                  "stop_line": 25,
+                  "stop_column": 19
+                }
+              },
+              "location": {
+                "filename": "comp_expressions_ok.input.bel",
+                "start_line": 25,
+                "start_column": 17,
+                "stop_line": 25,
+                "stop_column": 19
+              }
+            }
+          ],
+          "location": {
+            "filename": "comp_expressions_ok.input.bel",
+            "start_line": 25,
+            "start_column": 1,
+            "stop_line": 25,
+            "stop_column": 20
+          }
+        }
+      ],
+      "arguments": [
+        [
+          "Comp.Expression.Variable",
+          {
+            "identifier": {
+              "name": "x1",
+              "location": {
+                "filename": "comp_expressions_ok.input.bel",
+                "start_line": 25,
+                "start_column": 21,
+                "stop_line": 25,
+                "stop_column": 23
+              }
+            },
+            "location": {
+              "filename": "comp_expressions_ok.input.bel",
+              "start_line": 25,
+              "start_column": 21,
+              "stop_line": 25,
+              "stop_column": 23
+            }
+          }
+        ],
+        [
+          "Comp.Expression.Variable",
+          {
+            "identifier": {
+              "name": "x2",
+              "location": {
+                "filename": "comp_expressions_ok.input.bel",
+                "start_line": 25,
+                "start_column": 24,
+                "stop_line": 25,
+                "stop_column": 26
+              }
+            },
+            "location": {
+              "filename": "comp_expressions_ok.input.bel",
+              "start_line": 25,
+              "start_column": 24,
+              "stop_line": 25,
+              "stop_column": 26
+            }
+          }
+        ],
+        [
+          "Comp.Expression.Variable",
+          {
+            "identifier": {
+              "name": "x3",
+              "location": {
+                "filename": "comp_expressions_ok.input.bel",
+                "start_line": 25,
+                "start_column": 27,
+                "stop_line": 25,
+                "stop_column": 29
+              }
+            },
+            "location": {
+              "filename": "comp_expressions_ok.input.bel",
+              "start_line": 25,
+              "start_column": 27,
+              "stop_line": 25,
+              "stop_column": 29
+            }
+          }
+        ]
+      ],
+      "location": {
+        "filename": "comp_expressions_ok.input.bel",
+        "start_line": 25,
+        "start_column": 1,
+        "stop_line": 25,
+        "stop_column": 29
+      }
+    }
   ]
 ]

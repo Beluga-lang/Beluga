@@ -372,58 +372,43 @@ let make_location_snippets locations =
                 (location, snippet)))
   |> Seq.to_list
 
-type stag = Format.stag = ..
-
-type stag += Ansi_bold | Ansi_bold_red | Ansi_bold_red_bg | Ansi_red
-
-exception Unsupported_stag of stag
-
 (* See ANSI escape sequences:
    https://gist.github.com/fnky/458719343aabd01cfb17a3a4f7296797 *)
-let mark_open_ansi_stags = function
-  | Ansi_bold -> "\027[1m"
-  | Ansi_bold_red -> "\027[1;31m"
-  | Ansi_bold_red_bg -> "\027[1;41m"
-  | Ansi_red -> "\027[31m"
-  | stag -> raise (Unsupported_stag stag)
 
-let mark_close_ansi_stags = function
-  | Ansi_bold
-  | Ansi_bold_red
-  | Ansi_bold_red_bg
-  | Ansi_red ->
-      "\027[0m"
-  | stag -> raise (Unsupported_stag stag)
+let bold ppv ppf x =
+  Format.fprintf ppf "@<0>%s%a@<0>%s" "\027[1m" ppv x "\027[0m"
 
-let with_ansi_stags =
-  Format.with_stags ~mark_open_stag:mark_open_ansi_stags
-    ~mark_close_stag:mark_close_ansi_stags
-    ~print_open_stag:(fun _ppf -> ())
-    ~print_close_stag:(fun _ppf -> ())
+let bold_red ppv ppf x =
+  Format.fprintf ppf "@<0>%s%a@<0>%s" "\027[1;31m" ppv x "\027[0m"
+
+let bold_red_bg ppv ppf x =
+  Format.fprintf ppf "@<0>%s%a@<0>%s" "\027[1;41m" ppv x "\027[0m"
+
+let red ppv ppf x =
+  Format.fprintf ppf "@<0>%s%a@<0>%s" "\027[31m" ppv x "\027[0m"
 
 let located_exception_printer cause_printer locations =
   try
     let snippets = make_location_snippets (List1.to_list locations) in
     if List.length snippets > 0 then
       let pp_snippet ppf (location, lines) =
-        Format.fprintf ppf "@[<v 0>@[%t@]:@,%a@]"
-          (Format.in_stag Ansi_bold
-             (Format.dprintf "%a" Location.pp location))
+        Format.fprintf ppf "@[<v 0>@[%a@]:@,%a@]" (bold Location.pp) location
           (List.pp ~pp_sep:Format.pp_print_cut (fun ppf (line, carets) ->
-               Format.fprintf ppf "%s@,%t" line
-                 (Format.in_stag Ansi_red (Format.dprintf "%s" carets))))
+               Format.fprintf ppf "%s@,%a" line
+                 (red Format.pp_print_string)
+                 carets))
           lines
       in
-      Format.dprintf "@[<v 0>%a@,@[<hov 0>%t %t@]@]"
+      Format.dprintf "@[<v 0>%a@,@[<hov 0>%a %t@]@]"
         (List.pp ~pp_sep:Format.pp_print_cut pp_snippet)
         snippets
-        (Format.in_stag Ansi_bold_red (Format.dprintf "Error:"))
-        cause_printer
+        (bold_red Format.pp_print_string)
+        "Error:" cause_printer
     else
       (* All locations in [locations] are ghost locations. *)
-      Format.dprintf "@[<v 0>%t @[%t@]@]"
-        (Format.in_stag Ansi_bold_red (Format.dprintf "Error:"))
-        cause_printer
+      Format.dprintf "@[<v 0>%a @[%t@]@]"
+        (bold_red Format.pp_print_string)
+        "Error:" cause_printer
   with
   | _ ->
       (* An exception occurred while trying to read the snippets. Report the
@@ -439,30 +424,28 @@ let () =
         let cause_printer = find_printer cause in
         located_exception_printer cause_printer locations
     | Composite_exception { causes } ->
-        Format.dprintf "@[<v 0>%a@]%!"
+        Format.dprintf "@[<v 0>%a@]"
           (List2.pp ~pp_sep:Format.pp_print_cut (fun ppf printer ->
                Format.fprintf ppf "@[%t@]" printer))
           (List2.map find_printer causes)
     | Aggregate_exception { exceptions } ->
-        Format.dprintf "@[<v 0>%a@]%!"
+        Format.dprintf "@[<v 0>%a@]"
           (List2.pp
              ~pp_sep:(fun ppf () -> Format.fprintf ppf "@,@,")
              (fun ppf printer -> Format.fprintf ppf "@[%t@]" printer))
           (List2.map find_printer exceptions)
     | Not_implemented msg ->
-        Format.dprintf "@[<hov 0>%t Please report this as a bug.@ %s@]%!"
-          (Format.in_stag Ansi_bold_red_bg
-             (Format.dprintf "Not implemented."))
-          msg
+        Format.dprintf "@[<hov 0>%a Please report this as a bug.@ %s@]"
+          (bold_red_bg Format.pp_print_string)
+          "Not implemented." msg
     | Sys_error msg ->
-        Format.dprintf "@[<v 0>%t %s@]%!"
-          (Format.in_stag Ansi_bold_red (Format.dprintf "System error:"))
-          msg
+        Format.dprintf "@[<v 0>%a %s@]"
+          (bold_red Format.pp_print_string)
+          "System error:" msg
     | Violation msg ->
-        Format.dprintf "@[<hov 0>%t Please report this as a bug.@ %s@]%!"
-          (Format.in_stag Ansi_bold_red_bg
-             (Format.dprintf "Internal error."))
-          msg
+        Format.dprintf "@[<hov 0>%a Please report this as a bug.@ %s@]"
+          (bold_red_bg Format.pp_print_string)
+          "Internal error." msg
     | cause -> raise_unsupported_exception_printing cause)
 
 let () =
@@ -474,18 +457,18 @@ let () =
             if Printexc.backtrace_status () then
               (* [backtrace] is non-empty. *)
               Format.dprintf
-                "@[<hov 0>%t@ Please report this as a bug.@ %s@ %s@]@."
-                (Format.in_stag Ansi_bold_red_bg
-                   (Format.dprintf "Uncaught exception:"))
+                "@[<hov 0>%a@ Please report this as a bug.@ %s@ %s@]@."
+                (bold_red_bg Format.pp_print_string)
+                "Uncaught exception:"
                 (Printexc.to_string_default exn)
                 (Printexc.raw_backtrace_to_string backtrace)
             else
               (* [backtrace] is empty since bracktrace recording was not
                  enabled. *)
               Format.dprintf
-                "@[<hov 0>%t@ Please report this as a bug.@ %s@]@."
-                (Format.in_stag Ansi_bold_red_bg
-                   (Format.dprintf "Uncaught exception:"))
+                "@[<hov 0>%a@ Please report this as a bug.@ %s@]@."
+                (bold_red_bg Format.pp_print_string)
+                "Uncaught exception:"
                 (Printexc.to_string_default exn)
       in
-      with_ansi_stags exn_printer Format.err_formatter)
+      exn_printer Format.err_formatter)

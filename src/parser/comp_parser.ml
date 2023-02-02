@@ -704,15 +704,19 @@ module Make
 
   let comp_sort_object = Comp_parsers.comp_sort_object
 
-  let comp_pattern = Comp_parsers.comp_pattern_object
+  let comp_pattern =
+    Comp_parsers.comp_pattern_object |> labelled "Computation-level pattern"
 
-  let comp_expression = Comp_parsers.comp_expression_object
+  let comp_expression =
+    Comp_parsers.comp_expression_object
+    |> labelled "Computation-level expression"
 
-  let comp_context = Comp_parsers.comp_context
+  let comp_context =
+    Comp_parsers.comp_context |> labelled "Computation-level context"
 
-  let comp_kind = comp_sort_object
+  let comp_kind = comp_sort_object |> labelled "Computation-level kind"
 
-  let comp_typ = comp_sort_object
+  let comp_typ = comp_sort_object |> labelled "Computation-level type"
 
   let () =
     Error.register_exception_printer (function

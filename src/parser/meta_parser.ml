@@ -260,13 +260,15 @@ module Make
       choice [ non_empty; empty ]
   end
 
-  let schema = Meta_parsers.schema_object
+  let schema = Meta_parsers.schema_object |> labelled "Schema"
 
-  let meta_type = Meta_parsers.meta_type
+  let meta_type = Meta_parsers.meta_type |> labelled "Meta-type"
 
-  let meta_object = Meta_parsers.meta_object
+  let meta_object = Meta_parsers.meta_object |> labelled "Meta-object"
 
-  let meta_pattern = Meta_parsers.meta_object
+  let meta_pattern =
+    Meta_parsers.meta_object |> labelled "Meta-object pattern"
 
-  let meta_context = Meta_parsers.meta_context
+  let meta_context =
+    Meta_parsers.meta_context |> labelled "Meta-level context"
 end

@@ -265,11 +265,11 @@ module Make
 
   let lf_object = LF_parsers.lf_object
 
-  let lf_kind = lf_object
+  let lf_kind = lf_object |> labelled "LF kind"
 
-  let lf_typ = lf_object
+  let lf_typ = lf_object |> labelled "LF type"
 
-  let lf_term = lf_object
+  let lf_term = lf_object |> labelled "LF term"
 
   let () =
     Error.register_exception_printer (function

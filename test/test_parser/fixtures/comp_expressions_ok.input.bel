@@ -43,3 +43,27 @@ case l of
 
 case x of --not x => x
 ;;
+
+x .hd
+;;
+
+x .tl
+;;
+
+x .tl .hd
+;;
+
+x .tl .tl .hd
+;;
+
+x .Stream.hd
+;;
+
+x .Stream.tl .Stream.tl
+;;
+
+(x) .Stream.tl
+;;
+
+Util.Nat.fib .tl .hd
+;;

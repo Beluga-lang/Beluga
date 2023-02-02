@@ -1,3 +1,17 @@
 % The following is a list of `;;`-terminated syntactically invalid
 % computation-level expressions with respect to the disambiguation state
 % `disambiguation_state.json`.
+
+% `nil' is a constructor
+x .nil
+;;
+
+x .tl .nil .tl
+;;
+
+x .tl .hd .nil
+;;
+
+% Non-linear patterns
+case x of (x, x) => x
+;;

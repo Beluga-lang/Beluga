@@ -139,6 +139,21 @@
               "fixity": "prefix",
               "arity": 1,
               "precedence": 1
+            },
+            {
+              "sort": "program_constant",
+              "identifier": "fact"
+            },
+            {
+              "sort": "program_constant",
+              "identifier": "plus",
+              "fixity": "infix",
+              "associativity": "right_associative",
+              "precedence": 2
+            },
+            {
+              "sort": "program_constant",
+              "identifier": "fib"
             }
           ]
         }
@@ -358,6 +373,28 @@
       "fixity": "infix",
       "associativity": "right_associative",
       "precedence": 3
+    },
+    {
+      "sort": "comp_destructor",
+      "identifier": "tl"
+    },
+    {
+      "sort": "comp_destructor",
+      "identifier": "hd"
+    },
+    {
+      "sort": "module",
+      "identifier": "Stream",
+      "entries": [
+        {
+          "sort": "comp_destructor",
+          "identifier": "tl"
+        },
+        {
+          "sort": "comp_destructor",
+          "identifier": "hd"
+        }
+      ]
     }
   ]
 }

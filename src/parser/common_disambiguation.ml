@@ -171,6 +171,15 @@ module type BINDINGS_STATE = sig
 
   val lookup_toplevel : Identifier.t -> (entry * data, exn) Result.t t
 
+  val partial_lookup' :
+       Identifier.t List1.t
+    -> [ `Partially_bound of
+         (Identifier.t * (entry * data)) List1.t * Identifier.t List1.t
+       | `Totally_bound of (Identifier.t * (entry * data)) List1.t
+       | `Totally_unbound of Identifier.t List1.t
+       ]
+       t
+
   val partial_lookup :
        Qualified_identifier.t
     -> [ `Partially_bound of
@@ -482,6 +491,11 @@ module Disambiguation_state : DISAMBIGUATION_STATE = struct
         | Binding_tree.Unbound_identifier _ ->
             `Totally_unbound
               (List1.append (List1.from x xs) (List1.singleton identifier)))
+
+  let partial_lookup' query =
+    let namespaces, identifier = List1.unsnoc query in
+    let* bindings = get_bindings in
+    return (partial_lookup_nested namespaces identifier bindings)
 
   let partial_lookup query =
     let identifier = Qualified_identifier.name query

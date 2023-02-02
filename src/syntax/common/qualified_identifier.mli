@@ -60,6 +60,17 @@ val namespaces : t -> Identifier.t List.t
     For instance, if [qid = Util.Nat.z], then [name qid = "z"]. *)
 val name : t -> Identifier.t
 
+(** {1 Interoperability} *)
+
+(** [from_list1 (x1, \[x2; x3; ...; xn\])] is the qualified identifier with
+    namespaces [\[x1; x2; ...; x(n-1)\]] and name [xn]. *)
+val from_list1 : Identifier.t List1.t -> t
+
+(** [to_list1 id] is the non-empty list [(x1, \[x2; x3; ...; xn\])] where
+    [\[x1; x2; ...; x(n-1)\]] are the namespaces of [id], and [xn] is the
+    name of [id]. *)
+val to_list1 : t -> Identifier.t List1.t
+
 (** {1 Instances} *)
 
 (** Equality of qualified identifiers by namespaces and names. Locations are

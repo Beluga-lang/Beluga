@@ -1693,5 +1693,674 @@
         "stop_column": 23
       }
     }
+  ],
+  [
+    "Comp.Expression.Observation",
+    {
+      "scrutinee": [
+        "Comp.Expression.Variable",
+        {
+          "identifier": {
+            "name": "x",
+            "location": {
+              "filename": "comp_expressions_ok.input.bel",
+              "start_line": 47,
+              "start_column": 1,
+              "stop_line": 47,
+              "stop_column": 2
+            }
+          },
+          "location": {
+            "filename": "comp_expressions_ok.input.bel",
+            "start_line": 47,
+            "start_column": 1,
+            "stop_line": 47,
+            "stop_column": 2
+          }
+        }
+      ],
+      "destructor": {
+        "name": {
+          "name": "hd",
+          "location": {
+            "filename": "comp_expressions_ok.input.bel",
+            "start_line": 47,
+            "start_column": 3,
+            "stop_line": 47,
+            "stop_column": 6
+          }
+        },
+        "namespaces": [],
+        "location": {
+          "filename": "comp_expressions_ok.input.bel",
+          "start_line": 47,
+          "start_column": 3,
+          "stop_line": 47,
+          "stop_column": 6
+        }
+      },
+      "location": {
+        "filename": "comp_expressions_ok.input.bel",
+        "start_line": 47,
+        "start_column": 1,
+        "stop_line": 47,
+        "stop_column": 6
+      }
+    }
+  ],
+  [
+    "Comp.Expression.Observation",
+    {
+      "scrutinee": [
+        "Comp.Expression.Variable",
+        {
+          "identifier": {
+            "name": "x",
+            "location": {
+              "filename": "comp_expressions_ok.input.bel",
+              "start_line": 50,
+              "start_column": 1,
+              "stop_line": 50,
+              "stop_column": 2
+            }
+          },
+          "location": {
+            "filename": "comp_expressions_ok.input.bel",
+            "start_line": 50,
+            "start_column": 1,
+            "stop_line": 50,
+            "stop_column": 2
+          }
+        }
+      ],
+      "destructor": {
+        "name": {
+          "name": "tl",
+          "location": {
+            "filename": "comp_expressions_ok.input.bel",
+            "start_line": 50,
+            "start_column": 3,
+            "stop_line": 50,
+            "stop_column": 6
+          }
+        },
+        "namespaces": [],
+        "location": {
+          "filename": "comp_expressions_ok.input.bel",
+          "start_line": 50,
+          "start_column": 3,
+          "stop_line": 50,
+          "stop_column": 6
+        }
+      },
+      "location": {
+        "filename": "comp_expressions_ok.input.bel",
+        "start_line": 50,
+        "start_column": 1,
+        "stop_line": 50,
+        "stop_column": 6
+      }
+    }
+  ],
+  [
+    "Comp.Expression.Observation",
+    {
+      "scrutinee": [
+        "Comp.Expression.Observation",
+        {
+          "scrutinee": [
+            "Comp.Expression.Variable",
+            {
+              "identifier": {
+                "name": "x",
+                "location": {
+                  "filename": "comp_expressions_ok.input.bel",
+                  "start_line": 53,
+                  "start_column": 1,
+                  "stop_line": 53,
+                  "stop_column": 2
+                }
+              },
+              "location": {
+                "filename": "comp_expressions_ok.input.bel",
+                "start_line": 53,
+                "start_column": 1,
+                "stop_line": 53,
+                "stop_column": 2
+              }
+            }
+          ],
+          "destructor": {
+            "name": {
+              "name": "tl",
+              "location": {
+                "filename": "comp_expressions_ok.input.bel",
+                "start_line": 53,
+                "start_column": 3,
+                "stop_line": 53,
+                "stop_column": 6
+              }
+            },
+            "namespaces": [],
+            "location": {
+              "filename": "comp_expressions_ok.input.bel",
+              "start_line": 53,
+              "start_column": 3,
+              "stop_line": 53,
+              "stop_column": 6
+            }
+          },
+          "location": {
+            "filename": "comp_expressions_ok.input.bel",
+            "start_line": 53,
+            "start_column": 1,
+            "stop_line": 53,
+            "stop_column": 6
+          }
+        }
+      ],
+      "destructor": {
+        "name": {
+          "name": "hd",
+          "location": {
+            "filename": "comp_expressions_ok.input.bel",
+            "start_line": 53,
+            "start_column": 7,
+            "stop_line": 53,
+            "stop_column": 10
+          }
+        },
+        "namespaces": [],
+        "location": {
+          "filename": "comp_expressions_ok.input.bel",
+          "start_line": 53,
+          "start_column": 7,
+          "stop_line": 53,
+          "stop_column": 10
+        }
+      },
+      "location": {
+        "filename": "comp_expressions_ok.input.bel",
+        "start_line": 53,
+        "start_column": 1,
+        "stop_line": 53,
+        "stop_column": 10
+      }
+    }
+  ],
+  [
+    "Comp.Expression.Observation",
+    {
+      "scrutinee": [
+        "Comp.Expression.Observation",
+        {
+          "scrutinee": [
+            "Comp.Expression.Observation",
+            {
+              "scrutinee": [
+                "Comp.Expression.Variable",
+                {
+                  "identifier": {
+                    "name": "x",
+                    "location": {
+                      "filename": "comp_expressions_ok.input.bel",
+                      "start_line": 56,
+                      "start_column": 1,
+                      "stop_line": 56,
+                      "stop_column": 2
+                    }
+                  },
+                  "location": {
+                    "filename": "comp_expressions_ok.input.bel",
+                    "start_line": 56,
+                    "start_column": 1,
+                    "stop_line": 56,
+                    "stop_column": 2
+                  }
+                }
+              ],
+              "destructor": {
+                "name": {
+                  "name": "tl",
+                  "location": {
+                    "filename": "comp_expressions_ok.input.bel",
+                    "start_line": 56,
+                    "start_column": 3,
+                    "stop_line": 56,
+                    "stop_column": 6
+                  }
+                },
+                "namespaces": [],
+                "location": {
+                  "filename": "comp_expressions_ok.input.bel",
+                  "start_line": 56,
+                  "start_column": 3,
+                  "stop_line": 56,
+                  "stop_column": 6
+                }
+              },
+              "location": {
+                "filename": "comp_expressions_ok.input.bel",
+                "start_line": 56,
+                "start_column": 1,
+                "stop_line": 56,
+                "stop_column": 6
+              }
+            }
+          ],
+          "destructor": {
+            "name": {
+              "name": "tl",
+              "location": {
+                "filename": "comp_expressions_ok.input.bel",
+                "start_line": 56,
+                "start_column": 7,
+                "stop_line": 56,
+                "stop_column": 10
+              }
+            },
+            "namespaces": [],
+            "location": {
+              "filename": "comp_expressions_ok.input.bel",
+              "start_line": 56,
+              "start_column": 7,
+              "stop_line": 56,
+              "stop_column": 10
+            }
+          },
+          "location": {
+            "filename": "comp_expressions_ok.input.bel",
+            "start_line": 56,
+            "start_column": 1,
+            "stop_line": 56,
+            "stop_column": 10
+          }
+        }
+      ],
+      "destructor": {
+        "name": {
+          "name": "hd",
+          "location": {
+            "filename": "comp_expressions_ok.input.bel",
+            "start_line": 56,
+            "start_column": 11,
+            "stop_line": 56,
+            "stop_column": 14
+          }
+        },
+        "namespaces": [],
+        "location": {
+          "filename": "comp_expressions_ok.input.bel",
+          "start_line": 56,
+          "start_column": 11,
+          "stop_line": 56,
+          "stop_column": 14
+        }
+      },
+      "location": {
+        "filename": "comp_expressions_ok.input.bel",
+        "start_line": 56,
+        "start_column": 1,
+        "stop_line": 56,
+        "stop_column": 14
+      }
+    }
+  ],
+  [
+    "Comp.Expression.Observation",
+    {
+      "scrutinee": [
+        "Comp.Expression.Variable",
+        {
+          "identifier": {
+            "name": "x",
+            "location": {
+              "filename": "comp_expressions_ok.input.bel",
+              "start_line": 59,
+              "start_column": 1,
+              "stop_line": 59,
+              "stop_column": 2
+            }
+          },
+          "location": {
+            "filename": "comp_expressions_ok.input.bel",
+            "start_line": 59,
+            "start_column": 1,
+            "stop_line": 59,
+            "stop_column": 2
+          }
+        }
+      ],
+      "destructor": {
+        "name": {
+          "name": "hd",
+          "location": {
+            "filename": "comp_expressions_ok.input.bel",
+            "start_line": 59,
+            "start_column": 10,
+            "stop_line": 59,
+            "stop_column": 13
+          }
+        },
+        "namespaces": [
+          {
+            "name": "Stream",
+            "location": {
+              "filename": "comp_expressions_ok.input.bel",
+              "start_line": 59,
+              "start_column": 3,
+              "stop_line": 59,
+              "stop_column": 10
+            }
+          }
+        ],
+        "location": {
+          "filename": "comp_expressions_ok.input.bel",
+          "start_line": 59,
+          "start_column": 3,
+          "stop_line": 59,
+          "stop_column": 13
+        }
+      },
+      "location": {
+        "filename": "comp_expressions_ok.input.bel",
+        "start_line": 59,
+        "start_column": 1,
+        "stop_line": 59,
+        "stop_column": 13
+      }
+    }
+  ],
+  [
+    "Comp.Expression.Observation",
+    {
+      "scrutinee": [
+        "Comp.Expression.Observation",
+        {
+          "scrutinee": [
+            "Comp.Expression.Variable",
+            {
+              "identifier": {
+                "name": "x",
+                "location": {
+                  "filename": "comp_expressions_ok.input.bel",
+                  "start_line": 62,
+                  "start_column": 1,
+                  "stop_line": 62,
+                  "stop_column": 2
+                }
+              },
+              "location": {
+                "filename": "comp_expressions_ok.input.bel",
+                "start_line": 62,
+                "start_column": 1,
+                "stop_line": 62,
+                "stop_column": 2
+              }
+            }
+          ],
+          "destructor": {
+            "name": {
+              "name": "tl",
+              "location": {
+                "filename": "comp_expressions_ok.input.bel",
+                "start_line": 62,
+                "start_column": 10,
+                "stop_line": 62,
+                "stop_column": 13
+              }
+            },
+            "namespaces": [
+              {
+                "name": "Stream",
+                "location": {
+                  "filename": "comp_expressions_ok.input.bel",
+                  "start_line": 62,
+                  "start_column": 3,
+                  "stop_line": 62,
+                  "stop_column": 10
+                }
+              }
+            ],
+            "location": {
+              "filename": "comp_expressions_ok.input.bel",
+              "start_line": 62,
+              "start_column": 3,
+              "stop_line": 62,
+              "stop_column": 13
+            }
+          },
+          "location": {
+            "filename": "comp_expressions_ok.input.bel",
+            "start_line": 62,
+            "start_column": 1,
+            "stop_line": 62,
+            "stop_column": 13
+          }
+        }
+      ],
+      "destructor": {
+        "name": {
+          "name": "tl",
+          "location": {
+            "filename": "comp_expressions_ok.input.bel",
+            "start_line": 62,
+            "start_column": 21,
+            "stop_line": 62,
+            "stop_column": 24
+          }
+        },
+        "namespaces": [
+          {
+            "name": "Stream",
+            "location": {
+              "filename": "comp_expressions_ok.input.bel",
+              "start_line": 62,
+              "start_column": 14,
+              "stop_line": 62,
+              "stop_column": 21
+            }
+          }
+        ],
+        "location": {
+          "filename": "comp_expressions_ok.input.bel",
+          "start_line": 62,
+          "start_column": 14,
+          "stop_line": 62,
+          "stop_column": 24
+        }
+      },
+      "location": {
+        "filename": "comp_expressions_ok.input.bel",
+        "start_line": 62,
+        "start_column": 1,
+        "stop_line": 62,
+        "stop_column": 24
+      }
+    }
+  ],
+  [
+    "Comp.Expression.Observation",
+    {
+      "scrutinee": [
+        "Comp.Expression.Variable",
+        {
+          "identifier": {
+            "name": "x",
+            "location": {
+              "filename": "comp_expressions_ok.input.bel",
+              "start_line": 65,
+              "start_column": 2,
+              "stop_line": 65,
+              "stop_column": 3
+            }
+          },
+          "location": {
+            "filename": "comp_expressions_ok.input.bel",
+            "start_line": 65,
+            "start_column": 1,
+            "stop_line": 65,
+            "stop_column": 4
+          }
+        }
+      ],
+      "destructor": {
+        "name": {
+          "name": "tl",
+          "location": {
+            "filename": "comp_expressions_ok.input.bel",
+            "start_line": 65,
+            "start_column": 12,
+            "stop_line": 65,
+            "stop_column": 15
+          }
+        },
+        "namespaces": [
+          {
+            "name": "Stream",
+            "location": {
+              "filename": "comp_expressions_ok.input.bel",
+              "start_line": 65,
+              "start_column": 5,
+              "stop_line": 65,
+              "stop_column": 12
+            }
+          }
+        ],
+        "location": {
+          "filename": "comp_expressions_ok.input.bel",
+          "start_line": 65,
+          "start_column": 5,
+          "stop_line": 65,
+          "stop_column": 15
+        }
+      },
+      "location": {
+        "filename": "comp_expressions_ok.input.bel",
+        "start_line": 65,
+        "start_column": 1,
+        "stop_line": 65,
+        "stop_column": 15
+      }
+    }
+  ],
+  [
+    "Comp.Expression.Observation",
+    {
+      "scrutinee": [
+        "Comp.Expression.Observation",
+        {
+          "scrutinee": [
+            "Comp.Expression.Constant",
+            {
+              "identifier": {
+                "name": {
+                  "name": "fib",
+                  "location": {
+                    "filename": "comp_expressions_ok.input.bel",
+                    "start_line": 68,
+                    "start_column": 9,
+                    "stop_line": 68,
+                    "stop_column": 13
+                  }
+                },
+                "namespaces": [
+                  {
+                    "name": "Util",
+                    "location": {
+                      "filename": "comp_expressions_ok.input.bel",
+                      "start_line": 68,
+                      "start_column": 1,
+                      "stop_line": 68,
+                      "stop_column": 5
+                    }
+                  },
+                  {
+                    "name": "Nat",
+                    "location": {
+                      "filename": "comp_expressions_ok.input.bel",
+                      "start_line": 68,
+                      "start_column": 5,
+                      "stop_line": 68,
+                      "stop_column": 9
+                    }
+                  }
+                ],
+                "location": {
+                  "filename": "comp_expressions_ok.input.bel",
+                  "start_line": 68,
+                  "start_column": 1,
+                  "stop_line": 68,
+                  "stop_column": 13
+                }
+              },
+              "prefixed": false,
+              "operator": null,
+              "location": {
+                "filename": "comp_expressions_ok.input.bel",
+                "start_line": 68,
+                "start_column": 1,
+                "stop_line": 68,
+                "stop_column": 13
+              }
+            }
+          ],
+          "destructor": {
+            "name": {
+              "name": "tl",
+              "location": {
+                "filename": "comp_expressions_ok.input.bel",
+                "start_line": 68,
+                "start_column": 14,
+                "stop_line": 68,
+                "stop_column": 17
+              }
+            },
+            "namespaces": [],
+            "location": {
+              "filename": "comp_expressions_ok.input.bel",
+              "start_line": 68,
+              "start_column": 14,
+              "stop_line": 68,
+              "stop_column": 17
+            }
+          },
+          "location": {
+            "filename": "comp_expressions_ok.input.bel",
+            "start_line": 68,
+            "start_column": 1,
+            "stop_line": 68,
+            "stop_column": 17
+          }
+        }
+      ],
+      "destructor": {
+        "name": {
+          "name": "hd",
+          "location": {
+            "filename": "comp_expressions_ok.input.bel",
+            "start_line": 68,
+            "start_column": 18,
+            "stop_line": 68,
+            "stop_column": 21
+          }
+        },
+        "namespaces": [],
+        "location": {
+          "filename": "comp_expressions_ok.input.bel",
+          "start_line": 68,
+          "start_column": 18,
+          "stop_line": 68,
+          "stop_column": 21
+        }
+      },
+      "location": {
+        "filename": "comp_expressions_ok.input.bel",
+        "start_line": 68,
+        "start_column": 1,
+        "stop_line": 68,
+        "stop_column": 21
+      }
+    }
   ]
 ]

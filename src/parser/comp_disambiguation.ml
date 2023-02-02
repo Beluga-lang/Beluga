@@ -74,6 +74,8 @@ exception
 
 exception Expected_program_or_constructor_constant of Qualified_identifier.t
 
+exception Unbound_comp_term_destructor_constant of Qualified_identifier.t
+
 exception Illegal_duplicate_pattern_variables
 
 (** {2 Exceptions for expression-level application rewriting} *)
@@ -1015,9 +1017,97 @@ module Make
             return (Synext.Comp.Expression.Variable { location; identifier })
         | Result.Error cause -> Error.raise_at1 location cause)
     | Synprs.Comp.Expression_object.Raw_qualified_identifier
-        { location; identifier; prefixed } ->
-        (* TODO: Can be the observation(s) of a variable *)
-        Obj.magic ()
+        { location; identifier; prefixed } -> (
+        (* Qualified identifiers without namespaces were parsed as plain
+           identifiers *)
+        assert (List.length (Qualified_identifier.namespaces identifier) >= 1);
+        (* As a computation-level expression, identifiers of the form
+           [<identifier> <dot-identifier>+] are computation-level variables
+           or constants with optionally trailing observation constants.
+
+           Examples include:
+
+           - [List.nil] (constructor)
+
+           - [Math.fact] (program)
+
+           - [Stream.nil .tl .hd] (constructor with observations [.tl .hd])
+
+           - [fibonacci .tl] (variable/program with observation [.tl]) *)
+        partial_lookup identifier >>= function
+        | `Totally_unbound (List1.T (free_variable, rest))
+        (* A free computation-level variable with (possibly) trailing
+           observations *) -> (
+            let location = Identifier.location free_variable in
+            let scrutinee =
+              Synext.Comp.Expression.Variable
+                { location; identifier = free_variable }
+            in
+            match rest with
+            | [] -> return scrutinee
+            | x :: xs ->
+                disambiguate_trailing_observations scrutinee
+                  (List1.from x xs))
+        | `Partially_bound (bound_segments, unbound_segments) -> (
+            match bound_segments with
+            | List1.T ((variable, (Computation_variable, _)), [])
+            (* A bound computation-level variable with trailing
+               observations *) ->
+                let location = Identifier.location variable in
+                let scrutinee =
+                  Synext.Comp.Expression.Variable
+                    { location; identifier = variable }
+                in
+                disambiguate_trailing_observations scrutinee unbound_segments
+            | bound_segments -> (
+                let bound_segments_identifier =
+                  Qualified_identifier.from_list1
+                    (List1.map Pair.fst bound_segments)
+                in
+                match List1.last bound_segments with
+                | ( _identifier
+                  , ( (Computation_term_constructor | Program_constant)
+                    , { operator; _ } ) )
+                (* [bound_segments] forms a valid constant *) ->
+                    let location =
+                      Qualified_identifier.location bound_segments_identifier
+                    in
+                    let scrutinee =
+                      Synext.Comp.Expression.Constant
+                        { location
+                        ; identifier = bound_segments_identifier
+                        ; operator
+                        ; prefixed =
+                            false
+                            (* [unbound_segments] is non-empty, so the
+                               parentheses do not force the constant to be
+                               prefixed *)
+                        }
+                    in
+                    disambiguate_trailing_observations scrutinee
+                      unbound_segments
+                | ( _identifier
+                  , entry (* [bound_segments] forms an invalid constant *) )
+                  ->
+                    Error.raise_at1 location
+                      (Error.composite_exception2
+                         (Expected_program_or_constructor_constant
+                            bound_segments_identifier)
+                         (actual_binding_exn bound_segments_identifier entry))
+                ))
+        | `Totally_bound bound_segments (* A constant *) -> (
+            match List1.last bound_segments with
+            | ( _identifier
+              , ( (Computation_term_constructor | Program_constant)
+                , { operator; _ } ) ) ->
+                return
+                  (Synext.Comp.Expression.Constant
+                     { location; identifier; operator; prefixed })
+            | _identifier, entry ->
+                Error.raise_at1 location
+                  (Error.composite_exception2
+                     (Expected_program_or_constructor_constant identifier)
+                     (actual_binding_exn identifier entry))))
     | Synprs.Comp.Expression_object.Raw_fn { location; parameters; body } ->
         let* body' =
           (with_function_parameters parameters)
@@ -1153,10 +1243,66 @@ module Make
           (Synext.Comp.Expression.Type_annotated
              { location; expression = expression'; typ = typ' })
     | Synprs.Comp.Expression_object.Raw_observation
-        { location; scrutinee; destructor } ->
-        (* TODO: [destructor] may be multiple observations `(nats 2) .tl
-           .tl' *)
-        Obj.magic ()
+        { scrutinee; destructor; _ } ->
+        (* Observations of variables or constants is handled in the
+           disambiguation of qualified identifiers. *)
+        let* scrutinee' = disambiguate_comp_expression scrutinee in
+        disambiguate_trailing_observations scrutinee'
+          (Qualified_identifier.to_list1 destructor)
+
+  and disambiguate_trailing_observations scrutinee trailing_identifiers =
+    partial_lookup' trailing_identifiers >>= function
+    | `Totally_unbound _ ->
+        let qualified_identifier =
+          Qualified_identifier.from_list1 trailing_identifiers
+        in
+        Error.raise_at1
+          (Qualified_identifier.location qualified_identifier)
+          (Unbound_comp_term_destructor_constant qualified_identifier)
+    | `Partially_bound (bound_segments, unbound_segments) -> (
+        let bound_segments_identifier =
+          Qualified_identifier.from_list1 (List1.map Pair.fst bound_segments)
+        in
+        match List1.last bound_segments with
+        | _identifier, (Computation_term_destructor, _)
+        (* [bound_segments] forms a destructor *) ->
+            let destructor = bound_segments_identifier in
+            let location =
+              Location.join
+                (Synext.location_of_comp_expression scrutinee)
+                (Qualified_identifier.location destructor)
+            in
+            let scrutinee' =
+              Synext.Comp.Expression.Observation
+                { scrutinee; destructor; location }
+            in
+            disambiguate_trailing_observations scrutinee' unbound_segments
+        | _identifier, _entry
+        (* [bound_segments] forms an invalid constant *) ->
+            Error.raise_at1
+              (Qualified_identifier.location bound_segments_identifier)
+              Expected_comp_term_destructor_constant)
+    | `Totally_bound bound_segments -> (
+        let bound_segments_identifier =
+          Qualified_identifier.from_list1 (List1.map Pair.fst bound_segments)
+        in
+        match List1.last bound_segments with
+        | _identifier, (Computation_term_destructor, _)
+        (* [bound_segments] forms a destructor *) ->
+            let destructor = bound_segments_identifier in
+            let location =
+              Location.join
+                (Synext.location_of_comp_expression scrutinee)
+                (Qualified_identifier.location destructor)
+            in
+            return
+              (Synext.Comp.Expression.Observation
+                 { scrutinee; destructor; location })
+        | _identifier, _entry
+        (* [bound_segments] forms an invalid constant *) ->
+            Error.raise_at1
+              (Qualified_identifier.location bound_segments_identifier)
+              Expected_comp_term_destructor_constant)
 
   and elaborate_comp_expression_operand operand =
     match operand with
@@ -1615,6 +1761,7 @@ module Make_pattern_disambiguator
         | Result.Error (Unbound_identifier _) ->
             (* [identifier] does not appear in the state, so it is a free
                variable. *)
+            let* () = add_pattern_comp_variable identifier in
             return (Synext.Comp.Pattern.Variable { location; identifier })
         | Result.Error cause -> Error.raise_at1 location cause)
     | Synprs.Comp.Pattern_object.Raw_qualified_identifier

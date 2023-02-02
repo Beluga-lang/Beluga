@@ -39,6 +39,13 @@ let[@inline] namespaces { namespaces; _ } = namespaces
 
 let[@inline] name { name; _ } = name
 
+let from_list1 identifiers =
+  let namespaces, name = List1.unsnoc identifiers in
+  make ~namespaces name
+
+let to_list1 identifier =
+  List1.append_list identifier.namespaces (List1.singleton identifier.name)
+
 module type ORD = Ord.ORD
 
 module Ord =

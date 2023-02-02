@@ -431,15 +431,16 @@ module Make
 
   let clf_context_object = CLF_parsers.clf_context_object
 
-  let clf_typ = clf_object
+  let clf_typ = clf_object |> labelled "Contextual LF type"
 
-  let clf_term = clf_object
+  let clf_term = clf_object |> labelled "Contextual LF term"
 
-  let clf_term_pattern = clf_object
+  let clf_term_pattern = clf_object |> labelled "Contextual LF term pattern"
 
-  let clf_context = clf_context_object
+  let clf_context = clf_context_object |> labelled "Contextual LF context"
 
-  let clf_substitution = clf_context_object
+  let clf_substitution =
+    clf_context_object |> labelled "Contextual LF substitution"
 
   let () =
     Error.register_exception_printer (function

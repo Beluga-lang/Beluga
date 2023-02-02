@@ -550,7 +550,7 @@ module Make
           Format.dprintf "@[Failed to parse %t@]" cause_printer
       | Labelled_exception { label; cause } ->
           let cause_printer = Error.find_printer cause in
-          Format.dprintf "%s:@,@[%t@]" label cause_printer
+          Format.dprintf "%s.@;@[%t@]" label cause_printer
       | No_more_choices exceptions_rev ->
           let exception_printers =
             List.map Error.find_printer exceptions_rev

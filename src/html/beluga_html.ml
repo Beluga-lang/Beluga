@@ -122,195 +122,139 @@ module Make (Html_state : sig
 end) : BELUGA_HTML with type state = Html_state.state = struct
   include Html_state
 
-  type stag = Format.stag = ..
+  let[@inline] in_html ~start ~stop ppv ppf x =
+    Format.fprintf ppf "@<0>%s%a@<0>%s" start ppv x stop
 
-  (* Miscellaneous tags *)
-  type stag +=
-    | Keyword of { keyword : String.t }
-    | Pragma of { pragma_keyword : String.t }
-    | Toplevel_documentation_comment
-    | Inner_documentation_comment
-    | Preformatted_code
+  let pp_toplevel_documentation_html ppv ppf x =
+    in_html ~start:{|<div class="documentation">|} ~stop:{|</div>|} ppv ppf x
 
-  (* Variables *)
-  type stag +=
-    | Lf_variable
-    | Meta_variable
-    | Parameter_variable
-    | Substitution_variable
-    | Context_variable
-    | Computation_variable
+  let pp_inner_documentation_html ppv ppf x =
+    in_html ~start:{|<div class="inner-documentation">|} ~stop:{|</div>|} ppv
+      ppf x
 
-  (* Constant introductions *)
-  type stag +=
-    | Lf_type_constant of { id : String.t }
-    | Lf_term_constant of { id : String.t }
-    | Context_schema of { id : String.t }
-    | Computation_stratified_type_constant of { id : String.t }
-    | Computation_inductive_type_constant of { id : String.t }
-    | Computation_abbreviation_type_constant of { id : String.t }
-    | Computation_coinductive_type_constant of { id : String.t }
-    | Computation_destructor of { id : String.t }
-    | Computation_constructor of { id : String.t }
+  let pp_preformatted_code_html ppv ppf x =
+    in_html ~start:{|<pre><code>|} ~stop:{|</code></pre>|} ppv ppf x
 
-  (* Constant references *)
-  type stag +=
-    | Lf_type_constant_invoke of { id : String.t }
-    | Lf_term_constant_invoke of { id : String.t }
-    | Context_schema_invoke of { id : String.t }
-    | Computation_inductive_type_constant_invoke of { id : String.t }
-    | Computation_stratified_type_constant_invoke of { id : String.t }
-    | Computation_abbreviation_type_constant_invoke of { id : String.t }
-    | Computation_coinductive_type_constant_invoke of { id : String.t }
-    | Computation_constructor_invoke of { id : String.t }
-    | Computation_destructor_invoke of { id : String.t }
+  let pp_keyword ppf x =
+    in_html
+      ~start:(Format.asprintf {|<span class="keyword keyword-%s">|} x)
+      ~stop:{|</span>|} Format.pp_print_string ppf x
 
-  let with_stag ppf stag f =
-    Format.pp_open_stag ppf stag;
-    let y = f ppf in
-    Format.pp_close_stag ppf ();
-    y
+  let pp_pragma base ppv ppf x =
+    in_html
+      ~start:(Format.asprintf {|<span class="pragma pragma-%s">|} base)
+      ~stop:{|</span>|} ppv ppf x
 
-  let with_stag_identifier ppf stag identifier =
-    with_stag ppf stag (fun ppf -> Identifier.pp ppf identifier)
+  let pp_lf_variable ppv ppf x =
+    in_html ~start:{|<span class="variable lf-variable">|} ~stop:{|</span>|}
+      ppv ppf x
 
-  let with_stag_qualified_identifier ppf stag identifier =
-    with_stag ppf stag (fun ppf -> Qualified_identifier.pp ppf identifier)
+  let pp_meta_variable ppv ppf x =
+    in_html ~start:{|<span class="variable meta-variable">|}
+      ~stop:{|</span>|} ppv ppf x
 
-  let pp_keyword ppf keyword =
-    with_stag ppf
-      (Keyword { keyword })
-      (fun ppf -> Format.pp_print_string ppf keyword)
+  let pp_parameter_variable ppv ppf x =
+    in_html ~start:{|<span class="variable parameter-variable">|}
+      ~stop:{|</span>|} ppv ppf x
 
-  let with_pragma_stag _state pragma_keyword f ppf () =
-    with_stag ppf (Pragma { pragma_keyword }) f
+  let pp_substitution_variable ppv ppf x =
+    in_html ~start:{|<span class="variable substitution-variable">|}
+      ~stop:{|</span>|} ppv ppf x
 
-  let pp_toplevel_documentation_comment _state html ppf () =
-    with_stag ppf Toplevel_documentation_comment (fun ppf ->
-        Format.pp_print_string ppf html)
+  let pp_context_variable ppv ppf x =
+    in_html ~start:{|<span class="variable context-variable">|}
+      ~stop:{|</span>|} ppv ppf x
 
-  let pp_inner_documentation_comment _state html ppf () =
-    with_stag ppf Inner_documentation_comment (fun ppf ->
-        Format.pp_print_string ppf html)
+  let pp_computation_variable ppv ppf x =
+    in_html ~start:{|<span class="variable computation-variable">|}
+      ~stop:{|</span>|} ppv ppf x
 
-  let with_preformatted_code_stag _state f ppf () =
-    with_stag ppf Preformatted_code f
-
-  let pp_lf_variable _state ppf identifier =
-    with_stag_identifier ppf Lf_variable identifier
-
-  let pp_meta_variable _state ppf identifier =
-    with_stag_identifier ppf Meta_variable identifier
-
-  let pp_parameter_variable _state ppf identifier =
-    with_stag_identifier ppf Parameter_variable identifier
-
-  let pp_substitution_variable _state ppf identifier =
-    with_stag_identifier ppf Substitution_variable identifier
-
-  let pp_context_variable _state ppf identifier =
-    with_stag_identifier ppf Context_variable identifier
-
-  let pp_computation_variable _state ppf identifier =
-    with_stag_identifier ppf Computation_variable identifier
-
-  let pp_lf_type_constant state ppf identifier =
+  let pp_constant css_class state ppf identifier =
     let id = lookup_toplevel_id identifier state in
-    with_stag_identifier ppf (Lf_type_constant { id }) identifier
+    in_html
+      ~start:
+        (Format.asprintf {|<span id="%s" class="constant %s">|} id css_class)
+      ~stop:{|</span>|} Identifier.pp ppf identifier
 
-  let pp_lf_type_constant_invoke state ppf identifier =
+  let pp_constant_invoke css_class state ppf identifier =
     let id = lookup_id identifier state in
-    with_stag_qualified_identifier ppf
-      (Lf_type_constant_invoke { id })
-      identifier
+    in_html
+      ~start:
+        (Format.asprintf {|<span class="constant %s"><a href="#%s">|}
+           css_class id)
+      ~stop:{|</a></span>|} Qualified_identifier.pp ppf identifier
 
-  let pp_lf_term_constant state ppf identifier =
-    let id = lookup_toplevel_id identifier state in
-    with_stag_identifier ppf (Lf_term_constant { id }) identifier
+  let lf_type_constant_css_class = "lf-type-constant"
 
-  let pp_lf_term_constant_invoke state ppf identifier =
-    let id = lookup_id identifier state in
-    with_stag_qualified_identifier ppf
-      (Lf_term_constant_invoke { id })
-      identifier
+  let pp_lf_type_constant = pp_constant lf_type_constant_css_class
 
-  let pp_schema_constant state ppf identifier =
-    let id = lookup_toplevel_id identifier state in
-    with_stag_identifier ppf (Context_schema { id }) identifier
+  let pp_lf_type_constant_invoke =
+    pp_constant_invoke lf_type_constant_css_class
 
-  let pp_schema_constant_invoke state ppf identifier =
-    let id = lookup_id identifier state in
-    with_stag_qualified_identifier ppf
-      (Context_schema_invoke { id })
-      identifier
+  let lf_term_constant_css_class = "lf-term-constant"
 
-  let pp_computation_inductive_constant state ppf identifier =
-    let id = lookup_toplevel_id identifier state in
-    with_stag_identifier ppf
-      (Computation_inductive_type_constant { id })
-      identifier
+  let pp_lf_term_constant = pp_constant lf_term_constant_css_class
 
-  let pp_computation_inductive_constant_invoke state ppf identifier =
-    let id = lookup_id identifier state in
-    with_stag_qualified_identifier ppf
-      (Computation_inductive_type_constant_invoke { id })
-      identifier
+  let pp_lf_term_constant_invoke =
+    pp_constant_invoke lf_term_constant_css_class
 
-  let pp_computation_stratified_constant state ppf identifier =
-    let id = lookup_toplevel_id identifier state in
-    with_stag_identifier ppf
-      (Computation_stratified_type_constant { id })
-      identifier
+  let context_schema_css_class = "context-schema"
 
-  let pp_computation_stratified_constant_invoke state ppf identifier =
-    let id = lookup_id identifier state in
-    with_stag_qualified_identifier ppf
-      (Computation_stratified_type_constant_invoke { id })
-      identifier
+  let pp_schema_constant = pp_constant context_schema_css_class
 
-  let pp_computation_coinductive_constant state ppf identifier =
-    let id = lookup_toplevel_id identifier state in
-    with_stag_identifier ppf
-      (Computation_coinductive_type_constant { id })
-      identifier
+  let pp_schema_constant_invoke = pp_constant_invoke context_schema_css_class
 
-  let pp_computation_coinductive_constant_invoke state ppf identifier =
-    let id = lookup_id identifier state in
-    with_stag_qualified_identifier ppf
-      (Computation_coinductive_type_constant_invoke { id })
-      identifier
+  let computation_inductive_type_constant_css_class =
+    "computation-inductive-type-constant"
 
-  let pp_computation_abbreviation_constant state ppf identifier =
-    let id = lookup_toplevel_id identifier state in
-    with_stag_identifier ppf
-      (Computation_abbreviation_type_constant { id })
-      identifier
+  let pp_computation_inductive_constant =
+    pp_constant computation_inductive_type_constant_css_class
 
-  let pp_computation_abbreviation_constant_invoke state ppf identifier =
-    let id = lookup_id identifier state in
-    with_stag_qualified_identifier ppf
-      (Computation_abbreviation_type_constant_invoke { id })
-      identifier
+  let pp_computation_inductive_constant_invoke =
+    pp_constant_invoke computation_inductive_type_constant_css_class
 
-  let pp_computation_constructor state ppf identifier =
-    let id = lookup_toplevel_id identifier state in
-    with_stag_identifier ppf (Computation_constructor { id }) identifier
+  let computation_stratified_type_constant_css_class =
+    "computation-stratified-type-constant"
 
-  let pp_computation_constructor_invoke state ppf identifier =
-    let id = lookup_id identifier state in
-    with_stag_qualified_identifier ppf
-      (Computation_constructor_invoke { id })
-      identifier
+  let pp_computation_stratified_constant =
+    pp_constant computation_stratified_type_constant_css_class
 
-  let pp_computation_destructor state ppf identifier =
-    let id = lookup_toplevel_id identifier state in
-    with_stag_identifier ppf (Computation_destructor { id }) identifier
+  let pp_computation_stratified_constant_invoke =
+    pp_constant_invoke computation_stratified_type_constant_css_class
 
-  let pp_computation_destructor_invoke state ppf identifier =
-    let id = lookup_id identifier state in
-    with_stag_qualified_identifier ppf
-      (Computation_destructor_invoke { id })
-      identifier
+  let computation_coinductive_type_constant_css_class =
+    "computation-coinductive-type-constant"
+
+  let pp_computation_coinductive_constant =
+    pp_constant computation_coinductive_type_constant_css_class
+
+  let pp_computation_coinductive_constant_invoke =
+    pp_constant_invoke computation_coinductive_type_constant_css_class
+
+  let computation_abbreviation_type_constant_css_class =
+    "computation-abbreviation-type-constant"
+
+  let pp_computation_abbreviation_constant =
+    pp_constant computation_abbreviation_type_constant_css_class
+
+  let pp_computation_abbreviation_constant_invoke =
+    pp_constant_invoke computation_abbreviation_type_constant_css_class
+
+  let computation_constructor_css_class = "computation-constructor"
+
+  let pp_computation_constructor =
+    pp_constant computation_constructor_css_class
+
+  let pp_computation_constructor_invoke =
+    pp_constant_invoke computation_constructor_css_class
+
+  let computation_destructor_css_class = "computation-destructor"
+
+  let pp_computation_destructor =
+    pp_constant computation_destructor_css_class
+
+  let pp_computation_destructor_invoke =
+    pp_constant_invoke computation_destructor_css_class
 
   (** {1 Pretty-Printing LF Syntax} *)
 
@@ -413,10 +357,12 @@ end) : BELUGA_HTML with type state = Html_state.state = struct
         match (parameter_identifier, parameter_type) with
         | Option.Some parameter_identifier, Option.Some parameter_type ->
             Format.fprintf ppf "@[<hov 2>{%a :@ %a}@ %a@]"
-              (pp_lf_variable state) parameter_identifier (pp_lf_typ state)
-              parameter_type (pp_lf_typ state) body
+              (pp_lf_variable Identifier.pp)
+              parameter_identifier (pp_lf_typ state) parameter_type
+              (pp_lf_typ state) body
         | Option.Some parameter_identifier, Option.None ->
-            Format.fprintf ppf "@[<hov 2>{%a}@ %a@]" (pp_lf_variable state)
+            Format.fprintf ppf "@[<hov 2>{%a}@ %a@]"
+              (pp_lf_variable Identifier.pp)
               parameter_identifier (pp_lf_typ state) body
         | Option.None, Option.Some parameter_type ->
             Format.fprintf ppf "@[<hov 2>{_ :@ %a}@ %a@]" (pp_lf_typ state)
@@ -428,7 +374,7 @@ end) : BELUGA_HTML with type state = Html_state.state = struct
     let parent_precedence = precedence_of_lf_term term in
     match term with
     | LF.Term.Variable { identifier; _ } ->
-        (pp_lf_variable state) ppf identifier
+        (pp_lf_variable Identifier.pp) ppf identifier
     | LF.Term.Constant { identifier; prefixed = true; _ } ->
         Format.fprintf ppf "(%a)"
           (pp_lf_term_constant_invoke state)
@@ -464,12 +410,14 @@ end) : BELUGA_HTML with type state = Html_state.state = struct
             Format.fprintf ppf "@[<hov 2>\\_:%a.@ %a@]" (pp_lf_typ state)
               parameter_type (pp_lf_term state) body
         | Option.Some parameter_identifier, Option.None ->
-            Format.fprintf ppf "@[<hov 2>\\%a.@ %a@]" (pp_lf_variable state)
+            Format.fprintf ppf "@[<hov 2>\\%a.@ %a@]"
+              (pp_lf_variable Identifier.pp)
               parameter_identifier (pp_lf_term state) body
         | Option.Some parameter_identifier, Option.Some parameter_type ->
             Format.fprintf ppf "@[<hov 2>\\%a:%a.@ %a@]"
-              (pp_lf_variable state) parameter_identifier (pp_lf_typ state)
-              parameter_type (pp_lf_term state) body)
+              (pp_lf_variable Identifier.pp)
+              parameter_identifier (pp_lf_typ state) parameter_type
+              (pp_lf_term state) body)
     | LF.Term.Wildcard _ -> Format.fprintf ppf "_"
     | LF.Term.Type_annotated { term; typ; _ } ->
         (* Type ascriptions are left-associative *)
@@ -550,7 +498,7 @@ end) : BELUGA_HTML with type state = Html_state.state = struct
         Format.fprintf ppf "@[<hov 2>{%a :@ %a}@ %a@]"
           (fun ppf -> function
             | Option.Some parameter_identifier ->
-                (pp_lf_variable state) ppf parameter_identifier
+                (pp_lf_variable Identifier.pp) ppf parameter_identifier
             | Option.None -> Format.fprintf ppf "_")
           parameter_identifier (pp_clf_typ state) parameter_type
           (pp_clf_typ state) body
@@ -559,19 +507,20 @@ end) : BELUGA_HTML with type state = Html_state.state = struct
     | CLF.Typ.Block { elements = `Record nts; _ } ->
         Format.fprintf ppf "@[<hov 2>block (%a)]"
           (List1.pp ~pp_sep:Format.comma (fun ppf (i, t) ->
-               Format.fprintf ppf "%a :@ %a" (pp_lf_variable state) i
-                 (pp_clf_typ state) t))
+               Format.fprintf ppf "%a :@ %a"
+                 (pp_lf_variable Identifier.pp)
+                 i (pp_clf_typ state) t))
           nts
 
   and pp_clf_term state ppf term =
     let parent_precedence = precedence_of_clf_term term in
     match term with
     | CLF.Term.Variable { identifier; _ } ->
-        (pp_lf_variable state) ppf identifier
+        (pp_lf_variable Identifier.pp) ppf identifier
     | CLF.Term.Parameter_variable { identifier; _ } ->
-        (pp_parameter_variable state) ppf identifier
+        (pp_parameter_variable Identifier.pp) ppf identifier
     | CLF.Term.Substitution_variable { identifier; _ } ->
-        (pp_substitution_variable state) ppf identifier
+        (pp_substitution_variable Identifier.pp) ppf identifier
     | CLF.Term.Constant { identifier; prefixed = true; _ } ->
         Format.fprintf ppf "(%a)"
           (pp_lf_term_constant_invoke state)
@@ -607,12 +556,14 @@ end) : BELUGA_HTML with type state = Html_state.state = struct
             Format.fprintf ppf "@[<hov 2>\\_:%a.@ %a@]" (pp_clf_typ state)
               parameter_type (pp_clf_term state) body
         | Option.Some parameter_identifier, Option.None ->
-            Format.fprintf ppf "@[<hov 2>\\%a.@ %a@]" (pp_lf_variable state)
+            Format.fprintf ppf "@[<hov 2>\\%a.@ %a@]"
+              (pp_lf_variable Identifier.pp)
               parameter_identifier (pp_clf_term state) body
         | Option.Some parameter_identifier, Option.Some parameter_type ->
             Format.fprintf ppf "@[<hov 2>\\%a:%a.@ %a@]"
-              (pp_lf_variable state) parameter_identifier (pp_clf_typ state)
-              parameter_type (pp_clf_term state) body)
+              (pp_lf_variable Identifier.pp)
+              parameter_identifier (pp_clf_typ state) parameter_type
+              (pp_clf_term state) body)
     | CLF.Term.Hole { variant = `Underscore; _ } -> Format.fprintf ppf "_"
     | CLF.Term.Hole { variant = `Unlabelled; _ } -> Format.fprintf ppf "?"
     | CLF.Term.Hole { variant = `Labelled label; _ } ->
@@ -676,7 +627,7 @@ end) : BELUGA_HTML with type state = Html_state.state = struct
       ; _
       } ->
         Format.fprintf ppf "@[<hov 2>%a@]"
-          (pp_substitution_variable state)
+          (pp_substitution_variable Identifier.pp)
           identifier
     | { CLF.Substitution.head =
           CLF.Substitution.Head.Substitution_variable
@@ -685,7 +636,7 @@ end) : BELUGA_HTML with type state = Html_state.state = struct
       ; _
       } ->
         Format.fprintf ppf "@[<hov 2>%a[%a]@]"
-          (pp_substitution_variable state)
+          (pp_substitution_variable Identifier.pp)
           identifier
           (pp_clf_substitution state)
           closure
@@ -696,7 +647,7 @@ end) : BELUGA_HTML with type state = Html_state.state = struct
       ; _
       } ->
         Format.fprintf ppf "@[<hov 2>%a,@ %a@]"
-          (pp_substitution_variable state)
+          (pp_substitution_variable Identifier.pp)
           identifier
           (List.pp ~pp_sep:Format.comma (pp_clf_term state))
           terms
@@ -707,7 +658,7 @@ end) : BELUGA_HTML with type state = Html_state.state = struct
       ; _
       } ->
         Format.fprintf ppf "@[<hov 2>%a[%a],@ %a@]"
-          (pp_substitution_variable state)
+          (pp_substitution_variable Identifier.pp)
           identifier
           (pp_clf_substitution state)
           closure
@@ -717,10 +668,12 @@ end) : BELUGA_HTML with type state = Html_state.state = struct
   and pp_clf_context state ppf context =
     let pp_typing ppf typing =
       match typing with
-      | identifier, Option.None -> (pp_lf_variable state) ppf identifier
+      | identifier, Option.None ->
+          (pp_lf_variable Identifier.pp) ppf identifier
       | identifier, Option.Some typ ->
-          Format.fprintf ppf "%a :@ %a" (pp_lf_variable state) identifier
-            (pp_clf_typ state) typ
+          Format.fprintf ppf "%a :@ %a"
+            (pp_lf_variable Identifier.pp)
+            identifier (pp_clf_typ state) typ
     in
     match context with
     | { CLF.Context.head = CLF.Context.Head.None _; bindings = []; _ } ->
@@ -732,7 +685,7 @@ end) : BELUGA_HTML with type state = Html_state.state = struct
       ; bindings = []
       ; _
       } ->
-        (pp_context_variable state) ppf identifier
+        (pp_context_variable Identifier.pp) ppf identifier
     | { CLF.Context.head = CLF.Context.Head.None _; bindings; _ } ->
         Format.fprintf ppf "@[<hov 2>%a@]"
           (List.pp ~pp_sep:Format.comma pp_typing)
@@ -747,7 +700,7 @@ end) : BELUGA_HTML with type state = Html_state.state = struct
       ; _
       } ->
         Format.fprintf ppf "@[<hov 2>%a,@ %a@]"
-          (pp_context_variable state)
+          (pp_context_variable Identifier.pp)
           identifier
           (List.pp ~pp_sep:Format.comma pp_typing)
           bindings
@@ -756,11 +709,11 @@ end) : BELUGA_HTML with type state = Html_state.state = struct
     let parent_precedence = precedence_of_clf_term_pattern term in
     match term with
     | CLF.Term.Pattern.Variable { identifier; _ } ->
-        (pp_lf_variable state) ppf identifier
+        (pp_lf_variable Identifier.pp) ppf identifier
     | CLF.Term.Pattern.Parameter_variable { identifier; _ } ->
-        (pp_parameter_variable state) ppf identifier
+        (pp_parameter_variable Identifier.pp) ppf identifier
     | CLF.Term.Pattern.Substitution_variable { identifier; _ } ->
-        (pp_substitution_variable state) ppf identifier
+        (pp_substitution_variable Identifier.pp) ppf identifier
     | CLF.Term.Pattern.Constant { identifier; prefixed = true; _ } ->
         Format.fprintf ppf "(%a)"
           (pp_lf_term_constant_invoke state)
@@ -802,14 +755,15 @@ end) : BELUGA_HTML with type state = Html_state.state = struct
               (pp_clf_term_pattern state)
               body
         | Option.Some parameter_identifier, Option.None ->
-            Format.fprintf ppf "@[<hov 2>\\%a.@ %a@]" (pp_lf_variable state)
+            Format.fprintf ppf "@[<hov 2>\\%a.@ %a@]"
+              (pp_lf_variable Identifier.pp)
               parameter_identifier
               (pp_clf_term_pattern state)
               body
         | Option.Some parameter_identifier, Option.Some parameter_type ->
             Format.fprintf ppf "@[<hov 2>\\%a:%a.@ %a@]"
-              (pp_lf_variable state) parameter_identifier (pp_clf_typ state)
-              parameter_type
+              (pp_lf_variable Identifier.pp)
+              parameter_identifier (pp_clf_typ state) parameter_type
               (pp_clf_term_pattern state)
               body)
     | CLF.Term.Pattern.Wildcard _ -> Format.fprintf ppf "_"
@@ -885,7 +839,7 @@ end) : BELUGA_HTML with type state = Html_state.state = struct
       ; _
       } ->
         Format.fprintf ppf "@[<hov 2>%a@]"
-          (pp_substitution_variable state)
+          (pp_substitution_variable Identifier.pp)
           identifier
     | { CLF.Substitution.Pattern.head =
           CLF.Substitution.Pattern.Head.Substitution_variable
@@ -894,7 +848,7 @@ end) : BELUGA_HTML with type state = Html_state.state = struct
       ; _
       } ->
         Format.fprintf ppf "@[<hov 2>%a[%a]@]"
-          (pp_substitution_variable state)
+          (pp_substitution_variable Identifier.pp)
           identifier
           (pp_clf_substitution state)
           closure
@@ -905,7 +859,7 @@ end) : BELUGA_HTML with type state = Html_state.state = struct
       ; _
       } ->
         Format.fprintf ppf "@[<hov 2>%a,@ %a@]"
-          (pp_substitution_variable state)
+          (pp_substitution_variable Identifier.pp)
           identifier
           (List.pp ~pp_sep:Format.comma (pp_clf_term_pattern state))
           terms
@@ -916,7 +870,7 @@ end) : BELUGA_HTML with type state = Html_state.state = struct
       ; _
       } ->
         Format.fprintf ppf "@[<hov 2>%a[%a],@ %a@]"
-          (pp_substitution_variable state)
+          (pp_substitution_variable Identifier.pp)
           identifier
           (pp_clf_substitution state)
           closure
@@ -925,8 +879,9 @@ end) : BELUGA_HTML with type state = Html_state.state = struct
 
   and pp_clf_context_pattern state ppf context_pattern =
     let pp_typing ppf (i, t) =
-      Format.fprintf ppf "%a :@ %a" (pp_lf_variable state) i
-        (pp_clf_typ state) t
+      Format.fprintf ppf "%a :@ %a"
+        (pp_lf_variable Identifier.pp)
+        i (pp_clf_typ state) t
     in
     match context_pattern with
     | { CLF.Context.Pattern.head = CLF.Context.Pattern.Head.None _
@@ -944,7 +899,7 @@ end) : BELUGA_HTML with type state = Html_state.state = struct
       ; bindings = []
       ; _
       } ->
-        (pp_context_variable state) ppf identifier
+        (pp_context_variable Identifier.pp) ppf identifier
     | { CLF.Context.Pattern.head = CLF.Context.Pattern.Head.None _
       ; bindings
       ; _
@@ -965,7 +920,7 @@ end) : BELUGA_HTML with type state = Html_state.state = struct
       ; _
       } ->
         Format.fprintf ppf "@[<hov 2>%a,@ %a@]"
-          (pp_context_variable state)
+          (pp_context_variable Identifier.pp)
           identifier
           (List.pp ~pp_sep:Format.comma pp_typing)
           bindings
@@ -1035,8 +990,9 @@ end) : BELUGA_HTML with type state = Html_state.state = struct
     let parent_precedence = precedence_of_schema schema in
     let pp_bindings =
       List1.pp ~pp_sep:Format.comma (fun ppf (i, t) ->
-          Format.fprintf ppf "@[%a :@ %a@]" (pp_lf_variable state) i
-            (pp_clf_typ state) t)
+          Format.fprintf ppf "@[%a :@ %a@]"
+            (pp_lf_variable Identifier.pp)
+            i (pp_clf_typ state) t)
     in
     match schema with
     | Meta.Schema.Constant { identifier; _ } ->
@@ -1105,8 +1061,9 @@ end) : BELUGA_HTML with type state = Html_state.state = struct
               parameter_type (pp_comp_kind state) body
         | Option.Some parameter_identifier ->
             Format.fprintf ppf "@[<hov 2>{%a :@ %a}@ %a@]"
-              (pp_meta_variable state) parameter_identifier
-              (pp_meta_typ state) parameter_type (pp_comp_kind state) body)
+              (pp_meta_variable Identifier.pp)
+              parameter_identifier (pp_meta_typ state) parameter_type
+              (pp_comp_kind state) body)
 
   and pp_comp_typ state ppf typ =
     let parent_precedence = precedence_of_comp_typ typ in
@@ -1147,7 +1104,7 @@ end) : BELUGA_HTML with type state = Html_state.state = struct
         let pp_parameter_identifier parameter_type ppf parameter_identifier =
           match (parameter_identifier, parameter_type) with
           | Option.Some parameter_identifier, _ ->
-              (pp_meta_variable state) ppf parameter_identifier
+              (pp_meta_variable Identifier.pp) ppf parameter_identifier
           | ( Option.None
             , (Meta.Typ.Context_schema _ | Meta.Typ.Contextual_typ _) ) ->
               Format.pp_print_string ppf "_"
@@ -1270,7 +1227,7 @@ end) : BELUGA_HTML with type state = Html_state.state = struct
     let parent_precedence = precedence_of_comp_expression expression in
     match expression with
     | Comp.Expression.Variable { identifier; _ } ->
-        (pp_computation_variable state) ppf identifier
+        (pp_computation_variable Identifier.pp) ppf identifier
     | Comp.Expression.Constant { identifier; prefixed; operator; _ } -> (
         match operator with
         | Option.Some operator ->
@@ -1290,7 +1247,7 @@ end) : BELUGA_HTML with type state = Html_state.state = struct
           match parameter with
           | Option.None -> Format.pp_print_string ppf "_"
           | Option.Some parameter ->
-              (pp_computation_variable state) ppf parameter
+              (pp_computation_variable Identifier.pp) ppf parameter
         in
         Format.fprintf ppf "@[<hov 2>%a %a ⇒@ %a@]" pp_keyword "fn"
           (List1.pp ~pp_sep:Format.pp_print_space pp_parameter)
@@ -1302,7 +1259,7 @@ end) : BELUGA_HTML with type state = Html_state.state = struct
           match (parameter, modifier) with
           | Option.Some parameter, (`Plain | `Hash | `Dollar) ->
               (* The hash or dollar prefix is part of [parameter] *)
-              (pp_meta_variable state) ppf parameter
+              (pp_meta_variable Identifier.pp) ppf parameter
           | Option.None, `Plain -> Format.pp_print_string ppf "_"
           | Option.None, `Hash -> Format.pp_print_string ppf "#_"
           | Option.None, `Dollar -> Format.pp_print_string ppf "$_"
@@ -1363,9 +1320,8 @@ end) : BELUGA_HTML with type state = Html_state.state = struct
             pp_keyword "case"
             (pp_comp_expression state)
             scrutinee
-            (with_pragma_stag state "not" (fun ppf ->
-                 Format.pp_print_string ppf "--not"))
-            () pp_keyword "of" pp_branches branches
+            (pp_pragma "not" Format.pp_print_string)
+            "--not" pp_keyword "of" pp_branches branches
         else
           Format.fprintf ppf "@[<v 0>@[%a@ %a@ %a@]@,%a@]" pp_keyword "case"
             (pp_comp_expression state)
@@ -1616,120 +1572,121 @@ end) : BELUGA_HTML with type state = Html_state.state = struct
         { constant; meta_variable_base; computation_variable_base; _ } ->
         (match computation_variable_base with
         | Option.None ->
-            (with_pragma_stag state "name" (fun ppf ->
-                 Format.fprintf ppf "@[<hov 2>--name@ %a@ %a.@]"
-                   Qualified_identifier.pp constant Identifier.pp
-                   meta_variable_base))
-              ppf ()
+            let pp_name_pragma ppf () =
+              Format.fprintf ppf "@[<hov 2>--name@ %a@ %a.@]"
+                Qualified_identifier.pp constant Identifier.pp
+                meta_variable_base
+            in
+            (pp_pragma "name" pp_name_pragma) ppf ()
         | Option.Some computation_variable_base ->
-            with_pragma_stag state "name"
-              (fun ppf ->
-                Format.fprintf ppf "@[<hov 2>--name@ %a@ %a@ %a.@]"
-                  Qualified_identifier.pp constant Identifier.pp
-                  meta_variable_base Identifier.pp computation_variable_base)
-              ppf ());
+            let pp_name_pragma ppf () =
+              Format.fprintf ppf "@[<hov 2>--name@ %a@ %a@ %a.@]"
+                Qualified_identifier.pp constant Identifier.pp
+                meta_variable_base Identifier.pp computation_variable_base
+            in
+            (pp_pragma "name" pp_name_pragma) ppf ());
         state
     | Signature.Pragma.Default_associativity { associativity; _ } ->
-        with_pragma_stag state "assoc"
-          (fun ppf ->
-            Format.fprintf ppf "@[<hov 2>--assoc@ %a.@]" pp_associativity
-              associativity)
-          ppf ();
+        let pp_associativity_pragma ppf () =
+          Format.fprintf ppf "@[<hov 2>--assoc@ %a.@]" pp_associativity
+            associativity
+        in
+        (pp_pragma "assoc" pp_associativity_pragma) ppf ();
         state
     | Signature.Pragma.Prefix_fixity { constant; precedence; _ } ->
         (match precedence with
         | Option.None ->
-            with_pragma_stag state "prefix"
-              (fun ppf ->
-                Format.fprintf ppf "@[<hov 2>--prefix@ %a.@]"
-                  Qualified_identifier.pp constant)
-              ppf ()
+            let pp_prefix_pragma ppf () =
+              Format.fprintf ppf "@[<hov 2>--prefix@ %a.@]"
+                Qualified_identifier.pp constant
+            in
+            (pp_pragma "prefix" pp_prefix_pragma) ppf ()
         | Option.Some precedence ->
-            with_pragma_stag state "prefix"
-              (fun ppf ->
-                Format.fprintf ppf "@[<hov 2>--prefix@ %a@ %i.@]"
-                  Qualified_identifier.pp constant precedence)
-              ppf ());
+            let pp_prefix_pragma ppf () =
+              Format.fprintf ppf "@[<hov 2>--prefix@ %a@ %i.@]"
+                Qualified_identifier.pp constant precedence
+            in
+            (pp_pragma "prefix" pp_prefix_pragma) ppf ());
         state
     | Signature.Pragma.Infix_fixity
         { constant; precedence; associativity; _ } ->
         (match (precedence, associativity) with
         | Option.Some precedence, Option.Some associativity ->
-            with_pragma_stag state "infix"
-              (fun ppf ->
-                Format.fprintf ppf "@[<hov 2>--infix@ %a@ %i@ %a.@]"
-                  Qualified_identifier.pp constant precedence
-                  pp_associativity associativity)
-              ppf ()
+            let pp_infix_pragma ppf () =
+              Format.fprintf ppf "@[<hov 2>--infix@ %a@ %i@ %a.@]"
+                Qualified_identifier.pp constant precedence pp_associativity
+                associativity
+            in
+            (pp_pragma "infix" pp_infix_pragma) ppf ()
         | Option.Some precedence, Option.None ->
-            with_pragma_stag state "infix"
-              (fun ppf ->
-                Format.fprintf ppf "@[<hov 2>--infix@ %a@ %i.@]"
-                  Qualified_identifier.pp constant precedence)
-              ppf ()
+            let pp_infix_pragma ppf () =
+              Format.fprintf ppf "@[<hov 2>--infix@ %a@ %i.@]"
+                Qualified_identifier.pp constant precedence
+            in
+            (pp_pragma "infix" pp_infix_pragma) ppf ()
         | Option.None, Option.Some associativity ->
-            with_pragma_stag state "infix"
-              (fun ppf ->
-                Format.fprintf ppf "@[<hov 2>--infix@ %a@ %a.@]"
-                  Qualified_identifier.pp constant pp_associativity
-                  associativity)
-              ppf ()
+            let pp_infix_pragma ppf () =
+              Format.fprintf ppf "@[<hov 2>--infix@ %a@ %a.@]"
+                Qualified_identifier.pp constant pp_associativity
+                associativity
+            in
+            (pp_pragma "infix" pp_infix_pragma) ppf ()
         | Option.None, Option.None ->
-            with_pragma_stag state "infix"
-              (fun ppf ->
-                Format.fprintf ppf "@[<hov 2>--infix@ %a.@]"
-                  Qualified_identifier.pp constant)
-              ppf ());
+            let pp_infix_pragma ppf () =
+              Format.fprintf ppf "@[<hov 2>--infix@ %a.@]"
+                Qualified_identifier.pp constant
+            in
+            (pp_pragma "infix" pp_infix_pragma) ppf ());
         state
     | Signature.Pragma.Postfix_fixity { constant; precedence; _ } ->
         (match precedence with
         | Option.None ->
-            with_pragma_stag state "postfix"
-              (fun ppf ->
-                Format.fprintf ppf "@[<hov 2>--postfix@ %a.@]"
-                  Qualified_identifier.pp constant)
-              ppf ()
+            let pp_postfix_pragma ppf () =
+              Format.fprintf ppf "@[<hov 2>--postfix@ %a.@]"
+                Qualified_identifier.pp constant
+            in
+            (pp_pragma "postfix" pp_postfix_pragma) ppf ()
         | Option.Some precedence ->
-            with_pragma_stag state "postfix"
-              (fun ppf ->
-                Format.fprintf ppf "@[<hov 2>--postfix@ %a@ %i.@]"
-                  Qualified_identifier.pp constant precedence)
-              ppf ());
+            let pp_postfix_pragma ppf () =
+              Format.fprintf ppf "@[<hov 2>--postfix@ %a@ %i.@]"
+                Qualified_identifier.pp constant precedence
+            in
+            (pp_pragma "postfix" pp_postfix_pragma) ppf ());
         state
     | Signature.Pragma.Not _ ->
-        with_pragma_stag state "not"
-          (fun ppf -> Format.pp_print_string ppf "--not")
+        pp_pragma "not"
+          (fun ppf () -> Format.pp_print_string ppf "--not")
           ppf ();
         state
     | Signature.Pragma.Open_module { module_identifier; _ } ->
-        with_pragma_stag state "open"
-          (fun ppf ->
+        pp_pragma "open"
+          (fun ppf () ->
             Format.fprintf ppf "@[<hov 2>--open@ %a.@]"
               Qualified_identifier.pp module_identifier)
           ppf ();
         state (* TODO: Open the module *)
     | Signature.Pragma.Abbreviation { module_identifier; abbreviation; _ } ->
-        with_pragma_stag state "abbrev"
-          (fun ppf ->
+        pp_pragma "abbrev"
+          (fun ppf () ->
             Format.fprintf ppf "@[<hov 2>--abbrev@ %a@ %a.@]"
               Qualified_identifier.pp module_identifier Identifier.pp
               abbreviation)
           ppf ();
         state (* TODO: Add the abbreviation *)
 
-  and pp_signature_global_pragma state ppf global_pragma =
+  and pp_signature_global_pragma _state ppf global_pragma =
     match global_pragma with
     | Signature.Global_pragma.No_strengthening _ ->
-        with_pragma_stag state "nostrengthen"
-          (fun ppf -> Format.pp_print_string ppf "--nostrengthen")
+        pp_pragma "nostrengthen"
+          (fun ppf () -> Format.pp_print_string ppf "--nostrengthen")
           ppf ()
     | Signature.Global_pragma.Warn_on_coverage_error _ ->
-        with_pragma_stag state "warncoverage"
-          (fun ppf -> Format.pp_print_string ppf "--warncoverage")
+        pp_pragma "warncoverage"
+          (fun ppf () -> Format.pp_print_string ppf "--warncoverage")
           ppf ()
     | Signature.Global_pragma.Raise_error_on_coverage_error _ ->
-        with_pragma_stag state "coverage"
-          (fun ppf -> Format.pp_print_string ppf "--coverage")
+        pp_pragma "coverage"
+          (fun ppf () -> Format.pp_print_string ppf "--coverage")
           ppf ()
 
   and pp_signature_totality_declaration state ppf totality_declaration =
@@ -1819,7 +1776,7 @@ end) : BELUGA_HTML with type state = Html_state.state = struct
         (match typ with
         | Option.None ->
             Format.fprintf ppf "@[<hov 2>%a@ %a@ =@ %a@]" pp_keyword "let"
-              (pp_computation_variable state)
+              (pp_computation_variable Identifier.pp)
               identifier
               (pp_comp_expression state)
               expression
@@ -1986,14 +1943,14 @@ end) : BELUGA_HTML with type state = Html_state.state = struct
         | Option.None ->
             Format.fprintf ppf "@[<hov 2>%a %a :@ %a =@ %a@]" pp_keyword
               "rec"
-              (pp_computation_variable state)
+              (pp_computation_variable Identifier.pp)
               identifier (pp_comp_typ state) typ
               (pp_comp_expression state)
               body
         | Option.Some order ->
             Format.fprintf ppf "@[<hov 2>%a %a :@ %a =@,%a@,%a@]" pp_keyword
               "rec"
-              (pp_computation_variable state)
+              (pp_computation_variable Identifier.pp)
               identifier (pp_comp_typ state) typ
               (pp_signature_totality_declaration state)
               order
@@ -2004,13 +1961,13 @@ end) : BELUGA_HTML with type state = Html_state.state = struct
         | Option.None ->
             Format.fprintf ppf "@[<hov 2>%a %a :@ %a =@ %a@]" pp_keyword
               "proof"
-              (pp_computation_variable state)
+              (pp_computation_variable Identifier.pp)
               identifier (pp_comp_typ state) typ (pp_harpoon_proof state)
               body
         | Option.Some order ->
             Format.fprintf ppf "@[<hov 2>%a %a :@ %a =@,%a@,%a@]" pp_keyword
               "proof"
-              (pp_computation_variable state)
+              (pp_computation_variable Identifier.pp)
               identifier (pp_comp_typ state) typ
               (pp_signature_totality_declaration state)
               order (pp_harpoon_proof state) body)
@@ -2154,7 +2111,7 @@ end) : BELUGA_HTML with type state = Html_state.state = struct
         pp_signature_entry state ppf entry
     | Signature.Entry.Comment { location; content } ->
         let html = render_markdown location content in
-        (pp_inner_documentation_comment state html) ppf ();
+        (pp_inner_documentation_html Format.pp_print_string) ppf html;
         state
 
   and pp_signature_entry state ppf entry =
@@ -2165,7 +2122,7 @@ end) : BELUGA_HTML with type state = Html_state.state = struct
         (pp_signature_pragma state) ppf pragma
     | Signature.Entry.Comment { location; content } ->
         let html = render_markdown location content in
-        (pp_toplevel_documentation_comment state html) ppf ();
+        (pp_toplevel_documentation_html Format.pp_print_string) ppf html;
         state
 
   and pp_signature state ppf signature =
@@ -2177,8 +2134,8 @@ end) : BELUGA_HTML with type state = Html_state.state = struct
     | _global_pragmas, `Code _group1 :: _rest -> Obj.magic () (* TODO: *)
     | _global_pragmas, `Comment _group1 :: _rest -> Obj.magic () (* TODO: *)
     | global_pragmas, [] ->
-        with_preformatted_code_stag state
-          (fun ppf ->
+        pp_preformatted_code_html
+          (fun ppf () ->
             (List.pp ~pp_sep:Format.pp_print_cut
                (pp_signature_global_pragma state))
               ppf global_pragmas)
@@ -2219,142 +2176,7 @@ end) : BELUGA_HTML with type state = Html_state.state = struct
        [`Comment] *)
     Obj.magic ()
 
-  let html_mark_open_stag = function
-    | Toplevel_documentation_comment -> {|<div class="documentation">|}
-    | Inner_documentation_comment -> {|<div class="inner-documentation">|}
-    | Preformatted_code -> {|<pre><code>|}
-    | Keyword { keyword } ->
-        Format.asprintf {|<span class="keyword keyword-%s">|} keyword
-    | Pragma { pragma_keyword } ->
-        Format.asprintf {|<span class="pragma pragma-%s">|} pragma_keyword
-    | Lf_variable -> {|<span class="variable lf-variable">|}
-    | Meta_variable -> {|<span class="variable meta-variable">|}
-    | Parameter_variable -> {|<span class="variable parameter-variable">|}
-    | Substitution_variable ->
-        {|<span class="variable substitution-variable">|}
-    | Context_variable -> {|<span class="variable context-variable">|}
-    | Computation_variable ->
-        {|<span class="variable computation-variable">|}
-    | Lf_type_constant { id } ->
-        Format.asprintf {|<span id="%s" class="constant lf-type-constant">|}
-          id
-    | Lf_term_constant { id } ->
-        Format.asprintf {|<span id="%s" class="constant lf-term-constant">|}
-          id
-    | Context_schema { id } ->
-        Format.asprintf {|<span id="%s" class="constant context-schema">|} id
-    | Computation_inductive_type_constant { id } ->
-        Format.asprintf
-          {|<span id="%s" class="constant computation-inductive-type-constant">|}
-          id
-    | Computation_stratified_type_constant { id } ->
-        Format.asprintf
-          {|<span id="%s" class="constant computation-stratified-type-constant">|}
-          id
-    | Computation_abbreviation_type_constant { id } ->
-        Format.asprintf
-          {|<span id="%s" class="constant computation-abbreviation-type-constant">|}
-          id
-    | Computation_coinductive_type_constant { id } ->
-        Format.asprintf
-          {|<span id="%s" class="constant computation-coinductive-type-constant">|}
-          id
-    | Computation_constructor { id } ->
-        Format.asprintf
-          {|<span id="%s" class="constant computation-constructor">|} id
-    | Computation_destructor { id } ->
-        Format.asprintf
-          {|<span id="%s" class="constant computation-destructor">|} id
-    | Lf_type_constant_invoke { id } ->
-        Format.asprintf
-          {|<span class="constant lf-type-constant"><a href="#%s">|} id
-    | Lf_term_constant_invoke { id } ->
-        Format.asprintf
-          {|<span class="constant lf-term-constant"><a href="#%s">|} id
-    | Context_schema_invoke { id } ->
-        Format.asprintf
-          {|<span class="constant schema-constant"><a href="#%s">|} id
-    | Computation_inductive_type_constant_invoke { id } ->
-        Format.asprintf
-          {|<span class="constant comp-inductive-type-constant"><a href="#%s">|}
-          id
-    | Computation_stratified_type_constant_invoke { id } ->
-        Format.asprintf
-          {|<span class="constant comp-stratified-type-constant"><a href="#%s">|}
-          id
-    | Computation_abbreviation_type_constant_invoke { id } ->
-        Format.asprintf
-          {|<span class="constant comp-abbreviation-type-constant"><a href="#%s">|}
-          id
-    | Computation_coinductive_type_constant_invoke { id } ->
-        Format.asprintf
-          {|<span class="constant comp-coinductive-type-constant"><a href="#%s">|}
-          id
-    | Computation_constructor_invoke { id } ->
-        Format.asprintf
-          {|<span class="constant comp-constructor-constant"><a href="#%s">|}
-          id
-    | Computation_destructor_invoke { id } ->
-        Format.asprintf
-          {|<span class="constant comp-destructor-constant"><a href="#%s">|}
-          id
-    | _ -> Error.raise_violation "Unsupported HTML stag"
-
-  let html_mark_close_stag = function
-    | Toplevel_documentation_comment
-    | Inner_documentation_comment ->
-        {|</div>|}
-    | Preformatted_code -> {|</code></pre>|}
-    | Keyword _
-    | Pragma _
-    | Lf_variable
-    | Meta_variable
-    | Parameter_variable
-    | Substitution_variable
-    | Context_variable
-    | Computation_variable
-    | Lf_type_constant _
-    | Lf_term_constant _
-    | Context_schema _
-    | Computation_inductive_type_constant _
-    | Computation_stratified_type_constant _
-    | Computation_abbreviation_type_constant _
-    | Computation_coinductive_type_constant _
-    | Computation_constructor _
-    | Computation_destructor _ ->
-        {|</span>|}
-    | Lf_type_constant_invoke _
-    | Lf_term_constant_invoke _
-    | Context_schema_invoke _
-    | Computation_inductive_type_constant_invoke _
-    | Computation_stratified_type_constant_invoke _
-    | Computation_abbreviation_type_constant_invoke _
-    | Computation_coinductive_type_constant_invoke _
-    | Computation_constructor_invoke _
-    | Computation_destructor_invoke _ ->
-        {|</a></span>|}
-    | _ -> Error.raise_violation "Unsupported HTML stag"
-
-  let with_html_tags ppf f =
-    (* Get the old stag-marking state *)
-    let old_formatter_stag_functions =
-      Format.pp_get_formatter_stag_functions ppf ()
-    in
-    let old_mark_tags = Format.pp_get_mark_tags ppf () in
-    (* Print with stag-marking enabled *)
-    Format.pp_set_formatter_stag_functions ppf
-      { old_formatter_stag_functions with
-        Format.mark_open_stag = html_mark_open_stag
-      ; mark_close_stag = html_mark_close_stag
-      };
-    Format.pp_set_mark_tags ppf true;
-    f ppf;
-    (* Restore the stag-marking state *)
-    Format.pp_set_mark_tags ppf old_mark_tags;
-    Format.pp_set_formatter_stag_functions ppf old_formatter_stag_functions
-
-  let pp_html_signature ppf signature =
-    with_html_tags ppf (fun ppf -> pp_signature empty ppf signature)
+  let pp_html_signature ppf signature = pp_signature empty ppf signature
 end
 
 let () =

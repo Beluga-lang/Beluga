@@ -431,15 +431,15 @@ Atomic patterns are computation-level patterns that may appear as whitespace-del
 | <identifier> \hfill \texttt{(* Variable *)}\\
 | <qualified-identifier> \hfill \texttt{(* Constant *)}\\
 | `fn' <omittable-identifier>+ <thick-forward-arrow> <comp-expression>\\
-| `fun' [`|'] <comp-copattern>+ <thick-forward-arrow> <comp-expression>\\
-  (`|' <comp-copattern>+ <thick-forward-arrow> <comp-expression>)*\\
+| `fun' [`|'] <comp-cofunction-branch> (`|' <comp-cofunction-branch>)*\\
 | `mlam' <omittable-meta-object-identifier>+ <thick-forward-arrow> <comp-expression>\\
-| `let' <comp-pattern> `=' <comp-expression> `in' <comp-expression> \hfill \texttt{(* Let *)}\\
+| `let' [<comp-pattern-meta-context>] <comp-pattern> `=' <comp-expression> \\
+  `in' <comp-expression> \hfill \texttt{(* Let *)}\\
 | <meta-object> \hfill \texttt{(* Meta-object *)}\\
 | `impossible' <comp-expression> \hfill \texttt{(* Impossible case analysis *)} \\
 | `case' <comp-expression> [`----not'] `of'\\{}
-  [`|'] <comp-pattern> <thick-forward-arrow> <comp-expression>\\
-  (`|' <comp-pattern> <thick-forward-arrow> <comp-expression>)* \hfill \texttt{(* Case analysis *)}\\
+  [`|'] <comp-case-branch>\\
+  (`|' <comp-case-branch>>)* \hfill \texttt{(* Case analysis *)}\\
 | `(' <comp-expression> (`,' <comp-expression>)+ `)' \hfill \texttt{(* Tuple *)}\\
 | `?' [<identifier>] \hfill \texttt{(* Hole *)}\\
 | `_' \hfill \texttt{(* Box hole *)}\\
@@ -448,6 +448,15 @@ Atomic patterns are computation-level patterns that may appear as whitespace-del
 | <comp-expression> `:' <comp-type> \hfill \texttt{(* Annotated *)}\\
 | `(' <comp-expression> `)'
 
+<comp-case-branch> ::= \hfill\\
+| [<comp-pattern-meta-context>] <comp-pattern> <thick-forward-arrow> <comp-expression>
+
+<comp-cofunction-branch> ::= \hfill\\
+| ([<comp-pattern-meta-context>] <comp-copattern>)+ <thick-forward-arrow> <comp-expression>
+
+<comp-pattern-meta-context> ::= \hfill\\
+| (`{' <meta-object-identifier> [`:' <meta-type>] `}')+
+
 <comp-pattern> ::= \hfill\\
 | <identifier> \hfill \texttt{(* Variable *)}\\
 | <qualified-identifier> \hfill \texttt{(* Constant *)}\\
@@ -455,7 +464,6 @@ Atomic patterns are computation-level patterns that may appear as whitespace-del
 | `(' <comp-pattern> (`,' <comp-pattern>)+ `)' \hfill \texttt{(* Tuple *)}\\
 | <comp-pattern> <comp-pattern> \hfill \texttt{(* Application *)}\\
 | <comp-pattern> `:' <comp-type> \hfill \texttt{(* Annotated *)}\\
-| `{' <meta-object-identifier> `:' <meta-type> `}' <comp-pattern> \hfill \texttt{(* Meta-annotated *)}\\
 | `_' \hfill \texttt{(* Wildcard *)}\\
 | `(' <comp-pattern> `)'
 

@@ -412,6 +412,14 @@ module Disambiguation_state : DISAMBIGUATION_STATE = struct
     add_binding identifier entry
 
   let add_computation_term_destructor ?location identifier =
+    (* TODO: Annotate with the number of arguments expected:
+
+       {[ Sim_unit : Sim [|- top] [|- M] [|- N] :: Eval [ |- M] [ |- unit] ->
+       Eval [ |- N] [ |- unit]
+
+       fun .Sim_unit d => d
+
+       d : Eval [ |- M] [ |- unit] ]} *)
     let data = make_entry_data ?location identifier in
     let entry = (Computation_term_destructor, data) in
     add_binding identifier entry

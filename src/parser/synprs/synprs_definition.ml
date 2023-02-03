@@ -383,7 +383,10 @@ module Comp = struct
       | Raw_fun of
           { location : Location.t
           ; branches :
-              (Pattern_object.t List1.t * Expression_object.t) List1.t
+              (Meta.Context_object.t
+              * Copattern_object.t List1.t
+              * Expression_object.t)
+              List1.t
           }
       | Raw_box of
           { location : Location.t
@@ -391,6 +394,7 @@ module Comp = struct
           }
       | Raw_let of
           { location : Location.t
+          ; meta_context : Meta.Context_object.t
           ; pattern : Pattern_object.t
           ; scrutinee : Expression_object.t
           ; body : Expression_object.t
@@ -403,7 +407,11 @@ module Comp = struct
           { location : Location.t
           ; scrutinee : Expression_object.t
           ; check_coverage : Bool.t
-          ; branches : (Pattern_object.t * Expression_object.t) List1.t
+          ; branches :
+              (Meta.Context_object.t
+              * Pattern_object.t
+              * Expression_object.t)
+              List1.t
           }
       | Raw_tuple of
           { location : Location.t
@@ -461,11 +469,6 @@ module Comp = struct
           { location : Location.t
           ; patterns : Pattern_object.t List2.t
           }
-      | Raw_observation of
-          { location : Location.t
-          ; constant : Qualified_identifier.t
-          ; arguments : Pattern_object.t List.t
-          }
       | Raw_annotated of
           { location : Location.t
           ; pattern : Pattern_object.t
@@ -485,6 +488,19 @@ module Comp = struct
       | Raw_wildcard of { location : Location.t }
   end =
     Pattern_object
+
+  and Copattern_object : sig
+    type t =
+      | Raw_observation of
+          { location : Location.t
+          ; observation : Qualified_identifier.t
+          }
+      | Raw_pattern of
+          { location : Location.t
+          ; pattern : Pattern_object.t
+          }
+  end =
+    Copattern_object
 
   and Context_object : sig
     type t =
@@ -958,6 +974,9 @@ type comp_expression_object = Comp.Expression_object.t
 
 (** @canonical Synprs.comp_pattern_object *)
 type comp_pattern_object = Comp.Pattern_object.t
+
+(** @canonical Synprs.comp_copattern_object *)
+type comp_copattern_object = Comp.Copattern_object.t
 
 (** @canonical Synprs.comp_context_object *)
 type comp_context_object = Comp.Context_object.t

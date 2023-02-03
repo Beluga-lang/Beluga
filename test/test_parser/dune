@@ -10,47 +10,5 @@
   test_beluga_parser_fixtures_lib)
  (deps
   fixtures/disambiguation_state.json
-  ;; LF kind test fixtures
-  fixtures/lf_kinds_ok.input.bel
-  fixtures/lf_kinds_ok.output.json ;; auto-generated
-  fixtures/lf_kinds_error.input.bel
-  ;; LF type test fixtures
-  fixtures/lf_types_ok.input.bel
-  fixtures/lf_types_ok.output.json ;; auto-generated
-  fixtures/lf_types_error.input.bel
-  ;; LF term test fixtures
-  fixtures/lf_terms_ok.input.bel
-  fixtures/lf_terms_ok.output.json ;; auto-generated
-  fixtures/lf_terms_error.input.bel
-  ;; Contextual LF type test fixtures
-  fixtures/clf_types_ok.input.bel
-  fixtures/clf_types_ok.output.json ;; auto-generated
-  fixtures/clf_types_error.input.bel
-  ;; Contextual LF term test fixtures
-  fixtures/clf_terms_ok.input.bel
-  fixtures/clf_terms_ok.output.json ;; auto-generated
-  fixtures/clf_terms_error.input.bel
-  ;; Meta-type test fixtures
-  fixtures/meta_types_ok.input.bel
-  fixtures/meta_types_ok.output.json ;; auto-generated
-  fixtures/meta_types_error.input.bel
-  ;; Meta-object test fixtures
-  fixtures/meta_objects_ok.input.bel
-  fixtures/meta_objects_ok.output.json ;; auto-generated
-  fixtures/meta_objects_error.input.bel
-  ;; Schema test fixtures
-  fixtures/schemas_ok.input.bel
-  fixtures/schemas_ok.output.json ;; auto-generated
-  fixtures/schemas_error.input.bel
-  ;; Computation-level kind test fixtures
-  fixtures/comp_kinds_ok.input.bel
-  fixtures/comp_kinds_ok.output.json ;; auto-generated
-  fixtures/comp_kinds_error.input.bel
-  ;; Computation-level type test fixtures
-  fixtures/comp_types_ok.input.bel
-  fixtures/comp_types_ok.output.json ;; auto-generated
-  fixtures/comp_types_error.input.bel
-  ;; Computation-level expression test fixtures
-  fixtures/comp_expressions_ok.input.bel
-  fixtures/comp_expressions_ok.output.json ;; auto-generated
-  fixtures/comp_expressions_error.input.bel))
+  (glob_files fixtures/*.input.bel)
+  (glob_files fixtures/*.output.json)))

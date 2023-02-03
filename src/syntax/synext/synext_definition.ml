@@ -1062,6 +1062,7 @@ module Comp = struct
               making this a cofunction. *)
       | Let of
           { location : Location.t
+          ; meta_context : Meta.Context.t
           ; pattern : Pattern.t
           ; scrutinee : Expression.t
           ; body : Expression.t
@@ -1134,6 +1135,7 @@ module Comp = struct
   and Case_branch : sig
     type t =
       { location : Location.t
+      ; meta_context : Meta.Context.t
       ; pattern : Pattern.t
       ; body : Expression.t
       }
@@ -1144,7 +1146,8 @@ module Comp = struct
   and Cofunction_branch : sig
     type t =
       { location : Location.t
-      ; copatterns : Copattern.t List1.t
+      ; meta_context : Meta.Context.t
+      ; copattern : Copattern.t
       ; body : Expression.t
       }
   end =
@@ -1181,12 +1184,6 @@ module Comp = struct
           ; pattern : Pattern.t
           ; typ : Typ.t
           }
-      | Meta_type_annotated of
-          { location : Location.t
-          ; annotation_identifier : Identifier.t
-          ; annotation_type : Meta.Typ.t
-          ; body : Pattern.t
-          }
       | Wildcard of { location : Location.t }
   end =
     Pattern
@@ -1194,12 +1191,10 @@ module Comp = struct
   (** External computation-level copatterns. *)
   and Copattern : sig
     type t =
-      | Observation of
-          { location : Location.t
-          ; observation : Qualified_identifier.t
-          ; arguments : Pattern.t List.t
-          }
-      | Pattern of Pattern.t
+      { location : Location.t
+      ; patterns : Pattern.t List.t
+      ; observations : (Qualified_identifier.t * Pattern.t List.t) List.t
+      }
   end =
     Copattern
 

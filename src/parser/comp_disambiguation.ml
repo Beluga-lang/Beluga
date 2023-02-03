@@ -515,7 +515,6 @@ struct
     | Synprs.Comp.Pattern_object.Raw_tuple _
     | Synprs.Comp.Pattern_object.Raw_application _
     | Synprs.Comp.Pattern_object.Raw_annotated _
-    | Synprs.Comp.Pattern_object.Raw_observation _
     | Synprs.Comp.Pattern_object.Raw_meta_annotated _
     | Synprs.Comp.Pattern_object.Raw_wildcard _ ->
         return Option.none
@@ -547,8 +546,8 @@ module type COMP_PATTERN_DISAMBIGUATION = sig
   val disambiguate_comp_pattern :
     Synprs.comp_pattern_object -> Synext.comp_pattern t
 
-  val disambiguate_comp_copattern :
-    Synprs.comp_pattern_object -> Synext.comp_copattern t
+  val disambiguate_comp_copatterns :
+    Synprs.comp_copattern_object List1.t -> Synext.comp_copattern t
 end
 
 module Make
@@ -1151,25 +1150,27 @@ module Make
     | Synprs.Comp.Expression_object.Raw_fun { location; branches } ->
         let* branches' =
           traverse_list1
-            (fun (copatterns, body) ->
-              let* copatterns', body' =
-                Pattern_disambiguation_state.with_pattern_variables
-                  ~pattern:
-                    Comp_pattern_disambiguator.(
-                      traverse_list1 disambiguate_comp_copattern copatterns)
-                  ~expression:(disambiguate_comp_expression body)
-              in
-              let location =
-                Location.join
-                  (Location.join_all1_contramap
-                     Synext.location_of_comp_copattern copatterns')
-                  (Synext.location_of_comp_expression body')
-              in
-              return
-                { Synext.Comp.Cofunction_branch.location
-                ; copatterns = copatterns'
-                ; body = body'
-                })
+            (fun (meta_context, copatterns, body) ->
+              with_disambiguated_meta_context meta_context
+                (fun meta_context' ->
+                  let* copattern', body' =
+                    Pattern_disambiguation_state.with_pattern_variables
+                      ~pattern:
+                        Comp_pattern_disambiguator.(
+                          disambiguate_comp_copatterns copatterns)
+                      ~expression:(disambiguate_comp_expression body)
+                  in
+                  let location =
+                    Location.join
+                      (Synext.location_of_comp_copattern copattern')
+                      (Synext.location_of_comp_expression body')
+                  in
+                  return
+                    { Synext.Comp.Cofunction_branch.location
+                    ; meta_context = meta_context'
+                    ; copattern = copattern'
+                    ; body = body'
+                    }))
             branches
         in
         return
@@ -1180,21 +1181,24 @@ module Make
           (Synext.Comp.Expression.Box
              { location; meta_object = meta_object' })
     | Synprs.Comp.Expression_object.Raw_let
-        { location; pattern; scrutinee; body } ->
+        { location; meta_context; pattern; scrutinee; body } ->
         let* scrutinee' = disambiguate_comp_expression scrutinee in
-        let* pattern', body' =
-          Pattern_disambiguation_state.with_pattern_variables
-            ~pattern:
-              (Comp_pattern_disambiguator.disambiguate_comp_pattern pattern)
-            ~expression:(disambiguate_comp_expression body)
-        in
-        return
-          (Synext.Comp.Expression.Let
-             { location
-             ; pattern = pattern'
-             ; scrutinee = scrutinee'
-             ; body = body'
-             })
+        with_disambiguated_meta_context meta_context (fun meta_context' ->
+            let* pattern', body' =
+              Pattern_disambiguation_state.with_pattern_variables
+                ~pattern:
+                  (Comp_pattern_disambiguator.disambiguate_comp_pattern
+                     pattern)
+                ~expression:(disambiguate_comp_expression body)
+            in
+            return
+              (Synext.Comp.Expression.Let
+                 { location
+                 ; meta_context = meta_context'
+                 ; pattern = pattern'
+                 ; scrutinee = scrutinee'
+                 ; body = body'
+                 }))
     | Synprs.Comp.Expression_object.Raw_impossible { location; scrutinee } ->
         let* scrutinee' = disambiguate_comp_expression scrutinee in
         return
@@ -1205,24 +1209,27 @@ module Make
         let* scrutinee' = disambiguate_comp_expression scrutinee in
         let* branches' =
           traverse_list1
-            (fun (pattern, body) ->
-              let* pattern', body' =
-                Pattern_disambiguation_state.with_pattern_variables
-                  ~pattern:
-                    (Comp_pattern_disambiguator.disambiguate_comp_pattern
-                       pattern)
-                  ~expression:(disambiguate_comp_expression body)
-              in
-              let location =
-                Location.join
-                  (Synext.location_of_comp_pattern pattern')
-                  (Synext.location_of_comp_expression body')
-              in
-              return
-                { Synext.Comp.Case_branch.location
-                ; pattern = pattern'
-                ; body = body'
-                })
+            (fun (meta_context, pattern, body) ->
+              with_disambiguated_meta_context meta_context
+                (fun meta_context' ->
+                  let* pattern', body' =
+                    Pattern_disambiguation_state.with_pattern_variables
+                      ~pattern:
+                        (Comp_pattern_disambiguator.disambiguate_comp_pattern
+                           pattern)
+                      ~expression:(disambiguate_comp_expression body)
+                  in
+                  let location =
+                    Location.join
+                      (Synext.location_of_comp_pattern pattern')
+                      (Synext.location_of_comp_expression body')
+                  in
+                  return
+                    { Synext.Comp.Case_branch.location
+                    ; meta_context = meta_context'
+                    ; pattern = pattern'
+                    ; body = body'
+                    }))
             branches
         in
         return
@@ -1835,9 +1842,6 @@ module Make_pattern_disambiguator
         return
           (Synext.Comp.Pattern.Application
              { applicand = applicand'; arguments = arguments'; location })
-    | Synprs.Comp.Pattern_object.Raw_observation
-        { location; constant; arguments } ->
-        Obj.magic () (* TODO: *)
     | Synprs.Comp.Pattern_object.Raw_annotated { location; pattern; typ } ->
         let* pattern' = disambiguate_comp_pattern pattern in
         let* typ' = disambiguate_comp_typ typ in
@@ -1865,38 +1869,38 @@ module Make_pattern_disambiguator
     | Synprs.Comp.Pattern_object.Raw_wildcard { location } ->
         return (Synext.Comp.Pattern.Wildcard { location })
 
+  and disambiguate_comp_copatterns = Obj.magic () (* TODO: *)
+
   and disambiguate_comp_copattern = function
-    | Synprs.Comp.Pattern_object.Raw_qualified_identifier
-        { location; identifier; prefixed } ->
+    | Synprs.Comp.Copattern_object.Raw_pattern
+        { location
+        ; pattern =
+            Synprs.Comp.Pattern_object.Raw_qualified_identifier
+              { location = identifier_location; identifier; prefixed }
+        } ->
         (* TODO: Can be a variable pattern or constant together with an
            observation *)
         Obj.magic ()
-    | Synprs.Comp.Pattern_object.Raw_observation
-        { location; constant; arguments } -> (
-        lookup constant >>= function
+    | Synprs.Comp.Copattern_object.Raw_observation { location; observation }
+      -> (
+        lookup observation >>= function
         | Result.Ok (Computation_term_destructor, _) ->
-            let* arguments' =
+            (*= let* arguments' =
               traverse_list disambiguate_comp_pattern arguments
-            in
-            return
-              (Synext.Comp.Copattern.Observation
-                 { location; observation = constant; arguments = arguments' })
+            in *)
+            let arguments' = Obj.magic () (* TODO: *) in
+            return (Obj.magic () (* TODO: *))
         | Result.Ok entry ->
             Error.raise_at1 location
               (Error.composite_exception2
                  Expected_comp_term_destructor_constant
-                 (actual_binding_exn constant entry))
+                 (actual_binding_exn observation entry))
         | Result.Error cause ->
-            Error.raise_at1 (Qualified_identifier.location constant) cause)
-    | ( Synprs.Comp.Pattern_object.Raw_identifier _
-      | Synprs.Comp.Pattern_object.Raw_box _
-      | Synprs.Comp.Pattern_object.Raw_tuple _
-      | Synprs.Comp.Pattern_object.Raw_application _
-      | Synprs.Comp.Pattern_object.Raw_annotated _
-      | Synprs.Comp.Pattern_object.Raw_meta_annotated _
-      | Synprs.Comp.Pattern_object.Raw_wildcard _ ) as pattern ->
+            Error.raise_at1 (Qualified_identifier.location observation) cause
+        )
+    | Synprs.Comp.Copattern_object.Raw_pattern { pattern; _ } ->
         let* pattern' = disambiguate_comp_pattern pattern in
-        return (Synext.Comp.Copattern.Pattern pattern')
+        return (Obj.magic () (* TODO: *))
 
   and elaborate_comp_pattern_operand operand =
     match operand with

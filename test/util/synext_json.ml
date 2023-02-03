@@ -790,8 +790,17 @@ and json_of_comp_expression expression =
           [ ("identifier", json_of_identifier identifier)
           ; ("location", json_of_location location)
           ]
-  | Comp.Expression.Constant { identifier; prefixed; location; operator } ->
-      json_of_variant ~name:"Comp.Expression.Constant"
+  | Comp.Expression.Constructor { identifier; prefixed; location; operator }
+    ->
+      json_of_variant ~name:"Comp.Expression.Constructor"
+        ~data:
+          [ ("identifier", json_of_qualified_identifier identifier)
+          ; ("prefixed", json_of_bool prefixed)
+          ; ("operator", json_of_operator operator)
+          ; ("location", json_of_location location)
+          ]
+  | Comp.Expression.Program { identifier; prefixed; location; operator } ->
+      json_of_variant ~name:"Comp.Expression.Program"
         ~data:
           [ ("identifier", json_of_qualified_identifier identifier)
           ; ("prefixed", json_of_bool prefixed)

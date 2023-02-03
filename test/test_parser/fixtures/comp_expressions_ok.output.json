@@ -2251,7 +2251,7 @@
         "Comp.Expression.Observation",
         {
           "scrutinee": [
-            "Comp.Expression.Constant",
+            "Comp.Expression.Program",
             {
               "identifier": {
                 "name": {

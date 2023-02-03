@@ -1019,14 +1019,22 @@ module Comp = struct
           }
           (** [Variable { identifier = "x"; _ }] is the computation-level
               variable ["x"]. *)
-      | Constant of
+      | Constructor of
+          { location : Location.t
+          ; identifier : Qualified_identifier.t
+          ; operator : Operator.t
+          ; prefixed : Bool.t
+          }
+          (** [Constructor { identifier = "c"; _ }] is the computation-level
+              constant ["c"] referring to a constructor. *)
+      | Program of
           { location : Location.t
           ; identifier : Qualified_identifier.t
           ; operator : Operator.t Option.t
           ; prefixed : Bool.t
           }
-          (** [Constant { identifier = "c"; _ }] is the computation-level
-              constant ["c"] referring to a value or constructor. *)
+          (** [Program { identifier = "f"; _ }] is the computation-level
+              constant ["f"] referring to a value. *)
       | Fn of
           { location : Location.t
           ; parameters : Identifier.t Option.t List1.t

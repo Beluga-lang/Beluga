@@ -175,7 +175,8 @@ let location_of_comp_expression expression =
   | Hole { location; _ }
   | Box_hole { location; _ }
   | Variable { location; _ }
-  | Constant { location; _ }
+  | Constructor { location; _ }
+  | Program { location; _ }
   | Application { location; _ }
   | Observation { location; _ }
   | Type_annotated { location; _ } ->

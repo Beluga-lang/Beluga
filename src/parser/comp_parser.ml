@@ -132,7 +132,7 @@ module Make
                })
         |> labelled "Explicit computational Pi kind or type"
       and implicit_pi =
-        seq2 (parens declaration) Comp_parsers.comp_sort_object
+        seq2 (trying (parens declaration)) Comp_parsers.comp_sort_object
         |> span
         $> (fun (location, ((parameter_identifier, parameter_sort), body)) ->
              Synprs.Comp.Sort_object.Raw_pi

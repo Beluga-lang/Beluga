@@ -102,7 +102,7 @@ struct
       match kind with
       | Synprs.LF.Object.Raw_arrow { range; _ } ->
           explicit_arguments_lf_kind_tl range (1 + acc)
-      | Synprs.LF.Object.Raw_pi { body; _ } ->
+      | Synprs.LF.Object.Raw_pi { body; plicity = Plicity.Explicit; _ } ->
           explicit_arguments_lf_kind_tl body (1 + acc)
       | _ -> acc
     in
@@ -113,7 +113,7 @@ struct
       match kind' with
       | Synext.LF.Kind.Arrow { range; _ } ->
           explicit_arguments_lf_kind_tl' range (1 + acc)
-      | Synext.LF.Kind.Pi { body; _ } ->
+      | Synext.LF.Kind.Pi { body; plicity = Plicity.Explicit; _ } ->
           explicit_arguments_lf_kind_tl' body (1 + acc)
       | _ -> acc
     in
@@ -124,7 +124,7 @@ struct
       match typ with
       | Synprs.LF.Object.Raw_arrow { range; _ } ->
           explicit_arguments_lf_typ_tl range (1 + acc)
-      | Synprs.LF.Object.Raw_pi { body; _ } ->
+      | Synprs.LF.Object.Raw_pi { body; plicity = Plicity.Explicit; _ } ->
           explicit_arguments_lf_typ_tl body (1 + acc)
       | _ -> acc
     in
@@ -135,7 +135,7 @@ struct
       match typ' with
       | Synext.LF.Typ.Arrow { range; _ } ->
           explicit_arguments_lf_typ_tl' range (1 + acc)
-      | Synext.LF.Typ.Pi { body; _ } ->
+      | Synext.LF.Typ.Pi { body; plicity = Plicity.Explicit; _ } ->
           explicit_arguments_lf_typ_tl' body (1 + acc)
       | _ -> acc
     in

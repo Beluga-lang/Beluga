@@ -37,6 +37,9 @@ module type META_PATTERN_DISAMBIGUATION = sig
 
   val disambiguate_meta_pattern :
     Synprs.meta_thing -> Synext.Meta.Pattern.t t
+
+  val with_disambiguated_meta_context :
+    Synprs.meta_context_object -> (Synext.meta_context -> 'a t) -> 'a t
 end
 
 module Make_pattern_disambiguator

@@ -67,3 +67,14 @@ x .Stream.tl .Stream.tl
 
 Util.Nat.fib .tl .hd
 ;;
+
+fun
+| x .tl .hd => ?
+;;
+
+fun
+| { $S : $[g, x : nat |- h] }
+  { g1 : ctx1 }
+  x1 .Stream.tl (x2 cons nil) x3 .Stream.hd [g2] => ?
+;;
+

@@ -57,3 +57,9 @@ some [x : nat, y : nat] block nat
 
 some [x : nat, y : nat] block (z : sum x y z)
 ;;
+
+$[ |- g]
+;;
+
+$[g |- h]
+;;

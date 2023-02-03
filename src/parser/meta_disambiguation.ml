@@ -81,6 +81,9 @@ module type META_PATTERN_DISAMBIGUATION = sig
 
   val disambiguate_meta_pattern :
     Synprs.meta_thing -> Synext.Meta.Pattern.t t
+
+  val with_disambiguated_meta_context :
+    Synprs.meta_context_object -> (Synext.meta_context -> 'a t) -> 'a t
 end
 
 module Make
@@ -357,6 +360,46 @@ struct
   include Disambiguation_state
   include Clf_pattern_disambiguator
 
+  let with_inner_bound_meta_variable ?location identifier f =
+    with_inner_binding identifier (with_meta_variable ?location identifier f)
+
+  let with_inner_bound_parameter_variable ?location identifier f =
+    with_inner_binding identifier
+      (with_parameter_variable ?location identifier f)
+
+  let with_inner_bound_substitution_variable ?location identifier f =
+    with_inner_binding identifier
+      (with_substitution_variable ?location identifier f)
+
+  let with_inner_bound_context_variable ?location identifier f =
+    with_inner_binding identifier
+      (with_context_variable ?location identifier f)
+
+  let meta_variable_adder identifier =
+    { run = (fun m -> Bindings_state.with_meta_variable identifier m) }
+
+  let parameter_variable_adder identifier =
+    { run = (fun m -> Bindings_state.with_parameter_variable identifier m) }
+
+  let substitution_variable_adder identifier =
+    { run = (fun m -> Bindings_state.with_substitution_variable identifier m)
+    }
+
+  let context_variable_adder identifier =
+    { run = (fun m -> Bindings_state.with_context_variable identifier m) }
+
+  let add_pattern_meta_variable identifier =
+    add_pattern_variable identifier (meta_variable_adder identifier)
+
+  let add_pattern_parameter_variable identifier =
+    add_pattern_variable identifier (parameter_variable_adder identifier)
+
+  let add_pattern_substitution_variable identifier =
+    add_pattern_variable identifier (substitution_variable_adder identifier)
+
+  let add_pattern_context_variable identifier =
+    add_pattern_variable identifier (context_variable_adder identifier)
+
   let rec disambiguate_meta_typ meta_thing =
     match meta_thing with
     | Synprs.Meta.Thing.RawContext { location; _ } ->
@@ -574,6 +617,87 @@ struct
             return
               (Synext.Meta.Pattern.Renaming_substitution
                  { location; domain = domain'; range = range' }))
+
+  let rec with_disambiguated_meta_context_binding :
+            'a.
+               (Identifier.t * [ `Dollar | `Hash | `Plain ])
+               * Synprs.meta_thing option
+            -> (Identifier.t * Synext.meta_typ -> 'a t)
+            -> 'a t =
+   fun binding f ->
+    match binding with
+    | (identifier, `Plain), Option.Some meta_type
+    (* Plain meta-variable binding *) -> (
+        let* meta_type' = disambiguate_meta_typ meta_type in
+        match meta_type' with
+        | Synext.Meta.Typ.Context_schema _ ->
+            let* () = add_pattern_context_variable identifier in
+            with_inner_bound_context_variable identifier
+              (f (identifier, meta_type'))
+        | Synext.Meta.Typ.Contextual_typ _ ->
+            let* () = add_pattern_meta_variable identifier in
+            with_inner_bound_meta_variable identifier
+              (with_meta_variable identifier (f (identifier, meta_type')))
+        | _ ->
+            Error.raise_at1
+              (Synext.location_of_meta_type meta_type')
+              Expected_contextual_type_or_schema)
+    | (identifier, `Hash), Option.Some meta_type
+    (* Parameter variable binding *) -> (
+        let* meta_type' = disambiguate_meta_typ meta_type in
+        match meta_type' with
+        | Synext.Meta.Typ.Contextual_typ _ ->
+            let* () = add_pattern_parameter_variable identifier in
+            with_inner_bound_parameter_variable identifier
+              (f (identifier, meta_type'))
+        | _ ->
+            Error.raise_at1
+              (Synext.location_of_meta_type meta_type')
+              Expected_contextual_type)
+    | (identifier, `Dollar), Option.Some meta_type
+    (* Plain substitution or renaming substitution variable binding *) -> (
+        let* meta_type' = disambiguate_meta_typ meta_type in
+        match meta_type' with
+        | Synext.Meta.Typ.Plain_substitution_typ _
+        | Synext.Meta.Typ.Renaming_substitution_typ _ ->
+            let* () = add_pattern_substitution_variable identifier in
+            with_inner_bound_substitution_variable identifier
+              (f (identifier, meta_type'))
+        | _ ->
+            Error.raise_at1
+              (Synext.location_of_meta_type meta_type')
+              Expected_plain_or_renaming_substitution_type)
+    | (identifier, _identifier_modifier), Option.None (* Missing meta-type *)
+      ->
+        Error.raise_at1
+          (Identifier.location identifier)
+          Illegal_missing_meta_type_annotation
+
+  and with_disambiguated_meta_context_bindings_list :
+        'a.
+           ((Identifier.t * [ `Dollar | `Hash | `Plain ])
+           * Synprs.meta_thing option)
+           list
+        -> ((Identifier.t * Synext.meta_typ) list -> 'a t)
+        -> 'a t =
+   fun bindings f ->
+    match bindings with
+    | [] -> f []
+    | binding :: bindings ->
+        with_disambiguated_meta_context_binding binding (fun binding' ->
+            with_disambiguated_meta_context_bindings_list bindings
+              (fun bindings' -> f (binding' :: bindings')))
+
+  and with_disambiguated_meta_context :
+        'a.
+        Synprs.meta_context_object -> (Synext.meta_context -> 'a t) -> 'a t =
+   fun context_object f ->
+    let { Synprs.Meta.Context_object.location; bindings } = context_object in
+    (* Meta-contexts are dependent, meaning that bound variables on the left
+       of a declaration may appear in the type of a binding on the right.
+       Bindings may not recursively refer to themselves. *)
+    with_disambiguated_meta_context_bindings_list bindings (fun bindings' ->
+        f { Synext.Meta.Context.location; bindings = bindings' })
 end
 
 (** {2 Exception Printing} *)

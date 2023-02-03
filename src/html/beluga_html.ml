@@ -1012,12 +1012,9 @@ end) : BELUGA_HTML with type state = Html_state.state = struct
     | Comp.Pattern.Tuple _
     | Comp.Pattern.Wildcard _ ->
         true
-    | _ -> false
-
-  let is_atomic_copattern copattern =
-    match copattern with
-    | Comp.Copattern.Observation _ -> true
-    | Comp.Copattern.Pattern pattern -> is_atomic_pattern pattern
+    | Comp.Pattern.Application _
+    | Comp.Pattern.Type_annotated _ ->
+        false
 
   let rec pp_comp_kind state ppf kind =
     let[@warning "-26"] parent_precedence = precedence_of_comp_kind kind in
@@ -1196,6 +1193,14 @@ end) : BELUGA_HTML with type state = Html_state.state = struct
               (List1.pp ~pp_sep:Format.pp_print_space (pp_meta_object state))
               arguments)
 
+  and pp_pattern_meta_context state ppf context =
+    let { Meta.Context.bindings; _ } = context in
+    List.pp ~pp_sep:Format.pp_print_space
+      (fun ppf (i, t) ->
+        Format.fprintf ppf "@[{%a :@ %a}@]" Identifier.pp i
+          (pp_meta_typ state) t)
+      ppf bindings
+
   and pp_comp_expression state ppf expression =
     let parent_precedence = precedence_of_comp_expression expression in
     match expression with
@@ -1250,31 +1255,32 @@ end) : BELUGA_HTML with type state = Html_state.state = struct
           (pp_comp_expression state)
           body
     | Comp.Expression.Fun { branches; _ } ->
-        let pp_branch_copattern ppf copattern =
-          if is_atomic_copattern copattern then
-            (pp_comp_copattern state) ppf copattern
-          else parenthesize (pp_comp_copattern state) ppf copattern
-        in
-        let pp_branch_copatterns =
-          List1.pp ~pp_sep:Format.pp_print_space pp_branch_copattern
-        in
         let pp_branch ppf branch =
-          let { Comp.Cofunction_branch.copatterns; body; _ } = branch in
-          Format.fprintf ppf "@[<hov 2>|@ %a ⇒@ %a@]" pp_branch_copatterns
-            copatterns
+          let { Comp.Cofunction_branch.copattern; body; _ } = branch in
+          Format.fprintf ppf "@[<hov 2>| %a ⇒@ %a@]"
+            (pp_comp_copattern state) copattern
             (pp_comp_expression state)
             body
         in
         let pp_branches = List1.pp ~pp_sep:Format.pp_print_cut pp_branch in
-        Format.fprintf ppf "@[<v 0>%a@;%a@]" pp_keyword "fun" pp_branches
-          branches
-    | Comp.Expression.Let { pattern; scrutinee; body; _ } ->
-        Format.fprintf ppf "@[<hov 2>%a %a =@ %a@ %a@ %a@]" pp_keyword "let"
-          (pp_comp_pattern state) pattern pp_keyword "in"
-          (pp_comp_expression state)
-          scrutinee
-          (pp_comp_expression state)
-          body
+        Format.fprintf ppf "@[<v 0>fun@ %a@]" pp_branches branches
+    | Comp.Expression.Let { scrutinee; meta_context; pattern; body; _ } -> (
+        match meta_context with
+        | Meta.Context.{ bindings = []; _ } ->
+            Format.fprintf ppf "@[<hov 2>let %a =@ %a@ in@ %a@]"
+              (pp_comp_pattern state) pattern
+              (pp_comp_expression state)
+              scrutinee
+              (pp_comp_expression state)
+              body
+        | _ ->
+            Format.fprintf ppf "@[<hov 2>let %a@ %a =@ %a@ in@ %a@]"
+              (pp_pattern_meta_context state)
+              meta_context (pp_comp_pattern state) pattern
+              (pp_comp_expression state)
+              scrutinee
+              (pp_comp_expression state)
+              body)
     | Comp.Expression.Box { meta_object; _ } ->
         (pp_meta_object state) ppf meta_object
     | Comp.Expression.Impossible { scrutinee; _ } ->
@@ -1384,11 +1390,6 @@ end) : BELUGA_HTML with type state = Html_state.state = struct
           (parenthesize_right_argument_left_associative_operator
              precedence_of_comp_typ ~parent_precedence (pp_comp_typ state))
           typ
-    | Comp.Pattern.Meta_type_annotated
-        { annotation_identifier; annotation_type; body; _ } ->
-        Format.fprintf ppf "@[<hov 2>{%a :@ %a}@ %a@]" Identifier.pp
-          annotation_identifier (pp_meta_typ state) annotation_type
-          (pp_comp_pattern state) body
     | Comp.Pattern.Wildcard _ -> Format.pp_print_string ppf "_"
     | Comp.Pattern.Application { applicand; arguments; _ } ->
         pp_application
@@ -1411,19 +1412,37 @@ end) : BELUGA_HTML with type state = Html_state.state = struct
           (applicand, arguments)
 
   and pp_comp_copattern state ppf copattern =
-    let[@warning "-26"] parent_precedence = precedence_of_comp_copattern in
-    match copattern with
-    | Comp.Copattern.Observation { observation; arguments; _ } -> (
-        match List1.of_list arguments with
-        | Option.None ->
-            Format.fprintf ppf "@[<hov 2>.%a@]" Qualified_identifier.pp
-              observation
-        | Option.Some arguments ->
-            Format.fprintf ppf "@[<hov 2>.%a@ %a@]" Qualified_identifier.pp
-              observation
-              (List1.pp ~pp_sep:Format.pp_print_space (pp_comp_pattern state))
-              arguments)
-    | Comp.Copattern.Pattern pattern -> (pp_comp_pattern state) ppf pattern
+    let pp_comp_pattern state ppf pattern =
+      if is_atomic_pattern pattern then (pp_comp_pattern state) ppf pattern
+      else
+        Format.fprintf ppf "@[<hov 2>(%a)@]" (pp_comp_pattern state) pattern
+    in
+    let pp_comp_patterns state ppf patterns =
+      List.pp ~pp_sep:Format.pp_print_space (pp_comp_pattern state) ppf
+        patterns
+    in
+    let pp_observations state ppf observations =
+      List.pp ~pp_sep:Format.pp_print_space
+        (fun ppf (destructor, arguments) ->
+          match arguments with
+          | [] ->
+              Format.fprintf ppf ".%a"
+                (pp_computation_destructor_invoke state)
+                destructor
+          | _ ->
+              Format.fprintf ppf ".%a@ %a"
+                (pp_computation_destructor_invoke state)
+                destructor (pp_comp_patterns state) arguments)
+        ppf observations
+    in
+    let { Comp.Copattern.patterns; observations; _ } = copattern in
+    match (patterns, observations) with
+    | [], [] -> ()
+    | [], observations -> (pp_observations state) ppf observations
+    | patterns, [] -> (pp_comp_patterns state) ppf patterns
+    | patterns, observations ->
+        Format.fprintf ppf "%a@ %a" (pp_comp_patterns state) patterns
+          (pp_observations state) observations
 
   (** {1 Pretty-Printing Harpoon Syntax} *)
 

@@ -11,6 +11,8 @@ module type COMP_PARSER = sig
 
   val comp_pattern : Synprs.comp_pattern_object t
 
+  val comp_copattern : Synprs.comp_copattern_object t
+
   val comp_expression : Synprs.comp_expression_object t
 
   val comp_context : Synprs.comp_context_object t

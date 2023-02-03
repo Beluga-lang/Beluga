@@ -12,6 +12,8 @@ module type COMP_PARSER = sig
 
   val comp_pattern : Synprs.comp_pattern_object t
 
+  val comp_copattern : Synprs.comp_copattern_object t
+
   val comp_expression : Synprs.comp_expression_object t
 
   val comp_context : Synprs.comp_context_object t
@@ -48,10 +50,19 @@ module Make
 
     val comp_pattern_object : Synprs.comp_pattern_object t
 
+    val comp_copattern_object : Synprs.comp_copattern_object t
+
     val comp_expression_object : Synprs.comp_expression_object t
 
     val comp_context : Synprs.comp_context_object t
   end = struct
+    let comp_pattern_meta_context =
+      many
+        (braces (seq2 meta_object_identifier (maybe (colon &> meta_type))))
+      |> span
+      $> fun (location, bindings) ->
+      { Synprs.Meta.Context_object.location; bindings }
+
     (*=
       Original grammar:
 
@@ -325,12 +336,15 @@ module Make
         | <identifier>
         | <qualified-identifier>
         | <boxed-meta-object-thing>
-        | <dot-qualified-identifier> <comp-pattern-object4>*
         | `_'
         | `(' <comp-pattern-object> (`,' <comp-pattern-object>)+ `)'
         | `(' <comp-pattern-object> `)'
 
-      <comp-pattern-atomic-object> ::=
+      <comp-atomic-pattern-object> ::=
+        | <comp-pattern-object4>
+
+      <comp-copattern-object> ::=
+        | <dot-qualified-identifier>
         | <comp-pattern-object4>
       *)
     let comp_weak_prefix_pattern =
@@ -344,7 +358,7 @@ module Make
         $> (fun (location, ((parameter_identifier, parameter_typ), pattern)) ->
              Synprs.Comp.Pattern_object.Raw_meta_annotated
                { location; parameter_identifier; parameter_typ; pattern })
-        |> labelled "Explicit computational Pi kind or type"
+        |> labelled "Meta-annotated computation-level pattern"
       in
       pi
 
@@ -364,13 +378,6 @@ module Make
         $> (fun (location, pattern) ->
              Synprs.Comp.Pattern_object.Raw_box { location; pattern })
         |> labelled "Meta-object pattern"
-      and observation =
-        seq2 dot_qualified_identifier
-          (many Comp_parsers.comp_pattern_atomic_object)
-        |> span
-        $> fun (location, (constant, arguments)) ->
-        Synprs.Comp.Pattern_object.Raw_observation
-          { location; constant; arguments }
       and wildcard =
         underscore |> span
         $> (fun (location, ()) ->
@@ -398,13 +405,7 @@ module Make
                  Synprs.Comp.Pattern_object.Raw_tuple { location; elements })
         |> labelled "Computational tuple pattern or parenthesized pattern"
       in
-      choice
-        [ constant_or_variable
-        ; box
-        ; observation
-        ; wildcard
-        ; parenthesized_or_tuple
-        ]
+      choice [ constant_or_variable; box; wildcard; parenthesized_or_tuple ]
 
     let comp_pattern_object3 =
       seq2 comp_pattern_object4
@@ -441,6 +442,22 @@ module Make
 
     let comp_pattern_atomic_object =
       comp_pattern_object4 |> labelled "Computation-level atomic pattern"
+
+    let comp_copattern_object =
+      let observation =
+        dot_qualified_identifier |> span
+        $> (fun (location, observation) ->
+             Synprs.Comp.Copattern_object.Raw_observation
+               { location; observation })
+        |> labelled "Computation-level destructor pattern"
+      and pattern =
+        Comp_parsers.comp_pattern_atomic_object |> span
+        $> (fun (location, pattern) ->
+             Synprs.Comp.Copattern_object.Raw_pattern { location; pattern })
+        |> labelled "Computation-level application copattern"
+      in
+      choice [ observation; pattern ]
+      |> labelled "Computation-level copattern"
 
     (*=
       Original grammar:
@@ -593,12 +610,11 @@ module Make
              Synprs.Comp.Expression_object.Raw_fn
                { location; parameters; body })
         |> labelled "Ordinary function abstraction"
-      and matching_fun =
+      and cofunction =
         keyword "fun" &> maybe pipe
         &> sep_by1 ~sep:pipe
-             (seq2
-                (sep_by1 ~sep:comma_opt
-                   Comp_parsers.comp_pattern_atomic_object)
+             (seq3 comp_pattern_meta_context
+                (sep_by1 ~sep:comma_opt comp_copattern_object)
                 (thick_forward_arrow &> Comp_parsers.comp_expression_object))
         |> span
         $> (fun (location, branches) ->
@@ -614,14 +630,15 @@ module Make
                { location; parameters; body })
         |> labelled "Meta-level function abstraction"
       and let_ =
-        seq3
-          (keyword "let" &> Comp_parsers.comp_pattern_object)
+        seq4
+          (keyword "let" &> comp_pattern_meta_context)
+          Comp_parsers.comp_pattern_object
           (equals &> Comp_parsers.comp_expression_object)
           (keyword "in" &> Comp_parsers.comp_expression_object)
         |> span
-        $> (fun (location, (pattern, scrutinee, body)) ->
+        $> (fun (location, (meta_context, pattern, scrutinee, body)) ->
              Synprs.Comp.Expression_object.Raw_let
-               { location; pattern; scrutinee; body })
+               { location; meta_context; pattern; scrutinee; body })
         |> labelled "`let'-expressions"
       and impossible =
         keyword "impossible" &> Comp_parsers.comp_expression_object |> span
@@ -635,7 +652,8 @@ module Make
           (keyword "of" &> maybe (pragma "not"))
           (maybe pipe
           &> sep_by1 ~sep:pipe
-               (seq2 Comp_parsers.comp_pattern_object
+               (seq3 comp_pattern_meta_context
+                  Comp_parsers.comp_pattern_object
                   (thick_forward_arrow &> Comp_parsers.comp_expression_object))
           )
         |> span
@@ -647,7 +665,7 @@ module Make
       in
       choice
         [ fn
-        ; matching_fun
+        ; cofunction
         ; mlam
         ; let_
         ; impossible
@@ -706,6 +724,10 @@ module Make
 
   let comp_pattern =
     Comp_parsers.comp_pattern_object |> labelled "Computation-level pattern"
+
+  let comp_copattern =
+    Comp_parsers.comp_copattern_object
+    |> labelled "Computation-level copattern"
 
   let comp_expression =
     Comp_parsers.comp_expression_object

@@ -328,7 +328,6 @@ module Comp_precedence = struct
 
   let precedence_of_comp_pattern pattern =
     match pattern with
-    | Comp.Pattern.Meta_type_annotated _ -> Static 1
     | Comp.Pattern.Type_annotated _ -> Static 2
     | Comp.Pattern.Application
         { applicand = Comp.Pattern.Constant { operator; prefixed; _ }; _ }
@@ -349,11 +348,6 @@ module Comp_precedence = struct
     | Comp.Pattern.Tuple _
     | Comp.Pattern.Wildcard _ ->
         Static 4
-
-  let precedence_of_comp_copattern copattern =
-    match copattern with
-    | Comp.Copattern.Observation _ -> Static 3
-    | Comp.Copattern.Pattern pattern -> precedence_of_comp_pattern pattern
 
   include (
     Ord.Make (struct
@@ -418,6 +412,3 @@ let precedence_of_comp_expression =
   Comp_precedence.precedence_of_comp_expression
 
 let precedence_of_comp_pattern = Comp_precedence.precedence_of_comp_pattern
-
-let precedence_of_comp_copattern =
-  Comp_precedence.precedence_of_comp_copattern

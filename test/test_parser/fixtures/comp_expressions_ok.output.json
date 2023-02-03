@@ -509,6 +509,19 @@
                 "stop_line": 30,
                 "stop_column": 19
               },
+              "meta_context": [
+                "Meta.Context",
+                {
+                  "bindings": [],
+                  "location": {
+                    "filename": "comp_expressions_ok.input.bel",
+                    "start_line": 30,
+                    "start_column": 5,
+                    "stop_line": 30,
+                    "stop_column": 4
+                  }
+                }
+              ],
               "pattern": [
                 "Comp.Pattern.Meta_object",
                 {
@@ -638,6 +651,19 @@
                 "stop_line": 31,
                 "stop_column": 31
               },
+              "meta_context": [
+                "Meta.Context",
+                {
+                  "bindings": [],
+                  "location": {
+                    "filename": "comp_expressions_ok.input.bel",
+                    "start_line": 31,
+                    "start_column": 5,
+                    "stop_line": 31,
+                    "stop_column": 4
+                  }
+                }
+              ],
               "pattern": [
                 "Comp.Pattern.Meta_object",
                 {
@@ -961,6 +987,19 @@
             "stop_line": 35,
             "stop_column": 31
           },
+          "meta_context": [
+            "Meta.Context",
+            {
+              "bindings": [],
+              "location": {
+                "filename": "comp_expressions_ok.input.bel",
+                "start_line": 35,
+                "start_column": 3,
+                "stop_line": 35,
+                "stop_column": 2
+              }
+            }
+          ],
           "pattern": [
             "Comp.Pattern.Meta_object",
             {
@@ -1228,6 +1267,19 @@
             "stop_line": 39,
             "stop_column": 26
           },
+          "meta_context": [
+            "Meta.Context",
+            {
+              "bindings": [],
+              "location": {
+                "filename": "comp_expressions_ok.input.bel",
+                "start_line": 39,
+                "start_column": 3,
+                "stop_line": 39,
+                "stop_column": 2
+              }
+            }
+          ],
           "pattern": [
             "Comp.Pattern.Application",
             {
@@ -1422,6 +1474,19 @@
             "stop_line": 40,
             "stop_column": 17
           },
+          "meta_context": [
+            "Meta.Context",
+            {
+              "bindings": [],
+              "location": {
+                "filename": "comp_expressions_ok.input.bel",
+                "start_line": 40,
+                "start_column": 3,
+                "stop_line": 40,
+                "stop_column": 2
+              }
+            }
+          ],
           "pattern": [
             "Comp.Pattern.Application",
             {
@@ -1541,6 +1606,19 @@
             "stop_line": 41,
             "stop_column": 11
           },
+          "meta_context": [
+            "Meta.Context",
+            {
+              "bindings": [],
+              "location": {
+                "filename": "comp_expressions_ok.input.bel",
+                "start_line": 41,
+                "start_column": 3,
+                "stop_line": 41,
+                "stop_column": 2
+              }
+            }
+          ],
           "pattern": [
             "Comp.Pattern.Constant",
             {
@@ -1639,6 +1717,19 @@
             "stop_line": 44,
             "stop_column": 23
           },
+          "meta_context": [
+            "Meta.Context",
+            {
+              "bindings": [],
+              "location": {
+                "filename": "comp_expressions_ok.input.bel",
+                "start_line": 44,
+                "start_column": 17,
+                "stop_line": 44,
+                "stop_column": 16
+              }
+            }
+          ],
           "pattern": [
             "Comp.Pattern.Variable",
             {

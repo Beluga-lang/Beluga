@@ -831,10 +831,12 @@ and json_of_comp_expression expression =
             , json_of_list1 json_of_comp_cofunction_branch branches )
           ; ("location", json_of_location location)
           ]
-  | Comp.Expression.Let { pattern; scrutinee; body; location } ->
+  | Comp.Expression.Let { pattern; meta_context; scrutinee; body; location }
+    ->
       json_of_variant ~name:"Comp.Expression.Let"
         ~data:
           [ ("pattern", json_of_comp_pattern pattern)
+          ; ("meta_context", json_of_meta_context meta_context)
           ; ("scrutinee", json_of_comp_expression scrutinee)
           ; ("body", json_of_comp_expression body)
           ; ("location", json_of_location location)
@@ -897,18 +899,22 @@ and json_of_comp_expression expression =
           ]
 
 and json_of_comp_case_branch branch =
-  let { Comp.Case_branch.location; pattern; body } = branch in
+  let { Comp.Case_branch.location; meta_context; pattern; body } = branch in
   json_of_association
     [ ("location", json_of_location location)
+    ; ("meta_context", json_of_meta_context meta_context)
     ; ("pattern", json_of_comp_pattern pattern)
     ; ("body", json_of_comp_expression body)
     ]
 
 and json_of_comp_cofunction_branch branch =
-  let { Comp.Cofunction_branch.location; copatterns; body } = branch in
+  let { Comp.Cofunction_branch.location; meta_context; copattern; body } =
+    branch
+  in
   json_of_association
     [ ("location", json_of_location location)
-    ; ("copatterns", json_of_list1 json_of_comp_copattern copatterns)
+    ; ("meta_context", json_of_meta_context meta_context)
+    ; ("copattern", json_of_comp_copattern copattern)
     ; ("body", json_of_comp_expression body)
     ]
 
@@ -954,30 +960,25 @@ and json_of_comp_pattern pattern =
           ; ("typ", json_of_comp_typ typ)
           ; ("location", json_of_location location)
           ]
-  | Comp.Pattern.Meta_type_annotated
-      { annotation_identifier; annotation_type; body; location } ->
-      json_of_variant ~name:"Comp.Pattern.Meta_type_annotated"
-        ~data:
-          [ ( "annotation_identifier"
-            , json_of_identifier annotation_identifier )
-          ; ("annotation_type", json_of_meta_typ annotation_type)
-          ; ("body", json_of_comp_pattern body)
-          ; ("location", json_of_location location)
-          ]
   | Comp.Pattern.Wildcard { location } ->
       json_of_variant ~name:"Comp.Pattern.Wildcard"
         ~data:[ ("location", json_of_location location) ]
 
-and json_of_comp_copattern pattern =
-  match pattern with
-  | Comp.Copattern.Pattern pattern -> json_of_comp_pattern pattern
-  | Comp.Copattern.Observation { observation; arguments; location } ->
-      json_of_variant ~name:"Comp.Copattern.Observation"
-        ~data:
-          [ ("observation", json_of_qualified_identifier observation)
-          ; ("arguments", json_of_list json_of_comp_pattern arguments)
-          ; ("location", json_of_location location)
-          ]
+and json_of_comp_copattern copattern =
+  let { Comp.Copattern.location; patterns; observations } = copattern in
+  json_of_variant ~name:"Comp.Copattern"
+    ~data:
+      [ ("location", json_of_location location)
+      ; ("patterns", json_of_list json_of_comp_pattern patterns)
+      ; ( "observations"
+        , json_of_list
+            (fun (destructor, arguments) ->
+              json_of_association
+                [ ("destructor", json_of_qualified_identifier destructor)
+                ; ("arguments", json_of_list json_of_comp_pattern arguments)
+                ])
+            observations )
+      ]
 
 and json_of_comp_context context =
   match context with

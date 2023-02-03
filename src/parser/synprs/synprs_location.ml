@@ -172,7 +172,6 @@ let location_of_comp_pattern_object pattern_object =
   | Raw_box { location; _ }
   | Raw_tuple { location; _ }
   | Raw_application { location; _ }
-  | Raw_observation { location; _ }
   | Raw_annotated { location; _ }
   | Raw_meta_annotated { location; _ }
   | Raw_wildcard { location; _ } ->
@@ -188,10 +187,23 @@ let[@warning "-23"] set_location_of_comp_pattern_object location
   | Raw_box o -> Raw_box { o with location }
   | Raw_tuple o -> Raw_tuple { o with location }
   | Raw_application o -> Raw_application { o with location }
-  | Raw_observation o -> Raw_observation { o with location }
   | Raw_annotated o -> Raw_annotated { o with location }
   | Raw_meta_annotated o -> Raw_meta_annotated { o with location }
   | Raw_wildcard o -> Raw_wildcard { o with location }
+
+let location_of_comp_copattern_object copattern_object =
+  let open Comp.Copattern_object in
+  match copattern_object with
+  | Raw_observation { location; _ }
+  | Raw_pattern { location; _ } ->
+      location
+
+let[@warning "-23"] set_location_of_comp_copattern_object location
+    copattern_object =
+  let open Comp.Copattern_object in
+  match copattern_object with
+  | Raw_observation o -> Raw_observation { o with location }
+  | Raw_pattern o -> Raw_pattern { o with location }
 
 let location_of_comp_context_object context_object =
   let open Comp.Context_object in

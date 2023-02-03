@@ -191,15 +191,10 @@ let location_of_comp_pattern pattern =
   | Tuple { location; _ }
   | Application { location; _ }
   | Type_annotated { location; _ }
-  | Meta_type_annotated { location; _ }
   | Wildcard { location; _ } ->
       location
 
-let location_of_comp_copattern copattern =
-  let open Comp.Copattern in
-  match copattern with
-  | Pattern pattern -> location_of_comp_pattern pattern
-  | Observation { location; _ } -> location
+let location_of_comp_copattern copattern = copattern.Comp.Copattern.location
 
 (** {1 Harpoon} *)
 

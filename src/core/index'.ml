@@ -611,8 +611,6 @@ struct
 
   exception Unsupported_comp_typ_applicand
 
-  exception Unsupported_meta_type_annotated_comp_pattern
-
   exception Unsupported_wildcard_comp_pattern
 
   let rec index_comp_kind = function
@@ -696,7 +694,10 @@ struct
   and index_comp_expression = function
     | Synext.Comp.Expression.Variable { location; identifier } ->
         Obj.magic ()
-    | Synext.Comp.Expression.Constant
+    | Synext.Comp.Expression.Constructor
+        { location; identifier; operator; prefixed } ->
+        Obj.magic ()
+    | Synext.Comp.Expression.Program
         { location; identifier; operator; prefixed } ->
         Obj.magic ()
     | Synext.Comp.Expression.Fn { location; parameters; body } ->
@@ -801,19 +802,11 @@ struct
         let* typ' = index_comp_typ typ in
         let* pattern' = index_comp_pattern pattern in
         return (Synapx.Comp.PatAnn (location, pattern', typ'))
-    | Synext.Comp.Pattern.Meta_type_annotated { location; _ } ->
-        Error.raise_at1 location Unsupported_meta_type_annotated_comp_pattern
     | Synext.Comp.Pattern.Wildcard { location } ->
+        (* TODO: Generate a fresh identifier not in the pattern *)
         Error.raise_at1 location Unsupported_wildcard_comp_pattern
 
-  and index_comp_pattern_with_meta_type_annotations = function
-    | Synext.Comp.Pattern.Meta_type_annotated { location; _ } ->
-        (* TODO: Collect meta-type annotations, and index to [LF.ctyp_decl
-           LF.ctx] together with head/body pattern *)
-        Obj.magic ()
-    | pattern ->
-        let* pattern' = index_comp_pattern pattern in
-        return (Synapx.LF.Empty, pattern')
+  and index_comp_pattern_with_meta_type_annotations = Obj.magic () (* TODO: *)
 
   and index_branch pattern body =
     let location =
@@ -821,41 +814,9 @@ struct
         (Synext.location_of_comp_pattern pattern)
         (Synext.location_of_comp_expression body)
     in
-    match pattern with
-    | Synext.Comp.Pattern.Meta_type_annotated _ ->
-        (* TODO: Collect meta-type annotations, and index to [LF.ctyp_decl
-           LF.ctx] together with head/body pattern *)
-        Obj.magic ()
-    | pattern ->
-        let* pattern', body' =
-          with_pattern_variables_checkpoint
-            ~pattern:(index_comp_pattern pattern)
-            ~expression:(index_comp_expression body)
-        in
-        return
-          (Synapx.Comp.Branch (location, Synapx.LF.Empty, pattern', body'))
+    Obj.magic () (* TODO: *)
 
-  and index_comp_copattern = function
-    | Synext.Comp.Copattern.Observation { location; observation; arguments }
-      ->
-        let* id = index_of_comp_destructor observation in
-        let* arguments' = traverse_list index_comp_pattern arguments in
-        let initial_location = Location.stop_position_as_location location in
-        let _spine_location, spine' =
-          List.fold_right2
-            (fun argument' argument (spine_location, spine) ->
-              let location =
-                Location.join
-                  (Synext.location_of_comp_pattern argument)
-                  spine_location
-              in
-              (location, Synapx.Comp.PatApp (location, argument', spine)))
-            arguments' arguments
-            (initial_location, Synapx.Comp.PatNil initial_location)
-        in
-        return (`Observation (Synapx.Comp.PatObs (location, id, spine')))
-    | Synext.Comp.Copattern.Pattern pattern ->
-        index_comp_pattern pattern $> fun pattern' -> `Pattern pattern'
+  and index_comp_copattern = Obj.magic () (* TODO: *)
 
   and index_comp_context = function
     | { Synext.Comp.Context.location; bindings } ->

@@ -701,12 +701,9 @@ let is_atomic_pattern pattern =
   | Comp.Pattern.Tuple _
   | Comp.Pattern.Wildcard _ ->
       true
-  | _ -> false
-
-let is_atomic_copattern copattern =
-  match copattern with
-  | Comp.Copattern.Observation _ -> true
-  | Comp.Copattern.Pattern pattern -> is_atomic_pattern pattern
+  | Comp.Pattern.Application _
+  | Comp.Pattern.Type_annotated _ ->
+      false
 
 let rec pp_comp_kind ppf kind =
   let[@warning "-26"] parent_precedence = precedence_of_comp_kind kind in
@@ -869,6 +866,13 @@ and pp_comp_typ ppf typ =
             (List1.pp ~pp_sep:Format.pp_print_space pp_meta_object)
             arguments)
 
+and pp_pattern_meta_context ppf context =
+  let { Meta.Context.bindings; _ } = context in
+  List.pp ~pp_sep:Format.pp_print_space
+    (fun ppf (i, t) ->
+      Format.fprintf ppf "@[{%a :@ %a}@]" Identifier.pp i pp_meta_typ t)
+    ppf bindings
+
 and pp_comp_expression ppf expression =
   let parent_precedence = precedence_of_comp_expression expression in
   match expression with
@@ -913,23 +917,23 @@ and pp_comp_expression ppf expression =
       Format.fprintf ppf "@[<hov 2>mlam %a ⇒@ %a@]" pp_parameters parameters
         pp_comp_expression body
   | Comp.Expression.Fun { branches; _ } ->
-      let pp_branch_copattern ppf copattern =
-        if is_atomic_copattern copattern then pp_comp_copattern ppf copattern
-        else parenthesize pp_comp_copattern ppf copattern
-      in
-      let pp_branch_copatterns =
-        List1.pp ~pp_sep:Format.pp_print_space pp_branch_copattern
-      in
       let pp_branch ppf branch =
-        let { Comp.Cofunction_branch.copatterns; body; _ } = branch in
-        Format.fprintf ppf "@[<hov 2>| %a ⇒@ %a@]" pp_branch_copatterns
-          copatterns pp_comp_expression body
+        let { Comp.Cofunction_branch.copattern; body; _ } = branch in
+        Format.fprintf ppf "@[<hov 2>| %a ⇒@ %a@]" pp_comp_copattern
+          copattern pp_comp_expression body
       in
       let pp_branches = List1.pp ~pp_sep:Format.pp_print_cut pp_branch in
       Format.fprintf ppf "@[<v 0>fun@ %a@]" pp_branches branches
-  | Comp.Expression.Let { pattern; scrutinee; body; _ } ->
-      Format.fprintf ppf "@[<hov 2>let %a =@ %a@ in@ %a@]" pp_comp_pattern
-        pattern pp_comp_expression scrutinee pp_comp_expression body
+  | Comp.Expression.Let { scrutinee; meta_context; pattern; body; _ } -> (
+      match meta_context with
+      | Meta.Context.{ bindings = []; _ } ->
+          Format.fprintf ppf "@[<hov 2>let %a =@ %a@ in@ %a@]"
+            pp_comp_pattern pattern pp_comp_expression scrutinee
+            pp_comp_expression body
+      | _ ->
+          Format.fprintf ppf "@[<hov 2>let %a@ %a =@ %a@ in@ %a@]"
+            pp_pattern_meta_context meta_context pp_comp_pattern pattern
+            pp_comp_expression scrutinee pp_comp_expression body)
   | Comp.Expression.Box { meta_object; _ } -> pp_meta_object ppf meta_object
   | Comp.Expression.Impossible { scrutinee; _ } ->
       (* [impossible (impossible (...))] is right-associative *)
@@ -1027,11 +1031,6 @@ and pp_comp_pattern ppf pattern =
         (parenthesize_right_argument_left_associative_operator
            precedence_of_comp_typ ~parent_precedence pp_comp_typ)
         typ
-  | Comp.Pattern.Meta_type_annotated
-      { annotation_identifier; annotation_type; body; _ } ->
-      Format.fprintf ppf "@[<hov 2>{%a :@ %a}@ %a@]" Identifier.pp
-        annotation_identifier pp_meta_typ annotation_type pp_comp_pattern
-        body
   | Comp.Pattern.Wildcard _ -> Format.pp_print_string ppf "_"
   | Comp.Pattern.Application { applicand; arguments; _ } ->
       pp_application
@@ -1053,19 +1052,31 @@ and pp_comp_pattern ppf pattern =
         ~parent_precedence ppf (applicand, arguments)
 
 and pp_comp_copattern ppf copattern =
-  let[@warning "-26"] parent_precedence = precedence_of_comp_copattern in
-  match copattern with
-  | Comp.Copattern.Observation { observation; arguments; _ } -> (
-      match List1.of_list arguments with
-      | Option.None ->
-          Format.fprintf ppf "@[<hov 2>.%a@]" Qualified_identifier.pp
-            observation
-      | Option.Some arguments ->
-          Format.fprintf ppf "@[<hov 2>.%a@ %a@]" Qualified_identifier.pp
-            observation
-            (List1.pp ~pp_sep:Format.pp_print_space pp_comp_pattern)
-            arguments)
-  | Comp.Copattern.Pattern pattern -> pp_comp_pattern ppf pattern
+  let pp_comp_pattern ppf pattern =
+    if is_atomic_pattern pattern then pp_comp_pattern ppf pattern
+    else Format.fprintf ppf "@[<hov 2>(%a)@]" pp_comp_pattern pattern
+  in
+  let pp_comp_patterns ppf patterns =
+    List.pp ~pp_sep:Format.pp_print_space pp_comp_pattern ppf patterns
+  in
+  let pp_observations ppf observations =
+    List.pp ~pp_sep:Format.pp_print_space
+      (fun ppf (destructor, arguments) ->
+        match arguments with
+        | [] -> Format.fprintf ppf ".%a" Qualified_identifier.pp destructor
+        | _ ->
+            Format.fprintf ppf ".%a@ %a" Qualified_identifier.pp destructor
+              pp_comp_patterns arguments)
+      ppf observations
+  in
+  let { Comp.Copattern.patterns; observations; _ } = copattern in
+  match (patterns, observations) with
+  | [], [] -> ()
+  | [], observations -> pp_observations ppf observations
+  | patterns, [] -> pp_comp_patterns ppf patterns
+  | patterns, observations ->
+      Format.fprintf ppf "%a@ %a" pp_comp_patterns patterns pp_observations
+        observations
 
 and pp_comp_context ppf context =
   let pp_binding ppf (identifier, typ) =

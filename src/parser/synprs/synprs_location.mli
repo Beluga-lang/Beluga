@@ -40,6 +40,11 @@ val location_of_comp_pattern_object : comp_pattern_object -> Location.t
 val set_location_of_comp_pattern_object :
   Location.t -> comp_pattern_object -> comp_pattern_object
 
+val location_of_comp_copattern_object : comp_copattern_object -> Location.t
+
+val set_location_of_comp_copattern_object :
+  Location.t -> comp_copattern_object -> comp_copattern_object
+
 val location_of_comp_context_object : comp_context_object -> Location.t
 
 (** {1 Harpoon} *)

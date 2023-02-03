@@ -88,6 +88,9 @@ module Make
         | `(' <lf-object> `)'
     *)
     let lf_weak_prefix =
+      let declaration =
+        seq2 omittable_identifier (maybe (colon &> LF_parsers.lf_object))
+      in
       let lambda =
         seq2
           (lambda
@@ -101,11 +104,7 @@ module Make
                { location; parameter_identifier; parameter_sort; body })
         |> labelled "LF lambda term"
       and explicit_pi =
-        seq2
-          (braces
-             (seq2 omittable_identifier
-                (maybe (colon &> LF_parsers.lf_object))))
-          LF_parsers.lf_object
+        seq2 (braces declaration) LF_parsers.lf_object
         |> span
         $> (fun (location, ((parameter_identifier, parameter_sort), body)) ->
              Synprs.LF.Object.Raw_pi
@@ -115,7 +114,7 @@ module Make
                ; plicity = Plicity.explicit
                ; body
                })
-        |> labelled "LF dependent product type or kind"
+        |> labelled "LF explicit dependent product type or kind"
       in
       (* There is no syntax for implict Pis *)
       choice [ lambda; explicit_pi ]

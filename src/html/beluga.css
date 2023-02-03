@@ -1,0 +1,81 @@
+body {
+  padding: 2em 1em 2em 1em;
+  margin: 0;
+  font-family: sans-serif;
+  color: black;
+  background: white;
+}
+
+a {
+  text-decoration: none;
+}
+
+a:link {
+  color: #00c;
+}
+
+a:visited {
+  color: #00c;
+}
+
+a:active {
+  color: #c00;
+}
+
+pre {
+  border: 1px dashed maroon;
+  display: block;
+  padding: 8px;
+  background-color: #dddddd;
+}
+
+code {
+  background-color: #dddddd;
+  color: black;
+  font-family: "courier";
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.documentation {
+}
+
+.inner-documentation {
+}
+
+.keyword {
+  color: #3333cc;
+}
+
+.pragma {
+  color: #3333cc;
+}
+
+.variable {
+}
+
+.constant .constructor,
+.constant .destructor,
+.constant .lf-term-constant {
+  color: #335c85;
+  font-weight: bold;
+}
+
+.constant .lf-type-constant,
+.constant .computation-inductive-type-constant,
+.constant .computation-stratified-type-constant,
+.constant .computation-coinductive-type-constant,
+.constant .computation-abbreviation-type-constant {
+  color: #660000;
+  font-weight: bold;
+}
+
+.constant .context-schema {
+  color: #6600cc;
+  font-weight: bold;
+}
+
+.constant .program {
+  color: #660033;
+  font-weight: bold;
+}

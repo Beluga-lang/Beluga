@@ -7,3 +7,9 @@
   (pps tyxml-ppx))
  (instrumentation
   (backend bisect_ppx --bisect-silent yes)))
+
+;; Install the stylesheet at `$(opam var share)/beluga/beluga.css`
+
+(install
+ (section share)
+ (files beluga.css))

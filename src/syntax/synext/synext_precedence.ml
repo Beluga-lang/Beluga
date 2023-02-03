@@ -289,8 +289,9 @@ module Comp_precedence = struct
     | Comp.Expression.Type_annotated _ -> Static 1
     | Comp.Expression.Application
         { applicand =
-            Comp.Expression.Constant
-              { operator = Option.Some operator; prefixed; _ }
+            ( Comp.Expression.Constructor { operator; prefixed; _ }
+            | Comp.Expression.Program
+                { operator = Option.Some operator; prefixed; _ } )
         ; _
         }
       when prefixed || Operator.is_prefix operator
@@ -299,8 +300,9 @@ module Comp_precedence = struct
         Static expression_application_precedence
     | Comp.Expression.Application
         { applicand =
-            Comp.Expression.Constant
-              { operator = Option.Some operator; prefixed = false; _ }
+            ( Comp.Expression.Constructor { operator; prefixed = false; _ }
+            | Comp.Expression.Program
+                { operator = Option.Some operator; prefixed = false; _ } )
         ; _
         }
     (* User-defined operator application *) ->
@@ -320,7 +322,8 @@ module Comp_precedence = struct
     | Comp.Expression.Box_hole _
     | Comp.Expression.Tuple _
     | Comp.Expression.Variable _
-    | Comp.Expression.Constant _ ->
+    | Comp.Expression.Constructor _
+    | Comp.Expression.Program _ ->
         Static 5
 
   let precedence_of_comp_pattern pattern =

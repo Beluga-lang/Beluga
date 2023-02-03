@@ -125,6 +125,8 @@ exception Illegal_meta_annotated_comp_pattern_missing_identifier
 
 exception Illegal_meta_annotated_comp_pattern_missing_type
 
+exception Unbound_comp_term_constructor_constant of Qualified_identifier.t
+
 (** {2 Exceptions for computation-level copattern disambiguation} *)
 
 exception Expected_comp_term_destructor_constant
@@ -985,16 +987,16 @@ module Make
             (* [identifier] appears as a bound computation-level
                constructor *)
             return
-              (Synext.Comp.Expression.Constant
+              (Synext.Comp.Expression.Constructor
                  { location
                  ; identifier = qualified_identifier
                  ; prefixed
-                 ; operator = Option.some operator
+                 ; operator
                  })
         | Result.Ok (Program_constant, { operator; _ }) ->
             (* [identifier] appears as a bound computation-level program *)
             return
-              (Synext.Comp.Expression.Constant
+              (Synext.Comp.Expression.Program
                  { location
                  ; identifier = qualified_identifier
                  ; prefixed
@@ -1066,14 +1068,33 @@ module Make
                 in
                 match List1.last bound_segments with
                 | ( _identifier
-                  , ( (Computation_term_constructor | Program_constant)
-                    , { operator; _ } ) )
+                  , ( Computation_term_constructor
+                    , { operator = Option.Some operator; _ } ) )
                 (* [bound_segments] forms a valid constant *) ->
                     let location =
                       Qualified_identifier.location bound_segments_identifier
                     in
                     let scrutinee =
-                      Synext.Comp.Expression.Constant
+                      Synext.Comp.Expression.Constructor
+                        { location
+                        ; identifier = bound_segments_identifier
+                        ; operator
+                        ; prefixed =
+                            false
+                            (* [unbound_segments] is non-empty, so the
+                               parentheses do not force the constant to be
+                               prefixed *)
+                        }
+                    in
+                    disambiguate_trailing_observations scrutinee
+                      unbound_segments
+                | _identifier, (Program_constant, { operator; _ })
+                (* [bound_segments] forms a valid constant *) ->
+                    let location =
+                      Qualified_identifier.location bound_segments_identifier
+                    in
+                    let scrutinee =
+                      Synext.Comp.Expression.Program
                         { location
                         ; identifier = bound_segments_identifier
                         ; operator
@@ -1098,10 +1119,14 @@ module Make
         | `Totally_bound bound_segments (* A constant *) -> (
             match List1.last bound_segments with
             | ( _identifier
-              , ( (Computation_term_constructor | Program_constant)
-                , { operator; _ } ) ) ->
+              , ( Computation_term_constructor
+                , { operator = Option.Some operator; _ } ) ) ->
                 return
-                  (Synext.Comp.Expression.Constant
+                  (Synext.Comp.Expression.Constructor
+                     { location; identifier; operator; prefixed })
+            | _identifier, (Program_constant, { operator; _ }) ->
+                return
+                  (Synext.Comp.Expression.Program
                      { location; identifier; operator; prefixed })
             | _identifier, entry ->
                 Error.raise_at1 location
@@ -1765,8 +1790,26 @@ module Make_pattern_disambiguator
             return (Synext.Comp.Pattern.Variable { location; identifier })
         | Result.Error cause -> Error.raise_at1 location cause)
     | Synprs.Comp.Pattern_object.Raw_qualified_identifier
-        { location; identifier; prefixed } ->
-        Obj.magic () (* TODO: *)
+        { location; identifier; prefixed } -> (
+        lookup identifier >>= function
+        | Result.Ok
+            ( Computation_term_constructor
+            , { operator = Option.Some operator; _ } ) ->
+            (* [identifier] appears as a bound computation-level program *)
+            return
+              (Synext.Comp.Pattern.Constant
+                 { location; identifier; prefixed; operator })
+        | Result.Ok entry ->
+            (* [identifier] appears as a bound entry that is not a
+               computation-level constructor *)
+            Error.raise_at1 location
+              (Error.composite_exception2
+                 (Expected_constructor_constant identifier)
+                 (actual_binding_exn identifier entry))
+        | Result.Error (Unbound_identifier _) ->
+            Error.raise_at1 location
+              (Unbound_comp_term_constructor_constant identifier)
+        | Result.Error cause -> Error.raise_at1 location cause)
     | Synprs.Comp.Pattern_object.Raw_box { location; pattern } ->
         let* pattern' = disambiguate_meta_pattern pattern in
         return
@@ -2009,6 +2052,9 @@ let () =
           "Expected %a to be a program constant or computation-level \
            constructor."
           Qualified_identifier.pp qualified_identifier
+    | Unbound_comp_term_destructor_constant qualified_identifier ->
+        Format.dprintf "Computation-level destructor constant %a is unbound."
+          Qualified_identifier.pp qualified_identifier
     | Illegal_duplicate_pattern_variables ->
         Format.dprintf "%a" Format.pp_print_text
           "Illegal duplicate pattern variables."
@@ -2073,6 +2119,9 @@ let () =
     | Illegal_meta_annotated_comp_pattern_missing_type ->
         Format.dprintf "%a" Format.pp_print_text
           "This meta-annotated pattern is missing its meta-type."
+    | Unbound_comp_term_constructor_constant identifier ->
+        Format.dprintf "Unbound computation-level constructor constant %a."
+          Qualified_identifier.pp identifier
     | Expected_comp_term_destructor_constant ->
         Format.dprintf "%a" Format.pp_print_text
           "Expected a computation-level term destructor constant."

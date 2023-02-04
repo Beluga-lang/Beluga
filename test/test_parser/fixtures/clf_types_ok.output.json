@@ -8755,7 +8755,7 @@
                       "location": {
                         "filename": "clf_types_ok.input.bel",
                         "start_line": 109,
-                        "start_column": 9,
+                        "start_column": 10,
                         "stop_line": 109,
                         "stop_column": 14
                       }
@@ -8841,7 +8841,7 @@
                       "location": {
                         "filename": "clf_types_ok.input.bel",
                         "start_line": 109,
-                        "start_column": 27,
+                        "start_column": 28,
                         "stop_line": 109,
                         "stop_column": 32
                       }
@@ -8937,7 +8937,7 @@
                   "location": {
                     "filename": "clf_types_ok.input.bel",
                     "start_line": 109,
-                    "start_column": 47,
+                    "start_column": 48,
                     "stop_line": 109,
                     "stop_column": 52
                   }
@@ -8991,7 +8991,7 @@
                         "location": {
                           "filename": "clf_types_ok.input.bel",
                           "start_line": 109,
-                          "start_column": 63,
+                          "start_column": 64,
                           "stop_line": 109,
                           "stop_column": 69
                         }
@@ -9125,7 +9125,7 @@
                       "location": {
                         "filename": "clf_types_ok.input.bel",
                         "start_line": 112,
-                        "start_column": 9,
+                        "start_column": 10,
                         "stop_line": 112,
                         "stop_column": 14
                       }
@@ -9211,7 +9211,7 @@
                       "location": {
                         "filename": "clf_types_ok.input.bel",
                         "start_line": 112,
-                        "start_column": 27,
+                        "start_column": 28,
                         "stop_line": 112,
                         "stop_column": 32
                       }
@@ -9307,7 +9307,7 @@
                   "location": {
                     "filename": "clf_types_ok.input.bel",
                     "start_line": 112,
-                    "start_column": 47,
+                    "start_column": 48,
                     "stop_line": 112,
                     "stop_column": 52
                   }
@@ -9361,7 +9361,7 @@
                         "location": {
                           "filename": "clf_types_ok.input.bel",
                           "start_line": 112,
-                          "start_column": 62,
+                          "start_column": 63,
                           "stop_line": 112,
                           "stop_column": 68
                         }

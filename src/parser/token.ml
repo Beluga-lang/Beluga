@@ -77,10 +77,6 @@ type t =
   | IDENT of string
   (* Two dashes followed by an identifier *)
   | PRAGMA of string
-  (* A dot followed by an integer; used for projections *)
-  | DOT_NUMBER of int (* .n *)
-  (* A dot followed by an identifier; used for projections *)
-  | DOT_IDENT of string (* .x *)
   (* A hash followed by an identifier; used for parameter variables. *)
   | HASH_IDENT of string (* #x *)
   (* A dollar followed by an identifier; used for substitution variables. *)
@@ -183,8 +179,6 @@ include (
       | IDENT s -> p "%s" s
       | HOLE s -> p "?%s" s
       | INTLIT n -> p "%d" n
-      | DOT_NUMBER k -> p ".%d" k
-      | DOT_IDENT s -> p ".%s" s
       | HASH_IDENT s -> p "#%s" s
       | DOLLAR_IDENT s -> p "$%s" s
       | PRAGMA s -> p "--%s" s

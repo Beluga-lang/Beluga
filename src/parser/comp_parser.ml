@@ -445,7 +445,7 @@ module Make
 
     let comp_copattern_object =
       let observation =
-        dot_qualified_identifier |> span
+        dot &> qualified_identifier |> span
         $> (fun (location, observation) ->
              Synprs.Comp.Copattern_object.Raw_observation
                { location; observation })
@@ -584,7 +584,7 @@ module Make
     let comp_expression_object4 =
       seq2 comp_expression_object5
         (maybe
-           dot_qualified_identifier
+           (dot &> qualified_identifier)
            (* Repeated dot qualified identifiers are impossible by the
               lexical convention. *))
       |> span

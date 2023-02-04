@@ -331,9 +331,8 @@ module Make (Bindings_state : BINDINGS_STATE) :
         (* Qualified identifiers without namespaces were parsed as plain
            identifiers *)
         assert (List.length (Qualified_identifier.namespaces identifier) >= 1);
-        (* As an LF type, identifiers of the form [<identifier>
-           <dot-identifier>+] are necessarily bound LF type-level
-           constants. *)
+        (* As an LF type, identifiers of the form [<identifier> (`.'
+           <identifier>)+] are necessarily bound LF type-level constants. *)
         lookup identifier >>= function
         | Result.Ok (Lf_type_constant, { operator = Option.Some operator; _ })
           ->
@@ -435,9 +434,9 @@ module Make (Bindings_state : BINDINGS_STATE) :
         (* Qualified identifiers without namespaces were parsed as plain
            identifiers *)
         assert (List.length (Qualified_identifier.namespaces identifier) >= 1);
-        (* As an LF term, identifiers of the form [<identifier>
-           <dot-identifier>+] are necessarily LF term-level constants. Plain
-           LF terms do not support projections, so there is no additional
+        (* As an LF term, identifiers of the form [<identifier> (`.'
+           <identifier>)+] are necessarily LF term-level constants. Plain LF
+           terms do not support projections, so there is no additional
            ambiguity. *)
         (* Lookup the identifier in the current state *)
         lookup identifier >>= function

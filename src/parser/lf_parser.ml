@@ -39,7 +39,8 @@ module Make
 
       <lf-object> ::=
         | `{' <omittable-identifier> [`:' <lf-object>] `}' <lf-object>
-        | `\' <omittable-identifier> [`:' <lf-object>] `.' <lf-object>
+        | `\' `(' <omittable-identifier> `:' <lf-object> `)' `.' <lf-object>
+        | `\' <omittable-identifier> `.' <lf-object>
         | <lf-object> <forward-arrow> <lf-object>
         | <lf-object> <backward-arrow> <lf-object>
         | <lf-object> `:' <lf-object>
@@ -58,7 +59,8 @@ module Make
 
       <lf-weak-prefix> ::=
         | `{' <omittable-identifier> [`:' <lf-object>] `}' <lf-object>
-        | `\' <omittable-identifier> [`:' <lf-object>] `.' <lf-object>
+        | `\' `(' <omittable-identifier> `:' <lf-object> `)' `.' <lf-object>
+        | `\' <omittable-identifier> `.' <lf-object>
 
       <lf-object> ::=
         | <lf-object1>
@@ -92,11 +94,19 @@ module Make
         seq2 omittable_identifier (maybe (colon &> LF_parsers.lf_object))
       in
       let lambda =
+        let untyped_declaration =
+          omittable_identifier
+          $> (fun parameter_identifier ->
+               (parameter_identifier, Option.none))
+          |> labelled "Untyped LF lambda-abstraction parameter"
+        and typed_declaration =
+          parens (seq2 omittable_identifier (colon &> LF_parsers.lf_object))
+          $> (fun (parameter_identifier, parameter_typ) ->
+               (parameter_identifier, Option.some parameter_typ))
+          |> labelled "Typed LF lambda-abstraction parameter"
+        in
         seq2
-          (lambda
-          &> seq2 omittable_identifier
-               (maybe (colon &> LF_parsers.lf_object))
-          <& dot)
+          (lambda &> alt untyped_declaration typed_declaration <& dot)
           LF_parsers.lf_object
         |> span
         $> (fun (location, ((parameter_identifier, parameter_sort), body)) ->

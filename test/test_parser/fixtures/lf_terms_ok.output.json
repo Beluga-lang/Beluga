@@ -1439,9 +1439,9 @@
         "location": {
           "filename": "lf_terms_ok.input.bel",
           "start_line": 52,
-          "start_column": 2,
+          "start_column": 3,
           "stop_line": 52,
-          "stop_column": 3
+          "stop_column": 4
         }
       },
       "parameter_type": [
@@ -1453,18 +1453,18 @@
               "location": {
                 "filename": "lf_terms_ok.input.bel",
                 "start_line": 52,
-                "start_column": 4,
+                "start_column": 5,
                 "stop_line": 52,
-                "stop_column": 7
+                "stop_column": 8
               }
             },
             "namespaces": [],
             "location": {
               "filename": "lf_terms_ok.input.bel",
               "start_line": 52,
-              "start_column": 4,
+              "start_column": 5,
               "stop_line": 52,
-              "stop_column": 7
+              "stop_column": 8
             }
           },
           "prefixed": false,
@@ -1477,9 +1477,9 @@
           "location": {
             "filename": "lf_terms_ok.input.bel",
             "start_line": 52,
-            "start_column": 4,
+            "start_column": 5,
             "stop_line": 52,
-            "stop_column": 7
+            "stop_column": 8
           }
         }
       ],
@@ -1495,18 +1495,18 @@
                   "location": {
                     "filename": "lf_terms_ok.input.bel",
                     "start_line": 52,
-                    "start_column": 9,
+                    "start_column": 11,
                     "stop_line": 52,
-                    "stop_column": 10
+                    "stop_column": 12
                   }
                 },
                 "namespaces": [],
                 "location": {
                   "filename": "lf_terms_ok.input.bel",
                   "start_line": 52,
-                  "start_column": 9,
+                  "start_column": 11,
                   "stop_line": 52,
-                  "stop_column": 10
+                  "stop_column": 12
                 }
               },
               "prefixed": false,
@@ -1519,9 +1519,9 @@
               "location": {
                 "filename": "lf_terms_ok.input.bel",
                 "start_line": 52,
-                "start_column": 9,
+                "start_column": 11,
                 "stop_line": 52,
-                "stop_column": 10
+                "stop_column": 12
               }
             }
           ],
@@ -1534,17 +1534,17 @@
                   "location": {
                     "filename": "lf_terms_ok.input.bel",
                     "start_line": 52,
-                    "start_column": 11,
+                    "start_column": 13,
                     "stop_line": 52,
-                    "stop_column": 12
+                    "stop_column": 14
                   }
                 },
                 "location": {
                   "filename": "lf_terms_ok.input.bel",
                   "start_line": 52,
-                  "start_column": 11,
+                  "start_column": 13,
                   "stop_line": 52,
-                  "stop_column": 12
+                  "stop_column": 14
                 }
               }
             ]
@@ -1552,9 +1552,9 @@
           "location": {
             "filename": "lf_terms_ok.input.bel",
             "start_line": 52,
-            "start_column": 9,
+            "start_column": 11,
             "stop_line": 52,
-            "stop_column": 12
+            "stop_column": 14
           }
         }
       ],
@@ -1563,7 +1563,7 @@
         "start_line": 52,
         "start_column": 1,
         "stop_line": 52,
-        "stop_column": 12
+        "stop_column": 14
       }
     }
   ],
@@ -3593,6 +3593,51 @@
         "start_column": 1,
         "stop_line": 88,
         "stop_column": 8
+      }
+    }
+  ],
+  [
+    "LF.Term.Abstraction",
+    {
+      "parameter_identifier": {
+        "name": "x",
+        "location": {
+          "filename": "lf_terms_ok.input.bel",
+          "start_line": 91,
+          "start_column": 2,
+          "stop_line": 91,
+          "stop_column": 3
+        }
+      },
+      "parameter_type": null,
+      "body": [
+        "LF.Term.Variable",
+        {
+          "identifier": {
+            "name": "x",
+            "location": {
+              "filename": "lf_terms_ok.input.bel",
+              "start_line": 91,
+              "start_column": 4,
+              "stop_line": 91,
+              "stop_column": 5
+            }
+          },
+          "location": {
+            "filename": "lf_terms_ok.input.bel",
+            "start_line": 91,
+            "start_column": 4,
+            "stop_line": 91,
+            "stop_column": 5
+          }
+        }
+      ],
+      "location": {
+        "filename": "lf_terms_ok.input.bel",
+        "start_line": 91,
+        "start_column": 1,
+        "stop_line": 91,
+        "stop_column": 5
       }
     }
   ]

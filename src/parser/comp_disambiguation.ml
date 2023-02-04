@@ -783,7 +783,7 @@ module Make
            identifiers *)
         assert (List.length (Qualified_identifier.namespaces identifier) >= 1);
         (* As a computation-level type, identifiers of the form [<identifier>
-           <dot-identifier>+] are necessarily computation-level type
+           (`.' <identifier>)+] are necessarily computation-level type
            constants. *)
         lookup identifier >>= function
         | Result.Ok
@@ -991,7 +991,7 @@ module Make
            identifiers *)
         assert (List.length (Qualified_identifier.namespaces identifier) >= 1);
         (* As a computation-level expression, identifiers of the form
-           [<identifier> <dot-identifier>+] are computation-level variables
+           [<identifier> (`.' <identifier>)+] are computation-level variables
            or constants with optionally trailing observation constants.
 
            Examples include:
@@ -1557,7 +1557,7 @@ module Make_pattern_disambiguator
            identifiers *)
         assert (List.length (Qualified_identifier.namespaces identifier) >= 1);
         (* As a computation-level type, identifiers of the form [<identifier>
-           <dot-identifier>+] are necessarily computation-level type
+           (`.' <identifier>)+] are necessarily computation-level type
            constants. *)
         lookup identifier >>= function
         | Result.Ok
@@ -1816,9 +1816,9 @@ module Make_pattern_disambiguator
         (* Qualified identifiers without namespaces were parsed as plain
            identifiers *)
         assert (List.length (Qualified_identifier.namespaces identifier) >= 1);
-        (* This raw qualified identifier [<identifier> <dot-identifier>+] may
-           be a computation-level variable or constant pattern followed by
-           observations *)
+        (* This raw qualified identifier [<identifier> (`.' <identifier>)+]
+           may be a computation-level variable or constant pattern followed
+           by observations *)
         with_wrapped_state (S.partial_lookup identifier) >>= function
         | `Totally_unbound _ ->
             (* This is a variable pattern followed by observations *)

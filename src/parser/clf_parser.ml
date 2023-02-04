@@ -50,7 +50,8 @@ module Make
 
       <clf-object> ::=
         | `{' <omittable-identifier> `:' <clf-object> `}' <clf-object>
-        | `\' <omittable-identifier> [`:' <clf-object>] `.' <clf-object>
+        | `\' `(' <omittable-identifier> `:' <clf-object> `)' `.' <clf-object>
+        | `\' <omittable-identifier> `.' <clf-object>
         | <clf-object> <forward-arrow> <clf-object>
         | <clf-object> <backward-arrow> <clf-object>
         | <clf-object> `:' <clf-object>
@@ -82,7 +83,8 @@ module Make
 
       <clf-weak-prefix> ::=
         | `{' <omittable-identifier> [`:' <lf-object>] `}' <lf-object>
-        | `\' <omittable-identifier> [`:' <lf-object>] `.' <lf-object>
+        | `\' `(' <omittable-identifier> `:' <lf-object> `)' `.' <lf-object>
+        | `\' <omittable-identifier> `.' <lf-object>
 
       <clf-object> ::=
         | <clf-object1>
@@ -129,11 +131,20 @@ module Make
     *)
     let clf_weak_prefix =
       let lambda =
+        let untyped_declaration =
+          omittable_identifier
+          $> (fun parameter_identifier ->
+               (parameter_identifier, Option.none))
+          |> labelled "Untyped contextual LF lambda-abstraction parameter"
+        and typed_declaration =
+          parens
+            (seq2 omittable_identifier (colon &> CLF_parsers.clf_object))
+          $> (fun (parameter_identifier, parameter_typ) ->
+               (parameter_identifier, Option.some parameter_typ))
+          |> labelled "Typed contextual LF lambda-abstraction parameter"
+        in
         seq2
-          (lambda
-          &> seq2 omittable_identifier
-               (maybe (colon &> CLF_parsers.clf_object))
-          <& dot)
+          (lambda &> alt untyped_declaration typed_declaration <& dot)
           CLF_parsers.clf_object
         |> span
         $> (fun (location, ((parameter_identifier, parameter_sort), body)) ->
@@ -275,11 +286,9 @@ module Make
 
     let clf_object7 =
       (* Projections are left-associative. *)
-      let integer_projection = dot_integer $> fun i -> `By_position i
-      and identifier_projection =
-        dot_identifier $> fun x -> `By_identifier x
-      in
-      let projection = alt integer_projection identifier_projection in
+      let integer_projection = integer $> fun i -> `By_position i
+      and identifier_projection = identifier $> fun x -> `By_identifier x in
+      let projection = dot &> alt integer_projection identifier_projection in
       let trailing_projections = many (span projection) in
       (* If a term only uses named projections, then those projections are
          actually parsed as a qualfified identifier. *)

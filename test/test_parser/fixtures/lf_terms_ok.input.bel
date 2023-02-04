@@ -49,7 +49,7 @@ z : nat
 \s. \x. s x
 ;;
 
-\x:nat. s x
+\(x:nat). s x
 ;;
 
 \x. s (x : nat)
@@ -86,4 +86,7 @@ x : a : b : c
 ;;
 
 ¬ ¬ ¬ A
+;;
+
+\x.x
 ;;

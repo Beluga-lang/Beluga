@@ -1448,9 +1448,9 @@
         "location": {
           "filename": "clf_terms_ok.input.bel",
           "start_line": 52,
-          "start_column": 2,
+          "start_column": 3,
           "stop_line": 52,
-          "stop_column": 3
+          "stop_column": 4
         }
       },
       "parameter_type": [
@@ -1462,18 +1462,18 @@
               "location": {
                 "filename": "clf_terms_ok.input.bel",
                 "start_line": 52,
-                "start_column": 4,
+                "start_column": 5,
                 "stop_line": 52,
-                "stop_column": 7
+                "stop_column": 8
               }
             },
             "namespaces": [],
             "location": {
               "filename": "clf_terms_ok.input.bel",
               "start_line": 52,
-              "start_column": 4,
+              "start_column": 5,
               "stop_line": 52,
-              "stop_column": 7
+              "stop_column": 8
             }
           },
           "prefixed": false,
@@ -1486,9 +1486,9 @@
           "location": {
             "filename": "clf_terms_ok.input.bel",
             "start_line": 52,
-            "start_column": 4,
+            "start_column": 5,
             "stop_line": 52,
-            "stop_column": 7
+            "stop_column": 8
           }
         }
       ],
@@ -1504,18 +1504,18 @@
                   "location": {
                     "filename": "clf_terms_ok.input.bel",
                     "start_line": 52,
-                    "start_column": 9,
+                    "start_column": 11,
                     "stop_line": 52,
-                    "stop_column": 10
+                    "stop_column": 12
                   }
                 },
                 "namespaces": [],
                 "location": {
                   "filename": "clf_terms_ok.input.bel",
                   "start_line": 52,
-                  "start_column": 9,
+                  "start_column": 11,
                   "stop_line": 52,
-                  "stop_column": 10
+                  "stop_column": 12
                 }
               },
               "prefixed": false,
@@ -1528,9 +1528,9 @@
               "location": {
                 "filename": "clf_terms_ok.input.bel",
                 "start_line": 52,
-                "start_column": 9,
+                "start_column": 11,
                 "stop_line": 52,
-                "stop_column": 10
+                "stop_column": 12
               }
             }
           ],
@@ -1543,17 +1543,17 @@
                   "location": {
                     "filename": "clf_terms_ok.input.bel",
                     "start_line": 52,
-                    "start_column": 11,
+                    "start_column": 13,
                     "stop_line": 52,
-                    "stop_column": 12
+                    "stop_column": 14
                   }
                 },
                 "location": {
                   "filename": "clf_terms_ok.input.bel",
                   "start_line": 52,
-                  "start_column": 11,
+                  "start_column": 13,
                   "stop_line": 52,
-                  "stop_column": 12
+                  "stop_column": 14
                 }
               }
             ]
@@ -1561,9 +1561,9 @@
           "location": {
             "filename": "clf_terms_ok.input.bel",
             "start_line": 52,
-            "start_column": 9,
+            "start_column": 11,
             "stop_line": 52,
-            "stop_column": 12
+            "stop_column": 14
           }
         }
       ],
@@ -1572,7 +1572,7 @@
         "start_line": 52,
         "start_column": 1,
         "stop_line": 52,
-        "stop_column": 12
+        "stop_column": 14
       }
     }
   ],
@@ -3506,7 +3506,7 @@
                 "location": {
                   "filename": "clf_terms_ok.input.bel",
                   "start_line": 112,
-                  "start_column": 4,
+                  "start_column": 5,
                   "stop_line": 112,
                   "stop_column": 6
                 }
@@ -3535,7 +3535,7 @@
         "location": {
           "filename": "clf_terms_ok.input.bel",
           "start_line": 112,
-          "start_column": 8,
+          "start_column": 9,
           "stop_line": 112,
           "stop_column": 10
         }
@@ -3582,7 +3582,7 @@
             "location": {
               "filename": "clf_terms_ok.input.bel",
               "start_line": 115,
-              "start_column": 2,
+              "start_column": 3,
               "stop_line": 115,
               "stop_column": 4
             }
@@ -3601,7 +3601,7 @@
         "location": {
           "filename": "clf_terms_ok.input.bel",
           "start_line": 115,
-          "start_column": 4,
+          "start_column": 5,
           "stop_line": 115,
           "stop_column": 6
         }
@@ -3651,7 +3651,7 @@
                 "location": {
                   "filename": "clf_terms_ok.input.bel",
                   "start_line": 118,
-                  "start_column": 2,
+                  "start_column": 3,
                   "stop_line": 118,
                   "stop_column": 4
                 }
@@ -3670,7 +3670,7 @@
             "location": {
               "filename": "clf_terms_ok.input.bel",
               "start_line": 118,
-              "start_column": 4,
+              "start_column": 5,
               "stop_line": 118,
               "stop_column": 6
             }
@@ -3689,7 +3689,7 @@
         "location": {
           "filename": "clf_terms_ok.input.bel",
           "start_line": 118,
-          "start_column": 6,
+          "start_column": 7,
           "stop_line": 118,
           "stop_column": 8
         }
@@ -3712,7 +3712,7 @@
           "location": {
             "filename": "clf_terms_ok.input.bel",
             "start_line": 121,
-            "start_column": 4,
+            "start_column": 5,
             "stop_line": 121,
             "stop_column": 6
           }
@@ -6473,7 +6473,7 @@
                 "location": {
                   "filename": "clf_terms_ok.input.bel",
                   "start_line": 172,
-                  "start_column": 6,
+                  "start_column": 7,
                   "stop_line": 172,
                   "stop_column": 8
                 }
@@ -6492,7 +6492,7 @@
             "location": {
               "filename": "clf_terms_ok.input.bel",
               "start_line": 172,
-              "start_column": 8,
+              "start_column": 9,
               "stop_line": 172,
               "stop_column": 10
             }
@@ -6602,7 +6602,7 @@
         "location": {
           "filename": "clf_terms_ok.input.bel",
           "start_line": 181,
-          "start_column": 3,
+          "start_column": 4,
           "stop_line": 181,
           "stop_column": 5
         }
@@ -6652,7 +6652,7 @@
                 "location": {
                   "filename": "clf_terms_ok.input.bel",
                   "start_line": 184,
-                  "start_column": 3,
+                  "start_column": 4,
                   "stop_line": 184,
                   "stop_column": 5
                 }
@@ -6671,7 +6671,7 @@
             "location": {
               "filename": "clf_terms_ok.input.bel",
               "start_line": 184,
-              "start_column": 5,
+              "start_column": 6,
               "stop_line": 184,
               "stop_column": 7
             }
@@ -6690,7 +6690,7 @@
         "location": {
           "filename": "clf_terms_ok.input.bel",
           "start_line": 184,
-          "start_column": 7,
+          "start_column": 8,
           "stop_line": 184,
           "stop_column": 9
         }
@@ -6791,7 +6791,7 @@
         "location": {
           "filename": "clf_terms_ok.input.bel",
           "start_line": 193,
-          "start_column": 3,
+          "start_column": 4,
           "stop_line": 193,
           "stop_column": 5
         }
@@ -6841,7 +6841,7 @@
                 "location": {
                   "filename": "clf_terms_ok.input.bel",
                   "start_line": 196,
-                  "start_column": 3,
+                  "start_column": 4,
                   "stop_line": 196,
                   "stop_column": 5
                 }
@@ -6860,7 +6860,7 @@
             "location": {
               "filename": "clf_terms_ok.input.bel",
               "start_line": 196,
-              "start_column": 5,
+              "start_column": 6,
               "stop_line": 196,
               "stop_column": 7
             }
@@ -6879,7 +6879,7 @@
         "location": {
           "filename": "clf_terms_ok.input.bel",
           "start_line": 196,
-          "start_column": 7,
+          "start_column": 8,
           "stop_line": 196,
           "stop_column": 9
         }
@@ -6890,6 +6890,51 @@
         "start_column": 1,
         "stop_line": 196,
         "stop_column": 9
+      }
+    }
+  ],
+  [
+    "CLF.Term.Abstraction",
+    {
+      "parameter_identifier": {
+        "name": "x",
+        "location": {
+          "filename": "clf_terms_ok.input.bel",
+          "start_line": 199,
+          "start_column": 2,
+          "stop_line": 199,
+          "stop_column": 3
+        }
+      },
+      "parameter_type": null,
+      "body": [
+        "CLF.Term.Variable",
+        {
+          "identifier": {
+            "name": "x",
+            "location": {
+              "filename": "clf_terms_ok.input.bel",
+              "start_line": 199,
+              "start_column": 4,
+              "stop_line": 199,
+              "stop_column": 5
+            }
+          },
+          "location": {
+            "filename": "clf_terms_ok.input.bel",
+            "start_line": 199,
+            "start_column": 4,
+            "stop_line": 199,
+            "stop_column": 5
+          }
+        }
+      ],
+      "location": {
+        "filename": "clf_terms_ok.input.bel",
+        "start_line": 199,
+        "start_column": 1,
+        "stop_line": 199,
+        "stop_column": 5
       }
     }
   ]

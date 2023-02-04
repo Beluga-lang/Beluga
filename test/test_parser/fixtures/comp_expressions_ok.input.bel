@@ -78,3 +78,9 @@ fun
   x1 .Stream.tl (x2 cons nil) x3 .Stream.hd [g2] => ?
 ;;
 
+fun
+| $[g |- $S] => ?
+| { g : ctx1 } $[g |- $S] => ?
+| { $S : $[g |- h] } $[g |- $S] => ?
+| { g : ctx1 } { h : ctx2 } { $S : $[g |- h] } $[g |- $S] => ?
+;;

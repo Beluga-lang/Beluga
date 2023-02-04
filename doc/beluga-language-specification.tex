@@ -173,8 +173,6 @@ The production \synt{any} stands for any unicode character.
 
 <integer> ::= `0' | <non-zero-digit> <digit>*
 
-<dot-integer> ::= `.'<integer>
-
 <ascii-control> ::= `\\000' .. `\\031' | `\\127'
 
 <reserved-character> ::= `.' | `,' | `:' | `;' | `\%' | `|' | `"' | `\\' | `(' | `)' | `[' | `]' | `{' | `}' | `<' | `>'
@@ -188,8 +186,6 @@ The production \synt{any} stands for any unicode character.
 <hash-identifier> ::= `#'<identifier>
 
 <dollar-identifier> ::= `$'<identifier>
-
-<dot-identifier> ::= `.'<identifier>
 \end{grammar}
 
 \subsection{Utilities}
@@ -207,9 +203,9 @@ The production \synt{any} stands for any unicode character.
   `$_'
 | <dollar-identifier>
 
-<qualified-identifier> ::= <identifier> <dot-identifier>* \hfill \texttt{(* Identifier reference *)}
+<qualified-identifier> ::= <identifier> (`.' <identifier>)* \hfill \texttt{(* Identifier reference *)}
 
-<dot-qualified-identifier> ::= <dot-identifier>+
+<dot-qualified-identifier> ::= (`.' <identifier>)+
 
 <meta-object-identifier> ::= \hfill\\
 | <identifier>\\
@@ -254,7 +250,8 @@ These constructs form a weak representational function space without case analys
 <lf-term> ::= \hfill\\
 | <identifier> \hfill \texttt{(* Variable *)}\\
 | <qualified-identifier> \hfill \texttt{(* Term constant *)}\\
-| `\\' <omittable-identifier> [`:' <lf-type>] `.' <lf-term> \hfill \texttt{(* Lambda abstraction *)}\\
+| `\\' `(' <omittable-identifier> `:' <lf-type> `)' `.' <lf-term> \hfill \texttt{(* Typed lambda abstraction *)}\\
+| `\\' <omittable-identifier> `.' <lf-term> \hfill \texttt{(* Untyped lambda abstraction *)}\\
 | <lf-term> <lf-term> \hfill \texttt{(* Application *)}\\
 | <qualified-identifier> <lf-term>+ \hfill \texttt{(* Prefix term constant application *)}\\
 | <lf-term> <qualified-identifier> <lf-term> \hfill \texttt{(* Infix term constant application *)}\\
@@ -289,7 +286,8 @@ The following is the grammar for the extension of \LF with substitutions, contex
 | <dollar-identifier> \hfill \texttt{(* Substitution variable *)}\\
 | <qualified-identifier> \hfill \texttt{(* Term constant *)}\\
 | <clf-term> <clf-substitution> \hfill \texttt{(* Substitution term *)}\\
-| `\\' <omittable-identifier> [`:' <clf-type>] `.' <clf-term> \hfill \texttt{(* Lambda abstraction *)}\\
+| `\\' `(' <omittable-identifier> `:' <clf-type> `)' `.' <clf-term> \hfill \texttt{(* Typed lambda abstraction *)}\\
+| `\\' <omittable-identifier> `.' <clf-term> \hfill \texttt{(* Untyped lambda abstraction *)}\\
 | <clf-term> <clf-term> \hfill \texttt{(* Application *)}\\
 | <qualified-identifier> <clf-term>+ \hfill \texttt{(* Prefix term constant application *)}\\
 | <clf-term> <qualified-identifier> <clf-term> \hfill \texttt{(* Infix term constant application *)}\\
@@ -297,8 +295,8 @@ The following is the grammar for the extension of \LF with substitutions, contex
 | `_' \hfill \texttt{(* Hole *)}\\
 | `?'[<identifier>]\\
 | `<' <clf-term> (`;' <clf-term>)* `>' \hfill \texttt{(* Tuple *)}\\
-| <clf-term> <dot-integer> \hfill \texttt{(* Projection *)}\\
-| <clf-term> <dot-identifier>\\
+| <clf-term> `.' <integer> \hfill \texttt{(* Projection *)}\\
+| <clf-term> `.' <identifier>\\
 | <clf-term> `:' <clf-type> \hfill \texttt{(* Type-annotated *)}\\
 | `(' <clf-term> `)'
 
@@ -309,9 +307,10 @@ The following is the grammar for the extension of \LF with substitutions, contex
 | <qualified-identifier> \hfill \texttt{(* Constant *)}\\
 | `_' \hfill \texttt{(* Wildcard *)}\\
 | `<' <clf-pattern> (`;' <clf-pattern>)* `>' \hfill \texttt{(* Tuple *)}\\
-| <clf-pattern> <dot-integer> \hfill \texttt{(* Projection *)}\\
-| <clf-pattern> <dot-identifier>\\
-| `\\' <omittable-identifier> [`:' <clf-type>] `.' <clf-pattern> \hfill \texttt{(* Lambda abstraction *)}\\
+| <clf-pattern> `.' <integer> \hfill \texttt{(* Projection *)}\\
+| <clf-pattern> `.' <identifier>\\
+| `\\' `(' <omittable-identifier> `:' <clf-type> `)' `.' <clf-pattern> \hfill \texttt{(* Typed lambda abstraction *)}\\
+| `\\' <omittable-identifier> `.' <clf-pattern> \hfill \texttt{(* Untyped lambda abstraction *)}\\
 | <clf-pattern> `[' <clf-substitution> `]' \hfill \texttt{(* Substitution *)}\\
 | <clf-pattern> <clf-pattern> \hfill \texttt{(* Application *)}\\
 | <qualified-identifier> <clf-pattern>+ \hfill \texttt{(* Prefix term constant application *)}\\
@@ -753,7 +752,8 @@ Disambiguation of an \LF object as presented below requires:
 | `type'\\
 | `_'\\
 | `{' <omittable-identifier> [`:' <lf-object>] `}' <lf-object>\\
-| `\\' <omittable-identifier> [`:' <lf-object>] `.' <lf-object>\\
+| `\\' `(' <omittable-identifier> `:' <lf-object> `)' `.' <lf-object>\\
+| `\\' <omittable-identifier> `.' <lf-object>\\
 | <lf-object> <forward-arrow> <lf-object>\\
 | <lf-object> <backward-arrow> <lf-object>\\
 | <lf-object> `:' <lf-object>\\
@@ -790,6 +790,8 @@ Disambiguation of a contextual \LF object as presented below requires:
 | <dollar-identifier>\\
 | <qualified-identifier>\\
 | `{' <omittable-identifier> [`:' <clf-object>] `}' <clf-object>\\
+| `\\' `(' <omittable-identifier> `:' <clf-object> `)' `.' <clf-object>\\
+| `\\' <omittable-identifier> `.' <clf-object>\\
 | <clf-object> <forward-arrow> <clf-object>\\
 | <clf-object> <backward-arrow> <clf-object>\\
 | `block' `(' [<identifier> `:'] <clf-object> (`,' [<identifier> `:'] <clf-object>)* `)'\\
@@ -799,7 +801,6 @@ Disambiguation of a contextual \LF object as presented below requires:
 | `_'\\
 | `?'[<identifier>]\\
 | <clf-object> `[' <clf-context-object> `]'\\
-| `\\' <omittable-identifier> [`:' <clf-object>] `.' <clf-object>\\
 | `<' <clf-object> (`;' <clf-object>)* `>'\\
 | <clf-object>`.'<integer>\\
 | <clf-object>`.'<identifier>\\

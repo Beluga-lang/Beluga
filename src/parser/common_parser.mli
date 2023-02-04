@@ -23,8 +23,6 @@ module type COMMON_PARSER = sig
 
   val integer : int t
 
-  val dot_integer : int t
-
   val pragma : string -> unit t
 
   val string_literal : string t
@@ -111,8 +109,6 @@ module type COMMON_PARSER = sig
 
   val identifier : Identifier.t t
 
-  val dot_identifier : Identifier.t t
-
   val hash_identifier : Identifier.t t
 
   val dollar_identifier : Identifier.t t
@@ -124,8 +120,6 @@ module type COMMON_PARSER = sig
   val omittable_dollar_identifier : Identifier.t option t
 
   val qualified_identifier : Qualified_identifier.t t
-
-  val dot_qualified_identifier : Qualified_identifier.t t
 
   val qualified_or_plain_identifier :
     [> `Plain of Identifier.t | `Qualified of Qualified_identifier.t ] t

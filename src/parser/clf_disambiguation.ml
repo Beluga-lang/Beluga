@@ -377,8 +377,8 @@ module Make (Bindings_state : BINDINGS_STATE) :
         (* Qualified identifiers without namespaces were parsed as plain
            identifiers. *)
         assert (List.length (Qualified_identifier.namespaces identifier) >= 1);
-        (* As an LF type, identifiers of the form [<identifier>
-           <dot-identifier>+] are type-level constants, or illegal named
+        (* As an LF type, identifiers of the form [<identifier> (`.'
+           <identifier>)+] are type-level constants, or illegal named
            projections. *)
         lookup identifier >>= function
         | Result.Ok (Lf_type_constant, { operator = Option.Some operator; _ })
@@ -567,8 +567,8 @@ module Make (Bindings_state : BINDINGS_STATE) :
         (* Qualified identifiers without namespaces were parsed as plain
            identifiers *)
         assert (List.length (Qualified_identifier.namespaces identifier) >= 1);
-        (* As an LF term, identifiers of the form [<identifier>
-           <dot-identifier>+] are either term-level constants, or named
+        (* As an LF term, identifiers of the form [<identifier> (`.'
+           <identifier>)+] are either term-level constants, or named
            projections. *)
         let reduce_projections base projections =
           List.fold_left
@@ -1034,7 +1034,7 @@ struct
            identifiers. *)
         assert (List.length (Qualified_identifier.namespaces identifier) >= 1);
         (* As a contextual LF type occuring in a pattern, identifiers of the
-           form [<identifier> <dot-identifier>+] are bound type-level
+           form [<identifier> (`.' <identifier>)+] are bound type-level
            constants, or illegal named projections. *)
         lookup identifier >>= function
         | Result.Ok (Lf_type_constant, { operator = Option.Some operator; _ })
@@ -1250,8 +1250,8 @@ struct
         (* Qualified identifiers without namespaces were parsed as plain
            identifiers *)
         assert (List.length (Qualified_identifier.namespaces identifier) >= 1);
-        (* As an LF term, identifiers of the form [<identifier>
-           <dot-identifier>+] are either term-level constants, or named
+        (* As an LF term, identifiers of the form [<identifier> (`.'
+           <identifier>)+] are either term-level constants, or named
            projections. *)
         let reduce_projections base projections =
           List.fold_left
@@ -1702,8 +1702,8 @@ struct
         (* Qualified identifiers without namespaces were parsed as plain
            identifiers *)
         assert (List.length (Qualified_identifier.namespaces identifier) >= 1);
-        (* As an LF term, identifiers of the form [<identifier>
-           <dot-identifier>+] are either term-level constants, or named
+        (* As an LF term, identifiers of the form [<identifier> (`.'
+           <identifier>)+] are either term-level constants, or named
            projections. *)
         let reduce_projections base projections =
           List.fold_left

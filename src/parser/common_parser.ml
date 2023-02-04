@@ -19,8 +19,6 @@ module type COMMON_PARSER = sig
 
   val integer : int t
 
-  val dot_integer : int t
-
   val pragma : string -> unit t
 
   val string_literal : string t
@@ -107,8 +105,6 @@ module type COMMON_PARSER = sig
 
   val identifier : Identifier.t t
 
-  val dot_identifier : Identifier.t t
-
   val hash_identifier : Identifier.t t
 
   val dollar_identifier : Identifier.t t
@@ -120,8 +116,6 @@ module type COMMON_PARSER = sig
   val omittable_dollar_identifier : Identifier.t option t
 
   val qualified_identifier : Qualified_identifier.t t
-
-  val dot_qualified_identifier : Qualified_identifier.t t
 
   val qualified_or_plain_identifier :
     [> `Plain of Identifier.t | `Qualified of Qualified_identifier.t ] t
@@ -231,17 +225,6 @@ module Make
       ~on_end_of_input:(fun () ->
         fail_at_next_location
           (Expected_integer_literal { actual = Option.none }))
-
-  exception Expected_dot_number of { actual : Token.t Option.t }
-
-  let dot_integer =
-    satisfy
-      ~on_token:(function
-        | _location, Token.DOT_NUMBER k -> Result.ok k
-        | _location, token ->
-            Result.error (Expected_dot_number { actual = Option.some token }))
-      ~on_end_of_input:(fun () ->
-        fail_at_next_location (Expected_dot_number { actual = Option.none }))
 
   exception
     Expected_pragma of
@@ -393,21 +376,6 @@ module Make
         fail_at_next_location (Expected_identifier { actual = Option.none }))
     |> labelled "Identifier"
 
-  exception Expected_dot_identifier of { actual : Token.t Option.t }
-
-  let dot_identifier =
-    satisfy
-      ~on_token:(function
-        | location, Token.DOT_IDENT identifier ->
-            Result.ok (Identifier.make ~location identifier)
-        | _location, token ->
-            Result.error
-              (Expected_dot_identifier { actual = Option.some token }))
-      ~on_end_of_input:(fun () ->
-        fail_at_next_location
-          (Expected_dot_identifier { actual = Option.none }))
-    |> labelled "Identifier prefixed by a dot symbol"
-
   exception Expected_hash_identifier of { actual : Token.t Option.t }
 
   let hash_identifier =
@@ -442,7 +410,7 @@ module Make
     <omittable-identifier> ::=
       | `_'
       | <identifier>
-*)
+  *)
   let omittable_identifier =
     let underscore =
       underscore $> (fun () -> Option.none) |> labelled "Omitted identifier"
@@ -453,7 +421,7 @@ module Make
     <omittable-hash-identifier> ::=
       | `#_'
       | <hash-identifier>
-*)
+  *)
   let omittable_hash_identifier =
     let hash_underscore =
       token Token.HASH_BLANK
@@ -466,36 +434,28 @@ module Make
     <omittable-dollar-identifier> ::=
       | `$_'
       | <dollar-identifier>
-*)
+  *)
   let omittable_dollar_identifier =
     alt
       (token Token.DOLLAR_BLANK $> fun () -> Option.none)
       (dollar_identifier $> Option.some)
 
   (*=
-   <qualified-identifier> ::= <identifier> <dot-identifier>*
-*)
-  let[@warning "-32"] qualified_identifier =
-    seq2 identifier (many dot_identifier) |> span
+    <qualified-identifier> ::= <identifier> (`.' <identifier>)*
+  *)
+  let qualified_identifier =
+    seq2 identifier (many (dot &> trying identifier)) |> span
     $> fun (location, (head, tail)) ->
     let namespaces, identifier = List1.unsnoc (List1.from head tail) in
     Qualified_identifier.make ~location ~namespaces identifier
 
   (*=
-   <dot-qualified-identifier> ::= <dot-identifier>+
-*)
-  let dot_qualified_identifier =
-    some dot_identifier |> span $> fun (location, identifiers) ->
-    let namespaces, identifier = List1.unsnoc identifiers in
-    Qualified_identifier.make ~location ~namespaces identifier
-
-  (*=
     <qualified-or-plain-identifier> ::=
       | <identifier>
-      | <identifier> <dot-identifier>*
-*)
+      | <identifier> (`.' <identifier>)*
+  *)
   let qualified_or_plain_identifier =
-    seq2 identifier (many dot_identifier) |> span $> function
+    seq2 identifier (many (dot &> trying identifier)) |> span $> function
     | _, (head, []) -> `Plain head
     | location, (head, tail) ->
         let namespaces, identifier = List1.unsnoc (List1.from head tail) in
@@ -589,17 +549,6 @@ module Make
           | Option.None ->
               Format.dprintf "%a" Format.pp_print_text
                 "Expected an integer literal, but reached the end of input.")
-      | Expected_dot_number { actual } -> (
-          match actual with
-          | Option.Some actual ->
-              Format.dprintf
-                "Expected a number prefixed by a dot, but got the token \
-                 `%a'."
-                Token.pp actual
-          | Option.None ->
-              Format.dprintf "%a" Format.pp_print_text
-                "Expected a number prefixed by a dot, but reached the end \
-                 of input.")
       | Expected_pragma { expected_pragma; actual } -> (
           match actual with
           | Option.Some actual ->
@@ -628,17 +577,6 @@ module Make
           | Option.None ->
               Format.dprintf
                 "Expected an identifier, but reached the end of input.")
-      | Expected_dot_identifier { actual } -> (
-          match actual with
-          | Option.Some actual ->
-              Format.dprintf
-                "Expected an identifier prefixed by a dot `.', but got the \
-                 token `%a'."
-                Token.pp actual
-          | Option.None ->
-              Format.dprintf "%a" Format.pp_print_text
-                "Expected an identifier prefixed by a dot `.', but reached \
-                 the end of input.")
       | Expected_hash_identifier { actual } -> (
           match actual with
           | Option.Some actual ->

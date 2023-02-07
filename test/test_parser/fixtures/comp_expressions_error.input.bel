@@ -27,9 +27,3 @@ fun
   { g1 : ctx1 }
   x1 .Stream.tl (x cons nil) x .Stream.hd [g2] => ?
 ;;
-
-fun
-| { $S : $[g, x : nat |- h] }
-  { g1 : ctx1 }
-  x1 .Stream.tl (x2 cons nil) 3 .Stream.hd [g1] => ?
-;;

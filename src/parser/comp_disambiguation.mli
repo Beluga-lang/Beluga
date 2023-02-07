@@ -35,27 +35,22 @@ module type COMP_PATTERN_DISAMBIGUATION = sig
 end
 
 module Make
-    (Bindings_state : BINDINGS_STATE)
-    (Pattern_disambiguation_state : PATTERN_DISAMBGUATION_STATE
-                                      with module S = Bindings_state)
+    (Disambiguation_state : DISAMBIGUATION_STATE)
     (Meta_disambiguator : Meta_disambiguation.META_DISAMBIGUATION
-                            with type state = Bindings_state.state)
+                            with type state = Disambiguation_state.state)
     (Comp_pattern_disambiguator : COMP_PATTERN_DISAMBIGUATION
                                     with type state =
-                                      Pattern_disambiguation_state.state) :
-  COMP_DISAMBIGUATION with type state = Bindings_state.state
+                                      Disambiguation_state.state) :
+  COMP_DISAMBIGUATION with type state = Disambiguation_state.state
 [@@warning "-67"]
 
 module Make_pattern_disambiguator
-    (Bindings_state : BINDINGS_STATE)
-    (Pattern_disambiguation_state : PATTERN_DISAMBGUATION_STATE
-                                      with module S = Bindings_state)
+    (Disambiguation_state : DISAMBIGUATION_STATE)
     (Meta_disambiguator : Meta_disambiguation.META_DISAMBIGUATION
-                            with type state = Bindings_state.state)
+                            with type state = Disambiguation_state.state)
     (Meta_pattern_disambiguator : Meta_disambiguation
                                   .META_PATTERN_DISAMBIGUATION
                                     with type state =
-                                      Pattern_disambiguation_state.state) :
-  COMP_PATTERN_DISAMBIGUATION
-    with type state = Pattern_disambiguation_state.state
+                                      Disambiguation_state.state) :
+  COMP_PATTERN_DISAMBIGUATION with type state = Disambiguation_state.state
 [@@warning "-67"]

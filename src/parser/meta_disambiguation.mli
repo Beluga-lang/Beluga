@@ -19,10 +19,10 @@ module type META_DISAMBIGUATION = sig
 end
 
 module Make
-    (Bindings_state : BINDINGS_STATE)
+    (Disambiguation_state : DISAMBIGUATION_STATE)
     (Clf_disambiguator : Clf_disambiguation.CLF_DISAMBIGUATION
-                           with type state = Bindings_state.state) :
-  META_DISAMBIGUATION with type state = Bindings_state.state
+                           with type state = Disambiguation_state.state) :
+  META_DISAMBIGUATION with type state = Disambiguation_state.state
 [@@warning "-67"]
 
 module type META_PATTERN_DISAMBIGUATION = sig
@@ -43,13 +43,10 @@ module type META_PATTERN_DISAMBIGUATION = sig
 end
 
 module Make_pattern_disambiguator
-    (Bindings_state : BINDINGS_STATE)
-    (Pattern_disambiguation_state : PATTERN_DISAMBGUATION_STATE
-                                      with module S = Bindings_state)
+    (Disambiguation_state : DISAMBIGUATION_STATE)
     (Clf_pattern_disambiguator : Clf_disambiguation
                                  .CLF_PATTERN_DISAMBIGUATION
                                    with type state =
-                                     Pattern_disambiguation_state.state) :
-  META_PATTERN_DISAMBIGUATION
-    with type state = Pattern_disambiguation_state.state
+                                     Disambiguation_state.state) :
+  META_PATTERN_DISAMBIGUATION with type state = Disambiguation_state.state
 [@@warning "-67"]

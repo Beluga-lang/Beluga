@@ -65,12 +65,12 @@ exception Bound_module of Qualified_identifier.t
 
 exception Bound_program_constant of Qualified_identifier.t
 
-module type BINDINGS_STATE = sig
+module type DISAMBIGUATION_STATE = sig
   include State.STATE
 
   type data = private
     { location : Location.t
-    ; operator : Operator.t Option.t
+    ; operator : Operator.t option
     }
 
   type entry = private
@@ -94,82 +94,72 @@ module type BINDINGS_STATE = sig
     | Module
     | Program_constant
 
-  val empty : state
+  val initial : state
 
-  val get_bindings : (entry * data) List1.t Binding_tree.t t
+  val set_default_associativity : Associativity.t -> unit t
 
-  val add_lf_term_variable : ?location:Location.t -> Identifier.t -> Unit.t t
+  val get_default_associativity : Associativity.t t
+
+  val add_lf_term_variable : ?location:Location.t -> Identifier.t -> unit t
 
   val add_lf_type_constant :
-    ?location:Location.t -> Operator.t -> Identifier.t -> Unit.t t
+    ?location:Location.t -> Operator.t -> Identifier.t -> unit t
 
   val add_lf_term_constant :
-    ?location:Location.t -> Operator.t -> Identifier.t -> Unit.t t
+    ?location:Location.t -> Operator.t -> Identifier.t -> unit t
 
-  val add_meta_variable : ?location:Location.t -> Identifier.t -> Unit.t t
+  val add_meta_variable : ?location:Location.t -> Identifier.t -> unit t
 
-  val add_parameter_variable :
-    ?location:Location.t -> Identifier.t -> Unit.t t
+  val add_parameter_variable : ?location:Location.t -> Identifier.t -> unit t
 
   val add_substitution_variable :
-    ?location:Location.t -> Identifier.t -> Unit.t t
+    ?location:Location.t -> Identifier.t -> unit t
 
-  val add_context_variable : ?location:Location.t -> Identifier.t -> Unit.t t
+  val add_context_variable : ?location:Location.t -> Identifier.t -> unit t
 
-  val add_schema_constant : ?location:Location.t -> Identifier.t -> Unit.t t
+  val add_schema_constant : ?location:Location.t -> Identifier.t -> unit t
 
   val add_computation_variable :
-    ?location:Location.t -> Identifier.t -> Unit.t t
+    ?location:Location.t -> Identifier.t -> unit t
 
   val add_inductive_computation_type_constant :
-    ?location:Location.t -> Operator.t -> Identifier.t -> Unit.t t
+    ?location:Location.t -> Operator.t -> Identifier.t -> unit t
 
   val add_stratified_computation_type_constant :
-    ?location:Location.t -> Operator.t -> Identifier.t -> Unit.t t
+    ?location:Location.t -> Operator.t -> Identifier.t -> unit t
 
   val add_coinductive_computation_type_constant :
-    ?location:Location.t -> Operator.t -> Identifier.t -> Unit.t t
+    ?location:Location.t -> Operator.t -> Identifier.t -> unit t
 
   val add_abbreviation_computation_type_constant :
-    ?location:Location.t -> Operator.t -> Identifier.t -> Unit.t t
+    ?location:Location.t -> Operator.t -> Identifier.t -> unit t
 
   val add_computation_term_constructor :
-    ?location:Location.t -> Operator.t -> Identifier.t -> Unit.t t
+    ?location:Location.t -> Operator.t -> Identifier.t -> unit t
 
   val add_computation_term_destructor :
-    ?location:Location.t -> Identifier.t -> Unit.t t
+    ?location:Location.t -> Identifier.t -> unit t
 
-  val add_query : ?location:Location.t -> Identifier.t -> Unit.t t
+  val add_query : ?location:Location.t -> Identifier.t -> unit t
 
-  val add_mquery : ?location:Location.t -> Identifier.t -> Unit.t t
+  val add_mquery : ?location:Location.t -> Identifier.t -> unit t
 
   val add_module :
        ?location:Location.t
-    -> (entry * data) List1.t Binding_tree.t
+    -> (entry * data) Binding_tree.t
     -> Identifier.t
-    -> Unit.t t
-
-  val add_synonym :
-       ?location:Location.t
-    -> Qualified_identifier.t
-    -> Identifier.t
-    -> Unit.t t
+    -> unit t
 
   val add_program_constant :
-    ?location:Location.t -> ?operator:Operator.t -> Identifier.t -> Unit.t t
+    ?location:Location.t -> ?operator:Operator.t -> Identifier.t -> unit t
 
-  val actual_binding_exn : Qualified_identifier.t -> entry * data -> exn
+  val lookup_toplevel : Identifier.t -> (entry * data, exn) result t
 
-  val open_namespace : Qualified_identifier.t -> Unit.t t
+  val lookup' :
+       Qualified_identifier.t
+    -> ((entry * data) * (entry * data) Binding_tree.t) t
 
-  val open_module : Qualified_identifier.t -> Unit.t t
-
-  val modify_operator :
-    Qualified_identifier.t -> (Operator.t -> Operator.t) -> Unit.t t
-
-  val lookup : Qualified_identifier.t -> (entry * data, exn) Result.t t
-
-  val lookup_toplevel : Identifier.t -> (entry * data, exn) Result.t t
+  val lookup : Qualified_identifier.t -> (entry * data, exn) result t
 
   val partial_lookup' :
        Identifier.t List1.t
@@ -189,7 +179,17 @@ module type BINDINGS_STATE = sig
        ]
        t
 
-  val pop_binding : Identifier.t -> Unit.t t
+  val modify_operator :
+    Qualified_identifier.t -> (Operator.t -> Operator.t) -> unit t
+
+  val add_synonym :
+    ?location:Location.t -> Qualified_identifier.t -> Identifier.t -> unit t
+
+  val actual_binding_exn : Qualified_identifier.t -> entry * data -> exn
+
+  val open_namespace : Qualified_identifier.t -> unit t
+
+  val open_module : Qualified_identifier.t -> unit t
 
   val with_lf_term_variable :
     ?location:Location.t -> Identifier.t -> 'a t -> 'a t
@@ -209,35 +209,49 @@ module type BINDINGS_STATE = sig
   val with_comp_variable :
     ?location:Location.t -> Identifier.t -> 'a t -> 'a t
 
-  (** [with_scope m] pushes a new scope, runs [m], then pops the scope. *)
   val with_scope : 'a t -> 'a t
 
-  (** [with_parent_scope m] restores the parent scope, runs [with_scope m],
-      then restores the initial scope. *)
   val with_parent_scope : 'a t -> 'a t
+
+  val add_inner_binding : Identifier.t -> unit t
+
+  val with_inner_binding : Identifier.t -> 'a t -> 'a t
+
+  val is_inner_bound : Identifier.t -> bool t
+
+  exception Duplicate_pattern_variables of Identifier.t List2.t
+
+  val with_pattern_variables : pattern:'a t -> expression:'b t -> ('a * 'b) t
+
+  val with_inner_bound_lf_term_variable :
+    ?location:Location.t -> Identifier.t -> 'a t -> 'a t
+
+  val with_inner_bound_meta_variable :
+    ?location:Location.t -> Identifier.t -> 'a t -> 'a t
+
+  val with_inner_bound_parameter_variable :
+    ?location:Location.t -> Identifier.t -> 'a t -> 'a t
+
+  val with_inner_bound_substitution_variable :
+    ?location:Location.t -> Identifier.t -> 'a t -> 'a t
+
+  val with_inner_bound_context_variable :
+    ?location:Location.t -> Identifier.t -> 'a t -> 'a t
+
+  val add_pattern_lf_term_variable : Identifier.t -> unit t
+
+  val add_pattern_meta_variable : Identifier.t -> unit t
+
+  val add_pattern_parameter_variable : Identifier.t -> unit t
+
+  val add_pattern_substitution_variable : Identifier.t -> unit t
+
+  val add_pattern_context_variable : Identifier.t -> unit t
+
+  val add_pattern_comp_variable : Identifier.t -> unit t
 end
 
-module type SIGNATURE_STATE = sig
-  include State.STATE
-
-  val set_default_associativity : Associativity.t -> Unit.t t
-
-  val get_default_associativity : Associativity.t t
-end
-
-(** Module type for the type of state used in disambiguating the parser
-    syntax to the external syntax. *)
-module type DISAMBIGUATION_STATE = sig
-  include State.STATE
-
-  include BINDINGS_STATE with type state := state
-
-  include SIGNATURE_STATE with type state := state
-end
-
-(** A minimal disambiguation state backed by nested HAMT data structures with
-    plain identifier keys. *)
-module Disambiguation_state : DISAMBIGUATION_STATE = struct
+module Persistent_disambiguation_state = struct
   type data =
     { location : Location.t
     ; operator : Operator.t Option.t
@@ -264,12 +278,32 @@ module Disambiguation_state : DISAMBIGUATION_STATE = struct
     | Module
     | Program_constant
 
+  type pattern_variable_adder =
+    { run : 'a. (state -> state * 'a) -> state -> state * 'a }
+
   and state =
-    { bindings : (entry * data) List1.t Binding_tree.t  (** Symbol table. *)
-    ; default_associativity : Associativity.t
-          (** Associativity to use if a pragma for an infix operator does not
-              specify an associativity. *)
-    }
+    | Disambiguation_state of { bindings : (entry * data) Binding_tree.t }
+    | Signature_state of
+        { state : state
+        ; default_associativity : Associativity.t
+        }
+    | Pattern_state of
+        { state : state
+        ; inner_bindings : Identifier.Set.t
+        ; pattern_variables_rev : Identifier.t List.t
+        ; pattern_variable_adders_rev : pattern_variable_adder List.t
+        }
+    | Module_state of
+        { state : state
+        ; declarations : (entry * data) Binding_tree.t
+              (* The declarations in the current module *)
+        }
+    | Scope_state of
+        { state : state
+        ; bindings : (entry * data) Binding_tree.t
+              (* Initially a copy of the binding tree in [state],
+                 mutations/lookups only happen to [bindings] *)
+        }
 
   include (
     State.Make (struct
@@ -277,66 +311,86 @@ module Disambiguation_state : DISAMBIGUATION_STATE = struct
     end) :
       State.STATE with type state := state)
 
-  let empty =
-    { bindings = Binding_tree.empty
-    ; default_associativity = Associativity.non_associative
-    }
+  let initial =
+    Signature_state
+      { state = Disambiguation_state { bindings = Binding_tree.empty }
+      ; default_associativity = Associativity.non_associative
+      }
 
-  let[@inline] set_default_associativity default_associativity =
-    modify (fun state -> { state with default_associativity })
+  let rec nested_set_default_associativity default_associativity = function
+    | Disambiguation_state _ ->
+        Error.raise_violation "[set_default_associativity] invalid state"
+    | Signature_state o -> Signature_state { o with default_associativity }
+    | Pattern_state o ->
+        let state' =
+          nested_set_default_associativity default_associativity o.state
+        in
+        Pattern_state { o with state = state' }
+    | Module_state o ->
+        let state' =
+          nested_set_default_associativity default_associativity o.state
+        in
+        Module_state { o with state = state' }
+    | Scope_state o ->
+        let state' =
+          nested_set_default_associativity default_associativity o.state
+        in
+        Scope_state { o with state = state' }
+
+  let rec nested_get_default_associativity = function
+    | Disambiguation_state _ ->
+        Error.raise_violation "[get_default_associativity] invalid state"
+    | Signature_state o -> o.default_associativity
+    | Pattern_state o -> nested_get_default_associativity o.state
+    | Module_state o -> nested_get_default_associativity o.state
+    | Scope_state o -> nested_get_default_associativity o.state
+
+  let set_default_associativity default_associativity =
+    modify (nested_set_default_associativity default_associativity)
 
   let get_default_associativity =
     let* state = get in
-    return state.default_associativity
+    return (nested_get_default_associativity state)
+
+  let[@warning "-23"] rec nested_set_bindings bindings = function
+    | Disambiguation_state o -> Disambiguation_state { o with bindings }
+    | Signature_state o ->
+        let state' = nested_set_bindings bindings o.state in
+        Signature_state { o with state = state' }
+    | Pattern_state o ->
+        let state' = nested_set_bindings bindings o.state in
+        Pattern_state { o with state = state' }
+    | Module_state o ->
+        let state' = nested_set_bindings bindings o.state in
+        Module_state { o with state = state' }
+    | Scope_state o -> Scope_state { o with bindings }
+
+  let rec nested_get_bindings = function
+    | Disambiguation_state { bindings } -> bindings
+    | Signature_state o -> nested_get_bindings o.state
+    | Pattern_state o -> nested_get_bindings o.state
+    | Module_state o -> nested_get_bindings o.state
+    | Scope_state o -> o.bindings
+
+  let set_bindings bindings = modify (nested_set_bindings bindings)
 
   let get_bindings =
     let* state = get in
-    return state.bindings
-
-  let[@inline] set_bindings bindings =
-    modify (fun state -> { state with bindings })
+    return (nested_get_bindings state)
 
   let[@inline] modify_bindings f =
     let* bindings = get_bindings in
     let bindings' = f bindings in
     set_bindings bindings'
 
-  let[@inline] push_binding identifier entry ?subtree bindings =
-    let binding_stack' =
-      try
-        let binding_stack, _subtree =
-          Binding_tree.lookup_toplevel identifier bindings
-        in
-        List1.cons entry binding_stack
-      with
-      | Binding_tree.Unbound_identifier _identifier -> List1.singleton entry
-    in
-    Binding_tree.add_toplevel identifier ?subtree binding_stack' bindings
-
-  let[@inline] push_namespace_binding identifier entry subtree bindings =
-    push_binding identifier entry ~subtree bindings
-
-  let[@inline] push_binding identifier entry bindings =
-    push_binding identifier entry bindings
-
-  let[@inline] pop_binding identifier =
-    modify_bindings (fun bindings ->
-        let binding_stack, _subtree =
-          Binding_tree.lookup_toplevel identifier bindings
-        in
-        match binding_stack with
-        | List1.T (_head_to_discard, []) ->
-            Binding_tree.remove identifier bindings
-        | List1.T (_head_to_discard, new_head :: stack) ->
-            Binding_tree.add_toplevel identifier
-              (List1.from new_head stack)
-              bindings)
-
-  let[@inline] add_binding identifier entry =
-    modify_bindings (push_binding identifier entry)
+  let[@inline] add_binding identifier entry ?subtree bindings =
+    Binding_tree.add_toplevel identifier ?subtree entry bindings
 
   let[@inline] add_namespace_binding identifier entry subtree =
-    modify_bindings (push_namespace_binding identifier entry subtree)
+    modify_bindings (add_binding identifier entry ~subtree)
+
+  let[@inline] add_entry_binding identifier entry =
+    modify_bindings (add_binding identifier entry)
 
   let make_entry_location location identifier =
     Option.value location ~default:(Identifier.location identifier)
@@ -348,90 +402,90 @@ module Disambiguation_state : DISAMBIGUATION_STATE = struct
   let add_lf_term_variable ?location identifier =
     let data = make_entry_data ?location identifier in
     let entry = (Lf_term_variable, data) in
-    add_binding identifier entry
+    add_entry_binding identifier entry
 
   let add_lf_type_constant ?location operator identifier =
     let data = make_entry_data ?location ~operator identifier in
     let entry = (Lf_type_constant, data) in
-    add_binding identifier entry
+    add_entry_binding identifier entry
 
   let add_lf_term_constant ?location operator identifier =
     let data = make_entry_data ?location ~operator identifier in
     let entry = (Lf_term_constant, data) in
-    add_binding identifier entry
+    add_entry_binding identifier entry
 
   let add_meta_variable ?location identifier =
     let data = make_entry_data ?location identifier in
     let entry = (Meta_variable, data) in
-    add_binding identifier entry
+    add_entry_binding identifier entry
 
   let add_parameter_variable ?location identifier =
     let data = make_entry_data ?location identifier in
     let entry = (Parameter_variable, data) in
-    add_binding identifier entry
+    add_entry_binding identifier entry
 
   let add_substitution_variable ?location identifier =
     let data = make_entry_data ?location identifier in
     let entry = (Substitution_variable, data) in
-    add_binding identifier entry
+    add_entry_binding identifier entry
 
   let add_context_variable ?location identifier =
     let data = make_entry_data ?location identifier in
     let entry = (Context_variable, data) in
-    add_binding identifier entry
+    add_entry_binding identifier entry
 
   let add_schema_constant ?location identifier =
     let data = make_entry_data ?location identifier in
     let entry = (Schema_constant, data) in
-    add_binding identifier entry
+    add_entry_binding identifier entry
 
   let add_computation_variable ?location identifier =
     let data = make_entry_data ?location identifier in
     let entry = (Computation_variable, data) in
-    add_binding identifier entry
+    add_entry_binding identifier entry
 
   let add_inductive_computation_type_constant ?location operator identifier =
     let data = make_entry_data ?location ~operator identifier in
     let entry = (Computation_inductive_type_constant, data) in
-    add_binding identifier entry
+    add_entry_binding identifier entry
 
   let add_stratified_computation_type_constant ?location operator identifier
       =
     let data = make_entry_data ?location ~operator identifier in
     let entry = (Computation_stratified_type_constant, data) in
-    add_binding identifier entry
+    add_entry_binding identifier entry
 
   let add_coinductive_computation_type_constant ?location operator identifier
       =
     let data = make_entry_data ?location ~operator identifier in
     let entry = (Computation_coinductive_type_constant, data) in
-    add_binding identifier entry
+    add_entry_binding identifier entry
 
   let add_abbreviation_computation_type_constant ?location operator
       identifier =
     let data = make_entry_data ?location ~operator identifier in
     let entry = (Computation_abbreviation_type_constant, data) in
-    add_binding identifier entry
+    add_entry_binding identifier entry
 
   let add_computation_term_constructor ?location operator identifier =
     let data = make_entry_data ?location ~operator identifier in
     let entry = (Computation_term_constructor, data) in
-    add_binding identifier entry
+    add_entry_binding identifier entry
 
   let add_computation_term_destructor ?location identifier =
     let data = make_entry_data ?location identifier in
     let entry = (Computation_term_destructor, data) in
-    add_binding identifier entry
+    add_entry_binding identifier entry
 
   let add_query ?location identifier =
     let data = make_entry_data ?location identifier in
     let entry = (Query, data) in
-    add_binding identifier entry
+    add_entry_binding identifier entry
 
   let add_mquery ?location identifier =
     let data = make_entry_data ?location identifier in
     let entry = (MQuery, data) in
-    add_binding identifier entry
+    add_entry_binding identifier entry
 
   let add_module ?location subtree identifier =
     let data = make_entry_data ?location identifier in
@@ -441,7 +495,7 @@ module Disambiguation_state : DISAMBIGUATION_STATE = struct
   let add_program_constant ?location ?operator identifier =
     let data = make_entry_data ?location ?operator identifier in
     let entry = (Program_constant, data) in
-    add_binding identifier entry
+    add_entry_binding identifier entry
 
   let lookup_toplevel query =
     let* bindings = get_bindings in
@@ -451,8 +505,8 @@ module Disambiguation_state : DISAMBIGUATION_STATE = struct
 
   let lookup_toplevel query =
     try_catch
-      (let* binding_stack, _subtree = lookup_toplevel query in
-       return (Result.ok (List1.head binding_stack)))
+      (let* entry, _subtree = lookup_toplevel query in
+       return (Result.ok entry))
       ~on_exn:(fun cause -> return (Result.error cause))
 
   let lookup' query =
@@ -468,26 +522,24 @@ module Disambiguation_state : DISAMBIGUATION_STATE = struct
 
   let lookup query =
     try_catch
-      (let* binding_stack, _subtree = lookup' query in
-       return (Result.ok (List1.head binding_stack)))
+      (let* entry, _subtree = lookup' query in
+       return (Result.ok entry))
       ~on_exn:(fun cause -> return (Result.error cause))
 
   let rec partial_lookup_nested namespaces identifier tree =
     match namespaces with
     | [] -> (
         try
-          let binding_stack, _subtree =
+          let entry, _subtree =
             Binding_tree.lookup_toplevel identifier tree
           in
-          let entry = List1.head binding_stack in
           `Totally_bound (List1.singleton (identifier, entry))
         with
         | Binding_tree.Unbound_identifier _ ->
             `Totally_unbound (List1.singleton identifier))
     | x :: xs -> (
         try
-          let binding_stack, subtree = Binding_tree.lookup_toplevel x tree in
-          let entry = List1.head binding_stack in
+          let entry, subtree = Binding_tree.lookup_toplevel x tree in
           match partial_lookup_nested xs identifier subtree with
           | `Totally_bound xs' -> `Totally_bound (List1.cons (x, entry) xs')
           | `Partially_bound (bound, unbound) ->
@@ -522,28 +574,22 @@ module Disambiguation_state : DISAMBIGUATION_STATE = struct
         | cause -> Error.raise cause)
 
   let modify_operator identifier f =
-    replace identifier (fun binding_stack subtree ->
-        let binding_stack' =
-          List1.replace_first
-            (fun (entry, data) ->
-              match data.operator with
-              | Option.None ->
-                  Error.raise_at1
-                    (Qualified_identifier.location identifier)
-                    (Expected_operator identifier)
-              | Option.Some operator ->
-                  let operator' = Option.some (f operator) in
-                  (entry, { data with operator = operator' }))
-            binding_stack
-        in
-        (binding_stack', subtree))
+    replace identifier (fun (entry, data) subtree ->
+        match data.operator with
+        | Option.None ->
+            Error.raise_at1
+              (Qualified_identifier.location identifier)
+              (Expected_operator identifier)
+        | Option.Some operator ->
+            let operator' = Option.some (f operator) in
+            let data' = { data with operator = operator' } in
+            ((entry, data'), subtree))
 
   let add_synonym ?location qualified_identifier synonym =
-    let* binding_stack, subtree = lookup' qualified_identifier in
-    let entry, data = List1.head binding_stack in
+    let* (entry, data), subtree = lookup' qualified_identifier in
     let location' = Option.value ~default:data.location location in
     let data' = { data with location = location' } in
-    add_namespace_binding synonym (entry, data') subtree
+    modify_bindings (add_binding synonym (entry, data') ~subtree)
 
   let actual_binding_exn identifier (sort, data) =
     let exn =
@@ -589,284 +635,200 @@ module Disambiguation_state : DISAMBIGUATION_STATE = struct
           (Expected_module identifier)
     | Result.Error cause -> Error.raise cause
 
-  let with_lf_term_variable ?location identifier =
-    scoped
-      ~set:(add_lf_term_variable ?location identifier)
-      ~unset:(pop_binding identifier)
+  let with_bindings_checkpoint m =
+    let* bindings = get_bindings in
+    let* x = m in
+    let* () = set_bindings bindings in
+    return x
 
-  let with_meta_variable ?location identifier =
-    scoped
-      ~set:(add_meta_variable ?location identifier)
-      ~unset:(pop_binding identifier)
+  let with_lf_term_variable ?location identifier m =
+    with_bindings_checkpoint (add_lf_term_variable ?location identifier &> m)
 
-  let with_parameter_variable ?location identifier =
-    scoped
-      ~set:(add_parameter_variable ?location identifier)
-      ~unset:(pop_binding identifier)
+  let with_meta_variable ?location identifier m =
+    with_bindings_checkpoint (add_meta_variable ?location identifier &> m)
 
-  let with_context_variable ?location identifier =
-    scoped
-      ~set:(add_context_variable ?location identifier)
-      ~unset:(pop_binding identifier)
+  let with_parameter_variable ?location identifier m =
+    with_bindings_checkpoint
+      (add_parameter_variable ?location identifier &> m)
 
-  let with_substitution_variable ?location identifier =
-    scoped
-      ~set:(add_substitution_variable ?location identifier)
-      ~unset:(pop_binding identifier)
+  let with_context_variable ?location identifier m =
+    with_bindings_checkpoint (add_context_variable ?location identifier &> m)
 
-  let with_comp_variable ?location identifier =
-    scoped
-      ~set:(add_computation_variable ?location identifier)
-      ~unset:(pop_binding identifier)
+  let with_substitution_variable ?location identifier m =
+    with_bindings_checkpoint
+      (add_substitution_variable ?location identifier &> m)
 
-  let with_scope = Obj.magic ()
+  let with_comp_variable ?location identifier m =
+    with_bindings_checkpoint
+      (add_computation_variable ?location identifier &> m)
 
-  let with_parent_scope = Obj.magic ()
-end
+  let with_scope m =
+    let* state = get in
+    let* bindings = get_bindings in
+    let* () = put (Scope_state { state; bindings }) in
+    let* x = m in
+    let* () = put state in
+    return x
 
-module type PATTERN_DISAMBGUATION_STATE = sig
-  module S : State.STATE
-
-  include State.STATE
-
-  type pattern_variable_adder = { run : 'a. 'a S.t -> 'a S.t }
-
-  val initial : S.state -> state
-
-  val push_inner_binding : Identifier.t -> Unit.t t
-
-  val pop_inner_binding : Identifier.t -> Unit.t t
-
-  val with_inner_binding : Identifier.t -> 'a t -> 'a t
-
-  val is_inner_bound : Identifier.t -> Bool.t t
-
-  val add_pattern_variable :
-    Identifier.t -> pattern_variable_adder -> Unit.t t
-
-  exception Duplicate_pattern_variables of Identifier.t List2.t
-
-  val with_pattern_variables :
-       pattern:'pattern t
-    -> expression:'expression S.t
-    -> ('pattern * 'expression) S.t
-
-  val with_wrapped_state : 'a S.t -> 'a t
-
-  val with_lf_term_variable :
-    ?location:Location.t -> Identifier.t -> 'a t -> 'a t
-
-  val with_context_variable :
-    ?location:Location.t -> Identifier.t -> 'a t -> 'a t
-
-  val with_meta_variable :
-    ?location:Location.t -> Identifier.t -> 'a t -> 'a t
-
-  val with_parameter_variable :
-    ?location:Location.t -> Identifier.t -> 'a t -> 'a t
-
-  val with_substitution_variable :
-    ?location:Location.t -> Identifier.t -> 'a t -> 'a t
-end
-
-module Make_persistent_pattern_disambiguation_state (S : BINDINGS_STATE) :
-  PATTERN_DISAMBGUATION_STATE with module S = S = struct
-  module S = S
-
-  type pattern_variable_adder = { run : 'a. 'a S.t -> 'a S.t }
-
-  type state =
-    { inner_bindings : Identifier.t List1.t Identifier.Hamt.t
-    ; pattern_variables_rev : Identifier.t List.t
-    ; pattern_variable_adders_rev : pattern_variable_adder List.t
-    ; wrapped_state : S.state
-    }
-
-  include (
-    State.Make (struct
-      type t = state
-    end) :
-      State.STATE with type state := state)
-
-  let initial wrapped_state =
-    { inner_bindings = Identifier.Hamt.empty
-    ; pattern_variables_rev = []
-    ; pattern_variable_adders_rev = []
-    ; wrapped_state
-    }
-
-  let push_binding identifier bindings =
-    match Identifier.Hamt.find_opt identifier bindings with
-    | Option.None ->
-        Identifier.Hamt.add identifier (List1.singleton identifier) bindings
-    | Option.Some binding_stack ->
-        Identifier.Hamt.add identifier
-          (List1.cons identifier binding_stack)
-          bindings
-
-  let pop_binding identifier bindings =
-    match Identifier.Hamt.find_opt identifier bindings with
-    | Option.None -> Error.raise_violation "[pop_binding]"
-    | Option.Some (List1.T (_head, [])) ->
-        Identifier.Hamt.remove identifier bindings
-    | Option.Some (List1.T (_head, x :: xs)) ->
-        Identifier.Hamt.add identifier (List1.from x xs) bindings
+  let with_parent_scope m =
+    let* state = get in
+    match state with
+    | Scope_state { state = parent_scope; _ } ->
+        let* () = put parent_scope in
+        let* x = m in
+        let* () = put state in
+        return x
+    | Disambiguation_state _
+    | Signature_state _
+    | Pattern_state _
+    | Module_state _ ->
+        Error.raise_violation "[with_parent_scope] invalid state"
 
   let[@inline] modify_inner_bindings f =
-    modify (fun state ->
-        { state with inner_bindings = f state.inner_bindings })
+    modify (function
+      | Pattern_state o ->
+          Pattern_state { o with inner_bindings = f o.inner_bindings }
+      | Disambiguation_state _
+      | Signature_state _
+      | Module_state _
+      | Scope_state _ ->
+          Error.raise_violation "[modify_inner_bindings] invalid state")
 
   let get_inner_bindings =
-    let* state = get in
-    return state.inner_bindings
+    get >>= function
+    | Pattern_state o -> return o.inner_bindings
+    | Disambiguation_state _
+    | Signature_state _
+    | Module_state _
+    | Scope_state _ ->
+        Error.raise_violation "[get_inner_bindings] invalid state"
 
-  let push_inner_binding identifier =
-    modify_inner_bindings (push_binding identifier)
+  let add_inner_binding identifier =
+    modify_inner_bindings (Identifier.Set.add identifier)
 
-  let pop_inner_binding identifier =
-    modify_inner_bindings (pop_binding identifier)
-
-  let with_inner_binding identifier =
-    scoped
-      ~set:(push_inner_binding identifier)
-      ~unset:(pop_inner_binding identifier)
+  let with_inner_binding identifier m =
+    with_bindings_checkpoint (add_inner_binding identifier &> m)
 
   let is_inner_bound identifier =
     let* inner_bindings = get_inner_bindings in
-    return (Identifier.Hamt.mem identifier inner_bindings)
+    return (Identifier.Set.mem identifier inner_bindings)
 
   let add_pattern_variable identifier f =
-    modify (fun state ->
-        { state with
-          pattern_variables_rev = identifier :: state.pattern_variables_rev
-        ; pattern_variable_adders_rev =
-            f :: state.pattern_variable_adders_rev
-        })
-
-  let get_wrapped_state =
-    let* state = get in
-    return state.wrapped_state
-
-  let[@inline] modify_wrapped_state f =
-    modify (fun state ->
-        { state with wrapped_state = f state.wrapped_state })
-
-  let[@inline] set_wrapped_state wrapped_state =
-    modify_wrapped_state (Fun.const wrapped_state)
-
-  let with_wrapped_state f =
-    let* wrapped_state = get_wrapped_state in
-    let wrapped_state', result = S.run f wrapped_state in
-    let* () = set_wrapped_state wrapped_state' in
-    return result
+    modify (function
+      | Pattern_state o ->
+          Pattern_state
+            { o with
+              pattern_variables_rev = identifier :: o.pattern_variables_rev
+            ; pattern_variable_adders_rev =
+                f :: o.pattern_variable_adders_rev
+            }
+      | Disambiguation_state _
+      | Signature_state _
+      | Module_state _
+      | Scope_state _ ->
+          Error.raise_violation "[add_pattern_variable] invalid state")
 
   let get_pattern_variables =
-    let* state = get in
-    return (List.rev state.pattern_variables_rev)
+    get >>= function
+    | Pattern_state o -> return (List.rev o.pattern_variables_rev)
+    | Disambiguation_state _
+    | Signature_state _
+    | Module_state _
+    | Scope_state _ ->
+        Error.raise_violation "[get_pattern_variables] invalid state"
 
   let get_pattern_variable_adders =
-    let* state = get in
-    return (List.rev state.pattern_variable_adders_rev)
+    get >>= function
+    | Pattern_state o -> return (List.rev o.pattern_variable_adders_rev)
+    | Disambiguation_state _
+    | Signature_state _
+    | Module_state _
+    | Scope_state _ ->
+        Error.raise_violation "[get_pattern_variable_adders] invalid state"
 
   exception Duplicate_pattern_variables of Identifier.t List2.t
 
-  let with_pattern_variables ~pattern ~expression state =
-    let state', pattern' = run pattern (initial state) in
-    match Identifier.find_duplicates (eval get_pattern_variables state') with
+  let with_pattern_variables ~pattern ~expression =
+    let* state = get in
+    let* () =
+      put
+        (Pattern_state
+           { state
+           ; inner_bindings = Identifier.Set.empty
+           ; pattern_variables_rev = []
+           ; pattern_variable_adders_rev = []
+           })
+    in
+    let* pattern' = pattern in
+    let* pattern_variables = get_pattern_variables in
+    match Identifier.find_duplicates pattern_variables with
     | Option.Some duplicates ->
         Error.raise (Duplicate_pattern_variables duplicates)
     | Option.None ->
-        let pattern_variable_adders =
-          eval get_pattern_variable_adders state'
-        in
+        let* pattern_variable_adders = get_pattern_variable_adders in
         let expression_with_pattern_variables =
           List.fold_left
             (fun accumulator adder -> adder.run accumulator)
             expression pattern_variable_adders
         in
-        S.run
-          (S.map
-             (fun expression' -> (pattern', expression'))
-             expression_with_pattern_variables)
-          state'.wrapped_state
+        map
+          (fun expression' -> (pattern', expression'))
+          expression_with_pattern_variables
 
-  let with_lf_term_variable ?location identifier =
-    scoped
-      ~set:(with_wrapped_state (S.add_lf_term_variable ?location identifier))
-      ~unset:(with_wrapped_state (S.pop_binding identifier))
+  let with_inner_bound_lf_term_variable ?location identifier f =
+    with_inner_binding identifier
+      (with_lf_term_variable ?location identifier f)
 
-  let with_context_variable ?location identifier =
-    scoped
-      ~set:(with_wrapped_state (S.add_context_variable ?location identifier))
-      ~unset:(with_wrapped_state (S.pop_binding identifier))
+  let with_inner_bound_meta_variable ?location identifier f =
+    with_inner_binding identifier (with_meta_variable ?location identifier f)
 
-  let with_meta_variable ?location identifier =
-    scoped
-      ~set:(with_wrapped_state (S.add_meta_variable ?location identifier))
-      ~unset:(with_wrapped_state (S.pop_binding identifier))
+  let with_inner_bound_parameter_variable ?location identifier f =
+    with_inner_binding identifier
+      (with_parameter_variable ?location identifier f)
 
-  let with_parameter_variable ?location identifier =
-    scoped
-      ~set:
-        (with_wrapped_state (S.add_parameter_variable ?location identifier))
-      ~unset:(with_wrapped_state (S.pop_binding identifier))
+  let with_inner_bound_substitution_variable ?location identifier f =
+    with_inner_binding identifier
+      (with_substitution_variable ?location identifier f)
 
-  let with_substitution_variable ?location identifier =
-    scoped
-      ~set:
-        (with_wrapped_state
-           (S.add_substitution_variable ?location identifier))
-      ~unset:(with_wrapped_state (S.pop_binding identifier))
-end
+  let with_inner_bound_context_variable ?location identifier f =
+    with_inner_binding identifier
+      (with_context_variable ?location identifier f)
 
-module Make_persistent_signature_state (S : State.STATE) : sig
-  include SIGNATURE_STATE
+  let lf_term_variable_adder identifier =
+    { run = (fun m -> with_lf_term_variable identifier m) }
 
-  val initial : S.state -> state
+  let meta_variable_adder identifier =
+    { run = (fun m -> with_meta_variable identifier m) }
 
-  val with_wrapped_state : 'a S.t -> 'a t
-end = struct
-  type state =
-    { default_associativity : Associativity.t
-    ; wrapped_state : S.state
-    }
+  let parameter_variable_adder identifier =
+    { run = (fun m -> with_parameter_variable identifier m) }
 
-  include (
-    State.Make (struct
-      type t = state
-    end) :
-      State.STATE with type state := state)
+  let substitution_variable_adder identifier =
+    { run = (fun m -> with_substitution_variable identifier m) }
 
-  let initial wrapped_state =
-    { default_associativity = Associativity.non_associative; wrapped_state }
+  let context_variable_adder identifier =
+    { run = (fun m -> with_context_variable identifier m) }
 
-  let get_default_associativity =
-    let* state = get in
-    return state.default_associativity
+  let comp_variable_adder identifier =
+    { run = (fun m -> with_comp_variable identifier m) }
 
-  let[@inline] modify_default_associativity f =
-    modify (fun state ->
-        { state with default_associativity = f state.default_associativity })
+  let add_pattern_lf_term_variable identifier =
+    add_pattern_variable identifier (lf_term_variable_adder identifier)
 
-  let[@inline] set_default_associativity default_associativity =
-    modify_default_associativity (Fun.const default_associativity)
+  let add_pattern_meta_variable identifier =
+    add_pattern_variable identifier (meta_variable_adder identifier)
 
-  let get_wrapped_state =
-    let* state = get in
-    return state.wrapped_state
+  let add_pattern_parameter_variable identifier =
+    add_pattern_variable identifier (parameter_variable_adder identifier)
 
-  let[@inline] modify_wrapped_state f =
-    modify (fun state ->
-        { state with wrapped_state = f state.wrapped_state })
+  let add_pattern_substitution_variable identifier =
+    add_pattern_variable identifier (substitution_variable_adder identifier)
 
-  let[@inline] set_wrapped_state wrapped_state =
-    modify_wrapped_state (Fun.const wrapped_state)
+  let add_pattern_context_variable identifier =
+    add_pattern_variable identifier (context_variable_adder identifier)
 
-  let with_wrapped_state f =
-    let* wrapped_state = get_wrapped_state in
-    let wrapped_state', result = S.run f wrapped_state in
-    let* () = set_wrapped_state wrapped_state' in
-    return result
+  let add_pattern_comp_variable identifier =
+    add_pattern_variable identifier (comp_variable_adder identifier)
 end
 
 let () =

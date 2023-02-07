@@ -898,14 +898,6 @@ module Signature = struct
           ; expected_solutions : Int.t Option.t
           ; maximum_tries : Int.t Option.t
           }
-      | Raw_mquery of
-          { location : Location.t
-          ; identifier : Identifier.t Option.t
-          ; typ : Comp.Sort_object.t
-          ; expected_solutions : Int.t Option.t
-          ; search_tries : Int.t Option.t
-          ; search_depth : Int.t Option.t
-          }
       | Raw_module of
           { location : Location.t
           ; identifier : Identifier.t

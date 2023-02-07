@@ -279,28 +279,6 @@ module Make
         ; maximum_tries
         }
 
-    let mquery_declaration =
-      let bound =
-        alt (star $> fun () -> Option.none) (integer $> Option.some)
-        |> labelled "search bound"
-      in
-      pragma "mquery"
-      &> seq3 (seq3 bound bound bound) (maybe (identifier <& colon)) comp_typ
-      <& dot |> span
-      |> labelled "meta-logic search engine mquery pragma"
-      $> fun ( location
-             , ( (expected_solutions, search_tries, search_depth)
-               , identifier
-               , typ ) ) ->
-      Synprs.Signature.Declaration.Raw_mquery
-        { location
-        ; identifier
-        ; typ
-        ; expected_solutions
-        ; search_tries
-        ; search_depth
-        }
-
     let sgn_oldstyle_lf_decl =
       seq2 (identifier <& colon) (alt lf_kind lf_typ)
       <& dot |> span
@@ -459,7 +437,6 @@ module Make
         ; sgn_let_decl
         ; sgn_thm_decl
         ; query_declaration
-        ; mquery_declaration
         ]
       |> labelled "top-level declaration"
 

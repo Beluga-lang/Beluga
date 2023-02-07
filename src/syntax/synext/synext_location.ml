@@ -339,6 +339,5 @@ let location_of_signature_declaration declaration =
   | Recursive_declarations { location; _ }
   | Val { location; _ }
   | Query { location; _ }
-  | MQuery { location; _ }
   | Module { location; _ } ->
       location

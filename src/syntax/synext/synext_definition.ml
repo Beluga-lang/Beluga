@@ -1679,14 +1679,6 @@ module Signature = struct
           ; expected_solutions : Int.t Option.t
           ; maximum_tries : Int.t Option.t
           }  (** Logic programming query on an LF type *)
-      | MQuery of
-          { location : Location.t
-          ; identifier : Identifier.t Option.t
-          ; typ : Comp.Typ.t
-          ; expected_solutions : Int.t Option.t
-          ; search_tries : Int.t Option.t
-          ; search_depth : Int.t Option.t
-          }  (** Logic programming mquery on a computational type *)
       | Module of
           { location : Location.t
           ; identifier : Identifier.t

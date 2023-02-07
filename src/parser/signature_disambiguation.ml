@@ -372,8 +372,6 @@ struct
         add_default_program_constant ?typ identifier
     | Synprs.Signature.Declaration.Raw_query { identifier; _ } ->
         add_query_opt identifier
-    | Synprs.Signature.Declaration.Raw_mquery { identifier; _ } ->
-        add_mquery_opt identifier
 
   (** [add_inner_module_declaration_to_disambiguation_state declaration' state]
       is the disambiguation state derived from [state] with the addition of
@@ -412,8 +410,6 @@ struct
         add_program_constant identifier
     | Synext.Signature.Declaration.Query { identifier; _ } ->
         add_query_opt identifier
-    | Synext.Signature.Declaration.MQuery { identifier; _ } ->
-        add_mquery_opt identifier
     | Synext.Signature.Declaration.Module { identifier; entries; _ } ->
         Obj.magic ()
 
@@ -805,25 +801,6 @@ struct
              ; typ = typ'
              ; expected_solutions
              ; maximum_tries
-             })
-    | Synprs.Signature.Declaration.Raw_mquery
-        { location
-        ; typ
-        ; identifier
-        ; expected_solutions
-        ; search_tries
-        ; search_depth
-        } ->
-        let* typ' = disambiguate_comp_typ typ in
-        let* () = add_mquery_opt identifier in
-        return
-          (Synext.Signature.Declaration.MQuery
-             { location
-             ; identifier
-             ; typ = typ'
-             ; expected_solutions
-             ; search_tries
-             ; search_depth
              })
     | Synprs.Signature.Declaration.Raw_module
         { location; identifier; declarations } ->

@@ -1818,31 +1818,6 @@ end) : BELUGA_HTML with type state = Html_state.state = struct
               pp_query_argument maximum_tries (pp_meta_context state)
               meta_context Identifier.pp identifier (pp_lf_typ state) typ;
             add_fresh_id identifier state)
-    | Signature.Declaration.MQuery
-        { identifier
-        ; typ
-        ; expected_solutions
-        ; search_tries
-        ; search_depth
-        ; _
-        } -> (
-        let pp_mquery_argument ppf = function
-          | Option.None -> Format.pp_print_string ppf "*"
-          | Option.Some argument -> Format.pp_print_int ppf argument
-        in
-        match identifier with
-        | Option.None ->
-            Format.fprintf ppf "@[<hov 2>%a@ %a@ %a@ %a@ %a@]" pp_keyword
-              "mquery" pp_mquery_argument expected_solutions
-              pp_mquery_argument search_tries pp_mquery_argument search_depth
-              (pp_comp_typ state) typ;
-            state
-        | Option.Some identifier ->
-            Format.fprintf ppf "@[<hov 2>%a@ %a@ %a@ %a@ %a :@ %a@]"
-              pp_keyword "mquery" pp_mquery_argument expected_solutions
-              pp_mquery_argument search_tries pp_mquery_argument search_depth
-              Identifier.pp identifier (pp_comp_typ state) typ;
-            add_fresh_id identifier state)
     | Signature.Declaration.Module { identifier; entries; _ } ->
         Format.fprintf ppf "%a %a = %a@;<1 2>@[<v 0>%a@]@ %a" pp_keyword
           "module" Identifier.pp identifier pp_keyword "struct"
@@ -1877,15 +1852,12 @@ end) : BELUGA_HTML with type state = Html_state.state = struct
     | Signature.Declaration.CompTypAbbrev { identifier; _ }
     | Signature.Declaration.Val { identifier; _ }
     | Signature.Declaration.Query { identifier = Option.Some identifier; _ }
-    | Signature.Declaration.MQuery { identifier = Option.Some identifier; _ }
       ->
         add_fresh_id identifier state
     | Signature.Declaration.Module { location; _ }
     | Signature.Declaration.Recursive_declarations { location; _ } ->
         Error.raise_at1 location Unsupported_recursive_declaration
-    | Signature.Declaration.Query { identifier = Option.None; _ }
-    | Signature.Declaration.MQuery { identifier = Option.None; _ } ->
-        state
+    | Signature.Declaration.Query { identifier = Option.None; _ } -> state
 
   and pp_grouped_declaration state ppf declaration =
     match declaration with

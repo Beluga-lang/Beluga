@@ -59,8 +59,6 @@ exception Bound_computation_term_destructor of Qualified_identifier.t
 
 exception Bound_query of Qualified_identifier.t
 
-exception Bound_mquery of Qualified_identifier.t
-
 exception Bound_module of Qualified_identifier.t
 
 exception Bound_program_constant of Qualified_identifier.t
@@ -90,7 +88,6 @@ module type DISAMBIGUATION_STATE = sig
     | Computation_term_constructor
     | Computation_term_destructor
     | Query
-    | MQuery
     | Module
     | Program_constant
 
@@ -141,8 +138,6 @@ module type DISAMBIGUATION_STATE = sig
     ?location:Location.t -> Identifier.t -> unit t
 
   val add_query : ?location:Location.t -> Identifier.t -> unit t
-
-  val add_mquery : ?location:Location.t -> Identifier.t -> unit t
 
   val add_module :
        ?location:Location.t
@@ -274,7 +269,6 @@ module Persistent_disambiguation_state = struct
     | Computation_term_constructor
     | Computation_term_destructor
     | Query
-    | MQuery
     | Module
     | Program_constant
 
@@ -482,11 +476,6 @@ module Persistent_disambiguation_state = struct
     let entry = (Query, data) in
     add_entry_binding identifier entry
 
-  let add_mquery ?location identifier =
-    let data = make_entry_data ?location identifier in
-    let entry = (MQuery, data) in
-    add_entry_binding identifier entry
-
   let add_module ?location subtree identifier =
     let data = make_entry_data ?location identifier in
     let entry = (Module, data) in
@@ -616,7 +605,6 @@ module Persistent_disambiguation_state = struct
       | Computation_term_destructor ->
           Bound_computation_term_destructor identifier
       | Query -> Bound_query identifier
-      | MQuery -> Bound_mquery identifier
       | Module -> Bound_module identifier
       | Program_constant -> Bound_program_constant identifier
     in
@@ -901,9 +889,6 @@ let () =
           Qualified_identifier.pp qualified_identifier
     | Bound_query qualified_identifier ->
         Format.dprintf "%a is a bound query." Qualified_identifier.pp
-          qualified_identifier
-    | Bound_mquery qualified_identifier ->
-        Format.dprintf "%a is a bound mquery." Qualified_identifier.pp
           qualified_identifier
     | Bound_module qualified_identifier ->
         Format.dprintf "%a is a bound module." Qualified_identifier.pp

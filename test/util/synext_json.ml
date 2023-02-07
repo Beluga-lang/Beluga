@@ -1592,24 +1592,6 @@ and json_of_signature_declaration declaration =
           ; ("maximum_tries", json_of_option json_of_int maximum_tries)
           ; ("location", json_of_location location)
           ]
-  | Signature.Declaration.MQuery
-      { identifier
-      ; typ
-      ; expected_solutions
-      ; search_tries
-      ; search_depth
-      ; location
-      } ->
-      json_of_variant ~name:"Signature.Declaration.MQuery"
-        ~data:
-          [ ("identifier", json_of_option json_of_identifier identifier)
-          ; ("typ", json_of_comp_typ typ)
-          ; ( "expected_solutions"
-            , json_of_option json_of_int expected_solutions )
-          ; ("search_tries", json_of_option json_of_int search_tries)
-          ; ("search_depth", json_of_option json_of_int search_depth)
-          ; ("location", json_of_location location)
-          ]
   | Signature.Declaration.Module { identifier; entries; location } ->
       json_of_variant ~name:"Signature.Declaration.Module"
         ~data:

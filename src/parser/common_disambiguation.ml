@@ -208,6 +208,13 @@ module type BINDINGS_STATE = sig
 
   val with_comp_variable :
     ?location:Location.t -> Identifier.t -> 'a t -> 'a t
+
+  (** [with_scope m] pushes a new scope, runs [m], then pops the scope. *)
+  val with_scope : 'a t -> 'a t
+
+  (** [with_parent_scope m] restores the parent scope, runs [with_scope m],
+      then restores the initial scope. *)
+  val with_parent_scope : 'a t -> 'a t
 end
 
 module type SIGNATURE_STATE = sig
@@ -611,6 +618,10 @@ module Disambiguation_state : DISAMBIGUATION_STATE = struct
     scoped
       ~set:(add_computation_variable ?location identifier)
       ~unset:(pop_binding identifier)
+
+  let with_scope = Obj.magic ()
+
+  let with_parent_scope = Obj.magic ()
 end
 
 module type PATTERN_DISAMBGUATION_STATE = sig

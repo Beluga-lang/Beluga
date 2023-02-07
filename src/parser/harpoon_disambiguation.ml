@@ -13,8 +13,8 @@ module type HARPOON_DISAMBIGUATION = sig
   val disambiguate_harpoon_proof :
     Synprs.harpoon_proof -> Synext.harpoon_proof t
 
-  val disambiguate_harpoon_command :
-    Synprs.harpoon_command -> Synext.harpoon_command t
+  val with_disambiguated_harpoon_command :
+    Synprs.harpoon_command -> (Synext.harpoon_command -> 'a t) -> 'a t
 
   val disambiguate_harpoon_directive :
     Synprs.harpoon_directive -> Synext.harpoon_directive t
@@ -45,38 +45,41 @@ module Make
 
   (** {1 Disambiguation} *)
 
-  let rec disambiguate_harpoon_proof proof =
-    match proof with
+  let rec disambiguate_harpoon_proof = function
     | Synprs.Harpoon.Proof.Incomplete { location; label } ->
         return (Synext.Harpoon.Proof.Incomplete { location; label })
     | Synprs.Harpoon.Proof.Command { location; command; body } ->
-        let* command' = disambiguate_harpoon_command command in
-        let* body' = disambiguate_harpoon_proof body in
-        return
-          (Synext.Harpoon.Proof.Command
-             { location; command = command'; body = body' })
+        with_disambiguated_harpoon_command command (fun command' ->
+            let* body' = disambiguate_harpoon_proof body in
+            return
+              (Synext.Harpoon.Proof.Command
+                 { location; command = command'; body = body' }))
     | Synprs.Harpoon.Proof.Directive { location; directive } ->
         let* directive' = disambiguate_harpoon_directive directive in
         return
           (Synext.Harpoon.Proof.Directive
              { location; directive = directive' })
 
-  and disambiguate_harpoon_command command =
+  and with_disambiguated_harpoon_command :
+        'a.
+        Synprs.harpoon_command -> (Synext.harpoon_command -> 'a t) -> 'a t =
+   fun command f ->
     match command with
     | Synprs.Harpoon.Command.By { location; expression; assignee } ->
         let* expression' = disambiguate_comp_expression expression in
-        return
-          (Synext.Harpoon.Command.By
-             { location; expression = expression'; assignee })
+        with_comp_variable assignee
+          (f
+             (Synext.Harpoon.Command.By
+                { location; expression = expression'; assignee }))
     | Synprs.Harpoon.Command.Unbox
         { location; expression; assignee; modifier } ->
         let* expression' = disambiguate_comp_expression expression in
-        return
-          (Synext.Harpoon.Command.Unbox
-             { location; expression = expression'; assignee; modifier })
+        with_meta_variable assignee
+          (f
+             (Synext.Harpoon.Command.Unbox
+                { location; expression = expression'; assignee; modifier }))
 
-  and disambiguate_harpoon_directive directive =
-    match directive with
+  and disambiguate_harpoon_directive = function
     | Synprs.Harpoon.Directive.Intros { location; hypothetical } ->
         let* hypothetical' =
           disambiguate_harpoon_hypothetical hypothetical
@@ -110,81 +113,78 @@ module Make
           (Synext.Harpoon.Directive.Suffices
              { location; scrutinee = scrutinee'; branches = branches' })
 
-  and disambiguate_harpoon_split_branch split_branch =
-    let { Synprs.Harpoon.Split_branch.location; label; body } =
-      split_branch
-    in
-    let* label' =
-      match label with
-      | Synprs.Harpoon.Split_branch.Label.Constant { location; identifier }
-        -> (
-          lookup identifier >>= function
-          | Result.Ok (Lf_term_constant, _) ->
-              return
-                (Synext.Harpoon.Split_branch.Label.Lf_constant
-                   { location; identifier })
-          | Result.Ok (Computation_term_constructor, _) ->
-              return
-                (Synext.Harpoon.Split_branch.Label.Comp_constant
-                   { location; identifier })
-          | Result.Ok entry ->
-              Error.raise_at1 location
-                (Error.composite_exception2 Expected_constructor_constant
-                   (actual_binding_exn identifier entry))
-          | Result.Error cause -> Error.raise_at1 location cause)
-      | Synprs.Harpoon.Split_branch.Label.Bound_variable { location } ->
-          return
-            (Synext.Harpoon.Split_branch.Label.Bound_variable { location })
-      | Synprs.Harpoon.Split_branch.Label.Empty_context { location } ->
-          return
-            (Synext.Harpoon.Split_branch.Label.Empty_context { location })
-      | Synprs.Harpoon.Split_branch.Label.Extended_context
-          { location; schema_element } ->
-          return
-            (Synext.Harpoon.Split_branch.Label.Extended_context
-               { location; schema_element })
-      | Synprs.Harpoon.Split_branch.Label.Parameter_variable
-          { location; schema_element; projection } ->
-          return
-            (Synext.Harpoon.Split_branch.Label.Parameter_variable
-               { location; schema_element; projection })
-    in
-    let* body' = disambiguate_harpoon_hypothetical body in
-    return
-      { Synext.Harpoon.Split_branch.location; label = label'; body = body' }
+  and disambiguate_harpoon_split_branch = function
+    | { Synprs.Harpoon.Split_branch.location; label; body } ->
+        let* label' = disambiguate_harpoon_split_branch_label label in
+        let* body' = disambiguate_harpoon_hypothetical body in
+        return
+          { Synext.Harpoon.Split_branch.location
+          ; label = label'
+          ; body = body'
+          }
 
-  and disambiguate_harpoon_suffices_branch suffices_branch =
-    let { Synprs.Harpoon.Suffices_branch.location; goal; proof } =
-      suffices_branch
-    in
-    let* goal' = disambiguate_comp_typ goal in
-    let* proof' = disambiguate_harpoon_proof proof in
-    return
-      { Synext.Harpoon.Suffices_branch.location
-      ; goal = goal'
-      ; proof = proof'
-      }
-
-  and disambiguate_harpoon_hypothetical hypothetical =
-    let { Synprs.Harpoon.Hypothetical.location
-        ; meta_context
-        ; comp_context
-        ; proof
-        } =
-      hypothetical
-    in
-    with_disambiguated_meta_context meta_context (fun meta_context' ->
-        with_disambiguated_comp_context comp_context (fun comp_context' ->
-            let* proof' = disambiguate_harpoon_proof proof in
+  and disambiguate_harpoon_split_branch_label = function
+    | Synprs.Harpoon.Split_branch.Label.Constant { location; identifier }
+      -> (
+        lookup identifier >>= function
+        | Result.Ok (Lf_term_constant, _) ->
             return
-              { Synext.Harpoon.Hypothetical.location
-              ; meta_context = meta_context'
-              ; comp_context = comp_context'
-              ; proof = proof'
-              }))
+              (Synext.Harpoon.Split_branch.Label.Lf_constant
+                 { location; identifier })
+        | Result.Ok (Computation_term_constructor, _) ->
+            return
+              (Synext.Harpoon.Split_branch.Label.Comp_constant
+                 { location; identifier })
+        | Result.Ok entry ->
+            Error.raise_at1 location
+              (Error.composite_exception2 Expected_constructor_constant
+                 (actual_binding_exn identifier entry))
+        | Result.Error cause -> Error.raise_at1 location cause)
+    | Synprs.Harpoon.Split_branch.Label.Bound_variable { location } ->
+        return
+          (Synext.Harpoon.Split_branch.Label.Bound_variable { location })
+    | Synprs.Harpoon.Split_branch.Label.Empty_context { location } ->
+        return (Synext.Harpoon.Split_branch.Label.Empty_context { location })
+    | Synprs.Harpoon.Split_branch.Label.Extended_context
+        { location; schema_element } ->
+        return
+          (Synext.Harpoon.Split_branch.Label.Extended_context
+             { location; schema_element })
+    | Synprs.Harpoon.Split_branch.Label.Parameter_variable
+        { location; schema_element; projection } ->
+        return
+          (Synext.Harpoon.Split_branch.Label.Parameter_variable
+             { location; schema_element; projection })
 
-  and disambiguate_harpoon_repl_command repl_command =
-    match repl_command with
+  and disambiguate_harpoon_suffices_branch = function
+    | { Synprs.Harpoon.Suffices_branch.location; goal; proof } ->
+        let* goal' = disambiguate_comp_typ goal in
+        let* proof' = disambiguate_harpoon_proof proof in
+        return
+          { Synext.Harpoon.Suffices_branch.location
+          ; goal = goal'
+          ; proof = proof'
+          }
+
+  and disambiguate_harpoon_hypothetical = function
+    | { Synprs.Harpoon.Hypothetical.location
+      ; meta_context
+      ; comp_context
+      ; proof
+      } ->
+        with_parent_scope
+          (with_disambiguated_meta_context meta_context (fun meta_context' ->
+               with_disambiguated_comp_context comp_context
+                 (fun comp_context' ->
+                   let* proof' = disambiguate_harpoon_proof proof in
+                   return
+                     { Synext.Harpoon.Hypothetical.location
+                     ; meta_context = meta_context'
+                     ; comp_context = comp_context'
+                     ; proof = proof'
+                     })))
+
+  and disambiguate_harpoon_repl_command = function
     | Synprs.Harpoon.Repl.Command.Rename
         { location; rename_from; rename_to; level } ->
         return

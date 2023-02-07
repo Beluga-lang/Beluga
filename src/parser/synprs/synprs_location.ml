@@ -354,6 +354,5 @@ let location_of_signature_declaration declaration =
   | Raw_recursive_declarations { location; _ }
   | Raw_val { location; _ }
   | Raw_query { location; _ }
-  | Raw_mquery { location; _ }
   | Raw_module { location; _ } ->
       location

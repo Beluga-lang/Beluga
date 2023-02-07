@@ -1467,23 +1467,6 @@ and pp_signature_declaration ppf declaration =
             pp_query_argument expected_solutions pp_query_argument
             maximum_tries pp_meta_context meta_context Identifier.pp
             identifier pp_lf_typ typ)
-  | Signature.Declaration.MQuery
-      { identifier; typ; expected_solutions; search_tries; search_depth; _ }
-    -> (
-      let pp_mquery_argument ppf = function
-        | Option.None -> Format.pp_print_string ppf "*"
-        | Option.Some argument -> Format.pp_print_int ppf argument
-      in
-      match identifier with
-      | Option.None ->
-          Format.fprintf ppf "@[<hov 2>mquery@ %a@ %a@ %a@ %a@]"
-            pp_mquery_argument expected_solutions pp_mquery_argument
-            search_tries pp_mquery_argument search_depth pp_comp_typ typ
-      | Option.Some identifier ->
-          Format.fprintf ppf "@[<hov 2>mquery@ %a@ %a@ %a@ %a :@ %a@]"
-            pp_mquery_argument expected_solutions pp_mquery_argument
-            search_tries pp_mquery_argument search_depth Identifier.pp
-            identifier pp_comp_typ typ)
   | Signature.Declaration.Module { identifier; entries; _ } ->
       Format.fprintf ppf "module %a = struct@;<1 2>@[<v 0>%a@]@ end"
         Identifier.pp identifier

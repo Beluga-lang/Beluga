@@ -87,11 +87,11 @@ module type META_PATTERN_DISAMBIGUATION = sig
 end
 
 module Make
-    (Bindings_state : BINDINGS_STATE)
+    (Disambiguation_state : DISAMBIGUATION_STATE)
     (Clf_disambiguation : Clf_disambiguation.CLF_DISAMBIGUATION
-                            with type state = Bindings_state.state) :
-  META_DISAMBIGUATION with type state = Bindings_state.state = struct
-  include Bindings_state
+                            with type state = Disambiguation_state.state) :
+  META_DISAMBIGUATION with type state = Disambiguation_state.state = struct
+  include Disambiguation_state
   include Clf_disambiguation
 
   (** {1 Disambiguation} *)
@@ -348,9 +348,7 @@ module Make
 end
 
 module Make_pattern_disambiguator
-    (Bindings_state : BINDINGS_STATE)
-    (Disambiguation_state : PATTERN_DISAMBGUATION_STATE
-                              with module S = Bindings_state)
+    (Disambiguation_state : DISAMBIGUATION_STATE)
     (Clf_pattern_disambiguator : Clf_disambiguation
                                  .CLF_PATTERN_DISAMBIGUATION
                                    with type state =
@@ -359,46 +357,6 @@ module Make_pattern_disambiguator
 struct
   include Disambiguation_state
   include Clf_pattern_disambiguator
-
-  let with_inner_bound_meta_variable ?location identifier f =
-    with_inner_binding identifier (with_meta_variable ?location identifier f)
-
-  let with_inner_bound_parameter_variable ?location identifier f =
-    with_inner_binding identifier
-      (with_parameter_variable ?location identifier f)
-
-  let with_inner_bound_substitution_variable ?location identifier f =
-    with_inner_binding identifier
-      (with_substitution_variable ?location identifier f)
-
-  let with_inner_bound_context_variable ?location identifier f =
-    with_inner_binding identifier
-      (with_context_variable ?location identifier f)
-
-  let meta_variable_adder identifier =
-    { run = (fun m -> Bindings_state.with_meta_variable identifier m) }
-
-  let parameter_variable_adder identifier =
-    { run = (fun m -> Bindings_state.with_parameter_variable identifier m) }
-
-  let substitution_variable_adder identifier =
-    { run = (fun m -> Bindings_state.with_substitution_variable identifier m)
-    }
-
-  let context_variable_adder identifier =
-    { run = (fun m -> Bindings_state.with_context_variable identifier m) }
-
-  let add_pattern_meta_variable identifier =
-    add_pattern_variable identifier (meta_variable_adder identifier)
-
-  let add_pattern_parameter_variable identifier =
-    add_pattern_variable identifier (parameter_variable_adder identifier)
-
-  let add_pattern_substitution_variable identifier =
-    add_pattern_variable identifier (substitution_variable_adder identifier)
-
-  let add_pattern_context_variable identifier =
-    add_pattern_variable identifier (context_variable_adder identifier)
 
   let rec disambiguate_meta_typ meta_thing =
     match meta_thing with

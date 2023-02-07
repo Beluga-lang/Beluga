@@ -207,9 +207,9 @@ module Comp_typ_operator = struct
 end
 
 module Make_comp_typ_application_disambiguation_state
-    (Bindings_state : BINDINGS_STATE) =
+    (Disambiguation_state : DISAMBIGUATION_STATE) =
 struct
-  include Bindings_state
+  include Disambiguation_state
 
   type operator = Comp_typ_operator.t
 
@@ -339,9 +339,9 @@ module Comp_expression_operator = struct
 end
 
 module Make_comp_expression_application_disambiguation_state
-    (Bindings_state : BINDINGS_STATE) =
+    (Disambiguation_state : DISAMBIGUATION_STATE) =
 struct
-  include Bindings_state
+  include Disambiguation_state
 
   type operator = Comp_expression_operator.t
 
@@ -470,9 +470,9 @@ module Comp_pattern_operator = struct
 end
 
 module Make_comp_pattern_application_disambiguation_state
-    (Bindings_state : BINDINGS_STATE) =
+    (Disambiguation_state : DISAMBIGUATION_STATE) =
 struct
-  include Bindings_state
+  include Disambiguation_state
 
   type operator = Comp_pattern_operator.t
 
@@ -550,16 +550,14 @@ module type COMP_PATTERN_DISAMBIGUATION = sig
 end
 
 module Make
-    (Bindings_state : BINDINGS_STATE)
-    (Pattern_disambiguation_state : PATTERN_DISAMBGUATION_STATE
-                                      with module S = Bindings_state)
+    (Disambiguation_state : DISAMBIGUATION_STATE)
     (Meta_disambiguator : Meta_disambiguation.META_DISAMBIGUATION
-                            with type state = Bindings_state.state)
+                            with type state = Disambiguation_state.state)
     (Comp_pattern_disambiguator : COMP_PATTERN_DISAMBIGUATION
                                     with type state =
-                                      Pattern_disambiguation_state.state) :
-  COMP_DISAMBIGUATION with type state = Bindings_state.state = struct
-  include Bindings_state
+                                      Disambiguation_state.state) :
+  COMP_DISAMBIGUATION with type state = Disambiguation_state.state = struct
+  include Disambiguation_state
   include Meta_disambiguator
 
   (** {1 Disambiguation State Helpers} *)
@@ -641,11 +639,8 @@ module Make
   let with_meta_function_parameters = with_meta_function_parameters_list1
 
   let with_pattern_variables ~pattern ~expression =
-    try_catch
-      (Pattern_disambiguation_state.with_pattern_variables ~pattern
-         ~expression) ~on_exn:(function
-      | Pattern_disambiguation_state.Duplicate_pattern_variables duplicates
-        ->
+    try_catch (with_pattern_variables ~pattern ~expression) ~on_exn:(function
+      | Duplicate_pattern_variables duplicates ->
           Error.raise_at
             (List2.to_list1 (List2.map Identifier.location duplicates))
             Illegal_duplicate_pattern_variables
@@ -887,7 +882,7 @@ module Make
       Application_disambiguation.Make (Associativity) (Fixity)
         (Comp_typ_operand)
         (Comp_typ_operator)
-        (Make_comp_typ_application_disambiguation_state (Bindings_state)) in
+        (Make_comp_typ_application_disambiguation_state (Disambiguation_state)) in
     disambiguate_application >=> function
     | Result.Ok (applicand, arguments) -> return (applicand, arguments)
     | Result.Error
@@ -1335,7 +1330,7 @@ module Make
         (Comp_expression_operand)
         (Comp_expression_operator)
         (Make_comp_expression_application_disambiguation_state
-           (Bindings_state)) in
+           (Disambiguation_state)) in
     disambiguate_application >=> function
     | Result.Ok (applicand, arguments) -> return (applicand, arguments)
     | Result.Error
@@ -1419,31 +1414,17 @@ module Make
 end
 
 module Make_pattern_disambiguator
-    (Bindings_state : BINDINGS_STATE)
-    (Pattern_disambiguation_state : PATTERN_DISAMBGUATION_STATE
-                                      with module S = Bindings_state)
+    (Disambiguation_state : DISAMBIGUATION_STATE)
     (Meta_disambiguator : Meta_disambiguation.META_DISAMBIGUATION
-                            with type state = Bindings_state.state)
+                            with type state = Disambiguation_state.state)
     (Meta_pattern_disambiguator : Meta_disambiguation
                                   .META_PATTERN_DISAMBIGUATION
                                     with type state =
-                                      Pattern_disambiguation_state.state) :
-  COMP_PATTERN_DISAMBIGUATION
-    with type state = Pattern_disambiguation_state.state = struct
-  include Pattern_disambiguation_state
+                                      Disambiguation_state.state) :
+  COMP_PATTERN_DISAMBIGUATION with type state = Disambiguation_state.state =
+struct
+  include Disambiguation_state
   include Meta_pattern_disambiguator
-
-  let lookup_toplevel identifier =
-    with_wrapped_state (Bindings_state.lookup_toplevel identifier)
-
-  let lookup identifier =
-    with_wrapped_state (Bindings_state.lookup identifier)
-
-  let comp_variable_adder identifier =
-    { run = (fun m -> Bindings_state.with_comp_variable identifier m) }
-
-  let add_pattern_comp_variable identifier =
-    add_pattern_variable identifier (comp_variable_adder identifier)
 
   let with_context_variable_opt = function
     | Option.Some identifier -> with_context_variable identifier
@@ -1486,7 +1467,7 @@ module Make_pattern_disambiguator
           (Synext.location_of_meta_type typ)
           Dollar_modifier_typ_mismatch
 
-  let actual_binding_exn = Bindings_state.actual_binding_exn
+  let actual_binding_exn = Disambiguation_state.actual_binding_exn
 
   let rec disambiguate_comp_typ = function
     | Synprs.Comp.Sort_object.Raw_ctype { location } ->
@@ -1628,7 +1609,7 @@ module Make_pattern_disambiguator
         return (Synext.Comp.Typ.Box { location; meta_type = meta_type' })
     | Synprs.Comp.Sort_object.Raw_application { location; objects } ->
         let* applicand, arguments =
-          with_wrapped_state (disambiguate_comp_typ_application objects)
+          disambiguate_comp_typ_application objects
         in
         let* applicand' = disambiguate_comp_typ applicand in
         let* arguments' =
@@ -1661,7 +1642,7 @@ module Make_pattern_disambiguator
       Application_disambiguation.Make (Associativity) (Fixity)
         (Comp_typ_operand)
         (Comp_typ_operator)
-        (Make_comp_typ_application_disambiguation_state (Bindings_state)) in
+        (Make_comp_typ_application_disambiguation_state (Disambiguation_state)) in
     disambiguate_application >=> function
     | Result.Ok (applicand, arguments) -> return (applicand, arguments)
     | Result.Error
@@ -1784,7 +1765,7 @@ module Make_pattern_disambiguator
            disambiguation state, so the application disambiguation identifies
            them as operands. *)
         let* applicand, arguments =
-          with_wrapped_state (disambiguate_comp_pattern_application patterns)
+          disambiguate_comp_pattern_application patterns
         in
         let* applicand' = disambiguate_comp_pattern applicand in
         let* arguments' =
@@ -1819,7 +1800,7 @@ module Make_pattern_disambiguator
         (* This raw qualified identifier [<identifier> (`.' <identifier>)+]
            may be a computation-level variable or constant pattern followed
            by observations *)
-        with_wrapped_state (S.partial_lookup identifier) >>= function
+        partial_lookup identifier >>= function
         | `Totally_unbound _ ->
             (* This is a variable pattern followed by observations *)
             let[@warning "-8"] (List1.T (variable, d :: ds)) =
@@ -2010,7 +1991,7 @@ module Make_pattern_disambiguator
               })
 
   and disambiguate_destructors identifiers =
-    with_wrapped_state (S.partial_lookup' identifiers) >>= function
+    partial_lookup' identifiers >>= function
     | `Totally_unbound _ ->
         let qualified_identifier =
           Qualified_identifier.from_list1 identifiers
@@ -2077,7 +2058,8 @@ module Make_pattern_disambiguator
       Application_disambiguation.Make (Associativity) (Fixity)
         (Comp_pattern_operand)
         (Comp_pattern_operator)
-        (Make_comp_pattern_application_disambiguation_state (Bindings_state)) in
+        (Make_comp_pattern_application_disambiguation_state
+           (Disambiguation_state)) in
     disambiguate_application >=> function
     | Result.Ok (applicand, arguments) -> return (applicand, arguments)
     | Result.Error

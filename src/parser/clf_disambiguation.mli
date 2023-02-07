@@ -19,8 +19,8 @@ module type CLF_DISAMBIGUATION = sig
     Synprs.clf_context_object -> (Synext.clf_context -> 'a t) -> 'a t
 end
 
-module Make (Bindings_state : BINDINGS_STATE) :
-  CLF_DISAMBIGUATION with type state = Bindings_state.state
+module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
+  CLF_DISAMBIGUATION with type state = Disambiguation_state.state
 
 module type CLF_PATTERN_DISAMBIGUATION = sig
   (** @closed *)
@@ -52,8 +52,5 @@ module type CLF_PATTERN_DISAMBIGUATION = sig
 end
 
 module Make_pattern_disambiguator
-    (Bindings_state : BINDINGS_STATE)
-    (Pattern_disambiguation_state : PATTERN_DISAMBGUATION_STATE
-                                      with module S = Bindings_state) :
-  CLF_PATTERN_DISAMBIGUATION
-    with type state = Pattern_disambiguation_state.state
+    (Disambiguation_state : DISAMBIGUATION_STATE) :
+  CLF_PATTERN_DISAMBIGUATION with type state = Disambiguation_state.state

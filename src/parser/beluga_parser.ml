@@ -44,35 +44,23 @@ struct
     Signature_parser.Make (Common_parser) (Lf_parser) (Meta_parser)
       (Comp_parser)
       (Harpoon_parser)
-
-  module Persistent_pattern_disambiguation_state =
-    Common_disambiguation.Make_persistent_pattern_disambiguation_state
-      (Disambiguation_state)
-
   module Lf_disambiguator = Lf_disambiguation.Make (Disambiguation_state)
   module Clf_disambiguator = Clf_disambiguation.Make (Disambiguation_state)
   module Clf_pattern_disambiguator =
-    Clf_disambiguation.Make_pattern_disambiguator
-      (Disambiguation_state)
-      (Persistent_pattern_disambiguation_state)
+    Clf_disambiguation.Make_pattern_disambiguator (Disambiguation_state)
   module Meta_disambiguator =
     Meta_disambiguation.Make (Disambiguation_state) (Clf_disambiguator)
   module Meta_pattern_disambiguator =
     Meta_disambiguation.Make_pattern_disambiguator
       (Disambiguation_state)
-      (Persistent_pattern_disambiguation_state)
       (Clf_pattern_disambiguator)
   module Comp_pattern_disambiguator =
     Comp_disambiguation.Make_pattern_disambiguator
       (Disambiguation_state)
-      (Persistent_pattern_disambiguation_state)
       (Meta_disambiguator)
       (Meta_pattern_disambiguator)
   module Comp_disambiguator =
-    Comp_disambiguation.Make
-      (Disambiguation_state)
-      (Persistent_pattern_disambiguation_state)
-      (Meta_disambiguator)
+    Comp_disambiguation.Make (Disambiguation_state) (Meta_disambiguator)
       (Comp_pattern_disambiguator)
   module Harpoon_disambiguator =
     Harpoon_disambiguation.Make (Disambiguation_state) (Meta_disambiguator)
@@ -255,6 +243,8 @@ module Located_token = struct
 end
 
 module Simple_parser_state = Parser_combinator.Make_state (Located_token)
+
 module Simple_disambiguation_state =
-  Common_disambiguation.Disambiguation_state
+  Common_disambiguation.Persistent_disambiguation_state
+
 module Simple = Make (Simple_parser_state) (Simple_disambiguation_state)

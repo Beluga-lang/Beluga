@@ -72,7 +72,7 @@ and add_json_entry json =
       add_lf_term_constant operator (Identifier.make identifier)
   | "module" ->
       let identifier = json |> member "identifier" |> to_string in
-      let module_state = exec (disambiguation_state_of_json json) empty in
+      let module_state = exec (disambiguation_state_of_json json) initial in
       let bindings = eval get_bindings module_state in
       add_module bindings (Identifier.make identifier)
   | "parameter_variable" ->
@@ -150,4 +150,4 @@ and add_json_entry json =
 let read_disambiguation_state filename =
   let open Disambiguation_state in
   let json = Yojson.Safe.from_file filename in
-  exec (disambiguation_state_of_json json) empty
+  exec (disambiguation_state_of_json json) initial

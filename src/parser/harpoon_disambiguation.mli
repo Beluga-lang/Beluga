@@ -31,10 +31,10 @@ module type HARPOON_DISAMBIGUATION = sig
 end
 
 module Make
-    (Bindings_state : BINDINGS_STATE)
+    (Disambiguation_state : DISAMBIGUATION_STATE)
     (Meta_disambiguation : Meta_disambiguation.META_DISAMBIGUATION
-                             with type state = Bindings_state.state)
+                             with type state = Disambiguation_state.state)
     (Comp_disambiguation : Comp_disambiguation.COMP_DISAMBIGUATION
-                             with type state = Bindings_state.state) :
-  HARPOON_DISAMBIGUATION with type state = Bindings_state.state
+                             with type state = Disambiguation_state.state) :
+  HARPOON_DISAMBIGUATION with type state = Disambiguation_state.state
 [@@warning "-67"]

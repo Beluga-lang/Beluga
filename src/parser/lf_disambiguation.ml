@@ -162,12 +162,12 @@ module Lf_operator = struct
 end
 
 module Make_lf_application_disambiguation_state
-    (Bindings_state : BINDINGS_STATE) :
+    (Disambiguation_state : DISAMBIGUATION_STATE) :
   Application_disambiguation.APPLICATION_DISAMBIGUATION_STATE
-    with type state = Bindings_state.state
+    with type state = Disambiguation_state.state
      and type operator = Lf_operator.t
      and type expression = Synprs.lf_object = struct
-  include Bindings_state
+  include Disambiguation_state
 
   type operator = Lf_operator.t
 
@@ -226,9 +226,9 @@ end
     external syntax.
 
     This disambiguation does not perform normalization nor validation. *)
-module Make (Bindings_state : BINDINGS_STATE) :
-  LF_DISAMBIGUATION with type state = Bindings_state.state = struct
-  include Bindings_state
+module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
+  LF_DISAMBIGUATION with type state = Disambiguation_state.state = struct
+  include Disambiguation_state
 
   (** {1 Disambiguation} *)
 
@@ -496,7 +496,7 @@ module Make (Bindings_state : BINDINGS_STATE) :
     let open
       Application_disambiguation.Make (Associativity) (Fixity) (Lf_operand)
         (Lf_operator)
-        (Make_lf_application_disambiguation_state (Bindings_state)) in
+        (Make_lf_application_disambiguation_state (Disambiguation_state)) in
     disambiguate_application >=> function
     | Result.Ok (applicand, arguments) -> return (applicand, arguments)
     | Result.Error

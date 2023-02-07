@@ -206,12 +206,12 @@ end
 (** Disambiguation state for contextual LF application rewriting with
     {!module:Application_disambiguation.Make}. *)
 module Make_clf_application_disambiguation_state
-    (Bindings_state : BINDINGS_STATE) :
+    (Disambiguation_state : DISAMBIGUATION_STATE) :
   Application_disambiguation.APPLICATION_DISAMBIGUATION_STATE
-    with type state = Bindings_state.state
+    with type state = Disambiguation_state.state
      and type operator = Clf_operator.t
      and type expression = Synprs.clf_object = struct
-  include Bindings_state
+  include Disambiguation_state
 
   type operator = Clf_operator.t
 
@@ -309,9 +309,9 @@ end
     syntax to the external syntax.
 
     This disambiguation does not perform normalization nor validation. *)
-module Make (Bindings_state : BINDINGS_STATE) :
-  CLF_DISAMBIGUATION with type state = Bindings_state.state = struct
-  include Bindings_state
+module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
+  CLF_DISAMBIGUATION with type state = Disambiguation_state.state = struct
+  include Disambiguation_state
 
   (** {1 Disambiguation} *)
 
@@ -871,7 +871,7 @@ module Make (Bindings_state : BINDINGS_STATE) :
     let open
       Application_disambiguation.Make (Associativity) (Fixity) (Clf_operand)
         (Clf_operator)
-        (Make_clf_application_disambiguation_state (Bindings_state)) in
+        (Make_clf_application_disambiguation_state (Disambiguation_state)) in
     disambiguate_application >=> function
     | Result.Ok (applicand, arguments) -> return (applicand, arguments)
     | Result.Error
@@ -927,52 +927,10 @@ module Make (Bindings_state : BINDINGS_STATE) :
 end
 
 module Make_pattern_disambiguator
-    (Bindings_state : BINDINGS_STATE)
-    (Disambiguation_state : PATTERN_DISAMBGUATION_STATE
-                              with module S = Bindings_state) :
+    (Disambiguation_state : DISAMBIGUATION_STATE) :
   CLF_PATTERN_DISAMBIGUATION with type state = Disambiguation_state.state =
 struct
   include Disambiguation_state
-
-  let lookup_toplevel identifier =
-    with_wrapped_state (Bindings_state.lookup_toplevel identifier)
-
-  let lookup identifier =
-    with_wrapped_state (Bindings_state.lookup identifier)
-
-  let partial_lookup identifier =
-    with_wrapped_state (Bindings_state.partial_lookup identifier)
-
-  let with_inner_bound_lf_term_variable ?location identifier f =
-    with_inner_binding identifier
-      (with_lf_term_variable ?location identifier f)
-
-  let lf_term_variable_adder identifier =
-    { run = (fun m -> Bindings_state.with_lf_term_variable identifier m) }
-
-  let parameter_variable_adder identifier =
-    { run = (fun m -> Bindings_state.with_parameter_variable identifier m) }
-
-  let substitution_variable_adder identifier =
-    { run = (fun m -> Bindings_state.with_substitution_variable identifier m)
-    }
-
-  let context_variable_adder identifier =
-    { run = (fun m -> Bindings_state.with_context_variable identifier m) }
-
-  let add_pattern_lf_term_variable identifier =
-    add_pattern_variable identifier (lf_term_variable_adder identifier)
-
-  let add_pattern_parameter_variable identifier =
-    add_pattern_variable identifier (parameter_variable_adder identifier)
-
-  let add_pattern_substitution_variable identifier =
-    add_pattern_variable identifier (substitution_variable_adder identifier)
-
-  let add_pattern_context_variable identifier =
-    add_pattern_variable identifier (context_variable_adder identifier)
-
-  let actual_binding_exn = Bindings_state.actual_binding_exn
 
   (** {1 Disambiguation} *)
 
@@ -1081,9 +1039,7 @@ struct
              ; body = body'
              })
     | Synprs.CLF.Object.Raw_application { objects; location } ->
-        let* applicand, arguments =
-          with_wrapped_state (disambiguate_clf_application objects)
-        in
+        let* applicand, arguments = disambiguate_clf_application objects in
         let* applicand' = disambiguate_clf_typ applicand in
         let* arguments' = traverse_list1 elaborate_lf_operand arguments in
         return
@@ -1168,7 +1124,7 @@ struct
                 return term'
             | false ->
                 let* () = add_pattern_parameter_variable identifier in
-                let* () = push_inner_binding identifier in
+                let* () = add_inner_binding identifier in
                 return term')
         | Result.Error cause -> Error.raise_at1 location cause)
     | Synprs.CLF.Object.Raw_identifier
@@ -1201,7 +1157,7 @@ struct
                 return term'
             | false ->
                 let* () = add_pattern_substitution_variable identifier in
-                let* () = push_inner_binding identifier in
+                let* () = add_inner_binding identifier in
                 return term')
         | Result.Error cause -> Error.raise_at1 location cause)
     | Synprs.CLF.Object.Raw_identifier
@@ -1242,7 +1198,7 @@ struct
                 return term'
             | false ->
                 let* () = add_pattern_lf_term_variable identifier in
-                let* () = push_inner_binding identifier in
+                let* () = add_inner_binding identifier in
                 return term')
         | Result.Error cause -> Error.raise_at1 location cause)
     | Synprs.CLF.Object.Raw_qualified_identifier
@@ -1287,7 +1243,7 @@ struct
                 return term'
             | false ->
                 let* () = add_pattern_lf_term_variable free_variable in
-                let* () = push_inner_binding free_variable in
+                let* () = add_inner_binding free_variable in
                 return term')
         | `Partially_bound
             ( List1.T
@@ -1322,9 +1278,7 @@ struct
                   (Error.composite_exception2 Expected_clf_term_constant
                      (actual_binding_exn identifier entry))))
     | Synprs.CLF.Object.Raw_application { objects; location } ->
-        let* applicand, arguments =
-          with_wrapped_state (disambiguate_clf_application objects)
-        in
+        let* applicand, arguments = disambiguate_clf_application objects in
         let* applicand' = disambiguate_clf_term applicand in
         let* arguments' = traverse_list1 elaborate_lf_operand arguments in
         return
@@ -1566,7 +1520,7 @@ struct
     let open
       Application_disambiguation.Make (Associativity) (Fixity) (Clf_operand)
         (Clf_operator)
-        (Make_clf_application_disambiguation_state (Bindings_state)) in
+        (Make_clf_application_disambiguation_state (Disambiguation_state)) in
     disambiguate_application >=> function
     | Result.Ok (applicand, arguments) -> return (applicand, arguments)
     | Result.Error
@@ -1642,7 +1596,7 @@ struct
         | true -> return pattern'
         | false ->
             let* () = add_pattern_parameter_variable identifier in
-            let* () = push_inner_binding identifier in
+            let* () = add_inner_binding identifier in
             return pattern')
     | Synprs.CLF.Object.Raw_identifier
         { location; identifier = identifier, `Dollar; _ } -> (
@@ -1654,7 +1608,7 @@ struct
         | true -> return pattern'
         | false ->
             let* () = add_pattern_substitution_variable identifier in
-            let* () = push_inner_binding identifier in
+            let* () = add_inner_binding identifier in
             return pattern')
     | Synprs.CLF.Object.Raw_identifier
         { location; identifier = identifier, `Plain; prefixed; _ } -> (
@@ -1683,7 +1637,7 @@ struct
             | true -> return pattern'
             | false ->
                 let* () = add_pattern_lf_term_variable identifier in
-                let* () = push_inner_binding identifier in
+                let* () = add_inner_binding identifier in
                 return pattern')
         | Result.Ok _
         | Result.Error (Unbound_identifier _) -> (
@@ -1694,7 +1648,7 @@ struct
             | true -> return pattern'
             | false ->
                 let* () = add_pattern_lf_term_variable identifier in
-                let* () = push_inner_binding identifier in
+                let* () = add_inner_binding identifier in
                 return pattern')
         | Result.Error cause -> Error.raise_at1 location cause)
     | Synprs.CLF.Object.Raw_qualified_identifier
@@ -1733,7 +1687,7 @@ struct
             | true -> return term'
             | false ->
                 let* () = add_pattern_lf_term_variable free_variable in
-                let* () = push_inner_binding free_variable in
+                let* () = add_inner_binding free_variable in
                 return term')
         | `Partially_bound
             ( List1.T
@@ -1754,7 +1708,7 @@ struct
             | true -> return term'
             | false ->
                 let* () = add_pattern_lf_term_variable variable_identifier in
-                let* () = push_inner_binding variable_identifier in
+                let* () = add_inner_binding variable_identifier in
                 return term')
         | `Partially_bound (List1.T (_, []), unbound_segments)
         | `Partially_bound (_, unbound_segments)
@@ -1774,11 +1728,10 @@ struct
             | _identifier, entry ->
                 Error.raise_at1 location
                   (Error.composite_exception2 Expected_clf_term_constant
-                     (Bindings_state.actual_binding_exn identifier entry))))
+                     (Disambiguation_state.actual_binding_exn identifier
+                        entry))))
     | Synprs.CLF.Object.Raw_application { objects; location } ->
-        let* applicand, arguments =
-          with_wrapped_state (disambiguate_clf_application objects)
-        in
+        let* applicand, arguments = disambiguate_clf_application objects in
         let* applicand' = disambiguate_clf_term_pattern applicand in
         let* arguments' =
           traverse_list1 elaborate_lf_operand_pattern arguments
@@ -1905,7 +1858,7 @@ struct
                    will be introduced during the abstraction phase of term
                    reconstruction. *)
                 let* () = add_pattern_substitution_variable identifier in
-                let* () = push_inner_binding identifier in
+                let* () = add_inner_binding identifier in
                 return substitution')
         | Synprs.CLF.Object.Raw_identifier
             { location; identifier = identifier, `Dollar; _ }
@@ -1935,7 +1888,7 @@ struct
                    will be introduced during the abstraction phase of term
                    reconstruction. *)
                 let* () = add_pattern_substitution_variable identifier in
-                let* () = push_inner_binding identifier in
+                let* () = add_inner_binding identifier in
                 return substitution')
         | objects' ->
             let head' =
@@ -2070,7 +2023,7 @@ struct
                        will be introduced during the abstraction phase of
                        term reconstruction. *)
                     let* () = add_pattern_context_variable identifier in
-                    let* () = push_inner_binding identifier in
+                    let* () = add_inner_binding identifier in
                     with_disambiguated_context_pattern_bindings_list bindings
                       (fun bindings' ->
                         f
@@ -2089,7 +2042,7 @@ struct
                    will be introduced during the abstraction phase of term
                    reconstruction. *)
                 let* () = add_pattern_context_variable identifier in
-                let* () = push_inner_binding identifier in
+                let* () = add_inner_binding identifier in
                 with_disambiguated_context_pattern_bindings_list bindings
                   (fun bindings' ->
                     f

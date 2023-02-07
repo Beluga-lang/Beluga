@@ -15,5 +15,5 @@ module type LF_DISAMBIGUATION = sig
   val disambiguate_lf_term : Synprs.lf_object -> Synext.lf_term t
 end
 
-module Make (Bindings_state : BINDINGS_STATE) :
-  LF_DISAMBIGUATION with type state = Bindings_state.state
+module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
+  LF_DISAMBIGUATION with type state = Disambiguation_state.state

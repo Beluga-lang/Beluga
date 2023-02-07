@@ -766,7 +766,7 @@ struct
           traverse_option disambiguate_totality_declaration order
         in
         let* () = add_program_constant identifier in
-        let* body' = disambiguate_harpoon_proof body in
+        let* body' = with_scope (disambiguate_harpoon_proof body) in
         return
           (Synext.Signature.Declaration.Proof
              { location

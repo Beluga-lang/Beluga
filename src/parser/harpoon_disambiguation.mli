@@ -11,8 +11,8 @@ module type HARPOON_DISAMBIGUATION = sig
   val disambiguate_harpoon_proof :
     Synprs.harpoon_proof -> Synext.harpoon_proof t
 
-  val disambiguate_harpoon_command :
-    Synprs.harpoon_command -> Synext.harpoon_command t
+  val with_disambiguated_harpoon_command :
+    Synprs.harpoon_command -> (Synext.harpoon_command -> 'a t) -> 'a t
 
   val disambiguate_harpoon_directive :
     Synprs.harpoon_directive -> Synext.harpoon_directive t

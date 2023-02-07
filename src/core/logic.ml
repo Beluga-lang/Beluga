@@ -484,41 +484,151 @@ module Convert = struct
   let mctxToMSub cD (mV, ms) fS =
     let etaExpand' cD cPsi (tA, ms) name plic ind =
       let cvar = Whnf.newMMVar (Some name) (cD, cPsi, tA) plic ind in
-       LF.Root (Syntax.Location.ghost, LF.MMVar((cvar, ms), S.id), LF.Nil, plic)
+       LF.Root (Location.ghost, LF.MMVar((cvar, ms), S.id), LF.Nil, plic)
     in
-    let noLoc = Syntax.Location.ghost in
-    match mV with
-    | LF.Empty -> (ms, fS)
-    | LF.Dec (mV',
-              LF.Decl (name, ((LF.ClTyp (LF.MTyp tA, cPsi)) as ctyp), plicity, _)) ->
-       let (ms', fS') = mctxToMSub cD (mV', ms) fS in
-       let tM = etaExpand' cD cPsi (tA, ms) name in
-       let dctx_hat = Context.dctxToHat cPsi in
-       let mfront = LF.ClObj (dctx_hat, LF.MObj tM) in
-       (LF.MDot (mfront, ms'),
-        (fun s ->
-          fS' (Comp.MApp (noLoc, s, (noLoc, mfront), ctyp, plicity))))
-    | LF.Dec (mV',
-              LF.Decl (name, ((LF.ClTyp (LF.PTyp tA, cPsi)) as ctyp), plicity, _)) ->
-       let (ms', fS') = mctxToMSub cD (mV', ms) fS in
-       let tM = etaExpand' cD cPsi (tA, ms') name in
-       let LF.Root (noLoc, hd, LF.Nil, _) = tM in
-       let dctx_hat = Context.dctxToHat cPsi in
-       let mfront =
-         LF.ClObj (dctx_hat, LF.PObj hd) in
-       (LF.MDot (mfront, ms'),
-        (fun s ->
-          fS' (Comp.MApp (noLoc, s, (noLoc, mfront), ctyp, plicity))))
-    | LF.Dec (mV',
-              LF.Decl (name, ((LF.CTyp (Some cid)) as ctyp), plicity, inductivity)) ->
-       let (ms', fS') = mctxToMSub cD (mV', ms) fS in
-       let dctx = Whnf.newCVar (Some name) cD (Some cid) plicity inductivity in
-       let mfront = LF.CObj (LF.CtxVar dctx) in
-       (* let mf = Whnf.cnormMFt mfront ms' in *)
-       (LF.MDot (mfront, ms'),
-        (fun s -> fS'
-                    (Comp.MApp (noLoc, s, (noLoc, mfront), ctyp, plicity))))
-    | _ -> raise NotImplementedYet
+    let rec rev_ms ms ms_ret =
+      match ms with
+      | LF.MShift k -> ms_ret
+      | LF.MDot (mf, ms') -> rev_ms ms' (LF.MDot (mf, ms_ret))
+    in
+    let rec shift lst i =
+      match lst with
+      | [] -> lst
+      | (cPsi, k) :: lst' -> (cPsi, k+i) :: (shift lst' i)
+    in
+    let rmLst lst =
+      match lst with
+      | (cPsi, k) :: lst' -> (shift lst' (-1), cPsi)
+    in
+    let rec find_cPsi lst k =
+      match lst with
+      | (dctx, k') :: lst' when k == k' -> dctx
+      | x :: lst' -> find_cPsi lst' k
+      | _ -> raise NotImplementedYet
+    in
+    let rec find_ctxvar_offset dctx =
+      match dctx with
+      | LF.DDec (dctx', _) -> find_ctxvar_offset dctx'
+      | LF.CtxVar (LF.CtxOffset k) -> k
+      | LF.Null -> 0
+    in
+    let rec adjust_offset cPsi ctx_var =
+      match cPsi with
+      | LF.DDec (cPsi', td) -> LF.DDec (adjust_offset cPsi' ctx_var, td)
+      | LF.CtxVar (_) -> ctx_var
+      | _ -> invalid_arg
+         "Logic.Convert.mctxToMSub.adjust_offset"
+    in
+    let rev_mctx cD =
+      let rec rev cD cD_ret =
+      match cD with
+      | LF.Empty -> cD_ret
+      | LF.Dec(cD', cdecl) ->
+         rev cD' (LF.Dec(cD_ret, cdecl))
+      in
+      rev cD LF.Empty
+    in
+    let rec create_psiList mV psiLst =
+      match mV with
+      | LF.Empty -> shift psiLst (-1)
+      | LF.Dec (mV',
+                LF.Decl (name, LF.CTyp (Some cid), plic ,ind)) ->
+         let dctx = LF.CtxVar(Whnf.newCVar (Some name) cD (Some cid) plic ind) in
+         let psiLst' = (dctx, 1) :: (shift psiLst 1) in
+         create_psiList mV' psiLst'
+      | LF.Dec (mV', _) ->
+         create_psiList mV' (shift psiLst 1)
+    in
+    let rec mctxToMSub' cD (mV, ms) psiLst =
+      match mV with
+      | LF.Empty -> ms
+      | LF.Dec (mV',
+                LF.Decl (name, LF.CTyp (Some cid), plic, ind)) ->
+         let (psiLst', dctx) = rmLst psiLst in
+         let mfront = LF.CObj dctx in
+         let ms' = mctxToMSub' cD (mV', ms) psiLst' in
+         LF.MDot (mfront, ms')
+      | LF.Dec (mV',
+                LF.Decl (name, LF.ClTyp (LF.MTyp tA,
+                                         LF.CtxVar (LF.CtxOffset k)), plic, ind)) ->
+         let dctx = find_cPsi psiLst k in
+         let dctx_hat = Context.dctxToHat dctx in
+         let psiLst' = shift psiLst (-1) in
+         let ms' = mctxToMSub' cD (mV', ms) psiLst' in
+         let tA = Whnf.cnormTyp (tA, ms') in
+         let tM = etaExpand' cD dctx (tA, LF.MShift 0) name plic ind in
+         let mfront = LF.ClObj (dctx_hat, LF.MObj tM) in
+         LF.MDot (mfront, ms')
+      | LF.Dec (mV',
+                LF.Decl (name, LF.ClTyp (LF.PTyp tA,
+                                         LF.CtxVar (LF.CtxOffset k)), plic, ind)) ->
+         let dctx = find_cPsi psiLst k in
+         let dctx_hat = Context.dctxToHat dctx in
+         let psiLst' = shift psiLst (-1) in
+         let ms' = mctxToMSub' cD (mV', ms) psiLst' in
+         let tA = Whnf.cnormTyp (tA, ms') in
+         let cvar = Whnf.newMPVar (Some name) (cD, dctx, tA) plic ind in
+         let tM = LF.MPVar((cvar, ms), S.id) in
+         let mfront = LF.ClObj (dctx_hat, LF.PObj tM) in
+         LF.MDot (mfront, ms')
+      | LF.Dec (mV',
+                LF.Decl (name, LF.ClTyp (LF.MTyp tA, cPsi), plic, ind)) ->
+         let k = find_ctxvar_offset cPsi in
+         let dctx = match k with
+           | 0 -> cPsi
+           | _ -> adjust_offset cPsi (find_cPsi psiLst k)
+         in
+         let dctx_hat = Context.dctxToHat dctx in
+         let psiLst' = shift psiLst (-1) in
+         let ms' = mctxToMSub' cD (mV', ms) psiLst' in
+         let tA = Whnf.cnormTyp (tA, ms') in
+         let tM = etaExpand' cD dctx (tA, LF.MShift 0) name plic ind in
+         let mfront = LF.ClObj (dctx_hat, LF.MObj tM) in
+         LF.MDot (mfront, ms')
+      | LF.Dec (mV',
+                LF.Decl (name, LF.ClTyp (LF.PTyp tA, cPsi), plic, ind)) ->
+         let k = find_ctxvar_offset cPsi in
+         let dctx = match k with
+           | 0 -> cPsi
+           | _ -> adjust_offset cPsi (find_cPsi psiLst k)
+         in
+         let dctx_hat = Context.dctxToHat dctx in
+         let psiLst' = shift psiLst (-1) in
+         let ms' = mctxToMSub' cD (mV', ms) psiLst' in
+         let tA = Whnf.cnormTyp (tA, ms') in
+         let cvar = Whnf.newMPVar (Some name) (cD, dctx, tA) plic ind in
+         let tM = LF.MPVar((cvar, ms), S.id) in
+         let mfront = LF.ClObj (dctx_hat, LF.PObj tM) in
+         LF.MDot (mfront, ms')
+      | _ -> raise NotImplementedYet
+    in
+    let rec msToSpine ms fS =
+      let loc = Location.ghost in
+      match ms with
+      | LF.MShift k -> fS
+      | LF.MDot (LF.CObj ((LF.CtxVar(LF.CInst
+                                      ({ LF.name ; instantiation ; cD ; mmvar_id ;
+                                         typ ; constraints ; plicity ; inductivity }, _))) as dctx),
+                 ms') ->
+         let mfront = LF.CObj dctx in
+         msToSpine ms' (fun s ->
+             (Comp.MApp (loc, fS s, (loc, mfront), typ, plicity)))
+      | LF.MDot (LF.ClObj (dctx_hat, LF.MObj ((LF.Root (_,LF.MMVar (({ LF.name ; instantiation ; cD ; mmvar_id ; typ ; constraints ; plicity ; inductivity },_),_), _ ,_)) as tM)), ms') ->
+         let mfront = LF.ClObj (dctx_hat, LF.MObj tM) in
+         msToSpine ms' (fun s ->
+             (Comp.MApp (loc, fS s, (loc, mfront), typ, plicity)))
+      | LF.MDot (LF.ClObj (dctx_hat, LF.PObj (LF.MPVar (({ LF.name ; instantiation ; cD ; mmvar_id ; typ ; constraints ; plicity ; inductivity }, _), _) as tM)), ms') ->
+         let mfront = LF.ClObj (dctx_hat, LF.PObj tM) in
+         msToSpine ms' (fun s ->
+             (Comp.MApp (loc, fS s, (loc, mfront), typ, plicity)))
+      | _ -> raise NotImplementedYet
+    in
+    let rev_cD = rev_mctx mV in
+    let psiLst = create_psiList rev_cD [] in
+    let ms' = mctxToMSub' cD (mV, ms) psiLst in
+    let ms_rev = (rev_ms ms' (LF.MShift 0)) in
+    let fS = msToSpine ms_rev (fun s -> s) in
+    (ms_rev, fS)
 
   (** typToQuery (M, i)  = ((g, s), xs)
       Transform a reconstructed LF.typ into a query, accumulating all
@@ -1293,13 +1403,203 @@ module Solver = struct
          DynCl (dPool, (C.resToClause (r, s), k))
        in
        gSolve dPool' cD (LF.DDec (cPsi, S.decSub tD s), k + 1) (g', S.dot1 s)
-         (fun (u, tM) -> sc (u, LF.Lam (Syntax.Location.ghost, x, tM)))
+         (fun (u, tM) -> sc (u, LF.Lam (Location.ghost, x, tM)))
+         (currDepth, maxDepth)
 
     | All (LF.TypDecl (x, _) as tD, g') ->
        (* we *don't* get an assumption from a forall; it's just a parameter.
           So we just prove the conclusion in an extended context. *)
        gSolve dPool cD (LF.DDec (cPsi, S.decSub tD s), k + 1) (g', S.dot1 s)
-         (fun (u, tM) -> sc (u, LF.Lam (Syntax.Location.ghost, x, tM)))
+         (fun (u, tM) -> sc (u, LF.Lam (Location.ghost, x, tM)))
+         (currDepth, maxDepth)
+
+  (* Overall goal...
+     cD ; cPsi         |- X <= u
+     cD ; cPhi ~ dPool |- goal[s_goal]
+     cD ; cPhi         |- s_all : cPsi
+     want to instantiate s s.t. [s_all]u == [s_goal]goal
+
+     solve_sub:
+     s_all = s, ?M/x, s' <= cPhi', x:?tA. cPhi''
+     find M:tA' s.t. cD ; cPhi' |- M <= [s]tA *)
+  and solve_sub_delta (cD_all, cD, k, cPhi, dPool) (tA, s, curr_sub) (u, s_all)
+(goal, s_goal) =
+    dprintf begin fun p ->
+      p.fmt "[solve_sub_delta] looking for term of type %a"
+      (Printer.fmt_ppr_typ cD_all cPhi) (tA, LF.Shift 0) end;
+    let tA = match tA with
+      | LF.TClo (tA, _) | tA -> tA in
+
+    let rec strengthen (dctx, n) =
+      match dctx with
+      | LF.DDec (dctx', td) when n > 0 -> strengthen (dctx, (n-1))
+      | _ -> dctx
+    in
+
+    (* remove first curr_sub entries from cPhi *)
+    let cPhi' = strengthen (cPhi, curr_sub) in
+    match cD with
+    | LF.Empty -> raise NoSolution
+    | LF.Dec (cD', LF.Decl (_, LF.CTyp (_), _, _)) ->
+       solve_sub_delta (cD_all, cD', k+1, cPhi, dPool) (tA, s, curr_sub) (u, s_all) (goal, s_goal)
+    | LF.Dec (cD', LF.Decl (_, LF.ClTyp (cltyp, cPsi), plicity, _)) ->
+       let tA' = match cltyp with
+         | LF.MTyp tau -> tau
+         | LF.PTyp tau -> tau
+       in
+       try
+         trail'
+           begin fun () ->
+           try
+           (* Check if the assumption matches our goal *)
+           U.unifyTyp cD_all cPhi'
+             (tA, LF.Shift 0)
+             (Whnf.cnormTyp(tA', LF.MShift k), LF.Shift 0);
+
+           dprintf begin fun p ->
+            p.fmt "[solve_sub_delta] s = %a, s_all = %a"
+              (P.fmt_ppr_lf_sub cD' cPhi' P.l0) s
+              (P.fmt_ppr_lf_sub cD_all cPhi P.l0) s_all
+            end;
+
+           (* If the assumption matches the desired type, we make sure we're
+              on the right track by
+              unifying our current goal and sub_goal [s_goal]goal with
+              the assumption from cD and its sub [s_all]u              *)
+           U.unifyTyp cD_all cPhi (goal, s_goal) (u, s_all);
+
+           (* Instantiate the correct sub in s_all with the front *)
+           instantiate_sub (curr_sub, s_all) (LF.Obj (LF.Root (Location.ghost, LF.MVar(LF.Offset k, LF.Shift 0), LF.Nil, plicity))) 1
+
+           with
+           | U.Failure _ ->
+                U.unifyTyp cD_all cPhi'
+                  (Whnf.cnormTyp(tA, LF.MShift k), LF.Shift 0)
+                  (Whnf.cnormTyp(tA', LF.MShift k), LF.Shift 0);
+                U.unifyTyp cD_all cPhi (goal, s_goal) (LF.TClo(u, s_all), LF.Shift 0);
+                (* Instantiate the correct sub in s_all with the front *)
+           instantiate_sub (curr_sub, s_all) (LF.Obj (LF.Root (Location.ghost, LF.MVar(LF.Offset k, LF.Shift 0), LF.Nil, plicity))) 1
+           end
+       with
+       | U.Failure _ ->
+     solve_sub_delta (cD_all, cD', k+1, cPhi, dPool) (tA, s, curr_sub) (u, s_all) (goal, s_goal)
+
+  (* Attempts to complete a branch of the proof tree by solving the
+     simultaneuos substitution.
+
+     cD ; cPsi         |- X <= u      where X : U = (cPsi, u) is in cD
+     cD ; cPhi ~ dPool |- goal[s_goal]
+     cD ; cPhi         |- s_all : cPsi
+     want to instantiate s_all s.t. [s_all]u == [s_goal]goal           *)
+  and trivially_prove s s_all cD (goal, cPhi, s_goal) dPool u curr_sub =
+    dprintf begin fun p -> p.fmt "[trivially_prove] s = %a"
+                             (P.fmt_ppr_lf_sub cD cPhi P.l0) s
+                             end;
+    match s with
+    | LF.Shift _ ->
+dprintf begin fun p ->
+            p.fmt "[trivially_prove] s_all = %a"
+              (P.fmt_ppr_lf_sub cD cPhi P.l0) s_all
+            end;
+       if (* Check if all mvars have been instantiated *)
+         check_sub (Whnf.normSub s_all)
+       then (* Correct plicity tags on mvars *)
+         fix_sub s_all cD
+       else raise NoSolution
+    | LF.Dot (LF.Head (((LF.MMVar ((mmvar, ms'), s)) as hd)), s')
+         when (uninstantiated hd) ->
+         let ctyp = mmvar.LF.typ in
+         let tA = match ctyp with
+           | LF.ClTyp (LF.MTyp tA, _) | LF.ClTyp (LF.PTyp tA, _) -> tA
+           | _ -> raise NotImplementedYet
+         in
+         (try
+            let s_all' = solve_sub_delta (cD, cD, 1, cPhi, dPool) (tA, s', curr_sub) (u, s_all) (goal, s_goal) in
+            let s' = Whnf.normSub s' in
+            trivially_prove s' s_all' cD (goal, cPhi, s_goal) dPool u
+              (curr_sub+1)
+         with
+         | U.Failure _ | NoSolution -> raise NoSolution)
+
+    | LF.Dot (LF.Head (((LF.MPVar ((mmvar, ms'), s)) as hd)), s')
+         when (uninstantiated hd) ->
+         let ctyp = mmvar.LF.typ in
+         let tA = match ctyp with
+           | LF.ClTyp (LF.MTyp tA, _) | LF.ClTyp (LF.PTyp tA, _) -> tA
+           | _ -> raise NotImplementedYet
+         in
+         (try
+            let s_all' = solve_sub_delta (cD, cD, 1, cPhi, dPool) (tA, s', curr_sub)
+                           (u, s_all) (goal, s_goal) in
+            let s' = Whnf.normSub s' in
+            trivially_prove s' s_all' cD (goal, cPhi, s_goal) dPool u (curr_sub+1)
+         with
+         | U.Failure _ | NoSolution -> raise NoSolution)
+
+    | LF.Dot (LF.Head (((LF.MVar (LF.Inst mmvar, s)) as hd)), s')
+         when (uninstantiated hd) ->
+         let ctyp = mmvar.LF.typ in
+         let tA = match ctyp with
+           | LF.ClTyp (LF.MTyp tA, _) | LF.ClTyp (LF.PTyp tA, _) -> tA
+           | _ -> raise NotImplementedYet
+         in
+         (try
+            let s_all' = solve_sub_delta (cD, cD, 1, cPhi, dPool) (tA, s', curr_sub)
+                           (u, s_all) (goal, s_goal) in
+            let s' = Whnf.normSub s' in
+            trivially_prove s' s_all' cD (goal, cPhi, s_goal) dPool u (curr_sub+1)
+         with
+         | U.Failure _ | NoSolution -> raise NoSolution)
+    | LF.Dot (LF.Obj
+                (LF.Root
+                   (loc, ((LF.MVar (LF.Inst mmvar, s)) as hd), sP, pl)), s')
+         when (uninstantiated hd) ->
+         let ctyp = mmvar.LF.typ in
+         let tA = match ctyp with
+           | LF.ClTyp (LF.MTyp tA, _) | LF.ClTyp (LF.PTyp tA, _) -> tA
+           | _ -> raise NotImplementedYet
+         in
+         (try
+            let s_all' = solve_sub_delta (cD, cD, 1, cPhi, dPool) (tA, s', curr_sub)
+                           (u, s_all) (goal, s_goal) in
+            let s' = Whnf.normSub s' in
+            trivially_prove s' s_all' cD (goal, cPhi, s_goal) dPool u (curr_sub+1)
+         with
+         | U.Failure _ | NoSolution -> raise NoSolution)
+    | LF.Dot (LF.Obj
+                (LF.Root
+                   (loc, ((LF.MMVar ((mmvar, ms'), s)) as hd), sP, pl)), s')
+         when (uninstantiated hd) ->
+         let ctyp = mmvar.LF.typ in
+         let tA = match ctyp with
+           | LF.ClTyp (LF.MTyp tA, _) | LF.ClTyp (LF.PTyp tA, _) -> tA
+           | _ -> raise NotImplementedYet
+         in
+         (try
+            let s_all' = solve_sub_delta (cD, cD, 1, cPhi, dPool) (tA, s', curr_sub)
+                           (u, s_all) (goal, s_goal) in
+            let s' = Whnf.normSub s' in
+            trivially_prove s' s_all' cD (goal, cPhi, s_goal) dPool u (curr_sub+1)
+         with
+         | U.Failure _ | NoSolution -> raise NoSolution)
+    | LF.Dot (LF.Obj
+                (LF.Root
+                   (loc, ((LF.MPVar ((mmvar, ms'), s)) as hd), sP, pl)), s')
+         when (uninstantiated hd) ->
+         let ctyp = mmvar.LF.typ in
+         let tA = match ctyp with
+           | LF.ClTyp (LF.MTyp tA, _) | LF.ClTyp (LF.PTyp tA, _) -> tA
+           | _ -> raise NotImplementedYet
+         in
+         (try
+            let s_all' = solve_sub_delta (cD, cD, 1, cPhi, dPool) (tA, s', curr_sub)
+                           (u, s_all) (goal, s_goal) in
+            let s' = Whnf.normSub s' in
+            trivially_prove s' s_all' cD (goal, cPhi, s_goal) dPool u (curr_sub+1)
+         with
+         | U.Failure _ | NoSolution -> raise NoSolution)
+    | LF.Dot (_, s') ->
+       trivially_prove s' s_all cD (goal, cPhi, s_goal) dPool u (curr_sub+1)
 
   (* matchAtom dPool Delta (Psi, k) (A, s) sc = ()
      Invariants:
@@ -1998,8 +2298,8 @@ module CSolver = struct
     match cIH with
     | LF.Empty ->
        fprintf ppf
-         "Current State: @;
-          @[<h 0> %a@] @; @[<h 0> ;  %a@] @; @[<h 0> |-  %a@] @.
+         "Current State: @;\
+          @[<h 0> %a@] @; @[<h 0> ;  %a@] @; @[<h 0> |-  %a@] @.\
           @[<h 2> ms = %a@]  @."
          (P.fmt_ppr_mctx) cD
          (printCPool cD cG) cPool
@@ -2007,9 +2307,9 @@ module CSolver = struct
          (DP.fmt_ppr_lf_msub cD DP.l0) ms
     | _ ->
        fprintf ppf
-         "Current State WITH IH: \n
-          @[<h 0> %a@] @; @[<h 0> ;  %a@] @; @[<h 0> |-  %a@] @.
-          @[<h 2> cIH = %a@] @.
+         "Current State WITH IH: \n\
+          @[<h 0> %a@] @; @[<h 0> ;  %a@] @; @[<h 0> |-  %a@] @.\
+          @[<h 2> cIH = %a@] @.\
           @[<h 2> ms = %a@] @."
          (P.fmt_ppr_mctx) cD
          (printCPool cD cG) cPool
@@ -5475,8 +5775,8 @@ module Frontend = struct
     (* This reference will hold the return of cgSolve
        (i.e. the Beluga proof term with type tau)     *)
     let exp = ref (Comp.Impossible
-                     (Syntax.Location.ghost, Comp.Var
-                                          (Syntax.Location.ghost, 0)))
+                     (Location.ghost, Comp.Var
+                                          (Location.ghost, 0)))
     in
 
     (* Remove duplicates from cIH *)

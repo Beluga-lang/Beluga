@@ -41,11 +41,18 @@ module Make (Indexing_state : sig
 
   val index_of_schema_constant : Qualified_identifier.t -> Id.cid_schema t
 
+  val index_of_comp_constructor :
+    Qualified_identifier.t -> Id.cid_comp_const t
+
   val index_of_comp_destructor : Qualified_identifier.t -> Id.cid_comp_dest t
 
   val index_of_lf_variable : Identifier.t -> Id.offset t
 
+  val index_of_lf_variable_opt : Identifier.t -> Id.offset Option.t t
+
   val index_of_parameter_variable : Identifier.t -> Id.offset t
+
+  val index_of_parameter_variable_opt : Identifier.t -> Id.offset Option.t t
 
   val index_of_substitution_variable : Identifier.t -> Id.offset t
 
@@ -53,22 +60,48 @@ module Make (Indexing_state : sig
 
   val with_bound_lf_variable : Identifier.t -> 'a t -> 'a t
 
-  val with_meta_variable : Identifier.t -> 'a t -> 'a t
+  val with_bound_meta_variable : Identifier.t -> 'a t -> 'a t
 
   val with_bound_comp_variable : Identifier.t -> 'a t -> 'a t
 
   val with_pattern_variables_checkpoint :
     pattern:'a t -> expression:'b t -> ('a * 'b) t
 
-  val with_bindings_checkpoint : 'a t -> 'a t
+  val with_scope : 'a t -> 'a t
+
+  val with_parent_scope : 'a t -> 'a t
+
+  val add_computation_pattern_variable : Identifier.t -> Unit.t t
 end) =
 struct
   include Indexing_state
 
-  let fresh_identifier_opt identifier_opt =
-    match identifier_opt with
-    | Option.Some identifier -> return identifier
-    | Option.None -> fresh_identifier
+  exception Unsupported_lf_typ_applicand
+
+  exception Unsupported_lf_term_applicand
+
+  exception Unsupported_lf_annotated_term_abstraction
+
+  exception Unsupported_lf_untyped_pi_kind_parameter
+
+  exception Unsupported_lf_untyped_pi_typ_parameter
+
+  exception Illegal_clf_substitution_variable_outside_substitution
+
+  exception
+    Unsupported_clf_substitution_variable_not_at_start_of_substitution
+
+  exception Unsupported_clf_projection_applicand
+
+  exception Unsupported_clf_substitution_applicand
+
+  exception Unsupported_context_schema_meta_typ
+
+  exception Unsupported_context_schema_element
+
+  exception Unsupported_comp_typ_applicand
+
+  exception Unsupported_comp_pattern_applicand
 
   let rec append_lf_spines spine1 spine2 =
     match spine1 with
@@ -84,38 +117,30 @@ struct
         let spine' = append_meta_spines sub_spine1 spine2 in
         Synapx.Comp.MetaApp (x, spine')
 
-  exception Unsupported_lf_typ_applicand
-
-  exception Unsupported_lf_term_applicand
-
-  exception Unsupported_lf_annotated_term_abstraction
-
-  exception Unsupported_lf_untyped_pi_kind_parameter
-
-  exception Unsupported_lf_untyped_pi_typ_parameter
-
-  let rec index_lf_kind =
-    let index_as_lf_pi_kind ~x ~parameter_type ~body =
-      let* domain' = index_lf_typ parameter_type in
-      let* range' = (with_bound_lf_variable x) (index_lf_kind body) in
-      let x' = Name.make_from_identifier x in
-      return
-        (Synapx.LF.PiKind
-           ((Synapx.LF.TypDecl (x', domain'), Plicity.explicit), range'))
-    in
-    function
+  let rec index_lf_kind = function
     | Synext.LF.Kind.Typ _ -> return Synapx.LF.Typ
     | Synext.LF.Kind.Arrow { domain; range; _ } ->
         let* x = fresh_identifier in
-        index_as_lf_pi_kind ~x ~parameter_type:domain ~body:range
+        let* domain' = index_lf_typ domain in
+        let* range' = (with_bound_lf_variable x) (index_lf_kind range) in
+        let x' = Name.make_from_identifier x in
+        return
+          (Synapx.LF.PiKind
+             ((Synapx.LF.TypDecl (x', domain'), Plicity.explicit), range'))
     | Synext.LF.Kind.Pi
-        { parameter_identifier; parameter_type; body; location } -> (
+        { parameter_identifier; parameter_type; plicity; body; location }
+      -> (
         match parameter_type with
         | Option.None ->
             Error.raise_at1 location Unsupported_lf_untyped_pi_kind_parameter
         | Option.Some parameter_type ->
             let* x = fresh_identifier_opt parameter_identifier in
-            index_as_lf_pi_kind ~x ~parameter_type ~body)
+            let* domain' = index_lf_typ parameter_type in
+            let* range' = (with_bound_lf_variable x) (index_lf_kind body) in
+            let x' = Name.make_from_identifier x in
+            return
+              (Synapx.LF.PiKind
+                 ((Synapx.LF.TypDecl (x', domain'), plicity), range')))
 
   and index_lf_typ = function
     | Synext.LF.Typ.Constant { identifier; location; _ } ->
@@ -150,7 +175,8 @@ struct
           (Synapx.LF.PiTyp
              ((Synapx.LF.TypDecl (x', domain'), Plicity.explicit), range'))
     | Synext.LF.Typ.Pi
-        { parameter_identifier; parameter_type; body; location } -> (
+        { parameter_identifier; parameter_type; plicity; body; location }
+      -> (
         match parameter_type with
         | Option.None ->
             Error.raise_at1 location Unsupported_lf_untyped_pi_typ_parameter
@@ -161,24 +187,25 @@ struct
             let x' = Name.make_from_identifier x in
             return
               (Synapx.LF.PiTyp
-                 ((Synapx.LF.TypDecl (x', domain'), Plicity.explicit), range'))
-        )
+                 ((Synapx.LF.TypDecl (x', domain'), plicity), range')))
 
   and index_lf_term = function
-    | Synext.LF.Term.Variable { location; identifier } ->
-        (* TODO: Check whether the variable is bound *)
-        let* offset = index_of_lf_variable identifier in
-        return
-          (Synapx.LF.Root (location, Synapx.LF.BVar offset, Synapx.LF.Nil))
-    (*= | Synext.LF.Term.Free_variable { location; identifier } ->
-        let name = Name.make_from_identifier identifier in
-        let closure = Option.none in
-        return
-          (Synapx.LF.Root
-             (location, Synapx.LF.FMVar (name, closure), Synapx.LF.Nil)) *)
+    | Synext.LF.Term.Variable { location; identifier } -> (
+        index_of_lf_variable_opt identifier >>= function
+        | Option.Some offset ->
+            let head = Synapx.LF.BVar offset in
+            let spine = Synapx.LF.Nil in
+            return (Synapx.LF.Root (location, head, spine))
+        | Option.None ->
+            let name = Name.make_from_identifier identifier in
+            let head = Synapx.LF.FVar name in
+            let spine = Synapx.LF.Nil in
+            return (Synapx.LF.Root (location, head, spine)))
     | Synext.LF.Term.Constant { location; identifier; _ } ->
         let* id = index_of_lf_term_constant identifier in
-        return (Synapx.LF.Root (location, Synapx.LF.Const id, Synapx.LF.Nil))
+        let head = Synapx.LF.Const id in
+        let spine = Synapx.LF.Nil in
+        return (Synapx.LF.Root (location, head, spine))
     | Synext.LF.Term.Application { location; applicand; arguments } -> (
         match applicand with
         | Synext.LF.Term.Variable _
@@ -219,7 +246,8 @@ struct
         let x' = Name.make_from_identifier x in
         let substitution = Option.none in
         let head = Synapx.LF.FMVar (x', substitution) in
-        return (Synapx.LF.Root (location, head, Synapx.LF.Nil))
+        let spine = Synapx.LF.Nil in
+        return (Synapx.LF.Root (location, head, spine))
     | Synext.LF.Term.Type_annotated { location; term; typ } ->
         let* term' = index_lf_term term in
         let* typ' = index_lf_typ typ in
@@ -236,19 +264,11 @@ struct
         return (Synapx.LF.App (argument', spine')))
       arguments
 
-  exception Illegal_clf_substitution_variable_outside_substitution
-
-  exception
-    Unsupported_clf_substitution_variable_not_at_start_of_substitution
-
-  exception Unsupported_clf_projection_applicand
-
-  exception Unsupported_clf_substitution_applicand
-
   let rec index_clf_typ = function
     | Synext.CLF.Typ.Constant { identifier; location; _ } ->
         let* id = index_of_lf_typ_constant identifier in
-        return (Synapx.LF.Atom (location, id, Synapx.LF.Nil))
+        let spine = Synapx.LF.Nil in
+        return (Synapx.LF.Atom (location, id, spine))
     | Synext.CLF.Typ.Application { applicand; arguments; location } -> (
         match applicand with
         | Synext.CLF.Typ.Constant _
@@ -311,14 +331,23 @@ struct
         return (Synapx.LF.SigmaElem (name, typ', bindings'))
 
   and index_clf_term = function
-    | Synext.CLF.Term.Variable { location; identifier } ->
-        (* TODO: Check whether the variable is bound *)
-        let* offset = index_of_lf_variable identifier in
-        return
-          (Synapx.LF.Root (location, Synapx.LF.BVar offset, Synapx.LF.Nil))
+    | Synext.CLF.Term.Variable { location; identifier } -> (
+        index_of_lf_variable_opt identifier >>= function
+        | Option.Some offset ->
+            let head = Synapx.LF.BVar offset in
+            let spine = Synapx.LF.Nil in
+            return (Synapx.LF.Root (location, head, spine))
+        | Option.None ->
+            let name = Name.make_from_identifier identifier in
+            let closure = Option.none in
+            let head = Synapx.LF.FMVar (name, closure) in
+            let spine = Synapx.LF.Nil in
+            return (Synapx.LF.Root (location, head, spine)))
     | Synext.CLF.Term.Constant { location; identifier; _ } ->
         let* id = index_of_lf_term_constant identifier in
-        return (Synapx.LF.Root (location, Synapx.LF.Const id, Synapx.LF.Nil))
+        let head = Synapx.LF.Const id in
+        let spine = Synapx.LF.Nil in
+        return (Synapx.LF.Root (location, head, spine))
     | Synext.CLF.Term.Application { location; applicand; arguments } -> (
         match applicand with
         | Synext.CLF.Term.Variable _
@@ -364,7 +393,8 @@ struct
         match variant with
         | `Underscore ->
             let head = Synapx.LF.Hole in
-            return (Synapx.LF.Root (location, head, Synapx.LF.Nil))
+            let spine = Synapx.LF.Nil in
+            return (Synapx.LF.Root (location, head, spine))
         | `Unlabelled ->
             let label = Option.none in
             return (Synapx.LF.LFHole (location, label))
@@ -375,12 +405,19 @@ struct
         let* term' = index_clf_term term in
         let* typ' = index_clf_typ typ in
         return (Synapx.LF.Ann (location, term', typ'))
-    | Synext.CLF.Term.Parameter_variable { identifier; location } ->
-        (* TODO: Check whether the variable is bound *)
-        let* offset = index_of_parameter_variable identifier in
-        let closure = Option.none in
-        let head = Synapx.LF.PVar (Synapx.LF.Offset offset, closure) in
-        return (Synapx.LF.Root (location, head, Synapx.LF.Nil))
+    | Synext.CLF.Term.Parameter_variable { identifier; location } -> (
+        index_of_parameter_variable_opt identifier >>= function
+        | Option.Some offset ->
+            let closure = Option.none in
+            let head = Synapx.LF.PVar (Synapx.LF.Offset offset, closure) in
+            let spine = Synapx.LF.Nil in
+            return (Synapx.LF.Root (location, head, spine))
+        | Option.None ->
+            let name = Name.make_from_identifier identifier in
+            let closure = Option.none in
+            let head = Synapx.LF.FPVar (name, closure) in
+            let spine = Synapx.LF.Nil in
+            return (Synapx.LF.Root (location, head, spine)))
     | Synext.CLF.Term.Substitution_variable { location; _ } ->
         Error.raise_at1 location
           Illegal_clf_substitution_variable_outside_substitution
@@ -514,12 +551,15 @@ struct
         return (Synapx.LF.App (argument', spine')))
       arguments
 
-  and index_clf_context = function
+  and with_indexed_clf_context :
+        'a. Synext.clf_context -> (Synapx.LF.dctx -> 'a t) -> 'a t =
+   fun context f ->
+    match context with
     | { Synext.CLF.Context.head = Synext.CLF.Context.Head.None _
       ; bindings = []
       ; _
       } ->
-        return Synapx.LF.Null
+        f Synapx.LF.Null
     | { Synext.CLF.Context.head = Synext.CLF.Context.Head.None _
       ; bindings = _ :: _
       ; _
@@ -538,9 +578,7 @@ struct
         let* index = index_of_context_variable identifier in
         Obj.magic ()
 
-  exception Unsupported_context_schema_meta_typ
-
-  exception Unsupported_context_schema_element
+  and index_clf_context context = with_indexed_clf_context context return
 
   let rec index_meta_object = function
     | Synext.Meta.Object.Context { location; context } ->
@@ -562,17 +600,13 @@ struct
         | Synext.Meta.Schema.Element _ ->
             Error.raise_at1 location Unsupported_context_schema_meta_typ)
     | Synext.Meta.Typ.Contextual_typ { context; typ; _ } ->
-        let* context', typ' =
-          with_bindings_checkpoint
-            (seq2 (index_clf_context context) (index_clf_typ typ))
-        in
-        return (Synapx.LF.ClTyp (Synapx.LF.MTyp typ', context'))
+        with_indexed_clf_context context (fun context' ->
+            let* typ' = index_clf_typ typ in
+            return (Synapx.LF.ClTyp (Synapx.LF.MTyp typ', context')))
     | Synext.Meta.Typ.Parameter_typ { context; typ; _ } ->
-        let* context', typ' =
-          with_bindings_checkpoint
-            (seq2 (index_clf_context context) (index_clf_typ typ))
-        in
-        return (Synapx.LF.ClTyp (Synapx.LF.PTyp typ', context'))
+        with_indexed_clf_context context (fun context' ->
+            let* typ' = index_clf_typ typ in
+            return (Synapx.LF.ClTyp (Synapx.LF.PTyp typ', context')))
     | Synext.Meta.Typ.Plain_substitution_typ { location; domain; range } ->
         Obj.magic ()
     | Synext.Meta.Typ.Renaming_substitution_typ { location; domain; range }
@@ -605,13 +639,12 @@ struct
       ->
         Obj.magic ()
 
-  and index_meta_context = function
+  and with_indexed_meta_context :
+        'a. Synext.meta_context -> (Synapx.LF.mctx -> 'a t) -> 'a t =
+   fun context f ->
+    match context with
     | { Synext.Meta.Context.location; bindings } ->
         (* TODO: Traverse and index dependently *) Obj.magic ()
-
-  exception Unsupported_comp_typ_applicand
-
-  exception Unsupported_wildcard_comp_pattern
 
   let rec index_comp_kind = function
     | Synext.Comp.Kind.Ctype { location } ->
@@ -619,7 +652,7 @@ struct
     | Synext.Comp.Kind.Arrow { location; domain; range } ->
         let* x = fresh_identifier in
         let* domain' = index_meta_type domain in
-        let* range' = (with_bound_comp_variable x) (index_comp_kind range) in
+        let* range' = (with_bound_meta_variable x) (index_comp_kind range) in
         let x' = Name.make_from_identifier x in
         return
           (Synapx.Comp.PiKind
@@ -630,7 +663,7 @@ struct
         { location; parameter_identifier; plicity; parameter_type; body } ->
         let* x = fresh_identifier_opt parameter_identifier in
         let* parameter_type' = index_meta_type parameter_type in
-        let* body' = (with_bound_comp_variable x) (index_comp_kind body) in
+        let* body' = (with_bound_meta_variable x) (index_comp_kind body) in
         let x' = Name.make_from_identifier x in
         return
           (Synapx.Comp.PiKind
@@ -654,7 +687,7 @@ struct
         { location; parameter_identifier; plicity; parameter_type; body } ->
         let* x = fresh_identifier_opt parameter_identifier in
         let* parameter_type' = index_meta_type parameter_type in
-        let* body' = (with_meta_variable x) (index_comp_typ body) in
+        let* body' = (with_bound_meta_variable x) (index_comp_typ body) in
         let x' = Name.make_from_identifier x in
         return
           (Synapx.Comp.TypPiBox
@@ -705,14 +738,10 @@ struct
     | Synext.Comp.Expression.Mlam { location; parameters; body } ->
         Obj.magic ()
     | Synext.Comp.Expression.Fun { location; branches } -> Obj.magic ()
-    | Synext.Comp.Expression.Let { location; pattern; scrutinee; body } -> (
+    | Synext.Comp.Expression.Let
+        { location; meta_context; pattern; scrutinee; body } -> (
         let* scrutinee' = index_comp_expression scrutinee in
-        let* (meta_context', pattern'), body' =
-          with_bindings_checkpoint
-            (seq2
-               (index_comp_pattern_with_meta_type_annotations pattern)
-               (index_comp_expression body))
-        in
+        let* (meta_context', pattern'), body' = Obj.magic () in
         match pattern with
         | Synext.Comp.Pattern.Variable { identifier; _ } ->
             (* The approximate syntax does not support general patterns in
@@ -787,26 +816,42 @@ struct
       arguments
 
   and index_comp_pattern = function
-    | Synext.Comp.Pattern.Variable { location; identifier } -> Obj.magic ()
+    | Synext.Comp.Pattern.Variable { location; identifier } ->
+        let* () = add_computation_pattern_variable identifier in
+        let x' = Name.make_from_identifier identifier in
+        return (Synapx.Comp.PatFVar (location, x'))
+    | Synext.Comp.Pattern.Wildcard { location } ->
+        let* x = fresh_identifier in
+        let* () = add_computation_pattern_variable x in
+        let x' = Name.make_from_identifier x in
+        return (Synapx.Comp.PatFVar (location, x'))
     | Synext.Comp.Pattern.Constant { location; identifier; _ } ->
-        Obj.magic ()
+        let* id = index_of_comp_constructor identifier in
+        let spine = Synapx.Comp.PatNil location in
+        return (Synapx.Comp.PatConst (location, id, spine))
     | Synext.Comp.Pattern.Meta_object { location; meta_pattern } ->
         let* meta_pattern' = index_meta_pattern meta_pattern in
         return (Synapx.Comp.PatMetaObj (location, meta_pattern'))
     | Synext.Comp.Pattern.Tuple { location; elements } ->
         let* elements' = traverse_list2 index_comp_pattern elements in
         return (Synapx.Comp.PatTuple (location, elements'))
-    | Synext.Comp.Pattern.Application { location; applicand; arguments } ->
-        Obj.magic ()
     | Synext.Comp.Pattern.Type_annotated { location; pattern; typ } ->
         let* typ' = index_comp_typ typ in
         let* pattern' = index_comp_pattern pattern in
         return (Synapx.Comp.PatAnn (location, pattern', typ'))
-    | Synext.Comp.Pattern.Wildcard { location } ->
-        (* TODO: Generate a fresh identifier not in the pattern *)
-        Error.raise_at1 location Unsupported_wildcard_comp_pattern
+    | Synext.Comp.Pattern.Application { location; applicand; arguments } -> (
+        index_comp_pattern applicand >>= function
+        | Synapx.Comp.PatConst (applicand_location, id, Synapx.Comp.PatNil _)
+          ->
+            let* arguments' = traverse_list1 index_comp_pattern arguments in
+            Obj.magic ()
+        | _ ->
+            Error.raise_at1
+              (Synext.location_of_comp_pattern applicand)
+              Unsupported_comp_pattern_applicand)
 
-  and index_comp_pattern_with_meta_type_annotations = Obj.magic () (* TODO: *)
+  and index_comp_pattern_with_meta_type_annotations =
+    Obj.magic () (* TODO: *)
 
   and index_branch pattern body =
     let location =
@@ -818,39 +863,43 @@ struct
 
   and index_comp_copattern = Obj.magic () (* TODO: *)
 
-  and index_comp_context = function
+  and with_indexed_comp_context :
+        'a. Synext.comp_context -> (Synapx.Comp.gctx -> 'a t) -> 'a t =
+   fun context f ->
+    match context with
     | { Synext.Comp.Context.location; bindings } ->
-        (* TODO: Traverse and index, dependently? *) Obj.magic ()
+        (* TODO: Traverse and index bindings independently *) Obj.magic ()
 
   let rec index_harpoon_proof = function
     | Synext.Harpoon.Proof.Incomplete { location; label } ->
         let name = Option.map Identifier.name label in
         return (Synapx.Comp.Incomplete (location, name))
     | Synext.Harpoon.Proof.Command { location; command; body } ->
-        let* command', body' =
-          with_bindings_checkpoint
-            (seq2 (index_harpoon_command command) (index_harpoon_proof body))
-        in
-        return (Synapx.Comp.Command (location, command', body'))
+        with_indexed_harpoon_command command (fun command' ->
+            let* body' = index_harpoon_proof body in
+            return (Synapx.Comp.Command (location, command', body')))
     | Synext.Harpoon.Proof.Directive { location; directive } -> Obj.magic ()
 
-  and index_harpoon_command = function
+  and with_indexed_harpoon_command :
+        'a. Synext.harpoon_command -> (Synapx.Comp.command -> 'a t) -> 'a t =
+   fun command f ->
+    match command with
     | Synext.Harpoon.Command.By { location; expression; assignee } ->
         let* expression' = index_comp_expression expression in
-        let* () = bind_comp_variable assignee in
         let x = Name.make_from_identifier assignee in
-        return (Synapx.Comp.By (location, expression', x))
+        with_bound_comp_variable assignee
+          (f (Synapx.Comp.By (location, expression', x)))
     | Synext.Harpoon.Command.Unbox
         { location; expression; assignee; modifier } ->
         let* expression' = index_comp_expression expression in
-        let* () = bind_meta_variable assignee in
         let x = Name.make_from_identifier assignee in
         let modifier' =
           match modifier with
           | Option.Some `Strengthened -> Option.some `strengthened
           | Option.None -> Option.none
         in
-        return (Synapx.Comp.Unbox (location, expression', x, modifier'))
+        with_bound_meta_variable assignee
+          (f (Synapx.Comp.Unbox (location, expression', x, modifier')))
 
   and index_harpoon_directive = function
     | Synext.Harpoon.Directive.Intros { location; hypothetical } ->
@@ -869,17 +918,15 @@ struct
       ; comp_context
       ; proof
       } ->
-        let* meta_context', comp_context', proof' =
-          with_bindings_checkpoint
-            (seq3
-               (index_meta_context meta_context)
-               (index_comp_context comp_context)
-               (index_harpoon_proof proof))
-        in
-        return
-          Synapx.Comp.
-            { hypotheses = { cD = meta_context'; cG = comp_context' }
-            ; proof = proof'
-            ; hypothetical_loc = location
-            }
+        with_parent_scope
+          (with_indexed_meta_context meta_context (fun meta_context' ->
+               with_indexed_comp_context comp_context (fun comp_context' ->
+                   let* proof' = index_harpoon_proof proof in
+                   return
+                     Synapx.Comp.
+                       { hypotheses =
+                           { cD = meta_context'; cG = comp_context' }
+                       ; proof = proof'
+                       ; hypothetical_loc = location
+                       })))
 end

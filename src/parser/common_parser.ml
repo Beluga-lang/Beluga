@@ -19,6 +19,8 @@ module type COMMON_PARSER = sig
 
   val integer : int t
 
+  val dot_integer : int t
+
   val pragma : string -> unit t
 
   val string_literal : string t
@@ -105,6 +107,8 @@ module type COMMON_PARSER = sig
 
   val identifier : Identifier.t t
 
+  val dot_identifier : Identifier.t t
+
   val hash_identifier : Identifier.t t
 
   val dollar_identifier : Identifier.t t
@@ -116,6 +120,8 @@ module type COMMON_PARSER = sig
   val omittable_dollar_identifier : Identifier.t option t
 
   val qualified_identifier : Qualified_identifier.t t
+
+  val dot_qualified_identifier : Qualified_identifier.t t
 
   val qualified_or_plain_identifier :
     [> `Plain of Identifier.t | `Qualified of Qualified_identifier.t ] t
@@ -226,6 +232,19 @@ module Make
         fail_at_next_location
           (Expected_integer_literal { actual = Option.none }))
 
+  exception Expected_dot_integer_literal of { actual : Token.t Option.t }
+
+  let dot_integer =
+    satisfy
+      ~on_token:(function
+        | _location, Token.DOT_INTLIT k -> Result.ok k
+        | _location, token ->
+            Result.error
+              (Expected_dot_integer_literal { actual = Option.some token }))
+      ~on_end_of_input:(fun () ->
+        fail_at_next_location
+          (Expected_dot_integer_literal { actual = Option.none }))
+
   exception
     Expected_pragma of
       { expected_pragma : string
@@ -258,8 +277,6 @@ module Make
           (Expected_string_literal { actual = Option.none }))
 
   (** {1 Tokens} *)
-
-  let dot = token Token.DOT
 
   let dots = token Token.DOTS
 
@@ -376,6 +393,54 @@ module Make
         fail_at_next_location (Expected_identifier { actual = Option.none }))
     |> labelled "Identifier"
 
+  exception Expected_dot_identifier of { actual : Token.t Option.t }
+
+  let dot_identifier =
+    satisfy
+      ~on_token:(function
+        | location, Token.DOT_IDENT identifier ->
+            Result.ok (Identifier.make ~location identifier)
+        | _location, token ->
+            Result.error
+              (Expected_dot_identifier { actual = Option.some token }))
+      ~on_end_of_input:(fun () ->
+        fail_at_next_location
+          (Expected_dot_identifier { actual = Option.none }))
+    |> labelled "Identifier prefixed by a dot symbol"
+
+  (*=
+     Old style LF declarations and pragmas are terminated with a dot.
+     However, the typical lexical convention is such that
+     [base : tp. arr : tp -> tp -> tp.] is tokenized as
+     [IDENT "base"; COLON; IDENT "tp"; DOT; IDENT "arr"; COLON; ...].
+     This causes [IDENT "tp"; DOT; IDENT "arr"] to be parsed as a qualified
+     identifier.
+
+     The lexical convention is adjusted with the addition of the
+     [DOT_IDENT _] and [DOT_INTLIT _] tokens for the cases where a dot is
+     immediately followed (white-space sensitive) by an identifier or integer
+     respectively. In the case where a [DOT] is expected, [DOT_IDENT _] and
+     [DOT_INTLIT _] may be accepted instead, but only if we then insert an
+     [IDENT] or [INTLIT] token in the input stream. This effectively restores
+     the initial tokenization as [DOT; IDENT _] and [DOT; INTLIT _]. *)
+  let dot =
+    let dot_identifier_and_insert_ident =
+      span dot_identifier >>= fun (location, identifier) ->
+      let ident_token =
+        (location, Token.IDENT (Identifier.name identifier))
+      in
+      insert_token ident_token
+    and dot_integer_and_insert_intlit =
+      span dot_integer >>= fun (location, integer) ->
+      let intlit_token = (location, Token.INTLIT integer) in
+      insert_token intlit_token
+    in
+    choice
+      [ token Token.DOT
+      ; dot_identifier_and_insert_ident
+      ; dot_integer_and_insert_intlit
+      ]
+
   exception Expected_hash_identifier of { actual : Token.t Option.t }
 
   let hash_identifier =
@@ -441,21 +506,29 @@ module Make
       (dollar_identifier $> Option.some)
 
   (*=
-    <qualified-identifier> ::= <identifier> (`.' <identifier>)*
+    <qualified-identifier> ::= <identifier> (<dot-identifier>)*
   *)
   let qualified_identifier =
-    seq2 identifier (many (dot &> trying identifier)) |> span
+    seq2 identifier (many dot_identifier) |> span
     $> fun (location, (head, tail)) ->
     let namespaces, identifier = List1.unsnoc (List1.from head tail) in
     Qualified_identifier.make ~location ~namespaces identifier
 
   (*=
+    <dot-qualified-identifier> ::= <dot-identifier>+
+  *)
+  let dot_qualified_identifier =
+    some dot_identifier |> span $> fun (location, identifiers) ->
+    let namespaces, identifier = List1.unsnoc identifiers in
+    Qualified_identifier.make ~location ~namespaces identifier
+
+  (*=
     <qualified-or-plain-identifier> ::=
       | <identifier>
-      | <identifier> (`.' <identifier>)*
+      | <identifier> (<dot-identifier>)*
   *)
   let qualified_or_plain_identifier =
-    seq2 identifier (many (dot &> trying identifier)) |> span $> function
+    seq2 identifier (many dot_identifier) |> span $> function
     | _, (head, []) -> `Plain head
     | location, (head, tail) ->
         let namespaces, identifier = List1.unsnoc (List1.from head tail) in
@@ -549,6 +622,17 @@ module Make
           | Option.None ->
               Format.dprintf "%a" Format.pp_print_text
                 "Expected an integer literal, but reached the end of input.")
+      | Expected_dot_integer_literal { actual } -> (
+          match actual with
+          | Option.Some actual ->
+              Format.dprintf
+                "Expected a number prefixed by a dot, but got the token \
+                 `%a'."
+                Token.pp actual
+          | Option.None ->
+              Format.dprintf "%a" Format.pp_print_text
+                "Expected a number prefixed by a dot, but reached the end \
+                 of input.")
       | Expected_pragma { expected_pragma; actual } -> (
           match actual with
           | Option.Some actual ->
@@ -577,6 +661,17 @@ module Make
           | Option.None ->
               Format.dprintf
                 "Expected an identifier, but reached the end of input.")
+      | Expected_dot_identifier { actual } -> (
+          match actual with
+          | Option.Some actual ->
+              Format.dprintf
+                "Expected an identifier prefixed by a dot `.', but got the \
+                 token `%a'."
+                Token.pp actual
+          | Option.None ->
+              Format.dprintf "%a" Format.pp_print_text
+                "Expected an identifier prefixed by a dot `.', but reached \
+                 the end of input.")
       | Expected_hash_identifier { actual } -> (
           match actual with
           | Option.Some actual ->

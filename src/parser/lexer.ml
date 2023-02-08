@@ -15,6 +15,9 @@ let get_location lexbuf =
   Location.make_from_lexing_positions ~filename ~start_position
     ~stop_position
 
+let shift_position position =
+  Stdlib.Lexing.{ position with pos_cnum = position.pos_cnum + 1 }
+
 let set_location location lexbuf =
   let filename = Location.filename location
   and position = Location.start_to_lexing_position location in
@@ -43,6 +46,10 @@ let number = [%sedlex.regexp? Plus digit]
 let hole = [%sedlex.regexp? '?', Opt ident]
 
 let pragma = [%sedlex.regexp? "--", Plus alphabetic]
+
+let dot_ident = [%sedlex.regexp? '.', ident]
+
+let dot_intlit = [%sedlex.regexp? '.', number]
 
 let hash_ident = [%sedlex.regexp? '#', ident]
 
@@ -210,6 +217,39 @@ let rec tokenize lexbuf =
   | dots -> const Token.DOTS
   | turnstile_hash -> const Token.TURNSTILE_HASH
   | hash_blank -> const Token.HASH_BLANK
+  | dot_ident ->
+      let prefix_length = String.length "." in
+      let s =
+        Sedlexing.Utf8.sub_lexeme lexbuf prefix_length
+          (Sedlexing.lexeme_length lexbuf - prefix_length)
+      in
+      let start_position, stop_position =
+        Sedlexing.lexing_positions lexbuf
+      in
+      let filename = start_position.Lexing.pos_fname in
+      let location =
+        Location.make_from_lexing_positions ~filename
+          ~start_position:(shift_position start_position)
+          ~stop_position
+      in
+      Option.some (location, Token.DOT_IDENT s)
+  | dot_intlit ->
+      let prefix_length = String.length "." in
+      let s =
+        Sedlexing.Utf8.sub_lexeme lexbuf prefix_length
+          (Sedlexing.lexeme_length lexbuf - prefix_length)
+      in
+      let n = int_of_string s in
+      let start_position, stop_position =
+        Sedlexing.lexing_positions lexbuf
+      in
+      let filename = start_position.Lexing.pos_fname in
+      let location =
+        Location.make_from_lexing_positions ~filename
+          ~start_position:(shift_position start_position)
+          ~stop_position
+      in
+      Option.some (location, Token.DOT_INTLIT n)
   | hash_ident ->
       let s = Sedlexing.Utf8.lexeme lexbuf in
       const (Token.HASH_IDENT s)

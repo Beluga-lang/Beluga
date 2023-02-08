@@ -171,16 +171,14 @@ module type S = sig
   val filter_map : (key -> 'a -> 'b option) -> 'a t -> 'b t
 
   (** [fold f t x] computes [(f vN ... (f v1 (f v0 x)))] where
-      [v0,
-      v1, ..., vN] are the values bound in [t], provided in
-      unspecified order. *)
+      [v0, v1, ..., vN] are the values bound in [t], provided in unspecified
+      order. *)
   val foldv : ('a -> 'b -> 'b) -> 'a t -> 'b -> 'b
 
   (** [fold f t x] computes [(f kN vN ... (f k1 v1 (f k0 v0 x)))] where
-      [k0, k1, ..., kN] are the keys of [t] and [v0, v1, ...,
-      vN] the
-      values associated to these keys. The order in which the bindings are
-      provided to [f] is unspecified. *)
+      [k0, k1, ..., kN] are the keys of [t] and [v0, v1, ..., vN] the values
+      associated to these keys. The order in which the bindings are provided
+      to [f] is unspecified. *)
   val fold : (key -> 'a -> 'b -> 'b) -> 'a t -> 'b -> 'b
 
   (** {5 Scanning} *)

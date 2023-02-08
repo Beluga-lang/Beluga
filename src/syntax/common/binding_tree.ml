@@ -97,10 +97,21 @@ let open_namespace qualified_identifier tree =
   let _entry, subtree = lookup qualified_identifier tree in
   add_all tree subtree
 
-let is_identifier_bound identifier tree =
-  match Identifier.Hamt.find_opt identifier tree with
-  | Option.None -> false
-  | Option.Some _node -> true
+let rec is_bound_nested namespaces identifier tree =
+  match namespaces with
+  | [] -> (
+      match Identifier.Hamt.find_opt identifier tree with
+      | Option.None -> false
+      | Option.Some _node -> true)
+  | n :: ns -> (
+      match Identifier.Hamt.find_opt n tree with
+      | Option.None -> false
+      | Option.Some { subtree; _ } -> is_bound_nested ns identifier subtree)
+
+let is_identifier_bound identifier tree = is_bound_nested [] identifier tree
+
+let is_qualified_identifier_bound qualified_identifier tree =
+  with_namespaces_and_identifier qualified_identifier is_bound_nested tree
 
 let rec replace_nested namespaces identifier f tree =
   match namespaces with

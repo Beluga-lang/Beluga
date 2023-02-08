@@ -41,6 +41,12 @@ module type STATE = sig
       Not tail-recursive. *)
   val try_catch : 'a t -> on_exn:(exn -> 'a t) -> 'a t
 
+  (** [try_catch_lazy m ~on_exn state] is [on_exn cause] if [run m state]
+      raises [cause], and [run m state] otherwise.
+
+      Not tail-recursive. *)
+  val try_catch_lazy : 'a t Lazy.t -> on_exn:(exn -> 'a t) -> 'a t
+
   (** {1 Traversals} *)
 
   val traverse_tuple2 :

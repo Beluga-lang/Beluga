@@ -674,7 +674,7 @@ end = struct
     match state with
     | Scope_state { state = parent_scope; _ } ->
         let* () = put parent_scope in
-        let* x = m in
+        let* x = with_scope m in
         let* () = put state in
         return x
     | Disambiguation_state _

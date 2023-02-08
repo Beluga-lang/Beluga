@@ -1620,8 +1620,11 @@ and json_of_signature_entry = function
           ; ("location", json_of_location location)
           ]
 
-and json_of_signature signature =
-  json_of_variant ~name:"Signature"
-    ~data:
-      [ ("declarations", json_of_list json_of_signature_declaration signature)
-      ]
+and json_of_signature = function
+  | { Signature.global_pragmas; entries } ->
+      json_of_variant ~name:"Signature"
+        ~data:
+          [ ( "global_pragmas"
+            , json_of_list json_of_signature_global_pragma global_pragmas )
+          ; ("entries", json_of_list json_of_signature_entry entries)
+          ]

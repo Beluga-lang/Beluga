@@ -41,7 +41,8 @@ struct
   module Harpoon_parser =
     Harpoon_parser.Make (Common_parser) (Meta_parser) (Comp_parser)
   module Signature_parser =
-    Signature_parser.Make (Common_parser) (Lf_parser) (Meta_parser)
+    Signature_parser.Make (Common_parser) (Lf_parser) (Clf_parser)
+      (Meta_parser)
       (Comp_parser)
       (Harpoon_parser)
   module Lf_disambiguator = Lf_disambiguation.Make (Disambiguation_state)
@@ -232,6 +233,11 @@ struct
     eval
       (parse_and_disambiguate ~parser:(only comp_expression)
          ~disambiguator:disambiguate_comp_expression)
+
+  let parse_only_signature =
+    eval
+      (parse_and_disambiguate ~parser:(only signature)
+         ~disambiguator:disambiguate_signature)
 end
 
 module Located_token = struct

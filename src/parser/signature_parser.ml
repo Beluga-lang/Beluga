@@ -6,11 +6,11 @@ module type SIGNATURE_PARSER = sig
   (** @closed *)
   include COMMON_PARSER
 
-  val sgn : Synprs.signature t
+  val signature : Synprs.signature t
 
-  val sgn_entry : Synprs.signature_entry t
+  val signature_entry : Synprs.signature_entry t
 
-  val sgn_declaration : Synprs.signature_declaration t
+  val signature_declaration : Synprs.signature_declaration t
 
   val trust_totality_declaration : Synprs.signature_totality_declaration t
 
@@ -30,6 +30,11 @@ module Make
                     and type input = Parser.input
                     and type state = Parser.state
                     and type location = Parser.location)
+    (Clf_parser : Clf_parser.CLF_PARSER
+                    with type token = Parser.token
+                     and type input = Parser.input
+                     and type state = Parser.state
+                     and type location = Parser.location)
     (Meta_parser : Meta_parser.META_PARSER
                      with type token = Parser.token
                       and type input = Parser.input
@@ -52,6 +57,7 @@ module Make
      and type location = Parser.location = struct
   include Parser
   include Lf_parser
+  include Clf_parser
   include Meta_parser
   include Comp_parser
   include Harpoon_parser
@@ -59,12 +65,119 @@ module Make
   (* This recursive module is defined as a convenient alternative to
      eta-expansion or using the fixpoint combinator for defining mutually
      recursive parsers. *)
+  module rec Schema_parsers : sig
+    (** [schema_object] is a schema at the signature-level.
+
+        This version of the parser for schema objects supports schemas like:
+
+        - [some \[\]]
+        - [some \[\] block exp t]
+        - [exp t] *)
+    val schema_object : Synprs.schema_object t
+  end = struct
+    (*=
+      Original grammar:
+
+      <schema-object> ::=
+        | <qualified-identifier>
+        | <schema-object> `+' <schema-object>
+        | [`some' `[' `]']
+          [`block'] `(' [<identifier> `:'] <clf-object> (`,' [<identifier> `:'] <clf-object>)* `)'
+        | [`some' `[' <identifier> `:' <clf-object> (`,' <identifier> `:' <clf-object>) `]']
+          [`block'] `(' [<identifier> `:'] <clf-object> (`,' [<identifier> `:'] <clf-object>)* `)'
+        | [`some' `[' `]']
+          [`block'] [<identifier> `:'] <clf-object> (`,' [<identifier> `:'] <clf-object>)*
+        | [`some' `[' <identifier> `:' <clf-object> (`,' <identifier> `:' <clf-object>) `]']
+          [`block'] [<identifier> `:'] <clf-object> (`,' [<identifier> `:'] <clf-object>)*
+
+      Rewritten grammar, to eliminate left-recursions, and handle precedence
+      using recursive descent.
+
+      <schema-object> ::=
+        | <schema-object1>
+
+      <schema-object1> ::=
+        | <schema-object2> (`+' <schema-object2>)+
+        | <schema-object2>
+
+      <schema-object2> ::=
+        | <qualified-identifier>
+        | [`some' `[' `]']
+          `block' `(' [<identifier> `:'] <clf-object> (`,' [<identifier> `:'] <clf-object>)* `)'
+        | [`some' `[' <identifier> `:' <clf-object> (`,' <identifier> `:' <clf-object>) `]']
+          `block' `(' [<identifier> `:'] <clf-object> (`,' [<identifier> `:'] <clf-object>)* `)'
+        | [`some' `[' `]']
+          `block' [<identifier> `:'] <clf-object> (`,' [<identifier> `:'] <clf-object>)*
+        | [`some' `[' <identifier> `:' <clf-object> (`,' <identifier> `:' <clf-object>) `]']
+          `block' [<identifier> `:'] <clf-object> (`,' [<identifier> `:'] <clf-object>)*
+    *)
+    let schema_some_clause =
+      let declaration = seq2 identifier (colon &> clf_typ) in
+      keyword "some"
+      &> bracks (sep_by0 ~sep:comma declaration)
+      |> labelled "Context schema `some' clause"
+
+    let schema_block_clause =
+      let block_contents =
+        sep_by1 ~sep:comma
+          (seq2 (maybe (identifier <& trying colon)) clf_typ)
+        |> labelled "Context schema element"
+      in
+      maybe (keyword "block")
+      &> opt_parens block_contents
+      |> labelled "Context schema `block' clause"
+
+    let schema_object2 =
+      let constant =
+        qualified_identifier
+        $> (fun identifier ->
+             let location = Qualified_identifier.location identifier in
+             Synprs.Meta.Schema_object.Raw_constant { location; identifier })
+        |> labelled "Schema constant"
+      and element_with_some =
+        seq2 schema_some_clause schema_block_clause
+        |> span
+        $> (function
+             | location, ([], block_clause) ->
+                 Synprs.Meta.Schema_object.Raw_element
+                   { location; some = Option.none; block = block_clause }
+             | location, (x :: xs, block_clause) ->
+                 Synprs.Meta.Schema_object.Raw_element
+                   { location
+                   ; some = Option.some (List1.from x xs)
+                   ; block = block_clause
+                   })
+        |> labelled "`some'-`block' schema"
+      and element =
+        schema_block_clause |> span
+        $> (fun (location, block_clause) ->
+             Synprs.Meta.Schema_object.Raw_element
+               { location; some = Option.none; block = block_clause })
+        |> labelled "`block' schema"
+      in
+      choice [ element_with_some; element; constant ]
+
+    let schema_object1 =
+      sep_by1 ~sep:plus schema_object2 |> span $> function
+      | _, List1.T (schema_object, []) -> schema_object
+      | location, List1.T (c1, c2 :: cs) ->
+          let schemas = List2.from c1 c2 cs in
+          Synprs.Meta.Schema_object.Raw_alternation { location; schemas }
+
+    let schema_object = schema_object1 |> labelled "Context schema"
+  end
+
+  let schema = Schema_parsers.schema_object |> labelled "Schema"
+
+  (* This recursive module is defined as a convenient alternative to
+     eta-expansion or using the fixpoint combinator for defining mutually
+     recursive parsers. *)
   module rec Signature_parsers : sig
-    val sgn : Synprs.signature t
+    val signature : Synprs.signature t
 
-    val sgn_entry : Synprs.signature_entry t
+    val signature_entry : Synprs.signature_entry t
 
-    val sgn_declaration : Synprs.signature_declaration t
+    val signature_declaration : Synprs.signature_declaration t
 
     val trust_totality_declaration : Synprs.signature_totality_declaration t
 
@@ -88,7 +201,7 @@ module Make
       pragma "warncoverage" |> span $> fun (location, ()) ->
       Synprs.Signature.Global_pragma.Warn_on_coverage_error { location }
 
-    let sgn_global_prag =
+    let signature_global_prag =
       choice [ nostrenghten_pragma; coverage_pragma; warncoverage_pragma ]
       |> labelled "global pragma"
 
@@ -103,7 +216,7 @@ module Make
       Synprs.Signature.Pragma.Name
         { location; constant; meta_variable_base; computation_variable_base }
 
-    let sgn_lf_const_decl =
+    let signature_lf_const_decl =
       seq2 (identifier <& colon) lf_typ
       |> span
       $> (fun (location, (identifier, typ)) ->
@@ -111,11 +224,11 @@ module Make
              { location; identifier; typ })
       |> labelled "LF term-level constant declaration"
 
-    let sgn_lf_typ_decl =
+    let signature_lf_typ_decl =
       let lf_typ_decl_body =
         let typ_decl = seq2 (identifier <& colon) lf_kind in
         seq2 (typ_decl <& equals)
-          (maybe pipe &> sep_by0 ~sep:pipe sgn_lf_const_decl)
+          (maybe pipe &> sep_by0 ~sep:pipe signature_lf_const_decl)
         |> span
         $> fun (location, ((identifier, kind), constructor_declarations)) ->
         let typ_declaration =
@@ -187,12 +300,12 @@ module Make
       alt trust_totality_declaration total |> labelled "totality declaration"
 
     (** Mutual block of computation type declarations. *)
-    let sgn_cmp_typ_decl =
+    let signature_cmp_typ_decl =
       let cmp_typ_decl =
         let inductive = keyword "inductive" $> fun () -> `Inductive
         and stratified = keyword "stratified" $> fun () -> `Stratified in
         let flavour = choice [ inductive; stratified ] in
-        let sgn_cmp_typ_decl_body =
+        let signature_cmp_typ_decl_body =
           seq2 (identifier <& colon) comp_typ |> span
           $> fun (location, (identifier, typ)) ->
           Synprs.Signature.Declaration.Raw_comp_expression_constructor
@@ -200,7 +313,7 @@ module Make
         in
         seq4 flavour (identifier <& colon)
           (comp_kind <& equals <& maybe pipe)
-          (sep_by0 ~sep:pipe sgn_cmp_typ_decl_body)
+          (sep_by0 ~sep:pipe signature_cmp_typ_decl_body)
         |> span
         $> fun ( location
                , ( datatype_flavour
@@ -246,7 +359,9 @@ module Make
            let declarations' = List1.flatten declarations in
            Synprs.Signature.Declaration.Raw_recursive_declarations
              { location; declarations = declarations' })
-      |> labelled "Inductive or stratified computation type declaration"
+      |> labelled
+           "Inductive, stratified or coinductive computation type \
+            declaration"
 
     let query_declaration =
       let bound =
@@ -279,7 +394,7 @@ module Make
         ; maximum_tries
         }
 
-    let sgn_oldstyle_lf_decl =
+    let signature_oldstyle_lf_decl =
       seq2 (identifier <& colon) (alt lf_kind lf_typ)
       <& dot |> span
       $> (fun (location, (identifier, typ_or_const)) ->
@@ -359,7 +474,7 @@ module Make
              { location; module_identifier; abbreviation })
       |> labelled "module abbreviation pragma"
 
-    let sgn_typedef_decl =
+    let signature_typedef_decl =
       seq3
         (keyword "typedef" &> identifier)
         (colon &> comp_kind)
@@ -370,7 +485,7 @@ module Make
       Synprs.Signature.Declaration.Raw_comp_typ_abbreviation
         { location; identifier; kind; typ }
 
-    let sgn_schema_decl =
+    let signature_schema_decl =
       seq2 (keyword "schema" &> identifier <& equals) schema
       <& semicolon |> span
       $> (fun (location, (identifier, schema)) ->
@@ -378,7 +493,7 @@ module Make
              { location; identifier; schema })
       |> labelled "Context schema declaration"
 
-    let sgn_let_decl =
+    let signature_let_decl =
       seq2
         (keyword "let" &> seq2 identifier (maybe (colon &> comp_typ)))
         (equals &> comp_expression <& semicolon)
@@ -389,9 +504,10 @@ module Make
         { location; identifier; typ; expression }
 
     let program_decl =
-      seq4 (identifier <& colon) (comp_typ <& equals)
-        (maybe (slash &> totality_declaration <& slash))
-        comp_expression
+      keyword "rec"
+      &> seq4 (identifier <& colon) (comp_typ <& equals)
+           (maybe (slash &> totality_declaration <& slash))
+           comp_expression
       |> span
       $> fun (location, (identifier, typ, order, body)) ->
       Synprs.Signature.Declaration.Raw_theorem
@@ -407,40 +523,39 @@ module Make
       Synprs.Signature.Declaration.Raw_proof
         { location; identifier; typ; order; body }
 
-    let sgn_thm_decl =
-      keyword "rec"
-      &> sep_by1 ~sep:(keyword "and") (choice [ program_decl; proof_decl ])
+    let signature_thm_decl =
+      sep_by1 ~sep:(keyword "and") (choice [ program_decl; proof_decl ])
       <& semicolon |> span
       |> labelled "(mutual) recursive function declaration(s)"
       $> fun (location, declarations) ->
       Synprs.Signature.Declaration.Raw_recursive_declarations
         { location; declarations }
 
-    let sgn_module_decl =
+    let signature_module_decl =
       seq2
         (keyword "module" &> identifier)
-        (equals &> keyword "struct" &> many Signature_parsers.sgn_entry)
+        (equals &> keyword "struct" &> many Signature_parsers.signature_entry)
       <& keyword "end" <& maybe semicolon |> span
       |> labelled "module declaration"
       $> fun (location, (identifier, declarations)) ->
       Synprs.Signature.Declaration.Raw_module
         { location; identifier; declarations }
 
-    let sgn_declaration =
+    let signature_declaration =
       choice
-        [ sgn_lf_typ_decl
-        ; sgn_oldstyle_lf_decl
-        ; sgn_cmp_typ_decl
-        ; sgn_schema_decl
-        ; sgn_module_decl
-        ; sgn_typedef_decl
-        ; sgn_let_decl
-        ; sgn_thm_decl
+        [ signature_lf_typ_decl
+        ; signature_oldstyle_lf_decl
+        ; signature_cmp_typ_decl
+        ; signature_schema_decl
+        ; signature_module_decl
+        ; signature_typedef_decl
+        ; signature_let_decl
+        ; signature_thm_decl
         ; query_declaration
         ]
       |> labelled "top-level declaration"
 
-    let sgn_pragma =
+    let signature_pragma =
       choice
         [ name_pragma
         ; not_pragma
@@ -451,14 +566,14 @@ module Make
         ]
       |> labelled "pragma"
 
-    let sgn_entry =
+    let signature_entry =
       let declaration =
-        sgn_declaration |> span
+        signature_declaration |> span
         $> (fun (location, declaration) ->
              Synprs.Signature.Entry.Raw_declaration { location; declaration })
         |> labelled "Declaration"
       and pragma =
-        sgn_pragma |> span
+        signature_pragma |> span
         $> (fun (location, pragma) ->
              Synprs.Signature.Entry.Raw_pragma { location; pragma })
         |> labelled "Pragma"
@@ -470,17 +585,17 @@ module Make
       in
       choice [ declaration; pragma; comment ]
 
-    let sgn =
-      let* global_pragmas = many sgn_global_prag in
-      let* entries = many sgn_entry in
+    let signature =
+      let* global_pragmas = many signature_global_prag in
+      let* entries = many signature_entry in
       return { Synprs.Signature.global_pragmas; entries }
   end
 
-  let sgn = Signature_parsers.sgn
+  let signature = Signature_parsers.signature
 
-  let sgn_entry = Signature_parsers.sgn_entry
+  let signature_entry = Signature_parsers.signature_entry
 
-  let sgn_declaration = Signature_parsers.sgn_declaration
+  let signature_declaration = Signature_parsers.signature_declaration
 
   let trust_totality_declaration =
     Signature_parsers.trust_totality_declaration

@@ -2155,7 +2155,7 @@ let () =
         Format.dprintf "Expected %a to be a computation-level type constant."
           Qualified_identifier.pp qualified_identifier
     | Unbound_comp_type_constant qualified_identifier ->
-        Format.dprintf "The computation-level constant %a is unbound."
+        Format.dprintf "The computation-level type constant %a is unbound."
           Qualified_identifier.pp qualified_identifier
     | Illegal_untyped_comp_pi_type ->
         Format.dprintf "%a" Format.pp_print_text

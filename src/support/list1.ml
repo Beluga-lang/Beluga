@@ -92,7 +92,7 @@ let append_list l1 l2 = List.fold_right cons l1 l2
 let rec flatten (T (hd, tl)) =
   match tl with
   | [] -> hd
-  | x :: xs -> append x (flatten (T (x, xs)))
+  | x :: xs -> append hd (flatten (T (x, xs)))
 
 let rec concat_map f (T (hd, tl)) =
   match tl with

@@ -93,60 +93,55 @@ module type DISAMBIGUATION_STATE = sig
 
   val initial : state
 
-  val set_default_associativity : Associativity.t -> unit t
+  val set_default_associativity : Associativity.t -> Unit.t t
 
   val get_default_associativity : Associativity.t t
 
-  val add_lf_term_variable : ?location:Location.t -> Identifier.t -> unit t
+  val add_lf_term_variable : ?location:Location.t -> Identifier.t -> Unit.t t
 
   val add_lf_type_constant :
-    ?location:Location.t -> Operator.t -> Identifier.t -> unit t
+    ?location:Location.t -> Operator.t -> Identifier.t -> Unit.t t
 
   val add_lf_term_constant :
-    ?location:Location.t -> Operator.t -> Identifier.t -> unit t
+    ?location:Location.t -> Operator.t -> Identifier.t -> Unit.t t
 
-  val add_meta_variable : ?location:Location.t -> Identifier.t -> unit t
+  val add_meta_variable : ?location:Location.t -> Identifier.t -> Unit.t t
 
-  val add_parameter_variable : ?location:Location.t -> Identifier.t -> unit t
+  val add_parameter_variable :
+    ?location:Location.t -> Identifier.t -> Unit.t t
 
   val add_substitution_variable :
-    ?location:Location.t -> Identifier.t -> unit t
+    ?location:Location.t -> Identifier.t -> Unit.t t
 
-  val add_context_variable : ?location:Location.t -> Identifier.t -> unit t
+  val add_context_variable : ?location:Location.t -> Identifier.t -> Unit.t t
 
-  val add_schema_constant : ?location:Location.t -> Identifier.t -> unit t
+  val add_schema_constant : ?location:Location.t -> Identifier.t -> Unit.t t
 
   val add_computation_variable :
-    ?location:Location.t -> Identifier.t -> unit t
+    ?location:Location.t -> Identifier.t -> Unit.t t
 
   val add_inductive_computation_type_constant :
-    ?location:Location.t -> Operator.t -> Identifier.t -> unit t
+    ?location:Location.t -> Operator.t -> Identifier.t -> Unit.t t
 
   val add_stratified_computation_type_constant :
-    ?location:Location.t -> Operator.t -> Identifier.t -> unit t
+    ?location:Location.t -> Operator.t -> Identifier.t -> Unit.t t
 
   val add_coinductive_computation_type_constant :
-    ?location:Location.t -> Operator.t -> Identifier.t -> unit t
+    ?location:Location.t -> Operator.t -> Identifier.t -> Unit.t t
 
   val add_abbreviation_computation_type_constant :
-    ?location:Location.t -> Operator.t -> Identifier.t -> unit t
+    ?location:Location.t -> Operator.t -> Identifier.t -> Unit.t t
 
   val add_computation_term_constructor :
-    ?location:Location.t -> Operator.t -> Identifier.t -> unit t
+    ?location:Location.t -> Operator.t -> Identifier.t -> Unit.t t
 
   val add_computation_term_destructor :
-    ?location:Location.t -> Identifier.t -> unit t
+    ?location:Location.t -> Identifier.t -> Unit.t t
 
-  val add_query : ?location:Location.t -> Identifier.t -> unit t
-
-  val add_module :
-       ?location:Location.t
-    -> (entry * data) Binding_tree.t
-    -> Identifier.t
-    -> unit t
+  val add_query : ?location:Location.t -> Identifier.t -> Unit.t t
 
   val add_program_constant :
-    ?location:Location.t -> ?operator:Operator.t -> Identifier.t -> unit t
+    ?location:Location.t -> ?operator:Operator.t -> Identifier.t -> Unit.t t
 
   val lookup_toplevel : Identifier.t -> (entry * data, exn) result t
 
@@ -175,16 +170,19 @@ module type DISAMBIGUATION_STATE = sig
        t
 
   val modify_operator :
-    Qualified_identifier.t -> (Operator.t -> Operator.t) -> unit t
+    Qualified_identifier.t -> (Operator.t -> Operator.t) -> Unit.t t
 
   val add_synonym :
-    ?location:Location.t -> Qualified_identifier.t -> Identifier.t -> unit t
+       ?location:Location.t
+    -> Qualified_identifier.t
+    -> Identifier.t
+    -> Unit.t t
 
   val actual_binding_exn : Qualified_identifier.t -> entry * data -> exn
 
-  val open_namespace : Qualified_identifier.t -> unit t
+  val open_namespace : Qualified_identifier.t -> Unit.t t
 
-  val open_module : Qualified_identifier.t -> unit t
+  val open_module : Qualified_identifier.t -> Unit.t t
 
   val with_lf_term_variable :
     ?location:Location.t -> Identifier.t -> 'a t -> 'a t
@@ -208,11 +206,11 @@ module type DISAMBIGUATION_STATE = sig
 
   val with_parent_scope : 'a t -> 'a t
 
-  val add_inner_binding : Identifier.t -> unit t
+  val add_inner_binding : Identifier.t -> Unit.t t
 
   val with_inner_binding : Identifier.t -> 'a t -> 'a t
 
-  val is_inner_bound : Identifier.t -> bool t
+  val is_inner_bound : Identifier.t -> Bool.t t
 
   exception Duplicate_pattern_variables of Identifier.t List2.t
 
@@ -233,20 +231,33 @@ module type DISAMBIGUATION_STATE = sig
   val with_inner_bound_context_variable :
     ?location:Location.t -> Identifier.t -> 'a t -> 'a t
 
-  val add_pattern_lf_term_variable : Identifier.t -> unit t
+  val add_pattern_lf_term_variable : Identifier.t -> Unit.t t
 
-  val add_pattern_meta_variable : Identifier.t -> unit t
+  val add_pattern_meta_variable : Identifier.t -> Unit.t t
 
-  val add_pattern_parameter_variable : Identifier.t -> unit t
+  val add_pattern_parameter_variable : Identifier.t -> Unit.t t
 
-  val add_pattern_substitution_variable : Identifier.t -> unit t
+  val add_pattern_substitution_variable : Identifier.t -> Unit.t t
 
-  val add_pattern_context_variable : Identifier.t -> unit t
+  val add_pattern_context_variable : Identifier.t -> Unit.t t
 
-  val add_pattern_comp_variable : Identifier.t -> unit t
+  val add_pattern_comp_variable : Identifier.t -> Unit.t t
+
+  val add_declaration : Identifier.t -> Unit.t t
+
+  val update_declaration : Qualified_identifier.t -> Unit.t t
+
+  val is_inner_bound_declaration : Qualified_identifier.t -> Bool.t t
+
+  val with_module_inner_declarations :
+    declarations:'a t -> module_identifier:Identifier.t -> 'a t
 end
 
-module Persistent_disambiguation_state = struct
+module Persistent_disambiguation_state : sig
+  include DISAMBIGUATION_STATE
+
+  val initial : state
+end = struct
   type data =
     { location : Location.t
     ; operator : Operator.t Option.t
@@ -817,6 +828,69 @@ module Persistent_disambiguation_state = struct
 
   let add_pattern_comp_variable identifier =
     add_pattern_variable identifier (comp_variable_adder identifier)
+
+  let add_declaration identifier =
+    let* bindings = get_bindings in
+    let entry, subtree = Binding_tree.lookup_toplevel identifier bindings in
+    modify (function
+      | Module_state o ->
+          let declarations' =
+            Binding_tree.add_toplevel identifier entry ~subtree
+              o.declarations
+          in
+          Module_state { o with declarations = declarations' }
+      | Signature_state _ as state -> state
+      | Disambiguation_state _
+      | Pattern_state _
+      | Scope_state _ ->
+          Error.raise_violation "[add_declaration] invalid state")
+
+  let update_declaration identifier =
+    let* bindings = get_bindings in
+    let entry, subtree = Binding_tree.lookup identifier bindings in
+    modify (function
+      | Module_state o ->
+          let declarations' =
+            Binding_tree.add identifier entry ~subtree o.declarations
+          in
+          Module_state { o with declarations = declarations' }
+      | Signature_state _ as state -> state
+      | Disambiguation_state _
+      | Pattern_state _
+      | Scope_state _ ->
+          Error.raise_violation "[update_declaration] invalid state")
+
+  let is_inner_bound_declaration identifier =
+    get >>= function
+    | Disambiguation_state _
+    | Signature_state _
+    | Pattern_state _
+    | Scope_state _ ->
+        Error.raise_violation "[is_inner_bound_declaration] invalid state"
+    | Module_state o ->
+        return
+          (Binding_tree.is_qualified_identifier_bound identifier
+             o.declarations)
+
+  let get_declarations =
+    get >>= function
+    | Disambiguation_state _
+    | Signature_state _
+    | Pattern_state _
+    | Scope_state _ ->
+        Error.raise_violation "[get_declarations] invalid state"
+    | Module_state o -> return o.declarations
+
+  let with_module_inner_declarations ~declarations ~module_identifier =
+    let* state = get in
+    let* () =
+      put (Module_state { state; declarations = Binding_tree.empty })
+    in
+    let* declarations' = declarations in
+    let* inner_declarations = get_declarations in
+    let* () = put state in
+    let* () = add_module inner_declarations module_identifier in
+    return declarations'
 end
 
 let () =

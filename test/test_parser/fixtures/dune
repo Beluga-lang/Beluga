@@ -223,3 +223,22 @@
    --inputs=%{inputs}
    --output=%{target}
    --variant=comp_expression)))
+
+(rule
+ (target signatures_ok.output.json)
+ (deps
+  (:generator generate_outputs.exe)
+  (:state disambiguation_state.json)
+  (:inputs signatures_ok.input.bel))
+ (mode promote)
+ (enabled_if
+  (not
+   %{env:CI=false} ;; If `$CI` is undefined, then it defaults to `false`
+   ))
+ (action
+  (run
+   %{generator}
+   --state=%{state}
+   --inputs=%{inputs}
+   --output=%{target}
+   --variant=signature)))

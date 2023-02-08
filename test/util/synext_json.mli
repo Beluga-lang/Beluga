@@ -122,4 +122,4 @@ val json_of_signature_named_totality_order :
 
 val json_of_signature_declaration : signature_declaration -> Yojson.Safe.t
 
-val json_of_signature : signature_declaration list -> Yojson.Safe.t
+val json_of_signature : signature -> Yojson.Safe.t

@@ -24,6 +24,7 @@ let usage_message =
     - "comp_kind"
     - "comp_typ"
     - "comp_expression"
+    - "signature"
   |}
 
 let parse_lf_kind_to_json state =
@@ -70,6 +71,10 @@ let parse_comp_expression_to_json state =
   let expression = Beluga_parser.Simple.parse_only_comp_expression state in
   Util.Synext_json.json_of_comp_expression expression
 
+let parse_signature_to_json state =
+  let expression = Beluga_parser.Simple.parse_only_signature state in
+  Util.Synext_json.json_of_signature expression
+
 exception Unsupported_variant of string
 
 let lookup_parser variant =
@@ -85,6 +90,7 @@ let lookup_parser variant =
   | "comp_kind" -> parse_comp_kind_to_json
   | "comp_typ" -> parse_comp_typ_to_json
   | "comp_expression" -> parse_comp_expression_to_json
+  | "signature" -> parse_signature_to_json
   | variant -> raise (Unsupported_variant variant)
 
 let generate_outputs ~state_filename ~input_filename ~output_filename

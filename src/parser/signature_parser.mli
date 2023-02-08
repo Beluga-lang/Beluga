@@ -5,11 +5,11 @@ module type SIGNATURE_PARSER = sig
   (** @closed *)
   include COMMON_PARSER
 
-  val sgn : Synprs.signature t
+  val signature : Synprs.signature t
 
-  val sgn_entry : Synprs.signature_entry t
+  val signature_entry : Synprs.signature_entry t
 
-  val sgn_declaration : Synprs.signature_declaration t
+  val signature_declaration : Synprs.signature_declaration t
 
   val trust_totality_declaration : Synprs.signature_totality_declaration t
 
@@ -29,6 +29,11 @@ module Make
                     and type input = Parser.input
                     and type state = Parser.state
                     and type location = Parser.location)
+    (Clf_parser : Clf_parser.CLF_PARSER
+                    with type token = Parser.token
+                     and type input = Parser.input
+                     and type state = Parser.state
+                     and type location = Parser.location)
     (Meta_parser : Meta_parser.META_PARSER
                      with type token = Parser.token
                       and type input = Parser.input

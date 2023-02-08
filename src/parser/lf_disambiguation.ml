@@ -571,7 +571,7 @@ let () =
     | Illegal_application_lf_kind ->
         Format.dprintf "Term applications may not appear as LF kinds."
     | Illegal_type_kind_lf_type ->
-        Format.dprintf "The kind `type' may not appear as LF types."
+        Format.dprintf "The kind `type' may not appear as an LF type."
     | Illegal_hole_lf_type ->
         Format.dprintf "Holes may not appear as LF types."
     | Illegal_lambda_lf_type ->
@@ -582,7 +582,7 @@ let () =
         Format.dprintf "The LF type-level constant %a is unbound."
           Qualified_identifier.pp identifier
     | Illegal_type_kind_lf_term ->
-        Format.dprintf "The kind `type' may not appear as LF terms."
+        Format.dprintf "The kind `type' may not appear as an LF term."
     | Illegal_pi_lf_term ->
         Format.dprintf "Pi-kinds or types may not appear as LF terms."
     | Illegal_forward_arrow_lf_term ->

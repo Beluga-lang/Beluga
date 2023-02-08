@@ -114,7 +114,7 @@ module Make
         Synprs.Harpoon.Split_branch.Label.Constant { location; identifier }
       and pvar_case_label =
         hash
-        &> seq2 (maybe integer) (maybe (dot &> integer))
+        &> seq2 (maybe integer) (maybe dot_integer)
         |> span
         |> labelled "parameter variable case label"
         $> fun (location, (n, k)) ->

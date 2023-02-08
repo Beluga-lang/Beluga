@@ -286,9 +286,11 @@ module Make
 
     let clf_object7 =
       (* Projections are left-associative. *)
-      let integer_projection = integer $> fun i -> `By_position i
-      and identifier_projection = identifier $> fun x -> `By_identifier x in
-      let projection = dot &> alt integer_projection identifier_projection in
+      let integer_projection = dot_integer $> fun i -> `By_position i
+      and identifier_projection =
+        dot_identifier $> fun x -> `By_identifier x
+      in
+      let projection = alt integer_projection identifier_projection in
       let trailing_projections = many (span projection) in
       (* If a term only uses named projections, then those projections are
          actually parsed as a qualfified identifier. *)

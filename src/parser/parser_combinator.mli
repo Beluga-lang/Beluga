@@ -112,6 +112,11 @@ module type PARSER_STATE = sig
       by consuming the next token in the input stream. This effectively
       observes and discards the next token in [state]. *)
   val accept : unit t
+
+  (** [insert token state] is [(state', ())] where [state'] is derived from
+      [state] by inserting [token] at the beginning of the input stream. That
+      is, [token] is the next token in [state']. *)
+  val insert : token -> unit t
 end
 
 (** State definition for the traversal of a sequence with location
@@ -341,6 +346,10 @@ module type PARSER = sig
       is either the end of the input string, token stream, or file input
       channel. *)
   val eoi : unit t
+
+  (** [insert_token token] is the parser that inserts [token] as the next
+      token to be read from the input stream. *)
+  val insert_token : token -> unit t
 end
 
 (** {2 Constructors} *)

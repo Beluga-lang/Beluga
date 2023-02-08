@@ -11,6 +11,8 @@ module type PARSER_STATE = sig
   val observe : token option t
 
   val accept : unit t
+
+  val insert : token -> unit t
 end
 
 module type PARSER_LOCATION_STATE = sig
@@ -214,6 +216,9 @@ end = struct
   let previous_location =
     let* state = get in
     return state.last_location
+
+  let insert token =
+    modify (fun state -> { state with input = Seq.cons token state.input })
 end
 
 module type PARSER = sig
@@ -290,6 +295,8 @@ module type PARSER = sig
     -> 'a t
 
   val eoi : unit t
+
+  val insert_token : token -> unit t
 end
 
 module Make (State : sig
@@ -617,4 +624,9 @@ end) :
             let* () = accept in
             return r
         | Result.Error cause -> fail_at_next_location cause)
+
+  let insert_token token =
+    let open State in
+    let* () = insert token in
+    return (Result.ok ())
 end

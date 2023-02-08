@@ -992,7 +992,7 @@ struct
            identifiers. *)
         assert (List.length (Qualified_identifier.namespaces identifier) >= 1);
         (* As a contextual LF type occuring in a pattern, identifiers of the
-           form [<identifier> (`.' <identifier>)+] are bound type-level
+           form [<identifier> (<dot-identifier>)+] are bound type-level
            constants, or illegal named projections. *)
         lookup identifier >>= function
         | Result.Ok (Lf_type_constant, { operator = Option.Some operator; _ })

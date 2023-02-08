@@ -26,6 +26,9 @@ module type COMMON_PARSER = sig
   (** [integer] parses an integer. *)
   val integer : int t
 
+  (** [dot_integer] parses a dot followed by an integer. *)
+  val dot_integer : int t
+
   (** [pragma s] parses [--s]. *)
   val pragma : string -> unit t
 
@@ -157,6 +160,9 @@ module type COMMON_PARSER = sig
   (** [identifier] parses a plain identifier. *)
   val identifier : Identifier.t t
 
+  (** [dot_identifier] parses a dot followed by an identifier. *)
+  val dot_identifier : Identifier.t t
+
   (** [hash_identifier] parses an identifier starting with [`#']. The prefix
       [`#'] is included in the identifier. *)
   val hash_identifier : Identifier.t t
@@ -174,8 +180,12 @@ module type COMMON_PARSER = sig
   (** [omittable_dollar_identifier] parses [`$_' | <dollar-identifier>]. *)
   val omittable_dollar_identifier : Identifier.t option t
 
-  (** [qualified_identifier] parses [<identifier> (`.' <identifier>)*]. *)
+  (** [qualified_identifier] parses [<identifier> (<dot-identifier>)*]. *)
   val qualified_identifier : Qualified_identifier.t t
+
+  (** [dot_qualified_identifier] parses a dot followed by a qualified
+      identifier. *)
+  val dot_qualified_identifier : Qualified_identifier.t t
 
   (** [qualified_or_plain_identifier] parses a plain identifier or a
       qualified identifier, whichever is the longest parse. That is, if

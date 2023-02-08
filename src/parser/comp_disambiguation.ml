@@ -778,7 +778,7 @@ module Make
            identifiers *)
         assert (List.length (Qualified_identifier.namespaces identifier) >= 1);
         (* As a computation-level type, identifiers of the form [<identifier>
-           (`.' <identifier>)+] are necessarily computation-level type
+           (<dot-identifier>)+] are necessarily computation-level type
            constants. *)
         lookup identifier >>= function
         | Result.Ok
@@ -986,7 +986,7 @@ module Make
            identifiers *)
         assert (List.length (Qualified_identifier.namespaces identifier) >= 1);
         (* As a computation-level expression, identifiers of the form
-           [<identifier> (`.' <identifier>)+] are computation-level variables
+           [<identifier> (<dot-identifier>)+] are computation-level variables
            or constants with optionally trailing observation constants.
 
            Examples include:
@@ -1538,7 +1538,7 @@ struct
            identifiers *)
         assert (List.length (Qualified_identifier.namespaces identifier) >= 1);
         (* As a computation-level type, identifiers of the form [<identifier>
-           (`.' <identifier>)+] are necessarily computation-level type
+           (<dot-identifier>)+] are necessarily computation-level type
            constants. *)
         lookup identifier >>= function
         | Result.Ok
@@ -1797,7 +1797,7 @@ struct
         (* Qualified identifiers without namespaces were parsed as plain
            identifiers *)
         assert (List.length (Qualified_identifier.namespaces identifier) >= 1);
-        (* This raw qualified identifier [<identifier> (`.' <identifier>)+]
+        (* This raw qualified identifier [<identifier> (<dot-identifier>)+]
            may be a computation-level variable or constant pattern followed
            by observations *)
         partial_lookup identifier >>= function

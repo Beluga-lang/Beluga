@@ -77,6 +77,8 @@ type t =
       (** [IDENT x] is an identifier [x] that may represent an operator, a
           variable, etc.. *)
   | PRAGMA of string  (** [PRAGMA p] is [--p]. *)
+  | DOT_IDENT of string  (** [DOT_IDENT x] is a dot followed by [x]. *)
+  | DOT_INTLIT of int  (** [DOT_INTLIT n] is a dot followed by [n]. *)
   | HASH_IDENT of string
       (** [HASH_IDENT x] is [x] where [x] starts with [#]. *)
   | DOLLAR_IDENT of string

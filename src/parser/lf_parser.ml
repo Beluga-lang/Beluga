@@ -114,7 +114,7 @@ module Make
                { location; parameter_identifier; parameter_sort; body })
         |> labelled "LF lambda term"
       and explicit_pi =
-        seq2 (braces declaration) LF_parsers.lf_object
+        seq2 (braces declaration <& maybe forward_arrow) LF_parsers.lf_object
         |> span
         $> (fun (location, ((parameter_identifier, parameter_sort), body)) ->
              Synprs.LF.Object.Raw_pi

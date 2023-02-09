@@ -6,6 +6,7 @@
  (preprocess
   (per_module
    ((pps sedlex.ppx)
-    lexer)))
+    lexer
+    config_parser)))
  (instrumentation
   (backend bisect_ppx --bisect-silent yes)))

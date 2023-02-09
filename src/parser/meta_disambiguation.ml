@@ -43,7 +43,7 @@ exception Illegal_unnamed_block_element_type
 
 (** {2 Exceptions for meta-context disambiguation} *)
 
-exception Expected_contextual_type
+exception Expected_parameter_type
 
 exception Expected_plain_or_renaming_substitution_type
 
@@ -296,12 +296,12 @@ module Make
     (* Parameter variable binding *) -> (
         let* meta_type' = disambiguate_meta_typ meta_type in
         match meta_type' with
-        | Synext.Meta.Typ.Contextual_typ _ ->
+        | Synext.Meta.Typ.Parameter_typ _ ->
             with_parameter_variable identifier (f (identifier, meta_type'))
         | _ ->
             Error.raise_at1
               (Synext.location_of_meta_type meta_type')
-              Expected_contextual_type)
+              Expected_parameter_type)
     | (identifier, `Dollar), Option.Some meta_type
     (* Plain substitution or renaming substitution variable binding *) -> (
         let* meta_type' = disambiguate_meta_typ meta_type in
@@ -604,14 +604,14 @@ struct
     (* Parameter variable binding *) -> (
         let* meta_type' = disambiguate_meta_typ meta_type in
         match meta_type' with
-        | Synext.Meta.Typ.Contextual_typ _ ->
+        | Synext.Meta.Typ.Parameter_typ _ ->
             let* () = add_pattern_parameter_variable identifier in
             with_inner_bound_parameter_variable identifier
               (f (identifier, meta_type'))
         | _ ->
             Error.raise_at1
               (Synext.location_of_meta_type meta_type')
-              Expected_contextual_type)
+              Expected_parameter_type)
     | (identifier, `Dollar), Option.Some meta_type
     (* Plain substitution or renaming substitution variable binding *) -> (
         let* meta_type' = disambiguate_meta_typ meta_type in
@@ -670,7 +670,7 @@ let () =
           "Expected only one contextual LF type for this meta-type."
     | Illegal_missing_dollar_modifier_meta_object ->
         Format.dprintf "%a" Format.pp_print_text
-          "Dollar prefix is missing for this substitution."
+          "The dollar prefix is missing for this substitution."
     | Illegal_hash_modifier_meta_object ->
         Format.dprintf "%a" Format.pp_print_text
           "Illegal hash prefix for a meta-object."
@@ -678,7 +678,7 @@ let () =
         Format.dprintf "%a" Format.pp_print_text "Expected a meta-object."
     | Illegal_missing_dollar_modifier_meta_pattern ->
         Format.dprintf "%a" Format.pp_print_text
-          "Dollar prefix is missing for this substitution pattern."
+          "The dollar prefix is missing for this substitution pattern."
     | Illegal_hash_modifier_meta_pattern ->
         Format.dprintf "%a" Format.pp_print_text
           "Illegal hash prefix for a meta-object pattern."
@@ -688,9 +688,9 @@ let () =
     | Illegal_unnamed_block_element_type ->
         Format.dprintf "%a" Format.pp_print_text
           "Schema block clause binding is missing its identifier."
-    | Expected_contextual_type ->
+    | Expected_parameter_type ->
         Format.dprintf "%a" Format.pp_print_text
-          "Expected a parameter contextual type meta-type."
+          "Expected a contextual parameter type."
     | Expected_plain_or_renaming_substitution_type ->
         Format.dprintf "%a" Format.pp_print_text
           "Expected a plain or renaming substitution meta-type."

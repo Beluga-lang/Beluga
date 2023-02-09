@@ -15,11 +15,6 @@ val with_temp_file : string -> string -> (string -> out_channel -> 'a) -> 'a
     exceptional exit. *)
 val with_in_channel : string -> (in_channel -> 'a) -> 'a
 
-(** [with_open_bin filename f] opens an input channel on [filename] in binary
-    mode and runs [f] with it. The channel is guaranteed to be closed after
-    calling [f], even in case of exceptional exit. *)
-val with_open_bin : string -> (in_channel -> 'a) -> 'a
-
 (** [with_pp_to_file filename handler] calls [handler] with a pretty-printer
     to the file at [filename]. The contents of the file are replaced by the
     outputs printed it. *)

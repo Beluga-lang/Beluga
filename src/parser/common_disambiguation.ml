@@ -765,6 +765,7 @@ end = struct
         Error.raise (Duplicate_pattern_variables duplicates)
     | Option.None ->
         let* pattern_variable_adders = get_pattern_variable_adders in
+        let* () = put state in
         let expression_with_pattern_variables =
           List.fold_left
             (fun accumulator adder -> adder.run accumulator)
@@ -862,15 +863,15 @@ end = struct
 
   let is_inner_bound_declaration identifier =
     get >>= function
-    | Disambiguation_state _
-    | Signature_state _
-    | Pattern_state _
-    | Scope_state _ ->
-        Error.raise_violation "[is_inner_bound_declaration] invalid state"
+    | Signature_state _ -> return false
     | Module_state o ->
         return
           (Binding_tree.is_qualified_identifier_bound identifier
              o.declarations)
+    | Disambiguation_state _
+    | Pattern_state _
+    | Scope_state _ ->
+        Error.raise_violation "[is_inner_bound_declaration] invalid state"
 
   let get_declarations =
     get >>= function
@@ -899,10 +900,11 @@ let () =
         Format.dprintf "Expected an operator bound at %a."
           Qualified_identifier.pp qualified_identifier
     | Unbound_identifier identifier ->
-        Format.dprintf "Identifier %a is unbound." Identifier.pp identifier
+        Format.dprintf "The identifier %a is unbound." Identifier.pp
+          identifier
     | Unbound_qualified_identifier qualified_identifier ->
-        Format.dprintf "Identifier %a is unbound." Qualified_identifier.pp
-          qualified_identifier
+        Format.dprintf "The qualified identifier %a is unbound."
+          Qualified_identifier.pp qualified_identifier
     | Unbound_namespace qualified_identifier ->
         Format.dprintf "Unbound namespace %a." Qualified_identifier.pp
           qualified_identifier

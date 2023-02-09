@@ -112,7 +112,14 @@ module Make
     | `Operand x :: xs ->
         let operands, rest = take_while_operand xs in
         (x :: operands, rest)
-    | expressions -> ([], expressions)
+    | `Operator x :: xs -> (
+        match Operator.fixity x with
+        | Fixity.Prefix ->
+            (* Prefix operators may appear as operands *)
+            let operands, rest = take_while_operand xs in
+            (Operator.applicand x :: operands, rest)
+        | _ -> ([], expressions))
+    | [] -> ([], [])
 
   let rec reduce_juxtapositions expressions =
     match expressions with

@@ -2031,25 +2031,38 @@ struct
                           ; head = head'
                           ; bindings = bindings'
                           }))
-            | Result.Error (Unbound_identifier _) ->
+            | Result.Error (Unbound_identifier _) -> (
                 let head' =
                   Synext.CLF.Context.Pattern.Head.Context_variable
                     { identifier; location = Identifier.location identifier }
                 in
-                (* The context variable is not explicitly bound in the
-                   pattern we are currently disambiguating. Hence it is
-                   treated as a pattern variable, and its implicit binder
-                   will be introduced during the abstraction phase of term
-                   reconstruction. *)
-                let* () = add_pattern_context_variable identifier in
-                let* () = add_inner_binding identifier in
-                with_disambiguated_context_pattern_bindings_list bindings
-                  (fun bindings' ->
-                    f
-                      { Synext.CLF.Context.Pattern.location
-                      ; head = head'
-                      ; bindings = bindings'
-                      })
+                is_inner_bound identifier >>= function
+                | true ->
+                    (* The context variable is explicitly bound in the
+                       pattern we are currently disambiguating. We do not add
+                       it to the pattern variables. *)
+                    with_disambiguated_context_pattern_bindings_list bindings
+                      (fun bindings' ->
+                        f
+                          { Synext.CLF.Context.Pattern.location
+                          ; head = head'
+                          ; bindings = bindings'
+                          })
+                | false ->
+                    (* The context variable is not explicitly bound in the
+                       pattern we are currently disambiguating. Hence it is
+                       treated as a pattern variable, and its implicit binder
+                       will be introduced during the abstraction phase of
+                       term reconstruction. *)
+                    let* () = add_pattern_context_variable identifier in
+                    let* () = add_inner_binding identifier in
+                    with_disambiguated_context_pattern_bindings_list bindings
+                      (fun bindings' ->
+                        f
+                          { Synext.CLF.Context.Pattern.location
+                          ; head = head'
+                          ; bindings = bindings'
+                          }))
             | Result.Ok _ ->
                 let head' =
                   Synext.CLF.Context.Pattern.Head.None

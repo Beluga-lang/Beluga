@@ -872,3 +872,35 @@ struct
           ; entries = entries'
           }
 end
+
+(** {2 Exception Printing} *)
+
+let () =
+  Error.register_exception_printer (function
+    | Invalid_prefix_pragma { actual_arity } ->
+        Format.dprintf "Can't make an operator with arity %d prefix."
+          actual_arity
+    | Invalid_infix_pragma { actual_arity } ->
+        Format.dprintf "Can't make an operator with arity %d infix."
+          actual_arity
+    | Invalid_postfix_pragma { actual_arity } ->
+        Format.dprintf "Can't make an operator with arity %d postfix."
+          actual_arity
+    | Expected_module qualified_identifier ->
+        Format.dprintf "Expected %a to be a module." Qualified_identifier.pp
+          qualified_identifier
+    | Old_style_lf_constant_declaration_error
+        { as_type_constant; as_term_constant } ->
+        let as_type_constant_printer = Error.find_printer as_type_constant in
+        let as_term_constant_printer = Error.find_printer as_term_constant in
+        Format.dprintf
+          "@[<v 0>@[<hov 0>Failed@ to@ disambiguate@ old-style@ LF@ \
+           type-level@ or@ term-level@ constant@ declaration.@]@,\
+           - @[<hov 0>As@ an@ LF@ type:@ %t@]@,\
+           - @[<hov 0>As@ an@ LF@ term:@ %t@]@]" as_type_constant_printer
+          as_term_constant_printer
+    | Identifiers_bound_several_times_in_recursive_declaration ->
+        Format.dprintf
+          "Identifiers may not be bound several times in a mutually \
+           recursive declaration."
+    | exn -> Error.raise_unsupported_exception_printing exn)

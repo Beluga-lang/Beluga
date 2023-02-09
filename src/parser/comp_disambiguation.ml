@@ -359,7 +359,11 @@ struct
                (Comp_expression_operator.make ~identifier ~operator
                   ~applicand:expression))
     | Result.Ok _
-    | Result.Error (Unbound_identifier _) ->
+    | Result.Error (Unbound_identifier _)
+    | Result.Error (Unbound_qualified_identifier _)
+    | Result.Error (Unbound_namespace _)
+    (* [Unbound_qualified_identifier] and [Unbound_namespace] are special
+       cases due to the ambiguity with observations *) ->
         return Option.none
     | Result.Error cause ->
         Error.raise_at1 (Qualified_identifier.location identifier) cause
@@ -1837,6 +1841,80 @@ struct
               ; patterns = pattern' :: patterns
               ; observations
               }
+        | `Partially_bound (List1.T (bound_segment, []), unbound_segments)
+          -> (
+            let constructor =
+              Qualified_identifier.make_simple (Pair.fst bound_segment)
+            in
+            match bound_segment with
+            | ( _identifier
+              , ( Computation_term_constructor
+                , { operator = Option.Some operator; _ } ) ) ->
+                (* This is a constructor pattern followed by observations *)
+                let pattern' =
+                  Synext.Comp.Pattern.Constant
+                    { location = Qualified_identifier.location constructor
+                    ; identifier = constructor
+                    ; prefixed = false
+                    ; operator
+                    }
+                in
+                let destructors_as_qualified_identifier =
+                  Qualified_identifier.from_list1 unbound_segments
+                in
+                let* { Synext.Comp.Copattern.location = rest_location
+                     ; patterns
+                     ; observations
+                     } =
+                  disambiguate_comp_copattern
+                    (List1.from
+                       (Synprs.Comp.Copattern_object.Raw_observation
+                          { location =
+                              Qualified_identifier.location
+                                destructors_as_qualified_identifier
+                          ; observation = destructors_as_qualified_identifier
+                          })
+                       rest)
+                in
+                return
+                  { Synext.Comp.Copattern.location =
+                      Location.join location rest_location
+                  ; patterns = pattern' :: patterns
+                  ; observations
+                  }
+            | identifier, _entry ->
+                (* [identifier] appears as a bound entry that is not a
+                   computation-level constructor *)
+                (* There are no computation-level patterns under
+                   [fn]-abstractions, so no need to check that [identifier]
+                   is not inner-bound. *)
+                let* () = add_pattern_comp_variable identifier in
+                let pattern' =
+                  Synext.Comp.Pattern.Variable { location; identifier }
+                in
+                let destructors_as_qualified_identifier =
+                  Qualified_identifier.from_list1 unbound_segments
+                in
+                let* { Synext.Comp.Copattern.location = rest_location
+                     ; patterns
+                     ; observations
+                     } =
+                  disambiguate_comp_copattern
+                    (List1.from
+                       (Synprs.Comp.Copattern_object.Raw_observation
+                          { location =
+                              Qualified_identifier.location
+                                destructors_as_qualified_identifier
+                          ; observation = destructors_as_qualified_identifier
+                          })
+                       rest)
+                in
+                return
+                  { Synext.Comp.Copattern.location =
+                      Location.join location rest_location
+                  ; patterns = pattern' :: patterns
+                  ; observations
+                  })
         | `Partially_bound (bound_segments, unbound_segments) -> (
             let constructor =
               Qualified_identifier.from_list1
@@ -2120,6 +2198,18 @@ end
 
 let () =
   Error.register_exception_printer (function
+    | Plain_modifier_typ_mismatch ->
+        Format.dprintf "%a" Format.pp_print_text
+          "A plain meta-object identifier may only be used for contextual \
+           types or contexts."
+    | Hash_modifier_typ_mismatch ->
+        Format.dprintf "%a" Format.pp_print_text
+          "A hash meta-object identifier may only be used for contextual \
+           parameter types."
+    | Dollar_modifier_typ_mismatch ->
+        Format.dprintf "%a" Format.pp_print_text
+          "A dollar meta-object identifier may only be used for plain or \
+           renaming substitutions."
     | Illegal_identifier_comp_kind ->
         Format.dprintf "%a" Format.pp_print_text
           "An identifier may not appear as a computation-level kind."

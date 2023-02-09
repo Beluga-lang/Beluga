@@ -207,7 +207,7 @@ let read_file_lines line_numbers_by_filename =
   String.Map.mapi
     (fun filename line_numbers_set ->
       let line_numbers_list = Int.Set.elements line_numbers_set in
-      Files.with_open_bin filename (fun in_channel ->
+      In_channel.with_open_bin filename (fun in_channel ->
           let lexer_buffer = Sedlexing.Utf8.from_channel in_channel in
           let lines = read_lines line_numbers_list lexer_buffer in
           List.combine line_numbers_list lines))

@@ -12,8 +12,6 @@ module Make (Indexing_state : sig
 
   val bind_comp_variable : Identifier.t -> Unit.t t
 
-  val pop_binding : Identifier.t -> Unit.t t
-
   (** [fresh_identifier state] is [(state', identifier)] where [identifier]
       is an identifier that is not bound in [state]. This is used in the
       indexing of arrow types to Pi-types, and to generate parameter

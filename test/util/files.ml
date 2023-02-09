@@ -51,7 +51,7 @@ let convert_token_location filename = function
 
 let read_test_case_inputs ~filename =
   let tokens =
-    Support.Files.with_open_bin filename (fun in_channel ->
+    In_channel.with_open_bin filename (fun in_channel ->
         let lexer_buffer = Sedlexing.Utf8.from_channel in_channel in
         let generate_token =
           Sedlexing.with_tokenizer tokenize_test_cases lexer_buffer

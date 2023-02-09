@@ -130,6 +130,9 @@ module Make
         | `(' <clf-object> `)'
     *)
     let clf_weak_prefix =
+      let declaration =
+        seq2 omittable_identifier (maybe (colon &> CLF_parsers.clf_object))
+      in
       let lambda =
         let untyped_declaration =
           omittable_identifier
@@ -153,9 +156,7 @@ module Make
         |> labelled "Contextual LF lambda term"
       and explicit_pi =
         seq2
-          (braces
-             (seq2 omittable_identifier
-                (maybe (colon &> CLF_parsers.clf_object))))
+          (braces declaration <& maybe forward_arrow)
           CLF_parsers.clf_object
         |> span
         $> (fun (location, ((parameter_identifier, parameter_sort), body)) ->

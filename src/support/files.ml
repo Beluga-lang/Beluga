@@ -37,9 +37,3 @@ let with_pp_to_file filename f =
   | cause ->
       Out_channel.close_noerr out_channel;
       raise cause
-
-let with_open_bin filename f =
-  let in_channel = In_channel.open_bin filename in
-  let r = f in_channel in
-  In_channel.close in_channel;
-  r

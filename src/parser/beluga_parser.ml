@@ -1,6 +1,10 @@
 open Support
 open Beluga_syntax
 
+(** {1 Configuration Files} *)
+
+module Config_parser = Config_parser
+
 (** {1 Parsing} *)
 
 module Parser_combinator = Parser_combinator
@@ -90,58 +94,47 @@ struct
 
   type parser_state = Common_parser.state
 
-  module State = struct
-    type state =
-      { parser_state : parser_state
-      ; disambiguation_state : disambiguation_state
-      }
+  type state =
+    { parser_state : parser_state
+    ; disambiguation_state : disambiguation_state
+    }
 
-    include (
-      State.Make (struct
-        type t = state
-      end) :
-        State.STATE with type state := state)
+  include (
+    State.Make (struct
+      type t = state
+    end) :
+      State.STATE with type state := state)
 
-    let[@inline] make ~disambiguation_state ~parser_state =
-      { parser_state; disambiguation_state }
+  let[@inline] make ~disambiguation_state ~parser_state =
+    { parser_state; disambiguation_state }
 
-    let[@inline] put_parser_state parser_state =
-      modify (fun state -> { state with parser_state })
+  let[@inline] put_parser_state parser_state =
+    modify (fun state -> { state with parser_state })
 
-    let[@inline] put_disambiguation_state disambiguation_state =
-      modify (fun state -> { state with disambiguation_state })
+  let[@inline] put_disambiguation_state disambiguation_state =
+    modify (fun state -> { state with disambiguation_state })
 
-    let get_parser_state =
-      let* state = get in
-      return state.parser_state
+  let get_parser_state =
+    let* state = get in
+    return state.parser_state
 
-    let get_disambiguation_state =
-      let* state = get in
-      return state.disambiguation_state
+  let get_disambiguation_state =
+    let* state = get in
+    return state.disambiguation_state
 
-    let parse parser =
-      let* parser_state = get_parser_state in
-      let parser_state', parsed = Parser_state.run parser parser_state in
-      let* () = put_parser_state parser_state' in
-      return parsed
+  let parse parser =
+    let* parser_state = get_parser_state in
+    let parser_state', parsed = Parser_state.run parser parser_state in
+    let* () = put_parser_state parser_state' in
+    return parsed
 
-    let disambiguate disambiguator =
-      let* disambiguation_state = get_disambiguation_state in
-      let disambiguation_state', disambiguated =
-        Disambiguation_state.run disambiguator disambiguation_state
-      in
-      let* () = put_disambiguation_state disambiguation_state' in
-      return disambiguated
-  end
-
-  include State
-
-  type 'a t = ('a, exn) Result.t State.t
-
-  let make_initial_parser_state_from_file ~filename =
-    let initial_location = Location.initial filename in
-    let token_sequence = Lexer.lex_file ~filename in
-    Parser_state.initial ~initial_location token_sequence
+  let disambiguate disambiguator =
+    let* disambiguation_state = get_disambiguation_state in
+    let disambiguation_state', disambiguated =
+      Disambiguation_state.run disambiguator disambiguation_state
+    in
+    let* () = put_disambiguation_state disambiguation_state' in
+    return disambiguated
 
   let make_initial_parser_state_from_channel ~initial_location input =
     let token_sequence = Lexer.lex_input_channel ~initial_location input in
@@ -151,23 +144,19 @@ struct
     let token_sequence = Lexer.lex_string ~initial_location input in
     Parser_state.initial ~initial_location token_sequence
 
-  let make_initial_state_from_file ~disambiguation_state ~filename =
-    let parser_state = make_initial_parser_state_from_file ~filename in
-    State.make ~disambiguation_state ~parser_state
-
   let make_initial_state_from_channel ~disambiguation_state ~initial_location
       ~channel =
     let parser_state =
       make_initial_parser_state_from_channel ~initial_location channel
     in
-    State.make ~disambiguation_state ~parser_state
+    make ~disambiguation_state ~parser_state
 
   let make_initial_state_from_string ~disambiguation_state ~initial_location
       ~input =
     let parser_state =
       make_initial_parser_state_from_string ~initial_location input
     in
-    State.make ~disambiguation_state ~parser_state
+    make ~disambiguation_state ~parser_state
 
   let parse_and_disambiguate ~parser ~disambiguator =
     let* parsed = parse (run_exn parser) in
@@ -238,6 +227,42 @@ struct
     eval
       (parse_and_disambiguate ~parser:(only signature)
          ~disambiguator:disambiguate_signature)
+
+  let parse_multi_file_signature files =
+    let (List1.T (x, xs)) = files in
+    let signature =
+      let _parser_state', signature =
+        In_channel.with_open_bin x (fun in_channel ->
+            let initial_location = Location.initial x in
+            run_exn (only signature)
+              (make_initial_parser_state_from_channel ~initial_location
+                 in_channel))
+      in
+      let xs_entries =
+        List.map
+          (fun filename ->
+            let _parser_state', entries =
+              In_channel.with_open_bin filename (fun in_channel ->
+                  let initial_location = Location.initial filename in
+                  run_exn
+                    (only (many signature_entry))
+                    (make_initial_parser_state_from_channel ~initial_location
+                       in_channel))
+            in
+            entries)
+          xs
+      in
+      let { Synprs.Signature.global_pragmas; entries = x_entries } =
+        signature
+      in
+      let entries = List.flatten (x_entries :: xs_entries) in
+      let signature' = { Synprs.Signature.global_pragmas; entries } in
+      signature'
+    in
+    let _disambiguation_state', signature' =
+      disambiguate_signature signature Disambiguation_state.initial
+    in
+    signature'
 end
 
 module Located_token = struct

@@ -362,13 +362,13 @@ Schema meta-types are not boxed.
 | <qualified-identifier> \hfill \texttt{(* Constant *)}\\
 | <schema> `+' <schema> \hfill \texttt{(* Alternation *)}\\
 | [`some' `[' <identifier> `:' <clf-type> (`,' <identifier> `:' <clf-type>) `]']\\
-`block' `(' <identifier> `:' <clf-type> (`,' <identifier> `:' <clf-type>) `)' \hfill \texttt{(* Atom *)}\\
+  `block' `(' <identifier> `:' <clf-type> (`,' <identifier> `:' <clf-type>) `)' \hfill \texttt{(* Atom *)}\\
 | [`some' `[' <identifier> `:' <clf-type> (`,' <identifier> `:' <clf-type>) `]']\\
-`block' <identifier> `:' <clf-type> (`,' <identifier> `:' <clf-type>)\\
+  `block' <identifier> `:' <clf-type> (`,' <identifier> `:' <clf-type>)\\
 | [`some' `[' <identifier> `:' <clf-type> (`,' <identifier> `:' <clf-type>) `]']\\
-`block' <clf-type>\\
+  `block' <clf-type>\\
 | [`some' `[' <identifier> `:' <clf-type> (`,' <identifier> `:' <clf-type>) `]']\\
-`block' <clf-type>
+  `block' <clf-type>
 
 <meta-type> ::= \hfill\\
 | <schema> \hfill \texttt{(* Context schema *)}\\
@@ -547,7 +547,7 @@ The following is the grammar for the serialized form of \Harpoon interactive ses
 
 \begin{grammar}
 <harpoon-proof> ::= \hfill\\
-| `?' [<identifier>] \hfill \texttt{(* Incomplete proof *)}\\
+| `?'[<identifier>] \hfill \texttt{(* Incomplete proof *)}\\
 | <harpoon-command> `;' <harpoon-proof>\\
 | <harpoon-directive>
 

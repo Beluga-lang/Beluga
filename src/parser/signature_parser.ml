@@ -8,6 +8,8 @@ module type SIGNATURE_PARSER = sig
 
   val signature : Synprs.signature t
 
+  val signature_global_pragma : Synprs.signature_global_pragma t
+
   val signature_entry : Synprs.signature_entry t
 
   val signature_declaration : Synprs.signature_declaration t
@@ -175,6 +177,8 @@ module Make
   module rec Signature_parsers : sig
     val signature : Synprs.signature t
 
+    val signature_global_pragma : Synprs.signature_global_pragma t
+
     val signature_entry : Synprs.signature_entry t
 
     val signature_declaration : Synprs.signature_declaration t
@@ -201,7 +205,7 @@ module Make
       pragma "warncoverage" |> span $> fun (location, ()) ->
       Synprs.Signature.Global_pragma.Warn_on_coverage_error { location }
 
-    let signature_global_prag =
+    let signature_global_pragma =
       choice [ nostrenghten_pragma; coverage_pragma; warncoverage_pragma ]
       |> labelled "global pragma"
 
@@ -553,7 +557,6 @@ module Make
         ; signature_thm_decl
         ; query_declaration
         ]
-      |> labelled "top-level declaration"
 
     let signature_pragma =
       choice
@@ -564,19 +567,14 @@ module Make
         ; open_pragma
         ; abbrev_pragma
         ]
-      |> labelled "pragma"
 
     let signature_entry =
       let declaration =
-        signature_declaration |> span
-        $> (fun (location, declaration) ->
-             Synprs.Signature.Entry.Raw_declaration { location; declaration })
-        |> labelled "Declaration"
+        signature_declaration |> span $> fun (location, declaration) ->
+        Synprs.Signature.Entry.Raw_declaration { location; declaration }
       and pragma =
-        signature_pragma |> span
-        $> (fun (location, pragma) ->
-             Synprs.Signature.Entry.Raw_pragma { location; pragma })
-        |> labelled "Pragma"
+        signature_pragma |> span $> fun (location, pragma) ->
+        Synprs.Signature.Entry.Raw_pragma { location; pragma }
       and comment =
         block_comment
         $> (fun (location, content) ->
@@ -586,12 +584,14 @@ module Make
       choice [ declaration; pragma; comment ]
 
     let signature =
-      let* global_pragmas = many signature_global_prag in
+      let* global_pragmas = many signature_global_pragma in
       let* entries = many signature_entry in
       return { Synprs.Signature.global_pragmas; entries }
   end
 
   let signature = Signature_parsers.signature
+
+  let signature_global_pragma = Signature_parsers.signature_global_pragma
 
   let signature_entry = Signature_parsers.signature_entry
 

@@ -7,6 +7,8 @@ module type SIGNATURE_PARSER = sig
 
   val signature : Synprs.signature t
 
+  val signature_global_pragma : Synprs.signature_global_pragma t
+
   val signature_entry : Synprs.signature_entry t
 
   val signature_declaration : Synprs.signature_declaration t

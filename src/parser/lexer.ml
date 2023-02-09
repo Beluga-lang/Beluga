@@ -5,6 +5,12 @@ exception Unlexable_character of string
 
 exception Mismatched_block_comment
 
+exception Unterminated_block_comment
+
+exception Mismatched_documentation_comment
+
+exception Unterminated_documentation_comment
+
 exception String_literal_unescape_failure of string
 
 (** [get_location lexbuf] is the location of the currently lexed token in
@@ -15,14 +21,16 @@ let get_location lexbuf =
   Location.make_from_lexing_positions ~filename ~start_position
     ~stop_position
 
-let shift_position position =
-  Stdlib.Lexing.{ position with pos_cnum = position.pos_cnum + 1 }
-
+(** [set_location location lexbuf] sets the initial location of [lexbuf] to
+    [location]. This enables the tracking of locations in the lexer. *)
 let set_location location lexbuf =
   let filename = Location.filename location
   and position = Location.start_to_lexing_position location in
   Sedlexing.set_filename lexbuf filename;
   Sedlexing.set_position lexbuf position
+
+let shift_position position n =
+  Stdlib.Lexing.{ position with pos_cnum = position.pos_cnum + n }
 
 let ascii_control_character = [%sedlex.regexp? '\000' .. '\031' | '\127']
 
@@ -83,32 +91,8 @@ let doc_comment_char =
 let doc_comment =
   [%sedlex.regexp? doc_comment_begin, Star doc_comment_char, doc_comment_end]
 
-let line_comment =
-  [%sedlex.regexp?
-    '%', Opt (Intersect (Compl '\n', Compl '{'), Star (Compl '\n'))]
-
-let block_comment_begin = [%sedlex.regexp? "%{"]
-
-let block_comment_end = [%sedlex.regexp? "}%"]
-
-let block_comment_char = [%sedlex.regexp? Compl '%' | Compl '}']
-
 let string_literal =
   [%sedlex.regexp? '"', Star ('\\', any | Sub (any, ('"' | '\\'))), '"']
-
-(** Skips the _body_ of a block comment. Calls itself recursively upon
-    encountering a nested block comment. Consumes the block_comment_end
-    symbol. *)
-let rec skip_nested_block_comment lexbuf =
-  match%sedlex lexbuf with
-  | block_comment_begin ->
-      skip_nested_block_comment lexbuf;
-      (* for the body of the new comment *)
-      skip_nested_block_comment
-        lexbuf (* for the remaining characters in this comment *)
-  | block_comment_end -> ()
-  | any -> skip_nested_block_comment lexbuf
-  | _ -> assert false
 
 let rec tokenize lexbuf =
   let[@inline] const t = Option.some (get_location lexbuf, t) in
@@ -116,12 +100,31 @@ let rec tokenize lexbuf =
   (* comments *)
   | eof -> Option.none
   | white_space -> tokenize lexbuf
-  | block_comment_begin ->
-      skip_nested_block_comment lexbuf;
-      tokenize lexbuf
-  | block_comment_end ->
-      Error.raise_at1 (get_location lexbuf) Mismatched_block_comment
-  | line_comment -> tokenize lexbuf
+  | "%{{" ->
+      let start_position, _stop_position =
+        Sedlexing.lexing_positions lexbuf
+      in
+      Sedlexing.rollback lexbuf;
+      let location, contents =
+        tokenize_documentation_comment start_position (Buffer.create 16)
+          ~level:0 lexbuf
+      in
+      let contents' =
+        String.trim
+          (String.sub contents (String.length "%{{")
+             (String.length contents - String.length "%{{"
+            - String.length "}}%"))
+      in
+      Option.some (location, Token.BLOCK_COMMENT contents')
+  | "}}%" ->
+      Error.raise_at1 (get_location lexbuf) Mismatched_documentation_comment
+  | "%{" ->
+      Sedlexing.rollback lexbuf;
+      tokenize_block_comment ~level:0 lexbuf
+  | "}%" -> Error.raise_at1 (get_location lexbuf) Mismatched_block_comment
+  | '%' ->
+      Sedlexing.rollback lexbuf;
+      tokenize_line_comment lexbuf
   (* STRING LITERALS *)
   | string_literal ->
       let delimiter_length = String.length "\"" in
@@ -215,7 +218,16 @@ let rec tokenize lexbuf =
       const (Token.HOLE s)
   | "_" -> const Token.UNDERSCORE
   | dots -> const Token.DOTS
-  | turnstile_hash -> const Token.TURNSTILE_HASH
+  | turnstile_hash, Compl ident_start ->
+      let start_position, stop_position =
+        Sedlexing.lexing_positions lexbuf
+      in
+      let filename = start_position.Lexing.pos_fname in
+      let location =
+        Location.make_from_lexing_positions ~filename ~start_position
+          ~stop_position:(shift_position stop_position (-1))
+      in
+      Option.some (location, Token.TURNSTILE_HASH)
   | hash_blank -> const Token.HASH_BLANK
   | dot_ident ->
       let prefix_length = String.length "." in
@@ -229,7 +241,7 @@ let rec tokenize lexbuf =
       let filename = start_position.Lexing.pos_fname in
       let location =
         Location.make_from_lexing_positions ~filename
-          ~start_position:(shift_position start_position)
+          ~start_position:(shift_position start_position 1)
           ~stop_position
       in
       Option.some (location, Token.DOT_IDENT s)
@@ -246,7 +258,7 @@ let rec tokenize lexbuf =
       let filename = start_position.Lexing.pos_fname in
       let location =
         Location.make_from_lexing_positions ~filename
-          ~start_position:(shift_position start_position)
+          ~start_position:(shift_position start_position 1)
           ~stop_position
       in
       Option.some (location, Token.DOT_INTLIT n)
@@ -270,6 +282,62 @@ let rec tokenize lexbuf =
       let s = Sedlexing.Utf8.lexeme lexbuf in
       Error.raise_at1 (get_location lexbuf) (Unlexable_character s)
 
+and tokenize_line_comment lexbuf =
+  match%sedlex lexbuf with
+  | '%' -> tokenize_line_comment lexbuf
+  | Compl '\n' -> tokenize_line_comment lexbuf
+  | _ -> tokenize lexbuf
+
+and tokenize_block_comment ~level lexbuf =
+  match%sedlex lexbuf with
+  | "%{" ->
+      let level' = level + 1 in
+      tokenize_block_comment ~level:level' lexbuf
+  | "}%" ->
+      let level' = level - 1 in
+      if level' = 0 then tokenize lexbuf
+      else tokenize_block_comment ~level:level' lexbuf
+  | any -> tokenize_block_comment ~level lexbuf
+  | eof -> Error.raise_at1 (get_location lexbuf) Unterminated_block_comment
+  | _ ->
+      let s = Sedlexing.Utf8.lexeme lexbuf in
+      Error.raise_at1 (get_location lexbuf) (Unlexable_character s)
+
+and tokenize_documentation_comment start_position comment_buffer ~level
+    lexbuf =
+  match%sedlex lexbuf with
+  | "%{{" ->
+      let level' = level + 1 in
+      Buffer.add_string comment_buffer (Sedlexing.Utf8.lexeme lexbuf);
+      tokenize_documentation_comment start_position comment_buffer
+        ~level:level' lexbuf
+  | "}}%" ->
+      let level' = level - 1 in
+      Buffer.add_string comment_buffer (Sedlexing.Utf8.lexeme lexbuf);
+      if level' = 0 then
+        let _start_position, stop_position =
+          Sedlexing.lexing_positions lexbuf
+        in
+        let filename = start_position.Lexing.pos_fname in
+        let location =
+          Location.make_from_lexing_positions ~filename ~start_position
+            ~stop_position
+        in
+        (location, Buffer.contents comment_buffer)
+      else
+        tokenize_documentation_comment start_position comment_buffer
+          ~level:level' lexbuf
+  | any ->
+      Buffer.add_string comment_buffer (Sedlexing.Utf8.lexeme lexbuf);
+      tokenize_documentation_comment start_position comment_buffer ~level
+        lexbuf
+  | eof ->
+      Error.raise_at1 (get_location lexbuf)
+        Unterminated_documentation_comment
+  | _ ->
+      let s = Sedlexing.Utf8.lexeme lexbuf in
+      Error.raise_at1 (get_location lexbuf) (Unlexable_character s)
+
 let make_token_sequence ~initial_location lexer_buffer =
   set_location initial_location lexer_buffer;
   Seq.memoize (Seq.of_gen (fun () -> tokenize lexer_buffer))
@@ -280,10 +348,6 @@ let lex_gen ~initial_location input =
 let lex_string ~initial_location input =
   make_token_sequence ~initial_location (Sedlexing.Utf8.from_string input)
 
-let lex_file ~filename =
-  let initial_location = Location.initial filename in
-  Gen.IO.with_in filename (lex_gen ~initial_location)
-
 let lex_input_channel ~initial_location input =
   lex_gen ~initial_location (Gen.of_in_channel input)
 
@@ -293,6 +357,22 @@ let () =
         Format.dprintf "Unlexable character(s) \"%s\"." s
     | Mismatched_block_comment ->
         Format.dprintf "Unexpected end of block comment."
+    | Unterminated_block_comment ->
+        (* Workaround format string errors when inputting the documentation
+           comment delimiters *)
+        let right_delimiter = "}%" in
+        Format.dprintf
+          "This block comment is missing its closing delimiter `%s'."
+          right_delimiter
+    | Mismatched_documentation_comment ->
+        Format.dprintf "Unexpected end of documentation comment."
+    | Unterminated_documentation_comment ->
+        (* Workaround format string errors when inputting the documentation
+           comment delimiters *)
+        let right_delimiter = "}}%" in
+        Format.dprintf
+          "This documentation comment is missing its closing delimiter `%s'."
+          right_delimiter
     | String_literal_unescape_failure s ->
         Format.dprintf
           "The string literal \"%s\" contains invalid escape sequences." s

@@ -120,7 +120,9 @@ module Make
         seq2 omittable_meta_object_identifier (maybe (colon &> meta_type))
       in
       let explicit_pi =
-        seq2 (braces declaration) Comp_parsers.comp_sort_object
+        seq2
+          (braces declaration <& maybe forward_arrow)
+          Comp_parsers.comp_sort_object
         |> span
         $> (fun (location, ((parameter_identifier, parameter_sort), body)) ->
              Synprs.Comp.Sort_object.Raw_pi
@@ -132,7 +134,9 @@ module Make
                })
         |> labelled "Explicit computational Pi kind or type"
       and implicit_pi =
-        seq2 (trying (parens declaration)) Comp_parsers.comp_sort_object
+        seq2
+          (trying (parens declaration <& maybe forward_arrow))
+          Comp_parsers.comp_sort_object
         |> span
         $> (fun (location, ((parameter_identifier, parameter_sort), body)) ->
              Synprs.Comp.Sort_object.Raw_pi
@@ -622,7 +626,8 @@ module Make
         |> labelled "Pattern-matching function abstraction"
       and mlam =
         seq2
-          (keyword "mlam" &> some omittable_meta_object_identifier)
+          (keyword "mlam"
+          &> sep_by1 ~sep:comma_opt omittable_meta_object_identifier)
           (thick_forward_arrow &> Comp_parsers.comp_expression_object)
         |> span
         $> (fun (location, (parameters, body)) ->

@@ -38,7 +38,7 @@ schema tctx = target;
 
 inductive Fvs: {g:ctx} ctype =
 | Nil : Fvs [g]
-| Cons: {#p:[g |- term]} Fvs [g] -> Fvs [g];
+| Cons: {#p:#[g |- term]} Fvs [g] -> Fvs [g];
 
 
 rec append: Fvs [g] -> Fvs [g] -> Fvs [g] =
@@ -95,8 +95,8 @@ fn n =>
  % Build a map from the free var to its position in fvlist , used in abs conversion(started with id from x -> x).
  % Resulting should be a term closed under the environement tuple xenv and the local variable x.
 
-rec b_map:(g:ctx)Fvs [g] ->({#p:[g,x:term |- term]} [xenv:target |-  target]) -> [ |- nat] ->
-	  {#p:[g,x:term |- term]}[xenv:target |-  target] =
+rec b_map:(g:ctx)Fvs [g] ->({#p:#[g,x:term |- term]} [xenv:target |-  target]) -> [ |- nat] ->
+	  {#p:#[g,x:term |- term]}[xenv:target |-  target] =
 / total l (b_map g l )/
 fn l => fn map => fn n => case l of
 | Nil =>
@@ -116,7 +116,7 @@ let [ |- N] = n in
 
 
 % Extend the mapping with id function, used for the local variable in lam and let.
-rec e_map : {g:ctx}{h:tctx} ({#p:[g |- term]} [h |- target])  ->  {#q:[g,x:term |-  term]} [h,x:target |-  target] =
+rec e_map : {g:ctx}{h:tctx} ({#p:#[g |- term]} [h |- target])  ->  {#q:#[g,x:term |-  term]} [h,x:target |-  target] =
 / total e' (e_map g h map e') /
 mlam g, h => fn map => mlam #q => case [g,x:term |- #q] of
    | [g,x:term |-  x] => [h,x:target |-  x]
@@ -127,7 +127,7 @@ mlam g, h => fn map => mlam #q => case [g,x:term |- #q] of
 
 
 % Build the environement tuble xenv that will be packed next to a lam. Map should contain the idmapping from x:term to x:target at this stage.
-rec b_env:(g:ctx){h:tctx}({#p:[g |- term]} [h |- target]) -> Fvs [g] -> [h |- target] =
+rec b_env:(g:ctx){h:tctx}({#p:#[g |- term]} [h |- target]) -> Fvs [g] -> [h |- target] =
 / total fvar (b_env g h map fvar)/
 mlam h => fn map => fn fvar => case fvar of
 | Nil => [h |- tunit]
@@ -141,7 +141,7 @@ mlam h => fn map => fn fvar => case fvar of
 %
 % outer conversion
 %
-rec convert:(g:ctx){h:tctx} ({#p:[g |- term]} [h |- target]) -> [g |- term] -> [h |- target] =
+rec convert:(g:ctx){h:tctx} ({#p:#[g |- term]} [h |- target]) -> [g |- term] -> [h |- target] =
 mlam h => fn map => fn e => case e of
 | [g |- #p] => map [g |- #p]
 | [g |- eapp U V] =>

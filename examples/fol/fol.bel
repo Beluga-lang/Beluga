@@ -1,4 +1,3 @@
---nostrengthen
 schema ctx = down A;
 
 rec identity : {P: [ |- atm]}  [ |- up (imp (atom P ) (atom P))] =

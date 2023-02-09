@@ -35,16 +35,16 @@ and norm : tp -> type =
 schema ctx = neut T;
 
 inductive TmVar : {g:tctx} [ |- tp] -> ctype =
-| TmVar : {#p:[g |- tm T[]]} TmVar [g] [ |- T]
+| TmVar/c : {#p:#[g |- tm T[]]} TmVar [g] [ |- T]
 ;
 
 stratified Sem : {g:ctx} [ |- tp] -> ctype =
 | Syn :  [g |- neut (atomic P[])] -> Sem [g] [ |- atomic P]
-| Slam : ({h:ctx}{$S:[h |- g]} Sem [h] [ |- A] -> Sem [h] [ |- B])
+| Slam : ({h:ctx}{$S:$[h |- g]} Sem [h] [ |- A] -> Sem [h] [ |- B])
            -> Sem [g] [ |- arr A B]
 ;
 
-rec subst : {g:ctx}{h:ctx}{$S:[h |- g]}
+rec subst : {g:ctx}{h:ctx}{$S:$[h |- g]}
             Sem [g] [ |- A] -> Sem [h] [ |- A] =
 mlam g,h,$S => fn e =>
 case e of
@@ -59,8 +59,8 @@ typedef Map : {g:tctx} {h:ctx} ctype = ({T:[ |- tp]} TmVar [g] [ |- T] -> Sem [h
 rec extend : (g:tctx)(h:ctx)
              Map [g] [h] -> Sem [h] [ |- S] ->  Map [g, x:tm S[]] [h]  =
 fn s => fn e => mlam T => fn x => case x of
-| TmVar [g,x:tm S[] |-  x] => e
-| TmVar [g,x:tm S[] |-  #q[..] ] => s [ |- T ] (TmVar [g |- #q])
+| TmVar/c [g,x:tm S[] |-  x] => e
+| TmVar/c [g,x:tm S[] |-  #q[..] ] => s [ |- T ] (TmVar/c [g |- #q])
 ;
 
 rec eval : (g:tctx)(h:ctx)
@@ -69,15 +69,15 @@ rec eval : (g:tctx)(h:ctx)
 fn s => fn t =>
 let (s : Map [g] [h]) = s in
 case t of
-| [g |- #p ]          : [g |- tm S[]] =>  s [ |- S] (TmVar [g |- #p ])
+| [g |- #p ]          : [g |- tm S[]] =>  s [ |- S] (TmVar/c [g |- #p ])
 | [g |- lam (\x. E) ] : [g |- tm (arr A[] B[])] =>
   Slam  (mlam h' => mlam $W => fn e =>
-         eval (extend (mlam T => fn x => subst [h] [h'] [h'|- $W] (s [ |- T] x))  e)
+         eval (extend (mlam T => fn x => subst [h] [h'] $[h'|- $W] (s [ |- T] x))  e)
               [g,x:tm A[] |-  E])
 
 | [g |- app E1 E2 ] =>
   let (Slam f ) : Sem [h] [ |- arr A B] =  eval s [g |- E1] in
-  f [h] [h |- ..] (eval s [g |- E2])
+  f [h] $[h |- ..] (eval s [g |- E2])
 ;
 
 
@@ -90,7 +90,7 @@ case [ |- A] of
 
 % Lesson: FACTORIZATION OF CODE HELPS TYPE RECONSTRUCTION!!!
 and rec extendSem : (g:ctx)[g |- neut (arr A[] B[])] ->
-                ({h:ctx}{$S:[h |- g]} Sem [h] [ |- A] -> Sem [h] [ |- B])
+                ({h:ctx}{$S:$[h |- g]} Sem [h] [ |- A] -> Sem [h] [ |- B])
 =
 fn r => mlam h => mlam $S => fn e =>
 let [h |- N ] = reify e in
@@ -103,14 +103,14 @@ fn e => let (e : Sem [g] [ |- A]) = e in case [ |- A] of
 | [ |- arr T S ] =>
   (case e of
    | Slam f  =>
-     let s = (f [g,x:neut T[] ] [g,x:neut T[] |- ..] (reflect [g ,x:neut T[] |-  x])) in
+     let s = (f [g,x:neut T[] ] $[g,x:neut T[] |- ..] (reflect [g ,x:neut T[] |-  x])) in
      let [g,x:neut T[] |-  E] = reify s
      in [g |- nlam (\x. E)])
 ;
 
 
 rec initialMap :  {T:[ |- tp]} TmVar [ ] [ |- T] -> Sem [ ] [ |- T] =
-mlam T => fn y => let TmVar [ |- #p] = y in impossible [ |- #p] ;
+mlam T => fn y => let TmVar/c [ |- #p] = y in impossible [ |- #p] ;
 
 rec nbe : [ |- tm A] -> [ |- norm A] =
 fn t => reify  (eval initialMap t)

@@ -119,7 +119,7 @@ mlam Q => fn d1 => fn d2 => case d1 of
 		 d2
 
 |
-   {#p: [g |- block (a:tp, tr: ({u':tp}{t':tp} sub u' t' -> sub a u' -> sub a t'),
+   {#p: #[g |- block (a:tp, tr: ({u':tp}{t':tp} sub u' t' -> sub a u' -> sub a t'),
 			   w: sub a (U[..]), ref: sub a a)]}
    {D1:[g |- sub (#p.1) U]}
   [g |- (#p.2) U Q D2 D1] =>
@@ -165,7 +165,7 @@ fn d => case d of
 | [g |- #p.4] => % refl: sub a a
   [g |- subtype_refl]
 % transitivity
-| {#p: [g |- block (a:tp, tr: ({u':tp}{t':tp} sub u' t' -> sub a u' -> sub a t'),
+| {#p: #[g |- block (a:tp, tr: ({u':tp}{t':tp} sub u' t' -> sub a u' -> sub a t'),
  	          w: sub a (U[..]), ref: sub a a, w': subtype a (U[..]))]}
    {D1:[g |- sub (#p.1) U]}
   [g |- (#p.2) U Q D2 D1] =>

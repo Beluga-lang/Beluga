@@ -29,7 +29,7 @@ inductive SN : (g: cxt) {M: [g |- tm A[]]} ctype =
 	   -> SN [g |- M]
 
 and inductive SNe : (g: cxt) {M: [ g |- tm A[]]} ctype =
-      | SVar : {#p: [g |- tm A[]]} SNe [g |- #p]
+      | SVar : {#p: #[g |- tm A[]]} SNe [g |- #p]
       | SApp : SNe [g |- R] -> SN [g |- M] -> SNe [g |- app R M]
 
 and inductive SNRed : (g: cxt) {M: [g |- tm A[]]} {M': [g |- tm A[]]} ctype =

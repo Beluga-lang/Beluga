@@ -19,7 +19,7 @@ mlam g => fn e =>
  (case e of
   | [g |- z]     => [g |- z]
   | [g |- suc U] => let [g |- V] = copy [g] [g |- U] in [g |- suc (V )]
-  | [g |- (#p)] => [g |- (#p)]
+  | [g |- #p] => [g |- #p]
 
   | [g |- lam (\ x. ( U))] =>
 

@@ -93,25 +93,25 @@ let test : DB [z : hoas (arr o o)] [|- arr (arr o o) (arr o o)] = db ex1;
 %{{
 ## From De Bruijn to HOAS
 
-The following recursive function descend recursively in an indexed,
+The following recursive function descends recursively in an indexed,
 computational object `DB` to construct the equivalent HOAS contextual
 object.
 }}%
 
-rec hoas : (g:ctx) DB [g] [|- A] -> [g |- hoas A[]] =
+rec translate : (g:ctx) DB [g] [|- A] -> [g |- hoas A[]] =
     fn m => case m of
     | Lam m =>
-      let [g, x: hoas _ |- M] = hoas m in
+      let [g, x: hoas _ |- M] = translate m in
       [g |- lam \x. M]
     | App m n =>
-      let [g |- M] = hoas m in
-      let [g |- N] = hoas n in
+      let [g |- M] = translate m in
+      let [g |- N] = translate n in
       [g |- app M N]
     | O =>
        let (m : DB [g, x:hoas _] [|- B]) = m in
       [g, x:hoas _ |- x]
     | S m =>
-      let [g |- M] = hoas m in
+      let [g |- M] = translate m in
       [g, x |- M[..]];
 %{{
 
@@ -126,4 +126,4 @@ i.e. `ex1`:
 }}%
 
 let test : [z : hoas (arr o o) |- hoas (arr (arr o o) (arr o o))] =
-    hoas ex2;
+    translate ex2;

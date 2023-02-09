@@ -21,11 +21,11 @@ nat : type.
 
 
 inductive NeutVar : {g:ctx} [ |- tp] -> ctype  =
-| NeutVar : {#p:[g |- neut T[]]} NeutVar [g] [ |- T]
+| NeutVar : {#p:#[g |- neut T[]]} NeutVar [g] [ |- T]
 ;
 
 inductive TmVar : {g:tctx} [ |- tp] -> ctype  =
-| TmVar : {#p:[g |- tm T[]]} TmVar [g] [ |- T]
+| TmVar/c : {#p:#[g |- tm T[]]} TmVar [g] [ |- T]
 ;
 
 
@@ -68,8 +68,8 @@ rec extend : (g:tctx)(h:ctx)
 -> ({T:[ |- tp]} TmVar [g, x:tm S[]] [ |- T] ->  Sem [h] [ |- T]) =
 / total x (extend g h s e t x) /
 fn s => fn e => mlam T => fn x => case x of
-| TmVar [g,x:tm S[] |-  x] => e
-| TmVar [g,x:tm S[] |-  #q[..] ] => s [ |- T ] (TmVar [g |- #q])
+| TmVar/c [g,x:tm S[] |-  x] => e
+| TmVar/c [g,x:tm S[] |-  #q[..] ] => s [ |- T ] (TmVar/c [g |- #q])
 ;
 
 rec eval : (g:tctx)(h:ctx)
@@ -79,7 +79,7 @@ rec eval : (g:tctx)(h:ctx)
 / total t (eval g h s t _) /
 fn t => fn s =>
 case t of
-| [g |- #p ]            : [g |- tm S[]] =>  s [ |- S] (TmVar [g |- #p ])
+| [g |- #p ]            : [g |- tm S[]] =>  s [ |- S] (TmVar/c [g |- #p ])
 | [g |- lam (\x. E) ] : [g |- tm (arr A[] B[])] =>
   Slam  (mlam h' => fn s' => fn e =>
          eval [g,x:tm A[] |-  E]
@@ -124,7 +124,7 @@ fn e => let (e : Sem [g] [ |- A]) = e in case [ |- A] of
 
 rec initialMap :  {T:[ |- tp]} TmVar [ ] [ |- T] -> Sem [ ] [ |- T] =
 / total (initialMap) /
-mlam T => fn y => let TmVar [ |- #p] = y in impossible [ |- #p] ;
+mlam T => fn y => let TmVar/c [ |- #p] = y in impossible [ |- #p] ;
 
 rec nbe : [ |- tm A] -> [ |- norm A] =
 / total (nbe) /

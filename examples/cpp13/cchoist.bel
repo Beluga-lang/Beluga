@@ -151,7 +151,7 @@ fn sigma =>
 % ----------------------------------------------------------
 % Variable lookups
 
-rec lookup: Map [h] [g] -> {#q:[g |- source T[]]}[h |-  target T[]] =
+rec lookup: Map [h] [g] -> {#q:#[g |- source T[]]}[h |-  target T[]] =
 % / total m (lookup _ _ _ m) /
 fn sigma => mlam #q => case sigma of
 | M_dot sigma' [h |- M] =>
@@ -224,7 +224,7 @@ LF env:  {Lf:tp}target Lf -> type =
 
 % Result of Hoisting: Result [Δ] [|- T] ⇔ ∃ P L, Δ,l : L ⊢ M : T and · ⊢ E : L
 inductive Result:{h:tctx} [ |- tp] -> ctype =
-| Result : [h,l:target Lf[] |- target T[]] -> [ |- env Lf E]
+| Result/c : [h,l:target Lf[] |- target T[]] -> [ |- env Lf E]
          -> Result [h] [ |- T]
 ;
 
@@ -297,66 +297,66 @@ mlam Env1, Env2, Env3 => fn prf => fn n => case prf of
 rec hcc: [g |-  source T[]] -> Map [h] [g] -> Result [h] [|- T[]] =
 % / total e (hcc _ _ _ e)/
 fn e => fn sigma => let (sigma : Map [h] [g]) = sigma in case e of
-| [g |- z] => Result [h,l:target unit |- cz] [|- env_nil]
+| [g |- z] => Result/c [h,l:target unit |- cz] [|- env_nil]
 
 | [g |- suc M] =>
- let Result [h,l:target L[] |- P'] e  = hcc [g |-  M]  sigma in
-    Result [h,l:target L[] |- csuc P'] e
+ let Result/c [h,l:target L[] |- P'] e  = hcc [g |-  M]  sigma in
+    Result/c [h,l:target L[] |- csuc P'] e
 
 | [g |- #p] =>
   let [h |- M] = lookup sigma [g |-  #p] in
-    Result [h,l:target unit |- M[..]  ] [ |- env_nil]
+    Result/c [h,l:target unit |- M[..]  ] [ |- env_nil]
 
 | [g |- app M N] =>
-  let Result r1 [|- Env1]  = hcc [g |- M ] sigma in
-  let Result r2 [|- Env2]  = hcc [g |- N ] sigma in
+  let Result/c r1 [|- Env1]  = hcc [g |- M ] sigma in
+  let Result/c r2 [|- Env2]  = hcc [g |- N ] sigma in
   let ExEnv (a12 : Append [|- _ ] [|- _ ] [|- Env3])  = append [|- Env1] [|- Env2] in
   let [h, l:target L |- P] = weakenEnv2 _ _ _ a12 r1  in
   let [h, l:target L |- Q] = weakenEnv1 _ _ _ a12 r2 in
-    Result [h, l:target L |- copen P \e.\xf.\xenv. capp xf (ccons  Q [..,l] xenv)] [|- Env3]
+    Result/c [h, l:target L |- copen P \e.\xf.\xenv. capp xf (ccons  Q [..,l] xenv)] [|- Env3]
 
 | [g |- letv M \x. N] =>
-  let Result r1 [|- Env1] = hcc [g |- M] sigma in
-  let Result r2 [|- Env2] = hcc [g,x: source _ |- N] (extend sigma) in
+  let Result/c r1 [|- Env1] = hcc [g |- M] sigma in
+  let Result/c r2 [|- Env2] = hcc [g,x: source _ |- N] (extend sigma) in
   let ExEnv (a12 : Append [|- _] [|- _] [|- Env3]) = append [|- Env1] [|- Env2] in
   let [h, l:target L[] |- P]                      = weakenEnv2 _ _ _ a12 r1 in
   let [h,x:target T1[], l:target L[] |- Q]        = weakenEnv1 _ _ _ a12 r2 in
-    Result [h, l:target L[] |- clet P (\x. Q[..,x,l])] [|- Env3]
+    Result/c [h, l:target L[] |- clet P (\x. Q[..,x,l])] [|- Env3]
 
 | [g |- lam \x.M] =>
   let STm [g',x:source S[] |- M' ] wk = strengthen [g, x:source _ |- M ] in
   let EnvClo env rho = reify [g'] in
-  let Result r1 [|- Env1] = hcc [g',x:source _ |- M' ] (extend rho) in
+  let Result/c r1 [|- Env1] = hcc [g',x:source _ |- M' ] (extend rho) in
   let [h |- C] = lookupVars wk env sigma in
   let [xenv:target Lg[],x:target T[],l:target L[] |- P [xenv, x, l] ] = r1 in
-    Result [h,l:target (cross (code L[] (code (cross T[] Lg[]) _ )) L[]) |- cpack  (capp (cfst l) (crst l))   C[..] ]
+    Result/c [h,l:target (cross (code L[] (code (cross T[] Lg[]) _ )) L[]) |- cpack  (capp (cfst l) (crst l))   C[..] ]
            [|- env_cons (clam \l. clam (\clo. clet (cfst clo) \x. clet (crst clo)  \xenv. P[xenv, x, l])) Env1 ]
 
 | [g |-  cons M N] =>
-  let Result r1 [|- Env1] = hcc [g |- M] sigma in
-  let Result r2 [|- Env2] = hcc [g |- N] sigma in
+  let Result/c r1 [|- Env1] = hcc [g |- M] sigma in
+  let Result/c r2 [|- Env2] = hcc [g |- N] sigma in
   let ExEnv (a12 : Append [|- _] [|- _] [|- Env3]) = append [|- Env1] [|- Env2] in
   let [h, l:target L[] |- P]                      = weakenEnv2 _ _ _ a12 r1 in
   let [h, l:target L[] |- Q]                      = weakenEnv1 _ _ _ a12 r2 in
-    Result [h, l:target L[] |- ccons P Q]  [|- Env3]
+    Result/c [h, l:target L[] |- ccons P Q]  [|- Env3]
 
 | [g |- fst M] =>
-  let Result r [|- Env] = hcc [g |- M ] sigma in
+  let Result/c r [|- Env] = hcc [g |- M ] sigma in
   let [h, l:target L[] |- P] = r in
-    Result [h, l:target L[] |- cfst P] [|- Env]
+    Result/c [h, l:target L[] |- cfst P] [|- Env]
 
 | [g |-  rst M] =>
-  let Result r [|- Env] = hcc [g |- M] sigma in
+  let Result/c r [|- Env] = hcc [g |- M] sigma in
   let [h, l:target L |- P] = r in
-    Result [h, l:target L |- crst P] [|- Env]
+    Result/c [h, l:target L |- crst P] [|- Env]
 
-| [g |-  nil] => Result [h, l:target unit |- cnil] [|- env_nil]
+| [g |-  nil] => Result/c [h, l:target unit |- cnil] [|- env_nil]
 ;
 
 
 rec hoist_cc: [ |- source T] -> [ |- target T] =
 fn m =>
- let Result [l:target _ |- M] (e : [|- env _ E]) = hcc m  (M_id []) in
+ let Result/c [l:target _ |- M] (e : [|- env _ E]) = hcc m  (M_id []) in
    [ |- clet E (\l. M)]
 ;
 

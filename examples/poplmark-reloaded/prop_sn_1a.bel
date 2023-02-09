@@ -4,7 +4,7 @@
 % All variables are in sn.
 empty: type.
 
-rec varSn : (g:cxt) {#p: [g |- tm A[]]} Sn [g |- #p] =
+rec varSn : (g:cxt) {#p: #[g |- tm A[]]} Sn [g |- #p] =
     / total (varSn) /
       mlam #p => let [_ |- #p] : [g |- tm A[]] = [_ |- #p] in
 		 Acc [g] [|- A] [g |- #p] (mlam M', S => impossible [_ |- S])
@@ -74,7 +74,7 @@ rec app_abs_sn : {g: cxt} {A : [ |- ty]} {B : [ |- ty]}
 
 % Neutral terms
 inductive Neutral: (g: cxt) {M: [g |- tm A[]]} ctype =
-  | Nvar : {#x: [g |- tm A[]]} Neutral [g |- #x]
+  | Nvar : {#x: #[g |- tm A[]]} Neutral [g |- #x]
   | Napp : {R: [g |- tm (arr A[] B[])]} {N: [g |- tm A[]]} Neutral [g |- R]
 	   -> Neutral [g |- app R N]
 ;

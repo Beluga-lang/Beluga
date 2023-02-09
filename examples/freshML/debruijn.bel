@@ -20,7 +20,7 @@ LF term'   : type =
 schema ctx = term;
 
 
-rec vhoas2db : {gamma:ctx}{#p:[gamma |- term]} [ |- term'] =
+rec vhoas2db : {gamma:ctx}{#p:#[gamma |- term]} [ |- term'] =
  / total gamma (vhoas2db gamma) /
 mlam gamma => mlam #p =>  case [gamma] of
 | [] => impossible [ |- #p ]

@@ -48,7 +48,7 @@ rec vhoas2db : {g:ctx}[g |- value S] ->  [g |- exp' S] =
 mlam g => fn v =>  case v of
  | [h,x:value T  |-  x] => [h, x:value T |-  one (T[..])]
 
- |  {#p:[h |- value (S')]}
+ |  {#p:#[h |- value (S')]}
    [h,x:value T  |-  #p[..]] =>
    let [g |- Db] = vhoas2db [h] [h |- #p] in
      [g,x:value T  |-  shift (S'[..])  (Db[..])]

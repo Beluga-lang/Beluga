@@ -40,7 +40,7 @@ stratified Log : (g:tctx) [g |- tmpair] -> [ |- tp] -> ctype   =
 | LogBase : [g |- algeqn M N i]
           -> Log [g |- M sim N ] [|- i]
 | LogArr  : {M1:[g |- tm]}{M2:[g |- tm]}
-             ({h:tctx} {$R:[h |- g]} {N1:[h |- tm]}{D1:[h |- oft N1 T[]]}{N2:[h |- tm]}{D2:[h |- oft N2 T[]]}
+             ({h:tctx} {$R:$[h |- g]} {N1:[h |- tm]}{D1:[h |- oft N1 T[]]}{N2:[h |- tm]}{D2:[h |- oft N2 T[]]}
                 Log [h |- N1 sim N2] [ |- T]
               -> Log [h |- (app M1[$R] N1) sim (app M2[$R] N2)] [|- S])
             -> Log [g |- M1 sim M2] [ |- arr T S]
@@ -48,7 +48,7 @@ stratified Log : (g:tctx) [g |- tmpair] -> [ |- tp] -> ctype   =
 
 
 % Monotonicity of logical equivalence
-rec logEq_Monotone : {h:tctx}{$W:[h |- g]} Log [g |- M1 sim M2] [ |- A]
+rec logEq_Monotone : {h:tctx}{$W:$[h |- g]} Log [g |- M1 sim M2] [ |- A]
                    -> Log [h |- M1[$W] sim M2[$W]] [ |- A] =
 / total e (logEq_Monotone g h m1 m2 a iv e) /
 mlam h,$W => fn e => case e of
@@ -82,7 +82,7 @@ mlam A => fn e => case [ |- A] of
 | [ |- arr A B] =>
   let LogArr [g |-  M1] [g |-  M2] f = e in
   let [g,b:block x:tm,y:oft x A[],z:algeqr x x A[] |- R[..,b.1,b.3]]
-      = reify [ |- B ] (f [g,b:block x:tm,y:oft x A[],z:algeqr x x A[]] [g,b |- ..] [g,b |- b.1] [g,b |- b.2] [g,b |- b.1] [g,b |- b.2]
+      = reify [ |- B ] (f [g,b:block x:tm,y:oft x A[],z:algeqr x x A[]] $[g,b |- ..] [g,b |- b.1] [g,b |- b.2] [g,b |- b.1] [g,b |- b.2]
         (reflect [ |- A ] [g,b:block x:tm,y:oft x A[],z:algeqr x x A[] |- b.3]))
   in [g |- algarr (\x. \y. R)]
 ;
@@ -130,7 +130,7 @@ mlam T => fn s1,s2,e => case [|- T] of
   let [g |-  S1] = s1 in
   let [g |-  S2] = s2 in
   LogArr [g |-  _] [g |-  _] (mlam h,$W,P1,D1,P2,D2 => fn rp =>
-   let q0 = f [h] [h |- $W] [h |-  P1] [h |- D1] [h |-  P2] [h |- D2] rp in
+   let q0 = f [h] $[h |- $W] [h |-  P1] [h |- D1] [h |-  P2] [h |- D2] rp in
    closed [|- T2] (mstep_app [h |-  S1[$W]] ) (mstep_app [h |-  S2[$W]]) q0
   )
 ;
@@ -173,7 +173,7 @@ mlam T => fn e => case [|- T] of
   let LogArr [g |-  M1] [g |-  M2] f = e in
   LogArr [g |-  M2] [g |-  M1] (mlam h,$W,N1,D1,N2,D2 => fn rn =>
 					let e' = logEqSym [|- T1] rn in
-					logEqSym [|- T2] (f [h] [h |- $W] [h |-  N2] [h |- D2] [h |-  N1] [h |- D1] e')
+					logEqSym [|- T2] (f [h] $[h |- $W] [h |-  N2] [h |- D2] [h |-  N1] [h |- D1] e')
 				       );
 % % Several of the following lemmas are to establish transitivity of algorithmic equivalenc
 
@@ -310,8 +310,8 @@ mlam T => fn e1 => fn e2 => case [|- T] of
   let LogArr [g |-  M] [g |-  N] f1 = e1 in
   let LogArr [g |-  N] [g |-  P] f2 = e2 in
   LogArr [g |-  M] [g |-  P] (mlam h,$W,V1,D1,V2,D2 => fn v =>
-   logEqTrans [|- T2] (f1 [h] [h |- $W] [h |-  V1] [h|- D1] [h |-  V2] [h |- D2] v)
-                      (f2 [h] [h |- $W] [h |-  V2] [h|- D2] [h |-  V2] [h |- D2]
+   logEqTrans [|- T2] (f1 [h] $[h |- $W] [h |-  V1] [h|- D1] [h |-  V2] [h |- D2] v)
+                      (f2 [h] $[h |- $W] [h |-  V2] [h|- D2] [h |-  V2] [h |- D2]
                       (logEqTrans [|- T1] (logEqSym _ v) v)));
 
 
@@ -328,13 +328,13 @@ d_trans : deq M N T -> deq N O T -> deq M O T.
 schema ctx = some [t:tp] block x:tm,y:oft x t;
 
 % % Logical equivalence of substitutions. Written _|-s_simsim_:_ in the paper
-inductive LogSub : {g0:ctx}(h:tctx){$S1: [h |- g0]}{$S2: [h |- g0]}
+inductive LogSub : {g0:ctx}(h:tctx){$S1: $[h |- g0]}{$S2: $[h |- g0]}
 ctype  =
-| Nil : LogSub [] [h |- ^] [h |- ^]
-| Dot : LogSub [g0] [h |- $S1] [h |- $S2]
+| Nil : LogSub [] $[h |- ^] $[h |- ^]
+| Dot : LogSub [g0] $[h |- $S1] [h |- $S2]
        -> Log [h |- M1 sim M2] [ |- R]
        -> {D1:[h |- oft M1 R[]]} {D2:[h |- oft M2 R[]]}
-         LogSub [g0,b:block x:tm,y:oft x R[]] [h |- $S1, <M1;D1>] [h |- $S2, <M2;D2>]
+         LogSub [g0,b:block x:tm,y:oft x R[]] $[h |- $S1, <M1;D1>] $[h |- $S2, <M2;D2>]
 ;
 
 % % Looking up a variable in logically equivalence substitutions gives a logical equivalence
@@ -349,20 +349,20 @@ ctype  =
 
 % Monotonicity of logical equivalence on substitutions
 rec monotoneSub :
-    {h0:tctx}{h:tctx}{$W:[h0 |- h]}
-    LogSub [g] [h |- $S1] [h |- $S2]
-  -> LogSub [g] [h0 |- $S1[$W]] [h0 |- $S2[$W]]=
+    {h0:tctx}{h:tctx}{$W:$[h0 |- h]}
+    LogSub [g] $[h |- $S1] $[h |- $S2]
+  -> LogSub [g] $[h0 |- $S1[$W]] $[h0 |- $S2[$W]]=
  / total es (monotoneSub _ _ _ _ _ iv es ) /
 mlam h0,h,$W => fn es => case es of
 | Nil => Nil
-| Dot rs' rN [h |- D1] [h |- D2]  => Dot (monotoneSub [h0] [h] [h0 |- $W] rs') (logEq_Monotone [h0] [h0 |- $W] rN) [h0 |- D1[$W]] [h0 |- D2[$W]]
+| Dot rs' rN [h |- D1] [h |- D2]  => Dot (monotoneSub [h0] [h] $[h0 |- $W] rs') (logEq_Monotone [h0] $[h0 |- $W] rN) $[h0 |- D1[$W]] $[h0 |- D2[$W]]
 ;
 
 
 % Symmetry of logical equivalence on substitutions
 rec logEqSubSym :
-   LogSub [g] [h |- $S1] [h |- $S2]
- -> LogSub [g] [h |- $S2] [h |- $S1] =
+   LogSub [g] $[h |- $S1] $[h |- $S2]
+ -> LogSub [g] $[h |- $S2] $[h |- $S1] =
  / total e (logEqSubSym g h sigma sigma' e) /
 fn e => case e of
 | Nil => Nil
@@ -370,16 +370,16 @@ fn e => case e of
 
 % Transitivity of logical equivalence on substitutions
 rec logEqSubTrans :
-   LogSub [g] [h |- $S1] [h |- $S2]
- -> LogSub [g] [h |- $S2] [h |- $S3]
- -> LogSub [g] [h |- $S1] [h |- $S3] =
+   LogSub [g] $[h |- $S1] $[h |- $S2]
+ -> LogSub [g] $[h |- $S2] $[h |- $S3]
+ -> LogSub [g] $[h |- $S1] $[h |- $S3] =
 / total e1 (logEqSubTrans g g h s1 s2 s3 e1) /
 fn e1 => fn e2 => case e1 of
 | Nil => let Nil = e2 in Nil
 | Dot e1' x1 [h |- D1] [h |- D2] => let Dot e2' x2 [h |- D3] [h |- D4] = e2 in Dot (logEqSubTrans e1' e2') (logEqTrans _ x1 x2) [h |- D1] [h |- D4];
 
 
-rec lookup : {g:ctx}{#p:[g |- block (x:tm, u: oft x Q[])]} LogSub [g] [h |- $S1] [h |- $S2]
+rec lookup : {g:ctx}{#p:#[g |- block (x:tm, u: oft x Q[])]} LogSub [g] $[h |- $S1] $[h |- $S2]
    -> Log [h |- #p.1[$S1] sim #p.1[$S2]] [|- Q] =
  / total g (lookup g) /
  mlam g, #p => fn s => case [g] of
@@ -387,28 +387,28 @@ rec lookup : {g:ctx}{#p:[g |- block (x:tm, u: oft x Q[])]} LogSub [g] [h |- $S1]
 	 | [g',b:block x:tm,y:oft x S[]] =>
 	   let Dot rs rm [h |- D1] [h |- D2] = s in
 	   (case [g', b:block (x:tm, y:oft x S[]) |- #p.2] of
-	      |  {#q:[g0 |- block (x:tm, u: oft x P[])]}
+	      |  {#q:#[g0 |- block (x:tm, u: oft x P[])]}
                  [g0, b:block (x:tm, y: oft x T[]) |- #q.2[..]] => lookup [g'] [g' |- #q] rs
 	      | [g0, b:block (x:tm, u: oft x T[]) |- b.2] => rm
 )
  ;
 
 % Tiny fundamental theorem
-rec thm' : [g |- oft M T[]] -> LogSub [g] [h |- $S1] [h |- $S2] -> Log [h |- M[$S1] sim M[$S2]] [|- T] =
+rec thm' : [g |- oft M T[]] -> LogSub [g] $[h |- $S1] $[h |- $S2] -> Log [h |- M[$S1] sim M[$S2]] [|- T] =
 / total d (thm' g h m t s1 s2 d) /
 fn d, s =>
-let s : LogSub [g] [h |- $S1] [h |- $S2] = s in
+let s : LogSub [g] $[h |- $S1] $[h |- $S2] = s in
 case d of
 | [g |- #p.2] =>  lookup [g] [g |- #p] s
 | [g |- t_app D1 D2] =>
   let LogArr [h |- M1] [h |- M2] f = thm' [g |- D1] s in
-  f [h] [h |- ..] [h |- _] [h |- D2[$S1]] [h |- _] [h |- D2[$S2]] (thm' [g |- D2] s)
+  f [h] $[h |- ..] [h |- _] $[h |- D2[$S1]] [h |- _] $[h |- D2[$S2]] (thm' [g |- D2] s)
 
 | [g |- t_lam (\x.\y. D0)] =>
   let ([g |- _ ] : [g |- oft (lam \x.M) (arr P[] Q[])]) = d in
   LogArr [h |- lam \x.M[$S1[..],x]] [h |- lam \x.M[$S2[..],x]]
    (mlam h0,$W,N1,D1,N2,D2 => fn rn =>
-    let q0 = Dot (monotoneSub [h0] [h] [h0 |- $W] s) rn [h0 |- D1] [h0 |- D2] in
+    let q0 = Dot (monotoneSub [h0] [h] $[h0 |- $W] s) rn [h0 |- D1] [h0 |- D2] in
     let q2 = thm' [g,b:block x:tm,y:oft x P[] |- D0[..,b.1,b.2]] q0 in
    closed [|- Q]
          [h0 |- trans1 beta refl]
@@ -468,17 +468,17 @@ fn d => case d of
 
 % % Fundamental theorem
 rec thm : [g |- deq M1 M2 T[]]
-        -> LogSub [g] [h |- $S1] [h |- $S2]
+        -> LogSub [g] $[h |- $S1] $[h |- $S2]
         -> Log [h |- M1[$S1] sim M2[$S2]] [|- T] =
  / total d (thm g h m1 m2 t sigma sigma' d) /
 fn d , s =>
-let s : LogSub [g] [h |- $S1] [h |- $S2] = s in
+let s : LogSub [g] $[h |- $S1] $[h |- $S2] = s in
 case d of
 | [g |- d_app D1 D2] =>
   let LogArr [h |- M1] [h |- M2] f = thm [g |- D1] s in
   let [g |- E1] = dtp1 [g |- D2] in
   let [g |- E2] = dtp2 [g |- D2] in
-  f [h] [h |- ..] [h |- _] [h |- E1[$S1]] [h |- _] [h |- E2[$S2]] (thm [g |- D2] s)
+  f [h] $[h |- ..] [h |- _] [h |- E1[$S1]] [h |- _] [h |- E2[$S2]] (thm [g |- D2] s)
 | [g |- d_beta (\x.\y. D1) D2] =>
   let [h |- E1] = dtp1 [h |- D2[$S1]] in
   let [h |- E2] = dtp2 [h |- D2[$S2]] in
@@ -488,14 +488,14 @@ case d of
   let ([g |- _ ] : [g |- deq (lam \x.M1) (lam \x.M2) (arr P[] Q[])]) = d in
   LogArr [h |- lam (\x. M1[$S1[..],x])] [h |- lam (\x. M2[$S2[..],x])]
    (mlam h0,$W,N1,D1,N2,D2 => fn rn =>
-    let q0 = Dot (monotoneSub [h0] [h] [h0 |- $W] s) rn [h0 |- D1] [h0 |- D2] in
+    let q0 = Dot (monotoneSub [h0] [h] $[h0 |- $W] s) rn [h0 |- D1] [h0 |- D2] in
     let q2 = thm [g,b:block x:tm,y:oft x _ |- E1[..,b.1,b.2]] q0 in
     closed [|- Q] [h0 |- trans1 beta refl] [h0 |- trans1 beta refl] q2
    )
 | [g |- d_ext (\x.\y. D0)] =>
   let ([g |- _ ] : [g |- deq M1 M2 (arr P[] Q[])]) = d in
   LogArr [h |- M1[$S1]] [h |- M2[$S2]] (mlam h0,$W,N1,D1,N2,D2 => fn rn =>
-    let q0 = Dot (monotoneSub [h0] [h] [h0 |- $W] s) rn [h0 |- D1] [h0 |- D2] in
+    let q0 = Dot (monotoneSub [h0] [h] $[h0 |- $W] s) rn [h0 |- D1] [h0 |- D2] in
     thm [g,b:block x:tm,y:oft x _ |- D0[..,b.1,b.2]] q0
   )
 | [g |- d_refl D1] => thm' [g |- D1] s
@@ -506,27 +506,27 @@ case d of
 
 
 % $Id is a substitution which moves from a term context to a neutral term context in the obvious way
-inductive IdSub : (g':tctx){g:ctx}{$Id:[g' |- g]} ctype =
-| INil : IdSub [] [|- ^]
-| ISnoc : {T:[|-tp]}IdSub [g] [g' |- $Id]
-        -> IdSub [g,b:block (x:tm, u:oft x T[])] [g',b:block (x:tm, u:oft x T[], a:algeqr x x T[]) |- $Id[..], <b.1 ; b.2> ]
+inductive IdSub : (g':tctx){g:ctx}{$Id:$[g' |- g]} ctype =
+| INil : IdSub [] $[|- ^]
+| ISnoc : {T:[|-tp]}IdSub [g] $[g' |- $Id]
+        -> IdSub [g,b:block (x:tm, u:oft x T[])] $[g',b:block (x:tm, u:oft x T[], a:algeqr x x T[]) |- $Id[..], <b.1 ; b.2> ]
 ;
 
 
-rec idLogSub : IdSub [g] [g' |- $Id] -> LogSub [g] [g' |- $Id] [g' |- $Id] =
+rec idLogSub : IdSub [g] $[g' |- $Id] -> LogSub [g] $[g' |- $Id] $[g' |- $Id] =
 / total r (idLogSub g g s r) /
 fn r => case r of
 | INil => Nil
 | ISnoc [|- T] r' =>
- let (s : LogSub [g] [h |- $S] [h |- $S]) = idLogSub r' in
+ let (s : LogSub [g] $[h |- $S] $[h |- $S]) = idLogSub r' in
   let wkn = monotoneSub
        [h,b:block (x:tm,u: oft x T[], a:algeqr x x T[]) ] [h]
-       [h,b:block (x:tm,u: oft x T[], a:algeqr x x T[]) |- ..] s in
+       $[h,b:block (x:tm,u: oft x T[], a:algeqr x x T[]) |- ..] s in
   let rx = reflect [|- T] [h,b:block (x:tm , u:oft x T[], a: algeqr x x T[]) |- b.3] in
    Dot wkn rx  [h,b:block (x:tm,u: oft x T[], a:algeqr x x T[]) |- b.2]
                [h,b:block (x:tm,u: oft x T[], a:algeqr x x T[]) |- b.2]
 ;
 
 
-rec main : {T:[ |- tp]}[g |- deq M N T[]] -> IdSub [g] [h |- $S] -> [h |- algeqn M[$S] N[$S] T[]] =
+rec main : {T:[ |- tp]}[g |- deq M N T[]] -> IdSub [g] $[h |- $S] -> [h |- algeqn M[$S] N[$S] T[]] =
 mlam T => fn d => fn wk => reify [|- T] (thm d (idLogSub wk)) ;

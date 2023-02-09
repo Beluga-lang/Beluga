@@ -8,13 +8,13 @@ LF term : tp -> type =
 
 schema termCtx = some [t:tp] term t;
 
-rec copy : {g:termCtx} {T:[ |- tp]} [g |- term (T[])] -> [g |- term (T[])] =
+rec copy : {g:termCtx} {T:[ |- tp]} [g |- term T[]] -> [g |- term T[]] =
 / total e (copy g t e) /
 mlam g => mlam T => fn e =>
 (case e of
 
-  {T':[ |- tp]} {#p:[g |- term (T'[])]}
-  [g |- (#p)] : [g |- (term (T'[]))]        => [g |- (#p)]
+  {T':[ |- tp]} {#p:#[g |- term T'[]]}
+  [g |- #p] : [g |- (term T'[])]        => [g |- #p]
 
 | {T1:[ |- tp]} {T2:[ |- tp]} {U:[g, x :term (T1[]) |-  term (T2[])]}
 

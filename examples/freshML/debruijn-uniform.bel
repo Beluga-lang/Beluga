@@ -42,7 +42,7 @@ LF obj'   : term_or_typ -> type =
 
 schema ctx = some [a:term_or_typ] obj a ;
 
-rec vhoas2db: {g:ctx} {#p: [g |- obj (S[])]}[ |- obj' S] =
+rec vhoas2db: {g:ctx} {#p: #[g |- obj (S[])]}[ |- obj' S] =
 / total g (vhoas2db g) /
 mlam g => mlam #p => case [g] of
 | [ ] => impossible [ |- #p]

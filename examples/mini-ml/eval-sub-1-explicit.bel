@@ -8,7 +8,7 @@ exp: type.
 nat: type.
 
 num: nat -> exp.
-add: exp -> exp -> exp.
+plus: exp -> exp -> exp.
 letv: exp -> (nat -> exp) -> exp.
 
 
@@ -32,7 +32,7 @@ fn e =>
 (case e of
    {U:[|- nat]} [|- num U] : [|- exp] => [|- U]
  | {U:[|- exp]}{W:[|- exp]}
-    [|- add U W] : [|- exp] =>
+    [|- plus U W] : [|- exp] =>
        add (eval [|- U]) (eval [|- W])
 
  | {U:[|- exp]}{W:[x : nat |- exp]}

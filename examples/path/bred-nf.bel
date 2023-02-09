@@ -112,12 +112,12 @@ fn br => fn pt => case br of
        [g |- Q']
 
 
-| {#p:[g |- block (x:tm, _b:({u : nf}  bred (N[..]) u -> bred x u), _q: ({q : p} path  (N[..]) q -> path x q))]}
+| {#p:#[g |- block (x:tm, _b:({u : nf}  bred (N[..]) u -> bred x u), _q: ({q : p} path  (N[..]) q -> path x q))]}
   [g |- (#p.2) U R] => % [g |- bred x U]
    % R : bred N U
    % pt: path x P
   case pt of
-    |{#p:[g |- block (x:tm, _b:({u : nf}  bred (N[..]) u -> bred x u), _q: ({q : p} path  (N[..]) q -> path x q))]}
+    |{#p:#[g |- block (x:tm, _b:({u : nf}  bred (N[..]) u -> bred x u), _q: ({q : p} path  (N[..]) q -> path x q))]}
        [g |- (#p.3) Q (Qp)] => % [g |- path x Q]
         % Qp : path N Q
           bred_ltr [g |- R] [g |- Qp] % path U Q
@@ -159,7 +159,7 @@ fn br => fn pt => case br of
        [g |- p_beta (\x. \qf. Q'[..,x,qf])]
 
 
-| {#p:[g |- block (x:tm, _b:({u : nf}  bred (N[..]) u -> bred x u), _q: ({q : p} path  (N[..]) q -> path x q))]}
+| {#p:#[g |- block (x:tm, _b:({u : nf}  bred (N[..]) u -> bred x u), _q: ({q : p} path  (N[..]) q -> path x q))]}
   [g |- (#p.2) U R] => % [g |- bred x U]
   let ([g |- Pt] : [g |- npath U P]) = pt in
   let [g |- Qt] = bred_rtl [g |- R] pt % path N P
@@ -192,7 +192,7 @@ in
     ExPath [g |- np_app_l (Ql)]
 
 
-| {#p: [g |- block x:tm, y:nf, _r: bred x y, p:p, _pt: path x p, _np: npath y p]}
+| {#p: #[g |- block x:tm, y:nf, _r: bred x y, p:p, _pt: path x p, _np: npath y p]}
   [g |- #p.2] => ExPath [g |- #p.6]
 ;
 
@@ -203,7 +203,7 @@ rec tm_same: {g:jctx'} {U:[g |- nf ]} {V: [g |- nf ]}
   =
 / total u (tm_same g u) /
 mlam g => mlam U => mlam V => fn pf => case [g |- U] of
-| {#p: [g |- block x:tm, y:nf, _r: bred x y, p:p, _pt: path x p, _np: npath y p]}
+| {#p: #[g |- block x:tm, y:nf, _r: bred x y, p:p, _pt: path x p, _np: npath y p]}
   [g |- #p.2] =>
   let [g |- #q.6] = pf [g |- #p.4] [g |- #p.6] in
   [g |- nref ]

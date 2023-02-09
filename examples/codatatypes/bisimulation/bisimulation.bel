@@ -41,8 +41,8 @@ fun [g |- P] .Simf  (t : [g |- one P A[] P']) => MakeTransSimf t (sim_refl [g |-
 rec sim_trans : (g:ctx) Sim [g |- P] [g |- Q] -> Sim [g |- Q] [g |- R] ->
 		Sim [g |- P] [g |- R] =
 fun s1 s2 .Simf t =>
-    let MakeTransSimf t1 s3 = Simf s1 t in
-    let MakeTransSimf t2 s4 = Simf s2 t1 in
+    let MakeTransSimf t1 s3 = s1 .Simf t in
+    let MakeTransSimf t2 s4 = s2 .Simf t1 in
     MakeTransSimf t2 (sim_trans s3 s4)
   | s1 s2 .SimDn t =>
     let MakeTransSimDn t1 s3 = s1 .SimDn t in

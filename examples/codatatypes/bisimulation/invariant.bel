@@ -4,17 +4,17 @@
 % Definition of two processes and of an invariance relation between them
 % Proofs that this invariance relation implies bisimulation
 
-inductive P : (g:ctx) [g |- p] -> ctype =
-| Pproc : P [ |- bang (nu (\z.par (out z b null) (inp z (\y. out x y null))))]
+inductive Pt : (g:ctx) [g |- p] -> ctype =
+| Pproc : Pt [ |- bang (nu (\z.par (out z b null) (inp z (\y. out x y null))))]
 ;
 
-inductive Q : (g:ctx) [g |- p] -> ctype =
-| Qproc : Q [ |- bang (taup (out x b null))]
+inductive Qt : (g:ctx) [g |- p] -> ctype =
+| Qproc : Qt [ |- bang (taup (out x b null))]
 ;
 
 inductive Inv : (g:ctx) [g |- p] -> [g |- p] -> ctype =
-| Inv_pq : P [g |- P] -> Q [g |- Q] -> Inv [g |- P] [g |- Q]
-| Inv_qp : Q [g |- Q] -> P [g |- P] -> Inv [g |- Q] [g |- P]
+| Inv_pq : Pt [g |- P] -> Qt [g |- Q] -> Inv [g |- P] [g |- Q]
+| Inv_qp : Qt [g |- Q] -> Pt [g |- P] -> Inv [g |- Q] [g |- P]
 | Inv_nupar : Inv [g |- M] [g |- N] ->
 	      Inv [g |- par (nu (\z. par null null)) M] [g |- par null N]
 | Inv_parnu : Inv [g |- N] [g |- M] ->

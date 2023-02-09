@@ -2,7 +2,7 @@
 % Author: Andrew Cave
 
 LF  notLam : exp -> type =
-  | notLam : notLam (app M N)
+  | notLam' : notLam (app M N)
 ;
 
 LF eval : exp -> exp -> type =

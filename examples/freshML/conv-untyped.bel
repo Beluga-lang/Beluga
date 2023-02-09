@@ -23,7 +23,7 @@ LF term: type =
 
 schema ctx = some [t:tp] block x:term , _t:value t ;
 
-rec conv: (g:ctx)[g |- exp (T[])] -> [g |- term] =
+rec conv: (g:ctx)[g |- exp T[]] -> [g |- term] =
 % / total e (conv g e) /
 fn e => case e of
 | [g |- app (E1 ) E2] =>
@@ -32,7 +32,7 @@ fn e => case e of
     [g |- app' (T1 ) T2]
 | [g |- ret (V )] => convv [g |- V ]
 
-and rec convv: (g:ctx)[g |- value (T[])] -> [g |- term] =
+and rec convv: (g:ctx)[g |- value T[]] -> [g |- term] =
 % / total v (convv g v)/
 fn v => case v of
 | [g |- #p.2] => [g |- #p.1]

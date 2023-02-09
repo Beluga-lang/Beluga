@@ -38,7 +38,7 @@ rec eqfun : {g:w} {U:[g |- exp]} [g |- eq U U] =
       let
           [g,e:block yyy:exp, _t:eq yyy yyy |-  V] = eqfun [g, e:block q:exp, _t:eq q q] [g, e |-  L[..,e.1]]
       in
-        [g |- eq_lam \x. \w. (V[..,<x ; w>])]  % : eq L L
+        [g |- eq_lam \x. \w. V[..,<x ; w>]]  % : eq L L
 
    | [g |- app A1 A2]  : [g |- exp]=>
        let [g |- EQ1] = eqfun [g] [g |- A1] in
@@ -74,7 +74,7 @@ rec trans: {g:w}       %   {TT::exp[g]} {RR::exp[g]} {SS::exp[g]}
   mlam g =>
     fn e1 => fn e2 =>
       case e1 of
-      | {#p : [g |- block yy:exp, _t:eq yy yy]}
+      | {#p : #[g |- block yy:exp, _t:eq yy yy]}
          [g |- #p.2] => e2
 
       | [g |- eq_lam \x.\u. D1] =>

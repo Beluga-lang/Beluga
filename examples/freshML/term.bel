@@ -110,7 +110,7 @@ FN g => fn l => case l of
 
  | [g,x:term] cons (#p ) L =>
   let [g] L' = rm [g] ([g,x] L) in
-   [g] cons (#p) (L')
+   [g] cons #p (L')
 
 ;
 
@@ -135,7 +135,7 @@ FN g => fn l => case l of
 rec fv : {g:(ctx)*} term[g] -> list [g] =
 FN g => fn t => case t of
 | [g] const I => [g] nil
-| [g] #p    => [g] cons (#p) nil
+| [g] #p    => [g] cons #p nil
 | [g] app T1 T2 =>
   append [g] (fv [g] ([g] T1))
           (fv [g] ([g] T2))

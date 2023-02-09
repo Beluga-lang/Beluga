@@ -20,11 +20,11 @@ embed : neut (atomic P) -> norm (atomic P).
 schema ctx = neut T;
 
 inductive NeutVar : {g:ctx} [ |- tp] -> ctype =
-| NeutVar : {#p:[g |- neut T[]]} NeutVar [g] [ |- T]
+| NeutVar/c : {#p:#[g |- neut T[]]} NeutVar [g] [ |- T]
 ;
 
 inductive TmVar : {g:tctx} [ |- tp] -> ctype =
-| TmVar : {#p:[g |- tm T[]]} TmVar [g] [ |- T]
+| TmVar/c : {#p:#[g |- tm T[]]} TmVar [g] [ |- T]
 ;
 stratified Sem : {g:ctx} [ |- tp] -> ctype =
 | Syn :  [g |- neut (atomic P[])] -> Sem [g] [ |- atomic P]
@@ -39,18 +39,18 @@ rec extendSub : ({T:[ |- tp]} NeutVar [g] [ |- T] ->  NeutVar [h] [ |- T])
 / total y (extendSub g h _ s t y) /
 fn s => let (s : {T:[ |- tp]} NeutVar [g] [ |- T] ->  NeutVar [h] [ |- T]) = s in
 (mlam T => fn y => case y of
-              | NeutVar [g,x:neut Tx[] |-  x ] => NeutVar [h,x:neut Tx[] |-  x]
-              | NeutVar [g,x:neut Tx[] |-  #p[..] ] =>
-                 let NeutVar [h |- #q] = s [ |- T] (NeutVar [g |- #p]) in
-                   NeutVar [h,x:neut Tx[] |-  #q[..]])
+              | NeutVar/c [g,x:neut Tx[] |-  x ] => NeutVar/c [h,x:neut Tx[] |-  x]
+              | NeutVar/c [g,x:neut Tx[] |-  #p[..] ] =>
+                 let NeutVar/c [h |- #q] = s [ |- T] (NeutVar/c [g |- #p]) in
+                   NeutVar/c [h,x:neut Tx[] |-  #q[..]])
 ;
 rec nsubst : {h:ctx}{g:ctx}{S:[|- tp]} ({T:[ |- tp]} NeutVar [g] [ |- T]  -> NeutVar [h] [ |- T])
            -> [g |- neut S[]]
            -> [h |- neut S[]] =
 / total n (nsubst g h _ s n ) /
 mlam h,g, S => fn s => fn e => case e of
-| {#p: [g |- neut T[]]}
-  [g |- #p ] => let NeutVar [h |- #q] = s [ |- T] (NeutVar [g |- #p ]) in [h |- #q]
+| {#p: #[g |- neut T[]]}
+  [g |- #p ] => let NeutVar/c [h |- #q] = s [ |- T] (NeutVar/c [g |- #p ]) in [h |- #q]
 | {R:[g |- neut (arr T[] S[])]}
   [g |- rapp R N] =>
   let [h |- R' ] = nsubst [h] [g] [|- arr T S] s [g |- R ] in
@@ -90,15 +90,15 @@ case e of
 
 rec weaken : {T:[ |- tp]} NeutVar [g] [ |- T] -> NeutVar [g,x:neut S[]] [ |- T] =
 / total (weaken) /
-mlam T => fn x => let NeutVar [g |- #p] = x in NeutVar [g,x:neut _ |-  #p[..]]
+mlam T => fn x => let NeutVar/c [g |- #p] = x in NeutVar/c [g,x:neut _ |-  #p[..]]
 ;
 
 rec extend : ({T:[ |- tp]} TmVar [g] [ |- T] -> Sem [h] [ |- T]) -> Sem [h] [ |- S]
 -> ({T:[ |- tp]} TmVar [g, x:tm S[]] [ |- T] ->  Sem [h] [ |- T]) =
 / total (extend) /
 fn s => fn e => mlam T => fn x => case x of
-| TmVar [g,x:tm S[] |-  x] => e
-| TmVar [g,x:tm S[] |-  #q[..] ] => s [ |- T ] (TmVar [g |- #q])
+| TmVar/c [g,x:tm S[] |-  x] => e
+| TmVar/c [g,x:tm S[] |-  #q[..] ] => s [ |- T ] (TmVar/c [g |- #q])
 ;
 
 rec id : {T:[ |- tp]} NeutVar [g] [ |- T] -> NeutVar [g] [ |- T] =
@@ -111,7 +111,7 @@ rec eval :  [g |- tm S[]] -> ({T:[ |- tp]} TmVar [g] [ |- T] -> Sem [h] [ |- T])
 fn t => fn s =>
 let (s :{T:[ |- tp]} TmVar [g] [ |- T] -> Sem [h] [ |- T]) = s in
 case t of
-| [g |- #p ]           : [g |- tm S[]] =>  s [ |- S] (TmVar [g |- #p ])
+| [g |- #p ]           : [g |- tm S[]] =>  s [ |- S] (TmVar/c [g |- #p ])
 | [g |- lam (\x. E) ] : [g |- tm (arr A[] B[])] =>
   Slam [h] [|- A] [|- B]
        (mlam h' => fn s' => fn e =>
@@ -150,7 +150,7 @@ mlam g, A => fn e => case [ |- A] of
 
 rec initialMap :  {T:[ |- tp]} TmVar [ ] [ |- T] -> Sem [ ] [ |- T] =
 / total (initialMap) /
-mlam T => fn y => let TmVar [ |- #p] = y in impossible [ |- #p] ;
+mlam T => fn y => let TmVar/c [ |- #p] = y in impossible [ |- #p] ;
 
 rec nbe : [ |- tm A] -> [ |- norm A] =
 / total (nbe) /

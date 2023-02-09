@@ -49,7 +49,7 @@ and neutral : tm A -> type =
 schema nctx = some [t:tp] block x:tm t, y:neutral x;
 
 inductive Halts : (gamma:nctx) {A:[ |- tp]}{M:[gamma |- tm A[]]} ctype =
-| Halts : {V:[gamma |- tm A[]]} [gamma |- mstep M V] -> [gamma |- normal V] -> Halts [ |- A] [gamma |- M];
+| Halts/c : {V:[gamma |- tm A[]]} [gamma |- mstep M V] -> [gamma |- normal V] -> Halts [ |- A] [gamma |- M];
 
 % -----------------------------------------------------------------------------
 % Reducibility Definition
@@ -66,7 +66,7 @@ stratified Reduce : (gamma:nctx) {A:[ |- tp]}{M:[gamma |- tm A[]]} ctype =
 | Base : Halts [ |- i] [gamma |- M] -> Reduce [ |- i] [gamma |- M]
 | Arr :  {M:[gamma |- tm (arr A[] B[])]}
 	 Halts [ |- arr A B] [gamma |- M] ->
-         ({phi:nctx} {$S:[phi |- gamma]} {N:[phi |- tm A[]]}
+         ({phi:nctx} {$S:$[phi |- gamma]} {N:[phi |- tm A[]]}
             Reduce [ |- A] [phi |- N]
           -> Reduce [ |- B ] [phi |- app M[$S] N])
          -> Reduce [ |- arr A B] [gamma |-  M];
@@ -81,14 +81,14 @@ rec closed : {A:[|- tp]}{M:[g |- tm A[]]}{M':[g |- tm A[]]}
 / total a (closed _ a) /
 mlam A,M,M',S => fn r => case [|- A] of
 | [|- i] =>
-   let Base (Halts [g |- V] [g |- S'] v) = r in
-     Base (Halts [g |- V] [g |- s_trans S S'] v)
+   let Base (Halts/c [g |- V] [g |- S'] v) = r in
+     Base (Halts/c [g |- V] [g |- s_trans S S'] v)
 
 | [|- arr A B] =>
-  let Arr [g |- M] (Halts [g |- V] [g |- S'] v) f = r in
-  Arr [g |- _] (Halts [g |- V] [g |- s_trans S S'] v)
+  let Arr [g |- M] (Halts/c [g |- V] [g |- S'] v) f = r in
+  Arr [g |- _] (Halts/c [g |- V] [g |- s_trans S S'] v)
   (mlam h => mlam $W => mlam N => fn rn =>
-    closed [ |- B] [h |- _ ] [h |- _ ] [h |- s_app1 S[$W]] (f [h] [h |- $W] [h |- N] rn))
+    closed [ |- B] [h |- _ ] [h |- _ ] [h |- s_app1 S[$W]] (f [h] $[h |- $W] [h |- N] rn))
 ;
 
 rec m_closed : (g:nctx) [g |- mstep M M'] -> Reduce [ |- A] [g |- M'] -> Reduce [ |- A] [g |- M] =
@@ -125,11 +125,11 @@ mlam M => fn s => case s of
 rec reflect : {gamma:nctx}{A:[|-tp]}{R:[gamma |- tm A[]]}{NR:[gamma |- neutral R]} Reduce [ |- A] [gamma |- R] =
 / total a (reflect gamma a) /
 mlam gamma, A,R,NR => case [ |- A] of
-| [ |- i] => Base (Halts [gamma |- R] [gamma |- s_refl] [gamma |- n_neut NR])
+| [ |- i] => Base (Halts/c [gamma |- R] [gamma |- s_refl] [gamma |- n_neut NR])
 | [ |- arr A B] =>
-  Arr [gamma |- R] (Halts [gamma |- R] [gamma |- s_refl] [gamma |- n_neut NR])
+  Arr [gamma |- R] (Halts/c [gamma |- R] [gamma |- s_refl] [gamma |- n_neut NR])
   (mlam h => mlam $W => mlam M2 => fn rm2 =>
-    let Halts [_ |- _] ms [_ |- N] = reify [h] [|- A] [h |- M2] rm2 in
+    let Halts/c [_ |- _] ms [_ |- N] = reify [h] [|- A] [h |- M2] rm2 in
     m_closed  (m_app2 _ ms)
              (reflect [h] [|- B] [h |- _ ] [_ |- n_app NR[$W] N]))
 
@@ -145,34 +145,34 @@ mlam g,A,M => fn r => case [|- A] of
 % -----------------------------------------------------------------------------
 % Defining reducibility of simultaneous substitutions.
 
-inductive LogSub : {g:ctx}(h:nctx){$S:[h |- g]} ctype =
-| Nil : LogSub [] [h |- ^ ]
-| Dot : LogSub [g] [h |- $S ] -> Reduce [ |- A] [h |- M] -> LogSub [g,x:tm A[]] [h |- $S, M ];
+inductive LogSub : {g:ctx}(h:nctx){$S:$[h |- g]} ctype =
+| Nil : LogSub [] $[h |- ^ ]
+| Dot : LogSub [g] $[h |- $S ] -> Reduce [ |- A] [h |- M] -> LogSub [g,x:tm A[]] $[h |- $S, M ];
 
 % Lemmas about reducible simultaneous substitutions.
 % Weakening a term M that is reducible at type A
-rec monotone : (h:nctx) {$W:[h |- g]} Reduce  [ |- A] [g |- M] -> Reduce [ |- A] [h |- M[$W]] =
+rec monotone : (h:nctx) {$W:$[h |- g]} Reduce  [ |- A] [g |- M] -> Reduce [ |- A] [h |- M[$W]] =
 / total (monotone) /
 mlam $W => fn r =>
 case r of
-| Base (Halts [_ |- _] [g |- S] [g |- NR]) => Base (Halts _ [_ |- S[$W]] [_ |- NR[$W]])
-| Arr [g |- M] (Halts [_ |- _] [g |- S] [g |- NR]) f =>
-  Arr [_ |- M[$W]] (Halts _ [_ |- S[$W]] [_ |- NR[$W]])
+| Base (Halts/c [_ |- _] [g |- S] [g |- NR]) => Base (Halts/c _ [_ |- S[$W]] [_ |- NR[$W]])
+| Arr [g |- M] (Halts/c [_ |- _] [g |- S] [g |- NR]) f =>
+  Arr [_ |- M[$W]] (Halts/c _ [_ |- S[$W]] [_ |- NR[$W]])
    (mlam h', $W2, N => fn rn =>
     f [h'] [h' |- $W[$W2]] [h' |-  N] rn);
 
 
 % Composing a reducible substitution with a variable substitution yields a
 % reducible substitution
-rec monotoneSub : {$W:[h' |- h]} LogSub [g] [h |- $S] -> LogSub [g] [h' |- $S[$W]] =
+rec monotoneSub : {$W:$[h' |- h]} LogSub [g] $[h |- $S] -> LogSub [g] [h' |- $S[$W]] =
 / total rs (monotoneSub _ _ _ _ _ rs) /
 mlam $W => fn rs => case rs of
 | Nil => Nil
-| Dot rs' rN => Dot (monotoneSub [_ |- $W] rs') (monotone [_ |- $W] rN);
+| Dot rs' rN => Dot (monotoneSub $[_ |- $W] rs') (monotone $[_ |- $W] rN);
 
 % If sigma is a reducible substitution then applying sigma to a variable yields a term
 % that is reducible
-rec redVar : {g:ctx}{#p:[g |- tm A[]]} LogSub [g] [h |- $S] ->  Reduce [ |- A] [h |- #p[$S] ] =
+rec redVar : {g:ctx}{#p:#[g |- tm A[]]} LogSub [g] $[h |- $S] ->  Reduce [ |- A] [h |- #p[$S] ] =
 / total g (redVar g) /
 mlam g, #p => fn rs => case [g] of
 | [] => impossible [ |- #p]
@@ -185,25 +185,25 @@ mlam g, #p => fn rs => case [g] of
 % If g |- M : A   and  h |- sigma : g   and sigma is reducible
 % then M[sigma] is reducible at type A in the context h.
 
-rec eval : {M:[gamma |- tm A[]]} LogSub [gamma] [phi |- $S ] -> Reduce [ |- A] [phi |- M[$S] ] =
+rec eval : {M:[gamma |- tm A[]]} LogSub [gamma] $[phi |- $S ] -> Reduce [ |- A] [phi |- M[$S] ] =
 / total m (eval gamma phi a sigma m) /
-mlam M => fn rs => let (rs : LogSub [gamma] [phi |- $S] ) = rs in
+mlam M => fn rs => let (rs : LogSub [gamma] $[phi |- $S] ) = rs in
  case [gamma |- M] of
 | [gamma |-  #p] => redVar [gamma] [gamma |-  #p] rs
 | [gamma |-  app M1 M2]  =>
   let Arr [phi |- _ ] h f = eval [gamma |-  M1]  rs in
-   f [phi] [phi |- ..] [phi |- M2[$S]] (eval [gamma |-  M2] rs)
+   f [phi] $[phi |- ..] [phi |- M2[$S]] (eval [gamma |-  M2] rs)
 | [gamma |-  lam (\x. M1)] =>
    let rx = reflect [phi,b:block x:tm _,y:neutral x] _ [phi,b |- b.1] [phi,b |- b.2] in
    let q0 = eval [gamma,x:tm _ |- M1]
-                 (Dot (monotoneSub [phi,b:block x:tm _,y:neutral x |- ..] rs) rx) in
+                 (Dot (monotoneSub $[phi,b:block x:tm _,y:neutral x |- ..] rs) rx) in
    let
-        Halts [phi,b:block x:tm A1[],y:neutral x |- _]
+        Halts/c [phi,b:block x:tm A1[],y:neutral x |- _]
               [phi,b:block x:tm A1[],y:neutral x |- MS]
               [phi,b:block x:tm A1[],y:neutral x |- NV]
      = reify [phi,b:block x:tm _,y:neutral x] _ [phi,b |- M1[$S[..],b.1]] q0 in
    Arr [phi |- lam (\x. M1[$S[..], x])]
-   (Halts _
+   (Halts/c _
      (m_lam [phi, x:tm A1[]  |- M1[$S[..],x]]  [phi, b:block (x:tm A1[], y:neutral x) |- MS])
      [phi |- n_lam (\x.\y. NV[..,<x;y>])])
    (mlam psi,$W,N => fn rN =>
@@ -215,22 +215,22 @@ mlam M => fn rs => let (rs : LogSub [gamma] [phi |- $S] ) = rs in
 % THEOREM: Well-typed terms halt.
 
 % $Id is a substitution which moves from a term context to a neutral term context in the obvious way
-inductive IdSub : (g':nctx){g:ctx}{$Id:[g' |- g]} ctype =
-| INil : IdSub [] [|- ^]
-| ISnoc : IdSub [g] [g' |- $Id] -> IdSub [g,x:tm A[]] [g',b:block x:tm A[],y:neutral x |- $Id[..], b.1];
+inductive IdSub : (g':nctx){g:ctx}{$Id:$[g' |- g]} ctype =
+| INil : IdSub [] $[|- ^]
+| ISnoc : IdSub [g] $[g' |- $Id] -> IdSub [g,x:tm A[]] $[g',b:block x:tm A[],y:neutral x |- $Id[..], b.1];
 
-rec idLogSub : IdSub [g] [g' |- $Id] -> LogSub [g] [g' |- $Id] =
+rec idLogSub : IdSub [g] $[g' |- $Id] -> LogSub [g] $[g' |- $Id] =
 / total r (idLogSub g g s r) /
 fn r => case r of
 | INil => Nil
 | ISnoc r' =>
-  Dot (monotoneSub [_,b:block x:tm _,y:neutral x |- ..] (idLogSub r'))
+  Dot (monotoneSub $[_,b:block x:tm _,y:neutral x |- ..] (idLogSub r'))
       (reflect [_] _ _ [_,b:block x:tm _,y:neutral x |- b.2])
 ;
 
-rec weakNorm : {M:[g |- tm A[]]} IdSub [g] [g' |- $Id] -> Halts  [ |- A] [g' |- M[$Id]] =
+rec weakNorm : {M:[g |- tm A[]]} IdSub [g] $[g' |- $Id] -> Halts  [ |- A] [g' |- M[$Id]] =
 / total (weakNorm) /
 mlam M => fn s => reify [_] _ _ (eval [_ |- M] (idLogSub s));
 
-% We probably want to show also that for any g:ctx there exists g':nctx and $Id:[g' |- g]
-% such that IdSub [g] [g' |- $Id]...
+% We probably want to show also that for any g:ctx there exists g':nctx and $Id:$[g' |- g]
+% such that IdSub [g] $[g' |- $Id]...

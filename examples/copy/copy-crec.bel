@@ -16,10 +16,10 @@ LF term : tp -> type =
 schema tctx = some [t:tp] term t;
 % schema W = term nat;
 
-rec copy : (g:tctx) [g |- term (T[])] -> [g |- term (T[])] =
+rec copy : (g:tctx) [g |- term T[]] -> [g |- term T[]] =
 / total e (copy _ _ e) /
 fn e => case e of
-| [g |- #p]    => [g |- (#p)]
+| [g |- #p]    => [g |- #p]
 
 | [g |- z]      => [g |- z]
 

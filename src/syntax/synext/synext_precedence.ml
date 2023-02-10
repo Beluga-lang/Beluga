@@ -235,7 +235,7 @@ module Comp_precedence = struct
 
   let type_application_precedence = 4
 
-  let expression_application_precedence = 2
+  let expression_application_precedence = 3
 
   let pattern_application_precedence = 3
 
@@ -287,6 +287,13 @@ module Comp_precedence = struct
   let precedence_of_comp_expression expression =
     match expression with
     | Comp.Expression.Type_annotated _ -> Static 1
+    | Comp.Expression.Let _
+    | Comp.Expression.Impossible _
+    | Comp.Expression.Case _
+    | Comp.Expression.Fn _
+    | Comp.Expression.Mlam _
+    | Comp.Expression.Fun _ ->
+        Static 2
     | Comp.Expression.Application
         { applicand =
             ( Comp.Expression.Constructor { operator; prefixed; _ }
@@ -309,13 +316,6 @@ module Comp_precedence = struct
         User_defined_expression (Operator.precedence operator)
     | Comp.Expression.Application _ ->
         Static expression_application_precedence
-    | Comp.Expression.Let _
-    | Comp.Expression.Impossible _
-    | Comp.Expression.Case _
-    | Comp.Expression.Fn _
-    | Comp.Expression.Mlam _
-    | Comp.Expression.Fun _ ->
-        Static 3
     | Comp.Expression.Observation _ -> Static 4
     | Comp.Expression.Hole _
     | Comp.Expression.Box _

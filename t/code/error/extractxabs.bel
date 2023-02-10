@@ -5,7 +5,7 @@ LF nat: type =
 
 LF tm : type =
 | z    : tm
-| suc  : (tm) → tm
+| suc  : tm → tm
 | app  : tm → tm → tm
 | lam  : (tm → tm) → tm
 ;

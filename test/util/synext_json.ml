@@ -1614,7 +1614,7 @@ and json_of_signature_entry = function
           ; ("location", json_of_location location)
           ]
   | Signature.Entry.Comment { content; location } ->
-      json_of_variant ~name:"Signature.Declaration.Comment"
+      json_of_variant ~name:"Signature.Entry.Comment"
         ~data:
           [ ("content", json_of_string content)
           ; ("location", json_of_location location)

@@ -476,7 +476,7 @@ module Make
         | `let' <comp-pattern-object> `=' <comp-expression-object> `in' <comp-expression-object>
         | <boxed-meta-object-thing>
         | `impossible' <comp-expression-object>
-        | `case' <comp-expression-object> [`--not'] `of'
+        | `case' <comp-expression-object> `of' [`--not']
           [`|'] <comp-pattern-object> <thick-forward-arrow> <comp-expression-object>
           (`|' <comp-pattern-object> <thick-forward-arrow> <comp-expression-object>)*
         | `(' <comp-expression-object> (`,' <comp-expression-object>)+ `)'
@@ -499,20 +499,20 @@ module Make
         | <comp-expression-object2>
 
       <comp-expression-object2> ::=
-        | <comp-expression-object3> <comp-expression-object3>+
-        | <comp-expression-object3>
-
-      <comp-expression-object3> ::=
         | `fn' <omittable-identifier>+ <thick-forward-arrow> <comp-expression>
         | `fun' [`|'] <comp-pattern-atomic-object>+ <thick-forward-arrow> <comp-expression-object>
-          (`|' <comp-pattern-atomic-object>+ <thick-forward-arrow> <comp-expression-object>)*
+        (`|' <comp-pattern-atomic-object>+ <thick-forward-arrow> <comp-expression-object>)*
         | `mlam' <omittable-meta-object-identifier>+ <thick-forward-arrow> <comp-expression-object>
         | `let' <comp-pattern-object> `=' <comp-expression-object> `in' <comp-expression-object>
         | `impossible' <comp-expression-object>
-        | `case' <comp-expression-object> [`--not'] `of'
-          [`|'] <comp-pattern-object> <thick-forward-arrow> <comp-expression-object>
-          (`|' <comp-pattern-object> <thick-forward-arrow> <comp-expression-object>)*
-        | <comp-expresion-object4>
+        | `case' <comp-expression-object> `of' [`--not']
+        [`|'] <comp-pattern-object> <thick-forward-arrow> <comp-expression-object>
+        (`|' <comp-pattern-object> <thick-forward-arrow> <comp-expression-object>)*
+        | <comp-expresion-object3>
+
+      <comp-expression-object3> ::=
+          | <comp-expression-object4> <comp-expression-object4>+
+          | <comp-expression-object4>
 
       <comp-expresion-object4> ::=
         | <comp-expresion-object5> <dot-qualified-identifier>+
@@ -600,6 +600,14 @@ module Make
       |> labelled "Computational atomic or observation expression"
 
     let comp_expression_object3 =
+      some comp_expression_object4 |> span $> function
+      | _, List1.T (expression, []) -> expression
+      | location, List1.T (x1, x2 :: xs) ->
+          let expressions = List2.from x1 x2 xs in
+          Synprs.Comp.Expression_object.Raw_application
+            { location; expressions }
+
+    let comp_expression_object2 =
       let comma_opt =
         (*= Optionally parse a comma, for backwards compatibility with
           `fn x1, x2, ..., xn => e' and `mlam X1, X2, ..., Xn => e'. *)
@@ -675,16 +683,8 @@ module Make
         ; let_
         ; impossible
         ; case
-        ; comp_expression_object4
+        ; comp_expression_object3
         ]
-
-    let comp_expression_object2 =
-      some comp_expression_object3 |> span $> function
-      | _, List1.T (expression, []) -> expression
-      | location, List1.T (x1, x2 :: xs) ->
-          let expressions = List2.from x1 x2 xs in
-          Synprs.Comp.Expression_object.Raw_application
-            { location; expressions }
 
     let comp_expression_object1 =
       let annotation = colon &> comp_sort_object in

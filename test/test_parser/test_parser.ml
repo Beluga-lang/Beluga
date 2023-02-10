@@ -5,4 +5,5 @@ let () =
     ("Parser"
     >::: [ "Shunting-yard" >::: Test_shunting_yard.tests
          ; "Sub-parsers" >::: Test_sub_parsers.tests
+         ; "Parsing pretty-printed signatures" >::: Test_pp.tests
          ])

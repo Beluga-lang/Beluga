@@ -1,6 +1,8 @@
 open Test_beluga_parser_fixtures_lib
 open Beluga_syntax
 module Parser = Beluga_parser.Simple
+open Parser
+open Util.Synext_json
 
 let usage_message =
   {|
@@ -27,53 +29,30 @@ let usage_message =
     - "signature"
   |}
 
-let parse_lf_kind_to_json state =
-  let kind = Beluga_parser.Simple.parse_only_lf_kind state in
-  Util.Synext_json.json_of_lf_kind kind
+let parse_lf_kind_to_json = parse_only_lf_kind $> json_of_lf_kind
 
-let parse_lf_typ_to_json state =
-  let typ = Beluga_parser.Simple.parse_only_lf_typ state in
-  Util.Synext_json.json_of_lf_typ typ
+let parse_lf_typ_to_json = parse_only_lf_typ $> json_of_lf_typ
 
-let parse_lf_term_to_json state =
-  let term = Beluga_parser.Simple.parse_only_lf_term state in
-  Util.Synext_json.json_of_lf_term term
+let parse_lf_term_to_json = parse_only_lf_term $> json_of_lf_term
 
-let parse_clf_typ_to_json state =
-  let typ = Beluga_parser.Simple.parse_only_clf_typ state in
-  Util.Synext_json.json_of_clf_typ typ
+let parse_clf_typ_to_json = parse_only_clf_typ $> json_of_clf_typ
 
-let parse_clf_term_to_json state =
-  let term = Beluga_parser.Simple.parse_only_clf_term state in
-  Util.Synext_json.json_of_clf_term term
+let parse_clf_term_to_json = parse_only_clf_term $> json_of_clf_term
 
-let parse_meta_type_to_json state =
-  let typ = Beluga_parser.Simple.parse_only_meta_typ state in
-  Util.Synext_json.json_of_meta_typ typ
+let parse_meta_type_to_json = parse_only_meta_typ $> json_of_meta_typ
 
-let parse_meta_object_to_json state =
-  let object_ = Beluga_parser.Simple.parse_only_meta_object state in
-  Util.Synext_json.json_of_meta_object object_
+let parse_meta_object_to_json = parse_only_meta_object $> json_of_meta_object
 
-let parse_schema_to_json state =
-  let schema = Beluga_parser.Simple.parse_only_schema state in
-  Util.Synext_json.json_of_schema schema
+let parse_schema_to_json = parse_only_schema $> json_of_schema
 
-let parse_comp_kind_to_json state =
-  let kind = Beluga_parser.Simple.parse_only_comp_kind state in
-  Util.Synext_json.json_of_comp_kind kind
+let parse_comp_kind_to_json = parse_only_comp_kind $> json_of_comp_kind
 
-let parse_comp_typ_to_json state =
-  let typ = Beluga_parser.Simple.parse_only_comp_typ state in
-  Util.Synext_json.json_of_comp_typ typ
+let parse_comp_typ_to_json = parse_only_comp_typ $> json_of_comp_typ
 
-let parse_comp_expression_to_json state =
-  let expression = Beluga_parser.Simple.parse_only_comp_expression state in
-  Util.Synext_json.json_of_comp_expression expression
+let parse_comp_expression_to_json =
+  parse_only_comp_expression $> json_of_comp_expression
 
-let parse_signature_to_json state =
-  let expression = Beluga_parser.Simple.parse_only_signature state in
-  Util.Synext_json.json_of_signature expression
+let parse_signature_to_json = parse_only_signature $> json_of_signature
 
 exception Unsupported_variant of string
 
@@ -116,7 +95,7 @@ let generate_outputs ~state_filename ~input_filename ~output_filename
              Parser.make_initial_state_from_string ~disambiguation_state
                ~initial_location ~input
            in
-           parse_test_case state)
+           eval parse_test_case state)
          test_cases)
   in
   Support.Files.with_pp_to_file output_filename (fun ppf ->

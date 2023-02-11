@@ -136,6 +136,81 @@ struct
     let* () = put_disambiguation_state disambiguation_state' in
     return disambiguated
 
+  let parse_and_disambiguate ~parser ~disambiguator =
+    let* parsed = parse (run_exn parser) in
+    let* disambiguated = disambiguate (disambiguator parsed) in
+    return disambiguated
+
+  let parse_only_lf_kind =
+    parse_and_disambiguate ~parser:(only lf_kind)
+      ~disambiguator:disambiguate_lf_kind
+
+  let parse_only_lf_typ =
+    parse_and_disambiguate ~parser:(only lf_typ)
+      ~disambiguator:disambiguate_lf_typ
+
+  let parse_only_lf_term =
+    parse_and_disambiguate ~parser:(only lf_term)
+      ~disambiguator:disambiguate_lf_term
+
+  let parse_only_clf_typ =
+    parse_and_disambiguate ~parser:(only clf_typ)
+      ~disambiguator:disambiguate_clf_typ
+
+  let parse_only_clf_term =
+    parse_and_disambiguate ~parser:(only clf_term)
+      ~disambiguator:disambiguate_clf_term
+
+  let parse_only_clf_substitution =
+    parse_and_disambiguate ~parser:(only clf_substitution)
+      ~disambiguator:disambiguate_clf_substitution
+
+  let parse_only_meta_typ =
+    parse_and_disambiguate ~parser:(only meta_type)
+      ~disambiguator:disambiguate_meta_typ
+
+  let parse_only_meta_object =
+    parse_and_disambiguate ~parser:(only meta_object)
+      ~disambiguator:disambiguate_meta_object
+
+  let parse_only_schema =
+    parse_and_disambiguate ~parser:(only schema)
+      ~disambiguator:disambiguate_schema
+
+  let parse_only_comp_kind =
+    parse_and_disambiguate ~parser:(only comp_kind)
+      ~disambiguator:disambiguate_comp_kind
+
+  let parse_only_comp_typ =
+    parse_and_disambiguate ~parser:(only comp_typ)
+      ~disambiguator:disambiguate_comp_typ
+
+  let parse_only_comp_expression =
+    parse_and_disambiguate ~parser:(only comp_expression)
+      ~disambiguator:disambiguate_comp_expression
+
+  let parse_only_signature =
+    parse_and_disambiguate ~parser:(only signature)
+      ~disambiguator:disambiguate_signature
+end
+
+module Located_token = struct
+  type t = Location.t * Token.t
+
+  type location = Location.t
+
+  let location = Pair.fst
+end
+
+module Simple = struct
+  module Parser_state =
+    Parser_combinator.Make_persistent_state (Located_token)
+
+  module Disambiguation_state =
+    Common_disambiguation.Persistent_disambiguation_state
+
+  include Make (Parser_state) (Disambiguation_state)
+
   let make_initial_parser_state_from_channel ~initial_location input =
     let token_sequence = Lexer.lex_input_channel ~initial_location input in
     Parser_state.initial ~initial_location token_sequence
@@ -157,76 +232,6 @@ struct
       make_initial_parser_state_from_string ~initial_location input
     in
     make ~disambiguation_state ~parser_state
-
-  let parse_and_disambiguate ~parser ~disambiguator =
-    let* parsed = parse (run_exn parser) in
-    let* disambiguated = disambiguate (disambiguator parsed) in
-    return disambiguated
-
-  let parse_only_lf_kind =
-    eval
-      (parse_and_disambiguate ~parser:(only lf_kind)
-         ~disambiguator:disambiguate_lf_kind)
-
-  let parse_only_lf_typ =
-    eval
-      (parse_and_disambiguate ~parser:(only lf_typ)
-         ~disambiguator:disambiguate_lf_typ)
-
-  let parse_only_lf_term =
-    eval
-      (parse_and_disambiguate ~parser:(only lf_term)
-         ~disambiguator:disambiguate_lf_term)
-
-  let parse_only_clf_typ =
-    eval
-      (parse_and_disambiguate ~parser:(only clf_typ)
-         ~disambiguator:disambiguate_clf_typ)
-
-  let parse_only_clf_term =
-    eval
-      (parse_and_disambiguate ~parser:(only clf_term)
-         ~disambiguator:disambiguate_clf_term)
-
-  let parse_only_clf_substitution =
-    eval
-      (parse_and_disambiguate ~parser:(only clf_substitution)
-         ~disambiguator:disambiguate_clf_substitution)
-
-  let parse_only_meta_typ =
-    eval
-      (parse_and_disambiguate ~parser:(only meta_type)
-         ~disambiguator:disambiguate_meta_typ)
-
-  let parse_only_meta_object =
-    eval
-      (parse_and_disambiguate ~parser:(only meta_object)
-         ~disambiguator:disambiguate_meta_object)
-
-  let parse_only_schema =
-    eval
-      (parse_and_disambiguate ~parser:(only schema)
-         ~disambiguator:disambiguate_schema)
-
-  let parse_only_comp_kind =
-    eval
-      (parse_and_disambiguate ~parser:(only comp_kind)
-         ~disambiguator:disambiguate_comp_kind)
-
-  let parse_only_comp_typ =
-    eval
-      (parse_and_disambiguate ~parser:(only comp_typ)
-         ~disambiguator:disambiguate_comp_typ)
-
-  let parse_only_comp_expression =
-    eval
-      (parse_and_disambiguate ~parser:(only comp_expression)
-         ~disambiguator:disambiguate_comp_expression)
-
-  let parse_only_signature =
-    eval
-      (parse_and_disambiguate ~parser:(only signature)
-         ~disambiguator:disambiguate_signature)
 
   let parse_multi_file_signature files =
     let (List1.T (x, xs)) = files in
@@ -264,18 +269,3 @@ struct
     in
     signature'
 end
-
-module Located_token = struct
-  type t = Location.t * Token.t
-
-  type location = Location.t
-
-  let location = Pair.fst
-end
-
-module Simple_parser_state = Parser_combinator.Make_state (Located_token)
-
-module Simple_disambiguation_state =
-  Common_disambiguation.Persistent_disambiguation_state
-
-module Simple = Make (Simple_parser_state) (Simple_disambiguation_state)

@@ -21,7 +21,7 @@ let parser_ok_tests ~disambiguation_state ~ok_inputs_filename
   in
   let test_success disambiguation_state location input expected _test_ctxt =
     let state = make_parser_state disambiguation_state location input in
-    let parsed = parse state in
+    let parsed = Parser.eval parse state in
     let actual = json_of_parse parsed in
     assert_json_equal ~expected ~actual
   in
@@ -39,7 +39,7 @@ let parser_failure_tests ~disambiguation_state ~error_inputs_filename parse =
   in
   let test_failure disambiguation_state location input _test_ctxt =
     let state = make_parser_state disambiguation_state location input in
-    assert_exn (fun () -> ignore (parse state))
+    assert_exn (fun () -> ignore (Parser.eval parse state))
   in
   let failure_test_cases = error_inputs in
   failure_test_cases

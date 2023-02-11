@@ -643,12 +643,14 @@ module Make
   let with_meta_function_parameters = with_meta_function_parameters_list1
 
   let with_pattern_variables ~pattern ~expression =
-    try_catch (with_pattern_variables ~pattern ~expression) ~on_exn:(function
-      | Duplicate_pattern_variables duplicates ->
-          Error.raise_at
-            (List2.to_list1 (List2.map Identifier.location duplicates))
-            Illegal_duplicate_pattern_variables
-      | cause -> Error.raise cause)
+    try_catch
+      (lazy (with_pattern_variables ~pattern ~expression))
+      ~on_exn:(function
+        | Duplicate_pattern_variables duplicates ->
+            Error.raise_at
+              (List2.to_list1 (List2.map Identifier.location duplicates))
+              Illegal_duplicate_pattern_variables
+        | cause -> Error.raise cause)
 
   (** {1 Disambiguation} *)
 

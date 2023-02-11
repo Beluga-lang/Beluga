@@ -87,14 +87,10 @@ module type DISAMBIGUATION_STATE = sig
 
   val lookup_toplevel : Identifier.t -> (entry * data, exn) result t
 
-  val lookup' :
-       Qualified_identifier.t
-    -> ((entry * data) * (entry * data) Binding_tree.t) t
-
   val lookup : Qualified_identifier.t -> (entry * data, exn) result t
 
-  val partial_lookup' :
-       Identifier.t List1.t
+  val partial_lookup :
+       Qualified_identifier.t
     -> [ `Partially_bound of
          (Identifier.t * (entry * data)) List1.t * Identifier.t List1.t
        | `Totally_bound of (Identifier.t * (entry * data)) List1.t
@@ -102,8 +98,8 @@ module type DISAMBIGUATION_STATE = sig
        ]
        t
 
-  val partial_lookup :
-       Qualified_identifier.t
+  val partial_lookup' :
+       Identifier.t List1.t
     -> [ `Partially_bound of
          (Identifier.t * (entry * data)) List1.t * Identifier.t List1.t
        | `Totally_bound of (Identifier.t * (entry * data)) List1.t

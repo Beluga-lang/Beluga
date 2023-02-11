@@ -105,7 +105,7 @@ struct
     end) :
       State.STATE with type state := state)
 
-  let[@inline] make ~disambiguation_state ~parser_state =
+  let[@inline] make_state ~disambiguation_state ~parser_state =
     { parser_state; disambiguation_state }
 
   let[@inline] put_parser_state parser_state =
@@ -224,14 +224,14 @@ module Simple = struct
     let parser_state =
       make_initial_parser_state_from_channel ~initial_location channel
     in
-    make ~disambiguation_state ~parser_state
+    make_state ~disambiguation_state ~parser_state
 
   let make_initial_state_from_string ~disambiguation_state ~initial_location
       ~input =
     let parser_state =
       make_initial_parser_state_from_string ~initial_location input
     in
-    make ~disambiguation_state ~parser_state
+    make_state ~disambiguation_state ~parser_state
 
   let parse_multi_file_signature files =
     let (List1.T (x, xs)) = files in

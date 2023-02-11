@@ -17,6 +17,11 @@ let int_list_printer = Format.stringify (pp_print_list Int.pp)
 let assert_int_list_equal =
   OUnit2.assert_equal ~cmp:(List.equal Int.equal) ~printer:int_list_printer
 
+let int_printer = Format.asprintf "%d"
+
+let assert_int_equal =
+  OUnit2.assert_equal ~cmp:Int.equal ~printer:int_printer
+
 let int_list1_printer =
   Format.asprintf "@[<hov 2>[%a]@]"
     (List1.pp
@@ -142,6 +147,24 @@ let test_flatten =
   in
   success_tests
 
+let test_unsnoc =
+  let test_success l (xs, x) _test_ctxt =
+    let ys, y = List1.unsnoc l in
+    assert_int_equal x y;
+    assert_int_list_equal xs ys
+  in
+  let success_test_cases =
+    [ (List1.from 1 [], ([], 1))
+    ; (List1.from 1 [ 2; 3; 4 ], ([ 1; 2; 3 ], 4))
+    ]
+  in
+  let success_tests =
+    success_test_cases
+    |> List.map (fun (l, expected) ->
+           OUnit2.test_case (test_success l expected))
+  in
+  success_tests
+
 let tests =
   let open OUnit2 in
   "List1"
@@ -152,4 +175,5 @@ let tests =
        ; "map" >::: test_map
        ; "map2" >::: test_map2
        ; "flatten" >::: test_flatten
+       ; "unsnoc" >::: test_unsnoc
        ]

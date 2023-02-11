@@ -79,18 +79,6 @@ let thick_arrow = [%sedlex.regexp? "=>" | 0x21d2]
 
 let dots = [%sedlex.regexp? ".." | 0x2026]
 
-let doc_comment_begin = [%sedlex.regexp? "%{{"]
-
-let doc_comment_end = [%sedlex.regexp? "}}%"]
-
-(** Basically, anything that doesn't terminate the block comment. This is
-    somewhat tricky to detect. *)
-let doc_comment_char =
-  [%sedlex.regexp? Compl '}' | '}', Compl '}' | "}}", Compl '%']
-
-let doc_comment =
-  [%sedlex.regexp? doc_comment_begin, Star doc_comment_char, doc_comment_end]
-
 let string_literal =
   [%sedlex.regexp? '"', Star ('\\', any | Sub (any, ('"' | '\\'))), '"']
 
@@ -105,10 +93,12 @@ let rec tokenize lexbuf =
         Sedlexing.lexing_positions lexbuf
       in
       Sedlexing.rollback lexbuf;
-      let location, contents =
-        tokenize_documentation_comment start_position (Buffer.create 16)
-          ~level:0 lexbuf
+      let documentation_comment_buffer = Buffer.create 16 in
+      let location =
+        tokenize_documentation_comment start_position
+          documentation_comment_buffer ~level:0 lexbuf
       in
+      let contents = Buffer.contents documentation_comment_buffer in
       let contents' =
         String.trim
           (String.sub contents (String.length "%{{")
@@ -127,10 +117,10 @@ let rec tokenize lexbuf =
       tokenize_line_comment lexbuf
   (* STRING LITERALS *)
   | string_literal ->
-      let delimiter_length = String.length "\"" in
       let s =
-        Sedlexing.Utf8.sub_lexeme lexbuf delimiter_length
-          (Sedlexing.lexeme_length lexbuf - (2 * delimiter_length))
+        Sedlexing.Utf8.sub_lexeme lexbuf (String.length "\"")
+          (Sedlexing.lexeme_length lexbuf
+          - String.length "\"" - String.length "\"")
       in
       let s' =
         try Scanf.unescaped s with
@@ -298,7 +288,9 @@ and tokenize_block_comment ~level lexbuf =
       if level' = 0 then tokenize lexbuf
       else tokenize_block_comment ~level:level' lexbuf
   | any -> tokenize_block_comment ~level lexbuf
-  | eof -> Error.raise_at1 (get_location lexbuf) Unterminated_block_comment
+  | eof ->
+      assert (level > 0);
+      Error.raise_at1 (get_location lexbuf) Unterminated_block_comment
   | _ ->
       let s = Sedlexing.Utf8.lexeme lexbuf in
       Error.raise_at1 (get_location lexbuf) (Unlexable_character s)
@@ -323,7 +315,7 @@ and tokenize_documentation_comment start_position comment_buffer ~level
           Location.make_from_lexing_positions ~filename ~start_position
             ~stop_position
         in
-        (location, Buffer.contents comment_buffer)
+        location
       else
         tokenize_documentation_comment start_position comment_buffer
           ~level:level' lexbuf
@@ -332,6 +324,7 @@ and tokenize_documentation_comment start_position comment_buffer ~level
       tokenize_documentation_comment start_position comment_buffer ~level
         lexbuf
   | eof ->
+      assert (level > 0);
       Error.raise_at1 (get_location lexbuf)
         Unterminated_documentation_comment
   | _ ->

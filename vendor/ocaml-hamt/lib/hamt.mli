@@ -218,7 +218,7 @@ module type S = sig
       [t1] or in [t2]. If a key [k] is present in only one table, the
       corresponding value is chosen in the result. If it is bound to [v1] in
       [t1] and [v2] in [t2], the value in the result is [f k v1 v2]. *)
-  val union : (key -> 'a -> 'a -> 'a) -> 'a t -> 'a t -> 'a t
+  val union : (key -> 'a -> 'a -> 'a option) -> 'a t -> 'a t -> 'a t
 
   (** {2 Importing values from another structure} *)
 

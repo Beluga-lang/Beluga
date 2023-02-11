@@ -51,7 +51,7 @@ let add qualified_identifier entry ?(subtree = empty) tree =
       add_nested namespaces identifier { entry; subtree } tree)
 
 let add_all t1 t2 =
-  Identifier.Hamt.union (fun _identifier _e1 e2 -> e2) t1 t2
+  Identifier.Hamt.union (fun _identifier _e1 e2 -> Option.some e2) t1 t2
 
 let remove identifier tree =
   match Identifier.Hamt.find_opt identifier tree with

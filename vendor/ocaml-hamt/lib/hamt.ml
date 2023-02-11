@@ -160,7 +160,7 @@ module type S = sig
   val merge :
     (key -> 'a option -> 'b option -> 'c option) -> 'a t -> 'b t -> 'c t
 
-  val union : (key -> 'a -> 'a -> 'a) -> 'a t -> 'a t -> 'a t
+  val union : (key -> 'a -> 'a -> 'a option) -> 'a t -> 'a t -> 'a t
 
   module Import : sig
     module type FOLDABLE = sig
@@ -850,7 +850,7 @@ module Make (Config : CONFIG) (Key : Hashtbl.HashedType) :
         match (x, y) with
         | None, _ -> y
         | _, None -> x
-        | Some v1, Some v2 -> Some (f k v1 v2))
+        | Some v1, Some v2 -> f k v1 v2)
       t1 t2
 
   module Import = struct

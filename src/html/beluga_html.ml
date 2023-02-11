@@ -596,7 +596,7 @@ end) : BELUGA_HTML with type state = Html_state.state = struct
     match substitution with
     | { CLF.Substitution.head = CLF.Substitution.Head.None _; terms = []; _ }
       ->
-        Format.fprintf ppf "^"
+        ()
     | { CLF.Substitution.head = CLF.Substitution.Head.Identity _
       ; terms = []
       ; _
@@ -661,8 +661,7 @@ end) : BELUGA_HTML with type state = Html_state.state = struct
             (pp_clf_typ state) typ
     in
     match context with
-    | { CLF.Context.head = CLF.Context.Head.None _; bindings = []; _ } ->
-        Format.fprintf ppf "^"
+    | { CLF.Context.head = CLF.Context.Head.None _; bindings = []; _ } -> ()
     | { CLF.Context.head = CLF.Context.Head.Hole _; bindings = []; _ } ->
         Format.fprintf ppf "_"
     | { CLF.Context.head =
@@ -792,7 +791,7 @@ end) : BELUGA_HTML with type state = Html_state.state = struct
       ; terms = []
       ; _
       } ->
-        Format.fprintf ppf "^"
+        ()
     | { CLF.Substitution.Pattern.head =
           CLF.Substitution.Pattern.Head.Identity _
       ; terms = []
@@ -864,7 +863,7 @@ end) : BELUGA_HTML with type state = Html_state.state = struct
       ; bindings = []
       ; _
       } ->
-        Format.fprintf ppf "^"
+        ()
     | { CLF.Context.Pattern.head = CLF.Context.Pattern.Head.Hole _
       ; bindings = []
       ; _
@@ -1274,7 +1273,7 @@ end) : BELUGA_HTML with type state = Html_state.state = struct
           | Option.None -> Format.pp_print_string ppf "_"
           | Option.Some parameter -> pp_computation_variable ppf parameter
         in
-        Format.fprintf ppf "@[<hov 2>%a %a ⇒@ %a@]" pp_keyword "fn"
+        Format.fprintf ppf "%a %a ⇒@ %a" pp_keyword "fn"
           (List1.pp ~pp_sep:Format.pp_print_space pp_parameter)
           parameters
           (pp_comp_expression state)
@@ -1292,8 +1291,8 @@ end) : BELUGA_HTML with type state = Html_state.state = struct
         let pp_parameters =
           List1.pp ~pp_sep:Format.pp_print_space pp_parameter
         in
-        Format.fprintf ppf "@[<hov 2>%a %a ⇒@ %a@]" pp_keyword "mlam"
-          pp_parameters parameters
+        Format.fprintf ppf "%a %a ⇒@ %a" pp_keyword "mlam" pp_parameters
+          parameters
           (pp_comp_expression state)
           body
     | Comp.Expression.Fun { branches; _ } ->
@@ -1313,24 +1312,24 @@ end) : BELUGA_HTML with type state = Html_state.state = struct
                 (pp_comp_case_body state) body
         in
         let pp_branches = List1.pp ~pp_sep:Format.pp_print_cut pp_branch in
-        Format.fprintf ppf "@[<v 0>fun@ %a@]" pp_branches branches
+        Format.fprintf ppf "@[<v 0>%a@ %a@]" pp_keyword "fun" pp_branches
+          branches
     | Comp.Expression.Let { scrutinee; meta_context; pattern; body; _ } -> (
         match meta_context with
         | Meta.Context.{ bindings = []; _ } ->
-            Format.fprintf ppf
-              "@[<hov 0>let @[<hov 2>%a@] =@ @[<hov 2>%a@]@ in@;%a@]"
-              (pp_comp_pattern state) pattern
+            Format.fprintf ppf "@[<hov 2>%a@ %a =@ %a@]@ %a@ %a" pp_keyword
+              "let" (pp_comp_pattern state) pattern
               (pp_comp_expression state)
-              scrutinee
+              scrutinee pp_keyword "in"
               (pp_comp_expression state)
               body
         | _ ->
-            Format.fprintf ppf
-              "@[<hov 0>let @[<hov 2>%a@ %a@] =@ @[<hov 2>%a@]@ in@;%a@]"
+            Format.fprintf ppf "@[<hov 2>%a@ %a@ %a =@ %a@]@ %a@ %a"
+              pp_keyword "let"
               (pp_pattern_meta_context state)
               meta_context (pp_comp_pattern state) pattern
               (pp_comp_expression state)
-              scrutinee
+              scrutinee pp_keyword "in"
               (pp_comp_expression state)
               body)
     | Comp.Expression.Box { meta_object; _ } ->
@@ -1889,12 +1888,19 @@ end) : BELUGA_HTML with type state = Html_state.state = struct
       List.fold_left add_signature_declaration_to_state state
         (List1.to_list declarations)
     in
-    Format.fprintf ppf "@[<v 0>%a@];"
-      (List1.pp
-         ~pp_sep:(fun ppf () ->
-           Format.fprintf ppf "@,@,%a@ " pp_keyword "and")
-         (pp_grouped_declaration state'))
-      (group_recursive_declarations declarations);
+    (match group_recursive_declarations declarations with
+    | List1.T (first, []) ->
+        Format.fprintf ppf "@[<v 0>%a@];"
+          (pp_first_grouped_declaration state')
+          first
+    | List1.T (first, rest) ->
+        Format.fprintf ppf "@[<v 0>%a@,@,%a@];"
+          (pp_first_grouped_declaration state')
+          first
+          (List.pp
+             ~pp_sep:(fun ppf () -> Format.fprintf ppf "@,@,")
+             (pp_rest_grouped_declaration state'))
+          rest);
     state'
 
   and add_signature_declaration_to_state state = function
@@ -1917,27 +1923,26 @@ end) : BELUGA_HTML with type state = Html_state.state = struct
         Error.raise_at1 location Unsupported_recursive_declaration
     | Signature.Declaration.Query { identifier = Option.None; _ } -> state
 
-  and pp_grouped_declaration state ppf declaration =
+  and pp_first_grouped_declaration state ppf declaration =
     match declaration with
     | `Lf_typ (identifier, kind, constants) ->
         let pp_constant ppf (identifier, typ) =
-          Format.fprintf ppf "@[<hov 0>| @[<hov 2>%a :@;%a@]@]"
+          Format.fprintf ppf "@[<hov 2>| %a :@;%a@]"
             (pp_lf_term_constant state)
             identifier (pp_lf_typ state) typ
         in
-        Format.fprintf ppf "@[<v 0>@[<hov 2>%a %a :@ %a =@]@,%a@]" pp_keyword
-          "LF"
+        Format.fprintf ppf "@[<hov 2>%a %a :@ %a =@]@,%a" pp_keyword "LF"
           (pp_lf_type_constant state)
           identifier (pp_lf_kind state) kind
           (List.pp ~pp_sep:Format.pp_print_cut pp_constant)
           constants
     | `Inductive_comp_typ (identifier, kind, constants) ->
         let pp_constant ppf (identifier, typ) =
-          Format.fprintf ppf "@[<hov 0>| @[<hov 2>%a :@;%a@]@]"
+          Format.fprintf ppf "@[<hov 2>| %a :@;%a@]"
             (pp_computation_constructor state)
             identifier (pp_comp_typ state) typ
         in
-        Format.fprintf ppf "@[<v 0>@[<hov 2>%a %a :@ %a =@]@,%a@]" pp_keyword
+        Format.fprintf ppf "@[<hov 2>%a %a :@ %a =@]@,%a" pp_keyword
           "inductive"
           (pp_computation_inductive_constant state)
           identifier (pp_comp_kind state) kind
@@ -1945,11 +1950,11 @@ end) : BELUGA_HTML with type state = Html_state.state = struct
           constants
     | `Stratified_comp_typ (identifier, kind, constants) ->
         let pp_constant ppf (identifier, typ) =
-          Format.fprintf ppf "@[<hov 0>| @[<hov 2>%a :@;%a@]@]"
+          Format.fprintf ppf "@[<hov 2>| %a :@;%a@]"
             (pp_computation_constructor state)
             identifier (pp_comp_typ state) typ
         in
-        Format.fprintf ppf "@[<v 0>@[<hov 2>%a %a :@ %a =@]@,%a@]" pp_keyword
+        Format.fprintf ppf "@[<hov 2>%a %a :@ %a =@]@,%a" pp_keyword
           "stratified"
           (pp_computation_stratified_constant state)
           identifier (pp_comp_kind state) kind
@@ -1957,12 +1962,12 @@ end) : BELUGA_HTML with type state = Html_state.state = struct
           constants
     | `Coinductive_comp_typ (identifier, kind, constants) ->
         let pp_constant ppf (identifier, observation_typ, return_typ) =
-          Format.fprintf ppf "@[<hov 0>| @[<hov 2>%a :@ %a ::@ %a@]@]"
+          Format.fprintf ppf "@[<hov 2>| %a :@ %a ::@ %a@]"
             (pp_computation_destructor state)
             identifier (pp_comp_typ state) observation_typ
             (pp_comp_typ state) return_typ
         in
-        Format.fprintf ppf "@[<v 0>@[%a %a :@ %a =@]@,%a@]" pp_keyword
+        Format.fprintf ppf "@[<hov 2>%a %a :@ %a =@]@,%a" pp_keyword
           "coinductive"
           (pp_computation_coinductive_constant state)
           identifier (pp_comp_kind state) kind
@@ -1978,8 +1983,9 @@ end) : BELUGA_HTML with type state = Html_state.state = struct
               (pp_comp_expression state)
               body
         | Option.Some order ->
-            Format.fprintf ppf "@[<hov 2>%a %a :@ %a =@;/ %a /@;%a@]"
-              pp_keyword "rec"
+            Format.fprintf ppf
+              "@[<hov 2>%a %a :@ %a =@]@,/ %a /@,@[<hov 2>%a@]" pp_keyword
+              "rec"
               (pp_computation_program state)
               identifier (pp_comp_typ state) typ
               (pp_signature_totality_declaration state)
@@ -1995,8 +2001,96 @@ end) : BELUGA_HTML with type state = Html_state.state = struct
               identifier (pp_comp_typ state) typ (pp_harpoon_proof state)
               body
         | Option.Some order ->
-            Format.fprintf ppf "@[<hov 2>%a %a :@ %a =@;/ %a /@;%a@]"
-              pp_keyword "proof"
+            Format.fprintf ppf
+              "@[<hov 2>%a %a :@ %a =@]@,/ %a /@,@[<hov 2>%a@]" pp_keyword
+              "proof"
+              (pp_computation_program state)
+              identifier (pp_comp_typ state) typ
+              (pp_signature_totality_declaration state)
+              order (pp_harpoon_proof state) body)
+
+  and pp_rest_grouped_declaration state ppf declaration =
+    match declaration with
+    | `Lf_typ (identifier, kind, constants) ->
+        let pp_constant ppf (identifier, typ) =
+          Format.fprintf ppf "@[<hov 2>| %a :@;%a@]"
+            (pp_lf_term_constant state)
+            identifier (pp_lf_typ state) typ
+        in
+        Format.fprintf ppf "@[<hov 2>%a %a %a :@ %a =@]@,%a" pp_keyword "and"
+          pp_keyword "LF"
+          (pp_lf_type_constant state)
+          identifier (pp_lf_kind state) kind
+          (List.pp ~pp_sep:Format.pp_print_cut pp_constant)
+          constants
+    | `Inductive_comp_typ (identifier, kind, constants) ->
+        let pp_constant ppf (identifier, typ) =
+          Format.fprintf ppf "@[<hov 2>| %a :@;%a@]"
+            (pp_computation_constructor state)
+            identifier (pp_comp_typ state) typ
+        in
+        Format.fprintf ppf "@[<hov 2>%a %a %a :@ %a =@]@,%a" pp_keyword "and"
+          pp_keyword "inductive"
+          (pp_computation_inductive_constant state)
+          identifier (pp_comp_kind state) kind
+          (List.pp ~pp_sep:Format.pp_print_cut pp_constant)
+          constants
+    | `Stratified_comp_typ (identifier, kind, constants) ->
+        let pp_constant ppf (identifier, typ) =
+          Format.fprintf ppf "@[<hov 2>| %a :@;%a@]"
+            (pp_computation_constructor state)
+            identifier (pp_comp_typ state) typ
+        in
+        Format.fprintf ppf "@[<hov 2>%a %a %a :@ %a =@]@,%a" pp_keyword "and"
+          pp_keyword "stratified"
+          (pp_computation_stratified_constant state)
+          identifier (pp_comp_kind state) kind
+          (List.pp ~pp_sep:Format.pp_print_cut pp_constant)
+          constants
+    | `Coinductive_comp_typ (identifier, kind, constants) ->
+        let pp_constant ppf (identifier, observation_typ, return_typ) =
+          Format.fprintf ppf "@[<hov 2>| %a :@ %a ::@ %a@]"
+            (pp_computation_destructor state)
+            identifier (pp_comp_typ state) observation_typ
+            (pp_comp_typ state) return_typ
+        in
+        Format.fprintf ppf "@[<hov 2>%a %a %a :@ %a =@]@,%a" pp_keyword "and"
+          pp_keyword "coinductive"
+          (pp_computation_coinductive_constant state)
+          identifier (pp_comp_kind state) kind
+          (List.pp ~pp_sep:Format.pp_print_cut pp_constant)
+          constants
+    | `Theorem (identifier, typ, order, body) -> (
+        match order with
+        | Option.None ->
+            Format.fprintf ppf "@[<hov 2>%a %a %a :@ %a =@ %a@]" pp_keyword
+              "and" pp_keyword "rec"
+              (pp_computation_program state)
+              identifier (pp_comp_typ state) typ
+              (pp_comp_expression state)
+              body
+        | Option.Some order ->
+            Format.fprintf ppf
+              "@[<hov 2>%a %a %a :@ %a =@]@,/ %a /@,@[<hov 2>%a@]" pp_keyword
+              "and" pp_keyword "rec"
+              (pp_computation_program state)
+              identifier (pp_comp_typ state) typ
+              (pp_signature_totality_declaration state)
+              order
+              (pp_comp_expression state)
+              body)
+    | `Proof (identifier, typ, order, body) -> (
+        match order with
+        | Option.None ->
+            Format.fprintf ppf "@[<hov 2>%a %a %a :@ %a =@ %a@]" pp_keyword
+              "and" pp_keyword "proof"
+              (pp_computation_program state)
+              identifier (pp_comp_typ state) typ (pp_harpoon_proof state)
+              body
+        | Option.Some order ->
+            Format.fprintf ppf
+              "@[<hov 2>%a %a %a :@ %a =@]@,/ %a /@,@[<hov 2>%a@]" pp_keyword
+              "and" pp_keyword "proof"
               (pp_computation_program state)
               identifier (pp_comp_typ state) typ
               (pp_signature_totality_declaration state)

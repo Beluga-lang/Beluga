@@ -329,7 +329,7 @@ and pp_clf_substitution ppf substitution =
   match substitution with
   | { CLF.Substitution.head = CLF.Substitution.Head.None _; terms = []; _ }
     ->
-      Format.fprintf ppf "^"
+      ()
   | { CLF.Substitution.head = CLF.Substitution.Head.Identity _
     ; terms = []
     ; _
@@ -386,8 +386,7 @@ and pp_clf_context ppf context =
         Format.fprintf ppf "%a :@ %a" Identifier.pp identifier pp_clf_typ typ
   in
   match context with
-  | { CLF.Context.head = CLF.Context.Head.None _; bindings = []; _ } ->
-      Format.fprintf ppf "^"
+  | { CLF.Context.head = CLF.Context.Head.None _; bindings = []; _ } -> ()
   | { CLF.Context.head = CLF.Context.Head.Hole _; bindings = []; _ } ->
       Format.fprintf ppf "_"
   | { CLF.Context.head = CLF.Context.Head.Context_variable { identifier; _ }
@@ -500,7 +499,7 @@ and pp_clf_substitution_pattern ppf substitution_pattern =
     ; terms = []
     ; _
     } ->
-      Format.fprintf ppf "^"
+      ()
   | { CLF.Substitution.Pattern.head =
         CLF.Substitution.Pattern.Head.Identity _
     ; terms = []
@@ -566,7 +565,7 @@ and pp_clf_context_pattern ppf context_pattern =
     ; bindings = []
     ; _
     } ->
-      Format.fprintf ppf "^"
+      ()
   | { CLF.Context.Pattern.head = CLF.Context.Pattern.Head.Hole _
     ; bindings = []
     ; _
@@ -940,7 +939,7 @@ and pp_comp_expression ppf expression =
         | Option.None -> Format.pp_print_string ppf "_"
         | Option.Some parameter -> Identifier.pp ppf parameter
       in
-      Format.fprintf ppf "@[<hov 2>fn %a ⇒@ %a@]"
+      Format.fprintf ppf "fn %a ⇒@ %a"
         (List1.pp ~pp_sep:Format.pp_print_space pp_parameter)
         parameters pp_comp_expression body
   | Comp.Expression.Mlam { parameters; body; _ } ->
@@ -956,7 +955,7 @@ and pp_comp_expression ppf expression =
       let pp_parameters =
         List1.pp ~pp_sep:Format.pp_print_space pp_parameter
       in
-      Format.fprintf ppf "@[<hov 2>mlam %a ⇒@ %a@]" pp_parameters parameters
+      Format.fprintf ppf "mlam %a ⇒@ %a" pp_parameters parameters
         pp_comp_expression body
   | Comp.Expression.Fun { branches; _ } ->
       let pp_branch ppf branch =
@@ -977,13 +976,11 @@ and pp_comp_expression ppf expression =
   | Comp.Expression.Let { scrutinee; meta_context; pattern; body; _ } -> (
       match meta_context with
       | Meta.Context.{ bindings = []; _ } ->
-          Format.fprintf ppf
-            "@[<hov 0>let @[<hov 2>%a@] =@ @[<hov 2>%a@]@ in@;%a@]"
+          Format.fprintf ppf "@[<hov 2>let@ %a =@ %a@]@ in@ %a"
             pp_comp_pattern pattern pp_comp_expression scrutinee
             pp_comp_expression body
       | _ ->
-          Format.fprintf ppf
-            "@[<hov 0>let @[<hov 2>%a@ %a@] =@ @[<hov 2>%a@]@ in@;%a@]"
+          Format.fprintf ppf "@[<hov 2>let@ %a@ %a =@ %a@]@ in@ %a"
             pp_pattern_meta_context meta_context pp_comp_pattern pattern
             pp_comp_expression scrutinee pp_comp_expression body)
   | Comp.Expression.Box { meta_object; _ } -> pp_meta_object ppf meta_object
@@ -1534,48 +1531,52 @@ and pp_signature_declaration ppf declaration =
         entries
 
 and pp_recursive_declarations ppf declarations =
-  Format.fprintf ppf "@[<v 0>%a@];"
-    (List1.pp
-       ~pp_sep:(fun ppf () -> Format.fprintf ppf "@,@,and ")
-       pp_grouped_declaration)
-    (group_recursive_declarations declarations)
+  match group_recursive_declarations declarations with
+  | List1.T (first, []) ->
+      Format.fprintf ppf "@[<v 0>%a@];" pp_first_grouped_declaration first
+  | List1.T (first, rest) ->
+      Format.fprintf ppf "@[<v 0>%a@,@,%a@];" pp_first_grouped_declaration
+        first
+        (List.pp
+           ~pp_sep:(fun ppf () -> Format.fprintf ppf "@,@,")
+           pp_rest_grouped_declaration)
+        rest
 
-and pp_grouped_declaration ppf declaration =
+and pp_first_grouped_declaration ppf declaration =
   match declaration with
   | `Lf_typ (identifier, kind, constants) ->
       let pp_constant ppf (identifier, typ) =
-        Format.fprintf ppf "@[<hov 0>| @[<hov 2>%a :@;%a@]@]" Identifier.pp
-          identifier pp_lf_typ typ
+        Format.fprintf ppf "@[<hov 2>| %a :@;%a@]" Identifier.pp identifier
+          pp_lf_typ typ
       in
-      Format.fprintf ppf "@[<v 0>@[<hov 2>LF %a :@ %a =@]@;%a@]"
-        Identifier.pp identifier pp_lf_kind kind
+      Format.fprintf ppf "@[<hov 2>LF %a :@ %a =@]@;%a" Identifier.pp
+        identifier pp_lf_kind kind
         (List.pp ~pp_sep:Format.pp_print_cut pp_constant)
         constants
   | `Inductive_comp_typ (identifier, kind, constants) ->
       let pp_constant ppf (identifier, typ) =
-        Format.fprintf ppf "@[<hov 0>| @[<hov 2>%a :@;%a@]@]" Identifier.pp
-          identifier pp_comp_typ typ
+        Format.fprintf ppf "@[<hov 2>| %a :@;%a@]" Identifier.pp identifier
+          pp_comp_typ typ
       in
-      Format.fprintf ppf "@[<v 0>@[<hov 2>inductive %a :@ %a =@]@;%a@]"
-        Identifier.pp identifier pp_comp_kind kind
+      Format.fprintf ppf "@[<hov 2>inductive %a :@ %a =@]@;%a" Identifier.pp
+        identifier pp_comp_kind kind
         (List.pp ~pp_sep:Format.pp_print_cut pp_constant)
         constants
   | `Stratified_comp_typ (identifier, kind, constants) ->
       let pp_constant ppf (identifier, typ) =
-        Format.fprintf ppf "@[<hov 0>| @[<hov 2>%a :@;%a@]@]" Identifier.pp
-          identifier pp_comp_typ typ
+        Format.fprintf ppf "@[<hov 2>| %a :@;%a@]" Identifier.pp identifier
+          pp_comp_typ typ
       in
-      Format.fprintf ppf "@[<v 0>@[<hov 2>stratified %a :@ %a =@]@;%a@]"
-        Identifier.pp identifier pp_comp_kind kind
+      Format.fprintf ppf "@[<hov 2>stratified %a :@ %a =@]@;%a" Identifier.pp
+        identifier pp_comp_kind kind
         (List.pp ~pp_sep:Format.pp_print_cut pp_constant)
         constants
   | `Coinductive_comp_typ (identifier, kind, constants) ->
       let pp_constant ppf (identifier, observation_typ, return_typ) =
-        Format.fprintf ppf "@[<hov 0>| @[<hov 2>%a :@ %a ::@ %a@]@]"
-          Identifier.pp identifier pp_comp_typ observation_typ pp_comp_typ
-          return_typ
+        Format.fprintf ppf "@[<hov 2>| %a :@ %a ::@ %a@]" Identifier.pp
+          identifier pp_comp_typ observation_typ pp_comp_typ return_typ
       in
-      Format.fprintf ppf "@[<v 0>@[coinductive %a :@ %a =@]@,%a@]"
+      Format.fprintf ppf "@[<hov 2>coinductive %a :@ %a =@]@,%a"
         Identifier.pp identifier pp_comp_kind kind
         (List.pp ~pp_sep:Format.pp_print_cut pp_constant)
         constants
@@ -1585,16 +1586,77 @@ and pp_grouped_declaration ppf declaration =
           Format.fprintf ppf "@[<hov 2>rec %a :@;%a =@ %a@]" Identifier.pp
             identifier pp_comp_typ typ pp_comp_expression body
       | Option.Some order ->
-          Format.fprintf ppf "@[<hov 2>rec %a :@;%a =@;/ %a /@;%a@]"
-            Identifier.pp identifier pp_comp_typ typ
-            pp_signature_totality_declaration order pp_comp_expression body)
+          Format.fprintf ppf
+            "@[<hov 2>rec %a :@;%a =@]@,/ %a /@,@[<hov 2>%a@]" Identifier.pp
+            identifier pp_comp_typ typ pp_signature_totality_declaration
+            order pp_comp_expression body)
   | `Proof (identifier, typ, order, body) -> (
       match order with
       | Option.None ->
           Format.fprintf ppf "@[<hov 2>proof %a :@ %a =@ %a@]" Identifier.pp
             identifier pp_comp_typ typ pp_harpoon_proof body
       | Option.Some order ->
-          Format.fprintf ppf "@[<hov 2>proof %a :@ %a =@;/ %a /@;%a@]"
+          Format.fprintf ppf
+            "@[<hov 2>proof %a :@ %a =@]@,/ %a /@,@[<hov 2>%a@]"
+            Identifier.pp identifier pp_comp_typ typ
+            pp_signature_totality_declaration order pp_harpoon_proof body)
+
+and pp_rest_grouped_declaration ppf declaration =
+  match declaration with
+  | `Lf_typ (identifier, kind, constants) ->
+      let pp_constant ppf (identifier, typ) =
+        Format.fprintf ppf "@[<hov 2>| %a :@;%a@]" Identifier.pp identifier
+          pp_lf_typ typ
+      in
+      Format.fprintf ppf "@[<hov 2>and LF %a :@ %a =@]@;%a" Identifier.pp
+        identifier pp_lf_kind kind
+        (List.pp ~pp_sep:Format.pp_print_cut pp_constant)
+        constants
+  | `Inductive_comp_typ (identifier, kind, constants) ->
+      let pp_constant ppf (identifier, typ) =
+        Format.fprintf ppf "@[<hov 2>| %a :@;%a@]" Identifier.pp identifier
+          pp_comp_typ typ
+      in
+      Format.fprintf ppf "@[<hov 2>and inductive %a :@ %a =@]@;%a"
+        Identifier.pp identifier pp_comp_kind kind
+        (List.pp ~pp_sep:Format.pp_print_cut pp_constant)
+        constants
+  | `Stratified_comp_typ (identifier, kind, constants) ->
+      let pp_constant ppf (identifier, typ) =
+        Format.fprintf ppf "@[<hov 2>| %a :@;%a@]" Identifier.pp identifier
+          pp_comp_typ typ
+      in
+      Format.fprintf ppf "@[<hov 2>and stratified %a :@ %a =@]@;%a"
+        Identifier.pp identifier pp_comp_kind kind
+        (List.pp ~pp_sep:Format.pp_print_cut pp_constant)
+        constants
+  | `Coinductive_comp_typ (identifier, kind, constants) ->
+      let pp_constant ppf (identifier, observation_typ, return_typ) =
+        Format.fprintf ppf "@[<hov 2>| %a :@ %a ::@ %a@]" Identifier.pp
+          identifier pp_comp_typ observation_typ pp_comp_typ return_typ
+      in
+      Format.fprintf ppf "@[<hov 2>and coinductive %a :@ %a =@]@,%a"
+        Identifier.pp identifier pp_comp_kind kind
+        (List.pp ~pp_sep:Format.pp_print_cut pp_constant)
+        constants
+  | `Theorem (identifier, typ, order, body) -> (
+      match order with
+      | Option.None ->
+          Format.fprintf ppf "@[<hov 2>and rec %a :@;%a =@ %a@]"
+            Identifier.pp identifier pp_comp_typ typ pp_comp_expression body
+      | Option.Some order ->
+          Format.fprintf ppf
+            "@[<hov 2>and rec %a :@;%a =@]@,/ %a /@,@[<hov 2>%a@]"
+            Identifier.pp identifier pp_comp_typ typ
+            pp_signature_totality_declaration order pp_comp_expression body)
+  | `Proof (identifier, typ, order, body) -> (
+      match order with
+      | Option.None ->
+          Format.fprintf ppf "@[<hov 2>and proof %a :@ %a =@ %a@]"
+            Identifier.pp identifier pp_comp_typ typ pp_harpoon_proof body
+      | Option.Some order ->
+          Format.fprintf ppf
+            "@[<hov 2>and proof %a :@ %a =@]@,/ %a /@,@[<hov 2>%a@]"
             Identifier.pp identifier pp_comp_typ typ
             pp_signature_totality_declaration order pp_harpoon_proof body)
 

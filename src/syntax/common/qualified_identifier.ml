@@ -71,7 +71,7 @@ include (
       match namespaces n with
       | [] -> Identifier.pp ppf (name n)
       | _ ->
-          Format.fprintf ppf "@[<2>%a@,.%a@]"
+          Format.fprintf ppf "@[<hov 2>%a@,.%a@]"
             (Format.pp_print_list
                ~pp_sep:(fun ppf () -> Format.fprintf ppf "@,.")
                Identifier.pp)

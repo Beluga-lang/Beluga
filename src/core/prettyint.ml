@@ -1738,9 +1738,13 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
      *)
 
     | Sgn.Pragma { pragma=LF.OpenPrag n } ->
-       let n' = Store.Modules.name_of_id n in
-       ignore (Store.Modules.open_module n');
-       fprintf ppf "@\n--open %s@\n" (String.concat "." n')
+       (* FIXME: Although the pretty-printer for the internal syntax has to be
+          stateful in order to properly generate fresh variable identifiers,
+          the printer should just checkout the scope information from the
+          store, meaning that it should not perform module opens directly. *)
+       (*=let n' = Store.Modules.name_of_id n in
+       ignore (Store.Modules.open_module n');*)
+       fprintf ppf "@\n--open %a@\n" Qualified_identifier.pp n
 
     | Sgn.Pragma _ -> ()
 

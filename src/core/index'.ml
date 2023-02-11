@@ -3,7 +3,33 @@ open Beluga_syntax
 
 [@@@warning "-A-4-44"]
 
-module Make (Indexing_state : sig
+exception Unsupported_lf_typ_applicand
+
+exception Unsupported_lf_term_applicand
+
+exception Unsupported_lf_annotated_term_abstraction
+
+exception Unsupported_lf_untyped_pi_kind_parameter
+
+exception Unsupported_lf_untyped_pi_typ_parameter
+
+exception Illegal_clf_substitution_variable_outside_substitution
+
+exception Unsupported_clf_substitution_variable_not_at_start_of_substitution
+
+exception Unsupported_clf_projection_applicand
+
+exception Unsupported_clf_substitution_applicand
+
+exception Unsupported_context_schema_meta_typ
+
+exception Unsupported_context_schema_element
+
+exception Unsupported_comp_typ_applicand
+
+exception Unsupported_comp_pattern_applicand
+
+module type INDEXING_STATE = sig
   include State.STATE
 
   val bind_lf_variable : Identifier.t -> Unit.t t
@@ -70,36 +96,15 @@ module Make (Indexing_state : sig
   val with_parent_scope : 'a t -> 'a t
 
   val add_computation_pattern_variable : Identifier.t -> Unit.t t
-end) =
-struct
+end
+
+module type INDEXER = sig
+  include State.STATE
+end
+
+module Make (Indexing_state : INDEXING_STATE) :
+  INDEXER with type state = Indexing_state.state = struct
   include Indexing_state
-
-  exception Unsupported_lf_typ_applicand
-
-  exception Unsupported_lf_term_applicand
-
-  exception Unsupported_lf_annotated_term_abstraction
-
-  exception Unsupported_lf_untyped_pi_kind_parameter
-
-  exception Unsupported_lf_untyped_pi_typ_parameter
-
-  exception Illegal_clf_substitution_variable_outside_substitution
-
-  exception
-    Unsupported_clf_substitution_variable_not_at_start_of_substitution
-
-  exception Unsupported_clf_projection_applicand
-
-  exception Unsupported_clf_substitution_applicand
-
-  exception Unsupported_context_schema_meta_typ
-
-  exception Unsupported_context_schema_element
-
-  exception Unsupported_comp_typ_applicand
-
-  exception Unsupported_comp_pattern_applicand
 
   let rec append_lf_spines spine1 spine2 =
     match spine1 with

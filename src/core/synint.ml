@@ -258,11 +258,11 @@ module LF = struct
   type trec_clo = typ_rec * sub          (* [s]Arec                        *)
 
   type prag =
-    | NamePrag of cid_typ
+    | NamePrag of Name.t
     | NotPrag
-    | OpenPrag of module_id
+    | OpenPrag of Qualified_identifier.t
     | DefaultAssocPrag of Associativity.t
-    | FixPrag of Name.t * Fixity.t * int * Associativity.t option
+    | FixPrag of Name.t * Fixity.t * int option * Associativity.t option
     | AbbrevPrag of string list * string
 
   (**********************)

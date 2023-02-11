@@ -279,7 +279,7 @@ let recSgnDecls decls =
              else
                raise (Error (loc, IllegalOperatorPrag (name, fix, actual)))
        end;
-       Int.Sgn.Pragma { pragma=Int.LF.FixPrag (name, fix, precedence, assoc) }
+       Int.Sgn.Pragma { pragma=Int.LF.FixPrag (name, fix, (Some precedence), assoc) }
 
     | Ext.Sgn.CompTypAbbrev { location; identifier; kind=cK; typ=cT } ->
        (* index cT in a context which contains arguments to cK *)
@@ -1164,7 +1164,7 @@ let recSgnDecls decls =
           let m = Some (Gensym.MVarData.name_gensym m_name) in
           let v = Option.(v_name $> Gensym.VarData.name_gensym) in
           Typ.set_name_convention cid m v;
-          Int.Sgn.Pragma { pragma=Int.LF.NamePrag cid }
+          Int.Sgn.Pragma { pragma=Int.LF.NamePrag typ_name }
        | None ->
            throw loc (UnboundNamePragma typ_name)
        end
@@ -1181,8 +1181,8 @@ let recSgnDecls decls =
 
     | Ext.Sgn.Pragma { location=loc; pragma=Ext.Sgn.OpenPrag n } ->
        try
-         let x = Modules.open_module n in
-         let sgn = Int.Sgn.Pragma { pragma=Int.LF.OpenPrag x } in
+         (*let _ = Modules.open_module n in*)
+         let sgn = Int.Sgn.Pragma { pragma=Int.LF.OpenPrag (Obj.magic ()) } in
          Store.Modules.addSgnToCurrent sgn;
          sgn
        with

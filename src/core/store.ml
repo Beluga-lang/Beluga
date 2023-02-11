@@ -105,6 +105,8 @@ module Modules = struct
     | Some s -> [s]
     | None -> x
 
+  (** @deprecated(Marc-Antoine) Name resolution occurs in a different data
+      structure during the indexing phase of signature reconstruction. *)
   let open_module (m : string list) : Id.module_id =
     let x =
       let m =
@@ -118,14 +120,14 @@ module Modules = struct
       with
       | _ -> Hashtbl.find directory (!currentName @ m)
     in
-    let l =
+    (*=let l =
       x ::
         ( !(DynArray.get modules x)
           |> List.filter (function (Int.Sgn.Pragma { pragma=Int.LF.OpenPrag _ }) -> true | _ -> false)
           |> List.map (fun (Int.Sgn.Pragma { pragma=Int.LF.OpenPrag x }) -> x)
         )
     in
-    opened := l @ !opened;
+    opened := l @ !opened;*)
     x
 
   let addAbbrev (orig : string list) (abbrev : string) : unit =

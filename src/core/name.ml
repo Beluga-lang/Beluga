@@ -129,8 +129,8 @@ let mk_name ?(location = Location.ghost) ?(modules = []) : name_guide -> t =
   (* If no {!name} is given, create a new unique {!name}. This prevents the
      problem that when a {!Store.Typ.entry} or {!Store.Term.entry} is looked
      up, we never have to compare a {!string option}. This prevents the case
-     where two entries appear to refer to the same name because {!None} =
-     {!None}. *)
+     where two entries appear to refer to the same name because [None =
+     None]. *)
   | MVarName (Some vGen)
   | SVarName (Some vGen)
   | PVarName (Some vGen)
@@ -151,6 +151,17 @@ let make_from_identifier identifier =
   let hint_name, hint_cnt = split_name identifier_as_string in
   let location = Identifier.location identifier in
   let modules = [] in
+  { modules; hint_name; hint_cnt; location }
+
+let make_from_qualified_identifier qualified_identifier =
+  let name = Qualified_identifier.name qualified_identifier in
+  let name_as_string = Identifier.show name in
+  let hint_name, hint_cnt = split_name name_as_string in
+  let modules =
+    List.map Identifier.show
+      (Qualified_identifier.namespaces qualified_identifier)
+  in
+  let location = Qualified_identifier.location qualified_identifier in
   { modules; hint_name; hint_cnt; location }
 
 let mk_blank = function

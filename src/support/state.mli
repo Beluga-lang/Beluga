@@ -24,28 +24,11 @@ module type STATE = sig
   (** [exec a init] is [run a init = (final, v)], but outputs only [final]. *)
   val exec : 'a t -> state -> state
 
-  (** [locally f m a init] runs [a] with state [f init] and returns
-      [(init, v)] where [v] is the output from running [a]. *)
-  val locally : (state -> state) -> 'a t -> 'a t
-
-  (** [scoped ~set ~unset m initial_state] executes [set], then [m], then
-      [unset] and returns the value from [m]. This allows for computations
-      with scoped mutations to the state. [set] and [unset] can be thought of
-      apply and undo operations for the mutation. This is less strict than
-      [locally] which ignores the output state. *)
-  val scoped : set:Unit.t t -> unset:Unit.t t -> 'a t -> 'a t
-
   (** [try_catch m ~on_exn state] is [on_exn cause] if [run m state] raises
       [cause], and [run m state] otherwise.
 
       Not tail-recursive. *)
-  val try_catch : 'a t -> on_exn:(exn -> 'a t) -> 'a t
-
-  (** [try_catch_lazy m ~on_exn state] is [on_exn cause] if [run m state]
-      raises [cause], and [run m state] otherwise.
-
-      Not tail-recursive. *)
-  val try_catch_lazy : 'a t Lazy.t -> on_exn:(exn -> 'a t) -> 'a t
+  val try_catch : 'a t Lazy.t -> on_exn:(exn -> 'a t) -> 'a t
 
   (** {1 Traversals} *)
 

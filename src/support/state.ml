@@ -15,13 +15,7 @@ module type STATE = sig
 
   val exec : 'a t -> state -> state
 
-  val locally : (state -> state) -> 'a t -> 'a t
-
-  val scoped : set:Unit.t t -> unset:Unit.t t -> 'a t -> 'a t
-
-  val try_catch : 'a t -> on_exn:(exn -> 'a t) -> 'a t
-
-  val try_catch_lazy : 'a t Lazy.t -> on_exn:(exn -> 'a t) -> 'a t
+  val try_catch : 'a t Lazy.t -> on_exn:(exn -> 'a t) -> 'a t
 
   val traverse_tuple2 :
     ('a1 -> 'b1 t) -> ('a2 -> 'b2 t) -> 'a1 * 'a2 -> ('b1 * 'b2) t
@@ -111,21 +105,7 @@ end) : STATE with type state = S.t = struct
     let final, _n = run m init in
     final
 
-  let[@inline] locally f m s =
-    let a = eval m (f s) in
-    (s, a)
-
-  let[@inline] scoped ~set ~unset m =
-    let* () = set in
-    let* a = m in
-    let* () = unset in
-    return a
-
   let[@inline] try_catch m ~on_exn state =
-    try run m state with
-    | exn -> run (on_exn exn) state
-
-  let[@inline] try_catch_lazy m ~on_exn state =
     try run (Lazy.force m) state with
     | exn -> run (on_exn exn) state
 

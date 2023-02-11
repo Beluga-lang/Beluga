@@ -638,9 +638,8 @@ struct
                (Synext.Signature.Declaration.Const
                   { location; identifier; typ = typ' }))
         in
-        try_catch_lazy disambiguate_as_lf_typ_declaration
-          ~on_exn:(fun typ_exn ->
-            try_catch_lazy disambiguate_as_lf_const_declaration
+        try_catch disambiguate_as_lf_typ_declaration ~on_exn:(fun typ_exn ->
+            try_catch disambiguate_as_lf_const_declaration
               ~on_exn:(fun const_exn ->
                 if typ_exn <> const_exn then
                   (* Disambiguation as an LF type or term constant

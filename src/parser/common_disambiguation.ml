@@ -505,8 +505,9 @@ end = struct
 
   let lookup_toplevel query =
     try_catch
-      (let* entry, _subtree = lookup_toplevel query in
-       return (Result.ok entry))
+      (lazy
+        (let* entry, _subtree = lookup_toplevel query in
+         return (Result.ok entry)))
       ~on_exn:(fun cause -> return (Result.error cause))
 
   let lookup' query =
@@ -522,8 +523,9 @@ end = struct
 
   let lookup query =
     try_catch
-      (let* entry, _subtree = lookup' query in
-       return (Result.ok entry))
+      (lazy
+        (let* entry, _subtree = lookup' query in
+         return (Result.ok entry)))
       ~on_exn:(fun cause -> return (Result.error cause))
 
   let rec partial_lookup_nested namespaces identifier tree =

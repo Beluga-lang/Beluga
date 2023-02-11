@@ -9,8 +9,8 @@ let assert_raises_invalid_argument f =
   | Invalid_argument _ -> ()
 
 let pp_print_list ppv ppf =
-  Format.fprintf ppf "[%a]"
-    (List.pp ~pp_sep:(fun ppf () -> Format.pp_print_string ppf "; ") ppv)
+  Format.fprintf ppf "@[<hov 2>[%a]@]"
+    (List.pp ~pp_sep:(fun ppf () -> Format.pp_print_string ppf ";@ ") ppv)
 
 let int_list_printer = Format.stringify (pp_print_list Int.pp)
 
@@ -18,8 +18,10 @@ let assert_int_list_equal =
   OUnit2.assert_equal ~cmp:(List.equal Int.equal) ~printer:int_list_printer
 
 let int_list1_printer =
-  Format.asprintf "[%a]"
-    (List1.pp ~pp_sep:(fun ppf () -> Format.pp_print_string ppf "; ") Int.pp)
+  Format.asprintf "@[<hov 2>[%a]@]"
+    (List1.pp
+       ~pp_sep:(fun ppf () -> Format.pp_print_string ppf ";@ ")
+       Int.pp)
 
 let assert_int_list1_equal =
   OUnit2.assert_equal ~cmp:(List1.equal Int.equal) ~printer:int_list1_printer
@@ -117,6 +119,29 @@ let test_map2 =
   in
   success_tests @ failure_tests
 
+let test_flatten =
+  let test_success l expected _test_ctxt =
+    assert_int_list1_equal expected (List1.flatten l)
+  in
+  let success_test_cases =
+    [ (List1.from (List1.singleton 1) [], List1.from 1 [])
+    ; ( List1.from (List1.singleton 1) [ List1.from 2 [ 3 ] ]
+      , List1.from 1 [ 2; 3 ] )
+    ; ( List1.from (List1.from 1 [ 2; 3 ]) [ List1.from 4 [ 5; 6 ] ]
+      , List1.from 1 [ 2; 3; 4; 5; 6 ] )
+    ; ( List1.from
+          (List1.from 1 [ 2; 3 ])
+          [ List1.from 4 [ 5; 6 ]; List1.from 7 [ 8; 9 ] ]
+      , List1.from 1 [ 2; 3; 4; 5; 6; 7; 8; 9 ] )
+    ]
+  in
+  let success_tests =
+    success_test_cases
+    |> List.map (fun (l, expected) ->
+           OUnit2.test_case (test_success l expected))
+  in
+  success_tests
+
 let tests =
   let open OUnit2 in
   "List1"
@@ -126,4 +151,5 @@ let tests =
        ; "iter" >::: test_iter
        ; "map" >::: test_map
        ; "map2" >::: test_map2
+       ; "flatten" >::: test_flatten
        ]

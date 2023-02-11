@@ -48,7 +48,15 @@ type name_guide =
     [mk_name] generates a [t] with a guaranteed unique [string]. *)
 val mk_name : ?location:Location.t -> ?modules:string list -> name_guide -> t
 
+(** [make_from_identifier identifier] constructs a name from [identifier].
+    This should be deprecated once the [Name] module is fully replaced with
+    [Identifier] and [Qualified_identifier]. *)
 val make_from_identifier : Identifier.t -> t
+
+(** [make_from_qualified_identifier identifier] constructs a name from
+    [identifier]. This should be deprecated once the [Name] module is fully
+    replaced with [Identifier] and [Qualified_identifier]. *)
+val make_from_qualified_identifier : Qualified_identifier.t -> t
 
 val string_of_name : t -> string
 

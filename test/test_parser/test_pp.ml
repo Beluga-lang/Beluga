@@ -1,10 +1,10 @@
-[@@@warning "-A"]
-
 open Support
 open Beluga_syntax
 open Util
+open Base_json
+open Synext_json
 open Assert
-module Parser = Beluga_parser.Simple
+open Beluga_parser.Simple
 
 type entry =
   | File of string
@@ -54,6 +54,9 @@ let find_compiler_tests ~directory =
   let test_files = find_compiler_tests_in_structure structure in
   List.sort String.compare test_files
 
+let assert_equal_as_json f ~expected ~actual =
+  assert_json_equal ~expected:(f expected) ~actual:(f actual)
+
 let examples_directory = "../../examples"
 
 let compiler_tests = find_compiler_tests ~directory:examples_directory
@@ -69,25 +72,18 @@ let make_compiler_test compiler_test_file =
       let signature_source_files = List1.map Pair.snd (List1.from x xs) in
       let open OUnit2 in
       compiler_test_file >:: fun _test_ctxt ->
-      let signature =
-        Parser.parse_multi_file_signature signature_source_files
-      in
+      let signature = parse_multi_file_signature signature_source_files in
       let printed_signature =
         Format.asprintf "%a@." Synext.pp_signature signature
       in
       let signature' =
-        Parser.parse_only_signature
-          (Parser.make_initial_state_from_string
-             ~disambiguation_state:
-               Beluga_parser.Simple_disambiguation_state.initial
+        eval parse_only_signature
+          (make_initial_state_from_string
+             ~disambiguation_state:Disambiguation_state.initial
              ~initial_location:Location.ghost ~input:printed_signature)
       in
-      assert_json_equal
-        ~expected:
-          (Base_json.without_locations
-             (Synext_json.json_of_signature signature))
-        ~actual:
-          (Base_json.without_locations
-             (Synext_json.json_of_signature signature'))
+      assert_equal_as_json
+        Fun.(json_of_signature >> without_locations)
+        ~expected:signature ~actual:signature'
 
 let tests = List.map make_compiler_test compiler_tests

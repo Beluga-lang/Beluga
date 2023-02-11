@@ -1,20 +1,7 @@
-(** Disambiguation of the parser syntax to the external syntax.
-
-    Elements of the syntax for Beluga require the symbol table for
-    disambiguation. This module contains stateful functions for elaborating
-    the context-free parser syntax to the data-dependent external syntax. The
-    logic for the symbol lookups is repeated in the indexing phase to the
-    approximate syntax.
-
-    The "Beluga Language Specification" document contains additional details
-    as to which syntactic structures have ambiguities. *)
-
 open Support
 open Beluga_syntax
 
 exception Expected_module of Qualified_identifier.t
-
-exception Expected_namespace of Qualified_identifier.t
 
 exception Expected_operator of Qualified_identifier.t
 
@@ -91,8 +78,6 @@ module type DISAMBIGUATION_STATE = sig
     | Module
     | Program_constant
 
-  val initial : state
-
   val set_default_associativity : Associativity.t -> Unit.t t
 
   val get_default_associativity : Associativity.t t
@@ -142,6 +127,12 @@ module type DISAMBIGUATION_STATE = sig
 
   val add_program_constant :
     ?location:Location.t -> ?operator:Operator.t -> Identifier.t -> Unit.t t
+
+  exception Unbound_identifier of Identifier.t
+
+  exception Unbound_qualified_identifier of Qualified_identifier.t
+
+  exception Unbound_namespace of Qualified_identifier.t
 
   val lookup_toplevel : Identifier.t -> (entry * data, exn) result t
 
@@ -309,6 +300,12 @@ end = struct
               (* Initially a copy of the binding tree in [state],
                  mutations/lookups only happen to [bindings] *)
         }
+
+  exception Unbound_identifier = Unbound_identifier
+
+  exception Unbound_qualified_identifier = Unbound_qualified_identifier
+
+  exception Unbound_namespace = Unbound_namespace
 
   include (
     State.Make (struct
@@ -910,9 +907,6 @@ let () =
     | Unbound_namespace qualified_identifier ->
         Format.dprintf "Unbound namespace %a." Qualified_identifier.pp
           qualified_identifier
-    | Expected_namespace qualified_identifier ->
-        Format.dprintf "Expected %a to be a namespace."
-          Qualified_identifier.pp qualified_identifier
     | Expected_module qualified_identifier ->
         Format.dprintf "Expected %a to be a module." Qualified_identifier.pp
           qualified_identifier

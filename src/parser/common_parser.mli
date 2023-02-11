@@ -12,8 +12,6 @@ module type PARSER_STATE = sig
   include PARSER_LOCATION_STATE with type state := state
 
   include BACKTRACKING_STATE with type state := state
-
-  val initial : ?initial_location:location -> token Seq.t -> state
 end
 
 module type COMMON_PARSER = sig

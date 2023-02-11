@@ -49,7 +49,7 @@ module type LOCATED = sig
   val location : t -> location
 end
 
-module Make_state (Token : LOCATED) : sig
+module Make_persistent_state (Token : LOCATED) : sig
   include PARSER_STATE with type token = Token.t
 
   include

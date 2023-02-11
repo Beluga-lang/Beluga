@@ -1,5 +1,6 @@
 open Beluga_syntax
-module Disambiguation_state = Beluga_parser.Simple_disambiguation_state
+open Beluga_parser
+module Disambiguation_state = Simple.Disambiguation_state
 
 exception Unsupported_sort of string
 

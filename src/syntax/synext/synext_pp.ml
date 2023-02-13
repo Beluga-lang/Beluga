@@ -23,7 +23,8 @@ let rec pp_lf_kind ppf kind =
         (parenthesize_right_argument_right_associative_operator
            precedence_of_lf_kind ~parent_precedence pp_lf_kind)
         range
-  | LF.Kind.Pi { parameter_identifier; parameter_type; body; _ } -> (
+  | LF.Kind.Pi { parameter_identifier; parameter_type; body; plicity = _; _ }
+    -> (
       (* Pi-operators are weak prefix operators *)
       match (parameter_identifier, parameter_type) with
       | Option.Some parameter_identifier, Option.Some parameter_type ->
@@ -98,7 +99,8 @@ and pp_lf_typ ppf typ =
             parenthesize_right_argument_left_associative_operator
               precedence_of_lf_typ ~parent_precedence pp_lf_typ)
         domain
-  | LF.Typ.Pi { parameter_identifier; parameter_type; body; _ } -> (
+  | LF.Typ.Pi { parameter_identifier; parameter_type; body; plicity = _; _ }
+    -> (
       (* Pi-operators are weak prefix operators *)
       match (parameter_identifier, parameter_type) with
       | Option.Some parameter_identifier, Option.Some parameter_type ->
@@ -147,13 +149,13 @@ and pp_lf_term ppf term =
       | Option.None, Option.None ->
           Format.fprintf ppf "@[<hov 2>\\_.@ %a@]" pp_lf_term body
       | Option.None, Option.Some parameter_type ->
-          Format.fprintf ppf "@[<hov 2>\\_:%a.@ %a@]" pp_lf_typ
+          Format.fprintf ppf "@[<hov 2>\\(_:%a).@ %a@]" pp_lf_typ
             parameter_type pp_lf_term body
       | Option.Some parameter_identifier, Option.None ->
           Format.fprintf ppf "@[<hov 2>\\%a.@ %a@]" Identifier.pp
             parameter_identifier pp_lf_term body
       | Option.Some parameter_identifier, Option.Some parameter_type ->
-          Format.fprintf ppf "@[<hov 2>\\%a:%a.@ %a@]" Identifier.pp
+          Format.fprintf ppf "@[<hov 2>\\(%a:%a).@ %a@]" Identifier.pp
             parameter_identifier pp_lf_typ parameter_type pp_lf_term body)
   | LF.Term.Wildcard _ -> Format.fprintf ppf "_"
   | LF.Term.Type_annotated { term; typ; _ } ->
@@ -228,7 +230,8 @@ let rec pp_clf_typ ppf typ =
             parenthesize_right_argument_left_associative_operator
               precedence_of_clf_typ ~parent_precedence pp_clf_typ)
         domain
-  | CLF.Typ.Pi { parameter_identifier; parameter_type; body; _ } ->
+  | CLF.Typ.Pi { parameter_identifier; parameter_type; body; plicity = _; _ }
+    ->
       (* Pi-operators are weak prefix operators *)
       Format.fprintf ppf "@[<hov 2>{%a :@ %a}@ %a@]"
         (fun ppf -> function
@@ -282,13 +285,13 @@ and pp_clf_term ppf term =
       | Option.None, Option.None ->
           Format.fprintf ppf "@[<hov 2>\\_.@ %a@]" pp_clf_term body
       | Option.None, Option.Some parameter_type ->
-          Format.fprintf ppf "@[<hov 2>\\_:%a.@ %a@]" pp_clf_typ
+          Format.fprintf ppf "@[<hov 2>\\(_:%a).@ %a@]" pp_clf_typ
             parameter_type pp_clf_term body
       | Option.Some parameter_identifier, Option.None ->
           Format.fprintf ppf "@[<hov 2>\\%a.@ %a@]" Identifier.pp
             parameter_identifier pp_clf_term body
       | Option.Some parameter_identifier, Option.Some parameter_type ->
-          Format.fprintf ppf "@[<hov 2>\\%a:%a.@ %a@]" Identifier.pp
+          Format.fprintf ppf "@[<hov 2>\\(%a:%a).@ %a@]" Identifier.pp
             parameter_identifier pp_clf_typ parameter_type pp_clf_term body)
   | CLF.Term.Hole { variant = `Underscore; _ } -> Format.fprintf ppf "_"
   | CLF.Term.Hole { variant = `Unlabelled; _ } -> Format.fprintf ppf "?"
@@ -449,13 +452,13 @@ let rec pp_clf_term_pattern ppf term =
       | Option.None, Option.None ->
           Format.fprintf ppf "@[<hov 2>\\_.@ %a@]" pp_clf_term_pattern body
       | Option.None, Option.Some parameter_type ->
-          Format.fprintf ppf "@[<hov 2>\\_:%a.@ %a@]" pp_clf_typ
+          Format.fprintf ppf "@[<hov 2>\\(_:%a).@ %a@]" pp_clf_typ
             parameter_type pp_clf_term_pattern body
       | Option.Some parameter_identifier, Option.None ->
           Format.fprintf ppf "@[<hov 2>\\%a.@ %a@]" Identifier.pp
             parameter_identifier pp_clf_term_pattern body
       | Option.Some parameter_identifier, Option.Some parameter_type ->
-          Format.fprintf ppf "@[<hov 2>\\%a:%a.@ %a@]" Identifier.pp
+          Format.fprintf ppf "@[<hov 2>\\(%a:%a).@ %a@]" Identifier.pp
             parameter_identifier pp_clf_typ parameter_type
             pp_clf_term_pattern body)
   | CLF.Term.Pattern.Wildcard _ -> Format.fprintf ppf "_"
@@ -709,7 +712,8 @@ let rec pp_comp_kind ppf kind =
   match kind with
   | Comp.Kind.Ctype _ -> Format.pp_print_string ppf "ctype"
   | Comp.Kind.Arrow { domain; range; _ } ->
-      (* Right arrows are right-associative *)
+      (* Right arrows are right-associative, but the precedence of meta-types
+         is not comparable with the precedence of computation-level kinds *)
       Format.fprintf ppf "@[<hov 2>%a →@ %a@]" pp_meta_typ domain
         pp_comp_kind range
   | Comp.Kind.Pi { parameter_identifier; parameter_type; body; plicity; _ }

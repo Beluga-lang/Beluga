@@ -1,21 +1,20 @@
+module MyFormat = Format
+module MyParenthesizer = Parenthesizer
 open Support
-open Common
-open Parenthesizer
 open Beluga_syntax
 open Synext
 
-(* open Tyxml *)
 [@@@warning "+A-4-44-32"]
-
-(* https://github.com/ocaml/omd/tree/1.3.2 *)
-(* view-source:https://hackage.haskell.org/package/base-4.17.0.0/docs/src/GHC.Base.html#%2B%2B *)
-(* https://ocsigen.org/tyxml/latest/api/Html_sigs.T *)
-(* https://ocamlpro.com/blog/2020_06_01_fr_tutoriel_format *)
-(* https://highlightjs.readthedocs.io/en/latest/css-classes-reference.html *)
 
 exception Unbound_identifier of Identifier.t
 
 exception Unbound_qualified_identifier of Qualified_identifier.t
+
+exception Unsupported_implicit_lf_pi_kind
+
+exception Unsupported_implicit_lf_pi_typ
+
+exception Unsupported_implicit_clf_pi_typ
 
 exception Markdown_rendering_error
 
@@ -92,63 +91,143 @@ module Persistent_html_state = struct
   let lookup_id identifier state =
     let id, _ = lookup identifier state in
     id
+end
 
-  (* TODO: For modules, the first pass-through creates IDs as declarations
-     get printed. Once the module is printed, backtrack to the state before
-     printing the module, set the IDs set to the one after the first
-     passthrough, then retraverse and add the declaration pairs.
-     Alternatively, in the combinator for modules, keep track of added
-     variables separately from namespace opens. *)
+module type HTML_PRINTING_STATE = sig
+  include State.STATE
+
+  include MyFormat.FORMAT_STATE with type state := state
+
+  val add_fresh_id : ?prefix:String.t -> Identifier.t -> Unit.t t
+
+  val lookup_toplevel_id : Identifier.t -> String.t t
+
+  val lookup_id : Qualified_identifier.t -> String.t t
+
+  val in_module : declarations:'a t -> module_identifier:Identifier.t -> 'a t
+
+  val open_module : Qualified_identifier.t -> Unit.t t
+
+  val add_synonym : Qualified_identifier.t -> Identifier.t -> Unit.t t
 end
 
 module type BELUGA_HTML = sig
-  type state
-
-  val pp_html_signature : Format.formatter -> signature -> unit
+  include State.STATE
 end
 
-module Make (Html_state : sig
-  type state
-
-  val empty : state
-
-  (* val open_module : Qualified_identifier.t -> state -> state *)
-
-  val add_fresh_id : ?prefix:String.t -> Identifier.t -> state -> state
-
-  val lookup_toplevel_id : Identifier.t -> state -> String.t
-
-  val lookup_id : Qualified_identifier.t -> state -> String.t
-end) : BELUGA_HTML with type state = Html_state.state = struct
+module Make (Html_state : HTML_PRINTING_STATE) :
+  BELUGA_HTML with type state = Html_state.state = struct
   include Html_state
 
-  let[@inline] in_html ~start ~stop ppv ppf x =
-    Format.fprintf ppf "@<0>%s%a@<0>%s" start ppv x stop
+  let indent = 2
 
-  let pp_toplevel_documentation_html ppv ppf x =
-    in_html ~start:{|<div class="documentation">|} ~stop:{|</div>|} ppv ppf x
+  let[@inline] pp_in_parens p = pp_char '(' ++ p ++ pp_char ')'
 
-  let pp_inner_documentation_html ppv ppf x =
-    in_html ~start:{|<div class="inner-documentation">|} ~stop:{|</div>|} ppv
-      ppf x
+  let[@inline] pp_in_bracks p = pp_char '[' ++ p ++ pp_char ']'
 
-  let pp_preformatted_code_html ppv ppf x =
-    in_html ~start:{|<pre><code>|} ~stop:{|</code></pre>|} ppv ppf x
+  let[@inline] pp_in_braces p = pp_char '{' ++ p ++ pp_char '}'
 
-  let pp_keyword ppf x =
-    in_html
+  let[@inline] pp_in_angles p = pp_char '<' ++ p ++ pp_char '>'
+
+  let[@inline] pp_in_hash_parens p = pp_string "#(" ++ p ++ pp_char ')'
+
+  let[@inline] pp_in_dollar_parens p = pp_string "$(" ++ p ++ pp_char ')'
+
+  let[@inline] pp_in_hash_bracks p = pp_string "#[" ++ p ++ pp_char ']'
+
+  let[@inline] pp_in_dollar_bracks p = pp_string "$[" ++ p ++ pp_char ']'
+
+  let pp_right_arrow = pp_utf_8 "→"
+
+  let pp_left_arrow = pp_utf_8 "←"
+
+  let pp_thick_right_arrow = pp_utf_8 "⇒"
+
+  let pp_turnstile = pp_utf_8 "⊢"
+
+  let pp_hash = pp_char '#'
+
+  let pp_dollar = pp_char '$'
+
+  let pp_hash_underscore = pp_string "#_"
+
+  let pp_dollar_underscore = pp_string "$_"
+
+  let pp_turnstile_hash = pp_turnstile ++ pp_hash
+
+  let pp_dots = pp_utf_8 "…"
+
+  let pp_underscore = pp_char '_'
+
+  let pp_semicolon = pp_char ';'
+
+  let pp_colon = pp_char ':'
+
+  let pp_comma = pp_char ','
+
+  let pp_dot = pp_char '.'
+
+  let pp_star = pp_char '*'
+
+  let pp_lambda = pp_char '\\'
+
+  let pp_question_mark = pp_char '?'
+
+  let pp_equal = pp_char '='
+
+  let pp_pipe = pp_char '|'
+
+  let pp_slash = pp_char '/'
+
+  let pp_plus = pp_char '+'
+
+  let pp_double_colon = pp_string "::"
+
+  let pp_semicolon_space = pp_semicolon ++ pp_space
+
+  let pp_comma_space = pp_comma ++ pp_space
+
+  let pp_identifier identifier = pp_utf_8 (Identifier.name identifier)
+
+  let pp_qualified_identifier identifier =
+    let name = Qualified_identifier.name identifier in
+    let namespaces = Qualified_identifier.namespaces identifier in
+    match namespaces with
+    | [] -> pp_identifier name
+    | _ ->
+        pp_hovbox ~indent
+          (traverse_list_void
+             (fun namespace -> pp_identifier namespace ++ pp_cut ++ pp_dot)
+             namespaces
+          ++ pp_identifier name)
+
+  let[@inline] pp_in_html ~start ~stop p =
+    pp_as 1 (pp_string start) ++ p ++ pp_as 1 (pp_string stop)
+
+  let pp_toplevel_documentation_html =
+    pp_in_html ~start:{|<div class="documentation">|} ~stop:{|</div>|}
+
+  let pp_inner_documentation_html =
+    pp_in_html ~start:{|<div class="inner-documentation">|} ~stop:{|</div>|}
+
+  let pp_preformatted_code_html =
+    pp_in_html ~start:{|<pre><code>|} ~stop:{|</code></pre>|}
+
+  let pp_keyword x =
+    pp_in_html
       ~start:(Format.asprintf {|<span class="keyword keyword-%s">|} x)
-      ~stop:{|</span>|} Format.pp_print_string ppf x
+      ~stop:{|</span>|} (pp_string x)
 
-  let pp_pragma base ppv ppf x =
-    in_html
+  let pp_pragma base =
+    pp_in_html
       ~start:(Format.asprintf {|<span class="pragma pragma-%s">|} base)
-      ~stop:{|</span>|} ppv ppf x
+      ~stop:{|</span>|}
 
-  let pp_variable css_class ppf identifier =
-    in_html
+  let pp_variable css_class identifier =
+    pp_in_html
       ~start:(Format.asprintf {|<span class="variable %s">|} css_class)
-      ~stop:{|</span>|} Identifier.pp ppf identifier
+      ~stop:{|</span>|}
+      (pp_identifier identifier)
 
   let pp_lf_variable = pp_variable "lf-variable"
 
@@ -162,20 +241,22 @@ end) : BELUGA_HTML with type state = Html_state.state = struct
 
   let pp_computation_variable = pp_variable "computation-variable"
 
-  let pp_constant css_class state ppf identifier =
-    let id = lookup_toplevel_id identifier state in
-    in_html
+  let pp_constant css_class identifier =
+    let* id = lookup_toplevel_id identifier in
+    pp_in_html
       ~start:
         (Format.asprintf {|<span id="%s" class="constant %s">|} id css_class)
-      ~stop:{|</span>|} Identifier.pp ppf identifier
+      ~stop:{|</span>|}
+      (pp_identifier identifier)
 
-  let pp_constant_invoke css_class state ppf identifier =
-    let id = lookup_id identifier state in
-    in_html
+  let pp_constant_invoke css_class identifier =
+    let* id = lookup_id identifier in
+    pp_in_html
       ~start:
         (Format.asprintf {|<span class="constant %s"><a href="#%s">|}
            css_class id)
-      ~stop:{|</a></span>|} Qualified_identifier.pp ppf identifier
+      ~stop:{|</a></span>|}
+      (pp_qualified_identifier identifier)
 
   let lf_type_constant_css_class = "lf-type-constant"
 
@@ -256,48 +337,141 @@ end) : BELUGA_HTML with type state = Html_state.state = struct
   let pp_computation_program_invoke =
     pp_constant_invoke computation_program_css_class
 
+  let pp_and_keyword = pp_keyword "and"
+
+  let pp_block_keyword = pp_keyword "block"
+
+  let pp_case_keyword = pp_keyword "case"
+
+  let pp_if_keyword = pp_keyword "if"
+
+  let pp_then_keyword = pp_keyword "then"
+
+  let pp_else_keyword = pp_keyword "else"
+
+  let pp_impossible_keyword = pp_keyword "impossible"
+
+  let pp_let_keyword = pp_keyword "let"
+
+  let pp_in_keyword = pp_keyword "in"
+
+  let pp_of_keyword = pp_keyword "of"
+
+  let pp_rec_keyword = pp_keyword "rec"
+
+  let pp_schema_keyword = pp_keyword "schema"
+
+  let pp_some_keyword = pp_keyword "some"
+
+  let pp_fn_keyword = pp_keyword "fn"
+
+  let pp_mlam_keyword = pp_keyword "mlam"
+
+  let pp_module_keyword = pp_keyword "module"
+
+  let pp_struct_keyword = pp_keyword "struct"
+
+  let pp_end_keyword = pp_keyword "end"
+
+  let pp_total_keyword = pp_keyword "total"
+
+  let pp_trust_keyword = pp_keyword "trust"
+
+  let pp_type_keyword = pp_keyword "type"
+
+  let pp_ctype_keyword = pp_keyword "ctype"
+
+  let pp_prop_keyword = pp_keyword "prop"
+
+  let pp_inductive_keyword = pp_keyword "inductive"
+
+  let pp_coinductive_keyword = pp_keyword "coinductive"
+
+  let pp_stratified_keyword = pp_keyword "stratified"
+
+  let pp_lf_keyword = pp_keyword "LF"
+
+  let pp_fun_keyword = pp_keyword "fun"
+
+  let pp_typedef_keyword = pp_keyword "typedef"
+
+  let pp_proof_keyword = pp_keyword "proof"
+
+  let pp_as_keyword = pp_keyword "as"
+
+  let pp_by_keyword = pp_keyword "by"
+
+  let pp_suffices_keyword = pp_keyword "suffices"
+
+  let pp_toshow_keyword = pp_keyword "toshow"
+
+  let pp_unbox_keyword = pp_keyword "unbox"
+
+  let pp_strengthen_keyword = pp_keyword "strengthen"
+
+  let pp_head_keyword = pp_keyword "head"
+
+  let pp_variable_keyword = pp_keyword "variable"
+
+  let pp_empty_keyword = pp_keyword "empty"
+
+  let pp_context_keyword = pp_keyword "context"
+
+  let pp_extended_keyword = pp_keyword "extended"
+
+  let pp_intros_keyword = pp_keyword "intros"
+
+  let pp_solve_keyword = pp_keyword "solve"
+
+  let pp_split_keyword = pp_keyword "split"
+
   (** {1 Pretty-Printing LF Syntax} *)
 
-  open Make_parenthesizer (Lf_precedence)
+  open MyParenthesizer.Make_parenthesizer (Html_state) (Lf_precedence)
 
-  let rec pp_lf_kind state ppf kind =
+  let rec pp_lf_kind kind =
     let parent_precedence = precedence_of_lf_kind kind in
     match kind with
-    | LF.Kind.Typ _ -> Format.fprintf ppf "type"
     | LF.Kind.Arrow { domain; range; _ } ->
         (* Right arrows are right-associative *)
-        Format.fprintf ppf "@[<hov 2>%a →@ %a@]"
-          (parenthesize_left_argument_right_associative_operator
-             precedence_of_lf_typ ~parent_precedence (pp_lf_typ state))
-          domain
-          (parenthesize_right_argument_right_associative_operator
-             precedence_of_lf_kind ~parent_precedence (pp_lf_kind state))
-          range
-    | LF.Kind.Pi { parameter_identifier; parameter_type; body; _ } -> (
-        (* Pi-operators are weak prefix operators *)
-        match (parameter_identifier, parameter_type) with
-        | Option.Some parameter_identifier, Option.Some parameter_type ->
-            Format.fprintf ppf "@[<hov 2>{%a :@ %a}@ %a@]" Identifier.pp
-              parameter_identifier (pp_lf_typ state) parameter_type
-              (pp_lf_kind state) body
-        | Option.Some parameter_identifier, Option.None ->
-            Format.fprintf ppf "@[<hov 2>{%a}@ %a@]" Identifier.pp
-              parameter_identifier (pp_lf_kind state) body
-        | Option.None, Option.Some parameter_type ->
-            Format.fprintf ppf "@[<hov 2>{_ :@ %a}@ %a@]" (pp_lf_typ state)
-              parameter_type (pp_lf_kind state) body
-        | Option.None, Option.None ->
-            Format.fprintf ppf "@[<hov 2>{_}@ %a@]" (pp_lf_kind state) body)
+        let pp_domain =
+          parenthesize_left_argument_right_associative_operator
+            precedence_of_lf_typ ~parent_precedence pp_lf_typ domain
+        in
+        let pp_range =
+          parenthesize_right_argument_right_associative_operator
+            precedence_of_lf_kind ~parent_precedence pp_lf_kind range
+        in
+        pp_hovbox ~indent
+          (pp_domain ++ pp_non_breaking_space ++ pp_right_arrow ++ pp_space
+         ++ pp_range)
+    | LF.Kind.Typ _ -> pp_type_keyword
+    | LF.Kind.Pi
+        { parameter_identifier; parameter_type; body; plicity; location } ->
+        let pp_parameter_identifier =
+          pp_option ~none:pp_underscore pp_identifier parameter_identifier
+        in
+        let pp_parameter_type =
+          pp_option
+            (fun parameter_type ->
+              pp_non_breaking_space ++ pp_colon ++ pp_space
+              ++ pp_lf_typ parameter_type)
+            parameter_type
+        in
+        let pp_declaration = pp_parameter_identifier ++ pp_parameter_type in
+        let pp_binding =
+          match plicity with
+          | Plicity.Explicit -> pp_in_braces pp_declaration
+          | Plicity.Implicit ->
+              Error.raise_at1 location Unsupported_implicit_lf_pi_kind
+        in
+        pp_hovbox ~indent (pp_binding ++ pp_space ++ pp_lf_kind body)
 
-  and pp_lf_typ state ppf typ =
+  and pp_lf_typ typ =
     let parent_precedence = precedence_of_lf_typ typ in
     match typ with
-    | LF.Typ.Constant { identifier; prefixed; _ } ->
-        if prefixed then
-          Format.fprintf ppf "(%a)"
-            (pp_lf_type_constant_invoke state)
-            identifier
-        else (pp_lf_type_constant_invoke state) ppf identifier
+    | LF.Typ.Constant { identifier; _ } ->
+        pp_lf_type_constant_invoke identifier
     | LF.Typ.Application { applicand; arguments; _ } ->
         pp_application
           ~guard_operator:(function
@@ -314,70 +488,79 @@ end) : BELUGA_HTML with type state = Html_state.state = struct
             | _ -> `Term)
           ~precedence_of_applicand:precedence_of_lf_typ
           ~precedence_of_argument:precedence_of_lf_term
-          ~pp_applicand:(pp_lf_typ state) ~pp_argument:(pp_lf_term state)
-          ~parent_precedence ppf (applicand, arguments)
+          ~pp_applicand:pp_lf_typ ~pp_argument:pp_lf_term ~parent_precedence
+          (applicand, arguments)
     | LF.Typ.Arrow { domain; range; orientation = `Forward; _ } ->
         (* Forward arrows are right-associative and of equal precedence with
            backward arrows, so backward arrows have to be parenthesized *)
-        Format.fprintf ppf "@[<hov 2>%a →@ %a@]"
-          (match domain with
+        let pp_domain =
+          match domain with
           | LF.Typ.Arrow { orientation = `Backward; _ } ->
-              parenthesize (pp_lf_typ state)
+              pp_in_parens (pp_lf_typ domain)
           | _ ->
               parenthesize_left_argument_right_associative_operator
-                precedence_of_lf_typ ~parent_precedence (pp_lf_typ state))
-          domain
-          (match range with
+                precedence_of_lf_typ ~parent_precedence pp_lf_typ domain
+        in
+        let pp_range =
+          match range with
           | LF.Typ.Arrow { orientation = `Backward; _ } ->
-              parenthesize (pp_lf_typ state)
+              pp_in_parens (pp_lf_typ range)
           | _ ->
               parenthesize_right_argument_right_associative_operator
-                precedence_of_lf_typ ~parent_precedence (pp_lf_typ state))
-          range
+                precedence_of_lf_typ ~parent_precedence pp_lf_typ range
+        in
+        pp_hovbox ~indent
+          (pp_domain ++ pp_non_breaking_space ++ pp_right_arrow ++ pp_space
+         ++ pp_range)
     | LF.Typ.Arrow { range; domain; orientation = `Backward; _ } ->
         (* Backward arrows are left-associative and of equal precedence with
            forward arrows, so forward arrows have to be parenthesized *)
-        Format.fprintf ppf "@[<hov 2>%a@ ← %a@]"
-          (match range with
+        let pp_range =
+          match range with
           | LF.Typ.Arrow { orientation = `Forward; _ } ->
-              parenthesize (pp_lf_typ state)
+              pp_in_parens (pp_lf_typ range)
           | _ ->
               parenthesize_left_argument_left_associative_operator
-                precedence_of_lf_typ ~parent_precedence (pp_lf_typ state))
-          range
-          (match domain with
+                precedence_of_lf_typ ~parent_precedence pp_lf_typ range
+        in
+        let pp_domain =
+          match domain with
           | LF.Typ.Arrow { orientation = `Forward; _ } ->
-              parenthesize (pp_lf_typ state)
+              pp_in_parens (pp_lf_typ domain)
           | _ ->
               parenthesize_right_argument_left_associative_operator
-                precedence_of_lf_typ ~parent_precedence (pp_lf_typ state))
-          domain
-    | LF.Typ.Pi { parameter_identifier; parameter_type; body; _ } -> (
-        (* Pi-operators are weak prefix operators *)
-        match (parameter_identifier, parameter_type) with
-        | Option.Some parameter_identifier, Option.Some parameter_type ->
-            Format.fprintf ppf "@[<hov 2>{%a :@ %a}@ %a@]" pp_lf_variable
-              parameter_identifier (pp_lf_typ state) parameter_type
-              (pp_lf_typ state) body
-        | Option.Some parameter_identifier, Option.None ->
-            Format.fprintf ppf "@[<hov 2>{%a}@ %a@]" pp_lf_variable
-              parameter_identifier (pp_lf_typ state) body
-        | Option.None, Option.Some parameter_type ->
-            Format.fprintf ppf "@[<hov 2>{_ :@ %a}@ %a@]" (pp_lf_typ state)
-              parameter_type (pp_lf_typ state) body
-        | Option.None, Option.None ->
-            Format.fprintf ppf "@[<hov 2>{_}@ %a@]" (pp_lf_typ state) body)
+                precedence_of_lf_typ ~parent_precedence pp_lf_typ domain
+        in
+        pp_hovbox ~indent
+          (pp_range ++ pp_space ++ pp_left_arrow ++ pp_non_breaking_space
+         ++ pp_domain)
+    | LF.Typ.Pi
+        { parameter_identifier; parameter_type; body; plicity; location } ->
+        let pp_parameter_identifier =
+          pp_option ~none:pp_underscore pp_identifier parameter_identifier
+        in
+        let pp_parameter_type =
+          pp_option
+            (fun parameter_type ->
+              pp_non_breaking_space ++ pp_colon ++ pp_space
+              ++ pp_lf_typ parameter_type)
+            parameter_type
+        in
+        let pp_declaration = pp_parameter_identifier ++ pp_parameter_type in
+        let pp_binding =
+          match plicity with
+          | Plicity.Explicit -> pp_in_braces pp_declaration
+          | Plicity.Implicit ->
+              Error.raise_at1 location Unsupported_implicit_lf_pi_typ
+        in
+        pp_hovbox ~indent (pp_binding ++ pp_space ++ pp_lf_typ body)
 
-  and pp_lf_term state ppf term =
+  and pp_lf_term term =
     let parent_precedence = precedence_of_lf_term term in
     match term with
-    | LF.Term.Variable { identifier; _ } -> pp_lf_variable ppf identifier
-    | LF.Term.Constant { identifier; prefixed = true; _ } ->
-        Format.fprintf ppf "(%a)"
-          (pp_lf_term_constant_invoke state)
-          identifier
-    | LF.Term.Constant { identifier; prefixed = false; _ } ->
-        (pp_lf_term_constant_invoke state) ppf identifier
+    | LF.Term.Variable { identifier; _ } -> pp_lf_variable identifier
+    | LF.Term.Constant { identifier; _ } ->
+        pp_lf_term_constant_invoke identifier
     | LF.Term.Application { applicand; arguments; _ } ->
         pp_application
           ~guard_operator:(function
@@ -394,46 +577,45 @@ end) : BELUGA_HTML with type state = Html_state.state = struct
             | _ -> `Term)
           ~precedence_of_applicand:precedence_of_lf_term
           ~precedence_of_argument:precedence_of_lf_term
-          ~pp_applicand:(pp_lf_term state) ~pp_argument:(pp_lf_term state)
-          ~parent_precedence ppf (applicand, arguments)
+          ~pp_applicand:pp_lf_term ~pp_argument:pp_lf_term ~parent_precedence
+          (applicand, arguments)
     | LF.Term.Abstraction { parameter_identifier; parameter_type; body; _ }
-      -> (
+      ->
         (* Lambdas are weak prefix operators, so the body of the lambda never
            requires parentheses *)
-        match (parameter_identifier, parameter_type) with
-        | Option.None, Option.None ->
-            Format.fprintf ppf "@[<hov 2>\\_.@ %a@]" (pp_lf_term state) body
-        | Option.None, Option.Some parameter_type ->
-            Format.fprintf ppf "@[<hov 2>\\_:%a.@ %a@]" (pp_lf_typ state)
-              parameter_type (pp_lf_term state) body
-        | Option.Some parameter_identifier, Option.None ->
-            Format.fprintf ppf "@[<hov 2>\\%a.@ %a@]" pp_lf_variable
-              parameter_identifier (pp_lf_term state) body
-        | Option.Some parameter_identifier, Option.Some parameter_type ->
-            Format.fprintf ppf "@[<hov 2>\\%a:%a.@ %a@]" pp_lf_variable
-              parameter_identifier (pp_lf_typ state) parameter_type
-              (pp_lf_term state) body)
-    | LF.Term.Wildcard _ -> Format.fprintf ppf "_"
+        let pp_parameter_identifier =
+          pp_option ~none:pp_underscore pp_identifier parameter_identifier
+        in
+        let pp_declaration =
+          match parameter_type with
+          | Option.Some parameter_type ->
+              pp_in_parens
+                (pp_parameter_identifier ++ pp_non_breaking_space ++ pp_colon
+               ++ pp_space ++ pp_lf_typ parameter_type)
+          | Option.None -> pp_parameter_identifier
+        in
+        pp_hovbox ~indent
+          (pp_lambda ++ pp_declaration ++ pp_dot ++ pp_space
+         ++ pp_lf_term body)
+    | LF.Term.Wildcard _ -> pp_underscore
     | LF.Term.Type_annotated { term; typ; _ } ->
         (* Type ascriptions are left-associative *)
-        Format.fprintf ppf "@[<hov 2>%a :@ %a@]"
-          (parenthesize_left_argument_left_associative_operator
-             precedence_of_lf_term ~parent_precedence (pp_lf_term state))
-          term (pp_lf_typ state) typ
+        let pp_term =
+          parenthesize_left_argument_left_associative_operator
+            precedence_of_lf_term ~parent_precedence pp_lf_term term
+        in
+        pp_hovbox ~indent
+          (pp_term ++ pp_space ++ pp_colon ++ pp_space ++ pp_lf_typ typ)
 
   (** {1 Pretty-Printing Contextual LF Syntax} *)
 
-  open Make_parenthesizer (Clf_precedence)
+  open MyParenthesizer.Make_parenthesizer (Html_state) (Clf_precedence)
 
-  let rec pp_clf_typ state ppf typ =
+  let rec pp_clf_typ typ =
     let parent_precedence = precedence_of_clf_typ typ in
     match typ with
-    | CLF.Typ.Constant { identifier; prefixed; _ } ->
-        if prefixed then
-          Format.fprintf ppf "(%a)"
-            (pp_lf_type_constant_invoke state)
-            identifier
-        else (pp_lf_type_constant_invoke state) ppf identifier
+    | CLF.Typ.Constant { identifier; _ } ->
+        pp_lf_type_constant_invoke identifier
     | CLF.Typ.Application { applicand; arguments; _ } ->
         pp_application
           ~guard_operator:(function
@@ -450,76 +632,90 @@ end) : BELUGA_HTML with type state = Html_state.state = struct
             | _ -> `Term)
           ~precedence_of_applicand:precedence_of_clf_typ
           ~precedence_of_argument:precedence_of_clf_term
-          ~pp_applicand:(pp_clf_typ state) ~pp_argument:(pp_clf_term state)
-          ~parent_precedence ppf (applicand, arguments)
+          ~pp_applicand:pp_clf_typ ~pp_argument:pp_clf_term
+          ~parent_precedence (applicand, arguments)
     | CLF.Typ.Arrow { domain; range; orientation = `Forward; _ } ->
         (* Forward arrows are right-associative and of equal precedence with
            backward arrows, so backward arrows have to be parenthesized *)
-        Format.fprintf ppf "@[<hov 2>%a →@ %a@]"
-          (match domain with
+        let pp_domain =
+          match domain with
           | CLF.Typ.Arrow { orientation = `Backward; _ } ->
-              parenthesize (pp_clf_typ state)
+              pp_in_parens (pp_clf_typ domain)
           | _ ->
               parenthesize_left_argument_right_associative_operator
-                precedence_of_clf_typ ~parent_precedence (pp_clf_typ state))
-          domain
-          (match range with
+                precedence_of_clf_typ ~parent_precedence pp_clf_typ domain
+        in
+        let pp_range =
+          match range with
           | CLF.Typ.Arrow { orientation = `Backward; _ } ->
-              parenthesize (pp_clf_typ state)
+              pp_in_parens (pp_clf_typ range)
           | _ ->
               parenthesize_right_argument_right_associative_operator
-                precedence_of_clf_typ ~parent_precedence (pp_clf_typ state))
-          range
+                precedence_of_clf_typ ~parent_precedence pp_clf_typ range
+        in
+        pp_hovbox ~indent
+          (pp_domain ++ pp_non_breaking_space ++ pp_right_arrow ++ pp_space
+         ++ pp_range)
     | CLF.Typ.Arrow { range; domain; orientation = `Backward; _ } ->
         (* Backward arrows are left-associative and of equal precedence with
            forward arrows, so forward arrows have to be parenthesized *)
-        Format.fprintf ppf "@[<hov 2>%a@ ← %a@]"
-          (match range with
+        let pp_range =
+          match range with
           | CLF.Typ.Arrow { orientation = `Forward; _ } ->
-              parenthesize (pp_clf_typ state)
+              pp_in_parens (pp_clf_typ range)
           | _ ->
               parenthesize_left_argument_left_associative_operator
-                precedence_of_clf_typ ~parent_precedence (pp_clf_typ state))
-          range
-          (match domain with
+                precedence_of_clf_typ ~parent_precedence pp_clf_typ range
+        in
+        let pp_domain =
+          match domain with
           | CLF.Typ.Arrow { orientation = `Forward; _ } ->
-              parenthesize (pp_clf_typ state)
+              pp_in_parens (pp_clf_typ domain)
           | _ ->
               parenthesize_right_argument_left_associative_operator
-                precedence_of_clf_typ ~parent_precedence (pp_clf_typ state))
-          domain
-    | CLF.Typ.Pi { parameter_identifier; parameter_type; body; _ } ->
+                precedence_of_clf_typ ~parent_precedence pp_clf_typ domain
+        in
+        pp_hovbox ~indent
+          (pp_range ++ pp_space ++ pp_left_arrow ++ pp_non_breaking_space
+         ++ pp_domain)
+    | CLF.Typ.Pi
+        { parameter_identifier; parameter_type; body; plicity; location } ->
         (* Pi-operators are weak prefix operators *)
-        Format.fprintf ppf "@[<hov 2>{%a :@ %a}@ %a@]"
-          (fun ppf -> function
-            | Option.Some parameter_identifier ->
-                pp_lf_variable ppf parameter_identifier
-            | Option.None -> Format.fprintf ppf "_")
-          parameter_identifier (pp_clf_typ state) parameter_type
-          (pp_clf_typ state) body
+        let pp_parameter_identifier =
+          pp_option ~none:pp_underscore pp_identifier parameter_identifier
+        in
+        let pp_parameter_type = pp_clf_typ parameter_type in
+        let pp_declaration = pp_parameter_identifier ++ pp_parameter_type in
+        let pp_binding =
+          match plicity with
+          | Plicity.Explicit -> pp_in_braces pp_declaration
+          | Plicity.Implicit ->
+              Error.raise_at1 location Unsupported_implicit_clf_pi_typ
+        in
+        pp_hovbox ~indent (pp_binding ++ pp_space ++ pp_clf_typ body)
     | CLF.Typ.Block { elements = `Unnamed typ; _ } ->
-        Format.fprintf ppf "@[<hov 2>block (%a)@]" (pp_clf_typ state) typ
+        pp_hovbox ~indent
+          (pp_block_keyword ++ pp_non_breaking_space
+          ++ pp_in_parens (pp_clf_typ typ))
     | CLF.Typ.Block { elements = `Record nts; _ } ->
-        Format.fprintf ppf "@[<hov 2>block (%a)@]"
-          (List1.pp ~pp_sep:Format.comma (fun ppf (i, t) ->
-               Format.fprintf ppf "%a :@ %a" pp_lf_variable i
-                 (pp_clf_typ state) t))
-          nts
+        let pp_binding (identifier, typ) =
+          pp_identifier identifier ++ pp_non_breaking_space ++ pp_colon
+          ++ pp_space ++ pp_clf_typ typ
+        in
+        pp_hovbox ~indent
+          (pp_block_keyword ++ pp_non_breaking_space
+          ++ pp_in_parens (pp_list1 ~sep:pp_comma_space pp_binding nts))
 
-  and pp_clf_term state ppf term =
+  and pp_clf_term term =
     let parent_precedence = precedence_of_clf_term term in
     match term with
-    | CLF.Term.Variable { identifier; _ } -> pp_lf_variable ppf identifier
+    | CLF.Term.Variable { identifier; _ } -> pp_lf_variable identifier
     | CLF.Term.Parameter_variable { identifier; _ } ->
-        pp_parameter_variable ppf identifier
+        pp_parameter_variable identifier
     | CLF.Term.Substitution_variable { identifier; _ } ->
-        pp_substitution_variable ppf identifier
-    | CLF.Term.Constant { identifier; prefixed = true; _ } ->
-        Format.fprintf ppf "(%a)"
-          (pp_lf_term_constant_invoke state)
-          identifier
-    | CLF.Term.Constant { identifier; prefixed = false; _ } ->
-        (pp_lf_term_constant_invoke state) ppf identifier
+        pp_substitution_variable identifier
+    | CLF.Term.Constant { identifier; _ } ->
+        pp_lf_term_constant_invoke identifier
     | CLF.Term.Application { applicand; arguments; _ } ->
         pp_application
           ~guard_operator:(function
@@ -536,173 +732,160 @@ end) : BELUGA_HTML with type state = Html_state.state = struct
             | _ -> `Term)
           ~precedence_of_applicand:precedence_of_clf_term
           ~precedence_of_argument:precedence_of_clf_term
-          ~pp_applicand:(pp_clf_term state) ~pp_argument:(pp_clf_term state)
-          ~parent_precedence ppf (applicand, arguments)
+          ~pp_applicand:pp_clf_term ~pp_argument:pp_clf_term
+          ~parent_precedence (applicand, arguments)
     | CLF.Term.Abstraction { parameter_identifier; parameter_type; body; _ }
-      -> (
+      ->
         (* Lambdas are weak prefix operators, so the body of a lambda does
            not need to be parenthesized *)
-        match (parameter_identifier, parameter_type) with
-        | Option.None, Option.None ->
-            Format.fprintf ppf "@[<hov 2>\\_.@ %a@]" (pp_clf_term state) body
-        | Option.None, Option.Some parameter_type ->
-            Format.fprintf ppf "@[<hov 2>\\_:%a.@ %a@]" (pp_clf_typ state)
-              parameter_type (pp_clf_term state) body
-        | Option.Some parameter_identifier, Option.None ->
-            Format.fprintf ppf "@[<hov 2>\\%a.@ %a@]" pp_lf_variable
-              parameter_identifier (pp_clf_term state) body
-        | Option.Some parameter_identifier, Option.Some parameter_type ->
-            Format.fprintf ppf "@[<hov 2>\\%a:%a.@ %a@]" pp_lf_variable
-              parameter_identifier (pp_clf_typ state) parameter_type
-              (pp_clf_term state) body)
-    | CLF.Term.Hole { variant = `Underscore; _ } -> Format.fprintf ppf "_"
-    | CLF.Term.Hole { variant = `Unlabelled; _ } -> Format.fprintf ppf "?"
+        let pp_parameter_identifier =
+          pp_option ~none:pp_underscore pp_identifier parameter_identifier
+        in
+        let pp_declaration =
+          match parameter_type with
+          | Option.Some parameter_type ->
+              pp_in_parens
+                (pp_parameter_identifier ++ pp_non_breaking_space ++ pp_colon
+               ++ pp_space ++ pp_clf_typ parameter_type)
+          | Option.None -> pp_parameter_identifier
+        in
+        pp_hovbox ~indent
+          (pp_lambda ++ pp_declaration ++ pp_dot ++ pp_space
+         ++ pp_clf_term body)
+    | CLF.Term.Hole { variant = `Underscore; _ } -> pp_underscore
+    | CLF.Term.Hole { variant = `Unlabelled; _ } -> pp_question_mark
     | CLF.Term.Hole { variant = `Labelled label; _ } ->
-        Format.fprintf ppf "?%a" Identifier.pp label
+        pp_question_mark ++ pp_identifier label
     | CLF.Term.Substitution { term; substitution; _ } ->
         (* Substitutions are left-associative *)
-        Format.fprintf ppf "@[<hov 2>%a[%a]@]"
-          (parenthesize_left_argument_left_associative_operator
-             precedence_of_clf_term ~parent_precedence (pp_clf_term state))
-          term
-          (pp_clf_substitution state)
-          substitution
+        let pp_term =
+          parenthesize_left_argument_left_associative_operator
+            precedence_of_clf_term ~parent_precedence pp_clf_term term
+        in
+        pp_hovbox ~indent
+          (pp_term ++ pp_in_bracks (pp_clf_substitution substitution))
     | CLF.Term.Tuple { terms; _ } ->
-        Format.fprintf ppf "@[<hov 2><%a>@]"
-          (List1.pp
-             ~pp_sep:(fun ppf () -> Format.fprintf ppf ";@,")
-             (pp_clf_term state))
-          terms
+        pp_hovbox ~indent
+          (pp_in_angles (pp_list1 ~sep:pp_semicolon_space pp_clf_term terms))
     | CLF.Term.Projection { term; projection = `By_position i; _ } ->
         (* Projections are left-associative *)
-        Format.fprintf ppf "@[<hov 2>%a.%d@]"
-          (parenthesize_left_argument_left_associative_operator
-             precedence_of_clf_term ~parent_precedence (pp_clf_term state))
-          term i
+        let pp_term =
+          parenthesize_left_argument_left_associative_operator
+            precedence_of_clf_term ~parent_precedence pp_clf_term term
+        in
+        pp_hovbox ~indent (pp_term ++ pp_dot ++ pp_int i)
     | CLF.Term.Projection { term; projection = `By_identifier i; _ } ->
         (* Projections are left-associative *)
-        Format.fprintf ppf "@[<hov 2>%a.%a@]"
-          (parenthesize_left_argument_left_associative_operator
-             precedence_of_clf_term ~parent_precedence (pp_clf_term state))
-          term Identifier.pp i
+        let pp_term =
+          parenthesize_left_argument_left_associative_operator
+            precedence_of_clf_term ~parent_precedence pp_clf_term term
+        in
+        pp_term ++ pp_dot ++ pp_identifier i
     | CLF.Term.Type_annotated { term; typ; _ } ->
         (* Type ascriptions are left-associative *)
-        Format.fprintf ppf "@[<hov 2>%a :@ %a@]"
-          (parenthesize_left_argument_left_associative_operator
-             precedence_of_clf_term ~parent_precedence (pp_clf_term state))
-          term (pp_clf_typ state) typ
+        let pp_term =
+          parenthesize_left_argument_left_associative_operator
+            precedence_of_clf_term ~parent_precedence pp_clf_term term
+        in
+        pp_hovbox ~indent
+          (pp_term ++ pp_non_breaking_space ++ pp_colon ++ pp_space
+         ++ pp_clf_typ typ)
 
-  and pp_clf_substitution state ppf substitution =
+  and pp_clf_substitution substitution =
     match substitution with
     | { CLF.Substitution.head = CLF.Substitution.Head.None _; terms = []; _ }
       ->
-        ()
+        pp_nop
     | { CLF.Substitution.head = CLF.Substitution.Head.Identity _
       ; terms = []
       ; _
       } ->
-        Format.fprintf ppf "…"
+        pp_dots
     | { CLF.Substitution.head = CLF.Substitution.Head.None _; terms; _ } ->
-        Format.fprintf ppf "@[<hov 2>%a@]"
-          (List.pp ~pp_sep:Format.comma (pp_clf_term state))
-          terms
+        pp_list ~sep:pp_comma_space pp_clf_term terms
     | { CLF.Substitution.head = CLF.Substitution.Head.Identity _; terms; _ }
       ->
-        Format.fprintf ppf "@[<hov 2>…,@ %a@]"
-          (List.pp ~pp_sep:Format.comma (pp_clf_term state))
-          terms
+        pp_dots ++ pp_comma_space
+        ++ pp_list ~sep:pp_comma_space pp_clf_term terms
     | { CLF.Substitution.head =
           CLF.Substitution.Head.Substitution_variable
             { identifier; closure = Option.None; _ }
       ; terms = []
       ; _
       } ->
-        Format.fprintf ppf "@[<hov 2>%a@]" pp_substitution_variable
-          identifier
+        pp_substitution_variable identifier
     | { CLF.Substitution.head =
           CLF.Substitution.Head.Substitution_variable
             { identifier; closure = Option.Some closure; _ }
       ; terms = []
       ; _
       } ->
-        Format.fprintf ppf "@[<hov 2>%a[%a]@]" pp_substitution_variable
-          identifier
-          (pp_clf_substitution state)
-          closure
+        pp_substitution_variable identifier
+        ++ pp_in_bracks (pp_clf_substitution closure)
     | { CLF.Substitution.head =
           CLF.Substitution.Head.Substitution_variable
             { identifier; closure = Option.None; _ }
       ; terms
       ; _
       } ->
-        Format.fprintf ppf "@[<hov 2>%a,@ %a@]" pp_substitution_variable
-          identifier
-          (List.pp ~pp_sep:Format.comma (pp_clf_term state))
-          terms
+        pp_substitution_variable identifier
+        ++ pp_comma_space
+        ++ pp_list ~sep:pp_comma_space pp_clf_term terms
     | { CLF.Substitution.head =
           CLF.Substitution.Head.Substitution_variable
             { identifier; closure = Option.Some closure; _ }
       ; terms
       ; _
       } ->
-        Format.fprintf ppf "@[<hov 2>%a[%a],@ %a@]" pp_substitution_variable
-          identifier
-          (pp_clf_substitution state)
-          closure
-          (List.pp ~pp_sep:Format.comma (pp_clf_term state))
-          terms
+        pp_substitution_variable identifier
+        ++ pp_in_bracks (pp_clf_substitution closure)
+        ++ pp_comma_space
+        ++ pp_list ~sep:pp_comma_space pp_clf_term terms
 
-  and pp_clf_context state ppf context =
-    let pp_typing ppf typing =
-      match typing with
-      | identifier, Option.None -> pp_lf_variable ppf identifier
-      | identifier, Option.Some typ ->
-          Format.fprintf ppf "%a :@ %a" pp_lf_variable identifier
-            (pp_clf_typ state) typ
+  and pp_clf_context context =
+    let pp_typing (identifier, typ_opt) =
+      pp_lf_variable identifier
+      ++ pp_option
+           (fun typ ->
+             pp_non_breaking_space ++ pp_colon ++ pp_space ++ pp_clf_typ typ)
+           typ_opt
     in
     match context with
-    | { CLF.Context.head = CLF.Context.Head.None _; bindings = []; _ } -> ()
+    | { CLF.Context.head = CLF.Context.Head.None _; bindings = []; _ } ->
+        pp_nop
     | { CLF.Context.head = CLF.Context.Head.Hole _; bindings = []; _ } ->
-        Format.fprintf ppf "_"
+        pp_underscore
     | { CLF.Context.head =
           CLF.Context.Head.Context_variable { identifier; _ }
       ; bindings = []
       ; _
       } ->
-        pp_context_variable ppf identifier
+        pp_context_variable identifier
     | { CLF.Context.head = CLF.Context.Head.None _; bindings; _ } ->
-        Format.fprintf ppf "@[<hov 2>%a@]"
-          (List.pp ~pp_sep:Format.comma pp_typing)
-          bindings
+        pp_list ~sep:pp_comma_space pp_typing bindings
     | { CLF.Context.head = CLF.Context.Head.Hole _; bindings; _ } ->
-        Format.fprintf ppf "@[<hov 2>_,@ %a@]"
-          (List.pp ~pp_sep:Format.comma pp_typing)
-          bindings
+        pp_underscore ++ pp_comma_space
+        ++ pp_list ~sep:pp_comma_space pp_typing bindings
     | { CLF.Context.head =
           CLF.Context.Head.Context_variable { identifier; _ }
       ; bindings
       ; _
       } ->
-        Format.fprintf ppf "@[<hov 2>%a,@ %a@]" pp_context_variable
-          identifier
-          (List.pp ~pp_sep:Format.comma pp_typing)
-          bindings
+        pp_context_variable identifier
+        ++ pp_comma_space
+        ++ pp_list ~sep:pp_comma_space pp_typing bindings
 
-  let rec pp_clf_term_pattern state ppf term =
+  let rec pp_clf_term_pattern term =
     let parent_precedence = precedence_of_clf_term_pattern term in
     match term with
     | CLF.Term.Pattern.Variable { identifier; _ } ->
-        pp_lf_variable ppf identifier
+        pp_lf_variable identifier
     | CLF.Term.Pattern.Parameter_variable { identifier; _ } ->
-        pp_parameter_variable ppf identifier
+        pp_parameter_variable identifier
     | CLF.Term.Pattern.Substitution_variable { identifier; _ } ->
-        pp_substitution_variable ppf identifier
-    | CLF.Term.Pattern.Constant { identifier; prefixed = true; _ } ->
-        Format.fprintf ppf "(%a)"
-          (pp_lf_term_constant_invoke state)
-          identifier
-    | CLF.Term.Pattern.Constant { identifier; prefixed = false; _ } ->
-        (pp_lf_term_constant_invoke state) ppf identifier
+        pp_substitution_variable identifier
+    | CLF.Term.Pattern.Constant { identifier; _ } ->
+        pp_lf_term_constant_invoke identifier
     | CLF.Term.Pattern.Application { applicand; arguments; _ } ->
         pp_application
           ~guard_operator:(function
@@ -720,287 +903,279 @@ end) : BELUGA_HTML with type state = Html_state.state = struct
             | _ -> `Term)
           ~precedence_of_applicand:precedence_of_clf_term_pattern
           ~precedence_of_argument:precedence_of_clf_term_pattern
-          ~pp_applicand:(pp_clf_term_pattern state)
-          ~pp_argument:(pp_clf_term_pattern state)
-          ~parent_precedence ppf (applicand, arguments)
+          ~pp_applicand:pp_clf_term_pattern ~pp_argument:pp_clf_term_pattern
+          ~parent_precedence (applicand, arguments)
     | CLF.Term.Pattern.Abstraction
-        { parameter_identifier; parameter_type; body; _ } -> (
+        { parameter_identifier; parameter_type; body; _ } ->
         (* Lambdas are weak prefix operators, so the body of a lambda never
            requires parentheses. *)
-        match (parameter_identifier, parameter_type) with
-        | Option.None, Option.None ->
-            Format.fprintf ppf "@[<hov 2>\\_.@ %a@]"
-              (pp_clf_term_pattern state)
-              body
-        | Option.None, Option.Some parameter_type ->
-            Format.fprintf ppf "@[<hov 2>\\_:%a.@ %a@]" (pp_clf_typ state)
-              parameter_type
-              (pp_clf_term_pattern state)
-              body
-        | Option.Some parameter_identifier, Option.None ->
-            Format.fprintf ppf "@[<hov 2>\\%a.@ %a@]" pp_lf_variable
-              parameter_identifier
-              (pp_clf_term_pattern state)
-              body
-        | Option.Some parameter_identifier, Option.Some parameter_type ->
-            Format.fprintf ppf "@[<hov 2>\\%a:%a.@ %a@]" pp_lf_variable
-              parameter_identifier (pp_clf_typ state) parameter_type
-              (pp_clf_term_pattern state)
-              body)
-    | CLF.Term.Pattern.Wildcard _ -> Format.fprintf ppf "_"
+        let pp_parameter_identifier =
+          pp_option ~none:pp_underscore pp_identifier parameter_identifier
+        in
+        let pp_declaration =
+          pp_parameter_identifier
+          ++ pp_option
+               (fun parameter_type ->
+                 pp_in_parens
+                   (pp_non_breaking_space ++ pp_colon ++ pp_space
+                  ++ pp_clf_typ parameter_type))
+               parameter_type
+        in
+        pp_hovbox ~indent
+          (pp_lambda ++ pp_declaration ++ pp_dot ++ pp_space
+         ++ pp_clf_term_pattern body)
+    | CLF.Term.Pattern.Wildcard _ -> pp_underscore
     | CLF.Term.Pattern.Substitution { term; substitution; _ } ->
-        Format.fprintf ppf "@[<hov 2>%a[%a]@]"
-          (parenthesize_left_argument_left_associative_operator
-             precedence_of_clf_term_pattern ~parent_precedence
-             (pp_clf_term_pattern state))
-          term
-          (pp_clf_substitution state)
-          substitution
+        let pp_term =
+          parenthesize_left_argument_left_associative_operator
+            precedence_of_clf_term_pattern ~parent_precedence
+            pp_clf_term_pattern term
+        in
+        pp_hovbox ~indent
+          (pp_term ++ pp_in_bracks (pp_clf_substitution substitution))
     | CLF.Term.Pattern.Tuple { terms; _ } ->
-        Format.fprintf ppf "@[<hov 2><%a>@]"
-          (List1.pp
-             ~pp_sep:(fun ppf () -> Format.fprintf ppf ";@,")
-             (pp_clf_term_pattern state))
-          terms
+        pp_hovbox ~indent
+          (pp_in_angles
+             (pp_list1 ~sep:pp_semicolon_space pp_clf_term_pattern terms))
     | CLF.Term.Pattern.Projection { term; projection = `By_position i; _ } ->
         (* Projections are left-associative *)
-        Format.fprintf ppf "@[<hov 2>%a.%d@]"
-          (parenthesize_left_argument_left_associative_operator
-             precedence_of_clf_term_pattern ~parent_precedence
-             (pp_clf_term_pattern state))
-          term i
+        let pp_term =
+          parenthesize_left_argument_left_associative_operator
+            precedence_of_clf_term_pattern ~parent_precedence
+            pp_clf_term_pattern term
+        in
+        pp_term ++ pp_dot ++ pp_int i
     | CLF.Term.Pattern.Projection { term; projection = `By_identifier i; _ }
       ->
         (* Projections are left-associative *)
-        Format.fprintf ppf "@[<hov 2>%a.%a@]"
-          (parenthesize_left_argument_left_associative_operator
-             precedence_of_clf_term_pattern ~parent_precedence
-             (pp_clf_term_pattern state))
-          term Identifier.pp i
+        let pp_term =
+          parenthesize_left_argument_left_associative_operator
+            precedence_of_clf_term_pattern ~parent_precedence
+            pp_clf_term_pattern term
+        in
+        pp_term ++ pp_dot ++ pp_identifier i
     | CLF.Term.Pattern.Type_annotated { term; typ; _ } ->
         (* Type ascriptions are left-associative *)
-        Format.fprintf ppf "@[<hov 2>%a :@ %a@]"
-          (parenthesize_left_argument_left_associative_operator
-             precedence_of_clf_term_pattern ~parent_precedence
-             (pp_clf_term_pattern state))
-          term (pp_clf_typ state) typ
+        let pp_term =
+          parenthesize_left_argument_left_associative_operator
+            precedence_of_clf_term_pattern ~parent_precedence
+            pp_clf_term_pattern term
+        in
+        pp_hovbox ~indent
+          (pp_term ++ pp_non_breaking_space ++ pp_colon ++ pp_space
+         ++ pp_clf_typ typ)
 
-  and pp_clf_substitution_pattern state ppf substitution_pattern =
+  and pp_clf_substitution_pattern substitution_pattern =
     match substitution_pattern with
     | { CLF.Substitution.Pattern.head = CLF.Substitution.Pattern.Head.None _
       ; terms = []
       ; _
       } ->
-        ()
+        pp_nop
     | { CLF.Substitution.Pattern.head =
           CLF.Substitution.Pattern.Head.Identity _
       ; terms = []
       ; _
       } ->
-        Format.fprintf ppf "…"
+        pp_dots
     | { CLF.Substitution.Pattern.head = CLF.Substitution.Pattern.Head.None _
       ; terms
       ; _
       } ->
-        Format.fprintf ppf "@[<hov 2>%a@]"
-          (List.pp ~pp_sep:Format.comma (pp_clf_term_pattern state))
-          terms
+        pp_list ~sep:pp_comma_space pp_clf_term_pattern terms
     | { CLF.Substitution.Pattern.head =
           CLF.Substitution.Pattern.Head.Identity _
       ; terms
       ; _
       } ->
-        Format.fprintf ppf "@[<hov 2>…,@ %a@]"
-          (List.pp ~pp_sep:Format.comma (pp_clf_term_pattern state))
-          terms
+        pp_dots ++ pp_comma_space
+        ++ pp_list ~sep:pp_comma_space pp_clf_term_pattern terms
     | { CLF.Substitution.Pattern.head =
           CLF.Substitution.Pattern.Head.Substitution_variable
             { identifier; closure = Option.None; _ }
       ; terms = []
       ; _
       } ->
-        Format.fprintf ppf "@[<hov 2>%a@]" pp_substitution_variable
-          identifier
+        pp_substitution_variable identifier
     | { CLF.Substitution.Pattern.head =
           CLF.Substitution.Pattern.Head.Substitution_variable
             { identifier; closure = Option.Some closure; _ }
       ; terms = []
       ; _
       } ->
-        Format.fprintf ppf "@[<hov 2>%a[%a]@]" pp_substitution_variable
-          identifier
-          (pp_clf_substitution state)
-          closure
+        pp_substitution_variable identifier
+        ++ pp_in_bracks (pp_clf_substitution closure)
     | { CLF.Substitution.Pattern.head =
           CLF.Substitution.Pattern.Head.Substitution_variable
             { identifier; closure = Option.None; _ }
       ; terms
       ; _
       } ->
-        Format.fprintf ppf "@[<hov 2>%a,@ %a@]" pp_substitution_variable
-          identifier
-          (List.pp ~pp_sep:Format.comma (pp_clf_term_pattern state))
-          terms
+        pp_substitution_variable identifier
+        ++ pp_comma_space
+        ++ pp_list ~sep:pp_comma_space pp_clf_term_pattern terms
     | { CLF.Substitution.Pattern.head =
           CLF.Substitution.Pattern.Head.Substitution_variable
             { identifier; closure = Option.Some closure; _ }
       ; terms
       ; _
       } ->
-        Format.fprintf ppf "@[<hov 2>%a[%a],@ %a@]" pp_substitution_variable
-          identifier
-          (pp_clf_substitution state)
-          closure
-          (List.pp ~pp_sep:Format.comma (pp_clf_term_pattern state))
-          terms
+        pp_substitution_variable identifier
+        ++ pp_in_bracks (pp_clf_substitution closure)
+        ++ pp_comma_space
+        ++ pp_list ~sep:pp_comma_space pp_clf_term_pattern terms
 
-  and pp_clf_context_pattern state ppf context_pattern =
-    let pp_typing ppf (i, t) =
-      Format.fprintf ppf "%a :@ %a" pp_lf_variable i (pp_clf_typ state) t
+  and pp_clf_context_pattern context_pattern =
+    let pp_typing (identifier, typ) =
+      pp_lf_variable identifier ++ pp_non_breaking_space ++ pp_colon
+      ++ pp_space ++ pp_clf_typ typ
     in
     match context_pattern with
     | { CLF.Context.Pattern.head = CLF.Context.Pattern.Head.None _
       ; bindings = []
       ; _
       } ->
-        ()
+        pp_nop
     | { CLF.Context.Pattern.head = CLF.Context.Pattern.Head.Hole _
       ; bindings = []
       ; _
       } ->
-        Format.fprintf ppf "_"
+        pp_underscore
     | { CLF.Context.Pattern.head =
           CLF.Context.Pattern.Head.Context_variable { identifier; _ }
       ; bindings = []
       ; _
       } ->
-        pp_context_variable ppf identifier
+        pp_context_variable identifier
     | { CLF.Context.Pattern.head = CLF.Context.Pattern.Head.None _
       ; bindings
       ; _
       } ->
-        Format.fprintf ppf "@[<hov 2>%a@]"
-          (List.pp ~pp_sep:Format.comma pp_typing)
-          bindings
+        pp_list ~sep:pp_comma_space pp_typing bindings
     | { CLF.Context.Pattern.head = CLF.Context.Pattern.Head.Hole _
       ; bindings
       ; _
       } ->
-        Format.fprintf ppf "@[<hov 2>_,@ %a@]"
-          (List.pp ~pp_sep:Format.comma pp_typing)
-          bindings
+        pp_underscore ++ pp_comma_space
+        ++ pp_list ~sep:pp_comma_space pp_typing bindings
     | { CLF.Context.Pattern.head =
           CLF.Context.Pattern.Head.Context_variable { identifier; _ }
       ; bindings
       ; _
       } ->
-        Format.fprintf ppf "@[<hov 2>%a,@ %a@]" pp_context_variable
-          identifier
-          (List.pp ~pp_sep:Format.comma pp_typing)
-          bindings
+        pp_context_variable identifier
+        ++ pp_comma_space
+        ++ pp_list ~sep:pp_comma_space pp_typing bindings
 
   (** {1 Pretty-Printing Meta-Level Syntax} *)
 
-  open Make_parenthesizer (Meta_precedence)
+  open MyParenthesizer.Make_parenthesizer (Html_state) (Meta_precedence)
 
-  let rec pp_meta_typ state ppf typ =
+  let rec pp_meta_typ typ =
     match typ with
-    | Meta.Typ.Context_schema { schema; _ } -> (pp_schema state) ppf schema
+    | Meta.Typ.Context_schema { schema; _ } -> pp_schema schema
     | Meta.Typ.Contextual_typ { context; typ; _ } ->
-        Format.fprintf ppf "@[<hov 2>(%a ⊢@ %a)@]" (pp_clf_context state)
-          context (pp_clf_typ state) typ
+        pp_hovbox ~indent
+          (pp_in_parens
+             (pp_clf_context context ++ pp_non_breaking_space ++ pp_turnstile
+            ++ pp_space ++ pp_clf_typ typ))
     | Meta.Typ.Parameter_typ { context; typ; _ } ->
-        Format.fprintf ppf "@[<hov 2>#(%a ⊢@ %a)@]" (pp_clf_context state)
-          context (pp_clf_typ state) typ
+        pp_hovbox ~indent
+          (pp_in_hash_parens
+             (pp_clf_context context ++ pp_non_breaking_space ++ pp_turnstile
+            ++ pp_space ++ pp_clf_typ typ))
     | Meta.Typ.Plain_substitution_typ { domain; range; _ } ->
-        Format.fprintf ppf "@[<hov 2>$(%a ⊢@ %a)@]" (pp_clf_context state)
-          domain (pp_clf_context state) range
+        pp_hovbox ~indent
+          (pp_in_dollar_parens
+             (pp_clf_context domain ++ pp_non_breaking_space ++ pp_turnstile
+            ++ pp_space ++ pp_clf_context range))
     | Meta.Typ.Renaming_substitution_typ { domain; range; _ } ->
-        Format.fprintf ppf "@[<hov 2>$(%a ⊢#@ %a)@]" (pp_clf_context state)
-          domain (pp_clf_context state) range
+        pp_hovbox ~indent
+          (pp_in_dollar_parens
+             (pp_clf_context domain ++ pp_non_breaking_space
+            ++ pp_turnstile_hash ++ pp_space ++ pp_clf_context range))
 
-  and pp_meta_object state ppf object_ =
+  and pp_meta_object object_ =
     match object_ with
     | Meta.Object.Context { context; _ } ->
-        Format.fprintf ppf "@[<hov 2>[%a]@]" (pp_clf_context state) context
+        pp_hovbox ~indent (pp_in_bracks (pp_clf_context context))
     | Meta.Object.Contextual_term { context; term; _ } ->
-        Format.fprintf ppf "@[<hov 2>[%a ⊢@ %a]@]" (pp_clf_context state)
-          context (pp_clf_term state) term
+        pp_hovbox ~indent
+          (pp_in_bracks
+             (pp_clf_context context ++ pp_non_breaking_space ++ pp_turnstile
+            ++ pp_space ++ pp_clf_term term))
     | Meta.Object.Plain_substitution { domain; range; _ } ->
-        Format.fprintf ppf "@[<hov 2>$[%a ⊢@ %a]@]" (pp_clf_context state)
-          domain
-          (pp_clf_substitution state)
-          range
+        pp_hovbox ~indent
+          (pp_in_dollar_bracks
+             (pp_clf_context domain ++ pp_non_breaking_space ++ pp_turnstile
+            ++ pp_space ++ pp_clf_substitution range))
     | Meta.Object.Renaming_substitution { domain; range; _ } ->
-        Format.fprintf ppf "@[<hov 2>$[%a ⊢#@ %a]@]" (pp_clf_context state)
-          domain
-          (pp_clf_substitution state)
-          range
+        pp_hovbox ~indent
+          (pp_in_dollar_bracks
+             (pp_clf_context domain ++ pp_non_breaking_space
+            ++ pp_turnstile_hash ++ pp_space ++ pp_clf_substitution range))
 
-  and pp_meta_pattern state ppf pattern =
+  and pp_meta_pattern pattern =
     match pattern with
     | Meta.Pattern.Context { context; _ } ->
-        Format.fprintf ppf "@[<hov 2>[%a]@]"
-          (pp_clf_context_pattern state)
-          context
+        pp_hovbox ~indent (pp_in_bracks (pp_clf_context_pattern context))
     | Meta.Pattern.Contextual_term { context; term; _ } ->
-        Format.fprintf ppf "@[<hov 2>[%a ⊢@ %a]@]"
-          (pp_clf_context_pattern state)
-          context
-          (pp_clf_term_pattern state)
-          term
+        pp_hovbox ~indent
+          (pp_in_bracks
+             (pp_clf_context_pattern context
+             ++ pp_non_breaking_space ++ pp_turnstile ++ pp_space
+             ++ pp_clf_term_pattern term))
     | Meta.Pattern.Plain_substitution { domain; range; _ } ->
-        Format.fprintf ppf "@[<hov 2>$[%a ⊢@ %a]@]"
-          (pp_clf_context_pattern state)
-          domain
-          (pp_clf_substitution_pattern state)
-          range
+        pp_hovbox ~indent
+          (pp_in_dollar_bracks
+             (pp_clf_context_pattern domain
+             ++ pp_non_breaking_space ++ pp_turnstile ++ pp_space
+             ++ pp_clf_substitution_pattern range))
     | Meta.Pattern.Renaming_substitution { domain; range; _ } ->
-        Format.fprintf ppf "@[<hov 2>$[%a ⊢#@ %a]@]"
-          (pp_clf_context_pattern state)
-          domain
-          (pp_clf_substitution_pattern state)
-          range
+        pp_hovbox ~indent
+          (pp_in_dollar_bracks
+             (pp_clf_context_pattern domain
+             ++ pp_non_breaking_space ++ pp_turnstile_hash ++ pp_space
+             ++ pp_clf_substitution_pattern range))
 
-  and pp_schema state ppf schema =
+  and pp_schema schema =
     let parent_precedence = precedence_of_schema schema in
-    let pp_bindings =
-      List1.pp ~pp_sep:Format.comma (fun ppf (i, t) ->
-          Format.fprintf ppf "@[%a :@ %a@]" pp_lf_variable i
-            (pp_clf_typ state) t)
+    let pp_binding (identifier, typ) =
+      pp_lf_variable identifier ++ pp_non_breaking_space ++ pp_colon
+      ++ pp_space ++ pp_clf_typ typ
     in
+    let pp_bindings = pp_list1 ~sep:pp_comma_space pp_binding in
     match schema with
     | Meta.Schema.Constant { identifier; _ } ->
-        (pp_schema_constant_invoke state) ppf identifier
+        pp_schema_constant_invoke identifier
     | Meta.Schema.Alternation { schemas; _ } ->
-        List2.pp
-          ~pp_sep:(fun ppf () -> Format.fprintf ppf "@ + ")
+        pp_list2
+          ~sep:(pp_space ++ pp_plus ++ pp_non_breaking_space)
           (parenthesize_term_of_lesser_than_or_equal_precedence
-             precedence_of_schema ~parent_precedence (pp_schema state))
-          ppf schemas
-    | Meta.Schema.Element { some = Option.None; block = `Unnamed t; _ } ->
-        Format.fprintf ppf "@[<hov 2>%a %a@]" pp_keyword "block"
-          (pp_clf_typ state) t
-    | Meta.Schema.Element { some = Option.None; block = `Record bindings; _ }
-      ->
-        Format.fprintf ppf "@[<hov 2>%a (%a)@]" pp_keyword "block"
-          pp_bindings bindings
-    | Meta.Schema.Element
-        { some = Option.Some some_bindings; block = `Unnamed t; _ } ->
-        Format.fprintf ppf "@[<hov 2>%a [%a]@ %a %a@]" pp_keyword "some"
-          pp_bindings some_bindings pp_keyword "block" (pp_clf_typ state) t
-    | Meta.Schema.Element
-        { some = Option.Some some_bindings
-        ; block = `Record block_bindings
-        ; _
-        } ->
-        Format.fprintf ppf "@[<hov 2>%a [%a]@ %a (%a)@]" pp_keyword "some"
-          pp_bindings some_bindings pp_keyword "block" pp_bindings
-          block_bindings
+             precedence_of_schema ~parent_precedence pp_schema)
+          schemas
+    | Meta.Schema.Element { some; block; _ } ->
+        let pp_some_clause =
+          pp_option
+            (fun some_bindings ->
+              pp_some_keyword ++ pp_non_breaking_space
+              ++ pp_in_bracks (pp_bindings some_bindings)
+              ++ pp_space)
+            some
+        in
+        let pp_block_clause =
+          match block with
+          | `Unnamed t ->
+              pp_block_keyword ++ pp_non_breaking_space ++ pp_clf_typ t
+          | `Record block_bindings ->
+              pp_block_keyword ++ pp_non_breaking_space
+              ++ pp_in_parens (pp_bindings block_bindings)
+        in
+        pp_hovbox ~indent (pp_some_clause ++ pp_block_clause)
 
   (** {1 Pretty-Printing Computation-Level Syntax} *)
 
-  open Make_parenthesizer (Comp_precedence)
+  open MyParenthesizer.Make_parenthesizer (Html_state) (Comp_precedence)
 
   (** [is_atomic_pattern pattern] is [true] if and only if [pattern] is an
       atomic pattern as defined in {!Parser}, meaning that it never requires
@@ -1017,143 +1192,134 @@ end) : BELUGA_HTML with type state = Html_state.state = struct
     | Comp.Pattern.Type_annotated _ ->
         false
 
-  let rec pp_comp_kind state ppf kind =
+  let rec pp_comp_kind kind =
     let[@warning "-26"] parent_precedence = precedence_of_comp_kind kind in
     match kind with
-    | Comp.Kind.Ctype _ -> pp_keyword ppf "ctype"
+    | Comp.Kind.Ctype _ -> pp_ctype_keyword
     | Comp.Kind.Arrow { domain; range; _ } ->
-        (* Right arrows are right-associative *)
-        Format.fprintf ppf "@[<hov 2>%a →@ %a@]" (pp_meta_typ state) domain
-          (pp_comp_kind state) range
+        (* Right arrows are right-associative, but the precedence of
+           meta-types is not comparable with the precedence of
+           computation-level kinds *)
+        pp_hovbox ~indent
+          (pp_meta_typ domain ++ pp_non_breaking_space ++ pp_right_arrow
+         ++ pp_space ++ pp_comp_kind range)
     | Comp.Kind.Pi { parameter_identifier; parameter_type; body; plicity; _ }
-      -> (
+      ->
         (* Pi-operators are weak prefix operators *)
-        let pp_parameter_identifier parameter_type ppf parameter_identifier =
+        let pp_parameter_identifier =
           match (parameter_identifier, parameter_type) with
           | Option.Some parameter_identifier, _ ->
-              pp_meta_variable ppf parameter_identifier
+              pp_meta_variable parameter_identifier
           | ( Option.None
             , (Meta.Typ.Context_schema _ | Meta.Typ.Contextual_typ _) ) ->
-              Format.pp_print_string ppf "_"
-          | Option.None, Meta.Typ.Parameter_typ _ ->
-              Format.pp_print_string ppf "#_"
+              pp_underscore
+          | Option.None, Meta.Typ.Parameter_typ _ -> pp_hash_underscore
           | ( Option.None
             , ( Meta.Typ.Plain_substitution_typ _
               | Meta.Typ.Renaming_substitution_typ _ ) ) ->
-              Format.pp_print_string ppf "$_"
+              pp_dollar_underscore
         in
-        match plicity with
-        | Plicity.Implicit ->
-            Format.fprintf ppf "@[<hov 2>(%a :@ %a)@ %a@]"
-              (pp_parameter_identifier parameter_type)
-              parameter_identifier (pp_meta_typ state) parameter_type
-              (pp_comp_kind state) body
-        | Plicity.Explicit ->
-            Format.fprintf ppf "@[<hov 2>{%a :@ %a}@ %a@]"
-              (pp_parameter_identifier parameter_type)
-              parameter_identifier (pp_meta_typ state) parameter_type
-              (pp_comp_kind state) body)
+        let pp_binding =
+          pp_parameter_identifier ++ pp_non_breaking_space ++ pp_colon
+          ++ pp_space
+          ++ pp_meta_typ parameter_type
+        in
+        let pp_declaration =
+          match plicity with
+          | Plicity.Implicit -> pp_in_parens pp_binding
+          | Plicity.Explicit -> pp_in_braces pp_binding
+        in
+        pp_hovbox ~indent (pp_declaration ++ pp_space ++ pp_comp_kind body)
 
-  and pp_comp_typ state ppf typ =
+  and pp_comp_typ typ =
     let parent_precedence = precedence_of_comp_typ typ in
     match typ with
-    | Comp.Typ.Inductive_typ_constant { identifier; prefixed; _ } ->
-        if prefixed then
-          Format.fprintf ppf "(%a)"
-            (pp_computation_inductive_constant_invoke state)
-            identifier
-        else (pp_computation_inductive_constant_invoke state) ppf identifier
-    | Comp.Typ.Stratified_typ_constant { identifier; prefixed; _ } ->
-        if prefixed then
-          Format.fprintf ppf "(%a)"
-            (pp_computation_stratified_constant_invoke state)
-            identifier
-        else (pp_computation_stratified_constant_invoke state) ppf identifier
-    | Comp.Typ.Coinductive_typ_constant { identifier; prefixed; _ } ->
-        if prefixed then
-          Format.fprintf ppf "(%a)"
-            (pp_computation_coinductive_constant_invoke state)
-            identifier
-        else
-          (pp_computation_coinductive_constant_invoke state) ppf identifier
-    | Comp.Typ.Abbreviation_typ_constant { identifier; prefixed; _ } ->
-        if prefixed then
-          Format.fprintf ppf "(%a)"
-            (pp_computation_abbreviation_constant_invoke state)
-            identifier
-        else
-          (pp_computation_abbreviation_constant_invoke state) ppf identifier
+    | Comp.Typ.Inductive_typ_constant { identifier; _ } ->
+        pp_computation_inductive_constant_invoke identifier
+    | Comp.Typ.Stratified_typ_constant { identifier; _ } ->
+        pp_computation_stratified_constant_invoke identifier
+    | Comp.Typ.Coinductive_typ_constant { identifier; _ } ->
+        pp_computation_coinductive_constant_invoke identifier
+    | Comp.Typ.Abbreviation_typ_constant { identifier; _ } ->
+        pp_computation_abbreviation_constant_invoke identifier
     | Comp.Typ.Pi { parameter_identifier; plicity; parameter_type; body; _ }
-      -> (
+      ->
         (* Pi-operators are weak prefix operators *)
-        let pp_parameter_identifier parameter_type ppf parameter_identifier =
+        let pp_parameter_identifier =
           match (parameter_identifier, parameter_type) with
           | Option.Some parameter_identifier, _ ->
-              pp_meta_variable ppf parameter_identifier
+              pp_meta_variable parameter_identifier
           | ( Option.None
             , (Meta.Typ.Context_schema _ | Meta.Typ.Contextual_typ _) ) ->
-              Format.pp_print_string ppf "_"
-          | Option.None, Meta.Typ.Parameter_typ _ ->
-              Format.pp_print_string ppf "#_"
+              pp_underscore
+          | Option.None, Meta.Typ.Parameter_typ _ -> pp_hash_underscore
           | ( Option.None
             , ( Meta.Typ.Plain_substitution_typ _
               | Meta.Typ.Renaming_substitution_typ _ ) ) ->
-              Format.pp_print_string ppf "$_"
+              pp_dollar_underscore
         in
-        match plicity with
-        | Plicity.Implicit ->
-            Format.fprintf ppf "@[<hov 2>(%a :@ %a)@ %a@]"
-              (pp_parameter_identifier parameter_type)
-              parameter_identifier (pp_meta_typ state) parameter_type
-              (pp_comp_typ state) body
-        | Plicity.Explicit ->
-            Format.fprintf ppf "@[<hov 2>{%a :@ %a}@ %a@]"
-              (pp_parameter_identifier parameter_type)
-              parameter_identifier (pp_meta_typ state) parameter_type
-              (pp_comp_typ state) body)
+        let pp_binding =
+          pp_parameter_identifier ++ pp_non_breaking_space ++ pp_colon
+          ++ pp_space
+          ++ pp_meta_typ parameter_type
+        in
+        let pp_declaration =
+          match plicity with
+          | Plicity.Implicit -> pp_in_parens pp_binding
+          | Plicity.Explicit -> pp_in_braces pp_binding
+        in
+        pp_hovbox ~indent (pp_declaration ++ pp_space ++ pp_comp_typ body)
     | Comp.Typ.Arrow { domain; range; orientation = `Forward; _ } ->
         (* Forward arrows are right-associative and of equal precedence with
            backward arrows *)
-        Format.fprintf ppf "@[<hov 2>%a →@ %a@]"
-          (match domain with
+        let pp_domain =
+          match domain with
           | Comp.Typ.Arrow { orientation = `Backward; _ } ->
-              parenthesize (pp_comp_typ state)
+              pp_in_parens (pp_comp_typ domain)
           | _ ->
               parenthesize_left_argument_right_associative_operator
-                precedence_of_comp_typ ~parent_precedence (pp_comp_typ state))
-          domain
-          (match range with
+                precedence_of_comp_typ ~parent_precedence pp_comp_typ domain
+        in
+        let pp_range =
+          match range with
           | Comp.Typ.Arrow { orientation = `Backward; _ } ->
-              parenthesize (pp_comp_typ state)
+              pp_in_parens (pp_comp_typ range)
           | _ ->
               parenthesize_right_argument_right_associative_operator
-                precedence_of_comp_typ ~parent_precedence (pp_comp_typ state))
-          range
+                precedence_of_comp_typ ~parent_precedence pp_comp_typ range
+        in
+        pp_hovbox ~indent
+          (pp_domain ++ pp_non_breaking_space ++ pp_right_arrow ++ pp_space
+         ++ pp_range)
     | Comp.Typ.Arrow { range; domain; orientation = `Backward; _ } ->
         (* Backward arrows are left-associative and of equal precedence with
            forward arrows *)
-        Format.fprintf ppf "@[<hov 2>%a@ ← %a@]"
-          (match range with
+        let pp_range =
+          match range with
           | Comp.Typ.Arrow { orientation = `Forward; _ } ->
-              parenthesize (pp_comp_typ state)
+              pp_in_parens (pp_comp_typ range)
           | _ ->
               parenthesize_left_argument_left_associative_operator
-                precedence_of_comp_typ ~parent_precedence (pp_comp_typ state))
-          range
-          (match domain with
+                precedence_of_comp_typ ~parent_precedence pp_comp_typ range
+        in
+        let pp_domain =
+          match domain with
           | Comp.Typ.Arrow { orientation = `Forward; _ } ->
-              parenthesize (pp_comp_typ state)
+              pp_in_parens (pp_comp_typ domain)
           | _ ->
               parenthesize_right_argument_left_associative_operator
-                precedence_of_comp_typ ~parent_precedence (pp_comp_typ state))
-          domain
+                precedence_of_comp_typ ~parent_precedence pp_comp_typ domain
+        in
+        pp_hovbox ~indent
+          (pp_range ++ pp_space ++ pp_left_arrow ++ pp_non_breaking_space
+         ++ pp_domain)
     | Comp.Typ.Cross { types; _ } ->
-        List2.pp
-          ~pp_sep:(fun ppf () -> Format.fprintf ppf "@ * ")
+        pp_list2
+          ~sep:(pp_space ++ pp_star ++ pp_non_breaking_space)
           (parenthesize_term_of_lesser_than_or_equal_precedence
-             precedence_of_comp_typ ~parent_precedence (pp_comp_typ state))
-          ppf types
-    | Comp.Typ.Box { meta_type; _ } -> (pp_meta_typ state) ppf meta_type
+             precedence_of_comp_typ ~parent_precedence pp_comp_typ)
+          types
+    | Comp.Typ.Box { meta_type; _ } -> pp_meta_typ meta_type
     | Comp.Typ.Application { applicand; arguments; _ } -> (
         (* Override the behaviour of printing applications since the
            arguments are meta-object, which need no parentheses. *)
@@ -1172,11 +1338,9 @@ end) : BELUGA_HTML with type state = Html_state.state = struct
             } -> (
             match Operator.fixity operator with
             | Fixity.Prefix ->
-                Format.fprintf ppf "@[<hov 2>%a@ %a@]" (pp_comp_typ state)
-                  applicand
-                  (List1.pp ~pp_sep:Format.pp_print_space
-                     (pp_meta_object state))
-                  arguments
+                pp_hovbox ~indent
+                  (pp_comp_typ applicand ++ pp_space
+                  ++ pp_list1 ~sep:pp_space pp_meta_object arguments)
             | Fixity.Infix ->
                 assert (
                   List1.compare_length_with arguments 2
@@ -1187,9 +1351,10 @@ end) : BELUGA_HTML with type state = Html_state.state = struct
                                      (left_argument, [ right_argument ])) =
                   arguments
                 in
-                Format.fprintf ppf "@[<hov 2>%a@ %a@ %a@]"
-                  (pp_meta_object state) left_argument (pp_comp_typ state)
-                  applicand (pp_meta_object state) right_argument
+                pp_hovbox ~indent
+                  (pp_meta_object left_argument
+                  ++ pp_space ++ pp_comp_typ applicand ++ pp_space
+                  ++ pp_meta_object right_argument)
             | Fixity.Postfix ->
                 assert (
                   List1.compare_length_with arguments 1
@@ -1197,24 +1362,30 @@ end) : BELUGA_HTML with type state = Html_state.state = struct
                     (* Postfix operators must be applied with exactly one
                        argument. *));
                 let[@warning "-8"] (List1.T (argument, [])) = arguments in
-                Format.fprintf ppf "@[<hov 2>%a@ %a@]" (pp_meta_object state)
-                  argument (pp_comp_typ state) applicand)
+                pp_hovbox ~indent
+                  (pp_meta_object argument ++ pp_space
+                 ++ pp_comp_typ applicand))
         | _ ->
-            Format.fprintf ppf "@[<hov 2>%a@ %a@]"
-              (parenthesize_term_of_lesser_than_or_equal_precedence
-                 precedence_of_comp_typ ~parent_precedence
-                 (pp_comp_typ state))
-              applicand
-              (List1.pp ~pp_sep:Format.pp_print_space (pp_meta_object state))
-              arguments)
+            let pp_applicand =
+              parenthesize_term_of_lesser_than_or_equal_precedence
+                precedence_of_comp_typ ~parent_precedence pp_comp_typ
+                applicand
+            in
+            let pp_arguments =
+              pp_list1 ~sep:pp_space pp_meta_object arguments
+            in
+            pp_hovbox ~indent (pp_applicand ++ pp_space ++ pp_arguments))
 
-  and pp_pattern_meta_context state ppf context =
+  and pp_pattern_meta_context context =
+    let pp_binding identifier typ =
+      pp_identifier identifier ++ pp_non_breaking_space ++ pp_colon
+      ++ pp_space ++ pp_meta_typ typ
+    in
     let { Meta.Context.bindings; _ } = context in
-    List.pp ~pp_sep:Format.pp_print_space
-      (fun ppf (i, t) ->
-        Format.fprintf ppf "@[{%a :@ %a}@]" Identifier.pp i
-          (pp_meta_typ state) t)
-      ppf bindings
+    pp_list ~sep:pp_space
+      (fun (identifier, typ) ->
+        pp_hovbox ~indent (pp_in_braces (pp_binding identifier typ)))
+      bindings
 
   and comp_case_body_requires_parentheses = function
     | Comp.Expression.Type_annotated _ ->
@@ -1245,156 +1416,151 @@ end) : BELUGA_HTML with type state = Html_state.state = struct
            case-expressions *)
         false
 
-  and pp_comp_case_body state ppf expression =
+  and pp_comp_case_body expression =
     if comp_case_body_requires_parentheses expression then
-      parenthesize (pp_comp_expression state) ppf expression
-    else pp_comp_expression state ppf expression
+      pp_in_parens (pp_comp_expression expression)
+    else pp_comp_expression expression
 
-  and pp_comp_expression state ppf expression =
+  and pp_comp_expression expression =
     let parent_precedence = precedence_of_comp_expression expression in
     match expression with
     | Comp.Expression.Variable { identifier; _ } ->
-        pp_computation_variable ppf identifier
-    | Comp.Expression.Constructor { identifier; prefixed; _ } ->
-        if prefixed then
-          Format.fprintf ppf "(%a)"
-            (pp_computation_constructor_invoke state)
-            identifier
-        else (pp_computation_constructor_invoke state) ppf identifier
-    | Comp.Expression.Program { identifier; prefixed; _ } ->
-        if prefixed then
-          Format.fprintf ppf "(%a)"
-            (pp_computation_program_invoke state)
-            identifier
-        else (pp_computation_program_invoke state) ppf identifier
+        pp_computation_variable identifier
+    | Comp.Expression.Constructor { identifier; _ } ->
+        pp_computation_constructor_invoke identifier
+    | Comp.Expression.Program { identifier; _ } ->
+        pp_computation_program_invoke identifier
     | Comp.Expression.Fn { parameters; body; _ } ->
-        let pp_parameter ppf parameter =
-          match parameter with
-          | Option.None -> Format.pp_print_string ppf "_"
-          | Option.Some parameter -> pp_computation_variable ppf parameter
+        let pp_parameter parameter =
+          pp_option ~none:pp_underscore pp_computation_variable parameter
         in
-        Format.fprintf ppf "%a %a ⇒@ %a" pp_keyword "fn"
-          (List1.pp ~pp_sep:Format.pp_print_space pp_parameter)
-          parameters
-          (pp_comp_expression state)
-          body
+        pp_fn_keyword ++ pp_non_breaking_space
+        ++ pp_list1 ~sep:pp_space pp_parameter parameters
+        ++ pp_non_breaking_space ++ pp_thick_right_arrow ++ pp_space
+        ++ pp_comp_expression body
     | Comp.Expression.Mlam { parameters; body; _ } ->
-        let pp_parameter ppf (parameter, modifier) =
+        let pp_parameter (parameter, modifier) =
           match (parameter, modifier) with
           | Option.Some parameter, (`Plain | `Hash | `Dollar) ->
               (* The hash or dollar prefix is part of [parameter] *)
-              pp_meta_variable ppf parameter
-          | Option.None, `Plain -> Format.pp_print_string ppf "_"
-          | Option.None, `Hash -> Format.pp_print_string ppf "#_"
-          | Option.None, `Dollar -> Format.pp_print_string ppf "$_"
+              pp_meta_variable parameter
+          | Option.None, `Plain -> pp_underscore
+          | Option.None, `Hash -> pp_hash_underscore
+          | Option.None, `Dollar -> pp_dollar_underscore
         in
-        let pp_parameters =
-          List1.pp ~pp_sep:Format.pp_print_space pp_parameter
-        in
-        Format.fprintf ppf "%a %a ⇒@ %a" pp_keyword "mlam" pp_parameters
-          parameters
-          (pp_comp_expression state)
-          body
+        let pp_parameters = pp_list1 ~sep:pp_space pp_parameter parameters in
+        pp_mlam_keyword ++ pp_non_breaking_space ++ pp_parameters
+        ++ pp_non_breaking_space ++ pp_thick_right_arrow ++ pp_space
+        ++ pp_comp_expression body
     | Comp.Expression.Fun { branches; _ } ->
-        let pp_branch ppf branch =
+        let pp_branch branch =
           let { Comp.Cofunction_branch.meta_context; copattern; body; _ } =
             branch
           in
           match meta_context with
           | Meta.Context.{ bindings = []; _ } ->
-              Format.fprintf ppf "@[<hov 2>| %a ⇒@ %a@]"
-                (pp_comp_copattern state) copattern (pp_comp_case_body state)
-                body
+              pp_hovbox ~indent
+                (pp_pipe ++ pp_non_breaking_space
+                ++ pp_comp_copattern copattern
+                ++ pp_non_breaking_space ++ pp_thick_right_arrow ++ pp_space
+                ++ pp_comp_case_body body)
           | _ ->
-              Format.fprintf ppf "@[<hov 2>| %a@ %a ⇒@ %a@]"
-                (pp_pattern_meta_context state)
-                meta_context (pp_comp_copattern state) copattern
-                (pp_comp_case_body state) body
+              pp_hovbox ~indent
+                (pp_pipe ++ pp_non_breaking_space
+                ++ pp_pattern_meta_context meta_context
+                ++ pp_space
+                ++ pp_comp_copattern copattern
+                ++ pp_non_breaking_space ++ pp_thick_right_arrow ++ pp_space
+                ++ pp_comp_case_body body)
         in
-        let pp_branches = List1.pp ~pp_sep:Format.pp_print_cut pp_branch in
-        Format.fprintf ppf "@[<v 0>%a@ %a@]" pp_keyword "fun" pp_branches
-          branches
+        let pp_branches = pp_list1 ~sep:pp_cut pp_branch branches in
+        pp_vbox ~indent:0 (pp_fun_keyword ++ pp_space ++ pp_branches)
     | Comp.Expression.Let { scrutinee; meta_context; pattern; body; _ } -> (
         match meta_context with
         | Meta.Context.{ bindings = []; _ } ->
-            Format.fprintf ppf "@[<hov 2>%a@ %a =@ %a@]@ %a@ %a" pp_keyword
-              "let" (pp_comp_pattern state) pattern
-              (pp_comp_expression state)
-              scrutinee pp_keyword "in"
-              (pp_comp_expression state)
-              body
+            pp_hovbox ~indent
+              (pp_let_keyword ++ pp_space ++ pp_comp_pattern pattern
+             ++ pp_non_breaking_space ++ pp_equal ++ pp_space
+              ++ pp_comp_expression scrutinee)
+            ++ pp_space ++ pp_in_keyword ++ pp_space
+            ++ pp_comp_expression body
         | _ ->
-            Format.fprintf ppf "@[<hov 2>%a@ %a@ %a =@ %a@]@ %a@ %a"
-              pp_keyword "let"
-              (pp_pattern_meta_context state)
-              meta_context (pp_comp_pattern state) pattern
-              (pp_comp_expression state)
-              scrutinee pp_keyword "in"
-              (pp_comp_expression state)
-              body)
-    | Comp.Expression.Box { meta_object; _ } ->
-        (pp_meta_object state) ppf meta_object
+            pp_hovbox ~indent
+              (pp_let_keyword ++ pp_space
+              ++ pp_pattern_meta_context meta_context
+              ++ pp_space ++ pp_comp_pattern pattern ++ pp_non_breaking_space
+              ++ pp_equal ++ pp_space
+              ++ pp_comp_expression scrutinee)
+            ++ pp_space ++ pp_in_keyword ++ pp_space
+            ++ pp_comp_expression body)
+    | Comp.Expression.Box { meta_object; _ } -> pp_meta_object meta_object
     | Comp.Expression.Impossible { scrutinee; _ } ->
         (* [impossible (impossible (...))] is right-associative *)
-        Format.fprintf ppf "@[<hov 2>%a@ %a@]" pp_keyword "impossible"
-          (parenthesize_right_argument_right_associative_operator
-             precedence_of_comp_expression ~parent_precedence
-             (pp_comp_expression state))
-          scrutinee
+        let pp_scrutinee =
+          parenthesize_right_argument_right_associative_operator
+            precedence_of_comp_expression ~parent_precedence
+            pp_comp_expression scrutinee
+        in
+        pp_hovbox ~indent (pp_impossible_keyword ++ pp_space ++ pp_scrutinee)
     | Comp.Expression.Case { scrutinee; check_coverage; branches; _ } ->
-        let pp_branch ppf branch =
+        let pp_branch branch =
           let { Comp.Case_branch.meta_context; pattern; body; _ } = branch in
           match meta_context with
           | Meta.Context.{ bindings = []; _ } ->
-              Format.fprintf ppf "@[<hov 2>|@ %a ⇒@ %a@]"
-                (pp_comp_pattern state) pattern (pp_comp_case_body state)
-                body
+              pp_hovbox ~indent
+                (pp_pipe ++ pp_non_breaking_space ++ pp_comp_pattern pattern
+               ++ pp_non_breaking_space ++ pp_thick_right_arrow ++ pp_space
+               ++ pp_comp_case_body body)
           | _ ->
-              Format.fprintf ppf "@[<hov 2>|@ %a@ %a ⇒@ %a@]"
-                (pp_pattern_meta_context state)
-                meta_context (pp_comp_pattern state) pattern
-                (pp_comp_case_body state) body
+              pp_hovbox ~indent
+                (pp_pipe ++ pp_non_breaking_space
+                ++ pp_pattern_meta_context meta_context
+                ++ pp_space ++ pp_comp_pattern pattern
+                ++ pp_non_breaking_space ++ pp_thick_right_arrow ++ pp_space
+                ++ pp_comp_case_body body)
         in
-        let pp_branches = List1.pp ~pp_sep:Format.pp_print_cut pp_branch in
-        if check_coverage then
-          Format.fprintf ppf "@[<v 0>@[%a@ %a@ %a@]@,%a@]" pp_keyword "case"
-            (pp_comp_expression state)
-            scrutinee pp_keyword "of" pp_branches branches
-        else
-          Format.fprintf ppf "@[<v 0>@[<hov 2>%a@ %a@ %a@ %a@]@,%a@]"
-            pp_keyword "case"
-            (pp_comp_expression state)
-            scrutinee
-            (pp_pragma "not" Format.pp_print_string)
-            "--not" pp_keyword "of" pp_branches branches
+        let pp_branches = pp_list1 ~sep:pp_cut pp_branch branches in
+        let pp_check_coverage_pragma_opt =
+          if check_coverage then pp_nop
+          else pp_space ++ pp_pragma "not" (pp_string "--not")
+        in
+        pp_vbox ~indent:0
+          (pp_hovbox ~indent
+             (pp_case_keyword ++ pp_space
+             ++ pp_comp_expression scrutinee
+             ++ pp_space ++ pp_of_keyword ++ pp_check_coverage_pragma_opt)
+          ++ pp_cut ++ pp_branches)
     | Comp.Expression.Tuple { elements; _ } ->
-        Format.fprintf ppf "@[<hov 2>(%a)@]"
-          (List2.pp ~pp_sep:Format.comma (pp_comp_expression state))
-          elements
-    | Comp.Expression.Hole { label; _ } -> (
-        match label with
-        | Option.None -> Format.pp_print_string ppf "?"
-        | Option.Some label -> Format.fprintf ppf "?%a" Identifier.pp label)
-    | Comp.Expression.Box_hole _ -> Format.pp_print_string ppf "_"
+        pp_hovbox ~indent
+          (pp_in_parens
+             (pp_list2 ~sep:pp_comma_space pp_comp_expression elements))
+    | Comp.Expression.Hole { label; _ } ->
+        pp_question_mark ++ pp_option pp_identifier label
+    | Comp.Expression.Box_hole _ -> pp_underscore
     | Comp.Expression.Observation { scrutinee; destructor; _ } ->
         (* Observations are left-associative *)
-        Format.fprintf ppf "@[<hov 2>%a@ .%a@]"
-          (parenthesize_left_argument_left_associative_operator
-             precedence_of_comp_expression ~parent_precedence
-             (pp_comp_expression state))
-          scrutinee
-          (pp_computation_destructor_invoke state)
-          destructor
+        let pp_scrutinee =
+          parenthesize_left_argument_left_associative_operator
+            precedence_of_comp_expression ~parent_precedence
+            pp_comp_expression scrutinee
+        in
+        pp_hovbox ~indent
+          (pp_scrutinee ++ pp_space ++ pp_dot
+          ++ pp_computation_destructor_invoke destructor)
     | Comp.Expression.Type_annotated { expression; typ; _ } ->
         (* Type ascriptions are left-associative *)
-        Format.fprintf ppf "@[<hov 2>%a :@ %a@]"
-          (parenthesize_left_argument_left_associative_operator
-             precedence_of_comp_expression ~parent_precedence
-             (pp_comp_expression state))
-          expression
-          (parenthesize_right_argument_left_associative_operator
-             precedence_of_comp_typ ~parent_precedence (pp_comp_typ state))
-          typ
+        let pp_expression =
+          parenthesize_left_argument_left_associative_operator
+            precedence_of_comp_expression ~parent_precedence
+            pp_comp_expression expression
+        in
+        let pp_typ =
+          parenthesize_right_argument_left_associative_operator
+            precedence_of_comp_typ ~parent_precedence pp_comp_typ typ
+        in
+        pp_hovbox ~indent
+          (pp_expression ++ pp_non_breaking_space ++ pp_colon ++ pp_space
+         ++ pp_typ)
     | Comp.Expression.Application { applicand; arguments; _ } ->
         pp_application
           ~guard_operator:(function
@@ -1419,35 +1585,37 @@ end) : BELUGA_HTML with type state = Html_state.state = struct
             | _ -> `Term)
           ~precedence_of_applicand:precedence_of_comp_expression
           ~precedence_of_argument:precedence_of_comp_expression
-          ~pp_applicand:(pp_comp_expression state)
-          ~pp_argument:(pp_comp_expression state)
-          ~parent_precedence ppf (applicand, arguments)
+          ~pp_applicand:pp_comp_expression ~pp_argument:pp_comp_expression
+          ~parent_precedence (applicand, arguments)
 
-  and pp_comp_pattern state ppf pattern =
+  and pp_comp_pattern pattern =
     let parent_precedence = precedence_of_comp_pattern pattern in
     match pattern with
-    | Comp.Pattern.Variable { identifier; _ } -> Identifier.pp ppf identifier
-    | Comp.Pattern.Constant { identifier; prefixed; _ } ->
-        if prefixed then
-          Format.fprintf ppf "(%a)" Qualified_identifier.pp identifier
-        else Qualified_identifier.pp ppf identifier
+    | Comp.Pattern.Variable { identifier; _ } ->
+        pp_computation_variable identifier
+    | Comp.Pattern.Constant { identifier; _ } ->
+        pp_computation_constructor_invoke identifier
     | Comp.Pattern.Meta_object { meta_pattern; _ } ->
-        (pp_meta_pattern state) ppf meta_pattern
+        pp_meta_pattern meta_pattern
     | Comp.Pattern.Tuple { elements; _ } ->
-        Format.fprintf ppf "@[<hov 2>(%a)@]"
-          (List2.pp ~pp_sep:Format.comma (pp_comp_pattern state))
-          elements
+        pp_hovbox ~indent
+          (pp_in_parens
+             (pp_list2 ~sep:pp_comma_space pp_comp_pattern elements))
     | Comp.Pattern.Type_annotated { pattern; typ; _ } ->
         (* The type annotation operator is left-associative *)
-        Format.fprintf ppf "@[<hov 2>%a :@ %a@]"
-          (parenthesize_left_argument_left_associative_operator
-             precedence_of_comp_pattern ~parent_precedence
-             (pp_comp_pattern state))
-          pattern
-          (parenthesize_right_argument_left_associative_operator
-             precedence_of_comp_typ ~parent_precedence (pp_comp_typ state))
-          typ
-    | Comp.Pattern.Wildcard _ -> Format.pp_print_string ppf "_"
+        let pp_pattern =
+          parenthesize_left_argument_left_associative_operator
+            precedence_of_comp_pattern ~parent_precedence pp_comp_pattern
+            pattern
+        in
+        let pp_typ =
+          parenthesize_right_argument_left_associative_operator
+            precedence_of_comp_typ ~parent_precedence pp_comp_typ typ
+        in
+        pp_hovbox ~indent
+          (pp_pattern ++ pp_non_breaking_space ++ pp_colon ++ pp_space
+         ++ pp_typ)
+    | Comp.Pattern.Wildcard _ -> pp_underscore
     | Comp.Pattern.Application { applicand; arguments; _ } ->
         pp_application
           ~guard_operator:(function
@@ -1464,139 +1632,136 @@ end) : BELUGA_HTML with type state = Html_state.state = struct
             | _ -> `Term)
           ~precedence_of_applicand:precedence_of_comp_pattern
           ~precedence_of_argument:precedence_of_comp_pattern
-          ~pp_applicand:(pp_comp_pattern state)
-          ~pp_argument:(pp_comp_pattern state) ~parent_precedence ppf
-          (applicand, arguments)
+          ~pp_applicand:pp_comp_pattern ~pp_argument:pp_comp_pattern
+          ~parent_precedence (applicand, arguments)
 
-  and pp_comp_copattern state ppf copattern =
-    let pp_comp_pattern state ppf pattern =
-      if is_atomic_pattern pattern then (pp_comp_pattern state) ppf pattern
-      else
-        Format.fprintf ppf "@[<hov 2>(%a)@]" (pp_comp_pattern state) pattern
+  and pp_comp_copattern copattern =
+    let pp_comp_pattern pattern =
+      if is_atomic_pattern pattern then pp_comp_pattern pattern
+      else pp_hovbox ~indent (pp_in_parens (pp_comp_pattern pattern))
     in
-    let pp_comp_patterns state ppf patterns =
-      List.pp ~pp_sep:Format.pp_print_space (pp_comp_pattern state) ppf
-        patterns
+    let pp_comp_patterns patterns =
+      pp_list ~sep:pp_space pp_comp_pattern patterns
     in
-    let pp_observations state ppf observations =
-      List.pp ~pp_sep:Format.pp_print_space
-        (fun ppf (destructor, arguments) ->
+    let pp_observations observations =
+      pp_list ~sep:pp_space
+        (fun (destructor, arguments) ->
           match arguments with
-          | [] ->
-              Format.fprintf ppf ".%a"
-                (pp_computation_destructor_invoke state)
-                destructor
+          | [] -> pp_dot ++ pp_computation_destructor_invoke destructor
           | _ ->
-              Format.fprintf ppf ".%a@ %a"
-                (pp_computation_destructor_invoke state)
-                destructor (pp_comp_patterns state) arguments)
-        ppf observations
+              pp_dot
+              ++ pp_computation_destructor_invoke destructor
+              ++ pp_space
+              ++ pp_comp_patterns arguments)
+        observations
     in
     let { Comp.Copattern.patterns; observations; _ } = copattern in
     match (patterns, observations) with
-    | [], [] -> ()
-    | [], observations -> (pp_observations state) ppf observations
-    | patterns, [] -> (pp_comp_patterns state) ppf patterns
+    | [], [] -> pp_nop
+    | [], observations -> pp_observations observations
+    | patterns, [] -> pp_comp_patterns patterns
     | patterns, observations ->
-        Format.fprintf ppf "%a@ %a" (pp_comp_patterns state) patterns
-          (pp_observations state) observations
+        pp_comp_patterns patterns ++ pp_space ++ pp_observations observations
 
   (** {1 Pretty-Printing Harpoon Syntax} *)
 
-  let rec pp_harpoon_proof state ppf proof =
+  let rec pp_harpoon_proof proof =
     match proof with
-    | Harpoon.Proof.Incomplete { label; _ } -> (
-        match label with
-        | Option.None -> Format.pp_print_string ppf "?"
-        | Option.Some label -> Identifier.pp ppf label)
+    | Harpoon.Proof.Incomplete { label; _ } ->
+        pp_option ~none:pp_question_mark pp_identifier label
     | Harpoon.Proof.Command { command; body; _ } ->
-        Format.fprintf ppf "@[%a@];@,%a"
-          (pp_harpoon_command state)
-          command (pp_harpoon_proof state) body
+        pp_hovbox ~indent (pp_harpoon_command command)
+        ++ pp_semicolon ++ pp_cut ++ pp_harpoon_proof body
     | Harpoon.Proof.Directive { directive; _ } ->
-        (pp_harpoon_directive state) ppf directive
+        pp_harpoon_directive directive
 
-  and pp_harpoon_command state ppf command =
+  and pp_harpoon_command command =
     match command with
     | Harpoon.Command.By { expression; assignee; _ } ->
-        Format.fprintf ppf "@[<hov 2>%a %a@ %a %a@]" pp_keyword "by"
-          (pp_comp_expression state)
-          expression pp_keyword "as" Identifier.pp assignee
+        pp_hovbox ~indent
+          (pp_by_keyword ++ pp_non_breaking_space
+          ++ pp_comp_expression expression
+          ++ pp_as_keyword ++ pp_identifier assignee)
     | Harpoon.Command.Unbox
         { expression; assignee; modifier = Option.None; _ } ->
-        Format.fprintf ppf "@[<hov 2>%a %a@ %a %a@]" pp_keyword "unbox"
-          (pp_comp_expression state)
-          expression pp_keyword "as" Identifier.pp assignee
+        pp_hovbox ~indent
+          (pp_unbox_keyword ++ pp_non_breaking_space
+          ++ pp_comp_expression expression
+          ++ pp_space ++ pp_as_keyword ++ pp_non_breaking_space
+          ++ pp_identifier assignee)
     | Harpoon.Command.Unbox
         { expression; assignee; modifier = Option.Some `Strengthened; _ } ->
-        Format.fprintf ppf "@[<hov 2>%a %a@ %a %a@]" pp_keyword "strengthen"
-          (pp_comp_expression state)
-          expression pp_keyword "as" Identifier.pp assignee
+        pp_hovbox ~indent
+          (pp_strengthen_keyword ++ pp_non_breaking_space
+          ++ pp_comp_expression expression
+          ++ pp_space ++ pp_as_keyword ++ pp_non_breaking_space
+          ++ pp_identifier assignee)
 
-  and pp_harpoon_directive state ppf directive =
+  and pp_harpoon_directive directive =
     match directive with
     | Harpoon.Directive.Intros { hypothetical; _ } ->
-        Format.fprintf ppf "@[<v 0>%a@,%a@]" pp_keyword "intros"
-          (pp_harpoon_hypothetical state)
-          hypothetical
+        pp_vbox ~indent:0
+          (pp_intros_keyword ++ pp_cut
+          ++ pp_harpoon_hypothetical hypothetical)
     | Harpoon.Directive.Solve { solution; _ } ->
-        Format.fprintf ppf "@[<hov 2>%a@ %a@]" pp_keyword "solve"
-          (pp_comp_expression state)
-          solution
+        pp_hovbox ~indent
+          (pp_solve_keyword ++ pp_space ++ pp_comp_expression solution)
     | Harpoon.Directive.Split { scrutinee; branches; _ } ->
-        Format.fprintf ppf "@[%a@ %a as@]@,@[<v 0>%a@]" pp_keyword "split"
-          (pp_comp_expression state)
-          scrutinee
-          (List1.pp ~pp_sep:Format.pp_print_cut
-             (pp_harpoon_split_branch state))
-          branches
+        pp_hovbox ~indent
+          (pp_split_keyword ++ pp_space
+          ++ pp_comp_expression scrutinee
+          ++ pp_non_breaking_space ++ pp_as_keyword)
+        ++ pp_cut
+        ++ pp_vbox ~indent:0
+             (pp_list1 ~sep:pp_cut pp_harpoon_split_branch branches)
     | Harpoon.Directive.Impossible { scrutinee; _ } ->
-        Format.fprintf ppf "@[%a@ @[%a@]@]" pp_keyword "impossible"
-          (pp_comp_expression state)
-          scrutinee
+        pp_hovbox ~indent
+          (pp_impossible_keyword ++ pp_space ++ pp_comp_expression scrutinee)
     | Harpoon.Directive.Suffices { scrutinee; branches; _ } ->
-        Format.fprintf ppf "@[<v 0>@[<hov 2>%a %a@ %a@] %a@,@[<v 0>%a@]@]"
-          pp_keyword "suffices" pp_keyword "by"
-          (pp_comp_expression state)
-          scrutinee pp_keyword "toshow"
-          (List.pp ~pp_sep:Format.pp_print_cut
-             (pp_harpoon_suffices_branch state))
-          branches
+        pp_vbox ~indent:0
+          (pp_hovbox ~indent pp_suffices_keyword
+          ++ pp_non_breaking_space ++ pp_by_keyword ++ pp_space
+          ++ pp_comp_expression scrutinee)
+        ++ pp_non_breaking_space ++ pp_toshow_keyword ++ pp_cut
+        ++ pp_list ~sep:pp_cut pp_harpoon_suffices_branch branches
 
-  and pp_harpoon_split_branch state ppf branch =
+  and pp_harpoon_split_branch branch =
     let { Harpoon.Split_branch.label; body; _ } = branch in
-    Format.fprintf ppf "@[<v 0>%a %a:@,%a@]" pp_keyword "case"
-      (pp_harpoon_split_branch_label state)
-      label
-      (pp_harpoon_hypothetical state)
-      body
+    pp_vbox ~indent:0
+      (pp_case_keyword ++ pp_non_breaking_space
+      ++ pp_harpoon_split_branch_label label
+      ++ pp_colon ++ pp_cut
+      ++ pp_harpoon_hypothetical body)
 
-  and pp_harpoon_split_branch_label _state ppf label =
+  and pp_harpoon_split_branch_label label =
     match label with
     | Harpoon.Split_branch.Label.Lf_constant { identifier; _ } ->
-        Qualified_identifier.pp ppf identifier
+        pp_qualified_identifier identifier
     | Harpoon.Split_branch.Label.Comp_constant { identifier; _ } ->
-        Qualified_identifier.pp ppf identifier
+        pp_qualified_identifier identifier
     | Harpoon.Split_branch.Label.Bound_variable _ ->
-        Format.fprintf ppf "%a %a" pp_keyword "head" pp_keyword "variable"
+        pp_head_keyword ++ pp_non_breaking_space ++ pp_variable_keyword
     | Harpoon.Split_branch.Label.Empty_context _ ->
-        Format.fprintf ppf "%a %a" pp_keyword "empty" pp_keyword "context"
+        pp_empty_keyword ++ pp_non_breaking_space ++ pp_context_keyword
     | Harpoon.Split_branch.Label.Extended_context { schema_element; _ } ->
-        Format.fprintf ppf "%a %a %d" pp_keyword "extended" pp_keyword "by"
-          schema_element
+        pp_extended_keyword ++ pp_non_breaking_space ++ pp_by_keyword
+        ++ pp_space ++ pp_int schema_element
     | Harpoon.Split_branch.Label.Parameter_variable
-        { schema_element; projection; _ } -> (
-        match projection with
-        | Option.None -> Format.fprintf ppf "%d" schema_element
-        | Option.Some projection ->
-            Format.fprintf ppf "%d.%d" schema_element projection)
+        { schema_element; projection; _ } ->
+        pp_int schema_element
+        ++ pp_option
+             (fun projection -> pp_dot ++ pp_int projection)
+             projection
 
-  and pp_harpoon_suffices_branch state ppf branch =
+  and pp_harpoon_suffices_branch branch =
     let { Harpoon.Suffices_branch.goal; proof; _ } = branch in
-    Format.fprintf ppf "@[<v 2>@[%a@] {@,@[<v 0>%a@]@]@,}"
-      (pp_comp_typ state) goal (pp_harpoon_proof state) proof
+    pp_vbox ~indent
+      (pp_box (pp_comp_typ goal)
+      ++ pp_non_breaking_space
+      ++ pp_in_braces
+           (pp_cut ++ pp_vbox ~indent:0 (pp_harpoon_proof proof) ++ pp_cut))
 
-  and pp_harpoon_hypothetical state ppf hypothetical =
+  and pp_harpoon_hypothetical hypothetical =
     let { Harpoon.Hypothetical.meta_context =
             { Meta.Context.bindings = meta_context_bindings; _ }
         ; comp_context = { Comp.Context.bindings = comp_context_bindings; _ }
@@ -1605,197 +1770,178 @@ end) : BELUGA_HTML with type state = Html_state.state = struct
         } =
       hypothetical
     in
-    Format.fprintf ppf
-      "@[<v 0>{ @[<hv>%a@]@,| @[<hv>%a@]@,; @[<v 0>%a@]@,}@]"
-      (List.pp ~pp_sep:Format.comma (fun ppf (i, t) ->
-           Format.fprintf ppf "@[<hov 2>%a :@ %a@]" Identifier.pp i
-             (pp_meta_typ state) t))
-      meta_context_bindings
-      (List.pp ~pp_sep:Format.comma (fun ppf (i, t) ->
-           Format.fprintf ppf "@[<hov 2>%a :@ %a@]" Identifier.pp i
-             (pp_comp_typ state) t))
-      comp_context_bindings (pp_harpoon_proof state) proof
+    let pp_meta_binding (identifier, typ) =
+      pp_hovbox ~indent:2
+        (pp_identifier identifier ++ pp_non_breaking_space ++ pp_colon
+       ++ pp_space ++ pp_meta_typ typ)
+    in
+    let pp_comp_binding (identifier, typ) =
+      pp_hovbox ~indent:2
+        (pp_identifier identifier ++ pp_non_breaking_space ++ pp_colon
+       ++ pp_space ++ pp_comp_typ typ)
+    in
+    let pp_meta_context =
+      pp_hvbox ~indent:0
+        (pp_list ~sep:pp_comma_space pp_meta_binding meta_context_bindings)
+    in
+    let pp_comp_context =
+      pp_hvbox ~indent:0
+        (pp_list ~sep:pp_comma_space pp_comp_binding comp_context_bindings)
+    in
+    pp_vbox ~indent:0
+      (pp_in_braces
+         (pp_non_breaking_space ++ pp_meta_context ++ pp_cut ++ pp_pipe
+        ++ pp_non_breaking_space ++ pp_comp_context ++ pp_cut ++ pp_semicolon
+        ++ pp_non_breaking_space ++ pp_harpoon_proof proof ++ pp_cut))
 
   (** {1 Pretty-Printing Signature Syntax} *)
 
-  let pp_associativity ppf = function
-    | Associativity.Left_associative -> Format.pp_print_string ppf "left"
-    | Associativity.Right_associative -> Format.pp_print_string ppf "right"
-    | Associativity.Non_associative -> Format.pp_print_string ppf "none"
+  let pp_associativity = function
+    | Associativity.Left_associative -> pp_string "left"
+    | Associativity.Right_associative -> pp_string "right"
+    | Associativity.Non_associative -> pp_string "none"
 
-  let rec pp_signature_pragma state ppf pragma =
+  let rec pp_signature_pragma pragma =
     match pragma with
     | Signature.Pragma.Name
         { constant; meta_variable_base; computation_variable_base; _ } ->
-        (match computation_variable_base with
-        | Option.None ->
-            let pp_name_pragma ppf () =
-              Format.fprintf ppf "@[<hov 2>--name@ %a@ %a.@]"
-                Qualified_identifier.pp constant Identifier.pp
-                meta_variable_base
-            in
-            (pp_pragma "name" pp_name_pragma) ppf ()
-        | Option.Some computation_variable_base ->
-            let pp_name_pragma ppf () =
-              Format.fprintf ppf "@[<hov 2>--name@ %a@ %a@ %a.@]"
-                Qualified_identifier.pp constant Identifier.pp
-                meta_variable_base Identifier.pp computation_variable_base
-            in
-            (pp_pragma "name" pp_name_pragma) ppf ());
-        state
-    | Signature.Pragma.Default_associativity { associativity; _ } ->
-        let pp_associativity_pragma ppf () =
-          Format.fprintf ppf "@[<hov 2>--assoc@ %a.@]" pp_associativity
-            associativity
+        let pp_name_pragma =
+          pp_hovbox ~indent
+            (pp_string "--name" ++ pp_space
+            ++ pp_qualified_identifier constant
+            ++ pp_space
+            ++ pp_identifier meta_variable_base
+            ++ pp_option
+                 (fun computation_variable_base ->
+                   pp_identifier computation_variable_base ++ pp_dot)
+                 computation_variable_base)
         in
-        (pp_pragma "assoc" pp_associativity_pragma) ppf ();
-        state
+        pp_pragma "name" pp_name_pragma
+    | Signature.Pragma.Default_associativity { associativity; _ } ->
+        let pp_associativity_pragma =
+          pp_hovbox ~indent
+            (pp_string "--assoc" ++ pp_space
+            ++ pp_associativity associativity
+            ++ pp_dot)
+        in
+        pp_pragma "assoc" pp_associativity_pragma
     | Signature.Pragma.Prefix_fixity { constant; precedence; _ } ->
-        (match precedence with
-        | Option.None ->
-            let pp_prefix_pragma ppf () =
-              Format.fprintf ppf "@[<hov 2>--prefix@ %a.@]"
-                Qualified_identifier.pp constant
-            in
-            (pp_pragma "prefix" pp_prefix_pragma) ppf ()
-        | Option.Some precedence ->
-            let pp_prefix_pragma ppf () =
-              Format.fprintf ppf "@[<hov 2>--prefix@ %a@ %i.@]"
-                Qualified_identifier.pp constant precedence
-            in
-            (pp_pragma "prefix" pp_prefix_pragma) ppf ());
-        state
+        let pp_prefix_pragma =
+          pp_hovbox ~indent
+            (pp_string "--prefix" ++ pp_space
+            ++ pp_qualified_identifier constant
+            ++ pp_option
+                 (fun precedence -> pp_space ++ pp_int precedence)
+                 precedence
+            ++ pp_dot)
+        in
+        pp_pragma "prefix" pp_prefix_pragma
     | Signature.Pragma.Infix_fixity
         { constant; precedence; associativity; _ } ->
-        (match (precedence, associativity) with
-        | Option.Some precedence, Option.Some associativity ->
-            let pp_infix_pragma ppf () =
-              Format.fprintf ppf "@[<hov 2>--infix@ %a@ %i@ %a.@]"
-                Qualified_identifier.pp constant precedence pp_associativity
-                associativity
-            in
-            (pp_pragma "infix" pp_infix_pragma) ppf ()
-        | Option.Some precedence, Option.None ->
-            let pp_infix_pragma ppf () =
-              Format.fprintf ppf "@[<hov 2>--infix@ %a@ %i.@]"
-                Qualified_identifier.pp constant precedence
-            in
-            (pp_pragma "infix" pp_infix_pragma) ppf ()
-        | Option.None, Option.Some associativity ->
-            let pp_infix_pragma ppf () =
-              Format.fprintf ppf "@[<hov 2>--infix@ %a@ %a.@]"
-                Qualified_identifier.pp constant pp_associativity
-                associativity
-            in
-            (pp_pragma "infix" pp_infix_pragma) ppf ()
-        | Option.None, Option.None ->
-            let pp_infix_pragma ppf () =
-              Format.fprintf ppf "@[<hov 2>--infix@ %a.@]"
-                Qualified_identifier.pp constant
-            in
-            (pp_pragma "infix" pp_infix_pragma) ppf ());
-        state
+        pp_hovbox ~indent
+          (pp_string "--infix" ++ pp_space
+          ++ pp_qualified_identifier constant
+          ++ pp_option
+               (fun precedence -> pp_space ++ pp_int precedence)
+               precedence
+          ++ pp_option
+               (fun associativity ->
+                 pp_space ++ pp_associativity associativity)
+               associativity
+          ++ pp_dot)
     | Signature.Pragma.Postfix_fixity { constant; precedence; _ } ->
-        (match precedence with
-        | Option.None ->
-            let pp_postfix_pragma ppf () =
-              Format.fprintf ppf "@[<hov 2>--postfix@ %a.@]"
-                Qualified_identifier.pp constant
-            in
-            (pp_pragma "postfix" pp_postfix_pragma) ppf ()
-        | Option.Some precedence ->
-            let pp_postfix_pragma ppf () =
-              Format.fprintf ppf "@[<hov 2>--postfix@ %a@ %i.@]"
-                Qualified_identifier.pp constant precedence
-            in
-            (pp_pragma "postfix" pp_postfix_pragma) ppf ());
-        state
+        let pp_postfix_pragma =
+          pp_hovbox ~indent
+            (pp_string "--postfix" ++ pp_space
+            ++ pp_qualified_identifier constant
+            ++ pp_option
+                 (fun precedence -> pp_space ++ pp_int precedence)
+                 precedence
+            ++ pp_dot)
+        in
+        pp_pragma "postfix" pp_postfix_pragma
     | Signature.Pragma.Not _ ->
-        pp_pragma "not"
-          (fun ppf () -> Format.pp_print_string ppf "--not")
-          ppf ();
-        state
+        let pp_not_pragma = pp_string "--not" in
+        pp_pragma "not" pp_not_pragma
     | Signature.Pragma.Open_module { module_identifier; _ } ->
-        pp_pragma "open"
-          (fun ppf () ->
-            Format.fprintf ppf "@[<hov 2>--open@ %a.@]"
-              Qualified_identifier.pp module_identifier)
-          ppf ();
-        state (* TODO: Open the module *)
+        let pp_open_pragma =
+          pp_hovbox ~indent
+            (pp_string "--open" ++ pp_space
+            ++ pp_qualified_identifier module_identifier
+            ++ pp_dot)
+        in
+        let* () = pp_pragma "open" pp_open_pragma in
+        open_module module_identifier
     | Signature.Pragma.Abbreviation { module_identifier; abbreviation; _ } ->
-        pp_pragma "abbrev"
-          (fun ppf () ->
-            Format.fprintf ppf "@[<hov 2>--abbrev@ %a@ %a.@]"
-              Qualified_identifier.pp module_identifier Identifier.pp
-              abbreviation)
-          ppf ();
-        state (* TODO: Add the abbreviation *)
+        let pp_abbrev_pragma =
+          pp_hovbox ~indent
+            (pp_string "--abbrev" ++ pp_space
+            ++ pp_qualified_identifier module_identifier
+            ++ pp_space
+            ++ pp_identifier abbreviation
+            ++ pp_dot)
+        in
+        let* () = pp_pragma "abbrev" pp_abbrev_pragma in
+        add_synonym module_identifier abbreviation
 
-  and pp_signature_global_pragma _state ppf global_pragma =
+  and pp_signature_global_pragma global_pragma =
     match global_pragma with
     | Signature.Global_pragma.No_strengthening _ ->
-        pp_pragma "nostrengthen"
-          (fun ppf () -> Format.pp_print_string ppf "--nostrengthen")
-          ppf ()
+        let pp_nostrengthen_pragma = pp_string "--nostrengthen" in
+        pp_pragma "nostrengthen" pp_nostrengthen_pragma
     | Signature.Global_pragma.Warn_on_coverage_error _ ->
-        pp_pragma "warncoverage"
-          (fun ppf () -> Format.pp_print_string ppf "--warncoverage")
-          ppf ()
+        let pp_warncoverage_pragma = pp_string "--warncoverage" in
+        pp_pragma "warncoverage" pp_warncoverage_pragma
     | Signature.Global_pragma.Raise_error_on_coverage_error _ ->
-        pp_pragma "coverage"
-          (fun ppf () -> Format.pp_print_string ppf "--coverage")
-          ppf ()
+        let pp_coverage_pragma = pp_string "--coverage" in
+        pp_pragma "coverage" pp_coverage_pragma
 
-  and pp_signature_totality_declaration state ppf totality_declaration =
+  and pp_signature_totality_declaration totality_declaration =
     match totality_declaration with
-    | Signature.Totality.Declaration.Trust _ -> pp_keyword ppf "trust"
+    | Signature.Totality.Declaration.Trust _ -> pp_trust_keyword
     | Signature.Totality.Declaration.Named
-        { order; program; argument_labels; _ } -> (
-        let pp_identifier_option ppf = function
-          | Option.None -> Format.pp_print_string ppf "_"
-          | Option.Some identifier -> Identifier.pp ppf identifier
+        { order; program; argument_labels; _ } ->
+        let pp_argument_label_opt =
+          pp_option ~none:pp_underscore pp_identifier
         in
-        match order with
-        | Option.None ->
-            Format.fprintf ppf "@[<hov 2>%a@ (%a)@]" pp_keyword "total"
-              (List.pp ~pp_sep:Format.pp_print_space pp_identifier_option)
-              (Option.some program :: argument_labels)
-        | Option.Some order ->
-            Format.fprintf ppf "@[<hov 2>%a@ %a@ (%a)@]" pp_keyword "total"
-              ((pp_signature_totality_order state) Identifier.pp)
-              order
-              (List.pp ~pp_sep:Format.pp_print_space pp_identifier_option)
-              (Option.some program :: argument_labels))
-    | Signature.Totality.Declaration.Numeric { order; _ } -> (
-        match order with
-        | Option.None -> pp_keyword ppf "total"
-        | Option.Some order ->
-            Format.fprintf ppf "@[%a@ %a@]" pp_keyword "total"
-              ((pp_signature_totality_order state) Int.pp)
-              order)
+        let pp_order_opt =
+          pp_option
+            (fun order ->
+              pp_space ++ pp_signature_totality_order pp_identifier order)
+            order
+        in
+        pp_hovbox ~indent
+          (pp_total_keyword ++ pp_order_opt ++ pp_space
+          ++ pp_in_parens
+               (pp_identifier program ++ pp_space
+               ++ pp_list ~sep:pp_space pp_argument_label_opt argument_labels
+               ))
+    | Signature.Totality.Declaration.Numeric { order; _ } ->
+        pp_option ~none:pp_total_keyword
+          (fun order ->
+            pp_hovbox ~indent
+              (pp_total_keyword ++ pp_signature_totality_order pp_int order))
+          order
 
   and pp_signature_totality_order :
-        'a.
-           state
-        -> (Format.formatter -> 'a -> Unit.t)
-        -> Format.formatter
-        -> 'a Signature.Totality.Order.t
-        -> Unit.t =
-   fun state ppv ppf totality_order ->
+        'a. ('a -> unit t) -> 'a signature_totality_order -> unit t =
+   fun ppv totality_order ->
     match totality_order with
-    | Signature.Totality.Order.Argument { argument; _ } -> ppv ppf argument
+    | Signature.Totality.Order.Argument { argument; _ } -> ppv argument
     | Signature.Totality.Order.Lexical_ordering { arguments; _ } ->
-        Format.fprintf ppf "@[<hov 2>{@ %a@ }@]"
-          (List1.pp ~pp_sep:Format.pp_print_space
-             ((pp_signature_totality_order state) ppv))
-          arguments
+        pp_hovbox ~indent
+          (pp_in_braces
+             (pp_list1 ~sep:pp_space
+                (pp_signature_totality_order ppv)
+                arguments))
     | Signature.Totality.Order.Simultaneous_ordering { arguments; _ } ->
-        Format.fprintf ppf "@[<hov 2>[@ %a@ ]@]"
-          (List1.pp ~pp_sep:Format.pp_print_space
-             ((pp_signature_totality_order state) ppv))
-          arguments
+        pp_hovbox ~indent
+          (pp_in_bracks
+             (pp_list1 ~sep:pp_space
+                (pp_signature_totality_order ppv)
+                arguments))
 
-  and pp_signature_declaration state ppf declaration =
+  and pp_signature_declaration declaration =
     match declaration with
     | Signature.Declaration.CompTyp _
     | Signature.Declaration.CompCotyp _
@@ -1807,41 +1953,51 @@ end) : BELUGA_HTML with type state = Html_state.state = struct
           (Synext.location_of_signature_declaration declaration)
           Unsupported_non_recursive_declaration
     | Signature.Declaration.Typ { identifier; kind; _ } ->
-        Format.fprintf ppf "@[<hov 2>%a :@ %a.@]"
-          (pp_lf_type_constant state)
-          identifier (pp_lf_kind state) kind;
-        add_fresh_id identifier state
+        pp_hovbox ~indent
+          (pp_lf_type_constant identifier
+          ++ pp_non_breaking_space ++ pp_colon ++ pp_space ++ pp_lf_kind kind
+          ++ pp_dot)
     | Signature.Declaration.Const { identifier; typ; _ } ->
-        Format.fprintf ppf "@[<hov 2>%a :@ %a.@]"
-          (pp_lf_term_constant state)
-          identifier (pp_lf_typ state) typ;
-        add_fresh_id identifier state
+        pp_hovbox ~indent
+          (pp_lf_term_constant identifier
+          ++ pp_non_breaking_space ++ pp_colon ++ pp_space ++ pp_lf_typ typ
+          ++ pp_dot)
     | Signature.Declaration.Schema { identifier; schema; _ } ->
-        Format.fprintf ppf "@[<hov 2>%a %a =@ %a;@]" pp_keyword "schema"
-          (pp_schema_constant state)
-          identifier (pp_schema state) schema;
-        add_fresh_id identifier state
-    | Signature.Declaration.Recursive_declarations { declarations; _ } ->
-        (pp_recursive_declarations state) ppf declarations
+        pp_hovbox ~indent
+          (pp_schema_keyword ++ pp_non_breaking_space
+          ++ pp_schema_constant identifier
+          ++ pp_non_breaking_space ++ pp_equal ++ pp_space
+          ++ pp_schema schema ++ pp_semicolon)
+    | Signature.Declaration.Recursive_declarations { declarations; _ } -> (
+        match group_recursive_declarations declarations with
+        | List1.T (first, []) ->
+            pp_vbox ~indent:0
+              (pp_grouped_declaration ~prepend_and:false first)
+            ++ pp_semicolon
+        | List1.T (first, rest) ->
+            pp_vbox ~indent:0
+              (pp_grouped_declaration ~prepend_and:false first
+              ++ pp_cut ++ pp_cut
+              ++ pp_list ~sep:(pp_cut ++ pp_cut)
+                   (pp_grouped_declaration ~prepend_and:true)
+                   rest)
+            ++ pp_semicolon)
     | Signature.Declaration.CompTypAbbrev { identifier; kind; typ; _ } ->
-        Format.fprintf ppf "@[<hov 2>%a %a :@ %a =@ %a;@]" pp_keyword
-          "typedef"
-          (pp_computation_abbreviation_constant state)
-          identifier (pp_comp_kind state) kind (pp_comp_typ state) typ;
-        add_fresh_id identifier state
+        pp_hovbox ~indent
+          (pp_typedef_keyword ++ pp_non_breaking_space
+          ++ pp_computation_abbreviation_constant identifier
+          ++ pp_non_breaking_space ++ pp_colon ++ pp_space
+          ++ pp_comp_kind kind ++ pp_non_breaking_space ++ pp_equal
+          ++ pp_space ++ pp_comp_typ typ ++ pp_semicolon)
     | Signature.Declaration.Val { identifier; typ; expression; _ } ->
-        (match typ with
-        | Option.None ->
-            Format.fprintf ppf "@[<hov 2>%a@ %a@ =@ %a;@]" pp_keyword "let"
-              pp_computation_variable identifier
-              (pp_comp_expression state)
-              expression
-        | Option.Some typ ->
-            Format.fprintf ppf "@[<hov 2>%a@ %a :@ %a@ =@ %a;@]" pp_keyword
-              "let" Identifier.pp identifier (pp_comp_typ state) typ
-              (pp_comp_expression state)
-              expression);
-        add_fresh_id identifier state
+        let pp_typ_annotation =
+          pp_option (fun typ -> pp_colon ++ pp_space ++ pp_comp_typ typ) typ
+        in
+        let pp_declaration = pp_identifier identifier ++ pp_typ_annotation in
+        pp_hovbox ~indent
+          (pp_let_keyword ++ pp_space ++ pp_declaration ++ pp_space
+         ++ pp_equal
+          ++ pp_comp_expression expression)
     | Signature.Declaration.Query
         { identifier
         ; meta_context
@@ -1849,252 +2005,189 @@ end) : BELUGA_HTML with type state = Html_state.state = struct
         ; expected_solutions
         ; maximum_tries
         ; _
-        } -> (
-        let pp_meta_context state ppf meta_context =
+        } ->
+        let pp_binding identifier typ =
+          pp_identifier identifier ++ pp_non_breaking_space ++ pp_colon
+          ++ pp_space ++ pp_meta_typ typ
+        in
+        let pp_declaration (identifier, typ) =
+          pp_hovbox ~indent (pp_in_braces (pp_binding identifier typ))
+        in
+        let pp_meta_context meta_context =
           let { Meta.Context.bindings; _ } = meta_context in
-          List.pp ~pp_sep:Format.pp_print_space
-            (fun ppf (i, t) ->
-              Format.fprintf ppf "@[{@ %a :@ %a@ }@]" Identifier.pp i
-                (pp_meta_typ state) t)
-            ppf bindings
+          pp_list ~sep:pp_space pp_declaration bindings
         in
-        let pp_query_argument ppf = function
-          | Option.None -> Format.pp_print_string ppf "*"
-          | Option.Some argument -> Format.pp_print_int ppf argument
+        let pp_query_argument =
+          pp_option ~none:pp_star (fun argument -> pp_int argument)
         in
-        match identifier with
-        | Option.None ->
-            Format.fprintf ppf "@[<hov 2>%a@ %a@ %a@ %a@ %a@]" pp_keyword
-              "query" pp_query_argument expected_solutions pp_query_argument
-              maximum_tries (pp_meta_context state) meta_context
-              (pp_lf_typ state) typ;
-            state
-        | Option.Some identifier ->
-            Format.fprintf ppf "@[<hov 2>%a@ %a@ %a@ %a@ %a :@ %a@]"
-              pp_keyword "query" pp_query_argument expected_solutions
-              pp_query_argument maximum_tries (pp_meta_context state)
-              meta_context Identifier.pp identifier (pp_lf_typ state) typ;
-            add_fresh_id identifier state)
+        let pp_identifier_opt =
+          pp_option
+            (fun identifier -> pp_space ++ pp_identifier identifier)
+            identifier
+        in
+        pp_hovbox ~indent
+          (pp_string "--query" ++ pp_space
+          ++ pp_query_argument expected_solutions
+          ++ pp_space
+          ++ pp_query_argument maximum_tries
+          ++ pp_space
+          ++ pp_meta_context meta_context
+          ++ pp_identifier_opt ++ pp_non_breaking_space ++ pp_colon
+          ++ pp_lf_typ typ ++ pp_dot)
     | Signature.Declaration.Module { identifier; entries; _ } ->
-        Format.fprintf ppf "%a %a = %a@;<1 2>@[<v 0>%a@]@ %a" pp_keyword
-          "module" Identifier.pp identifier pp_keyword "struct"
-          (Obj.magic ()) entries pp_keyword "end";
-        (* TODO: Carry the state through [pp_module_entry], or collect inner
-           (identifier, IDs) pairs with a [with]-combinator *)
-        add_fresh_id identifier state
+        pp_module_keyword ++ pp_non_breaking_space
+        ++ pp_identifier identifier ++ pp_equal ++ pp_non_breaking_space
+        ++ pp_struct_keyword ++ pp_break 1 2
+        ++ pp_vbox ~indent:0
+             (pp_list ~sep:(pp_cut ++ pp_cut) pp_module_entry entries)
+        ++ pp_cut ++ pp_end_keyword
 
-  and pp_recursive_declarations state ppf declarations =
-    let state' =
-      List.fold_left add_signature_declaration_to_state state
-        (List1.to_list declarations)
+  and add_fresh_id_for_declaration declaration =
+    match declaration with
+    | Signature.Declaration.Typ { identifier; _ } ->
+        add_fresh_id ~prefix:"lf-type-" identifier
+    | Signature.Declaration.Const { identifier; _ } ->
+        add_fresh_id ~prefix:"lf-term-" identifier
+    | Signature.Declaration.CompTyp { identifier; _ } ->
+        add_fresh_id ~prefix:"comp-typ-" identifier
+    | Signature.Declaration.CompCotyp { identifier; _ } ->
+        add_fresh_id ~prefix:"comp-cotyp-" identifier
+    | Signature.Declaration.CompConst { identifier; _ } ->
+        add_fresh_id ~prefix:"comp-const-" identifier
+    | Signature.Declaration.CompDest { identifier; _ } ->
+        add_fresh_id ~prefix:"comp-dest-" identifier
+    | Signature.Declaration.Schema { identifier; _ } ->
+        add_fresh_id ~prefix:"schema-" identifier
+    | Signature.Declaration.Theorem { identifier; _ } ->
+        add_fresh_id ~prefix:"theorem-" identifier
+    | Signature.Declaration.Proof { identifier; _ } ->
+        add_fresh_id ~prefix:"proof-" identifier
+    | Signature.Declaration.CompTypAbbrev { identifier; _ } ->
+        add_fresh_id ~prefix:"abbrev-" identifier
+    | Signature.Declaration.Val { identifier; _ } ->
+        add_fresh_id ~prefix:"val-" identifier
+    | Signature.Declaration.Module { identifier; _ } ->
+        add_fresh_id ~prefix:"module-" identifier
+    | Signature.Declaration.Recursive_declarations { declarations; _ } ->
+        traverse_list1_void add_fresh_id_for_declaration declarations
+    | Signature.Declaration.Query { identifier; _ } ->
+        traverse_option_void (add_fresh_id ~prefix:"query-") identifier
+
+  and pp_grouped_declaration ~prepend_and declaration =
+    let pp_and_opt =
+      if prepend_and then pp_and_keyword ++ pp_non_breaking_space else pp_nop
     in
-    (match group_recursive_declarations declarations with
-    | List1.T (first, []) ->
-        Format.fprintf ppf "@[<v 0>%a@];"
-          (pp_first_grouped_declaration state')
-          first
-    | List1.T (first, rest) ->
-        Format.fprintf ppf "@[<v 0>%a@,@,%a@];"
-          (pp_first_grouped_declaration state')
-          first
-          (List.pp
-             ~pp_sep:(fun ppf () -> Format.fprintf ppf "@,@,")
-             (pp_rest_grouped_declaration state'))
-          rest);
-    state'
-
-  and add_signature_declaration_to_state state = function
-    | Signature.Declaration.Typ { identifier; _ }
-    | Signature.Declaration.Const { identifier; _ }
-    | Signature.Declaration.CompTyp { identifier; _ }
-    | Signature.Declaration.CompCotyp { identifier; _ }
-    | Signature.Declaration.CompConst { identifier; _ }
-    | Signature.Declaration.CompDest { identifier; _ }
-    | Signature.Declaration.Schema { identifier; _ }
-    | Signature.Declaration.Theorem { identifier; _ }
-    | Signature.Declaration.Proof { identifier; _ }
-    | Signature.Declaration.CompTypAbbrev { identifier; _ }
-    | Signature.Declaration.Val { identifier; _ }
-    | Signature.Declaration.Query { identifier = Option.Some identifier; _ }
-      ->
-        add_fresh_id identifier state
-    | Signature.Declaration.Module { location; _ }
-    | Signature.Declaration.Recursive_declarations { location; _ } ->
-        Error.raise_at1 location Unsupported_recursive_declaration
-    | Signature.Declaration.Query { identifier = Option.None; _ } -> state
-
-  and pp_first_grouped_declaration state ppf declaration =
     match declaration with
     | `Lf_typ (identifier, kind, constants) ->
-        let pp_constant ppf (identifier, typ) =
-          Format.fprintf ppf "@[<hov 2>| %a :@;%a@]"
-            (pp_lf_term_constant state)
-            identifier (pp_lf_typ state) typ
+        let pp_constant (identifier, typ) =
+          pp_hovbox ~indent
+            (pp_pipe ++ pp_non_breaking_space
+            ++ pp_lf_term_constant identifier
+            ++ pp_non_breaking_space ++ pp_colon ++ pp_space ++ pp_lf_typ typ
+            )
         in
-        Format.fprintf ppf "@[<hov 2>%a %a :@ %a =@]@,%a" pp_keyword "LF"
-          (pp_lf_type_constant state)
-          identifier (pp_lf_kind state) kind
-          (List.pp ~pp_sep:Format.pp_print_cut pp_constant)
-          constants
+        let pp_constants =
+          match constants with
+          | [] -> pp_nop
+          | _ -> pp_cut ++ pp_list ~sep:pp_cut pp_constant constants
+        in
+        pp_hovbox ~indent
+          (pp_and_opt ++ pp_lf_keyword ++ pp_non_breaking_space
+          ++ pp_computation_stratified_constant identifier
+          ++ pp_non_breaking_space ++ pp_colon ++ pp_space ++ pp_lf_kind kind
+          ++ pp_non_breaking_space ++ pp_equal)
+        ++ pp_constants
     | `Inductive_comp_typ (identifier, kind, constants) ->
-        let pp_constant ppf (identifier, typ) =
-          Format.fprintf ppf "@[<hov 2>| %a :@;%a@]"
-            (pp_computation_constructor state)
-            identifier (pp_comp_typ state) typ
+        let pp_constant (identifier, typ) =
+          pp_hovbox ~indent
+            (pp_pipe ++ pp_non_breaking_space
+            ++ pp_computation_constructor identifier
+            ++ pp_non_breaking_space ++ pp_colon ++ pp_space
+            ++ pp_comp_typ typ)
         in
-        Format.fprintf ppf "@[<hov 2>%a %a :@ %a =@]@,%a" pp_keyword
-          "inductive"
-          (pp_computation_inductive_constant state)
-          identifier (pp_comp_kind state) kind
-          (List.pp ~pp_sep:Format.pp_print_cut pp_constant)
-          constants
+        let pp_constants =
+          match constants with
+          | [] -> pp_nop
+          | _ -> pp_cut ++ pp_list ~sep:pp_cut pp_constant constants
+        in
+        pp_hovbox ~indent
+          (pp_and_opt ++ pp_inductive_keyword ++ pp_non_breaking_space
+          ++ pp_computation_stratified_constant identifier
+          ++ pp_non_breaking_space ++ pp_colon ++ pp_space
+          ++ pp_comp_kind kind ++ pp_non_breaking_space ++ pp_equal)
+        ++ pp_constants
     | `Stratified_comp_typ (identifier, kind, constants) ->
-        let pp_constant ppf (identifier, typ) =
-          Format.fprintf ppf "@[<hov 2>| %a :@;%a@]"
-            (pp_computation_constructor state)
-            identifier (pp_comp_typ state) typ
+        let pp_constant (identifier, typ) =
+          pp_hovbox ~indent
+            (pp_pipe ++ pp_non_breaking_space
+            ++ pp_computation_constructor identifier
+            ++ pp_non_breaking_space ++ pp_colon ++ pp_space
+            ++ pp_comp_typ typ)
         in
-        Format.fprintf ppf "@[<hov 2>%a %a :@ %a =@]@,%a" pp_keyword
-          "stratified"
-          (pp_computation_stratified_constant state)
-          identifier (pp_comp_kind state) kind
-          (List.pp ~pp_sep:Format.pp_print_cut pp_constant)
-          constants
+        let pp_constants =
+          match constants with
+          | [] -> pp_nop
+          | _ -> pp_cut ++ pp_list ~sep:pp_cut pp_constant constants
+        in
+        pp_hovbox ~indent
+          (pp_and_opt ++ pp_stratified_keyword ++ pp_non_breaking_space
+          ++ pp_computation_stratified_constant identifier
+          ++ pp_non_breaking_space ++ pp_colon ++ pp_space
+          ++ pp_comp_kind kind ++ pp_non_breaking_space ++ pp_equal)
+        ++ pp_constants
     | `Coinductive_comp_typ (identifier, kind, constants) ->
-        let pp_constant ppf (identifier, observation_typ, return_typ) =
-          Format.fprintf ppf "@[<hov 2>| %a :@ %a ::@ %a@]"
-            (pp_computation_destructor state)
-            identifier (pp_comp_typ state) observation_typ
-            (pp_comp_typ state) return_typ
+        let pp_constant (identifier, observation_typ, return_typ) =
+          pp_hovbox ~indent
+            (pp_pipe ++ pp_non_breaking_space
+            ++ pp_computation_destructor identifier
+            ++ pp_non_breaking_space ++ pp_colon ++ pp_space
+            ++ pp_comp_typ observation_typ
+            ++ pp_non_breaking_space ++ pp_double_colon ++ pp_space
+            ++ pp_comp_typ return_typ)
         in
-        Format.fprintf ppf "@[<hov 2>%a %a :@ %a =@]@,%a" pp_keyword
-          "coinductive"
-          (pp_computation_coinductive_constant state)
-          identifier (pp_comp_kind state) kind
-          (List.pp ~pp_sep:Format.pp_print_cut pp_constant)
-          constants
-    | `Theorem (identifier, typ, order, body) -> (
-        match order with
-        | Option.None ->
-            Format.fprintf ppf "@[<hov 2>%a %a :@ %a =@ %a@]" pp_keyword
-              "rec"
-              (pp_computation_program state)
-              identifier (pp_comp_typ state) typ
-              (pp_comp_expression state)
-              body
-        | Option.Some order ->
-            Format.fprintf ppf
-              "@[<hov 2>%a %a :@ %a =@]@,/ %a /@,@[<hov 2>%a@]" pp_keyword
-              "rec"
-              (pp_computation_program state)
-              identifier (pp_comp_typ state) typ
-              (pp_signature_totality_declaration state)
-              order
-              (pp_comp_expression state)
-              body)
-    | `Proof (identifier, typ, order, body) -> (
-        match order with
-        | Option.None ->
-            Format.fprintf ppf "@[<hov 2>%a %a :@ %a =@ %a@]" pp_keyword
-              "proof"
-              (pp_computation_program state)
-              identifier (pp_comp_typ state) typ (pp_harpoon_proof state)
-              body
-        | Option.Some order ->
-            Format.fprintf ppf
-              "@[<hov 2>%a %a :@ %a =@]@,/ %a /@,@[<hov 2>%a@]" pp_keyword
-              "proof"
-              (pp_computation_program state)
-              identifier (pp_comp_typ state) typ
-              (pp_signature_totality_declaration state)
-              order (pp_harpoon_proof state) body)
-
-  and pp_rest_grouped_declaration state ppf declaration =
-    match declaration with
-    | `Lf_typ (identifier, kind, constants) ->
-        let pp_constant ppf (identifier, typ) =
-          Format.fprintf ppf "@[<hov 2>| %a :@;%a@]"
-            (pp_lf_term_constant state)
-            identifier (pp_lf_typ state) typ
+        let pp_constants =
+          match constants with
+          | [] -> pp_nop
+          | _ -> pp_cut ++ pp_list ~sep:pp_cut pp_constant constants
         in
-        Format.fprintf ppf "@[<hov 2>%a %a %a :@ %a =@]@,%a" pp_keyword "and"
-          pp_keyword "LF"
-          (pp_lf_type_constant state)
-          identifier (pp_lf_kind state) kind
-          (List.pp ~pp_sep:Format.pp_print_cut pp_constant)
-          constants
-    | `Inductive_comp_typ (identifier, kind, constants) ->
-        let pp_constant ppf (identifier, typ) =
-          Format.fprintf ppf "@[<hov 2>| %a :@;%a@]"
-            (pp_computation_constructor state)
-            identifier (pp_comp_typ state) typ
+        pp_hovbox ~indent
+          (pp_and_opt ++ pp_coinductive_keyword ++ pp_non_breaking_space
+          ++ pp_computation_coinductive_constant identifier
+          ++ pp_non_breaking_space ++ pp_colon ++ pp_space
+          ++ pp_comp_kind kind ++ pp_non_breaking_space ++ pp_equal)
+        ++ pp_constants
+    | `Theorem (identifier, typ, order, body) ->
+        let pp_order =
+          pp_option
+            (fun order ->
+              pp_cut ++ pp_slash ++ pp_non_breaking_space
+              ++ pp_signature_totality_declaration order
+              ++ pp_non_breaking_space ++ pp_slash)
+            order
         in
-        Format.fprintf ppf "@[<hov 2>%a %a %a :@ %a =@]@,%a" pp_keyword "and"
-          pp_keyword "inductive"
-          (pp_computation_inductive_constant state)
-          identifier (pp_comp_kind state) kind
-          (List.pp ~pp_sep:Format.pp_print_cut pp_constant)
-          constants
-    | `Stratified_comp_typ (identifier, kind, constants) ->
-        let pp_constant ppf (identifier, typ) =
-          Format.fprintf ppf "@[<hov 2>| %a :@;%a@]"
-            (pp_computation_constructor state)
-            identifier (pp_comp_typ state) typ
+        pp_hovbox ~indent
+          (pp_and_opt ++ pp_rec_keyword ++ pp_non_breaking_space
+          ++ pp_computation_program identifier
+          ++ pp_non_breaking_space ++ pp_colon ++ pp_space ++ pp_comp_typ typ
+          ++ pp_non_breaking_space ++ pp_equal)
+        ++ pp_order ++ pp_cut
+        ++ pp_hovbox ~indent (pp_comp_expression body)
+    | `Proof (identifier, typ, order, body) ->
+        let pp_order =
+          pp_option
+            (fun order ->
+              pp_cut ++ pp_slash ++ pp_non_breaking_space
+              ++ pp_signature_totality_declaration order
+              ++ pp_non_breaking_space ++ pp_slash)
+            order
         in
-        Format.fprintf ppf "@[<hov 2>%a %a %a :@ %a =@]@,%a" pp_keyword "and"
-          pp_keyword "stratified"
-          (pp_computation_stratified_constant state)
-          identifier (pp_comp_kind state) kind
-          (List.pp ~pp_sep:Format.pp_print_cut pp_constant)
-          constants
-    | `Coinductive_comp_typ (identifier, kind, constants) ->
-        let pp_constant ppf (identifier, observation_typ, return_typ) =
-          Format.fprintf ppf "@[<hov 2>| %a :@ %a ::@ %a@]"
-            (pp_computation_destructor state)
-            identifier (pp_comp_typ state) observation_typ
-            (pp_comp_typ state) return_typ
-        in
-        Format.fprintf ppf "@[<hov 2>%a %a %a :@ %a =@]@,%a" pp_keyword "and"
-          pp_keyword "coinductive"
-          (pp_computation_coinductive_constant state)
-          identifier (pp_comp_kind state) kind
-          (List.pp ~pp_sep:Format.pp_print_cut pp_constant)
-          constants
-    | `Theorem (identifier, typ, order, body) -> (
-        match order with
-        | Option.None ->
-            Format.fprintf ppf "@[<hov 2>%a %a %a :@ %a =@ %a@]" pp_keyword
-              "and" pp_keyword "rec"
-              (pp_computation_program state)
-              identifier (pp_comp_typ state) typ
-              (pp_comp_expression state)
-              body
-        | Option.Some order ->
-            Format.fprintf ppf
-              "@[<hov 2>%a %a %a :@ %a =@]@,/ %a /@,@[<hov 2>%a@]" pp_keyword
-              "and" pp_keyword "rec"
-              (pp_computation_program state)
-              identifier (pp_comp_typ state) typ
-              (pp_signature_totality_declaration state)
-              order
-              (pp_comp_expression state)
-              body)
-    | `Proof (identifier, typ, order, body) -> (
-        match order with
-        | Option.None ->
-            Format.fprintf ppf "@[<hov 2>%a %a %a :@ %a =@ %a@]" pp_keyword
-              "and" pp_keyword "proof"
-              (pp_computation_program state)
-              identifier (pp_comp_typ state) typ (pp_harpoon_proof state)
-              body
-        | Option.Some order ->
-            Format.fprintf ppf
-              "@[<hov 2>%a %a %a :@ %a =@]@,/ %a /@,@[<hov 2>%a@]" pp_keyword
-              "and" pp_keyword "proof"
-              (pp_computation_program state)
-              identifier (pp_comp_typ state) typ
-              (pp_signature_totality_declaration state)
-              order (pp_harpoon_proof state) body)
+        pp_hovbox ~indent
+          (pp_and_opt ++ pp_rec_keyword ++ pp_non_breaking_space
+          ++ pp_computation_program identifier
+          ++ pp_non_breaking_space ++ pp_colon ++ pp_space ++ pp_comp_typ typ
+          ++ pp_non_breaking_space ++ pp_equal)
+        ++ pp_order ++ pp_cut
+        ++ pp_hovbox ~indent (pp_harpoon_proof body)
 
   and group_recursive_declarations declarations =
     let (List1.T (first_declaration, declarations')) = declarations in
@@ -2228,29 +2321,26 @@ end) : BELUGA_HTML with type state = Html_state.state = struct
         Error.raise_at1 location
           (Error.composite_exception2 Markdown_rendering_error cause)
 
-  and pp_module_entry state ppf entry =
+  and pp_module_entry entry =
     match entry with
     | Signature.Entry.Declaration _
     | Signature.Entry.Pragma _ ->
-        pp_signature_entry state ppf entry
+        pp_signature_entry entry
     | Signature.Entry.Comment { location; content } ->
         let html = render_markdown location content in
-        (pp_inner_documentation_html Format.pp_print_string) ppf html;
-        state
+        pp_inner_documentation_html (pp_string html)
 
-  and pp_signature_entry state ppf entry =
+  and pp_signature_entry entry =
     match entry with
     | Signature.Entry.Declaration { declaration; _ } ->
-        (pp_signature_declaration state) ppf declaration
-    | Signature.Entry.Pragma { pragma; _ } ->
-        (pp_signature_pragma state) ppf pragma
+        pp_signature_declaration declaration
+    | Signature.Entry.Pragma { pragma; _ } -> pp_signature_pragma pragma
     | Signature.Entry.Comment { location; content } ->
         let html = render_markdown location content in
-        (pp_toplevel_documentation_html Format.pp_print_string) ppf html;
-        state
+        pp_toplevel_documentation_html (pp_string html)
 
-  and pp_signature state ppf signature =
-    (* TODO: State management *)
+  and pp_signature signature =
+    (* TODO: state management *)
     let { Signature.global_pragmas; entries } = signature in
     let groups = group_toplevel_signature_entries entries in
     match (global_pragmas, groups) with
@@ -2259,12 +2349,8 @@ end) : BELUGA_HTML with type state = Html_state.state = struct
     | _global_pragmas, `Comment _group1 :: _rest -> Obj.magic () (* TODO: *)
     | global_pragmas, [] ->
         pp_preformatted_code_html
-          (fun ppf () ->
-            (List.pp ~pp_sep:Format.pp_print_cut
-               (pp_signature_global_pragma state))
-              ppf global_pragmas)
-          ppf ();
-        Format.pp_print_char ppf '\n'
+          (pp_list ~sep:pp_cut pp_signature_global_pragma global_pragmas)
+        ++ pp_cut
 
   and group_toplevel_signature_entries entries =
     match entries with
@@ -2295,16 +2381,30 @@ end) : BELUGA_HTML with type state = Html_state.state = struct
         :: group_toplevel_signature_entries rest
     | [] -> []
 
-  and pp_toplevel_signature_group _state _groups =
+  and pp_toplevel_signature_group _groups =
     (* TODO: Add the HTML tags depending on whether the group is [`Code] or
        [`Comment] *)
     Obj.magic ()
-
-  let pp_html_signature ppf signature = pp_signature empty ppf signature
 end
 
 let () =
   Error.register_exception_printer (function
+    | Unbound_identifier identifier ->
+        Format.dprintf "The identifier %a is unbound." Identifier.pp
+          identifier
+    | Unbound_qualified_identifier qualified_identifier ->
+        Format.dprintf "The qualified identifier %a is unbound."
+          Qualified_identifier.pp qualified_identifier
+    | Unsupported_implicit_lf_pi_kind ->
+        Format.dprintf
+          "Pretty-printing of implicit LF Pi kinds is unsupported."
+    | Unsupported_implicit_lf_pi_typ ->
+        Format.dprintf
+          "Pretty-printing of implicit LF Pi types is unsupported."
+    | Unsupported_implicit_clf_pi_typ ->
+        Format.dprintf
+          "Pretty-printing of implicit contextual LF Pi types is \
+           unsupported."
     | Markdown_rendering_error ->
         Format.dprintf "Failed to render Markdown documentation comment."
     | Unsupported_non_recursive_declaration ->

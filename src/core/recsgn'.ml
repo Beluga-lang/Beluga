@@ -146,7 +146,7 @@ module Make (Signature_reconstruction_state : SIGNATURE_RECONSTRUCTION_STATE) :
                reconstruction. So, we perform reconstruction of [entry]
                without keeping track of its side effects. *)
             let* entry_res' =
-              try_catch_lazy
+              try_catch
                 (lazy
                   ( with_checkpoint (reconstruct_signature_entry entry)
                   $> fun entry' -> Result.ok entry' ))

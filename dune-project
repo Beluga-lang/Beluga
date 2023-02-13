@@ -35,8 +35,6 @@
   (ocaml
    (>= 4.14))
   sedlex
-  tyxml
-  tyxml-ppx
   omd
   uri
   (ocamlformat :with-test)

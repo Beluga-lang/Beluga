@@ -10,11 +10,11 @@ rec eq1: (g:ctx) [g |- pred M N] -> [g |- step* M N] =
  fn r => case r of
 | [g |- #p.2] => [g |- id1]
 | [g |- beta (\x.\u. R1) R2] =>
-  let {M1':[g,x:term |-  term]}{S1*:[g,x:term |-  step* M1 (M1')]}
+  let {M1':[g,x:term |-  term]}{S1*:[g,x:term |-  step* M1 M1']}
       [g,b:block x:term,t:pred x x |-  S1*[..,b.1]] =
          eq1 [g,b:block x:term , t:pred x x |-  R1[..,b.1,b.2]] in
   % S1*: step* (M1 x) (M1' x)
-  let {M2:[g |- term]}{S2*:[g |- step* M2 (M2')]}
+  let {M2:[g |- term]}{S2*:[g |- step* M2 M2']}
       [g |- S2*]   = eq1 [g |- R2] in
   % S2* : step* M2 M2'
   let [g |- S1*']  = lm1*  [g,x |- S1*] in
@@ -63,13 +63,13 @@ fn r => case r of
     [g |- lm \x.\u. S1[..,<x ; u>]]
 
 
-| [g |- apl1 (R1 )] : [g |- (step (app M1 M2) (app (M1') M2))]  =>
+| [g |- apl1 R1] : [g |- (step (app M1 M2) (app M1' M2))]  =>
   let [g |- S1] = eq2 [g |- R1 ] in
   let [g |- I2] = identity  [g] [g |- M2 ]  in
     [g |- ap S1 I2]
 
 
-| [g |- apr1 (R2 )] : [g |- (step (app M1 M2) (app M1 (M2')))]  =>
+| [g |- apr1 R2] : [g |- (step (app M1 M2) (app M1 M2'))]  =>
   let [g |- S2] = eq2 [g |- R2 ] in
   let [g |- I1] = identity  [g] [g |- M1 ]  in
     [g |- ap I1 S2]
@@ -83,10 +83,10 @@ rec eq3:(g:ctx) [g |- step* M N] -> [g |- pred* M N] =
 % / total r (eq3 g m n r) /
 fn r => case r of
 | [g |- id1] => [g |- id*]
-| [g |- step1 R1 (R2*)] =>
+| [g |- step1 R1 R2*] =>
   let [g |- S1]  = eq2 [g |- R1]  in
   let [g |- S2*] = eq3 [g |- R2*] in
-    [g |- next S1 (S2*)]
+    [g |- next S1 S2*]
 ;
 
 
@@ -96,7 +96,7 @@ rec eq4 : (g:ctx) [g |- pred* M N] -> [g |- step* M N] =
 % / total r (eq4 g m n r) /
 fn r => case r of
 | [g |- id*] => [g |- id1]
-| [g |- next R1 (R2*)] =>
+| [g |- next R1 R2*] =>
   let [g |- S1*] = eq1 [g |- R1] in
   let [g |- S2*] = eq4 [g |- R2*] in
    appd [g |- S1*] [g |- S2*]

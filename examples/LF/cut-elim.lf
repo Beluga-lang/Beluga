@@ -10,7 +10,7 @@ hyp  : o -> type.
 conc : o -> type.
 
 axiom   : (hyp A -> conc A).
-truer   : conc (true).
+truer   : conc true.
 impr    : (hyp A -> conc B) -> conc (imp A B).
 impl    : conc A -> (hyp B -> conc C) -> (hyp (imp A B) -> conc C).
 notr    : ({p:o} hyp A -> conc p) -> conc (not A).
@@ -38,7 +38,7 @@ notr'  : (neg A -> hash)
 notl'  : (pos A -> hash)
 	  -> (neg (not A) -> hash).
 
-truer' : (pos (true) -> hash).
+truer' : (pos true -> hash).
 
 
 forallr' : ({a:i} pos (A a) -> hash)

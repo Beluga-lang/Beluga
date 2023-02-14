@@ -32,7 +32,7 @@ rec ref : {g:eCtx} {M:[g |- exp]} [g |- eq M M] =
 | [g |- app M1 M2] =>
   let [g |- EQ1] = ref [g] [g |- M1] in
   let [g |- EQ2] = ref [g] [g |- M2] in
-    [g |- eq_app (EQ1) (EQ2)]
+    [g |- eq_app EQ1 EQ2]
 ;
 
 

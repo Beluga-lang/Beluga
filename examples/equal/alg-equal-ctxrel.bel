@@ -96,13 +96,13 @@ case [g |- M] of
   let TRapp tr1 tr2 = r in
   let [h |- AE1] = ref'  tr1 in
   let [h |- AE2] = ref' tr2 in
-    [h |- ae_a (AE1) (AE2)]
+    [h |- ae_a AE1 AE2]
 ;
 
 rec trans: (h:taCtx)(g:tCtx)
 TRel [g |- T] [h |- T'] -> TRel [g |- S] [h |- S'] -> TRel [g |- R] [h |- R'] ->
-   [h |- aeq (T') (R')] -> [h |- aeq (R') (S')]
- -> [h |- aeq (T') (S')] =
+   [h |- aeq T' R'] -> [h |- aeq R' S']
+ -> [h |- aeq T' S'] =
 fn tr => fn sr => fn rr =>
 fn ae1 => fn ae2 => case ae1 of
 | [h |- #p.2] => ae2
@@ -119,14 +119,14 @@ fn ae1 => fn ae2 => case ae1 of
   in
     [h |- ae_l \x. \u. AE]
 
-| [h |- ae_a (AE1) (AE2)] =>
-  let [h |- ae_a (AE3) (AE4)] = ae2 in
+| [h |- ae_a AE1 AE2] =>
+  let [h |- ae_a AE3 AE4] = ae2 in
   let TRapp t1 t2 = tr in
   let TRapp s1 s2 = sr in
   let TRapp r1 r2 = rr in
   let [h |- AE] = trans t1 s1 r1 [h |- AE1]  [h |- AE3] in
   let [h |- AE'] = trans t2 s2 r2 [h |- AE2]  [h |- AE4] in
-    [h |- ae_a  (AE)  (AE')]
+    [h |- ae_a  AE  AE']
 ;
 
 %----------------------------------------------------------
@@ -363,7 +363,7 @@ rec ceq: (g:taCtx)(h:tdCtx)(l:tCtx)
          TRel' [l |- T] [h |- T1']  -> TRel' [l |- S] [h |- S1'] ->
          TRel [l |- T] [g |- T2']  -> TRel [l |- S] [g |- S2'] ->
          TadCxt [g] [h]
-         -> [h |- deq (T1') (S1')] -> [g |- aeq (T2') (S2')]  =
+         -> [h |- deq T1' S1'] -> [g |- aeq T2' S2']  =
 fn tr => fn sr => fn tr' => fn sr' => fn cr =>
 fn de => case de of
 | [h |- #p.2] =>
@@ -376,14 +376,14 @@ fn de => case de of
   let EqRef = unique tr' sr' in
    ref' tr'
 
- | [h |- de_a (DE1) (DE2)] =>
+ | [h |- de_a DE1 DE2] =>
    let TRapp' tr1' tr2' = tr in
    let TRapp' sr1' sr2' = sr in
    let TRapp tr1 tr2 = tr' in
    let TRapp sr1 sr2 = sr' in
   let [g |- AE1] = ceq tr1' sr1' tr1 sr1 cr [h |- DE1] in
   let [g |- AE2] = ceq tr2' sr2' tr2 sr2 cr [h |- DE2] in
-    [g |- ae_a (AE1) (AE2)]
+    [g |- ae_a AE1 AE2]
 
  | [h |- de_l (\x.\u. DE)] =>
   let TRlam' tr1' = tr in
@@ -396,8 +396,8 @@ fn de => case de of
   in
      [g |- ae_l (\x.\v. AE)]
 
- | [h |- de_t (DE1) (DE2)] =>
-   let [h |- DE1] : [h |- deq (T1') (R1')] = [h |- DE1] in
+ | [h |- de_t DE1 DE2] =>
+   let [h |- DE1] : [h |- deq T1' R1'] = [h |- DE1] in
    let tdcxt = trelImpliesTdCxt tr in  % tdcxt:TdCxt [l] [h]
    let ExWk'/c (rr : TRel' [l |- R] [h |- R1']) = exTRel' [h |- R1'] tdcxt in
    let tacxt = exCRel tr' in
@@ -408,8 +408,8 @@ fn de => case de of
 
 %{ Explanation of the previous case:
   % Assumptions:
-  % {DE1 :: [h |- (deq (T1') (R1'))]}
-  % {DE2 :: [h |- (deq (R1') (S1'))]}
+  % {DE1 :: [h |- (deq T1' R1')]}
+  % {DE2 :: [h |- (deq R1' S1')]}
   % tr : TRel' [l |- T] [h |- T1']
   % sr : TRel' [l |- S] [h |- S1']
   % tr': TRel [l] [g] ([l |- T]) ([g |- T2'])
@@ -418,21 +418,21 @@ fn de => case de of
   % If {R1' : [h |- term]} then there exists {R : [l |- term]} and rr : TRel' [l |- R] [h |- R1']
   % If {R : [l |- term]} then there exists {R2': [g |- term]}  and rr' : TRel [l |- R] [g |- R2']
 }%
-%{ i.h. given DE2 :[h |- (deq (R1') (S1'))]
+%{ i.h. given DE2 :[h |- (deq R1' S1')]
               rr  : TRel' [l |- R][h |- R1'..]
               sr  : TRel' [l |- S] [h |- S1']
               rr' : TRel [l |- R][g |- R2'..]
               sr' : TRel [l] [g] ([l |- S]) ([g |- S2'])
-        we obtain [g |- aeq (R2') (S2'..))]
+        we obtain [g |- aeq R2' (S2'..))]
 
    let [g |- AE2] = ceq rr sr rr' sr' cr [h |- DE2] in
 
-   i |- h.  given DE1 : [h |- deq (T1') (R1')]
+   i |- h.  given DE1 : [h |- deq T1' R1']
                tr  : TRel' [l |- T][h |- T1'..]
                rr  : TRel' [l |- R][h |- R1'..]
                tr' : TRel [l |- T][g |- T2'..]
                rr' : TRel [l |- R][g |- R2'..]
-         we obtain[g |- aeq (T2') (R2')]
+         we obtain[g |- aeq T2' R2']
   let [g |- AE1] = ceq tr rr tr' rr' cr [g |- DE1] in
     trans tr' sr' srr [g |- AE1]  [g |- AE2]
 }%

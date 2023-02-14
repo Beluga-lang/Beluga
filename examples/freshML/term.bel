@@ -108,7 +108,7 @@ FN g => fn l => case l of
 | [g,x:term] cons x L  =>
     rm [g] ([g,x] L)
 
- | [g,x:term] cons (#p ) L =>
+ | [g,x:term] cons #p L =>
   let [g] L' = rm [g] ([g,x] L) in
    [g] cons #p (L')
 

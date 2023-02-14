@@ -41,7 +41,7 @@ fn e =>  case e of
   let [ |- F] =  hoas2db  [gamma,x:term |- E ] in
     [ |- lam' F ]
 
-| [gamma |- app (E1 ) (E2 )] =>
+| [gamma |- app E1 E2] =>
   let [ |- F1] = hoas2db  [gamma |- E1]  in
   let [ |- F2] = hoas2db  [gamma |- E2]  in
     [ |- app' F1 F2]

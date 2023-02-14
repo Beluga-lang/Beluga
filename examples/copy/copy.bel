@@ -25,7 +25,7 @@ mlam g => fn e => case e of
 | [g |- z]      => [g |- z]
 
 | [g |- s E] =>
-  let [g |- F] = copy [g] [g |- (E )] in
+  let [g |- F] = copy [g] [g |- E] in
      [g |- s F]
 
 | [g |- #p ]   => [g |- #p]

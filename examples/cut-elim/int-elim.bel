@@ -28,7 +28,7 @@ ce_notr  : ({p:o} {h1:hyp A} ce (D1* p h1) (D1 p h1)) → ce (notr* D1*) (notr D
 
 ce_notl  : ce D1* D1 → ce (notl* D1* H) (notl D1 H).
 
-ce_truer : ce (truer*) (truer).
+ce_truer : ce truer* truer.
 
 ce_falsel : ce (falsel* H) (falsel H).
 

@@ -40,16 +40,16 @@ rec ref : {g:eqCtx} {U:[g |- exp]} [g |- eq U U] =
 | [g |- app A1 A2]  : [g |- exp]=>
   let [g |- EQ1] = ref [g] [g |- A1] in
   let [g |- EQ2] = ref [g] [g |- A2] in
-    [g |- eq_app (EQ1) (EQ2)]
+    [g |- eq_app EQ1 EQ2]
 ;
 
 
 
 % General transitivity is admissible
 rec trans: (g:eqCtx)
-   [g |- eq (TT) (RR)]     % e1 : eq T R
--> [g |- eq (RR) (SS)]     % e2 : eq R S
--> [g |- eq (TT) (SS)]     % result : eq T S
+   [g |- eq TT RR]     % e1 : eq T R
+-> [g |- eq RR SS]     % e2 : eq R S
+-> [g |- eq TT SS]     % result : eq T S
 =
 / total e1 (trans g t r s e1) /
  fn e1 => fn e2 => case e1 of
@@ -87,7 +87,7 @@ rec ceq: (g:equalCtx) [g |- equal T S] -> [g |- eq T S]  =
 fn e => case e of
 | [g |- #p.2] => [g |- #p.3]
 
-| [g |- e_r (T )]=> ref [g] [g |- T ]
+| [g |- e_r T]=> ref [g] [g |- T ]
 
 | [g |- e_t D2 D1] =>
   let [g |- F2] = ceq [g |- D2] in

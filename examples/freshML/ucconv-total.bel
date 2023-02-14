@@ -134,7 +134,7 @@ mlam h => fn map => fn fvar => case fvar of
 | Cons [g |- #p] l =>
   let [h |- Ta'] = b_env [h] map l in
   let [h |- E' ] = map [g |- #p] in
-  [h |- tpair (E') (Ta')]
+  [h |- tpair E' Ta']
 ;
 
 
@@ -147,7 +147,7 @@ mlam h => fn map => fn e => case e of
 | [g |- eapp U V] =>
   let [h |- U'] = convert [h] map [g |- U] in
   let [h |- V'] = convert [h] map [g |- V] in
-  [h |- topen (U')
+  [h |- topen U'
       \xenv .  tapp (tfst xenv) (tpair (tsnd xenv) (V'[..]))]
 
 |[g |- elam \x.U] =>
@@ -162,10 +162,10 @@ let [h |- T2] = b_env [h] map fvs in
 |[g |- elet U (\x. V)] =>
  let [h |- U'] = convert [h] map [g |- U] in
  let [h,x:target |- V'] = convert [h,x:target] (e_map [g] [h] map) [g,x:term |- V] in
- [h |- tlet (U') (\x.V')]
+ [h |- tlet U' (\x.V')]
 ;
 
 
-let t1 = convert [ ] (mlam #p => [ |- tunit]) [ |- elam (\x.(x))];
+let t1 = convert [ ] (mlam #p => [ |- tunit]) [ |- elam (\x.x)];
 let t2 = convert [ ] (mlam #p => [ |- tunit]) [ |- elet (elam (\y.y)) (\x.x)];
 let t3 = convert [ ] (mlam #p => [ |- tunit]) [ |- elam (\x.(elam (\y. eapp x y)))];

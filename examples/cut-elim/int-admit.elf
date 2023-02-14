@@ -74,7 +74,7 @@ car_notr : ({p:o} {h1:hyp B1} ca A D (\h. E1 h p h1) (E1' p h1)) -> ca A D (\h. 
 
 car_notl : ca A D E1 E1' -> ca A D (\h. notl (E1 h) H) (notl E1' H).
 
-car_truer: ca A D (\h. truer) (truer).
+car_truer: ca A D (\h. truer) truer.
 
 car_falsel : ca A D (\h. falsel H) (falsel H).
 

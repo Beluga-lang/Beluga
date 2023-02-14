@@ -58,7 +58,7 @@ rec vsound : [ |- eval E V] -> [ |- value V] =
 fn d => case d of
 | [ |- ev_true]   => [ |- v_true]
 | [ |- ev_false]  => [ |- v_false]
-| [ |- ev_z]      => [ |- v_num (v_z)]
+| [ |- ev_z]      => [ |- v_num v_z]
 | [ |- ev_succ D V] =>  [ |- v_num (v_s V)]
 | [ |- ev_switch_true D D1] =>
   vsound [ |- D1]

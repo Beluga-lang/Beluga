@@ -42,7 +42,7 @@ mlam g =>
 
     [g,x : exp _  |-  tt]          => [ |- z]
 
-  | [g,x : exp _  |-  (#p )]    => [ |- z]
+  | [g,x : exp _  |-  #p]    => [ |- z]
 
   | [g,x : exp _  |-  x]           => [ |- s z]
 

@@ -58,11 +58,11 @@ rec subst_split : (g:sch){J : [g |- joining (cjoin Phi Phi1 Phi2)]}{S : [ g |- s
     | [g |- stp_empty S1] =>
       let [g |- joining_empty] = [g |- J] in
       let [g |- F3] = lemma1_6d [g |- S1] in
-      [g |- sub_s J S (stp_empty S1) (stp_empty S1) (F3)]
+      [g |- sub_s J S (stp_empty S1) (stp_empty S1) F3]
     | [g |- stp_base S1 S2] =>
       let [g |- joining_base J1[]] = [g |- J] in
       let [g |- ssh5 _ _ F1 F2 F3] = subst_split_h1 [ |- J1] [g |- S2] [g |- S1] in
-      [g |- sub_s J S (stp_base S1 F1) (stp_base S1 F2) (F3)]
+      [g |- sub_s J S (stp_base S1 F1) (stp_base S1 F2) F3]
     | [g |- stp_lin S1 S2 S3 S4 S5] =>
       ( case [g |- J] of
 	| [g |- joining_lin_l J1] =>
@@ -76,7 +76,7 @@ rec subst_split : (g:sch){J : [g |- joining (cjoin Phi Phi1 Phi2)]}{S : [ g |- s
 	  let [g |- F'] = ctxjoincomm [g |- F3] in
 	  let [g |- adcjoin _ _ F7 F''] = ctxjoinasso1 [g |- S2] [g |- F'] in
 	  let [g |- F8] = ctxjoincomm [g |- F''] in
-	  [g |- sub_s J S (stp_lin UnrPhi1 F7 F1 S4 S5) (stp_unav UnrPhi2 F2 F4 F5 F6 S4 S5) (F8)]
+	  [g |- sub_s J S (stp_lin UnrPhi1 F7 F1 S4 S5) (stp_unav UnrPhi2 F2 F4 F5 F6 S4 S5) F8]
 	| [g |- joining_lin_r J1] =>
 	  let [g |- sub_s _ _ F1 F2 F3] = subst_split [g |- J1] [g |- S3] in
 	  let [g |- UnrPhi1] = is_unr_joinb [g |- S1] [g |- J1] in
@@ -87,7 +87,7 @@ rec subst_split : (g:sch){J : [g |- joining (cjoin Phi Phi1 Phi2)]}{S : [ g |- s
 	  let [g |- adcjoin _ _ F _] = ctxjoinasso1 [g |- S2] [g |- F'] in
 	  let [g |- ssh6 _ F4 F5 F6] = subst_split_h2 [g |- F] in
 	  let [g |- adcjoin _ _ F7 F8] = ctxjoinasso1 [g |- S2] [g |- F3] in
-	  [g |- sub_s J S (stp_unav UnrPhi1 F1 F4 F5 F6 S4 S5) (stp_lin UnrPhi2 F7 F2 S4 S5) (F8)]
+	  [g |- sub_s J S (stp_unav UnrPhi1 F1 F4 F5 F6 S4 S5) (stp_lin UnrPhi2 F7 F2 S4 S5) F8]
       )
     | [g |- stp_unr S1 S2 S3 S4 S5] =>
       let [g |- joining_unr J1] = [g |- J] in
@@ -96,7 +96,7 @@ rec subst_split : (g:sch){J : [g |- joining (cjoin Phi Phi1 Phi2)]}{S : [ g |- s
       let [g |- UnrPhi2] = is_unr_join_commb [g |- S1] [g |- J1] in
       let [g |- UnrPsi1] = is_unr_joinb [g |- S3] [g |- F3] in
       let [g |- UnrPsi2] = is_unr_join_commb [g |- S3] [g |- F3] in
-      [g |- sub_s J S (stp_unr UnrPhi1 F1 UnrPsi1 S4 S5) (stp_unr UnrPhi2 F2 UnrPsi2 S4 S5) (F3)]
+      [g |- sub_s J S (stp_unr UnrPhi1 F1 UnrPsi1 S4 S5) (stp_unr UnrPhi2 F2 UnrPsi2 S4 S5) F3]
     | [g |- stp_unav S1 S2 S3 S4 S5 S6 S7] =>
       let [g |- joining_unav J1] = [g |- J] in
       let [g |- sub_s _ _ F1 F2 F3] = subst_split [g |- J1] [g |- S2] in
@@ -108,5 +108,5 @@ rec subst_split : (g:sch){J : [g |- joining (cjoin Phi Phi1 Phi2)]}{S : [ g |- s
       let [g |- refl] : [g |- ctx_eq C C] = [g |- S5] in
       let [g |- refl] : [g |- ctx_eq C C] = ctxjoinunreq [g |- F3] [g |- S3] [g |- UnrPsi1] in
       let [g |- refl] : [g |- ctx_eq C C] = ctxjoinunreqb [g |- F3] [g |- S3] [g |- UnrPsi2] in
-      [g |- sub_s J S (stp_unav UnrPhi1 F1 UnrPsi1 S4 refl S6 S7) (stp_unav UnrPhi2 F2 UnrPsi2 S4 refl S6 S7) (F3)]
+      [g |- sub_s J S (stp_unav UnrPhi1 F1 UnrPsi1 S4 refl S6 S7) (stp_unav UnrPhi2 F2 UnrPsi2 S4 refl S6 S7) F3]
 ;

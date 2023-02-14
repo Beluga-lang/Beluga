@@ -40,14 +40,14 @@ mlam g  => % mlam T  =>
   (case free_var [g] [g |- U] of
      [g |- nothing]   => free_var [g] [g |- V]
 %   | [g] something  #p  => [g] something  #p
-    | [g |- something U]     => [g |- something (U )]
+    | [g |- something U]     => [g |- something U]
   )
 
 | [g |- app U V]  =>
     (case free_var [g] [g |- U] of
        [g |- nothing]   => free_var [g] [g |- V]
 %     | [g] something  #p  => [g] something  #p
-     | [g |- something U]     => [g |- something (U )])
+     | [g |- something U]     => [g |- something U])
 
 | [g |- lam (\x . U)] =>
 

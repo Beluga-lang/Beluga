@@ -60,7 +60,7 @@ fn v =>  case v of
   let [ |- F]  =  hoas2db [g,x:obj _ |-  E] in
     [ |- lam' F]
 
-| [g |- app (E1 ) (E2 )] =>
+| [g |- app E1 E2] =>
   let [ |- F1] = hoas2db [g |- E1]  in
   let [ |- F2] = hoas2db [g |- E2]  in [ |- app' F1 F2]
 

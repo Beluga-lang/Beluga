@@ -50,16 +50,16 @@ mlam g => mlam U => case [g |- U] of
 | [g |- app A1 A2] =>
   let [g |- EQ1] = ref [g] [g |- A1 ] in
   let [g |- EQ2] = ref [g] [g |- A2 ] in
-    [g |- eq_app (EQ1) (EQ2)]
+    [g |- eq_app EQ1 EQ2]
 ;
 
 
 
 % General transitivity is admissible
 rec trans: (g:equalCtx)
-   [g |- eq (TT) (RR)]     % e1 : eq T R
--> [g |- eq (RR) (SS)]     % e2 : eq R S
--> [g |- eq (TT) (SS)]     % result : eq T S
+   [g |- eq TT RR]     % e1 : eq T R
+-> [g |- eq RR SS]     % e2 : eq R S
+-> [g |- eq TT SS]     % result : eq T S
 =
  / total e1 (trans g t r s e1) /
 fn e1 => fn e2 => case e1 of

@@ -39,7 +39,7 @@ case e of
 
 | [g |- z] => [g |- K[..,z+]]
 
-%{ | [g |- s (E )] =>
+%{ | [g |- s E] =>
   cmp [g] [g |- E ] [g,x |- K[..,(s+ x)]]
 
 | [g |- lam \x. E] =>
@@ -48,7 +48,7 @@ case e of
           [g,b |- E[..,b.1]] [g,b,x1 |-  b.3 x1] in
    [g |- K[..,(lam+ (\v.\k. E'))]]
 }%
-		  
+
 | [g |- app E1 E2 ] =>
     let [g,x:cval |-  E2'] =
         cmp [g, x:cval]

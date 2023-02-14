@@ -77,17 +77,17 @@ mlam g =>
   case e of  % e : exp S [g, x:exp T]
 
    | % {T':[g |- tp]}
-     [g,x : exp (T')  |-  tt]
+     [g,x : exp T'  |-  tt]
      => [ |- z]
 
-  | [g,x : exp _  |-  (#p )]    => [ |- z]
+  | [g,x : exp _  |-  #p]    => [ |- z]
 
   | [g,x : exp _  |-  x]           => [ |- s z]
 
 
   | [g,x : exp _  |-  z]           => [ |- z]
 
-  | [g,x : exp _  |-  (U )]  => [ |- z]
+  | [g,x : exp _  |-  U]  => [ |- z]
 
   | [g,x : exp _  |-  s W]  => cntV [g] [g,x |- W]
 

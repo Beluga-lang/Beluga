@@ -17,7 +17,7 @@ LF o : type =  % formulas
 LF hyp  : o -> type = ;  % Hypotheses (left)
 LF conc : o -> type =  % Conclusion (right)
   | axiom   : (hyp A -> conc A)
-  | truer   : conc (true)
+  | truer   : conc true
   | impr    : (hyp A -> conc B) -> conc (imp A B)
   | impl    : conc A -> (hyp B -> conc C) -> (hyp (imp A B) -> conc C)
   | notr    : ({p:o}hyp A -> conc p) -> conc (not A)
@@ -105,7 +105,7 @@ mlam A' => fn d => fn e => case e of
 
  | [g, h:hyp A |-  notl E1 (H[..])] =>
    let [g |- E1'] = ca  [g |- A ] d [g, h |-  E1] in
-     [g |- notl (E1') H]
+     [g |- notl E1' H]
 
  | [g,h: hyp A |-  truer] => [g |- truer]
 
@@ -154,7 +154,7 @@ mlam A' => fn d => fn e => case e of
       let [g,h2: hyp B2 |-  D2'] = ca [g,h2: hyp _  |-  A[..] ] [g,h2 |- D2] [g,h2,h |-  E[..,h]] in
        [g |- impl D1 (\h2. D2') H]
 
-    | [g |- notl D1 H] => [g |- notl (D1 ) H]
+    | [g |- notl D1 H] => [g |- notl D1 H]
 %   | [g] notl D1 H => d  % is not working -bp
 
     | [g |- foralll T (\h1. D1) H] =>
@@ -223,7 +223,7 @@ mlam A' => fn d => fn e => case e of
 % car_notl : ca A D ([h:hyp A] notl (E1 h) H) (notl E1' H)
 % 	    <- ca A D E1 E1'.
 %
-% car_truer: ca A D ([h:hyp A] truer) (truer).
+% car_truer: ca A D ([h:hyp A] truer) truer.
 %
 % car_forallr : ca A D ([h:hyp A] forallr (E1 h)) (forallr E1')
 % 	       <- ({a:i} ca A D ([h:hyp A] E1 h a) (E1' a)).

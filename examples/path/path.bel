@@ -41,15 +41,15 @@ mlam g => mlam M => mlam N => fn f => case [g |- M] of
 
     let [g |- e_ref] = eqPath [g] [g |- M2 ] [g |- N2  ]
       (mlam Q => fn iq => let [g |- D] = iq in
-           let [g |- p_right (D')] : [g |- is_path (right (Q' )) (app N1 N2)]
-              = f [g |- (right Q)] [g |- p_right (D )] in
+           let [g |- p_right D'] : [g |- is_path (right Q') (app N1 N2)]
+              = f [g |- (right Q)] [g |- p_right D] in
 		[g |- D']   )
     in
     let [g |- e_ref]  = eqPath [g] [g |- M1 ] [g |- N1  ]
 		       (mlam Q => fn iq =>
                         let [g |- D] = iq in
-			let [g |- p_left (D')] : [g |- is_path (left (Q' )) (app N1 N2)]
-              = f [g |- (left Q)] [g |- p_left (D )] in
+			let [g |- p_left D'] : [g |- is_path (left Q') (app N1 N2)]
+              = f [g |- (left Q)] [g |- p_left D] in
 		[g |- D']   )
     in
 

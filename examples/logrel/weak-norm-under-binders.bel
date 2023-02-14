@@ -174,7 +174,7 @@ mlam g, A,R => fn r =>  case [ |- A] of
   Arr [g |- R]
   (mlam h => mlam $W => mlam M2 => fn iv => fn rm2 =>
     let Halts/c [h |- MS] n = reify [h] [|- A] [h |- M2] rm2 in
-    closed _ [h |- _ ]  [h |- _ ] [h |- s_app s_refl (MS)]
+    closed _ [h |- _ ]  [h |- _ ] [h |- s_app s_refl MS]
            (reflect [h] [|- B] [h |- _ ] (App (rwkn r iv) n)))
 
 and rec reify : {g:ctx}{A:[|- tp]}{M:[g |- tm A[]]}

@@ -518,7 +518,7 @@
                     "start_line": 30,
                     "start_column": 5,
                     "stop_line": 30,
-                    "stop_column": 4
+                    "stop_column": 5
                   }
                 }
               ],
@@ -660,7 +660,7 @@
                     "start_line": 31,
                     "start_column": 5,
                     "stop_line": 31,
-                    "stop_column": 4
+                    "stop_column": 5
                   }
                 }
               ],
@@ -996,7 +996,7 @@
                 "start_line": 35,
                 "start_column": 3,
                 "stop_line": 35,
-                "stop_column": 2
+                "stop_column": 3
               }
             }
           ],
@@ -1276,7 +1276,7 @@
                 "start_line": 39,
                 "start_column": 3,
                 "stop_line": 39,
-                "stop_column": 2
+                "stop_column": 3
               }
             }
           ],
@@ -1483,7 +1483,7 @@
                 "start_line": 40,
                 "start_column": 3,
                 "stop_line": 40,
-                "stop_column": 2
+                "stop_column": 3
               }
             }
           ],
@@ -1615,7 +1615,7 @@
                 "start_line": 41,
                 "start_column": 3,
                 "stop_line": 41,
-                "stop_column": 2
+                "stop_column": 3
               }
             }
           ],
@@ -1726,7 +1726,7 @@
                 "start_line": 44,
                 "start_column": 17,
                 "stop_line": 44,
-                "stop_column": 16
+                "stop_column": 17
               }
             }
           ],
@@ -2475,7 +2475,7 @@
                 "start_line": 72,
                 "start_column": 3,
                 "stop_line": 72,
-                "stop_column": 2
+                "stop_column": 3
               }
             }
           ],
@@ -3163,7 +3163,7 @@
                 "start_line": 82,
                 "start_column": 3,
                 "stop_line": 82,
-                "stop_column": 2
+                "stop_column": 3
               }
             }
           ],
@@ -4092,6 +4092,370 @@
         "start_column": 1,
         "stop_line": 85,
         "stop_column": 63
+      }
+    }
+  ],
+  [
+    "Comp.Expression.Mlam",
+    {
+      "parameters": [
+        {
+          "name": "g",
+          "location": {
+            "filename": "comp_expressions_ok.input.bel",
+            "start_line": 88,
+            "start_column": 6,
+            "stop_line": 88,
+            "stop_column": 7
+          }
+        }
+      ],
+      "body": [
+        "Comp.Expression.Box",
+        {
+          "meta_object": [
+            "Meta.Object.Context",
+            {
+              "context": [
+                "CLF.Context",
+                {
+                  "head": [
+                    "CLF.Context.Head.Context_variable",
+                    {
+                      "identifier": {
+                        "name": "g",
+                        "location": {
+                          "filename": "comp_expressions_ok.input.bel",
+                          "start_line": 88,
+                          "start_column": 12,
+                          "stop_line": 88,
+                          "stop_column": 13
+                        }
+                      },
+                      "location": {
+                        "filename": "comp_expressions_ok.input.bel",
+                        "start_line": 88,
+                        "start_column": 12,
+                        "stop_line": 88,
+                        "stop_column": 13
+                      }
+                    }
+                  ],
+                  "bindings": [],
+                  "location": {
+                    "filename": "comp_expressions_ok.input.bel",
+                    "start_line": 88,
+                    "start_column": 12,
+                    "stop_line": 88,
+                    "stop_column": 13
+                  }
+                }
+              ],
+              "location": {
+                "filename": "comp_expressions_ok.input.bel",
+                "start_line": 88,
+                "start_column": 11,
+                "stop_line": 88,
+                "stop_column": 14
+              }
+            }
+          ],
+          "location": {
+            "filename": "comp_expressions_ok.input.bel",
+            "start_line": 88,
+            "start_column": 11,
+            "stop_line": 88,
+            "stop_column": 14
+          }
+        }
+      ],
+      "location": {
+        "filename": "comp_expressions_ok.input.bel",
+        "start_line": 88,
+        "start_column": 1,
+        "stop_line": 88,
+        "stop_column": 14
+      }
+    }
+  ],
+  [
+    "Comp.Expression.Mlam",
+    {
+      "parameters": [
+        {
+          "name": "g",
+          "location": {
+            "filename": "comp_expressions_ok.input.bel",
+            "start_line": 91,
+            "start_column": 6,
+            "stop_line": 91,
+            "stop_column": 7
+          }
+        }
+      ],
+      "body": [
+        "Comp.Expression.Case",
+        {
+          "scrutinee": [
+            "Comp.Expression.Variable",
+            {
+              "identifier": {
+                "name": "x",
+                "location": {
+                  "filename": "comp_expressions_ok.input.bel",
+                  "start_line": 92,
+                  "start_column": 8,
+                  "stop_line": 92,
+                  "stop_column": 9
+                }
+              },
+              "location": {
+                "filename": "comp_expressions_ok.input.bel",
+                "start_line": 92,
+                "start_column": 8,
+                "stop_line": 92,
+                "stop_column": 9
+              }
+            }
+          ],
+          "check_coverage": true,
+          "branches": [
+            {
+              "location": {
+                "filename": "comp_expressions_ok.input.bel",
+                "start_line": 93,
+                "start_column": 5,
+                "stop_line": 93,
+                "stop_column": 18
+              },
+              "meta_context": [
+                "Meta.Context",
+                {
+                  "bindings": [],
+                  "location": {
+                    "filename": "comp_expressions_ok.input.bel",
+                    "start_line": 93,
+                    "start_column": 5,
+                    "stop_line": 93,
+                    "stop_column": 5
+                  }
+                }
+              ],
+              "pattern": [
+                "Comp.Pattern.Meta_object",
+                {
+                  "meta_pattern": [
+                    "Meta.Pattern.Contextual_term",
+                    {
+                      "context": [
+                        "CLF.Context.Pattern",
+                        {
+                          "head": [
+                            "CLF.Context.Pattern.Head.Context_variable",
+                            {
+                              "identifier": {
+                                "name": "g",
+                                "location": {
+                                  "filename": "comp_expressions_ok.input.bel",
+                                  "start_line": 93,
+                                  "start_column": 6,
+                                  "stop_line": 93,
+                                  "stop_column": 7
+                                }
+                              },
+                              "location": {
+                                "filename": "comp_expressions_ok.input.bel",
+                                "start_line": 93,
+                                "start_column": 6,
+                                "stop_line": 93,
+                                "stop_column": 7
+                              }
+                            }
+                          ],
+                          "bindings": [],
+                          "location": {
+                            "filename": "comp_expressions_ok.input.bel",
+                            "start_line": 93,
+                            "start_column": 6,
+                            "stop_line": 93,
+                            "stop_column": 7
+                          }
+                        }
+                      ],
+                      "term": [
+                        "CLF.Term.Pattern.Wildcard",
+                        {
+                          "location": {
+                            "filename": "comp_expressions_ok.input.bel",
+                            "start_line": 93,
+                            "start_column": 11,
+                            "stop_line": 93,
+                            "stop_column": 12
+                          }
+                        }
+                      ],
+                      "location": {
+                        "filename": "comp_expressions_ok.input.bel",
+                        "start_line": 93,
+                        "start_column": 5,
+                        "stop_line": 93,
+                        "stop_column": 13
+                      }
+                    }
+                  ],
+                  "location": {
+                    "filename": "comp_expressions_ok.input.bel",
+                    "start_line": 93,
+                    "start_column": 5,
+                    "stop_line": 93,
+                    "stop_column": 13
+                  }
+                }
+              ],
+              "body": [
+                "Comp.Expression.Variable",
+                {
+                  "identifier": {
+                    "name": "x",
+                    "location": {
+                      "filename": "comp_expressions_ok.input.bel",
+                      "start_line": 93,
+                      "start_column": 17,
+                      "stop_line": 93,
+                      "stop_column": 18
+                    }
+                  },
+                  "location": {
+                    "filename": "comp_expressions_ok.input.bel",
+                    "start_line": 93,
+                    "start_column": 17,
+                    "stop_line": 93,
+                    "stop_column": 18
+                  }
+                }
+              ]
+            },
+            {
+              "location": {
+                "filename": "comp_expressions_ok.input.bel",
+                "start_line": 94,
+                "start_column": 5,
+                "stop_line": 94,
+                "stop_column": 17
+              },
+              "meta_context": [
+                "Meta.Context",
+                {
+                  "bindings": [],
+                  "location": {
+                    "filename": "comp_expressions_ok.input.bel",
+                    "start_line": 94,
+                    "start_column": 5,
+                    "stop_line": 94,
+                    "stop_column": 5
+                  }
+                }
+              ],
+              "pattern": [
+                "Comp.Pattern.Wildcard",
+                {
+                  "location": {
+                    "filename": "comp_expressions_ok.input.bel",
+                    "start_line": 94,
+                    "start_column": 5,
+                    "stop_line": 94,
+                    "stop_column": 6
+                  }
+                }
+              ],
+              "body": [
+                "Comp.Expression.Box",
+                {
+                  "meta_object": [
+                    "Meta.Object.Contextual_term",
+                    {
+                      "context": [
+                        "CLF.Context",
+                        {
+                          "head": [
+                            "CLF.Context.Head.None",
+                            {
+                              "location": {
+                                "filename": "comp_expressions_ok.input.bel",
+                                "start_line": 94,
+                                "start_column": 12,
+                                "stop_line": 94,
+                                "stop_column": 11
+                              }
+                            }
+                          ],
+                          "bindings": [],
+                          "location": {
+                            "filename": "comp_expressions_ok.input.bel",
+                            "start_line": 94,
+                            "start_column": 12,
+                            "stop_line": 94,
+                            "stop_column": 11
+                          }
+                        }
+                      ],
+                      "term": [
+                        "CLF.Term.Variable",
+                        {
+                          "identifier": {
+                            "name": "g",
+                            "location": {
+                              "filename": "comp_expressions_ok.input.bel",
+                              "start_line": 94,
+                              "start_column": 15,
+                              "stop_line": 94,
+                              "stop_column": 16
+                            }
+                          },
+                          "location": {
+                            "filename": "comp_expressions_ok.input.bel",
+                            "start_line": 94,
+                            "start_column": 15,
+                            "stop_line": 94,
+                            "stop_column": 16
+                          }
+                        }
+                      ],
+                      "location": {
+                        "filename": "comp_expressions_ok.input.bel",
+                        "start_line": 94,
+                        "start_column": 10,
+                        "stop_line": 94,
+                        "stop_column": 17
+                      }
+                    }
+                  ],
+                  "location": {
+                    "filename": "comp_expressions_ok.input.bel",
+                    "start_line": 94,
+                    "start_column": 10,
+                    "stop_line": 94,
+                    "stop_column": 17
+                  }
+                }
+              ]
+            }
+          ],
+          "location": {
+            "filename": "comp_expressions_ok.input.bel",
+            "start_line": 92,
+            "start_column": 3,
+            "stop_line": 94,
+            "stop_column": 17
+          }
+        }
+      ],
+      "location": {
+        "filename": "comp_expressions_ok.input.bel",
+        "start_line": 91,
+        "start_column": 1,
+        "stop_line": 94,
+        "stop_column": 17
       }
     }
   ]

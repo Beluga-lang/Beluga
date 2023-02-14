@@ -60,8 +60,12 @@ module Make
       many
         (braces (seq2 meta_object_identifier (maybe (colon &> meta_type))))
       |> span
-      $> fun (location, bindings) ->
-      { Synprs.Meta.Context_object.location; bindings }
+      $> function
+      | location, [] ->
+          let location = Location.start_position_as_location location in
+          { Synprs.Meta.Context_object.location; bindings = [] }
+      | location, bindings ->
+          { Synprs.Meta.Context_object.location; bindings }
 
     (*=
       Original grammar:

@@ -814,45 +814,18 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
         | ( Option.None
           , Synprs.CLF.Object.Raw_identifier
               { identifier = identifier, `Plain; _ } )
-            (* Possibly a context variable as context head *)
-          :: xs -> (
-            lookup_toplevel identifier >>= function
-            | Result.Ok (Context_variable, _) ->
-                let head' =
-                  Synext.CLF.Context.Head.Context_variable
-                    { identifier; location = Identifier.location identifier }
-                in
-                with_disambiguated_context_bindings_list xs (fun bindings' ->
-                    f
-                      { Synext.CLF.Context.location
-                      ; head = head'
-                      ; bindings = bindings'
-                      })
-            | Result.Error (Unbound_identifier _) ->
-                let head' =
-                  Synext.CLF.Context.Head.Context_variable
-                    { identifier; location = Identifier.location identifier }
-                in
-                with_context_variable identifier
-                  (with_disambiguated_context_bindings_list xs
-                     (fun bindings' ->
-                       f
-                         { Synext.CLF.Context.location
-                         ; head = head'
-                         ; bindings = bindings'
-                         }))
-            | Result.Ok _ ->
-                let head' =
-                  Synext.CLF.Context.Head.None { location = head_location }
-                in
-                with_disambiguated_context_bindings_list objects
-                  (fun bindings' ->
-                    f
-                      { Synext.CLF.Context.location
-                      ; head = head'
-                      ; bindings = bindings'
-                      })
-            | Result.Error cause -> Error.raise_at1 head_location cause)
+            (* A context variable as context head *)
+          :: xs ->
+            let head' =
+              Synext.CLF.Context.Head.Context_variable
+                { identifier; location = Identifier.location identifier }
+            in
+            with_disambiguated_context_bindings_list xs (fun bindings' ->
+                f
+                  { Synext.CLF.Context.location
+                  ; head = head'
+                  ; bindings = bindings'
+                  })
         | objects ->
             (* Context is just a list of bindings without context
                variables *)
@@ -1464,44 +1437,17 @@ struct
           , Synprs.CLF.Object.Raw_identifier
               { identifier = identifier, `Plain; _ } )
             (* Possibly a context variable as context head *)
-          :: xs -> (
-            lookup_toplevel identifier >>= function
-            | Result.Ok (Context_variable, _) ->
-                let head' =
-                  Synext.CLF.Context.Head.Context_variable
-                    { identifier; location = Identifier.location identifier }
-                in
-                with_disambiguated_context_bindings_list xs (fun bindings' ->
-                    f
-                      { Synext.CLF.Context.location
-                      ; head = head'
-                      ; bindings = bindings'
-                      })
-            | Result.Error (Unbound_identifier _) ->
-                let head' =
-                  Synext.CLF.Context.Head.Context_variable
-                    { identifier; location = Identifier.location identifier }
-                in
-                with_context_variable identifier
-                  (with_disambiguated_context_bindings_list xs
-                     (fun bindings' ->
-                       f
-                         { Synext.CLF.Context.location
-                         ; head = head'
-                         ; bindings = bindings'
-                         }))
-            | Result.Ok _ ->
-                let head' =
-                  Synext.CLF.Context.Head.None { location = head_location }
-                in
-                with_disambiguated_context_bindings_list objects
-                  (fun bindings' ->
-                    f
-                      { Synext.CLF.Context.location
-                      ; head = head'
-                      ; bindings = bindings'
-                      })
-            | Result.Error cause -> Error.raise_at1 head_location cause)
+          :: xs ->
+            let head' =
+              Synext.CLF.Context.Head.Context_variable
+                { identifier; location = Identifier.location identifier }
+            in
+            with_disambiguated_context_bindings_list xs (fun bindings' ->
+                f
+                  { Synext.CLF.Context.location
+                  ; head = head'
+                  ; bindings = bindings'
+                  })
         | objects ->
             (* Context is just a list of bindings without context
                variables *)
@@ -1996,78 +1942,17 @@ struct
         | ( Option.None
           , Synprs.CLF.Object.Raw_identifier
               { identifier = identifier, `Plain; _ } )
-            (* Possibly a context variable as context head *)
+            (* A context variable as context head *)
           :: bindings -> (
-            lookup_toplevel identifier >>= function
-            | Result.Ok (Context_variable, _) -> (
-                let head' =
-                  Synext.CLF.Context.Pattern.Head.Context_variable
-                    { identifier; location = Identifier.location identifier }
-                in
-                is_inner_bound identifier >>= function
-                | true ->
-                    (* The context variable is explicitly bound in the
-                       pattern we are currently disambiguating. We do not add
-                       it to the pattern variables. *)
-                    with_disambiguated_context_pattern_bindings_list bindings
-                      (fun bindings' ->
-                        f
-                          { Synext.CLF.Context.Pattern.location
-                          ; head = head'
-                          ; bindings = bindings'
-                          })
-                | false ->
-                    (* The context variable is not explicitly bound in the
-                       pattern we are currently disambiguating. Hence it is
-                       treated as a pattern variable, and its implicit binder
-                       will be introduced during the abstraction phase of
-                       term reconstruction. *)
-                    let* () = add_pattern_context_variable identifier in
-                    let* () = add_inner_binding identifier in
-                    with_disambiguated_context_pattern_bindings_list bindings
-                      (fun bindings' ->
-                        f
-                          { Synext.CLF.Context.Pattern.location
-                          ; head = head'
-                          ; bindings = bindings'
-                          }))
-            | Result.Error (Unbound_identifier _) -> (
-                let head' =
-                  Synext.CLF.Context.Pattern.Head.Context_variable
-                    { identifier; location = Identifier.location identifier }
-                in
-                is_inner_bound identifier >>= function
-                | true ->
-                    (* The context variable is explicitly bound in the
-                       pattern we are currently disambiguating. We do not add
-                       it to the pattern variables. *)
-                    with_disambiguated_context_pattern_bindings_list bindings
-                      (fun bindings' ->
-                        f
-                          { Synext.CLF.Context.Pattern.location
-                          ; head = head'
-                          ; bindings = bindings'
-                          })
-                | false ->
-                    (* The context variable is not explicitly bound in the
-                       pattern we are currently disambiguating. Hence it is
-                       treated as a pattern variable, and its implicit binder
-                       will be introduced during the abstraction phase of
-                       term reconstruction. *)
-                    let* () = add_pattern_context_variable identifier in
-                    let* () = add_inner_binding identifier in
-                    with_disambiguated_context_pattern_bindings_list bindings
-                      (fun bindings' ->
-                        f
-                          { Synext.CLF.Context.Pattern.location
-                          ; head = head'
-                          ; bindings = bindings'
-                          }))
-            | Result.Ok _ ->
-                let head' =
-                  Synext.CLF.Context.Pattern.Head.None
-                    { location = head_location }
-                in
+            let head' =
+              Synext.CLF.Context.Pattern.Head.Context_variable
+                { identifier; location = Identifier.location identifier }
+            in
+            is_inner_bound identifier >>= function
+            | true ->
+                (* The context variable is explicitly bound in the pattern we
+                   are currently disambiguating. We do not add it to the
+                   pattern variables. *)
                 with_disambiguated_context_pattern_bindings_list bindings
                   (fun bindings' ->
                     f
@@ -2075,8 +1960,21 @@ struct
                       ; head = head'
                       ; bindings = bindings'
                       })
-            | Result.Error cause ->
-                Error.raise_at1 (Identifier.location identifier) cause)
+            | false ->
+                (* The context variable is not explicitly bound in the
+                   pattern we are currently disambiguating. Hence it is
+                   treated as a pattern variable, and its implicit binder
+                   will be introduced during the abstraction phase of term
+                   reconstruction. *)
+                let* () = add_pattern_context_variable identifier in
+                let* () = add_inner_binding identifier in
+                with_disambiguated_context_pattern_bindings_list bindings
+                  (fun bindings' ->
+                    f
+                      { Synext.CLF.Context.Pattern.location
+                      ; head = head'
+                      ; bindings = bindings'
+                      }))
         | _ ->
             let head' =
               Synext.CLF.Context.Pattern.Head.None

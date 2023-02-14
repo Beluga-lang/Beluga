@@ -152,6 +152,28 @@ let replace qualified_identifier f tree =
     (fun namespaces identifier ->
       replace_nested namespaces identifier f tree)
 
+let size =
+  let rec size_tl tree acc =
+    Identifier.Hamt.fold
+      (fun _identifier { subtree; _ } acc -> size_tl subtree (acc + 1))
+      tree acc
+  in
+  fun tree -> size_tl tree 0
+
+let rec to_seq tree =
+  Identifier.Hamt.fold
+    (fun identifier { entry; subtree } acc ->
+      let binding = (Qualified_identifier.make_simple identifier, entry) in
+      let subtree_bindings =
+        Seq.map
+          (fun (nested_identifier, nested_entry) ->
+            ( Qualified_identifier.prepend_module identifier nested_identifier
+            , nested_entry ))
+          (to_seq subtree)
+      in
+      Seq.cons binding (Seq.append subtree_bindings acc))
+    tree Seq.empty
+
 let () =
   Error.register_exception_printer (function
     | Unbound_identifier identifier ->

@@ -7,8 +7,10 @@
 </script>
 
 # Transitivity of Algorithmic Subtyping
+
 This example follows the proof in the proof pearl description which appeared at TPHOLs2007
-<a href="http://www.cs.mcgill.ca/~bpientka/papers/pearl.pdf"> [Pientka 2007]</a>. It shows a solution of  <a href="http://www.seas.upenn.edu/~plclub/poplmark/">POPLMARK Challenge</a>,  part 1A : Transitivity of Subtyping. <br>
+<a href="http://www.cs.mcgill.ca/~bpientka/papers/pearl.pdf"> [Pientka 2007]</a>.
+It shows a solution of the <a href="http://www.seas.upenn.edu/~plclub/poplmark/">POPLMARK Challenge</a>, part 1A : Transitivity of Subtyping.
 
 This implementation not only uses higher-order abstract syntax in specifying the types, but we will exploit extensively the power of parametric and hypothetical judgment. As a benefit we do not need to implement a narrowing lemma separately, but get it "for free".
 
@@ -23,8 +25,6 @@ LF tp : type =
 
 --name tp T.
 
-
-
 %{{
 ## Algorithmic subtyping
 
@@ -34,9 +34,7 @@ its own reflexivity and transitivity version. In other words, our rule for polym
 $$\frac{\Gamma \vdash T_1 <: S_1 \qquad \Gamma,tr:a <: U \rightarrow U <: T \rightarrow a <: T, w:a <: T, ref : a <: a \vdash S_2 <: T_2 }{\Gamma \vdash \forall a:S_1.S_2(a) <: \forall a:T_1.T_2(a)}$$
 
 We use (<:) to denote algorithmic subtyping.
-
 }}%
-
 
 LF sub : tp -> tp -> type =
   | sa_top : sub S top
@@ -52,21 +50,20 @@ LF sub : tp -> tp -> type =
              -> sub (forall S1 S2) (forall T1 T2)
 ;
 
-
 %{{
 We specify the structure of the context using context schema `s_ctx` as follows:
 }}%
 
-schema s_ctx  = some [u:tp] block a:tp, tr:{U:tp}{T:tp} sub a U -> sub U T -> sub a T, w: sub a u, ref: sub a a ;
-
-
-
+schema s_ctx  = some [u:tp] block a:tp, tr:{U:tp}{T:tp} sub a U -> sub U T -> sub a T, w: sub a u, ref: sub a a;
 
 %{{
 ### Reflexivity
-<b>Theorem</b> :  For every $\Gamma$ and $T$,  $\Gamma\vdash T <: T$. <br>
 
-The reflexivity Theorem is simply described as `{g:s_ctx} {T: [g |- tp]} [g |- sub T T]` in computational-level in Beluga. Context variable `g` and term `T` are written explicitly using curly brackets `{g:s_ctx}` and  `{T: [g |- tp]}`.  We do case analysis on the term `T` of type `[g |- tp]`, which is written as `[g |- T]`.
+**Theorem** :  For every $\Gamma$ and $T$,  $\Gamma\vdash T <: T$.
+
+The reflexivity Theorem is simply described as `{g:s_ctx} {T: [g |- tp]} [g |- sub T T]` in computational-level in Beluga.
+Context variable `g` and term `T` are written explicitly using curly brackets `{g:s_ctx}` and `{T: [g |- tp]}`.
+We do case analysis on the term `T` of type `[g |- tp]`, which is written as `[g |- T]`.
 }}%
 
 rec refl : {g:s_ctx} {T: [g |- tp]} [g |- sub T T] =
@@ -83,15 +80,21 @@ rec refl : {g:s_ctx} {T: [g |- tp]} [g |- sub T T] =
           = refl  [g, b : block (a:tp, tr:{u':tp}{t':tp} sub a u' -> sub u' t' -> sub a t', w: sub a T1[..], ref: sub a a )]
                   [g, b |- T2[..,b.1]]
       in [g |- sa_all S1 (\a.\tr.\w.\ref.S2)]
-
 ;
-
 
 %{{
 ### Transitivity
-<b>Theorem</b> :  For every $\Gamma$, $S$, $Q$ and $T$,  if $\Gamma\vdash S <: Q$ and  $\Gamma\vdash Q <: T$, then  $\Gamma\vdash S <: T$. <br>
 
-The transitivity Theorem is described  as `(g:s_ctx){Q:[g |- tp]}[g |- sub S Q] -> [g |- sub Q T] -> [g |- sub S T]`. The context variable is written implicitly in round bracket as `(g:s_ctx)`.  We do case analysis on the derivation of type `[g |- sub S Q]`. In some cases we need to provide extral type annotation for the branch. For example, in the case `[g |- sa_arr D1 D2 ]`, which uses `sa_arr` rule for the last step of derivation `d1`, we add type annotation `[g |- sub (arr S1 S2) (arr Q1 Q2) ]` to obtain terms `Q1` and `Q2`, which are later used as arguments. We use the same technique in the branch of `sa_all`.  We also need to specify the type of some variables when we don't have enough information on them. For example, in the case `[g |- #p.2 U' T' D1 D2]`, we need to specify the type of parameter variable `#p` and the type of `D1`.
+**Theorem** : For every $\Gamma$, $S$, $Q$ and $T$, if $\Gamma\vdash S <: Q$ and $\Gamma\vdash Q <: T$, then $\Gamma\vdash S <: T$.
+
+The transitivity Theorem is described  as `(g:s_ctx){Q:[g |- tp]}[g |- sub S Q] -> [g |- sub Q T] -> [g |- sub S T]`.
+The context variable is written implicitly in round bracket as `(g:s_ctx)`.
+We do case analysis on the derivation of type `[g |- sub S Q]`.
+In some cases we need to provide extral type annotation for the branch.
+For example, in the case `[g |- sa_arr D1 D2 ]`, which uses `sa_arr` rule for the last step of derivation `d1`, we add type annotation `[g |- sub (arr S1 S2) (arr Q1 Q2) ]` to obtain terms `Q1` and `Q2`, which are later used as arguments.
+We use the same technique in the branch of `sa_all`.
+We also need to specify the type of some variables when we don't have enough information on them.
+For example, in the case `[g |- #p.2 U' T' D1 D2]`, we need to specify the type of parameter variable `#p` and the type of `D1`.
 }}%
 
 rec trans : (g:s_ctx){Q:[g |- tp]}[g |- sub S Q] -> [g |- sub Q T]
@@ -133,17 +136,24 @@ rec trans : (g:s_ctx){Q:[g |- tp]}[g |- sub S Q] -> [g |- sub Q T]
 
 
 %{{
-We only mark out this special case: <br>
-if &emsp;&emsp;&emsp;&emsp;&emsp;&nbsp;`d1 : [g |- sub (forall S1 (\a.S2)) (forall Q1 (\a.Q2))]`  <br>
-and &emsp;`d2 : [g |- sub (forall Q1 (\a.Q2)) (forall T1 (\a.T2))]`<br>
- then  `f  : [g |- sub (forall S1 (\a.S2) (forall T1 (\a.T2))]`.
+We only mark out this special case:
 
-By inversion on `d1`, we have: <br>
-`D1 : [g |- sub Q1 S1]` <br>
+If `d1 : [g |- sub (forall S1 (\a.S2)) (forall Q1 (\a.Q2))]`
+
+and `d2 : [g |- sub (forall Q1 (\a.Q2)) (forall T1 (\a.T2))]`
+
+then `f  : [g |- sub (forall S1 (\a.S2) (forall T1 (\a.T2))]`.
+
+By inversion on `d1`, we have:
+
+`D1 : [g |- sub Q1 S1]`
+
 `D2 : [g, b : block (a:tp, tr:{u':tp}{t':tp} sub a u' -> sub u' t' -> sub a t', w: sub a Q1[..], ref: sub a a )  |- sub S2[.. b.1] Q2[..,b.1]]`
 
-By inversion on E: <br>
-`E1 : [g |- sub T1 Q1]` <br>
+By inversion on E:
+
+`E1 : [g |- sub T1 Q1]`
+
 `E2 : [g, b : block (a:tp, tr:{u':tp}{t':tp} sub a u' -> sub u' t' -> sub a t', w: sub a T1, ref: sub a a )  |- sub (Q2 b.1) (T2 b.1)]`
 
 
@@ -188,7 +198,7 @@ schema ss_ctx = some [u:tp] block a:tp, tr:{U:tp}{T:tp} sub a U -> sub U T -> su
 
 %{{
 ### Soundness
-<b>Theorem</b> :  For every $\Gamma$, $T$ and $S$, if $\Gamma\vdash T<:S$, then $\Gamma\vdash T < S$ .
+**Theorem** :  For every $\Gamma$, $T$ and $S$, if $\Gamma\vdash T<:S$, then $\Gamma\vdash T < S$ .
 }}%
 rec sound : (g:ss_ctx) [g |- sub T S] -> [g |- subtype T S] =
     fn d => case d of
@@ -220,7 +230,7 @@ rec sound : (g:ss_ctx) [g |- sub T S] -> [g |- subtype T S] =
 
 %{{
 ### Completeness
-<b>Theorem</b> :  For every $\Gamma$, $T$ and $S$, if $\Gamma\vdash T < S$,  then $\Gamma\vdash T <: S$ .
+**Theorem**:  For every $\Gamma$, $T$ and $S$, if $\Gamma\vdash T < S$,  then $\Gamma\vdash T <: S$ .
 }}%
 
 rec complete : (g:ss_ctx) [g |- subtype T S] -> [g |- sub T S] =

@@ -180,18 +180,25 @@ end) : FORMAT_STATE with type state = S.state = struct
         pp_list ~sep ppv xs
 
   let pp_list1 ?(sep = nop) ppv l =
-    let (List1.T (x, xs)) = l in
-    let* () = ppv x in
-    let* () = sep in
-    pp_list ~sep ppv xs
+    match l with
+    | List1.T (x, []) -> ppv x
+    | List1.T (x, xs) ->
+        let* () = ppv x in
+        let* () = sep in
+        pp_list ~sep ppv xs
 
   let pp_list2 ?(sep = nop) ppv l =
-    let (List2.T (x1, x2, xs)) = l in
-    let* () = ppv x1 in
-    let* () = sep in
-    let* () = ppv x2 in
-    let* () = sep in
-    pp_list ~sep ppv xs
+    match l with
+    | List2.T (x1, x2, []) ->
+        let* () = ppv x1 in
+        let* () = sep in
+        ppv x2
+    | List2.T (x1, x2, xs) ->
+        let* () = ppv x1 in
+        let* () = sep in
+        let* () = ppv x2 in
+        let* () = sep in
+        pp_list ~sep ppv xs
 
   let pp_text t =
     with_formatter (fun ppf ->

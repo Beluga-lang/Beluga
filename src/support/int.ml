@@ -1,5 +1,9 @@
 include Stdlib.Int
 
+let of_string = Stdlib.int_of_string
+
+let of_string_opt = Stdlib.int_of_string_opt
+
 module type ORD = Ord.ORD
 
 module Ord : ORD with type t = t = Ord.Make (Stdlib.Int)

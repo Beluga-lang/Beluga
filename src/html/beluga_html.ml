@@ -4,7 +4,7 @@ open Support
 open Beluga_syntax
 open Synext
 
-[@@@warning "+A-4-44-32"]
+[@@@warning "-A-4-44-32"]
 
 exception Unbound_identifier of Identifier.t
 
@@ -22,77 +22,6 @@ exception Unsupported_non_recursive_declaration
 
 exception Unsupported_recursive_declaration
 
-module Persistent_html_state = struct
-  type entry = { id : String.t }
-
-  type state =
-    { bindings : entry Binding_tree.t
-    ; ids : String.Set.t
-    ; max_suffix_by_id : Int.t String.Hamt.t
-    }
-
-  let empty =
-    { bindings = Binding_tree.empty
-    ; ids = String.Set.empty
-    ; max_suffix_by_id = String.Hamt.empty
-    }
-
-  (** Regular expression for non-digit characters. *)
-  let non_digit_regexp = Str.regexp "[^0-9]"
-
-  (** [split_id s] is [(s', Option.Some n)] if [s = s' ^ string_of_int n],
-      and [(s, Option.None)] if [s] does not end with digits. *)
-  let split_id s =
-    try
-      let pos =
-        Str.search_backward non_digit_regexp s (String.length s) + 1
-      in
-      (Str.string_before s pos, Some (int_of_string (Str.string_after s pos)))
-    with
-    | Not_found -> (s, Option.none)
-
-  let fresh_id ?(prefix = "") identifier { ids; max_suffix_by_id; _ } =
-    let id = Uri.pct_encode (prefix ^ Identifier.show identifier) in
-    let base, suffix = split_id id in
-    if String.Set.mem id ids then
-      match String.Hamt.find_opt base max_suffix_by_id with
-      | Option.Some max_suffix -> (id, base, Option.some (max_suffix + 1))
-      | Option.None -> (id, base, Option.some 1)
-    else (id, base, suffix)
-
-  let add identifier ~id ~base suffix entry
-      { bindings; ids; max_suffix_by_id } =
-    let bindings' = Binding_tree.add_toplevel identifier entry bindings in
-    let ids' = String.Set.add id ids in
-    let max_suffix_by_id' =
-      match suffix with
-      | Option.Some suffix -> String.Hamt.add base suffix max_suffix_by_id
-      | Option.None -> max_suffix_by_id
-    in
-    { bindings = bindings'
-    ; ids = ids'
-    ; max_suffix_by_id = max_suffix_by_id'
-    }
-
-  let add_fresh_id ?prefix identifier state =
-    let id, base, suffix = fresh_id ?prefix identifier state in
-    add identifier ~id ~base suffix (Obj.magic ()) state
-
-  let lookup_toplevel identifier { bindings; _ } =
-    Binding_tree.lookup_toplevel identifier bindings
-
-  let lookup identifier { bindings; _ } =
-    Binding_tree.lookup identifier bindings
-
-  let lookup_toplevel_id identifier state =
-    let id, _ = lookup_toplevel identifier state in
-    id
-
-  let lookup_id identifier state =
-    let id, _ = lookup identifier state in
-    id
-end
-
 module type HTML_PRINTING_STATE = sig
   include State.STATE
 
@@ -104,15 +33,300 @@ module type HTML_PRINTING_STATE = sig
 
   val lookup_id : Qualified_identifier.t -> String.t t
 
-  val in_module : declarations:'a t -> module_identifier:Identifier.t -> 'a t
+  val set_default_associativity : Associativity.t -> Unit.t t
+
+  val get_default_associativity : Associativity.t t
+
+  val make_operator_prefix :
+    ?precedence:Int.t -> Qualified_identifier.t -> Unit.t t
+
+  val make_operator_infix :
+       ?precedence:Int.t
+    -> ?associativity:Associativity.t
+    -> Qualified_identifier.t
+    -> Unit.t t
+
+  val make_operator_postfix :
+    ?precedence:Int.t -> Qualified_identifier.t -> Unit.t t
+
+  val with_module_declarations :
+    declarations:'a t -> module_identifier:Identifier.t -> 'a t
 
   val open_module : Qualified_identifier.t -> Unit.t t
 
-  val add_synonym : Qualified_identifier.t -> Identifier.t -> Unit.t t
+  val add_abbreviation : Qualified_identifier.t -> Identifier.t -> Unit.t t
+end
+
+module Persistent_html_state : sig
+  include HTML_PRINTING_STATE
+
+  val initial : MyFormat.formatter -> state
+end = struct
+  type entry = { id : String.t }
+
+  type state =
+    | Id_state of
+        { bindings : entry Binding_tree.t
+        ; ids : String.Set.t
+        ; max_suffix_by_id : Int.t String.Hamt.t
+        ; formatter : MyFormat.formatter
+        }
+    | Signature_state of
+        { state : state
+        ; default_associativity : Associativity.t
+        }
+    | Module_state of
+        { state : state
+        ; declarations : entry Binding_tree.t
+        }
+
+  module S = State.Make (struct
+    type t = state
+  end)
+
+  include (S : State.STATE with type state := state)
+
+  let rec nested_get_formatter = function
+    | Id_state { formatter; _ } -> formatter
+    | Signature_state { state; _ } -> nested_get_formatter state
+    | Module_state { state; _ } -> nested_get_formatter state
+
+  let with_formatter f =
+    let* state = get in
+    f (nested_get_formatter state)
+
+  include (
+    MyFormat.Make (struct
+      include S
+
+      let with_formatter = with_formatter
+    end) :
+      MyFormat.FORMAT_STATE with type state := state)
+
+  let initial formatter =
+    Signature_state
+      { state =
+          Id_state
+            { bindings = Binding_tree.empty
+            ; ids = String.Set.empty
+            ; max_suffix_by_id = String.Hamt.empty
+            ; formatter
+            }
+      ; default_associativity = Associativity.non_associative
+      }
+
+  let rec nested_get_bindings = function
+    | Id_state { bindings; _ } -> bindings
+    | Signature_state { state; _ } -> nested_get_bindings state
+    | Module_state { state; _ } -> nested_get_bindings state
+
+  let get_bindings = get $> nested_get_bindings
+
+  let rec nested_set_bindings bindings = function
+    | Id_state o -> Id_state { o with bindings }
+    | Signature_state o ->
+        let state' = nested_set_bindings bindings o.state in
+        Signature_state { o with state = state' }
+    | Module_state o ->
+        let state' = nested_set_bindings bindings o.state in
+        Module_state { o with state = state' }
+
+  let set_bindings bindings = modify (nested_set_bindings bindings)
+
+  let[@inline] modify_bindings f =
+    let* bindings = get_bindings in
+    let bindings' = f bindings in
+    set_bindings bindings'
+
+  let rec nested_get_ids = function
+    | Id_state { ids; _ } -> ids
+    | Signature_state { state; _ } -> nested_get_ids state
+    | Module_state { state; _ } -> nested_get_ids state
+
+  let get_ids = get $> nested_get_ids
+
+  let rec nested_set_ids ids = function
+    | Id_state o -> Id_state { o with ids }
+    | Signature_state o ->
+        let state' = nested_set_ids ids o.state in
+        Signature_state { o with state = state' }
+    | Module_state o ->
+        let state' = nested_set_ids ids o.state in
+        Module_state { o with state = state' }
+
+  let set_ids ids = modify (nested_set_ids ids)
+
+  let[@inline] modify_ids f =
+    let* ids = get_ids in
+    let ids' = f ids in
+    set_ids ids'
+
+  let rec nested_get_max_suffix_by_id = function
+    | Id_state { max_suffix_by_id; _ } -> max_suffix_by_id
+    | Signature_state { state; _ } -> nested_get_max_suffix_by_id state
+    | Module_state { state; _ } -> nested_get_max_suffix_by_id state
+
+  let get_max_suffix_by_id = get $> nested_get_max_suffix_by_id
+
+  let rec nested_set_max_suffix_by_id max_suffix_by_id = function
+    | Id_state o -> Id_state { o with max_suffix_by_id }
+    | Signature_state o ->
+        let state' = nested_set_max_suffix_by_id max_suffix_by_id o.state in
+        Signature_state { o with state = state' }
+    | Module_state o ->
+        let state' = nested_set_max_suffix_by_id max_suffix_by_id o.state in
+        Module_state { o with state = state' }
+
+  let set_max_suffix_by_base max_suffix_by_id =
+    modify (nested_set_max_suffix_by_id max_suffix_by_id)
+
+  let[@inline] modify_max_suffix_by_id f =
+    let* max_suffix_by_id = get_max_suffix_by_id in
+    let max_suffix_by_id' = f max_suffix_by_id in
+    set_max_suffix_by_base max_suffix_by_id'
+
+  let add_module_declaration identifier =
+    let* bindings = get_bindings in
+    let entry, subtree = Binding_tree.lookup_toplevel identifier bindings in
+    modify (function
+      | Module_state o ->
+          let declarations' =
+            Binding_tree.add_toplevel identifier entry ~subtree
+              o.declarations
+          in
+          Module_state { o with declarations = declarations' }
+      | Signature_state _ as state -> state
+      | Id_state _ ->
+          Error.raise_violation "[add_module_declaration] invalid state")
+
+  (** Regular expression for non-digit characters. *)
+  let non_digit_regexp = Str.regexp "[^0-9]"
+
+  (** [split_id s] is [(s', Option.Some n)] if [s = s' ^ string_of_int n],
+      and [(s, Option.None)] if [s] does not end with digits, or if the
+      integer suffix does not fit in an {!type:int}. *)
+  let split_id s =
+    try
+      let pos =
+        Str.search_backward non_digit_regexp s (String.length s) + 1
+      in
+      let s' = Str.string_before s pos in
+      let n = Int.of_string_opt (Str.string_after s pos) in
+      (s', n)
+    with
+    | Not_found -> (* [Str.search_backward] failed *) (s, Option.none)
+
+  let fresh_id ?(prefix = "") identifier =
+    let initial_id = Uri.pct_encode (prefix ^ Identifier.name identifier) in
+    let base, suffix_opt = split_id initial_id in
+    let* ids = get_ids in
+    let* max_suffix_by_id = get_max_suffix_by_id in
+    let* id' =
+      if String.Set.mem initial_id ids then
+        (* [initial_id] would conflict with other IDs, so renumber it *)
+        let* suffix' =
+          match String.Hamt.find_opt base max_suffix_by_id with
+          | Option.None -> return 1
+          | Option.Some max_suffix -> return (max_suffix + 1)
+        in
+        let* () = modify_max_suffix_by_id (String.Hamt.add base suffix') in
+        return (base ^ Int.show suffix')
+      else
+        (* [initial_id] won't conflict with other IDs *)
+        let* () =
+          match suffix_opt with
+          | Option.None -> return ()
+          | Option.Some suffix ->
+              modify_max_suffix_by_id (String.Hamt.add base suffix)
+        in
+        return initial_id
+    in
+    let* () = modify_ids (String.Set.add id') in
+    return id'
+
+  let add_fresh_id ?prefix identifier =
+    let* id = fresh_id ?prefix identifier in
+    let* () =
+      modify_bindings (Binding_tree.add_toplevel identifier { id })
+    in
+    add_module_declaration identifier
+
+  let lookup_toplevel identifier =
+    let* bindings = get_bindings in
+    return (Binding_tree.lookup_toplevel identifier bindings)
+
+  let lookup identifier =
+    let* bindings = get_bindings in
+    return (Binding_tree.lookup identifier bindings)
+
+  let lookup_toplevel_id identifier =
+    let* { id }, _ = lookup_toplevel identifier in
+    return id
+
+  let lookup_id identifier =
+    let* { id }, _ = lookup identifier in
+    return id
+
+  let add_synonym qualified_identifier synonym =
+    let* entry, subtree = lookup qualified_identifier in
+    modify_bindings (Binding_tree.add_toplevel synonym entry ~subtree)
+
+  let add_abbreviation = add_synonym
+
+  let open_namespace qualified_identifier =
+    modify_bindings (Binding_tree.open_namespace qualified_identifier)
+
+  let open_module = open_namespace
+
+  let get_module_declarations =
+    get >>= function
+    | Id_state _
+    | Signature_state _ ->
+        Error.raise_violation "[get_declarations] invalid state"
+    | Module_state o -> return o.declarations
+
+  let with_module_declarations ~declarations ~module_identifier =
+    let* state = get in
+    let* () =
+      put (Module_state { state; declarations = Binding_tree.empty })
+    in
+    let* declarations' = declarations in
+    let* inner_declarations = get_module_declarations in
+    let* () = put state in
+    return (Obj.magic ())
+
+  let rec nested_set_default_associativity default_associativity = function
+    | Id_state _ ->
+        Error.raise_violation "[set_default_associativity] invalid state"
+    | Signature_state o -> Signature_state { o with default_associativity }
+    | Module_state o ->
+        let state' =
+          nested_set_default_associativity default_associativity o.state
+        in
+        Module_state { o with state = state' }
+
+  let rec nested_get_default_associativity = function
+    | Id_state _ ->
+        Error.raise_violation "[get_default_associativity] invalid state"
+    | Signature_state o -> o.default_associativity
+    | Module_state o -> nested_get_default_associativity o.state
+
+  let set_default_associativity default_associativity =
+    modify (nested_set_default_associativity default_associativity)
+
+  let get_default_associativity = get $> nested_get_default_associativity
+
+  let make_operator_prefix ?precedence identifier = return ()
+
+  let make_operator_infix ?precedence ?associativity identifier = return ()
+
+  let make_operator_postfix ?precedence identifier = return ()
 end
 
 module type BELUGA_HTML = sig
   include State.STATE
+
+  val pp_signature : Synext.signature -> Unit.t t
 end
 
 module Make (Html_state : HTML_PRINTING_STATE) :
@@ -120,6 +334,8 @@ module Make (Html_state : HTML_PRINTING_STATE) :
   include Html_state
 
   let indent = 2
+
+  let pp_double_cut = pp_cut ++ pp_cut
 
   let[@inline] pp_in_parens p = pp_char '(' ++ p ++ pp_char ')'
 
@@ -133,7 +349,8 @@ module Make (Html_state : HTML_PRINTING_STATE) :
 
   let[@inline] pp_in_dollar_parens p = pp_string "$(" ++ p ++ pp_char ')'
 
-  let[@inline] pp_in_hash_bracks p = pp_string "#[" ++ p ++ pp_char ']'
+  let[@inline] [@warning "-32"] pp_in_hash_bracks p =
+    pp_string "#[" ++ p ++ pp_char ']'
 
   let[@inline] pp_in_dollar_bracks p = pp_string "$[" ++ p ++ pp_char ']'
 
@@ -147,7 +364,7 @@ module Make (Html_state : HTML_PRINTING_STATE) :
 
   let pp_hash = pp_char '#'
 
-  let pp_dollar = pp_char '$'
+  let[@warning "-32"] pp_dollar = pp_char '$'
 
   let pp_hash_underscore = pp_string "#_"
 
@@ -201,8 +418,7 @@ module Make (Html_state : HTML_PRINTING_STATE) :
              namespaces
           ++ pp_identifier name)
 
-  let[@inline] pp_in_html ~start ~stop p =
-    pp_as 1 (pp_string start) ++ p ++ pp_as 1 (pp_string stop)
+  let[@inline] pp_in_html ~start ~stop p = pp_as 1 start ++ p ++ pp_as 1 stop
 
   let pp_toplevel_documentation_html =
     pp_in_html ~start:{|<div class="documentation">|} ~stop:{|</div>|}
@@ -343,11 +559,11 @@ module Make (Html_state : HTML_PRINTING_STATE) :
 
   let pp_case_keyword = pp_keyword "case"
 
-  let pp_if_keyword = pp_keyword "if"
+  let[@warning "-32"] pp_if_keyword = pp_keyword "if"
 
-  let pp_then_keyword = pp_keyword "then"
+  let[@warning "-32"] pp_then_keyword = pp_keyword "then"
 
-  let pp_else_keyword = pp_keyword "else"
+  let[@warning "-32"] pp_else_keyword = pp_keyword "else"
 
   let pp_impossible_keyword = pp_keyword "impossible"
 
@@ -381,7 +597,7 @@ module Make (Html_state : HTML_PRINTING_STATE) :
 
   let pp_ctype_keyword = pp_keyword "ctype"
 
-  let pp_prop_keyword = pp_keyword "prop"
+  let[@warning "-32"] pp_prop_keyword = pp_keyword "prop"
 
   let pp_inductive_keyword = pp_keyword "inductive"
 
@@ -1824,7 +2040,8 @@ module Make (Html_state : HTML_PRINTING_STATE) :
             ++ pp_associativity associativity
             ++ pp_dot)
         in
-        pp_pragma "assoc" pp_associativity_pragma
+        let* () = pp_pragma "assoc" pp_associativity_pragma in
+        set_default_associativity associativity
     | Signature.Pragma.Prefix_fixity { constant; precedence; _ } ->
         let pp_prefix_pragma =
           pp_hovbox ~indent
@@ -1835,20 +2052,25 @@ module Make (Html_state : HTML_PRINTING_STATE) :
                  precedence
             ++ pp_dot)
         in
-        pp_pragma "prefix" pp_prefix_pragma
+        let* () = pp_pragma "prefix" pp_prefix_pragma in
+        make_operator_prefix ?precedence constant
     | Signature.Pragma.Infix_fixity
         { constant; precedence; associativity; _ } ->
-        pp_hovbox ~indent
-          (pp_string "--infix" ++ pp_space
-          ++ pp_qualified_identifier constant
-          ++ pp_option
-               (fun precedence -> pp_space ++ pp_int precedence)
-               precedence
-          ++ pp_option
-               (fun associativity ->
-                 pp_space ++ pp_associativity associativity)
-               associativity
-          ++ pp_dot)
+        let pp_infix_pragma =
+          pp_hovbox ~indent
+            (pp_string "--infix" ++ pp_space
+            ++ pp_qualified_identifier constant
+            ++ pp_option
+                 (fun precedence -> pp_space ++ pp_int precedence)
+                 precedence
+            ++ pp_option
+                 (fun associativity ->
+                   pp_space ++ pp_associativity associativity)
+                 associativity
+            ++ pp_dot)
+        in
+        let* () = pp_pragma "infix" pp_infix_pragma in
+        make_operator_infix ?precedence ?associativity constant
     | Signature.Pragma.Postfix_fixity { constant; precedence; _ } ->
         let pp_postfix_pragma =
           pp_hovbox ~indent
@@ -1859,7 +2081,8 @@ module Make (Html_state : HTML_PRINTING_STATE) :
                  precedence
             ++ pp_dot)
         in
-        pp_pragma "postfix" pp_postfix_pragma
+        let* () = pp_pragma "postfix" pp_postfix_pragma in
+        make_operator_postfix ?precedence constant
     | Signature.Pragma.Not _ ->
         let pp_not_pragma = pp_string "--not" in
         pp_pragma "not" pp_not_pragma
@@ -1882,7 +2105,7 @@ module Make (Html_state : HTML_PRINTING_STATE) :
             ++ pp_dot)
         in
         let* () = pp_pragma "abbrev" pp_abbrev_pragma in
-        add_synonym module_identifier abbreviation
+        add_abbreviation module_identifier abbreviation
 
   and pp_signature_global_pragma global_pragma =
     match global_pragma with
@@ -1977,8 +2200,8 @@ module Make (Html_state : HTML_PRINTING_STATE) :
         | List1.T (first, rest) ->
             pp_vbox ~indent:0
               (pp_grouped_declaration ~prepend_and:false first
-              ++ pp_cut ++ pp_cut
-              ++ pp_list ~sep:(pp_cut ++ pp_cut)
+              ++ pp_double_cut
+              ++ pp_list ~sep:pp_double_cut
                    (pp_grouped_declaration ~prepend_and:true)
                    rest)
             ++ pp_semicolon)
@@ -2035,14 +2258,16 @@ module Make (Html_state : HTML_PRINTING_STATE) :
           ++ pp_identifier_opt ++ pp_non_breaking_space ++ pp_colon
           ++ pp_lf_typ typ ++ pp_dot)
     | Signature.Declaration.Module { identifier; entries; _ } ->
-        pp_module_keyword ++ pp_non_breaking_space
-        ++ pp_identifier identifier ++ pp_equal ++ pp_non_breaking_space
-        ++ pp_struct_keyword ++ pp_break 1 2
-        ++ pp_vbox ~indent:0
-             (pp_list ~sep:(pp_cut ++ pp_cut) pp_module_entry entries)
-        ++ pp_cut ++ pp_end_keyword
+        with_module_declarations
+          ~declarations:
+            (pp_module_keyword ++ pp_non_breaking_space
+           ++ pp_identifier identifier ++ pp_equal ++ pp_non_breaking_space
+           ++ pp_struct_keyword ++ pp_break 1 2
+            ++ pp_vbox ~indent:0 (pp_module_entries entries)
+            ++ pp_cut ++ pp_end_keyword)
+          ~module_identifier:identifier
 
-  and add_fresh_id_for_declaration declaration =
+  and add_declaration declaration =
     match declaration with
     | Signature.Declaration.Typ { identifier; _ } ->
         add_fresh_id ~prefix:"lf-type-" identifier
@@ -2069,9 +2294,20 @@ module Make (Html_state : HTML_PRINTING_STATE) :
     | Signature.Declaration.Module { identifier; _ } ->
         add_fresh_id ~prefix:"module-" identifier
     | Signature.Declaration.Recursive_declarations { declarations; _ } ->
-        traverse_list1_void add_fresh_id_for_declaration declarations
+        traverse_list1_void add_declaration declarations
     | Signature.Declaration.Query { identifier; _ } ->
-        traverse_option_void (add_fresh_id ~prefix:"query-") identifier
+        traverse_option_void
+          (fun identifier -> add_fresh_id ~prefix:"query-" identifier)
+          identifier
+
+  and pp_and_add_signature_declaration declaration =
+    match declaration with
+    | Signature.Declaration.Recursive_declarations { declarations; _ } ->
+        let* () = traverse_list1_void add_declaration declarations in
+        pp_signature_declaration declaration
+    | _ ->
+        let* () = pp_signature_declaration declaration in
+        add_declaration declaration
 
   and pp_grouped_declaration ~prepend_and declaration =
     let pp_and_opt =
@@ -2093,7 +2329,7 @@ module Make (Html_state : HTML_PRINTING_STATE) :
         in
         pp_hovbox ~indent
           (pp_and_opt ++ pp_lf_keyword ++ pp_non_breaking_space
-          ++ pp_computation_stratified_constant identifier
+          ++ pp_lf_type_constant identifier
           ++ pp_non_breaking_space ++ pp_colon ++ pp_space ++ pp_lf_kind kind
           ++ pp_non_breaking_space ++ pp_equal)
         ++ pp_constants
@@ -2112,7 +2348,7 @@ module Make (Html_state : HTML_PRINTING_STATE) :
         in
         pp_hovbox ~indent
           (pp_and_opt ++ pp_inductive_keyword ++ pp_non_breaking_space
-          ++ pp_computation_stratified_constant identifier
+          ++ pp_computation_inductive_constant identifier
           ++ pp_non_breaking_space ++ pp_colon ++ pp_space
           ++ pp_comp_kind kind ++ pp_non_breaking_space ++ pp_equal)
         ++ pp_constants
@@ -2182,7 +2418,7 @@ module Make (Html_state : HTML_PRINTING_STATE) :
             order
         in
         pp_hovbox ~indent
-          (pp_and_opt ++ pp_rec_keyword ++ pp_non_breaking_space
+          (pp_and_opt ++ pp_proof_keyword ++ pp_non_breaking_space
           ++ pp_computation_program identifier
           ++ pp_non_breaking_space ++ pp_colon ++ pp_space ++ pp_comp_typ typ
           ++ pp_non_breaking_space ++ pp_equal)
@@ -2321,38 +2557,57 @@ module Make (Html_state : HTML_PRINTING_STATE) :
         Error.raise_at1 location
           (Error.composite_exception2 Markdown_rendering_error cause)
 
-  and pp_module_entry entry =
-    match entry with
-    | Signature.Entry.Declaration _
-    | Signature.Entry.Pragma _ ->
-        pp_signature_entry entry
-    | Signature.Entry.Comment { location; content } ->
-        let html = render_markdown location content in
-        pp_inner_documentation_html (pp_string html)
+  and pp_module_entries entries =
+    let groups = group_signature_entries entries in
+    let rec pp_groups groups =
+      match groups with
+      | `Code group :: rest ->
+          pp_preformatted_code_html
+            (pp_list1 ~sep:pp_double_cut pp_signature_entry group)
+          ++ pp_double_cut ++ pp_groups rest
+      | `Comment group :: rest ->
+          pp_inner_documentation_html
+            (pp_list1 ~sep:pp_double_cut pp_signature_entry group)
+          ++ pp_double_cut ++ pp_groups rest
+      | [] -> pp_nop
+    in
+    pp_vbox ~indent:0 (pp_groups groups)
 
   and pp_signature_entry entry =
     match entry with
     | Signature.Entry.Declaration { declaration; _ } ->
-        pp_signature_declaration declaration
+        pp_and_add_signature_declaration declaration
     | Signature.Entry.Pragma { pragma; _ } -> pp_signature_pragma pragma
     | Signature.Entry.Comment { location; content } ->
         let html = render_markdown location content in
-        pp_toplevel_documentation_html (pp_string html)
+        pp_string html
 
   and pp_signature signature =
-    (* TODO: state management *)
     let { Signature.global_pragmas; entries } = signature in
-    let groups = group_toplevel_signature_entries entries in
-    match (global_pragmas, groups) with
-    | [], _groups -> Obj.magic () (* TODO: *)
-    | _global_pragmas, `Code _group1 :: _rest -> Obj.magic () (* TODO: *)
-    | _global_pragmas, `Comment _group1 :: _rest -> Obj.magic () (* TODO: *)
-    | global_pragmas, [] ->
-        pp_preformatted_code_html
-          (pp_list ~sep:pp_cut pp_signature_global_pragma global_pragmas)
-        ++ pp_cut
+    let pp_global_pragmas_opt =
+      match global_pragmas with
+      | [] -> pp_nop
+      | _ ->
+          pp_preformatted_code_html
+            (pp_list ~sep:pp_cut pp_signature_global_pragma global_pragmas)
+          ++ pp_cut
+    in
+    let groups = group_signature_entries entries in
+    let rec pp_groups groups =
+      match groups with
+      | `Code group :: rest ->
+          pp_preformatted_code_html
+            (pp_list1 ~sep:pp_double_cut pp_signature_entry group)
+          ++ pp_double_cut ++ pp_groups rest
+      | `Comment group :: rest ->
+          pp_toplevel_documentation_html
+            (pp_list1 ~sep:pp_double_cut pp_signature_entry group)
+          ++ pp_double_cut ++ pp_groups rest
+      | [] -> pp_nop
+    in
+    pp_vbox ~indent:0 (pp_global_pragmas_opt ++ pp_groups groups)
 
-  and group_toplevel_signature_entries entries =
+  and group_signature_entries entries =
     match entries with
     | (Signature.Entry.Declaration _ as x) :: xs
     | (Signature.Entry.Pragma _ as x) :: xs ->
@@ -2365,8 +2620,7 @@ module Make (Html_state : HTML_PRINTING_STATE) :
               | Signature.Entry.Comment _ -> false)
             xs
         in
-        `Code (List1.from x code_entries)
-        :: group_toplevel_signature_entries rest
+        `Code (List1.from x code_entries) :: group_signature_entries rest
     | (Signature.Entry.Comment _ as x) :: xs ->
         let comment_entries, rest =
           List.take_while
@@ -2378,13 +2632,8 @@ module Make (Html_state : HTML_PRINTING_STATE) :
             xs
         in
         `Comment (List1.from x comment_entries)
-        :: group_toplevel_signature_entries rest
+        :: group_signature_entries rest
     | [] -> []
-
-  and pp_toplevel_signature_group _groups =
-    (* TODO: Add the HTML tags depending on whether the group is [`Code] or
-       [`Comment] *)
-    Obj.magic ()
 end
 
 let () =

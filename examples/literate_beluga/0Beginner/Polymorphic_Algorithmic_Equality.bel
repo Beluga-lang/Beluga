@@ -1,10 +1,13 @@
 % Beluga Development
 % Author: Brigitte Pientka
+
 %{{
 # Algorithmic Equality for the Polymorphic Lambda-calculus (G-version)
+
 We discuss completeness of algorithmic equality for typed lambda-terms with respect to declarative equality of lambda-terms.
 This case-study is part of <a ref="https://github.com/pientka/ORBI">ORBI</a>, Open challenge problem Repository for systems reasoning with BInders.  For a detailed description of the proof and a discussion regarding other systems see <a href="orbi-jar.pdf" target="_blank">(Felty et al, 2014)</a>.
-<br>
+
+
 The mechanization highlights several aspects:
 
 - Context schemas with alternative assumptions
@@ -13,7 +16,10 @@ The mechanization highlights several aspects:
 - Reasoning using context subsumption
 
 ## Syntax
-The polymorphic lambda-calculus is introduced with the following declarations: }}%
+
+The polymorphic lambda-calculus is introduced with the following declarations:
+}}%
+
 LF tp : type =
   | arr : tp -> tp -> tp
   | all : (tp -> tp) -> tp
@@ -28,20 +34,33 @@ LF term: type =
 ;
 --name term M x.
 
-%{{## Judgements and Rules
-We describe algorithmic and declarative equality for the polymorphic lambda-calculus as judgements using axioms and inference rules. The Beluga code is a straightforward HOAS encoding of the associated rules.}}%
+%{{
+## Judgements and Rules
+
+We describe algorithmic and declarative equality for the polymorphic lambda-calculus as judgements using axioms and inference rules.
+The Beluga code is a straightforward HOAS encoding of the associated rules.
+}}%
+
 % -----------------------------------------------------------------
 
-%{{### Algorithmic Equality for types
-We add the judgement for type equality <code>atp</code> of type <code>tm -> tm -> type</code> along with inference rules for universal quantifiers <code>at_al</code> and arrow types <code>at_arr</code>.}}%
+%{{
+### Algorithmic Equality for types
+
+We add the judgement for type equality `atp` of type `tm -> tm -> type` along with inference rules for universal quantifiers `at_al` and arrow types `at_arr`.
+}}%
+
 LF atp: tp -> tp -> type =
   | at_al : ({a:tp} atp a a -> atp (T a) (S a)) -> atp (all T) (all S)
   | at_arr: atp T1 T2 -> atp S1 S2 -> atp (arr T1 S1) (arr T2 S2)
 ;
 --name atp Q u.
 
-%{{### Algorithmic Equality for terms
-We extend the term equality judgement given for the untyped lambda-calculus with rules for type abstraction <code>ae_tl</code> and type application <code>ae_ta</code>.}}%
+%{{
+### Algorithmic Equality for terms
+
+We extend the term equality judgement given for the untyped lambda-calculus with rules for type abstraction `ae_tl` and type application `ae_ta`.
+}}%
+
 LF aeq: term -> term -> type =
   | ae_a : aeq M1 N1 -> aeq M2 N2 -> aeq (app M1 M2) (app N1 N2)
   | ae_l : ({x:term} aeq x x -> aeq (M x) (N x)) -> aeq (lam (\x. M x)) (lam (\x. N x))
@@ -50,9 +69,16 @@ LF aeq: term -> term -> type =
 ;
 --name aeq D u.
 
-%{{Note that type equality <code>atp A B</code> can be defined independently of term equality <code>aeq M N</code>. In other words, <code>aeq M N</code> depends on <code>atp A B</code>, but not vice-versa.}}%
+%{{
+Note that type equality `atp A B` can be defined independently of term equality `aeq M N`.
+In other words, `aeq M N` depends on `atp A B`, but not vice-versa.
+}}%
+
 % ----------------------------------------------------------------- %
-%{{### Declarative Equality for types
+
+%{{
+### Declarative Equality for types
+
 We define declarative equality for types in order to establish its equivalence with algorithmic equality and prove completeness. Rules for reflexivity, transitivity, and symmetry are explicitly derived.}}%
 LF dtp: tp -> tp -> type =
   | dt_al : ({a:tp}dtp a a -> dtp (T a) (S a)) -> dtp (all T) (all S)
@@ -63,8 +89,13 @@ LF dtp: tp -> tp -> type =
 ;
 --name atp P u.
 
-%{{### Declarative Equality for terms
-Declarative equality for terms is encoded similarly to its counterpart. Again, we are extending the Untyped Equality case study to account for polymorphism with constructors for type abstraction <code>de_tl</code> and type application <code>de_ta</code> }}%
+%{{
+### Declarative Equality for terms
+
+Declarative equality for terms is encoded similarly to its counterpart.
+Again, we are extending the Untyped Equality case study to account for polymorphism with constructors for type abstraction `de_tl` and type application `de_ta`
+}}%
+
 LF deq: term -> term -> type =
   | de_l: ({x:term} deq x x -> deq (M x) (N x)) -> deq (lam (\x. M x)) (lam (\x. N x))
   | de_a: deq M1 N1 -> deq M2 N2 -> deq (app M1 M2) (app N1 N2)
@@ -76,10 +107,19 @@ LF deq: term -> term -> type =
 ;
 
 % ----------------------------------------------------------------- %
-%{{## Context declarations
-Just as types classify expressions, contexts are classified by context schemas.}}%
+
+%{{
+## Context declarations
+
+Just as types classify expressions, contexts are classified by context schemas.
+}}%
+
 schema atpCtx = block a:tp , _t:atp a a;
-%{{Since the case for lambda-abstraction <code>lam</code> deals with term assumptions while the type abstraction <code>tlam</code> introduces type assumptions, we need to specify <i>alternating</i> assumptions. This alternation of blocks is described by using <code>+</code> in Beluga's concrete syntax.}}%
+
+%{{
+Since the case for lambda-abstraction `lam` deals with term assumptions while the type abstraction `tlam` introduces type assumptions, we need to specify _alternating_ assumptions. This alternation of blocks is described by using `+` in Beluga's concrete syntax.
+}}%
+
 schema aeqCtx = block (x:term, _u:aeq x x) + block (a:tp , _t:atp a a);
 
 schema dtpCtx = block a: tp, u:atp a a , _t:dtp a a ;
@@ -88,8 +128,15 @@ schema deqCtx = block x: term, u:aeq x x , _t:deq x x
 
 % ----------------------------------------------------------------- %
 % Admissibility of Reflexivity
-%{{## Proof of Reflexivity for Types
-The reflexivity for types is implemented as a recursive function called <code>reftp</code> of type: <code>{gamma:atpCtx}{T:[gamma |- tp ]}[gamma |- atp T T]</code>. This can be read as: for all contexts <code>g</code> that have schema <code>atpCtx</code>, for all types <code>T</code>, we have a proof that <code>[ g |- atp T T]</code>. Quantification over contexts and contextual objects in computation-level types is denoted between braces <code>{}</code>; the corresponding abstraction on the level of expressions is written as <code>mlam g => mlam T1 => e</code>.}}%
+
+%{{
+## Proof of Reflexivity for Types
+
+The reflexivity for types is implemented as a recursive function called `reftp` of type: `{gamma:atpCtx}{T:[gamma |- tp ]}[gamma |- atp T T]`.
+This can be read as: for all contexts `g` that have schema `atpCtx`, for all types `T`, we have a proof that `[ g |- atp T T]`.
+Quantification over contexts and contextual objects in computation-level types is denoted between braces `{}`; the corresponding abstraction on the level of expressions is written as `mlam g => mlam T1 => e`.
+}}%
+
 rec reftp : {gamma:atpCtx} {T:[gamma |- tp]} [gamma |- atp T T] =
 mlam gamma => mlam T => case [gamma |- T] of
 | [gamma |- #p.1] => [gamma |- #p.2]
@@ -105,15 +152,33 @@ mlam gamma => mlam T => case [gamma |- T] of
   let [gamma |- D2] = reftp [gamma] [gamma |- S ] in
     [gamma |- at_arr D1 D2]
 ;
-%{{In the proof for <code>refltp</code> we begin by introducing and <code>T</code> followed by a case analysis on <code>[gamma |- T]</code> using pattern matching. There are three possible cases for <code>T</code>:
-<ul>
--<b>Variable case.</b> If <code>T</code> is a variable from <code>g</code>, we write <code>[gamma |- #p.1]</code> where <code>#p</code> denotes a parameter variable declared in the context <code>g</code>. Operationally, <code>#p</code> can be instantiated with any bound variable from the context <code>g</code>. Since the context <code>g</code> has schema <code>atpCtx</code>, it contains blocks <code>a:tp , _t:atp a a;</code>. The first projection allows us to extract the type component, while the second projection denotes the proof of <code>_t:atp a a;</code>.
--<b>Existential case.</b> If <code>T</code> is an existential quantification, then we extend the context and appeal to the induction hypothesis by making a recursive call. Beluga supports declaration weakening which allows us to use <code>T</code> that has type <code>[gamma, a:tp |- tp ]</code> in the extended context <code>[gamma, b:block a:tp , _t: atp a a]</code>. We simply construct a weakening substitution <code>.. b.1</code> with domain <code>g,a:tp</code> and range <code>g, b:block a:tp , _t: atp a a</code> that essentially renames <code>a</code> to <code>b.1</code> in <code>T</code>. The recursive call returns <code>[gamma,b:block a:tp , _t:atp a a |- D[.., b.1 ,b.2]]</code>. Using it together with rule <code>at_la</code> we build the final derivation.
--<b>Arrow case.</b> If <code>T</code> is an arrow type, we appeal twice to the induction hypothesis and build a proof for <code>[gamma |- atp (arr T S) (arr T S)]</code>.
-</ul>}}%
 
-%{{## Proof of Reflexivity for Terms
-The recursive function <code>ref</code> encodes the proof reflexivity for terms. The type signature reads: for all contexts <code>g</code> that have schema <code>aeqCtx</code>, for all terms <code>M</code>, we have a proof that <code>[ g |- aeq M M]</code>.}}%
+%{{
+In the proof for `refltp` we begin by introducing and `T` followed by a case analysis on `[gamma |- T]` using pattern matching.
+There are three possible cases for `T`:
+
+- **Variable case.**
+  If `T` is a variable from `g`, we write `[gamma |- #p.1]` where `#p` denotes a parameter variable declared in the context `g`.
+  Operationally, `#p` can be instantiated with any bound variable from the context `g`.
+  Since the context `g` has schema `atpCtx`, it contains blocks `a:tp , _t:atp a a;`.
+  The first projection allows us to extract the type component, while the second projection denotes the proof of `_t:atp a a;`.
+- **Existential case.**
+  If `T` is an existential quantification, then we extend the context and appeal to the induction hypothesis by making a recursive call.
+  Beluga supports declaration weakening which allows us to use `T` that has type `[gamma, a:tp |- tp ]` in the extended context `[gamma, b:block a:tp , _t: atp a a]`.
+  We simply construct a weakening substitution `.. b.1` with domain `g,a:tp` and range `g, b:block a:tp , _t: atp a a` that essentially renames `a` to `b.1` in `T`.
+  The recursive call returns `[gamma,b:block a:tp , _t:atp a a |- D[.., b.1 ,b.2]]`.
+  Using it together with rule `at_la` we build the final derivation.
+- **Arrow case.**
+  If `T` is an arrow type, we appeal twice to the induction hypothesis and build a proof for `[gamma |- atp (arr T S) (arr T S)]`.
+}}%
+
+%{{
+## Proof of Reflexivity for Terms
+
+The recursive function `ref` encodes the proof reflexivity for terms.
+The type signature reads: for all contexts `g` that have schema `aeqCtx`, for all terms `M`, we have a proof that `[ g |- aeq M M]`.
+}}%
+
 rec ref : {gamma:aeqCtx} {M:[gamma |- term]} [gamma |- aeq M M] =
 mlam gamma => mlam M => case [gamma |- M] of
 | [gamma |- #p.1] => [gamma |- #p.2]
@@ -140,18 +205,38 @@ mlam gamma => mlam M => case [gamma |- M] of
   let [gamma |- D2] = reftp [gamma] [gamma |- T ] in
     [gamma |- ae_ta D1 D2]
 ;
-%{{This time, there are five possible cases for our meta-variable <code>M</code>:
-<ul>
--<b>Variable case.</b> If <code>M</code> is a variable from <code>g</code>, we write <code>[gamma |- #p.1]</code> where <code>#p</code> denotes a parameter variable declared in the context <code>g</code>. Operationally, <code>#p</code> can be instantiated with any bound variable from the context <code>g</code>. Since the context <code>g</code> has schema <code>aeqCtx</code>, it contains blocks <code>x:tm , ae_v:aeq x x.</code> The first projection allows us to extract the term component, while the second projection denotes the proof of <code>aeq x x</code>.
--<b>Lambda-abstraction case.</b> If <code>M</code> is a lambda-term, then we extend the context and appeal to the induction hypothesis by making a recursive call. Automatic context subsumption comes into play again, allowing us to use M that has type <code>[gamma, x:tm |- tm ]</code> in the extended context <code>[gamma, b:block y:tm , ae_v: aeq y y]</code>. We simply construct a weakening substitution <code>.. b.1</code> with domain <code>g,y:tm</code> and range <code>g, b:block y:tm , ae_v:aeq y y.</code> that essentially renames <code>y</code> to <code>b.1</code> in <code>M</code>. The recursive call returns <code>[gamma,b:block y:tm ,ae_v:aeq y y |- D[.., b.1 b.2]]</code>. Using it together with rule <code>ae_l</code> we build the final derivation.
--<b>Term application case.</b> If <code>M</code> is an application, we appeal twice to the induction hypothesis and build a proof for <code>[gamma |- aeq (app M1 M2) (app M1 M2)]</code>.
--<b>Type abstraction case.</b> If <code>M</code> is a type abstraction, then we extend the context and appeal to the induction hypothesis by making a recursive call. We use <code>M</code> that has type <code>[gamma, a:tp |- tp ]</code> in the extended context <code>[gamma, b:block a:tp , _t: atp a a]</code> and construct a weakening substitution <code>.. b.1</code> with domain <code>g,a:tp</code> and range <code>g, b:block a:tp , _t: atp a a</code> that essentially renames <code>a</code> to <code>b.1</code> in <code>T</code>. The recursive call returns <code>[gamma,b:block a:tp , _t:atp a a |- D[.., b.1, b.2]]</code>. Using it together with rule <code>at_la</code> we build the final derivation.
--<b>Type application case.</b> If <code>M</code> is a type application, we appeal twice to the induction hypothesis and build a proof for <code>[gamma |- aeqCtx (tapp M T) (tapp M T)]</code>.
-</ul>}}%
+
+%{{
+This time, there are five possible cases for our meta-variable `M`:
+
+- **Variable case.**
+  If `M` is a variable from `g`, we write `[gamma |- #p.1]` where `#p` denotes a parameter variable declared in the context `g`.
+  Operationally, `#p` can be instantiated with any bound variable from the context `g`.
+  Since the context `g` has schema `aeqCtx`, it contains blocks `x:tm , ae_v:aeq x x.` The first projection allows us to extract the term component, while the second projection denotes the proof of `aeq x x`.
+- **Lambda-abstraction case.**
+  If `M` is a lambda-term, then we extend the context and appeal to the induction hypothesis by making a recursive call.
+  Automatic context subsumption comes into play again, allowing us to use M that has type `[gamma, x:tm |- tm ]` in the extended context `[gamma, b:block y:tm , ae_v: aeq y y]`.
+  We simply construct a weakening substitution `.. b.1` with domain `g,y:tm` and range `g, b:block y:tm , ae_v:aeq y y.` that essentially renames `y` to `b.1` in `M`.
+  The recursive call returns `[gamma,b:block y:tm ,ae_v:aeq y y |- D[.., b.1 b.2]]`.
+  Using it together with rule `ae_l` we build the final derivation.
+- **Term application case.**
+  If `M` is an application, we appeal twice to the induction hypothesis and build a proof for `[gamma |- aeq (app M1 M2) (app M1 M2)]`.
+- **Type abstraction case.**
+  If `M` is a type abstraction, then we extend the context and appeal to the induction hypothesis by making a recursive call.
+  We use `M` that has type `[gamma, a:tp |- tp ]` in the extended context `[gamma, b:block a:tp , _t: atp a a]` and construct a weakening substitution `.. b.1` with domain `g,a:tp` and range `g, b:block a:tp , _t: atp a a` that essentially renames `a` to `b.1` in `T`.
+  The recursive call returns `[gamma,b:block a:tp , _t:atp a a |- D[.., b.1, b.2]]`.
+  Using it together with rule `at_la` we build the final derivation.
+- **Type application case.**
+  If `M` is a type application, we appeal twice to the induction hypothesis and build a proof for `[gamma |- aeqCtx (tapp M T) (tapp M T)]`.
+}}%
 
 % ----------------------------------------------------------------- %
 % General transitivity is admissible
-%{{## Proof of Transitivity for Types}}%
+
+%{{
+## Proof of Transitivity for Types
+}}%
+
 rec transtp: (gamma:atpCtx)
    [gamma |- atp T R] -> [gamma |- atp R S]
  -> [gamma |- atp T S] =
@@ -173,7 +258,10 @@ fn ae1 => fn ae2 => case ae1 of
     [gamma |- at_arr D D']
 ;
 
-%{{## Proof of Transitivity for Terms}}%
+%{{
+## Proof of Transitivity for Terms
+}}%
+
 rec trans: (gamma:aeqCtx)
    [gamma |- aeq T R] -> [gamma |- aeq R S]
  -> [gamma |- aeq T S] =
@@ -211,7 +299,10 @@ fn ae1 => fn ae2 => case ae1 of
 
 % ----------------------------------------------------------------- %
 % General symmetry is admissible
-%{{## Proof of Symmetry for Types}}%
+%{{
+## Proof of Symmetry for Types
+}}%
+
 rec symtp: (gamma:atpCtx)
  [gamma |- atp T R] -> [gamma |- atp R T] =
 fn ae => case ae of
@@ -226,7 +317,10 @@ fn ae => case ae of
     [gamma |- at_arr D1' D2']
  ;
 
-%{{## Proof of Symmetry for Terms}}%
+%{{
+## Proof of Symmetry for Terms
+}}%
+
 rec sym: (gamma:aeqCtx)
  [gamma |- aeq T R] -> [gamma |- aeq R T] =
 fn ae => case ae of
@@ -251,7 +345,10 @@ fn ae => case ae of
 
 % ----------------------------------------------------------------- %
 % Completeness
-%{{## Proof of Completeness for Types}}%
+%{{
+## Proof of Completeness for Types
+}}%
+
 rec ctp: (gamma:dtpCtx)
          [gamma |- dtp T S] -> [gamma |- atp T S] =
 fn e => case e of
@@ -277,7 +374,10 @@ fn e => case e of
      symtp [gamma |-  D]
 ;
 
-%{{## Proof of Completeness for Terms}}%
+%{{
+## Proof of Completeness for Terms
+}}%
+
 rec ceq: (gamma:deqCtx)
          [gamma |-  deq T S] -> [gamma |- aeq T S] =
 fn e => case e of

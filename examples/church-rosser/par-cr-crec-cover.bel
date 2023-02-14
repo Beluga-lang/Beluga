@@ -49,7 +49,7 @@ rec dia : (g:ctx) [g |- split_red M1 M2]
 % / total d (dia g m1 m2 d) /
 fn d => case d of
 | [g |- assume (ap (lm \y.\v. R1a) R2)
-             (beta (\y . \v. R1') (R2'))] =>
+             (beta (\y. \v. R1') (R2'))] =>
   let [g |- dia_result H2 S2 (S2')] = dia [g |- assume R2 (R2')] in
 
   let  [g, b:block y:term, _t:pred y y |-  dia_result (H1[..,b.1]) S1 (S1')] =

@@ -118,8 +118,6 @@ module type DISAMBIGUATION_STATE = sig
 
   val actual_binding_exn : Qualified_identifier.t -> entry * data -> exn
 
-  val open_namespace : Qualified_identifier.t -> Unit.t t
-
   val open_module : Qualified_identifier.t -> Unit.t t
 
   val with_lf_term_variable :

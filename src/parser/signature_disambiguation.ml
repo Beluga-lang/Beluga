@@ -610,11 +610,9 @@ struct
 
   and disambiguate_mutually_recursive_declarations declarations =
     let* () = traverse_list1_void add_recursive_declaration declarations in
-    let* state = get in
     let* declarations =
-      traverse_list1 disambiguate_declaration declarations
+      with_scope (traverse_list1 disambiguate_declaration declarations)
     in
-    let* () = put state in
     return declarations
 
   and disambiguate_declaration = function

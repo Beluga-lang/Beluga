@@ -93,10 +93,6 @@ struct
     | Option.None -> return ()
     | Option.Some identifier -> add_query identifier
 
-  let add_module_declaration_opt = function
-    | Option.None -> return ()
-    | Option.Some identifier -> add_module_declaration identifier
-
   let explicit_arguments_lf_kind =
     let rec explicit_arguments_lf_kind_tl kind acc =
       match kind with
@@ -351,48 +347,37 @@ struct
     | Synprs.Signature.Declaration.Raw_lf_typ_constant
         { identifier; kind; _ } ->
         add_default_lf_type_constant identifier kind
-        <& add_module_declaration identifier
     | Synprs.Signature.Declaration.Raw_lf_term_constant
         { identifier; typ; _ } ->
         add_default_lf_term_constant identifier typ
-        <& add_module_declaration identifier
     | Synprs.Signature.Declaration.Raw_inductive_comp_typ_constant
         { identifier; kind; _ } ->
         add_default_inductive_comp_typ_constant identifier kind
-        <& add_module_declaration identifier
     | Synprs.Signature.Declaration.Raw_stratified_comp_typ_constant
         { identifier; kind; _ } ->
         add_default_stratified_comp_typ_constant identifier kind
-        <& add_module_declaration identifier
     | Synprs.Signature.Declaration.Raw_comp_expression_constructor
         { identifier; typ; _ } ->
         add_default_comp_constructor_constant identifier typ
-        <& add_module_declaration identifier
     | Synprs.Signature.Declaration.Raw_comp_cotyp_constant
         { identifier; kind; _ } ->
         add_default_coinductive_comp_typ_constant identifier kind
-        <& add_module_declaration identifier
     | Synprs.Signature.Declaration.Raw_comp_expression_destructor
         { identifier; _ } ->
         add_computation_term_destructor identifier
-        <& add_module_declaration identifier
     | Synprs.Signature.Declaration.Raw_schema { identifier; _ } ->
-        add_schema_constant identifier <& add_module_declaration identifier
+        add_schema_constant identifier
     | Synprs.Signature.Declaration.Raw_theorem { identifier; typ; _ } ->
         add_default_program_constant identifier ~typ
-        <& add_module_declaration identifier
     | Synprs.Signature.Declaration.Raw_proof { identifier; typ; _ } ->
         add_default_program_constant identifier ~typ
-        <& add_module_declaration identifier
     | Synprs.Signature.Declaration.Raw_comp_typ_abbreviation
         { identifier; kind; _ } ->
         add_default_abbreviation_comp_typ_constant identifier kind
-        <& add_module_declaration identifier
     | Synprs.Signature.Declaration.Raw_val { identifier; typ; _ } ->
         add_default_program_constant ?typ identifier
-        <& add_module_declaration identifier
     | Synprs.Signature.Declaration.Raw_query { identifier; _ } ->
-        add_query_opt identifier <& add_module_declaration_opt identifier
+        add_query_opt identifier
 
   (** [make_operator_prefix ?precedence operator_identifier state] is the
       disambiguation state derived from [state] where the operator with
@@ -623,7 +608,6 @@ struct
           lazy
             (let* kind' = disambiguate_lf_kind typ_or_const in
              let* () = add_default_lf_type_constant' identifier kind' in
-             let* () = add_module_declaration identifier in
              return
                (Synext.Signature.Declaration.Typ
                   { location; identifier; kind = kind' }))
@@ -631,7 +615,6 @@ struct
           lazy
             (let* typ' = disambiguate_lf_typ typ_or_const in
              let* () = add_default_lf_term_constant' identifier typ' in
-             let* () = add_module_declaration identifier in
              return
                (Synext.Signature.Declaration.Const
                   { location; identifier; typ = typ' }))
@@ -655,7 +638,6 @@ struct
         { location; identifier; kind } ->
         let* kind' = disambiguate_lf_kind kind in
         let* () = add_default_lf_type_constant' identifier kind' in
-        let* () = add_module_declaration identifier in
         return
           (Synext.Signature.Declaration.Typ
              { location; identifier; kind = kind' })
@@ -663,7 +645,6 @@ struct
         { location; identifier; typ } ->
         let* typ' = disambiguate_lf_typ typ in
         let* () = add_default_lf_term_constant' identifier typ' in
-        let* () = add_module_declaration identifier in
         return
           (Synext.Signature.Declaration.Const
              { location; identifier; typ = typ' })
@@ -673,7 +654,6 @@ struct
         let* () =
           add_default_inductive_comp_typ_constant' identifier kind'
         in
-        let* () = add_module_declaration identifier in
         return
           (Synext.Signature.Declaration.CompTyp
              { location
@@ -687,7 +667,6 @@ struct
         let* () =
           add_default_stratified_comp_typ_constant' identifier kind'
         in
-        let* () = add_module_declaration identifier in
         return
           (Synext.Signature.Declaration.CompTyp
              { location
@@ -701,7 +680,6 @@ struct
         let* () =
           add_default_coinductive_comp_typ_constant' identifier kind'
         in
-        let* () = add_module_declaration identifier in
         return
           (Synext.Signature.Declaration.CompCotyp
              { location; identifier; kind = kind' })
@@ -709,7 +687,6 @@ struct
         { location; identifier; typ } ->
         let* typ' = disambiguate_comp_typ typ in
         let* () = add_default_comp_constructor_constant' identifier typ' in
-        let* () = add_module_declaration identifier in
         return
           (Synext.Signature.Declaration.CompConst
              { location; identifier; typ = typ' })
@@ -718,7 +695,6 @@ struct
         let* observation_type' = disambiguate_comp_typ observation_type in
         let* return_type' = disambiguate_comp_typ return_type in
         let* () = add_computation_term_destructor identifier in
-        let* () = add_module_declaration identifier in
         return
           (Synext.Signature.Declaration.CompDest
              { location
@@ -733,7 +709,6 @@ struct
         let* () =
           add_default_abbreviation_comp_typ_constant' identifier kind'
         in
-        let* () = add_module_declaration identifier in
         return
           (Synext.Signature.Declaration.CompTypAbbrev
              { location; identifier; kind = kind'; typ = typ' })
@@ -741,7 +716,6 @@ struct
         { location; identifier; schema } ->
         let* schema' = disambiguate_schema schema in
         let* () = add_schema_constant identifier in
-        let* () = add_module_declaration identifier in
         return
           (Synext.Signature.Declaration.Schema
              { location; identifier; schema = schema' })
@@ -760,7 +734,6 @@ struct
           traverse_option disambiguate_totality_declaration order
         in
         let* () = add_program_constant identifier in
-        let* () = add_module_declaration identifier in
         let* body' = disambiguate_comp_expression body in
         return
           (Synext.Signature.Declaration.Theorem
@@ -777,7 +750,6 @@ struct
           traverse_option disambiguate_totality_declaration order
         in
         let* () = add_program_constant identifier in
-        let* () = add_module_declaration identifier in
         let* body' = with_scope (disambiguate_harpoon_proof body) in
         return
           (Synext.Signature.Declaration.Proof
@@ -792,7 +764,6 @@ struct
         let* typ' = traverse_option disambiguate_comp_typ typ in
         let* expression' = disambiguate_comp_expression expression in
         let* () = add_program_constant identifier in
-        let* () = add_module_declaration identifier in
         return
           (Synext.Signature.Declaration.Val
              { location; identifier; typ = typ'; expression = expression' })
@@ -810,7 +781,6 @@ struct
               return (meta_context', typ'))
         in
         let* () = add_query_opt identifier in
-        let* () = add_module_declaration_opt identifier in
         return
           (Synext.Signature.Declaration.Query
              { location
@@ -827,7 +797,6 @@ struct
             ~declarations:(traverse_list disambiguate_entry declarations)
             ~module_identifier:identifier
         in
-        let* () = add_module_declaration identifier in
         return
           (Synext.Signature.Declaration.Module
              { location; identifier; entries = entries' })

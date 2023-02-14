@@ -58,7 +58,6 @@ and add_json_entry json =
         | Fixity.Postfix -> Operator.make_postfix ~precedence
       in
       add_lf_type_constant operator identifier
-      <& add_module_declaration identifier
   | "lf_term_constant" ->
       let identifier = json |> member "identifier" |> identifier_of_json in
       let fixity = json |> member "fixity" |> fixity_of_json in
@@ -76,14 +75,10 @@ and add_json_entry json =
         | Fixity.Postfix -> Operator.make_postfix ~precedence
       in
       add_lf_term_constant operator identifier
-      <& add_module_declaration identifier
   | "module" ->
       let identifier = json |> member "identifier" |> identifier_of_json in
-      let* () =
-        with_module_declarations ~declarations:(add_json_entries json)
-          ~module_identifier:identifier
-      in
-      add_module_declaration identifier
+      with_module_declarations ~declarations:(add_json_entries json)
+        ~module_identifier:identifier
   | "parameter_variable" ->
       let identifier = json |> member "identifier" |> identifier_of_json in
       add_parameter_variable identifier
@@ -92,7 +87,7 @@ and add_json_entry json =
       add_context_variable identifier
   | "schema_constant" ->
       let identifier = json |> member "identifier" |> identifier_of_json in
-      add_schema_constant identifier <& add_module_declaration identifier
+      add_schema_constant identifier
   | "comp_inductive_type_constant" ->
       let identifier = json |> member "identifier" |> identifier_of_json in
       let fixity = json |> member "fixity" |> fixity_of_json in
@@ -110,7 +105,6 @@ and add_json_entry json =
         | Fixity.Postfix -> Operator.make_postfix ~precedence
       in
       add_inductive_computation_type_constant operator identifier
-      <& add_module_declaration identifier
   | "comp_constructor" ->
       let identifier = json |> member "identifier" |> identifier_of_json in
       let fixity = json |> member "fixity" |> fixity_of_json in
@@ -128,17 +122,13 @@ and add_json_entry json =
         | Fixity.Postfix -> Operator.make_postfix ~precedence
       in
       add_computation_term_constructor operator identifier
-      <& add_module_declaration identifier
   | "comp_destructor" ->
       let identifier = json |> member "identifier" |> identifier_of_json in
       add_computation_term_destructor identifier
-      <& add_module_declaration identifier
   | "program_constant" -> (
       let identifier = json |> member "identifier" |> identifier_of_json in
       match (member "fixity" json, member "precedence" json) with
-      | `Null, `Null ->
-          add_program_constant identifier
-          <& add_module_declaration identifier
+      | `Null, `Null -> add_program_constant identifier
       | `Null, _
       | _, `Null ->
           Error.raise Missing_fixity_or_precedence
@@ -157,8 +147,7 @@ and add_json_entry json =
                 Operator.make_infix ~associativity ~precedence
             | Fixity.Postfix -> Operator.make_postfix ~precedence
           in
-          add_program_constant ~operator identifier
-          <& add_module_declaration identifier)
+          add_program_constant ~operator identifier)
   | sort -> Error.raise (Unsupported_sort sort)
 
 let read_disambiguation_state filename =

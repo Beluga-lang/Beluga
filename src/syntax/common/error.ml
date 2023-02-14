@@ -449,6 +449,13 @@ let () =
     | cause -> raise_unsupported_exception_printing cause)
 
 let () =
+  Printexc.register_printer (fun exn ->
+      match find_printer_opt exn with
+      | Option.Some printer ->
+          Option.some (Format.asprintf "@[<v 0>%t@]@." printer)
+      | Option.None -> Option.none)
+
+let () =
   Printexc.set_uncaught_exception_handler (fun exn backtrace ->
       let exn_printer =
         match find_printer_opt exn with

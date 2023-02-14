@@ -567,9 +567,9 @@
                               "location": {
                                 "filename": "comp_kinds_ok.input.bel",
                                 "start_line": 16,
-                                "start_column": 48,
+                                "start_column": 47,
                                 "stop_line": 16,
-                                "stop_column": 47
+                                "stop_column": 48
                               }
                             }
                           ],
@@ -577,9 +577,9 @@
                           "location": {
                             "filename": "comp_kinds_ok.input.bel",
                             "start_line": 16,
-                            "start_column": 48,
+                            "start_column": 47,
                             "stop_line": 16,
-                            "stop_column": 47
+                            "stop_column": 48
                           }
                         }
                       ],

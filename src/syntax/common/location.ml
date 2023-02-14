@@ -7,17 +7,6 @@ type t =
   ; ghost : bool
   }
 
-let between ~start:l1 ~stop:l2 =
-  if l1.ghost then l2
-  else if l2.ghost then l1
-  else (
-    assert (String.equal l1.filename l2.filename);
-    { filename = l1.filename
-    ; start = l1.start
-    ; stop = l2.stop
-    ; ghost = false
-    })
-
 let join l1 l2 =
   if l1.ghost then l2
   else if l2.ghost then l1
@@ -67,17 +56,14 @@ let[@inline] start_column location = Position.column location.start
 
 let[@inline] stop_column location = Position.column location.stop
 
+let[@inline] make ~filename ~start_position ~stop_position =
+  { filename; start = start_position; stop = stop_position; ghost = false }
+
 let[@inline] initial filename =
-  { start = Position.initial
-  ; stop = Position.initial
-  ; ghost = false
-  ; filename
-  }
+  make ~filename ~start_position:Position.initial
+    ~stop_position:Position.initial
 
 let ghost = { (initial "_ghost") with ghost = true }
-
-let make ~filename ~start_position ~stop_position =
-  { filename; start = start_position; stop = stop_position; ghost = false }
 
 let make_from_lexing_positions ~filename ~start_position ~stop_position =
   let start_position' = Position.make_from_lexing_position start_position in

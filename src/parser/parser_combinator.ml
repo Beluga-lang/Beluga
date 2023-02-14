@@ -598,13 +598,26 @@ end) :
     and* x = p
     and* l2_opt = previous_location in
     match (l1_opt, l2_opt) with
+    | Option.None, Option.None ->
+        (* There are no tokens in the input stream *)
+        return (Location.ghost, x)
+    | Option.Some l1, Option.None -> return (l1, x)
     | Option.None, Option.Some l2 -> return (l2, x)
     | Option.Some l1, Option.Some l2 ->
-        let l = Location.between ~start:l1 ~stop:l2 in
+        let filename = Location.filename l1
+        and start_position = Location.start_position l1
+        and stop_position = Location.stop_position l2 in
+        let l =
+          if Position.(start_position < stop_position) then
+            (* The parser [p] consumed some tokens *)
+            Location.make ~filename ~start_position ~stop_position
+          else
+            (* The parser [p] did not consume any tokens, so this location
+               does not include any token *)
+            Location.make ~filename ~start_position:stop_position
+              ~stop_position:start_position
+        in
         return (l, x)
-    | _, Option.None ->
-        assert
-          false (* The parser [p] succeeded, so [l2_opt <> Option.none]. *)
 
   let eoi =
     let open State in

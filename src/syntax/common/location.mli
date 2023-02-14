@@ -28,17 +28,6 @@ val make :
   -> stop_position:Position.t
   -> t
 
-(** [between ~start ~stop] is the location starting at [start_position start]
-    and stopping at [stop_position stop].
-
-    It is assumed that [filename start = filename stop].
-
-    Ghost locations are left and right identities of [between], meaning that:
-
-    - If [is_ghost start], then [between ~start ~stop = stop].
-    - If [is_ghost stop], then [between ~start ~stop = start]. *)
-val between : start:t -> stop:t -> t
-
 (** [join l1 l2] is the smallest location that contains [l1] and [l2].
 
     It is assumed that [filename l1 = filename l2].

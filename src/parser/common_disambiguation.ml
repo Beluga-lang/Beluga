@@ -134,9 +134,9 @@ module type DISAMBIGUATION_STATE = sig
 
   exception Unbound_namespace of Qualified_identifier.t
 
-  val lookup_toplevel : Identifier.t -> (entry * data, exn) result t
+  val lookup_toplevel : Identifier.t -> (entry * data, exn) Result.t t
 
-  val lookup : Qualified_identifier.t -> (entry * data, exn) result t
+  val lookup : Qualified_identifier.t -> (entry * data, exn) Result.t t
 
   val partial_lookup :
        Qualified_identifier.t
@@ -191,11 +191,11 @@ module type DISAMBIGUATION_STATE = sig
 
   val with_parent_scope : 'a t -> 'a t
 
-  val add_inner_binding : Identifier.t -> Unit.t t
+  val add_inner_pattern_binding : Identifier.t -> Unit.t t
 
-  val with_inner_binding : Identifier.t -> 'a t -> 'a t
+  val with_inner_pattern_binding : Identifier.t -> 'a t -> 'a t
 
-  val is_inner_bound : Identifier.t -> Bool.t t
+  val is_inner_pattern_bound : Identifier.t -> Bool.t t
 
   exception Duplicate_pattern_variables of Identifier.t List2.t
 
@@ -228,13 +228,13 @@ module type DISAMBIGUATION_STATE = sig
 
   val add_pattern_comp_variable : Identifier.t -> Unit.t t
 
-  val add_declaration : Identifier.t -> Unit.t t
+  val add_module_declaration : Identifier.t -> Unit.t t
 
-  val update_declaration : Qualified_identifier.t -> Unit.t t
+  val update_module_declaration : Qualified_identifier.t -> Unit.t t
 
-  val is_inner_bound_declaration : Qualified_identifier.t -> Bool.t t
+  val is_inner_module_declaration : Qualified_identifier.t -> Bool.t t
 
-  val with_module_inner_declarations :
+  val with_module_declarations :
     declarations:'a t -> module_identifier:Identifier.t -> 'a t
 end
 
@@ -268,9 +268,6 @@ end = struct
     | Module
     | Program_constant
 
-  type pattern_variable_adder =
-    { run : 'a. (state -> state * 'a) -> state -> state * 'a }
-
   and state =
     | Disambiguation_state of { bindings : (entry * data) Binding_tree.t }
     | Signature_state of
@@ -278,10 +275,10 @@ end = struct
         ; default_associativity : Associativity.t
         }
     | Pattern_state of
-        { state : state
-        ; inner_bindings : Identifier.Set.t
+        { pattern_state : state
+        ; inner_pattern_bindings : Identifier.Set.t
         ; pattern_variables_rev : Identifier.t List.t
-        ; pattern_variable_adders_rev : pattern_variable_adder List.t
+        ; expression_state : state
         }
     | Module_state of
         { state : state
@@ -318,10 +315,11 @@ end = struct
         Error.raise_violation "[set_default_associativity] invalid state"
     | Signature_state o -> Signature_state { o with default_associativity }
     | Pattern_state o ->
-        let state' =
-          nested_set_default_associativity default_associativity o.state
+        let pattern_state' =
+          nested_set_default_associativity default_associativity
+            o.pattern_state
         in
-        Pattern_state { o with state = state' }
+        Pattern_state { o with pattern_state = pattern_state' }
     | Module_state o ->
         let state' =
           nested_set_default_associativity default_associativity o.state
@@ -337,7 +335,7 @@ end = struct
     | Disambiguation_state _ ->
         Error.raise_violation "[get_default_associativity] invalid state"
     | Signature_state o -> o.default_associativity
-    | Pattern_state o -> nested_get_default_associativity o.state
+    | Pattern_state o -> nested_get_default_associativity o.pattern_state
     | Module_state o -> nested_get_default_associativity o.state
     | Scope_state o -> nested_get_default_associativity o.state
 
@@ -354,8 +352,8 @@ end = struct
         let state' = nested_set_bindings bindings o.state in
         Signature_state { o with state = state' }
     | Pattern_state o ->
-        let state' = nested_set_bindings bindings o.state in
-        Pattern_state { o with state = state' }
+        let pattern_state' = nested_set_bindings bindings o.pattern_state in
+        Pattern_state { o with pattern_state = pattern_state' }
     | Module_state o ->
         let state' = nested_set_bindings bindings o.state in
         Module_state { o with state = state' }
@@ -364,7 +362,7 @@ end = struct
   let rec nested_get_bindings = function
     | Disambiguation_state { bindings } -> bindings
     | Signature_state o -> nested_get_bindings o.state
-    | Pattern_state o -> nested_get_bindings o.state
+    | Pattern_state o -> nested_get_bindings o.pattern_state
     | Module_state o -> nested_get_bindings o.state
     | Scope_state o -> o.bindings
 
@@ -676,43 +674,46 @@ end = struct
     | Module_state _ ->
         Error.raise_violation "[with_parent_scope] invalid state"
 
-  let[@inline] modify_inner_bindings f =
+  let[@inline] modify_inner_pattern_bindings f =
     modify (function
       | Pattern_state o ->
-          Pattern_state { o with inner_bindings = f o.inner_bindings }
+          let inner_pattern_bindings' = f o.inner_pattern_bindings in
+          Pattern_state
+            { o with inner_pattern_bindings = inner_pattern_bindings' }
       | Disambiguation_state _
       | Signature_state _
       | Module_state _
       | Scope_state _ ->
-          Error.raise_violation "[modify_inner_bindings] invalid state")
+          Error.raise_violation
+            "[modify_inner_pattern_bindings] invalid state")
 
   let get_inner_bindings =
     get >>= function
-    | Pattern_state o -> return o.inner_bindings
+    | Pattern_state o -> return o.inner_pattern_bindings
     | Disambiguation_state _
     | Signature_state _
     | Module_state _
     | Scope_state _ ->
         Error.raise_violation "[get_inner_bindings] invalid state"
 
-  let add_inner_binding identifier =
-    modify_inner_bindings (Identifier.Set.add identifier)
+  let add_inner_pattern_binding identifier =
+    modify_inner_pattern_bindings (Identifier.Set.add identifier)
 
-  let with_inner_binding identifier m =
-    with_bindings_checkpoint (add_inner_binding identifier &> m)
+  let with_inner_pattern_binding identifier m =
+    with_bindings_checkpoint (add_inner_pattern_binding identifier &> m)
 
-  let is_inner_bound identifier =
-    let* inner_bindings = get_inner_bindings in
-    return (Identifier.Set.mem identifier inner_bindings)
+  let is_inner_pattern_bound identifier =
+    let* inner_pattern_bindings = get_inner_bindings in
+    return (Identifier.Set.mem identifier inner_pattern_bindings)
 
   let add_pattern_variable identifier f =
     modify (function
       | Pattern_state o ->
+          let expression_state' = exec f o.expression_state in
           Pattern_state
             { o with
               pattern_variables_rev = identifier :: o.pattern_variables_rev
-            ; pattern_variable_adders_rev =
-                f :: o.pattern_variable_adders_rev
+            ; expression_state = expression_state'
             }
       | Disambiguation_state _
       | Signature_state _
@@ -720,23 +721,17 @@ end = struct
       | Scope_state _ ->
           Error.raise_violation "[add_pattern_variable] invalid state")
 
-  let get_pattern_variables =
+  let get_pattern_variables_and_expression_state =
     get >>= function
-    | Pattern_state o -> return (List.rev o.pattern_variables_rev)
+    | Pattern_state o ->
+        let pattern_variables = List.rev o.pattern_variables_rev in
+        return (pattern_variables, o.expression_state)
     | Disambiguation_state _
     | Signature_state _
     | Module_state _
     | Scope_state _ ->
-        Error.raise_violation "[get_pattern_variables] invalid state"
-
-  let get_pattern_variable_adders =
-    get >>= function
-    | Pattern_state o -> return (List.rev o.pattern_variable_adders_rev)
-    | Disambiguation_state _
-    | Signature_state _
-    | Module_state _
-    | Scope_state _ ->
-        Error.raise_violation "[get_pattern_variable_adders] invalid state"
+        Error.raise_violation
+          "[get_pattern_variables_and_expression_state] invalid state"
 
   exception Duplicate_pattern_variables of Identifier.t List2.t
 
@@ -745,85 +740,65 @@ end = struct
     let* () =
       put
         (Pattern_state
-           { state
-           ; inner_bindings = Identifier.Set.empty
+           { pattern_state = state
+           ; inner_pattern_bindings = Identifier.Set.empty
            ; pattern_variables_rev = []
-           ; pattern_variable_adders_rev = []
+           ; expression_state = state
            })
     in
     let* pattern' = pattern in
-    let* pattern_variables = get_pattern_variables in
+    let* pattern_variables, expression_state =
+      get_pattern_variables_and_expression_state
+    in
     match Identifier.find_duplicates pattern_variables with
     | Option.Some duplicates ->
+        let* () = put state in
         Error.raise (Duplicate_pattern_variables duplicates)
     | Option.None ->
-        let* pattern_variable_adders = get_pattern_variable_adders in
+        let* () = put expression_state in
+        let* expression' = expression in
         let* () = put state in
-        let expression_with_pattern_variables =
-          List.fold_left
-            (fun accumulator adder -> adder.run accumulator)
-            expression pattern_variable_adders
-        in
-        map
-          (fun expression' -> (pattern', expression'))
-          expression_with_pattern_variables
+        return (pattern', expression')
 
   let with_inner_bound_lf_term_variable ?location identifier f =
-    with_inner_binding identifier
+    with_inner_pattern_binding identifier
       (with_lf_term_variable ?location identifier f)
 
   let with_inner_bound_meta_variable ?location identifier f =
-    with_inner_binding identifier (with_meta_variable ?location identifier f)
+    with_inner_pattern_binding identifier
+      (with_meta_variable ?location identifier f)
 
   let with_inner_bound_parameter_variable ?location identifier f =
-    with_inner_binding identifier
+    with_inner_pattern_binding identifier
       (with_parameter_variable ?location identifier f)
 
   let with_inner_bound_substitution_variable ?location identifier f =
-    with_inner_binding identifier
+    with_inner_pattern_binding identifier
       (with_substitution_variable ?location identifier f)
 
   let with_inner_bound_context_variable ?location identifier f =
-    with_inner_binding identifier
+    with_inner_pattern_binding identifier
       (with_context_variable ?location identifier f)
 
-  let lf_term_variable_adder identifier =
-    { run = (fun m -> with_lf_term_variable identifier m) }
-
-  let meta_variable_adder identifier =
-    { run = (fun m -> with_meta_variable identifier m) }
-
-  let parameter_variable_adder identifier =
-    { run = (fun m -> with_parameter_variable identifier m) }
-
-  let substitution_variable_adder identifier =
-    { run = (fun m -> with_substitution_variable identifier m) }
-
-  let context_variable_adder identifier =
-    { run = (fun m -> with_context_variable identifier m) }
-
-  let comp_variable_adder identifier =
-    { run = (fun m -> with_comp_variable identifier m) }
-
   let add_pattern_lf_term_variable identifier =
-    add_pattern_variable identifier (lf_term_variable_adder identifier)
+    add_pattern_variable identifier (add_lf_term_variable identifier)
 
   let add_pattern_meta_variable identifier =
-    add_pattern_variable identifier (meta_variable_adder identifier)
+    add_pattern_variable identifier (add_meta_variable identifier)
 
   let add_pattern_parameter_variable identifier =
-    add_pattern_variable identifier (parameter_variable_adder identifier)
+    add_pattern_variable identifier (add_parameter_variable identifier)
 
   let add_pattern_substitution_variable identifier =
-    add_pattern_variable identifier (substitution_variable_adder identifier)
+    add_pattern_variable identifier (add_substitution_variable identifier)
 
   let add_pattern_context_variable identifier =
-    add_pattern_variable identifier (context_variable_adder identifier)
+    add_pattern_variable identifier (add_context_variable identifier)
 
   let add_pattern_comp_variable identifier =
-    add_pattern_variable identifier (comp_variable_adder identifier)
+    add_pattern_variable identifier (add_computation_variable identifier)
 
-  let add_declaration identifier =
+  let add_module_declaration identifier =
     let* bindings = get_bindings in
     let entry, subtree = Binding_tree.lookup_toplevel identifier bindings in
     modify (function
@@ -836,9 +811,9 @@ end = struct
       | (Signature_state _ | Scope_state _) as state -> state
       | Disambiguation_state _
       | Pattern_state _ ->
-          Error.raise_violation "[add_declaration] invalid state")
+          Error.raise_violation "[add_module_declaration] invalid state")
 
-  let update_declaration identifier =
+  let update_module_declaration identifier =
     let* bindings = get_bindings in
     let entry, subtree = Binding_tree.lookup identifier bindings in
     modify (function
@@ -851,9 +826,9 @@ end = struct
       | Disambiguation_state _
       | Pattern_state _
       | Scope_state _ ->
-          Error.raise_violation "[update_declaration] invalid state")
+          Error.raise_violation "[update_module_declaration] invalid state")
 
-  let is_inner_bound_declaration identifier =
+  let is_inner_module_declaration identifier =
     get >>= function
     | Signature_state _ -> return false
     | Module_state o ->
@@ -863,7 +838,7 @@ end = struct
     | Disambiguation_state _
     | Pattern_state _
     | Scope_state _ ->
-        Error.raise_violation "[is_inner_bound_declaration] invalid state"
+        Error.raise_violation "[is_inner_module_declaration] invalid state"
 
   let get_declarations =
     get >>= function
@@ -874,7 +849,7 @@ end = struct
         Error.raise_violation "[get_declarations] invalid state"
     | Module_state o -> return o.declarations
 
-  let with_module_inner_declarations ~declarations ~module_identifier =
+  let with_module_declarations ~declarations ~module_identifier =
     let* state = get in
     let* () =
       put (Module_state { state; declarations = Binding_tree.empty })

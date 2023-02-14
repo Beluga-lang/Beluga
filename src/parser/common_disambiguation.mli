@@ -85,9 +85,9 @@ module type DISAMBIGUATION_STATE = sig
 
   exception Unbound_namespace of Qualified_identifier.t
 
-  val lookup_toplevel : Identifier.t -> (entry * data, exn) result t
+  val lookup_toplevel : Identifier.t -> (entry * data, exn) Result.t t
 
-  val lookup : Qualified_identifier.t -> (entry * data, exn) result t
+  val lookup : Qualified_identifier.t -> (entry * data, exn) Result.t t
 
   val partial_lookup :
        Qualified_identifier.t
@@ -142,11 +142,11 @@ module type DISAMBIGUATION_STATE = sig
 
   val with_parent_scope : 'a t -> 'a t
 
-  val add_inner_binding : Identifier.t -> Unit.t t
+  val add_inner_pattern_binding : Identifier.t -> Unit.t t
 
-  val with_inner_binding : Identifier.t -> 'a t -> 'a t
+  val with_inner_pattern_binding : Identifier.t -> 'a t -> 'a t
 
-  val is_inner_bound : Identifier.t -> Bool.t t
+  val is_inner_pattern_bound : Identifier.t -> Bool.t t
 
   exception Duplicate_pattern_variables of Identifier.t List2.t
 
@@ -179,13 +179,13 @@ module type DISAMBIGUATION_STATE = sig
 
   val add_pattern_comp_variable : Identifier.t -> Unit.t t
 
-  val add_declaration : Identifier.t -> Unit.t t
+  val add_module_declaration : Identifier.t -> Unit.t t
 
-  val update_declaration : Qualified_identifier.t -> Unit.t t
+  val update_module_declaration : Qualified_identifier.t -> Unit.t t
 
-  val is_inner_bound_declaration : Qualified_identifier.t -> Bool.t t
+  val is_inner_module_declaration : Qualified_identifier.t -> Bool.t t
 
-  val with_module_inner_declarations :
+  val with_module_declarations :
     declarations:'a t -> module_identifier:Identifier.t -> 'a t
 end
 

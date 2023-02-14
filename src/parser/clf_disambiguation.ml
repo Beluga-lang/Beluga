@@ -1090,14 +1090,14 @@ struct
             let term' =
               Synext.CLF.Term.Parameter_variable { location; identifier }
             in
-            is_inner_bound identifier >>= function
+            is_inner_pattern_bound identifier >>= function
             | true ->
                 (* A separate free occurrence of the variable has already
                    occurred, so we don't duplicate it. *)
                 return term'
             | false ->
                 let* () = add_pattern_parameter_variable identifier in
-                let* () = add_inner_binding identifier in
+                let* () = add_inner_pattern_binding identifier in
                 return term')
         | Result.Error cause -> Error.raise_at1 location cause)
     | Synprs.CLF.Object.Raw_identifier
@@ -1123,14 +1123,14 @@ struct
             let term' =
               Synext.CLF.Term.Substitution_variable { location; identifier }
             in
-            is_inner_bound identifier >>= function
+            is_inner_pattern_bound identifier >>= function
             | true ->
                 (* A separate free occurrence of the variable has already
                    occurred, so we don't duplicate it. *)
                 return term'
             | false ->
                 let* () = add_pattern_substitution_variable identifier in
-                let* () = add_inner_binding identifier in
+                let* () = add_inner_pattern_binding identifier in
                 return term')
         | Result.Error cause -> Error.raise_at1 location cause)
     | Synprs.CLF.Object.Raw_identifier
@@ -1164,14 +1164,14 @@ struct
                abstraction phase of term reconstruction. It is added as an
                inner binding to simulate that binder. *)
             let term' = Synext.CLF.Term.Variable { location; identifier } in
-            is_inner_bound identifier >>= function
+            is_inner_pattern_bound identifier >>= function
             | true ->
                 (* A separate free occurrence of the variable has already
                    occurred, so we don't duplicate it. *)
                 return term'
             | false ->
                 let* () = add_pattern_lf_term_variable identifier in
-                let* () = add_inner_binding identifier in
+                let* () = add_inner_pattern_binding identifier in
                 return term')
         | Result.Error cause -> Error.raise_at1 location cause)
     | Synprs.CLF.Object.Raw_qualified_identifier
@@ -1209,14 +1209,14 @@ struct
                 { location; identifier = free_variable }
             in
             let term' = reduce_projections term projections in
-            is_inner_bound free_variable >>= function
+            is_inner_pattern_bound free_variable >>= function
             | true ->
                 (* A separate free occurrence of the variable has already
                    occurred, so we don't duplicate it. *)
                 return term'
             | false ->
                 let* () = add_pattern_lf_term_variable free_variable in
-                let* () = add_inner_binding free_variable in
+                let* () = add_inner_pattern_binding free_variable in
                 return term')
         | `Partially_bound
             ( List1.T
@@ -1384,14 +1384,14 @@ struct
     match binding with
     | Option.Some identifier, typ (* Typed binding *) ->
         let* typ' = disambiguate_clf_typ typ in
-        with_inner_binding identifier
+        with_inner_pattern_binding identifier
           (with_lf_term_variable identifier
              (f (identifier, Option.some typ')))
     | ( Option.None
       , Synprs.CLF.Object.Raw_identifier
           { identifier = identifier, `Plain; _ } )
     (* Untyped contextual LF variable *) ->
-        with_inner_binding identifier
+        with_inner_pattern_binding identifier
           (with_lf_term_variable identifier (f (identifier, Option.none)))
     | ( Option.None
       , Synprs.CLF.Object.Raw_identifier
@@ -1538,11 +1538,11 @@ struct
         let pattern' =
           Synext.CLF.Term.Pattern.Parameter_variable { location; identifier }
         in
-        is_inner_bound identifier >>= function
+        is_inner_pattern_bound identifier >>= function
         | true -> return pattern'
         | false ->
             let* () = add_pattern_parameter_variable identifier in
-            let* () = add_inner_binding identifier in
+            let* () = add_inner_pattern_binding identifier in
             return pattern')
     | Synprs.CLF.Object.Raw_identifier
         { location; identifier = identifier, `Dollar; _ } -> (
@@ -1550,11 +1550,11 @@ struct
           Synext.CLF.Term.Pattern.Substitution_variable
             { location; identifier }
         in
-        is_inner_bound identifier >>= function
+        is_inner_pattern_bound identifier >>= function
         | true -> return pattern'
         | false ->
             let* () = add_pattern_substitution_variable identifier in
-            let* () = add_inner_binding identifier in
+            let* () = add_inner_pattern_binding identifier in
             return pattern')
     | Synprs.CLF.Object.Raw_identifier
         { location; identifier = identifier, `Plain; prefixed; _ } -> (
@@ -1579,22 +1579,22 @@ struct
             let pattern' =
               Synext.CLF.Term.Pattern.Variable { location; identifier }
             in
-            is_inner_bound identifier >>= function
+            is_inner_pattern_bound identifier >>= function
             | true -> return pattern'
             | false ->
                 let* () = add_pattern_lf_term_variable identifier in
-                let* () = add_inner_binding identifier in
+                let* () = add_inner_pattern_binding identifier in
                 return pattern')
         | Result.Ok _
         | Result.Error (Unbound_identifier _) -> (
             let pattern' =
               Synext.CLF.Term.Pattern.Variable { location; identifier }
             in
-            is_inner_bound identifier >>= function
+            is_inner_pattern_bound identifier >>= function
             | true -> return pattern'
             | false ->
                 let* () = add_pattern_lf_term_variable identifier in
-                let* () = add_inner_binding identifier in
+                let* () = add_inner_pattern_binding identifier in
                 return pattern')
         | Result.Error cause -> Error.raise_at1 location cause)
     | Synprs.CLF.Object.Raw_qualified_identifier
@@ -1629,11 +1629,11 @@ struct
                 { location; identifier = free_variable }
             in
             let term' = reduce_projections term projections in
-            is_inner_bound free_variable >>= function
+            is_inner_pattern_bound free_variable >>= function
             | true -> return term'
             | false ->
                 let* () = add_pattern_lf_term_variable free_variable in
-                let* () = add_inner_binding free_variable in
+                let* () = add_inner_pattern_binding free_variable in
                 return term')
         | `Partially_bound
             ( List1.T
@@ -1650,11 +1650,11 @@ struct
             let term' =
               reduce_projections term (List1.to_list unbound_segments)
             in
-            is_inner_bound variable_identifier >>= function
+            is_inner_pattern_bound variable_identifier >>= function
             | true -> return term'
             | false ->
                 let* () = add_pattern_lf_term_variable variable_identifier in
-                let* () = add_inner_binding variable_identifier in
+                let* () = add_inner_pattern_binding variable_identifier in
                 return term')
         | `Partially_bound (List1.T (_, []), unbound_segments)
         | `Partially_bound (_, unbound_segments)
@@ -1791,7 +1791,7 @@ struct
               ; terms = terms'
               }
             in
-            is_inner_bound identifier >>= function
+            is_inner_pattern_bound identifier >>= function
             | true ->
                 (* The substitution variable is explicitly bound in the
                    pattern we are currently disambiguating. We do not add it
@@ -1804,7 +1804,7 @@ struct
                    will be introduced during the abstraction phase of term
                    reconstruction. *)
                 let* () = add_pattern_substitution_variable identifier in
-                let* () = add_inner_binding identifier in
+                let* () = add_inner_pattern_binding identifier in
                 return substitution')
         | Synprs.CLF.Object.Raw_identifier
             { location; identifier = identifier, `Dollar; _ }
@@ -1821,7 +1821,7 @@ struct
               ; terms = terms'
               }
             in
-            is_inner_bound identifier >>= function
+            is_inner_pattern_bound identifier >>= function
             | true ->
                 (* The substitution variable is explicitly bound in the
                    pattern we are currently disambiguating. We do not add it
@@ -1834,7 +1834,7 @@ struct
                    will be introduced during the abstraction phase of term
                    reconstruction. *)
                 let* () = add_pattern_substitution_variable identifier in
-                let* () = add_inner_binding identifier in
+                let* () = add_inner_pattern_binding identifier in
                 return substitution')
         | objects' ->
             let head' =
@@ -1871,7 +1871,7 @@ struct
     | Option.Some identifier, typ ->
         let* typ' = disambiguate_clf_typ typ in
         let y = (identifier, typ') in
-        with_inner_binding identifier
+        with_inner_pattern_binding identifier
           (with_lf_term_variable identifier (f y))
     | ( Option.None
       , Synprs.CLF.Object.Raw_identifier
@@ -1948,7 +1948,7 @@ struct
               Synext.CLF.Context.Pattern.Head.Context_variable
                 { identifier; location = Identifier.location identifier }
             in
-            is_inner_bound identifier >>= function
+            is_inner_pattern_bound identifier >>= function
             | true ->
                 (* The context variable is explicitly bound in the pattern we
                    are currently disambiguating. We do not add it to the
@@ -1967,7 +1967,7 @@ struct
                    will be introduced during the abstraction phase of term
                    reconstruction. *)
                 let* () = add_pattern_context_variable identifier in
-                let* () = add_inner_binding identifier in
+                let* () = add_inner_pattern_binding identifier in
                 with_disambiguated_context_pattern_bindings_list bindings
                   (fun bindings' ->
                     f

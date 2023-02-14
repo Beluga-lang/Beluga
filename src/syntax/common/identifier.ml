@@ -33,8 +33,13 @@ module type SHOW = Show.SHOW
 
 module Set = Set.Make (Ord)
 
-module Show : SHOW with type t = t =
-  (val Show.contramap (module String) name)
+module Show : SHOW with type t = t = struct
+  type nonrec t = t
+
+  let pp ppf x = Format.pp_utf_8 ppf (name x)
+
+  let show = name
+end
 
 include (Show : SHOW with type t := t)
 

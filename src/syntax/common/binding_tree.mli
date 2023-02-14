@@ -69,3 +69,10 @@ val is_qualified_identifier_bound : Qualified_identifier.t -> 'a t -> bool
     being the result of [lookup identifier tree]. *)
 val replace :
   Qualified_identifier.t -> ('a -> 'a t -> 'a * 'a t) -> 'a t -> 'a t
+
+(** [size tree] is the total number of key-value pairs in [tree]. *)
+val size : 'a t -> int
+
+(** [to_seq tree] is the sequence of values mapped by qualified identifier in
+    [tree]. *)
+val to_seq : 'a t -> (Qualified_identifier.t * 'a) Seq.t

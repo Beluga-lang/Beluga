@@ -167,8 +167,6 @@ module type DISAMBIGUATION_STATE = sig
 
   val actual_binding_exn : Qualified_identifier.t -> entry * data -> exn
 
-  val open_namespace : Qualified_identifier.t -> Unit.t t
-
   val open_module : Qualified_identifier.t -> Unit.t t
 
   val with_lf_term_variable :
@@ -835,10 +833,9 @@ end = struct
               o.declarations
           in
           Module_state { o with declarations = declarations' }
-      | Signature_state _ as state -> state
+      | (Signature_state _ | Scope_state _) as state -> state
       | Disambiguation_state _
-      | Pattern_state _
-      | Scope_state _ ->
+      | Pattern_state _ ->
           Error.raise_violation "[add_declaration] invalid state")
 
   let update_declaration identifier =

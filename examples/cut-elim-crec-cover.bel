@@ -14,7 +14,7 @@ LF o : type =  % formulas
 LF hyp  : o -> type = ;  % Hypotheses (left)
 LF conc : o -> type =  % Conclusion (right)
   | axiom   : (hyp A -> conc A)
-  | truer   : conc (true)
+  | truer   : conc true
   | impr    : (hyp A -> conc B) -> conc (imp A B)
   | impl    : conc A -> (hyp B -> conc C) -> (hyp (imp A B) -> conc C)
   | notr    : ({p:o}hyp A -> conc p) -> conc (not A)
@@ -149,7 +149,7 @@ fn e => case e of
 % car_notl : ca A D ([h:hyp A] notl (E1 h) H) (notl E1' H)
 % 	    <- ca A D E1 E1'.
 %
-% car_truer: ca A D ([h:hyp A] truer) (truer).
+% car_truer: ca A D ([h:hyp A] truer) truer.
 %
 % car_forallr : ca A D ([h:hyp A] forallr (E1 h)) (forallr E1')
 % 	       <- ({a:i} ca A D ([h:hyp A] E1 h a) (E1' a)).

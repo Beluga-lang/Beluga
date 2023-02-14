@@ -21,11 +21,11 @@ fn d => fn c => case c of
 
    [ |- tr_1 (vtr_lam (tr_lam (\w. \x. \v. C2)))]  =>
      let [ |- ev_lam] = d in
-        [ |- fev_vtrans (fev_1) (vtr_lam (tr_lam (\w. \x. \v. C2)))]
+        [ |- fev_vtrans fev_1 (vtr_lam (tr_lam (\w. \x. \v. C2)))]
 
  | [ |- tr_lam (\w. \x. \u. C1)] =>
    let [ |- ev_lam] = d in
-        [ |- fev_vtrans (fev_lam) (vtr_lam (tr_lam (\w.\x.\u. C1)))]
+        [ |- fev_vtrans fev_lam (vtr_lam (tr_lam (\w.\x.\u. C1)))]
 
  | [ |- tr_^ C1] =>
      let [ |- fev_vtrans  D1' U1] = (map_eval d) [ |- C1] in

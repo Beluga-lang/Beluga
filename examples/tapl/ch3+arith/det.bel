@@ -79,7 +79,7 @@ fn s => case s of
 | [ |- andalso (e_succ D)        (e_succ F)]   =>
   let [ |- ref] = det [ |- andalso D F] in [ |- ref]
 
-| [ |- andalso (e_pred_zero)     (e_pred_zero)]    => [ |- ref]
+| [ |- andalso e_pred_zero     e_pred_zero]    => [ |- ref]
 
 | [ |- andalso (e_pred_succ _ )  (e_pred_succ _ )] => [ |- ref]
 

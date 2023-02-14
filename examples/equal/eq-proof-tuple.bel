@@ -43,7 +43,7 @@ rec eqfun : {g:w} {U:[g |- exp]} [g |- eq U U] =
    | [g |- app A1 A2]  : [g |- exp]=>
        let [g |- EQ1] = eqfun [g] [g |- A1] in
        let [g |- EQ2] = eqfun [g] [g |- A2] in
-          [g |- eq_app (EQ1) (EQ2)]
+          [g |- eq_app EQ1 EQ2]
 
 ;
 
@@ -66,9 +66,9 @@ schema w = block x:exp, _t:eq x x;
 
 % General transitivity is admissible
 rec trans: {g:w}       %   {TT::exp[g]} {RR::exp[g]} {SS::exp[g]}
-   [g |- eq (TT) (RR)]  % e1 : eq T R
--> [g |- eq (RR) (SS)]  % e2 : eq R S
--> [g |- eq (TT) (SS)]  % result : eq T S
+   [g |- eq TT RR]  % e1 : eq T R
+-> [g |- eq RR SS]  % e2 : eq R S
+-> [g |- eq TT SS]  % result : eq T S
 =
 / total e1 (trans g t r s e1)/
   mlam g =>

@@ -124,7 +124,7 @@ mlam Q => fn d1 => fn d2 => case d1 of
    {D1:[g |- sub (#p.1) U]}
   [g |- (#p.2) U Q D2 D1] =>
   let [g |- F'] = trans [g |- Q] [g |- D2] d2 in
-    [g |- (#p.2)  U _  (F') D1]
+    [g |- (#p.2)  U _  F' D1]
 
 | [g |- sa_top] => let  [g |- sa_top] = d2 in [g |- sa_top]
 

@@ -48,7 +48,7 @@ rec vhoas2db : {g:ctx}[g |- value S] ->  [g |- exp' S] =
 mlam g => fn v =>  case v of
  | [h,x:value T  |-  x] => [h, x:value T |-  one (T[..])]
 
- |  {#p:#[h |- value (S')]}
+ |  {#p:#[h |- value S']}
    [h,x:value T  |-  #p[..]] =>
    let [g |- Db] = vhoas2db [h] [h |- #p] in
      [g,x:value T  |-  shift (S'[..])  (Db[..])]
@@ -69,18 +69,18 @@ mlam g => fn v =>  case v of
 and rec hoas2db : {g:ctx} [g |- exp T] ->  [g |- exp' T ] =
 % / total e (hoas2db _ _ e ) /
 mlam g => fn e =>  case e of
- | [g |- app (E1 ) (E2 )] =>
+ | [g |- app E1 E2] =>
    let [g |- F1] = hoas2db [g] [g |- E1]  in
    let [g |- F2] = hoas2db [g] [g |- E2]  in
      [g |- app' F1 F2]
  | [g |- ret V] =>
    vhoas2db [g] [g |- V ]
- | [g |- tapp (E ) T] =>
+ | [g |- tapp E T] =>
      let [g |- F] = hoas2db [g] [g |- E ] in
-     [g |- tapp' (F ) (T )]
+     [g |- tapp' F T]
 ;
 
-rec todbruijn : {g':tctx}[g' |-  exp (S )] -> [g' |-  exp' S] =
+rec todbruijn : {g':tctx}[g' |-  exp S] -> [g' |-  exp' S] =
 mlam g' => fn e =>  hoas2db [g'] e ;
 
 

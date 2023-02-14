@@ -68,14 +68,14 @@ fn h =>  case h of
     [g,x:i |- H'] =
       ded [g, x:i, u: hil A[..] |-  H[..,x,u]]
   in
-     [g |- mp f2 (ug  \x. (H'))]
+     [g |- mp f2 (ug  \x. H')]
 
 | % {H1 : [g, u : hil A |-  hil (imp B1 B2)]}
   % {H2 : [g, u : hil A |-  hil B1]}
   [g, u: hil A  |- mp H1 H2] =>
   let [g |- H2'] = ded [g,u: hil A |- H2] in
   let [g |- H1'] = ded [g,u: hil A |- H1] in
-       [g |- mp (mp s (H1')) (H2')]
+       [g |- mp (mp s H1') H2']
 
 ;
 
@@ -123,7 +123,7 @@ fn d =>  case d of
       ndhil [g, w : block (_t:nd B1, u:hil (B1[..]) ), p:o |-  D[..,w.1,p]] in
   let [g |- H1']  = ded [g,u |- H[..,u,(not (A[..]))]] in
   let [g |- H1''] = ded [g,u |- H[..,u,(A[..])]] in
-    [g |- mp (mp n1 (H1')) (H1'')]
+    [g |- mp (mp n1 H1') H1'']
 
 ;
 

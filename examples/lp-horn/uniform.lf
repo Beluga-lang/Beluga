@@ -12,7 +12,7 @@ focus  : o -> p -> type.  % immediate entailment
 
 s_and  : solve A2 -> solve A1 -> solve (conj A1 A2).
 
-s_true : solve (true).
+s_true : solve true.
 
 s_atom : focus A P -> assume A -> solve (atom P).
 

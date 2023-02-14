@@ -308,7 +308,7 @@ fn d => case d of
   (case terminate [ |- D ] of
    | [ |- result MS (v_num v_z)] =>
      let [ |- MS']         = mstep_pred [ |- MS] in
-       [ |- result (ms_tr MS' (ms_step (e_pred_zero))) (v_num v_z)]
+       [ |- result (ms_tr MS' (ms_step e_pred_zero)) (v_num v_z)]
    | [ |- result MS (v_num (v_s V))] =>
      let [ |- MS']         = mstep_pred [ |- MS] in
        [ |- result (ms_tr MS' (ms_step (e_pred_succ V))) (v_num V)]
@@ -320,7 +320,7 @@ fn d => case d of
   (case terminate [|- D] of
    | [ |- result MS (v_num v_z)] =>
      let [ |- MS']         = mstep_iszero [ |- MS] in
-       [ |- result (ms_tr MS' (ms_step (e_iszero_zero))) v_true]
+       [ |- result (ms_tr MS' (ms_step e_iszero_zero)) v_true]
    | [ |- result MS (v_num (v_s V))] =>
      let [ |- MS']         = mstep_iszero [ |- MS] in
        [ |- result (ms_tr MS' (ms_step (e_iszero_succ V))) v_false]

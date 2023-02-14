@@ -109,7 +109,7 @@ tp_fix : ({x:exp} oft x T -> oft (E x) T)
 tps : eval E V -> oft E T -> oft V T -> type.
 
 
-tps_z     : tps (ev_z) (tp_z) (tp_z).
+tps_z     : tps ev_z tp_z tp_z.
 tps_s     : tps D1 P1 Q1
 	  -> tps (ev_s D1) (tp_s P1) (tp_s Q1).
 
@@ -141,7 +141,7 @@ tps_app  :  tps D3 (Q1' _ Q2) Q3 ->
           -> tps (ev_app D3 D2 D1) (tp_app P2 P1) Q3.
 
 
-tps_lam  : tps (ev_lam) (tp_lam (\ x . \ u . P x u)) (tp_lam (\ x . \ u . P x u)).
+tps_lam  : tps ev_lam (tp_lam (\ x . \ u . P x u)) (tp_lam (\ x . \ u . P x u)).
 
 
 

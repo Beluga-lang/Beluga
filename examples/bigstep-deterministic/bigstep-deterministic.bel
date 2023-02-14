@@ -19,11 +19,11 @@ rec eval_respects_eq :
 -> [g |- eval N R] =
 / total f (eval_respects_eq g m n r e f ) /
 fn d => fn f => case f of
- | [g |- eval_app2 D1 (NL) D2] =>
+ | [g |- eval_app2 D1 NL D2] =>
    let [g |- eq_app F1 F2] = d in
    let [g |- E1] = eval_respects_eq [g |- F1] [g |- D1] in
    let [g |- E2] = eval_respects_eq [g |- F2] [g |- D2] in
-   [g |- eval_app2 E1 (NL) E2]
+   [g |- eval_app2 E1 NL E2]
 
  | [g |- eval_lam (\x.\u.\v. M')] =>
    let [g |- eq_lam (\x.\u. F1)] = d in
@@ -48,14 +48,14 @@ fn d => fn f => case f of
 
 ;
 
-rec deterministic : (g:evctx) [g |- eval M R] -> [g |- eval M (R')]
--> [g |- eq R (R')] =
+rec deterministic : (g:evctx) [g |- eval M R] -> [g |- eval M R']
+-> [g |- eq R R'] =
 / total d (deterministic g m r r' d)/
 fn d => fn f =>
 case d of
-| [g |- eval_app2 D1 (NL) D2] =>
+| [g |- eval_app2 D1 NL D2] =>
   (case f of
-    | [g |- eval_app2 F1 (NL') F2] =>
+    | [g |- eval_app2 F1 NL' F2] =>
       let [g |- E1] = deterministic [g |- D1] [g |- F1] in
       let [g |- E2] = deterministic [g |- D2] [g |- F2] in
       [g |- eq_app E1 E2]
@@ -84,7 +84,7 @@ case d of
       let [g |- F3] = eval_respects_eq [g |- E3] [g |- F2] in
       deterministic [g |- D2] [g |- F3]
 
-    | [g |- eval_app2 F1 (NL) F2] =>
+    | [g |- eval_app2 F1 NL F2] =>
       let [g |- eq_lam (\x.\u. E1)] =
          deterministic [g |- D1] [g |- F1] in
       impossible [g |- NL] )

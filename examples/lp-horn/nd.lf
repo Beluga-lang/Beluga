@@ -25,7 +25,7 @@ ander   : pf (conj A B) -> pf B.
 impi    : (pf A -> pf B) -> pf (imp A B).
 impe    : pf (imp A B) -> pf A -> pf B.
 
-truei   : pf (true).
+truei   : pf true.
 
 foralli : ({a:i} pf (A a)) -> pf (forall (\x. A x)).
 foralle : pf (forall (\x. A x)) -> {T:i} pf (A T).

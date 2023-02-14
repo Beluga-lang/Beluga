@@ -83,15 +83,15 @@ rec mstep_trans : (g:tctx) [g |-  mstep M N] -> [g |-  mstep N P] -> [g |-  mste
 / total s1 (mstep_trans g m n p s1 s2) /
 fn s1 => fn s2 => case s1 of
 | [g |-  refl] => let [g |-  S2] = s2 in [g |-  S2]
-| [g |-  trans1 S1 (MS1)] => let [g |-  MSR] = mstep_trans [g |-  MS1] s2 in
-  [g |-  trans1 S1 (MSR)]
+| [g |-  trans1 S1 MS1] => let [g |-  MSR] = mstep_trans [g |-  MS1] s2 in
+  [g |-  trans1 S1 MSR]
 ;
 
 % Boxed form of trans1 for convenience
 rec trans1' : (g:tctx) [g |-  step M N] -> [g |-  mstep N P] -> [g |-  mstep M P] =
 / total (trans1') /
 fn s1 => fn s2 => case (s1,s2) of
-| ([g |-  S], [g |-  MS]) => [g |-  trans1 S (MS)]
+| ([g |-  S], [g |-  MS]) => [g |-  trans1 S MS]
 ; % TODO: Are these actually necessary?
 
 % multi-step reduction under the function position of application
@@ -99,7 +99,7 @@ rec mstep_app : (g:tctx) [g |-  mstep M N] -> [g |-  mstep (app M P) (app N P)] 
 / total s1 (mstep_app g m n p s1) /
 fn s1 => case s1 of
 | [g |-  refl] => [g |-  refl]
-| [g |-  trans1 S (MS)] => trans1' [g |-  stepapp S] (mstep_app [g |-  MS]);
+| [g |-  trans1 S MS] => trans1' [g |-  stepapp S] (mstep_app [g |-  MS]);
 
 
 
@@ -111,10 +111,10 @@ rec closed : {T:[|- tp]} [g |-  mstep N1 M1] -> [g |-  mstep N2 M2]
  / total t (closed g n1 m1 n2 m2 t) /
 mlam T => fn s1,s2,e => case [|- T] of
 | [|- i] =>
-  let LogBase [g |- algbase (S1') (S2') A] = e in
+  let LogBase [g |- algbase S1' S2' A] = e in
   let [g |- S1''] = mstep_trans s1 [g |- S1'] in
   let [g |- S2''] = mstep_trans s2 [g |- S2'] in
-  LogBase [g |- algbase (S1'') (S2'') A]
+  LogBase [g |- algbase S1'' S2'' A]
 | [|- arr T1 T2] =>
   let LogArr [g |-  M1] [g |-  M2] f = e in
   let [g |-  S1] = s1 in
@@ -134,7 +134,7 @@ fn a => case a of
 | [g |- algapp R N] =>
   let [g |- R'] = algEqRSym [g |- R] in
   let [g |- N'] = algEqNSym [g |- N] in
-  [g |- algapp (R') (N')]
+  [g |- algapp R' N']
 and rec algEqNSym : (g:tctx)
   [g |- algeqn N1 N2 T]
 -> [g |- algeqn N2 N1 T] =
@@ -142,7 +142,7 @@ and rec algEqNSym : (g:tctx)
 fn a => case a of
 | [g |- algbase S1 S2 R] =>
   let [g |- R'] = algEqRSym [g |- R] in
-  [g |- algbase S2 S1 (R')]
+  [g |- algbase S2 S1 R']
 | [g |- algarr (\x.\y.N)] =>
   let [g,b:block x:tm,y:algeqr x x _ |- N'[..,b.1,b.2]] = algEqNSym [g,b:block x:tm,y:algeqr x x _ |- N[..,b.1,b.2]] in
   [g |- algarr (\x.\y. N')]
@@ -177,7 +177,7 @@ rec algEqRUnique : (g:tctx)
 fn e1 => fn e2 => case e1 of
 | [g |- #p.2] => let [g |- #q.2] = e2 in [|- refltp]
 | [g |- algapp R N] =>
-  let [g |- algapp (R') (N')] = e2 in
+  let [g |- algapp R' N'] = e2 in
   let [|- refltp] = algEqRUnique [g |- R] [g |- R'] in [|- refltp]
 ;
 
@@ -204,10 +204,10 @@ rec confluence : [g |-  mstep M N] -> [g |-  mstep M P] ->
 / total s1 (confluence g m n p s1) /
 fn s1 => fn s2 => case s1 of
 | [g |-  refl ] => Common s2 [g |-  refl]
-| [g |-  trans1 S1 (MS1)] =>
+| [g |-  trans1 S1 MS1] =>
   case s2 of
   | [g |-  refl] => Common [g |-  refl] s1
-  | [g |-  trans1 S2 (MS2)] =>
+  | [g |-  trans1 S2 MS2] =>
     let [g|- refltm] = determinacy [g |-  S1] [g |-  S2] in
     confluence [g |-  MS1] [g |-  MS2]
 ;
@@ -233,7 +233,7 @@ rec neutral_mstep : (g:tctx)
 / total  (neutral_mstep) /
 fn s => fn e => case s of
 | [g |-  refl] => [g |- refltm]
-| [g |-  trans1 S1 (MS)] => impossible (neutral_doesnt_step [g |-  S1] e) ;
+| [g |-  trans1 S1 MS] => impossible (neutral_doesnt_step [g |-  S1] e) ;
 
 % Corollary of determinacy
 rec determinacy' : (g:tctx)
@@ -257,8 +257,8 @@ rec algEqRTrans : (g:tctx)
 / total a1 (algEqRTrans g n1 n2 n3 t a1) /
 fn a1 => fn a2 => case a1 of
 | [g |- #p.2] => let [g |- #q.2] = a2 in [g |- #q.2]
-| [g |- algapp (A1') B1] =>
-  let [g |- algapp (A2') B2] = a2 in
+| [g |- algapp A1' B1] =>
+  let [g |- algapp A2' B2] = a2 in
   let [|- refltp] = algEqRUnique [g |- A1'] [g |- A2'] in
   let [g |- R1] = algEqRTrans [g |- A1'] [g |- A2'] in
   let [g |- R2] = algEqNTrans [g |- B1] [g |- B2] in
@@ -269,8 +269,8 @@ and rec algEqNTrans : (g:tctx)
 -> [g |- algeqn N1 N3 T] =
 / total a1 (algEqNTrans g n1 n2 n3 t a1) /
 fn a1 => fn a2 => case a1 of
-| [g |- algbase S1 S2 (A1')] =>
-  let [g |- algbase (S2') S3 (A2')] = a2 in
+| [g |- algbase S1 S2 A1'] =>
+  let [g |- algbase S2' S3 A2'] = a2 in
   let [g |- refltm] = determinacy' [g |- S2] [g |- S2'] [g |- A1'] [g |- A2'] in
   let [g |- R] = algEqRTrans [g |- A1'] [g |- A2'] in
   [g |- algbase S1 S3 R]

@@ -42,11 +42,11 @@ fn v =>  case v of
 
 and rec cpse : (g:ctx)[g |- exp A] -> [g,k:ccont A |-  contra] =
 fn e => case e of
-| [g |- ret (V )] =>
+| [g |- ret V] =>
   let [g |- V'] = cps [g |- V ] in
     [g,k |- cthrow k (V'[..] )]
 
-| [g |- app (E1 ) (E2 )] =>
+| [g |- app E1 E2] =>
   let [g,k:ccont (arr B A) |-  E1'] = cpse [g |- E1 ] in
   let [g,k:ccont B' |-  E2'] = cpse [g |- E2 ] in
    [g, k |- E1'[..,(cconti (\f. E2'[..,(cconti (\x. capp f x k))]))]]

@@ -43,11 +43,11 @@ mlam g => fn v => case v of
 and rec cpse : {g:ctx}[g |- exp A] -> [g, c: cvalue A -> contra |-  contra] =
 / total e (cpse g a e) /
 mlam g => fn e => case e of
-| [g |- ret (V )] =>
+| [g |- ret V] =>
   let [g |- V'] = cps [g] [g |- V ] in
     [g,c |- c (V'[..] )]
 
-| [g |- app (E1 ) (E2 )] =>
+| [g |- app E1 E2] =>
   let [g, c:cvalue (arr B A) -> contra |-  E1'] = cpse [g] [g |- E1] in
   let [g, c:cvalue B         -> contra |-  E2'] = cpse [g] [g |- E2] in
     [g,c |- E1'[..,(\f. E2'[..,(\x. capp f x c)])]]

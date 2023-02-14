@@ -55,7 +55,7 @@ mlam h,g, S => fn s => fn e => case e of
   [g |- rapp R N] =>
   let [h |- R' ] = nsubst [h] [g] [|- arr T S] s [g |- R ] in
   let {N':[h |- norm T[]]} [h |- N' ] = nosubst s [g |- N ] in
-    [h |- rapp (R') (N' ) ]
+    [h |- rapp R' N' ]
 
 and rec nosubst : ({T:[ |- tp]} NeutVar [g] [ |- T] ->  NeutVar [h] [ |- T])
 	    -> [g |- norm S[]]
@@ -64,8 +64,8 @@ and rec nosubst : ({T:[ |- tp]} NeutVar [g] [ |- T] ->  NeutVar [h] [ |- T])
 fn s => fn n =>
 let (s : {T:[ |- tp]} NeutVar [g] [ |- T] ->  NeutVar [h] [ |- T]) = s in
 case n of
-| {R:[g |- neut (atomic P[])]} [g |- embed (R ) ] =>
-  let [h |- R' ] = nsubst [h] [g] _ s [g |- R ] in [h |- embed (R' )]
+| {R:[g |- neut (atomic P[])]} [g |- embed R ] =>
+  let [h |- R' ] = nsubst [h] [g] _ s [g |- R ] in [h |- embed R']
 
  | {N:[g,x:neut S[]  |-  norm S'[]]}
    [g |- nlam (\x. N) ]  =>
@@ -133,7 +133,7 @@ mlam g, A => fn r => case [ |- A] of
     (mlam h => fn s => fn e =>
       let [h |- N ] = reify [h] [|- T] e in
       let [h |- R' ] = nsubst [h] [g] [|- arr T S] s r in
-       reflect [h] [|- S] [h |- rapp (R') N]
+       reflect [h] [|- S] [h |- rapp R' N]
 )
 
 and rec reify : {g:ctx}{A:[|- tp]}Sem [g] [ |- A] -> [g |- norm A[]] =

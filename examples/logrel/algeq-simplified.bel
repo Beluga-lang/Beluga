@@ -62,7 +62,7 @@ rec reflect : {A:[ |- tp]} [g |- algeqNeu M1 M2 A[]] -> Log [g |- M1 sim M2] [ |
 mlam A => fn r => case [ |- A] of
 | [ |- i] =>
     let [g |- R ] = r in
-    LogBase [g |- alg_base refl refl (R)]
+    LogBase [g |- alg_base refl refl R]
 | [ |- arr A B] =>
   let [g |- R] = r in
   LogArr [g |- _] [g |-  _]
@@ -138,10 +138,10 @@ rec algeqNeuSym : (g:tctx)
 fn a => case a of
 | [g |- #p.2] => [g |- #p.2]
 
-| [g |- alg_app (R) N] =>
+| [g |- alg_app R N] =>
   let [g |- R'] = algeqNeuSym [g |- R] in
   let [g |- N'] = algeqSym [g |- N] in
-  [g |- alg_app (R') (N')]
+  [g |- alg_app R' N']
 and rec algeqSym : (g:tctx)
   [g |- algeq N1 N2 T]
 -> [g |- algeq N2 N1 T] =
@@ -183,8 +183,8 @@ rec algeqNeuUnique : (g:tctx)
 / total e1 (algeqNeuUnique g n1 n2 n3 t s e1) /
 fn e1 => fn e2 => case e1 of
 | [g |- #p.2] => let [g |- #q.2] = e2 in [|- refltp]
-| [g |- alg_app (R) N] =>
-  let [g |- alg_app (R') (N')] = e2 in
+| [g |- alg_app R N] =>
+  let [g |- alg_app R' N'] = e2 in
   let [|- refltp] = algeqNeuUnique [g |- R] [g |- R'] in [|- refltp]
 ;
 
@@ -211,7 +211,7 @@ rec confluence : [g |-  mstep M N] -> [g |-  mstep M P] ->
 / total s1 (confluence g m n p s1) /
 fn s1 => fn s2 => case s1 of
 | [g |-  refl ] => Common s2 [g |-  refl]
-| [g |-  trans1 S1 (MS1)] =>
+| [g |-  trans1 S1 MS1] =>
   case s2 of
   | [g |-  refl] => Common [g |-  refl] s1
   | [g |-  trans1 S2 MS2] =>
@@ -240,7 +240,7 @@ rec neutral_mstep : (g:tctx)
 / total  (neutral_mstep) /
 fn s => fn e => case s of
 | [g |-  refl] => [g |- refltm]
-| [g |-  trans1 S1 (MS)] => impossible (neutral_doesnt_step [g |-  S1] e) ;
+| [g |-  trans1 S1 MS] => impossible (neutral_doesnt_step [g |-  S1] e) ;
 
 % Corollary of determinacy
 rec determinacy' : (g:tctx)
@@ -264,23 +264,23 @@ rec algeqNeuTrans : (g:tctx)
 / total a1 (algeqNeuTrans g n1 n2 n3 t a1) /
 fn a1 => fn a2 => case a1 of
 | [g |- #p.2] => let [g |- #q.2] = a2 in [g |- #q.2]
-| [g |- alg_app (A1') (B1)] =>
-  let [g |- alg_app (A2') (B2)] = a2 in
+| [g |- alg_app A1' B1] =>
+  let [g |- alg_app A2' B2] = a2 in
   let [|- refltp] = algeqNeuUnique [g |- A1'] [g |- A2'] in
   let [g |- R1] = algeqNeuTrans [g |- A1'] [g |- A2'] in
   let [g |- R2] = algeqTrans [g |- B1] [g |- B2] in
-  [g |- alg_app (R1) (R2)]
+  [g |- alg_app R1 R2]
 and rec algeqTrans : (g:tctx)
   [g |- algeq N1 N2 T]
 -> [g |- algeq N2 N3 T]
 -> [g |- algeq N1 N3 T] =
 / total a1 (algeqTrans g n1 n2 n3 t a1) /
 fn a1 => fn a2 => case a1 of
-| [g |- alg_base (S1) (S2) (A1')] =>
-  let [g |- alg_base (S2') (S3) (A2')] = a2 in
+| [g |- alg_base S1 S2 A1'] =>
+  let [g |- alg_base S2' S3 A2'] = a2 in
   let [g |- refltm] = determinacy' [g |- S2] [g |- S2'] [g |- A1'] [g |- A2'] in
   let [g |- R] = algeqNeuTrans [g |- A1'] [g |- A2'] in
-  [g |- alg_base (S1) (S3) (R)]
+  [g |- alg_base S1 S3 R]
 | [g |- alg_arr (\x.\u.A1')] =>
   let [g |- alg_arr (\x.\u.A2')] = a2 in
   let [g,b:block x:tm,y:algeqNeu x x T |- R[..,b.1,b.2]]

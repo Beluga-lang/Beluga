@@ -38,7 +38,7 @@ case e of
 
 | [g |- z] => [g |- K[..,z+]]
 
-| [g |- s (E )] =>
+| [g |- s E] =>
   cmp [g |- E ] [g,x |- K[..,(s+ x)]]
 
 | [g |- lam \x. E] =>

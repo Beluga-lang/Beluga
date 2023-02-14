@@ -91,7 +91,7 @@ rec eq3:(g:ctx) [g |- step* M N] -> [g |- pred* M N] =
 / total r (eq3 g m n r) /
 fn r => case r of
 | [g |- id1] => [g |- id*]
-| [g |- step1 R1 (R2*)] =>
+| [g |- step1 R1 R2*] =>
   let [g |- S1]  = eq2 [g |- R1]  in
   let [g |- S2*] = eq3 [g |- R2*] in
     [g |- next S1 S2*]

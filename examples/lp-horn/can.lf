@@ -15,7 +15,7 @@ can_andi : can B E -> can A D -> can (conj A B) (andi E D).
 can_impi : {u:pf A} atm u -> can B (D u) -> can (imp A B) (impi (\u. D u)).
 
 }%
-can_truei : can (true) (truei).
+can_truei : can true truei.
 
 
 
@@ -63,7 +63,7 @@ toatm : {A:o}pf A -> pf A -> type.        % Conversion to atomic form
 %name toatm TA.
 
 tc_and : tocan B (ander D) D2' -> tocan A (andel D) D1' -> tocan (conj A B) D (andi D2' D1').
-tc_true : tocan (true) D (truei).
+tc_true : tocan true D truei.
 
 %{
 tc_forall : {a:i} tocan (A a) (foralle D a) (D' a) -> tocan (forall (\x. A x)) D (foralli (\x. D' x)).

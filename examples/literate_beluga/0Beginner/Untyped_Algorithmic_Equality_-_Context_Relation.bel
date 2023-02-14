@@ -108,7 +108,7 @@ rec refl : {phi:xG}{M: [phi |-  tm]}
 mlam phi => mlam M => fn cr => case [phi |-  M] of
 | [phi |-  #p] => ctx_membership [phi |-  #p] cr
 
-| [phi |-  app (M ) N] =>
+| [phi |-  app M N] =>
   let [psi |-  D1 ] = refl [phi] [phi |- M] cr in
   let [psi |-  D2 ] = refl [phi] [phi |- N] cr in
     [psi |-  ae_a D1 D2 ]
@@ -172,12 +172,12 @@ case [phi |-  #p] of
 rec reflR : {phi:xG}{M: [phi |-  tm]}
           Ctx_xaR [phi] [psi] $[ psi |- $S ] ->
 Eq [phi] [psi] $[ psi |- $S ] [phi |-  M] [psi |-  M'] ->
-           [psi |-  aeq (M') (M')] =
+           [psi |-  aeq M' M'] =
  mlam phi => mlam M => fn cr => fn m => case [phi |-  M] of
 | [phi |-  #p ] =>
   let Eq_v m' = m in
   ctx_member [phi |-  #p] cr m'
-| [phi |-  app (M ) N] =>
+| [phi |-  app M N] =>
   let Eq_a m1 m2 = m in
   let [psi |-  D1 ] = reflR [phi] [phi |- M] cr m1 in
   let [psi |-  D2 ] = reflR [phi] [phi |- N] cr m2 in
@@ -215,8 +215,8 @@ Ctx_xaR [phi] [psi] [ psi |- $S ] ->
 Eq [phi] [psi] $[ psi |- $S ] [phi |-  M] [psi |-  M'] ->
 Eq [phi] [psi] $[ psi |- $S ] [phi |-  N] [psi |-  N'] ->
 Eq [phi] [psi] $[ psi |- $S ] [phi |-  L] [psi |-  L'] ->
-[psi |-  aeq (M') (N')] -> [psi |-  aeq (N') (L')]
--> [psi |-  aeq (M') (L')] =
+[psi |-  aeq M' N'] -> [psi |-  aeq N' L']
+-> [psi |-  aeq M' L'] =
  fn cr => fn m => fn n => fn l => fn d1 => fn d2 => case d1 of
 | [psi |-  #p.2] =>
   let [psi |-  #q.2 ] = d2 in
@@ -297,7 +297,7 @@ inductive Eq' : {phi:xG}{psi:xdG}{$S:$[psi |- phi]} [phi |- tm] -> [psi |- tm] -
 | Eq'_a:
     Eq' [phi] [psi] $[psi |- $S ] [phi |-  M] [psi |-  M'] ->
     Eq' [phi] [psi] $[psi |- $S ] [phi |-  N] [psi |-  N'] ->
-    Eq' [phi] [psi] $[psi |- $S ] [phi |-  app M N] [psi |-  app (M') N']
+    Eq' [phi] [psi] $[psi |- $S ] [phi |-  app M N] [psi |-  app M' N']
 
 | Eq'_l :
     Eq' [phi,x:tm] [psi,b:block (x:tm, u:deq x x)] $[psi, b:block (x:tm, u:deq x x) |- $S[..],b.1]
@@ -397,7 +397,7 @@ case [gamma |-  L] of
 | [gamma |-  app M N] =>
   let ExistsEq/c [psi |- La1] eq1 = existsEq cr_xa [gamma |- M] in
   let ExistsEq/c [psi |- La2] eq2 = existsEq cr_xa [gamma |- N] in
-  ExistsEq/c [psi |-  app (La1) (La2)] (Eq_a eq1 eq2)
+  ExistsEq/c [psi |-  app La1 La2] (Eq_a eq1 eq2)
 
 | [gamma |-  lam \x. M] =>
   let ExistsEq/c [psi, b:block (x:tm, u:aeq x x) |-  La[..,b.1]] eq =

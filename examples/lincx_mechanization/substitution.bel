@@ -48,8 +48,8 @@ LF ctx_er : ctx -> ctx_erased -> type =
 % variable x is in a context Psi
 
 LF in_ctx : (var -> ctx) -> type =
-   | ic_base_l : in_ctx (\x.snoc (Psi) (decl x A lin))
-   | ic_base_unr : in_ctx (\x.snoc (Psi) (decl x A unr))
+   | ic_base_l : in_ctx (\x.snoc Psi (decl x A lin))
+   | ic_base_unr : in_ctx (\x.snoc Psi (decl x A unr))
    | ic_snoc : in_ctx (\x.Psi x) -> in_ctx (\x.snoc (Psi x) (decl y A F))
 ;
 
@@ -83,8 +83,8 @@ and subst_canon :  canon  -> tp_appro -> (var -> canon) -> canon -> type =
 		  -> subst_canon M alpha (\x.c_atom (atom_base (hd_cst c) (S x))) (c_atom (atom_base (hd_cst c) (S')))
     | sc_varspine_neq : ({y : var} subst_spine (M y) alpha (\x.S y x) (S' y))
 			-> subst_canon (M y) alpha (\x.c_atom (atom_base (hd_var y) (S y x))) (c_atom (atom_base (hd_var y) (S' y)))
-    | sc_varspine_eq : subst_spine M alpha (\x.S x) (S') -> reduce M alpha (S') (N)
-		       -> subst_canon M alpha (\x.c_atom (atom_base (hd_var x) (S x))) (N)
+    | sc_varspine_eq : subst_spine M alpha (\x.S x) (S') -> reduce M alpha (S') N
+		       -> subst_canon M alpha (\x.c_atom (atom_base (hd_var x) (S x))) N
 
 and subst_spine : canon -> tp_appro -> (var -> spine) -> spine -> type =
    | ssp_empty : subst_spine M alpha (\x.sp_empty) sp_empty
@@ -97,7 +97,7 @@ and subst_spine : canon -> tp_appro -> (var -> spine) -> spine -> type =
 
 and subst_subst : canon -> tp_appro -> (var -> sim_subst) -> sim_subst -> type =
    | su_empty : subst_subst M alpha (\x.s_empty) s_empty
-   | su_id_lin : subst_subst M alpha (\x.s_id) (s_id)
+   | su_id_lin : subst_subst M alpha (\x.s_id) s_id
    | su_id_snoc : subst_subst M alpha (\x.sigma x) (sigma') -> subst_canon M alpha (\x.N x) (N')
 		  -> subst_subst M alpha (\x.s_snoc (sigma x) (N x)) (s_snoc sigma' N')
 
@@ -156,7 +156,7 @@ and sim_subst_spine : sim_subst -> ctx -> ctx_erased -> spine -> spine -> type =
 
 and sim_subst_subst : sim_subst -> ctx -> ctx_erased -> sim_subst -> sim_subst -> type =
    | ssu_empty : is_unr Psi -> sim_subst_subst sigma Psi Phi s_empty s_empty
-   | ssu_id_lin : is_unr Psi -> sim_subst_subst sigma Psi Phi (s_id) (s_id)
+   | ssu_id_lin : is_unr Psi -> sim_subst_subst sigma Psi Phi s_id s_id
    | ssu_id_snoc : ctx_er Phi0 Phi -> ctx_er Phi1 Phi' -> ctx_er Phi2 Phi''
 		   -> joining (cjoin Phi0 Phi1 Phi2)
 		   -> joining (cjoin Psi Psi1 Psi2)

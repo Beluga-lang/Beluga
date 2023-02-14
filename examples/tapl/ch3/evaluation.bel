@@ -61,8 +61,8 @@ andalso: step T T1 -> step T T2 -> steps_to_terms T T1 T2.
 rec det : [ |- steps_to_terms T T1 T2] -> [ |- equal T1 T2] =
 % / total s (det t t1 t2 s)/
 fn s => case s of
-| [ |- andalso (e_if_true)  (e_if_true)]  =>  [ |- ref]
-| [ |- andalso (e_if_false) (e_if_false)] =>  [ |- ref]
+| [ |- andalso e_if_true  e_if_true]  =>  [ |- ref]
+| [ |- andalso e_if_false e_if_false] =>  [ |- ref]
 | [ |- andalso (e_if D)     (e_if E)]     =>
   let [ |- ref]        = det [ |- andalso D E] in
     [ |- ref]
@@ -147,7 +147,7 @@ rec unique : [ |- msteps_to_terms M N1 N2]
 	     -> [ |- equal N1 N2] =
 % / total ms (unique m n1 n2 ms)/
 fn ms => fn vn1 => fn vn2 => case ms of
-| [ |- andalso' (m_step S1 MS1) (m_ref)] =>
+| [ |- andalso' (m_step S1 MS1) m_ref] =>
   let [ |- V2] = vn2 in
     lemma_val_2 [ |- V2] [ |- m_step S1 MS1]
 
@@ -155,10 +155,10 @@ fn ms => fn vn1 => fn vn2 => case ms of
   let [ |- ref] = det [ |- andalso S1 S2] in
     unique [ |- andalso' MS1 MS2] vn1 vn2
 
-| [ |- andalso' (m_ref )       (m_ref )]   =>
+| [ |- andalso' m_ref       m_ref]   =>
    [ |- ref]
 
-| [ |- andalso' (m_ref )       (m_step S2 MS2)] =>
+| [ |- andalso' m_ref       (m_step S2 MS2)] =>
   let [ |- V1] = vn1 in
     lemma_val_1 [ |- V1] [ |- m_step S2 MS2]
 ;

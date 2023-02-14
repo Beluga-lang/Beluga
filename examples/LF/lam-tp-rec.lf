@@ -81,7 +81,7 @@ vs_z    : vs ev_z v_z.
 
 vs_s    : vs D P -> vs (ev_s D) (v_s P).
 
-vs_lam  : vs (ev_lam) (v_l).
+vs_lam  : vs ev_lam v_l.
 
 vs_app  : vs D3 P3
        -> vs (ev_app D1 D2 D3) P3.

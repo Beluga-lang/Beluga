@@ -179,8 +179,6 @@ module type DISAMBIGUATION_STATE = sig
 
   val add_pattern_comp_variable : Identifier.t -> Unit.t t
 
-  val add_module_declaration : Identifier.t -> Unit.t t
-
   val update_module_declaration : Qualified_identifier.t -> Unit.t t
 
   val is_inner_module_declaration : Qualified_identifier.t -> Bool.t t

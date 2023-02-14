@@ -228,8 +228,6 @@ module type DISAMBIGUATION_STATE = sig
 
   val add_pattern_comp_variable : Identifier.t -> Unit.t t
 
-  val add_module_declaration : Identifier.t -> Unit.t t
-
   val update_module_declaration : Qualified_identifier.t -> Unit.t t
 
   val is_inner_module_declaration : Qualified_identifier.t -> Bool.t t
@@ -393,19 +391,77 @@ end = struct
     let location = make_entry_location location identifier in
     { location; operator }
 
+  let add_module_declaration identifier =
+    let* bindings = get_bindings in
+    let entry, subtree = Binding_tree.lookup_toplevel identifier bindings in
+    modify (function
+      | Module_state o ->
+          let declarations' =
+            Binding_tree.add_toplevel identifier entry ~subtree
+              o.declarations
+          in
+          Module_state { o with declarations = declarations' }
+      | (Signature_state _ | Scope_state _) as state -> state
+      | Disambiguation_state _
+      | Pattern_state _ ->
+          Error.raise_violation "[add_module_declaration] invalid state")
+
+  let update_module_declaration identifier =
+    let* bindings = get_bindings in
+    let entry, subtree = Binding_tree.lookup identifier bindings in
+    modify (function
+      | Module_state o ->
+          let declarations' =
+            Binding_tree.add identifier entry ~subtree o.declarations
+          in
+          Module_state { o with declarations = declarations' }
+      | Signature_state _ as state -> state
+      | Disambiguation_state _
+      | Pattern_state _
+      | Scope_state _ ->
+          Error.raise_violation "[update_module_declaration] invalid state")
+
+  let is_inner_module_declaration identifier =
+    get >>= function
+    | Signature_state _ -> return false
+    | Module_state o ->
+        return
+          (Binding_tree.is_qualified_identifier_bound identifier
+             o.declarations)
+    | Disambiguation_state _
+    | Pattern_state _
+    | Scope_state _ ->
+        Error.raise_violation "[is_inner_module_declaration] invalid state"
+
+  let get_declarations =
+    get >>= function
+    | Disambiguation_state _
+    | Signature_state _
+    | Pattern_state _
+    | Scope_state _ ->
+        Error.raise_violation "[get_declarations] invalid state"
+    | Module_state o -> return o.declarations
+
+  let add_module ?location subtree identifier =
+    let data = make_entry_data ?location identifier in
+    let entry = (Module, data) in
+    add_namespace_binding identifier entry subtree
+    <& add_module_declaration identifier
+
+  let with_module_declarations ~declarations ~module_identifier =
+    let* state = get in
+    let* () =
+      put (Module_state { state; declarations = Binding_tree.empty })
+    in
+    let* declarations' = declarations in
+    let* inner_declarations = get_declarations in
+    let* () = put state in
+    let* () = add_module inner_declarations module_identifier in
+    return declarations'
+
   let add_lf_term_variable ?location identifier =
     let data = make_entry_data ?location identifier in
     let entry = (Lf_term_variable, data) in
-    add_entry_binding identifier entry
-
-  let add_lf_type_constant ?location operator identifier =
-    let data = make_entry_data ?location ~operator identifier in
-    let entry = (Lf_type_constant, data) in
-    add_entry_binding identifier entry
-
-  let add_lf_term_constant ?location operator identifier =
-    let data = make_entry_data ?location ~operator identifier in
-    let entry = (Lf_term_constant, data) in
     add_entry_binding identifier entry
 
   let add_meta_variable ?location identifier =
@@ -428,63 +484,68 @@ end = struct
     let entry = (Context_variable, data) in
     add_entry_binding identifier entry
 
-  let add_schema_constant ?location identifier =
-    let data = make_entry_data ?location identifier in
-    let entry = (Schema_constant, data) in
-    add_entry_binding identifier entry
-
   let add_computation_variable ?location identifier =
     let data = make_entry_data ?location identifier in
     let entry = (Computation_variable, data) in
     add_entry_binding identifier entry
 
+  let add_lf_type_constant ?location operator identifier =
+    let data = make_entry_data ?location ~operator identifier in
+    let entry = (Lf_type_constant, data) in
+    add_entry_binding identifier entry <& add_module_declaration identifier
+
+  let add_lf_term_constant ?location operator identifier =
+    let data = make_entry_data ?location ~operator identifier in
+    let entry = (Lf_term_constant, data) in
+    add_entry_binding identifier entry <& add_module_declaration identifier
+
+  let add_schema_constant ?location identifier =
+    let data = make_entry_data ?location identifier in
+    let entry = (Schema_constant, data) in
+    add_entry_binding identifier entry <& add_module_declaration identifier
+
   let add_inductive_computation_type_constant ?location operator identifier =
     let data = make_entry_data ?location ~operator identifier in
     let entry = (Computation_inductive_type_constant, data) in
-    add_entry_binding identifier entry
+    add_entry_binding identifier entry <& add_module_declaration identifier
 
   let add_stratified_computation_type_constant ?location operator identifier
       =
     let data = make_entry_data ?location ~operator identifier in
     let entry = (Computation_stratified_type_constant, data) in
-    add_entry_binding identifier entry
+    add_entry_binding identifier entry <& add_module_declaration identifier
 
   let add_coinductive_computation_type_constant ?location operator identifier
       =
     let data = make_entry_data ?location ~operator identifier in
     let entry = (Computation_coinductive_type_constant, data) in
-    add_entry_binding identifier entry
+    add_entry_binding identifier entry <& add_module_declaration identifier
 
   let add_abbreviation_computation_type_constant ?location operator
       identifier =
     let data = make_entry_data ?location ~operator identifier in
     let entry = (Computation_abbreviation_type_constant, data) in
-    add_entry_binding identifier entry
+    add_entry_binding identifier entry <& add_module_declaration identifier
 
   let add_computation_term_constructor ?location operator identifier =
     let data = make_entry_data ?location ~operator identifier in
     let entry = (Computation_term_constructor, data) in
-    add_entry_binding identifier entry
+    add_entry_binding identifier entry <& add_module_declaration identifier
 
   let add_computation_term_destructor ?location identifier =
     let data = make_entry_data ?location identifier in
     let entry = (Computation_term_destructor, data) in
-    add_entry_binding identifier entry
+    add_entry_binding identifier entry <& add_module_declaration identifier
 
   let add_query ?location identifier =
     let data = make_entry_data ?location identifier in
     let entry = (Query, data) in
-    add_entry_binding identifier entry
-
-  let add_module ?location subtree identifier =
-    let data = make_entry_data ?location identifier in
-    let entry = (Module, data) in
-    add_namespace_binding identifier entry subtree
+    add_entry_binding identifier entry <& add_module_declaration identifier
 
   let add_program_constant ?location ?operator identifier =
     let data = make_entry_data ?location ?operator identifier in
     let entry = (Program_constant, data) in
-    add_entry_binding identifier entry
+    add_entry_binding identifier entry <& add_module_declaration identifier
 
   let lookup_toplevel query =
     let* bindings = get_bindings in
@@ -797,68 +858,6 @@ end = struct
 
   let add_pattern_comp_variable identifier =
     add_pattern_variable identifier (add_computation_variable identifier)
-
-  let add_module_declaration identifier =
-    let* bindings = get_bindings in
-    let entry, subtree = Binding_tree.lookup_toplevel identifier bindings in
-    modify (function
-      | Module_state o ->
-          let declarations' =
-            Binding_tree.add_toplevel identifier entry ~subtree
-              o.declarations
-          in
-          Module_state { o with declarations = declarations' }
-      | (Signature_state _ | Scope_state _) as state -> state
-      | Disambiguation_state _
-      | Pattern_state _ ->
-          Error.raise_violation "[add_module_declaration] invalid state")
-
-  let update_module_declaration identifier =
-    let* bindings = get_bindings in
-    let entry, subtree = Binding_tree.lookup identifier bindings in
-    modify (function
-      | Module_state o ->
-          let declarations' =
-            Binding_tree.add identifier entry ~subtree o.declarations
-          in
-          Module_state { o with declarations = declarations' }
-      | Signature_state _ as state -> state
-      | Disambiguation_state _
-      | Pattern_state _
-      | Scope_state _ ->
-          Error.raise_violation "[update_module_declaration] invalid state")
-
-  let is_inner_module_declaration identifier =
-    get >>= function
-    | Signature_state _ -> return false
-    | Module_state o ->
-        return
-          (Binding_tree.is_qualified_identifier_bound identifier
-             o.declarations)
-    | Disambiguation_state _
-    | Pattern_state _
-    | Scope_state _ ->
-        Error.raise_violation "[is_inner_module_declaration] invalid state"
-
-  let get_declarations =
-    get >>= function
-    | Disambiguation_state _
-    | Signature_state _
-    | Pattern_state _
-    | Scope_state _ ->
-        Error.raise_violation "[get_declarations] invalid state"
-    | Module_state o -> return o.declarations
-
-  let with_module_declarations ~declarations ~module_identifier =
-    let* state = get in
-    let* () =
-      put (Module_state { state; declarations = Binding_tree.empty })
-    in
-    let* declarations' = declarations in
-    let* inner_declarations = get_declarations in
-    let* () = put state in
-    let* () = add_module inner_declarations module_identifier in
-    return declarations'
 end
 
 let () =

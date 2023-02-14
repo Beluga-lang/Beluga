@@ -15,43 +15,45 @@ rec transfer : (g:sch){J : [g |- ctx_mer Psi Phi0 Psi1]}{Phi1 : [g |- ctx]} [g |
 % Psi = Phi, Gamma; unr(Phi), unr(Gamma), Psi_unr = Psi => Psi_unr = Phi, Gamma
 
 rec sstu_helper1 : (g:sch) [g |- ctx_mer Phi Gam Psi] -> [g |- is_unr Phi] -> [g |- is_unr Gam] -> [g |- unrest_ctx Psi Psi_unr] -> [g |- ctx_mer Phi Gam Psi_unr] =
-    fn d => fn e => fn f => fn g =>
-    case d of
-    | [g |- m_empty] =>
-      (case g of
-       | [g |- unrest_base_e] => [g |- m_empty]
-       | [g |- unrest_base_var] =>
-	 (case e of
-	  | [g |- is_unr_b] => [g |- m_empty]
-	 )
-       | [g |- unrest_unr G] =>
-	 (case e of
- 	  | [g |- is_unr_cons E] => ?
-            % There is no reason to believe that ctx_mer Phi Phi2 Phi -bp
-            % let [g |- H1]: [g |- ctx_mer Phi Phi2 Phi]  =
-            % sstu_helper1 [g |- m_empty] [g |- E] f [g |- G] in [g |- m_empty]
-	 )
-       | [g |- unrest_l G] => impossible e
-       | [g |- unrest_unav G] =>
-	 (case e of
-	  | [g |- is_unr_unav_cons E] => ?
-            % Coverage Failure: Same Problem as above
-            % let [g |- H1] : [g |- ctx_mer Phi Phi2 Phi] = sstu_helper1 [g |- m_empty] [g |- E] f [g |- G] in [g |- m_empty]
-	 )
-      )
-    | [g |- m_cons D] =>
-      (case f of
-       | [g |- is_unr_cons F] =>
-	 (case g of
-	  | [g |- unrest_unr G] => let [g |- H] = sstu_helper1 [g |- D] e [g |- F] [g |- G] in
-				 [g |- m_cons H]
-	 )
-       | [g |- is_unr_unav_cons F] =>
-	 (case g of
-	  | [g |- unrest_unav G] => let [g |- H] = sstu_helper1 [g |- D] e [g |- F] [g |- G] in
-				 [g |- m_cons H]
-	 )
-      )
+  fn d => fn e => fn f => fn g =>
+  case d of
+  | [g' |- m_empty] =>
+    (case g of
+      | [g' |- unrest_base_e] => [g' |- m_empty]
+      | [g' |- unrest_base_var] =>
+        (case e of
+        | [g |- is_unr_b] => [g |- m_empty]
+        )
+      | [g |- unrest_unr G] =>
+        (case e of
+        | [g |- is_unr_cons E] => ?
+                % There is no reason to believe that ctx_mer Phi Phi2 Phi -bp
+                % let [g |- H1]: [g |- ctx_mer Phi Phi2 Phi]  =
+                % sstu_helper1 [g |- m_empty] [g |- E] f [g |- G] in [g |- m_empty]
+        )
+      | [g |- unrest_l G] => impossible e
+      | [g |- unrest_unav G] =>
+        (case e of
+        | [g |- is_unr_unav_cons E] => ?
+                % Coverage Failure: Same Problem as above
+                % let [g |- H1] : [g |- ctx_mer Phi Phi2 Phi] = sstu_helper1 [g |- m_empty] [g |- E] f [g |- G] in [g |- m_empty]
+        )
+    )
+  | [g' |- m_cons D] =>
+    (case f of
+      | [g' |- is_unr_cons F] =>
+        (case g of
+        | [g |- unrest_unr G] =>
+            let [g |- H] = sstu_helper1 [g |- D] e [g |- F] [g |- G] in
+            [g |- m_cons H]
+        )
+      | [g' |- is_unr_unav_cons F] =>
+        (case g of
+        | [g |- unrest_unav G] =>
+            let [g |- H] = sstu_helper1 [g |- D] e [g |- F] [g |- G] in
+            [g |- m_cons H]
+        )
+    )
 ;
 
 rec sstu_helper2_1 : (g:sch) [g |- ctx_mer Psi1 c_empty Psi2] -> [g |- ctx_mer (snoc Psi1 V) c_empty (snoc Psi2 V)] =
@@ -61,35 +63,37 @@ rec sstu_helper2_1 : (g:sch) [g |- ctx_mer Psi1 c_empty Psi2] -> [g |- ctx_mer (
 ;
 
 rec sstu_helper2 : (g:sch) [g |- ctx_mer Psi1 Psi2 Psi] -> [g |- is_unr Psi2] -> [g |- unrest_ctx Psi1 Psi1_unr] -> [g |- unrest_ctx Psi Psi_unr] -> [g |- ctx_mer Psi1_unr Psi2 Psi_unr] =
-    fn d => fn e => fn f => fn g =>
-    case d of
-    | [g |- m_empty] =>
-      (case f of
-       | [g |- unrest_base_e] => let [g |- unrest_base_e] = g in [g |- m_empty]
-       | [g |- unrest_base_var] => let [g |- unrest_base_var] = g in [g |- m_empty]
-       | [g |- unrest_unav F] => let [g |- unrest_unav G] = g in
-			       let [g |- H] = sstu_helper2 [g |- m_empty] [g |- is_unr_e] [g |- F] [g |- G] in
-			       sstu_helper2_1 [g |- H]
-       | [g |- unrest_unr F] => let [g |- unrest_unr G] = g in
-			      let [g |- H] = sstu_helper2 [g |- m_empty] [g |- is_unr_e] [g |- F] [g |- G] in
-			      sstu_helper2_1 [g |- H]
-       | [g |- unrest_l F] => let [g |- unrest_l G] = g in
-			    let [g |- H] = sstu_helper2 [g |- m_empty] [g |- is_unr_e] [g |- F] [g |- G] in
-			    sstu_helper2_1 [g |- H]
-     )
-    | [g |- m_cons D] =>
-      (case e of
-       | [g |- is_unr_cons E] =>
-	 (case g of
-	  | [g |- unrest_unr G] => let [g |- H] = sstu_helper2 [g |- D] [g |- E] f [g |- G] in
-				 [g |- m_cons H]
-	 )
-       | [g |- is_unr_unav_cons E] =>
-	 (case g of
-	  | [g |- unrest_unav G] => let [g |- H] = sstu_helper2 [g |- D] [g |- E] f [g |- G] in
-				 [g |- m_cons H]
-	 )
-      )
+  fn d => fn e => fn f => fn g =>
+  case d of
+  | [g' |- m_empty] =>
+    (case f of
+      | [g' |- unrest_base_e] => let [g' |- unrest_base_e] = g in [g' |- m_empty]
+      | [g' |- unrest_base_var] => let [g' |- unrest_base_var] = g in [g' |- m_empty]
+      | [g' |- unrest_unav F] => let [g' |- unrest_unav G] = g in
+            let [g' |- H] = sstu_helper2 [g' |- m_empty] [g' |- is_unr_e] [g' |- F] [g' |- G] in
+            sstu_helper2_1 [g' |- H]
+      | [g' |- unrest_unr F] => let [g' |- unrest_unr G] = g in
+          let [g' |- H] = sstu_helper2 [g' |- m_empty] [g' |- is_unr_e] [g' |- F] [g' |- G] in
+          sstu_helper2_1 [g' |- H]
+      | [g' |- unrest_l F] => let [g' |- unrest_l G] = g in
+        let [g' |- H] = sstu_helper2 [g' |- m_empty] [g' |- is_unr_e] [g' |- F] [g' |- G] in
+        sstu_helper2_1 [g' |- H]
+    )
+  | [g' |- m_cons D] =>
+    (case e of
+      | [g' |- is_unr_cons E] =>
+      (case g of
+        | [g' |- unrest_unr G] =>
+            let [g' |- H] = sstu_helper2 [g' |- D] [g' |- E] f [g' |- G] in
+            [g' |- m_cons H]
+    )
+  | [g' |- is_unr_unav_cons E] =>
+    (case g of
+      | [g' |- unrest_unav G] =>
+          let [g' |- H] = sstu_helper2 [g' |- D] [g' |- E] f [g' |- G] in
+          [g' |- m_cons H]
+    )
+  )
 ;
 
 %            ___             ___

@@ -624,7 +624,17 @@ module Make
   let with_function_parameters = with_function_parameters_list1
 
   let with_meta_parameter = function
-    | Option.Some identifier, `Plain -> with_meta_variable identifier
+    | Option.Some identifier, `Plain ->
+        with_meta_variable identifier
+        (*= FIXME: [mlam g => ?] may technically introduce a context variable
+           rather than a meta-variable. This is not an issue for now because
+           contextual LF contexts with a variable in head position are always
+           disambiguated as having a context variable in head position.
+           Allowing multiple context variables in a context
+           (like [..g1, x : t, ..g2]) will introduce an ambiguity between
+           context variables and meta-variables that cannot be resolved in the
+           case of [mlam g => ?]. I suggest removing [fn] and [mlam]
+           expressions in favour of [fun] expressions. *)
     | Option.Some identifier, `Hash -> with_parameter_variable identifier
     | Option.Some identifier, `Dollar ->
         with_substitution_variable identifier

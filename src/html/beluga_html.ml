@@ -710,7 +710,7 @@ module Make (Html_state : HTML_PRINTING_STATE) :
     | LF.Typ.Constant { identifier; _ } ->
         pp_lf_type_constant_invoke identifier
     | LF.Typ.Application { applicand; arguments; _ } ->
-        pp_application
+        pp_application ~indent
           ~guard_operator:(function
             | LF.Typ.Constant { operator; prefixed = false; _ } ->
                 `Operator operator
@@ -799,7 +799,7 @@ module Make (Html_state : HTML_PRINTING_STATE) :
     | LF.Term.Constant { identifier; _ } ->
         pp_lf_term_constant_invoke identifier
     | LF.Term.Application { applicand; arguments; _ } ->
-        pp_application
+        pp_application ~indent
           ~guard_operator:(function
             | LF.Term.Constant { operator; prefixed = false; _ } ->
                 `Operator operator
@@ -854,7 +854,7 @@ module Make (Html_state : HTML_PRINTING_STATE) :
     | CLF.Typ.Constant { identifier; _ } ->
         pp_lf_type_constant_invoke identifier
     | CLF.Typ.Application { applicand; arguments; _ } ->
-        pp_application
+        pp_application ~indent
           ~guard_operator:(function
             | CLF.Typ.Constant { operator; prefixed = false; _ } ->
                 `Operator operator
@@ -957,7 +957,7 @@ module Make (Html_state : HTML_PRINTING_STATE) :
     | CLF.Term.Constant { identifier; _ } ->
         pp_lf_term_constant_invoke identifier
     | CLF.Term.Application { applicand; arguments; _ } ->
-        pp_application
+        pp_application ~indent
           ~guard_operator:(function
             | CLF.Term.Constant { operator; prefixed = false; _ } ->
                 `Operator operator
@@ -1127,7 +1127,7 @@ module Make (Html_state : HTML_PRINTING_STATE) :
     | CLF.Term.Pattern.Constant { identifier; _ } ->
         pp_lf_term_constant_invoke identifier
     | CLF.Term.Pattern.Application { applicand; arguments; _ } ->
-        pp_application
+        pp_application ~indent
           ~guard_operator:(function
             | CLF.Term.Pattern.Constant { operator; prefixed = false; _ } ->
                 `Operator operator
@@ -1802,7 +1802,7 @@ module Make (Html_state : HTML_PRINTING_STATE) :
           (pp_expression ++ pp_non_breaking_space ++ pp_colon ++ pp_space
          ++ pp_typ)
     | Comp.Expression.Application { applicand; arguments; _ } ->
-        pp_application
+        pp_application ~indent
           ~guard_operator:(function
             | Comp.Expression.Constructor { operator; prefixed = false; _ }
             | Comp.Expression.Program
@@ -1857,7 +1857,7 @@ module Make (Html_state : HTML_PRINTING_STATE) :
          ++ pp_typ)
     | Comp.Pattern.Wildcard _ -> pp_underscore
     | Comp.Pattern.Application { applicand; arguments; _ } ->
-        pp_application
+        pp_application ~indent
           ~guard_operator:(function
             | Comp.Pattern.Constant { operator; prefixed = false; _ } ->
                 `Operator operator

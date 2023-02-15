@@ -4,8 +4,6 @@ open Support
 open Beluga_syntax
 open Synext
 
-[@@@warning "-A-4-44-32"]
-
 exception Unbound_identifier of Identifier.t
 
 exception Unbound_qualified_identifier of Qualified_identifier.t
@@ -37,22 +35,6 @@ module type HTML_PRINTING_STATE = sig
 
   val lookup_id : Qualified_identifier.t -> String.t t
 
-  val set_default_associativity : Associativity.t -> Unit.t t
-
-  val get_default_associativity : Associativity.t t
-
-  val make_operator_prefix :
-    ?precedence:Int.t -> Qualified_identifier.t -> Unit.t t
-
-  val make_operator_infix :
-       ?precedence:Int.t
-    -> ?associativity:Associativity.t
-    -> Qualified_identifier.t
-    -> Unit.t t
-
-  val make_operator_postfix :
-    ?precedence:Int.t -> Qualified_identifier.t -> Unit.t t
-
   val with_module_declarations :
        declarations:'a t
     -> module_identifier:Identifier.t
@@ -80,10 +62,6 @@ end = struct
         ; max_suffix_by_id : Int.t String.Hamt.t
         ; formatter : MyFormat.formatter
         }
-    | Signature_state of
-        { state : state
-        ; default_associativity : Associativity.t
-        }
     | Module_state of
         { state : state
         ; declarations : entry Binding_tree.t
@@ -97,7 +75,6 @@ end = struct
 
   let rec nested_get_formatter = function
     | Id_state { formatter; _ } -> formatter
-    | Signature_state { state; _ } -> nested_get_formatter state
     | Module_state { state; _ } -> nested_get_formatter state
 
   let with_formatter f =
@@ -113,29 +90,21 @@ end = struct
       MyFormat.FORMAT_STATE with type state := state)
 
   let initial formatter =
-    Signature_state
-      { state =
-          Id_state
-            { bindings = Binding_tree.empty
-            ; ids = String.Set.empty
-            ; max_suffix_by_id = String.Hamt.empty
-            ; formatter
-            }
-      ; default_associativity = Associativity.non_associative
+    Id_state
+      { bindings = Binding_tree.empty
+      ; ids = String.Set.empty
+      ; max_suffix_by_id = String.Hamt.empty
+      ; formatter
       }
 
   let rec nested_get_bindings = function
     | Id_state { bindings; _ } -> bindings
-    | Signature_state { state; _ } -> nested_get_bindings state
     | Module_state { state; _ } -> nested_get_bindings state
 
   let get_bindings = get $> nested_get_bindings
 
   let rec nested_set_bindings bindings = function
     | Id_state o -> Id_state { o with bindings }
-    | Signature_state o ->
-        let state' = nested_set_bindings bindings o.state in
-        Signature_state { o with state = state' }
     | Module_state o ->
         let state' = nested_set_bindings bindings o.state in
         Module_state { o with state = state' }
@@ -149,16 +118,12 @@ end = struct
 
   let rec nested_get_ids = function
     | Id_state { ids; _ } -> ids
-    | Signature_state { state; _ } -> nested_get_ids state
     | Module_state { state; _ } -> nested_get_ids state
 
   let get_ids = get $> nested_get_ids
 
   let rec nested_set_ids ids = function
     | Id_state o -> Id_state { o with ids }
-    | Signature_state o ->
-        let state' = nested_set_ids ids o.state in
-        Signature_state { o with state = state' }
     | Module_state o ->
         let state' = nested_set_ids ids o.state in
         Module_state { o with state = state' }
@@ -172,16 +137,12 @@ end = struct
 
   let rec nested_get_max_suffix_by_id = function
     | Id_state { max_suffix_by_id; _ } -> max_suffix_by_id
-    | Signature_state { state; _ } -> nested_get_max_suffix_by_id state
     | Module_state { state; _ } -> nested_get_max_suffix_by_id state
 
   let get_max_suffix_by_id = get $> nested_get_max_suffix_by_id
 
   let rec nested_set_max_suffix_by_id max_suffix_by_id = function
     | Id_state o -> Id_state { o with max_suffix_by_id }
-    | Signature_state o ->
-        let state' = nested_set_max_suffix_by_id max_suffix_by_id o.state in
-        Signature_state { o with state = state' }
     | Module_state o ->
         let state' = nested_set_max_suffix_by_id max_suffix_by_id o.state in
         Module_state { o with state = state' }
@@ -204,9 +165,7 @@ end = struct
               o.declarations
           in
           Module_state { o with declarations = declarations' }
-      | Signature_state _ as state -> state
-      | Id_state _ ->
-          Error.raise_violation "[add_module_declaration] invalid state")
+      | Id_state _ as state -> state)
 
   (** Regular expression for non-digit characters. *)
   let non_digit_regexp = Str.regexp "[^0-9]"
@@ -290,9 +249,7 @@ end = struct
 
   let get_module_declarations =
     get >>= function
-    | Id_state _
-    | Signature_state _ ->
-        Error.raise_violation "[get_declarations] invalid state"
+    | Id_state _ -> Error.raise_violation "[get_declarations] invalid state"
     | Module_state o -> return o.declarations
 
   let with_module_declarations ~declarations ~module_identifier ~id =
@@ -309,33 +266,6 @@ end = struct
            ~subtree:inner_declarations { id })
     in
     return declarations'
-
-  let rec nested_set_default_associativity default_associativity = function
-    | Id_state _ ->
-        Error.raise_violation "[set_default_associativity] invalid state"
-    | Signature_state o -> Signature_state { o with default_associativity }
-    | Module_state o ->
-        let state' =
-          nested_set_default_associativity default_associativity o.state
-        in
-        Module_state { o with state = state' }
-
-  let rec nested_get_default_associativity = function
-    | Id_state _ ->
-        Error.raise_violation "[get_default_associativity] invalid state"
-    | Signature_state o -> o.default_associativity
-    | Module_state o -> nested_get_default_associativity o.state
-
-  let set_default_associativity default_associativity =
-    modify (nested_set_default_associativity default_associativity)
-
-  let get_default_associativity = get $> nested_get_default_associativity
-
-  let make_operator_prefix ?precedence identifier = return ()
-
-  let make_operator_infix ?precedence ?associativity identifier = return ()
-
-  let make_operator_postfix ?precedence identifier = return ()
 end
 
 module type BELUGA_HTML = sig
@@ -2064,8 +1994,7 @@ module Make (Html_state : HTML_PRINTING_STATE) :
             ++ pp_associativity associativity
             ++ pp_dot)
         in
-        let* () = pp_pragma "assoc" pp_associativity_pragma in
-        set_default_associativity associativity
+        pp_pragma "assoc" pp_associativity_pragma
     | Signature.Pragma.Prefix_fixity { constant; precedence; _ } ->
         let pp_prefix_pragma =
           pp_hovbox ~indent
@@ -2076,8 +2005,7 @@ module Make (Html_state : HTML_PRINTING_STATE) :
                  precedence
             ++ pp_dot)
         in
-        let* () = pp_pragma "prefix" pp_prefix_pragma in
-        make_operator_prefix ?precedence constant
+        pp_pragma "prefix" pp_prefix_pragma
     | Signature.Pragma.Infix_fixity
         { constant; precedence; associativity; _ } ->
         let pp_infix_pragma =
@@ -2093,8 +2021,7 @@ module Make (Html_state : HTML_PRINTING_STATE) :
                  associativity
             ++ pp_dot)
         in
-        let* () = pp_pragma "infix" pp_infix_pragma in
-        make_operator_infix ?precedence ?associativity constant
+        pp_pragma "infix" pp_infix_pragma
     | Signature.Pragma.Postfix_fixity { constant; precedence; _ } ->
         let pp_postfix_pragma =
           pp_hovbox ~indent
@@ -2105,8 +2032,7 @@ module Make (Html_state : HTML_PRINTING_STATE) :
                  precedence
             ++ pp_dot)
         in
-        let* () = pp_pragma "postfix" pp_postfix_pragma in
-        make_operator_postfix ?precedence constant
+        pp_pragma "postfix" pp_postfix_pragma
     | Signature.Pragma.Not _ ->
         let pp_not_pragma = pp_string "--not" in
         pp_pragma "not" pp_not_pragma
@@ -2157,12 +2083,16 @@ module Make (Html_state : HTML_PRINTING_STATE) :
               pp_space ++ pp_signature_totality_order pp_identifier order)
             order
         in
+        let pp_argument_labels =
+          match argument_labels with
+          | [] -> pp_nop
+          | _ ->
+              pp_space
+              ++ pp_list ~sep:pp_space pp_argument_label_opt argument_labels
+        in
         pp_hovbox ~indent
           (pp_total_keyword ++ pp_order_opt ++ pp_space
-          ++ pp_in_parens
-               (pp_identifier program ++ pp_space
-               ++ pp_list ~sep:pp_space pp_argument_label_opt argument_labels
-               ))
+          ++ pp_in_parens (pp_identifier program ++ pp_argument_labels))
     | Signature.Totality.Declaration.Numeric { order; _ } ->
         pp_option ~none:pp_total_keyword
           (fun order ->

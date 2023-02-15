@@ -1,7 +1,6 @@
-open Support
 include Format
 
-module type FORMAT_STATE = sig
+module type S = sig
   include State.STATE
 
   val pp_flush : Unit.t t
@@ -62,7 +61,7 @@ module Make (S : sig
   include State.STATE
 
   val with_formatter : (formatter -> 'a t) -> 'a t
-end) : FORMAT_STATE with type state = S.state = struct
+end) : S with type state = S.state = struct
   include S
 
   let nop = return ()

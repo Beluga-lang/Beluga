@@ -11,6 +11,7 @@ module Show = Show
 module Eq = Eq
 module Ord = Ord
 module Hash = Hash
+module Format_state = Format_state
 
 (** {1 Extensions to Imported Libraries} *)
 

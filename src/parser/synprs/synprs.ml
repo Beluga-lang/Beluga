@@ -6,6 +6,10 @@ include Synprs_definition
 
 include Common
 
+(** {1 Explicit Arguments} *)
+
+include Synprs_arguments
+
 (** {1 Locations} *)
 
 include Synprs_location

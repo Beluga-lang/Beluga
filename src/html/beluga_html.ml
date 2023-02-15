@@ -433,7 +433,7 @@ module Make (Html_state : HTML_PRINTING_STATE) :
              namespaces
           ++ pp_identifier name)
 
-  let[@inline] pp_in_html ~start ~stop p = pp_as 1 start ++ p ++ pp_as 1 stop
+  let[@inline] pp_in_html ~start ~stop p = pp_as 0 start ++ p ++ pp_as 0 stop
 
   let pp_toplevel_documentation_html =
     pp_in_html ~start:{|<div class="documentation">|} ~stop:{|</div>|}

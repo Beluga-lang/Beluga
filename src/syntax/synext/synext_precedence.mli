@@ -27,9 +27,9 @@ module Meta_precedence : Ord.ORD
 
 val precedence_of_schema : schema -> Meta_precedence.t
 
-module Comp_precedence : Ord.ORD
-
 (** {1 Precedence of Computation-Level Syntax} *)
+
+module Comp_precedence : Ord.ORD
 
 val precedence_of_comp_kind : comp_kind -> Comp_precedence.t
 

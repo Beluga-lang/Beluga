@@ -27,6 +27,10 @@ module type HTML_PRINTING_STATE = sig
 
   include MyFormat.FORMAT_STATE with type state := state
 
+  val fresh_id : ?prefix:String.t -> Identifier.t -> String.t t
+
+  val add_binding : Identifier.t -> id:String.t -> Unit.t t
+
   val add_fresh_id : ?prefix:String.t -> Identifier.t -> Unit.t t
 
   val lookup_toplevel_id : Identifier.t -> String.t t
@@ -50,7 +54,12 @@ module type HTML_PRINTING_STATE = sig
     ?precedence:Int.t -> Qualified_identifier.t -> Unit.t t
 
   val with_module_declarations :
-    declarations:'a t -> module_identifier:Identifier.t -> 'a t
+       declarations:'a t
+    -> module_identifier:Identifier.t
+    -> id:String.t
+    -> 'a t
+
+  val add_module_declaration : Identifier.t -> Unit.t t
 
   val open_module : Qualified_identifier.t -> Unit.t t
 
@@ -244,11 +253,12 @@ end = struct
     let* () = modify_ids (String.Set.add id') in
     return id'
 
+  let add_binding identifier ~id =
+    modify_bindings (Binding_tree.add_toplevel identifier { id })
+
   let add_fresh_id ?prefix identifier =
     let* id = fresh_id ?prefix identifier in
-    let* () =
-      modify_bindings (Binding_tree.add_toplevel identifier { id })
-    in
+    let* () = add_binding identifier ~id in
     add_module_declaration identifier
 
   let lookup_toplevel identifier =
@@ -285,7 +295,7 @@ end = struct
         Error.raise_violation "[get_declarations] invalid state"
     | Module_state o -> return o.declarations
 
-  let with_module_declarations ~declarations ~module_identifier =
+  let with_module_declarations ~declarations ~module_identifier ~id =
     let* state = get in
     let* () =
       put (Module_state { state; declarations = Binding_tree.empty })
@@ -293,7 +303,12 @@ end = struct
     let* declarations' = declarations in
     let* inner_declarations = get_module_declarations in
     let* () = put state in
-    return (Obj.magic ())
+    let* () =
+      modify_bindings
+        (Binding_tree.add_toplevel module_identifier
+           ~subtree:inner_declarations { id })
+    in
+    return declarations'
 
   let rec nested_set_default_associativity default_associativity = function
     | Id_state _ ->
@@ -457,8 +472,7 @@ module Make (Html_state : HTML_PRINTING_STATE) :
 
   let pp_computation_variable = pp_variable "computation-variable"
 
-  let pp_constant css_class identifier =
-    let* id = lookup_toplevel_id identifier in
+  let pp_constant css_class ~id identifier =
     pp_in_html
       ~start:
         (Format.asprintf {|<span id="%s" class="constant %s">|} id css_class)
@@ -552,6 +566,13 @@ module Make (Html_state : HTML_PRINTING_STATE) :
 
   let pp_computation_program_invoke =
     pp_constant_invoke computation_program_css_class
+
+  let module_css_class = "module"
+
+  let pp_module_constant = pp_constant module_css_class
+
+  let[@warning "-32"] pp_module_constant_invoke =
+    pp_constant_invoke module_css_class
 
   let pp_and_keyword = pp_keyword "and"
 
@@ -900,7 +921,10 @@ module Make (Html_state : HTML_PRINTING_STATE) :
         let pp_parameter_identifier =
           pp_option ~none:pp_underscore pp_identifier parameter_identifier
         in
-        let pp_parameter_type = pp_clf_typ parameter_type in
+        let pp_parameter_type =
+          pp_non_breaking_space ++ pp_colon ++ pp_space
+          ++ pp_clf_typ parameter_type
+        in
         let pp_declaration = pp_parameter_identifier ++ pp_parameter_type in
         let pp_binding =
           match plicity with
@@ -2176,22 +2200,38 @@ module Make (Html_state : HTML_PRINTING_STATE) :
           (Synext.location_of_signature_declaration declaration)
           Unsupported_non_recursive_declaration
     | Signature.Declaration.Typ { identifier; kind; _ } ->
-        pp_hovbox ~indent
-          (pp_lf_type_constant identifier
-          ++ pp_non_breaking_space ++ pp_colon ++ pp_space ++ pp_lf_kind kind
-          ++ pp_dot)
+        let* id = fresh_id ~prefix:"lf-type-" identifier in
+        let* () =
+          pp_hovbox ~indent
+            (pp_lf_type_constant ~id identifier
+            ++ pp_non_breaking_space ++ pp_colon ++ pp_space
+            ++ pp_lf_kind kind ++ pp_dot)
+        in
+        let* () = add_binding identifier ~id in
+        add_module_declaration identifier
     | Signature.Declaration.Const { identifier; typ; _ } ->
-        pp_hovbox ~indent
-          (pp_lf_term_constant identifier
-          ++ pp_non_breaking_space ++ pp_colon ++ pp_space ++ pp_lf_typ typ
-          ++ pp_dot)
+        let* id = fresh_id ~prefix:"lf-term-" identifier in
+        let* () =
+          pp_hovbox ~indent
+            (pp_lf_term_constant ~id identifier
+            ++ pp_non_breaking_space ++ pp_colon ++ pp_space ++ pp_lf_typ typ
+            ++ pp_dot)
+        in
+        let* () = add_binding identifier ~id in
+        add_module_declaration identifier
     | Signature.Declaration.Schema { identifier; schema; _ } ->
-        pp_hovbox ~indent
-          (pp_schema_keyword ++ pp_non_breaking_space
-          ++ pp_schema_constant identifier
-          ++ pp_non_breaking_space ++ pp_equal ++ pp_space
-          ++ pp_schema schema ++ pp_semicolon)
+        let* id = fresh_id ~prefix:"schema-" identifier in
+        let* () =
+          pp_hovbox ~indent
+            (pp_schema_keyword ++ pp_non_breaking_space
+            ++ pp_schema_constant ~id identifier
+            ++ pp_non_breaking_space ++ pp_equal ++ pp_space
+            ++ pp_schema schema ++ pp_semicolon)
+        in
+        let* () = add_binding identifier ~id in
+        add_module_declaration identifier
     | Signature.Declaration.Recursive_declarations { declarations; _ } -> (
+        let* () = traverse_list1_void pre_add_declaration declarations in
         match group_recursive_declarations declarations with
         | List1.T (first, []) ->
             pp_vbox ~indent:0
@@ -2206,21 +2246,33 @@ module Make (Html_state : HTML_PRINTING_STATE) :
                    rest)
             ++ pp_semicolon)
     | Signature.Declaration.CompTypAbbrev { identifier; kind; typ; _ } ->
-        pp_hovbox ~indent
-          (pp_typedef_keyword ++ pp_non_breaking_space
-          ++ pp_computation_abbreviation_constant identifier
-          ++ pp_non_breaking_space ++ pp_colon ++ pp_space
-          ++ pp_comp_kind kind ++ pp_non_breaking_space ++ pp_equal
-          ++ pp_space ++ pp_comp_typ typ ++ pp_semicolon)
+        let* id = fresh_id ~prefix:"abbrev-" identifier in
+        let* () =
+          pp_hovbox ~indent
+            (pp_typedef_keyword ++ pp_non_breaking_space
+            ++ pp_computation_abbreviation_constant ~id identifier
+            ++ pp_non_breaking_space ++ pp_colon ++ pp_space
+            ++ pp_comp_kind kind ++ pp_non_breaking_space ++ pp_equal
+            ++ pp_space ++ pp_comp_typ typ ++ pp_semicolon)
+        in
+        let* () = add_binding identifier ~id in
+        add_module_declaration identifier
     | Signature.Declaration.Val { identifier; typ; expression; _ } ->
         let pp_typ_annotation =
           pp_option (fun typ -> pp_colon ++ pp_space ++ pp_comp_typ typ) typ
         in
-        let pp_declaration = pp_identifier identifier ++ pp_typ_annotation in
-        pp_hovbox ~indent
-          (pp_let_keyword ++ pp_space ++ pp_declaration ++ pp_space
-         ++ pp_equal
-          ++ pp_comp_expression expression)
+        let* id = fresh_id ~prefix:"val-" identifier in
+        let pp_declaration =
+          pp_computation_program ~id identifier ++ pp_typ_annotation
+        in
+        let* () =
+          pp_hovbox ~indent
+            (pp_let_keyword ++ pp_space ++ pp_declaration ++ pp_space
+           ++ pp_equal
+            ++ pp_comp_expression expression)
+        in
+        let* () = add_binding identifier ~id in
+        add_module_declaration identifier
     | Signature.Declaration.Query
         { identifier
         ; meta_context
@@ -2228,7 +2280,7 @@ module Make (Html_state : HTML_PRINTING_STATE) :
         ; expected_solutions
         ; maximum_tries
         ; _
-        } ->
+        } -> (
         let pp_binding identifier typ =
           pp_identifier identifier ++ pp_non_breaking_space ++ pp_colon
           ++ pp_space ++ pp_meta_typ typ
@@ -2243,31 +2295,46 @@ module Make (Html_state : HTML_PRINTING_STATE) :
         let pp_query_argument =
           pp_option ~none:pp_star (fun argument -> pp_int argument)
         in
-        let pp_identifier_opt =
-          pp_option
-            (fun identifier -> pp_space ++ pp_identifier identifier)
-            identifier
-        in
-        pp_hovbox ~indent
-          (pp_string "--query" ++ pp_space
-          ++ pp_query_argument expected_solutions
-          ++ pp_space
-          ++ pp_query_argument maximum_tries
-          ++ pp_space
-          ++ pp_meta_context meta_context
-          ++ pp_identifier_opt ++ pp_non_breaking_space ++ pp_colon
-          ++ pp_lf_typ typ ++ pp_dot)
+        match identifier with
+        | Option.Some identifier ->
+            let* id = fresh_id ~prefix:"query-" identifier in
+            let* () =
+              pp_hovbox ~indent
+                (pp_string "--query" ++ pp_space
+                ++ pp_query_argument expected_solutions
+                ++ pp_space
+                ++ pp_query_argument maximum_tries
+                ++ pp_space
+                ++ pp_meta_context meta_context
+                ++ pp_space ++ pp_identifier identifier
+                ++ pp_non_breaking_space ++ pp_colon ++ pp_lf_typ typ
+                ++ pp_dot)
+            in
+            let* () = add_binding identifier ~id in
+            add_module_declaration identifier
+        | Option.None ->
+            pp_hovbox ~indent
+              (pp_string "--query" ++ pp_space
+              ++ pp_query_argument expected_solutions
+              ++ pp_space
+              ++ pp_query_argument maximum_tries
+              ++ pp_space
+              ++ pp_meta_context meta_context
+              ++ pp_non_breaking_space ++ pp_colon ++ pp_lf_typ typ ++ pp_dot
+              ))
     | Signature.Declaration.Module { identifier; entries; _ } ->
+        let* id = fresh_id ~prefix:"module-" identifier in
         with_module_declarations
           ~declarations:
             (pp_module_keyword ++ pp_non_breaking_space
-           ++ pp_identifier identifier ++ pp_equal ++ pp_non_breaking_space
-           ++ pp_struct_keyword ++ pp_break 1 2
+            ++ pp_module_constant ~id identifier
+            ++ pp_equal ++ pp_non_breaking_space ++ pp_struct_keyword
+            ++ pp_break 1 2
             ++ pp_vbox ~indent:0 (pp_module_entries entries)
             ++ pp_cut ++ pp_end_keyword)
-          ~module_identifier:identifier
+          ~module_identifier:identifier ~id
 
-  and add_declaration declaration =
+  and pre_add_declaration declaration =
     match declaration with
     | Signature.Declaration.Typ { identifier; _ } ->
         add_fresh_id ~prefix:"lf-type-" identifier
@@ -2294,20 +2361,11 @@ module Make (Html_state : HTML_PRINTING_STATE) :
     | Signature.Declaration.Module { identifier; _ } ->
         add_fresh_id ~prefix:"module-" identifier
     | Signature.Declaration.Recursive_declarations { declarations; _ } ->
-        traverse_list1_void add_declaration declarations
+        traverse_list1_void pre_add_declaration declarations
     | Signature.Declaration.Query { identifier; _ } ->
         traverse_option_void
           (fun identifier -> add_fresh_id ~prefix:"query-" identifier)
           identifier
-
-  and pp_and_add_signature_declaration declaration =
-    match declaration with
-    | Signature.Declaration.Recursive_declarations { declarations; _ } ->
-        let* () = traverse_list1_void add_declaration declarations in
-        pp_signature_declaration declaration
-    | _ ->
-        let* () = pp_signature_declaration declaration in
-        add_declaration declaration
 
   and pp_grouped_declaration ~prepend_and declaration =
     let pp_and_opt =
@@ -2316,9 +2374,10 @@ module Make (Html_state : HTML_PRINTING_STATE) :
     match declaration with
     | `Lf_typ (identifier, kind, constants) ->
         let pp_constant (identifier, typ) =
+          let* id = lookup_toplevel_id identifier in
           pp_hovbox ~indent
             (pp_pipe ++ pp_non_breaking_space
-            ++ pp_lf_term_constant identifier
+            ++ pp_lf_term_constant ~id identifier
             ++ pp_non_breaking_space ++ pp_colon ++ pp_space ++ pp_lf_typ typ
             )
         in
@@ -2327,17 +2386,19 @@ module Make (Html_state : HTML_PRINTING_STATE) :
           | [] -> pp_nop
           | _ -> pp_cut ++ pp_list ~sep:pp_cut pp_constant constants
         in
+        let* id = lookup_toplevel_id identifier in
         pp_hovbox ~indent
           (pp_and_opt ++ pp_lf_keyword ++ pp_non_breaking_space
-          ++ pp_lf_type_constant identifier
+          ++ pp_lf_type_constant ~id identifier
           ++ pp_non_breaking_space ++ pp_colon ++ pp_space ++ pp_lf_kind kind
           ++ pp_non_breaking_space ++ pp_equal)
         ++ pp_constants
     | `Inductive_comp_typ (identifier, kind, constants) ->
         let pp_constant (identifier, typ) =
+          let* id = lookup_toplevel_id identifier in
           pp_hovbox ~indent
             (pp_pipe ++ pp_non_breaking_space
-            ++ pp_computation_constructor identifier
+            ++ pp_computation_constructor ~id identifier
             ++ pp_non_breaking_space ++ pp_colon ++ pp_space
             ++ pp_comp_typ typ)
         in
@@ -2346,17 +2407,19 @@ module Make (Html_state : HTML_PRINTING_STATE) :
           | [] -> pp_nop
           | _ -> pp_cut ++ pp_list ~sep:pp_cut pp_constant constants
         in
+        let* id = lookup_toplevel_id identifier in
         pp_hovbox ~indent
           (pp_and_opt ++ pp_inductive_keyword ++ pp_non_breaking_space
-          ++ pp_computation_inductive_constant identifier
+          ++ pp_computation_inductive_constant ~id identifier
           ++ pp_non_breaking_space ++ pp_colon ++ pp_space
           ++ pp_comp_kind kind ++ pp_non_breaking_space ++ pp_equal)
         ++ pp_constants
     | `Stratified_comp_typ (identifier, kind, constants) ->
         let pp_constant (identifier, typ) =
+          let* id = lookup_toplevel_id identifier in
           pp_hovbox ~indent
             (pp_pipe ++ pp_non_breaking_space
-            ++ pp_computation_constructor identifier
+            ++ pp_computation_constructor ~id identifier
             ++ pp_non_breaking_space ++ pp_colon ++ pp_space
             ++ pp_comp_typ typ)
         in
@@ -2365,17 +2428,19 @@ module Make (Html_state : HTML_PRINTING_STATE) :
           | [] -> pp_nop
           | _ -> pp_cut ++ pp_list ~sep:pp_cut pp_constant constants
         in
+        let* id = lookup_toplevel_id identifier in
         pp_hovbox ~indent
           (pp_and_opt ++ pp_stratified_keyword ++ pp_non_breaking_space
-          ++ pp_computation_stratified_constant identifier
+          ++ pp_computation_stratified_constant ~id identifier
           ++ pp_non_breaking_space ++ pp_colon ++ pp_space
           ++ pp_comp_kind kind ++ pp_non_breaking_space ++ pp_equal)
         ++ pp_constants
     | `Coinductive_comp_typ (identifier, kind, constants) ->
         let pp_constant (identifier, observation_typ, return_typ) =
+          let* id = lookup_toplevel_id identifier in
           pp_hovbox ~indent
             (pp_pipe ++ pp_non_breaking_space
-            ++ pp_computation_destructor identifier
+            ++ pp_computation_destructor ~id identifier
             ++ pp_non_breaking_space ++ pp_colon ++ pp_space
             ++ pp_comp_typ observation_typ
             ++ pp_non_breaking_space ++ pp_double_colon ++ pp_space
@@ -2386,9 +2451,10 @@ module Make (Html_state : HTML_PRINTING_STATE) :
           | [] -> pp_nop
           | _ -> pp_cut ++ pp_list ~sep:pp_cut pp_constant constants
         in
+        let* id = lookup_toplevel_id identifier in
         pp_hovbox ~indent
           (pp_and_opt ++ pp_coinductive_keyword ++ pp_non_breaking_space
-          ++ pp_computation_coinductive_constant identifier
+          ++ pp_computation_coinductive_constant ~id identifier
           ++ pp_non_breaking_space ++ pp_colon ++ pp_space
           ++ pp_comp_kind kind ++ pp_non_breaking_space ++ pp_equal)
         ++ pp_constants
@@ -2401,9 +2467,10 @@ module Make (Html_state : HTML_PRINTING_STATE) :
               ++ pp_non_breaking_space ++ pp_slash)
             order
         in
+        let* id = lookup_toplevel_id identifier in
         pp_hovbox ~indent
           (pp_and_opt ++ pp_rec_keyword ++ pp_non_breaking_space
-          ++ pp_computation_program identifier
+          ++ pp_computation_program ~id identifier
           ++ pp_non_breaking_space ++ pp_colon ++ pp_space ++ pp_comp_typ typ
           ++ pp_non_breaking_space ++ pp_equal)
         ++ pp_order ++ pp_cut
@@ -2417,9 +2484,10 @@ module Make (Html_state : HTML_PRINTING_STATE) :
               ++ pp_non_breaking_space ++ pp_slash)
             order
         in
+        let* id = lookup_toplevel_id identifier in
         pp_hovbox ~indent
           (pp_and_opt ++ pp_proof_keyword ++ pp_non_breaking_space
-          ++ pp_computation_program identifier
+          ++ pp_computation_program ~id identifier
           ++ pp_non_breaking_space ++ pp_colon ++ pp_space ++ pp_comp_typ typ
           ++ pp_non_breaking_space ++ pp_equal)
         ++ pp_order ++ pp_cut
@@ -2576,7 +2644,7 @@ module Make (Html_state : HTML_PRINTING_STATE) :
   and pp_signature_entry entry =
     match entry with
     | Signature.Entry.Declaration { declaration; _ } ->
-        pp_and_add_signature_declaration declaration
+        pp_signature_declaration declaration
     | Signature.Entry.Pragma { pragma; _ } -> pp_signature_pragma pragma
     | Signature.Entry.Comment { location; content } ->
         let html = render_markdown location content in

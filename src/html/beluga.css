@@ -27,6 +27,7 @@ pre {
   display: block;
   padding: 8px;
   background-color: #dddddd;
+  white-space: pre-wrap;
 }
 
 code {
@@ -34,7 +35,6 @@ code {
   color: black;
   font-family: "courier";
   margin: 0;
-  white-space: pre-wrap;
 }
 
 .documentation {

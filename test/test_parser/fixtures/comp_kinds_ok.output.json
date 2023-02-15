@@ -14,7 +14,16 @@
   [
     "Comp.Kind.Pi",
     {
-      "parameter_identifier": null,
+      "parameter_identifier": {
+        "name": "g",
+        "location": {
+          "filename": "comp_kinds_ok.input.bel",
+          "start_line": 10,
+          "start_column": 2,
+          "stop_line": 10,
+          "stop_column": 3
+        }
+      },
       "plicity": "explicit",
       "parameter_type": [
         "Meta.Typ.Context_schema",
@@ -84,7 +93,16 @@
   [
     "Comp.Kind.Pi",
     {
-      "parameter_identifier": null,
+      "parameter_identifier": {
+        "name": "M",
+        "location": {
+          "filename": "comp_kinds_ok.input.bel",
+          "start_line": 13,
+          "start_column": 2,
+          "stop_line": 13,
+          "stop_column": 3
+        }
+      },
       "plicity": "explicit",
       "parameter_type": [
         "Meta.Typ.Contextual_typ",
@@ -165,7 +183,16 @@
       "body": [
         "Comp.Kind.Pi",
         {
-          "parameter_identifier": null,
+          "parameter_identifier": {
+            "name": "N",
+            "location": {
+              "filename": "comp_kinds_ok.input.bel",
+              "start_line": 13,
+              "start_column": 16,
+              "stop_line": 13,
+              "stop_column": 17
+            }
+          },
           "plicity": "explicit",
           "parameter_type": [
             "Meta.Typ.Contextual_typ",
@@ -276,7 +303,16 @@
   [
     "Comp.Kind.Pi",
     {
-      "parameter_identifier": null,
+      "parameter_identifier": {
+        "name": "g",
+        "location": {
+          "filename": "comp_kinds_ok.input.bel",
+          "start_line": 16,
+          "start_column": 2,
+          "stop_line": 16,
+          "stop_column": 3
+        }
+      },
       "plicity": "implicit",
       "parameter_type": [
         "Meta.Typ.Context_schema",

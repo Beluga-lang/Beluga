@@ -340,9 +340,7 @@ end = struct
   let set_default_associativity default_associativity =
     modify (nested_set_default_associativity default_associativity)
 
-  let get_default_associativity =
-    let* state = get in
-    return (nested_get_default_associativity state)
+  let get_default_associativity = get $> nested_get_default_associativity
 
   let[@warning "-23"] rec nested_set_bindings bindings = function
     | Disambiguation_state o -> Disambiguation_state { o with bindings }
@@ -366,9 +364,7 @@ end = struct
 
   let set_bindings bindings = modify (nested_set_bindings bindings)
 
-  let get_bindings =
-    let* state = get in
-    return (nested_get_bindings state)
+  let get_bindings = get $> nested_get_bindings
 
   let[@inline] modify_bindings f =
     let* bindings = get_bindings in
@@ -433,7 +429,7 @@ end = struct
     | Scope_state _ ->
         Error.raise_violation "[is_inner_module_declaration] invalid state"
 
-  let get_declarations =
+  let get_module_declarations =
     get >>= function
     | Disambiguation_state _
     | Signature_state _
@@ -454,7 +450,7 @@ end = struct
       put (Module_state { state; declarations = Binding_tree.empty })
     in
     let* declarations' = declarations in
-    let* inner_declarations = get_declarations in
+    let* inner_declarations = get_module_declarations in
     let* () = put state in
     let* () = add_module inner_declarations module_identifier in
     return declarations'
@@ -611,8 +607,7 @@ end = struct
   let partial_lookup query =
     let identifier = Qualified_identifier.name query
     and namespaces = Qualified_identifier.namespaces query in
-    let* bindings = get_bindings in
-    return (partial_lookup_nested namespaces identifier bindings)
+    get_bindings $> partial_lookup_nested namespaces identifier
 
   let replace identifier f =
     modify_bindings (fun bindings ->

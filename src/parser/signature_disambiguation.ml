@@ -89,10 +89,6 @@ struct
 
   (** {1 Disambiguation Helpers} *)
 
-  let add_query_opt = function
-    | Option.None -> return ()
-    | Option.Some identifier -> add_query identifier
-
   let default_precedence = 0
 
   let make_default_prefix_operator ~arity =
@@ -271,18 +267,16 @@ struct
     | Synprs.Signature.Declaration.Raw_val { identifier; typ; _ } ->
         add_default_program_constant ?typ identifier
     | Synprs.Signature.Declaration.Raw_query { identifier; _ } ->
-        add_query_opt identifier
+        traverse_option_void add_query identifier
 
   (** [make_operator_prefix ?precedence operator_identifier state] is the
       disambiguation state derived from [state] where the operator with
       identifier [operator_identifier] is set as a prefix operator with
       [precedence]. *)
-  let make_operator_prefix ?precedence operator_identifier =
+  let make_operator_prefix ?(precedence = default_precedence)
+      operator_identifier =
     modify_operator operator_identifier (fun operator ->
-        let arity = Operator.arity operator
-        and precedence =
-          Option.value ~default:default_precedence precedence
-        in
+        let arity = Operator.arity operator in
         if arity >= 0 then Operator.make_prefix ~arity ~precedence
         else
           Error.raise_at1
@@ -300,13 +294,11 @@ struct
       then the default associativity as found [state] is used instead.
 
       Only operators with arity [2] may be converted to infix operators. *)
-  let make_operator_infix ?precedence ?associativity operator_identifier =
+  let make_operator_infix ?(precedence = default_precedence) ?associativity
+      operator_identifier =
     let* associativity = get_default_associativity_opt associativity in
     modify_operator operator_identifier (fun operator ->
-        let arity = Operator.arity operator
-        and precedence =
-          Option.value ~default:default_precedence precedence
-        in
+        let arity = Operator.arity operator in
         if arity = 2 then Operator.make_infix ~associativity ~precedence
         else
           Error.raise_at1
@@ -319,12 +311,10 @@ struct
       [precedence].
 
       Only operators with arity [1] may be converted to postfix operators. *)
-  let make_operator_postfix ?precedence operator_identifier =
+  let make_operator_postfix ?(precedence = default_precedence)
+      operator_identifier =
     modify_operator operator_identifier (fun operator ->
-        let arity = Operator.arity operator
-        and precedence =
-          Option.value ~default:default_precedence precedence
-        in
+        let arity = Operator.arity operator in
         if arity = 1 then Operator.make_postfix ~precedence
         else
           Error.raise_at1
@@ -674,7 +664,7 @@ struct
               let* typ' = disambiguate_lf_typ typ in
               return (meta_context', typ'))
         in
-        let* () = add_query_opt identifier in
+        let* () = traverse_option_void add_query identifier in
         return
           (Synext.Signature.Declaration.Query
              { location

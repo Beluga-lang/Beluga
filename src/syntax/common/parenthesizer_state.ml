@@ -1,6 +1,4 @@
-module MyFormat = Format
 open Support
-open Beluga_syntax
 
 module type PARENTHESIZER = sig
   include State.STATE
@@ -84,9 +82,7 @@ module type PARENTHESIZER = sig
     -> unit t
 end
 
-module Make_parenthesizer
-    (Format_state : MyFormat.FORMAT_STATE)
-    (Precedence : Ord.ORD) :
+module Make (Format_state : Format_state.S) (Precedence : Ord.ORD) :
   PARENTHESIZER
     with type state = Format_state.state
      and type precedence = Precedence.t = struct

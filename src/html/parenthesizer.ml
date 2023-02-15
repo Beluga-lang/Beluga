@@ -71,7 +71,8 @@ module type PARENTHESIZER = sig
     -> unit t
 
   val pp_application :
-       guard_operator:('a -> [ `Operator of Operator.t | `Term ])
+       indent:Int.t
+    -> guard_operator:('a -> [ `Operator of Operator.t | `Term ])
     -> guard_operator_application:
          ('b -> [ `Operator_application of Operator.t | `Term ])
     -> precedence_of_applicand:('a -> precedence)
@@ -134,14 +135,14 @@ module Make_parenthesizer
   let parenthesize_argument_postfix_operator =
     parenthesize_term_of_lesser_precedence
 
-  let rec pp_application ~guard_operator ~guard_operator_application
+  let rec pp_application ~indent ~guard_operator ~guard_operator_application
       ~precedence_of_applicand ~precedence_of_argument ~pp_applicand
       ~pp_argument ~parent_precedence (applicand, arguments) =
     match guard_operator applicand with
     | `Term ->
         (* The applicand is not a user-defined operator, so the application
            is in prefix notation. *)
-        pp_hovbox ~indent:2
+        pp_hovbox ~indent
           (parenthesize_term_of_lesser_than_or_equal_precedence
              precedence_of_applicand ~parent_precedence pp_applicand
              applicand
@@ -153,17 +154,17 @@ module Make_parenthesizer
     | `Operator operator ->
         (* The applicand is a user-defined operator, so pretty-printing must
            handle the operator fixity, associativity and precedence. *)
-        pp_operator_application ~guard_operator_application
+        pp_operator_application ~indent ~guard_operator_application
           ~precedence_of_argument ~pp_applicand ~pp_argument
           ~parent_precedence applicand operator arguments
 
-  and pp_operator_application ~guard_operator_application
+  and pp_operator_application ~indent ~guard_operator_application
       ~precedence_of_argument ~pp_applicand ~pp_argument ~parent_precedence
       applicand operator arguments =
     match Operator.fixity operator with
     | Fixity.Prefix ->
-        pp_prefix_operator_application ~precedence_of_argument ~pp_applicand
-          ~pp_argument ~parent_precedence applicand arguments
+        pp_prefix_operator_application ~indent ~precedence_of_argument
+          ~pp_applicand ~pp_argument ~parent_precedence applicand arguments
     | Fixity.Infix ->
         assert (
           List1.compare_length_with arguments 2
@@ -171,7 +172,7 @@ module Make_parenthesizer
         let[@warning "-8"] (List1.T (left_argument, [ right_argument ])) =
           arguments
         in
-        pp_infix_operator_application ~guard_operator_application
+        pp_infix_operator_application ~indent ~guard_operator_application
           ~precedence_of_argument ~pp_applicand ~pp_argument
           ~parent_precedence applicand operator ~left_argument
           ~right_argument
@@ -180,33 +181,33 @@ module Make_parenthesizer
           List1.compare_length_with arguments 1
           = 0 (* The arguments list must have exactly one element *));
         let[@warning "-8"] (List1.T (argument, [])) = arguments in
-        pp_postfix_operator_application ~guard_operator_application
+        pp_postfix_operator_application ~indent ~guard_operator_application
           ~precedence_of_argument ~pp_applicand ~pp_argument
           ~parent_precedence applicand argument
 
-  and pp_prefix_operator_application ~precedence_of_argument ~pp_applicand
-      ~pp_argument ~parent_precedence applicand arguments =
-    pp_hovbox ~indent:2
+  and pp_prefix_operator_application ~indent ~precedence_of_argument
+      ~pp_applicand ~pp_argument ~parent_precedence applicand arguments =
+    pp_hovbox ~indent
       (pp_applicand applicand ++ pp_space
       ++ pp_list1 ~sep:pp_space
            (parenthesize_argument_prefix_operator precedence_of_argument
               ~parent_precedence pp_argument)
            arguments)
 
-  and pp_postfix_operator_application ~guard_operator_application
+  and pp_postfix_operator_application ~indent ~guard_operator_application
       ~precedence_of_argument ~pp_applicand ~pp_argument ~parent_precedence
       applicand argument =
-    pp_hovbox ~indent:2
+    pp_hovbox ~indent
       (pp_postfix_operator_argument ~guard_operator_application
          ~precedence_of_argument ~pp_argument ~parent_precedence argument
       ++ pp_space ++ pp_applicand applicand)
 
-  and pp_infix_operator_application ~guard_operator_application
+  and pp_infix_operator_application ~indent ~guard_operator_application
       ~precedence_of_argument ~pp_applicand ~pp_argument ~parent_precedence
       applicand operator ~left_argument ~right_argument =
     match Operator.associativity operator with
     | Associativity.Left_associative ->
-        pp_hovbox ~indent:2
+        pp_hovbox ~indent
           (pp_infix_left_associative_operator_left_argument
              ~guard_operator_application ~precedence_of_argument ~pp_argument
              ~parent_precedence operator left_argument
@@ -215,7 +216,7 @@ module Make_parenthesizer
                ~guard_operator_application ~precedence_of_argument
                ~pp_argument ~parent_precedence operator right_argument)
     | Associativity.Right_associative ->
-        pp_hovbox ~indent:2
+        pp_hovbox ~indent
           (pp_infix_right_associative_operator_left_argument
              ~guard_operator_application ~precedence_of_argument ~pp_argument
              ~parent_precedence operator left_argument
@@ -224,7 +225,7 @@ module Make_parenthesizer
                ~guard_operator_application ~precedence_of_argument
                ~pp_argument ~parent_precedence operator right_argument)
     | Associativity.Non_associative ->
-        pp_hovbox ~indent:2
+        pp_hovbox ~indent
           (pp_infix_non_associative_operator_left_argument
              ~precedence_of_argument ~pp_argument ~parent_precedence
              left_argument

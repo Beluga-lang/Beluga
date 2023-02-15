@@ -93,165 +93,59 @@ struct
     | Option.None -> return ()
     | Option.Some identifier -> add_query identifier
 
-  let explicit_arguments_lf_kind =
-    let rec explicit_arguments_lf_kind_tl kind acc =
-      match kind with
-      | Synprs.LF.Object.Raw_arrow { range; _ } ->
-          explicit_arguments_lf_kind_tl range (1 + acc)
-      | Synprs.LF.Object.Raw_pi { body; plicity = Plicity.Explicit; _ } ->
-          explicit_arguments_lf_kind_tl body (1 + acc)
-      | Synprs.LF.Object.Raw_pi { body; plicity = Plicity.Implicit; _ } ->
-          explicit_arguments_lf_kind_tl body acc
-      | _ -> acc
-    in
-    fun kind -> explicit_arguments_lf_kind_tl kind 0
-
-  let explicit_arguments_lf_kind' =
-    let rec explicit_arguments_lf_kind_tl' kind' acc =
-      match kind' with
-      | Synext.LF.Kind.Arrow { range; _ } ->
-          explicit_arguments_lf_kind_tl' range (1 + acc)
-      | Synext.LF.Kind.Pi { body; plicity = Plicity.Explicit; _ } ->
-          explicit_arguments_lf_kind_tl' body (1 + acc)
-      | Synext.LF.Kind.Pi { body; plicity = Plicity.Implicit; _ } ->
-          explicit_arguments_lf_kind_tl' body acc
-      | _ -> acc
-    in
-    fun kind' -> explicit_arguments_lf_kind_tl' kind' 0
-
-  let explicit_arguments_lf_typ =
-    let rec explicit_arguments_lf_typ_tl typ acc =
-      match typ with
-      | Synprs.LF.Object.Raw_arrow { range; _ } ->
-          explicit_arguments_lf_typ_tl range (1 + acc)
-      | Synprs.LF.Object.Raw_pi { body; plicity = Plicity.Explicit; _ } ->
-          explicit_arguments_lf_typ_tl body (1 + acc)
-      | Synprs.LF.Object.Raw_pi { body; plicity = Plicity.Implicit; _ } ->
-          explicit_arguments_lf_typ_tl body acc
-      | _ -> acc
-    in
-    fun typ -> explicit_arguments_lf_typ_tl typ 0
-
-  let explicit_arguments_lf_typ' =
-    let rec explicit_arguments_lf_typ_tl' typ' acc =
-      match typ' with
-      | Synext.LF.Typ.Arrow { range; _ } ->
-          explicit_arguments_lf_typ_tl' range (1 + acc)
-      | Synext.LF.Typ.Pi { body; plicity = Plicity.Explicit; _ } ->
-          explicit_arguments_lf_typ_tl' body (1 + acc)
-      | Synext.LF.Typ.Pi { body; plicity = Plicity.Implicit; _ } ->
-          explicit_arguments_lf_typ_tl' body acc
-      | _ -> acc
-    in
-    fun typ' -> explicit_arguments_lf_typ_tl' typ' 0
-
-  let explicit_arguments_comp_kind =
-    let rec explicit_arguments_comp_kind_tl kind acc =
-      match kind with
-      | Synprs.Comp.Sort_object.Raw_arrow { range; _ } ->
-          explicit_arguments_comp_kind_tl range (1 + acc)
-      | Synprs.Comp.Sort_object.Raw_pi
-          { body; plicity = Plicity.Explicit; _ } ->
-          explicit_arguments_comp_kind_tl body (1 + acc)
-      | Synprs.Comp.Sort_object.Raw_pi
-          { body; plicity = Plicity.Implicit; _ } ->
-          explicit_arguments_comp_kind_tl body acc
-      | _ -> acc
-    in
-    fun kind -> explicit_arguments_comp_kind_tl kind 0
-
-  let explicit_arguments_comp_kind' =
-    let rec explicit_arguments_comp_kind_tl' kind' acc =
-      match kind' with
-      | Synext.Comp.Kind.Arrow { range; _ } ->
-          explicit_arguments_comp_kind_tl' range (1 + acc)
-      | Synext.Comp.Kind.Pi { body; plicity = Plicity.Explicit; _ } ->
-          explicit_arguments_comp_kind_tl' body (1 + acc)
-      | Synext.Comp.Kind.Pi { body; plicity = Plicity.Implicit; _ } ->
-          explicit_arguments_comp_kind_tl' body acc
-      | _ -> acc
-    in
-    fun kind' -> explicit_arguments_comp_kind_tl' kind' 0
-
-  let explicit_arguments_comp_typ =
-    let rec explicit_arguments_comp_typ_tl typ acc =
-      match typ with
-      | Synprs.Comp.Sort_object.Raw_arrow { range; _ } ->
-          explicit_arguments_comp_typ_tl range (1 + acc)
-      | Synprs.Comp.Sort_object.Raw_pi
-          { body; plicity = Plicity.Explicit; _ } ->
-          explicit_arguments_comp_typ_tl body (1 + acc)
-      | Synprs.Comp.Sort_object.Raw_pi
-          { body; plicity = Plicity.Implicit; _ } ->
-          explicit_arguments_comp_typ_tl body acc
-      | _ -> acc
-    in
-    fun typ -> explicit_arguments_comp_typ_tl typ 0
-
-  let explicit_arguments_comp_typ' =
-    let rec explicit_arguments_comp_typ_tl' typ' acc =
-      match typ' with
-      | Synext.Comp.Typ.Arrow { range; _ } ->
-          explicit_arguments_comp_typ_tl' range (1 + acc)
-      | Synext.Comp.Typ.Pi { body; plicity = Plicity.Explicit; _ } ->
-          explicit_arguments_comp_typ_tl' body (1 + acc)
-      | Synext.Comp.Typ.Pi { body; plicity = Plicity.Implicit; _ } ->
-          explicit_arguments_comp_typ_tl' body acc
-      | _ -> acc
-    in
-    fun typ' -> explicit_arguments_comp_typ_tl' typ' 0
-
   let default_precedence = 0
 
   let make_default_prefix_operator ~arity =
     Operator.make_prefix ~arity ~precedence:default_precedence
 
   let make_default_lf_type_constant_operator lf_kind =
-    let explicit_arguments = explicit_arguments_lf_kind lf_kind in
+    let explicit_arguments = Synprs.explicit_arguments_lf_kind lf_kind in
     make_default_prefix_operator ~arity:explicit_arguments
 
   let make_default_lf_type_constant_operator' lf_kind' =
-    let explicit_arguments = explicit_arguments_lf_kind' lf_kind' in
+    let explicit_arguments = Synext.explicit_arguments_lf_kind lf_kind' in
     make_default_prefix_operator ~arity:explicit_arguments
 
   let make_default_lf_term_constant_operator lf_typ =
-    let explicit_arguments = explicit_arguments_lf_typ lf_typ in
+    let explicit_arguments = Synprs.explicit_arguments_lf_typ lf_typ in
     make_default_prefix_operator ~arity:explicit_arguments
 
   let make_default_lf_term_constant_operator' lf_typ' =
-    let explicit_arguments = explicit_arguments_lf_typ' lf_typ' in
+    let explicit_arguments = Synext.explicit_arguments_lf_typ lf_typ' in
     make_default_prefix_operator ~arity:explicit_arguments
 
   let make_default_comp_typ_constant_operator comp_kind =
-    let explicit_arguments = explicit_arguments_comp_kind comp_kind in
+    let explicit_arguments = Synprs.explicit_arguments_comp_kind comp_kind in
     make_default_prefix_operator ~arity:explicit_arguments
 
   let make_default_comp_typ_constant_operator' comp_kind' =
-    let explicit_arguments = explicit_arguments_comp_kind' comp_kind' in
+    let explicit_arguments =
+      Synext.explicit_arguments_comp_kind comp_kind'
+    in
     make_default_prefix_operator ~arity:explicit_arguments
 
   let make_default_comp_constructor_operator comp_typ =
-    let explicit_arguments = explicit_arguments_comp_typ comp_typ in
+    let explicit_arguments = Synprs.explicit_arguments_comp_typ comp_typ in
     make_default_prefix_operator ~arity:explicit_arguments
 
   let make_default_comp_constructor_operator' comp_typ' =
-    let explicit_arguments = explicit_arguments_comp_typ' comp_typ' in
+    let explicit_arguments = Synext.explicit_arguments_comp_typ comp_typ' in
     make_default_prefix_operator ~arity:explicit_arguments
 
   let make_default_program_constant_operator comp_typ =
-    let explicit_arguments = explicit_arguments_comp_typ comp_typ in
+    let explicit_arguments = Synprs.explicit_arguments_comp_typ comp_typ in
     make_default_prefix_operator ~arity:explicit_arguments
 
   let make_default_program_constant_operator' comp_typ' =
-    let explicit_arguments = explicit_arguments_comp_typ' comp_typ' in
+    let explicit_arguments = Synext.explicit_arguments_comp_typ comp_typ' in
     make_default_prefix_operator ~arity:explicit_arguments
 
   let make_default_comp_destructor_operator comp_typ =
-    let explicit_arguments = explicit_arguments_comp_typ comp_typ in
+    let explicit_arguments = Synprs.explicit_arguments_comp_typ comp_typ in
     make_default_prefix_operator ~arity:explicit_arguments
 
   let make_default_comp_destructor_operator' comp_typ' =
-    let explicit_arguments = explicit_arguments_comp_typ' comp_typ' in
+    let explicit_arguments = Synext.explicit_arguments_comp_typ comp_typ' in
     make_default_prefix_operator ~arity:explicit_arguments
 
   let add_default_lf_type_constant identifier kind =

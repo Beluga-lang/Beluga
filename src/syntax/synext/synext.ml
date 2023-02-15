@@ -14,6 +14,10 @@ include Synext_location
 
 include Synext_precedence
 
+(** {1 Explicit Arguments} *)
+
+include Synext_arguments
+
 (** {1 Pretty-Printing} *)
 
 include Synext_pp

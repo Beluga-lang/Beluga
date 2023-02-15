@@ -699,7 +699,7 @@ module Make
         return
           (Synext.Comp.Kind.Pi
              { location
-             ; parameter_identifier = Option.none
+             ; parameter_identifier
              ; parameter_type = parameter_typ'
              ; plicity
              ; body = body'

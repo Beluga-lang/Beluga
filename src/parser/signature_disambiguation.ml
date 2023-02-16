@@ -277,7 +277,7 @@ struct
       operator_identifier =
     modify_operator operator_identifier (fun operator ->
         let arity = Operator.arity operator in
-        if arity >= 0 then Operator.make_prefix ~arity ~precedence
+        if arity > 0 then Operator.make_prefix ~arity ~precedence
         else
           Error.raise_at1
             (Qualified_identifier.location operator_identifier)

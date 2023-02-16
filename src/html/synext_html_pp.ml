@@ -44,6 +44,10 @@ module type HTML_PRINTING_STATE = sig
   val open_module : Qualified_identifier.t -> Unit.t t
 
   val add_abbreviation : Qualified_identifier.t -> Identifier.t -> Unit.t t
+
+  val lookup_operator_precedence : Qualified_identifier.t -> Int.t Option.t t
+
+  val lookup_operator : Qualified_identifier.t -> Operator.t Option.t t
 end
 
 module Persistent_html_state : sig
@@ -264,6 +268,10 @@ end = struct
            ~subtree:inner_declarations { id })
     in
     return declarations'
+
+  let lookup_operator_precedence _ = return Option.none (* TODO: *)
+
+  let lookup_operator _ = return Option.none (* TODO: *)
 end
 
 module type BELUGA_HTML = sig
@@ -400,107 +408,119 @@ module Make (Html_state : HTML_PRINTING_STATE) :
 
   let pp_computation_variable = pp_variable "computation-variable"
 
-  let pp_constant css_class ~id identifier =
-    pp_in_html
-      ~start:
-        (Format.asprintf {|<span id="%s" class="constant %s">|} id css_class)
-      ~stop:{|</span>|}
-      (pp_identifier identifier)
+  let pp_constant ?css_class ~id identifier =
+    let start =
+      match css_class with
+      | Option.Some css_class ->
+          Format.asprintf {|<span id="%s" class="constant %s">|} id css_class
+      | Option.None -> Format.asprintf {|<span id="%s" class="constant">|} id
+    in
+    pp_in_html ~start ~stop:{|</span>|} (pp_identifier identifier)
 
-  let pp_constant_invoke css_class identifier =
+  let pp_constant_invoke ?css_class identifier =
     let* id = lookup_id identifier in
-    pp_in_html
-      ~start:
-        (Format.asprintf {|<span class="constant %s"><a href="#%s">|}
-           css_class id)
-      ~stop:{|</a></span>|}
+    let start =
+      match css_class with
+      | Option.Some css_class ->
+          Format.asprintf {|<span class="constant %s"><a href="#%s">|}
+            css_class id
+      | Option.None ->
+          Format.asprintf {|<span class="constant"><a href="#%s">|} id
+    in
+    pp_in_html ~start ~stop:{|</a></span>|}
       (pp_qualified_identifier identifier)
 
   let lf_type_constant_css_class = "lf-type-constant"
 
-  let pp_lf_type_constant = pp_constant lf_type_constant_css_class
+  let pp_lf_type_constant = pp_constant ~css_class:lf_type_constant_css_class
 
   let pp_lf_type_constant_invoke =
-    pp_constant_invoke lf_type_constant_css_class
+    pp_constant_invoke ~css_class:lf_type_constant_css_class
 
   let lf_term_constant_css_class = "lf-term-constant"
 
-  let pp_lf_term_constant = pp_constant lf_term_constant_css_class
+  let pp_lf_term_constant = pp_constant ~css_class:lf_term_constant_css_class
 
   let pp_lf_term_constant_invoke =
-    pp_constant_invoke lf_term_constant_css_class
+    pp_constant_invoke ~css_class:lf_term_constant_css_class
 
   let context_schema_css_class = "context-schema"
 
-  let pp_schema_constant = pp_constant context_schema_css_class
+  let pp_schema_constant = pp_constant ~css_class:context_schema_css_class
 
-  let pp_schema_constant_invoke = pp_constant_invoke context_schema_css_class
+  let pp_schema_constant_invoke =
+    pp_constant_invoke ~css_class:context_schema_css_class
 
   let computation_inductive_type_constant_css_class =
     "computation-inductive-type-constant"
 
   let pp_computation_inductive_constant =
-    pp_constant computation_inductive_type_constant_css_class
+    pp_constant ~css_class:computation_inductive_type_constant_css_class
 
   let pp_computation_inductive_constant_invoke =
-    pp_constant_invoke computation_inductive_type_constant_css_class
+    pp_constant_invoke
+      ~css_class:computation_inductive_type_constant_css_class
 
   let computation_stratified_type_constant_css_class =
     "computation-stratified-type-constant"
 
   let pp_computation_stratified_constant =
-    pp_constant computation_stratified_type_constant_css_class
+    pp_constant ~css_class:computation_stratified_type_constant_css_class
 
   let pp_computation_stratified_constant_invoke =
-    pp_constant_invoke computation_stratified_type_constant_css_class
+    pp_constant_invoke
+      ~css_class:computation_stratified_type_constant_css_class
 
   let computation_coinductive_type_constant_css_class =
     "computation-coinductive-type-constant"
 
   let pp_computation_coinductive_constant =
-    pp_constant computation_coinductive_type_constant_css_class
+    pp_constant ~css_class:computation_coinductive_type_constant_css_class
 
   let pp_computation_coinductive_constant_invoke =
-    pp_constant_invoke computation_coinductive_type_constant_css_class
+    pp_constant_invoke
+      ~css_class:computation_coinductive_type_constant_css_class
 
   let computation_abbreviation_type_constant_css_class =
     "computation-abbreviation-type-constant"
 
   let pp_computation_abbreviation_constant =
-    pp_constant computation_abbreviation_type_constant_css_class
+    pp_constant ~css_class:computation_abbreviation_type_constant_css_class
 
   let pp_computation_abbreviation_constant_invoke =
-    pp_constant_invoke computation_abbreviation_type_constant_css_class
+    pp_constant_invoke
+      ~css_class:computation_abbreviation_type_constant_css_class
 
   let computation_constructor_css_class = "computation-constructor"
 
   let pp_computation_constructor =
-    pp_constant computation_constructor_css_class
+    pp_constant ~css_class:computation_constructor_css_class
 
   let pp_computation_constructor_invoke =
-    pp_constant_invoke computation_constructor_css_class
+    pp_constant_invoke ~css_class:computation_constructor_css_class
 
   let computation_destructor_css_class = "computation-destructor"
 
   let pp_computation_destructor =
-    pp_constant computation_destructor_css_class
+    pp_constant ~css_class:computation_destructor_css_class
 
   let pp_computation_destructor_invoke =
-    pp_constant_invoke computation_destructor_css_class
+    pp_constant_invoke ~css_class:computation_destructor_css_class
 
   let computation_program_css_class = "computation-program"
 
-  let pp_computation_program = pp_constant computation_program_css_class
+  let pp_computation_program =
+    pp_constant ~css_class:computation_program_css_class
 
   let pp_computation_program_invoke =
-    pp_constant_invoke computation_program_css_class
+    pp_constant_invoke ~css_class:computation_program_css_class
 
   let module_css_class = "module"
 
-  let pp_module_constant = pp_constant module_css_class
+  let pp_module_constant = pp_constant ~css_class:module_css_class
 
   let[@warning "-32"] pp_module_constant_invoke =
-    pp_constant_invoke module_css_class
+    pp_constant_invoke ~css_class:module_css_class
 
   let pp_and_keyword = pp_keyword "and"
 
@@ -590,12 +610,35 @@ module Make (Html_state : HTML_PRINTING_STATE) :
 
   let pp_split_keyword = pp_keyword "split"
 
+  open Synext.Make_precedences (Html_state)
+
   (** {1 Pretty-Printing LF Syntax} *)
 
-  open Parenthesizer_state.Make (Html_state) (Lf_precedence)
+  let guard_lf_typ_operator = function
+    | LF.Typ.Constant { identifier; _ } -> (
+        lookup_operator identifier >>= function
+        | Option.Some operator -> return (`Operator operator)
+        | Option.None -> return `Operand)
+    | _ -> return `Operand
+
+  let guard_lf_term_operator = function
+    | LF.Term.Constant { identifier; _ } -> (
+        lookup_operator identifier >>= function
+        | Option.Some operator -> return (`Operator operator)
+        | Option.None -> return `Operand)
+    | _ -> return `Operand
+
+  let guard_lf_term_operator_application = function
+    | LF.Term.Application
+        { applicand = LF.Term.Constant { identifier; _ }; _ } -> (
+        lookup_operator identifier >>= function
+        | Option.Some operator -> return (`Operator_application operator)
+        | Option.None -> return `Operand)
+    | term -> guard_lf_term_operator term
 
   let rec pp_lf_kind kind =
-    let parent_precedence = precedence_of_lf_kind kind in
+    let open Parenthesizer_state.Make (Html_state) (Lf_precedence.Ord) in
+    let* parent_precedence = precedence_of_lf_kind kind in
     match kind with
     | LF.Kind.Arrow { domain; range; _ } ->
         (* Right arrows are right-associative *)
@@ -633,24 +676,14 @@ module Make (Html_state : HTML_PRINTING_STATE) :
         pp_hovbox ~indent (pp_binding ++ pp_space ++ pp_lf_kind body)
 
   and pp_lf_typ typ =
-    let parent_precedence = precedence_of_lf_typ typ in
+    let open Parenthesizer_state.Make (Html_state) (Lf_precedence.Ord) in
+    let* parent_precedence = precedence_of_lf_typ typ in
     match typ with
     | LF.Typ.Constant { identifier; _ } ->
         pp_lf_type_constant_invoke identifier
     | LF.Typ.Application { applicand; arguments; _ } ->
-        pp_application ~indent
-          ~guard_operator:(function
-            | LF.Typ.Constant { operator; prefixed = false; _ } ->
-                `Operator operator
-            | _ -> `Term)
-          ~guard_operator_application:(function
-            | LF.Term.Application
-                { applicand =
-                    LF.Term.Constant { operator; prefixed = false; _ }
-                ; _
-                } ->
-                `Operator_application operator
-            | _ -> `Term)
+        pp_application ~indent ~guard_operator:guard_lf_typ_operator
+          ~guard_operator_application:guard_lf_term_operator_application
           ~precedence_of_applicand:precedence_of_lf_typ
           ~precedence_of_argument:precedence_of_lf_term
           ~pp_applicand:pp_lf_typ ~pp_argument:pp_lf_term ~parent_precedence
@@ -721,25 +754,15 @@ module Make (Html_state : HTML_PRINTING_STATE) :
         pp_hovbox ~indent (pp_binding ++ pp_space ++ pp_lf_typ body)
 
   and pp_lf_term term =
-    let parent_precedence = precedence_of_lf_term term in
+    let open Parenthesizer_state.Make (Html_state) (Lf_precedence.Ord) in
+    let* parent_precedence = precedence_of_lf_term term in
     match term with
     | LF.Term.Variable { identifier; _ } -> pp_lf_variable identifier
     | LF.Term.Constant { identifier; _ } ->
         pp_lf_term_constant_invoke identifier
     | LF.Term.Application { applicand; arguments; _ } ->
-        pp_application ~indent
-          ~guard_operator:(function
-            | LF.Term.Constant { operator; prefixed = false; _ } ->
-                `Operator operator
-            | _ -> `Term)
-          ~guard_operator_application:(function
-            | LF.Term.Application
-                { applicand =
-                    LF.Term.Constant { operator; prefixed = false; _ }
-                ; _
-                } ->
-                `Operator_application operator
-            | _ -> `Term)
+        pp_application ~indent ~guard_operator:guard_lf_term_operator
+          ~guard_operator_application:guard_lf_term_operator_application
           ~precedence_of_applicand:precedence_of_lf_term
           ~precedence_of_argument:precedence_of_lf_term
           ~pp_applicand:pp_lf_term ~pp_argument:pp_lf_term ~parent_precedence
@@ -774,27 +797,52 @@ module Make (Html_state : HTML_PRINTING_STATE) :
 
   (** {1 Pretty-Printing Contextual LF Syntax} *)
 
-  open Parenthesizer_state.Make (Html_state) (Clf_precedence)
+  let guard_clf_typ_operator = function
+    | CLF.Typ.Constant { identifier; _ } -> (
+        lookup_operator identifier >>= function
+        | Option.Some operator -> return (`Operator operator)
+        | Option.None -> return `Operand)
+    | _ -> return `Operand
+
+  let guard_clf_term_operator = function
+    | CLF.Term.Constant { identifier; _ } -> (
+        lookup_operator identifier >>= function
+        | Option.Some operator -> return (`Operator operator)
+        | Option.None -> return `Operand)
+    | _ -> return `Operand
+
+  let guard_clf_term_operator_application = function
+    | CLF.Term.Application
+        { applicand = CLF.Term.Constant { identifier; _ }; _ } -> (
+        lookup_operator identifier >>= function
+        | Option.Some operator -> return (`Operator_application operator)
+        | Option.None -> return `Operand)
+    | term -> guard_clf_term_operator term
+
+  let guard_clf_term_pattern_operator = function
+    | CLF.Term.Pattern.Constant { identifier; _ } -> (
+        lookup_operator identifier >>= function
+        | Option.Some operator -> return (`Operator operator)
+        | Option.None -> return `Operand)
+    | _ -> return `Operand
+
+  let guard_clf_term_pattern_operator_application = function
+    | CLF.Term.Pattern.Application
+        { applicand = CLF.Term.Pattern.Constant { identifier; _ }; _ } -> (
+        lookup_operator identifier >>= function
+        | Option.Some operator -> return (`Operator_application operator)
+        | Option.None -> return `Operand)
+    | term -> guard_clf_term_pattern_operator term
 
   let rec pp_clf_typ typ =
-    let parent_precedence = precedence_of_clf_typ typ in
+    let open Parenthesizer_state.Make (Html_state) (Clf_precedence.Ord) in
+    let* parent_precedence = precedence_of_clf_typ typ in
     match typ with
     | CLF.Typ.Constant { identifier; _ } ->
         pp_lf_type_constant_invoke identifier
     | CLF.Typ.Application { applicand; arguments; _ } ->
-        pp_application ~indent
-          ~guard_operator:(function
-            | CLF.Typ.Constant { operator; prefixed = false; _ } ->
-                `Operator operator
-            | _ -> `Term)
-          ~guard_operator_application:(function
-            | CLF.Term.Application
-                { applicand =
-                    CLF.Term.Constant { operator; prefixed = false; _ }
-                ; _
-                } ->
-                `Operator_application operator
-            | _ -> `Term)
+        pp_application ~indent ~guard_operator:guard_clf_typ_operator
+          ~guard_operator_application:guard_clf_term_operator_application
           ~precedence_of_applicand:precedence_of_clf_typ
           ~precedence_of_argument:precedence_of_clf_term
           ~pp_applicand:pp_clf_typ ~pp_argument:pp_clf_term
@@ -875,7 +923,8 @@ module Make (Html_state : HTML_PRINTING_STATE) :
           ++ pp_in_parens (pp_list1 ~sep:pp_comma_space pp_binding nts))
 
   and pp_clf_term term =
-    let parent_precedence = precedence_of_clf_term term in
+    let open Parenthesizer_state.Make (Html_state) (Clf_precedence.Ord) in
+    let* parent_precedence = precedence_of_clf_term term in
     match term with
     | CLF.Term.Variable { identifier; _ } -> pp_lf_variable identifier
     | CLF.Term.Parameter_variable { identifier; _ } ->
@@ -885,19 +934,8 @@ module Make (Html_state : HTML_PRINTING_STATE) :
     | CLF.Term.Constant { identifier; _ } ->
         pp_lf_term_constant_invoke identifier
     | CLF.Term.Application { applicand; arguments; _ } ->
-        pp_application ~indent
-          ~guard_operator:(function
-            | CLF.Term.Constant { operator; prefixed = false; _ } ->
-                `Operator operator
-            | _ -> `Term)
-          ~guard_operator_application:(function
-            | CLF.Term.Application
-                { applicand =
-                    CLF.Term.Constant { operator; prefixed = false; _ }
-                ; _
-                } ->
-                `Operator_application operator
-            | _ -> `Term)
+        pp_application ~indent ~guard_operator:guard_clf_term_operator
+          ~guard_operator_application:guard_clf_term_operator_application
           ~precedence_of_applicand:precedence_of_clf_term
           ~precedence_of_argument:precedence_of_clf_term
           ~pp_applicand:pp_clf_term ~pp_argument:pp_clf_term
@@ -1044,7 +1082,8 @@ module Make (Html_state : HTML_PRINTING_STATE) :
         ++ pp_list ~sep:pp_comma_space pp_typing bindings
 
   let rec pp_clf_term_pattern term =
-    let parent_precedence = precedence_of_clf_term_pattern term in
+    let open Parenthesizer_state.Make (Html_state) (Clf_precedence.Ord) in
+    let* parent_precedence = precedence_of_clf_term_pattern term in
     match term with
     | CLF.Term.Pattern.Variable { identifier; _ } ->
         pp_lf_variable identifier
@@ -1056,19 +1095,9 @@ module Make (Html_state : HTML_PRINTING_STATE) :
         pp_lf_term_constant_invoke identifier
     | CLF.Term.Pattern.Application { applicand; arguments; _ } ->
         pp_application ~indent
-          ~guard_operator:(function
-            | CLF.Term.Pattern.Constant { operator; prefixed = false; _ } ->
-                `Operator operator
-            | _ -> `Term)
-          ~guard_operator_application:(function
-            | CLF.Term.Pattern.Application
-                { applicand =
-                    CLF.Term.Pattern.Constant
-                      { operator; prefixed = false; _ }
-                ; _
-                } ->
-                `Operator_application operator
-            | _ -> `Term)
+          ~guard_operator:guard_clf_term_pattern_operator
+          ~guard_operator_application:
+            guard_clf_term_pattern_operator_application
           ~precedence_of_applicand:precedence_of_clf_term_pattern
           ~precedence_of_argument:precedence_of_clf_term_pattern
           ~pp_applicand:pp_clf_term_pattern ~pp_argument:pp_clf_term_pattern
@@ -1237,8 +1266,6 @@ module Make (Html_state : HTML_PRINTING_STATE) :
 
   (** {1 Pretty-Printing Meta-Level Syntax} *)
 
-  open Parenthesizer_state.Make (Html_state) (Meta_precedence)
-
   let rec pp_meta_typ typ =
     match typ with
     | Meta.Typ.Context_schema { schema; _ } -> pp_schema schema
@@ -1307,7 +1334,8 @@ module Make (Html_state : HTML_PRINTING_STATE) :
              ++ pp_clf_substitution_pattern range))
 
   and pp_schema schema =
-    let parent_precedence = precedence_of_schema schema in
+    let open Parenthesizer_state.Make (Html_state) (Schema_precedence.Ord) in
+    let* parent_precedence = precedence_of_schema schema in
     let pp_binding (identifier, typ) =
       pp_lf_variable identifier ++ pp_non_breaking_space ++ pp_colon
       ++ pp_space ++ pp_clf_typ typ
@@ -1343,8 +1371,6 @@ module Make (Html_state : HTML_PRINTING_STATE) :
 
   (** {1 Pretty-Printing Computation-Level Syntax} *)
 
-  open Parenthesizer_state.Make (Html_state) (Comp_precedence)
-
   (** [is_atomic_pattern pattern] is [true] if and only if [pattern] is an
       atomic pattern as defined in {!Parser}, meaning that it never requires
       additional enclosing parentheses during printing to avoid ambiguities. *)
@@ -1361,7 +1387,6 @@ module Make (Html_state : HTML_PRINTING_STATE) :
         false
 
   let rec pp_comp_kind kind =
-    let[@warning "-26"] parent_precedence = precedence_of_comp_kind kind in
     match kind with
     | Comp.Kind.Ctype _ -> pp_ctype_keyword
     | Comp.Kind.Arrow { domain; range; _ } ->
@@ -1400,7 +1425,8 @@ module Make (Html_state : HTML_PRINTING_STATE) :
         pp_hovbox ~indent (pp_declaration ++ pp_space ++ pp_comp_kind body)
 
   and pp_comp_typ typ =
-    let parent_precedence = precedence_of_comp_typ typ in
+    let open Parenthesizer_state.Make (Html_state) (Comp_sort_precedence.Ord) in
+    let* parent_precedence = precedence_of_comp_typ typ in
     match typ with
     | Comp.Typ.Inductive_typ_constant { identifier; _ } ->
         pp_computation_inductive_constant_invoke identifier
@@ -1490,49 +1516,61 @@ module Make (Html_state : HTML_PRINTING_STATE) :
     | Comp.Typ.Box { meta_type; _ } -> pp_meta_typ meta_type
     | Comp.Typ.Application { applicand; arguments; _ } -> (
         (* Override the behaviour of printing applications since the
-           arguments are meta-object, which need no parentheses. *)
+           arguments are meta-object, which never need parentheses. *)
         match applicand with
         | Comp.Typ.Application
             { applicand =
-                ( Comp.Typ.Inductive_typ_constant
-                    { operator; prefixed = false; _ }
-                | Comp.Typ.Stratified_typ_constant
-                    { operator; prefixed = false; _ }
-                | Comp.Typ.Coinductive_typ_constant
-                    { operator; prefixed = false; _ }
-                | Comp.Typ.Abbreviation_typ_constant
-                    { operator; prefixed = false; _ } ) as applicand
+                ( Comp.Typ.Inductive_typ_constant { identifier; _ }
+                | Comp.Typ.Stratified_typ_constant { identifier; _ }
+                | Comp.Typ.Coinductive_typ_constant { identifier; _ }
+                | Comp.Typ.Abbreviation_typ_constant { identifier; _ } ) as
+                applicand
             ; _
             } -> (
-            match Operator.fixity operator with
-            | Fixity.Prefix ->
-                pp_hovbox ~indent
-                  (pp_comp_typ applicand ++ pp_space
-                  ++ pp_list1 ~sep:pp_space pp_meta_object arguments)
-            | Fixity.Infix ->
-                assert (
-                  List1.compare_length_with arguments 2
-                  = 0
-                    (* Infix operators must be applied with exactly two
-                       arguments. *));
-                let[@warning "-8"] (List1.T
-                                     (left_argument, [ right_argument ])) =
-                  arguments
+            lookup_operator identifier >>= function
+            | Option.Some operator -> (
+                match Operator.fixity operator with
+                | Fixity.Prefix ->
+                    pp_hovbox ~indent
+                      (pp_comp_typ applicand ++ pp_space
+                      ++ pp_list1 ~sep:pp_space pp_meta_object arguments)
+                | Fixity.Infix ->
+                    assert (
+                      List1.compare_length_with arguments 2
+                      = 0
+                        (* Infix operators must be applied with exactly two
+                           arguments. *));
+                    let[@warning "-8"] (List1.T
+                                         (left_argument, [ right_argument ]))
+                        =
+                      arguments
+                    in
+                    pp_hovbox ~indent
+                      (pp_meta_object left_argument
+                      ++ pp_space ++ pp_comp_typ applicand ++ pp_space
+                      ++ pp_meta_object right_argument)
+                | Fixity.Postfix ->
+                    assert (
+                      List1.compare_length_with arguments 1
+                      = 0
+                        (* Postfix operators must be applied with exactly one
+                           argument. *));
+                    let[@warning "-8"] (List1.T (argument, [])) =
+                      arguments
+                    in
+                    pp_hovbox ~indent
+                      (pp_meta_object argument ++ pp_space
+                     ++ pp_comp_typ applicand))
+            | Option.None ->
+                let pp_applicand =
+                  parenthesize_term_of_lesser_than_or_equal_precedence
+                    precedence_of_comp_typ ~parent_precedence pp_comp_typ
+                    applicand
                 in
-                pp_hovbox ~indent
-                  (pp_meta_object left_argument
-                  ++ pp_space ++ pp_comp_typ applicand ++ pp_space
-                  ++ pp_meta_object right_argument)
-            | Fixity.Postfix ->
-                assert (
-                  List1.compare_length_with arguments 1
-                  = 0
-                    (* Postfix operators must be applied with exactly one
-                       argument. *));
-                let[@warning "-8"] (List1.T (argument, [])) = arguments in
-                pp_hovbox ~indent
-                  (pp_meta_object argument ++ pp_space
-                 ++ pp_comp_typ applicand))
+                let pp_arguments =
+                  pp_list1 ~sep:pp_space pp_meta_object arguments
+                in
+                pp_hovbox ~indent (pp_applicand ++ pp_space ++ pp_arguments))
         | _ ->
             let pp_applicand =
               parenthesize_term_of_lesser_than_or_equal_precedence
@@ -1555,7 +1593,42 @@ module Make (Html_state : HTML_PRINTING_STATE) :
         pp_hovbox ~indent (pp_in_braces (pp_binding identifier typ)))
       bindings
 
-  and comp_case_body_requires_parentheses = function
+  let guard_comp_expression_operator = function
+    | Comp.Expression.Program { identifier; _ }
+    | Comp.Expression.Constructor { identifier; _ } -> (
+        lookup_operator identifier >>= function
+        | Option.Some operator -> return (`Operator operator)
+        | Option.None -> return `Operand)
+    | _ -> return `Operand
+
+  let guard_comp_expression_operator_application = function
+    | Comp.Expression.Application
+        { applicand =
+            ( Comp.Expression.Program { identifier; _ }
+            | Comp.Expression.Constructor { identifier; _ } )
+        ; _
+        } -> (
+        lookup_operator identifier >>= function
+        | Option.Some operator -> return (`Operator_application operator)
+        | Option.None -> return `Operand)
+    | expression -> guard_comp_expression_operator expression
+
+  let guard_comp_pattern_operator = function
+    | Comp.Pattern.Constant { identifier; _ } -> (
+        lookup_operator identifier >>= function
+        | Option.Some operator -> return (`Operator operator)
+        | Option.None -> return `Operand)
+    | _ -> return `Operand
+
+  let guard_comp_pattern_operator_application = function
+    | Comp.Pattern.Application
+        { applicand = Comp.Pattern.Constant { identifier; _ }; _ } -> (
+        lookup_operator identifier >>= function
+        | Option.Some operator -> return (`Operator_application operator)
+        | Option.None -> return `Operand)
+    | pattern -> guard_comp_pattern_operator pattern
+
+  let rec comp_case_body_requires_parentheses = function
     | Comp.Expression.Type_annotated _ ->
         (* Type-annotated expressions are of lesser precedence than
            case-expressions *)
@@ -1584,13 +1657,15 @@ module Make (Html_state : HTML_PRINTING_STATE) :
            case-expressions *)
         false
 
-  and pp_comp_case_body expression =
+  let rec pp_comp_case_body expression =
     if comp_case_body_requires_parentheses expression then
       pp_in_parens (pp_comp_expression expression)
     else pp_comp_expression expression
 
   and pp_comp_expression expression =
-    let parent_precedence = precedence_of_comp_expression expression in
+    let open
+      Parenthesizer_state.Make (Html_state) (Comp_expression_precedence.Ord) in
+    let* parent_precedence = precedence_of_comp_expression expression in
     match expression with
     | Comp.Expression.Variable { identifier; _ } ->
         pp_computation_variable identifier
@@ -1722,42 +1797,23 @@ module Make (Html_state : HTML_PRINTING_STATE) :
             precedence_of_comp_expression ~parent_precedence
             pp_comp_expression expression
         in
-        let pp_typ =
-          parenthesize_right_argument_left_associative_operator
-            precedence_of_comp_typ ~parent_precedence pp_comp_typ typ
-        in
+        let pp_typ = pp_comp_typ typ in
         pp_hovbox ~indent
           (pp_expression ++ pp_non_breaking_space ++ pp_colon ++ pp_space
          ++ pp_typ)
     | Comp.Expression.Application { applicand; arguments; _ } ->
-        pp_application ~indent
-          ~guard_operator:(function
-            | Comp.Expression.Constructor { operator; prefixed = false; _ }
-            | Comp.Expression.Program
-                { operator = Option.Some operator; prefixed = false; _ } ->
-                `Operator operator
-            | _ -> `Term)
-          ~guard_operator_application:(function
-            | Comp.Expression.Application
-                { applicand =
-                    ( Comp.Expression.Constructor
-                        { operator; prefixed = false; _ }
-                    | Comp.Expression.Program
-                        { operator = Option.Some operator
-                        ; prefixed = false
-                        ; _
-                        } )
-                ; _
-                } ->
-                `Operator_application operator
-            | _ -> `Term)
+        pp_application ~indent ~guard_operator:guard_comp_expression_operator
+          ~guard_operator_application:
+            guard_comp_expression_operator_application
           ~precedence_of_applicand:precedence_of_comp_expression
           ~precedence_of_argument:precedence_of_comp_expression
           ~pp_applicand:pp_comp_expression ~pp_argument:pp_comp_expression
           ~parent_precedence (applicand, arguments)
 
   and pp_comp_pattern pattern =
-    let parent_precedence = precedence_of_comp_pattern pattern in
+    let open
+      Parenthesizer_state.Make (Html_state) (Comp_pattern_precedence.Ord) in
+    let* parent_precedence = precedence_of_comp_pattern pattern in
     match pattern with
     | Comp.Pattern.Variable { identifier; _ } ->
         pp_computation_variable identifier
@@ -1776,28 +1832,14 @@ module Make (Html_state : HTML_PRINTING_STATE) :
             precedence_of_comp_pattern ~parent_precedence pp_comp_pattern
             pattern
         in
-        let pp_typ =
-          parenthesize_right_argument_left_associative_operator
-            precedence_of_comp_typ ~parent_precedence pp_comp_typ typ
-        in
+        let pp_typ = pp_comp_typ typ in
         pp_hovbox ~indent
           (pp_pattern ++ pp_non_breaking_space ++ pp_colon ++ pp_space
          ++ pp_typ)
     | Comp.Pattern.Wildcard _ -> pp_underscore
     | Comp.Pattern.Application { applicand; arguments; _ } ->
-        pp_application ~indent
-          ~guard_operator:(function
-            | Comp.Pattern.Constant { operator; prefixed = false; _ } ->
-                `Operator operator
-            | _ -> `Term)
-          ~guard_operator_application:(function
-            | Comp.Pattern.Application
-                { applicand =
-                    Comp.Pattern.Constant { operator; prefixed = false; _ }
-                ; _
-                } ->
-                `Operator_application operator
-            | _ -> `Term)
+        pp_application ~indent ~guard_operator:guard_comp_pattern_operator
+          ~guard_operator_application:guard_comp_pattern_operator_application
           ~precedence_of_applicand:precedence_of_comp_pattern
           ~precedence_of_argument:precedence_of_comp_pattern
           ~pp_applicand:pp_comp_pattern ~pp_argument:pp_comp_pattern
@@ -1904,9 +1946,9 @@ module Make (Html_state : HTML_PRINTING_STATE) :
   and pp_harpoon_split_branch_label label =
     match label with
     | Harpoon.Split_branch.Label.Lf_constant { identifier; _ } ->
-        pp_qualified_identifier identifier
+        pp_constant_invoke identifier
     | Harpoon.Split_branch.Label.Comp_constant { identifier; _ } ->
-        pp_qualified_identifier identifier
+        pp_constant_invoke identifier
     | Harpoon.Split_branch.Label.Bound_variable _ ->
         pp_head_keyword ++ pp_non_breaking_space ++ pp_variable_keyword
     | Harpoon.Split_branch.Label.Empty_context _ ->
@@ -1976,7 +2018,7 @@ module Make (Html_state : HTML_PRINTING_STATE) :
         let pp_name_pragma =
           pp_hovbox ~indent
             (pp_string "--name" ++ pp_space
-            ++ pp_qualified_identifier constant
+            ++ pp_constant_invoke constant
             ++ pp_space
             ++ pp_identifier meta_variable_base
             ++ pp_option
@@ -1997,7 +2039,7 @@ module Make (Html_state : HTML_PRINTING_STATE) :
         let pp_prefix_pragma =
           pp_hovbox ~indent
             (pp_string "--prefix" ++ pp_space
-            ++ pp_qualified_identifier constant
+            ++ pp_constant_invoke constant
             ++ pp_option
                  (fun precedence -> pp_space ++ pp_int precedence)
                  precedence
@@ -2009,7 +2051,7 @@ module Make (Html_state : HTML_PRINTING_STATE) :
         let pp_infix_pragma =
           pp_hovbox ~indent
             (pp_string "--infix" ++ pp_space
-            ++ pp_qualified_identifier constant
+            ++ pp_constant_invoke constant
             ++ pp_option
                  (fun precedence -> pp_space ++ pp_int precedence)
                  precedence
@@ -2024,7 +2066,7 @@ module Make (Html_state : HTML_PRINTING_STATE) :
         let pp_postfix_pragma =
           pp_hovbox ~indent
             (pp_string "--postfix" ++ pp_space
-            ++ pp_qualified_identifier constant
+            ++ pp_constant_invoke constant
             ++ pp_option
                  (fun precedence -> pp_space ++ pp_int precedence)
                  precedence
@@ -2038,7 +2080,7 @@ module Make (Html_state : HTML_PRINTING_STATE) :
         let pp_open_pragma =
           pp_hovbox ~indent
             (pp_string "--open" ++ pp_space
-            ++ pp_qualified_identifier module_identifier
+            ++ pp_constant_invoke module_identifier
             ++ pp_dot)
         in
         let* () = pp_pragma "open" pp_open_pragma in
@@ -2047,7 +2089,7 @@ module Make (Html_state : HTML_PRINTING_STATE) :
         let pp_abbrev_pragma =
           pp_hovbox ~indent
             (pp_string "--abbrev" ++ pp_space
-            ++ pp_qualified_identifier module_identifier
+            ++ pp_constant_invoke module_identifier
             ++ pp_space
             ++ pp_identifier abbreviation
             ++ pp_dot)

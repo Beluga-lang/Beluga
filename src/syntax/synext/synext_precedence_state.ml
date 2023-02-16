@@ -46,7 +46,7 @@ open Synext_definition
 module type BASE_PRECEDENCE = sig
   type precedence
 
-  module Ord : Ord.ORD with type t := precedence
+  module Ord : Ord.ORD with type t = precedence
 end
 
 module type LF_PRECEDENCE = sig
@@ -146,7 +146,7 @@ module Make_lf_precedence (S : PRECEDENCE_STATE) :
 
   let application_precedence = 4
 
-  module Ord : Ord.ORD with type t := precedence =
+  module Ord : Ord.ORD with type t = precedence =
     (val Ord.make (compare ~application_precedence))
 
   include S
@@ -188,7 +188,7 @@ module Make_clf_precedence (S : PRECEDENCE_STATE) :
 
   let application_precedence = 5
 
-  module Ord : Ord.ORD with type t := precedence =
+  module Ord : Ord.ORD with type t = precedence =
     (val Ord.make (compare ~application_precedence))
 
   include S
@@ -257,7 +257,7 @@ module Make_schema_precedence (S : PRECEDENCE_STATE) :
     | Meta.Schema.Element _ ->
         return (Static 2)
 
-  module Ord : Ord.ORD with type t := precedence = Ord.Make (struct
+  module Ord : Ord.ORD with type t = precedence = Ord.Make (struct
     type nonrec t = precedence
 
     let compare (Static x) (Static y) = Int.compare x y
@@ -270,7 +270,7 @@ module Make_comp_sort_precedence (S : PRECEDENCE_STATE) :
 
   let application_precedence = 4
 
-  module Ord : Ord.ORD with type t := precedence =
+  module Ord : Ord.ORD with type t = precedence =
     (val Ord.make (compare ~application_precedence))
 
   include S
@@ -312,7 +312,7 @@ module Make_comp_expression_precedence (S : PRECEDENCE_STATE) :
 
   let application_precedence = 3
 
-  module Ord : Ord.ORD with type t := precedence =
+  module Ord : Ord.ORD with type t = precedence =
     (val Ord.make (compare ~application_precedence))
 
   include S
@@ -355,7 +355,7 @@ module Make_comp_pattern_precedence (S : PRECEDENCE_STATE) :
 
   let application_precedence = 3
 
-  module Ord : Ord.ORD with type t := precedence =
+  module Ord : Ord.ORD with type t = precedence =
     (val Ord.make (compare ~application_precedence))
 
   include S
@@ -378,7 +378,7 @@ module Make_comp_pattern_precedence (S : PRECEDENCE_STATE) :
         return (make_static 4)
 end
 
-module Make (S : PRECEDENCE_STATE) = struct
+module Make_precedences (S : PRECEDENCE_STATE) = struct
   module Lf_precedence = Make_lf_precedence (S)
   module Clf_precedence = Make_clf_precedence (S)
   module Schema_precedence = Make_schema_precedence (S)

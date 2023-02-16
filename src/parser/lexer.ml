@@ -77,10 +77,15 @@ let turnstile_hash = [%sedlex.regexp? turnstile, '#']
 
 let thick_arrow = [%sedlex.regexp? "=>" | 0x21d2]
 
+let thick_backarrow = [%sedlex.regexp? "<=" | 0x21d0]
+
 let dots = [%sedlex.regexp? ".." | 0x2026]
 
 let string_literal =
   [%sedlex.regexp? '"', Star ('\\', any | Sub (any, ('"' | '\\'))), '"']
+
+let add_utf8_lexeme_to_buffer comment_buffer lexbuf =
+  Buffer.add_string comment_buffer (Sedlexing.Utf8.lexeme lexbuf)
 
 let rec tokenize lexbuf =
   let[@inline] const t = Option.some (get_location lexbuf, t) in
@@ -89,28 +94,29 @@ let rec tokenize lexbuf =
   | eof -> Option.none
   | white_space -> tokenize lexbuf
   | "%{{" ->
-      let start_position, _stop_position =
+      let start_delimiter_location = get_location lexbuf in
+      let documentation_comment_buffer = Buffer.create 32 in
+      tokenize_documentation_comment
+        (List1.singleton start_delimiter_location)
+        documentation_comment_buffer lexbuf;
+      let _start_position, stop_position =
         Sedlexing.lexing_positions lexbuf
       in
-      Sedlexing.rollback lexbuf;
-      let documentation_comment_buffer = Buffer.create 16 in
       let location =
-        tokenize_documentation_comment start_position
-          documentation_comment_buffer ~level:0 lexbuf
+        Location.set_stop
+          (Position.make_from_lexing_position stop_position)
+          start_delimiter_location
       in
       let contents = Buffer.contents documentation_comment_buffer in
-      let contents' =
-        String.trim
-          (String.sub contents (String.length "%{{")
-             (String.length contents - String.length "%{{"
-            - String.length "}}%"))
-      in
-      Option.some (location, Token.BLOCK_COMMENT contents')
+      Option.some (location, Token.BLOCK_COMMENT (String.trim contents))
   | "}}%" ->
       Error.raise_at1 (get_location lexbuf) Mismatched_documentation_comment
   | "%{" ->
-      Sedlexing.rollback lexbuf;
-      tokenize_block_comment ~level:0 lexbuf
+      let start_delimiter_location = get_location lexbuf in
+      tokenize_block_comment
+        (List1.singleton start_delimiter_location)
+        lexbuf;
+      tokenize lexbuf
   | "}%" -> Error.raise_at1 (get_location lexbuf) Mismatched_block_comment
   | '%' ->
       Sedlexing.rollback lexbuf;
@@ -118,11 +124,13 @@ let rec tokenize lexbuf =
   (* STRING LITERALS *)
   | string_literal ->
       let s =
+        (* Discard ['"'] delimiters *)
         Sedlexing.Utf8.sub_lexeme lexbuf (String.length "\"")
           (Sedlexing.lexeme_length lexbuf
           - String.length "\"" - String.length "\"")
       in
       let s' =
+        (* Handle escape sequences *)
         try Scanf.unescaped s with
         | Scanf.Scan_failure s ->
             Error.raise_at1 (get_location lexbuf)
@@ -208,18 +216,10 @@ let rec tokenize lexbuf =
       const (Token.HOLE s)
   | "_" -> const Token.UNDERSCORE
   | dots -> const Token.DOTS
-  | turnstile_hash, Compl ident_start ->
-      let start_position, stop_position =
-        Sedlexing.lexing_positions lexbuf
-      in
-      let filename = start_position.Lexing.pos_fname in
-      let location =
-        Location.make_from_lexing_positions ~filename ~start_position
-          ~stop_position:(shift_position stop_position (-1))
-      in
-      Option.some (location, Token.TURNSTILE_HASH)
+  | turnstile_hash -> const Token.TURNSTILE_HASH
   | hash_blank -> const Token.HASH_BLANK
   | dot_ident ->
+      (* Adjust location to ignore the leading ['.'] *)
       let prefix_length = String.length "." in
       let s =
         Sedlexing.Utf8.sub_lexeme lexbuf prefix_length
@@ -236,6 +236,7 @@ let rec tokenize lexbuf =
       in
       Option.some (location, Token.DOT_IDENT s)
   | dot_intlit ->
+      (* Adjust location to ignore the leading ['.'] *)
       let prefix_length = String.length "." in
       let s =
         Sedlexing.Utf8.sub_lexeme lexbuf prefix_length
@@ -278,54 +279,68 @@ and tokenize_line_comment lexbuf =
   | Compl '\n' -> tokenize_line_comment lexbuf
   | _ -> tokenize lexbuf
 
-and tokenize_block_comment ~level lexbuf =
+(** [tokenize_block_comment start_delimiter_locations lexbuf] tokenizes a
+    block comment delimited by ["%{"] and ["}%"] from [lexbuf]. Nested block
+    comments are supported. [start_delimiter_locations] is a stack of
+    locations used both for keeping track of the level of nested block
+    comments and for error-reporting. That is,
+    [List1.length start_delimiter_locations] is the current level of the
+    block comment being tokenized. *)
+and tokenize_block_comment start_delimiter_locations lexbuf =
   match%sedlex lexbuf with
   | "%{" ->
-      let level' = level + 1 in
-      tokenize_block_comment ~level:level' lexbuf
-  | "}%" ->
-      let level' = level - 1 in
-      if level' = 0 then tokenize lexbuf
-      else tokenize_block_comment ~level:level' lexbuf
-  | any -> tokenize_block_comment ~level lexbuf
+      tokenize_block_comment
+        (List1.cons (get_location lexbuf) start_delimiter_locations)
+        lexbuf
+  | "}%" -> (
+      match start_delimiter_locations with
+      | List1.T (_location, []) -> ()
+      | List1.T (_location, l :: ls) ->
+          tokenize_block_comment (List1.from l ls) lexbuf)
+  | any -> tokenize_block_comment start_delimiter_locations lexbuf
   | eof ->
-      assert (level > 0);
-      Error.raise_at1 (get_location lexbuf) Unterminated_block_comment
+      Error.raise_at1
+        (List1.head start_delimiter_locations)
+        Unterminated_block_comment
   | _ ->
       let s = Sedlexing.Utf8.lexeme lexbuf in
       Error.raise_at1 (get_location lexbuf) (Unlexable_character s)
 
-and tokenize_documentation_comment start_position comment_buffer ~level
+(** [tokenize_documentation_comment start_delimiter_locations comment_buffer lexbuf]
+    tokenizes a documentation comment delimited by ["%{{"] and ["}}%"] from
+    [lexbuf] by adding lexemes to [comment_buffer]. Nested block comments are
+    supported. [start_delimiter_locations] is a stack of locations used both
+    for keeping track of the level of nested documentation comments and for
+    error-reporting. That is, [List1.length start_delimiter_locations] is the
+    current level of the documentation comment being tokenized.
+
+    This function is called when the first ["%{{"] has already been
+    tokenized, and consequently, the last ["}}%"] is not added to
+    [comment_buffer]. *)
+and tokenize_documentation_comment start_delimiter_locations comment_buffer
     lexbuf =
   match%sedlex lexbuf with
   | "%{{" ->
-      let level' = level + 1 in
-      Buffer.add_string comment_buffer (Sedlexing.Utf8.lexeme lexbuf);
-      tokenize_documentation_comment start_position comment_buffer
-        ~level:level' lexbuf
-  | "}}%" ->
-      let level' = level - 1 in
-      Buffer.add_string comment_buffer (Sedlexing.Utf8.lexeme lexbuf);
-      if level' = 0 then
-        let _start_position, stop_position =
-          Sedlexing.lexing_positions lexbuf
-        in
-        let filename = start_position.Lexing.pos_fname in
-        let location =
-          Location.make_from_lexing_positions ~filename ~start_position
-            ~stop_position
-        in
-        location
-      else
-        tokenize_documentation_comment start_position comment_buffer
-          ~level:level' lexbuf
-  | any ->
-      Buffer.add_string comment_buffer (Sedlexing.Utf8.lexeme lexbuf);
-      tokenize_documentation_comment start_position comment_buffer ~level
+      add_utf8_lexeme_to_buffer comment_buffer lexbuf;
+      tokenize_documentation_comment
+        (List1.cons (get_location lexbuf) start_delimiter_locations)
+        comment_buffer lexbuf
+  | "}}%" -> (
+      match start_delimiter_locations with
+      | List1.T (_location, []) -> ()
+      | List1.T (_location, l :: ls) ->
+          add_utf8_lexeme_to_buffer comment_buffer lexbuf;
+          tokenize_documentation_comment (List1.from l ls) comment_buffer
+            lexbuf)
+  | any, Star (Sub (any, ('%' | '}')))
+  (* Optimization to add more than one character to [comment_buffer] at a
+     time *) ->
+      add_utf8_lexeme_to_buffer comment_buffer lexbuf;
+      tokenize_documentation_comment start_delimiter_locations comment_buffer
         lexbuf
   | eof ->
-      assert (level > 0);
-      Error.raise_at1 (get_location lexbuf)
+      Error.raise_at1
+        (List1.head start_delimiter_locations)
         Unterminated_documentation_comment
   | _ ->
       let s = Sedlexing.Utf8.lexeme lexbuf in

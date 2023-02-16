@@ -621,9 +621,11 @@ end) :
 
   let eoi =
     let open State in
-    peek >>= function
-    | Option.None -> return (Result.ok ())
-    | Option.Some _token -> fail_at_next_location Expected_end_of_input
+    peek
+    >>= (function
+          | Option.None -> return (Result.ok ())
+          | Option.Some _token -> fail_at_next_location Expected_end_of_input)
+    |> labelled "end of input"
 
   let only p = p <& eoi
 

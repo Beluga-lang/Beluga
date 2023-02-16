@@ -14,7 +14,7 @@ It shows a solution of the <a href="http://www.seas.upenn.edu/~plclub/poplmark/"
 
 This implementation not only uses higher-order abstract syntax in specifying the types, but we will exploit extensively the power of parametric and hypothetical judgment. As a benefit we do not need to implement a narrowing lemma separately, but get it "for free".
 
-First, we define or type `tp` with higher-order abstract syntax in LF as follows:
+First, we define our type `tp` with higher-order abstract syntax in LF as follows:
 }}%
 
 LF tp : type =
@@ -33,7 +33,7 @@ for type variables, but instead we provide for each type variable
 its own reflexivity and transitivity version. In other words, our rule for polymorphic types implements the following:
 $$\frac{\Gamma \vdash T_1 <: S_1 \qquad \Gamma,tr:a <: U \rightarrow U <: T \rightarrow a <: T, w:a <: T, ref : a <: a \vdash S_2 <: T_2 }{\Gamma \vdash \forall a:S_1.S_2(a) <: \forall a:T_1.T_2(a)}$$
 
-We use (<:) to denote algorithmic subtyping.
+We use ($<:$) or `sub` to denote algorithmic subtyping.
 }}%
 
 LF sub : tp -> tp -> type =
@@ -150,29 +150,26 @@ By inversion on `d1`, we have:
 
 `D2 : [g, b : block (a:tp, tr:{u':tp}{t':tp} sub a u' -> sub u' t' -> sub a t', w: sub a Q1[..], ref: sub a a )  |- sub S2[.. b.1] Q2[..,b.1]]`
 
-By inversion on E:
+By inversion on `d2`:
 
 `E1 : [g |- sub T1 Q1]`
 
 `E2 : [g, b : block (a:tp, tr:{u':tp}{t':tp} sub a u' -> sub u' t' -> sub a t', w: sub a T1, ref: sub a a )  |- sub (Q2 b.1) (T2 b.1)]`
 
 
-By i.h. on E1 and D1 we can obtain a derivation `F1 : [g |- sub T1 S1]`.
+By i.h. on `E1` and `D1` we can obtain a derivation `F1 : [g |- sub T1 S1]`.
 
 We would like to obtain another derivation `F2 : [g, b : block (a:tp, tr:{u':tp}{t':tp} sub a u' -> sub u' t' -> sub a t', w: sub a T1[…], ref: sub a a )  ⊢ sub S2[… ,b.1] T2[ … ,b.1]]`. However, applying the induction hypothesis on `D2` and `E2` will not work
 because `D2` depends on the assumption `w: sub a Q1` while `E2` depends
-on the assumption `w: sub a T1`. We need to first create a derivation D2'
+on the assumption `w: sub a T1`. We need to first create a derivation `D2'`
 which depends on `w: sub a T1[..]`. Recall `D2` is a parametric and hypothetical derivation which can be viewed as a function which expects as inputs `tr: sub a u' -> sub u' t' -> sub a t', ref: sub a a`, and an object of type `sub a Q1[..]`. In other words, we need to turn a function which expects `sub a Q1` into a function which expects an object of type `sub a T1`. We use `b.2 T1[..] Q1[..]  b.3 E1[..]` to achieve this transformation.
-
 }}%
-
-
-
-
 
 %{{
 ## Declarative subtyping
-We can also define declarative subtyping in Beluga and prove the equivalence between algoritmic and declarative subtyping through soundness and completeness proofs. We use (<) to denote declarative subtyping.
+
+We can also define declarative subtyping in Beluga and prove the equivalence between algoritmic and declarative subtyping through soundness and completeness proofs.
+We use ($<$) or `subtype` to denote declarative subtyping.
 }}%
 
 
@@ -198,8 +195,10 @@ schema ss_ctx = some [u:tp] block a:tp, tr:{U:tp}{T:tp} sub a U -> sub U T -> su
 
 %{{
 ### Soundness
+
 **Theorem** :  For every $\Gamma$, $T$ and $S$, if $\Gamma\vdash T<:S$, then $\Gamma\vdash T < S$ .
 }}%
+
 rec sound : (g:ss_ctx) [g |- sub T S] -> [g |- subtype T S] =
     fn d => case d of
     | [g |- sa_top] => [g |- subtype_top]
@@ -210,7 +209,7 @@ rec sound : (g:ss_ctx) [g |- sub T S] -> [g |- subtype T S] =
     | [g |- sa_all D1 (\a.\tr.\w.\ref.D2) ] : [g |- sub (forall S1 (\a.S2 )) ( forall T1 (\a.T2 ))] =>
       let [g |- E1] = sound [g |- D1] in
       let [g,  b : block (a:tp, tr:{u':tp}{t':tp} sub a u' -> sub u' t' -> sub a t', w: sub a T1[..], ref: sub a a , w' : subtype a T1[..])  |- E2[..,b.1,b.5] ] =
-	  sound  [g,  b : block (a:tp, tr:{u':tp}{t':tp} sub a u' -> sub u' t' -> sub a t', w: sub a T1[..], ref: sub a a , w' : subtype a T1[..])  |- D2[..,b.1,b.2,b.3,b.4]] in
+    sound  [g,  b : block (a:tp, tr:{u':tp}{t':tp} sub a u' -> sub u' t' -> sub a t', w: sub a T1[..], ref: sub a a , w' : subtype a T1[..])  |- D2[..,b.1,b.2,b.3,b.4]] in
       [g |- subtype_forall E1 (\a.\w.E2)]
     % Assumption w : sub a Q
     | [g |- #p.3] => [g |- #p.5]
@@ -218,8 +217,8 @@ rec sound : (g:ss_ctx) [g |- sub T S] -> [g |- subtype T S] =
     | [g |- #p.4] => [g |- subtype_refl]
     % transitivity
     | {#p : #[g |-  block (a:tp, tr:{u':tp}{t':tp} sub a u' -> sub u' t' -> sub a t', w: sub a U'[..], ref: sub a a , w' : subtype a U'[..])] }
-	  {D1 : [g |- sub #p.1  U']}
-	  [g |- #p.2 U' T' D1 D2] =>
+    {D1 : [g |- sub #p.1  U']}
+    [g |- #p.2 U' T' D1 D2] =>
       let [g |- E1] = sound [g |- D1] in
       let [g |- E2] = sound [g |- D2] in
       [g |- subtype_trans E1 E2]
@@ -230,6 +229,7 @@ rec sound : (g:ss_ctx) [g |- sub T S] -> [g |- subtype T S] =
 
 %{{
 ### Completeness
+
 **Theorem**:  For every $\Gamma$, $T$ and $S$, if $\Gamma\vdash T < S$,  then $\Gamma\vdash T <: S$ .
 }}%
 

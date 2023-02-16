@@ -87,6 +87,82 @@ let string_literal =
 let add_utf8_lexeme_to_buffer comment_buffer lexbuf =
   Buffer.add_string comment_buffer (Sedlexing.Utf8.lexeme lexbuf)
 
+(** [tokenize_line_comment lexbuf] tokenizes a line comment starting with
+    ['%'] and ending in a newline or the end of input by ignoring the
+    lexemes. *)
+let rec tokenize_line_comment lexbuf =
+  match%sedlex lexbuf with
+  | '%' -> tokenize_line_comment lexbuf
+  | Compl '\n' -> tokenize_line_comment lexbuf
+  | _ -> ()
+
+(** [tokenize_block_comment start_delimiter_locations lexbuf] tokenizes a
+    block comment delimited by ["%{"] and ["}%"] from [lexbuf]. Nested block
+    comments are supported. [start_delimiter_locations] is a stack of
+    locations used both for keeping track of the level of nested block
+    comments and for error-reporting. That is,
+    [List1.length start_delimiter_locations] is the current level of the
+    block comment being tokenized. *)
+let rec tokenize_block_comment start_delimiter_locations lexbuf =
+  match%sedlex lexbuf with
+  | "%{" ->
+      tokenize_block_comment
+        (List1.cons (get_location lexbuf) start_delimiter_locations)
+        lexbuf
+  | "}%" -> (
+      match start_delimiter_locations with
+      | List1.T (_location, []) -> ()
+      | List1.T (_location, l :: ls) ->
+          tokenize_block_comment (List1.from l ls) lexbuf)
+  | any -> tokenize_block_comment start_delimiter_locations lexbuf
+  | eof ->
+      Error.raise_at1
+        (List1.head start_delimiter_locations)
+        Unterminated_block_comment
+  | _ ->
+      let s = Sedlexing.Utf8.lexeme lexbuf in
+      Error.raise_at1 (get_location lexbuf) (Unlexable_character s)
+
+(** [tokenize_documentation_comment start_delimiter_locations comment_buffer lexbuf]
+    tokenizes a documentation comment delimited by ["%{{"] and ["}}%"] from
+    [lexbuf] by adding lexemes to [comment_buffer]. Nested block comments are
+    supported. [start_delimiter_locations] is a stack of locations used both
+    for keeping track of the level of nested documentation comments and for
+    error-reporting. That is, [List1.length start_delimiter_locations] is the
+    current level of the documentation comment being tokenized.
+
+    This function is called when the first ["%{{"] has already been
+    tokenized, and consequently, the last ["}}%"] is not added to
+    [comment_buffer]. *)
+let rec tokenize_documentation_comment start_delimiter_locations
+    comment_buffer lexbuf =
+  match%sedlex lexbuf with
+  | "%{{" ->
+      add_utf8_lexeme_to_buffer comment_buffer lexbuf;
+      tokenize_documentation_comment
+        (List1.cons (get_location lexbuf) start_delimiter_locations)
+        comment_buffer lexbuf
+  | "}}%" -> (
+      match start_delimiter_locations with
+      | List1.T (_location, []) -> ()
+      | List1.T (_location, l :: ls) ->
+          add_utf8_lexeme_to_buffer comment_buffer lexbuf;
+          tokenize_documentation_comment (List1.from l ls) comment_buffer
+            lexbuf)
+  | any, Star (Sub (any, ('%' | '}')))
+  (* Optimization to add more than one character to [comment_buffer] at a
+     time *) ->
+      add_utf8_lexeme_to_buffer comment_buffer lexbuf;
+      tokenize_documentation_comment start_delimiter_locations comment_buffer
+        lexbuf
+  | eof ->
+      Error.raise_at1
+        (List1.head start_delimiter_locations)
+        Unterminated_documentation_comment
+  | _ ->
+      let s = Sedlexing.Utf8.lexeme lexbuf in
+      Error.raise_at1 (get_location lexbuf) (Unlexable_character s)
+
 let rec tokenize lexbuf =
   let[@inline] const t = Option.some (get_location lexbuf, t) in
   match%sedlex lexbuf with
@@ -119,8 +195,8 @@ let rec tokenize lexbuf =
       tokenize lexbuf
   | "}%" -> Error.raise_at1 (get_location lexbuf) Mismatched_block_comment
   | '%' ->
-      Sedlexing.rollback lexbuf;
-      tokenize_line_comment lexbuf
+      tokenize_line_comment lexbuf;
+      tokenize lexbuf
   (* STRING LITERALS *)
   | string_literal ->
       let s =
@@ -269,79 +345,6 @@ let rec tokenize lexbuf =
   | ident ->
       let s = Sedlexing.Utf8.lexeme lexbuf in
       const (Token.IDENT s)
-  | _ ->
-      let s = Sedlexing.Utf8.lexeme lexbuf in
-      Error.raise_at1 (get_location lexbuf) (Unlexable_character s)
-
-and tokenize_line_comment lexbuf =
-  match%sedlex lexbuf with
-  | '%' -> tokenize_line_comment lexbuf
-  | Compl '\n' -> tokenize_line_comment lexbuf
-  | _ -> tokenize lexbuf
-
-(** [tokenize_block_comment start_delimiter_locations lexbuf] tokenizes a
-    block comment delimited by ["%{"] and ["}%"] from [lexbuf]. Nested block
-    comments are supported. [start_delimiter_locations] is a stack of
-    locations used both for keeping track of the level of nested block
-    comments and for error-reporting. That is,
-    [List1.length start_delimiter_locations] is the current level of the
-    block comment being tokenized. *)
-and tokenize_block_comment start_delimiter_locations lexbuf =
-  match%sedlex lexbuf with
-  | "%{" ->
-      tokenize_block_comment
-        (List1.cons (get_location lexbuf) start_delimiter_locations)
-        lexbuf
-  | "}%" -> (
-      match start_delimiter_locations with
-      | List1.T (_location, []) -> ()
-      | List1.T (_location, l :: ls) ->
-          tokenize_block_comment (List1.from l ls) lexbuf)
-  | any -> tokenize_block_comment start_delimiter_locations lexbuf
-  | eof ->
-      Error.raise_at1
-        (List1.head start_delimiter_locations)
-        Unterminated_block_comment
-  | _ ->
-      let s = Sedlexing.Utf8.lexeme lexbuf in
-      Error.raise_at1 (get_location lexbuf) (Unlexable_character s)
-
-(** [tokenize_documentation_comment start_delimiter_locations comment_buffer lexbuf]
-    tokenizes a documentation comment delimited by ["%{{"] and ["}}%"] from
-    [lexbuf] by adding lexemes to [comment_buffer]. Nested block comments are
-    supported. [start_delimiter_locations] is a stack of locations used both
-    for keeping track of the level of nested documentation comments and for
-    error-reporting. That is, [List1.length start_delimiter_locations] is the
-    current level of the documentation comment being tokenized.
-
-    This function is called when the first ["%{{"] has already been
-    tokenized, and consequently, the last ["}}%"] is not added to
-    [comment_buffer]. *)
-and tokenize_documentation_comment start_delimiter_locations comment_buffer
-    lexbuf =
-  match%sedlex lexbuf with
-  | "%{{" ->
-      add_utf8_lexeme_to_buffer comment_buffer lexbuf;
-      tokenize_documentation_comment
-        (List1.cons (get_location lexbuf) start_delimiter_locations)
-        comment_buffer lexbuf
-  | "}}%" -> (
-      match start_delimiter_locations with
-      | List1.T (_location, []) -> ()
-      | List1.T (_location, l :: ls) ->
-          add_utf8_lexeme_to_buffer comment_buffer lexbuf;
-          tokenize_documentation_comment (List1.from l ls) comment_buffer
-            lexbuf)
-  | any, Star (Sub (any, ('%' | '}')))
-  (* Optimization to add more than one character to [comment_buffer] at a
-     time *) ->
-      add_utf8_lexeme_to_buffer comment_buffer lexbuf;
-      tokenize_documentation_comment start_delimiter_locations comment_buffer
-        lexbuf
-  | eof ->
-      Error.raise_at1
-        (List1.head start_delimiter_locations)
-        Unterminated_documentation_comment
   | _ ->
       let s = Sedlexing.Utf8.lexeme lexbuf in
       Error.raise_at1 (get_location lexbuf) (Unlexable_character s)

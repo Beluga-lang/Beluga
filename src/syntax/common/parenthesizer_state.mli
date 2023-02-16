@@ -6,63 +6,63 @@ module type PARENTHESIZER = sig
   type precedence
 
   val parenthesize_term_of_lesser_precedence :
-       ('a -> precedence)
+       ('a -> precedence t)
     -> parent_precedence:precedence
     -> ('a -> unit t)
     -> 'a
     -> unit t
 
   val parenthesize_term_of_lesser_than_or_equal_precedence :
-       ('a -> precedence)
+       ('a -> precedence t)
     -> parent_precedence:precedence
     -> ('a -> unit t)
     -> 'a
     -> unit t
 
   val parenthesize_left_argument_left_associative_operator :
-       ('a -> precedence)
+       ('a -> precedence t)
     -> parent_precedence:precedence
     -> ('a -> unit t)
     -> 'a
     -> unit t
 
   val parenthesize_right_argument_left_associative_operator :
-       ('a -> precedence)
+       ('a -> precedence t)
     -> parent_precedence:precedence
     -> ('a -> unit t)
     -> 'a
     -> unit t
 
   val parenthesize_left_argument_right_associative_operator :
-       ('a -> precedence)
+       ('a -> precedence t)
     -> parent_precedence:precedence
     -> ('a -> unit t)
     -> 'a
     -> unit t
 
   val parenthesize_right_argument_right_associative_operator :
-       ('a -> precedence)
+       ('a -> precedence t)
     -> parent_precedence:precedence
     -> ('a -> unit t)
     -> 'a
     -> unit t
 
   val parenthesize_argument_non_associative_operator :
-       ('a -> precedence)
+       ('a -> precedence t)
     -> parent_precedence:precedence
     -> ('a -> unit t)
     -> 'a
     -> unit t
 
   val parenthesize_argument_prefix_operator :
-       ('a -> precedence)
+       ('a -> precedence t)
     -> parent_precedence:precedence
     -> ('a -> unit t)
     -> 'a
     -> unit t
 
   val parenthesize_argument_postfix_operator :
-       ('a -> precedence)
+       ('a -> precedence t)
     -> parent_precedence:precedence
     -> ('a -> unit t)
     -> 'a
@@ -70,11 +70,16 @@ module type PARENTHESIZER = sig
 
   val pp_application :
        indent:Int.t
-    -> guard_operator:('a -> [ `Operator of Operator.t | `Term ])
+    -> guard_operator:('a -> [ `Operator of Operator.t | `Operand ] t)
     -> guard_operator_application:
-         ('b -> [ `Operator_application of Operator.t | `Term ])
-    -> precedence_of_applicand:('a -> precedence)
-    -> precedence_of_argument:('b -> precedence)
+         (   'b
+          -> [ `Operator_application of Operator.t
+             | `Operator of Operator.t
+             | `Operand
+             ]
+             t)
+    -> precedence_of_applicand:('a -> precedence t)
+    -> precedence_of_argument:('b -> precedence t)
     -> pp_applicand:('a -> unit t)
     -> pp_argument:('b -> unit t)
     -> parent_precedence:precedence

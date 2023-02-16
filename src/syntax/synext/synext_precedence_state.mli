@@ -5,7 +5,7 @@ open Synext_definition
 module type BASE_PRECEDENCE = sig
   type precedence
 
-  module Ord : Ord.ORD with type t := precedence
+  module Ord : Ord.ORD with type t = precedence
 end
 
 module type PRECEDENCE_STATE = sig
@@ -14,7 +14,7 @@ module type PRECEDENCE_STATE = sig
   val lookup_operator_precedence : Qualified_identifier.t -> Int.t Option.t t
 end
 
-module Make (S : PRECEDENCE_STATE) : sig
+module Make_precedences (S : PRECEDENCE_STATE) : sig
   include State.STATE with type state = S.state
 
   (** {1 Precedence of LF Syntax} *)

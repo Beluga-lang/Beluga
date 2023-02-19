@@ -1,7 +1,7 @@
 nat : type.
 z : nat.
 s : nat -> nat. --prefix s 5.
- --assoc left.
+ --assoc right.
 t : type.
 test : nat -> nat -> t. --infix test 5.
 

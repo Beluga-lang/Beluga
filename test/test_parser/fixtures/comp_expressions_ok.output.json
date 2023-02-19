@@ -586,13 +586,6 @@
                               "stop_column": 12
                             }
                           },
-                          "prefixed": false,
-                          "operator": {
-                            "fixity": "prefix",
-                            "associativity": "right-associative",
-                            "arity": 0,
-                            "precedence": 1
-                          },
                           "location": {
                             "filename": "comp_expressions_ok.input.bel",
                             "start_line": 30,
@@ -731,13 +724,6 @@
                                   "stop_column": 12
                                 }
                               },
-                              "prefixed": false,
-                              "operator": {
-                                "fixity": "prefix",
-                                "associativity": "right-associative",
-                                "arity": 1,
-                                "precedence": 1
-                              },
                               "location": {
                                 "filename": "comp_expressions_ok.input.bel",
                                 "start_line": 31,
@@ -864,13 +850,6 @@
                                   "stop_line": 31,
                                   "stop_column": 27
                                 }
-                              },
-                              "prefixed": false,
-                              "operator": {
-                                "fixity": "prefix",
-                                "associativity": "right-associative",
-                                "arity": 1,
-                                "precedence": 1
                               },
                               "location": {
                                 "filename": "comp_expressions_ok.input.bel",
@@ -1066,13 +1045,6 @@
                                   "stop_column": 14
                                 }
                               },
-                              "prefixed": false,
-                              "operator": {
-                                "fixity": "prefix",
-                                "associativity": "right-associative",
-                                "arity": 0,
-                                "precedence": 1
-                              },
                               "location": {
                                 "filename": "comp_expressions_ok.input.bel",
                                 "start_line": 35,
@@ -1187,13 +1159,6 @@
                           "stop_column": 30
                         }
                       },
-                      "prefixed": false,
-                      "operator": {
-                        "fixity": "prefix",
-                        "associativity": "right-associative",
-                        "arity": 0,
-                        "precedence": 1
-                      },
                       "location": {
                         "filename": "comp_expressions_ok.input.bel",
                         "start_line": 35,
@@ -1306,13 +1271,6 @@
                       "stop_column": 10
                     }
                   },
-                  "prefixed": false,
-                  "operator": {
-                    "fixity": "infix",
-                    "associativity": "right-associative",
-                    "arity": 2,
-                    "precedence": 3
-                  },
                   "location": {
                     "filename": "comp_expressions_ok.input.bel",
                     "start_line": 39,
@@ -1370,13 +1328,6 @@
                             "stop_line": 39,
                             "stop_column": 18
                           }
-                        },
-                        "prefixed": false,
-                        "operator": {
-                          "fixity": "infix",
-                          "associativity": "right-associative",
-                          "arity": 2,
-                          "precedence": 3
                         },
                         "location": {
                           "filename": "comp_expressions_ok.input.bel",
@@ -1513,13 +1464,6 @@
                       "stop_column": 9
                     }
                   },
-                  "prefixed": false,
-                  "operator": {
-                    "fixity": "infix",
-                    "associativity": "right-associative",
-                    "arity": 2,
-                    "precedence": 3
-                  },
                   "location": {
                     "filename": "comp_expressions_ok.input.bel",
                     "start_line": 40,
@@ -1641,13 +1585,6 @@
                   "stop_line": 41,
                   "stop_column": 6
                 }
-              },
-              "prefixed": false,
-              "operator": {
-                "fixity": "prefix",
-                "associativity": "right-associative",
-                "arity": 0,
-                "precedence": 3
               },
               "location": {
                 "filename": "comp_expressions_ok.input.bel",
@@ -2385,8 +2322,6 @@
                   "stop_column": 13
                 }
               },
-              "prefixed": false,
-              "operator": null,
               "location": {
                 "filename": "comp_expressions_ok.input.bel",
                 "start_line": 68,
@@ -2677,13 +2612,6 @@
                                       "stop_column": 22
                                     }
                                   },
-                                  "prefixed": false,
-                                  "operator": {
-                                    "fixity": "prefix",
-                                    "associativity": "right-associative",
-                                    "arity": 0,
-                                    "precedence": 1
-                                  },
                                   "location": {
                                     "filename": "comp_expressions_ok.input.bel",
                                     "start_line": 76,
@@ -2909,13 +2837,6 @@
                                 "stop_column": 25
                               }
                             },
-                            "prefixed": false,
-                            "operator": {
-                              "fixity": "infix",
-                              "associativity": "right-associative",
-                              "arity": 2,
-                              "precedence": 3
-                            },
                             "location": {
                               "filename": "comp_expressions_ok.input.bel",
                               "start_line": 78,
@@ -2970,13 +2891,6 @@
                                   "stop_line": 78,
                                   "stop_column": 29
                                 }
-                              },
-                              "prefixed": false,
-                              "operator": {
-                                "fixity": "prefix",
-                                "associativity": "right-associative",
-                                "arity": 0,
-                                "precedence": 3
                               },
                               "location": {
                                 "filename": "comp_expressions_ok.input.bel",

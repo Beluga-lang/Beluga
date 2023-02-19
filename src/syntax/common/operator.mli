@@ -10,7 +10,7 @@ type t
 (** [arity operator] is the number of arguments [operator] is expected to be
     applied with.
 
-    - If [fixity operator = Fixity.Prefix], then [arity operator >= 0].
+    - If [fixity operator = Fixity.Prefix], then [arity operator = 1].
     - If [fixity operator = Fixity.Infix], then [arity operator = 2].
     - If [fixity operator = Fixity.Postfix], then [arity operator = 1]. *)
 val arity : t -> int
@@ -36,11 +36,9 @@ val associativity : t -> Associativity.t
 
 (** {1 Constructors} *)
 
-(** [make_prefix ~arity ~precedence] is a description for an operator with
-    [~arity] and [~precedence].
-
-    [~arity] must be non-negative. *)
-val make_prefix : arity:int -> precedence:int -> t
+(** [make_prefix ~precedence] is a description for an operator with
+    [~precedence]. *)
+val make_prefix : precedence:int -> t
 
 (** [make_infix ~associativity ~precedence] is a description for an operator
     with [~associativity] and [~precedence]. *)
@@ -63,9 +61,6 @@ val is_infix : t -> bool
 (** [is_postfix operator] is [true] if and only if
     [fixity operator = Fixity.Postfix]. *)
 val is_postfix : t -> bool
-
-(** [is_nullary operator] is [true] if and only if [arity operator = 0]. *)
-val is_nullary : t -> bool
 
 (** [is_unary operator] is [true] if and only if [arity operator = 1]. *)
 val is_unary : t -> bool

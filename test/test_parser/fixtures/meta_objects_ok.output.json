@@ -220,13 +220,6 @@
                       "stop_column": 12
                     }
                   },
-                  "prefixed": false,
-                  "operator": {
-                    "fixity": "prefix",
-                    "associativity": "right-associative",
-                    "arity": 0,
-                    "precedence": 1
-                  },
                   "location": {
                     "filename": "meta_objects_ok.input.bel",
                     "start_line": 19,
@@ -308,13 +301,6 @@
                       "stop_line": 22,
                       "stop_column": 12
                     }
-                  },
-                  "prefixed": false,
-                  "operator": {
-                    "fixity": "prefix",
-                    "associativity": "right-associative",
-                    "arity": 0,
-                    "precedence": 1
                   },
                   "location": {
                     "filename": "meta_objects_ok.input.bel",
@@ -495,13 +481,6 @@
                       "stop_column": 12
                     }
                   },
-                  "prefixed": false,
-                  "operator": {
-                    "fixity": "prefix",
-                    "associativity": "right-associative",
-                    "arity": 0,
-                    "precedence": 1
-                  },
                   "location": {
                     "filename": "meta_objects_ok.input.bel",
                     "start_line": 28,
@@ -545,13 +524,6 @@
                       "stop_line": 28,
                       "stop_column": 21
                     }
-                  },
-                  "prefixed": false,
-                  "operator": {
-                    "fixity": "prefix",
-                    "associativity": "right-associative",
-                    "arity": 0,
-                    "precedence": 1
                   },
                   "location": {
                     "filename": "meta_objects_ok.input.bel",
@@ -599,13 +571,6 @@
                           "stop_line": 28,
                           "stop_column": 30
                         }
-                      },
-                      "prefixed": false,
-                      "operator": {
-                        "fixity": "prefix",
-                        "associativity": "right-associative",
-                        "arity": 3,
-                        "precedence": 1
                       },
                       "location": {
                         "filename": "meta_objects_ok.input.bel",
@@ -683,13 +648,6 @@
                             "stop_line": 28,
                             "stop_column": 36
                           }
-                        },
-                        "prefixed": false,
-                        "operator": {
-                          "fixity": "prefix",
-                          "associativity": "right-associative",
-                          "arity": 0,
-                          "precedence": 1
                         },
                         "location": {
                           "filename": "meta_objects_ok.input.bel",
@@ -783,13 +741,6 @@
                       "stop_column": 9
                     }
                   },
-                  "prefixed": false,
-                  "operator": {
-                    "fixity": "prefix",
-                    "associativity": "right-associative",
-                    "arity": 0,
-                    "precedence": 1
-                  },
                   "location": {
                     "filename": "meta_objects_ok.input.bel",
                     "start_line": 31,
@@ -833,13 +784,6 @@
                       "stop_line": 31,
                       "stop_column": 18
                     }
-                  },
-                  "prefixed": false,
-                  "operator": {
-                    "fixity": "prefix",
-                    "associativity": "right-associative",
-                    "arity": 0,
-                    "precedence": 1
                   },
                   "location": {
                     "filename": "meta_objects_ok.input.bel",
@@ -887,13 +831,6 @@
                           "stop_line": 31,
                           "stop_column": 27
                         }
-                      },
-                      "prefixed": false,
-                      "operator": {
-                        "fixity": "prefix",
-                        "associativity": "right-associative",
-                        "arity": 3,
-                        "precedence": 1
                       },
                       "location": {
                         "filename": "meta_objects_ok.input.bel",
@@ -971,13 +908,6 @@
                             "stop_line": 31,
                             "stop_column": 33
                           }
-                        },
-                        "prefixed": false,
-                        "operator": {
-                          "fixity": "prefix",
-                          "associativity": "right-associative",
-                          "arity": 0,
-                          "precedence": 1
                         },
                         "location": {
                           "filename": "meta_objects_ok.input.bel",
@@ -1071,13 +1001,6 @@
                       "stop_column": 12
                     }
                   },
-                  "prefixed": false,
-                  "operator": {
-                    "fixity": "prefix",
-                    "associativity": "right-associative",
-                    "arity": 0,
-                    "precedence": 1
-                  },
                   "location": {
                     "filename": "meta_objects_ok.input.bel",
                     "start_line": 34,
@@ -1121,13 +1044,6 @@
                       "stop_line": 34,
                       "stop_column": 21
                     }
-                  },
-                  "prefixed": false,
-                  "operator": {
-                    "fixity": "prefix",
-                    "associativity": "right-associative",
-                    "arity": 0,
-                    "precedence": 1
                   },
                   "location": {
                     "filename": "meta_objects_ok.input.bel",
@@ -1175,13 +1091,6 @@
                           "stop_line": 34,
                           "stop_column": 30
                         }
-                      },
-                      "prefixed": false,
-                      "operator": {
-                        "fixity": "prefix",
-                        "associativity": "right-associative",
-                        "arity": 3,
-                        "precedence": 1
                       },
                       "location": {
                         "filename": "meta_objects_ok.input.bel",
@@ -1259,13 +1168,6 @@
                             "stop_line": 34,
                             "stop_column": 36
                           }
-                        },
-                        "prefixed": false,
-                        "operator": {
-                          "fixity": "prefix",
-                          "associativity": "right-associative",
-                          "arity": 0,
-                          "precedence": 1
                         },
                         "location": {
                           "filename": "meta_objects_ok.input.bel",
@@ -1357,13 +1259,6 @@
               "stop_column": 8
             }
           },
-          "prefixed": false,
-          "operator": {
-            "fixity": "prefix",
-            "associativity": "right-associative",
-            "arity": 0,
-            "precedence": 1
-          },
           "location": {
             "filename": "meta_objects_ok.input.bel",
             "start_line": 37,
@@ -1434,13 +1329,6 @@
                       "stop_line": 40,
                       "stop_column": 9
                     }
-                  },
-                  "prefixed": false,
-                  "operator": {
-                    "fixity": "prefix",
-                    "associativity": "right-associative",
-                    "arity": 0,
-                    "precedence": 1
                   },
                   "location": {
                     "filename": "meta_objects_ok.input.bel",
@@ -1545,13 +1433,6 @@
                       "stop_line": 43,
                       "stop_column": 12
                     }
-                  },
-                  "prefixed": false,
-                  "operator": {
-                    "fixity": "prefix",
-                    "associativity": "right-associative",
-                    "arity": 0,
-                    "precedence": 1
                   },
                   "location": {
                     "filename": "meta_objects_ok.input.bel",
@@ -1667,13 +1548,6 @@
                       "stop_column": 12
                     }
                   },
-                  "prefixed": false,
-                  "operator": {
-                    "fixity": "prefix",
-                    "associativity": "right-associative",
-                    "arity": 0,
-                    "precedence": 1
-                  },
                   "location": {
                     "filename": "meta_objects_ok.input.bel",
                     "start_line": 46,
@@ -1777,13 +1651,6 @@
                       "stop_line": 49,
                       "stop_column": 9
                     }
-                  },
-                  "prefixed": false,
-                  "operator": {
-                    "fixity": "prefix",
-                    "associativity": "right-associative",
-                    "arity": 0,
-                    "precedence": 1
                   },
                   "location": {
                     "filename": "meta_objects_ok.input.bel",
@@ -2047,13 +1914,6 @@
                     "stop_column": 10
                   }
                 },
-                "prefixed": false,
-                "operator": {
-                  "fixity": "prefix",
-                  "associativity": "right-associative",
-                  "arity": 0,
-                  "precedence": 1
-                },
                 "location": {
                   "filename": "meta_objects_ok.input.bel",
                   "start_line": 58,
@@ -2145,13 +2005,6 @@
                       "stop_column": 14
                     }
                   },
-                  "prefixed": false,
-                  "operator": {
-                    "fixity": "prefix",
-                    "associativity": "right-associative",
-                    "arity": 0,
-                    "precedence": 1
-                  },
                   "location": {
                     "filename": "meta_objects_ok.input.bel",
                     "start_line": 61,
@@ -2210,13 +2063,6 @@
                     "stop_line": 61,
                     "stop_column": 19
                   }
-                },
-                "prefixed": false,
-                "operator": {
-                  "fixity": "prefix",
-                  "associativity": "right-associative",
-                  "arity": 0,
-                  "precedence": 1
                 },
                 "location": {
                   "filename": "meta_objects_ok.input.bel",
@@ -2479,13 +2325,6 @@
                     "stop_column": 11
                   }
                 },
-                "prefixed": false,
-                "operator": {
-                  "fixity": "prefix",
-                  "associativity": "right-associative",
-                  "arity": 0,
-                  "precedence": 1
-                },
                 "location": {
                   "filename": "meta_objects_ok.input.bel",
                   "start_line": 70,
@@ -2577,13 +2416,6 @@
                       "stop_column": 14
                     }
                   },
-                  "prefixed": false,
-                  "operator": {
-                    "fixity": "prefix",
-                    "associativity": "right-associative",
-                    "arity": 0,
-                    "precedence": 1
-                  },
                   "location": {
                     "filename": "meta_objects_ok.input.bel",
                     "start_line": 73,
@@ -2642,13 +2474,6 @@
                     "stop_line": 73,
                     "stop_column": 20
                   }
-                },
-                "prefixed": false,
-                "operator": {
-                  "fixity": "prefix",
-                  "associativity": "right-associative",
-                  "arity": 0,
-                  "precedence": 1
                 },
                 "location": {
                   "filename": "meta_objects_ok.input.bel",
@@ -2762,13 +2587,6 @@
                       "stop_line": 76,
                       "stop_column": 14
                     }
-                  },
-                  "prefixed": false,
-                  "operator": {
-                    "fixity": "prefix",
-                    "associativity": "right-associative",
-                    "arity": 0,
-                    "precedence": 1
                   },
                   "location": {
                     "filename": "meta_objects_ok.input.bel",

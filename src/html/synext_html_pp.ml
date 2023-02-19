@@ -45,9 +45,23 @@ module type HTML_PRINTING_STATE = sig
 
   val add_abbreviation : Qualified_identifier.t -> Identifier.t -> Unit.t t
 
+  val set_default_associativity : Associativity.t -> Unit.t t
+
+  val get_default_associativity : Associativity.t t
+
   val lookup_operator_precedence : Qualified_identifier.t -> Int.t Option.t t
 
   val lookup_operator : Qualified_identifier.t -> Operator.t Option.t t
+
+  val make_prefix : ?precedence:Int.t -> Qualified_identifier.t -> Unit.t t
+
+  val make_infix :
+       ?precedence:Int.t
+    -> ?associativity:Associativity.t
+    -> Qualified_identifier.t
+    -> Unit.t t
+
+  val make_postfix : ?precedence:Int.t -> Qualified_identifier.t -> Unit.t t
 end
 
 module Persistent_html_state : sig
@@ -55,7 +69,10 @@ module Persistent_html_state : sig
 
   val initial : Format.formatter -> state
 end = struct
-  type entry = { id : String.t }
+  type entry =
+    { id : String.t
+    ; operator : Operator.t Option.t
+    }
 
   type state =
     | Id_state of
@@ -63,6 +80,10 @@ end = struct
         ; ids : String.Set.t
         ; max_suffix_by_id : Int.t String.Hamt.t
         ; formatter : Format.formatter
+        }
+    | Signature_state of
+        { state : state
+        ; default_associativity : Associativity.t
         }
     | Module_state of
         { state : state
@@ -77,6 +98,7 @@ end = struct
 
   let rec nested_get_formatter = function
     | Id_state { formatter; _ } -> formatter
+    | Signature_state { state; _ } -> nested_get_formatter state
     | Module_state { state; _ } -> nested_get_formatter state
 
   let with_formatter f =
@@ -92,21 +114,29 @@ end = struct
       Format_state.S with type state := state)
 
   let initial formatter =
-    Id_state
-      { bindings = Binding_tree.empty
-      ; ids = String.Set.empty
-      ; max_suffix_by_id = String.Hamt.empty
-      ; formatter
+    Signature_state
+      { state =
+          Id_state
+            { bindings = Binding_tree.empty
+            ; ids = String.Set.empty
+            ; max_suffix_by_id = String.Hamt.empty
+            ; formatter
+            }
+      ; default_associativity = Associativity.non_associative
       }
 
   let rec nested_get_bindings = function
     | Id_state { bindings; _ } -> bindings
+    | Signature_state { state; _ } -> nested_get_bindings state
     | Module_state { state; _ } -> nested_get_bindings state
 
   let get_bindings = get $> nested_get_bindings
 
   let rec nested_set_bindings bindings = function
     | Id_state o -> Id_state { o with bindings }
+    | Signature_state o ->
+        let state' = nested_set_bindings bindings o.state in
+        Signature_state { o with state = state' }
     | Module_state o ->
         let state' = nested_set_bindings bindings o.state in
         Module_state { o with state = state' }
@@ -120,12 +150,16 @@ end = struct
 
   let rec nested_get_ids = function
     | Id_state { ids; _ } -> ids
+    | Signature_state { state; _ } -> nested_get_ids state
     | Module_state { state; _ } -> nested_get_ids state
 
   let get_ids = get $> nested_get_ids
 
   let rec nested_set_ids ids = function
     | Id_state o -> Id_state { o with ids }
+    | Signature_state o ->
+        let state' = nested_set_ids ids o.state in
+        Signature_state { o with state = state' }
     | Module_state o ->
         let state' = nested_set_ids ids o.state in
         Module_state { o with state = state' }
@@ -139,12 +173,16 @@ end = struct
 
   let rec nested_get_max_suffix_by_id = function
     | Id_state { max_suffix_by_id; _ } -> max_suffix_by_id
+    | Signature_state { state; _ } -> nested_get_max_suffix_by_id state
     | Module_state { state; _ } -> nested_get_max_suffix_by_id state
 
   let get_max_suffix_by_id = get $> nested_get_max_suffix_by_id
 
   let rec nested_set_max_suffix_by_id max_suffix_by_id = function
     | Id_state o -> Id_state { o with max_suffix_by_id }
+    | Signature_state o ->
+        let state' = nested_set_max_suffix_by_id max_suffix_by_id o.state in
+        Signature_state { o with state = state' }
     | Module_state o ->
         let state' = nested_set_max_suffix_by_id max_suffix_by_id o.state in
         Module_state { o with state = state' }
@@ -167,7 +205,8 @@ end = struct
               o.declarations
           in
           Module_state { o with declarations = declarations' }
-      | Id_state _ as state -> state)
+      | Id_state _ as state -> state
+      | Signature_state _ as state -> state)
 
   (** Regular expression for non-digit characters. *)
   let non_digit_regexp = Str.regexp "[^0-9]"
@@ -215,7 +254,8 @@ end = struct
     return id'
 
   let add_binding identifier ~id =
-    modify_bindings (Binding_tree.add_toplevel identifier { id })
+    modify_bindings
+      (Binding_tree.add_toplevel identifier { id; operator = Option.none })
 
   let add_fresh_id ?prefix identifier =
     let* id = fresh_id ?prefix identifier in
@@ -231,11 +271,11 @@ end = struct
     return (Binding_tree.lookup identifier bindings)
 
   let lookup_toplevel_id identifier =
-    let* { id }, _ = lookup_toplevel identifier in
+    let* { id; _ }, _ = lookup_toplevel identifier in
     return id
 
   let lookup_id identifier =
-    let* { id }, _ = lookup identifier in
+    let* { id; _ }, _ = lookup identifier in
     return id
 
   let add_synonym qualified_identifier synonym =
@@ -251,7 +291,9 @@ end = struct
 
   let get_module_declarations =
     get >>= function
-    | Id_state _ -> Error.raise_violation "[get_declarations] invalid state"
+    | Signature_state _
+    | Id_state _ ->
+        Error.raise_violation "[get_declarations] invalid state"
     | Module_state o -> return o.declarations
 
   let with_module_declarations ~declarations ~module_identifier ~id =
@@ -265,13 +307,85 @@ end = struct
     let* () =
       modify_bindings
         (Binding_tree.add_toplevel module_identifier
-           ~subtree:inner_declarations { id })
+           ~subtree:inner_declarations
+           { id; operator = Option.none })
     in
     return declarations'
 
-  let lookup_operator_precedence _ = return Option.none (* TODO: *)
+  let rec nested_set_default_associativity default_associativity = function
+    | Id_state _ ->
+        Error.raise_violation
+          "[nested_set_default_associativity] invalid state"
+    | Signature_state o -> Signature_state { o with default_associativity }
+    | Module_state o ->
+        let state' =
+          nested_set_default_associativity default_associativity o.state
+        in
+        Module_state { o with state = state' }
 
-  let lookup_operator _ = return Option.none (* TODO: *)
+  let set_default_associativity associativity =
+    modify (nested_set_default_associativity associativity)
+
+  let rec nested_get_default_associativity = function
+    | Id_state _ ->
+        Error.raise_violation
+          "[nested_get_default_associativity] invalid state"
+    | Signature_state o -> o.default_associativity
+    | Module_state o -> nested_get_default_associativity o.state
+
+  let get_default_associativity = get $> nested_get_default_associativity
+
+  let lookup_operator constant =
+    let* { operator; _ }, _subtree = lookup constant in
+    return operator
+
+  let lookup_operator_precedence constant =
+    lookup_operator constant $> Option.map Operator.precedence
+
+  let default_precedence = 20
+
+  let make_prefix ?(precedence = default_precedence) constant =
+    modify_bindings (fun bindings ->
+        Binding_tree.replace constant
+          (fun entry subtree ->
+            let entry' =
+              { entry with
+                operator = Option.some (Operator.make_prefix ~precedence)
+              }
+            in
+            (entry', subtree))
+          bindings)
+
+  let make_infix ?(precedence = default_precedence) ?associativity constant =
+    let* associativity =
+      match associativity with
+      | Option.None -> get_default_associativity
+      | Option.Some associativity -> return associativity
+    in
+    modify_bindings (fun bindings ->
+        Binding_tree.replace constant
+          (fun entry subtree ->
+            let entry' =
+              { entry with
+                operator =
+                  Option.some
+                    (Operator.make_infix ~precedence ~associativity)
+              }
+            in
+            (entry', subtree))
+          bindings)
+
+  let make_postfix ?(precedence = default_precedence) constant =
+    modify_bindings (fun bindings ->
+        Binding_tree.replace constant
+          (fun entry subtree ->
+            let entry' =
+              { entry with
+                operator = Option.some (Operator.make_postfix ~precedence)
+              }
+            in
+            (entry', subtree))
+          bindings)
 end
 
 module type BELUGA_HTML = sig
@@ -637,7 +751,7 @@ module Make (Html_state : HTML_PRINTING_STATE) :
     | term -> guard_lf_term_operator term
 
   let rec pp_lf_kind kind =
-    let open Parenthesizer_state.Make (Html_state) (Lf_precedence.Ord) in
+    let open Parenthesizer.Make (Html_state) (Lf_precedence.Ord) in
     let* parent_precedence = precedence_of_lf_kind kind in
     match kind with
     | LF.Kind.Arrow { domain; range; _ } ->
@@ -676,7 +790,7 @@ module Make (Html_state : HTML_PRINTING_STATE) :
         pp_hovbox ~indent (pp_binding ++ pp_space ++ pp_lf_kind body)
 
   and pp_lf_typ typ =
-    let open Parenthesizer_state.Make (Html_state) (Lf_precedence.Ord) in
+    let open Parenthesizer.Make (Html_state) (Lf_precedence.Ord) in
     let* parent_precedence = precedence_of_lf_typ typ in
     match typ with
     | LF.Typ.Constant { identifier; _ } ->
@@ -687,7 +801,7 @@ module Make (Html_state : HTML_PRINTING_STATE) :
           ~precedence_of_applicand:precedence_of_lf_typ
           ~precedence_of_argument:precedence_of_lf_term
           ~pp_applicand:pp_lf_typ ~pp_argument:pp_lf_term ~parent_precedence
-          (applicand, arguments)
+          applicand arguments
     | LF.Typ.Arrow { domain; range; orientation = `Forward; _ } ->
         (* Forward arrows are right-associative and of equal precedence with
            backward arrows, so backward arrows have to be parenthesized *)
@@ -754,7 +868,7 @@ module Make (Html_state : HTML_PRINTING_STATE) :
         pp_hovbox ~indent (pp_binding ++ pp_space ++ pp_lf_typ body)
 
   and pp_lf_term term =
-    let open Parenthesizer_state.Make (Html_state) (Lf_precedence.Ord) in
+    let open Parenthesizer.Make (Html_state) (Lf_precedence.Ord) in
     let* parent_precedence = precedence_of_lf_term term in
     match term with
     | LF.Term.Variable { identifier; _ } -> pp_lf_variable identifier
@@ -766,7 +880,7 @@ module Make (Html_state : HTML_PRINTING_STATE) :
           ~precedence_of_applicand:precedence_of_lf_term
           ~precedence_of_argument:precedence_of_lf_term
           ~pp_applicand:pp_lf_term ~pp_argument:pp_lf_term ~parent_precedence
-          (applicand, arguments)
+          applicand arguments
     | LF.Term.Abstraction { parameter_identifier; parameter_type; body; _ }
       ->
         (* Lambdas are weak prefix operators, so the body of the lambda never
@@ -835,7 +949,7 @@ module Make (Html_state : HTML_PRINTING_STATE) :
     | term -> guard_clf_term_pattern_operator term
 
   let rec pp_clf_typ typ =
-    let open Parenthesizer_state.Make (Html_state) (Clf_precedence.Ord) in
+    let open Parenthesizer.Make (Html_state) (Clf_precedence.Ord) in
     let* parent_precedence = precedence_of_clf_typ typ in
     match typ with
     | CLF.Typ.Constant { identifier; _ } ->
@@ -846,7 +960,7 @@ module Make (Html_state : HTML_PRINTING_STATE) :
           ~precedence_of_applicand:precedence_of_clf_typ
           ~precedence_of_argument:precedence_of_clf_term
           ~pp_applicand:pp_clf_typ ~pp_argument:pp_clf_term
-          ~parent_precedence (applicand, arguments)
+          ~parent_precedence applicand arguments
     | CLF.Typ.Arrow { domain; range; orientation = `Forward; _ } ->
         (* Forward arrows are right-associative and of equal precedence with
            backward arrows, so backward arrows have to be parenthesized *)
@@ -915,15 +1029,19 @@ module Make (Html_state : HTML_PRINTING_STATE) :
           ++ pp_in_parens (pp_clf_typ typ))
     | CLF.Typ.Block { elements = `Record nts; _ } ->
         let pp_binding (identifier, typ) =
-          pp_identifier identifier ++ pp_non_breaking_space ++ pp_colon
-          ++ pp_space ++ pp_clf_typ typ
+          pp_hovbox ~indent
+            (pp_identifier identifier ++ pp_non_breaking_space ++ pp_colon
+           ++ pp_space ++ pp_clf_typ typ)
+        in
+        let pp_bindings bindings =
+          pp_hvbox (pp_list1 ~sep:pp_comma_space pp_binding bindings)
         in
         pp_hovbox ~indent
           (pp_block_keyword ++ pp_non_breaking_space
-          ++ pp_in_parens (pp_list1 ~sep:pp_comma_space pp_binding nts))
+          ++ pp_in_parens (pp_bindings nts))
 
   and pp_clf_term term =
-    let open Parenthesizer_state.Make (Html_state) (Clf_precedence.Ord) in
+    let open Parenthesizer.Make (Html_state) (Clf_precedence.Ord) in
     let* parent_precedence = precedence_of_clf_term term in
     match term with
     | CLF.Term.Variable { identifier; _ } -> pp_lf_variable identifier
@@ -939,7 +1057,7 @@ module Make (Html_state : HTML_PRINTING_STATE) :
           ~precedence_of_applicand:precedence_of_clf_term
           ~precedence_of_argument:precedence_of_clf_term
           ~pp_applicand:pp_clf_term ~pp_argument:pp_clf_term
-          ~parent_precedence (applicand, arguments)
+          ~parent_precedence applicand arguments
     | CLF.Term.Abstraction { parameter_identifier; parameter_type; body; _ }
       ->
         (* Lambdas are weak prefix operators, so the body of a lambda does
@@ -1082,7 +1200,7 @@ module Make (Html_state : HTML_PRINTING_STATE) :
         ++ pp_list ~sep:pp_comma_space pp_typing bindings
 
   let rec pp_clf_term_pattern term =
-    let open Parenthesizer_state.Make (Html_state) (Clf_precedence.Ord) in
+    let open Parenthesizer.Make (Html_state) (Clf_precedence.Ord) in
     let* parent_precedence = precedence_of_clf_term_pattern term in
     match term with
     | CLF.Term.Pattern.Variable { identifier; _ } ->
@@ -1101,7 +1219,7 @@ module Make (Html_state : HTML_PRINTING_STATE) :
           ~precedence_of_applicand:precedence_of_clf_term_pattern
           ~precedence_of_argument:precedence_of_clf_term_pattern
           ~pp_applicand:pp_clf_term_pattern ~pp_argument:pp_clf_term_pattern
-          ~parent_precedence (applicand, arguments)
+          ~parent_precedence applicand arguments
     | CLF.Term.Pattern.Abstraction
         { parameter_identifier; parameter_type; body; _ } ->
         (* Lambdas are weak prefix operators, so the body of a lambda never
@@ -1334,13 +1452,16 @@ module Make (Html_state : HTML_PRINTING_STATE) :
              ++ pp_clf_substitution_pattern range))
 
   and pp_schema schema =
-    let open Parenthesizer_state.Make (Html_state) (Schema_precedence.Ord) in
+    let open Parenthesizer.Make (Html_state) (Schema_precedence.Ord) in
     let* parent_precedence = precedence_of_schema schema in
     let pp_binding (identifier, typ) =
-      pp_lf_variable identifier ++ pp_non_breaking_space ++ pp_colon
-      ++ pp_space ++ pp_clf_typ typ
+      pp_hovbox ~indent
+        (pp_lf_variable identifier ++ pp_non_breaking_space ++ pp_colon
+       ++ pp_space ++ pp_clf_typ typ)
     in
-    let pp_bindings = pp_list1 ~sep:pp_comma_space pp_binding in
+    let pp_bindings bindings =
+      pp_hvbox (pp_list1 ~sep:pp_comma_space pp_binding bindings)
+    in
     match schema with
     | Meta.Schema.Constant { identifier; _ } ->
         pp_schema_constant_invoke identifier
@@ -1367,7 +1488,7 @@ module Make (Html_state : HTML_PRINTING_STATE) :
               pp_block_keyword ++ pp_non_breaking_space
               ++ pp_in_parens (pp_bindings block_bindings)
         in
-        pp_hovbox ~indent (pp_some_clause ++ pp_block_clause)
+        pp_hvbox (pp_some_clause ++ pp_block_clause)
 
   (** {1 Pretty-Printing Computation-Level Syntax} *)
 
@@ -1425,7 +1546,7 @@ module Make (Html_state : HTML_PRINTING_STATE) :
         pp_hovbox ~indent (pp_declaration ++ pp_space ++ pp_comp_kind body)
 
   and pp_comp_typ typ =
-    let open Parenthesizer_state.Make (Html_state) (Comp_sort_precedence.Ord) in
+    let open Parenthesizer.Make (Html_state) (Comp_sort_precedence.Ord) in
     let* parent_precedence = precedence_of_comp_typ typ in
     match typ with
     | Comp.Typ.Inductive_typ_constant { identifier; _ } ->
@@ -1663,8 +1784,7 @@ module Make (Html_state : HTML_PRINTING_STATE) :
     else pp_comp_expression expression
 
   and pp_comp_expression expression =
-    let open
-      Parenthesizer_state.Make (Html_state) (Comp_expression_precedence.Ord) in
+    let open Parenthesizer.Make (Html_state) (Comp_expression_precedence.Ord) in
     let* parent_precedence = precedence_of_comp_expression expression in
     match expression with
     | Comp.Expression.Variable { identifier; _ } ->
@@ -1808,11 +1928,10 @@ module Make (Html_state : HTML_PRINTING_STATE) :
           ~precedence_of_applicand:precedence_of_comp_expression
           ~precedence_of_argument:precedence_of_comp_expression
           ~pp_applicand:pp_comp_expression ~pp_argument:pp_comp_expression
-          ~parent_precedence (applicand, arguments)
+          ~parent_precedence applicand arguments
 
   and pp_comp_pattern pattern =
-    let open
-      Parenthesizer_state.Make (Html_state) (Comp_pattern_precedence.Ord) in
+    let open Parenthesizer.Make (Html_state) (Comp_pattern_precedence.Ord) in
     let* parent_precedence = precedence_of_comp_pattern pattern in
     match pattern with
     | Comp.Pattern.Variable { identifier; _ } ->
@@ -1843,7 +1962,7 @@ module Make (Html_state : HTML_PRINTING_STATE) :
           ~precedence_of_applicand:precedence_of_comp_pattern
           ~precedence_of_argument:precedence_of_comp_pattern
           ~pp_applicand:pp_comp_pattern ~pp_argument:pp_comp_pattern
-          ~parent_precedence (applicand, arguments)
+          ~parent_precedence applicand arguments
 
   and pp_comp_copattern copattern =
     let pp_comp_pattern pattern =
@@ -1891,7 +2010,8 @@ module Make (Html_state : HTML_PRINTING_STATE) :
         pp_hovbox ~indent
           (pp_by_keyword ++ pp_non_breaking_space
           ++ pp_comp_expression expression
-          ++ pp_as_keyword ++ pp_identifier assignee)
+          ++ pp_space ++ pp_as_keyword ++ pp_space ++ pp_identifier assignee
+          )
     | Harpoon.Command.Unbox
         { expression; assignee; modifier = Option.None; _ } ->
         pp_hovbox ~indent
@@ -2002,7 +2122,9 @@ module Make (Html_state : HTML_PRINTING_STATE) :
       (pp_in_braces
          (pp_non_breaking_space ++ pp_meta_context ++ pp_cut ++ pp_pipe
         ++ pp_non_breaking_space ++ pp_comp_context ++ pp_cut ++ pp_semicolon
-        ++ pp_non_breaking_space ++ pp_harpoon_proof proof ++ pp_cut))
+        ++ pp_non_breaking_space
+         ++ pp_vbox ~indent:0 (pp_harpoon_proof proof)
+         ++ pp_cut))
 
   (** {1 Pretty-Printing Signature Syntax} *)
 
@@ -2023,8 +2145,9 @@ module Make (Html_state : HTML_PRINTING_STATE) :
             ++ pp_identifier meta_variable_base
             ++ pp_option
                  (fun computation_variable_base ->
-                   pp_identifier computation_variable_base ++ pp_dot)
-                 computation_variable_base)
+                   pp_space ++ pp_identifier computation_variable_base)
+                 computation_variable_base
+            ++ pp_dot)
         in
         pp_pragma "name" pp_name_pragma
     | Signature.Pragma.Default_associativity { associativity; _ } ->
@@ -2035,6 +2158,7 @@ module Make (Html_state : HTML_PRINTING_STATE) :
             ++ pp_dot)
         in
         pp_pragma "assoc" pp_associativity_pragma
+        <& set_default_associativity associativity
     | Signature.Pragma.Prefix_fixity { constant; precedence; _ } ->
         let pp_prefix_pragma =
           pp_hovbox ~indent
@@ -2046,6 +2170,7 @@ module Make (Html_state : HTML_PRINTING_STATE) :
             ++ pp_dot)
         in
         pp_pragma "prefix" pp_prefix_pragma
+        <& make_prefix ?precedence constant
     | Signature.Pragma.Infix_fixity
         { constant; precedence; associativity; _ } ->
         let pp_infix_pragma =
@@ -2062,6 +2187,7 @@ module Make (Html_state : HTML_PRINTING_STATE) :
             ++ pp_dot)
         in
         pp_pragma "infix" pp_infix_pragma
+        <& make_infix ?precedence ?associativity constant
     | Signature.Pragma.Postfix_fixity { constant; precedence; _ } ->
         let pp_postfix_pragma =
           pp_hovbox ~indent
@@ -2073,6 +2199,7 @@ module Make (Html_state : HTML_PRINTING_STATE) :
             ++ pp_dot)
         in
         pp_pragma "postfix" pp_postfix_pragma
+        <& make_postfix ?precedence constant
     | Signature.Pragma.Not _ ->
         let pp_not_pragma = pp_string "--not" in
         pp_pragma "not" pp_not_pragma
@@ -2083,8 +2210,7 @@ module Make (Html_state : HTML_PRINTING_STATE) :
             ++ pp_constant_invoke module_identifier
             ++ pp_dot)
         in
-        let* () = pp_pragma "open" pp_open_pragma in
-        open_module module_identifier
+        pp_pragma "open" pp_open_pragma <& open_module module_identifier
     | Signature.Pragma.Abbreviation { module_identifier; abbreviation; _ } ->
         let pp_abbrev_pragma =
           pp_hovbox ~indent
@@ -2094,8 +2220,8 @@ module Make (Html_state : HTML_PRINTING_STATE) :
             ++ pp_identifier abbreviation
             ++ pp_dot)
         in
-        let* () = pp_pragma "abbrev" pp_abbrev_pragma in
-        add_abbreviation module_identifier abbreviation
+        pp_pragma "abbrev" pp_abbrev_pragma
+        <& add_abbreviation module_identifier abbreviation
 
   and pp_signature_global_pragma global_pragma =
     match global_pragma with
@@ -2238,8 +2364,9 @@ module Make (Html_state : HTML_PRINTING_STATE) :
         let* () =
           pp_hovbox ~indent
             (pp_let_keyword ++ pp_space ++ pp_declaration ++ pp_space
-           ++ pp_equal
-            ++ pp_comp_expression expression)
+           ++ pp_equal ++ pp_space
+            ++ pp_comp_expression expression
+            ++ pp_semicolon)
         in
         let* () = add_binding identifier ~id in
         add_module_declaration identifier

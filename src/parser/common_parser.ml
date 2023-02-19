@@ -582,10 +582,8 @@ module Make
       | Labelled_exception { label; cause } ->
           let cause_printer = Error.find_printer cause in
           Format.dprintf "%s.@;@[%t@]" label cause_printer
-      | No_more_choices exceptions_rev ->
-          let exception_printers =
-            List.map Error.find_printer exceptions_rev
-          in
+      | No_more_choices exceptions ->
+          let exception_printers = List.map Error.find_printer exceptions in
           Format.dprintf "@[<v 2>Exhausted alternatives in parsing:@,%a@]"
             (List.pp ~pp_sep:Format.pp_print_cut
                (fun ppf exception_printer ->

@@ -77,23 +77,6 @@ exception Illegal_clf_context_missing_binding_identifier
 
 exception Illegal_clf_context_identity
 
-(** {2 Exceptions for application rewriting} *)
-
-exception Misplaced_clf_operator
-
-exception Ambiguous_clf_operator_placement of Qualified_identifier.t
-
-exception
-  Consecutive_applications_of_non_associative_clf_operators of
-    Qualified_identifier.t
-
-exception
-  Clf_arity_mismatch of
-    { operator_identifier : Qualified_identifier.t
-    ; expected_arguments_count : Int.t
-    ; actual_arguments_count : Int.t
-    }
-
 (** {2 Exceptions for contextual LF term pattern disambiguation} *)
 
 exception Illegal_pi_clf_term_pattern
@@ -123,141 +106,6 @@ exception Illegal_clf_context_pattern_missing_binding_identifier
 exception Illegal_clf_context_pattern_identity
 
 (** {1 Disambiguation} *)
-
-(** Contextual LF operands for application rewriting with
-    {!module:Application_disambiguation.Make}. *)
-module Clf_operand = struct
-  type expression = Synprs.clf_object
-
-  type t =
-    | Atom of expression
-    | Application of
-        { applicand : expression
-        ; arguments : t List1.t
-        }
-
-  let rec location operand =
-    match operand with
-    | Atom object_ -> Synprs.location_of_clf_object object_
-    | Application { applicand; arguments } ->
-        let applicand_location = Synprs.location_of_clf_object applicand in
-        let arguments_location =
-          Location.join_all1_contramap location arguments
-        in
-        Location.join applicand_location arguments_location
-end
-
-(** Contextual LF operators for application rewriting with
-    {!module:Application_disambiguation.Make}. *)
-module Clf_operator = struct
-  type associativity = Associativity.t
-
-  type fixity = Fixity.t
-
-  type operand = Clf_operand.t
-
-  type t =
-    { identifier : Qualified_identifier.t
-    ; operator : Operator.t
-    ; applicand : Synprs.clf_object
-    }
-
-  let[@inline] make ~identifier ~operator ~applicand =
-    { identifier; operator; applicand }
-
-  let[@inline] operator o = o.operator
-
-  let[@inline] applicand o = o.applicand
-
-  let[@inline] identifier o = o.identifier
-
-  let arity = Fun.(operator >> Operator.arity)
-
-  let precedence = Fun.(operator >> Operator.precedence)
-
-  let fixity = Fun.(operator >> Operator.fixity)
-
-  let associativity = Fun.(operator >> Operator.associativity)
-
-  let location = Fun.(applicand >> Synprs.location_of_clf_object)
-
-  (** [write operator arguments] constructs the application of [operator]
-      with [arguments] for the shunting yard algorithm. Since nullary
-      operators are treated as arguments, it is always the case that
-      [List.length arguments > 0]. *)
-  let write operator arguments =
-    let applicand = applicand operator in
-    let arguments =
-      List1.unsafe_of_list arguments (* [List.length arguments > 0] *)
-    in
-    Clf_operand.Application { applicand; arguments }
-
-  (** Instance of equality by operator identifier.
-
-      Since applications do not introduce bound variables, occurrences of
-      operators are equal by their identifier. That is, in an application
-      like [a o1 a o2 a], the operators [o1] and [o2] are equal if and only
-      if they are textually equal. *)
-  include (
-    (val Eq.contramap (module Qualified_identifier) identifier) :
-      Eq.EQ with type t := t)
-end
-
-(** Disambiguation state for contextual LF application rewriting with
-    {!module:Application_disambiguation.Make}. *)
-module Make_clf_application_disambiguation_state
-    (Disambiguation_state : DISAMBIGUATION_STATE) :
-  Application_disambiguation.APPLICATION_DISAMBIGUATION_STATE
-    with type state = Disambiguation_state.state
-     and type operator = Clf_operator.t
-     and type expression = Synprs.clf_object = struct
-  include Disambiguation_state
-
-  type operator = Clf_operator.t
-
-  type expression = Synprs.clf_object
-
-  let guard_identifier_operator identifier expression =
-    lookup identifier >>= function
-    | Result.Ok (Lf_type_constant, { operator = Option.Some operator; _ })
-    | Result.Ok (Lf_term_constant, { operator = Option.Some operator; _ }) ->
-        if Operator.is_nullary operator then return Option.none
-        else
-          return
-            (Option.some
-               (Clf_operator.make ~identifier ~operator ~applicand:expression))
-    | Result.Ok _
-    | Result.Error (Unbound_identifier _) ->
-        return Option.none
-    | Result.Error cause ->
-        Error.raise_at1 (Qualified_identifier.location identifier) cause
-
-  let guard_operator expression =
-    match expression with
-    | Synprs.CLF.Object.Raw_identifier { prefixed; _ }
-    | Synprs.CLF.Object.Raw_qualified_identifier { prefixed; _ }
-      when prefixed ->
-        return Option.none
-    | Synprs.CLF.Object.Raw_identifier { identifier = identifier, `Plain; _ }
-      ->
-        let identifier = Qualified_identifier.make_simple identifier in
-        guard_identifier_operator identifier expression
-    | Synprs.CLF.Object.Raw_qualified_identifier { identifier; _ } ->
-        guard_identifier_operator identifier expression
-    | Synprs.CLF.Object.Raw_identifier
-        { identifier = _, (`Dollar | `Hash); _ }
-    | Synprs.CLF.Object.Raw_hole _
-    | Synprs.CLF.Object.Raw_pi _
-    | Synprs.CLF.Object.Raw_lambda _
-    | Synprs.CLF.Object.Raw_arrow _
-    | Synprs.CLF.Object.Raw_annotated _
-    | Synprs.CLF.Object.Raw_application _
-    | Synprs.CLF.Object.Raw_block _
-    | Synprs.CLF.Object.Raw_tuple _
-    | Synprs.CLF.Object.Raw_projection _
-    | Synprs.CLF.Object.Raw_substitution _ ->
-        return Option.none
-end
 
 module type CLF_DISAMBIGUATION = sig
   (** @closed *)
@@ -315,15 +163,35 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
 
   (** {1 Disambiguation} *)
 
-  (** [disambiguate_clf_typ object_ state] is [object_] rewritten as a
-      contextual LF type with respect to the disambiguation context [state].
+  module Clf_application_disambiguation =
+  Application_disambiguation.Make_expression_parser (struct
+    type t = Synprs.clf_object
 
-      Type applications are rewritten with {!disambiguate_application} using
-      Dijkstra's shunting yard algorithm.
+    type location = Location.t
 
-      This function imposes syntactic restrictions on [object_], but does not
-      perform normalization nor validation. To see the syntactic restrictions
-      from LF objects to LF types, see the Beluga language specification. *)
+    let location = Synprs.location_of_clf_object
+  end)
+
+  let guard_operator_identifier expression identifier =
+    lookup_operator identifier >>= function
+    | Option.None ->
+        return (Clf_application_disambiguation.make_expression expression)
+    | Option.Some operator ->
+        return
+          (Clf_application_disambiguation.make_operator expression operator
+             identifier)
+
+  let guard_operator expression =
+    match expression with
+    | Synprs.CLF.Object.Raw_qualified_identifier
+        { identifier; prefixed = false; _ } ->
+        guard_operator_identifier expression identifier
+    | Synprs.CLF.Object.Raw_identifier
+        { identifier = identifier, `Plain; prefixed = false; _ } ->
+        guard_operator_identifier expression
+          (Qualified_identifier.make_simple identifier)
+    | _ -> return (Clf_application_disambiguation.make_expression expression)
+
   let rec disambiguate_clf_typ object_ =
     match object_ with
     | Synprs.CLF.Object.Raw_hole { location; _ } ->
@@ -348,22 +216,17 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
         { location; identifier = _identifier, `Dollar; _ } ->
         Error.raise_at1 location Illegal_substitution_variable_clf_type
     | Synprs.CLF.Object.Raw_identifier
-        { location; identifier = identifier, `Plain; prefixed; _ } -> (
+        { location; identifier = identifier, `Plain; _ } -> (
         (* As an LF type, plain identifiers are necessarily type-level
            constants. *)
         let qualified_identifier =
           Qualified_identifier.make_simple identifier
         in
         lookup_toplevel identifier >>= function
-        | Result.Ok (Lf_type_constant, { operator = Option.Some operator; _ })
-          ->
+        | Result.Ok (Lf_type_constant, _) ->
             return
               (Synext.CLF.Typ.Constant
-                 { location
-                 ; identifier = qualified_identifier
-                 ; operator
-                 ; prefixed
-                 })
+                 { location; identifier = qualified_identifier })
         | Result.Ok entry ->
             Error.raise_at1 location
               (Error.composite_exception2 Expected_clf_type_constant
@@ -372,8 +235,8 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
             Error.raise_at1 location
               (Unbound_clf_type_constant qualified_identifier)
         | Result.Error cause -> Error.raise_at1 location cause)
-    | Synprs.CLF.Object.Raw_qualified_identifier
-        { location; identifier; prefixed } -> (
+    | Synprs.CLF.Object.Raw_qualified_identifier { location; identifier; _ }
+      -> (
         (* Qualified identifiers without namespaces were parsed as plain
            identifiers. *)
         assert (List.length (Qualified_identifier.namespaces identifier) >= 1);
@@ -381,11 +244,8 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
            <identifier>)+] are type-level constants, or illegal named
            projections. *)
         lookup identifier >>= function
-        | Result.Ok (Lf_type_constant, { operator = Option.Some operator; _ })
-          ->
-            return
-              (Synext.CLF.Typ.Constant
-                 { location; identifier; operator; prefixed })
+        | Result.Ok (Lf_type_constant, _) ->
+            return (Synext.CLF.Typ.Constant { location; identifier })
         | Result.Ok entry ->
             Error.raise_at1 location
               (Error.composite_exception2 Expected_clf_type_constant
@@ -432,7 +292,7 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
            the application disambiguation identifies them as operands. *)
         let* applicand, arguments = disambiguate_clf_application objects in
         let* applicand' = disambiguate_clf_typ applicand in
-        let* arguments' = traverse_list1 elaborate_lf_operand arguments in
+        let* arguments' = traverse_list1 elaborate_clf_operand arguments in
         return
           (Synext.CLF.Typ.Application
              { applicand = applicand'; arguments = arguments'; location })
@@ -477,15 +337,6 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
     in
     return (List1.from (identifier, typ') ys)
 
-  (** [disambiguate_clf_term object_ state] is [object_] rewritten as a
-      contextual LF term with respect to the disambiguation context [state].
-
-      Term applications are rewritten with {!disambiguate_application} using
-      Dijkstra's shunting yard algorithm.
-
-      This function imposes syntactic restrictions on [object_], but does not
-      perform normalization nor validation. To see the syntactic restrictions
-      from LF objects to LF terms, see the Beluga language specification. *)
   and disambiguate_clf_term = function
     | Synprs.CLF.Object.Raw_pi { location; _ } ->
         Error.raise_at1 location Illegal_pi_clf_term
@@ -534,22 +385,17 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
               (Synext.CLF.Term.Substitution_variable { location; identifier })
         | Result.Error cause -> Error.raise_at1 location cause)
     | Synprs.CLF.Object.Raw_identifier
-        { location; identifier = identifier, `Plain; prefixed; _ } -> (
+        { location; identifier = identifier, `Plain; _ } -> (
         (* As an LF term, plain identifiers are either term-level constants
            or variables (bound or free). *)
         let qualified_identifier =
           Qualified_identifier.make_simple identifier
         in
         lookup_toplevel identifier >>= function
-        | Result.Ok (Lf_term_constant, { operator = Option.Some operator; _ })
-          ->
+        | Result.Ok (Lf_term_constant, _) ->
             return
               (Synext.CLF.Term.Constant
-                 { location
-                 ; identifier = qualified_identifier
-                 ; operator
-                 ; prefixed
-                 })
+                 { location; identifier = qualified_identifier })
         | Result.Ok (Lf_term_variable, _)
         | Result.Ok (Meta_variable, _) ->
             (* Bound variable *)
@@ -562,8 +408,8 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
             (* Free variable. *)
             return (Synext.CLF.Term.Variable { location; identifier })
         | Result.Error cause -> Error.raise_at1 location cause)
-    | Synprs.CLF.Object.Raw_qualified_identifier
-        { location; identifier; prefixed } -> (
+    | Synprs.CLF.Object.Raw_qualified_identifier { location; identifier; _ }
+      -> (
         (* Qualified identifiers without namespaces were parsed as plain
            identifiers *)
         assert (List.length (Qualified_identifier.namespaces identifier) >= 1);
@@ -616,12 +462,8 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
               Illegal_clf_term_projection
         | `Totally_bound bound_segments (* A constant *) -> (
             match List1.last bound_segments with
-            | ( _identifier
-              , (Lf_term_constant, { operator = Option.Some operator; _ }) )
-              ->
-                return
-                  (Synext.CLF.Term.Constant
-                     { identifier; location; operator; prefixed })
+            | _identifier, (Lf_term_constant, _) ->
+                return (Synext.CLF.Term.Constant { identifier; location })
             | _identifier, entry ->
                 Error.raise_at1 location
                   (Error.composite_exception2 Expected_clf_term_constant
@@ -634,7 +476,7 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
            the application disambiguation identifies them as operands. *)
         let* applicand, arguments = disambiguate_clf_application objects in
         let* applicand' = disambiguate_clf_term applicand in
-        let* arguments' = traverse_list1 elaborate_lf_operand arguments in
+        let* arguments' = traverse_list1 elaborate_clf_operand arguments in
         return
           (Synext.CLF.Term.Application
              { applicand = applicand'; arguments = arguments'; location })
@@ -840,60 +682,18 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
                   ; bindings = bindings'
                   }))
 
-  and disambiguate_clf_application =
-    let open
-      Application_disambiguation.Make (Associativity) (Fixity) (Clf_operand)
-        (Clf_operator)
-        (Make_clf_application_disambiguation_state (Disambiguation_state)) in
-    disambiguate_application >=> function
-    | Result.Ok (applicand, arguments) -> return (applicand, arguments)
-    | Result.Error
-        (Ambiguous_operator_placement { left_operator; right_operator }) ->
-        let left_operator_location = Clf_operator.location left_operator in
-        let right_operator_location = Clf_operator.location right_operator in
-        let identifier = Clf_operator.identifier left_operator in
-        Error.raise_at2 left_operator_location right_operator_location
-          (Ambiguous_clf_operator_placement identifier)
-    | Result.Error (Arity_mismatch { operator; operator_arity; operands }) ->
-        let operator_identifier = Clf_operator.identifier operator in
-        let operator_location = Clf_operator.location operator in
-        let expected_arguments_count = operator_arity in
-        let operand_locations = List.map Clf_operand.location operands in
-        let actual_arguments_count = List.length operands in
-        Error.raise_at
-          (List1.from operator_location operand_locations)
-          (Clf_arity_mismatch
-             { operator_identifier
-             ; expected_arguments_count
-             ; actual_arguments_count
-             })
-    | Result.Error
-        (Consecutive_non_associative_operators
-          { left_operator; right_operator }) ->
-        let operator_identifier = Clf_operator.identifier left_operator in
-        let left_operator_location = Clf_operator.location left_operator in
-        let right_operator_location = Clf_operator.location right_operator in
-        Error.raise_at2 left_operator_location right_operator_location
-          (Consecutive_applications_of_non_associative_clf_operators
-             operator_identifier)
-    | Result.Error (Misplaced_operator { operator; operands }) ->
-        let operator_location = Clf_operator.location operator
-        and operand_locations = List.map Clf_operand.location operands in
-        Error.raise_at
-          (List1.from operator_location operand_locations)
-          Misplaced_clf_operator
-    | Result.Error cause -> Error.raise cause
+  and disambiguate_clf_application objects =
+    let* objects' = traverse_list2 guard_operator objects in
+    return (Clf_application_disambiguation.parse_application objects')
 
-  and elaborate_lf_operand operand =
+  and elaborate_clf_operand operand =
     match operand with
-    | Clf_operand.Atom object_ -> disambiguate_clf_term object_
-    | Clf_operand.Application { applicand; arguments } ->
+    | Clf_application_disambiguation.Atom { expression; _ } ->
+        disambiguate_clf_term expression
+    | Clf_application_disambiguation.Application
+        { applicand; arguments; location } ->
         let* applicand' = disambiguate_clf_term applicand in
-        let* arguments' = traverse_list1 elaborate_lf_operand arguments in
-        let location =
-          Location.join_all1_contramap Synext.location_of_clf_term
-            (List1.cons applicand' arguments')
-        in
+        let* arguments' = traverse_list1 elaborate_clf_operand arguments in
         return
           (Synext.CLF.Term.Application
              { applicand = applicand'; arguments = arguments'; location })
@@ -906,6 +706,35 @@ struct
   include Disambiguation_state
 
   (** {1 Disambiguation} *)
+
+  module Clf_application_disambiguation =
+  Application_disambiguation.Make_expression_parser (struct
+    type t = Synprs.clf_object
+
+    type location = Location.t
+
+    let location = Synprs.location_of_clf_object
+  end)
+
+  let guard_operator_identifier expression identifier =
+    lookup_operator identifier >>= function
+    | Option.None ->
+        return (Clf_application_disambiguation.make_expression expression)
+    | Option.Some operator ->
+        return
+          (Clf_application_disambiguation.make_operator expression operator
+             identifier)
+
+  let guard_operator expression =
+    match expression with
+    | Synprs.CLF.Object.Raw_qualified_identifier
+        { identifier; prefixed = false; _ } ->
+        guard_operator_identifier expression identifier
+    | Synprs.CLF.Object.Raw_identifier
+        { identifier = identifier, `Plain; prefixed = false; _ } ->
+        guard_operator_identifier expression
+          (Qualified_identifier.make_simple identifier)
+    | _ -> return (Clf_application_disambiguation.make_expression expression)
 
   (** [disambiguate_clf_typ object_ state] is [(state', typ')] where [typ']
       is the disambiguated contextual LF type corresponding to [object_] with
@@ -935,22 +764,17 @@ struct
         { location; identifier = _identifier, `Dollar; _ } ->
         Error.raise_at1 location Illegal_substitution_variable_clf_type
     | Synprs.CLF.Object.Raw_identifier
-        { location; identifier = identifier, `Plain; prefixed; _ } -> (
+        { location; identifier = identifier, `Plain; _ } -> (
         (* As a contextual LF type occuring in a pattern, plain identifiers
            are necessarily bound type-level constants. *)
         let qualified_identifier =
           Qualified_identifier.make_simple identifier
         in
         lookup_toplevel identifier >>= function
-        | Result.Ok (Lf_type_constant, { operator = Option.Some operator; _ })
-          ->
+        | Result.Ok (Lf_type_constant, _) ->
             return
               (Synext.CLF.Typ.Constant
-                 { location
-                 ; identifier = qualified_identifier
-                 ; operator
-                 ; prefixed
-                 })
+                 { location; identifier = qualified_identifier })
         | Result.Ok entry ->
             Error.raise_at1 location
               (Error.composite_exception2 Expected_clf_type_constant
@@ -959,8 +783,8 @@ struct
             Error.raise_at1 location
               (Unbound_clf_type_constant qualified_identifier)
         | Result.Error cause -> Error.raise_at1 location cause)
-    | Synprs.CLF.Object.Raw_qualified_identifier
-        { location; identifier; prefixed } -> (
+    | Synprs.CLF.Object.Raw_qualified_identifier { location; identifier; _ }
+      -> (
         (* Qualified identifiers without namespaces were parsed as plain
            identifiers. *)
         assert (List.length (Qualified_identifier.namespaces identifier) >= 1);
@@ -968,11 +792,8 @@ struct
            form [<identifier> (<dot-identifier>)+] are bound type-level
            constants, or illegal named projections. *)
         lookup identifier >>= function
-        | Result.Ok (Lf_type_constant, { operator = Option.Some operator; _ })
-          ->
-            return
-              (Synext.CLF.Typ.Constant
-                 { location; identifier; operator; prefixed })
+        | Result.Ok (Lf_type_constant, _) ->
+            return (Synext.CLF.Typ.Constant { location; identifier })
         | Result.Ok entry ->
             Error.raise_at1 location
               (Error.composite_exception2 Expected_clf_type_constant
@@ -1014,7 +835,7 @@ struct
     | Synprs.CLF.Object.Raw_application { objects; location } ->
         let* applicand, arguments = disambiguate_clf_application objects in
         let* applicand' = disambiguate_clf_typ applicand in
-        let* arguments' = traverse_list1 elaborate_lf_operand arguments in
+        let* arguments' = traverse_list1 elaborate_clf_operand arguments in
         return
           (Synext.CLF.Typ.Application
              { applicand = applicand'; arguments = arguments'; location })
@@ -1134,22 +955,17 @@ struct
                 return term')
         | Result.Error cause -> Error.raise_at1 location cause)
     | Synprs.CLF.Object.Raw_identifier
-        { location; identifier = identifier, `Plain; prefixed; _ } -> (
+        { location; identifier = identifier, `Plain; _ } -> (
         (* As an LF term, plain identifiers are either term-level constants
            or variables (bound or free). *)
         let qualified_identifier =
           Qualified_identifier.make_simple identifier
         in
         lookup_toplevel identifier >>= function
-        | Result.Ok (Lf_term_constant, { operator = Option.Some operator; _ })
-          ->
+        | Result.Ok (Lf_term_constant, _) ->
             return
               (Synext.CLF.Term.Constant
-                 { location
-                 ; identifier = qualified_identifier
-                 ; operator
-                 ; prefixed
-                 })
+                 { location; identifier = qualified_identifier })
         | Result.Ok (Lf_term_variable, _)
         | Result.Ok (Meta_variable, _) ->
             (* Bound variable *)
@@ -1174,8 +990,8 @@ struct
                 let* () = add_inner_pattern_binding identifier in
                 return term')
         | Result.Error cause -> Error.raise_at1 location cause)
-    | Synprs.CLF.Object.Raw_qualified_identifier
-        { location; identifier; prefixed } -> (
+    | Synprs.CLF.Object.Raw_qualified_identifier { location; identifier; _ }
+      -> (
         (* Qualified identifiers without namespaces were parsed as plain
            identifiers *)
         assert (List.length (Qualified_identifier.namespaces identifier) >= 1);
@@ -1240,12 +1056,8 @@ struct
               Illegal_clf_term_projection
         | `Totally_bound bound_segments (* A constant *) -> (
             match List1.last bound_segments with
-            | ( _identifier
-              , (Lf_term_constant, { operator = Option.Some operator; _ }) )
-              ->
-                return
-                  (Synext.CLF.Term.Constant
-                     { identifier; location; operator; prefixed })
+            | _identifier, (Lf_term_constant, _) ->
+                return (Synext.CLF.Term.Constant { identifier; location })
             | _identifier, entry ->
                 Error.raise_at1 location
                   (Error.composite_exception2 Expected_clf_term_constant
@@ -1253,7 +1065,7 @@ struct
     | Synprs.CLF.Object.Raw_application { objects; location } ->
         let* applicand, arguments = disambiguate_clf_application objects in
         let* applicand' = disambiguate_clf_term applicand in
-        let* arguments' = traverse_list1 elaborate_lf_operand arguments in
+        let* arguments' = traverse_list1 elaborate_clf_operand arguments in
         return
           (Synext.CLF.Term.Application
              { applicand = applicand'; arguments = arguments'; location })
@@ -1462,60 +1274,18 @@ struct
                   ; bindings = bindings'
                   }))
 
-  and disambiguate_clf_application =
-    let open
-      Application_disambiguation.Make (Associativity) (Fixity) (Clf_operand)
-        (Clf_operator)
-        (Make_clf_application_disambiguation_state (Disambiguation_state)) in
-    disambiguate_application >=> function
-    | Result.Ok (applicand, arguments) -> return (applicand, arguments)
-    | Result.Error
-        (Ambiguous_operator_placement { left_operator; right_operator }) ->
-        let left_operator_location = Clf_operator.location left_operator in
-        let right_operator_location = Clf_operator.location right_operator in
-        let identifier = Clf_operator.identifier left_operator in
-        Error.raise_at2 left_operator_location right_operator_location
-          (Ambiguous_clf_operator_placement identifier)
-    | Result.Error (Arity_mismatch { operator; operator_arity; operands }) ->
-        let operator_identifier = Clf_operator.identifier operator in
-        let operator_location = Clf_operator.location operator in
-        let expected_arguments_count = operator_arity in
-        let operand_locations = List.map Clf_operand.location operands in
-        let actual_arguments_count = List.length operands in
-        Error.raise_at
-          (List1.from operator_location operand_locations)
-          (Clf_arity_mismatch
-             { operator_identifier
-             ; expected_arguments_count
-             ; actual_arguments_count
-             })
-    | Result.Error
-        (Consecutive_non_associative_operators
-          { left_operator; right_operator }) ->
-        let operator_identifier = Clf_operator.identifier left_operator in
-        let left_operator_location = Clf_operator.location left_operator in
-        let right_operator_location = Clf_operator.location right_operator in
-        Error.raise_at2 left_operator_location right_operator_location
-          (Consecutive_applications_of_non_associative_clf_operators
-             operator_identifier)
-    | Result.Error (Misplaced_operator { operator; operands }) ->
-        let operator_location = Clf_operator.location operator
-        and operand_locations = List.map Clf_operand.location operands in
-        Error.raise_at
-          (List1.from operator_location operand_locations)
-          Misplaced_clf_operator
-    | Result.Error cause -> Error.raise cause
+  and disambiguate_clf_application objects =
+    let* objects' = traverse_list2 guard_operator objects in
+    return (Clf_application_disambiguation.parse_application objects')
 
-  and elaborate_lf_operand operand =
+  and elaborate_clf_operand operand =
     match operand with
-    | Clf_operand.Atom object_ -> disambiguate_clf_term object_
-    | Clf_operand.Application { applicand; arguments } ->
+    | Clf_application_disambiguation.Atom { expression; _ } ->
+        disambiguate_clf_term expression
+    | Clf_application_disambiguation.Application
+        { applicand; arguments; location } ->
         let* applicand' = disambiguate_clf_term applicand in
-        let* arguments' = traverse_list1 elaborate_lf_operand arguments in
-        let location =
-          Location.join_all1_contramap Synext.location_of_clf_term
-            (List1.cons applicand' arguments')
-        in
+        let* arguments' = traverse_list1 elaborate_clf_operand arguments in
         return
           (Synext.CLF.Term.Application
              { applicand = applicand'; arguments = arguments'; location })
@@ -1557,7 +1327,7 @@ struct
             let* () = add_inner_pattern_binding identifier in
             return pattern')
     | Synprs.CLF.Object.Raw_identifier
-        { location; identifier = identifier, `Plain; prefixed; _ } -> (
+        { location; identifier = identifier, `Plain; _ } -> (
         (* As an LF term pattern, plain identifiers are either term-level
            constants, variables bound in the pattern, or new pattern
            variables. *)
@@ -1565,15 +1335,10 @@ struct
           Qualified_identifier.make_simple identifier
         in
         lookup_toplevel identifier >>= function
-        | Result.Ok (Lf_term_constant, { operator = Option.Some operator; _ })
-          ->
+        | Result.Ok (Lf_term_constant, _) ->
             return
               (Synext.CLF.Term.Pattern.Constant
-                 { location
-                 ; identifier = qualified_identifier
-                 ; operator
-                 ; prefixed
-                 })
+                 { location; identifier = qualified_identifier })
         | Result.Ok (Lf_term_variable, _)
         | Result.Ok (Meta_variable, _) -> (
             let pattern' =
@@ -1597,8 +1362,8 @@ struct
                 let* () = add_inner_pattern_binding identifier in
                 return pattern')
         | Result.Error cause -> Error.raise_at1 location cause)
-    | Synprs.CLF.Object.Raw_qualified_identifier
-        { location; identifier; prefixed } -> (
+    | Synprs.CLF.Object.Raw_qualified_identifier { location; identifier; _ }
+      -> (
         (* Qualified identifiers without namespaces were parsed as plain
            identifiers *)
         assert (List.length (Qualified_identifier.namespaces identifier) >= 1);
@@ -1665,12 +1430,9 @@ struct
               Illegal_clf_term_projection
         | `Totally_bound bound_segments (* A constant *) -> (
             match List1.last bound_segments with
-            | ( _identifier
-              , (Lf_term_constant, { operator = Option.Some operator; _ }) )
-              ->
+            | _identifier, (Lf_term_constant, _) ->
                 return
-                  (Synext.CLF.Term.Pattern.Constant
-                     { identifier; location; operator; prefixed })
+                  (Synext.CLF.Term.Pattern.Constant { identifier; location })
             | _identifier, entry ->
                 Error.raise_at1 location
                   (Error.composite_exception2 Expected_clf_term_constant
@@ -1680,7 +1442,7 @@ struct
         let* applicand, arguments = disambiguate_clf_application objects in
         let* applicand' = disambiguate_clf_term_pattern applicand in
         let* arguments' =
-          traverse_list1 elaborate_lf_operand_pattern arguments
+          traverse_list1 elaborate_clf_operand_pattern arguments
         in
         return
           (Synext.CLF.Term.Pattern.Application
@@ -1738,17 +1500,15 @@ struct
           (Synext.CLF.Term.Pattern.Type_annotated
              { location; term = term'; typ = typ' })
 
-  and elaborate_lf_operand_pattern operand =
+  and elaborate_clf_operand_pattern operand =
     match operand with
-    | Clf_operand.Atom object_ -> disambiguate_clf_term_pattern object_
-    | Clf_operand.Application { applicand; arguments } ->
+    | Clf_application_disambiguation.Atom { expression; _ } ->
+        disambiguate_clf_term_pattern expression
+    | Clf_application_disambiguation.Application
+        { applicand; arguments; location } ->
         let* applicand' = disambiguate_clf_term_pattern applicand in
         let* arguments' =
-          traverse_list1 elaborate_lf_operand_pattern arguments
-        in
-        let location =
-          Location.join_all1_contramap Synext.location_of_clf_term_pattern
-            (List1.cons applicand' arguments')
+          traverse_list1 elaborate_clf_operand_pattern arguments
         in
         return
           (Synext.CLF.Term.Pattern.Application
@@ -1863,7 +1623,7 @@ struct
 
   and with_disambiguated_context_pattern_binding :
         'a.
-           Identifier.t option * Clf_operand.expression
+           Identifier.t option * Synprs.clf_object
         -> (Identifier.t * Synext.clf_typ -> 'a t)
         -> 'a t =
    fun binding f ->
@@ -1898,7 +1658,7 @@ struct
 
   and with_disambiguated_context_pattern_bindings_list :
         'a.
-           (Identifier.t option * Clf_operand.expression) list
+           (Identifier.t option * Synprs.clf_object) list
         -> ((Identifier.t * Synext.clf_typ) list -> 'a t)
         -> 'a t =
    fun bindings f ->
@@ -2032,7 +1792,7 @@ let () =
           Qualified_identifier.pp identifier
     | Expected_clf_type_constant ->
         Format.dprintf "%a" Format.pp_print_text
-          "Expected a contextual LF type-level constant."
+          "Expected a LF type-level constant."
     | Unbound_type_constant_or_illegal_projection_clf_type identifier ->
         Format.dprintf
           "Either the LF type-level constant %a is unbound, or a projection \
@@ -2080,28 +1840,6 @@ let () =
     | Expected_clf_term_constant ->
         Format.dprintf "%a" Format.pp_print_text
           "Expected an LF term-level constant."
-    | Ambiguous_clf_operator_placement operator_identifier ->
-        Format.dprintf
-          "Ambiguous occurrences of the LF term-level or type-level \
-           operator %a after rewriting."
-          Qualified_identifier.pp operator_identifier
-    | Misplaced_clf_operator ->
-        Format.dprintf "%a" Format.pp_print_text
-          "Misplaced contextual LF term-level or type-level operator."
-    | Consecutive_applications_of_non_associative_clf_operators
-        operator_identifier ->
-        Format.dprintf
-          "Consecutive occurrences of the contextual LF term-level or \
-           type-level operator %a after rewriting."
-          Qualified_identifier.pp operator_identifier
-    | Clf_arity_mismatch
-        { operator_identifier
-        ; expected_arguments_count
-        ; actual_arguments_count
-        } ->
-        Format.dprintf "Operator %a expected %d argument(s) but got %d."
-          Qualified_identifier.pp operator_identifier
-          expected_arguments_count actual_arguments_count
     | Illegal_pi_clf_term_pattern ->
         Format.dprintf "%a" Format.pp_print_text
           "Pi kinds or types may not appear as contextual LF term patterns."

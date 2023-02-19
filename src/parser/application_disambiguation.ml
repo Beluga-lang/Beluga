@@ -1,203 +1,448 @@
 open Support
 open Beluga_syntax
 
-module type APPLICATION_DISAMBIGUATION_STATE = sig
-  include State.STATE
+module type EXPRESSION = sig
+  type t
 
-  type operator
+  type location
 
-  type expression
-
-  val guard_operator : expression -> operator Option.t t
+  val location : t -> location
 end
 
-module type OPERAND = sig
-  type expression
+module Make_expression_parser
+    (Expression : EXPRESSION with type location = Location.t) : sig
+  type source
 
-  type t =
-    | Atom of expression
-    | Application of
-        { applicand : expression
-        ; arguments : t List1.t
+  val make_expression : Expression.t -> source
+
+  val make_operator :
+    Expression.t -> Operator.t -> Qualified_identifier.t -> source
+
+  type target = private
+    | Atom of
+        { expression : Expression.t
+        ; location : Location.t
         }
-end
+    | Application of
+        { applicand : Expression.t
+        ; arguments : target List1.t
+        ; location : Location.t
+        }
 
-module type APPLICATION_DISAMBIGUATOR = sig
-  (** @closed *)
-  include APPLICATION_DISAMBIGUATION_STATE
+  val parse_application : source List2.t -> Expression.t * target List1.t
+end = struct
+  type source =
+    | Expression of
+        { expression : Expression.t
+        ; location : Location.t
+        }
+    | Operator of
+        { applicand : Expression.t
+        ; operator : Operator.t
+        ; identifier : Qualified_identifier.t
+        ; location : Location.t
+        }
 
-  type operand
+  let make_expression expression =
+    let location = Expression.location expression in
+    Expression { expression; location }
 
-  exception
-    Misplaced_operator of
-      { operator : operator
-      ; operands : operand list
-      }
+  let make_operator applicand operator identifier =
+    let location = Expression.location applicand in
+    Operator { applicand; operator; identifier; location }
 
-  exception
-    Ambiguous_operator_placement of
-      { left_operator : operator
-      ; right_operator : operator
-      }
+  let source_location = function
+    | Expression { location; _ }
+    | Operator { location; _ } ->
+        location
 
-  exception
-    Consecutive_non_associative_operators of
-      { left_operator : operator
-      ; right_operator : operator
-      }
+  module State = Parser_combinator.Make_persistent_state (struct
+    type t = source
 
-  exception
-    Arity_mismatch of
-      { operator : operator
-      ; operator_arity : int
-      ; operands : operand list
-      }
+    type location = Location.t
 
-  val disambiguate_application :
-    expression List2.t -> (expression * operand List1.t, exn) result t
-end
+    let location = source_location
+  end)
 
-module Make
-    (Associativity : Shunting_yard.ASSOCIATIVITY)
-    (Fixity : Shunting_yard.FIXITY)
-    (Operand : OPERAND) (Operator : sig
-      include
-        Shunting_yard.OPERATOR
-          with type associativity = Associativity.t
-           and type fixity = Fixity.t
-           and type operand = Operand.t
+  include State
+  include Parser_combinator.Make (State)
 
-      val applicand : t -> Operand.expression
-    end)
-    (Disambiguation_state : APPLICATION_DISAMBIGUATION_STATE
-                              with type operator = Operator.t
-                               and type expression = Operand.expression) :
-  APPLICATION_DISAMBIGUATOR
-    with type state = Disambiguation_state.state
-     and type operator = Operator.t
-     and type expression = Operand.expression
-     and type operand = Operand.t = struct
-  include Disambiguation_state
+  type target =
+    | Atom of
+        { expression : Expression.t
+        ; location : Location.t
+        }
+    | Application of
+        { applicand : Expression.t
+        ; arguments : target List1.t
+        ; location : Location.t
+        }
 
-  type operand = Operand.t
+  let parse_tree_location = function
+    | Atom { location; _ }
+    | Application { location; _ } ->
+        location
 
-  module Shunting_yard =
-    Shunting_yard.Make (Associativity) (Fixity) (Operand) (Operator)
+  let atom expression =
+    Atom { expression; location = Expression.location expression }
 
-  exception Misplaced_operator = Shunting_yard.Misplaced_operator
-
-  exception
-    Ambiguous_operator_placement = Shunting_yard.Ambiguous_operator_placement
-
-  exception
-    Consecutive_non_associative_operators = Shunting_yard
-                                            .Consecutive_non_associative_operators
-
-  exception Arity_mismatch = Shunting_yard.Arity_mismatch
-
-  let make_atom expression = Operand.Atom expression
-
-  let make_application applicand arguments =
-    Operand.Application { applicand; arguments }
-
-  (** [identify expression] determines whether [expression] should be
-      considered as an operand or an operator, based on {!guard_operator}. *)
-  let identify expression =
-    guard_operator expression >>= function
-    | Option.None -> return (`Operand expression)
-    | Option.Some operator -> return (`Operator operator)
-
-  let rec take_while_operand expressions =
-    match expressions with
-    | `Operand x :: xs ->
-        let operands, rest = take_while_operand xs in
-        (x :: operands, rest)
-    | `Operator x :: xs -> (
-        match Operator.fixity x with
-        | Fixity.Prefix ->
-            (* Prefix operators may appear as operands *)
-            let operands, rest = take_while_operand xs in
-            (Operator.applicand x :: operands, rest)
-        | _ -> ([], expressions))
-    | [] -> ([], [])
-
-  let rec reduce_juxtapositions expressions =
-    match expressions with
-    | `Operand expression :: rest -> (
-        match take_while_operand rest with
-        | [], rest ->
-            (* [expression] is not in juxtaposition, so leave [expression] as
-               an atom. *)
-            let expression' = make_atom expression in
-            let rest' = reduce_juxtapositions rest in
-            Shunting_yard.operand expression' :: rest'
-        | x :: xs, rest ->
-            (* The expressions [expression], [x] and those in [xs] are in
-               juxtaposition, so they are reduced to an application with
-               applicand [expression]. *)
-            let arguments' = List1.map make_atom (List1.from x xs) in
-            let expression' = make_application expression arguments' in
-            let rest' = reduce_juxtapositions rest in
-            Shunting_yard.operand expression' :: rest')
-    | `Operator op :: rest -> (
-        match Operator.fixity op with
-        | Fixity.Prefix -> (
-            match take_while_operand rest with
-            | [], rest' ->
-                (* [op] is a prefix operator not followed by operands, so
-                   leave [op] as an operator. *)
-                let rest'' = reduce_juxtapositions rest' in
-                Shunting_yard.operator op :: rest''
-            | x :: xs, rest' ->
-                (* [op] is a prefix operator followed by operands, so [op],
-                   [x] and [xs] are reduced to an application. This
-                   effectively disregards [op]'s precedence, but
-                   juxtapositions have to be of higher precedence than
-                   user-defined operators. *)
-                let expression = Operator.applicand op in
-                let arguments' = List1.map make_atom (List1.from x xs) in
-                let expression' = make_application expression arguments' in
-                let rest'' = reduce_juxtapositions rest' in
-                Shunting_yard.operand expression' :: rest'')
-        | Fixity.Infix
-        | Fixity.Postfix ->
-            let rest' = reduce_juxtapositions rest in
-            Shunting_yard.operator op :: rest')
-    | [] -> []
-
-  let disambiguate_application expressions =
-    let expressions_list = List2.to_list expressions in
-    let* identified_expressions = traverse_list identify expressions_list in
-    let translated_expressions =
-      reduce_juxtapositions identified_expressions
+  let application applicand arguments =
+    let location =
+      Location.join
+        (Expression.location applicand)
+        (Location.join
+           (parse_tree_location (List1.head arguments))
+           (parse_tree_location (List1.last arguments)))
     in
-    match Shunting_yard.shunting_yard translated_expressions with
-    | Operand.Atom _
-    (* [expressions] is a list of expressions. This was necessarily
-       elaborated to an [Application]. *) ->
-        assert false
-    | Operand.Application { applicand; arguments } ->
-        return (Result.ok (applicand, arguments))
-    | exception Shunting_yard.Misplaced_operator { operator; operands } ->
-        return (Result.error (Misplaced_operator { operator; operands }))
-    | exception
-        Shunting_yard.Ambiguous_operator_placement
-          { left_operator; right_operator } ->
-        return
-          (Result.error
-             (Ambiguous_operator_placement { left_operator; right_operator }))
-    | exception
-        Shunting_yard.Consecutive_non_associative_operators
-          { left_operator; right_operator } ->
-        return
-          (Result.error
-             (Consecutive_non_associative_operators
-                { left_operator; right_operator }))
-    | exception
-        Shunting_yard.Arity_mismatch { operator; operator_arity; operands }
-      ->
-        return
-          (Result.error
-             (Arity_mismatch { operator; operator_arity; operands }))
-    | exception cause -> Error.raise cause
+    Application { applicand; arguments; location }
+
+  let prefix_application applicand argument =
+    let arguments = List1.singleton argument
+    and location =
+      Location.join
+        (Expression.location applicand)
+        (parse_tree_location argument)
+    in
+    Application { applicand; arguments; location }
+
+  let infix_application left_argument applicand right_argument =
+    let arguments = List1.from left_argument [ right_argument ]
+    and location =
+      Location.join
+        (parse_tree_location left_argument)
+        (parse_tree_location right_argument)
+    in
+    Application { applicand; arguments; location }
+
+  let postfix_application argument applicand =
+    let arguments = List1.singleton argument
+    and location =
+      Location.join
+        (Expression.location applicand)
+        (parse_tree_location argument)
+    in
+    Application { applicand; arguments; location }
+
+  exception Expected_expression of { actual : Expression.t Option.t }
+
+  let expression =
+    satisfy
+      ~on_token:(function
+        | Expression { expression; _ } -> Result.ok expression
+        | Operator { applicand; _ } ->
+            Result.error
+              (Expected_expression { actual = Option.some applicand }))
+      ~on_end_of_input:(fun () ->
+        fail_at_next_location (Expected_expression { actual = Option.none }))
+
+  exception
+    Expected_operator of
+      { expected : Qualified_identifier.t
+      ; actual : Expression.t Option.t
+      }
+
+  let operator expected_identifier =
+    satisfy
+      ~on_token:(function
+        | Expression { expression; _ } ->
+            Result.error
+              (Expected_operator
+                 { expected = expected_identifier
+                 ; actual = Option.some expression
+                 })
+        | Operator { applicand; identifier = actual_identifier; _ } ->
+            if
+              Qualified_identifier.equal expected_identifier
+                actual_identifier
+            then Result.ok applicand
+            else
+              Result.error
+                (Expected_operator
+                   { expected = expected_identifier
+                   ; actual = Option.some applicand
+                   }))
+      ~on_end_of_input:(fun () ->
+        fail_at_next_location
+          (Expected_operator
+             { expected = expected_identifier; actual = Option.none }))
+
+  exception Ambiguous_operator_placement of Expression.t
+
+  let ambiguous p =
+    let* x = p in
+    fail_at_previous_location (Ambiguous_operator_placement x)
+
+  exception Missing_left_argument of Expression.t
+
+  let missing_left_argument p =
+    let* x = p in
+    fail_at_previous_location (Missing_left_argument x)
+
+  type operators =
+    { prefix : Qualified_identifier.Set.t
+    ; postfix : Qualified_identifier.Set.t
+    ; infix_left_associative : Qualified_identifier.Set.t
+    ; infix_right_associative : Qualified_identifier.Set.t
+    ; infix_non_associative : Qualified_identifier.Set.t
+    }
+
+  let empty_operators =
+    { prefix = Qualified_identifier.Set.empty
+    ; postfix = Qualified_identifier.Set.empty
+    ; infix_left_associative = Qualified_identifier.Set.empty
+    ; infix_right_associative = Qualified_identifier.Set.empty
+    ; infix_non_associative = Qualified_identifier.Set.empty
+    }
+
+  let add_operator identifier operator operators =
+    match Operator.fixity operator with
+    | Fixity.Prefix ->
+        { operators with
+          prefix = Qualified_identifier.Set.add identifier operators.prefix
+        }
+    | Fixity.Postfix ->
+        { operators with
+          postfix = Qualified_identifier.Set.add identifier operators.postfix
+        }
+    | Fixity.Infix -> (
+        match Operator.associativity operator with
+        | Associativity.Left_associative ->
+            { operators with
+              infix_left_associative =
+                Qualified_identifier.Set.add identifier
+                  operators.infix_left_associative
+            }
+        | Associativity.Right_associative ->
+            { operators with
+              infix_right_associative =
+                Qualified_identifier.Set.add identifier
+                  operators.infix_right_associative
+            }
+        | Associativity.Non_associative ->
+            { operators with
+              infix_non_associative =
+                Qualified_identifier.Set.add identifier
+                  operators.infix_non_associative
+            })
+
+  let group_operators primitives =
+    let groups =
+      List.fold_left
+        (fun levels primitive ->
+          match primitive with
+          | Expression _ -> levels
+          | Operator { identifier; operator; _ } ->
+              let precedence = Operator.precedence operator in
+              let level =
+                Option.value ~default:empty_operators
+                  (Int.Map.find_opt precedence levels)
+              in
+              let level' = add_operator identifier operator level in
+              Int.Map.add precedence level' levels)
+        Int.Map.empty primitives
+    in
+    List.map Pair.snd (Int.Map.bindings groups)
+
+  (*=
+    Original grammar:
+
+    <expression> ::=
+      | <prefix-op> <expression>
+      | <expression> <infix-op> <expression>
+      | <expression> <postfix-op>
+      | <atom>+
+
+    Rewritten grammar to handle dynamic recursive descent:
+
+    Let N be the total number of precedence levels for the user-defined
+    operators. Let R, L and N stand for right-, left- and non-associative.
+
+    <expression n> ::= (* n <= N *)
+      | <expression (n + 1)> (<infix-op n R> <expression (n + 1)>)+
+      | <expression (n + 1)> (<infix-op n L> <expression (n + 1)>)+
+      | <expression (n + 1)> <infix-op n N> <expression (n + 1)>
+      | <prefix-op n>+ <expression (n + 1)>
+      | <expression (n + 1)> <postfix-op n>+
+      | <expression (n + 1)>
+
+    <expression (N + 1)> ::=
+      | <atom>+
+  *)
+
+  let rec rewrite_prefix_applications operators argument =
+    match operators with
+    | [] -> argument
+    | o :: os ->
+        prefix_application o (rewrite_prefix_applications os argument)
+
+  let rec rewrite_infix_left_associative_applications left_argument
+      applications =
+    match applications with
+    | [] -> left_argument
+    | (operator, right_argument) :: applications' ->
+        rewrite_infix_left_associative_applications
+          (infix_application left_argument operator right_argument)
+          applications'
+
+  let rec rewrite_infix_right_associative_applications left_argument
+      applications =
+    match applications with
+    | [] -> left_argument
+    | (operator, right_argument) :: applications' ->
+        infix_application left_argument operator
+          (rewrite_infix_right_associative_applications right_argument
+             applications')
+
+  let rec rewrite_postfix_applications argument operators =
+    match operators with
+    | [] -> argument
+    | o :: os ->
+        rewrite_postfix_applications (postfix_application argument o) os
+
+  let operator_choice operators =
+    choice (List.map operator (Qualified_identifier.Set.elements operators))
+
+  let make_parser
+      { prefix
+      ; postfix
+      ; infix_left_associative
+      ; infix_right_associative
+      ; infix_non_associative
+      } fallback =
+    let prefix_operator = operator_choice prefix
+    and postfix_operator = operator_choice postfix
+    and infix_left_associative_operator =
+      operator_choice infix_left_associative
+    and infix_right_associative_operator =
+      operator_choice infix_right_associative
+    and infix_non_associative_operator =
+      operator_choice infix_non_associative
+    in
+    let ambiguous_infix_left_associative_operator =
+      ambiguous infix_left_associative_operator
+    and ambiguous_infix_right_associative_operator =
+      ambiguous infix_right_associative_operator
+    and ambiguous_infix_non_associative_operator =
+      ambiguous infix_non_associative_operator
+    in
+    let prefix_application =
+      let* prefix_operators = some prefix_operator in
+      let* argument = fallback in
+      return
+        (rewrite_prefix_applications
+           (List1.to_list prefix_operators)
+           argument)
+    and postfix_application left_argument =
+      let* postfix_operators = some postfix_operator in
+      return
+        (rewrite_postfix_applications left_argument
+           (List1.to_list postfix_operators))
+    and infix_left_associative_application left_argument =
+      let* trailing_applications =
+        some (seq2 infix_left_associative_operator fallback)
+      in
+      return
+        (rewrite_infix_left_associative_applications left_argument
+           (List1.to_list trailing_applications))
+    and infix_right_associative_application left_argument =
+      let* trailing_applications =
+        some (seq2 infix_right_associative_operator fallback)
+      in
+      return
+        (rewrite_infix_right_associative_applications left_argument
+           (List1.to_list trailing_applications))
+    and infix_non_associative_application left_argument =
+      let* operator, right_argument =
+        seq2 infix_non_associative_operator fallback
+      in
+      return (infix_application left_argument operator right_argument)
+    in
+    choice
+      [ prefix_application
+      ; (let* left_argument = fallback in
+         choice
+           [ postfix_application left_argument
+           ; infix_left_associative_application left_argument
+             <& choice
+                  [ ambiguous_infix_right_associative_operator
+                  ; ambiguous_infix_non_associative_operator
+                  ; return ()
+                  ]
+           ; infix_right_associative_application left_argument
+             <& choice
+                  [ ambiguous_infix_left_associative_operator
+                  ; ambiguous_infix_non_associative_operator
+                  ; return ()
+                  ]
+           ; infix_non_associative_application left_argument
+             <& choice
+                  [ ambiguous_infix_left_associative_operator
+                  ; ambiguous_infix_right_associative_operator
+                  ; ambiguous_infix_non_associative_operator
+                  ; return ()
+                  ]
+           ; return left_argument
+           ])
+      ; missing_left_argument
+          (choice
+             [ postfix_operator
+             ; infix_left_associative_operator
+             ; infix_right_associative_operator
+             ; infix_non_associative_operator
+             ])
+      ]
+
+  let juxtaposition =
+    some expression >>= function
+    | List1.T (expression, []) -> return (atom expression)
+    | List1.T (applicand, x :: xs) ->
+        let arguments = List1.map atom (List1.from x xs) in
+        return (application applicand arguments)
+
+  let rec make_parser' operators =
+    match operators with
+    | [] -> juxtaposition
+    | o :: os -> make_parser o (make_parser' os)
+
+  let parse_application expressions =
+    let expressions_list = List2.to_list expressions in
+    let operator_levels = group_operators expressions_list in
+    let parser = make_parser' operator_levels in
+    let initial_location =
+      let (List2.T (e1, _e2, _es)) = expressions in
+      Location.start_position_as_location (source_location e1)
+    in
+    let state = initial ~initial_location (Seq.of_list expressions_list) in
+    match run_exn (only parser) state with
+    | _state', Atom _expression -> assert false
+    | _state', Application { applicand; arguments; _ } ->
+        (applicand, arguments)
+
+  let () =
+    Error.register_exception_printer (function
+      | Parser_error cause ->
+          let cause_printer = Error.find_printer cause in
+          Format.dprintf "@[Failed to parse %t@]" cause_printer
+      | No_more_choices exceptions ->
+          let exception_printers = List.map Error.find_printer exceptions in
+          Format.dprintf "@[<v 2>Exhausted alternatives in parsing:@,%a@]"
+            (List.pp ~pp_sep:Format.pp_print_cut
+               (fun ppf exception_printer ->
+                 Format.fprintf ppf "- @[%t@]" exception_printer))
+            exception_printers
+      | Expected_end_of_input -> Format.dprintf "Expected_end_of_input"
+      | Expected_expression _ ->
+          Format.dprintf
+            "Expected an expression, but got an operator.@ If you intended \
+             to write the operator as an expression, add parentheses around \
+             it."
+      | Expected_operator _ ->
+          Format.dprintf "Expected an operator, but got an expression."
+      | Missing_left_argument _ ->
+          Format.dprintf "This operator is missing its left argument."
+      | Ambiguous_operator_placement _ ->
+          Format.dprintf
+            "This operator's placement is ambiguous.@ Add parentheses \
+             around its arguments."
+      | cause -> Error.raise_unsupported_exception_printing cause)
 end

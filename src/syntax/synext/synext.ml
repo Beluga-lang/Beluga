@@ -13,7 +13,6 @@ include Synext_location
 (** {1 Precedences} *)
 
 include Synext_precedence
-include Synext_precedence_state
 
 (** {1 Explicit Arguments} *)
 

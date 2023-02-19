@@ -55,7 +55,8 @@ module type DISAMBIGUATION_STATE = sig
 
   type data = private
     { location : Location.t
-    ; operator : Operator.t option
+    ; operator : Operator.t Option.t
+    ; arity : Int.t Option.t
     }
 
   type entry = private
@@ -84,12 +85,6 @@ module type DISAMBIGUATION_STATE = sig
 
   val add_lf_term_variable : ?location:Location.t -> Identifier.t -> Unit.t t
 
-  val add_lf_type_constant :
-    ?location:Location.t -> Operator.t -> Identifier.t -> Unit.t t
-
-  val add_lf_term_constant :
-    ?location:Location.t -> Operator.t -> Identifier.t -> Unit.t t
-
   val add_meta_variable : ?location:Location.t -> Identifier.t -> Unit.t t
 
   val add_parameter_variable :
@@ -100,33 +95,40 @@ module type DISAMBIGUATION_STATE = sig
 
   val add_context_variable : ?location:Location.t -> Identifier.t -> Unit.t t
 
-  val add_schema_constant : ?location:Location.t -> Identifier.t -> Unit.t t
-
   val add_computation_variable :
     ?location:Location.t -> Identifier.t -> Unit.t t
 
+  val add_lf_type_constant :
+    ?location:Location.t -> ?arity:Int.t -> Identifier.t -> Unit.t t
+
+  val add_lf_term_constant :
+    ?location:Location.t -> ?arity:Int.t -> Identifier.t -> Unit.t t
+
+  val add_schema_constant :
+    ?location:Location.t -> ?arity:Int.t -> Identifier.t -> Unit.t t
+
   val add_inductive_computation_type_constant :
-    ?location:Location.t -> Operator.t -> Identifier.t -> Unit.t t
+    ?location:Location.t -> ?arity:Int.t -> Identifier.t -> Unit.t t
 
   val add_stratified_computation_type_constant :
-    ?location:Location.t -> Operator.t -> Identifier.t -> Unit.t t
+    ?location:Location.t -> ?arity:Int.t -> Identifier.t -> Unit.t t
 
   val add_coinductive_computation_type_constant :
-    ?location:Location.t -> Operator.t -> Identifier.t -> Unit.t t
+    ?location:Location.t -> ?arity:Int.t -> Identifier.t -> Unit.t t
 
   val add_abbreviation_computation_type_constant :
-    ?location:Location.t -> Operator.t -> Identifier.t -> Unit.t t
+    ?location:Location.t -> ?arity:Int.t -> Identifier.t -> Unit.t t
 
   val add_computation_term_constructor :
-    ?location:Location.t -> Operator.t -> Identifier.t -> Unit.t t
+    ?location:Location.t -> ?arity:Int.t -> Identifier.t -> Unit.t t
 
   val add_computation_term_destructor :
-    ?location:Location.t -> Identifier.t -> Unit.t t
+    ?location:Location.t -> ?arity:Int.t -> Identifier.t -> Unit.t t
 
   val add_query : ?location:Location.t -> Identifier.t -> Unit.t t
 
   val add_program_constant :
-    ?location:Location.t -> ?operator:Operator.t -> Identifier.t -> Unit.t t
+    ?location:Location.t -> ?arity:Int.t -> Identifier.t -> Unit.t t
 
   exception Unbound_identifier of Identifier.t
 
@@ -155,9 +157,6 @@ module type DISAMBIGUATION_STATE = sig
        | `Totally_unbound of Identifier.t List1.t
        ]
        t
-
-  val modify_operator :
-    Qualified_identifier.t -> (Operator.t -> Operator.t) -> Unit.t t
 
   val add_synonym :
        ?location:Location.t
@@ -234,6 +233,13 @@ module type DISAMBIGUATION_STATE = sig
 
   val with_module_declarations :
     declarations:'a t -> module_identifier:Identifier.t -> 'a t
+
+  val modify_operator :
+       Qualified_identifier.t
+    -> (Operator.t Option.t -> arity:Int.t -> Operator.t Option.t)
+    -> Unit.t t
+
+  val lookup_operator : Qualified_identifier.t -> Operator.t Option.t t
 end
 
 module Persistent_disambiguation_state : sig
@@ -244,6 +250,7 @@ end = struct
   type data =
     { location : Location.t
     ; operator : Operator.t Option.t
+    ; arity : Int.t Option.t
     }
 
   type entry =
@@ -383,9 +390,9 @@ end = struct
   let make_entry_location location identifier =
     Option.value location ~default:(Identifier.location identifier)
 
-  let make_entry_data ?location ?operator identifier =
+  let make_entry_data ?location ?arity ?operator identifier =
     let location = make_entry_location location identifier in
-    { location; operator }
+    { location; operator; arity }
 
   let add_module_declaration identifier =
     let* bindings = get_bindings in
@@ -485,51 +492,49 @@ end = struct
     let entry = (Computation_variable, data) in
     add_entry_binding identifier entry
 
-  let add_lf_type_constant ?location operator identifier =
-    let data = make_entry_data ?location ~operator identifier in
+  let add_lf_type_constant ?location ?arity identifier =
+    let data = make_entry_data ?location ?arity identifier in
     let entry = (Lf_type_constant, data) in
     add_entry_binding identifier entry <& add_module_declaration identifier
 
-  let add_lf_term_constant ?location operator identifier =
-    let data = make_entry_data ?location ~operator identifier in
+  let add_lf_term_constant ?location ?arity identifier =
+    let data = make_entry_data ?location ?arity identifier in
     let entry = (Lf_term_constant, data) in
     add_entry_binding identifier entry <& add_module_declaration identifier
 
-  let add_schema_constant ?location identifier =
-    let data = make_entry_data ?location identifier in
+  let add_schema_constant ?location ?arity identifier =
+    let data = make_entry_data ?location ?arity identifier in
     let entry = (Schema_constant, data) in
     add_entry_binding identifier entry <& add_module_declaration identifier
 
-  let add_inductive_computation_type_constant ?location operator identifier =
-    let data = make_entry_data ?location ~operator identifier in
+  let add_inductive_computation_type_constant ?location ?arity identifier =
+    let data = make_entry_data ?location ?arity identifier in
     let entry = (Computation_inductive_type_constant, data) in
     add_entry_binding identifier entry <& add_module_declaration identifier
 
-  let add_stratified_computation_type_constant ?location operator identifier
-      =
-    let data = make_entry_data ?location ~operator identifier in
+  let add_stratified_computation_type_constant ?location ?arity identifier =
+    let data = make_entry_data ?location ?arity identifier in
     let entry = (Computation_stratified_type_constant, data) in
     add_entry_binding identifier entry <& add_module_declaration identifier
 
-  let add_coinductive_computation_type_constant ?location operator identifier
-      =
-    let data = make_entry_data ?location ~operator identifier in
+  let add_coinductive_computation_type_constant ?location ?arity identifier =
+    let data = make_entry_data ?location ?arity identifier in
     let entry = (Computation_coinductive_type_constant, data) in
     add_entry_binding identifier entry <& add_module_declaration identifier
 
-  let add_abbreviation_computation_type_constant ?location operator
-      identifier =
-    let data = make_entry_data ?location ~operator identifier in
+  let add_abbreviation_computation_type_constant ?location ?arity identifier
+      =
+    let data = make_entry_data ?location ?arity identifier in
     let entry = (Computation_abbreviation_type_constant, data) in
     add_entry_binding identifier entry <& add_module_declaration identifier
 
-  let add_computation_term_constructor ?location operator identifier =
-    let data = make_entry_data ?location ~operator identifier in
+  let add_computation_term_constructor ?location ?arity identifier =
+    let data = make_entry_data ?location ?arity identifier in
     let entry = (Computation_term_constructor, data) in
     add_entry_binding identifier entry <& add_module_declaration identifier
 
-  let add_computation_term_destructor ?location identifier =
-    let data = make_entry_data ?location identifier in
+  let add_computation_term_destructor ?location ?arity identifier =
+    let data = make_entry_data ?location ?arity identifier in
     let entry = (Computation_term_destructor, data) in
     add_entry_binding identifier entry <& add_module_declaration identifier
 
@@ -538,8 +543,8 @@ end = struct
     let entry = (Query, data) in
     add_entry_binding identifier entry <& add_module_declaration identifier
 
-  let add_program_constant ?location ?operator identifier =
-    let data = make_entry_data ?location ?operator identifier in
+  let add_program_constant ?location ?arity identifier =
+    let data = make_entry_data ?location ?arity identifier in
     let entry = (Program_constant, data) in
     add_entry_binding identifier entry <& add_module_declaration identifier
 
@@ -609,28 +614,17 @@ end = struct
     and namespaces = Qualified_identifier.namespaces query in
     get_bindings $> partial_lookup_nested namespaces identifier
 
-  let replace identifier f =
-    modify_bindings (fun bindings ->
-        try Binding_tree.replace identifier f bindings with
-        | Binding_tree.Unbound_identifier identifier ->
-            Error.raise (Unbound_identifier identifier)
-        | Binding_tree.Unbound_namespace identifier ->
-            Error.raise (Unbound_namespace identifier)
-        | Binding_tree.Unbound_qualified_identifier identifier ->
-            Error.raise (Unbound_qualified_identifier identifier)
-        | cause -> Error.raise cause)
-
   let modify_operator identifier f =
-    replace identifier (fun (entry, data) subtree ->
-        match data.operator with
-        | Option.None ->
-            Error.raise_at1
-              (Qualified_identifier.location identifier)
-              (Expected_operator identifier)
-        | Option.Some operator ->
-            let operator' = Option.some (f operator) in
-            let data' = { data with operator = operator' } in
-            ((entry, data'), subtree))
+    let* (entry, data), subtree = lookup' identifier in
+    match data.arity with
+    | Option.Some arity ->
+        let operator' = f data.operator ~arity in
+        let data' = { data with operator = operator' } in
+        modify_bindings (Binding_tree.add identifier (entry, data') ~subtree)
+    | Option.None ->
+        Error.raise_at1
+          (Qualified_identifier.location identifier)
+          (Expected_operator identifier)
 
   let add_synonym ?location qualified_identifier synonym =
     let* (entry, data), subtree = lookup' qualified_identifier in
@@ -853,12 +847,17 @@ end = struct
 
   let add_pattern_comp_variable identifier =
     add_pattern_variable identifier (add_computation_variable identifier)
+
+  let lookup_operator =
+    lookup >=> function
+    | Result.Ok (_, { operator; _ }) -> return operator
+    | Result.Error _ -> return Option.none
 end
 
 let () =
   Error.register_exception_printer (function
     | Expected_operator qualified_identifier ->
-        Format.dprintf "Expected an operator bound at %a."
+        Format.dprintf "Expected %a to be a bound operator."
           Qualified_identifier.pp qualified_identifier
     | Unbound_identifier identifier ->
         Format.dprintf "The identifier %a is unbound." Identifier.pp

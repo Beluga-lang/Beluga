@@ -86,8 +86,6 @@ module LF = struct
       | Constant of
           { location : Location.t
           ; identifier : Qualified_identifier.t
-          ; operator : Operator.t
-          ; prefixed : Bool.t
           }
           (** [Constant { identifier = "c"; _ }] is the type-level constant
               with qualified identifier ["c"]. *)
@@ -143,8 +141,6 @@ module LF = struct
       | Constant of
           { location : Location.t
           ; identifier : Qualified_identifier.t
-          ; operator : Operator.t
-          ; prefixed : Bool.t
           }
           (** [Constant { identifier = "c"; _ }] is the term-level constant
               with qualified identifier ["c"]. *)
@@ -281,8 +277,6 @@ module CLF = struct
       | Constant of
           { location : Location.t
           ; identifier : Qualified_identifier.t
-          ; operator : Operator.t
-          ; prefixed : Bool.t
           }
           (** [Constant { identifier = "c"; _ }] is the type-level constant
               with qualified identifier ["c"]. *)
@@ -365,8 +359,6 @@ module CLF = struct
       | Constant of
           { location : Location.t
           ; identifier : Qualified_identifier.t
-          ; operator : Operator.t
-          ; prefixed : Bool.t
           }
           (** [Constant { identifier = "c"; _ }] is the term-level constant
               with qualified identifier ["c"]. *)
@@ -462,8 +454,6 @@ module CLF = struct
         | Constant of
             { location : Location.t
             ; identifier : Qualified_identifier.t
-            ; operator : Operator.t
-            ; prefixed : Bool.t
             }
             (** [Constant { identifier = "c"; _ }] is the term-level constant
                 pattern ["c"]. *)
@@ -941,32 +931,24 @@ module Comp = struct
       | Inductive_typ_constant of
           { location : Location.t
           ; identifier : Qualified_identifier.t
-          ; operator : Operator.t
-          ; prefixed : Bool.t
           }
           (** [Inductive_typ_constant { identifier = "c"; }] is the
               computation-level inductive type constant ["c"]. *)
       | Stratified_typ_constant of
           { location : Location.t
           ; identifier : Qualified_identifier.t
-          ; operator : Operator.t
-          ; prefixed : Bool.t
           }
           (** [Stratified_typ_constant { identifier = "c"; }] is the
               computation-level stratified type constant ["c"]. *)
       | Coinductive_typ_constant of
           { location : Location.t
           ; identifier : Qualified_identifier.t
-          ; operator : Operator.t
-          ; prefixed : Bool.t
           }
           (** [Coinductive_typ_constant { identifier = "c"; }] is the
               computation-level coinductive type constant ["c"]. *)
       | Abbreviation_typ_constant of
           { location : Location.t
           ; identifier : Qualified_identifier.t
-          ; operator : Operator.t
-          ; prefixed : Bool.t
           }
           (** [Abbreviation_typ_constant { identifier = "c"; }] is the
               computation-level abbreviated type constant ["c"]. *)
@@ -1022,16 +1004,12 @@ module Comp = struct
       | Constructor of
           { location : Location.t
           ; identifier : Qualified_identifier.t
-          ; operator : Operator.t
-          ; prefixed : Bool.t
           }
           (** [Constructor { identifier = "c"; _ }] is the computation-level
               constant ["c"] referring to a constructor. *)
       | Program of
           { location : Location.t
           ; identifier : Qualified_identifier.t
-          ; operator : Operator.t Option.t
-          ; prefixed : Bool.t
           }
           (** [Program { identifier = "f"; _ }] is the computation-level
               constant ["f"] referring to a value. *)
@@ -1163,8 +1141,6 @@ module Comp = struct
       | Constant of
           { location : Location.t
           ; identifier : Qualified_identifier.t
-          ; operator : Operator.t
-          ; prefixed : Bool.t
           }
       | Meta_object of
           { location : Location.t

@@ -96,12 +96,10 @@ let rec json_of_lf_kind kind =
 
 and json_of_lf_typ typ =
   match typ with
-  | LF.Typ.Constant { identifier; prefixed; location; operator } ->
+  | LF.Typ.Constant { identifier; location } ->
       json_of_variant ~name:"LF.Typ.Constant"
         ~data:
           [ ("identifier", json_of_qualified_identifier identifier)
-          ; ("prefixed", json_of_bool prefixed)
-          ; ("operator", json_of_operator operator)
           ; ("location", json_of_location location)
           ]
   | LF.Typ.Application { applicand; arguments; location } ->
@@ -142,12 +140,10 @@ and json_of_lf_term term =
           [ ("identifier", json_of_identifier identifier)
           ; ("location", json_of_location location)
           ]
-  | LF.Term.Constant { identifier; prefixed; location; operator } ->
+  | LF.Term.Constant { identifier; location } ->
       json_of_variant ~name:"LF.Term.Constant"
         ~data:
           [ ("identifier", json_of_qualified_identifier identifier)
-          ; ("prefixed", json_of_bool prefixed)
-          ; ("operator", json_of_operator operator)
           ; ("location", json_of_location location)
           ]
   | LF.Term.Application { applicand; arguments; location } ->
@@ -182,12 +178,10 @@ and json_of_lf_term term =
 
 let rec json_of_clf_typ typ =
   match typ with
-  | CLF.Typ.Constant { identifier; prefixed; location; operator } ->
+  | CLF.Typ.Constant { identifier; location } ->
       json_of_variant ~name:"CLF.Typ.Constant"
         ~data:
           [ ("identifier", json_of_qualified_identifier identifier)
-          ; ("prefixed", json_of_bool prefixed)
-          ; ("operator", json_of_operator operator)
           ; ("location", json_of_location location)
           ]
   | CLF.Typ.Application { applicand; arguments; location } ->
@@ -256,12 +250,10 @@ and json_of_clf_term term =
           [ ("identifier", json_of_identifier identifier)
           ; ("location", json_of_location location)
           ]
-  | CLF.Term.Constant { identifier; prefixed; location; operator } ->
+  | CLF.Term.Constant { identifier; location } ->
       json_of_variant ~name:"CLF.Term.Constant"
         ~data:
           [ ("identifier", json_of_qualified_identifier identifier)
-          ; ("prefixed", json_of_bool prefixed)
-          ; ("operator", json_of_operator operator)
           ; ("location", json_of_location location)
           ]
   | CLF.Term.Application { applicand; arguments; location } ->
@@ -344,12 +336,10 @@ and json_of_clf_term_pattern term_pattern =
           [ ("identifier", json_of_identifier identifier)
           ; ("location", json_of_location location)
           ]
-  | CLF.Term.Pattern.Constant { identifier; prefixed; location; operator } ->
+  | CLF.Term.Pattern.Constant { identifier; location } ->
       json_of_variant ~name:"CLF.Term.Pattern.Constant"
         ~data:
           [ ("identifier", json_of_qualified_identifier identifier)
-          ; ("prefixed", json_of_bool prefixed)
-          ; ("operator", json_of_operator operator)
           ; ("location", json_of_location location)
           ]
   | CLF.Term.Pattern.Application { applicand; arguments; location } ->
@@ -704,40 +694,28 @@ let rec json_of_comp_kind kind =
 
 and json_of_comp_typ typ =
   match typ with
-  | Comp.Typ.Inductive_typ_constant
-      { identifier; prefixed; location; operator } ->
+  | Comp.Typ.Inductive_typ_constant { identifier; location } ->
       json_of_variant ~name:"Comp.Typ.Inductive_typ_constant"
         ~data:
           [ ("identifier", json_of_qualified_identifier identifier)
-          ; ("prefixed", json_of_bool prefixed)
-          ; ("operator", json_of_operator operator)
           ; ("location", json_of_location location)
           ]
-  | Comp.Typ.Stratified_typ_constant
-      { identifier; prefixed; location; operator } ->
+  | Comp.Typ.Stratified_typ_constant { identifier; location } ->
       json_of_variant ~name:"Comp.Typ.Stratified_typ_constant"
         ~data:
           [ ("identifier", json_of_qualified_identifier identifier)
-          ; ("prefixed", json_of_bool prefixed)
-          ; ("operator", json_of_operator operator)
           ; ("location", json_of_location location)
           ]
-  | Comp.Typ.Coinductive_typ_constant
-      { identifier; prefixed; location; operator } ->
+  | Comp.Typ.Coinductive_typ_constant { identifier; location } ->
       json_of_variant ~name:"Comp.Typ.Coinductive_typ_constant"
         ~data:
           [ ("identifier", json_of_qualified_identifier identifier)
-          ; ("prefixed", json_of_bool prefixed)
-          ; ("operator", json_of_operator operator)
           ; ("location", json_of_location location)
           ]
-  | Comp.Typ.Abbreviation_typ_constant
-      { identifier; prefixed; location; operator } ->
+  | Comp.Typ.Abbreviation_typ_constant { identifier; location } ->
       json_of_variant ~name:"Comp.Typ.Abbreviation_typ_constant"
         ~data:
           [ ("identifier", json_of_qualified_identifier identifier)
-          ; ("prefixed", json_of_bool prefixed)
-          ; ("operator", json_of_operator operator)
           ; ("location", json_of_location location)
           ]
   | Comp.Typ.Pi
@@ -790,21 +768,16 @@ and json_of_comp_expression expression =
           [ ("identifier", json_of_identifier identifier)
           ; ("location", json_of_location location)
           ]
-  | Comp.Expression.Constructor { identifier; prefixed; location; operator }
-    ->
+  | Comp.Expression.Constructor { identifier; location } ->
       json_of_variant ~name:"Comp.Expression.Constructor"
         ~data:
           [ ("identifier", json_of_qualified_identifier identifier)
-          ; ("prefixed", json_of_bool prefixed)
-          ; ("operator", json_of_operator operator)
           ; ("location", json_of_location location)
           ]
-  | Comp.Expression.Program { identifier; prefixed; location; operator } ->
+  | Comp.Expression.Program { identifier; location } ->
       json_of_variant ~name:"Comp.Expression.Program"
         ~data:
           [ ("identifier", json_of_qualified_identifier identifier)
-          ; ("prefixed", json_of_bool prefixed)
-          ; ("operator", json_of_option json_of_operator operator)
           ; ("location", json_of_location location)
           ]
   | Comp.Expression.Fn { parameters; body; location } ->
@@ -926,12 +899,10 @@ and json_of_comp_pattern pattern =
           [ ("identifier", json_of_identifier identifier)
           ; ("location", json_of_location location)
           ]
-  | Comp.Pattern.Constant { identifier; prefixed; location; operator } ->
+  | Comp.Pattern.Constant { identifier; location } ->
       json_of_variant ~name:"Comp.Pattern.Constant"
         ~data:
           [ ("identifier", json_of_qualified_identifier identifier)
-          ; ("prefixed", json_of_bool prefixed)
-          ; ("operator", json_of_operator operator)
           ; ("location", json_of_location location)
           ]
   | Comp.Pattern.Meta_object { meta_pattern; location } ->

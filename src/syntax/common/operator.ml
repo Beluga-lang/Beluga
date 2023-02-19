@@ -1,10 +1,7 @@
 open Support
 
 type t =
-  | Prefix of
-      { arity : Int.t
-      ; precedence : Int.t
-      }
+  | Prefix of { precedence : Int.t }
   | Infix of
       { precedence : Int.t
       ; associativity : Associativity.t
@@ -12,9 +9,10 @@ type t =
   | Postfix of { precedence : Int.t }
 
 let[@inline] arity = function
-  | Prefix { arity; _ } -> arity
   | Infix _ -> 2
-  | Postfix _ -> 1
+  | Prefix _
+  | Postfix _ ->
+      1
 
 let[@inline] precedence = function
   | Prefix { precedence; _ }
@@ -32,35 +30,42 @@ let[@inline] associativity = function
   | Prefix _ -> Associativity.right_associative
   | Postfix _ -> Associativity.left_associative
 
-let make_prefix ~arity ~precedence =
-  assert (arity >= 0);
-  Prefix { arity; precedence }
+let make_prefix ~precedence = Prefix { precedence }
 
 let make_infix ~associativity ~precedence =
   Infix { precedence; associativity }
 
 let make_postfix ~precedence = Postfix { precedence }
 
-let is_prefix operator =
-  match operator with
+let is_prefix = function
   | Prefix _ -> true
-  | _ -> false
+  | Infix _
+  | Postfix _ ->
+      false
 
-let is_infix operator =
-  match operator with
+let is_infix = function
   | Infix _ -> true
-  | _ -> false
+  | Prefix _
+  | Postfix _ ->
+      false
 
-let is_postfix operator =
-  match operator with
+let is_postfix = function
   | Postfix _ -> true
-  | _ -> false
+  | Prefix _
+  | Infix _ ->
+      false
 
-let is_nullary = Fun.(arity >> Int.( = ) 0)
+let is_unary = function
+  | Infix _ -> false
+  | Prefix _
+  | Postfix _ ->
+      true
 
-let is_unary = Fun.(arity >> Int.( = ) 1)
-
-let is_binary = Fun.(arity >> Int.( = ) 2)
+let is_binary = function
+  | Infix _ -> true
+  | Prefix _
+  | Postfix _ ->
+      false
 
 let is_left_associative =
   Fun.(associativity >> Associativity.is_left_associative)

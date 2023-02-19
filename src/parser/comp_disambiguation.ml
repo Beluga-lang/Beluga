@@ -53,21 +53,6 @@ exception Illegal_untyped_comp_pi_type
 
 exception Expected_meta_object
 
-exception Misplaced_comp_typ_operator
-
-exception Ambiguous_comp_typ_operator_placement of Qualified_identifier.t
-
-exception
-  Consecutive_applications_of_non_associative_comp_typ_operators of
-    Qualified_identifier.t
-
-exception
-  Comp_typ_arity_mismatch of
-    { operator_identifier : Qualified_identifier.t
-    ; expected_arguments_count : Int.t
-    ; actual_arguments_count : Int.t
-    }
-
 (** {2 Exceptions for computation-level expression disambiguation} *)
 
 exception Expected_program_or_constructor_constant of Qualified_identifier.t
@@ -75,41 +60,6 @@ exception Expected_program_or_constructor_constant of Qualified_identifier.t
 exception Unbound_comp_term_destructor_constant of Qualified_identifier.t
 
 exception Illegal_duplicate_pattern_variables
-
-(** {2 Exceptions for expression-level application rewriting} *)
-
-exception Misplaced_comp_expression_operator
-
-exception
-  Ambiguous_comp_expression_operator_placement of Qualified_identifier.t
-
-exception
-  Consecutive_applications_of_non_associative_comp_expression_operators of
-    Qualified_identifier.t
-
-exception
-  Comp_expression_arity_mismatch of
-    { operator_identifier : Qualified_identifier.t
-    ; expected_arguments_count : Int.t
-    ; actual_arguments_count : Int.t
-    }
-
-(** {2 Exceptions for pattern-level application rewriting} *)
-
-exception Misplaced_comp_pattern_operator
-
-exception Ambiguous_comp_pattern_operator_placement of Qualified_identifier.t
-
-exception
-  Consecutive_applications_of_non_associative_comp_pattern_operators of
-    Qualified_identifier.t
-
-exception
-  Comp_pattern_arity_mismatch of
-    { operator_identifier : Qualified_identifier.t
-    ; expected_arguments_count : Int.t
-    ; actual_arguments_count : Int.t
-    }
 
 (** {2 Exceptions for computation-level context disambiguation} *)
 
@@ -128,397 +78,6 @@ exception Unbound_comp_term_constructor_constant of Qualified_identifier.t
 exception Expected_comp_term_destructor_constant
 
 (** {1 Disambiguation} *)
-
-module Comp_typ_operand = struct
-  type expression = Synprs.comp_sort_object
-
-  type t =
-    | Atom of expression
-    | Application of
-        { applicand : expression
-        ; arguments : t List1.t
-        }
-
-  let rec location operand =
-    match operand with
-    | Atom object_ -> Synprs.location_of_comp_sort_object object_
-    | Application { applicand; arguments } ->
-        let applicand_location =
-          Synprs.location_of_comp_sort_object applicand
-        in
-        let arguments_location =
-          Location.join_all1_contramap location arguments
-        in
-        Location.join applicand_location arguments_location
-end
-
-module Comp_typ_operator = struct
-  type associativity = Associativity.t
-
-  type fixity = Fixity.t
-
-  type operand = Comp_typ_operand.t
-
-  type t =
-    { identifier : Qualified_identifier.t
-    ; operator : Operator.t
-    ; applicand : Synprs.comp_sort_object
-    }
-
-  let[@inline] make ~identifier ~operator ~applicand =
-    { identifier; operator; applicand }
-
-  let[@inline] operator o = o.operator
-
-  let[@inline] applicand o = o.applicand
-
-  let[@inline] identifier o = o.identifier
-
-  let arity = Fun.(operator >> Operator.arity)
-
-  let precedence = Fun.(operator >> Operator.precedence)
-
-  let fixity = Fun.(operator >> Operator.fixity)
-
-  let associativity = Fun.(operator >> Operator.associativity)
-
-  let location = Fun.(applicand >> Synprs.location_of_comp_sort_object)
-
-  (** [write operator arguments] constructs the application of [operator]
-      with [arguments] for the shunting yard algorithm. Since nullary
-      operators are treated as arguments, it is always the case that
-      [List.length arguments > 0]. *)
-  let write operator arguments =
-    let applicand = applicand operator in
-    let arguments =
-      List1.unsafe_of_list arguments (* [List.length arguments > 0] *)
-    in
-    Comp_typ_operand.Application { applicand; arguments }
-
-  (** Instance of equality by operator identifier.
-
-      Since applications do not introduce bound variables, occurrences of
-      operators are equal by their identifier. That is, in an application
-      like [a o1 a o2 a], the operators [o1] and [o2] are equal if and only
-      if they are textually equal. *)
-  include (
-    (val Eq.contramap (module Qualified_identifier) identifier) :
-      Eq.EQ with type t := t)
-end
-
-module Make_comp_typ_application_disambiguation_state
-    (Disambiguation_state : DISAMBIGUATION_STATE) =
-struct
-  include Disambiguation_state
-
-  type operator = Comp_typ_operator.t
-
-  type expression = Comp_typ_operand.expression
-
-  let guard_identifier_operator identifier expression =
-    lookup identifier >>= function
-    | Result.Ok
-        ( Computation_inductive_type_constant
-        , { operator = Option.Some operator; _ } )
-    | Result.Ok
-        ( Computation_stratified_type_constant
-        , { operator = Option.Some operator; _ } )
-    | Result.Ok
-        ( Computation_abbreviation_type_constant
-        , { operator = Option.Some operator; _ } )
-    | Result.Ok
-        ( Computation_coinductive_type_constant
-        , { operator = Option.Some operator; _ } ) ->
-        if Operator.is_nullary operator then return Option.none
-        else
-          return
-            (Option.some
-               (Comp_typ_operator.make ~identifier ~operator
-                  ~applicand:expression))
-    | Result.Ok _
-    | Result.Error (Unbound_identifier _) ->
-        return Option.none
-    | Result.Error cause ->
-        Error.raise_at1 (Qualified_identifier.location identifier) cause
-
-  let guard_operator expression =
-    match expression with
-    | Synprs.Comp.Sort_object.Raw_identifier { prefixed; _ }
-    | Synprs.Comp.Sort_object.Raw_qualified_identifier { prefixed; _ }
-      when prefixed ->
-        return Option.none
-    | Synprs.Comp.Sort_object.Raw_identifier { identifier; _ } ->
-        let identifier = Qualified_identifier.make_simple identifier in
-        guard_identifier_operator identifier expression
-    | Synprs.Comp.Sort_object.Raw_qualified_identifier { identifier; _ } ->
-        guard_identifier_operator identifier expression
-    | Synprs.Comp.Sort_object.Raw_ctype _
-    | Synprs.Comp.Sort_object.Raw_pi _
-    | Synprs.Comp.Sort_object.Raw_arrow _
-    | Synprs.Comp.Sort_object.Raw_cross _
-    | Synprs.Comp.Sort_object.Raw_box _
-    | Synprs.Comp.Sort_object.Raw_application _ ->
-        return Option.none
-end
-
-module Comp_expression_operand = struct
-  type expression = Synprs.comp_expression_object
-
-  type t =
-    | Atom of expression
-    | Application of
-        { applicand : expression
-        ; arguments : t List1.t
-        }
-
-  let rec location operand =
-    match operand with
-    | Atom object_ -> Synprs.location_of_comp_expression_object object_
-    | Application { applicand; arguments } ->
-        let applicand_location =
-          Synprs.location_of_comp_expression_object applicand
-        in
-        let arguments_location =
-          Location.join_all1_contramap location arguments
-        in
-        Location.join applicand_location arguments_location
-end
-
-module Comp_expression_operator = struct
-  type associativity = Associativity.t
-
-  type fixity = Fixity.t
-
-  type operand = Comp_expression_operand.t
-
-  type t =
-    { identifier : Qualified_identifier.t
-    ; operator : Operator.t
-    ; applicand : Synprs.comp_expression_object
-    }
-
-  let[@inline] make ~identifier ~operator ~applicand =
-    { identifier; operator; applicand }
-
-  let[@inline] operator o = o.operator
-
-  let[@inline] applicand o = o.applicand
-
-  let[@inline] identifier o = o.identifier
-
-  let arity = Fun.(operator >> Operator.arity)
-
-  let precedence = Fun.(operator >> Operator.precedence)
-
-  let fixity = Fun.(operator >> Operator.fixity)
-
-  let associativity = Fun.(operator >> Operator.associativity)
-
-  let location = Fun.(applicand >> Synprs.location_of_comp_expression_object)
-
-  (** [write operator arguments] constructs the application of [operator]
-      with [arguments] for the shunting yard algorithm. Since nullary
-      operators are treated as arguments, it is always the case that
-      [List.length arguments > 0]. *)
-  let write operator arguments =
-    let applicand = applicand operator in
-    let arguments =
-      List1.unsafe_of_list arguments (* [List.length arguments > 0] *)
-    in
-    Comp_expression_operand.Application { applicand; arguments }
-
-  (** Instance of equality by operator identifier.
-
-      Since applications do not introduce bound variables, occurrences of
-      operators are equal by their identifier. That is, in an application
-      like [a o1 a o2 a], the operators [o1] and [o2] are equal if and only
-      if they are textually equal. *)
-  include (
-    (val Eq.contramap (module Qualified_identifier) identifier) :
-      Eq.EQ with type t := t)
-end
-
-module Make_comp_expression_application_disambiguation_state
-    (Disambiguation_state : DISAMBIGUATION_STATE) =
-struct
-  include Disambiguation_state
-
-  type operator = Comp_expression_operator.t
-
-  type expression = Comp_expression_operand.expression
-
-  let guard_identifier_operator identifier expression =
-    lookup identifier >>= function
-    | Result.Ok
-        (Computation_term_constructor, { operator = Option.Some operator; _ })
-    | Result.Ok (Program_constant, { operator = Option.Some operator; _ }) ->
-        if Operator.is_nullary operator then return Option.none
-        else
-          return
-            (Option.some
-               (Comp_expression_operator.make ~identifier ~operator
-                  ~applicand:expression))
-    | Result.Ok _
-    | Result.Error (Unbound_identifier _)
-    | Result.Error (Unbound_qualified_identifier _)
-    | Result.Error (Unbound_namespace _)
-    (* [Unbound_qualified_identifier] and [Unbound_namespace] are special
-       cases due to the ambiguity with observations *) ->
-        return Option.none
-    | Result.Error cause ->
-        Error.raise_at1 (Qualified_identifier.location identifier) cause
-
-  let guard_operator expression =
-    match expression with
-    | Synprs.Comp.Expression_object.Raw_identifier { prefixed; _ }
-    | Synprs.Comp.Expression_object.Raw_qualified_identifier { prefixed; _ }
-      when prefixed ->
-        return Option.none
-    | Synprs.Comp.Expression_object.Raw_identifier { identifier; _ } ->
-        let identifier = Qualified_identifier.make_simple identifier in
-        guard_identifier_operator identifier expression
-    | Synprs.Comp.Expression_object.Raw_qualified_identifier
-        { identifier; _ } ->
-        guard_identifier_operator identifier expression
-    | Synprs.Comp.Expression_object.Raw_fn _
-    | Synprs.Comp.Expression_object.Raw_mlam _
-    | Synprs.Comp.Expression_object.Raw_fun _
-    | Synprs.Comp.Expression_object.Raw_box _
-    | Synprs.Comp.Expression_object.Raw_let _
-    | Synprs.Comp.Expression_object.Raw_impossible _
-    | Synprs.Comp.Expression_object.Raw_case _
-    | Synprs.Comp.Expression_object.Raw_tuple _
-    | Synprs.Comp.Expression_object.Raw_hole _
-    | Synprs.Comp.Expression_object.Raw_box_hole _
-    | Synprs.Comp.Expression_object.Raw_application _
-    | Synprs.Comp.Expression_object.Raw_annotated _
-    | Synprs.Comp.Expression_object.Raw_observation _ ->
-        return Option.none
-end
-
-module Comp_pattern_operand = struct
-  type expression = Synprs.comp_pattern_object
-
-  type t =
-    | Atom of expression
-    | Application of
-        { applicand : expression
-        ; arguments : t List1.t
-        }
-
-  let rec location operand =
-    match operand with
-    | Atom object_ -> Synprs.location_of_comp_pattern_object object_
-    | Application { applicand; arguments } ->
-        let applicand_location =
-          Synprs.location_of_comp_pattern_object applicand
-        in
-        let arguments_location =
-          Location.join_all1_contramap location arguments
-        in
-        Location.join applicand_location arguments_location
-end
-
-module Comp_pattern_operator = struct
-  type associativity = Associativity.t
-
-  type fixity = Fixity.t
-
-  type operand = Comp_pattern_operand.t
-
-  type t =
-    { identifier : Qualified_identifier.t
-    ; operator : Operator.t
-    ; applicand : Synprs.comp_pattern_object
-    }
-
-  let[@inline] make ~identifier ~operator ~applicand =
-    { identifier; operator; applicand }
-
-  let[@inline] operator o = o.operator
-
-  let[@inline] applicand o = o.applicand
-
-  let[@inline] identifier o = o.identifier
-
-  let arity = Fun.(operator >> Operator.arity)
-
-  let precedence = Fun.(operator >> Operator.precedence)
-
-  let fixity = Fun.(operator >> Operator.fixity)
-
-  let associativity = Fun.(operator >> Operator.associativity)
-
-  let location = Fun.(applicand >> Synprs.location_of_comp_pattern_object)
-
-  (** [write operator arguments] constructs the application of [operator]
-      with [arguments] for the shunting yard algorithm. Since nullary
-      operators are treated as arguments, it is always the case that
-      [List.length arguments > 0]. *)
-  let write operator arguments =
-    let applicand = applicand operator in
-    let arguments =
-      List1.unsafe_of_list arguments (* [List.length arguments > 0] *)
-    in
-    Comp_pattern_operand.Application { applicand; arguments }
-
-  (** Instance of equality by operator identifier.
-
-      Since applications do not introduce bound variables, occurrences of
-      operators are equal by their identifier. That is, in an application
-      like [a o1 a o2 a], the operators [o1] and [o2] are equal if and only
-      if they are textually equal. *)
-  include (
-    (val Eq.contramap (module Qualified_identifier) identifier) :
-      Eq.EQ with type t := t)
-end
-
-module Make_comp_pattern_application_disambiguation_state
-    (Disambiguation_state : DISAMBIGUATION_STATE) =
-struct
-  include Disambiguation_state
-
-  type operator = Comp_pattern_operator.t
-
-  type expression = Comp_pattern_operand.expression
-
-  let guard_identifier_operator identifier pattern =
-    lookup identifier >>= function
-    | Result.Ok
-        (Computation_term_constructor, { operator = Option.Some operator; _ })
-    | Result.Ok (Program_constant, { operator = Option.Some operator; _ }) ->
-        if Operator.is_nullary operator then return Option.none
-        else
-          return
-            (Option.some
-               (Comp_pattern_operator.make ~identifier ~operator
-                  ~applicand:pattern))
-    | Result.Ok _
-    | Result.Error (Unbound_identifier _) ->
-        return Option.none
-    | Result.Error cause ->
-        Error.raise_at1 (Qualified_identifier.location identifier) cause
-
-  let guard_operator pattern =
-    match pattern with
-    | Synprs.Comp.Pattern_object.Raw_identifier { prefixed; _ }
-    | Synprs.Comp.Pattern_object.Raw_qualified_identifier { prefixed; _ }
-      when prefixed ->
-        return Option.none
-    | Synprs.Comp.Pattern_object.Raw_identifier { identifier; _ } ->
-        let identifier = Qualified_identifier.make_simple identifier in
-        guard_identifier_operator identifier pattern
-    | Synprs.Comp.Pattern_object.Raw_qualified_identifier { identifier; _ }
-      ->
-        guard_identifier_operator identifier pattern
-    | Synprs.Comp.Pattern_object.Raw_box _
-    | Synprs.Comp.Pattern_object.Raw_tuple _
-    | Synprs.Comp.Pattern_object.Raw_application _
-    | Synprs.Comp.Pattern_object.Raw_annotated _
-    | Synprs.Comp.Pattern_object.Raw_meta_annotated _
-    | Synprs.Comp.Pattern_object.Raw_wildcard _ ->
-        return Option.none
-end
 
 module type COMP_DISAMBIGUATION = sig
   (** @closed *)
@@ -563,6 +122,72 @@ module Make
   COMP_DISAMBIGUATION with type state = Disambiguation_state.state = struct
   include Disambiguation_state
   include Meta_disambiguator
+
+  module Comp_typ_application_disambiguation =
+  Application_disambiguation.Make_expression_parser (struct
+    type t = Synprs.comp_sort_object
+
+    type location = Location.t
+
+    let location = Synprs.location_of_comp_sort_object
+  end)
+
+  let guard_typ_operator_identifier expression identifier =
+    lookup_operator identifier >>= function
+    | Option.None ->
+        return
+          (Comp_typ_application_disambiguation.make_expression expression)
+    | Option.Some operator ->
+        return
+          (Comp_typ_application_disambiguation.make_operator expression
+             operator identifier)
+
+  let guard_typ_operator expression =
+    match expression with
+    | Synprs.Comp.Sort_object.Raw_qualified_identifier
+        { identifier; prefixed = false; _ } ->
+        guard_typ_operator_identifier expression identifier
+    | Synprs.Comp.Sort_object.Raw_identifier
+        { identifier; prefixed = false; _ } ->
+        guard_typ_operator_identifier expression
+          (Qualified_identifier.make_simple identifier)
+    | _ ->
+        return
+          (Comp_typ_application_disambiguation.make_expression expression)
+
+  module Comp_expression_application_disambiguation =
+  Application_disambiguation.Make_expression_parser (struct
+    type t = Synprs.comp_expression_object
+
+    type location = Location.t
+
+    let location = Synprs.location_of_comp_expression_object
+  end)
+
+  let guard_expression_operator_identifier expression identifier =
+    lookup_operator identifier >>= function
+    | Option.None ->
+        return
+          (Comp_expression_application_disambiguation.make_expression
+             expression)
+    | Option.Some operator ->
+        return
+          (Comp_expression_application_disambiguation.make_operator
+             expression operator identifier)
+
+  let guard_expression_operator expression =
+    match expression with
+    | Synprs.Comp.Expression_object.Raw_qualified_identifier
+        { identifier; prefixed = false; _ } ->
+        guard_expression_operator_identifier expression identifier
+    | Synprs.Comp.Expression_object.Raw_identifier
+        { identifier; prefixed = false; _ } ->
+        guard_expression_operator_identifier expression
+          (Qualified_identifier.make_simple identifier)
+    | _ ->
+        return
+          (Comp_expression_application_disambiguation.make_expression
+             expression)
 
   (** {1 Disambiguation State Helpers} *)
 
@@ -731,54 +356,29 @@ module Make
     | Synprs.Comp.Sort_object.Raw_pi
         { parameter_sort = Option.None; location; _ } ->
         Error.raise_at1 location Illegal_untyped_comp_pi_type
-    | Synprs.Comp.Sort_object.Raw_identifier
-        { location; identifier; prefixed } -> (
+    | Synprs.Comp.Sort_object.Raw_identifier { location; identifier; _ } -> (
         (* As a computation-level type, plain identifiers are necessarily
            computation-level type constants *)
         let qualified_identifier =
           Qualified_identifier.make_simple identifier
         in
         lookup_toplevel identifier >>= function
-        | Result.Ok
-            ( Computation_inductive_type_constant
-            , { operator = Option.Some operator; _ } ) ->
+        | Result.Ok (Computation_inductive_type_constant, _) ->
             return
               (Synext.Comp.Typ.Inductive_typ_constant
-                 { location
-                 ; identifier = qualified_identifier
-                 ; operator
-                 ; prefixed
-                 })
-        | Result.Ok
-            ( Computation_stratified_type_constant
-            , { operator = Option.Some operator; _ } ) ->
+                 { location; identifier = qualified_identifier })
+        | Result.Ok (Computation_stratified_type_constant, _) ->
             return
               (Synext.Comp.Typ.Stratified_typ_constant
-                 { location
-                 ; identifier = qualified_identifier
-                 ; operator
-                 ; prefixed
-                 })
-        | Result.Ok
-            ( Computation_abbreviation_type_constant
-            , { operator = Option.Some operator; _ } ) ->
+                 { location; identifier = qualified_identifier })
+        | Result.Ok (Computation_abbreviation_type_constant, _) ->
             return
               (Synext.Comp.Typ.Abbreviation_typ_constant
-                 { location
-                 ; identifier = qualified_identifier
-                 ; operator
-                 ; prefixed
-                 })
-        | Result.Ok
-            ( Computation_coinductive_type_constant
-            , { operator = Option.Some operator; _ } ) ->
+                 { location; identifier = qualified_identifier })
+        | Result.Ok (Computation_coinductive_type_constant, _) ->
             return
               (Synext.Comp.Typ.Coinductive_typ_constant
-                 { location
-                 ; identifier = qualified_identifier
-                 ; operator
-                 ; prefixed
-                 })
+                 { location; identifier = qualified_identifier })
         | Result.Ok entry ->
             Error.raise_at1 location
               (Error.composite_exception2
@@ -789,7 +389,7 @@ module Make
               (Unbound_comp_type_constant qualified_identifier)
         | Result.Error cause -> Error.raise_at1 location cause)
     | Synprs.Comp.Sort_object.Raw_qualified_identifier
-        { location; identifier; prefixed } -> (
+        { location; identifier; _ } -> (
         (* Qualified identifiers without namespaces were parsed as plain
            identifiers *)
         assert (List.length (Qualified_identifier.namespaces identifier) >= 1);
@@ -797,30 +397,22 @@ module Make
            (<dot-identifier>)+] are necessarily computation-level type
            constants. *)
         lookup identifier >>= function
-        | Result.Ok
-            ( Computation_inductive_type_constant
-            , { operator = Option.Some operator; _ } ) ->
+        | Result.Ok (Computation_inductive_type_constant, _) ->
             return
               (Synext.Comp.Typ.Inductive_typ_constant
-                 { location; identifier; operator; prefixed })
-        | Result.Ok
-            ( Computation_stratified_type_constant
-            , { operator = Option.Some operator; _ } ) ->
+                 { location; identifier })
+        | Result.Ok (Computation_stratified_type_constant, _) ->
             return
               (Synext.Comp.Typ.Stratified_typ_constant
-                 { location; identifier; operator; prefixed })
-        | Result.Ok
-            ( Computation_abbreviation_type_constant
-            , { operator = Option.Some operator; _ } ) ->
+                 { location; identifier })
+        | Result.Ok (Computation_abbreviation_type_constant, _) ->
             return
               (Synext.Comp.Typ.Abbreviation_typ_constant
-                 { location; identifier; operator; prefixed })
-        | Result.Ok
-            ( Computation_coinductive_type_constant
-            , { operator = Option.Some operator; _ } ) ->
+                 { location; identifier })
+        | Result.Ok (Computation_coinductive_type_constant, _) ->
             return
               (Synext.Comp.Typ.Coinductive_typ_constant
-                 { location; identifier; operator; prefixed })
+                 { location; identifier })
         | Result.Ok entry ->
             Error.raise_at1 location
               (Error.composite_exception2
@@ -877,109 +469,39 @@ module Make
 
   and elaborate_comp_typ_operand operand =
     match operand with
-    | Comp_typ_operand.Atom object_ -> (
-        match object_ with
+    | Comp_typ_application_disambiguation.Atom { expression; _ } -> (
+        match expression with
         | Synprs.Comp.Sort_object.Raw_box { boxed; _ } ->
             disambiguate_meta_object boxed
         | _ ->
             Error.raise_at1
-              (Synprs.location_of_comp_sort_object object_)
+              (Synprs.location_of_comp_sort_object expression)
               Expected_meta_object)
-    | Comp_typ_operand.Application { applicand; arguments } ->
-        let location =
-          Location.join
-            (Synprs.location_of_comp_sort_object applicand)
-            (Location.join_all1_contramap Comp_typ_operand.location arguments)
-        in
+    | Comp_typ_application_disambiguation.Application { location; _ } ->
         Error.raise_at1 location Expected_meta_object
 
-  and disambiguate_comp_typ_application =
-    let open
-      Application_disambiguation.Make (Associativity) (Fixity)
-        (Comp_typ_operand)
-        (Comp_typ_operator)
-        (Make_comp_typ_application_disambiguation_state (Disambiguation_state)) in
-    disambiguate_application >=> function
-    | Result.Ok (applicand, arguments) -> return (applicand, arguments)
-    | Result.Error
-        (Ambiguous_operator_placement { left_operator; right_operator }) ->
-        let left_operator_location =
-          Comp_typ_operator.location left_operator
-        in
-        let right_operator_location =
-          Comp_typ_operator.location right_operator
-        in
-        let identifier = Comp_typ_operator.identifier left_operator in
-        Error.raise_at2 left_operator_location right_operator_location
-          (Ambiguous_comp_typ_operator_placement identifier)
-    | Result.Error (Arity_mismatch { operator; operator_arity; operands }) ->
-        let operator_identifier = Comp_typ_operator.identifier operator in
-        let operator_location = Comp_typ_operator.location operator in
-        let expected_arguments_count = operator_arity in
-        let operand_locations =
-          List.map Comp_typ_operand.location operands
-        in
-        let actual_arguments_count = List.length operands in
-        Error.raise_at
-          (List1.from operator_location operand_locations)
-          (Comp_typ_arity_mismatch
-             { operator_identifier
-             ; expected_arguments_count
-             ; actual_arguments_count
-             })
-    | Result.Error
-        (Consecutive_non_associative_operators
-          { left_operator; right_operator }) ->
-        let operator_identifier =
-          Comp_typ_operator.identifier left_operator
-        in
-        let left_operator_location =
-          Comp_typ_operator.location left_operator
-        in
-        let right_operator_location =
-          Comp_typ_operator.location right_operator
-        in
-        Error.raise_at2 left_operator_location right_operator_location
-          (Consecutive_applications_of_non_associative_comp_typ_operators
-             operator_identifier)
-    | Result.Error (Misplaced_operator { operator; operands }) ->
-        let operator_location = Comp_typ_operator.location operator
-        and operand_locations =
-          List.map Comp_typ_operand.location operands
-        in
-        Error.raise_at
-          (List1.from operator_location operand_locations)
-          Misplaced_comp_typ_operator
-    | Result.Error cause -> Error.raise cause
+  and disambiguate_comp_typ_application objects =
+    let* objects' = traverse_list2 guard_typ_operator objects in
+    return (Comp_typ_application_disambiguation.parse_application objects')
 
   and disambiguate_comp_expression = function
     | Synprs.Comp.Expression_object.Raw_identifier
-        { location; identifier; prefixed } -> (
+        { location; identifier; _ } -> (
         let qualified_identifier =
           Qualified_identifier.make_simple identifier
         in
         lookup_toplevel identifier >>= function
-        | Result.Ok
-            ( Computation_term_constructor
-            , { operator = Option.Some operator; _ } ) ->
+        | Result.Ok (Computation_term_constructor, _) ->
             (* [identifier] appears as a bound computation-level
                constructor *)
             return
               (Synext.Comp.Expression.Constructor
-                 { location
-                 ; identifier = qualified_identifier
-                 ; prefixed
-                 ; operator
-                 })
-        | Result.Ok (Program_constant, { operator; _ }) ->
+                 { location; identifier = qualified_identifier })
+        | Result.Ok (Program_constant, _) ->
             (* [identifier] appears as a bound computation-level program *)
             return
               (Synext.Comp.Expression.Program
-                 { location
-                 ; identifier = qualified_identifier
-                 ; prefixed
-                 ; operator
-                 })
+                 { location; identifier = qualified_identifier })
         | Result.Ok (Computation_variable, _) ->
             (* [identifier] appears as a bound computation-level variable *)
             return (Synext.Comp.Expression.Variable { location; identifier })
@@ -997,7 +519,7 @@ module Make
             return (Synext.Comp.Expression.Variable { location; identifier })
         | Result.Error cause -> Error.raise_at1 location cause)
     | Synprs.Comp.Expression_object.Raw_qualified_identifier
-        { location; identifier; prefixed } -> (
+        { location; identifier; _ } -> (
         (* Qualified identifiers without namespaces were parsed as plain
            identifiers *)
         assert (List.length (Qualified_identifier.namespaces identifier) >= 1);
@@ -1045,43 +567,25 @@ module Make
                     (List1.map Pair.fst bound_segments)
                 in
                 match List1.last bound_segments with
-                | ( _identifier
-                  , ( Computation_term_constructor
-                    , { operator = Option.Some operator; _ } ) )
+                | _identifier, (Computation_term_constructor, _)
                 (* [bound_segments] forms a valid constant *) ->
                     let location =
                       Qualified_identifier.location bound_segments_identifier
                     in
                     let scrutinee =
                       Synext.Comp.Expression.Constructor
-                        { location
-                        ; identifier = bound_segments_identifier
-                        ; operator
-                        ; prefixed =
-                            false
-                            (* [unbound_segments] is non-empty, so the
-                               parentheses do not force the constant to be
-                               prefixed *)
-                        }
+                        { location; identifier = bound_segments_identifier }
                     in
                     disambiguate_trailing_observations scrutinee
                       unbound_segments
-                | _identifier, (Program_constant, { operator; _ })
+                | _identifier, (Program_constant, _)
                 (* [bound_segments] forms a valid constant *) ->
                     let location =
                       Qualified_identifier.location bound_segments_identifier
                     in
                     let scrutinee =
                       Synext.Comp.Expression.Program
-                        { location
-                        ; identifier = bound_segments_identifier
-                        ; operator
-                        ; prefixed =
-                            false
-                            (* [unbound_segments] is non-empty, so the
-                               parentheses do not force the constant to be
-                               prefixed *)
-                        }
+                        { location; identifier = bound_segments_identifier }
                     in
                     disambiguate_trailing_observations scrutinee
                       unbound_segments
@@ -1096,16 +600,13 @@ module Make
                 ))
         | `Totally_bound bound_segments (* A constant *) -> (
             match List1.last bound_segments with
-            | ( _identifier
-              , ( Computation_term_constructor
-                , { operator = Option.Some operator; _ } ) ) ->
+            | _identifier, (Computation_term_constructor, _) ->
                 return
                   (Synext.Comp.Expression.Constructor
-                     { location; identifier; operator; prefixed })
-            | _identifier, (Program_constant, { operator; _ }) ->
+                     { location; identifier })
+            | _identifier, (Program_constant, _) ->
                 return
-                  (Synext.Comp.Expression.Program
-                     { location; identifier; operator; prefixed })
+                  (Synext.Comp.Expression.Program { location; identifier })
             | _identifier, entry ->
                 Error.raise_at1 location
                   (Error.composite_exception2
@@ -1323,84 +824,24 @@ module Make
               (Qualified_identifier.location bound_segments_identifier)
               Expected_comp_term_destructor_constant)
 
+  and disambiguate_comp_expression_application objects =
+    let* objects' = traverse_list2 guard_expression_operator objects in
+    return
+      (Comp_expression_application_disambiguation.parse_application objects')
+
   and elaborate_comp_expression_operand operand =
     match operand with
-    | Comp_expression_operand.Atom object_ ->
-        disambiguate_comp_expression object_
-    | Comp_expression_operand.Application { applicand; arguments } ->
+    | Comp_expression_application_disambiguation.Atom { expression; _ } ->
+        disambiguate_comp_expression expression
+    | Comp_expression_application_disambiguation.Application
+        { applicand; arguments; location } ->
         let* applicand' = disambiguate_comp_expression applicand in
         let* arguments' =
           traverse_list1 elaborate_comp_expression_operand arguments
         in
-        let location =
-          Location.join_all1_contramap Synext.location_of_comp_expression
-            (List1.cons applicand' arguments')
-        in
         return
           (Synext.Comp.Expression.Application
              { applicand = applicand'; arguments = arguments'; location })
-
-  and disambiguate_comp_expression_application =
-    let open
-      Application_disambiguation.Make (Associativity) (Fixity)
-        (Comp_expression_operand)
-        (Comp_expression_operator)
-        (Make_comp_expression_application_disambiguation_state
-           (Disambiguation_state)) in
-    disambiguate_application >=> function
-    | Result.Ok (applicand, arguments) -> return (applicand, arguments)
-    | Result.Error
-        (Ambiguous_operator_placement { left_operator; right_operator }) ->
-        let left_operator_location =
-          Comp_expression_operator.location left_operator
-        in
-        let right_operator_location =
-          Comp_expression_operator.location right_operator
-        in
-        let identifier = Comp_expression_operator.identifier left_operator in
-        Error.raise_at2 left_operator_location right_operator_location
-          (Ambiguous_comp_expression_operator_placement identifier)
-    | Result.Error (Arity_mismatch { operator; operator_arity; operands }) ->
-        let operator_identifier =
-          Comp_expression_operator.identifier operator
-        in
-        let operator_location = Comp_expression_operator.location operator in
-        let expected_arguments_count = operator_arity in
-        let operand_locations =
-          List.map Comp_expression_operand.location operands
-        in
-        let actual_arguments_count = List.length operands in
-        Error.raise_at
-          (List1.from operator_location operand_locations)
-          (Comp_expression_arity_mismatch
-             { operator_identifier
-             ; expected_arguments_count
-             ; actual_arguments_count
-             })
-    | Result.Error
-        (Consecutive_non_associative_operators
-          { left_operator; right_operator }) ->
-        let operator_identifier =
-          Comp_expression_operator.identifier left_operator
-        in
-        let left_operator_location =
-          Comp_expression_operator.location left_operator
-        in
-        let right_operator_location =
-          Comp_expression_operator.location right_operator
-        in
-        Error.raise_at2 left_operator_location right_operator_location
-          (Consecutive_applications_of_non_associative_comp_expression_operators
-             operator_identifier)
-    | Result.Error (Misplaced_operator { operator; operands }) ->
-        let operator_location = Comp_expression_operator.location operator
-        and operand_locations =
-          List.map Comp_expression_operand.location operands
-        in
-        Error.raise_at
-          (List1.from operator_location operand_locations)
-          Misplaced_comp_expression_operator
-    | Result.Error cause -> Error.raise cause
 
   and with_disambiguated_comp_context context_object f =
     let { Synprs.Comp.Context_object.location; bindings } = context_object in
@@ -1441,6 +882,70 @@ module Make_pattern_disambiguator
 struct
   include Disambiguation_state
   include Meta_pattern_disambiguator
+
+  module Comp_typ_application_disambiguation =
+  Application_disambiguation.Make_expression_parser (struct
+    type t = Synprs.comp_sort_object
+
+    type location = Location.t
+
+    let location = Synprs.location_of_comp_sort_object
+  end)
+
+  let guard_typ_operator_identifier expression identifier =
+    lookup_operator identifier >>= function
+    | Option.None ->
+        return
+          (Comp_typ_application_disambiguation.make_expression expression)
+    | Option.Some operator ->
+        return
+          (Comp_typ_application_disambiguation.make_operator expression
+             operator identifier)
+
+  let guard_typ_operator expression =
+    match expression with
+    | Synprs.Comp.Sort_object.Raw_qualified_identifier
+        { identifier; prefixed = false; _ } ->
+        guard_typ_operator_identifier expression identifier
+    | Synprs.Comp.Sort_object.Raw_identifier
+        { identifier; prefixed = false; _ } ->
+        guard_typ_operator_identifier expression
+          (Qualified_identifier.make_simple identifier)
+    | _ ->
+        return
+          (Comp_typ_application_disambiguation.make_expression expression)
+
+  module Comp_pattern_application_disambiguation =
+  Application_disambiguation.Make_expression_parser (struct
+    type t = Synprs.comp_pattern_object
+
+    type location = Location.t
+
+    let location = Synprs.location_of_comp_pattern_object
+  end)
+
+  let guard_pattern_operator_identifier expression identifier =
+    lookup_operator identifier >>= function
+    | Option.None ->
+        return
+          (Comp_pattern_application_disambiguation.make_expression expression)
+    | Option.Some operator ->
+        return
+          (Comp_pattern_application_disambiguation.make_operator expression
+             operator identifier)
+
+  let guard_pattern_operator expression =
+    match expression with
+    | Synprs.Comp.Pattern_object.Raw_qualified_identifier
+        { identifier; prefixed = false; _ } ->
+        guard_pattern_operator_identifier expression identifier
+    | Synprs.Comp.Pattern_object.Raw_identifier
+        { identifier; prefixed = false; _ } ->
+        guard_pattern_operator_identifier expression
+          (Qualified_identifier.make_simple identifier)
+    | _ ->
+        return
+          (Comp_pattern_application_disambiguation.make_expression expression)
 
   let with_context_variable_opt = function
     | Option.Some identifier -> with_context_variable identifier
@@ -1491,54 +996,29 @@ struct
     | Synprs.Comp.Sort_object.Raw_pi
         { parameter_sort = Option.None; location; _ } ->
         Error.raise_at1 location Illegal_untyped_comp_pi_type
-    | Synprs.Comp.Sort_object.Raw_identifier
-        { location; identifier; prefixed } -> (
+    | Synprs.Comp.Sort_object.Raw_identifier { location; identifier; _ } -> (
         (* As a computation-level type, plain identifiers are necessarily
            computation-level type constants *)
         let qualified_identifier =
           Qualified_identifier.make_simple identifier
         in
         lookup_toplevel identifier >>= function
-        | Result.Ok
-            ( Computation_inductive_type_constant
-            , { operator = Option.Some operator; _ } ) ->
+        | Result.Ok (Computation_inductive_type_constant, _) ->
             return
               (Synext.Comp.Typ.Inductive_typ_constant
-                 { location
-                 ; identifier = qualified_identifier
-                 ; operator
-                 ; prefixed
-                 })
-        | Result.Ok
-            ( Computation_stratified_type_constant
-            , { operator = Option.Some operator; _ } ) ->
+                 { location; identifier = qualified_identifier })
+        | Result.Ok (Computation_stratified_type_constant, _) ->
             return
               (Synext.Comp.Typ.Stratified_typ_constant
-                 { location
-                 ; identifier = qualified_identifier
-                 ; operator
-                 ; prefixed
-                 })
-        | Result.Ok
-            ( Computation_abbreviation_type_constant
-            , { operator = Option.Some operator; _ } ) ->
+                 { location; identifier = qualified_identifier })
+        | Result.Ok (Computation_abbreviation_type_constant, _) ->
             return
               (Synext.Comp.Typ.Abbreviation_typ_constant
-                 { location
-                 ; identifier = qualified_identifier
-                 ; operator
-                 ; prefixed
-                 })
-        | Result.Ok
-            ( Computation_coinductive_type_constant
-            , { operator = Option.Some operator; _ } ) ->
+                 { location; identifier = qualified_identifier })
+        | Result.Ok (Computation_coinductive_type_constant, _) ->
             return
               (Synext.Comp.Typ.Coinductive_typ_constant
-                 { location
-                 ; identifier = qualified_identifier
-                 ; operator
-                 ; prefixed
-                 })
+                 { location; identifier = qualified_identifier })
         | Result.Ok entry ->
             Error.raise_at1 location
               (Error.composite_exception2
@@ -1549,7 +1029,7 @@ struct
               (Unbound_comp_type_constant qualified_identifier)
         | Result.Error cause -> Error.raise_at1 location cause)
     | Synprs.Comp.Sort_object.Raw_qualified_identifier
-        { location; identifier; prefixed } -> (
+        { location; identifier; _ } -> (
         (* Qualified identifiers without namespaces were parsed as plain
            identifiers *)
         assert (List.length (Qualified_identifier.namespaces identifier) >= 1);
@@ -1557,30 +1037,22 @@ struct
            (<dot-identifier>)+] are necessarily computation-level type
            constants. *)
         lookup identifier >>= function
-        | Result.Ok
-            ( Computation_inductive_type_constant
-            , { operator = Option.Some operator; _ } ) ->
+        | Result.Ok (Computation_inductive_type_constant, _) ->
             return
               (Synext.Comp.Typ.Inductive_typ_constant
-                 { location; identifier; operator; prefixed })
-        | Result.Ok
-            ( Computation_stratified_type_constant
-            , { operator = Option.Some operator; _ } ) ->
+                 { location; identifier })
+        | Result.Ok (Computation_stratified_type_constant, _) ->
             return
               (Synext.Comp.Typ.Stratified_typ_constant
-                 { location; identifier; operator; prefixed })
-        | Result.Ok
-            ( Computation_abbreviation_type_constant
-            , { operator = Option.Some operator; _ } ) ->
+                 { location; identifier })
+        | Result.Ok (Computation_abbreviation_type_constant, _) ->
             return
               (Synext.Comp.Typ.Abbreviation_typ_constant
-                 { location; identifier; operator; prefixed })
-        | Result.Ok
-            ( Computation_coinductive_type_constant
-            , { operator = Option.Some operator; _ } ) ->
+                 { location; identifier })
+        | Result.Ok (Computation_coinductive_type_constant, _) ->
             return
               (Synext.Comp.Typ.Coinductive_typ_constant
-                 { location; identifier; operator; prefixed })
+                 { location; identifier })
         | Result.Ok entry ->
             Error.raise_at1 location
               (Error.composite_exception2
@@ -1637,99 +1109,33 @@ struct
 
   and elaborate_comp_typ_operand operand =
     match operand with
-    | Comp_typ_operand.Atom object_ -> (
-        match object_ with
+    | Comp_typ_application_disambiguation.Atom { expression; _ } -> (
+        match expression with
         | Synprs.Comp.Sort_object.Raw_box { boxed; _ } ->
             disambiguate_meta_object boxed
         | _ ->
             Error.raise_at1
-              (Synprs.location_of_comp_sort_object object_)
+              (Synprs.location_of_comp_sort_object expression)
               Expected_meta_object)
-    | Comp_typ_operand.Application { applicand; arguments } ->
-        let location =
-          Location.join
-            (Synprs.location_of_comp_sort_object applicand)
-            (Location.join_all1_contramap Comp_typ_operand.location arguments)
-        in
+    | Comp_typ_application_disambiguation.Application { location; _ } ->
         Error.raise_at1 location Expected_meta_object
 
-  and disambiguate_comp_typ_application =
-    let open
-      Application_disambiguation.Make (Associativity) (Fixity)
-        (Comp_typ_operand)
-        (Comp_typ_operator)
-        (Make_comp_typ_application_disambiguation_state (Disambiguation_state)) in
-    disambiguate_application >=> function
-    | Result.Ok (applicand, arguments) -> return (applicand, arguments)
-    | Result.Error
-        (Ambiguous_operator_placement { left_operator; right_operator }) ->
-        let left_operator_location =
-          Comp_typ_operator.location left_operator
-        in
-        let right_operator_location =
-          Comp_typ_operator.location right_operator
-        in
-        let identifier = Comp_typ_operator.identifier left_operator in
-        Error.raise_at2 left_operator_location right_operator_location
-          (Ambiguous_comp_typ_operator_placement identifier)
-    | Result.Error (Arity_mismatch { operator; operator_arity; operands }) ->
-        let operator_identifier = Comp_typ_operator.identifier operator in
-        let operator_location = Comp_typ_operator.location operator in
-        let expected_arguments_count = operator_arity in
-        let operand_locations =
-          List.map Comp_typ_operand.location operands
-        in
-        let actual_arguments_count = List.length operands in
-        Error.raise_at
-          (List1.from operator_location operand_locations)
-          (Comp_typ_arity_mismatch
-             { operator_identifier
-             ; expected_arguments_count
-             ; actual_arguments_count
-             })
-    | Result.Error
-        (Consecutive_non_associative_operators
-          { left_operator; right_operator }) ->
-        let operator_identifier =
-          Comp_typ_operator.identifier left_operator
-        in
-        let left_operator_location =
-          Comp_typ_operator.location left_operator
-        in
-        let right_operator_location =
-          Comp_typ_operator.location right_operator
-        in
-        Error.raise_at2 left_operator_location right_operator_location
-          (Consecutive_applications_of_non_associative_comp_typ_operators
-             operator_identifier)
-    | Result.Error (Misplaced_operator { operator; operands }) ->
-        let operator_location = Comp_typ_operator.location operator
-        and operand_locations =
-          List.map Comp_typ_operand.location operands
-        in
-        Error.raise_at
-          (List1.from operator_location operand_locations)
-          Misplaced_comp_typ_operator
-    | Result.Error cause -> Error.raise cause
+  and disambiguate_comp_typ_application objects =
+    let* objects' = traverse_list2 guard_typ_operator objects in
+    return (Comp_typ_application_disambiguation.parse_application objects')
 
   and disambiguate_comp_pattern = function
-    | Synprs.Comp.Pattern_object.Raw_identifier
-        { location; identifier; prefixed } -> (
+    | Synprs.Comp.Pattern_object.Raw_identifier { location; identifier; _ }
+      -> (
         let qualified_identifier =
           Qualified_identifier.make_simple identifier
         in
         lookup_toplevel identifier >>= function
-        | Result.Ok
-            ( Computation_term_constructor
-            , { operator = Option.Some operator; _ } ) ->
+        | Result.Ok (Computation_term_constructor, _) ->
             (* [identifier] appears as a bound computation-level program *)
             return
               (Synext.Comp.Pattern.Constant
-                 { location
-                 ; identifier = qualified_identifier
-                 ; prefixed
-                 ; operator
-                 })
+                 { location; identifier = qualified_identifier })
         | Result.Ok _entry ->
             (* [identifier] appears as a bound entry that is not a
                computation-level constructor *)
@@ -1745,15 +1151,11 @@ struct
             return (Synext.Comp.Pattern.Variable { location; identifier })
         | Result.Error cause -> Error.raise_at1 location cause)
     | Synprs.Comp.Pattern_object.Raw_qualified_identifier
-        { location; identifier; prefixed } -> (
+        { location; identifier; _ } -> (
         lookup identifier >>= function
-        | Result.Ok
-            ( Computation_term_constructor
-            , { operator = Option.Some operator; _ } ) ->
+        | Result.Ok (Computation_term_constructor, _) ->
             (* [identifier] appears as a bound computation-level program *)
-            return
-              (Synext.Comp.Pattern.Constant
-                 { location; identifier; prefixed; operator })
+            return (Synext.Comp.Pattern.Constant { location; identifier })
         | Result.Ok entry ->
             (* [identifier] appears as a bound entry that is not a
                computation-level constructor *)
@@ -1859,16 +1261,12 @@ struct
               Qualified_identifier.make_simple (Pair.fst bound_segment)
             in
             match bound_segment with
-            | ( _identifier
-              , ( Computation_term_constructor
-                , { operator = Option.Some operator; _ } ) ) ->
+            | _identifier, (Computation_term_constructor, _) ->
                 (* This is a constructor pattern followed by observations *)
                 let pattern' =
                   Synext.Comp.Pattern.Constant
                     { location = Qualified_identifier.location constructor
                     ; identifier = constructor
-                    ; prefixed = false
-                    ; operator
                     }
                 in
                 let destructors_as_qualified_identifier =
@@ -1933,16 +1331,12 @@ struct
                 (List1.map Pair.fst bound_segments)
             in
             match List1.last bound_segments with
-            | ( _identifier
-              , ( Computation_term_constructor
-                , { operator = Option.Some operator; _ } ) ) ->
+            | _identifier, (Computation_term_constructor, _) ->
                 (* This is a constructor pattern followed by observations *)
                 let pattern' =
                   Synext.Comp.Pattern.Constant
                     { location = Qualified_identifier.location constructor
                     ; identifier = constructor
-                    ; prefixed = false
-                    ; operator
                     }
                 in
                 let destructors_as_qualified_identifier =
@@ -1980,16 +1374,12 @@ struct
                 (List1.map Pair.fst bound_segments)
             in
             match List1.last bound_segments with
-            | ( _identifier
-              , ( Computation_term_constructor
-                , { operator = Option.Some operator; _ } ) ) -> (
+            | _identifier, (Computation_term_constructor, _) -> (
                 (* This qualified identifier is a constructor pattern *)
                 let pattern' =
                   Synext.Comp.Pattern.Constant
                     { location = Qualified_identifier.location constructor
                     ; identifier = constructor
-                    ; prefixed = false
-                    ; operator
                     }
                 in
                 match rest with
@@ -2127,83 +1517,24 @@ struct
     in
     return (List1.from (destructor, patterns) observations)
 
+  and disambiguate_comp_pattern_application objects =
+    let* objects' = traverse_list2 guard_pattern_operator objects in
+    return
+      (Comp_pattern_application_disambiguation.parse_application objects')
+
   and elaborate_comp_pattern_operand operand =
     match operand with
-    | Comp_pattern_operand.Atom object_ -> disambiguate_comp_pattern object_
-    | Comp_pattern_operand.Application { applicand; arguments } ->
+    | Comp_pattern_application_disambiguation.Atom { expression; _ } ->
+        disambiguate_comp_pattern expression
+    | Comp_pattern_application_disambiguation.Application
+        { applicand; arguments; location } ->
         let* applicand' = disambiguate_comp_pattern applicand in
         let* arguments' =
           traverse_list1 elaborate_comp_pattern_operand arguments
         in
-        let location =
-          Location.join_all1_contramap Synext.location_of_comp_pattern
-            (List1.cons applicand' arguments')
-        in
         return
           (Synext.Comp.Pattern.Application
              { applicand = applicand'; arguments = arguments'; location })
-
-  and disambiguate_comp_pattern_application =
-    let open
-      Application_disambiguation.Make (Associativity) (Fixity)
-        (Comp_pattern_operand)
-        (Comp_pattern_operator)
-        (Make_comp_pattern_application_disambiguation_state
-           (Disambiguation_state)) in
-    disambiguate_application >=> function
-    | Result.Ok (applicand, arguments) -> return (applicand, arguments)
-    | Result.Error
-        (Ambiguous_operator_placement { left_operator; right_operator }) ->
-        let left_operator_location =
-          Comp_pattern_operator.location left_operator
-        in
-        let right_operator_location =
-          Comp_pattern_operator.location right_operator
-        in
-        let identifier = Comp_pattern_operator.identifier left_operator in
-        Error.raise_at2 left_operator_location right_operator_location
-          (Ambiguous_comp_pattern_operator_placement identifier)
-    | Result.Error (Arity_mismatch { operator; operator_arity; operands }) ->
-        let operator_identifier =
-          Comp_pattern_operator.identifier operator
-        in
-        let operator_location = Comp_pattern_operator.location operator in
-        let expected_arguments_count = operator_arity in
-        let operand_locations =
-          List.map Comp_pattern_operand.location operands
-        in
-        let actual_arguments_count = List.length operands in
-        Error.raise_at
-          (List1.from operator_location operand_locations)
-          (Comp_pattern_arity_mismatch
-             { operator_identifier
-             ; expected_arguments_count
-             ; actual_arguments_count
-             })
-    | Result.Error
-        (Consecutive_non_associative_operators
-          { left_operator; right_operator }) ->
-        let operator_identifier =
-          Comp_pattern_operator.identifier left_operator
-        in
-        let left_operator_location =
-          Comp_pattern_operator.location left_operator
-        in
-        let right_operator_location =
-          Comp_pattern_operator.location right_operator
-        in
-        Error.raise_at2 left_operator_location right_operator_location
-          (Consecutive_applications_of_non_associative_comp_pattern_operators
-             operator_identifier)
-    | Result.Error (Misplaced_operator { operator; operands }) ->
-        let operator_location = Comp_pattern_operator.location operator
-        and operand_locations =
-          List.map Comp_pattern_operand.location operands
-        in
-        Error.raise_at
-          (List1.from operator_location operand_locations)
-          Misplaced_comp_pattern_operator
-    | Result.Error cause -> Error.raise cause
 end
 
 (** {2 Exception Printing} *)
@@ -2265,30 +1596,6 @@ let () =
            meta-type."
     | Expected_meta_object ->
         Format.dprintf "%a" Format.pp_print_text "Expected a meta-object."
-    | Ambiguous_comp_typ_operator_placement operator_identifier ->
-        Format.dprintf
-          "Ambiguous occurrences of the computation-level type operator %a \
-           after rewriting."
-          Qualified_identifier.pp operator_identifier
-    | Misplaced_comp_typ_operator ->
-        Format.dprintf "%a" Format.pp_print_text
-          "Misplaced contextual computation-level type operator."
-    | Consecutive_applications_of_non_associative_comp_typ_operators
-        operator_identifier ->
-        Format.dprintf
-          "Consecutive occurrences of the computation-level type operator \
-           %a after rewriting."
-          Qualified_identifier.pp operator_identifier
-    | Comp_typ_arity_mismatch
-        { operator_identifier
-        ; expected_arguments_count
-        ; actual_arguments_count
-        } ->
-        Format.dprintf
-          "Computation-level type operator %a expected %d argument(s) but \
-           got %d."
-          Qualified_identifier.pp operator_identifier
-          expected_arguments_count actual_arguments_count
     | Expected_program_or_constructor_constant qualified_identifier ->
         Format.dprintf
           "Expected %a to be a program constant or computation-level \
@@ -2300,54 +1607,6 @@ let () =
     | Illegal_duplicate_pattern_variables ->
         Format.dprintf "%a" Format.pp_print_text
           "Illegal duplicate pattern variables."
-    | Ambiguous_comp_expression_operator_placement operator_identifier ->
-        Format.dprintf
-          "Ambiguous occurrences of the computation-level expression \
-           operator %a after rewriting."
-          Qualified_identifier.pp operator_identifier
-    | Misplaced_comp_expression_operator ->
-        Format.dprintf "%a" Format.pp_print_text
-          "Misplaced contextual computation-level expression operator."
-    | Consecutive_applications_of_non_associative_comp_expression_operators
-        operator_identifier ->
-        Format.dprintf
-          "Consecutive occurrences of the computation-level expressionn \
-           operator %a after rewriting."
-          Qualified_identifier.pp operator_identifier
-    | Comp_expression_arity_mismatch
-        { operator_identifier
-        ; expected_arguments_count
-        ; actual_arguments_count
-        } ->
-        Format.dprintf
-          "Computation-level expression operator %a expected %d argument(s) \
-           but got %d."
-          Qualified_identifier.pp operator_identifier
-          expected_arguments_count actual_arguments_count
-    | Ambiguous_comp_pattern_operator_placement operator_identifier ->
-        Format.dprintf
-          "Ambiguous occurrences of the computation-level pattern operator \
-           %a after rewriting."
-          Qualified_identifier.pp operator_identifier
-    | Misplaced_comp_pattern_operator ->
-        Format.dprintf "%a" Format.pp_print_text
-          "Misplaced contextual computation-level pattern operator."
-    | Consecutive_applications_of_non_associative_comp_pattern_operators
-        operator_identifier ->
-        Format.dprintf
-          "Consecutive occurrences of the computation-level patternn \
-           operator %a after rewriting."
-          Qualified_identifier.pp operator_identifier
-    | Comp_pattern_arity_mismatch
-        { operator_identifier
-        ; expected_arguments_count
-        ; actual_arguments_count
-        } ->
-        Format.dprintf
-          "Computation-level pattern operator %a expected %d argument(s) \
-           but got %d."
-          Qualified_identifier.pp operator_identifier
-          expected_arguments_count actual_arguments_count
     | Illegal_missing_comp_context_binding_type identifier ->
         Format.dprintf
           "Missing computation-level context type for binding for %a."

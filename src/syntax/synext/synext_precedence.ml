@@ -43,280 +43,302 @@ open Support
 open Common
 open Synext_definition
 
-module Lf_precedence = struct
-  type t =
+module type BASE_PRECEDENCE = sig
+  type precedence
+
+  module Ord : Ord.ORD with type t = precedence
+end
+
+module type LF_PRECEDENCE = sig
+  include State.STATE
+
+  include BASE_PRECEDENCE
+
+  val precedence_of_lf_kind : lf_kind -> precedence t
+
+  val precedence_of_lf_typ : lf_typ -> precedence t
+
+  val precedence_of_lf_term : lf_term -> precedence t
+end
+
+module type CLF_PRECEDENCE = sig
+  include State.STATE
+
+  include BASE_PRECEDENCE
+
+  val precedence_of_clf_typ : clf_typ -> precedence t
+
+  val precedence_of_clf_term : clf_term -> precedence t
+
+  val precedence_of_clf_term_pattern : clf_term_pattern -> precedence t
+end
+
+module type SCHEMA_PRECEDENCE = sig
+  include State.STATE
+
+  include BASE_PRECEDENCE
+
+  val precedence_of_schema : schema -> precedence t
+end
+
+module type COMP_SORT_PRECEDENCE = sig
+  include State.STATE
+
+  include BASE_PRECEDENCE
+
+  val precedence_of_comp_kind : comp_kind -> precedence t
+
+  val precedence_of_comp_typ : comp_typ -> precedence t
+end
+
+module type COMP_EXPRESSION_PRECEDENCE = sig
+  include State.STATE
+
+  include BASE_PRECEDENCE
+
+  val precedence_of_comp_expression : comp_expression -> precedence t
+end
+
+module type COMP_PATTERN_PRECEDENCE = sig
+  include State.STATE
+
+  include BASE_PRECEDENCE
+
+  val precedence_of_comp_pattern : comp_pattern -> precedence t
+end
+
+module type PRECEDENCE_STATE = sig
+  include State.STATE
+
+  val lookup_operator_precedence : Qualified_identifier.t -> Int.t Option.t t
+end
+
+module Base : sig
+  type precedence
+
+  val make_static : int -> precedence
+
+  val make_user_defined : int -> precedence
+
+  val compare : application_precedence:int -> precedence -> precedence -> int
+end = struct
+  type precedence =
     | Static of Int.t
     | User_defined of Int.t
 
-  let lf_application_precedence = 4
+  let[@inline] make_static p = Static p
 
-  let precedence_of_lf_kind kind =
-    match kind with
-    | LF.Kind.Pi _ -> Static 1
-    | LF.Kind.Arrow _ -> Static 3
-    | LF.Kind.Typ _ -> Static 5
+  let[@inline] make_user_defined p = User_defined p
 
-  let precedence_of_lf_typ typ =
-    match typ with
-    | LF.Typ.Pi _ -> Static 1
-    | LF.Typ.Arrow _ -> Static 3
-    | LF.Typ.Application
-        { applicand = LF.Typ.Constant { operator; prefixed; _ }; _ }
-      when prefixed || Operator.is_prefix operator
-           (* Juxtapositions are of higher precedence than user-defined
-              operators *) ->
-        Static lf_application_precedence
-    | LF.Typ.Application
-        { applicand = LF.Typ.Constant { operator; prefixed = false; _ }; _ }
-    (* User-defined operator application *) ->
-        User_defined (Operator.precedence operator)
-    | LF.Typ.Application _ -> Static lf_application_precedence
-    | LF.Typ.Constant _ -> Static 5
+  let compare ~application_precedence x y =
+    match (x, y) with
+    | Static x, Static y -> Int.compare x y
+    | User_defined x, User_defined y -> Int.compare x y
+    | User_defined _, Static y ->
+        if application_precedence <= y then -1 else 1
+    | Static x, User_defined _ ->
+        if x < application_precedence then -1 else 1
+end
 
-  let precedence_of_lf_term term =
-    match term with
-    | LF.Term.Abstraction _ -> Static 1
-    | LF.Term.Type_annotated _ -> Static 2
+module Make_lf_precedence (S : PRECEDENCE_STATE) :
+  LF_PRECEDENCE with type state = S.state = struct
+  include Base
+
+  let application_precedence = 4
+
+  module Ord : Ord.ORD with type t = precedence =
+    (val Ord.make (compare ~application_precedence))
+
+  include S
+
+  let precedence_of_lf_kind = function
+    | LF.Kind.Pi _ -> return (make_static 1)
+    | LF.Kind.Arrow _ -> return (make_static 3)
+    | LF.Kind.Typ _ -> return (make_static 5)
+
+  let precedence_of_lf_typ = function
+    | LF.Typ.Pi _ -> return (make_static 1)
+    | LF.Typ.Arrow _ -> return (make_static 3)
+    | LF.Typ.Application { applicand = LF.Typ.Constant { identifier; _ }; _ }
+      -> (
+        lookup_operator_precedence identifier >>= function
+        | Option.Some precedence -> return (make_user_defined precedence)
+        | Option.None -> return (make_static application_precedence))
+    | LF.Typ.Application _ -> return (make_static application_precedence)
+    | LF.Typ.Constant _ -> return (make_static 5)
+
+  let precedence_of_lf_term = function
+    | LF.Term.Abstraction _ -> return (make_static 1)
+    | LF.Term.Type_annotated _ -> return (make_static 2)
     | LF.Term.Application
-        { applicand = LF.Term.Constant { operator; prefixed; _ }; _ }
-      when prefixed || Operator.is_prefix operator
-           (* Juxtapositions are of higher precedence than user-defined
-              operators *) ->
-        Static lf_application_precedence
-    | LF.Term.Application
-        { applicand = LF.Term.Constant { operator; prefixed = false; _ }; _ }
-    (* User-defined operator application *) ->
-        User_defined (Operator.precedence operator)
-    | LF.Term.Application _ -> Static lf_application_precedence
+        { applicand = LF.Term.Constant { identifier; _ }; _ } -> (
+        lookup_operator_precedence identifier >>= function
+        | Option.Some precedence -> return (make_user_defined precedence)
+        | Option.None -> return (make_static application_precedence))
+    | LF.Term.Application _ -> return (make_static application_precedence)
     | LF.Term.Wildcard _
     | LF.Term.Variable _
     | LF.Term.Constant _ ->
-        Static 6
-
-  include (
-    Ord.Make (struct
-      type nonrec t = t
-
-      let compare x y =
-        match (x, y) with
-        | Static x, Static y -> Int.compare x y
-        | User_defined x, User_defined y -> Int.compare x y
-        | User_defined _, Static y ->
-            if lf_application_precedence <= y then -1 else 1
-        | Static x, User_defined _ ->
-            if x < lf_application_precedence then -1 else 1
-    end) :
-      Ord.ORD with type t := t)
+        return (make_static 6)
 end
 
-module Clf_precedence = struct
-  type t =
-    | Static of Int.t
-    | User_defined of Int.t
+module Make_clf_precedence (S : PRECEDENCE_STATE) :
+  CLF_PRECEDENCE with type state = S.state = struct
+  include Base
 
-  let clf_application_precedence = 5
+  let application_precedence = 5
 
-  let precedence_of_clf_typ typ =
-    match typ with
-    | CLF.Typ.Pi _ -> Static 1
-    | CLF.Typ.Arrow _ -> Static 3
-    | CLF.Typ.Block _ -> Static 4
+  module Ord : Ord.ORD with type t = precedence =
+    (val Ord.make (compare ~application_precedence))
+
+  include S
+
+  let precedence_of_clf_typ = function
+    | CLF.Typ.Pi _ -> return (make_static 1)
+    | CLF.Typ.Arrow _ -> return (make_static 3)
+    | CLF.Typ.Block _ -> return (make_static 4)
     | CLF.Typ.Application
-        { applicand = CLF.Typ.Constant { operator; prefixed; _ }; _ }
-      when prefixed || Operator.is_prefix operator
-           (* Juxtapositions are of higher precedence than user-defined
-              operators *) ->
-        Static clf_application_precedence
-    | CLF.Typ.Application
-        { applicand = CLF.Typ.Constant { operator; prefixed = false; _ }; _ }
-    (* User-defined operator application *) ->
-        User_defined (Operator.precedence operator)
-    | CLF.Typ.Application _ -> Static clf_application_precedence
-    | CLF.Typ.Constant _ -> Static 8
+        { applicand = CLF.Typ.Constant { identifier; _ }; _ } -> (
+        lookup_operator_precedence identifier >>= function
+        | Option.Some precedence -> return (make_user_defined precedence)
+        | Option.None -> return (make_static application_precedence))
+    | CLF.Typ.Application _ -> return (make_static application_precedence)
+    | CLF.Typ.Constant _ -> return (make_static 8)
 
-  let precedence_of_clf_term term =
-    match term with
-    | CLF.Term.Abstraction _ -> Static 1
-    | CLF.Term.Type_annotated _ -> Static 2
+  let precedence_of_clf_term = function
+    | CLF.Term.Abstraction _ -> return (make_static 1)
+    | CLF.Term.Type_annotated _ -> return (make_static 2)
     | CLF.Term.Application
-        { applicand = CLF.Term.Constant { operator; prefixed; _ }; _ }
-      when prefixed || Operator.is_prefix operator
-           (* Juxtapositions are of higher precedence than user-defined
-              operators *) ->
-        Static clf_application_precedence
-    | CLF.Term.Application
-        { applicand = CLF.Term.Constant { operator; prefixed = false; _ }
-        ; _
-        }
-    (* User-defined operator application *) ->
-        User_defined (Operator.precedence operator)
-    | CLF.Term.Application _ -> Static clf_application_precedence
-    | CLF.Term.Substitution _ -> Static 6
-    | CLF.Term.Projection _ -> Static 7
+        { applicand = CLF.Term.Constant { identifier; _ }; _ } -> (
+        lookup_operator_precedence identifier >>= function
+        | Option.Some precedence -> return (make_user_defined precedence)
+        | Option.None -> return (make_static application_precedence))
+    | CLF.Term.Application _ -> return (make_static application_precedence)
+    | CLF.Term.Substitution _ -> return (make_static 6)
+    | CLF.Term.Projection _ -> return (make_static 7)
     | CLF.Term.Variable _
     | CLF.Term.Parameter_variable _
     | CLF.Term.Substitution_variable _
     | CLF.Term.Constant _
     | CLF.Term.Hole _
     | CLF.Term.Tuple _ ->
-        Static 8
+        return (make_static 8)
 
-  let precedence_of_clf_term_pattern term =
-    match term with
-    | CLF.Term.Pattern.Abstraction _ -> Static 1
-    | CLF.Term.Pattern.Type_annotated _ -> Static 2
+  let precedence_of_clf_term_pattern = function
+    | CLF.Term.Pattern.Abstraction _ -> return (make_static 1)
+    | CLF.Term.Pattern.Type_annotated _ -> return (make_static 2)
     | CLF.Term.Pattern.Application
-        { applicand = CLF.Term.Pattern.Constant { operator; prefixed; _ }
-        ; _
-        }
-      when prefixed || Operator.is_prefix operator
-           (* Juxtapositions are of higher precedence than user-defined
-              operators *) ->
-        Static clf_application_precedence
-    | CLF.Term.Pattern.Application
-        { applicand =
-            CLF.Term.Pattern.Constant { operator; prefixed = false; _ }
-        ; _
-        }
-    (* User-defined operator application *) ->
-        User_defined (Operator.precedence operator)
-    | CLF.Term.Pattern.Application _ -> Static clf_application_precedence
-    | CLF.Term.Pattern.Substitution _ -> Static 6
-    | CLF.Term.Pattern.Projection _ -> Static 7
+        { applicand = CLF.Term.Pattern.Constant { identifier; _ }; _ } -> (
+        lookup_operator_precedence identifier >>= function
+        | Option.Some precedence -> return (make_user_defined precedence)
+        | Option.None -> return (make_static application_precedence))
+    | CLF.Term.Pattern.Application _ ->
+        return (make_static application_precedence)
+    | CLF.Term.Pattern.Substitution _ -> return (make_static 6)
+    | CLF.Term.Pattern.Projection _ -> return (make_static 7)
     | CLF.Term.Pattern.Wildcard _
     | CLF.Term.Pattern.Variable _
     | CLF.Term.Pattern.Parameter_variable _
     | CLF.Term.Pattern.Substitution_variable _
     | CLF.Term.Pattern.Constant _
     | CLF.Term.Pattern.Tuple _ ->
-        Static 8
-
-  include (
-    Ord.Make (struct
-      type nonrec t = t
-
-      let compare x y =
-        match (x, y) with
-        | Static x, Static y -> Int.compare x y
-        | User_defined x, User_defined y -> Int.compare x y
-        | User_defined _, Static y ->
-            if clf_application_precedence <= y then -1 else 1
-        | Static x, User_defined _ ->
-            if x < clf_application_precedence then -1 else 1
-    end) :
-      Ord.ORD with type t := t)
+        return (make_static 8)
 end
 
-module Meta_precedence = struct
-  type t = Static of Int.t [@unboxed]
+module Make_schema_precedence (S : PRECEDENCE_STATE) :
+  SCHEMA_PRECEDENCE with type state = S.state = struct
+  include S
 
-  let precedence_of_schema schema =
-    match schema with
-    | Meta.Schema.Alternation _ -> Static 1
+  type precedence = Static of Int.t [@unboxed]
+
+  let precedence_of_schema = function
+    | Meta.Schema.Alternation _ -> return (Static 1)
     | Meta.Schema.Constant _
     | Meta.Schema.Element _ ->
-        Static 2
+        return (Static 2)
 
-  include (
-    Ord.Make (struct
-      type nonrec t = t
+  module Ord : Ord.ORD with type t = precedence = Ord.Make (struct
+    type nonrec t = precedence
 
-      let compare (Static x) (Static y) = Int.compare x y
-    end) :
-      Ord.ORD with type t := t)
+    let compare (Static x) (Static y) = Int.compare x y
+  end)
 end
 
-module Comp_precedence = struct
-  type t =
-    | Static of Int.t
-    | User_defined_type of Int.t
-    | User_defined_expression of Int.t
-    | User_defined_pattern of Int.t
+module Make_comp_sort_precedence (S : PRECEDENCE_STATE) :
+  COMP_SORT_PRECEDENCE with type state = S.state = struct
+  include Base
 
-  let type_application_precedence = 4
+  let application_precedence = 4
 
-  let expression_application_precedence = 3
+  module Ord : Ord.ORD with type t = precedence =
+    (val Ord.make (compare ~application_precedence))
 
-  let pattern_application_precedence = 3
+  include S
 
   let precedence_of_comp_kind kind =
     match kind with
-    | Comp.Kind.Pi _ -> Static 1
-    | Comp.Kind.Arrow _ -> Static 2
-    | Comp.Kind.Ctype _ -> Static 5
+    | Comp.Kind.Pi _ -> return (make_static 1)
+    | Comp.Kind.Arrow _ -> return (make_static 2)
+    | Comp.Kind.Ctype _ -> return (make_static 5)
 
   let precedence_of_comp_typ typ =
     match typ with
-    | Comp.Typ.Pi _ -> Static 1
-    | Comp.Typ.Arrow _ -> Static 2
-    | Comp.Typ.Cross _ -> Static 3
+    | Comp.Typ.Pi _ -> return (make_static 1)
+    | Comp.Typ.Arrow _ -> return (make_static 2)
+    | Comp.Typ.Cross _ -> return (make_static 3)
     | Comp.Typ.Application
         { applicand =
-            ( Comp.Typ.Inductive_typ_constant { operator; prefixed; _ }
-            | Comp.Typ.Stratified_typ_constant { operator; prefixed; _ }
-            | Comp.Typ.Coinductive_typ_constant { operator; prefixed; _ }
-            | Comp.Typ.Abbreviation_typ_constant { operator; prefixed; _ } )
+            ( Comp.Typ.Inductive_typ_constant { identifier; _ }
+            | Comp.Typ.Stratified_typ_constant { identifier; _ }
+            | Comp.Typ.Coinductive_typ_constant { identifier; _ }
+            | Comp.Typ.Abbreviation_typ_constant { identifier; _ } )
         ; _
-        }
-      when prefixed || Operator.is_prefix operator
-           (* Juxtapositions are of higher precedence than user-defined
-              operators *) ->
-        Static type_application_precedence
-    | Comp.Typ.Application
-        { applicand =
-            ( Comp.Typ.Inductive_typ_constant
-                { operator; prefixed = false; _ }
-            | Comp.Typ.Stratified_typ_constant
-                { operator; prefixed = false; _ }
-            | Comp.Typ.Coinductive_typ_constant
-                { operator; prefixed = false; _ }
-            | Comp.Typ.Abbreviation_typ_constant
-                { operator; prefixed = false; _ } )
-        ; _
-        }
-    (* User-defined operator application *) ->
-        User_defined_type (Operator.precedence operator)
-    | Comp.Typ.Application _ -> Static type_application_precedence
+        } -> (
+        lookup_operator_precedence identifier >>= function
+        | Option.Some precedence -> return (make_user_defined precedence)
+        | Option.None -> return (make_static application_precedence))
+    | Comp.Typ.Application _ -> return (make_static application_precedence)
     | Comp.Typ.Inductive_typ_constant _
     | Comp.Typ.Stratified_typ_constant _
     | Comp.Typ.Coinductive_typ_constant _
     | Comp.Typ.Abbreviation_typ_constant _
     | Comp.Typ.Box _ ->
-        Static 5
+        return (make_static 5)
+end
+
+module Make_comp_expression_precedence (S : PRECEDENCE_STATE) :
+  COMP_EXPRESSION_PRECEDENCE with type state = S.state = struct
+  include Base
+
+  let application_precedence = 3
+
+  module Ord : Ord.ORD with type t = precedence =
+    (val Ord.make (compare ~application_precedence))
+
+  include S
 
   let precedence_of_comp_expression expression =
     match expression with
-    | Comp.Expression.Type_annotated _ -> Static 1
+    | Comp.Expression.Type_annotated _ -> return (make_static 1)
     | Comp.Expression.Let _
     | Comp.Expression.Impossible _
     | Comp.Expression.Case _
     | Comp.Expression.Fn _
     | Comp.Expression.Mlam _
     | Comp.Expression.Fun _ ->
-        Static 2
+        return (make_static 2)
     | Comp.Expression.Application
         { applicand =
-            ( Comp.Expression.Constructor { operator; prefixed; _ }
-            | Comp.Expression.Program
-                { operator = Option.Some operator; prefixed; _ } )
+            ( Comp.Expression.Program { identifier; _ }
+            | Comp.Expression.Constructor { identifier; _ } )
         ; _
-        }
-      when prefixed || Operator.is_prefix operator
-           (* Juxtapositions are of higher precedence than user-defined
-              operators *) ->
-        Static expression_application_precedence
-    | Comp.Expression.Application
-        { applicand =
-            ( Comp.Expression.Constructor { operator; prefixed = false; _ }
-            | Comp.Expression.Program
-                { operator = Option.Some operator; prefixed = false; _ } )
-        ; _
-        }
-    (* User-defined operator application *) ->
-        User_defined_expression (Operator.precedence operator)
+        } -> (
+        lookup_operator_precedence identifier >>= function
+        | Option.Some precedence -> return (make_user_defined precedence)
+        | Option.None -> return (make_static application_precedence))
     | Comp.Expression.Application _ ->
-        Static expression_application_precedence
-    | Comp.Expression.Observation _ -> Static 4
+        return (make_static application_precedence)
+    | Comp.Expression.Observation _ -> return (make_static 4)
     | Comp.Expression.Hole _
     | Comp.Expression.Box _
     | Comp.Expression.Box_hole _
@@ -324,91 +346,49 @@ module Comp_precedence = struct
     | Comp.Expression.Variable _
     | Comp.Expression.Constructor _
     | Comp.Expression.Program _ ->
-        Static 5
+        return (make_static 5)
+end
+
+module Make_comp_pattern_precedence (S : PRECEDENCE_STATE) :
+  COMP_PATTERN_PRECEDENCE with type state = S.state = struct
+  include Base
+
+  let application_precedence = 3
+
+  module Ord : Ord.ORD with type t = precedence =
+    (val Ord.make (compare ~application_precedence))
+
+  include S
 
   let precedence_of_comp_pattern pattern =
     match pattern with
-    | Comp.Pattern.Type_annotated _ -> Static 2
+    | Comp.Pattern.Type_annotated _ -> return (make_static 2)
     | Comp.Pattern.Application
-        { applicand = Comp.Pattern.Constant { operator; prefixed; _ }; _ }
-      when prefixed || Operator.is_prefix operator
-           (* Juxtapositions are of higher precedence than user-defined
-              operators *) ->
-        Static pattern_application_precedence
-    | Comp.Pattern.Application
-        { applicand = Comp.Pattern.Constant { operator; prefixed = false; _ }
-        ; _
-        }
-    (* User-defined operator application *) ->
-        User_defined_pattern (Operator.precedence operator)
-    | Comp.Pattern.Application _ -> Static pattern_application_precedence
+        { applicand = Comp.Pattern.Constant { identifier; _ }; _ } -> (
+        lookup_operator_precedence identifier >>= function
+        | Option.Some precedence -> return (make_user_defined precedence)
+        | Option.None -> return (make_static application_precedence))
+    | Comp.Pattern.Application _ ->
+        return (make_static application_precedence)
     | Comp.Pattern.Variable _
     | Comp.Pattern.Constant _
     | Comp.Pattern.Meta_object _
     | Comp.Pattern.Tuple _
     | Comp.Pattern.Wildcard _ ->
-        Static 4
-
-  include (
-    Ord.Make (struct
-      type nonrec t = t
-
-      let compare x y =
-        match (x, y) with
-        | Static x, Static y -> Int.compare x y
-        | User_defined_type x, User_defined_type y -> Int.compare x y
-        | User_defined_type _, Static y ->
-            if type_application_precedence <= y then -1 else 1
-        | Static x, User_defined_type _ ->
-            if x < type_application_precedence then -1 else 1
-        | User_defined_expression x, User_defined_expression y ->
-            Int.compare x y
-        | User_defined_expression _, Static y ->
-            if expression_application_precedence <= y then -1 else 1
-        | Static x, User_defined_expression _ ->
-            if x < expression_application_precedence then -1 else 1
-        | User_defined_pattern _, Static y ->
-            if pattern_application_precedence <= y then -1 else 1
-        | Static x, User_defined_pattern _ ->
-            if x < pattern_application_precedence then -1 else 1
-        | _ ->
-            Error.raise_violation
-              "[Precedence.compare] cannot compare precedences for \
-               user-defined type, expression and pattern constants"
-    end) :
-      Ord.ORD with type t := t)
+        return (make_static 4)
 end
 
-(** {1 Aliases} *)
-
-(** {2 LF} *)
-
-let precedence_of_lf_kind = Lf_precedence.precedence_of_lf_kind
-
-let precedence_of_lf_typ = Lf_precedence.precedence_of_lf_typ
-
-let precedence_of_lf_term = Lf_precedence.precedence_of_lf_term
-
-(** {2 Contextual LF} *)
-
-let precedence_of_clf_typ = Clf_precedence.precedence_of_clf_typ
-
-let precedence_of_clf_term = Clf_precedence.precedence_of_clf_term
-
-let precedence_of_clf_term_pattern =
-  Clf_precedence.precedence_of_clf_term_pattern
-
-(** {2 Meta-Level} *)
-
-let precedence_of_schema = Meta_precedence.precedence_of_schema
-
-(** {2 Computation-Level} *)
-
-let precedence_of_comp_kind = Comp_precedence.precedence_of_comp_kind
-
-let precedence_of_comp_typ = Comp_precedence.precedence_of_comp_typ
-
-let precedence_of_comp_expression =
-  Comp_precedence.precedence_of_comp_expression
-
-let precedence_of_comp_pattern = Comp_precedence.precedence_of_comp_pattern
+module Make_precedences (S : PRECEDENCE_STATE) = struct
+  module Lf_precedence = Make_lf_precedence (S)
+  module Clf_precedence = Make_clf_precedence (S)
+  module Schema_precedence = Make_schema_precedence (S)
+  module Comp_sort_precedence = Make_comp_sort_precedence (S)
+  module Comp_expression_precedence = Make_comp_expression_precedence (S)
+  module Comp_pattern_precedence = Make_comp_pattern_precedence (S)
+  include Lf_precedence
+  include Clf_precedence
+  include Schema_precedence
+  include Comp_sort_precedence
+  include Comp_expression_precedence
+  include Comp_pattern_precedence
+end

@@ -19,7 +19,6 @@ module Signature_parser = Signature_parser
 
 (** {1 Disambiguation} *)
 
-module Shunting_yard = Shunting_yard
 module Application_disambiguation = Application_disambiguation
 module Lf_disambiguation = Lf_disambiguation
 module Clf_disambiguation = Clf_disambiguation
@@ -233,30 +232,35 @@ module Simple = struct
     in
     make_state ~disambiguation_state ~parser_state
 
+  let read_signature filename =
+    In_channel.with_open_bin filename (fun in_channel ->
+        let initial_location = Location.initial filename in
+        let _parser_state', signature =
+          run_exn (only signature)
+            (make_initial_parser_state_from_channel ~initial_location
+               in_channel)
+        in
+        signature)
+
+  let read_signature_entries filename =
+    In_channel.with_open_bin filename (fun in_channel ->
+        let initial_location = Location.initial filename in
+        let _parser_state', entries =
+          run_exn
+            (only (many signature_entry))
+            (make_initial_parser_state_from_channel ~initial_location
+               in_channel)
+        in
+        entries)
+
   let parse_multi_file_signature files =
     let (List1.T (x, xs)) = files in
     let signature =
-      let _parser_state', signature =
-        In_channel.with_open_bin x (fun in_channel ->
-            let initial_location = Location.initial x in
-            run_exn (only signature)
-              (make_initial_parser_state_from_channel ~initial_location
-                 in_channel))
-      in
-      let xs_entries =
-        List.map
-          (fun filename ->
-            let _parser_state', entries =
-              In_channel.with_open_bin filename (fun in_channel ->
-                  let initial_location = Location.initial filename in
-                  run_exn
-                    (only (many signature_entry))
-                    (make_initial_parser_state_from_channel ~initial_location
-                       in_channel))
-            in
-            entries)
-          xs
-      in
+      (* For OCaml >= 5, spawn a parallel domain for each call to
+         {!read_signature} and {!read_signature_entries}, then join those
+         domains before [List.flatten (x_entries :: xs_entries)] *)
+      let signature = read_signature x in
+      let xs_entries = List.map read_signature_entries xs in
       let { Synprs.Signature.global_pragmas; entries = x_entries } =
         signature
       in

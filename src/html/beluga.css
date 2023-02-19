@@ -54,28 +54,28 @@ code {
 .variable {
 }
 
-.constant .constructor,
-.constant .destructor,
-.constant .lf-term-constant {
+.constant.constructor,
+.constant.destructor,
+.constant.lf-term-constant {
   color: #335c85;
   font-weight: bold;
 }
 
-.constant .lf-type-constant,
-.constant .computation-inductive-type-constant,
-.constant .computation-stratified-type-constant,
-.constant .computation-coinductive-type-constant,
-.constant .computation-abbreviation-type-constant {
+.constant.lf-type-constant,
+.constant.computation-inductive-type-constant,
+.constant.computation-stratified-type-constant,
+.constant.computation-coinductive-type-constant,
+.constant.computation-abbreviation-type-constant {
   color: #660000;
   font-weight: bold;
 }
 
-.constant .context-schema {
+.constant.context-schema {
   color: #6600cc;
   font-weight: bold;
 }
 
-.constant .program {
+.constant.program {
   color: #660033;
   font-weight: bold;
 }

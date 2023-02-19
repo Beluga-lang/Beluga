@@ -2,17 +2,11 @@
   "entries": [
     {
       "sort": "lf_type_constant",
-      "identifier": "nat",
-      "fixity": "prefix",
-      "arity": 0,
-      "precedence": 1
+      "identifier": "nat"
     },
     {
       "sort": "lf_term_constant",
-      "identifier": "z",
-      "fixity": "prefix",
-      "arity": 0,
-      "precedence": 1
+      "identifier": "z"
     },
     {
       "sort": "lf_term_constant",
@@ -23,24 +17,15 @@
     },
     {
       "sort": "lf_type_constant",
-      "identifier": "sum",
-      "fixity": "prefix",
-      "arity": 3,
-      "precedence": 1
+      "identifier": "sum"
     },
     {
       "sort": "lf_term_constant",
-      "identifier": "sum/z",
-      "fixity": "prefix",
-      "arity": 0,
-      "precedence": 1
+      "identifier": "sum/z"
     },
     {
       "sort": "lf_term_constant",
-      "identifier": "sum/s",
-      "fixity": "prefix",
-      "arity": 1,
-      "precedence": 1
+      "identifier": "sum/s"
     },
     {
       "sort": "module",
@@ -48,17 +33,11 @@
       "entries": [
         {
           "sort": "lf_type_constant",
-          "identifier": "nat",
-          "fixity": "prefix",
-          "arity": 0,
-          "precedence": 1
+          "identifier": "nat"
         },
         {
           "sort": "lf_term_constant",
-          "identifier": "z",
-          "fixity": "prefix",
-          "arity": 0,
-          "precedence": 1
+          "identifier": "z"
         },
         {
           "sort": "lf_term_constant",
@@ -69,24 +48,15 @@
         },
         {
           "sort": "lf_type_constant",
-          "identifier": "sum",
-          "fixity": "prefix",
-          "arity": 3,
-          "precedence": 1
+          "identifier": "sum"
         },
         {
           "sort": "lf_term_constant",
-          "identifier": "sum/z",
-          "fixity": "prefix",
-          "arity": 0,
-          "precedence": 1
+          "identifier": "sum/z"
         },
         {
           "sort": "lf_term_constant",
-          "identifier": "sum/s",
-          "fixity": "prefix",
-          "arity": 1,
-          "precedence": 1
+          "identifier": "sum/s"
         }
       ]
     },
@@ -100,45 +70,30 @@
           "entries": [
             {
               "sort": "lf_type_constant",
-              "identifier": "nat",
-              "fixity": "prefix",
-              "arity": 0,
-              "precedence": 1
+              "identifier": "nat"
             },
             {
               "sort": "lf_term_constant",
-              "identifier": "z",
-              "fixity": "prefix",
-              "arity": 0,
-              "precedence": 1
+              "identifier": "z"
             },
             {
               "sort": "lf_term_constant",
               "identifier": "s",
-              "fixity": "prefix",
               "arity": 1,
+              "fixity": "prefix",
               "precedence": 1
             },
             {
               "sort": "lf_type_constant",
-              "identifier": "sum",
-              "fixity": "prefix",
-              "arity": 3,
-              "precedence": 1
+              "identifier": "sum"
             },
             {
               "sort": "lf_term_constant",
-              "identifier": "sum/z",
-              "fixity": "prefix",
-              "arity": 0,
-              "precedence": 1
+              "identifier": "sum/z"
             },
             {
               "sort": "lf_term_constant",
-              "identifier": "sum/s",
-              "fixity": "prefix",
-              "arity": 1,
-              "precedence": 1
+              "identifier": "sum/s"
             },
             {
               "sort": "program_constant",
@@ -148,6 +103,7 @@
               "sort": "program_constant",
               "identifier": "plus",
               "fixity": "infix",
+              "arity": 2,
               "associativity": "right_associative",
               "precedence": 2
             },
@@ -161,70 +117,52 @@
     },
     {
       "sort": "lf_type_constant",
-      "identifier": "tp",
-      "fixity": "prefix",
-      "arity": 0,
-      "precedence": 1
+      "identifier": "tp"
     },
     {
       "sort": "lf_term_constant",
-      "identifier": "bool",
-      "fixity": "prefix",
-      "arity": 0,
-      "precedence": 1
+      "identifier": "bool"
     },
     {
       "sort": "lf_term_constant",
       "identifier": "arrow",
+      "arity": 2,
       "fixity": "infix",
       "associativity": "right_associative",
       "precedence": 2
     },
     {
       "sort": "lf_type_constant",
-      "identifier": "term",
-      "fixity": "prefix",
-      "arity": 1,
-      "precedence": 1
+      "identifier": "term"
     },
     {
       "sort": "lf_type_constant",
-      "identifier": "target",
-      "fixity": "prefix",
-      "arity": 1,
-      "precedence": 1
+      "identifier": "target"
     },
     {
       "sort": "lf_term_constant",
       "identifier": "has_type",
+      "arity": 2,
       "fixity": "infix",
       "associativity": "non_associative",
       "precedence": 3
     },
     {
       "sort": "lf_type_constant",
-      "identifier": "exp",
-      "fixity": "prefix",
-      "arity": 0,
-      "precedence": 1
+      "identifier": "exp"
     },
     {
       "sort": "lf_term_constant",
-      "identifier": "app",
-      "fixity": "prefix",
-      "arity": 2,
-      "precedence": 3
+      "identifier": "app"
     },
     {
       "sort": "lf_term_constant",
-      "identifier": "lam",
-      "fixity": "prefix",
-      "arity": 1,
-      "precedence": 1
+      "identifier": "lam"
     },
     {
       "sort": "lf_type_constant",
       "identifier": "eq",
+      "arity": 2,
       "fixity": "infix",
       "associativity": "left_associative",
       "precedence": 1
@@ -232,30 +170,22 @@
     {
       "sort": "lf_type_constant",
       "identifier": "msteps",
+      "arity": 2,
       "fixity": "infix",
       "associativity": "right_associative",
       "precedence": 1
     },
     {
       "sort": "lf_type_constant",
-      "identifier": "a",
-      "fixity": "prefix",
-      "arity": 0,
-      "precedence": 1
+      "identifier": "a"
     },
     {
       "sort": "lf_type_constant",
-      "identifier": "b",
-      "fixity": "prefix",
-      "arity": 0,
-      "precedence": 1
+      "identifier": "b"
     },
     {
       "sort": "lf_type_constant",
-      "identifier": "c",
-      "fixity": "prefix",
-      "arity": 0,
-      "precedence": 1
+      "identifier": "c"
     },
     {
       "sort": "module",
@@ -263,38 +193,27 @@
       "entries": [
         {
           "sort": "lf_type_constant",
-          "identifier": "tp",
-          "fixity": "prefix",
-          "arity": 0,
-          "precedence": 1
+          "identifier": "tp"
         },
         {
           "sort": "lf_term_constant",
-          "identifier": "bool",
-          "fixity": "prefix",
-          "arity": 0,
-          "precedence": 1
+          "identifier": "bool"
         },
         {
           "sort": "lf_type_constant",
-          "identifier": "nat",
-          "fixity": "prefix",
-          "arity": 0,
-          "precedence": 1
+          "identifier": "nat"
         },
         {
           "sort": "lf_term_constant",
           "identifier": "arrow",
+          "arity": 2,
           "fixity": "infix",
           "associativity": "right_associative",
           "precedence": 2
         },
         {
           "sort": "lf_type_constant",
-          "identifier": "term",
-          "fixity": "prefix",
-          "arity": 1,
-          "precedence": 1
+          "identifier": "term"
         }
       ]
     },
@@ -317,20 +236,27 @@
     {
       "sort": "lf_term_constant",
       "identifier": "⊃",
+      "arity": 2,
       "fixity": "infix",
       "associativity": "right_associative",
       "precedence": 3
     },
     {
       "sort": "lf_term_constant",
-      "identifier": "⊤",
-      "fixity": "prefix",
-      "arity": 0,
-      "precedence": 1
+      "identifier": "⊂",
+      "arity": 2,
+      "fixity": "infix",
+      "associativity": "left_associative",
+      "precedence": 3
+    },
+    {
+      "sort": "lf_term_constant",
+      "identifier": "⊤"
     },
     {
       "sort": "lf_term_constant",
       "identifier": "∧",
+      "arity": 2,
       "fixity": "infix",
       "associativity": "right_associative",
       "precedence": 5
@@ -338,6 +264,7 @@
     {
       "sort": "lf_term_constant",
       "identifier": "∨",
+      "arity": 2,
       "fixity": "infix",
       "associativity": "right_associative",
       "precedence": 4
@@ -345,8 +272,8 @@
     {
       "sort": "lf_term_constant",
       "identifier": "¬",
-      "fixity": "prefix",
       "arity": 1,
+      "fixity": "prefix",
       "precedence": 10
     },
     {
@@ -356,20 +283,19 @@
     {
       "sort": "comp_inductive_type_constant",
       "identifier": "Leq",
+      "arity": 2,
       "fixity": "infix",
       "associativity": "non_associative",
       "precedence": 3
     },
     {
       "sort": "comp_constructor",
-      "identifier": "nil",
-      "fixity": "prefix",
-      "arity": 0,
-      "precedence": 3
+      "identifier": "nil"
     },
     {
       "sort": "comp_constructor",
       "identifier": "cons",
+      "arity": 2,
       "fixity": "infix",
       "associativity": "right_associative",
       "precedence": 3

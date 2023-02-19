@@ -6,6 +6,11 @@ open Synext_json
 open Assert
 open Beluga_parser.Simple
 
+let pp_signature ppf signature =
+  let state = Synext.Printing_state.initial ppf in
+  let module Printer = Synext.Make_pretty_printer (Synext.Printing_state) in
+  Printer.eval (Printer.pp_signature signature) state
+
 type entry =
   | File of string
   | Directory of string * entry list
@@ -62,6 +67,8 @@ let examples_directory = "../../examples"
 let compiler_tests = find_compiler_tests ~directory:examples_directory
 
 let make_compiler_test compiler_test_file =
+  let open OUnit2 in
+  compiler_test_file >:: fun _test_ctxt ->
   let beluga_source_files =
     Beluga_parser.Config_parser.read_configuration
       ~filename:compiler_test_file
@@ -70,11 +77,9 @@ let make_compiler_test compiler_test_file =
   | [] -> assert false
   | x :: xs ->
       let signature_source_files = List1.map Pair.snd (List1.from x xs) in
-      let open OUnit2 in
-      compiler_test_file >:: fun _test_ctxt ->
       let signature = parse_multi_file_signature signature_source_files in
       let printed_signature =
-        Format.asprintf "%a@." Synext.pp_signature signature
+        Format.asprintf "%a@." pp_signature signature
       in
       let signature' =
         eval parse_only_signature

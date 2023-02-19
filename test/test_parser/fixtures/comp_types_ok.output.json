@@ -64,13 +64,6 @@
                   "stop_column": 13
                 }
               },
-              "prefixed": false,
-              "operator": {
-                "fixity": "prefix",
-                "associativity": "right-associative",
-                "arity": 0,
-                "precedence": 1
-              },
               "location": {
                 "filename": "comp_types_ok.input.bel",
                 "start_line": 7,
@@ -154,13 +147,6 @@
                       "stop_column": 28
                     }
                   },
-                  "prefixed": false,
-                  "operator": {
-                    "fixity": "prefix",
-                    "associativity": "right-associative",
-                    "arity": 0,
-                    "precedence": 1
-                  },
                   "location": {
                     "filename": "comp_types_ok.input.bel",
                     "start_line": 7,
@@ -207,13 +193,6 @@
                           "stop_line": 7,
                           "stop_column": 41
                         }
-                      },
-                      "prefixed": false,
-                      "operator": {
-                        "fixity": "infix",
-                        "associativity": "non-associative",
-                        "arity": 2,
-                        "precedence": 3
                       },
                       "location": {
                         "filename": "comp_types_ok.input.bel",
@@ -379,13 +358,6 @@
                           "stop_column": 61
                         }
                       },
-                      "prefixed": false,
-                      "operator": {
-                        "fixity": "infix",
-                        "associativity": "non-associative",
-                        "arity": 2,
-                        "precedence": 3
-                      },
                       "location": {
                         "filename": "comp_types_ok.input.bel",
                         "start_line": 7,
@@ -508,13 +480,6 @@
                                     "stop_line": 7,
                                     "stop_column": 66
                                   }
-                                },
-                                "prefixed": false,
-                                "operator": {
-                                  "fixity": "prefix",
-                                  "associativity": "right-associative",
-                                  "arity": 1,
-                                  "precedence": 1
                                 },
                                 "location": {
                                   "filename": "comp_types_ok.input.bel",

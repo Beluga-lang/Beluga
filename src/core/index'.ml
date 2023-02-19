@@ -731,10 +731,10 @@ module Make (Indexing_state : INDEXING_STATE) :
     | Synext.Comp.Expression.Variable { location; identifier } ->
         Obj.magic ()
     | Synext.Comp.Expression.Constructor
-        { location; identifier; operator; prefixed } ->
+        { location; identifier } ->
         Obj.magic ()
     | Synext.Comp.Expression.Program
-        { location; identifier; operator; prefixed } ->
+        { location; identifier } ->
         Obj.magic ()
     | Synext.Comp.Expression.Fn { location; parameters; body } ->
         Obj.magic ()

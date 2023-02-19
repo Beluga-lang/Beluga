@@ -6,7 +6,8 @@ module type DISAMBIGUATION_STATE = sig
 
   type data = private
     { location : Location.t
-    ; operator : Operator.t option
+    ; operator : Operator.t Option.t
+    ; arity : Int.t Option.t
     }
 
   type entry = private
@@ -35,12 +36,6 @@ module type DISAMBIGUATION_STATE = sig
 
   val add_lf_term_variable : ?location:Location.t -> Identifier.t -> Unit.t t
 
-  val add_lf_type_constant :
-    ?location:Location.t -> Operator.t -> Identifier.t -> Unit.t t
-
-  val add_lf_term_constant :
-    ?location:Location.t -> Operator.t -> Identifier.t -> Unit.t t
-
   val add_meta_variable : ?location:Location.t -> Identifier.t -> Unit.t t
 
   val add_parameter_variable :
@@ -51,33 +46,40 @@ module type DISAMBIGUATION_STATE = sig
 
   val add_context_variable : ?location:Location.t -> Identifier.t -> Unit.t t
 
-  val add_schema_constant : ?location:Location.t -> Identifier.t -> Unit.t t
-
   val add_computation_variable :
     ?location:Location.t -> Identifier.t -> Unit.t t
 
+  val add_lf_type_constant :
+    ?location:Location.t -> ?arity:Int.t -> Identifier.t -> Unit.t t
+
+  val add_lf_term_constant :
+    ?location:Location.t -> ?arity:Int.t -> Identifier.t -> Unit.t t
+
+  val add_schema_constant :
+    ?location:Location.t -> ?arity:Int.t -> Identifier.t -> Unit.t t
+
   val add_inductive_computation_type_constant :
-    ?location:Location.t -> Operator.t -> Identifier.t -> Unit.t t
+    ?location:Location.t -> ?arity:Int.t -> Identifier.t -> Unit.t t
 
   val add_stratified_computation_type_constant :
-    ?location:Location.t -> Operator.t -> Identifier.t -> Unit.t t
+    ?location:Location.t -> ?arity:Int.t -> Identifier.t -> Unit.t t
 
   val add_coinductive_computation_type_constant :
-    ?location:Location.t -> Operator.t -> Identifier.t -> Unit.t t
+    ?location:Location.t -> ?arity:Int.t -> Identifier.t -> Unit.t t
 
   val add_abbreviation_computation_type_constant :
-    ?location:Location.t -> Operator.t -> Identifier.t -> Unit.t t
+    ?location:Location.t -> ?arity:Int.t -> Identifier.t -> Unit.t t
 
   val add_computation_term_constructor :
-    ?location:Location.t -> Operator.t -> Identifier.t -> Unit.t t
+    ?location:Location.t -> ?arity:Int.t -> Identifier.t -> Unit.t t
 
   val add_computation_term_destructor :
-    ?location:Location.t -> Identifier.t -> Unit.t t
+    ?location:Location.t -> ?arity:Int.t -> Identifier.t -> Unit.t t
 
   val add_query : ?location:Location.t -> Identifier.t -> Unit.t t
 
   val add_program_constant :
-    ?location:Location.t -> ?operator:Operator.t -> Identifier.t -> Unit.t t
+    ?location:Location.t -> ?arity:Int.t -> Identifier.t -> Unit.t t
 
   exception Unbound_identifier of Identifier.t
 
@@ -106,9 +108,6 @@ module type DISAMBIGUATION_STATE = sig
        | `Totally_unbound of Identifier.t List1.t
        ]
        t
-
-  val modify_operator :
-    Qualified_identifier.t -> (Operator.t -> Operator.t) -> Unit.t t
 
   val add_synonym :
        ?location:Location.t
@@ -185,6 +184,13 @@ module type DISAMBIGUATION_STATE = sig
 
   val with_module_declarations :
     declarations:'a t -> module_identifier:Identifier.t -> 'a t
+
+  val modify_operator :
+       Qualified_identifier.t
+    -> (Operator.t Option.t -> arity:Int.t -> Operator.t Option.t)
+    -> Unit.t t
+
+  val lookup_operator : Qualified_identifier.t -> Operator.t Option.t t
 end
 
 module Persistent_disambiguation_state : sig

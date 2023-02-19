@@ -13,8 +13,6 @@ open Support
 open Beluga_syntax
 open Common_disambiguation
 
-[@@@warning "-A-4-44"]
-
 (** {1 Exceptions} *)
 
 (** {2 Exceptions for pragma applications} *)
@@ -89,132 +87,73 @@ struct
 
   (** {1 Disambiguation Helpers} *)
 
-  let default_precedence = 0
-
-  let make_default_prefix_operator ~arity =
-    Operator.make_prefix ~arity ~precedence:default_precedence
-
-  let make_default_lf_type_constant_operator lf_kind =
-    let explicit_arguments = Synprs.explicit_arguments_lf_kind lf_kind in
-    make_default_prefix_operator ~arity:explicit_arguments
-
-  let make_default_lf_type_constant_operator' lf_kind' =
-    let explicit_arguments = Synext.explicit_arguments_lf_kind lf_kind' in
-    make_default_prefix_operator ~arity:explicit_arguments
-
-  let make_default_lf_term_constant_operator lf_typ =
-    let explicit_arguments = Synprs.explicit_arguments_lf_typ lf_typ in
-    make_default_prefix_operator ~arity:explicit_arguments
-
-  let make_default_lf_term_constant_operator' lf_typ' =
-    let explicit_arguments = Synext.explicit_arguments_lf_typ lf_typ' in
-    make_default_prefix_operator ~arity:explicit_arguments
-
-  let make_default_comp_typ_constant_operator comp_kind =
-    let explicit_arguments = Synprs.explicit_arguments_comp_kind comp_kind in
-    make_default_prefix_operator ~arity:explicit_arguments
-
-  let make_default_comp_typ_constant_operator' comp_kind' =
-    let explicit_arguments =
-      Synext.explicit_arguments_comp_kind comp_kind'
-    in
-    make_default_prefix_operator ~arity:explicit_arguments
-
-  let make_default_comp_constructor_operator comp_typ =
-    let explicit_arguments = Synprs.explicit_arguments_comp_typ comp_typ in
-    make_default_prefix_operator ~arity:explicit_arguments
-
-  let make_default_comp_constructor_operator' comp_typ' =
-    let explicit_arguments = Synext.explicit_arguments_comp_typ comp_typ' in
-    make_default_prefix_operator ~arity:explicit_arguments
-
-  let make_default_program_constant_operator comp_typ =
-    let explicit_arguments = Synprs.explicit_arguments_comp_typ comp_typ in
-    make_default_prefix_operator ~arity:explicit_arguments
-
-  let make_default_program_constant_operator' comp_typ' =
-    let explicit_arguments = Synext.explicit_arguments_comp_typ comp_typ' in
-    make_default_prefix_operator ~arity:explicit_arguments
-
-  let make_default_comp_destructor_operator comp_typ =
-    let explicit_arguments = Synprs.explicit_arguments_comp_typ comp_typ in
-    make_default_prefix_operator ~arity:explicit_arguments
-
-  let make_default_comp_destructor_operator' comp_typ' =
-    let explicit_arguments = Synext.explicit_arguments_comp_typ comp_typ' in
-    make_default_prefix_operator ~arity:explicit_arguments
+  let default_precedence = 20
 
   let add_default_lf_type_constant identifier kind =
-    let operator = make_default_lf_type_constant_operator kind in
-    add_lf_type_constant operator identifier
+    let arity = Synprs.explicit_arguments_lf_kind kind in
+    add_lf_type_constant ~arity identifier
 
   let add_default_lf_type_constant' identifier kind' =
-    let operator = make_default_lf_type_constant_operator' kind' in
-    add_lf_type_constant operator identifier
+    let arity = Synext.explicit_arguments_lf_kind kind' in
+    add_lf_type_constant ~arity identifier
 
   let add_default_lf_term_constant identifier typ =
-    let operator = make_default_lf_term_constant_operator typ in
-    add_lf_term_constant operator identifier
+    let arity = Synprs.explicit_arguments_lf_typ typ in
+    add_lf_term_constant ~arity identifier
 
   let add_default_lf_term_constant' identifier typ' =
-    let operator = make_default_lf_term_constant_operator' typ' in
-    add_lf_term_constant operator identifier
+    let arity = Synext.explicit_arguments_lf_typ typ' in
+    add_lf_term_constant ~arity identifier
 
   let add_default_inductive_comp_typ_constant identifier kind =
-    let operator = make_default_comp_typ_constant_operator kind in
-    add_inductive_computation_type_constant operator identifier
+    let arity = Synprs.explicit_arguments_comp_kind kind in
+    add_inductive_computation_type_constant ~arity identifier
 
   let add_default_inductive_comp_typ_constant' identifier kind' =
-    let operator = make_default_comp_typ_constant_operator' kind' in
-    add_inductive_computation_type_constant operator identifier
+    let arity = Synext.explicit_arguments_comp_kind kind' in
+    add_inductive_computation_type_constant ~arity identifier
 
   let add_default_stratified_comp_typ_constant identifier kind =
-    let operator = make_default_comp_typ_constant_operator kind in
-    add_stratified_computation_type_constant operator identifier
+    let arity = Synprs.explicit_arguments_comp_kind kind in
+    add_stratified_computation_type_constant ~arity identifier
 
   let add_default_stratified_comp_typ_constant' identifier kind' =
-    let operator = make_default_comp_typ_constant_operator' kind' in
-    add_stratified_computation_type_constant operator identifier
+    let arity = Synext.explicit_arguments_comp_kind kind' in
+    add_stratified_computation_type_constant ~arity identifier
 
   let add_default_abbreviation_comp_typ_constant identifier kind =
-    let operator = make_default_comp_typ_constant_operator kind in
-    add_abbreviation_computation_type_constant operator identifier
+    let arity = Synprs.explicit_arguments_comp_kind kind in
+    add_abbreviation_computation_type_constant ~arity identifier
 
   let add_default_abbreviation_comp_typ_constant' identifier kind' =
-    let operator = make_default_comp_typ_constant_operator' kind' in
-    add_abbreviation_computation_type_constant operator identifier
+    let arity = Synext.explicit_arguments_comp_kind kind' in
+    add_abbreviation_computation_type_constant ~arity identifier
 
   let add_default_coinductive_comp_typ_constant identifier kind =
-    let operator = make_default_comp_typ_constant_operator kind in
-    add_coinductive_computation_type_constant operator identifier
+    let arity = Synprs.explicit_arguments_comp_kind kind in
+    add_coinductive_computation_type_constant ~arity identifier
 
   let add_default_coinductive_comp_typ_constant' identifier kind' =
-    let operator = make_default_comp_typ_constant_operator' kind' in
-    add_coinductive_computation_type_constant operator identifier
+    let arity = Synext.explicit_arguments_comp_kind kind' in
+    add_coinductive_computation_type_constant ~arity identifier
 
   let add_default_comp_constructor_constant identifier typ =
-    let operator = make_default_comp_constructor_operator typ in
-    add_computation_term_constructor operator identifier
+    let arity = Synprs.explicit_arguments_comp_typ typ in
+    add_computation_term_constructor ~arity identifier
 
   let add_default_comp_constructor_constant' identifier typ' =
-    let operator = make_default_comp_constructor_operator' typ' in
-    add_computation_term_constructor operator identifier
+    let arity = Synext.explicit_arguments_comp_typ typ' in
+    add_computation_term_constructor ~arity identifier
 
   let add_default_program_constant ?typ identifier =
-    match typ with
-    | Option.Some typ ->
-        let operator = make_default_program_constant_operator typ in
-        add_program_constant ~operator identifier
-    | Option.None -> add_program_constant identifier
+    let arity = Option.map Synprs.explicit_arguments_comp_typ typ in
+    add_program_constant ?arity identifier
 
-  let add_default_program_constant' ?typ' identifier =
-    match typ' with
-    | Option.Some typ' ->
-        let operator = make_default_program_constant_operator' typ' in
-        add_program_constant ~operator identifier
-    | Option.None -> add_program_constant identifier
+  let[@warning "-32"] add_default_program_constant' ?typ' identifier =
+    let arity = Option.map Synext.explicit_arguments_comp_typ typ' in
+    add_program_constant ?arity identifier
 
-  let rec add_recursive_declaration declaration =
+  let add_recursive_declaration declaration =
     match declaration with
     | Synprs.Signature.Declaration.Raw_lf_typ_or_term_constant _
     (* Old style LF declarations can't be disambiguated without knowing the
@@ -275,9 +214,8 @@ struct
       [precedence]. *)
   let make_operator_prefix ?(precedence = default_precedence)
       operator_identifier =
-    modify_operator operator_identifier (fun operator ->
-        let arity = Operator.arity operator in
-        if arity > 0 then Operator.make_prefix ~arity ~precedence
+    modify_operator operator_identifier (fun _operator ~arity ->
+        if arity = 1 then Option.some (Operator.make_prefix ~precedence)
         else
           Error.raise_at1
             (Qualified_identifier.location operator_identifier)
@@ -297,9 +235,9 @@ struct
   let make_operator_infix ?(precedence = default_precedence) ?associativity
       operator_identifier =
     let* associativity = get_default_associativity_opt associativity in
-    modify_operator operator_identifier (fun operator ->
-        let arity = Operator.arity operator in
-        if arity = 2 then Operator.make_infix ~associativity ~precedence
+    modify_operator operator_identifier (fun _operator ~arity ->
+        if arity = 2 then
+          Option.some (Operator.make_infix ~associativity ~precedence)
         else
           Error.raise_at1
             (Qualified_identifier.location operator_identifier)
@@ -313,9 +251,8 @@ struct
       Only operators with arity [1] may be converted to postfix operators. *)
   let make_operator_postfix ?(precedence = default_precedence)
       operator_identifier =
-    modify_operator operator_identifier (fun operator ->
-        let arity = Operator.arity operator in
-        if arity = 1 then Operator.make_postfix ~precedence
+    modify_operator operator_identifier (fun _operator ~arity ->
+        if arity = 1 then Option.some (Operator.make_postfix ~precedence)
         else
           Error.raise_at1
             (Qualified_identifier.location operator_identifier)

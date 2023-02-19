@@ -12,7 +12,6 @@ module Inductivity = Inductivity
 (** {1 Pretty-Printing} *)
 
 module Parenthesizer = Parenthesizer
-module Parenthesizer_state = Parenthesizer_state
 
 (** {1 Identifiers} *)
 

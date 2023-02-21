@@ -39,7 +39,7 @@ let digit = [%sedlex.regexp? '0' .. '9']
 let reserved_character =
   [%sedlex.regexp?
     ( '.' | ',' | ':' | ';' | '%' | '|' | '"' | '\\' | '(' | ')' | '[' | ']'
-    | '{' | '}' | '<' | '>' )]
+    | '{' | '}' | '<' | '>' | 0x22a2 )]
 
 let ident_continue =
   [%sedlex.regexp?

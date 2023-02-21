@@ -2686,5 +2686,109 @@
         "stop_column": 25
       }
     }
+  ],
+  [
+    "Meta.Object.Contextual_term",
+    {
+      "context": [
+        "CLF.Context",
+        {
+          "head": [
+            "CLF.Context.Head.None",
+            {
+              "location": {
+                "filename": "meta_objects_ok.input.bel",
+                "start_line": 79,
+                "start_column": 2,
+                "stop_line": 79,
+                "stop_column": 2
+              }
+            }
+          ],
+          "bindings": [
+            {
+              "identifier": {
+                "name": "z",
+                "location": {
+                  "filename": "meta_objects_ok.input.bel",
+                  "start_line": 79,
+                  "start_column": 2,
+                  "stop_line": 79,
+                  "stop_column": 3
+                }
+              },
+              "typ": [
+                "CLF.Typ.Constant",
+                {
+                  "identifier": {
+                    "name": {
+                      "name": "nat",
+                      "location": {
+                        "filename": "meta_objects_ok.input.bel",
+                        "start_line": 79,
+                        "start_column": 6,
+                        "stop_line": 79,
+                        "stop_column": 9
+                      }
+                    },
+                    "namespaces": [],
+                    "location": {
+                      "filename": "meta_objects_ok.input.bel",
+                      "start_line": 79,
+                      "start_column": 6,
+                      "stop_line": 79,
+                      "stop_column": 9
+                    }
+                  },
+                  "location": {
+                    "filename": "meta_objects_ok.input.bel",
+                    "start_line": 79,
+                    "start_column": 6,
+                    "stop_line": 79,
+                    "stop_column": 9
+                  }
+                }
+              ]
+            }
+          ],
+          "location": {
+            "filename": "meta_objects_ok.input.bel",
+            "start_line": 79,
+            "start_column": 2,
+            "stop_line": 79,
+            "stop_column": 9
+          }
+        }
+      ],
+      "term": [
+        "CLF.Term.Variable",
+        {
+          "identifier": {
+            "name": "z",
+            "location": {
+              "filename": "meta_objects_ok.input.bel",
+              "start_line": 79,
+              "start_column": 10,
+              "stop_line": 79,
+              "stop_column": 11
+            }
+          },
+          "location": {
+            "filename": "meta_objects_ok.input.bel",
+            "start_line": 79,
+            "start_column": 10,
+            "stop_line": 79,
+            "stop_column": 11
+          }
+        }
+      ],
+      "location": {
+        "filename": "meta_objects_ok.input.bel",
+        "start_line": 79,
+        "start_column": 1,
+        "stop_line": 79,
+        "stop_column": 12
+      }
+    }
   ]
 ]

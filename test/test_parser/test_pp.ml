@@ -11,6 +11,11 @@ let pp_signature ppf signature =
   let module Printer = Synext.Make_pretty_printer (Synext.Printing_state) in
   Printer.eval (Printer.pp_signature signature) state
 
+let pp_html_signature ppf signature =
+  let state = Beluga_html.Persistent_html_state.initial ppf in
+  let module Printer = Beluga_html.Make (Beluga_html.Persistent_html_state) in
+  Printer.eval (Printer.pp_signature signature) state
+
 type entry =
   | File of string
   | Directory of string * entry list
@@ -66,7 +71,7 @@ let examples_directory = "../../examples"
 
 let compiler_tests = find_compiler_tests ~directory:examples_directory
 
-let make_compiler_test compiler_test_file =
+let make_compiler_test ?(save_pp_to_file = true) compiler_test_file =
   let open OUnit2 in
   compiler_test_file >:: fun _test_ctxt ->
   let beluga_source_files =
@@ -78,6 +83,10 @@ let make_compiler_test compiler_test_file =
   | x :: xs ->
       let signature_source_files = List1.map Pair.snd (List1.from x xs) in
       let signature = parse_multi_file_signature signature_source_files in
+      if save_pp_to_file then
+        Support.Files.with_pp_to_file
+          (Filename.remove_extension compiler_test_file ^ ".pp")
+          (fun ppf -> Format.fprintf ppf "%a@." pp_signature signature);
       let printed_signature =
         Format.asprintf "%a@." pp_signature signature
       in
@@ -91,4 +100,26 @@ let make_compiler_test compiler_test_file =
         Fun.(json_of_signature >> without_locations)
         ~expected:signature ~actual:signature'
 
-let tests = List.map make_compiler_test compiler_tests
+let make_html_test ?(save_pp_to_file = true) compiler_test_file =
+  let open OUnit2 in
+  compiler_test_file >:: fun _test_ctxt ->
+  let beluga_source_files =
+    Beluga_parser.Config_parser.read_configuration
+      ~filename:compiler_test_file
+  in
+  match beluga_source_files with
+  | [] -> assert false
+  | x :: xs ->
+      let signature_source_files = List1.map Pair.snd (List1.from x xs) in
+      let signature = parse_multi_file_signature signature_source_files in
+      if save_pp_to_file then
+        Support.Files.with_pp_to_file
+          (Filename.remove_extension compiler_test_file ^ ".html")
+          (fun ppf -> Format.fprintf ppf "%a@." pp_html_signature signature);
+      ignore (Format.asprintf "%a@." pp_html_signature signature : string)
+
+let tests =
+  let open OUnit2 in
+  [ "Pretty-printing" >::: List.map make_compiler_test compiler_tests
+  ; "HTML pretty-printing" >::: List.map make_html_test compiler_tests
+  ]

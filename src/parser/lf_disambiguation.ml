@@ -93,7 +93,7 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
   end
 
   module Lf_application_disambiguation =
-    Application_disambiguation.Make_application_parser (Lf_object)
+    Application_disambiguation.Make_application_disambiguation (Lf_object)
 
   let guard_operator_identifier expression identifier =
     lookup_operator identifier >>= function
@@ -360,7 +360,7 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
 
   and disambiguate_lf_application objects =
     let* objects' = traverse_list2 guard_operator objects in
-    return (Lf_application_disambiguation.parse_application objects')
+    return (Lf_application_disambiguation.disambiguate_application objects')
 
   and elaborate_lf_operand operand =
     match operand with

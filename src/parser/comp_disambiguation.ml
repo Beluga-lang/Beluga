@@ -132,7 +132,8 @@ module Make
   end
 
   module Comp_typ_application_disambiguation =
-    Application_disambiguation.Make_application_parser (Comp_sort_object)
+    Application_disambiguation.Make_application_disambiguation
+      (Comp_sort_object)
 
   let guard_typ_operator_identifier expression identifier =
     lookup_operator identifier >>= function
@@ -166,7 +167,7 @@ module Make
   end
 
   module Comp_expression_application_disambiguation =
-    Application_disambiguation.Make_application_parser
+    Application_disambiguation.Make_application_disambiguation
       (Comp_expression_object)
 
   let guard_expression_operator_identifier expression identifier =
@@ -487,7 +488,8 @@ module Make
 
   and disambiguate_comp_typ_application objects =
     let* objects' = traverse_list2 guard_typ_operator objects in
-    return (Comp_typ_application_disambiguation.parse_application objects')
+    return
+      (Comp_typ_application_disambiguation.disambiguate_application objects')
 
   and disambiguate_comp_expression = function
     | Synprs.Comp.Expression_object.Raw_identifier
@@ -832,7 +834,8 @@ module Make
   and disambiguate_comp_expression_application objects =
     let* objects' = traverse_list2 guard_expression_operator objects in
     return
-      (Comp_expression_application_disambiguation.parse_application objects')
+      (Comp_expression_application_disambiguation.disambiguate_application
+         objects')
 
   and elaborate_comp_expression_operand operand =
     match operand with
@@ -897,7 +900,8 @@ struct
   end
 
   module Comp_typ_application_disambiguation =
-    Application_disambiguation.Make_application_parser (Comp_sort_object)
+    Application_disambiguation.Make_application_disambiguation
+      (Comp_sort_object)
 
   let guard_typ_operator_identifier expression identifier =
     lookup_operator identifier >>= function
@@ -931,7 +935,8 @@ struct
   end
 
   module Comp_pattern_application_disambiguation =
-    Application_disambiguation.Make_application_parser (Comp_pattern_object)
+    Application_disambiguation.Make_application_disambiguation
+      (Comp_pattern_object)
 
   let guard_pattern_operator_identifier expression identifier =
     lookup_operator identifier >>= function
@@ -1131,7 +1136,8 @@ struct
 
   and disambiguate_comp_typ_application objects =
     let* objects' = traverse_list2 guard_typ_operator objects in
-    return (Comp_typ_application_disambiguation.parse_application objects')
+    return
+      (Comp_typ_application_disambiguation.disambiguate_application objects')
 
   and disambiguate_comp_pattern = function
     | Synprs.Comp.Pattern_object.Raw_identifier { location; identifier; _ }
@@ -1529,7 +1535,8 @@ struct
   and disambiguate_comp_pattern_application objects =
     let* objects' = traverse_list2 guard_pattern_operator objects in
     return
-      (Comp_pattern_application_disambiguation.parse_application objects')
+      (Comp_pattern_application_disambiguation.disambiguate_application
+         objects')
 
   and elaborate_comp_pattern_operand operand =
     match operand with

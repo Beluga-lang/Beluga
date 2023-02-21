@@ -172,7 +172,7 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
   end
 
   module Clf_application_disambiguation =
-    Application_disambiguation.Make_application_parser (Clf_object)
+    Application_disambiguation.Make_application_disambiguation (Clf_object)
 
   let guard_operator_identifier expression identifier =
     lookup_operator identifier >>= function
@@ -686,7 +686,7 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
 
   and disambiguate_clf_application objects =
     let* objects' = traverse_list2 guard_operator objects in
-    return (Clf_application_disambiguation.parse_application objects')
+    return (Clf_application_disambiguation.disambiguate_application objects')
 
   and elaborate_clf_operand operand =
     match operand with
@@ -710,7 +710,7 @@ struct
   (** {1 Disambiguation} *)
 
   module Clf_application_disambiguation =
-  Application_disambiguation.Make_application_parser (struct
+  Application_disambiguation.Make_application_disambiguation (struct
     type t = Synprs.clf_object
 
     type location = Location.t
@@ -1278,7 +1278,7 @@ struct
 
   and disambiguate_clf_application objects =
     let* objects' = traverse_list2 guard_operator objects in
-    return (Clf_application_disambiguation.parse_application objects')
+    return (Clf_application_disambiguation.disambiguate_application objects')
 
   and elaborate_clf_operand operand =
     match operand with

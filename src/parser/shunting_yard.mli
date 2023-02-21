@@ -1,5 +1,5 @@
 (** Disambiguation of expression applications with user-defined operators and
-    juxtapositions.
+    juxtapositions using Dijkstra's shunting yard algorithm.
 
     @author Marc-Antoine Ouimet *)
 
@@ -14,8 +14,9 @@ module type EXPRESSION = sig
   val location : t -> location
 end
 
-module type APPLICATION_DISAMBIGUATION = sig
-  type expression
+module Make_application_rewriter
+    (Expression : EXPRESSION with type location = Location.t) : sig
+  type expression = Expression.t
 
   type source
 
@@ -38,15 +39,3 @@ module type APPLICATION_DISAMBIGUATION = sig
   val disambiguate_application :
     source List2.t -> expression * target List1.t
 end
-
-module Make_application_parser
-    (Expression : EXPRESSION with type location = Location.t) :
-  APPLICATION_DISAMBIGUATION with type expression = Expression.t
-
-module Make_application_rewriter
-    (Expression : EXPRESSION with type location = Location.t) :
-  APPLICATION_DISAMBIGUATION with type expression = Expression.t
-
-module Make_application_disambiguation
-    (Expression : EXPRESSION with type location = Location.t) :
-  APPLICATION_DISAMBIGUATION with type expression = Expression.t

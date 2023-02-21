@@ -881,7 +881,9 @@ module Make (Indexing_state : INDEXING_STATE) :
         with_indexed_harpoon_command command (fun command' ->
             let* body' = index_harpoon_proof body in
             return (Synapx.Comp.Command (location, command', body')))
-    | Synext.Harpoon.Proof.Directive { location; directive } -> Obj.magic ()
+    | Synext.Harpoon.Proof.Directive { location; directive } ->
+        let* directive = index_harpoon_directive directive in
+        return (Synapx.Comp.Directive (location, directive))
 
   and with_indexed_harpoon_command :
         'a. Synext.harpoon_command -> (Synapx.Comp.command -> 'a t) -> 'a t =
@@ -906,14 +908,73 @@ module Make (Indexing_state : INDEXING_STATE) :
 
   and index_harpoon_directive = function
     | Synext.Harpoon.Directive.Intros { location; hypothetical } ->
-        Obj.magic ()
-    | Synext.Harpoon.Directive.Solve { location; solution } -> Obj.magic ()
+        let* hypothetical' = index_harpoon_hypothetical hypothetical in
+        return (Synapx.Comp.Intros (location, hypothetical'))
+    | Synext.Harpoon.Directive.Solve { location; solution } ->
+        let* solution' = index_comp_expression solution in
+        return (Synapx.Comp.Solve (location, solution'))
     | Synext.Harpoon.Directive.Split { location; scrutinee; branches } ->
-        Obj.magic ()
+        let* scrutinee' = index_comp_expression scrutinee in
+        let* branches' =
+          traverse_list1 index_harpoon_split_branch branches
+        in
+        return
+          (Synapx.Comp.Split (location, scrutinee', List1.to_list branches'))
     | Synext.Harpoon.Directive.Impossible { location; scrutinee } ->
-        Obj.magic ()
+        let* scrutinee' = index_comp_expression scrutinee in
+        (* TODO: The approximate syntax should have an [Impossible _]
+           constructor *)
+        return (Synapx.Comp.Split (location, scrutinee', []))
     | Synext.Harpoon.Directive.Suffices { location; scrutinee; branches } ->
-        Obj.magic ()
+        let* scrutinee' = index_comp_expression scrutinee in
+        let* branches' =
+          traverse_list index_harpoon_suffices_branch branches
+        in
+        return (Synapx.Comp.Suffices (location, scrutinee', branches'))
+
+  and index_harpoon_split_branch
+      { Synext.Harpoon.Split_branch.location; label; body } =
+    let* label' = index_harpoon_split_branch_label label in
+    let* body' = index_harpoon_hypothetical body in
+    return
+      { Synapx.Comp.case_label = label'
+      ; branch_body = body'
+      ; split_branch_loc = location
+      }
+
+  and index_harpoon_split_branch_label = function
+    | Synext.Harpoon.Split_branch.Label.Lf_constant { location; identifier }
+      ->
+        let* _ = index_of_lf_term_constant identifier in
+        let name = Name.make_from_qualified_identifier identifier in
+        (* TODO: The approximate syntax should have an [Lf_constant _]
+           constructor *)
+        return (Synapx.Comp.NamedCase (location, name))
+    | Synext.Harpoon.Split_branch.Label.Comp_constant
+        { location; identifier } ->
+        let* _ = index_of_comp_constructor identifier in
+        let name = Name.make_from_qualified_identifier identifier in
+        (* TODO: The approximate syntax should have a [Comp_constant _]
+           constructor *)
+        return (Synapx.Comp.NamedCase (location, name))
+    | Synext.Harpoon.Split_branch.Label.Bound_variable { location } ->
+        return (Synapx.Comp.BVarCase location)
+    | Synext.Harpoon.Split_branch.Label.Empty_context { location } ->
+        return (Synapx.Comp.ContextCase (Synapx.Comp.EmptyContext location))
+    | Synext.Harpoon.Split_branch.Label.Extended_context
+        { location; schema_element } ->
+        return
+          (Synapx.Comp.ContextCase
+             (Synapx.Comp.ExtendedBy (location, schema_element)))
+    | Synext.Harpoon.Split_branch.Label.Parameter_variable
+        { location; schema_element; projection } ->
+        return (Synapx.Comp.PVarCase (location, schema_element, projection))
+
+  and index_harpoon_suffices_branch
+      { Synext.Harpoon.Suffices_branch.location; goal; proof } =
+    let* goal' = index_comp_typ goal in
+    let* proof' = index_harpoon_proof proof in
+    return (location, goal', proof')
 
   and index_harpoon_hypothetical = function
     | { Synext.Harpoon.Hypothetical.location

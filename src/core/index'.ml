@@ -29,6 +29,11 @@ exception Unsupported_comp_typ_applicand
 
 exception Unsupported_comp_pattern_applicand
 
+exception Duplicate_identifiers_in_schema_some_clause of Identifier.t List2.t
+
+exception
+  Duplicate_identifiers_in_schema_block_clause of Identifier.t List2.t
+
 module type INDEXING_STATE = sig
   include State.STATE
 
@@ -68,6 +73,8 @@ module type INDEXING_STATE = sig
   val index_of_comp_constructor :
     Qualified_identifier.t -> Id.cid_comp_const t
 
+  val index_of_comp_program : Qualified_identifier.t -> Id.cid_prog t
+
   val index_of_comp_destructor : Qualified_identifier.t -> Id.cid_comp_dest t
 
   val index_of_lf_variable : Identifier.t -> Id.offset t
@@ -80,7 +87,14 @@ module type INDEXING_STATE = sig
 
   val index_of_substitution_variable : Identifier.t -> Id.offset t
 
+  val index_of_substitution_variable_opt :
+    Identifier.t -> Id.offset Option.t t
+
   val index_of_context_variable : Identifier.t -> Id.offset t
+
+  val index_of_context_variable_opt : Identifier.t -> Id.offset Option.t t
+
+  val index_of_comp_variable : Identifier.t -> Id.offset t
 
   val with_bound_lf_variable : Identifier.t -> 'a t -> 'a t
 
@@ -554,44 +568,86 @@ module Make (Indexing_state : INDEXING_STATE) :
         return (Synapx.LF.App (argument', spine')))
       arguments
 
+  and with_indexed_clf_context_bindings cPhi bindings f =
+    match bindings with
+    | [] -> f cPhi
+    | x :: xs ->
+        with_indexed_clf_context_binding x (fun y ->
+            with_indexed_clf_context_bindings (Synapx.LF.DDec (cPhi, y)) xs f)
+
+  and with_indexed_clf_context_binding (identifier, typ_opt) f =
+    let name = Name.make_from_identifier identifier in
+    match typ_opt with
+    | Option.None ->
+        with_bound_lf_variable identifier (f (Synapx.LF.TypDeclOpt name))
+    | Option.Some typ ->
+        let* typ' = index_clf_typ typ in
+        with_bound_lf_variable identifier
+          (f (Synapx.LF.TypDecl (name, typ')))
+
   and with_indexed_clf_context :
         'a. Synext.clf_context -> (Synapx.LF.dctx -> 'a t) -> 'a t =
    fun context f ->
     match context with
     | { Synext.CLF.Context.head = Synext.CLF.Context.Head.None _
-      ; bindings = []
+      ; bindings
       ; _
       } ->
-        f Synapx.LF.Null
-    | { Synext.CLF.Context.head = Synext.CLF.Context.Head.None _
-      ; bindings = _ :: _
-      ; _
-      } ->
-        Obj.magic ()
+        with_indexed_clf_context_bindings Synapx.LF.Null bindings f
     | { Synext.CLF.Context.head = Synext.CLF.Context.Head.Hole _
       ; bindings
       ; _
       } ->
-        Obj.magic ()
+        with_indexed_clf_context_bindings Synapx.LF.CtxHole bindings f
     | { Synext.CLF.Context.head =
           Synext.CLF.Context.Head.Context_variable { identifier; _ }
       ; bindings
       ; _
-      } ->
-        let* index = index_of_context_variable identifier in
-        Obj.magic ()
+      } -> (
+        index_of_context_variable_opt identifier >>= function
+        | Option.None ->
+            (* A free context variable *)
+            let name = Name.make_from_identifier identifier in
+            f (Synapx.LF.CtxVar (Synapx.LF.CtxName name))
+        | Option.Some index ->
+            (* A bound context variable *)
+            f (Synapx.LF.CtxVar (Synapx.LF.CtxOffset index)))
 
   and index_clf_context context = with_indexed_clf_context context return
 
   let rec index_meta_object = function
     | Synext.Meta.Object.Context { location; context } ->
-        (* TODO: Can be a free [CtxName] *) Obj.magic ()
+        let* context' = index_clf_context context in
+        return (location, Synapx.Comp.CObj context')
     | Synext.Meta.Object.Contextual_term { location; context; term } ->
-        Obj.magic ()
+        (* TODO: It is unclear why not all values [h] of type
+           {!type:Synapx.LF.head} are mapped to [Synapx.LF.Head h] when the
+           spine is [Synapx.LF.Nil]. This function was introduced in commit
+           95578f0e ("Improved parsing of substitutions", 2015-05-25). *)
+        let to_head_or_obj = function
+          | Synapx.LF.Root (_, (Synapx.LF.BVar _ as h), Synapx.LF.Nil)
+          | Synapx.LF.Root (_, (Synapx.LF.PVar _ as h), Synapx.LF.Nil)
+          | Synapx.LF.Root (_, (Synapx.LF.Proj _ as h), Synapx.LF.Nil) ->
+              Synapx.LF.Head h
+          | tM -> Synapx.LF.Obj tM
+        in
+        with_indexed_clf_context context (fun context' ->
+            let* term' = index_clf_term term in
+            let term'' = to_head_or_obj term' in
+            (* TODO: The approximate syntax should have a [MObj of normal]
+               constructor like in the internal syntax *)
+            return
+              ( location
+              , Synapx.Comp.ClObj
+                  (context', Synapx.LF.Dot (term'', Synapx.LF.EmptySub)) ))
     | Synext.Meta.Object.Plain_substitution { location; domain; range } ->
-        Obj.magic ()
+        with_indexed_clf_context domain (fun domain' ->
+            let* range' = index_clf_substitution range in
+            return (location, Synapx.Comp.ClObj (domain', range')))
     | Synext.Meta.Object.Renaming_substitution { location; domain; range } ->
-        Obj.magic ()
+        with_indexed_clf_context domain (fun domain' ->
+            let* range' = index_clf_substitution range in
+            return (location, Synapx.Comp.ClObj (domain', range')))
 
   and index_meta_type = function
     | Synext.Meta.Typ.Context_schema { location; schema } -> (
@@ -611,10 +667,62 @@ module Make (Indexing_state : INDEXING_STATE) :
             let* typ' = index_clf_typ typ in
             return (Synapx.LF.ClTyp (Synapx.LF.PTyp typ', context')))
     | Synext.Meta.Typ.Plain_substitution_typ { location; domain; range } ->
-        Obj.magic ()
+        with_indexed_clf_context domain (fun domain' ->
+            with_indexed_clf_context range (fun range' ->
+                return
+                  (Synapx.LF.ClTyp
+                     (Synapx.LF.STyp (Synapx.LF.Subst, range'), domain'))))
     | Synext.Meta.Typ.Renaming_substitution_typ { location; domain; range }
       ->
-        Obj.magic ()
+        with_indexed_clf_context domain (fun domain' ->
+            with_indexed_clf_context range (fun range' ->
+                return
+                  (Synapx.LF.ClTyp
+                     (Synapx.LF.STyp (Synapx.LF.Ren, range'), domain'))))
+
+  and with_indexed_lf_context_bindings_list1 cPhi (List1.T (x, xs)) f =
+    with_indexed_lf_context_binding x (fun y ->
+        with_indexed_lf_context_bindings_list (Synapx.LF.Dec (cPhi, y)) xs f)
+
+  and with_indexed_lf_context_bindings_list cPhi bindings f =
+    match bindings with
+    | [] -> f cPhi
+    | x :: xs ->
+        with_indexed_lf_context_binding x (fun y ->
+            with_indexed_lf_context_bindings_list
+              (Synapx.LF.Dec (cPhi, y))
+              xs f)
+
+  and with_indexed_lf_context_binding (identifier, typ) f =
+    let name = Name.make_from_identifier identifier in
+    let* typ' = index_clf_typ typ in
+    with_bound_lf_variable identifier (f (Synapx.LF.TypDecl (name, typ')))
+
+  and with_indexed_schema_some_clause some f =
+    match some with
+    | Option.None -> f Synapx.LF.Empty
+    | Option.Some some ->
+        with_indexed_lf_context_bindings_list1 Synapx.LF.Empty some f
+
+  and with_indexed_schema_block_clause_bindings_list1 bindings f =
+    match bindings with
+    | List1.T ((identifier, typ), []) ->
+        let name = Name.make_from_identifier identifier in
+        let* typ' = index_clf_typ typ in
+        return (Synapx.LF.SigmaLast (Option.some name, typ'))
+    | List1.T ((identifier, typ), x :: xs) ->
+        let name = Name.make_from_identifier identifier in
+        let* typ' = index_clf_typ typ in
+        with_bound_lf_variable identifier
+          (with_indexed_schema_block_clause_bindings_list1 (List1.from x xs)
+             (fun tRec -> return (Synapx.LF.SigmaElem (name, typ', tRec))))
+
+  and index_schema_block_clause = function
+    | `Record bindings ->
+        with_indexed_schema_block_clause_bindings_list1 bindings return
+    | `Unnamed typ ->
+        let* typ' = index_clf_typ typ in
+        return (Synapx.LF.SigmaLast (Option.none, typ'))
 
   and index_schema = function
     | Synext.Meta.Schema.Alternation { schemas; _ } ->
@@ -626,8 +734,34 @@ module Make (Indexing_state : INDEXING_STATE) :
         let* element' = index_schema_element element in
         return (Synapx.LF.Schema [ element' ])
 
+  and schema_some_clause_identifiers = function
+    | Option.None -> []
+    | Option.Some bindings -> List1.to_list (List1.map Pair.fst bindings)
+
+  and schema_block_clause_identifiers = function
+    | `Record bindings -> List1.to_list (List1.map Pair.fst bindings)
+    | `Unnamed _typ -> []
+
   and index_schema_element = function
-    | Synext.Meta.Schema.Element { location; some; block } -> Obj.magic ()
+    | Synext.Meta.Schema.Element { location; some; block } -> (
+        match
+          Identifier.find_duplicates (schema_some_clause_identifiers some)
+        with
+        | Option.Some duplicates ->
+            Error.raise_at1 location
+              (Duplicate_identifiers_in_schema_some_clause duplicates)
+        | Option.None -> (
+            match
+              Identifier.find_duplicates
+                (schema_block_clause_identifiers block)
+            with
+            | Option.Some duplicates ->
+                Error.raise_at1 location
+                  (Duplicate_identifiers_in_schema_block_clause duplicates)
+            | Option.None ->
+                with_indexed_schema_some_clause some (fun some' ->
+                    let* block' = index_schema_block_clause block in
+                    return (Synapx.LF.SchElem (some', block')))))
     | Synext.Meta.Schema.Constant { location; _ }
     | Synext.Meta.Schema.Alternation { location; _ } ->
         Error.raise_at1 location Unsupported_context_schema_element

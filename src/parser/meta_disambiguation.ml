@@ -221,17 +221,11 @@ module Make
       (with_disambiguated_clf_bindings_list xs (fun ys ->
            f (List1.from (identifier, typ') ys)))
 
-  and disambiguate_schema_block_clause :
-         (Identifier.t option * Synprs.clf_object) List1.t
-      -> [ `Record of (Identifier.t * Synext.clf_typ) List1.t
-         | `Unnamed of Synext.clf_typ
-         ]
-         t =
-   fun block ->
+  and disambiguate_schema_block_clause =
     (* Schema block-clauses are dependent, meaning that bound variables on
        the left of a declaration may appear in the type of a binding on the
        right. Bindings may not recursively refer to themselves.*)
-    match block with
+    function
     | List1.T ((Option.None, typ), []) ->
         let* typ' = disambiguate_clf_typ typ in
         return (`Unnamed typ')

@@ -9,7 +9,7 @@ module type EXPRESSION = sig
   val location : t -> location
 end
 
-module Make_expression_parser
+module Make_application_parser
     (Expression : EXPRESSION with type location = Location.t) : sig
   type source
 

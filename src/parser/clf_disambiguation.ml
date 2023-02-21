@@ -163,14 +163,16 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
 
   (** {1 Disambiguation} *)
 
-  module Clf_application_disambiguation =
-  Application_disambiguation.Make_expression_parser (struct
+  module Clf_object = struct
     type t = Synprs.clf_object
 
     type location = Location.t
 
     let location = Synprs.location_of_clf_object
-  end)
+  end
+
+  module Clf_application_disambiguation =
+    Application_disambiguation.Make_application_parser (Clf_object)
 
   let guard_operator_identifier expression identifier =
     lookup_operator identifier >>= function
@@ -708,7 +710,7 @@ struct
   (** {1 Disambiguation} *)
 
   module Clf_application_disambiguation =
-  Application_disambiguation.Make_expression_parser (struct
+  Application_disambiguation.Make_application_parser (struct
     type t = Synprs.clf_object
 
     type location = Location.t

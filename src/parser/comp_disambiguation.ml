@@ -123,14 +123,16 @@ module Make
   include Disambiguation_state
   include Meta_disambiguator
 
-  module Comp_typ_application_disambiguation =
-  Application_disambiguation.Make_expression_parser (struct
+  module Comp_sort_object = struct
     type t = Synprs.comp_sort_object
 
     type location = Location.t
 
     let location = Synprs.location_of_comp_sort_object
-  end)
+  end
+
+  module Comp_typ_application_disambiguation =
+    Application_disambiguation.Make_application_parser (Comp_sort_object)
 
   let guard_typ_operator_identifier expression identifier =
     lookup_operator identifier >>= function
@@ -155,14 +157,17 @@ module Make
         return
           (Comp_typ_application_disambiguation.make_expression expression)
 
-  module Comp_expression_application_disambiguation =
-  Application_disambiguation.Make_expression_parser (struct
+  module Comp_expression_object = struct
     type t = Synprs.comp_expression_object
 
     type location = Location.t
 
     let location = Synprs.location_of_comp_expression_object
-  end)
+  end
+
+  module Comp_expression_application_disambiguation =
+    Application_disambiguation.Make_application_parser
+      (Comp_expression_object)
 
   let guard_expression_operator_identifier expression identifier =
     lookup_operator identifier >>= function
@@ -883,14 +888,16 @@ struct
   include Disambiguation_state
   include Meta_pattern_disambiguator
 
-  module Comp_typ_application_disambiguation =
-  Application_disambiguation.Make_expression_parser (struct
+  module Comp_sort_object = struct
     type t = Synprs.comp_sort_object
 
     type location = Location.t
 
     let location = Synprs.location_of_comp_sort_object
-  end)
+  end
+
+  module Comp_typ_application_disambiguation =
+    Application_disambiguation.Make_application_parser (Comp_sort_object)
 
   let guard_typ_operator_identifier expression identifier =
     lookup_operator identifier >>= function
@@ -915,14 +922,16 @@ struct
         return
           (Comp_typ_application_disambiguation.make_expression expression)
 
-  module Comp_pattern_application_disambiguation =
-  Application_disambiguation.Make_expression_parser (struct
+  module Comp_pattern_object = struct
     type t = Synprs.comp_pattern_object
 
     type location = Location.t
 
     let location = Synprs.location_of_comp_pattern_object
-  end)
+  end
+
+  module Comp_pattern_application_disambiguation =
+    Application_disambiguation.Make_application_parser (Comp_pattern_object)
 
   let guard_pattern_operator_identifier expression identifier =
     lookup_operator identifier >>= function

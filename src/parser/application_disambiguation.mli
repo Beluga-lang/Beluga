@@ -13,7 +13,7 @@ module type EXPRESSION = sig
   val location : t -> location
 end
 
-module Make_expression_parser
+module Make_application_parser
     (Expression : EXPRESSION with type location = Location.t) : sig
   type source
 
@@ -35,4 +35,3 @@ module Make_expression_parser
 
   val parse_application : source List2.t -> Expression.t * target List1.t
 end
-[@@warning "-67"]

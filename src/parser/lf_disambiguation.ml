@@ -84,14 +84,16 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
 
   (** {1 Disambiguation} *)
 
-  module Lf_application_disambiguation =
-  Application_disambiguation.Make_expression_parser (struct
+  module Lf_object = struct
     type t = Synprs.lf_object
 
     type location = Location.t
 
     let location = Synprs.location_of_lf_object
-  end)
+  end
+
+  module Lf_application_disambiguation =
+    Application_disambiguation.Make_application_parser (Lf_object)
 
   let guard_operator_identifier expression identifier =
     lookup_operator identifier >>= function

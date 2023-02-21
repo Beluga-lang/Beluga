@@ -33,6 +33,14 @@ let join_all1_contramap get_location located_elements =
       join accumulated_location (get_location located_element))
     located_elements
 
+let join_all2_contramap get_location located_elements =
+  List2.fold_left get_location
+    (fun accumulated_location located_element ->
+      join accumulated_location (get_location located_element))
+    (fun accumulated_location located_element ->
+      join accumulated_location (get_location located_element))
+    located_elements
+
 let[@inline] is_ghost location = location.ghost
 
 let[@inline] start_offset location = Position.offset location.start

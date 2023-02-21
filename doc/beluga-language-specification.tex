@@ -132,6 +132,7 @@ Additionally, the following characters are reserved and cannot be used anywhere 
 \item \texttt{[ ]} \hfill (brackets)
 \item \texttt{\{ \}} \hfill (braces)
 \item \texttt{< >} \hfill (chevrons)
+\item \texttt{⊢} \hfill (turnstile \texttt{U+22A2})
 \end{itemize}
 \end{multicols}
 }
@@ -175,7 +176,7 @@ The production \synt{any} stands for any unicode character.
 
 <ascii-control> ::= `\\000' .. `\\031' | `\\127'
 
-<reserved-character> ::= `.' | `,' | `:' | `;' | `\%' | `|' | `"' | `\\' | `(' | `)' | `[' | `]' | `{' | `}' | `<' | `>'
+<reserved-character> ::= `.' | `,' | `:' | `;' | `\%' | `|' | `"' | `\\' | `(' | `)' | `[' | `]' | `{' | `}' | `<' | `>' | `⊢' \texttt{(* U+22A2 *)}
 
 <identifier-continue> ::= <any> - (<ascii-control> | <white-space> | <reserved-character>)
 

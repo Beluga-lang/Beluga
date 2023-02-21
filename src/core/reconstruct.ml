@@ -1017,7 +1017,7 @@ and elExpW cD cG e theta_tau =
      let e' = elExp cD' cG' e' (tau, C.mvar_dot1 theta) in
      Int.Comp.MLam (Location.ghost, u, e', Plicity.implicit)
 
-  | (Apx.Comp.Var _ | Apx.Comp.FVar _ | Apx.Comp.DataConst _ | Apx.Comp.Obs _ | Apx.Comp.Const _ | Apx.Comp.Apply _ | Apx.Comp.Ann _ as i, (tau, t)) ->
+  | (Apx.Comp.Var _ | Apx.Comp.DataConst _ | Apx.Comp.Obs _ | Apx.Comp.Const _ | Apx.Comp.Apply _ | Apx.Comp.Ann _ as i, (tau, t)) ->
      let loc = Apx.Comp.loc_of_exp i in
      dprintf
        begin fun p ->

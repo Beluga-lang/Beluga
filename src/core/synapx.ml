@@ -151,7 +151,6 @@ module Comp = struct
     | Hole       of Location.t * string option                    (*   | ?name                          *)
     | BoxHole    of Location.t                                    (*   | _                              *)
     | Var        of Location.t * offset                           (*   | x                              *)
-    | FVar       of Location.t * Name.t                           (*   | x                              *)
     | DataConst  of Location.t * cid_comp_const                   (*   | c                              *)
     | Obs        of Location.t * exp * cid_comp_dest              (*   | e.d                            *)
     | Const      of Location.t * cid_prog                         (*   | c                              *)
@@ -239,7 +238,6 @@ module Comp = struct
    | Hole (loc, _)
    | BoxHole loc
    | Var (loc, _)
-   | FVar (loc, _)
    | DataConst (loc, _)
    | Obs (loc, _, _)
    | Const (loc, _)

@@ -53,6 +53,8 @@ val join_all1 : t List1.t -> t
 
 val join_all1_contramap : ('a -> t) -> 'a List1.t -> t
 
+val join_all2_contramap : ('a -> t) -> 'a List2.t -> t
+
 val start_position_as_location : t -> t
 
 val stop_position_as_location : t -> t

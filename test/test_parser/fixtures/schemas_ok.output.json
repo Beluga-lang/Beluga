@@ -16,7 +16,7 @@
             }
           },
           "typ": [
-            "CLF.Typ.Constant",
+            "LF.Typ.Constant",
             {
               "identifier": {
                 "name": {
@@ -75,7 +75,7 @@
             }
           },
           "typ": [
-            "CLF.Typ.Constant",
+            "LF.Typ.Constant",
             {
               "identifier": {
                 "name": {
@@ -119,7 +119,7 @@
             }
           },
           "typ": [
-            "CLF.Typ.Constant",
+            "LF.Typ.Constant",
             {
               "identifier": {
                 "name": {
@@ -177,7 +177,7 @@
             }
           },
           "typ": [
-            "CLF.Typ.Constant",
+            "LF.Typ.Constant",
             {
               "identifier": {
                 "name": {
@@ -211,7 +211,7 @@
         }
       ],
       "block": [
-        "CLF.Typ.Constant",
+        "LF.Typ.Constant",
         {
           "identifier": {
             "name": {
@@ -267,7 +267,7 @@
             }
           },
           "typ": [
-            "CLF.Typ.Constant",
+            "LF.Typ.Constant",
             {
               "identifier": {
                 "name": {
@@ -311,7 +311,7 @@
             }
           },
           "typ": [
-            "CLF.Typ.Constant",
+            "LF.Typ.Constant",
             {
               "identifier": {
                 "name": {
@@ -345,7 +345,7 @@
         }
       ],
       "block": [
-        "CLF.Typ.Constant",
+        "LF.Typ.Constant",
         {
           "identifier": {
             "name": {
@@ -401,7 +401,7 @@
             }
           },
           "typ": [
-            "CLF.Typ.Constant",
+            "LF.Typ.Constant",
             {
               "identifier": {
                 "name": {
@@ -445,7 +445,7 @@
             }
           },
           "typ": [
-            "CLF.Typ.Constant",
+            "LF.Typ.Constant",
             {
               "identifier": {
                 "name": {
@@ -491,10 +491,10 @@
             }
           },
           "typ": [
-            "CLF.Typ.Application",
+            "LF.Typ.Application",
             {
               "applicand": [
-                "CLF.Typ.Constant",
+                "LF.Typ.Constant",
                 {
                   "identifier": {
                     "name": {
@@ -527,7 +527,7 @@
               ],
               "arguments": [
                 [
-                  "CLF.Term.Variable",
+                  "LF.Term.Variable",
                   {
                     "identifier": {
                       "name": "x",
@@ -549,7 +549,7 @@
                   }
                 ],
                 [
-                  "CLF.Term.Variable",
+                  "LF.Term.Variable",
                   {
                     "identifier": {
                       "name": "y",
@@ -571,7 +571,7 @@
                   }
                 ],
                 [
-                  "CLF.Term.Constant",
+                  "LF.Term.Constant",
                   {
                     "identifier": {
                       "name": {
@@ -639,7 +639,7 @@
             }
           },
           "typ": [
-            "CLF.Typ.Constant",
+            "LF.Typ.Constant",
             {
               "identifier": {
                 "name": {
@@ -683,7 +683,7 @@
             }
           },
           "typ": [
-            "CLF.Typ.Constant",
+            "LF.Typ.Constant",
             {
               "identifier": {
                 "name": {
@@ -729,7 +729,7 @@
             }
           },
           "typ": [
-            "CLF.Typ.Constant",
+            "LF.Typ.Constant",
             {
               "identifier": {
                 "name": {
@@ -773,10 +773,10 @@
             }
           },
           "typ": [
-            "CLF.Typ.Application",
+            "LF.Typ.Application",
             {
               "applicand": [
-                "CLF.Typ.Constant",
+                "LF.Typ.Constant",
                 {
                   "identifier": {
                     "name": {
@@ -809,7 +809,7 @@
               ],
               "arguments": [
                 [
-                  "CLF.Term.Variable",
+                  "LF.Term.Variable",
                   {
                     "identifier": {
                       "name": "x",
@@ -831,7 +831,7 @@
                   }
                 ],
                 [
-                  "CLF.Term.Variable",
+                  "LF.Term.Variable",
                   {
                     "identifier": {
                       "name": "y",
@@ -853,7 +853,7 @@
                   }
                 ],
                 [
-                  "CLF.Term.Variable",
+                  "LF.Term.Variable",
                   {
                     "identifier": {
                       "name": "w",
@@ -1057,7 +1057,7 @@
                   }
                 },
                 "typ": [
-                  "CLF.Typ.Constant",
+                  "LF.Typ.Constant",
                   {
                     "identifier": {
                       "name": {
@@ -1091,7 +1091,7 @@
               }
             ],
             "block": [
-              "CLF.Typ.Constant",
+              "LF.Typ.Constant",
               {
                 "identifier": {
                   "name": {
@@ -1225,7 +1225,7 @@
                   }
                 },
                 "typ": [
-                  "CLF.Typ.Constant",
+                  "LF.Typ.Constant",
                   {
                     "identifier": {
                       "name": {
@@ -1269,7 +1269,7 @@
                   }
                 },
                 "typ": [
-                  "CLF.Typ.Constant",
+                  "LF.Typ.Constant",
                   {
                     "identifier": {
                       "name": {
@@ -1315,10 +1315,10 @@
                   }
                 },
                 "typ": [
-                  "CLF.Typ.Application",
+                  "LF.Typ.Application",
                   {
                     "applicand": [
-                      "CLF.Typ.Constant",
+                      "LF.Typ.Constant",
                       {
                         "identifier": {
                           "name": {
@@ -1351,7 +1351,7 @@
                     ],
                     "arguments": [
                       [
-                        "CLF.Term.Variable",
+                        "LF.Term.Variable",
                         {
                           "identifier": {
                             "name": "x",
@@ -1373,7 +1373,7 @@
                         }
                       ],
                       [
-                        "CLF.Term.Variable",
+                        "LF.Term.Variable",
                         {
                           "identifier": {
                             "name": "y",
@@ -1395,7 +1395,7 @@
                         }
                       ],
                       [
-                        "CLF.Term.Constant",
+                        "LF.Term.Constant",
                         {
                           "identifier": {
                             "name": {

@@ -1056,747 +1056,6 @@
     }
   ],
   [
-    "Meta.Typ.Context_schema",
-    {
-      "schema": [
-        "Meta.Schema.Element",
-        {
-          "some": null,
-          "block": [
-            "CLF.Typ.Constant",
-            {
-              "identifier": {
-                "name": {
-                  "name": "nat",
-                  "location": {
-                    "filename": "meta_types_ok.input.bel",
-                    "start_line": 43,
-                    "start_column": 7,
-                    "stop_line": 43,
-                    "stop_column": 10
-                  }
-                },
-                "namespaces": [],
-                "location": {
-                  "filename": "meta_types_ok.input.bel",
-                  "start_line": 43,
-                  "start_column": 7,
-                  "stop_line": 43,
-                  "stop_column": 10
-                }
-              },
-              "location": {
-                "filename": "meta_types_ok.input.bel",
-                "start_line": 43,
-                "start_column": 7,
-                "stop_line": 43,
-                "stop_column": 10
-              }
-            }
-          ],
-          "location": {
-            "filename": "meta_types_ok.input.bel",
-            "start_line": 43,
-            "start_column": 1,
-            "stop_line": 43,
-            "stop_column": 10
-          }
-        }
-      ],
-      "location": {
-        "filename": "meta_types_ok.input.bel",
-        "start_line": 43,
-        "start_column": 1,
-        "stop_line": 43,
-        "stop_column": 10
-      }
-    }
-  ],
-  [
-    "Meta.Typ.Context_schema",
-    {
-      "schema": [
-        "Meta.Schema.Element",
-        {
-          "some": null,
-          "block": [
-            {
-              "identifier": {
-                "name": "x",
-                "location": {
-                  "filename": "meta_types_ok.input.bel",
-                  "start_line": 46,
-                  "start_column": 8,
-                  "stop_line": 46,
-                  "stop_column": 9
-                }
-              },
-              "typ": [
-                "CLF.Typ.Constant",
-                {
-                  "identifier": {
-                    "name": {
-                      "name": "nat",
-                      "location": {
-                        "filename": "meta_types_ok.input.bel",
-                        "start_line": 46,
-                        "start_column": 12,
-                        "stop_line": 46,
-                        "stop_column": 15
-                      }
-                    },
-                    "namespaces": [],
-                    "location": {
-                      "filename": "meta_types_ok.input.bel",
-                      "start_line": 46,
-                      "start_column": 12,
-                      "stop_line": 46,
-                      "stop_column": 15
-                    }
-                  },
-                  "location": {
-                    "filename": "meta_types_ok.input.bel",
-                    "start_line": 46,
-                    "start_column": 12,
-                    "stop_line": 46,
-                    "stop_column": 15
-                  }
-                }
-              ]
-            }
-          ],
-          "location": {
-            "filename": "meta_types_ok.input.bel",
-            "start_line": 46,
-            "start_column": 1,
-            "stop_line": 46,
-            "stop_column": 16
-          }
-        }
-      ],
-      "location": {
-        "filename": "meta_types_ok.input.bel",
-        "start_line": 46,
-        "start_column": 1,
-        "stop_line": 46,
-        "stop_column": 16
-      }
-    }
-  ],
-  [
-    "Meta.Typ.Context_schema",
-    {
-      "schema": [
-        "Meta.Schema.Element",
-        {
-          "some": null,
-          "block": [
-            {
-              "identifier": {
-                "name": "x",
-                "location": {
-                  "filename": "meta_types_ok.input.bel",
-                  "start_line": 49,
-                  "start_column": 8,
-                  "stop_line": 49,
-                  "stop_column": 9
-                }
-              },
-              "typ": [
-                "CLF.Typ.Constant",
-                {
-                  "identifier": {
-                    "name": {
-                      "name": "nat",
-                      "location": {
-                        "filename": "meta_types_ok.input.bel",
-                        "start_line": 49,
-                        "start_column": 12,
-                        "stop_line": 49,
-                        "stop_column": 15
-                      }
-                    },
-                    "namespaces": [],
-                    "location": {
-                      "filename": "meta_types_ok.input.bel",
-                      "start_line": 49,
-                      "start_column": 12,
-                      "stop_line": 49,
-                      "stop_column": 15
-                    }
-                  },
-                  "location": {
-                    "filename": "meta_types_ok.input.bel",
-                    "start_line": 49,
-                    "start_column": 12,
-                    "stop_line": 49,
-                    "stop_column": 15
-                  }
-                }
-              ]
-            },
-            {
-              "identifier": {
-                "name": "y",
-                "location": {
-                  "filename": "meta_types_ok.input.bel",
-                  "start_line": 49,
-                  "start_column": 17,
-                  "stop_line": 49,
-                  "stop_column": 18
-                }
-              },
-              "typ": [
-                "CLF.Typ.Constant",
-                {
-                  "identifier": {
-                    "name": {
-                      "name": "nat",
-                      "location": {
-                        "filename": "meta_types_ok.input.bel",
-                        "start_line": 49,
-                        "start_column": 21,
-                        "stop_line": 49,
-                        "stop_column": 24
-                      }
-                    },
-                    "namespaces": [],
-                    "location": {
-                      "filename": "meta_types_ok.input.bel",
-                      "start_line": 49,
-                      "start_column": 21,
-                      "stop_line": 49,
-                      "stop_column": 24
-                    }
-                  },
-                  "location": {
-                    "filename": "meta_types_ok.input.bel",
-                    "start_line": 49,
-                    "start_column": 21,
-                    "stop_line": 49,
-                    "stop_column": 24
-                  }
-                }
-              ]
-            }
-          ],
-          "location": {
-            "filename": "meta_types_ok.input.bel",
-            "start_line": 49,
-            "start_column": 1,
-            "stop_line": 49,
-            "stop_column": 25
-          }
-        }
-      ],
-      "location": {
-        "filename": "meta_types_ok.input.bel",
-        "start_line": 49,
-        "start_column": 1,
-        "stop_line": 49,
-        "stop_column": 25
-      }
-    }
-  ],
-  [
-    "Meta.Typ.Context_schema",
-    {
-      "schema": [
-        "Meta.Schema.Element",
-        {
-          "some": [
-            {
-              "identifier": {
-                "name": "x",
-                "location": {
-                  "filename": "meta_types_ok.input.bel",
-                  "start_line": 52,
-                  "start_column": 7,
-                  "stop_line": 52,
-                  "stop_column": 8
-                }
-              },
-              "typ": [
-                "CLF.Typ.Constant",
-                {
-                  "identifier": {
-                    "name": {
-                      "name": "nat",
-                      "location": {
-                        "filename": "meta_types_ok.input.bel",
-                        "start_line": 52,
-                        "start_column": 11,
-                        "stop_line": 52,
-                        "stop_column": 14
-                      }
-                    },
-                    "namespaces": [],
-                    "location": {
-                      "filename": "meta_types_ok.input.bel",
-                      "start_line": 52,
-                      "start_column": 11,
-                      "stop_line": 52,
-                      "stop_column": 14
-                    }
-                  },
-                  "location": {
-                    "filename": "meta_types_ok.input.bel",
-                    "start_line": 52,
-                    "start_column": 11,
-                    "stop_line": 52,
-                    "stop_column": 14
-                  }
-                }
-              ]
-            }
-          ],
-          "block": [
-            "CLF.Typ.Constant",
-            {
-              "identifier": {
-                "name": {
-                  "name": "nat",
-                  "location": {
-                    "filename": "meta_types_ok.input.bel",
-                    "start_line": 52,
-                    "start_column": 22,
-                    "stop_line": 52,
-                    "stop_column": 25
-                  }
-                },
-                "namespaces": [],
-                "location": {
-                  "filename": "meta_types_ok.input.bel",
-                  "start_line": 52,
-                  "start_column": 22,
-                  "stop_line": 52,
-                  "stop_column": 25
-                }
-              },
-              "location": {
-                "filename": "meta_types_ok.input.bel",
-                "start_line": 52,
-                "start_column": 22,
-                "stop_line": 52,
-                "stop_column": 25
-              }
-            }
-          ],
-          "location": {
-            "filename": "meta_types_ok.input.bel",
-            "start_line": 52,
-            "start_column": 1,
-            "stop_line": 52,
-            "stop_column": 25
-          }
-        }
-      ],
-      "location": {
-        "filename": "meta_types_ok.input.bel",
-        "start_line": 52,
-        "start_column": 1,
-        "stop_line": 52,
-        "stop_column": 25
-      }
-    }
-  ],
-  [
-    "Meta.Typ.Context_schema",
-    {
-      "schema": [
-        "Meta.Schema.Element",
-        {
-          "some": [
-            {
-              "identifier": {
-                "name": "x",
-                "location": {
-                  "filename": "meta_types_ok.input.bel",
-                  "start_line": 55,
-                  "start_column": 7,
-                  "stop_line": 55,
-                  "stop_column": 8
-                }
-              },
-              "typ": [
-                "CLF.Typ.Constant",
-                {
-                  "identifier": {
-                    "name": {
-                      "name": "nat",
-                      "location": {
-                        "filename": "meta_types_ok.input.bel",
-                        "start_line": 55,
-                        "start_column": 11,
-                        "stop_line": 55,
-                        "stop_column": 14
-                      }
-                    },
-                    "namespaces": [],
-                    "location": {
-                      "filename": "meta_types_ok.input.bel",
-                      "start_line": 55,
-                      "start_column": 11,
-                      "stop_line": 55,
-                      "stop_column": 14
-                    }
-                  },
-                  "location": {
-                    "filename": "meta_types_ok.input.bel",
-                    "start_line": 55,
-                    "start_column": 11,
-                    "stop_line": 55,
-                    "stop_column": 14
-                  }
-                }
-              ]
-            },
-            {
-              "identifier": {
-                "name": "y",
-                "location": {
-                  "filename": "meta_types_ok.input.bel",
-                  "start_line": 55,
-                  "start_column": 16,
-                  "stop_line": 55,
-                  "stop_column": 17
-                }
-              },
-              "typ": [
-                "CLF.Typ.Constant",
-                {
-                  "identifier": {
-                    "name": {
-                      "name": "nat",
-                      "location": {
-                        "filename": "meta_types_ok.input.bel",
-                        "start_line": 55,
-                        "start_column": 20,
-                        "stop_line": 55,
-                        "stop_column": 23
-                      }
-                    },
-                    "namespaces": [],
-                    "location": {
-                      "filename": "meta_types_ok.input.bel",
-                      "start_line": 55,
-                      "start_column": 20,
-                      "stop_line": 55,
-                      "stop_column": 23
-                    }
-                  },
-                  "location": {
-                    "filename": "meta_types_ok.input.bel",
-                    "start_line": 55,
-                    "start_column": 20,
-                    "stop_line": 55,
-                    "stop_column": 23
-                  }
-                }
-              ]
-            }
-          ],
-          "block": [
-            "CLF.Typ.Constant",
-            {
-              "identifier": {
-                "name": {
-                  "name": "nat",
-                  "location": {
-                    "filename": "meta_types_ok.input.bel",
-                    "start_line": 55,
-                    "start_column": 31,
-                    "stop_line": 55,
-                    "stop_column": 34
-                  }
-                },
-                "namespaces": [],
-                "location": {
-                  "filename": "meta_types_ok.input.bel",
-                  "start_line": 55,
-                  "start_column": 31,
-                  "stop_line": 55,
-                  "stop_column": 34
-                }
-              },
-              "location": {
-                "filename": "meta_types_ok.input.bel",
-                "start_line": 55,
-                "start_column": 31,
-                "stop_line": 55,
-                "stop_column": 34
-              }
-            }
-          ],
-          "location": {
-            "filename": "meta_types_ok.input.bel",
-            "start_line": 55,
-            "start_column": 1,
-            "stop_line": 55,
-            "stop_column": 34
-          }
-        }
-      ],
-      "location": {
-        "filename": "meta_types_ok.input.bel",
-        "start_line": 55,
-        "start_column": 1,
-        "stop_line": 55,
-        "stop_column": 34
-      }
-    }
-  ],
-  [
-    "Meta.Typ.Context_schema",
-    {
-      "schema": [
-        "Meta.Schema.Element",
-        {
-          "some": [
-            {
-              "identifier": {
-                "name": "x",
-                "location": {
-                  "filename": "meta_types_ok.input.bel",
-                  "start_line": 58,
-                  "start_column": 7,
-                  "stop_line": 58,
-                  "stop_column": 8
-                }
-              },
-              "typ": [
-                "CLF.Typ.Constant",
-                {
-                  "identifier": {
-                    "name": {
-                      "name": "nat",
-                      "location": {
-                        "filename": "meta_types_ok.input.bel",
-                        "start_line": 58,
-                        "start_column": 11,
-                        "stop_line": 58,
-                        "stop_column": 14
-                      }
-                    },
-                    "namespaces": [],
-                    "location": {
-                      "filename": "meta_types_ok.input.bel",
-                      "start_line": 58,
-                      "start_column": 11,
-                      "stop_line": 58,
-                      "stop_column": 14
-                    }
-                  },
-                  "location": {
-                    "filename": "meta_types_ok.input.bel",
-                    "start_line": 58,
-                    "start_column": 11,
-                    "stop_line": 58,
-                    "stop_column": 14
-                  }
-                }
-              ]
-            },
-            {
-              "identifier": {
-                "name": "y",
-                "location": {
-                  "filename": "meta_types_ok.input.bel",
-                  "start_line": 58,
-                  "start_column": 16,
-                  "stop_line": 58,
-                  "stop_column": 17
-                }
-              },
-              "typ": [
-                "CLF.Typ.Constant",
-                {
-                  "identifier": {
-                    "name": {
-                      "name": "nat",
-                      "location": {
-                        "filename": "meta_types_ok.input.bel",
-                        "start_line": 58,
-                        "start_column": 20,
-                        "stop_line": 58,
-                        "stop_column": 23
-                      }
-                    },
-                    "namespaces": [],
-                    "location": {
-                      "filename": "meta_types_ok.input.bel",
-                      "start_line": 58,
-                      "start_column": 20,
-                      "stop_line": 58,
-                      "stop_column": 23
-                    }
-                  },
-                  "location": {
-                    "filename": "meta_types_ok.input.bel",
-                    "start_line": 58,
-                    "start_column": 20,
-                    "stop_line": 58,
-                    "stop_column": 23
-                  }
-                }
-              ]
-            }
-          ],
-          "block": [
-            {
-              "identifier": {
-                "name": "z",
-                "location": {
-                  "filename": "meta_types_ok.input.bel",
-                  "start_line": 58,
-                  "start_column": 32,
-                  "stop_line": 58,
-                  "stop_column": 33
-                }
-              },
-              "typ": [
-                "CLF.Typ.Application",
-                {
-                  "applicand": [
-                    "CLF.Typ.Constant",
-                    {
-                      "identifier": {
-                        "name": {
-                          "name": "sum",
-                          "location": {
-                            "filename": "meta_types_ok.input.bel",
-                            "start_line": 58,
-                            "start_column": 36,
-                            "stop_line": 58,
-                            "stop_column": 39
-                          }
-                        },
-                        "namespaces": [],
-                        "location": {
-                          "filename": "meta_types_ok.input.bel",
-                          "start_line": 58,
-                          "start_column": 36,
-                          "stop_line": 58,
-                          "stop_column": 39
-                        }
-                      },
-                      "location": {
-                        "filename": "meta_types_ok.input.bel",
-                        "start_line": 58,
-                        "start_column": 36,
-                        "stop_line": 58,
-                        "stop_column": 39
-                      }
-                    }
-                  ],
-                  "arguments": [
-                    [
-                      "CLF.Term.Variable",
-                      {
-                        "identifier": {
-                          "name": "x",
-                          "location": {
-                            "filename": "meta_types_ok.input.bel",
-                            "start_line": 58,
-                            "start_column": 40,
-                            "stop_line": 58,
-                            "stop_column": 41
-                          }
-                        },
-                        "location": {
-                          "filename": "meta_types_ok.input.bel",
-                          "start_line": 58,
-                          "start_column": 40,
-                          "stop_line": 58,
-                          "stop_column": 41
-                        }
-                      }
-                    ],
-                    [
-                      "CLF.Term.Variable",
-                      {
-                        "identifier": {
-                          "name": "y",
-                          "location": {
-                            "filename": "meta_types_ok.input.bel",
-                            "start_line": 58,
-                            "start_column": 42,
-                            "stop_line": 58,
-                            "stop_column": 43
-                          }
-                        },
-                        "location": {
-                          "filename": "meta_types_ok.input.bel",
-                          "start_line": 58,
-                          "start_column": 42,
-                          "stop_line": 58,
-                          "stop_column": 43
-                        }
-                      }
-                    ],
-                    [
-                      "CLF.Term.Constant",
-                      {
-                        "identifier": {
-                          "name": {
-                            "name": "z",
-                            "location": {
-                              "filename": "meta_types_ok.input.bel",
-                              "start_line": 58,
-                              "start_column": 44,
-                              "stop_line": 58,
-                              "stop_column": 45
-                            }
-                          },
-                          "namespaces": [],
-                          "location": {
-                            "filename": "meta_types_ok.input.bel",
-                            "start_line": 58,
-                            "start_column": 44,
-                            "stop_line": 58,
-                            "stop_column": 45
-                          }
-                        },
-                        "location": {
-                          "filename": "meta_types_ok.input.bel",
-                          "start_line": 58,
-                          "start_column": 44,
-                          "stop_line": 58,
-                          "stop_column": 45
-                        }
-                      }
-                    ]
-                  ],
-                  "location": {
-                    "filename": "meta_types_ok.input.bel",
-                    "start_line": 58,
-                    "start_column": 36,
-                    "stop_line": 58,
-                    "stop_column": 45
-                  }
-                }
-              ]
-            }
-          ],
-          "location": {
-            "filename": "meta_types_ok.input.bel",
-            "start_line": 58,
-            "start_column": 1,
-            "stop_line": 58,
-            "stop_column": 46
-          }
-        }
-      ],
-      "location": {
-        "filename": "meta_types_ok.input.bel",
-        "start_line": 58,
-        "start_column": 1,
-        "stop_line": 58,
-        "stop_column": 46
-      }
-    }
-  ],
-  [
     "Meta.Typ.Plain_substitution_typ",
     {
       "domain": [
@@ -1807,9 +1066,9 @@
             {
               "location": {
                 "filename": "meta_types_ok.input.bel",
-                "start_line": 61,
+                "start_line": 43,
                 "start_column": 3,
-                "stop_line": 61,
+                "stop_line": 43,
                 "stop_column": 4
               }
             }
@@ -1817,9 +1076,9 @@
           "bindings": [],
           "location": {
             "filename": "meta_types_ok.input.bel",
-            "start_line": 61,
+            "start_line": 43,
             "start_column": 3,
-            "stop_line": 61,
+            "stop_line": 43,
             "stop_column": 4
           }
         }
@@ -1834,17 +1093,17 @@
                 "name": "g",
                 "location": {
                   "filename": "meta_types_ok.input.bel",
-                  "start_line": 61,
+                  "start_line": 43,
                   "start_column": 7,
-                  "stop_line": 61,
+                  "stop_line": 43,
                   "stop_column": 8
                 }
               },
               "location": {
                 "filename": "meta_types_ok.input.bel",
-                "start_line": 61,
+                "start_line": 43,
                 "start_column": 7,
-                "stop_line": 61,
+                "stop_line": 43,
                 "stop_column": 8
               }
             }
@@ -1852,18 +1111,18 @@
           "bindings": [],
           "location": {
             "filename": "meta_types_ok.input.bel",
-            "start_line": 61,
+            "start_line": 43,
             "start_column": 7,
-            "stop_line": 61,
+            "stop_line": 43,
             "stop_column": 8
           }
         }
       ],
       "location": {
         "filename": "meta_types_ok.input.bel",
-        "start_line": 61,
+        "start_line": 43,
         "start_column": 1,
-        "stop_line": 61,
+        "stop_line": 43,
         "stop_column": 9
       }
     }
@@ -1881,17 +1140,17 @@
                 "name": "g",
                 "location": {
                   "filename": "meta_types_ok.input.bel",
-                  "start_line": 64,
+                  "start_line": 46,
                   "start_column": 3,
-                  "stop_line": 64,
+                  "stop_line": 46,
                   "stop_column": 4
                 }
               },
               "location": {
                 "filename": "meta_types_ok.input.bel",
-                "start_line": 64,
+                "start_line": 46,
                 "start_column": 3,
-                "stop_line": 64,
+                "stop_line": 46,
                 "stop_column": 4
               }
             }
@@ -1899,9 +1158,9 @@
           "bindings": [],
           "location": {
             "filename": "meta_types_ok.input.bel",
-            "start_line": 64,
+            "start_line": 46,
             "start_column": 3,
-            "stop_line": 64,
+            "stop_line": 46,
             "stop_column": 4
           }
         }
@@ -1916,17 +1175,17 @@
                 "name": "h",
                 "location": {
                   "filename": "meta_types_ok.input.bel",
-                  "start_line": 64,
+                  "start_line": 46,
                   "start_column": 8,
-                  "stop_line": 64,
+                  "stop_line": 46,
                   "stop_column": 9
                 }
               },
               "location": {
                 "filename": "meta_types_ok.input.bel",
-                "start_line": 64,
+                "start_line": 46,
                 "start_column": 8,
-                "stop_line": 64,
+                "stop_line": 46,
                 "stop_column": 9
               }
             }
@@ -1934,18 +1193,18 @@
           "bindings": [],
           "location": {
             "filename": "meta_types_ok.input.bel",
-            "start_line": 64,
+            "start_line": 46,
             "start_column": 8,
-            "stop_line": 64,
+            "stop_line": 46,
             "stop_column": 9
           }
         }
       ],
       "location": {
         "filename": "meta_types_ok.input.bel",
-        "start_line": 64,
+        "start_line": 46,
         "start_column": 1,
-        "stop_line": 64,
+        "stop_line": 46,
         "stop_column": 10
       }
     }

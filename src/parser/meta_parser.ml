@@ -21,6 +21,11 @@ module Make
     (Parser : COMMON_PARSER
                 with type token = Location.t * Token.t
                  and type location = Location.t)
+    (Lf_parser : Lf_parser.LF_PARSER
+                   with type token = Parser.token
+                    and type input = Parser.input
+                    and type state = Parser.state
+                    and type location = Parser.location)
     (Clf_parser : Clf_parser.CLF_PARSER
                     with type token = Parser.token
                      and type input = Parser.input
@@ -32,6 +37,7 @@ module Make
      and type state = Parser.state
      and type location = Parser.location = struct
   include Parser
+  include Lf_parser
   include Clf_parser
 
   (* This recursive module is defined as a convenient alternative to
@@ -58,7 +64,7 @@ module Make
           `block' [<identifier> `:'] <clf-object> (`,' [<identifier> `:'] <clf-object>)*
 
       <meta-thing> ::=
-        | <schema-object>
+        | <qualified-identifier>
         | `(' <clf-context-object> `)'
         | `(' <clf-context-object> <turnstile> <clf-context-object> `)'
         | `#(' <clf-context-object> <turnstile> <clf-context-object> `)'
@@ -88,7 +94,7 @@ module Make
           `block' [<identifier> `:'] <clf-object> (`,' [<identifier> `:'] <clf-object>)*
 
       <meta-thing> ::=
-        | <schema-object>
+        | <qualified-identifier>
         | `(' <clf-context-object> [<turnstile> <clf-context-object>] `)'
         | `#(' <clf-context-object> <turnstile> <clf-context-object> `)'
         | `$(' <clf-context-object> (<turnstile> | <turnstile-hash>) <clf-context-object> `)'
@@ -97,15 +103,14 @@ module Make
         | `$[' <clf-context-object> (<turnstile> | <turnstile-hash>) <clf-context-object> `]'
     *)
     let schema_some_clause =
-      let declaration = seq2 identifier (colon &> clf_typ) in
+      let declaration = seq2 identifier (colon &> lf_typ) in
       keyword "some"
       &> bracks (sep_by1 ~sep:comma declaration)
       |> labelled "Context schema `some' clause"
 
     let schema_block_clause =
       let block_contents =
-        sep_by1 ~sep:comma
-          (seq2 (maybe (identifier <& trying colon)) clf_typ)
+        sep_by1 ~sep:comma (seq2 (maybe (identifier <& trying colon)) lf_typ)
         |> labelled "Context schema element"
       in
       keyword "block" &> opt_parens block_contents
@@ -148,7 +153,7 @@ module Make
 
     let meta_type =
       let schema_type =
-        schema_object |> span
+        qualified_identifier |> span
         $> (fun (location, schema) ->
              Synprs.Meta.Thing.RawSchema { location; schema })
         |> labelled "Schema meta-type"

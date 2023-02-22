@@ -39,7 +39,8 @@ struct
   module Common_parser = Common_parser.Make (Parser_combinator)
   module Lf_parser = Lf_parser.Make (Common_parser)
   module Clf_parser = Clf_parser.Make (Common_parser)
-  module Meta_parser = Meta_parser.Make (Common_parser) (Clf_parser)
+  module Meta_parser =
+    Meta_parser.Make (Common_parser) (Lf_parser) (Clf_parser)
   module Comp_parser = Comp_parser.Make (Common_parser) (Meta_parser)
   module Harpoon_parser =
     Harpoon_parser.Make (Common_parser) (Meta_parser) (Comp_parser)
@@ -53,7 +54,8 @@ struct
   module Clf_pattern_disambiguator =
     Clf_disambiguation.Make_pattern_disambiguator (Disambiguation_state)
   module Meta_disambiguator =
-    Meta_disambiguation.Make (Disambiguation_state) (Clf_disambiguator)
+    Meta_disambiguation.Make (Disambiguation_state) (Lf_disambiguator)
+      (Clf_disambiguator)
   module Meta_pattern_disambiguator =
     Meta_disambiguation.Make_pattern_disambiguator
       (Disambiguation_state)

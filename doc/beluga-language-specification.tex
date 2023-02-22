@@ -362,17 +362,17 @@ Schema meta-types are not boxed.
 <schema> ::= \hfill\\
 | <qualified-identifier> \hfill \texttt{(* Constant *)}\\
 | <schema> `+' <schema> \hfill \texttt{(* Alternation *)}\\
-| [`some' `[' <identifier> `:' <clf-type> (`,' <identifier> `:' <clf-type>) `]']\\
-  `block' `(' <identifier> `:' <clf-type> (`,' <identifier> `:' <clf-type>) `)' \hfill \texttt{(* Atom *)}\\
-| [`some' `[' <identifier> `:' <clf-type> (`,' <identifier> `:' <clf-type>) `]']\\
-  `block' <identifier> `:' <clf-type> (`,' <identifier> `:' <clf-type>)\\
-| [`some' `[' <identifier> `:' <clf-type> (`,' <identifier> `:' <clf-type>) `]']\\
-  `block' <clf-type>\\
-| [`some' `[' <identifier> `:' <clf-type> (`,' <identifier> `:' <clf-type>) `]']\\
-  `block' <clf-type>
+| [`some' `[' <identifier> `:' <lf-type> (`,' <identifier> `:' <lf-type>) `]']\\
+  `block' `(' <identifier> `:' <lf-type> (`,' <identifier> `:' <lf-type>) `)' \hfill \texttt{(* Atom *)}\\
+| [`some' `[' <identifier> `:' <lf-type> (`,' <identifier> `:' <lf-type>) `]']\\
+  `block' <identifier> `:' <lf-type> (`,' <identifier> `:' <lf-type>)\\
+| [`some' `[' <identifier> `:' <lf-type> (`,' <identifier> `:' <lf-type>) `]']\\
+  `block' <lf-type>\\
+| [`some' `[' <identifier> `:' <lf-type> (`,' <identifier> `:' <lf-type>) `]']\\
+  `block' <lf-type>
 
 <meta-type> ::= \hfill\\
-| <schema> \hfill \texttt{(* Context schema *)}\\
+| <qualified-identifier> \hfill \texttt{(* Context schema *)}\\
 | `(' <clf-context> <turnstile> <clf-type> `)' \hfill \texttt{(* Contextual type *)}\\
 | `#(' <clf-context> <turnstile> <clf-type> `)' \hfill \texttt{(* Parameter type *)}\\
 | `$(' <clf-context> <turnstile> <clf-context> `)' \hfill \texttt{(* Plain substitution type *)}\\
@@ -841,13 +841,13 @@ Disambiguation of a meta-thing as presented below requires:
 <schema-object> ::= \hfill\\
 | <qualified-identifier>\\
 | <schema-object> `+' <schema-object>\\
-| [`some' `[' <identifier> `:' <clf-object> (`,' <identifier> `:' <clf-object>) `]']\\
-`block' `(' [<identifier> `:'] <clf-object> (`,' [<identifier> `:'] <clf-object>)* `)'\\
-| [`some' `[' <identifier> `:' <clf-object> (`,' <identifier> `:' <clf-object>) `]']\\
-`block' [<identifier> `:'] <clf-object> (`,' [<identifier> `:'] <clf-object>)*
+| [`some' `[' <identifier> `:' <lf-object> (`,' <identifier> `:' <lf-object>) `]']\\
+`block' `(' [<identifier> `:'] <lf-object> (`,' [<identifier> `:'] <lf-object>)* `)'\\
+| [`some' `[' <identifier> `:' <lf-object> (`,' <identifier> `:' <lf-object>) `]']\\
+`block' [<identifier> `:'] <lf-object> (`,' [<identifier> `:'] <lf-object>)*
 
 <meta-thing> ::= \hfill\\
-| <schema-object>\\
+| <qualified-identifier>\\
 | `(' <clf-context-object> `)'\\
 | `(' <clf-context-object> <turnstile> <clf-context-object> `)'\\
 | `#(' <clf-context-object> <turnstile> <clf-context-object> `)'\\

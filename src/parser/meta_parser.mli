@@ -20,6 +20,11 @@ module Make
     (Parser : COMMON_PARSER
                 with type token = Location.t * Token.t
                  and type location = Location.t)
+    (Lf_parser : Lf_parser.LF_PARSER
+                   with type token = Parser.token
+                    and type input = Parser.input
+                    and type state = Parser.state
+                    and type location = Parser.location)
     (Clf_parser : Clf_parser.CLF_PARSER
                     with type token = Parser.token
                      and type input = Parser.input

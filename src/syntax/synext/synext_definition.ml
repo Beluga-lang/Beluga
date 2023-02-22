@@ -684,7 +684,7 @@ module Meta = struct
     type t =
       | Context_schema of
           { location : Location.t
-          ; schema : Schema.t
+          ; schema : Qualified_identifier.t
           }
           (** [Context_schema_constant { schema; _ }] is the context schema
               [schema]. *)
@@ -822,10 +822,10 @@ module Meta = struct
               if [t] matches against at least one of [g1], [g2], ..., [gn]. *)
       | Element of
           { location : Location.t
-          ; some : (Identifier.t * CLF.Typ.t) List1.t Option.t
+          ; some : (Identifier.t * LF.Typ.t) List1.t Option.t
           ; block :
-              [ `Unnamed of CLF.Typ.t
-              | `Record of (Identifier.t * CLF.Typ.t) List1.t
+              [ `Unnamed of LF.Typ.t
+              | `Record of (Identifier.t * LF.Typ.t) List1.t
               ]
           }
           (** - [Element { some = \[("x1", p1); ("x2", p2); ...; ("xn", pn)\]; block = `Unnamed t; _ }]

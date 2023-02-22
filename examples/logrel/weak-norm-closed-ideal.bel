@@ -83,9 +83,9 @@ rec lookup : {g:ctx}{#p:#[g |- tm A[]]}RedSub [g] $[ |- $S[^]] -> Reduce [|- A] 
 mlam g => mlam #p => fn rs => case [g] of
 | [ ] => impossible [ |- #p]
 | [g', x:tm A] => (case [g', x:tm A |- #p[..,x]] of
-		   | [g',x:tm A |-  x] =>   let (Dot rs' rN) = rs in rN
-		   | [g',x:tm A |-  #q[..]] => let Dot rs' rN = rs in
-					       lookup [g'] [g' |-  #q] rs')
+       | [g',x:tm A |-  x] =>   let (Dot rs' rN) = rs in rN
+       | [g',x:tm A |-  #q[..]] => let Dot rs' rN = rs in
+                 lookup [g'] [g' |-  #q] rs')
 ;
 
 

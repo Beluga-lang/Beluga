@@ -24,10 +24,10 @@ t_succ   : oft N nat
 t_pred   : oft N nat
            -> oft (pred N) nat.
 t_iszero : oft N nat
-	   -> oft (iszero N) bool.
+     -> oft (iszero N) bool.
 
 t_leq    : oft N nat -> oft M nat
-	   -> oft (leq N M) bool.
+     -> oft (leq N M) bool.
 
 
 %{

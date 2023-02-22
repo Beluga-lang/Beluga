@@ -135,8 +135,8 @@ rec bwd_closed' : {A:[|- tp]}{M:[|- tm A]}{M':[|- tm A]} Step [ |- M] [ |-  M'] 
 | [|- arr A B] =>
   let Arr ha f = r in
     Arr (halts_step s ha)
-	(mlam N => fn rn =>
-	 bwd_closed' [|- B] _ _ (Stepapp s) (f [ |- N] rn))
+  (mlam N => fn rn =>
+   bwd_closed' [|- B] _ _ (Stepapp s) (f [ |- N] rn))
 ;
 
 

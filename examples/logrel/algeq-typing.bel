@@ -172,9 +172,9 @@ mlam T => fn e => case [|- T] of
 | [|- arr T1 T2] =>
   let LogArr [g |-  M1] [g |-  M2] f = e in
   LogArr [g |-  M2] [g |-  M1] (mlam h,$W,N1,D1,N2,D2 => fn rn =>
-					let e' = logEqSym [|- T1] rn in
-					logEqSym [|- T2] (f [h] $[h |- $W] [h |-  N2] [h |- D2] [h |-  N1] [h |- D1] e')
-				       );
+          let e' = logEqSym [|- T1] rn in
+          logEqSym [|- T2] (f [h] $[h |- $W] [h |-  N2] [h |- D2] [h |-  N1] [h |- D1] e')
+               );
 % % Several of the following lemmas are to establish transitivity of algorithmic equivalenc
 
 % Equality on types
@@ -292,7 +292,7 @@ fn a1 => fn a2 => case a1 of
   let (a2 : [g |- algeqn _ _ (arr T[] S[])]) = a2 in
    let [g,b:block x:tm, u:oft x _, y:algeqr x x _ |- R[..,b.1,b.3]]
        = algEqNTrans [g,b:block x:tm,y:oft x T[],z:algeqr x x T[] |- A1'[..,b.1,b.3]]
-   		     [g,b:block x:tm,y:oft x T[],z:algeqr x x T[] |- A2'[..,b.1,b.3]] in
+            [g,b:block x:tm,y:oft x T[],z:algeqr x x T[] |- A2'[..,b.1,b.3]] in
    [g |- algarr (\x.\u.R)]
 ;
 
@@ -383,13 +383,13 @@ rec lookup : {g:ctx}{#p:#[g |- block (x:tm, u: oft x Q[])]} LogSub [g] $[h |- $S
    -> Log [h |- #p.1[$S1] sim #p.1[$S2]] [|- Q] =
  / total g (lookup g) /
  mlam g, #p => fn s => case [g] of
-	 | [] => impossible [ |- #p.1]
-	 | [g',b:block x:tm,y:oft x S[]] =>
-	   let Dot rs rm [h |- D1] [h |- D2] = s in
-	   (case [g', b:block (x:tm, y:oft x S[]) |- #p.2] of
-	      |  {#q:#[g0 |- block (x:tm, u: oft x P[])]}
+   | [] => impossible [ |- #p.1]
+   | [g',b:block x:tm,y:oft x S[]] =>
+     let Dot rs rm [h |- D1] [h |- D2] = s in
+     (case [g', b:block (x:tm, y:oft x S[]) |- #p.2] of
+        |  {#q:#[g0 |- block (x:tm, u: oft x P[])]}
                  [g0, b:block (x:tm, y: oft x T[]) |- #q.2[..]] => lookup [g'] [g' |- #q] rs
-	      | [g0, b:block (x:tm, u: oft x T[]) |- b.2] => rm
+        | [g0, b:block (x:tm, u: oft x T[]) |- b.2] => rm
 )
  ;
 

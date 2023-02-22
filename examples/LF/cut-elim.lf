@@ -26,26 +26,26 @@ pos : o -> type.
 axiom' : (neg A -> pos A -> hash).
 
 impr'  : (neg A -> pos B -> hash)
-	  -> (pos (imp A B) -> hash).
+        -> (pos (imp A B) -> hash).
 
 impl'  : (pos A -> hash)
-	  -> (neg B -> hash)
-	  -> (neg (imp A B) -> hash).
+        -> (neg B -> hash)
+        -> (neg (imp A B) -> hash).
 
 notr'  : (neg A -> hash)
-	  -> (pos (not A) -> hash).
+        -> (pos (not A) -> hash).
 
 notl'  : (pos A -> hash)
-	  -> (neg (not A) -> hash).
+        -> (neg (not A) -> hash).
 
 truer' : (pos true -> hash).
 
 
 forallr' : ({a:i} pos (A a) -> hash)
-	    -> (pos (forall (\ x . A x)) -> hash).
+          -> (pos (forall (\ x . A x)) -> hash).
 
 foralll' : {T:i} (neg (A T) -> hash)
-	    -> (neg (forall (\ x . A x)) -> hash).
+          -> (neg (forall (\ x . A x)) -> hash).
 
 ca' : {A:o} (pos A -> hash) -> (neg A -> hash) -> hash -> type.
 
@@ -76,7 +76,7 @@ ca_imp' :
 
 
 car_impr' : ({n1:neg B1} {p2:pos B2}
-	      ca' A (\ p . D p) (\ n . E1 n n1 p2) (F1 n1 p2))
+            ca' A (\ p . D p) (\ n . E1 n n1 p2) (F1 n1 p2))
          -> ca' A (\ p . D p)
                (\ n . impr' (\ n1 . \ p . E1 n n1 p) P)
                (impr' (\ n . \ p . F1 n p) P).

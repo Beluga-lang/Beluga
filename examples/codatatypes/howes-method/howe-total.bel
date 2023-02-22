@@ -26,14 +26,14 @@ inductive Value : [ |- term T] -> ctype =
 
 inductive Eval : [ |- term T] -> [ |- term T] -> ctype =
   | Ev_app      : Eval [ |- M1] [ |- lam (\x.N)] -> Eval [ |- N[M2]]  [ |- V]
-	       -> Eval [ |- app M1 M2] [ |- V]
+         -> Eval [ |- app M1 M2] [ |- V]
   | Ev_val      : Value [ |- V] -> Eval [ |- V] [ |- V]
   | Ev_fix      : Eval [ |- M[ fix \x.M]] [ |- V]
-	      ->  Eval [ |- fix \x.M] [ |- V]
+        ->  Eval [ |- fix \x.M] [ |- V]
   | Ev_case_nil : Eval [ |- M] [ |- nil] -> Eval [ |- M1] [ |- V]
-	       -> Eval [ |- lcase M M1 (\h.\t.M2)] [ |- V]
+         -> Eval [ |- lcase M M1 (\h.\t.M2)] [ |- V]
   | Ev_case_cons: {M2: [ x:term S, y: term (list S[]) |- term T[]]}
-		  Eval [ |- M]  [ |- cons H L] ->  Eval [ |- M2[H, L]] [ |- V]
+      Eval [ |- M]  [ |- cons H L] ->  Eval [ |- M2[H, L]] [ |- V]
                -> Eval [ |- lcase M M1 (\h.\t.M2)] [ |- V]
 ;
 
@@ -458,7 +458,7 @@ fun d0 [x:term _, y:term _ |- N] .Sim_unit d =>
        Ev_case_cons [x:term _, y:term _ |- N] d0 d
   | d0 [x:term _, y:term _ |- N] .Sim_cons d =>
      ESim_cons (Ev_case_cons [x:term _, y:term _ |- N] d0 d)
-	       sim_refl sim_refl
+         sim_refl sim_refl
  | d0 [x:term _, y:term _ |- N] .Sim_lam (d : Eval [|-  N[H,L]] [ |- lam \x.E]) =>
    ESim_lam (Ev_case_cons [x:term _, y:term _ |- N] d0 d)
             (mlam R => sim_refl)

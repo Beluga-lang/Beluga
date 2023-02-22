@@ -6,11 +6,11 @@
 
   vtrv_z     : vtrans_val (vtr_z) (val_z).
   vtrv_s     : vtrans_val (vtr_s U1) (val_s P1)
-		<- vtrans_val U1 P1.
+    <- vtrans_val U1 P1.
 
   vtrv_pair  : vtrans_val (vtr_pair U2 U1) (val_pair P2 P1)
-	          <- vtrans_val U1 P1
-		  <- vtrans_val U2 P2.
+            <- vtrans_val U1 P1
+      <- vtrans_val U2 P2.
 
   vtrv_lam   : vtrans_val (vtr_lam U1) (val_lam).
 
@@ -22,12 +22,12 @@
   val_eval  : value E -> eval E E -> type.
 
   vev_z     : val_eval (val_z) (ev_z).
-  vev_s	    : val_eval (val_s P1) (ev_s D1)
-	       <- val_eval P1 D1.
+  vev_s      : val_eval (val_s P1) (ev_s D1)
+         <- val_eval P1 D1.
 
   vev_pair  : val_eval (val_pair P2 P1) (ev_pair D2 D1)
-	         <- val_eval P1 D1
-		 <- val_eval P2 D2.
+           <- val_eval P1 D1
+     <- val_eval P2 D2.
 
   vev_lam   : val_eval (val_lam) (ev_lam).
 

@@ -233,7 +233,7 @@ fn e => fn sigma => let (sigma : Map [h] [g]) = sigma in case e of
   let [h |- P] = cc' [g |- M] sigma  in
   let [h |- Q] = cc' [g |- N] sigma  in
       [h |- cletpack P
-	 \e.\xf.\xenv. capp xf (ccons  Q[..] xenv)]
+   \e.\xf.\xenv. capp xf (ccons  Q[..] xenv)]
 
 | [g |- letv M (\x. N)] =>
   let [h |- P]              = cc' [g |- M]  sigma in

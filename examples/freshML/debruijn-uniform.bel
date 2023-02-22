@@ -47,10 +47,10 @@ rec vhoas2db: {g:ctx} {#p: #[g |- obj (S[])]}[ |- obj' S] =
 mlam g => mlam #p => case [g] of
 | [ ] => impossible [ |- #p]
 | [h, x:obj S] => (case [h, x:obj S |- #p[..,x]] of
-		   | [h,x:obj S |-  x] => [ |- one]
+       | [h,x:obj S |-  x] => [ |- one]
 
-		   | [h,x:obj T |-  #p[..]]  =>
-		     let [ |- Db] = vhoas2db [h] [h |- #p] in [ |- shift Db])
+       | [h,x:obj T |-  #p[..]]  =>
+         let [ |- Db] = vhoas2db [h] [h |- #p] in [ |- shift Db])
 ;
 
 rec hoas2db : (g:ctx) [g |- obj (S[])]  -> [ |- obj' S] = / total x (hoas2db _ _ x) /

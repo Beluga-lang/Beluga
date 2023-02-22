@@ -74,17 +74,17 @@ fn d => fn e => case d of
      let [g |- S] = subst  [g,y,v |-  S1[..,<y ; v>]] [g |- S2] in
      let [g |- S'] = subst [g,y,v |-  S1'[..,<y ; v>]] [g |- S2'] in
        [g |- dia_result _  S S']
-	   )
+      )
   | [g |- ap R1' R2'] =>
     (case [g |- R1']  of
      | [g |- lm \y.\v. R1''] =>
-	 let [g |- dia_result H2 S2 S2'] = dia [g |- R2] [g |- R2'] in
+    let [g |- dia_result H2 S2 S2'] = dia [g |- R2] [g |- R2'] in
 
-	 let [g, b:block (y:term, t:pred y y) |-  dia_result (H1[..,b.1]) S1 S1'] =
+    let [g, b:block (y:term, t:pred y y) |-  dia_result (H1[..,b.1]) S1 S1'] =
       dia [g, b:block (y:term, t:pred y y) |-  R1[..,b.1,b.2]] [g,b |- R1''[..,b.1,b.2]] in
 
-	 let [g |- S] = subst [g,y,v |-  S1[..,<y ; v>]] [g |- S2] in
-	 [g |- dia_result _ S (beta (\y.\v. S1'[..,<y ; v>]) S2')]
+    let [g |- S] = subst [g,y,v |-  S1[..,<y ; v>]] [g |- S2] in
+    [g |- dia_result _ S (beta (\y.\v. S1'[..,<y ; v>]) S2')]
 %     | [g] {}  % prove explicitely that other cases is impossible
     )
   )
@@ -169,7 +169,7 @@ fn d => fn e => case d of
 
 strip_prop: term -> term -> type.
 strip_result: pred* M' N -> pred M'' N
-	      -> strip_prop M' M''.
+         -> strip_prop M' M''.
 
 rec strip_lemma: (g:ctx)[g |- pred M M'] -> [g |- pred* M M'']
                 -> [g |- strip_prop M' M''] =

@@ -9,7 +9,7 @@
 % Proof: By induction on the structure of C.
 rec append : [ |- mstep (st Ks P S)  (st Ks' P' S')]
            -> [ |- mstep (st Ks' P' S') (st Ks'' P'' S'')]
-	   -> [ |- mstep (st Ks P S) (st Ks'' P'' S'')] =
+     -> [ |- mstep (st Ks P S) (st Ks'' P'' S'')] =
 / total c (append ks p s ks' p' s' ks'' p'' s'' c _)/
 fn c =>  fn c' => case c of
 | [ |- id_step] =>  c'
@@ -45,16 +45,16 @@ fn d => case d of
 
  |  [ |- fev_^ D1] =>
      (let [ |- C1]  = subcomp [ |- Ks ] [ |- P ] [ |- S ] [ |- D1] in
- 	[ |- to c_^ C1])
+   [ |- to c_^ C1])
 
 
 | [ |- fev_1+ D1]  =>
     let [ |- C1] = subcomp [ |- Ks ] [ |- P ] [ |- S ] [ |- D1] in
- 	[ |- (to c_1+ C1)]
+   [ |- (to c_1+ C1)]
 
  | [ |- fev_^+ D1] =>
      let [ |- C1] = subcomp [ |- Ks ] [ |- P ] [ |- S ] [ |- D1] in
- 	[ |- (to c_^+ C1)]
+   [ |- (to c_^+ C1)]
 
 
  | [ |- fev_z] => [ |- (to c_z id_step)]

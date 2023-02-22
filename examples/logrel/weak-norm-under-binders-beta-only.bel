@@ -65,7 +65,7 @@ inductive Halts : (gamma:nctx) {A:[ |- tp]}{M:[gamma |- tm A[]]} ctype =
 stratified Reduce : (gamma:nctx) {A:[ |- tp]}{M:[gamma |- tm A[]]} ctype =
 | Base : Halts [ |- i] [gamma |- M] -> Reduce [ |- i] [gamma |- M]
 | Arr :  {M:[gamma |- tm (arr A[] B[])]}
-	 Halts [ |- arr A B] [gamma |- M] ->
+   Halts [ |- arr A B] [gamma |- M] ->
          ({phi:nctx} {$S:$[phi |- gamma]} {N:[phi |- tm A[]]}
             Reduce [ |- A] [phi |- N]
           -> Reduce [ |- B ] [phi |- app M[$S] N])

@@ -14,7 +14,7 @@ subst_idx : subst (\x.\idx. idx) S S.
 subst_beta : subst (\x.\idx. beta (R1 x idx) (R2 x idx))
                    S (beta R1' R2')
            <- ({y:term} {idy: pred y y}
-		 subst (\x.\idx. idy) S' idy
+                 subst (\x.\idx. idy) S' idy
                  -> subst (\x.\idx. R1 x idx y idy)  S (R1' y idy))
            <- subst R2 S R2'.
 
@@ -26,14 +26,14 @@ subst_ap  : subst (\x.\idx. ap (R1 x idx) (R2 x idx))
 subst_lm  : subst (\x.\idx. lm (R1 x idx))
                   S (lm R1')
           <- ({y:term} {idy: pred y  y}
-		   subst (\x.\idx. idy) S' idy
+                   subst (\x.\idx. idy) S' idy
                 -> subst (\x.\idx. R1 x idx y idy)
                          S (R1' y idy)).
 
 %{
 % block l1 : block {x:term} {idx: x => x}
-	     {hs: {N:term} {N':term} {S':N => N'}
-		   subst ([y:term][idy:y => y] idx) S' idx}.
+             {hs: {N:term} {N':term} {S':N => N'}
+                   subst ([y:term][idy:y => y] idx) S' idx}.
 % worlds (l1) (subst R S R').
 % covers subst +R +S -R'.
 % terminates R (subst R S _).
@@ -53,7 +53,7 @@ dia : pred M M'  ->  pred M M''  ->  pred M' N  ->  pred M'' N  -> type.
 
 dia_bb : dia (beta R1' R2') (beta R1'' R2'') S' S''
       <- ({x:term} {idx: pred x x}
-	       subst (\y.\idy. idx) S' idx
+               subst (\y.\idy. idx) S' idx
             -> dia idx idx idx idx
             -> dia (R1' x idx) (R1'' x idx)
                    (S1' x idx) (S1'' x idx))
@@ -64,7 +64,7 @@ dia_bb : dia (beta R1' R2') (beta R1'' R2'') S' S''
 dia_bal : dia (beta R1' R2') (ap (lm R1'') R2'')
              S' (beta S1'' S2'')
        <- ({x:term} {idx: pred x x}
-	       subst (\y.\idy. idx) S' idx
+               subst (\y.\idy. idx) S' idx
              -> dia idx idx idx idx
              -> dia (R1' x idx) (R1'' x idx)
                     (S1' x idx) (S1'' x idx))
@@ -74,7 +74,7 @@ dia_bal : dia (beta R1' R2') (ap (lm R1'') R2'')
 dia_alb : dia (ap (lm R1') R2') (beta R1'' R2'')
              (beta S1' S2') S''
        <- ({x:term} {idx: pred x  x}
-	       subst (\y.\idy. idx) S' idx
+               subst (\y.\idy. idx) S' idx
              -> dia idx idx idx idx
              -> dia (R1' x idx) (R1'' x idx)
                     (S1' x idx) (S1'' x idx))
@@ -87,14 +87,14 @@ dia_aa  : dia (ap R1' R2') (ap R1'' R2'') (ap S1' S2') (ap S1'' S2'')
 
 dia_ll  : dia (lm R1') (lm R1'') (lm S1') (lm S1'')
        <- ({x:term} {idx: pred x x}
-		subst (\y.\idy. idx) S' idx
-	     -> dia idx idx idx idx
+                subst (\y.\idy. idx) S' idx
+             -> dia idx idx idx idx
              -> dia (R1' x idx) (R1'' x idx) (S1' x idx) (S1'' x idx)).
 
 %{
 % block l2 : block {x:term} {idx:x => x}
-	     {hs: {N:term} {N':term} {S':N => N'} subst ([y:term][idy:y => y] idx) S' idx}
-	     {hd: dia idx idx idx idx}.
+             {hs: {N:term} {N':term} {S':N => N'} subst ([y:term][idy:y => y] idx) S' idx}
+             {hd: dia idx idx idx idx}.
 % worlds (l2) (dia _ _ _ _).
 % covers dia +R' +R'' -S' -S''.
 % terminates [R' R''] (dia R' R'' _ _).

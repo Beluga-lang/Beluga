@@ -68,7 +68,7 @@ fn s => fn e => case e of
 
 and rec nosubst : (g:ctx)(h:ctx)
               Sub [g] [h]
-	    -> [g |- norm S[]]
+      -> [g |- norm S[]]
             -> [h |- norm S[]] =
 fn s => fn n =>
 let (s : {T:[ |- tp]} NeutVar [g] [ |- T] ->  NeutVar [h] [ |- T]) = s in
@@ -85,7 +85,7 @@ case n of
 ;
 
 rec subst : (g:ctx)(h:ctx)
-	    Sub [g] [h]
+      Sub [g] [h]
           -> Sem [g] [ |- A]
           -> Sem [h] [ |- A] =
 fn s => fn e =>

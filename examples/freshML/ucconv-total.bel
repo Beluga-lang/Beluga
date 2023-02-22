@@ -96,15 +96,15 @@ fn n =>
  % Resulting should be a term closed under the environement tuple xenv and the local variable x.
 
 rec b_map:(g:ctx)Fvs [g] ->({#p:#[g,x:term |- term]} [xenv:target |-  target]) -> [ |- nat] ->
-	  {#p:#[g,x:term |- term]}[xenv:target |-  target] =
+    {#p:#[g,x:term |- term]}[xenv:target |-  target] =
 / total l (b_map g l )/
 fn l => fn map => fn n => case l of
 | Nil =>
   let ( l : Fvs [g]) = l in
     (mlam #p => case [g,x:term |- #p]  of
-	       |[g,x:term |- x]     => [xenv:target |- tsnd xenv]
-	       |[g,x:term |- #p] => map [g,x:term |-  #p]
-	    )
+         |[g,x:term |- x]     => [xenv:target |- tsnd xenv]
+         |[g,x:term |- #p] => map [g,x:term |-  #p]
+      )
 | Cons [g |- #p] l =>
 let [ |- N] = n in
  (mlam #q => case ([g,x:term |- #q], [g,x:term |- #p[..]]) of
@@ -122,7 +122,7 @@ mlam g, h => fn map => mlam #q => case [g,x:term |- #q] of
    | [g,x:term |-  x] => [h,x:target |-  x]
    | [g,x:term |-  #q[..]] =>
      let [h |- F] = map [g |- #q] in
-    	 [h,x:target |- F[..]]
+       [h,x:target |- F[..]]
 ;
 
 
@@ -154,8 +154,8 @@ mlam h => fn map => fn e => case e of
  let fvs = fvar e in
  let [xenv:target |- U'] =
      convert [xenv:target]
-	     (b_map fvs (mlam #p => [xenv:target |- tunit]) [ |- z])
-	     [g,x:term |-  U] in
+       (b_map fvs (mlam #p => [xenv:target |- tunit]) [ |- z])
+       [g,x:term |-  U] in
 let [h |- T2] = b_env [h] map fvs in
   [h |- tpack (tpair (tlam \xenv. U'[xenv]) T2)]
 

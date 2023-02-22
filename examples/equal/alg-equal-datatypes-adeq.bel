@@ -99,7 +99,7 @@ fn ae => case ae of
 % terms in the context tctx are related to terms in the context aCtx
 inductive TRel : (g:tctx) (h:aCtx) [g |- term] -> [h |- term] -> ctype =
 | TRvar0 : {h: aCtx} TRel [g, x:term |-  x]
- 		         [h, b:block (x:term, u:aeq x x) |- b.1]
+             [h, b:block (x:term, u:aeq x x) |- b.1]
 | TRvar  :   % {#p:[g |- term]}{#q:[h |- block x:term, u:aeq x x]}
                           TRel  [g |- #p] [h |- #q.1]
          -> TRel [g, x:term |-  #p[..]]
@@ -109,7 +109,7 @@ inductive TRel : (g:tctx) (h:aCtx) [g |- term] -> [h |- term] -> ctype =
         -> TRel [g |- app M N] [h |- app M' N']
 
 | TRlam  : TRel [g, x:term |-  M] [h, b:block (x:term, _u:aeq x x) |-  N[..,b.1]]
-	   -> TRel [g |- lam \x. M] [h |- lam \x. N]
+     -> TRel [g |- lam \x. M] [h |- lam \x. N]
 ;
 
 % strengthen Aeq' to Aeq.

@@ -19,4 +19,4 @@ vs: {E:exp}{V:exp}eval E V -> value V -> type.
 vs_z    : vs z z ev_z val_z.
 
 vs_s    : {E:exp}{V:exp}{D: eval E V}{P:value V}
-	   vs E V D P -> vs (suc E) (suc V) (ev_s E V D) (val_s V P).
+          vs E V D P -> vs (suc E) (suc V) (ev_s E V D) (val_s V P).

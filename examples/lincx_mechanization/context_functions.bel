@@ -100,9 +100,9 @@ rec ctx_unr_unrest : (g:sch) [g |- is_unr Psi] -> [g |- unrest_ctx Psi Psi] =
     | [g |- is_unr_b] => [g |- unrest_base_var]
     | [g |- is_unr_e] => [g |- unrest_base_e]
     | [g |- is_unr_cons D] => let [g |- F] = ctx_unr_unrest [g |- D] in
-			    [g |- unrest_unr F]
+             [g |- unrest_unr F]
     | [g |- is_unr_unav_cons D] => let [g |- F] = ctx_unr_unrest [g |- D] in
-			    [g |- unrest_unav F]
+             [g |- unrest_unav F]
 ;
 
 % unr(Phi1), unr(Gamma), Phi = Phi1, Gamma => unr(Phi)
@@ -114,9 +114,9 @@ rec is_unr_mer : (g:sch) [g |- is_unr Phi] -> [g |- is_unr Gam] -> [g |- ctx_mer
     | [g |- m_cons F] =>
       (case e of
        | [g |- is_unr_cons E] => let [g |- G] = is_unr_mer d [g |- E] [g |- F] in
-			       [g |- is_unr_cons G]
+                [g |- is_unr_cons G]
        | [g |- is_unr_unav_cons E] => let [g |- G] = is_unr_mer d [g |- E] [g |- F] in
-			       [g |- is_unr_unav_cons G]
+                [g |- is_unr_unav_cons G]
       )
 ;
 

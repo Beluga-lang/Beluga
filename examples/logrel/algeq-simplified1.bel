@@ -159,9 +159,9 @@ mlam T => fn e => case [|- T] of
 | [|- arr T1 T2] =>
   let LogArr [g |-  M1] [g |-  M2] f = e in
   LogArr [g |-  M2] [g |-  M1] (mlam h,$W,N1,N2 => fn rn =>
-					let e' = logEqSym [|- T1] rn in
-					logEqSym [|- T2] (f [h] $[h |- $W] [h |-  N2] [h |-  N1] e')
-				       );
+          let e' = logEqSym [|- T1] rn in
+          logEqSym [|- T2] (f [h] $[h |- $W] [h |-  N2] [h |-  N1] e')
+               );
 % Several of the following lemmas are to establish transitivity of algorithmic equivalenc
 
 % Equality on types
@@ -278,7 +278,7 @@ fn a1 => fn a2 => case a1 of
   let [g |- algarr (\x.\y. A2')] = a2 in
   let [g,b:block x:tm,y:algeqr x x T |- R[..,b.1,b.2]]
       = algEqNTrans [g,b:block x:tm,y:algeqr x x _ |- A1'[..,b.1,b.2]]
-		    [g,b:block x:tm,y:algeqr x x _ |- A2'[..,b.1,b.2]] in
+        [g,b:block x:tm,y:algeqr x x _ |- A2'[..,b.1,b.2]] in
   [g |- algarr (\x.\y. R)]
 ;
 

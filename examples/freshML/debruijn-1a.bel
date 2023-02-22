@@ -115,7 +115,7 @@ FN g => FN g' => mlam S => fn v =>  case v of
 
 
 and hoas2db : {g:(ctx)*}{g':(tctx)*}{T::tp[g']}
-			(exp T)[g] ->  (exp' T )[g'] =
+      (exp T)[g] ->  (exp' T )[g'] =
 FN g => FN g' => mlam T => fn e =>  case e of
  | {g:(ctx)*}{g':(tctx)*}
    {T1::tp[g']}{T2::tp[g']}{E1:: (exp (arr T1 T2))[g]}

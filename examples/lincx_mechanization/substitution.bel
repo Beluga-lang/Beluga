@@ -80,26 +80,26 @@ and subst_canon :  canon  -> tp_appro -> (var -> canon) -> canon -> type =
     | sc_lam : ({y : var} subst_canon M alpha (\x.N y x) (N' y)) -> subst_canon M alpha (\x.lam \y.N y x) (lam \y.N' y)
     | sc_llam : ({y : var} subst_canon M alpha (\x.N y x) (N' y)) -> subst_canon M alpha (\x.llam \y.N y x) (llam \y.N' y)
     | sc_cspine : subst_spine M alpha (\x. S x) (S')
-		  -> subst_canon M alpha (\x.c_atom (atom_base (hd_cst c) (S x))) (c_atom (atom_base (hd_cst c) (S')))
+        -> subst_canon M alpha (\x.c_atom (atom_base (hd_cst c) (S x))) (c_atom (atom_base (hd_cst c) (S')))
     | sc_varspine_neq : ({y : var} subst_spine (M y) alpha (\x.S y x) (S' y))
-			-> subst_canon (M y) alpha (\x.c_atom (atom_base (hd_var y) (S y x))) (c_atom (atom_base (hd_var y) (S' y)))
+         -> subst_canon (M y) alpha (\x.c_atom (atom_base (hd_var y) (S y x))) (c_atom (atom_base (hd_var y) (S' y)))
     | sc_varspine_eq : subst_spine M alpha (\x.S x) (S') -> reduce M alpha (S') N
-		       -> subst_canon M alpha (\x.c_atom (atom_base (hd_var x) (S x))) N
+             -> subst_canon M alpha (\x.c_atom (atom_base (hd_var x) (S x))) N
 
 and subst_spine : canon -> tp_appro -> (var -> spine) -> spine -> type =
    | ssp_empty : subst_spine M alpha (\x.sp_empty) sp_empty
    | ssp_unr : subst_spine M alpha (\x.S x) S'
-	       -> subst_canon M alpha (\x.N x) N'
-	       -> subst_spine M alpha (\x.sp_unr (N x) (S x)) (sp_unr N' S')
+          -> subst_canon M alpha (\x.N x) N'
+          -> subst_spine M alpha (\x.sp_unr (N x) (S x)) (sp_unr N' S')
    | ssp_lin : subst_spine M alpha (\x.S x) S'
-	       -> subst_canon M alpha (\x.N x) N'
-	       -> subst_spine M alpha (\x.sp_lin (N x) (S x)) (sp_lin N' S')
+          -> subst_canon M alpha (\x.N x) N'
+          -> subst_spine M alpha (\x.sp_lin (N x) (S x)) (sp_lin N' S')
 
 and subst_subst : canon -> tp_appro -> (var -> sim_subst) -> sim_subst -> type =
    | su_empty : subst_subst M alpha (\x.s_empty) s_empty
    | su_id_lin : subst_subst M alpha (\x.s_id) s_id
    | su_id_snoc : subst_subst M alpha (\x.sigma x) (sigma') -> subst_canon M alpha (\x.N x) (N')
-		  -> subst_subst M alpha (\x.s_snoc (sigma x) (N x)) (s_snoc sigma' N')
+        -> subst_subst M alpha (\x.s_snoc (sigma x) (N x)) (s_snoc sigma' N')
 
 and subst_at_tp : canon -> tp_appro -> (var -> atp) -> atp -> type =
    | sat_atom : subst_spine M alpha (\x.S x) S' -> subst_at_tp M alpha (\x.atom_tp a (S x)) (atom_tp a S')
@@ -107,9 +107,9 @@ and subst_at_tp : canon -> tp_appro -> (var -> atp) -> atp -> type =
 and subst_tp : canon -> tp_appro -> (var -> tp) -> tp -> type =
    | st_atom : subst_at_tp M alpha (\x. A x) A' -> subst_tp M alpha (\x. atp_canon (A x)) (atp_canon A')
    | st_lin : subst_tp M alpha (\x. A x) A' -> subst_tp M alpha (\x. B x) B'
-	      -> subst_tp M alpha (\x. limp (A x) (B x)) (limp A' B')
+         -> subst_tp M alpha (\x. limp (A x) (B x)) (limp A' B')
    | st_unr : subst_tp M alpha (\x. A x) A' -> ({y : var} subst_tp M alpha (\x. B y x) (B' y))
-	      -> subst_tp M alpha (\x. (pi (A x) (\y. B y x))) (pi A' (\y. B' y))
+         -> subst_tp M alpha (\x. (pi (A x) (\y. B y x))) (pi A' (\y. B' y))
 ;
 
 % --------------------------------------
@@ -123,46 +123,46 @@ LF var_look : sim_subst -> (var -> ctx) -> canon -> tp_appro -> type =
 
 and sim_subst_canon : sim_subst -> ctx -> ctx_erased -> canon -> canon -> type =
     | ssc_unr : ({y : var} sim_subst_canon sigma Psi (cer_snoc Phi (decl_er y unr)) (N y) (N' y))
-		-> sim_subst_canon sigma Psi Phi (lam \y.N y) (lam \y.N' y)
+      -> sim_subst_canon sigma Psi Phi (lam \y.N y) (lam \y.N' y)
 
     | ssc_lin : ({y : var} sim_subst_canon sigma Psi (cer_snoc Phi (decl_er y lin)) (N y) (N' y))
-		-> sim_subst_canon sigma Psi Phi (llam \y.N y) (llam \y.N' y)
+      -> sim_subst_canon sigma Psi Phi (llam \y.N y) (llam \y.N' y)
     | ssc_cspine : sim_subst_spine sigma Psi Phi S S'
-		   -> sim_subst_canon sigma Psi Phi (c_atom (atom_base (hd_cst c) S)) (c_atom (atom_base (hd_cst c) S'))
+         -> sim_subst_canon sigma Psi Phi (c_atom (atom_base (hd_cst c) S)) (c_atom (atom_base (hd_cst c) S'))
     | ssc_varspine_nin : reduce M alpha S' N
-			 -> ({x : var} var_look sigma1 (\x.Psi1 x) M alpha)
-			 -> ctx_er Phi Phi_er
-			 -> joining (cjoin Psi (Psi1 x) Psi2)
-			 -> sim_subst_spine sigma2 Psi2 Phi_er S S'
-			 -> sim_subst_canon sigma Psi Phi_er (c_atom (atom_base (hd_var x) S)) N
+          -> ({x : var} var_look sigma1 (\x.Psi1 x) M alpha)
+          -> ctx_er Phi Phi_er
+          -> joining (cjoin Psi (Psi1 x) Psi2)
+          -> sim_subst_spine sigma2 Psi2 Phi_er S S'
+          -> sim_subst_canon sigma Psi Phi_er (c_atom (atom_base (hd_var x) S)) N
     | ssc_varspine_in : ({y : var} in_ctx (\y.Phi1 y))
-			-> joining (cjoin Phi (Phi1 y) Phi2)
-			-> ctx_er (Phi1 y) Phi1_er
-			-> ctx_er Phi Phi_er
-			-> sim_subst_spine sigma Psi Phi1_er S S'
-			-> sim_subst_canon sigma Psi Phi_er (c_atom (atom_base (hd_var y) S)) (c_atom (atom_base (hd_var y) S'))
+         -> joining (cjoin Phi (Phi1 y) Phi2)
+         -> ctx_er (Phi1 y) Phi1_er
+         -> ctx_er Phi Phi_er
+         -> sim_subst_spine sigma Psi Phi1_er S S'
+         -> sim_subst_canon sigma Psi Phi_er (c_atom (atom_base (hd_var y) S)) (c_atom (atom_base (hd_var y) S'))
 
 and sim_subst_spine : sim_subst -> ctx -> ctx_erased -> spine -> spine -> type =
    | sspi_empty : is_unr Psi -> is_unr Phi -> ctx_er Phi Phi_er -> sim_subst_spine sigma Psi Phi_er sp_empty sp_empty
    | sspi_unr : unrest_ctx Phi Phi_unr -> ctx_er Phi_unr Phi_er_unr -> ctx_er Phi Phi_er
-		-> unrest_ctx Psi Psi_unr
-		-> sim_subst_canon sigma Psi_unr Phi_er_unr N N'
-		-> sim_subst_spine sigma Psi Phi_er S S'
-		-> sim_subst_spine sigma Psi Phi_er (sp_unr N S) (sp_unr N' S')
+      -> unrest_ctx Psi Psi_unr
+      -> sim_subst_canon sigma Psi_unr Phi_er_unr N N'
+      -> sim_subst_spine sigma Psi Phi_er S S'
+      -> sim_subst_spine sigma Psi Phi_er (sp_unr N S) (sp_unr N' S')
    | sspi_lin : joining (cjoin Psi Psi1 Psi2) -> ctx_er Phi0 Phi
-		-> ctx_er Phi1 Phi' -> ctx_er Phi2 Phi'' -> joining (cjoin Phi0 Phi1 Phi2)
-		-> sim_subst_canon sigma1 Psi1 Phi' N N' -> sim_subst_spine sigma2 Psi2 Phi'' S S'
-		-> sim_subst_spine sigma Psi Phi (sp_lin N S) (sp_lin N' S')
+      -> ctx_er Phi1 Phi' -> ctx_er Phi2 Phi'' -> joining (cjoin Phi0 Phi1 Phi2)
+      -> sim_subst_canon sigma1 Psi1 Phi' N N' -> sim_subst_spine sigma2 Psi2 Phi'' S S'
+      -> sim_subst_spine sigma Psi Phi (sp_lin N S) (sp_lin N' S')
 
 and sim_subst_subst : sim_subst -> ctx -> ctx_erased -> sim_subst -> sim_subst -> type =
    | ssu_empty : is_unr Psi -> sim_subst_subst sigma Psi Phi s_empty s_empty
    | ssu_id_lin : is_unr Psi -> sim_subst_subst sigma Psi Phi s_id s_id
    | ssu_id_snoc : ctx_er Phi0 Phi -> ctx_er Phi1 Phi' -> ctx_er Phi2 Phi''
-		   -> joining (cjoin Phi0 Phi1 Phi2)
-		   -> joining (cjoin Psi Psi1 Psi2)
-		   -> sim_subst_subst sigma Psi1 Phi' tau tau'
-		   -> sim_subst_canon sigma Psi2 Phi'' M M'
-		   -> sim_subst_subst sigma Psi Phi (s_snoc tau M) (s_snoc tau' M')
+         -> joining (cjoin Phi0 Phi1 Phi2)
+         -> joining (cjoin Psi Psi1 Psi2)
+         -> sim_subst_subst sigma Psi1 Phi' tau tau'
+         -> sim_subst_canon sigma Psi2 Phi'' M M'
+         -> sim_subst_subst sigma Psi Phi (s_snoc tau M) (s_snoc tau' M')
 
 and sim_subst_at_tp : sim_subst -> ctx -> ctx_erased -> atp -> atp -> type =
    | ssat_atom : sim_subst_spine sigma Psi Phi S S' -> sim_subst_at_tp sigma Psi Phi (atom_tp a S) (atom_tp a S')
@@ -170,17 +170,17 @@ and sim_subst_at_tp : sim_subst -> ctx -> ctx_erased -> atp -> atp -> type =
 and sim_subst_tp : sim_subst -> ctx -> ctx_erased -> tp -> tp -> type =
    | sst_atom : sim_subst_at_tp sigma Psi Phi_er A A' -> sim_subst_tp sigma Psi Phi_er (atp_canon A) (atp_canon A')
    | sst_unr : sim_subst_tp sigma Psi Phi_er A A'
-	       -> ({x : var} sim_subst_tp sigma Psi (cer_snoc Phi_er (decl_er x unr)) (B x) (B' x))
-	       -> sim_subst_tp sigma Psi Phi_er (pi A (\x.B x)) (pi A' (\x.B' x))
+          -> ({x : var} sim_subst_tp sigma Psi (cer_snoc Phi_er (decl_er x unr)) (B x) (B' x))
+          -> sim_subst_tp sigma Psi Phi_er (pi A (\x.B x)) (pi A' (\x.B' x))
    | sst_lin : sim_subst_tp sigma Psi Phi_er A A'
-	       -> sim_subst_tp sigma Psi Phi_er B B'
-	       -> sim_subst_tp sigma Psi Phi_er (limp A B) (limp A' B')
+          -> sim_subst_tp sigma Psi Phi_er B B'
+          -> sim_subst_tp sigma Psi Phi_er (limp A B) (limp A' B')
 
 and sim_subst_ctx : sim_subst -> ctx -> ctx -> ctx -> type =
     | ssctx_empty : is_unr Psi -> sim_subst_ctx sigma Psi c_empty c_empty
     | ssctx_base  : is_unr Psi -> sim_subst_ctx sigma Psi (varctx I) (varctx I)
    | ssctx_snoc  : is_unr Psi -> unrest_ctx Phi Phi_unr -> ctx_er Phi_unr Phi_unr_er ->
-		   sim_subst_ctx sigma Psi Phi Phi' ->
-		   sim_subst_tp sigma Psi Phi_unr_er A A'
-		  -> sim_subst_ctx sigma Psi (snoc Phi (decl x A F)) (snoc Phi' (decl x A' F))
+         sim_subst_ctx sigma Psi Phi Phi' ->
+         sim_subst_tp sigma Psi Phi_unr_er A A'
+        -> sim_subst_ctx sigma Psi (snoc Phi (decl x A F)) (snoc Phi' (decl x A' F))
 ;

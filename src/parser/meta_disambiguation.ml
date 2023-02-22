@@ -39,6 +39,10 @@ exception Expected_meta_pattern
 
 (** {2 Exceptions for schema disambiguation} *)
 
+exception Expected_schema_constant
+
+exception Unbound_schema_constant of Qualified_identifier.t
+
 exception Illegal_unnamed_block_element_type
 
 (** {2 Exceptions for meta-context disambiguation} *)
@@ -88,10 +92,13 @@ end
 
 module Make
     (Disambiguation_state : DISAMBIGUATION_STATE)
+    (Lf_disambiguation : Lf_disambiguation.LF_DISAMBIGUATION
+                           with type state = Disambiguation_state.state)
     (Clf_disambiguation : Clf_disambiguation.CLF_DISAMBIGUATION
                             with type state = Disambiguation_state.state) :
   META_DISAMBIGUATION with type state = Disambiguation_state.state = struct
   include Disambiguation_state
+  include Lf_disambiguation
   include Clf_disambiguation
 
   (** {1 Disambiguation} *)
@@ -100,10 +107,17 @@ module Make
     match meta_thing with
     | Synprs.Meta.Thing.RawContext { location; _ } ->
         Error.raise_at1 location Illegal_context_meta_type
-    | Synprs.Meta.Thing.RawSchema { location; schema } ->
-        let* schema' = disambiguate_schema schema in
-        return
-          (Synext.Meta.Typ.Context_schema { location; schema = schema' })
+    | Synprs.Meta.Thing.RawSchema { location; schema } -> (
+        lookup schema >>= function
+        | Result.Ok (Schema_constant, _) ->
+            return (Synext.Meta.Typ.Context_schema { location; schema })
+        | Result.Ok entry ->
+            Error.raise_at1 location
+              (Error.composite_exception2 Expected_schema_constant
+                 (actual_binding_exn schema entry))
+        | Result.Error (Unbound_qualified_identifier _) ->
+            Error.raise_at1 location (Unbound_schema_constant schema)
+        | Result.Error cause -> Error.raise_at1 location cause)
     | Synprs.Meta.Thing.RawTurnstile
         { location; context; object_; variant = `Plain }
     (* Contextual type *) ->
@@ -195,30 +209,30 @@ module Make
               (Synext.Meta.Object.Renaming_substitution
                  { location; domain = domain'; range = range' }))
 
-  and with_disambiguated_clf_bindings_list :
+  and with_disambiguated_lf_bindings_list :
         'a.
-           (Identifier.t * Synprs.clf_object) list
-        -> ((Identifier.t * Synext.clf_typ) list -> 'a t)
+           (Identifier.t * Synprs.lf_object) list
+        -> ((Identifier.t * Synext.lf_typ) list -> 'a t)
         -> 'a t =
    fun bindings f ->
     match bindings with
     | [] -> f []
     | (identifier, typ) :: xs ->
-        let* typ' = disambiguate_clf_typ typ in
+        let* typ' = disambiguate_lf_typ typ in
         with_lf_term_variable identifier
-          (with_disambiguated_clf_bindings_list xs (fun ys ->
+          (with_disambiguated_lf_bindings_list xs (fun ys ->
                f ((identifier, typ') :: ys)))
 
-  and with_disambiguated_clf_bindings_list1 :
+  and with_disambiguated_lf_bindings_list1 :
         'a.
-           (Identifier.t * Synprs.clf_object) List1.t
-        -> ((Identifier.t * Synext.clf_typ) List1.t -> 'a t)
+           (Identifier.t * Synprs.lf_object) List1.t
+        -> ((Identifier.t * Synext.lf_typ) List1.t -> 'a t)
         -> 'a t =
    fun bindings f ->
     let (List1.T ((identifier, typ), xs)) = bindings in
-    let* typ' = disambiguate_clf_typ typ in
+    let* typ' = disambiguate_lf_typ typ in
     with_lf_term_variable identifier
-      (with_disambiguated_clf_bindings_list xs (fun ys ->
+      (with_disambiguated_lf_bindings_list xs (fun ys ->
            f (List1.from (identifier, typ') ys)))
 
   and disambiguate_schema_block_clause =
@@ -227,7 +241,7 @@ module Make
        right. Bindings may not recursively refer to themselves.*)
     function
     | List1.T ((Option.None, typ), []) ->
-        let* typ' = disambiguate_clf_typ typ in
+        let* typ' = disambiguate_lf_typ typ in
         return (`Unnamed typ')
     | block ->
         let bindings =
@@ -235,18 +249,27 @@ module Make
             (function
               | Option.None, typ ->
                   Error.raise_at1
-                    (Synprs.location_of_clf_object typ)
+                    (Synprs.location_of_lf_object typ)
                     Illegal_unnamed_block_element_type
               | Option.Some identifier, typ -> (identifier, typ))
             block
         in
-        with_disambiguated_clf_bindings_list1 bindings (fun bindings' ->
+        with_disambiguated_lf_bindings_list1 bindings (fun bindings' ->
             return (`Record bindings'))
 
   and disambiguate_schema schema_object =
     match schema_object with
-    | Synprs.Meta.Schema_object.Raw_constant { location; identifier } ->
-        return (Synext.Meta.Schema.Constant { location; identifier })
+    | Synprs.Meta.Schema_object.Raw_constant { location; identifier } -> (
+        lookup identifier >>= function
+        | Result.Ok (Schema_constant, _) ->
+            return (Synext.Meta.Schema.Constant { location; identifier })
+        | Result.Ok entry ->
+            Error.raise_at1 location
+              (Error.composite_exception2 Expected_schema_constant
+                 (actual_binding_exn identifier entry))
+        | Result.Error (Unbound_qualified_identifier _) ->
+            Error.raise_at1 location (Unbound_schema_constant identifier)
+        | Result.Error cause -> Error.raise_at1 location cause)
     | Synprs.Meta.Schema_object.Raw_alternation { location; schemas } ->
         let* schemas' = traverse_list2 disambiguate_schema schemas in
         return
@@ -259,7 +282,7 @@ module Make
               (Synext.Meta.Schema.Element
                  { location; some = Option.none; block = block' })
         | Option.Some some ->
-            with_disambiguated_clf_bindings_list1 some (fun some' ->
+            with_disambiguated_lf_bindings_list1 some (fun some' ->
                 let* block' = disambiguate_schema_block_clause block in
                 return
                   (Synext.Meta.Schema.Element
@@ -352,14 +375,21 @@ struct
   include Disambiguation_state
   include Clf_pattern_disambiguator
 
-  let rec disambiguate_meta_typ meta_thing =
+  let disambiguate_meta_typ meta_thing =
     match meta_thing with
     | Synprs.Meta.Thing.RawContext { location; _ } ->
         Error.raise_at1 location Illegal_context_meta_type
-    | Synprs.Meta.Thing.RawSchema { location; schema } ->
-        let* schema' = disambiguate_schema schema in
-        return
-          (Synext.Meta.Typ.Context_schema { location; schema = schema' })
+    | Synprs.Meta.Thing.RawSchema { location; schema } -> (
+        lookup schema >>= function
+        | Result.Ok (Schema_constant, _) ->
+            return (Synext.Meta.Typ.Context_schema { location; schema })
+        | Result.Ok entry ->
+            Error.raise_at1 location
+              (Error.composite_exception2 Expected_schema_constant
+                 (actual_binding_exn schema entry))
+        | Result.Error (Unbound_qualified_identifier _) ->
+            Error.raise_at1 location (Unbound_schema_constant schema)
+        | Result.Error cause -> Error.raise_at1 location cause)
     | Synprs.Meta.Thing.RawTurnstile
         { location; context; object_; variant = `Plain }
     (* Contextual type *) ->
@@ -409,7 +439,7 @@ struct
                   (Synext.Meta.Typ.Renaming_substitution_typ
                      { location; domain = domain'; range = range' })))
 
-  and disambiguate_meta_object meta_thing =
+  let disambiguate_meta_object meta_thing =
     match meta_thing with
     | Synprs.Meta.Thing.RawSchema { location; _ } ->
         Error.raise_at1 location Expected_meta_object
@@ -450,83 +480,6 @@ struct
             return
               (Synext.Meta.Object.Renaming_substitution
                  { location; domain = domain'; range = range' }))
-
-  and with_disambiguated_clf_bindings_list :
-        'a.
-           (Identifier.t * Synprs.clf_object) list
-        -> ((Identifier.t * Synext.clf_typ) list -> 'a t)
-        -> 'a t =
-   fun bindings f ->
-    match bindings with
-    | [] -> f []
-    | (identifier, typ) :: xs ->
-        let* typ' = disambiguate_clf_typ typ in
-        with_lf_term_variable identifier
-          (with_disambiguated_clf_bindings_list xs (fun ys ->
-               f ((identifier, typ') :: ys)))
-
-  and with_disambiguated_clf_bindings_list1 :
-        'a.
-           (Identifier.t * Synprs.clf_object) List1.t
-        -> ((Identifier.t * Synext.clf_typ) List1.t -> 'a t)
-        -> 'a t =
-   fun bindings f ->
-    let (List1.T ((identifier, typ), xs)) = bindings in
-    let* typ' = disambiguate_clf_typ typ in
-    with_lf_term_variable identifier
-      (with_disambiguated_clf_bindings_list xs (fun ys ->
-           f (List1.from (identifier, typ') ys)))
-
-  and disambiguate_schema_block_clause :
-         (Identifier.t option * Synprs.clf_object) List1.t
-      -> [ `Record of (Identifier.t * Synext.clf_typ) List1.t
-         | `Unnamed of Synext.clf_typ
-         ]
-         t =
-   fun block ->
-    (* Schema block-clauses are dependent, meaning that bound variables on
-       the left of a declaration may appear in the type of a binding on the
-       right. Bindings may not recursively refer to themselves.*)
-    match block with
-    | List1.T ((Option.None, typ), []) ->
-        let* typ' = disambiguate_clf_typ typ in
-        return (`Unnamed typ')
-    | block ->
-        let bindings =
-          List1.map
-            (function
-              | Option.None, typ ->
-                  Error.raise_at1
-                    (Synprs.location_of_clf_object typ)
-                    Illegal_unnamed_block_element_type
-              | Option.Some identifier, typ -> (identifier, typ))
-            block
-        in
-        with_disambiguated_clf_bindings_list1 bindings (fun bindings' ->
-            return (`Record bindings'))
-
-  and disambiguate_schema schema_object =
-    match schema_object with
-    | Synprs.Meta.Schema_object.Raw_constant { location; identifier } ->
-        return (Synext.Meta.Schema.Constant { location; identifier })
-    | Synprs.Meta.Schema_object.Raw_alternation { location; schemas } ->
-        let* schemas' = traverse_list2 disambiguate_schema schemas in
-        return
-          (Synext.Meta.Schema.Alternation { location; schemas = schemas' })
-    | Synprs.Meta.Schema_object.Raw_element { location; some; block } -> (
-        match some with
-        | Option.None ->
-            let* block' = disambiguate_schema_block_clause block in
-            return
-              (Synext.Meta.Schema.Element
-                 { location; some = Option.none; block = block' })
-        | Option.Some some ->
-            with_disambiguated_clf_bindings_list1 some (fun some' ->
-                let* block' = disambiguate_schema_block_clause block in
-                return
-                  (Synext.Meta.Schema.Element
-                     { location; some = Option.some some'; block = block' }))
-        )
 
   let disambiguate_meta_pattern meta_thing =
     match meta_thing with
@@ -679,6 +632,11 @@ let () =
     | Expected_meta_pattern ->
         Format.dprintf "%a" Format.pp_print_text
           "Expected a meta-object pattern."
+    | Expected_schema_constant ->
+        Format.dprintf "Expected a schema constant."
+    | Unbound_schema_constant constant ->
+        Format.dprintf "The schema constant %a is unbound."
+          Qualified_identifier.pp constant
     | Illegal_unnamed_block_element_type ->
         Format.dprintf "%a" Format.pp_print_text
           "Schema block clause binding is missing its identifier."

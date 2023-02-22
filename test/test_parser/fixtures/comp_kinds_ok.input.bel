@@ -7,11 +7,11 @@
 ctype
 ;;
 
-{g : ctx} ctype
+{g : ctx1} ctype
 ;;
 
 {M : [⊢ nat]} {N : [⊢ nat]} ctype
 ;;
 
-(g : ctx) [g, x : nat |- nat] → [g |- nat] → [ |- nat] → ctype
+(g : ctx1) [g, x : nat |- nat] → [g |- nat] → [ |- nat] → ctype
 ;;

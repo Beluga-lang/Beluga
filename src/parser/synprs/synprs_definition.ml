@@ -234,7 +234,7 @@ module Meta = struct
     type t =
       | RawSchema of
           { location : Location.t
-          ; schema : Schema_object.t
+          ; schema : Qualified_identifier.t
           }  (** [RawSchema { schema; _ }] is the context schema [schema]. *)
       | RawContext of
           { location : Location.t
@@ -276,8 +276,8 @@ module Meta = struct
           }
       | Raw_element of
           { location : Location.t
-          ; some : (Identifier.t * CLF.Object.t) List1.t Option.t
-          ; block : (Identifier.t Option.t * CLF.Object.t) List1.t
+          ; some : (Identifier.t * LF.Object.t) List1.t Option.t
+          ; block : (Identifier.t Option.t * LF.Object.t) List1.t
           }
   end =
     Schema_object

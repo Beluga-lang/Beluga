@@ -635,7 +635,8 @@ module Make (Indexing_state : INDEXING_STATE) :
             let* term' = index_clf_term term in
             let term'' = to_head_or_obj term' in
             (* TODO: The approximate syntax should have a [MObj of normal]
-               constructor like in the internal syntax *)
+               constructor like in the internal syntax. See
+               {!Reconstruct.elClObj}. *)
             return
               ( location
               , Synapx.Comp.ClObj
@@ -650,14 +651,9 @@ module Make (Indexing_state : INDEXING_STATE) :
             return (location, Synapx.Comp.ClObj (domain', range')))
 
   and index_meta_type = function
-    | Synext.Meta.Typ.Context_schema { location; schema } -> (
-        match schema with
-        | Synext.Meta.Schema.Constant { identifier; _ } ->
-            let* index = index_of_schema_constant identifier in
-            return (Synapx.LF.CTyp index)
-        | Synext.Meta.Schema.Alternation _
-        | Synext.Meta.Schema.Element _ ->
-            Error.raise_at1 location Unsupported_context_schema_meta_typ)
+    | Synext.Meta.Typ.Context_schema { location; schema } ->
+        let* index = index_of_schema_constant schema in
+        return (Synapx.LF.CTyp index)
     | Synext.Meta.Typ.Contextual_typ { context; typ; _ } ->
         with_indexed_clf_context context (fun context' ->
             let* typ' = index_clf_typ typ in
@@ -695,7 +691,7 @@ module Make (Indexing_state : INDEXING_STATE) :
 
   and with_indexed_lf_context_binding (identifier, typ) f =
     let name = Name.make_from_identifier identifier in
-    let* typ' = index_clf_typ typ in
+    let* typ' = index_lf_typ typ in
     with_bound_lf_variable identifier (f (Synapx.LF.TypDecl (name, typ')))
 
   and with_indexed_schema_some_clause some f =
@@ -708,11 +704,11 @@ module Make (Indexing_state : INDEXING_STATE) :
     match bindings with
     | List1.T ((identifier, typ), []) ->
         let name = Name.make_from_identifier identifier in
-        let* typ' = index_clf_typ typ in
+        let* typ' = index_lf_typ typ in
         return (Synapx.LF.SigmaLast (Option.some name, typ'))
     | List1.T ((identifier, typ), x :: xs) ->
         let name = Name.make_from_identifier identifier in
-        let* typ' = index_clf_typ typ in
+        let* typ' = index_lf_typ typ in
         with_bound_lf_variable identifier
           (with_indexed_schema_block_clause_bindings_list1 (List1.from x xs)
              (fun tRec -> return (Synapx.LF.SigmaElem (name, typ', tRec))))
@@ -721,7 +717,7 @@ module Make (Indexing_state : INDEXING_STATE) :
     | `Record bindings ->
         with_indexed_schema_block_clause_bindings_list1 bindings return
     | `Unnamed typ ->
-        let* typ' = index_clf_typ typ in
+        let* typ' = index_lf_typ typ in
         return (Synapx.LF.SigmaLast (Option.none, typ'))
 
   and index_schema = function

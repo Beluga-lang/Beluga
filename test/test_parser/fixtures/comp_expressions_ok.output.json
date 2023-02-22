@@ -2691,29 +2691,9 @@
                   "typ": [
                     "Meta.Typ.Context_schema",
                     {
-                      "schema": [
-                        "Meta.Schema.Constant",
-                        {
-                          "identifier": {
-                            "name": {
-                              "name": "ctx1",
-                              "location": {
-                                "filename": "comp_expressions_ok.input.bel",
-                                "start_line": 77,
-                                "start_column": 10,
-                                "stop_line": 77,
-                                "stop_column": 14
-                              }
-                            },
-                            "namespaces": [],
-                            "location": {
-                              "filename": "comp_expressions_ok.input.bel",
-                              "start_line": 77,
-                              "start_column": 10,
-                              "stop_line": 77,
-                              "stop_column": 14
-                            }
-                          },
+                      "schema": {
+                        "name": {
+                          "name": "ctx1",
                           "location": {
                             "filename": "comp_expressions_ok.input.bel",
                             "start_line": 77,
@@ -2721,8 +2701,16 @@
                             "stop_line": 77,
                             "stop_column": 14
                           }
+                        },
+                        "namespaces": [],
+                        "location": {
+                          "filename": "comp_expressions_ok.input.bel",
+                          "start_line": 77,
+                          "start_column": 10,
+                          "stop_line": 77,
+                          "stop_column": 14
                         }
-                      ],
+                      },
                       "location": {
                         "filename": "comp_expressions_ok.input.bel",
                         "start_line": 77,
@@ -3231,29 +3219,9 @@
                   "typ": [
                     "Meta.Typ.Context_schema",
                     {
-                      "schema": [
-                        "Meta.Schema.Constant",
-                        {
-                          "identifier": {
-                            "name": {
-                              "name": "ctx1",
-                              "location": {
-                                "filename": "comp_expressions_ok.input.bel",
-                                "start_line": 83,
-                                "start_column": 9,
-                                "stop_line": 83,
-                                "stop_column": 13
-                              }
-                            },
-                            "namespaces": [],
-                            "location": {
-                              "filename": "comp_expressions_ok.input.bel",
-                              "start_line": 83,
-                              "start_column": 9,
-                              "stop_line": 83,
-                              "stop_column": 13
-                            }
-                          },
+                      "schema": {
+                        "name": {
+                          "name": "ctx1",
                           "location": {
                             "filename": "comp_expressions_ok.input.bel",
                             "start_line": 83,
@@ -3261,8 +3229,16 @@
                             "stop_line": 83,
                             "stop_column": 13
                           }
+                        },
+                        "namespaces": [],
+                        "location": {
+                          "filename": "comp_expressions_ok.input.bel",
+                          "start_line": 83,
+                          "start_column": 9,
+                          "stop_line": 83,
+                          "stop_column": 13
                         }
-                      ],
+                      },
                       "location": {
                         "filename": "comp_expressions_ok.input.bel",
                         "start_line": 83,
@@ -3673,29 +3649,9 @@
                   "typ": [
                     "Meta.Typ.Context_schema",
                     {
-                      "schema": [
-                        "Meta.Schema.Constant",
-                        {
-                          "identifier": {
-                            "name": {
-                              "name": "ctx1",
-                              "location": {
-                                "filename": "comp_expressions_ok.input.bel",
-                                "start_line": 85,
-                                "start_column": 9,
-                                "stop_line": 85,
-                                "stop_column": 13
-                              }
-                            },
-                            "namespaces": [],
-                            "location": {
-                              "filename": "comp_expressions_ok.input.bel",
-                              "start_line": 85,
-                              "start_column": 9,
-                              "stop_line": 85,
-                              "stop_column": 13
-                            }
-                          },
+                      "schema": {
+                        "name": {
+                          "name": "ctx1",
                           "location": {
                             "filename": "comp_expressions_ok.input.bel",
                             "start_line": 85,
@@ -3703,8 +3659,16 @@
                             "stop_line": 85,
                             "stop_column": 13
                           }
+                        },
+                        "namespaces": [],
+                        "location": {
+                          "filename": "comp_expressions_ok.input.bel",
+                          "start_line": 85,
+                          "start_column": 9,
+                          "stop_line": 85,
+                          "stop_column": 13
                         }
-                      ],
+                      },
                       "location": {
                         "filename": "comp_expressions_ok.input.bel",
                         "start_line": 85,
@@ -3729,29 +3693,9 @@
                   "typ": [
                     "Meta.Typ.Context_schema",
                     {
-                      "schema": [
-                        "Meta.Schema.Constant",
-                        {
-                          "identifier": {
-                            "name": {
-                              "name": "ctx2",
-                              "location": {
-                                "filename": "comp_expressions_ok.input.bel",
-                                "start_line": 85,
-                                "start_column": 22,
-                                "stop_line": 85,
-                                "stop_column": 26
-                              }
-                            },
-                            "namespaces": [],
-                            "location": {
-                              "filename": "comp_expressions_ok.input.bel",
-                              "start_line": 85,
-                              "start_column": 22,
-                              "stop_line": 85,
-                              "stop_column": 26
-                            }
-                          },
+                      "schema": {
+                        "name": {
+                          "name": "ctx2",
                           "location": {
                             "filename": "comp_expressions_ok.input.bel",
                             "start_line": 85,
@@ -3759,8 +3703,16 @@
                             "stop_line": 85,
                             "stop_column": 26
                           }
+                        },
+                        "namespaces": [],
+                        "location": {
+                          "filename": "comp_expressions_ok.input.bel",
+                          "start_line": 85,
+                          "start_column": 22,
+                          "stop_line": 85,
+                          "stop_column": 26
                         }
-                      ],
+                      },
                       "location": {
                         "filename": "comp_expressions_ok.input.bel",
                         "start_line": 85,

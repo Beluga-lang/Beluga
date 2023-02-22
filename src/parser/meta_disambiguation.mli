@@ -20,6 +20,8 @@ end
 
 module Make
     (Disambiguation_state : DISAMBIGUATION_STATE)
+    (Lf_disambiguation : Lf_disambiguation.LF_DISAMBIGUATION
+                           with type state = Disambiguation_state.state)
     (Clf_disambiguator : Clf_disambiguation.CLF_DISAMBIGUATION
                            with type state = Disambiguation_state.state) :
   META_DISAMBIGUATION with type state = Disambiguation_state.state

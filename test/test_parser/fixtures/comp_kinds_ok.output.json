@@ -28,44 +28,32 @@
       "parameter_type": [
         "Meta.Typ.Context_schema",
         {
-          "schema": [
-            "Meta.Schema.Constant",
-            {
-              "identifier": {
-                "name": {
-                  "name": "ctx",
-                  "location": {
-                    "filename": "comp_kinds_ok.input.bel",
-                    "start_line": 10,
-                    "start_column": 6,
-                    "stop_line": 10,
-                    "stop_column": 9
-                  }
-                },
-                "namespaces": [],
-                "location": {
-                  "filename": "comp_kinds_ok.input.bel",
-                  "start_line": 10,
-                  "start_column": 6,
-                  "stop_line": 10,
-                  "stop_column": 9
-                }
-              },
+          "schema": {
+            "name": {
+              "name": "ctx1",
               "location": {
                 "filename": "comp_kinds_ok.input.bel",
                 "start_line": 10,
                 "start_column": 6,
                 "stop_line": 10,
-                "stop_column": 9
+                "stop_column": 10
               }
+            },
+            "namespaces": [],
+            "location": {
+              "filename": "comp_kinds_ok.input.bel",
+              "start_line": 10,
+              "start_column": 6,
+              "stop_line": 10,
+              "stop_column": 10
             }
-          ],
+          },
           "location": {
             "filename": "comp_kinds_ok.input.bel",
             "start_line": 10,
             "start_column": 6,
             "stop_line": 10,
-            "stop_column": 9
+            "stop_column": 10
           }
         }
       ],
@@ -75,9 +63,9 @@
           "location": {
             "filename": "comp_kinds_ok.input.bel",
             "start_line": 10,
-            "start_column": 11,
+            "start_column": 12,
             "stop_line": 10,
-            "stop_column": 16
+            "stop_column": 17
           }
         }
       ],
@@ -86,7 +74,7 @@
         "start_line": 10,
         "start_column": 1,
         "stop_line": 10,
-        "stop_column": 16
+        "stop_column": 17
       }
     }
   ],
@@ -303,44 +291,32 @@
       "parameter_type": [
         "Meta.Typ.Context_schema",
         {
-          "schema": [
-            "Meta.Schema.Constant",
-            {
-              "identifier": {
-                "name": {
-                  "name": "ctx",
-                  "location": {
-                    "filename": "comp_kinds_ok.input.bel",
-                    "start_line": 16,
-                    "start_column": 6,
-                    "stop_line": 16,
-                    "stop_column": 9
-                  }
-                },
-                "namespaces": [],
-                "location": {
-                  "filename": "comp_kinds_ok.input.bel",
-                  "start_line": 16,
-                  "start_column": 6,
-                  "stop_line": 16,
-                  "stop_column": 9
-                }
-              },
+          "schema": {
+            "name": {
+              "name": "ctx1",
               "location": {
                 "filename": "comp_kinds_ok.input.bel",
                 "start_line": 16,
                 "start_column": 6,
                 "stop_line": 16,
-                "stop_column": 9
+                "stop_column": 10
               }
+            },
+            "namespaces": [],
+            "location": {
+              "filename": "comp_kinds_ok.input.bel",
+              "start_line": 16,
+              "start_column": 6,
+              "stop_line": 16,
+              "stop_column": 10
             }
-          ],
+          },
           "location": {
             "filename": "comp_kinds_ok.input.bel",
             "start_line": 16,
             "start_column": 6,
             "stop_line": 16,
-            "stop_column": 9
+            "stop_column": 10
           }
         }
       ],
@@ -361,17 +337,17 @@
                         "location": {
                           "filename": "comp_kinds_ok.input.bel",
                           "start_line": 16,
-                          "start_column": 12,
+                          "start_column": 13,
                           "stop_line": 16,
-                          "stop_column": 13
+                          "stop_column": 14
                         }
                       },
                       "location": {
                         "filename": "comp_kinds_ok.input.bel",
                         "start_line": 16,
-                        "start_column": 12,
+                        "start_column": 13,
                         "stop_line": 16,
-                        "stop_column": 13
+                        "stop_column": 14
                       }
                     }
                   ],
@@ -382,9 +358,9 @@
                         "location": {
                           "filename": "comp_kinds_ok.input.bel",
                           "start_line": 16,
-                          "start_column": 15,
+                          "start_column": 16,
                           "stop_line": 16,
-                          "stop_column": 16
+                          "stop_column": 17
                         }
                       },
                       "typ": [
@@ -396,26 +372,26 @@
                               "location": {
                                 "filename": "comp_kinds_ok.input.bel",
                                 "start_line": 16,
-                                "start_column": 19,
+                                "start_column": 20,
                                 "stop_line": 16,
-                                "stop_column": 22
+                                "stop_column": 23
                               }
                             },
                             "namespaces": [],
                             "location": {
                               "filename": "comp_kinds_ok.input.bel",
                               "start_line": 16,
-                              "start_column": 19,
+                              "start_column": 20,
                               "stop_line": 16,
-                              "stop_column": 22
+                              "stop_column": 23
                             }
                           },
                           "location": {
                             "filename": "comp_kinds_ok.input.bel",
                             "start_line": 16,
-                            "start_column": 19,
+                            "start_column": 20,
                             "stop_line": 16,
-                            "stop_column": 22
+                            "stop_column": 23
                           }
                         }
                       ]
@@ -424,9 +400,9 @@
                   "location": {
                     "filename": "comp_kinds_ok.input.bel",
                     "start_line": 16,
-                    "start_column": 12,
+                    "start_column": 13,
                     "stop_line": 16,
-                    "stop_column": 22
+                    "stop_column": 23
                   }
                 }
               ],
@@ -439,35 +415,35 @@
                       "location": {
                         "filename": "comp_kinds_ok.input.bel",
                         "start_line": 16,
-                        "start_column": 26,
+                        "start_column": 27,
                         "stop_line": 16,
-                        "stop_column": 29
+                        "stop_column": 30
                       }
                     },
                     "namespaces": [],
                     "location": {
                       "filename": "comp_kinds_ok.input.bel",
                       "start_line": 16,
-                      "start_column": 26,
+                      "start_column": 27,
                       "stop_line": 16,
-                      "stop_column": 29
+                      "stop_column": 30
                     }
                   },
                   "location": {
                     "filename": "comp_kinds_ok.input.bel",
                     "start_line": 16,
-                    "start_column": 26,
+                    "start_column": 27,
                     "stop_line": 16,
-                    "stop_column": 29
+                    "stop_column": 30
                   }
                 }
               ],
               "location": {
                 "filename": "comp_kinds_ok.input.bel",
                 "start_line": 16,
-                "start_column": 11,
+                "start_column": 12,
                 "stop_line": 16,
-                "stop_column": 30
+                "stop_column": 31
               }
             }
           ],
@@ -488,17 +464,17 @@
                             "location": {
                               "filename": "comp_kinds_ok.input.bel",
                               "start_line": 16,
-                              "start_column": 34,
+                              "start_column": 35,
                               "stop_line": 16,
-                              "stop_column": 35
+                              "stop_column": 36
                             }
                           },
                           "location": {
                             "filename": "comp_kinds_ok.input.bel",
                             "start_line": 16,
-                            "start_column": 34,
+                            "start_column": 35,
                             "stop_line": 16,
-                            "stop_column": 35
+                            "stop_column": 36
                           }
                         }
                       ],
@@ -506,9 +482,9 @@
                       "location": {
                         "filename": "comp_kinds_ok.input.bel",
                         "start_line": 16,
-                        "start_column": 34,
+                        "start_column": 35,
                         "stop_line": 16,
-                        "stop_column": 35
+                        "stop_column": 36
                       }
                     }
                   ],
@@ -521,35 +497,35 @@
                           "location": {
                             "filename": "comp_kinds_ok.input.bel",
                             "start_line": 16,
-                            "start_column": 39,
+                            "start_column": 40,
                             "stop_line": 16,
-                            "stop_column": 42
+                            "stop_column": 43
                           }
                         },
                         "namespaces": [],
                         "location": {
                           "filename": "comp_kinds_ok.input.bel",
                           "start_line": 16,
-                          "start_column": 39,
+                          "start_column": 40,
                           "stop_line": 16,
-                          "stop_column": 42
+                          "stop_column": 43
                         }
                       },
                       "location": {
                         "filename": "comp_kinds_ok.input.bel",
                         "start_line": 16,
-                        "start_column": 39,
+                        "start_column": 40,
                         "stop_line": 16,
-                        "stop_column": 42
+                        "stop_column": 43
                       }
                     }
                   ],
                   "location": {
                     "filename": "comp_kinds_ok.input.bel",
                     "start_line": 16,
-                    "start_column": 33,
+                    "start_column": 34,
                     "stop_line": 16,
-                    "stop_column": 43
+                    "stop_column": 44
                   }
                 }
               ],
@@ -568,9 +544,9 @@
                               "location": {
                                 "filename": "comp_kinds_ok.input.bel",
                                 "start_line": 16,
-                                "start_column": 47,
+                                "start_column": 48,
                                 "stop_line": 16,
-                                "stop_column": 48
+                                "stop_column": 49
                               }
                             }
                           ],
@@ -578,9 +554,9 @@
                           "location": {
                             "filename": "comp_kinds_ok.input.bel",
                             "start_line": 16,
-                            "start_column": 47,
+                            "start_column": 48,
                             "stop_line": 16,
-                            "stop_column": 48
+                            "stop_column": 49
                           }
                         }
                       ],
@@ -593,35 +569,35 @@
                               "location": {
                                 "filename": "comp_kinds_ok.input.bel",
                                 "start_line": 16,
-                                "start_column": 51,
+                                "start_column": 52,
                                 "stop_line": 16,
-                                "stop_column": 54
+                                "stop_column": 55
                               }
                             },
                             "namespaces": [],
                             "location": {
                               "filename": "comp_kinds_ok.input.bel",
                               "start_line": 16,
-                              "start_column": 51,
+                              "start_column": 52,
                               "stop_line": 16,
-                              "stop_column": 54
+                              "stop_column": 55
                             }
                           },
                           "location": {
                             "filename": "comp_kinds_ok.input.bel",
                             "start_line": 16,
-                            "start_column": 51,
+                            "start_column": 52,
                             "stop_line": 16,
-                            "stop_column": 54
+                            "stop_column": 55
                           }
                         }
                       ],
                       "location": {
                         "filename": "comp_kinds_ok.input.bel",
                         "start_line": 16,
-                        "start_column": 46,
+                        "start_column": 47,
                         "stop_line": 16,
-                        "stop_column": 55
+                        "stop_column": 56
                       }
                     }
                   ],
@@ -631,36 +607,36 @@
                       "location": {
                         "filename": "comp_kinds_ok.input.bel",
                         "start_line": 16,
-                        "start_column": 58,
+                        "start_column": 59,
                         "stop_line": 16,
-                        "stop_column": 63
+                        "stop_column": 64
                       }
                     }
                   ],
                   "location": {
                     "filename": "comp_kinds_ok.input.bel",
                     "start_line": 16,
-                    "start_column": 46,
+                    "start_column": 47,
                     "stop_line": 16,
-                    "stop_column": 63
+                    "stop_column": 64
                   }
                 }
               ],
               "location": {
                 "filename": "comp_kinds_ok.input.bel",
                 "start_line": 16,
-                "start_column": 33,
+                "start_column": 34,
                 "stop_line": 16,
-                "stop_column": 63
+                "stop_column": 64
               }
             }
           ],
           "location": {
             "filename": "comp_kinds_ok.input.bel",
             "start_line": 16,
-            "start_column": 11,
+            "start_column": 12,
             "stop_line": 16,
-            "stop_column": 63
+            "stop_column": 64
           }
         }
       ],
@@ -669,7 +645,7 @@
         "start_line": 16,
         "start_column": 1,
         "stop_line": 16,
-        "stop_column": 63
+        "stop_column": 64
       }
     }
   ]

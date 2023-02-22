@@ -519,7 +519,7 @@ let rec json_of_meta_typ typ =
   | Meta.Typ.Context_schema { schema; location } ->
       json_of_variant ~name:"Meta.Typ.Context_schema"
         ~data:
-          [ ("schema", json_of_schema schema)
+          [ ("schema", json_of_qualified_identifier schema)
           ; ("location", json_of_location location)
           ]
   | Meta.Typ.Contextual_typ { context; typ; location } ->
@@ -649,18 +649,18 @@ and json_of_schema schema =
                 (json_of_list1 (fun (identifier, typ) ->
                      json_of_association
                        [ ("identifier", json_of_identifier identifier)
-                       ; ("typ", json_of_clf_typ typ)
+                       ; ("typ", json_of_lf_typ typ)
                        ]))
                 some )
           ; ( "block"
             , match block with
-              | `Unnamed typ -> json_of_clf_typ typ
+              | `Unnamed typ -> json_of_lf_typ typ
               | `Record bindings ->
                   json_of_list1
                     (fun (identifier, typ) ->
                       json_of_association
                         [ ("identifier", json_of_identifier identifier)
-                        ; ("typ", json_of_clf_typ typ)
+                        ; ("typ", json_of_lf_typ typ)
                         ])
                     bindings )
           ; ("location", json_of_location location)

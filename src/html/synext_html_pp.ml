@@ -1386,7 +1386,8 @@ module Make (Html_state : HTML_PRINTING_STATE) :
 
   let rec pp_meta_typ typ =
     match typ with
-    | Meta.Typ.Context_schema { schema; _ } -> pp_schema schema
+    | Meta.Typ.Context_schema { schema; _ } ->
+        pp_schema_constant_invoke schema
     | Meta.Typ.Contextual_typ { context; typ; _ } ->
         pp_hovbox ~indent
           (pp_in_parens
@@ -1457,7 +1458,7 @@ module Make (Html_state : HTML_PRINTING_STATE) :
     let pp_binding (identifier, typ) =
       pp_hovbox ~indent
         (pp_lf_variable identifier ++ pp_non_breaking_space ++ pp_colon
-       ++ pp_space ++ pp_clf_typ typ)
+       ++ pp_space ++ pp_lf_typ typ)
     in
     let pp_bindings bindings =
       pp_hvbox (pp_list1 ~sep:pp_comma_space pp_binding bindings)
@@ -1483,7 +1484,7 @@ module Make (Html_state : HTML_PRINTING_STATE) :
         let pp_block_clause =
           match block with
           | `Unnamed t ->
-              pp_block_keyword ++ pp_non_breaking_space ++ pp_clf_typ t
+              pp_block_keyword ++ pp_non_breaking_space ++ pp_lf_typ t
           | `Record block_bindings ->
               pp_block_keyword ++ pp_non_breaking_space
               ++ pp_in_parens (pp_bindings block_bindings)

@@ -114,15 +114,14 @@ module Make
           `block' [<identifier> `:'] <clf-object> (`,' [<identifier> `:'] <clf-object>)*
     *)
     let schema_some_clause =
-      let declaration = seq2 identifier (colon &> clf_typ) in
+      let declaration = seq2 identifier (colon &> lf_typ) in
       keyword "some"
       &> bracks (sep_by0 ~sep:comma declaration)
       |> labelled "Context schema `some' clause"
 
     let schema_block_clause =
       let block_contents =
-        sep_by1 ~sep:comma
-          (seq2 (maybe (identifier <& trying colon)) clf_typ)
+        sep_by1 ~sep:comma (seq2 (maybe (identifier <& trying colon)) lf_typ)
         |> labelled "Context schema element"
       in
       maybe (keyword "block")

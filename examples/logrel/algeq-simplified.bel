@@ -52,7 +52,7 @@ mlam h,$W => fn e => case e of
 | LogArr [g |-  M1] [g |-  M2] f =>
   LogArr [h |-  M1[$W]] [h |-  M2[$W]]
    (mlam h0,$W2,N1,N2 => fn rn =>
-    f [h0] [h0 |- $W[$W2]] [h0 |-  N1] [h0 |-  N2] rn
+    f [h0] $[h0 |- $W[$W2]] [h0 |-  N1] [h0 |-  N2] rn
    )
 ;
 
@@ -410,7 +410,7 @@ case d of
    )
 | DecExt d1 =>
   LogArr [h |-  _] [h |-  _] (mlam h0,$W,N1,N2 => fn rn =>
-   thm d1 (Dot (wknLogSub [h0] [h] [h0 |- $W] s) rn)
+   thm d1 (Dot (wknLogSub [h0] [h] $[h0 |- $W] s) rn)
   )
 | DecBeta d1 d2 =>
    closed _ [h |-  trans1 beta refl] [h |-  refl] (thm d1 (Dot s (thm d2 s)))
@@ -426,7 +426,7 @@ inductive IdSub : {G:[|-dctx]}{g:ctx}(g':tctx){$Id:$[g' |- g]} ctype =
 
 % % The identity substitution is logically related to itself
 rec idLogSub : IdSub [|-G] [g] $[g' |- $Id]
--> LogSub [g] $[g' |- $Id] [g' |- $Id] [|-G] =
+-> LogSub [g] $[g' |- $Id] $[g' |- $Id] [|-G] =
  / total r (idLogSub g g g s r) /
    fn r => case r of
 | INil => Nil

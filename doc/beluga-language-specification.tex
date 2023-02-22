@@ -20,9 +20,14 @@
 
 \usepackage{xspace}
 
+\usepackage{acronym}
+
 \newcommand{\Beluga}{\textsc{Beluga}\xspace}
 \newcommand{\Harpoon}{\textsc{Harpoon}\xspace}
 \newcommand{\LF}{\textsc{LF}\xspace}
+
+\acrodef{AST}{abstract syntax tree}
+\acrodefplural{AST}[ASTs]{abstract syntax trees}
 
 \title{%
 \Beluga Language Specification%
@@ -59,6 +64,8 @@ The EBNF metasyntax used in the sections hereafter follows this notation:
 
 \subsection{Comments}
 
+\Beluga supports three kinds of comments:
+
 \begin{itemize}
 \item
 Line comments start with \texttt{\%} and end with a newline \texttt{\textbackslash n}.
@@ -75,7 +82,7 @@ Documentation comments may only appear before or after signature-level declarati
 
 \subsection{Keywords}
 
-The following identifiers are reserved as keywords, and cannot be used otherwise.
+The following identifiers are reserved as keywords in \Beluga, and cannot be used otherwise.
 
 \begin{multicols}{4}
 \begin{itemize}[label={}]
@@ -184,6 +191,8 @@ The production \synt{any} stands for any unicode character.
 
 <identifier> ::= <identifier-start> <identifier-continue>* \hfill \texttt{(* Identifier definition *)}
 
+<dot-identifier> ::= `.'<identifier>
+
 <hash-identifier> ::= `#'<identifier>
 
 <dollar-identifier> ::= `$'<identifier>
@@ -204,9 +213,9 @@ The production \synt{any} stands for any unicode character.
   `$_'
 | <dollar-identifier>
 
-<qualified-identifier> ::= <identifier> (`.' <identifier>)* \hfill \texttt{(* Identifier reference *)}
+<qualified-identifier> ::= <identifier> <dot-identifier>* \hfill \texttt{(* Identifier reference *)}
 
-<dot-qualified-identifier> ::= (`.' <identifier>)+
+<dot-qualified-identifier> ::= <dot-identifier>+
 
 <meta-object-identifier> ::= \hfill\\
 | <identifier>\\
@@ -243,7 +252,7 @@ These constructs form a weak representational function space without case analys
 | `{' <omittable-identifier> `:' <lf-type> `}' <lf-type> \hfill \texttt{(* Pi type *)}\\
 | <lf-type> <forward-arrow> <lf-type> \hfill \texttt{(* Arrow type *)}\\
 | <lf-type> <backward-arrow> <lf-type>\\
-| <qualified-identifier> <lf-term>+ \hfill \texttt{(* Prefix application *)}\\
+| <qualified-identifier> <lf-term> \hfill \texttt{(* Prefix application *)}\\
 | <lf-term> <qualified-identifier> <lf-term> \hfill \texttt{(* Infix application *)}\\
 | <lf-term> <qualified-identifier> \hfill \texttt{(* Postfix application *)}\\
 | `(' <lf-type> `)'
@@ -253,8 +262,8 @@ These constructs form a weak representational function space without case analys
 | <qualified-identifier> \hfill \texttt{(* Term constant *)}\\
 | `\\' `(' <omittable-identifier> `:' <lf-type> `)' `.' <lf-term> \hfill \texttt{(* Typed lambda abstraction *)}\\
 | `\\' <omittable-identifier> `.' <lf-term> \hfill \texttt{(* Untyped lambda abstraction *)}\\
-| <lf-term> <lf-term> \hfill \texttt{(* Application *)}\\
-| <qualified-identifier> <lf-term>+ \hfill \texttt{(* Prefix term constant application *)}\\
+| <lf-term> <lf-term>+ \hfill \texttt{(* Application *)}\\
+| <qualified-identifier> <lf-term> \hfill \texttt{(* Prefix term constant application *)}\\
 | <lf-term> <qualified-identifier> <lf-term> \hfill \texttt{(* Infix term constant application *)}\\
 | <lf-term> <qualified-identifier> \hfill \texttt{(* Postfix term constant application *)}\\
 | `_' \hfill \texttt{(* Wildcard *)}\\
@@ -276,7 +285,7 @@ The following is the grammar for the extension of \LF with substitutions, contex
 | `block' <identifier> `:' <clf-type> (`,' <identifier> `:' <clf-type>)+\\
 | `block' `(' <clf-type> `)'\\
 | `block' <clf-type>\\
-| <qualified-identifier> <clf-term>+ \hfill \texttt{(* Prefix type constant application *)}\\
+| <qualified-identifier> <clf-term> \hfill \texttt{(* Prefix type constant application *)}\\
 | <clf-term> <qualified-identifier> <clf-term> \hfill \texttt{(* Infix type constant application *)}\\
 | <clf-term> <qualified-identifier> \hfill \texttt{(* Postfix type constant application *)}\\
 | `(' <clf-type> `)'
@@ -288,8 +297,8 @@ The following is the grammar for the extension of \LF with substitutions, contex
 | <clf-term> <clf-substitution> \hfill \texttt{(* Substitution term *)}\\
 | `\\' `(' <omittable-identifier> `:' <clf-type> `)' `.' <clf-term> \hfill \texttt{(* Typed lambda abstraction *)}\\
 | `\\' <omittable-identifier> `.' <clf-term> \hfill \texttt{(* Untyped lambda abstraction *)}\\
-| <clf-term> <clf-term> \hfill \texttt{(* Application *)}\\
-| <qualified-identifier> <clf-term>+ \hfill \texttt{(* Prefix term constant application *)}\\
+| <clf-term> <clf-term>+ \hfill \texttt{(* Application *)}\\
+| <qualified-identifier> <clf-term> \hfill \texttt{(* Prefix term constant application *)}\\
 | <clf-term> <qualified-identifier> <clf-term> \hfill \texttt{(* Infix term constant application *)}\\
 | <clf-term> <qualified-identifier> \hfill \texttt{(* Postfix term constant application *)}\\
 | `_' \hfill \texttt{(* Hole *)}\\
@@ -311,8 +320,8 @@ The following is the grammar for the extension of \LF with substitutions, contex
 | `\\' `(' <omittable-identifier> `:' <clf-type> `)' `.' <clf-pattern> \hfill \texttt{(* Typed lambda abstraction *)}\\
 | `\\' <omittable-identifier> `.' <clf-pattern> \hfill \texttt{(* Untyped lambda abstraction *)}\\
 | <clf-pattern> `[' <clf-substitution> `]' \hfill \texttt{(* Substitution *)}\\
-| <clf-pattern> <clf-pattern> \hfill \texttt{(* Application *)}\\
-| <qualified-identifier> <clf-pattern>+ \hfill \texttt{(* Prefix term constant application *)}\\
+| <clf-pattern> <clf-pattern>+ \hfill \texttt{(* Application *)}\\
+| <qualified-identifier> <clf-pattern> \hfill \texttt{(* Prefix term constant application *)}\\
 | <clf-pattern> <qualified-identifier> <clf-pattern> \hfill \texttt{(* Infix term constant application *)}\\
 | <clf-pattern> <qualified-identifier> \hfill \texttt{(* Postfix term constant application *)}\\
 | <clf-pattern> `:' <clf-type> \hfill \texttt{(* Annotated *)}\\
@@ -417,17 +426,20 @@ Atomic patterns are computation-level patterns that may appear as whitespace-del
 | <comp-type> <backward-arrow> <comp-type>\\
 | <comp-type> (`*' <comp-type>)+ \hfill \texttt{(* Cross type *)}\\
 | <meta-type> \hfill \texttt{(* Meta-type *)}\\
-| <qualified-identifier> <meta-object>* \hfill \texttt{(* Prefix base type *)}\\
+| <qualified-identifier> <meta-object>* \hfill \texttt{(* Base type application *)}\\
+| <qualified-identifier> <meta-object> \hfill \texttt{(* Prefix base type *)}\\
 | <meta-object> <qualified-identifier> <meta-object> \hfill \texttt{(* Infix base type *)}\\
 | <meta-object> <qualified-identifier> \hfill \texttt{(* Postfix base type *)}\\
-| <qualified-identifier> <meta-object>* \hfill \texttt{(* Prefix cobase type *)}\\
+| <qualified-identifier> <meta-object>* \hfill \texttt{(* Cobase type application *)}\\
+| <qualified-identifier> <meta-object> \hfill \texttt{(* Prefix cobase type *)}\\
 | <meta-object> <qualified-identifier> <meta-object> \hfill \texttt{(* Infix cobase type *)}\\
 | <meta-object> <qualified-identifier> \hfill \texttt{(* Postfix cobase type *)}\\
 | `(' <comp-type> `)'
 
 <comp-expression> ::= \hfill\\
 | <identifier> \hfill \texttt{(* Variable *)}\\
-| <qualified-identifier> \hfill \texttt{(* Constant *)}\\
+| <qualified-identifier> \hfill \texttt{(* Constructor *)}\\
+| <qualified-identifier> \hfill \texttt{(* Program constant *)}\\
 | `fn' <omittable-identifier>+ <thick-forward-arrow> <comp-expression>\\
 | `fun' [`|'] <comp-cofunction-branch> (`|' <comp-cofunction-branch>)*\\
 | `mlam' <omittable-meta-object-identifier>+ <thick-forward-arrow> <comp-expression>\\
@@ -441,7 +453,13 @@ Atomic patterns are computation-level patterns that may appear as whitespace-del
 | `(' <comp-expression> (`,' <comp-expression>)+ `)' \hfill \texttt{(* Tuple *)}\\
 | `?' [<identifier>] \hfill \texttt{(* Hole *)}\\
 | `_' \hfill \texttt{(* Box hole *)}\\
-| <comp-expression> <comp-expression> \hfill \texttt{(* Application *)}\\
+| <comp-expression> <comp-expression>+ \hfill \texttt{(* Application *)}\\
+| <qualified-identifier> <comp-expression> \hfill \texttt{(* Prefix constructor application *)}\\
+| <comp-expression> <qualified-identifier> <comp-expression> \hfill \texttt{(* Infix constructor application *)}\\
+| <comp-expression> <qualified-identifier> \hfill \texttt{(* Postfix constructor application *)}\\
+| <qualified-identifier> <comp-expression> \hfill \texttt{(* Prefix program constant application *)}\\
+| <comp-expression> <qualified-identifier> <comp-expression> \hfill \texttt{(* Infix program constant application *)}\\
+| <comp-expression> <qualified-identifier> \hfill \texttt{(* Postfix program constant application *)}\\
 | <comp-expression> <dot-qualified-identifier> \hfill \texttt{(* Observation *)}\\
 | <comp-expression> `:' <comp-type> \hfill \texttt{(* Annotated *)}\\
 | `(' <comp-expression> `)'
@@ -457,10 +475,13 @@ Atomic patterns are computation-level patterns that may appear as whitespace-del
 
 <comp-pattern> ::= \hfill\\
 | <identifier> \hfill \texttt{(* Variable *)}\\
-| <qualified-identifier> \hfill \texttt{(* Constant *)}\\
+| <qualified-identifier> \hfill \texttt{(* Constructor *)}\\
 | <meta-pattern> \hfill \texttt{(* Meta-object *)} \\
 | `(' <comp-pattern> (`,' <comp-pattern>)+ `)' \hfill \texttt{(* Tuple *)}\\
-| <comp-pattern> <comp-pattern> \hfill \texttt{(* Application *)}\\
+| <comp-pattern> <comp-pattern>+ \hfill \texttt{(* Application *)}\\
+| <qualified-identifier> <comp-pattern> \hfill \texttt{(* Prefix constructor application *)}\\
+| <comp-pattern> <qualified-identifier> <comp-pattern> \hfill \texttt{(* Infix constructor application *)}\\
+| <comp-pattern> <qualified-identifier> \hfill \texttt{(* Postfix constructor application *)}\\
 | <comp-pattern> `:' <comp-type> \hfill \texttt{(* Annotated *)}\\
 | `_' \hfill \texttt{(* Wildcard *)}\\
 | `(' <comp-pattern> `)'
@@ -577,9 +598,9 @@ In particular, pragmas allow the user to choose a notation for operators.
 
 \begin{grammar}
 <pragma> ::= \hfill\\
-| `----prefix' <qualified-identifier> <precedence> `.'\\
-| `----infix' <qualified-identifier> <precedence> [<associativity>] `.'\\
-| `----postfix' <qualified-identifier> <precedence> `.'\\
+| `----prefix' <qualified-identifier> [<precedence>] `.'\\
+| `----infix' <qualified-identifier> [<precedence>] [<associativity>] `.'\\
+| `----postfix' <qualified-identifier> [<precedence>] `.'\\
 | `----name' <qualified-identifier> <identifier> [<identifier>] `.'\\
 | `----not'\\
 | `----assoc <associativity> `.'\\
@@ -719,14 +740,14 @@ Ambiguities in the syntax include:
 \item Ambiguities associated with user-defined operators with their fixities, associativities and precedences.
 \end{itemize}
 
-Resolution for ambiguities in a grammar is either stateless using grammar rewriting, or stateful using semantic analysis data produced during or after parsing.
+Resolution for ambiguities in a grammar is either stateless (context-free) using grammar rewriting, or stateful (context-sensitive or data-dependent) using semantic analysis data produced during or after parsing.
 
 Ambiguities for the built-in operators in the syntax may be resolved statelessly by rewriting the grammar to be suitable for recursive-descent parsing.
 
 The remainder of the ambiguities listed above must be resolved statefully since they require complete scope information to correctly resolve operator sorts and the parser settings defined by the user.
 Furthermore, given that declarations in a \Beluga signature may be mutually recursive, resolving these ambiguities is best done in a separate phase after parsing.
 Indeed, attempting to resolve these ambiguities in a top-down parser would require possibly unbounded lookaheads and more costly backtracking.
-As such, a \Beluga signature is first parsed into an abstract syntax tree with ambiguous nodes (AST), and separate disambigution phase elaborates that AST to the external syntax.
+As such, a \Beluga signature is first parsed into an \ac{AST} with ambiguous nodes, and separate disambigution phase elaborates that \ac{AST} to the external syntax.
 By design, the grammar of section~\ref{section:syntax} does not require type information for disambiguation.
 Hence, the symbol table only keeps track of identifiers in scope and their associated sort without types.
 

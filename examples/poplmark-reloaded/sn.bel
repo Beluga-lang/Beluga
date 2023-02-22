@@ -79,7 +79,7 @@ rec red_var : {g : cxt} {#p : #[g |- tm A[]]} Red [ |- A] [g |- #p] =
       mlam g, #p => cr3 [_] [|- _ ] [_ |- _] (SVar [g |- #p]);
 
 rec fundVar : {g : cxt} {#p : #[g |- tm A[]]}
-			RedS [g] [g' |- $S]
+			RedS [g] $[g' |- $S]
 	      -> Red [|- A] [g' |- #p[$S]] =
     / total g (fundVar g) /
       mlam g, #p => fn s => case [g] of
@@ -97,7 +97,7 @@ rec fundamental_lemma : {g : cxt} {g' : cxt} {M : [g |- tm A[]]} {$S : $[g' |- g
    | [g |- #p] => fundVar [g] [g |- #p] rs
 
    | [g |- app M N] => let RArr r1 = fundamental_lemma [g] [g'] [g |- M] $[g' |- $S] rs in
-		       let r2 = fundamental_lemma [g] [g'] [g |- N] [g' |- $S] rs in
+		       let r2 = fundamental_lemma [g] [g'] [g |- N] $[g' |- $S] rs in
 		       r1 [g'] $[g' |- ..] [g' |- N[$S]] r2
 
    | [g |- abs \x.M] =>

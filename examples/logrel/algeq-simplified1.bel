@@ -47,7 +47,7 @@ mlam h,$W => fn e => case e of
 | LogArr [g |-  M1] [g |-  M2] f =>
   LogArr [h |-  M1[$W]] [h |-  M2[$W]]
    (mlam h0,$W2,N1,N2 => fn rn =>
-    f [h0] [h0 |- $W[$W2]] [h0 |-  N1] [h0 |-  N2] rn
+    f [h0] $[h0 |- $W[$W2]] [h0 |-  N1] [h0 |-  N2] rn
    )
 ;
 
@@ -390,7 +390,7 @@ rec thm :  DecEq [|-G] [g |- M1] [g |- M2] [|- T ]
         -> LogEq [h |- M1[$S1]] [h |- M2[$S2]] [ |- T] =
 / total d (thm g g h m1 m2 t sigma sigma' d) /
 fn d , s =>
-let s : LogEqSub [|- G] [g] [h |- $S1] [h |- $S2] = s in
+let s : LogEqSub [|- G] [g] $[h |- $S1] $[h |- $S2] = s in
 case d of
 | DecVar v => lookup v s
 | DecApp d1 d2 => let LogArr [h |-  M1] [h |-  M2] f = thm d1 s in
@@ -403,7 +403,7 @@ case d of
    )
 | DecExt d1 =>
   LogArr [h |-  _] [h |-  _] (mlam h0,$W,N1,N2 => fn rn =>
-   thm d1 (Dot (wknLogEqSub [h0] [h] [h0 |- $W] s) rn)
+   thm d1 (Dot (wknLogEqSub [h0] [h] $[h0 |- $W] s) rn)
   )
 | DecBeta d1 d2 =>
    closed _ [h |-  trans1 beta refl] [h |-  refl] (thm d1 (Dot s (thm d2 s)))

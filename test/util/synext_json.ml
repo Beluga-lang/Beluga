@@ -244,12 +244,6 @@ and json_of_clf_term term =
           [ ("identifier", json_of_identifier identifier)
           ; ("location", json_of_location location)
           ]
-  | CLF.Term.Substitution_variable { identifier; location } ->
-      json_of_variant ~name:"CLF.Term.Substitution_variable"
-        ~data:
-          [ ("identifier", json_of_identifier identifier)
-          ; ("location", json_of_location location)
-          ]
   | CLF.Term.Constant { identifier; location } ->
       json_of_variant ~name:"CLF.Term.Constant"
         ~data:

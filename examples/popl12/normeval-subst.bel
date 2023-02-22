@@ -50,7 +50,7 @@ mlam g,h,$S => fn e =>
 case e of
 | Syn [g |- R] => Syn [h |- R[$S]]
 | Slam  f =>
-  Slam (mlam h' => mlam $W => fn e => f [h'] [h'|- $S[$W[..]]] e)
+  Slam (mlam h' => mlam $W => fn e => f [h'] $[h'|- $S[$W[..]]] e)
 ;
 
 

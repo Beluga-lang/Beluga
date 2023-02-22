@@ -39,7 +39,7 @@ rec weaken : (g:ctx)(h:ctx) {$R : $[h |- g]}  Sem [g] [ |- A] -> Sem [h] [ |- A]
 / total x (weaken g h a e x) /
 mlam $R => fn x => case x of
 | Syn [g |- N] => Syn [_ |- N[$R]]
-| Slam [g] [ |- A] [ |- B] f => Slam [_] [ |- A] [ |- B] (mlam h' => mlam $S => fn x => f [h'] [h' |- $R[$S]] x)
+| Slam [g] [ |- A] [ |- B] f => Slam [_] [ |- A] [ |- B] (mlam h' => mlam $S => fn x => f [h'] $[h' |- $R[$S]] x)
 ;
 
 
@@ -64,7 +64,7 @@ case t of
 | [g |- lam (\x. E) ] : [g |- tm (arr A[] B[])] =>
   Slam [_] [ |- A] [ |- B]  (mlam h' => mlam $S => fn e =>
          eval [g,x:tm A[] |-  E]
-              (extend (mlam T => fn x => weaken [h' |- $S] (s [ |- T] x))  e))
+              (extend (mlam T => fn x => weaken $[h' |- $S] (s [ |- T] x))  e))
 
 | [g |- app E1 E2 ] =>
   let (Slam [h] [ |- A] [ |- B] f ) =  eval [g |- E1] s in

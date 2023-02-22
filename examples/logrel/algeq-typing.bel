@@ -56,7 +56,7 @@ mlam h,$W => fn e => case e of
 | LogArr [g |-  M1] [g |-  M2] f =>
   LogArr [h |-  M1[$W]] [h |-  M2[$W]]
    (mlam h0,$W2,N1,D1,N2,D2 => fn rn =>
-    f [h0] [h0 |- $W[$W2]] [h0 |-  N1] [_ |- D1] [h0 |-  N2] [_ |- D2] rn
+    f [h0] $[h0 |- $W[$W2]] [h0 |-  N1] [_ |- D1] [h0 |-  N2] [_ |- D2] rn
    )
 ;
 
@@ -331,7 +331,7 @@ schema ctx = some [t:tp] block x:tm,y:oft x t;
 inductive LogSub : {g0:ctx}(h:tctx){$S1: $[h |- g0]}{$S2: $[h |- g0]}
 ctype  =
 | Nil : LogSub [] $[h |- ^] $[h |- ^]
-| Dot : LogSub [g0] $[h |- $S1] [h |- $S2]
+| Dot : LogSub [g0] $[h |- $S1] $[h |- $S2]
        -> Log [h |- M1 sim M2] [ |- R]
        -> {D1:[h |- oft M1 R[]]} {D2:[h |- oft M2 R[]]}
          LogSub [g0,b:block x:tm,y:oft x R[]] $[h |- $S1, <M1;D1>] $[h |- $S2, <M2;D2>]

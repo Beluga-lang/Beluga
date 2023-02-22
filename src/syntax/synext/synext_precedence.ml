@@ -218,7 +218,6 @@ module Make_clf_precedence (S : PRECEDENCE_STATE) :
     | CLF.Term.Projection _ -> return (make_static 7)
     | CLF.Term.Variable _
     | CLF.Term.Parameter_variable _
-    | CLF.Term.Substitution_variable _
     | CLF.Term.Constant _
     | CLF.Term.Hole _
     | CLF.Term.Tuple _ ->

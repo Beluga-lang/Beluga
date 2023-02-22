@@ -284,7 +284,6 @@ The following is the grammar for the extension of \LF with substitutions, contex
 <clf-term> ::= \hfill\\
 | <identifier> \hfill \texttt{(* Variable *)}\\
 | <hash-identifier> \hfill \texttt{(* Parameter variable *)}\\
-| <dollar-identifier> \hfill \texttt{(* Substitution variable *)}\\
 | <qualified-identifier> \hfill \texttt{(* Term constant *)}\\
 | <clf-term> <clf-substitution> \hfill \texttt{(* Substitution term *)}\\
 | `\\' `(' <omittable-identifier> `:' <clf-type> `)' `.' <clf-term> \hfill \texttt{(* Typed lambda abstraction *)}\\
@@ -304,7 +303,6 @@ The following is the grammar for the extension of \LF with substitutions, contex
 <clf-pattern> ::= \hfill\\
 | <identifier> \hfill \texttt{(* Variable *)}\\
 | <hash-identifier> \hfill \texttt{(* Parameter variable *)}\\
-| <dollar-identifier> \hfill \texttt{(* Substitution variable *)}\\
 | <qualified-identifier> \hfill \texttt{(* Constant *)}\\
 | `_' \hfill \texttt{(* Wildcard *)}\\
 | `<' <clf-pattern> (`;' <clf-pattern>)* `>' \hfill \texttt{(* Tuple *)}\\

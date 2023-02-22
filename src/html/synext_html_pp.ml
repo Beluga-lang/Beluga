@@ -1047,8 +1047,6 @@ module Make (Html_state : HTML_PRINTING_STATE) :
     | CLF.Term.Variable { identifier; _ } -> pp_lf_variable identifier
     | CLF.Term.Parameter_variable { identifier; _ } ->
         pp_parameter_variable identifier
-    | CLF.Term.Substitution_variable { identifier; _ } ->
-        pp_substitution_variable identifier
     | CLF.Term.Constant { identifier; _ } ->
         pp_lf_term_constant_invoke identifier
     | CLF.Term.Application { applicand; arguments; _ } ->

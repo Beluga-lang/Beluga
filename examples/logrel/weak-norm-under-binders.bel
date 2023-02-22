@@ -207,7 +207,7 @@ case r of
 | Arr [g |- M] f =>
   Arr [h |- M[$W]]
    (mlam h' => mlam $W2 => mlam N => fn iv2 => fn rn =>
-    f [h'] [h' |- $W[$W2]] [h' |-  N] (compose iv iv2) rn);
+    f [h'] $[h' |- $W[$W2]] [h' |-  N] (compose iv iv2) rn);
 
 
 % Composing a reducible substitution with a variable substitution yields a

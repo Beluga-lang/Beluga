@@ -211,7 +211,7 @@ fn cr => fn m => fn n => fn l => case m of
 ;
 
 rec transR:
-Ctx_xaR [phi] [psi] [ psi |- $S ] ->
+Ctx_xaR [phi] [psi] $[ psi |- $S ] ->
 Eq [phi] [psi] $[ psi |- $S ] [phi |-  M] [psi |-  M'] ->
 Eq [phi] [psi] $[ psi |- $S ] [phi |-  N] [psi |-  N'] ->
 Eq [phi] [psi] $[ psi |- $S ] [phi |-  L] [psi |-  L'] ->
@@ -221,7 +221,7 @@ Eq [phi] [psi] $[ psi |- $S ] [phi |-  L] [psi |-  L'] ->
 | [psi |-  #p.2] =>
   let [psi |-  #q.2 ] = d2 in
   let Eq_v m' = m in
-  let (m' : EqV [phi] [psi, b : block (x:tm, u:aeq x x)] [psi, b:block (x:tm, u:aeq x x) |- $S]
+  let (m' : EqV [phi] [psi, b : block (x:tm, u:aeq x x)] $[psi, b:block (x:tm, u:aeq x x) |- $S]
                 [phi |-  #r] [psi, b: block (x:tm, u:aeq x x) |- #q.1[..]] ) = m' in
   ctx_member [phi |-  #r] cr m'
 

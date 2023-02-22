@@ -57,11 +57,11 @@ exception Illegal_block_clf_term
 
 exception Illegal_clf_term_projection
 
+exception Illegal_substitution_variable
+
 exception Expected_clf_term_constant
 
 exception Expected_parameter_variable
-
-exception Expected_substitution_variable
 
 (** {2 Exceptions for contextual LF substitution disambiguation} *)
 
@@ -368,24 +368,8 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
               (Synext.CLF.Term.Parameter_variable { location; identifier })
         | Result.Error cause -> Error.raise_at1 location cause)
     | Synprs.CLF.Object.Raw_identifier
-        { location; identifier = identifier, `Dollar; _ } -> (
-        (* A possibly free substitution variable. *)
-        let qualified_identifier =
-          Qualified_identifier.make_simple identifier
-        in
-        lookup_toplevel identifier >>= function
-        | Result.Ok (Substitution_variable, _) ->
-            return
-              (Synext.CLF.Term.Substitution_variable { location; identifier })
-        | Result.Ok entry ->
-            Error.raise_at1 location
-              (Error.composite_exception2 Expected_substitution_variable
-                 (actual_binding_exn qualified_identifier entry))
-        | Result.Error (Unbound_identifier _) ->
-            (* Free variable. *)
-            return
-              (Synext.CLF.Term.Substitution_variable { location; identifier })
-        | Result.Error cause -> Error.raise_at1 location cause)
+        { location; identifier = _identifier, `Dollar; _ } ->
+        Error.raise_at1 location Illegal_substitution_variable
     | Synprs.CLF.Object.Raw_identifier
         { location; identifier = identifier, `Plain; _ } -> (
         (* As an LF term, plain identifiers are either term-level constants
@@ -924,38 +908,8 @@ struct
                 return term')
         | Result.Error cause -> Error.raise_at1 location cause)
     | Synprs.CLF.Object.Raw_identifier
-        { location; identifier = identifier, `Dollar; _ } -> (
-        (* A possibly free substitution variable. *)
-        let qualified_identifier =
-          Qualified_identifier.make_simple identifier
-        in
-        lookup_toplevel identifier >>= function
-        | Result.Ok (Substitution_variable, _) ->
-            return
-              (Synext.CLF.Term.Substitution_variable { location; identifier })
-        | Result.Ok entry ->
-            Error.raise_at1 location
-              (Error.composite_exception2 Expected_substitution_variable
-                 (actual_binding_exn qualified_identifier entry))
-        | Result.Error (Unbound_identifier _) -> (
-            (* Free substitution variable in a contextgual LF term occuring
-               in a pattern. Its meta-type annotation binder will be
-               introduced during the abstraction phase of term
-               reconstruction. It is added as an inner binding to simulate
-               that binder. *)
-            let term' =
-              Synext.CLF.Term.Substitution_variable { location; identifier }
-            in
-            is_inner_pattern_bound identifier >>= function
-            | true ->
-                (* A separate free occurrence of the variable has already
-                   occurred, so we don't duplicate it. *)
-                return term'
-            | false ->
-                let* () = add_pattern_substitution_variable identifier in
-                let* () = add_inner_pattern_binding identifier in
-                return term')
-        | Result.Error cause -> Error.raise_at1 location cause)
+        { location; identifier = _identifier, `Dollar; _ } ->
+        Error.raise_at1 location Illegal_substitution_variable
     | Synprs.CLF.Object.Raw_identifier
         { location; identifier = identifier, `Plain; _ } -> (
         (* As an LF term, plain identifiers are either term-level constants
@@ -1815,12 +1769,13 @@ let () =
     | Illegal_clf_term_projection ->
         Format.dprintf "%a" Format.pp_print_text
           "Illegal contextual LF projection(s)."
+    | Illegal_substitution_variable ->
+        Format.dprintf "%a" Format.pp_print_text
+          "This substitution variable is illegal since it is not in a \
+           substitution."
     | Expected_parameter_variable ->
         Format.dprintf "%a" Format.pp_print_text
           "Expected a parameter variable."
-    | Expected_substitution_variable ->
-        Format.dprintf "%a" Format.pp_print_text
-          "Expected a substitution variable."
     | Illegal_clf_subtitution_term_label ->
         Format.dprintf "%a" Format.pp_print_text
           "Terms in a substitution may not be labelled."

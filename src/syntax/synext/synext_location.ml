@@ -47,7 +47,6 @@ let location_of_clf_term term =
   match term with
   | Variable { location; _ }
   | Parameter_variable { location; _ }
-  | Substitution_variable { location; _ }
   | Constant { location; _ }
   | Application { location; _ }
   | Abstraction { location; _ }

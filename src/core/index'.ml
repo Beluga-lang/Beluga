@@ -13,8 +13,6 @@ exception Unsupported_lf_untyped_pi_kind_parameter
 
 exception Unsupported_lf_untyped_pi_typ_parameter
 
-exception Illegal_clf_substitution_variable_outside_substitution
-
 exception Unsupported_clf_substitution_variable_not_at_start_of_substitution
 
 exception Unsupported_clf_projection_applicand
@@ -435,9 +433,6 @@ module Make (Indexing_state : INDEXING_STATE) :
             let head = Synapx.LF.FPVar (name, closure) in
             let spine = Synapx.LF.Nil in
             return (Synapx.LF.Root (location, head, spine)))
-    | Synext.CLF.Term.Substitution_variable { location; _ } ->
-        Error.raise_at1 location
-          Illegal_clf_substitution_variable_outside_substitution
     | Synext.CLF.Term.Substitution { location; term; substitution } -> (
         let* term' = index_clf_term term in
         (* Only [term'] that is a root with an empty spine and whose head can
@@ -531,12 +526,6 @@ module Make (Indexing_state : INDEXING_STATE) :
           Synapx.LF.Head h
       | tM -> Synapx.LF.Obj tM
     in
-    let index_clf_term = function
-      | Synext.CLF.Term.Substitution_variable { location; _ } ->
-          Error.raise_at1 location
-            Unsupported_clf_substitution_variable_not_at_start_of_substitution
-      | x -> index_clf_term x
-    in
     let rec index_clf_substitution' head terms =
       match (head, terms) with
       | start, h :: s ->
@@ -620,27 +609,17 @@ module Make (Indexing_state : INDEXING_STATE) :
         let* context' = index_clf_context context in
         return (location, Synapx.Comp.CObj context')
     | Synext.Meta.Object.Contextual_term { location; context; term } ->
-        (* TODO: It is unclear why not all values [h] of type
-           {!type:Synapx.LF.head} are mapped to [Synapx.LF.Head h] when the
-           spine is [Synapx.LF.Nil]. This function was introduced in commit
-           95578f0e ("Improved parsing of substitutions", 2015-05-25). *)
-        let to_head_or_obj = function
-          | Synapx.LF.Root (_, (Synapx.LF.BVar _ as h), Synapx.LF.Nil)
-          | Synapx.LF.Root (_, (Synapx.LF.PVar _ as h), Synapx.LF.Nil)
-          | Synapx.LF.Root (_, (Synapx.LF.Proj _ as h), Synapx.LF.Nil) ->
-              Synapx.LF.Head h
-          | tM -> Synapx.LF.Obj tM
-        in
         with_indexed_clf_context context (fun context' ->
             let* term' = index_clf_term term in
-            let term'' = to_head_or_obj term' in
             (* TODO: The approximate syntax should have a [MObj of normal]
                constructor like in the internal syntax. See
                {!Reconstruct.elClObj}. *)
             return
               ( location
               , Synapx.Comp.ClObj
-                  (context', Synapx.LF.Dot (term'', Synapx.LF.EmptySub)) ))
+                  ( context'
+                  , Synapx.LF.Dot (Synapx.LF.Obj term', Synapx.LF.EmptySub)
+                  ) ))
     | Synext.Meta.Object.Plain_substitution { location; domain; range } ->
         with_indexed_clf_context domain (fun domain' ->
             let* range' = index_clf_substitution range in

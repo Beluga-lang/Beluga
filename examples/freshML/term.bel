@@ -43,7 +43,7 @@ mlam g => fn t => case t of
 
 | [g |- letv T (\x. U)] =>
   let [ |- N] =   add (size [g] [g |- T])
-		    (size [g,x:term] [g,x |- U]) in
+        (size [g,x:term] [g,x |- U]) in
    [ |- suc N]
 
 | [g |- const I] => [ |- suc z]

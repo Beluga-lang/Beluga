@@ -113,7 +113,7 @@ pres_#1 : pres D EV D' ->
 pres_#2 :
         % ----------------------------------------------------------------
 
-%	   {X1:tp -> tm} {T:tp} {X2:tp -> tp}
+%    {X1:tp -> tm} {T:tp} {X2:tp -> tp}
           {D:{x:tp} has (X1 x) (X2 x)}
           pres (is_# (is_lAM (\a. D a)) ) (~>_#2) (D T).
 

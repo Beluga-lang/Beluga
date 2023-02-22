@@ -87,25 +87,25 @@ vs_app  : vs D3 P3
        -> vs (ev_app D1 D2 D3) P3.
 
 vs_fst  : vs D' (v_p P1 P2)
-	-> vs (ev_fst D') P1.
+      -> vs (ev_fst D') P1.
 
 vs_snd  : vs D' (v_p P1 P2)
        -> vs (ev_snd D') P2.
 
 vs_pair : vs D1 P1 -> vs D2 P2
-	-> vs (ev_pair D1 D2) (v_p P1 P2).
+      -> vs (ev_pair D1 D2) (v_p P1 P2).
 
 vs_case'_z :   vs D2 P2
-	   -> vs (ev_case'_z D1 D2) P2.
+         -> vs (ev_case'_z D1 D2) P2.
 
 vs_case'_s :  vs D3 P3
-	  -> vs (ev_case'_s D1 D3) P3.
+        -> vs (ev_case'_s D1 D3) P3.
 
 vs_letv :  vs D2 P2
-	-> vs (ev_letv D1 D2) P2.
+      -> vs (ev_letv D1 D2) P2.
 
 vs_letn :  vs D2 P2
-	-> vs (ev_letn D2) P2.
+      -> vs (ev_letn D2) P2.
 
 
 vs_fix :  vs D1 P1

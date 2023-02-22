@@ -17,7 +17,7 @@ rec bin_join_comm : [|- bin_join M N K] -> [|- bin_join N M K] =
 rec ctxjoincomm : (g:sch)[g |- joining (cjoin Psi1 Psi2 Psi3)] -> [g |- joining (cjoin Psi1 Psi3 Psi2)] =
     fn d => case d of
     | [g |- joining_base D1[]] => let [|- F1] = bin_join_comm [|- D1] in
-				 [g |- joining_base F1[]]
+         [g |- joining_base F1[]]
     | [g |- joining_empty] => [g |- joining_empty]
     | [g |- joining_lin_l D] => let [g |- F] = ctxjoincomm [g |- D] in [g |- joining_lin_r F]
     | [g |- joining_lin_r D] => let [g |- F] = ctxjoincomm [g |- D] in [g |- joining_lin_l F]
@@ -55,27 +55,27 @@ rec exist_and : {A1 : [|- bin_join M N K]} {A2 : [|- bin_join L R M]} [|- ex_and
       | [|- bin_join_nil_r] => [|- ex_a_n A1 A2 bin_join_nil_l]
       | [|- bin_join_nil_l] => [|- ex_a_n A1 A2 A1]
       | [|- bin_join_l E] =>
-	let [|- ex_a_n _ _ A3] = exist_and [|- D] [|- E] in
-	let [|- F] = [|- bin_join_zero A3] in
-	[|- ex_a_n A1 A2 F]
+  let [|- ex_a_n _ _ A3] = exist_and [|- D] [|- E] in
+  let [|- F] = [|- bin_join_zero A3] in
+  [|- ex_a_n A1 A2 F]
       | [|- bin_join_r E] =>
-	let [|- ex_a_n D E A3] = exist_and [|- D] [|- E] in
-	[|- ex_a_n A1 A2 (bin_join_l A3)]
+  let [|- ex_a_n D E A3] = exist_and [|- D] [|- E] in
+  [|- ex_a_n A1 A2 (bin_join_l A3)]
      )
    | [|- bin_join_r D] =>
      (case [|- A2] of
       | [|- bin_join_nil_r] => [|- ex_a_n A1 A2 bin_join_nil_l]
       | [|- bin_join_nil_l] => [|- ex_a_n A1 A2 A1]
       | [|- bin_join_zero E] =>
-	let [|- ex_a_n _ _ A3] = exist_and [|- D] [|- E] in
-				 [|- ex_a_n A1 A2 (bin_join_r A3)]
+  let [|- ex_a_n _ _ A3] = exist_and [|- D] [|- E] in
+         [|- ex_a_n A1 A2 (bin_join_r A3)]
      )
    | [|- bin_join_zero D] =>
      (case [|- A2] of
       | [|- bin_join_nil_r] => [|- ex_a_n A1 A2 bin_join_nil_l]
       | [|- bin_join_nil_l] => [|- ex_a_n A1 A2 A1]
       | [|- bin_join_zero E] => let [|- ex_a_n _ _ A3] = exist_and [|- D] [|- E] in
-			       [|- ex_a_n A1 A2 (bin_join_zero A3)]
+             [|- ex_a_n A1 A2 (bin_join_zero A3)]
      )
 ;
 
@@ -92,8 +92,8 @@ rec lemma1_2a : (g:sch) { J1 : [g |- (joining (cjoin Psi Psi1 Psi2))] } { J2 : [
     case [_ |- J1] of
     | [g |- joining_base D1[]] => (case [g |- J2] of
        | [g |- joining_base E1[]] =>
-	 let [|- ex_a_n A1 A2 F1] = exist_and [|- D1] [|- E1] in
-	 [g |- ex_n J1 J2 (joining_base F1[])]
+   let [|- ex_a_n A1 A2 F1] = exist_and [|- D1] [|- E1] in
+   [g |- ex_n J1 J2 (joining_base F1[])]
       )
     | [g |- joining_empty] =>
       (case [g |- J2] of
@@ -102,28 +102,28 @@ rec lemma1_2a : (g:sch) { J1 : [g |- (joining (cjoin Psi Psi1 Psi2))] } { J2 : [
     | [g |- joining_lin_l D] =>
       (case [g |- J2] of
        | [g |- joining_lin_l E] =>
-	 let [g |- ex_n _ _ F] = lemma1_2a [g |- D] [g |- E] in
-	 [g |- ex_n J1 J2 (joining_unav F)]
+   let [g |- ex_n _ _ F] = lemma1_2a [g |- D] [g |- E] in
+   [g |- ex_n J1 J2 (joining_unav F)]
        | [g |- joining_lin_r E] =>
-	 let [g |- ex_n _ _ F] = lemma1_2a [g |- D] [g |- E] in
-	 [g |- ex_n J1 J2 (joining_lin_l F)]
+   let [g |- ex_n _ _ F] = lemma1_2a [g |- D] [g |- E] in
+   [g |- ex_n J1 J2 (joining_lin_l F)]
       )
     | [g |- joining_lin_r D] =>
       (case [g |- J2] of
        | [g |- joining_unav E] =>
-	 let [g |- ex_n _ _ F] = lemma1_2a [g |- D] [g |- E] in
-	 [g |- ex_n J1 J2 (joining_lin_r F)]
+   let [g |- ex_n _ _ F] = lemma1_2a [g |- D] [g |- E] in
+   [g |- ex_n J1 J2 (joining_lin_r F)]
       )
     | [g |- joining_unr D] =>
       (case [g |- J2] of
        | [g |- joining_unr E] =>
-	 let [g |- ex_n _ _ F] = lemma1_2a [g |- D] [g |- E] in
-	 [g |- ex_n J1 J2 (joining_unr F)]
+   let [g |- ex_n _ _ F] = lemma1_2a [g |- D] [g |- E] in
+   [g |- ex_n J1 J2 (joining_unr F)]
       )
     | [g |- joining_unav D] =>
       (case [g |- J2] of
        | [g |- joining_unav E] => let [g |- ex_n _ _ F] = lemma1_2a [g |- D] [g |- E] in
-				 [g |- ex_n J1 J2 (joining_unav F)]
+         [g |- ex_n J1 J2 (joining_unav F)]
       )
 ;
 
@@ -173,103 +173,103 @@ rec bin_join_assoc : [|- bin_join M1 M2 K] -> [|- bin_join M11 M12 M1] -> [|- bi
     | [|- bin_join_nil_r] =>
       (case e of
        | [|- bin_join_zero E] =>
-	 (case f of
-	  | [|- bin_join_nil_r] => e
-	 )
+   (case f of
+    | [|- bin_join_nil_r] => e
+   )
        | [|- bin_join_r E] =>
-	 (case f of
-	  | [|- bin_join_nil_r] => e
-	 )
+   (case f of
+    | [|- bin_join_nil_r] => e
+   )
        | [|- bin_join_l E] =>
-	 (case f of
-	  | [|- bin_join_nil_r] => e
-	 )
+   (case f of
+    | [|- bin_join_nil_r] => e
+   )
        | [|- bin_join_nil_l] =>
-	 (case f of
-	  | [|- bin_join_nil_l] => [|- bin_join_nil_l]
-	  | [|- bin_join_nil_r] => [|- bin_join_nil_l]
-	 )
+   (case f of
+    | [|- bin_join_nil_l] => [|- bin_join_nil_l]
+    | [|- bin_join_nil_r] => [|- bin_join_nil_l]
+   )
        | [|- bin_join_nil_r] =>
-	 (case f of
-	  | [|- bin_join_nil_r] => [|- bin_join_nil_r]
-	  | [|- bin_join_nil_l] => [|- bin_join_nil_r]
-	 )
+   (case f of
+    | [|- bin_join_nil_r] => [|- bin_join_nil_r]
+    | [|- bin_join_nil_l] => [|- bin_join_nil_r]
+   )
       )
     | [|- bin_join_nil_l] =>
       (case e of
        | [|- bin_join_nil_l] =>
-	 (case f of
-	  | [|- bin_join_nil_l] => [|- bin_join_nil_l]
-	  | [|- bin_join_nil_r] => [|- bin_join_nil_l]
-	 )
+   (case f of
+    | [|- bin_join_nil_l] => [|- bin_join_nil_l]
+    | [|- bin_join_nil_r] => [|- bin_join_nil_l]
+   )
        | [|- bin_join_nil_r] =>
-	 (case f of
-	  | [|- bin_join_nil_r] => [|- bin_join_nil_l]
-	  | [|- bin_join_nil_l] => [|- bin_join_nil_l]
-	 )
+   (case f of
+    | [|- bin_join_nil_r] => [|- bin_join_nil_l]
+    | [|- bin_join_nil_l] => [|- bin_join_nil_l]
+   )
       )
     | [|- bin_join_l D] =>
       (case e of
        | [|- bin_join_nil_l] =>
-	 (case f of
-	  | [|- bin_join_l F] =>
-	    let [|- bin_refl] = helper1_2b d f in
-	    [|- bin_join_nil_l]
-	 )
+   (case f of
+    | [|- bin_join_l F] =>
+      let [|- bin_refl] = helper1_2b d f in
+      [|- bin_join_nil_l]
+   )
        | [|- bin_join_nil_r] =>
-	 (case f of
-	  | [|- bin_join_nil_l] => d
-	 )
+   (case f of
+    | [|- bin_join_nil_l] => d
+   )
        | [|- bin_join_l E] =>
-	 (case f of
-	  | [|- bin_join_zero F] =>
-	    let [|- F0] = bin_join_assoc [|- D] [|- E] [|- F] in
-	    [|- bin_join_l F0]
-	 )
+   (case f of
+    | [|- bin_join_zero F] =>
+      let [|- F0] = bin_join_assoc [|- D] [|- E] [|- F] in
+      [|- bin_join_l F0]
+   )
        | [|- bin_join_r E] =>
-	 (case f of
-	  | [|- bin_join_l F] =>
-	    let [|- F0] = bin_join_assoc [|- D] [|- E] [|- F] in
-	    [|- bin_join_r F0]
-	 )
+   (case f of
+    | [|- bin_join_l F] =>
+      let [|- F0] = bin_join_assoc [|- D] [|- E] [|- F] in
+      [|- bin_join_r F0]
+   )
       )
     | [|- bin_join_r D] =>
       (case e of
        | [|- bin_join_nil_l] =>
-	 (case f of
-	  | [|- bin_join_r F] =>
-	    let [|- bin_refl] = helper1_2b d f in
-	    [|- bin_join_nil_l]
-	 )
+   (case f of
+    | [|- bin_join_r F] =>
+      let [|- bin_refl] = helper1_2b d f in
+      [|- bin_join_nil_l]
+   )
        | [|- bin_join_nil_r] =>
-	 (case f of
-	  | [|- bin_join_nil_l] => d
-	 )
+   (case f of
+    | [|- bin_join_nil_l] => d
+   )
        | [|- bin_join_zero E] =>
-	 (case f of
-	  | [|- bin_join_r F] =>
-	    let [|- F0] = bin_join_assoc [|- D] [|- E] [|- F] in
-	    [|- bin_join_r F0]
-	 )
+   (case f of
+    | [|- bin_join_r F] =>
+      let [|- F0] = bin_join_assoc [|- D] [|- E] [|- F] in
+      [|- bin_join_r F0]
+   )
       )
     | [|- bin_join_zero D] =>
       (case e of
        | [|- bin_join_nil_l] =>
-	 (case f of
-	  | [|- bin_join_zero F] =>
-	    let [|- bin_refl] = helper1_2b d f in
-	    [|- bin_join_nil_l]
-	 )
+   (case f of
+    | [|- bin_join_zero F] =>
+      let [|- bin_refl] = helper1_2b d f in
+      [|- bin_join_nil_l]
+   )
        | [|- bin_join_nil_r] =>
-	 (case f of
-	  | [|- bin_join_nil_l] => d
-	 )
+   (case f of
+    | [|- bin_join_nil_l] => d
+   )
        | [|- bin_join_zero E] =>
-	 (case f of
-	  | [|- bin_join_zero F] =>
-	    let [|- F0] = bin_join_assoc [|- D] [|- E] [|- F] in
-	    [|- bin_join_zero F0]
-	 )
+   (case f of
+    | [|- bin_join_zero F] =>
+      let [|- F0] = bin_join_assoc [|- D] [|- E] [|- F] in
+      [|- bin_join_zero F0]
+   )
       )
 ;
 
@@ -277,67 +277,67 @@ rec bin_join_assoc : [|- bin_join M1 M2 K] -> [|- bin_join M11 M12 M1] -> [|- bi
 %
 
 rec lemma1_2b : (g:sch) [g |- joining (cjoin Psi Psi1 Psi2) ]
-		-> [g |- joining (cjoin Psi1 Psi11 Psi12) ]
-		-> [g |- joining (cjoin Psi0 Psi12 Psi2)]
-		-> [g |- joining (cjoin Psi Psi11 Psi0)]  =
+    -> [g |- joining (cjoin Psi1 Psi11 Psi12) ]
+    -> [g |- joining (cjoin Psi0 Psi12 Psi2)]
+    -> [g |- joining (cjoin Psi Psi11 Psi0)]  =
     fn j1 => fn j2 => fn j3 => case j1 of
     | [g |- joining_base D1[]] =>
       (case j2 of
        | [g |- joining_base E1[]] =>
-	 (case j3 of
-	  | [g |- joining_base G1[]] =>
-	    let [|- F1] = bin_join_assoc [|- D1] [|- E1] [|- G1] in
-	    [g |- joining_base F1[]]
-	 )
+   (case j3 of
+    | [g |- joining_base G1[]] =>
+      let [|- F1] = bin_join_assoc [|- D1] [|- E1] [|- G1] in
+      [g |- joining_base F1[]]
+   )
       )
     | [g |- joining_empty] =>
       (case j2 of
        | [g |- joining_empty] =>
-	 (case j3 of | [g |- joining_empty] =>
-		       [g |- joining_empty]
-	 )
+   (case j3 of | [g |- joining_empty] =>
+           [g |- joining_empty]
+   )
       )
     | [g |- joining_lin_l D1] =>
       (case j2 of
        | [g |- joining_lin_l D2] =>
-	 (case j3 of
-	  | [g |- joining_unav E] =>
-	    let [g |- F] = lemma1_2b [g |- D1] [g |- D2] [g |- E] in
-	    [g |- joining_lin_l F]
-	 )
+   (case j3 of
+    | [g |- joining_unav E] =>
+      let [g |- F] = lemma1_2b [g |- D1] [g |- D2] [g |- E] in
+      [g |- joining_lin_l F]
+   )
        | [g |- joining_lin_r D2] =>
-	 (case j3 of
-	  | [g |- joining_lin_l E] =>
-	    let [g |- F] = lemma1_2b [g |- D1] [g |- D2] [g |- E] in
-	    [g |- joining_lin_r F]
-	 )
+   (case j3 of
+    | [g |- joining_lin_l E] =>
+      let [g |- F] = lemma1_2b [g |- D1] [g |- D2] [g |- E] in
+      [g |- joining_lin_r F]
+   )
       )
     | [g |- joining_lin_r D1] =>
       (case j2 of
        | [g |- joining_unav E] =>
-	 (case j3 of
-	  | [g |- joining_lin_r D2] =>
-	    let [g |- F] = lemma1_2b [g |- D1] [g |- E] [g |- D2] in
-	    [g |- joining_lin_r F]
-	 )
+   (case j3 of
+    | [g |- joining_lin_r D2] =>
+      let [g |- F] = lemma1_2b [g |- D1] [g |- E] [g |- D2] in
+      [g |- joining_lin_r F]
+   )
       )
     | [g |- joining_unr D1] =>
       (case j2 of
        | [g |- joining_unr D2] =>
-	 (case j3 of
-	  | [g |- joining_unr D3] =>
-	    let [g |- F] = lemma1_2b [g |- D1] [g |- D2] [g |- D3] in
-	    [g |- joining_unr F]
-	 )
+   (case j3 of
+    | [g |- joining_unr D3] =>
+      let [g |- F] = lemma1_2b [g |- D1] [g |- D2] [g |- D3] in
+      [g |- joining_unr F]
+   )
       )
     | [g |- joining_unav D1] =>
       (case j2 of
        | [g |- joining_unav D2] =>
-	 (case j3 of
-	  | [g |- joining_unav D3] =>
-	    let [g |- F] = lemma1_2b [g |- D1] [g |- D2] [g |- D3] in
-	    [g |- joining_unav F]
-	 )
+   (case j3 of
+    | [g |- joining_unav D3] =>
+      let [g |- F] = lemma1_2b [g |- D1] [g |- D2] [g |- D3] in
+      [g |- joining_unav F]
+   )
       )
 ;
 
@@ -345,7 +345,7 @@ rec lemma1_2b : (g:sch) [g |- joining (cjoin Psi Psi1 Psi2) ]
 
 LF assoc_double_joining : joining J1 -> joining J2 -> type =
    | adcjoin : {J1 : joining (cjoin Psi Psi1 Psi2)} {J2 : joining (cjoin Psi1 Psi11 Psi12)} joining (cjoin Psi0 Psi12 Psi2) -> joining (cjoin Psi Psi11 Psi0)
-	      -> assoc_double_joining J1 J2 %(J1 : joining (cjoin Psi Psi1 Psi2)) (J2 : joining (cjoin Psi1 Psi11 Psi12))
+        -> assoc_double_joining J1 J2 %(J1 : joining (cjoin Psi Psi1 Psi2)) (J2 : joining (cjoin Psi1 Psi11 Psi12))
 ;
 
 % Psi = Psi1 join Psi2, Psi1 = Psi11 join Psi12 => there exists Psi0 s.t. Psi0 = Psi12 join Psi2 and Psi = Psi11 join Psi0
@@ -362,7 +362,7 @@ rec ctxjoinasso1 : (g : sch){J1 : [g |- joining (cjoin Psi Psi1 Psi2)]}{J2 : [g 
 
 LF inv_assoc_double_joining : joining J1 -> joining J2 -> type =
    | iadcjoin : {J1 : joining (cjoin Psi Psi1 Psi2)} {J2 : joining (cjoin Psi2 Psi21 Psi22)} joining (cjoin Psi0 Psi1 Psi21) -> joining (cjoin Psi Psi0 Psi22)
-	      -> inv_assoc_double_joining J1 J2 %(J1 : joining (cjoin Psi Psi1 Psi2)) (J2 : joining (cjoin Psi2 Psi21 Psi22))
+        -> inv_assoc_double_joining J1 J2 %(J1 : joining (cjoin Psi Psi1 Psi2)) (J2 : joining (cjoin Psi2 Psi21 Psi22))
 ;
 
 % Psi = Psi1 join Psi2, Psi2 = Psi21 join Psi22 => there exists Psi0 s.t. Psi0 = Psi1 join Psi21, Psi = Psi0 join Psi22
@@ -391,41 +391,41 @@ rec ctxjoinunreq : (g : sch)[g |- joining (cjoin Psi Psi1 Psi2)] -> [g |- unrest
     | [g |- unrest_base_var] =>
       (case d of
        | [g |- joining_base D1] =>
-	 (case h of
-	  | [g |- unrest_base_var] => [g |- refl]
-	 )
+   (case h of
+    | [g |- unrest_base_var] => [g |- refl]
+   )
       )
     | [g |- unrest_base_e] =>
       (case d of
        | [g |- joining_empty] =>
-	 (case h of
-	  | [g |- unrest_base_e] => [g |- refl]
-	 )
+   (case h of
+    | [g |- unrest_base_e] => [g |- refl]
+   )
       )
     | [g |- unrest_l E] =>
       (case d of
        | [g |- joining_lin_l D] =>
-	 (case h of
-	  | [g |- unrest_l G] => let [g |- refl] = ctxjoinunreq [g |- D] [g |- E] [g |- G] in [g |- refl]
-	 )
+   (case h of
+    | [g |- unrest_l G] => let [g |- refl] = ctxjoinunreq [g |- D] [g |- E] [g |- G] in [g |- refl]
+   )
        | [g |- joining_lin_r D] =>
-	 (case h of
-	  | [g |- unrest_unav G] => let [g |- refl] = ctxjoinunreq [g |- D] [g |- E] [g |- G] in [g |- refl]
-	 )
+   (case h of
+    | [g |- unrest_unav G] => let [g |- refl] = ctxjoinunreq [g |- D] [g |- E] [g |- G] in [g |- refl]
+   )
       )
     | [g |- unrest_unr E] =>
       (case d of
        | [g |- joining_unr D] =>
-	 (case h of
-	  | [g |- unrest_unr G] => let [g |- refl] = ctxjoinunreq [g |- D] [g |- E] [g |- G] in [g |- refl]
-	 )
+   (case h of
+    | [g |- unrest_unr G] => let [g |- refl] = ctxjoinunreq [g |- D] [g |- E] [g |- G] in [g |- refl]
+   )
       )
     | [g |- unrest_unav E] =>
       (case d of
        | [g |- joining_unav D] =>
-	 (case h of
-	  | [g |- unrest_unav G] => let [g |- refl] = ctxjoinunreq [g |- D] [g |- E] [g |- G] in [g |- refl]
-	 )
+   (case h of
+    | [g |- unrest_unav G] => let [g |- refl] = ctxjoinunreq [g |- D] [g |- E] [g |- G] in [g |- refl]
+   )
       )
 ;
 
@@ -451,32 +451,32 @@ rec ctxjoinmer: (g : sch) {M1 : [g |- ctx_mer Phi Gam Psi]}{M2 : [g |- ctx_mer P
      )
   )
 | [g |- m_cons N1] => (case e of
-		     | [g |- is_unr_cons D] =>
-		       (case [g |- M2] of
-			| [g |- m_cons N2] =>
-			  (case [g |- M3] of
-			   | [g |- m_cons N3] =>
-			     (case e of
-			      | [g |- is_unr_cons Unr] =>
-				let [g |- F] : [g |- joining (cjoin Psi Psi1 Psi2)] = ctxjoinmer[g |- N1] [g |- N2] [g |- N3] [g |- Unr] d in
-				[g |- joining_unr F]
-			     )
-			  )
-		       )
-		     | [g |- is_unr_unav_cons D] =>
-		       (case [g |- M2] of
-			| [g |- m_cons N2] =>
-			  (case [g |- M3] of
+         | [g |- is_unr_cons D] =>
+           (case [g |- M2] of
+      | [g |- m_cons N2] =>
+        (case [g |- M3] of
+         | [g |- m_cons N3] =>
+           (case e of
+            | [g |- is_unr_cons Unr] =>
+        let [g |- F] : [g |- joining (cjoin Psi Psi1 Psi2)] = ctxjoinmer[g |- N1] [g |- N2] [g |- N3] [g |- Unr] d in
+        [g |- joining_unr F]
+           )
+        )
+           )
+         | [g |- is_unr_unav_cons D] =>
+           (case [g |- M2] of
+      | [g |- m_cons N2] =>
+        (case [g |- M3] of
 
-			   | [g |- m_cons N3] =>
-			     (case e of
-			      | [g |- is_unr_unav_cons Unr] =>
-				let [g |- F] : [g |- joining (cjoin Psi Psi1 Psi2)] = ctxjoinmer[g |- N1] [g |- N2] [g |- N3] [g |- Unr] d in
-				[g |- joining_unav F]
-			     )
-			  )
-		       )
-		    )
+         | [g |- m_cons N3] =>
+           (case e of
+            | [g |- is_unr_unav_cons Unr] =>
+        let [g |- F] : [g |- joining (cjoin Psi Psi1 Psi2)] = ctxjoinmer[g |- N1] [g |- N2] [g |- N3] [g |- Unr] d in
+        [g |- joining_unav F]
+           )
+        )
+           )
+        )
 ;
 
 
@@ -572,12 +572,12 @@ rec is_unr_joinb : (g : sch) [g |- unrest_ctx Psi Phi] -> [g |- joining (cjoin P
       [g |- unrest_base_e]
     | [g |- unrest_l D] =>
       ( case e of
-	| [g |- joining_lin_l E] =>
-	  let [g |- F] = is_unr_joinb [g |- D] [g |- E] in
-	  [g |- unrest_l F]
-	| [g |- joining_lin_r E] =>
-	  let [g |- F] = is_unr_joinb [g |- D] [g |- E] in
-	  [g |- unrest_unav F]
+  | [g |- joining_lin_l E] =>
+    let [g |- F] = is_unr_joinb [g |- D] [g |- E] in
+    [g |- unrest_l F]
+  | [g |- joining_lin_r E] =>
+    let [g |- F] = is_unr_joinb [g |- D] [g |- E] in
+    [g |- unrest_unav F]
       )
     | [g |- unrest_unr D] =>
       let [g |- joining_unr E] = e in

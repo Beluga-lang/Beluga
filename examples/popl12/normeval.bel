@@ -56,7 +56,7 @@ fn s => fn e => case e of
     [h |- rapp R' N' ]
 
 and rec nosubst : ({T:[ |- tp]} NeutVar [g] [ |- T] ->  NeutVar [h] [ |- T])
-	    -> [g |- norm S[]]
+      -> [g |- norm S[]]
             -> [h |- norm S[]] =
 / total n (nosubst g h _ s n) /
 fn s => fn n =>

@@ -113,17 +113,17 @@ rec unr_uniqueness : (g:sch) [g |- unrest_ctx Psi Psi_unr1] -> [g |- unrest_ctx 
     | [g |- unrest_unav D] =>
       (case e of
        | [g |- unrest_unav E] => let [g |- F] = unr_uniqueness [g |- D] [g |- E] in
-			       [g |- unrest_unav F]
+             [g |- unrest_unav F]
       )
     | [g |- unrest_unr D] =>
       (case e of
        | [g |- unrest_unr E] => let [g |- F] = unr_uniqueness [g |- D] [g |- E] in
-			      [g |- unrest_unr F]
+            [g |- unrest_unr F]
       )
     | [g |- unrest_l D] =>
       (case e of
        | [g |- unrest_l E] => let [g |- F] = unr_uniqueness [g |- D] [g |- E] in
-			      [g |- unrest_unav F]
+            [g |- unrest_unav F]
       )
 ;
 
@@ -151,35 +151,35 @@ rec sim_subst_tp_unr : (g:sch) [g |- unrest_ctx Phi Phi_unr] -> [g |- unrest_ctx
     | [g |- stp_base F1 F2] =>
       (case d of
         | [g |- unrest_base_var] =>
-	 let [g |- G2] = sstu_helper2 [g |- F2] [g |- F1] d e in
-	 [g |- stp_base F1 G2]
+   let [g |- G2] = sstu_helper2 [g |- F2] [g |- F1] d e in
+   [g |- stp_base F1 G2]
       )
     | [g |- stp_lin F1 F2 F3 F4 F5] =>
       (case d of
        | [g |- unrest_l D1] => let [g |- F2] : [g |- joining (cjoin Psi Psi1 Psi2)] = [g |- F2] in
-			     let [g |- int_unr Psi1_unr] = unrest_exist [g |- Psi1] in
-			     let [g |- int_unr Psi2_unr] = unrest_exist [g |- Psi2] in
-			     let [g |- H3'] = sim_subst_tp_unr [g |- D1] [g |- Psi1_unr] [g |- F3] in
-			     let [g |- Eq] = ctxjoinunreq [g |- F2] [g |- E] [g |- Psi1_unr] in
-			     let [g |- H2] = sstu_helper4 [g |- Eq] [g |- H3'] in
-			     let [g |- H1] = unr_uniqueness [g |- D1] [g |- F1] in
-			     let [g |- H3] = unrest_repeat [g |- E] in
-			     let [g |- F2'] = ctxjoincomm [g |- F2] in
-			     let [g |- H5] = ctxjoinunreq [g |- F2'] [g |- E] [g |- Psi2_unr] in
-			     [g |- stp_unav H1 H2 H3 Psi2_unr H5 F4 F5]
+           let [g |- int_unr Psi1_unr] = unrest_exist [g |- Psi1] in
+           let [g |- int_unr Psi2_unr] = unrest_exist [g |- Psi2] in
+           let [g |- H3'] = sim_subst_tp_unr [g |- D1] [g |- Psi1_unr] [g |- F3] in
+           let [g |- Eq] = ctxjoinunreq [g |- F2] [g |- E] [g |- Psi1_unr] in
+           let [g |- H2] = sstu_helper4 [g |- Eq] [g |- H3'] in
+           let [g |- H1] = unr_uniqueness [g |- D1] [g |- F1] in
+           let [g |- H3] = unrest_repeat [g |- E] in
+           let [g |- F2'] = ctxjoincomm [g |- F2] in
+           let [g |- H5] = ctxjoinunreq [g |- F2'] [g |- E] [g |- Psi2_unr] in
+           [g |- stp_unav H1 H2 H3 Psi2_unr H5 F4 F5]
       )
     | [g |- stp_unr F1 F2 F3 F4 F5] =>
       (case d of
        | [g |- unrest_unr D1] => let [g |- G1] = unr_uniqueness [g |- D1] [g |- F1] in
-			      let [g |- G3] = unr_uniqueness [g |- E] [g |- F3] in
-			      let [g |- G2] = sim_subst_tp_unr [g |- D1] [g |- E] [g |- F2] in
-			      [g |- stp_unr G1 G2 G3 F4 F5]
+            let [g |- G3] = unr_uniqueness [g |- E] [g |- F3] in
+            let [g |- G2] = sim_subst_tp_unr [g |- D1] [g |- E] [g |- F2] in
+            [g |- stp_unr G1 G2 G3 F4 F5]
       )
     | [g |- stp_unav F1 F2 F3 F4 F5 F6 F7] =>
       (case d of
        | [g |- unrest_unav D1] => let [g |- H1] = unr_uniqueness [g |- D1] [g |- F1] in
-				let [g |- H2] = sim_subst_tp_unr [g |- D1] [g |- E] [g |- F2] in
-				let [g |- H3] = unr_uniqueness [g |- E] [g |- F3] in
-				[g |- stp_unav H1 H2 H3 F4 F5 F6 F7]
+        let [g |- H2] = sim_subst_tp_unr [g |- D1] [g |- E] [g |- F2] in
+        let [g |- H3] = unr_uniqueness [g |- E] [g |- F3] in
+        [g |- stp_unav H1 H2 H3 F4 F5 F6 F7]
       )
 ;

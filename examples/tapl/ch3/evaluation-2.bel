@@ -35,7 +35,7 @@ let d : [ |- step (if_then_else (if_then_else (if_then_else true false false)
                        false)
 
               (if_then_else (if_then_else false true true)
-	              false
+                false
                       false)]
 = [ |- e_if (e_if e_if_true)] ;
 
@@ -139,7 +139,7 @@ andalso': mstep M M1 -> mstep M M2 -> msteps_to_terms M M1 M2.
 
 rec unique : [ |- msteps_to_terms M N1 N2]
              -> [ |- value N1] -> [ |- value N2]
-	     -> [ |- equal N1 N2] =
+       -> [ |- equal N1 N2] =
 fn ms => fn vn1 => fn vn2 => case ms of
 | [ |- andalso' (m_step S1 MS1) m_ref] =>
   (case vn2 of
@@ -177,7 +177,7 @@ ms_tr: multi_step M N' -> multi_step N' N
 ms_ref: multi_step M M.
 
 ms_step: step M N
-	 -> multi_step M N.
+   -> multi_step M N.
 
 
 %{

@@ -29,7 +29,7 @@ tr_less : less C1 C2 -> less C2 C3 -> less C1 C3 -> type.
 
 tr_less_imm : tr_less R1 (sub_imm) (sub_med R1).
 tr_less_med : tr_less R1 (sub_med R2) (sub_med R3)
-	  <- tr_less R1 R2 R3.
+      <- tr_less R1 R2 R3.
 
 %%%{
 %%Splitting Lemma:
@@ -68,65 +68,65 @@ spl_^+ : spl (to c_^+  C1) (fev_^+ D1) C2 (sub_med C2<C1)
 
 spl_z : spl (to c_z  C1) (fev_z) C1 (sub_imm).
 spl_s : spl (to c_s  C1) (fev_s D1) C2' (sub_med C2'<C1)
-	 <- spl C1 D1 (to c_add1 C2') C2<C1
-	 <- tr_less (sub_imm) C2<C1 C2'<C1.
+     <- spl C1 D1 (to c_add1 C2') C2<C1
+     <- tr_less (sub_imm) C2<C1 C2'<C1.
 
 spl_match_z : spl (to c_match C1) (fev_match_z D2 D1) C3 (sub_med C3<C1)
-	      <- spl C1 D1 (to c_branch_z C2') C2<C1
-	      <- spl C2' D2 C3 C3<C2'
-	      <- tr_less (sub_imm) C2<C1 C2'<C1
-	      <- tr_less C3<C2' C2'<C1 C3<C1.
+          <- spl C1 D1 (to c_branch_z C2') C2<C1
+          <- spl C2' D2 C3 C3<C2'
+          <- tr_less (sub_imm) C2<C1 C2'<C1
+          <- tr_less C3<C2' C2'<C1 C3<C1.
 spl_match_s : spl (to c_match C1) (fev_match_s D3 D1) C3 (sub_med C3<C1)
-	      <- spl C1 D1 (to c_branch_s  C2') C2<C1
-	      <- spl C2' D3 C3 C3<C2'
-	      <- tr_less (sub_imm) C2<C1 C2'<C1
-	      <- tr_less C3<C2' C2'<C1 C3<C1.
+          <- spl C1 D1 (to c_branch_s  C2') C2<C1
+          <- spl C2' D3 C3 C3<C2'
+          <- tr_less (sub_imm) C2<C1 C2'<C1
+          <- tr_less C3<C2' C2'<C1 C3<C1.
 
 % Pairs
 
 spl_pair : spl (to c_pair C1) (fev_pair D2 D1) C3' (sub_med C3'<C1)
-	 <- spl C1 D1 C2 C2<C1
-	 <- spl C2 D2 (to c_mkpair C3') C3<C2
-	 <- tr_less (sub_imm) C3<C2 C3'<C2
-	 <- tr_less C3'<C2 C2<C1 C3'<C1.
+     <- spl C1 D1 C2 C2<C1
+     <- spl C2 D2 (to c_mkpair C3') C3<C2
+     <- tr_less (sub_imm) C3<C2 C3'<C2
+     <- tr_less C3'<C2 C2<C1 C3'<C1.
 
 spl_fst : spl (to c_fst C1) (fev_fst D1) C2' (sub_med C2'<C1)
-	<- spl C1 D1 (to c_getfst C2') C2<C1
-	<- tr_less (sub_imm) C2<C1 C2'<C1.
+    <- spl C1 D1 (to c_getfst C2') C2<C1
+    <- tr_less (sub_imm) C2<C1 C2'<C1.
 
 spl_snd : spl (to c_snd C1) (fev_snd D1) C2' (sub_med C2'<C1)
-	<- spl C1 D1 (to c_getsnd C2') C2<C1
-	<- tr_less (sub_imm) C2<C1 C2'<C1.
+    <- spl C1 D1 (to c_getsnd C2') C2<C1
+    <- tr_less (sub_imm) C2<C1 C2'<C1.
 
 % Functions
 
 spl_lam : spl (to c_lam C1) (fev_lam) C1 (sub_imm).
 
 spl_app : spl (to c_app C1)
-	   (fev_app D3 D2 D1) C4
-	   (sub_med C4<C1)
-	    <- spl C1 D1 C2 C2<C1
-	    <- spl C2 D2 (to c_apply C3') C3<C2
-	    <- spl C3' D3 C4 C4<C3'
-	    <- tr_less C3<C2 C2<C1 C3<C1
-	    <- tr_less (sub_imm) C3<C1 C3'<C1
-	    <- tr_less C4<C3' C3'<C1 C4<C1.
+       (fev_app D3 D2 D1) C4
+       (sub_med C4<C1)
+        <- spl C1 D1 C2 C2<C1
+        <- spl C2 D2 (to c_apply C3') C3<C2
+        <- spl C3' D3 C4 C4<C3'
+        <- tr_less C3<C2 C2<C1 C3<C1
+        <- tr_less (sub_imm) C3<C1 C3'<C1
+        <- tr_less C4<C3' C3'<C1 C4<C1.
 
 % Definitions
 
 spl_letv : spl (to c_letv C1) (fev_letv D2 D1) C3 (sub_med C3<C1)
-	    <- spl C1 D1 (to c_bind C2') C2<C1
-	    <- spl C2' D2 C3 C3<C2'
-	    <- tr_less (sub_imm) C2<C1 C2'<C1
-	    <- tr_less C3<C2' C2'<C1 C3<C1.
+        <- spl C1 D1 (to c_bind C2') C2<C1
+        <- spl C2' D2 C3 C3<C2'
+        <- tr_less (sub_imm) C2<C1 C2'<C1
+        <- tr_less C3<C2' C2'<C1 C3<C1.
 
 spl_letn : spl (to c_letn C2) (fev_letn D2) C3 (sub_med C3<C2)
-	    <- spl C2 D2 C3 C3<C2.
+        <- spl C2 D2 C3 C3<C2.
 
 % Recursion
 
 spl_fix : spl (to c_fix C1) (fev_fix D1) C2 (sub_med C2<C1)
-	   <- spl C1 D1 C2 C2<C1.
+       <- spl C1 D1 C2 C2<C1.
 
 %%%{
 %%Soundness Theorem: For every complete computation

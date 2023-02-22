@@ -30,7 +30,7 @@ ev_l : eval (E2 V1) V  -> eval E1 V1 -> eval (letv E1 (\x. E2 x)) V.
 ev_lam: eval (lam T (\x. E x)) (lam T (\x. E x)).
 
 ev_app: eval E1 (lam T (\x. E x)) -> eval E2 V2 -> eval (E V2) V
-	-> eval (app E1 E2) V.
+  -> eval (app E1 E2) V.
 
 ev_fix: eval (fix E) (E (fix E)).
 
@@ -41,7 +41,7 @@ oft : exp -> tp -> type.  --name oft D u.
 
 tp_z     : oft z nat.
 tp_s     : oft E nat ->
-	   oft (suc E) nat.
+     oft (suc E) nat.
 
 tp_match : ({x:exp}oft x nat -> oft (E2 x) T) → oft E1 T → oft E nat → oft (match E E1 (\x. E2 x)) T.
 
@@ -50,14 +50,14 @@ tp_lam :   ({x:exp} oft x T1 -> oft (E x) T2)
 
 tp_app : oft E2 T2 ->
          oft E1 (arrow T2 T1)
-	 -> oft (app E1 E2) T1.
+   -> oft (app E1 E2) T1.
 
 tp_letv : ({x:exp} oft x T1 -> oft (E2 x) T2) ->
-	   oft E1 T1
+     oft E1 T1
            -> oft (letv E1 (\ x . E2 x)) T2.
 
 tp_fix : ({x:exp }oft x T -> oft (E x) T)
-	     -> oft (fix E) T.
+       -> oft (fix E) T.
 
 % Type preservation proof
 rec tps :  [ |- eval E V] -> [ |- oft E T]
@@ -80,7 +80,7 @@ fn f => fn d => case f of
   let [ |- tp_s C]    =   tps [ |- F] [ |- D] in
   tps [ |- F2] [ |- (D2[_,C])]
 
-| [ |- ev_lam] =>  d 
+| [ |- ev_lam] =>  d
 
 | [ |- ev_app F1 F2 F3] =>
   let [ |- tp_app D2 D1]            = d in
@@ -95,5 +95,5 @@ fn f => fn d => case f of
 
 | [ |- ev_fix] =>
   let [ |- tp_fix (\x.\u.D)] : [ |- oft (fix \x.M) T] = d in
-    [ |- D[(fix \x.M), tp_fix (\x.\u.D)]]  
+    [ |- D[(fix \x.M), tp_fix (\x.\u.D)]]
 ;

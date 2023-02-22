@@ -68,7 +68,7 @@ fn s => fn v => case v of
 | [ |- v_z]   => impossible s % (case s of [ |- {}] )
 | [ |- v_s V] =>
     (case s of [ |- e_succ D] =>
-		values_dont_step [ |- D] [ |- V])
+      values_dont_step [ |- D] [ |- V])
 ;
 
 

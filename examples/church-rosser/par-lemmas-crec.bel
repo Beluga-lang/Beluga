@@ -26,7 +26,7 @@ mlam g => mlam M => case [g |- M] of
 %  Parallel multi-step reduction is transitive.
 
 rec append : (g:ctx) [g |- pred* M M']  ->  [g |- pred* M' M'']
-	     ->  [g |- pred* M M''] =
+       ->  [g |- pred* M M''] =
 % / total d1 (append g m m' m'' d1) /
 fn d1 => fn d2 => case d1 of
 | [g |- id*] => d2

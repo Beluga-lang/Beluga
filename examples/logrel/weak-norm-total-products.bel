@@ -164,14 +164,14 @@ rec bwd_closed' : {A:[|- tp]}{M:[|- tm A]}{M':[|- tm A]}
 | [|- arr A B] =>
   let Arr ha f = r in
     Arr (halts_step [ |- MS] ha)
-	(mlam N => fn rn =>
-	 bwd_closed' [|- B] _ _ [ |- stepapp MS] (f [ |- N] rn))
+  (mlam N => fn rn =>
+   bwd_closed' [|- B] _ _ [ |- stepapp MS] (f [ |- N] rn))
 
 | [|- cross A B] =>
    let Cross ha r1 r2 = r in
    Cross (halts_step [|- MS] ha)
-	 (bwd_closed' [|- A] _ _ [|- stepfst MS] r1)
-	 (bwd_closed' [|- B] _ _ [|- stepsnd MS] r2)
+   (bwd_closed' [|- A] _ _ [|- stepfst MS] r1)
+   (bwd_closed' [|- B] _ _ [|- stepsnd MS] r2)
 
 ;
 
@@ -275,8 +275,8 @@ mlam gamma, M => fn rs => case [gamma |- M] of
   let h1 = reduce_halts r1 in
   let h2 = reduce_halts r2 in
   Cross (pair_halts _ _ h1 h2)
-	(bwd_closed [|- step1pair] r1)
-	(bwd_closed [|- step2pair] r2)
+  (bwd_closed [|- step1pair] r1)
+  (bwd_closed [|- step2pair] r2)
 
 | [gamma |- fst M ] =>
   let c = main [gamma] [gamma |- M] rs in

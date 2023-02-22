@@ -11,14 +11,14 @@ inductive Sn : (g: cxt) {M: [g |- tm A[]]} ctype =
 % Multi-step strong normalization
 % If Sn [g |- M] and [g |- mstep M M'] then Sn [g |- M'].
 rec mstep_sn: (g: cxt) {M : [g |- tm A[]]}{M': [g |- tm A[]]}
-		       [g |- mstep M M'] -> Sn [g |- M] -> Sn [g |- M'] =
+             [g |- mstep M M'] -> Sn [g |- M] -> Sn [g |- M'] =
     / total sn (mstep_sn g m m' ms sn) /
     mlam M => mlam M' => fn ms => fn sn =>
     case ms of
     | [g |- m-refl] =>  sn
     | [g |- m-step S MS'] => let Acc [g] [ |- A] [g |- _ ] r = sn in
-			     let sn' = r [_ |- _] [_ |- S] in
-  			       mstep_sn [_ |- _] [_ |- M'] [_ |- MS'] sn'
+              let sn' = r [_ |- _] [_ |- S] in
+                  mstep_sn [_ |- _] [_ |- M'] [_ |- MS'] sn'
 ;
 
 % Inductive definition
@@ -26,7 +26,7 @@ inductive SN : (g: cxt) {M: [g |- tm A[]]} ctype =
   | SNeu : SNe [g |- R] -> SN [g |- R]
   | SAbs : SN [g, x: tm A[] |- M] -> SN [g |- abs \x. M]
   | SRed : SNRed [g |- M] [g |- M'] -> SN [g |- M']
-	   -> SN [g |- M]
+      -> SN [g |- M]
 
 and inductive SNe : (g: cxt) {M: [ g |- tm A[]]} ctype =
       | SVar : {#p: #[g |- tm A[]]} SNe [g |- #p]
@@ -34,15 +34,15 @@ and inductive SNe : (g: cxt) {M: [ g |- tm A[]]} ctype =
 
 and inductive SNRed : (g: cxt) {M: [g |- tm A[]]} {M': [g |- tm A[]]} ctype =
       | SBeta : {M: [g, x: tm A[] |- tm B[]]} SN [g |- N]
-		-> SNRed [g |- app (abs \x. M) N] [g |- M[..,N]]
+      -> SNRed [g |- app (abs \x. M) N] [g |- M[..,N]]
       | SAppl : SNRed [g |- R] [g |- R']
-		-> SNRed [g |- app R M] [g |- app R' M]
+      -> SNRed [g |- app R M] [g |- app R' M]
 ;
 
 % Head reduction
 inductive SnRed : (g: cxt) {M: [g |- tm A[]]} {M': [g |- tm A[]]} ctype =
   | SnBeta : {M: [g, x: tm A[] |- tm B[]]} Sn [g |- N]
-	     -> SnRed [g |- app (abs \x. M) N] [g |- M[.., N]]
+        -> SnRed [g |- app (abs \x. M) N] [g |- M[.., N]]
   | SnAppl : SnRed [g |- M] [g |- M']
-	     -> SnRed [g |- (app M N)] [g |- app M' N]
+        -> SnRed [g |- (app M N)] [g |- app M' N]
 ;

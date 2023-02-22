@@ -34,7 +34,7 @@ let d : [ |- step (if_then_else (if_then_else (if_then_else true false false)
                        false)
 
               (if_then_else (if_then_else false true true)
-	              false
+                false
                       false)]
 = [ |- e_if (e_if e_if_true)] ;
 
@@ -104,17 +104,17 @@ fn v => fn s => case v of
   (case s of
      | [ |- m_ref]      => [ |- ref]
      | [ |- m_tr S1 S2] =>
-	 let [ |- ref] = lemma_val [ |- v_true] [ |- S1] in
-	 let [ |- ref] = lemma_val [ |- v_true] [ |- S2] in
-	   [ |- ref]
+   let [ |- ref] = lemma_val [ |- v_true] [ |- S1] in
+   let [ |- ref] = lemma_val [ |- v_true] [ |- S2] in
+     [ |- ref]
   )
 | [ |- v_false] =>
   (case s of
      | [ |- m_ref]      => [ |- ref]
      | [ |- m_tr S1 S2] =>
-	 let [ |- ref] = lemma_val [ |- v_false] [ |- S1] in
-	 let [ |- ref] = lemma_val [ |- v_false] [ |- S2] in
-	   [ |- ref]
+   let [ |- ref] = lemma_val [ |- v_false] [ |- S1] in
+   let [ |- ref] = lemma_val [ |- v_false] [ |- S2] in
+     [ |- ref]
   )
 ;
 
@@ -130,8 +130,8 @@ msteps_to_terms: term -> term -> term -> type.
 andalso': mstep M M1 -> mstep M M2 -> msteps_to_terms M M1 M2.
 %{
 rec unique : (msteps_to_terms M N1 N2)[ ]
-	     -> (value N1)[ ] -> (value N2)[ ]
-	     -> (equal N1 N2)[ ] =
+       -> (value N1)[ ] -> (value N2)[ ]
+       -> (equal N1 N2)[ ] =
 fn ms => case ms of
 | [ ] andalso' (m_step S1) (m_step S2) =>
   let [ ] ref = det ([ ] andalso S1 S2) in

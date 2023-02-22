@@ -20,8 +20,8 @@ rec soundSN : (g: cxt) {M: [g |- tm A[]]} SN [g |- M] -> Sn [g |- M] =
     | SNeu sne => soundSNe [_ |- M] sne
     | SAbs sn' => let sn'' = soundSN [_ |- _] sn' in abs_sn  [_] [ |- _] [|- _]  [_ |- _] sn''
     | SRed snr sn' => let snr' = soundSNRed [_ |- _] [_ |- _] snr in
-		      let sn'' = soundSN [_ |- _] sn' in
-		      backwards_closure [_ |- M] [_ |- _] snr' sn''
+              let sn'' = soundSN [_ |- _] sn' in
+              backwards_closure [_ |- M] [_ |- _] snr' sn''
 and
 rec soundSNe : (g: cxt) {M: [g |- tm A[]]} SNe [g |- M] -> Sn [g |- M] =
     / total s (soundSNe g a m s) /
@@ -29,15 +29,15 @@ rec soundSNe : (g: cxt) {M: [g |- tm A[]]} SNe [g |- M] -> Sn [g |- M] =
     case sne of
     | SVar [g |- #p] => varSn [g |- #p]
     | SApp sne' sn => let snl = soundSNe [_ |- _] sne' in
-		      let snr = soundSN [_ |- _] sn in
-		      let neu = neutralSNe [_ |- _] sne' in
-		      app_sn [_] [ |- _] [|- _] [_ |- _] [_ |- _] neu snl snr
+              let snr = soundSN [_ |- _] sn in
+              let neu = neutralSNe [_ |- _] sne' in
+              app_sn [_] [ |- _] [|- _] [_ |- _] [_ |- _] neu snl snr
 
 and
 rec soundSNRed : (g: cxt) {M: [g |- tm A[]]}
-			  {M': [g |- tm A[]]}
-			  SNRed [g |- M] [g |- M']
-		 -> SnRed [g |- M] [g |- M'] =
+              {M': [g |- tm A[]]}
+              SNRed [g |- M] [g |- M']
+         -> SnRed [g |- M] [g |- M'] =
      / total s (soundSNRed g a m m' s) /
     mlam M => mlam M' => fn snr =>
     case snr of

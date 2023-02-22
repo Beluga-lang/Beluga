@@ -14,7 +14,7 @@ mlam g =>  mlam Q =>
 
 rec curry : {P: [ |- atm]} {Q: [ |- atm]} {R: [ |- atm]}
             [ |- up (imp (imp (conj (atom P) (atom Q)) (atom  R))
-	              (imp (atom  P) (imp (atom Q) (atom R))))] =
+                 (imp (atom  P) (imp (atom Q) (atom R))))] =
 mlam P => mlam Q => mlam R =>
  [ |- impI^ (\w. impI^ (\u. impI^ (\v. close( impEv w (andI^ (close u) (close v))   ))))]
 ;
@@ -22,23 +22,23 @@ mlam P => mlam Q => mlam R =>
 
 rec uncurry : {P: [ |- atm]} {Q: [ |- atm]} {R: [ |- atm]}
             [ |- up (imp
-	              (imp (atom  P) (imp (atom Q) (atom R)))
-		      (imp (conj (atom P) (atom Q)) (atom  R)) )] =
+                 (imp (atom  P) (imp (atom Q) (atom R)))
+            (imp (conj (atom P) (atom Q)) (atom  R)) )] =
 mlam P => mlam Q => mlam R =>
   [ |- impI^ (\w. impI^ (\u. close ( impEv (impEv w (close (andEvL u)))  (close (andEvR u)))))]
 ;
 
 rec curry' :
             [ |- up (imp (imp (conj (atom P) (atom Q)) (atom  R))
-	              (imp (atom  P) (imp (atom Q) (atom R))))] =
+                 (imp (atom  P) (imp (atom Q) (atom R))))] =
 
  [ |- impI^ (\w. impI^ (\u. impI^ (\v. close( impEv w (andI^ (close u) (close v))   ))))]
 ;
 
 
 rec uncurry' : [ |- up (imp
-	              (imp (atom  P) (imp (atom Q) (atom R)))
-		      (imp (conj (atom P) (atom Q)) (atom  R)) )] =
+                 (imp (atom  P) (imp (atom Q) (atom R)))
+            (imp (conj (atom P) (atom Q)) (atom  R)) )] =
 
   [ |- impI^ (\w. impI^ (\u. close ( impEv (impEv w (close (andEvL u)))  (close (andEvR u)))))]
 ;

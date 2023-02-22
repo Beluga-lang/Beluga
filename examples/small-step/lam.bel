@@ -94,9 +94,9 @@ fn d =>
          (case   (prog [ |- D2])   of
             [ |- step_to EV]   =>  [ |- step_to (s_app2 VL1 EV)]
           | [ |- val VL2]      =>
-            let [ |- value_lam]	= [ |- VL1] in
-	    [ |- step_to (s_app3 VL2)]
-	 )
+            let [ |- value_lam]  = [ |- VL1] in
+      [ |- step_to (s_app3 VL2)]
+   )
        )
 | [ |- is_lam (\x. (\d. D1))]  =>  [ |- val value_lam]
 ;
@@ -113,7 +113,7 @@ fn d =>  case d of
             [ |- step_to EV]   =>  [ |- step_to (s_app2 value_lam EV)]
 
            | [ |- val VL2]     =>  [ |- step_to (s_app3 VL2)]
-	    )
+      )
 %      | [ ] {}  % Prove explicitely that the other cases are impossible
        )
 | [ |- is_lam (\x. (\d. D1))]  =>  [ |- val value_lam]

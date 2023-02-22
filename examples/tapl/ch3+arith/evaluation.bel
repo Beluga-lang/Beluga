@@ -79,7 +79,7 @@ let d : [ |- step (switch (switch (switch true false false)
                        false)
 
               (switch (switch false true true)
-	              false
+                false
                       false)]
 = [ |- e_switch (e_switch e_switch_true)] ;
 
@@ -162,7 +162,7 @@ LF multi_step: term -> term -> type =
        -> multi_step M N
 | ms_ref: multi_step M M
 | ms_step: step M N
-	 -> multi_step M N
+   -> multi_step M N
 ;
 
 % ----------------------------------------------------------------------------

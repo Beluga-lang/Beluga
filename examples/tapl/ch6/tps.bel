@@ -37,9 +37,9 @@ LF step: term -> term -> type =
 % ---------------------------------------------------------- %
 LF hastype: term -> tp -> type =
 | t_lam : ({x:term} hastype x T -> hastype (E x) S)
-	-> hastype (lam T E) (arr T S)
+  -> hastype (lam T E) (arr T S)
 | t_app:  hastype E1 (arr T S) -> hastype E2 T
-	-> hastype (app E1 E2) S
+  -> hastype (app E1 E2) S
 ;
 
 % ---------------------------------------------------------- %

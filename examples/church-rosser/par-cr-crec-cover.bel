@@ -92,7 +92,7 @@ fn d => case d of
 
 strip_prop: term -> term -> type.
 strip_result: pred* M' N -> pred M'' N
-	      -> strip_prop M' M''.
+          -> strip_prop M' M''.
 
 rec strip_lemma: (g:ctx)[g |- pred M M'] -> [g |- pred* M M'']
                 -> [g |- strip_prop M' M''] =

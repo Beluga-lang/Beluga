@@ -16,15 +16,15 @@ inductive Inv : (g:ctx) [g |- p] -> [g |- p] -> ctype =
 | Inv_pq : Pt [g |- P] -> Qt [g |- Q] -> Inv [g |- P] [g |- Q]
 | Inv_qp : Qt [g |- Q] -> Pt [g |- P] -> Inv [g |- Q] [g |- P]
 | Inv_nupar : Inv [g |- M] [g |- N] ->
-	      Inv [g |- par (nu (\z. par null null)) M] [g |- par null N]
+        Inv [g |- par (nu (\z. par null null)) M] [g |- par null N]
 | Inv_parnu : Inv [g |- N] [g |- M] ->
-	      Inv [g |- par null N] [g |- par (nu (\z. par null null)) M]
+        Inv [g |- par null N] [g |- par (nu (\z. par null null)) M]
 | Inv_nuout : Inv [g |- M] [g |- N] ->
-	      Inv [g |- par (nu (\z. par null (out x b null))) M]
-		  [g |- par (out x b null) N]
+        Inv [g |- par (nu (\z. par null (out x b null))) M]
+      [g |- par (out x b null) N]
 | Inv_outnu : Inv [g |- N] [g |- M] ->
-	      Inv [g |- par (out x b null) N]
-		  [g |- par (nu (\z. par null (out x b null))) M]
+        Inv [g |- par (out x b null) N]
+      [g |- par (nu (\z. par null (out x b null))) M]
 ;
 
 inductive ExistsTransInvf : (g : ctx) [g |- p] -> [g |- p] -> [ |- a] -> ctype =
@@ -34,13 +34,13 @@ inductive ExistsTransInvf : (g : ctx) [g |- p] -> [g |- p] -> [ |- a] -> ctype =
 
 inductive ExistsTransInvDn : (g : ctx) [g,x:n |- p] -> [g |- p] -> [ |- n] -> ctype =
 | MakeTransInvOneDn : [g |- oneb Q (dn X[]) (\x.N)] ->
-		  ({W : [ |- n]} Inv [g |- M[..,W[]]] [g |- N[..,W[]]])
+      ({W : [ |- n]} Inv [g |- M[..,W[]]] [g |- N[..,W[]]])
                   -> ExistsTransInvDn [g,x:n |-  M] [g |-  Q] [ |- X]
 ;
 
 inductive ExistsTransInvUp : (g : ctx) [g,x:n |- p] -> [g |- p] -> [ |- n] -> ctype =
 | MakeTransInvOneUp : [g |- oneb Q (up X[]) (\x.N)] ->
-		  ({W : [ |- n]} Inv [g |- M[..,W[]]] [g |- N[..,W[]]])
+      ({W : [ |- n]} Inv [g |- M[..,W[]]] [g |- N[..,W[]]])
                   -> ExistsTransInvUp [g,x:n |-  M] [g |-  Q] [ |- X]
 ;
 
@@ -78,7 +78,7 @@ fun (Inv_pq a b) => Inv_qp b a
 ;
 
 rec simBisim : (g:ctx) SimInv [g |- P] [g |- Q] -> SimInv [g |- Q] [g |- P]
-	       -> BisimInv [g |- P] [g |- Q] =
+         -> BisimInv [g |- P] [g |- Q] =
 fun s1 s2 .BInvLf  t => s1 .SInvf  t
   | s1 s2 .BInvLDn t => s1 .SInvDn t
   | s1 s2 .BInvLUp t => s1 .SInvUp t
@@ -94,9 +94,9 @@ fun s1 s2 .BInvLf  t => s1 .SInvf  t
 %   let Qproc = b in
 %   (observe SInvf => mlam A => mlam P' => fn t =>
 %           (case t of
-% 	   | [ |- comm_bangf T] => ?
-% 	   | [ |- comm_bangtaub T T'] => ?
-% 	  )
+%      | [ |- comm_bangf T] => ?
+%      | [ |- comm_bangtaub T T'] => ?
+%     )
 %        | SInvDn => mlam X => mlam M  => fn t => ?
 %        | SInvUp => mlam X => mlam M  => fn t => ?
 %   )

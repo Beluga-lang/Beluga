@@ -8,7 +8,7 @@ identity : {M:term} pred M M  ->  type.
 
 id_lam : identity (lam M1) (lm R1)
        <- ({x:term} {eqx: pred x x}
-	     identity x eqx -> identity (M1 x) (R1 x eqx)).
+            identity x eqx -> identity (M1 x) (R1 x eqx)).
 
 id_app : identity (app M1 M2) (ap R1 R2)
        <- identity M1 R1

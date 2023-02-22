@@ -21,12 +21,12 @@ and inductive ExistsTransSim : (g : ctx) [g |- p] -> [g |- p] -> [ |- a] -> ctyp
 
 and inductive ExistsTransSimDn : (g:ctx) [g,x:n |- p] -> [g |- p] -> [ |- n] -> ctype =
 | MakeTransSimDn : [g |- oneb Q (dn X[]) (\x.N)] ->
-		  ({W : [ |- n]} Sim [g |- M[..,W[]]] [g |- N[..,W[]]])
+      ({W : [ |- n]} Sim [g |- M[..,W[]]] [g |- N[..,W[]]])
                   -> ExistsTransSimDn [g,x:n |-  M] [g |-  Q] [ |- X]
 
 and inductive ExistsTransSimUp : (g:ctx) [g,x:n |- p] -> [g |- p] -> [ |- n] -> ctype =
 | MakeTransSimUp : [g |- oneb Q (up X[]) (\x.N)] ->
-		  ({W : [ |- n]} (Sim [g |- M[..,W[]] ] [g |- N[..,W[]] ]))
+      ({W : [ |- n]} (Sim [g |- M[..,W[]] ] [g |- N[..,W[]] ]))
                   -> ExistsTransSimUp [g,x:n |-  M] [g |-  Q] [ |- X]
 ;
 
@@ -39,7 +39,7 @@ fun [g |- P] .Simf  (t : [g |- one P A[] P']) => MakeTransSimf t (sim_refl [g |-
 ;
 
 rec sim_trans : (g:ctx) Sim [g |- P] [g |- Q] -> Sim [g |- Q] [g |- R] ->
-		Sim [g |- P] [g |- R] =
+    Sim [g |- P] [g |- R] =
 fun s1 s2 .Simf t =>
     let MakeTransSimf t1 s3 = s1 .Simf t in
     let MakeTransSimf t2 s4 = s2 .Simf t1 in
@@ -75,12 +75,12 @@ and inductive ExistsTransBisimf : (g : ctx) [g |- p] -> [g |- p] -> [ |- a] -> c
 
 and inductive ExistsTransBisimDn : (g : ctx) [g,x:n |- p] -> [g |- p] -> [ |- n] -> ctype =
 | MakeTransOneDn : [g |- oneb Q (dn X[]) \x.N] ->
-		   ({W : [ |- n]} Bisim [g |- M[..,W[]]] [g |- N[..,W[]]])
+       ({W : [ |- n]} Bisim [g |- M[..,W[]]] [g |- N[..,W[]]])
                   -> ExistsTransBisimDn [g,x:n |-  M] [g |-  Q] [ |- X]
 
 and inductive ExistsTransBisimUp : (g : ctx) [g,x:n |- p] -> [g |- p] -> [ |- n] -> ctype =
 | MakeTransOneUp : [g |- oneb Q (up X[]) \x.N] ->
-		  ({W : [ |- n]} Bisim [g |- M[..,W[]]] [g |- N[..,W[]]])
+      ({W : [ |- n]} Bisim [g |- M[..,W[]]] [g |- N[..,W[]]])
                   -> ExistsTransBisimUp [g,x:n |-  M] [g |-  Q] [ |- X]
 ;
 
@@ -98,7 +98,7 @@ fun [g |- P] .Leftf   (t : [g |- one P A[] P']) => MakeTransOne t (bisim_refl [g
 ;
 
 rec bisim_trans : (g:ctx) Bisim [g |- P] [g |- Q] -> Bisim [g |- Q] [g |- R] ->
-		  Bisim [g |- P] [g |- R] =
+      Bisim [g |- P] [g |- R] =
 fun s1 s2 .Leftf t =>
     let MakeTransOne t1 s3 = s1 .Leftf t in
     let MakeTransOne t2 s4 = s2 .Leftf t1 in

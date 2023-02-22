@@ -16,7 +16,7 @@ fev_vtr: env -> exp' -> exp  -> type.
 fev_vtrans: feval K F W → vtrans W V → fev_vtr K F V.
 
 rec map_eval : [ |- eval E V] -> [ |- trans K F E]
- 	      -> [ |- fev_vtr K F V] =
+         -> [ |- fev_vtr K F V] =
 fn d => fn c => case c of
 
    [ |- tr_1 (vtr_lam (tr_lam (\w. \x. \v. C2)))]  =>

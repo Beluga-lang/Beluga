@@ -44,7 +44,7 @@ then  eq M N.
 }%
 rec eqPath : {g:ctx}{M:[g |- exp]}{N:[g |- exp]}
              ({P:[g |- path]} [g |- is_path P M] -> [g |- is_path P N])
-	     -> [g |- eq M N] =
+          -> [g |- eq M N] =
 / total m (eqPath g m) /
 mlam g => mlam M => mlam N => fn f => case [g |- M] of
  | [g |- app M1 M2]  =>
@@ -52,17 +52,17 @@ mlam g => mlam M => mlam N => fn f => case [g |- M] of
        = f [g |- (left done)] [g |- p_left p_done] in
 
     let [g |- e_ref] = eqPath [g] [g |- M2 ] [g |- N2  ]
-  		     (mlam Q => fn iq => let [g |- D] = iq in
+                 (mlam Q => fn iq => let [g |- D] = iq in
                       let [g |- p_right D'] : [g |- is_path (right Q') (app N1 N2)]
-			  = f [g |- (right Q) ] [g |- p_right D]  in
-						 [g |- D']   )  in
+                 = f [g |- (right Q) ] [g |- p_right D]  in
+                               [g |- D']   )  in
 
     let [g |- e_ref]  = eqPath [g] [g |- M1 ] [g |- N1  ]
                        (mlam Q => fn iq =>
                         let [g |- D] = iq in
-			let [g |- p_left D'] : [g |- is_path (left Q') (app N1 N2)]
-			    = f [g |- (left Q) ] [g |- p_left D] in
-				     [g |- D']   ) in
+               let [g |- p_left D'] : [g |- is_path (left Q') (app N1 N2)]
+                   = f [g |- (left Q) ] [g |- p_left D] in
+                         [g |- D']   ) in
 
     [g |- e_ref]
 
@@ -79,11 +79,11 @@ mlam g => mlam M => mlam N => fn f => case [g |- M] of
 
   let [g,b:block x:exp, q:path,u:type_of x T'' , _t:is_path q x |-  e_ref] =
        eqPath [g, b:block x:exp, q:path, u:type_of x T'[] , _t:is_path q x]
-	      [g,b |- M'[..,b.1] ] [g,b |- N'[..,b.1] ]
+           [g,b |- M'[..,b.1] ] [g,b |- N'[..,b.1] ]
 (mlam Q => fn ip =>
          let {Qs: [g,p:path |-  path]}
              [g, b:block x:exp, q:path, u:type_of x T'[], _t:is_path q x |-  Qs[..,b.2]] =
-	        [g, b:block x:exp, q:path,u:type_of x T'[], _t:is_path q x |-  Q] in  % strengthening
+             [g, b:block x:exp, q:path,u:type_of x T'[], _t:is_path q x |-  Q] in  % strengthening
          let [g, b:block x:exp, q:path, u:type_of x T'[], _t:is_path q x |-  D] = ip in
          let [g |- p_lam (\x.\q.\u.\iq. D')] : [g |- is_path (bind T'[] (\q. Q')) (lam _ (\x. N'))] =
            f [g |- bind _ (\q. Qs) ]  [g |- p_lam (\x.\q.\u.\iq. D[..,<x ; q ; u ; iq>])  ] in

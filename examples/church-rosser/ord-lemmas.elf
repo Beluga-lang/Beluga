@@ -13,7 +13,7 @@ appd :  -->* M M'  ->  -->*  M' M''  ->  -->* M M''  ->  type.
 
 appd_id   : appd id1 S* S*.
 appd_step : appd (step1 R1 R2*) S* (step1 R1 S2*')
-	 <- appd R2* S* S2*'.
+     <- appd R2* S* S2*'.
 
 % worlds (ltm) (appd R* S* S*').
 % covers appd +R* +S* -S*'.
@@ -31,7 +31,7 @@ lm1* : ({x:term}  -->* (M x) (M' x))
 }%
 lm1*_id   : lm1* (\x. id1) id1.
 lm1*_step : lm1* (\x. step1 (R1 x) (R2* x)) (step1 (lm1 R1) S2*)
-	      <- lm1* R2* S2*.
+          <- lm1* R2* S2*.
 
 %{
 % worlds (ltm) (lm1* R* S*).
@@ -50,7 +50,7 @@ apl1* :            -->* M1 M1'
 }%
 apl1*_id   : apl1* id1 id1.
 apl1*_step : apl1* (step1 R1 R2*) (step1 (apl1 R1) S2*)
-	       <- apl1* R2* S2*.
+           <- apl1* R2* S2*.
 
 %{
 % worlds (ltm) (apl1* R* S*).
@@ -69,7 +69,7 @@ apr1* :          -->*   M2 M2'
 }%
 apr1*_id : apr1* id1 id1.
 apr1*_step : apr1* (step1 R1 R2*) (step1 (apr1 R1) S2*)
-	   <- apr1* R2* S2*.
+       <- apr1* R2* S2*.
 
 %{
 % worlds (ltm) (apr1* R* S*).

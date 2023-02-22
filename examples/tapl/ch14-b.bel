@@ -28,15 +28,15 @@ step_app_2    : step E2 E2' → value E1 → step (app E1 E2) (app E1 E2').
 step_app_beta : value E2 → step (app (lam T E ) E2) (E E2).
 
 step_app_err1 : value V
-		-> step (app (raise V) E2) (raise V).
+    -> step (app (raise V) E2) (raise V).
 step_app_err2 : value V1 -> value V2 ->
-		step (app V1 (raise V2)) (raise V2).
+    step (app V1 (raise V2)) (raise V2).
 
 step_try      : step E1 E1'
-	      -> step (trywith E1 E2) (trywith E1' E2).
+        -> step (trywith E1 E2) (trywith E1' E2).
 
 step_try_v    : value V
-		-> step (trywith V E2) V.
+    -> step (trywith V E2) V.
 
 step_try_error: value V -> step (trywith (raise V) E2) (E2 V).
 
@@ -44,12 +44,12 @@ step_try_error: value V -> step (trywith (raise V) E2) (E2 V).
 oft: term -> tp -> type.
 
 t_lam : ({x:term} oft x T -> oft (E x) S)
-	-> oft (lam T E) (arr T S).
+  -> oft (lam T E) (arr T S).
 t_app:  oft E1 (arr T S) -> oft E2 T
-	-> oft (app E1 E2) S.
+  -> oft (app E1 E2) S.
 
 t_trywith: oft E1 T -> ({x:term} oft x nat -> oft (E2 x) T)
-	   -> oft (trywith E1 E2) T.
+     -> oft (trywith E1 E2) T.
 
 t_error : oft E nat -> oft (raise E) T.
 

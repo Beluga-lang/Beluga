@@ -289,10 +289,7 @@ module type PARSER = sig
 
   val alt : 'a t -> 'a t -> 'a t
 
-  val satisfy :
-       on_token:(token -> ('a, exn) result)
-    -> on_end_of_input:(unit -> 'a t)
-    -> 'a t
+  val satisfy : (token option -> ('a, exn) result) -> 'a t
 
   val eoi : unit t
 
@@ -629,16 +626,12 @@ end) :
 
   let only p = p <& eoi
 
-  let satisfy ~on_token ~on_end_of_input =
+  let satisfy f =
     let open State in
-    peek >>= function
-    | Option.None -> on_end_of_input ()
-    | Option.Some token -> (
-        match on_token token with
-        | Result.Ok _ as r ->
-            let* () = accept in
-            return r
-        | Result.Error cause -> fail_at_next_location cause)
+    peek >>= fun token_opt ->
+    match f token_opt with
+    | Result.Ok _ as r -> accept &> return r
+    | Result.Error cause -> fail_at_next_location cause
 
   let insert_token token =
     let open State in

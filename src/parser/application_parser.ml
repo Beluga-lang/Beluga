@@ -109,14 +109,13 @@ struct
   exception Expected_expression of { actual : Expression.t Option.t }
 
   let expression =
-    satisfy
-      ~on_token:(function
-        | Expression { expression; _ } -> Result.ok expression
-        | Operator { applicand; _ } ->
-            Result.error
-              (Expected_expression { actual = Option.some applicand }))
-      ~on_end_of_input:(fun () ->
-        fail_at_next_location (Expected_expression { actual = Option.none }))
+    satisfy (function
+      | Option.Some (Expression { expression; _ }) -> Result.ok expression
+      | Option.Some (Operator { applicand; _ }) ->
+          Result.error
+            (Expected_expression { actual = Option.some applicand })
+      | Option.None ->
+          Result.error (Expected_expression { actual = Option.none }))
 
   exception
     Expected_operator of
@@ -125,29 +124,27 @@ struct
       }
 
   let operator expected_identifier =
-    satisfy
-      ~on_token:(function
-        | Expression { expression; _ } ->
+    satisfy (function
+      | Option.Some (Expression { expression; _ }) ->
+          Result.error
+            (Expected_operator
+               { expected = expected_identifier
+               ; actual = Option.some expression
+               })
+      | Option.Some
+          (Operator { applicand; identifier = actual_identifier; _ }) ->
+          if Qualified_identifier.equal expected_identifier actual_identifier
+          then Result.ok applicand
+          else
             Result.error
               (Expected_operator
                  { expected = expected_identifier
-                 ; actual = Option.some expression
+                 ; actual = Option.some applicand
                  })
-        | Operator { applicand; identifier = actual_identifier; _ } ->
-            if
-              Qualified_identifier.equal expected_identifier
-                actual_identifier
-            then Result.ok applicand
-            else
-              Result.error
-                (Expected_operator
-                   { expected = expected_identifier
-                   ; actual = Option.some applicand
-                   }))
-      ~on_end_of_input:(fun () ->
-        fail_at_next_location
-          (Expected_operator
-             { expected = expected_identifier; actual = Option.none }))
+      | Option.None ->
+          Result.error
+            (Expected_operator
+               { expected = expected_identifier; actual = Option.none }))
 
   exception Ambiguous_operator_placement of Expression.t
 

@@ -155,12 +155,11 @@ module Make
       }
 
   let token expected =
-    satisfy
-      ~on_token:(fun (_location, actual) ->
-        if Token.equal expected actual then Result.ok ()
-        else Result.error (Unexpected_token { expected; actual }))
-      ~on_end_of_input:(fun () ->
-        fail_at_next_location (Unexpected_end_of_input { expected }))
+    satisfy (function
+      | Option.Some (_location, actual) ->
+          if Token.equal expected actual then Result.ok ()
+          else Result.error (Unexpected_token { expected; actual })
+      | Option.None -> Result.error (Unexpected_end_of_input { expected }))
 
   exception
     Expected_keyword of
@@ -204,44 +203,41 @@ module Make
     | "suffices" -> token Token.KW_SUFFICES
     | "toshow" -> token Token.KW_TOSHOW
     | kw ->
-        satisfy
-          ~on_token:(function
-            | _location, Token.IDENT kw' when String.equal kw kw' ->
-                Result.ok ()
-            | _location, token ->
-                Result.error
-                  (Expected_keyword
-                     { expected_keyword = kw; actual = Option.some token }))
-          ~on_end_of_input:(fun () ->
-            fail_at_next_location
-              (Expected_keyword
-                 { expected_keyword = kw; actual = Option.none }))
+        satisfy (function
+          | Option.Some (_location, Token.IDENT kw') when String.equal kw kw'
+            ->
+              Result.ok ()
+          | Option.Some (_location, token) ->
+              Result.error
+                (Expected_keyword
+                   { expected_keyword = kw; actual = Option.some token })
+          | Option.None ->
+              Result.error
+                (Expected_keyword
+                   { expected_keyword = kw; actual = Option.none }))
 
   exception Expected_integer_literal of { actual : Token.t Option.t }
 
   let integer =
-    satisfy
-      ~on_token:(function
-        | _location, Token.INTLIT k -> Result.ok k
-        | _location, token ->
-            Result.error
-              (Expected_integer_literal { actual = Option.some token }))
-      ~on_end_of_input:(fun () ->
-        fail_at_next_location
-          (Expected_integer_literal { actual = Option.none }))
+    satisfy (function
+      | Option.Some (_location, Token.INTLIT k) -> Result.ok k
+      | Option.Some (_location, token) ->
+          Result.error
+            (Expected_integer_literal { actual = Option.some token })
+      | Option.None ->
+          Result.error (Expected_integer_literal { actual = Option.none }))
 
   exception Expected_dot_integer_literal of { actual : Token.t Option.t }
 
   let dot_integer =
-    satisfy
-      ~on_token:(function
-        | _location, Token.DOT_INTLIT k -> Result.ok k
-        | _location, token ->
-            Result.error
-              (Expected_dot_integer_literal { actual = Option.some token }))
-      ~on_end_of_input:(fun () ->
-        fail_at_next_location
-          (Expected_dot_integer_literal { actual = Option.none }))
+    satisfy (function
+      | Option.Some (_location, Token.DOT_INTLIT k) -> Result.ok k
+      | Option.Some (_location, token) ->
+          Result.error
+            (Expected_dot_integer_literal { actual = Option.some token })
+      | Option.None ->
+          Result.error
+            (Expected_dot_integer_literal { actual = Option.none }))
 
   exception
     Expected_pragma of
@@ -250,29 +246,27 @@ module Make
       }
 
   let pragma s =
-    satisfy
-      ~on_token:(function
-        | _location, Token.PRAGMA s' when String.equal s s' -> Result.ok ()
-        | _location, token ->
-            Result.error
-              (Expected_pragma
-                 { expected_pragma = s; actual = Option.some token }))
-      ~on_end_of_input:(fun () ->
-        fail_at_next_location
-          (Expected_pragma { expected_pragma = s; actual = Option.none }))
+    satisfy (function
+      | Option.Some (_location, Token.PRAGMA s') when String.equal s s' ->
+          Result.ok ()
+      | Option.Some (_location, token) ->
+          Result.error
+            (Expected_pragma
+               { expected_pragma = s; actual = Option.some token })
+      | Option.None ->
+          Result.error
+            (Expected_pragma { expected_pragma = s; actual = Option.none }))
 
   exception Expected_string_literal of { actual : Token.t Option.t }
 
   let string_literal =
-    satisfy
-      ~on_token:(function
-        | _location, Token.STRING s -> Result.ok s
-        | _location, token ->
-            Result.error
-              (Expected_string_literal { actual = Option.some token }))
-      ~on_end_of_input:(fun () ->
-        fail_at_next_location
-          (Expected_string_literal { actual = Option.none }))
+    satisfy (function
+      | Option.Some (_location, Token.STRING s) -> Result.ok s
+      | Option.Some (_location, token) ->
+          Result.error
+            (Expected_string_literal { actual = Option.some token })
+      | Option.None ->
+          Result.error (Expected_string_literal { actual = Option.none }))
 
   (** {1 Tokens} *)
 
@@ -381,29 +375,26 @@ module Make
   exception Expected_identifier of { actual : Token.t Option.t }
 
   let identifier =
-    satisfy
-      ~on_token:(function
-        | location, Token.IDENT identifier ->
-            Result.ok (Identifier.make ~location identifier)
-        | _location, token ->
-            Result.error (Expected_identifier { actual = Option.some token }))
-      ~on_end_of_input:(fun () ->
-        fail_at_next_location (Expected_identifier { actual = Option.none }))
+    satisfy (function
+      | Option.Some (location, Token.IDENT identifier) ->
+          Result.ok (Identifier.make ~location identifier)
+      | Option.Some (_location, token) ->
+          Result.error (Expected_identifier { actual = Option.some token })
+      | Option.None ->
+          Result.error (Expected_identifier { actual = Option.none }))
     |> labelled "Identifier"
 
   exception Expected_dot_identifier of { actual : Token.t Option.t }
 
   let dot_identifier =
-    satisfy
-      ~on_token:(function
-        | location, Token.DOT_IDENT identifier ->
-            Result.ok (Identifier.make ~location identifier)
-        | _location, token ->
-            Result.error
-              (Expected_dot_identifier { actual = Option.some token }))
-      ~on_end_of_input:(fun () ->
-        fail_at_next_location
-          (Expected_dot_identifier { actual = Option.none }))
+    satisfy (function
+      | Option.Some (location, Token.DOT_IDENT identifier) ->
+          Result.ok (Identifier.make ~location identifier)
+      | Option.Some (_location, token) ->
+          Result.error
+            (Expected_dot_identifier { actual = Option.some token })
+      | Option.None ->
+          Result.error (Expected_dot_identifier { actual = Option.none }))
     |> labelled "Identifier prefixed by a dot symbol"
 
   (*=
@@ -442,31 +433,27 @@ module Make
   exception Expected_hash_identifier of { actual : Token.t Option.t }
 
   let hash_identifier =
-    satisfy
-      ~on_token:(function
-        | location, Token.HASH_IDENT identifier ->
-            Result.ok (Identifier.make ~location identifier)
-        | _location, token ->
-            Result.error
-              (Expected_hash_identifier { actual = Option.some token }))
-      ~on_end_of_input:(fun () ->
-        fail_at_next_location
-          (Expected_hash_identifier { actual = Option.none }))
+    satisfy (function
+      | Option.Some (location, Token.HASH_IDENT identifier) ->
+          Result.ok (Identifier.make ~location identifier)
+      | Option.Some (_location, token) ->
+          Result.error
+            (Expected_hash_identifier { actual = Option.some token })
+      | Option.None ->
+          Result.error (Expected_hash_identifier { actual = Option.none }))
     |> labelled "Identifier prefixed by a hash symbol"
 
   exception Expected_dollar_identifier of { actual : Token.t Option.t }
 
   let dollar_identifier =
-    satisfy
-      ~on_token:(function
-        | location, Token.DOLLAR_IDENT s ->
-            Result.ok (Identifier.make ~location s)
-        | _location, token ->
-            Result.error
-              (Expected_dollar_identifier { actual = Option.some token }))
-      ~on_end_of_input:(fun () ->
-        fail_at_next_location
-          (Expected_dollar_identifier { actual = Option.none }))
+    satisfy (function
+      | Option.Some (location, Token.DOLLAR_IDENT s) ->
+          Result.ok (Identifier.make ~location s)
+      | Option.Some (_location, token) ->
+          Result.error
+            (Expected_dollar_identifier { actual = Option.some token })
+      | Option.None ->
+          Result.error (Expected_dollar_identifier { actual = Option.none }))
     |> labelled "Identifier prefixed by a dollar symbol"
 
   (*=
@@ -548,29 +535,25 @@ module Make
   exception Expected_hole of { actual : Token.t Option.t }
 
   let hole =
-    satisfy
-      ~on_token:(function
-        | _location, Token.HOLE "" -> Result.ok `Unlabelled
-        | location, Token.HOLE label ->
-            Result.ok (`Labelled (Identifier.make ~location label))
-        | _location, token ->
-            Result.error (Expected_hole { actual = Option.some token }))
-      ~on_end_of_input:(fun () ->
-        fail_at_next_location (Expected_hole { actual = Option.none }))
+    satisfy (function
+      | Option.Some (_location, Token.HOLE "") -> Result.ok `Unlabelled
+      | Option.Some (location, Token.HOLE label) ->
+          Result.ok (`Labelled (Identifier.make ~location label))
+      | Option.Some (_location, token) ->
+          Result.error (Expected_hole { actual = Option.some token })
+      | Option.None -> Result.error (Expected_hole { actual = Option.none }))
 
   exception Expected_block_comment of { actual : Token.t Option.t }
 
   let block_comment =
-    satisfy
-      ~on_token:(function
-        | location, Token.BLOCK_COMMENT content ->
-            Result.ok (location, content)
-        | _location, token ->
-            Result.error
-              (Expected_block_comment { actual = Option.some token }))
-      ~on_end_of_input:(fun () ->
-        fail_at_next_location
-          (Expected_block_comment { actual = Option.none }))
+    satisfy (function
+      | Option.Some (location, Token.BLOCK_COMMENT content) ->
+          Result.ok (location, content)
+      | Option.Some (_location, token) ->
+          Result.error
+            (Expected_block_comment { actual = Option.some token })
+      | Option.None ->
+          Result.error (Expected_block_comment { actual = Option.none }))
 
   (** {1 Exceptions Printing} *)
 

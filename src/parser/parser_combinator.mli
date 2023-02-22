@@ -333,14 +333,12 @@ module type PARSER = sig
   (** [alt p1 p2] is [choice \[p1; p2\]]. *)
   val alt : 'a t -> 'a t -> 'a t
 
-  (** [satisfy ~on_token ~on_end_of_input] is the basic parser [p] that
-      performs an action based on whether the next token in the stream
-      satisfies the predicate [on_token]. The parser is advanced only if the
-      next token satisfies [on_token]. *)
-  val satisfy :
-       on_token:(token -> ('a, exn) result)
-    -> on_end_of_input:(unit -> 'a t)
-    -> 'a t
+  (** [satisfy f] is the basic parser [p] that performs an action based on
+      whether the next token in the stream satisfies the predicate [f]. The
+      parser is advanced only if the next token satisfies [f]. If the next
+      token does not satisfy the predicate, then the error is annotated with
+      the next token's location. *)
+  val satisfy : (token option -> ('a, exn) result) -> 'a t
 
   (** [eoi] is the parser that expects the end of input to be reached. This
       is either the end of the input string, token stream, or file input

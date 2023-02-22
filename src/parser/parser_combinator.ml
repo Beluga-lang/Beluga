@@ -616,22 +616,20 @@ end) :
         in
         return (l, x)
 
-  let eoi =
-    let open State in
-    peek
-    >>= (function
-          | Option.None -> return (Result.ok ())
-          | Option.Some _token -> fail_at_next_location Expected_end_of_input)
-    |> labelled "end of input"
-
-  let only p = p <& eoi
-
   let satisfy f =
     let open State in
     peek >>= fun token_opt ->
     match f token_opt with
     | Result.Ok _ as r -> accept &> return r
     | Result.Error cause -> fail_at_next_location cause
+
+  let eoi =
+    satisfy (function
+      | Option.None -> Result.ok ()
+      | Option.Some _ -> Result.error Expected_end_of_input)
+    |> labelled "end of input"
+
+  let only p = p <& eoi
 
   let insert_token token =
     let open State in

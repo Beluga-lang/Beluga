@@ -245,11 +245,11 @@ module Make
   let rec with_function_parameters_list parameters f =
     match parameters with
     | [] -> f
-    | x :: xs ->
+    | (_location, x) :: xs ->
         with_computation_variable_opt x (with_function_parameters_list xs f)
 
   let with_function_parameters_list1 parameters f =
-    let (List1.T (x, xs)) = parameters in
+    let (List1.T ((_location, x), xs)) = parameters in
     with_computation_variable_opt x (with_function_parameters_list xs f)
 
   let with_function_parameters = with_function_parameters_list1
@@ -274,11 +274,11 @@ module Make
   let rec with_meta_function_parameters_list parameters f =
     match parameters with
     | [] -> f
-    | x :: xs ->
+    | (_location, x) :: xs ->
         with_meta_parameter x (with_meta_function_parameters_list xs f)
 
   let with_meta_function_parameters_list1 parameters f =
-    let (List1.T (x, xs)) = parameters in
+    let (List1.T ((_location, x), xs)) = parameters in
     with_meta_parameter x (with_meta_function_parameters_list xs f)
 
   let with_meta_function_parameters = with_meta_function_parameters_list1

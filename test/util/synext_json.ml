@@ -777,7 +777,10 @@ and json_of_comp_expression expression =
   | Comp.Expression.Fn { parameters; body; location } ->
       json_of_variant ~name:"Comp.Expression.Fn"
         ~data:
-          [ ("parameters", json_of_list1 json_of_identifier_opt parameters)
+          [ ( "parameters"
+            , json_of_list1
+                Fun.(Pair.snd >> json_of_identifier_opt)
+                parameters )
           ; ("body", json_of_comp_expression body)
           ; ("location", json_of_location location)
           ]
@@ -786,7 +789,7 @@ and json_of_comp_expression expression =
         ~data:
           [ ( "parameters"
             , json_of_list1
-                Fun.(Pair.fst >> json_of_identifier_opt)
+                Fun.(Pair.snd >> Pair.fst >> json_of_identifier_opt)
                 parameters )
           ; ("body", json_of_comp_expression body)
           ; ("location", json_of_location location)

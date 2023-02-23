@@ -371,13 +371,15 @@ module Comp = struct
               associativity. *)
       | Raw_fn of
           { location : Location.t
-          ; parameters : Identifier.t Option.t List1.t
+          ; parameters : (Location.t * Identifier.t Option.t) List1.t
           ; body : Expression_object.t
           }
       | Raw_mlam of
           { location : Location.t
           ; parameters :
-              (Identifier.t Option.t * [ `Plain | `Hash | `Dollar ]) List1.t
+              (Location.t
+              * (Identifier.t Option.t * [ `Plain | `Hash | `Dollar ]))
+              List1.t
           ; body : Expression_object.t
           }
       | Raw_fun of

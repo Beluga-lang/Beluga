@@ -615,7 +615,7 @@ module Make
       in
       let fn =
         seq2
-          (keyword "fn" &> sep_by1 ~sep:comma_opt omittable_identifier)
+          (keyword "fn" &> sep_by1 ~sep:comma_opt (span omittable_identifier))
           (thick_forward_arrow &> Comp_parsers.comp_expression_object)
         |> span
         $> (fun (location, (parameters, body)) ->
@@ -635,7 +635,7 @@ module Make
       and mlam =
         seq2
           (keyword "mlam"
-          &> sep_by1 ~sep:comma_opt omittable_meta_object_identifier)
+          &> sep_by1 ~sep:comma_opt (span omittable_meta_object_identifier))
           (thick_forward_arrow &> Comp_parsers.comp_expression_object)
         |> span
         $> (fun (location, (parameters, body)) ->

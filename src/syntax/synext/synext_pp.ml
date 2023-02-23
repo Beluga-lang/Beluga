@@ -1573,7 +1573,7 @@ module Make_pretty_printer (Printing_state : PRINTING_STATE) :
     | Comp.Expression.Program { identifier; _ } ->
         pp_computation_program_invoke identifier
     | Comp.Expression.Fn { parameters; body; _ } ->
-        let pp_parameter parameter =
+        let pp_parameter (_location, parameter) =
           pp_option ~none:pp_underscore pp_computation_variable parameter
         in
         pp_fn_keyword ++ pp_non_breaking_space
@@ -1581,7 +1581,7 @@ module Make_pretty_printer (Printing_state : PRINTING_STATE) :
         ++ pp_non_breaking_space ++ pp_thick_right_arrow ++ pp_space
         ++ pp_comp_expression body
     | Comp.Expression.Mlam { parameters; body; _ } ->
-        let pp_parameter (parameter, modifier) =
+        let pp_parameter (_location, (parameter, modifier)) =
           match (parameter, modifier) with
           | Option.Some parameter, (`Plain | `Hash | `Dollar) ->
               (* The hash or dollar prefix is part of [parameter] *)

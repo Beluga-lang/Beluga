@@ -412,37 +412,11 @@ module FVar : sig
   val clear : unit -> unit
 end
 
-(*
-module FMVar : sig
-   (* NOTE: FMVars are stored in an an ordered data structure *)
-
-  val add : Name.t -> (LF.typ * LF.dctx) -> unit
-  val get : Name.t -> (LF.typ * LF.dctx)
-  val clear : unit -> unit
-end
- *)
-
-module FPatVar : sig
-  val add : Name.t -> Syntax.Int.Comp.typ -> unit
-  val get : Name.t -> Syntax.Int.Comp.typ
-  val clear : unit -> unit
-  val fvar_ctx : unit -> Syntax.Int.Comp.gctx
-end
-
 module FCVar : sig
   val add : Name.t -> LF.mctx * LF.ctyp_decl -> unit
   val get : Name.t -> LF.mctx * LF.ctyp_decl
   val clear : unit -> unit
 end
-
-(*
-module FPVar : sig
- (* NOTE: FPVars are stored in an an ordered data structure *)
-  val add : Name.t -> (LF.typ * LF.dctx) -> unit
-  val get : Name.t -> (LF.typ * LF.dctx)
-  val clear : unit -> unit
-end
-*)
 
 (** Persistent stack-based store for computational variables.
 

@@ -1016,7 +1016,6 @@ module BVar = struct
   let get = List.nth
 end
 
-
 (* Free Bound Variables *)
 module FVar = struct
   let store = NameTable.create 0
@@ -1025,41 +1024,6 @@ module FVar = struct
   let clear () = NameTable.clear store
 end
 
-
-module FPatVar = struct
-
-  let store = ref Syntax.Int.LF.Empty
-
-  let add x tau =
-      store := Syntax.Int.LF.Dec (!store, Syntax.Int.Comp.CTypDecl (x, tau, false))
-
-  let get x =
-    let rec lookup str = match str with
-      | Syntax.Int.LF.Dec (str', Syntax.Int.Comp.CTypDecl ((y, tau, _))) ->
-          if Name.(x = y) then tau else lookup str'
-      | _ -> raise Not_found
-    in
-      lookup (!store)
-
-
-  let clear () = (store := Syntax.Int.LF.Empty)
-
-  let fvar_ctx () = !store
-
-end
-
-
-(*
-(* Free meta-variables *)
-module FMVar = struct
-
-  let store = Hashtbl.create 0
-  let add = Hashtbl.add store
-  let get = Hashtbl.find store
-  let clear () = Hashtbl.clear store
-
-end
-*)
 
 (* Free contextual variables *)
 module FCVar = struct
@@ -1070,17 +1034,6 @@ module FCVar = struct
   let clear () = NameTable.clear store
 end
 
-(*
-(* Free parameter variables *)
-module FPVar = struct
-
-  let store = Hashtbl.create 0
-  let add = Hashtbl.add store
-  let get = Hashtbl.find store
-  let clear () = Hashtbl.clear store
-
-end
-*)
 (* Computation-level variables *)
 module Var = struct
 

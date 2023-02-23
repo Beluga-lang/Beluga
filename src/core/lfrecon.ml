@@ -780,7 +780,7 @@ let rec sigmifyDctx cPhi s =
 
 
 (* Constraints for free bound variables *)
-let fvar_cnstr : ((Int.LF.typ_free_var * Apx.LF.normal * Int.LF.cvar) list) ref = ref []
+let fvar_cnstr : ((Int.LF.tvar * Apx.LF.normal * Int.LF.cvar) list) ref = ref []
 
 let add_fvarCnstr c =
   fvar_cnstr := c :: !fvar_cnstr
@@ -1091,7 +1091,7 @@ and elTerm' recT cD cPsi r sP =
      | Pi ->
         begin
           try
-            let Int.LF.Type tA = FVar.get x in
+            let tA = FVar.get x in
             (* For type reconstruction to succeed, we must have
              *
              *  . |- tA <= type
@@ -1121,13 +1121,13 @@ and elTerm' recT cD cPsi r sP =
                   *  . |- tA <= type  and cPsi |- tS : tA <= [s]tP
                   *  This will be enforced during abstraction.
                   *)
-                 FVar.add x (Int.LF.Type tA);
+                 FVar.add x tA;
                  Int.LF.Root (loc, Int.LF.FVar x, tS, Plicity.explicit)
                with
                | NotPatSpine ->
                   dprint (fun () -> "[elTerm'] FVar case -- Not a pattern spine...");
                   let v = Whnf.newMVar None (cPsi, Int.LF.TClo sP) Plicity.implicit Inductivity.not_inductive in
-                  let tAvar = Int.LF.TypVar (Int.LF.TInst (ref None, cPsi, Int.LF.Typ, ref [])) in
+                  let tAvar = Int.LF.TInst (ref None, cPsi, Int.LF.Typ, ref []) in
                   add_fvarCnstr (tAvar, r, v);
                   Int.LF.Root (loc, Int.LF.MVar (v, S.LF.id), Int.LF.Nil, Plicity.explicit)
              end
@@ -2894,27 +2894,23 @@ let rec solve_fvarCnstr recT cD =
      | None ->
         begin
           try
-            begin match FVar.get x with
-            | Int.LF.Type tA ->
-               (* For type reconstruction to succeed, we must have
-                *  . |- tA <= type
-                *  This will be enforced during abstraction.
-                *)
-               let sshift = mkShift recT cPsi in
+            let tA = FVar.get x in
+            (* For type reconstruction to succeed, we must have
+             *  . |- tA <= type
+             *  This will be enforced during abstraction.
+             *)
+            let sshift = mkShift recT cPsi in
 
-               (* let tS = elSpine cPsi spine (tA, S.LF.id) (tP, s) in *)
-               let (tS, sQ) = elSpine loc recT cD cPsi spine (tA, sshift) in
-               begin
-                 try
-                   Unify.unifyTyp cD cPsi sQ (tP, S.LF.id);
-                   instantiation := Some (Int.LF.INorm (Int.LF.Root (loc, Int.LF.FVar x, tS, Plicity.explicit)));
-                   solve_fvarCnstr recT cD cnstrs
-                 with
-                 | Unify.Failure msg ->
-                    throw loc (TypMismatchElab (cD, cPsi, (tP, S.LF.id), sQ))
-               end
-            | Int.LF.TypVar _ ->
-               throw loc (LeftoverConstraints x)
+            (* let tS = elSpine cPsi spine (tA, S.LF.id) (tP, s) in *)
+            let (tS, sQ) = elSpine loc recT cD cPsi spine (tA, sshift) in
+            begin
+              try
+                Unify.unifyTyp cD cPsi sQ (tP, S.LF.id);
+                instantiation := Some (Int.LF.INorm (Int.LF.Root (loc, Int.LF.FVar x, tS, Plicity.explicit)));
+                solve_fvarCnstr recT cD cnstrs
+              with
+              | Unify.Failure msg ->
+                throw loc (TypMismatchElab (cD, cPsi, (tP, S.LF.id), sQ))
             end
           with
           | _ ->
@@ -2923,31 +2919,27 @@ let rec solve_fvarCnstr recT cD =
      | Some Int.LF.INorm tR ->
         begin
           try
-            begin match FVar.get x with
-            | Int.LF.Type tA ->
-               (* For type reconstruction to succeed, we must have
-                *  . |- tA <= type
-                *  This will be enforced during abstraction.
-                *)
-               let sshift = mkShift recT cPsi in
+            let tA = FVar.get x in
+            (* For type reconstruction to succeed, we must have
+             *  . |- tA <= type
+             *  This will be enforced during abstraction.
+             *)
+            let sshift = mkShift recT cPsi in
 
-               (* let tS = elSpine cPsi spine (tA, S.LF.id) (tP, s) in *)
-               let (tS, sQ) = elSpine loc recT cD cPsi spine (tA, sshift) in
-               (* let psihat = Context.dctxToHat cPsi in *)
-               begin
-                 try
-                   Unify.unifyTyp cD cPsi sQ (tP, S.LF.id);
-                   Unify.unify cD cPsi
-                     (Int.LF.Root (loc, Int.LF.FVar x, tS, Plicity.explicit), S.LF.id)
-                     (tR, S.LF.id);
-                   (* r := Some (Int.LF.Root (loc, Int.LF.FVar x, tS)); *)
-                   solve_fvarCnstr recT cD cnstrs
-                 with
-                 | Unify.Failure msg ->
-                    throw loc (TypMismatchElab (cD, cPsi, (tP, S.LF.id), sQ))
-               end
-            | Int.LF.TypVar _ ->
-               throw loc (LeftoverConstraints x)
+            (* let tS = elSpine cPsi spine (tA, S.LF.id) (tP, s) in *)
+            let (tS, sQ) = elSpine loc recT cD cPsi spine (tA, sshift) in
+            (* let psihat = Context.dctxToHat cPsi in *)
+            begin
+              try
+                Unify.unifyTyp cD cPsi sQ (tP, S.LF.id);
+                Unify.unify cD cPsi
+                  (Int.LF.Root (loc, Int.LF.FVar x, tS, Plicity.explicit), S.LF.id)
+                  (tR, S.LF.id);
+                (* r := Some (Int.LF.Root (loc, Int.LF.FVar x, tS)); *)
+                solve_fvarCnstr recT cD cnstrs
+              with
+              | Unify.Failure msg ->
+                throw loc (TypMismatchElab (cD, cPsi, (tP, S.LF.id), sQ))
             end
           with
           | _ ->

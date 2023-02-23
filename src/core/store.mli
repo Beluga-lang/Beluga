@@ -407,11 +407,9 @@ end
 
 
 module FVar : sig
- (* NOTE: FVars are stored in an an ordered data structure *)
-  val add : Name.t -> LF.typ_free_var -> unit
-  val get : Name.t -> LF.typ_free_var
+  val add : Name.t -> LF.typ -> unit
+  val get : Name.t -> LF.typ
   val clear : unit -> unit
-  val fvar_list : unit -> (Name.t * LF.typ_free_var) list
 end
 
 (*
@@ -432,7 +430,6 @@ module FPatVar : sig
 end
 
 module FCVar : sig
-   (* NOTE: FCVars are stored in an an ordered data structure *)
   val add : Name.t -> LF.mctx * LF.ctyp_decl -> unit
   val get : Name.t -> LF.mctx * LF.ctyp_decl
   val clear : unit -> unit

@@ -136,8 +136,6 @@ module LF = struct
   and tvar =
     | TInst of typ option ref * dctx * kind * cnstr list ref
 
-  and typ_free_var = Type of typ | TypVar of tvar
-
   (* unique identifiers attached to constraints, used for debugging *)
   and constrnt_id = int
 

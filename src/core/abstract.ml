@@ -465,7 +465,7 @@ and addVar loc p cQ v tp =
 and getType loc p name f =
   try
     match f with
-    | LF -> let Int.LF.Type tA = FVar.get name in (LFTyp tA)
+    | LF -> let tA = FVar.get name in (LFTyp tA)
     | Comp ->
        let (cD_d, I.Decl (_, mtyp, plicity, inductivity)) = FCVar.get name in
        let mtyp' = Whnf.cnormMTyp (mtyp, Int.LF.MShift (p - Context.length cD_d)) in

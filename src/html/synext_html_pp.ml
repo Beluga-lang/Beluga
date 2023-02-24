@@ -2724,9 +2724,7 @@ module Make (Html_state : HTML_PRINTING_STATE) :
   and pp_module_entries entries =
     let groups = group_signature_entries entries in
     let pp_group = function
-      | `Code group ->
-          pp_preformatted_code_html
-            (pp_list1 ~sep:pp_double_cut pp_signature_entry group)
+      | `Code group -> pp_list1 ~sep:pp_double_cut pp_signature_entry group
       | `Comment group ->
           pp_inner_documentation_html
             (pp_list1 ~sep:pp_double_cut pp_signature_entry group)

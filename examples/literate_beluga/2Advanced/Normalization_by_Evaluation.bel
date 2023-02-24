@@ -63,7 +63,7 @@ case e of
 Environments:
 }}%
 
-typedef Env : {g:tctx} {h:ctx} ctype = ({T:[ |- tp]} {#p:#[g |- tm T[]]} Sem [h] [ |- T]);
+typedef Env : {g:tctx} {h:ctx} ctype = {T:[ |- tp]} {#p:#[g |- tm T[]]} Sem [h] [ |- T];
 
 rec env_ext : Env [g] [h] -> Sem [h] [ |- S] -> Env [g,x:tm S[]] [h] =
 fn s => let s : Env [g] [h] = s in fn e => mlam T => mlam #p => case [g,x:tm _ |-  #p] of

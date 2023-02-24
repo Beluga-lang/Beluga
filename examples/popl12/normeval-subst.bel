@@ -54,7 +54,7 @@ case e of
 ;
 
 
-typedef Map : {g:tctx} {h:ctx} ctype = ({T:[ |- tp]} TmVar [g] [ |- T] -> Sem [h] [ |- T]);
+typedef Map : {g:tctx} {h:ctx} ctype = {T:[ |- tp]} TmVar [g] [ |- T] -> Sem [h] [ |- T];
 
 rec extend : (g:tctx)(h:ctx)
              Map [g] [h] -> Sem [h] [ |- S] ->  Map [g, x:tm S[]] [h]  =

@@ -41,6 +41,13 @@ code {
 }
 
 .inner-documentation {
+  background-color: white;
+  border: 1px dashed maroon;
+  display: block;
+  padding: 8px;
+  white-space: normal;
+  font-family: sans-serif;
+  color: black;
 }
 
 .keyword {

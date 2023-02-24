@@ -176,7 +176,8 @@ module Make (Signature_reconstruction_state : SIGNATURE_RECONSTRUCTION_STATE) :
     | Synext.Signature.Entry.Comment { location; content } ->
         return (Synint.Sgn.Comment { location; content })
     | Synext.Signature.Entry.Pragma { pragma; _ } ->
-        reconstruct_signature_pragma pragma
+        let* pragma' = reconstruct_signature_pragma pragma in
+        return (Synint.Sgn.Pragma { pragma = pragma' })
     | Synext.Signature.Entry.Declaration { declaration; _ } ->
         reconstruct_signature_declaration declaration
 
@@ -194,24 +195,18 @@ module Make (Signature_reconstruction_state : SIGNATURE_RECONSTRUCTION_STATE) :
             ?computation_variable_base constant
         in
         let name = Name.make_from_qualified_identifier constant in
-        return (Synint.Sgn.Pragma { pragma = Synint.LF.NamePrag name })
+        return (Synint.LF.NamePrag name)
     | Synext.Signature.Pragma.Default_associativity
         { associativity; location } ->
         let* () = set_default_associativity ~location associativity in
-        return
-          (Synint.Sgn.Pragma
-             { pragma = Synint.LF.DefaultAssocPrag associativity })
+        return (Synint.LF.DefaultAssocPrag associativity)
     | Synext.Signature.Pragma.Prefix_fixity
         { location; constant; precedence } ->
         let* () = set_operator_prefix ~location ?precedence constant in
         let name = Name.make_from_qualified_identifier constant in
         let associativity = Option.some Associativity.right_associative in
         return
-          (Synint.Sgn.Pragma
-             { pragma =
-                 Synint.LF.FixPrag
-                   (name, Fixity.prefix, precedence, associativity)
-             })
+          (Synint.LF.FixPrag (name, Fixity.prefix, precedence, associativity))
     | Synext.Signature.Pragma.Infix_fixity
         { location; constant; precedence; associativity } ->
         let* () =
@@ -219,27 +214,17 @@ module Make (Signature_reconstruction_state : SIGNATURE_RECONSTRUCTION_STATE) :
         in
         let name = Name.make_from_qualified_identifier constant in
         return
-          (Synint.Sgn.Pragma
-             { pragma =
-                 Synint.LF.FixPrag
-                   (name, Fixity.infix, precedence, associativity)
-             })
+          (Synint.LF.FixPrag (name, Fixity.infix, precedence, associativity))
     | Synext.Signature.Pragma.Postfix_fixity
         { location; constant; precedence } ->
         let* () = set_operator_postfix ~location ?precedence constant in
         let name = Name.make_from_qualified_identifier constant in
         let associativity = Option.some Associativity.left_associative in
         return
-          (Synint.Sgn.Pragma
-             { pragma =
-                 Synint.LF.FixPrag
-                   (name, Fixity.postfix, precedence, associativity)
-             })
+          (Synint.LF.FixPrag (name, Fixity.postfix, precedence, associativity))
     | Synext.Signature.Pragma.Open_module { location; module_identifier } ->
         let* () = open_module ~location module_identifier in
-        return
-          (Synint.Sgn.Pragma
-             { pragma = Synint.LF.OpenPrag module_identifier })
+        return (Synint.LF.OpenPrag module_identifier)
     | Synext.Signature.Pragma.Abbreviation
         { location; module_identifier; abbreviation } ->
         let* () =
@@ -250,11 +235,10 @@ module Make (Signature_reconstruction_state : SIGNATURE_RECONSTRUCTION_STATE) :
           |> List.map Identifier.show
         in
         return
-          (Synint.Sgn.Pragma
-             { pragma =
-                 Synint.LF.AbbrevPrag
-                   (module_identifier_as_list, Identifier.show abbreviation)
-             })
+          (Synint.LF.AbbrevPrag
+             (module_identifier_as_list, Identifier.show abbreviation))
+    | Synext.Signature.Pragma.Query _ ->
+        Obj.magic () (* TODO: *)
 
   and reconstruct_signature_declaration declaration =
     match declaration with

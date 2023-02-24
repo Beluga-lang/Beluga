@@ -287,7 +287,8 @@ let location_of_signature_pragma pragma =
   | Postfix_fixity { location; _ }
   | Not { location; _ }
   | Open_module { location; _ }
-  | Abbreviation { location; _ } ->
+  | Abbreviation { location; _ }
+  | Query { location; _ } ->
       location
 
 let location_of_signature_global_pragma global_pragma =
@@ -337,6 +338,5 @@ let location_of_signature_declaration declaration =
   | Proof { location; _ }
   | Recursive_declarations { location; _ }
   | Val { location; _ }
-  | Query { location; _ }
   | Module { location; _ } ->
       location

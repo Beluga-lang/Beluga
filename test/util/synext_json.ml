@@ -1349,6 +1349,24 @@ let rec json_of_signature_pragma pragma =
           ; ("abbreviation", json_of_identifier abbreviation)
           ; ("location", json_of_location location)
           ]
+  | Signature.Pragma.Query
+      { identifier
+      ; meta_context
+      ; typ
+      ; expected_solutions
+      ; maximum_tries
+      ; location
+      } ->
+      json_of_variant ~name:"Signature.Pragma.Query"
+        ~data:
+          [ ("identifier", json_of_option json_of_identifier identifier)
+          ; ("meta_context", json_of_meta_context meta_context)
+          ; ("typ", json_of_lf_typ typ)
+          ; ( "expected_solutions"
+            , json_of_option json_of_int expected_solutions )
+          ; ("maximum_tries", json_of_option json_of_int maximum_tries)
+          ; ("location", json_of_location location)
+          ]
 
 and json_of_signature_global_pragma global_pragma =
   match global_pragma with
@@ -1540,24 +1558,6 @@ and json_of_signature_declaration declaration =
           [ ("identifier", json_of_identifier identifier)
           ; ("typ", json_of_option json_of_comp_typ typ)
           ; ("expression", json_of_comp_expression expression)
-          ; ("location", json_of_location location)
-          ]
-  | Signature.Declaration.Query
-      { identifier
-      ; meta_context
-      ; typ
-      ; expected_solutions
-      ; maximum_tries
-      ; location
-      } ->
-      json_of_variant ~name:"Signature.Declaration.Query"
-        ~data:
-          [ ("identifier", json_of_option json_of_identifier identifier)
-          ; ("meta_context", json_of_meta_context meta_context)
-          ; ("typ", json_of_lf_typ typ)
-          ; ( "expected_solutions"
-            , json_of_option json_of_int expected_solutions )
-          ; ("maximum_tries", json_of_option json_of_int maximum_tries)
           ; ("location", json_of_location location)
           ]
   | Signature.Declaration.Module { identifier; entries; location } ->

@@ -264,6 +264,14 @@ module LF = struct
     | DefaultAssocPrag of Associativity.t
     | FixPrag of Name.t * Fixity.t * int option * Associativity.t option
     | AbbrevPrag of string list * string
+    | Query of
+      { location: Location.t
+      ; name: Name.t option
+      ; mctx: mctx
+      ; typ: (typ * Id.offset)
+      ; expected_solutions: int option
+      ; maximum_tries: int option
+      } (** Logic programming query on LF type *)
 
   (**********************)
   (* Helpers            *)
@@ -970,23 +978,6 @@ module Sgn = struct
       ; identifier: string
       ; declarations: decl list
       } (** Namespace declaration for other declarations *)
-
-    | Query of
-      { location: Location.t
-      ; name: Name.t option
-      ; mctx: LF.mctx
-      ; typ: (LF.typ * Id.offset)
-      ; expected_solutions: int option
-      ; maximum_tries: int option
-      } (** Logic programming query on LF type *)
-
-    | MQuery of
-      { location: Location.t
-      ; typ: (Comp.typ * Id.offset)
-      ; expected_solutions: int option
-      ; search_tries: int option
-      ; search_depth: int option
-      } (** Logic programming mquery on Comp. type *)
 
     | Comment of
       { location: Location.t

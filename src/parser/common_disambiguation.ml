@@ -44,8 +44,6 @@ exception Bound_computation_term_constructor of Qualified_identifier.t
 
 exception Bound_computation_term_destructor of Qualified_identifier.t
 
-exception Bound_query of Qualified_identifier.t
-
 exception Bound_module of Qualified_identifier.t
 
 exception Bound_program_constant of Qualified_identifier.t
@@ -75,7 +73,6 @@ module type DISAMBIGUATION_STATE = sig
     | Computation_abbreviation_type_constant
     | Computation_term_constructor
     | Computation_term_destructor
-    | Query
     | Module
     | Program_constant
 
@@ -124,8 +121,6 @@ module type DISAMBIGUATION_STATE = sig
 
   val add_computation_term_destructor :
     ?location:Location.t -> ?arity:Int.t -> Identifier.t -> Unit.t t
-
-  val add_query : ?location:Location.t -> Identifier.t -> Unit.t t
 
   val add_program_constant :
     ?location:Location.t -> ?arity:Int.t -> Identifier.t -> Unit.t t
@@ -269,7 +264,6 @@ end = struct
     | Computation_abbreviation_type_constant
     | Computation_term_constructor
     | Computation_term_destructor
-    | Query
     | Module
     | Program_constant
 
@@ -538,11 +532,6 @@ end = struct
     let entry = (Computation_term_destructor, data) in
     add_entry_binding identifier entry <& add_module_declaration identifier
 
-  let add_query ?location identifier =
-    let data = make_entry_data ?location identifier in
-    let entry = (Query, data) in
-    add_entry_binding identifier entry <& add_module_declaration identifier
-
   let add_program_constant ?location ?arity identifier =
     let data = make_entry_data ?location ?arity identifier in
     let entry = (Program_constant, data) in
@@ -656,7 +645,6 @@ end = struct
           Bound_computation_term_constructor identifier
       | Computation_term_destructor ->
           Bound_computation_term_destructor identifier
-      | Query -> Bound_query identifier
       | Module -> Bound_module identifier
       | Program_constant -> Bound_program_constant identifier
     in
@@ -920,9 +908,6 @@ let () =
     | Bound_computation_term_destructor qualified_identifier ->
         Format.dprintf "%a is a bound computation-level term destructor."
           Qualified_identifier.pp qualified_identifier
-    | Bound_query qualified_identifier ->
-        Format.dprintf "%a is a bound query." Qualified_identifier.pp
-          qualified_identifier
     | Bound_module qualified_identifier ->
         Format.dprintf "%a is a bound module." Qualified_identifier.pp
           qualified_identifier

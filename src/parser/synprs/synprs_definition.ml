@@ -770,6 +770,14 @@ module Signature = struct
           ; module_identifier : Qualified_identifier.t
           ; abbreviation : Identifier.t
           }
+      | Raw_query of
+          { location : Location.t
+          ; identifier : Identifier.t Option.t
+          ; meta_context : Meta.Context_object.t
+          ; typ : LF.Object.t
+          ; expected_solutions : Int.t Option.t
+          ; maximum_tries : Int.t Option.t
+          }
   end
 
   module rec Global_pragma : sig
@@ -891,14 +899,6 @@ module Signature = struct
           ; identifier : Identifier.t
           ; typ : Comp.Sort_object.t Option.t
           ; expression : Comp.Expression_object.t
-          }
-      | Raw_query of
-          { location : Location.t
-          ; identifier : Identifier.t Option.t
-          ; meta_context : Meta.Context_object.t
-          ; typ : LF.Object.t
-          ; expected_solutions : Int.t Option.t
-          ; maximum_tries : Int.t Option.t
           }
       | Raw_module of
           { location : Location.t

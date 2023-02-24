@@ -2424,8 +2424,8 @@ module Make (Html_state : HTML_PRINTING_STATE) :
           ~declarations:
             (pp_module_keyword ++ pp_non_breaking_space
             ++ pp_module_constant ~id identifier
-            ++ pp_equal ++ pp_non_breaking_space ++ pp_struct_keyword
-            ++ pp_break 1 2
+            ++ pp_non_breaking_space ++ pp_equal ++ pp_non_breaking_space
+            ++ pp_struct_keyword ++ pp_break 1 2
             ++ pp_vbox ~indent:0 (pp_module_entries entries)
             ++ pp_cut ++ pp_end_keyword)
           ~module_identifier:identifier ~id

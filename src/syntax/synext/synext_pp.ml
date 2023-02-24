@@ -2206,30 +2206,35 @@ module Make_pretty_printer (Printing_state : PRINTING_STATE) :
 
   and pre_add_declaration declaration =
     match declaration with
-    | Signature.Declaration.Typ { identifier; _ } -> add_binding identifier
-    | Signature.Declaration.Const { identifier; _ } -> add_binding identifier
+    | Signature.Declaration.Typ { identifier; _ } ->
+        add_binding identifier <& add_module_declaration identifier
+    | Signature.Declaration.Const { identifier; _ } ->
+        add_binding identifier <& add_module_declaration identifier
     | Signature.Declaration.CompTyp { identifier; _ } ->
-        add_binding identifier
+        add_binding identifier <& add_module_declaration identifier
     | Signature.Declaration.CompCotyp { identifier; _ } ->
-        add_binding identifier
+        add_binding identifier <& add_module_declaration identifier
     | Signature.Declaration.CompConst { identifier; _ } ->
-        add_binding identifier
+        add_binding identifier <& add_module_declaration identifier
     | Signature.Declaration.CompDest { identifier; _ } ->
-        add_binding identifier
+        add_binding identifier <& add_module_declaration identifier
     | Signature.Declaration.Schema { identifier; _ } ->
-        add_binding identifier
+        add_binding identifier <& add_module_declaration identifier
     | Signature.Declaration.Theorem { identifier; _ } ->
-        add_binding identifier
-    | Signature.Declaration.Proof { identifier; _ } -> add_binding identifier
+        add_binding identifier <& add_module_declaration identifier
+    | Signature.Declaration.Proof { identifier; _ } ->
+        add_binding identifier <& add_module_declaration identifier
     | Signature.Declaration.CompTypAbbrev { identifier; _ } ->
         add_binding identifier
-    | Signature.Declaration.Val { identifier; _ } -> add_binding identifier
+    | Signature.Declaration.Val { identifier; _ } ->
+        add_binding identifier <& add_module_declaration identifier
     | Signature.Declaration.Module { identifier; _ } ->
-        add_binding identifier
+        add_binding identifier <& add_module_declaration identifier
     | Signature.Declaration.Recursive_declarations { declarations; _ } ->
         traverse_list1_void pre_add_declaration declarations
     | Signature.Declaration.Query { identifier; _ } ->
         traverse_option_void add_binding identifier
+        <& traverse_option_void add_module_declaration identifier
 
   and pp_grouped_declaration ~prepend_and declaration =
     let pp_and_opt =

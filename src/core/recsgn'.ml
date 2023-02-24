@@ -2,11 +2,23 @@ open Support
 open Beluga_syntax
 module Synint = Syntax.Int
 
-[@@@warning "+A-4-44"]
+[@@@warning "+A-26-27-4-44"]
+
+module C = Whnf
+module S = Substitution
+module Unify = Unify.StdTrail
+module P = Pretty.Int.DefaultPrinter
+module R = Store.Cid.DefaultRenderer
+
+let dprintf, dprint, _ = Debug.makeFunctions' (Debug.toFlags [ 11 ])
+
+open Debug.Fmt
 
 exception Dangling_not_pragma
 
 exception Unexpected_entry_reconstruction_success
+
+exception Unsupported_recursive_declaration
 
 let () =
   Error.register_exception_printer (function
@@ -18,6 +30,10 @@ let () =
           "This signature entry was successfully reconstructed, but the \
            `--not' pragma indicates that it was expected to fail \
            reconstruction."
+    | Unsupported_recursive_declaration ->
+        Format.dprintf "%a" Format.pp_print_text
+          "Reconstruction of this declaration is unsupported in a mutually \
+           recursive group of declarations."
     | exn -> Error.raise_unsupported_exception_printing exn)
 
 module type SIGNATURE_RECONSTRUCTION_STATE = sig
@@ -96,7 +112,47 @@ module type SIGNATURE_RECONSTRUCTION_STATE = sig
     -> abbreviation:Identifier.t
     -> Unit.t t
 
+  (** [with_checkpoint m state] is [(state, x)] where [x] is the result of
+      running [m] with [state]. Note that the state is rolled back entirely. *)
   val with_checkpoint : 'a t -> 'a t
+
+  (** {1 Indexing} *)
+
+  (** [index_lf_kind kind state] is [(state', kind')] where [kind'] is [kind]
+      indexed with respect to [state]. Free variables in [kind] are discarded
+      in [state']. *)
+  val index_lf_kind : Synext.lf_kind -> Synapx.LF.kind t
+
+  val index_lf_typ : Synext.lf_typ -> Synapx.LF.typ t
+
+  val index_schema : Synext.schema -> Synapx.LF.schema t
+
+  val index_meta_context : Synext.meta_context -> Synapx.LF.mctx t
+
+  val index_closed_comp_typ : Synext.comp_typ -> Synapx.Comp.typ t
+
+  val index_closed_comp_expression :
+    Synext.comp_expression -> Synapx.Comp.exp t
+
+  val index_comp_typedef :
+       Synext.comp_typ
+    -> Synext.comp_kind
+    -> (Synapx.Comp.typ * Synapx.Comp.kind) t
+
+  val add_lf_type_constant :
+    ?location:Location.t -> Identifier.t -> Id.cid_typ -> Unit.t t
+
+  val add_lf_term_constant :
+    ?location:Location.t -> Identifier.t -> Id.cid_term -> Unit.t t
+
+  val add_schema_constant :
+    ?location:Location.t -> Identifier.t -> Id.cid_schema -> Unit.t t
+
+  val add_comp_val :
+    ?location:Location.t -> Identifier.t -> Id.cid_prog -> Unit.t t
+
+  val add_comp_typedef :
+    ?location:Location.t -> Identifier.t -> Id.cid_comp_typdef -> Unit.t t
 end
 
 module type SIGNATURE_RECONSTRUCTION = sig
@@ -237,8 +293,16 @@ module Make (Signature_reconstruction_state : SIGNATURE_RECONSTRUCTION_STATE) :
         return
           (Synint.LF.AbbrevPrag
              (module_identifier_as_list, Identifier.show abbreviation))
-    | Synext.Signature.Pragma.Query _ ->
-        Obj.magic () (* TODO: *)
+    | Synext.Signature.Pragma.Query
+        { location
+        ; identifier
+        ; meta_context
+        ; typ
+        ; expected_solutions
+        ; maximum_tries
+        } ->
+        reconstruct_query_declaration location identifier meta_context typ
+          expected_solutions maximum_tries
 
   and reconstruct_signature_declaration declaration =
     match declaration with
@@ -252,14 +316,534 @@ module Make (Signature_reconstruction_state : SIGNATURE_RECONSTRUCTION_STATE) :
           "[reconstruct_signature_declaration] this kind of signature \
            declaration is only supported within a mutually recursive group \
            of declarations."
-    | Synext.Signature.Declaration.Typ _ -> Obj.magic () (* TODO: *)
-    | Synext.Signature.Declaration.Const _ -> Obj.magic () (* TODO: *)
-    | Synext.Signature.Declaration.Schema _ -> Obj.magic () (* TODO: *)
-    | Synext.Signature.Declaration.CompTypAbbrev _ ->
-        Obj.magic () (* TODO: *)
-    | Synext.Signature.Declaration.Val _ -> Obj.magic () (* TODO: *)
-    | Synext.Signature.Declaration.Query _ -> Obj.magic () (* TODO: *)
-    | Synext.Signature.Declaration.Recursive_declarations _ ->
-        Obj.magic () (* TODO: *)
-    | Synext.Signature.Declaration.Module _ -> Obj.magic () (* TODO: *)
+    | Synext.Signature.Declaration.Typ { location; identifier; kind } ->
+        reconstruct_oldstyle_lf_typ_declaration location identifier kind
+    | Synext.Signature.Declaration.Const { location; identifier; typ } ->
+        reconstruct_oldstyle_lf_const_declaration location identifier typ
+    | Synext.Signature.Declaration.Schema { location; identifier; schema } ->
+        reconstruct_schema_declaration location identifier schema
+    | Synext.Signature.Declaration.CompTypAbbrev
+        { location; identifier; kind; typ } ->
+        reconstruct_comp_typ_abbrev_declaration location identifier kind typ
+    | Synext.Signature.Declaration.Val
+        { location; identifier; typ; expression } ->
+        reconstruct_val_declaration location identifier typ expression
+    | Synext.Signature.Declaration.Recursive_declarations
+        { location; declarations } ->
+        reconstruct_recursive_declarations location declarations
+    | Synext.Signature.Declaration.Module { location; identifier; entries }
+      ->
+        reconstruct_module_declaration location identifier entries
+
+  and reconstruct_oldstyle_lf_typ_declaration location identifier extK =
+    let name = Name.make_from_identifier identifier in
+    dprintf (fun p ->
+        p.fmt "[RecSgn Checking] Typ at: %a" Location.print_short location);
+    dprintf (fun p ->
+        p.fmt "\nIndexing type constant %a" Identifier.pp identifier);
+    let* apxK = index_lf_kind extK in
+    dprintf (fun p ->
+        p.fmt "\nElaborating type constant %a" Identifier.pp identifier);
+    Store.FVar.clear ();
+    let tK =
+      Monitor.timer
+        ( "Type Elaboration"
+        , fun () ->
+            let tK = Reconstruct.kind apxK in
+            Reconstruct.solve_fvarCnstr Lfrecon.Pi;
+            tK )
+    in
+    Unify.forceGlobalCnstr ();
+    let tK', i =
+      Monitor.timer ("Type Abstraction", fun () -> Abstract.kind tK)
+    in
+    Reconstruct.reset_fvarCnstr ();
+    Unify.resetGlobalCnstrs ();
+    dprintf (fun p ->
+        p.fmt "%a : %a@." Identifier.pp identifier
+          (P.fmt_ppr_lf_kind Synint.LF.Null P.l0)
+          tK');
+    Monitor.timer
+      ( "Type Check"
+      , fun () -> Check.LF.checkKind Synint.LF.Empty Synint.LF.Null tK' );
+    dprintf (fun p ->
+        p.fmt "DOUBLE CHECK for type constant %a successful!" Identifier.pp
+          identifier);
+    Typeinfo.Sgn.add location
+      (Typeinfo.Sgn.mk_entry (Typeinfo.Sgn.Kind tK'))
+      "";
+    let cid =
+      Store.Cid.Typ.add (fun _cid -> Store.Cid.Typ.mk_entry name tK' i)
+    in
+    let sgn = Synint.Sgn.Typ { location; identifier = cid; kind = tK' } in
+    Store.Modules.addSgnToCurrent sgn;
+    let* () = add_lf_type_constant ~location identifier cid in
+    return sgn
+
+  and reconstruct_oldstyle_lf_const_declaration location identifier extT =
+    let name = Name.make_from_identifier identifier in
+    dprintf (fun p ->
+        p.fmt "[RecSgn Checking] Const at: %a" Location.print_short location);
+    let* apxT = index_lf_typ extT in
+    let rec get_type_family = function
+      | Synapx.LF.Atom (_loc, a, _spine) -> a
+      | Synapx.LF.PiTyp ((_, _), t) -> get_type_family t
+      | Synapx.LF.Sigma _ ->
+          Error.raise_violation ~location
+            "[reconstruct_oldstyle_lf_const_declaration] unsupported sigma \
+             type"
+    in
+    let constructedType = get_type_family apxT in
+    dprintf (fun p ->
+        p.fmt "Reconstructing term constant %a" Identifier.pp identifier);
+    Store.FVar.clear ();
+    let tA =
+      Monitor.timer
+        ( "Constant Elaboration"
+        , fun () ->
+            let tA = Reconstruct.typ Lfrecon.Pi apxT in
+            Reconstruct.solve_fvarCnstr Lfrecon.Pi;
+            tA )
+    in
+    let cD = Synint.LF.Empty in
+    dprintf (fun p ->
+        p.fmt "[recSgnDecl] [Const] %a : %a" Identifier.pp identifier
+          (P.fmt_ppr_lf_typ cD Synint.LF.Null P.l0)
+          tA);
+    Unify.forceGlobalCnstr ();
+    let tA', i =
+      Monitor.timer ("Constant Abstraction", fun () -> Abstract.typ tA)
+    in
+    Reconstruct.reset_fvarCnstr ();
+    Unify.resetGlobalCnstrs ();
+    dprintf (fun p ->
+        p.fmt
+          "[recSgnDecl] [Const] Reconstruction (with abstraction) of \
+           constant: %a : %a"
+          Identifier.pp identifier
+          (P.fmt_ppr_lf_typ cD Synint.LF.Null P.l0)
+          tA');
+    Monitor.timer
+      ( "Constant Check"
+      , fun () ->
+          Check.LF.checkTyp Synint.LF.Empty Synint.LF.Null (tA', S.LF.id) );
+    Typeinfo.Sgn.add location
+      (Typeinfo.Sgn.mk_entry (Typeinfo.Sgn.Typ tA'))
+      "";
+    let cid =
+      Store.Cid.Term.add' location constructedType (fun _cid ->
+          Store.Cid.Term.mk_entry name tA' i)
+    in
+    let sgn = Synint.Sgn.Const { location; identifier = cid; typ = tA' } in
+    Store.Modules.addSgnToCurrent sgn;
+    let* () = add_lf_term_constant ~location identifier cid in
+    return sgn
+
+  and reconstruct_schema_declaration location identifier schema =
+    let name = Name.make_from_identifier identifier in
+    dprintf (fun p ->
+        p.fmt "[RecSgn Checking] Schema at: %a@." Location.print_short
+          location);
+    let* apx_schema = index_schema schema in
+    dprintf (fun p ->
+        p.fmt "Reconstructing schema %a@." Identifier.pp identifier);
+    Store.FVar.clear ();
+    let sW = Reconstruct.schema apx_schema in
+    dprintf (fun p ->
+        p.fmt "Elaborated schema %a : %a" Identifier.pp identifier
+          (P.fmt_ppr_lf_schema P.l0)
+          sW);
+    Reconstruct.solve_fvarCnstr Lfrecon.Pi;
+    Unify.forceGlobalCnstr ();
+    Reconstruct.reset_fvarCnstr ();
+    Unify.resetGlobalCnstrs ();
+    let sW' = Abstract.schema sW in
+    dprintf (fun p ->
+        p.fmt "Schema %a : %a after abstraction@." Identifier.pp identifier
+          (P.fmt_ppr_lf_schema P.l0)
+          sW');
+    Check.LF.checkSchemaWf sW';
+    dprintf (fun p ->
+        p.fmt "TYPE CHECK for schema %a successful@." Identifier.pp
+          identifier);
+    let cid =
+      Store.Cid.Schema.add (fun _cid -> Store.Cid.Schema.mk_entry name sW')
+    in
+    let sgn =
+      Synint.Sgn.Schema { location; identifier = cid; schema = sW' }
+    in
+    Store.Modules.addSgnToCurrent sgn;
+    let* () = add_schema_constant ~location identifier cid in
+    return sgn
+
+  and reconstruct_comp_typ_abbrev_declaration location identifier cK cT =
+    let name = Name.make_from_identifier identifier in
+    (* index cT in a context which contains arguments to cK *)
+    let* apx_tau, apxK = index_comp_typedef cT cK in
+    let (cD, cT), i, cK =
+      Reconstruct.comptypdef location name (apx_tau, apxK)
+    in
+    dprintf (fun p ->
+        p.fmt "typedef %a : %a = %a" Identifier.pp identifier
+          (P.fmt_ppr_cmp_kind Synint.LF.Empty P.l0)
+          cK
+          (P.fmt_ppr_cmp_typ cD P.l0)
+          cT);
+    Monitor.timer
+      ( "Type abbrev. : Kind Check"
+      , fun () -> Check.Comp.checkKind Synint.LF.Empty cK );
+    Monitor.timer
+      ("Type abbrev. : Type Check", fun () -> Check.Comp.checkTyp cD cT);
+    let cid =
+      Store.Cid.CompTypDef.add (fun _cid ->
+          Store.Cid.CompTypDef.mk_entry name i (cD, cT) cK)
+    in
+    let sgn =
+      Synint.Sgn.CompTypAbbrev
+        { location; identifier = name; kind = cK; typ = cT }
+    in
+    Store.Modules.addSgnToCurrent sgn;
+    let* () = add_comp_typedef ~location identifier cid in
+    return sgn
+
+  and reconstruct_val_declaration location identifier typ_opt expression =
+    match typ_opt with
+    | Option.None ->
+        reconstruct_untyped_val_declaration location identifier expression
+    | Option.Some typ ->
+        reconstruct_typed_val_declaration location identifier typ expression
+
+  and reconstruct_untyped_val_declaration location identifier expression =
+    let name = Name.make_from_identifier identifier in
+    dprintf (fun p ->
+        p.fmt "[RecSgn Checking] Val at: %a" Location.print_short location);
+    let* apx_i = index_closed_comp_expression expression in
+    let cD, cG = (Synint.LF.Empty, Synint.LF.Empty) in
+    let i', (tau, theta) =
+      Monitor.timer
+        ("Function Elaboration", fun () -> Reconstruct.exp' cG apx_i)
+    in
+    Unify.forceGlobalCnstr ();
+    let tau' = Whnf.cnormCTyp (tau, theta) in
+    let expression' = Whnf.cnormExp (i', Whnf.m_id) in
+
+    dprintf (fun p ->
+        p.fmt "[AFTER Reconstruction Val] @[<v 2>let %a : %a =@ %a@]"
+          Identifier.pp identifier
+          (P.fmt_ppr_cmp_typ cD P.l0)
+          tau'
+          (P.fmt_ppr_cmp_exp cD cG P.l0)
+          expression');
+    let cQ, expression'' =
+      Monitor.timer
+        ("Function Abstraction", fun () -> Abstract.exp expression')
+    in
+    let* () = add_leftover_vars cQ location in
+    Monitor.timer
+      ( "Function Check"
+      , fun () ->
+          Check.Comp.check Option.none cD cG [] expression'' (tau', C.m_id)
+      );
+
+    let value_opt =
+      if Holes.none () && Context.is_empty cQ then
+        Option.some (Opsem.eval expression'')
+      else Option.none
+    in
+    let cid =
+      Store.Cid.Comp.add (fun _cid ->
+          let mgid =
+            Store.Cid.Comp.add_mutual_group
+              [ { Synint.Comp.name; tau = tau'; order = `not_recursive } ]
+          in
+          Store.Cid.Comp.mk_entry
+            (Option.some (Decl.next ()))
+            name tau' 0 mgid value_opt)
+    in
+    let sgn =
+      Synint.Sgn.Val
+        { location
+        ; identifier = name
+        ; typ = tau'
+        ; expression = expression''
+        ; expression_value = value_opt
+        }
+    in
+    Store.Modules.addSgnToCurrent sgn;
+    let* () = add_comp_val ~location identifier cid in
+    return sgn
+
+  and reconstruct_typed_val_declaration location identifier tau expression =
+    let name = Name.make_from_identifier identifier in
+    dprintf (fun p ->
+        p.fmt "[RecSgn Checking] Val at %a" Location.print_short location);
+    let* apx_tau = index_closed_comp_typ tau in
+    let cD, cG = (Synint.LF.Empty, Synint.LF.Empty) in
+    let tau' =
+      Monitor.timer
+        ("Function Type Elaboration", fun () -> Reconstruct.comptyp apx_tau)
+    in
+    Unify.forceGlobalCnstr ();
+    let tau', _ =
+      Monitor.timer
+        ("Function Type Abstraction", fun () -> Abstract.comptyp tau')
+    in
+    Monitor.timer
+      ("Function Type Check", fun () -> Check.Comp.checkTyp cD tau');
+    let* apx_i = index_closed_comp_expression expression in
+    let i' =
+      Monitor.timer
+        ( "Function Elaboration"
+        , fun () -> Reconstruct.exp cG apx_i (tau', C.m_id) )
+    in
+    let expression' = Whnf.cnormExp (i', Whnf.m_id) in
+    Unify.forceGlobalCnstr ();
+    let tau' = Whnf.cnormCTyp (tau', C.m_id) in
+    dprintf (fun p ->
+        p.fmt "[AFTER Reconstruction Val - 2] let %a : %a =@ %a"
+          Identifier.pp identifier
+          (P.fmt_ppr_cmp_typ cD P.l0)
+          tau'
+          (P.fmt_ppr_cmp_exp cD cG P.l0)
+          expression');
+
+    let cQ, expression'' =
+      Monitor.timer
+        ("Function Abstraction", fun () -> Abstract.exp expression')
+    in
+    let* () = add_leftover_vars cQ location in
+    Monitor.timer
+      ( "Function Check"
+      , fun _cid ->
+          Check.Comp.check Option.none cD cG [] expression'' (tau', C.m_id)
+      );
+    let value_opt =
+      if Holes.none () && Context.is_empty cQ then
+        Option.some (Opsem.eval expression'')
+      else Option.none
+    in
+    let cid =
+      let mgid =
+        Store.Cid.Comp.add_mutual_group
+          [ { Synint.Comp.name; tau = tau'; order = `not_recursive } ]
+      in
+      Store.Cid.Comp.add (fun _cid ->
+          Store.Cid.Comp.mk_entry
+            (Option.some (Decl.next ()))
+            name tau' 0 mgid value_opt)
+    in
+    let sgn =
+      Synint.Sgn.Val
+        { location
+        ; identifier = name
+        ; typ = tau'
+        ; expression = expression''
+        ; expression_value = value_opt
+        }
+    in
+    Store.Modules.addSgnToCurrent sgn;
+    let* () = add_comp_val ~location identifier cid in
+    return sgn
+
+  and reconstruct_query_declaration location identifier_opt cD extT
+      expected_solutions maximum_tries =
+    let name_opt = Option.map Name.make_from_identifier identifier_opt in
+    dprintf (fun p ->
+        p.fmt "[RecSgn Checking] Query at %a" Location.print_short location);
+    let* apxT = index_lf_typ extT in
+    dprint (fun () -> "Reconstructing query.");
+
+    Store.FVar.clear ();
+    let tA =
+      Monitor.timer
+        ( "Constant Elaboration"
+        , fun () ->
+            let tA = Reconstruct.typ Lfrecon.Pi apxT in
+            Reconstruct.solve_fvarCnstr Lfrecon.Pi;
+            tA )
+    in
+    let* cD = index_meta_context cD in
+    let cD = Reconstruct.mctx cD in
+    dprintf (fun p ->
+        p.fmt "Elaboration of query : %a"
+          (P.fmt_ppr_lf_typ cD Synint.LF.Null P.l0)
+          tA);
+    Unify.forceGlobalCnstr ();
+    let tA', i =
+      Monitor.timer ("Constant Abstraction", fun () -> Abstract.typ tA)
+    in
+    Reconstruct.reset_fvarCnstr ();
+    Unify.resetGlobalCnstrs ();
+    dprintf (fun p ->
+        p.fmt
+          "Reconstruction (with abstraction) of query: %a with %s \
+           abstracted variables"
+          (P.fmt_ppr_lf_typ cD Synint.LF.Null P.l0)
+          tA' (string_of_int i));
+    Monitor.timer
+      ( "Constant Check"
+      , fun () ->
+          Check.LF.checkTyp Synint.LF.Empty Synint.LF.Null (tA', S.LF.id) );
+    Logic.storeQuery name_opt (tA', i) cD expected_solutions maximum_tries;
+    return
+      (Synint.LF.Query
+         { location
+         ; name = name_opt
+         ; mctx = cD
+         ; typ = (tA', i)
+         ; expected_solutions
+         ; maximum_tries
+         })
+
+  and reconstruct_module_declaration _location _identifier _entries =
+    Obj.magic () (* TODO: *)
+
+  and reconstruct_recursive_declarations location declarations =
+    let (List1.T (first_declaration, declarations')) = declarations in
+    match first_declaration with
+    | Synext.Signature.Declaration.Typ _ ->
+        let groups =
+          group_recursive_lf_typ_declarations first_declaration declarations'
+        in
+        reconstruct_recursive_lf_typ_declarations location groups
+    | Synext.Signature.Declaration.CompTyp _
+    | Synext.Signature.Declaration.CompCotyp _ ->
+        let groups =
+          group_recursive_comp_typ_declarations first_declaration
+            declarations'
+        in
+        reconstruct_recursive_comp_typ_declarations location groups
+    | Synext.Signature.Declaration.Theorem _
+    | Synext.Signature.Declaration.Proof _ ->
+        let groups =
+          group_recursive_theorem_declarations first_declaration
+            declarations'
+        in
+        reconstruct_recursive_theorem_declarations location groups
+    | _ ->
+        Error.raise_at1
+          (Synext.location_of_signature_declaration first_declaration)
+          Unsupported_recursive_declaration
+
+  and reconstruct_recursive_lf_typ_declarations location declarations =
+    Obj.magic () (* TODO: *)
+
+  and reconstruct_recursive_comp_typ_declarations location declarations =
+    Obj.magic () (* TODO: *)
+
+  and reconstruct_recursive_theorem_declarations location declarations =
+    Obj.magic () (* TODO: *)
+
+  and group_recursive_lf_typ_declarations first_declaration declarations =
+    match first_declaration with
+    | Synext.Signature.Declaration.Typ { identifier; kind; _ } -> (
+        let lf_term_constant_declarations, declarations' =
+          List.take_while_map
+            (function
+              | Synext.Signature.Declaration.Const { identifier; typ; _ } ->
+                  Option.some (identifier, typ)
+              | _ -> Option.none)
+            declarations
+        in
+        let lf_typ_declaration =
+          `Lf_typ (identifier, kind, lf_term_constant_declarations)
+        in
+        match declarations' with
+        | [] -> List1.singleton lf_typ_declaration
+        | first_declaration' :: declarations'' ->
+            let lf_typ_declarations =
+              group_recursive_lf_typ_declarations first_declaration'
+                declarations''
+            in
+            List1.cons lf_typ_declaration lf_typ_declarations)
+    | _ ->
+        Error.raise_at1
+          (Synext.location_of_signature_declaration first_declaration)
+          Unsupported_recursive_declaration
+
+  and group_recursive_theorem_declarations first_declaration declarations =
+    match first_declaration with
+    | Synext.Signature.Declaration.Theorem
+        { identifier; typ; order; body; _ } -> (
+        let theorem_declaration = `Theorem (identifier, typ, order, body) in
+        match declarations with
+        | [] -> List1.singleton theorem_declaration
+        | first_declaration' :: declarations'' ->
+            let theorem_declarations =
+              group_recursive_theorem_declarations first_declaration'
+                declarations''
+            in
+            List1.cons theorem_declaration theorem_declarations)
+    | Synext.Signature.Declaration.Proof { identifier; typ; order; body; _ }
+      -> (
+        let proof_declaration = `Proof (identifier, typ, order, body) in
+        match declarations with
+        | [] -> List1.singleton proof_declaration
+        | first_declaration' :: declarations'' ->
+            let theorem_declarations =
+              group_recursive_theorem_declarations first_declaration'
+                declarations''
+            in
+            List1.cons proof_declaration theorem_declarations)
+    | _ ->
+        Error.raise_at1
+          (Synext.location_of_signature_declaration first_declaration)
+          Unsupported_recursive_declaration
+
+  and group_recursive_comp_typ_declarations first_declaration declarations =
+    match first_declaration with
+    | Synext.Signature.Declaration.CompTyp
+        { identifier; kind; datatype_flavour; _ } -> (
+        let comp_constructor_declarations, declarations' =
+          List.take_while_map
+            (function
+              | Synext.Signature.Declaration.CompConst { identifier; typ; _ }
+                ->
+                  Option.some (identifier, typ)
+              | _ -> Option.none)
+            declarations
+        in
+        let comp_typ_declaration =
+          match datatype_flavour with
+          | `Inductive ->
+              `Inductive_comp_typ
+                (identifier, kind, comp_constructor_declarations)
+          | `Stratified ->
+              `Stratified_comp_typ
+                (identifier, kind, comp_constructor_declarations)
+        in
+        match declarations' with
+        | [] -> List1.singleton comp_typ_declaration
+        | first_declaration' :: declarations'' ->
+            let comp_typ_declarations =
+              group_recursive_comp_typ_declarations first_declaration'
+                declarations''
+            in
+            List1.cons comp_typ_declaration comp_typ_declarations)
+    | Synext.Signature.Declaration.CompCotyp { identifier; kind; _ } -> (
+        let comp_destructor_declarations, declarations' =
+          List.take_while_map
+            (function
+              | Synext.Signature.Declaration.CompDest
+                  { identifier; observation_type; return_type; _ } ->
+                  Option.some (identifier, observation_type, return_type)
+              | _ -> Option.none)
+            declarations
+        in
+        let comp_cotyp_declaration =
+          `Coinductive_comp_typ
+            (identifier, kind, comp_destructor_declarations)
+        in
+        match declarations' with
+        | [] -> List1.singleton comp_cotyp_declaration
+        | first_declaration' :: declarations'' ->
+            let comp_typ_declarations =
+              group_recursive_comp_typ_declarations first_declaration'
+                declarations''
+            in
+            List1.cons comp_cotyp_declaration comp_typ_declarations)
+    | _ ->
+        Error.raise_at1
+          (Synext.location_of_signature_declaration first_declaration)
+          Unsupported_recursive_declaration
 end

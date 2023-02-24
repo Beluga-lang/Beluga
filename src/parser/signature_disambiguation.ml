@@ -554,7 +554,7 @@ struct
         let* order' =
           traverse_option disambiguate_totality_declaration order
         in
-        let* () = add_program_constant identifier in
+        let* () = add_default_program_constant ~typ identifier in
         let* body' = disambiguate_comp_expression body in
         return
           (Synext.Signature.Declaration.Theorem
@@ -570,7 +570,7 @@ struct
         let* order' =
           traverse_option disambiguate_totality_declaration order
         in
-        let* () = add_program_constant identifier in
+        let* () = add_default_program_constant ~typ identifier in
         let* body' = with_scope (disambiguate_harpoon_proof body) in
         return
           (Synext.Signature.Declaration.Proof
@@ -584,7 +584,7 @@ struct
         { location; identifier; typ; expression } ->
         let* typ' = traverse_option disambiguate_comp_typ typ in
         let* expression' = disambiguate_comp_expression expression in
-        let* () = add_program_constant identifier in
+        let* () = add_default_program_constant ?typ identifier in
         return
           (Synext.Signature.Declaration.Val
              { location; identifier; typ = typ'; expression = expression' })

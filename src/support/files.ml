@@ -31,7 +31,6 @@ let with_pp_to_file filename f =
   try
     let ppf = Format.formatter_of_out_channel out_channel in
     f ppf;
-    Format.pp_print_newline ppf ();
     Out_channel.close out_channel
   with
   | cause ->

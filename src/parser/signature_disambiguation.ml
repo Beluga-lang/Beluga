@@ -205,8 +205,6 @@ struct
         add_default_abbreviation_comp_typ_constant identifier kind
     | Synprs.Signature.Declaration.Raw_val { identifier; typ; _ } ->
         add_default_program_constant ?typ identifier
-    | Synprs.Signature.Declaration.Raw_query { identifier; _ } ->
-        traverse_option_void add_query identifier
 
   (** [make_operator_prefix ?precedence operator_identifier state] is the
       disambiguation state derived from [state] where the operator with
@@ -340,6 +338,28 @@ struct
         return
           (Synext.Signature.Pragma.Abbreviation
              { location; module_identifier; abbreviation })
+    | Synprs.Signature.Pragma.Raw_query
+        { location
+        ; identifier
+        ; meta_context
+        ; typ
+        ; expected_solutions
+        ; maximum_tries
+        } ->
+        let* meta_context', typ' =
+          with_disambiguated_meta_context meta_context (fun meta_context' ->
+              let* typ' = disambiguate_lf_typ typ in
+              return (meta_context', typ'))
+        in
+        return
+          (Synext.Signature.Pragma.Query
+             { location
+             ; identifier
+             ; meta_context = meta_context'
+             ; typ = typ'
+             ; expected_solutions
+             ; maximum_tries
+             })
 
   and disambiguate_global_pragma = function
     | Synprs.Signature.Global_pragma.No_strengthening { location } ->
@@ -588,29 +608,6 @@ struct
         return
           (Synext.Signature.Declaration.Val
              { location; identifier; typ = typ'; expression = expression' })
-    | Synprs.Signature.Declaration.Raw_query
-        { location
-        ; identifier
-        ; meta_context
-        ; typ
-        ; expected_solutions
-        ; maximum_tries
-        } ->
-        let* meta_context', typ' =
-          with_disambiguated_meta_context meta_context (fun meta_context' ->
-              let* typ' = disambiguate_lf_typ typ in
-              return (meta_context', typ'))
-        in
-        let* () = traverse_option_void add_query identifier in
-        return
-          (Synext.Signature.Declaration.Query
-             { location
-             ; identifier
-             ; meta_context = meta_context'
-             ; typ = typ'
-             ; expected_solutions
-             ; maximum_tries
-             })
     | Synprs.Signature.Declaration.Raw_module
         { location; identifier; declarations } ->
         let* entries' =

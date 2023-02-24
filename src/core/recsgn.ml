@@ -1139,14 +1139,17 @@ let recSgnDecls decls =
            Check.LF.checkTyp Int.LF.Empty Int.LF.Null (tA', S.LF.id)
          );
        Logic.storeQuery name (tA', i) cD expected tries;
-       Int.Sgn.Query
-       { location
-       ; name
-       ; mctx=cD
-       ; typ=(tA', i)
-       ; expected_solutions=expected
-       ; maximum_tries=tries
-       }
+       Int.Sgn.Pragma
+         { pragma =
+              Int.LF.Query
+                { location
+                ; name
+                ; mctx=cD
+                ; typ=(tA', i)
+                ; expected_solutions=expected
+                ; maximum_tries=tries
+                }
+         }
 
     | Ext.Sgn.Pragma
       { location=loc

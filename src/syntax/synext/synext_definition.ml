@@ -1487,6 +1487,14 @@ module Signature = struct
           (** [Abbreviation { module_identifier; abbreviation; _ }] is the
               pragma [--abbrev module_identifier abbreviation.] for defining
               the alias [abbreviation] for the module [module_identifier]. *)
+      | Query of
+          { location : Location.t
+          ; identifier : Identifier.t Option.t
+          ; meta_context : Meta.Context.t
+          ; typ : LF.Typ.t
+          ; expected_solutions : Int.t Option.t
+          ; maximum_tries : Int.t Option.t
+          }  (** Logic programming query on an LF type *)
   end
 
   (** Global signature pragmas for setting compilation parameters
@@ -1642,14 +1650,6 @@ module Signature = struct
           ; typ : Comp.Typ.t Option.t
           ; expression : Comp.Expression.t
           }  (** Computation-level value declaration *)
-      | Query of
-          { location : Location.t
-          ; identifier : Identifier.t Option.t
-          ; meta_context : Meta.Context.t
-          ; typ : LF.Typ.t
-          ; expected_solutions : Int.t Option.t
-          ; maximum_tries : Int.t Option.t
-          }  (** Logic programming query on an LF type *)
       | Module of
           { location : Location.t
           ; identifier : Identifier.t

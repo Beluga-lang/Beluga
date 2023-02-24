@@ -26,7 +26,6 @@ module type DISAMBIGUATION_STATE = sig
     | Computation_abbreviation_type_constant
     | Computation_term_constructor
     | Computation_term_destructor
-    | Query
     | Module
     | Program_constant
 
@@ -75,8 +74,6 @@ module type DISAMBIGUATION_STATE = sig
 
   val add_computation_term_destructor :
     ?location:Location.t -> ?arity:Int.t -> Identifier.t -> Unit.t t
-
-  val add_query : ?location:Location.t -> Identifier.t -> Unit.t t
 
   val add_program_constant :
     ?location:Location.t -> ?arity:Int.t -> Identifier.t -> Unit.t t

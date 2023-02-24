@@ -366,7 +366,7 @@ module Make
            "Inductive, stratified or coinductive computation type \
             declaration"
 
-    let query_declaration =
+    let query_pragma =
       let bound =
         alt (star $> fun () -> Option.none) (integer $> Option.some)
         |> labelled "search bound"
@@ -388,7 +388,7 @@ module Make
                , meta_context
                , identifier
                , typ ) ) ->
-      Synprs.Signature.Declaration.Raw_query
+      Synprs.Signature.Pragma.Raw_query
         { location
         ; identifier
         ; meta_context
@@ -554,7 +554,6 @@ module Make
         ; signature_typedef_decl
         ; signature_let_decl
         ; signature_thm_decl
-        ; query_declaration
         ]
 
     let signature_pragma =
@@ -565,6 +564,7 @@ module Make
         ; default_associativity_pragma
         ; open_pragma
         ; abbrev_pragma
+        ; query_pragma
         ]
 
     let signature_entry =

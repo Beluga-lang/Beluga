@@ -2002,6 +2002,39 @@ module Make_pretty_printer (Printing_state : PRINTING_STATE) :
         in
         pp_pragma "abbrev" pp_abbrev_pragma
         <& add_abbreviation module_identifier abbreviation
+    | Signature.Pragma.Query
+        { identifier
+        ; meta_context
+        ; typ
+        ; expected_solutions
+        ; maximum_tries
+        ; _
+        } ->
+        let pp_binding identifier typ =
+          pp_identifier identifier ++ pp_non_breaking_space ++ pp_colon
+          ++ pp_space ++ pp_meta_typ typ
+        in
+        let pp_declaration (identifier, typ) =
+          pp_hovbox ~indent (pp_in_braces (pp_binding identifier typ))
+        in
+        let pp_meta_context meta_context =
+          let { Meta.Context.bindings; _ } = meta_context in
+          pp_list ~sep:pp_space pp_declaration bindings
+        in
+        let pp_query_argument =
+          pp_option ~none:pp_star (fun argument -> pp_int argument)
+        in
+        pp_hovbox ~indent
+          (pp_string "--query" ++ pp_space
+          ++ pp_query_argument expected_solutions
+          ++ pp_space
+          ++ pp_query_argument maximum_tries
+          ++ pp_space
+          ++ pp_meta_context meta_context
+          ++ pp_option
+               (fun identifier -> pp_space ++ pp_identifier identifier)
+               identifier
+          ++ pp_non_breaking_space ++ pp_colon ++ pp_lf_typ typ ++ pp_dot)
 
   and pp_signature_global_pragma global_pragma =
     match global_pragma with
@@ -2145,54 +2178,6 @@ module Make_pretty_printer (Printing_state : PRINTING_STATE) :
         in
         let* () = add_binding identifier in
         add_module_declaration identifier
-    | Signature.Declaration.Query
-        { identifier
-        ; meta_context
-        ; typ
-        ; expected_solutions
-        ; maximum_tries
-        ; _
-        } -> (
-        let pp_binding identifier typ =
-          pp_identifier identifier ++ pp_non_breaking_space ++ pp_colon
-          ++ pp_space ++ pp_meta_typ typ
-        in
-        let pp_declaration (identifier, typ) =
-          pp_hovbox ~indent (pp_in_braces (pp_binding identifier typ))
-        in
-        let pp_meta_context meta_context =
-          let { Meta.Context.bindings; _ } = meta_context in
-          pp_list ~sep:pp_space pp_declaration bindings
-        in
-        let pp_query_argument =
-          pp_option ~none:pp_star (fun argument -> pp_int argument)
-        in
-        match identifier with
-        | Option.Some identifier ->
-            let* () =
-              pp_hovbox ~indent
-                (pp_string "--query" ++ pp_space
-                ++ pp_query_argument expected_solutions
-                ++ pp_space
-                ++ pp_query_argument maximum_tries
-                ++ pp_space
-                ++ pp_meta_context meta_context
-                ++ pp_space ++ pp_identifier identifier
-                ++ pp_non_breaking_space ++ pp_colon ++ pp_lf_typ typ
-                ++ pp_dot)
-            in
-            let* () = add_binding identifier in
-            add_module_declaration identifier
-        | Option.None ->
-            pp_hovbox ~indent
-              (pp_string "--query" ++ pp_space
-              ++ pp_query_argument expected_solutions
-              ++ pp_space
-              ++ pp_query_argument maximum_tries
-              ++ pp_space
-              ++ pp_meta_context meta_context
-              ++ pp_non_breaking_space ++ pp_colon ++ pp_lf_typ typ ++ pp_dot
-              ))
     | Signature.Declaration.Module { identifier; entries; _ } ->
         with_module_declarations
           ~declarations:
@@ -2232,9 +2217,6 @@ module Make_pretty_printer (Printing_state : PRINTING_STATE) :
         add_binding identifier <& add_module_declaration identifier
     | Signature.Declaration.Recursive_declarations { declarations; _ } ->
         traverse_list1_void pre_add_declaration declarations
-    | Signature.Declaration.Query { identifier; _ } ->
-        traverse_option_void add_binding identifier
-        <& traverse_option_void add_module_declaration identifier
 
   and pp_grouped_declaration ~prepend_and declaration =
     let pp_and_opt =

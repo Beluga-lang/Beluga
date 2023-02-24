@@ -99,7 +99,7 @@ let generate_outputs ~state_filename ~input_filename ~output_filename
          test_cases)
   in
   Support.Files.with_pp_to_file output_filename (fun ppf ->
-      Yojson.Safe.pretty_print ~std:true ppf outputs)
+      Format.fprintf ppf "%a@." (Yojson.Safe.pretty_print ~std:true) outputs)
 
 let () =
   let state_filename = ref "" in

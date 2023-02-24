@@ -2723,18 +2723,15 @@ module Make (Html_state : HTML_PRINTING_STATE) :
 
   and pp_module_entries entries =
     let groups = group_signature_entries entries in
-    let rec pp_groups groups =
-      match groups with
-      | `Code group :: rest ->
+    let pp_group = function
+      | `Code group ->
           pp_preformatted_code_html
             (pp_list1 ~sep:pp_double_cut pp_signature_entry group)
-          ++ pp_double_cut ++ pp_groups rest
-      | `Comment group :: rest ->
+      | `Comment group ->
           pp_inner_documentation_html
             (pp_list1 ~sep:pp_double_cut pp_signature_entry group)
-          ++ pp_double_cut ++ pp_groups rest
-      | [] -> pp_nop
     in
+    let pp_groups groups = pp_list ~sep:pp_double_cut pp_group groups in
     pp_vbox ~indent:0 (pp_groups groups)
 
   and pp_signature_entry entry =
@@ -2757,18 +2754,15 @@ module Make (Html_state : HTML_PRINTING_STATE) :
           ++ pp_cut
     in
     let groups = group_signature_entries entries in
-    let rec pp_groups groups =
-      match groups with
-      | `Code group :: rest ->
+    let pp_group = function
+      | `Code group ->
           pp_preformatted_code_html
             (pp_list1 ~sep:pp_double_cut pp_signature_entry group)
-          ++ pp_double_cut ++ pp_groups rest
-      | `Comment group :: rest ->
+      | `Comment group ->
           pp_toplevel_documentation_html
             (pp_list1 ~sep:pp_double_cut pp_signature_entry group)
-          ++ pp_double_cut ++ pp_groups rest
-      | [] -> pp_nop
     in
+    let pp_groups groups = pp_list ~sep:pp_double_cut pp_group groups in
     pp_vbox ~indent:0 (pp_global_pragmas_opt ++ pp_groups groups)
 
   and group_signature_entries entries =

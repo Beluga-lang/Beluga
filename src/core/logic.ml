@@ -3643,12 +3643,6 @@ module CSolver = struct
     in
     gen cG []
 
-  let rec mSpineToPSpine mS =
-    match mS with
-    | Comp.MetaNil -> Comp.PatNil
-    | Comp.MetaApp (mO, mT, mS', plicity) ->
-       Comp.PatApp (noLoc, (Comp.PatMetaObj (noLoc, mO)), mSpineToPSpine mS')
-
   let rec lengthCPool cPool =
     match cPool with
     | Emp -> 0    | Full (cPool', cc) -> 1 + (lengthCPool cPool')

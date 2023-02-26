@@ -720,7 +720,7 @@ module Comp = struct
   (** An open subgoal is a proof state together with a reference ot the
       theorem in which it occurs.
    *)
-  type open_subgoal = cid_comp_const * proof_state
+  type open_subgoal = cid_prog * proof_state
 
   (** Generates a unsolved subgoal with the given goal in an empty
       context, with no label.

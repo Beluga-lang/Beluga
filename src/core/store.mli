@@ -181,8 +181,8 @@ module Cid : sig
     val current_entries : unit -> (cid_comp_cotyp * entry) list
     val freeze : cid_comp_cotyp -> unit
     val addDestructor : cid_comp_dest -> cid_comp_cotyp -> unit
-    val index_of_name : Name.t -> cid_comp_typ
-    val index_of_name_opt : Name.t -> cid_comp_typ option
+    val index_of_name : Name.t -> cid_comp_cotyp
+    val index_of_name_opt : Name.t -> cid_comp_cotyp option
     val clear : unit -> unit
   end
 

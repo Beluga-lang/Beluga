@@ -151,7 +151,7 @@ val genObj : LF.mctx * LF.dctx * LF.typ -> LF.head * LF.typ * int
 val genPatt : Name.t list
               -> gen_pat_var_strategy
               -> LF.mctx * Comp.typ
-              -> Id.cid_comp_typ * Comp.typ
+              -> Id.cid_comp_const * Comp.typ
               -> (Comp.gctx * Comp.pattern * Comp.tclo) inside option
 
 val genPatCGoals : Name.t list

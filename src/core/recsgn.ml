@@ -29,8 +29,6 @@ type error =
   | TotalArgsError of Name.t
   | IllegalOptsPrag of string
   | IllegalOperatorPrag of Name.t * Fixity.t * int
-  | InvalidOpenPrag of string
-  | InvalidAbbrev of string list * string
   | UnboundArg of Name.t * Name.t option list
   | UnboundNamePragma of Name.t
 
@@ -81,11 +79,6 @@ let error_printer = function
       Name.pp n
       actual
       expected
-| InvalidOpenPrag s ->
-    Format.dprintf "Invalid module in pragma '--open %s'" s
-| InvalidAbbrev (l, s) ->
-    Format.dprintf "Invalid module in pragma '--abbrev %s %s'"
-      (String.concat "." l) s
 | UnboundArg (a, args) ->
     Format.dprintf "Argument %a does not appear in argument list @[<h>%a@]."
       Name.pp a
@@ -239,12 +232,6 @@ let recSgnDecls decls =
     | Ext.Sgn.Comment { location; content } ->
         Int.Sgn.Comment { location; content }
     | Ext.Sgn.Pragma { location=loc; pragma=Ext.Sgn.AbbrevPrag (orig, abbrev) } ->
-       begin
-         try
-           Store.Modules.addAbbrev orig abbrev
-         with
-         | Not_found -> raise (Error (loc, InvalidAbbrev (orig, abbrev)))
-       end;
        Int.Sgn.Pragma { pragma=Int.LF.AbbrevPrag (orig, abbrev) }
     | Ext.Sgn.Pragma { location=loc; pragma=Ext.Sgn.DefaultAssocPrag a } ->
        OpPragmas.default := a;
@@ -297,9 +284,7 @@ let recSgnDecls decls =
        Monitor.timer
          (Monitor.type_abbrev_type_check, fun () -> Check.Comp.checkTyp cD tau);
        ignore (CompTypDef.add (fun _ -> CompTypDef.mk_entry identifier i (cD, tau) cK));
-       let sgn = Int.Sgn.CompTypAbbrev { location; identifier; kind=cK; typ=tau } in
-       Store.Modules.addSgnToCurrent sgn;
-       sgn
+       Int.Sgn.CompTypAbbrev { location; identifier; kind=cK; typ=tau }
 
     | Ext.Sgn.CompTyp { location; identifier; kind=extK; datatype_flavour=pflag } ->
        dprint (fun () -> "Indexing computation-level data-type constant " ^ Name.string_of_name identifier);
@@ -354,9 +339,7 @@ let recSgnDecls decls =
        in
        Total.stratNum := -1;
        ignore (CompTyp.add (fun _ -> CompTyp.mk_entry identifier cK' i p));
-       let sgn = Int.Sgn.CompTyp { location; identifier; kind=cK'; positivity_flag=p } in
-       Store.Modules.addSgnToCurrent sgn;
-       sgn
+       Int.Sgn.CompTyp { location; identifier; kind=cK'; positivity_flag=p }
 
     | Ext.Sgn.CompCotyp { location; identifier; kind=extK } ->
        dprintf
@@ -401,9 +384,7 @@ let recSgnDecls decls =
            "\nDOUBLE CHECK for codata type constant " ^ Name.string_of_name identifier ^
              " successful!");
        ignore (CompCotyp.add (fun _ -> CompCotyp.mk_entry identifier cK' i));
-       let sgn = Int.Sgn.CompCotyp { location; identifier; kind=cK' } in
-       Store.Modules.addSgnToCurrent sgn;
-       sgn
+       Int.Sgn.CompCotyp { location; identifier; kind=cK' }
 
 
     | Ext.Sgn.CompConst { location; identifier; typ=tau } ->
@@ -477,9 +458,7 @@ let recSgnDecls decls =
         *   else ()
         * end; *)
        ignore (CompConst.add cid_ctypfamily (fun _ -> CompConst.mk_entry identifier tau' i));
-       let sgn = Int.Sgn.CompConst { location; identifier; typ=tau' } in
-       Store.Modules.addSgnToCurrent sgn;
-       sgn
+       Int.Sgn.CompConst { location; identifier; typ=tau' }
 
 
 
@@ -543,16 +522,13 @@ let recSgnDecls decls =
          );
        let cid_ctypfamily = get_target_cid_compcotyp tau0' in
        ignore (CompDest.add cid_ctypfamily (fun _ -> CompDest.mk_entry identifier cD1 tau0' tau1' i));
-       let sgn =
         Int.Sgn.CompDest
         { location
         ; identifier
         ; mctx=cD1
         ; observation_typ=tau0'
         ; return_typ=tau1'
-        } in
-       Store.Modules.addSgnToCurrent sgn;
-       sgn
+        }
 
 
     | Ext.Sgn.Typ { location; identifier=a; kind=extK } ->
@@ -598,9 +574,7 @@ let recSgnDecls decls =
        );
        Typeinfo.Sgn.add location (Typeinfo.Sgn.mk_entry (Typeinfo.Sgn.Kind tK')) "";
        let cid = Typ.add (fun _ -> Typ.mk_entry a tK' i) in
-       let sgn = Int.Sgn.Typ { location; identifier=cid; kind=tK' } in
-       Store.Modules.addSgnToCurrent sgn;
-       sgn
+       Int.Sgn.Typ { location; identifier=cid; kind=tK' }
 
     | Ext.Sgn.Const { location; identifier=c; typ=extT } ->
        dprintf
@@ -653,9 +627,7 @@ let recSgnDecls decls =
          );
        Typeinfo.Sgn.add location (Typeinfo.Sgn.mk_entry (Typeinfo.Sgn.Typ tA')) "";
        let cid = Term.add' location constructedType (fun _ -> Term.mk_entry c tA' i) in
-       let sgn = Int.Sgn.Const { location; identifier=cid; typ=tA' } in
-       Store.Modules.addSgnToCurrent sgn;
-       sgn
+       Int.Sgn.Const { location; identifier=cid; typ=tA' }
 
     | Ext.Sgn.Schema { location; identifier=g; schema } ->
        dprintf
@@ -686,9 +658,7 @@ let recSgnDecls decls =
        Check.LF.checkSchemaWf sW';
        dprintf (fun p -> p.fmt "TYPE CHECK for schema %s successful@." (Name.string_of_name g));
        let sch = Schema.add (fun _ -> Schema.mk_entry g sW') in
-       let sgn = Int.Sgn.Schema { location; identifier=sch; schema=sW' } in
-       Store.Modules.addSgnToCurrent sgn;
-       sgn
+       Int.Sgn.Schema { location; identifier=sch; schema=sW' }
 
     | Ext.Sgn.Val { location; identifier; typ=None; expression } ->
        dprintf
@@ -746,9 +716,7 @@ let recSgnDecls decls =
          else
            None
        in
-       let sgn = Int.Sgn.Val { location; identifier; typ=tau'; expression=expression''; expression_value=v } in
-       Store.Modules.addSgnToCurrent sgn;
-       sgn
+       Int.Sgn.Val { location; identifier; typ=tau'; expression=expression''; expression_value=v }
 
     | Ext.Sgn.Val { location; identifier; typ=Some tau; expression } ->
        dprintf
@@ -825,9 +793,7 @@ let recSgnDecls decls =
          else
            None
        in
-       let sgn = Int.Sgn.Val { location; identifier; typ=tau'; expression=expression''; expression_value=v } in
-       Store.Modules.addSgnToCurrent sgn;
-       sgn
+       Int.Sgn.Val { location; identifier; typ=tau'; expression=expression''; expression_value=v }
 
     | Ext.Sgn.MRecTyp { location; declarations=recDats } ->
        dprintf
@@ -1083,9 +1049,7 @@ let recSgnDecls decls =
          in
          List1.map reconOne (List1.combine thm_cid_list thm_list)
        in
-       let decl = Int.Sgn.Theorems { location; theorems = ds } in
-       Store.Modules.addSgnToCurrent decl;
-       decl
+       Int.Sgn.Theorems { location; theorems = ds }
 
     | Ext.Sgn.Query
       { location
@@ -1173,24 +1137,11 @@ let recSgnDecls decls =
        end
 
     | Ext.Sgn.Module { location; identifier; declarations=decls } ->
-       let state = Store.Modules.getState () in
-       ignore (Store.Modules.instantiateModule identifier);
        let decls' = List.map recSgnDecl decls in
-
-       Store.Modules.setState state;
-       let sgn = Int.Sgn.Module { location; identifier; declarations=decls' } in
-       Store.Modules.addSgnToCurrent sgn;
-       sgn
+       Int.Sgn.Module { location; identifier; declarations=decls' }
 
     | Ext.Sgn.Pragma { location=loc; pragma=Ext.Sgn.OpenPrag n } ->
-       try
-         (*let _ = Modules.open_module n in*)
-         let sgn = Int.Sgn.Pragma { pragma=Int.LF.OpenPrag (Obj.magic ()) } in
-         Store.Modules.addSgnToCurrent sgn;
-         sgn
-       with
-       | Not_found ->
-          raise (Error (loc, (InvalidOpenPrag (String.concat "." n))))
+       Int.Sgn.Pragma { pragma=Int.LF.OpenPrag (Obj.magic ()) }
   in
   let decls' = recSgnDecls' decls in
   match !leftoverVars with

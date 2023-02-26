@@ -375,10 +375,8 @@ module Make (Signature_reconstruction_state : SIGNATURE_RECONSTRUCTION_STATE) :
     let cid =
       Store.Cid.Typ.add (fun _cid -> Store.Cid.Typ.mk_entry name tK' i)
     in
-    let sgn = Synint.Sgn.Typ { location; identifier = cid; kind = tK' } in
-    Store.Modules.addSgnToCurrent sgn;
     let* () = add_lf_type_constant ~location identifier cid in
-    return sgn
+    return (Synint.Sgn.Typ { location; identifier = cid; kind = tK' })
 
   and reconstruct_oldstyle_lf_const_declaration location identifier extT =
     let name = Name.make_from_identifier identifier in
@@ -434,10 +432,8 @@ module Make (Signature_reconstruction_state : SIGNATURE_RECONSTRUCTION_STATE) :
       Store.Cid.Term.add' location constructedType (fun _cid ->
           Store.Cid.Term.mk_entry name tA' i)
     in
-    let sgn = Synint.Sgn.Const { location; identifier = cid; typ = tA' } in
-    Store.Modules.addSgnToCurrent sgn;
     let* () = add_lf_term_constant ~location identifier cid in
-    return sgn
+    return (Synint.Sgn.Const { location; identifier = cid; typ = tA' })
 
   and reconstruct_schema_declaration location identifier schema =
     let name = Name.make_from_identifier identifier in
@@ -469,12 +465,8 @@ module Make (Signature_reconstruction_state : SIGNATURE_RECONSTRUCTION_STATE) :
     let cid =
       Store.Cid.Schema.add (fun _cid -> Store.Cid.Schema.mk_entry name sW')
     in
-    let sgn =
-      Synint.Sgn.Schema { location; identifier = cid; schema = sW' }
-    in
-    Store.Modules.addSgnToCurrent sgn;
     let* () = add_schema_constant ~location identifier cid in
-    return sgn
+    return (Synint.Sgn.Schema { location; identifier = cid; schema = sW' })
 
   and reconstruct_comp_typ_abbrev_declaration location identifier cK cT =
     let name = Name.make_from_identifier identifier in
@@ -498,13 +490,9 @@ module Make (Signature_reconstruction_state : SIGNATURE_RECONSTRUCTION_STATE) :
       Store.Cid.CompTypDef.add (fun _cid ->
           Store.Cid.CompTypDef.mk_entry name i (cD, cT) cK)
     in
-    let sgn =
-      Synint.Sgn.CompTypAbbrev
-        { location; identifier = name; kind = cK; typ = cT }
-    in
-    Store.Modules.addSgnToCurrent sgn;
     let* () = add_comp_typedef ~location identifier cid in
-    return sgn
+    return (Synint.Sgn.CompTypAbbrev
+    { location; identifier = name; kind = cK; typ = cT })
 
   and reconstruct_val_declaration location identifier typ_opt expression =
     match typ_opt with
@@ -560,18 +548,14 @@ module Make (Signature_reconstruction_state : SIGNATURE_RECONSTRUCTION_STATE) :
             (Option.some (Decl.next ()))
             name tau' 0 mgid value_opt)
     in
-    let sgn =
-      Synint.Sgn.Val
-        { location
-        ; identifier = name
-        ; typ = tau'
-        ; expression = expression''
-        ; expression_value = value_opt
-        }
-    in
-    Store.Modules.addSgnToCurrent sgn;
     let* () = add_comp_val ~location identifier cid in
-    return sgn
+    return (Synint.Sgn.Val
+    { location
+    ; identifier = name
+    ; typ = tau'
+    ; expression = expression''
+    ; expression_value = value_opt
+    })
 
   and reconstruct_typed_val_declaration location identifier tau expression =
     let name = Name.make_from_identifier identifier in
@@ -632,18 +616,14 @@ module Make (Signature_reconstruction_state : SIGNATURE_RECONSTRUCTION_STATE) :
             (Option.some (Decl.next ()))
             name tau' 0 mgid value_opt)
     in
-    let sgn =
-      Synint.Sgn.Val
-        { location
-        ; identifier = name
-        ; typ = tau'
-        ; expression = expression''
-        ; expression_value = value_opt
-        }
-    in
-    Store.Modules.addSgnToCurrent sgn;
     let* () = add_comp_val ~location identifier cid in
-    return sgn
+    return (Synint.Sgn.Val
+    { location
+    ; identifier = name
+    ; typ = tau'
+    ; expression = expression''
+    ; expression_value = value_opt
+    })
 
   and reconstruct_query_declaration location identifier_opt cD extT
       expected_solutions maximum_tries =

@@ -93,7 +93,6 @@ let load_file ppf file_name =
   Chatter.print 1 (fun ppf -> Format.fprintf ppf "## Type Reconstruction begin: %s ##@." file_name);
 
   let sgn', leftoverVars = Recsgn.recSgnDecls sgn in
-  Store.Modules.reset ();
 
   Chatter.print 2
     (fun ppf -> Format.fprintf ppf "@[<v>## Internal syntax dump: %s ##@,@[<v>%a@]@]@." file_name

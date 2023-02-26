@@ -54,8 +54,6 @@ module OpPragmas = struct
 end
 
 module Modules = struct
-  type state = Id.module_id * string list * Id.module_id list * (string * string list) list
-
   let current : Id.module_id ref = ref 0
 
   let currentName : string list ref = ref []
@@ -63,14 +61,6 @@ module Modules = struct
   let opened : Id.module_id list ref = ref []
 
   let abbrevs : (string * string list) list ref = ref []
-
-  let getState () = (!current, !currentName, !opened, !abbrevs)
-
-  let setState (a, b, c, d) =
-    current := a;
-    currentName := b;
-    opened := c;
-    abbrevs := d
 
   let directory : (string list, Id.module_id) Hashtbl.t =
     let x = Hashtbl.create 1 in
@@ -80,11 +70,6 @@ module Modules = struct
   let rev_directory : (string list) DynArray.t =
     let x = DynArray.create () in
     DynArray.add x [];
-    x
-
-  let modules : (Int.Sgn.decl list ref) DynArray.t =
-    let x = DynArray.create () in
-    DynArray.add x (ref []);
     x
 
   let id_of_name (n : string list) : Id.module_id =
@@ -104,36 +89,6 @@ module Modules = struct
     with
     | Some s -> [s]
     | None -> x
-
-  (** @deprecated(Marc-Antoine) Name resolution occurs in a different data
-      structure during the indexing phase of signature reconstruction. *)
-  let open_module (m : string list) : Id.module_id =
-    let x =
-      let m =
-        match m with
-        | [m'] when List.mem_assoc m' !abbrevs ->
-           List.assoc m' !abbrevs
-        | _ -> m
-      in
-      try
-        Hashtbl.find directory m
-      with
-      | _ -> Hashtbl.find directory (!currentName @ m)
-    in
-    (*=let l =
-      x ::
-        ( !(DynArray.get modules x)
-          |> List.filter (function (Int.Sgn.Pragma { pragma=Int.LF.OpenPrag _ }) -> true | _ -> false)
-          |> List.map (fun (Int.Sgn.Pragma { pragma=Int.LF.OpenPrag x }) -> x)
-        )
-    in
-    opened := l @ !opened;*)
-    x
-
-  let addAbbrev (orig : string list) (abbrev : string) : unit =
-    if Hashtbl.mem directory orig
-    then abbrevs := (abbrev, orig) :: !abbrevs
-    else raise Not_found
 
   (* Precondition: the name check in f is using a name with Id.modules = [] *)
   let find (n : Name.t) (x : 'a DynArray.t) (f : 'a -> 'b) : 'b =
@@ -182,24 +137,6 @@ module Modules = struct
                  iter_find (List.map (fun h -> (id_of_name (name_of_id h @ m))) !opened)
             end
        end
-
-  let addSgnToCurrent (decl : Int.Sgn.decl) : unit =
-    let l = DynArray.get modules !current in
-    l := decl :: !l
-
-  let instantiateModule (name : string) : Id.module_id =
-    let l = !currentName @ [name] in
-    let module_id = DynArray.length modules in
-    current := module_id; currentName := l;
-    DynArray.insert modules module_id (ref []);
-    Hashtbl.replace directory l module_id;
-    DynArray.insert rev_directory module_id l;
-    module_id
-
-  let reset () : unit =
-    current := 0;
-    opened := [];
-    currentName := []
 
   let correct (l : string list) : string list =
     let rec aux m l =

@@ -87,6 +87,19 @@ struct
 
   (** {1 Disambiguation Helpers} *)
 
+  let with_meta_level_binding = function
+    | Synext.Meta.Typ.Context_schema _ -> with_context_variable
+    | Synext.Meta.Typ.Contextual_typ _ -> with_meta_variable
+    | Synext.Meta.Typ.Parameter_typ _ -> with_parameter_variable
+    | Synext.Meta.Typ.Plain_substitution_typ _
+    | Synext.Meta.Typ.Renaming_substitution_typ _ ->
+        with_substitution_variable
+
+  let with_meta_level_binding_opt identifier_opt typ =
+    match identifier_opt with
+    | Option.None -> Fun.id
+    | Option.Some identifier -> with_meta_level_binding typ identifier
+
   let default_precedence = 20
 
   let add_default_lf_type_constant identifier kind =
@@ -546,7 +559,16 @@ struct
     | Synprs.Signature.Declaration.Raw_comp_typ_abbreviation
         { location; identifier; kind; typ } ->
         let* kind' = disambiguate_comp_kind kind in
-        let* typ' = disambiguate_comp_typ typ in
+        let rec with_unrolled_kind kind f =
+          match kind with
+          | Synext.Comp.Kind.Pi
+              { parameter_identifier; parameter_type; body; _ } ->
+              with_meta_level_binding_opt parameter_identifier parameter_type
+                (with_unrolled_kind body f)
+          | Synext.Comp.Kind.Arrow { range; _ } -> with_unrolled_kind range f
+          | Synext.Comp.Kind.Ctype _ -> f
+        in
+        let* typ' = with_unrolled_kind kind' (disambiguate_comp_typ typ) in
         let* () =
           add_default_abbreviation_comp_typ_constant' identifier kind'
         in

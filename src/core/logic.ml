@@ -3643,12 +3643,6 @@ module CSolver = struct
     in
     gen cG []
 
-  let rec mSpineToPSpine mS =
-    match mS with
-    | Comp.MetaNil -> Comp.PatNil
-    | Comp.MetaApp (mO, mT, mS', plicity) ->
-       Comp.PatApp (noLoc, (Comp.PatMetaObj (noLoc, mO)), mSpineToPSpine mS')
-
   let rec lengthCPool cPool =
     match cPool with
     | Emp -> 0    | Full (cPool', cc) -> 1 + (lengthCPool cPool')
@@ -4063,14 +4057,7 @@ module CSolver = struct
            mmvar.LF.instantiation :=
              Some (LF.IHead (LF.MVar (LF.Offset k, LF.Shift 0)))
     in
-    let pattern =
-      match hd with
-      | Comp.TypBox (_, meta_typ) ->
-         Comp.PatVar (noLoc, 1)
-      | Comp.TypBase (_, cid, mS) ->
-         (* TODO:: Not sure if this correct... *)
-         Comp.PatConst (noLoc, cid, mSpineToPSpine mS)
-    in
+    let pattern = Comp.PatVar (noLoc, 1) in
     let rec grab ih_args =
       match ih_args with
       | (Comp.M ((_, LF.ClObj (_, ((LF.PObj hd) as mobj))), _)) :: xs ->
@@ -5239,14 +5226,7 @@ module CSolver = struct
        let fS = create_IH_args (thm, ih_args, tau) cD in
        let names = Context.(names_of_mctx cD @ names_of_gctx cG) in
        let name = Name.gen_fresh_name names (Name.mk_name Name.NoName) in
-       let pattern =
-         match hd with
-         | Comp.TypBox (_, meta_typ) ->
-            Comp.PatVar (noLoc, 1)
-         | Comp.TypBase (_, cid, mS) ->
-            (* TODO:: Not sure if this correct... *)
-            Comp.PatConst (noLoc, cid, mSpineToPSpine mS)
-       in
+       let pattern = Comp.PatVar (noLoc, 1) in
        let cPool' = Full (shift_cPool cPool 1,
                           ({cHead=hd;
                             cMVars=LF.Empty;
@@ -5286,14 +5266,7 @@ module CSolver = struct
        let fS = create_IH_args (thm, ih_args, tau) cD in
        let names = Context.(names_of_mctx cD @ names_of_gctx cG) in
        let name = Name.gen_fresh_name names (Name.mk_name Name.NoName) in
-       let pattern =
-         match hd with
-         | Comp.TypBox (_, meta_typ) ->
-            Comp.PatVar (noLoc, 1)
-         | Comp.TypBase (_, cid, mS) ->
-            (* TODO:: Not sure if this correct... *)
-            Comp.PatConst (noLoc, cid, mSpineToPSpine mS)
-       in
+       let pattern = Comp.PatVar (noLoc, 1) in
        let cPool' = Full (shift_cPool cPool 1,
                           ({cHead=hd;
                             cMVars=LF.Empty;
@@ -5362,14 +5335,7 @@ module CSolver = struct
          let names = Context.(names_of_mctx cD @ names_of_gctx cG) in
          Name.gen_fresh_name names n
        in
-       let pattern =
-         match hd with
-         | Comp.TypBox (_, meta_typ) ->
-            Comp.PatVar (noLoc, 1)
-         | Comp.TypBase (_, cid, mS) ->
-            (* TODO:: Not sure if this correct... *)
-            Comp.PatConst (noLoc, cid, mSpineToPSpine mS)
-       in
+       let pattern = Comp.PatVar (noLoc, 1) in
        let cPool_all' = Full (shift_cPool cPool_all 1, ({cHead=hd;
                                            cMVars=LF.Empty;
                                            cSubGoals=Proved} , 1, Boxed)) in

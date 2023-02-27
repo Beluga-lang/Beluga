@@ -1,4 +1,3 @@
-open Support.Equality
 open Support
 open Beluga_syntax.Common
 open Syntax
@@ -53,116 +52,17 @@ module OpPragmas = struct
       incr pragmaCount
 end
 
-module Modules = struct
-  let current : Id.module_id ref = ref 0
-
-  let currentName : string list ref = ref []
-
-  let opened : Id.module_id list ref = ref []
-
-  let abbrevs : (string * string list) list ref = ref []
-
-  let directory : (string list, Id.module_id) Hashtbl.t =
-    let x = Hashtbl.create 1 in
-    Hashtbl.add x [] 0;
-    x
-
-  let rev_directory : (string list) DynArray.t =
-    let x = DynArray.create () in
-    DynArray.add x [];
-    x
-
-  let id_of_name (n : string list) : Id.module_id =
-    Hashtbl.find directory n
-
-  let name_of_id (id : Id.module_id) : string list =
-    let x = DynArray.get rev_directory id in
-    match
-      List.fold_left
-        begin fun acc (ab, o) ->
-          if List.equal String.equal o x
-          then Some ab
-          else acc
-        end
-        None
-        !abbrevs
-    with
-    | Some s -> [s]
-    | None -> x
-
-  (* Precondition: the name check in f is using a name with Id.modules = [] *)
-  let find (n : Name.t) (x : 'a DynArray.t) (f : 'a -> 'b) : 'b =
-    let m = Name.get_module n in
-    let m =
-      match m with
-      | [m'] ->
-         begin
-           try
-             List.assoc m' !abbrevs
-           with
-           | _ -> m
-         end
-      | _ -> m
-    in
-    let rec iter_find : Id.module_id list -> 'b =
-      function
-      | [] -> raise Not_found
-      | h :: t ->
-         begin
-           try
-             f (DynArray.get x h)
-           with
-           | _ -> iter_find t
-         end
-    in
-    match m with
-    | [] ->
-       begin
-         try
-           f (DynArray.get x !current)
-         with
-         | _ -> iter_find !opened
-       end
-    | _ ->
-       begin
-         try
-           f (DynArray.get x (id_of_name m))
-         with
-         | _ ->
-            begin
-              try
-                f (DynArray.get x (id_of_name (!currentName @ m)))
-              with
-              | _ ->
-                 iter_find (List.map (fun h -> (id_of_name (name_of_id h @ m))) !opened)
-            end
-       end
-
-  let correct (l : string list) : string list =
-    let rec aux m l =
-      match (m, l) with
-      | _ when List.equal String.equal m l -> m
-      | ([], _) -> l
-      | (h :: t, h' :: t') when String.equal h h' -> aux t t'
-      | _ -> m
-    in
-    aux (List.fold_left aux l (List.map name_of_id !opened)) !currentName
-end
-
 module type ENTRY = sig
   type t
   val name_of_entry : t -> Name.t
 
-  type cid = Id.module_id * int
+  type cid = int
 end
 
 module type CIDSTORE = sig
   type entry
   type cid
 
-  (** Generic lookup function that includes configurable additional
-      lookup failure and result transformation. *)
-  (* val lookup : Name.t -> (entry -> entry option) -> (cid * entry) option *)
   val index_of_name : Name.t -> cid
   val index_of_name_opt : Name.t -> cid option
   val replace_entry : cid -> entry -> unit
@@ -170,7 +70,6 @@ module type CIDSTORE = sig
   val get : cid -> entry
   val add : (cid -> entry) -> cid
   val clear : unit -> unit
-  (* val entries : unit -> (cid * entry) list *)
   val current_entries : unit -> (cid * entry) list
 end
 
@@ -180,46 +79,30 @@ module CidStore (M : ENTRY) : CIDSTORE
   include M
   type entry = M.t
 
-  (* let entry_list : (cid list ref) DynArray.t = DynArray.create () *)
+  (** The entries in the store mapped by {!cid}. This is an arraylist, where
+      the index of an entry is its {!cid}. *)
+  let store : entry DynArray.t = DynArray.create ()
 
-  (*  store is used for storing the information associated with a cid *)
-  let store : (entry DynArray.t) DynArray.t = DynArray.create ()
-
-  (*  directory keeps track of which cid a name is associated with
-        and provides a way to quickly look up this information. *)
-  let directory : (cid NameTable.t) DynArray.t = DynArray.create ()
-
-  (*
-    let entries () =
-      DynArray.to_list store
-      |> List.concat_mapi
-           begin fun l x ->
-           DynArray.to_list x
-           |> List.mapi (fun n e -> ((l, n), e))
-           end
-   *)
+  (* FIXME: This needs to be phased out in favour of a persistent data
+     structure for the names in scope. *)
+  (** The entries in the store mapped by name. Only the latest binding is kept,
+      so shadowed entries may only be retrived from {!store}. This does not
+      take into account shadowing by entries in other stores, meaning that
+      lookups from this hash table do not fully respect lexical scoping of
+      signature entries. *)
+  let directory : cid NameTable.t = NameTable.create 0
 
   let current_entries () =
-    let l = !Modules.current in
-    DynArray.get store l
-    |> DynArray.to_list
-    |> List.mapi (fun n e -> ((l, n), e))
+    List.index (DynArray.to_list store)
 
   let clear () =
-    DynArray.clear directory;
     DynArray.clear store
 
-  let replace_entry (l, n) e =
-    let s = DynArray.get store l in
-    DynArray.set s n e
+  let replace_entry n e =
+    DynArray.set store n e
 
   let index_of_name (n : Name.t) : cid =
-    let n' =
-      match Name.get_module n with
-      | [] -> n
-      | _ -> Name.mk_name (Name.SomeString (Name.string_of_name n))
-    in
-    Modules.find n directory (fun x -> NameTable.find x n')
+    NameTable.find directory n
 
   let index_of_name_opt (n : Name.t) : cid option =
     try
@@ -227,60 +110,16 @@ module CidStore (M : ENTRY) : CIDSTORE
     with
     | Not_found -> None
 
-  let fixed_name_of (l, n) =
-    let l' = Modules.name_of_id l in
-    let m' =
-      if l <> !Modules.current && Bool.not (List.exists (fun x -> x = l) !Modules.opened)
-      then Modules.correct l'
-      else []
-    in
-    let e = DynArray.get (DynArray.get store l) n in
-    Name.(mk_name ~modules:m' (SomeString (string_of_name (name_of_entry e))))
+  let get n =
+    DynArray.get store n
 
-  let get (l, n) =
-    DynArray.get (DynArray.get store l) n
-
-    (*
-  let lookup (n : Name.t) f : (cid * entry) option =
-    let open Option in
-    index_of_name_opt n
-    >>= begin fun cid ->
-      Option.map (fun e -> (cid, e)) (f (get cid))
-      end
-     *)
+  let fixed_name_of n = M.name_of_entry (get n)
 
   let add f =
-    let cid, e =
-      let store =
-        try
-          DynArray.get store !Modules.current
-        with
-        | _ ->
-           let x = DynArray.create () in
-           while DynArray.length store < !Modules.current do
-             DynArray.add store (DynArray.create ())
-           done;
-           DynArray.add store x;
-           x
-      in
-      let cid = (!Modules.current, DynArray.length store) in
-      let e = f cid in
-      DynArray.add store e;
-      ((!Modules.current, DynArray.length store - 1), e)
-    in
-    let directory =
-      try
-        DynArray.get directory !Modules.current
-      with
-      | _ ->
-         let x = NameTable.create 0 in
-         while DynArray.length directory < !Modules.current do
-           DynArray.add directory (NameTable.create 0)
-         done;
-         DynArray.add directory x;
-         x
-    in
-    NameTable.replace directory (name_of_entry e) cid;
+    let cid = DynArray.length store in
+    let e = f cid in
+    DynArray.add store e;
+    NameTable.add directory (name_of_entry e) cid;
     cid
 end
 
@@ -393,19 +232,18 @@ module Cid = struct
        Terms of type family b can contain terms of type family a.
      *)
     let rec addSubord a b =
-      let (a_l, a_n) = a in
       let a_e = get a in
       let b_e = get b in
-      if Bool.not (BitSet.is_set !(b_e.subordinates) a_n)
+      if Bool.not (BitSet.is_set !(b_e.subordinates) a)
       then
         begin
           (* a is not yet in the subordinate relation for b, i.e. b depends on a *)
-          BitSet.set !(b_e.subordinates) a_n;
+          BitSet.set !(b_e.subordinates) a;
           (* Take transitive closure:
              If b-terms can contain a-terms, then b-terms can contain everything a-terms can contain. *)
           (* Call below could be replaced by
              subord_iter (fun aa -> BitSet.set b_e subordinates aa) a_e.subordinates *)
-          subord_iter (fun aa -> addSubord (a_l, aa) b) !(a_e.subordinates);
+          subord_iter (fun aa -> addSubord aa b) !(a_e.subordinates);
         end
       (* in else case, a is already in the subordinate relation for b, i.e. b depends on a *)
 
@@ -523,13 +361,11 @@ module Cid = struct
 
     let is_subordinate_to (a : Id.cid_typ) (b : Id.cid_typ) : bool =
       let a_e = get a in
-      let (_, b_n) = b in
-      (* subord_read *)BitSet.is_set !(a_e.subordinates) b_n
+      (* subord_read *)BitSet.is_set !(a_e.subordinates) b
 
     let is_typesubordinate_to (a : Id.cid_typ) (b : Id.cid_typ) : bool =
       let b_e = get b in
-      let (_, a_n) = a in
-      (* subord_read *)BitSet.is_set !(b_e.typesubordinated) a_n
+      (* subord_read *)BitSet.is_set !(b_e.typesubordinated) a
   end
 
   module Term = struct
@@ -667,7 +503,7 @@ module Cid = struct
     module Entry = struct
       type t =
         { name : Name.t
-        (* bp : this is misgleding with the current design where explicitly declared context variables
+        (* bp : this is misleading with the current design where explicitly declared context variables
           are factored into implicit arguments *)
         ; implicit_arguments : int
         ; kind : Int.Comp.kind

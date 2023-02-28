@@ -1,13 +1,10 @@
 open Support
 open Format
-open Beluga_syntax.Common
+open Beluga_syntax
 open Syntax
 open Int
 
 let (_, _, dprnt) = Debug.(makeFunctions' (toFlags [17]))
-
-module TermS = Store.Cid.Term
-module CompS = Store.Cid.Comp
 
 module PC = Printer.Control
 
@@ -217,7 +214,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
 
     | LF.(Root (_, (Const cid as h), ms, _)) ->
        let ms = deimplicitize_spine h ms in
-       let TermS.Entry.({ name; _ }) = TermS.get cid in
+       let Store.Cid.Term.Entry.({ name; _ }) = Store.Cid.Term.get cid in
        begin match Store.OpPragmas.getPragma name with
        | Some p ->
           (* TODO limit the printing of parens for operators *)
@@ -1595,7 +1592,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
       (fmt_ppr_cmp_typ cD l0) tau
 
   let fmt_ppr_cmp_comp_prog_info ppf e =
-    let { CompS.Entry.name
+    let { Store.Cid.Comp.Entry.name
         ; implicit_arguments
         ; typ
         ; prog
@@ -1603,7 +1600,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
         ; _ } =
       e
     in
-    let ds = CompS.lookup_mutual_group mutual_group in
+    let ds = Store.Cid.Comp.lookup_mutual_group mutual_group in
     fprintf ppf
       "@[<v>name: @[%a@]\
        @,@[<hv 2>type:@ @[%a@]@]\

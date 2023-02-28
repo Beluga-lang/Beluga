@@ -1,4 +1,4 @@
-open Beluga_syntax.Common
+open Beluga_syntax
 open Syntax
 
 type leftover_vars = (Abstract.free_var Int.LF.ctx * Location.t) list

@@ -6,7 +6,7 @@ open Support.Equality
 
 open Support
 open Format
-open Beluga_syntax.Common
+open Beluga_syntax
 open Syntax.Ext
 
 module Make (_ : Store.Cid.RENDERER) : Printer.Ext.T = struct

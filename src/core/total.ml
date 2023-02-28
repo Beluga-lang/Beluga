@@ -2,14 +2,12 @@ open Support.Equality
 (* Checking termination of a function *)
 
 open Support
-open Beluga_syntax.Common
+open Beluga_syntax
 open Syntax
 open Int
 module Unify = Unify.StdTrail
 module P = Pretty.Int.DefaultPrinter
 module R = Store.Cid.DefaultRenderer
-module CompS = Store.Cid.Comp
-module Schema = Store.Cid.Schema
 
 let (dprintf, dprint, dprnt) = Debug.makeFunctions' (Debug.toFlags [11])
 open Debug.Fmt

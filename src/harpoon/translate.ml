@@ -2,8 +2,6 @@ open Support
 open Beluga
 open Syntax.Int
 
-module CompS = Store.Cid.Comp
-
 let (dprintf, _, _) = Debug.(makeFunctions' (toFlags [13]))
 open Debug.Fmt
 
@@ -224,7 +222,7 @@ let fmt_ppr_result ppf =
         @,@[%a@]@]"
        fmt_ppr_error err
 
-let entry { CompS.Entry.prog; typ = tau; name; _ } =
+let entry { Store.Cid.Comp.Entry.prog; typ = tau; name; _ } =
   let prog =
     Option.get'
       (Beluga_syntax.Error.raise_violation

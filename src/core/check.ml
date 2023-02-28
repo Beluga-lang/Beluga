@@ -4,7 +4,7 @@
 
 *)
 
-open Beluga_syntax.Common
+open Beluga_syntax
 module P = Pretty.Int.DefaultPrinter
 module R = Store.Cid.DefaultRenderer
 open Support
@@ -48,8 +48,6 @@ module Comp = struct
      *  If we keep them in Delta, we need to rewrite mctxToMSub for example;
      *)
 
-  open Store
-  open Cid
   open Syntax.Int.Comp
 
   module S = Substitution
@@ -750,8 +748,8 @@ module Comp = struct
       | Int.LF.Null -> () (* raise (Error (Location.ghost, IllegalParamTyp (cD, cPsi, tA))) *)
       | Int.LF.CtxVar psi ->
          (* tA is an instance of a schema block *)
-         let { Schema.Entry.name; schema = Int.LF.Schema elems; decl = _ } =
-           Schema.get (Context.lookupCtxVarSchema cD psi)
+         let { Store.Cid.Schema.Entry.name; schema = Int.LF.Schema elems; decl = _ } =
+           Store.Cid.Schema.get (Context.lookupCtxVarSchema cD psi)
          in
          begin
            try
@@ -812,7 +810,7 @@ module Comp = struct
     | I.CTyp (Some schema_cid) ->
        begin
          try
-           ignore (Schema.get_schema schema_cid)
+           ignore (Store.Cid.Schema.get_schema schema_cid)
          with
          | _ -> Error.raise_violation "Schema undefined"
        end
@@ -834,11 +832,11 @@ module Comp = struct
   let rec checkTyp cD =
     function
     | TypBase (loc, c, mS) ->
-       let { CompTyp.Entry.kind = cK; _ } = CompTyp.get c in
+       let { Store.Cid.CompTyp.Entry.kind = cK; _ } = Store.Cid.CompTyp.get c in
        checkMetaSpine loc cD mS (cK, C.m_id)
 
     | TypCobase (loc, c, mS) ->
-       let { CompCotyp.Entry.kind = cK; _ } = CompCotyp.get c in
+       let { Store.Cid.CompCotyp.Entry.kind = cK; _ } = Store.Cid.CompCotyp.get c in
        checkMetaSpine loc cD mS (cK, C.m_id)
 
     | TypBox (loc, ctyp) -> checkCLFTyp loc cD ctyp
@@ -1129,16 +1127,16 @@ module Comp = struct
        (None, tau, C.m_id)
 
     | DataConst (loc, c) as e ->
-       let tau = CompConst.((get c).Entry.typ) in
+       let tau = Store.Cid.CompConst.((get c).Entry.typ) in
        Typeinfo.Comp.add loc
          (Typeinfo.Comp.mk_entry cD (tau, C.m_id))
          (Format.asprintf "DataConst %a" (P.fmt_ppr_cmp_exp cD cG P.l0) e);
        (None, tau, C.m_id)
 
     | Obs (loc, e, t, obs) ->
-       let { CompDest.Entry.obs_type = tau0
+       let { Store.Cid.CompDest.Entry.obs_type = tau0
            ; return_type = tau1
-           ; _ } = CompDest.get obs in
+           ; _ } = Store.Cid.CompDest.get obs in
        check mcid cD (cG, cIH) total_decs e (tau0, t);
        (None, tau1, t)
 
@@ -1147,10 +1145,10 @@ module Comp = struct
     (*     (None,(CompDest.get c).CompDest.typ, C.m_id)) *)
 
     | Const (loc, prog) as e ->
-       let { Comp.Entry.typ = tau
+       let { Store.Cid.Comp.Entry.typ = tau
            ; decl = d1
            ; name
-           ; _ } = Comp.get prog in
+           ; _ } = Store.Cid.Comp.get prog in
        Typeinfo.Comp.add loc (Typeinfo.Comp.mk_entry cD (tau, C.m_id))
          (Format.asprintf "Const %a" (P.fmt_ppr_cmp_exp cD cG P.l0) e);
        (* First we need to decide whether we are calling a function in
@@ -1171,13 +1169,13 @@ module Comp = struct
           (* Second, need to check whether the function we're calling
              actually requires totality checking. *)
           let is_not_recursive cid =
-            match (Comp.get_total_decl cid).order with
+            match (Store.Cid.Comp.get_total_decl cid).order with
             | `not_recursive -> true
             | _ -> false
           in
           begin match mcid with
           | Some cid when is_not_recursive cid ->
-             throw loc (NotRecursiveSrc (Comp.name cid))
+             throw loc (NotRecursiveSrc (Store.Cid.Comp.name cid))
           | _ -> ()
           end;
           begin match d.order with
@@ -1331,7 +1329,7 @@ module Comp = struct
   and synPattern cD cG =
     function
     | PatConst (loc, c, pat_spine) ->
-       let { CompConst.Entry.typ = tau; _ } = CompConst.get c in
+       let { Store.Cid.CompConst.Entry.typ = tau; _ } = Store.Cid.CompConst.get c in
        (loc, synPatSpine cD cG pat_spine (tau, C.m_id))
     | PatVar (loc, k) -> (loc, (lookup' cG k, C.m_id))
     | PatAnn (loc, pat, tau, _) ->
@@ -1372,11 +1370,11 @@ module Comp = struct
          p.fmt "[synPatSpine] t = %a"
            (P.fmt_ppr_lf_msub cD P.l0) t
          end;
-       let CompDest.Entry.
+       let Store.Cid.CompDest.Entry.
          { obs_type = tau0
          ; return_type = tau1
          ; _
-         } = CompDest.get obs in
+         } = Store.Cid.CompDest.get obs in
        if Whnf.convCTyp (tau, theta) (tau0, t)
        then synPatSpine cD cG pat_spine (tau1, t)
        else raise (Error (loc, TypMismatch (cD, (tau, theta), (tau0, t))))

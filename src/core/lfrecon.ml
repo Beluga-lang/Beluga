@@ -1,8 +1,6 @@
 open Support.Equality
 open Support
-open Store
-open Store.Cid
-open Beluga_syntax.Common
+open Beluga_syntax
 open Syntax
 
 (* module Unify = Unify.EmptyTrail  *)
@@ -317,7 +315,7 @@ let unify_phat cD psihat =
           begin
             begin match c_var with
             | CtxName psi ->
-               FCVar.add psi (cD, Decl (psi, CTyp s_cid, Plicity.implicit, Inductivity.not_inductive))
+               Store.FCVar.add psi (cD, Decl (psi, CTyp s_cid, Plicity.implicit, Inductivity.not_inductive))
             | _ -> ()
             end;
             mmvar1.instantiation := Some (ICtx (CtxVar (c_var)));
@@ -345,18 +343,18 @@ let unify_phat cD psihat =
 let getSchema cD ctxvar loc =
   match ctxvar with
   | Some (Int.LF.CtxOffset _ as phi) ->
-     Schema.get_schema (Context.lookupCtxVarSchema cD phi)
+     Store.Cid.Schema.get_schema (Context.lookupCtxVarSchema cD phi)
   | Some (Int.LF.CtxName n) ->
      begin
        try
-         let (_, Int.LF.Decl (_, Int.LF.CTyp (Some s_cid), _, _)) = FCVar.get n in
-         Schema.get_schema s_cid
+         let (_, Int.LF.Decl (_, Int.LF.CTyp (Some s_cid), _, _)) = Store.FCVar.get n in
+         Store.Cid.Schema.get_schema s_cid
        with
        | _ -> throw loc (CtxVarSchema n)
      end
 
   | Some Int.LF.(CInst ({ typ = CTyp (Some s_cid); _ }, _)) ->
-     Schema.get_schema s_cid
+     Store.Cid.Schema.get_schema s_cid
   | None -> Error.raise_violation "No context variable for which we could retrieve a schema"
 
 (* ******************************************************************* *)
@@ -902,7 +900,7 @@ let rec elKind cD cPsi =
 and elTyp recT cD cPsi =
   function
   | Apx.LF.Atom (loc, a, s) ->
-     let { Typ.Entry.kind = tK; implicit_arguments = i; _ } = Typ.get a in
+     let { Store.Cid.Typ.Entry.kind = tK; implicit_arguments = i; _ } = Store.Cid.Typ.get a in
      let s' = mkShift recT cPsi in
      (* let s' = S.LF.id in *)
      let tS = elKSpineI loc recT cD cPsi s i (tK, s') in
@@ -1053,7 +1051,7 @@ and elTerm' recT cD cPsi r sP =
      Int.LF.LFHole (loc, id, name)
 
   | Apx.LF.Root (loc, Apx.LF.Const c, spine) ->
-     let { Term.Entry.typ = tA; implicit_arguments = i; _ } = Term.get c in
+     let { Store.Cid.Term.Entry.typ = tA; implicit_arguments = i; _ } = Store.Cid.Term.get c in
      (* let s = mkShift recT cPsi in *)
      let s = S.LF.id in
      let (tS, sQ) = elSpineI loc recT cD cPsi spine i (tA, s) in
@@ -1093,7 +1091,7 @@ and elTerm' recT cD cPsi r sP =
      | Pi ->
         begin
           try
-            let tA = FVar.get x in
+            let tA = Store.FVar.get x in
             (* For type reconstruction to succeed, we must have
              *
              *  . |- tA <= type
@@ -1123,7 +1121,7 @@ and elTerm' recT cD cPsi r sP =
                   *  . |- tA <= type  and cPsi |- tS : tA <= [s]tP
                   *  This will be enforced during abstraction.
                   *)
-                 FVar.add x tA;
+                 Store.FVar.add x tA;
                  Int.LF.Root (loc, Int.LF.FVar x, tS, Plicity.explicit)
                with
                | NotPatSpine ->
@@ -1204,7 +1202,7 @@ and elTerm' recT cD cPsi r sP =
   | Apx.LF.Root (loc, Apx.LF.FMVar (u, s), Apx.LF.Nil) ->
      begin
        try
-         let (cD_d, Int.LF.Decl (_, Int.LF.ClTyp (Int.LF.MTyp tQ, cPhi), _, _)) = FCVar.get u in
+         let (cD_d, Int.LF.Decl (_, Int.LF.ClTyp (Int.LF.MTyp tQ, cPhi), _, _)) = Store.FCVar.get u in
          dprintf
            begin fun p ->
            p.fmt "[elTerm'] @[<v>FMV %a of type %a[%a]@,in cD_d = %a@,and cD = %a@]"
@@ -1312,7 +1310,7 @@ and elTerm' recT cD cPsi r sP =
                  (P.fmt_ppr_lf_typ cD cPhi P.l0) tP
                end;
 
-             FCVar.add u (cD, Int.LF.Decl (u, Int.LF.ClTyp (Int.LF.MTyp tP, cPhi), Plicity.implicit, Inductivity.not_inductive));
+             Store.FCVar.add u (cD, Int.LF.Decl (u, Int.LF.ClTyp (Int.LF.MTyp tP, cPhi), Plicity.implicit, Inductivity.not_inductive));
              (*The depend paramater here affects both mlam vars and case vars*)
              Int.LF.Root (loc, Int.LF.FMVar (u, s''), Int.LF.Nil, Plicity.explicit)
           | _ when isProjPatSub s ->
@@ -1406,7 +1404,7 @@ and elTerm' recT cD cPsi r sP =
                  (P.fmt_ppr_lf_dctx cD P.l0) cPhi
                end;
 
-             FCVar.add u (cD, Int.LF.Decl (u, Int.LF.ClTyp (Int.LF.MTyp tP, cPhi), Plicity.implicit, Inductivity.not_inductive));
+             Store.FCVar.add u (cD, Int.LF.Decl (u, Int.LF.ClTyp (Int.LF.MTyp tP, cPhi), Plicity.implicit, Inductivity.not_inductive));
              Int.LF.Root (loc, Int.LF.FMVar (u, sorig), Int.LF.Nil, Plicity.explicit)
 
           | _ ->
@@ -1449,7 +1447,7 @@ and elTerm' recT cD cPsi r sP =
   | Apx.LF.Root (loc, Apx.LF.FPVar (p, s), spine) ->
      begin
        try
-         let (cD_d, Int.LF.Decl (_, Int.LF.ClTyp (Int.LF.PTyp tA, cPhi), _, _)) = FCVar.get p in
+         let (cD_d, Int.LF.Decl (_, Int.LF.ClTyp (Int.LF.PTyp tA, cPhi), _, _)) = Store.FCVar.get p in
          let d = Context.length cD - Context.length cD_d in
          let (tA, cPhi) =
            if d = 0
@@ -1510,7 +1508,7 @@ and elTerm' recT cD cPsi r sP =
                     end
                | _ -> ()
              end;
-             FCVar.add p (cD, Int.LF.Decl (p, Int.LF.ClTyp (Int.LF.PTyp (Whnf.normTyp (tP, S.LF.id)), cPhi), Plicity.implicit, Inductivity.not_inductive));
+             Store.FCVar.add p (cD, Int.LF.Decl (p, Int.LF.ClTyp (Int.LF.PTyp (Whnf.normTyp (tP, S.LF.id)), cPhi), Plicity.implicit, Inductivity.not_inductive));
              Int.LF.Root (loc, Int.LF.FPVar (p, s''), Int.LF.Nil, Plicity.explicit)
 
           | (Apx.LF.Nil, false) ->
@@ -1536,7 +1534,7 @@ and elTerm' recT cD cPsi r sP =
            (string_of_proj proj)
          );
          let (cD_d, Int.LF.Decl (_, Int.LF.ClTyp (Int.LF.PTyp ((Int.LF.Sigma typRec) as tA), cPhi), _, _)) =
-           FCVar.get p
+           Store.FCVar.get p
          in
          let d = Context.length cD - Context.length cD_d in
          let (tA, cPhi) =
@@ -1617,7 +1615,7 @@ and elTerm' recT cD cPsi r sP =
                | (Some (typrec, subst), index) -> (typrec, subst, index)
              in
              let tB = Whnf.collapse_sigma typRec in
-             FCVar.add p
+             Store.FCVar.add p
                ( cD
                , Int.LF.(Decl (p, ClTyp (PTyp (Whnf.normTyp (tB, s_inst)), cPhi), Plicity.implicit, Inductivity.not_inductive))
                );
@@ -2054,7 +2052,7 @@ and elClosedTerm' recT cD cPsi =
      throw loc (SynthesizableLFHole name)
 
   | Apx.LF.Root (loc, Apx.LF.Const c, spine) ->
-     let { Term.Entry.typ = tA; implicit_arguments = i; _ } = Term.get c in
+     let { Store.Cid.Term.Entry.typ = tA; implicit_arguments = i; _ } = Store.Cid.Term.get c in
      (* let s = mkShift recT cPsi in *)
      let s = S.LF.id in
      let (tS, sQ) = elSpineI loc recT cD cPsi spine i (tA, s) in
@@ -2236,7 +2234,7 @@ and elSub loc recT cD cPsi s cl cPhi =
        begin
          try
            let (cD_d, Int.LF.Decl (_, Int.LF.ClTyp (Int.LF.STyp (cl0, cPhi0), cPsi0), _, _)) =
-             FCVar.get s_name
+             Store.FCVar.get s_name
            in
            svar_le (cl0, cl);
            let d = Context.length cD - Context.length cD_d in
@@ -2276,7 +2274,7 @@ and elSub loc recT cD cPsi s cl cPhi =
             then
               begin
                 let (cPsi', sigma') = synDomOpt cD loc cPsi sigma in
-                FCVar.add s_name
+                Store.FCVar.add s_name
                   ( cD
                   , Int.LF.Decl
                       ( s_name
@@ -2480,7 +2478,7 @@ and elHead loc recT cD cPsi head cl =
        | _ -> throw loc (BVarTypMissing (cD, cPsi, Int.LF.BVar x))
      end
   | (Apx.LF.Const c, Int.LF.Subst) ->
-     let tA = (Term.get c).Term.Entry.typ in
+     let tA = (Store.Cid.Term.get c).Store.Cid.Term.Entry.typ in
      (Int.LF.Const c, (tA, S.LF.id))
 
   | (Apx.LF.MVar (Apx.LF.Offset u, s), Int.LF.Subst) ->
@@ -2813,7 +2811,7 @@ and elSpineSynth recT cD cPsi spine s' sP =
      dprint (fun () -> "elSpineSynth done \n");
      let tB' =
        Int.LF.PiTyp
-         ( ( Int.LF.TypDecl (Name.mk_name (Name.BVarName (Typ.gen_var_name tA')), tA')
+         ( ( Int.LF.TypDecl (Name.mk_name (Name.BVarName (Store.Cid.Typ.gen_var_name tA')), tA')
            , Plicity.implicit
            )
          , tB
@@ -2881,7 +2879,7 @@ let checkCtxVar loc cD c_var w =
             )
          )
   | Apx.LF.CtxName psi ->
-     FCVar.add psi (cD, Int.LF.Decl (psi, Int.LF.CTyp (Some w), Plicity.implicit, Inductivity.not_inductive));
+     Store.FCVar.add psi (cD, Int.LF.Decl (psi, Int.LF.CTyp (Some w), Plicity.implicit, Inductivity.not_inductive));
      Int.LF.CtxName psi
 
 (* ******************************************************************* *)
@@ -2896,7 +2894,7 @@ let rec solve_fvarCnstr recT cD =
      | None ->
         begin
           try
-            let tA = FVar.get x in
+            let tA = Store.FVar.get x in
             (* For type reconstruction to succeed, we must have
              *  . |- tA <= type
              *  This will be enforced during abstraction.
@@ -2921,7 +2919,7 @@ let rec solve_fvarCnstr recT cD =
      | Some Int.LF.INorm tR ->
         begin
           try
-            let tA = FVar.get x in
+            let tA = Store.FVar.get x in
             (* For type reconstruction to succeed, we must have
              *  . |- tA <= type
              *  This will be enforced during abstraction.
@@ -2953,7 +2951,7 @@ let solve_fcvarCnstr cnstrs =
   let solve_one (tM, v) =
     let lookup_fcvar loc u =
       try
-        FCVar.get u
+        Store.FCVar.get u
       with
       | Not_found -> throw loc (LeftoverConstraints u)
     in

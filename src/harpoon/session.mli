@@ -3,8 +3,6 @@
 open Beluga
 open Syntax.Int
 
-module CompS = Store.Cid.Comp
-
 type t
 
 (** Construct a new session representing the given mutual group.

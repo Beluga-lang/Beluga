@@ -2,7 +2,6 @@ open Support
 open Beluga
 open Syntax.Int
 
-module CompS = Store.Cid.Comp
 module F = Fun
 module P = Pretty.Int.DefaultPrinter
 
@@ -25,7 +24,7 @@ let make mutual_group thms =
         currently loaded theorems in the active session.
  *)
 let get_mutual_decs (s : t) : Comp.total_dec list =
-  CompS.lookup_mutual_group s.mutual_group
+  Store.Cid.Comp.lookup_mutual_group s.mutual_group
 
 (** Constructs a list of all theorems in this session, both
     incomplete and finished.
@@ -123,30 +122,29 @@ let prepare_translated_proofs tes total_decs =
       total_decs
   in
   let mutual_group_id =
-    CompS.add_mutual_group total_decs
+    Store.Cid.Comp.add_mutual_group total_decs
   in
   (* map from old cids to new cids *)
   let h = Hashtbl.create 8 in
   let etaus =
     List.map
       begin fun (t, e) ->
-      let open CompS in
       let cid, entry = Theorem.get_entry' t in
-      let tau = entry.Entry.typ in
+      let tau = entry.Store.Cid.Comp.Entry.typ in
       let _ =
         (* the type to store for the newly allocated must be without
         inductive stars, so we obtain it directly from the store entry
         for the proof. *)
-        add
+        Store.Cid.Comp.add
           begin fun cid' ->
           (* associate the cid of this theorem to the newly allocated
                  cid for the translated proof *)
           Hashtbl.add h cid cid';
-          mk_entry
+          Store.Cid.Comp.mk_entry
             None
-            (trans_name entry.Entry.name)
+            (trans_name entry.Store.Cid.Comp.Entry.name)
             tau
-            entry.Entry.implicit_arguments
+            entry.Store.Cid.Comp.Entry.implicit_arguments
             mutual_group_id
             None
           (* We use None for the declaration number here.

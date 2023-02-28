@@ -5,15 +5,13 @@ open Support.Equality
  *)
 
 open Support
-open Beluga_syntax.Common
+open Beluga_syntax
 
 module F = Fun
 
 module Comp = Syntax.Int.Comp
 module LF = Syntax.Int.LF
 
-module Types = Store.Cid.Typ
-module Const = Store.Cid.Term
 module S = Substitution
 module U = Unify.EmptyTrail
 module P = Pretty.Int.DefaultPrinter
@@ -618,7 +616,7 @@ let rec pre_match_head cD cD' (cPsi, tH) (cPsi', tH') =
      if Id.cid_term_equal c c'
      then
        begin
-         let tA = (Const.get c).Const.Entry.typ in
+         let tA = (Store.Cid.Term.get c).Store.Cid.Term.Entry.typ in
          Yes ((tA, S.LF.id), (tA, S.LF.id))
        end
      else No
@@ -856,8 +854,8 @@ and pre_match_typ cD cD_p (cPsi, sA) (cPhi, sB) matchCands splitCands =
     end;
   match (Whnf.whnfTyp sA, Whnf.whnfTyp sB) with
   | ((LF.Atom (_, a, tS1), s1), (LF.Atom (loc, b, tS2), s2)) ->
-     let tK1 = (Types.get a).Types.Entry.kind in
-     let tK2 = (Types.get b).Types.Entry.kind in
+     let tK1 = (Store.Cid.Typ.get a).Store.Cid.Typ.Entry.kind in
+     let tK2 = (Store.Cid.Typ.get b).Store.Cid.Typ.Entry.kind in
      let tS1' = Whnf.normSpine (tS1, s1) in
      let tS2' = Whnf.normSpine (tS2, s2) in
      if Id.cid_typ_equal a b
@@ -1292,19 +1290,18 @@ let genObj (cD, cPsi, tP) (tH, tA, k) =
 let genAllObj cg = List.filter_map (genObj cg)
 
 let genConst (cD, cPsi, (a, tS)) =
-  Types.freeze a;
-  let constructors = (Types.get a).Types.Entry.constructors in
+  Store.Cid.Typ.freeze a;
+  let constructors = (Store.Cid.Typ.get a).Store.Cid.Typ.Entry.constructors in
   (* Reverse the list so coverage will be checked in the order that the
      constructors were declared, which is more natural to the user *)
   let constructors = List.rev !constructors in
   let tH_tA_list =
     List.map
       begin fun c ->
-      let open Const in
-      let e = get c in
+      let e = Store.Cid.Term.get c in
       ( LF.Const c
-      , e.Entry.typ
-      , e.Entry.implicit_arguments
+      , e.Store.Cid.Term.Entry.typ
+      , e.Store.Cid.Term.Entry.implicit_arguments
       )
       end
       constructors

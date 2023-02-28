@@ -1,5 +1,5 @@
 open Id
-open Beluga_syntax.Common
+open Beluga_syntax
 open Syntax.Int
 
 module OpPragmas : sig

@@ -11,15 +11,13 @@ open Support.Equality
  *)
 
 open Support
-open Beluga_syntax.Common
+open Beluga_syntax
 open Syntax.Int.LF
 open Syntax.Int
 open Substitution
 
 let dprintf, _, dprnt = Debug.(makeFunctions' (toFlags [11]))
 open Debug.Fmt
-
-module T = Store.Cid.Typ
 
 exception Fmvar_not_found
 exception FreeMVar of head
@@ -91,8 +89,8 @@ let etaContract =
 
 let newMTypName =
   function
-  | ClTyp (MTyp tA, _) -> Name.MVarName (T.gen_mvar_name tA)
-  | ClTyp (PTyp tA, _) -> Name.PVarName (T.gen_var_name tA)
+  | ClTyp (MTyp tA, _) -> Name.MVarName (Store.Cid.Typ.gen_mvar_name tA)
+  | ClTyp (PTyp tA, _) -> Name.PVarName (Store.Cid.Typ.gen_var_name tA)
   | ClTyp (STyp _, _) -> Name.SVarName None
   | CTyp _ -> Name.NoName
 

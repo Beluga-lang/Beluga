@@ -2,7 +2,7 @@ open Support.Equality
 (* module Interactive *)
 
 open Support
-open Beluga_syntax.Common
+open Beluga_syntax
 
 module F = Fun
 module P = Pretty.Int.DefaultPrinter

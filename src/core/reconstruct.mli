@@ -1,4 +1,4 @@
-open Beluga_syntax.Common
+open Beluga_syntax
 open Syntax
 
 val solve_fvarCnstr : Lfrecon.reconType -> unit

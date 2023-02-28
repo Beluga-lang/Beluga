@@ -13,7 +13,7 @@
  *)
 
 open Support
-open Beluga_syntax.Common
+open Beluga_syntax
 module Ext = Syntax.Ext
 module Apx = Syntax.Apx
 

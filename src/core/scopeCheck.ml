@@ -1,6 +1,5 @@
 open Support
-open Beluga_syntax.Common
-open Store.Cid
+open Beluga_syntax
 
 type error =
   | FixedFixed
@@ -20,8 +19,8 @@ let throw loc e = raise (Error (loc, e))
     theorem specified by `mcid`, if any.
  *)
 let thm_thm loc cid1 =
-  let get_decl cid = Comp.( (get cid).Entry.decl ) in
-  let name = Comp.name cid1 in
+  let get_decl cid = Store.Cid.Comp.( (get cid).Entry.decl ) in
+  let name = Store.Cid.Comp.name cid1 in
   let loc' = Name.location name in
   function
   | None -> () (* no cid from whose POV to do the scopechecking *)
@@ -51,7 +50,7 @@ let thm_thm loc cid1 =
 let other_thm loc name d1 loc' = function
   | None -> ()
   | Some cid ->
-     match Comp.( (get cid).Entry.decl ) with
+     match Store.Cid.Comp.( (get cid).Entry.decl ) with
      | None -> ()
      | Some d2 ->
         if Bool.not Decl.(d1 < d2) then
@@ -61,8 +60,8 @@ let other_thm loc name d1 loc' = function
 let () =
   Error.register_exception_printer (function
     | Error (location, FixedFixed (item_name, item_loc, thm_cid)) ->
-        let e = Comp.get thm_cid in
-        let thm_name = e.Comp.Entry.name in
+        let e = Store.Cid.Comp.get thm_cid in
+        let thm_name = e.Store.Cid.Comp.Entry.name in
         let thm_loc = Name.location thm_name in
         Error.located_exception_printer
           (Format.dprintf
@@ -74,8 +73,8 @@ let () =
               work, reorder some definitions, and try again.")
           (List1.from location [ item_loc; thm_loc ])
     | Error (location, FloatingFloating (cid1, cid2)) ->
-        let name1 = Comp.name cid1 in
-        let name2 = Comp.name cid2 in
+        let name1 = Store.Cid.Comp.name cid1 in
+        let name2 = Store.Cid.Comp.name cid2 in
         Error.located_exception_printer
           (Format.dprintf
              "@[<v>Ill-scoped reference.@,\

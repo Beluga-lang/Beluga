@@ -7,8 +7,7 @@ let (dprintf, dprint, dprnt) = Debug.makeFunctions' (Debug.toFlags [5])
 open Debug.Fmt
 
 open Context
-open Store.Cid
-open Beluga_syntax.Common
+open Beluga_syntax
 open Syntax.Int.LF
 
 module Print = Pretty.Int.DefaultPrinter
@@ -426,7 +425,7 @@ and inferHead loc cD cPsi head cl =
      TClo sA
 
   | (Const c, Subst) ->
-    (Term.get c).Term.Entry.typ
+    (Store.Cid.Term.get c).Store.Cid.Term.Entry.typ
 
   | (MVar (Offset u, s), Subst) ->
     (* cD ; cPsi' |- tA <= type *)
@@ -513,8 +512,8 @@ and canAppear cD cPsi head sA loc =
                       it is not inhabited *)
 
   | CtxVar ctx_var ->
-     let { Schema.Entry.name; schema = Schema elems; decl = _ } =
-       Schema.get (lookupCtxVarSchema cD ctx_var)
+     let { Store.Cid.Schema.Entry.name; schema = Schema elems; decl = _ } =
+       Store.Cid.Schema.get (lookupCtxVarSchema cD ctx_var)
      in
      begin
        try
@@ -665,7 +664,7 @@ and synKSpine cD cPsi sS1 sK =
 and checkTyp' cD cPsi (tA, s) =
   match tA with
   | Atom (loc, a, tS) ->
-     let tK = (Typ.get a).Typ.Entry.kind in
+     let tK = (Store.Cid.Typ.get a).Store.Cid.Typ.Entry.kind in
      begin
        try
            match synKSpine cD cPsi (tS, s) (tK, S.LF.id) with
@@ -964,8 +963,8 @@ and checkSchema loc cD cPsi schema_name (Schema elements as schema) =
      let Some (ICtx cPhi) = mmvar.instantiation.contents in
      checkSchema loc cD cPhi schema_name schema
   | CtxVar (CtxOffset _ as phi) ->
-     let { Schema.Entry.name; schema = Schema phiSchemaElements; decl = _ } =
-       Schema.get (lookupCtxVarSchema cD phi)
+     let { Store.Cid.Schema.Entry.name; schema = Schema phiSchemaElements; decl = _ } =
+       Store.Cid.Schema.get (lookupCtxVarSchema cD phi)
      in
      if
        List.exists
@@ -994,8 +993,8 @@ and checkSchema loc cD cPsi schema_name (Schema elements as schema) =
 and subsumes cD psi phi =
   match (psi, phi) with
   | (CtxOffset psi_var, CtxOffset phi_var) ->
-     let Schema psi_selem = Schema.get_schema (lookupCtxVarSchema cD psi) in
-     let Schema phi_selem = Schema.get_schema (lookupCtxVarSchema cD phi) in
+     let Schema psi_selem = Store.Cid.Schema.get_schema (lookupCtxVarSchema cD psi) in
+     let Schema phi_selem = Store.Cid.Schema.get_schema (lookupCtxVarSchema cD phi) in
      List.for_all (fun elem -> checkElementAgainstSchema Empty elem phi_selem) psi_selem
   | _ -> false
 
@@ -1076,7 +1075,7 @@ and checkClObj cD loc cPsi' cM cTt =
 and checkMetaObj cD (loc, cM) cTt =
   match (cM, cTt) with
   | (CObj cPsi, (CTyp (Some w), _)) ->
-     let { Schema.Entry.name; schema; decl = _ } = Schema.get w in
+     let { Store.Cid.Schema.Entry.name; schema; decl = _ } = Store.Cid.Schema.get w in
      checkSchema loc cD cPsi name schema
 
   | (ClObj (phat, tM), (ClTyp (tp, cPsi), t)) ->

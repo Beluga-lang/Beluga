@@ -286,13 +286,8 @@ module Make (Signature_reconstruction_state : SIGNATURE_RECONSTRUCTION_STATE) :
         let* () =
           add_module_abbreviation ~location module_identifier ~abbreviation
         in
-        let module_identifier_as_list =
-          module_identifier |> Qualified_identifier.to_list1 |> List1.to_list
-          |> List.map Identifier.show
-        in
         return
-          (Synint.LF.AbbrevPrag
-             (module_identifier_as_list, Identifier.show abbreviation))
+          (Synint.LF.AbbrevPrag { location; module_identifier; abbreviation })
     | Synext.Signature.Pragma.Query
         { location
         ; identifier
@@ -491,8 +486,9 @@ module Make (Signature_reconstruction_state : SIGNATURE_RECONSTRUCTION_STATE) :
           Store.Cid.CompTypDef.mk_entry name i (cD, cT) cK)
     in
     let* () = add_comp_typedef ~location identifier cid in
-    return (Synint.Sgn.CompTypAbbrev
-    { location; identifier = name; kind = cK; typ = cT })
+    return
+      (Synint.Sgn.CompTypAbbrev
+         { location; identifier = name; kind = cK; typ = cT })
 
   and reconstruct_val_declaration location identifier typ_opt expression =
     match typ_opt with
@@ -549,13 +545,14 @@ module Make (Signature_reconstruction_state : SIGNATURE_RECONSTRUCTION_STATE) :
             name tau' 0 mgid value_opt)
     in
     let* () = add_comp_val ~location identifier cid in
-    return (Synint.Sgn.Val
-    { location
-    ; identifier = name
-    ; typ = tau'
-    ; expression = expression''
-    ; expression_value = value_opt
-    })
+    return
+      (Synint.Sgn.Val
+         { location
+         ; identifier = name
+         ; typ = tau'
+         ; expression = expression''
+         ; expression_value = value_opt
+         })
 
   and reconstruct_typed_val_declaration location identifier tau expression =
     let name = Name.make_from_identifier identifier in
@@ -598,7 +595,7 @@ module Make (Signature_reconstruction_state : SIGNATURE_RECONSTRUCTION_STATE) :
     let* () = add_leftover_vars cQ location in
     Monitor.timer
       ( "Function Check"
-      , fun _cid ->
+      , fun () ->
           Check.Comp.check Option.none cD cG [] expression'' (tau', C.m_id)
       );
     let value_opt =
@@ -617,13 +614,14 @@ module Make (Signature_reconstruction_state : SIGNATURE_RECONSTRUCTION_STATE) :
             name tau' 0 mgid value_opt)
     in
     let* () = add_comp_val ~location identifier cid in
-    return (Synint.Sgn.Val
-    { location
-    ; identifier = name
-    ; typ = tau'
-    ; expression = expression''
-    ; expression_value = value_opt
-    })
+    return
+      (Synint.Sgn.Val
+         { location
+         ; identifier = name
+         ; typ = tau'
+         ; expression = expression''
+         ; expression_value = value_opt
+         })
 
   and reconstruct_query_declaration location identifier_opt cD extT
       expected_solutions maximum_tries =

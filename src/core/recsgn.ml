@@ -232,7 +232,7 @@ let recSgnDecls decls =
     | Ext.Sgn.Comment { location; content } ->
         Int.Sgn.Comment { location; content }
     | Ext.Sgn.Pragma { location=loc; pragma=Ext.Sgn.AbbrevPrag (orig, abbrev) } ->
-       Int.Sgn.Pragma { pragma=Int.LF.AbbrevPrag (orig, abbrev) }
+       Int.Sgn.Pragma { pragma= Obj.magic () }
     | Ext.Sgn.Pragma { location=loc; pragma=Ext.Sgn.DefaultAssocPrag a } ->
        OpPragmas.default := a;
        Int.Sgn.Pragma { pragma=Int.LF.DefaultAssocPrag a }

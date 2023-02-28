@@ -263,15 +263,22 @@ module LF = struct
     | OpenPrag of Qualified_identifier.t
     | DefaultAssocPrag of Associativity.t
     | FixPrag of Name.t * Fixity.t * int option * Associativity.t option
-    | AbbrevPrag of string list * string
+    | AbbrevPrag of
+        { location : Location.t
+        ; module_identifier : Qualified_identifier.t
+        ; abbreviation : Identifier.t
+        }
+        (** [AbbrevPrag { module_identifier; abbreviation; _ }] is the
+            pragma [--abbrev module_identifier abbreviation.] for defining
+            the alias [abbreviation] for the module [module_identifier]. *)
     | Query of
-      { location: Location.t
-      ; name: Name.t option
-      ; mctx: mctx
-      ; typ: (typ * Id.offset)
-      ; expected_solutions: int option
-      ; maximum_tries: int option
-      } (** Logic programming query on LF type *)
+        { location : Location.t
+        ; name : Name.t option
+        ; mctx : mctx
+        ; typ : typ * Id.offset
+        ; expected_solutions : int option
+        ; maximum_tries : int option
+        }  (** Logic programming query on LF type *)
 
   (**********************)
   (* Helpers            *)

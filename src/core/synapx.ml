@@ -137,7 +137,7 @@ module Comp = struct
     | TypPiBox of Location.t * LF.ctyp_decl * typ
     | TypInd of typ
 
-  (** Normal computational terms *)
+  (** Computation-level terms *)
   and exp =                                                       (* e ::=                              *)
     | Fn         of Location.t * Name.t * exp                     (*   | fn x => e                      *)
     | Fun        of Location.t * fun_branches                     (*   | fun   fbranches                *)

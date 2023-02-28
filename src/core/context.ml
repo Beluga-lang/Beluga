@@ -21,12 +21,13 @@ let rec decs ds ctx =
 let is_null =
   function
   | Null -> true
-  | _ -> false
+  | CtxVar _
+  | DDec _ -> false
 
 let is_empty =
   function
   | Empty -> true
-  | _ -> false
+  | Dec _ -> false
 
 let addToHat (ctxvarOpt, length) =
   (ctxvarOpt, length + 1)

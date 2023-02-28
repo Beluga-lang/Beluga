@@ -20,6 +20,29 @@ exception Unexpected_entry_reconstruction_success
 
 exception Unsupported_recursive_declaration
 
+exception
+  Missing_totality_declarations of
+    { programs_with : Identifier.t List.t
+    ; programs_without : Identifier.t List.t
+    }
+
+exception Too_many_totality_declaration_arguments of Identifier.t
+
+exception
+  Totality_declaration_program_mismatch of
+    { expected_program : Identifier.t
+          (** The identifier of the program the totality declaration is
+              attached to *)
+    ; actual_program : Identifier.t
+          (** The program identifier in the totality declaration *)
+    }
+
+exception
+  Unbound_totality_declaration_argument of
+    { unbound_argument : Identifier.t
+    ; arguments : Identifier.t Option.t List.t
+    }
+
 let () =
   Error.register_exception_printer (function
     | Dangling_not_pragma ->
@@ -34,6 +57,41 @@ let () =
         Format.dprintf "%a" Format.pp_print_text
           "Reconstruction of this declaration is unsupported in a mutually \
            recursive group of declarations."
+    | Missing_totality_declarations { programs_with; programs_without } ->
+        Format.dprintf
+          "@[<v 0>@[%a@]@]The function(s)@,\
+          \  @[<hov>%a@]@,\
+           have totality declarations, but the function(s)@,\
+          \  @[<hov>%a@]@,\
+           are missing totality declarations." Format.pp_print_text
+          "This mutual definition block does not have consistent totality \
+           declarations. Either all or none of functions must be declared \
+           total."
+          (List.pp ~pp_sep:Format.comma Identifier.pp)
+          programs_with
+          (List.pp ~pp_sep:Format.comma Identifier.pp)
+          programs_without
+    | Too_many_totality_declaration_arguments program ->
+        Format.dprintf
+          "The totality declaration for %a has too many arguments."
+          Identifier.pp program
+    | Totality_declaration_program_mismatch
+        { expected_program; actual_program } ->
+        Format.dprintf
+          "@[<v 0>@[Expected totality declaration for %a.@]@,\
+           @[Found totality declaration for %a.@]@]" Identifier.pp
+          expected_program Identifier.pp actual_program
+    | Unbound_totality_declaration_argument { unbound_argument; arguments }
+      ->
+        let pp_argument ppf = function
+          | Option.None -> Format.pp_print_string ppf "_"
+          | Option.Some argument -> Identifier.pp ppf argument
+        in
+        Format.dprintf
+          "The argument %a does not appear in argument list @[<h>%a@]."
+          Identifier.pp unbound_argument
+          (List.pp ~pp_sep:Format.comma pp_argument)
+          arguments
     | exn -> Error.raise_unsupported_exception_printing exn)
 
 module type SIGNATURE_RECONSTRUCTION_STATE = sig
@@ -138,6 +196,10 @@ module type SIGNATURE_RECONSTRUCTION_STATE = sig
        Synext.comp_typ
     -> Synext.comp_kind
     -> (Synapx.Comp.typ * Synapx.Comp.kind) t
+
+  val index_comp_theorem : Synext.comp_expression -> Synapx.Comp.thm t
+
+  val index_harpoon_proof : Synext.harpoon_proof -> Synapx.Comp.thm t
 
   val add_lf_type_constant :
     ?location:Location.t -> Identifier.t -> Id.cid_typ -> Unit.t t
@@ -677,6 +739,7 @@ module Make (Signature_reconstruction_state : SIGNATURE_RECONSTRUCTION_STATE) :
     Obj.magic () (* TODO: *)
 
   and reconstruct_recursive_declarations location declarations =
+    (* TODO: Freeze all having identifiers in [declarations] *)
     let (List1.T (first_declaration, declarations')) = declarations in
     match first_declaration with
     | Synext.Signature.Declaration.Typ _ ->
@@ -709,8 +772,296 @@ module Make (Signature_reconstruction_state : SIGNATURE_RECONSTRUCTION_STATE) :
   and reconstruct_recursive_comp_typ_declarations location declarations =
     Obj.magic () (* TODO: *)
 
+  and translate_totality_order :
+        'a.
+        'a Synext.signature_totality_order -> 'a Synint.Comp.generic_order =
+    function
+    | Synext.Signature.Totality.Order.Argument { argument; _ } ->
+        Synint.Comp.Arg argument
+    | Synext.Signature.Totality.Order.Lexical_ordering
+        { location; arguments } ->
+        let arguments' = List1.map translate_totality_order arguments in
+        Synint.Comp.Lex (List1.to_list arguments')
+    | Synext.Signature.Totality.Order.Simultaneous_ordering
+        { location; arguments } ->
+        let arguments' = List1.map translate_totality_order arguments in
+        Synint.Comp.Simul (List1.to_list arguments')
+
+  and reconstruct_totality_declaration program typ declaration =
+    match declaration with
+    | Synext.Signature.Totality.Declaration.Trust _ -> `trust
+    | Synext.Signature.Totality.Declaration.Numeric { location; order } -> (
+        match order with
+        | Option.None -> `not_recursive
+        | Option.Some order ->
+            `inductive
+              (Reconstruct.numeric_order typ
+                 (translate_totality_order order)))
+    | Synext.Signature.Totality.Declaration.Named
+        { location; order; program = program'; argument_labels } -> (
+        if
+          (* Validate the inputs: can't have too many args or the wrong
+             name *)
+          Bool.not (Total.is_valid_args typ (List.length argument_labels))
+        then
+          Error.raise_at1 location
+            (Too_many_totality_declaration_arguments program)
+        else if Identifier.(program <> program') then
+          Error.raise_at1 location
+            (Totality_declaration_program_mismatch
+               { expected_program = program; actual_program = program' })
+        else
+          match order with
+          | Option.None -> `not_recursive
+          | Option.Some order ->
+              (* Reconstruct to a numeric order by looking up the positions
+                 of the specified arguments. *)
+              let order =
+                order |> translate_totality_order
+                |> Synint.Comp.map_order (fun x ->
+                       match
+                         List.index_of
+                           (Option.equal Identifier.equal (Option.some x))
+                           argument_labels
+                       with
+                       | Option.None ->
+                           Error.raise_at1 location
+                             (Unbound_totality_declaration_argument
+                                { unbound_argument = x
+                                ; arguments = argument_labels
+                                })
+                       | Option.Some k ->
+                           k + 1 (* index_of is 0-based, but we're 1-based *))
+                |> Order.of_numeric_order
+              in
+              `inductive order)
+
+  (** [guard_totality_declarations location declarations] collects the
+      totality declarations in [declarations] and ensures that either:
+
+      - each declaration in [declarations] has a totality declaration, or
+      - no declaration in [declarations] has a totality declaration.
+
+      [location] is the location of the mutually recursive group of
+      declarations [declarations], and is used for error-reporting. *)
+  and guard_totality_declarations location declarations =
+    match
+      List1.partition_map
+        (function
+          | `Proof (identifier, _, totality_declaration_opt, _)
+          | `Theorem (identifier, _, totality_declaration_opt, _) -> (
+              match totality_declaration_opt with
+              | Option.None -> Either.left identifier
+              | Option.Some totality_declaration ->
+                  Either.right (identifier, totality_declaration)))
+        declarations
+    with
+    | Either.Right ([], haves) ->
+        (* All the program declarations have a totality declaration *)
+        Option.some (List1.map Pair.snd haves)
+    | Either.Left (_have_nots, []) ->
+        (* All the program declarations don't have a totality declaration *)
+        Option.none
+    | Either.Right (have_nots, haves) ->
+        Error.raise_at1 location
+          (Missing_totality_declarations
+             { programs_with = List1.to_list (List1.map Pair.fst haves)
+             ; programs_without = have_nots
+             })
+    | Either.Left (have_nots, haves) ->
+        Error.raise_at1 location
+          (Missing_totality_declarations
+             { programs_with = List.map Pair.fst haves
+             ; programs_without = List1.to_list have_nots
+             })
+
   and reconstruct_recursive_theorem_declarations location declarations =
-    Obj.magic () (* TODO: *)
+    let reconstruct_program_typ typ =
+      let* apx_tau = index_closed_comp_typ typ in
+      let tau' =
+        Monitor.timer
+          ("Function Type Elaboration", fun () -> Reconstruct.comptyp apx_tau)
+      in
+      Unify.forceGlobalCnstr ();
+      (* Are some FMVars delayed since we can't infer their type? - Not
+         associated with pattsub *)
+      let tau', _ =
+        Monitor.timer
+          ("Function Type Abstraction", fun () -> Abstract.comptyp tau')
+      in
+      Monitor.timer
+        ( "Function Type Check"
+        , fun () -> Check.Comp.checkTyp Synint.LF.Empty tau' );
+      Store.FCVar.clear ();
+
+      (* XXX do we need this strip? -je AFAIK tau' is not annotated. *)
+      return (Total.strip tau')
+    in
+
+    let register_program identifier tau' total_decs =
+      let name = Name.make_from_identifier identifier in
+      Store.Cid.Comp.add (fun cid ->
+          Store.Cid.Comp.mk_entry
+            (Option.some (Decl.next ()))
+            name tau' 0 total_decs Option.none)
+    in
+
+    let total_decs = guard_totality_declarations location declarations in
+
+    let preprocess =
+      traverse_list1 (function
+        | `Proof (identifier, typ, _totality_declaration_opt, body) ->
+            let* tau' = reconstruct_program_typ typ in
+            return
+              ( (identifier, `Proof body, location, tau')
+              , register_program identifier tau' )
+        | `Theorem (identifier, typ, _totality_declaration_opt, body) ->
+            let* tau' = reconstruct_program_typ typ in
+            return
+              ( (identifier, `Theorem body, location, tau')
+              , register_program identifier tau' ))
+    in
+
+    let* preprocessed = preprocess declarations in
+
+    let thm_list, registers = List1.split preprocessed in
+
+    (* We have the elaborated types of the theorems, so we construct the
+       final list of totality declarations for this mutual group. *)
+    let total_decs =
+      match total_decs with
+      | Option.Some total_decs ->
+          List1.map2
+            (fun (thm_name, _, _, tau) decl ->
+              reconstruct_totality_declaration thm_name tau decl
+              |> Synint.Comp.make_total_dec
+                   (Name.make_from_identifier thm_name)
+                   tau)
+            thm_list total_decs
+      | Option.None ->
+          List1.map
+            (fun (thm_name, _, _, tau) ->
+              Synint.Comp.make_total_dec
+                (Name.make_from_identifier thm_name)
+                tau `partial)
+            thm_list
+    in
+
+    (* We have the list of all totality declarations for this group, so we
+       can register each theorem in the store. *)
+    let thm_cid_list =
+      registers
+      |> List1.flap
+           (Store.Cid.Comp.add_mutual_group (List1.to_list total_decs))
+    in
+
+    let reconThm loc (f, cid, thm, tau) =
+      let name = Name.make_from_identifier f in
+      let* apx_thm =
+        match thm with
+        | `Proof p -> index_harpoon_proof p
+        | `Theorem p -> index_comp_theorem p
+      in
+      dprint (fun () -> "[reconThm] Indexing theorem done.");
+      let thm' =
+        Monitor.timer
+          ( "Function Elaboration"
+          , fun () ->
+              Reconstruct.thm Synint.LF.Empty apx_thm
+                (Total.strip tau, C.m_id) )
+      in
+      dprintf (fun p ->
+          p.fmt
+            "[reconThm] @[<v>Elaboration of theorem %a : %a@,\
+             result: @[%a@]@]" Identifier.pp f
+            (P.fmt_ppr_cmp_typ Synint.LF.Empty P.l0)
+            tau P.fmt_ppr_cmp_thm thm');
+      (try Unify.forceGlobalCnstr () with
+      | Unify.GlobalCnstrFailure (loc, cnstr) ->
+          raise
+            (Check.Comp.Error
+               ( loc
+               , Check.Comp.UnsolvableConstraints (Option.some name, cnstr)
+               )));
+
+      Unify.resetGlobalCnstrs ();
+
+      dprintf (fun p ->
+          p.fmt "[AFTER reconstruction] @[<v>Function %a : %a@,@[%a@]@]"
+            Identifier.pp f
+            (P.fmt_ppr_cmp_typ Synint.LF.Empty P.l0)
+            tau P.fmt_ppr_cmp_thm thm');
+
+      let thm'' = Whnf.cnormThm (thm', Whnf.m_id) in
+      let cQ, thm_r =
+        Monitor.timer ("Function Abstraction", fun () -> Abstract.thm thm'')
+      in
+      let* () = add_leftover_vars cQ location in
+
+      (* This abstraction is for detecting leftover metavariables, which is
+         an error. *)
+      let thm_r' = Whnf.cnormThm (thm_r, Whnf.m_id) in
+
+      let tau_ann =
+        match Total.lookup_dec name (List1.to_list total_decs) with
+        | Option.None -> tau
+        | Option.Some d ->
+            let tau = Total.annotate loc d.Synint.Comp.order tau in
+            dprintf (fun p ->
+                p.fmt "[reconThm] @[<v>got annotated type:@,@[%a@]@]"
+                  P.(fmt_ppr_cmp_typ Synint.LF.Empty l0)
+                  tau);
+            tau
+      in
+      Monitor.timer
+        ( "Function Check"
+        , fun () ->
+            dprintf (fun p ->
+                p.fmt
+                  "[recThm] @[<v>begin checking theorem %a.@,\
+                   @[<hv 2>total_decs =@ @[<v>%a@]@]@,\
+                   tau_ann = @[%a@]@]" Identifier.pp f
+                  (List1.pp ~pp_sep:Format.pp_print_cut
+                     P.(fmt_ppr_cmp_total_dec))
+                  total_decs
+                  P.(fmt_ppr_cmp_typ Synint.LF.Empty l0)
+                  tau_ann);
+            Total.enabled :=
+              Total.requires_checking name (List1.to_list total_decs);
+            Check.Comp.thm (Some cid) Synint.LF.Empty Synint.LF.Empty
+              (List1.to_list total_decs)
+              thm_r' (tau_ann, C.m_id);
+            Total.enabled := false );
+      return (thm_r', tau)
+    in
+
+    let* ds =
+      let reconOne (thm_cid, (thm_name, thm_body, thm_location, thm_typ)) =
+        let* e_r', tau' =
+          reconThm thm_location (thm_name, thm_cid, thm_body, thm_typ)
+        in
+        dprintf (fun p ->
+            p.fmt
+              "[reconRecFun] @[<v>DOUBLE CHECK of function %a at %a \
+               successful@,\
+               Adding definition to the store.@]" Identifier.pp thm_name
+              Location.print_short thm_location);
+        let v =
+          Synint.Comp.ThmValue
+            (thm_cid, e_r', Synint.LF.MShift 0, Synint.Comp.Empty)
+        in
+        Store.Cid.Comp.set_prog thm_cid (Fun.const (Option.some v));
+        return
+          (Synint.Sgn.Theorem
+             { name = thm_cid
+             ; body = e_r'
+             ; location = thm_location
+             ; typ = tau'
+             })
+      in
+      traverse_list1 reconOne (List1.combine thm_cid_list thm_list)
+    in
+    return (Synint.Sgn.Theorems { location; theorems = ds })
 
   and group_recursive_lf_typ_declarations first_declaration declarations =
     match first_declaration with

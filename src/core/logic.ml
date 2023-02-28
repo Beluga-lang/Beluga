@@ -7,7 +7,7 @@ open Support.Equality
  *)
 
 open Support
-open Beluga_syntax.Common
+open Beluga_syntax
 module S = Substitution.LF
 open Format
 open Syntax.Int
@@ -721,8 +721,6 @@ end
 
 
 module Index = struct
-  open Store
-
   let types = Hashtbl.create 0          (* typConst Hashtbl.t          *)
 
   let compITypes = Hashtbl.create 0     (* compTypConst Hashtbl.t      *)
@@ -795,17 +793,17 @@ module Index = struct
 
   (* LF Constants  *)
   let compileSgnClause cidTerm =
-    let { Cid.Term.Entry.typ = tA; _ } = Cid.Term.get cidTerm in
+    let { Store.Cid.Term.Entry.typ = tA; _ } = Store.Cid.Term.get cidTerm in
     (cidTerm, Convert.typToClause tA)
 
   (* Computation Theorem Constants  *)
   let compileSgnCClause cidTerm =
-    let { Cid.Comp.Entry.typ = tau; _ } = Cid.Comp.get cidTerm in
+    let { Store.Cid.Comp.Entry.typ = tau; _ } = Store.Cid.Comp.get cidTerm in
     (cidTerm, Convert.comptypToCClause tau)
 
   (* Computation Inductive Constants *)
   let compileSgnConstClause cidCompTerm =
-    let { Cid.CompConst.Entry.typ = tau; _ } = Cid.CompConst.get cidCompTerm in
+    let { Store.Cid.CompConst.Entry.typ = tau; _ } = Store.Cid.CompConst.get cidCompTerm in
     (cidCompTerm, Convert.comptypToCClause tau)
 
 
@@ -813,13 +811,13 @@ module Index = struct
      Get the string representation of term constant c.
   *)
   let termName cidTerm =
-    (Cid.Term.get cidTerm).Cid.Term.Entry.name
+    (Store.Cid.Term.get cidTerm).Store.Cid.Term.Entry.name
 
   let compName cidTerm =
-    (Cid.Comp.get cidTerm).Cid.Comp.Entry.name
+    (Store.Cid.Comp.get cidTerm).Store.Cid.Comp.Entry.name
 
   let compConstName cidTerm =
-    (Cid.CompConst.get cidTerm).Cid.CompConst.Entry.name
+    (Store.Cid.CompConst.get cidTerm).Store.Cid.CompConst.Entry.name
 
   (* storeTypConst c = ()
      Add a new entry in `types' for type constant c and fill the DynArray
@@ -829,7 +827,7 @@ module Index = struct
      listed in reverse order.
   *)
   let storeTypConst (cidTyp, typEntry) =
-    let typConstr = !(typEntry.Cid.Typ.Entry.constructors) in
+    let typConstr = !(typEntry.Store.Cid.Typ.Entry.constructors) in
     let typConst = addTyp cidTyp in
     let regSgnClause cidTerm =
       addSgnClause typConst (compileSgnClause cidTerm)
@@ -862,7 +860,7 @@ module Index = struct
 
 
   let storeCompConst (cidCompTyp, compTypEntry) =
-    let ctypConstr = !(compTypEntry.Cid.CompTyp.Entry.constructors) in
+    let ctypConstr = !(compTypEntry.Store.Cid.CompTyp.Entry.constructors) in
     let ctypConst = addCompTyp cidCompTyp in
     let regSgnCClause cidCompTerm =
       addSgnClause ctypConst (compileSgnConstClause cidCompTerm)
@@ -890,7 +888,7 @@ module Index = struct
   *)
   let rob_LF_Store () =
     try
-      List.iter storeTypConst (Cid.Typ.current_entries ())
+      List.iter storeTypConst (Store.Cid.Typ.current_entries ())
     with
     | _ -> ()
 
@@ -899,7 +897,7 @@ module Index = struct
   *)
   let rob_CompValue_Store () =
     try
-      List.iter storeCompValue (Cid.Comp.current_entries ())
+      List.iter storeCompValue (Store.Cid.Comp.current_entries ())
     with
     | _ -> ()
 
@@ -909,7 +907,7 @@ module Index = struct
   *)
   let rob_CompConst_Store () =
     try
-      List.iter storeCompConst (Cid.CompTyp.current_entries ())
+      List.iter storeCompConst (Store.Cid.CompTyp.current_entries ())
     with
     | _ -> ()
 

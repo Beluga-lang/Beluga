@@ -7,9 +7,8 @@
 open Support
 
 open Context
-open Beluga_syntax.Common
+open Beluga_syntax
 open Syntax.Int.LF
-open Store.Cid
 
 let (dprintf, _, _) = Debug.makeFunctions' (Debug.toFlags [12])
 open Debug.Fmt
@@ -112,7 +111,7 @@ let rec ctxToSub_mclosed cD psi =
      let s' = Whnf.cnormSub (s, MShift 1) in
      let result = Dot (Obj u, s') in
 
-     let u_name = Name.mk_name (Name.MVarName (Typ.gen_mvar_name tA')) in
+     let u_name = Name.mk_name (Name.MVarName (Store.Cid.Typ.gen_mvar_name tA')) in
      (* dprint (fun () -> "[ctxToSub_mclosed] result = " ^ subToString result); *)
      ( Dec
          ( cD'
@@ -138,7 +137,7 @@ let rec ctxToSub_mclosed cD psi =
      (* cD', u: _   ; psi |- s : cPsi', x:tA *)
      let s' = Whnf.cnormSub (s, MShift 1) in
      let tM , clT = lowerMVar (Whnf.cnormDCtx (CtxVar psi, MShift k)) (tA, s) in   (* where clT is the type of the mvar in M *)
-     let u_name = Name.mk_name (Name.MVarName (Typ.gen_mvar_name tA')) in
+     let u_name = Name.mk_name (Name.MVarName (Store.Cid.Typ.gen_mvar_name tA')) in
      let result = Dot (Obj tM, s') in
      (* dprint (fun () -> "[ctxToSub_mclosed] result = " ^ subToString result); *)
      ( Dec

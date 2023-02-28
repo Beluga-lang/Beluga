@@ -5,9 +5,7 @@ open Support.Equality
 *)
 
 open Support
-open Store
-open Store.Cid
-open Beluga_syntax.Common
+open Beluga_syntax
 open Syntax
 open Substitution
 open ConvSigma
@@ -304,7 +302,7 @@ let rec elDCtxAgainstSchema loc recT cD psi s_cid =
      Int.LF.CtxVar (Whnf.newCVar None cD (Some s_cid) Plicity.implicit Inductivity.not_inductive)
 
   | Apx.LF.CtxVar ((Apx.LF.CtxOffset _) as c_var) ->
-     let { Schema.Entry.name; schema; decl = _ } = Schema.get s_cid in
+     let { Store.Cid.Schema.Entry.name; schema; decl = _ } = Store.Cid.Schema.get s_cid in
      let c_var = Lfrecon.elCtxVar c_var in
      Int.LF.CtxVar c_var
      |> F.through (fun cPsi' -> Check.LF.checkSchema loc cD cPsi' name schema)
@@ -313,16 +311,16 @@ let rec elDCtxAgainstSchema loc recT cD psi s_cid =
      (* This case should only be executed when c_var occurs in a pattern *)
      begin
        try
-         let (_, Int.LF.Decl (_, Int.LF.CTyp (Some s_cid'), _, _)) = FCVar.get psi in
+         let (_, Int.LF.Decl (_, Int.LF.CTyp (Some s_cid'), _, _)) = Store.FCVar.get psi in
          if Id.cid_schema_equal s_cid s_cid'
          then Int.LF.CtxVar (Int.LF.CtxName psi)
          else
-           let { Schema.Entry.name; schema; decl = _ } = Schema.get s_cid in
+           let { Store.Cid.Schema.Entry.name; schema; decl = _ } = Store.Cid.Schema.get s_cid in
            let c_var' = Int.LF.CtxName psi in
            Check.LF.(CtxVarMismatch (cD, c_var', name, schema) |> throw (Name.location psi))
        with
        | Not_found ->
-          FCVar.add psi (cD, Int.LF.Decl (psi, Int.LF.CTyp (Some s_cid), Plicity.implicit, Inductivity.not_inductive));
+          Store.FCVar.add psi (cD, Int.LF.Decl (psi, Int.LF.CTyp (Some s_cid), Plicity.implicit, Inductivity.not_inductive));
           Int.LF.CtxVar (Int.LF.CtxName psi)
      end
 
@@ -362,7 +360,7 @@ let unifyDCtxWithFCVar loc cD cPsi1 cPsi2 =
          match Context.ctxVar cPsi with
          | None -> ()
          | Some (Int.LF.CtxName psi) ->
-            FCVar.add psi (cD, Int.LF.(Decl (psi, CTyp (Some s_cid), v.plicity, v.inductivity)))
+            Store.FCVar.add psi (cD, Int.LF.(Decl (psi, CTyp (Some s_cid), v.plicity, v.inductivity)))
          | _ -> ()
        end
 
@@ -562,7 +560,7 @@ let mgAtomicTyp cD cPsi a kK =
 let rec mgTyp cD cPsi =
   function
   | Int.LF.Atom (_, a, _) ->
-     mgAtomicTyp cD cPsi a (Typ.get a).Typ.Entry.kind
+     mgAtomicTyp cD cPsi a (Store.Cid.Typ.get a).Store.Cid.Typ.Entry.kind
 
   | Int.LF.Sigma trec ->
      Int.LF.Sigma (mgTypRec cD cPsi trec)
@@ -736,7 +734,7 @@ let rec elCompTyp cD =
   function
   | Apx.Comp.TypBase (loc, a, cS) ->
      dprint (fun () -> "[elCompTyp] Base : " ^ R.render_cid_comp_typ a);
-     let tK = (CompTyp.get a).CompTyp.Entry.kind in
+     let tK = (Store.Cid.CompTyp.get a).Store.Cid.CompTyp.Entry.kind in
      dprintf
        begin fun p ->
        p.fmt "[elCompTyp] of kind: %a"
@@ -747,7 +745,7 @@ let rec elCompTyp cD =
 
   | Apx.Comp.TypCobase (loc, a, cS) ->
       dprint (fun () -> "[elCompCotyp] Cobase : " ^ R.render_cid_comp_cotyp a);
-      let tK = (CompCotyp.get a).CompCotyp.Entry.kind in
+      let tK = (Store.Cid.CompCotyp.get a).Store.Cid.CompCotyp.Entry.kind in
       dprintf
         begin fun p ->
         p.fmt "[elCompCotyp] of kind: %a"
@@ -757,9 +755,9 @@ let rec elCompTyp cD =
       Int.Comp.TypCobase (loc, a, cS')
 
   | Apx.Comp.TypDef (loc, a, cS) ->
-     let tK = (CompTypDef.get a).CompTypDef.Entry.kind in
+     let tK = (Store.Cid.CompTypDef.get a).Store.Cid.CompTypDef.Entry.kind in
      let cS' = elMetaSpine loc cD cS (tK, C.m_id) in
-     let tau = (CompTypDef.get a).CompTypDef.Entry.typ in
+     let tau = (Store.Cid.CompTypDef.get a).Store.Cid.CompTypDef.Entry.typ in
      (* eager expansion of type definitions - to make things simple for now
         -bp *)
      let ms = spineToMSub cS' (Int.LF.MShift 0) in
@@ -805,7 +803,7 @@ let mgCompTypSpine cD (loc, cK) =
   genMetaSpine (cK, Whnf.m_id)
 
 let mgCompCotyp cD (loc, c) =
-  let cK = (CompCotyp.get c).CompCotyp.Entry.kind in
+  let cK = (Store.Cid.CompCotyp.get c).Store.Cid.CompCotyp.Entry.kind in
   let mS = mgCompTypSpine cD (loc, cK) in
   dprintf
     begin fun p ->
@@ -816,7 +814,7 @@ let mgCompCotyp cD (loc, c) =
   Int.Comp.TypCobase (loc, c, mS)
 
 let mgCompTyp cD (loc, c) =
-  let cK = (CompTyp.get c).CompTyp.Entry.kind in
+  let cK = (Store.Cid.CompTyp.get c).Store.Cid.CompTyp.Entry.kind in
   let mS = mgCompTypSpine cD (loc, cK) in
   dprintf
     begin fun p ->
@@ -1205,7 +1203,7 @@ and elExp' cD cG i =
      (Int.Comp.Var (loc, offset), (tau, C.m_id))
 
   | Apx.Comp.DataConst (loc, c) ->
-     let tau = (CompConst.get c).CompConst.Entry.typ in
+     let tau = (Store.Cid.CompConst.get c).Store.Cid.CompConst.Entry.typ in
      dprintf
        begin fun p ->
        p.fmt "[elExp'] @[<v>DataConst %s has type@,@[%a@]@]"
@@ -1215,11 +1213,11 @@ and elExp' cD cG i =
      (Int.Comp.DataConst (loc, c), (tau, C.m_id))
 
   | Apx.Comp.Obs (loc, e, obs) ->
-     let { CompDest.Entry.mctx = cD'
+     let { Store.Cid.CompDest.Entry.mctx = cD'
          ; obs_type = tau0
          ; return_type = tau1
          ; _
-         } = CompDest.get obs in
+         } = Store.Cid.CompDest.get obs in
      let t = Ctxsub.mctxToMMSub cD cD' in
      dprintf
        begin fun p ->
@@ -1244,7 +1242,7 @@ and elExp' cD cG i =
   (*    (Int.Comp.DataDest (loc, c), ((CompDest.get c).CompDest.typ, C.m_id)) *)
 
   | Apx.Comp.Const (loc, prog) ->
-     (Int.Comp.Const (loc, prog), ((Comp.get prog).Comp.Entry.typ, C.m_id))
+     (Int.Comp.Const (loc, prog), ((Store.Cid.Comp.get prog).Store.Cid.Comp.Entry.typ, C.m_id))
 
   | Apx.Comp.Apply (loc, i, e) ->
      dprintf
@@ -1609,7 +1607,7 @@ and elPatSyn (cD : Int.LF.mctx) (cG : Int.Comp.gctx) =
      (cG', Int.Comp.PatAnn (loc, pat', tau', Plicity.explicit), (tau', Whnf.m_id))
 
   | Apx.Comp.PatConst (loc, c, pat_spine) ->
-     let { CompConst.Entry.typ = tau; _ } = CompConst.get c in
+     let { Store.Cid.CompConst.Entry.typ = tau; _ } = Store.Cid.CompConst.get c in
      dprintf (fun p -> p.fmt "[elPat] PatConst = %s@." (R.render_cid_comp_const c));
      let (cG1, pat_spine', ttau') = elPatSpine cD cG pat_spine (tau, Whnf.m_id) in
      (cG1, Int.Comp.PatConst (loc, c, pat_spine'), ttau')
@@ -1691,12 +1689,12 @@ and elPatSpineW cD cG pat_spine ttau =
   | Apx.Comp.PatObs (loc, obs, pat_spine') ->
      begin match ttau with
      | (Int.Comp.TypCobase (_, _, _), _) ->
-        let { CompDest.Entry.name
+        let { Store.Cid.CompDest.Entry.name
             ; mctx = cD'
             ; obs_type = tau0
             ; return_type = tau1
             ; _
-            } = CompDest.get obs in
+            } = Store.Cid.CompDest.get obs in
         dprintf
           begin fun p ->
           p.fmt "[elPatSpine] @[<v>Observation: %a@,cD = @[%a@]@,cD' = @[%a@]@]"
@@ -2010,7 +2008,7 @@ and elBranch caseTyp cD cG branch tau_s (tau, theta) =
        end;
      let eE' = elExp cD1'' cG_ext e' (tau', Whnf.m_id) in
      dprint (fun () -> "[elBranch] Body done (general pattern) \n");
-     FCVar.clear();
+     Store.FCVar.clear();
      Int.Comp.Branch (loc, cD_prefix, (cD1'', cG1'), pat1', t', eE')
 
 
@@ -2045,7 +2043,7 @@ and elFBranch cD cG fbr theta_tau =
          (P.fmt_ppr_cmp_typ cD1 P.l0) tau1
        end;
      let e'' = elExp cD1 cG1 e' (tau1, Whnf.m_id) in
-     FCVar.clear();
+     Store.FCVar.clear();
      dprintf
        begin fun p ->
        p.fmt "[elExp] @[<v>Fun: Done@,expression @[%a@]@,has type @[%a@]@]"
@@ -2328,9 +2326,8 @@ and elSplit loc cD cG pb i tau_i bs ttau =
     | A.NamedCase (loc, name) ->
        let cid, tA, k =
          try
-           let open Store.Cid.Term in
-           let cid = index_of_name name in
-           let { Entry.typ; implicit_arguments; _ } = get cid in
+           let cid = Store.Cid.Term.index_of_name name in
+           let { Store.Cid.Term.Entry.typ; implicit_arguments; _ } = Store.Cid.Term.get cid in
            (cid, typ, implicit_arguments)
          with
          | Not_found ->
@@ -2475,13 +2472,13 @@ and elSplit loc cD cG pb i tau_i bs ttau =
     | A.NamedCase (loc, name) ->
        let cid =
          try
-           CompConst.index_of_name name
+           Store.Cid.CompConst.index_of_name name
          with
          | Not_found ->
             UnboundCaseLabel (`comp, name, cD, tau_i)
             |> throw loc
        in
-       let { CompConst.Entry.typ = tau_c; _ } = CompConst.get cid in
+       let { Store.Cid.CompConst.Entry.typ = tau_c; _ } = Store.Cid.CompConst.get cid in
 
        dprintf
          begin fun p ->

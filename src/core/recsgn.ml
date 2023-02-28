@@ -1,7 +1,5 @@
 open Support.Equality
 open Support
-open Store
-open Store.Cid
 open Beluga_syntax.Common
 open Syntax
 
@@ -135,16 +133,16 @@ let rec get_target_cid_compcotyp tau =
 let freeze_from_name tau =
   match tau with
   | Ext.Sgn.Typ { identifier; _ } ->
-     let a = Typ.index_of_name identifier in
-     Typ.freeze a;
+     let a = Store.Cid.Typ.index_of_name identifier in
+     Store.Cid.Typ.freeze a;
      ()
   | Ext.Sgn.CompTyp { identifier; _ } ->
-     let a = CompTyp.index_of_name identifier in
-     CompTyp.freeze a;
+     let a = Store.Cid.CompTyp.index_of_name identifier in
+     Store.Cid.CompTyp.freeze a;
      ()
   | Ext.Sgn.CompCotyp { identifier; _ } ->
-     let a = CompCotyp.index_of_name identifier in
-     CompCotyp.freeze a;
+     let a = Store.Cid.CompCotyp.index_of_name identifier in
+     Store.Cid.CompCotyp.freeze a;
      ()
 
 let sgnDeclToHtml =
@@ -225,7 +223,7 @@ let recSgnDecls decls =
 
   and recSgnDecl ?(pauseHtml=false) d =
     Reconstruct.reset_fvarCnstr ();
-    FCVar.clear ();
+    Store.FCVar.clear ();
     if !Html.generate && Bool.not pauseHtml
     then sgnDeclToHtml d;
     match d with
@@ -234,13 +232,13 @@ let recSgnDecls decls =
     | Ext.Sgn.Pragma { location=loc; pragma=Ext.Sgn.AbbrevPrag (orig, abbrev) } ->
        Int.Sgn.Pragma { pragma= Obj.magic () }
     | Ext.Sgn.Pragma { location=loc; pragma=Ext.Sgn.DefaultAssocPrag a } ->
-       OpPragmas.default := a;
+       Store.OpPragmas.default := a;
        Int.Sgn.Pragma { pragma=Int.LF.DefaultAssocPrag a }
     | Ext.Sgn.Pragma { location=loc; pragma=Ext.Sgn.FixPrag (name, fix, precedence, assoc) } ->
        dprintf (fun p -> p.fmt "Pragma found for %a" Name.pp name);
        begin match fix with
        | Fixity.Prefix ->
-          OpPragmas.addPragma name fix (Some precedence) assoc
+          Store.OpPragmas.addPragma name fix (Some precedence) assoc
        | (Fixity.Infix | Fixity.Postfix) ->
           let args_expected =
             match fix with
@@ -249,11 +247,11 @@ let recSgnDecls decls =
           in
           let actual =
             try
-              Some (Typ.args_of_name name)
+              Some (Store.Cid.Typ.args_of_name name)
             with
             | _ ->
                try
-                 Some (Term.args_of_name name)
+                 Some (Store.Cid.Term.args_of_name name)
                with
                | _ -> None
           in
@@ -262,7 +260,7 @@ let recSgnDecls decls =
           | Some actual ->
              if args_expected = actual
              then
-               OpPragmas.addPragma name fix (Some precedence) assoc
+               Store.OpPragmas.addPragma name fix (Some precedence) assoc
              else
                raise (Error (loc, IllegalOperatorPrag (name, fix, actual)))
        end;
@@ -283,13 +281,13 @@ let recSgnDecls decls =
          (Monitor.type_abbrev_kind_check, fun () -> Check.Comp.checkKind Int.LF.Empty cK);
        Monitor.timer
          (Monitor.type_abbrev_type_check, fun () -> Check.Comp.checkTyp cD tau);
-       ignore (CompTypDef.add (fun _ -> CompTypDef.mk_entry identifier i (cD, tau) cK));
+       ignore (Store.Cid.CompTypDef.add (fun _ -> Store.Cid.CompTypDef.mk_entry identifier i (cD, tau) cK));
        Int.Sgn.CompTypAbbrev { location; identifier; kind=cK; typ=tau }
 
     | Ext.Sgn.CompTyp { location; identifier; kind=extK; datatype_flavour=pflag } ->
        dprint (fun () -> "Indexing computation-level data-type constant " ^ Name.string_of_name identifier);
        let apxK = Index.compkind extK in
-       FVar.clear ();
+       Store.FVar.clear ();
        dprint (fun () -> "Elaborating data-type declaration " ^ Name.string_of_name identifier);
        let cK =
          Monitor.timer
@@ -338,7 +336,7 @@ let recSgnDecls decls =
          | Ext.Sgn.InductiveDatatype -> Int.Sgn.Positivity
        in
        Total.stratNum := -1;
-       ignore (CompTyp.add (fun _ -> CompTyp.mk_entry identifier cK' i p));
+       ignore (Store.Cid.CompTyp.add (fun _ -> Store.Cid.CompTyp.mk_entry identifier cK' i p));
        Int.Sgn.CompTyp { location; identifier; kind=cK'; positivity_flag=p }
 
     | Ext.Sgn.CompCotyp { location; identifier; kind=extK } ->
@@ -348,7 +346,7 @@ let recSgnDecls decls =
              Location.print location);
        dprint (fun () -> "\nIndexing computation-level codata-type constant " ^ Name.string_of_name identifier);
        let apxK = Index.compkind extK in
-       FVar.clear ();
+       Store.FVar.clear ();
        dprint (fun () -> "\nElaborating codata-type declaration " ^ Name.string_of_name identifier);
        let cK =
          Monitor.timer
@@ -383,7 +381,7 @@ let recSgnDecls decls =
          (fun () ->
            "\nDOUBLE CHECK for codata type constant " ^ Name.string_of_name identifier ^
              " successful!");
-       ignore (CompCotyp.add (fun _ -> CompCotyp.mk_entry identifier cK' i));
+       ignore (Store.Cid.CompCotyp.add (fun _ -> Store.Cid.CompCotyp.mk_entry identifier cK' i));
        Int.Sgn.CompCotyp { location; identifier; kind=cK' }
 
 
@@ -424,7 +422,7 @@ let recSgnDecls decls =
          );
        let cid_ctypfamily = get_target_cid_comptyp tau' in
 
-       let flag = (CompTyp.get cid_ctypfamily).CompTyp.Entry.positivity in
+       let flag = (Store.Cid.CompTyp.get cid_ctypfamily).Store.Cid.CompTyp.Entry.positivity in
 
        begin match flag with
        | Int.Sgn.Nocheck -> ()
@@ -457,7 +455,7 @@ let recSgnDecls decls =
         *     else raise (Error (loc, (NoPositive (string_of_name c))))
         *   else ()
         * end; *)
-       ignore (CompConst.add cid_ctypfamily (fun _ -> CompConst.mk_entry identifier tau' i));
+       ignore (Store.Cid.CompConst.add cid_ctypfamily (fun _ -> Store.Cid.CompConst.mk_entry identifier tau' i));
        Int.Sgn.CompConst { location; identifier; typ=tau' }
 
 
@@ -521,7 +519,7 @@ let recSgnDecls decls =
          , fun () -> Check.Comp.checkTyp cD1 tau1'
          );
        let cid_ctypfamily = get_target_cid_compcotyp tau0' in
-       ignore (CompDest.add cid_ctypfamily (fun _ -> CompDest.mk_entry identifier cD1 tau0' tau1' i));
+       ignore (Store.Cid.CompDest.add cid_ctypfamily (fun _ -> Store.Cid.CompDest.mk_entry identifier cD1 tau0' tau1' i));
         Int.Sgn.CompDest
         { location
         ; identifier
@@ -538,7 +536,7 @@ let recSgnDecls decls =
              Location.print_short location);
        dprint (fun () -> "\nIndexing type constant " ^ Name.string_of_name a);
        let (_, apxK) = Index.kind Index.disambiguate_to_fvars extK in
-       FVar.clear ();
+       Store.FVar.clear ();
 
        dprint (fun () -> "\nElaborating type constant " ^ Name.string_of_name a);
        let tK =
@@ -573,7 +571,7 @@ let recSgnDecls decls =
          p.fmt "DOUBLE CHECK for type constant %s successful!" (Name.string_of_name a)
        );
        Typeinfo.Sgn.add location (Typeinfo.Sgn.mk_entry (Typeinfo.Sgn.Kind tK')) "";
-       let cid = Typ.add (fun _ -> Typ.mk_entry a tK' i) in
+       let cid = Store.Cid.Typ.add (fun _ -> Store.Cid.Typ.mk_entry a tK' i) in
        Int.Sgn.Typ { location; identifier=cid; kind=tK' }
 
     | Ext.Sgn.Const { location; identifier=c; typ=extT } ->
@@ -589,7 +587,7 @@ let recSgnDecls decls =
        in
        let constructedType = get_type_family apxT in
        dprint (fun () -> "Reconstructing term constant " ^ (Name.string_of_name c));
-       FVar.clear ();
+       Store.FVar.clear ();
        let tA =
          Monitor.timer
            ( Monitor.constant_elaboration
@@ -626,7 +624,7 @@ let recSgnDecls decls =
          , fun () -> Check.LF.checkTyp Int.LF.Empty Int.LF.Null (tA', S.LF.id)
          );
        Typeinfo.Sgn.add location (Typeinfo.Sgn.mk_entry (Typeinfo.Sgn.Typ tA')) "";
-       let cid = Term.add' location constructedType (fun _ -> Term.mk_entry c tA' i) in
+       let cid = Store.Cid.Term.add' location constructedType (fun _ -> Store.Cid.Term.mk_entry c tA' i) in
        Int.Sgn.Const { location; identifier=cid; typ=tA' }
 
     | Ext.Sgn.Schema { location; identifier=g; schema } ->
@@ -636,7 +634,7 @@ let recSgnDecls decls =
              Location.print_short location);
        let apx_schema = Index.schema schema in
        dprintf (fun p -> p.fmt "Reconstructing schema %s@." (Name.string_of_name g));
-       FVar.clear ();
+       Store.FVar.clear ();
        let sW = Reconstruct.schema apx_schema in
        dprintf
          begin fun p ->
@@ -657,7 +655,7 @@ let recSgnDecls decls =
          end;
        Check.LF.checkSchemaWf sW';
        dprintf (fun p -> p.fmt "TYPE CHECK for schema %s successful@." (Name.string_of_name g));
-       let sch = Schema.add (fun _ -> Schema.mk_entry g sW') in
+       let sch = Store.Cid.Schema.add (fun _ -> Store.Cid.Schema.mk_entry g sW') in
        Int.Sgn.Schema { location; identifier=sch; schema=sW' }
 
     | Ext.Sgn.Val { location; identifier; typ=None; expression } ->
@@ -702,13 +700,12 @@ let recSgnDecls decls =
          then
            begin
              let v = Some (Opsem.eval expression'') in
-             let open Comp in
-             add begin fun _ ->
+             Store.Cid.Comp.add begin fun _ ->
                let mgid =
-                 Comp.add_mutual_group
+                 Store.Cid.Comp.add_mutual_group
                    Int.Comp.[{ name = identifier; tau = tau'; order = `not_recursive }]
                in
-               mk_entry (Some (Decl.next ())) identifier tau' 0 mgid v
+               Store.Cid.Comp.mk_entry (Some (Decl.next ())) identifier tau' 0 mgid v
                end
              |> ignore;
              v
@@ -779,13 +776,12 @@ let recSgnDecls decls =
          then
            begin
              let v = Some (Opsem.eval expression'') in
-             let open Comp in
              let mgid =
-               add_mutual_group
+               Store.Cid.Comp.add_mutual_group
                  Int.Comp.[ {name = identifier; tau = tau'; order = `not_recursive } ]
              in
-             add begin fun _ ->
-               mk_entry (Some (Decl.next ())) identifier tau' 0 mgid v
+             Store.Cid.Comp.add begin fun _ ->
+               Store.Cid.Comp.mk_entry (Some (Decl.next ())) identifier tau' 0 mgid v
                end;
              |> ignore;
              v
@@ -894,7 +890,7 @@ let recSgnDecls decls =
              ( Monitor.function_type_check
              , fun () -> Check.Comp.checkTyp Int.LF.Empty tau'
              );
-           FCVar.clear ();
+           Store.FCVar.clear ();
 
            let tau' = Total.strip tau' in
            (* XXX do we need this strip? -je
@@ -903,8 +899,8 @@ let recSgnDecls decls =
 
            let register =
              fun total_decs ->
-             Comp.add begin fun cid ->
-               Comp.mk_entry (Some (Decl.next ())) name tau' 0 total_decs None
+             Store.Cid.Comp.add begin fun cid ->
+               Store.Cid.Comp.mk_entry (Some (Decl.next ())) name tau' 0 total_decs None
                end
            in
            ( (name, body, location, tau')
@@ -939,7 +935,7 @@ let recSgnDecls decls =
         *)
        let thm_cid_list =
           registers
-          |> List1.flap (Comp.add_mutual_group (List1.to_list total_decs))
+          |> List1.flap (Store.Cid.Comp.add_mutual_group (List1.to_list total_decs))
        in
 
        let reconThm loc (f, cid, thm, tau) =
@@ -1039,7 +1035,7 @@ let recSgnDecls decls =
                Location.print_short thm_location
              end;
            let v = Int.(Comp.ThmValue (thm_cid, e_r', LF.MShift 0, Comp.Empty)) in
-           Comp.set_prog thm_cid (Fun.const (Some v));
+           Store.Cid.Comp.set_prog thm_cid (Fun.const (Some v));
            Int.Sgn.Theorem
              { name = thm_cid
              ; body = e_r'
@@ -1065,7 +1061,7 @@ let recSgnDecls decls =
              Location.print_short location);
        let (_, apxT) = Index.typ Index.disambiguate_to_fvars extT in
        dprint (fun () -> "Reconstructing query.");
-       FVar.clear ();
+       Store.FVar.clear ();
        let tA =
          Monitor.timer
            ( Monitor.constant_elaboration
@@ -1124,13 +1120,13 @@ let recSgnDecls decls =
            p.fmt "[RecSgn Checking] Pragma at %a"
              Location.print_short loc);
        begin match
-         try Some (Typ.index_of_name typ_name)
+         try Some (Store.Cid.Typ.index_of_name typ_name)
          with Not_found -> None
        with
        | Some cid ->
           let m = Some (Gensym.MVarData.name_gensym m_name) in
           let v = Option.(v_name $> Gensym.VarData.name_gensym) in
-          Typ.set_name_convention cid m v;
+          Store.Cid.Typ.set_name_convention cid m v;
           Int.Sgn.Pragma { pragma=Int.LF.NamePrag typ_name }
        | None ->
            throw loc (UnboundNamePragma typ_name)

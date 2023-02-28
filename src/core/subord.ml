@@ -11,8 +11,6 @@ include Options.Subord
 
 open Support
 open Syntax.Int.LF
-module Types = Store.Cid.Typ
-module Schema = Store.Cid.Schema
 
 let (dprintf, _, _) = Debug.(makeFunctions' (toFlags [28]))
 open Debug.Fmt
@@ -85,10 +83,10 @@ open Debug.Fmt
 let rec relevant tA basis =
   match tA with
   | Atom (_, a, _) ->
-     Types.freeze a;
+     Store.Cid.Typ.freeze a;
      if List.exists
           begin fun type_in_basis ->
-          Types.is_subordinate_to type_in_basis a
+          Store.Cid.Typ.is_subordinate_to type_in_basis a
           || Id.cid_typ_equal a type_in_basis
           end basis
      then [a]
@@ -161,7 +159,7 @@ let thin cD (tP, cPsi) =
          | CtxOffset _ -> Context.lookupCtxVarSchema cD psi
          | CInst ({ typ = CTyp (Some cid_schema); _ }, _) -> cid_schema
        in
-       if relevantSchema (Schema.get_schema schema) basis
+       if relevantSchema (Store.Cid.Schema.get_schema schema) basis
        then
          begin
            (*print_string "Keeping context variable\n"; *)
@@ -217,7 +215,7 @@ let thin0 cD a cPsi =
                 s_cid
              | _ -> raise NoSchema
            in
-           if relevantSchema (Schema.get_schema schema) basis
+           if relevantSchema (Store.Cid.Schema.get_schema schema) basis
            then (Shift 0, CtxVar psi) (* psi |- shift(noCtx, 0) : psi *)
            else (EmptySub, Null)      (* psi |- shift(noCtx, 0) : . *)
          with

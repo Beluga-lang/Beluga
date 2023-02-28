@@ -7,7 +7,6 @@ open Support.Equality
 
 open Support
 open ExtString.String
-open Store.Cid
 module P = Pretty.Int.DefaultPrinter
 open Format
 
@@ -74,15 +73,15 @@ let types =
       command_with_arguments 0
         begin fun ppf _ ->
         let entrylist =
-          List.map Pair.snd (Typ.current_entries ())
+          List.map Pair.snd (Store.Cid.Typ.current_entries ())
         in
         let dctx = Synint.LF.Null in
         fprintf ppf "@[<v>%a@];\n@?"
           (pp_print_list ~pp_sep:pp_print_cut
              (fun ppf x ->
                fprintf ppf "%a : %a"
-                 Name.pp x.Typ.Entry.name
-                 (P.fmt_ppr_lf_kind dctx P.l0) x.Typ.Entry.kind))
+                 Name.pp x.Store.Cid.Typ.Entry.name
+                 (P.fmt_ppr_lf_kind dctx P.l0) x.Store.Cid.Typ.Entry.kind))
           entrylist
         end
   ; help = "Print out all types currently defined"
@@ -314,18 +313,18 @@ let constructors =
         begin fun ppf arglist ->
         let typ_name = Name.(mk_name (SomeString (List.hd arglist))) in
         let entry =
-          Typ.index_of_name typ_name |> Typ.get
+          Store.Cid.Typ.index_of_name typ_name |> Store.Cid.Typ.get
         in
         let termlist =
-          List.map Term.get !(entry.Typ.Entry.constructors)
+          List.map Store.Cid.Term.get !(entry.Store.Cid.Typ.Entry.constructors)
         in
         fprintf ppf "@[<v>%a@]@.;@."
           (pp_print_list ~pp_sep: pp_print_cut
              (fun ppf x ->
                fprintf ppf "%a : [%d] %a"
-                 Name.pp x.Term.Entry.name
-                 x.Term.Entry.implicit_arguments
-                 (P.fmt_ppr_lf_typ LF.Empty LF.Null P.l0) x.Term.Entry.typ))
+                 Name.pp x.Store.Cid.Term.Entry.name
+                 x.Store.Cid.Term.Entry.implicit_arguments
+                 (P.fmt_ppr_lf_typ LF.Empty LF.Null P.l0) x.Store.Cid.Term.Entry.typ))
           termlist
         end
   ; help = "Print all constructors of a given type passed as a parameter"
@@ -395,18 +394,18 @@ let compconst =
         let name = Name.(mk_name (SomeString arg)) in
         try
           let entry =
-            CompTyp.index_of_name name |> CompTyp.get
+            Store.Cid.CompTyp.index_of_name name |> Store.Cid.CompTyp.get
           in
           let termlist =
-            List.map CompConst.get !(entry.CompTyp.Entry.constructors)
+            List.map Store.Cid.CompConst.get !(entry.Store.Cid.CompTyp.Entry.constructors)
           in
           fprintf ppf "@[<v>%a@]@.;@."
             (pp_print_list ~pp_sep: pp_print_cut
                (fun ppf x ->
                  fprintf ppf "%s : [%d] %a"
-                   (Name.string_of_name x.CompConst.Entry.name)
-                   x.CompConst.Entry.implicit_arguments
-                   (P.fmt_ppr_cmp_typ LF.Empty P.l0) x.CompConst.Entry.typ))
+                   (Name.string_of_name x.Store.Cid.CompConst.Entry.name)
+                   x.Store.Cid.CompConst.Entry.implicit_arguments
+                   (P.fmt_ppr_cmp_typ LF.Empty P.l0) x.Store.Cid.CompConst.Entry.typ))
             termlist;
         with
         | Not_found -> fprintf ppf "- The type %s does not exist;\n@?" arg

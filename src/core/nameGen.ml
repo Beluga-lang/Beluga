@@ -1,4 +1,4 @@
-open Beluga_syntax.Common
+open Beluga_syntax
 module LF = Syntax.Int.LF
 module Comp = Syntax.Int.Comp
 

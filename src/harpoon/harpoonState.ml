@@ -3,7 +3,6 @@ open Beluga.Syntax.Int
 
 module F = Fun
 
-module CompS = Beluga.Store.Cid.Comp
 module P = Beluga.Pretty.Int.DefaultPrinter
 
 let dprintf, _, _ = Debug.(makeFunctions' (toFlags [14]))
@@ -39,9 +38,9 @@ open Beluga
     subgoals. *)
 let recover_theorem ppf hooks (cid, gs) =
   let open Comp in
-  let e = CompS.get cid in
-  let tau = e.CompS.Entry.typ in
-  let decl = CompS.get_total_decl cid in
+  let e = Store.Cid.Comp.get cid in
+  let tau = e.Store.Cid.Comp.Entry.typ in
+  let decl = Store.Cid.Comp.get_total_decl cid in
   let initial_state =
     let s =
       make_proof_state SubgoalPath.start
@@ -49,7 +48,7 @@ let recover_theorem ppf hooks (cid, gs) =
         , Whnf.m_id )
     in
     let prf =
-      match e.CompS.Entry.prog with
+      match e.Store.Cid.Comp.Entry.prog with
       | Some (ThmValue (_, Proof p, _, _)) -> p
       | _ -> Beluga_syntax.Error.raise_violation "recovered theorem not a proof"
     in
@@ -99,7 +98,7 @@ let recover_sessions ppf hooks (gs : Comp.open_subgoal list) =
    *)
   List1.group_by Pair.fst gs
   |> List.map (Pair.map_right (List1.map Pair.snd))
-  |> List1.group_by F.(Pair.fst >> CompS.mutual_group)
+  |> List1.group_by F.(Pair.fst >> Store.Cid.Comp.mutual_group)
   |> List.map (recover_session ppf hooks)
 
 (** Drops all sessions from the prover, replacing with the given

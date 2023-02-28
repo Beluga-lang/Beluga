@@ -4,10 +4,8 @@ open Support
    @author Renaud Germain
    @author Brigitte Pientka
 *)
-open Store
-open Store.Cid
 open Substitution
-open Beluga_syntax.Common
+open Beluga_syntax
 open Syntax
 open Id
 
@@ -322,7 +320,7 @@ let rec ctxToCtx =
   | I.Dec (cQ', FDecl (MMV _, Pure (MetaTyp (I.ClTyp (I.MTyp tA, cPsi), _, _)))) ->
      begin match raiseType cPsi tA with
      | (None, tA') ->
-        let x = Name.mk_name (Name.MVarName (Typ.gen_mvar_name tA')) in
+        let x = Name.mk_name (Name.MVarName (Store.Cid.Typ.gen_mvar_name tA')) in
         I.Dec (ctxToCtx cQ', I.TypDecl (x, tA'))
      | (Some _, _) -> Error.raise_violation "ctxToDctx generates LF-dctx with context variable."
      end
@@ -468,9 +466,9 @@ and addVar loc p cQ v tp =
 and getType loc p name f =
   try
     match f with
-    | LF -> let tA = FVar.get name in (LFTyp tA)
+    | LF -> let tA = Store.FVar.get name in (LFTyp tA)
     | Comp ->
-       let (cD_d, I.Decl (_, mtyp, plicity, inductivity)) = FCVar.get name in
+       let (cD_d, I.Decl (_, mtyp, plicity, inductivity)) = Store.FCVar.get name in
        let mtyp' = Whnf.cnormMTyp (mtyp, Int.LF.MShift (p - Context.length cD_d)) in
        if !pat_flag
        then MetaTyp (mtyp', Plicity.explicit, Inductivity.not_inductive)

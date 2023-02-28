@@ -7,7 +7,6 @@ module E = Beluga_syntax.Error
 module Command = Syntax.Ext.Harpoon
 module S = Substitution
 module P = Pretty.Int.DefaultPrinter
-module CompS = Store.Cid.Comp
 
 let dprintf, _, dprnt = Debug.(makeFunctions' (toFlags [13]))
 open Debug.Fmt
@@ -294,7 +293,7 @@ let process_command
      begin match k with
      | `prog ->
         let open Option in
-        begin match CompS.(index_of_name_opt n $> get) with
+        begin match Store.Cid.Comp.(index_of_name_opt n $> get) with
         | None ->
            HarpoonState.printf s
              "- No such theorem by name %a" Name.pp n
@@ -307,7 +306,7 @@ let process_command
 
   | Command.Translate n ->
      let open Option in
-     begin match CompS.(index_of_name_opt n $> get) with
+     begin match Store.Cid.Comp.(index_of_name_opt n $> get) with
      | Some e ->
         HarpoonState.printf s "%a"
           Translate.fmt_ppr_result (Translate.entry e)

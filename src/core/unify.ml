@@ -11,8 +11,7 @@ open Equality
    the instantiations EmptyTrail and StdTrail (hence Unify.EmptyTrail and Unify.StdTrail
    to other modules) are declared at the end of this file.
 *)
-open Store
-open Beluga_syntax.Common
+open Beluga_syntax
 open Syntax.Int.LF
 open Syntax.Int
 open Trail
@@ -2726,10 +2725,10 @@ let rec blockdeclInDctx =
            | Some (CtxName psi) ->
               begin
                 try
-                  ignore (FCVar.get psi)
+                  ignore (Store.FCVar.get psi)
                 with
                 | Not_found ->
-                   FCVar.add psi (cD0, Decl (psi, CTyp s_cid, Plicity.implicit, Inductivity.not_inductive))
+                   Store.FCVar.add psi (cD0, Decl (psi, CTyp s_cid, Plicity.implicit, Inductivity.not_inductive))
               end
            | _ -> ()
          end

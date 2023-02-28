@@ -3,7 +3,7 @@
 *)
 
 open Support
-open Beluga_syntax.Common
+open Beluga_syntax
 open Syntax.Int
 
 (* module Unify = Unify.EmptyTrail  *)

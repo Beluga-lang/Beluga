@@ -6,7 +6,7 @@
 open Support.Equality
 open Support
 
-open Beluga_syntax.Common
+open Beluga_syntax
 open Syntax
 open Int
 module S = Substitution

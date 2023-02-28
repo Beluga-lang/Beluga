@@ -1,8 +1,6 @@
 open Beluga
 open Syntax.Int.Comp
 
-module CompS = Store.Cid.Comp
-
 module Conf : sig
   type t
   val make : Name.t -> order total_dec_kind -> typ -> int -> t
@@ -48,7 +46,7 @@ type 'a subgoal_hook = proof_state -> 'a
 val printf : t -> ('a, Format.formatter, unit) format -> 'a
 
 (** Gets the cid and Store entry for this theorem. *)
-val get_entry' : t -> Id.cid_prog * CompS.Entry.t
+val get_entry' : t -> Id.cid_prog * Store.Cid.Comp.Entry.t
 
 (** get_history_names t = (as1, as2)
     where as1 are the past history items and as2 are the future
@@ -60,7 +58,7 @@ val get_history_names : t -> string list * string list
 val get_cid : t -> Id.cid_prog
 
 (** Gets the Store entry for this theorem. *)
-val get_entry : t -> CompS.Entry.t
+val get_entry : t -> Store.Cid.Comp.Entry.t
 
 val get_name : t -> Name.t
 

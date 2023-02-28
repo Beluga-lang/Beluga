@@ -1,4 +1,4 @@
-open Beluga_syntax.Common
+open Beluga_syntax
 open Syntax.Int
 
 let rec numeric_order_arg tau n =

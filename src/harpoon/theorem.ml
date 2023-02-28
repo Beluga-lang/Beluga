@@ -4,7 +4,6 @@ module F = Fun
 module LF = Syntax.Int.LF
 module Comp = Syntax.Int.Comp
 open Id
-module CompS = Store.Cid.Comp
 
 module P = Pretty.Int.DefaultPrinter
 
@@ -159,18 +158,18 @@ let printf t x = Format.fprintf t.ppf x
 
 let get_entry' t =
   let cid = t.cid in
-  (cid, CompS.get cid)
+  (cid, Store.Cid.Comp.get cid)
 
 let get_cid t = t.cid
 let get_entry t = get_entry' t |> Pair.snd
-let get_name t = (get_entry t).CompS.Entry.name
+let get_name t = (get_entry t).Store.Cid.Comp.Entry.name
 let has_name_of t name = Name.(get_name t = name)
 let has_cid_of t cid = t.cid = cid
 
 let get_statement t = t.initial_state.Comp.goal
 
 let serialize ppf (t : t) =
-  let name = CompS.name t.cid in
+  let name = Store.Cid.Comp.name t.cid in
   dprintf begin fun p ->
     p.fmt "[theorem] [serialize] begin serialization of theorem '%a'"
       Name.pp name
@@ -191,7 +190,7 @@ let serialize ppf (t : t) =
   in
   let order =
     let open Option in
-    Total.lookup_dec name (CompS.total_decs t.cid)
+    Total.lookup_dec name (Store.Cid.Comp.total_decs t.cid)
     $> fun o -> o.Comp.order
   in
   Printer.with_implicits false
@@ -303,10 +302,10 @@ let rename_variable src dst level t g =
     annotations.
  *)
 let register name tau p mutual_group k : cid_prog =
-  CompS.add
+  Store.Cid.Comp.add
     begin fun cid ->
     let v = Comp.(ThmValue (cid, Proof p, Whnf.m_id, Empty)) in
-    CompS.mk_entry None name tau k
+    Store.Cid.Comp.mk_entry None name tau k
       mutual_group
       (Some v)
     end
@@ -326,7 +325,7 @@ let register name tau p mutual_group k : cid_prog =
 let configure cid ppf hooks initial_state gs =
   dprintf begin fun p ->
     p.fmt "[theorem] configuring theorem %a"
-      Name.pp (CompS.name cid)
+      Name.pp (Store.Cid.Comp.name cid)
     end;
   let t =
     { cid
@@ -348,7 +347,7 @@ let configure cid ppf hooks initial_state gs =
 let configure_set ppf (hooks : (t -> Comp.proof_state -> unit) list) (confs : Conf.t list)
     : Id.cid_mutual_group * t list =
   let mutual_group =
-    CompS.add_mutual_group
+    Store.Cid.Comp.add_mutual_group
       (List.map Pair.fst confs)
   in
   let configure ({ Comp.name; tau; order }, k) =
@@ -395,5 +394,5 @@ let subgoals t = DynArray.to_list t.remaining_subgoals
 let count_subgoals t = DynArray.length t.remaining_subgoals
 
 let materialize t =
-  CompS.set_decl t.cid
+  Store.Cid.Comp.set_decl t.cid
     Option.(eliminate F.(some ++ Decl.next) some)

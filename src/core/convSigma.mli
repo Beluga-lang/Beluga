@@ -2,7 +2,7 @@
    @author Brigitte Pientka
 *)
 
-open Beluga_syntax.Common
+open Beluga_syntax
 open Syntax
 open Int
 open LF

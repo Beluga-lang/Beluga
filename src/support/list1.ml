@@ -145,6 +145,15 @@ let partition f (T (h, l)) =
   let l1, l2 = List.partition f l in
   if f h then (h :: l1, l2) else (l1, h :: l2)
 
+let partition_map f (T (h, l)) =
+  match f h with
+  | Stdlib.Either.Left x ->
+      let l1, l2 = List.partition_map f l in
+      Stdlib.Either.left (T (x, l1), l2)
+  | Stdlib.Either.Right x ->
+      let l1, l2 = List.partition_map f l in
+      Stdlib.Either.right (l1, T (x, l2))
+
 let group_by p l =
   let h = Hashtbl.create 32 in
   let () =

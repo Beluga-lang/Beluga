@@ -184,6 +184,19 @@ val maximum : 'a t -> 'a
     is non-empty. *)
 val partition : ('a -> bool) -> 'a t -> 'a list * 'a list
 
+(** [partition_map f l] returns a pair of lists [(l1, l2)] such that, for
+    each element [x] of the input list [l]:
+
+    - if [f x] is [Left y1], then [y1] is in [l1], and
+    - if [f x] is [Right y2], then [y2] is in [l2].
+
+    In order to preserve the guarantee that the output lists [l1] and [l2]
+    combined have at least one element, an {!Stdlib.Either.t} is returned. *)
+val partition_map :
+     ('a -> ('l, 'r) Stdlib.Either.t)
+  -> 'a t
+  -> ('l t * 'r list, 'l list * 'r t) Stdlib.Either.t
+
 (** Groups elements of a list according to a key computed from the element.
     The input list need not be sorted. (The algorithm inserts every element
     of the list into a hashtable in order to construct the grouping.) Each

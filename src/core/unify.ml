@@ -2961,9 +2961,11 @@ let rec blockdeclInDctx =
     match !globalCnstrs with
     | [] -> ()
     | cs ->
-       Format.fprintf Format.str_formatter "Unresolved constraints@,@[<v 2>  %a@]@."
-         P.fmt_ppr_lf_constraints cs;
-       raise (Failure (Buffer.contents Format.stdbuf))
+       let error_message =
+         Format.asprintf "Unresolved constraints@;<1 2>@[<v 2>%a@]@."
+           P.fmt_ppr_lf_constraints cs
+       in
+       raise (Failure error_message)
 
   and forceGlobalCnstr' c_list =
     match c_list with

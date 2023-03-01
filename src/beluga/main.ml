@@ -53,7 +53,6 @@ let process_option arg rest =
   match arg with
   (* these strings must be lowercase *)
   | "+d" -> Debug.enable (); rest
-  | "+ext" -> Options.Testing.print_external_syntax := true; rest
   | "-s=debruijn" -> PC.substitutionStyle := PC.DeBruijn; rest
   | "+implicit" -> PC.printImplicit := true; rest
   | "+t" -> Monitor.on := true; rest
@@ -72,18 +71,6 @@ let process_option arg rest =
        rest
        end
   | "-logic" -> Logic.Options.enableLogic := false ; rest
-  | "+htmltest" ->
-     Html.generate := true;
-     Html.filename := None;
-     rest
-  | "+html" | "+HTML" -> Html.generate := true; rest
-  | "-css"  | "-CSS"  -> Html.css := `none; rest
-  | "+cssfile" ->
-     with_arg_for "+cssfile"
-       begin fun arg rest ->
-       Html.css := `file arg;
-       rest
-       end
   | "+annot" ->
      Typeinfo.generate_annotations := true;
      rest

@@ -187,13 +187,12 @@ module State : sig
   type t
   val make : unit -> t
   val serialize : Format.formatter -> t -> unit
-  val toggle : t -> Command.automation_kind -> Command.automation_change -> unit
+  val toggle : t -> [ `auto_intros | `auto_solve_trivial ] -> [ `on | `off | `toggle ] -> unit
   val execute : t -> automation
 end = struct
   type info = bool ref * automation
 
-  type t =
-    (Command.automation_kind, info) Hashtbl.t
+  type t = ([ `auto_intros | `auto_solve_trivial ], info) Hashtbl.t
 
   let make () : t =
     let hashtbl = Hashtbl.create 2 in
@@ -209,7 +208,7 @@ end = struct
     | `auto_intros -> Format.fprintf ppf "auto_intros"
     | `auto_solve_trivial -> Format.fprintf ppf "auto_solve_trivial"
 
-  let serialize_item ppf : (Command.automation_kind * bool ref) -> unit =
+  let serialize_item ppf : ([ `auto_intros | `auto_solve_trivial ] * bool ref) -> unit =
     function
     | (k, b) ->
        Format.fprintf ppf "%a = %B"
@@ -223,14 +222,14 @@ end = struct
     Format.fprintf ppf "@[<v>--harpoon @[<h>%a@].@,@]"
       (Format.pp_print_list ~pp_sep: Format.pp_print_space serialize_item) items
 
-  let get_info st (k : Command.automation_kind) : info =
+  let get_info st (k : [ `auto_intros | `auto_solve_trivial ]) : info =
     (* find here is guaranteed to succeed by the external invariant
        that the hashtable has been populated with all the keys of the
        polymorphic variant `automation_kind`.
      *)
     Hashtbl.find st k
 
-  let toggle st (k : Command.automation_kind) (inst : Command.automation_change) : unit =
+  let toggle st (k : [ `auto_intros | `auto_solve_trivial ]) (inst : [ `on | `off | `toggle ]) : unit =
     let (b, _) = get_info st k in
     let v =
       match inst with

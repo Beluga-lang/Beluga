@@ -1,4 +1,4 @@
-open Beluga
+open Beluga_syntax
 
 module Error : sig
   type t
@@ -11,4 +11,4 @@ end
 (** Executes a single Harpoon interactive command on the given state. May
     raise {!Error.E}. *)
 val process_command :
-  HarpoonState.t -> HarpoonState.triple -> Syntax.Ext.Harpoon.command -> unit
+  HarpoonState.t -> HarpoonState.triple -> Synext.harpoon_repl_command -> unit

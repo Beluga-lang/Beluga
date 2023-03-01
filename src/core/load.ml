@@ -2,7 +2,6 @@
 
 open Support
 open Beluga_syntax
-module F = Fun
 
 let (dprintf, _, _) = Debug.(makeFunctions' (toFlags [11]))
 open Debug.Fmt
@@ -67,32 +66,16 @@ let forbid_leftover_vars path =
   | Some vars ->
      Chatter.print 1
        (fun ppf -> Format.fprintf ppf "@[<v>## Leftover variables: %s  ##\
-        @,  @[%a@]@]@."
-       path
-       Recsgn.fmt_ppr_leftover_vars vars;
+        @,  @[.a@]@]@."
+       path);
      raise (Abstract.Error (Location.ghost, Abstract.LeftoverVars))
 
 let load_file ppf file_name =
-  let sgn =
-    Obj.magic ()
-    (* If the file starts with global pragmas then process them now. *)
-    |> F.through
-         begin fun sgn ->
-         if !Options.Testing.print_external_syntax
-         then
-           begin
-             Chatter.print 1
-               (fun ppf -> Format.fprintf ppf "## External syntax dump: %s ##@." file_name);
-             Format.fprintf ppf "@[%a@]"
-               Pretty.Ext.DefaultPrinter.fmt_ppr_sgn sgn
-           end
-         end
-    |> Recsgn.apply_global_pragmas
-  in
+  let[@warning "-26"] sgn = Obj.magic () in
 
   Chatter.print 1 (fun ppf -> Format.fprintf ppf "## Type Reconstruction begin: %s ##@." file_name);
 
-  let sgn', leftoverVars = Recsgn.recSgnDecls sgn in
+  let sgn', leftoverVars = Obj.magic () (* TODO: Recsgn.recSgnDecls sgn *) in
 
   Chatter.print 2
     (fun ppf -> Format.fprintf ppf "@[<v>## Internal syntax dump: %s ##@,@[<v>%a@]@]@." file_name
@@ -132,10 +115,7 @@ let load_file ppf file_name =
   if !Typeinfo.generate_annotations
   then Typeinfo.print_annot file_name;
   if !Monitor.on || !Monitor.onf
-  then Monitor.print_timers ();
-
-  if !Html.generate
-  then Html.generatePage file_name
+  then Monitor.print_timers ()
 
 let load_one ppf path =
   try

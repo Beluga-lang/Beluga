@@ -178,7 +178,7 @@ let generate_pattern_coverage_goals
   in
   B.Coverage.(genPatCGoals names withPatVar g.context.cD (B.Total.strip tau))
 
-let split (k : Command.split_kind) (i : Comp.exp) (tau : Comp.typ) mfs : t =
+let split (k : [ `split | `invert | `impossible ]) (i : Comp.exp) (tau : Comp.typ) mfs : t =
   let open B in
   let open Comp in
   fun t s ->

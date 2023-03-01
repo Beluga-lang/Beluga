@@ -834,7 +834,7 @@ module Var = struct
     in
     loop 1 store
 
-  let to_list (l : entry list) = Fun.id l
+  let to_list = Fun.id
   let empty = []
   let extend ctx e = e :: ctx
   let append vars vars' = vars @ vars'

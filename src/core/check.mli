@@ -137,7 +137,7 @@ module Comp : sig
       The returned substitution witnesses the transformation of the type.
       It should be applied to the metavariable of the computed type in
       order for it to make sense in the original context.
-      For example, suppose apply_unbox_modifier cD `strengthen cU = cU', s
+      For example, suppose apply_unbox_modifier cD `Strengthen cU = cU', s
       If we want X : cU' to make sense in its original LF context,
       then it suffices to apply X[s].
       This substitution is used by the translation from proofs into

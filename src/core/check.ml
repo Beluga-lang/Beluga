@@ -386,7 +386,7 @@ module Comp = struct
 
   let apply_unbox_modifier cD modifier cU =
     match modifier with
-    | `strengthened ->
+    | `Strengthened ->
        begin match cU with
        | Int.LF.CTyp _ ->
           (* TODO proper error; cannot strengthen a schema *)

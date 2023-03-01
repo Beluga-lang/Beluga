@@ -15,7 +15,7 @@ end
 
 module Comp = struct
   type unbox_modifier =
-    [ `strengthened
+    [ `Strengthened
     ]
 
   type case_pragma = PragmaCase | PragmaNotCase

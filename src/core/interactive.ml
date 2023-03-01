@@ -6,7 +6,6 @@ open Beluga_syntax
 
 module F = Fun
 module P = Pretty.Int.DefaultPrinter
-module PExt = Pretty.Ext.DefaultPrinter
 module LF = Syntax.Int.LF
 module ExtComp = Syntax.Ext.Comp
 module Comp = Syntax.Int.Comp
@@ -14,8 +13,7 @@ module Cover = Coverage
 module S = Substitution
 open Syntax.Int.Comp
 
-let dprintf, dprint, _ = Debug.makeFunctions' (Debug.toFlags [11])
-open Debug.Fmt
+[@@@warning "-26"]
 
 (*********************)
 (* helper functions *)
@@ -29,54 +27,29 @@ open Debug.Fmt
     This is so that types given in the `suffices` Harpoon command can
     access implicit variables.
  *)
-let elaborate_typ (cD : LF.mctx) (tau : ExtComp.typ) : Comp.typ * int =
-  dprintf
-    begin fun p ->
-    p.fmt "[elaborate_typ] @[<v>tau =@ @[%a@] (external)@,\
-           cD = @[%a@]@]"
-      PExt.(fmt_ppr_cmp_typ l0) tau
-      (P.fmt_ppr_lf_mctx P.l0) cD
-    end;
+let elaborate_typ (cD : LF.mctx) (tau : Synext.comp_typ) : Comp.typ * int =
   let cvars =
     Store.CVar.of_mctx (Fun.const Plicity.explicit) cD
   in
-  Index.hcomptyp cvars tau
+  (Obj.magic ()) (* TODO: Index.hcomptyp cvars tau *)
   |> Reconstruct.comptyp_cD cD
   |> Abstract.comptyp
   |> Pair.map_left (fun tau -> Whnf.cnormCTyp (tau, Whnf.m_id))
   |> F.through (fun (tau, _) -> Check.Comp.checkTyp cD tau)
 
 let elaborate_exp (cD : LF.mctx) (cG : Comp.gctx)
-      (t : ExtComp.exp) (tp : Comp.typ * LF.msub)
+      (t : Synext.comp_expression) (tp : Comp.typ * LF.msub)
     : Comp.exp =
-  dprintf
-    begin fun p ->
-    p.fmt "[elaborate_exp] @[<v>e = @[%a@] (external)@,\
-           cD = @[%a@]@,\
-           cG = @[%a@]@]"
-      PExt.(fmt_ppr_cmp_exp l0) t
-      (P.fmt_ppr_lf_mctx P.l0) cD
-      (P.fmt_ppr_cmp_gctx cD P.l0) cG
-    end;
   let var_store = Store.Var.of_gctx cG in
   let cvar_store = Store.CVar.of_mctx (function _, Inductivity.Inductive -> Plicity.explicit | plicity, _ -> plicity) cD in
-  let t = Index.hexp cvar_store var_store t in
+  let t = Obj.magic () (* TODO: Index.hexp cvar_store var_store t *) in
   Reconstruct.elExp cD cG t tp
 
-let elaborate_exp' (cD : LF.mctx) (cG : Comp.gctx) (t : ExtComp.exp)
+let elaborate_exp' (cD : LF.mctx) (cG : Comp.gctx) (t : Synext.comp_expression)
     : Comp.exp * Comp.tclo =
-  dprintf
-    begin fun p ->
-    p.fmt "[elaborate_exp] @[<v>i = @[%a@] (external)@,\
-           cD = @[%a@]@,\
-           cG = @[%a@]@]"
-      PExt.(fmt_ppr_cmp_exp l0) t
-      (P.fmt_ppr_lf_mctx P.l0) cD
-      (P.fmt_ppr_cmp_gctx cD P.l0) cG
-    end;
   let var_store = Store.Var.of_gctx cG in
   let cvar_store = Store.CVar.of_mctx (function _, Inductivity.Inductive -> Plicity.explicit | plicity, _ -> plicity) cD in
-  let t = Index.hexp cvar_store var_store t in
+  let t = Obj.magic () (* TODO: Index.hexp cvar_store var_store t *) in
   Reconstruct.elExp' cD cG t
 
 

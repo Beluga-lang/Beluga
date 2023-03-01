@@ -85,4 +85,4 @@ val exp' : Int.Comp.gctx -> Apx.Comp.exp -> Int.Comp.exp * Int.Comp.tclo
 
 val thm : Int.Comp.gctx -> Apx.Comp.thm -> Int.Comp.typ * Int.LF.msub -> Int.Comp.thm
 
-val numeric_order : Int.Comp.typ -> Ext.Comp.numeric_order -> Int.Comp.order
+val numeric_order : Int.Comp.typ -> Int.Comp.order -> Int.Comp.order

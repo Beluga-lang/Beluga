@@ -3,6 +3,8 @@ open Beluga_syntax
 
 exception Did_not_raise
 
+let null_formatter = Format.make_formatter (fun _ _ _ -> ()) (fun _ -> ())
+
 let assert_exn f =
   try
     ignore (f ());
@@ -15,7 +17,7 @@ let assert_exn f =
         (* For coverage analysis, find a printer for the uncaught
            exception *)
         let printer = Error.find_printer exn in
-        Format.fprintf Format.null_formatter "%t@." printer
+        Format.fprintf null_formatter "%t@." printer
       with
       | _ -> ())
 

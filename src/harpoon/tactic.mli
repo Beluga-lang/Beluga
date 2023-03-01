@@ -47,7 +47,7 @@ val intros' : Theorem.t ->
     In particular, this is used to implement variants of splitting,
     e.g. inversion and impossible.
  *)
-val split : Command.split_kind -> Comp.exp -> Comp.typ -> Comp.total_dec list -> t
+val split : [ `split | `invert | `impossible ] -> Comp.exp -> Comp.typ -> Comp.total_dec list -> t
 
 (** Performs unboxing of the given synthesizable expression of the given type.
     The tactic will itself verify that the type is a box-type.

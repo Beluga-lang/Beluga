@@ -43,4 +43,3 @@
 
 module Common = Prettycom
 module Int = Prettyint
-module Ext = Prettyext

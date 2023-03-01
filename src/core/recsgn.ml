@@ -1134,7 +1134,7 @@ let recSgnDecls decls =
 
     | Ext.Sgn.Module { location; identifier; declarations=decls } ->
        let decls' = List.map recSgnDecl decls in
-       Int.Sgn.Module { location; identifier; declarations=decls' }
+       Int.Sgn.Module { location; identifier = Obj.magic (); declarations=decls' }
 
     | Ext.Sgn.Pragma { location=loc; pragma=Ext.Sgn.OpenPrag n } ->
        Int.Sgn.Pragma { pragma=Int.LF.OpenPrag (Obj.magic ()) }

@@ -238,7 +238,6 @@ module Make_clf_precedence (S : PRECEDENCE_STATE) :
     | CLF.Term.Pattern.Wildcard _
     | CLF.Term.Pattern.Variable _
     | CLF.Term.Pattern.Parameter_variable _
-    | CLF.Term.Pattern.Substitution_variable _
     | CLF.Term.Pattern.Constant _
     | CLF.Term.Pattern.Tuple _ ->
         return (make_static 8)

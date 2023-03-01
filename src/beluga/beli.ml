@@ -75,13 +75,8 @@ let run args =
     try
       let arg = List.hd files in
       let _location = Beluga_syntax.Location.initial arg in
-      let sgn = Obj.magic () (* TODO: Parse only a signature from the file [arg] *) in
-      let sgn' = begin match Recsgn.recSgnDecls sgn with
-    | sgn', None -> sgn'
-    | _, Some _ ->
-      raise (Abstract.Error (Beluga_syntax.Location.ghost, Abstract.LeftoverVars))
-      end
-      in
+      let[@warning "-26"] sgn = Obj.magic () (* TODO: Parse only a signature from the file [arg] *) in
+      let sgn' = Obj.magic () (* TODO: Reconstruct [sgn] and raise on leftover variables *) in
       Chatter.print 1 (fun ppf -> Format.fprintf ppf "%a" P.fmt_ppr_sgn sgn');
       fprintf ppf "The file has been successfully loaded.\n"
     with

@@ -1430,7 +1430,7 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
   and fmt_ppr_cmp_command cD cG ppf cmd =
     let fmt_ppr_unbox_modifier ppf =
       function
-      | Some `strengthened -> fprintf ppf "strengthened"
+      | Some `Strengthened -> fprintf ppf "strengthened"
       | None -> fprintf ppf "unboxed"
     in
     let open Comp in

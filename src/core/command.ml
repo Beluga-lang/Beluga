@@ -479,14 +479,14 @@ let query =
       begin fun ppf arglist ->
       try
         begin
-          let [Synext.Sgn.Query { name; typ=extT; mctx=cD; expected_solutions=expected; maximum_tries=tries; _ }] =
+          let [Synext.Signature.Pragma.Query { identifier; typ=extT; meta_context=cD; expected_solutions=expected; maximum_tries=tries; _ }] =
             let[@warning "-8"] expected :: tries :: rest = arglist in
             let str = String.concat " " rest in
             let _input = "%query " ^ expected ^ " " ^ tries ^ " " ^ str in
             let _location = Beluga_syntax.Location.initial "<query>" in
             Obj.magic ()
           in
-          let (_, apxT) = Index.typ Index.disambiguate_to_fvars extT in
+          let (_, apxT) = Obj.magic () (* TODO: Index.typ Index.disambiguate_to_fvars extT *) in
           Store.FVar.clear ();
           let tA =
             Monitor.timer
@@ -497,8 +497,7 @@ let query =
                 tA
               )
           in
-          (* let cD       = Synint.LF.Empty in *)
-          let cD = Index.mctx cD in
+          let cD = Obj.magic () (* TODO: Index.mctx cD *) in
           let cD = Reconstruct.mctx cD in
           Unify.StdTrail.forceGlobalCnstr ();
           let (tA', i) =
@@ -514,7 +513,7 @@ let query =
             , fun () ->
               Check.LF.checkTyp Synint.LF.Empty Synint.LF.Null (tA', Substitution.LF.id)
             );
-          Logic.storeQuery name (tA', i) cD expected tries;
+          Logic.storeQuery (Option.map Name.make_from_identifier identifier) (tA', i) cD expected tries;
           Logic.runLogic ();
           fprintf ppf ";\n@?"
         end

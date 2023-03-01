@@ -11,5 +11,5 @@ module State : sig
   val serialize : Format.formatter -> t -> unit
 end
 
-val toggle : State.t -> Command.automation_kind -> Command.automation_change -> unit
+val toggle : State.t -> [ `auto_intros | `auto_solve_trivial ] -> [ `on | `off | `toggle ] -> unit
 val execute : State.t -> t

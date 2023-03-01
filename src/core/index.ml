@@ -1,1789 +1,1705 @@
-(* -------------------------------------------------------------*)
-(*  indexing
- *
- * index_term names ext_m = (m, fvars)
- *
- * Translates an object ext_m in external syntax
- * into an object m in approximate internal syntax.
- *
- * ASSUMPTION:
- *
- *    ext_m is in beta normal form
- *
- *)
-
 open Support
 open Beluga_syntax
-module Ext = Syntax.Ext
-module Apx = Syntax.Apx
 
-module P = Pretty.Ext.DefaultPrinter
+[@@@warning "-A-4-44"]
 
-let (dprintf, dprint, _) = Debug.makeFunctions' (Debug.toFlags [11])
-open Debug.Fmt
+exception Unsupported_lf_typ_applicand
 
-let print_subst_class ppf cl =
-  let open Format in
-  match cl with
-  | Ext.LF.Subst -> fprintf ppf "substitution"
-  | Ext.LF.Ren -> fprintf ppf "renaming"
+exception Unsupported_lf_term_applicand
 
-type illegal_subst_term =
-  [ `bvar
-  | `const
-  | `pure_lf
-  ]
+exception Unsupported_lf_annotated_term_abstraction
 
-let print_illegal_subst_term ppf : illegal_subst_term -> unit =
-  let open Format in
-  function
-  | `bvar -> fprintf ppf "bound variable"
-  | `const -> fprintf ppf "LF constant"
-  | `pure_lf -> fprintf ppf "pure LF type"
+exception Unsupported_lf_untyped_pi_kind_parameter
 
-type open_or_closed =
-  [ `open_term
-  | `closed_term
-  ]
+exception Unsupported_lf_untyped_pi_typ_parameter
 
-type fvars =
-  { open_flag : open_or_closed
-  ; vars : Store.CVar.cvar list
-  }
+exception Unsupported_clf_substitution_variable_not_at_start_of_substitution
 
-let append_fvars f1 f2 flag =
-  { open_flag = flag
-  ; vars = f1.vars @ f2.vars
-  }
+exception Unsupported_clf_projection_applicand
 
-let empty_fvars open_flag = { open_flag; vars = [] }
+exception Unsupported_clf_substitution_applicand
 
-(** State monad. *)
-type ('s, 'a) state = 's -> 's * 'a
+exception Unsupported_context_schema_meta_typ
 
-(** State monad with the state instantiated to a list of free (contextual) variables. *)
-type 'a fvar_state = (fvars, 'a) state
+exception Unsupported_context_schema_element
 
-(** A strategy for disambiguating an LF name.
-    In general the disambiguation strategy is the same in all cases,
-    except the very end when we generate a free variable.
-    In (pure) LF types, we disambiguate by generating `FVar'.
-    These are abstracted into LF Pi-types.
-    In contextual LF types, we disambiguate by generating `FMVar'.
-    These are abstracted into computational Pi-box types.
- *)
-type name_disambiguator =
-  Store.CVar.t -> Store.BVar.t -> Location.t * Name.t -> Ext.LF.sub option -> Apx.LF.head fvar_state
+exception Unsupported_comp_typ_applicand
 
-type lf_indexing_context =
-  { disambiguate_name : name_disambiguator
-  ; cvars : Store.CVar.t
-  ; bvars : Store.BVar.t
-  }
+exception Unsupported_comp_pattern_applicand
 
-let empty_lf_indexing_context disambiguate_name =
-  { cvars = Store.CVar.empty
-  ; bvars = Store.BVar.empty
-  ; disambiguate_name
-  }
+exception Unsupported_copatern_meta_context
 
-(** Transforms the bound variable list in an indexing context. *)
-let modify_bvars (f : Store.BVar.t -> Store.BVar.t) (c : lf_indexing_context) : lf_indexing_context =
-  { c with bvars = f c.bvars }
+exception Duplicate_identifiers_in_schema_some_clause of Identifier.t List2.t
 
-(** Extends the bound variable list in an indexing context with a new entry. *)
-let extending_bvars (x : Name.t) (c : lf_indexing_context) : lf_indexing_context =
-  modify_bvars (fun bvars -> Store.BVar.extend bvars (Store.BVar.mk_entry x)) c
+exception
+  Duplicate_identifiers_in_schema_block_clause of Identifier.t List2.t
 
-let extending_by (x : Name.t) (fvars : fvars) : fvars =
-  { fvars with vars = x :: fvars.vars }
+module type INDEXING_STATE = sig
+  include State.STATE
 
-type 'a index = lf_indexing_context -> 'a fvar_state
+  (** [fresh_identifier state] is [(state', identifier)] where [identifier]
+      is an identifier that is not bound in [state]. This is used in the
+      indexing of arrow types to Pi-types, and to generate parameter
+      identifiers for lambda abstractions.
 
-(** Transforms the state. *)
-let modify (f : 's -> 's) : ('s, unit) state =
-  fun s -> (f s, ())
+      In order to avoid potential captures, [identifier] is not a
+      syntactically valid identifier. That is, [identifier] printed as is
+      cannot be parsed into an identifier. *)
+  val fresh_identifier : Identifier.t t
 
-let modify_fvars (f : fvars -> fvars) : unit index =
-  fun c -> modify f
+  val fresh_identifier_opt : Identifier.t Option.t -> Identifier.t t
 
-(** Runs the indexer with a locally modified context. *)
-let locally (f : lf_indexing_context -> lf_indexing_context) (m : 'a index) : 'a index =
-  fun c fvars -> m (f c) fvars
+  (** {1 Index of Constants} *)
 
-let get : ('s, 's) state =
-  fun s -> (s, s)
+  val index_of_lf_typ_constant : Qualified_identifier.t -> Id.cid_typ t
 
-(** Gets the free variables from the state. *)
-let get_fvars : fvars index =
-  fun c -> get
+  val index_of_lf_term_constant : Qualified_identifier.t -> Id.cid_term t
 
-let get_env : lf_indexing_context index =
-  fun c fvars -> (fvars, c)
+  val index_of_inductive_comp_constant :
+    Qualified_identifier.t -> Id.cid_comp_typ t
 
-let trying_index (f : unit -> 'a) : 'a option =
-  try Some (f ()) with Not_found -> None
+  val index_of_stratified_comp_constant :
+    Qualified_identifier.t -> Id.cid_comp_typ t
 
-type cvar_error_status =
-  [ `implicit
-  | `unbound
-  ]
+  val index_of_coinductive_comp_constant :
+    Qualified_identifier.t -> Id.cid_comp_cotyp t
 
-let cvar_error_to_hint =
-  function
-  | `implicit -> Some `implicit_variable
-  | _ -> None
+  val index_of_abbreviation_comp_constant :
+    Qualified_identifier.t -> Id.cid_comp_typdef t
 
-let index_cvar' cvars (u : Name.t) : (cvar_error_status, Id.offset) Either.t =
-  match
-    trying_index (fun _ -> Store.CVar.index_of_name cvars u)
-  with
-  | None -> Either.left `unbound
-  | Some (Plicity.Implicit, _) -> Either.left `implicit
-  | Some (_, k) ->
-     dprintf
-       begin fun p ->
-       p.fmt "[index_cvar'] indexed %a to offset %d at %a"
-         Name.pp u
-         k
-         Location.print_short (Name.location u)
-       end;
-     Either.right k
+  val index_of_schema_constant : Qualified_identifier.t -> Id.cid_schema t
 
-let index_cvar (name : Name.t) : (cvar_error_status, Id.offset) Either.t index =
-  fun c fvars -> (fvars, index_cvar' c.cvars name)
+  val index_of_comp_constructor :
+    Qualified_identifier.t -> Id.cid_comp_const t
 
-  (*
-let index_bvar (name : Name.t) : Id.offset option index =
-  fun c fvars ->
-  ( fvars
-  , trying_index (fun () -> Store.BVar.index_of_name c.bvars name)
-  )
-   *)
+  val index_of_comp_program : Qualified_identifier.t -> Id.cid_prog t
 
-let get_closed_status : open_or_closed index =
-  fun c fvars -> (fvars, fvars.open_flag)
+  val index_of_comp_destructor : Qualified_identifier.t -> Id.cid_comp_dest t
 
-module rec Bind : sig
-  include Monad.MONAD with type 'a t = 'a index
-  include Functor.FUNCTOR with type 'a t := 'a index
-  include Apply.APPLY with type 'a t := 'a index
-end = struct
-  include Monad.Make (struct
-    type 'a t = 'a index
-    let return x = fun _ fvars -> (fvars, x)
-    let bind k m =
-      fun c fvars ->
-      let (fvars', x) = m c fvars in
-      k x c fvars'
-  end)
-  include Functor.Make (Bind)
-  include Apply.Make (Bind)
+  (** {1 Index of Variables} *)
+
+  val index_of_lf_variable : Identifier.t -> Id.offset t
+
+  (** [index_of_lf_variable_opt identifier state] is [(state', offset_opt)]
+      where [offset_opt] is the de Bruijn index of [identifier] in [state].
+
+      If [identifier] is unbound, then [offset_opt = Option.None].
+
+      If [state] is a pattern state, then [offset_opt] is additionally
+      [Option.None] if it is not an inner bound variable. *)
+  val index_of_lf_variable_opt : Identifier.t -> Id.offset Option.t t
+
+  val index_of_parameter_variable : Identifier.t -> Id.offset t
+
+  val index_of_parameter_variable_opt : Identifier.t -> Id.offset Option.t t
+
+  val index_of_substitution_variable : Identifier.t -> Id.offset t
+
+  val index_of_substitution_variable_opt :
+    Identifier.t -> Id.offset Option.t t
+
+  val index_of_context_variable : Identifier.t -> Id.offset t
+
+  val index_of_context_variable_opt : Identifier.t -> Id.offset Option.t t
+
+  val index_of_comp_variable : Identifier.t -> Id.offset t
+
+  (** {1 Binding Variables} *)
+
+  (** [with_bound_lf_variable identifier m state] runs [m] in a state where
+      [identifier] is a bound LF variable.
+
+      If [state] is a pattern state, then [identifier] is additionally
+      considered as an inner bound variable. *)
+  val with_bound_lf_variable : Identifier.t -> 'a t -> 'a t
+
+  val with_bound_meta_variable : Identifier.t -> 'a t -> 'a t
+
+  val with_bound_parameter_variable : Identifier.t -> 'a t -> 'a t
+
+  val with_bound_substitution_variable : Identifier.t -> 'a t -> 'a t
+
+  val with_bound_context_variable : Identifier.t -> 'a t -> 'a t
+
+  val with_bound_comp_variable : Identifier.t -> 'a t -> 'a t
+
+  val with_scope : 'a t -> 'a t
+
+  val with_parent_scope : 'a t -> 'a t
+
+  (** {1 Pattern Variables} *)
+
+  (** [with_pattern_variables_checkpoint ~pattern ~expression] runs [pattern]
+      while keeping track of free and pattern variables, then runs
+      [expression] with the free and pattern variables as bound variables. *)
+  val with_pattern_variables_checkpoint :
+    pattern:'a t -> expression:'b t -> ('a * 'b) t
+
+  val add_computation_pattern_variable : Identifier.t -> Unit.t t
+
+  (** {1 Free Variables} *)
+
+  (** [add_free_lf_variable identifier state] is [(state', ())] where
+      [state'] is derived from [state] by the addition of [identifier] as a
+      free LF variable.
+
+      If [identifier] is a free variable in [state] of a different kind than
+      LF variables, then an exception is raised. *)
+  val add_free_lf_variable : Identifier.t -> Unit.t t
+
+  val add_free_meta_variable : Identifier.t -> Unit.t t
+
+  val add_free_parameter_variable : Identifier.t -> Unit.t t
+
+  val add_free_substitution_variable : Identifier.t -> Unit.t t
+
+  val add_free_context_variable : Identifier.t -> Unit.t t
+
+  val ensure_closed : 'a t -> 'a t
 end
 
-(** Hints can be attached to certain errors. *)
-type hint =
-  [ `needs_box
-  | `implicit_variable
-  ]
+module type INDEXER = sig
+  include State.STATE
+end
 
-type error =
-  | UnboundName of Name.t
-  | UnboundCtxSchemaName of Name.t
-  | UnboundCompName of Name.t
-  | UnboundObs of Name.t
-  | UnboundOperator of Name.t
-  | PatVarNotUnique
-  | IllFormedCompTyp
-  | MisplacedOperator of Name.t
-  | MissingArguments of Name.t * int * int
-  | ParseError
-  | NameOvershadowing of Name.t
-  | SubstitutionNotAllowed of illegal_subst_term
-  | NonemptyPatternSpineForVariable of Name.t
+module Make (Indexing_state : INDEXING_STATE) :
+  INDEXER with type state = Indexing_state.state = struct
+  include Indexing_state
 
-exception Error of Location.t * error * hint option
+  let rec append_lf_spines spine1 spine2 =
+    match spine1 with
+    | Synapx.LF.Nil -> spine2
+    | Synapx.LF.App (x, sub_spine1) ->
+        let spine' = append_lf_spines sub_spine1 spine2 in
+        Synapx.LF.App (x, spine')
 
-let throw_hint' loc hint e = raise (Error (loc, e, hint))
-let throw loc e = throw_hint' loc None e
-let throw_hint loc hint e = throw_hint' loc (Some hint) e
+  let rec append_meta_spines spine1 spine2 =
+    match spine1 with
+    | Synapx.Comp.MetaNil -> spine2
+    | Synapx.Comp.MetaApp (x, sub_spine1) ->
+        let spine' = append_meta_spines sub_spine1 spine2 in
+        Synapx.Comp.MetaApp (x, spine')
 
-let error_printer = function
-  | NameOvershadowing n ->
-      Format.dprintf "The declaration %a is overshadowing an earlier one."
-        Name.pp n
-  | MisplacedOperator n ->
-      Format.dprintf "Illegal use of operator %a." Name.pp n
-  | MissingArguments (n, expected, found) ->
-      Format.dprintf "Operator %a expected %d argument(s), found %d." Name.pp n
-        expected found
-  | UnboundName n ->
-      Format.dprintf
-        "Unbound data-level variable (ordinary or meta-variable) or \
-         constructor: %a."
-        Name.pp n
-  | UnboundCtxSchemaName n ->
-      Format.dprintf "Unbound context schema: %a." Name.pp n
-  | UnboundCompName n ->
-      Format.dprintf "Unbound computation-level identifier: %a." Name.pp n
-  | UnboundObs n ->
-      Format.dprintf "Unbound computation-level observation: %a." Name.pp n
-  | PatVarNotUnique -> Format.dprintf "Pattern variable not linear."
-  | IllFormedCompTyp -> Format.dprintf "Ill-formed computation-level type."
-  | ParseError ->
-      Format.dprintf "Unable to parse operators into valid structure"
-  | SubstitutionNotAllowed s ->
-      Format.dprintf "Substitution is not allowed in %a"
-        print_illegal_subst_term s
-  | NonemptyPatternSpineForVariable x ->
-      Format.dprintf
-        "Variable patterns may not be applied; is %a misspelled?" Name.pp x
+  let rec index_lf_kind = function
+    | Synext.LF.Kind.Typ _ -> return Synapx.LF.Typ
+    | Synext.LF.Kind.Arrow { domain; range; _ } ->
+        let* x = fresh_identifier in
+        let* domain' = index_lf_typ domain in
+        let* range' = (with_bound_lf_variable x) (index_lf_kind range) in
+        let x' = Name.make_from_identifier x in
+        return
+          (Synapx.LF.PiKind
+             ((Synapx.LF.TypDecl (x', domain'), Plicity.explicit), range'))
+    | Synext.LF.Kind.Pi
+        { parameter_identifier; parameter_type; plicity; body; location }
+      -> (
+        match parameter_type with
+        | Option.None ->
+            Error.raise_at1 location Unsupported_lf_untyped_pi_kind_parameter
+        | Option.Some parameter_type ->
+            let* x = fresh_identifier_opt parameter_identifier in
+            let* domain' = index_lf_typ parameter_type in
+            let* range' = (with_bound_lf_variable x) (index_lf_kind body) in
+            let x' = Name.make_from_identifier x in
+            return
+              (Synapx.LF.PiKind
+                 ((Synapx.LF.TypDecl (x', domain'), plicity), range')))
 
-let print_hint ppf : hint -> unit =
-  let open Format in
-  function
-  | `needs_box ->
-     pp_print_string ppf
-       "This identifier is bound as a contextual variable. Did \
-        you mean to write it in a box?"
-  | `implicit_variable ->
-     pp_print_string ppf
-       "This variable is an implicit parameter. It cannot be \
-        accessed directly."
+  and index_lf_typ = function
+    | Synext.LF.Typ.Constant { identifier; location; _ } ->
+        let* id = index_of_lf_typ_constant identifier in
+        return (Synapx.LF.Atom (location, id, Synapx.LF.Nil))
+    | Synext.LF.Typ.Application { applicand; arguments; location } -> (
+        match applicand with
+        | Synext.LF.Typ.Constant _
+        | Synext.LF.Typ.Application _ -> (
+            let* applicand' = index_lf_typ applicand in
+            match applicand' with
+            | Synapx.LF.Atom (_applicand_location, id, spine1') ->
+                let* spine2' = index_lf_spine arguments in
+                let spine' = append_lf_spines spine1' spine2' in
+                return (Synapx.LF.Atom (location, id, spine'))
+            | Synapx.LF.PiTyp _
+            | Synapx.LF.Sigma _ ->
+                assert false
+            (* Supported LF type-level applicands are always translated to LF
+               atoms *))
+        | Synext.LF.Typ.Arrow _
+        | Synext.LF.Typ.Pi _ ->
+            Error.raise_at1
+              (Synext.location_of_lf_typ applicand)
+              Unsupported_lf_typ_applicand)
+    | Synext.LF.Typ.Arrow { domain; range; _ } ->
+        let* x = fresh_identifier in
+        let* domain' = index_lf_typ domain in
+        let* range' = (with_bound_lf_variable x) (index_lf_typ range) in
+        let x' = Name.make_from_identifier x in
+        return
+          (Synapx.LF.PiTyp
+             ((Synapx.LF.TypDecl (x', domain'), Plicity.explicit), range'))
+    | Synext.LF.Typ.Pi
+        { parameter_identifier; parameter_type; plicity; body; location }
+      -> (
+        match parameter_type with
+        | Option.None ->
+            Error.raise_at1 location Unsupported_lf_untyped_pi_typ_parameter
+        | Option.Some parameter_type ->
+            let* x = fresh_identifier_opt parameter_identifier in
+            let* domain' = index_lf_typ parameter_type in
+            let* range' = (with_bound_lf_variable x) (index_lf_typ body) in
+            let x' = Name.make_from_identifier x in
+            return
+              (Synapx.LF.PiTyp
+                 ((Synapx.LF.TypDecl (x', domain'), plicity), range')))
 
-let () =
-  Error.register_exception_printer (function
-    | Error (location, error, Option.None) ->
-        Error.located_exception_printer (Format.dprintf "@[<v>%t@]" (error_printer error))
-          (List1.singleton location)
-    | Error (location, error, Option.Some hint) ->
-        Error.located_exception_printer
-          (Format.dprintf "@[@<v>%t@,- @[<hov>%a@]]" (error_printer error)
-             print_hint hint)
-          (List1.singleton location)
-    | exn -> Error.raise_unsupported_exception_printing exn)
+  and index_lf_term = function
+    | Synext.LF.Term.Variable { location; identifier } -> (
+        index_of_lf_variable_opt identifier >>= function
+        | Option.Some offset ->
+            let head = Synapx.LF.BVar offset in
+            let spine = Synapx.LF.Nil in
+            return (Synapx.LF.Root (location, head, spine))
+        | Option.None ->
+            let* () = add_free_lf_variable identifier in
+            let name = Name.make_from_identifier identifier in
+            let head = Synapx.LF.FVar name in
+            let spine = Synapx.LF.Nil in
+            return (Synapx.LF.Root (location, head, spine)))
+    | Synext.LF.Term.Constant { location; identifier; _ } ->
+        let* id = index_of_lf_term_constant identifier in
+        let head = Synapx.LF.Const id in
+        let spine = Synapx.LF.Nil in
+        return (Synapx.LF.Root (location, head, spine))
+    | Synext.LF.Term.Application { location; applicand; arguments } -> (
+        match applicand with
+        | Synext.LF.Term.Variable _
+        | Synext.LF.Term.Constant _
+        | Synext.LF.Term.Application _
+        | Synext.LF.Term.Wildcard _ -> (
+            let* applicand' = index_lf_term applicand in
+            match applicand' with
+            | Synapx.LF.Root (_applicand_location, id, spine1') ->
+                let* spine2' = index_lf_spine arguments in
+                let spine' = append_lf_spines spine1' spine2' in
+                return (Synapx.LF.Root (location, id, spine'))
+            | Synapx.LF.Lam _
+            | Synapx.LF.LFHole _
+            | Synapx.LF.Tuple _
+            | Synapx.LF.Ann _ ->
+                assert false
+            (* Supported LF term-level applicands are always translated to LF
+               roots *))
+        | Synext.LF.Term.Type_annotated _
+        | Synext.LF.Term.Abstraction _ ->
+            Error.raise_at1
+              (Synext.location_of_lf_term applicand)
+              Unsupported_lf_term_applicand)
+    | Synext.LF.Term.Abstraction
+        { location; parameter_identifier; parameter_type; body } -> (
+        match parameter_type with
+        | Option.None ->
+            let* x = fresh_identifier_opt parameter_identifier in
+            let* body' = (with_bound_lf_variable x) (index_lf_term body) in
+            let x' = Name.make_from_identifier x in
+            return (Synapx.LF.Lam (location, x', body'))
+        | Option.Some _typ ->
+            Error.raise_at1 location
+              Unsupported_lf_annotated_term_abstraction)
+    | Synext.LF.Term.Wildcard { location } ->
+        let* x = fresh_identifier in
+        let x' = Name.make_from_identifier x in
+        let substitution = Option.none in
+        let head = Synapx.LF.FMVar (x', substitution) in
+        let spine = Synapx.LF.Nil in
+        return (Synapx.LF.Root (location, head, spine))
+    | Synext.LF.Term.Type_annotated { location; term; typ } ->
+        let* term' = index_lf_term term in
+        let* typ' = index_lf_typ typ in
+        return (Synapx.LF.Ann (location, term', typ'))
 
-(** Require that a substitution be None in the given situation `case'. *)
-let require_no_sub loc (case : illegal_subst_term) =
-  function
-  | Option.None -> ()
-  | Option.Some o -> throw loc (SubstitutionNotAllowed case)
+  and index_lf_spine arguments =
+    List1.fold_right
+      (fun argument ->
+        let* argument' = index_lf_term argument in
+        return (Synapx.LF.App (argument', Synapx.LF.Nil)))
+      (fun argument spine ->
+        let* argument' = index_lf_term argument in
+        let* spine' = spine in
+        return (Synapx.LF.App (argument', spine')))
+      arguments
 
-(** Invokes the name disambiguation procedure from the indexing
-    context.
- *)
-let disambiguate_name :
-      Location.t * Name.t -> Ext.LF.sub option ->
-      Apx.LF.head index =
-  fun p s c fvars ->
-  c.disambiguate_name c.cvars c.bvars p s fvars
+  let rec index_clf_typ = function
+    | Synext.CLF.Typ.Constant { identifier; location; _ } ->
+        let* id = index_of_lf_typ_constant identifier in
+        let spine = Synapx.LF.Nil in
+        return (Synapx.LF.Atom (location, id, spine))
+    | Synext.CLF.Typ.Application { applicand; arguments; location } -> (
+        match applicand with
+        | Synext.CLF.Typ.Constant _
+        | Synext.CLF.Typ.Application _ -> (
+            let* applicand' = index_clf_typ applicand in
+            match applicand' with
+            | Synapx.LF.Atom (_applicand_location, id, spine1') ->
+                let* spine2' = index_clf_spine arguments in
+                let spine' = append_lf_spines spine1' spine2' in
+                return (Synapx.LF.Atom (location, id, spine'))
+            | Synapx.LF.PiTyp _
+            | Synapx.LF.Sigma _ ->
+                assert false
+            (* Supported contextual LF type-level applicands are always
+               translated to LF atoms *))
+        | Synext.CLF.Typ.Arrow _
+        | Synext.CLF.Typ.Pi _
+        | Synext.CLF.Typ.Block _ ->
+            Error.raise_at1
+              (Synext.location_of_clf_typ applicand)
+              Unsupported_lf_typ_applicand)
+    | Synext.CLF.Typ.Arrow { domain; range; _ } ->
+        let* x = fresh_identifier in
+        let* domain' = index_clf_typ domain in
+        let* range' = (with_bound_lf_variable x) (index_clf_typ range) in
+        let x' = Name.make_from_identifier x in
+        return
+          (Synapx.LF.PiTyp
+             ((Synapx.LF.TypDecl (x', domain'), Plicity.explicit), range'))
+    | Synext.CLF.Typ.Pi { parameter_identifier; parameter_type; body; _ } ->
+        let* x = fresh_identifier_opt parameter_identifier in
+        let* domain' = index_clf_typ parameter_type in
+        let* range' = (with_bound_lf_variable x) (index_clf_typ body) in
+        let x' = Name.make_from_identifier x in
+        return
+          (Synapx.LF.PiTyp
+             ((Synapx.LF.TypDecl (x', domain'), Plicity.explicit), range'))
+    | Synext.CLF.Typ.Block { elements; _ } -> (
+        match elements with
+        | `Unnamed typ ->
+            let* typ' = index_clf_typ typ in
+            let identifier = Option.none in
+            return (Synapx.LF.Sigma (Synapx.LF.SigmaLast (identifier, typ')))
+        | `Record bindings ->
+            let* bindings' = index_clf_block_bindings bindings in
+            return (Synapx.LF.Sigma bindings'))
 
-let lookup_fv' (m : Name.t) fvars =
-  List.exists (Name.( = ) m) fvars.vars
+  and index_clf_block_bindings bindings =
+    List1.fold_right
+      (fun (identifier, typ) ->
+        let* typ' = index_clf_typ typ in
+        let name_opt = Option.some (Name.make_from_identifier identifier) in
+        return (Synapx.LF.SigmaLast (name_opt, typ')))
+      (fun (identifier, typ) bindings ->
+        let* typ' = index_clf_typ typ in
+        let name = Name.make_from_identifier identifier in
+        let* bindings' = (with_bound_lf_variable identifier) bindings in
+        return (Synapx.LF.SigmaElem (name, typ', bindings')))
+      bindings
 
-let lookup_fv (m : Name.t) : bool index =
-  Bind.(get_fvars $> lookup_fv' m)
+  and index_clf_term = function
+    | Synext.CLF.Term.Variable { location; identifier } -> (
+        index_of_lf_variable_opt identifier >>= function
+        | Option.Some offset ->
+            let head = Synapx.LF.BVar offset in
+            let spine = Synapx.LF.Nil in
+            return (Synapx.LF.Root (location, head, spine))
+        | Option.None ->
+            let* () = add_free_meta_variable identifier in
+            let name = Name.make_from_identifier identifier in
+            let closure = Option.none in
+            let head = Synapx.LF.FMVar (name, closure) in
+            let spine = Synapx.LF.Nil in
+            return (Synapx.LF.Root (location, head, spine)))
+    | Synext.CLF.Term.Constant { location; identifier; _ } ->
+        let* id = index_of_lf_term_constant identifier in
+        let head = Synapx.LF.Const id in
+        let spine = Synapx.LF.Nil in
+        return (Synapx.LF.Root (location, head, spine))
+    | Synext.CLF.Term.Application { location; applicand; arguments } -> (
+        match applicand with
+        | Synext.CLF.Term.Variable _
+        | Synext.CLF.Term.Parameter_variable _
+        | Synext.CLF.Term.Constant _
+        | Synext.CLF.Term.Substitution _
+        | Synext.CLF.Term.Projection _
+        | Synext.CLF.Term.Application _
+        | Synext.CLF.Term.Hole { variant = `Underscore; _ } -> (
+            let* applicand' = index_clf_term applicand in
+            match applicand' with
+            | Synapx.LF.Root (_applicand_location, id, spine1') ->
+                let* spine2' = index_clf_spine arguments in
+                let spine' = append_lf_spines spine1' spine2' in
+                return (Synapx.LF.Root (location, id, spine'))
+            | Synapx.LF.Lam _
+            | Synapx.LF.LFHole _
+            | Synapx.LF.Tuple _
+            | Synapx.LF.Ann _ ->
+                assert false
+            (* Supported contextual LF term-level applicands are always
+               translated to LF roots *))
+        | Synext.CLF.Term.Hole { variant = `Labelled _ | `Unlabelled; _ }
+        | Synext.CLF.Term.Type_annotated _
+        | Synext.CLF.Term.Abstraction _
+        | Synext.CLF.Term.Tuple _ ->
+            Error.raise_at1
+              (Synext.location_of_clf_term applicand)
+              Unsupported_lf_term_applicand)
+    | Synext.CLF.Term.Abstraction
+        { location; parameter_identifier; parameter_type; body } -> (
+        match parameter_type with
+        | Option.None ->
+            let* x = fresh_identifier_opt parameter_identifier in
+            let* body' = (with_bound_lf_variable x) (index_clf_term body) in
+            let x' = Name.make_from_identifier x in
+            return (Synapx.LF.Lam (location, x', body'))
+        | Option.Some _typ ->
+            Error.raise_at1 location
+              Unsupported_lf_annotated_term_abstraction)
+    | Synext.CLF.Term.Hole { variant; location } -> (
+        match variant with
+        | `Underscore ->
+            let head = Synapx.LF.Hole in
+            let spine = Synapx.LF.Nil in
+            return (Synapx.LF.Root (location, head, spine))
+        | `Unlabelled ->
+            let label = Option.none in
+            return (Synapx.LF.LFHole (location, label))
+        | `Labelled label ->
+            let label = Option.some (Identifier.name label) in
+            return (Synapx.LF.LFHole (location, label)))
+    | Synext.CLF.Term.Type_annotated { location; term; typ } ->
+        let* term' = index_clf_term term in
+        let* typ' = index_clf_typ typ in
+        return (Synapx.LF.Ann (location, term', typ'))
+    | Synext.CLF.Term.Parameter_variable { identifier; location } -> (
+        index_of_parameter_variable_opt identifier >>= function
+        | Option.Some offset ->
+            let closure = Option.none in
+            let head = Synapx.LF.PVar (Synapx.LF.Offset offset, closure) in
+            let spine = Synapx.LF.Nil in
+            return (Synapx.LF.Root (location, head, spine))
+        | Option.None ->
+            let* () = add_free_parameter_variable identifier in
+            let name = Name.make_from_identifier identifier in
+            let closure = Option.none in
+            let head = Synapx.LF.FPVar (name, closure) in
+            let spine = Synapx.LF.Nil in
+            return (Synapx.LF.Root (location, head, spine)))
+    | Synext.CLF.Term.Substitution { location; term; substitution } -> (
+        let* term' = index_clf_term term in
+        (* Only [term'] that is a root with an empty spine and whose head can
+           have a substitution can have [substitution] attached to it. *)
+        match term' with
+        | Synapx.LF.Root (_, Synapx.LF.MVar (cv, Option.None), Synapx.LF.Nil)
+          ->
+            let* substitution' = index_clf_substitution substitution in
+            let head' =
+              Synapx.LF.MVar (cv, Option.some substitution')
+              (* Attach substitution *)
+            in
+            return (Synapx.LF.Root (location, head', Synapx.LF.Nil))
+        | Synapx.LF.Root (_, Synapx.LF.PVar (cv, Option.None), Synapx.LF.Nil)
+          ->
+            let* substitution' = index_clf_substitution substitution in
+            let head' =
+              Synapx.LF.PVar (cv, Option.some substitution')
+              (* Attach substitution *)
+            in
+            return (Synapx.LF.Root (location, head', Synapx.LF.Nil))
+        | Synapx.LF.Root (_, Synapx.LF.FMVar (cv, Option.None), Synapx.LF.Nil)
+          ->
+            let* substitution' = index_clf_substitution substitution in
+            let head' =
+              Synapx.LF.FMVar (cv, Option.some substitution')
+              (* Attach substitution *)
+            in
+            return (Synapx.LF.Root (location, head', Synapx.LF.Nil))
+        | Synapx.LF.Root (_, Synapx.LF.FPVar (cv, Option.None), Synapx.LF.Nil)
+          ->
+            let* substitution' = index_clf_substitution substitution in
+            let head' =
+              Synapx.LF.FPVar (cv, Option.some substitution')
+              (* Attach substitution *)
+            in
+            return (Synapx.LF.Root (location, head', Synapx.LF.Nil))
+        | Synapx.LF.Root _
+        (* Matches roots with non-empty spines, or whose heads do not support
+           attaching a substitution. *)
+        | Synapx.LF.Lam _
+        | Synapx.LF.LFHole _
+        | Synapx.LF.Tuple _
+        | Synapx.LF.Ann _ ->
+            Error.raise_at1
+              (Synext.location_of_clf_term term)
+              Unsupported_clf_substitution_applicand)
+    | Synext.CLF.Term.Projection { location; term; projection } -> (
+        let* term' = index_clf_term term in
+        match term' with
+        | Synapx.LF.Root (_, head, Synapx.LF.Nil) -> (
+            match projection with
+            | `By_identifier identifier ->
+                let name = Name.make_from_identifier identifier in
+                let head' = Synapx.LF.Proj (head, Synapx.LF.ByName name) in
+                return (Synapx.LF.Root (location, head', Synapx.LF.Nil))
+            | `By_position position ->
+                let head' =
+                  Synapx.LF.Proj (head, Synapx.LF.ByPos position)
+                in
+                return (Synapx.LF.Root (location, head', Synapx.LF.Nil)))
+        | Synapx.LF.Root _
+        | Synapx.LF.Lam _
+        | Synapx.LF.LFHole _
+        | Synapx.LF.Tuple _
+        | Synapx.LF.Ann _ ->
+            Error.raise_at1 location Unsupported_clf_projection_applicand)
+    | Synext.CLF.Term.Tuple { location; terms } ->
+        let* tuple = index_clf_tuple terms in
+        return (Synapx.LF.Tuple (location, tuple))
 
-let print_fvars ppf (vs : Store.Var.t) =
-  let open Format in
-  pp_print_list
-    ~pp_sep: Format.comma
-    (fun ppf x -> Name.pp ppf x.Store.Var.name)
-    ppf
-    (Store.Var.to_list vs)
+  and index_clf_tuple terms =
+    List1.fold_right
+      (fun last ->
+        let* last' = index_clf_term last in
+        return (Synapx.LF.Last last'))
+      (fun term tuple ->
+        let* term' = index_clf_term term in
+        let* tuple' = tuple in
+        return (Synapx.LF.Cons (term', tuple')))
+      terms
 
-let print_fcvars ppf fcvars =
-  let open Format in
-  pp_print_list
-    ~pp_sep: Format.comma
-    (fun ppf x ->
-      fprintf ppf "FMV %a" Name.pp x)
-    ppf
-    fcvars.vars
+  and index_clf_spine spine =
+    List1.fold_right
+      (fun last ->
+        let* last' = index_clf_term last in
+        return (Synapx.LF.App (last', Synapx.LF.Nil)))
+      (fun term spine ->
+        let* term' = index_clf_term term in
+        let* spine' = spine in
+        return (Synapx.LF.App (term', spine')))
+      spine
 
-let rec get_ctxvar =
-  function
-  | Ext.LF.Null -> None
-  | Ext.LF.CtxVar (_, psi_name) -> Some psi_name
-  | Ext.LF.DDec (psi, _) -> get_ctxvar psi
-  | Ext.LF.CtxHole -> None
+  and index_clf_term_pattern = function
+    | Synext.CLF.Term.Pattern.Variable { location; identifier } -> (
+        index_of_lf_variable_opt identifier >>= function
+        | Option.Some offset ->
+            let head = Synapx.LF.BVar offset in
+            let spine = Synapx.LF.Nil in
+            return (Synapx.LF.Root (location, head, spine))
+        | Option.None ->
+            let* () = add_free_meta_variable identifier in
+            let name = Name.make_from_identifier identifier in
+            let closure = Option.none in
+            let head = Synapx.LF.FMVar (name, closure) in
+            let spine = Synapx.LF.Nil in
+            return (Synapx.LF.Root (location, head, spine)))
+    | Synext.CLF.Term.Pattern.Constant { location; identifier; _ } ->
+        let* id = index_of_lf_term_constant identifier in
+        let head = Synapx.LF.Const id in
+        let spine = Synapx.LF.Nil in
+        return (Synapx.LF.Root (location, head, spine))
+    | Synext.CLF.Term.Pattern.Application { location; applicand; arguments }
+      -> (
+        match applicand with
+        | Synext.CLF.Term.Pattern.Variable _
+        | Synext.CLF.Term.Pattern.Parameter_variable _
+        | Synext.CLF.Term.Pattern.Constant _
+        | Synext.CLF.Term.Pattern.Substitution _
+        | Synext.CLF.Term.Pattern.Projection _
+        | Synext.CLF.Term.Pattern.Application _
+        | Synext.CLF.Term.Pattern.Wildcard _ -> (
+            let* applicand' = index_clf_term_pattern applicand in
+            match applicand' with
+            | Synapx.LF.Root (_applicand_location, id, spine1') ->
+                let* spine2' = index_clf_spine_pattern arguments in
+                let spine' = append_lf_spines spine1' spine2' in
+                return (Synapx.LF.Root (location, id, spine'))
+            | Synapx.LF.Lam _
+            | Synapx.LF.LFHole _
+            | Synapx.LF.Tuple _
+            | Synapx.LF.Ann _ ->
+                assert false
+            (* Supported contextual LF term-level applicands are always
+               translated to LF roots *))
+        | Synext.CLF.Term.Pattern.Type_annotated _
+        | Synext.CLF.Term.Pattern.Abstraction _
+        | Synext.CLF.Term.Pattern.Tuple _ ->
+            Error.raise_at1
+              (Synext.location_of_clf_term_pattern applicand)
+              Unsupported_lf_term_applicand)
+    | Synext.CLF.Term.Pattern.Abstraction
+        { location; parameter_identifier; parameter_type; body } -> (
+        match parameter_type with
+        | Option.None ->
+            let* x = fresh_identifier_opt parameter_identifier in
+            let* body' =
+              (with_bound_lf_variable x) (index_clf_term_pattern body)
+            in
+            let x' = Name.make_from_identifier x in
+            return (Synapx.LF.Lam (location, x', body'))
+        | Option.Some _typ ->
+            Error.raise_at1 location
+              Unsupported_lf_annotated_term_abstraction)
+    | Synext.CLF.Term.Pattern.Wildcard { location } ->
+        return (Synapx.LF.LFHole (location, Option.none))
+    | Synext.CLF.Term.Pattern.Type_annotated { location; term; typ } ->
+        let* term' = index_clf_term_pattern term in
+        let* typ' = index_clf_typ typ in
+        return (Synapx.LF.Ann (location, term', typ'))
+    | Synext.CLF.Term.Pattern.Parameter_variable { identifier; location }
+      -> (
+        index_of_parameter_variable_opt identifier >>= function
+        | Option.Some offset ->
+            let closure = Option.none in
+            let head = Synapx.LF.PVar (Synapx.LF.Offset offset, closure) in
+            let spine = Synapx.LF.Nil in
+            return (Synapx.LF.Root (location, head, spine))
+        | Option.None ->
+            let* () = add_free_parameter_variable identifier in
+            let name = Name.make_from_identifier identifier in
+            let closure = Option.none in
+            let head = Synapx.LF.FPVar (name, closure) in
+            let spine = Synapx.LF.Nil in
+            return (Synapx.LF.Root (location, head, spine)))
+    | Synext.CLF.Term.Pattern.Substitution { location; term; substitution }
+      -> (
+        let* term' = index_clf_term_pattern term in
+        (* Only [term'] that is a root with an empty spine and whose head can
+           have a substitution can have [substitution] attached to it. *)
+        match term' with
+        | Synapx.LF.Root (_, Synapx.LF.MVar (cv, Option.None), Synapx.LF.Nil)
+          ->
+            let* substitution' = index_clf_substitution substitution in
+            let head' =
+              Synapx.LF.MVar (cv, Option.some substitution')
+              (* Attach substitution *)
+            in
+            return (Synapx.LF.Root (location, head', Synapx.LF.Nil))
+        | Synapx.LF.Root (_, Synapx.LF.PVar (cv, Option.None), Synapx.LF.Nil)
+          ->
+            let* substitution' = index_clf_substitution substitution in
+            let head' =
+              Synapx.LF.PVar (cv, Option.some substitution')
+              (* Attach substitution *)
+            in
+            return (Synapx.LF.Root (location, head', Synapx.LF.Nil))
+        | Synapx.LF.Root (_, Synapx.LF.FMVar (cv, Option.None), Synapx.LF.Nil)
+          ->
+            let* substitution' = index_clf_substitution substitution in
+            let head' =
+              Synapx.LF.FMVar (cv, Option.some substitution')
+              (* Attach substitution *)
+            in
+            return (Synapx.LF.Root (location, head', Synapx.LF.Nil))
+        | Synapx.LF.Root (_, Synapx.LF.FPVar (cv, Option.None), Synapx.LF.Nil)
+          ->
+            let* substitution' = index_clf_substitution substitution in
+            let head' =
+              Synapx.LF.FPVar (cv, Option.some substitution')
+              (* Attach substitution *)
+            in
+            return (Synapx.LF.Root (location, head', Synapx.LF.Nil))
+        | Synapx.LF.Root _
+        (* Matches roots with non-empty spines, or whose heads do not support
+           attaching a substitution. *)
+        | Synapx.LF.Lam _
+        | Synapx.LF.LFHole _
+        | Synapx.LF.Tuple _
+        | Synapx.LF.Ann _ ->
+            Error.raise_at1
+              (Synext.location_of_clf_term_pattern term)
+              Unsupported_clf_substitution_applicand)
+    | Synext.CLF.Term.Pattern.Projection { location; term; projection } -> (
+        let* term' = index_clf_term_pattern term in
+        match term' with
+        | Synapx.LF.Root (_, head, Synapx.LF.Nil) -> (
+            match projection with
+            | `By_identifier identifier ->
+                let name = Name.make_from_identifier identifier in
+                let head' = Synapx.LF.Proj (head, Synapx.LF.ByName name) in
+                return (Synapx.LF.Root (location, head', Synapx.LF.Nil))
+            | `By_position position ->
+                let head' =
+                  Synapx.LF.Proj (head, Synapx.LF.ByPos position)
+                in
+                return (Synapx.LF.Root (location, head', Synapx.LF.Nil)))
+        | Synapx.LF.Root _
+        | Synapx.LF.Lam _
+        | Synapx.LF.LFHole _
+        | Synapx.LF.Tuple _
+        | Synapx.LF.Ann _ ->
+            Error.raise_at1 location Unsupported_clf_projection_applicand)
+    | Synext.CLF.Term.Pattern.Tuple { location; terms } ->
+        let* tuple = index_clf_tuple_pattern terms in
+        return (Synapx.LF.Tuple (location, tuple))
 
+  and index_clf_tuple_pattern terms =
+    List1.fold_right
+      (fun last ->
+        let* last' = index_clf_term_pattern last in
+        return (Synapx.LF.Last last'))
+      (fun term tuple ->
+        let* term' = index_clf_term_pattern term in
+        let* tuple' = tuple in
+        return (Synapx.LF.Cons (term', tuple')))
+      terms
 
-let get_ctxvar_mobj (_, mO) =
-  match mO with
-  | Ext.LF.CObj cPsi -> get_ctxvar cPsi
-  | Ext.LF.ClObj (cPsi, (Ext.LF.EmptySub _, [_])) -> get_ctxvar cPsi
-  | _ -> None
+  and index_clf_spine_pattern spine =
+    List1.fold_right
+      (fun last ->
+        let* last' = index_clf_term_pattern last in
+        return (Synapx.LF.App (last', Synapx.LF.Nil)))
+      (fun term spine ->
+        let* term' = index_clf_term_pattern term in
+        let* spine' = spine in
+        return (Synapx.LF.App (term', spine')))
+      spine
 
-let rec length_typ_rec =
-  function
-  | Ext.LF.SigmaLast _ -> 1
-  | Ext.LF.SigmaElem (x, _, rest) ->
-     1 + length_typ_rec rest
+  and index_clf_substitution =
+    (* Not all values [h] of type {!type:Synapx.LF.head} are mapped to
+       [Synapx.LF.Head h] when the spine is [Synapx.LF.Nil] because only
+       those terms are in the pattern substitution.
 
-let rec index_kind (k : Ext.LF.kind) : Apx.LF.kind index =
-  let open Bind in
-  let pi x a k =
-    seq2 (index_typ a) (locally (extending_bvars x) (index_kind k))
-    $> fun (a', k') -> Apx.LF.PiKind ((Apx.LF.TypDecl (x, a'), Plicity.explicit), k')
-  in
-  match k with
-  | Ext.LF.Typ _ ->
-     return Apx.LF.Typ
-  | Ext.LF.ArrKind (_, a, k) ->
-     pi (Name.mk_name Name.NoName) a k
-  | Ext.LF.PiKind (_, Ext.LF.TypDecl (x, a), k) ->
-     pi x a k
-
-and index_typ (a : Ext.LF.typ) : Apx.LF.typ index =
-  let open Bind in
-  match a with
-  | Ext.LF.Atom (loc, a, s) ->
-     let a' =
-       try
-         Store.Cid.Typ.index_of_name a
-       with
-       | Not_found ->
-          throw loc (UnboundName a)
-     in
-     index_spine s
-     $> fun s' -> Apx.LF.Atom (loc, a', s')
-
-  | Ext.LF.ArrTyp (_, a, b) ->
-     (* TODO use contextual name generation here *)
-     let x = Name.mk_name Name.NoName in
-     seq2 (index_typ a) (locally (extending_bvars x) (index_typ b))
-     $> fun (a', b') ->
-        Apx.LF.PiTyp ((Apx.LF.TypDecl (x, a'), Plicity.explicit), b')
-
-  | Ext.LF.PiTyp (_, Ext.LF.TypDecl (x, a), b) ->
-     seq2 (index_typ a) (locally (extending_bvars x) (index_typ b))
-     $> fun (a', b') ->
-        Apx.LF.PiTyp ((Apx.LF.TypDecl (x, a'), Plicity.implicit), b')
-
-  | Ext.LF.Sigma (_, typRec) ->
-     index_typ_rec typRec $> fun typRec' -> Apx.LF.Sigma typRec'
-
-  | Ext.LF.AtomTerm (loc, Ext.LF.TList (loc', nl)) ->
-     begin match shunting_yard nl with
-     | Ext.LF.Root (_, Ext.LF.Name (_, a, None), tS') ->
-        dprintf
-          begin fun p ->
-          p.fmt "[index_typ] shunting_yard' of @[%a@] gives head @[%a@] and spine @[%a@]"
-            (Format.pp_print_list
-               ~pp_sep: Format.pp_print_space
-               (P.fmt_ppr_lf_normal P.l0))
-            nl
-            Name.pp a
-            (P.fmt_ppr_lf_spine P.l0) tS'
-          end;
-        index_typ (Ext.LF.Atom (loc, a, tS'))
-     | _ -> throw loc IllFormedCompTyp
-     end
-
-  | Ext.LF.AtomTerm (loc, Ext.LF.Root (loc', Ext.LF.Name (_, name, None), tS)) ->
-     index_typ (Ext.LF.Atom (loc', name, tS))
-
-(* Adaptation of Dijkstra's 'shunting yard' algorithm for
- * parsing infix, postfix, and prefix operators from a list
- *
- * Preconditions:
- *    - All operators (constructors and typs) are contained in the store
- *
- * Post: List of normals is converted to a Root with a head and a spine
- *        - Head contains the name of the atom term that is to be indexed
- *
-*)
-and shunting_yard (l : Ext.LF.normal list) : Ext.LF.normal =
-  let module List : sig
-    include module type of List
-
-    (** [take k \[x1; x2; ...; xn\]] is
-        [(\[x1; x2; ...; xk\], \[x(k+1); x(k+2); ...; xn\])].
-        - If [k <= 0], then [take k \[x1; x2; ...; xn\]] is
-          [(\[\], \[x1; x2; ...; xn\])].
-        - If [k >= n], then [take k \[x1; x2; ...; xn\]] is
-          [(\[x1; x2; ...; xn\], \[\])]. *)
-    val take : int -> 'a list -> 'a list * 'a list
-  end = struct
-    include List
-
-    let take =
-      let rec take k l acc =
-        match l with
-        | x :: xs when k > 0 -> take (k - 1) xs (x :: acc)
-        | _ -> (acc, l)
-      in
-      fun k l -> take k l []
-  end
-  in
-  let get_pragma =
-    function
-    | Ext.LF.Root (_, Ext.LF.Name (_, name, _), Ext.LF.Nil)
-      | Ext.LF.Root (_, Ext.LF.PVar (_, name, _), Ext.LF.Nil) ->
-       Option.get (Store.OpPragmas.getPragma name)
-  in
-  let pragmaExists =
-    function
-    | Ext.LF.Root (_, Ext.LF.Name (_, name, _), Ext.LF.Nil)
-      | Ext.LF.Root (_, Ext.LF.PVar (_, name, _), Ext.LF.Nil) ->
-       let args_expected =
-         name
-         |> List.find_apply
-              [ Store.Cid.Typ.args_of_name_opt
-              ; Store.Cid.Term.args_of_name_opt
-              ]
-         |> Option.value ~default:(-1)
-       in
-       Store.OpPragmas.pragmaExists name && args_expected > 0
-    | _ -> false
-  in
-  let lte (p : Store.OpPragmas.fixPragma) (o : Store.OpPragmas.fixPragma) : bool =
-    let p_p = p.Store.OpPragmas.precedence in
-    let o_p = o.Store.OpPragmas.precedence in
-    let p_a =
-      match p.Store.OpPragmas.assoc with
-      | Some a -> a
-      | None -> !Store.OpPragmas.default
+       This function was introduced in commit 95578f0e ("Improved parsing of
+       substitutions", 2015-05-25). *)
+    let to_head_or_obj = function
+      | Synapx.LF.Root (_, (Synapx.LF.BVar _ as h), Synapx.LF.Nil)
+      | Synapx.LF.Root (_, (Synapx.LF.PVar _ as h), Synapx.LF.Nil)
+      | Synapx.LF.Root (_, (Synapx.LF.Proj _ as h), Synapx.LF.Nil) ->
+          Synapx.LF.Head h
+      | tM -> Synapx.LF.Obj tM
     in
-    p_p < o_p ||
-      (p_p = o_p && Associativity.is_left_associative p_a)
-  (* p.Store.OpPragmas.precedence < o.Store.OpPragmas.precedence ||
-   * (p.Store.OpPragmas.precedence = o.Store.OpPragmas.precedence &&
-   *    ((o.Store.OpPragmas.assoc = None && !Store.OpPragmas.default = Ext.Sgn.Left) ||
-   *       o.Store.OpPragmas.assoc = Some Ext.Sgn.Left)) *)
-  in
-  let rec normalListToSpine : Ext.LF.normal list -> Ext.LF.spine =
-    function
-    | [] -> Ext.LF.Nil
-    | h :: t -> Ext.LF.App (Ext.LF.loc_of_normal h, h, normalListToSpine t)
-  in
-  let rec parse : int
-                  * Ext.LF.normal list
-                  * (int * Ext.LF.normal) list
-                  * (int * Store.OpPragmas.fixPragma * Location.t) list ->
-                  Ext.LF.normal =
-    function
-    | (i, Ext.LF.TList (_, nl) :: t, y, z) ->
-       let h = parse (0, nl, [], []) in
-       parse (i + 1, t, (i, h) :: y, z)
-    | (i, Ext.LF.Lam (loc, name, Ext.LF.TList (_, nl)) :: t, y, z) ->
-       let h = parse (0, nl, [], []) in
-       parse (i + 1, t, (i, Ext.LF.Lam (loc, name, h)) :: y, z)
-    | (i, h :: t, exps, [])
-         when pragmaExists h ->
-       let p = get_pragma h in
-       let loc = Ext.LF.loc_of_normal h in
-       parse (i + 1, t, exps, [(i, p, loc)])
-    | (i, h :: t, exps, (x, o, loc_o) :: os)
-         when pragmaExists h ->
-       let p = get_pragma h in
-       if lte p o
-       then
-         begin match o.Store.OpPragmas.fix with
-         | Fixity.Prefix ->
-            let args_expected =
-              o.Store.OpPragmas.name
-              |> List.find_apply
-                [ Store.Cid.Typ.args_of_name_opt
-                ; Store.Cid.Term.args_of_name_opt
-                ]
-              |> Option.get_or_else
-                  (fun () -> throw loc_o (UnboundOperator o.Store.OpPragmas.name))
-            in
-            let (ops, es) = List.take args_expected exps in
-            let loc = loc_o in
-            let ops = List.map Pair.snd ops in
-            let e' =
-              Ext.LF.Root
-                ( loc
-                , Ext.LF.Name (loc, o.Store.OpPragmas.name, None)
-                , normalListToSpine ops
-                )
-            in
-            parse (i + 1, h :: t, (i, e') :: es, os)
+    let rec index_clf_substitution' head terms =
+      match (head, terms) with
+      | start, h :: s ->
+          let* s' = index_clf_substitution' start s in
+          let* h' = index_clf_term h in
+          let h'' = to_head_or_obj h' in
+          return (Synapx.LF.Dot (h'', s'))
+      | Synext.CLF.Substitution.Head.None _, [] -> return Synapx.LF.EmptySub
+      | Synext.CLF.Substitution.Head.Identity _, [] -> return Synapx.LF.Id
+      | ( Synext.CLF.Substitution.Head.Substitution_variable
+            { identifier; closure; _ }
+        , [] ) -> (
+          index_of_substitution_variable_opt identifier >>= function
+          | Option.Some offset ->
+              let* closure' =
+                traverse_option index_clf_substitution closure
+              in
+              return (Synapx.LF.SVar (Synapx.LF.Offset offset, closure'))
+          | Option.None ->
+              let* () = add_free_substitution_variable identifier in
+              let name = Name.make_from_identifier identifier in
+              let* closure' =
+                traverse_option index_clf_substitution closure
+              in
+              return (Synapx.LF.FSVar (name, closure')))
+    in
+    fun substitution ->
+      let { Synext.CLF.Substitution.head; terms; _ } = substitution in
+      index_clf_substitution' head terms
 
-         | Fixity.Postfix ->
-            let (_, e) :: es = exps in
-            let loc = Ext.LF.loc_of_normal e in
-            let e' =
-              Ext.LF.Root
-                ( loc
-                , Ext.LF.Name (loc, o.Store.OpPragmas.name, None)
-                , Ext.LF.App (loc, e, Ext.LF.Nil)
-                )
-            in
-            parse (i + 1, h :: t, (i, e') :: es, os)
+  and index_clf_substitution_pattern =
+    (* Not all values [h] of type {!type:Synapx.LF.head} are mapped to
+       [Synapx.LF.Head h] when the spine is [Synapx.LF.Nil] because only
+       those terms are in the pattern substitution.
 
-         | Fixity.Infix ->
-            let (_, e2) :: (_, e1) :: es = exps in
-            let loc = Ext.LF.loc_of_normal e1 in
-            let e' =
-              Ext.LF.Root
-                ( loc
-                , Ext.LF.Name (loc, o.Store.OpPragmas.name, None)
-                , normalListToSpine [e1; e2]
-                )
-            in
-            parse (i + 1, h :: t, (i, e') :: es, os)
-         end
-       else
-         begin
-           let loc_p = Ext.LF.loc_of_normal h in
-           parse (i + 1, t, exps, (i, p, loc_p) :: (x, o, loc_o) :: os)
-         end
-    | (i, h :: t, y, z) -> parse (i + 1, t, (i, h) :: y, z)
-    | (_, [], y, z) ->
-       reconstruct (y, z)
+       This function was introduced in commit 95578f0e ("Improved parsing of
+       substitutions", 2015-05-25). *)
+    let to_head_or_obj = function
+      | Synapx.LF.Root (_, (Synapx.LF.BVar _ as h), Synapx.LF.Nil)
+      | Synapx.LF.Root (_, (Synapx.LF.PVar _ as h), Synapx.LF.Nil)
+      | Synapx.LF.Root (_, (Synapx.LF.Proj _ as h), Synapx.LF.Nil) ->
+          Synapx.LF.Head h
+      | tM -> Synapx.LF.Obj tM
+    in
+    let rec index_clf_substitution' head terms =
+      match (head, terms) with
+      | start, h :: s ->
+          let* s' = index_clf_substitution' start s in
+          let* h' = index_clf_term_pattern h in
+          let h'' = to_head_or_obj h' in
+          return (Synapx.LF.Dot (h'', s'))
+      | Synext.CLF.Substitution.Pattern.Head.None _, [] ->
+          return Synapx.LF.EmptySub
+      | Synext.CLF.Substitution.Pattern.Head.Identity _, [] ->
+          return Synapx.LF.Id
+      | ( Synext.CLF.Substitution.Pattern.Head.Substitution_variable
+            { identifier; closure; _ }
+        , [] ) -> (
+          index_of_substitution_variable_opt identifier >>= function
+          | Option.Some offset ->
+              let* closure' =
+                traverse_option index_clf_substitution closure
+              in
+              return (Synapx.LF.SVar (Synapx.LF.Offset offset, closure'))
+          | Option.None ->
+              let* () = add_free_substitution_variable identifier in
+              let name = Name.make_from_identifier identifier in
+              let* closure' =
+                traverse_option index_clf_substitution closure
+              in
+              return (Synapx.LF.FSVar (name, closure')))
+    in
+    fun substitution ->
+      let { Synext.CLF.Substitution.Pattern.head; terms; _ } =
+        substitution
+      in
+      index_clf_substitution' head terms
 
-  (** [reconstruct (operands, operators)] is the normal term reconstructed by
-      iteratively rewriting the {i stack} of operands [operands] using the
-      {i stack} of operators [operators] following Dijkstra's shunting yard
-      algorithm.
+  and with_indexed_clf_context_bindings cPhi bindings f =
+    match bindings with
+    | [] -> f cPhi
+    | x :: xs ->
+        with_indexed_clf_context_binding x (fun y ->
+            with_indexed_clf_context_bindings (Synapx.LF.DDec (cPhi, y)) xs f)
 
-      The input operands and operators are indexed by their initial position in
-      the list of normal terms to rewrite. This allows for more precise error
-      reporting:
+  and with_indexed_clf_context_binding (identifier, typ_opt) f =
+    let name = Name.make_from_identifier identifier in
+    match typ_opt with
+    | Option.None ->
+        with_bound_lf_variable identifier (f (Synapx.LF.TypDeclOpt name))
+    | Option.Some typ ->
+        let* typ' = index_clf_typ typ in
+        with_bound_lf_variable identifier
+          (f (Synapx.LF.TypDecl (name, typ')))
 
-        - The operands of a prefix operator must have initially appeared after
-          the operator.
-        - The left operand of an infix operator must have initially appeared
-          before the operator, and similarly the right operand must have
-          appeared after the operator.
-        - The operands of a postfix operator must have initially appeared
-          before the operator.
-      *)
-  and reconstruct : (int * Ext.LF.normal) list
-                    * (int * Store.OpPragmas.fixPragma * Location.t) list
-                    -> Ext.LF.normal =
-    function
-    | ([(_, e)], []) -> e
+  and with_indexed_clf_context :
+        'a. Synext.clf_context -> (Synapx.LF.dctx -> 'a t) -> 'a t =
+   fun context f ->
+    match context with
+    | { Synext.CLF.Context.head = Synext.CLF.Context.Head.None _
+      ; bindings
+      ; _
+      } ->
+        with_indexed_clf_context_bindings Synapx.LF.Null bindings f
+    | { Synext.CLF.Context.head = Synext.CLF.Context.Head.Hole _
+      ; bindings
+      ; _
+      } ->
+        with_indexed_clf_context_bindings Synapx.LF.CtxHole bindings f
+    | { Synext.CLF.Context.head =
+          Synext.CLF.Context.Head.Context_variable { identifier; _ }
+      ; bindings
+      ; _
+      } -> (
+        index_of_context_variable_opt identifier >>= function
+        | Option.None ->
+            (* A free context variable *)
+            let* () = add_free_context_variable identifier in
+            let name = Name.make_from_identifier identifier in
+            f (Synapx.LF.CtxVar (Synapx.LF.CtxName name))
+        | Option.Some index ->
+            (* A bound context variable *)
+            f (Synapx.LF.CtxVar (Synapx.LF.CtxOffset index)))
 
-    | (exps,
-       (i, ({ Store.OpPragmas.fix = Fixity.Prefix; _ } as o), loc_o) :: os) ->
-       let args_expected =
-         o.Store.OpPragmas.name
-         |> List.find_apply
-           [ Store.Cid.Typ.args_of_name_opt
-           ; Store.Cid.Term.args_of_name_opt
-           ]
-         |> Option.get_or_else
-             (fun () -> throw loc_o (UnboundOperator o.Store.OpPragmas.name))
-       in
-       let (ops, es) = List.take args_expected exps in
-       let loc =
-         if Location.is_ghost loc_o
-         then
-           if args_expected > 0
-           then
-             try
-               let (_, x) = List.hd ops in
-               Ext.LF.loc_of_normal x
-             with
-             | _ ->
-                throw
-                  Location.ghost
-                  (MissingArguments (o.Store.OpPragmas.name, args_expected, List.length exps))
-           else Location.ghost
-         else loc_o
-       in
-       if List.for_all (fun (x, _) -> x > i) ops
-       then
-         begin
-           let ops = List.map (fun (_, x) -> x) ops in
-           let e' = Ext.LF.Root (loc, Ext.LF.Name (loc, o.Store.OpPragmas.name, None), normalListToSpine ops) in
-           reconstruct ((i, e') :: es, os)
-         end
-       else
-         throw loc (MisplacedOperator o.Store.OpPragmas.name)
+  and index_clf_context context = with_indexed_clf_context context return
 
-    | ((i2, e2) :: (i1, e1) :: es,
-       (i, ({ Store.OpPragmas.fix = Fixity.Infix; _ } as o), _) :: os) ->
-       let loc = Ext.LF.loc_of_normal e1 in
-       if i2 > i && i > i1
-       then
-         begin
-           let e' =
-             Ext.LF.Root
-               ( loc
-               , Ext.LF.Name (loc, o.Store.OpPragmas.name, None)
-               , normalListToSpine [e1; e2]
-               )
-           in
-           reconstruct ((i, e') :: es, os)
-         end
-       else
-         throw loc (MisplacedOperator o.Store.OpPragmas.name)
+  and with_indexed_clf_context_pattern_bindings cPhi bindings f =
+    match bindings with
+    | [] -> f cPhi
+    | x :: xs ->
+        with_indexed_clf_context_pattern_binding x (fun y ->
+            with_indexed_clf_context_pattern_bindings
+              (Synapx.LF.DDec (cPhi, y))
+              xs f)
 
-    | ((i1, e) :: es,
-       (i, ({ Store.OpPragmas.fix = Fixity.Postfix; _ } as o), _) :: os) ->
-       let loc = Ext.LF.loc_of_normal e in
-       if i > i1
-       then
-         begin
-           let e' =
-             Ext.LF.Root
-               ( loc
-               , Ext.LF.Name (loc, o.Store.OpPragmas.name, None)
-               , Ext.LF.App (loc, e, Ext.LF.Nil)
-               )
-           in
-           reconstruct ((i, e') :: es, os)
-         end
-       else
-         throw loc (MisplacedOperator o.Store.OpPragmas.name)
+  and with_indexed_clf_context_pattern_binding (identifier, typ) f =
+    let name = Name.make_from_identifier identifier in
+    let* typ' = index_clf_typ typ in
+    with_bound_lf_variable identifier (f (Synapx.LF.TypDecl (name, typ')))
 
-    | (l, []) ->
-       let l' = List.rev l in
-       let (_, Ext.LF.Root (loc, h, Ext.LF.Nil)) :: t = l' in
-       let t = List.map Pair.snd t in
-       Ext.LF.Root (loc, h, normalListToSpine t)
+  and with_indexed_clf_context_pattern :
+        'a. Synext.clf_context_pattern -> (Synapx.LF.dctx -> 'a t) -> 'a t =
+   fun context f ->
+    match context with
+    | { Synext.CLF.Context.Pattern.head =
+          Synext.CLF.Context.Pattern.Head.None _
+      ; bindings
+      ; _
+      } ->
+        with_indexed_clf_context_pattern_bindings Synapx.LF.Null bindings f
+    | { Synext.CLF.Context.Pattern.head =
+          Synext.CLF.Context.Pattern.Head.Hole _
+      ; bindings
+      ; _
+      } ->
+        with_indexed_clf_context_pattern_bindings Synapx.LF.CtxHole bindings
+          f
+    | { Synext.CLF.Context.Pattern.head =
+          Synext.CLF.Context.Pattern.Head.Context_variable { identifier; _ }
+      ; bindings
+      ; _
+      } -> (
+        index_of_context_variable_opt identifier >>= function
+        | Option.None ->
+            (* A free context variable *)
+            let* () = add_free_context_variable identifier in
+            let name = Name.make_from_identifier identifier in
+            f (Synapx.LF.CtxVar (Synapx.LF.CtxName name))
+        | Option.Some index ->
+            (* A bound context variable *)
+            f (Synapx.LF.CtxVar (Synapx.LF.CtxOffset index)))
 
-    | a, b ->
-       failwith "Error in indexing"
-  in
-  try
-    parse (0, l, [], [])
-  with
-  | Error _ as e -> raise e
-  | _ -> throw (List.hd l |> Ext.LF.loc_of_normal) ParseError
+  and index_clf_context_pattern context =
+    with_indexed_clf_context_pattern context return
 
-(* Records are not handled in a general manner
- * We need to change the datatype for typ_rec to be typ_decl ctx
- * XXX
- * Remark: records *must* be nonempty (this is enforced by
-   construction) but contexts may be empty.
-   If we rewrite records to be contexts, then we now have an
-   additional invariant in the code that is not enforced by the types.
-   -je
- *)
-and index_typ_rec : Ext.LF.typ_rec -> Apx.LF.typ_rec index =
-  let open Bind in
-  function
-  | Ext.LF.SigmaLast (n, a) ->
-     index_typ a $> fun a' -> Apx.LF.SigmaLast (n, a')
+  let rec index_meta_object = function
+    | Synext.Meta.Object.Context { location; context } ->
+        let* context' = index_clf_context context in
+        return (location, Synapx.Comp.CObj context')
+    | Synext.Meta.Object.Contextual_term { location; context; term } ->
+        with_indexed_clf_context context (fun context' ->
+            let* term' = index_clf_term term in
+            (* TODO: The approximate syntax should have a [MObj of normal]
+               constructor like in the internal syntax. See
+               {!Reconstruct.elClObj}. *)
+            return
+              ( location
+              , Synapx.Comp.ClObj
+                  ( context'
+                  , Synapx.LF.Dot (Synapx.LF.Obj term', Synapx.LF.EmptySub)
+                  ) ))
+    | Synext.Meta.Object.Plain_substitution { location; domain; range } ->
+        with_indexed_clf_context domain (fun domain' ->
+            let* range' = index_clf_substitution range in
+            return (location, Synapx.Comp.ClObj (domain', range')))
+    | Synext.Meta.Object.Renaming_substitution { location; domain; range } ->
+        with_indexed_clf_context domain (fun domain' ->
+            let* range' = index_clf_substitution range in
+            return (location, Synapx.Comp.ClObj (domain', range')))
 
-  | Ext.LF.SigmaElem (x, a, rest) ->
-     seq2
-       (index_typ a)
-       (locally (extending_bvars x) (index_typ_rec rest))
-     $> fun (a', rest') -> Apx.LF.SigmaElem (x, a', rest')
+  and index_meta_type = function
+    | Synext.Meta.Typ.Context_schema { location; schema } ->
+        let* index = index_of_schema_constant schema in
+        return (Synapx.LF.CTyp index)
+    | Synext.Meta.Typ.Contextual_typ { context; typ; _ } ->
+        with_indexed_clf_context context (fun context' ->
+            let* typ' = index_clf_typ typ in
+            return (Synapx.LF.ClTyp (Synapx.LF.MTyp typ', context')))
+    | Synext.Meta.Typ.Parameter_typ { context; typ; _ } ->
+        with_indexed_clf_context context (fun context' ->
+            let* typ' = index_clf_typ typ in
+            return (Synapx.LF.ClTyp (Synapx.LF.PTyp typ', context')))
+    | Synext.Meta.Typ.Plain_substitution_typ { location; domain; range } ->
+        with_indexed_clf_context domain (fun domain' ->
+            with_indexed_clf_context range (fun range' ->
+                return
+                  (Synapx.LF.ClTyp
+                     (Synapx.LF.STyp (Synapx.LF.Subst, range'), domain'))))
+    | Synext.Meta.Typ.Renaming_substitution_typ { location; domain; range }
+      ->
+        with_indexed_clf_context domain (fun domain' ->
+            with_indexed_clf_context range (fun range' ->
+                return
+                  (Synapx.LF.ClTyp
+                     (Synapx.LF.STyp (Synapx.LF.Ren, range'), domain'))))
 
-and index_tuple : Ext.LF.tuple -> Apx.LF.tuple index =
-  let open Bind in
-  function
-  | Ext.LF.Last m ->
-     index_term m $> fun m' -> Apx.LF.Last m'
+  and with_indexed_lf_context_bindings_list1 cPhi (List1.T (x, xs)) f =
+    with_indexed_lf_context_binding x (fun y ->
+        with_indexed_lf_context_bindings_list (Synapx.LF.Dec (cPhi, y)) xs f)
 
-  | Ext.LF.Cons (m, rest) ->
-     seq2 (index_term m) (index_tuple rest)
-     $> fun (m', rest') ->
-        Apx.LF.Cons (m', rest')
+  and with_indexed_lf_context_bindings_list cPhi bindings f =
+    match bindings with
+    | [] -> f cPhi
+    | x :: xs ->
+        with_indexed_lf_context_binding x (fun y ->
+            with_indexed_lf_context_bindings_list
+              (Synapx.LF.Dec (cPhi, y))
+              xs f)
 
-and index_term : Ext.LF.normal -> Apx.LF.normal index =
-  let open Bind in
-  function
-  | Ext.LF.Lam (loc, x, m) ->
-     locally (extending_bvars x) (index_term m)
-     $> fun m' -> Apx.LF.Lam (loc, x, m')
+  and with_indexed_lf_context_binding (identifier, typ) f =
+    let name = Name.make_from_identifier identifier in
+    let* typ' = index_lf_typ typ in
+    with_bound_lf_variable identifier (f (Synapx.LF.TypDecl (name, typ')))
 
-  | Ext.LF.Tuple (loc, tuple) ->
-     index_tuple tuple $> fun tuple' -> Apx.LF.Tuple (loc, tuple')
+  and with_indexed_schema_some_clause some f =
+    match some with
+    | Option.None -> f Synapx.LF.Empty
+    | Option.Some some ->
+        with_indexed_lf_context_bindings_list1 Synapx.LF.Empty some f
 
-  | Ext.LF.Root (loc, h, s) ->
-     seq2 (index_head h) (index_spine s)
-     $> fun (h', s') -> Apx.LF.Root (loc, h', s')
+  and with_indexed_schema_block_clause_bindings_list1 bindings f =
+    match bindings with
+    | List1.T ((identifier, typ), []) ->
+        let name = Name.make_from_identifier identifier in
+        let* typ' = index_lf_typ typ in
+        return (Synapx.LF.SigmaLast (Option.some name, typ'))
+    | List1.T ((identifier, typ), x :: xs) ->
+        let name = Name.make_from_identifier identifier in
+        let* typ' = index_lf_typ typ in
+        with_bound_lf_variable identifier
+          (with_indexed_schema_block_clause_bindings_list1 (List1.from x xs)
+             (fun tRec -> return (Synapx.LF.SigmaElem (name, typ', tRec))))
 
-  | Ext.LF.LFHole (loc, name) -> return (Apx.LF.LFHole (loc, name))
+  and index_clf_block_clause_bindings bindings =
+    List1.fold_right
+      (fun (identifier, typ) ->
+        let* typ' = index_clf_typ typ in
+        let name_opt = Option.some (Name.make_from_identifier identifier) in
+        return (Synapx.LF.SigmaLast (name_opt, typ')))
+      (fun (identifier, typ) bindings ->
+        let* typ' = index_clf_typ typ in
+        let name = Name.make_from_identifier identifier in
+        let* bindings' = (with_bound_lf_variable identifier) bindings in
+        return (Synapx.LF.SigmaElem (name, typ', bindings')))
+      bindings
 
-  | Ext.LF.Ann (loc, m, a) ->
-     seq2 (index_typ a) (index_term m)
-     $> fun (a', m') ->
-        Apx.LF.Ann (loc, m', a')
+  and index_schema_block_clause = function
+    | `Record bindings ->
+        with_indexed_schema_block_clause_bindings_list1 bindings return
+    | `Unnamed typ ->
+        let* typ' = index_lf_typ typ in
+        return (Synapx.LF.SigmaLast (Option.none, typ'))
 
-  | Ext.LF.TList (loc, nl) ->
-     index_term (shunting_yard nl)
+  and index_schema = function
+    | Synext.Meta.Schema.Alternation { schemas; _ } ->
+        let* schemas' = traverse_list2 index_schema_element schemas in
+        let schemas'' = List2.to_list schemas' in
+        return (Synapx.LF.Schema schemas'')
+    | (Synext.Meta.Schema.Constant _ | Synext.Meta.Schema.Element _) as
+      element ->
+        let* element' = index_schema_element element in
+        return (Synapx.LF.Schema [ element' ])
 
-and index_proj =
-  function
-  | Ext.LF.ByPos k -> Apx.LF.ByPos k
-  | Ext.LF.ByName n -> Apx.LF.ByName n
+  and schema_some_clause_identifiers = function
+    | Option.None -> []
+    | Option.Some bindings -> List1.to_list (List1.map Pair.fst bindings)
 
-and index_head : Ext.LF.head -> Apx.LF.head index =
-  let open Bind in
-  function
-  | Ext.LF.Name (loc, n, o) ->
-     dprintf
-       (fun p ->
-         p.fmt "[index_head] indexing name/variable %a at %a"
-           Name.pp n
-           Location.print_short loc);
-     disambiguate_name (loc, n) o
+  and schema_block_clause_identifiers = function
+    | `Record bindings -> List1.to_list (List1.map Pair.fst bindings)
+    | `Unnamed _typ -> []
 
-  | Ext.LF.Proj (loc, h, k) ->
-     index_head h $> fun h' -> Apx.LF.Proj (h', index_proj k)
-
-  | Ext.LF.Hole _ ->
-     return Apx.LF.Hole
-
-  | Ext.LF.PVar (loc, p, s) ->
-     lookup_fv p
-       >>= function
-       | true ->
-          index_sub_opt s $> fun s' -> Apx.LF.FPVar (p, s')
-       | false ->
-          seq2 get_closed_status (index_cvar p)
-            >>= function
-            | (`closed_term, Either.Left _) -> throw loc (UnboundName p)
-            | (`open_term, Either.Left _) ->
-               index_sub_opt s
-               >>= fun s' ->
-                 modify_fvars (extending_by p)
-                 &> return (Apx.LF.FPVar (p, s'))
-            | (_, Either.Right offset) ->
-               index_sub_opt s
-               $> fun s' ->
-                  Apx.LF.PVar (Apx.LF.Offset offset, s')
-
-(*
-          try
-            let offset = Store.CVar.index_of_name cvars p in
-            let (s', fvs') = index_sub_opt cvars bvars fvs s in
-            (Apx.LF.PVar (Apx.LF.Offset offset, s'), fvs')
-          with Not_found ->
-            if closed_flag then
-              ((* if lookup_fv fvars (FPV p) then
-                  let (s', (fvars', closed_flag)) = index_sub cvars bvars fvs s in
-                  (Apx.LF.FPVar (p, s'), (fvars', closed_flag))
-                  else *)
-               raise (Error (loc, UnboundName p))
-              )
-            else
-              let (s', (fvars', closed_flag)) = index_sub_opt cvars bvars fvs s in
-              (Apx.LF.FPVar (p, s'), (p :: fvars', closed_flag))
- *)
-
-and index_spine : Ext.LF.spine -> Apx.LF.spine index =
-  let open Bind in
-  let app m s =
-    seq2 (index_term m) (index_spine s)
-    $> fun (m', s') -> Apx.LF.App (m', s')
-  in
-  function
-  | Ext.LF.Nil -> return Apx.LF.Nil
-  | Ext.LF.App (_, Ext.LF.TList (_, nl), s) -> app (shunting_yard nl) s
-  | Ext.LF.App (_, m, s) -> app m s
-
-(* In the external syntax, `Name` is used for bound variables, constants, and metavariables.
-   Since the logic is a bit nasty, it is encapsulated in this helper.
-
-   Here's the logic, in the order in which the checks are performed:
-   - Is it a bound variable? -> BVar
-   - Is the name already a free variable? -> FMVar
-   - Is it a declared metavariable? -> MVar
-   - Is it a constant? -> Const
-   - Are we in a closed context -> error
-   - Otherwise -> FMVar
- *)
-and disambiguate_name' f : name_disambiguator =
-  fun cvars bvars (loc, name) sub_opt fvars ->
-  let disambiguation_message kind k p =
-    p.fmt "[disambiguate_name] variable %a -> %s (at %a) %a"
-      Name.pp name
-      kind
-      Location.print_short loc
-      (Option.print
-         (fun ppf x -> Format.fprintf ppf "--> index %d" x))
-      k
-  in
-  (* form an LF indexing context so we can invoke index_sub_opt *)
-  let c = { cvars; bvars; disambiguate_name = disambiguate_name' f } in
-  try
-    ( fvars
-    , ( let k = Store.BVar.index_of_name bvars name in
-        require_no_sub loc `bvar sub_opt;
-        dprintf (disambiguation_message "bound variable" (Some k));
-        Apx.LF.BVar k
-      (* it's essential to perform `index_of_name` first since it will
-         throw the Not_found exception that leads to trying the next case
-         in the disambiguation.
-         Only once we've ascertained that it is in fact a BVar should
-         be demand that no substitution be present.
-       *)
-      )
-    )
-  with
-  | Not_found ->
-     if lookup_fv' name fvars
-     then
-       begin
-         let (fvs', o') =
-           dprintf (disambiguation_message "known to be free" None);
-           match sub_opt with
-           | Some s ->
-              let (fvs', s') = index_sub s c fvars in
-              (fvs', Some s')
-           | None -> (fvars, None)
-         in
-         (fvs', Apx.LF.FMVar (name, o'))
-       end
-     else
-       begin match index_cvar' cvars name with
-       | Either.Left `implicit ->
-          throw_hint
-            (Name.location name)
-            `implicit_variable
-            (UnboundName name)
-       | Either.Right offset ->
-          dprintf (disambiguation_message "contextual variable" (Some offset));
-          let (fvs', o') = index_sub_opt sub_opt c fvars in
-          (fvs', Apx.LF.MVar (Apx.LF.Offset offset, o'))
-       | Either.Left `unbound ->
-          begin
-            try
-              ( fvars
-              , ( let k = Store.Cid.Term.index_of_name name in
-                  require_no_sub loc `const sub_opt;
-                  dprintf (disambiguation_message "LF constant" None);
-                  Apx.LF.Const k
-                (* similar consideration here as for BVar;
-                we must ascertain that it is in fact a Const before
-                demanding that there be no substitution.
-                 *)
-                )
-              )
+  and index_schema_element = function
+    | Synext.Meta.Schema.Element { location; some; block } -> (
+        match
+          Identifier.find_duplicates (schema_some_clause_identifiers some)
+        with
+        | Option.Some duplicates ->
+            Error.raise_at1 location
+              (Duplicate_identifiers_in_schema_some_clause duplicates)
+        | Option.None -> (
+            match
+              Identifier.find_duplicates
+                (schema_block_clause_identifiers block)
             with
-            | Not_found ->
-               dprintf (disambiguation_message "new free variable" None);
-               f c (loc, name) sub_opt fvars
-          end
-       end
+            | Option.Some duplicates ->
+                Error.raise_at1 location
+                  (Duplicate_identifiers_in_schema_block_clause duplicates)
+            | Option.None ->
+                with_indexed_schema_some_clause some (fun some' ->
+                    let* block' = index_schema_block_clause block in
+                    return (Synapx.LF.SchElem (some', block')))))
+    | Synext.Meta.Schema.Constant { location; _ }
+    | Synext.Meta.Schema.Alternation { location; _ } ->
+        Error.raise_at1 location Unsupported_context_schema_element
 
-and disambiguate_to_fmvars : name_disambiguator =
-  fun cvars bvars (loc, name) sub_opt fvars ->
-  disambiguate_name'
-    begin fun c (loc, name) sub_opt fvars ->
-    dprintf (fun p -> p.fmt "[disambiguate_name] disambiguating %a to FMVar" Name.pp name);
-    match fvars.open_flag with
-    | `closed_term -> throw loc (UnboundName name)
-    | `open_term ->
-       let (fvars', s') = index_sub_opt sub_opt c fvars in
-       ( extending_by name fvars'
-       , Apx.LF.FMVar (name, s')
-       )
-    end
-    cvars bvars (loc, name) sub_opt fvars
+  and index_meta_pattern = function
+    | Synext.Meta.Pattern.Context { location; context } ->
+        let* context' = index_clf_context_pattern context in
+        return (location, Synapx.Comp.CObj context')
+    | Synext.Meta.Pattern.Contextual_term { location; context; term } ->
+        with_indexed_clf_context_pattern context (fun context' ->
+            let* term' = index_clf_term_pattern term in
+            (* TODO: The approximate syntax should have a [MObj of normal]
+               constructor like in the internal syntax. See
+               {!Reconstruct.elClObj}. *)
+            return
+              ( location
+              , Synapx.Comp.ClObj
+                  ( context'
+                  , Synapx.LF.Dot (Synapx.LF.Obj term', Synapx.LF.EmptySub)
+                  ) ))
+    | Synext.Meta.Pattern.Plain_substitution { location; domain; range } ->
+        with_indexed_clf_context_pattern domain (fun domain' ->
+            let* range' = index_clf_substitution_pattern range in
+            return (location, Synapx.Comp.ClObj (domain', range')))
+    | Synext.Meta.Pattern.Renaming_substitution { location; domain; range }
+      ->
+        with_indexed_clf_context_pattern domain (fun domain' ->
+            let* range' = index_clf_substitution_pattern range in
+            return (location, Synapx.Comp.ClObj (domain', range')))
 
-and disambiguate_to_fvars : name_disambiguator =
-  fun cvars bvars (loc, name) sub_opt fvars ->
-  disambiguate_name'
-    begin fun _ (loc, name) sub_opt fvars ->
-    dprintf (fun p -> p.fmt "[disambiguate_name] disambiguating %a to FVar" Name.pp name);
-    require_no_sub loc `pure_lf sub_opt;
-    dprintf (fun p -> p.fmt "FVar %a at %a" Name.pp name Location.print loc);
-    (fvars, Apx.LF.FVar name)
-    end
-    cvars bvars (loc, name) sub_opt fvars
+  and with_indexed_meta_context_binding :
+        'a.
+           Identifier.t * Synext.meta_typ
+        -> (Synapx.LF.ctyp_decl -> 'a t)
+        -> 'a t =
+   fun (identifier, typ) f ->
+    let* typ' = index_meta_type typ in
+    let name = Name.make_from_identifier identifier in
+    f (Synapx.LF.Decl (name, typ', Plicity.explicit))
 
+  and with_indexed_meta_context_bindings :
+        'a.
+           (Identifier.t * Synext.meta_typ) list
+        -> (Synapx.LF.ctyp_decl List.t -> 'a t)
+        -> 'a t =
+   fun bindings f ->
+    match bindings with
+    | [] -> f []
+    | x :: xs ->
+        with_indexed_meta_context_binding x (fun y ->
+            with_indexed_meta_context_bindings xs (fun ys -> f (y :: ys)))
 
-and index_sub_opt : Ext.LF.sub option -> Apx.LF.sub option index =
-  let open Bind in
-  function
-  | None -> return None
-  | Some s ->
-     index_sub s $> Option.some
+  and with_indexed_meta_context :
+        'a. Synext.meta_context -> (Synapx.LF.mctx -> 'a t) -> 'a t =
+   fun { Synext.Meta.Context.bindings; _ } f ->
+    with_indexed_meta_context_bindings bindings (fun bindings' ->
+        f
+          (List.fold_left
+             (fun accumulator binding' ->
+               Synapx.LF.Dec (accumulator, binding'))
+             Synapx.LF.Empty bindings'))
 
-and index_sub : Ext.LF.sub -> Apx.LF.sub index =
-  let open Bind in
-  let to_head_or_obj =
-    function
-    | Apx.LF.Root (_, (Apx.LF.BVar _ as h), Apx.LF.Nil)
-      | Apx.LF.Root (_, (Apx.LF.PVar _ as h), Apx.LF.Nil)
-      | Apx.LF.Root (_, (Apx.LF.Proj _ as h), Apx.LF.Nil) -> Apx.LF.Head h
-    | tM -> Apx.LF.Obj tM
-  in
-  function
-  | (start, h :: s) ->
-     seq2 (index_sub (start, s)) (index_term h)
-     $> fun (s', h') -> Apx.LF.Dot (to_head_or_obj h', s')
+  and with_bound_meta_level_variable identifier typ =
+    match typ with
+    | Synext.Meta.Typ.Context_schema _ ->
+        with_bound_context_variable identifier
+    | Synext.Meta.Typ.Contextual_typ _ -> with_bound_meta_variable identifier
+    | Synext.Meta.Typ.Parameter_typ _ ->
+        with_bound_parameter_variable identifier
+    | Synext.Meta.Typ.Plain_substitution_typ _
+    | Synext.Meta.Typ.Renaming_substitution_typ _ ->
+        with_bound_substitution_variable identifier
 
-  | (Ext.LF.Id loc, []) ->
-     return Apx.LF.Id
+  let rec index_comp_kind = function
+    | Synext.Comp.Kind.Ctype { location } ->
+        return (Synapx.Comp.Ctype location)
+    | Synext.Comp.Kind.Arrow { location; domain; range } ->
+        let* x = fresh_identifier in
+        let* domain' = index_meta_type domain in
+        let* range' =
+          (with_bound_meta_level_variable x domain) (index_comp_kind range)
+        in
+        let x' = Name.make_from_identifier x in
+        return
+          (Synapx.Comp.PiKind
+             ( location
+             , Synapx.LF.Decl (x', domain', Plicity.explicit)
+             , range' ))
+    | Synext.Comp.Kind.Pi
+        { location; parameter_identifier; plicity; parameter_type; body } ->
+        let* x = fresh_identifier_opt parameter_identifier in
+        let* parameter_type' = index_meta_type parameter_type in
+        let* body' =
+          (with_bound_meta_level_variable x parameter_type)
+            (index_comp_kind body)
+        in
+        let x' = Name.make_from_identifier x in
+        return
+          (Synapx.Comp.PiKind
+             (location, Synapx.LF.Decl (x', parameter_type', plicity), body'))
 
-  | (Ext.LF.EmptySub _, []) ->
-     return Apx.LF.EmptySub
+  and index_comp_typ = function
+    | Synext.Comp.Typ.Inductive_typ_constant { location; identifier; _ } ->
+        let* index = index_of_inductive_comp_constant identifier in
+        return (Synapx.Comp.TypBase (location, index, Synapx.Comp.MetaNil))
+    | Synext.Comp.Typ.Stratified_typ_constant { location; identifier; _ } ->
+        let* index = index_of_stratified_comp_constant identifier in
+        return (Synapx.Comp.TypBase (location, index, Synapx.Comp.MetaNil))
+    | Synext.Comp.Typ.Coinductive_typ_constant { location; identifier; _ } ->
+        let* index = index_of_coinductive_comp_constant identifier in
+        return (Synapx.Comp.TypCobase (location, index, Synapx.Comp.MetaNil))
+    | Synext.Comp.Typ.Abbreviation_typ_constant { location; identifier; _ }
+      ->
+        let* index = index_of_abbreviation_comp_constant identifier in
+        return (Synapx.Comp.TypDef (location, index, Synapx.Comp.MetaNil))
+    | Synext.Comp.Typ.Pi
+        { location; parameter_identifier; plicity; parameter_type; body } ->
+        let* x = fresh_identifier_opt parameter_identifier in
+        let* parameter_type' = index_meta_type parameter_type in
+        let* body' =
+          (with_bound_meta_level_variable x parameter_type)
+            (index_comp_typ body)
+        in
+        let x' = Name.make_from_identifier x in
+        return
+          (Synapx.Comp.TypPiBox
+             (location, Synapx.LF.Decl (x', parameter_type', plicity), body'))
+    | Synext.Comp.Typ.Arrow { location; domain; range; _ } ->
+        let* domain' = index_comp_typ domain in
+        let* range' = index_comp_typ range in
+        return (Synapx.Comp.TypArr (location, domain', range'))
+    | Synext.Comp.Typ.Cross { location; types } ->
+        let* types' = traverse_list2 index_comp_typ types in
+        return (Synapx.Comp.TypCross (location, types'))
+    | Synext.Comp.Typ.Box { location; meta_type } ->
+        let* meta_type' = index_meta_type meta_type in
+        return (Synapx.Comp.TypBox (location, (location, meta_type')))
+    | Synext.Comp.Typ.Application { location; applicand; arguments } -> (
+        let* applicand' = index_comp_typ applicand in
+        match applicand' with
+        | Synapx.Comp.TypBase (_, a', spine1') ->
+            let* spine2' = index_meta_spine arguments in
+            let spine' = append_meta_spines spine1' spine2' in
+            return (Synapx.Comp.TypBase (location, a', spine'))
+        | Synapx.Comp.TypCobase (_, a', spine1') ->
+            let* spine2' = index_meta_spine arguments in
+            let spine' = append_meta_spines spine1' spine2' in
+            return (Synapx.Comp.TypCobase (location, a', spine'))
+        | Synapx.Comp.TypDef (_, a', spine1') ->
+            let* spine2' = index_meta_spine arguments in
+            let spine' = append_meta_spines spine1' spine2' in
+            return (Synapx.Comp.TypDef (location, a', spine'))
+        | Synapx.Comp.TypBox _
+        | Synapx.Comp.TypArr _
+        | Synapx.Comp.TypCross _
+        | Synapx.Comp.TypPiBox _
+        | Synapx.Comp.TypInd _ ->
+            Error.raise_at1 location Unsupported_comp_typ_applicand)
 
-  | (Ext.LF.SVar (loc, u, s), []) ->
-     lookup_fv u
-       >>= function
-       | true ->
-          index_sub_opt s
-          $> fun s' -> Apx.LF.FSVar (u, s')
-       | false ->
-          seq2 get_closed_status (index_cvar u)
-            >>= function
-            | (`closed_term, Either.Left e) ->
-               throw_hint' loc (cvar_error_to_hint e) (UnboundName u)
-            | (`open_term, Either.Left _) ->
-               index_sub_opt s
-               >>= fun s' ->
-                 modify_fvars (extending_by u)
-                 &> return (Apx.LF.FSVar (u, s'))
-            | (_, Either.Right offset) ->
-               index_sub_opt s
-               $> fun s' -> Apx.LF.SVar (Apx.LF.Offset offset, s')
+  and index_comp_expression = function
+    | Synext.Comp.Expression.Variable { location; identifier } ->
+        let* index = index_of_comp_variable identifier in
+        return (Synapx.Comp.Var (location, index))
+    | Synext.Comp.Expression.Constructor { location; identifier } ->
+        let* index = index_of_comp_constructor identifier in
+        return (Synapx.Comp.DataConst (location, index))
+    | Synext.Comp.Expression.Program { location; identifier } ->
+        let* index = index_of_comp_program identifier in
+        return (Synapx.Comp.Const (location, index))
+    | Synext.Comp.Expression.Fn { location; parameters; body } ->
+        let rec aux parameters =
+          match parameters with
+          | [] -> index_comp_expression body
+          | (parameter_location, parameter_opt) :: parameters ->
+              let* parameter = fresh_identifier_opt parameter_opt in
+              let name = Name.make_from_identifier parameter in
+              let* body' =
+                with_bound_comp_variable parameter (aux parameters)
+              in
+              let location =
+                Location.join parameter_location
+                  (Synapx.Comp.loc_of_exp body')
+              in
+              return (Synapx.Comp.Fn (location, name, body'))
+        in
+        aux (List1.to_list parameters)
+    | Synext.Comp.Expression.Mlam { location; parameters; body } ->
+        let rec aux parameters =
+          match parameters with
+          | [] -> index_comp_expression body
+          | (parameter_location, (parameter_opt, modifier)) :: parameters ->
+              let* parameter = fresh_identifier_opt parameter_opt in
+              let name = Name.make_from_identifier parameter in
+              let* body' =
+                (match modifier with
+                | `Plain ->
+                    (* FIXME: [mlam g => ?] may technically introduce a
+                       context variable rather than a meta-variable. This is
+                       not an issue since both kinds of variables are part of
+                       the meta-context. *)
+                    with_bound_meta_variable
+                | `Hash -> with_bound_parameter_variable
+                | `Dollar -> with_bound_substitution_variable)
+                  parameter (aux parameters)
+              in
+              let location =
+                Location.join parameter_location
+                  (Synapx.Comp.loc_of_exp body')
+              in
+              return (Synapx.Comp.MLam (location, name, body'))
+        in
+        aux (List1.to_list parameters)
+    | Synext.Comp.Expression.Fun { location; branches } ->
+        let* branches' = traverse_list1 index_cofunction_branch branches in
+        let branches_location =
+          Location.join_all1_contramap
+            (fun { Synext.Comp.Cofunction_branch.location; _ } -> location)
+            branches
+        in
+        let branches'' =
+          List.fold_right
+            (fun (location, pattern_spine, body) accumulator ->
+              Synapx.Comp.ConsFBranch
+                (location, (pattern_spine, body), accumulator))
+            (List1.to_list branches')
+            (Synapx.Comp.NilFBranch branches_location)
+        in
+        return (Synapx.Comp.Fun (location, branches''))
+    | Synext.Comp.Expression.Let
+        { location; meta_context; pattern; scrutinee; body } -> (
+        let* scrutinee' = index_comp_expression scrutinee in
+        let* (meta_context', pattern'), body' =
+          with_pattern_variables_checkpoint
+            ~pattern:
+              (with_indexed_meta_context meta_context (fun meta_context' ->
+                   let* pattern' = index_comp_pattern pattern in
+                   return (meta_context', pattern')))
+            ~expression:(index_comp_expression body)
+        in
+        (* The approximate syntax does not support general patterns in
+           [let]-expressions, so only [let]-expressions with a variable
+           pattern are translated to [let]-expressions in the approximate
+           syntax. *)
+        match (meta_context', pattern') with
+        | Synapx.LF.Empty, Synapx.Comp.PatFVar (_location, name) ->
+            (* TODO: General [let] pattern expressions would render this case
+               obsolete *)
+            return (Synapx.Comp.Let (location, scrutinee', (name, body')))
+        | Synapx.LF.Empty, Synapx.Comp.PatVar (_location, name, _offset) ->
+            (* TODO: General [let] pattern expressions would render this case
+               obsolete *)
+            return (Synapx.Comp.Let (location, scrutinee', (name, body')))
+        | Synapx.LF.Empty, Synapx.Comp.PatTuple (_location, patterns') -> (
+            (* TODO: [LetTuple] expressions should be deprecated in favour of
+               general [let] pattern expressions *)
+            (* [LetTuple] expressions only support variable patterns *)
+            match
+              List2.traverse
+                (function
+                  | Synapx.Comp.PatFVar (_location, name) -> Option.some name
+                  | Synapx.Comp.PatVar (_location, name, _offset) ->
+                      Option.some name
+                  | _ -> Option.none)
+                patterns'
+            with
+            | Option.Some variables ->
+                return
+                  (Synapx.Comp.LetTuple
+                     (location, scrutinee', (variables, body')))
+            | Option.None ->
+                return
+                  (Synapx.Comp.Case
+                     ( location
+                     , Synapx.Comp.PragmaCase
+                     , scrutinee'
+                     , [ Synapx.Comp.Branch
+                           (location, meta_context', pattern', body')
+                       ] )))
+        | _ ->
+            (* TODO: General [let] pattern expressions should be supported *)
+            (* The pattern is not a variable pattern, so the [let]-expression
+               is translated to a [case]-expression. *)
+            return
+              (Synapx.Comp.Case
+                 ( location
+                 , Synapx.Comp.PragmaCase
+                 , scrutinee'
+                 , [ Synapx.Comp.Branch
+                       (location, meta_context', pattern', body')
+                   ] )))
+    | Synext.Comp.Expression.Box { location; meta_object } ->
+        let* meta_object' = index_meta_object meta_object in
+        return (Synapx.Comp.Box (location, meta_object'))
+    | Synext.Comp.Expression.Impossible { location; scrutinee } ->
+        let* scrutinee' = index_comp_expression scrutinee in
+        return (Synapx.Comp.Impossible (location, scrutinee'))
+    | Synext.Comp.Expression.Case
+        { location; scrutinee; check_coverage; branches } ->
+        let* scrutinee' = index_comp_expression scrutinee in
+        let* branches = traverse_list1 index_case_branch branches in
+        let case_pragma =
+          if check_coverage then Synapx.Comp.PragmaCase
+          else Synapx.Comp.PragmaNotCase
+        in
+        return
+          (Synapx.Comp.Case
+             (location, case_pragma, scrutinee', List1.to_list branches))
+    | Synext.Comp.Expression.Tuple { location; elements } ->
+        let* elements' = traverse_list2 index_comp_expression elements in
+        return (Synapx.Comp.Tuple (location, elements'))
+    | Synext.Comp.Expression.Hole { location; label } ->
+        let name = Option.map Identifier.name label in
+        return (Synapx.Comp.Hole (location, name))
+    | Synext.Comp.Expression.Box_hole { location } ->
+        return (Synapx.Comp.BoxHole location)
+    | Synext.Comp.Expression.Application { applicand; arguments; _ } ->
+        let* applicand' = index_comp_expression applicand in
+        let* arguments' = traverse_list1 index_comp_expression arguments in
+        let application' =
+          List.fold_left
+            (fun applicand' argument' ->
+              let location =
+                Location.join
+                  (Synapx.Comp.loc_of_exp applicand')
+                  (Synapx.Comp.loc_of_exp argument')
+              in
+              Synapx.Comp.Apply (location, applicand', argument'))
+            applicand'
+            (List1.to_list arguments')
+        in
+        return application'
+    | Synext.Comp.Expression.Observation { location; scrutinee; destructor }
+      ->
+        let* scrutinee' = index_comp_expression scrutinee in
+        let* id = index_of_comp_destructor destructor in
+        return (Synapx.Comp.Obs (location, scrutinee', id))
+    | Synext.Comp.Expression.Type_annotated { location; expression; typ } ->
+        let* expression' = index_comp_expression expression in
+        let* typ' = index_comp_typ typ in
+        return (Synapx.Comp.Ann (location, expression', typ'))
 
-                      (*
-      if lookup_fv fvs (u) then
-        let (s', fvs') = index_sub_opt cvars bvars fvars s in
-          (Apx.LF.FSVar (u, s'), fvs')
-      else
-        begin
-          try
-            let offset = Store.CVar.index_of_name cvars u in
-            let (s', fvs') = index_sub_opt cvars bvars fvars s in
-            let _ = dprint (fun () -> "[index_sub] s = " ^ string_of_int offset) in
-            (Apx.LF.SVar (Apx.LF.Offset offset, s'), fvs')
-          with Not_found ->
-            if closed_flag then
-              (* if lookup_fv fvars (FMV u) then
-                 let (s', (fvars', closed_flag)) = index_sub cvars bvars fvs s in
-                 (Apx.LF.FMVar (u, s'), (fvars', closed_flag))
-                 else *)
-              raise (Error (loc, UnboundName u))
-            else
-              let (s', (fvars', closed_flag)) = index_sub_opt cvars bvars fvars s in
-              (Apx.LF.FSVar (u, s'), (u :: fvars', closed_flag))
-        end
-                       *)
+  and index_meta_spine arguments =
+    List1.fold_right
+      (fun argument ->
+        let* argument' = index_meta_object argument in
+        return (Synapx.Comp.MetaApp (argument', Synapx.Comp.MetaNil)))
+      (fun argument spine ->
+        let* argument' = index_meta_object argument in
+        let* spine' = spine in
+        return (Synapx.Comp.MetaApp (argument', spine')))
+      arguments
 
-let index_decl disambiguate_name (cvars : Store.CVar.t) (bvars : Store.BVar.t) fvars =
-  function
-  | (Ext.LF.TypDecl (x, a)) ->
-     let (fvars', a') =
-       index_typ a { cvars; bvars; disambiguate_name } fvars
-     in
-     let bvars = Store.BVar.extend bvars (Store.BVar.mk_entry x) in
-     (Apx.LF.TypDecl (x, a'), bvars, fvars')
+  and index_comp_pattern = function
+    | Synext.Comp.Pattern.Variable { location; identifier } ->
+        let* () = add_computation_pattern_variable identifier in
+        let x' = Name.make_from_identifier identifier in
+        return (Synapx.Comp.PatFVar (location, x'))
+    | Synext.Comp.Pattern.Wildcard { location } ->
+        let* x = fresh_identifier in
+        let* () = add_computation_pattern_variable x in
+        let x' = Name.make_from_identifier x in
+        return (Synapx.Comp.PatFVar (location, x'))
+    | Synext.Comp.Pattern.Constant { location; identifier; _ } ->
+        let* id = index_of_comp_constructor identifier in
+        let spine = Synapx.Comp.PatNil location in
+        return (Synapx.Comp.PatConst (location, id, spine))
+    | Synext.Comp.Pattern.Meta_object { location; meta_pattern } ->
+        let* meta_pattern' = index_meta_pattern meta_pattern in
+        return (Synapx.Comp.PatMetaObj (location, meta_pattern'))
+    | Synext.Comp.Pattern.Tuple { location; elements } ->
+        let* elements' = traverse_list2 index_comp_pattern elements in
+        return (Synapx.Comp.PatTuple (location, elements'))
+    | Synext.Comp.Pattern.Type_annotated { location; pattern; typ } ->
+        let* pattern' = index_comp_pattern pattern in
+        let* typ' = index_comp_typ typ in
+        return (Synapx.Comp.PatAnn (location, pattern', typ'))
+    | Synext.Comp.Pattern.Application { location; applicand; arguments } -> (
+        index_comp_pattern applicand >>= function
+        | Synapx.Comp.PatConst (applicand_location, id, Synapx.Comp.PatNil _)
+          ->
+            let* spine' = index_applicative_comp_pattern_spine arguments in
+            return (Synapx.Comp.PatConst (applicand_location, id, spine'))
+        | _ ->
+            Error.raise_at1
+              (Synext.location_of_comp_pattern applicand)
+              Unsupported_comp_pattern_applicand)
 
-  | (Ext.LF.TypDeclOpt x) ->
-     let bvars' = Store.BVar.extend bvars (Store.BVar.mk_entry x) in
-     (Apx.LF.TypDeclOpt x, bvars', fvars)
+  and index_applicative_comp_pattern_spine patterns =
+    List1.fold_right
+      (fun pattern ->
+        let* pattern' = index_comp_pattern pattern in
+        let location = Synext.location_of_comp_pattern pattern in
+        return
+          (Synapx.Comp.PatApp
+             ( location
+             , pattern'
+             , Synapx.Comp.PatNil
+                 (Location.join_all1_contramap
+                    Synext.location_of_comp_pattern patterns) )))
+      (fun pattern spine ->
+        let* pattern' = index_comp_pattern pattern in
+        let* spine' = spine in
+        let location = Synext.location_of_comp_pattern pattern in
+        return (Synapx.Comp.PatApp (location, pattern', spine')))
+      patterns
 
-(** Tries to index the given name as a context variable.
-    Computes a cvar_error_status in case free variables are not
-    permitted and the name is not bound.
- *)
-let index_ctx_var name : (cvar_error_status, Apx.LF.dctx) Either.t index =
-  let open Bind in
-  lookup_fv name
-  >>= function
-    | true -> Either.right (Apx.LF.CtxVar (Apx.LF.CtxName name)) |> return
-    | false ->
-       seq2 (get_fvars) (index_cvar name)
-       >>= function
-         | (_, Either.Right k) ->
-            Either.right (Apx.LF.CtxVar (Apx.LF.CtxOffset k)) |> return
-         | (fvars, Either.Left e) ->
-            match fvars.open_flag with
-            | `closed_term -> return (Either.left e)
-            | `open_term ->
-               Either.right (Apx.LF.CtxVar (Apx.LF.CtxName name)) |> return
-               <& modify_fvars (extending_by name)
+  and index_case_branch
+      { Synext.Comp.Case_branch.location; meta_context; pattern; body } =
+    let* (meta_context', pattern'), body' =
+      with_pattern_variables_checkpoint
+        ~pattern:
+          (with_indexed_meta_context meta_context (fun meta_context' ->
+               let* pattern' = index_comp_pattern pattern in
+               return (meta_context', pattern')))
+        ~expression:(index_comp_expression body)
+    in
+    return (Synapx.Comp.Branch (location, meta_context', pattern', body'))
 
-let rec index_dctx disambiguate_name cvars bvars (fvars : fvars) =
-  function
-  | Ext.LF.CtxHole -> (Apx.LF.CtxHole, bvars, fvars)
-  | Ext.LF.Null -> (Apx.LF.Null, bvars, fvars)
+  and index_comp_pattern_with_location pattern =
+    let location = Synext.location_of_comp_pattern pattern in
+    let* pattern' = index_comp_pattern pattern in
+    return (location, pattern')
 
-  | Ext.LF.CtxVar (loc, psi_name) ->
-     index_ctx_var psi_name {cvars; bvars; disambiguate_name} fvars
-     |> Pair.map_right
-          begin
-            function
-            | Either.Right x -> x
-            | Either.Left e ->
-               throw_hint' loc (cvar_error_to_hint e) (UnboundName psi_name)
-          end
-     |> fun (fvars, dctx) -> (dctx, bvars, fvars)
-
-  | Ext.LF.DDec (psi, decl) ->
-     let (psi', bvars', fvars') =
-       index_dctx disambiguate_name cvars bvars fvars psi
-     in
-     let (decl', bvars'', fvars'') =
-       index_decl disambiguate_name cvars bvars' fvars' decl
-     in
-     (Apx.LF.DDec (psi', decl'), bvars'', fvars'')
-
-let index_svar_class =
-  function
-  | Ext.LF.Ren -> Apx.LF.Ren
-  | Ext.LF.Subst -> Apx.LF.Subst
-
-let rec index_ctx d cvars bvars fvars =
-  function
-  | Ext.LF.Empty -> (Apx.LF.Empty, bvars, fvars)
-  | Ext.LF.Dec (psi, dec) ->
-     let (psi', bvars', fvars') = index_ctx d cvars bvars fvars psi in
-     let (dec', bvars'', fvars'') = index_decl d cvars bvars' fvars' dec in
-     (Apx.LF.Dec (psi', dec'), bvars'', fvars'')
-
-let index_cltyp' : Ext.LF.cltyp -> Apx.LF.cltyp index =
-  let open Bind in
-  function
-  | Ext.LF.MTyp a ->
-     dprintf
-       begin fun p ->
-       p.fmt "[index_cltyp'] indexing meta type %a"
-         (P.fmt_ppr_lf_typ P.l0) a
-       end;
-     index_typ a $> fun a' -> Apx.LF.MTyp a'
-
-  | Ext.LF.PTyp a ->
-     dprintf
-       begin fun p ->
-       p.fmt "[index_cltyp'] indexing parameter type %a"
-         (P.fmt_ppr_lf_typ P.l0) a
-       end;
-     index_typ a $> fun a' -> Apx.LF.PTyp a'
-  (*
-     in
-     begin match a with
-     | Ext.LF.AtomTerm (loc, Ext.LF.TList (_, [Ext.LF.Root (_, Ext.LF.Name (_, name, None), Ext.LF.Nil)])) ->
-        index_ctx_var name
-        >>= begin function
-          | None -> index_as_ptyp ()
-          | Some x -> Apx.LF.STyp (Apx.LF.Subst, x) |> return
-          end
-     | _ -> index_as_ptyp ()
-     end
-   *)
-
-  | Ext.LF.STyp (cl, phi) ->
-     dprintf
-       begin fun p ->
-       p.fmt "[index_cltyp'] indexing %a type %a"
-         print_subst_class cl
-         (P.fmt_ppr_lf_dctx P.l0) phi
-       end;
-     seq2 get_env get_fvars
-     >>= fun (c, fvars) ->
-       let (phi', _, fvars) =
-         index_dctx c.disambiguate_name c.cvars Store.BVar.empty fvars phi
-       in
-       modify_fvars (Fun.const fvars)
-       &> return (Apx.LF.STyp (index_svar_class cl, phi'))
-
-let index_cltyp loc cvars fvars =
-  function
-  | Ext.LF.ClTyp (cl, psi) ->
-     let disambiguate_name = disambiguate_to_fmvars in
-     let (psi', bvars, fvars) =
-       index_dctx disambiguate_name cvars Store.BVar.empty fvars psi
-     in
-     let (fvars, cl) =
-       index_cltyp' cl {cvars; bvars; disambiguate_name} fvars
-     in
-     (fvars, Apx.LF.ClTyp (cl, psi'))
-
-  | Ext.LF.CTyp schema_name ->
-     begin
-       try
-         let schema_cid = Store.Cid.Schema.index_of_name schema_name in
-         (fvars, Apx.LF.CTyp schema_cid)
-       with
-       | Not_found ->
-          throw loc (UnboundCtxSchemaName schema_name)
-     end
-
-let index_cdecl f cvars fvars =
-  function
-  | Ext.LF.DeclOpt _ ->
-     Error.raise_violation
-       "[index_cdecl] DeclOpt not allowed in external syntax"
-  | Ext.LF.Decl (u, (loc, cl), plicity) ->
-     let (fvars, cl) = index_cltyp loc cvars fvars cl in
-     dprintf
-       begin fun p ->
-       p.fmt "[index_cdecl] %a at %a"
-         Name.pp u
-         Location.print_short loc
-       end;
-     begin
-       match index_cvar' cvars u with
-       | Either.Right _ ->
-          throw loc (NameOvershadowing u)
-       | Either.Left _ ->
-          let cvars =
-            Store.CVar.extend cvars
-              (Store.CVar.mk_entry u (f plicity))
+  and index_comp_copattern
+      { Synext.Comp.Copattern.location; patterns; observations } =
+    let* patterns' =
+      traverse_list index_comp_pattern_with_location patterns
+    in
+    let* observations' =
+      traverse_list
+        (fun (destructor, patterns) ->
+          let location = Qualified_identifier.location destructor in
+          let* index = index_of_comp_destructor destructor in
+          let* patterns' =
+            traverse_list index_comp_pattern_with_location patterns
           in
-          (Apx.LF.Decl (u, cl, plicity), cvars, fvars)
-     end
-
-let rec index_mctx cvars fvars =
-  function
-  | Ext.LF.Empty -> (Apx.LF.Empty, cvars, fvars)
-  | Ext.LF.Dec (delta, cdec) ->
-     let (delta', cvars', fvars') = index_mctx cvars fvars delta in
-     let (cdec', cvars'', fvars'') =
-       index_cdecl Fun.id cvars' fvars' cdec
-     in
-     (Apx.LF.Dec (delta', cdec'), cvars'', fvars'')
-
-
-(* Translation of external schemas into approximate schemas *)
-let rec index_elements el_list = List.map index_el el_list
-
-and index_el (Ext.LF.SchElem (_, typ_ctx, typ_rec)) =
-  let cvars = Store.CVar.empty in
-  let bvars = Store.BVar.empty in
-  let fvars = empty_fvars `open_term in
-  let disambiguate_name = disambiguate_to_fvars in
-  let (typ_ctx', bvars, _) = index_ctx disambiguate_name cvars bvars fvars typ_ctx in
-  dprintf
-    begin fun p ->
-    p.fmt "[index_el] ext block has length %d@."
-      (length_typ_rec typ_rec)
-    end;
-  let (_, typ_rec') = index_typ_rec typ_rec {cvars; bvars; disambiguate_name} fvars in
-  Apx.LF.SchElem (typ_ctx', typ_rec')
-
-let index_schema (Ext.LF.Schema el_list) =
-  Apx.LF.Schema (index_elements el_list)
-
-(* Translation of external computations into approximate computations *)
-
-  (*
-let index_clobj cvars bvars fcvars m =
-  match m with
-  | Ext.Comp.MObj m ->
-    let (m', fcvars') = index_term cvars bvars fcvars m in
-    (Apx.Comp.MObj m', fcvars')
-  | Ext.Comp.SObj s ->
-    let (s', fcvars') = index_sub cvars bvars fcvars s in
-    (Apx.Comp.SObj s', fcvars')
-   *)
-
-let rec index_meta_obj cvars fcvars (l, cM) =
-  match cM with
-  | Ext.LF.CObj cpsi ->
-     let (cPsi, _, fcvars') =
-       index_dctx disambiguate_to_fmvars cvars Store.BVar.empty fcvars cpsi
-     in
-     ( (l, Apx.Comp.CObj (cPsi))
-     , fcvars'
-     )
-
-  | Ext.LF.ClObj (cpsi, s) ->
-     let (cPsi, bvars, fcvars') =
-       index_dctx disambiguate_to_fmvars cvars Store.BVar.empty fcvars cpsi
-     in
-     let disambiguate_name = disambiguate_to_fmvars in
-     let (fcvars'', s') =
-       index_sub s {cvars; bvars; disambiguate_name} fcvars'
-     in
-     ( (l, Apx.Comp.ClObj (cPsi, s'))
-     , fcvars''
-     )
-
-and index_meta_spine cvars fcvars =
-  function
-  | Ext.Comp.MetaNil ->
-     (Apx.Comp.MetaNil, fcvars)
-
-  | Ext.Comp.MetaApp (m, s) ->
-     let (m', fcvars') = index_meta_obj cvars fcvars m in
-     let (s', fcvars'') = index_meta_spine cvars fcvars' s in
-     (Apx.Comp.MetaApp (m', s'), fcvars'')
-
-let rec index_compkind cvars fcvars =
-  function
-  | Ext.Comp.Ctype loc -> Apx.Comp.Ctype loc
-  | Ext.Comp.PiKind (loc, cdecl, cK) ->
-     let (cdecl', cvars', fcvars') =
-       index_cdecl (Fun.const Plicity.explicit) cvars fcvars cdecl
-     in
-     let cK' = index_compkind cvars' fcvars' cK in
-     Apx.Comp.PiKind (loc, cdecl', cK')
-  | Ext.Comp.ArrKind (location, (loc', ctau, plicity), cK) ->
-    let x = Name.mk_name ~location Name.NoName in
-    index_compkind
-      cvars
-      fcvars
-      (Ext.Comp.PiKind (location, Ext.LF.Decl (x, (loc', ctau), plicity), cK))
-
-let rec index_comptyp (tau : Ext.Comp.typ) cvars : Apx.Comp.typ fvar_state =
-  fun fvars ->
-  match tau with
-  | Ext.Comp.TypBase (loc, a, ms) ->
-     a
-     |> List.find_apply
-       [ (fun a ->
-            let open Option in
-            Store.Cid.CompTyp.index_of_name_opt a
-            $> fun a' ->
-              let (ms', fvars) = index_meta_spine cvars fvars ms in
-              (fvars, Apx.Comp.TypBase (loc, a', ms')))
-       ; (fun a ->
-            let open Option in
-            Store.Cid.CompCotyp.index_of_name_opt a
-            $> fun a' ->
-              let (ms', fvars) = index_meta_spine cvars fvars ms in
-              (fvars, Apx.Comp.TypCobase (loc, a', ms')))
-       ; (fun a ->
-            let open Option in
-            Store.Cid.CompTypDef.index_of_name_opt a
-            $> fun a' ->
-              let (ms', fvars) = index_meta_spine cvars fvars ms in
-              (fvars, Apx.Comp.TypDef (loc, a', ms')))
-       ]
-     |> Option.get_or_else (fun () -> throw loc (UnboundName a))
-
-  | Ext.Comp.TypBox (loc, (loc', mU)) ->
-     let (fvars, mU') = index_cltyp loc cvars fvars mU in
-     (fvars, Apx.Comp.TypBox (loc, (loc', mU')))
-
-  | Ext.Comp.TypArr (loc, tau, tau') ->
-     let (fvars, tau1) = index_comptyp tau cvars fvars in
-     let (fvars, tau2) = index_comptyp tau' cvars fvars in
-     (fvars, Apx.Comp.TypArr (loc, tau1, tau2))
-
-  | Ext.Comp.TypCross (loc, taus) ->
-     let (fvars, taus') = List2.fold_left
-       (fun tau1 -> index_comptyp tau1 cvars fvars)
-       (fun (fvars, tau1') tau2 ->
-         let (fvars, tau2') = index_comptyp tau2 cvars fvars in
-         (fvars, List2.pair tau2' tau1' (* intentionally reversed *))
-       )
-       (fun (fvars, taus') tau ->
-         let (fvars, tau') = index_comptyp tau cvars fvars in
-         (fvars, List2.cons tau' taus')
-       )
-       taus in
-     (fvars, Apx.Comp.TypCross (loc, List2.rev taus'))
-
-  | Ext.Comp.TypPiBox (loc, cdecl, tau) ->
-     let (cdecl', cvars, fvars) =
-       index_cdecl (Fun.const Plicity.explicit) cvars fvars cdecl
-     in
-     let (fvars, tau') = index_comptyp tau cvars fvars in
-     (fvars, Apx.Comp.TypPiBox (loc, cdecl', tau'))
-
-      (*
-  | Ext.Comp.TypInd (tau) ->
-      let (tau1, fcvars1) = index_comptyp cvars fcvars tau in
-        (Apx.Comp.TypInd tau1, fcvars1)
-       *)
-
-(* disambiguation strategies for computational names *)
-let d_var, d_const, d_dataconst, d_codataobs =
-  let mk ty f con loc x =
-    let open Option in
-    trying_index (fun () ->
-      dprintf (fun p -> p.fmt "disambiguting as %s" ty);
-      f x
-    ) $> fun k -> con loc k
-  in
-  let var vars =
-    mk "variable" (Store.Var.index_of_name vars) (fun loc k -> Apx.Comp.Var (loc, k))
-  and const =
-    mk "constant" Store.Cid.Comp.index_of_name (fun loc k -> Apx.Comp.Const (loc, k))
-  and dataconst =
-    mk "data constructor" Store.Cid.CompConst.index_of_name (fun loc k -> Apx.Comp.DataConst (loc, k))
-  and codataobs =
-    mk "observation" Store.Cid.CompDest.index_of_name (fun loc k e' -> Apx.Comp.Obs (loc, e', k)) in
-  var, const, dataconst, codataobs
-
-let disambiguate loc x ps =
-  List.find_map (fun f -> f loc x) ps
-
-let rec index_exp cvars vars fcvars =
-  function
-  | Ext.Comp.Impossible (loc, i) ->
-     let i' = index_exp cvars vars fcvars i in
-     Apx.Comp.Impossible (loc, i')
-
-  | Ext.Comp.Fn (loc, x, e) ->
-     let vars' = Store.Var.extend vars (Store.Var.mk_entry x) in
-     let e' = index_exp cvars vars' fcvars e in
-     Apx.Comp.Fn (loc, x, e')
-
-  | Ext.Comp.Fun (loc, fbr) ->
-     let fbr' = index_fbranches cvars vars fcvars fbr in
-     Apx.Comp.Fun (loc, fbr')
-
-  | Ext.Comp.MLam (loc, u, e) ->
-     let cvars' = Store.CVar.extend cvars (Store.CVar.mk_entry u Plicity.explicit) in
-     let e' = index_exp cvars' vars fcvars e in
-     Apx.Comp.MLam (loc, u, e')
-
-  | Ext.Comp.Tuple (loc, es) ->
-     let es' = List2.map (fun e -> index_exp cvars vars fcvars e) es in
-     Apx.Comp.Tuple (loc, es')
-
-  | Ext.Comp.LetTuple (loc, i, (xs, e)) ->
-     let i' = index_exp cvars vars fcvars i in
-     let vars' =
-       xs
-       |> List2.to_list
-       |> List.fold_left (fun vars x -> Store.Var.extend vars (Store.Var.mk_entry x)) vars
-       in
-     let e' = index_exp cvars vars' fcvars e in
-     Apx.Comp.LetTuple (loc, i', (xs, e'))
-
-  | Ext.Comp.Let (loc, i, (x, e)) ->
-     let i' = index_exp cvars vars fcvars i in
-     let vars1 = Store.Var.extend vars (Store.Var.mk_entry x) in
-     let e' = index_exp cvars vars1 fcvars e in
-     Apx.Comp.Let (loc, i', (x, e'))
-
-  | Ext.Comp.Box (loc, m) ->
-     let (m', fcvars') = index_meta_obj cvars fcvars m in
-     Apx.Comp.Box (loc, m')
-
-  | Ext.Comp.Case (loc, prag, i, ([Ext.Comp.Branch (_, Ext.LF.Empty, Ext.Comp.PatName (loc', name, Ext.Comp.PatNil _), e)] as branches)) ->
-     (* if we have a single-branch case containing a name, we can
-        rewrite it to a `Let' _if_ that name is not a data constructor.
-        In principle, this should be unnecessary, because such a
-        single-branch case should be identical to a `let` expression.
-        However, the case-expression introduces new constraints which
-        fail to be solved in some circumstances.
-        (I dare you to comment out this case and see how many tests fail.)
-        -je
-      *)
-     disambiguate loc' name [d_dataconst]
-     |> Option.eliminate
-          (fun _ -> (* the name is not a data constructor *)
-            let i' = index_exp cvars vars fcvars i in
-            let vars1 = Store.Var.extend vars (Store.Var.mk_entry name) in
-            let e' = index_exp cvars vars1 fcvars e in
-            Apx.Comp.Let (loc, i', (name, e')))
-          (fun x ->
-            let i' = index_exp cvars vars fcvars i in
-            let branches' = List.map (index_branch cvars vars fcvars) branches in
-            Apx.Comp.Case (loc, prag, i', branches'))
-
-  | Ext.Comp.Case (loc, prag, i, branches) ->
-     let i' = index_exp cvars vars fcvars i in
-     dprint (fun () -> "index case");
-     let branches' = List.map (index_branch cvars vars fcvars) branches in
-     Apx.Comp.Case (loc, prag, i', branches')
-
-  | Ext.Comp.Hole (loc, name) -> Apx.Comp.Hole (loc, name)
-
-  | Ext.Comp.BoxHole loc -> Apx.Comp.BoxHole loc
-
-  | Ext.Comp.Name (loc, x) ->
-     disambiguate loc x [ d_var vars; d_const; d_dataconst ]
-     |> Option.get_or_else (fun _ -> throw loc (UnboundCompName x))
-
-  (* Since observations are syntactically indistinguishable from
-     function applications, they get parsed as applications in the
-     external syntax.
-     This case here performs the necessary disambiguation, since we
-     now have scoping information, so we can determine whether the
-     application is of a function or of an observation.
-   *)
-  | Ext.Comp.Apply (loc, Ext.Comp.Name (loc', c), e) ->
-     (* we use the same logic as in the case for a bare `Name' but, we
-        add one more check at the end to see if it's a declared
-        observation.
-      *)
-     let mk_apply f loc' x =
-       let open Option in
-       f loc' x $> fun h e' -> Apx.Comp.Apply (loc, h, e')
-     in
-     dprint (fun _ -> "[index_exp'] name disambiguation hack for observations");
-     disambiguate loc' c
-       [ mk_apply (d_var vars)
-       ; mk_apply d_const
-       ; mk_apply d_dataconst
-       ; d_codataobs
-       ]
-     |> Option.eliminate
-          (fun _ ->
-            let hint =
-              Option.(trying_index (fun _ -> Store.CVar.index_of_name cvars c) &> some `needs_box)
-            in
-            throw_hint' loc' hint (UnboundCompName c))
-          (fun f -> index_exp cvars vars fcvars e |> f)
-
-  (*
-    begin
-      try
-        (* first try as an ordinary function *)
-        let cid = CompConst.index_of_name c in
-        let e' = index_exp cvars vars fcvars e in
-        Apx.Comp.Apply (loc, Apx.Comp.DataConst (loc', cid), e')
-      with Not_found ->
-        try
-          (* then try as an observation *)
-          let cid = CompDest.index_of_name c in
-          let e' = index_exp cvars vars fcvars e in
-          Apx.Comp.Obs (loc, e', cid)
-        with Not_found -> raise (Error (loc', UnboundCompConstName c))
-    end
-   *)
-  | Ext.Comp.Apply (loc, i, e) ->
-     let i' = index_exp cvars vars fcvars i in
-     let e' = index_exp cvars vars fcvars e in
-     Apx.Comp.Apply (loc, i', e')
-
-(* patterns can contain free contextual variables as well as free *computational* variables.
-   `fvars` refers to computational variables whereas `fcvars` refers to contextual variables.
- *)
-and index_pattern cvars fcvars fvars =
-  function
-  | Ext.Comp.PatName (loc, c, pat_spine) ->
-     (* disambiguation logic:
-        First see if it's a defined constructor.
-        Otherwise, it's a variable.
-      *)
-     begin match trying_index (fun () -> Store.Cid.CompConst.index_of_name c) with
-     | Some k ->
-        dprintf
-          begin fun p ->
-          p.fmt "[index_pattern] %a is matching a constructor"
-            Name.pp c
-          end;
-        let (pat_spine', fcvars', fvars') = index_pat_spine cvars fcvars fvars pat_spine in
-        (Apx.Comp.PatConst (loc, k, pat_spine'), fcvars', fvars')
-     | None ->
-        begin
-          try
-            let _ = Store.Var.index_of_name fvars c in
-            throw loc PatVarNotUnique
-          with
-          | Not_found ->
-             begin match pat_spine with
-             | Ext.Comp.PatNil _ ->
-                dprintf
-                  begin fun p ->
-                  p.fmt "[index_pattern] %a is a variable"
-                    Name.pp c
-                  end;
-                let fvars' = Store.Var.extend fvars (Store.Var.mk_entry c) in
-                (Apx.Comp.PatFVar (loc, c), fcvars, fvars')
-             | _ ->
-                throw loc (NonemptyPatternSpineForVariable c)
-             end
-        end
-     end
-
-  | Ext.Comp.PatTuple (loc, pats) ->
-     dprintf
-       begin fun p ->
-       p.fmt "[index_pattern] indexing a tuple pattern"
-       end;
-     let (pats', fcvars', fvars') = List2.fold_left
-       (fun pat1 -> index_pattern cvars fcvars fvars pat1)
-       (fun (pat1', fcvars, fvars) pat2 ->
-         let (pat2', fcvars, fvars) = index_pattern cvars fcvars fvars pat2 in
-         (List2.pair pat2' pat1' (* intentionally reversed *), fcvars, fvars)
-       )
-       (fun (pats', fcvars, fvars) pat ->
-         let (pat', fcvars, fvars) = index_pattern cvars fcvars fvars pat in
-         (List2.cons pat' pats', fcvars, fvars)
-       )
-       pats in
-     (Apx.Comp.PatTuple (loc, List2.rev pats'), fcvars', fvars')
-
-  | Ext.Comp.PatMetaObj (loc, mO) ->
-     let (mO', fcvars1) = index_meta_obj cvars fcvars mO in
-     (Apx.Comp.PatMetaObj (loc, mO'), fcvars1, fvars)
-
-  | Ext.Comp.PatAnn (loc, pat, tau) ->
-     let (pat', fcvars', fvars') = index_pattern cvars fcvars fvars pat in
-     let (fcvars'', tau') = index_comptyp tau cvars fcvars' in
-     (Apx.Comp.PatAnn (loc, pat', tau'), fcvars'', fvars')
-
-and index_pat_spine cvars fcvars fvars =
-  function
-  | Ext.Comp.PatNil loc ->
-     ( Apx.Comp.PatNil loc
-     , fcvars
-     , fvars
-     )
-
-  | Ext.Comp.PatApp (loc, pat, pat_spine) ->
-     let (pat', fcvars1, fvars1) = index_pattern cvars fcvars fvars pat in
-     let (pat_spine', fcvars2, fvars2) = index_pat_spine cvars fcvars1 fvars1 pat_spine in
-     ( Apx.Comp.PatApp (loc, pat', pat_spine')
-     , fcvars2
-     , fvars2
-     )
-
-  | Ext.Comp.PatObs (loc, obs, pat_spine) ->
-     let (pat_spine', fcvars1, fvars1) = index_pat_spine cvars fcvars fvars pat_spine in
-     let cid =
-       Store.Cid.CompDest.index_of_name_opt obs
-       |> Option.get_or_else (fun () -> throw loc (UnboundObs obs))
-     in
-     ( Apx.Comp.PatObs (loc, cid, pat_spine')
-     , fcvars1
-     , fvars1
-     )
-
-and index_fbranches cvars vars fcvars =
-  function
-  | Ext.Comp.NilFBranch loc -> Apx.Comp.NilFBranch loc
-  | Ext.Comp.ConsFBranch (loc, (patS, e), fbr) ->
-     let (patS', fcvars1, vars1) =
-       index_pat_spine cvars
-         (empty_fvars `open_term)
-         Store.Var.empty
-         patS
-     in
-     let vars_all = Store.Var.append vars1 vars in
-     let patS'' = reindex_pat_spine vars1 patS' in
-     dprintf
-       begin fun p ->
-       p.fmt "[index_fbranches] fcvars in pattern = @[<h>%a@]"
-         print_fcvars fcvars1
-       end;
-     dprintf
-       begin fun p ->
-       p.fmt "[index_fbranches] fvars in pattern = @[<h>%a@]"
-         print_fvars vars_all
-       end;
-     let fcv2 = List.append fcvars1.vars fcvars.vars in
-     let total_fcvars = { vars = fcv2; open_flag = `closed_term } in
-     dprintf
-       begin fun p ->
-       p.fmt "[Fun] fcvars in total = @[<h>%a@]"
-         print_fcvars total_fcvars
-       end;
-     let e' = index_exp cvars vars_all total_fcvars e in
-     let brs = index_fbranches cvars vars fcvars fbr in
-     Apx.Comp.ConsFBranch (loc, (patS'', e'), brs)
-
-(* reindex pattern *)
-and reindex_pattern fvars =
-  function
-  | Apx.Comp.PatFVar (loc, x) ->
-     (* all free variable names must be in fvars *)
-     let offset = Store.Var.index_of_name fvars x in
-     Apx.Comp.PatVar (loc, x, offset)
-
-  | Apx.Comp.PatTuple (loc, pats) ->
-     let pats' = List2.map (fun pat -> reindex_pattern fvars pat) pats in
-     Apx.Comp.PatTuple (loc, pats')
-
-  | Apx.Comp.PatConst (loc, c, pat_spine) ->
-     let pat_spine' = reindex_pat_spine fvars pat_spine in
-     Apx.Comp.PatConst (loc, c, pat_spine')
-
-  | Apx.Comp.PatMetaObj _ as pat -> pat
-
-  | Apx.Comp.PatAnn (loc, pat, tau) ->
-     let pat' = reindex_pattern fvars pat in
-     Apx.Comp.PatAnn (loc, pat', tau)
-
-and reindex_pat_spine fvars =
-  function
-  | Apx.Comp.PatNil loc -> Apx.Comp.PatNil loc
-  | Apx.Comp.PatApp (loc, pat, pat_spine) ->
-     let pat' = reindex_pattern fvars pat in
-     let pat_spine' = reindex_pat_spine fvars pat_spine in
-     Apx.Comp.PatApp (loc, pat', pat_spine')
-  | Apx.Comp.PatObs (loc, obs, pat_spine) ->
-     Apx.Comp.PatObs (loc, obs, reindex_pat_spine fvars pat_spine)
-
-and index_branch cvars vars fcvars =
-  function
-  | Ext.Comp.Branch (loc, cD, Ext.Comp.PatMetaObj (loc', mO), e) ->
-     dprint (fun () -> "index_branch");
-     (* computing fcvars' is unnecessary? -bp *)
-     let fcvars' =
-       match get_ctxvar_mobj mO with
-       | Option.Some mobj -> extending_by mobj (empty_fvars `open_term)
-       | Option.None -> empty_fvars `open_term
-     in
-     dprintf
-       begin fun p ->
-       p.fmt "[index_branch] indexing cD in branch at %a"
-         Location.print_short loc
-       end;
-     let (cD', cvars1, fcvars1) = index_mctx Store.CVar.empty fcvars' cD in
-     let (mO', fcvars2) = index_meta_obj cvars1 fcvars1 mO in
-     dprintf
-       begin fun p ->
-       p.fmt "fcvars in pattern = @[<h>%a@]"
-         print_fcvars fcvars2
-       end;
-     let cvars_all = Store.CVar.append cvars1 cvars in
-     let fcvars3 =
-       { open_flag = `closed_term
-       ; vars = List.append fcvars2.vars fcvars.vars
-       }
-     in
-     dprint (fun _ -> "indexing branch body");
-     let e' = index_exp cvars_all vars fcvars3 e in
-     Apx.Comp.Branch (loc, cD', Apx.Comp.PatMetaObj (loc', mO'), e')
-
-  | Ext.Comp.Branch (loc, cD, pat, e) ->
-     let empty_fcvars = empty_fvars `open_term in
-     dprintf
-       begin fun p ->
-       p.fmt "[index_branch] general pattern at %a"
-         Location.print_short loc
-       end;
-     let (cD', cvars1, fcvars1) = index_mctx Store.CVar.empty empty_fcvars cD in
-     let (pat', fcvars2, fvars2) = index_pattern cvars1 fcvars1 Store.Var.empty pat in
-     dprint (fun () -> "[index_branch] index_pattern done");
-     let cvars_all = Store.CVar.append cvars1 cvars in
-     let vars_all = Store.Var.append fvars2 vars in
-     let pat'' = reindex_pattern fvars2 pat' in
-     dprint (fun () -> "[index_branch] reindex_pattern done");
-     dprintf
-       begin fun p ->
-       p.fmt "fcvars in pattern = @[<h>%a@]"
-         print_fcvars fcvars2
-       end;
-     let fcvars3 = append_fvars fcvars2 fcvars `closed_term in
-     dprint (fun _ -> "indexing branch body");
-     let e' = index_exp cvars_all vars_all fcvars3 e in
-     Apx.Comp.Branch (loc, cD', pat'', e')
-
-let rec index_gctx cvars vars fvars =
-  function
-  | Ext.LF.Empty -> Ext.LF.Empty, vars, fvars
-  | Ext.LF.Dec (cG, Ext.Comp.CTypDecl (x, tau)) ->
-     let (cG', vars, fvars) = index_gctx cvars vars fvars cG in
-     let (fvars, tau') = index_comptyp tau cvars fvars in
-     let vars = Store.Var.extend vars (Store.Var.mk_entry x) in
-     Apx.LF.Dec (cG', Apx.Comp.CTypDecl (x, tau')), vars, fvars
-
-let rec index_proof cvars vars fvars =
-  function
-  | Ext.Comp.Incomplete (loc, name) -> Apx.Comp.Incomplete (loc, name)
-  | Ext.Comp.Command (loc, cmd, p) ->
-     let (cmd', vars, cvars) = index_command cvars vars fvars cmd in
-     let p' = index_proof cvars vars fvars p in
-     Apx.Comp.Command (loc, cmd', p')
-  | Ext.Comp.Directive (loc, d) ->
-     let d' = index_directive cvars vars fvars d in
-     Apx.Comp.Directive (loc, d')
-
-and index_command cvars vars fvars =
-  function
-  | Ext.Comp.By (loc, i, x) ->
-     let i' = index_exp cvars vars fvars i in
-     let vars = Store.Var.extend vars (Store.Var.mk_entry x) in
-     Apx.Comp.By (loc, i', x), vars, cvars
-
-  | Ext.Comp.Unbox (loc, i, x, modifier) ->
-     let i' = index_exp cvars vars fvars i in
-     let cvars = Store.CVar.extend cvars (Store.CVar.mk_entry x Plicity.explicit) in
-     Apx.Comp.Unbox (loc, i', x, modifier), vars, cvars
-
-and index_directive cvars vars fvars =
-  function
-  | Ext.Comp.Intros (loc, h) ->
-     let (_, _, h') = index_hypothetical h in
-     Apx.Comp.Intros (loc, h')
-
-  | Ext.Comp.Solve (loc, e) ->
-     let e' = index_exp cvars vars fvars e in
-     Apx.Comp.Solve (loc, e')
-
-  | Ext.Comp.Split (loc, i, bs) ->
-     let i' = index_exp cvars vars fvars i in
-     let bs' = List.map index_split_branch bs in
-     Apx.Comp.Split (loc, i', bs')
-
-  | Ext.Comp.Suffices (loc, i, tau_ps) ->
-     let i' = index_exp cvars vars fvars i in
-     let ps' =
-       List.map
-         begin fun (loc, tau, p) ->
-         let (_, tau') = index_comptyp tau cvars (empty_fvars `closed_term) in
-         let p' = index_proof cvars vars fvars p in
-         (loc, tau', p')
-         end
-         tau_ps
-     in
-     Apx.Comp.Suffices (loc, i', ps')
-
-and index_split_branch =
-  fun Ext.Comp.{ case_label; branch_body; split_branch_loc } ->
-  let (cvars, fvars, branch_body) = index_hypothetical branch_body in
-  Apx.Comp.
-  { case_label
-  ; branch_body
-  ; split_branch_loc
-  }
-
-and index_hypothetical h =
-  let Ext.Comp.{ hypotheses = { cD; cG }; proof; hypothetical_loc } = h in
-  let cvars =
-    Context.to_list_map_rev cD
-      Ext.LF.(fun _ (Decl (x, _, plicity)) -> (x, plicity))
-    |> Store.CVar.of_list
-  in
-  let vars =
-    Context.to_list_map_rev cG
-      (fun _ (Ext.Comp.CTypDecl (x, _)) -> x)
-    |> Store.Var.of_list
-  in
-  let proof = index_proof cvars vars (empty_fvars `closed_term) proof in
-  let (cD, cvars, fvars) = index_mctx Store.CVar.empty (empty_fvars `closed_term) cD in
-  let (cG, vars, fvars) = index_gctx cvars Store.Var.empty fvars cG in
-  ( cvars
-  , fvars
-  , Apx.Comp.({ hypotheses = { cD; cG }; proof; hypothetical_loc })
-  )
-
-let comptypdef (cT, cK) =
-  let cK' = index_compkind Store.CVar.empty (empty_fvars `closed_term) cK in
-  let rec unroll cK cvars =
-    match cK with
-    | Apx.Comp.Ctype _ -> cvars
-    | Apx.Comp.PiKind (loc, Apx.LF.Decl (u, ctyp, _), cK) ->
-       let cvars' = Store.CVar.extend cvars (Store.CVar.mk_entry u Plicity.explicit) in
-       unroll cK cvars'
-  in
-  let (_, tau) =
-    index_comptyp cT (unroll cK' Store.CVar.empty) (empty_fvars `closed_term)
-  in
-  (tau, cK')
-
-let run_empty d f =
-  f (empty_lf_indexing_context d) (empty_fvars `closed_term)
-
-let kind d k = run_empty d (index_kind k)
-let typ d tA = run_empty d (index_typ tA)
-let schema = index_schema
-let mctx cD =
-  let (cD', _, _) =
-    index_mctx Store.CVar.empty (empty_fvars `open_term) cD
-  in
-  cD'
-let compkind = index_compkind Store.CVar.empty (empty_fvars `open_term)
-
-let hcomptyp cvars tau =
-  let (_, tau') = index_comptyp tau cvars (empty_fvars `open_term) in
-  tau'
-
-let comptyp = hcomptyp Store.CVar.empty
-
-let exp vars e =
-  index_exp Store.CVar.empty vars (empty_fvars `closed_term) e
-
-let proof vars p =
-  index_proof Store.CVar.empty vars (empty_fvars `closed_term) p
-
-let thm vars =
-  function
-  | Ext.Comp.Program e -> Apx.Comp.Program (exp vars e)
-  | Ext.Comp.Proof p -> Apx.Comp.Proof (proof vars p)
-
-let hexp cvars vars e =
-  let closed =
-    if Store.CVar.length cvars = 0
-    then `closed_term
-    else `open_term
-  in
-  index_exp cvars vars (empty_fvars closed) e
+          return (location, index, patterns'))
+        observations
+    in
+    let add_patterns' =
+      List.fold_right (fun (pattern_location, pattern) accumulator ->
+          Synapx.Comp.PatApp (pattern_location, pattern, accumulator))
+    in
+    let add_observations' =
+      List.fold_right (fun (location, destructor, patterns) accumulator ->
+          Synapx.Comp.PatObs
+            (location, destructor, add_patterns' patterns accumulator))
+    in
+    return
+      (add_patterns' patterns'
+         (add_observations' observations' (Synapx.Comp.PatNil location)))
+
+  and index_cofunction_branch
+      { Synext.Comp.Cofunction_branch.location
+      ; meta_context
+      ; copattern
+      ; body
+      } =
+    match meta_context.bindings with
+    | [] ->
+        let* pattern_spine', body' =
+          with_pattern_variables_checkpoint
+            ~pattern:(index_comp_copattern copattern)
+            ~expression:(index_comp_expression body)
+        in
+        return (location, pattern_spine', body')
+    | _ -> Error.raise_at1 location Unsupported_copatern_meta_context
+
+  and with_indexed_comp_context_binding :
+        'a.
+           Identifier.t * Synext.comp_typ
+        -> (Synapx.Comp.ctyp_decl -> 'a t)
+        -> 'a t =
+   fun (identifier, typ) f ->
+    let name = Name.make_from_identifier identifier in
+    let* typ' = index_comp_typ typ in
+    with_bound_comp_variable identifier
+      (f (Synapx.Comp.CTypDecl (name, typ')))
+
+  and with_indexed_comp_context_bindings :
+        'a.
+           (Identifier.t * Synext.comp_typ) List.t
+        -> (Synapx.Comp.ctyp_decl List.t -> 'a t)
+        -> 'a t =
+   fun bindings f ->
+    match bindings with
+    | [] -> f []
+    | x :: xs ->
+        with_indexed_comp_context_binding x (fun y ->
+            with_indexed_comp_context_bindings xs (fun ys -> f (y :: ys)))
+
+  and with_indexed_comp_context :
+        'a. Synext.comp_context -> (Synapx.Comp.gctx -> 'a t) -> 'a t =
+   fun { Synext.Comp.Context.bindings; _ } f ->
+    with_indexed_comp_context_bindings bindings (fun bindings' ->
+        f
+          (List.fold_left
+             (fun accumulator binding' ->
+               Synapx.LF.Dec (accumulator, binding'))
+             Synapx.LF.Empty bindings'))
+
+  let rec index_harpoon_proof = function
+    | Synext.Harpoon.Proof.Incomplete { location; label } ->
+        let name = Option.map Identifier.name label in
+        return (Synapx.Comp.Incomplete (location, name))
+    | Synext.Harpoon.Proof.Command { location; command; body } ->
+        with_indexed_harpoon_command command (fun command' ->
+            let* body' = index_harpoon_proof body in
+            return (Synapx.Comp.Command (location, command', body')))
+    | Synext.Harpoon.Proof.Directive { location; directive } ->
+        let* directive = index_harpoon_directive directive in
+        return (Synapx.Comp.Directive (location, directive))
+
+  and with_indexed_harpoon_command :
+        'a. Synext.harpoon_command -> (Synapx.Comp.command -> 'a t) -> 'a t =
+   fun command f ->
+    match command with
+    | Synext.Harpoon.Command.By { location; expression; assignee } ->
+        let* expression' = index_comp_expression expression in
+        let x = Name.make_from_identifier assignee in
+        with_bound_comp_variable assignee
+          (f (Synapx.Comp.By (location, expression', x)))
+    | Synext.Harpoon.Command.Unbox
+        { location; expression; assignee; modifier } ->
+        let* expression' = index_comp_expression expression in
+        let x = Name.make_from_identifier assignee in
+        with_bound_meta_variable assignee
+          (f (Synapx.Comp.Unbox (location, expression', x, modifier)))
+
+  and index_harpoon_directive = function
+    | Synext.Harpoon.Directive.Intros { location; hypothetical } ->
+        let* hypothetical' = index_harpoon_hypothetical hypothetical in
+        return (Synapx.Comp.Intros (location, hypothetical'))
+    | Synext.Harpoon.Directive.Solve { location; solution } ->
+        let* solution' = index_comp_expression solution in
+        return (Synapx.Comp.Solve (location, solution'))
+    | Synext.Harpoon.Directive.Split { location; scrutinee; branches } ->
+        let* scrutinee' = index_comp_expression scrutinee in
+        let* branches' =
+          traverse_list1 index_harpoon_split_branch branches
+        in
+        return
+          (Synapx.Comp.Split (location, scrutinee', List1.to_list branches'))
+    | Synext.Harpoon.Directive.Impossible { location; scrutinee } ->
+        let* scrutinee' = index_comp_expression scrutinee in
+        (* TODO: The approximate syntax should have an [Impossible _]
+           constructor *)
+        return (Synapx.Comp.Split (location, scrutinee', []))
+    | Synext.Harpoon.Directive.Suffices { location; scrutinee; branches } ->
+        let* scrutinee' = index_comp_expression scrutinee in
+        let* branches' =
+          traverse_list index_harpoon_suffices_branch branches
+        in
+        return (Synapx.Comp.Suffices (location, scrutinee', branches'))
+
+  and index_harpoon_split_branch
+      { Synext.Harpoon.Split_branch.location; label; body } =
+    let* label' = index_harpoon_split_branch_label label in
+    let* body' = index_harpoon_hypothetical body in
+    return
+      { Synapx.Comp.case_label = label'
+      ; branch_body = body'
+      ; split_branch_loc = location
+      }
+
+  and index_harpoon_split_branch_label = function
+    | Synext.Harpoon.Split_branch.Label.Lf_constant { location; identifier }
+      ->
+        let* _ = index_of_lf_term_constant identifier in
+        let name = Name.make_from_qualified_identifier identifier in
+        (* TODO: The approximate syntax should have an [Lf_constant _]
+           constructor *)
+        return (Synapx.Comp.NamedCase (location, name))
+    | Synext.Harpoon.Split_branch.Label.Comp_constant
+        { location; identifier } ->
+        let* _ = index_of_comp_constructor identifier in
+        let name = Name.make_from_qualified_identifier identifier in
+        (* TODO: The approximate syntax should have a [Comp_constant _]
+           constructor *)
+        return (Synapx.Comp.NamedCase (location, name))
+    | Synext.Harpoon.Split_branch.Label.Bound_variable { location } ->
+        return (Synapx.Comp.BVarCase location)
+    | Synext.Harpoon.Split_branch.Label.Empty_context { location } ->
+        return (Synapx.Comp.ContextCase (Synapx.Comp.EmptyContext location))
+    | Synext.Harpoon.Split_branch.Label.Extended_context
+        { location; schema_element } ->
+        return
+          (Synapx.Comp.ContextCase
+             (Synapx.Comp.ExtendedBy (location, schema_element)))
+    | Synext.Harpoon.Split_branch.Label.Parameter_variable
+        { location; schema_element; projection } ->
+        return (Synapx.Comp.PVarCase (location, schema_element, projection))
+
+  and index_harpoon_suffices_branch
+      { Synext.Harpoon.Suffices_branch.location; goal; proof } =
+    let* goal' = index_comp_typ goal in
+    let* proof' = index_harpoon_proof proof in
+    return (location, goal', proof')
+
+  and index_harpoon_hypothetical = function
+    | { Synext.Harpoon.Hypothetical.location
+      ; meta_context
+      ; comp_context
+      ; proof
+      } ->
+        with_parent_scope
+          (with_indexed_meta_context meta_context (fun meta_context' ->
+               with_indexed_comp_context comp_context (fun comp_context' ->
+                   let* proof' = index_harpoon_proof proof in
+                   return
+                     Synapx.Comp.
+                       { hypotheses =
+                           { cD = meta_context'; cG = comp_context' }
+                       ; proof = proof'
+                       ; hypothetical_loc = location
+                       })))
+end

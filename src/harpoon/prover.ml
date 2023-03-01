@@ -1,10 +1,10 @@
 open Support
 
 open Beluga
+open Beluga_syntax
 open Syntax.Int
 
 module E = Beluga_syntax.Error
-module Command = Syntax.Ext.Harpoon
 module S = Substitution
 module P = Pretty.Int.DefaultPrinter
 
@@ -137,7 +137,7 @@ let dump_proof t path =
 let process_command
       (s : HarpoonState.t)
       ( (c, t, g) : HarpoonState.triple)
-      (cmd : Command.command)
+      (cmd : Synext.harpoon_repl_command)
     : unit =
   let mfs =
     lazy
@@ -227,7 +227,7 @@ let process_command
 
   match cmd with
   (* Administrative commands: *)
-  | Command.Theorem cmd ->
+  | Synext.Harpoon.Repl.Command.Theorem { subcommand = cmd; _ } ->
      begin match cmd with
      | `list ->
         HarpoonState.printf s "@[<v>%a@,@,Current theorem is first.@]"
@@ -248,7 +248,8 @@ let process_command
      | `show_proof ->
         Theorem.show_proof t
      end
-  | Command.Session cmd ->
+
+  | Synext.Harpoon.Repl.Command.Session { subcommand = cmd; _ } ->
      begin match cmd with
      | `list ->
         HarpoonState.printf s "@[<v>%a@,@,Current session and theorem are first.@]"
@@ -257,46 +258,51 @@ let process_command
      | `create -> ignore (HarpoonState.session_configuration_wizard s)
      | `serialize -> HarpoonState.serialize s (c, t, g)
      end
-  | Command.Subgoal cmd ->
+
+  | Synext.Harpoon.Repl.Command.Subgoal { subcommand = cmd; _ } ->
      begin match cmd with
      | `list -> Theorem.show_subgoals t
      | `defer -> Theorem.defer_subgoal t
      end
 
-  | Command.SelectTheorem name ->
+  | Synext.Harpoon.Repl.Command.Select_theorem { theorem; _ } ->
+     let name = Name.make_from_qualified_identifier theorem in
      if Bool.not (HarpoonState.select_theorem s name) then
        HarpoonState.printf s
          "There is no theorem by name %a."
          Name.pp name
 
-  | Command.Rename { rename_from=x_src; rename_to=x_dst; level } ->
+  | Synext.Harpoon.Repl.Command.Rename { rename_from; rename_to; level; _ } ->
+     let x_src = Name.make_from_identifier rename_from
+     and x_dst = Name.make_from_identifier rename_to in
      if Bool.not (Theorem.rename_variable x_src x_dst level t g) then
        Error.(throw (NoSuchVariable (x_src, level)))
 
-  | Command.ToggleAutomation (automation_kind, automation_change) ->
+  | Synext.Harpoon.Repl.Command.Toggle_automation { kind; change; _ } ->
      Automation.toggle
        (HarpoonState.automation_state s)
-       automation_kind
-       automation_change
+       kind
+       change
 
-  | Command.Type i ->
+  | Synext.Harpoon.Repl.Command.Type { scrutinee; _ } ->
      let (hs, i, tau) =
        Elab.exp' (Some (Theorem.get_cid t))
-         cIH cD cG (Lazy.force mfs) i
+         cIH cD cG (Lazy.force mfs) scrutinee
      in
      HarpoonState.printf s
        "- @[<hov 2>@[%a@] :@ @[%a@]@]"
        (P.fmt_ppr_cmp_exp cD cG P.l0) i
        (P.fmt_ppr_cmp_typ cD P.l0) tau
 
-  | Command.Info (k, n) ->
-     begin match k with
+  | Synext.Harpoon.Repl.Command.Info { kind; object_identifier; _ } ->
+     begin match kind with
      | `prog ->
         let open Option in
-        begin match Store.Cid.Comp.(index_of_name_opt n $> get) with
+        let name = Name.make_from_qualified_identifier object_identifier in
+        begin match Store.Cid.Comp.index_of_name_opt name $> Store.Cid.Comp.get with
         | None ->
            HarpoonState.printf s
-             "- No such theorem by name %a" Name.pp n
+             "- No such theorem by name %a" Qualified_identifier.pp object_identifier
         | Some e ->
            HarpoonState.printf s
              "- @[%a@]"
@@ -304,7 +310,8 @@ let process_command
         end
      end
 
-  | Command.Translate n ->
+  | Synext.Harpoon.Repl.Command.Translate { theorem; _ } ->
+     let n = Name.make_from_qualified_identifier theorem in
      let open Option in
      begin match Store.Cid.Comp.(index_of_name_opt n $> get) with
      | Some e ->
@@ -315,15 +322,15 @@ let process_command
           Name.pp n
      end
 
-  | Command.Undo ->
+  | Synext.Harpoon.Repl.Command.Undo _ ->
      if Bool.not Theorem.(history_step t Direction.backward) then
        HarpoonState.printf s "Nothing to undo in the current theorem's timeline."
 
-  | Command.Redo ->
+  | Synext.Harpoon.Repl.Command.Redo _ ->
      if Bool.not Theorem.(history_step t Direction.forward) then
        HarpoonState.printf s "Nothing to redo in the current theorem's timeline."
 
-  | Command.History ->
+  | Synext.Harpoon.Repl.Command.History _ ->
      let open Format in
      let (past, future) = Theorem.get_history_names t in
      let future = List.rev future in
@@ -350,36 +357,58 @@ let process_command
        past
        future_remark ()
 
-  | Command.Help ->
+  | Synext.Harpoon.Repl.Command.Help _ ->
      HarpoonState.printf s
        "@[<v>Built-in help is not implemented.\
         @,See online documentation: https://beluga-lang.readthedocs.io/@]"
 
   (* Real tactics: *)
-  | Command.Unbox (i, name, modifier) ->
+  | Synext.Harpoon.Repl.Command.Unbox { expression; assignee; modifier; _ } ->
      let (hs, m, tau) =
        let cid = Theorem.get_cid t in
-       Elab.exp' (Some cid) cIH cD cG (Lazy.force mfs) i
+       Elab.exp' (Some cid) cIH cD cG (Lazy.force mfs) expression
      in
+     let name = Name.make_from_identifier assignee in
      Tactic.unbox m tau name modifier t g
 
-  | Command.Intros names ->
+  | Synext.Harpoon.Repl.Command.Intros { introduced_variables; _ } ->
+     let names =
+       Option.map Fun.(List1.map Identifier.show >> List1.to_list) introduced_variables
+     in
      Tactic.intros names t g
 
-  | Command.Split (split_kind, i) ->
+  | Synext.Harpoon.Repl.Command.Split { location; scrutinee; _ } ->
      let (hs, m, tau) =
        let cid = Theorem.get_cid t in
-       Elab.exp' (Some cid) cIH cD cG (Lazy.force mfs) i
+       Elab.exp' (Some cid) cIH cD cG (Lazy.force mfs) scrutinee
      in
-     Tactic.split split_kind m tau (Lazy.force mfs) t g
-  | Command.MSplit (loc, name) ->
-     let i, tau = Elab.mvar cD loc name in
+     Tactic.split `split m tau (Lazy.force mfs) t g
+
+  | Synext.Harpoon.Repl.Command.Invert { location; scrutinee; _ } ->
+     let (hs, m, tau) =
+       let cid = Theorem.get_cid t in
+       Elab.exp' (Some cid) cIH cD cG (Lazy.force mfs) scrutinee
+     in
+     Tactic.split `invert m tau (Lazy.force mfs) t g
+
+  | Synext.Harpoon.Repl.Command.Impossible { location; scrutinee; _ } ->
+     let (hs, m, tau) =
+       let cid = Theorem.get_cid t in
+       Elab.exp' (Some cid) cIH cD cG (Lazy.force mfs) scrutinee
+     in
+     Tactic.split `impossible m tau (Lazy.force mfs) t g
+
+  | Synext.Harpoon.Repl.Command.Msplit { location; identifier } ->
+     let name = Name.make_from_identifier identifier in
+     let i, tau = Elab.mvar cD location name in
      Tactic.split `split i tau (Lazy.force mfs) t g
-  | Command.By (i, name) ->
+
+  | Synext.Harpoon.Repl.Command.By { expression; assignee; _ } ->
      let (hs, i, tau) =
        let cid = Theorem.get_cid t in
-       Elab.exp' (Some cid) cIH cD cG (Lazy.force mfs) i
+       Elab.exp' (Some cid) cIH cD cG (Lazy.force mfs) expression
      in
+     let name = Name.make_from_identifier assignee in
      dprintf
        begin fun p ->
        p.fmt "@[<v>[harpoon-By] elaborated invocation:@,%a@ : %a@]"
@@ -399,10 +428,10 @@ let process_command
          (P.fmt_ppr_cmp_exp cD cG P.l0) i
          (P.fmt_ppr_cmp_typ cD P.l0) tau
 
-  | Command.Suffices (i, tau_list) ->
+  | Synext.Harpoon.Repl.Command.Suffices { implication; goal_premises; _ } ->
      let (hs, i, tau) =
        let cid = Theorem.get_cid t in
-       Elab.exp' (Some cid) cIH cD cG (Lazy.force mfs) i
+       Elab.exp' (Some cid) cIH cD cG (Lazy.force mfs) implication
      in
      begin match Session.infer_invocation_kind c i with
      | `ih ->
@@ -415,12 +444,12 @@ let process_command
            let elab_suffices_typ tau_ext : suffices_typ =
              map_suffices_typ (Elab.typ cD) tau_ext
            in
-           let tau_list = List.map elab_suffices_typ tau_list in
+           let tau_list = List.map elab_suffices_typ goal_premises in
            Tactic.suffices i tau_list tau t g
         end
      end
 
-  | Command.Solve e ->
+  | Synext.Harpoon.Repl.Command.Solve { solution = e; _ } ->
      let cid = Theorem.get_cid t in
      let (hs, e) =
        Elab.exp (Some cid) cIH cD cG (Lazy.force mfs) e g.goal
@@ -436,7 +465,8 @@ let process_command
        (Comp.solve e |> Tactic.solve) t g
      else
        HarpoonState.printf s "Solution contains uninstantiated metavariables."
-  | Command.AutoInvertSolve d ->
+
+  | Synext.Harpoon.Repl.Command.Auto_invert_solve { max_depth = d; _ } ->
      let { cD; cG; cIH } = g.context in
      let (tau, ms) = g.goal in
      let tau = Whnf.cnormCTyp (tau, ms) in
@@ -462,7 +492,7 @@ let process_command
         (Comp.solve e |> Tactic.solve) t g
      end
 
-  | Command.InductiveAutoSolve d ->
+  | Synext.Harpoon.Repl.Command.Inductive_auto_solve { max_depth = d; _ } ->
      let { cD; cG; cIH } = g.context in
      let (tau, ms) = g.goal in
      let tau = Whnf.cnormCTyp (tau, ms) in

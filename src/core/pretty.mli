@@ -14,8 +14,3 @@ module Int : sig
   module Make : functor (_ : Store.Cid.RENDERER) -> Printer.Int.T
   module DefaultPrinter : Printer.Int.T
 end
-
-module Ext : sig
-  module Make : functor (_ : Store.Cid.RENDERER) -> Printer.Ext.T
-  module DefaultPrinter : Printer.Ext.T
-end

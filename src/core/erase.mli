@@ -1,3 +1,3 @@
 open Syntax
 
-val numeric_order : Int.Comp.typ -> Int.Comp.order -> Ext.Comp.numeric_order
+val numeric_order : Int.Comp.typ -> Int.Comp.order -> Int.Comp.order

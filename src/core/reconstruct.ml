@@ -267,7 +267,7 @@ let map_case_type f =
 (** Elaborates the given numeric induction order by skipping implicit
     parameters in the given type.
  *)
-let elNumericOrder (tau : I.typ) (order : Ext.Comp.numeric_order)
+let elNumericOrder (tau : I.typ) (order : I.order)
     : I.order =
   (** skip tau n uses n units of fuel to travel through the type tau.
       A fuel unit is spent to cross an explicit function type, but
@@ -287,8 +287,7 @@ let elNumericOrder (tau : I.typ) (order : Ext.Comp.numeric_order)
     | I.TypArr (_, _, tau), n ->
       1 + skip tau (n - 1) (* simple functions cost 1 *)
   in
-  Ext.Comp.map_order (skip tau) order
-  |> Order.of_numeric_order
+  I.map_order (skip tau) order
 
 let rec elDCtxAgainstSchema loc recT cD psi s_cid =
   match psi with

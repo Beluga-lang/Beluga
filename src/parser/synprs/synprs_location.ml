@@ -286,7 +286,9 @@ let location_of_harpoon_repl_command repl_command =
   | Unbox { location; _ }
   | By { location; _ }
   | Suffices { location; _ }
-  | Help { location; _ } ->
+  | Help { location; _ }
+  | Auto_invert_solve { location; _ }
+  | Inductive_auto_solve { location; _ } ->
       location
 
 (** {1 Signature} *)

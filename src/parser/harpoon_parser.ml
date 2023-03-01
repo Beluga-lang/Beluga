@@ -235,6 +235,15 @@ module Make
         keyword "solve" &> comp_expression |> span
         $> fun (location, solution) ->
         Synprs.Harpoon.Repl.Command.Solve { location; solution }
+      and auto_invert_solve =
+        keyword "auto-invert-solve" &> maybe integer |> span
+        $> fun (location, max_depth) ->
+        Synprs.Harpoon.Repl.Command.Auto_invert_solve { location; max_depth }
+      and inductive_auto_solve =
+        keyword "inductive-auto-solve" &> maybe integer |> span
+        $> fun (location, max_depth) ->
+        Synprs.Harpoon.Repl.Command.Inductive_auto_solve
+          { location; max_depth }
       and by =
         keyword "by"
         &> seq3 comp_expression (keyword "as" &> identifier) (maybe boxity)
@@ -402,6 +411,8 @@ module Make
         ; invert
         ; impossible
         ; solve
+        ; auto_invert_solve
+        ; inductive_auto_solve
         ; by
         ; suffices
         ; unbox

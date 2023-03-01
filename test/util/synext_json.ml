@@ -1284,6 +1284,18 @@ and json_of_harpoon_repl_command command =
   | Harpoon.Repl.Command.Help { location } ->
       json_of_variant ~name:"Harpoon.Repl.Command.Help"
         ~data:[ ("location", json_of_location location) ]
+  | Harpoon.Repl.Command.Auto_invert_solve { location; max_depth } ->
+      json_of_variant ~name:"Harpoon.Repl.Command.Auto_invert_solve"
+        ~data:
+          [ ("location", json_of_location location)
+          ; ("max_depth", json_of_option json_of_int max_depth)
+          ]
+  | Harpoon.Repl.Command.Inductive_auto_solve { location; max_depth } ->
+      json_of_variant ~name:"Harpoon.Repl.Command.Inductive_auto_solve"
+        ~data:
+          [ ("location", json_of_location location)
+          ; ("max_depth", json_of_option json_of_int max_depth)
+          ]
 
 (** {1 Signature} *)
 

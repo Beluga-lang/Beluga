@@ -982,7 +982,7 @@ module Sgn = struct
 
     | Module of
       { location: Location.t
-      ; identifier: string
+      ; identifier: Identifier.t
       ; declarations: decl list
       } (** Namespace declaration for other declarations *)
 

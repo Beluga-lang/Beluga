@@ -1748,8 +1748,8 @@ module Make (R : Store.Cid.RENDERER) : Printer.Int.T = struct
     | Sgn.Module { identifier; declarations; _ } ->
        let aux fmt t = List.iter (fun x -> (fmt_ppr_sgn_decl fmt x)) t in
 
-       fprintf ppf "@\nmodule %s = struct@\n@[<v2>%a@]@\nend;@\n"
-         identifier
+       fprintf ppf "@\nmodule %a = struct@\n@[<v2>%a@]@\nend;@\n"
+         Identifier.pp identifier
          aux declarations;
 
     | _ -> ()

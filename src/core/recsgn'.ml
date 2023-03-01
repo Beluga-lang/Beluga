@@ -2,7 +2,7 @@ open Support
 open Beluga_syntax
 module Synint = Syntax.Int
 
-[@@@warning "+A-26-27-4-44"]
+[@@@warning "+A-4-44"]
 
 module C = Whnf
 module S = Substitution
@@ -42,6 +42,40 @@ exception
     { unbound_argument : Identifier.t
     ; arguments : Identifier.t Option.t List.t
     }
+
+exception Invalid_lf_typ_target
+
+exception Invalid_comp_typ_target
+
+exception Invalid_comp_cotyp_target
+
+exception
+  Lf_typ_target_mismatch of
+    { constant : Identifier.t
+    ; expected : Identifier.t
+    ; actual : Qualified_identifier.t
+    }
+
+exception
+  Comp_typ_target_mismatch of
+    { constant : Identifier.t
+    ; expected : Identifier.t
+    ; actual : Qualified_identifier.t
+    }
+
+exception
+  Comp_cotyp_target_mismatch of
+    { constant : Identifier.t
+    ; expected : Identifier.t
+    ; actual : Qualified_identifier.t
+    }
+
+exception No_positive of Identifier.t
+
+exception No_stratify of Identifier.t
+
+exception
+  No_stratify_or_positive of String.t (* TODO: Should be an identifier *)
 
 let () =
   Error.register_exception_printer (function
@@ -92,6 +126,48 @@ let () =
           Identifier.pp unbound_argument
           (List.pp ~pp_sep:Format.comma pp_argument)
           arguments
+    | Invalid_lf_typ_target ->
+        Format.dprintf "%a" Format.pp_print_text
+          "This LF type is expected to end with the application of an LF \
+           type-level constant."
+    | Invalid_comp_typ_target ->
+        Format.dprintf "%a" Format.pp_print_text
+          "This computation-level type is expected to end with the \
+           application of a computation-level type constant."
+    | Invalid_comp_cotyp_target ->
+        Format.dprintf "%a" Format.pp_print_text
+          "This computation-level type is expected to begin with the \
+           application of a computation-level cotype constant."
+    | Lf_typ_target_mismatch { constant; expected; actual } ->
+        Format.dprintf
+          "@[<v 2>@[Wrong target data type for LF constructor %a.@]@,\
+           @[Expected %a@]@,\
+           @[Actual %a@]@]" Identifier.pp constant Identifier.pp expected
+          Qualified_identifier.pp actual
+    | Comp_typ_target_mismatch { constant; expected; actual } ->
+        Format.dprintf
+          "@[<v 2>@[Wrong target data type for computation-level \
+           constructor %a.@]@,\
+           @[Expected %a@]@,\
+           @[Actual %a@]@]" Identifier.pp constant Identifier.pp expected
+          Qualified_identifier.pp actual
+    | Comp_cotyp_target_mismatch { constant; expected; actual } ->
+        Format.dprintf
+          "@[<v 2>@[Wrong target data type for computation-level destructor \
+           %a.@]@,\
+           @[Expected %a@]@,\
+           @[Actual %a@]@]" Identifier.pp constant Identifier.pp expected
+          Qualified_identifier.pp actual
+    | No_positive identifier ->
+        Format.dprintf "Positivity checking of constructor %a fails."
+          Identifier.pp identifier
+    | No_stratify identifier ->
+        Format.dprintf "Stratification checking of constructor %a fails."
+          Identifier.pp identifier
+    | No_stratify_or_positive identifier ->
+        Format.dprintf
+          "Stratification or positivity checking of datatype %a fails."
+          String.pp identifier
     | exn -> Error.raise_unsupported_exception_printing exn)
 
 module type SIGNATURE_RECONSTRUCTION_STATE = sig
@@ -187,6 +263,10 @@ module type SIGNATURE_RECONSTRUCTION_STATE = sig
 
   val index_meta_context : Synext.meta_context -> Synapx.LF.mctx t
 
+  val index_comp_kind : Synext.comp_kind -> Synapx.Comp.kind t
+
+  val index_comp_typ : Synext.comp_typ -> Synapx.Comp.typ t
+
   val index_closed_comp_typ : Synext.comp_typ -> Synapx.Comp.typ t
 
   val index_closed_comp_expression :
@@ -201,6 +281,13 @@ module type SIGNATURE_RECONSTRUCTION_STATE = sig
 
   val index_harpoon_proof : Synext.harpoon_proof -> Synapx.Comp.thm t
 
+  (** Adding a constant or module introduces an identifier in the state.
+      Whenever an extensible declaration is shadowed, it is frozen. *)
+
+  (** [add_lf_type_constant ?location identifier id] adds the LF type
+      constant having identifier [identifier], ID [cid] and binding site
+      [location] to the state. If [location = Option.None], then the
+      identifier's location is used as binding site. *)
   val add_lf_type_constant :
     ?location:Location.t -> Identifier.t -> Id.cid_typ -> Unit.t t
 
@@ -210,11 +297,32 @@ module type SIGNATURE_RECONSTRUCTION_STATE = sig
   val add_schema_constant :
     ?location:Location.t -> Identifier.t -> Id.cid_schema -> Unit.t t
 
+  val add_prog :
+    ?location:Location.t -> Identifier.t -> Id.cid_prog -> Unit.t t
+
   val add_comp_val :
     ?location:Location.t -> Identifier.t -> Id.cid_prog -> Unit.t t
 
   val add_comp_typedef :
     ?location:Location.t -> Identifier.t -> Id.cid_comp_typdef -> Unit.t t
+
+  val add_comp_type_constant :
+    ?location:Location.t -> Identifier.t -> Id.cid_comp_typ -> Unit.t t
+
+  val add_comp_cotype_constant :
+    ?location:Location.t -> Identifier.t -> Id.cid_comp_cotyp -> Unit.t t
+
+  val add_comp_constructor :
+    ?location:Location.t -> Identifier.t -> Id.cid_comp_const -> Unit.t t
+
+  val add_comp_destructor :
+    ?location:Location.t -> Identifier.t -> Id.cid_comp_dest -> Unit.t t
+
+  (** [add_module ?location identifier m] adds the module having identifier
+      [identifier] and bindinng site [location] to the state. The action [m]
+      is executed in the module's state. [m] is typically the reconstruction
+      of the module's entries. *)
+  val add_module : ?location:Location.t -> Identifier.t -> 'a t -> 'a t
 end
 
 module type SIGNATURE_RECONSTRUCTION = sig
@@ -227,6 +335,90 @@ module Make (Signature_reconstruction_state : SIGNATURE_RECONSTRUCTION_STATE) :
   SIGNATURE_RECONSTRUCTION
     with type state = Signature_reconstruction_state.state = struct
   include Signature_reconstruction_state
+
+  let rec get_lf_typ_target = function
+    | Synext.LF.Typ.Constant { identifier; _ } -> identifier
+    | Synext.LF.Typ.Arrow { range; _ } -> get_lf_typ_target range
+    | Synext.LF.Typ.Pi { body; _ } -> get_lf_typ_target body
+    | Synext.LF.Typ.Application { applicand; _ } ->
+        let rec get_lf_typ_target = function
+          | Synext.LF.Typ.Constant { identifier; _ } -> identifier
+          | Synext.LF.Typ.Application { applicand; _ } ->
+              get_lf_typ_target applicand
+          | typ ->
+              let location = Synext.location_of_lf_typ typ in
+              Error.raise_at1 location Invalid_lf_typ_target
+        in
+        get_lf_typ_target applicand
+
+  let rec get_comp_typ_target = function
+    | Synext.Comp.Typ.Inductive_typ_constant { identifier; _ }
+    | Synext.Comp.Typ.Stratified_typ_constant { identifier; _ }
+    | Synext.Comp.Typ.Coinductive_typ_constant { identifier; _ }
+    | Synext.Comp.Typ.Abbreviation_typ_constant { identifier; _ } ->
+        identifier
+    | Synext.Comp.Typ.Pi { body; _ } -> get_comp_typ_target body
+    | Synext.Comp.Typ.Arrow { range; _ } -> get_comp_typ_target range
+    | (Synext.Comp.Typ.Cross _ | Synext.Comp.Typ.Box _) as typ ->
+        let location = Synext.location_of_comp_typ typ in
+        Error.raise_at1 location Invalid_comp_typ_target
+    | Synext.Comp.Typ.Application { applicand; _ } ->
+        let rec get_comp_typ_target = function
+          | Synext.Comp.Typ.Inductive_typ_constant { identifier; _ }
+          | Synext.Comp.Typ.Stratified_typ_constant { identifier; _ }
+          | Synext.Comp.Typ.Coinductive_typ_constant { identifier; _ }
+          | Synext.Comp.Typ.Abbreviation_typ_constant { identifier; _ } ->
+              identifier
+          | Synext.Comp.Typ.Application { applicand; _ } ->
+              get_comp_typ_target applicand
+          | typ ->
+              let location = Synext.location_of_comp_typ typ in
+              Error.raise_at1 location Invalid_comp_typ_target
+        in
+        get_comp_typ_target applicand
+
+  let get_comp_cotyp_target = function
+    | Synext.Comp.Typ.Inductive_typ_constant { identifier; _ }
+    | Synext.Comp.Typ.Stratified_typ_constant { identifier; _ }
+    | Synext.Comp.Typ.Coinductive_typ_constant { identifier; _ }
+    | Synext.Comp.Typ.Abbreviation_typ_constant { identifier; _ } ->
+        identifier
+    | ( Synext.Comp.Typ.Pi _ | Synext.Comp.Typ.Arrow _
+      | Synext.Comp.Typ.Cross _ | Synext.Comp.Typ.Box _ ) as typ ->
+        let location = Synext.location_of_comp_typ typ in
+        Error.raise_at1 location Invalid_comp_cotyp_target
+    | Synext.Comp.Typ.Application { applicand; _ } ->
+        let rec get_comp_cotyp_target = function
+          | Synext.Comp.Typ.Inductive_typ_constant { identifier; _ }
+          | Synext.Comp.Typ.Stratified_typ_constant { identifier; _ }
+          | Synext.Comp.Typ.Coinductive_typ_constant { identifier; _ }
+          | Synext.Comp.Typ.Abbreviation_typ_constant { identifier; _ } ->
+              identifier
+          | Synext.Comp.Typ.Application { applicand; _ } ->
+              get_comp_cotyp_target applicand
+          | typ ->
+              let location = Synext.location_of_comp_typ typ in
+              Error.raise_at1 location Invalid_comp_cotyp_target
+        in
+        get_comp_cotyp_target applicand
+
+  let rec get_target_cid_comptyp = function
+    | Synint.Comp.TypBase (_, a, _) -> a
+    | Synint.Comp.TypArr (_, _, tau) -> get_target_cid_comptyp tau
+    | Synint.Comp.TypPiBox (_, _, tau) -> get_target_cid_comptyp tau
+    | ( Synint.Comp.TypCobase _ | Synint.Comp.TypDef _ | Synint.Comp.TypBox _
+      | Synint.Comp.TypCross _ | Synint.Comp.TypClo _ | Synint.Comp.TypInd _
+        ) as tau ->
+        let location = Synint.Comp.loc_of_typ tau in
+        Error.raise_at1 location Invalid_comp_typ_target
+
+  let get_target_cid_compcotyp = function
+    | Synint.Comp.TypCobase (_, a, _) -> a
+    | ( Synint.Comp.TypArr _ | Synint.Comp.TypPiBox _ | Synint.Comp.TypBase _
+      | Synint.Comp.TypDef _ | Synint.Comp.TypBox _ | Synint.Comp.TypCross _
+      | Synint.Comp.TypClo _ | Synint.Comp.TypInd _ ) as tau ->
+        let location = Synint.Comp.loc_of_typ tau in
+        Error.raise_at1 location Invalid_comp_cotyp_target
 
   let rec reconstruct_signature signature =
     let { Synext.Signature.global_pragmas; entries } = signature in
@@ -362,6 +554,8 @@ module Make (Signature_reconstruction_state : SIGNATURE_RECONSTRUCTION_STATE) :
           expected_solutions maximum_tries
 
   and reconstruct_signature_declaration declaration =
+    Reconstruct.reset_fvarCnstr ();
+    Store.FCVar.clear ();
     match declaration with
     | Synext.Signature.Declaration.CompTyp { location; _ }
     | Synext.Signature.Declaration.CompCotyp { location; _ }
@@ -374,9 +568,9 @@ module Make (Signature_reconstruction_state : SIGNATURE_RECONSTRUCTION_STATE) :
            declaration is only supported within a mutually recursive group \
            of declarations."
     | Synext.Signature.Declaration.Typ { location; identifier; kind } ->
-        reconstruct_oldstyle_lf_typ_declaration location identifier kind
+        reconstruct_lf_typ_declaration location identifier kind
     | Synext.Signature.Declaration.Const { location; identifier; typ } ->
-        reconstruct_oldstyle_lf_const_declaration location identifier typ
+        reconstruct_lf_const_declaration location identifier typ
     | Synext.Signature.Declaration.Schema { location; identifier; schema } ->
         reconstruct_schema_declaration location identifier schema
     | Synext.Signature.Declaration.CompTypAbbrev
@@ -392,7 +586,7 @@ module Make (Signature_reconstruction_state : SIGNATURE_RECONSTRUCTION_STATE) :
       ->
         reconstruct_module_declaration location identifier entries
 
-  and reconstruct_oldstyle_lf_typ_declaration location identifier extK =
+  and reconstruct_lf_typ_declaration location identifier extK =
     let name = Name.make_from_identifier identifier in
     dprintf (fun p ->
         p.fmt "[RecSgn Checking] Typ at: %a" Location.print_short location);
@@ -435,7 +629,7 @@ module Make (Signature_reconstruction_state : SIGNATURE_RECONSTRUCTION_STATE) :
     let* () = add_lf_type_constant ~location identifier cid in
     return (Synint.Sgn.Typ { location; identifier = cid; kind = tK' })
 
-  and reconstruct_oldstyle_lf_const_declaration location identifier extT =
+  and reconstruct_lf_const_declaration location identifier extT =
     let name = Name.make_from_identifier identifier in
     dprintf (fun p ->
         p.fmt "[RecSgn Checking] Const at: %a" Location.print_short location);
@@ -491,6 +685,226 @@ module Make (Signature_reconstruction_state : SIGNATURE_RECONSTRUCTION_STATE) :
     in
     let* () = add_lf_term_constant ~location identifier cid in
     return (Synint.Sgn.Const { location; identifier = cid; typ = tA' })
+
+  and reconstruct_comp_typ_constant location identifier kind datatype_flavour
+      =
+    dprintf (fun p ->
+        p.fmt "Indexing computation-level data-type constant %a"
+          Identifier.pp identifier);
+    let* apx_kind = index_comp_kind kind in
+    Store.FVar.clear ();
+    dprintf (fun p ->
+        p.fmt "Elaborating data-type declaration %a" Identifier.pp identifier);
+    let cK =
+      Monitor.timer
+        ( "CType Elaboration"
+        , fun () ->
+            let cK = Reconstruct.compkind apx_kind in
+            Reconstruct.solve_fvarCnstr Lfrecon.Pibox;
+            cK )
+    in
+    Unify.forceGlobalCnstr ();
+    let cK', i =
+      Monitor.timer ("Type Abstraction", fun () -> Abstract.compkind cK)
+    in
+    Reconstruct.reset_fvarCnstr ();
+    Unify.resetGlobalCnstrs ();
+    dprintf (fun p ->
+        p.fmt "%a : %a@." Identifier.pp identifier
+          (P.fmt_ppr_cmp_kind Synint.LF.Empty P.l0)
+          cK');
+    Monitor.timer
+      ("Type Check", fun () -> Check.Comp.checkKind Synint.LF.Empty cK');
+    dprintf (fun p ->
+        p.fmt "DOUBLE CHECK for data type constant %a successful!"
+          Identifier.pp identifier);
+
+    let p =
+      match datatype_flavour with
+      | `Stratified -> Synint.Sgn.StratifyAll location
+      | `Inductive -> Synint.Sgn.Positivity
+    in
+    Total.stratNum := -1;
+    let name = Name.make_from_identifier identifier in
+    let cid =
+      Store.Cid.CompTyp.add (fun _cid ->
+          Store.Cid.CompTyp.mk_entry name cK' i p)
+    in
+    let* () = add_comp_type_constant ~location identifier cid in
+    return
+      (Synint.Sgn.CompTyp
+         { location; identifier = name; kind = cK'; positivity_flag = p })
+
+  and reconstruct_comp_cotyp_constant location identifier kind =
+    dprintf (fun p ->
+        p.fmt "[RecSgn Checking] CompCotyp at: %a" Location.print location);
+    dprintf (fun p ->
+        p.fmt "Indexing computation-level codata-type constant %a"
+          Identifier.pp identifier);
+    let* apxK = index_comp_kind kind in
+    Store.FVar.clear ();
+    dprintf (fun p ->
+        p.fmt "Elaborating codata-type declaration %a" Identifier.pp
+          identifier);
+    let cK =
+      Monitor.timer
+        ( "CType Elaboration"
+        , fun () ->
+            let cK = Reconstruct.compkind apxK in
+            Reconstruct.solve_fvarCnstr Lfrecon.Pibox;
+            cK )
+    in
+    Unify.forceGlobalCnstr ();
+    let cK', i =
+      Monitor.timer ("Type Abstraction", fun () -> Abstract.compkind cK)
+    in
+
+    Reconstruct.reset_fvarCnstr ();
+    Unify.resetGlobalCnstrs ();
+    dprintf (fun p ->
+        p.fmt "%a : %a" Identifier.pp identifier
+          (P.fmt_ppr_cmp_kind Synint.LF.Empty P.l0)
+          cK');
+    Monitor.timer
+      ("Type Check", fun () -> Check.Comp.checkKind Synint.LF.Empty cK');
+    dprintf (fun p ->
+        p.fmt "DOUBLE CHECK for codata type constant %a successful!"
+          Identifier.pp identifier);
+
+    let name = Name.make_from_identifier identifier in
+    let cid =
+      Store.Cid.CompCotyp.add (fun _cid ->
+          Store.Cid.CompCotyp.mk_entry name cK' i)
+    in
+    let* () = add_comp_cotype_constant ~location identifier cid in
+    return (Synint.Sgn.CompCotyp { location; identifier = name; kind = cK' })
+
+  and reconstruct_comp_constructor location identifier typ =
+    dprintf (fun p ->
+        p.fmt "[RecSgn Checking] CompConst at: %a" Location.print_short
+          location);
+    dprintf (fun p ->
+        p.fmt "Indexing computation-level data-type constructor %a"
+          Identifier.pp identifier);
+    let* apx_tau = index_comp_typ typ in
+    let cD = Synint.LF.Empty in
+    dprintf (fun p ->
+        p.fmt "Elaborating data-type constructor %a" Identifier.pp identifier);
+    let tau' =
+      Monitor.timer
+        ( "Data-type Constant: Type Elaboration"
+        , fun () -> Reconstruct.comptyp apx_tau )
+    in
+    Unify.forceGlobalCnstr ();
+    dprint (fun () -> "Abstracting over computation-level type");
+    let tau', i =
+      Monitor.timer
+        ( "Data-type Constant: Type Abstraction"
+        , fun () -> Abstract.comptyp tau' )
+    in
+    dprint (fun () -> "Abstracting over computation-level type: done");
+    dprintf (fun p ->
+        p.fmt
+          "[recsgn] @[<v>@[<hov>@[%a@] :@ @[%a@]@]@,\
+           with %d implicit parameters@]" Identifier.pp identifier
+          (P.fmt_ppr_cmp_typ cD P.l0)
+          tau' i);
+    Monitor.timer
+      ( "Data-type Constant: Type Check"
+      , fun () -> Check.Comp.checkTyp cD tau' );
+    let cid_ctypfamily = get_target_cid_comptyp tau' in
+
+    let flag = Store.Cid.CompTyp.((get cid_ctypfamily).Entry.positivity) in
+
+    (match flag with
+    | Synint.Sgn.Nocheck -> ()
+    | Synint.Sgn.Positivity ->
+        if Total.positive cid_ctypfamily tau' then ()
+        else Error.raise_at1 location (No_positive identifier)
+    | Synint.Sgn.Stratify (loc_s, n) ->
+        if Total.stratify cid_ctypfamily tau' n then ()
+        else Error.raise_at1 loc_s (No_stratify identifier)
+    | Synint.Sgn.StratifyAll loc_s ->
+        let t = Total.stratifyAll cid_ctypfamily tau' in
+        let t' = t land !Total.stratNum in
+        if t' <> 0 then Total.stratNum := t'
+        else
+          Error.raise_at1 loc_s
+            (No_stratify_or_positive (R.render_cid_comp_typ cid_ctypfamily)));
+
+    let name = Name.make_from_identifier identifier in
+    let cid =
+      Store.Cid.CompConst.add cid_ctypfamily (fun _ ->
+          Store.Cid.CompConst.mk_entry name tau' i)
+    in
+    let* () = add_comp_constructor ~location identifier cid in
+    return (Synint.Sgn.CompConst { location; identifier = name; typ = tau' })
+
+  and reconstruct_comp_destructor location identifier observation_type
+      return_type =
+    dprintf (fun p ->
+        p.fmt "[RecSgn Checking] CompDest at: %a" Location.print_short
+          location);
+    dprintf (fun p ->
+        p.fmt "Indexing computation-level codata-type destructor %a"
+          Identifier.pp identifier);
+    let cD = Synint.LF.Empty in
+    let* apx_observation_type = index_comp_typ observation_type in
+    let* apx_return_type = index_comp_typ return_type in
+    dprintf (fun p ->
+        p.fmt "Elaborating codata-type destructor %a" Identifier.pp
+          identifier);
+    let observation_type' =
+      Monitor.timer
+        ( "Codata-type Constant: Type Elaboration"
+        , fun () -> Reconstruct.comptyp_cD cD apx_observation_type )
+    in
+    let return_type' =
+      Monitor.timer
+        ( "Codata-type Constant: Type Elaboration"
+        , fun () -> Reconstruct.comptyp_cD cD apx_return_type )
+    in
+    Unify.forceGlobalCnstr ();
+    dprint (fun () -> "Abstracting over computation-level type");
+    let mctx', observation_type', return_type', i =
+      Monitor.timer
+        ( "Codata-type Constant: Type Abstraction"
+        , fun () -> Abstract.codatatyp cD observation_type' return_type' )
+    in
+    dprintf (fun p ->
+        p.fmt "[recSgnDecl] [CompDest] @[<v>cD1 = @[%a@]@,tau1' = @[%a@]@]"
+          (P.fmt_ppr_lf_mctx P.l0) mctx'
+          (P.fmt_ppr_cmp_typ mctx' P.l0)
+          return_type');
+    dprint (fun () -> "Abstracting over computation-level type: done");
+    dprintf (fun p ->
+        p.fmt "%a : %a :: %a" Identifier.pp identifier
+          (P.fmt_ppr_cmp_typ mctx' P.l0)
+          observation_type'
+          (P.fmt_ppr_cmp_typ mctx' P.l0)
+          return_type');
+    Monitor.timer
+      ( "Codata-type Constant: Type Check"
+      , fun () -> Check.Comp.checkTyp mctx' observation_type' );
+    Monitor.timer
+      ( "Codata-type Constant: Type Check"
+      , fun () -> Check.Comp.checkTyp mctx' return_type' );
+    let cid_ctypfamily = get_target_cid_compcotyp observation_type' in
+    let name = Name.make_from_identifier identifier in
+    let cid =
+      Store.Cid.CompDest.add cid_ctypfamily (fun _ ->
+          Store.Cid.CompDest.mk_entry name mctx' observation_type'
+            return_type' i)
+    in
+    let* () = add_comp_destructor ~location identifier cid in
+    return
+      (Synint.Sgn.CompDest
+         { location
+         ; identifier = name
+         ; mctx = mctx'
+         ; observation_typ = observation_type'
+         ; return_typ = return_type'
+         })
 
   and reconstruct_schema_declaration location identifier schema =
     let name = Name.make_from_identifier identifier in
@@ -735,11 +1149,15 @@ module Make (Signature_reconstruction_state : SIGNATURE_RECONSTRUCTION_STATE) :
          ; maximum_tries
          })
 
-  and reconstruct_module_declaration _location _identifier _entries =
-    Obj.magic () (* TODO: *)
+  and reconstruct_module_declaration location identifier entries =
+    let* entries' =
+      add_module ~location identifier
+        (traverse_list reconstruct_signature_entry entries)
+    in
+    return
+      (Synint.Sgn.Module { location; identifier; declarations = entries' })
 
   and reconstruct_recursive_declarations location declarations =
-    (* TODO: Freeze all having identifiers in [declarations] *)
     let (List1.T (first_declaration, declarations')) = declarations in
     match first_declaration with
     | Synext.Signature.Declaration.Typ _ ->
@@ -766,11 +1184,199 @@ module Make (Signature_reconstruction_state : SIGNATURE_RECONSTRUCTION_STATE) :
           (Synext.location_of_signature_declaration first_declaration)
           Unsupported_recursive_declaration
 
+  and validate_lf_type_and_term_declaration typ_identifier term_constants =
+    let typ_qualified_identifier =
+      Qualified_identifier.make_simple typ_identifier
+    in
+    List.iter
+      (fun (identifier, typ) ->
+        let target = get_lf_typ_target typ in
+        if Qualified_identifier.equal typ_qualified_identifier target then ()
+        else
+          Error.raise_at1
+            (Synext.location_of_lf_typ typ)
+            (Lf_typ_target_mismatch
+               { constant = identifier
+               ; expected = typ_identifier
+               ; actual = target
+               }))
+      term_constants
+
+  (** [reconstruct_recursive_lf_typ_declarations location declarations]
+      reconstructs the mutually recursive groups of LF type and term constant
+      declarations [declarations] located at [location].
+
+      This ideally would proceed as follows:
+
+      + Ensure that the target of each constructor corresponds to the type
+        constant for which it is declared.
+      + Compute dependency graphs on the type and term constant declarations
+        separately.
+      + Topologically order these depedency graphs, ensuring that there are
+        no dependency cycles.
+      + Pre-allocate IDs for the type and term constants, and add them to the
+        scope information.
+      + Reconstruct the type and term declarations in parallel (inadvisable
+        at the moment since the processes involved are not thread-safe).
+
+      For now, we proceed in the naive way of the legacy system, whereby it
+      is assumed that the types and terms are already topologically sorted,
+      such that we first reconstruct the type declarations, then the term
+      declarations. *)
   and reconstruct_recursive_lf_typ_declarations location declarations =
-    Obj.magic () (* TODO: *)
+    List1.iter
+      (fun (`Lf_typ (typ_identifier, _kind, term_constants)) ->
+        validate_lf_type_and_term_declaration typ_identifier term_constants)
+      declarations;
+    let* typs' =
+      seq_list1
+        (List1.map
+           (fun (`Lf_typ (typ_identifier, kind, _term_constants)) ->
+             let location =
+               Location.join
+                 (Identifier.location typ_identifier)
+                 (Synext.location_of_lf_kind kind)
+             in
+             reconstruct_lf_typ_declaration location typ_identifier kind)
+           declarations)
+    in
+    let* consts' =
+      seq_list1
+        (List1.map
+           (fun (`Lf_typ (_typ_identifier, _kind, term_constants)) ->
+             seq_list
+               (List.map
+                  (fun (identifier, typ) ->
+                    let location =
+                      Location.join
+                        (Identifier.location identifier)
+                        (Synext.location_of_lf_typ typ)
+                    in
+                    reconstruct_lf_const_declaration location identifier typ)
+                  term_constants))
+           declarations)
+    in
+    let declarations' =
+      List1.map2 (fun typ' consts' -> typ' :: consts') typs' consts'
+    in
+    return (Synint.Sgn.MRecTyp { location; declarations = declarations' })
+
+  and validate_comp_type_and_constructor_declaration typ_identifier
+      constructors =
+    let typ_qualified_identifier =
+      Qualified_identifier.make_simple typ_identifier
+    in
+    List.iter
+      (fun (identifier, typ) ->
+        let target = get_comp_typ_target typ in
+        if Qualified_identifier.equal typ_qualified_identifier target then ()
+        else
+          Error.raise_at1
+            (Synext.location_of_comp_typ typ)
+            (Comp_typ_target_mismatch
+               { constant = identifier
+               ; expected = typ_identifier
+               ; actual = target
+               }))
+      constructors
+
+  and validate_comp_cotype_and_destructor_declaration typ_identifier
+      destructors =
+    let typ_qualified_identifier =
+      Qualified_identifier.make_simple typ_identifier
+    in
+    List.iter
+      (fun (identifier, observation_typ, _return_typ) ->
+        let target = get_comp_cotyp_target observation_typ in
+        if Qualified_identifier.equal typ_qualified_identifier target then ()
+        else
+          Error.raise_at1
+            (Synext.location_of_comp_typ observation_typ)
+            (Comp_cotyp_target_mismatch
+               { constant = identifier
+               ; expected = typ_identifier
+               ; actual = target
+               }))
+      destructors
 
   and reconstruct_recursive_comp_typ_declarations location declarations =
-    Obj.magic () (* TODO: *)
+    List1.iter
+      (function
+        | `Inductive_comp_typ (typ_identifier, _kind, constructors) ->
+            validate_comp_type_and_constructor_declaration typ_identifier
+              constructors
+        | `Stratified_comp_typ (typ_identifier, _kind, constructors) ->
+            validate_comp_type_and_constructor_declaration typ_identifier
+              constructors
+        | `Coinductive_comp_typ (typ_identifier, _kind, destructors) ->
+            validate_comp_cotype_and_destructor_declaration typ_identifier
+              destructors)
+      declarations;
+    let* typs' =
+      seq_list1
+        (List1.map
+           (function
+             | `Inductive_comp_typ (typ_identifier, kind, _constructors) ->
+                 let location =
+                   Location.join
+                     (Identifier.location typ_identifier)
+                     (Synext.location_of_comp_kind kind)
+                 in
+                 reconstruct_comp_typ_constant location typ_identifier kind
+                   `Inductive
+             | `Stratified_comp_typ (typ_identifier, kind, _constructors) ->
+                 let location =
+                   Location.join
+                     (Identifier.location typ_identifier)
+                     (Synext.location_of_comp_kind kind)
+                 in
+                 reconstruct_comp_typ_constant location typ_identifier kind
+                   `Stratified
+             | `Coinductive_comp_typ (typ_identifier, kind, _destructors) ->
+                 let location =
+                   Location.join
+                     (Identifier.location typ_identifier)
+                     (Synext.location_of_comp_kind kind)
+                 in
+                 reconstruct_comp_cotyp_constant location typ_identifier kind)
+           declarations)
+    in
+    let* consts' =
+      seq_list1
+        (List1.map
+           (function
+             | `Inductive_comp_typ (_typ_identifier, _kind, constructors)
+             | `Stratified_comp_typ (_typ_identifier, _kind, constructors) ->
+                 seq_list
+                   (List.map
+                      (fun (identifier, typ) ->
+                        let location =
+                          Location.join
+                            (Identifier.location identifier)
+                            (Synext.location_of_comp_typ typ)
+                        in
+                        reconstruct_comp_constructor location identifier typ)
+                      constructors)
+             | `Coinductive_comp_typ (_typ_identifier, _kind, destructors) ->
+                 seq_list
+                   (List.map
+                      (fun (identifier, observation_typ, return_typ) ->
+                        let location =
+                          Location.join
+                            (Identifier.location identifier)
+                            (Location.join
+                               (Synext.location_of_comp_typ observation_typ)
+                               (Synext.location_of_comp_typ return_typ))
+                        in
+                        reconstruct_comp_destructor location identifier
+                          observation_typ return_typ)
+                      destructors))
+           declarations)
+    in
+    let declarations' =
+      List1.map2 (fun typ' consts' -> typ' :: consts') typs' consts'
+    in
+    return (Synint.Sgn.MRecTyp { location; declarations = declarations' })
 
   and translate_totality_order :
         'a.
@@ -778,19 +1384,18 @@ module Make (Signature_reconstruction_state : SIGNATURE_RECONSTRUCTION_STATE) :
     function
     | Synext.Signature.Totality.Order.Argument { argument; _ } ->
         Synint.Comp.Arg argument
-    | Synext.Signature.Totality.Order.Lexical_ordering
-        { location; arguments } ->
+    | Synext.Signature.Totality.Order.Lexical_ordering { arguments; _ } ->
         let arguments' = List1.map translate_totality_order arguments in
         Synint.Comp.Lex (List1.to_list arguments')
-    | Synext.Signature.Totality.Order.Simultaneous_ordering
-        { location; arguments } ->
+    | Synext.Signature.Totality.Order.Simultaneous_ordering { arguments; _ }
+      ->
         let arguments' = List1.map translate_totality_order arguments in
         Synint.Comp.Simul (List1.to_list arguments')
 
   and reconstruct_totality_declaration program typ declaration =
     match declaration with
     | Synext.Signature.Totality.Declaration.Trust _ -> `trust
-    | Synext.Signature.Totality.Declaration.Numeric { location; order } -> (
+    | Synext.Signature.Totality.Declaration.Numeric { order; _ } -> (
         match order with
         | Option.None -> `not_recursive
         | Option.Some order ->
@@ -894,16 +1499,19 @@ module Make (Signature_reconstruction_state : SIGNATURE_RECONSTRUCTION_STATE) :
         , fun () -> Check.Comp.checkTyp Synint.LF.Empty tau' );
       Store.FCVar.clear ();
 
-      (* XXX do we need this strip? -je AFAIK tau' is not annotated. *)
-      return (Total.strip tau')
+      return tau'
     in
 
     let register_program identifier tau' total_decs =
       let name = Name.make_from_identifier identifier in
-      Store.Cid.Comp.add (fun cid ->
-          Store.Cid.Comp.mk_entry
-            (Option.some (Decl.next ()))
-            name tau' 0 total_decs Option.none)
+      let cid =
+        Store.Cid.Comp.add (fun _cid ->
+            Store.Cid.Comp.mk_entry
+              (Option.some (Decl.next ()))
+              name tau' 0 total_decs Option.none)
+      in
+      let* () = add_prog identifier cid in
+      return cid
     in
 
     let total_decs = guard_totality_declarations location declarations in
@@ -949,10 +1557,11 @@ module Make (Signature_reconstruction_state : SIGNATURE_RECONSTRUCTION_STATE) :
 
     (* We have the list of all totality declarations for this group, so we
        can register each theorem in the store. *)
-    let thm_cid_list =
+    let* thm_cid_list =
       registers
       |> List1.flap
            (Store.Cid.Comp.add_mutual_group (List1.to_list total_decs))
+      |> seq_list1
     in
 
     let reconThm loc (f, cid, thm, tau) =

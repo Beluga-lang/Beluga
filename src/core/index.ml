@@ -884,10 +884,12 @@ module Make (Indexing_state : INDEXING_STATE) :
             (* A free context variable *)
             let* () = add_free_context_variable identifier in
             let name = Name.make_from_identifier identifier in
-            f (Synapx.LF.CtxVar (Synapx.LF.CtxName name))
+            with_indexed_clf_context_bindings
+              (Synapx.LF.CtxVar (Synapx.LF.CtxName name)) bindings f
         | Option.Some index ->
             (* A bound context variable *)
-            f (Synapx.LF.CtxVar (Synapx.LF.CtxOffset index)))
+            with_indexed_clf_context_bindings
+              (Synapx.LF.CtxVar (Synapx.LF.CtxOffset index)) bindings f)
 
   and index_clf_context context = with_indexed_clf_context context return
 
@@ -932,10 +934,12 @@ module Make (Indexing_state : INDEXING_STATE) :
             (* A free context variable *)
             let* () = add_free_context_variable identifier in
             let name = Name.make_from_identifier identifier in
-            f (Synapx.LF.CtxVar (Synapx.LF.CtxName name))
+            with_indexed_clf_context_pattern_bindings
+              (Synapx.LF.CtxVar (Synapx.LF.CtxName name)) bindings f
         | Option.Some index ->
             (* A bound context variable *)
-            f (Synapx.LF.CtxVar (Synapx.LF.CtxOffset index)))
+            with_indexed_clf_context_pattern_bindings
+              (Synapx.LF.CtxVar (Synapx.LF.CtxOffset index)) bindings f)
 
   and index_clf_context_pattern context =
     with_indexed_clf_context_pattern context return
@@ -966,7 +970,7 @@ module Make (Indexing_state : INDEXING_STATE) :
             return (location, Synapx.Comp.ClObj (domain', range')))
 
   and index_meta_type = function
-    | Synext.Meta.Typ.Context_schema { location; schema } ->
+    | Synext.Meta.Typ.Context_schema { schema; _ } ->
         let* index = index_of_schema_constant schema in
         return (Synapx.LF.CTyp index)
     | Synext.Meta.Typ.Contextual_typ { context; typ; _ } ->
@@ -977,14 +981,13 @@ module Make (Indexing_state : INDEXING_STATE) :
         with_indexed_clf_context context (fun context' ->
             let* typ' = index_clf_typ typ in
             return (Synapx.LF.ClTyp (Synapx.LF.PTyp typ', context')))
-    | Synext.Meta.Typ.Plain_substitution_typ { location; domain; range } ->
+    | Synext.Meta.Typ.Plain_substitution_typ { domain; range; _ } ->
         with_indexed_clf_context domain (fun domain' ->
             with_indexed_clf_context range (fun range' ->
                 return
                   (Synapx.LF.ClTyp
                      (Synapx.LF.STyp (Synapx.LF.Subst, range'), domain'))))
-    | Synext.Meta.Typ.Renaming_substitution_typ { location; domain; range }
-      ->
+    | Synext.Meta.Typ.Renaming_substitution_typ { domain; range; _ } ->
         with_indexed_clf_context domain (fun domain' ->
             with_indexed_clf_context range (fun range' ->
                 return
@@ -1020,13 +1023,13 @@ module Make (Indexing_state : INDEXING_STATE) :
     | List1.T ((identifier, typ), []) ->
         let name = Name.make_from_identifier identifier in
         let* typ' = index_lf_typ typ in
-        return (Synapx.LF.SigmaLast (Option.some name, typ'))
+        f (Synapx.LF.SigmaLast (Option.some name, typ'))
     | List1.T ((identifier, typ), x :: xs) ->
         let name = Name.make_from_identifier identifier in
         let* typ' = index_lf_typ typ in
         with_bound_lf_variable identifier
           (with_indexed_schema_block_clause_bindings_list1 (List1.from x xs)
-             (fun tRec -> return (Synapx.LF.SigmaElem (name, typ', tRec))))
+             (fun tRec -> f (Synapx.LF.SigmaElem (name, typ', tRec))))
 
   and index_clf_block_clause_bindings bindings =
     List1.fold_right
@@ -1255,7 +1258,7 @@ module Make (Indexing_state : INDEXING_STATE) :
     | Synext.Comp.Expression.Program { location; identifier } ->
         let* index = index_of_comp_program identifier in
         return (Synapx.Comp.Const (location, index))
-    | Synext.Comp.Expression.Fn { location; parameters; body } ->
+    | Synext.Comp.Expression.Fn { parameters; body; _ } ->
         let rec aux parameters =
           match parameters with
           | [] -> index_comp_expression body
@@ -1272,7 +1275,7 @@ module Make (Indexing_state : INDEXING_STATE) :
               return (Synapx.Comp.Fn (location, name, body'))
         in
         aux (List1.to_list parameters)
-    | Synext.Comp.Expression.Mlam { location; parameters; body } ->
+    | Synext.Comp.Expression.Mlam { parameters; body; _ } ->
         let rec aux parameters =
           match parameters with
           | [] -> index_comp_expression body
@@ -1462,7 +1465,7 @@ module Make (Indexing_state : INDEXING_STATE) :
         let* pattern' = index_comp_pattern pattern in
         let* typ' = index_comp_typ typ in
         return (Synapx.Comp.PatAnn (location, pattern', typ'))
-    | Synext.Comp.Pattern.Application { location; applicand; arguments } -> (
+    | Synext.Comp.Pattern.Application { applicand; arguments; _ } -> (
         index_comp_pattern applicand >>= function
         | Synapx.Comp.PatConst (applicand_location, id, Synapx.Comp.PatNil _)
           ->
@@ -1544,7 +1547,7 @@ module Make (Indexing_state : INDEXING_STATE) :
       ; copattern
       ; body
       } =
-    match meta_context.bindings with
+    match meta_context.Synext.Meta.Context.bindings with
     | [] ->
         let* pattern_spine', body' =
           with_pattern_variables_checkpoint

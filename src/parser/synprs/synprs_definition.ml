@@ -723,6 +723,14 @@ module Harpoon = struct
                 List.t
             }
         | Help of { location : Location.t }
+        | Auto_invert_solve of
+            { location : Location.t
+            ; max_depth : int option
+            }
+        | Inductive_auto_solve of
+            { location : Location.t
+            ; max_depth : int option
+            }
     end
   end
 end

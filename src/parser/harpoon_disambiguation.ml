@@ -276,6 +276,16 @@ struct
              })
     | Synprs.Harpoon.Repl.Command.Help { location } ->
         return (Synext.Harpoon.Repl.Command.Help { location })
+    | Synprs.Harpoon.Repl.Command.Auto_invert_solve { location; max_depth }
+      ->
+        return
+          (Synext.Harpoon.Repl.Command.Auto_invert_solve
+             { location; max_depth })
+    | Synprs.Harpoon.Repl.Command.Inductive_auto_solve
+        { location; max_depth } ->
+        return
+          (Synext.Harpoon.Repl.Command.Inductive_auto_solve
+             { location; max_depth })
 
   and disambiguate_goal_premise = function
     | `exact typ ->

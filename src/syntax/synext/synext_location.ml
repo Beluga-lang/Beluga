@@ -82,7 +82,6 @@ let location_of_clf_term_pattern term_pattern =
   match term_pattern with
   | Variable { location; _ }
   | Parameter_variable { location; _ }
-  | Substitution_variable { location; _ }
   | Constant { location; _ }
   | Wildcard { location; _ }
   | Tuple { location; _ }

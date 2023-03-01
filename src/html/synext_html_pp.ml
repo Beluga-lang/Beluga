@@ -1205,8 +1205,6 @@ module Make (Html_state : HTML_PRINTING_STATE) :
         pp_lf_variable identifier
     | CLF.Term.Pattern.Parameter_variable { identifier; _ } ->
         pp_parameter_variable identifier
-    | CLF.Term.Pattern.Substitution_variable { identifier; _ } ->
-        pp_substitution_variable identifier
     | CLF.Term.Pattern.Constant { identifier; _ } ->
         pp_lf_term_constant_invoke identifier
     | CLF.Term.Pattern.Application { applicand; arguments; _ } ->

@@ -432,12 +432,6 @@ module CLF = struct
             }
             (** [Parameter_variable { identifier = "#x"; _ }] is the
                 term-level parameter variable pattern with name ["#x"]. *)
-        | Substitution_variable of
-            { location : Location.t
-            ; identifier : Identifier.t
-            }
-            (** [Substitution_variable { identifier = "$x"; _ }] is the
-                term-level substitution variable pattern with name ["$x"]. *)
         | Constant of
             { location : Location.t
             ; identifier : Qualified_identifier.t

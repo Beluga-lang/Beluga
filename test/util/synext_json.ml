@@ -324,12 +324,6 @@ and json_of_clf_term_pattern term_pattern =
           [ ("identifier", json_of_identifier identifier)
           ; ("location", json_of_location location)
           ]
-  | CLF.Term.Pattern.Substitution_variable { identifier; location } ->
-      json_of_variant ~name:"CLF.Term.Pattern.Substitution_variable"
-        ~data:
-          [ ("identifier", json_of_identifier identifier)
-          ; ("location", json_of_location location)
-          ]
   | CLF.Term.Pattern.Constant { identifier; location } ->
       json_of_variant ~name:"CLF.Term.Pattern.Constant"
         ~data:

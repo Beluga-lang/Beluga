@@ -1271,17 +1271,8 @@ struct
             let* () = add_inner_pattern_binding identifier in
             return pattern')
     | Synprs.CLF.Object.Raw_identifier
-        { location; identifier = identifier, `Dollar; _ } -> (
-        let pattern' =
-          Synext.CLF.Term.Pattern.Substitution_variable
-            { location; identifier }
-        in
-        is_inner_pattern_bound identifier >>= function
-        | true -> return pattern'
-        | false ->
-            let* () = add_pattern_substitution_variable identifier in
-            let* () = add_inner_pattern_binding identifier in
-            return pattern')
+        { location; identifier = _identifier, `Dollar; _ } ->
+        Error.raise_at1 location Illegal_substitution_variable
     | Synprs.CLF.Object.Raw_identifier
         { location; identifier = identifier, `Plain; _ } -> (
         (* As an LF term pattern, plain identifiers are either term-level

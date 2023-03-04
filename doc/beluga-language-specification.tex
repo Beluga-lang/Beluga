@@ -26,6 +26,9 @@
 \newcommand{\Harpoon}{\textsc{Harpoon}\xspace}
 \newcommand{\LF}{\textsc{LF}\xspace}
 
+\acrodef{REPL}{read-eval-print loop}
+\acrodefplural{REPL}[REPLs]{read-eval-print loops}
+
 \acrodef{AST}{abstract syntax tree}
 \acrodefplural{AST}[ASTs]{abstract syntax trees}
 
@@ -47,7 +50,7 @@ This document formally defines components of the \Beluga language for developers
 
 \section{Syntax}\label{section:syntax}
 
-This section presents the syntax for \Beluga signatures using ambiguous grammars.
+This section presents the syntax for \Beluga signatures using ambiguous context-free grammars.
 It is intended to serve as a specification for validating the parser's implementation, as well as to assist in making changes to the parser.
 Rewriting of the grammar for optimization, left recursion elimination, and disambiguation purposes is outside the scope of this presentation.
 Section~\ref{section:resolving-grammar-ambiguities} presents a context-free grammar for \Beluga that is suitable for parsing with a separate stage for disambiguation.
@@ -55,11 +58,11 @@ Section~\ref{section:resolving-grammar-ambiguities} presents a context-free gram
 The EBNF metasyntax used in the sections hereafter follows this notation:
 
 \begin{itemize}
-\item $ (a)* $ represents the repetition of $ a $ zero or more times
-\item $ (a)+ $ represents the repetition of $ a $ one or more times
-\item $ [a] $ represents optionally applying $ a $
-\item $ a - b $ represents the application of $ a $ that cannot be the application of $ b $ if $ a $ and $ b $ are single-character length productions
-\item \texttt{(*} and \texttt{*)} delimit comments
+\item $ (a)* $ represents the repeated application of $ a $ zero or more times.
+\item $ (a)+ $ represents the repeated application of $ a $ one or more times.
+\item $ [a] $ represents optionally applying $ a $.
+\item $ a - b $ represents the application of $ a $ that cannot be the application of $ b $ if $ a $ and $ b $ are single-character length productions.
+\item \texttt{(*} and \texttt{*)} delimit comments, and are not part of the grammar.
 \end{itemize}
 
 \subsection{Comments}
@@ -238,7 +241,7 @@ The production \synt{any} stands for any unicode character.
 \subsection{\LF}\label{section:syntax-lf}
 
 The following is the grammar for the definition of \LF kinds, types and terms.
-These constructs form a weak representational function space without case analysis or recursion.
+These syntactic constructs form a weak representational function space without case analysis or recursion.
 
 \begin{grammar}
 <lf-kind> ::= \hfill\\
@@ -369,13 +372,13 @@ Schema meta-types are not boxed.
 <schema> ::= \hfill\\
 | <qualified-identifier> \hfill \texttt{(* Constant *)}\\
 | <schema> `+' <schema> \hfill \texttt{(* Alternation *)}\\
-| [`some' `[' <identifier> `:' <lf-type> (`,' <identifier> `:' <lf-type>) `]']\\
-  `block' `(' <identifier> `:' <lf-type> (`,' <identifier> `:' <lf-type>) `)' \hfill \texttt{(* Atom *)}\\
-| [`some' `[' <identifier> `:' <lf-type> (`,' <identifier> `:' <lf-type>) `]']\\
+| [`some' `[' <identifier> `:' <lf-type> (`,' <identifier> `:' <lf-type>)* `]']\\
+  `block' `(' <identifier> `:' <lf-type> (`,' <identifier> `:' <lf-type>)* `)' \hfill \texttt{(* Atom *)}\\
+| [`some' `[' <identifier> `:' <lf-type> (`,' <identifier> `:' <lf-type>)* `]']\\
   `block' <identifier> `:' <lf-type> (`,' <identifier> `:' <lf-type>)\\
-| [`some' `[' <identifier> `:' <lf-type> (`,' <identifier> `:' <lf-type>) `]']\\
+| [`some' `[' <identifier> `:' <lf-type> (`,' <identifier> `:' <lf-type>)* `]']\\
   `block' <lf-type>\\
-| [`some' `[' <identifier> `:' <lf-type> (`,' <identifier> `:' <lf-type>) `]']\\
+| [`some' `[' <identifier> `:' <lf-type> (`,' <identifier> `:' <lf-type>)* `]']\\
   `block' <lf-type>
 
 <meta-type> ::= \hfill\\
@@ -505,7 +508,7 @@ Atomic patterns are computation-level patterns that may appear as whitespace-del
 
 \subsection{\Harpoon REPL}\label{section:syntax-harpoon-repl}
 
-The following is the grammar for the commands used in the \Harpoon read-eval-print loop (REPL).
+The following is the grammar for the commands used in the \Harpoon \ac{REPL}.
 
 \begin{grammar}
 <harpoon-command> ::= \hfill\\
@@ -732,7 +735,7 @@ That is, type constants, term constants, programs and proofs are arranged as lis
 This section highlights some ambiguities in the syntax for \Beluga as presented in section~\ref{section:syntax}, and presents strategies for resolving them.
 Ambiguities in the syntax include:
 \begin{itemize}
-\item Qualified identifiers and projections use the same dot operator.
+\item Qualified identifiers, projections and destructors use the same dot operator.
 \item \LF kinds, types and terms share syntactic constructs for arrows, $ \Pi $'s and applications.
 \item Contextual \LF types, terms and patterns share syntactic constructs for arrows and applications.
 \item Computation kinds and types share syntactic constructs for arrows, $ \Pi $'s and applications.
@@ -747,7 +750,7 @@ Ambiguities for the built-in operators in the syntax may be resolved statelessly
 The remainder of the ambiguities listed above must be resolved statefully since they require complete scope information to correctly resolve operator sorts and the parser settings defined by the user.
 Furthermore, given that declarations in a \Beluga signature may be mutually recursive, resolving these ambiguities is best done in a separate phase after parsing.
 Indeed, attempting to resolve these ambiguities in a top-down parser would require possibly unbounded lookaheads and more costly backtracking.
-As such, a \Beluga signature is first parsed into an \ac{AST} with ambiguous nodes, and separate disambigution phase elaborates that \ac{AST} to the external syntax.
+As such, a \Beluga signature is first parsed into an \ac{AST} with ambiguous nodes, and then a separate disambigution phase elaborates that \ac{AST} to the external syntax.
 By design, the grammar of section~\ref{section:syntax} does not require type information for disambiguation.
 Hence, the symbol table only keeps track of identifiers in scope and their associated sort without types.
 
@@ -761,8 +764,8 @@ This next grammar blurs together \LF kinds, types and terms with corresponding p
 Occurrences of \synt{lf-kind}, \synt{lf-type} and \synt{lf-term} elsewhere in the grammar are replaced with \synt{lf-object}.
 Disambiguation of an \LF object as presented below requires:
 \begin{itemize}
-\item complete scope information to resolve constants
-\item a target sort for the elaboration (i.e. knowing beforehand whether the \LF object should be a kind, type or term)
+\item complete scope information to resolve constants, and
+\item a target sort for the elaboration (i.e. knowing beforehand whether the \LF object should be a kind, type or term).
 \end{itemize}
 
 \begin{grammar}
@@ -799,9 +802,10 @@ Occurrences of \synt{clf-type}, \synt{clf-term} and \synt{clf-pattern} elsewhere
 Likewise, the productions \synt{clf-substitution}, \synt{clf-substitution-pattern}, \synt{clf-context} and \synt{clf-context-pattern} are blurred together as \synt{clf-context-object}.
 Disambiguation of a contextual \LF object as presented below requires:
 \begin{itemize}
-\item complete scope information to resolve constants
-\item a target sort for the elaboration (i.e. knowing beforehand whether the contextual \LF object should be a type, term or pattern)
+\item complete scope information to resolve constants, and
+\item a target sort for the elaboration (i.e. knowing beforehand whether the contextual \LF object should be a type, term or pattern).
 \end{itemize}
+Additionally, contextual \LF contexts starting with an untyped identifier are always disambiguated as having a context variable in head position.
 
 \begin{grammar}
 <clf-object> ::= \hfill\\
@@ -852,17 +856,17 @@ Occurrences of \synt{meta-type}, \synt{meta-object} and \synt{meta-pattern} else
 Likewise, the productions \synt{schema} and \synt{meta-context} are replaced with \synt{schema-object} and \synt{meta-context-object} respectively.
 Disambiguation of a meta-thing as presented below requires:
 \begin{itemize}
-\item complete scope information to resolve constants
-\item a target sort for the elaboration (i.e. knowing beforehand whether the meta-thing should be a meta-type, meta-object or pattern)
+\item complete scope information to resolve constants, and
+\item a target sort for the elaboration (i.e. knowing beforehand whether the meta-thing should be a meta-type, meta-object or pattern).
 \end{itemize}
 
 \begin{grammar}
 <schema-object> ::= \hfill\\
 | <qualified-identifier>\\
 | <schema-object> `+' <schema-object>\\
-| [`some' `[' <identifier> `:' <lf-object> (`,' <identifier> `:' <lf-object>) `]']\\
+| [`some' `[' <identifier> `:' <lf-object> (`,' <identifier> `:' <lf-object>)* `]']\\
 `block' `(' [<identifier> `:'] <lf-object> (`,' [<identifier> `:'] <lf-object>)* `)'\\
-| [`some' `[' <identifier> `:' <lf-object> (`,' <identifier> `:' <lf-object>) `]']\\
+| [`some' `[' <identifier> `:' <lf-object> (`,' <identifier> `:' <lf-object>)* `]']\\
 `block' [<identifier> `:'] <lf-object> (`,' [<identifier> `:'] <lf-object>)*
 
 <meta-thing> ::= \hfill\\
@@ -893,8 +897,8 @@ This next grammar blurs together computational kinds and types with correspondin
 Occurrences of \synt{comp-kind} and \synt{comp-type} elsewhere in the grammar are replaced with \synt{comp-sort-object}.
 Disambiguation of a computational sort object as presented below requires:
 \begin{itemize}
-\item complete scope information to resolve constants
-\item a target sort for the elaboration (i.e. knowing beforehand whether the computation-level sort object should be a kind or a type)
+\item complete scope information to resolve constants, and
+\item a target sort for the elaboration (i.e. knowing beforehand whether the computation-level sort object should be a kind or a type).
 \end{itemize}
 
 \begin{grammar}

@@ -240,8 +240,8 @@ fn ms => case ms of
   [ |- ms_step (e_if S)]
 
 | [ |- ms_tr MS1 MS2] =>
-  let [ |- MS1'] = mstep_if [ |- T2 ] [ |- T3 ] [ |- MS1] in
-  let [ |- MS2'] = mstep_if [ |- T2 ] [ |- T3 ] [ |- MS2] in
+  let [ |- MS1'] = mstep_if [ |- T2] [ |- T3] [ |- MS1] in
+  let [ |- MS2'] = mstep_if [ |- T2] [ |- T3] [ |- MS2] in
     [ |- ms_tr MS1' MS2']
 ;
 
@@ -263,15 +263,15 @@ mlam M => case [ |- M] of
     [ |- result ms_ref v_false]
 
 | [ |- if_then_else T T1 T2] =>
-  (case terminate [ |- T ] of
+  (case terminate [ |- T] of
    | [ |- result MS v_true] =>
-       let [ |- result MS1 V1] = terminate [ |- T1 ] in
-       let [ |- MS']           = mstep_if [ |- T1 ] [ |- T2 ] [ |- MS] in
+       let [ |- result MS1 V1] = terminate [ |- T1] in
+       let [ |- MS']           = mstep_if [ |- T1] [ |- T2] [ |- MS] in
        [ |- result (ms_tr MS' (ms_tr (ms_step e_if_true) MS1)) V1]
 
    | [ |- result MS v_false] =>
-       let [ |- result MS2 V2] = terminate [ |- T2 ] in
-       let [ |- MS']           = mstep_if [ |- T1 ] [ |- T2 ] [ |- MS] in
+       let [ |- result MS2 V2] = terminate [ |- T2] in
+       let [ |- MS']           = mstep_if [ |- T1] [ |- T2] [ |- MS] in
        [ |- result (ms_tr MS' (ms_tr (ms_step e_if_false) MS2)) V2]
 
 

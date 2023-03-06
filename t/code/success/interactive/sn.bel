@@ -28,21 +28,21 @@ LF step : tm A -> tm A -> type =
 
 schema cxt = tm A; % some [a : ty] block tm a;
 
-inductive SN : (g : cxt) {M : [ g |- tm A ]} ctype =
-  | Acc : ({M' : [ g |- tm A ]} [ g |- step M M' ] -> SN [ g |- M' ])
-        -> SN [ g |- M ]
+inductive SN : (g : cxt) {M : [g |- tm A]} ctype =
+  | Acc : ({M' : [g |- tm A]} [g |- step M M' ] -> SN [g |- M' ])
+        -> SN [g |- M]
   ;
 
-stratified Red : {A : [ |- ty ]} (g : cxt) {M : [ g |- tm A[] ]} ctype =
-  | RBase : SN [g |- M] -> Red [ |- base ] [g |- M]
+stratified Red : {A : [ |- ty]} (g : cxt) {M : [g |- tm A[] ]} ctype =
+  | RBase : SN [g |- M] -> Red [ |- base] [g |- M]
   | RArr  : ({g' : cxt} {$S : [g' |-# g]} {N : [g' |- tm A[]]}
                Red [|- A] [g' |- N]
             -> Red [|- B] [g' |- app M[$S] N])
-         -> Red [ |- arr A B ] [g |- M]
+         -> Red [ |- arr A B] [g |- M]
   ;
 
 inductive RedS : {g : cxt} (g' : cxt) {$S : [g' |- g]} ctype =
-  | RNil  : RedS [] [ g' |- ^ ]
+  | RNil  : RedS [] [g' |- ^ ]
   | RCons : Red [|- A] [g' |- M]
          -> RedS [g] [g' |- $S]
          -> RedS [g, x : tm A[]] [g' |- $S, M]
@@ -71,7 +71,7 @@ rec fundVar : {g : cxt} {#p : [g |- tm A[]]}
 
 
 %{case s of
-    | RNil       => impossible [ |- # p ]
+    | RNil       => impossible [ |- # p]
     | RCons r s' => ?
 }%
   ;
@@ -91,10 +91,10 @@ rec thm : {g : cxt} {M : [g |- tm A[]]}
 
 |  [g |- app M1 M2] =>  ?
 )
-%{ (case [g |- M ] of
- | [g |- #p1 ] =>  ?
- | [g |- abs \ x. M1 ] =>  ?
- | [g |- app M2 M3 ] =>  ?
+%{ (case [g |- M] of
+ | [g |- #p1] =>  ?
+ | [g |- abs \ x. M1] =>  ?
+ | [g |- app M2 M3] =>  ?
 )
 }%
   ;

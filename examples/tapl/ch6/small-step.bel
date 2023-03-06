@@ -30,14 +30,14 @@ LF equal : term -> term -> type =
 
 not_possible : type.
 
-rec values_dont_step : [ |- step M M' ] -> [ |- value M  ] -> [ |- not_possible]=
+rec values_dont_step : [ |- step M M' ] -> [ |- value M] -> [ |- not_possible]=
 / total v (values_dont_step m m' s v)/
 fn s => fn v => case v of
 | [ |- v_lam] => impossible s
 ;
 
 
-rec unique : [|- step M M1] -> [|- step M M2] -> [|- equal M1 M2 ] =
+rec unique : [|- step M M1] -> [|- step M M2] -> [|- equal M1 M2] =
 / total s (unique m m1 m2 s)/
 fn s1 => fn s2 => case s1 of
 | [ |- e_app_1 DstepE1'] =>
@@ -50,7 +50,7 @@ fn s1 => fn s2 => case s1 of
     | [|- e_app_abs V2] =>
       impossible values_dont_step [|- DstepE1'] [|- v_lam]
   )
-| [ |- e_app_2 DstepE2' V1 ] =>
+| [ |- e_app_2 DstepE2' V1] =>
    (case s2 of
     | [|- e_app_2 DstepE2'' _] =>
       let [ |- refl] = unique [ |- DstepE2'] [|- DstepE2''] in
@@ -63,7 +63,7 @@ fn s1 => fn s2 => case s1 of
 
 | [ |- e_app_abs V2] =>
   (case s2 of
-   | [|- e_app_abs _ ] =>  [ |- refl]
+   | [|- e_app_abs _] =>  [ |- refl]
    | [|- e_app_1 DstepE1'] =>
       impossible values_dont_step [|- DstepE1'] [|- v_lam]
    | [|- e_app_2 DstepE2'' V1] =>

@@ -72,18 +72,18 @@ fn d => fn s => case s of
 | [ |- step_app_1 S1] =>
   let [ |- t_app D1 D2] = d in
   let [ |- F1] = tps  [ |- D1] [ |- S1] in
-    [ |- t_app F1 D2 ]
+    [ |- t_app F1 D2]
 
-| [ |- step_app_2 S2 _ ] =>
+| [ |- step_app_2 S2 _] =>
   let [ |- t_app D1 D2] = d in
   let [ |- F2] = tps  [ |- D2] [ |- S2] in
-    [ |- t_app D1 F2 ]
+    [ |- t_app D1 F2]
 
 | [ |- step_app_beta V] =>
   let [ |- t_app (t_lam (\x.\u. D)) D2] = d in
-    [ |- D[_,D2]]
+    [ |- D[_, D2]]
 | [ |- step_app_err1 _]   =>
-  let [ |- t_app (t_error D) _ ] = d in [ |- t_error D ]
+  let [ |- t_app (t_error D) _] = d in [ |- t_error D]
 
 | [ |- step_app_err2 _  _] =>
   let [ |- t_app _ (t_error D)] = d in [ |- t_error D]
@@ -104,7 +104,7 @@ fn d => fn s => case s of
   let [ |- t_trywith D1 (\x.\y. D2)] = d in [ |- D1]
 
 | [ |- step_try_error V] =>
-    let [ |- t_trywith (t_error D1) (\x.\u.D2)] = d in [ |- D2[_,D1]]
+    let [ |- t_trywith (t_error D1) (\x.\u.D2)] = d in [ |- D2[_, D1]]
 
 ;
 
@@ -137,8 +137,8 @@ fn d =>
                      )
 | [ |- t_lam (\x. (\d. D1))]  =>  [ |- val v_lam]
 
-| [ |- t_error D ] =>
-  (case prog [ |- D ] of
+| [ |- t_error D] =>
+  (case prog [ |- D] of
     | [ |- val VL] => [ |- err (er_raise VL)]
     | [ |- err (er_raise VL)] => [ |- step_to (step_raise_raise VL)]
     | [ |- step_to EV] =>  [ |- step_to (step_raise EV)]

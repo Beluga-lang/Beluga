@@ -132,8 +132,8 @@ schema deqCtx = block x: term, u:aeq x x , _t:deq x x
 %{{
 ## Proof of Reflexivity for Types
 
-The reflexivity for types is implemented as a recursive function called `reftp` of type: `{gamma:atpCtx}{T:[gamma |- tp ]}[gamma |- atp T T]`.
-This can be read as: for all contexts `g` that have schema `atpCtx`, for all types `T`, we have a proof that `[ g |- atp T T]`.
+The reflexivity for types is implemented as a recursive function called `reftp` of type: `{gamma:atpCtx}{T:[gamma |- tp]}[gamma |- atp T T]`.
+This can be read as: for all contexts `g` that have schema `atpCtx`, for all types `T`, we have a proof that `[g |- atp T T]`.
 Quantification over contexts and contextual objects in computation-level types is denoted between braces `{}`; the corresponding abstraction on the level of expressions is written as `mlam g => mlam T1 => e`.
 }}%
 
@@ -142,14 +142,14 @@ mlam gamma => mlam T => case [gamma |- T] of
 | [gamma |- #p.1] => [gamma |- #p.2]
 
 | [gamma |- all \x. T] =>
-  let [gamma,b:block a:tp , _t:atp a a |- D[..,b.1,b.2]] =
-         reftp [gamma, b:block a:tp , _t:atp a a] [gamma, b |- T[..,b.1]]
+  let [gamma, b:block a:tp , _t:atp a a |- D[.., b.1, b.2]] =
+         reftp [gamma, b:block a:tp , _t:atp a a] [gamma, b |- T[.., b.1]]
   in
    [gamma |- at_al \x. \w. D]
 
 | [gamma |- arr T S] =>
-  let [gamma |- D1] = reftp [gamma] [gamma |- T ] in
-  let [gamma |- D2] = reftp [gamma] [gamma |- S ] in
+  let [gamma |- D1] = reftp [gamma] [gamma |- T] in
+  let [gamma |- D2] = reftp [gamma] [gamma |- S] in
     [gamma |- at_arr D1 D2]
 ;
 
@@ -164,9 +164,9 @@ There are three possible cases for `T`:
   The first projection allows us to extract the type component, while the second projection denotes the proof of `_t:atp a a;`.
 - **Existential case.**
   If `T` is an existential quantification, then we extend the context and appeal to the induction hypothesis by making a recursive call.
-  Beluga supports declaration weakening which allows us to use `T` that has type `[gamma, a:tp |- tp ]` in the extended context `[gamma, b:block a:tp , _t: atp a a]`.
-  We simply construct a weakening substitution `.. b.1` with domain `g,a:tp` and range `g, b:block a:tp , _t: atp a a` that essentially renames `a` to `b.1` in `T`.
-  The recursive call returns `[gamma,b:block a:tp , _t:atp a a |- D[.., b.1 ,b.2]]`.
+  Beluga supports declaration weakening which allows us to use `T` that has type `[gamma, a:tp |- tp]` in the extended context `[gamma, b:block a:tp , _t: atp a a]`.
+  We simply construct a weakening substitution `.. b.1` with domain `g, a:tp` and range `g, b:block a:tp , _t: atp a a` that essentially renames `a` to `b.1` in `T`.
+  The recursive call returns `[gamma, b:block a:tp , _t:atp a a |- D[.., b.1 , b.2]]`.
   Using it together with rule `at_la` we build the final derivation.
 - **Arrow case.**
   If `T` is an arrow type, we appeal twice to the induction hypothesis and build a proof for `[gamma |- atp (arr T S) (arr T S)]`.
@@ -176,7 +176,7 @@ There are three possible cases for `T`:
 ## Proof of Reflexivity for Terms
 
 The recursive function `ref` encodes the proof reflexivity for terms.
-The type signature reads: for all contexts `g` that have schema `aeqCtx`, for all terms `M`, we have a proof that `[ g |- aeq M M]`.
+The type signature reads: for all contexts `g` that have schema `aeqCtx`, for all terms `M`, we have a proof that `[g |- aeq M M]`.
 }}%
 
 rec ref : {gamma:aeqCtx} {M:[gamma |- term]} [gamma |- aeq M M] =
@@ -184,25 +184,25 @@ mlam gamma => mlam M => case [gamma |- M] of
 | [gamma |- #p.1] => [gamma |- #p.2]
 
 | [gamma |- lam \x. M] =>
-  let [gamma,b:block y:term , _t:aeq y y |- D[..,b.1,b.2]] =
-         ref [gamma, b:block y:term , _t:aeq y y] [gamma, b |- M[..,b.1]]
+  let [gamma, b:block y:term , _t:aeq y y |- D[.., b.1, b.2]] =
+         ref [gamma, b:block y:term , _t:aeq y y] [gamma, b |- M[.., b.1]]
   in
    [gamma |- ae_l \x. \w. D]
 
 | [gamma |- app M1 M2] =>
-  let [gamma |- D1] = ref [gamma] [gamma |- M1 ] in
-  let [gamma |- D2] = ref [gamma] [gamma |- M2 ] in
+  let [gamma |- D1] = ref [gamma] [gamma |- M1] in
+  let [gamma |- D2] = ref [gamma] [gamma |- M2] in
     [gamma |- ae_a D1 D2]
 
 | [gamma |- tlam \a. M] =>
-  let [gamma,b:block a:tp , _t:atp a a |- D[..,b.1,b.2]] =
-         ref [gamma, b:block a:tp , _t:atp a a] [gamma, b |- M[..,b.1]]
+  let [gamma, b:block a:tp , _t:atp a a |- D[.., b.1, b.2]] =
+         ref [gamma, b:block a:tp , _t:atp a a] [gamma, b |- M[.., b.1]]
   in
    [gamma |- ae_tl \x. \w. D]
 
 | [gamma |- tapp M T] =>
-  let [gamma |- D1] = ref [gamma] [gamma |- M ] in
-  let [gamma |- D2] = reftp [gamma] [gamma |- T ] in
+  let [gamma |- D1] = ref [gamma] [gamma |- M] in
+  let [gamma |- D2] = reftp [gamma] [gamma |- T] in
     [gamma |- ae_ta D1 D2]
 ;
 
@@ -215,16 +215,16 @@ This time, there are five possible cases for our meta-variable `M`:
   Since the context `g` has schema `aeqCtx`, it contains blocks `x:tm , ae_v:aeq x x.` The first projection allows us to extract the term component, while the second projection denotes the proof of `aeq x x`.
 - **Lambda-abstraction case.**
   If `M` is a lambda-term, then we extend the context and appeal to the induction hypothesis by making a recursive call.
-  Automatic context subsumption comes into play again, allowing us to use M that has type `[gamma, x:tm |- tm ]` in the extended context `[gamma, b:block y:tm , ae_v: aeq y y]`.
-  We simply construct a weakening substitution `.. b.1` with domain `g,y:tm` and range `g, b:block y:tm , ae_v:aeq y y.` that essentially renames `y` to `b.1` in `M`.
-  The recursive call returns `[gamma,b:block y:tm ,ae_v:aeq y y |- D[.., b.1 b.2]]`.
+  Automatic context subsumption comes into play again, allowing us to use M that has type `[gamma, x:tm |- tm]` in the extended context `[gamma, b:block y:tm , ae_v: aeq y y]`.
+  We simply construct a weakening substitution `.. b.1` with domain `g, y:tm` and range `g, b:block y:tm , ae_v:aeq y y.` that essentially renames `y` to `b.1` in `M`.
+  The recursive call returns `[gamma, b:block y:tm , ae_v:aeq y y |- D[.., b.1 b.2]]`.
   Using it together with rule `ae_l` we build the final derivation.
 - **Term application case.**
   If `M` is an application, we appeal twice to the induction hypothesis and build a proof for `[gamma |- aeq (app M1 M2) (app M1 M2)]`.
 - **Type abstraction case.**
   If `M` is a type abstraction, then we extend the context and appeal to the induction hypothesis by making a recursive call.
-  We use `M` that has type `[gamma, a:tp |- tp ]` in the extended context `[gamma, b:block a:tp , _t: atp a a]` and construct a weakening substitution `.. b.1` with domain `g,a:tp` and range `g, b:block a:tp , _t: atp a a` that essentially renames `a` to `b.1` in `T`.
-  The recursive call returns `[gamma,b:block a:tp , _t:atp a a |- D[.., b.1, b.2]]`.
+  We use `M` that has type `[gamma, a:tp |- tp]` in the extended context `[gamma, b:block a:tp , _t: atp a a]` and construct a weakening substitution `.. b.1` with domain `g, a:tp` and range `g, b:block a:tp , _t: atp a a` that essentially renames `a` to `b.1` in `T`.
+  The recursive call returns `[gamma, b:block a:tp , _t:atp a a |- D[.., b.1, b.2]]`.
   Using it together with rule `at_la` we build the final derivation.
 - **Type application case.**
   If `M` is a type application, we appeal twice to the induction hypothesis and build a proof for `[gamma |- aeqCtx (tapp M T) (tapp M T)]`.
@@ -243,13 +243,13 @@ rec transtp: (gamma:atpCtx)
 fn ae1 => fn ae2 => case ae1 of
 | [gamma |- #p.2] => ae2
 
-| [gamma |- at_al \a.\u. D1[..,a,u]] =>
-  let [gamma |- at_al \a.\u. D2[..,a,u]] = ae2 in
-  let [gamma, b:block a:tp , _t:atp a a |- D[..,b.1,b.2]] =
-         transtp [gamma, b:block a:tp , _t:atp a a |- D1[..,b.1,b.2]]
-               [gamma, b |- D2[..,b.1,b.2]]
+| [gamma |- at_al \a.\u. D1[.., a, u]] =>
+  let [gamma |- at_al \a.\u. D2[.., a, u]] = ae2 in
+  let [gamma, b:block a:tp , _t:atp a a |- D[.., b.1, b.2]] =
+         transtp [gamma, b:block a:tp , _t:atp a a |- D1[.., b.1, b.2]]
+               [gamma, b |- D2[.., b.1, b.2]]
   in
-    [gamma |- at_al \a. \u. D[..,a,u]]
+    [gamma |- at_al \a. \u. D[.., a, u]]
 
 | [gamma |- at_arr D1 D2] =>
   let [gamma |- at_arr D3 D4] = ae2 in
@@ -270,9 +270,9 @@ fn ae1 => fn ae2 => case ae1 of
 
 | [gamma |- ae_l \x.\u. D1] =>
   let [gamma |- ae_l \x.\u. D2] = ae2 in
-  let [gamma, b:block x:term , _t:aeq x x |- D[..,b.1,b.2]] =
-         trans [gamma, b:block x':term , _t:aeq x' x' |- D1[..,b.1,b.2]]
-               [gamma, b |- D2[..,b.1,b.2]]
+  let [gamma, b:block x:term , _t:aeq x x |- D[.., b.1, b.2]] =
+         trans [gamma, b:block x':term , _t:aeq x' x' |- D1[.., b.1, b.2]]
+               [gamma, b |- D2[.., b.1, b.2]]
   in
     [gamma |- ae_l \x. \u. D]
 
@@ -282,11 +282,11 @@ fn ae1 => fn ae2 => case ae1 of
   let [gamma |- D'] = trans [gamma |- D2] [gamma |- D4] in
     [gamma |- ae_a D D']
 
-| [gamma |- ae_tl \a.\u. D1[..,a,u]] =>
-  let [gamma |- ae_tl \a.\u. D2[..,a,u]] = ae2 in
-  let [gamma, b:block a:tp , _t:atp a a |- D[..,b.1,b.2]] =
-         trans [gamma, b:block a:tp , _t:atp a a |- D1[..,b.1,b.2]]
-               [gamma, b |- D2[..,b.1,b.2]]
+| [gamma |- ae_tl \a.\u. D1[.., a, u]] =>
+  let [gamma |- ae_tl \a.\u. D2[.., a, u]] = ae2 in
+  let [gamma, b:block a:tp , _t:atp a a |- D[.., b.1, b.2]] =
+         trans [gamma, b:block a:tp , _t:atp a a |- D1[.., b.1, b.2]]
+               [gamma, b |- D2[.., b.1, b.2]]
   in
     [gamma |- ae_tl \x. \u. D]
 
@@ -308,8 +308,8 @@ rec symtp: (gamma:atpCtx)
 fn ae => case ae of
 | [gamma |- #p.2] => ae
 | [gamma |- at_al \x.\u. D] =>
-  let [gamma, b:block a:tp , _t:atp a a |- D'[..,b.1,b.2]] =
-      symtp [gamma, b:block a:tp, _t:atp a a |- D[..,b.1,b.2]] in
+  let [gamma, b:block a:tp , _t:atp a a |- D'[.., b.1, b.2]] =
+      symtp [gamma, b:block a:tp, _t:atp a a |- D[.., b.1, b.2]] in
   [gamma |- at_al \x.\u. D']
 | [gamma |- at_arr D1 D2] =>
   let [gamma |- D1'] = symtp [gamma |- D1] in
@@ -326,16 +326,16 @@ rec sym: (gamma:aeqCtx)
 fn ae => case ae of
 | [gamma |- #p.2] => ae
 | [gamma |- ae_l \x.\u. D] =>
-  let [gamma, b:block x:term , _t:aeq x x |- D'[..,b.1,b.2]] =
-      sym [gamma, b:block x:term, _t:aeq x x |- D[..,b.1,b.2]] in
+  let [gamma, b:block x:term , _t:aeq x x |- D'[.., b.1, b.2]] =
+      sym [gamma, b:block x:term, _t:aeq x x |- D[.., b.1, b.2]] in
   [gamma |- ae_l \x.\u. D']
 | [gamma |- ae_a D1 D2] =>
   let [gamma |- D1'] = sym [gamma |- D1] in
   let [gamma |- D2'] = sym [gamma |- D2] in
     [gamma |- ae_a D1' D2']
 | [gamma |- ae_tl \x.\u. D] =>
-  let [gamma, b:block a:tp , _t:atp a a |- D'[..,b.1,b.2]] =
-      sym [gamma, b:block a:tp, _t:atp a a |- D[..,b.1,b.2]] in
+  let [gamma, b:block a:tp , _t:atp a a |- D'[.., b.1, b.2]] =
+      sym [gamma, b:block a:tp, _t:atp a a |- D[.., b.1, b.2]] in
   [gamma |- ae_tl \x.\u. D']
 | [gamma |- ae_ta D Q] =>
   let [gamma |- D'] = sym [gamma |- D] in
@@ -353,15 +353,15 @@ rec ctp: (gamma:dtpCtx)
          [gamma |- dtp T S] -> [gamma |- atp T S] =
 fn e => case e of
 | [gamma |- #p.3] => [gamma |- #p.2]
-| [gamma |- dt_r] => reftp [gamma] [gamma |- _ ]
+| [gamma |- dt_r] => reftp [gamma] [gamma |- _]
 | [gamma |- dt_arr F1 F2] =>
   let [gamma |- D1] = ctp [gamma |- F1] in
   let [gamma |- D2] = ctp [gamma |- F2] in
     [gamma |- at_arr D1 D2]
 
 | [gamma |- dt_al (\x.\u. F)] =>
-  let [gamma,b:block a:tp,u:atp a a , _t:dtp a a |- D[..,b.1,b.2]] =
-        ctp [gamma, b:block a:tp, u:atp a a , _t:dtp a a |- F[..,b.1,b.3]]
+  let [gamma, b:block a:tp, u:atp a a , _t:dtp a a |- D[.., b.1, b.2]] =
+        ctp [gamma, b:block a:tp, u:atp a a , _t:dtp a a |- F[.., b.1, b.3]]
   in
      [gamma |- at_al (\x.\v. D)]
 
@@ -369,9 +369,9 @@ fn e => case e of
   let [gamma |- D2] = ctp [gamma |- F2] in
   let [gamma |- D1] = ctp [gamma |- F1] in
     transtp [gamma |- D1] [gamma |- D2]
-| [gamma |-  dt_s F] =>
-  let [gamma |-  D] = ctp [gamma |-  F] in
-     symtp [gamma |-  D]
+| [gamma |- dt_s F] =>
+  let [gamma |- D] = ctp [gamma |- F] in
+     symtp [gamma |- D]
 ;
 
 %{{
@@ -379,18 +379,18 @@ fn e => case e of
 }}%
 
 rec ceq: (gamma:deqCtx)
-         [gamma |-  deq T S] -> [gamma |- aeq T S] =
+         [gamma |- deq T S] -> [gamma |- aeq T S] =
 fn e => case e of
 | [gamma |- #p.3] => [gamma |- #p.2]
-| [gamma |- de_r] => ref [gamma] [gamma |- _ ]
+| [gamma |- de_r] => ref [gamma] [gamma |- _]
 | [gamma |- de_a F1 F2] =>
-  let [gamma |-  D1] = ceq [gamma |- F1] in
-  let [gamma |-  D2] = ceq [gamma |- F2] in
-    [gamma |-  ae_a D1 D2]
+  let [gamma |- D1] = ceq [gamma |- F1] in
+  let [gamma |- D2] = ceq [gamma |- F2] in
+    [gamma |- ae_a D1 D2]
 
 | [gamma |- de_l (\x.\u. F)] =>
-  let [gamma,b:block x:term,u:aeq x x , _t:deq x x |- D[..,b.1,b.2]] =
-        ceq [gamma, b:block x:term, u:aeq x x , _t:deq x x |- F[..,b.1,b.3]]
+  let [gamma, b:block x:term, u:aeq x x , _t:deq x x |- D[.., b.1, b.2]] =
+        ceq [gamma, b:block x:term, u:aeq x x , _t:deq x x |- F[.., b.1, b.3]]
   in
      [gamma |- ae_l (\x.\v. D)]
 
@@ -399,13 +399,13 @@ fn e => case e of
   let [gamma |- D1] = ceq [gamma |- F1] in
     trans [gamma |- D1] [gamma |- D2]
 
-| [gamma |-  de_s F] =>
-   let [gamma |-  D] = ceq [gamma |-  F] in
-   sym [gamma |-  D]
+| [gamma |- de_s F] =>
+   let [gamma |- D] = ceq [gamma |- F] in
+   sym [gamma |- D]
 
-| [gamma |- de_tl (\a.\u. F[..,a,u])] =>
-  let [gamma,b:block a:tp,u:atp a a , _t:dtp a a |- D[..,b.1,b.2]] =
-        ceq [gamma, b:block a:tp, u: atp a a , _t:dtp a a |- F[..,b.1,b.3]]
+| [gamma |- de_tl (\a.\u. F[.., a, u])] =>
+  let [gamma, b:block a:tp, u:atp a a , _t:dtp a a |- D[.., b.1, b.2]] =
+        ceq [gamma, b:block a:tp, u: atp a a , _t:dtp a a |- F[.., b.1, b.3]]
   in
      [gamma |- ae_tl (\x.\v. D)]
 

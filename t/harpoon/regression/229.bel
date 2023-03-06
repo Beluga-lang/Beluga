@@ -115,7 +115,7 @@ intros
       C1 : (g |- con),
       Deq : (g |- kind-eq K2 (sing C1))
     | equiv : [g |- kd-equiv (sing C) K]
-    ; by kd-equiv-resp [g |- Deq] [g |- kind-eq/i ] [g |- Dequiv1]
+    ; by kd-equiv-resp [g |- Deq] [g |- kind-eq/i] [g |- Dequiv1]
       as Dequiv'' unboxed;
       split kd-equiv-sing-form [g |- Dequiv''] as
       case kd-equiv-sing-form/i:
@@ -196,7 +196,7 @@ intros
       C1 : (g |- con),
       Deq : (g |- kind-eq K2 (sing C1))
     | equiv : [g |- kd-equiv K (sing C)]
-    ; by kd-equiv-resp [g |- kind-eq/i ] [g |- Deq] [g |- Dequiv]
+    ; by kd-equiv-resp [g |- kind-eq/i] [g |- Deq] [g |- Dequiv]
       as Dequiv'' unboxed;
       split kd-equiv-sing-form' [g |- Dequiv''] as
       case kd-equiv-sing-form/i:

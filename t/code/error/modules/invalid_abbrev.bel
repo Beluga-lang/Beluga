@@ -3,8 +3,8 @@ module Nats = struct
   z : nat.
   s : nat -> nat.
 
-  rec suc : [ |- nat ] -> [ |- nat] =
-  fn n => let [ |- N ] = n in [ |- s N];
+  rec suc : [ |- nat] -> [ |- nat] =
+  fn n => let [ |- N] = n in [ |- s N];
 
   let two = [ |- s (s z)];
   let three = suc two;

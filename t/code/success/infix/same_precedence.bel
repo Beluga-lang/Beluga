@@ -6,7 +6,7 @@ t : type.
 test : nat -> nat -> t. --infix test 5.
 
 
-rec test_fun : [ |- nat ] -> [ |- t] =
+rec test_fun : [ |- nat] -> [ |- t] =
 fn n =>
-let [ |- N ] = n in
+let [ |- N] = n in
 [ |- s N test N];

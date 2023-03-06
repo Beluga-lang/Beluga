@@ -10,8 +10,8 @@ select reflect
 msplit A
 unbox x as R
 suffices by LogArr toshow _
-by reify [ |- T ] x1 as S unboxed
-by reflect [ |- T1 ] [_ |- alg_app R[$R] S] as done
+by reify [ |- T] x1 as S unboxed
+by reflect [ |- T1] [_ |- alg_app R[$R] S] as done
 unbox x as R
 suffices by LogBase toshow _
 solve [_ |- alg_base refl refl R]
@@ -44,7 +44,7 @@ by algeqNeuSym [_ |- X] as R unboxed
 by algeqSym [_ |- X1] as N unboxed
 solve [_ |- alg_app R N]
 split x
-by algeqSym [_, b:block x:tm, y:algeqNeu x x _ |- X[..,b.1,b.2]] as X' unboxed
+by algeqSym [_, b:block x:tm, y:algeqNeu x x _ |- X[.., b.1, b.2]] as X' unboxed
 strengthen [_ |- X'] as X'' % slight hack for flattening
 solve [_ |- alg_arr \x.\u. X'']
 by algeqNeuSym [_ |- X] as X' unboxed
@@ -107,7 +107,7 @@ solve [_ |- alg_app R1 R2]
 select algeqTrans
 split x
 invert x1
-by algeqTrans [_, b:block x:tm, y:algeqNeu x x _ |- X[..,b.1,b.2]] [_, b |- X1[..,b.1,b.2]] as R unboxed
+by algeqTrans [_, b:block x:tm, y:algeqNeu x x _ |- X[.., b.1, b.2]] [_, b |- X1[.., b.1, b.2]] as R unboxed
 solve [_ |- alg_arr \x.\u. R[..,<x;u>]]
 invert x1
 invert determinacy' [_ |- S1] [_ |- S2] [_ |- X] [_ |- X1]

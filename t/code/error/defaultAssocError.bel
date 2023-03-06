@@ -17,8 +17,8 @@ ap : bool -> list N -> list (s N).
 let l1 = [ |- t ap t ap t ap nil];
 
 
-rec copy : [ |- list N ] -> [ |- list N] =
+rec copy : [ |- list N] -> [ |- list N] =
 fn l => case l of
-| [ |- nil ] => [ |- nil ]
-| [ |- (X[]) ap T ] =>
-	let [ |- T' ] = copy [ |- T ] in [ |- (X[]) ap T' ];
+| [ |- nil] => [ |- nil]
+| [ |- X[] ap T] =>
+	let [ |- T' ] = copy [ |- T] in [ |- X[] ap T' ];

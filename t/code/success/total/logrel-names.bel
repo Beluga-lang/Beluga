@@ -93,12 +93,12 @@ sim : tm -> tm -> tmpair.
 --infix sim 5 right.
 
 stratified Log : (g:rctx) [g |- tmpair] -> [ |- tp] -> ctype =
-| LogUnit : Log [g |- M sim N ] [|- tp/unit]
+| LogUnit : Log [g |- M sim N] [|- tp/unit]
 | LogName : [g |- algeqn M N tp/nm]
-            -> Log [g |- M sim N ] [|- tp/nm]
+            -> Log [g |- M sim N] [|- tp/nm]
 | LogProd : Log [g |- (fst M) sim (fst N) ] [|- T1]
             -> Log [g |- (snd M) sim (snd N) ] [|- T2]
-            -> Log [g |- M sim N ] [|- prod T1 T2]
+            -> Log [g |- M sim N] [|- prod T1 T2]
 | LogArr  : {M1:[g |- tm]}{M2:[g |- tm]}
              ({h:rctx} {$R:[h |- g]} {N1:[h |- tm]}{D1:[h |- oft N1 T[]]}{N2:[h |- tm]}{D2:[h |- oft N2 T[]]}
                 Log [h |- N1 sim N2] [ |- T]
@@ -112,15 +112,15 @@ rec logEq_Monotone : {h:rctx}{$W:[h |- g]} Log [g |- M1 sim M2] [ |- A]
 / total e (logEq_Monotone g h m1 m2 a iv e) /
 mlam h,$W => fn e => case e of
 | LogName [g |- P] => LogName [h |- P[$W]]
-| LogArr [g |-  M1] [g |-  M2] f =>
-  LogArr [h |-  M1[$W]] [h |-  M2[$W]]
-   (mlam h0,$W2,N1,D1,N2,D2 => fn rn =>
-    f [h0] [h0 |- $W[$W2]] [h0 |-  N1] [_ |- D1] [h0 |-  N2] [_ |- D2] rn
+| LogArr [g |- M1] [g |- M2] f =>
+  LogArr [h |- M1[$W]] [h |- M2[$W]]
+   (mlam h0,$W2, N1, D1, N2, D2 => fn rn =>
+    f [h0] [h0 |- $W[$W2]] [h0 |- N1] [_ |- D1] [h0 |- N2] [_ |- D2] rn
    )
 | LogUnit => LogUnit
 | LogProd leq1 leq2 =>
-  let ih1 = logEq_Monotone [ h ] [ h |- $W ] leq1 in
-  let ih2 = logEq_Monotone [ h ] [ h |- $W ] leq2 in
+  let ih1 = logEq_Monotone [h] [h |- $W] leq1 in
+  let ih2 = logEq_Monotone [h] [h |- $W] leq2 in
   LogProd ih1 ih2
 ;
 
@@ -130,12 +130,12 @@ rec reflect : {A:[ |- tp]} [g |- algeqr M1 M2 A[]] -> Log [g |- M1 sim M2] [ |- 
 / total a (reflect g m1 m2 a) /
 mlam A => fn r => case [ |- A] of
 | [ |- tp/nm] =>
-    let [g |- R ] = r in
+    let [g |- R] = r in
     LogName [g |- algeqname refl refl R]
 | [ |- arr A B] =>
   let [g |- R] = r in
-  LogArr [g |- _] [g |-  _]
-   (mlam h,$W,N1,D1,N2,D2 => fn rn =>
+  LogArr [g |- _] [g |- _]
+   (mlam h,$W, N1, D1, N2, D2 => fn rn =>
     let [h |- S] = reify [|- A] rn in
     reflect [ |- B] [h |- algeqapp R[$W] S]
    )
@@ -150,14 +150,14 @@ mlam A => fn r => case [ |- A] of
 and rec reify : {A:[|- tp]} Log [g |- M1 sim M2] [ |- A] -> [g |- algeqn M1 M2 A[]] =
  / total a (reify g m1 m2 a) /
 mlam A => fn e => case [ |- A] of
-| [ |- tp/nm ] =>
+| [ |- tp/nm] =>
   let LogName a = e in a
 | [ |- arr A B] =>
-  let LogArr [g |-  M1] [g |-  M2] f = e in
-  let [g,b:block x:tm,xt:oft x A[],xx:algeqr x x A[] |- R[..,b.1,b.3]]
-      = reify [ |- B ] (f [g,b:block x:tm,xt:oft x A[],xx:algeqr x x A[]]
-                          [g,b |- ..] [g,b |- b.1] [g,b |- b.2] [g,b |- b.1] [g,b |- b.2]
-        (reflect [ |- A ] [g,b:block x:tm,xt:oft x A[],xx:algeqr x x A[] |- b.3]))
+  let LogArr [g |- M1] [g |- M2] f = e in
+  let [g, b:block x:tm, xt:oft x A[], xx:algeqr x x A[] |- R[.., b.1, b.3]]
+      = reify [ |- B] (f [g, b:block x:tm, xt:oft x A[], xx:algeqr x x A[]]
+                          [g, b |- ..] [g, b |- b.1] [g, b |- b.2] [g, b |- b.1] [g, b |- b.2]
+        (reflect [ |- A] [g, b:block x:tm, xt:oft x A[], xx:algeqr x x A[] |- b.3]))
   in [g |- algeqarr (\x. \y. R)]
 | [ |- prod T1 T2] =>
   let LogProd leq1 leq2 = e in
@@ -169,43 +169,43 @@ mlam A => fn e => case [ |- A] of
 
 
 % Transitivity of mstep
-rec mstep_trans : (g:rctx) [g |-  mstep M N] -> [g |-  mstep N P] -> [g |-  mstep M P] =
+rec mstep_trans : (g:rctx) [g |- mstep M N] -> [g |- mstep N P] -> [g |- mstep M P] =
 / total s1 (mstep_trans g m n p s1 s2) /
 fn s1 => fn s2 => case s1 of
-| [g |-  refl] => let [g |-  S2] = s2 in [g |-  S2]
-| [g |-  trans1 S1 (MS1)] => let [g |-  MSR] = mstep_trans [g |-  MS1] s2 in
-  [g |-  trans1 S1 (MSR)]
+| [g |- refl] => let [g |- S2] = s2 in [g |- S2]
+| [g |- trans1 S1 (MS1)] => let [g |- MSR] = mstep_trans [g |- MS1] s2 in
+  [g |- trans1 S1 (MSR)]
 ;
 
 
 % Boxed form of trans1 for convenience
-rec trans1' : (g:rctx) [g |-  step M N] -> [g |-  mstep N P] -> [g |-  mstep M P] =
+rec trans1' : (g:rctx) [g |- step M N] -> [g |- mstep N P] -> [g |- mstep M P] =
 / total (trans1') /
-fn s1 => fn s2 => case (s1,s2) of
-| ([g |-  S], [g |-  MS]) => [g |-  trans1 S (MS)]
+fn s1 => fn s2 => case (s1, s2) of
+| ([g |- S], [g |- MS]) => [g |- trans1 S (MS)]
 ; % TODO: Are these actually necessary?
 
 
 % multi-step reduction under the function position of application
-rec mstep_app : (g:rctx) [g |-  mstep M N] -> [g |-  mstep (app M P) (app N P)] =
+rec mstep_app : (g:rctx) [g |- mstep M N] -> [g |- mstep (app M P) (app N P)] =
 / total s1 (mstep_app g m n p s1) /
 fn s1 => case s1 of
-| [g |-  refl] => [g |-  refl]
-| [g |-  trans1 S (MS)] => trans1' [g |-  step/app S] (mstep_app [g |-  MS])
+| [g |- refl] => [g |- refl]
+| [g |- trans1 S (MS)] => trans1' [g |- step/app S] (mstep_app [g |- MS])
 ;
 
 rec mstep_proj1 : (g:rctx) [g |- mstep M N] -> [g |- mstep (fst M) (fst N)] =
 / total s (mstep_proj1 g m n s) /
 fn s => case s of
 | [g |- refl] => [g |- refl]
-| [g |- trans1 S MS] => trans1' [g |-  step/proj1 S] (mstep_proj1 [g |- MS])
+| [g |- trans1 S MS] => trans1' [g |- step/proj1 S] (mstep_proj1 [g |- MS])
 ;
 
 rec mstep_proj2 : (g:rctx) [g |- mstep M N] -> [g |- mstep (snd M) (snd N)] =
 / total s (mstep_proj2 g m n s) /
 fn s => case s of
 | [g |- refl] => [g |- refl]
-| [g |- trans1 S MS] => trans1' [g |-  step/proj2 S] (mstep_proj2 [g |- MS])
+| [g |- trans1 S MS] => trans1' [g |- step/proj2 S] (mstep_proj2 [g |- MS])
 ;
 
 rec mstep_bin : (g:rctx) [g |- mstep M1 N1] -> [g |- mstep M2 N2] -> [g |- mstep (bin M1 M2) (bin N1 N2)] =
@@ -235,18 +235,18 @@ fn s1 => fn s2 => case s1 of
 % Logical equality is backward closed under weak head reduction
 % Induction is on T. Make T explicit
 rec closed : {T:[|- tp]}
-     [g |-  mstep N1 M1] -> [g |-  mstep N2 M2]
+     [g |- mstep N1 M1] -> [g |- mstep N2 M2]
   -> Log [g |- M1 sim M2] [ |- T]
   -> Log [g |- N1 sim N2] [ |- T] =
  / total t (closed g n1 m1 n2 m2 t) /
-mlam T => fn s1,s2,e => case [|- T] of
+mlam T => fn s1, s2, e => case [|- T] of
 | [|- arr T1 T2] =>
-  let LogArr [g |-  M1] [g |-  M2] f = e in
-  let [g |-  S1] = s1 in
-  let [g |-  S2] = s2 in
-  LogArr [g |-  _] [g |-  _] (mlam h,$W,P1,D1,P2,D2 => fn rp =>
-   let q0 = f [h] [h |- $W] [h |-  P1] [h |- D1] [h |-  P2] [h |- D2] rp in
-   closed [|- T2] (mstep_app [h |-  S1[$W]] ) (mstep_app [h |-  S2[$W]]) q0
+  let LogArr [g |- M1] [g |- M2] f = e in
+  let [g |- S1] = s1 in
+  let [g |- S2] = s2 in
+  LogArr [g |- _] [g |- _] (mlam h,$W, P1, D1, P2, D2 => fn rp =>
+   let q0 = f [h] [h |- $W] [h |- P1] [h |- D1] [h |- P2] [h |- D2] rp in
+   closed [|- T2] (mstep_app [h |- S1[$W]] ) (mstep_app [h |- S2[$W]]) q0
   )
 | [ |- prod T1 T2] =>
   let LogProd leq1 leq2 = e in
@@ -305,10 +305,10 @@ fn a => case a of
 | [g |- algeqarr \x.\y.N] =>
   let (a : [g |- algeqn _ _ (arr T[] S[])]) = a in
   % key was to swap b.1 with b.2, as well as b.6 with b.5
-  let [g,b:block x:tm,xt:oft x T[],xx:algeqr x x T[] |- N'[..,b.1,b.3]] =
-      algEqNSym [g,b:block x:tm,xt:oft x T[],z:algeqr x x T[] |- N[..,b.1,b.3]]
+  let [g, b:block x:tm, xt:oft x T[], xx:algeqr x x T[] |- N'[.., b.1, b.3]] =
+      algEqNSym [g, b:block x:tm, xt:oft x T[], z:algeqr x x T[] |- N[.., b.1, b.3]]
   in [g |- algeqarr (\x.\y.N')]
-| [g |- algequnit ] =>  [g |- algequnit]
+| [g |- algequnit] =>  [g |- algequnit]
 | [g |- algeqprod A1 A2] =>
   let [g |- A1'] = algEqNSym [g |- A1] in
   let [g |- A2'] = algEqNSym [g |- A2] in
@@ -325,10 +325,10 @@ mlam T => fn e => case [|- T] of
 | [|- tp/nm] =>
   let LogName a = e in  LogName (algEqNSym a)
 | [|- arr T1 T2] =>
-  let LogArr [g |-  M1] [g |-  M2] f = e in
-  LogArr [g |-  M2] [g |-  M1] (mlam h,$W,N1,D1,N2,D2 => fn rn =>
+  let LogArr [g |- M1] [g |- M2] f = e in
+  LogArr [g |- M2] [g |- M1] (mlam h,$W, N1, D1, N2, D2 => fn rn =>
 					let e' = logEqSym [|- T1] rn in
-					logEqSym [|- T2] (f [h] [h |- $W] [h |-  N2] [h |- D2] [h |-  N1] [h |- D1] e')
+					logEqSym [|- T2] (f [h] [h |- $W] [h |- N2] [h |- D2] [h |- N1] [h |- D1] e')
 				                       )
 | [ |- prod T1 T2] =>
   let LogProd e1 e2 = e in
@@ -369,53 +369,53 @@ eqtm : tm -> tm -> type.
 refltm : eqtm M M.
 
 % Determinacy of weak head reduction
-rec determinacy : (g:rctx) [g |- step M N] -> [g |-  step M P] -> [g |- eqtm N P] =
+rec determinacy : (g:rctx) [g |- step M N] -> [g |- step M P] -> [g |- eqtm N P] =
 / total s1 (determinacy g m n p s1) /
 fn s1 => fn s2 => case s1 of
-| [g |-  step/beta] => let [g |-  step/beta] = s2 in [g |- refltm ]
-| [g |-  step/app S1] =>
-  let [g |-  step/app S2] = s2 in
-  let [g |- refltm] = determinacy [g |-  S1] [g |-  S2] in [g |- refltm]
-| [g |- step/betaprod1] => let [g |-  step/betaprod1] = s2 in [g |- refltm]
-| [g |- step/betaprod2] => let [g |-  step/betaprod2] = s2 in [g |- refltm]
+| [g |- step/beta] => let [g |- step/beta] = s2 in [g |- refltm]
+| [g |- step/app S1] =>
+  let [g |- step/app S2] = s2 in
+  let [g |- refltm] = determinacy [g |- S1] [g |- S2] in [g |- refltm]
+| [g |- step/betaprod1] => let [g |- step/betaprod1] = s2 in [g |- refltm]
+| [g |- step/betaprod2] => let [g |- step/betaprod2] = s2 in [g |- refltm]
 | [g |- step/proj1 S1] =>
-  let [g |-  step/proj1 S2] = s2 in
-  let [g |- refltm] = determinacy [g |-  S1] [g |-  S2] in [g |- refltm]
+  let [g |- step/proj1 S2] = s2 in
+  let [g |- refltm] = determinacy [g |- S1] [g |- S2] in [g |- refltm]
 | [g |- step/proj2 S1] =>
-  let [g |-  step/proj2 S2] = s2 in
-  let [g |- refltm] = determinacy [g |-  S1] [g |-  S2] in [g |- refltm]
+  let [g |- step/proj2 S2] = s2 in
+  let [g |- refltm] = determinacy [g |- S1] [g |- S2] in [g |- refltm]
 | [g |- step/bin S11 S12] => ?
-%  let [g |-  step/bin S21 S22] = s2 in
-%  let [g |- refltm] = determinacy [g |-  S11] [g |-  S21] in
-%  let [g |- refltm] = determinacy [g |-  S12] [g |-  S22] in
+%  let [g |- step/bin S21 S22] = s2 in
+%  let [g |- refltm] = determinacy [g |- S11] [g |- S21] in
+%  let [g |- refltm] = determinacy [g |- S12] [g |- S22] in
 %  [g |- refltm]
 | todo => ?
 ;
 
 
-inductive HasCommonReduct : (g:rctx) [g |-  tm] -> [g |-  tm] -> ctype =
-| Common : [g |-  mstep M1 N] -> [g |-  mstep M2 N] -> HasCommonReduct [g |-  M1] [g |-  M2];
+inductive HasCommonReduct : (g:rctx) [g |- tm] -> [g |- tm] -> ctype =
+| Common : [g |- mstep M1 N] -> [g |- mstep M2 N] -> HasCommonReduct [g |- M1] [g |- M2];
 
 % Confluence is trivial because it's deterministic. This is just a convenient
 % way to work with determinacy
-rec confluence : [g |-  mstep M N] -> [g |-  mstep M P] ->
-                 HasCommonReduct [g |-  N] [g |-  P] =
+rec confluence : [g |- mstep M N] -> [g |- mstep M P] ->
+                 HasCommonReduct [g |- N] [g |- P] =
 / total s1 (confluence g m n p s1) /
 fn s1 => fn s2 => case s1 of
-| [g |-  refl ] => Common s2 [g |-  refl]
-| [g |-  trans1 S1 (MS1)] =>
+| [g |- refl] => Common s2 [g |- refl]
+| [g |- trans1 S1 (MS1)] =>
   case s2 of
-  | [g |-  refl] => Common [g |-  refl] s1
-  | [g |-  trans1 S2 (MS2)] =>
-    let [g|- refltm] = determinacy [g |-  S1] [g |-  S2] in
-    confluence [g |-  MS1] [g |-  MS2]
+  | [g |- refl] => Common [g |- refl] s1
+  | [g |- trans1 S2 (MS2)] =>
+    let [g|- refltm] = determinacy [g |- S1] [g |- S2] in
+    confluence [g |- MS1] [g |- MS2]
 ;
 
 LF empty : type = ;
 
 % Terms in algorithmic path equivalence cannot step
 rec neutral_doesnt_step : (g:rctx)
-  [g |-  step M N]
+  [g |- step M N]
 -> [g |- algeqr M P T]
 -> [ |- empty] =
 / total s (neutral_doesnt_step g m n p t s ) /
@@ -432,17 +432,17 @@ fn s => fn e => case s of
 
 % Similarly for multi-step reduction
 rec neutral_mstep : (g:rctx)
-  [g |-  mstep M N]
+  [g |- mstep M N]
 -> [g |- algeqr M P T]
 -> [g |- eqtm M N] =
 / total  (neutral_mstep) /
 fn s => fn e => case s of
-| [g |-  refl] => [g |- refltm]
-| [g |-  trans1 S1 (MS)] => impossible (neutral_doesnt_step [g |-  S1] e);
+| [g |- refl] => [g |- refltm]
+| [g |- trans1 S1 (MS)] => impossible (neutral_doesnt_step [g |- S1] e);
 
 % Corollary of determinacy
 rec determinacy' : (g:rctx)
-  [g |-  mstep M M1] -> [g |-  mstep M M2]
+  [g |- mstep M M1] -> [g |- mstep M M2]
 -> [g |- algeqr N1 M1 T]
 -> [g |- algeqr M2 N2 T]
 -> [g |- eqtm M1 M2] =
@@ -500,9 +500,9 @@ fn a1 => fn a2 => case a1 of
 | [g |- algeqarr (\x.\u.A1')] =>
   let [g |- algeqarr \x.\u.A2'] = a2 in
   let (a2 : [g |- algeqn _ _ (arr T[] S[])]) = a2 in
-  let [g,b:block x:tm,xt:oft x _,xx:algeqr x x _ |- R[..,b.1,b.3]]
-      = algEqNTrans [g,b:block x:tm,xt:oft x T[],xx:algeqr x x T[] |- A1'[..,b.1,b.3]]
-  		     [g,b:block x:tm,xt:oft x T[],xx:algeqr x x T[] |- A2'[..,b.1,b.3]] in
+  let [g, b:block x:tm, xt:oft x _, xx:algeqr x x _ |- R[.., b.1, b.3]]
+      = algEqNTrans [g, b:block x:tm, xt:oft x T[], xx:algeqr x x T[] |- A1'[.., b.1, b.3]]
+  		     [g, b:block x:tm, xt:oft x T[], xx:algeqr x x T[] |- A2'[.., b.1, b.3]] in
   [g |- algeqarr (\x.\u.R)]
 | [g |- algequnit] => [g |- algequnit]
 | [g |- algeqprod A1 A2] =>
@@ -523,12 +523,12 @@ mlam T => fn e1 => fn e2 => case [|- T] of
   let LogName a1 = e1 in
   let LogName a2 = e2 in LogName (algEqNTrans a1 a2)
 | [|- arr T1 T2] =>
-  let LogArr [g |-  M] [g |-  N] f1 = e1 in
-  let LogArr [g |-  N] [g |-  P] f2 = e2 in
-  LogArr [g |-  M] [g |-  P] (mlam h,$W,V1,D1,V2,D2 => fn v =>
-   logEqTrans [|- T2] (f1 [h] [h |- $W] [h |-  V1] [h|- D1] [h |-  V2] [h |- D2] v)
-                      (f2 [h] [h |- $W] [h |-  V2] [h|- D2] [h |-  V2] [h |- D2]
-                          (logEqTrans [|- T1] (logEqSym [|- _ ] v) v)))
+  let LogArr [g |- M] [g |- N] f1 = e1 in
+  let LogArr [g |- N] [g |- P] f2 = e2 in
+  LogArr [g |- M] [g |- P] (mlam h,$W, V1, D1, V2, D2 => fn v =>
+   logEqTrans [|- T2] (f1 [h] [h |- $W] [h |- V1] [h|- D1] [h |- V2] [h |- D2] v)
+                      (f2 [h] [h |- $W] [h |- V2] [h|- D2] [h |- V2] [h |- D2]
+                          (logEqTrans [|- T1] (logEqSym [|- _] v) v)))
 | [ |- tp/unit] => LogUnit
 | [ |- prod T1 T2] =>
   let LogProd leq11 leq21 = e1 in
@@ -551,7 +551,7 @@ d_pair : deq M1 N1 T1 -> deq M2 N2 T2 -> deq (pair M1 M2) (pair N1 N2) (prod T1 
 d_bin : deq M1 N1 tp/nm -> deq M2 N2 tp/nm -> deq (pair M1 M2) (pair N1 N2) tp/nm.
 
 
-schema ctx = some [t:tp] block x:tm,y:oft x t;
+schema ctx = some [t:tp] block x:tm, y:oft x t;
 
 % % Logical equivalence of substitutions. Written _|-s_simsim_:_ in the paper
 inductive LogSub : {g0:ctx}(h:rctx){$S1: [h |- g0]}{$S2: [h |- g0]}
@@ -560,7 +560,7 @@ ctype  =
 | Dot : LogSub [g0] [h |- $S1] [h |- $S2]
        -> Log [h |- M1 sim M2] [ |- R]
        -> {D1:[h |- oft M1 R[]]} {D2:[h |- oft M2 R[]]}
-         LogSub [g0,b:block x:tm,y:oft x R[]] [h |- $S1, <M1;D1>] [h |- $S2, <M2;D2>]
+         LogSub [g0, b:block x:tm, y:oft x R[]] [h |- $S1, <M1;D1>] [h |- $S2, <M2;D2>]
 ;
 
 
@@ -580,7 +580,7 @@ rec monotoneSub :
     LogSub [g] [h |- $S1] [h |- $S2]
   -> LogSub [g] [h0 |- $S1[$W]] [h0 |- $S2[$W]]=
  / total es (monotoneSub _ _ _ _ _ iv es ) /
-mlam h0,h,$W => fn es => case es of
+mlam h0, h,$W => fn es => case es of
 | Nil => Nil
 | Dot rs' rN [h |- D1] [h |- D2]  => Dot (monotoneSub [h0] [h] [h0 |- $W] rs') (logEq_Monotone [h0] [h0 |- $W] rN) [h0 |- D1[$W]] [h0 |- D2[$W]]
 ;
@@ -593,7 +593,7 @@ rec logEqSubSym :
  / total e (logEqSubSym g h sigma sigma' e) /
 fn e => case e of
 | Nil => Nil
-| Dot e' e1 [h |- D1] [h |- D2] => Dot (logEqSubSym e') (logEqSym  [|- _ ] e1) [h |- D2] [h |- D1];
+| Dot e' e1 [h |- D1] [h |- D2] => Dot (logEqSubSym e') (logEqSym  [|- _] e1) [h |- D2] [h |- D1];
 
 % Transitivity of logical equivalence on substitutions
 rec logEqSubTrans :
@@ -603,7 +603,7 @@ rec logEqSubTrans :
 / total e1 (logEqSubTrans g g h s1 s2 s3 e1) /
 fn e1 => fn e2 => case e1 of
 | Nil => let Nil = e2 in Nil
-| Dot e1' x1 [h |- D1] [h |- D2] => let Dot e2' x2 [h |- D3] [h |- D4] = e2 in Dot (logEqSubTrans e1' e2') (logEqTrans [|- _ ] x1 x2) [h |- D1] [h |- D4];
+| Dot e1' x1 [h |- D1] [h |- D2] => let Dot e2' x2 [h |- D3] [h |- D4] = e2 in Dot (logEqSubTrans e1' e2') (logEqTrans [|- _] x1 x2) [h |- D1] [h |- D4];
 
 
 rec lookup : {g:ctx}{#p:[g |- block (x:tm, u: oft x Q[])]} LogSub [g] [h |- $S1] [h |- $S2]
@@ -611,7 +611,7 @@ rec lookup : {g:ctx}{#p:[g |- block (x:tm, u: oft x Q[])]} LogSub [g] [h |- $S1]
  / total g (lookup g) /
  mlam g, #p => fn s => case [g] of
 	 | [] => impossible [ |- #p.1]
-	 | [g',b:block x:tm,y:oft x S[]] =>
+	 | [g', b:block x:tm, y:oft x S[]] =>
 	   let Dot rs rm [h |- D1] [h |- D2] = s in
 	   (case [g', b:block (x:tm, y:oft x S[]) |- #p.2] of
 	      |  {#q:[g0 |- block (x:tm, u: oft x P[])]}
@@ -631,11 +631,11 @@ case d of
   let LogArr [h |- M1] [h |- M2] f = thm' [g |- D1] s in
   f [h] [h |- ..] [h |- _] [h |- D2[$S1]] [h |- _] [h |- D2[$S2]] (thm' [g |- D2] s)
 | [g |- oft/lam (\x.\y. D0)] =>
-  let ([g |- _ ] : [g |- oft (lam \x.M) (arr P[] Q[])]) = d in
-  LogArr [h |- lam \x.M[$S1[..],x]] [h |- lam \x.M[$S2[..],x]]
-   (mlam h0,$W,N1,D1,N2,D2 => fn rn =>
+  let ([g |- _] : [g |- oft (lam \x.M) (arr P[] Q[])]) = d in
+  LogArr [h |- lam \x.M[$S1[..], x]] [h |- lam \x.M[$S2[..], x]]
+   (mlam h0,$W, N1, D1, N2, D2 => fn rn =>
     let q0 = Dot (monotoneSub [h0] [h] [h0 |- $W] s) rn [h0 |- D1] [h0 |- D2] in
-    let q2 = thm' [g,b:block x:tm,y:oft x P[] |- D0[..,b.1,b.2]] q0 in
+    let q2 = thm' [g, b:block x:tm, y:oft x P[] |- D0[.., b.1, b.2]] q0 in
    closed [|- Q]
          [h0 |- trans1 step/beta refl]
          [h0 |- trans1 step/beta refl]
@@ -671,17 +671,17 @@ fn d => case d of
   let [g |- E2] = dtp1 [g |- D2] in
   [g |- oft/app E1 E2]
 | [g |- d_lam (\x.\y. D1)] =>
-  let [g,b:block x:tm,y:oft x T[] |- E1] = dtp1 [g,b:block x:tm,y:oft x _ |- D1[..,b.1,b.2]] in
+  let [g, b:block x:tm, y:oft x T[] |- E1] = dtp1 [g, b:block x:tm, y:oft x _ |- D1[.., b.1, b.2]] in
   [g |- oft/lam (\x.\y. E1[..,<x;y>])]
 | [g |- d_beta (\x.\y. D1) D2] =>
-  let [g,b:block x:tm,y:oft x T[] |- E1] = dtp1 [g,b:block x:tm,y:oft x _ |- D1[..,b.1,b.2]] in
+  let [g, b:block x:tm, y:oft x T[] |- E1] = dtp1 [g, b:block x:tm, y:oft x _ |- D1[.., b.1, b.2]] in
   let [g |- E2] = dtp1 [g |- D2] in
   [g |- oft/app (oft/lam (\x.\y. E1[..,<x;y>])) E2]
 | [g |- d_ext (\x.\y. D1)] =>
       % This case needs a special form of strengthening.
       % See discussion in issue #147
       ?
-  % let [g,b:block x:tm,y:oft x T[] |- oft/app E1[..] b.2] = dtp1 [g,b:block x:tm,y:oft x _ |- D1[..,b.1,b.2]] in
+  % let [g, b:block x:tm, y:oft x T[] |- oft/app E1[..] b.2] = dtp1 [g, b:block x:tm, y:oft x _ |- D1[.., b.1, b.2]] in
   % [g |- E1]
 | [g |- d_refl D1] => [g |- D1]
 | [g |- d_sym D1] => dtp2 [g |- D1]
@@ -695,17 +695,17 @@ fn d => case d of
   let [g |- E2] = dtp2 [g |- D2] in
   [g |- oft/app E1 E2]
 | [g |- d_lam (\x.\y. D1)] =>
-  let [g,b:block x:tm,y:oft x T[] |- E1] = dtp2 [g,b:block x:tm,y:oft x _ |- D1[..,b.1,b.2]] in
+  let [g, b:block x:tm, y:oft x T[] |- E1] = dtp2 [g, b:block x:tm, y:oft x _ |- D1[.., b.1, b.2]] in
   [g |- oft/lam (\x.\y. E1[..,<x;y>])]
 | [g |- d_beta (\x.\y. D1) D2] =>
-  let [g,b:block x:tm,y:oft x T[] |- E1] = dtp2 [g,b:block x:tm,y:oft x _ |- D1[..,b.1,b.2]] in
+  let [g, b:block x:tm, y:oft x T[] |- E1] = dtp2 [g, b:block x:tm, y:oft x _ |- D1[.., b.1, b.2]] in
   let [g |- E2] = dtp2 [g |- D2] in
   [g |- E1[..,< _ ; E2 >]]
 | [g |- d_ext (\x.\y. D1)] =>
       % This case needs a special form of strengthening.
       % See discussion in issue #147
       ?
-  % let [g,b:block x:tm,y:oft x T[] |- oft/app E1[..] b.2] = dtp2 [g,b:block x:tm,y:oft x _ |- D1[..,b.1,b.2]] in
+  % let [g, b:block x:tm, y:oft x T[] |- oft/app E1[..] b.2] = dtp2 [g, b:block x:tm, y:oft x _ |- D1[.., b.1, b.2]] in
   % [g |- E1]
 | [g |- d_refl D1] => [g |- D1]
 | [g |- d_sym D1] => dtp1 [g |- D1]
@@ -729,21 +729,21 @@ case d of
 | [g |- d_beta (\x.\y. D1) D2] =>
   let [h |- E1] = dtp1 [h |- D2[$S1]] in
   let [h |- E2] = dtp2 [h |- D2[$S2]] in
-   let q0 = thm [g,b:block x:tm,y:oft x _ |- D1[..,b.1,b.2]] (Dot s (thm [g |- D2] s)  [h |- E1] [h |- E2]) in
+   let q0 = thm [g, b:block x:tm, y:oft x _ |- D1[.., b.1, b.2]] (Dot s (thm [g |- D2] s)  [h |- E1] [h |- E2]) in
    closed [|- _] [h |- trans1 step/beta refl] [h |- refl] q0
 | [g |- d_lam \x.\y. E1] =>
-  let ([g |- _ ] : [g |- deq (lam \x.M1) (lam \x.M2) (arr P[] Q[])]) = d in
-  LogArr [h |- lam (\x. M1[$S1[..],x])] [h |- lam (\x. M2[$S2[..],x])]
-   (mlam h0,$W,N1,D1,N2,D2 => fn rn =>
+  let ([g |- _] : [g |- deq (lam \x.M1) (lam \x.M2) (arr P[] Q[])]) = d in
+  LogArr [h |- lam (\x. M1[$S1[..], x])] [h |- lam (\x. M2[$S2[..], x])]
+   (mlam h0,$W, N1, D1, N2, D2 => fn rn =>
     let q0 = Dot (monotoneSub [h0] [h] [h0 |- $W] s) rn [h0 |- D1] [h0 |- D2] in
-    let q2 = thm [g,b:block x:tm,y:oft x _ |- E1[..,b.1,b.2]] q0 in
+    let q2 = thm [g, b:block x:tm, y:oft x _ |- E1[.., b.1, b.2]] q0 in
     closed [|- Q] [h0 |- trans1 step/beta refl] [h0 |- trans1 step/beta refl] q2
    )
 | [g |- d_ext (\x.\y. D0)] =>
-  let ([g |- _ ] : [g |- deq M1 M2 (arr P[] Q[])]) = d in
-  LogArr [h |- M1[$S1]] [h |- M2[$S2]] (mlam h0,$W,N1,D1,N2,D2 => fn rn =>
+  let ([g |- _] : [g |- deq M1 M2 (arr P[] Q[])]) = d in
+  LogArr [h |- M1[$S1]] [h |- M2[$S2]] (mlam h0,$W, N1, D1, N2, D2 => fn rn =>
     let q0 = Dot (monotoneSub [h0] [h] [h0 |- $W] s) rn [h0 |- D1] [h0 |- D2] in
-    thm [g,b:block x:tm,y:oft x _ |- D0[..,b.1,b.2]] q0
+    thm [g, b:block x:tm, y:oft x _ |- D0[.., b.1, b.2]] q0
   )
 | [g |- d_refl D1] => thm' [g |- D1] s
 | [g |- d_sym D1] => logEqSym [|- _] (thm [g |- D1] (logEqSubSym s))
@@ -756,7 +756,7 @@ case d of
 inductive IdSub : (g':rctx){g:ctx}{$Id:[g' |- g]} ctype =
 | INil : IdSub [] [|- ^]
 | ISnoc : {T:[|-tp]}IdSub [g] [g' |- $Id]
-        -> IdSub [g,b:block (x:tm, u:oft x T[])] [g',b:block (x:tm, u:oft x T[], a:algeqr x x T[]) |- $Id[..], <b.1 ; b.2> ]
+        -> IdSub [g, b:block (x:tm, u:oft x T[])] [g', b:block (x:tm, u:oft x T[], a:algeqr x x T[]) |- $Id[..], <b.1 ; b.2> ]
 ;
 
 
@@ -767,11 +767,11 @@ fn r => case r of
 | ISnoc [|- T] r' =>
  let (s : LogSub [g] [h |- $S] [h |- $S]) = idLogSub r' in
   let wkn = monotoneSub
-       [h,b:block (x:tm,u: oft x T[], a:algeqr x x T[]) ] [h]
-       [h,b:block (x:tm,u: oft x T[], a:algeqr x x T[]) |- ..] s in
-  let rx = reflect [|- T] [h,b:block (x:tm , u:oft x T[], a: algeqr x x T[]) |- b.3] in
-   Dot wkn rx  [h,b:block (x:tm,u: oft x T[], a:algeqr x x T[]) |- b.2]
-               [h,b:block (x:tm,u: oft x T[], a:algeqr x x T[]) |- b.2]
+       [h, b:block (x:tm, u: oft x T[], a:algeqr x x T[]) ] [h]
+       [h, b:block (x:tm, u: oft x T[], a:algeqr x x T[]) |- ..] s in
+  let rx = reflect [|- T] [h, b:block (x:tm , u:oft x T[], a: algeqr x x T[]) |- b.3] in
+   Dot wkn rx  [h, b:block (x:tm, u: oft x T[], a:algeqr x x T[]) |- b.2]
+               [h, b:block (x:tm, u: oft x T[], a:algeqr x x T[]) |- b.2]
 ;
 
 

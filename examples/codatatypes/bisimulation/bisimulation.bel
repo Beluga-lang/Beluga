@@ -10,32 +10,32 @@ coinductive Sim : (g:ctx) [g |- p] -> [g |- p] -> ctype =
 | Simf : Sim [g |- P] [g |- Q] :: [g |- one P A[] P']
             -> ExistsTransSim [g |- P'] [g |- Q] [ |- A]
 | SimDn : Sim [g |- P] [g |- Q] :: [g |- oneb P (dn X[]) (\x. M)]
-            -> ExistsTransSimDn [g,x:n |-  M] [g |-  Q] [ |- X]
+            -> ExistsTransSimDn [g, x:n |- M] [g |- Q] [ |- X]
 | SimUp : Sim [g |- P] [g |- Q] :: [g |- oneb P (up X[]) (\x. M)]
-            -> ExistsTransSimUp [g,x:n |-  M] [g |-  Q] [ |- X]
+            -> ExistsTransSimUp [g, x:n |- M] [g |- Q] [ |- X]
 
 
 and inductive ExistsTransSim : (g : ctx) [g |- p] -> [g |- p] -> [ |- a] -> ctype =
 | MakeTransSimf  : [g |- one Q A[] Q'] -> Sim [g |- P'] [g |- Q']
                   -> ExistsTransSim [g |- P'] [g |- Q] [ |- A]
 
-and inductive ExistsTransSimDn : (g:ctx) [g,x:n |- p] -> [g |- p] -> [ |- n] -> ctype =
+and inductive ExistsTransSimDn : (g:ctx) [g, x:n |- p] -> [g |- p] -> [ |- n] -> ctype =
 | MakeTransSimDn : [g |- oneb Q (dn X[]) (\x.N)] ->
-      ({W : [ |- n]} Sim [g |- M[..,W[]]] [g |- N[..,W[]]])
-                  -> ExistsTransSimDn [g,x:n |-  M] [g |-  Q] [ |- X]
+      ({W : [ |- n]} Sim [g |- M[.., W[]]] [g |- N[.., W[]]])
+                  -> ExistsTransSimDn [g, x:n |- M] [g |- Q] [ |- X]
 
-and inductive ExistsTransSimUp : (g:ctx) [g,x:n |- p] -> [g |- p] -> [ |- n] -> ctype =
+and inductive ExistsTransSimUp : (g:ctx) [g, x:n |- p] -> [g |- p] -> [ |- n] -> ctype =
 | MakeTransSimUp : [g |- oneb Q (up X[]) (\x.N)] ->
-      ({W : [ |- n]} (Sim [g |- M[..,W[]] ] [g |- N[..,W[]] ]))
-                  -> ExistsTransSimUp [g,x:n |-  M] [g |-  Q] [ |- X]
+      ({W : [ |- n]} (Sim [g |- M[.., W[]] ] [g |- N[.., W[]] ]))
+                  -> ExistsTransSimUp [g, x:n |- M] [g |- Q] [ |- X]
 ;
 
 rec sim_refl : (g:ctx) {P:[g |- p]} Sim [g |- P] [g |- P] =
 fun [g |- P] .Simf  (t : [g |- one P A[] P']) => MakeTransSimf t (sim_refl [g |- P'])
   | [g |- P] .SimDn (t : [g |- oneb P (dn X[]) (\x. M)]) =>
-    MakeTransSimDn t (mlam W => sim_refl [g |- M[..,W[]]])
+    MakeTransSimDn t (mlam W => sim_refl [g |- M[.., W[]]])
   | [g |- P] .SimUp (t : [g |- oneb P (up X[]) (\x. M)]) =>
-    MakeTransSimUp t (mlam W => sim_refl [g |- M[..,W[]]])
+    MakeTransSimUp t (mlam W => sim_refl [g |- M[.., W[]]])
 ;
 
 rec sim_trans : (g:ctx) Sim [g |- P] [g |- Q] -> Sim [g |- Q] [g |- R] ->
@@ -59,42 +59,42 @@ coinductive Bisim : (g:ctx) [g |- p] -> [g |- p] -> ctype =
 | Leftf  : Bisim [g |- P] [g |- Q] :: [g |- one P A[] P']
               -> ExistsTransBisimf [g |- P'] [g |- Q] [ |- A]
 | LeftDn  : Bisim [g |- P] [g |- Q] :: [g |- oneb P (dn X[]) (\x. M)]
-              -> ExistsTransBisimDn [g,x:n |-  M] [g |-  Q] [ |- X]
+              -> ExistsTransBisimDn [g, x:n |- M] [g |- Q] [ |- X]
 | LeftUp  : Bisim [g |- P] [g |- Q] :: [g |- oneb P (up X[]) (\x. M)]
-              -> ExistsTransBisimUp [g,x:n |-  M] [g |-  Q] [ |- X]
+              -> ExistsTransBisimUp [g, x:n |- M] [g |- Q] [ |- X]
 | Rightf : Bisim [g |- P] [g |- Q] :: [g |- one Q A[] Q']
               -> ExistsTransBisimf [g |- Q'] [g |- P] [ |- A]
 | RightDn : Bisim [g |- P] [g |- Q] :: [g |- oneb Q (dn X[]) (\x. M)]
-              -> ExistsTransBisimDn [g,x:n |-  M] [g |- P] [ |- X]
+              -> ExistsTransBisimDn [g, x:n |- M] [g |- P] [ |- X]
 | RightUp : Bisim [g |- P] [g |- Q] :: [g |- oneb Q (up X[]) (\x. M)]
-              -> ExistsTransBisimUp [g,x:n |-  M] [g |- P] [ |- X]
+              -> ExistsTransBisimUp [g, x:n |- M] [g |- P] [ |- X]
 
 and inductive ExistsTransBisimf : (g : ctx) [g |- p] -> [g |- p] -> [ |- a] -> ctype =
 | MakeTransOne  : [g |- one Q A[] Q'] -> Bisim [g |- P'] [g |- Q']
                   -> ExistsTransBisimf [g |- P'] [g |- Q] [ |- A]
 
-and inductive ExistsTransBisimDn : (g : ctx) [g,x:n |- p] -> [g |- p] -> [ |- n] -> ctype =
+and inductive ExistsTransBisimDn : (g : ctx) [g, x:n |- p] -> [g |- p] -> [ |- n] -> ctype =
 | MakeTransOneDn : [g |- oneb Q (dn X[]) \x.N] ->
-       ({W : [ |- n]} Bisim [g |- M[..,W[]]] [g |- N[..,W[]]])
-                  -> ExistsTransBisimDn [g,x:n |-  M] [g |-  Q] [ |- X]
+       ({W : [ |- n]} Bisim [g |- M[.., W[]]] [g |- N[.., W[]]])
+                  -> ExistsTransBisimDn [g, x:n |- M] [g |- Q] [ |- X]
 
-and inductive ExistsTransBisimUp : (g : ctx) [g,x:n |- p] -> [g |- p] -> [ |- n] -> ctype =
+and inductive ExistsTransBisimUp : (g : ctx) [g, x:n |- p] -> [g |- p] -> [ |- n] -> ctype =
 | MakeTransOneUp : [g |- oneb Q (up X[]) \x.N] ->
-      ({W : [ |- n]} Bisim [g |- M[..,W[]]] [g |- N[..,W[]]])
-                  -> ExistsTransBisimUp [g,x:n |-  M] [g |-  Q] [ |- X]
+      ({W : [ |- n]} Bisim [g |- M[.., W[]]] [g |- N[.., W[]]])
+                  -> ExistsTransBisimUp [g, x:n |- M] [g |- Q] [ |- X]
 ;
 
 rec bisim_refl : (g:ctx) {P:[g|- p]} Bisim [g |- P] [g |- P] =
 fun [g |- P] .Leftf   (t : [g |- one P A[] P']) => MakeTransOne t (bisim_refl [g |- P'])
   | [g |- P] .LeftDn  (t : [g |- oneb P (dn X[]) (\x. M)]) =>
-    MakeTransOneDn t (mlam W => bisim_refl [g |- M[..,W[]]])
+    MakeTransOneDn t (mlam W => bisim_refl [g |- M[.., W[]]])
   | [g |- P] .LeftUp  (t : [g |- oneb P (up X[]) (\x. M)]) =>
-    MakeTransOneUp t (mlam W => bisim_refl [g |- M[..,W[]]])
+    MakeTransOneUp t (mlam W => bisim_refl [g |- M[.., W[]]])
   | [g |- P] .Rightf  (t : [g |- one P A[] P']) => MakeTransOne t (bisim_refl [g |- P'])
   | [g |- P] .RightDn (t : [g |- oneb P (dn X[]) (\x. M)]) =>
-    MakeTransOneDn t (mlam W => bisim_refl [g |- M[..,W[]]])
+    MakeTransOneDn t (mlam W => bisim_refl [g |- M[.., W[]]])
   | [g |- P] .RightUp (t : [g |- oneb P (up X[]) (\x. M)]) =>
-    MakeTransOneUp t (mlam W => bisim_refl [g |- M[..,W[]]])
+    MakeTransOneUp t (mlam W => bisim_refl [g |- M[.., W[]]])
 ;
 
 rec bisim_trans : (g:ctx) Bisim [g |- P] [g |- Q] -> Bisim [g |- Q] [g |- R] ->

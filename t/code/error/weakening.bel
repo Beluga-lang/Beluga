@@ -4,9 +4,9 @@ s: term -> term.
 schema ctx = term ;
 
 
-rec test : [x:term |-  term] -> [x:term |-  term] =
+rec test : [x:term |- term] -> [x:term |- term] =
 fn t => case t of
-| [h,x:term |-  U] => [x:term |-  x]
+| [h, x:term |- U] => [x:term |- x]
 
 ;
 

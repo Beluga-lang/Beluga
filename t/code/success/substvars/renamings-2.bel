@@ -92,7 +92,7 @@ rec howe_ren : {g:ctx}{h:ctx}{$S: [h |-# g]} Howe [|- T] [g |- E1] [g |- E2]
 %{
 inductive Ren : {g:ctx} (h:ctx) {$S : [h |-# g]} ctype =
   | RNil : Ren [] [h |- ^]
-  | RCons : Ren [g] [h |- $S] -> {#p:[h |- exp T[]]} Ren [g,x:exp T[]] [h |- $S, #p]
+  | RCons : Ren [g] [h |- $S] -> {#p:[h |- exp T[]]} Ren [g, x:exp T[]] [h |- $S, #p]
 ;
 
 inductive IsVar : (g:ctx) {T:[|- tp]} [g |-# exp T[]] -> ctype =

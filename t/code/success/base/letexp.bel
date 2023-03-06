@@ -9,7 +9,7 @@ rec copy : (g:ctx) [g |- nat] -> [g |- nat] =
 fn n => case n of
 | [g |- #p[..]] => n
 | [g |- z] => [g |- z]
-| [g |- s (N[..])] => let [g |- M[..]] = copy [g |- N] in [g |- s (M[..])] ;
+| [g |- s N[..]] => let [g |- M[..]] = copy [g |- N] in [g |- s M[..]] ;
 
 rec copy_final : (g:ctx) [g |- nat] -> [g |- nat] =
 fn n => case n of
@@ -26,4 +26,4 @@ case n of
 
 
 
-let x = copy_final [x:nat |-  s x];
+let x = copy_final [x:nat |- s x];

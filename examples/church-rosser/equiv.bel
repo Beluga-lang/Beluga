@@ -4,7 +4,7 @@
 % If M => N then M step* N.
 schema ctx = block x:term, t:pred x x;
 
-rec best_step: {g:ctx}[g |- step* (app (lam \x. M1') M2') M1'[..,M2']] =
+rec best_step: {g:ctx}[g |- step* (app (lam \x. M1') M2') M1'[.., M2']] =
 mlam g => [g |- step1 beta1 id1]
 ;
 
@@ -17,41 +17,41 @@ fn r => case r of
   % {R2::(pred M2 M2')[g]}
   [g |- beta (\x.\u. R1) R2] =>
   %  : pred (app (lam M1) M2) (M1' M2')
-  let {M1':[g,x:term |-  term]}{S1*:[g,x:term |-  step* M1 M1']}
-      [g,b:block x:term,t:pred x x |-  S1*[..,b.1]] =
-         eq1 [g,b:block x:term , t:pred x x |- R1[..,b.1,b.2]] in
+  let {M1':[g, x:term |- term]}{S1*:[g, x:term |- step* M1 M1']}
+      [g, b:block x:term, t:pred x x |- S1*[.., b.1]] =
+         eq1 [g, b:block x:term , t:pred x x |- R1[.., b.1, b.2]] in
   % S1*: step* (M1 x) (M1' x)
   let {M2:[g |- term]}{S2*:[g |- step* M2 M2']}
       [g |- S2*]   = eq1 [g |- R2] in
   % S2* : step* M2 M2'
-  let [g |- S1*']  = lm1*  [g,x |- S1*] in
+  let [g |- S1*']  = lm1*  [g, x |- S1*] in
   % S1*': step* (lam \x. M1 x) (lam \x. M1' x)
-  let [g |- S1*''] = apl1*  [g |- M2  ] [g |- S1*'] in
+  let [g |- S1*''] = apl1*  [g |- M2] [g |- S1*'] in
   % S1*'' : step* (app (lam M1) M2) (app (lam M1') M2)
   let [g |- S2*']  = apr1* [g |- lam \x. M1' ] [g |- S2* ] in
   % S2*'  : step* (app (lam M1') M2) (app (lam M1') M2')
   let [g |- S*']  = appd [g |- S1*''] [g |- S2*'] in
-    appd [g |- S*'] [g |- step1 beta1 id1 ]
+    appd [g |- S*'] [g |- step1 beta1 id1]
 
 | {R1: [g |- pred M1 N1]}{R2: [g |- pred M2 N2]}
   [g |- ap R1 R2] =>
   let % {S1*::(step* M1 N1)[g]}
       [g |- S1*]  = eq1 [g |- R1] in
   let % {S*'::(step* (app M1 M2) (app N1 M2))[g]}
-      [g |- S*']  = apl1* [g |- M2 ]  [g |- S1*] in
+      [g |- S*']  = apl1* [g |- M2]  [g |- S1*] in
 
   let % {S2*:: (step* M2 N2)[g]}
       [g |- S2*]  = eq1 [g |- R2] in
 
   let  % {S*'::(step* (app N1 M2) (app N1 N2))[g]}
-       [g |- S*''] = apr1* [g |- N1 ] [g |- S2*] in
+       [g |- S*''] = apr1* [g |- N1] [g |- S2*] in
    appd [g |- S*'] [g |- S*'' ]
 
  | [g |- lm (\x.\u. R1)] =>
-  let {S1* : [g,x:term |-  step* M N]}
-       [g,b:block x:term , t:pred x x |-  S1*[..,b.1]] =
-   eq1 [g,b:block x:term , t:pred x x |- R1[..,b.1,b.2]] in
-  lm1* [g,x |- S1*]
+  let {S1* : [g, x:term |- step* M N]}
+       [g, b:block x:term , t:pred x x |- S1*[.., b.1]] =
+   eq1 [g, b:block x:term , t:pred x x |- R1[.., b.1, b.2]] in
+  lm1* [g, x |- S1*]
 ;
 
 
@@ -60,26 +60,26 @@ fn r => case r of
 rec eq2 : (g:ctx) [g |- step M N] -> [g |- pred M N] =
 / total r (eq2 g m n r) /
 fn r => case r of
-| [g |- beta1] : [g |- step (app (lam \x. M1) M2) M1[..,M2]]  =>
-  let [g,b:block x:term,t:pred x x |-  I1] =
-    identity [g,b:block x:term, t:pred x x]  [g,b  |-  M1[..,b.1] ] in
-  let [g |- I2] = identity [g] [g |- M2 ] in
+| [g |- beta1] : [g |- step (app (lam \x. M1) M2) M1[.., M2]]  =>
+  let [g, b:block x:term, t:pred x x |- I1] =
+    identity [g, b:block x:term, t:pred x x]  [g, b  |- M1[.., b.1] ] in
+  let [g |- I2] = identity [g] [g |- M2] in
     [g |- beta (\x.\u. I1[..,<x ; u>]) I2]
 
 | [g |- lm1 \x. R1] =>
-  let [g,b:block x:term , t:pred x x |-  S1] =
-    eq2 [g,b:block x:term,t:pred x x |- R1[..,b.1]] in
+  let [g, b:block x:term , t:pred x x |- S1] =
+    eq2 [g, b:block x:term, t:pred x x |- R1[.., b.1]] in
     [g |- lm \x.\u. S1[..,<x ; u>]]
 
-| [g |- apl1 R1 ] : [g |- (step (app M1 M2) (app M1' M2))]  =>
-  let [g |- S1] = eq2 [g |- R1 ] in
-  let [g |- I2] = identity [g] [g |- M2 ]  in
+| [g |- apl1 R1] : [g |- (step (app M1 M2) (app M1' M2))]  =>
+  let [g |- S1] = eq2 [g |- R1] in
+  let [g |- I2] = identity [g] [g |- M2]  in
     [g |- ap S1 I2]
 
 
 | [g |- apr1 R2] : [g |- (step (app M1 M2) (app M1 M2'))]  =>
-  let [g |- S2] = eq2 [g |- R2 ] in
-  let [g |- I1] = identity [g] [g |- M1 ]  in
+  let [g |- S2] = eq2 [g |- R2] in
+  let [g |- I1] = identity [g] [g |- M1]  in
     [g |- ap I1 S2]
 
 ;

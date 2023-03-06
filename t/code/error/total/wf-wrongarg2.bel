@@ -16,10 +16,10 @@ LF le : nat -> nat -> type =
 
 rec test :  {N : [|- nat]} {M : [|- nat]} [|- le M N] -> [|- nat] =
 / total x (test x) /
- mlam X => mlam Y =>  fn p => case [ |- X ] of
+ mlam X => mlam Y =>  fn p => case [ |- X] of
 | [|- z] => [|- z]
 | [|- s X'] => (case p of
-              | [|- le-base ] => [|- z]
+              | [|- le-base] => [|- z]
               | [|- le-step D] => test [|- Y] [|- X'] [|- le-foo D]
               | [|- le-foo P] => [|- z])
 

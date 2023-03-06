@@ -16,7 +16,7 @@ fn m => (case m of
 |  [g |- #p1] =>  [g |- #p1]
 
 |  [g |- abs (\z1. Y1)] =>
-  let [g,x:tm |- M] = eta [g, x:tm |- Y1] in
+  let [g, x:tm |- M] = eta [g, x:tm |- Y1] in
     eta_single [g |- abs \x.M]
 
 |  [g |- app X Z] =>

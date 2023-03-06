@@ -74,43 +74,43 @@ schema xtG = some [t:tp] block x:term, _t:hastype x t;
 ## Typing uniqueness proof
 
 Our final proof of type uniqueness `rec unique` proceeds by case analysis on the first derivation.
-Accordingly, the recursive function pattern-matches on the first derivation `d` which has type `[g |-  hastype M T]`.
+Accordingly, the recursive function pattern-matches on the first derivation `d` which has type `[g |- hastype M T]`.
 }}%
 
-% induction on [g |-  hastype M T]
-rec unique : (g:xtG)[g |-  hastype M T[]] -> [g |-  hastype M T'[]]
--> [ |-  equal T T'] =
+% induction on [g |- hastype M T]
+rec unique : (g:xtG)[g |- hastype M T[]] -> [g |- hastype M T'[]]
+-> [ |- equal T T'] =
 fn d => fn f => case d of
-| [g |-  h_app D1 D2] =>
-  let [g |-  h_app F1 F2] = f in
-  let [ |-  e_ref] = unique [g |-  D1] [g |-  F1] in
-    [ |-  e_ref]
+| [g |- h_app D1 D2] =>
+  let [g |- h_app F1 F2] = f in
+  let [ |- e_ref] = unique [g |- D1] [g |- F1] in
+    [ |- e_ref]
 
-| [g |-  h_lam (\x.\u. D)] =>
-  let [g |-  h_lam (\x.\u. F)] = f in
-  let [ |-  e_ref] = unique [g,b: block x:term, u:hastype x _ |-  D[..,b.x,b.u]] [g,b |-  F[..,b.x,b.u]] in
-   [ |-  e_ref]
+| [g |- h_lam (\x.\u. D)] =>
+  let [g |- h_lam (\x.\u. F)] = f in
+  let [ |- e_ref] = unique [g, b: block x:term, u:hastype x _ |- D[.., b.x, b.u]] [g, b |- F[.., b.x, b.u]] in
+   [ |- e_ref]
 
-| [g |-  #q.2] =>           % d : hastype #p.1 T
-  let [g |-  #r.2] = f in   % f : hastype #p.1 T'
-    [ |-  e_ref]
+| [g |- #q.2] =>           % d : hastype #p.1 T
+  let [g |- #r.2] = f in   % f : hastype #p.1 T'
+    [ |- e_ref]
 ;
 
 %{{
 Consider each case individually.
 
 - **Application case.**
-  If the first derivation `d` concludes with `h_app`, it matches the pattern `[g |-  h_app D1 D2]`, and forms a contextual object in the context `g` of type `[g |-  hastype M T'[]]`.
+  If the first derivation `d` concludes with `h_app`, it matches the pattern `[g |- h_app D1 D2]`, and forms a contextual object in the context `g` of type `[g |- hastype M T'[]]`.
   `D1` corresponds to the first premise of the typing rule for applications with contextual type `[g |- hastype M1 (arr T'[] T[])]`.
   Using a let-binding, we invert the second argument, the derivation `f` which must have type `[g |- hastype (app M1 M2) T[]]`.
   `F1` corresponds to the first premise of the typing rule for applications and has the contextual type `[g |- hastype M1 (arr S'[] S[])]`.
-  The appeal to the induction hypothesis using `D1` and `F1` in the on-paper proof corresponds to the recursive call `unique [g |-  D1] [g |-  F1]`.
+  The appeal to the induction hypothesis using `D1` and `F1` in the on-paper proof corresponds to the recursive call `unique [g |- D1] [g |- F1]`.
   Note that while `unique`’s type says it takes a context variable `(g:xtG)`, we do not pass it explicitly; Beluga infers it from the context in the first argument passed.
   The result of the recursive call is a contextual object of type `[ |- eq (arr T1 T2) (arr S1 S2)]`.
   The only rule that could derive such an object is `e_ref`, and pattern matching establishes that `arr T T' = arr S S’` and hence `T = S and T' = S’`.
 
 - **Lambda case.**
-  If the first derivation `d` concludes with `h_lam`, it matches the pattern `[g |-  h_lam (\x.\u. D u)]`, and is a contextual object in the context `g` of type `hastype (lam T[] M) (arr T[] T'[])`.
+  If the first derivation `d` concludes with `h_lam`, it matches the pattern `[g |- h_lam (\x.\u. D u)]`, and is a contextual object in the context `g` of type `hastype (lam T[] M) (arr T[] T'[])`.
   Pattern matching—through a let-binding—serves to invert the second derivation `f`, which must have been by `h_lam` with a subderivation `F` to reach `hastype M S[]` that can use `x, u:hastype x T[]`, and assumptions from `g`.
   <br/>
   The use of the induction hypothesis on `D` and `F` in a paper proof corresponds to the recursive call to `unique`.
@@ -119,15 +119,15 @@ Consider each case individually.
   In the code, we wrote an underscore `_` instead of `T[]`, which tells Beluga to reconstruct it since we cannot write `T[]` there without binding it by explicitly giving the type of `D`.
   To retrieve `x` we take the first projection `b.x`, and to retrieve `x`’s typing assumption we take the second projection `b.u`.
   <br/>
-  Now we can appeal to the induction hypothesis using `D1[.., b.x, b.u]` and `F1[.., b.x, b.u]` in the context `g,b: block x:term, u:hastype x S[]`.
+  Now we can appeal to the induction hypothesis using `D1[.., b.x, b.u]` and `F1[.., b.x, b.u]` in the context `g, b: block x:term, u:hastype x S[]`.
   From the i.h. we get a contextual object, a closed derivation of `[|- eq (arr T T') (arr S S’)]`.
   The only rule that could derive this is ref, and pattern matching establishes that `S` must equal `S’`, since we must have `arr T S = arr T1 S’`.
   Therefore, there is a proof of `[ |- equal S S’]`, and we can finish with the reflexivity rule `e_ref`.
 
 - **Variable case.**
   Since our context consists of blocks containing variables of type `tm` and assumptions `hastype x T[]`, we pattern match on `[g |- #p.2]`, i.e., we project out the second argument of the block.
-  By the given assumptions, we know that `[g |- #p.2]` has type `[g |- hastype #p.1 T[]]`, because `#p` has type `[g |-  block x:tm , u:hastype x T[]]`.
-  We also know that the second input, called `f`, to the function unique has type `[g |-  hastype #p.1 T'[]]`.
+  By the given assumptions, we know that `[g |- #p.2]` has type `[g |- hastype #p.1 T[]]`, because `#p` has type `[g |- block x:tm , u:hastype x T[]]`.
+  We also know that the second input, called `f`, to the function unique has type `[g |- hastype #p.1 T'[]]`.
   By inversion on `f`, we know that the only possible object that can inhabit this type is `[g |- #p.2]` and therefore `T'` must be identical to `T`.
   Moreover, `#r` denotes the same block as `#p`.
 }}%

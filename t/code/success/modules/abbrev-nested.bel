@@ -4,26 +4,26 @@ module Arith = struct
 	  z : nat.
 	  s : nat -> nat.
 
-	  rec suc : [ |- nat ] -> [ |- nat] =
-	  fn n => let [ |- N ] = n in [ |- s N];
+	  rec suc : [ |- nat] -> [ |- nat] =
+	  fn n => let [ |- N] = n in [ |- s N];
 
 	  let two = [ |- s (s z)];
 	  let three = suc two;
 	end;
 
-	rec add : [ |- Nats.nat ] -> [ |- Nats.nat ] -> [ |- Nats.nat ] =
+	rec add : [ |- Nats.nat] -> [ |- Nats.nat] -> [ |- Nats.nat] =
 	fn x, y => case x of
-	| [ |- Nats.z ] => y
-	| [ |- Nats.s N ] =>
-		let [ |- N' ] = add [ |- N ] y in
+	| [ |- Nats.z] => y
+	| [ |- Nats.s N] =>
+		let [ |- N' ] = add [ |- N] y in
 		[ |- Nats.s N'];
 
 
-	rec mult : [ |- Nats.nat ] -> [ |- Nats.nat ] -> [ |- Nats.nat ] =
+	rec mult : [ |- Nats.nat] -> [ |- Nats.nat] -> [ |- Nats.nat] =
 	fn x, y => case x of
 	| [ |- Nats.z] => [ |- Nats.z]
 	| [ |- Nats.s N] =>
-		let [ |- N' ] = mult [ |- N ] y in
+		let [ |- N' ] = mult [ |- N] y in
 		add [ |- N' ] y;
 
 
@@ -36,8 +36,8 @@ end;
 
 --abbrev Arith.Nats N.
 
-let x = [ |- N.z ];
+let x = [ |- N.z];
 
 let y = [ |- N.s N.z];
 
-let z = N.suc [ |- N.z ];
+let z = N.suc [ |- N.z];

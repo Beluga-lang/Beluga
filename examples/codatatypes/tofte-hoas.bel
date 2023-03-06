@@ -14,30 +14,30 @@ coinductive Val : [ |- tp] -> ctype =
 | Out  : Val [ |- B] :: Val' [ |- B]
 
 and inductive Val' : [ |- tp] -> ctype =
-| Closure : Env [phi] -> [phi,x:tm A[] |- tm B[]] -> Val' [ |- arr A B]
+| Closure : Env [phi] -> [phi, x:tm A[] |- tm B[]] -> Val' [ |- arr A B]
 
 and inductive Env : {phi:ctx}  ctype =
 | Empty : Env  [ ]
 | Cons  : Val  [ |- A] -> Env [phi]
           -> Env [phi, x:tm A[]];
 
-rec unfold : [phi,f:tm (arr A[] B[]), x:tm A[] |- tm B[]] -> Env [phi] -> Val [ |- arr A B] =
+rec unfold : [phi, f:tm (arr A[] B[]), x:tm A[] |- tm B[]] -> Env [phi] -> Val [ |- arr A B] =
 fun cl env .Out => Closure  (Cons (unfold cl env) env) cl
 ;
 
-rec lookup : (phi:ctx) [phi |-  tm A[]] -> Env [phi] -> Val [ |- A] =
-fun [g,x:tm A[] |- x] env =>
+rec lookup : (phi:ctx) [phi |- tm A[]] -> Env [phi] -> Val [ |- A] =
+fun [g, x:tm A[] |- x] env =>
     let Cons w k = env in w
-  | [g,x:tm A[] |-  #p[..]] env =>
+  | [g, x:tm A[] |- #p[..]] env =>
     let Cons w k = env in lookup [g |- #p] k
 ;
 
 rec eval : (phi:ctx) [phi |- tm A[]] -> Env [phi] -> Val [ |- A] =
 fun [phi |- #p] env => lookup [phi |- #p] env
-  | [phi |- abs (\x.E)] env .Out => Closure env [phi, x:tm _  |-  E]
-  | [phi |- fix (\f. \x.E)] env => unfold [phi, f:tm _ , x:tm _  |-  E] env % Val [ |- arr A B]
-  | [phi |-  app E1 E2] env =>
-  let Closure env' [psi,x:tm _  |-  E] = (eval [phi |-  E1] env) .Out in
-  let w = eval [phi |-  E2] env in
-    eval [psi,x:tm _  |-  E] (Cons w env')
+  | [phi |- abs (\x.E)] env .Out => Closure env [phi, x:tm _  |- E]
+  | [phi |- fix (\f. \x.E)] env => unfold [phi, f:tm _ , x:tm _  |- E] env % Val [ |- arr A B]
+  | [phi |- app E1 E2] env =>
+  let Closure env' [psi, x:tm _  |- E] = (eval [phi |- E1] env) .Out in
+  let w = eval [phi |- E2] env in
+    eval [psi, x:tm _  |- E] (Cons w env')
 ;

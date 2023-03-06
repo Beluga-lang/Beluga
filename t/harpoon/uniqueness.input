@@ -11,7 +11,7 @@ invert ih1
 solve [|- refl]
 
 invert x1
-by (unique [_,b:block x:term, u:hastype x _ |- X3[..,b.1,b.2]] [_,b |- X7[..,b.1,b.2]]) as ih0
+by (unique [_, b:block x:term, u:hastype x _ |- X3[.., b.1, b.2]] [_, b |- X7[.., b.1, b.2]]) as ih0
 invert ih0
 solve [|- refl]
 

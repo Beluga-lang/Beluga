@@ -8,7 +8,7 @@ i : type.  % individuals
 LF o       : type =
   | q      : o               % Atomic Formulae
   | imp    : o → o → o
-  | forall : (i → o) → o   
+  | forall : (i → o) → o
 ;
 
 schema ctx = i;
@@ -37,7 +37,7 @@ and inductive Focus : (g:ctx) [g ⊢ gamma] → [g ⊢ o] → [g ⊢ o] -> ctype
       | impL    : Focus [g ⊢ G] [g ⊢ P2] [g ⊢ q]
 	          → Solve [g ⊢ G] [g ⊢ P1]
 	          → Focus [g ⊢ G] [g ⊢ imp P1 P2] [g ⊢ q]
-      | forallL : Focus [g ⊢ G] [g ⊢ P[..,t]] [g ⊢ q]
+      | forallL : Focus [g ⊢ G] [g ⊢ P[.., t]] [g ⊢ q]
 		  → Focus [g ⊢ G] [g ⊢ forall (\x. P)] [g ⊢ q]
       | init    : Focus [g ⊢ G] [g ⊢ q] [g ⊢ q]
 ;
@@ -46,7 +46,7 @@ proof t1 : {g : ctx} Solve [g |- Dec Empty q] [g |- q] =
 / total /
 intros
 { g : ctx
-| 
+|
 ; solve transition init head
 }
 ;
@@ -66,7 +66,7 @@ proof s2 : {P1 : (x : i |- o)}
 / total /
 intros
 { P : (x : i |- o)
-| 
+|
 ; solve transition init (tail head)
 }
 ;

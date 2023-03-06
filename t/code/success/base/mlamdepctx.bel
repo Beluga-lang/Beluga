@@ -11,7 +11,7 @@ schema ctx = tp N;
 rec f : {g:ctx} [ |- nat] =
 mlam g => case [g] of
 | [ ] => [ |- z]
-| [g, x:tp _ ] => let [|- N] = f [g] in [|- s N]
+| [g, x:tp _] => let [|- N] = f [g] in [|- s N]
 ;
 
 inductive Ctx: {g:ctx} ctype =
@@ -22,5 +22,5 @@ inductive Ctx: {g:ctx} ctype =
 rec g : {g:ctx} Ctx [g] =
 mlam g => case [g] of
 | [ ] => Empty
-| [g, x:tp _ ] =>  Cons (g [g])
+| [g, x:tp _] =>  Cons (g [g])
 ;

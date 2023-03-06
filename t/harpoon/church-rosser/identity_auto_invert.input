@@ -6,7 +6,7 @@ identity
 msplit M
 auto-invert-solve
 
-by (identity [g, b : block x : term, t : pred x x ] [g, b|- X[..,b.1]]) as ih
+by (identity [g, b : block x : term, t : pred x x] [g, b|- X[.., b.1]]) as ih
 unbox ih as R1
 solve [g |- (lm \x.\u. R1[..,<x ; u>] )]
 

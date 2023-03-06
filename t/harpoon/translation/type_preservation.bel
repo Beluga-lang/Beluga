@@ -40,7 +40,7 @@ intros
     M' : ( |- tm),
     M2 : (y6 : tm |- tm),
     E : ( |- eval M1 (lam (\y1. M2))),
-    E1 : ( |- eval (M2[M3]) M')
+    E1 : ( |- eval M2[M3] M')
   | x : [ |- oft (app M1 M3) A], x1 : [ |- eval (app M1 M3) M']
   ; split x as
     case t_app:
@@ -50,7 +50,7 @@ intros
       M' : ( |- tm),
       M2 : (y6 : tm |- tm),
       E : ( |- eval M1 (lam (\y1. M2))),
-      E1 : ( |- eval (M2[M3]) M'),
+      E1 : ( |- eval M2[M3] M'),
       A1 : ( |- tp),
       D : ( |- oft M1 (arr A1 A)),
       D1 : ( |- oft M3 A1)
@@ -64,11 +64,11 @@ intros
         M' : ( |- tm),
         M2 : (y6 : tm |- tm),
         E : ( |- eval M1 (lam (\y1. M2))),
-        E1 : ( |- eval (M2[M3]) M'),
+        E1 : ( |- eval M2[M3] M'),
         A1 : ( |- tp),
         D : ( |- oft M1 (arr A1 A)),
         D1 : ( |- oft M3 A1),
-        D2 : (x : tm, y3 : oft x A1[] |- oft (M2[x]) A[])
+        D2 : (x : tm, y3 : oft x A1[] |- oft M2[x] A[])
       | x : [ |- oft (app M1 M3) A],
         x1 : [ |- eval (app M1 M3) M'],
         ih0 : [ |- oft (lam (\y1. M2)) (arr A1 A)]

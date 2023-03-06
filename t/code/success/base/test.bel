@@ -12,16 +12,16 @@ coe : exp T -> exp T.
 
 schema w = some [t:tp] exp t;
 
-rec test : {g:w} [g |- exp (T[..])] -> [g |- exp (T[..])] =
+rec test : {g:w} [g |- exp T[..]] -> [g |- exp T[..]] =
  mlam g =>
  fn x =>
   case x of
 
     [g |- z]          => [g |- z]
 
-  | [g |- s (U[..])]   => [g |- s (U[..])]
+  | [g |- s U[..]]   => [g |- s U[..]]
 
-  | [g |- coe (E[..])] =>  [g |- coe (E[..])]
+  | [g |- coe E[..]] =>  [g |- coe E[..]]
 
   | [g |- (#p[..])]    => [g |- (#p[..])]
 

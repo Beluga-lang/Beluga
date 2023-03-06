@@ -30,7 +30,7 @@ rec test'' :(g:nctx)[g |- term] -> [g |- term] =
 fn x => case x of
 | [g |- c] => [g |- c]
 % Should actually succeed due to subordination
-| [g |- _ ] => x
+| [g |- _] => x
 ;
 
 rec test :(g:nctx)[g |- term] -> [g |- term] =

@@ -16,11 +16,11 @@ rec abs_sn : {g:cxt} {A : [ |- ty]} {B : [ |- ty]}
              Sn [g, x: tm A[] |- M] -> Sn [g |- (abs \x. M)] =
      / total s (abs_sn g a b m  s) /
     mlam g, A, B => mlam M => fn sn =>
-    Acc  [g] [ |- arr A B] [ g |- abs \x.M]
+    Acc  [g] [ |- arr A B] [g |- abs \x.M]
     (mlam Q => mlam S  =>
      let  [g |- rabs (\x. S1)] = [g |- S] in
      let [g, x : tm A[] |- S1] : [g, x : tm A[] |- step M M1] = [g, x: tm _ |- S1] in
-     let Acc [g,x:tm A[]] [ |- B] [g, x:tm A[] |- M] r = sn in
+     let Acc [g, x:tm A[]] [ |- B] [g, x:tm A[] |- M] r = sn in
      abs_sn [g] [|- A] [|- B]
             [g, x:tm  A[] |- M1] (r [g, x: tm A[] |- M1] [g, x: tm A[] |- S1])
     )
@@ -34,7 +34,7 @@ rec app_sna : (g: cxt) {M: [g |- tm (arr A[] B[])]}
     / total s (app_sna g a b m n s) /
     mlam M => mlam N => fn sn =>
     let Acc  [g] [ |- B[]] [g |- app M N] r = sn in
-    Acc [_] [_ |- _ ] [_ |- _ ] (mlam M' => mlam S =>
+    Acc [_] [_ |- _] [_ |- _] (mlam M' => mlam S =>
      app_sna [_ |- M'] [_ |- _] (r [_ |- app M' N] [_ |- rappl S]))
 ;
 rec app_snb : (g: cxt) {M: [g |- tm (arr A[] B[])]}
@@ -44,7 +44,7 @@ rec app_snb : (g: cxt) {M: [g |- tm (arr A[] B[])]}
      / total s (app_snb g a b m n s) /
     mlam M => mlam N => fn sn =>
     let Acc [g] [ |- B[]] [g |- app M N] r = sn in
-    Acc [_] [_ |- _ ] [_ |- _ ] (mlam N' => mlam S =>
+    Acc [_] [_ |- _] [_ |- _] (mlam N' => mlam S =>
      app_snb [_ |- M] [_ |- N'] (r [_ |- app M N'] [_ |- rappr S]))
 ;
 
@@ -62,7 +62,7 @@ rec app_abs_sn : {g: cxt} {A : [ |- ty]} {B : [ |- ty]}
     | [g |- rappl S'] => let [_ |- rabs (\x. S'')] = [_ |- S'] in
                  let [_ |- S''] : [g, x: tm _ |- step M M'] = [_ |- S''] in
                  let [_ |- S'''] = [_ |- S''[.., N]] in
-                 let Acc [g] [ |- B] [g |- _ ] r = sn1 in
+                 let Acc [g] [ |- B] [g |- _] r = sn1 in
                  app_abs_sn [g] [|- _] [|- _] [_ |- M'] [_ |- N] (r [_ |- M'[.., N]] [_ |- S''']) sn2
     | [g |- rappr S'] => let Acc [g] [ |- A] [g |- N] r = sn2 in
                  let [_ |- S'] : [_ |- step N N'] = [_ |- S'] in
@@ -92,7 +92,7 @@ rec neu-step : (g: cxt) {R  : [g |- tm A[]]}
     | Nvar [g |- #x] => impossible s
     | Napp [g |- R''] [g |- N] neu' =>
       (case s of
-       | [g |- rbeta ] => impossible neu'
+       | [g |- rbeta] => impossible neu'
        | [g |- rappl S'] => let neu'' = neu-step [_ |- R''] [_ |- _] [_ |- S'] neu' in
                 Napp [_ |- _] [_ |- N] neu''
        | [g |- rappr S'] => Napp [_ |- R''] [_ |- _] neu'
@@ -112,7 +112,7 @@ rec app_sn : {g: cxt}{A:[ |- ty]}{B: [ |- ty]}
      | [g |- rbeta] => impossible neu
      | [g |- rappl S'] => let Acc [g] [ |- arr A B] [g |- R] r = sn1 in
                   let neu' = neu-step [_ |- R] [_ |- _] [_ |- S'] neu in
-                  app_sn [g] [ |- A] [|- B ] [g |- _] [g |- N] neu' (r [_ |- _] [_ |- S']) sn2
+                  app_sn [g] [ |- A] [|- B] [g |- _] [g |- N] neu' (r [_ |- _] [_ |- S']) sn2
      | [g |- rappr S'] => let Acc [g] [|- A] [g |- N] r = sn2 in
                   app_sn [g] [ |- A] [|- B] [_ |- R] [_ |- _] neu sn1 (r [_ |- _] [_ |- S'])
     )
@@ -146,7 +146,7 @@ rec confluence : (g: cxt) {M : [g |- tm A[]]}
                 Conf snr' [g |- m-step R m-refl]
        | [g |- rappr S'] => let [_ |- S'] : [_ |- step N N'] = [_ |- S'] in
                 let ms = subst_mred [_ |- M] [_ |- N] [_ |- N'] [_ |- S'] in
-                let Acc [_] [ |- _] [_ |- _ ] r = sn in
+                let Acc [_] [ |- _] [_ |- _] r = sn in
                 let sn' = r [_ |- N'] [_ |- S'] in
                 Conf (SnBeta [g, x: tm _ |- M] sn') ms
       )
@@ -188,13 +188,13 @@ rec bc_aux : {g: cxt}{A : [ |- ty]}{B : [ |- ty]}
            let ms' = mstep_appl [_ |- M'] [_ |- _] [_ |- N] ms in
            let sn' = mstep_sn [_ |- app M' N] [_ |- _] ms' sn in
            let Acc [g] [ |- arr A B] [g |- M] r = sn1 in
-           bc_aux [_] [ |- _] [ |- _ ] [_ |- _] [_ |- _] [_ |- N] (r [_ |- _] [_ |- S']) sn2 snr' sn'
+           bc_aux [_] [ |- _] [ |- _] [_ |- _] [_ |- _] [_ |- N] (r [_ |- _] [_ |- S']) sn2 snr' sn'
         )
       | [g |- rappr S'] =>
         let Acc [g] [ |- B] [g |- app M' N] r = sn in
         let sn' = r [_ |- _] [_ |- rappr S'] in
         let Acc [g] [ |- A] [g |- N] r' = sn2 in
-        bc_aux  [_] [ |- _] [ |- _ ] [_ |- M] [_ |- M'] [_ |- _] sn1 (r' [_ |- _] [_ |- S']) snr sn'
+        bc_aux  [_] [ |- _] [ |- _] [_ |- M] [_ |- M'] [_ |- _] sn1 (r' [_ |- _] [_ |- S']) snr sn'
      )
 ;
 
@@ -209,5 +209,5 @@ rec backwards_closure : (g: cxt) {M : [g |- tm A[]]}
     | SnAppl r => let snl' = app_sna [_ |- _] [_ |- _] sn in
           let snl = backwards_closure [_ |- _] [_ |- _] r snl' in
           let snr = app_snb [_ |- _] [_ |- _] sn in
-            bc_aux [_] [ |- _] [ |- _ ] [_ |- _] [_ |- _] [_ |- _] snl snr r sn
+            bc_aux [_] [ |- _] [ |- _] [_ |- _] [_ |- _] [_ |- _] snl snr r sn
 ;

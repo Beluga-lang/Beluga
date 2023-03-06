@@ -17,7 +17,7 @@ mlam g =>
   (case x of
       [g |- z]                  =>  [g |- z]
     | [g |- (#p[..])]            =>  [g |- z]
-    | [g |- (U[..])]             =>  [g |- (U[..])]
+    | [g |- U[..]]             =>  [g |- U[..]]
     | [g |- zoo (\x. (U))] =>  [g |- (U[..,(s z)])]
 
 );
@@ -55,7 +55,7 @@ rec copy :  [ |- nat] -> [ |- nat] =
 
 
 
-% rec identity :  nat [,x:nat] -> nat [,x:nat] =
+% rec identity :  nat [, x:nat] -> nat [, x:nat] =
 % fn x =>
 %  (case x of
 %     box (y : nat. z)            =>  box (y . z)

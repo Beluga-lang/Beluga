@@ -48,12 +48,12 @@ fn a => fn b => case a of
 | Cons [g |- #p] l => Cons [g |- #p] (append l b)
 ;
 
-rec remove: Fvs [g,x:term] -> Fvs [g] =
+rec remove: Fvs [g, x:term] -> Fvs [g] =
 / total l (remove g l)/
 fn l => case l of
 | Nil  => Nil
-| Cons [g,x:term |- x] l => remove l
-| Cons [g,x:term |- #p[..]] l =>
+| Cons [g, x:term |- x] l => remove l
+| Cons [g, x:term |- #p[..]] l =>
     Cons [g |- #p] (remove l)
 ;
 
@@ -63,11 +63,11 @@ rec fvar:(g:ctx) [g |- term] -> Fvs [g] =
 fn e => case e of
 | [g |- #p] => Cons [g |- #p] Nil
 | [g |- elam \x.U] =>
-   remove (fvar [g,x:term |- U])
+   remove (fvar [g, x:term |- U])
 | [g |- eapp U V] =>
     append (fvar [g |- U]) (fvar [g |- V])
 |[g |- elet U (\x.V)] =>
- let l = remove (fvar [g,x:term |-  V])  in
+ let l = remove (fvar [g, x:term |- V])  in
    append (fvar [g |- U]) l
 ;
 
@@ -75,10 +75,10 @@ fn e => case e of
 
 % makeproj return the nth project of pair y
 % makeproj n = tfst(. (tfst y))
-rec makeproj': [ |- nat]  -> [xenv:target |-  target] =
+rec makeproj': [ |- nat]  -> [xenv:target |- target] =
 / total n (makeproj' n ) /
 fn n => case n of
-| [ |- z] => [xenv:target |-  (tfst xenv)]
+| [ |- z] => [xenv:target |- (tfst xenv)]
 | [ |- suc M] =>
   let [xenv:target |- N] = makeproj' [ |- M] in
       [xenv:target |- tsnd N]
@@ -87,42 +87,42 @@ fn n => case n of
 rec makeproj: [ |- nat] -> [xenv:target |- target] =
 / total n (makeproj n) /
 fn n =>
-   let [xenv:target |-  T] = makeproj' n in
-       [xenv:target |-  tfst T]
+   let [xenv:target |- T] = makeproj' n in
+       [xenv:target |- tfst T]
 
 ;
 
  % Build a map from the free var to its position in fvlist , used in abs conversion(started with id from x -> x).
  % Resulting should be a term closed under the environement tuple xenv and the local variable x.
 
-rec b_map:(g:ctx)Fvs [g] ->({#p:#[g,x:term |- term]} [xenv:target |-  target]) -> [ |- nat] ->
-    {#p:#[g,x:term |- term]}[xenv:target |-  target] =
+rec b_map:(g:ctx)Fvs [g] ->({#p:#[g, x:term |- term]} [xenv:target |- target]) -> [ |- nat] ->
+    {#p:#[g, x:term |- term]}[xenv:target |- target] =
 / total l (b_map g l )/
 fn l => fn map => fn n => case l of
 | Nil =>
   let ( l : Fvs [g]) = l in
-    (mlam #p => case [g,x:term |- #p]  of
-         |[g,x:term |- x]     => [xenv:target |- tsnd xenv]
-         |[g,x:term |- #p] => map [g,x:term |-  #p]
+    (mlam #p => case [g, x:term |- #p]  of
+         |[g, x:term |- x]     => [xenv:target |- tsnd xenv]
+         |[g, x:term |- #p] => map [g, x:term |- #p]
       )
 | Cons [g |- #p] l =>
 let [ |- N] = n in
- (mlam #q => case ([g,x:term |- #q], [g,x:term |- #p[..]]) of
-                | ([g,x:term |- #v], [g,x:term |- #v]) => makeproj [ |- N]
-                | ([g,x:term |- _ ] , [g,x:term |- _ ] ) =>
-                 b_map l map [ |- suc N] [g,x:term |- #q])
+ (mlam #q => case ([g, x:term |- #q], [g, x:term |- #p[..]]) of
+                | ([g, x:term |- #v], [g, x:term |- #v]) => makeproj [ |- N]
+                | ([g, x:term |- _] , [g, x:term |- _] ) =>
+                 b_map l map [ |- suc N] [g, x:term |- #q])
 
 ;
 
 
 % Extend the mapping with id function, used for the local variable in lam and let.
-rec e_map : {g:ctx}{h:tctx} ({#p:#[g |- term]} [h |- target])  ->  {#q:#[g,x:term |-  term]} [h,x:target |-  target] =
+rec e_map : {g:ctx}{h:tctx} ({#p:#[g |- term]} [h |- target])  ->  {#q:#[g, x:term |- term]} [h, x:target |- target] =
 / total e' (e_map g h map e') /
-mlam g, h => fn map => mlam #q => case [g,x:term |- #q] of
-   | [g,x:term |-  x] => [h,x:target |-  x]
-   | [g,x:term |-  #q[..]] =>
+mlam g, h => fn map => mlam #q => case [g, x:term |- #q] of
+   | [g, x:term |- x] => [h, x:target |- x]
+   | [g, x:term |- #q[..]] =>
      let [h |- F] = map [g |- #q] in
-       [h,x:target |- F[..]]
+       [h, x:target |- F[..]]
 ;
 
 
@@ -148,20 +148,20 @@ mlam h => fn map => fn e => case e of
   let [h |- U'] = convert [h] map [g |- U] in
   let [h |- V'] = convert [h] map [g |- V] in
   [h |- topen U'
-      \xenv .  tapp (tfst xenv) (tpair (tsnd xenv) (V'[..]))]
+      \xenv .  tapp (tfst xenv) (tpair (tsnd xenv) V'[..])]
 
 |[g |- elam \x.U] =>
  let fvs = fvar e in
  let [xenv:target |- U'] =
      convert [xenv:target]
        (b_map fvs (mlam #p => [xenv:target |- tunit]) [ |- z])
-       [g,x:term |-  U] in
+       [g, x:term |- U] in
 let [h |- T2] = b_env [h] map fvs in
   [h |- tpack (tpair (tlam \xenv. U'[xenv]) T2)]
 
 |[g |- elet U (\x. V)] =>
  let [h |- U'] = convert [h] map [g |- U] in
- let [h,x:target |- V'] = convert [h,x:target] (e_map [g] [h] map) [g,x:term |- V] in
+ let [h, x:target |- V'] = convert [h, x:target] (e_map [g] [h] map) [g, x:term |- V] in
  [h |- tlet U' (\x.V')]
 ;
 

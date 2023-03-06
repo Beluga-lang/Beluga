@@ -38,8 +38,8 @@ case e of
 rec extend : ({T:[ |- tp]} TmVar [g] [ |- T] -> Sem [h] [ |- T]) -> Sem [h] [ |- S]
 -> ({T:[ |- tp]} TmVar [g, x:tm S[]] [ |- T] ->  Sem [h] [ |- T]) =
 fn s => fn e => mlam T => fn x => case x of
-| TmVar [g,x:tm S[] |-  x] => e
-| TmVar [g,x:tm S[] |-  #q[..] ] => s [ |- T ] (TmVar [g |- #q[..]])
+| TmVar [g, x:tm S[] |- x] => e
+| TmVar [g, x:tm S[] |- #q[..] ] => s [ |- T] (TmVar [g |- #q[..]])
 ;
 
 rec eval : ({T:[ |- tp]} TmVar [g] [ |- T] -> Sem [h] [ |- T])
@@ -51,10 +51,10 @@ case t of
 | [g |- lam (\x. E) ] : [g |- tm (arr A[] B[])] =>
   Slam [h] [ |- A] [ |- B] (mlam h' => mlam $W => fn e =>
          eval (extend (mlam T => fn x => sem_wkn [h] [h'] [h' |- $W[..]] (s [ |- T] x))  e)
-              [g,x:tm A[] |-  E]
+              [g, x:tm A[] |- E]
          )
 
-| [g |- app (E1[..]) (E2[..]) ] =>
+| [g |- app E1[..] E2[..] ] =>
   let (Slam [h] [ |- A] [ |- B] f ) : Sem [h] [ |- arr A B] =  eval s [g |- E1[..]] in
     f [h] [h |- ..] (eval s [g |- E2[..]])
 ;
@@ -63,19 +63,19 @@ case t of
 rec reflect : [g |- neut A[]] ->  Sem [g] [ |- A] =
 fn r => let [g |- R[..] ] : [g |- neut A[]] = r in
 case [ |- A] of
-| [ |- atomic P ] => Syn [g |- R[..]]
-| [ |- arr T S ] =>  Slam [g] [ |- T] [ |- S] (mlam h => mlam $W => fn e =>
+| [ |- atomic P] => Syn [g |- R[..]]
+| [ |- arr T S] =>  Slam [g] [ |- T] [ |- S] (mlam h => mlam $W => fn e =>
    let [h |- N[..]] = reify e in
-   reflect [h |- rapp (R[$W]) (N[..])]
+   reflect [h |- rapp (R[$W]) N[..]]
   )
 
 and rec reify : Sem [g] [ |- A] -> [g |- norm A[]] =
 fn e => let (e : Sem [g] [ |- A]) = e in
 case e of
-| Syn [g |- R[..]] => [g |- embed (R[..])]
+| Syn [g |- R[..]] => [g |- embed R[..]]
 | Slam [g] [ |- A] [ |- B] f =>
-     let s = (f [g,x:neut _] [g,x |- ..] (reflect [g,x:neut _ |-  x])) in
-     let [g,x:neut _ |-  E] = reify s
+     let s = (f [g, x:neut _] [g, x |- ..] (reflect [g, x:neut _ |- x])) in
+     let [g, x:neut _ |- E] = reify s
      in [g |- nlam (\x. E)]
 ;
 

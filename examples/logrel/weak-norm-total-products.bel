@@ -95,10 +95,10 @@ computation-level types and programs are written inside `[ ]`.
 
 stratified Reduce : {A:[⊢ tp]}{M:[ |- tm A]} ctype
  =
-| I : [ |- halts M] -> Reduce [ ⊢ b ] [ |- M]
+| I : [ |- halts M] -> Reduce [ ⊢ b] [ |- M]
 | Arr :  [ |- halts M] ->
-    ({N:[ |- tm A]} Reduce [ ⊢ A] [ |- N] -> Reduce [ ⊢ B ] [ |- app M N])
-  -> Reduce [ ⊢ arr A B ] [ |- M]
+    ({N:[ |- tm A]} Reduce [ ⊢ A] [ |- N] -> Reduce [ ⊢ B] [ |- app M N])
+  -> Reduce [ ⊢ arr A B] [ |- M]
 | Cross: [|- halts M] -> Reduce [|- A] [|- fst M] -> Reduce [|- B] [|- snd M]
        -> Reduce [|- cross A B] [|- M]
 ;
@@ -113,7 +113,7 @@ schema ctx = tm T;
 inductive RedSub : {gamma:ctx}{$S:$[ |- gamma]} ctype =
 | Nil : RedSub  [ ] $[ |- ^ ]
 | Dot : RedSub  [gamma] $[ |- $S[^] ] → Reduce [|- A] [ |- M]
-     → RedSub [gamma, x:tm A[]] $[ |- $S[^], M ]
+     → RedSub [gamma, x:tm A[]] $[ |- $S[^], M]
 ;
 
 
@@ -180,7 +180,7 @@ rec bwd_closed : {S:[ |- step M M']} Reduce [|- A] [ |- M'] -> Reduce [|- A] [ |
 mlam S => fn r =>
 let [|- S] : [|- step M M'] = [|- S] in
 let [|- M] : [|- tm A]    = [|- M] in
-  bwd_closed' [|- A ] [|- M ] [|- M' ]  [|- S] r;
+  bwd_closed' [|- A] [|- M] [|- M' ]  [|- S] r;
 
 %{{
 The trivial fact that reducible terms halt has a corresponding
@@ -202,8 +202,8 @@ rec lookup : {gamma:ctx}{#p:#[gamma |- tm A[]]}RedSub [gamma] $[ |- $S[^]] -> Re
 mlam gamma => mlam #p => fn rs => case [gamma] of
 | [] => impossible [ |- #p]
 | [gamma', x:tm A] => (case [gamma', x:tm A |- #p] of
- | [gamma',x:tm A |-  x] =>    let (Dot rs' rN) = rs in rN
- | [gamma',x:tm A |-  #q[..]] => let Dot rs' rN = rs in
+ | [gamma', x:tm A |- x] =>    let (Dot rs' rN) = rs in rN
+ | [gamma', x:tm A |- #q[..]] => let Dot rs' rN = rs in
                       lookup [gamma'] [gamma' |- #q] rs')
 ;
 
@@ -227,7 +227,7 @@ rec pair_mstep2 : {V:[|- tm A]}{M2:[|- tm B]}[|- mstep M2 V2] ->
 mlam V, M2 => fn ms2 => case ms2 of
 | [|- refl] => [|- refl]
 | [|- onestep S MS] =>
-  let [|- MS'] = pair_mstep2 [|- V ] _ [|- MS] in
+  let [|- MS'] = pair_mstep2 [|- V] _ [|- MS] in
      [ |- onestep (step_pairr S) MS']
 ;
 
@@ -235,7 +235,7 @@ mlam V, M2 => fn ms2 => case ms2 of
 rec trans : [|- mstep M N] -> [|- mstep N R] -> [|- mstep M R] =
 / total ms (trans a m n r ms) /
 fn ms1 => fn ms2 => (case ms1 of
- | [ |- refl ] =>  ms2
+ | [ |- refl] =>  ms2
  | [ |- onestep S MS] =>
    let [|- MS'] = trans [|- MS] ms2 in
    [|- onestep S MS']
@@ -249,7 +249,7 @@ mlam M1, M2 => fn h1 => fn h2 =>
 let [|- halts/m MS1 V1] = h1 in
 let [|- halts/m MS2 V2] = h2 in
 let (s1 : [|- mstep (pair M1 M2) (pair W1 M2)]) = pair_mstep1 [|- M1] [|- M2] [|- MS1] in
-let (s2 : [|- mstep (pair W1 M2) (pair W1 W2)]) = pair_mstep2 [|- W1 ] [|- M2] [|- MS2] in
+let (s2 : [|- mstep (pair W1 M2) (pair W1 W2)]) = pair_mstep2 [|- W1] [|- M2] [|- MS2] in
 let [|- MS] = trans s1 s2 in
 [|- halts/m MS (val/pair V1 V2)]
 ;
@@ -262,12 +262,12 @@ mlam gamma, M => fn rs => case [gamma |- M] of
 | [gamma |- lam \x. M] =>
  Arr [ |- halts/m refl val/lam]
    (mlam N => fn rN =>
-    bwd_closed [ |- beta] (main [gamma,x:tm _] [gamma,x |- M] (Dot rs rN)))
+    bwd_closed [ |- beta] (main [gamma, x:tm _] [gamma, x |- M] (Dot rs rN)))
 
 | [gamma |- app M1 M2] =>
   let Arr ha f = main [gamma] [gamma |- M1] rs in
   f _ (main [gamma] [gamma |- M2] rs)
-| [gamma |-  c] =>  I [ |- halts/m refl val/c]
+| [gamma |- c] =>  I [ |- halts/m refl val/c]
 
 | [gamma |- pair M1 M2] =>
   let r1 = main [gamma] [gamma |- M1] rs in
@@ -278,12 +278,12 @@ mlam gamma, M => fn rs => case [gamma |- M] of
   (bwd_closed [|- step1pair] r1)
   (bwd_closed [|- step2pair] r2)
 
-| [gamma |- fst M ] =>
+| [gamma |- fst M] =>
   let c = main [gamma] [gamma |- M] rs in
   let Cross ha r1 r2 = c in  r1
 
 
-| [gamma |- snd M ] =>
+| [gamma |- snd M] =>
   let Cross ha r1 r2 = main [gamma] [gamma |- M] rs in  r2
 
 ;

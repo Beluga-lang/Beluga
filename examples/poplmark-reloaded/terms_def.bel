@@ -73,7 +73,7 @@ rec mstep_abs : (g : cxt) {M : [g , x: tm A[] |- tm B[]]}
     mlam M => fn s1 => case s1 of
     | [g, x:tm A[] |- m-refl] => [g |- m-refl]
     | [g, x:tm A[] |- m-step S MS] =>
-      let [g |- MS'] = mstep_abs [g, x : tm A[] |- _ ] [g, x : tm A[] |- MS] in
+      let [g |- MS'] = mstep_abs [g, x : tm A[] |- _] [g, x : tm A[] |- MS] in
       let [g |- S'] = [g |- rabs \x.S] in
       [g |- m-step S' MS']
 ;
@@ -84,17 +84,17 @@ rec subst_mred : (g: cxt) {M : [g, x: tm A[] |- tm B[]]}{N : [g |- tm A[]]}{N': 
    / trust /
   % Totality checker does not take into account modulo exchange; it only consider direct subterms
     mlam M => mlam N => mlam N' => fn s => case [_, x:tm _ |- M] of
-    | [g, x:tm A[] |- x ] => let [g |- S] = s in [g |- m-step S m-refl]
+    | [g, x:tm A[] |- x] => let [g |- S] = s in [g |- m-step S m-refl]
     | [g, x:tm A[] |- #p[..] ] => [g |- m-refl]
     | [g, x:tm A[] |- abs \y.M] =>
       let [g |- S] = s in
-      let [ g, y: tm _ |- S'] = subst_mred [g, y:tm _ , x:tm A[] |- M[.., x, y]]
+      let [g, y: tm _ |- S'] = subst_mred [g, y:tm _ , x:tm A[] |- M[.., x, y]]
              [g, y:tm _ |- N[..]] [g, y:tm _ |- N'[..]] [g, y:tm _ |- S[..]]  in
       mstep_abs [g, y : tm _ |- _] [g, y: tm _ |- S']
     | [g, x:tm A[] |- app M1 M2] =>
       let [g |- S1] = subst_mred [g, x:tm A[] |- M1] [g |- N] [g |- N'] s in
       let [g |- S2] = subst_mred [g, x:tm A[] |- M2] [g |- N] [g |- N'] s in
-      let [g |- MS1] =  mstep_appl [g |- M1[..,N]]  [g |- M1[.., N'] ] [g |- M2[.., N]]    [g |- S1] in
-      let [g |- MS2] = mstep_appr  [g |- M1[..,N']]  [g |- M2[..,N]]    [g |- M2[.., N'] ]  [g |- S2] in
-      m-trans [g |- _ ] [g |- MS1] [g |- MS2]
+      let [g |- MS1] =  mstep_appl [g |- M1[.., N]]  [g |- M1[.., N'] ] [g |- M2[.., N]]    [g |- S1] in
+      let [g |- MS2] = mstep_appr  [g |- M1[.., N']]  [g |- M2[.., N]]    [g |- M2[.., N'] ]  [g |- S2] in
+      m-trans [g |- _] [g |- MS1] [g |- MS2]
 ;

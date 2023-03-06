@@ -38,7 +38,7 @@ mlam g, $S, R => case [g] of
 inductive Subst : {g:ctx} {h:ctx} {$S1 : [h |- g]} ctype =
   | Nil : Subst [] [h] [h |- ^]
   | Cons : {E:[h |- exp T[]]}Subst [g] [h] [h |- $S1]
-            -> Subst [g,x:exp T[]] [h] [h |- $S1, E1]
+            -> Subst [g, x:exp T[]] [h] [h |- $S1, E1]
 ;
 
 rec test2 : Subst [g] [h] [h |- $S] -> [|- exp top] =

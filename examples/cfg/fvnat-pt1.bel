@@ -12,7 +12,7 @@ LF exp : tp -> type =
   | ff  : exp bool
 ;
 
-LF  opt: type =
+LF opt: type =
   | nothing: opt
   | something: {T:tp} exp T -> opt
 ;

@@ -36,11 +36,11 @@ halts : tm -> type.  --name halts H.
 halts/m : mstep M M' -> val M' -> halts M.
 
 stratified Reduce : {A:[⊢ tp]}{M:[ |- tm]} ctype =
-| I : [ |- halts M] -> Reduce [ ⊢ b ] [ |- M]
+| I : [ |- halts M] -> Reduce [ ⊢ b] [ |- M]
 | Arr :  [ |- halts M] ->
-    ({N:[ |- tm]} Reduce [ ⊢ A ] [ |- N] -> Reduce [ ⊢ B ] [ |- app M N])
-  -> Reduce [ ⊢ arr A B ] [ |- M]
-| Prod : [ |- halts M ] -> Reduce [|- A ] [|- fst M] -> Reduce [|- B] [|- snd M] -> Reduce [|- prod A B] [|- M]
+    ({N:[ |- tm]} Reduce [ ⊢ A] [ |- N] -> Reduce [ ⊢ B] [ |- app M N])
+  -> Reduce [ ⊢ arr A B] [ |- M]
+| Prod : [ |- halts M] -> Reduce [|- A] [|- fst M] -> Reduce [|- B] [|- snd M] -> Reduce [|- prod A B] [|- M]
 ;
 
 rec halts_step : {S:[ |- step M M']} [ |- halts M'] -> [ |- halts M] =
@@ -72,14 +72,14 @@ snoc : tctx -> tp -> tctx.
 
 % Typing
 inductive Lookup : (gamma:ctx){G:[|-tctx]}{M:[gamma |- tm]}{A : [ |- tp]} ctype =
-| Top : Lookup [|- snoc G A] [gamma,x:tm |- x] [|- A]
-| Pop : Lookup [|- G] [gamma |- #p] [|- A] -> Lookup [|- snoc G B] [gamma,x:tm |- #p[..]] [|- A]
+| Top : Lookup [|- snoc G A] [gamma, x:tm |- x] [|- A]
+| Pop : Lookup [|- G] [gamma |- #p] [|- A] -> Lookup [|- snoc G B] [gamma, x:tm |- #p[..]] [|- A]
 ;
 
 inductive Oft : (gamma:ctx){G:[|-tctx]}{M:[gamma |- tm]}{A:[ |- tp]} ctype =
-| Lam : Oft [|- snoc G A] [gamma,x:tm |- M] [ |- B ] -> Oft [|- G ] [gamma |- lam (\x. M)] [|- arr A B]
-| App : Oft [|- G ] [gamma |- M ] [|- arr A B] -> Oft [|- G ] [gamma |- N] [|- A] -> Oft [|- G] [gamma |- app M N] [|- B]
-| Var : Lookup [|- G ] [gamma |- #p] [|- A] -> Oft [|- G] [gamma |- #p] [|- A]
+| Lam : Oft [|- snoc G A] [gamma, x:tm |- M] [ |- B] -> Oft [|- G] [gamma |- lam (\x. M)] [|- arr A B]
+| App : Oft [|- G] [gamma |- M] [|- arr A B] -> Oft [|- G] [gamma |- N] [|- A] -> Oft [|- G] [gamma |- app M N] [|- B]
+| Var : Lookup [|- G] [gamma |- #p] [|- A] -> Oft [|- G] [gamma |- #p] [|- A]
 | Fst : Oft [|- G] [gamma |- M] [|- prod A B] -> Oft [|- G] [gamma |- fst M] [|- A]
 | Snd : Oft [|- G] [gamma |- M] [|- prod A B] -> Oft [|- G] [gamma |- snd M] [|- B]
 | Pair : Oft [|- G] [gamma |- M] [|- A] -> Oft [|- G] [gamma |- N] [|- B] -> Oft [|- G] [gamma |- pair M N] [|- prod A B]
@@ -89,7 +89,7 @@ inductive Oft : (gamma:ctx){G:[|-tctx]}{M:[gamma |- tm]}{A:[ |- tp]} ctype =
 inductive RedSub : {g:ctx}{G:[|-tctx]}{$S:$[ |- g]} ctype =
 | Nil : RedSub  [ ] [|- nil] $[ |- ^ ]
 | Dot : RedSub  [g] [|- G] $[ |- $S[^] ] → Reduce [|- A] [ |- M]
-     → RedSub [g, x:tm] [|- snoc G A] $[ |- $S[^] , M ]
+     → RedSub [g, x:tm] [|- snoc G A] $[ |- $S[^] , M]
 ;
 
 rec lookup : Lookup [|- G] [gamma |- M] [|- A] -> RedSub [gamma] [|- G] $[ |- $S[^]] -> Reduce [|- A] [ |- M[$S[^]]] =
@@ -118,7 +118,7 @@ rec mstep_trans : [|- mstep M1 M2] -> [|- mstep M2 M3] -> [|- mstep M1 M3] =
 fn d1 , d2 => case d1 of
 | [|- refl] => d2
 | [|- onestep S MS] =>
-  let [|- MS'] = mstep_trans [|- MS ] d2 in
+  let [|- MS'] = mstep_trans [|- MS] d2 in
   [|- onestep S MS']
 ;
 
@@ -135,12 +135,12 @@ rec main : {g:ctx} Oft [|- G] [gamma |- M] [|- A] -> RedSub [gamma] [|- G] $[ |-
 mlam g => fn d => fn s => case d of
 | Var v => lookup v s
 | Lam d1 =>
-  Arr [ |- halts/m refl val/lam ]
-      (mlam N => fn r => bwd_closed [ |- beta ] (main [g,x:tm] d1 (Dot s r)))
+  Arr [ |- halts/m refl val/lam]
+      (mlam N => fn r => bwd_closed [ |- beta] (main [g, x:tm] d1 (Dot s r)))
 | App d1 d2 =>
   let Arr h f = main [g] d1 s in
   f _ (main [g] d2 s)
-| C => I [|- halts/m refl val/c ]
+| C => I [|- halts/m refl val/c]
 | Fst d => let Prod h r1 r2 = main [g] d s in r1
 | Snd d => let Prod h r1 r2 = main [g] d s in r2
 | Pair d1 d2 =>

@@ -20,13 +20,13 @@ LF term : type =
  ;
 
 rec subst_sound :  (gamma : ctx)
-   [gamma ⊢ subst (\y. T) U[] T'] →  [gamma |- equal T' T[..,U[]]] =
+   [gamma ⊢ subst (\y. T) U[] T'] →  [gamma |- equal T' T[.., U[]]] =
   / total p (subst_sound g t u t' p) /
 fn p =>
 (case p of
 | [gamma |- subst_lam (\y. P)] =>
   let [gamma, y:term |- E] = subst_sound [gamma, y:term ⊢ P] in
     ?
-| [gamma |- subst_var ] =>  ?
-| [gamma |- subst_other ] => ?
+| [gamma |- subst_var] =>  ?
+| [gamma |- subst_other] => ?
 ) ;

@@ -28,7 +28,7 @@ let v2 = [ |- iszero (pred (succ z))]  ;
 % ill-typed later. So far, we only are concerned
 % with syntax.
 
-let v3 = [ |- switch (succ z) (succ z) false ] ;
+let v3 = [ |- switch (succ z) (succ z) false] ;
 
 % ----------------------------------------------------------------------------
 % Values
@@ -130,12 +130,12 @@ fn d => fn s => case s of
   let [|- D'] = tps [|- D] [|- S] in
   [|- t_switch D' D1 D2]
 | [|- e_pred_zero] =>
-  let [|- t_pred _ ] = d in [|- t_zero]
-| [|- e_pred_succ _ ] =>
+  let [|- t_pred _] = d in [|- t_zero]
+| [|- e_pred_succ _] =>
   let [|- t_pred (t_succ D) ] = d in [|- D]
 | [|- e_iszero_zero] =>
   let [|- t_iszero _] = d in [|- t_true]
-| [|- e_iszero_succ _ ] =>
+| [|- e_iszero_succ _] =>
   let [|- t_iszero _] = d in [|- t_false]
 | [|- e_pred S] =>
   let [|- t_pred D] = d in
@@ -195,8 +195,8 @@ fn ms => case ms of
   [ |- ms_step (e_switch S)]
 
 | [ |- ms_tr MS1 MS2] =>
-  let [ |- MS1'] = mstep_switch [ |- T2 ] [ |- T3 ] [ |- MS1] in
-  let [ |- MS2'] = mstep_switch [ |- T2 ] [ |- T3 ] [ |- MS2] in
+  let [ |- MS1'] = mstep_switch [ |- T2] [ |- T3] [ |- MS1] in
+  let [ |- MS2'] = mstep_switch [ |- T2] [ |- T3] [ |- MS2] in
     [ |- ms_tr MS1' MS2']
 ;
 
@@ -278,15 +278,15 @@ fn d => case d of
 
 | [ |- t_switch D D1 D2] =>
   let d : [|- hastype (switch M M1 M2) T] = d in
-  (case terminate [ |- D ] of
+  (case terminate [ |- D] of
    | [ |- result MS v_true] =>
-       let [ |- result MS1 V1] = terminate [ |- D1 ] in
-       let [ |- MS']           = mstep_switch [ |- M1 ] [ |- M2 ] [ |- MS] in
+       let [ |- result MS1 V1] = terminate [ |- D1] in
+       let [ |- MS']           = mstep_switch [ |- M1] [ |- M2] [ |- MS] in
        [ |- result (ms_tr MS' (ms_tr (ms_step e_switch_true) MS1)) V1]
 
    | [ |- result MS v_false] =>
-       let [ |- result MS2 V2] = terminate [ |- D2 ] in
-       let [ |- MS']           = mstep_switch [ |- M1 ] [ |- M2 ] [ |- MS] in
+       let [ |- result MS2 V2] = terminate [ |- D2] in
+       let [ |- MS']           = mstep_switch [ |- M1] [ |- M2] [ |- MS] in
        [ |- result (ms_tr MS' (ms_tr (ms_step e_switch_false) MS2)) V2]
    | [ |- result MS (v_num v_z)]     => impossible multi_tps [|- D] [|- MS]
    | [ |- result MS (v_num (v_s V))] => impossible multi_tps [|- D] [|- MS]
@@ -305,7 +305,7 @@ fn d => case d of
  )
 
 | [ |- t_pred D]       =>
-  (case terminate [ |- D ] of
+  (case terminate [ |- D] of
    | [ |- result MS (v_num v_z)] =>
      let [ |- MS']         = mstep_pred [ |- MS] in
        [ |- result (ms_tr MS' (ms_step e_pred_zero)) (v_num v_z)]

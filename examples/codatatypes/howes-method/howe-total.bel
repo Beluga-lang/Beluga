@@ -28,11 +28,11 @@ inductive Eval : [ |- term T] -> [ |- term T] -> ctype =
   | Ev_app      : Eval [ |- M1] [ |- lam (\x.N)] -> Eval [ |- N[M2]]  [ |- V]
          -> Eval [ |- app M1 M2] [ |- V]
   | Ev_val      : Value [ |- V] -> Eval [ |- V] [ |- V]
-  | Ev_fix      : Eval [ |- M[ fix \x.M]] [ |- V]
+  | Ev_fix      : Eval [ |- M[fix \x.M]] [ |- V]
         ->  Eval [ |- fix \x.M] [ |- V]
   | Ev_case_nil : Eval [ |- M] [ |- nil] -> Eval [ |- M1] [ |- V]
          -> Eval [ |- lcase M M1 (\h.\t.M2)] [ |- V]
-  | Ev_case_cons: {M2: [ x:term S, y: term (list S[]) |- term T[]]}
+  | Ev_case_cons: {M2: [x:term S, y: term (list S[]) |- term T[]]}
       Eval [ |- M]  [ |- cons H L] ->  Eval [ |- M2[H, L]] [ |- V]
                -> Eval [ |- lcase M M1 (\h.\t.M2)] [ |- V]
 ;
@@ -96,7 +96,7 @@ rec sim_osim : Sim [|- T] [|- M] [|- N] -> OSim [|- T] [|- M] [|- N] =
 
 rec osim_refl : (g:ctx) OSim [|- T] [g |- M] [g |- M] =
 / total m (osim_refl g t m) /
-    OSimC [ _ ] (mlam $S => sim_refl)
+    OSimC [_] (mlam $S => sim_refl)
 ;
 
 rec osim_trans :  (g:ctx) OSim [|- T] [g |- M] [g |- N] -> OSim [|- T] [g |- N] [g |- R]
@@ -119,13 +119,13 @@ inductive Howe : (g:ctx) {T:[|- tp]} [g |- term T[]] -> [g |- term T[]] -> ctype
   | Howe_var : {#p:#[g |- term T[]]}
                 OSim [|- T] [g |- #p] [g |- M]
                -> Howe [|- T] [g |- #p] [g |- M]
-  | Howe_lam : Howe [|- T] [g,x:term _ |- M] [g,x:term _ |- N]
+  | Howe_lam : Howe [|- T] [g, x:term _ |- M] [g, x:term _ |- N]
                -> OSim [|- arr S T] [g |- lam \x.N] [g |- R]
                -> Howe [|- arr S T] [g |- lam \x.M] [g |- R]
   | Howe_app : Howe [|- arr S T] [g |- M] [g |- M'] -> Howe [|- S] [g |- N] [g |- N']
                -> OSim [|- T] [g |- app M' N'] [g |- R]
                -> Howe [|- T] [g |- app M N] [g |- R]
-  | Howe_fix : Howe [|- T] [g,x:term T[] |- M] [g,x:term T[] |- N]
+  | Howe_fix : Howe [|- T] [g, x:term T[] |- M] [g, x:term T[] |- N]
                -> OSim [|- T] [g|- fix (\x.N)] [g |- R]
                -> Howe [|- T] [g |- fix (\x.M)] [g |- R]
   | Howe_nil : OSim [|- list T] [g |- nil] [g |- M]
@@ -136,8 +136,8 @@ inductive Howe : (g:ctx) {T:[|- tp]} [g |- term T[]] -> [g |- term T[]] -> ctype
                -> Howe [|- list T] [g |- cons M N] [g |- R]
   | Howe_case : Howe [|- list T] [g |- M] [g |- M']
                -> Howe [|- T'] [g |- N] [g |- N']
-               -> Howe [|- T'] [g,h:term T[],t:term (list T[]) |- P]
-                               [g,h:term T[],t:term (list T[]) |- P']
+               -> Howe [|- T'] [g, h:term T[], t:term (list T[]) |- P]
+                               [g, h:term T[], t:term (list T[]) |- P']
                -> OSim [|- T'] [g |- lcase M' N' \h.\t.P'] [g |- R]
                -> Howe [|- T'] [g |- lcase M N \h.\t.P] [g |- R]
 ;
@@ -163,13 +163,13 @@ rec howe_refl : (g:ctx) {M:[g |- term T[]]} Howe [|- T] [g |- M] [g |- M] =
 mlam M => case [_ |- M] of
   | [g |- unit] => Howe_unit osim_refl
   | [g |- #p] => Howe_var [g |- #p] osim_refl
-  | [g |- lam \x.M] => Howe_lam (howe_refl [g,x:term _ |- M]) osim_refl
+  | [g |- lam \x.M] => Howe_lam (howe_refl [g, x:term _ |- M]) osim_refl
   | [g |- app M N] => Howe_app (howe_refl [g |- M]) (howe_refl [g |- N]) osim_refl
-  | [g |- fix \x.M] => Howe_fix (howe_refl [g,x:term _ |- M]) osim_refl
+  | [g |- fix \x.M] => Howe_fix (howe_refl [g, x:term _ |- M]) osim_refl
   | [g |- nil] => Howe_nil osim_refl
   | [g |- cons M N] => Howe_cons (howe_refl [g |- M]) (howe_refl [g |- N]) osim_refl
   | [g |- lcase M N (\h.\t.P)] =>
-    Howe_case (howe_refl [g |- M]) (howe_refl [g |- N]) (howe_refl [g,h:term _, t:term (list _) |- P])
+    Howe_case (howe_refl [g |- M]) (howe_refl [g |- N]) (howe_refl [g, h:term _, t:term (list _) |- P])
               osim_refl
 ;
 
@@ -187,13 +187,13 @@ inductive Howe_subst : {g:ctx} (h:ctx) {$S1 : $[h |- g]} {$S2 : $[h |- g]} ctype
   | HNil : Howe_subst [] $[h |- ^] $[h |- ^]
   | HCons : Howe_subst [g] $[h |- $S1] $[h |- $S2]
             -> Howe [|- T] [h |- M] [h |- N]
-            -> Howe_subst [g,x:term T[]] $[h |- $S1, M] $[h |- $S2, N]
+            -> Howe_subst [g, x:term T[]] $[h |- $S1, M] $[h |- $S2, N]
 ;
 
 rec howe_subst_refl : {g:ctx} (h:ctx) {$S:$[h |- g]} Howe_subst [g] $[h |- $S] $[h |- $S] =
 / trust /
 fun [] $[h |- ^] => HNil
-  | [g,x:term _] $[h |- $S', M] => HCons (howe_subst_refl [g] $[h |- $S']) (howe_refl [h |- M])
+  | [g, x:term _] $[h |- $S', M] => HCons (howe_subst_refl [g] $[h |- $S']) (howe_refl [h |- M])
 ;
 
 rec howe_ren : {g:ctx}{h:ctx}{$S: $[h |-# g]} Howe [|- T] [g |- M] [g |- N]
@@ -204,19 +204,19 @@ mlam g, h, $S => fn hr => case hr of
 | Howe_var [g |- #p] s =>
       let os = osim_cus $[h |- $S] s in
       howe_osim_trans (howe_refl [h |- #p[$S]]) os
-| Howe_lam h' s => Howe_lam (howe_ren [g,x:term _] [h,x:term _] $[h,x:term _ |- $S[..],x] h') (osim_cus $[h |- $S] s)
+| Howe_lam h' s => Howe_lam (howe_ren [g, x:term _] [h, x:term _] $[h, x:term _ |- $S[..], x] h') (osim_cus $[h |- $S] s)
 | Howe_app h1 h2 s => Howe_app (howe_ren [g] [h] $[h |- $S] h1) (howe_ren [g] [h] $[h |- $S] h2) (osim_cus $[h |- $S] s)
-| Howe_fix h' s => Howe_fix (howe_ren [g,x:term _] [h,x:term _] $[h,x:term _ |- $S[..],x] h') (osim_cus $[h |- $S] s)
+| Howe_fix h' s => Howe_fix (howe_ren [g, x:term _] [h, x:term _] $[h, x:term _ |- $S[..], x] h') (osim_cus $[h |- $S] s)
 | Howe_nil s => Howe_nil (osim_cus $[h |- $S] s)
 | Howe_cons h1 h2 s => Howe_cons (howe_ren [g] [h] $[h |- $S] h1) (howe_ren [g] [h] $[h |- $S] h2) (osim_cus $[h |- $S] s)
 | Howe_case h1 h2 h3 s => Howe_case (howe_ren [g] [h] $[h |- $S] h1) (howe_ren [g] [h] $[h |- $S] h2)
-                                    (howe_ren [g,x:term _,y:term _] [h,x:term _,y:term _] $[h,x:term _, y:term _ |- $S[..],x,y] h3)
+                                    (howe_ren [g, x:term _, y:term _] [h, x:term _, y:term _] $[h, x:term _, y:term _ |- $S[..], x, y] h3)
                                     (osim_cus $[h |- $S] s)
 ;
 
 
 rec howe_subst_wkn : (g:ctx) (h:ctx) {S:[|-tp]} Howe_subst [g] $[h |- $S1] $[h |- $S2]
-                    -> Howe_subst [g] $[h,x:term S[] |- $S1[..]] $[h,x:term S[] |- $S2[..]] =
+                    -> Howe_subst [g] $[h, x:term S[] |- $S1[..]] $[h, x:term S[] |- $S2[..]] =
 / total hr (howe_subst_wkn g h s s1 s2 hr) /
   mlam S => fn h => case h of
   | HNil => HNil
@@ -237,16 +237,16 @@ case hs of
         impossible [⊢ #p]
   | HCons hs' h' =>
         case ho of
-          | Howe_var [g,x:term _ |- x] s =>
+          | Howe_var [g, x:term _ |- x] s =>
                 howe_osim_trans h' (osim_cus $[h |- $S2] s)
-          | Howe_var [g,x:term _ |- #p[..]] s =>
+          | Howe_var [g, x:term _ |- #p[..]] s =>
                 howe_osim_trans (howe_subst_var (howe_refl [g |- #p]) hs') (osim_cus $[h |- $S2] s)
   % let (hsa : Howe_subst [g] $[h |- $S1] $[h |- $S2]) = hs in
   %   case ho of
-  %   | Howe_var [g,x:term T[] |- x] s =>
+  %   | Howe_var [g, x:term T[] |- x] s =>
   %     let HCons hs' h' = hs in
   %     howe_osim_trans h' (osim_cus $[h |- $S2] s)
-  %   | Howe_var [g,x:term T[] |- #p[..]] s =>
+  %   | Howe_var [g, x:term T[] |- #p[..]] s =>
   %     let HCons (hs':Howe_subst [g] $[h |- $S1'] $[h |- $S2']) h' = hs in
   %     howe_osim_trans (howe_subst_var (howe_refl [g |- #p]) hs')
   %                     (osim_cus $[h |- $S2] s)
@@ -262,12 +262,12 @@ case ho of
     | Howe_unit s => howe_osim_trans (howe_refl [h |- _]) (osim_cus $[h |- $S2] s)
     | Howe_var [g |- #p] s => howe_subst_var ho hs
     | Howe_lam h' s =>
-      Howe_lam (howe_subst h' (HCons (howe_subst_wkn _ hs) (howe_refl [h,x:term _ |- x])))
+      Howe_lam (howe_subst h' (HCons (howe_subst_wkn _ hs) (howe_refl [h, x:term _ |- x])))
                (osim_cus $[h |- $S2] s)
     | Howe_app h1' h2' s =>
       Howe_app (howe_subst h1' hs) (howe_subst h2' hs) (osim_cus $[h |- $S2] s)
     | Howe_fix h' s =>
-      Howe_fix (howe_subst h' (HCons (howe_subst_wkn _ hs) (howe_refl [h,x:term _ |- x])))
+      Howe_fix (howe_subst h' (HCons (howe_subst_wkn _ hs) (howe_refl [h, x:term _ |- x])))
                (osim_cus $[h |- $S2] s)
     | Howe_nil s => howe_osim_trans (howe_refl [h |- _]) (osim_cus $[h |- $S2] s)
     | Howe_cons h1' h2' s =>
@@ -276,8 +276,8 @@ case ho of
       Howe_case (howe_subst h' hs) (howe_subst h1' hs)
                 (howe_subst h2'
                       (HCons (HCons (howe_subst_wkn _ (howe_subst_wkn _ hs))
-                             (howe_refl [h,x:term _, y:term _ |- x]))
-                          (howe_refl [h,x:term _, y:term _ |- y])))
+                             (howe_refl [h, x:term _, y:term _ |- x]))
+                          (howe_refl [h, x:term _, y:term _ |- y])))
                 (osim_cus $[h |- $S2] s)
 ;
 
@@ -291,7 +291,7 @@ inductive Howe_abs : [x:term S |- term T[]] -> [|- term (arr S T)] -> ctype =
 rec howe_ev_abs : Howe [ |- arr S T] [|- lam \x.M'] [|- N]
                   -> Howe_abs [x:term S |- M'] [|- N] =
 / total h (howe_ev_abs s t m n h) /
-fun (Howe_lam h' (OSimC [ _ ] s)) =>
+fun (Howe_lam h' (OSimC [_] s)) =>
     let ESim_lam d f = (s $[|- ^]) .Sim_lam (Ev_val Val_lam) in
     Howe_absC d (mlam R => let a = sim_osim (f [|- R]) in
                                let h'' = howe_subst h' (HCons HNil (howe_refl [|- R])) in
@@ -300,12 +300,12 @@ fun (Howe_lam h' (OSimC [ _ ] s)) =>
 
 rec howe_ev_unit : Howe [ |- top] [ |- unit] [ |- N] -> Eval [ |- N]  [ |- unit] =
 / total h (howe_ev_unit n h) /
-fun (Howe_unit (OSimC [_ ]f)) => (f $[|- ^]) .Sim_unit (Ev_val Val_unit)
+fun (Howe_unit (OSimC [_]f)) => (f $[|- ^]) .Sim_unit (Ev_val Val_unit)
 ;
 
 rec howe_ev_nil :  Howe [ |- list T] [ |- nil] [ |- N] -> Eval [ |- N] [|- nil] =
 / total h (howe_ev_nil t n h) /
-fun (Howe_nil (OSimC [ _ ] f)) => (f $[|- ^]) .Sim_nil (Ev_val Val_nil)
+fun (Howe_nil (OSimC [_] f)) => (f $[|- ^]) .Sim_nil (Ev_val Val_nil)
 ;
 
 
@@ -317,7 +317,7 @@ inductive Howe_cons : [|- term T] -> [|- term (list T)] -> [|- term (list T)] ->
 
 rec howe_ev_cons : Howe [ |- list T] [ |- cons H L] [ |- N] -> Howe_cons [|- H] [|- L] [|- N] =
 / total h (howe_ev_cons t a l n h) /
-fun (Howe_cons h1 h2 (OSimC [ _ ] s)) =>
+fun (Howe_cons h1 h2 (OSimC [_] s)) =>
     let ESim_cons d s1 s2 = (s $[|- ^]) .Sim_cons (Ev_val Val_cons) in
     Howe_consC d (howe_osim_trans h1 (sim_osim s1)) (howe_osim_trans h2 (sim_osim s2))
 ;
@@ -393,7 +393,7 @@ fn e1, e2 => case e1 of
        Refl)
 ;
 
-rec ev_val : Eval [ |- M] [ |- V] -> Eval [ |- V] [ |-  V'] -> Aeq [ |- V] [ |-  V'] =
+rec ev_val : Eval [ |- M] [ |- V] -> Eval [ |- V] [ |- V'] -> Aeq [ |- V] [ |- V'] =
 / total e (ev_val t m v e) /
 fun d d' =>
     let v = ev_value d in
@@ -450,7 +450,7 @@ fun d0 .Sim_unit d => Ev_case_nil d0 d
 
 
 rec case_cons_sim : Eval [|- P] [|- cons H L] -> {N:[x:term S, y:term (list S[]) |- term T[]]}
-                    Sim [ |- T] [|- N[H,L]] [|- lcase P M \x.\y.N] =
+                    Sim [ |- T] [|- N[H, L]] [|- lcase P M \x.\y.N] =
 / total e (case_cons_sim t s p h l m n e) /
 fun d0 [x:term _, y:term _ |- N] .Sim_unit d =>
         Ev_case_cons [x:term _, y:term _ |- N] d0 d
@@ -459,7 +459,7 @@ fun d0 [x:term _, y:term _ |- N] .Sim_unit d =>
   | d0 [x:term _, y:term _ |- N] .Sim_cons d =>
      ESim_cons (Ev_case_cons [x:term _, y:term _ |- N] d0 d)
          sim_refl sim_refl
- | d0 [x:term _, y:term _ |- N] .Sim_lam (d : Eval [|-  N[H,L]] [ |- lam \x.E]) =>
+ | d0 [x:term _, y:term _ |- N] .Sim_lam (d : Eval [|- N[H, L]] [ |- lam \x.E]) =>
    ESim_lam (Ev_case_cons [x:term _, y:term _ |- N] d0 d)
             (mlam R => sim_refl)
 ;
@@ -471,14 +471,14 @@ rec down_closed : Eval [|- M] [|- V] -> Howe [|- T] [|- M] [|- N] -> Howe [|- T]
 fn e => fn h => case e of
   | (Ev_val v) => h
   | (Ev_app d1 d2) =>
-    let (Howe_app h1 (h2:Howe [ |- _] [ |- E2] [ |- E2']) (OSimC [ _ ] s)) = h in
-    let Howe_lam h' (OSimC [ _ ] s') = down_closed d1 h1 in
-    let ESim_lam (d1': Eval [ |- _ ]  [ |- lam \x.M]) s'' =
+    let (Howe_app h1 (h2:Howe [ |- _] [ |- E2] [ |- E2']) (OSimC [_] s)) = h in
+    let Howe_lam h' (OSimC [_] s') = down_closed d1 h1 in
+    let ESim_lam (d1': Eval [ |- _]  [ |- lam \x.M]) s'' =
         (s' $[|- ^]) .Sim_lam (Ev_val Val_lam) in
     let ha = howe_osim_trans (howe_subst h' (HCons HNil h2)) (sim_osim (s'' [|- E2'])) in
     let ha1 = down_closed d2 ha in
-    let Howe_lam ha' (OSimC [ _ ] sa) = ha1 in
-    let ESim_lam (d2': Eval [ |- N0] [ |-  lam \x.N]) sa' =
+    let Howe_lam ha' (OSimC [_] sa) = ha1 in
+    let ESim_lam (d2': Eval [ |- N0] [ |- lam \x.N]) sa' =
         (sa $[|- ^]) .Sim_lam (Ev_val Val_lam) in
     let ESim_lam (dd:Eval [ |- _]  [ |- lam \x.N']) ss =
         (s $[|- ^]) .Sim_lam (Ev_app d1' d2') in
@@ -495,12 +495,12 @@ fn e => fn h => case e of
     let (Howe_case h1 h2 h3 s) = h in
     let s' = case_nil_sim (howe_ev_nil (down_closed d1 h1)) in
     howe_osim_trans (down_closed d2 h2) (osim_trans (sim_osim s') s)
-  | (Ev_case_cons [x:term _ , y:term _ |- _ ] d1 d2) =>
+  | (Ev_case_cons [x:term _ , y:term _ |- _] d1 d2) =>
     let (Howe_case h1 h2 h3 s) = h in
     let Howe_consC d1' (h1':Howe [ |- T] [ |- M'] [ |- N'])
                   (h2':Howe [ |- list T] [ |- MS'] [ |- NS'])
         = howe_ev_cons (down_closed d1 h1) in
-    let s' = case_cons_sim d1' [x:term _,y:term (list _) |- _] in
+    let s' = case_cons_sim d1' [x:term _, y:term (list _) |- _] in
     let h_hat = down_closed d2 (howe_subst h3 (HCons (HCons HNil h1') h2')) in
     howe_osim_trans h_hat (osim_trans (sim_osim s') s)
 ;
@@ -565,7 +565,7 @@ rec sim_lemma2 : Sim [|- T] [|- app M N]
 
 rec sim_lemma1: {M:[|- term _]}
               Sim [|- arr T T]
-                  [|-  lam (\x. app M[] (app M[] x))]
+                  [|- lam (\x. app M[] (app M[] x))]
                   [ |- lam (\y. app M[] (app (app (lam (\f. lam (\w. app f w))) M[]) y))] =
 / total a (sim_lemma1 a) /
 fun [|- M] .Sim_lam (Ev_val Val_lam) =>

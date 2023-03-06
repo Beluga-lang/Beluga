@@ -80,12 +80,12 @@ Theorem: if step T T1 and step T T2 then equal T1 T2.
 
 not_possible : type.
 
-rec values_dont_step : [ |- step M M'] -> [ |- value M ] -> [ |- not_possible]=
+rec values_dont_step : [ |- step M M'] -> [ |- value M] -> [ |- not_possible]=
 / total v (values_dont_step m m' s v) /
 fn s => fn v => case v of
 | [ |- v_true]    => impossible s
 | [ |- v_false]   => impossible s
-| [ |- v_z ]      => impossible s
+| [ |- v_z]      => impossible s
 | [ |- v_s V] =>
   let [ |- e_succ D] = s in values_dont_step [ |- D] [ |- V]
 ;
@@ -313,8 +313,8 @@ fn ms => case ms of
   [ |- ms_step (e_switch S)]
 
 | [ |- ms_tr MS1 MS2] =>
-  let [ |- MS1'] = mstep_switch [ |- T2 ] [ |- T3 ] [ |- MS1] in
-  let [ |- MS2'] = mstep_switch [ |- T2 ] [ |- T3 ] [ |- MS2] in
+  let [ |- MS1'] = mstep_switch [ |- T2] [ |- T3] [ |- MS1] in
+  let [ |- MS2'] = mstep_switch [ |- T2] [ |- T3] [ |- MS2] in
     [ |- ms_tr MS1' MS2']
 ;
 
@@ -389,15 +389,15 @@ mlam M => case [ |- M] of --not
     [ |- result ms_ref v_false]
 
 | [ |- switch T T1 T2] =>
-  (case terminate [ |- T ] of --not
+  (case terminate [ |- T] of --not
    | [ |- result MS v_true] =>
-       let [ |- result MS1 V1] = terminate [ |- T1 ] in
-       let [ |- MS']           = mstep_switch [ |- T1 ] [ |- T2 ] [ |- MS] in
+       let [ |- result MS1 V1] = terminate [ |- T1] in
+       let [ |- MS']           = mstep_switch [ |- T1] [ |- T2] [ |- MS] in
        [ |- result (ms_tr MS' (ms_tr (ms_step e_switch_true) MS1)) V1]
 
    | [ |- result MS v_false] =>
-       let [ |- result MS2 V2] = terminate [ |- T2 ] in
-       let [ |- MS']           = mstep_switch [ |- T1 ] [ |- T2 ] [ |- MS] in
+       let [ |- result MS2 V2] = terminate [ |- T2] in
+       let [ |- MS']           = mstep_switch [ |- T1] [ |- T2] [ |- MS] in
        [ |- result (ms_tr MS' (ms_tr (ms_step e_switch_false) MS2)) V2]
   )
 
@@ -405,12 +405,12 @@ mlam M => case [ |- M] of --not
     [ |- result ms_ref v_z]
 
 | [ |- succ N] =>
-    let [ |- result MS V] = terminate [ |- N ] in
+    let [ |- result MS V] = terminate [ |- N] in
     let [ |- MS']         = mstep_succ [ |- MS] in
     [ |- result MS' (v_s V)]
 
 | [ |- pred M]       =>
-  (case terminate [ |- M ] of
+  (case terminate [ |- M] of
    | [ |- result MS v_z] =>
      let [ |- MS']         = mstep_pred [ |- MS] in
        [ |- result (ms_tr MS' (ms_step (e_pred_zero))) v_z]

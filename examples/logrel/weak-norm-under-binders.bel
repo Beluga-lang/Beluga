@@ -40,7 +40,7 @@ inductive Var : (gamma:ctx){M:[gamma |- tm A]} ctype =
 
 inductive Normal : (gamma:ctx) {M:[gamma |- tm A]} ctype =
 | Neut : Neutral [gamma |- M] -> Normal [gamma |- M]
-| Lam : Normal [gamma,x:tm _ |-  M] -> Normal [gamma |- lam (\x. M)]
+| Lam : Normal [gamma, x:tm _ |- M] -> Normal [gamma |- lam (\x. M)]
 
 and inductive Neutral : (gamma:ctx) {M:[gamma |- tm A]} ctype =
 | VarN : Var [gamma |- M] -> Neutral [gamma |- M]
@@ -48,7 +48,7 @@ and inductive Neutral : (gamma:ctx) {M:[gamma |- tm A]} ctype =
      -> Neutral [gamma |- app M N];
 
 inductive Halts : (gamma:ctx) {A:[ |- tp]}{M:[gamma |- tm A[]]} ctype =
-| Halts/c : [gamma |- step M V] -> Normal [gamma |- V ] -> Halts [ |- A] [gamma |- M];
+| Halts/c : [gamma |- step M V] -> Normal [gamma |- V] -> Halts [ |- A] [gamma |- M];
 
 % -----------------------------------------------------------------------------
 % Reducibility Definition
@@ -64,15 +64,15 @@ inductive Halts : (gamma:ctx) {A:[ |- tp]}{M:[gamma |- tm A[]]} ctype =
 inductive IsVarSub : {gamma:ctx} (phi:ctx) {$S: $[phi |- gamma]}ctype =
 | Nil : IsVarSub [] $[phi |- ^ ]
 | Cons :  IsVarSub [gamma] $[phi |- $S] -> Var [phi |- M]
-         -> IsVarSub [gamma,x:tm A[]] $[phi |- $S, M];
+         -> IsVarSub [gamma, x:tm A[]] $[phi |- $S, M];
 
 stratified Reduce : (gamma:ctx) {A:[ |- tp]}{M:[gamma |- tm A[]]} ctype =
 | Base : Halts [ |- i] [gamma |- M] -> Reduce [ |- i] [gamma |- M]
 | Arr :  {M:[gamma |- tm (arr A[] B[])]}
          ({phi:ctx} {$S:$[phi |- gamma]} {N:[phi |- tm A[]]}
-          IsVarSub [gamma] $[phi |- $S ] -> Reduce [ |- A] [phi |- N]
-          -> Reduce [ |- B ] [phi |- app M[$S] N])
-         -> Reduce [ |- arr A B] [gamma |-  M];
+          IsVarSub [gamma] $[phi |- $S] -> Reduce [ |- A] [phi |- N]
+          -> Reduce [ |- B] [phi |- app M[$S] N])
+         -> Reduce [ |- arr A B] [gamma |- M];
 
 % -----------------------------------------------------------------------------
 % Auxiliary lemmas about using variable substitutions
@@ -84,8 +84,8 @@ rec wknVar : Var [g |- M] -> IsVarSub [g] $[h |- $W] -> Var [h |- M[$W]] =
 fn iv => fn ivs => case ivs of
 | Nil => let (iv : Var [ |- #p]) = iv in impossible [|- #p]
 | Cons ivs' iv' => (case iv of
-  | IsVar [g',x:tm B[] |-  x] => iv'
-  | IsVar [g',x:tm B[] |-  #q[..]] => wknVar (IsVar [g' |-  #q]) ivs');
+  | IsVar [g', x:tm B[] |- x] => iv'
+  | IsVar [g', x:tm B[] |- #q[..]] => wknVar (IsVar [g' |- #q]) ivs');
 
 % Composing variable substitutions yields a variable substitution
 % Context extensions can be composed.
@@ -97,27 +97,27 @@ fn r1 => fn r2 => case r1 of
 
 % Variable substitutions can be weakened, and they remain variable substitutions
 %
-rec wknVarSub : IsVarSub [g] $[h |- $S] -> IsVarSub [g] $[h,x:tm A[] |- $S[..] ] =
+rec wknVarSub : IsVarSub [g] $[h |- $S] -> IsVarSub [g] $[h, x:tm A[] |- $S[..] ] =
 / total r (wknVarSub _ _ _ _ r) /
 fn r => case r of
 | Nil => Nil
-| Cons r' (IsVar [h |- #p]) => Cons (wknVarSub r') (IsVar [h,x:tm _  |-  #p[..]]);
+| Cons r' (IsVar [h |- #p]) => Cons (wknVarSub r') (IsVar [h, x:tm _  |- #p[..]]);
 
 % Extending a variable substitution with a new variable-to-variable mapping results in a
 % variable substitution
-rec extVarSub : IsVarSub [g] $[h |- $S] -> IsVarSub [g,x:tm A[]] $[h,x:tm A[] |- $S[..], x ] =
+rec extVarSub : IsVarSub [g] $[h |- $S] -> IsVarSub [g, x:tm A[]] $[h, x:tm A[] |- $S[..], x] =
 / total (extVarSub) /
-fn r => let r : IsVarSub [g] $[h |- $S] = r in Cons (wknVarSub r) (IsVar [h,x:tm _  |-  x]);
+fn r => let r : IsVarSub [g] $[h |- $S] = r in Cons (wknVarSub r) (IsVar [h, x:tm _  |- x]);
 
 % Given a context, we can generate a variable substitution
 rec idIsVarSub : {g:ctx} IsVarSub [g] $[g |- ..] =
 / total g  (idIsVarSub g) /
 mlam g => case [g] of
 | [ ] => Nil
-| [g,x:tm T[]] => extVarSub (idIsVarSub [g]);
+| [g, x:tm T[]] => extVarSub (idIsVarSub [g]);
 
 % Given a context, we can generate a weakened variable substitution
-rec shiftIsVarSub :  {g:ctx} IsVarSub [g] $[ g,x:tm A[] |- .. ] =
+rec shiftIsVarSub :  {g:ctx} IsVarSub [g] $[g, x:tm A[] |- .. ] =
 / total (shiftIsVarSub) /
 mlam g => wknVarSub (idIsVarSub [g]);
 
@@ -137,7 +137,7 @@ fn r => fn iv => case r of
 | Lam n => Lam (nwkn n (extVarSub iv));
 
 % -----------------------------------------------------------------------------
-% Lemma [ Backwards Closed ]
+% Lemma [Backwards Closed]
 % If step M M'   and   M' is reducible at type A
 % then M is reducible at type A
 
@@ -150,7 +150,7 @@ let Halts/c [g |- R] v = h in Halts/c [g |- s_trans S R] v;
 rec closed : {A:[|- tp]}{M:[g |- tm A[]]}{M':[g |- tm A[]]}
              {S:[g |- step M M']} Reduce [ |- A] [g |- M'] -> Reduce [ |- A] [g |- M] =
 / total a (closed _ a) /
-mlam A,M,M',S => fn r => case [|- A] of
+mlam A, M, M', S => fn r => case [|- A] of
 | [|- i] =>
    let Base ha = r in
    let (ha : Halts [ |- i] [g |- M]) = ha in Base (haltsStep  [g |- S] ha)
@@ -159,7 +159,7 @@ mlam A,M,M',S => fn r => case [|- A] of
   let Arr [g |- M] f = r in
   Arr [g |- _]
   (mlam h => mlam $W => mlam N => fn iv => fn rn =>
-    closed [ |- B] [h |- _ ] [h |- _ ] [h |- s_app S[$W] s_refl] (f [h] $[h |- $W] [h |- N] iv rn))
+    closed [ |- B] [h |- _] [h |- _] [h |- s_app S[$W] s_refl] (f [h] $[h |- $W] [h |- N] iv rn))
 ;
 
 % -----------------------------------------------------------------------------
@@ -167,27 +167,27 @@ mlam A,M,M',S => fn r => case [|- A] of
 
 rec reflect : {g:ctx}{A:[|-tp]}{R:[g |- tm A[]]} Neutral [g |- R] -> Reduce [ |- A] [g |- R] =
 / total a (reflect g a) /
-mlam g, A,R => fn r =>  case [ |- A] of
+mlam g, A, R => fn r =>  case [ |- A] of
 | [ |- i] =>
     Base (Halts/c [g |- s_refl] (Neut r))
 | [ |- arr A B] =>
   Arr [g |- R]
   (mlam h => mlam $W => mlam M2 => fn iv => fn rm2 =>
     let Halts/c [h |- MS] n = reify [h] [|- A] [h |- M2] rm2 in
-    closed _ [h |- _ ]  [h |- _ ] [h |- s_app s_refl MS]
-           (reflect [h] [|- B] [h |- _ ] (App (rwkn r iv) n)))
+    closed _ [h |- _]  [h |- _] [h |- s_app s_refl MS]
+           (reflect [h] [|- B] [h |- _] (App (rwkn r iv) n)))
 
 and rec reify : {g:ctx}{A:[|- tp]}{M:[g |- tm A[]]}
             Reduce [ |- A] [g |- M] -> Halts [ |- A] [g |- M] =
  / total a (reify g a ) /
-mlam g,A,M => fn r => case [|- A] of
+mlam g, A, M => fn r => case [|- A] of
 | [|- i] => let Base h = r in h
 | [|- arr A B] =>
   let Arr [g |- M] f = r in
-  let q1 = f [g,x:tm _] $[g,x |- ..] [g,x |- x] (shiftIsVarSub [g])
-             (reflect [g,x:tm _ ] [|- A] [g,x:tm _ |- x] (VarN (IsVar [g,x:tm _ |-  x]))) in
-  let Halts/c ms q2 = reify [g, x:tm _ ] [|- B] [g,x:tm _ |- app M[..] x] q1 in
-  let [g,x:tm _ |-  MS] = ms in
+  let q1 = f [g, x:tm _] $[g, x |- ..] [g, x |- x] (shiftIsVarSub [g])
+             (reflect [g, x:tm _] [|- A] [g, x:tm _ |- x] (VarN (IsVar [g, x:tm _ |- x]))) in
+  let Halts/c ms q2 = reify [g, x:tm _] [|- B] [g, x:tm _ |- app M[..] x] q1 in
+  let [g, x:tm _ |- MS] = ms in
   Halts/c [g |- s_trans (s_eta _) (s_lam (\x. MS))] (Lam q2);
 
 % -----------------------------------------------------------------------------
@@ -195,19 +195,19 @@ mlam g,A,M => fn r => case [|- A] of
 
 inductive RedSub : {g:ctx}(h:ctx){$S:$[h |- g]} ctype =
 | Nil : RedSub [] $[h |- ^ ]
-| Dot : RedSub [g] $[h |- $S ] -> Reduce [ |- A] [h |- M] -> RedSub [g,x:tm A[]] $[h |- $S, M ];
+| Dot : RedSub [g] $[h |- $S] -> Reduce [ |- A] [h |- M] -> RedSub [g, x:tm A[]] $[h |- $S, M];
 
 % Lemmas about reducible simultaneous substitutions.
 % Weakening a term M that is reducible at type A
 rec wknRed : Reduce  [ |- A] [g |- M] -> IsVarSub [g] $[h |- $W] -> Reduce [ |- A] $[h |- M[$W]] =
 / total (wknRed) /
-fn r => fn iv => let (iv : IsVarSub [g] $[h |- $W ] ) = iv in
+fn r => fn iv => let (iv : IsVarSub [g] $[h |- $W] ) = iv in
 case r of
 | Base (Halts/c [g |- S] q2) => Base (Halts/c [h |- S[$W]] (nwkn q2 iv))
 | Arr [g |- M] f =>
   Arr [h |- M[$W]]
    (mlam h' => mlam $W2 => mlam N => fn iv2 => fn rn =>
-    f [h'] $[h' |- $W[$W2]] [h' |-  N] (compose iv iv2) rn);
+    f [h'] $[h' |- $W[$W2]] [h' |- N] (compose iv iv2) rn);
 
 
 % Composing a reducible substitution with a variable substitution yields a
@@ -224,37 +224,37 @@ rec redVar : {g:ctx}{#p:#[g |- tm T[]]} RedSub [g] $[h |- $S] ->  Reduce [ |- T]
 / total g (redVar g) /
 mlam g, #p => fn rs => case [g] of
 | [] => impossible [ |- #p]
-| [g', x:tm A[]] => (case [g', x:tm A[] |- #p[..,x]] of
-   | [g',x:tm A[] |-  x]      =>    let Dot rs' rN = rs in rN
-   | [g',x:tm A[] |-  #q[..]] => let Dot rs' rN = rs in redVar [g'] [g' |-  #q] rs');
+| [g', x:tm A[]] => (case [g', x:tm A[] |- #p[.., x]] of
+   | [g', x:tm A[] |- x]      =>    let Dot rs' rN = rs in rN
+   | [g', x:tm A[] |- #q[..]] => let Dot rs' rN = rs in redVar [g'] [g' |- #q] rs');
 
 % The identity substitution is reducible
 rec idRedSub : {g:ctx} RedSub [g] $[g |- ..] =
 / total g (idRedSub g) /
 mlam g => case [g] of
 | [ ] => Nil
-| [g',x:tm A[]] =>
+| [g', x:tm A[]] =>
   Dot (wknRedSub (idRedSub [g']) (shiftIsVarSub [g']))
-      (reflect [g', x:tm A[]] _ [g', x:tm A[] |- x ] (VarN (IsVar [g',x:tm A[] |-  x])));
+      (reflect [g', x:tm A[]] _ [g', x:tm A[] |- x] (VarN (IsVar [g', x:tm A[] |- x])));
 
 % -----------------------------------------------------------------------------
 % Main Lemma:
 % If g |- M : A   and  h |- sigma : g   and sigma is reducible
 % then M[sigma] is reducible at type A in the context h.
 
-rec eval : {M:[g |- tm A[]]} RedSub [g] $[h |- $S ] -> Reduce [ |- A] [h |- M[$S] ] =
+rec eval : {M:[g |- tm A[]]} RedSub [g] $[h |- $S] -> Reduce [ |- A] [h |- M[$S] ] =
 / total m (eval g a h sigma m) /
 mlam M => fn rs => let (rs : RedSub [g] $[h |- $S] ) = rs in
  case [g |- M] of
-| [g' |-  #p] => redVar [g'] [g' |-  #p] rs
-| [g' |-  app M1 M2]  =>
-  let Arr [h0 |- N1] f = eval [g' |-  M1]  rs in
-   f [h] $[h |- ..] [h |- _] (idIsVarSub [h]) (eval [g' |-  M2] rs)
-| [g' |-  lam (\x. M1)] =>
+| [g' |- #p] => redVar [g'] [g' |- #p] rs
+| [g' |- app M1 M2]  =>
+  let Arr [h0 |- N1] f = eval [g' |- M1]  rs in
+   f [h] $[h |- ..] [h |- _] (idIsVarSub [h]) (eval [g' |- M2] rs)
+| [g' |- lam (\x. M1)] =>
    Arr [h |- lam (\x. M1[$S[..], x])]
    (mlam h' => mlam $W => mlam N => fn isVS => fn rN =>
-     closed _ [h' |- _ ] [h' |- _ ]
-            [h' |-  s_beta] (eval [g',x:tm _ |-  M1] (Dot (wknRedSub rs isVS) rN)));
+     closed _ [h' |- _] [h' |- _]
+            [h' |- s_beta] (eval [g', x:tm _ |- M1] (Dot (wknRedSub rs isVS) rN)));
 
 % -----------------------------------------------------------------------------
 % THEOREM: Well-typed terms halt.

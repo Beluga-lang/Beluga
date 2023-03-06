@@ -35,12 +35,12 @@ case e of
 
 inductive SemSubst : {g:tctx}{h:ctx} ctype =
 | Nil : SemSubst [] [h]
-| Dot : SemSubst [g] [h] -> Sem [h] [ |- A] -> SemSubst [g,x:tm A[]] [h];
+| Dot : SemSubst [g] [h] -> Sem [h] [ |- A] -> SemSubst [g, x:tm A[]] [h];
 
 rec lookup : {#p:[g |- tm A[]]} SemSubst [g] [h] -> Sem [h] [ |- A] =
 mlam #p => fn s => let s : SemSubst [g] [h] = s in case [g |- #p[..]] of
-| [g',x:tm T |-  x] => let Dot s' e = s in e
-| [g',x:tm T |-  #q[..]] => let Dot s' e = s in lookup [g' |-  #q[..]] s'
+| [g', x:tm T |- x] => let Dot s' e = s in e
+| [g', x:tm T |- #q[..]] => let Dot s' e = s in lookup [g' |- #q[..]] s'
 ;
 
 rec subst_wkn : {h:ctx}{h':ctx}{$W:[h' |- h]} SemSubst [g] [h] -> SemSubst [g] [h'] =
@@ -56,8 +56,8 @@ case t of
 | [g |- #p[..] ]           =>  lookup [g |- #p[..]] s
 | [g |- lam (\x. E) ]  =>
   Slam [h] [ |- _] [ |- _] (mlam h' => mlam $W => fn e =>
-    eval (Dot (subst_wkn [h] [h'] [h' |- $W[..]] s) e) [g,x:tm _ |-  E])
-| [g |- app (E1[..]) (E2[..]) ] =>
+    eval (Dot (subst_wkn [h] [h'] [h' |- $W[..]] s) e) [g, x:tm _ |- E])
+| [g |- app E1[..] E2[..] ] =>
   let Slam [h] [ |- A] [ |- B] f =  eval s [g |- E1[..]] in
     f [h] [h |- ..] (eval s [g |- E2[..]])
 ;
@@ -65,18 +65,18 @@ case t of
 rec reflect : [g |- neut A[]] ->  Sem [g] [ |- A] =
 fn r => let [g |- R[..] ] : [g |- neut A[]] = r in
 case [ |- A] of
-| [ |- atomic P ] => Syn [g |- R[..]]
-| [ |- arr T S ] =>  Slam [g] [ |- T] [ |- S] (mlam h => mlam $W => fn e =>
+| [ |- atomic P] => Syn [g |- R[..]]
+| [ |- arr T S] =>  Slam [g] [ |- T] [ |- S] (mlam h => mlam $W => fn e =>
    let [h |- N[..]] = reify e in
-   reflect [h |- rapp (R[$W[..]]) (N[..])]
+   reflect [h |- rapp (R[$W[..]]) N[..]]
   )
 
 and rec reify : Sem [g] [ |- A] -> [g |- norm A[]] =
 fn e => let (e : Sem [g] [ |- A]) = e in
 case e of
-| Syn [g |- R[..]] => [g |- embed (R[..])]
+| Syn [g |- R[..]] => [g |- embed R[..]]
 | Slam [g] [ |- A] [ |- B] f =>
-     let [g,x:neut _ |-  E] = reify (f [g,x:neut _] [g,x |- .. ] (reflect [g,x:neut _ |-  x]))
+     let [g, x:neut _ |- E] = reify (f [g, x:neut _] [g, x |- .. ] (reflect [g, x:neut _ |- x]))
      in [g |- nlam (\x. E)]
 ;
 

@@ -50,7 +50,7 @@ LF sub_split : joining (cjoin Phii Phi1 Phii2) -> subst_typing sigma Phi Psi -> 
 
 % Let Phi = Phi1 join Phi2 and Psi |- Sig <= Phi, then there exists Psi1, Psi2 s.t. Psi1 |- Sig <= Phi1, Psi2 |- Sig <= Phi2 and Psi = Psi1 join Psi2
 
-rec subst_split : (g:sch){J : [g |- joining (cjoin Phi Phi1 Phi2)]}{S : [ g |- subst_typing Sig Phi Psi]} [g |- sub_split J S] =
+rec subst_split : (g:sch){J : [g |- joining (cjoin Phi Phi1 Phi2)]}{S : [g |- subst_typing Sig Phi Psi]} [g |- sub_split J S] =
     mlam J => mlam S =>
     let [g |- J] : [g |- joining (cjoin Psi Psi1 Psi2)] = [_ |- J] in
     let [g |- S] : [g |- subst_typing Sig Psi Phi] = [_ |- S] in

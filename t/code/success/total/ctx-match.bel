@@ -13,8 +13,8 @@ rec pos :{g:ctx}{#p:[g |- term]} Nat =
 / total m (pos m) /
 mlam g,#p => case [g] of
 | [ ] => impossible [|- #p]
-| [g,y:term] =>
-  (case [g,y:term |- #p[..,y]] of
-  | [g, y:term |- y ] => (S Z)
-  | [g,y:term |- #p[..]] => S (pos [g] [g |- #p[..]]))
+| [g, y:term] =>
+  (case [g, y:term |- #p[.., y]] of
+  | [g, y:term |- y] => (S Z)
+  | [g, y:term |- #p[..]] => S (pos [g] [g |- #p[..]]))
 ;

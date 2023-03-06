@@ -9,9 +9,9 @@ lam : (tm → tm) → tm.
 oft : tm → tp → type.
 t_lam : ({x : tm} oft x A → oft (M x) B) → oft (lam M) (arr A B).
 
-rec copy : [ ⊢ oft M A ] → [ ⊢ oft M A ] =
+rec copy : [ ⊢ oft M A] → [ ⊢ oft M A] =
 fn d ⇒ case d of
-    [ ⊢ t_lam \x. \u. D ] ⇒ [ ⊢ ?a ]
+    [ ⊢ t_lam \x. \u. D] ⇒ [ ⊢ ?a]
 ;
 %:load input.bel
 The file input.bel has been successfully loaded;

@@ -109,7 +109,7 @@ fn d => fn ev => case ev of
     [ |- is_@ D1 D2']
  )
 | [ |- step_@3 V] =>
-  let  [ |- is_@ (is_lam (\x. (\d. D1'))) D2] = d in  [ |- D1'[_,D2]]
+  let  [ |- is_@ (is_lam (\x. (\d. D1'))) D2] = d in  [ |- D1'[_, D2]]
 
 | [ |- (step_#1 EV)] =>
  (let [ |- is_# D]  = d in
@@ -117,7 +117,7 @@ fn d => fn ev => case ev of
     [ |- is_# D']
  )
 | [ |- step_#2] =>
-  let {D':[a:tp |-  has E T] }
+  let {D':[a:tp |- has E T] }
      [ |- is_# (is_lAM (\a. D'))]  : [ |- has (ann _ T2) T[T2]] = d in [ |- D'[T2]]
 ;
 

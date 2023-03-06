@@ -5,7 +5,7 @@ arr: tp -> tp -> tp.
 tm : type.          --name tm E.
 oft : tm -> tp -> type.
 
-schema ctx = some [t:tp] block x:tm,y:oft x t;
+schema ctx = some [t:tp] block x:tm, y:oft x t;
 
 nat: type.
 z: nat.

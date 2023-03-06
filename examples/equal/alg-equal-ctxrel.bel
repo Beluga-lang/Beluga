@@ -55,16 +55,16 @@ inductive Crel : {g:tCtx} {h:taCtx} ctype   =
 
 inductive TRel : (g:tCtx) (h:taCtx) [g |- term] -> [h |- term] -> ctype  =
 | TRvar0 : {h: taCtx} Crel [g] [h] ->
-            TRel [g, x:term |-  x]
+            TRel [g, x:term |- x]
      [h, b:block (x:term, u:aeq x x) |- b.1]
 | TRvar  : TRel  [g |- #p] [h |- #q.1]
-         -> TRel [g, x:term |-  #p[..]]
-                [h, b:block (x:term, u:aeq x x) |-  #q.1[..]]
+         -> TRel [g, x:term |- #p[..]]
+                [h, b:block (x:term, u:aeq x x) |- #q.1[..]]
 
 | TRapp  : TRel [g |- M] [h |- M'] -> TRel [g |- N] [h |- N']
         -> TRel [g |- app M N] [h |- app M' N']
 
-| TRlam  : TRel [g, x:term |-  M] [h, b:block (x:term, _u:aeq x x) |-  N[..,b.1]]
+| TRlam  : TRel [g, x:term |- M] [h, b:block (x:term, _u:aeq x x) |- N[.., b.1]]
      -> TRel [g |- lam \x. M] [h |- lam \x. N]
 ;
 
@@ -77,17 +77,17 @@ rec ref' : (h:taCtx)(g:tCtx) TRel [g |- M] [h |- N] ->
 fn r =>
 let (r:TRel [g |- M] [h |- N]) = r in
 case [g |- M] of
-| [g,x:term |-  x] =>
-  let TRvar0 [h] cr = r in [h, b: block (x:term, u:aeq x x)  |-  b.2]
+| [g, x:term |- x] =>
+  let TRvar0 [h] cr = r in [h, b: block (x:term, u:aeq x x)  |- b.2]
 
-| [g, x:term |-  #p ] =>
+| [g, x:term |- #p] =>
   let TRvar r' = r in
   let [h |- E] = ref' r' in
-    [h, b:block(x:term, _u:aeq x x) |-  E[..]]
+    [h, b:block(x:term, _u:aeq x x) |- E[..]]
 
 | [g |- lam \x. M] =>
   let TRlam  tr1 = r in
-  let [h,b:block (y:term , _t:aeq y y) |-  AE[..,b.1,b.2]] =
+  let [h, b:block (y:term , _t:aeq y y) |- AE[.., b.1, b.2]] =
          ref'  tr1
   in
    [h |- ae_l \x. \w. AE]
@@ -112,10 +112,10 @@ fn ae1 => fn ae2 => case ae1 of
   let TRlam t = tr in
   let TRlam s = sr in
   let TRlam r = rr in
-  let [h, b:block x:term , _t:aeq x x |-  AE[..,b.1,b.2]] =
+  let [h, b:block x:term , _t:aeq x x |- AE[.., b.1, b.2]] =
          trans t s r
-               [h, b:block x':term , _t:aeq x' x' |-  AE1[..,b.1,b.2]]
-               [h, b |-  AE2[..,b.1,b.2]]
+               [h, b:block x':term , _t:aeq x' x' |- AE1[.., b.1, b.2]]
+               [h, b |- AE2[.., b.1, b.2]]
   in
     [h |- ae_l \x. \u. AE]
 
@@ -202,7 +202,7 @@ fn tr => case tr of
 % Guarantee that for every variable in h there is a corresponding variable in l
 rec exTRelV : {#p: #[l |- term]} Crel [l] [h] -> ExWkV [h] [l |- #p] =
 mlam #p => fn cr => let (cr : Crel [l] [h]) = cr in case [l |- #p] of
-| [l, x:term |-  x ] =>
+| [l, x:term |- x] =>
   let Crel_xa (cr' : Crel [l0] [h0]) = cr in ExWkV/c (TRvar0 [h0] cr')
 | [l, x:term |- #p[..]] =>
   let Crel_xa cr' = cr in
@@ -214,10 +214,10 @@ mlam #p => fn cr => let (cr : Crel [l] [h]) = cr in case [l |- #p] of
 rec exTRel : {M : [l |- term]} Crel [l] [h] -> ExWk [h] [l |- M] =
 mlam M => fn cr => let (cr : Crel [l] [h]) = cr in case [l |- M] of
 | [l |- #p] =>
-  let ExWkV/c tr = exTRelV [l |- #p] cr in ExWk/c [h |- _ ] tr
+  let ExWkV/c tr = exTRelV [l |- #p] cr in ExWk/c [h |- _] tr
 
 | [l |- lam \x. M] =>
-  let ExWk/c [h,b:block (x:term, _u: aeq x x) |-  M'[..,b.1]] tr' = exTRel [l, x:term |-  M] (Crel_xa cr) in
+  let ExWk/c [h, b:block (x:term, _u: aeq x x) |- M'[.., b.1]] tr' = exTRel [l, x:term |- M] (Crel_xa cr) in
     ExWk/c [h |- lam \x. M'] (TRlam tr')
 
 | [l |- app M N] =>
@@ -261,15 +261,15 @@ inductive TdCxt : {g:tCtx} {h:tdCtx} ctype =
 inductive TRel' : (g:tCtx) (h:tdCtx) [g |- term] -> [h |- term] -> ctype =
 | TRvar0' : {h: tdCtx} % should it include a proof that g and h are related
             TdCxt [g] [h] ->
-            TRel' [g, x:term |-  x] [h, b:block (x:term, u:deq x x) |- b.1]
+            TRel' [g, x:term |- x] [h, b:block (x:term, u:deq x x) |- b.1]
 | TRvar'  : TRel'  [g |- #p] [h |- #q.1]
-         -> TRel' [g, x:term |-  #p[..]]
-                [h, b:block (x:term, u:deq x x) |-  #q.1[..]]
+         -> TRel' [g, x:term |- #p[..]]
+                [h, b:block (x:term, u:deq x x) |- #q.1[..]]
 
 | TRapp'  : TRel' [g |- M] [h |- M'] -> TRel' [g |- N] [h |- N']
         -> TRel' [g |- app M N] [h |- app M' N']
 
-| TRlam'  : TRel' [g, x:term |-  M] [h, b:block (x:term, _u:deq x x) |-  N[..,b.1]]
+| TRlam'  : TRel' [g, x:term |- M] [h, b:block (x:term, _u:deq x x) |- N[.., b.1]]
      -> TRel' [g |- lam \x. M] [h |- lam \x. N]
 ;
 
@@ -283,8 +283,8 @@ inductive ExWkV' : (h: tdCtx){l:tCtx}[h |- term] -> ctype =
 ;
 
 inductive Var : (h: tdCtx) [h |- term] -> ctype =
-| BV : {h:tdCtx} Var [h, b: block x:term, _u:deq x x |-  b.1 ]
-| PV : Var [h |- #p.1] -> Var [h, b: block x:term, _u:deq x x |-  #p.1[..] ];
+| BV : {h:tdCtx} Var [h, b: block x:term, _u:deq x x |- b.1]
+| PV : Var [h |- #p.1] -> Var [h, b: block x:term, _u:deq x x |- #p.1[..] ];
 
 % Various Lemmas needed in the transitivity case of the ceq proof
 % They establish properties about the weakening relation TRel' and TRel
@@ -304,11 +304,11 @@ fn tr => case tr of
 rec exTRelV' :  {#p: #[h |- block x:term, _u:deq x x]}
         TdCxt [l] [h] -> ExWkV' [l] [h |- #p.1] =
 mlam #p => fn cr => let (cr : TdCxt [l] [h]) = cr in case [h |- #p.1] of
-| [h,b: block x:term, _u:deq x x |-  b.1 ] =>
+| [h, b: block x:term, _u:deq x x |- b.1] =>
   let Tdcons cr' = cr in ExWkV'/c (TRvar0' [h] cr')
-| [h',b: block x:term, _u:deq x x |- #q.1[..]] =>
+| [h', b: block x:term, _u:deq x x |- #q.1[..]] =>
   let Tdcons cr' = cr in
-  let ExWkV'/c tr = exTRelV' [h' |-  #q] cr' in
+  let ExWkV'/c tr = exTRelV' [h' |- #q] cr' in
     ExWkV'/c (TRvar' tr )
 ;
 
@@ -319,7 +319,7 @@ mlam M => fn cr => let (cr : TdCxt [l] [h]) = cr in case [h |- M] of
   let ExWkV'/c tr = exTRelV' [h |- #p] cr in ExWk'/c tr
 
 | [h |- lam \x. M] =>
-  let ExWk'/c tr' = exTRel' [h, b:block (x:term, _u: deq x x) |-  M[..,b.1]] (Tdcons cr) in
+  let ExWk'/c tr' = exTRel' [h, b:block (x:term, _u: deq x x) |- M[.., b.1]] (Tdcons cr) in
     ExWk'/c (TRlam' tr')
 
 | [h |- app M N] =>
@@ -390,9 +390,9 @@ fn de => case de of
   let TRlam' sr1' = sr in
   let TRlam tr1 = tr' in
   let TRlam sr1 = sr' in
-  let [g,b:block x:term,u:aeq x x  |-  AE[..,b.1,b.2]] =
+  let [g, b:block x:term, u:aeq x x  |- AE[.., b.1, b.2]] =
         ceq tr1' sr1' tr1 sr1 (ADcons cr)
-            [h, b:block x:term, _t:deq x x |-  DE[..,b.1,b.2]]
+            [h, b:block x:term, _t:deq x x |- DE[.., b.1, b.2]]
   in
      [g |- ae_l (\x.\v. AE)]
 

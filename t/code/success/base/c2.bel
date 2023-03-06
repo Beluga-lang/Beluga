@@ -19,20 +19,20 @@ mlam g => fn e =>
   | [g |- #p[..]] => [g |- #p[..]]
 );
 
-rec copyXBad1 : {g:termCtx} [g, x:term |-  term] -> [g, x:term |-  term] =
+rec copyXBad1 : {g:termCtx} [g, x:term |- term] -> [g, x:term |- term] =
 / total e (copyXBad1 g e)/
 mlam g => fn e =>
  (case e of --not
-  | [g,x:term |-  z]     => [g,x:term |-  z]
-  | [g,x:term |-  x]     => [g,x:term |-  x]
+  | [g, x:term |- z]     => [g, x:term |- z]
+  | [g, x:term |- x]     => [g, x:term |- x]
 );
 
-rec copyXBad2 : {g:termCtx} [g, x:term |-  term] -> [g, x:term |-  term] =
+rec copyXBad2 : {g:termCtx} [g, x:term |- term] -> [g, x:term |- term] =
 / total e (copyXBad2 g e)/
 mlam g => fn e =>
  case e of --not
- | [g,x:term |-  z]     => [g,x:term |-  z]
- | [g,x:term |-  #p[..]] => [g,x:term |-  #p[..]]
+ | [g, x:term |- z]     => [g, x:term |- z]
+ | [g, x:term |- #p[..]] => [g, x:term |- #p[..]]
 ;
 
 
@@ -40,8 +40,8 @@ rec copyXGood : {g:termCtx} [g |- term] -> [g |- term] =
 / total e (copyXGood g e)/
 mlam g => fn e =>
   case e of
-  | [g,x:term |-  x]     => [g,x:term |-  x]
-  | [g,x:term |-  #p[..]] => [g,x:term |-  #p[..]]
+  | [g, x:term |- x]     => [g, x:term |- x]
+  | [g, x:term |- #p[..]] => [g, x:term |- #p[..]]
   | [g |- z] => [g |- z]
 ;
 
@@ -49,8 +49,8 @@ rec copyXGood2 : {g:termCtx} [g |- term] -> [g |- term] =
 / total e (copyXGood2 g e)/
 mlam g => fn e =>
  (case e of
-  | [g,x:term |-  z]     => [g,x:term |-  z]
-  | [g,x:term |-  x]     => [g,x:term |-  x]
-  | [g,x:term |-  #p[..]] => [g,x:term |-  #p[..]]
+  | [g, x:term |- z]     => [g, x:term |- z]
+  | [g, x:term |- x]     => [g, x:term |- x]
+  | [g, x:term |- #p[..]] => [g, x:term |- #p[..]]
   | [g |- z] => [g |- z]
 );

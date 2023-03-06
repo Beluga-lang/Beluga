@@ -48,8 +48,8 @@ rec extend : (g:tctx)(h:ctx)
 -> ({T:[ |- tp]} TmVar [g, x:tm S[]] [ |- T] ->  Sem [h] [ |- T]) =
 / total x (extend g h s e t x) /
 fn s => fn e => mlam T => fn x => case x of
-| TmVar/c [g,x:tm S[] |-  x] => e
-| TmVar/c [g,x:tm S[] |-  #q[..] ] => s [ |- T ] (TmVar/c [g |- #q])
+| TmVar/c [g, x:tm S[] |- x] => e
+| TmVar/c [g, x:tm S[] |- #q[..] ] => s [ |- T] (TmVar/c [g |- #q])
 ;
 
 
@@ -60,13 +60,13 @@ rec eval : (g:tctx)(h:ctx)
 / total t (eval g h s t _) /
 fn t => fn s =>
 case t of
-| [g |- #p ]            : [g |- tm S[]] =>  s [ |- S] (TmVar/c [g |- #p ])
+| [g |- #p]            : [g |- tm S[]] =>  s [ |- S] (TmVar/c [g |- #p])
 | [g |- lam (\x. E) ] : [g |- tm (arr A[] B[])] =>
   Slam [_] [ |- A] [ |- B]  (mlam h' => mlam $S => fn e =>
-         eval [g,x:tm A[] |-  E]
+         eval [g, x:tm A[] |- E]
               (extend (mlam T => fn x => weaken $[h' |- $S] (s [ |- T] x))  e))
 
-| [g |- app E1 E2 ] =>
+| [g |- app E1 E2] =>
   let (Slam [h] [ |- A] [ |- B] f ) =  eval [g |- E1] s in
     f [h] $[h |- ..] (eval [g |- E2] s)
 ;
@@ -76,22 +76,22 @@ rec reflect : {g:ctx} {A:[|- tp]}[g |- neut A[]] ->  Sem [g] [ |- A] =
  / total a (reflect g a) /
 mlam g, A => fn r =>
 case [ |- A] of
-| [ |- atomic P ] => Syn r
-| [ |- arr T1 T2 ] =>
-  let  [g |- R ] = r in
+| [ |- atomic P] => Syn r
+| [ |- arr T1 T2] =>
+  let  [g |- R] = r in
   Slam [g] [ |- T1] [ |- T2]  (mlam h => mlam $S => fn e =>
-          let [h |- N ] = reify [h] [ |- T1] e in
-            reflect [h] [ |- T2 ] [h |- rapp R[$S] N])
+          let [h |- N] = reify [h] [ |- T1] e in
+            reflect [h] [ |- T2] [h |- rapp R[$S] N])
 
 and rec reify : {g : ctx} {A : [ |- tp]}Sem [g] [ |- A] -> [g |- norm A[]] =
  / total a (reify g a) /
 mlam g, A => fn e => case [ |- A] of
-| [ |- atomic P ] =>  (case e of Syn [g |- R] => [g |- embed R])
-| [ |- arr T S ] =>
+| [ |- atomic P] =>  (case e of Syn [g |- R] => [g |- embed R])
+| [ |- arr T S] =>
   (case e of
    | (Slam [g] [ |- T] [ |- S] f)  =>
-     let s = (f [g,x:neut T[] ] $[g,x:neut T[] |- ..] (reflect [g ,x:neut T[]] [ |- T] [g ,x:neut T[] |-  x])) in
-     let [g,x:neut T[] |-  E] = reify [g ,x:neut T[]] [ |- S] s
+     let s = (f [g, x:neut T[] ] $[g, x:neut T[] |- ..] (reflect [g , x:neut T[]] [ |- T] [g , x:neut T[] |- x])) in
+     let [g, x:neut T[] |- E] = reify [g , x:neut T[]] [ |- S] s
      in [g |- nlam (\x. E)])
 
 ;
@@ -103,7 +103,7 @@ mlam T => fn y => let TmVar/c [ |- #p] = y in impossible [ |- #p]; % in [ ];
 
 rec nbe : [ |- tm A] -> [ |- norm A] =
 / total (nbe) /
-fn t => reify   [] [ |- _ ] (eval t initialMap)
+fn t => reify   [] [ |- _] (eval t initialMap)
 ;
 
 

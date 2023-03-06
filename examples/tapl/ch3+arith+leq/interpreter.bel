@@ -61,7 +61,7 @@ fn m => case m of
 
 | [ |- switch M M1 M2]      =>
   (case isvalue [ |- M] of
-     | [ |- yes] => (case [ |- M ] of
+     | [ |- yes] => (case [ |- M] of
          | [ |- true] => [ |- interim M1]
          | [ |- false] => [ |- interim M2]
          | [ |- V]     => [ |- no_interim])
@@ -121,7 +121,7 @@ rec eval : [ |- term] -> [ |- optVal] =
 % / total m (eval m)/
 fn m => case m of
 | [ |- succ M] =>
-  (case eval [ |- M ] of
+  (case eval [ |- M] of
      | [ |- val V] => [ |- val (succ V)]
      | [ |- no_val] => [ |- no_val]
   )
@@ -199,7 +199,7 @@ fn m => case m of
      | [ |- typ bool] =>
    (case infer [ |- N1] of
       | [ |- no_typ] => [ |- no_typ]
-      | [ |- typ T1] =>  (case infer [ |- N2 ] of
+      | [ |- typ T1] =>  (case infer [ |- N2] of
           | [ |- no_typ] => [ |- no_typ]
           | [ |- typ T2] =>  (case equal [ |- T1] [ |- T2] of
             | [ |- yes] => [ |- typ T1]

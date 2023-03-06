@@ -1,6 +1,6 @@
 t/harpoon/logrel/weak-norm-total-no-theorems.bel
 halts_step'
-[ ⊢ step M M'] -> [ ⊢ halts M' ] → [⊢ halts M ]
+[ ⊢ step M M'] -> [ ⊢ halts M' ] → [⊢ halts M]
 
 
 inductive-auto-solve

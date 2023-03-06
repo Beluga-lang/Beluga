@@ -21,13 +21,13 @@ fn r => fn s => case r of
 ;
 
 % Multi-step reduction is a congruence
-rec lm1* : (g:tctx) [g,x:term |-  step* M M']
+rec lm1* : (g:tctx) [g, x:term |- step* M M']
       ->  [g |- step* (lam (\x. M)) (lam (\x. M'))] =
 % / total r (lm1* g m m' r) /
 fn r => case r of
-| [g,x:term |-  id1] => [g |- id1]
-| [g,x:term |-  step1 R1 R2*] =>
-  let [g |- S2*] = lm1* [g,x |- R2*] in
+| [g, x:term |- id1] => [g |- id1]
+| [g, x:term |- step1 R1 R2*] =>
+  let [g |- S2*] = lm1* [g, x |- R2*] in
     [g |- step1 (lm1 \x. R1) S2*]
 ;
 
@@ -38,7 +38,7 @@ rec apl1* :(g:tctx) {M2:[g |- term]} [g |- step* M1 M1']
 mlam M2 => fn r => case r of
 | [g |- id1] => [g |- id1]
 | [g |- step1 R1 R2*] =>
-  let [g |- S2*] = apl1* [g |- M2 ] [g |- R2*] in
+  let [g |- S2*] = apl1* [g |- M2] [g |- R2*] in
     [g |- step1 (apl1 R1) S2*]
 ;
 
@@ -48,6 +48,6 @@ rec apr1* :(g:tctx){M1:[g |- term]} [g |- step* M2 M2']
 mlam M1 => fn r => case r of
 | [g |- id1] => [g |- id1]
 | [g |- step1 R1 R2*] =>
-  let [g |- S2*] = apr1* [g |- M1 ] [g |- R2*] in
+  let [g |- S2*] = apr1* [g |- M1] [g |- R2*] in
     [g |- step1 (apr1 R1) S2*]
 ;

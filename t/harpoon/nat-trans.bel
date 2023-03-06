@@ -33,7 +33,7 @@ intros
   case leq_z:
   { N1 : ( |- nat), N2 : ( |- nat)
   | x : [ |- leq z N1], x1 : [ |- leq N1 N2]
-  ; solve [ |- leq_z ]
+  ; solve [ |- leq_z]
   }
 }
 ;

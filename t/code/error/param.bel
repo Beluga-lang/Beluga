@@ -12,7 +12,7 @@ elem: tm.
 oft : tm -> tp -> type.
 o/i: oft elem i.
 
-schema ctx = some [t:tp] block x:tm,y:oft x t;
+schema ctx = some [t:tp] block x:tm, y:oft x t;
 
 
 

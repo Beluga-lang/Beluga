@@ -79,13 +79,13 @@ schema trCtx = some [t:tp] block x:tm, of_v: oft x t, pr_v: pr x x;
 Beluga enjoys the usual substitution property for parametric and hypothetical derivations for free since substitutivity is just a by-product of
 hypothetical-parametric judgements. Strictly speaking, the substitution lemma does not need to be stated explicitly in order to prove type preservation for parallel reduction but we've encoded it regardless. While this is usually proved by induction on the first derivation, we show it as a corollary of the substitution principles. In stating the substitution lemma we explicitly state that the types `S` and `T` cannot depend on the context `g`, i.e. they are closed.}}%
 rec subst : (g:tCtx)
-            [g,b: block x:tm, of_v: oft x T[] |- oft M[..,b.1] S[]]
--> [g |-  oft N T[]]
--> [g |-  oft M[..,N] S[]] =
+            [g, b: block x:tm, of_v: oft x T[] |- oft M[.., b.1] S[]]
+-> [g |- oft N T[]]
+-> [g |- oft M[.., N] S[]] =
 fn d1 => fn d2 =>
-let [g, b: block x:tm, of_v: oft x T |- D1[..,b.1,b.2]] = d1 in
-let [g |-  D2] = d2 in
-    [g |-  D1[..,_,D2]]
+let [g, b: block x:tm, of_v: oft x T |- D1[.., b.1, b.2]] = d1 in
+let [g |- D2] = d2 in
+    [g |- D1[.., _, D2]]
 ;
 
 
@@ -100,28 +100,28 @@ rec tps : (g:trCtx)
             [g |- pr M N] -> [g |- oft M A]
           -> [g |- oft N A] =
 fn r => fn d => case r of
-| [g |- #p.3 ] => d
-| [g |- pr_b (\x.\pr_v. R1) R2 ] =>
-    let [g |-  of_app (of_lam (\x.\of_v. D1)) D2 ] = d in
-    let [g, b: block x:tm, of_v: oft x T, pr_v: pr x x |- F1[..,b.1,b.2]] =
-        tps [g, b: block x:tm, of_v: oft x _, pr_v: pr x x |- R1[..,b.1,b.3]]
-[g, b |- D1[..,b.1,b.2]] in
-    let [g |-  F2 ] = tps [g |-  R2] [g |-  D2] in
-    [g |-  F1[..,_,F2]] % use substitution lemma directly
+| [g |- #p.3] => d
+| [g |- pr_b (\x.\pr_v. R1) R2] =>
+    let [g |- of_app (of_lam (\x.\of_v. D1)) D2] = d in
+    let [g, b: block x:tm, of_v: oft x T, pr_v: pr x x |- F1[.., b.1, b.2]] =
+        tps [g, b: block x:tm, of_v: oft x _, pr_v: pr x x |- R1[.., b.1, b.3]]
+[g, b |- D1[.., b.1, b.2]] in
+    let [g |- F2] = tps [g |- R2] [g |- D2] in
+    [g |- F1[.., _, F2]] % use substitution lemma directly
 
 | [g |- pr_l \x.\pr_v. R] =>
-    let [g |-  of_lam \x.\of_v. D] = d in
-    let [g, b: block x:tm, of_v: oft x T, pr_v: pr x x |- F[..,b.1,b.2]] =
-        tps [g, b: block x:tm, of_v: oft x _, pr_v: pr x x |- R[..,b.1,b.3]]
-[g, b |- D[..,b.1,b.2]] in
-    [g |-  of_lam \x.\of_v. F]
+    let [g |- of_lam \x.\of_v. D] = d in
+    let [g, b: block x:tm, of_v: oft x T, pr_v: pr x x |- F[.., b.1, b.2]] =
+        tps [g, b: block x:tm, of_v: oft x _, pr_v: pr x x |- R[.., b.1, b.3]]
+[g, b |- D[.., b.1, b.2]] in
+    [g |- of_lam \x.\of_v. F]
 
-| [g |- pr_a R1 R2 ] =>
+| [g |- pr_a R1 R2] =>
     let [g |- of_app D1 D2] = d in
-    let [g |- F1] = tps [g |-  R1] [g |- D1] in
-    let [g |- F2] = tps [g |-  R2] [g |- D2] in
+    let [g |- F1] = tps [g |- R1] [g |- D1] in
+    let [g |- F2] = tps [g |- R2] [g |- D2] in
     [g |- of_app F1 F2]
 ;
 %{{
-The &beta;-reduction case is perhaps the most note-worthy. We know by assumption that `d:[g |- oft (app (lam A (\x. M x)) N)) (arr A B)` and by inversion that `d:[g |- of_a (of_l \x. \u. D1 x u)D2 ]` where `D1` stands for `oft (M x) B` in the extended context `g, x:tm , u:oft x A`. Furthermore, `D2` describes a derivation `oft N A`. A recursive call on `D2` yields `F2:oft N' A`. Likewise, y the i.h. on `D1`, we obtain a derivation <code/>F1:oft M' B</code> in `g, b:block (x:tm , of_x:oft x A)`. We now want to substitute for `x` the term `N'`, and for the derivation `oft x A` the derivation `F2`. This is achieved by applying to `F1` the substitution `.., _ F2)`. Since in the program above we do not have the name `N` available, we write an underscore and let Beluga's type reconstruction algorithm infer the appropriate name.
+The &beta;-reduction case is perhaps the most note-worthy. We know by assumption that `d:[g |- oft (app (lam A (\x. M x)) N)) (arr A B)` and by inversion that `d:[g |- of_a (of_l \x. \u. D1 x u)D2]` where `D1` stands for `oft (M x) B` in the extended context `g, x:tm , u:oft x A`. Furthermore, `D2` describes a derivation `oft N A`. A recursive call on `D2` yields `F2:oft N' A`. Likewise, y the i.h. on `D1`, we obtain a derivation <code/>F1:oft M' B</code> in `g, b:block (x:tm , of_x:oft x A)`. We now want to substitute for `x` the term `N'`, and for the derivation `oft x A` the derivation `F2`. This is achieved by applying to `F1` the substitution `.., _ F2)`. Since in the program above we do not have the name `N` available, we write an underscore and let Beluga's type reconstruction algorithm infer the appropriate name.
 }}%

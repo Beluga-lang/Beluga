@@ -27,4 +27,4 @@ let v2 = [ |- iszero (pred (succ z))]  ;
 % ill-typed later. So far, we only are concerned
 % with syntax.
 
-let v3 = [ |- switch (succ z) (succ z) false ] ;
+let v3 = [ |- switch (succ z) (succ z) false] ;

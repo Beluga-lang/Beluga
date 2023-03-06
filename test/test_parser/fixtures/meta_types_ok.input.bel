@@ -4,40 +4,40 @@
 % types is automatically generated during development, but not during
 % continuous integration.
 
-$[ ^ |- ^ ]
+$[^ |- ^]
 ;;
 
 $[ |- ]
 ;;
 
-$[ ^ |-# ^ ]
+$[^ |-# ^]
 ;;
 
 $[ |-# ]
 ;;
 
-$[ x : nat |- y : nat ]
+$[x : nat |- y : nat]
 ;;
 
-$[ x : nat |-# y : nat ]
+$[x : nat |-# y : nat]
 ;;
 
-[ ^ |- nat ]
+[^ |- nat]
 ;;
 
-( ^ |- nat )
+(^ |- nat)
 ;;
 
-[ |- nat ]
+[ |- nat]
 ;;
 
-( |- nat )
+( |- nat)
 ;;
 
-[ x : nat |- nat ]
+[x : nat |- nat]
 ;;
 
-( x : nat |- nat )
+(x : nat |- nat)
 ;;
 
 $[ |- g]

@@ -221,7 +221,7 @@ mlam T2 => mlam T3 =>
 fn ms => case ms of
 | [ |- m_ref] => [ |- m_ref]
 | [ |- m_step S MS] =>
-  let [ |- MS'] = mstep_switch [ |- T2 ] [ |- T3 ] [ |- MS] in
+  let [ |- MS'] = mstep_switch [ |- T2] [ |- T3] [ |- MS] in
   [ |- m_step (s_switch S) MS']
 
 ;
@@ -299,7 +299,7 @@ fn d => case d of
 | [ |- ev_switch_true D D1] : [ |- (eval (switch M M1 M2) V)] =>
   let [ |- Mtrue]  = big_to_small [ |- D] in
     % Mtrue : multi_step M true
-  let [ |- MS]     = mstep_switch [ |- M1 ] [ |- M2 ] [ |- Mtrue ] in
+  let [ |- MS]     = mstep_switch [ |- M1] [ |- M2] [ |- Mtrue] in
     % MS : multi_step (switch M M1 M2) (switch true M1 M2)
   let [ |- MS1]    = big_to_small [ |- D1] in
     % MS1 : multi_step  M1 V
@@ -309,7 +309,7 @@ fn d => case d of
  | [ |- ev_switch_false D D1] : [ |- (eval (switch M M1 M2) V)] =>
   let [ |- Mfalse]  = big_to_small [ |- D] in
     % Mfalse : multi_step M false
-  let [ |- MS]     = mstep_switch [ |- M1 ] [ |- M2 ] [ |- Mfalse ] in
+  let [ |- MS]     = mstep_switch [ |- M1] [ |- M2] [ |- Mfalse] in
     % MS : multi_step (switch M M1 M2) (switch false M1 M2)
   let [ |- MS1]    = big_to_small [ |- D1] in
     % MS1 : multi_step  M1 V
@@ -541,7 +541,7 @@ fn s => fn v => case s of
 ;
 
 empty : type.
-rec values_dont_step : [ |- step M M'] -> [ |- value M ] -> [ |- empty]=
+rec values_dont_step : [ |- step M M'] -> [ |- value M] -> [ |- empty]=
 / total v (values_dont_step m m' s v )/
 fn s => fn v => case v of
 | [ |- v_true]    => impossible s % (case s of [ |- {}] )
@@ -556,7 +556,7 @@ rec values_mstep_to_themselves: [ |- value V] -> [ |- mstep V V'] -> [ |- eq V V
 / total ms (values_mstep_to_themselves _ _ _ ms)/
 fn v => fn ms => case ms of
  | [ |- m_ref] => [ |- ref]
- | [ |- m_step S MS] => impossible values_dont_step [ ⊢ S ] v % case (values_dont_step [ |- S] v) of [ |- {}]
+ | [ |- m_step S MS] => impossible values_dont_step [ ⊢ S] v % case (values_dont_step [ |- S] v) of [ |- {}]
 ;
 
 rec small_to_big : {M:[ |- term]}[ |- mstep M V] -> [ |- value V] -> [ |- eval M V] =
@@ -566,23 +566,23 @@ mlam M => fn ms => fn v => case [ |- M] of
 | [ |- switch M M1 M2] =>
     (case switch_lemma  ms v of
        | [ |- switch_subseq_true M2true M1V] =>
-     let [ |- D]  = small_to_big [ |- M  ] [ |- M2true] [ |- v_true] in
-     let [ |- D1] = small_to_big [ |- M1 ] [ |- M1V] v in
+     let [ |- D]  = small_to_big [ |- M] [ |- M2true] [ |- v_true] in
+     let [ |- D1] = small_to_big [ |- M1] [ |- M1V] v in
      [ |- ev_switch_true D D1]
        | [ |- switch_subseq_false M2false M2V] =>
-     let [ |- D]  = small_to_big [ |- M  ] [ |- M2false] [ |- v_false] in
-     let [ |- D2] = small_to_big [ |- M2 ] [ |- M2V] v in
+     let [ |- D]  = small_to_big [ |- M] [ |- M2false] [ |- v_false] in
+     let [ |- D2] = small_to_big [ |- M2] [ |- M2V] v in
      [ |- ev_switch_false D D2]
     )
 
 | [ |- pred M] =>
   (case pred_lemma ms v of
      | [ |- pred_subseq_zero Mzero m_ref]  =>  % Mzero : mstep M zero
-       let [ |- D] = small_to_big [ |- M ]  [ |- Mzero] [ |- v_z] in
+       let [ |- D] = small_to_big [ |- M]  [ |- Mzero] [ |- v_z] in
          [ |- ev_pred_zero D]
 
      | [ |- pred_subseq_succ Msucc NV MS]  =>   % Msuc : mstep M (succ NV)
-       let [ |- D] = small_to_big [ |- M ] [ |- Msucc] [ |- v_s NV] in
+       let [ |- D] = small_to_big [ |- M] [ |- Msucc] [ |- v_s NV] in
        let [ |- ref] = values_mstep_to_themselves [ |- NV] [ |- MS] in
      [ |- ev_pred_succ D]
   )
@@ -590,10 +590,10 @@ mlam M => fn ms => fn v => case [ |- M] of
 | [ |- iszero M] =>
   (case iszero_lemma ms v of
      | [ |- iszero_subseq_zero Mzero m_ref] =>
-       let [ |- D] = small_to_big [ |- M ] [ |- Mzero] [ |- v_z] in
+       let [ |- D] = small_to_big [ |- M] [ |- Mzero] [ |- v_z] in
          [ |- ev_iszero_zero D]
      | [ |- iszero_subseq_succ Msuc NV m_ref] =>
-       let [ |- D] = small_to_big [ |- M ] [ |- Msuc] [ |- v_s NV] in
+       let [ |- D] = small_to_big [ |- M] [ |- Msuc] [ |- v_s NV] in
          [ |- ev_iszero_succ D]
   )
 
@@ -601,7 +601,7 @@ mlam M => fn ms => fn v => case [ |- M] of
   (case succ_lemma ms v of
   | [ |- succ_subseq MS NV MS'] =>
     let [ |- ref] = values_mstep_to_themselves [ |- v_s NV] [ |- MS'] in
-    let [ |- D]   = small_to_big [ |- M ] [ |- MS] [ |- NV] in
+    let [ |- D]   = small_to_big [ |- M] [ |- MS] [ |- NV] in
       [ |- ev_succ D]
 
   )

@@ -206,7 +206,7 @@ fn all ⇒ fn getP ⇒
         [|-
          EQ
              (apply H formula (lambda H formula (\t. S[t])) T)
-             (S[T])
+             S[T]
              (ALL-E H (lambda H formula (\t. S[t])) T A)
              (BETA H formula (\t. S[t]) T)
         ]

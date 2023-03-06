@@ -136,12 +136,12 @@ not_possible : type.
 rec natval_dont_step : [ |- step M M'] -> [ |- nat_value M] -> [ |- not_possible] =
 / total v (natval_dont_step m m' s v) /
 fn s => fn v => case v of
-| [ |- v_z ] => impossible s
+| [ |- v_z] => impossible s
 | [ |- v_s V] =>
   let [ |- e_succ D] = s in natval_dont_step [ |- D] [ |- V]
 ;
 
-rec values_dont_step : [ |- step M M'] -> [ |- value M ] -> [ |- not_possible]=
+rec values_dont_step : [ |- step M M'] -> [ |- value M] -> [ |- not_possible]=
 / total v (values_dont_step m m' s v) /
 fn s => fn v => case v of
 | [ |- v_true]    => impossible s
@@ -360,8 +360,8 @@ fn ms => case ms of
   [ |- ms_step (e_switch S)]
 
 | [ |- ms_tr MS1 MS2] =>
-  let [ |- MS1'] = mstep_switch [ |- T2 ] [ |- T3 ] [ |- MS1] in
-  let [ |- MS2'] = mstep_switch [ |- T2 ] [ |- T3 ] [ |- MS2] in
+  let [ |- MS1'] = mstep_switch [ |- T2] [ |- T3] [ |- MS1] in
+  let [ |- MS2'] = mstep_switch [ |- T2] [ |- T3] [ |- MS2] in
     [ |- ms_tr MS1' MS2']
 ;
 
@@ -447,28 +447,28 @@ mlam M => case [ |- M] of
     [ |- answer ms_ref (good_result v_false)]
 
 | [ |- switch T T1 T2] =>
-  (case terminate [ |- T ] of
+  (case terminate [ |- T] of
    | [ |- answer MS (good_result v_true)] =>
-       let [ |- answer MS1 V1] = terminate [ |- T1 ] in
-       let [ |- MS']           = mstep_switch [ |- T1 ] [ |- T2 ] [ |- MS] in
+       let [ |- answer MS1 V1] = terminate [ |- T1] in
+       let [ |- MS']           = mstep_switch [ |- T1] [ |- T2] [ |- MS] in
        [ |- answer (ms_tr MS' (ms_tr (ms_step e_switch_true) MS1)) V1]
 
    | [ |- answer MS (good_result v_false)] =>
-       let [ |- answer MS2 V2] = terminate [ |- T2 ] in
-       let [ |- MS']           = mstep_switch [ |- T1 ] [ |- T2 ] [ |- MS] in
+       let [ |- answer MS2 V2] = terminate [ |- T2] in
+       let [ |- MS']           = mstep_switch [ |- T1] [ |- T2] [ |- MS] in
        [ |- answer (ms_tr MS' (ms_tr (ms_step e_switch_false) MS2)) V2]
 
    | [ |- answer MS (good_result (v_num v_z ))] =>
-       let [ |- MS']           = mstep_switch [ |- T1 ] [ |- T2 ] [ |- MS] in
+       let [ |- MS']           = mstep_switch [ |- T1] [ |- T2] [ |- MS] in
        [ |- answer MS' (stuck_result  stuck_switch_zero)]
 
    | [ |- answer MS (good_result (v_num (v_s V)))] =>
-       let [ |- MS']           = mstep_switch [ |- T1 ] [ |- T2 ] [ |- MS] in
+       let [ |- MS']           = mstep_switch [ |- T1] [ |- T2] [ |- MS] in
        [ |- answer MS' (stuck_result  stuck_switch_succ)]
 
 
    | [ |- answer MS (stuck_result R)] =>
-       let [ |- MS']           = mstep_switch [ |- T1 ] [ |- T2 ] [ |- MS] in
+       let [ |- MS']           = mstep_switch [ |- T1] [ |- T2] [ |- MS] in
        [ |- answer MS' (stuck_result (stuck_switch R))]
   )
 
@@ -476,7 +476,7 @@ mlam M => case [ |- M] of
     [ |- answer ms_ref (good_result (v_num v_z))]
 
 | [ |- succ N] =>
-    (case terminate [ |- N ] of
+    (case terminate [ |- N] of
      | [ |- answer MS (good_result (v_num V))] =>
    let [ |- MS']         = mstep_succ [ |- MS] in
    [ |- answer MS' (good_result (v_num (v_s V)))]
@@ -494,7 +494,7 @@ mlam M => case [ |- M] of
    [ |- answer MS' (stuck_result (stuck_succ R))]
    )
 | [ |- pred M]       =>
-  (case terminate [ |- M ] of
+  (case terminate [ |- M] of
    | [ |- answer MS (good_result (v_num v_z))] =>
      let [ |- MS']         = mstep_pred [ |- MS] in
        [ |- answer (ms_tr MS' (ms_step e_pred_zero)) (good_result (v_num v_z))]
@@ -517,7 +517,7 @@ mlam M => case [ |- M] of
 
 
 | [ |- iszero N]    =>
-  (case terminate [ |- N ] of
+  (case terminate [ |- N] of
    | [ |- answer MS (good_result (v_num v_z))] =>
      let [ |- MS'] = mstep_iszero [ |- MS] in
      [ |- answer (ms_tr MS' (ms_step e_iszero_zero))(good_result v_true)]

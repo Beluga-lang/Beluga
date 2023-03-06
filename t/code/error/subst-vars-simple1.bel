@@ -31,11 +31,11 @@ rec whExp : (g:cxt){T : [|- ty]}
    {N : [g |- tm A[]]}
    [g |- ecxt \y.C]
     -> [g |- ecxt \y.C] =
-  mlam T,C,N => fn e =>
+  mlam T, C, N => fn e =>
     let [g |- E] = e in  ?
 %{
     case [|- T] of
-    | [|- base   ] => ?
+    | [|- base] => ?
     | [|- arr U V] => ?
 }%
 %{ RArr (mlam g', $S, N0 => fn s =>

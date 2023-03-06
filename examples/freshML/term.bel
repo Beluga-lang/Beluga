@@ -32,7 +32,7 @@ rec size : {g:ctx} [g |- term] -> [ |- nat] =
 mlam g => fn t => case t of
 | [g |- #p] => [ |- suc z]
 | [g |- lam \x. T] =>
-  let [ |- K] = size [g,x:term] [g,x |- T ] in
+  let [ |- K] = size [g, x:term] [g, x |- T] in
    [ |- suc K]
 
 | [g |- app T U] =>
@@ -43,7 +43,7 @@ mlam g => fn t => case t of
 
 | [g |- letv T (\x. U)] =>
   let [ |- N] =   add (size [g] [g |- T])
-        (size [g,x:term] [g,x |- U]) in
+        (size [g, x:term] [g, x |- U]) in
    [ |- suc N]
 
 | [g |- const I] => [ |- suc z]
@@ -102,14 +102,14 @@ FN g => fn l1 => fn l2 => case l1 of
 % This is however also not really necessary to remove an element from a list.
 % see rm' function.
 
-rec rm : {g:(ctx)*} list[g,x:term] -> list[g] =
+rec rm : {g:(ctx)*} list[g, x:term] -> list[g] =
 FN g => fn l => case l of
-| [g,x:term] nil => [g] nil
-| [g,x:term] cons x L  =>
-    rm [g] ([g,x] L)
+| [g, x:term] nil => [g] nil
+| [g, x:term] cons x L  =>
+    rm [g] ([g, x] L)
 
- | [g,x:term] cons #p L =>
-  let [g] L' = rm [g] ([g,x] L) in
+ | [g, x:term] cons #p L =>
+  let [g] L' = rm [g] ([g, x] L) in
    [g] cons #p (L')
 
 ;
@@ -117,18 +117,18 @@ FN g => fn l => case l of
 
 % OR more generally.
 
-rec rm' : {g:(ctx)*} list[g,x:term] -> list[g] =
+rec rm' : {g:(ctx)*} list[g, x:term] -> list[g] =
 FN g => fn l => case l of
-| [g,x:term] nil => [g] nil
+| [g, x:term] nil => [g] nil
 
 % the next case succeeds if x does not occur in U
-| [g,x:term] cons (U ) L =>
-  let [g] L' = rm' [g] ([g,x] L) in
+| [g, x:term] cons (U ) L =>
+  let [g] L' = rm' [g] ([g, x] L) in
    [g] cons U (L')
 
 % this case hence succeeds if x does occur in U
-| [g,x:term] cons U L  =>
-    rm' [g] ([g,x] L)
+| [g, x:term] cons U L  =>
+    rm' [g] ([g, x] L)
 ;
 
 
@@ -141,14 +141,14 @@ FN g => fn t => case t of
           (fv [g] ([g] T2))
 
 | [g] lam \x. T =>
-  let [g,x:term] L = fv [g,x:term] ([g,x] T) in
-    rm' [g] ([g,x] L)
+  let [g, x:term] L = fv [g, x:term] ([g, x] T) in
+    rm' [g] ([g, x] L)
 
 | [g] letv T1 (\x. T2) =>
   let [g] L1 = fv [g] ([g] T1 ) in
-  let [g,x:term] L2 = fv [g,x:term] ([g,x] T2) in
+  let [g, x:term] L2 = fv [g, x:term] ([g, x] T2) in
   append [g] ([g] L1 )
-             (rm' [g] ([g,x] L2))
+             (rm' [g] ([g, x] L2))
 ;
 
 
@@ -192,7 +192,7 @@ case e of
 
 | [g] lamt T (\x. M) =>
   let [g] L = l in
-    typing [g,x:tm] ([g,x] M) ([g,x] push x T (L ))
+    typing [g, x:tm] ([g, x] M) ([g, x] push x T (L ))
 
 %{ | [g] apply (M1 ) (M2 ) =>
   (case typing [g] ([g] M1 ) l of

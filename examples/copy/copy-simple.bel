@@ -23,7 +23,7 @@ mlam g => fn e =>
 
   | [g |- lam (\ x. U)] =>
 
-    let [g,x : term |-  V] = copy [g, x:term]  [g,x |- U]  in
+    let [g, x : term |- V] = copy [g, x:term]  [g, x |- U]  in
 
       [g |- lam (\x. V)]
 
@@ -38,9 +38,9 @@ mlam g => fn e =>
 
 
 let t = copy [ ] [ |- z] ;
-let t = copy [x:term] [x:term |-  x];
-let t = copy [x:term] [x:term |-  suc x];
+let t = copy [x:term] [x:term |- x];
+let t = copy [x:term] [x:term |- suc x];
 let t = copy [ ] [ |- lam \x. x];
 let t = copy [ ] [ |- lam \x. (lam \y. app x y)];
-let t = copy [y:term] [y:term |-  app y (lam \x. (lam \y. app x y))];
-let t = copy [y:term,x:term] [x:term,y:term |-  suc x];
+let t = copy [y:term] [y:term |- app y (lam \x. (lam \y. app x y))];
+let t = copy [y:term, x:term] [x:term, y:term |- suc x];

@@ -27,18 +27,18 @@ rec f : {g:w} [g |- nat] -> [g |- nat] =
 ;
 }%
 
-rec qqqq : [x:block (y:nat,_t:nat) |-  nat] -> [x:block (y:nat,_t:nat) |-  nat] =
+rec qqqq : [x:block (y:nat, _t:nat) |- nat] -> [x:block (y:nat, _t:nat) |- nat] =
 fn eNat => case eNat of --not
-  [x:block (y:nat,_t:nat) |-  x.1] => [x:block (y:nat,_t:nat) |-  x.2]
-%  [x:block (y:nat,_t:nat) |-  x.1] => [x |- x.2]
+  [x:block (y:nat, _t:nat) |- x.1] => [x:block (y:nat, _t:nat) |- x.2]
+%  [x:block (y:nat, _t:nat) |- x.1] => [x |- x.2]
 ;
 
 %{
 --not
-rec ffff1 : {h:tps} [h, extras:tp |-  nat] -> [h |- nat] =
+rec ffff1 : {h:tps} [h, extras:tp |- nat] -> [h |- nat] =
    mlam h => fn eNat =>
      case eNat of
-       [h, extras:tp |-  #pp[..]] => [h |- #pp[..]]
+       [h, extras:tp |- #pp[..]] => [h |- #pp[..]]
        % #pp must be a nat, but nat does not appear in contexts of the form [h, extras:tp]
 ;
 

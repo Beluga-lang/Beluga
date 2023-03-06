@@ -72,10 +72,10 @@ computation-level types and programs are written inside `[ ]`.
 }%
 
 stratified Reduce : {A:[⊢ tp]}{M:[ |- tm A]} ctype =
-| Rb : [ |- halts M] -> Reduce [ ⊢ b ] [ |- M]
+| Rb : [ |- halts M] -> Reduce [ ⊢ b] [ |- M]
 | Rarr :  [ |- halts M] ->
-    ({N:[ |- tm A]} Reduce [ ⊢ A ] [ |- N] -> Reduce [ ⊢ B ] [ |- app M N])
-  -> Reduce [ ⊢ arr A B ] [ |- M]
+    ({N:[ |- tm A]} Reduce [ ⊢ A] [ |- N] -> Reduce [ ⊢ B] [ |- app M N])
+  -> Reduce [ ⊢ arr A B] [ |- M]
 ;
 
 %{ First, we prove that halts is closed under expansion in the `halts_step` lemma.

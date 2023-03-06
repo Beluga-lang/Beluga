@@ -30,14 +30,14 @@ fn e => case e of
   let [g |- T1] = conv [g |- E1] in
   let [g |- T2] = conv [g |- E2] in
     [g |- app' T1 T2]
-| [g |- ret V] => convv [g |- V ]
+| [g |- ret V] => convv [g |- V]
 
 and rec convv: (g:ctx)[g |- value T[]] -> [g |- term] =
 % / total v (convv g v)/
 fn v => case v of
 | [g |- #p.2] => [g |- #p.1]
-| [g |- lam (A[]) (\v. E)] =>
-    let [g,b:block x:term, _t:value (A[]) |-  T[..,b.1]] = conv [g,b:block (x:term , _t:value (A[])) |-  E[..,b.2]] in
+| [g |- lam A[] (\v. E)] =>
+    let [g, b:block x:term, _t:value A[] |- T[.., b.1]] = conv [g, b:block (x:term , _t:value A[]) |- E[.., b.2]] in
       [g |- lam' \x. T]
 
 ;

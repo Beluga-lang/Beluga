@@ -17,7 +17,7 @@ by complete [|- E1] x1 as S unboxed
 solve [|- next S st_letn]
 
 by complete [|- E1] x1 as S2 unboxed
-by complete [|- E2] [|- next S2 (st_return (\x1. ev (M[x1])) _)] as S1 unboxed
+by complete [|- E2] [|- next S2 (st_return (\x1. ev M[x1]) _)] as S1 unboxed
 solve [|- next S1 st_letv]
 
 by complete [|- E1] x1 as S2 unboxed

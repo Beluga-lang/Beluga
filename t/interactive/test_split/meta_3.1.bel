@@ -62,8 +62,8 @@ The file input.bel has been successfully loaded;
 %:split 0 s
 
 case s of
-| [ |- e_if_true ] => ?
-| [ |- e_if_false ] => ?
+| [ |- e_if_true] => ?
+| [ |- e_if_false] => ?
 | [ |- e_pred_zero] => ?
 
 | [ |- e_pred_succ Z5] => ?

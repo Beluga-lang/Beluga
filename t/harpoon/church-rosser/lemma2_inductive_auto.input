@@ -1,6 +1,6 @@
 t/harpoon/church-rosser/church-rosser.bel
 lm1*
-{g:tctx} {M : [g, x:term ⊢ term]} {M' : [g, x:term ⊢ term]} [g,x:term |-  step* M M'] ->  [g |- step* (lam (\x. M)) (lam (\x. M'))]
+{g:tctx} {M : [g, x:term ⊢ term]} {M' : [g, x:term ⊢ term]} [g, x:term |- step* M M'] ->  [g |- step* (lam (\x. M)) (lam (\x. M'))]
 4
 
 inductive-auto-solve

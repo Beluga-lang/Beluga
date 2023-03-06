@@ -46,12 +46,12 @@ fn d => case d of
   [ |- fev_1]  =>  [ |- to c_1 id_step]
 
  |  [ |- fev_^ D1] =>
-     (let [ |- C1]  = subcomp [ |- Ks ] [ |- P ] [ |- S ] [ |- D1] in
+     (let [ |- C1]  = subcomp [ |- Ks] [ |- P] [ |- S] [ |- D1] in
    [ |- to c_^ C1] )
 
 
 | [ |- fev_1+ D1]  =>
-    let [ |- C1] = subcomp [ |- Ks ] [ |- P ] [ |- S ] [ |- D1] in
+    let [ |- C1] = subcomp [ |- Ks] [ |- P] [ |- S] [ |- D1] in
    [ |- (to c_1+ C1)]
 
 % | [ ] fev_^+ D1 =>

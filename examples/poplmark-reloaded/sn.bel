@@ -7,12 +7,12 @@ stratified Red : {A : [|- ty]} (g : cxt) {M : [g |- tm A[]]} ctype =
   | RBase : SN [g |- M] -> Red [|- base] [g |- M]
   | RArr  : ({g' : cxt} {$S : $[g' |-# g]} {N : [g' |- tm A[]]}
              Red [|- A] [g' |- N] -> Red [|- B] [g' |- app M[$S] N])
-         -> Red [|- arr A B ] [g |- M]
+         -> Red [|- arr A B] [g |- M]
 ;
 
 % Semantic substitutions
 inductive RedS : {g : cxt} (g' : cxt) {$S : $[g' |- g]} ctype =
-  | RNil  : RedS [] $[ g' |- ^ ]
+  | RNil  : RedS [] $[g' |- ^ ]
   | RCons : Red [|- A] [g' |- M]
             -> RedS [g] $[g' |- $S]
             -> RedS [g, x : tm A[]] $[g' |- $S, M]
@@ -45,8 +45,8 @@ rec cr1 : {g : cxt} {A : [|- ty]} {M : [g |- tm A[]]} Red [|- A] [g |- M] -> SN 
           let RArr r'  = r in
           let s = cr1 [g, x:tm A[]] [|- B] [g, x:tm A[] |- app M[..] x]
           (r' [g, x:tm A[]] $[g, x:tm A[] |- ..] [g, x:tm A[] |- x] rv) in
-          let sm = ext_SN [g,x:tm A[] |- M[..]] [g, x:tm A[] |- x] s in
-          anti_renameSN [ _ ] [ _ ] $[g, x:tm A[] |- ..] [g |- M] sm
+          let sm = ext_SN [g, x:tm A[] |- M[..]] [g, x:tm A[] |- x] s in
+          anti_renameSN [_] [_] $[g, x:tm A[] |- ..] [g |- M] sm
 
 
 and
@@ -66,7 +66,7 @@ and
 rec cr3 : {g : cxt} {A : [|- ty]} {M : [g |- tm A[]]} SNe [g |- M] -> Red [|- A] [g |- M] =
     / total a (cr3 g a) /
       mlam g, A, M => fn sm => case [ |- A] of
-    | [ |- base ] => RBase (SNeu sm)
+    | [ |- base] => RBase (SNeu sm)
     | [ |- arr A B] => RArr (mlam g', $R, N => fn rn =>
            let sn  = cr1 [g'] [|- A] [g' |- N] rn in
            cr3 [g'] [|- B] [g' |- app M[$R] N]
@@ -76,16 +76,16 @@ rec cr3 : {g : cxt} {A : [|- ty]} {M : [g |- tm A[]]} SNe [g |- M] -> Red [|- A]
 % Variables are reducible
 rec red_var : {g : cxt} {#p : #[g |- tm A[]]} Red [ |- A] [g |- #p] =
     / total (red_var ) /
-      mlam g, #p => cr3 [_] [|- _ ] [_ |- _] (SVar [g |- #p]);
+      mlam g, #p => cr3 [_] [|- _] [_ |- _] (SVar [g |- #p]);
 
 rec fundVar : {g : cxt} {#p : #[g |- tm A[]]}
       RedS [g] $[g' |- $S]
         -> Red [|- A] [g' |- #p[$S]] =
     / total g (fundVar g) /
       mlam g, #p => fn s => case [g] of
-    | [] => impossible [ |- #p ]
+    | [] => impossible [ |- #p]
     | [g, x : tm A[]] => (case [g, x : tm _ |- #p] of
-        | [g, x : tm A[] |- x     ] => let RCons r s' = s in r
+        | [g, x : tm A[] |- x] => let RCons r s' = s in r
         | [g, x : tm A[] |- #q[..]] => let RCons r s' = s in fundVar [g] [g |- #q] s')
 ;
 
@@ -104,7 +104,7 @@ rec fundamental_lemma : {g : cxt} {g' : cxt} {M : [g |- tm A[]]} {$S : $[g' |- g
      RArr (mlam g'', $R, N => fn rn =>
      let rs' = rename_redS [g'] [g''] $[g'' |- $R] rs in
      let r   = fundamental_lemma  [g, x:tm _] [g''] [g, x:tm _ |- M] $[g'' |- $S[$R], N] (RCons rn rs') in
-     let sn = cr1 [_] [ |- _ ] [_ |- _ ] rn in
+     let sn = cr1 [_] [ |- _] [_ |- _] rn in
      let sn' = SBeta [g'', x:tm _ |- M[$S[$R[..]], x]] sn in
      cr2 [_] [|- _] [_ |- _] [_ |- _] sn' r)
 ;
@@ -121,4 +121,4 @@ rec id_red : {g : cxt} RedS [g] $[g |- ..] =
 
 rec norm : {g : cxt} {M : [g |- tm A[]]} SN [g |- M] =
     / total  (norm) /
-      mlam g, M => cr1 [_] [|- _ ] [_ |- _] (fundamental_lemma [g] [g] [g |- M] $[g |- ..] (id_red [g]));
+      mlam g, M => cr1 [_] [|- _] [_ |- _] (fundamental_lemma [g] [g] [g |- M] $[g |- ..] (id_red [g]));

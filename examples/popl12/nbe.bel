@@ -32,7 +32,7 @@ inductive TmVar : {g:tctx} [ |- tp] -> ctype  =
 inductive Extends : {g:ctx} {h:ctx} ctype  =
 | Zero : Extends [g] [g]
 | Succ :  {h:ctx}
-          Extends [g] [h] -> Extends [g] [h,x:neut A[]]
+          Extends [g] [h] -> Extends [g] [h, x:neut A[]]
 ;
 
 stratified Sem : {g:ctx} [ |- tp] -> ctype    =
@@ -45,7 +45,7 @@ rec weak_neut : (g:ctx)(h:ctx) Extends [g] [h] -> [g |- neut A[]] -> [h |- neut 
 / total e (weak_neut g h a e r) /
 fn e => fn r => case e of
 | Zero => r
-| Succ [h] e' => let [h |- R] = weak_neut e' r in [h,x:neut _ |-  R[..]]
+| Succ [h] e' => let [h |- R] = weak_neut e' r in [h, x:neut _ |- R[..]]
 ;
 
 
@@ -68,8 +68,8 @@ rec extend : (g:tctx)(h:ctx)
 -> ({T:[ |- tp]} TmVar [g, x:tm S[]] [ |- T] ->  Sem [h] [ |- T]) =
 / total x (extend g h s e t x) /
 fn s => fn e => mlam T => fn x => case x of
-| TmVar/c [g,x:tm S[] |-  x] => e
-| TmVar/c [g,x:tm S[] |-  #q[..] ] => s [ |- T ] (TmVar/c [g |- #q])
+| TmVar/c [g, x:tm S[] |- x] => e
+| TmVar/c [g, x:tm S[] |- #q[..] ] => s [ |- T] (TmVar/c [g |- #q])
 ;
 
 rec eval : (g:tctx)(h:ctx)
@@ -79,13 +79,13 @@ rec eval : (g:tctx)(h:ctx)
 / total t (eval g h s t _) /
 fn t => fn s =>
 case t of
-| [g |- #p ]            : [g |- tm S[]] =>  s [ |- S] (TmVar/c [g |- #p ])
+| [g |- #p]            : [g |- tm S[]] =>  s [ |- S] (TmVar/c [g |- #p])
 | [g |- lam (\x. E) ] : [g |- tm (arr A[] B[])] =>
   Slam  (mlam h' => fn s' => fn e =>
-         eval [g,x:tm A[] |-  E]
+         eval [g, x:tm A[] |- E]
               (extend (mlam T => fn x => weaken s' (s [ |- T] x))  e))
 
-| [g |- app E1 E2 ] =>
+| [g |- app E1 E2] =>
   let (Slam f ) : Sem [h] [ |- arr A B] =  eval [g |- E1] s in
     f [h] Zero (eval [g |- E2] s)
 ;
@@ -95,8 +95,8 @@ rec reflect : (g:ctx) {A:[|- tp]}[g |- neut A[]] ->  Sem [g] [ |- A] =
 / trust /
 mlam A => fn r =>
 case [ |- A] of
-| [ |- atomic P ] => Syn r
-| [ |- arr T S ] =>  Slam (extendSem r)
+| [ |- atomic P] => Syn r
+| [ |- arr T S] =>  Slam (extendSem r)
 
 % Lesson: FACTORIZATION OF CODE HELPS TYPE RECONSTRUCTION!!!
 and rec extendSem : [g |- neut (arr A[] B[])] ->
@@ -105,19 +105,19 @@ and rec extendSem : [g |- neut (arr A[] B[])] ->
 =
 / trust /
 fn r => mlam h => fn s => fn e =>
-let [h |- N ] = reify e in
+let [h |- N] = reify e in
 let [h |- R' ] = weak_neut s r in
   reflect _ [h |- rapp (R') N]
 
 and rec reify : Sem [g] [ |- A] -> [g |- norm A[]] =
 / trust /
 fn e => let (e : Sem [g] [ |- A]) = e in case [ |- A] of
-| [ |- atomic P ] =>  (case e of Syn [g |- R] => [g |- embed R])
-| [ |- arr T S ] =>
+| [ |- atomic P] =>  (case e of Syn [g |- R] => [g |- embed R])
+| [ |- arr T S] =>
   (case e of
    | (Slam f)  =>
-     let s = (f [g,x:neut T[] ] (Succ [g] Zero) (reflect _ [g ,x:neut T[] |-  x])) in
-     let [g,x:neut T[] |-  E] = reify s
+     let s = (f [g, x:neut T[] ] (Succ [g] Zero) (reflect _ [g , x:neut T[] |- x])) in
+     let [g, x:neut T[] |- E] = reify s
      in [g |- nlam (\x. E)])
 ;
 

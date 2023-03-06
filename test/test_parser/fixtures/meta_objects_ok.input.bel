@@ -4,7 +4,7 @@
 % those objects is automatically generated during development, but not during
 % continuous integration.
 
-[ ^ ]
+[^]
 ;;
 
 []
@@ -49,31 +49,31 @@
 [z : nat |- z]
 ;;
 
-$[ ^ |- ^ ]
+$[^ |- ^]
 ;;
 
-$[ g |- ^ ]
+$[g |- ^]
 ;;
 
-$[ g |- z ]
+$[g |- z]
 ;;
 
-$[ g, x : nat |- z, x ]
+$[g, x : nat |- z, x]
 ;;
 
-$[ ^ |-# ^ ]
+$[^ |-# ^]
 ;;
 
-$[ g |-# ^ ]
+$[g |-# ^]
 ;;
 
-$[ g |-# z ]
+$[g |-# z]
 ;;
 
-$[ g, x : nat |-# z, x ]
+$[g, x : nat |-# z, x]
 ;;
 
-$[ g, z : nat |-# z, x ]
+$[g, z : nat |-# z, x]
 ;;
 
 [z : nat⊢z]

@@ -5,7 +5,7 @@
 
 for a breakline, put two spaces at the end of the line
 
-Inline code `[ |- nat ]`.
+Inline code `[ |- nat]`.
 
 Italics: *like this*.
 
@@ -57,6 +57,6 @@ rec plus : [ |- nat] -> [ |- nat] -> [ |- nat] =
 fn x => fn y =>  case x of
 | [ |- z]  => y
 | [ |- s U]  =>
-  let [ |- V] = plus [ |- U ] y in
+  let [ |- V] = plus [ |- U] y in
     [ |- s V]
 ;

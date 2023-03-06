@@ -23,10 +23,10 @@ schema ctx = term;
 rec vhoas2db : {gamma:ctx}{#p:#[gamma |- term]} [ |- term'] =
  / total gamma (vhoas2db gamma) /
 mlam gamma => mlam #p =>  case [gamma] of
-| [] => impossible [ |- #p ]
+| [] => impossible [ |- #p]
 | [gamma', x:term] => (case [gamma', x:term |- #p] of
- | [gamma',x:term |- x] => [ |- one ]
- | [gamma',x:term |- #p[..] ] =>
+ | [gamma', x:term |- x] => [ |- one]
+ | [gamma', x:term |- #p[..] ] =>
    let [ |- Db] = vhoas2db [gamma'] [gamma' |- #p] in
      [ |- shift Db])
 ;
@@ -35,11 +35,11 @@ mlam gamma => mlam #p =>  case [gamma] of
 rec hoas2db : (gamma:ctx) [gamma |- term] ->  [ |- term' ] =
 / total e ( hoas2db _  e) /
 fn e =>  case e of
-| [gamma |- #p ] =>  vhoas2db [gamma] [gamma |- #p]
+| [gamma |- #p] =>  vhoas2db [gamma] [gamma |- #p]
 
 | [gamma |- lam  (\x. E)] =>
-  let [ |- F] =  hoas2db  [gamma,x:term |- E ] in
-    [ |- lam' F ]
+  let [ |- F] =  hoas2db  [gamma, x:term |- E] in
+    [ |- lam' F]
 
 | [gamma |- app E1 E2] =>
   let [ |- F1] = hoas2db  [gamma |- E1]  in

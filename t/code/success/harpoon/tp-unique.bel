@@ -98,7 +98,7 @@ intros
     M1 : (g, m : tm |- tm),
     A2 : ( |- tp),
     B : ( |- tp),
-    D : (g, x : tm, x3 : oft x A1[] |- oft (M1[.., x]) A2[])
+    D : (g, x : tm, x3 : oft x A1[] |- oft M1[.., x] A2[])
   | y6 : [g |- oft (lam A1[] (\x. M1)) (arr A1[] A2[])],
     d : [g |- oft (lam A1[] (\x. M1)) B[]]
   ; split d as
@@ -108,8 +108,8 @@ intros
       M1 : (g, m : tm |- tm),
       A2 : ( |- tp),
       A4 : ( |- tp),
-      D : (g, x : tm, x3 : oft x A1[] |- oft (M1[.., x]) A2[]),
-      D1 : (g, x : tm, x3 : oft x A1[] |- oft (M1[.., x]) A4[])
+      D : (g, x : tm, x3 : oft x A1[] |- oft M1[.., x] A2[]),
+      D1 : (g, x : tm, x3 : oft x A1[] |- oft M1[.., x] A4[])
     | y6 : [g |- oft (lam A1[] (\x. M1)) (arr A1[] A2[])],
       d : [g |- oft (lam A1[] (\x. M1)) (arr A1[] A4[])]
     ; by tp-unique [g, x1:block x:tm, u:oft x A1[] |- D[.., x1.1, x1.2]] [g, x1 |- D1[.., x1.1, x1.2]]

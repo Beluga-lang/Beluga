@@ -4,5 +4,5 @@ schroder_heister_elimination
 
 
 unbox x as A
-solve x1 mlam T => [|- EQ (apply H formula (lambda H formula (\t. S[t])) T) (S[T]) (ALL-E H (lambda H formula (\t. S[t])) T A) (BETA H formula (\t. S[t]) T)]
+solve x1 mlam T => [|- EQ (apply H formula (lambda H formula (\t. S[t])) T) S[T] (ALL-E H (lambda H formula (\t. S[t])) T A) (BETA H formula (\t. S[t]) T)]
 :quit

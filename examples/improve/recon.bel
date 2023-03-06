@@ -22,6 +22,6 @@ rec copy : (g:ctx) [g |- exp] -> [g |- exp] =
 % / total e (copy g e)/
 fn e => case e of
 | [h |- lam (\x. M)] =>
-  let [h,x:exp |- N] = copy [h, x:exp |- M] in
-    [h |- lam \x. N ]
+  let [h, x:exp |- N] = copy [h, x:exp |- M] in
+    [h |- lam \x. N]
 ;

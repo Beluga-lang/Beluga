@@ -49,14 +49,14 @@ fn d => fn s => case s of
 | [ |- e_app_1 S1] =>
  let [ |- t_app D1 D2] = d in
   let [ |- F1] = tps  [ |- D1] [ |- S1] in
-    [ |- t_app F1 D2 ]
+    [ |- t_app F1 D2]
 
-| [ |- e_app_2 S2 _ ] =>
+| [ |- e_app_2 S2 _] =>
   let [ |- t_app D1 D2] = d in
   let [ |- F2] = tps  [ |- D2] [ |- S2] in
     [ |- t_app D1 F2]
 
 | [ |- e_app_abs V] =>
   let [ |- t_app (t_lam \x.\u. D) D2] = d in
-    [ |- D[_,D2]]
+    [ |- D[_, D2]]
 ;

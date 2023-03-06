@@ -29,7 +29,7 @@ schema evTpCtx3 = some [s:tp, t:tp, e:exp s -> exp s] {x:exp s} has x t -> has (
 schema evTpCtx4 = {x:exp'}oft x T -> oft F S;
 schema evTpCtx5 = {x:exp'}oft x T -> oft (E x) S;
 
-schema evCtx = some [ t:tp, e:exp t] eval e e;
+schema evCtx = some [t:tp, e:exp t] eval e e;
 
 typist : {TT:tp} exp nat.
 
@@ -45,6 +45,6 @@ rec cntV : {g:expCtx} [g |- exp nat] -> [ |- exp nat] =
 mlam g => fn e =>
  case e of --not
    {T1:[ |- tp]}
-   [g |- typist (T1[])] : [g |- (exp nat)] =>
-      expnatter [g, x:exp (T1[])] [g, x |-  typist (T1[])]
+   [g |- typist T1[]] : [g |- (exp nat)] =>
+      expnatter [g, x:exp T1[]] [g, x |- typist T1[]]
 ;

@@ -23,10 +23,10 @@ schema aCtx  = block x:term, _t:aeq x x;
 inductive Aeq' : (g:aCtx) [g |- term] -> [g |- term] -> ctype =
 | Ae_v' : % {#p:[g |- block (x:term, u:aeq x x)]}
              Aeq' [g |- #p.1] [g |- #p.1]
-| Ae_a' : Aeq' [g |- E1] [g |- F1 ] -> Aeq' [g |- E2] [g |- F2]
+| Ae_a' : Aeq' [g |- E1] [g |- F1] -> Aeq' [g |- E2] [g |- F2]
     -> Aeq' [g |- app E1 E2] [g |- app F1 F2]
-| Ae_l' :  Aeq' [h,b:block (x:term, u:aeq x x) |-  E[..,b.1]]
-              [h,b:block (x:term, u:aeq x x) |-  F[..,b.1]]
+| Ae_l' :  Aeq' [h, b:block (x:term, u:aeq x x) |- E[.., b.1]]
+              [h, b:block (x:term, u:aeq x x) |- F[.., b.1]]
         -> Aeq' [h |- lam (\x. E)]  [h |- lam (\x. F)]
 ;
 
@@ -34,9 +34,9 @@ inductive Aeq' : (g:aCtx) [g |- term] -> [g |- term] -> ctype =
 inductive Aeq : (g:tctx) [g |- term] -> [g |- term] -> ctype   =
 | Ae_v : % {#p:[g |- term]}
              Aeq [g |- #p] [g |- #p]
-| Ae_a : Aeq [g |- E1] [g |- F1 ] -> Aeq [g |- E2] [g |- F2]
+| Ae_a : Aeq [g |- E1] [g |- F1] -> Aeq [g |- E2] [g |- F2]
     -> Aeq [g |- app E1 E2] [g |- app F1 F2]
-| Ae_l :  Aeq [h,x:term |-  E] [h,x:term |-  F]
+| Ae_l :  Aeq [h, x:term |- E] [h, x:term |- F]
         -> Aeq [h |- lam (\x. E)]  [h |- lam (\x. F)]
 ;
 
@@ -44,7 +44,7 @@ inductive Aeq : (g:tctx) [g |- term] -> [g |- term] -> ctype   =
 
 inductive Deq: (g:tctx) [g |- term] -> [g |- term] -> ctype  =
 | De_v : Deq [g |- #p] [g |- #p]
-| De_l : Deq [g,x:term |- T] [g,x:term |-  T']
+| De_l : Deq [g, x:term |- T] [g, x:term |- T']
      -> Deq [g |- lam (\x. T)] [g |- lam (\x. T')]
 | De_a : Deq [g |- T1] [g |- S1] -> Deq [g |- T2] [g |- S2]
      -> Deq [g |- app T1 T2] [g |- app S1 S2]
@@ -72,11 +72,11 @@ LF deq: term -> term -> type =
 rec atrans_c :(g:aCtx) [g |- aeq M N] -> Aeq' [g |- M] [g |- N] =
 / total ae (atrans_c g m n ae) /
 fn ae => case ae of
-| [g |- #p.2 ] => Ae_v' % [g |- #p]
+| [g |- #p.2] => Ae_v' % [g |- #p]
 | [g |- ae_a D1 D2] =>
   Ae_a' (atrans_c [g |- D1]) (atrans_c [g |- D2])
 | [g |- ae_l \x.\u.D] =>
-  Ae_l' (atrans_c [g, b:block (x:term, _u:aeq x x)  |-  D[..,b.1,b.2]])
+  Ae_l' (atrans_c [g, b:block (x:term, _u:aeq x x)  |- D[.., b.1, b.2]])
 ;
 
 rec atrans_s :(g:aCtx)  Aeq' [g |- M] [g |- N] -> [g |- aeq M N] =
@@ -90,7 +90,7 @@ fn ae => case ae of
      [g |- ae_a D1 D2]
 
 | Ae_l' d =>
-  let [g, b:block (x:term, _u:aeq x x)  |-  D[..,b.1,b.2]] = atrans_s d in
+  let [g, b:block (x:term, _u:aeq x x)  |- D[.., b.1, b.2]] = atrans_s d in
   [g |- ae_l \x.\u.D]
 ;
 
@@ -98,17 +98,17 @@ fn ae => case ae of
 % To weaken/strengthen the Aeq' relation, we define how
 % terms in the context tctx are related to terms in the context aCtx
 inductive TRel : (g:tctx) (h:aCtx) [g |- term] -> [h |- term] -> ctype =
-| TRvar0 : {h: aCtx} TRel [g, x:term |-  x]
+| TRvar0 : {h: aCtx} TRel [g, x:term |- x]
              [h, b:block (x:term, u:aeq x x) |- b.1]
 | TRvar  :   % {#p:[g |- term]}{#q:[h |- block x:term, u:aeq x x]}
                           TRel  [g |- #p] [h |- #q.1]
-         -> TRel [g, x:term |-  #p[..]]
-                [h, b:block (x:term, u:aeq x x) |-  #q.1[..]]
+         -> TRel [g, x:term |- #p[..]]
+                [h, b:block (x:term, u:aeq x x) |- #q.1[..]]
 
 | TRapp  : TRel [g |- M] [h |- M'] -> TRel [g |- N] [h |- N']
         -> TRel [g |- app M N] [h |- app M' N']
 
-| TRlam  : TRel [g, x:term |-  M] [h, b:block (x:term, _u:aeq x x) |-  N[..,b.1]]
+| TRlam  : TRel [g, x:term |- M] [h, b:block (x:term, _u:aeq x x) |- N[.., b.1]]
      -> TRel [g |- lam \x. M] [h |- lam \x. N]
 ;
 
@@ -122,8 +122,8 @@ fn ae' => fn tr1 => fn tr2 => case tr1  of
    let Ae_v'  = ae' in
    let TRvar0 [h] = tr2 in Ae_v
 | TRvar r => % r : TRel [g |- #q] [h |- #p.1]
-  let Ae_v' = ae' in  % Aeq' [h,b  |-  #p.1] [h,b |- #p.1]
-  let TRvar r' = tr2 in  % r : TRel [g |- #q'] [h,b |- #p.1]
+  let Ae_v' = ae' in  % Aeq' [h, b  |- #p.1] [h, b |- #p.1]
+  let TRvar r' = tr2 in  % r : TRel [g |- #q'] [h, b |- #p.1]
   let Ae_v  = aeq_str Ae_v' r r' in  % Aeq [g |- #q] [g |- #q']
       % by inversion, we know that #q = #q'
     Ae_v  % % [g, x |- term #q]
@@ -159,7 +159,7 @@ fn ae => fn tr1 => fn tr2 => case tr1  of
     Ae_v'
 
 | TRvar r =>             % r : TRel [g |- #q] [h |- #p.1]
-  let Ae_v = ae in       % Aeq [g,x:term  |-  #q] [g,x:term |-  #q]
+  let Ae_v = ae in       % Aeq [g, x:term  |- #q] [g, x:term |- #q]
   let TRvar r' = tr2 in  % r : TRel [g |- #q]  [h |- #p'.1]
   let Ae_v'  = aeq_wk Ae_v  r r' in  % Aeq' [g |- #p.1] [g |- #p.1]
       % by inversion, we know that #p = #p'

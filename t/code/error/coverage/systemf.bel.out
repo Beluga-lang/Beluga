@@ -12,9 +12,9 @@ X : (g |- hastype M1 (arr A1 A)), X1 : (g |- hastype M2 A1) ;  |-
         x : tm_f,
         y : obj,
         u : tmrel x y,
-        v : hastype x (A[..]),
-        r : tyrel (A[..]) (X[..]),
-        w : oftype y (X[..]))) ;
+        v : hastype x A[..],
+        r : tyrel A[..] X[..],
+        w : oftype y X[..])) ;
  |- [_ |- #p.4]
 
 ##

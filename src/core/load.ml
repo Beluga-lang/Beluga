@@ -132,7 +132,7 @@ let load_file ppf file_name =
   if !Typeinfo.generate_annotations
   then Typeinfo.print_annot file_name;
   if !Monitor.on || !Monitor.onf
-  then Monitor.print_timer ();
+  then Monitor.print_timers ();
 
   if !Html.generate
   then Html.generatePage file_name

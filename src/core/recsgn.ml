@@ -293,9 +293,9 @@ let recSgnDecls decls =
            (P.fmt_ppr_cmp_typ cD P.l0) tau
          end;
        Monitor.timer
-         ("Type abbrev. : Kind Check", fun () -> Check.Comp.checkKind Int.LF.Empty cK);
+         (Monitor.type_abbrev_kind_check, fun () -> Check.Comp.checkKind Int.LF.Empty cK);
        Monitor.timer
-         ("Type abbrev. : Type Check", fun () -> Check.Comp.checkTyp cD tau);
+         (Monitor.type_abbrev_type_check, fun () -> Check.Comp.checkTyp cD tau);
        ignore (CompTypDef.add (fun _ -> CompTypDef.mk_entry identifier i (cD, tau) cK));
        let sgn = Int.Sgn.CompTypAbbrev { location; identifier; kind=cK; typ=tau } in
        Store.Modules.addSgnToCurrent sgn;
@@ -308,7 +308,7 @@ let recSgnDecls decls =
        dprint (fun () -> "Elaborating data-type declaration " ^ Name.string_of_name identifier);
        let cK =
          Monitor.timer
-           ( "CType Elaboration"
+           ( Monitor.ctype_elaboration
            , fun () ->
              let cK = Reconstruct.compkind apxK in
              Reconstruct.solve_fvarCnstr Lfrecon.Pibox;
@@ -318,7 +318,7 @@ let recSgnDecls decls =
        Unify.forceGlobalCnstr ();
        let (cK', i) =
          Monitor.timer
-           ( "Type Abstraction"
+           ( Monitor.ctype_abstraction
            , fun () -> Abstract.compkind cK
            )
        in
@@ -331,7 +331,7 @@ let recSgnDecls decls =
            (P.fmt_ppr_cmp_kind Int.LF.Empty P.l0) cK'
          end;
        Monitor.timer
-         ( "Type Check"
+         ( Monitor.ctype_check
          , fun () -> Check.Comp.checkKind Int.LF.Empty cK'
          );
        dprintf
@@ -369,7 +369,7 @@ let recSgnDecls decls =
        dprint (fun () -> "\nElaborating codata-type declaration " ^ Name.string_of_name identifier);
        let cK =
          Monitor.timer
-           ( "CType Elaboration"
+           ( Monitor.ctype_elaboration
            , fun () ->
              let cK = Reconstruct.compkind apxK in
              Reconstruct.solve_fvarCnstr Lfrecon.Pibox;
@@ -379,7 +379,7 @@ let recSgnDecls decls =
        Unify.forceGlobalCnstr ();
        let (cK', i) =
          Monitor.timer
-           ( "Type Abstraction"
+           ( Monitor.ctype_abstraction
            , fun () -> Abstract.compkind cK
            )
        in
@@ -393,7 +393,7 @@ let recSgnDecls decls =
            (P.fmt_ppr_cmp_kind Int.LF.Empty P.l0) cK'
          end;
        Monitor.timer
-         ( "Type Check"
+         ( Monitor.ctype_check
          , fun () -> Check.Comp.checkKind Int.LF.Empty cK'
          );
        dprint
@@ -417,7 +417,7 @@ let recSgnDecls decls =
        dprint (fun () -> "\nElaborating data-type constructor " ^ Name.string_of_name identifier);
        let tau' =
          Monitor.timer
-           ( "Data-type Constant: Type Elaboration"
+           ( Monitor.datatype_constant_type_elaboration
            , fun () -> Reconstruct.comptyp apx_tau
            )
        in
@@ -425,7 +425,7 @@ let recSgnDecls decls =
        dprint (fun () -> "Abstracting over comp. type");
        let (tau', i) =
          Monitor.timer
-           ( "Data-type Constant: Type Abstraction"
+           ( Monitor.datatype_constant_type_abstraction
            , fun () -> Abstract.comptyp tau'
            )
        in
@@ -438,7 +438,7 @@ let recSgnDecls decls =
            i
          end;
        Monitor.timer
-         ( "Data-type Constant: Type Check"
+         ( Monitor.datatype_constant_type_check
          , fun () -> Check.Comp.checkTyp cD tau'
          );
        let cid_ctypfamily = get_target_cid_comptyp tau' in
@@ -501,13 +501,13 @@ let recSgnDecls decls =
        dprint (fun () -> "\nElaborating codata-type destructor " ^ Name.string_of_name identifier);
        let tau0' =
          Monitor.timer
-           ( "Codata-type Constant: Type Elaboration"
+           ( Monitor.codatatype_constant_type_elaboration
            , fun () -> Reconstruct.comptyp_cD cD apx_tau0
            )
        in
        let tau1' =
          Monitor.timer
-           ( "Codata-type Constant: Type Elaboration"
+           ( Monitor.codatatype_constant_type_elaboration
            , fun () -> Reconstruct.comptyp_cD cD apx_tau1
            )
        in
@@ -515,7 +515,7 @@ let recSgnDecls decls =
        dprint (fun () -> "Abstracting over comp. type");
        let (cD1, tau0', tau1', i) =
          Monitor.timer
-           ( "Codata-type Constant: Type Abstraction"
+           ( Monitor.codatatype_constant_type_abstraction
            , fun () -> Abstract.codatatyp cD tau0' tau1'
            )
        in
@@ -534,11 +534,11 @@ let recSgnDecls decls =
            (P.fmt_ppr_cmp_typ cD1 P.l0) tau1'
          end;
        Monitor.timer
-         ( "Codata-type Constant: Type Check"
+         ( Monitor.codatatype_constant_type_check
          , fun () -> Check.Comp.checkTyp cD1 tau0'
          );
        Monitor.timer
-         ( "Codata-type Constant: Type Check"
+         ( Monitor.codatatype_constant_type_check
          , fun () -> Check.Comp.checkTyp cD1 tau1'
          );
        let cid_ctypfamily = get_target_cid_compcotyp tau0' in
@@ -567,7 +567,7 @@ let recSgnDecls decls =
        dprint (fun () -> "\nElaborating type constant " ^ Name.string_of_name a);
        let tK =
          Monitor.timer
-           ( "Type Elaboration"
+           ( Monitor.type_elaboration
            , fun () ->
              let tK = Reconstruct.kind apxK in
              Reconstruct.solve_fvarCnstr Lfrecon.Pi;
@@ -577,7 +577,7 @@ let recSgnDecls decls =
        Unify.forceGlobalCnstr ();
        let (tK', i) =
          Monitor.timer
-           ( "Type Abstraction"
+           ( Monitor.type_abstraction
            , fun () -> Abstract.kind tK
            )
        in
@@ -590,7 +590,7 @@ let recSgnDecls decls =
            (P.fmt_ppr_lf_kind Int.LF.Null P.l0) tK'
          end;
        Monitor.timer
-         ( "Type Check"
+         ( Monitor.type_check
          , fun () -> Check.LF.checkKind Int.LF.Empty Int.LF.Null tK'
          );
        dprintf (fun p ->
@@ -618,7 +618,7 @@ let recSgnDecls decls =
        FVar.clear ();
        let tA =
          Monitor.timer
-           ( "Constant Elaboration"
+           ( Monitor.constant_elaboration
            , fun () ->
              let tA = Reconstruct.typ Lfrecon.Pi apxT in
              Reconstruct.solve_fvarCnstr Lfrecon.Pi;
@@ -635,7 +635,7 @@ let recSgnDecls decls =
        Unify.forceGlobalCnstr ();
        let (tA', i) =
          Monitor.timer
-           ( "Constant Abstraction"
+           ( Monitor.constant_abstraction
            , fun () -> Abstract.typ tA
            )
        in
@@ -648,7 +648,7 @@ let recSgnDecls decls =
            (P.fmt_ppr_lf_typ cD Int.LF.Null P.l0) tA'
          end;
        Monitor.timer
-         ( "Constant Check"
+         ( Monitor.constant_check
          , fun () -> Check.LF.checkTyp Int.LF.Empty Int.LF.Null (tA', S.LF.id)
          );
        Typeinfo.Sgn.add location (Typeinfo.Sgn.mk_entry (Typeinfo.Sgn.Typ tA')) "";
@@ -699,7 +699,7 @@ let recSgnDecls decls =
        let (cD, cG) = (Int.LF.Empty, Int.LF.Empty) in
        let (i', (tau, theta)) =
          Monitor.timer
-           ( "Function Elaboration"
+           ( Monitor.function_elaboration
            , fun () -> Reconstruct.exp' cG apx_i
            )
        in
@@ -716,14 +716,14 @@ let recSgnDecls decls =
          end;
        let cQ, expression'' =
          Monitor.timer
-           ( "Function Abstraction"
+           ( Monitor.function_abstraction
            , fun _ ->
              Abstract.exp expression'
            )
        in
        storeLeftoverVars cQ location;
        Monitor.timer
-         ( "Function Check"
+         ( Monitor.function_check
          , fun _ -> Check.Comp.check None cD cG [] expression'' (tau', C.m_id)
          );
 
@@ -760,25 +760,25 @@ let recSgnDecls decls =
        let (cD, cG) = (Int.LF.Empty, Int.LF.Empty) in
        let tau' =
          Monitor.timer
-           ( "Function Type Elaboration"
+           ( Monitor.function_type_elaboration
            , fun () -> Reconstruct.comptyp apx_tau
            )
        in
        Unify.forceGlobalCnstr ();
        let (tau', _) =
          Monitor.timer
-           ( "Function Type Abstraction"
+           ( Monitor.function_type_abstraction
            , fun _ -> Abstract.comptyp tau'
            )
        in
        Monitor.timer
-         ( "Function Type Check"
+         ( Monitor.function_type_check
          , fun () -> Check.Comp.checkTyp cD tau'
          );
        let apx_i = Index.exp Store.Var.empty expression in
        let i' =
          Monitor.timer
-           ( "Function Elaboration"
+           ( Monitor.function_elaboration
            , fun _ ->
              Reconstruct.exp cG apx_i (tau', C.m_id)
            )
@@ -796,13 +796,13 @@ let recSgnDecls decls =
 
        let cQ, expression'' =
          Monitor.timer
-           ( "Function Abstraction"
+           ( Monitor.function_abstraction
            , fun () -> Abstract.exp expression'
            )
        in
        storeLeftoverVars cQ location;
        Monitor.timer
-         ( "Function Check"
+         ( Monitor.function_check
          , fun _ ->
            Check.Comp.check None cD cG [] expression'' (tau', C.m_id)
          );
@@ -910,7 +910,7 @@ let recSgnDecls decls =
            let apx_tau = Index.comptyp typ in
            let tau' =
              Monitor.timer
-               ( "Function Type Elaboration"
+               ( Monitor.function_type_elaboration
                , fun () -> Reconstruct.comptyp apx_tau
                )
            in
@@ -920,12 +920,12 @@ let recSgnDecls decls =
             *)
            let (tau', _) =
              Monitor.timer
-               ( "Function Type Abstraction"
+               ( Monitor.function_type_abstraction
                , fun () -> Abstract.comptyp tau'
                )
            in
            Monitor.timer
-             ( "Function Type Check"
+             ( Monitor.function_type_check
              , fun () -> Check.Comp.checkTyp Int.LF.Empty tau'
              );
            FCVar.clear ();
@@ -981,7 +981,7 @@ let recSgnDecls decls =
          dprint (fun () -> "[reconThm] Indexing theorem done.");
          let thm' =
            Monitor.timer
-             ( "Function Elaboration",
+             ( Monitor.function_elaboration,
                fun () ->
                Reconstruct.thm Int.LF.Empty apx_thm (Total.strip tau, C.m_id)
              )
@@ -1019,7 +1019,7 @@ let recSgnDecls decls =
          let thm'' = Whnf.cnormThm (thm', Whnf.m_id) in
          let cQ, thm_r =
            Monitor.timer
-             ( "Function Abstraction"
+             ( Monitor.function_abstraction
              , fun () -> Abstract.thm thm''
              )
          in
@@ -1043,7 +1043,7 @@ let recSgnDecls decls =
               tau
          in
          Monitor.timer
-           ( "Function Check"
+           ( Monitor.function_check
            , fun _ ->
              dprintf
                begin fun p ->
@@ -1104,7 +1104,7 @@ let recSgnDecls decls =
        FVar.clear ();
        let tA =
          Monitor.timer
-           ( "Constant Elaboration"
+           ( Monitor.constant_elaboration
            , fun () ->
              let tA = Reconstruct.typ Lfrecon.Pi apxT in
              Reconstruct.solve_fvarCnstr Lfrecon.Pi;
@@ -1121,7 +1121,7 @@ let recSgnDecls decls =
        Unify.forceGlobalCnstr ();
        let (tA', i) =
          Monitor.timer
-           ( "Constant Abstraction"
+           ( Monitor.constant_abstraction
            , fun () -> Abstract.typ tA
            )
        in
@@ -1134,7 +1134,7 @@ let recSgnDecls decls =
              (string_of_int i)
          end;
        Monitor.timer
-         ( "Constant Check"
+         ( Monitor.constant_check
          , fun () ->
            Check.LF.checkTyp Int.LF.Empty Int.LF.Null (tA', S.LF.id)
          );

@@ -762,7 +762,7 @@ let rec blockdeclInDctx =
          begin
            let s0 =
              Monitor.timer
-               ( "Normalisation"
+               ( Monitor.normalisation
                , fun () ->
                  Whnf.normSub (comp s' s) (* s0 = s', since s = Id *)
                )
@@ -910,7 +910,7 @@ let rec blockdeclInDctx =
          begin
            let t =
              Monitor.timer
-               ( "Normalisation"
+               ( Monitor.normalisation
                , fun () -> Whnf.normSub t
                )
            in
@@ -1418,7 +1418,7 @@ let rec blockdeclInDctx =
           let s1_i =
             invert
               (Monitor.timer
-                 ( "Normalisation"
+                 ( Monitor.normalisation
                  , fun () -> Whnf.normSub s1'
                  )
               )
@@ -1440,7 +1440,7 @@ let rec blockdeclInDctx =
           let s1_i =
             invert
               (Monitor.timer
-                 ( "Normalisation"
+                 ( Monitor.normalisation
                  , fun () -> Whnf.normSub s1'
                  )
               )
@@ -1458,7 +1458,7 @@ let rec blockdeclInDctx =
        let s1_i =
          invert
            (Monitor.timer
-              ( "Normalisation"
+              ( Monitor.normalisation
               , fun () -> Whnf.normSub s1'
               )
            )
@@ -1950,7 +1950,7 @@ let rec blockdeclInDctx =
            let ss' =
              invert
                (Monitor.timer
-                  ( "Normalisation"
+                  ( Monitor.normalisation
                   , fun () -> Whnf.normSub s'
                   )
                )

@@ -492,7 +492,7 @@ let query =
           Store.FVar.clear ();
           let tA =
             Monitor.timer
-              ( "Constant Elaboration"
+              ( Monitor.constant_elaboration
               , fun () ->
                 let tA = Reconstruct.typ Lfrecon.Pi apxT in
                 Reconstruct.solve_fvarCnstr Lfrecon.Pi;
@@ -505,14 +505,14 @@ let query =
           Unify.StdTrail.forceGlobalCnstr ();
           let (tA', i) =
             Monitor.timer
-              ( "Constant Abstraction"
+              ( Monitor.constant_abstraction
               , fun () -> Abstract.typ tA
               )
           in
           Reconstruct.reset_fvarCnstr ();
           Unify.StdTrail.resetGlobalCnstrs ();
           Monitor.timer
-            ( "Constant Check"
+            ( Monitor.constant_check
             , fun () ->
               Check.LF.checkTyp Synint.LF.Empty Synint.LF.Null (tA', Substitution.LF.id)
             );

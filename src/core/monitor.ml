@@ -1,173 +1,234 @@
+(** Timing utilities for monitoring the execution time of functions.
+
+    This implementation is based on Celf's [Timing] and [Timers] modules.
+    https://github.com/clf/celf/blob/404f5f1590fa2166b90312fddaf8a316d13c01af/Timing.sml
+    https://github.com/clf/celf/blob/404f5f1590fa2166b90312fddaf8a316d13c01af/Timers.sml
+
+    @author Dimitri Kirchner
+    @author Marc-Antoine Ouimet *)
+
 open Support
 
-(*
- *  monitor.ml
- *
- *  Made by Dimitri Kirchner
- *  Login   <dimitri@logic-3.CS.McGill.CA>
- *
- *  Started on  Wed May  6 11:13:24 2009 Dimitri Kirchner
- *  Last update Mon Jun 15 11:13:24 2009 Dimitri Kirchner
- *)
+let on = ref false
 
-let on = ref false;;
-let onf = ref false;;
+let onf = ref false
 
-(* TODO this module should be rewritten to use hashtable or something
-   and furthermore to use English variable names.
-   -je
- *)
+let output_file = "time.txt"
 
-(*
- * We create four arrays which will contain the differents steps of the type checking
- * and the binding result.
- *)
-let etapes = Array.make 17 "" ;;
-let valeurs_realtime = Array.make 17 0. ;;
-let valeurs_utime = Array.make 17 0. ;;
-let valeurs_stime = Array.make 17 0. ;;
+type timer =
+  { label : string
+  ; mutable realtime_elapsed : float
+  ; mutable utime_elapsed : float
+  ; mutable stime_elapsed : float
+  }
 
+let timer (timer, f) =
+  if !on || !onf then (
+    let realtime_before = Unix.gettimeofday () in
+    let times_before = Unix.times () in
+    let result = f () in
+    let times_after = Unix.times () in
+    let realtime_after = Unix.gettimeofday () in
 
-(* @brief Initialise the array named "etapes" to the different steps. *)
-let init_tab () =
-  etapes.(0) <- "Constant Elaboration";
-  etapes.(1) <- "Constant Reconstruction";
-  etapes.(2) <- "Constant Abstraction";
-  etapes.(3) <- "Constant Check";
+    timer.realtime_elapsed <-
+      timer.realtime_elapsed +. (realtime_after -. realtime_before);
+    timer.utime_elapsed <-
+      timer.utime_elapsed
+      +. (times_after.Unix.tms_utime -. times_before.Unix.tms_utime);
+    timer.stime_elapsed <-
+      timer.stime_elapsed
+      +. (times_after.Unix.tms_stime -. times_before.Unix.tms_stime);
 
-  etapes.(4) <- "Type Elaboration";
-  etapes.(5) <- "Type Reconstruction";
-  etapes.(6) <- "Type Abstraction";
-  etapes.(7) <- "Type Check";
+    result)
+  else f ()
 
-  etapes.(8) <- "Function Elaboration";
-  etapes.(9) <- "Function Reconstruction";
-  etapes.(10) <- "Function Abstraction";
-  etapes.(11) <- "Function Check";
+let add_all label timers =
+  let realtime_elapsed, utime_elapsed, stime_elapsed =
+    List.fold_left
+      (fun (realtime_elapsed_acc, utime_elapsed_acc, stime_elapsed_acc)
+           { realtime_elapsed; utime_elapsed; stime_elapsed; _ } ->
+        ( realtime_elapsed +. realtime_elapsed_acc
+        , utime_elapsed +. utime_elapsed_acc
+        , stime_elapsed +. stime_elapsed_acc ))
+      (0., 0., 0.) timers
+  in
+  { label; realtime_elapsed; utime_elapsed; stime_elapsed }
 
-  etapes.(12) <- "Function Type Elaboration";
-  etapes.(13) <- "Function Type Reconstruction";
-  etapes.(14) <- "Function Type Abstraction";
-  etapes.(15) <- "Function Type Check";
+let make_timer label =
+  { label; realtime_elapsed = 0.; utime_elapsed = 0.; stime_elapsed = 0. }
 
-  etapes.(16) <- "Normalisation";;
+let type_abbrev_kind_check = make_timer "Type abbrev. : Kind Check"
 
-init_tab ();;
+let type_abbrev_type_check = make_timer "Type abbrev. : Type Check"
 
+let ctype_elaboration = make_timer "CType Elaboration"
 
-(* @brief Add the time to the bound flag in the array named "array". *)
-let writeTime (name, time, array) =
-  let found = ref false in
-  for i = 1 to 16 do
-    if String.equal name etapes.(i)
-    then
-      begin
-        array.(i) <- array.(i) +. time;
-        found := true
-      end
-  done;
-  if Bool.not !found
-  then
-    Printf.printf "Non existing argument for function writeTime (name, time).\n"
+let ctype_abstraction = make_timer "CType Abstraction"
 
-(* Get the time before and after executing function f. Then call writeTime() to save data. *)
-let timer (name, f) =
-  if !on || !onf
-  then
-    begin
-      let timeRealBef = Unix.gettimeofday () in
-      let timeBef = Unix.times () in
-      let result = f () in
-      let timeAft = Unix.times () in
-      let timeRealAft = Unix.gettimeofday () in
-      writeTime (name, timeAft.Unix.tms_utime -. timeBef.Unix.tms_utime, valeurs_utime);
-      writeTime (name, timeAft.Unix.tms_stime -. timeBef.Unix.tms_stime, valeurs_stime);
-      writeTime (name, timeRealAft -. timeRealBef, valeurs_realtime);
-      result;
-    end
-  else
-    f ();;
+let ctype_check = make_timer "CType Check"
 
+let datatype_constant_type_elaboration =
+  make_timer "Data-type Constant: Type Elaboration"
 
-(*Help for print_timer*)
-let addR i =
-  (valeurs_realtime.(i) +. valeurs_realtime.(i + 4) +. valeurs_realtime.(i + 8) +. valeurs_realtime.(i + 12));;
-let addU i =
-  (valeurs_utime.(i) +. valeurs_utime.(i + 4) +. valeurs_utime.(i + 8) +. valeurs_utime.(i + 12));;
-let addS i =
-  (valeurs_stime.(i) +. valeurs_stime.(i + 4) +. valeurs_stime.(i + 8) +. valeurs_stime.(i + 12));;
+let datatype_constant_type_abstraction =
+  make_timer "Data-type Constant: Type Abstraction"
 
+let datatype_constant_type_check =
+  make_timer "Data-type Constant: Type Check"
 
-(*
- * @brief Print the timing arrays.
- * If the flag "on" is true, print it in the shell, after the execution.
- * If the flag "onf" is true, print it in the file named "time.txt".
- *)
-let print_timer () =
-  if !on
-  then
-    begin
-      Printf.printf "\n                ## Timer Information: ##\n\n";
-      Printf.printf "    Steps:                   | Real time: | User time: | System time: \n";
+let codatatype_constant_type_elaboration =
+  make_timer "Codata-type Constant: Type Elaboration"
 
-      Printf.printf "%s         |  %.6f  |  %.6f  |  %.6f\n" etapes.(0) valeurs_realtime.(0) valeurs_utime.(0) valeurs_stime.(0);
-      Printf.printf "%s      |  %.6f  |  %.6f  |  %.6f\n" etapes.(1) valeurs_realtime.(1) valeurs_utime.(1) valeurs_stime.(1);
-      Printf.printf "%s         |  %.6f  |  %.6f  |  %.6f\n" etapes.(2) valeurs_realtime.(2) valeurs_utime.(2) valeurs_stime.(2);
-      Printf.printf "%s               |  %.6f  |  %.6f  |  %.6f\n" etapes.(3) valeurs_realtime.(3) valeurs_utime.(3) valeurs_stime.(3);
+let codatatype_constant_type_abstraction =
+  make_timer "Codata-type Constant: Type Abstraction"
 
-      Printf.printf "%s             |  %.6f  |  %.6f  |  %.6f\n" etapes.(4) valeurs_realtime.(4) valeurs_utime.(4) valeurs_stime.(4);
-      Printf.printf "%s          |  %.6f  |  %.6f  |  %.6f\n" etapes.(5) valeurs_realtime.(5) valeurs_utime.(5) valeurs_stime.(5);
-      Printf.printf "%s             |  %.6f  |  %.6f  |  %.6f\n" etapes.(6) valeurs_realtime.(6) valeurs_utime.(6) valeurs_stime.(6);
-      Printf.printf "%s                   |  %.6f  |  %.6f  |  %.6f\n" etapes.(7) valeurs_realtime.(7) valeurs_utime.(7) valeurs_stime.(7);
+let codatatype_constant_type_check =
+  make_timer "Codata-type Constant: Type Check"
 
-      Printf.printf "%s         |  %.6f  |  %.6f  |  %.6f\n" etapes.(8) valeurs_realtime.(8) valeurs_utime.(8) valeurs_stime.(8);
-      Printf.printf "%s      |  %.6f  |  %.6f  |  %.6f\n" etapes.(9) valeurs_realtime.(9) valeurs_utime.(9) valeurs_stime.(9);
-      Printf.printf "%s         |  %.6f  |  %.6f  |  %.6f\n" etapes.(10) valeurs_realtime.(10) valeurs_utime.(10) valeurs_stime.(10);
-      Printf.printf "%s               |  %.6f  |  %.6f  |  %.6f\n" etapes.(11) valeurs_realtime.(11) valeurs_utime.(11) valeurs_stime.(11);
+let type_elaboration = make_timer "Type Elaboration"
 
-      Printf.printf "%s    |  %.6f  |  %.6f  |  %.6f\n" etapes.(12) valeurs_realtime.(12) valeurs_utime.(12) valeurs_stime.(12);
-      Printf.printf "%s |  %.6f  |  %.6f  |  %.6f\n" etapes.(13) valeurs_realtime.(13) valeurs_utime.(13) valeurs_stime.(13);
-      Printf.printf "%s    |  %.6f  |  %.6f  |  %.6f\n" etapes.(14) valeurs_realtime.(14) valeurs_utime.(14) valeurs_stime.(14);
-      Printf.printf "%s          |  %.6f  |  %.6f  |  %.6f\n" etapes.(15) valeurs_realtime.(15) valeurs_utime.(15) valeurs_stime.(15);
+let type_abstraction = make_timer "Type Abstraction"
 
-      Printf.printf "\nTOTAL:";
-      Printf.printf "\n Elaboration:                |  %.6f  |  %.6f  |  %.6f" (addR 0) (addU 0) (addS 0);
-      Printf.printf "\n Reconstruction:             |  %.6f  |  %.6f  |  %.6f" (addR 1) (addU 1) (addS 1);
-      Printf.printf "\n Abstraction:                |  %.6f  |  %.6f  |  %.6f" (addR 2) (addU 2) (addS 2);
-      Printf.printf "\n Check:                      |  %.6f  |  %.6f  |  %.6f\n" (addR 3) (addU 3) (addS 3);
-      Printf.printf "\n Normalisation:              |  %.6f  |  %.6f  |  %.6f\n" valeurs_realtime.(16) valeurs_utime.(16) valeurs_stime.(16);
-    end
-  else if !onf
-  then
-    begin
-      let channel = open_out "time.txt" in
-      Printf.fprintf channel "\n               ## Timer Information: ##\n\n";
-      Printf.fprintf channel "    Steps:                   | Real time: | User time: | System time: \n";
+let type_check = make_timer "Type Check"
 
-      Printf.fprintf channel "%s         |  %.6f  |  %.6f  |  %.6f\n" etapes.(0) valeurs_realtime.(0) valeurs_utime.(0) valeurs_stime.(0);
-      Printf.fprintf channel "%s      |  %.6f  |  %.6f  |  %.6f\n" etapes.(1) valeurs_realtime.(1) valeurs_utime.(1) valeurs_stime.(1);
-      Printf.fprintf channel "%s         |  %.6f  |  %.6f  |  %.6f\n" etapes.(2) valeurs_realtime.(2) valeurs_utime.(2) valeurs_stime.(2);
-      Printf.fprintf channel "%s               |  %.6f  |  %.6f  |  %.6f\n" etapes.(3) valeurs_realtime.(3) valeurs_utime.(3) valeurs_stime.(3);
+let function_type_elaboration = make_timer "Function Type Elaboration"
 
-      Printf.fprintf channel "%s             |  %.6f  |  %.6f  |  %.6f\n" etapes.(4) valeurs_realtime.(4) valeurs_utime.(4) valeurs_stime.(4);
-      Printf.fprintf channel "%s          |  %.6f  |  %.6f  |  %.6f\n" etapes.(5) valeurs_realtime.(5) valeurs_utime.(5) valeurs_stime.(5);
-      Printf.fprintf channel "%s             |  %.6f  |  %.6f  |  %.6f\n" etapes.(6) valeurs_realtime.(6) valeurs_utime.(6) valeurs_stime.(6);
-      Printf.fprintf channel "%s                   |  %.6f  |  %.6f  |  %.6f\n" etapes.(7) valeurs_realtime.(7) valeurs_utime.(7) valeurs_stime.(7);
+let function_type_abstraction = make_timer "Function Type Abstraction"
 
-      Printf.fprintf channel "%s         |  %.6f  |  %.6f  |  %.6f\n" etapes.(8) valeurs_realtime.(8) valeurs_utime.(8) valeurs_stime.(8);
-      Printf.fprintf channel "%s      |  %.6f  |  %.6f  |  %.6f\n" etapes.(9) valeurs_realtime.(9) valeurs_utime.(9) valeurs_stime.(9);
-      Printf.fprintf channel "%s         |  %.6f  |  %.6f  |  %.6f\n" etapes.(10) valeurs_realtime.(10) valeurs_utime.(10) valeurs_stime.(10);
-      Printf.fprintf channel "%s               |  %.6f  |  %.6f  |  %.6f\n" etapes.(11) valeurs_realtime.(11) valeurs_utime.(11) valeurs_stime.(11);
+let function_type_check = make_timer "Function Type Check"
 
-      Printf.fprintf channel "%s    |  %.6f  |  %.6f  |  %.6f\n" etapes.(12) valeurs_realtime.(12) valeurs_utime.(12) valeurs_stime.(12);
-      Printf.fprintf channel "%s |  %.6f  |  %.6f  |  %.6f\n" etapes.(13) valeurs_realtime.(13) valeurs_utime.(13) valeurs_stime.(13);
-      Printf.fprintf channel "%s    |  %.6f  |  %.6f  |  %.6f\n" etapes.(14) valeurs_realtime.(14) valeurs_utime.(14) valeurs_stime.(14);
-      Printf.fprintf channel "%s          |  %.6f  |  %.6f  |  %.6f\n" etapes.(15) valeurs_realtime.(15) valeurs_utime.(15) valeurs_stime.(15);
+let function_elaboration = make_timer "Function Elaboration"
 
-      Printf.fprintf channel "\nTOTAL:";
-      Printf.fprintf channel "\n Elaboration:                |  %.6f  |  %.6f  |  %.6f" (addR 0) (addU 0) (addS 0);
-      Printf.fprintf channel "\n Reconstruction:             |  %.6f  |  %.6f  |  %.6f" (addR 1) (addU 1) (addS 1);
-      Printf.fprintf channel "\n Abstraction:                |  %.6f  |  %.6f  |  %.6f" (addR 2) (addU 2) (addS 2);
-      Printf.fprintf channel "\n Check:                      |  %.6f  |  %.6f  |  %.6f\n" (addR 3) (addU 3) (addS 3);
-      Printf.fprintf channel "\n Normalisation:              |  %.6f  |  %.6f  |  %.6f\n" valeurs_realtime.(16) valeurs_utime.(16) valeurs_stime.(16)
-    end
+let function_abstraction = make_timer "Function Abstraction"
+
+let function_check = make_timer "Function Check"
+
+let constant_elaboration = make_timer "Constant Elaboration"
+
+let constant_abstraction = make_timer "Constant Abstraction"
+
+let constant_check = make_timer "Constant Check"
+
+let normalisation = make_timer "Normalisation"
+
+let elaboration_timers =
+  [ ctype_elaboration
+  ; datatype_constant_type_elaboration
+  ; codatatype_constant_type_elaboration
+  ; type_elaboration
+  ; function_type_elaboration
+  ; function_elaboration
+  ; constant_elaboration
+  ]
+
+let abstraction_timers =
+  [ ctype_abstraction
+  ; datatype_constant_type_abstraction
+  ; codatatype_constant_type_abstraction
+  ; type_abstraction
+  ; function_type_abstraction
+  ; function_abstraction
+  ; constant_abstraction
+  ]
+
+let check_timers =
+  [ ctype_check
+  ; type_abbrev_kind_check
+  ; type_abbrev_type_check
+  ; datatype_constant_type_check
+  ; codatatype_constant_type_check
+  ; type_check
+  ; function_type_check
+  ; function_check
+  ; constant_check
+  ]
+
+let normalisation_timers = [ normalisation ]
+
+let timers =
+  [ `Simple type_abbrev_kind_check
+  ; `Simple type_abbrev_type_check
+  ; `Simple ctype_elaboration
+  ; `Simple ctype_abstraction
+  ; `Simple ctype_check
+  ; `Simple datatype_constant_type_elaboration
+  ; `Simple datatype_constant_type_abstraction
+  ; `Simple datatype_constant_type_check
+  ; `Simple codatatype_constant_type_elaboration
+  ; `Simple codatatype_constant_type_abstraction
+  ; `Simple codatatype_constant_type_check
+  ; `Simple type_elaboration
+  ; `Simple type_abstraction
+  ; `Simple type_check
+  ; `Simple function_type_elaboration
+  ; `Simple function_type_abstraction
+  ; `Simple function_type_check
+  ; `Simple function_elaboration
+  ; `Simple function_abstraction
+  ; `Simple function_check
+  ; `Simple constant_elaboration
+  ; `Simple constant_abstraction
+  ; `Simple constant_check
+  ; `Simple normalisation
+  ; `Aggregate ("Cumulative elaboration", elaboration_timers)
+  ; `Aggregate ("Cumulative abstraction", abstraction_timers)
+  ; `Aggregate ("Cumulative check", check_timers)
+  ; `Aggregate ("Cumulative normalisation", normalisation_timers)
+  ]
+
+let whitespaces n = String.init n (fun _index -> ' ')
+
+let indent_data4 data =
+  let max_length1, max_length2, max_length3, max_length4 =
+    List.fold_left
+      (fun (max_length1, max_length2, max_length3, max_length4)
+           (element1, element2, element3, element4) ->
+        ( Int.max max_length1 (String.length element1)
+        , Int.max max_length2 (String.length element2)
+        , Int.max max_length3 (String.length element3)
+        , Int.max max_length4 (String.length element4) ))
+      (0, 0, 0, 0) data
+  in
+  List.map
+    (fun (element1, element2, element3, element4) ->
+      ( element1 ^ whitespaces (max_length1 - String.length element1)
+      , element2 ^ whitespaces (max_length2 - String.length element2)
+      , element3 ^ whitespaces (max_length3 - String.length element3)
+      , element4 ^ whitespaces (max_length4 - String.length element4) ))
+    data
+
+let float_to_string = Format.asprintf "%.6f"
+
+let pp_timers ppf timers =
+  let timers' =
+    List.map
+      (function
+        | `Simple timer -> timer
+        | `Aggregate (label, timers) -> add_all label timers)
+      timers
+  in
+  let data =
+    ("Steps:", "Real time:", "User time:", "System time:")
+    :: List.map
+         (fun { label; realtime_elapsed; utime_elapsed; stime_elapsed } ->
+           ( label
+           , float_to_string realtime_elapsed
+           , float_to_string utime_elapsed
+           , float_to_string stime_elapsed ))
+         timers'
+  in
+  let data' = indent_data4 data in
+  Format.fprintf ppf "@[<v 0>## Timer Information: ##@,%a@]"
+    (List.pp ~pp_sep:Format.pp_print_cut
+       (fun ppf (element1, element2, element3, element4) ->
+         Format.fprintf ppf "@[<h 0>%s  |  %s  |  %s  |  %s  @]" element1
+           element2 element3 element4))
+    data'
+
+let print_timers () =
+  if !on then Format.fprintf Format.std_formatter "@[%a@]@." pp_timers timers
+  else if !onf then
+    Out_channel.with_open_bin output_file (fun out_channel ->
+        Format.fprintf
+          (Format.formatter_of_out_channel out_channel)
+          "@[%a@]@." pp_timers timers)

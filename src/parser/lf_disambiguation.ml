@@ -59,6 +59,53 @@ exception Expected_lf_term_constant
 
 exception Expected_lf_type_constant
 
+(** {2 Exception Printing} *)
+
+let () =
+  Error.register_exception_printer (function
+    | Illegal_identifier_lf_kind ->
+        Format.dprintf "Identifiers may not appear as LF kinds."
+    | Illegal_qualified_identifier_lf_kind ->
+        Format.dprintf "Qualified identifiers may not appear as LF kinds."
+    | Illegal_backward_arrow_lf_kind ->
+        Format.dprintf "Backward arrows may not appear as LF kinds."
+    | Illegal_hole_lf_kind ->
+        Format.dprintf "Holes may not appear as LF kinds."
+    | Illegal_lambda_lf_kind ->
+        Format.dprintf "Lambdas may not appear as LF kinds."
+    | Illegal_annotated_lf_kind ->
+        Format.dprintf
+          "Type ascriptions to terms may not appear as LF kinds."
+    | Illegal_application_lf_kind ->
+        Format.dprintf "Term applications may not appear as LF kinds."
+    | Illegal_type_kind_lf_type ->
+        Format.dprintf "The kind `type' may not appear as an LF type."
+    | Illegal_hole_lf_type ->
+        Format.dprintf "Holes may not appear as LF types."
+    | Illegal_lambda_lf_type ->
+        Format.dprintf "Lambdas may not appear as LF types."
+    | Illegal_annotated_lf_type ->
+        Format.dprintf "Type ascriptions may not appear as LF types."
+    | Unbound_lf_type_constant identifier ->
+        Format.dprintf "The LF type-level constant %a is unbound."
+          Qualified_identifier.pp identifier
+    | Illegal_type_kind_lf_term ->
+        Format.dprintf "The kind `type' may not appear as an LF term."
+    | Illegal_pi_lf_term ->
+        Format.dprintf "Pi-kinds or types may not appear as LF terms."
+    | Illegal_forward_arrow_lf_term ->
+        Format.dprintf "Forward arrows may not appear as LF terms."
+    | Illegal_backward_arrow_lf_term ->
+        Format.dprintf "Backward arrows may not appear as LF terms."
+    | Unbound_lf_term_constant identifier ->
+        Format.dprintf "The LF term-level constant %a is unbound."
+          Qualified_identifier.pp identifier
+    | Expected_lf_term_constant ->
+        Format.dprintf "Expected an LF term-level constant."
+    | Expected_lf_type_constant ->
+        Format.dprintf "Expected an LF type-level constant."
+    | exn -> Error.raise_unsupported_exception_printing exn)
+
 (** {1 Disambiguation} *)
 
 module type LF_DISAMBIGUATION = sig
@@ -114,6 +161,10 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
           (Qualified_identifier.make_simple identifier)
     | _ -> return (Lf_application_disambiguation.make_expression expression)
 
+  let[@inline] with_lf_term_variable_opt = function
+    | Option.None -> Fun.id
+    | Option.Some identifier -> with_lf_term_variable identifier
+
   (** [disambiguate_lf_kind object_ state] is [object_] rewritten as an LF
       kind with respect to the disambiguation context [state].
 
@@ -153,11 +204,8 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
           traverse_option disambiguate_lf_typ parameter_sort
         in
         let* body' =
-          match parameter_identifier with
-          | Option.None -> disambiguate_lf_kind body
-          | Option.Some parameter_identifier ->
-              with_lf_term_variable parameter_identifier
-                (disambiguate_lf_kind body)
+          with_lf_term_variable_opt parameter_identifier
+            (disambiguate_lf_kind body)
         in
         return
           (Synext.LF.Kind.Pi
@@ -208,8 +256,9 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
         (* Qualified identifiers without namespaces were parsed as plain
            identifiers *)
         assert (List.length (Qualified_identifier.namespaces identifier) >= 1);
-        (* As an LF type, identifiers of the form [<identifier> (`.'
-           <identifier>)+] are necessarily bound LF type-level constants. *)
+        (* As an LF type, identifiers of the form [<identifier>
+           <dot-identifier>+] are necessarily bound LF type-level
+           constants. *)
         lookup identifier >>= function
         | Result.Ok (Lf_type_constant, _) ->
             return (Synext.LF.Typ.Constant { location; identifier })
@@ -233,11 +282,8 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
           traverse_option disambiguate_lf_typ parameter_sort
         in
         let* body' =
-          match parameter_identifier with
-          | Option.None -> disambiguate_lf_typ body
-          | Option.Some parameter_identifier ->
-              with_lf_term_variable parameter_identifier
-                (disambiguate_lf_typ body)
+          with_lf_term_variable_opt parameter_identifier
+            (disambiguate_lf_typ body)
         in
         return
           (Synext.LF.Typ.Pi
@@ -296,6 +342,7 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
         | Result.Error (Unbound_identifier _) ->
             (* [identifier] does not appear in the state, so it is a free
                variable. *)
+            let* () = add_free_lf_term_variable identifier in
             return (Synext.LF.Term.Variable { location; identifier })
         | Result.Error cause -> Error.raise_at1 location cause)
     | Synprs.LF.Object.Raw_qualified_identifier { location; identifier; _ }
@@ -303,9 +350,9 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
         (* Qualified identifiers without namespaces were parsed as plain
            identifiers *)
         assert (List.length (Qualified_identifier.namespaces identifier) >= 1);
-        (* As an LF term, identifiers of the form [<identifier> (`.'
-           <identifier>)+] are necessarily LF term-level constants. Plain LF
-           terms do not support projections, so there is no additional
+        (* As an LF term, identifiers of the form [<identifier>
+           <dot-identifier>+] are necessarily LF term-level constants. Plain
+           LF terms do not support projections, so there is no additional
            ambiguity. *)
         (* Lookup the identifier in the current state *)
         lookup identifier >>= function
@@ -329,11 +376,8 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
           traverse_option disambiguate_lf_typ parameter_sort
         in
         let* body' =
-          match parameter_identifier with
-          | Option.None -> disambiguate_lf_term body
-          | Option.Some parameter_identifier ->
-              with_lf_term_variable parameter_identifier
-                (disambiguate_lf_term body)
+          with_lf_term_variable_opt parameter_identifier
+            (disambiguate_lf_term body)
         in
         return
           (Synext.LF.Term.Abstraction
@@ -374,50 +418,3 @@ module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
           (Synext.LF.Term.Application
              { applicand = applicand'; arguments = arguments'; location })
 end
-
-(** {2 Exception Printing} *)
-
-let () =
-  Error.register_exception_printer (function
-    | Illegal_identifier_lf_kind ->
-        Format.dprintf "Identifiers may not appear as LF kinds."
-    | Illegal_qualified_identifier_lf_kind ->
-        Format.dprintf "Qualified identifiers may not appear as LF kinds."
-    | Illegal_backward_arrow_lf_kind ->
-        Format.dprintf "Backward arrows may not appear as LF kinds."
-    | Illegal_hole_lf_kind ->
-        Format.dprintf "Holes may not appear as LF kinds."
-    | Illegal_lambda_lf_kind ->
-        Format.dprintf "Lambdas may not appear as LF kinds."
-    | Illegal_annotated_lf_kind ->
-        Format.dprintf
-          "Type ascriptions to terms may not appear as LF kinds."
-    | Illegal_application_lf_kind ->
-        Format.dprintf "Term applications may not appear as LF kinds."
-    | Illegal_type_kind_lf_type ->
-        Format.dprintf "The kind `type' may not appear as an LF type."
-    | Illegal_hole_lf_type ->
-        Format.dprintf "Holes may not appear as LF types."
-    | Illegal_lambda_lf_type ->
-        Format.dprintf "Lambdas may not appear as LF types."
-    | Illegal_annotated_lf_type ->
-        Format.dprintf "Type ascriptions may not appear as LF types."
-    | Unbound_lf_type_constant identifier ->
-        Format.dprintf "The LF type-level constant %a is unbound."
-          Qualified_identifier.pp identifier
-    | Illegal_type_kind_lf_term ->
-        Format.dprintf "The kind `type' may not appear as an LF term."
-    | Illegal_pi_lf_term ->
-        Format.dprintf "Pi-kinds or types may not appear as LF terms."
-    | Illegal_forward_arrow_lf_term ->
-        Format.dprintf "Forward arrows may not appear as LF terms."
-    | Illegal_backward_arrow_lf_term ->
-        Format.dprintf "Backward arrows may not appear as LF terms."
-    | Unbound_lf_term_constant identifier ->
-        Format.dprintf "The LF term-level constant %a is unbound."
-          Qualified_identifier.pp identifier
-    | Expected_lf_term_constant ->
-        Format.dprintf "Expected an LF term-level constant."
-    | Expected_lf_type_constant ->
-        Format.dprintf "Expected an LF type-level constant."
-    | exn -> Error.raise_unsupported_exception_printing exn)

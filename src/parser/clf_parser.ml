@@ -2,6 +2,20 @@ open Support
 open Beluga_syntax
 open Common_parser
 
+exception Ambiguous_clf_forward_arrow
+
+exception Ambiguous_clf_backward_arrow
+
+let () =
+  Error.register_exception_printer (function
+    | Ambiguous_clf_forward_arrow ->
+        Format.dprintf
+          "This contextual LF forward arrow operator is ambiguous."
+    | Ambiguous_clf_backward_arrow ->
+        Format.dprintf
+          "This contextual LF backward arrow operator is ambiguous."
+    | cause -> Error.raise_unsupported_exception_printing cause)
+
 module type CLF_PARSER = sig
   (** @closed *)
   include COMMON_PARSER
@@ -27,10 +41,6 @@ module Make
      and type state = Parser.state
      and type location = Parser.location = struct
   include Parser
-
-  exception Ambiguous_clf_forward_arrow
-
-  exception Ambiguous_clf_backward_arrow
 
   (* This recursive module is defined as a convenient alternative to
      eta-expansion or using the fixpoint combinator for defining mutually
@@ -453,14 +463,4 @@ module Make
 
   let clf_substitution =
     clf_context_object |> labelled "Contextual LF substitution"
-
-  let () =
-    Error.register_exception_printer (function
-      | Ambiguous_clf_forward_arrow ->
-          Format.dprintf
-            "This contextual LF forward arrow operator is ambiguous."
-      | Ambiguous_clf_backward_arrow ->
-          Format.dprintf
-            "This contextual LF backward arrow operator is ambiguous."
-      | cause -> Error.raise_unsupported_exception_printing cause)
 end

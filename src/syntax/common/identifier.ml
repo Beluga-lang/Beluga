@@ -32,6 +32,7 @@ end)
 module type SHOW = Show.SHOW
 
 module Set = Set.Make (Ord)
+module Map = Map.Make (Ord)
 
 module Show : SHOW with type t = t = struct
   type nonrec t = t
@@ -43,24 +44,15 @@ end
 
 include (Show : SHOW with type t := t)
 
-let inspect_duplicates identifiers =
-  let duplicates, set =
-    List.fold_left
-      (fun (duplicates, encountered_identifiers) addition ->
-        match Set.find_opt addition encountered_identifiers with
-        | Option.Some hit ->
-            let duplicates' = addition :: hit :: duplicates in
-            (duplicates', encountered_identifiers)
-        | Option.None ->
-            let encountered_identifiers' =
-              Set.add addition encountered_identifiers
-            in
-            (duplicates, encountered_identifiers'))
-      ([], Set.empty) identifiers
-  in
-  match duplicates with
-  | e1 :: e2 :: es -> (Option.some (List2.from e1 e2 es), set)
-  | [] -> (Option.none, set)
-  | _ -> Error.raise_violation "[Identifier.inspect_duplicates]"
-
-let find_duplicates = Fun.(inspect_duplicates >> Pair.fst)
+let find_duplicates identifiers =
+  Map.empty
+  |> List.fold_right
+       (fun identifier identifiers_map ->
+         match Map.find_opt identifier identifiers_map with
+         | Option.None -> Map.add identifier [ identifier ] identifiers_map
+         | Option.Some identifiers ->
+             Map.add identifier (identifier :: identifiers) identifiers_map)
+       identifiers
+  |> Map.filter_map (fun _identifier identifiers ->
+         List2.of_list identifiers)
+  |> Map.bindings |> List1.of_list

@@ -540,9 +540,9 @@ module Make
         (equals &> keyword "struct" &> many Signature_parsers.signature_entry)
       <& keyword "end" <& maybe semicolon |> span
       |> labelled "module declaration"
-      $> fun (location, (identifier, declarations)) ->
+      $> fun (location, (identifier, entries)) ->
       Synprs.Signature.Declaration.Raw_module
-        { location; identifier; declarations }
+        { location; identifier; entries }
 
     let signature_declaration =
       choice

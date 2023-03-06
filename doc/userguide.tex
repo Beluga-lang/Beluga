@@ -572,7 +572,7 @@ substitution, written as \verb+[^]+. Their type is hence
  object of type \verb+tp+ that is closed to an object in the context \verb+g+.
 
 \begin{verbatim}
-rec trans : (g:xaG) [g |- type_of M T[^] ] -> [g |-  M T1[^] ] ->
+rec trans : (g:xaG) [g |- type_of M T[^] ] -> [g |- M T1[^] ] ->
 [g |- eq T T1] = fn d1, d2 => ?;
 \end{verbatim}
 
@@ -683,8 +683,8 @@ module Nats = struct
   z : nat.
   s : nat -> nat.
 
-  rec suc : [ |- nat ] -> [ |- nat] =
-  fn n => let [ |- N ] = n in [ |- s N];
+  rec suc : [ |- nat] -> [ |- nat] =
+  fn n => let [ |- N] = n in [ |- s N];
 
   let two = [ |- s (s z)];
   let three = suc two;

@@ -362,14 +362,14 @@ module Make_comp_pattern_precedence (S : PRECEDENCE_STATE) :
     match pattern with
     | Comp.Pattern.Type_annotated _ -> return (make_static 2)
     | Comp.Pattern.Application
-        { applicand = Comp.Pattern.Constant { identifier; _ }; _ } -> (
+        { applicand = Comp.Pattern.Constructor { identifier; _ }; _ } -> (
         lookup_operator_precedence identifier >>= function
         | Option.Some precedence -> return (make_user_defined precedence)
         | Option.None -> return (make_static application_precedence))
     | Comp.Pattern.Application _ ->
         return (make_static application_precedence)
     | Comp.Pattern.Variable _
-    | Comp.Pattern.Constant _
+    | Comp.Pattern.Constructor _
     | Comp.Pattern.Meta_object _
     | Comp.Pattern.Tuple _
     | Comp.Pattern.Wildcard _ ->

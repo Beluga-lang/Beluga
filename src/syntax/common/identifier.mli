@@ -27,18 +27,13 @@ val name : t -> String.t
 
 module Set : Set.S with type elt = t
 
+module Map : Map.S with type key = t
+
 module Hamt : Hamt.S with type key = t
 
 (** {1 Lists} *)
 
-(** [inspect_duplicates identifiers] is [duplicates_opt, set], where
-    [duplicates_opt] is the list of duplicate identifiers in [identifiers],
-    and [set] is [identifiers] as a set. *)
-val inspect_duplicates : t List.t -> t List2.t Option.t * Set.t
-
-(** [find_duplicates identifiers] is
-    [Pair.fst (inspect_duplicates identifiers)]. *)
-val find_duplicates : t List.t -> t List2.t Option.t
+val find_duplicates : t List.t -> (t * t List2.t) List1.t Option.t
 
 (** {1 Instances} *)
 

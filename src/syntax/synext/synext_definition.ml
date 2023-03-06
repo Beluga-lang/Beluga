@@ -1133,11 +1133,11 @@ module Comp = struct
           { location : Location.t
           ; identifier : Identifier.t
           }
-      | Constant of
+      | Constructor of
           { location : Location.t
           ; identifier : Qualified_identifier.t
           }
-          (** [Constant { identifier = "c"; _ }] is the computation-level
+          (** [Constructor { identifier = "c"; _ }] is the computation-level
               constructor pattern ["c"]. *)
       | Meta_object of
           { location : Location.t

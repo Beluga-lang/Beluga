@@ -49,11 +49,24 @@ let operator_opt_of_json json =
 
 let set_operator identifier operator_opt =
   let open Disambiguation_state in
+  let qualified_identifier = Qualified_identifier.make_simple identifier in
   match operator_opt with
   | Option.None -> return ()
-  | Option.Some operator ->
-      modify_operator (Qualified_identifier.make_simple identifier)
-        (fun _operator ~arity:_ -> Option.some operator)
+  | Option.Some operator -> (
+      match Operator.fixity operator with
+      | Fixity.Prefix ->
+          add_prefix_notation
+            ~precedence:(Operator.precedence operator)
+            qualified_identifier
+      | Fixity.Infix ->
+          add_infix_notation
+            ~precedence:(Operator.precedence operator)
+            ~associativity:(Operator.associativity operator)
+            qualified_identifier
+      | Fixity.Postfix ->
+          add_postfix_notation
+            ~precedence:(Operator.precedence operator)
+            qualified_identifier)
 
 let rec add_json_entries json =
   let open Disambiguation_state in
@@ -80,8 +93,7 @@ and add_json_entry json =
       <& set_operator identifier operator_opt
   | "module" ->
       let identifier = json |> member "identifier" |> identifier_of_json in
-      with_module_declarations ~declarations:(add_json_entries json)
-        ~module_identifier:identifier
+      add_module identifier (add_json_entries json)
   | "parameter_variable" ->
       let identifier = json |> member "identifier" |> identifier_of_json in
       add_parameter_variable identifier

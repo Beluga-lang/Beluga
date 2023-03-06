@@ -1249,7 +1249,7 @@
             "Comp.Pattern.Application",
             {
               "applicand": [
-                "Comp.Pattern.Constant",
+                "Comp.Pattern.Constructor",
                 {
                   "identifier": {
                     "name": {
@@ -1307,7 +1307,7 @@
                   "Comp.Pattern.Application",
                   {
                     "applicand": [
-                      "Comp.Pattern.Constant",
+                      "Comp.Pattern.Constructor",
                       {
                         "identifier": {
                           "name": {
@@ -1442,7 +1442,7 @@
             "Comp.Pattern.Application",
             {
               "applicand": [
-                "Comp.Pattern.Constant",
+                "Comp.Pattern.Constructor",
                 {
                   "identifier": {
                     "name": {
@@ -1564,7 +1564,7 @@
             }
           ],
           "pattern": [
-            "Comp.Pattern.Constant",
+            "Comp.Pattern.Constructor",
             {
               "identifier": {
                 "name": {
@@ -2803,7 +2803,7 @@
                       "Comp.Pattern.Application",
                       {
                         "applicand": [
-                          "Comp.Pattern.Constant",
+                          "Comp.Pattern.Constructor",
                           {
                             "identifier": {
                               "name": {
@@ -2858,7 +2858,7 @@
                             }
                           ],
                           [
-                            "Comp.Pattern.Constant",
+                            "Comp.Pattern.Constructor",
                             {
                               "identifier": {
                                 "name": {

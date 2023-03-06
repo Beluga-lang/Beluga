@@ -17,26 +17,6 @@ module type CLF_DISAMBIGUATION = sig
 
   val with_disambiguated_clf_context :
     Synprs.clf_context_object -> (Synext.clf_context -> 'a t) -> 'a t
-end
-
-module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
-  CLF_DISAMBIGUATION with type state = Disambiguation_state.state
-
-module type CLF_PATTERN_DISAMBIGUATION = sig
-  (** @closed *)
-  include State.STATE
-
-  (** {1 Disambiguation} *)
-
-  val disambiguate_clf_typ : Synprs.clf_object -> Synext.clf_typ t
-
-  val disambiguate_clf_term : Synprs.clf_object -> Synext.clf_term t
-
-  val disambiguate_clf_substitution :
-    Synprs.clf_context_object -> Synext.clf_substitution t
-
-  val with_disambiguated_clf_context :
-    Synprs.clf_context_object -> (Synext.clf_context -> 'a t) -> 'a t
 
   val disambiguate_clf_term_pattern :
     Synprs.clf_object -> Synext.clf_term_pattern t
@@ -51,6 +31,5 @@ module type CLF_PATTERN_DISAMBIGUATION = sig
     Synprs.clf_context_object -> Synext.clf_context_pattern t
 end
 
-module Make_pattern_disambiguator
-    (Disambiguation_state : DISAMBIGUATION_STATE) :
-  CLF_PATTERN_DISAMBIGUATION with type state = Disambiguation_state.state
+module Make (Disambiguation_state : DISAMBIGUATION_STATE) :
+  CLF_DISAMBIGUATION with type state = Disambiguation_state.state

@@ -184,7 +184,7 @@ let location_of_comp_pattern pattern =
   let open Comp.Pattern in
   match pattern with
   | Variable { location; _ }
-  | Constant { location; _ }
+  | Constructor { location; _ }
   | Meta_object { location; _ }
   | Tuple { location; _ }
   | Application { location; _ }

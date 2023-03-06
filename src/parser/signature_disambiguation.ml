@@ -15,16 +15,6 @@ open Common_disambiguation
 
 (** {1 Exceptions} *)
 
-(** {2 Exceptions for pragma applications} *)
-
-exception Invalid_prefix_pragma of { actual_arity : Int.t }
-
-exception Invalid_infix_pragma of { actual_arity : Int.t }
-
-exception Invalid_postfix_pragma of { actual_arity : Int.t }
-
-exception Expected_module of Qualified_identifier.t
-
 (** {2 Exceptions for declaration disambiguation} *)
 
 exception
@@ -33,9 +23,21 @@ exception
     ; as_term_constant : exn
     }
 
-(** {2 Exceptions for recursive declaration disambiguation} *)
+(** {2 Exception Printing} *)
 
-exception Identifiers_bound_several_times_in_recursive_declaration
+let () =
+  Error.register_exception_printer (function
+    | Old_style_lf_constant_declaration_error
+        { as_type_constant; as_term_constant } ->
+        let as_type_constant_printer = Error.find_printer as_type_constant in
+        let as_term_constant_printer = Error.find_printer as_term_constant in
+        Format.dprintf
+          "@[<v 0>@[<hov 0>Failed@ to@ disambiguate@ old-style@ LF@ \
+           type-level@ or@ term-level@ constant@ declaration.@]@,\
+           - @[<hov 0>As@ an@ LF@ type:@ %t@]@,\
+           - @[<hov 0>As@ an@ LF@ term:@ %t@]@]" as_type_constant_printer
+          as_term_constant_printer
+    | exn -> Error.raise_unsupported_exception_printing exn)
 
 module type SIGNATURE_DISAMBIGUATION = sig
   (** @closed *)
@@ -99,8 +101,6 @@ struct
     match identifier_opt with
     | Option.None -> Fun.id
     | Option.Some identifier -> with_meta_level_binding typ identifier
-
-  let default_precedence = 20
 
   let add_default_lf_type_constant identifier kind =
     let arity = Synprs.explicit_arguments_lf_kind kind in
@@ -219,73 +219,6 @@ struct
     | Synprs.Signature.Declaration.Raw_val { identifier; typ; _ } ->
         add_default_program_constant ?typ identifier
 
-  (** [make_operator_prefix ?precedence operator_identifier state] is the
-      disambiguation state derived from [state] where the operator with
-      identifier [operator_identifier] is set as a prefix operator with
-      [precedence]. *)
-  let make_operator_prefix ?(precedence = default_precedence)
-      operator_identifier =
-    modify_operator operator_identifier (fun _operator ~arity ->
-        if arity = 1 then Option.some (Operator.make_prefix ~precedence)
-        else
-          Error.raise_at1
-            (Qualified_identifier.location operator_identifier)
-            (Invalid_prefix_pragma { actual_arity = arity }))
-
-  let get_default_associativity_opt = function
-    | Option.Some associativity -> return associativity
-    | Option.None -> get_default_associativity
-
-  (** [make_operator_infix ?precedence ?associativity operator_identifier state]
-      is the disambiguation state derived from [state] where the operator
-      with identifier [operator_identifier] is set as an infix operator with
-      [precedence] and [associativity]. If [associativity = Option.None],
-      then the default associativity as found [state] is used instead.
-
-      Only operators with arity [2] may be converted to infix operators. *)
-  let make_operator_infix ?(precedence = default_precedence) ?associativity
-      operator_identifier =
-    let* associativity = get_default_associativity_opt associativity in
-    modify_operator operator_identifier (fun _operator ~arity ->
-        if arity = 2 then
-          Option.some (Operator.make_infix ~associativity ~precedence)
-        else
-          Error.raise_at1
-            (Qualified_identifier.location operator_identifier)
-            (Invalid_infix_pragma { actual_arity = arity }))
-
-  (** [make_operator_postfix ?precedence operator_identifier state] is the
-      disambiguation state derived from [state] where the operator with
-      identifier [operator_identifier] is set as a postifx operator with
-      [precedence].
-
-      Only operators with arity [1] may be converted to postfix operators. *)
-  let make_operator_postfix ?(precedence = default_precedence)
-      operator_identifier =
-    modify_operator operator_identifier (fun _operator ~arity ->
-        if arity = 1 then Option.some (Operator.make_postfix ~precedence)
-        else
-          Error.raise_at1
-            (Qualified_identifier.location operator_identifier)
-            (Invalid_postfix_pragma { actual_arity = arity }))
-
-  (** [add_module_abbreviation module_identifier abbreviation state] is the
-      disambiguation state derived from [state] with the addition of
-      [abbreviation] as a synonym for the module with identifier
-      [module_identifier] currently in scope. *)
-  let add_module_abbreviation module_identifier abbreviation =
-    lookup module_identifier >>= function
-    | Result.Ok (Module, _) -> add_synonym module_identifier abbreviation
-    | Result.Ok entry ->
-        Error.raise_at1
-          (Qualified_identifier.location module_identifier)
-          (Error.composite_exception2 (Expected_module module_identifier)
-             (actual_binding_exn module_identifier entry))
-    | Result.Error cause ->
-        Error.raise_at1
-          (Qualified_identifier.location module_identifier)
-          cause
-
   (** {1 Disambiguation} *)
 
   let rec disambiguate_pragma = function
@@ -307,34 +240,19 @@ struct
              { location; associativity })
     | Synprs.Signature.Pragma.Prefix_fixity
         { location; constant; precedence } ->
-        let* () = make_operator_prefix ?precedence constant in
-        let* () =
-          is_inner_module_declaration constant >>= function
-          | true -> update_module_declaration constant
-          | false -> return ()
-        in
+        let* () = add_prefix_notation ?precedence constant in
         return
           (Synext.Signature.Pragma.Prefix_fixity
              { location; constant; precedence })
     | Synprs.Signature.Pragma.Infix_fixity
         { location; constant; precedence; associativity } ->
-        let* () = make_operator_infix ?precedence ?associativity constant in
-        let* () =
-          is_inner_module_declaration constant >>= function
-          | true -> update_module_declaration constant
-          | false -> return ()
-        in
+        let* () = add_infix_notation ?precedence ?associativity constant in
         return
           (Synext.Signature.Pragma.Infix_fixity
              { location; constant; precedence; associativity })
     | Synprs.Signature.Pragma.Postfix_fixity
         { location; constant; precedence } ->
-        let* () = make_operator_postfix ?precedence constant in
-        let* () =
-          is_inner_module_declaration constant >>= function
-          | true -> update_module_declaration constant
-          | false -> return ()
-        in
+        let* () = add_postfix_notation ?precedence constant in
         return
           (Synext.Signature.Pragma.Postfix_fixity
              { location; constant; precedence })
@@ -450,7 +368,11 @@ struct
   and disambiguate_mutually_recursive_declarations declarations =
     let* () = traverse_list1_void add_recursive_declaration declarations in
     let* declarations =
-      with_scope (traverse_list1 disambiguate_declaration declarations)
+      with_scope
+        (traverse_list1
+           (fun declaration ->
+             with_parent_scope (disambiguate_declaration declaration))
+           declarations)
     in
     return declarations
 
@@ -631,15 +553,12 @@ struct
           (Synext.Signature.Declaration.Val
              { location; identifier; typ = typ'; expression = expression' })
     | Synprs.Signature.Declaration.Raw_module
-        { location; identifier; declarations } ->
-        let* entries' =
-          with_module_declarations
-            ~declarations:(traverse_list disambiguate_entry declarations)
-            ~module_identifier:identifier
-        in
-        return
-          (Synext.Signature.Declaration.Module
-             { location; identifier; entries = entries' })
+        { location; identifier; entries } ->
+        add_module ~location identifier
+          (let* entries' = traverse_list disambiguate_entry entries in
+           return
+             (Synext.Signature.Declaration.Module
+                { location; identifier; entries = entries' }))
 
   and disambiguate_entry = function
     | Synprs.Signature.Entry.Raw_pragma { pragma; location } ->
@@ -678,35 +597,3 @@ struct
           ; entries = entries'
           }
 end
-
-(** {2 Exception Printing} *)
-
-let () =
-  Error.register_exception_printer (function
-    | Invalid_prefix_pragma { actual_arity } ->
-        Format.dprintf "Can't make an operator with arity %d prefix."
-          actual_arity
-    | Invalid_infix_pragma { actual_arity } ->
-        Format.dprintf "Can't make an operator with arity %d infix."
-          actual_arity
-    | Invalid_postfix_pragma { actual_arity } ->
-        Format.dprintf "Can't make an operator with arity %d postfix."
-          actual_arity
-    | Expected_module qualified_identifier ->
-        Format.dprintf "Expected %a to be a module." Qualified_identifier.pp
-          qualified_identifier
-    | Old_style_lf_constant_declaration_error
-        { as_type_constant; as_term_constant } ->
-        let as_type_constant_printer = Error.find_printer as_type_constant in
-        let as_term_constant_printer = Error.find_printer as_term_constant in
-        Format.dprintf
-          "@[<v 0>@[<hov 0>Failed@ to@ disambiguate@ old-style@ LF@ \
-           type-level@ or@ term-level@ constant@ declaration.@]@,\
-           - @[<hov 0>As@ an@ LF@ type:@ %t@]@,\
-           - @[<hov 0>As@ an@ LF@ term:@ %t@]@]" as_type_constant_printer
-          as_term_constant_printer
-    | Identifiers_bound_several_times_in_recursive_declaration ->
-        Format.dprintf
-          "Identifiers may not be bound several times in a mutually \
-           recursive declaration."
-    | exn -> Error.raise_unsupported_exception_printing exn)

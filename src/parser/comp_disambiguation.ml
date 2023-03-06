@@ -59,8 +59,6 @@ exception Expected_program_or_constructor_constant of Qualified_identifier.t
 
 exception Unbound_comp_term_destructor_constant of Qualified_identifier.t
 
-exception Illegal_duplicate_pattern_variables
-
 (** {2 Exceptions for computation-level context disambiguation} *)
 
 exception Illegal_missing_comp_context_binding_type of Identifier.t
@@ -77,6 +75,92 @@ exception Unbound_comp_term_constructor_constant of Qualified_identifier.t
 
 exception Expected_comp_term_destructor_constant
 
+(** {2 Exception Printing} *)
+
+let () =
+  Error.register_exception_printer (function
+    | Plain_modifier_typ_mismatch ->
+        Format.dprintf "%a" Format.pp_print_text
+          "A plain meta-object identifier may only be used for contextual \
+           types or contexts."
+    | Hash_modifier_typ_mismatch ->
+        Format.dprintf "%a" Format.pp_print_text
+          "A hash meta-object identifier may only be used for contextual \
+           parameter types."
+    | Dollar_modifier_typ_mismatch ->
+        Format.dprintf "%a" Format.pp_print_text
+          "A dollar meta-object identifier may only be used for plain or \
+           renaming substitutions."
+    | Illegal_identifier_comp_kind ->
+        Format.dprintf "%a" Format.pp_print_text
+          "An identifier may not appear as a computation-level kind."
+    | Illegal_qualified_identifier_comp_kind ->
+        Format.dprintf "%a" Format.pp_print_text
+          "A qualified identifier may not appear as a computation-level \
+           kind."
+    | Illegal_backward_arrow_comp_kind ->
+        Format.dprintf "%a" Format.pp_print_text
+          "Backward arrows may not appear as computation-level kinds."
+    | Illegal_cross_comp_kind ->
+        Format.dprintf "%a" Format.pp_print_text
+          "Cross operators may not appear as computation-level kinds."
+    | Illegal_box_comp_kind ->
+        Format.dprintf "%a" Format.pp_print_text
+          "Boxed types or objects may not appear as computation-level kinds."
+    | Illegal_application_comp_kind ->
+        Format.dprintf "%a" Format.pp_print_text
+          "Applications may not appear as computation-level kinds."
+    | Illegal_untyped_comp_pi_kind_parameter ->
+        Format.dprintf "%a" Format.pp_print_text
+          "Computation-level Pi kind parameters must be annotated with a \
+           meta-type."
+    | Illegal_comp_typ_domain_pi_comp_kind ->
+        Format.dprintf "%a" Format.pp_print_text
+          "Computation-level Pi kind parameters may only be annotated with \
+           a meta-type, not a computation-level type."
+    | Illegal_ctype_comp_type ->
+        Format.dprintf "%a" Format.pp_print_text
+          "The computation-level kind `ctype' may not appear as a \
+           computation-level type."
+    | Expected_comp_type_constant qualified_identifier ->
+        Format.dprintf "Expected %a to be a computation-level type constant."
+          Qualified_identifier.pp qualified_identifier
+    | Unbound_comp_type_constant qualified_identifier ->
+        Format.dprintf "The computation-level type constant %a is unbound."
+          Qualified_identifier.pp qualified_identifier
+    | Illegal_untyped_comp_pi_type ->
+        Format.dprintf "%a" Format.pp_print_text
+          "Computation-level Pi type parameters must be annotated with a \
+           meta-type."
+    | Expected_meta_object ->
+        Format.dprintf "%a" Format.pp_print_text "Expected a meta-object."
+    | Expected_program_or_constructor_constant qualified_identifier ->
+        Format.dprintf
+          "Expected %a to be a program constant or computation-level \
+           constructor."
+          Qualified_identifier.pp qualified_identifier
+    | Unbound_comp_term_destructor_constant qualified_identifier ->
+        Format.dprintf "Computation-level destructor constant %a is unbound."
+          Qualified_identifier.pp qualified_identifier
+    | Illegal_missing_comp_context_binding_type identifier ->
+        Format.dprintf
+          "Missing computation-level context type for binding for %a."
+          Identifier.pp identifier
+    | Expected_constructor_constant qualified_identifier ->
+        Format.dprintf "Expected %a to be a computation-level constructor."
+          Qualified_identifier.pp qualified_identifier
+    | Illegal_inner_meta_annotated_comp_pattern ->
+        Format.dprintf "%a" Format.pp_print_text
+          "Meta-context annotations to patterns cannot be nested in \
+           patterns. Move this annotation to the left of the pattern."
+    | Unbound_comp_term_constructor_constant identifier ->
+        Format.dprintf "Unbound computation-level constructor constant %a."
+          Qualified_identifier.pp identifier
+    | Expected_comp_term_destructor_constant ->
+        Format.dprintf "%a" Format.pp_print_text
+          "Expected a computation-level term destructor constant."
+    | exn -> Error.raise_unsupported_exception_printing exn)
+
 (** {1 Disambiguation} *)
 
 module type COMP_DISAMBIGUATION = sig
@@ -92,33 +176,20 @@ module type COMP_DISAMBIGUATION = sig
   val disambiguate_comp_expression :
     Synprs.comp_expression_object -> Synext.comp_expression t
 
-  val with_disambiguated_comp_context :
-    Synprs.comp_context_object -> (Synext.comp_context -> 'a t) -> 'a t
-end
-
-module type COMP_PATTERN_DISAMBIGUATION = sig
-  (** @closed *)
-  include State.STATE
-
-  (** {1 Disambiguation} *)
-
-  val with_disambiguated_meta_context :
-    Synprs.meta_context_object -> (Synext.meta_context -> 'a t) -> 'a t
-
   val disambiguate_comp_pattern :
     Synprs.comp_pattern_object -> Synext.comp_pattern t
 
   val disambiguate_comp_copattern :
     Synprs.comp_copattern_object List1.t -> Synext.comp_copattern t
+
+  val with_disambiguated_comp_context :
+    Synprs.comp_context_object -> (Synext.comp_context -> 'a t) -> 'a t
 end
 
 module Make
     (Disambiguation_state : DISAMBIGUATION_STATE)
     (Meta_disambiguator : Meta_disambiguation.META_DISAMBIGUATION
-                            with type state = Disambiguation_state.state)
-    (Comp_pattern_disambiguator : COMP_PATTERN_DISAMBIGUATION
-                                    with type state =
-                                      Disambiguation_state.state) :
+                            with type state = Disambiguation_state.state) :
   COMP_DISAMBIGUATION with type state = Disambiguation_state.state = struct
   include Disambiguation_state
   include Meta_disambiguator
@@ -195,6 +266,41 @@ module Make
           (Comp_expression_application_disambiguation.make_expression
              expression)
 
+  module Comp_pattern_object = struct
+    type t = Synprs.comp_pattern_object
+
+    type location = Location.t
+
+    let location = Synprs.location_of_comp_pattern_object
+  end
+
+  module Comp_pattern_application_disambiguation =
+    Application_disambiguation.Make_application_disambiguation
+      (Comp_pattern_object)
+
+  let guard_pattern_operator_identifier expression identifier =
+    lookup_operator identifier >>= function
+    | Option.None ->
+        return
+          (Comp_pattern_application_disambiguation.make_expression expression)
+    | Option.Some operator ->
+        return
+          (Comp_pattern_application_disambiguation.make_operator expression
+             operator identifier)
+
+  let guard_pattern_operator expression =
+    match expression with
+    | Synprs.Comp.Pattern_object.Raw_qualified_identifier
+        { identifier; prefixed = false; _ } ->
+        guard_pattern_operator_identifier expression identifier
+    | Synprs.Comp.Pattern_object.Raw_identifier
+        { identifier; prefixed = false; _ } ->
+        guard_pattern_operator_identifier expression
+          (Qualified_identifier.make_simple identifier)
+    | _ ->
+        return
+          (Comp_pattern_application_disambiguation.make_expression expression)
+
   (** {1 Disambiguation State Helpers} *)
 
   let with_context_variable_opt = function
@@ -257,15 +363,14 @@ module Make
   let with_meta_parameter = function
     | Option.Some identifier, `Plain ->
         with_meta_variable identifier
-        (*= FIXME: [mlam g => ?] may technically introduce a context variable
-           rather than a meta-variable. This is not an issue for now because
-           contextual LF contexts with a variable in head position are always
-           disambiguated as having a context variable in head position.
-           Allowing multiple context variables in a context
-           (like [..g1, x : t, ..g2]) will introduce an ambiguity between
-           context variables and meta-variables that cannot be resolved in the
-           case of [mlam g => ?]. I suggest removing [fn] and [mlam]
-           expressions in favour of [fun] expressions. *)
+        (*= FIXME(Marc-Antoine): [mlam g => ?] may technically introduce a
+            context variable rather than a meta-variable. This is not an issue
+            for now because contextual LF contexts with a variable in head
+            position are always disambiguated as having a context variable in
+            head position. Allowing multiple context variables in a context
+            (like [..g1, x : t, ..g2]) will introduce an ambiguity between
+            context variables and meta-variables that cannot be resolved in the
+            case of [mlam g => ?]. *)
     | Option.Some identifier, `Hash -> with_parameter_variable identifier
     | Option.Some identifier, `Dollar ->
         with_substitution_variable identifier
@@ -284,14 +389,7 @@ module Make
   let with_meta_function_parameters = with_meta_function_parameters_list1
 
   let with_pattern_variables ~pattern ~expression =
-    try_catch
-      (lazy (with_pattern_variables ~pattern ~expression))
-      ~on_exn:(function
-        | Duplicate_pattern_variables duplicates ->
-            Error.raise_at
-              (List2.to_list1 (List2.map Identifier.location duplicates))
-              Illegal_duplicate_pattern_variables
-        | cause -> Error.raise cause)
+    with_free_variables_as_pattern_variables ~pattern ~expression
 
   (** {1 Disambiguation} *)
 
@@ -400,7 +498,7 @@ module Make
            identifiers *)
         assert (List.length (Qualified_identifier.namespaces identifier) >= 1);
         (* As a computation-level type, identifiers of the form [<identifier>
-           (<dot-identifier>)+] are necessarily computation-level type
+           <dot-identifier>+] are necessarily computation-level type
            constants. *)
         lookup identifier >>= function
         | Result.Ok (Computation_inductive_type_constant, _) ->
@@ -531,7 +629,7 @@ module Make
            identifiers *)
         assert (List.length (Qualified_identifier.namespaces identifier) >= 1);
         (* As a computation-level expression, identifiers of the form
-           [<identifier> (<dot-identifier>)+] are computation-level variables
+           [<identifier> <dot-identifier>+] are computation-level variables
            or constants with optionally trailing observation constants.
 
            Examples include:
@@ -621,7 +719,7 @@ module Make
                      (actual_binding_exn identifier entry))))
     | Synprs.Comp.Expression_object.Raw_fn { location; parameters; body } ->
         let* body' =
-          (with_function_parameters parameters)
+          with_function_parameters parameters
             (disambiguate_comp_expression body)
         in
         return
@@ -629,7 +727,7 @@ module Make
     | Synprs.Comp.Expression_object.Raw_mlam { location; parameters; body }
       ->
         let* body' =
-          (with_meta_function_parameters parameters)
+          with_meta_function_parameters parameters
             (disambiguate_comp_expression body)
         in
         return
@@ -649,11 +747,10 @@ module Make
         let* (meta_context', pattern'), body' =
           with_pattern_variables
             ~pattern:
-              Comp_pattern_disambiguator.(
-                with_disambiguated_meta_context meta_context
-                  (fun meta_context' ->
-                    let* pattern' = disambiguate_comp_pattern pattern in
-                    return (meta_context', pattern')))
+              (with_disambiguated_meta_context_pattern meta_context
+                 (fun meta_context' ->
+                   let* pattern' = disambiguate_comp_pattern pattern in
+                   return (meta_context', pattern')))
             ~expression:(disambiguate_comp_expression body)
         in
         return
@@ -729,13 +826,12 @@ module Make
         let* (meta_context', copattern'), body' =
           with_pattern_variables
             ~pattern:
-              Comp_pattern_disambiguator.(
-                with_disambiguated_meta_context meta_context
-                  (fun meta_context' ->
-                    let* copattern' =
-                      disambiguate_comp_copattern copatterns
-                    in
-                    return (meta_context', copattern')))
+              (with_disambiguated_meta_context_pattern meta_context
+                 (fun meta_context' ->
+                   let* copattern' =
+                     disambiguate_comp_copattern copatterns
+                   in
+                   return (meta_context', copattern')))
             ~expression:(disambiguate_comp_expression body)
         in
         let location =
@@ -757,11 +853,10 @@ module Make
         let* (meta_context', pattern'), body' =
           with_pattern_variables
             ~pattern:
-              Comp_pattern_disambiguator.(
-                with_disambiguated_meta_context meta_context
-                  (fun meta_context' ->
-                    let* pattern' = disambiguate_comp_pattern pattern in
-                    return (meta_context', pattern')))
+              (with_disambiguated_meta_context_pattern meta_context
+                 (fun meta_context' ->
+                   let* pattern' = disambiguate_comp_pattern pattern in
+                   return (meta_context', pattern')))
             ~expression:(disambiguate_comp_expression body)
         in
         let location =
@@ -851,294 +946,6 @@ module Make
           (Synext.Comp.Expression.Application
              { applicand = applicand'; arguments = arguments'; location })
 
-  and with_disambiguated_comp_context context_object f =
-    let { Synprs.Comp.Context_object.location; bindings } = context_object in
-    (* Computation contexts are dependent, meaning that bound variables on
-       the left of a declaration may appear in the type of a binding on the
-       right. Bindings may not recursively refer to themselves. *)
-    with_disambiguated_context_bindings_list bindings (fun bindings' ->
-        f { Synext.Comp.Context.location; bindings = bindings' })
-
-  and with_disambiguated_context_binding binding f =
-    match binding with
-    | identifier, Option.None ->
-        Error.raise_at1
-          (Identifier.location identifier)
-          (Illegal_missing_comp_context_binding_type identifier)
-    | identifier, Option.Some typ ->
-        let* typ' = disambiguate_comp_typ typ in
-        with_comp_variable identifier (f (identifier, typ'))
-
-  and with_disambiguated_context_bindings_list bindings f =
-    match bindings with
-    | [] -> f []
-    | x :: xs ->
-        with_disambiguated_context_binding x (fun y ->
-            with_disambiguated_context_bindings_list xs (fun ys ->
-                f (y :: ys)))
-end
-
-module Make_pattern_disambiguator
-    (Disambiguation_state : DISAMBIGUATION_STATE)
-    (Meta_disambiguator : Meta_disambiguation.META_DISAMBIGUATION
-                            with type state = Disambiguation_state.state)
-    (Meta_pattern_disambiguator : Meta_disambiguation
-                                  .META_PATTERN_DISAMBIGUATION
-                                    with type state =
-                                      Disambiguation_state.state) :
-  COMP_PATTERN_DISAMBIGUATION with type state = Disambiguation_state.state =
-struct
-  include Disambiguation_state
-  include Meta_pattern_disambiguator
-
-  module Comp_sort_object = struct
-    type t = Synprs.comp_sort_object
-
-    type location = Location.t
-
-    let location = Synprs.location_of_comp_sort_object
-  end
-
-  module Comp_typ_application_disambiguation =
-    Application_disambiguation.Make_application_disambiguation
-      (Comp_sort_object)
-
-  let guard_typ_operator_identifier expression identifier =
-    lookup_operator identifier >>= function
-    | Option.None ->
-        return
-          (Comp_typ_application_disambiguation.make_expression expression)
-    | Option.Some operator ->
-        return
-          (Comp_typ_application_disambiguation.make_operator expression
-             operator identifier)
-
-  let guard_typ_operator expression =
-    match expression with
-    | Synprs.Comp.Sort_object.Raw_qualified_identifier
-        { identifier; prefixed = false; _ } ->
-        guard_typ_operator_identifier expression identifier
-    | Synprs.Comp.Sort_object.Raw_identifier
-        { identifier; prefixed = false; _ } ->
-        guard_typ_operator_identifier expression
-          (Qualified_identifier.make_simple identifier)
-    | _ ->
-        return
-          (Comp_typ_application_disambiguation.make_expression expression)
-
-  module Comp_pattern_object = struct
-    type t = Synprs.comp_pattern_object
-
-    type location = Location.t
-
-    let location = Synprs.location_of_comp_pattern_object
-  end
-
-  module Comp_pattern_application_disambiguation =
-    Application_disambiguation.Make_application_disambiguation
-      (Comp_pattern_object)
-
-  let guard_pattern_operator_identifier expression identifier =
-    lookup_operator identifier >>= function
-    | Option.None ->
-        return
-          (Comp_pattern_application_disambiguation.make_expression expression)
-    | Option.Some operator ->
-        return
-          (Comp_pattern_application_disambiguation.make_operator expression
-             operator identifier)
-
-  let guard_pattern_operator expression =
-    match expression with
-    | Synprs.Comp.Pattern_object.Raw_qualified_identifier
-        { identifier; prefixed = false; _ } ->
-        guard_pattern_operator_identifier expression identifier
-    | Synprs.Comp.Pattern_object.Raw_identifier
-        { identifier; prefixed = false; _ } ->
-        guard_pattern_operator_identifier expression
-          (Qualified_identifier.make_simple identifier)
-    | _ ->
-        return
-          (Comp_pattern_application_disambiguation.make_expression expression)
-
-  let with_context_variable_opt = function
-    | Option.Some identifier -> with_context_variable identifier
-    | Option.None -> Fun.id
-
-  let with_meta_variable_opt = function
-    | Option.Some identifier -> with_meta_variable identifier
-    | Option.None -> Fun.id
-
-  let with_parameter_variable_opt = function
-    | Option.Some identifier -> with_parameter_variable identifier
-    | Option.None -> Fun.id
-
-  let with_substitution_variable_opt = function
-    | Option.Some identifier -> with_substitution_variable identifier
-    | Option.None -> Fun.id
-
-  let with_parameter_binding_opt identifier_opt modifier typ =
-    match (modifier, typ) with
-    | `Plain, Synext.Meta.Typ.Context_schema _ ->
-        with_context_variable_opt identifier_opt
-    | `Plain, Synext.Meta.Typ.Contextual_typ _ ->
-        with_meta_variable_opt identifier_opt
-    | `Hash, Synext.Meta.Typ.Parameter_typ _ ->
-        with_parameter_variable_opt identifier_opt
-    | ( `Dollar
-      , ( Synext.Meta.Typ.Plain_substitution_typ _
-        | Synext.Meta.Typ.Renaming_substitution_typ _ ) ) ->
-        with_substitution_variable_opt identifier_opt
-    | `Plain, typ ->
-        Error.raise_at1
-          (Synext.location_of_meta_type typ)
-          Plain_modifier_typ_mismatch
-    | `Hash, typ ->
-        Error.raise_at1
-          (Synext.location_of_meta_type typ)
-          Hash_modifier_typ_mismatch
-    | `Dollar, typ ->
-        Error.raise_at1
-          (Synext.location_of_meta_type typ)
-          Dollar_modifier_typ_mismatch
-
-  let actual_binding_exn = Disambiguation_state.actual_binding_exn
-
-  let rec disambiguate_comp_typ = function
-    | Synprs.Comp.Sort_object.Raw_ctype { location } ->
-        Error.raise_at1 location Illegal_ctype_comp_type
-    | Synprs.Comp.Sort_object.Raw_pi
-        { parameter_sort = Option.None; location; _ } ->
-        Error.raise_at1 location Illegal_untyped_comp_pi_type
-    | Synprs.Comp.Sort_object.Raw_identifier { location; identifier; _ } -> (
-        (* As a computation-level type, plain identifiers are necessarily
-           computation-level type constants *)
-        let qualified_identifier =
-          Qualified_identifier.make_simple identifier
-        in
-        lookup_toplevel identifier >>= function
-        | Result.Ok (Computation_inductive_type_constant, _) ->
-            return
-              (Synext.Comp.Typ.Inductive_typ_constant
-                 { location; identifier = qualified_identifier })
-        | Result.Ok (Computation_stratified_type_constant, _) ->
-            return
-              (Synext.Comp.Typ.Stratified_typ_constant
-                 { location; identifier = qualified_identifier })
-        | Result.Ok (Computation_abbreviation_type_constant, _) ->
-            return
-              (Synext.Comp.Typ.Abbreviation_typ_constant
-                 { location; identifier = qualified_identifier })
-        | Result.Ok (Computation_coinductive_type_constant, _) ->
-            return
-              (Synext.Comp.Typ.Coinductive_typ_constant
-                 { location; identifier = qualified_identifier })
-        | Result.Ok entry ->
-            Error.raise_at1 location
-              (Error.composite_exception2
-                 (Expected_comp_type_constant qualified_identifier)
-                 (actual_binding_exn qualified_identifier entry))
-        | Result.Error (Unbound_identifier _) ->
-            Error.raise_at1 location
-              (Unbound_comp_type_constant qualified_identifier)
-        | Result.Error cause -> Error.raise_at1 location cause)
-    | Synprs.Comp.Sort_object.Raw_qualified_identifier
-        { location; identifier; _ } -> (
-        (* Qualified identifiers without namespaces were parsed as plain
-           identifiers *)
-        assert (List.length (Qualified_identifier.namespaces identifier) >= 1);
-        (* As a computation-level type, identifiers of the form [<identifier>
-           (<dot-identifier>)+] are necessarily computation-level type
-           constants. *)
-        lookup identifier >>= function
-        | Result.Ok (Computation_inductive_type_constant, _) ->
-            return
-              (Synext.Comp.Typ.Inductive_typ_constant
-                 { location; identifier })
-        | Result.Ok (Computation_stratified_type_constant, _) ->
-            return
-              (Synext.Comp.Typ.Stratified_typ_constant
-                 { location; identifier })
-        | Result.Ok (Computation_abbreviation_type_constant, _) ->
-            return
-              (Synext.Comp.Typ.Abbreviation_typ_constant
-                 { location; identifier })
-        | Result.Ok (Computation_coinductive_type_constant, _) ->
-            return
-              (Synext.Comp.Typ.Coinductive_typ_constant
-                 { location; identifier })
-        | Result.Ok entry ->
-            Error.raise_at1 location
-              (Error.composite_exception2
-                 (Expected_comp_type_constant identifier)
-                 (actual_binding_exn identifier entry))
-        | Result.Error (Unbound_qualified_identifier _) ->
-            Error.raise_at1 location (Unbound_comp_type_constant identifier)
-        | Result.Error cause -> Error.raise_at1 location cause)
-    | Synprs.Comp.Sort_object.Raw_pi
-        { location
-        ; parameter_identifier = parameter_identifier, modifier
-        ; parameter_sort = Option.Some parameter_typ
-        ; plicity
-        ; body
-        } ->
-        let* parameter_typ' = disambiguate_meta_typ parameter_typ in
-        let* body' =
-          (with_parameter_binding_opt parameter_identifier modifier
-             parameter_typ')
-            (disambiguate_comp_typ body)
-        in
-        return
-          (Synext.Comp.Typ.Pi
-             { location
-             ; parameter_identifier
-             ; parameter_type = parameter_typ'
-             ; plicity
-             ; body = body'
-             })
-    | Synprs.Comp.Sort_object.Raw_arrow
-        { location; domain; range; orientation } ->
-        let* domain' = disambiguate_comp_typ domain in
-        let* range' = disambiguate_comp_typ range in
-        return
-          (Synext.Comp.Typ.Arrow
-             { location; domain = domain'; range = range'; orientation })
-    | Synprs.Comp.Sort_object.Raw_cross { location; operands } ->
-        let* types' = traverse_list2 disambiguate_comp_typ operands in
-        return (Synext.Comp.Typ.Cross { location; types = types' })
-    | Synprs.Comp.Sort_object.Raw_box { location; boxed } ->
-        let* meta_type' = disambiguate_meta_typ boxed in
-        return (Synext.Comp.Typ.Box { location; meta_type = meta_type' })
-    | Synprs.Comp.Sort_object.Raw_application { location; objects } ->
-        let* applicand, arguments =
-          disambiguate_comp_typ_application objects
-        in
-        let* applicand' = disambiguate_comp_typ applicand in
-        let* arguments' =
-          traverse_list1 elaborate_comp_typ_operand arguments
-        in
-        return
-          (Synext.Comp.Typ.Application
-             { applicand = applicand'; arguments = arguments'; location })
-
-  and elaborate_comp_typ_operand operand =
-    match operand with
-    | Comp_typ_application_disambiguation.Atom { expression; _ } -> (
-        match expression with
-        | Synprs.Comp.Sort_object.Raw_box { boxed; _ } ->
-            disambiguate_meta_object boxed
-        | _ ->
-            Error.raise_at1
-              (Synprs.location_of_comp_sort_object expression)
-              Expected_meta_object)
-    | Comp_typ_application_disambiguation.Application { location; _ } ->
-        Error.raise_at1 location Expected_meta_object
-
-  and disambiguate_comp_typ_application objects =
-    let* objects' = traverse_list2 guard_typ_operator objects in
-    return
-      (Comp_typ_application_disambiguation.disambiguate_application objects')
-
   and disambiguate_comp_pattern = function
     | Synprs.Comp.Pattern_object.Raw_identifier { location; identifier; _ }
       -> (
@@ -1147,9 +954,10 @@ struct
         in
         lookup_toplevel identifier >>= function
         | Result.Ok (Computation_term_constructor, _) ->
-            (* [identifier] appears as a bound computation-level program *)
+            (* [identifier] appears as a bound computation-level
+               constructor *)
             return
-              (Synext.Comp.Pattern.Constant
+              (Synext.Comp.Pattern.Constructor
                  { location; identifier = qualified_identifier })
         | Result.Ok _entry ->
             (* [identifier] appears as a bound entry that is not a
@@ -1157,20 +965,21 @@ struct
             (* There are no computation-level patterns under
                [fn]-abstractions, so no need to check that [identifier] is
                not inner-bound. *)
-            let* () = add_pattern_comp_variable identifier in
+            let* () = add_free_computation_variable identifier in
             return (Synext.Comp.Pattern.Variable { location; identifier })
         | Result.Error (Unbound_identifier _) ->
             (* [identifier] does not appear in the state, so it is a free
                variable. *)
-            let* () = add_pattern_comp_variable identifier in
+            let* () = add_free_computation_variable identifier in
             return (Synext.Comp.Pattern.Variable { location; identifier })
         | Result.Error cause -> Error.raise_at1 location cause)
     | Synprs.Comp.Pattern_object.Raw_qualified_identifier
         { location; identifier; _ } -> (
         lookup identifier >>= function
         | Result.Ok (Computation_term_constructor, _) ->
-            (* [identifier] appears as a bound computation-level program *)
-            return (Synext.Comp.Pattern.Constant { location; identifier })
+            (* [identifier] appears as a bound computation-level
+               constructor *)
+            return (Synext.Comp.Pattern.Constructor { location; identifier })
         | Result.Ok entry ->
             (* [identifier] appears as a bound entry that is not a
                computation-level constructor *)
@@ -1230,9 +1039,9 @@ struct
         (* Qualified identifiers without namespaces were parsed as plain
            identifiers *)
         assert (List.length (Qualified_identifier.namespaces identifier) >= 1);
-        (* This raw qualified identifier [<identifier> (<dot-identifier>)+]
-           may be a computation-level variable or constant pattern followed
-           by observations *)
+        (* This raw qualified identifier [<identifier> <dot-identifier>+] may
+           be a computation-level variable or constant pattern followed by
+           observations *)
         partial_lookup identifier >>= function
         | `Totally_unbound _ ->
             (* This is a variable pattern followed by observations *)
@@ -1246,7 +1055,7 @@ struct
                 ; identifier = variable
                 }
             in
-            let* () = add_pattern_comp_variable variable in
+            let* () = add_free_computation_variable variable in
             let destructors_as_qualified_identifier =
               Qualified_identifier.from_list1 destructors
             in
@@ -1279,7 +1088,7 @@ struct
             | _identifier, (Computation_term_constructor, _) ->
                 (* This is a constructor pattern followed by observations *)
                 let pattern' =
-                  Synext.Comp.Pattern.Constant
+                  Synext.Comp.Pattern.Constructor
                     { location = Qualified_identifier.location constructor
                     ; identifier = constructor
                     }
@@ -1307,16 +1116,24 @@ struct
                   ; patterns = pattern' :: patterns
                   ; observations
                   }
-            | identifier, _entry ->
-                (* [identifier] appears as a bound entry that is not a
-                   computation-level constructor *)
-                (* There are no computation-level patterns under
-                   [fn]-abstractions, so no need to check that [identifier]
-                   is not inner-bound. *)
-                let* () = add_pattern_comp_variable identifier in
-                let pattern' =
-                  Synext.Comp.Pattern.Variable { location; identifier }
+            | ( identifier
+              , (( ( Lf_term_variable | Meta_variable | Substitution_variable
+                   | Parameter_variable | Context_variable )
+                 , _ ) as entry) ) ->
+                let qualified_identifier =
+                  Qualified_identifier.make_simple identifier
                 in
+                Error.raise_at1 location
+                  (Error.composite_exception2
+                     (Expected_constructor_constant qualified_identifier)
+                     (actual_binding_exn qualified_identifier entry))
+            | identifier, _entry ->
+                (* This is a variable pattern followed by observations *)
+                let pattern' =
+                  Synext.Comp.Pattern.Variable
+                    { location = Identifier.location identifier; identifier }
+                in
+                let* () = add_free_computation_variable identifier in
                 let destructors_as_qualified_identifier =
                   Qualified_identifier.from_list1 unbound_segments
                 in
@@ -1349,7 +1166,7 @@ struct
             | _identifier, (Computation_term_constructor, _) ->
                 (* This is a constructor pattern followed by observations *)
                 let pattern' =
-                  Synext.Comp.Pattern.Constant
+                  Synext.Comp.Pattern.Constructor
                     { location = Qualified_identifier.location constructor
                     ; identifier = constructor
                     }
@@ -1392,7 +1209,7 @@ struct
             | _identifier, (Computation_term_constructor, _) -> (
                 (* This qualified identifier is a constructor pattern *)
                 let pattern' =
-                  Synext.Comp.Pattern.Constant
+                  Synext.Comp.Pattern.Constructor
                     { location = Qualified_identifier.location constructor
                     ; identifier = constructor
                     }
@@ -1551,93 +1368,30 @@ struct
         return
           (Synext.Comp.Pattern.Application
              { applicand = applicand'; arguments = arguments'; location })
+
+  and with_disambiguated_comp_context context_object f =
+    let { Synprs.Comp.Context_object.location; bindings } = context_object in
+    (* Computation contexts are dependent, meaning that bound variables on
+       the left of a declaration may appear in the type of a binding on the
+       right. Bindings may not recursively refer to themselves. *)
+    with_disambiguated_context_bindings_list bindings (fun bindings' ->
+        f { Synext.Comp.Context.location; bindings = bindings' })
+
+  and with_disambiguated_context_binding binding f =
+    match binding with
+    | identifier, Option.None ->
+        Error.raise_at1
+          (Identifier.location identifier)
+          (Illegal_missing_comp_context_binding_type identifier)
+    | identifier, Option.Some typ ->
+        let* typ' = disambiguate_comp_typ typ in
+        with_comp_variable identifier (f (identifier, typ'))
+
+  and with_disambiguated_context_bindings_list bindings f =
+    match bindings with
+    | [] -> f []
+    | x :: xs ->
+        with_disambiguated_context_binding x (fun y ->
+            with_disambiguated_context_bindings_list xs (fun ys ->
+                f (y :: ys)))
 end
-
-(** {2 Exception Printing} *)
-
-let () =
-  Error.register_exception_printer (function
-    | Plain_modifier_typ_mismatch ->
-        Format.dprintf "%a" Format.pp_print_text
-          "A plain meta-object identifier may only be used for contextual \
-           types or contexts."
-    | Hash_modifier_typ_mismatch ->
-        Format.dprintf "%a" Format.pp_print_text
-          "A hash meta-object identifier may only be used for contextual \
-           parameter types."
-    | Dollar_modifier_typ_mismatch ->
-        Format.dprintf "%a" Format.pp_print_text
-          "A dollar meta-object identifier may only be used for plain or \
-           renaming substitutions."
-    | Illegal_identifier_comp_kind ->
-        Format.dprintf "%a" Format.pp_print_text
-          "An identifier may not appear as a computation-level kind."
-    | Illegal_qualified_identifier_comp_kind ->
-        Format.dprintf "%a" Format.pp_print_text
-          "A qualified identifier may not appear as a computation-level \
-           kind."
-    | Illegal_backward_arrow_comp_kind ->
-        Format.dprintf "%a" Format.pp_print_text
-          "Backward arrows may not appear as computation-level kinds."
-    | Illegal_cross_comp_kind ->
-        Format.dprintf "%a" Format.pp_print_text
-          "Cross operators may not appear as computation-level kinds."
-    | Illegal_box_comp_kind ->
-        Format.dprintf "%a" Format.pp_print_text
-          "Boxed types or objects may not appear as computation-level kinds."
-    | Illegal_application_comp_kind ->
-        Format.dprintf "%a" Format.pp_print_text
-          "Applications may not appear as computation-level kinds."
-    | Illegal_untyped_comp_pi_kind_parameter ->
-        Format.dprintf "%a" Format.pp_print_text
-          "Computation-level Pi kind parameters must be annotated with a \
-           meta-type."
-    | Illegal_comp_typ_domain_pi_comp_kind ->
-        Format.dprintf "%a" Format.pp_print_text
-          "Computation-level Pi kind parameters may only be annotated with \
-           a meta-type, not a computation-level type."
-    | Illegal_ctype_comp_type ->
-        Format.dprintf "%a" Format.pp_print_text
-          "The computation-level kind `ctype' may not appear as a \
-           computation-level type."
-    | Expected_comp_type_constant qualified_identifier ->
-        Format.dprintf "Expected %a to be a computation-level type constant."
-          Qualified_identifier.pp qualified_identifier
-    | Unbound_comp_type_constant qualified_identifier ->
-        Format.dprintf "The computation-level type constant %a is unbound."
-          Qualified_identifier.pp qualified_identifier
-    | Illegal_untyped_comp_pi_type ->
-        Format.dprintf "%a" Format.pp_print_text
-          "Computation-level Pi type parameters must be annotated with a \
-           meta-type."
-    | Expected_meta_object ->
-        Format.dprintf "%a" Format.pp_print_text "Expected a meta-object."
-    | Expected_program_or_constructor_constant qualified_identifier ->
-        Format.dprintf
-          "Expected %a to be a program constant or computation-level \
-           constructor."
-          Qualified_identifier.pp qualified_identifier
-    | Unbound_comp_term_destructor_constant qualified_identifier ->
-        Format.dprintf "Computation-level destructor constant %a is unbound."
-          Qualified_identifier.pp qualified_identifier
-    | Illegal_duplicate_pattern_variables ->
-        Format.dprintf "%a" Format.pp_print_text
-          "Illegal duplicate pattern variables."
-    | Illegal_missing_comp_context_binding_type identifier ->
-        Format.dprintf
-          "Missing computation-level context type for binding for %a."
-          Identifier.pp identifier
-    | Expected_constructor_constant qualified_identifier ->
-        Format.dprintf "Expected %a to be a computation-level constructor."
-          Qualified_identifier.pp qualified_identifier
-    | Illegal_inner_meta_annotated_comp_pattern ->
-        Format.dprintf "%a" Format.pp_print_text
-          "Meta-context annotations to patterns cannot be nested in \
-           patterns. Move this annotation to the left of the pattern."
-    | Unbound_comp_term_constructor_constant identifier ->
-        Format.dprintf "Unbound computation-level constructor constant %a."
-          Qualified_identifier.pp identifier
-    | Expected_comp_term_destructor_constant ->
-        Format.dprintf "%a" Format.pp_print_text
-          "Expected a computation-level term destructor constant."
-    | exn -> Error.raise_unsupported_exception_printing exn)

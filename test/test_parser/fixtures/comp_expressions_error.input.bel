@@ -17,13 +17,28 @@ case x of (x, x) => x
 ;;
 
 fun
-| { $S : $[g, x : nat |- h] }
-  { g1 : ctx1 }
+| {$S : $[g, x : nat |- h]}
+  {g1 : ctx1}
   x .Stream.tl (x cons nil) x3 .Stream.hd [g2] => ?
 ;;
 
 fun
-| { $S : $[g, x : nat |- h] }
-  { g1 : ctx1 }
+| {$S : $[g, x : nat |- h]}
+  {g1 : ctx1}
   x1 .Stream.tl (x cons nil) x .Stream.hd [g2] => ?
+;;
+
+fun {g : ctx1} {g : ctx1} _ => ?
+;;
+
+fun {x : [ |- nat]} {x : [ |- nat]} _ => ?
+;;
+
+fun {#x : #[ |- nat]} {#x : #[ |- nat]} _ => ?
+;;
+
+fun {$S : $[g |- h]} {$S : $[g |- h]} _ => ?
+;;
+
+fun {x : [ |- nat]} x => ?
 ;;

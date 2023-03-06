@@ -890,8 +890,8 @@ and json_of_comp_pattern pattern =
           [ ("identifier", json_of_identifier identifier)
           ; ("location", json_of_location location)
           ]
-  | Comp.Pattern.Constant { identifier; location } ->
-      json_of_variant ~name:"Comp.Pattern.Constant"
+  | Comp.Pattern.Constructor { identifier; location } ->
+      json_of_variant ~name:"Comp.Pattern.Constructor"
         ~data:
           [ ("identifier", json_of_qualified_identifier identifier)
           ; ("location", json_of_location location)

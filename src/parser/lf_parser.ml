@@ -2,6 +2,18 @@ open Support
 open Beluga_syntax
 open Common_parser
 
+exception Ambiguous_lf_forward_arrow
+
+exception Ambiguous_lf_backward_arrow
+
+let () =
+  Error.register_exception_printer (function
+    | Ambiguous_lf_forward_arrow ->
+        Format.dprintf "This LF forward arrow operator is ambiguous."
+    | Ambiguous_lf_backward_arrow ->
+        Format.dprintf "This LF backward arrow operator is ambiguous."
+    | exn -> Error.raise_unsupported_exception_printing exn)
+
 module type LF_PARSER = sig
   (** @closed *)
   include COMMON_PARSER
@@ -23,10 +35,6 @@ module Make
      and type state = Parser.state
      and type location = Parser.location = struct
   include Parser
-
-  exception Ambiguous_lf_forward_arrow
-
-  exception Ambiguous_lf_backward_arrow
 
   (* This recursive module is defined as a convenient alternative to
      eta-expansion or using the fixpoint combinator for defining mutually
@@ -279,12 +287,4 @@ module Make
   let lf_typ = lf_object |> labelled "LF type"
 
   let lf_term = lf_object |> labelled "LF term"
-
-  let () =
-    Error.register_exception_printer (function
-      | Ambiguous_lf_forward_arrow ->
-          Format.dprintf "This LF forward arrow operator is ambiguous."
-      | Ambiguous_lf_backward_arrow ->
-          Format.dprintf "This LF backward arrow operator is ambiguous."
-      | exn -> Error.raise_unsupported_exception_printing exn)
 end

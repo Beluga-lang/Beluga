@@ -1274,7 +1274,7 @@ module Make_pretty_printer (Printing_state : PRINTING_STATE) :
   let is_atomic_pattern pattern =
     match pattern with
     | Comp.Pattern.Variable _
-    | Comp.Pattern.Constant _
+    | Comp.Pattern.Constructor _
     | Comp.Pattern.Meta_object _
     | Comp.Pattern.Tuple _
     | Comp.Pattern.Wildcard _ ->
@@ -1511,7 +1511,7 @@ module Make_pretty_printer (Printing_state : PRINTING_STATE) :
     | expression -> guard_comp_expression_operator expression
 
   let guard_comp_pattern_operator = function
-    | Comp.Pattern.Constant { identifier; _ } -> (
+    | Comp.Pattern.Constructor { identifier; _ } -> (
         lookup_operator identifier >>= function
         | Option.Some operator -> return (`Operator operator)
         | Option.None -> return `Operand)
@@ -1519,7 +1519,7 @@ module Make_pretty_printer (Printing_state : PRINTING_STATE) :
 
   let guard_comp_pattern_operator_application = function
     | Comp.Pattern.Application
-        { applicand = Comp.Pattern.Constant { identifier; _ }; _ } -> (
+        { applicand = Comp.Pattern.Constructor { identifier; _ }; _ } -> (
         lookup_operator identifier >>= function
         | Option.Some operator -> return (`Operator_application operator)
         | Option.None -> return `Operand)
@@ -1714,7 +1714,7 @@ module Make_pretty_printer (Printing_state : PRINTING_STATE) :
     match pattern with
     | Comp.Pattern.Variable { identifier; _ } ->
         pp_computation_variable identifier
-    | Comp.Pattern.Constant { identifier; _ } ->
+    | Comp.Pattern.Constructor { identifier; _ } ->
         pp_computation_constructor_invoke identifier
     | Comp.Pattern.Meta_object { meta_pattern; _ } ->
         pp_meta_pattern meta_pattern

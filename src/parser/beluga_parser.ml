@@ -51,23 +51,11 @@ struct
       (Harpoon_parser)
   module Lf_disambiguator = Lf_disambiguation.Make (Disambiguation_state)
   module Clf_disambiguator = Clf_disambiguation.Make (Disambiguation_state)
-  module Clf_pattern_disambiguator =
-    Clf_disambiguation.Make_pattern_disambiguator (Disambiguation_state)
   module Meta_disambiguator =
     Meta_disambiguation.Make (Disambiguation_state) (Lf_disambiguator)
       (Clf_disambiguator)
-  module Meta_pattern_disambiguator =
-    Meta_disambiguation.Make_pattern_disambiguator
-      (Disambiguation_state)
-      (Clf_pattern_disambiguator)
-  module Comp_pattern_disambiguator =
-    Comp_disambiguation.Make_pattern_disambiguator
-      (Disambiguation_state)
-      (Meta_disambiguator)
-      (Meta_pattern_disambiguator)
   module Comp_disambiguator =
     Comp_disambiguation.Make (Disambiguation_state) (Meta_disambiguator)
-      (Comp_pattern_disambiguator)
   module Harpoon_disambiguator =
     Harpoon_disambiguation.Make (Disambiguation_state) (Meta_disambiguator)
       (Comp_disambiguator)

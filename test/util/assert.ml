@@ -11,7 +11,8 @@ let assert_exn f =
     raise Did_not_raise
   with
   | Did_not_raise ->
-      OUnit2.assert_failure "Expected an exception to be raised"
+      OUnit2.assert_failure
+        "Expected an exception to be raised, but no exception was raised."
   | exn -> (
       try
         (* For coverage analysis, find a printer for the uncaught

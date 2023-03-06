@@ -14,43 +14,19 @@ module type COMP_DISAMBIGUATION = sig
   val disambiguate_comp_expression :
     Synprs.comp_expression_object -> Synext.comp_expression t
 
-  val with_disambiguated_comp_context :
-    Synprs.comp_context_object -> (Synext.comp_context -> 'a t) -> 'a t
-end
-
-module type COMP_PATTERN_DISAMBIGUATION = sig
-  (** @closed *)
-  include State.STATE
-
-  (** {1 Disambiguation} *)
-
-  val with_disambiguated_meta_context :
-    Synprs.meta_context_object -> (Synext.meta_context -> 'a t) -> 'a t
-
   val disambiguate_comp_pattern :
     Synprs.comp_pattern_object -> Synext.comp_pattern t
 
   val disambiguate_comp_copattern :
     Synprs.comp_copattern_object List1.t -> Synext.comp_copattern t
+
+  val with_disambiguated_comp_context :
+    Synprs.comp_context_object -> (Synext.comp_context -> 'a t) -> 'a t
 end
 
 module Make
     (Disambiguation_state : DISAMBIGUATION_STATE)
     (Meta_disambiguator : Meta_disambiguation.META_DISAMBIGUATION
-                            with type state = Disambiguation_state.state)
-    (Comp_pattern_disambiguator : COMP_PATTERN_DISAMBIGUATION
-                                    with type state =
-                                      Disambiguation_state.state) :
+                            with type state = Disambiguation_state.state) :
   COMP_DISAMBIGUATION with type state = Disambiguation_state.state
-[@@warning "-67"]
-
-module Make_pattern_disambiguator
-    (Disambiguation_state : DISAMBIGUATION_STATE)
-    (Meta_disambiguator : Meta_disambiguation.META_DISAMBIGUATION
-                            with type state = Disambiguation_state.state)
-    (Meta_pattern_disambiguator : Meta_disambiguation
-                                  .META_PATTERN_DISAMBIGUATION
-                                    with type state =
-                                      Disambiguation_state.state) :
-  COMP_PATTERN_DISAMBIGUATION with type state = Disambiguation_state.state
 [@@warning "-67"]

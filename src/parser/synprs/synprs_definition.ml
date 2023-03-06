@@ -911,7 +911,7 @@ module Signature = struct
       | Raw_module of
           { location : Location.t
           ; identifier : Identifier.t
-          ; declarations : Entry.t List.t
+          ; entries : Entry.t List.t
           }
   end =
     Declaration

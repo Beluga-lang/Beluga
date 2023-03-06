@@ -1069,22 +1069,41 @@ module Make (Indexing_state : INDEXING_STATE) :
     | `Record bindings -> List1.to_list (List1.map Pair.fst bindings)
     | `Unnamed _typ -> []
 
+  and raise_duplicate_identifiers_exception f duplicates =
+    match duplicates with
+    | List1.T ((_identifier, duplicates), []) ->
+        Error.raise_at
+          (List2.to_list1 (List2.map Identifier.location duplicates))
+          (f duplicates)
+    | List1.T (x1, x2 :: xs) ->
+        Error.raise_aggregate_exception
+          (List2.map
+             (fun (_identifier, duplicates) ->
+               Error.located_exception
+                 (List2.to_list1 (List2.map Identifier.location duplicates))
+                 (f duplicates))
+             (List2.from x1 x2 xs))
+
   and index_schema_element = function
     | Synext.Meta.Schema.Element { location; some; block } -> (
         match
           Identifier.find_duplicates (schema_some_clause_identifiers some)
         with
         | Option.Some duplicates ->
-            Error.raise_at1 location
-              (Duplicate_identifiers_in_schema_some_clause duplicates)
+            raise_duplicate_identifiers_exception
+              (fun identifiers ->
+                Duplicate_identifiers_in_schema_some_clause identifiers)
+              duplicates
         | Option.None -> (
             match
               Identifier.find_duplicates
                 (schema_block_clause_identifiers block)
             with
             | Option.Some duplicates ->
-                Error.raise_at1 location
-                  (Duplicate_identifiers_in_schema_block_clause duplicates)
+                raise_duplicate_identifiers_exception
+                  (fun identifiers ->
+                    Duplicate_identifiers_in_schema_block_clause identifiers)
+                  duplicates
             | Option.None ->
                 with_indexed_schema_some_clause some (fun some' ->
                     let* block' = index_schema_block_clause block in
@@ -1451,7 +1470,7 @@ module Make (Indexing_state : INDEXING_STATE) :
         let* () = add_computation_pattern_variable x in
         let x' = Name.make_from_identifier x in
         return (Synapx.Comp.PatFVar (location, x'))
-    | Synext.Comp.Pattern.Constant { location; identifier; _ } ->
+    | Synext.Comp.Pattern.Constructor { location; identifier; _ } ->
         let* id = index_of_comp_constructor identifier in
         let spine = Synapx.Comp.PatNil location in
         return (Synapx.Comp.PatConst (location, id, spine))

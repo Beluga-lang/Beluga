@@ -2,6 +2,20 @@ open Support
 open Beluga_syntax
 open Common_parser
 
+exception Ambiguous_comp_forward_arrow
+
+exception Ambiguous_comp_backward_arrow
+
+let () =
+  Error.register_exception_printer (function
+    | Ambiguous_comp_forward_arrow ->
+        Format.dprintf
+          "This computation-level forward arrow operator is ambiguous."
+    | Ambiguous_comp_backward_arrow ->
+        Format.dprintf
+          "This computation-level backward arrow operator is ambiguous."
+    | cause -> Error.raise_unsupported_exception_printing cause)
+
 module type COMP_PARSER = sig
   (** @closed *)
   include COMMON_PARSER
@@ -35,10 +49,6 @@ module Make
      and type location = Parser.location = struct
   include Parser
   include Meta_parser
-
-  exception Ambiguous_comp_forward_arrow
-
-  exception Ambiguous_comp_backward_arrow
 
   (* This recursive module is defined as a convenient alternative to
      eta-expansion or using the fixpoint combinator for defining mutually
@@ -744,14 +754,4 @@ module Make
   let comp_kind = comp_sort_object |> labelled "Computation-level kind"
 
   let comp_typ = comp_sort_object |> labelled "Computation-level type"
-
-  let () =
-    Error.register_exception_printer (function
-      | Ambiguous_comp_forward_arrow ->
-          Format.dprintf
-            "This computation-level forward arrow operator is ambiguous."
-      | Ambiguous_comp_backward_arrow ->
-          Format.dprintf
-            "This computation-level backward arrow operator is ambiguous."
-      | cause -> Error.raise_unsupported_exception_printing cause)
 end

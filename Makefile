@@ -17,10 +17,6 @@ coverage: # Build and run the OUnit2 test suite and generate code coverage repor
 harpoon-test: # Run only the Harpoon intergration tests
 	./TEST.sh -- --harpoon
 
-.PHONY: all-test
-all-test: test
-# TODO: dune exec ./TEST.sh -- -- +htmltest
-
 .PHONY: setup-development
 setup-development: # Setup a development environment
 	opam switch create --description="Beluga development switch" --locked --deps-only --with-test --with-doc --yes .

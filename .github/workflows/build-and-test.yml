@@ -97,4 +97,4 @@ jobs:
         run: opam exec -- make
 
       - name: Test
-        run: opam exec -- make all-test
+        run: opam exec -- make test

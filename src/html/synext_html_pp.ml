@@ -49,6 +49,10 @@ module type HTML_PRINTING_STATE = sig
 
   val get_default_associativity : Associativity.t t
 
+  val set_default_precedence : Int.t -> Unit.t t
+
+  val get_default_precedence : Int.t t
+
   val lookup_operator_precedence : Qualified_identifier.t -> Int.t Option.t t
 
   val lookup_operator : Qualified_identifier.t -> Operator.t Option.t t
@@ -75,20 +79,14 @@ end = struct
     }
 
   type state =
-    | Id_state of
-        { bindings : entry Binding_tree.t
-        ; ids : String.Set.t
-        ; max_suffix_by_id : Int.t String.Hamt.t
-        ; formatter : Format.formatter
-        }
-    | Signature_state of
-        { state : state
-        ; default_associativity : Associativity.t
-        }
-    | Module_state of
-        { state : state
-        ; declarations : entry Binding_tree.t
-        }
+    { bindings : entry Binding_tree.t
+    ; ids : String.Set.t
+    ; max_suffix_by_id : Int.t String.Hamt.t
+    ; formatter : Format.formatter
+    ; default_associativity : Associativity.t
+    ; default_precedence : Int.t
+    ; declarations : entry Binding_tree.t
+    }
 
   module S = State.Make (struct
     type t = state
@@ -96,14 +94,9 @@ end = struct
 
   include (S : State.STATE with type state := state)
 
-  let rec nested_get_formatter = function
-    | Id_state { formatter; _ } -> formatter
-    | Signature_state { state; _ } -> nested_get_formatter state
-    | Module_state { state; _ } -> nested_get_formatter state
-
   let with_formatter f =
     let* state = get in
-    f (nested_get_formatter state)
+    f state.formatter
 
   include (
     Format_state.Make (struct
@@ -114,81 +107,43 @@ end = struct
       Format_state.S with type state := state)
 
   let initial formatter =
-    Signature_state
-      { state =
-          Id_state
-            { bindings = Binding_tree.empty
-            ; ids = String.Set.empty
-            ; max_suffix_by_id = String.Hamt.empty
-            ; formatter
-            }
-      ; default_associativity = Associativity.non_associative
-      }
+    { bindings = Binding_tree.empty
+    ; ids = String.Set.empty
+    ; max_suffix_by_id = String.Hamt.empty
+    ; formatter
+    ; default_precedence = Synext.default_precedence
+    ; default_associativity = Synext.default_associativity
+    ; declarations = Binding_tree.empty
+    }
 
-  let rec nested_get_bindings = function
-    | Id_state { bindings; _ } -> bindings
-    | Signature_state { state; _ } -> nested_get_bindings state
-    | Module_state { state; _ } -> nested_get_bindings state
+  let get_bindings =
+    let* state = get in
+    return state.bindings
 
-  let get_bindings = get $> nested_get_bindings
-
-  let rec nested_set_bindings bindings = function
-    | Id_state o -> Id_state { o with bindings }
-    | Signature_state o ->
-        let state' = nested_set_bindings bindings o.state in
-        Signature_state { o with state = state' }
-    | Module_state o ->
-        let state' = nested_set_bindings bindings o.state in
-        Module_state { o with state = state' }
-
-  let set_bindings bindings = modify (nested_set_bindings bindings)
+  let set_bindings bindings = modify (fun state -> { state with bindings })
 
   let[@inline] modify_bindings f =
     let* bindings = get_bindings in
     let bindings' = f bindings in
     set_bindings bindings'
 
-  let rec nested_get_ids = function
-    | Id_state { ids; _ } -> ids
-    | Signature_state { state; _ } -> nested_get_ids state
-    | Module_state { state; _ } -> nested_get_ids state
+  let get_ids =
+    let* state = get in
+    return state.ids
 
-  let get_ids = get $> nested_get_ids
-
-  let rec nested_set_ids ids = function
-    | Id_state o -> Id_state { o with ids }
-    | Signature_state o ->
-        let state' = nested_set_ids ids o.state in
-        Signature_state { o with state = state' }
-    | Module_state o ->
-        let state' = nested_set_ids ids o.state in
-        Module_state { o with state = state' }
-
-  let set_ids ids = modify (nested_set_ids ids)
+  let set_ids ids = modify (fun state -> { state with ids })
 
   let[@inline] modify_ids f =
     let* ids = get_ids in
     let ids' = f ids in
     set_ids ids'
 
-  let rec nested_get_max_suffix_by_id = function
-    | Id_state { max_suffix_by_id; _ } -> max_suffix_by_id
-    | Signature_state { state; _ } -> nested_get_max_suffix_by_id state
-    | Module_state { state; _ } -> nested_get_max_suffix_by_id state
-
-  let get_max_suffix_by_id = get $> nested_get_max_suffix_by_id
-
-  let rec nested_set_max_suffix_by_id max_suffix_by_id = function
-    | Id_state o -> Id_state { o with max_suffix_by_id }
-    | Signature_state o ->
-        let state' = nested_set_max_suffix_by_id max_suffix_by_id o.state in
-        Signature_state { o with state = state' }
-    | Module_state o ->
-        let state' = nested_set_max_suffix_by_id max_suffix_by_id o.state in
-        Module_state { o with state = state' }
+  let get_max_suffix_by_id =
+    let* state = get in
+    return state.max_suffix_by_id
 
   let set_max_suffix_by_base max_suffix_by_id =
-    modify (nested_set_max_suffix_by_id max_suffix_by_id)
+    modify (fun state -> { state with max_suffix_by_id })
 
   let[@inline] modify_max_suffix_by_id f =
     let* max_suffix_by_id = get_max_suffix_by_id in
@@ -198,15 +153,12 @@ end = struct
   let add_module_declaration identifier =
     let* bindings = get_bindings in
     let entry, subtree = Binding_tree.lookup_toplevel identifier bindings in
-    modify (function
-      | Module_state o ->
-          let declarations' =
-            Binding_tree.add_toplevel identifier entry ~subtree
-              o.declarations
-          in
-          Module_state { o with declarations = declarations' }
-      | Id_state _ as state -> state
-      | Signature_state _ as state -> state)
+    modify (fun state ->
+        let declarations' =
+          Binding_tree.add_toplevel identifier entry ~subtree
+            state.declarations
+        in
+        { state with declarations = declarations' })
 
   (** Regular expression for non-digit characters. *)
   let non_digit_regexp = Str.regexp "[^0-9]"
@@ -289,51 +241,50 @@ end = struct
 
   let open_module = open_namespace
 
-  let get_module_declarations =
-    get >>= function
-    | Signature_state _
-    | Id_state _ ->
-        Error.raise_violation "[get_declarations] invalid state"
-    | Module_state o -> return o.declarations
-
   let with_module_declarations ~declarations ~module_identifier ~id =
     let* state = get in
-    let* () =
-      put (Module_state { state; declarations = Binding_tree.empty })
-    in
+    let* () = put { state with declarations = Binding_tree.empty } in
     let* declarations' = declarations in
-    let* inner_declarations = get_module_declarations in
-    let* () = put state in
+    let* state' = get in
+    let* () =
+      put
+        { state with
+          ids = state'.ids
+        ; max_suffix_by_id = state'.max_suffix_by_id
+        }
+    in
     let* () =
       modify_bindings
         (Binding_tree.add_toplevel module_identifier
-           ~subtree:inner_declarations
+           ~subtree:state'.declarations
            { id; operator = Option.none })
     in
     return declarations'
 
-  let rec nested_set_default_associativity default_associativity = function
-    | Id_state _ ->
-        Error.raise_violation
-          "[nested_set_default_associativity] invalid state"
-    | Signature_state o -> Signature_state { o with default_associativity }
-    | Module_state o ->
-        let state' =
-          nested_set_default_associativity default_associativity o.state
-        in
-        Module_state { o with state = state' }
+  let set_default_associativity default_associativity =
+    modify (fun state -> { state with default_associativity })
 
-  let set_default_associativity associativity =
-    modify (nested_set_default_associativity associativity)
+  let get_default_associativity =
+    let* state = get in
+    return state.default_associativity
 
-  let rec nested_get_default_associativity = function
-    | Id_state _ ->
-        Error.raise_violation
-          "[nested_get_default_associativity] invalid state"
-    | Signature_state o -> o.default_associativity
-    | Module_state o -> nested_get_default_associativity o.state
+  let[@warning "-32"] set_default_precedence default_precedence =
+    modify (fun state -> { state with default_precedence })
 
-  let get_default_associativity = get $> nested_get_default_associativity
+  let get_default_associativity_opt = function
+    | Option.None -> get_default_associativity
+    | Option.Some associativity -> return associativity
+
+  let get_default_precedence =
+    let* state = get in
+    return state.default_precedence
+
+  let set_default_precedence default_precedence =
+    modify (fun state -> { state with default_precedence })
+
+  let get_default_precedence_opt = function
+    | Option.None -> get_default_precedence
+    | Option.Some precedence -> return precedence
 
   let lookup_operator constant =
     let* { operator; _ }, _subtree = lookup constant in
@@ -342,9 +293,8 @@ end = struct
   let lookup_operator_precedence constant =
     lookup_operator constant $> Option.map Operator.precedence
 
-  let default_precedence = 20
-
-  let make_prefix ?(precedence = default_precedence) constant =
+  let make_prefix ?precedence constant =
+    let* precedence = get_default_precedence_opt precedence in
     modify_bindings (fun bindings ->
         Binding_tree.replace constant
           (fun entry subtree ->
@@ -356,12 +306,9 @@ end = struct
             (entry', subtree))
           bindings)
 
-  let make_infix ?(precedence = default_precedence) ?associativity constant =
-    let* associativity =
-      match associativity with
-      | Option.None -> get_default_associativity
-      | Option.Some associativity -> return associativity
-    in
+  let make_infix ?precedence ?associativity constant =
+    let* precedence = get_default_precedence_opt precedence in
+    let* associativity = get_default_associativity_opt associativity in
     modify_bindings (fun bindings ->
         Binding_tree.replace constant
           (fun entry subtree ->
@@ -375,7 +322,8 @@ end = struct
             (entry', subtree))
           bindings)
 
-  let make_postfix ?(precedence = default_precedence) constant =
+  let make_postfix ?precedence constant =
+    let* precedence = get_default_precedence_opt precedence in
     modify_bindings (fun bindings ->
         Binding_tree.replace constant
           (fun entry subtree ->

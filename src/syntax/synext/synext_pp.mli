@@ -9,8 +9,7 @@ module type PRINTING_STATE = sig
 
   val add_binding : Identifier.t -> Unit.t t
 
-  val with_module_declarations :
-    declarations:'a t -> module_identifier:Identifier.t -> 'a t
+  val with_module_declarations : Identifier.t -> 'a t -> 'a t
 
   val add_module_declaration : Identifier.t -> Unit.t t
 
@@ -21,6 +20,10 @@ module type PRINTING_STATE = sig
   val set_default_associativity : Associativity.t -> Unit.t t
 
   val get_default_associativity : Associativity.t t
+
+  val set_default_precedence : Int.t -> Unit.t t
+
+  val get_default_precedence : Int.t t
 
   val lookup_operator_precedence : Qualified_identifier.t -> Int.t Option.t t
 

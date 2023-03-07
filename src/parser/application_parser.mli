@@ -3,7 +3,7 @@
 
     This implementation is inspired by Parsec's [buildExpressionParser] found
     {{:https://github.com/haskell/parsec/blob/1f542120d9adc5e22f8791a6d595210e93c6c389/src/Text/Parsec/Expr.hs#L95-L177}
-    here}.
+      here}.
 
     @author Marc-Antoine Ouimet *)
 

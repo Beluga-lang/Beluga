@@ -394,8 +394,8 @@ module Persistent_disambiguation_state = struct
   let initial =
     { substate =
         Scope_state { bindings = Binding_tree.empty; parent = Option.none }
-    ; default_associativity = Associativity.non_associative
-    ; default_precedence = 20
+    ; default_precedence = Synext.default_precedence
+    ; default_associativity = Synext.default_associativity
     }
 
   let is_entry_variable = function

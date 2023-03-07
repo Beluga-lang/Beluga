@@ -1700,6 +1700,14 @@ module Signature = struct
     }
 end
 
+(** {1 Constants} *)
+
+(** The default associativity for user-defined infix operators. *)
+let default_associativity = Associativity.non_associative
+
+(** The default precedence for user-defined operators. *)
+let default_precedence = 20
+
 (** {1 Type Aliases} *)
 
 (** {2 LF} *)

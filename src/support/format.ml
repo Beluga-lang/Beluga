@@ -15,8 +15,3 @@ let semicolon = punctuation ";"
 
 (** Prints a comma followed by a space break hint. *)
 let comma = punctuation ","
-
-let between before after inside ppf () =
-  before ppf ();
-  inside ppf ();
-  after ppf ()

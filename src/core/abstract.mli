@@ -37,12 +37,12 @@ exception Error of Location.t * error
 val kind :
      LF.kind
   -> LF.kind
-     * Id.offset (* where the offset indicates the #implicit arguments *)
+     * Id.offset (* where the offset indicates the number of implicit arguments *)
 
 val typ :
      LF.typ
   -> LF.typ
-     * Id.offset (* where the offset indicates the #implicit arguments *)
+     * Id.offset (* where the offset indicates the number of implicit arguments *)
 
 val covgoal :
      LF.dctx
@@ -65,12 +65,12 @@ val msub : LF.msub -> LF.msub * LF.mctx
 val compkind :
      Comp.kind
   -> Comp.kind
-     * Id.offset (* where the offset indicates the #implicit arguments *)
+     * Id.offset (* where the offset indicates the number of implicit arguments *)
 
 val comptyp :
      Comp.typ
   -> Comp.typ
-     * Id.offset (* where the offset indicates the #implicit arguments *)
+     * Id.offset (* where the offset indicates the number of implicit arguments *)
 
 val comptyp_cD : LF.mctx -> Comp.typ -> Comp.typ * Id.offset
 

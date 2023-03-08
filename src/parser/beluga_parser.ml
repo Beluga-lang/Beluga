@@ -7,6 +7,8 @@ module Config_parser = Config_parser
 
 (** {1 Parsing} *)
 
+module type PARSER_STATE = Common_parser.PARSER_STATE
+
 module Parser_combinator = Parser_combinator
 module Token = Token
 module Common_parser = Common_parser
@@ -19,6 +21,8 @@ module Signature_parser = Signature_parser
 
 (** {1 Disambiguation} *)
 
+module type DISAMBIGUATION_STATE = Common_disambiguation.DISAMBIGUATION_STATE
+
 module Application_disambiguation = Application_disambiguation
 module Lf_disambiguation = Lf_disambiguation
 module Clf_disambiguation = Clf_disambiguation
@@ -30,10 +34,10 @@ module Signature_disambiguation = Signature_disambiguation
 (** {1 Constructors} *)
 
 module Make
-    (Parser_state : Common_parser.PARSER_STATE
+    (Parser_state : PARSER_STATE
                       with type token = Location.t * Token.t
                        and type location = Location.t)
-    (Disambiguation_state : Common_disambiguation.DISAMBIGUATION_STATE) =
+    (Disambiguation_state : DISAMBIGUATION_STATE) =
 struct
   module Parser_combinator = Parser_combinator.Make (Parser_state)
   module Common_parser = Common_parser.Make (Parser_combinator)

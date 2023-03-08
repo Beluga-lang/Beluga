@@ -353,14 +353,11 @@ let make_token_sequence ~initial_location lexer_buffer =
   set_location initial_location lexer_buffer;
   Seq.memoize (Seq.of_gen (fun () -> tokenize lexer_buffer))
 
-let lex_gen ~initial_location input =
-  make_token_sequence ~initial_location (Sedlexing.Utf8.from_gen input)
-
 let lex_string ~initial_location input =
   make_token_sequence ~initial_location (Sedlexing.Utf8.from_string input)
 
 let lex_input_channel ~initial_location input =
-  lex_gen ~initial_location (Gen.of_in_channel input)
+  make_token_sequence ~initial_location (Sedlexing.Utf8.from_channel input)
 
 let () =
   Error.register_exception_printer (function

@@ -208,7 +208,7 @@ let recSgnDecls decls =
              with
            | _ ->
               Chatter.print 1
-                "Reconstruction fails for --not'd declaration@.";
+                (fun ppf -> Format.fprintf ppf "Reconstruction fails for --not'd declaration@.");
               false
          end in
        if not'd_decl_succeeds

@@ -81,7 +81,7 @@ let run args =
       raise (Abstract.Error (Syntax.Loc.ghost, Abstract.LeftoverVars))
       end
       in
-      Chatter.print 1 "%a" P.fmt_ppr_sgn sgn';
+      Chatter.print 1 (fun ppf -> Format.fprintf ppf "%a" P.fmt_ppr_sgn sgn');
       fprintf ppf "The file has been successfully loaded.\n"
     with
     |Failure _ -> fprintf ppf "Please provide the file name\n" ;

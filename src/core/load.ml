@@ -65,10 +65,10 @@ let forbid_leftover_vars path =
   | None -> ()
   | Some vars ->
      Chatter.print 1
-       "@[<v>## Leftover variables: %s  ##\
+       (fun ppf -> Format.fprintf ppf "@[<v>## Leftover variables: %s  ##\
         @,  @[%a@]@]@."
        path
-       Recsgn.fmt_ppr_leftover_vars vars;
+       Recsgn.fmt_ppr_leftover_vars vars);
      raise (Abstract.Error (Syntax.Loc.ghost, Abstract.LeftoverVars))
 
 let load_file ppf file_name =
@@ -81,7 +81,7 @@ let load_file ppf file_name =
          then
            begin
              Chatter.print 1
-               "## External syntax dump: %s ##@." file_name;
+               (fun ppf -> Format.fprintf ppf "## External syntax dump: %s ##@." file_name);
              Format.fprintf ppf "@[%a@]"
                Pretty.Ext.DefaultPrinter.fmt_ppr_sgn sgn
            end
@@ -89,16 +89,16 @@ let load_file ppf file_name =
     |> Recsgn.apply_global_pragmas
   in
 
-  Chatter.print 1 "## Type Reconstruction begin: %s ##@." file_name;
+  Chatter.print 1 (fun ppf -> Format.fprintf ppf "## Type Reconstruction begin: %s ##@." file_name);
 
   let sgn', leftoverVars = Recsgn.recSgnDecls sgn in
   Store.Modules.reset ();
 
   Chatter.print 2
-    "@[<v>## Internal syntax dump: %s ##@,@[<v>%a@]@]@." file_name
-    Pretty.Int.DefaultPrinter.fmt_ppr_sgn sgn';
+    (fun ppf -> Format.fprintf ppf "@[<v>## Internal syntax dump: %s ##@,@[<v>%a@]@]@." file_name
+    Pretty.Int.DefaultPrinter.fmt_ppr_sgn sgn');
 
-  Chatter.print 1 "## Type Reconstruction done:  %s ##@." file_name;
+  Chatter.print 1 (fun ppf -> Format.fprintf ppf "## Type Reconstruction done:  %s ##@." file_name);
 
   (* XXX pretty sure the list of cov problems is never added to -je
      So this call to Coverage.iter never does anything.
@@ -114,7 +114,7 @@ let load_file ppf file_name =
    *)
 
   if !Coverage.enableCoverage
-  then Chatter.print 2 "## Coverage checking done: %s  ##@." file_name;
+  then Chatter.print 2 (fun ppf -> Format.fprintf ppf "## Coverage checking done: %s  ##@." file_name);
 
   Logic.runLogic (); (* TODO Logic needs to accept a formatter -je *)
   if Bool.not (Holes.none ())
@@ -122,9 +122,9 @@ let load_file ppf file_name =
     begin
       let open Format in
       Chatter.print 1
-        "@[<v>## Holes: %s  ##@,@[<v>%a@]@]@."
+        (fun ppf -> Format.fprintf ppf "@[<v>## Holes: %s  ##@,@[<v>%a@]@]@."
         file_name
-        (pp_print_list Interactive.fmt_ppr_hole) (Holes.list ());
+        (pp_print_list Interactive.fmt_ppr_hole) (Holes.list ()));
     end;
 
   forbid_leftover_vars file_name leftoverVars;

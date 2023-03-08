@@ -103,9 +103,9 @@ let main () =
   end;
   printf "%s" (Beluga.Coverage.get_information ())
 
-let _ =
+let () =
   Format.set_margin 80;
-  if Array.length Sys.argv < 2 then
+  if Array.length Sys.argv <= 1 then
     usage ()
   else
     try

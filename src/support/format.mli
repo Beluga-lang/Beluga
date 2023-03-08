@@ -21,7 +21,3 @@ val between : (formatter -> unit -> unit) ->
 val surrounded : (formatter -> unit -> unit) ->
                  (formatter -> 'a -> unit) ->
                  formatter -> 'a -> unit
-
-(** Constructs a formatting function that ignores its argument and
-    prints the given string literally. *)
-val string : string -> formatter -> unit -> unit

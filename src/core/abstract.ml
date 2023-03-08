@@ -1534,7 +1534,7 @@ let raiseCompKind cD cK =
        raisePiBox cD' (Comp.PiKind (Location.ghost, mdecl, cK))
   in
   (* let rec roll =
-     funciton
+     function
      | Comp.PiKind (loc, (cdecl, plicity), cK') ->
         Comp.PiKind (loc, (cdecl, plicity), roll cK')
      | cK -> raisePiBox cD cK
@@ -1551,7 +1551,7 @@ let abstrCompKind cK =
   in
   let (cQ, cK') = roll cK I.Empty in
   let l' = lengthCollection cQ in
-  let p = prefixCompKind cK' in (* p = number of explicitely declared mvars *)
+  let p = prefixCompKind cK' in (* p = number of explicitly declared mvars *)
   let (cQ, cK1) = collectCompKind (l' + p) cQ cK' in
   let k = lengthCollection cQ in
   let l = (k - l') in
@@ -1578,7 +1578,7 @@ let abstrCompTyp tau =
   let (cQ, tau') = roll tau0 I.Empty in
   (* l': count of leading context quantifiers *)
   let l' = lengthCollection cQ in
-  let p = prefixCompTyp tau' in (* p = number of explicitely declared mvars *)
+  let p = prefixCompTyp tau' in (* p = number of explicitly declared mvars *)
   (* extend cQ with any variables found in tau' *)
   let (cQ, tau1) = collectCompTyp (l' + p) cQ tau' in
   let k = lengthCollection cQ in
@@ -1608,7 +1608,7 @@ let abstrCompTypcD cD tau =
   let (cQ, tau') = roll tau0 cQ in
   (* l': count of leading context quantifiers *)
   let l' = lengthCollection cQ in
-  let p = prefixCompTyp tau' in (* p = number of explicitely declared mvars *)
+  let p = prefixCompTyp tau' in (* p = number of explicitly declared mvars *)
   (* extend cQ with any variables found in tau' *)
   let (cQ, tau1) = collectCompTyp (l' + p) cQ tau' in
   let k = lengthCollection cQ in

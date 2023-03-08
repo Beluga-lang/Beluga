@@ -757,7 +757,7 @@ let rec sigmifyDctx cPhi s =
  * In the implementation:
  *   - meta-variables in O1 and O2 are handled destructively, and O1 and O2 resp characterize the state of memory.
  *   - r is not explicit but implicit since we  update all meta-variables in O1 destructively
- *   - U1 and U2 are the fvar_ctx; they are handled globally and hence are not carried explicitely as an argument
+ *   - U1 and U2 are the fvar_ctx; they are handled globally and hence are not carried explicitly as an argument
  *     to elTerm
  *   - may raise Error, if no modal substitution r exists.
  *

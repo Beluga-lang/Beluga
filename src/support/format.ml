@@ -1,8 +1,5 @@
 include Stdlib.Format
 
-(** The type of formatting functions. *)
-type 'a t = formatter -> 'a -> unit
-
 (** Polymorphic function that processes a format string. *)
 type fmt =
   { fmt : 'a. ('a, formatter, unit) format -> 'a }
@@ -23,12 +20,3 @@ let between before after inside ppf () =
   before ppf ();
   inside ppf ();
   after ppf ()
-
-(** `surrounded by inside` constructs a formatting function that
-    will print `by` then `inside` then `by` again.
- *)
-let surrounded (by : unit t) (inside : 'a t) : 'a t =
-  fun ppf x ->
-  by ppf ();
-  inside ppf x;
-  by ppf ()

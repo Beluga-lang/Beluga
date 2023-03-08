@@ -1,6 +1,5 @@
 include module type of Stdlib.Format
 
-
 type fmt =
   { fmt : 'a. ('a, formatter, unit) format -> 'a }
 
@@ -14,10 +13,3 @@ val between : (formatter -> unit -> unit) ->
               (formatter -> unit -> unit) ->
               (formatter -> unit -> unit) ->
               formatter -> unit -> unit
-
-(** surrounded f1 f2 ppf x
-    renders x using f2, but renders f1 before and after.
- *)
-val surrounded : (formatter -> unit -> unit) ->
-                 (formatter -> 'a -> unit) ->
-                 formatter -> 'a -> unit

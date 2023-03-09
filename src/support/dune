@@ -2,7 +2,6 @@
  (name support)
  (package beluga)
  (libraries
-  (re_export camlp-streams)
   (re_export gen)
   (re_export extlib)
   hamt)

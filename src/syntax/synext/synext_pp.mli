@@ -44,12 +44,14 @@ module Printing_state : sig
   include PRINTING_STATE
 
   val initial : Format.formatter -> state
+
+  val set_formatter : Format.formatter -> Unit.t t
 end
 
 module type BELUGA_PRINTER = sig
   include State.STATE
 
-  val pp_signature : signature -> Unit.t t
+  val pp_signature_file : signature_file -> Unit.t t
 end
 
 module Make_pretty_printer (Printing_state : PRINTING_STATE) :

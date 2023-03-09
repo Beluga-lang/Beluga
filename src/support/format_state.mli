@@ -5,6 +5,8 @@ module type S = sig
 
   val pp_flush : Unit.t t
 
+  val pp_newline : Unit.t t
+
   val pp_nop : Unit.t t
 
   val pp_cut : Unit.t t

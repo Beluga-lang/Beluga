@@ -54,6 +54,8 @@ module Printing_state : sig
   include PRINTING_STATE
 
   val initial : Format.formatter -> state
+
+  val set_formatter : Format.formatter -> Unit.t t
 end = struct
   type entry = { operator : Operator.t Option.t }
 
@@ -90,6 +92,9 @@ end = struct
     ; default_associativity
     ; declarations = Binding_tree.empty
     }
+
+  let set_formatter formatter =
+    modify (fun state -> { state with formatter })
 
   let get_bindings =
     let* state = get in
@@ -223,7 +228,7 @@ end
 module type BELUGA_PRINTER = sig
   include State.STATE
 
-  val pp_signature : signature -> Unit.t t
+  val pp_signature_file : signature_file -> Unit.t t
 end
 
 module Make_pretty_printer (Printing_state : PRINTING_STATE) :
@@ -2446,8 +2451,8 @@ module Make_pretty_printer (Printing_state : PRINTING_STATE) :
           (pp_string "%{{" ++ pp_cut ++ pp_string content ++ pp_cut
          ++ pp_string "}}%")
 
-  and pp_signature signature =
-    let { Signature.global_pragmas; entries } = signature in
+  and pp_signature_file signature_file =
+    let { Signature.global_pragmas; entries; _ } = signature_file in
     let pp_global_pragmas_opt =
       match global_pragmas with
       | [] -> pp_nop

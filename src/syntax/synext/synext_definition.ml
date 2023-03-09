@@ -1694,10 +1694,13 @@ module Signature = struct
   end =
     Entry
 
-  type t =
-    { global_pragmas : Global_pragma.t List.t
+  type signature_file =
+    { location : Location.t
+    ; global_pragmas : Global_pragma.t List.t
     ; entries : Entry.t List.t
     }
+
+  type t = signature_file List1.t
 end
 
 (** {1 Constants} *)
@@ -1827,6 +1830,9 @@ type signature_declaration = Signature.Declaration.t
 
 (** @canonical Synext.signature_entry *)
 type signature_entry = Signature.Entry.t
+
+(** @canonical Synext.signature_file *)
+type signature_file = Signature.signature_file
 
 (** @canonical Synext.signature *)
 type signature = Signature.t

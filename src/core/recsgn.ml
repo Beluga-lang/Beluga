@@ -184,21 +184,23 @@ module type SIGNATURE_RECONSTRUCTION_STATE = sig
 
       [location] is the location to use for error-reporting in case of
       failure to perform [disable_lf_strengthening ~location]. *)
-  val disable_lf_strengthening : location:Location.t -> Unit.t t
+  val with_disabled_lf_strengthening : location:Location.t -> 'a t -> 'a t
 
   (** [enable_warn_on_coverage_error ~location] sets the error-reporting mode
       of pattern coverage-checking to `warn'.
 
       [location] is the location to use for error-reporting in case of
       failure to perform [enable_warn_on_coverage_error ~location]. *)
-  val enable_warn_on_coverage_error : location:Location.t -> Unit.t t
+  val with_enabled_warn_on_coverage_error :
+    location:Location.t -> 'a t -> 'a t
 
   (** [enable_raise_on_coverage_error ~location] sets the error-reporting
       mode of pattern coverage-checking to `raise'.
 
       [location] is the location to use for error-reporting in case of
       failure to perform [enable_raise_on_coverage_error ~location]. *)
-  val enable_raise_on_coverage_error : location:Location.t -> Unit.t t
+  val with_enabled_raise_on_coverage_error :
+    location:Location.t -> 'a t -> 'a t
 
   (** [set_name_generation_bases ~location ~meta_variable_base ?computation_variable_base constant]
       sets the naming convention for name generation of meta-level and
@@ -420,23 +422,32 @@ module Make (Signature_reconstruction_state : SIGNATURE_RECONSTRUCTION_STATE) :
         let location = Synint.Comp.loc_of_typ tau in
         Error.raise_at1 location Invalid_comp_cotyp_target
 
-  let rec reconstruct_signature signature =
-    let { Synext.Signature.global_pragmas; entries } = signature in
-    let* () = apply_global_pragmas global_pragmas in
-    reconstruct_signature_entries entries
+  let rec reconstruct_signature signature_files =
+    let* signature_files' =
+      traverse_list1 reconstruct_signature_file signature_files
+    in
+    return (List.flatten (List1.to_list signature_files'))
 
-  and apply_global_pragmas global_pragmas =
-    traverse_list_void apply_global_pragma global_pragmas
+  and reconstruct_signature_file file =
+    let { Synext.Signature.global_pragmas; entries; _ } = file in
+    with_applied_global_pragmas global_pragmas
+      (reconstruct_signature_entries entries)
 
-  and apply_global_pragma global_pragma =
+  and with_applied_global_pragmas global_pragmas f =
+    match global_pragmas with
+    | [] -> f
+    | x :: xs ->
+        with_applied_global_pragma x (with_applied_global_pragmas xs f)
+
+  and with_applied_global_pragma global_pragma f =
     match global_pragma with
     | Synext.Signature.Global_pragma.No_strengthening { location } ->
-        disable_lf_strengthening ~location
+        with_disabled_lf_strengthening ~location f
     | Synext.Signature.Global_pragma.Warn_on_coverage_error { location } ->
-        enable_warn_on_coverage_error ~location
+        with_enabled_warn_on_coverage_error ~location f
     | Synext.Signature.Global_pragma.Raise_error_on_coverage_error
         { location } ->
-        enable_raise_on_coverage_error ~location
+        with_enabled_raise_on_coverage_error ~location f
 
   (** [reconstruct_signature_entries entries] reconstructs a list of
       signature entries. This in particular handles the reconstruction of

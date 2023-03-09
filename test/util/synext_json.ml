@@ -42,19 +42,16 @@ let json_of_identifier_opt = json_of_option json_of_identifier
 let json_of_qualified_identifier_opt =
   json_of_option json_of_qualified_identifier
 
-let[@inline] json_of_plicity plicity =
-  match plicity with
+let[@inline] json_of_plicity = function
   | Plicity.Explicit -> json_of_string "explicit"
   | Plicity.Implicit -> json_of_string "implicit"
 
-let[@inline] json_of_fixity fixity =
-  match fixity with
+let[@inline] json_of_fixity = function
   | Fixity.Prefix -> json_of_string "prefix"
   | Fixity.Infix -> json_of_string "infix"
   | Fixity.Postfix -> json_of_string "postfix"
 
-let[@inline] json_of_associativity associativity =
-  match associativity with
+let[@inline] json_of_associativity = function
   | Associativity.Left_associative -> json_of_string "left-associative"
   | Associativity.Right_associative -> json_of_string "right-associative"
   | Associativity.Non_associative -> json_of_string "non-associative"
@@ -70,8 +67,7 @@ let json_of_operator operator =
 
 (** {1 LF} *)
 
-let rec json_of_lf_kind kind =
-  match kind with
+let rec json_of_lf_kind = function
   | LF.Kind.Typ { location } ->
       json_of_variant ~name:"LF.Kind.Typ"
         ~data:[ ("location", json_of_location location) ]
@@ -94,8 +90,7 @@ let rec json_of_lf_kind kind =
           ; ("location", json_of_location location)
           ]
 
-and json_of_lf_typ typ =
-  match typ with
+and json_of_lf_typ = function
   | LF.Typ.Constant { identifier; location } ->
       json_of_variant ~name:"LF.Typ.Constant"
         ~data:
@@ -132,8 +127,7 @@ and json_of_lf_typ typ =
           ; ("location", json_of_location location)
           ]
 
-and json_of_lf_term term =
-  match term with
+and json_of_lf_term = function
   | LF.Term.Variable { identifier; location } ->
       json_of_variant ~name:"LF.Term.Variable"
         ~data:
@@ -176,8 +170,7 @@ and json_of_lf_term term =
 
 (** {1 Contextual LF} *)
 
-let rec json_of_clf_typ typ =
-  match typ with
+let rec json_of_clf_typ = function
   | CLF.Typ.Constant { identifier; location } ->
       json_of_variant ~name:"CLF.Typ.Constant"
         ~data:
@@ -230,8 +223,7 @@ let rec json_of_clf_typ typ =
           ; ("location", json_of_location location)
           ]
 
-and json_of_clf_term term =
-  match term with
+and json_of_clf_term = function
   | CLF.Term.Variable { identifier; location } ->
       json_of_variant ~name:"CLF.Term.Variable"
         ~data:
@@ -310,8 +302,7 @@ and json_of_clf_term term =
           ; ("location", json_of_location location)
           ]
 
-and json_of_clf_term_pattern term_pattern =
-  match term_pattern with
+and json_of_clf_term_pattern = function
   | CLF.Term.Pattern.Variable { identifier; location } ->
       json_of_variant ~name:"CLF.Term.Pattern.Variable"
         ~data:
@@ -381,18 +372,15 @@ and json_of_clf_term_pattern term_pattern =
           ; ("location", json_of_location location)
           ]
 
-and json_of_clf_substitution substition =
-  match substition with
-  | { CLF.Substitution.head; terms; location } ->
-      json_of_variant ~name:"CLF.Substitution"
-        ~data:
-          [ ("head", json_of_clf_substitution_head head)
-          ; ("terms", json_of_list json_of_clf_term terms)
-          ; ("location", json_of_location location)
-          ]
+and json_of_clf_substitution { CLF.Substitution.head; terms; location } =
+  json_of_variant ~name:"CLF.Substitution"
+    ~data:
+      [ ("head", json_of_clf_substitution_head head)
+      ; ("terms", json_of_list json_of_clf_term terms)
+      ; ("location", json_of_location location)
+      ]
 
-and json_of_clf_substitution_head head =
-  match head with
+and json_of_clf_substitution_head = function
   | CLF.Substitution.Head.None { location } ->
       json_of_variant ~name:"CLF.Substitution.Head.None"
         ~data:[ ("location", json_of_location location) ]
@@ -408,18 +396,16 @@ and json_of_clf_substitution_head head =
           ; ("location", json_of_location location)
           ]
 
-and json_of_clf_substitution_pattern substitution_pattern =
-  match substitution_pattern with
-  | { CLF.Substitution.Pattern.head; terms; location } ->
-      json_of_variant ~name:"CLF.Substitution"
-        ~data:
-          [ ("head", json_of_clf_substitution_pattern_head head)
-          ; ("terms", json_of_list json_of_clf_term_pattern terms)
-          ; ("location", json_of_location location)
-          ]
+and json_of_clf_substitution_pattern
+    { CLF.Substitution.Pattern.head; terms; location } =
+  json_of_variant ~name:"CLF.Substitution"
+    ~data:
+      [ ("head", json_of_clf_substitution_pattern_head head)
+      ; ("terms", json_of_list json_of_clf_term_pattern terms)
+      ; ("location", json_of_location location)
+      ]
 
-and json_of_clf_substitution_pattern_head head =
-  match head with
+and json_of_clf_substitution_pattern_head = function
   | CLF.Substitution.Pattern.Head.None { location } ->
       json_of_variant ~name:"CLF.Substitution.Pattern.Head.None"
         ~data:[ ("location", json_of_location location) ]
@@ -436,25 +422,22 @@ and json_of_clf_substitution_pattern_head head =
           ; ("location", json_of_location location)
           ]
 
-and json_of_clf_context context =
-  match context with
-  | { CLF.Context.head; bindings; location } ->
-      json_of_variant ~name:"CLF.Context"
-        ~data:
-          [ ("head", json_of_clf_context_head head)
-          ; ( "bindings"
-            , json_of_list
-                (fun (identifier, typ) ->
-                  json_of_association
-                    [ ("identifier", json_of_identifier identifier)
-                    ; ("typ", json_of_option json_of_clf_typ typ)
-                    ])
-                bindings )
-          ; ("location", json_of_location location)
-          ]
+and json_of_clf_context { CLF.Context.head; bindings; location } =
+  json_of_variant ~name:"CLF.Context"
+    ~data:
+      [ ("head", json_of_clf_context_head head)
+      ; ( "bindings"
+        , json_of_list
+            (fun (identifier, typ) ->
+              json_of_association
+                [ ("identifier", json_of_identifier identifier)
+                ; ("typ", json_of_option json_of_clf_typ typ)
+                ])
+            bindings )
+      ; ("location", json_of_location location)
+      ]
 
-and json_of_clf_context_head head =
-  match head with
+and json_of_clf_context_head = function
   | CLF.Context.Head.None { location } ->
       json_of_variant ~name:"CLF.Context.Head.None"
         ~data:[ ("location", json_of_location location) ]
@@ -468,8 +451,7 @@ and json_of_clf_context_head head =
           ; ("location", json_of_location location)
           ]
 
-and json_of_clf_context_pattern context_pattern =
-  match context_pattern with
+and json_of_clf_context_pattern = function
   | { CLF.Context.Pattern.head; bindings; location } ->
       json_of_variant ~name:"CLF.Context.Pattern"
         ~data:
@@ -485,8 +467,7 @@ and json_of_clf_context_pattern context_pattern =
           ; ("location", json_of_location location)
           ]
 
-and json_of_clf_context_pattern_head head =
-  match head with
+and json_of_clf_context_pattern_head = function
   | CLF.Context.Pattern.Head.None { location } ->
       json_of_variant ~name:"CLF.Context.Head.Pattern.None"
         ~data:[ ("location", json_of_location location) ]
@@ -502,8 +483,7 @@ and json_of_clf_context_pattern_head head =
 
 (** {1 Meta-Level} *)
 
-let rec json_of_meta_typ typ =
-  match typ with
+let rec json_of_meta_typ = function
   | Meta.Typ.Context_schema { schema; location } ->
       json_of_variant ~name:"Meta.Typ.Context_schema"
         ~data:
@@ -539,8 +519,7 @@ let rec json_of_meta_typ typ =
           ; ("location", json_of_location location)
           ]
 
-and json_of_meta_object object_ =
-  match object_ with
+and json_of_meta_object = function
   | Meta.Object.Context { context; location } ->
       json_of_variant ~name:"Meta.Object.Context"
         ~data:
@@ -569,8 +548,7 @@ and json_of_meta_object object_ =
           ; ("location", json_of_location location)
           ]
 
-and json_of_meta_pattern pattern =
-  match pattern with
+and json_of_meta_pattern = function
   | Meta.Pattern.Context { context; location } ->
       json_of_variant ~name:"Meta.Pattern.Context"
         ~data:
@@ -599,24 +577,21 @@ and json_of_meta_pattern pattern =
           ; ("location", json_of_location location)
           ]
 
-and json_of_meta_context context =
-  match context with
-  | { Meta.Context.bindings; location } ->
-      json_of_variant ~name:"Meta.Context"
-        ~data:
-          [ ( "bindings"
-            , json_of_list
-                (fun (identifier, typ) ->
-                  json_of_association
-                    [ ("identifier", json_of_identifier identifier)
-                    ; ("typ", json_of_meta_typ typ)
-                    ])
-                bindings )
-          ; ("location", json_of_location location)
-          ]
+and json_of_meta_context { Meta.Context.bindings; location } =
+  json_of_variant ~name:"Meta.Context"
+    ~data:
+      [ ( "bindings"
+        , json_of_list
+            (fun (identifier, typ) ->
+              json_of_association
+                [ ("identifier", json_of_identifier identifier)
+                ; ("typ", json_of_meta_typ typ)
+                ])
+            bindings )
+      ; ("location", json_of_location location)
+      ]
 
-and json_of_schema schema =
-  match schema with
+and json_of_schema = function
   | Meta.Schema.Constant { identifier; location } ->
       json_of_variant ~name:"Meta.Schema.Constant"
         ~data:
@@ -656,8 +631,7 @@ and json_of_schema schema =
 
 (** {1 Computation-Level} *)
 
-let rec json_of_comp_kind kind =
-  match kind with
+let rec json_of_comp_kind = function
   | Comp.Kind.Ctype { location } ->
       json_of_variant ~name:"Comp.Kind.Ctype"
         ~data:[ ("location", json_of_location location) ]
@@ -680,8 +654,7 @@ let rec json_of_comp_kind kind =
           ; ("location", json_of_location location)
           ]
 
-and json_of_comp_typ typ =
-  match typ with
+and json_of_comp_typ = function
   | Comp.Typ.Inductive_typ_constant { identifier; location } ->
       json_of_variant ~name:"Comp.Typ.Inductive_typ_constant"
         ~data:
@@ -748,8 +721,7 @@ and json_of_comp_typ typ =
           ; ("location", json_of_location location)
           ]
 
-and json_of_comp_expression expression =
-  match expression with
+and json_of_comp_expression = function
   | Comp.Expression.Variable { identifier; location } ->
       json_of_variant ~name:"Comp.Expression.Variable"
         ~data:
@@ -862,8 +834,8 @@ and json_of_comp_expression expression =
           ; ("location", json_of_location location)
           ]
 
-and json_of_comp_case_branch branch =
-  let { Comp.Case_branch.location; meta_context; pattern; body } = branch in
+and json_of_comp_case_branch
+    { Comp.Case_branch.location; meta_context; pattern; body } =
   json_of_association
     [ ("location", json_of_location location)
     ; ("meta_context", json_of_meta_context meta_context)
@@ -871,10 +843,8 @@ and json_of_comp_case_branch branch =
     ; ("body", json_of_comp_expression body)
     ]
 
-and json_of_comp_cofunction_branch branch =
-  let { Comp.Cofunction_branch.location; meta_context; copattern; body } =
-    branch
-  in
+and json_of_comp_cofunction_branch
+    { Comp.Cofunction_branch.location; meta_context; copattern; body } =
   json_of_association
     [ ("location", json_of_location location)
     ; ("meta_context", json_of_meta_context meta_context)
@@ -882,8 +852,7 @@ and json_of_comp_cofunction_branch branch =
     ; ("body", json_of_comp_expression body)
     ]
 
-and json_of_comp_pattern pattern =
-  match pattern with
+and json_of_comp_pattern = function
   | Comp.Pattern.Variable { identifier; location } ->
       json_of_variant ~name:"Comp.Pattern.Variable"
         ~data:
@@ -926,8 +895,8 @@ and json_of_comp_pattern pattern =
       json_of_variant ~name:"Comp.Pattern.Wildcard"
         ~data:[ ("location", json_of_location location) ]
 
-and json_of_comp_copattern copattern =
-  let { Comp.Copattern.location; patterns; observations } = copattern in
+and json_of_comp_copattern
+    { Comp.Copattern.location; patterns; observations } =
   json_of_variant ~name:"Comp.Copattern"
     ~data:
       [ ("location", json_of_location location)
@@ -942,26 +911,23 @@ and json_of_comp_copattern copattern =
             observations )
       ]
 
-and json_of_comp_context context =
-  match context with
-  | { Comp.Context.bindings; location } ->
-      json_of_variant ~name:"Comp.Context"
-        ~data:
-          [ ( "bindings"
-            , json_of_list
-                (fun (identifier, typ) ->
-                  json_of_association
-                    [ ("identifier", json_of_identifier identifier)
-                    ; ("typ", json_of_comp_typ typ)
-                    ])
-                bindings )
-          ; ("location", json_of_location location)
-          ]
+and json_of_comp_context { Comp.Context.bindings; location } =
+  json_of_variant ~name:"Comp.Context"
+    ~data:
+      [ ( "bindings"
+        , json_of_list
+            (fun (identifier, typ) ->
+              json_of_association
+                [ ("identifier", json_of_identifier identifier)
+                ; ("typ", json_of_comp_typ typ)
+                ])
+            bindings )
+      ; ("location", json_of_location location)
+      ]
 
 (** {1 Harpoon} *)
 
-let rec json_of_harpoon_proof proof =
-  match proof with
+let rec json_of_harpoon_proof = function
   | Harpoon.Proof.Incomplete { label; location } ->
       json_of_variant ~name:"Harpoon.Proof.Incomplete"
         ~data:
@@ -982,8 +948,7 @@ let rec json_of_harpoon_proof proof =
           ; ("location", json_of_location location)
           ]
 
-and json_of_harpoon_command command =
-  match command with
+and json_of_harpoon_command = function
   | Harpoon.Command.By { expression; assignee; location } ->
       json_of_variant ~name:"Harpoon.Command.By"
         ~data:
@@ -1003,8 +968,7 @@ and json_of_harpoon_command command =
           ; ("location", json_of_location location)
           ]
 
-and json_of_harpoon_directive directive =
-  match directive with
+and json_of_harpoon_directive = function
   | Harpoon.Directive.Intros { hypothetical; location } ->
       json_of_variant ~name:"Harpoon.Directive.Intros"
         ~data:
@@ -1039,15 +1003,14 @@ and json_of_harpoon_directive directive =
           ; ("location", json_of_location location)
           ]
 
-and json_of_harpoon_split_branch split_branch =
-  match split_branch with
-  | { Harpoon.Split_branch.label; body; location } ->
-      json_of_variant ~name:"Harpoon.Split_branch"
-        ~data:
-          [ ("label", json_of_harpoon_split_branch_label label)
-          ; ("body", json_of_harpoon_hypothetical body)
-          ; ("location", json_of_location location)
-          ]
+and json_of_harpoon_split_branch
+    { Harpoon.Split_branch.label; body; location } =
+  json_of_variant ~name:"Harpoon.Split_branch"
+    ~data:
+      [ ("label", json_of_harpoon_split_branch_label label)
+      ; ("body", json_of_harpoon_hypothetical body)
+      ; ("location", json_of_location location)
+      ]
 
 and json_of_harpoon_split_branch_label split_branch_label =
   match split_branch_label with
@@ -1085,26 +1048,24 @@ and json_of_harpoon_split_branch_label split_branch_label =
           ; ("location", json_of_location location)
           ]
 
-and json_of_harpoon_suffices_branch suffices_branch =
-  match suffices_branch with
-  | { Harpoon.Suffices_branch.goal; proof; location } ->
-      json_of_variant ~name:"Harpoon.Suffices_branch"
-        ~data:
-          [ ("goal", json_of_comp_typ goal)
-          ; ("proof", json_of_harpoon_proof proof)
-          ; ("location", json_of_location location)
-          ]
+and json_of_harpoon_suffices_branch
+    { Harpoon.Suffices_branch.goal; proof; location } =
+  json_of_variant ~name:"Harpoon.Suffices_branch"
+    ~data:
+      [ ("goal", json_of_comp_typ goal)
+      ; ("proof", json_of_harpoon_proof proof)
+      ; ("location", json_of_location location)
+      ]
 
-and json_of_harpoon_hypothetical hypothetical =
-  match hypothetical with
-  | { Harpoon.Hypothetical.meta_context; comp_context; proof; location } ->
-      json_of_variant ~name:"Harpoon.Hypothetical"
-        ~data:
-          [ ("meta_context", json_of_meta_context meta_context)
-          ; ("comp_context", json_of_comp_context comp_context)
-          ; ("proof", json_of_harpoon_proof proof)
-          ; ("location", json_of_location location)
-          ]
+and json_of_harpoon_hypothetical
+    { Harpoon.Hypothetical.meta_context; comp_context; proof; location } =
+  json_of_variant ~name:"Harpoon.Hypothetical"
+    ~data:
+      [ ("meta_context", json_of_meta_context meta_context)
+      ; ("comp_context", json_of_comp_context comp_context)
+      ; ("proof", json_of_harpoon_proof proof)
+      ; ("location", json_of_location location)
+      ]
 
 and json_of_harpoon_repl_command command =
   match command with
@@ -1594,11 +1555,13 @@ and json_of_signature_entry = function
           ; ("location", json_of_location location)
           ]
 
-and json_of_signature = function
-  | { Signature.global_pragmas; entries } ->
-      json_of_variant ~name:"Signature"
-        ~data:
-          [ ( "global_pragmas"
-            , json_of_list json_of_signature_global_pragma global_pragmas )
-          ; ("entries", json_of_list json_of_signature_entry entries)
-          ]
+and json_of_signature_file { Signature.global_pragmas; entries; location } =
+  `Assoc
+    [ ("location", json_of_location location)
+    ; ( "global_pragmas"
+      , json_of_list json_of_signature_global_pragma global_pragmas )
+    ; ("entries", json_of_list json_of_signature_entry entries)
+    ]
+
+and json_of_signature signature_files =
+  json_of_list1 json_of_signature_file signature_files

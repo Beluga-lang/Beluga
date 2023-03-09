@@ -2,7 +2,7 @@
  (name beluga_html)
  (package beluga)
  (modules :standard)
- (libraries uri omd support beluga_syntax)
+ (libraries uri str omd support beluga_syntax)
  (instrumentation
   (backend bisect_ppx --bisect-silent yes)))
 

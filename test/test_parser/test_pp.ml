@@ -46,69 +46,73 @@ let save_signature_files_json =
         ~filename:(json_filename signature_file.Synext.Signature.location)
         signature_file)
 
-let save_signature_file_pp x state =
+let save_signature_file_pp =
   let module Printing_state = Synext.Printing_state in
   let module Printer = Synext.Make_pretty_printer (Printing_state) in
   let open Printing_state in
   let open Printer in
-  Support.Files.with_pp_to_file (pp_filename x.Synext.Signature.location)
-    (fun ppf ->
-      run (set_formatter ppf &> pp_signature_file x ++ pp_newline) state)
-
-let save_signature_files_pp (List1.T (x, xs)) =
-  let module Printing_state = Synext.Printing_state in
-  let module Printer = Synext.Make_pretty_printer (Printing_state) in
-  let open Printing_state in
-  let open Printer in
-  let state, () =
+  fun x state ->
     Support.Files.with_pp_to_file (pp_filename x.Synext.Signature.location)
-      (fun ppf -> run (save_signature_file_pp x) (initial ppf))
-  in
-  eval (traverse_list_void save_signature_file_pp xs) state
+      (fun ppf ->
+        run (set_formatter ppf &> pp_signature_file x ++ pp_newline) state)
 
-let pp_and_parse_signature_files (List1.T (x, xs)) =
+let save_signature_files_pp =
+  let module Printing_state = Synext.Printing_state in
+  let module Printer = Synext.Make_pretty_printer (Printing_state) in
+  let open Printing_state in
+  let open Printer in
+  fun (List1.T (x, xs)) ->
+    let state, () =
+      Support.Files.with_pp_to_file (pp_filename x.Synext.Signature.location)
+        (fun ppf -> run (save_signature_file_pp x) (initial ppf))
+    in
+    eval (traverse_list_void save_signature_file_pp xs) state
+
+let pp_and_parse_signature_files =
   let module Printing_state = Synext.Printing_state in
   let module Parser_state = Beluga_parser.Simple.Parser_state in
   let module Disambiguation_state = Beluga_parser.Simple.Disambiguation_state
   in
   let module Printer = Synext.Make_pretty_printer (Printing_state) in
   let module Parser = Beluga_parser.Simple in
-  let buffer = Buffer.create 16 in
-  let printing_state =
-    Printing_state.initial (Format.formatter_of_buffer buffer)
-  in
-  let printing_state', () =
-    Printing_state.(
-      Printer.(run (pp_signature_file x ++ pp_newline) printing_state))
-  in
-  let parser_state, y =
-    Parser.run Parser.parse_only_signature_file
-      (Parser.make_initial_state_from_string
-         ~disambiguation_state:Disambiguation_state.initial
-         ~initial_location:Location.ghost ~input:(Buffer.contents buffer))
-  in
-  let _printing_state'', _parser_state', ys_rev =
-    List.fold_left
-      (fun (printing_state, parser_state, ys_rev) x ->
-        Buffer.clear buffer;
-        let printing_state', () =
-          Printing_state.(
-            Printer.(run (pp_signature_file x ++ pp_newline) printing_state))
-        in
-        let parser_state', () =
-          Parser.put_parser_state
-            (Parser.make_initial_parser_state_from_string
-               ~initial_location:Location.ghost (Buffer.contents buffer))
-            parser_state
-        in
-        let parser_state'', y =
-          Parser.run Parser.parse_only_signature_file parser_state'
-        in
-        (printing_state', parser_state'', y :: ys_rev))
-      (printing_state', parser_state, [])
-      xs
-  in
-  List1.from y (List.rev ys_rev)
+  fun (List1.T (x, xs)) ->
+    let buffer = Buffer.create 16 in
+    let printing_state =
+      Printing_state.initial (Format.formatter_of_buffer buffer)
+    in
+    let printing_state', () =
+      Printing_state.(
+        Printer.(run (pp_signature_file x ++ pp_newline) printing_state))
+    in
+    let parser_state, y =
+      Parser.run Parser.parse_only_signature_file
+        (Parser.make_initial_state_from_string
+           ~disambiguation_state:Disambiguation_state.initial
+           ~initial_location:Location.ghost ~input:(Buffer.contents buffer))
+    in
+    let _printing_state'', _parser_state', ys_rev =
+      List.fold_left
+        (fun (printing_state, parser_state, ys_rev) x ->
+          Buffer.clear buffer;
+          let printing_state', () =
+            Printing_state.(
+              Printer.(
+                run (pp_signature_file x ++ pp_newline) printing_state))
+          in
+          let parser_state', () =
+            Parser.put_parser_state
+              (Parser.make_initial_parser_state_from_string
+                 ~initial_location:Location.ghost (Buffer.contents buffer))
+              parser_state
+          in
+          let parser_state'', y =
+            Parser.run Parser.parse_only_signature_file parser_state'
+          in
+          (printing_state', parser_state'', y :: ys_rev))
+        (printing_state', parser_state, [])
+        xs
+    in
+    List1.from y (List.rev ys_rev)
 
 type entry =
   | File of string

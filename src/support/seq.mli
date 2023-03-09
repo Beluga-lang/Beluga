@@ -8,9 +8,6 @@ include module type of Stdlib.Seq
     sequence has finite length. *)
 val of_gen : (unit -> 'a option) -> 'a t
 
-(** [of_stream s] is the sequence obtained from the stream [s]. *)
-val of_stream : 'a Stream.t -> 'a t
-
 (** [of_list l] is the sequence obtained from the list [l]. *)
 val of_list : 'a list -> 'a t
 

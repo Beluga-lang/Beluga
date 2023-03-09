@@ -5,14 +5,6 @@ let rec of_gen g () =
   | Option.None -> Nil
   | Option.Some x -> Cons (x, of_gen g)
 
-let rec of_stream s () =
-  match
-    try Option.some (Stream.next s) with
-    | Stream.Failure -> Option.none
-  with
-  | Option.None -> Nil
-  | Option.Some x -> Cons (x, of_stream s)
-
 let of_list l =
   let rec go l () =
     match l with

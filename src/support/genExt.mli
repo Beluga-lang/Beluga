@@ -29,7 +29,7 @@ val line_generator : ?buffer_size:int -> char Gen.t -> string Gen.t
 
 (** Sequence a list of generators into one generator.
     Of course, if any generator in the sequence is infinite,
-    subsequence generators will never be pulled from.
+    subsequent generators will never be pulled from.
  *)
 val sequence : 'a Gen.t list -> 'a Gen.t
 

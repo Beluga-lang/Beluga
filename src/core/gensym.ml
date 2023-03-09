@@ -8,7 +8,7 @@
 
 (* Given an alphabet of strings as an array, creates a symbol
    generator over the alphabet *)
-let create_symbols (alphabet : string array) : string Stream.t =
+let create_symbols (alphabet : string array) : string Seq.t =
   let next i =
     let length = Array.length alphabet in
     let symbol = Array.get alphabet (i mod length)
@@ -34,9 +34,9 @@ let create_symbols (alphabet : string array) : string Stream.t =
        generate a unique symbol. *)
     (* then Some (symbol ^ "%")
        else Some (symbol ^ suffix ^ "%") *)
-    Some (symbol ^ suffix)
+    symbol ^ suffix
   in
-  Stream.from next
+  Seq.map next (Seq.ints 0)
 
 module type GENSYM = sig
   val gensym : unit -> string
@@ -55,11 +55,21 @@ module VarData : GENSYM = struct
 
   let symbols = ref (create ())
 
-  let gensym () = Stream.next !symbols
+  let gensym () =
+    match !symbols () with
+    | Seq.Cons (x, xs) ->
+      symbols := xs;
+      x
+    | Seq.Nil -> Error.violation "Unexpectedly exhausted the symbol sequence"
 
   let name_gensym s =
-    let symbols = create_symbols [| s |] in
-    (fun () -> Stream.next symbols)
+    let symbols = ref (create_symbols [| s |]) in
+    fun () ->
+      match !symbols () with
+      | Seq.Cons (x, xs) ->
+        symbols := xs;
+        x
+      | Seq.Nil -> Error.violation "Unexpectedly exhausted the symbol sequence"
 
   let reset () =
     symbols := create ()
@@ -77,11 +87,21 @@ module MVarData : GENSYM = struct
 
   let symbols = ref (create ())
 
-  let gensym () = Stream.next !symbols
+  let gensym () =
+    match !symbols () with
+    | Seq.Cons (x, xs) ->
+      symbols := xs;
+      x
+    | Seq.Nil -> Error.violation "Unexpectedly exhausted the symbol sequence"
 
   let name_gensym s =
-    let symbols = create_symbols [| s |] in
-    (fun () -> Stream.next symbols)
+    let symbols = ref (create_symbols [| s |]) in
+    fun () ->
+      match !symbols () with
+      | Seq.Cons (x, xs) ->
+        symbols := xs;
+        x
+      | Seq.Nil -> Error.violation "Unexpectedly exhausted the symbol sequence"
 
   let reset () =
     symbols := create ()

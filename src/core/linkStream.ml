@@ -17,22 +17,6 @@ let of_gen (g : unit -> 'a option) : 'a t =
   in
   go 0
 
-let of_stream (s : 'a Stream.t) : 'a t =
-  let rec go n =
-    n,
-    lazy
-      begin match
-        try
-          Some (Stream.next s)
-        with
-        | Stream.Failure -> None
-      with
-      | None -> Nil
-      | Some x -> Cons (x, go (n + 1))
-      end
-  in
-  go 0
-
 let rec iter f s =
   match Pair.snd s with
   | lazy Nil -> ()

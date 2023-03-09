@@ -37,9 +37,6 @@
 
 type 'a t
 
-(** Converts a Stream into a LinkStream. *)
-val of_stream : 'a Stream.t -> 'a t
-
 (** Converts a Gen into a LinkStream. *)
 val of_gen : 'a Gen.t -> 'a t
 

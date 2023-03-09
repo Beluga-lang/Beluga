@@ -1,4 +1,4 @@
-val create_symbols : string array -> string Stream.t
+val create_symbols : string array -> string Seq.t
 
 
 (** Functionality for generating unique symbols *)

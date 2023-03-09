@@ -22,7 +22,7 @@ depends: [
   "base-threads" {= "base"}
   "base-unix" {= "base"}
   "bisect_ppx" {= "2.8.1" & with-test}
-  "camlp-streams" {= "5.0.1"}
+  "camlp-streams" {= "5.0.1" & with-doc}
   "cmdliner" {= "1.1.1" & with-test}
   "cppo" {= "1.6.9"}
   "csexp" {= "1.5.1"}

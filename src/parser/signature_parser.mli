@@ -5,7 +5,7 @@ module type SIGNATURE_PARSER = sig
   (** @closed *)
   include COMMON_PARSER
 
-  val signature : Synprs.signature t
+  val signature_file : Synprs.signature_file t
 
   val signature_global_pragma : Synprs.signature_global_pragma t
 

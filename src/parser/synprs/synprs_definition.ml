@@ -933,11 +933,14 @@ module Signature = struct
   end =
     Entry
 
-  (** Parsed Beluga project *)
-  type t =
-    { global_pragmas : Global_pragma.t List.t
+  type signature_file =
+    { location : Location.t
+    ; global_pragmas : Global_pragma.t List.t
     ; entries : Entry.t List.t
     }
+
+  (** Parsed Beluga project *)
+  type t = signature_file List1.t
 end
 
 (** {1 Type Aliases} *)
@@ -1029,6 +1032,9 @@ type signature_declaration = Signature.Declaration.t
 
 (** @canonical Synprs.signature_entry *)
 type signature_entry = Signature.Entry.t
+
+(** @canonical Synprs.signature_file *)
+type signature_file = Signature.signature_file
 
 (** @canonical Synprs.signature *)
 type signature = Signature.t

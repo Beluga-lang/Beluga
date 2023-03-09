@@ -29,6 +29,9 @@ module type SIGNATURE_DISAMBIGUATION = sig
   val disambiguate_declaration :
     Synprs.signature_declaration -> Synext.signature_declaration t
 
+  val disambiguate_signature_file :
+    Synprs.signature_file -> Synext.signature_file t
+
   val disambiguate_signature : Synprs.signature -> Synext.signature t
 end
 

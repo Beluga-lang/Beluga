@@ -66,6 +66,9 @@ module type SIGNATURE_DISAMBIGUATION = sig
   val disambiguate_declaration :
     Synprs.signature_declaration -> Synext.signature_declaration t
 
+  val disambiguate_signature_file :
+    Synprs.signature_file -> Synext.signature_file t
+
   val disambiguate_signature : Synprs.signature -> Synext.signature t
 end
 
@@ -572,28 +575,18 @@ struct
     | Synprs.Signature.Entry.Raw_comment { location; content } ->
         return (Synext.Signature.Entry.Comment { location; content })
 
-  (** [disambiguate_signature state signature] is [state', signature'], where
-      [signature'] is [signature] disambiguated with respect to [state], and
-      [state'] is [state] with all the declarations in [signature']
-      applied/added to it.
+  and disambiguate_signature_file
+      { Synprs.Signature.location; global_pragmas; entries } =
+    let* global_pragmas' =
+      traverse_list disambiguate_global_pragma global_pragmas
+    in
+    let* entries' = traverse_list disambiguate_entry entries in
+    return
+      { Synext.Signature.location
+      ; global_pragmas = global_pragmas'
+      ; entries = entries'
+      }
 
-      - When disambiguating the signature in the first file of a Beluga
-        project, use {!empty} as initial disambiguation state.
-      - When disambiguating a signature spread across multiple files, make
-        sure to disambiguate the files in the order configured by the
-        end-user, and pass [state'] to subsequent calls to
-        {!disambiguate_signature}.
-
-      The very last [state'] after disambiguating an entire Beluga project
-      may be discarded. *)
-  and disambiguate_signature = function
-    | { Synprs.Signature.global_pragmas; entries } ->
-        let* global_pragmas' =
-          traverse_list disambiguate_global_pragma global_pragmas
-        in
-        let* entries' = traverse_list disambiguate_entry entries in
-        return
-          { Synext.Signature.global_pragmas = global_pragmas'
-          ; entries = entries'
-          }
+  and disambiguate_signature signature_files =
+    traverse_list1 disambiguate_signature_file signature_files
 end

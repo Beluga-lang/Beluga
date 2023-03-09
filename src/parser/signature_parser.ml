@@ -6,7 +6,7 @@ module type SIGNATURE_PARSER = sig
   (** @closed *)
   include COMMON_PARSER
 
-  val signature : Synprs.signature t
+  val signature_file : Synprs.signature_file t
 
   val signature_global_pragma : Synprs.signature_global_pragma t
 
@@ -174,8 +174,6 @@ module Make
      eta-expansion or using the fixpoint combinator for defining mutually
      recursive parsers. *)
   module rec Signature_parsers : sig
-    val signature : Synprs.signature t
-
     val signature_global_pragma : Synprs.signature_global_pragma t
 
     val signature_entry : Synprs.signature_entry t
@@ -581,14 +579,7 @@ module Make
         |> labelled "Block comment"
       in
       choice [ declaration; pragma; comment ]
-
-    let signature =
-      let* global_pragmas = many signature_global_pragma in
-      let* entries = many signature_entry in
-      return { Synprs.Signature.global_pragmas; entries }
   end
-
-  let signature = Signature_parsers.signature
 
   let signature_global_pragma = Signature_parsers.signature_global_pragma
 
@@ -606,4 +597,9 @@ module Make
     Signature_parsers.numeric_totality_declaration
 
   let totality_declaration = Signature_parsers.totality_declaration
+
+  let signature_file =
+    seq2 (many signature_global_pragma) (many signature_entry) |> span
+    $> fun (location, (global_pragmas, entries)) ->
+    { Synprs.Signature.location; global_pragmas; entries }
 end

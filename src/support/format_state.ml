@@ -5,6 +5,8 @@ module type S = sig
 
   val pp_flush : Unit.t t
 
+  val pp_newline : Unit.t t
+
   val pp_nop : Unit.t t
 
   val pp_cut : Unit.t t
@@ -71,6 +73,11 @@ end) : S with type state = S.state = struct
   let pp_flush =
     with_formatter (fun ppf ->
         pp_print_flush ppf ();
+        nop)
+
+  let pp_newline =
+    with_formatter (fun ppf ->
+        pp_print_newline ppf ();
         nop)
 
   let pp_cut =

@@ -182,9 +182,9 @@ struct
     parse_and_disambiguate ~parser:(only comp_expression)
       ~disambiguator:disambiguate_comp_expression
 
-  let parse_only_signature =
-    parse_and_disambiguate ~parser:(only signature)
-      ~disambiguator:disambiguate_signature
+  let parse_only_signature_file =
+    parse_and_disambiguate ~parser:(only signature_file)
+      ~disambiguator:disambiguate_signature_file
 end
 
 module Located_token = struct
@@ -230,37 +230,17 @@ module Simple = struct
     In_channel.with_open_bin filename (fun in_channel ->
         let initial_location = Location.initial filename in
         let _parser_state', signature =
-          run_exn (only signature)
+          run_exn (only signature_file)
             (make_initial_parser_state_from_channel ~initial_location
                in_channel)
         in
         signature)
 
-  let read_signature_entries filename =
-    In_channel.with_open_bin filename (fun in_channel ->
-        let initial_location = Location.initial filename in
-        let _parser_state', entries =
-          run_exn
-            (only (many signature_entry))
-            (make_initial_parser_state_from_channel ~initial_location
-               in_channel)
-        in
-        entries)
-
   let parse_multi_file_signature files =
-    let (List1.T (x, xs)) = files in
     let signature =
       (* For OCaml >= 5, spawn a parallel domain for each call to
-         {!read_signature} and {!read_signature_entries}, then join those
-         domains before [List.flatten (x_entries :: xs_entries)] *)
-      let signature = read_signature x in
-      let xs_entries = List.map read_signature_entries xs in
-      let { Synprs.Signature.global_pragmas; entries = x_entries } =
-        signature
-      in
-      let entries = List.flatten (x_entries :: xs_entries) in
-      let signature' = { Synprs.Signature.global_pragmas; entries } in
-      signature'
+         {!read_signature}] *)
+      List1.map read_signature files
     in
     let _disambiguation_state', signature' =
       disambiguate_signature signature Disambiguation_state.initial

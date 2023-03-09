@@ -2670,8 +2670,8 @@ module Make (Html_state : HTML_PRINTING_STATE) :
         let html = render_markdown location content in
         pp_string html
 
-  and pp_signature signature =
-    let { Signature.global_pragmas; entries } = signature in
+  and pp_signature_file signature_file =
+    let { Signature.global_pragmas; entries; _ } = signature_file in
     let pp_global_pragmas_opt =
       match global_pragmas with
       | [] -> pp_nop
@@ -2719,6 +2719,11 @@ module Make (Html_state : HTML_PRINTING_STATE) :
         `Comment (List1.from x comment_entries)
         :: group_signature_entries rest
     | [] -> []
+
+  and pp_signature signature =
+    pp_list1
+      ~sep:(pp_double_cut ++ pp_as 0 "<hr>" ++ pp_double_cut)
+      pp_signature_file signature
 end
 
 let () =

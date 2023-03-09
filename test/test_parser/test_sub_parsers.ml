@@ -168,14 +168,6 @@ let test_comp_expression =
     Parser.parse_only_comp_expression
     Util.Synext_json.json_of_comp_expression
 
-let test_signature =
-  test_parser ~fixtures_directory:"fixtures"
-    ~disambiguation_state_configuration_basename:"disambiguation_state.json"
-    ~ok_inputs_basename:"signatures_ok.input.bel"
-    ~ok_outputs_basename:"signatures_ok.output.json"
-    ~error_inputs_basename:"signatures_error.input.bel"
-    Parser.parse_only_signature Util.Synext_json.json_of_signature
-
 let tests =
   (* Set the current working directory to the directory containing this
      executable file *)

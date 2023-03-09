@@ -30,8 +30,9 @@ let with_pp_to_file filename f =
   let out_channel = Out_channel.open_bin filename in
   try
     let ppf = Format.formatter_of_out_channel out_channel in
-    f ppf;
-    Out_channel.close out_channel
+    let x = f ppf in
+    Out_channel.close out_channel;
+    x
   with
   | cause ->
       Out_channel.close_noerr out_channel;

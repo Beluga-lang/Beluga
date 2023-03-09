@@ -1,5 +1,0 @@
-% The following is a list of `;;`-terminated syntactically valid signatures
-% with respect to the disambiguation state `disambiguation_state.json`.
-% The file `signatures_ok.output.json` of serialized ASTs corresponding to those
-% signatures is automatically generated during development, but not during
-% continuous integration.

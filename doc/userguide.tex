@@ -1,7 +1,13 @@
 \documentclass[11pt]{article}
+
+\usepackage[utf8x]{inputenc}
+\usepackage[T1]{fontenc}
+
 \newcommand{\shellcmd}[1]{\\\indent\texttt{\# #1}\\}
+
 \usepackage[margin=1.5in]{geometry}
 \usepackage{listings}
+
 \begin{document}
 \title{Beluga Reference Guide}
 \author{}
@@ -15,10 +21,11 @@
 The following characters are reserved and cannot be used anywhere in ordinary identifiers.
 \begin{center}
 \begin{tabular}{ | l r | l r | l r }
-  . & period & \% & percent sign &  ( )  & parentheses \\
- , & comma & $\vert$ & vertical bar & [ ] & brackets\\
-: & colon &  " & quotation mark  & \{ \} & braces  \\
-; & semicolon & $\backslash$ & backslash  & $< >$ & chevrons  \\
+    . & period    & \%           & percent sign   & ( )   & parentheses \\
+    , & comma     & $\vert$      & vertical bar   & [ ]   & brackets    \\
+    : & colon     & "            & quotation mark & \{ \} & braces      \\
+    ; & semicolon & $\backslash$ & backslash      & $< >$ & chevrons    \\
+    ⊢ & turnstile &              &                &       &
 \end{tabular}
 \end{center}
 
@@ -26,14 +33,13 @@ The following characters are reserved and cannot be used anywhere in ordinary id
 The following characters can be used in addition to letters and integers anywhere in names and identifiers.
 \begin{center}
 \begin{tabular}{ | l r | l r | l r }
- ! & exclamation mark & \$ & dollar sign & \& & ampersand\\
-' & apostrophe &  * & asterisk  & + & addition \\
-- & hyphen & / & forward slash  & = & equality  \\
-@ & at sign & \^{} & caret  &  \_  & underscore  \\
-\~{} & tilde &\\
+    ! & exclamation mark & \~{} & tilde         & \& & ampersand  \\
+    ' & apostrophe       & *    & asterisk      & +  & addition   \\
+    - & hyphen           & /    & forward slash & =  & equality   \\
+    @ & at sign          & \^{} & caret         & \_ & underscore
 \end{tabular}
 \end{center}
-Note that while the number sign (\#) is not a reserved  character strictly speaking and may be used in identifiers, it cannot be the first character.
+Note that while the number sign (\verb+#+), the dollar sign (\verb+$+) and the question mark (\verb+?+) are not reserved characters strictly speaking and may be used in identifiers, they cannot be the first character since they are reserved for parameter variables, substitution variables and labelled holes respectively.
 
 %-------------------------------------------------------------------------------------------------------------------------------
 
@@ -42,36 +48,42 @@ The following are Beluga keywords and cannot be used otherwise.
 \begin{center}
 \renewcommand{\arraystretch}{2}
 \begin{tabular}{ c c c c c c }
-.. & -$>$ & $<$-  & =$>$ &  ==  & :: \\
-FN & and & block & Bool & case & fn \\
-else & if & impossible & in & let & mlam \\
-of & rec & schema & some & then & type \\
-module & ttrue & ffalse & ? & struct &  \\
+    and         & block      & case     & fn     & else    & if        \\
+    impossible  & in         & let      & mlam   & of      & rec       \\
+    schema      & some       & then     & module & struct  & end       \\
+    trust       & total      & type     & ctype  & prop    & inductive \\
+    coinductive & stratified & LF       & fun    & typedef & proof     \\
+    by          & as         & suffices & toshow &         &
 \end{tabular}
 \end{center}
 
 \subsection{Pragmas}
-Pragmas provide a means of setting compilation behavior within a program. Each begins with a pair of dashes \texttt{--}. \\
+
+Pragmas provide a means of setting compilation behavior within a program.
+Each begins with a pair of dashes \verb+--+.
 
 \begin{tabular}{ | l l}
-\texttt{-{}-coverage} & Initiate coverage check \\
-\texttt{-{}-warncoverage} & Enable coverage check warnings \\
-\texttt{-{}-nostrengthen} & Disable automatic meta-variable strengthening \\
-\texttt{-{}-infix} & Create an infix operator from a two-argument constructor \\
-\texttt{-{}-prefix} & Create a prefix operator from a two-argument constructor \\
-\texttt{-{}-assoc} & Set the default associativity \\
-\texttt{-{}-name} & Set name preference \\
-\texttt{-{}-abbrev} & Set module abbreviation \\
-\texttt{-{}-not} & Guard an expression from type-checking\\
-\texttt{-{}-open} & Open a module\\
+    \verb+--coverage+     & Initiate coverage check                                  \\
+    \verb+--warncoverage+ & Enable coverage check warnings                           \\
+    \verb+--nostrengthen+ & Disable automatic meta-variable strengthening            \\
+    \verb+--infix+        & Create an infix operator from a two-argument constructor \\
+    \verb+--prefix+       & Create a prefix operator from a two-argument constructor \\
+    \verb+--assoc+        & Set the default associativity                            \\
+    \verb+--name+         & Set name preference                                      \\
+    \verb+--abbrev+       & Set module abbreviation                                  \\
+    \verb+--not+          & Guard an expression from type-checking                   \\
+    \verb+--open+         & Open a module
 \end{tabular}
 
 
 \subsection{Comments}
-Beluga supports single-line and multi-line comments using \texttt{\%} and \texttt{\%\{} $\ldots$ \texttt{\}\%}, respectively. Both can contain any character.
+
+Beluga supports single-line and multi-line comments using \verb+%+ and \verb+%{+ $\ldots$ \verb+}%+, respectively.
+Both can contain any character.
+
 \begin{center}
 \begin{tabular}{ | l | r }
-  \texttt{\%} \textit{this is a single-line comment} &  \texttt{\%\{} \textit{this is a multi-line comment}  \texttt{\}\%} \\
+  \verb+%+ \textit{this is a single-line comment} &  \verb+%{+ \textit{this is a multi-line comment}  \verb+}%+ \\
 \end{tabular}
 \end{center}
 
@@ -80,35 +92,34 @@ Beluga supports single-line and multi-line comments using \texttt{\%} and \textt
 \subsection{Command Options}
 The Beluga executable accepts the following options from the command line.\\
 
-\begin{tabular}{ | l l }
-+d & Turn all on -- note that in interactive mode debugging information is piped to 'debug.out' \\
-+ext &  Print external syntax before reconstruction \\ \\
--s=debruijn & Print substitutions in deBruijn--ish style (when debugging Beluga) \\
-+implicit & Print implicit arguments \\
-+t & Print timing information \\
-+tfile & Print timing information to file "time.txt" \\
-+printSubord & Print subordination relations (experimental) \\
--print & Turn printing off \\
-+print & Turn printing on \\
--width nnn & Set output width to nnn (default 86, min 40) \\
--logic & Turn off logic programming engine \\
-+test & Make output suitable for test harness \\
-+realNames & Print holes using real names\\
-+html &  Generate an html page of the source code using default CSS \\
-+htmltest & Run HTML mode on file, but do not create final HTML page \\
-+sexp & Dump the elaborated code using S-expressions \\
--css & Generate the html of the source code without CSS or <body> tags -- for inserting HTML into a webpage \\
-+cssfile $<$filepath$>$ & Specify css file to link to from generated HTML page\\
-+annot & Generate a .annot file for use in emacs\\
-+locs & Output location information (for testing) \\
--I [beli-options] &  Invoke interactive (Beli) mode with option path to interactive mode (default is bin/beli)\\
-&  beli-options:\\
-\begin{tabular}{ l l }
-	-emacs & mode used to interact with emacs (not recommended in commandline) \\
-	 -readLine & disable readline support using rlwrap
+\begin{tabular}{ | p{0.2\linewidth} p{0.8\linewidth} }
+    +d                      & Turn all on -- note that in interactive mode debugging information is piped to 'debug.out'           \\
+    +ext                    & Print external syntax before reconstruction                                                          \\
+    -s=debruijn             & Print substitutions in deBruijn--ish style (when debugging Beluga)                                   \\
+    +implicit               & Print implicit arguments                                                                             \\
+    +t                      & Print timing information                                                                             \\
+    +tfile                  & Print timing information to file "time.txt"                                                          \\
+    +printSubord            & Print subordination relations (experimental)                                                         \\
+    -print                  & Turn printing off                                                                                    \\
+    +print                  & Turn printing on                                                                                     \\
+    -width nnn              & Set output width to nnn (default 86, min 40)                                                         \\
+    -logic                  & Turn off logic programming engine                                                                    \\
+    +test                   & Make output suitable for test harness                                                                \\
+    +realNames              & Print holes using real names                                                                         \\
+    +html                   & Generate an html page of the source code using default CSS                                           \\
+    +htmltest               & Run HTML mode on file, but do not create final HTML page                                             \\
+    +sexp                   & Dump the elaborated code using S-expressions                                                         \\
+    -css                    & Generate the html of the source code without CSS or <body> tags -- for inserting HTML into a webpage \\
+    +cssfile $<$filepath$>$ & Specify css file to link to from generated HTML page                                                 \\
+    +annot                  & Generate a .annot file for use in emacs                                                              \\
+    +locs                   & Output location information (for testing)                                                            \\
+    -I [beli-options]       & Invoke interactive (Beli) mode with option path to interactive mode (default is bin/beli)\\
+                            &  beli-options:
+                            \begin{tabular}{ p{0.2\linewidth} p{0.6\linewidth} }
+                                -emacs    & mode used to interact with emacs (not recommended in commandline) \\
+                                -readLine & disable readline support using rlwrap
+                            \end{tabular}
 \end{tabular}
-\end{tabular}
-
 
 %-------------------------------------------------------------------------------------------------------------------------------
 %-------------------------------------------------------------------------------------------------------------------------------
@@ -120,7 +131,8 @@ Beluga is a two-level system:
 \item the computation-level, supporting programming with LF specifications
 \end{itemize}
 
-This section describes both levels in EBNF\footnote{Extended Backus–Naur Form: a family of metasyntax notations to describe formal languages} metasyntax. In particular:
+This section describes both levels in EBNF\footnote{Extended Backus–Naur Form: a family of metasyntax notations to describe formal languages} metasyntax.
+In particular:
 \begin{itemize}
 \item $\{a\}$ represents repeat production $a$ zero or more times
 \item $[a]$ represents optionally apply production $a$
@@ -136,9 +148,12 @@ sig ::= { lf_decl         (* LF constant declaraction *)
 %-------------------------------------------------------------------------------------------------------------------------------
 
 \subsection{LF-level}
-Beluga's first-level implements the logical framework LF for defining logics and representing proofs and derivations using higher order abstract syntax (HOAS). Specifically, a formal system is represented as a \textit{\textbf{signature}}, a series of declarations of type families and the constants which inhabit them. The signature establishes the system's syntax, judgments, and inference rules.
+Beluga's first-level implements the logical framework LF for defining logics and representing proofs and derivations using higher order abstract syntax (HOAS).
+Specifically, a formal system is represented as a \textit{\textbf{signature}}, a series of declarations of type families and the constants which inhabit them.
+The signature establishes the system's syntax, judgments, and inference rules.
 
-There are two ways of making LF declarations. The first follows closely the syntax used by the Twelf system whereas the second is akin to Standard ML datatype declarations.
+There are two ways of making LF declarations.
+The first follows closely the syntax used by the Twelf system whereas the second is akin to Standard ML datatype declarations.
 
 \begin{verbatim}
 lf_decl ::= lf_datatype_decl    (* new syntax for LF signatures *)
@@ -151,8 +166,8 @@ lf_decl ::= lf_datatype_decl    (* new syntax for LF signatures *)
 infix_prg ::=  lf_decl --infix id [assoc] nat "."
 
 assoc ::= none
-	   | left
-	   | right
+       | left
+       | right
 
 op_arrow ::= "->" | "<-"        (* A <- B same as B -> A *)
 
@@ -173,7 +188,8 @@ term ::= (id | ID)         (* variable x or constant a or c *)
        | term term         (* M N *)
        | _                 (* hole, inferred by term reconstruction *)
 \end{verbatim}
-The constructs \texttt{\{x:U\} V} and \texttt{x |- V} bind the identifier \texttt{x} in \texttt{V} which may shadow other constants or bound variables. As usual in type theory, \texttt{U -> V} is treated as an abbreviation for \texttt{\{x:U\}V} where \texttt{x} does not appear in \texttt{V}.
+The constructs \verb+{x:U} V+ and \verb+x |- V+ bind the identifier \verb+x+ in \verb+V+ which may shadow other constants or bound variables.
+As usual in type theory, \verb+U -> V+ is treated as an abbreviation for \verb+{x:U} V+ where \verb+x+ does not appear in \verb+V+.
 
 In the order of precedence, we disambiguate the syntax and impose restrictions as follows:
 \begin{itemize}
@@ -183,9 +199,11 @@ In the order of precedence, we disambiguate the syntax and impose restrictions a
 \item\lstinline!{}! and \lstinline!\! are weak prefix operators
 \item Bound variables and constants must be written with lower-case letters
 \item Free variables can be written with upper-case letters or lower case letters; but we use the convention to write them with upper-case letters
-\item All terms need to be written in beta-normal form, i.e. no redeces can occur in terms. However, variables do not need to be eta-expanded.
+\item All terms need to be written in beta-normal form, i.e. no redeces can occur in terms.
+However, variables do not need to be eta-expanded.
 \end{itemize}
-The following examples illustrate which terms Beluga will parse. For example, the following are parsed identically using the old style LF syntax:
+The following examples illustrate which terms Beluga will parse.
+For example, the following are parsed identically using the old style LF syntax:
 
 \begin{verbatim}
 d : a <- b <- {x:term} c x -> p x.
@@ -221,8 +239,8 @@ datatype foo: {x:A} p x -> type =
 
 Other differences between the Twelf system include:
 \begin{itemize}
-\item Lambda-abstractions cannot be annotated with the type of the input. Writing \texttt{\\x:nat.x} is illegal in Beluga.
-\item Omitting the type in a Pi-type is illegal in Beluga. One cannot simply write \texttt{(\{x\}foo x T) -> foo E T'.} . One must give the type of the variable \texttt{x}.
+\item Lambda-abstractions cannot be annotated with the type of the input. Writing \verb+\x:nat.x+ is illegal in Beluga.
+\item Omitting the type in a Pi-type is illegal in Beluga. One cannot simply write \verb+({x} foo x T) -> foo E T'+. One must give the type of the variable \verb+x+.
 \end{itemize}
 
 
@@ -230,16 +248,21 @@ Other differences between the Twelf system include:
 %-------------------------------------------------------------------------------------------------------------------------------
 
 \subsection{Computation-level}
-The computation-level provides a dependently typed functional language to manipulate and analyze object-level data. A term is passed along with its context as a \textbf{\textit{contextual object}}, enclosed between brackets \texttt{[ ]} to indicate that no further computations are required to reach a closed value. \textbf{\textit{Contextual variables}} and \textbf{\textit{projections}} on bound variables embed the term into computations. Context dependency is captured by \textit{\textbf{contextual types}}, taken as base types. Contexts themselves are classified by \textit{\textbf{schemas}} which are analogous to types with respect to terms. \textit{\textbf{Inductive datatypes}} define context relationships such as strengthening and weakening.
+The computation-level provides a dependently typed functional language to manipulate and analyze object-level data.
+A term is passed along with its context as a \textbf{\textit{contextual object}}, enclosed between brackets \verb+[ ]+ to indicate that no further computations are required to reach a closed value.
+\textbf{\textit{Contextual variables}} and \textbf{\textit{projections}} on bound variables embed the term into computations.
+Context dependency is captured by \textit{\textbf{contextual types}}, taken as base types.
+Contexts themselves are classified by \textit{\textbf{schemas}} which are analogous to types with respect to terms.
+\textit{\textbf{Inductive datatypes}} define context relationships such as strengthening and weakening.
 
 Beluga leverages higher order syntax to support:
 \begin{itemize}
-\item tuples \texttt{(T1 * T2)} (introduction for product types)
-\item function types \texttt{T1 -> T2}
-\item universal quantification ($\forall$ \texttt{x : T})
-\item nameless function (\texttt{fn x => e}) (introduction for function types)
-\item abstraction ($\lambda$ \texttt{X => e}) (introduction for universal types)
-\item recursion (\texttt{rec f => e})
+\item tuples \verb+(T1 * T2)+ (introduction for product types)
+\item function types \verb+T1 -> T2+
+\item universal quantification ($\forall$ \verb+x : T+)
+\item nameless function (\verb+fn x => e+) (introduction for function types)
+\item abstraction ($\lambda$ \verb+X => e+) (introduction for universal types)
+\item recursion (\verb+rec f => e+)
 \item case-analysis
 \end{itemize}
 Unlike Twelf, Beluga permits nesting of quantifiers and implications and supports higher-order functions.
@@ -340,11 +363,8 @@ sigma ::= ^                    (* empty substitution *)
 
 \end{verbatim}
 
-Note that Beluga restricts context variables to always occur on their
-own (i.e. sigma is always empty). Moreover, if \verb+sigma+ is the
-identity substitution, then it may be omitted and reconstruction will
-infer it, i.e. writing \verb+[g |- X[..] ]+ is
-equivalent to writing \verb+[g |- X]+.
+Note that Beluga restricts context variables to always occur on their own (i.e. sigma is always empty).
+Moreover, if \verb+sigma+ is the identity substitution, then it may be omitted and reconstruction will infer it, i.e. writing \verb+[g |- X[..] ]+ is equivalent to writing \verb+[g |- X]+.
 
 In order of precedence, Beluga disambiguates the syntax and imposes restrictions as follows.
 \begin{itemize}
@@ -352,7 +372,7 @@ In order of precedence, Beluga disambiguates the syntax and imposes restrictions
 \item Bound variables and constants must be written with lower-case letters
 \item Free meta-variables must be written with upper-case letters
 \item All LF terms need to be written in $\beta$-normal form, i.e. no redeces can occur in terms. \textit{LF terms occurring as part of a contextual object must be written in eta-expanded form.} For example, one must write \verb+[g |- lam \x.E]+ which is equivalent to
-  \verb+[g |- lam \x.E[..,x] ]+ whereas \texttt{[g |- lam E]} is currently rejected.
+  \verb+[g |- lam \x.E[..,x] ]+ whereas \verb+[g |- lam E]+ is currently rejected.
 \end{itemize}
 
 %-------------------------------------------------------------------------------------------------------------------------------
@@ -360,14 +380,24 @@ In order of precedence, Beluga disambiguates the syntax and imposes restrictions
 
 \section{Syntax}
 
-Recall that Beluga is a two-level system. The LF-level comprises the object layer or data layer. The computation-level makes up Beluga's functional programming language for reasoning about LF data.
+Recall that Beluga is a two-level system.
+The LF-level comprises the object layer or data layer.
+The computation-level makes up Beluga's functional programming language for reasoning about LF data.
 
 \subsection{LF Declarations}
-The LF signature defines a deductive system at the object level with constants declared using higher-order abstract syntax. Data is defined via data-level types, introduced with the \texttt{type} keyword. Constructors result in a particular base type. Data-level types and constructors are analogous to kinds and types in LF type theory. Dependent data-level types which take arguments correspond to type judgments whose constructors are inference rules.
 
-All LF constants take lower-case identifiers. Meta-variables within constants are upper-case, replacing free terms. Constructors can quantify over bound variables, written right after the declaration as \texttt{\{id : id\}} where the first identifier represents the variable and the second annotates its type. \\
+The LF signature defines a deductive system at the object level with constants declared using higher-order abstract syntax.
+Data is defined via data-level types, introduced with the \verb+type+ keyword.
+Constructors result in a particular base type.
+Data-level types and constructors are analogous to kinds and types in LF type theory.
+Dependent data-level types which take arguments correspond to type judgments whose constructors are inference rules.
 
-The grammar describes two styles of LF declaration. Experienced users will be accustomed to the Twelf syntax used below to represent the untyped lambda calculus.
+All LF constants take lower-case identifiers.
+Meta-variables within constants are upper-case, replacing free terms.
+Constructors can quantify over bound variables, written right after the declaration as \verb+{id : id}+ where the first identifier represents the variable and the second annotates its type.
+
+The grammar describes two styles of LF declaration.
+Experienced users will be accustomed to the Twelf syntax used below to represent the untyped lambda calculus.
 \begin{verbatim}
 term : type.
 app : term -> term -> term.
@@ -387,13 +417,19 @@ LF term : type =
 \end{verbatim}
 
 \subsection{Operators}
-A type constructor which takes two arguments can be declared an infix operator using the \texttt{-{}-infix} pragma. The \texttt{-{}-infix} pragma is proceeded by the identifier of the operator which must match the identifier of the LF declaration to which it is applied. The association is specified next to be left, right, or non-associative. Operator precedence is specified last as a natural number, delineated from largest to smallest such that the largest number takes the highest precedence.
+A type constructor which takes two arguments can be declared an infix operator using the \verb+--infix+ pragma.
+The \verb+--infix+ pragma is proceeded by the identifier of the operator which must match the identifier of the LF declaration to which it is applied.
+The association is specified next to be left, right, or non-associative.
+Operator precedence is specified last as a natural number, delineated from largest to smallest such that the largest number takes the highest precedence.
 
-The precedence of ordinary prefix operators can be adjusted using the \texttt{-{}-prefix} pragma which takes all the same arguments as \texttt{-{}-infix} except associativity. Prefix operators default to the low precedence of -1 if none is specified.
+The precedence of ordinary prefix operators can be adjusted using the \verb+--prefix+ pragma which takes all the same arguments as \verb+--infix+ except associativity.
+Prefix operators default to the low precedence of -1 if none is specified.
 
-The operator is treated as non-associative by default if no associativity is stated explicitly. The default associativity can be altered with the \texttt{-{}-assoc} pragma.
+The operator is treated as non-associative by default if no associativity is stated explicitly.
+The default associativity can be altered with the \verb+--assoc+ pragma.
 
-\textbf{Example:} A user may wish to declare \texttt{app} and \texttt{lam} as infix operators while ensuring that \texttt{red} has higher precedence. Seeing as no associativity was listed, \texttt{lam} takes the default associativity, here defined as \texttt{right}.
+\textbf{Example:} A user may wish to declare \verb+app+ and \verb+lam+ as infix operators while ensuring that \verb+red+ has higher precedence.
+Seeing as no associativity was listed, \verb+lam+ takes the default associativity, here defined as \verb+right+.
 \begin{verbatim}
 --assoc right
 
@@ -403,9 +439,15 @@ red: term -> term --prefix red 2.
 \end{verbatim}
 
 \subsection{Schemas and Context Variables}
-A schema, declared with the \texttt{schema} keyword, consists of \textbf{\textit{blocks}} of atomic assumptions. The \texttt{block} keyword introduces a comma-separated list of atoms. The first assumption is always a type judgment of a free variable, followed by terms which are well-typed under that judgment. Schemas comprised of several blocks separated by the plus sign \texttt{+} denote alternating assumptions.
+A schema, declared with the \verb+schema+ keyword, consists of \textbf{\textit{blocks}} of atomic assumptions.
+The \verb+block+ keyword introduces a comma-separated list of atoms.
+The first assumption is always a type judgment of a free variable, followed by terms which are well-typed under that judgment.
+Schemas comprised of several blocks separated by the plus sign \verb+++ denote alternating assumptions.
 
-Schemas classify terms as types classify terms. A context \texttt{g} has the schema \texttt{sCtx} if every declaration in \texttt{g} is an instance of schema \texttt{sCtx}. Schemas may quantify over a particular bound variable, written right after the declaration as \texttt{[id : id]} where the first identifier represents the bound variable and the second provides its type. Contexts can be passed as \textit{\textbf{context variables}} annotated with their associated schema.
+Schemas classify terms as types classify terms.
+A context \verb+g+ has the schema \verb+sCtx+ if every declaration in \verb+g+ is an instance of schema \verb+sCtx+.
+Schemas may quantify over a particular bound variable, written right after the declaration as \verb+[id : id]+ where the first identifier represents the bound variable and the second provides its type.
+Contexts can be passed as \textit{\textbf{context variables}} annotated with their associated schema.
 
 \begin{verbatim}
 schema natCtx = block (x:tm, u: eq_tm x x);
@@ -416,42 +458,61 @@ schema altCtx = block (x:tp, u:eq_tp x x) + block (x:tm, u:eq_tm x x)
 %-------------------------------------------------------------------------------------------------------------------------------
 
 \subsection{Contextual Objects and Types}
-A \textit{\textbf{contextual object}} relates that \texttt{M} is an open term in a context \texttt{g}, written \texttt{g |- M}. The context \texttt{g} provides bindings for the free variables, represented as a context variables bound to a particular schema, explicit blocks, or a context variable extended with a block. The turnstile \texttt{|-} separates the context of assumptions from the conclusion. Contextual objects appear within functions in \textit{\textbf{boxes}}, enclosed between brackets \texttt{[ ]} to indicate that the data is closed. Note that boxing does not preclude meta-variables within the contextual object so long as they are associated with a delayed substitution to close the object as soon as the appropriate mapping is determined.
+A \textit{\textbf{contextual object}} relates that \verb+M+ is an open term in a context \verb+g+, written \verb+g |- M+.
+The context \verb+g+ provides bindings for the free variables, represented as a context variables bound to a particular schema, explicit blocks, or a context variable extended with a block.
+The turnstile \verb+|-+ separates the context of assumptions from the conclusion.
+Contextual objects appear within functions in \textit{\textbf{boxes}}, enclosed between brackets \verb+[ ]+ to indicate that the data is closed.
+Note that boxing does not preclude meta-variables within the contextual object so long as they are associated with a delayed substitution to close the object as soon as the appropriate mapping is determined.
 
-\textit{\textbf{Contextual types}} encapsulate assumptions about the type of an object depending on its \textit{\textbf{context}}. A data-level object \texttt{M} has contextual type \texttt{[g |- A]} if \texttt{M : A} occurs in \texttt{g}.  Beluga takes contextual types as base types.
+\textit{\textbf{Contextual types}} encapsulate assumptions about the type of an object depending on its \textit{\textbf{context}}.
+A data-level object \verb+M+ has contextual type \verb+[g |- A]+ if \verb+M : A+ occurs in \verb+g+.
+ Beluga takes contextual types as base types.
 
-In Beluga, contextual objects are always embedded within functional programs. Likewise, contexts are classified at the computation level. Keeping with the two-level system approach in mind, it is important to realize that even when contexts and contextual objects are manipulated by computations, they occupy LF-space regardless.
+In Beluga, contextual objects are always embedded within functional programs.
+Likewise, contexts are classified at the computation level.
+Keeping with the two-level system approach in mind, it is important to realize that even when contexts and contextual objects are manipulated by computations, they occupy LF-space regardless.
 
 \subsection{Meta-variables and Parameter Variables}
-Contextual objects may contain bound variables and meta-variables representing open terms. If a binding is explicit in the context, the bound variable is called with its identifier. A bound variable implicit to a context variable is retrieved from the schema with a \textit{\textbf{parameter variable}} \texttt{\#p}, which always takes a lower-case identifier preceded by the the tag \texttt{\#} . A \textit{\textbf{concrete parameter}}, likewise lower-case, calls a binding from a block using the block's identifier. If the block or schema contains more than one element, a particular component is referenced with a \textbf{\textit{projection}}. The element is specified either by name or an integer indexing its relative position in the block.
+Contextual objects may contain bound variables and meta-variables representing open terms.
+If a binding is explicit in the context, the bound variable is called with its identifier.
+A bound variable implicit to a context variable is retrieved from the schema with a \textit{\textbf{parameter variable}} \verb+#p+, which always takes a lower-case identifier preceded by the the tag \verb+#+.
+A \textit{\textbf{concrete parameter}}, likewise lower-case, calls a binding from a block using the block's identifier.
+If the block or schema contains more than one element, a particular component is referenced with a \textbf{\textit{projection}}.
+The element is specified either by name or an integer indexing its relative position in the block.
 
-A \textit{\textbf{meta-variable}} \texttt{M} stands for an LF term. Note that meta-variables are always upper-case. Seeing as variables may occur with that term, the meta-variable is associated with a delayed substitution applied when the appropriate mapping is determined from the context. Likewise, a projection also takes a delayed substitution if the element to which it refers contains variables. The substitution is specified directly after the meta-variable, seperated by whitespace. A space-separated list of substitution tokens denotes a union of their domains. Beluga encodes substitutions as follows: \\
+A \textit{\textbf{meta-variable}} \verb+M+ stands for an LF term.
+Note that meta-variables are always upper-case.
+Seeing as variables may occur with that term, the meta-variable is associated with a delayed substitution applied when the appropriate mapping is determined from the context.
+Likewise, a projection also takes a delayed substitution if the element to which it refers contains variables.
+The substitution is specified directly after the meta-variable, seperated by whitespace.
+A space-separated list of substitution tokens denotes a union of their domains.
+Beluga encodes substitutions as follows: \\
 
 \begin{tabular}{ | l l}
-\texttt{..} & the identity substitution with respects to the context variable\\
-\texttt{\^} & the empty substitution\\
-\texttt{id} & a bound variable\\
-\texttt{id.[id,int]} & a projection of a block declaration\\
-\texttt{\#id.[id,int]} & a projection of a schema parameter\\
-\texttt{\#ID subst} & a substitution variable\\
+\verb+..+ & the identity substitution with respects to the context variable\\
+\verb+^+ & the empty substitution\\
+\verb+id+ & a bound variable\\
+\verb+id.[id,int]+ & a projection of a block declaration\\
+\verb+#id.[id,int]+ & a projection of a schema parameter\\
+\verb+#ID subst+ & a substitution variable\\
 \end{tabular}\\
 \\
 
-\textbf{Example:} Given a schema \texttt{eCtx = block x : term, e:eq x x}, a context variable \texttt{g:eCtx}, and a block \texttt{b:block x':tp, e':eqt x' x'}, a substitution may be defined as:
+\textbf{Example:} Given a schema \verb+eCtx = block x : term, e:eq x x+, a context variable \verb+g:eCtx+, and a block \verb+b:block x':tp, e':eqt x' x'+, a substitution may be defined as:
 
 \begin{center}
 \begin{tabular}{ l l}
 \multicolumn{2}{l}{Writing identity substitutions explicit}\\[0.5em]
-\texttt{[g |- M[..] ]} & \texttt{M} is bound by assumptions in \texttt{g}\\
-\texttt{[g |- \#p.e[..] ]} & \texttt{e:eq x x} is bound by assumptions in \texttt{g}\\
-\texttt{[g, x:tp |- M[.., x]]} & \texttt{M} is bound by \texttt{x:tp} or assumptions in \texttt{g} \\[1em]
+\verb+[g |- M[..] ]+ & \verb+M+ is bound by assumptions in \verb+g+\\
+\verb+[g |- #p.e[..] ]+ & \verb+e:eq x x+ is bound by assumptions in \verb+g+\\
+\verb+[g, x:tp |- M[.., x]]+ & \verb+M+ is bound by \verb+x:tp+ or assumptions in \verb+g+ \\[1em]
 \multicolumn{2}{l}{Identity substitutions may be omitted}\\[0.5em]
-\texttt{[g |- M]} & \texttt{M} is bound by assumptions in \texttt{g}\\
-\texttt{[g |- \#p.e]} & \texttt{e:eq x x} is bound by assumptions in \texttt{g}\\
-\texttt{[g, x:tp |- M]} & \texttt{M} is bound by \texttt{x:tp} or assumptions in \texttt{g} \\[1em]
+\verb+[g |- M]+ & \verb+M+ is bound by assumptions in \verb+g+\\
+\verb+[g |- #p.e]+ & \verb+e:eq x x+ is bound by assumptions in \verb+g+\\
+\verb+[g, x:tp |- M]+ & \verb+M+ is bound by \verb+x:tp+ or assumptions in \verb+g+ \\[1em]
 \multicolumn{2}{l}{Weakening substitutions}\\[0.5em]
-\texttt{[g, b |- M[.., b.1] ]} & \texttt{M} is bound by \texttt{x':tp} or assumptions in \texttt{g} \\
-\texttt{[g, b |- M[b.1, b.2] ]} & \texttt{M} is bound by assumptions in \texttt{b} \\
+\verb+[g, b |- M[.., b.1] ]+ & \verb+M+ is bound by \verb+x':tp+ or assumptions in \verb+g+ \\
+\verb+[g, b |- M[b.1, b.2] ]+ & \verb+M+ is bound by assumptions in \verb+b+ \\
 \end{tabular}
 \end{center}
 
@@ -459,48 +520,45 @@ A \textit{\textbf{meta-variable}} \texttt{M} stands for an LF term. Note that me
 %-------------------------------------------------------------------------------------------------------------------------------
 
 \subsection{Substitution Variables}
-Substitutions can be represented as \textit{\textbf{substitution variables}}, denoted with the tag \texttt{\#} and an upper-case identifier. They are indexed as \texttt{\#S: [g |- h]}, where \texttt{\#S} is a substitution variable which stands for a mapping with domain \texttt{g} and range \texttt{h}. Substitution variables are associated with a substitution closure just as contextual variables are associated with a delayed substitution. A substitution closure specifies the substitution to be applied to the substitution variable itself, written with brackets \texttt{[ ]} after the substitution variable as \texttt{\#S[}$\sigma${]} where $\sigma$ is the closure substitution. Closure substitutions are encoded with the same tokens as delayed substitutions for meta-variables.
 
-Note that the parameter variable \texttt{\#id}, the meta-variable \texttt{Id}, and the substitution variable \texttt{\#Id} are all unrelated. The case of the identifier and the presence of the tag \texttt{\#} are merely syntactic devices to distinguish variable types.
+Substitutions can be represented as \textit{\textbf{substitution variables}}, denoted with the tag \verb+$+ and an upper-case identifier.
+They are indexed as \verb+$S: $[g |- h]+, where \verb+$S+ is a substitution variable which stands for a mapping with domain \verb+g+ and range \verb+h+.
+Substitution variables are associated with a substitution closure just as contextual variables are associated with a delayed substitution.
+A substitution closure specifies the substitution to be applied to the substitution variable itself, written with brackets \verb+[ ]+ after the substitution variable as \verb+#S[o]+ where \verb+o+ is the closure substitution.
+Closure substitutions are encoded with the same tokens as delayed substitutions for meta-variables.
+
+Note that the parameter variable \verb+#id+, the meta-variable \verb+Id+, and the substitution variable \verb+#Id+ are all unrelated.
+The case of the identifier and the presence of the tag \verb+#+ are merely syntactic devices to distinguish variable types.
 
 \subsection{Inductive and Stratified Datatypes}
-\textbf{\textit{Inductive datatypes}} are indexed by contextual
-objects to express relationships between contextual objects and
-contexts. They are declared in a similar fashion to Beluga-style LF
-type families, using the \texttt{ctype} keyword instead of
-\texttt{type} to invoke the computation level. Inductive datatypes may
-be formed of other inductive datatypes, of contexts and of contextual
-objects, guarded by a constructor. Inductive datatypes take upper-case
-identifiers. We distinguish between \textit{inductive types} and
-\textit{stratified types}. Inductive types correspond to fix-point
-definitions in logic and must be strictly positive, i.e. the type
-family we are defining cannot occur in a negative
-occurrence. Stratified types define a recursive type by induction on
-an index argument. As a consequence, the type family we are defining
-may occur in a negative position, but the index is decreasing.
 
+\textbf{\textit{Inductive datatypes}} are indexed by contextual objects to express relationships between contextual objects and contexts.
+They are declared in a similar fashion to Beluga-style LF type families, using the \verb+ctype+ keyword instead of \verb+type+ to invoke the computation level.
+Inductive datatypes may be formed of other inductive datatypes, of contexts and of contextual objects, guarded by a constructor.
+Inductive datatypes take upper-case identifiers.
+We distinguish between \textit{inductive types} and \textit{stratified types}.
+Inductive types correspond to fix-point definitions in logic and must be strictly positive, i.e.
+the type family we are defining cannot occur in a negative occurrence.
+Stratified types define a recursive type by induction on an index argument.
+As a consequence, the type family we are defining may occur in a negative position, but the index is decreasing.
 
-\textbf{Example 1:} The inductive datatype \texttt{Opt}, for example, encodes an option type which is built in to many ML-style languages. A value of type \texttt{Opt} is either empty (\texttt{None}) or contains a term of type \texttt{T}.
+\textbf{Example 1:} The inductive datatype \verb+Opt+, for example, encodes an option type which is built in to many ML-style languages. A value of type \verb+Opt+ is either empty (\verb+None+) or contains a term of type \verb+T+.
 \begin{verbatim}
 inductive Opt : ctype =
 | None : Opt
-| Some : {T : tp}Tm [T] -> Opt;
+| Some : {T : tp} Tm [T] -> Opt;
 \end{verbatim}
 
-\textbf{Example 2:} The following datatype \texttt{Tm} is not inductive.
+\textbf{Example 2:} The following datatype \verb+Tm+ is not inductive.
 \begin{verbatim}
 inductive Tm : ctype =
 | Lam : (Tm -> Tm) -> Tm;
 \end{verbatim}
 
-This clearly illustrates the difference between LF definitions and
-inductive data types. Note that the function space \verb+Tm -> Tm+
-is a strong function space; we cannot match and inspect the structure
-of this function, but can only observe its behavior. Moreover, this
-function may be an arbitary function that is defined by recursion,
-pattern matching or by referring to other inductive definitions.
-
-The problem can be best illustrated by  the following problematic definitions.
+This clearly illustrates the difference between LF definitions and inductive data types.
+Note that the function space \verb+Tm -> Tm+ is a strong function space; we cannot match and inspect the structure of this function, but can only observe its behavior.
+Moreover, this function may be an arbitary function that is defined by recursion, pattern matching or by referring to other inductive definitions.
+The problem can be best illustrated by the following problematic definitions.
 
 \begin{verbatim}
 inductive D : ctype =
@@ -513,63 +571,57 @@ let omega  : D = Inj (fn x -> (out x) x);
 let omega' : D = (out omega) omega ;
 \end{verbatim}
 
-The definition of \verb+D+ seems sensible at first; but we can
-cleverly create a non-terminating computation \verb+omega'+ that
-will keep on reproducing itself. The problem is the negative occurrence
-in the definition \verb+D+.
+The definition of \verb+D+ seems sensible at first; but we can cleverly create a non-terminating computation \verb+omega'+ that will keep on reproducing itself.
+The problem is the negative occurrence in the definition \verb+D+.
 
 
-\textbf{Example 3:} The following type family \texttt{Tm} is stratified.
+\textbf{Example 3:} The following type family \verb+Tm+ is stratified.
 \begin{verbatim}
 stratified Tm : tp -> ctype =
 | Lam : (Tm A -> Tm B) -> Tm (arr A B);
 \end{verbatim}
 
-Here the constructor \verb+Lam+ takes a function of type
-\verb+(Tm A -> Tm B)+ as an argument. However, we can never
-pattern match on this function to inspect its shape and we can never
-recurse on it; we can recurse on the index \lstinline!A! instead.
-
+Here the constructor \verb+Lam+ takes a function of type \verb+(Tm A -> Tm B)+ as an argument.
+However, we can never pattern match on this function to inspect its shape and we can never recurse on it; we can recurse on the index \lstinline!A! instead.
 
 \subsection{Functions}
-Functions analyze contextual objects, contexts, and indexed datatypes. They are declared with the \texttt{let} keyword or the \texttt{rec} keyword for recursive functions. A function signature defines the function type using higher-order abstract syntax, where the arrow \texttt{->} is taken as the simply-typed function space, overloading the notation for the LF function space. Universal quantification is denoted between braces \texttt{\{\}} by an indexed variable. Context variables are indexed by schemas, meta-variables by a contextual object, and substitutions by domain and range.
 
-Explicit arguments from the function signature correspond to computation variables in the function body. An object comprising the left-hand side of an arrow function is introduced as \texttt{fn id} whereas quantifiers are constructed as \texttt{mlam id}. Multiple variables may be introduced at once by writing \texttt{fn id, id, ... } or \texttt{mlam id, id, ...} though the two keywords must be separated by the double arrow \texttt{=>}. If a term from the signature does not require a variable representation in the body, it is surrounded by parentheses \texttt{( )} to indicate it is implicit. \\
+Functions analyze contextual objects, contexts, and indexed datatypes.
+They are declared with the \verb+let+ keyword or the \verb+rec+ keyword for recursive functions.
+A function signature defines the function type using higher-order abstract syntax, where the arrow \verb+->+ is taken as the simply-typed function space, overloading the notation for the LF function space.
+Universal quantification is denoted between braces \verb+{}+ by an indexed variable.
+Context variables are indexed by schemas, meta-variables by a contextual object, and substitutions by domain and range.
+
+Explicit arguments from the function signature correspond to computation variables in the function body.
+An object comprising the left-hand side of an arrow function is introduced as \verb+fn id+ whereas quantifiers are constructed as \verb+mlam id+.
+Multiple variables may be introduced at once by writing \verb+fn id, id, ...+ or \verb+mlam id, id, ...+ though the two keywords must be separated by the double arrow \verb+=>+.
+If a term from the signature does not require a variable representation in the body, it is surrounded by parentheses \verb+( )+ to indicate it is implicit.
 
 \textbf{Example:} The type signature below reads: ``for all contexts
-\texttt{g} with schema \texttt{xaG}, for terms \texttt{M} which are
-expressions in the context of \texttt{g}, there is a proof that
-\texttt{M} is equal to itself.'' The computation-level variables are
-identified as \texttt{h} and \texttt{N}.
+\verb+g+ with schema \verb+xaG+, for terms \verb+M+ which are
+expressions in the context of \verb+g+, there is a proof that
+\verb+M+ is equal to itself.'' The computation-level variables are
+identified as \verb+h+ and \verb+N+.
 
 \begin{verbatim}
 rec refl : {g : xaG} {M : [g |- term]} [g |- eq M M] =
 FN h => mlam N => ...
 \end{verbatim}
 
-Recall that by default
-the meta-variable \verb+M+ is associated with the identity
-substitution which may be omitted. Hence the definition is equivalent to writing.
-
+Recall that by default the meta-variable \verb+M+ is associated with the identity substitution which may be omitted.
+Hence the definition is equivalent to writing.
 
 \begin{verbatim}
 rec refl : {g : xaG} {M : [g |- term]} [g |- eq M[..] M[..] ] =
 FN h => mlam N => ...
 \end{verbatim}
 
-
-
-\textbf{Example:} In this type signature, the context \texttt{g} is
-implicit, not used anywhere within the function body. Variables need
-only be introduced for the input types \verb+[g |- oft M T[^]]+ and
-\verb+[g |- oft M T1[^]]+, where \texttt{oft} stands for ``of
-type''. The meta-variables \texttt{M}, \texttt{T}, and \texttt{T1} are implicitly
-bound at the outside. By default \verb+M+ is associated with the
-identity substitution; its type is hence \verb+[g |- term]+. The
-meta-variables \verb+T+ and \verb+T'+ are associated with a weakening
-substitution, written as \verb+[^]+. Their type is hence
- \verb+[ |- tp]+ and the weakening substitution \verb+^+ transports an
- object of type \verb+tp+ that is closed to an object in the context \verb+g+.
+\textbf{Example:} In this type signature, the context \verb+g+ is implicit, not used anywhere within the function body.
+Variables need only be introduced for the input types \verb+[g |- oft M T[^]]+ and \verb+[g |- oft M T1[^]]+, where \verb+oft+ stands for ``of type''.
+The meta-variables \verb+M+, \verb+T+, and \verb+T1+ are implicitly bound at the outside.
+By default \verb+M+ is associated with the identity substitution; its type is hence \verb+[g |- term]+.
+The meta-variables \verb+T+ and \verb+T'+ are associated with a weakening substitution, written as \verb+[^]+.
+Their type is hence \verb+[ |- tp]+ and the weakening substitution \verb+^+ transports an object of type \verb+tp+ that is closed to an object in the context \verb+g+.
 
 \begin{verbatim}
 rec trans : (g:xaG) [g |- type_of M T[^] ] -> [g |- M T1[^] ] ->
@@ -589,29 +641,53 @@ Beluga provides powerful ML-style pattern-matching to analyze contextual object 
 \end{itemize}
 Pattern matching can be nested.
 
-Inductive proofs in Beluga are represented as recursive functions about contextual LF objects using pattern matching. Each case of the proof corresponds to one branch in the function.
-
+Inductive proofs in Beluga are represented as recursive functions about contextual LF objects using pattern matching.
+Each case of the proof corresponds to one branch in the function.
 
 %-------------------------------------------------------------------------------------------------------------------------------
 %-------------------------------------------------------------------------------------------------------------------------------
 
 \section{Type Reconstruction}
-Dependently typed systems can be extremely verbose since dependently typed objects must carry type information. It would be incredibly tedious to provide annotations on every variable when programming yet it can be very difficult to keep track of types without them as a reader. Type reconstruction relieves the user of the burden of providing type information while retaining the benefits of strongly-typed languages. Beluga infers types, reconstructs implicit variables with fresh identifiers, and outputs annotations. Features like holes, context subsumption and meta-variable strengthening improve usability whereas name preferences customize the output.
+
+Dependently typed systems can be extremely verbose since dependently typed objects must carry type information.
+It would be incredibly tedious to provide annotations on every variable when programming yet it can be very difficult to keep track of types without them as a reader.
+Type reconstruction relieves the user of the burden of providing type information while retaining the benefits of strongly-typed languages.
+Beluga infers types, reconstructs implicit variables with fresh identifiers, and outputs annotations.
+Features like holes, context subsumption and meta-variable strengthening improve usability whereas name preferences customize the output.
 
 \subsection{LF}
-Type reconstruction is, in general, undecidable for LF. Beluga's algorithm reports a principal type, a type error, or that the source term needs more type information. Every LF declaration is processed one at a time. Given a constant declaration, the types of the free variables and any omitted index arguments are inferred when necessary, constituting implicit arguments. As a consequence, users need only provide type annotations where no type can be inferred.
+Type reconstruction is, in general, undecidable for LF.
+Beluga's algorithm reports a principal type, a type error, or that the source term needs more type information.
+Every LF declaration is processed one at a time.
+Given a constant declaration, the types of the free variables and any omitted index arguments are inferred when necessary, constituting implicit arguments.
+As a consequence, users need only provide type annotations where no type can be inferred.
 
-Note that Beluga only outputs type information about the LF objects embedded within computations, not the actual LF signature. By default, implicit arguments are not printed beside their constructors. The \texttt{+implicit} command argument overrides this behavior. \\
+Note that Beluga only outputs type information about the LF objects embedded within computations, not the actual LF signature.
+By default, implicit arguments are not printed beside their constructors.
+The \texttt{+implicit} command argument overrides this behavior.
 
-\textbf{Example:} Say for instance that terms are indexed by type \texttt{tp}, corresponding to the LF declaration \texttt{term: tp -> type}. Type reconstruction can infer that any free variable following the \texttt{term} constructor must be of type \texttt{tp}. A contextual object \texttt{M: [term T]} takes an implicit quantifier: \texttt{\{T : tp\} M : [term T]}. Note that \texttt{T} may itself contain implicit arguments depending on the type of the term. If \texttt{T} is an arrow type \texttt{arr A B}, then \texttt{A} and \texttt{B} will be implicit to \texttt{T}.
+\textbf{Example:} Say for instance that terms are indexed by type \verb+tp+, corresponding to the LF declaration \verb+term: tp -> type+.
+Type reconstruction can infer that any free variable following the \verb+term+ constructor must be of type \verb+tp+.
+A contextual object \verb+M: [term T]+ takes an implicit quantifier: \verb+{T : tp} M : [term T]+.
+Note that \verb+T+ may itself contain implicit arguments depending on the type of the term.
+If \verb+T+ is an arrow type \verb+arr A B+, then \verb+A+ and \verb+B+ will be implicit to \verb+T+.
 
 \subsection{Functions}
-Type reconstruction for a Beluga function begins by reconstructing the type signature. Similar to LF reconstruction, an index argument is implicit to a computation-level type if it occurs either as a free meta-variable or index argument in the computation-level type; it need not be passed to functions if it was implicit when the type of the function was declared. Note that implicit meta-variables are not associated with a substitution. Once the full type of the function is known, type reconstruction introduces the implicit variables and inserts implicit arguments at recursive calls. These implicit arguments are not outputted unless the program was executed with the \texttt{+implicit} command line option.
 
-Pattern-matching on an object often refines its type. Case-analysis on a meta-variable \texttt{M: [g |- term]}, for instance, may yield a case in which \texttt{M} is a lambda-abstraction and another in which it is an application. Beluga reconstructs the types of free variables occurring in patterns themselves, inserting any omitted arguments. Once determined, the refinement substitution is stored with the pattern to be applied when the complete type is known.
+Type reconstruction for a Beluga function begins by reconstructing the type signature.
+Similar to LF reconstruction, an index argument is implicit to a computation-level type if it occurs either as a free meta-variable or index argument in the computation-level type; it need not be passed to functions if it was implicit when the type of the function was declared.
+Note that implicit meta-variables are not associated with a substitution.
+Once the full type of the function is known, type reconstruction introduces the implicit variables and inserts implicit arguments at recursive calls.
+These implicit arguments are not outputted unless the program was executed with the \texttt{+implicit} command line option.
+
+Pattern-matching on an object often refines its type.
+Case-analysis on a meta-variable \verb+M: [g |- term]+, for instance, may yield a case in which \verb+M+ is a lambda-abstraction and another in which it is an application.
+Beluga reconstructs the types of free variables occurring in patterns themselves, inserting any omitted arguments.
+Once determined, the refinement substitution is stored with the pattern to be applied when the complete type is known.
 
 \subsection{Context Subsumption}
-Beluga automatically detects weakening relationships. A contextual object in the context \texttt{g} can be provided in place of a contextual object in the context \texttt{h} if \texttt{g} can be obtained by weakening \texttt{h}. \\
+Beluga automatically detects weakening relationships.
+A contextual object in the context \verb+g+ can be provided in place of a contextual object in the context \verb+h+ if \verb+g+ can be obtained by weakening \verb+h+.
 
 \textbf{Example:} Consider the following code segment.
 \begin{verbatim}
@@ -620,27 +696,35 @@ schema eCtx = block x:term, u:eq x x, equal x x;
 
 rec ref : {h : eqCtx} {M : [g |- term]} [g |- eq M M] = ? ;
 \end{verbatim}
-The recursive function \texttt{ref} expects a context \texttt{h} satisfying the schema \texttt{eqCtx}. Beluga would allow passing some context \texttt{g:eCtx} to \texttt{ref} since \texttt{g:eqCtx} can be obtained by adding \texttt{equal x x} from \texttt{h}.
+The recursive function \verb+ref+ expects a context \verb+h+ satisfying the schema \verb+eqCtx+.
+Beluga would allow passing some context \verb+g:eCtx+ to \verb+ref+ since \verb+g:eqCtx+ can be obtained by adding \verb+equal x x+ from \verb+h+.
 
 \subsection{Meta-variable Strengthening}
-Automatic strengthening can be disabled by putting the \texttt{-{}-nostrengthen} pragma at the beginning of the program.
+Automatic strengthening can be disabled by putting the \verb+--nostrengthen+ pragma at the beginning of the program.
 
 \subsection{Holes}
-Beluga supports \textit{\textbf{holes}} for bound variables as well as contextual objects and variables. A bound variable in an abstraction which does not appear in the body can be replaced with the underscore \texttt{\_}.
+Beluga supports \textit{\textbf{holes}} for bound variables as well as contextual objects and variables.
+A bound variable in an abstraction which does not appear in the body can be replaced with the underscore \verb+_+.
 
 \subsection{LF and Computation Holes}
-Holes which take the place of contextual objects and variables are denoted with the question mark \texttt{?}. They can appear within functions either embedded within LF boxes or placed directly into the computation to represent normal terms or function outputs, respectively. During reconstruction, Beluga determines the expected type, printing all objects declared in the appropriate scope that could fit.
+Holes which take the place of contextual objects and variables are denoted with the question mark \verb+?+.
+They can appear within functions either embedded within LF boxes or placed directly into the computation to represent normal terms or function outputs, respectively.
+During reconstruction, Beluga determines the expected type, printing all objects declared in the appropriate scope that could fit.
 
-Note that holes do not synthesize objects; they can only be used in instances where type-checking is possible. Objects of the form \texttt{[g |- ?]}, for instance, often cannot be reconstructed because there are no terms against which to type check the hole.
+Note that holes do not synthesize objects; they can only be used in instances where type-checking is possible.
+Objects of the form \verb+[g |- ?]+, for instance, often cannot be reconstructed because there are no terms against which to type check the hole.
 
 Holes of this nature can be filled using Interactive Mode.
 
 \subsection{Name Preference}
-Beluga assigns names to anonymous variables during reconstruction. These names are generated randomly but appending a type family constructor declarations the \texttt{-{}-name} pragma sets a preferred naming choice for anonymous variables of that type.
+Beluga assigns names to anonymous variables during reconstruction.
+These names are generated randomly but appending a type family constructor declarations the \verb+--name+ pragma sets a preferred naming choice for anonymous variables of that type.
 \begin{verbatim}
 name_prg ::=  lf_decl --name id ID "."
 \end{verbatim}
-The first identifier must match the name of the constructor to which it is being applied. The second identifier is the preferred name itself. Note that name preference declarations have no affect on parsing.
+The first identifier must match the name of the constructor to which it is being applied.
+The second identifier is the preferred name itself.
+Note that name preference declarations have no affect on parsing.
 
 % \subsection{Type errors}
 
@@ -648,13 +732,16 @@ The first identifier must match the name of the constructor to which it is being
 %-------------------------------------------------------------------------------------------------------------------------------
 
 \section{Logic Programming with Queries}
-A query is posed as a \texttt{-{}-query} declaration.
+A query is posed as a \verb+--query+ declaration.
 \begin{verbatim}
 qdecl ::= --query int int [ID]:lf_typ.
 \end{verbatim}
-The first integer specifies the expected number of solutions whereas the second specifies the maximum number of tries. Beluga will attempt to solve the query to determine whether it has the expected number of solutions while never exceeding the user-defined limit. Supplying either integer field with an asterisk * will set the quantity to unlimited.
+The first integer specifies the expected number of solutions whereas the second specifies the maximum number of tries.
+Beluga will attempt to solve the query to determine whether it has the expected number of solutions while never exceeding the user-defined limit.
+Supplying either integer field with an asterisk * will set the quantity to unlimited.
 
-Beluga's logic programming engine is active by default. It can be disabled with the \texttt{-logic} switch from the command line.
+Beluga's logic programming engine is active by default.
+It can be disabled with the \verb+-logic+ switch from the command line.
 \shellcmd{bin/beluga -logic path/to/file.bel}
 
 %-------------------------------------------------------------------------------------------------------------------------------
@@ -667,14 +754,23 @@ Beluga's logic programming engine is active by default. It can be disabled with 
 %-------------------------------------------------------------------------------------------------------------------------------
 
 \section{Coverage}
-Coverage checking ensures that every closed object of a given type is an instance of a case outlined in the program, ruling out partial functions. Beluga does not perform coverage checks by default. To initiate a coverage check on a given program, include the \texttt{-{}-coverage} pragma at the beginning of the program. The program will not compile unless the coverage check is successful. The \texttt{-{}-warncoverage} alerts the user of missed cases without failures. Should a coverage check fail, Beluga will output the location of the incomplete pattern matching along with the cases not covered, similar to ML-style exhaustiveness checking.
+Coverage checking ensures that every closed object of a given type is an instance of a case outlined in the program, ruling out partial functions.
+Beluga does not perform coverage checks by default.
+To initiate a coverage check on a given program, include the \verb+--coverage+ pragma at the beginning of the program.
+The program will not compile unless the coverage check is successful.
+The \verb+--warncoverage+ alerts the user of missed cases without failures.
+Should a coverage check fail, Beluga will output the location of the incomplete pattern matching along with the cases not covered, similar to ML-style exhaustiveness checking.
 
 %-------------------------------------------------------------------------------------------------------------------------------
 %-------------------------------------------------------------------------------------------------------------------------------
 
 
 \section{Modules}
-Modules provide namespace separation within a program. They are declared with ML-style syntax with the \texttt{module} keyword followed by an upper-case identifier. The user can specify an abbreviation with the \texttt{-{}-abbrev} pragma, followed by the module's actual identifier and the desired abbreviation. Structural components are listed after the \texttt{struct} keyword in the usual Beluga syntax. The module declaration is terminated with the \texttt{end;} keyword. \\
+Modules provide namespace separation within a program.
+They are declared with ML-style syntax with the \verb+module+ keyword followed by an upper-case identifier.
+The user can specify an abbreviation with the \verb+--abbrev+ pragma, followed by the module's actual identifier and the desired abbreviation.
+Structural components are listed after the \verb+struct+ keyword in the usual Beluga syntax.
+The module declaration is terminated with the \verb+end;+ keyword.
 
 \textbf{Example:} A module defining natural numbers could be declared as follows:
 \begin{verbatim}
@@ -692,13 +788,18 @@ end;
 --abbrev Nats N
 \end{verbatim}
 
-Module components are accessed via fields as \texttt{Id.id}. The constructor \texttt{z} from the example above is called with \texttt{Nats.z} or \texttt{N.z} using the abbreviation. A module can be opened within a program using the \texttt{-{}-open} pragma followed by the module identifier. The components of open modules can be access directly, ie: \texttt{z} instead of \texttt{Nat.z}. Note that if module \texttt{B} is opened in the body of module \texttt{A}, then opening \texttt{A} within a program also opens \texttt{B}.
+Module components are accessed via fields as \verb+Id.id+.
+The constructor \verb+z+ from the example above is called with \verb+Nats.z+ or \verb+N.z+ using the abbreviation.
+A module can be opened within a program using the \verb+--open+ pragma followed by the module identifier.
+The components of open modules can be access directly, ie: \verb+z+ instead of \verb+Nat.z+.
+Note that if module \verb+B+ is opened in the body of module \verb+A+, then opening \verb+A+ within a program also opens \verb+B+.
 
 %-------------------------------------------------------------------------------------------------------------------------------
 %-------------------------------------------------------------------------------------------------------------------------------
 
 \section{Interactive Programming with Emacs}
-Beluga supports interactive proof development, with an interactive mode integrated with the Emacs editor. The programmer can leave ``holes'' for terms in the program using the \texttt{?} symbol, and then use the following commands to query and partially fill the holes.
+Beluga supports interactive proof development, with an interactive mode integrated with the Emacs editor.
+The programmer can leave ``holes'' for terms in the program using the \verb+?+ symbol, and then use the following commands to query and partially fill the holes.
 
 \subsection{Keybindings}
 
@@ -707,24 +808,26 @@ C-c C-x command & Execute shell command \\
 C-c C-c & Compile \\
 C-c C-l filename.bel & Load (necessary before the next commands) \\
 C-c C-e & Erase hole highlights \\
-C-c C-s num id & Split on variable \texttt{id} at hole \texttt{num} \\
-C-c C-i num & Introduce variable \texttt{num} \\
+C-c C-s num id & Split on variable \verb+id+ at hole \verb+num+ \\
+C-c C-i num & Introduce variable \verb+num+ \\
 C-c C-t & Get type of the term under the cursor \\
 \end{tabular}
 
-Note that the hole numbers \texttt{num} count the holes in order of occurrence, starting at 0.
+Note that the hole numbers \verb+num+ count the holes in order of occurrence, starting at 0.
 
 \subsection{Type Information}
-The user can query the type of the term represented by a hole. This feature is not yet implemented in all cases.
+The user can query the type of the term represented by a hole.
+This feature is not yet implemented in all cases.
 
 \subsection{Variable Introduction}
-Beluga can generate variable introductions based on the type of a function. The user enters the hole directly after the equal sign.
+Beluga can generate variable introductions based on the type of a function.
+The user enters the hole directly after the equal sign.
 \begin{verbatim}
 rec fun : {g : sCtx} {M : [g |- term]} [g |- oft M T[^] ] ->
 [g |- oft M T'[^] ] -> [ |- eq T T'] = ?;
 \end{verbatim}
 
-Enter \texttt{C-c C-i 0} and Interactive Mode introduces variables:
+Enter \verb+C-c C-i 0+ and Interactive Mode introduces variables:
 \begin{verbatim}
 rec fun : {g : sCtx} {M : [g |- term]} [g |- oft M T[^]] ->
 [g |- oft M T'[^]] -> [ |- eq T T'] =
@@ -733,54 +836,61 @@ FN g => mlam M => fn d => fn f => ? ;
 
 
 \subsection{Variable Splitting}
-Interactive mode supports variable splitting to fill computation-level
-holes with pattern matching. Use the split command with the hole
-number and variable name, and Beluga will elaborate the hole with case
-analysis, generating cases to cover all possible instances of the
-particular variable. After splitting one must recompile and reload the
-program, to continue splitting.
+
+Interactive mode supports variable splitting to fill computation-level holes with pattern matching.
+Use the split command with the hole number and variable name, and Beluga will elaborate the hole with case analysis, generating cases to cover all possible instances of the particular variable.
+After splitting one must recompile and reload the program, to continue splitting.
 
 % \section{VIM mode}
 
 \section{HTML mode}
-Beluga source code can be outputted to HTML complete with linking, highlighting, and unicode turnstiles. From the command line, compile the program with the \texttt{+HTML} option.
+
+Beluga source code can be outputted to HTML complete with linking, highlighting, and unicode turnstiles.
+From the command line, compile the program with the \texttt{+HTML} option.
 \shellcmd{bin/beluga +HTML path/to/source.bel}
-An HTML file called \texttt{<source>.html} is created in the directory containing the source file. The type reconstruction information appears on the web page as preformatted text in code boxes between \texttt{<pre>} tags. Beluga keywords along with user-defined types, constructors, and functions are enclosed between \texttt{<keyword>} and \texttt{<code>} tags, respectively, stylized with CSS embedded directly into the HTML. To forgo the default style, use the \texttt{-css} option to output the HTML body only.
+An HTML file called \verb+<source>.html+ is created in the directory containing the source file.
+The type reconstruction information appears on the web page as preformatted text in code boxes between \verb+<pre>+ tags.
+Beluga keywords along with user-defined types, constructors, and functions are enclosed between \verb+<keyword>+ and \verb+<code>+ tags, respectively, stylized with CSS embedded directly into the HTML.
+To forgo the default style, use the \verb+-css+ option to output the HTML body only.
 \shellcmd{bin/beluga +HTML -css path/to/source.bel}
-Alternatively, the user can specify a particular CSS stylesheet for the HTML page with the \texttt{+cssfile} option. Note that filepaths must be relative to the directory in which the Beluga program is located, not the terminal current directory.
+Alternatively, the user can specify a particular CSS stylesheet for the HTML page with the \verb++cssfile+ option.
+Note that filepaths must be relative to the directory in which the Beluga program is located, not the terminal current directory.
 \shellcmd{bin/beluga +HTML +cssfile path/to/style.css path/to/source.bel}
 
 \newpage
 
-HTML mode includes a markup language to add text to the web page. Three backticks \texttt{```} introduces and concludes a block of text to be rendered onto the page. In addition to the syntax described in the table below, pure HTML can embedded directly into text blocks. In fact, the special characters listed at the end are merely mnemonics for HTML encodings. \\
+HTML mode includes a markup language to add text to the web page.
+Three backticks \verb+```+ introduces and concludes a block of text to be rendered onto the page.
+In addition to the syntax described in the table below, pure HTML can embedded directly into text blocks.
+In fact, the special characters listed at the end are merely mnemonics for HTML encodings.
 
 \begin{tabular}{ | l | l |}
 \hline
-\texttt{```} & Begin/end text block \\
+\verb+```+ & Begin/end text block \\
 \hline
-\begin{tabular}{ l } \texttt{\# Level 1} \\ \texttt{\#\# Level 2} \\ \texttt{\#\#\# Level 3} \\  \end{tabular} & Headers \\
+\begin{tabular}{ l } \verb+# Level 1+ \\ \verb+## Level 2+ \\ \verb+### Level 3+ \\  \end{tabular} & Headers \\
 \hline
-\texttt{*text*} & Italicize text\\
+\verb+*text*+ & Italicize text\\
 \hline
-\texttt{**text**} & Bold text\\
+\verb+**text**+ & Bold text\\
 \hline
-\texttt{'code'} & Inline code\\
+\verb+'code'+ & Inline code\\
 \hline
 \begin{tabular}{ l } 1. \\ 2. \\ 3 .\\ .. \\ \end{tabular} & Ordered list\\
 \hline
 \begin{tabular}{ l } - \\ - \\ - \\ .. \\ \end{tabular} & Unordered list\\
 \hline
-\texttt{-----} & Horizontal line\\
+\verb+-----+ & Horizontal line\\
 \hline
-\texttt{\&rarr;} & Right-arrow\\
+\verb+&rarr;+ & Right-arrow\\
 \hline
-\texttt{\&Gamma;} & Upper-case gamma\\
+\verb+&Gamma;+ & Upper-case gamma\\
 \hline
-\texttt{\&delta;} & Lower-case delta\\
+\verb+&delta;+ & Lower-case delta\\
 \hline
-\texttt{\&forall;} & Turned A\\
+\verb+&forall;+ & Turned A\\
 \hline
-\texttt{\&exist;} & Turned E\\
+\verb+&exist;+ & Turned E\\
 \hline
 \end{tabular}
 
